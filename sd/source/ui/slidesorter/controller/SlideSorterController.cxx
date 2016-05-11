@@ -319,42 +319,25 @@ bool SlideSorterController::Command (
         case CommandEventId::ContextMenu:
         {
             SdPage* pPage = nullptr;
-            sal_uInt16 nPopupId;
+            OUString aPopupId;
 
             model::PageEnumeration aSelectedPages (
                 PageEnumerationProvider::CreateSelectedPagesEnumeration(mrModel));
             if (aSelectedPages.HasMoreElements())
                 pPage = aSelectedPages.GetNextElement()->GetPage();
 
-            // Choose the popup menu depending on a) the type of the main
-            // view shell, b) the edit mode, and c) on whether the selection
-            // is empty or not.
-            ViewShell::ShellType eMainViewShellType (ViewShell::ST_NONE);
-            std::shared_ptr<ViewShell> pMainViewShell (
-                pViewShell->GetViewShellBase().GetMainViewShell());
-            if (pMainViewShell.get() != nullptr)
-                eMainViewShellType = pMainViewShell->GetShellType();
-            switch (eMainViewShellType)
+            if (mrModel.GetEditMode() == EM_PAGE)
             {
-                case ViewShell::ST_DRAW:
-                    if (pPage != nullptr)
-                        nPopupId = RID_SLIDE_SORTER_DRAW_SEL_POPUP;
-                    else
-                        nPopupId = RID_SLIDE_SORTER_DRAW_NOSEL_POPUP;
-                    break;
-
-                default:
-                    if (mrModel.GetEditMode() == EM_PAGE)
-                        if (pPage != nullptr)
-                            nPopupId = RID_SLIDE_SORTER_IMPRESS_SEL_POPUP;
-                        else
-                            nPopupId = RID_SLIDE_SORTER_IMPRESS_NOSEL_POPUP;
-                    else
-                        if (pPage != nullptr)
-                            nPopupId = RID_SLIDE_SORTER_MASTER_SEL_POPUP;
-                        else
-                            nPopupId = RID_SLIDE_SORTER_MASTER_NOSEL_POPUP;
+                if (pPage != nullptr)
+                    aPopupId = "pagepane";
+                else
+                    aPopupId = "pagepanenosel";
             }
+            else if (pPage != nullptr)
+                aPopupId = "pagepanemaster";
+            else
+                aPopupId = "pagepanenoselmaster";
+
             std::unique_ptr<InsertionIndicatorHandler::ForceShowContext> pContext;
             if (pPage == nullptr)
             {
@@ -404,10 +387,7 @@ bool SlideSorterController::Command (
                 SfxDispatcher* pDispatcher = pViewShell->GetDispatcher();
                 if (pDispatcher != nullptr)
                 {
-                    pDispatcher->ExecutePopup(
-                        SdResId(nPopupId),
-                        pWindow,
-                        &aMenuLocation);
+                    pDispatcher->ExecutePopup( aPopupId, pWindow, &aMenuLocation );
                     mrSlideSorter.GetView().UpdatePageUnderMouse();
                     ::rtl::Reference<SelectionFunction> pFunction(GetCurrentSelectionFunction());
                     if (pFunction.is())
@@ -686,30 +666,24 @@ void SlideSorterController::UpdateAllPages()
     mrSlideSorter.GetContentWindow()->Invalidate();
 }
 
-Rectangle SlideSorterController::Resize (const Rectangle& rAvailableSpace)
+void SlideSorterController::Resize (const Rectangle& rAvailableSpace)
 {
-    Rectangle aContentArea (rAvailableSpace);
-
     if (maTotalWindowArea != rAvailableSpace)
     {
         maTotalWindowArea = rAvailableSpace;
-        aContentArea = Rearrange(true);
+        Rearrange(true);
     }
-
-    return aContentArea;
 }
 
-Rectangle  SlideSorterController::Rearrange (bool bForce)
+void  SlideSorterController::Rearrange (bool bForce)
 {
-    Rectangle aNewContentArea (maTotalWindowArea);
-
-    if (aNewContentArea.IsEmpty())
-        return aNewContentArea;
+    if (maTotalWindowArea.IsEmpty())
+        return;
 
     if (mnModelChangeLockCount>0)
     {
         mbIsForcedRearrangePending |= bForce;
-        return aNewContentArea;
+        return;
     }
     else
         mbIsForcedRearrangePending = false;
@@ -721,7 +695,7 @@ Rectangle  SlideSorterController::Rearrange (bool bForce)
             mrView.UpdateOrientation();
 
         // Place the scroll bars.
-        aNewContentArea = GetScrollBarManager().PlaceScrollBars(
+        Rectangle aNewContentArea = GetScrollBarManager().PlaceScrollBars(
             maTotalWindowArea,
             mrView.GetOrientation() != view::Layouter::VERTICAL,
             mrView.GetOrientation() != view::Layouter::HORIZONTAL);
@@ -743,15 +717,13 @@ Rectangle  SlideSorterController::Rearrange (bool bForce)
 
         // Adapt the scroll bars to the new zoom factor of the browser
         // window and the arrangement of the page objects.
-        GetScrollBarManager().UpdateScrollBars(false, !bForce);
+        GetScrollBarManager().UpdateScrollBars(!bForce);
 
         // Keep the current slide in the visible area.
         GetVisibleAreaManager().RequestCurrentSlideVisible();
 
         mrView.RequestRepaint();
     }
-
-    return aNewContentArea;
 }
 
 rtl::Reference<FuPoor> SlideSorterController::CreateSelectionFunction (SfxRequest& rRequest)
@@ -799,7 +771,7 @@ void SlideSorterController::PrepareEditModeChange()
     }
 }
 
-bool SlideSorterController::ChangeEditMode (EditMode eEditMode)
+void SlideSorterController::ChangeEditMode (EditMode eEditMode)
 {
     bool bResult (false);
     if (mrModel.GetEditMode() != eEditMode)
@@ -811,7 +783,6 @@ bool SlideSorterController::ChangeEditMode (EditMode eEditMode)
         if (bResult)
             HandleModelChange();
     }
-    return bResult;
 }
 
 void SlideSorterController::FinishEditModeChange()
@@ -893,11 +864,10 @@ void SlideSorterController::PageNameHasChanged (int nPageIndex, const OUString& 
     if (pChild == nullptr || pChild->GetPage() == nullptr)
         return;
 
-    OUString sOldName (rsOldName);
     OUString sNewName (pChild->GetPage()->GetName());
     pChild->FireAccessibleEvent(
         css::accessibility::AccessibleEventId::NAME_CHANGED,
-        makeAny(sOldName),
+        makeAny(rsOldName),
         makeAny(sNewName));
 }
 
@@ -929,8 +899,7 @@ void SlideSorterController::CheckForMasterPageAssignment()
         if (pDescriptor->UpdateMasterPage())
         {
             mrView.GetPreviewCache()->InvalidatePreviewBitmap (
-                pDescriptor->GetPage(),
-                true);
+                pDescriptor->GetPage());
         }
     }
 }
@@ -946,8 +915,7 @@ void SlideSorterController::CheckForSlideTransitionAssignment()
         if (pDescriptor->UpdateTransitionFlag())
         {
             mrView.GetPreviewCache()->InvalidatePreviewBitmap (
-                pDescriptor->GetPage(),
-                true);
+                pDescriptor->GetPage());
         }
     }
 }

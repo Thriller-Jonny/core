@@ -47,7 +47,7 @@ namespace basegfx
         {
             B2DPolyPolygon aRetval;
             OSL_ENSURE(rCandidate.count() > 1L, "createAreaGeometryForLineStartEnd: Line polygon has too less points (!)");
-            OSL_ENSURE(rArrow.count() > 0L, "createAreaGeometryForLineStartEnd: Empty arrow tools::PolyPolygon (!)");
+            OSL_ENSURE(rArrow.count() > 0, "createAreaGeometryForLineStartEnd: Empty arrow tools::PolyPolygon (!)");
             OSL_ENSURE(fWidth > 0.0, "createAreaGeometryForLineStartEnd: Width too small (!)");
             OSL_ENSURE(fDockingPosition >= 0.0 && fDockingPosition <= 1.0,
                 "createAreaGeometryForLineStartEnd: fDockingPosition out of range [0.0 .. 1.0] (!)");
@@ -98,7 +98,7 @@ namespace basegfx
 
                 // get the polygon vector we want to plant this arrow on
                 const double fConsumedLength(fArrowYLength * (1.0 - fDockingPosition) - fShift);
-                const B2DVector aHead(rCandidate.getB2DPoint((bStart) ? 0L : rCandidate.count() - 1L));
+                const B2DVector aHead(rCandidate.getB2DPoint((bStart) ? 0 : rCandidate.count() - 1L));
                 const B2DVector aTail(getPositionAbsolute(rCandidate,
                     (bStart) ? fConsumedLength : fCandidateLength - fConsumedLength, fCandidateLength));
 
@@ -715,7 +715,7 @@ namespace basegfx
                     double fCutPos(0.0);
                     tools::findCut(aStartPoint, rTangentPrev, aEndPoint, rTangentEdge, CutFlagValue::ALL, &fCutPos);
 
-                    if(0.0 != fCutPos)
+                    if(!rtl::math::approxEqual(0.0, fCutPos))
                     {
                         const B2DPoint aCutPoint(aStartPoint + (rTangentPrev * fCutPos));
                         aEdgePolygon.append(aCutPoint);
@@ -757,7 +757,7 @@ namespace basegfx
                     }
                     else
                     {
-                        // wanted fall-through to default
+                        SAL_FALLTHROUGH; // wanted fall-through to default
                     }
                 }
                 default: // B2DLineJoin::Bevel
@@ -779,6 +779,35 @@ namespace basegfx
 
     namespace tools
     {
+        B2DPolygon polygonSubdivide(const B2DPolygon& rCandidate, double fMaxAllowedAngle, double fMaxPartOfEdge)
+        {
+            if(fMaxAllowedAngle > F_PI2)
+            {
+                fMaxAllowedAngle = F_PI2;
+            }
+            else if(fMaxAllowedAngle < 0.01 * F_PI2)
+            {
+                fMaxAllowedAngle = 0.01 * F_PI2;
+            }
+
+            if(fMaxPartOfEdge > 1.0)
+            {
+                fMaxPartOfEdge = 1.0;
+            }
+            else if(fMaxPartOfEdge < 0.01)
+            {
+                fMaxPartOfEdge = 0.01;
+            }
+
+            B2DPolygon aCandidate(rCandidate);
+            const double fMaxCos(cos(fMaxAllowedAngle));
+
+            aCandidate.removeDoublePoints();
+            aCandidate = subdivideToSimple(aCandidate, fMaxCos * fMaxCos, fMaxPartOfEdge * fMaxPartOfEdge);
+
+            return aCandidate;
+        }
+
         B2DPolyPolygon createAreaGeometry(
             const B2DPolygon& rCandidate,
             double fHalfLineWidth,
@@ -866,7 +895,7 @@ namespace basegfx
 
                             if(B2VectorOrientation::Neutral == aOrientation)
                             {
-                                   // they are parallell or empty; if they are both not zero and point
+                                   // they are parallel or empty; if they are both not zero and point
                                    // in opposite direction, a half-circle is needed
                                    if(!aTangentPrev.equalZero() && !aTangentEdge.equalZero())
                                    {

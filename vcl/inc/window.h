@@ -21,34 +21,16 @@
 #define INCLUDED_VCL_INC_WINDOW_H
 
 #include <sal/config.h>
-
-#include <config_features.h>
-
-#include <com/sun/star/uno/Reference.hxx>
-#include <cppuhelper/weakref.hxx>
-#include <list>
-#include <tools/wintypes.hxx>
 #include <tools/fract.hxx>
-#include <vcl/cursor.hxx>
-#include <vcl/inputctx.hxx>
-#include <vcl/outdev.hxx>
-#include <vcl/pointr.hxx>
-#include <vcl/salnativewidgets.hxx>
-#include <vcl/timer.hxx>
 #include <vcl/idle.hxx>
-#include <vcl/vclevent.hxx>
-#include <vcl/vclptr.hxx>
 #include <vcl/rendersettings.hxx>
-#include "vcleventlisteners.hxx"
-#include <vector>
 
-struct SalPaintEvent;
-struct ImplDelData;
-struct ImplAccessibleInfos;
+#include <list>
+#include <vector>
+#include <set>
 
 namespace vcl {
     class Window;
-    struct ControlLayoutData;
 }
 
 class FixedText;
@@ -65,6 +47,7 @@ enum class ActivateModeFlags;
 enum class DialogControlFlags;
 enum class GetFocusFlags;
 enum class ParentClipMode;
+enum class SalEvent;
 
 namespace com { namespace sun { namespace star {
 
@@ -95,7 +78,7 @@ namespace dnd {
     class XDropTarget;
 }}}}}
 
-bool ImplWindowFrameProc( vcl::Window* pInst, SalFrame* pFrame, sal_uInt16 nEvent, const void* pEvent );
+bool ImplWindowFrameProc( vcl::Window* pInst, SalEvent nEvent, const void* pEvent );
 
 #define WINDOW_HITTEST_INSIDE           ((sal_uInt16)0x0001)
 #define WINDOW_HITTEST_TRANSPARENT      ((sal_uInt16)0x0002)
@@ -117,16 +100,9 @@ struct ImplWinData
     bool                mbEnableNativeWidget;   //< toggle native widget rendering
     ::std::list< VclPtr<vcl::Window> >
                         maTopWindowChildren;
-};
 
-struct ImplOverlapData
-{
-    VclPtr<VirtualDevice> mpSaveBackDev;          //< saved background bitmap
-    vcl::Region*        mpSaveBackRgn;          //< saved region, which must be invalidated
-    VclPtr<vcl::Window> mpNextBackWin;          //< next window with saved background
-    sal_uIntPtr         mnSaveBackSize;         //< bitmap size of saved background
-    bool                mbSaveBack;             //< true: save background
-    sal_uInt8           mnTopLevel;             //< Level for Overlap-Window
+     ImplWinData();
+    ~ImplWinData();
 };
 
 struct ImplFrameData
@@ -139,14 +115,12 @@ struct ImplFrameData
     VclPtr<vcl::Window> mpFocusWin;             //< focus window (is also set, when frame doesn't have the focus)
     VclPtr<vcl::Window> mpMouseMoveWin;         //< last window, where MouseMove() called
     VclPtr<vcl::Window> mpMouseDownWin;         //< last window, where MouseButtonDown() called
-    VclPtr<vcl::Window> mpFirstBackWin;         //< first overlap-window with saved background
     ::std::vector<VclPtr<vcl::Window> > maOwnerDrawList;    //< List of system windows with owner draw decoration
     PhysicalFontCollection* mpFontCollection;   //< Font-List for this frame
     ImplFontCache*      mpFontCache;            //< Font-Cache for this frame
     sal_Int32           mnDPIX;                 //< Original Screen Resolution
     sal_Int32           mnDPIY;                 //< Original Screen Resolution
     ImplMapRes          maMapUnitRes;           //< for LogicUnitToPixel
-    sal_uIntPtr         mnAllSaveBackSize;      //< size of all bitmaps of saved backgrounds
     ImplSVEvent *       mnFocusId;              //< FocusId for PostUserLink
     ImplSVEvent *       mnMouseMoveId;          //< MoveId for PostUserLink
     long                mnLastMouseX;           //< last x mouse position
@@ -212,7 +186,6 @@ public:
     ~WindowImpl();
 
     ImplWinData*        mpWinData;
-    ImplOverlapData*    mpOverlapData;
     ImplFrameData*      mpFrameData;
     SalFrame*           mpFrame;
     SalObject*          mpSysObj;
@@ -232,12 +205,15 @@ public:
     VclPtr<vcl::Window> mpLastFocusWindow;
     VclPtr<vcl::Window> mpDlgCtrlDownWindow;
     std::vector<Link<VclWindowEvent&,void>> maEventListeners;
+    int mnEventListenersIteratingCount;
+    std::set<Link<VclWindowEvent&,void>> maEventListenersDeleted;
     std::vector<Link<VclWindowEvent&,void>> maChildEventListeners;
+    int mnChildEventListenersIteratingCount;
+    std::set<Link<VclWindowEvent&,void>> maChildEventListenersDeleted;
 
     // The canvas interface for this VCL window. Is persistent after the first GetCanvas() call
     css::uno::WeakReference< css::rendering::XCanvas >    mxCanvas;
 
-    ImplDelData*        mpFirstDel;
     void*               mpUserData;
     vcl::Cursor*        mpCursor;
     Pointer             maPointer;
@@ -381,8 +357,6 @@ public:
                         mbNonHomogeneous:1,
                         mbDoubleBufferingRequested:1;
 
-    vcl::RenderSettings maRenderSettings;
-
     css::uno::Reference< css::uno::XInterface > mxDNDListenerContainer;
 };
 
@@ -408,25 +382,10 @@ public:
 
 // helper methods
 
-bool ImplHandleMouseEvent( vcl::Window* pWindow, MouseNotifyEvent nSVEvent, bool bMouseLeave,
+bool ImplHandleMouseEvent( const VclPtr<vcl::Window>& xWindow, MouseNotifyEvent nSVEvent, bool bMouseLeave,
                            long nX, long nY, sal_uInt64 nMsgTime,
                            sal_uInt16 nCode, MouseEventModifiers nMode );
 void ImplHandleResize( vcl::Window* pWindow, long nNewWidth, long nNewHeight );
-
-inline bool ImplDoTiledRendering()
-{
-#if !HAVE_FEATURE_DESKTOP && !defined(ANDROID)
-    // We do tiled rendering only for iOS at the moment, actually, but
-    // let's see what happens if we assume it for Android, too.
-    // (That comment doesn't match what the code does, does it?)
-    return true;
-#else
-    // We need some way to know globally if this process will use
-    // tiled rendering or not. Or should this be a per-window setting?
-    // Or what?
-    return false;
-#endif
-}
 
 #endif // INCLUDED_VCL_INC_WINDOW_H
 

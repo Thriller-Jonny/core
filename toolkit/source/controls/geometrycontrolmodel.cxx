@@ -439,7 +439,6 @@
     //= OCommonGeometryControlModel
 
 
-
     typedef std::unordered_map< OUString, sal_Int32, OUStringHash > HashMapString2Int;
     typedef std::vector< css::uno::Sequence< css::beans::Property > >   PropSeqArray;
     typedef std::vector< ::std::vector< sal_Int32 > > IntArrayArray;
@@ -461,7 +460,6 @@
     // With this, we can ensure that two instances of this class share the
     // same PropertySetInfo if and only if both aggregates have the same
     // service specifier.
-
 
 
     OCommonGeometryControlModel::OCommonGeometryControlModel( Reference< XCloneable >& _rxAgg, const OUString& _rServiceSpecifier )
@@ -552,8 +550,8 @@
                 // -> remove from the aggregate property sequence
                 ::comphelper::removeElementAt( aAggregateProps, pAggPropPos - pAggProps );
                 // which means we have to adjust the pointers
-                pAggProps = aAggregateProps.getConstArray(),
-                pAggPropsEnd = aAggregateProps.getConstArray() + aAggregateProps.getLength(),
+                pAggProps = aAggregateProps.getConstArray();
+                pAggPropsEnd = aAggregateProps.getConstArray() + aAggregateProps.getLength();
 
                 // and additionally, remember the id of this property
                 rDuplicateIds.push_back( pProp->Handle );

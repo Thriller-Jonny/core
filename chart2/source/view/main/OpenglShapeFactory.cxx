@@ -25,7 +25,6 @@
 #include "CommonConverters.hxx"
 #include "macros.hxx"
 #include "PropertyMapper.hxx"
-#include <comphelper/InlineContainer.hxx>
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/drawing/CircleKind.hpp>
 #include <com/sun/star/drawing/DoubleSequence.hpp>
@@ -65,8 +64,6 @@ extern "C" {
                               {    return new opengl::OpenglShapeFactory();}
     }
 
-using dummy::DummyXShape;
-using dummy::DummyXShapes;
 using dummy::DummyCylinder;
 using dummy::DummyRectangle;
 using dummy::DummyPyramid;
@@ -217,14 +214,14 @@ uno::Reference< drawing::XShape >
 
 uno::Reference< drawing::XShape >
         OpenglShapeFactory::createStripe( const uno::Reference< drawing::XShapes >& xTarget
-                    , const Stripe& rStripe
+                    , const Stripe&
                     , const uno::Reference< beans::XPropertySet >& xSourceProp
                     , const tPropertyNameMap& rPropertyNameMap
                     , bool
                     , short
                     , bool )
 {
-    dummy::DummyStripe* pStripe = new dummy::DummyStripe(rStripe,
+    dummy::DummyStripe* pStripe = new dummy::DummyStripe(
             xSourceProp, rPropertyNameMap);
     xTarget->add(pStripe);
     return pStripe;
@@ -269,10 +266,9 @@ uno::Reference< drawing::XShape >
                       const uno::Reference< drawing::XShapes >& xTarget
                     , const drawing::Position3D& rPosition
                     , const drawing::Direction3D& rSize
-                    , const uno::Reference< graphic::XGraphic >& xGraphic )
+                    , const uno::Reference< graphic::XGraphic >&  )
 {
-    dummy::DummyGraphic2D* pGraphic = new dummy::DummyGraphic2D(rPosition, rSize,
-            xGraphic);
+    dummy::DummyGraphic2D* pGraphic = new dummy::DummyGraphic2D(rPosition, rSize);
     xTarget->add(pGraphic);
     return pGraphic;
 }
@@ -355,7 +351,7 @@ uno::Reference< drawing::XShape > OpenglShapeFactory::createInvisibleRectangle(
             , const awt::Size& rSize )
 {
     dummy::DummyRectangle* pRectangle = new dummy::DummyRectangle(rSize);
-    pRectangle->setPropertyValue("Invisible", uno::makeAny(sal_True));
+    pRectangle->setPropertyValue("Invisible", uno::makeAny(true));
     xTarget->add(pRectangle);
     return pRectangle;
 }
@@ -422,8 +418,9 @@ uno::Reference< drawing::XShape >
     tPropertyNameValueMap aValueMap;
     //fill line-, fill- and paragraph-properties into the ValueMap
     {
-        tMakePropertyNameMap aNameMap = PropertyMapper::getPropertyNameMapForParagraphProperties();
-        aNameMap( PropertyMapper::getPropertyNameMapForFillAndLineProperties() );
+        tPropertyNameMap aNameMap = PropertyMapper::getPropertyNameMapForParagraphProperties();
+        auto const & add = PropertyMapper::getPropertyNameMapForFillAndLineProperties();
+        aNameMap.insert(add.begin(), add.end());
 
         PropertyMapper::getValueMap( aValueMap, aNameMap, xTextProperties );
     }
@@ -435,8 +432,8 @@ uno::Reference< drawing::XShape >
 
         aValueMap.insert( tPropertyNameValueMap::value_type( "TextHorizontalAdjust", uno::makeAny(eHorizontalAdjust) ) ); // drawing::TextHorizontalAdjust
         aValueMap.insert( tPropertyNameValueMap::value_type( "TextVerticalAdjust", uno::makeAny(eVerticalAdjust) ) ); //drawing::TextVerticalAdjust
-        aValueMap.insert( tPropertyNameValueMap::value_type( "TextAutoGrowHeight", uno::makeAny(sal_True) ) ); // sal_Bool
-        aValueMap.insert( tPropertyNameValueMap::value_type( "TextAutoGrowWidth", uno::makeAny(sal_True) ) ); // sal_Bool
+        aValueMap.insert( tPropertyNameValueMap::value_type( "TextAutoGrowHeight", uno::makeAny(true) ) ); // sal_Bool
+        aValueMap.insert( tPropertyNameValueMap::value_type( "TextAutoGrowWidth", uno::makeAny(true) ) ); // sal_Bool
 
     }
 

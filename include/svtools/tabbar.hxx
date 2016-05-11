@@ -69,7 +69,6 @@ DeactivatePage  - Is called, when a page is deactivated. If another page
                   deactivated.
 
 
-
 Drag and Drop
 -------------
 
@@ -262,9 +261,6 @@ been carried out.
 
 class Button;
 
-// - WinBits -
-
-
 #define WB_RANGESELECT      ((WinBits)0x00200000)
 #define WB_MULTISELECT      ((WinBits)0x00400000)
 #define WB_TOPBORDER        ((WinBits)0x04000000)
@@ -273,18 +269,9 @@ class Button;
 #define WB_INSERTTAB        ((WinBits)0x40000000)
 #define WB_STDTABBAR        WB_BORDER
 
-
-// - TabBarPageBits -
-
-
 typedef sal_uInt16 TabBarPageBits;
 
-
-// - Bits for TabBarPages -
-
-
 #define TPB_SPECIAL         ((TabBarPageBits)0x0001)
-
 
 // - TabBar-Types - used in TabBar::AllowRenaming
 
@@ -293,9 +280,6 @@ enum TabBarAllowRenamingReturnCode {
    TABBAR_RENAMING_YES,
    TABBAR_RENAMING_CANCEL
 };
-
-
-// - TabBar -
 
 class MouseEvent;
 class TrackingEvent;
@@ -307,6 +291,7 @@ class TabBarEdit;
 struct ImplTabBarItem;
 struct TabBar_Impl;
 typedef std::vector<ImplTabBarItem*> ImplTabBarList;
+
 
 class SVT_DLLPUBLIC TabBar : public vcl::Window
 {
@@ -446,7 +431,7 @@ public:
 
     void            SetMaxPageWidth( long nMaxWidth );
 
-    void            EnableEditMode( bool bEnable = true ) { mbAutoEditMode = bEnable; }
+    void            EnableEditMode() { mbAutoEditMode = true; }
     bool            StartEditMode( sal_uInt16 nPageId );
     void            EndEditMode( bool bCancel = false );
     void            SetEditText( const OUString& rText ) { maEditText = rText; }
@@ -474,7 +459,7 @@ public:
     bool            StartDrag( const CommandEvent& rCEvt, vcl::Region& rRegion );
     sal_uInt16      ShowDropPos( const Point& rPos );
     void            HideDropPos();
-    bool            SwitchPage( const Point& rPos );
+    void            SwitchPage( const Point& rPos );
     void            EndSwitchPage();
 
     void            SetPageText( sal_uInt16 nPageId, const OUString& rText );

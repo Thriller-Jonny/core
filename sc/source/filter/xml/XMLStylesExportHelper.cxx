@@ -97,13 +97,7 @@ ScMyValidationsContainer::ScMyValidationsContainer()
     sINPTITLE(SC_UNONAME_INPTITLE),
     sINPMESS(SC_UNONAME_INPMESS),
     sERRTITLE(SC_UNONAME_ERRTITLE),
-    sERRMESS(SC_UNONAME_ERRMESS),
-    sOnError("OnError"),
-    sEventType("EventType"),
-    sStarBasic("StarBasic"),
-    sScript("Script"),
-    sLibrary("Library"),
-    sMacroName("MacroName")
+    sERRMESS(SC_UNONAME_ERRMESS)
 {
 }
 
@@ -111,10 +105,9 @@ ScMyValidationsContainer::~ScMyValidationsContainer()
 {
 }
 
-bool ScMyValidationsContainer::AddValidation(const uno::Any& aTempAny,
+void ScMyValidationsContainer::AddValidation(const uno::Any& aTempAny,
     sal_Int32& nValidationIndex)
 {
-    bool bAdded(false);
     uno::Reference<beans::XPropertySet> xPropertySet(aTempAny, uno::UNO_QUERY);
     if (xPropertySet.is())
     {
@@ -173,11 +166,9 @@ bool ScMyValidationsContainer::AddValidation(const uno::Any& aTempAny,
                 aValidation.sName += sCount;
                 aValidationVec.push_back(aValidation);
                 nValidationIndex = nCount;
-                bAdded = true;
             }
         }
     }
-    return bAdded;
 }
 
 OUString ScMyValidationsContainer::GetCondition(ScXMLExport& rExport, const ScMyValidation& aValidation)
@@ -423,17 +414,18 @@ void ScMyValidationsContainer::WriteValidations(ScXMLExport& rExport)
                             // and the property name is "MacroName".
                             bool bScriptURL = SfxApplication::IsXScriptURL( aItr->sErrorTitle );
 
+                            const OUString sScript("Script");
                             uno::Sequence<beans::PropertyValue> aSeq(3);
                             beans::PropertyValue* pArr(aSeq.getArray());
-                            pArr[0].Name = sEventType;
-                            pArr[0].Value <<= bScriptURL ? sScript : sStarBasic;
-                            pArr[1].Name = sLibrary;
+                            pArr[0].Name = "EventType";
+                            pArr[0].Value <<= bScriptURL ? sScript : OUString("StarBasic");
+                            pArr[1].Name = "Library";
                             pArr[1].Value <<= sEmptyString;
-                            pArr[2].Name = bScriptURL ? sScript : sMacroName;
+                            pArr[2].Name = bScriptURL ? sScript : OUString("MacroName");
                             pArr[2].Value <<= aItr->sErrorTitle;
 
                             // 2) export the sequence
-                            rExport.GetEventExport().ExportSingleEvent( aSeq, sOnError);
+                            rExport.GetEventExport().ExportSingleEvent( aSeq, "OnError");
                         }
                     }
                     break;
@@ -712,8 +704,8 @@ ScFormatRangeStyles::ScFormatRangeStyles()
 
 ScFormatRangeStyles::~ScFormatRangeStyles()
 {
-    ScMyOUStringVec::iterator i(aStyleNames.begin());
-    ScMyOUStringVec::iterator endi(aStyleNames.end());
+    auto i(aStyleNames.begin());
+    auto endi(aStyleNames.end());
     while (i != endi)
     {
         delete *i;
@@ -902,9 +894,6 @@ void ScFormatRangeStyles::GetFormatRanges(const sal_Int32 nStartColumn, const sa
     sal_Int32 nColumns = 0;
     while (aItr != aEndItr && nColumns < nTotalColumns)
     {
-#if OSL_DEBUG_LEVEL > 1
-        table::CellRangeAddress aTempRangeAddress((*aItr).aRangeAddress);
-#endif
         if (((*aItr).aRangeAddress.StartRow <= nRow) &&
             ((*aItr).aRangeAddress.EndRow >= nRow))
         {
@@ -994,8 +983,8 @@ ScColumnRowStylesBase::ScColumnRowStylesBase()
 
 ScColumnRowStylesBase::~ScColumnRowStylesBase()
 {
-    ScMyOUStringVec::iterator i(aStyleNames.begin());
-    ScMyOUStringVec::iterator endi(aStyleNames.end());
+    auto i(aStyleNames.begin());
+    auto endi(aStyleNames.end());
     while (i != endi)
     {
         delete *i;

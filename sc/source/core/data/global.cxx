@@ -59,6 +59,7 @@
 #include <unotools/transliterationwrapper.hxx>
 
 #include <LibreOfficeKit/LibreOfficeKitEnums.h>
+#include <comphelper/lok.hxx>
 
 #include "global.hxx"
 #include "scresid.hxx"
@@ -170,8 +171,8 @@ bool ScGlobal::HasAttrChanged( const SfxItemSet&  rNewAttrs,
     return bInvalidate;
 }
 
-sal_uLong ScGlobal::GetStandardFormat( SvNumberFormatter& rFormatter,
-        sal_uLong nFormat, short nType )
+sal_uInt32 ScGlobal::GetStandardFormat( SvNumberFormatter& rFormatter,
+        sal_uInt32 nFormat, short nType )
 {
     const SvNumberformat* pFormat = rFormatter.GetEntry( nFormat );
     if ( pFormat )
@@ -361,16 +362,16 @@ OUString ScGlobal::GetErrorString(sal_uInt16 nErrNumber)
     OUString sResStr;
     switch (nErrNumber)
     {
-        case NOTAVAILABLE          : nErrNumber = STR_NV_STR; break;
-        case errNoRef              : nErrNumber = STR_NO_REF_TABLE; break;
-        case errNoName             : nErrNumber = STR_NO_NAME_REF; break;
-        case errNoAddin            : nErrNumber = STR_NO_ADDIN; break;
-        case errNoMacro            : nErrNumber = STR_NO_MACRO; break;
-        case errDoubleRef          :
-        case errNoValue            : nErrNumber = STR_NO_VALUE; break;
-        case errNoCode             : nErrNumber = STR_NULL_ERROR; break;
-        case errDivisionByZero     : nErrNumber = STR_DIV_ZERO; break;
-        case errIllegalFPOperation : nErrNumber = STR_NUM_ERROR; break;
+        case formula::NOTAVAILABLE          : nErrNumber = STR_NV_STR; break;
+        case formula::errNoRef              : nErrNumber = STR_NO_REF_TABLE; break;
+        case formula::errNoName             : nErrNumber = STR_NO_NAME_REF; break;
+        case formula::errNoAddin            : nErrNumber = STR_NO_ADDIN; break;
+        case formula::errNoMacro            : nErrNumber = STR_NO_MACRO; break;
+        case formula::errDoubleRef          :
+        case formula::errNoValue            : nErrNumber = STR_NO_VALUE; break;
+        case formula::errNoCode             : nErrNumber = STR_NULL_ERROR; break;
+        case formula::errDivisionByZero     : nErrNumber = STR_DIV_ZERO; break;
+        case formula::errIllegalFPOperation : nErrNumber = STR_NUM_ERROR; break;
 
         default          : sResStr = GetRscString(STR_ERROR_STR) + OUString::number( nErrNumber );
                            nErrNumber = 0;
@@ -388,84 +389,86 @@ OUString ScGlobal::GetLongErrorString(sal_uInt16 nErrNumber)
         case 0:
             break;
         case 1:
-        case errIllegalArgument:
+        case formula::errIllegalArgument:
             nErrNumber = STR_LONG_ERR_ILL_ARG;
         break;
         case 2:
         case 3:
         case 4:
         case 5:
-        case errIllegalFPOperation:
+        case formula::errIllegalFPOperation:
             nErrNumber = STR_LONG_ERR_ILL_FPO;
         break;
-        case errIllegalChar:
+        case formula::errIllegalChar:
             nErrNumber = STR_LONG_ERR_ILL_CHAR;
         break;
-        case errIllegalParameter:
+        case formula::errIllegalParameter:
             nErrNumber = STR_LONG_ERR_ILL_PAR;
         break;
-        case errSeparator:
+        case formula::errSeparator:
             nErrNumber = STR_LONG_ERR_ILL_SEP;
         break;
-        case errPair:
-        case errPairExpected:
+        case formula::errPair:
+        case formula::errPairExpected:
             nErrNumber = STR_LONG_ERR_PAIR;
         break;
-        case errOperatorExpected:
+        case formula::errOperatorExpected:
             nErrNumber = STR_LONG_ERR_OP_EXP;
         break;
-        case errVariableExpected:
-        case errParameterExpected:
+        case formula::errVariableExpected:
+        case formula::errParameterExpected:
             nErrNumber = STR_LONG_ERR_VAR_EXP;
         break;
-        case errCodeOverflow:
+        case formula::errCodeOverflow:
             nErrNumber = STR_LONG_ERR_CODE_OVF;
         break;
-        case errStringOverflow:
+        case formula::errStringOverflow:
             nErrNumber = STR_LONG_ERR_STR_OVF;
         break;
-        case errStackOverflow:
-        case errInterpOverflow:
+        case formula::errStackOverflow:
             nErrNumber = STR_LONG_ERR_STACK_OVF;
         break;
-        case errIllegalJump:
-        case errUnknownState:
-        case errUnknownVariable:
-        case errUnknownOpCode:
-        case errUnknownStackVariable:
-        case errUnknownToken:
-        case errNoCode:
-        case errDoubleRef:
+        case formula::errMatrixSize:
+            nErrNumber = STR_LONG_ERR_MATRIX_SIZE;
+        break;
+        case formula::errIllegalJump:
+        case formula::errUnknownState:
+        case formula::errUnknownVariable:
+        case formula::errUnknownOpCode:
+        case formula::errUnknownStackVariable:
+        case formula::errUnknownToken:
+        case formula::errNoCode:
+        case formula::errDoubleRef:
             nErrNumber = STR_LONG_ERR_SYNTAX;
         break;
-        case errCircularReference:
+        case formula::errCircularReference:
             nErrNumber = STR_LONG_ERR_CIRC_REF;
         break;
-        case errNoConvergence:
+        case formula::errNoConvergence:
             nErrNumber = STR_LONG_ERR_NO_CONV;
         break;
-        case errNoRef:
+        case formula::errNoRef:
             nErrNumber = STR_LONG_ERR_NO_REF;
         break;
-        case errNoName:
+        case formula::errNoName:
             nErrNumber = STR_LONG_ERR_NO_NAME;
         break;
-        case errNoAddin:
+        case formula::errNoAddin:
             nErrNumber = STR_LONG_ERR_NO_ADDIN;
         break;
-        case errNoMacro:
+        case formula::errNoMacro:
             nErrNumber = STR_LONG_ERR_NO_MACRO;
         break;
-        case errDivisionByZero:
+        case formula::errDivisionByZero:
             nErrNumber = STR_LONG_ERR_DIV_ZERO;
         break;
-        case errNestedArray:
+        case formula::errNestedArray:
             nErrNumber = STR_ERR_LONG_NESTED_ARRAY;
         break;
-        case errNoValue:
+        case formula::errNoValue:
             nErrNumber = STR_LONG_ERR_NO_VALUE;
         break;
-        case NOTAVAILABLE:
+        case formula::NOTAVAILABLE:
             nErrNumber = STR_LONG_ERR_NV;
         break;
         default:
@@ -659,7 +662,7 @@ rtl_TextEncoding ScGlobal::GetCharsetValue( const OUString& rCharSet )
     if ( CharClass::isAsciiNumeric( rCharSet ) )
     {
         sal_Int32 nVal = rCharSet.toInt32();
-        if ( !nVal || nVal == RTL_TEXTENCODING_DONTKNOW )
+        if ( nVal == RTL_TEXTENCODING_DONTKNOW )
             return osl_getThreadTextEncoding();
         return (rtl_TextEncoding) nVal;
     }
@@ -673,6 +676,11 @@ rtl_TextEncoding ScGlobal::GetCharsetValue( const OUString& rCharSet )
     else if (rCharSet.equalsIgnoreAsciiCase("IBMPC_861")) return RTL_TEXTENCODING_IBM_861;
     else if (rCharSet.equalsIgnoreAsciiCase("IBMPC_863")) return RTL_TEXTENCODING_IBM_863;
     else if (rCharSet.equalsIgnoreAsciiCase("IBMPC_865")) return RTL_TEXTENCODING_IBM_865;
+    // Some wrong "help" on the net mentions UTF8 and even unoconv uses it,
+    // which worked accidentally if the system encoding is UTF-8 anyway, so
+    // support it ;) but only when reading.
+    else if (rCharSet.equalsIgnoreAsciiCase("UTF8"))      return RTL_TEXTENCODING_UTF8;
+    else if (rCharSet.equalsIgnoreAsciiCase("UTF-8"))     return RTL_TEXTENCODING_UTF8;
     else return osl_getThreadTextEncoding();
 }
 
@@ -818,8 +826,9 @@ sal_Int32 ScGlobal::FindUnquoted( const OUString& rString, sal_Unicode cChar)
     return -1;
 }
 
-const sal_Unicode* ScGlobal::FindUnquoted( const sal_Unicode* pString, sal_Unicode cChar, sal_Unicode cQuote )
+const sal_Unicode* ScGlobal::FindUnquoted( const sal_Unicode* pString, sal_Unicode cChar )
 {
+    sal_Unicode cQuote = '\'';
     const sal_Unicode* p = pString;
     bool bQuoted = false;
     while (*p)
@@ -860,7 +869,7 @@ bool ScGlobal::EETextObjEqual( const EditTextObject* pObj1,
         SvMemoryStream  aStream2;
         pObj1->Store( aStream1 );
         pObj2->Store( aStream2 );
-        sal_uLong nSize = aStream1.Tell();
+        const sal_uInt64 nSize = aStream1.Tell();
         if ( aStream2.Tell() == nSize )
             if ( !memcmp( aStream1.GetData(), aStream2.GetData(), (sal_uInt16) nSize ) )
                 return true;
@@ -871,7 +880,7 @@ bool ScGlobal::EETextObjEqual( const EditTextObject* pObj1,
 
 void ScGlobal::OpenURL(const OUString& rURL, const OUString& rTarget, const SdrModel* pDrawLayer)
 {
-    if (pDrawLayer && pDrawLayer->isTiledRendering())
+    if (pDrawLayer && comphelper::LibreOfficeKit::isActive())
     {
         pDrawLayer->libreOfficeKitCallback(LOK_CALLBACK_HYPERLINK_CLICKED, rURL.toUtf8().getStr());
         return;
@@ -897,7 +906,8 @@ void ScGlobal::OpenURL(const OUString& rURL, const OUString& rTarget, const SdrM
     }
     SfxStringItem aUrl( SID_FILE_NAME, rURL );
     SfxStringItem aTarget( SID_TARGETNAME, rTarget );
-    aTarget.SetValue("_blank");
+    if ( nScClickMouseModifier & KEY_SHIFT )     // control-click -> into new window
+        aTarget.SetValue("_blank");
     SfxViewFrame* pFrame = nullptr;
     OUString aReferName;
     if ( pScActiveViewShell )
@@ -917,12 +927,11 @@ void ScGlobal::OpenURL(const OUString& rURL, const OUString& rTarget, const SdrM
     // No SID_SILENT anymore
     SfxViewFrame* pViewFrm = SfxViewFrame::Current();
     if (pViewFrm)
-        pViewFrm->GetDispatcher()->Execute( SID_OPENDOC,
-                                    SfxCallMode::ASYNCHRON | SfxCallMode::RECORD,
-                                    &aUrl, &aTarget,
-                                    &aFrm, &aReferer,
-                                    &aNewView, &aBrowsing,
-                                    0L );
+    {
+        pViewFrm->GetDispatcher()->ExecuteList(SID_OPENDOC,
+                SfxCallMode::ASYNCHRON | SfxCallMode::RECORD,
+                { &aUrl, &aTarget, &aFrm, &aReferer, &aNewView, &aBrowsing });
+    }
 }
 
 bool ScGlobal::IsSystemRTL()
@@ -1044,7 +1053,7 @@ void ScGlobal::AddLanguage( SfxItemSet& rSet, SvNumberFormatter& rFormatter )
         const SvNumberformat* pHardFormat = rFormatter.GetEntry(
             static_cast<const SfxUInt32Item*>(pHardItem)->GetValue() );
 
-        sal_uLong nParentFmt = 0; // Pool default
+        sal_uInt32 nParentFmt = 0; // Pool default
         const SfxItemSet* pParent = rSet.GetParent();
         if ( pParent )
             nParentFmt = static_cast<const SfxUInt32Item&>(pParent->Get( ATTR_VALUE_FORMAT )).GetValue();

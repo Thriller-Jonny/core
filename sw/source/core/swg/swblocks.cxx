@@ -74,16 +74,16 @@ SwBlockName::SwBlockName( const OUString& rShort, const OUString& rLong, const O
 /**
  * Is the provided file a storage or doesn't it exist?
  */
-short SwImpBlocks::GetFileType( const OUString& rFile )
+SwImpBlocks::FileType SwImpBlocks::GetFileType( const OUString& rFile )
 {
     if( !FStatHelper::IsDocument( rFile ) )
-        return SWBLK_NO_FILE;
+        return FileType::NoFile;
     if( SwXMLTextBlocks::IsFileUCBStorage( rFile ) )
-        return SWBLK_XML;
+        return FileType::XML;
     if( SotStorage::IsStorageFile( rFile ) )
-        return SWBLK_SW3;
+        return FileType::SW3;
     //otherwise return NONE
-    return SWBLK_NONE;
+    return FileType::None;
 }
 
 SwImpBlocks::SwImpBlocks( const OUString& rFile, bool )
@@ -217,12 +217,12 @@ bool SwImpBlocks::IsOnlyTextBlock( const OUString& ) const
     return false;
 }
 
-sal_uLong SwImpBlocks::GetMacroTable( sal_uInt16, SvxMacroTableDtor&, bool )
+sal_uLong SwImpBlocks::GetMacroTable( sal_uInt16, SvxMacroTableDtor& )
 {
     return 0;
 }
 
-sal_uLong SwImpBlocks::SetMacroTable( sal_uInt16 , const SvxMacroTableDtor& , bool )
+sal_uLong SwImpBlocks::SetMacroTable( sal_uInt16 , const SvxMacroTableDtor& )
 {
     return 0;
 }
@@ -239,8 +239,9 @@ SwTextBlocks::SwTextBlocks( const OUString& rFile )
     const OUString sFileName = aObj.GetMainURL( INetURLObject::NO_DECODE );
     switch( SwImpBlocks::GetFileType( rFile ) )
     {
-    case SWBLK_XML:     pImp = new SwXMLTextBlocks( sFileName ); break;
-    case SWBLK_NO_FILE: pImp = new SwXMLTextBlocks( sFileName ); break;
+    case SwImpBlocks::FileType::XML:    pImp = new SwXMLTextBlocks( sFileName ); break;
+    case SwImpBlocks::FileType::NoFile: pImp = new SwXMLTextBlocks( sFileName ); break;
+    default: break;
     }
     if( !pImp )
         nErr = ERR_SWG_FILE_FORMAT_ERROR;
@@ -266,8 +267,8 @@ bool SwTextBlocks::IsOld() const
 {
     if (pImp)
     {
-        short nType = pImp->GetFileType();
-        if (SWBLK_SW3 == nType || SWBLK_SW2 == nType )
+        SwImpBlocks::FileType nType = pImp->GetFileType();
+        if (SwImpBlocks::FileType::SW3 == nType || SwImpBlocks::FileType::SW2 == nType )
             return true;
     }
     return false;
@@ -329,12 +330,11 @@ bool SwTextBlocks::Delete( sal_uInt16 n )
     return false;
 }
 
-sal_uInt16 SwTextBlocks::Rename( sal_uInt16 n, const OUString* s, const OUString* l )
+void SwTextBlocks::Rename( sal_uInt16 n, const OUString* s, const OUString* l )
 {
-    sal_uInt16 nIdx = USHRT_MAX;
     if( pImp && !pImp->bInPutMuchBlocks )
     {
-        pImp->nCur = nIdx;
+        pImp->nCur = USHRT_MAX;
         OUString aNew;
         OUString aLong;
         if( s )
@@ -345,7 +345,7 @@ sal_uInt16 SwTextBlocks::Rename( sal_uInt16 n, const OUString* s, const OUString
         {
             OSL_ENSURE( false, "No short name provided in the rename" );
             nErr = ERR_SWG_INTERNAL_ERROR;
-            return USHRT_MAX;
+            return;
         }
 
         if( pImp->IsFileChanged() )
@@ -366,10 +366,7 @@ sal_uInt16 SwTextBlocks::Rename( sal_uInt16 n, const OUString* s, const OUString
         }
         pImp->CloseFile();
         pImp->Touch();
-        if( !nErr )
-            nIdx = pImp->GetIndex( aNew );
     }
-    return nIdx;
 }
 
 sal_uLong SwTextBlocks::CopyBlock( SwTextBlocks& rSource, OUString& rSrcShort,
@@ -378,8 +375,8 @@ sal_uLong SwTextBlocks::CopyBlock( SwTextBlocks& rSource, OUString& rSrcShort,
     bool bIsOld = false;
     if (rSource.pImp)
     {
-        short nType = rSource.pImp->GetFileType();
-        if (SWBLK_SW2 == nType || SWBLK_SW3 == nType )
+        SwImpBlocks::FileType nType = rSource.pImp->GetFileType();
+        if (SwImpBlocks::FileType::SW2 == nType || SwImpBlocks::FileType::SW3 == nType )
             bIsOld = true;
     }
     if( bIsOld ) //rSource.IsOld() )

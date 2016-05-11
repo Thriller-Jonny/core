@@ -18,7 +18,7 @@
  */
 
 #include <sal/types.h>
-#include "boost/noncopyable.hpp"
+#include <chrono>
 #include "com/sun/star/awt/AsyncCallback.hpp"
 #include "com/sun/star/awt/XCallback.hpp"
 #include "com/sun/star/beans/PropertyState.hpp"
@@ -55,10 +55,16 @@
 
 namespace {
 
-struct Result: private boost::noncopyable {
+struct Result {
     osl::Condition condition;
     bool success;
     OUString result;
+    Result()
+        : success(false)
+    {
+    }
+    Result(const Result&) = delete;
+    Result& operator=(const Result&) = delete;
 };
 
 class Listener:
@@ -146,7 +152,7 @@ void Test::test() {
     args[0].State = css::beans::PropertyState_DIRECT_VALUE;
     args[1].Name = "ReadOnly";
     args[1].Handle = -1;
-    args[1].Value <<= sal_True;
+    args[1].Value <<= true;
     args[1].State = css::beans::PropertyState_DIRECT_VALUE;
     css::util::URL url;
     url.Complete = "vnd.sun.star.script:Standard.Global.StartTestWithDefaultOptions?"
@@ -177,8 +183,7 @@ void Test::test() {
             css::uno::Any());
     // Wait for result.condition or connection_ going stale:
     for (;;) {
-        TimeValue delay = { 1, 0 }; // 1 sec
-        osl::Condition::Result res = result.condition.wait(&delay);
+        osl::Condition::Result res = result.condition.wait(std::chrono::seconds(1)); // 1 sec delay
         if (res == osl::Condition::result_ok) {
             break;
         }

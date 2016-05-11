@@ -33,7 +33,6 @@
 #include <rtl/ustring.hxx>
 
 
-
 using namespace ::xmloff::token;
 
 using ::com::sun::star::beans::XPropertySet;
@@ -45,7 +44,6 @@ const sal_Char sAPI_CreateFromOutline[] = "CreateFromOutline";
 const sal_Char sAPI_CreateFromMarks[] = "CreateFromMarks";
 const sal_Char sAPI_Level[] = "Level";
 const sal_Char sAPI_CreateFromLevelParagraphStyles[] = "CreateFromLevelParagraphStyles";
-
 
 
 XMLIndexTOCSourceContext::XMLIndexTOCSourceContext(
@@ -137,19 +135,11 @@ void XMLIndexTOCSourceContext::ProcessAttribute(
 
 void XMLIndexTOCSourceContext::EndElement()
 {
-    Any aAny;
+    rIndexPropertySet->setPropertyValue(sCreateFromMarks, css::uno::Any(bUseMarks));
+    rIndexPropertySet->setPropertyValue(sCreateFromOutline, css::uno::Any(bUseOutline));
+    rIndexPropertySet->setPropertyValue(sCreateFromLevelParagraphStyles, css::uno::Any(bUseParagraphStyles));
 
-    aAny.setValue(&bUseMarks, cppu::UnoType<bool>::get());
-    rIndexPropertySet->setPropertyValue(sCreateFromMarks, aAny);
-
-    aAny.setValue(&bUseOutline, cppu::UnoType<bool>::get());
-    rIndexPropertySet->setPropertyValue(sCreateFromOutline, aAny);
-
-    aAny.setValue(&bUseParagraphStyles, cppu::UnoType<bool>::get());
-    rIndexPropertySet->setPropertyValue(sCreateFromLevelParagraphStyles, aAny);
-
-    aAny <<= (sal_Int16)nOutlineLevel;
-    rIndexPropertySet->setPropertyValue(sLevel, aAny);
+    rIndexPropertySet->setPropertyValue(sLevel, css::uno::Any((sal_Int16)nOutlineLevel));
 
     // process common attributes
     XMLIndexSourceBaseContext::EndElement();

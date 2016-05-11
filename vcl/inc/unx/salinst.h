@@ -23,11 +23,10 @@
 #include <osl/thread.hxx>
 #include <vclpluginapi.h>
 #include <salinst.hxx>
-#include "generic/geninst.h"
+#include "unx/geninst.h"
 
-#include <prex.h>
 #include <X11/Xlib.h>
-#include <postx.h>
+#include <X11/Xutil.h>
 
 namespace com { namespace sun { namespace star { namespace datatransfer {
     namespace clipboard { class XClipboard; }
@@ -45,7 +44,7 @@ protected:
     SalXLib *mpXLib;
 
 public:
-    X11SalInstance( SalYieldMutex* pMutex ) : SalGenericInstance( pMutex ), mpXLib(NULL) {}
+    explicit X11SalInstance(SalYieldMutex* pMutex);
     virtual ~X11SalInstance();
 
     virtual SalFrame*           CreateChildFrame( SystemParentData* pParent, SalFrameStyleFlags nStyle ) override;
@@ -56,7 +55,7 @@ public:
     virtual void                DestroyObject( SalObject* pObject ) override;
 
     /// Gtk vclplug needs to pass GtkSalGraphics to X11SalVirtualDevice, so create it, and pass as pNewGraphics.
-    virtual SalVirtualDevice* CreateX11VirtualDevice(SalGraphics* pGraphics, long &nDX, long &nDY,
+    static SalVirtualDevice* CreateX11VirtualDevice(SalGraphics* pGraphics, long &nDX, long &nDY,
             DeviceFormat eFormat, const SystemGraphicsData* pData, X11SalGraphics* pNewGraphics);
 
     virtual SalVirtualDevice*   CreateVirtualDevice( SalGraphics* pGraphics,

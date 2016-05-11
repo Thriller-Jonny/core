@@ -110,7 +110,7 @@ void DrawDocShell::Construct( bool bClipboard )
     mpDoc->SetSdrUndoManager( mpUndoManager );
     mpDoc->SetSdrUndoFactory( new sd::UndoFactory );
     UpdateTablePointers();
-    SetStyleFamily(5);       //CL: actually SFX_STYLE_FAMILY_PSEUDO
+    SetStyleFamily(SfxStyleFamily::Pseudo);
 }
 
 DrawDocShell::DrawDocShell(SfxObjectCreateMode eMode,
@@ -197,8 +197,11 @@ DrawDocShell::~DrawDocShell()
         pFrame = SfxViewFrame::GetFirst( this );
 
     if( pFrame )
-        pFrame->GetDispatcher()->Execute(
-            SID_NAVIGATOR_INIT, SfxCallMode::ASYNCHRON | SfxCallMode::RECORD, &aItem, 0L);
+    {
+        pFrame->GetDispatcher()->ExecuteList(
+            SID_NAVIGATOR_INIT, SfxCallMode::ASYNCHRON | SfxCallMode::RECORD,
+            { &aItem });
+    }
 }
 
 void DrawDocShell::GetState(SfxItemSet &rSet)
@@ -215,6 +218,10 @@ void DrawDocShell::GetState(SfxItemSet &rSet)
 
         switch ( nSlotId )
         {
+            case SID_ATTR_CHAR_FONTLIST:
+                rSet.Put( SvxFontListItem( mpFontList, nSlotId ) );
+            break;
+
             case SID_SEARCH_ITEM:
             {
                 rSet.Put( *SD_MOD()->GetSearchItem() );
@@ -469,15 +476,6 @@ void DrawDocShell::libreOfficeKitCallback(int nType, const char* pPayload) const
     if (mpDoc)
         mpDoc->libreOfficeKitCallback(nType, pPayload);
 }
-
-bool DrawDocShell::isTiledRendering() const
-{
-    if (!mpDoc)
-        return false;
-    return mpDoc->isTiledRendering();
-}
-
-
 
 } // end of namespace sd
 

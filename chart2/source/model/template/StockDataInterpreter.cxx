@@ -146,7 +146,8 @@ InterpretedData SAL_CALL StockDataInterpreter::interpretDataSource(
             aSequences[nCandleStickGroupIndex][nLabeledSeqIdx][nSeqIdx].set( aData[nSourceIndex] );
             if( aData[nSourceIndex].is())
                 SetRole( aData[nSourceIndex]->getValues(), "values-first");
-            ++nSourceIndex, ++nSeqIdx;
+            ++nSourceIndex;
+            ++nSeqIdx;
         }
         else
             aSequences[nCandleStickGroupIndex][nLabeledSeqIdx].realloc( 3 );
@@ -154,17 +155,20 @@ InterpretedData SAL_CALL StockDataInterpreter::interpretDataSource(
         aSequences[nCandleStickGroupIndex][nLabeledSeqIdx][nSeqIdx].set( aData[nSourceIndex] );
         if( aData[nSourceIndex].is())
             SetRole( aData[nSourceIndex]->getValues(), "values-min");
-        ++nSourceIndex, ++nSeqIdx;
+        ++nSourceIndex;
+        ++nSeqIdx;
 
         aSequences[nCandleStickGroupIndex][nLabeledSeqIdx][nSeqIdx].set( aData[nSourceIndex] );
         if( aData[nSourceIndex].is())
             SetRole( aData[nSourceIndex]->getValues(), "values-max");
-        ++nSourceIndex, ++nSeqIdx;
+        ++nSourceIndex;
+        ++nSeqIdx;
 
         aSequences[nCandleStickGroupIndex][nLabeledSeqIdx][nSeqIdx].set( aData[nSourceIndex] );
         if( aData[nSourceIndex].is())
             SetRole( aData[nSourceIndex]->getValues(), "values-last");
-        ++nSourceIndex, ++nSeqIdx;
+        ++nSourceIndex;
+        ++nSeqIdx;
     }
 
     // 3. create series with remaining sequences
@@ -194,7 +198,8 @@ InterpretedData SAL_CALL StockDataInterpreter::interpretDataSource(
         aSequences[nCandleStickGroupIndex][nSeriesIndex][nSeqIdx].set( aData[nSourceIndex] );
         if( aData[nSourceIndex].is())
             SetRole( aData[nSourceIndex]->getValues(), "values-min");
-        ++nSourceIndex, ++nSeqIdx;
+        ++nSourceIndex;
+        ++nSeqIdx;
 
         // 2. high
         if( nSeqIdx < nRemaining )
@@ -202,7 +207,8 @@ InterpretedData SAL_CALL StockDataInterpreter::interpretDataSource(
             aSequences[nCandleStickGroupIndex][nSeriesIndex][nSeqIdx].set( aData[nSourceIndex] );
             if( aData[nSourceIndex].is())
                 SetRole( aData[nSourceIndex]->getValues(), "values-max");
-            ++nSourceIndex, ++nSeqIdx;
+            ++nSourceIndex;
+            ++nSeqIdx;
         }
 
         // 3. close
@@ -212,7 +218,8 @@ InterpretedData SAL_CALL StockDataInterpreter::interpretDataSource(
             aSequences[nCandleStickGroupIndex][nSeriesIndex][nSeqIdx].set( aData[nSourceIndex] );
             if( aData[nSourceIndex].is())
                 SetRole( aData[nSourceIndex]->getValues(), "values-last");
-            ++nSourceIndex, ++nSeqIdx;
+            ++nSourceIndex;
+            ++nSeqIdx;
         }
 
         // 4. open
@@ -273,7 +280,7 @@ sal_Bool SAL_CALL StockDataInterpreter::isDataCompatible(
 
     // 1. correct number of sub-types
     if( aInterpretedData.Series.getLength() < (bHasVolume ? 2 : 1 ))
-        return sal_False;
+        return false;
 
     // 2. a. volume -- use default check
     if( bHasVolume )
@@ -282,7 +289,7 @@ sal_Bool SAL_CALL StockDataInterpreter::isDataCompatible(
                 InterpretedData( Sequence< Sequence< Reference< XDataSeries > > >(
                                      aInterpretedData.Series.getConstArray(), 1 ),
                                  aInterpretedData.Categories )))
-            return sal_False;
+            return false;
     }
 
     // 2. b. candlestick
@@ -290,7 +297,7 @@ sal_Bool SAL_CALL StockDataInterpreter::isDataCompatible(
         OSL_ASSERT( aInterpretedData.Series.getLength() > (bHasVolume ? 1 : 0));
         Sequence< Reference< XDataSeries > > aSeries( aInterpretedData.Series[(bHasVolume ? 1 : 0)] );
         if(!aSeries.getLength())
-            return sal_False;
+            return false;
         for( sal_Int32 i=0; i<aSeries.getLength(); ++i )
         {
             try
@@ -298,7 +305,7 @@ sal_Bool SAL_CALL StockDataInterpreter::isDataCompatible(
                 Reference< data::XDataSource > xSrc( aSeries[i], uno::UNO_QUERY_THROW );
                 Sequence< Reference< data::XLabeledDataSequence > > aSeq( xSrc->getDataSequences());
                 if( aSeq.getLength() != nNumberOfNecessarySequences )
-                    return sal_False;
+                    return false;
             }
             catch( const uno::Exception & ex )
             {
@@ -310,7 +317,7 @@ sal_Bool SAL_CALL StockDataInterpreter::isDataCompatible(
     // 2. c. additional series
     // ignore
 
-    return sal_True;
+    return true;
 }
 
 InterpretedData SAL_CALL StockDataInterpreter::reinterpretDataSeries(

@@ -38,10 +38,6 @@ using namespace ::ooo;
 using namespace ::ooo::vba;
 using namespace ::com::sun::star;
 
-using ::com::sun::star::uno::Reference;
-using ::com::sun::star::uno::UNO_QUERY_THROW;
-using ::com::sun::star::uno::UNO_QUERY;
-
 SwVbaApplication::SwVbaApplication( uno::Reference<uno::XComponentContext >& xContext ): SwVbaApplication_BASE( xContext )
 {
 }
@@ -153,9 +149,9 @@ void SAL_CALL SwVbaApplication::setEnableCancelKey( sal_Int32/* _enableCancelKey
     // seems not supported in Writer
 }
 
-float SAL_CALL SwVbaApplication::CentimetersToPoints( float _Centimeters ) throw (uno::RuntimeException, std::exception)
+float SAL_CALL SwVbaApplication::CentimetersToPoints( float Centimeters ) throw (uno::RuntimeException, std::exception)
 {
-    return VbaApplicationBase::CentimetersToPoints( _Centimeters );
+    return VbaApplicationBase::CentimetersToPoints( Centimeters );
 }
 
 uno::Reference< frame::XModel >

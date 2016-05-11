@@ -20,12 +20,6 @@ using namespace svgi;
 class TestParser : public CppUnit::TestFixture
 {
 public:
-    void setUp()
-    {}
-
-    void tearDown()
-    {}
-
     void testParseColor()
     {
         ARGBColor aTmp;
@@ -193,7 +187,6 @@ public:
     // TODO: CPPUNIT_TEST(testParseXlinkHref);
     CPPUNIT_TEST_SUITE_END();
 };
-
 
 
 CPPUNIT_TEST_SUITE_NAMED_REGISTRATION(TestParser, "test svg parser fragments");

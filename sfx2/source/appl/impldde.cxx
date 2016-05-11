@@ -18,7 +18,7 @@
  */
 
 
-#if defined(WNT)
+#if defined(_WIN32)
 #include <prewin.h>
 #include <postwin.h>
 #endif
@@ -46,9 +46,6 @@
 #include <sot/formats.hxx>
 
 #include <unotools/securityoptions.hxx>
-
-#define DDELINK_ERROR_APP   1
-#define DDELINK_ERROR_DATA  2
 
 using namespace ::com::sun::star::uno;
 
@@ -121,10 +118,10 @@ IMPL_LINK_NOARG_TYPED( SvDDELinkEditDialog, EditHdl_Impl, Edit&, void)
 }
 
 SvDDEObject::SvDDEObject()
-    : pConnection( nullptr ), pLink( nullptr ), pRequest( nullptr ), pGetData( nullptr ), nError( 0 )
+    : pConnection( nullptr ), pLink( nullptr ), pRequest( nullptr ), pGetData( nullptr )
 {
     SetUpdateTimeout( 100 );
-    bWaitForData = sal_False;
+    bWaitForData = false;
 }
 
 SvDDEObject::~SvDDEObject()
@@ -148,15 +145,13 @@ bool SvDDEObject::GetData( css::uno::Any & rData /*out param*/,
 
         delete pConnection;
         pConnection = new DdeConnection( sServer, sTopic );
-        if( pConnection->GetError() )
-            nError = DDELINK_ERROR_APP;
     }
 
     if( bWaitForData ) // we are in an rekursive loop, get out again
         return false;
 
     // Lock against Reentrance
-    bWaitForData = sal_True;
+    bWaitForData = true;
 
     // if you want to print, we'll wait until the data is available
     if( bSynchron )
@@ -171,10 +166,7 @@ bool SvDDEObject::GetData( css::uno::Any & rData /*out param*/,
             aReq.Execute();
         } while( aReq.GetError() && ImplHasOtherFormat( aReq ) );
 
-        if( pConnection->GetError() )
-            nError = DDELINK_ERROR_DATA;
-
-        bWaitForData = sal_False;
+        bWaitForData = false;
     }
     else
     {
@@ -235,11 +227,8 @@ bool SvDDEObject::Connect( SvBaseLink * pSvLink )
         if( bSysTopic )
         {
             // if the system topic works then the server is up but just doesn't know the original topic
-            nError = DDELINK_ERROR_DATA;
             return false;
         }
-
-        nError = DDELINK_ERROR_APP;
     }
 
     if( SfxLinkUpdateMode::ALWAYS == nLinkType && !pLink && !pConnection->GetError() )
@@ -352,7 +341,7 @@ IMPL_LINK_TYPED( SvDDEObject, ImplGetDDEData, const DdeData*, pData, void )
                 aVal <<= aSeq;
                 DataChanged( SotExchange::GetFormatMimeType(
                                                 pData->GetFormat() ), aVal );
-                bWaitForData = sal_False;
+                bWaitForData = false;
             }
         }
     }
@@ -376,13 +365,13 @@ IMPL_LINK_TYPED( SvDDEObject, ImplDoneDDEData, bool, bValid, void )
             }
             else if( pReq == pRequest )
             {
-                bWaitForData = sal_False;
+                bWaitForData = false;
             }
         }
     }
     else
         // End waiting
-        bWaitForData = sal_False;
+        bWaitForData = false;
 }
 
 }

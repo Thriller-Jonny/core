@@ -52,25 +52,17 @@ using osl::MutexGuard;
 
 using com::sun::star::beans::XPropertySet;
 
-using com::sun::star::uno::Any;
 using com::sun::star::uno::makeAny;
 using com::sun::star::uno::UNO_QUERY;
-using com::sun::star::uno::Type;
-using com::sun::star::uno::XInterface;
 using com::sun::star::uno::Reference;
-using com::sun::star::uno::Sequence;
 using com::sun::star::uno::RuntimeException;
 
-using com::sun::star::container::NoSuchElementException;
-using com::sun::star::lang::WrappedTargetException;
 
 using com::sun::star::sdbc::XRow;
-using com::sun::star::sdbc::XCloseable;
 using com::sun::star::sdbc::XStatement;
 using com::sun::star::sdbc::XResultSet;
 using com::sun::star::sdbc::XParameters;
 using com::sun::star::sdbc::XPreparedStatement;
-using com::sun::star::sdbc::XDatabaseMetaData;
 
 namespace pq_sdbc_driver
 {
@@ -155,7 +147,7 @@ void Keys::refresh()
         Reference< XRow > xRow( rs , UNO_QUERY );
 
         String2IntMap map;
-        m_values = Sequence< com::sun::star::uno::Any > ();
+        m_values.clear();
         int keyIndex = 0;
         while( rs->next() )
         {
@@ -197,11 +189,9 @@ void Keys::refresh()
 
 
             {
-                const int currentKeyIndex = keyIndex++;
-                map[ xRow->getString( 1 ) ] = currentKeyIndex;
-                assert(currentKeyIndex == m_values.getLength());
-                m_values.realloc( keyIndex );
-                m_values[currentKeyIndex] = makeAny( prop );
+                map[ xRow->getString( 1 ) ] = keyIndex;
+                m_values.push_back( makeAny( prop ) );
+                ++keyIndex;
             }
         }
         m_name2index.swap( map );
@@ -241,10 +231,10 @@ void Keys::dropByIndex( sal_Int32 index )
            ::com::sun::star::uno::RuntimeException, std::exception)
 {
     osl::MutexGuard guard( m_refMutex->mutex );
-    if( index < 0 ||  index >= m_values.getLength() )
+    if( index < 0 ||  index >= (sal_Int32)m_values.size() )
     {
         OUStringBuffer buf( 128 );
-        buf.append( "TABLES: Index out of range (allowed 0 to " + OUString::number(m_values.getLength() -1) +
+        buf.append( "TABLES: Index out of range (allowed 0 to " + OUString::number(m_values.size() -1) +
                     ", got " + OUString::number( index ) + ")" );
         throw com::sun::star::lang::IndexOutOfBoundsException(
             buf.makeStringAndClear(), *this );

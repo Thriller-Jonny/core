@@ -91,20 +91,6 @@ struct VCL_DLLPUBLIC AnimationBitmap
     BitmapChecksum  GetChecksum() const;
 };
 
-struct AInfo
-{
-    Bitmap          aLastSaveBitmap;
-    Bitmap          aBackBitmap;
-    Point           aStartOrg;
-    Size            aStartSize;
-    VclPtr<OutputDevice>   pOutDev;
-    void*           pViewData;
-    long            nExtraData;
-    bool            bPause;
-
-    AInfo();
-};
-
 class ImplAnimView;
 
 class VCL_DLLPUBLIC Animation
@@ -163,9 +149,7 @@ public:
 public:
 
     bool            Convert( BmpConversion eConversion );
-    bool            ReduceColors(
-                        sal_uInt16 nNewColorCount,
-                        BmpReduce eReduce = BMP_REDUCE_SIMPLE );
+    bool            ReduceColors( sal_uInt16 nNewColorCount );
 
     bool            Invert();
     bool            Mirror( BmpMirrorFlags nMirrorFlags );

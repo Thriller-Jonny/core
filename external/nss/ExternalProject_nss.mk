@@ -22,6 +22,7 @@ $(call gb_ExternalProject_get_state_target,nss,configure):
 		nspr/configure --includedir=$(call gb_UnpackedTarball_get_dir,nss)/mozilla/dist/out/include \
 			$(if $(CROSS_COMPILING),--build=$(BUILD_PLATFORM) --host=$(HOST_PLATFORM)) \
 			$(if $(filter MSC-X86_64,$(COM)-$(CPUNAME)),--enable-64bit) \
+			$(if $(filter MSC-INTEL,$(COM)-$(CPUNAME)),--host=i686-pc-cygwin) \
 	,,nss_configure.log)
 
 ifeq ($(OS),WNT)
@@ -87,7 +88,6 @@ $(call gb_ExternalProject_get_state_target,nss,build): $(call gb_ExternalProject
 				$(gb_Package_SOURCEDIR_nss)/dist/out/lib/libnss3.dylib \
 				$(gb_Package_SOURCEDIR_nss)/dist/out/lib/libnssckbi.dylib \
 				$(gb_Package_SOURCEDIR_nss)/dist/out/lib/libnssdbm3.dylib \
-				$(gb_Package_SOURCEDIR_nss)/dist/out/lib/libnsspem.dylib \
 				$(gb_Package_SOURCEDIR_nss)/dist/out/lib/libnssutil3.dylib \
 				$(gb_Package_SOURCEDIR_nss)/dist/out/lib/libplc4.dylib \
 				$(gb_Package_SOURCEDIR_nss)/dist/out/lib/libplds4.dylib \

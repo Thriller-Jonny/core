@@ -22,6 +22,7 @@
 
 #include <com/sun/star/form/binding/XListEntrySource.hpp>
 #include <cppuhelper/compbase4.hxx>
+#include <comphelper/interfacecontainer2.hxx>
 #include <comphelper/propertycontainer.hxx>
 #include <comphelper/uno3.hxx>
 #include <comphelper/broadcasthelper.hxx>
@@ -62,7 +63,7 @@ namespace calc
                     m_xDocument;            /// the document where our cell lives
         css::uno::Reference< css::table::XCellRange >
                     m_xRange;               /// the range of cells we're bound to
-        ::cppu::OInterfaceContainerHelper
+        ::comphelper::OInterfaceContainerHelper2
                     m_aListEntryListeners;  /// our listeners
         bool        m_bInitialized;         /// has XInitialization::initialize been called?
 
@@ -127,8 +128,6 @@ namespace calc
                 getRangeAddress( ) const;
 
         /** retrievs the text of a cell within our range
-            @param _nRangeRelativeColumn
-                the relative column index of the cell within our range
             @param _nRangeRelativeRow
                 the relative row index of the cell within our range
             @precond
@@ -136,7 +135,6 @@ namespace calc
         */
         OUString
                 getCellTextContent_noCheck(
-                    sal_Int32 _nRangeRelativeColumn,
                     sal_Int32 _nRangeRelativeRow
                 );
 

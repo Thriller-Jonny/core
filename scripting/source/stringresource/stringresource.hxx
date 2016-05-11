@@ -29,7 +29,7 @@
 #include <com/sun/star/io/XInputStream.hpp>
 #include <com/sun/star/io/XOutputStream.hpp>
 #include <cppuhelper/implbase.hxx>
-#include <cppuhelper/interfacecontainer.hxx>
+#include <comphelper/interfacecontainer2.hxx>
 #include <osl/mutex.hxx>
 
 #include <unordered_map>
@@ -40,12 +40,10 @@ namespace stringresource
 {
 
 
-
 // mutex
 
 
 ::osl::Mutex& getMutex();
-
 
 
 // class stringresourceImpl
@@ -98,13 +96,12 @@ class StringResourceImpl : public StringResourceImpl_BASE
 {
 protected:
     css::uno::Reference< css::uno::XComponentContext >        m_xContext;
-    css::uno::Reference< css::lang::XMultiComponentFactory >  m_xMCF;
 
     LocaleItem*                                               m_pCurrentLocaleItem;
     LocaleItem*                                               m_pDefaultLocaleItem;
     bool                                                      m_bDefaultModified;
 
-    ::cppu::OInterfaceContainerHelper                         m_aListenerContainer;
+    ::comphelper::OInterfaceContainerHelper2                        m_aListenerContainer;
 
     LocaleItemVector                                          m_aLocaleItemVector;
     LocaleItemVector                                          m_aDeletedLocaleItemVector;
@@ -122,10 +119,6 @@ protected:
     // Checks read only status and throws exception if it's true
     void implCheckReadOnly( const sal_Char* pExceptionMsg )
         throw (css::lang::NoSupportException);
-
-    // Return the context's MultiComponentFactory
-    css::uno::Reference< css::lang::XMultiComponentFactory >
-        getMultiComponentFactory();
 
     // Returns the LocalItem for a given locale, if it exists, otherwise NULL
     // This method compares the locales exactly, no closest match search is performed

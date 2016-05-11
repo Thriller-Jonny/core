@@ -512,7 +512,7 @@ File gid_Brand_File_Desktophelper_Txt
 End
 #endif
 
-#if !defined WNT
+#if !defined WNT && !defined MACOSX
 File gid_Brand_File_Bin_Unoinfo
     BIN_FILE_BODY;
     Dir = gid_Brand_Dir_Program;
@@ -609,7 +609,7 @@ End
 #endif
 
 #if defined UNX && ! defined MACOSX
-#ifdef ENABLE_GTK
+#ifdef ENABLE_SYSTRAY_GTK
 File gid_Brand_File_Share_Xdg_QStart
     TXT_FILE_BODY;
     Dir = gid_Brand_Dir_Share_Xdg;
@@ -921,7 +921,7 @@ ProfileItem gid_Brand_Profileitem_Version_Useragent
     Section = "Version";
     Order = 17;
     Key = "UpdateUserAgent";
-    Value = "<PRODUCT> (${buildid}; ${_OS}; ${_ARCH}; BundledLanguages=${AllLanguages})";
+    Value = "<PRODUCT> (${buildid}; ${_OS}; ${_ARCH}; <OPTIONAL_OS_HW_DATA>)";
 End
 
 ProfileItem gid_Brand_Profileitem_Version_Vendor

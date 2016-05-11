@@ -51,7 +51,7 @@
  *      is null - no method calls are logged.
  * 2.   The SwImplProtocol class contains a filter for frame types, only method
  *      call of frame types which are defined there are logged.
- *      The member nTypes can be set to values like FRM_PAGE or FRM_SECTION and
+ *      The member nTypes can be set to values like SwFrameType::Page or SwFrameType::Section and
  *      may be combined using binary OR. The default values is 0xFFFF - meaning
  *      all frame types.
  * 3.   The SwImplProtocol class contains an ArrayPointer to FrameIds which need to be
@@ -91,7 +91,7 @@
  *           [frmtype] !0x3FFF 0x4
  *
  * As soon as the logging is in process, one can manipulate many things in
- * SwImplProtocol::_Record(...) using a debugger, especially concerning
+ * SwImplProtocol::Record_(...) using a debugger, especially concerning
  * frame types and FrameIds.
  */
 
@@ -124,12 +124,12 @@ class SwImplProtocol
     std::set<sal_uInt16> *pFrameIds;  // which FrameIds shall be logged ( NULL == all)
     std::vector<long> aVars;        // variables
     OStringBuffer aLayer;      // indentation of output ("  " per start/end)
-    sal_uInt16 nTypes;              // which types shall be logged
+    SwFrameType nTypes;              // which types shall be logged
     sal_uInt16 nLineCount;          // printed lines
     sal_uInt16 nMaxLines;           // max lines to be printed
     sal_uInt8 nInitFile;            // range (FrameId,FrameType,Record) during reading of the INI file
     sal_uInt8 nTestMode;            // special for test formatting, logging may only be done in test formatting.
-    void _Record( const SwFrame* pFrame, sal_uLong nFunction, sal_uLong nAct, void* pParam );
+    void Record_( const SwFrame* pFrame, sal_uLong nFunction, sal_uLong nAct, void* pParam );
     bool NewStream();
     void CheckLine( OString& rLine );
     static void SectFunc( OStringBuffer& rOut, const SwFrame* pFrame, sal_uLong nAct, void* pParam );
@@ -138,7 +138,7 @@ public:
     ~SwImplProtocol();
     // logging
     void Record( const SwFrame* pFrame, sal_uLong nFunction, sal_uLong nAct, void* pParam )
-        { if( pStream ) _Record( pFrame, nFunction, nAct, pParam ); }
+        { if( pStream ) Record_( pFrame, nFunction, nAct, pParam ); }
     bool InsertFrame( sal_uInt16 nFrameId );    // take FrameId for logging
     bool DeleteFrame( sal_uInt16 nFrameId );    // remove FrameId; don't log him anymore
     void FileInit();                    // read the INI file
@@ -255,7 +255,7 @@ void SwProtocol::Stop()
 }
 
 SwImplProtocol::SwImplProtocol()
-    : pStream( nullptr ), pFrameIds( nullptr ), nTypes( 0xffff ),
+    : pStream( nullptr ), pFrameIds( nullptr ), nTypes( FRM_ALL ),
       nLineCount( 0 ), nMaxLines( USHRT_MAX ), nTestMode( 0 )
 {
     NewStream();
@@ -306,7 +306,7 @@ void SwImplProtocol::CheckLine( OString& rLine )
         else if (aTmp == "[frmtype")// section types
         {
             nInitFile = 2;
-            nTypes = USHRT_MAX;     // default: log all frame types
+            nTypes = FRM_ALL;     // default: log all frame types
         }
         else if (aTmp == "[record")// section functions
         {
@@ -352,7 +352,7 @@ void SwImplProtocol::CheckLine( OString& rLine )
                 case 1: InsertFrame( sal_uInt16( nVal ) );    // add FrameId
                         break;
                 case 2: {
-                            sal_uInt16 nNew = (sal_uInt16)nVal;
+                            SwFrameType nNew = static_cast<SwFrameType>(nVal);
                             if( bNo )
                                 nTypes &= ~nNew;    // remove type
                             else
@@ -498,7 +498,7 @@ static void lcl_FrameType( OStringBuffer& rOut, const SwFrame* pFrame )
  *
  * In this method we also check if FrameId and frame type should be logged.
  */
-void SwImplProtocol::_Record( const SwFrame* pFrame, sal_uLong nFunction, sal_uLong nAct, void* pParam )
+void SwImplProtocol::Record_( const SwFrame* pFrame, sal_uLong nFunction, sal_uLong nAct, void* pParam )
 {
     sal_uInt16 nSpecial = 0;
     if( nSpecial )  // the possible debugger manipulations
@@ -538,7 +538,8 @@ void SwImplProtocol::_Record( const SwFrame* pFrame, sal_uLong nFunction, sal_uL
                             if( nAct == ACT_START )
                                 lcl_Flags( aOut, pFrame );
                             break;
-        case PROT_MOVE_FWD: bTmp = true; // NoBreak
+        case PROT_MOVE_FWD: bTmp = true;
+                            SAL_FALLTHROUGH;
         case PROT_MOVE_BWD:
                             if (nFunction == (bTmp ? 1U : 0U))
                                 aOut.append("Fwd");
@@ -560,7 +561,8 @@ void SwImplProtocol::_Record( const SwFrame* pFrame, sal_uLong nFunction, sal_uL
                             aOut.append("TestShrink");
                             break;
         case PROT_ADJUSTN :
-        case PROT_SHRINK:   bTmp = true; // NoBreak
+        case PROT_SHRINK:   bTmp = true;
+                            SAL_FALLTHROUGH;
         case PROT_GROW:
                             if (!bTmp)
                                 aOut.append("Grow");
@@ -601,7 +603,8 @@ void SwImplProtocol::_Record( const SwFrame* pFrame, sal_uLong nFunction, sal_uL
                             break;
         case PROT_SECTION:  SectFunc(aOut, pFrame, nAct, pParam);
                             break;
-        case PROT_CUT:      bTmp = true; // NoBreak
+        case PROT_CUT:      bTmp = true;
+                            SAL_FALLTHROUGH;
         case PROT_PASTE:
                             if (bTmp)
                                 aOut.append("Cut from ");
@@ -667,7 +670,8 @@ void SwImplProtocol::SectFunc(OStringBuffer &rOut, const SwFrame* , sal_uLong nA
         case ACT_MERGE:         rOut.append("Merge Section ");
                                 rOut.append(static_cast<sal_Int64>(lcl_GetFrameId(static_cast<SwFrame*>(pParam))));
                                 break;
-        case ACT_CREATE_MASTER: bTmp = true; // NoBreak
+        case ACT_CREATE_MASTER: bTmp = true;
+                                SAL_FALLTHROUGH;
         case ACT_CREATE_FOLLOW: rOut.append("Create Section ");
                                 if (bTmp)
                                     rOut.append("Master to ");
@@ -675,7 +679,8 @@ void SwImplProtocol::SectFunc(OStringBuffer &rOut, const SwFrame* , sal_uLong nA
                                     rOut.append("Follow from ");
                                 rOut.append(static_cast<sal_Int64>(lcl_GetFrameId(static_cast<SwFrame*>(pParam))));
                                 break;
-        case ACT_DEL_MASTER:    bTmp = true; // NoBreak
+        case ACT_DEL_MASTER:    bTmp = true;
+                                SAL_FALLTHROUGH;
         case ACT_DEL_FOLLOW:    rOut.append("Delete Section ");
                                 if (bTmp)
                                     rOut.append("Master to ");

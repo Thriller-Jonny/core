@@ -20,9 +20,6 @@
 #ifndef INCLUDED_SLIDESHOW_SOURCE_ENGINE_SHAPES_DRAWSHAPESUBSETTING_HXX
 #define INCLUDED_SLIDESHOW_SOURCE_ENGINE_SHAPES_DRAWSHAPESUBSETTING_HXX
 
-#include <boost/shared_ptr.hpp>
-#include <boost/noncopyable.hpp>
-
 #include "doctreenode.hxx"
 #include "attributableshape.hxx"
 
@@ -36,7 +33,7 @@ namespace slideshow
         /** This class encapsulates the subsetting aspects of a
             DrawShape.
          */
-        class DrawShapeSubsetting : private boost::noncopyable
+        class DrawShapeSubsetting
         {
         public:
             /** Create empty shape subset handling.
@@ -62,7 +59,13 @@ namespace slideshow
                 generated with verbose text comments switched on).
              */
             DrawShapeSubsetting( const DocTreeNode&                         rShapeSubset,
-                                 const ::boost::shared_ptr< GDIMetaFile >&  rMtf );
+                                 const ::std::shared_ptr< GDIMetaFile >&  rMtf );
+
+            /// Forbid copy construction
+            DrawShapeSubsetting(const DrawShapeSubsetting&) = delete;
+
+            /// Forbid copy assignment
+            DrawShapeSubsetting& operator=(const DrawShapeSubsetting&) = delete;
 
             /** Reset metafile.
 
@@ -75,13 +78,13 @@ namespace slideshow
                 Metafile to retrieve subset info from (must have been
                 generated with verbose text comments switched on).
              */
-            void reset( const ::boost::shared_ptr< GDIMetaFile >&   rMtf );
+            void reset( const ::std::shared_ptr< GDIMetaFile >&   rMtf );
 
             // Shape subsetting methods
 
 
             /// Return subset node for this shape
-            DocTreeNode                 getSubsetNode       () const;
+            const DocTreeNode&          getSubsetNode       () const;
 
             /// Get subset shape for given node, if any
             AttributableShapeSharedPtr  getSubsetShape      ( const DocTreeNode& rTreeNode ) const;
@@ -215,7 +218,7 @@ namespace slideshow
             mutable IndexClassificatorVector    maActionClassVector;
 
             /// Metafile to retrieve subset info from
-            ::boost::shared_ptr< GDIMetaFile >  mpMtf;
+            ::std::shared_ptr< GDIMetaFile >  mpMtf;
 
             /// Subset of the metafile represented by this object
             DocTreeNode                         maSubset;

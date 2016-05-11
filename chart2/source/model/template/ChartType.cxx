@@ -35,8 +35,6 @@ using namespace ::com::sun::star;
 using ::com::sun::star::beans::Property;
 using ::com::sun::star::uno::Sequence;
 using ::com::sun::star::uno::Reference;
-using ::com::sun::star::uno::Any;
-using ::osl::MutexGuard;
 
 namespace chart
 {
@@ -59,7 +57,7 @@ ChartType::ChartType( const ChartType & rOther ) :
 {
     {
         SolarMutexGuard g; // access to rOther.m_aDataSeries
-        CloneHelper::CloneRefVector<Reference<chart2::XDataSeries> >(
+        CloneHelper::CloneRefVector<css::chart2::XDataSeries>(
                 rOther.m_aDataSeries, m_aDataSeries);
     }
     ModifyListenerHelper::addListenerToAllElements( m_aDataSeries, m_xModifyEventForwarder );
@@ -78,8 +76,7 @@ Reference< chart2::XCoordinateSystem > SAL_CALL
            uno::RuntimeException, std::exception)
 {
     Reference< chart2::XCoordinateSystem > xResult(
-        new CartesianCoordinateSystem(
-            GetComponentContext(), DimensionCount, /* bSwapXAndYAxis */ false ));
+        new CartesianCoordinateSystem( GetComponentContext(), DimensionCount ));
 
     for( sal_Int32 i=0; i<DimensionCount; ++i )
     {

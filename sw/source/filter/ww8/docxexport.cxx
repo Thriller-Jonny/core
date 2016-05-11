@@ -25,10 +25,8 @@
 #include <com/sun/star/document/XDocumentPropertiesSupplier.hpp>
 #include <com/sun/star/document/XDocumentProperties.hpp>
 #include <com/sun/star/drawing/XShape.hpp>
-#include <com/sun/star/embed/EmbedStates.hpp>
 #include <com/sun/star/i18n/ScriptType.hpp>
 #include <com/sun/star/frame/XModel.hpp>
-#include <com/sun/star/frame/XStorable.hpp>
 #include <com/sun/star/xml/dom/XDocument.hpp>
 #include <com/sun/star/xml/sax/XSAXSerializable.hpp>
 #include <com/sun/star/xml/sax/Writer.hpp>
@@ -72,8 +70,7 @@
 #include "ww8par.hxx"
 #include "ww8scan.hxx"
 #include <oox/token/properties.hxx>
-#include <comphelper/classids.hxx>
-#include <comphelper/embeddedobjectcontainer.hxx>
+#include <comphelper/storagehelper.hxx>
 #include <comphelper/string.hxx>
 #include <rtl/ustrbuf.hxx>
 #include <vcl/font.hxx>
@@ -163,7 +160,7 @@ void DocxExport::AppendBookmarks( const SwTextNode& rNode, sal_Int32 nAktPos, sa
     m_pAttrOutput->WriteBookmarks_Impl( aStarts, aEnds );
 }
 
-void DocxExport::AppendBookmark( const OUString& rName, bool /*bSkip*/ )
+void DocxExport::AppendBookmark( const OUString& rName )
 {
     std::vector< OUString > aStarts;
     std::vector< OUString > aEnds;
@@ -364,209 +361,25 @@ OString DocxExport::OutputChart( uno::Reference< frame::XModel >& xModel, sal_In
         m_pFilter->openFragmentStreamWithSerializer( aFileName,
             "application/vnd.openxmlformats-officedocument.drawingml.chart+xml" );
 
-    oox::drawingml::ChartExport aChartExport( XML_w, pChartFS, xModel, m_pFilter, oox::drawingml::DrawingML::DOCUMENT_DOCX );
+    oox::drawingml::ChartExport aChartExport(XML_w, pChartFS, xModel, m_pFilter, oox::drawingml::DOCUMENT_DOCX);
     aChartExport.ExportContent();
     return OUStringToOString( sId, RTL_TEXTENCODING_UTF8 );
-}
-
-
-static void lcl_ConvertProgID(OUString const& rProgID,
-    OUString & o_rMediaType, OUString & o_rRelationType, OUString & o_rFileExtension)
-{
-    if (rProgID == "Excel.Sheet.12")
-    {
-        o_rMediaType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-        o_rRelationType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/package";
-        o_rFileExtension = "xlsx";
-    }
-    else if (rProgID.startsWith("Excel.SheetBinaryMacroEnabled.12") )
-    {
-        o_rMediaType = "application/vnd.ms-excel.sheet.binary.macroEnabled.12";
-        o_rRelationType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/package";
-        o_rFileExtension = "xlsb";
-    }
-    else if (rProgID.startsWith("Excel.SheetMacroEnabled.12"))
-    {
-        o_rMediaType = "application/vnd.ms-excel.sheet.macroEnabled.12";
-        o_rRelationType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/package";
-        o_rFileExtension = "xlsm";
-    }
-    else if (rProgID.startsWith("Excel.Sheet"))
-    {
-        o_rMediaType = "application/vnd.ms-excel";
-        o_rRelationType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/oleObject";
-        o_rFileExtension = "xls";
-    }
-    else if (rProgID == "PowerPoint.Show.12")
-    {
-        o_rMediaType = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
-        o_rRelationType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/package";
-        o_rFileExtension = "pptx";
-    }
-    else if (rProgID == "PowerPoint.ShowMacroEnabled.12")
-    {
-        o_rMediaType = "application/vnd.ms-powerpoint.presentation.macroEnabled.12";
-        o_rRelationType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/package";
-        o_rFileExtension = "pptm";
-    }
-    else if (rProgID.startsWith("PowerPoint.Show"))
-    {
-        o_rMediaType = "application/vnd.ms-powerpoint";
-        o_rRelationType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/oleObject";
-        o_rFileExtension = "ppt";
-    }
-    else if (rProgID.startsWith("PowerPoint.Slide.12"))
-    {
-        o_rMediaType = "application/vnd.openxmlformats-officedocument.presentationml.slide";
-       o_rRelationType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/package";
-       o_rFileExtension = "sldx";
-    }
-    else if (rProgID == "PowerPoint.SlideMacroEnabled.12")
-    {
-       o_rMediaType = "application/vnd.ms-powerpoint.slide.macroEnabled.12";
-       o_rRelationType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/package";
-       o_rFileExtension = "sldm";
-    }
-    else if (rProgID == "Word.DocumentMacroEnabled.12")
-    {
-        o_rMediaType = "application/vnd.ms-word.document.macroEnabled.12";
-        o_rRelationType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/package";
-        o_rFileExtension = "docm";
-    }
-    else if (rProgID == "Word.Document.12")
-    {
-        o_rMediaType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-        o_rRelationType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/package";
-        o_rFileExtension = "docx";
-    }
-    else if (rProgID == "Word.Document.8")
-    {
-        o_rMediaType = "application/msword";
-        o_rRelationType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/oleObject";
-        o_rFileExtension = "doc";
-    }
-    else if (rProgID == "Excel.Chart.8")
-    {
-        o_rMediaType = "application/vnd.ms-excel";
-        o_rRelationType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/oleObject";
-        o_rFileExtension = "xls";
-    }
-    else if (rProgID == "AcroExch.Document.11")
-    {
-        o_rMediaType = "application/pdf";
-        o_rRelationType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/oleObject";
-        o_rFileExtension = "pdf";
-    }
-    else
-    {
-        o_rMediaType = "application/vnd.openxmlformats-officedocument.oleObject";
-        o_rRelationType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/oleObject";
-        o_rFileExtension = "bin";
-    }
-}
-
-static uno::Reference<io::XInputStream> lcl_StoreOwnAsOOXML(
-    uno::Reference<uno::XComponentContext> const& xContext,
-    uno::Reference<embed::XEmbeddedObject> const& xObj,
-    char const*& o_rpProgID,
-    OUString & o_rMediaType, OUString & o_rRelationType, OUString & o_rSuffix)
-{
-    static struct {
-        struct {
-            sal_uInt32 n1;
-            sal_uInt16 n2, n3;
-            sal_uInt8 b8, b9, b10, b11, b12, b13, b14, b15;
-        } ClassId;
-        char const* pFilterName;
-        char const* pMediaType;
-        char const* pProgID;
-        char const* pSuffix;
-    } s_Mapping[] = {
-        { {SO3_SW_CLASSID_60}, "MS Word 2007 XML", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "Word.Document.12", "docx" },
-        { {SO3_SC_CLASSID_60}, "Calc MS Excel 2007 XML", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Excel.Sheet.12", "xlsx" },
-        { {SO3_SIMPRESS_CLASSID_60}, "Impress MS PowerPoint 2007 XML", "application/vnd.openxmlformats-officedocument.presentationml.presentation", "PowerPoint.Show.12", "pptx" },
-        // FIXME: Draw does not appear to have a MSO format export filter?
-//            { {SO3_SDRAW_CLASSID}, "", "", "", "" },
-        { {SO3_SCH_CLASSID_60}, "unused", "", "", "" },
-        { {SO3_SM_CLASSID_60}, "unused", "", "", "" },
-    };
-
-    const char * pFilterName(nullptr);
-    SvGlobalName const classId(xObj->getClassID());
-    for (size_t i = 0; i < SAL_N_ELEMENTS(s_Mapping); ++i)
-    {
-        auto const& rId(s_Mapping[i].ClassId);
-        SvGlobalName const temp(rId.n1, rId.n2, rId.n3, rId.b8, rId.b9, rId.b10, rId.b11, rId.b12, rId.b13, rId.b14, rId.b15);
-        if (temp == classId)
-        {
-            assert(SvGlobalName(SO3_SCH_CLASSID_60) != classId); // chart should be written elsewhere!
-            assert(SvGlobalName(SO3_SM_CLASSID_60) != classId); // formula should be written elsewhere!
-            pFilterName = s_Mapping[i].pFilterName;
-            o_rMediaType = OUString::createFromAscii(s_Mapping[i].pMediaType);
-            o_rpProgID = s_Mapping[i].pProgID;
-            o_rSuffix = OUString::createFromAscii(s_Mapping[i].pSuffix);
-            o_rRelationType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/package";
-            break;
-        }
-    }
-
-    if (!pFilterName)
-    {
-        SAL_WARN("sw.ww8", "DocxExport::WriteOLEObject: unknown ClassId " << classId.GetHexName());
-        return nullptr;
-    }
-
-    if (embed::EmbedStates::LOADED == xObj->getCurrentState())
-    {
-        xObj->changeState(embed::EmbedStates::RUNNING);
-    }
-    // use a temp stream - while it would work to store directly to a
-    // fragment stream, an error during export means we'd have to delete it
-    uno::Reference<io::XStream> const xTempStream(
-        xContext->getServiceManager()->createInstanceWithContext(
-            "com.sun.star.comp.MemoryStream", xContext),
-        uno::UNO_QUERY_THROW);
-    uno::Sequence<beans::PropertyValue> args(2);
-    args[0].Name = "OutputStream";
-    args[0].Value <<= xTempStream->getOutputStream();
-    args[1].Name = "FilterName";
-    args[1].Value <<= OUString::createFromAscii(pFilterName);
-    uno::Reference<frame::XStorable> xStorable(xObj->getComponent(), uno::UNO_QUERY);
-    try
-    {
-        xStorable->storeToURL("private:stream", args);
-    }
-    catch (uno::Exception const& e)
-    {
-        SAL_WARN("sw.ww8", "DocxExport::WriteOLEObject: exception: \"" << e.Message << "\"");
-        return nullptr;
-    }
-    xTempStream->getOutputStream()->closeOutput();
-    return xTempStream->getInputStream();
 }
 
 OString DocxExport::WriteOLEObject(SwOLEObj& rObject, OUString & io_rProgID)
 {
     uno::Reference <embed::XEmbeddedObject> xObj( rObject.GetOleRef() );
-    comphelper::EmbeddedObjectContainer* aContainer = rObject.GetObject().GetContainer();
-    uno::Reference< io::XInputStream > xInStream = aContainer->GetObjectStream( xObj );
+    uno::Reference<uno::XComponentContext> const xContext(
+        GetFilter().getComponentContext());
 
     OUString sMediaType;
     OUString sRelationType;
     OUString sSuffix;
     const char * pProgID(nullptr);
 
-    if (xInStream.is())
-    {
-        lcl_ConvertProgID(io_rProgID, sMediaType, sRelationType, sSuffix);
-    }
-    else // the object is ODF - either the whole document is
-    {    // ODF, or the OLE was edited so it was converted to ODF
-        uno::Reference<uno::XComponentContext> const xContext(
-            GetFilter().getComponentContext());
-        xInStream = lcl_StoreOwnAsOOXML(xContext, xObj,
-                pProgID, sMediaType, sRelationType, sSuffix);
-    }
+    uno::Reference<io::XInputStream> const xInStream =
+        oox::GetOLEObjectStream(xContext, xObj, io_rProgID,
+            sMediaType, sRelationType, sSuffix, pProgID);
 
     if (!xInStream.is())
     {
@@ -581,39 +394,24 @@ OString DocxExport::WriteOLEObject(SwOLEObj& rObject, OUString & io_rProgID)
         GetFilter().openFragmentStream("word/" + sFileName, sMediaType);
     assert(xOutStream.is()); // no reason why that could fail
 
-    bool const isExported = lcl_CopyStream(xInStream, xOutStream);
-
-    OUString sId;
-    if (isExported)
+    try
     {
-        sId = m_pFilter->addRelation( GetFS()->getOutputStream(),
+        ::comphelper::OStorageHelper::CopyInputToOutput(xInStream, xOutStream);
+    }
+    catch (uno::Exception const& e)
+    {
+        SAL_WARN("sw.ww8", "DocxExport::WriteOLEObject: exception: " << e.Message);
+        return OString();
+    }
+
+    OUString const sId = m_pFilter->addRelation( GetFS()->getOutputStream(),
                 sRelationType, sFileName );
-        if (pProgID)
-        {
-            io_rProgID = OUString::createFromAscii(pProgID);
-        }
+    if (pProgID)
+    {
+        io_rProgID = OUString::createFromAscii(pProgID);
     }
 
     return OUStringToOString( sId, RTL_TEXTENCODING_UTF8 );
-}
-
-// function copied from embeddedobj/source/msole/oleembed.cxx
-bool DocxExport::lcl_CopyStream( uno::Reference<io::XInputStream> xIn, uno::Reference<io::XOutputStream> xOut )
-{
-    if( !xIn.is() || !xOut.is() )
-        return false;
-
-    const sal_Int32 nChunkSize = 4096;
-    uno::Sequence< sal_Int8 > aData(nChunkSize);
-    sal_Int32 nTotalRead = 0;
-    sal_Int32 nRead = 0;
-    do
-    {
-        nRead = xIn->readBytes(aData, nChunkSize);
-        nTotalRead += nRead;
-        xOut->writeBytes(aData);
-    } while (nRead == nChunkSize);
-    return nTotalRead != 0;
 }
 
 void DocxExport::OutputDML(uno::Reference<drawing::XShape>& xShape)
@@ -624,7 +422,7 @@ void DocxExport::OutputDML(uno::Reference<drawing::XShape>& xShape)
         nNamespace = XML_wpg;
     else if (xServiceInfo->supportsService("com.sun.star.drawing.GraphicObjectShape"))
         nNamespace = XML_pic;
-    oox::drawingml::ShapeExport aExport(nNamespace, m_pAttrOutput->GetSerializer(), nullptr, m_pFilter, oox::drawingml::DrawingML::DOCUMENT_DOCX, m_pAttrOutput);
+    oox::drawingml::ShapeExport aExport(nNamespace, m_pAttrOutput->GetSerializer(), nullptr, m_pFilter, oox::drawingml::DOCUMENT_DOCX, m_pAttrOutput);
     aExport.WriteShape(xShape);
 }
 
@@ -664,8 +462,10 @@ void DocxExport::ExportDocument_Impl()
     WriteEmbeddings();
 
     m_aLinkedTextboxesHelper.clear();   //final cleanup
-    delete m_pStyles, m_pStyles = nullptr;
-    delete m_pSections, m_pSections = nullptr;
+    delete m_pStyles;
+    m_pStyles = nullptr;
+    delete m_pSections;
+    m_pSections = nullptr;
 }
 
 void DocxExport::AppendSection( const SwPageDesc *pPageDesc, const SwSectionFormat* pFormat, sal_uLong nLnNum )
@@ -1055,6 +855,12 @@ void DocxExport::WriteSettings()
         pFS->singleElementNS( XML_w, XML_defaultTabStop, FSNS( XML_w, XML_val ),
             OString::number( m_aSettings.defaultTabStop).getStr(), FSEND );
 
+    // Protect form
+    if( m_pDoc->getIDocumentSettingAccess().get( DocumentSettingId::PROTECT_FORM ))
+    {
+        pFS->singleElementNS( XML_w, XML_documentProtection, FSNS(XML_w, XML_edit), "forms", FSNS(XML_w, XML_enforcement), "1",  FSEND );
+    }
+
     // Automatic hyphenation: it's a global setting in Word, it's a paragraph setting in Writer.
     // Use the setting from the default style.
     SwTextFormatColl* pColl = m_pDoc->getIDocumentStylePoolAccess().GetTextCollFromPool(RES_POOLCOLL_STANDARD, /*bRegardLanguage=*/false);
@@ -1082,11 +888,11 @@ void DocxExport::WriteSettings()
     uno::Reference< beans::XPropertySet > xPropSet( m_pDoc->GetDocShell()->GetBaseModel(), uno::UNO_QUERY_THROW );
 
     uno::Reference< beans::XPropertySetInfo > xPropSetInfo = xPropSet->getPropertySetInfo();
-    OUString pName = UNO_NAME_MISC_OBJ_INTEROPGRABBAG;
-    if ( xPropSetInfo->hasPropertyByName( pName ) )
+    OUString aGrabBagName = UNO_NAME_MISC_OBJ_INTEROPGRABBAG;
+    if ( xPropSetInfo->hasPropertyByName( aGrabBagName ) )
     {
         uno::Sequence< beans::PropertyValue > propList;
-        xPropSet->getPropertyValue( pName ) >>= propList;
+        xPropSet->getPropertyValue( aGrabBagName ) >>= propList;
         for( sal_Int32 i=0; i < propList.getLength(); ++i )
         {
             if ( propList[i].Name == "ThemeFontLangProps" )
@@ -1161,13 +967,13 @@ void DocxExport::WriteTheme()
     uno::Reference< beans::XPropertySet > xPropSet( m_pDoc->GetDocShell()->GetBaseModel(), uno::UNO_QUERY_THROW );
 
     uno::Reference< beans::XPropertySetInfo > xPropSetInfo = xPropSet->getPropertySetInfo();
-    OUString pName = UNO_NAME_MISC_OBJ_INTEROPGRABBAG;
-    if ( !xPropSetInfo->hasPropertyByName( pName ) )
+    OUString aName = UNO_NAME_MISC_OBJ_INTEROPGRABBAG;
+    if ( !xPropSetInfo->hasPropertyByName( aName ) )
         return;
 
     uno::Reference<xml::dom::XDocument> themeDom;
     uno::Sequence< beans::PropertyValue > propList;
-    xPropSet->getPropertyValue( pName ) >>= propList;
+    xPropSet->getPropertyValue( aName ) >>= propList;
     for ( sal_Int32 nProp=0; nProp < propList.getLength(); ++nProp )
     {
         OUString propName = propList[nProp].Name;
@@ -1199,14 +1005,14 @@ void DocxExport::WriteGlossary()
     uno::Reference< beans::XPropertySet > xPropSet( m_pDoc->GetDocShell()->GetBaseModel(), uno::UNO_QUERY_THROW );
 
     uno::Reference< beans::XPropertySetInfo > xPropSetInfo = xPropSet->getPropertySetInfo();
-    OUString pName = UNO_NAME_MISC_OBJ_INTEROPGRABBAG;
-    if ( !xPropSetInfo->hasPropertyByName( pName ) )
+    OUString aName = UNO_NAME_MISC_OBJ_INTEROPGRABBAG;
+    if ( !xPropSetInfo->hasPropertyByName( aName ) )
         return;
 
     uno::Reference<xml::dom::XDocument> glossaryDocDom;
     uno::Sequence< uno::Sequence< uno::Any> > glossaryDomList;
     uno::Sequence< beans::PropertyValue > propList;
-    xPropSet->getPropertyValue( pName ) >>= propList;
+    xPropSet->getPropertyValue( aName ) >>= propList;
     sal_Int32 collectedProperties = 0;
     for ( sal_Int32 nProp=0; nProp < propList.getLength(); ++nProp )
     {
@@ -1270,14 +1076,14 @@ void DocxExport::WriteCustomXml()
     uno::Reference< beans::XPropertySet > xPropSet( m_pDoc->GetDocShell()->GetBaseModel(), uno::UNO_QUERY_THROW );
 
     uno::Reference< beans::XPropertySetInfo > xPropSetInfo = xPropSet->getPropertySetInfo();
-    OUString pName = UNO_NAME_MISC_OBJ_INTEROPGRABBAG;
-    if ( !xPropSetInfo->hasPropertyByName( pName ) )
+    OUString aName = UNO_NAME_MISC_OBJ_INTEROPGRABBAG;
+    if ( !xPropSetInfo->hasPropertyByName( aName ) )
         return;
 
     uno::Sequence<uno::Reference<xml::dom::XDocument> > customXmlDomlist;
     uno::Sequence<uno::Reference<xml::dom::XDocument> > customXmlDomPropslist;
     uno::Sequence< beans::PropertyValue > propList;
-    xPropSet->getPropertyValue( pName ) >>= propList;
+    xPropSet->getPropertyValue( aName ) >>= propList;
     for ( sal_Int32 nProp=0; nProp < propList.getLength(); ++nProp )
     {
         OUString propName = propList[nProp].Name;
@@ -1341,14 +1147,14 @@ void DocxExport::WriteActiveX()
     uno::Reference< beans::XPropertySet > xPropSet( m_pDoc->GetDocShell()->GetBaseModel(), uno::UNO_QUERY_THROW );
 
     uno::Reference< beans::XPropertySetInfo > xPropSetInfo = xPropSet->getPropertySetInfo();
-    OUString pName = UNO_NAME_MISC_OBJ_INTEROPGRABBAG;
-    if ( !xPropSetInfo->hasPropertyByName( pName ) )
+    OUString aName = UNO_NAME_MISC_OBJ_INTEROPGRABBAG;
+    if ( !xPropSetInfo->hasPropertyByName( aName ) )
         return;
 
     uno::Sequence<uno::Reference<xml::dom::XDocument> > activeXDomlist;
     uno::Sequence<uno::Reference<io::XInputStream> > activeXBinList;
     uno::Sequence< beans::PropertyValue > propList;
-    xPropSet->getPropertyValue( pName ) >>= propList;
+    xPropSet->getPropertyValue( aName ) >>= propList;
     for ( sal_Int32 nProp=0; nProp < propList.getLength(); ++nProp )
     {
         OUString propName = propList[nProp].Name;
@@ -1435,13 +1241,13 @@ void DocxExport::WriteEmbeddings()
     uno::Reference< beans::XPropertySet > xPropSet( m_pDoc->GetDocShell()->GetBaseModel(), uno::UNO_QUERY_THROW );
 
     uno::Reference< beans::XPropertySetInfo > xPropSetInfo = xPropSet->getPropertySetInfo();
-    OUString pName = UNO_NAME_MISC_OBJ_INTEROPGRABBAG;
-    if ( !xPropSetInfo->hasPropertyByName( pName ) )
+    OUString aName = UNO_NAME_MISC_OBJ_INTEROPGRABBAG;
+    if ( !xPropSetInfo->hasPropertyByName( aName ) )
         return;
 
     uno::Sequence< beans::PropertyValue > embeddingsList;
     uno::Sequence< beans::PropertyValue > propList;
-    xPropSet->getPropertyValue( pName ) >>= propList;
+    xPropSet->getPropertyValue( aName ) >>= propList;
     for ( sal_Int32 nProp=0; nProp < propList.getLength(); ++nProp )
     {
         OUString propName = propList[nProp].Name;
@@ -1506,22 +1312,6 @@ bool DocxExport::isMirroredMargin()
         bMirroredMargins = true;
     }
     return bMirroredMargins;
-}
-
-boost::optional<SvxBrushItem> DocxExport::getBackground()
-{
-    boost::optional<SvxBrushItem> oRet;
-    const SwFrameFormat &rFormat = m_pDoc->GetPageDesc(0).GetMaster();
-    SvxBrushItem aBrush(RES_BACKGROUND);
-    SfxItemState eState = rFormat.GetBackgroundState(aBrush);
-
-    if (SfxItemState::SET == eState)
-    {
-        // The 'color' is set for the first page style - take it and use it as the background color of the entire DOCX
-        if (aBrush.GetColor().GetColor() != COL_AUTO)
-            oRet.reset(aBrush);
-    }
-    return oRet;
 }
 
 void DocxExport::WriteMainText()
@@ -1668,7 +1458,7 @@ DocxExport::DocxExport( DocxExportFilter *pFilter, SwDoc *pDocument, SwPaM *pCur
     SetFS(m_pDocumentFS);
 
     // the DrawingML access
-    m_pDrawingML = new oox::drawingml::DrawingML( m_pDocumentFS, m_pFilter, oox::drawingml::DrawingML::DOCUMENT_DOCX );
+    m_pDrawingML = new oox::drawingml::DrawingML(m_pDocumentFS, m_pFilter, oox::drawingml::DOCUMENT_DOCX);
 
     // the attribute output for the document
     m_pAttrOutput = new DocxAttributeOutput( *this, m_pDocumentFS, m_pDrawingML );
@@ -1682,10 +1472,14 @@ DocxExport::DocxExport( DocxExportFilter *pFilter, SwDoc *pDocument, SwPaM *pCur
 
 DocxExport::~DocxExport()
 {
-    delete m_pSdrExport, m_pSdrExport = nullptr;
-    delete m_pVMLExport, m_pVMLExport = nullptr;
-    delete m_pAttrOutput, m_pAttrOutput = nullptr;
-    delete m_pDrawingML, m_pDrawingML = nullptr;
+    delete m_pSdrExport;
+    m_pSdrExport = nullptr;
+    delete m_pVMLExport;
+    m_pVMLExport = nullptr;
+    delete m_pAttrOutput;
+    m_pAttrOutput = nullptr;
+    delete m_pDrawingML;
+    m_pDrawingML = nullptr;
 }
 
 DocxSettingsData::DocxSettingsData()

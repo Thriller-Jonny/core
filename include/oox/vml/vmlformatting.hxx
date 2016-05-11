@@ -38,10 +38,8 @@ namespace oox {
 namespace vml {
 
 
-
 typedef ::std::pair< sal_Int32, sal_Int32 > Int32Pair;
 typedef ::std::pair< double, double >       DoublePair;
-
 
 
 namespace ConversionHelper
@@ -158,7 +156,6 @@ namespace ConversionHelper
 }
 
 
-
 /** The stroke arrow model structure contains all properties for an line end arrow. */
 struct StrokeArrowModel
 {
@@ -168,7 +165,6 @@ struct StrokeArrowModel
 
     void                assignUsed( const StrokeArrowModel& rSource );
 };
-
 
 
 /** The stroke model structure contains all shape border properties. */
@@ -192,7 +188,6 @@ struct StrokeModel
                             ::oox::drawingml::ShapePropertyMap& rPropMap,
                             const GraphicHelper& rGraphicHelper ) const;
 };
-
 
 
 /** The fill model structure contains all shape fill properties. */
@@ -220,7 +215,6 @@ struct OOX_DLLPUBLIC FillModel
 };
 
 
-
 /** The shadow model structure contains all shape shadow properties. */
 struct OOX_DLLPUBLIC ShadowModel
 {
@@ -244,7 +238,7 @@ struct OOX_DLLPUBLIC TextpathModel
     TextpathModel();
 
     /** Writes the properties to the passed property map. */
-    void pushToPropMap(oox::drawingml::ShapePropertyMap& rPropMap, css::uno::Reference<css::drawing::XShape> xShape) const;
+    void pushToPropMap(oox::drawingml::ShapePropertyMap& rPropMap, const css::uno::Reference<css::drawing::XShape>& xShape) const;
 };
 
 } // namespace vml

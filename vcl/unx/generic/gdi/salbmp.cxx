@@ -24,9 +24,9 @@
 #include <sys/types.h>
 #endif
 
-#include <prex.h>
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
 #include <X11/Xproto.h>
-#include <postx.h>
 
 #include <osl/endian.h>
 
@@ -51,7 +51,6 @@
 
 #include <memory>
 
-// - SalBitmap -
 
 SalBitmap* X11SalInstance::CreateSalBitmap()
 {
@@ -87,13 +86,19 @@ void X11SalBitmap::ImplDestroyCache()
     DBG_ASSERT( mnCacheInstCount, "X11SalBitmap::ImplDestroyCache(): underflow" );
 
     if( mnCacheInstCount && !--mnCacheInstCount )
-        delete mpCache, mpCache = nullptr;
+    {
+        delete mpCache;
+        mpCache = nullptr;
+    }
 }
 
 void X11SalBitmap::ImplRemovedFromCache()
 {
     if( mpDDB )
-        delete mpDDB, mpDDB = nullptr;
+    {
+        delete mpDDB;
+        mpDDB = nullptr;
+    }
 }
 
 #if defined HAVE_VALGRIND_HEADERS
@@ -117,8 +122,8 @@ namespace
 BitmapBuffer* X11SalBitmap::ImplCreateDIB(
     const Size& rSize,
     sal_uInt16 nBitCount,
-    const BitmapPalette& rPal
-) {
+    const BitmapPalette& rPal)
+{
     DBG_ASSERT(
            nBitCount ==  1
         || nBitCount ==  4
@@ -149,11 +154,11 @@ BitmapBuffer* X11SalBitmap::ImplCreateDIB(
 
             switch( nBitCount )
             {
-                case( 1 ): pDIB->mnFormat |= BMP_FORMAT_1BIT_MSB_PAL; break;
-                case( 4 ): pDIB->mnFormat |= BMP_FORMAT_4BIT_MSN_PAL; break;
-                case( 8 ): pDIB->mnFormat |= BMP_FORMAT_8BIT_PAL; break;
+                case 1: pDIB->mnFormat |= BMP_FORMAT_1BIT_MSB_PAL; break;
+                case 4: pDIB->mnFormat |= BMP_FORMAT_4BIT_MSN_PAL; break;
+                case 8: pDIB->mnFormat |= BMP_FORMAT_8BIT_PAL; break;
 #ifdef OSL_BIGENDIAN
-                case(16 ):
+                case 16:
                 {
                     pDIB->mnFormat|= BMP_FORMAT_16BIT_TC_MSB_MASK;
                     ColorMaskElement aRedMask(0xf800);
@@ -166,7 +171,7 @@ BitmapBuffer* X11SalBitmap::ImplCreateDIB(
                     break;
                 }
 #else
-                case(16 ):
+                case 16:
                 {
                     pDIB->mnFormat|= BMP_FORMAT_16BIT_TC_LSB_MASK;
                     ColorMaskElement aRedMask(0xf800);
@@ -181,7 +186,7 @@ BitmapBuffer* X11SalBitmap::ImplCreateDIB(
 #endif
                 default:
                     nBitCount = 24;
-                    //fall through
+                    SAL_FALLTHROUGH;
                 case 24:
                     pDIB->mnFormat |= BMP_FORMAT_24BIT_TC_BGR;
                 break;
@@ -264,7 +269,7 @@ BitmapBuffer* X11SalBitmap::ImplCreateDIB(
 
             switch( aSrcBuf.mnBitCount )
             {
-                case( 1 ):
+                case 1:
                 {
                     aSrcBuf.mnFormat |= ( LSBFirst == pImage->bitmap_bit_order
                                             ? BMP_FORMAT_1BIT_LSB_PAL
@@ -273,7 +278,7 @@ BitmapBuffer* X11SalBitmap::ImplCreateDIB(
                 }
                 break;
 
-                case( 4 ):
+                case 4:
                 {
                     aSrcBuf.mnFormat |= ( LSBFirst == pImage->bitmap_bit_order
                                             ? BMP_FORMAT_4BIT_LSN_PAL
@@ -282,13 +287,13 @@ BitmapBuffer* X11SalBitmap::ImplCreateDIB(
                 }
                 break;
 
-                case( 8 ):
+                case 8:
                 {
                     aSrcBuf.mnFormat |= BMP_FORMAT_8BIT_PAL;
                 }
                 break;
 
-                case( 16 ):
+                case 16:
                 {
                     ColorMaskElement aRedMask(pImage->red_mask);
                     aRedMask.CalcMaskShift();
@@ -309,7 +314,7 @@ BitmapBuffer* X11SalBitmap::ImplCreateDIB(
                 }
                 break;
 
-                case( 24 ):
+                case 24:
                 {
                     if( ( LSBFirst == pImage->byte_order ) && ( pImage->red_mask == 0xFF ) )
                         aSrcBuf.mnFormat |= BMP_FORMAT_24BIT_TC_RGB;
@@ -318,7 +323,7 @@ BitmapBuffer* X11SalBitmap::ImplCreateDIB(
                 }
                 break;
 
-                case( 32 ):
+                case 32:
                 {
                     if( LSBFirst == pImage->byte_order )
                         aSrcBuf.mnFormat |= (  pSalDisp->GetVisual(nScreen).red_mask == 0xFF
@@ -431,25 +436,25 @@ XImage* X11SalBitmap::ImplCreateXImage(
 
             switch( pImage->bits_per_pixel )
             {
-                case( 1 ):
+                case 1:
                     nDstFormat |=   ( LSBFirst == pImage->bitmap_bit_order
                                         ? BMP_FORMAT_1BIT_LSB_PAL
                                         : BMP_FORMAT_1BIT_MSB_PAL
                                     );
                 break;
 
-                case( 4 ):
+                case 4:
                     nDstFormat |=   ( LSBFirst == pImage->bitmap_bit_order
                                         ? BMP_FORMAT_4BIT_LSN_PAL
                                         : BMP_FORMAT_4BIT_MSN_PAL
                                     );
                 break;
 
-                case( 8 ):
+                case 8:
                     nDstFormat |= BMP_FORMAT_8BIT_PAL;
                 break;
 
-                case( 16 ):
+                case 16:
                 {
                     #ifdef OSL_BIGENDIAN
 
@@ -476,7 +481,7 @@ XImage* X11SalBitmap::ImplCreateXImage(
                 }
                 break;
 
-                case( 24 ):
+                case 24:
                 {
                     if( ( LSBFirst == pImage->byte_order ) && ( pImage->red_mask == 0xFF ) )
                         nDstFormat |= BMP_FORMAT_24BIT_TC_RGB;
@@ -485,7 +490,7 @@ XImage* X11SalBitmap::ImplCreateXImage(
                 }
                 break;
 
-                case( 32 ):
+                case 32:
                 {
                     if( LSBFirst == pImage->byte_order )
                         nDstFormat |=   ( pImage->red_mask == 0xFF
@@ -608,7 +613,8 @@ ImplSalDDB* X11SalBitmap::ImplGetDDB(
                                                                         mbGrey );
             }
 
-            delete mpDDB, const_cast<X11SalBitmap*>(this)->mpDDB = nullptr;
+            delete mpDDB;
+            const_cast<X11SalBitmap*>(this)->mpDDB = nullptr;
         }
 
         if( mpCache )
@@ -671,7 +677,8 @@ ImplSalDDB* X11SalBitmap::ImplGetDDB(
         if( pImage )
         {
             const_cast<X11SalBitmap*>(this)->mpDDB = new ImplSalDDB( pImage, aDrawable, nXScreen, aTwoRect );
-            delete[] pImage->data, pImage->data = nullptr;
+            delete[] pImage->data;
+            pImage->data = nullptr;
             XDestroyImage( pImage );
 
             if( mpCache )
@@ -795,11 +802,15 @@ void X11SalBitmap::Destroy()
     if( mpDIB )
     {
         delete[] mpDIB->mpBits;
-        delete mpDIB, mpDIB = nullptr;
+        delete mpDIB;
+        mpDIB = nullptr;
     }
 
     if( mpDDB )
-        delete mpDDB, mpDDB = nullptr;
+    {
+        delete mpDDB;
+        mpDDB = nullptr;
+    }
 
     if( mpCache )
         mpCache->ImplRemove( this );
@@ -810,9 +821,15 @@ Size X11SalBitmap::GetSize() const
     Size aSize;
 
     if( mpDIB )
-        aSize.Width() = mpDIB->mnWidth, aSize.Height() = mpDIB->mnHeight;
+    {
+        aSize.Width() = mpDIB->mnWidth;
+        aSize.Height() = mpDIB->mnHeight;
+    }
     else if( mpDDB )
-        aSize.Width() = mpDDB->ImplGetWidth(), aSize.Height() = mpDDB->ImplGetHeight();
+    {
+        aSize.Width() = mpDDB->ImplGetWidth();
+        aSize.Height() = mpDDB->ImplGetHeight();
+    }
 
     return aSize;
 }
@@ -854,7 +871,10 @@ void X11SalBitmap::ReleaseBuffer( BitmapBuffer*, BitmapAccessMode nMode )
     if( nMode == BITMAP_WRITE_ACCESS )
     {
         if( mpDDB )
-            delete mpDDB, mpDDB = nullptr;
+        {
+            delete mpDDB;
+            mpDDB = nullptr;
+        }
 
         if( mpCache )
             mpCache->ImplRemove( this );
@@ -887,7 +907,6 @@ bool X11SalBitmap::Replace( const Color& /*rSearchColor*/, const Color& /*rRepla
     return false;
 }
 
-// - ImplSalDDB -
 
 ImplSalDDB::ImplSalDDB( XImage* pImage, Drawable aDrawable,
                         SalX11Screen nXScreen, const SalTwoRect& rTwoRect )
@@ -910,7 +929,8 @@ ImplSalDDB::ImplSalDDB( XImage* pImage, Drawable aDrawable,
         if( 1 == mnDepth )
         {
             nValues |= ( GCForeground | GCBackground );
-            aValues.foreground = 1, aValues.background = 0;
+            aValues.foreground = 1;
+            aValues.background = 0;
         }
 
         aGC = XCreateGC( pXDisp, maPixmap, nValues, &aValues );
@@ -945,7 +965,8 @@ ImplSalDDB::ImplSalDDB(
         if( 1 == mnDepth )
         {
             nValues |= ( GCForeground | GCBackground );
-            aValues.foreground = 1, aValues.background = 0;
+            aValues.foreground = 1;
+            aValues.background = 0;
         }
 
         aGC = XCreateGC( pXDisp, maPixmap, nValues, &aValues );
@@ -980,7 +1001,7 @@ bool ImplSalDDB::ImplMatches( SalX11Screen nXScreen, long nDepth, const SalTwoRe
            && rTwoRect.mnDestHeight == maTwoRect.mnDestHeight
            )
         {
-            // absolutely indentically
+            // absolutely identically
             bRet = true;
         }
         else if(  rTwoRect.mnSrcWidth   == rTwoRect.mnDestWidth
@@ -1041,7 +1062,6 @@ void ImplSalDDB::ImplDraw(
     }
 }
 
-// - ImplSalBitmapCache -
 
 struct ImplBmpObj
 {
@@ -1063,7 +1083,7 @@ ImplSalBitmapCache::~ImplSalBitmapCache()
     ImplClear();
 }
 
-void ImplSalBitmapCache::ImplAdd( X11SalBitmap* pBmp, sal_uLong nMemSize, sal_uLong nFlags )
+void ImplSalBitmapCache::ImplAdd( X11SalBitmap* pBmp, sal_uLong nMemSize )
 {
     ImplBmpObj* pObj = nullptr;
     bool        bFound = false;
@@ -1083,10 +1103,11 @@ void ImplSalBitmapCache::ImplAdd( X11SalBitmap* pBmp, sal_uLong nMemSize, sal_uL
     if( bFound )
     {
         mnTotalSize -= pObj->mnMemSize;
-        pObj->mnMemSize = nMemSize, pObj->mnFlags = nFlags;
+        pObj->mnMemSize = nMemSize;
+        pObj->mnFlags = 0;
     }
     else
-        maBmpList.push_back( new ImplBmpObj( pBmp, nMemSize, nFlags ) );
+        maBmpList.push_back( new ImplBmpObj( pBmp, nMemSize, 0 ) );
 }
 
 void ImplSalBitmapCache::ImplRemove( X11SalBitmap* pBmp )

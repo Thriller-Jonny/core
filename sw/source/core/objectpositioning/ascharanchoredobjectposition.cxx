@@ -129,7 +129,7 @@ void SwAsCharAnchoredObjectPosition::CalcPosition()
 
     // consider left and upper spacing by adjusting anchor position.
     // left spacing is only considered, if requested.
-    if( mnFlags & AS_CHAR_ULSPACE )
+    if( mnFlags & AsCharFlags::UlSpace )
     {
         aAnchorPos.X() += nLRSpaceLeft;
     }
@@ -146,7 +146,7 @@ void SwAsCharAnchoredObjectPosition::CalcPosition()
             rAnchorFrame.SwitchVerticalToHorizontal( aSnapRect );
         }
 
-        if( mnFlags & AS_CHAR_ULSPACE )
+        if( mnFlags & AsCharFlags::UlSpace )
         {
             aAnchorPos.X() += aSnapRect.Left() - aObjBoundRect.Left();
         }
@@ -161,35 +161,35 @@ void SwAsCharAnchoredObjectPosition::CalcPosition()
 
     // calculate relative position to given base line.
     const SwFormatVertOrient& rVert = rFrameFormat.GetVertOrient();
-    const SwTwips nObjBoundHeight = ( mnFlags & AS_CHAR_ROTATE )
+    const SwTwips nObjBoundHeight = ( mnFlags & AsCharFlags::Rotate )
                                     ? aObjBoundRect.Width()
                                     : aObjBoundRect.Height();
-    const SwTwips nRelPos = _GetRelPosToBase( nObjBoundHeight, rVert );
+    const SwTwips nRelPos = GetRelPosToBase( nObjBoundHeight, rVert );
 
     // for initial positioning:
     // adjust the proposed anchor position by difference between
     // calculated relative position to base line and current maximal line ascent.
     // Note: In the following line formatting the base line will be adjusted
     //       by the same difference.
-    if( mnFlags & AS_CHAR_INIT && nRelPos < 0 && mnLineAscentInclObjs < -nRelPos )
+    if( mnFlags & AsCharFlags::Init && nRelPos < 0 && mnLineAscentInclObjs < -nRelPos )
     {
-        if( mnFlags & AS_CHAR_ROTATE )
+        if( mnFlags & AsCharFlags::Rotate )
             aAnchorPos.X() -= mnLineAscentInclObjs + nRelPos;
         else
             aAnchorPos.Y() -= mnLineAscentInclObjs + nRelPos;
     }
 
     // consider BIDI-multiportion by adjusting proposed anchor position
-    if( mnFlags & AS_CHAR_BIDI )
+    if( mnFlags & AsCharFlags::Bidi )
         aAnchorPos.X() -= aObjBoundRect.Width();
 
     // calculate relative position considering rotation and inside rotation
     // reverse direction.
     Point aRelPos;
     {
-        if( mnFlags & AS_CHAR_ROTATE )
+        if( mnFlags & AsCharFlags::Rotate )
         {
-            if( mnFlags & AS_CHAR_REVERSE )
+            if( mnFlags & AsCharFlags::Reverse )
                 aRelPos.X() = -nRelPos - aObjBoundRect.Width();
             else
             {
@@ -203,11 +203,11 @@ void SwAsCharAnchoredObjectPosition::CalcPosition()
 
     if( !IsObjFly() )
     {
-        if( !( mnFlags & AS_CHAR_QUICK ) )
+        if( !( mnFlags & AsCharFlags::Quick ) )
         {
             // save calculated Y-position value for 'automatic' vertical positioning,
             // in order to avoid a switch to 'manual' vertical positioning in
-            // <SwDrawContact::_Changed(..)>.
+            // <SwDrawContact::Changed_(..)>.
             const sal_Int16 eVertOrient = rVert.GetVertOrient();
             if( rVert.GetPos() != nRelPos && eVertOrient != text::VertOrientation::NONE )
             {
@@ -297,7 +297,7 @@ void SwAsCharAnchoredObjectPosition::CalcPosition()
                 "<SwAsCharAnchoredObjectPosition::CalcPosition()> - wrong anchored object." );
         const SwFlyInContentFrame& rFlyInContentFrame =
                 static_cast<const SwFlyInContentFrame&>(GetAnchoredObj());
-        if ( !(mnFlags & AS_CHAR_QUICK) &&
+        if ( !(mnFlags & AsCharFlags::Quick) &&
              ( aAnchorPos != rFlyInContentFrame.GetRefPoint() ||
                aRelAttr != rFlyInContentFrame.GetCurrRelPos() ) )
         {
@@ -332,7 +332,7 @@ void SwAsCharAnchoredObjectPosition::CalcPosition()
     0 - no feedback; 1|2|3 - proposed formatting of characters
     at top|at center|at bottom of line.
 */
-SwTwips SwAsCharAnchoredObjectPosition::_GetRelPosToBase(
+SwTwips SwAsCharAnchoredObjectPosition::GetRelPosToBase(
                                             const SwTwips _nObjBoundHeight,
                                             const SwFormatVertOrient& _rVert )
 {

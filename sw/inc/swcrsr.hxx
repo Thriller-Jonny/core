@@ -25,10 +25,10 @@
 #include <tblsel.hxx>
 #include <cshtyp.hxx>
 
-struct _SwCursor_SavePos;
+struct SwCursor_SavePos;
 
 namespace com { namespace sun { namespace star { namespace util {
-    struct SearchOptions;
+    struct SearchOptions2;
 } } } }
 
 // Base structure for parameters of the find-methods.
@@ -56,11 +56,20 @@ namespace nsSwCursorSelOverFlags
     const SwCursorSelOverFlags SELOVER_CHANGEPOS           = 0x08;
 }
 
+// define for cursor travelling normally in western text cells and chars do
+// the same, but in complex text cell skip over ligatures and char skip
+// into it.
+// These defines exist only to cut off the dependencies to I18N project.
+const sal_uInt16 CRSR_SKIP_CHARS  = 0;
+const sal_uInt16 CRSR_SKIP_CELLS  = 1;
+const sal_uInt16 CRSR_SKIP_HIDDEN = 2;
+
+
 class SW_DLLPUBLIC SwCursor : public SwPaM
 {
     friend class SwCursorSaveState;
 
-    _SwCursor_SavePos* m_pSavePos;
+    SwCursor_SavePos* m_pSavePos;
     long m_nRowSpanOffset;        // required for travelling in tabs with rowspans
     sal_uInt8 m_nCursorBidiLevel; // bidi level of the cursor
     bool m_bColumnSelection;      // true: cursor is aprt of a column selection
@@ -72,11 +81,11 @@ class SW_DLLPUBLIC SwCursor : public SwPaM
     SwCursor(SwCursor const& rPaM) = delete;
 
 protected:
-    _SwCursor_SavePos* CreateNewSavePos() const;
+    SwCursor_SavePos* CreateNewSavePos() const;
     void SaveState();
     void RestoreState();
 
-    const _SwCursor_SavePos* GetSavePos() const { return m_pSavePos; }
+    const SwCursor_SavePos* GetSavePos() const { return m_pSavePos; }
 
     virtual const SwContentFrame* DoSetBidiLevelLeftRight(
         bool & io_rbLeft, bool bVisualAllowed, bool bInsertCursor);
@@ -85,7 +94,7 @@ protected:
 
 public:
     // single argument ctors shall be explicit.
-    SwCursor( const SwPosition &rPos, SwPaM* pRing, bool bColumnSel );
+    SwCursor( const SwPosition &rPos, SwPaM* pRing );
     virtual ~SwCursor();
 
     /// this takes a second parameter, which indicates the Ring that
@@ -103,7 +112,7 @@ public:
     SwMoveFnCollection* MakeFindRange( SwDocPositions, SwDocPositions,
                                         SwPaM* ) const;
 
-    sal_uLong Find( const css::util::SearchOptions& rSearchOpt,
+    sal_uLong Find( const css::util::SearchOptions2& rSearchOpt,
                 bool bSearchInNotes,
                 SwDocPositions nStart, SwDocPositions nEnde,
                 bool& bCancel,
@@ -118,7 +127,7 @@ public:
                 SwDocPositions nStart, SwDocPositions nEnde,
                 bool& bCancel,
                 FindRanges = FND_IN_BODY,
-                const css::util::SearchOptions* pSearchOpt = nullptr,
+                const css::util::SearchOptions2* pSearchOpt = nullptr,
                 const SfxItemSet* rReplSet = nullptr );
 
     // UI versions
@@ -164,10 +173,8 @@ public:
     bool SttEndDoc( bool bSttDoc );
     bool GoPrevNextCell( bool bNext, sal_uInt16 nCnt );
 
-    bool Left( sal_uInt16 nCnt, sal_uInt16 nMode, bool bAllowVisual, bool bSkipHidden )
-                                    { return LeftRight( true, nCnt, nMode, bAllowVisual, bSkipHidden, false ); }
-    bool Right( sal_uInt16 nCnt, sal_uInt16 nMode, bool bAllowVisual, bool bSkipHidden )
-                                    { return LeftRight( false, nCnt, nMode, bAllowVisual, bSkipHidden, false ); }
+    bool Left( sal_uInt16 nCnt )   { return LeftRight( true, nCnt, CRSR_SKIP_CHARS, false/*bAllowVisual*/, false/*bSkipHidden*/, false ); }
+    bool Right( sal_uInt16 nCnt )  { return LeftRight( false, nCnt, CRSR_SKIP_CHARS, false/*bAllowVisual*/, false/*bSkipHidden*/, false ); }
     bool GoNextCell( sal_uInt16 nCnt = 1 )  { return GoPrevNextCell( true, nCnt ); }
     bool GoPrevCell( sal_uInt16 nCnt = 1 )  { return GoPrevNextCell( false, nCnt ); }
     virtual bool GotoTable( const OUString& rName );
@@ -233,20 +240,20 @@ public:
 };
 
 // internal, used by SwCursor::SaveState() etc.
-struct _SwCursor_SavePos
+struct SwCursor_SavePos
 {
     sal_uLong nNode;
     sal_Int32 nContent;
-    _SwCursor_SavePos* pNext;
+    SwCursor_SavePos* pNext;
 
-    _SwCursor_SavePos( const SwCursor& rCursor )
+    SwCursor_SavePos( const SwCursor& rCursor )
         : nNode( rCursor.GetPoint()->nNode.GetIndex() ),
         nContent( rCursor.GetPoint()->nContent.GetIndex() ),
         pNext( nullptr )
     {}
-    virtual ~_SwCursor_SavePos() {}
+    virtual ~SwCursor_SavePos() {}
 
-    DECL_FIXEDMEMPOOL_NEWDEL( _SwCursor_SavePos )
+    DECL_FIXEDMEMPOOL_NEWDEL( SwCursor_SavePos )
 };
 
 class SwTableCursor : public virtual SwCursor

@@ -20,34 +20,21 @@
 #ifndef INCLUDED_VCL_INC_SVDATA_HXX
 #define INCLUDED_VCL_INC_SVDATA_HXX
 
-#include "sal/types.h"
+#include <config_version.h>
 
-#include <osl/thread.hxx>
-#include <rtl/ref.hxx>
-#include <rtl/ustring.hxx>
-#include "tools/link.hxx"
-#include "tools/fldunit.hxx"
-#include "tools/color.hxx"
-#include "tools/debug.hxx"
-#include "tools/solar.h"
-#include "vcl/bitmapex.hxx"
-#include "vcl/idle.hxx"
-#include "vcl/dllapi.h"
-#include "vcl/keycod.hxx"
-#include "vcl/svapp.hxx"
-#include "vcl/vclevent.hxx"
+#include <tools/fldunit.hxx>
+#include <unotools/options.hxx>
+#include <vcl/idle.hxx>
+#include <vcl/svapp.hxx>
+
+#include <com/sun/star/lang/XComponent.hpp>
+
 #include "vcleventlisteners.hxx"
-
-#include "unotools/options.hxx"
-
+#include "impfontcache.hxx"
 #include "xconnection.hxx"
 
-#include "com/sun/star/lang/XComponent.hpp"
-#include "com/sun/star/uno/Reference.hxx"
-
 #include <unordered_map>
-
-#include <config_version.h>
+#include <boost/functional/hash.hpp>
 
 struct ImplTimerData;
 struct ImplIdleData;
@@ -126,6 +113,7 @@ struct ImplSVAppData
     OUString*               mpAppName;                      // Application name
     OUString*               mpAppFileName;                  // Abs. Application FileName
     OUString*               mpDisplayName;                  // Application Display Name
+    OUString*               mpToolkitName;                  // Toolkit Name
     Help*                   mpHelp;                         // Application help
     PopupMenu*              mpActivePopupMenu;              // Actives Popup-Menu (in Execute)
     ImplIdleMgr*            mpIdleMgr;                      // Idle-Manager
@@ -135,7 +123,6 @@ struct ImplSVAppData
     sal_uInt64              mnLastInputTime;                // GetLastInputTime()
     sal_uInt16              mnDispatchLevel;                // DispatchLevel
     sal_uInt16              mnModalMode;                    // ModalMode Count
-    sal_uInt16              mnModalDialog;                  // ModalDialog Count
     SystemWindowFlags       mnSysWinMode;                   // Mode, when SystemWindows should be created
     short                   mnDialogScaleX;                 // Scale X-Positions and sizes in Dialogs
     bool                    mbInAppMain;                    // is Application::Main() on stack
@@ -211,7 +198,6 @@ struct ImplSVWinData
     StartAutoScrollFlags    mnAutoScrollFlags;              // auto scroll flags
     bool                    mbNoDeactivate;                 // true: do not execute Deactivate
     bool                    mbNoSaveFocus;                  // true: menus must not save/restore focus
-    bool                    mbNoSaveBackground;             // true: save background is unnecessary or even less performant
 };
 
 typedef std::vector< std::pair< OUString, FieldUnit > > FieldUnitStringList;
@@ -357,6 +343,7 @@ struct ImplSVData
 
 void        ImplDeInitSVData();
 VCL_PLUGIN_PUBLIC vcl::Window* ImplGetDefaultWindow();
+VCL_PLUGIN_PUBLIC vcl::Window* ImplGetDefaultContextWindow();
 VCL_PLUGIN_PUBLIC ResMgr*     ImplGetResMgr();
 VCL_PLUGIN_PUBLIC ResId VclResId( sal_Int32 nId ); // throws std::bad_alloc if no res mgr
 DockingManager*     ImplGetDockingManager();
@@ -379,43 +366,27 @@ bool ImplInitAccessBridge();
 FieldUnitStringList* ImplGetFieldUnits();
 FieldUnitStringList* ImplGetCleanedFieldUnits();
 
-// ImplDelData is used as a "dog tag" by a window when it
-// does something that could indirectly destroy the window
-// TODO: wild destruction of a window should not be possible
-
-struct ImplDelData
-{
-    ImplDelData*        mpNext;
-    VclPtr<vcl::Window> mpWindow;
-    bool                mbDel;
-
-                        ImplDelData( vcl::Window* pWindow = nullptr );
-    virtual             ~ImplDelData();
-
-    bool                IsDead() const
-    {
-        DBG_ASSERT( !mbDel, "object deleted while in use !" );
-        return mbDel;
-    }
-
-private:
-    void                AttachToWindow( const vcl::Window* );
-
-};
-
-struct ImplFocusDelData : public ImplDelData
-{
-    VclPtr<vcl::Window> mpFocusWin;
-};
-
 struct ImplSVEvent
 {
     void*               mpData;
     Link<void*,void>    maLink;
     VclPtr<vcl::Window> mpInstanceRef;
     VclPtr<vcl::Window> mpWindow;
-    ImplDelData         maDelData;
     bool                mbCall;
+};
+
+struct ControlCacheHashFunction
+{
+    std::size_t operator()(ControlCacheKey const& aCache) const
+    {
+        std::size_t seed = 0;
+        boost::hash_combine(seed, aCache.mnType);
+        boost::hash_combine(seed, aCache.mnPart);
+        boost::hash_combine(seed, aCache.mnState);
+        boost::hash_combine(seed, aCache.maSize.Width());
+        boost::hash_combine(seed, aCache.maSize.Height());
+        return seed;
+    }
 };
 
 #endif // INCLUDED_VCL_INC_SVDATA_HXX

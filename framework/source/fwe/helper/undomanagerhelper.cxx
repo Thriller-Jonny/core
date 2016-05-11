@@ -21,15 +21,13 @@
 
 #include <com/sun/star/lang/XComponent.hpp>
 
-#include <cppuhelper/interfacecontainer.hxx>
+#include <comphelper/interfacecontainer2.hxx>
 #include <cppuhelper/exc_hlp.hxx>
 #include <comphelper/flagguard.hxx>
 #include <comphelper/asyncnotification.hxx>
 #include <svl/undo.hxx>
 #include <tools/diagnose_ex.h>
 #include <osl/conditn.hxx>
-
-#include <boost/bind.hpp>
 
 #include <functional>
 #include <stack>
@@ -41,14 +39,10 @@ namespace framework
     using ::com::sun::star::uno::Reference;
     using ::com::sun::star::uno::XInterface;
     using ::com::sun::star::uno::UNO_QUERY;
-    using ::com::sun::star::uno::UNO_QUERY_THROW;
-    using ::com::sun::star::uno::UNO_SET_THROW;
     using ::com::sun::star::uno::Exception;
     using ::com::sun::star::uno::RuntimeException;
     using ::com::sun::star::uno::Any;
-    using ::com::sun::star::uno::makeAny;
     using ::com::sun::star::uno::Sequence;
-    using ::com::sun::star::uno::Type;
     using ::com::sun::star::document::XUndoManagerListener;
     using ::com::sun::star::document::UndoManagerEvent;
     using ::com::sun::star::document::EmptyUndoStackException;
@@ -69,7 +63,7 @@ namespace framework
     class UndoActionWrapper : public SfxUndoAction
     {
     public:
-                            UndoActionWrapper(
+        explicit            UndoActionWrapper(
                                 Reference< XUndoAction > const& i_undoAction
                             );
         virtual             ~UndoActionWrapper();
@@ -138,7 +132,7 @@ namespace framework
     class UndoManagerRequest : public ::comphelper::AnyEvent
     {
     public:
-        UndoManagerRequest( ::std::function<void ()> const& i_request )
+        explicit UndoManagerRequest( ::std::function<void ()> const& i_request )
             :m_request( i_request )
             ,m_caughtException()
             ,m_finishCondition()
@@ -197,8 +191,8 @@ namespace framework
         bool                                m_bAPIActionRunning;
         bool                                m_bProcessingEvents;
         sal_Int32                           m_nLockCount;
-        ::cppu::OInterfaceContainerHelper   m_aUndoListeners;
-        ::cppu::OInterfaceContainerHelper   m_aModifyListeners;
+        ::comphelper::OInterfaceContainerHelper2   m_aUndoListeners;
+        ::comphelper::OInterfaceContainerHelper2   m_aModifyListeners;
         IUndoManagerImplementation&         m_rUndoManagerImplementation;
         ::std::stack< bool >                m_aContextVisibilities;
 #if OSL_DEBUG_LEVEL > 0
@@ -211,7 +205,7 @@ namespace framework
         ::osl::Mutex&   getMutex() { return m_aMutex; }
 
     public:
-        UndoManagerHelper_Impl( IUndoManagerImplementation& i_undoManagerImpl )
+        explicit UndoManagerHelper_Impl( IUndoManagerImplementation& i_undoManagerImpl )
             :m_aMutex()
             ,m_aQueueMutex()
             ,m_disposed( false )
@@ -371,12 +365,7 @@ namespace framework
     void UndoManagerHelper_Impl::enterUndoContext( const OUString& i_title, const bool i_hidden, IMutexGuard& i_instanceLock )
     {
         impl_processRequest(
-            ::boost::bind(
-                &UndoManagerHelper_Impl::impl_enterUndoContext,
-                this,
-                ::boost::cref( i_title ),
-                i_hidden
-            ),
+            [this, &i_title, i_hidden] () { return this->impl_enterUndoContext(i_title, i_hidden); },
             i_instanceLock
         );
     }
@@ -384,10 +373,7 @@ namespace framework
     void UndoManagerHelper_Impl::leaveUndoContext( IMutexGuard& i_instanceLock )
     {
         impl_processRequest(
-            ::boost::bind(
-                &UndoManagerHelper_Impl::impl_leaveUndoContext,
-                this
-            ),
+            [this] () { return this->impl_leaveUndoContext(); },
             i_instanceLock
         );
     }
@@ -402,11 +388,7 @@ namespace framework
             );
 
         impl_processRequest(
-            ::boost::bind(
-                &UndoManagerHelper_Impl::impl_addUndoAction,
-                this,
-                ::boost::ref( i_action )
-            ),
+            [this, &i_action] () { return this->impl_addUndoAction(i_action); },
             i_instanceLock
         );
     }
@@ -414,10 +396,7 @@ namespace framework
     void UndoManagerHelper_Impl::clear( IMutexGuard& i_instanceLock )
     {
         impl_processRequest(
-            ::boost::bind(
-                &UndoManagerHelper_Impl::impl_clear,
-                this
-            ),
+            [this] () { return this->impl_clear(); },
             i_instanceLock
         );
     }
@@ -425,10 +404,7 @@ namespace framework
     void UndoManagerHelper_Impl::clearRedo( IMutexGuard& i_instanceLock )
     {
         impl_processRequest(
-            ::boost::bind(
-                &UndoManagerHelper_Impl::impl_clearRedo,
-                this
-            ),
+            [this] () { return this->impl_clearRedo(); },
             i_instanceLock
         );
     }
@@ -436,10 +412,7 @@ namespace framework
     void UndoManagerHelper_Impl::reset( IMutexGuard& i_instanceLock )
     {
         impl_processRequest(
-            ::boost::bind(
-                &UndoManagerHelper_Impl::impl_reset,
-                this
-            ),
+            [this] () { return this->impl_reset(); },
             i_instanceLock
         );
     }
@@ -583,7 +556,7 @@ namespace framework
 
         size_t nContextElements = 0;
 
-        const bool isHiddenContext = m_aContextVisibilities.top();;
+        const bool isHiddenContext = m_aContextVisibilities.top();
         m_aContextVisibilities.pop();
 
         const bool bHadRedoActions = ( rUndoManager.GetRedoActionCount( IUndoManager::TopLevel ) > 0 );
@@ -894,12 +867,7 @@ namespace framework
     void UndoManagerHelper_Impl::undo( IMutexGuard& i_instanceLock )
     {
         impl_processRequest(
-            ::boost::bind(
-                &UndoManagerHelper_Impl::impl_doUndoRedo,
-                this,
-                ::boost::ref( i_instanceLock ),
-                true
-            ),
+            [this, &i_instanceLock] () { return this->impl_doUndoRedo(i_instanceLock, true); },
             i_instanceLock
         );
     }
@@ -907,12 +875,7 @@ namespace framework
     void UndoManagerHelper_Impl::redo( IMutexGuard& i_instanceLock )
     {
         impl_processRequest(
-            ::boost::bind(
-                &UndoManagerHelper_Impl::impl_doUndoRedo,
-                this,
-                ::boost::ref( i_instanceLock ),
-                false
-            ),
+            [this, &i_instanceLock] () { return this->impl_doUndoRedo(i_instanceLock, false); },
             i_instanceLock
         );
     }

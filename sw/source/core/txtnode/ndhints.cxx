@@ -198,7 +198,6 @@ bool SwpHints::Check(bool bPortionsMerged) const
         // 3b) Stimmt die End-Sortierung?
         nIdx = *pHtEnd->GetAnyEnd();
         CHECK_ERR( nIdx >= nLastEnd, "HintsCheck: ends are unsorted" );
-        nLastEnd = nIdx;
 
         // 4b) IsLessEnd-Konsistenz
         if( pLastEnd )
@@ -252,7 +251,7 @@ bool SwpHints::Check(bool bPortionsMerged) const
                                 ->GetSortNumber() !=
                          static_txtattr_cast<const SwTextCharFormat *>(pHtLast)
                                 ->GetSortNumber())
-                    ) // multiple CHARFMT on same range need distinct sortnr
+                    ) // multiple CHARFMT on same range need distinct sortner
                 )
             ||  (pHtThis->GetStart() == *pHtThis->End()), // this empty
                    "HintsCheck: Portion inconsistency. "

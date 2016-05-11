@@ -28,8 +28,8 @@
 #include <vcl/group.hxx>
 #include <vcl/lstbox.hxx>
 #include <vcl/msgbox.hxx>
+#include <sot/exchange.hxx>
 #include <sot/formats.hxx>
-#include <sot/stg.hxx>
 #include <svtools/sores.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/settings.hxx>
@@ -92,9 +92,7 @@ void SvPasteObjectDialog::Insert( SotClipboardFormatId nFormat, const OUString& 
     aSupplementMap.insert( ::std::make_pair( nFormat, rFormatName ) );
 }
 
-SotClipboardFormatId SvPasteObjectDialog::GetFormat( const TransferableDataHelper& rHelper,
-                                      const DataFlavorExVector* pFormats,
-                                      const TransferableObjectDescriptor* )
+SotClipboardFormatId SvPasteObjectDialog::GetFormat( const TransferableDataHelper& rHelper)
 {
     //TODO/LATER: why is the Descriptor never used?!
     TransferableObjectDescriptor aDesc;
@@ -103,8 +101,7 @@ SotClipboardFormatId SvPasteObjectDialog::GetFormat( const TransferableDataHelpe
         (void)const_cast<TransferableDataHelper&>(rHelper).GetTransferableObjectDescriptor(
                                 SotClipboardFormatId::OBJECTDESCRIPTOR, aDesc);
     }
-    if ( !pFormats )
-        pFormats = &rHelper.GetDataFlavorExVector();
+    const DataFlavorExVector* pFormats = &rHelper.GetDataFlavorExVector();
 
     // create and fill dialog box
     OUString aSourceName, aTypeName;

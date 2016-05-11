@@ -20,16 +20,16 @@
 #ifndef INCLUDED_VCL_INC_OPENGL_SALBMP_H
 #define INCLUDED_VCL_INC_OPENGL_SALBMP_H
 
-#include <basebmp/bitmapdevice.hxx>
 #include <vcl/opengl/OpenGLContext.hxx>
 
-#include "vcl/salbtype.hxx"
+#include <vcl/salbtype.hxx>
 #include "opengl/bmpop.hxx"
 #include "opengl/texture.hxx"
 
 #include <salbmp.hxx>
 
 #include <deque>
+#include <memory>
 
 struct  BitmapBuffer;
 class   BitmapPalette;
@@ -37,20 +37,16 @@ class   BitmapPalette;
 class VCL_PLUGIN_PUBLIC OpenGLSalBitmap : public SalBitmap
 {
 private:
-    rtl::Reference<OpenGLContext>       mpContext;
     OpenGLTexture                       maTexture;
     bool                                mbDirtyTexture;
     BitmapPalette                       maPalette;
-    basebmp::RawMemorySharedArray       maUserBuffer;
+    std::shared_ptr<sal_uInt8>          mpUserBuffer;
     sal_uInt16                          mnBits;
     sal_uInt16                          mnBytesPerRow;
     int                                 mnWidth;
     int                                 mnHeight;
-    int                                 mnBufWidth;
-    int                                 mnBufHeight;
     std::deque< OpenGLSalBitmapOp* >    maPendingOps;
 
-    void makeSomeOpenGLContextCurrent();
     virtual void updateChecksum() const override;
 
     bool calcChecksumGL(OpenGLTexture& rInputTexture, ChecksumType& rChecksum) const;
@@ -82,12 +78,14 @@ public:
 
     bool            Scale( const double& rScaleX, const double& rScaleY, BmpScaleFlag nScaleFlag ) override;
     bool            Replace( const Color& rSearchColor, const Color& rReplaceColor, sal_uLong nTol ) override;
+    bool            ConvertToGreyscale() override;
 
 public:
 
     bool            Create( const OpenGLTexture& rTex, long nX, long nY, long nWidth, long nHeight );
     OpenGLTexture&  GetTexture() const;
     static rtl::Reference<OpenGLContext> GetBitmapContext();
+    const BitmapPalette& GetBitmapPalette() const { return maPalette; }
 
 private:
 
@@ -98,10 +96,11 @@ private:
 
 private:
 
-    bool ImplScaleFilter( const double& rScaleX, const double& rScaleY, GLenum nFilter );
+    bool ImplScaleFilter( const rtl::Reference< OpenGLContext > &xContext, const double& rScaleX, const double& rScaleY, GLenum nFilter );
     static void ImplCreateKernel( const double& fScale, const vcl::Kernel& rKernel, GLfloat*& pWeights, sal_uInt32& aKernelSize );
-    bool ImplScaleConvolution(const double& rScaleX, const double& rScaleY, const vcl::Kernel& rKernel);
-    bool ImplScaleArea( double rScaleX, double rScaleY );
+    bool ImplScaleConvolution(const rtl::Reference< OpenGLContext > &xContext, const double& rScaleX, const double& rScaleY, const vcl::Kernel& rKernel);
+    bool ImplScaleArea( const rtl::Reference< OpenGLContext > &xContext,
+                        double rScaleX, double rScaleY );
 
 public:
 

@@ -35,7 +35,6 @@
 #include "sdpage.hxx"
 #include "drawdoc.hxx"
 #include "DrawDocShell.hxx"
-#include "slideshow.hxx"
 #include "pgjump.hxx"
 #include "NavigatorChildWindow.hxx"
 #include "navigatr.hxx"
@@ -67,16 +66,10 @@ void DrawViewShell::ExecNavigatorWin( SfxRequest& rReq )
         }
         break;
 
-        case SID_NAVIGATOR_PEN:
         case SID_NAVIGATOR_PAGE:
         case SID_NAVIGATOR_OBJECT:
         {
-            rtl::Reference< SlideShow > xSlideshow( SlideShow::GetSlideShow( GetViewShellBase() ) );
-            if (xSlideshow.is() && xSlideshow->isRunning() )
-            {
-                xSlideshow->receiveRequest( rReq );
-            }
-            else if (nSId == SID_NAVIGATOR_PAGE)
+            if (nSId == SID_NAVIGATOR_PAGE)
             {
                 if ( mpDrawView->IsTextEdit() )
                     mpDrawView->SdrEndTextEdit();
@@ -142,8 +135,8 @@ void DrawViewShell::ExecNavigatorWin( SfxRequest& rReq )
                 SfxFrameItem aFrameItem(SID_DOCFRAME, pFrame);
                 SfxBoolItem aBrowseItem(SID_BROWSE, true);
                 pFrame->GetDispatcher()->
-                Execute(SID_OPENDOC, SfxCallMode::ASYNCHRON | SfxCallMode::RECORD,
-                            &aStrItem, &aFrameItem, &aBrowseItem, &aReferer, 0L);
+                ExecuteList(SID_OPENDOC, SfxCallMode::ASYNCHRON | SfxCallMode::RECORD,
+                    { &aStrItem, &aFrameItem, &aBrowseItem, &aReferer });
             }
 
             SfxBindings& rBindings = GetViewFrame()->GetBindings();
@@ -163,48 +156,22 @@ void DrawViewShell::GetNavigatorWinState( SfxItemSet& rSet )
     sal_uInt16 nCurrentPage = 0;
     sal_uInt16 nFirstPage = 0;
     sal_uInt16 nLastPage;
-    bool   bEndless = false;
     OUString aPageName;
 
-    rtl::Reference< SlideShow > xSlideshow( SlideShow::GetSlideShow( GetViewShellBase() ) );
-    if( xSlideshow.is() && xSlideshow->isRunning() )
+    nState |= NAVTLB_UPDATE;
+
+    if (mpActualPage != nullptr)
     {
-        // pen activated?
-        nState |= xSlideshow->isDrawingPossible() ? NAVBTN_PEN_CHECKED : NAVBTN_PEN_UNCHECKED;
-
-        nCurrentPage = (sal_uInt16)xSlideshow->getCurrentPageNumber();
-        nFirstPage = (sal_uInt16)xSlideshow->getFirstPageNumber();
-        nLastPage = (sal_uInt16)xSlideshow->getLastPageNumber();
-        bEndless = xSlideshow->isEndless();
-
-        // Get the page for the current page number.
-        SdPage* pPage = nullptr;
-        if( nCurrentPage < GetDoc()->GetSdPageCount( PK_STANDARD ) )
-            pPage = GetDoc()->GetSdPage (nCurrentPage, PK_STANDARD);
-
-        if(pPage)
-            aPageName = pPage->GetName();
+        nCurrentPage = ( mpActualPage->GetPageNum() - 1 ) / 2;
+        aPageName = mpActualPage->GetName();
     }
-    else
-    {
-        nState |= NAVBTN_PEN_DISABLED | NAVTLB_UPDATE;
+    nLastPage = GetDoc()->GetSdPageCount( mePageKind ) - 1;
 
-        if (mpActualPage != nullptr)
-        {
-            nCurrentPage = ( mpActualPage->GetPageNum() - 1 ) / 2;
-            aPageName = mpActualPage->GetName();
-        }
-        nLastPage = GetDoc()->GetSdPageCount( mePageKind ) - 1;
-    }
 
     // first page / previous page
     if( nCurrentPage == nFirstPage )
     {
-        nState |= NAVBTN_FIRST_DISABLED;
-        if( !bEndless )
-            nState |= NAVBTN_PREV_DISABLED;
-        else
-            nState |= NAVBTN_PREV_ENABLED;
+        nState |= NAVBTN_FIRST_DISABLED | NAVBTN_PREV_DISABLED;
     }
     else
     {
@@ -214,11 +181,7 @@ void DrawViewShell::GetNavigatorWinState( SfxItemSet& rSet )
     // last page / next page
     if( nCurrentPage == nLastPage )
     {
-        nState |= NAVBTN_LAST_DISABLED;
-        if( !bEndless )
-            nState |= NAVBTN_NEXT_DISABLED;
-        else
-            nState |= NAVBTN_NEXT_ENABLED;
+        nState |= NAVBTN_LAST_DISABLED | NAVBTN_NEXT_DISABLED;
     }
     else
     {

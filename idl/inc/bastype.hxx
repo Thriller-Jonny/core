@@ -29,32 +29,17 @@ class SvIdlDataBase;
 class SvStream;
 class SvTokenStream;
 
-class Svint
-{
-    int     nVal;
-    bool    bSet;
-public:
-                Svint() { nVal = 0; bSet = false; }
-                Svint( int n ) : nVal( n ), bSet( true ) {}
-                Svint( int n, bool bSetP ) : nVal( n ), bSet( bSetP ) {}
-    Svint    &  operator = ( int n ) { nVal = n; bSet = true; return *this; }
-
-    operator    int ()const { return nVal; }
-    bool        IsSet() const { return bSet; }
-};
-
-
 class SvBOOL
 {
-    bool  nVal:1,
+    bool  bVal:1,
           bSet:1;
 public:
-                SvBOOL() { bSet = nVal = false; }
-                SvBOOL( bool n ) : nVal( n ), bSet( true ) {}
-                SvBOOL( bool n, bool bSetP ) : nVal( n ), bSet( bSetP ) {}
-    SvBOOL &    operator = ( bool n ) { nVal = n; bSet = true; return *this; }
+                SvBOOL() { bSet = bVal = false; }
+                SvBOOL( bool b ) : bVal( b ), bSet( true ) {}
+                SvBOOL( bool b, bool bSetP ) : bVal( b ), bSet( bSetP ) {}
+    SvBOOL &    operator = ( bool n ) { bVal = n; bSet = true; return *this; }
 
-    operator    bool() const { return nVal; }
+    operator    bool() const { return bVal; }
     bool        IsSet() const { return bSet; }
 
     bool        ReadSvIdl( SvStringHashEntry * pName, SvTokenStream & rInStm );
@@ -67,6 +52,7 @@ class SvIdentifier
     sal_uInt32  nValue;
 public:
                 SvIdentifier() : nValue( 0 ) {};
+                SvIdentifier(sal_uInt32 n) : nValue( n ) {};
 
     void        setString(const OString& rStr) { m_aStr = rStr; }
     const OString& getString() const { return m_aStr; }
@@ -77,75 +63,13 @@ public:
                     return !m_aStr.isEmpty() || nValue != 0;
                 }
     sal_uInt32  GetValue() const { return nValue; }
-    void        SetValue( sal_uInt32 nVal ) { nValue = nVal; }
+    void        SetValue( sal_uInt32 bVal ) { nValue = bVal; }
 
-    bool        ReadSvIdl( SvIdlDataBase &, SvTokenStream & rInStm );
-    bool        ReadSvIdl( SvIdlDataBase &, SvStringHashEntry * pName,
-                           SvTokenStream & rInStm );
+    void        ReadSvIdl( SvIdlDataBase &, SvTokenStream & rInStm );
 };
 
 
-class SvString
-{
-private:
-    OString m_aStr;
-public:
-    SvString() {}
-    void setString(const OString& rStr)
-    {
-        m_aStr = rStr;
-    }
-    const OString& getString() const
-    {
-        return m_aStr;
-    }
-    bool IsSet() const
-    {
-        return !m_aStr.isEmpty();
-    }
-
-    bool        ReadSvIdl( SvStringHashEntry * pName, SvTokenStream & rInStm );
-};
-
-
-class SvHelpText : public SvString
-{
-public:
-                SvHelpText() {}
-    bool        ReadSvIdl( SvIdlDataBase &, SvTokenStream & rInStm );
-};
-
-
-class SvHelpContext : public SvIdentifier
-{
-};
-
-class SvUUId : public SvGlobalName
-{
-public:
-                SvUUId() {}
-    bool        ReadSvIdl( SvIdlDataBase &, SvTokenStream & rInStm );
-};
-
-
-class SvVersion
-{
-    sal_uInt16  nMajorVersion;
-    sal_uInt16  nMinorVersion;
-public:
-                SvVersion() : nMajorVersion( 1 ), nMinorVersion( 0 ) {}
-    bool        operator == ( const SvVersion & r )
-                {
-                    return (r.nMajorVersion == nMajorVersion)
-                             && (r.nMinorVersion == nMinorVersion);
-                }
-    bool        operator != ( const SvVersion & r )
-                {
-                    return !(*this == r);
-                }
-
-    bool        ReadSvIdl( SvTokenStream & rInStm );
-};
+bool        ReadStringSvIdl( SvStringHashEntry * pName, SvTokenStream & rInStm, OString& aString );
 
 
 #endif // INCLUDED_IDL_INC_BASTYPE_HXX

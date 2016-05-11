@@ -21,10 +21,10 @@
 #define INCLUDED_SC_SOURCE_CORE_INC_BCASLOT_HXX
 
 #include <functional>
+#include <memory>
+#include <map>
 #include <set>
 #include <unordered_set>
-#include <boost/ptr_container/ptr_map.hpp>
-#include <boost/noncopyable.hpp>
 
 #include <svl/broadcast.hxx>
 
@@ -41,11 +41,6 @@ struct AreaListener
     ScRange maArea;
     bool mbGroupListening;
     SvtListener* mpListener;
-
-    struct SortByArea : std::binary_function<AreaListener, AreaListener, bool>
-    {
-        bool operator() ( const AreaListener& rLeft, const AreaListener& rRight ) const;
-    };
 };
 
 }
@@ -54,7 +49,7 @@ struct AreaListener
     Used in a Unique Associative Container.
  */
 
-class ScBroadcastArea : boost::noncopyable
+class ScBroadcastArea
 {
 private:
     ScBroadcastArea*    pUpdateChainNext;
@@ -66,6 +61,9 @@ private:
     bool mbGroupListening:1;
 
 public:
+    ScBroadcastArea(const ScBroadcastArea&) = delete;
+    const ScBroadcastArea& operator=(const ScBroadcastArea&) = delete;
+
     ScBroadcastArea( const ScRange& rRange );
 
     inline SvtBroadcaster&       GetBroadcaster()       { return aBroadcaster; }
@@ -213,7 +211,7 @@ public:
     void EndListeningArea(
         const ScRange& rRange, bool bGroupListening, SvtListener* pListener, ScBroadcastArea*& rpArea );
 
-    bool AreaBroadcast( const ScRange& rRange, sal_uLong nHint );
+    bool AreaBroadcast( const ScRange& rRange, sal_uInt32 nHint );
     bool                AreaBroadcast( const ScHint& rHint );
     void                DelBroadcastAreasInRange( const ScRange& rRange );
     void                UpdateRemove( UpdateRefMode eUpdateRefMode,
@@ -248,7 +246,7 @@ public:
 class  ScBroadcastAreaSlotMachine
 {
 private:
-    typedef boost::ptr_map<ScBroadcastArea*, sc::ColumnSpanSet> BulkGroupAreasType;
+    typedef std::map<ScBroadcastArea*, std::unique_ptr<sc::ColumnSpanSet>> BulkGroupAreasType;
 
     /**
         Slot offset arrangement of columns and rows, once per sheet.
@@ -289,14 +287,14 @@ private:
 
 private:
     ScBroadcastAreasBulk  aBulkBroadcastAreas;
-    BulkGroupAreasType maBulkGroupAreas;
+    BulkGroupAreasType m_BulkGroupAreas;
     TableSlotsMap         aTableSlotsMap;
     AreasToBeErased       maAreasToBeErased;
     SvtBroadcaster       *pBCAlways;             // for the RC_ALWAYS special range
     ScDocument           *pDoc;
     ScBroadcastArea      *pUpdateChain;
     ScBroadcastArea      *pEOUpdateChain;
-    sal_uLong             nInBulkBroadcast;
+    sal_uInt32            nInBulkBroadcast;
 
     static inline SCSIZE ComputeSlotOffset( const ScAddress& rAddress );
     static void          ComputeAreaPoints( const ScRange& rRange,
@@ -312,7 +310,7 @@ public:
     void EndListeningArea(
         const ScRange& rRange, bool bGroupListening, SvtListener* pListener );
 
-    bool AreaBroadcast( const ScRange& rRange, sal_uLong nHint );
+    bool AreaBroadcast( const ScRange& rRange, sal_uInt32 nHint );
     bool                AreaBroadcast( const ScHint& rHint ) const;
         // return: at least one broadcast occurred
     void                DelBroadcastAreasInRange( const ScRange& rRange );

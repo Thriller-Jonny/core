@@ -28,6 +28,7 @@
 #include "rtl/strbuf.hxx"
 #include "rtl/ustrbuf.hxx"
 #include <sal/log.hxx>
+#include <osl/mutex.hxx>
 
 #include "com/sun/star/uno/Any.hxx"
 #include <unordered_map>
@@ -82,7 +83,7 @@ static inline OUString toRTTIname( OUString const & rUNOname ) throw ()
 //#### RTTI simulation #############################################################################
 
 
-typedef std::unordered_map< OUString, void *, OUStringHash, equal_to< OUString > > t_string2PtrMap;
+typedef std::unordered_map< OUString, void *, OUStringHash > t_string2PtrMap;
 
 class RTTInfos
 {

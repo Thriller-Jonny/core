@@ -62,7 +62,7 @@ namespace xmlscript
             m_pParent->release();
     }
 
-    bool BasicElementBase::getBoolAttr( sal_Bool* pRet, const OUString& rAttrName,
+    bool BasicElementBase::getBoolAttr( bool* pRet, const OUString& rAttrName,
         const css::uno::Reference< css::xml::input::XAttributes >& xAttributes,
         sal_Int32 nUid )
     {
@@ -73,12 +73,12 @@ namespace xmlscript
             {
                 if ( aValue == "true" )
                 {
-                    *pRet = sal_True;
+                    *pRet = true;
                     return true;
                 }
                 else if ( aValue == "false" )
                 {
-                    *pRet = sal_False;
+                    *pRet = false;
                     return true;
                 }
                 else
@@ -180,7 +180,7 @@ void BasicElementBase::processingInstruction( const OUString& /*rTarget*/, const
 
                 OUString aStorageURL = xAttributes->getValueByUidName(m_pImport->XMLNS_XLINK_UID, "href" );
 
-                sal_Bool bReadOnly = sal_False;
+                bool bReadOnly = false;
                 getBoolAttr( &bReadOnly,"readonly", xAttributes, m_pImport->XMLNS_UID );
 
                 if ( m_xLibContainer.is() )
@@ -211,7 +211,7 @@ void BasicElementBase::processingInstruction( const OUString& /*rTarget*/, const
             {
                 OUString aName = xAttributes->getValueByUidName( m_pImport->XMLNS_UID, "name" );
 
-                sal_Bool bReadOnly = sal_False;
+                bool bReadOnly = false;
                 getBoolAttr( &bReadOnly, "readonly", xAttributes, m_pImport->XMLNS_UID );
 
                 if ( m_xLibContainer.is() )
@@ -497,30 +497,6 @@ void BasicImport::setDocumentLocator( const Reference< xml::sax::XLocator >& /*x
         return xElement;
     }
 
-    // component operations
-
-    OUString getImplementationName_XMLBasicImporter()
-    {
-        return OUString( "com.sun.star.comp.xmlscript.XMLBasicImporter" );
-    }
-
-    Sequence< OUString > getSupportedServiceNames_XMLBasicImporter()
-    {
-        Sequence< OUString > aNames { "com.sun.star.document.XMLBasicImporter" };
-        return aNames;
-    }
-
-    OUString getImplementationName_XMLOasisBasicImporter()
-    {
-        return OUString( "com.sun.star.comp.xmlscript.XMLOasisBasicImporter" );
-    }
-
-    Sequence< OUString > getSupportedServiceNames_XMLOasisBasicImporter()
-    {
-        Sequence< OUString > aNames { "com.sun.star.document.XMLOasisBasicImporter" };
-        return aNames;
-    }
-
     // XMLBasicImporterBase
 
     XMLBasicImporterBase::XMLBasicImporterBase( const Reference< XComponentContext >& rxContext, bool bOasis )
@@ -656,12 +632,13 @@ void BasicImport::setDocumentLocator( const Reference< xml::sax::XLocator >& /*x
 
     OUString XMLBasicImporter::getImplementationName(  ) throw (RuntimeException, std::exception)
     {
-        return getImplementationName_XMLBasicImporter();
+        return OUString( "com.sun.star.comp.xmlscript.XMLBasicImporter" );
     }
 
     Sequence< OUString > XMLBasicImporter::getSupportedServiceNames(  ) throw (RuntimeException, std::exception)
     {
-        return getSupportedServiceNames_XMLBasicImporter();
+        Sequence< OUString > aNames { "com.sun.star.document.XMLBasicImporter" };
+        return aNames;
     }
 
     // XMLOasisBasicImporter
@@ -679,28 +656,31 @@ void BasicImport::setDocumentLocator( const Reference< xml::sax::XLocator >& /*x
 
     OUString XMLOasisBasicImporter::getImplementationName(  ) throw (RuntimeException, std::exception)
     {
-        return getImplementationName_XMLOasisBasicImporter();
+        return OUString( "com.sun.star.comp.xmlscript.XMLOasisBasicImporter" );
     }
 
     Sequence< OUString > XMLOasisBasicImporter::getSupportedServiceNames(  ) throw (RuntimeException, std::exception)
     {
-        return getSupportedServiceNames_XMLOasisBasicImporter();
-    }
-
-    // component operations
-
-    Reference< XInterface > SAL_CALL create_XMLBasicImporter(
-        Reference< XComponentContext > const & xContext )
-    {
-        return static_cast< lang::XTypeProvider * >( new XMLBasicImporter( xContext ) );
-    }
-
-    Reference< XInterface > SAL_CALL create_XMLOasisBasicImporter(
-        Reference< XComponentContext > const & xContext )
-    {
-        return static_cast< lang::XTypeProvider * >( new XMLOasisBasicImporter( xContext ) );
+        Sequence< OUString > aNames { "com.sun.star.document.XMLOasisBasicImporter" };
+        return aNames;
     }
 
 }   // namespace xmlscript
+
+extern "C" SAL_DLLPUBLIC_EXPORT css::uno::XInterface * SAL_CALL
+com_sun_star_comp_xmlscript_XMLBasicImporter(
+    css::uno::XComponentContext *context,
+    css::uno::Sequence<css::uno::Any> const &)
+{
+    return cppu::acquire(new xmlscript::XMLBasicImporter(context));
+}
+
+extern "C" SAL_DLLPUBLIC_EXPORT css::uno::XInterface * SAL_CALL
+com_sun_star_comp_xmlscript_XMLOasisBasicImporter(
+    css::uno::XComponentContext *context,
+    css::uno::Sequence<css::uno::Any> const &)
+{
+    return cppu::acquire(new xmlscript::XMLOasisBasicImporter(context));
+}
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

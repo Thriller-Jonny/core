@@ -19,6 +19,8 @@
 #ifndef INCLUDED_FILTER_SOURCE_CONFIG_CACHE_BASECONTAINER_HXX
 #define INCLUDED_FILTER_SOURCE_CONFIG_CACHE_BASECONTAINER_HXX
 
+#include <memory>
+
 #include "filtercache.hxx"
 #include <com/sun/star/uno/Exception.hpp>
 #include <com/sun/star/lang/XServiceInfo.hpp>
@@ -28,7 +30,6 @@
 #include <com/sun/star/container/XContainerQuery.hpp>
 #include <com/sun/star/util/XFlushable.hpp>
 #include <cppuhelper/interfacecontainer.h>
-#include <salhelper/singletonref.hxx>
 #include <cppuhelper/implbase.hxx>
 #include <cppuhelper/weakref.hxx>
 #include <rtl/ustring.hxx>
@@ -36,8 +37,6 @@
 
 namespace filter{
     namespace config{
-
-
 
 
 /** @short      implements the interface css::container::XNameContainer
@@ -75,10 +74,6 @@ class BaseContainer : public BaseLock
                     at the interface XServiceInfo of our class ... */
         css::uno::Sequence< OUString > m_lServiceNames;
 
-        /** @short  reference(!) to a singleton filter cache implementation,
-                    which is used to work with the underlying configuration. */
-        ::salhelper::SingletonRef< FilterCache > m_rCache;
-
         /** @short  local filter cache, which is used to collect changes on the
                     filter configuration first and flush it later.
 
@@ -94,7 +89,7 @@ class BaseContainer : public BaseLock
                     m_rCache listen on the global configuration, where m_pFlushCache
                     write its data. m_rCache update itself automatically.
          */
-        FilterCache* m_pFlushCache;
+        std::unique_ptr<FilterCache> m_pFlushCache;
 
         /** @short  specify, which sub container of the used filter cache
                     must be wrapped by this container interface. */
@@ -124,11 +119,9 @@ class BaseContainer : public BaseLock
         BaseContainer();
 
 
-
         /** @short  standard dtor.
          */
         virtual ~BaseContainer();
-
 
 
         /** @short  initialize this generic intsnace with some specialized values
@@ -166,12 +159,10 @@ class BaseContainer : public BaseLock
     protected:
 
 
-
         /** @short  check if the underlying configuration data was already loaded
                     and do it if necessary automatically.
          */
         void impl_loadOnDemand();
-
 
 
         /** @short  it creates the global instance m_pFilterCache, which is a copy
@@ -183,7 +174,6 @@ class BaseContainer : public BaseLock
          */
         void impl_initFlushMode()
             throw (css::uno::RuntimeException);
-
 
 
         /** @short  returns a pointer to the current used cache member.

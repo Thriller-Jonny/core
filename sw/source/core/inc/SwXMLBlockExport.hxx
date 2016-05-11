@@ -38,9 +38,9 @@ public:
 
     virtual ~SwXMLBlockListExport() {}
     sal_uInt32 exportDoc( enum ::xmloff::token::XMLTokenEnum eClass) override;
-    void _ExportAutoStyles() override {}
-    void _ExportMasterStyles () override {}
-    void _ExportContent() override {}
+    void ExportAutoStyles_() override {}
+    void ExportMasterStyles_ () override {}
+    void ExportContent_() override {}
 };
 
 class SwXMLTextBlockExport : public SvXMLExport
@@ -57,10 +57,10 @@ public:
 
     virtual ~SwXMLTextBlockExport() {}
     sal_uInt32 exportDoc(enum ::xmloff::token::XMLTokenEnum /*eClass*/) override {return 0;}
-    sal_uInt32 exportDoc(const OUString & rText);
-    void _ExportAutoStyles() override {}
-    void _ExportMasterStyles () override {}
-    void _ExportContent() override {}
+    void exportDoc(const OUString & rText);
+    void ExportAutoStyles_() override {}
+    void ExportMasterStyles_ () override {}
+    void ExportContent_() override {}
 };
 
 #endif

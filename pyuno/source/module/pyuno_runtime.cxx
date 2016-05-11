@@ -56,14 +56,11 @@ using com::sun::star::lang::WrappedTargetRuntimeException;
 using com::sun::star::lang::XSingleServiceFactory;
 using com::sun::star::lang::XUnoTunnel;
 using com::sun::star::reflection::theCoreReflection;
-using com::sun::star::reflection::XIdlReflection;
 using com::sun::star::reflection::InvocationTargetException;
 using com::sun::star::script::Converter;
 using com::sun::star::script::XTypeConverter;
-using com::sun::star::script::XInvocationAdapterFactory2;
 using com::sun::star::script::XInvocation;
 using com::sun::star::beans::XMaterialHolder;
-using com::sun::star::beans::XIntrospection;
 using com::sun::star::beans::theIntrospection;
 
 #include <vector>
@@ -661,13 +658,11 @@ Any Runtime::pyObject2Any ( const PyRef & source, enum ConversionMode mode ) con
     {
         if( o == Py_True )
         {
-            sal_Bool b = sal_True;
-            a = Any( &b, cppu::UnoType<bool>::get() );
+            a <<= true;
         }
         else if ( o == Py_False )
         {
-            sal_Bool b = sal_False;
-            a = Any( &b, cppu::UnoType<bool>::get() );
+            a <<= false;
         }
         else
         {
@@ -695,13 +690,11 @@ Any Runtime::pyObject2Any ( const PyRef & source, enum ConversionMode mode ) con
         // Convert the Python 3 booleans that are actually of type PyLong.
         if(o == Py_True)
         {
-            sal_Bool b = sal_True;
-            a = Any(&b, cppu::UnoType<bool>::get());
+            a <<= true;
         }
         else if(o == Py_False)
         {
-            sal_Bool b = sal_False;
-            a = Any(&b, cppu::UnoType<bool>::get());
+            a <<= false;
         }
         else
         {

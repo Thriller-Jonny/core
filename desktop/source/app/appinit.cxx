@@ -66,7 +66,6 @@ namespace desktop
 {
 
 
-
 static void configureUcb()
 {
     // For backwards compatibility, in case some code still uses plain
@@ -176,7 +175,7 @@ class enable
     Sequence<Any> m_aSeq;
     public:
     enable() : m_aSeq(1) {
-        m_aSeq[0] <<= sal_True;
+        m_aSeq[0] <<= true;
     }
     void operator() (const AcceptorMap::value_type& val) {
         if (val.second.is()) {

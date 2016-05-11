@@ -25,7 +25,6 @@
 #include <limits>
 #include <sal/macros.h>
 #include <sot/storage.hxx>
-#include <boost/noncopyable.hpp>
 #include <oox/helper/helper.hxx>
 #include "filter.hxx"
 #include "scdllapi.h"
@@ -121,9 +120,14 @@ class ScStyleSheetPool;
 class SvStream;
 
 /** Contains static methods used anywhere in the filters. */
-class ScfTools : boost::noncopyable
+class ScfTools
 {
 public:
+    /** We don't want anybody to instantiate this class, since it is just a
+        collection of static items. */
+    ScfTools() = delete;
+    ScfTools(const ScfTools&) = delete;
+    const ScfTools& operator=(const ScfTools&) = delete;
 
 // *** common methods *** -----------------------------------------------------
 
@@ -246,10 +250,6 @@ private:
     static const OUString& GetHTMLIndexPrefix();
     /** Returns the prefix for table names. */
     static const OUString& GetHTMLNamePrefix();
-    /** We don't want anybody to instantiate this class, since it is just a
-        collection of static items. To enforce this, the default constructor
-        is made private */
-    ScfTools();
 };
 
 // Containers =================================================================
@@ -283,18 +283,16 @@ public:
                                    SvNumberFormatter* pFormatter = nullptr, bool bConvertDate = true ) override;
 
     virtual ScEEAbsImport *CreateRTFImport( ScDocument* pDoc, const ScRange& rRange ) override;
-    virtual ScEEAbsImport *CreateHTMLImport( ScDocument* pDocP, const OUString& rBaseURL, const ScRange& rRange, bool bCalcWidthHeight ) override;
+    virtual ScEEAbsImport *CreateHTMLImport( ScDocument* pDocP, const OUString& rBaseURL, const ScRange& rRange ) override;
     virtual OUString       GetHTMLRangeNameList( ScDocument* pDoc, const OUString& rOrigName ) override;
 
     // various export filters
     virtual FltError ScExportExcel5( SfxMedium&, ScDocument*, ExportFormatExcel eFormat, rtl_TextEncoding eDest ) override;
-    virtual FltError ScExportDif( SvStream&, ScDocument*, const ScAddress& rOutPos, const rtl_TextEncoding eDest,
-                                 sal_uInt32 nDifOption = SC_DIFOPT_EXCEL ) override;
-    virtual FltError ScExportDif( SvStream&, ScDocument*, const ScRange& rRange, const rtl_TextEncoding eDest,
-                 sal_uInt32 nDifOption = SC_DIFOPT_EXCEL ) override;
-    virtual FltError ScExportHTML( SvStream&, const OUString& rBaseURL, ScDocument*, const ScRange& rRange, const rtl_TextEncoding eDest, bool bAll,
+    virtual void ScExportDif( SvStream&, ScDocument*, const ScAddress& rOutPos, const rtl_TextEncoding eDest ) override;
+    virtual FltError ScExportDif( SvStream&, ScDocument*, const ScRange& rRange, const rtl_TextEncoding eDest ) override;
+    virtual void ScExportHTML( SvStream&, const OUString& rBaseURL, ScDocument*, const ScRange& rRange, const rtl_TextEncoding eDest, bool bAll,
                   const OUString& rStreamPath, OUString& rNonConvertibleChars, const OUString& rFilterOptions ) override;
-    virtual FltError ScExportRTF( SvStream&, ScDocument*, const ScRange& rRange, const rtl_TextEncoding eDest ) override;
+    virtual void ScExportRTF( SvStream&, ScDocument*, const ScRange& rRange, const rtl_TextEncoding eDest ) override;
 
     virtual ScOrcusFilters* GetOrcusFilters() override;
 };

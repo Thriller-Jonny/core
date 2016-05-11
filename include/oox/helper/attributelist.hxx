@@ -20,19 +20,22 @@
 #ifndef INCLUDED_OOX_HELPER_ATTRIBUTELIST_HXX
 #define INCLUDED_OOX_HELPER_ATTRIBUTELIST_HXX
 
+#include <com/sun/star/uno/Reference.hxx>
 #include <com/sun/star/util/DateTime.hpp>
-#include <com/sun/star/xml/sax/XFastAttributeList.hpp>
 #include <oox/helper/helper.hxx>
-#include <oox/token/namespaces.hxx>
-#include <oox/token/tokens.hxx>
 #include <oox/dllapi.h>
+#include <rtl/ustring.hxx>
+#include <sal/types.h>
+
+namespace com { namespace sun { namespace star {
+    namespace xml { namespace sax { class XFastAttributeList; } }
+} } }
 
 namespace sax_fastparser {
     class FastAttributeList;
 };
 
 namespace oox {
-
 
 
 /** Static helpers for conversion of strings to attribute values of various
@@ -62,7 +65,6 @@ public:
 };
 
 
-
 /** Provides access to attribute values of an element.
 
     Wraps a com.sun.star.xml.sax.XFastAttributeList object. Provides
@@ -76,7 +78,7 @@ public:
                             const css::uno::Reference< css::xml::sax::XFastAttributeList >& rxAttribs );
 
     /** Returns the wrapped com.sun.star.xml.sax.XFastAttributeList object. */
-    css::uno::Reference< css::xml::sax::XFastAttributeList >
+    const css::uno::Reference< css::xml::sax::XFastAttributeList >&
                         getFastAttributeList() const { return mxAttribs; }
 
     /** Returns true, if the specified attribute is present. */
@@ -168,7 +170,6 @@ private:
     mutable sax_fastparser::FastAttributeList *mpAttribList;
     sax_fastparser::FastAttributeList *getAttribList() const;
 };
-
 
 
 } // namespace oox

@@ -231,6 +231,7 @@ void ScUndoInsertCells::DoChange( const bool bUndo )
         case INS_INSCOLS_BEFORE:
         case INS_INSCOLS_AFTER:
             nPaint |= PAINT_TOP;                // top bar
+            SAL_FALLTHROUGH;
         case INS_CELLSRIGHT:
             for( i=0; i<nCount; i++ )
             {
@@ -464,6 +465,7 @@ void ScUndoDeleteCells::DoChange( const bool bUndo )
             break;
         case DEL_DELCOLS:
             nPaint |= PAINT_TOP;                // top bar
+            SAL_FALLTHROUGH;
         case DEL_CELLSLEFT:
             for( i=0; i<nCount; i++ )
             {
@@ -816,7 +818,7 @@ void ScUndoCut::Redo()
 void ScUndoCut::Repeat(SfxRepeatTarget& rTarget)
 {
     if (dynamic_cast<const ScTabViewTarget*>( &rTarget) !=  nullptr)
-        static_cast<ScTabViewTarget&>(rTarget).GetViewShell()->CutToClip( nullptr, true );
+        static_cast<ScTabViewTarget&>(rTarget).GetViewShell()->CutToClip();
 }
 
 bool ScUndoCut::CanRepeat(SfxRepeatTarget& rTarget) const
@@ -830,7 +832,7 @@ ScUndoPaste::ScUndoPaste( ScDocShell* pNewDocShell, const ScRangeList& rRanges,
                 InsertDeleteFlags nNewFlags,
                 ScRefUndoData* pRefData,
                 bool bRedoIsFilled, const ScUndoPasteOptions* pOptions ) :
-    ScMultiBlockUndo( pNewDocShell, rRanges, SC_UNDO_SIMPLE ),
+    ScMultiBlockUndo( pNewDocShell, rRanges ),
     aMarkData( rMark ),
     pUndoDoc( pNewUndoDoc ),
     pRedoDoc( pNewRedoDoc ),
@@ -1245,7 +1247,7 @@ void ScUndoDragDrop::DoUndo( ScRange aRange )
 
 namespace {
 
-class DataChangeNotifier : std::unary_function<SvtListener*, void>
+class DataChangeNotifier : public std::unary_function<SvtListener*, void>
 {
     ScHint maHint;
 public:
@@ -1369,7 +1371,7 @@ void ScUndoDragDrop::Redo()
     // do not clone objects and note captions into clipdoc (see above)
     // but at least copy notes
     ScClipParam aClipParam(aSrcRange, bCut);
-    rDoc.CopyToClip(aClipParam, pClipDoc.get(), &aSourceMark, false, bKeepScenarioFlags);
+    rDoc.CopyToClip(aClipParam, pClipDoc.get(), &aSourceMark, bKeepScenarioFlags, false);
 
     if (bCut)
     {
@@ -1707,7 +1709,7 @@ void ScUndoSelectionStyle::DoChange( const bool bUndo )
     {
         ScStyleSheetPool* pStlPool = rDoc.GetStyleSheetPool();
         ScStyleSheet* pStyleSheet =
-            static_cast<ScStyleSheet*>( pStlPool->Find( aStyleName, SFX_STYLE_FAMILY_PARA ) );
+            static_cast<ScStyleSheet*>( pStlPool->Find( aStyleName, SfxStyleFamily::Para ) );
         if (!pStyleSheet)
         {
             OSL_FAIL("StyleSheet not found");
@@ -1746,7 +1748,7 @@ void ScUndoSelectionStyle::Repeat(SfxRepeatTarget& rTarget)
         ScDocument& rDoc = pDocShell->GetDocument();
         ScStyleSheetPool* pStlPool = rDoc.GetStyleSheetPool();
         ScStyleSheet* pStyleSheet = static_cast<ScStyleSheet*>( pStlPool->
-                                            Find( aStyleName, SFX_STYLE_FAMILY_PARA ));
+                                            Find( aStyleName, SfxStyleFamily::Para ));
         if (!pStyleSheet)
         {
             OSL_FAIL("StyleSheet not found");

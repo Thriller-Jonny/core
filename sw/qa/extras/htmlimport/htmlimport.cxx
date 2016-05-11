@@ -92,7 +92,7 @@ DECLARE_HTMLIMPORT_TEST(testInlinedImagesPageAndParagraph, "PageAndParagraphFill
     CPPUNIT_ASSERT(pTextDoc);
 
     // The document contains embedded pictures inlined for PageBackground and
-    // ParagraphBackground, check for their existance after import
+    // ParagraphBackground, check for their existence after import
     SwDoc* pDoc = pTextDoc->GetDocShell()->GetDoc();
     SwEditShell* pEditShell = pDoc->GetEditShell();
     CPPUNIT_ASSERT(pEditShell);
@@ -116,7 +116,7 @@ DECLARE_HTMLIMPORT_TEST(testInlinedImagesPageAndParagraph, "PageAndParagraphFill
     if(nParagraphs)
     {
         // get the paragraph
-        uno::Reference< text::XTextRange > xPara = getParagraph( 0 );
+        uno::Reference<text::XTextRange> xPara = getParagraph(1);
         uno::Reference< beans::XPropertySet > xParagraphProperties( xPara, uno::UNO_QUERY);
 
         // check for Bitmap FillStyle, name empty, repeat

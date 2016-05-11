@@ -31,9 +31,6 @@
 #include <osl/time.h>
 
 
-// - OPTIMIZERDIALOG -
-
-
 using namespace ::com::sun::star::io;
 using namespace ::com::sun::star::ui;
 using namespace ::com::sun::star::awt;
@@ -45,8 +42,6 @@ using namespace ::com::sun::star::frame;
 using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::script;
 using namespace ::com::sun::star::container;
-
-
 
 
 void OptimizerDialog::InitDialog()
@@ -62,9 +57,9 @@ void OptimizerDialog::InitDialog()
         OUString("Width") };
 
     Any pValues[] = {
-        Any( sal_True ),
+        Any( true ),
         Any( sal_Int32( DIALOG_HEIGHT ) ),
-        Any( sal_True ),
+        Any( true ),
         Any( sal_Int32( 200 ) ),
         Any( sal_Int32( 52 ) ),
         Any( getString( STR_SUN_OPTIMIZATION_WIZARD2 ) ),
@@ -77,7 +72,6 @@ void OptimizerDialog::InitDialog()
 
     mxDialogModelMultiPropertySet->setPropertyValues( aNames, aValues );
 }
-
 
 
 void OptimizerDialog::InitRoadmap()
@@ -111,11 +105,11 @@ void OptimizerDialog::InitRoadmap()
         Reference< XPropertySet > xPropertySet( mxRoadmapControlModel, UNO_QUERY_THROW );
         xPropertySet->setPropertyValue( "Name", Any( OUString("rdmNavi") ) );
         mxRoadmapControl = mxDialog->getControl( "rdmNavi" );
-        InsertRoadmapItem( 0, true, getString( STR_INTRODUCTION ), ITEM_ID_INTRODUCTION );
-        InsertRoadmapItem( 1, true, getString( STR_SLIDES ), ITEM_ID_SLIDES );
-        InsertRoadmapItem( 2, true, getString( STR_IMAGE_OPTIMIZATION ), ITEM_ID_GRAPHIC_OPTIMIZATION );
-        InsertRoadmapItem( 3, true, getString( STR_OLE_OBJECTS ), ITEM_ID_OLE_OPTIMIZATION );
-        InsertRoadmapItem( 4, true, getString( STR_SUMMARY ), ITEM_ID_SUMMARY );
+        InsertRoadmapItem( 0, getString( STR_INTRODUCTION ), ITEM_ID_INTRODUCTION );
+        InsertRoadmapItem( 1, getString( STR_SLIDES ), ITEM_ID_SLIDES );
+        InsertRoadmapItem( 2, getString( STR_IMAGE_OPTIMIZATION ), ITEM_ID_GRAPHIC_OPTIMIZATION );
+        InsertRoadmapItem( 3, getString( STR_OLE_OBJECTS ), ITEM_ID_OLE_OPTIMIZATION );
+        InsertRoadmapItem( 4, getString( STR_SUMMARY ), ITEM_ID_SUMMARY );
 
         // Well, that's messy, but the
         // BMP_PRESENTATION_MINIMIZER from sd module cannot be used here directly
@@ -134,8 +128,7 @@ void OptimizerDialog::InitRoadmap()
 }
 
 
-
-void OptimizerDialog::InsertRoadmapItem( const sal_Int32 nIndex, const bool bEnabled, const OUString& rLabel, const sal_Int32 nItemID )
+void OptimizerDialog::InsertRoadmapItem( const sal_Int32 nIndex, const OUString& rLabel, const sal_Int32 nItemID )
 {
     try
     {
@@ -144,7 +137,7 @@ void OptimizerDialog::InsertRoadmapItem( const sal_Int32 nIndex, const bool bEna
         Reference< XInterface > xRoadmapItem( xSFRoadmap->createInstance(), UNO_QUERY_THROW );
         Reference< XPropertySet > xPropertySet( xRoadmapItem, UNO_QUERY_THROW );
         xPropertySet->setPropertyValue( "Label", Any( rLabel ) );
-        xPropertySet->setPropertyValue( "Enabled", Any( bEnabled ) );
+        xPropertySet->setPropertyValue( "Enabled", Any( true ) );
         xPropertySet->setPropertyValue( "ID", Any( nItemID ) );
         aIndexContainerRoadmap->insertByIndex( nIndex, Any( xRoadmapItem ) );
     }
@@ -153,7 +146,6 @@ void OptimizerDialog::InsertRoadmapItem( const sal_Int32 nIndex, const bool bEna
 
     }
 }
-
 
 
 void OptimizerDialog::UpdateConfiguration()
@@ -204,7 +196,6 @@ void OptimizerDialog::UpdateConfiguration()
 }
 
 
-
 OptimizerDialog::OptimizerDialog( const Reference< XComponentContext > &rxContext, Reference< XFrame >& rxFrame, Reference< XDispatch > rxStatusDispatcher ) :
     UnoDialog( rxContext, rxFrame ),
     ConfigurationAccess( rxContext, nullptr ),
@@ -239,7 +230,6 @@ OptimizerDialog::OptimizerDialog( const Reference< XComponentContext > &rxContex
 }
 
 
-
 OptimizerDialog::~OptimizerDialog()
 {
     // not saving configuration if the dialog has been finished via cancel or close window
@@ -248,17 +238,14 @@ OptimizerDialog::~OptimizerDialog()
 }
 
 
-
-bool OptimizerDialog::execute()
+void OptimizerDialog::execute()
 {
-    Reference< XItemEventBroadcaster > maRoadmapBroadcaster( mxRoadmapControl, UNO_QUERY_THROW );
-    maRoadmapBroadcaster->addItemListener( mxItemListener );
+    Reference< XItemEventBroadcaster > xRoadmapBroadcaster( mxRoadmapControl, UNO_QUERY_THROW );
+    xRoadmapBroadcaster->addItemListener( mxItemListener );
     UnoDialog::execute();
     UpdateConfiguration();          // taking actual control settings for the configuration
-    maRoadmapBroadcaster->removeItemListener( mxItemListener );
-    return mbStatus;
+    xRoadmapBroadcaster->removeItemListener( mxItemListener );
 }
-
 
 
 void OptimizerDialog::SwitchPage( sal_Int16 nNewStep )
@@ -307,7 +294,6 @@ void OptimizerDialog::UpdateControlStates( sal_Int16 nPage )
 }
 
 
-
 OUString OptimizerDialog::GetSelectedString( OUString const & token )
 {
     OUString aSelectedItem;
@@ -328,7 +314,6 @@ OUString OptimizerDialog::GetSelectedString( OUString const & token )
 }
 
 
-
 void OptimizerDialog::UpdateStatus( const css::uno::Sequence< css::beans::PropertyValue >& rStatus )
 {
     if ( mxReschedule.is() )
@@ -340,7 +325,7 @@ void OptimizerDialog::UpdateStatus( const css::uno::Sequence< css::beans::Proper
             OUString sStatus;
             if ( *pVal >>= sStatus )
             {
-                setControlProperty( "FixedText1Pg4", "Enabled", Any( sal_True ) );
+                setControlProperty( "FixedText1Pg4", "Enabled", Any( true ) );
                 setControlProperty( "FixedText1Pg4", "Label", Any( getString( TKGet( sStatus ) ) ) );
             }
         }
@@ -358,7 +343,6 @@ void OptimizerDialog::UpdateStatus( const css::uno::Sequence< css::beans::Proper
         mxReschedule->reschedule();
     }
 }
-
 
 
 void ItemListener::itemStateChanged( const ItemEvent& Event )
@@ -495,7 +479,6 @@ void ItemListener::disposing( const css::lang::EventObject& /* Source */ )
 }
 
 
-
 void ActionListener::actionPerformed( const ActionEvent& rEvent )
     throw ( css::uno::RuntimeException, std::exception )
 {
@@ -509,11 +492,11 @@ void ActionListener::actionPerformed( const ActionEvent& rEvent )
 
             mrOptimizerDialog.SwitchPage( ITEM_ID_SUMMARY );
             mrOptimizerDialog.DisablePage( ITEM_ID_SUMMARY );
-            mrOptimizerDialog.setControlProperty( "btnNavBack", "Enabled", Any( sal_False ) );
-            mrOptimizerDialog.setControlProperty( "btnNavNext", "Enabled", Any( sal_False ) );
-            mrOptimizerDialog.setControlProperty( "btnNavFinish", "Enabled", Any( sal_False ) );
-            mrOptimizerDialog.setControlProperty( "btnNavCancel", "Enabled", Any( sal_False ) );
-            mrOptimizerDialog.setControlProperty( "FixedText0Pg4", "Enabled", Any( sal_True ) );
+            mrOptimizerDialog.setControlProperty( "btnNavBack", "Enabled", Any( false ) );
+            mrOptimizerDialog.setControlProperty( "btnNavNext", "Enabled", Any( false ) );
+            mrOptimizerDialog.setControlProperty( "btnNavFinish", "Enabled", Any( false ) );
+            mrOptimizerDialog.setControlProperty( "btnNavCancel", "Enabled", Any( false ) );
+            mrOptimizerDialog.setControlProperty( "FixedText0Pg4", "Enabled", Any( true ) );
 
             // check if we have to open the FileDialog
             bool    bSuccessfullyExecuted = true;
@@ -612,10 +595,10 @@ void ActionListener::actionPerformed( const ActionEvent& rEvent )
             }
             else
             {
-                mrOptimizerDialog.setControlProperty( "btnNavBack", "Enabled", Any( sal_True ) );
-                mrOptimizerDialog.setControlProperty( "btnNavNext", "Enabled", Any( sal_False ) );
-                mrOptimizerDialog.setControlProperty( "btnNavFinish", "Enabled", Any( sal_True ) );
-                mrOptimizerDialog.setControlProperty( "btnNavCancel", "Enabled", Any( sal_True ) );
+                mrOptimizerDialog.setControlProperty( "btnNavBack", "Enabled", Any( true ) );
+                mrOptimizerDialog.setControlProperty( "btnNavNext", "Enabled", Any( false ) );
+                mrOptimizerDialog.setControlProperty( "btnNavFinish", "Enabled", Any( true ) );
+                mrOptimizerDialog.setControlProperty( "btnNavCancel", "Enabled", Any( true ) );
                 mrOptimizerDialog.EnablePage( ITEM_ID_SUMMARY );
             }
         }
@@ -645,7 +628,6 @@ void ActionListener::disposing( const css::lang::EventObject& /* Source */ )
 }
 
 
-
 void ActionListenerListBox0Pg0::actionPerformed( const ActionEvent& rEvent )
     throw ( css::uno::RuntimeException, std::exception )
 {
@@ -664,7 +646,6 @@ void ActionListenerListBox0Pg0::disposing( const css::lang::EventObject& /* Sour
 }
 
 
-
 void TextListenerFormattedField0Pg1::textChanged( const TextEvent& /* rEvent */ )
     throw ( css::uno::RuntimeException, std::exception )
 {
@@ -677,7 +658,6 @@ void TextListenerFormattedField0Pg1::disposing( const css::lang::EventObject& /*
     throw ( css::uno::RuntimeException, std::exception )
 {
 }
-
 
 
 void TextListenerComboBox0Pg1::textChanged( const TextEvent& /* rEvent */ )
@@ -706,7 +686,6 @@ void TextListenerComboBox0Pg1::disposing( const css::lang::EventObject& /* Sourc
     throw ( css::uno::RuntimeException, std::exception )
 {
 }
-
 
 
 void SpinListenerFormattedField0Pg1::up( const SpinEvent& /* rEvent */ )

@@ -561,7 +561,7 @@ void FormattedFieldElement::endElement()
         {
             Reference< util::XNumberFormats > xFormats(
                 _pImport->getNumberFormatsSupplier()->getNumberFormats() );
-            sal_Int32 nKey = xFormats->queryKey( sFormat, locale, sal_True );
+            sal_Int32 nKey = xFormats->queryKey( sFormat, locale, true );
             if (-1 == nKey)
             {
                 nKey = xFormats->addNew( sFormat, locale );
@@ -677,6 +677,8 @@ void NumericFieldElement::endElement()
     }
 
     ctx.importDefaults( _nBasePosX, _nBasePosY, _xAttributes );
+    ctx.importAlignProperty( "Align", "align", _xAttributes );
+    ctx.importVerticalAlignProperty( "VerticalAlign", "valign", _xAttributes );
     ctx.importBooleanProperty( "Tabstop","tabstop",_xAttributes );
     ctx.importBooleanProperty( "ReadOnly", "readonly",_xAttributes );
     ctx.importBooleanProperty( "StrictFormat", "strict-format", _xAttributes );
@@ -1088,6 +1090,7 @@ void TextFieldElement::endElement()
     ctx.importDefaults( _nBasePosX, _nBasePosY, _xAttributes );
     ctx.importBooleanProperty("Tabstop", "tabstop", _xAttributes );
     ctx.importAlignProperty( "Align", "align", _xAttributes );
+    ctx.importVerticalAlignProperty( "VerticalAlign", "valign", _xAttributes );
     ctx.importBooleanProperty( "HardLineBreaks", "hard-linebreaks", _xAttributes );
     ctx.importBooleanProperty( "HScroll", "hscroll" ,_xAttributes );
     ctx.importBooleanProperty( "VScroll", "vscroll", _xAttributes );
@@ -1222,7 +1225,7 @@ void TitledBoxElement::endElement()
         ctx.importStringProperty( "GroupName", "group-name", xAttributes );
 
         sal_Int16 nVal = 0;
-        sal_Bool bChecked = sal_False;
+        sal_Bool bChecked = false;
         if (getBoolAttr( &bChecked, "checked", xAttributes, _pImport->XMLNS_DIALOGS_UID ) && bChecked)
         {
             nVal = 1;
@@ -1318,7 +1321,7 @@ void RadioGroupElement::endElement()
         ctx.importBooleanProperty( "MultiLine", "multiline", xAttributes );
         ctx.importStringProperty( "GroupName", "group-name", xAttributes );
         sal_Int16 nVal = 0;
-        sal_Bool bChecked = sal_False;
+        sal_Bool bChecked = false;
         if (getBoolAttr( &bChecked, "checked", xAttributes, _pImport->XMLNS_DIALOGS_UID ) && bChecked)
         {
             nVal = 1;
@@ -1575,12 +1578,12 @@ void CheckBoxElement::endElement()
     ctx.importImagePositionProperty( "ImagePosition", "image-position", _xAttributes );
     ctx.importBooleanProperty( "MultiLine", "multiline", _xAttributes );
 
-    sal_Bool bTriState = sal_False;
+    sal_Bool bTriState = false;
     if (getBoolAttr( &bTriState, "tristate", _xAttributes, _pImport->XMLNS_DIALOGS_UID ))
     {
         xControlModel->setPropertyValue( "TriState", makeAny( bTriState ) );
     }
-    sal_Bool bChecked = sal_False;
+    sal_Bool bChecked = false;
     if (getBoolAttr( &bChecked, "checked", _xAttributes, _pImport->XMLNS_DIALOGS_UID ))
     {
         // has "checked" attribute
@@ -1652,7 +1655,7 @@ void ButtonElement::endElement()
     ctx.importBooleanProperty( "FocusOnClick", "grab-focus", _xAttributes );
     ctx.importBooleanProperty( "MultiLine", "multiline", _xAttributes );
     // State
-    sal_Bool bChecked = sal_False;
+    sal_Bool bChecked = false;
     if (getBoolAttr( &bChecked, "checked", _xAttributes, _pImport->XMLNS_DIALOGS_UID ) && bChecked)
     {
         sal_Int16 nVal = 1;

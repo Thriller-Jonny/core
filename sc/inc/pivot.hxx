@@ -120,11 +120,10 @@ struct ScPivotField
 
     css::sheet::DataPilotFieldReference maFieldRef;
 
-    explicit ScPivotField( SCCOL nNewCol = 0, sal_uInt16 nNewFuncMask = PIVOT_FUNC_NONE );
+    explicit ScPivotField( SCCOL nNewCol = 0 );
     ScPivotField( const ScPivotField& r );
 
     long getOriginalDim() const;
-    bool                operator==( const ScPivotField& r ) const;
 };
 
 typedef std::vector< ScPivotField > ScPivotFieldVector;
@@ -151,7 +150,6 @@ struct ScPivotParam
     ~ScPivotParam();
 
     ScPivotParam&   operator=  ( const ScPivotParam& r );
-    bool            operator== ( const ScPivotParam& r ) const;
     void SetLabelData(const ScDPLabelDataVector& r);
 };
 
@@ -165,8 +163,6 @@ struct ScPivotFuncData
     css::sheet::DataPilotFieldReference maFieldRef;
 
     explicit ScPivotFuncData( SCCOL nCol, sal_uInt16 nFuncMask );
-
-    bool operator== (const ScPivotFuncData& r) const;
 
 #if DEBUG_PIVOT_TABLE
     void Dump() const;

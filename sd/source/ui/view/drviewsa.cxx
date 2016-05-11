@@ -20,6 +20,7 @@
 #include "DrawViewShell.hxx"
 #include <com/sun/star/scanner/ScannerManager.hpp>
 #include <cppuhelper/implbase.hxx>
+#include <comphelper/lok.hxx>
 #include <comphelper/processfactory.hxx>
 #include <editeng/sizeitem.hxx>
 #include <svx/svdlayer.hxx>
@@ -68,7 +69,6 @@
 #include "annotationmanager.hxx"
 #include "DrawController.hxx"
 
-#include <boost/bind.hpp>
 #include <memory>
 
 using namespace ::com::sun::star;
@@ -79,7 +79,6 @@ namespace sd {
 
 bool DrawViewShell::mbPipette = false;
 
-// - ScannerEventListener -
 
 class ScannerEventListener : public ::cppu::WeakImplHelper< lang::XEventListener >
 {
@@ -114,7 +113,7 @@ DrawViewShell::DrawViewShell( SfxViewFrame* pFrame, ViewShellBase& rViewShellBas
     , mbIsLayerModeActive(false)
     , mbIsInSwitchPage(false)
     , mpSelectionChangeHandler(new svx::sidebar::SelectionChangeHandler(
-          ::boost::bind(&DrawViewShell::GetSidebarContextName, this),
+          [this] () { return this->GetSidebarContextName(); },
           uno::Reference<frame::XController>(&rViewShellBase.GetDrawController()),
           sfx2::sidebar::EnumContext::Context_Default))
 {
@@ -208,6 +207,8 @@ void DrawViewShell::Construct(DrawDocShell* pDocSh, PageKind eInitialPageKind)
 
     svtools::ColorConfig aColorConfig;
     mnAppBackgroundColor = Color( aColorConfig.GetColorValue( svtools::APPBACKGROUND ).nColor );
+    if (comphelper::LibreOfficeKit::isActive())
+        mnAppBackgroundColor = COL_TRANSPARENT;
 
     mpFrameView->Connect();
 
@@ -748,8 +749,8 @@ void DrawViewShell::Notify (SfxBroadcaster&, const SfxHint& rHint)
             mbReadOnly = GetDocSh()->IsReadOnly();
 
             SfxBoolItem aItem( SID_FM_DESIGN_MODE, !mbReadOnly );
-            GetViewFrame()->GetDispatcher()->Execute( SID_FM_DESIGN_MODE,
-                SfxCallMode::ASYNCHRON | SfxCallMode::RECORD, &aItem, 0L );
+            GetViewFrame()->GetDispatcher()->ExecuteList(SID_FM_DESIGN_MODE,
+                SfxCallMode::ASYNCHRON | SfxCallMode::RECORD, { &aItem });
         }
     }
 

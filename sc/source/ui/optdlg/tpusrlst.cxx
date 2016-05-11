@@ -56,7 +56,6 @@ ScTpUserLists::ScTpUserLists( vcl::Window*               pParent,
         pUserLists      ( nullptr ),
         pDoc            ( nullptr ),
         pViewData       ( nullptr ),
-        pRangeUtil      ( new ScRangeUtil ),
         bModifyMode     ( false ),
         bCancelMode     ( false ),
         bCopyDone       ( false ),
@@ -88,7 +87,6 @@ ScTpUserLists::~ScTpUserLists()
 void ScTpUserLists::dispose()
 {
     delete pUserLists;
-    delete pRangeUtil;
     mpFtLists.clear();
     mpLbLists.clear();
     mpFtEntries.clear();
@@ -137,7 +135,7 @@ void ScTpUserLists::Init()
         PutInOrder( nStartTab, nEndTab );
 
         aStrSelectedArea = ScRange( nStartCol, nStartRow, nStartTab, nEndCol, nEndRow, nEndTab
-                ).Format(SCR_ABS_3D, pDoc);
+                ).Format(ScRefFlags::RANGE_ABS_3D, pDoc);
 
         mpBtnCopy->SetClickHdl ( LINK( this, ScTpUserLists, BtnClickHdl ) );
         mpBtnCopy->Enable();

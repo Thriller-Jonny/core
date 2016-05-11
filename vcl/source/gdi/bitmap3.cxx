@@ -20,17 +20,19 @@
 #include <math.h>
 #include <stdlib.h>
 
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 #include <vcl/bitmapex.hxx>
 #include <vcl/bitmap.hxx>
 #include <vcl/bitmapscalesuper.hxx>
+#include <config_features.h>
+#if HAVE_FEATURE_OPENGL
 #include <vcl/opengl/OpenGLHelper.hxx>
-
+#endif
 #include <memory>
 
-#include <impbmp.hxx>
-#include <impoct.hxx>
-#include <impvect.hxx>
+#include "impbmp.hxx"
+#include "impoctree.hxx"
+#include "impvect.hxx"
 
 #include "octree.hxx"
 #include "BitmapScaleConvolution.hxx"
@@ -244,24 +246,36 @@ void ImplCreateDitherMatrix( sal_uInt8 (*pDitherMatrix)[16][16] )
 
 bool Bitmap::Convert( BmpConversion eConversion )
 {
+    // try to convert in backend
+    if (mxImpBmp)
+    {
+        std::shared_ptr<ImpBitmap> xImpBmp(new ImpBitmap);
+        if (xImpBmp->ImplCreate(*mxImpBmp) && xImpBmp->ImplConvert(eConversion))
+        {
+            ImplSetImpBitmap(xImpBmp);
+            SAL_INFO( "vcl.opengl", "Ref count: " << mxImpBmp.use_count() );
+            return true;
+        }
+    }
+
     const sal_uInt16 nBitCount = GetBitCount ();
     bool bRet = false;
 
     switch( eConversion )
     {
-        case( BMP_CONVERSION_1BIT_THRESHOLD ):
+        case BMP_CONVERSION_1BIT_THRESHOLD:
             bRet = ImplMakeMono( 128 );
         break;
 
-        case( BMP_CONVERSION_1BIT_MATRIX ):
+        case BMP_CONVERSION_1BIT_MATRIX:
             bRet = ImplMakeMonoDither();
         break;
 
-        case( BMP_CONVERSION_4BIT_GREYS ):
+        case BMP_CONVERSION_4BIT_GREYS:
             bRet = ImplMakeGreyscales( 16 );
         break;
 
-        case( BMP_CONVERSION_4BIT_COLORS ):
+        case BMP_CONVERSION_4BIT_COLORS:
         {
             if( nBitCount < 4 )
                 bRet = ImplConvertUp( 4 );
@@ -272,7 +286,7 @@ bool Bitmap::Convert( BmpConversion eConversion )
         }
         break;
 
-        case( BMP_CONVERSION_4BIT_TRANS ):
+        case BMP_CONVERSION_4BIT_TRANS:
         {
             Color aTrans( BMP_COL_TRANS );
 
@@ -283,11 +297,11 @@ bool Bitmap::Convert( BmpConversion eConversion )
         }
         break;
 
-        case( BMP_CONVERSION_8BIT_GREYS ):
+        case BMP_CONVERSION_8BIT_GREYS:
             bRet = ImplMakeGreyscales( 256 );
         break;
 
-        case( BMP_CONVERSION_8BIT_COLORS ):
+        case BMP_CONVERSION_8BIT_COLORS:
         {
             if( nBitCount < 8 )
                 bRet = ImplConvertUp( 8 );
@@ -298,7 +312,7 @@ bool Bitmap::Convert( BmpConversion eConversion )
         }
         break;
 
-        case( BMP_CONVERSION_8BIT_TRANS ):
+        case BMP_CONVERSION_8BIT_TRANS:
         {
             Color aTrans( BMP_COL_TRANS );
 
@@ -309,7 +323,7 @@ bool Bitmap::Convert( BmpConversion eConversion )
         }
         break;
 
-        case( BMP_CONVERSION_24BIT ):
+        case BMP_CONVERSION_24BIT:
         {
             if( nBitCount < 24 )
                 bRet = ImplConvertUp( 24 );
@@ -318,7 +332,7 @@ bool Bitmap::Convert( BmpConversion eConversion )
         }
         break;
 
-        case( BMP_CONVERSION_GHOSTED ):
+        case BMP_CONVERSION_GHOSTED:
             bRet = ImplConvertGhosted();
         break;
 
@@ -695,9 +709,9 @@ bool Bitmap::ImplConvertDown(sal_uInt16 nBitCount, Color* pExtColor)
             InverseColorMap aColorMap(aPalette);
             BitmapColor aColor;
             ImpErrorQuad aErrQuad;
-            std::vector<ImpErrorQuad> pErrQuad1(nWidth);
-            std::vector<ImpErrorQuad> pErrQuad2(nWidth);
-            ImpErrorQuad* pQLine1 = pErrQuad1.data();
+            std::vector<ImpErrorQuad> aErrQuad1(nWidth);
+            std::vector<ImpErrorQuad> aErrQuad2(nWidth);
+            ImpErrorQuad* pQLine1 = aErrQuad1.data();
             ImpErrorQuad* pQLine2 = nullptr;
             long nYTmp = 0L;
             sal_uInt8 cIndex;
@@ -721,7 +735,7 @@ bool Bitmap::ImplConvertDown(sal_uInt16 nBitCount, Color* pExtColor)
 
             for (long nY = 0L; nY < std::min(nHeight, 2L); nY++, nYTmp++)
             {
-                pQLine2 = !nY ? pErrQuad1.data() : pErrQuad2.data();
+                pQLine2 = !nY ? aErrQuad1.data() : aErrQuad2.data();
                 for (long nX = 0L; nX < nWidth; nX++)
                 {
                     if (pReadAcc->HasPalette())
@@ -759,7 +773,7 @@ bool Bitmap::ImplConvertDown(sal_uInt16 nBitCount, Color* pExtColor)
 
                 // Refill/copy row buffer
                 pQLine1 = pQLine2;
-                pQLine2 = (bQ1 = !bQ1) ? pErrQuad2.data() : pErrQuad1.data();
+                pQLine2 = (bQ1 = !bQ1) ? aErrQuad2.data() : aErrQuad1.data();
 
                 if (nYTmp < nHeight)
                 {
@@ -881,22 +895,17 @@ bool Bitmap::Scale( const double& rScaleX, const double& rScaleY, BmpScaleFlag n
 
     const sal_uInt16 nStartCount(GetBitCount());
 
-    if( mpImpBmp )
+    if (mxImpBmp)
     {
         // implementation specific scaling
-        ImpBitmap* pImpBmp = new ImpBitmap;
-
-        if( pImpBmp->ImplCreate( *mpImpBmp ) && pImpBmp->ImplScale( rScaleX, rScaleY, nScaleFlag ) )
+        std::shared_ptr<ImpBitmap> xImpBmp(new ImpBitmap);
+        if (xImpBmp->ImplCreate(*mxImpBmp) && xImpBmp->ImplScale(rScaleX, rScaleY, nScaleFlag))
         {
-            ImplSetImpBitmap( pImpBmp );
-            SAL_INFO( "vcl.opengl", "Ref count: " << mpImpBmp->ImplGetRefCount() );
+            ImplSetImpBitmap(xImpBmp);
+            SAL_INFO( "vcl.opengl", "Ref count: " << mxImpBmp.use_count() );
             maPrefMapMode = MapMode( MAP_PIXEL );
-            maPrefSize = pImpBmp->ImplGetSize();
+            maPrefSize = xImpBmp->ImplGetSize();
             return true;
-        }
-        else
-        {
-            delete pImpBmp;
         }
     }
 
@@ -1000,7 +1009,11 @@ bool Bitmap::Scale( const Size& rNewSize, BmpScaleFlag nScaleFlag )
 
 bool Bitmap::HasFastScale()
 {
+#if HAVE_FEATURE_OPENGL
     return OpenGLHelper::isVCLOpenGLEnabled();
+#else
+    return false;
+#endif
 }
 
 void Bitmap::AdaptBitCount(Bitmap& rNew) const
@@ -2020,7 +2033,8 @@ void Bitmap::ImplMedianCut( sal_uLong* pColBuf, BitmapPalette& rPal,
 
                 while( nPixNew < nTest )
                 {
-                    nB++, nPixOld = nPixNew;
+                    nB++;
+                    nPixOld = nPixNew;
                     for( long nR = nR1; nR <= nR2; nR++ )
                         for( long nG = nG1; nG <= nG2; nG++ )
                             nPixNew += pBuf[ RGB15( nR, nG, nB ) ];
@@ -2043,7 +2057,8 @@ void Bitmap::ImplMedianCut( sal_uLong* pColBuf, BitmapPalette& rPal,
 
                 while( nPixNew < nTest )
                 {
-                    nG++, nPixOld = nPixNew;
+                    nG++;
+                    nPixOld = nPixNew;
                     for( long nR = nR1; nR <= nR2; nR++ )
                         for( long nB = nB1; nB <= nB2; nB++ )
                             nPixNew += pBuf[ RGB15( nR, nG, nB ) ];
@@ -2066,7 +2081,8 @@ void Bitmap::ImplMedianCut( sal_uLong* pColBuf, BitmapPalette& rPal,
 
                 while( nPixNew < nTest )
                 {
-                    nR++, nPixOld = nPixNew;
+                    nR++;
+                    nPixOld = nPixNew;
                     for( long nG = nG1; nG <= nG2; nG++ )
                         for( long nB = nB1; nB <= nB2; nB++ )
                             nPixNew += pBuf[ RGB15( nR, nG, nB ) ];

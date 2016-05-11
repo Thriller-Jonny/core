@@ -75,8 +75,8 @@ protected:
     void            StartDefinitions();
     SbMethod*       GetMethod( const OUString&, SbxDataType );
     SbProperty*     GetProperty( const OUString&, SbxDataType );
-    SbProcedureProperty* GetProcedureProperty( const OUString&, SbxDataType );
-    SbIfaceMapperMethod* GetIfaceMapperMethod( const OUString&, SbMethod* );
+    void            GetProcedureProperty( const OUString&, SbxDataType );
+    void            GetIfaceMapperMethod( const OUString&, SbMethod* );
     void            EndDefinitions( bool=false );
     void            Run( SbMethod* );
     void            RunInit();
@@ -116,8 +116,8 @@ public:
     void ClearAllBP();
 
     // Store only image, no source (needed for new password protection)
-    bool     StoreBinaryData( SvStream&, sal_uInt16 nVer );
-    bool     LoadBinaryData( SvStream& );
+    void     StoreBinaryData( SvStream&, sal_uInt16 nVer );
+    void     LoadBinaryData( SvStream& );
     bool     ExceedsLegacyModuleSize();
     void     fixUpMethodStart( bool bCvtToLegacy, SbiImage* pImg = nullptr ) const;
     bool     HasExeCode();
@@ -131,11 +131,12 @@ public:
     css::uno::Reference< css::script::XInvocation > GetUnoModule();
     bool     createCOMWrapperForIface( css::uno::Any& o_rRetAny, SbClassModuleObject* pProxyClassModuleObject );
     void     GetCodeCompleteDataFromParse(CodeCompleteDataCache& aCache);
-    SbxArrayRef GetMethods() { return pMethods;}
+    const SbxArrayRef& GetMethods() { return pMethods;}
     static OUString GetKeywordCase( const OUString& sKeyword );
 };
 
 typedef tools::SvRef<SbModule> SbModuleRef;
+typedef std::vector<SbModuleRef> SbModules;
 
 // Object class for instances of class modules
 class BASIC_DLLPUBLIC SbClassModuleObject : public SbModule

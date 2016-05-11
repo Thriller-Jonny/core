@@ -46,14 +46,7 @@ struct TokenId
                         TokenId( const TokenId& r ) : nId( r.nId ) {}
     inline  TokenId&    operator =( const TokenId& r ) { nId = r.nId; return *this; }
     inline  TokenId&    operator =( sal_uInt16 n ) { nId = n; return *this; }
-    inline              operator sal_uInt16&() { return nId; }
     inline              operator const sal_uInt16&() const { return nId; }
-    inline  bool        operator <( sal_uInt16 n ) const { return nId < n; }
-    inline  bool        operator >( sal_uInt16 n ) const { return nId > n; }
-    inline  bool        operator <=( sal_uInt16 n ) const { return nId <= n; }
-    inline  bool        operator >=( sal_uInt16 n ) const { return nId >= n; }
-    inline  bool        operator ==( sal_uInt16 n ) const { return nId == n; }
-    inline  bool        operator !=( sal_uInt16 n ) const { return nId != n; }
 };
 
 struct ScComplexRefData;
@@ -133,7 +126,7 @@ private:
         struct RangeName
         {
             sal_uInt16 mnIndex;
-            bool mbGlobal;
+            sal_Int16  mnSheet;
         };
         ::std::vector<RangeName> maRangeNames;
 
@@ -181,14 +174,15 @@ private:
 #if 0
         bool                        GrowError();
 #endif
-		bool						GrowTripel( sal_uInt16 nByMin = 1 );
+        bool                        GrowTripel( sal_uInt16 nByMin = 1 );
         bool                        GrowId();
         bool                        GrowElement();
         bool                        GrowExt();
         bool                        GrowNlf();
         bool                        GrowMatrix();
-		bool						GetElement( const sal_uInt16 nId );
-		bool						GetElementRek( const sal_uInt16 nId );
+        bool                        GetElement( const sal_uInt16 nId );
+        bool                        GetElementRek( const sal_uInt16 nId );
+        void                        ClearMatrix();
 public:
     TokenPool( svl::SharedStringPool& rSPool );
                                     ~TokenPool();
@@ -211,7 +205,7 @@ public:
                                         // 4 externals (e.g. AddIns, Macros...)
         const TokenId               StoreNlf( const ScSingleRefData& rTr );
         const TokenId               StoreMatrix();
-        const TokenId               StoreName( sal_uInt16 nIndex, bool bGlobal );
+        const TokenId               StoreName( sal_uInt16 nIndex, sal_Int16 nSheet );
         const TokenId               StoreExtName( sal_uInt16 nFileId, const OUString& rName );
         const TokenId               StoreExtRef( sal_uInt16 nFileId, const OUString& rTabName, const ScSingleRefData& rRef );
         const TokenId               StoreExtRef( sal_uInt16 nFileId, const OUString& rTabName, const ScComplexRefData& rRef );
@@ -298,7 +292,7 @@ inline TokenPool& TokenPool::operator <<( const TokenId& rId )
         "-TokenPool::operator <<: TokenId in DefToken-Range!" );
 
     if( nP_IdAkt >= nP_Id )
-		if (!GrowId())
+        if (!GrowId())
             return *this;
 
     pP_Id[ nP_IdAkt ] = ( ( sal_uInt16 ) rId ) - 1;
@@ -313,7 +307,7 @@ inline TokenPool& TokenPool::operator <<( const DefTokenId eId )
         "-TokenPool::operator<<: enum too large!" );
 
     if( nP_IdAkt >= nP_Id )
-		if (!GrowId())
+        if (!GrowId())
             return *this;
 
     pP_Id[ nP_IdAkt ] = ( ( sal_uInt16 ) eId ) + nScTokenOff;
@@ -325,7 +319,7 @@ inline TokenPool& TokenPool::operator <<( const DefTokenId eId )
 inline TokenPool& TokenPool::operator <<( TokenStack& rStack )
 {
     if( nP_IdAkt >= nP_Id )
-		if (!GrowId())
+        if (!GrowId())
             return *this;
 
     pP_Id[ nP_IdAkt ] = ( ( sal_uInt16 ) rStack.Get() ) - 1;
@@ -362,7 +356,6 @@ const inline ScTokenArray* TokenPool::operator []( const TokenId& rId )
 
     return pScToken;
 }
-
 
 
 #endif

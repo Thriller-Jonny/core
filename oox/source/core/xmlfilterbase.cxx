@@ -22,6 +22,7 @@
 #include <cstdio>
 #include <set>
 #include <com/sun/star/beans/XPropertyAccess.hpp>
+#include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/container/XNameContainer.hpp>
 #include <com/sun/star/embed/XRelationshipAccess.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
@@ -44,7 +45,10 @@
 #include "oox/helper/containerhelper.hxx"
 #include "oox/helper/propertyset.hxx"
 #include "oox/helper/zipstorage.hxx"
+#include <oox/ole/olestorage.hxx>
+#include <oox/token/namespaces.hxx>
 #include "oox/token/properties.hxx"
+#include <oox/token/tokens.hxx>
 #include <com/sun/star/document/XDocumentPropertiesSupplier.hpp>
 #include <com/sun/star/document/XOOXMLDocumentPropertiesImporter.hpp>
 #include <com/sun/star/xml/dom/XDocument.hpp>
@@ -129,11 +133,15 @@ struct NamespaceIds: public rtl::StaticWithInit<
              NMSP_mce},
             {"http://schemas.openxmlformats.org/spreadsheetml/2006/main/v2",
              NMSP_mceTest},
+            {"http://schemas.openxmlformats.org/officeDocument/2006/math",
+             NMSP_officeMath},
             {"http://schemas.microsoft.com/office/drawing/2008/diagram",
              NMSP_dsp},
             {"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main",
              NMSP_xls14Lst},
             {"http://schemas.libreoffice.org/", NMSP_loext},
+            {"http://schemas.microsoft.com/office/drawing/2010/main",
+             NMSP_a14},
             {"http://schemas.microsoft.com/office/powerpoint/2010/main",
              NMSP_p14},
             {"http://schemas.microsoft.com/office/powerpoint/2012/main",
@@ -205,7 +213,7 @@ XmlFilterBase::~XmlFilterBase()
     mxImpl->maFastParser.setDocumentHandler( nullptr );
 }
 
-void XmlFilterBase::checkDocumentProperties(Reference<XDocumentProperties> xDocProps)
+void XmlFilterBase::checkDocumentProperties(const Reference<XDocumentProperties>& xDocProps)
 {
     mbMSO2007 = false;
     if (!xDocProps->getGenerator().startsWithIgnoreAsciiCase("Microsoft"))
@@ -364,21 +372,6 @@ bool XmlFilterBase::importFragment( const rtl::Reference<FragmentHandler>& rxHan
     return false;
 }
 
-OUString XmlFilterBase::getNamespaceURL( const OUString& rPrefix )
-{
-    return mxImpl->maFastParser.getNamespaceURL( rPrefix );
-}
-
-bool XmlFilterBase::hasNamespaceURL( const OUString& rPrefix ) const
-{
-    return mxImpl->maFastParser.hasNamespaceURL(rPrefix);
-}
-
-sal_Int32 XmlFilterBase::getNamespaceId( const OUString& rUrl )
-{
-     return mxImpl->maFastParser.getNamespaceId( rUrl );
-}
-
 Reference<XDocument> XmlFilterBase::importFragment( const OUString& aFragmentPath )
 {
     Reference<XDocument> xRet;
@@ -485,18 +478,18 @@ OUString lclAddRelation( const Reference< XRelationshipAccess >& rRelations, sal
         aEntry[2].First = "TargetMode";
         aEntry[2].Second = "External";
     }
-    rRelations->insertRelationshipByID( sId, aEntry, sal_True );
+    rRelations->insertRelationshipByID( sId, aEntry, true );
 
     return sId;
 }
 
 } // namespace
 
-OUString XmlFilterBase::addRelation( const OUString& rType, const OUString& rTarget, bool bExternal )
+OUString XmlFilterBase::addRelation( const OUString& rType, const OUString& rTarget )
 {
     Reference< XRelationshipAccess > xRelations( getStorage()->getXStorage(), UNO_QUERY );
     if( xRelations.is() )
-        return lclAddRelation( xRelations, mnRelId ++, rType, rTarget, bExternal );
+        return lclAddRelation( xRelations, mnRelId ++, rType, rTarget, false/*bExternal*/ );
 
     return OUString();
 }
@@ -519,7 +512,7 @@ OUString XmlFilterBase::addRelation( const Reference< XOutputStream >& rOutputSt
 }
 
 static void
-writeElement( FSHelperPtr pDoc, sal_Int32 nXmlElement, const OUString& sValue )
+writeElement( const FSHelperPtr& pDoc, sal_Int32 nXmlElement, const OUString& sValue )
 {
     pDoc->startElement( nXmlElement, FSEND );
     pDoc->writeEscaped( sValue );
@@ -527,7 +520,7 @@ writeElement( FSHelperPtr pDoc, sal_Int32 nXmlElement, const OUString& sValue )
 }
 
 static void
-writeElement( FSHelperPtr pDoc, sal_Int32 nXmlElement, const sal_Int32 nValue )
+writeElement( const FSHelperPtr& pDoc, sal_Int32 nXmlElement, const sal_Int32 nValue )
 {
     pDoc->startElement( nXmlElement, FSEND );
     pDoc->write( nValue );
@@ -535,7 +528,7 @@ writeElement( FSHelperPtr pDoc, sal_Int32 nXmlElement, const sal_Int32 nValue )
 }
 
 static void
-writeElement( FSHelperPtr pDoc, sal_Int32 nXmlElement, const util::DateTime& rTime )
+writeElement( const FSHelperPtr& pDoc, sal_Int32 nXmlElement, const util::DateTime& rTime )
 {
     if( rTime.Year == 0 )
         return;
@@ -558,7 +551,7 @@ writeElement( FSHelperPtr pDoc, sal_Int32 nXmlElement, const util::DateTime& rTi
 }
 
 static void
-writeElement( FSHelperPtr pDoc, sal_Int32 nXmlElement, const Sequence< OUString >& aItems )
+writeElement( const FSHelperPtr& pDoc, sal_Int32 nXmlElement, const Sequence< OUString >& aItems )
 {
     if( aItems.getLength() == 0 )
         return;
@@ -575,7 +568,7 @@ writeElement( FSHelperPtr pDoc, sal_Int32 nXmlElement, const Sequence< OUString 
 }
 
 static void
-writeElement( FSHelperPtr pDoc, sal_Int32 nXmlElement, const LanguageTag& rLanguageTag )
+writeElement( const FSHelperPtr& pDoc, sal_Int32 nXmlElement, const LanguageTag& rLanguageTag )
 {
     // dc:language, Dublin Core recommends "such as RFC 4646", which is BCP 47
     // and obsoleted by RFC 5646, see
@@ -585,7 +578,7 @@ writeElement( FSHelperPtr pDoc, sal_Int32 nXmlElement, const LanguageTag& rLangu
 }
 
 static void
-writeCoreProperties( XmlFilterBase& rSelf, Reference< XDocumentProperties > xProperties )
+writeCoreProperties( XmlFilterBase& rSelf, const Reference< XDocumentProperties >& xProperties )
 {
     OUString sValue;
     if( rSelf.getVersion() == oox::core::ISOIEC_29500_2008  )
@@ -632,7 +625,7 @@ writeCoreProperties( XmlFilterBase& rSelf, Reference< XDocumentProperties > xPro
 }
 
 static void
-writeAppProperties( XmlFilterBase& rSelf, Reference< XDocumentProperties > xProperties )
+writeAppProperties( XmlFilterBase& rSelf, const Reference< XDocumentProperties >& xProperties )
 {
     rSelf.addRelation(
             "http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties",
@@ -727,7 +720,7 @@ writeAppProperties( XmlFilterBase& rSelf, Reference< XDocumentProperties > xProp
 }
 
 static void
-writeCustomProperties( XmlFilterBase& rSelf, Reference< XDocumentProperties > xProperties )
+writeCustomProperties( XmlFilterBase& rSelf, const Reference< XDocumentProperties >& xProperties )
 {
     uno::Reference<beans::XPropertyAccess> xUserDefinedProperties( xProperties->getUserDefinedProperties(), uno::UNO_QUERY );
     Sequence< PropertyValue > aprop( xUserDefinedProperties->getPropertyValues() );
@@ -794,8 +787,8 @@ writeCustomProperties( XmlFilterBase& rSelf, Reference< XDocumentProperties > xP
                     {
                         OUStringBuffer buf;
                         ::sax::Converter::convertDuration( buf, aDuration );
-                        OUString pDuration = buf.makeStringAndClear();
-                        writeElement( pAppProps, FSNS( XML_vt, XML_lpwstr ), pDuration );
+                        OUString aDurationStr = buf.makeStringAndClear();
+                        writeElement( pAppProps, FSNS( XML_vt, XML_lpwstr ), aDurationStr );
                     }
                     else if ( ( aprop[n].Value ) >>= aDateTime )
                             writeElement( pAppProps, FSNS( XML_vt, XML_filetime ), aDateTime );
@@ -811,7 +804,7 @@ writeCustomProperties( XmlFilterBase& rSelf, Reference< XDocumentProperties > xP
     pAppProps->endElement( XML_Properties );
 }
 
-XmlFilterBase& XmlFilterBase::exportDocumentProperties( Reference< XDocumentProperties > xProperties )
+XmlFilterBase& XmlFilterBase::exportDocumentProperties( const Reference< XDocumentProperties >& xProperties )
 {
     if( xProperties.is() )
     {

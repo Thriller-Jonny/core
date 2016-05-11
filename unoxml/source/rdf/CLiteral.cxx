@@ -19,7 +19,6 @@
 
 #include "CNodes.hxx"
 
-#include <boost/noncopyable.hpp>
 #include <cppuhelper/implbase.hxx>
 #include <cppuhelper/supportsservice.hxx>
 #include <com/sun/star/lang/XServiceInfo.hpp>
@@ -38,11 +37,10 @@ class CLiteral:
     public ::cppu::WeakImplHelper<
         css::lang::XServiceInfo,
         css::lang::XInitialization,
-        css::rdf::XLiteral>,
-    private boost::noncopyable
+        css::rdf::XLiteral>
 {
 public:
-    explicit CLiteral(css::uno::Reference< css::uno::XComponentContext > const & context);
+    explicit CLiteral();
     virtual ~CLiteral() {}
 
     // css::lang::XServiceInfo:
@@ -62,15 +60,16 @@ public:
     virtual css::uno::Reference< css::rdf::XURI > SAL_CALL getDatatype() throw (css::uno::RuntimeException, std::exception) override;
 
 private:
-    css::uno::Reference< css::uno::XComponentContext > m_xContext;
+    CLiteral(CLiteral const&) = delete;
+    CLiteral& operator=(CLiteral const&) = delete;
 
     OUString m_Value;
     OUString m_Language;
     css::uno::Reference< css::rdf::XURI > m_xDatatype;
 };
 
-CLiteral::CLiteral(css::uno::Reference< css::uno::XComponentContext > const & context) :
-    m_xContext(context), m_Value(), m_Language(), m_xDatatype()
+CLiteral::CLiteral() :
+    m_Value(), m_Language(), m_xDatatype()
 {}
 
 // com.sun.star.uno.XServiceInfo:
@@ -178,7 +177,6 @@ css::uno::Reference< css::rdf::XURI > SAL_CALL CLiteral::getDatatype() throw (cs
 } // closing anonymous implementation namespace
 
 
-
 // component helper namespace
 namespace comp_CLiteral {
 
@@ -193,9 +191,9 @@ css::uno::Sequence< OUString > SAL_CALL _getSupportedServiceNames()
 }
 
 css::uno::Reference< css::uno::XInterface > SAL_CALL _create(
-    const css::uno::Reference< css::uno::XComponentContext > & context)
+    const css::uno::Reference< css::uno::XComponentContext > & )
 {
-    return static_cast< ::cppu::OWeakObject * >(new CLiteral(context));
+    return static_cast< ::cppu::OWeakObject * >(new CLiteral);
 }
 
 } // closing component helper namespace

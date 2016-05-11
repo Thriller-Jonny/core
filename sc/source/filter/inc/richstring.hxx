@@ -34,16 +34,6 @@ namespace com { namespace sun { namespace star {
 namespace oox {
 namespace xls {
 
-/** Flags used to specify import/export mode of strings. */
-typedef sal_Int32 BiffStringFlags;
-
-const BiffStringFlags BIFF_STR_DEFAULT      = 0x0000;   /// Default string settings.
-const BiffStringFlags BIFF_STR_FORCEUNICODE = 0x0001;   /// Always use UCS-2 characters (default: try to compress). BIFF8 export only.
-const BiffStringFlags BIFF_STR_8BITLENGTH   = 0x0002;   /// 8-bit string length field (default: 16-bit).
-const BiffStringFlags BIFF_STR_SMARTFLAGS   = 0x0004;   /// Omit flags on empty string (default: read/write always). BIFF8 only.
-const BiffStringFlags BIFF_STR_KEEPFONTS    = 0x0008;   /// Keep old fonts when reading unformatted string (default: clear fonts). Import only.
-const BiffStringFlags BIFF_STR_EXTRAFONTS   = 0x0010;   /// Read trailing rich-string font array (default: nothing). BIFF2-BIFF5 import only.
-
 /** Contains text data and font attributes for a part of a rich formatted string. */
 class RichStringPortion : public WorkbookHelper
 {
@@ -252,13 +242,10 @@ public:
 
     /** Converts the string and writes it into the passed XText.
         @param rxText  The XText interface of the target object.
-        @param bReplaceOld  True = replace old contents of the text object.
-        @param pFirstPortionFont  Optional font providing additional rich-text
-            formatting for the first text portion, e.g. font escapement. */
+        @param bReplaceOld  True = replace old contents of the text object. */
     void                convert(
                             const css::uno::Reference< css::text::XText >& rxText,
-                            bool bReplaceOld,
-                            const oox::xls::Font* pFirstPortionFont = nullptr ) const;
+                            bool bReplaceOld ) const;
     ::EditTextObject*   convert( ScEditEngineDefaulter& rEE, const oox::xls::Font* pFont ) const;
 
 private:

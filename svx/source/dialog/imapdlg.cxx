@@ -191,7 +191,7 @@ SvxIMapDlg::SvxIMapDlg(SfxBindings *_pBindings, SfxChildWindow *pCW, vcl::Window
 
     SetMinOutputSizePixel( aLastSize = GetOutputSizePixel() );
 
-    m_pStbStatus->InsertItem( 1, 130, SIB_LEFT | SIB_IN | SIB_AUTOSIZE );
+    m_pStbStatus->InsertItem( 1, 130, StatusBarItemBits::Left | StatusBarItemBits::In | StatusBarItemBits::AutoSize );
     m_pStbStatus->InsertItem( 2, 10 + GetTextWidth( " 9999,99 cm / 9999,99 cm " ) );
     m_pStbStatus->InsertItem( 3, 10 + GetTextWidth( " 9999,99 cm x 9999,99 cm " ) );
 
@@ -250,8 +250,9 @@ bool SvxIMapDlg::Close()
         if( nRet == RET_YES )
         {
             SfxBoolItem aBoolItem( SID_IMAP_EXEC, true );
-            GetBindings().GetDispatcher()->Execute(
-                SID_IMAP_EXEC, SfxCallMode::SYNCHRON | SfxCallMode::RECORD, &aBoolItem, 0L );
+            GetBindings().GetDispatcher()->ExecuteList(SID_IMAP_EXEC,
+                SfxCallMode::SYNCHRON | SfxCallMode::RECORD,
+                { &aBoolItem });
         }
         else if( nRet == RET_CANCEL )
             bRet = false;
@@ -350,8 +351,9 @@ IMPL_LINK_TYPED( SvxIMapDlg, TbxClickHdl, ToolBox*, pTbx, void )
     {
         URLLoseFocusHdl( *m_pURLBox );
         SfxBoolItem aBoolItem( SID_IMAP_EXEC, true );
-        GetBindings().GetDispatcher()->Execute(
-            SID_IMAP_EXEC, SfxCallMode::ASYNCHRON | SfxCallMode::RECORD, &aBoolItem, 0L );
+        GetBindings().GetDispatcher()->ExecuteList(SID_IMAP_EXEC,
+            SfxCallMode::ASYNCHRON | SfxCallMode::RECORD,
+            { &aBoolItem });
     }
     else if(nNewItemId == mnOpenId)
         DoOpen();
@@ -646,10 +648,10 @@ IMPL_LINK_TYPED( SvxIMapDlg, InfoHdl, IMapWindow&, rWnd, void )
 
         m_pStbStatus->SetItemText( 1, rInfo.aMarkURL );
 
-        if ( m_pURLBox->GetText() != OUString(rInfo.aMarkURL) )
+        if ( m_pURLBox->GetText() != rInfo.aMarkURL )
             m_pURLBox->SetText( rInfo.aMarkURL );
 
-        if ( m_pEdtText->GetText() != OUString(rInfo.aMarkAltText) )
+        if ( m_pEdtText->GetText() != rInfo.aMarkAltText )
             m_pEdtText->SetText( rInfo.aMarkAltText );
 
         if ( rInfo.aMarkTarget.isEmpty() )
@@ -788,8 +790,8 @@ IMPL_LINK_TYPED( SvxIMapDlg, StateHdl, GraphCtrl*, pWnd, void )
 
         switch( pWnd->GetPolyEditMode() )
         {
-            case( SID_BEZIER_MOVE ): nId = mnPolyMoveId; break;
-            case( SID_BEZIER_INSERT ): nId = mnPolyInsertId; break;
+            case SID_BEZIER_MOVE: nId = mnPolyMoveId; break;
+            case SID_BEZIER_INSERT: nId = mnPolyInsertId; break;
 
             default:
             break;

@@ -20,14 +20,21 @@
 #ifndef INCLUDED_OOX_HELPER_ZIPSTORAGE_HXX
 #define INCLUDED_OOX_HELPER_ZIPSTORAGE_HXX
 
+#include <vector>
+
+#include <com/sun/star/uno/Reference.hxx>
 #include <oox/helper/storagebase.hxx>
+#include <rtl/ustring.hxx>
 
 namespace com { namespace sun { namespace star {
+    namespace embed { class XStorage; }
+    namespace io { class XInputStream; }
+    namespace io { class XOutputStream; }
+    namespace io { class XStream; }
     namespace uno { class XComponentContext; }
 } } }
 
 namespace oox {
-
 
 
 /** Implements stream access for ZIP storages containing XML streams. */
@@ -78,7 +85,6 @@ private:
     css::uno::Reference< css::embed::XStorage >
                         mxStorage;      ///< Storage based on input or output stream.
 };
-
 
 
 } // namespace oox

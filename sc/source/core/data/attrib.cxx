@@ -353,28 +353,24 @@ SfxPoolItem* ScProtectionAttr::Create( SvStream& rStream, sal_uInt16 /* n */ ) c
     return new ScProtectionAttr(bProtect,bHFormula,bHCell,bHPrint);
 }
 
-bool ScProtectionAttr::SetProtection( bool bProtect)
+void ScProtectionAttr::SetProtection( bool bProtect)
 {
     bProtection =  bProtect;
-    return true;
 }
 
-bool ScProtectionAttr::SetHideFormula( bool bHFormula)
+void ScProtectionAttr::SetHideFormula( bool bHFormula)
 {
     bHideFormula = bHFormula;
-    return true;
 }
 
-bool ScProtectionAttr::SetHideCell( bool bHCell)
+void ScProtectionAttr::SetHideCell( bool bHCell)
 {
     bHideCell = bHCell;
-    return true;
 }
 
-bool ScProtectionAttr::SetHidePrint( bool bHPrint)
+void ScProtectionAttr::SetHidePrint( bool bHPrint)
 {
     bHidePrint = bHPrint;
-    return true;
 }
 
 /**
@@ -407,7 +403,7 @@ bool ScRangeItem::GetPresentation
     {
         case SFX_ITEM_PRESENTATION_COMPLETE:
         rText = ScGlobal::GetRscString(STR_AREA) + ": ";
-        /* !!! fall-through !!! */
+        SAL_FALLTHROUGH;
 
         case SFX_ITEM_PRESENTATION_NAMELESS:
         {
@@ -854,7 +850,7 @@ bool ScViewObjectModeItem::GetPresentation
             ePres = SFX_ITEM_PRESENTATION_NAMELESS; // Default setting!
             break;
         }
-        /* !!! fall-through !!! */
+        SAL_FALLTHROUGH;
         case SFX_ITEM_PRESENTATION_NAMELESS:
         rText += ScGlobal::GetRscString(STR_VOBJ_MODE_SHOW+GetValue());
         return true;

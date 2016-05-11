@@ -38,6 +38,7 @@
 #include <comphelper/namedvaluecollection.hxx>
 #include <comphelper/uno3.hxx>
 #include <cppuhelper/implbase5.hxx>
+#include <comphelper/interfacecontainer2.hxx>
 #include <sot/storage.hxx>
 #include <svtools/transfer.hxx>
 #include <svx/dataaccessdescriptor.hxx>
@@ -99,9 +100,7 @@ namespace dbaui
                                 m_xDataSource;
         css::uno::Reference< css::frame::XModel >
                                 m_xModel;
-        css::uno::Reference< css::util::XModifiable >
-                                m_xDocumentModify;
-        ::cppu::OInterfaceContainerHelper
+        ::comphelper::OInterfaceContainerHelper2
                                 m_aContextMenuInterceptors;
 
         TContainerVector        m_aCurrentContainers;       // the containers where we are listener on
@@ -153,15 +152,12 @@ namespace dbaui
                 Defines the type to open
             @param  _eOpenMode
                 denotes the mode in which to open the object
-            @param _nInstigatorCommand
-                denotes the command which instigated the action. Might be 0.
             @return the form or report model will only be returned, otherwise <NULL/>
         */
         css::uno::Reference< css::lang::XComponent > openElement(
             const OUString& _sName,
             ElementType _eType,
-            ElementOpenMode _eOpenMode,
-            sal_uInt16 _nInstigatorCommand = 0
+            ElementOpenMode _eOpenMode
         );
 
         /** opens a new sub frame with a table/query/form/report/view, passing additional arguments
@@ -390,7 +386,7 @@ namespace dbaui
         void    impl_validateObjectTypeAndName_throw( const sal_Int32 _nObjectType, const ::boost::optional< OUString >& i_rObjectName );
 
     protected:
-        // initalizing members
+        // initializing members
 
         // state of a feature. 'feature' may be the handle of a css::util::URL somebody requested a dispatch interface for OR a toolbar slot.
         virtual FeatureState    GetState(sal_uInt16 nId) const override;
@@ -493,7 +489,7 @@ namespace dbaui
             @param  _pTree
                 The tree list box.
             @return
-                <TRUE/> if the cotainer could be changed otherwise <FALSE/>
+                <TRUE/> if the container could be changed otherwise <FALSE/>
         */
         bool onContainerSelect(ElementType _eType);
         /** called when an entry in a tree view has been selected
@@ -538,7 +534,7 @@ namespace dbaui
         // IContextMenuProvider
         virtual PopupMenu*      getContextMenu( Control& _rControl ) const override;
         virtual IController&    getCommandController() override;
-        virtual ::cppu::OInterfaceContainerHelper*
+        virtual ::comphelper::OInterfaceContainerHelper2*
                                 getContextMenuInterceptors() override;
         virtual css::uno::Any
                                 getCurrentSelection( Control& _rControl ) const override;

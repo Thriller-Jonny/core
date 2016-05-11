@@ -126,13 +126,13 @@ public:
     virtual bool            PutValue( const css::uno::Any& rVal, sal_uInt8 nMemberId ) override;
 
             bool            GetProtection() const { return bProtection; }
-            bool            SetProtection( bool bProtect);
+            void            SetProtection( bool bProtect);
             bool            GetHideFormula() const { return bHideFormula; }
-            bool            SetHideFormula( bool bHFormula);
+            void            SetHideFormula( bool bHFormula);
             bool            GetHideCell() const { return bHideCell; }
-            bool            SetHideCell( bool bHCell);
+            void            SetHideCell( bool bHCell);
             bool            GetHidePrint() const { return bHidePrint; }
-            bool            SetHidePrint( bool bHPrint);
+            void            SetHidePrint( bool bHPrint);
     inline  ScProtectionAttr& operator=(const ScProtectionAttr& rProtection)
             {
                 bProtection = rProtection.bProtection;
@@ -144,9 +144,6 @@ public:
 };
 
 // ScRangeItem: manages an area of a table
-
-#define SCR_INVALID     0x01
-
 class ScRangeItem : public SfxPoolItem
 {
 public:
@@ -154,8 +151,7 @@ public:
 
             inline  ScRangeItem( const sal_uInt16 nWhich );
             inline  ScRangeItem( const sal_uInt16   nWhich,
-                                 const ScRange& rRange,
-                                 const sal_uInt16   nNewFlags = 0 );
+                                 const ScRange& rRange );
             inline  ScRangeItem( const ScRangeItem& rCpy );
 
     inline ScRangeItem& operator=( const ScRangeItem &rCpy );
@@ -171,23 +167,21 @@ public:
 
 private:
     ScRange aRange;
-    sal_uInt16  nFlags;
 };
 
 inline ScRangeItem::ScRangeItem( const sal_uInt16 nWhichP )
-    :   SfxPoolItem( nWhichP ), nFlags( SCR_INVALID ) // == invalid area
+    :   SfxPoolItem( nWhichP )
 {
 }
 
 inline ScRangeItem::ScRangeItem( const sal_uInt16   nWhichP,
-                                 const ScRange& rRange,
-                                 const sal_uInt16   nNew )
-    : SfxPoolItem( nWhichP ), aRange( rRange ), nFlags( nNew )
+                                 const ScRange& rRange )
+    : SfxPoolItem( nWhichP ), aRange( rRange )
 {
 }
 
 inline ScRangeItem::ScRangeItem( const ScRangeItem& rCpy )
-    : SfxPoolItem( rCpy.Which() ), aRange( rCpy.aRange ), nFlags( rCpy.nFlags )
+    : SfxPoolItem( rCpy.Which() ), aRange( rCpy.aRange )
 {}
 
 inline ScRangeItem& ScRangeItem::operator=( const ScRangeItem &rCpy )

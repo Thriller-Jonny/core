@@ -117,7 +117,7 @@ void lcl_clearIfNoValuesButTextIsContained( VDataSequence& rData, const uno::Ref
         if( !::rtl::math::isNan( rData.Doubles[i] ) )
             return;
     }
-    //no double value is countained
+    //no double value is contained
     //is there any text?
     uno::Sequence< OUString > aStrings( DataSequenceToStringSequence( xDataSequence ) );
     sal_Int32 nTextCount = aStrings.getLength();
@@ -134,7 +134,7 @@ void lcl_clearIfNoValuesButTextIsContained( VDataSequence& rData, const uno::Ref
 
 void lcl_maybeReplaceNanWithZero( double& rfValue, sal_Int32 nMissingValueTreatment )
 {
-    if( nMissingValueTreatment == ::com::sun::star::chart::MissingValueTreatment::USE_ZERO
+    if( nMissingValueTreatment == css::chart::MissingValueTreatment::USE_ZERO
         && (::rtl::math::isNan(rfValue) || ::rtl::math::isInf(rfValue)) )
             rfValue = 0.0;
 }
@@ -181,7 +181,7 @@ VDataSeries::VDataSeries( const uno::Reference< XDataSeries >& xDataSeries )
     , m_apSymbolProperties_AttributedPoint(nullptr)
     , m_apSymbolProperties_InvisibleSymbolForSelection(nullptr)
     , m_nCurrentAttributedPoint(-1)
-    , m_nMissingValueTreatment(::com::sun::star::chart::MissingValueTreatment::LEAVE_GAP)
+    , m_nMissingValueTreatment(css::chart::MissingValueTreatment::LEAVE_GAP)
     , m_bAllowPercentValueInDataLabel(false)
     , mpOldSeries(nullptr)
     , mnPercent(0.0)
@@ -328,7 +328,7 @@ void VDataSeries::releaseShapes()
     m_nPolygonIndex = 0;
 }
 
-uno::Reference<css::chart2::XDataSeries> VDataSeries::getModel() const
+const uno::Reference<css::chart2::XDataSeries>& VDataSeries::getModel() const
 {
     return m_xDataSeries;
 }
@@ -893,7 +893,7 @@ bool VDataSeries::hasPointOwnColor( sal_Int32 index ) const
 
 bool VDataSeries::isAttributedDataPoint( sal_Int32 index ) const
 {
-    //returns true if the data point assigned by the given index has set it's own properties
+    //returns true if the data point assigned by the given index has set its own properties
     if( index>=m_nPointCount || m_nPointCount==0)
         return false;
     for(sal_Int32 nN=m_aAttributedDataPointIndexList.getLength();nN--;)

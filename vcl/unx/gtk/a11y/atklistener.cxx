@@ -32,7 +32,7 @@
 
 #include "atklistener.hxx"
 #include "atkwrapper.hxx"
-#include "vcl/svapp.hxx"
+#include <vcl/svapp.hxx>
 
 #include <rtl/ref.hxx>
 
@@ -143,7 +143,6 @@ void AtkListener::updateChildList(
                  m_aChildList.resize(std::min(nChildren2, n));
                  break;
              }
-             OSL_ASSERT(m_aChildList[n].is());
          }
      }
 }

@@ -34,16 +34,13 @@
 
 using com::sun::star::uno::Sequence;
 using com::sun::star::uno::Reference;
-using com::sun::star::uno::XInterface;
 using com::sun::star::uno::Any;
 using com::sun::star::uno::makeAny;
 using com::sun::star::uno::UNO_QUERY;
-using com::sun::star::uno::Type;
 using com::sun::star::uno::TypeClass;
 using com::sun::star::uno::RuntimeException;
 using com::sun::star::uno::Exception;
 using com::sun::star::lang::XSingleServiceFactory;
-using com::sun::star::lang::XUnoTunnel;
 using com::sun::star::script::XInvocation2;
 using com::sun::star::beans::XMaterialHolder;
 
@@ -111,7 +108,7 @@ PyObject* PyUNOStruct_dir( PyObject *self )
     try
     {
         member_list = PyList_New( 0 );
-        for( auto aMember : me->members->xInvocation->getMemberNames() )
+        for( const auto& aMember : me->members->xInvocation->getMemberNames() )
         {
             // setitem steals a reference
             PyList_Append( member_list, ustring2PyString( aMember ).getAcquired() );

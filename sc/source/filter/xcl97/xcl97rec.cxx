@@ -84,7 +84,6 @@
 
 using namespace ::com::sun::star;
 using ::com::sun::star::uno::Reference;
-using ::oox::drawingml::DrawingML;
 using ::com::sun::star::uno::UNO_QUERY;
 using ::com::sun::star::beans::XPropertySet;
 using ::com::sun::star::drawing::XShape;
@@ -168,7 +167,7 @@ void XclExpObjList::Save( XclExpStream& rStrm )
 
 namespace {
 
-static bool IsVmlObject( const XclObj *rObj )
+bool IsVmlObject( const XclObj *rObj )
 {
     switch( rObj->GetObjType() )
     {
@@ -179,7 +178,7 @@ static bool IsVmlObject( const XclObj *rObj )
     }
 }
 
-static sal_Int32 GetVmlObjectCount( XclExpObjList& rList )
+sal_Int32 GetVmlObjectCount( XclExpObjList& rList )
 {
     sal_Int32 nNumVml = 0;
 
@@ -232,7 +231,7 @@ bool IsValidObject( const XclObj& rObj )
     return true;
 }
 
-static void SaveDrawingMLObjects( XclExpObjList& rList, XclExpXmlStream& rStrm, sal_Int32& nDrawingMLCount )
+void SaveDrawingMLObjects( XclExpObjList& rList, XclExpXmlStream& rStrm, sal_Int32& nDrawingMLCount )
 {
     std::vector<XclObj*> aList;
     aList.reserve(rList.size());
@@ -277,7 +276,7 @@ static void SaveDrawingMLObjects( XclExpObjList& rList, XclExpXmlStream& rStrm, 
     rStrm.PopStream();
 }
 
-static void SaveVmlObjects( XclExpObjList& rList, XclExpXmlStream& rStrm, sal_Int32& nVmlCount )
+void SaveVmlObjects( XclExpObjList& rList, XclExpXmlStream& rStrm, sal_Int32& nVmlCount )
 {
     if( GetVmlObjectCount( rList ) == 0 )
         return;
@@ -798,7 +797,7 @@ XclTxo::XclTxo( const XclExpRoot& rRoot, const EditTextObject& rEditObj, SdrObje
         OUString aParaText( rEditObj.GetText( 0 ) );
         if( !aParaText.isEmpty() )
         {
-            SfxItemSet aSet( rEditObj.GetParaAttribs( 0));
+            const SfxItemSet& aSet( rEditObj.GetParaAttribs( 0));
             const SfxPoolItem* pItem = nullptr;
             if( aSet.GetItemState( EE_PARA_JUST, true, &pItem ) == SfxItemState::SET )
             {
@@ -1050,44 +1049,44 @@ GetEditAs( XclObjAny& rObj )
 
 namespace {
 
-sal_uInt16 parseRange(const OUString& rString, ScRange& rRange, ScDocument* pDoc)
+ScRefFlags parseRange(const OUString& rString, ScRange& rRange, ScDocument* pDoc)
 {
     // start with the address convention set in the document
     formula::FormulaGrammar::AddressConvention eConv = pDoc->GetAddressConvention();
-    sal_uInt16 nResult = rRange.Parse(rString, pDoc, eConv);
-    if ( (nResult & SCA_VALID) )
+    ScRefFlags nResult = rRange.Parse(rString, pDoc, eConv);
+    if ( nResult & ScRefFlags::VALID )
         return nResult;
 
     // try the default calc address convention
     nResult = rRange.Parse(rString, pDoc);
-    if ( (nResult & SCA_VALID) )
+    if ( nResult & ScRefFlags::VALID )
         return nResult;
 
     // try excel a1
     nResult = rRange.Parse(rString, pDoc, formula::FormulaGrammar::CONV_XL_A1);
-    if (nResult & SCA_VALID)
+    if ( nResult & ScRefFlags::VALID )
         return nResult;
 
     // try r1c1
     return rRange.Parse(rString, pDoc, formula::FormulaGrammar::CONV_XL_R1C1);
 }
 
-sal_uInt16 parseAddress(const OUString& rString, ScAddress& rAddress, ScDocument* pDoc)
+ScRefFlags parseAddress(const OUString& rString, ScAddress& rAddress, ScDocument* pDoc)
 {
     // start with the address convention set in the document
     formula::FormulaGrammar::AddressConvention eConv = pDoc->GetAddressConvention();
-    sal_uInt16 nResult = rAddress.Parse(rString, pDoc, eConv);
-    if ( (nResult & SCA_VALID) )
+    ScRefFlags nResult = rAddress.Parse(rString, pDoc, eConv);
+    if ( nResult & ScRefFlags::VALID )
         return nResult;
 
     // try the default calc address convention
     nResult = rAddress.Parse(rString, pDoc);
-    if ( (nResult & SCA_VALID) )
+    if ( nResult & ScRefFlags::VALID )
         return nResult;
 
     // try excel a1
     nResult = rAddress.Parse(rString, pDoc, formula::FormulaGrammar::CONV_XL_A1);
-    if ( (nResult & SCA_VALID) )
+    if ( nResult & ScRefFlags::VALID )
         return nResult;
 
     // try r1c1
@@ -1105,8 +1104,8 @@ bool transformURL(const OUString& rOldURL, OUString& rNewURL, ScDocument* pDoc)
 
         ScRange aRange;
         ScAddress aAddress;
-        sal_uInt16 nResult = parseRange(aAddressString, aRange, pDoc);
-        if (nResult & SCA_VALID)
+        ScRefFlags nResult = parseRange(aAddressString, aRange, pDoc);
+        if ( nResult & ScRefFlags::VALID )
         {
             OUString aString = aRange.Format(nResult, pDoc, formula::FormulaGrammar::CONV_XL_OOX);
             rNewURL = "#" + aString;
@@ -1115,7 +1114,7 @@ bool transformURL(const OUString& rOldURL, OUString& rNewURL, ScDocument* pDoc)
         else
         {
             nResult = parseAddress(aAddressString, aAddress, pDoc);
-            if(nResult & SCA_VALID)
+            if( nResult & ScRefFlags::VALID )
             {
                 OUString aString = aAddress.Format(nResult, pDoc, formula::FormulaGrammar::CONV_XL_OOX);
                 rNewURL = "#" + aString;
@@ -1164,7 +1163,7 @@ void XclObjAny::SaveXml( XclExpXmlStream& rStrm )
 
     sax_fastparser::FSHelperPtr pDrawing = rStrm.GetCurrentStream();
 
-    ShapeExport aDML( XML_xdr, pDrawing, nullptr, &rStrm, DrawingML::DOCUMENT_XLSX );
+    ShapeExport aDML(XML_xdr, pDrawing, nullptr, &rStrm, drawingml::DOCUMENT_XLSX);
     std::shared_ptr<oox::drawingml::URLTransformer> pURLTransformer(new ScURLTransformer(*mpDoc));
     aDML.SetURLTranslator(pURLTransformer);
 
@@ -1346,7 +1345,7 @@ ExcEScenario::ExcEScenario( const XclExpRoot& rRoot, SCTAB nTab )
     sComment.Assign( sTmpComm, EXC_STR_DEFAULT, 255 );
     if( sComment.Len() )
         nRecLen += sComment.GetSize();
-    nProtected = (nFlags & SC_SCENARIO_PROTECT);
+    bProtected = (nFlags & SC_SCENARIO_PROTECT);
 
     sUserName.Assign( rRoot.GetUserName(), EXC_STR_DEFAULT, 255 );
     nRecLen += sUserName.GetSize();
@@ -1404,7 +1403,7 @@ void ExcEScenario::SaveCont( XclExpStream& rStrm )
     sal_uInt16 count = aCells.size();
 
     rStrm   << (sal_uInt16) count               // number of cells
-            << sal_uInt8(nProtected)            // fProtection
+            << sal_uInt8(bProtected)            // fProtection
             << (sal_uInt8) 0                    // fHidden
             << (sal_uInt8) sName.Len()          // length of scen name
             << (sal_uInt8) sComment.Len()       // length of comment
@@ -1441,7 +1440,7 @@ void ExcEScenario::SaveXml( XclExpXmlStream& rStrm )
     sax_fastparser::FSHelperPtr& rWorkbook = rStrm.GetCurrentStream();
     rWorkbook->startElement( XML_scenario,
             XML_name,       XclXmlUtils::ToOString( sName ).getStr(),
-            XML_locked,     XclXmlUtils::ToPsz( nProtected ),
+            XML_locked,     XclXmlUtils::ToPsz( bProtected ),
             // OOXTODO: XML_hidden,
             XML_count,      OString::number(  aCells.size() ).getStr(),
             XML_user,       XESTRING_TO_PSZ( sUserName ),

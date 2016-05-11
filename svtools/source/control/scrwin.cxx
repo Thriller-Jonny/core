@@ -21,7 +21,6 @@
 #include <vcl/settings.hxx>
 
 
-
 void ScrollableWindow::ImpInitialize( ScrollableWindowFlags nFlags )
 {
     bHandleDragging = bool( nFlags & ScrollableWindowFlags::THUMBDRAGGING );
@@ -39,10 +38,9 @@ void ScrollableWindow::ImpInitialize( ScrollableWindowFlags nFlags )
 }
 
 
-
-ScrollableWindow::ScrollableWindow( vcl::Window* pParent, WinBits nBits,
+ScrollableWindow::ScrollableWindow( vcl::Window* pParent,
                                     ScrollableWindowFlags nFlags ) :
-    Window( pParent, WinBits(nBits|WB_CLIPCHILDREN) ),
+    Window( pParent, WB_CLIPCHILDREN ),
     aVScroll( VclPtr<ScrollBar>::Create(this, WinBits(WB_VSCROLL | WB_DRAG)) ),
     aHScroll( VclPtr<ScrollBar>::Create(this, WinBits(WB_HSCROLL | WB_DRAG)) ),
     aCornerWin( VclPtr<ScrollBarBox>::Create(this) )
@@ -89,7 +87,6 @@ void ScrollableWindow::Command( const CommandEvent& rCEvt )
 }
 
 
-
 void ScrollableWindow::DataChanged( const DataChangedEvent& rDCEvt )
 {
     if ( (rDCEvt.GetType() == DataChangedEventType::SETTINGS) &&
@@ -103,7 +100,6 @@ void ScrollableWindow::DataChanged( const DataChangedEvent& rDCEvt )
 }
 
 
-
 Size ScrollableWindow::GetOutputSizePixel() const
 {
     Size aSz( Window::GetOutputSizePixel() );
@@ -115,7 +111,6 @@ Size ScrollableWindow::GetOutputSizePixel() const
         aSz.Width() -= nTmp;
     return aSz;
 }
-
 
 
 IMPL_LINK_TYPED( ScrollableWindow, EndScrollHdl, ScrollBar *, pScroll, void )
@@ -141,7 +136,6 @@ IMPL_LINK_TYPED( ScrollableWindow, EndScrollHdl, ScrollBar *, pScroll, void )
 }
 
 
-
 IMPL_LINK_TYPED( ScrollableWindow, ScrollHdl, ScrollBar *, pScroll, void )
 {
     // notify the start of scrolling, if not already scrolling
@@ -159,7 +153,6 @@ IMPL_LINK_TYPED( ScrollableWindow, ScrollHdl, ScrollBar *, pScroll, void )
             Scroll( 0, aDelta.Height() );
     }
 }
-
 
 
 void ScrollableWindow::Resize()
@@ -285,14 +278,12 @@ void ScrollableWindow::Resize()
 }
 
 
-
 void ScrollableWindow::SetMapMode( const MapMode& rNewMapMode )
 {
     MapMode aMap( rNewMapMode );
     aMap.SetOrigin( aMap.GetOrigin() + PixelToLogic( aPixOffset, aMap ) );
     Window::SetMapMode( aMap );
 }
-
 
 
 MapMode ScrollableWindow::GetMapMode() const
@@ -303,13 +294,11 @@ MapMode ScrollableWindow::GetMapMode() const
 }
 
 
-
 void ScrollableWindow::SetTotalSize( const Size& rNewSize )
 {
     aTotPixSz = LogicToPixel( rNewSize );
     ScrollableWindow::Resize();
 }
-
 
 
 void ScrollableWindow::Scroll( long nDeltaX, long nDeltaY, ScrollFlags )

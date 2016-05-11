@@ -20,24 +20,48 @@
 #ifndef INCLUDED_OOX_DRAWINGML_SHAPE_HXX
 #define INCLUDED_OOX_DRAWINGML_SHAPE_HXX
 
-#include <oox/helper/propertymap.hxx>
-#include <oox/core/xmlfilterbase.hxx>
+#include <map>
+#include <memory>
+#include <vector>
+
+#include <com/sun/star/awt/Point.hpp>
+#include <com/sun/star/awt/Size.hpp>
+#include <com/sun/star/beans/PropertyValue.hpp>
+#include <com/sun/star/uno/Reference.hxx>
+#include <com/sun/star/uno/Sequence.hxx>
+#include <oox/dllapi.h>
 #include <oox/drawingml/color.hxx>
 #include <oox/drawingml/drawingmltypes.hxx>
+#include <oox/helper/helper.hxx>
+#include <oox/helper/propertymap.hxx>
+#include <rtl/ustring.hxx>
+#include <sal/types.h>
 
-#include <com/sun/star/frame/XModel.hpp>
-#include <com/sun/star/drawing/XDrawPage.hpp>
-#include <memory>
-#include <basegfx/matrix/b2dhommatrix.hxx>
-#include <vector>
-#include <map>
-#include <oox/dllapi.h>
+namespace basegfx { class B2DHomMatrix; }
+
+namespace com { namespace sun { namespace star {
+    namespace awt { struct Rectangle; }
+    namespace drawing { class XShape; }
+    namespace drawing { class XShapes; }
+    namespace uno { class Any; }
+} } }
+
+namespace oox { namespace core {
+    class XmlFilterBase;
+} }
 
 namespace oox { namespace vml {
     struct OleObjectInfo;
 } }
 
 namespace oox { namespace drawingml {
+
+class Theme;
+struct EffectProperties;
+struct FillProperties;
+struct GraphicProperties;
+struct LineProperties;
+struct Shape3DProperties;
 
 class CustomShapeProperties;
 typedef std::shared_ptr< CustomShapeProperties > CustomShapePropertiesPtr;
@@ -94,7 +118,7 @@ public:
     GraphicProperties&       getGraphicProperties() { return *mpGraphicPropertiesPtr; }
     const GraphicProperties& getGraphicProperties() const { return *mpGraphicPropertiesPtr; }
 
-    CustomShapePropertiesPtr        getCustomShapeProperties(){ return mpCustomShapePropertiesPtr; }
+    CustomShapePropertiesPtr&       getCustomShapeProperties(){ return mpCustomShapePropertiesPtr; }
 
     Shape3DProperties&              get3DProperties() { return *mp3DPropertiesPtr; }
     const Shape3DProperties&        get3DProperties() const { return *mp3DPropertiesPtr; }
@@ -118,9 +142,9 @@ public:
     std::vector< ShapePtr >&        getChildren() { return maChildren; }
 
     void                            setName( const OUString& rName ) { msName = rName; }
-    OUString                        getName( ) { return msName; }
+    const OUString&                 getName( ) { return msName; }
     void                            setId( const OUString& rId ) { msId = rId; }
-    OUString                        getId() { return msId; }
+    const OUString&                 getId() { return msId; }
     void                            setHidden( bool bHidden ) { mbHidden = bHidden; }
     void                            setHiddenMasterShape( bool bHiddenMasterShape ) { mbHiddenMasterShape = bHiddenMasterShape; }
     void                            setSubType( sal_Int32 nSubType ) { mnSubType = nSubType; }
@@ -137,9 +161,9 @@ public:
     void                            setTableType();
 
     void                setTextBody(const TextBodyPtr & pTextBody);
-    TextBodyPtr         getTextBody() { return mpTextBody;}
+    const TextBodyPtr&   getTextBody() { return mpTextBody;}
     void                setMasterTextListStyle( const TextListStylePtr& pMasterTextListStyle );
-    TextListStylePtr    getMasterTextListStyle() const { return mpMasterTextListStyle; }
+    const TextListStylePtr&  getMasterTextListStyle() const { return mpMasterTextListStyle; }
 
     ShapeStyleRefMap&        getShapeStyleRefs() { return maShapeStyleRefs; }
     const ShapeStyleRefMap&  getShapeStyleRefs() const { return maShapeStyleRefs; }
@@ -238,7 +262,6 @@ protected:
     std::vector< ShapePtr >     maChildren;               // only used for group shapes
     css::awt::Size   maChSize;                 // only used for group shapes
     css::awt::Point  maChPosition;             // only used for group shapes
-    bool                        mbIsChild;
 
     TextBodyPtr                 mpTextBody;
     LinePropertiesPtr           mpLinePropertiesPtr;

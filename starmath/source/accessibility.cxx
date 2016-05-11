@@ -59,12 +59,11 @@
 #include <unomodel.hxx>
 #include <document.hxx>
 #include <view.hxx>
-
+#include <o3tl/make_unique.hxx>
 using namespace com::sun::star;
 using namespace com::sun::star::lang;
 using namespace com::sun::star::uno;
 using namespace com::sun::star::accessibility;
-
 
 
 static awt::Rectangle lcl_GetBounds( vcl::Window *pWin )
@@ -107,7 +106,6 @@ static awt::Point lcl_GetLocationOnScreen( vcl::Window *pWin )
     }
     return aPos;
 }
-
 
 
 SmGraphicAccessible::SmGraphicAccessible( SmGraphicWindow *pGraphicWin ) :
@@ -242,10 +240,10 @@ awt::Size SAL_CALL SmGraphicAccessible::getSize()
             "mismatch of window parent and accessible parent" );
 
     Size aSz( pWin->GetSizePixel() );
-#if OSL_DEBUG_LEVEL > 1
+#if OSL_DEBUG_LEVEL > 0
     awt::Rectangle aRect( lcl_GetBounds( pWin ) );
     Size aSz2( aRect.Width, aRect.Height );
-    OSL_ENSURE( aSz == aSz2, "mismatch in width" );
+    assert(aSz == aSz2 && "mismatch in width" );
 #endif
     return awt::Size( aSz.Width(), aSz.Height() );
 }
@@ -267,7 +265,7 @@ sal_Int32 SAL_CALL SmGraphicAccessible::getForeground()
 
     if (!pWin)
         throw RuntimeException();
-    return (sal_Int32) pWin->GetTextColor().GetColor();
+    return static_cast<sal_Int32>(pWin->GetTextColor().GetColor());
 }
 
 sal_Int32 SAL_CALL SmGraphicAccessible::getBackground()
@@ -283,7 +281,7 @@ sal_Int32 SAL_CALL SmGraphicAccessible::getBackground()
         nCol = pWin->GetSettings().GetStyleSettings().GetWindowColor().GetColor();
     else
         nCol = aWall.GetColor().GetColor();
-    return (sal_Int32) nCol;
+    return static_cast<sal_Int32>(nCol);
 }
 
 sal_Int32 SAL_CALL SmGraphicAccessible::getAccessibleChildCount()
@@ -449,7 +447,7 @@ sal_Bool SAL_CALL SmGraphicAccessible::setCaretPosition( sal_Int32 nIndex )
     OUString aTxt( GetAccessibleText_Impl() );
     if (!(nIndex < aTxt.getLength()))
         throw IndexOutOfBoundsException();
-    return sal_False;
+    return false;
 }
 
 sal_Unicode SAL_CALL SmGraphicAccessible::getCharacter( sal_Int32 nIndex )
@@ -646,7 +644,7 @@ sal_Bool SAL_CALL SmGraphicAccessible::setSelection(
     if (!(0 <= nStartIndex  &&  nStartIndex < nLen) ||
         !(0 <= nEndIndex    &&  nEndIndex   < nLen))
         throw IndexOutOfBoundsException();
-    return sal_False;
+    return false;
 }
 
 OUString SAL_CALL SmGraphicAccessible::getText()
@@ -795,9 +793,6 @@ Sequence< OUString > SAL_CALL SmGraphicAccessible::getSupportedServiceNames()
 }
 
 
-
-
-
 SmEditSource::SmEditSource( SmEditWindow * /*pWin*/, SmEditAccessible &rAcc ) :
     aViewFwd    (rAcc),
     aTextFwd    (rAcc, *this),
@@ -926,8 +921,6 @@ Point SmViewForwarder::PixelToLogic( const Point& rPoint, const MapMode& rMapMod
 }
 
 
-
-
 SmTextForwarder::SmTextForwarder( SmEditAccessible& rAcc, SmEditSource & rSource) :
     rEditAcc ( rAcc ),
     rEditSource (rSource)
@@ -1036,11 +1029,11 @@ SfxItemPool* SmTextForwarder::GetPool() const
     return pEditEngine ? pEditEngine->GetEmptyItemSet().GetPool() : nullptr;
 }
 
-void SmTextForwarder::RemoveAttribs( const ESelection& rSelection, bool bRemoveParaAttribs, sal_uInt16 nWhich )
+void SmTextForwarder::RemoveAttribs( const ESelection& rSelection )
 {
     EditEngine *pEditEngine = rEditAcc.GetEditEngine();
     if (pEditEngine)
-        pEditEngine->RemoveAttribs( rSelection, bRemoveParaAttribs, nWhich );
+        pEditEngine->RemoveAttribs( rSelection, false/*bRemoveParaAttribs*/, 0 );
 }
 
 void SmTextForwarder::GetPortions( sal_Int32 nPara, std::vector<sal_Int32>& rList ) const
@@ -1459,7 +1452,6 @@ void SmTextForwarder::CopyText(const SvxTextForwarder& rSource)
 }
 
 
-
 SmEditViewForwarder::SmEditViewForwarder( SmEditAccessible& rAcc ) :
     rEditAcc( rAcc )
 {
@@ -1598,10 +1590,9 @@ bool SmEditViewForwarder::Paste()
 }
 
 
-
 SmEditAccessible::SmEditAccessible( SmEditWindow *pEditWin ) :
     aAccName            (SM_RESSTR(STR_CMDBOXWINDOW)),
-    pTextHelper         (nullptr),
+    pTextHelper         (),
     pWin                (pEditWin)
 {
     OSL_ENSURE( pWin, "SmEditAccessible: window missing" );
@@ -1609,7 +1600,11 @@ SmEditAccessible::SmEditAccessible( SmEditWindow *pEditWin ) :
 
 SmEditAccessible::~SmEditAccessible()
 {
-    delete pTextHelper;
+}
+
+::accessibility::AccessibleTextHelper *SmEditAccessible::GetTextHelper()
+{
+    return pTextHelper.get();
 }
 
 void SmEditAccessible::Init()
@@ -1621,9 +1616,8 @@ void SmEditAccessible::Init()
         EditView   *pEditView   = pWin->GetEditView();
         if (pEditEngine && pEditView)
         {
-            ::std::unique_ptr< SvxEditSource > pEditSource(
-                    new SmEditSource( pWin, *this ) );
-            pTextHelper = new ::accessibility::AccessibleTextHelper( std::move(pEditSource) );
+            assert(!pTextHelper);
+            pTextHelper.reset(new ::accessibility::AccessibleTextHelper( o3tl::make_unique<SmEditSource>( pWin, *this ) ));
             pTextHelper->SetEventSource( this );
         }
     }
@@ -1644,7 +1638,7 @@ void SmEditAccessible::ClearWin()
     //! make TextHelper release references
     //! (e.g. the one set by the 'SetEventSource' call)
     pTextHelper->Dispose();
-    delete pTextHelper;     pTextHelper = nullptr;
+    pTextHelper.reset();
 }
 
 // XAccessible
@@ -1724,10 +1718,10 @@ awt::Size SAL_CALL SmEditAccessible::getSize(  )
             "mismatch of window parent and accessible parent" );
 
     Size aSz( pWin->GetSizePixel() );
-#if OSL_DEBUG_LEVEL > 1
+#if OSL_DEBUG_LEVEL > 0
     awt::Rectangle aRect( lcl_GetBounds( pWin ) );
     Size aSz2( aRect.Width, aRect.Height );
-    OSL_ENSURE( aSz == aSz2, "mismatch in width" );
+    assert(aSz == aSz2 && "mismatch in width");
 #endif
     return awt::Size( aSz.Width(), aSz.Height() );
 }
@@ -1749,7 +1743,7 @@ sal_Int32 SAL_CALL SmEditAccessible::getForeground()
 
     if (!pWin)
         throw RuntimeException();
-    return (sal_Int32) pWin->GetTextColor().GetColor();
+    return static_cast<sal_Int32>(pWin->GetTextColor().GetColor());
 }
 
 sal_Int32 SAL_CALL SmEditAccessible::getBackground()
@@ -1765,7 +1759,7 @@ sal_Int32 SAL_CALL SmEditAccessible::getBackground()
         nCol = pWin->GetSettings().GetStyleSettings().GetWindowColor().GetColor();
     else
         nCol = aWall.GetColor().GetColor();
-    return (sal_Int32) nCol;
+    return static_cast<sal_Int32>(nCol);
 }
 
 // XAccessibleContext
@@ -1923,7 +1917,6 @@ Sequence< OUString > SAL_CALL SmEditAccessible::getSupportedServiceNames()
         "css::accessibility::AccessibleContext"
     };
 }
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

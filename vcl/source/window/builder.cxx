@@ -40,8 +40,6 @@
 #include <window.h>
 #include <xmlreader/xmlreader.hxx>
 
-using namespace com::sun::star;
-
 #ifdef DISABLE_DYNLOADING
 #include <dlfcn.h>
 #endif
@@ -126,12 +124,12 @@ void VclBuilder::loadTranslations(const LanguageTag &rLanguageTag, const OUStrin
         OUString sZippedFile(rUri.copy(nLastSlash + 1, nEndName - nLastSlash - 1) + "/" + sLang + ".ui");
         try
         {
-            uno::Reference<packages::zip::XZipFileAccess2> xNameAccess =
-                packages::zip::ZipFileAccess::createWithURL(
+            css::uno::Reference<css::packages::zip::XZipFileAccess2> xNameAccess =
+                css::packages::zip::ZipFileAccess::createWithURL(
                         comphelper::getProcessComponentContext(), aTransBuf.makeStringAndClear());
             if (!xNameAccess.is())
                 continue;
-            uno::Reference<io::XInputStream> xInputStream(xNameAccess->getByName(sZippedFile), uno::UNO_QUERY);
+            css::uno::Reference<css::io::XInputStream> xInputStream(xNameAccess->getByName(sZippedFile), css::uno::UNO_QUERY);
             if (!xInputStream.is())
                 continue;
             OStringBuffer sStr;
@@ -149,7 +147,7 @@ void VclBuilder::loadTranslations(const LanguageTag &rLanguageTag, const OUStrin
             handleTranslations(reader);
             break;
         }
-        catch (const uno::Exception &)
+        catch (const css::uno::Exception &)
         {
         }
     }
@@ -172,7 +170,7 @@ namespace
 }
 #endif
 
-VclBuilder::VclBuilder(vcl::Window *pParent, const OUString& sUIDir, const OUString& sUIFile, const OString& sID, const uno::Reference<frame::XFrame>& rFrame)
+VclBuilder::VclBuilder(vcl::Window *pParent, const OUString& sUIDir, const OUString& sUIFile, const OString& sID, const css::uno::Reference<css::frame::XFrame>& rFrame)
     : m_sID(sID)
     , m_sHelpRoot(OUStringToOString(sUIFile, RTL_TEXTENCODING_UTF8))
     , m_pStringReplace(ResMgr::GetReadStringHook())
@@ -204,7 +202,7 @@ VclBuilder::VclBuilder(vcl::Window *pParent, const OUString& sUIDir, const OUStr
 
         handleChild(pParent, reader);
     }
-    catch (const uno::Exception &rExcept)
+    catch (const css::uno::Exception &rExcept)
     {
         SAL_WARN("vcl.layout", "Unable to read .ui file: " << rExcept.Message);
         throw;
@@ -486,7 +484,7 @@ VclBuilder::VclBuilder(vcl::Window *pParent, const OUString& sUIDir, const OUStr
     }
 
     //drop maps, etc. that we don't need again
-    delete m_pParserState;
+    m_pParserState.reset();
 
     SAL_WARN_IF(!m_sID.isEmpty() && (!m_bToplevelParentFound && !get_by_name(m_sID)), "vcl.layout",
         "Requested top level widget \"" << m_sID.getStr() <<
@@ -871,7 +869,7 @@ namespace
         return sTooltipText;
     }
 
-    void setupFromActionName(Button *pButton, VclBuilder::stringmap &rMap, const uno::Reference<frame::XFrame>& rFrame)
+    void setupFromActionName(Button *pButton, VclBuilder::stringmap &rMap, const css::uno::Reference<css::frame::XFrame>& rFrame)
     {
         if (!rFrame.is())
             return;
@@ -1649,7 +1647,8 @@ VclPtr<vcl::Window> VclBuilder::makeObject(vcl::Window *pParent, const OString &
     {
         xWindow = VclPtr<ToolBox>::Create(pParent, WB_3DLOOK | WB_TABSTOP);
     }
-    else if (name == "GtkToolButton" || name == "GtkMenuToolButton")
+    else if (name == "GtkToolButton" || name == "GtkMenuToolButton" ||
+             name == "GtkToggleToolButton" || name == "GtkRadioToolButton")
     {
         ToolBox *pToolBox = dynamic_cast<ToolBox*>(pParent);
         if (pToolBox)
@@ -1660,6 +1659,10 @@ VclPtr<vcl::Window> VclBuilder::makeObject(vcl::Window *pParent, const OString &
             ToolBoxItemBits nBits = ToolBoxItemBits::NONE;
             if (name == "GtkMenuToolButton")
                 nBits |= ToolBoxItemBits::DROPDOWN;
+            else if (name == "GtkToggleToolButton")
+                nBits |= ToolBoxItemBits::AUTOCHECK | ToolBoxItemBits::CHECKABLE;
+            else if (name == "GtkRadioToolButton")
+                nBits |= ToolBoxItemBits::AUTOCHECK | ToolBoxItemBits::RADIOCHECK;
 
             if (!aCommand.isEmpty() && m_xFrame.is())
             {

@@ -28,12 +28,12 @@
 #include <osl/conditn.h>
 #include <osl/time.h>
 
-typedef struct _oslConditionImpl
+struct oslConditionImpl
 {
     pthread_cond_t  m_Condition;
     pthread_mutex_t m_Lock;
     bool            m_State;
-} oslConditionImpl;
+};
 
 oslCondition SAL_CALL osl_createCondition()
 {
@@ -109,7 +109,7 @@ sal_Bool SAL_CALL osl_setCondition(oslCondition Condition)
    if ( nRet != 0 )
    {
        SAL_WARN( "sal.osl.condition", "osl_setCondition(" << pCond << "): pthread_mutex_lock failed: " << strerror(nRet) );
-       return sal_False;
+       return false;
    }
 
    pCond->m_State = true;
@@ -119,19 +119,19 @@ sal_Bool SAL_CALL osl_setCondition(oslCondition Condition)
        SAL_WARN( "sal.osl.condition", "osl_setCondition(" << pCond << "): pthread_cond_broadcast failed: " << strerror(nRet) );
        // try to unlock the mutex
        pthread_mutex_unlock(&pCond->m_Lock);
-       return sal_False;
+       return false;
    }
 
    nRet = pthread_mutex_unlock(&pCond->m_Lock);
    if ( nRet != 0 )
    {
        SAL_WARN( "sal.osl.condition", "osl_setCondition(" << pCond << "): pthread_mutex_unlock failed: " << strerror(nRet) );
-       return sal_False;
+       return false;
    }
 
    SAL_INFO( "sal.osl.condition", "osl_setCondition(" << pCond << ")" );
 
-   return sal_True;
+   return true;
 
 }
 
@@ -148,7 +148,7 @@ sal_Bool SAL_CALL osl_resetCondition(oslCondition Condition)
     if ( nRet != 0 )
     {
         SAL_WARN( "sal.osl.condition", "osl_resetCondition(" << pCond << "): pthread_mutex_lock failed: " << strerror(nRet) );
-        return sal_False;
+        return false;
     }
 
     pCond->m_State = false;
@@ -157,12 +157,12 @@ sal_Bool SAL_CALL osl_resetCondition(oslCondition Condition)
     if ( nRet != 0 )
     {
         SAL_WARN( "sal.osl.condition", "osl_resetCondition(" << pCond << "): pthread_mutex_unlock failed: " << strerror(nRet) );
-        return sal_False;
+        return false;
     }
 
     SAL_INFO( "sal.osl.condition", "osl_resetCondition(" << pCond << ")" );
 
-    return sal_True;
+    return true;
 }
 
 oslConditionResult SAL_CALL osl_waitCondition(oslCondition Condition, const TimeValue* pTimeout)

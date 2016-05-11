@@ -55,6 +55,24 @@ GtkWidget*                     lok_doc_view_new                    (const gchar*
                                                                     GError **error);
 
 /**
+ * lok_doc_view_new_from_user_profile:
+ * @pPath: (nullable): LibreOffice install path. Pass null to set it to default
+ * path which in most cases would be $libdir/libreoffice/program
+ * @pUserProfile: (nullable): User profile URL. Must be either a file URL or a
+ * special vnd.sun.star.pathname URL. Pass non-null to be able to use this
+ * widget and LibreOffice itself in parallel.
+ * @cancellable: The cancellable object that you can use to cancel this
+ * operation.
+ * @error: The error that will be set if the object fails to initialize.
+ *
+ * Returns: (transfer none): The #LOKDocView widget instance.
+ */
+GtkWidget*                     lok_doc_view_new_from_user_profile  (const gchar* pPath,
+                                                                    const gchar* pUserProfile,
+                                                                    GCancellable *cancellable,
+                                                                    GError **error);
+
+/**
  * lok_doc_view_new_from_widget:
  * @pDocView: The #LOKDocView instance
  *
@@ -71,7 +89,7 @@ GtkWidget*                     lok_doc_view_new_from_widget        (LOKDocView* 
  * @callback:
  * @userdata:
  *
- * Returns: %TRUE if the document is loaded succesfully, %FALSE otherwise
+ * Returns: %TRUE if the document is loaded successfully, %FALSE otherwise
  */
 void                           lok_doc_view_open_document          (LOKDocView* pDocView,
                                                                     const gchar* pPath,
@@ -86,7 +104,7 @@ void                           lok_doc_view_open_document          (LOKDocView* 
  * @res:
  * @error:
  *
- * Returns: %TRUE if the document is loaded succesfully, %FALSE otherwise
+ * Returns: %TRUE if the document is loaded successfully, %FALSE otherwise
  */
 gboolean                       lok_doc_view_open_document_finish   (LOKDocView* pDocView,
                                                                     GAsyncResult* res,
@@ -107,10 +125,23 @@ LibreOfficeKitDocument*        lok_doc_view_get_document           (LOKDocView* 
  * @pDocView: The #LOKDocView instance
  * @fZoom: The new zoom level that pDocView must set it into.
  *
- * Sets the new zoom level for the widget.
+ * Sets the new zoom level for the widget. Does nothing if fZoom is equal to
+ * existing zoom level. Values outside the range [0.25, 5.0] are clamped into
+ * the nearest allowed value in the interval.
  */
 void                           lok_doc_view_set_zoom               (LOKDocView* pDocView,
                                                                     float fZoom);
+/**
+ * lok_doc_view_set_visible_area:
+ * @pDocView: The #LOKDocView instance
+ * @fZoom: The new visible area of pDocView in twips.
+ *
+ * Sets the new visible area of the widget. This helps e.g. the page down key
+ * to jump the correct length, which depends on the amount of visible height of
+ * the document.
+ */
+void                           lok_doc_view_set_visible_area       (LOKDocView* pDocView,
+                                                                    GdkRectangle* pVisibleArea);
 
 /**
  * lok_doc_view_get_zoom:
@@ -118,19 +149,24 @@ void                           lok_doc_view_set_zoom               (LOKDocView* 
  *
  * Returns: The current zoom factor value in float for pDocView
  */
-float                          lok_doc_view_get_zoom               (LOKDocView* pDocView);
+gfloat                         lok_doc_view_get_zoom               (LOKDocView* pDocView);
 
 /**
  * lok_doc_view_get_parts:
  * @pDocView: The #LOKDocView instance
+ *
+ * Returns: Part refers to either individual sheets in a Calc, or slides in Impress,
+ * and has no relevance for Writer. Returns -1 if no document is set currently.
  */
-int                            lok_doc_view_get_parts              (LOKDocView* pDocView);
+gint                           lok_doc_view_get_parts              (LOKDocView* pDocView);
 
 /**
  * lok_doc_view_get_part:
  * @pDocView: The #LOKDocView instance
+ *
+ * Returns: Current part number of the document. Returns -1 if no document is set currently.
  */
-int                            lok_doc_view_get_part               (LOKDocView* pDocView);
+gint                           lok_doc_view_get_part               (LOKDocView* pDocView);
 
 /**
  * lok_doc_view_set_part:
@@ -144,8 +180,11 @@ void                           lok_doc_view_set_part               (LOKDocView* 
  * lok_doc_view_get_part_name:
  * @pDocView: The #LOKDocView instance
  * @nPart:
+ *
+ * Returns: Get current part name of loaded document. Returns null if no
+ * document is set, or document has been destroyed using lok_doc_view_destroy_document.
  */
-char*                          lok_doc_view_get_part_name          (LOKDocView* pDocView,
+gchar*                         lok_doc_view_get_part_name          (LOKDocView* pDocView,
                                                                     int nPart);
 
 /**
@@ -241,7 +280,8 @@ void                           lok_doc_view_highlight_all          (LOKDocView* 
  * @pUsedMimeType: (out): output parameter to inform about the determined format
  * (suggested or plain text).
  *
- * Returns: Selected text. The caller must free the returned buffer after use.
+ * Returns: Selected text. The caller must free the returned buffer after
+ * use. Returns null if no document is set.
  */
 gchar*                          lok_doc_view_copy_selection        (LOKDocView* pDocView,
                                                                     const gchar* pMimeType,
@@ -264,6 +304,18 @@ gboolean                        lok_doc_view_paste                 (LOKDocView* 
                                                                     gsize nSize);
 
 /**
+ * lok_doc_view_set_document_password:
+ * @pDocView: The #LOKDocView instance
+ * @pUrl: the URL of the document to set password for, as sent with signal `password-required`
+ * @pPassword: (nullable): the password, NULL for no password
+ *
+ * Set the password for password protected documents
+ */
+void                            lok_doc_view_set_document_password (LOKDocView* pDocView,
+                                                                    const gchar* pURL,
+                                                                    const gchar* pPassword);
+
+/**
  * lok_doc_view_pixel_to_twip:
  * @pDocView: The #LOKDocView instance
  * @fInput: The value in pixels to convert to twips
@@ -272,7 +324,7 @@ gboolean                        lok_doc_view_paste                 (LOKDocView* 
  *
  * Returns: The corresponding value in twips
  */
-float                          lok_doc_view_pixel_to_twip          (LOKDocView* pDocView,
+gfloat                         lok_doc_view_pixel_to_twip          (LOKDocView* pDocView,
                                                                     float fInput);
 
 /**
@@ -284,7 +336,7 @@ float                          lok_doc_view_pixel_to_twip          (LOKDocView* 
  *
  * Returns: The corresponding value in pixels
  */
-float                          lok_doc_view_twip_to_pixel          (LOKDocView* pDocView,
+gfloat                         lok_doc_view_twip_to_pixel          (LOKDocView* pDocView,
                                                                     float fInput);
 
 G_END_DECLS

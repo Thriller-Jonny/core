@@ -173,7 +173,6 @@ css::uno::Sequence< css::uno::Type > SAL_CALL FTPContent::getTypes()
 }
 
 
-
 // XServiceInfo methods.
 
 OUString SAL_CALL FTPContent::getImplementationName()
@@ -204,9 +203,6 @@ css::uno::Sequence< OUString > FTPContent::getSupportedServiceNames_Static()
     css::uno::Sequence<OUString> aSNS { "com.sun.star.ucb.FTPContent" };
     return aSNS;
 }
-
-
-
 
 
 // XContent methods.
@@ -551,9 +547,7 @@ Any SAL_CALL FTPContent::execute( const Command& aCommand,
                     Reference< XDynamicResultSet > xSet
                         = new DynamicResultSet(
                             m_xContext,
-                            this,
                             aOpenCommand,
-                            Environment,
                             new ResultSetFactoryI(m_xContext,
                                                   m_xProvider.get(),
                                                   aOpenCommand.Properties,
@@ -676,8 +670,6 @@ FTPContent::createNewContent( const ContentInfo& Info )
 }
 
 
-
-
 Reference<XInterface > SAL_CALL
 FTPContent::getParent(  )
     throw (RuntimeException, std::exception)
@@ -695,7 +687,6 @@ FTPContent::setParent(const Reference<XInterface >& /*Parent*/ )
 {
     throw NoSupportException();
 }
-
 
 
 OUString FTPContent::getParentURL()
@@ -722,7 +713,6 @@ private:
 };
 
 
-
 sal_Int32 InsertData::read(sal_Int8 *dest,sal_Int32 nBytesRequested)
 {
     sal_Int32 m = 0;
@@ -745,8 +735,7 @@ void FTPContent::insert(const InsertCommandArgument& aInsertCommand,
         MissingPropertiesException excep;
         excep.Properties.realloc(1);
         excep.Properties[0] = "Title";
-        Any aAny; aAny <<= excep;
-        ucbhelper::cancelCommandExecution(aAny,Env);
+        ucbhelper::cancelCommandExecution(Any(excep), Env);
     }
 
     if(m_bInserted &&
@@ -754,8 +743,7 @@ void FTPContent::insert(const InsertCommandArgument& aInsertCommand,
        !aInsertCommand.Data.is())
     {
         MissingInputStreamException excep;
-        Any aAny; aAny <<= excep;
-        ucbhelper::cancelCommandExecution(aAny,Env);
+        ucbhelper::cancelCommandExecution(Any(excep), Env);
     }
 
     bool bReplace(aInsertCommand.ReplaceExisting);
@@ -773,9 +761,7 @@ void FTPContent::insert(const InsertCommandArgument& aInsertCommand,
             // Deprecated, not used anymore:
             NameClashException excep;
             excep.Name = m_aFTPURL.child();
-            Any aAny;
-            aAny <<= excep;
-            ucbhelper::cancelCommandExecution(aAny,Env);
+            ucbhelper::cancelCommandExecution(Any(excep), Env);
         } else if(e.code() == FOLDER_MIGHT_EXIST_DURING_INSERT ||
                   e.code() == FILE_MIGHT_EXIST_DURING_INSERT) {
             // Interact
@@ -787,9 +773,7 @@ void FTPContent::insert(const InsertCommandArgument& aInsertCommand,
             excep.NameClash = 0; //NameClash::ERROR;
 
             if(!xInt.is()) {
-                Any aAny;
-                aAny <<= excep;
-                ucbhelper::cancelCommandExecution(aAny,Env);
+                ucbhelper::cancelCommandExecution(Any(excep), Env);
             }
 
             XInteractionRequestImpl request;
@@ -811,7 +795,6 @@ void FTPContent::insert(const InsertCommandArgument& aInsertCommand,
     m_bInserted = false;
     inserted();
 }
-
 
 
 Reference< XRow > FTPContent::getPropertyValues(
@@ -863,7 +846,6 @@ Reference< XRow > FTPContent::getPropertyValues(
 
     return Reference<XRow>(xRow.get());
 }
-
 
 
 Sequence<Any> FTPContent::setPropertyValues(

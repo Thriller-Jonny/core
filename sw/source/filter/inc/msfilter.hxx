@@ -34,8 +34,6 @@
 #include <shellio.hxx>
 #include <svl/zforlist.hxx>
 
-#include <boost/noncopyable.hpp>
-
 class SwDoc;
 class SwPaM;
 class SwTableNode;
@@ -335,12 +333,16 @@ namespace sw
             @author
                 <a href="mailto:mmaher@openoffice.org">Martin Maher</a>
          */
-        class RedlineStack : public boost::noncopyable
+        class RedlineStack
         {
         private:
             std::vector<SwFltStackEntry *> maStack;
             typedef std::vector<SwFltStackEntry *>::reverse_iterator myriter;
             SwDoc &mrDoc;
+
+            RedlineStack(RedlineStack const&) = delete;
+            RedlineStack& operator=(RedlineStack const&) = delete;
+
         public:
             explicit RedlineStack(SwDoc &rDoc) : mrDoc(rDoc) {}
             void open(const SwPosition& rPos, const SfxPoolItem& rAttr);
@@ -398,13 +400,17 @@ namespace sw
                 const;
         };
 
-        class WrtRedlineAuthor : public boost::noncopyable
+        class WrtRedlineAuthor
         {
         protected:
-            std::vector<OUString> maAuthors;          // Array of Sw - Bookmarknames
+            std::vector<OUString> maAuthors; // Array of Sw - Bookmarknames
+
+        private:
+            WrtRedlineAuthor(WrtRedlineAuthor const&) = delete;
+            WrtRedlineAuthor& operator=(WrtRedlineAuthor const&) = delete;
 
         public:
-            WrtRedlineAuthor() {}
+            WrtRedlineAuthor() = default;
             virtual ~WrtRedlineAuthor() {}
 
             sal_uInt16 AddName( const OUString& rNm );
@@ -440,9 +446,6 @@ namespace sw
             @param rTextNd
                 The TextNode we want to ranges from
 
-            @param nStart
-                The position in the TextNode to start processing from
-
             @return STL container of CharRuns which describe the shared
             direction, script and optionally script of the contiguous sequences
             of characters
@@ -452,8 +455,7 @@ namespace sw
 
             @see #i22537# for example
         */
-        CharRuns GetPseudoCharRuns(const SwTextNode& rTextNd,
-            sal_Int32 nStart = 0);
+        CharRuns GetPseudoCharRuns(const SwTextNode& rTextNd);
     }
 }
 

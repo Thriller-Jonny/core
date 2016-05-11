@@ -33,13 +33,11 @@ using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::ui;
 
 
-
-FileControl::FileControl( vcl::Window* pParent, WinBits nStyle, FileControlMode nFlags ) :
+FileControl::FileControl( vcl::Window* pParent, WinBits nStyle ) :
     Window( pParent, nStyle|WB_DIALOGCONTROL ),
     maEdit( VclPtr<Edit>::Create(this, (nStyle&(~WB_BORDER))|WB_NOTABSTOP) ),
     maButton( VclPtr<PushButton>::Create( this, (nStyle&(~WB_BORDER))|WB_NOLIGHTBORDER|WB_NOPOINTERFOCUS|WB_NOTABSTOP ) ),
     maButtonText( SVT_RESSTR(STR_FILECTRL_BUTTONTEXT) ),
-    mnFlags( nFlags ),
     mnInternalFlags( FileControlMode_Internal::ORIGINALBUTTONTEXT )
 {
     maButton->SetClickHdl( LINK( this, FileControl, ButtonHdl ) );
@@ -52,7 +50,6 @@ FileControl::FileControl( vcl::Window* pParent, WinBits nStyle, FileControlMode 
 
     SetStyle( ImplInitStyle( GetStyle() ) );
 }
-
 
 
 WinBits FileControl::ImplInitStyle( WinBits nStyle )
@@ -83,7 +80,6 @@ WinBits FileControl::ImplInitStyle( WinBits nStyle )
 }
 
 
-
 FileControl::~FileControl()
 {
     disposeOnce();
@@ -99,17 +95,13 @@ void FileControl::dispose()
 void FileControl::SetText( const OUString& rStr )
 {
     maEdit->SetText( rStr );
-    if ( mnFlags & FileControlMode::RESIZEBUTTONBYPATHLEN )
-        Resize();
 }
-
 
 
 OUString FileControl::GetText() const
 {
     return maEdit->GetText();
 }
-
 
 
 void FileControl::StateChanged( StateChangedType nType )
@@ -134,7 +126,7 @@ void FileControl::StateChanged( StateChangedType nType )
         // Only use height of the button, as in HTML
         // always Courier is used
         vcl::Font aFont = GetButton().GetControlFont();
-        aFont.SetSize( GetControlFont().GetSize() );
+        aFont.SetFontSize( GetControlFont().GetFontSize() );
         GetButton().SetControlFont( aFont );
     }
     else if ( nType == StateChangedType::ControlForeground )
@@ -151,7 +143,6 @@ void FileControl::StateChanged( StateChangedType nType )
 }
 
 
-
 void FileControl::Resize()
 {
     static long ButtonBorder = 10;
@@ -163,10 +154,7 @@ void FileControl::Resize()
     Size aOutSz = GetOutputSizePixel();
     long nButtonTextWidth = maButton->GetTextWidth( maButtonText );
     if ( !(mnInternalFlags & FileControlMode_Internal::ORIGINALBUTTONTEXT) ||
-         ( nButtonTextWidth < aOutSz.Width()/3 &&
-           ( !( mnFlags & FileControlMode::RESIZEBUTTONBYPATHLEN ) ||
-             ( maEdit->GetTextWidth( maEdit->GetText() )
-               <= aOutSz.Width() - nButtonTextWidth - ButtonBorder ) ) ) )
+         ( nButtonTextWidth < aOutSz.Width()/3 ) )
     {
         maButton->SetText( maButtonText );
     }
@@ -183,7 +171,6 @@ void FileControl::Resize()
 
     mnInternalFlags &= ~FileControlMode_Internal::INRESIZE; //InResize = sal_False
 }
-
 
 
 IMPL_LINK_NOARG_TYPED(FileControl, ButtonHdl, Button*, void)

@@ -129,8 +129,6 @@ enum class GraphicFileFormat
     XXX = 0xffff
 };
 
-// - GraphicDescriptor -
-
 
 class VCL_DLLPUBLIC GraphicDescriptor
 {
@@ -256,7 +254,7 @@ public:
     sal_uInt16      GetImportFormatNumberForTypeName( const OUString& rType );
     OUString        GetImportFormatName( sal_uInt16 nFormat );
     OUString        GetImportFormatTypeName( sal_uInt16 nFormat );
-#ifdef WNT
+#ifdef _WIN32
     OUString        GetImportFormatMediaType( sal_uInt16 nFormat );
 #endif
     OUString        GetImportFormatShortName( sal_uInt16 nFormat );
@@ -271,7 +269,7 @@ public:
     OUString        GetExportFormatName( sal_uInt16 nFormat );
     OUString        GetExportFormatMediaType( sal_uInt16 nFormat );
     OUString        GetExportFormatShortName( sal_uInt16 nFormat );
-    OUString        GetExportWildcard( sal_uInt16 nFormat, sal_Int32 nEntry = 0 );
+    OUString        GetExportWildcard( sal_uInt16 nFormat );
     bool            IsExportPixelFormat( sal_uInt16 nFormat );
 
     sal_uInt16          ExportGraphic( const Graphic& rGraphic, const INetURLObject& rPath,

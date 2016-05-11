@@ -222,14 +222,14 @@ DECLARE_WW8IMPORT_TEST(testN816593, "n816593.doc")
 DECLARE_WW8IMPORT_TEST(testPageBorder, "page-border.doc")
 {
     // Page border was missing (LineWidth was 0), due to wrong interpretation of pgbApplyTo.
-    table::BorderLine2 aBorder = getProperty<table::BorderLine2>(getStyles("PageStyles")->getByName(DEFAULT_STYLE), "TopBorder");
+    table::BorderLine2 aBorder = getProperty<table::BorderLine2>(getStyles("PageStyles")->getByName("Standard"), "TopBorder");
     CPPUNIT_ASSERT_EQUAL(sal_uInt32(convertTwipToMm100(6 * 20)), aBorder.LineWidth);
 }
 
 DECLARE_WW8IMPORT_TEST(testN823651, "n823651.doc")
 {
     // Character height was 10pt instead of 7.5pt in the header.
-    uno::Reference<beans::XPropertySet> xStyle(getStyles("PageStyles")->getByName(DEFAULT_STYLE), uno::UNO_QUERY);
+    uno::Reference<beans::XPropertySet> xStyle(getStyles("PageStyles")->getByName("Standard"), uno::UNO_QUERY);
     uno::Reference<text::XText> xText = getProperty< uno::Reference<text::XTextRange> >(xStyle, "HeaderTextFirst")->getText();
     CPPUNIT_ASSERT_EQUAL(7.5f, getProperty<float>(getParagraphOfText(1, xText), "CharHeight"));
 }
@@ -533,6 +533,79 @@ DECLARE_WW8IMPORT_TEST(testfdo68963, "fdo68963.doc")
     CPPUNIT_ASSERT_EQUAL( OUString("Topic 1"), parseDump("/root/page/body/tab/row[2]/cell[1]/txt/Special", "rText") );
     // all crossreference bookmarks should have a target.  Shouldn't be any "Reference source not found" in the xml
     CPPUNIT_ASSERT ( -1 == parseDump("/root/page/body/txt[24]/Special[2]","rText").indexOf("Reference source not found"));
+}
+
+DECLARE_WW8IMPORT_TEST(testTdf99100, "tdf99100.doc")
+{
+    uno::Reference<text::XText> xHeaderText = getProperty< uno::Reference<text::XText> >(getStyles("PageStyles")->getByName("Standard"), "HeaderText");
+    auto xField = getProperty< uno::Reference<lang::XServiceInfo> >(getRun(getParagraphOfText(1, xHeaderText), 2), "TextField");
+    // This failed: the second text portion wasn't a field.
+    CPPUNIT_ASSERT(xField.is());
+    CPPUNIT_ASSERT(xField->supportsService("com.sun.star.text.textfield.Chapter"));
+}
+
+DECLARE_WW8IMPORT_TEST(testTdf99120, "tdf99120.doc")
+{
+    CPPUNIT_ASSERT_EQUAL(OUString("Section 1, odd."),  parseDump("/root/page[1]/header/txt/text()"));
+    CPPUNIT_ASSERT_EQUAL(OUString("Section 1, even."),  parseDump("/root/page[2]/header/txt/text()"));
+    // This failed: the header was empty on the 3rd page, as the first page header was shown.
+    CPPUNIT_ASSERT_EQUAL(OUString("Section 2, odd."),  parseDump("/root/page[3]/header/txt/text()"));
+    CPPUNIT_ASSERT_EQUAL(OUString("Section 2, even."),  parseDump("/root/page[4]/header/txt/text()"));
+}
+
+DECLARE_WW8IMPORT_TEST(testTdf74328, "tdf74328.doc")
+{
+/*
+reading page numbers at sections > 255, in this case 256
+*/
+    uno::Reference<text::XTextDocument> textDocument(mxComponent, uno::UNO_QUERY);
+    uno::Reference<text::XTextCursor> xTextCursor(textDocument->getText()->createTextCursor( ), uno::UNO_QUERY);
+    uno::Reference<beans::XPropertySet> xProps(xTextCursor, uno::UNO_QUERY);
+    uno::Any aOffset = xProps->getPropertyValue("PageNumberOffset");
+    sal_Int16 nOffset = 0;
+    aOffset >>= nOffset;
+    CPPUNIT_ASSERT_EQUAL(sal_Int16(256), nOffset);
+}
+
+DECLARE_WW8IMPORT_TEST(testTdf95576, "tdf95576.doc")
+{
+    // The first three paragraphs in this document (which are headings)
+    // should have zero indent and first line indent
+    for (int nPara = 1; nPara <= 3; ++nPara) {
+        std::cout << "nPara = " << nPara << "\n";
+        auto xPara = getParagraph(nPara);
+
+        // get the numbering rules effective at this paragraph
+        uno::Reference<container::XIndexReplace> xNumRules(
+            getProperty< uno::Reference<container::XIndexReplace> >(
+                xPara, "NumberingRules"),
+            uno::UNO_QUERY);
+
+        // get the numbering level of this paragraph, and the properties
+        // associated with that numbering level
+        int numLevel = getProperty<sal_Int32>(xPara, "NumberingLevel");
+        uno::Sequence< beans::PropertyValue > aPropertyValues;
+        xNumRules->getByIndex(numLevel) >>= aPropertyValues;
+
+        // Now look through these properties for the indent and
+        // first line indent settings
+        sal_Int32 nIndentAt = -1;
+        sal_Int32 nFirstLineIndent = -1;
+        for(int j = 0 ; j< aPropertyValues.getLength() ; ++j)
+        {
+            auto aProp = aPropertyValues[j];
+            std::cout << "Prop.Name: " << aProp.Name << "\n";
+            if (aProp.Name == "FirstLineIndent") {
+                nFirstLineIndent = aProp.Value.get<sal_Int32>();
+            } else if (aProp.Name == "IndentAt") {
+                nIndentAt = aProp.Value.get<sal_Int32>();
+            }
+        }
+
+        // The indent and first line indent should be zero
+        CPPUNIT_ASSERT_EQUAL(sal_Int32(0), nIndentAt);
+        CPPUNIT_ASSERT_EQUAL(sal_Int32(0), nFirstLineIndent);
+    }
 }
 
 CPPUNIT_PLUGIN_IMPLEMENT();

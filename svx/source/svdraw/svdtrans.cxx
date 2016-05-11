@@ -32,30 +32,30 @@ void MoveXPoly(XPolygon& rPoly, const Size& S)
     rPoly.Move(S.Width(),S.Height());
 }
 
-void ResizeRect(Rectangle& rRect, const Point& rRef, const Fraction& rxFact, const Fraction& ryFact, bool bNoJustify)
+void ResizeRect(Rectangle& rRect, const Point& rRef, const Fraction& rxFact, const Fraction& ryFact)
 {
-    Fraction xFact(rxFact);
-    Fraction yFact(ryFact);
+    Fraction aXFact(rxFact);
+    Fraction aYFact(ryFact);
 
-    if (!xFact.IsValid()) {
+    if (!aXFact.IsValid()) {
         SAL_WARN( "svx.svdraw", "invalid fraction xFract, using Fraction(1,1)" );
-        xFact = Fraction(1,1);
+        aXFact = Fraction(1,1);
         long nWdt = rRect.Right() - rRect.Left();
         if (nWdt == 0) rRect.Right()++;
     }
-    rRect.Left()  = rRef.X() + svx::Round( (rRect.Left()  - rRef.X()) * double(xFact) );
-    rRect.Right() = rRef.X() + svx::Round( (rRect.Right() - rRef.X()) * double(xFact) );
+    rRect.Left()  = rRef.X() + svx::Round( (rRect.Left()  - rRef.X()) * double(aXFact) );
+    rRect.Right() = rRef.X() + svx::Round( (rRect.Right() - rRef.X()) * double(aXFact) );
 
-    if (!yFact.IsValid()) {
+    if (!aYFact.IsValid()) {
         SAL_WARN( "svx.svdraw", "invalid fraction yFract, using Fraction(1,1)" );
-        yFact = Fraction(1,1);
+        aYFact = Fraction(1,1);
         long nHgt = rRect.Bottom() - rRect.Top();
         if (nHgt == 0) rRect.Bottom()++;
     }
-    rRect.Top()    = rRef.Y() + svx::Round( (rRect.Top()    - rRef.Y()) * double(yFact) );
-    rRect.Bottom() = rRef.Y() + svx::Round( (rRect.Bottom() - rRef.Y()) * double(yFact) );
+    rRect.Top()    = rRef.Y() + svx::Round( (rRect.Top()    - rRef.Y()) * double(aYFact) );
+    rRect.Bottom() = rRef.Y() + svx::Round( (rRect.Bottom() - rRef.Y()) * double(aYFact) );
 
-    if (!bNoJustify) rRect.Justify();
+    rRect.Justify();
 }
 
 
@@ -141,11 +141,11 @@ void MirrorXPoly(XPolygon& rPoly, const Point& rRef1, const Point& rRef2)
     }
 }
 
-void ShearPoly(tools::Polygon& rPoly, const Point& rRef, double tn, bool bVShear)
+void ShearPoly(tools::Polygon& rPoly, const Point& rRef, double tn)
 {
     sal_uInt16 nCount=rPoly.GetSize();
     for (sal_uInt16 i=0; i<nCount; i++) {
-        ShearPoint(rPoly[i],rRef,tn,bVShear);
+        ShearPoint(rPoly[i],rRef,tn);
     }
 }
 
@@ -285,7 +285,6 @@ double CrookStretchXPoint(Point& rPnt, Point* pC1, Point* pC2, const Point& rCen
 }
 
 
-
 void CrookRotatePoly(XPolygon& rPoly, const Point& rCenter, const Point& rRad, bool bVert)
 {
     double nSin,nCos;
@@ -356,7 +355,6 @@ void CrookStretchPoly(XPolygon& rPoly, const Point& rCenter, const Point& rRad, 
 }
 
 
-
 void CrookRotatePoly(XPolyPolygon& rPoly, const Point& rCenter, const Point& rRad, bool bVert)
 {
     sal_uInt16 nPolyCount=rPoly.Count();
@@ -380,7 +378,6 @@ void CrookStretchPoly(XPolyPolygon& rPoly, const Point& rCenter, const Point& rR
         CrookStretchPoly(rPoly[nPolyNum],rCenter,rRad,bVert,rRefRect);
     }
 }
-
 
 
 long GetAngle(const Point& rPnt)
@@ -447,7 +444,6 @@ long GetLen(const Point& rPnt)
 }
 
 
-
 void GeoStat::RecalcSinCos()
 {
     if (nRotationAngle==0) {
@@ -469,7 +465,6 @@ void GeoStat::RecalcTan()
         nTan=tan(a);
     }
 }
-
 
 
 tools::Polygon Rect2Poly(const Rectangle& rRect, const GeoStat& rGeo)
@@ -527,7 +522,6 @@ void Poly2Rect(const tools::Polygon& rPol, Rectangle& rRect, GeoStat& rGeo)
 }
 
 
-
 void OrthoDistance8(const Point& rPt0, Point& rPt, bool bBigOrtho)
 {
     long dx=rPt.X()-rPt0.X();
@@ -556,7 +550,6 @@ void OrthoDistance4(const Point& rPt0, Point& rPt, bool bBigOrtho)
         rPt.X()=rPt0.X()+(dya* (dx>=0 ? 1 : -1) );
     }
 }
-
 
 
 long BigMulDiv(long nVal, long nMul, long nDiv)
@@ -658,7 +651,6 @@ FrPair GetMapFactor(FieldUnit eS, FieldUnit eD)
     if (!bSInch && bDInch) { aRet.X()*=Fraction(5,127); aRet.Y()*=Fraction(5,127); }
     return aRet;
 };
-
 
 
     // 1 mile    =  8 furlong = 63.360" = 1.609.344,0mm
@@ -861,7 +853,7 @@ void SdrFormatter::TakeStr(long nVal, OUString& rStr) const
     // add in thousands separator (if necessary)
     if( nForComma > 3 )
     {
-        OUString aThoSep( rLoc.getNumThousandSep() );
+        const OUString& aThoSep( rLoc.getNumThousandSep() );
         if ( aThoSep.getLength() > 0 )
         {
             sal_Unicode cTho( aThoSep[0] );
@@ -1048,8 +1040,6 @@ void SdrFormatter::TakeUnitStr(FieldUnit eUnit, OUString& rStr)
         }
     }
 }
-
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

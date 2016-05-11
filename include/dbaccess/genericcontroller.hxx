@@ -141,7 +141,6 @@ namespace dbaui
     // = helper
 
 
-
     struct ControllerFeature : public css::frame::DispatchInformation
     {
         sal_uInt16 nFeatureId;
@@ -257,8 +256,6 @@ namespace dbaui
 
         bool                    m_bCurrentlyModified : 1;
         bool                    m_bExternalTitle : 1;
-
-
 
 
         // attribute access
@@ -407,7 +404,7 @@ namespace dbaui
         DECL_LINK_TYPED(OnAsyncCloseTask, void*, void);
 
     public:
-        css::uno::Reference< css::uno::XComponentContext >  getORB() const { return m_xContext; }
+        const css::uno::Reference< css::uno::XComponentContext >& getORB() const { return m_xContext; }
         ODataView*  getView() const { return m_pView; }
         void        setView( const VclPtr<ODataView>& i_rView );
         void        clearView();
@@ -415,7 +412,7 @@ namespace dbaui
         void showError(const ::dbtools::SQLExceptionInfo& _rInfo);
 
         // if there is an css::util::URL translation for the id
-        // ('handle') then if if xListener is NULL the change will be forwarded
+        // ('handle') then if xListener is NULL the change will be forwarded
         // to all listeners to the given css::util::URL
         // if there is a toolbar slot with the given id it is updated (the new state is determined via GetState)
         // if _bForceBroadcast is sal_True, the current feature state is broadcasted no matter if it is the same as the cached state

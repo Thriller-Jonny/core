@@ -19,7 +19,7 @@
 
 
 #include <vcl/graph.hxx>
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 
 class FilterConfigItem;
 
@@ -130,7 +130,6 @@ TGAReader::~TGAReader()
 }
 
 
-
 bool TGAReader::ReadTGA(Graphic & rGraphic)
 {
     if ( m_rTGA.GetError() )
@@ -160,7 +159,10 @@ bool TGAReader::ReadTGA(Graphic & rGraphic)
                 mbStatus = false;
 
             if ( mpAcc )
-                Bitmap::ReleaseAccess ( mpAcc), mpAcc = nullptr;
+            {
+                Bitmap::ReleaseAccess ( mpAcc);
+                mpAcc = nullptr;
+            }
 
             if ( mbStatus )
                 rGraphic = aBitmap;
@@ -168,7 +170,6 @@ bool TGAReader::ReadTGA(Graphic & rGraphic)
     }
     return mbStatus;
 }
-
 
 
 bool TGAReader::ImplReadHeader()
@@ -269,7 +270,6 @@ bool TGAReader::ImplReadHeader()
 
     return mbStatus;
 }
-
 
 
 bool TGAReader::ImplReadBody()
@@ -704,7 +704,6 @@ bool TGAReader::ImplReadBody()
     }
     return mbStatus;
 }
-
 
 
 bool TGAReader::ImplReadPalette()

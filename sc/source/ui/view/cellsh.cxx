@@ -619,8 +619,7 @@ void ScCellShell::GetState(SfxItemSet &rSet)
                     ScRange aRange;
                     if ( pData->GetSimpleArea( aRange ) == SC_MARK_SIMPLE )
                     {
-                        sal_uInt16 nFlags = SCA_VALID | SCA_TAB_3D;
-                        OUString aStr(aRange.Format(nFlags,pDoc));
+                        OUString aStr(aRange.Format(ScRefFlags::VALID | ScRefFlags::TAB_3D,pDoc));
                         rSet.Put( SfxStringItem( nWhich, aStr ) );
                     }
                 }
@@ -722,6 +721,18 @@ void ScCellShell::GetState(SfxItemSet &rSet)
                         aStr = aStr.replaceAll( "$1", OUString::number( nRow2 - nRow1 + 1 ));
                         aStr = aStr.replaceAll( "$2", OUString::number( nCol2 - nCol1 + 1 ));
                         rSet.Put( SfxStringItem( nWhich, aStr ) );
+                    }
+                    else
+                    {
+                        SCSIZE nSelected, nTotal;
+                        pDoc->GetFilterSelCount( nPosX, nPosY, nTab, nSelected, nTotal );
+                        if( nTotal )
+                        {
+                            OUString aStr = ScGlobal::GetRscString( STR_FILTER_SELCOUNT );
+                            aStr = aStr.replaceAll( "$1", OUString::number( nSelected ) );
+                            aStr = aStr.replaceAll( "$2", OUString::number( nTotal ) );
+                            rSet.Put( SfxStringItem( nWhich, aStr ) );
+                        }
                     }
                 }
                 break;

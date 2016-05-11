@@ -102,7 +102,7 @@ namespace pcr
 
         void                        ShowPropertyPage( sal_uInt16 _nPageId, bool _bShow );
 
-        sal_uInt16                  InsertEntry( const OLineDescriptor&, sal_uInt16 _nPageId, sal_uInt16 nPos = EDITOR_LIST_APPEND );
+        void                        InsertEntry( const OLineDescriptor&, sal_uInt16 _nPageId, sal_uInt16 nPos = EDITOR_LIST_APPEND );
         void                        RemoveEntry( const OUString& _rName );
         void                        ChangeEntry( const OLineDescriptor& );
 
@@ -127,7 +127,7 @@ namespace pcr
         void Update(const ::std::mem_fun_t<void,OBrowserListBox>& _aUpdateFunction);
 
         typedef void (OPropertyEditor::*PageOperation)( OBrowserPage&, const void* );
-        void    forEachPage( PageOperation _pOperation, const void* _pArgument = nullptr );
+        void    forEachPage( PageOperation _pOperation );
 
         void    setPageLineListener( OBrowserPage& _rPage, const void* );
         void    setPageControlObserver( OBrowserPage& _rPage, const void* );

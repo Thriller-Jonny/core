@@ -40,6 +40,7 @@
 #include <sfx2/docfile.hxx>
 #include <sfx2/evntconf.hxx>
 #include <sfx2/docfilt.hxx>
+#include <sfx2/notebookbar/SfxNotebookBar.hxx>
 #include <sfx2/printer.hxx>
 #include <sfx2/linkmgr.hxx>
 #include <svl/srchitem.hxx>
@@ -170,7 +171,7 @@ Reader* SwDocShell::StartConvertFrom(SfxMedium& rMedium, SwReader** ppRdr,
             pMedSet->GetItemState( FN_API_CALL, true, &pApiItem ) )
             bAPICall = static_cast<const SfxBoolItem*>(pApiItem)->GetValue();
 
-    const SfxFilter* pFlt = rMedium.GetFilter();
+    std::shared_ptr<const SfxFilter> pFlt = rMedium.GetFilter();
     if( !pFlt )
     {
         if(!bAPICall)
@@ -329,7 +330,7 @@ bool SwDocShell::Save()
         case SfxObjectCreateMode::EMBEDDED:
             // Suppress SfxProgress, if we are Embedded
             SW_MOD()->SetEmbeddedLoadSave( true );
-            // no break;
+            SAL_FALLTHROUGH;
 
         case SfxObjectCreateMode::STANDARD:
         case SfxObjectCreateMode::PREVIEW:
@@ -399,7 +400,7 @@ bool SwDocShell::SaveAs( SfxMedium& rMedium )
 
     {
         // Task 75666 - is the Document imported by our Microsoft-Filters?
-        const SfxFilter* pOldFilter = GetMedium()->GetFilter();
+        std::shared_ptr<const SfxFilter> pOldFilter = GetMedium()->GetFilter();
         if( pOldFilter &&
             ( pOldFilter->GetUserData() == FILTER_WW8 ||
               pOldFilter->GetUserData() == "CWW6" ||
@@ -534,7 +535,7 @@ static SwSrcView* lcl_GetSourceView( SwDocShell* pSh )
 
 bool SwDocShell::ConvertTo( SfxMedium& rMedium )
 {
-    const SfxFilter* pFlt = rMedium.GetFilter();
+    std::shared_ptr<const SfxFilter> pFlt = rMedium.GetFilter();
     if( !pFlt )
         return false;
 
@@ -1006,7 +1007,7 @@ void SwDocShell::GetState(SfxItemSet& rSet)
                 if ( !aMOpt.IsImpress() )
                     rSet.DisableItem( nWhich );
             }
-            /* no break here */
+            SAL_FALLTHROUGH;
         case FN_ABSTRACT_NEWDOC:
         case FN_OUTLINE_TO_CLIPBOARD:
             {
@@ -1068,6 +1069,12 @@ void SwDocShell::GetState(SfxItemSet& rSet)
                 bRet = m_pDoc->HasInvisibleContent();
             }
             rSet.Put( SfxBoolItem( nWhich, bRet ) );
+        }
+        break;
+        case SID_NOTEBOOKBAR:
+        {
+            SfxViewShell* pViewShell = GetView()? GetView(): SfxViewShell::Current();
+            sfx2::SfxNotebookBar::StateMethod(pViewShell->GetViewFrame()->GetBindings(), "modules/swriter/ui/notebookbar.ui");
         }
         break;
 
@@ -1206,7 +1213,7 @@ void SwDocShell::CalcLayoutForOLEObjects()
 // read by the binary filter:
 void SwDocShell::UpdateLinks()
 {
-    GetDoc()->getIDocumentLinksAdministration().UpdateLinks(true);
+    GetDoc()->getIDocumentLinksAdministration().UpdateLinks();
     // #i50703# Update footnote numbers
     SwTextFootnote::SetUniqueSeqRefNo( *GetDoc() );
     SwNodeIndex aTmp( GetDoc()->GetNodes() );
@@ -1232,7 +1239,7 @@ static const char* s_EventNames[] =
     "OnFieldMergeFinished",
     "OnLayoutFinished"
 };
-static sal_Int32 const s_nEvents(sizeof(s_EventNames)/sizeof(s_EventNames[0]));
+static sal_Int32 const s_nEvents(SAL_N_ELEMENTS(s_EventNames));
 
 Sequence< OUString >    SwDocShell::GetEventNames()
 {
@@ -1285,7 +1292,7 @@ void SwDocShell::SetChangeRecording( bool bActivate )
     m_pWrtShell->SetRedlineModeAndCheckInsMode( (nMode & ~nsRedlineMode_t::REDLINE_ON) | nOn);
 }
 
-bool SwDocShell::SetProtectionPassword( const OUString &rNewPassword )
+void SwDocShell::SetProtectionPassword( const OUString &rNewPassword )
 {
     const SfxAllItemSet aSet( GetPool() );
     const SfxItemSet*   pArgs = &aSet;
@@ -1295,9 +1302,7 @@ bool SwDocShell::SetProtectionPassword( const OUString &rNewPassword )
     Sequence< sal_Int8 > aPasswd = rIDRA.GetRedlinePassword();
     if (pArgs && SfxItemState::SET == pArgs->GetItemState( FN_REDLINE_PROTECT, false, &pItem )
         && static_cast<const SfxBoolItem*>(pItem)->GetValue() == (aPasswd.getLength() > 0))
-        return false;
-
-    bool bRes = false;
+        return;
 
     if (!rNewPassword.isEmpty())
     {
@@ -1307,15 +1312,11 @@ bool SwDocShell::SetProtectionPassword( const OUString &rNewPassword )
         Sequence< sal_Int8 > aNewPasswd;
         SvPasswordHelper::GetHashPassword( aNewPasswd, rNewPassword );
         rIDRA.SetRedlinePassword( aNewPasswd );
-        bRes = true;
     }
     else
     {
         rIDRA.SetRedlinePassword( Sequence< sal_Int8 >() );
-        bRes = true;
     }
-
-    return bRes;
 }
 
 bool SwDocShell::GetProtectionHash( /*out*/ css::uno::Sequence< sal_Int8 > &rPasswordHash )
@@ -1344,12 +1345,6 @@ void SwDocShell::libreOfficeKitCallback(int nType, const char* pPayload) const
 
     SwDrawModel* pDrawModel = m_pDoc->getIDocumentDrawModelAccess().GetDrawModel();
     pDrawModel->libreOfficeKitCallback(nType, pPayload);
-}
-
-bool SwDocShell::isTiledRendering() const
-{
-    SwDrawModel* pDrawModel = m_pDoc->getIDocumentDrawModelAccess().GetDrawModel();
-    return pDrawModel->isTiledRendering();
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

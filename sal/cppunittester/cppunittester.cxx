@@ -17,7 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifdef WNT
+#ifdef _WIN32
 #include <windows.h>
 #endif
 
@@ -52,7 +52,6 @@
 #include "cppunit/plugin/DynamicLibraryManagerException.h"
 #include "cppunit/portability/Stream.h"
 
-#include "boost/noncopyable.hpp"
 #include <memory>
 #include <boost/algorithm/string.hpp>
 
@@ -86,9 +85,11 @@ std::string convertLazy(rtl::OUString const & s16) {
 //Output how long each test took
 class TimingListener
     : public CppUnit::TestListener
-    , private boost::noncopyable
 {
 public:
+    TimingListener(const TimingListener&) = delete;
+    TimingListener& operator=(const TimingListener&) = delete;
+
     void startTest( CppUnit::Test *) override
     {
         m_nStartTime = osl_getGlobalTimer();
@@ -112,9 +113,11 @@ private:
 // have a useful value to identify the source
 class EyecatcherListener
     : public CppUnit::TestListener
-    , private boost::noncopyable
 {
 public:
+    EyecatcherListener() = default;
+    EyecatcherListener(const EyecatcherListener&) = delete;
+    EyecatcherListener& operator=(const EyecatcherListener&) = delete;
     void startTest( CppUnit::Test* test) override
     {
         std::unique_ptr<char[]> tn(new char [ test->getName().length() + 2 ]);
@@ -171,13 +174,33 @@ private:
 
 namespace {
 
+struct test_name_compare
+{
+    explicit test_name_compare(const std::string& rName):
+        maName(rName)
+    {
+    }
+
+    bool operator()(const std::string& rCmp)
+    {
+        size_t nPos = maName.find(rCmp);
+        if (nPos == std::string::npos)
+            return false;
+
+        size_t nEndPos = nPos + rCmp.size();
+        return nEndPos == maName.size();
+    }
+
+    std::string maName;
+};
+
 void addRecursiveTests(const std::vector<std::string>& test_names, CppUnit::Test* pTest, CppUnit::TestRunner& rRunner)
 {
     for (int i = 0; i < pTest->getChildTestCount(); ++i)
     {
         CppUnit::Test* pNewTest = pTest->getChildTestAt(i);
         addRecursiveTests(test_names, pNewTest, rRunner);
-        if (std::find(test_names.begin(), test_names.end(), pNewTest->getName()) != test_names.end())
+        if (std::find_if(test_names.begin(), test_names.end(), test_name_compare(pNewTest->getName())) != test_names.end())
             rRunner.addTest(pNewTest);
     }
 }
@@ -189,7 +212,6 @@ void addRecursiveTests(const std::vector<std::string>& test_names, CppUnit::Test
 //exception before falling over and dying
 class CPPUNIT_API ProtectedFixtureFunctor
     : public CppUnit::Functor
-    , private boost::noncopyable
 {
 private:
     const std::string &testlib;
@@ -204,6 +226,8 @@ public:
         , result(result_)
     {
     }
+    ProtectedFixtureFunctor(const ProtectedFixtureFunctor&) = delete;
+    ProtectedFixtureFunctor& operator=(const ProtectedFixtureFunctor&) = delete;
     bool run() const
     {
 #ifdef DISABLE_DYNLOADING
@@ -227,7 +251,7 @@ public:
             manager.load(testlib, args);
         } catch (const CppUnit::DynamicLibraryManagerException &e) {
             std::cerr << "DynamicLibraryManagerException: \"" << e.what() << "\"\n";
-#ifdef WIN32
+#ifdef _WIN32
             const char *pPath = getenv ("PATH");
             if (pPath && strlen (pPath) > 256)
             {
@@ -341,7 +365,7 @@ SAL_IMPLEMENT_MAIN()
     OUString path;
     try
     {
-#ifdef WNT
+#ifdef _WIN32
         //Disable Dr-Watson in order to crash simply without popup dialogs under
         //windows
         DWORD dwMode = SetErrorMode(SEM_NOGPFAULTERRORBOX);

@@ -323,7 +323,7 @@ void SwHTMLParser::NewField()
     case RES_DATEFLD:
     case RES_TIMEFLD:
         {
-            sal_uLong nNumFormat = 0;
+            sal_uInt32 nNumFormat = 0;
             sal_Int64 nTime = tools::Time( tools::Time::SYSTEM ).GetTime();
             sal_Int32 nDate = Date( Date::SYSTEM ).GetDate();
             sal_uInt16 nSub = 0;
@@ -618,7 +618,7 @@ void SwHTMLParser::InsertComment( const OUString& rComment, const sal_Char *pTag
         const sal_Int32 nIdx = m_pPam->GetPoint()->nContent.GetIndex();
         for( auto i = m_aSetAttrTab.size(); i > 0; )
         {
-            _HTMLAttr *pAttr = m_aSetAttrTab[--i];
+            HTMLAttr *pAttr = m_aSetAttrTab[--i];
             if( pAttr->GetSttParaIdx() != nNodeIdx ||
                 pAttr->GetSttCnt() != nIdx )
                 break;
@@ -638,7 +638,7 @@ void SwHTMLParser::InsertComment( const OUString& rComment, const sal_Char *pTag
     SwPostItField aPostItField(
                     static_cast<SwPostItFieldType*>(m_pDoc->getIDocumentFieldsAccess().GetSysFieldType( RES_POSTITFLD )),
                     aEmptyOUStr, aComment, aEmptyOUStr, aEmptyOUStr, DateTime( DateTime::SYSTEM ) );
-    InsertAttr( SwFormatField( aPostItField ) );
+    InsertAttr( SwFormatField( aPostItField ), false );
 
     if( bMoveFwd )
         m_pPam->Move( fnMoveForward );

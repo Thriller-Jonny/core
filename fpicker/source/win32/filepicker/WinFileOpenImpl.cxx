@@ -31,6 +31,7 @@
 
 #include "FilePicker.hxx"
 #include "controlaccess.hxx"
+#include "customcontrolfactory.hxx"
 #include <rtl/ustrbuf.hxx>
 #include <rtl/string.hxx>
 #include <osl/thread.hxx>
@@ -84,8 +85,7 @@ CWinFileOpenImpl::CWinFileOpenImpl(
     CFileOpenDialog(bFileOpenDialog, dwFlags, dwTemplateId, hInstance),
     m_filterContainer(new CFilterContainer()),
     m_Preview(new CPreviewAdapter(hInstance)),
-    m_CustomControlFactory(new CCustomControlFactory()),
-    m_CustomControls(m_CustomControlFactory->CreateCustomControlContainer()),
+    m_CustomControls(CCustomControlFactory::CreateCustomControlContainer()),
     m_FilePicker(aFilePicker),
     m_bInitialSelChanged(sal_True),
     m_HelpPopupWindow(hInstance, m_hwndFileOpenDlg),
@@ -143,9 +143,6 @@ OUString CWinFileOpenImpl::getDisplayDirectory() throw(uno::RuntimeException)
 {
     return m_FilePickerState->getDisplayDirectory(this);
 }
-
-
-
 
 
 void SAL_CALL CWinFileOpenImpl::setDefaultName(const OUString& aName)
@@ -261,9 +258,6 @@ OUString SAL_CALL CWinFileOpenImpl::getCurrentFilter() throw(uno::RuntimeExcepti
 }
 
 
-
-
-
 inline void SAL_CALL CWinFileOpenImpl::appendFilterGroupSeparator()
 {
     m_filterContainer->addFilter(FILTER_SEPARATOR, ALL_FILES_WILDCARD, ALLOW_DUPLICATES);
@@ -347,9 +341,6 @@ void SAL_CALL CWinFileOpenImpl::enableControl(sal_Int16 ControlID, sal_Bool bEna
 }
 
 
-
-
-
 void SAL_CALL CWinFileOpenImpl::setLabel( sal_Int16 aControlId, const OUString& aLabel )
     throw (uno::RuntimeException)
 {
@@ -357,9 +348,6 @@ void SAL_CALL CWinFileOpenImpl::setLabel( sal_Int16 aControlId, const OUString& 
     if ( !filterControlCommand( aControlId ))
         m_FilePickerState->setLabel(aControlId, aLabel);
 }
-
-
-
 
 
 OUString SAL_CALL CWinFileOpenImpl::getLabel( sal_Int16 aControlId )
@@ -373,17 +361,11 @@ OUString SAL_CALL CWinFileOpenImpl::getLabel( sal_Int16 aControlId )
 }
 
 
-
-
-
 uno::Sequence<sal_Int16> SAL_CALL CWinFileOpenImpl::getSupportedImageFormats()
     throw (uno::RuntimeException)
 {
     return m_Preview->getSupportedImageFormats();
 }
-
-
-
 
 
 sal_Int32 SAL_CALL CWinFileOpenImpl::getTargetColorDepth()
@@ -393,17 +375,11 @@ sal_Int32 SAL_CALL CWinFileOpenImpl::getTargetColorDepth()
 }
 
 
-
-
-
 sal_Int32 SAL_CALL CWinFileOpenImpl::getAvailableWidth()
         throw (uno::RuntimeException)
 {
     return m_Preview->getAvailableWidth();
 }
-
-
-
 
 
 sal_Int32 SAL_CALL CWinFileOpenImpl::getAvailableHeight()
@@ -413,17 +389,11 @@ sal_Int32 SAL_CALL CWinFileOpenImpl::getAvailableHeight()
 }
 
 
-
-
-
 void SAL_CALL CWinFileOpenImpl::setImage(sal_Int16 aImageFormat, const uno::Any& aImage)
     throw (IllegalArgumentException, uno::RuntimeException)
 {
     m_Preview->setImage(aImageFormat,aImage);
 }
-
-
-
 
 
 sal_Bool SAL_CALL CWinFileOpenImpl::setShowState(sal_Bool bShowState)
@@ -433,17 +403,11 @@ sal_Bool SAL_CALL CWinFileOpenImpl::setShowState(sal_Bool bShowState)
 }
 
 
-
-
-
 sal_Bool SAL_CALL CWinFileOpenImpl::getShowState()
     throw (uno::RuntimeException)
 {
     return m_Preview->getShowState();
 }
-
-
-
 
 
 void SAL_CALL CWinFileOpenImpl::cancel()
@@ -452,11 +416,12 @@ void SAL_CALL CWinFileOpenImpl::cancel()
     {
         // simulate a mouse click to the
         // cancel button
-        PostMessage(
+        BOOL const ret = PostMessage(
             m_hwndFileOpenDlg,
             WM_COMMAND,
             MAKEWPARAM(IDCANCEL,BN_CLICKED),
             (LPARAM)GetDlgItem(m_hwndFileOpenDlg, IDCANCEL));
+        SAL_WARN_IF(0 == ret, "fpicker", "ERROR: PostMessage() failed!");
     }
 }
 
@@ -476,9 +441,6 @@ sal_Int16 SAL_CALL CWinFileOpenImpl::getFocused()
 
     return sal::static_int_cast< sal_Int16 >(nID);
 }
-
-
-
 
 
 inline sal_Bool SAL_CALL CWinFileOpenImpl::IsCustomControlHelpRequested(LPHELPINFO lphi) const
@@ -560,9 +522,6 @@ LRESULT CALLBACK CWinFileOpenImpl::SubClassFunc(
 }
 
 
-
-
-
 void SAL_CALL CWinFileOpenImpl::InitControlLabel(HWND hWnd)
 {
 
@@ -592,11 +551,8 @@ void SAL_CALL CWinFileOpenImpl::InitControlLabel(HWND hWnd)
 void SAL_CALL CWinFileOpenImpl::InitCustomControlContainer(HWND hCustomControl)
 {
     m_CustomControls->AddControl(
-        m_CustomControlFactory->CreateCustomControl(hCustomControl,m_hwndFileOpenDlg));
+        CCustomControlFactory::CreateCustomControl(hCustomControl,m_hwndFileOpenDlg));
 }
-
-
-
 
 
 void SAL_CALL CWinFileOpenImpl::CacheControlState(HWND hWnd)
@@ -604,9 +560,6 @@ void SAL_CALL CWinFileOpenImpl::CacheControlState(HWND hWnd)
     OSL_ASSERT(m_FilePickerState && m_NonExecuteFilePickerState);
     m_ExecuteFilePickerState->cacheControlState(hWnd, m_NonExecuteFilePickerState);
 }
-
-
-
 
 
 BOOL CALLBACK CWinFileOpenImpl::EnumChildWndProc(HWND hWnd, LPARAM lParam)
@@ -638,9 +591,6 @@ BOOL CALLBACK CWinFileOpenImpl::EnumChildWndProc(HWND hWnd, LPARAM lParam)
 }
 
 
-
-
-
 sal_uInt32 SAL_CALL CWinFileOpenImpl::onFileOk()
 {
     m_NonExecuteFilePickerState->reset();
@@ -654,9 +604,6 @@ sal_uInt32 SAL_CALL CWinFileOpenImpl::onFileOk()
 
     return 0;
 }
-
-
-
 
 
 void SAL_CALL CWinFileOpenImpl::onSelChanged(HWND)
@@ -781,11 +728,12 @@ void SAL_CALL CWinFileOpenImpl::onInitDone()
     m_FilePicker->resumeEventNotification();
 
     //#105996 let vcl know that now a system window is active
-    PostMessage(
+    BOOL const ret = PostMessage(
         HWND_BROADCAST,
         RegisterWindowMessage(TEXT("SYSTEM_WINDOW_ACTIVATED")),
         0,
         0);
+    SAL_WARN_IF(0 == ret, "fpicker", "ERROR: PostMessage() failed!");
 
     // call the parent function to center the
     // dialog to its parent
@@ -793,17 +741,11 @@ void SAL_CALL CWinFileOpenImpl::onInitDone()
 }
 
 
-
-
-
 void SAL_CALL CWinFileOpenImpl::onFolderChanged()
 {
     FilePickerEvent evt;
     m_FilePicker->directoryChanged(evt);
 }
-
-
-
 
 
 void SAL_CALL CWinFileOpenImpl::onTypeChanged(sal_uInt32)
@@ -835,9 +777,6 @@ sal_uInt32 SAL_CALL CWinFileOpenImpl::onCtrlCommand(
 }
 
 
-
-
-
 void CWinFileOpenImpl::onWMSize()
 {
     m_Preview->notifyParentSizeChanged();
@@ -846,25 +785,16 @@ void CWinFileOpenImpl::onWMSize()
 }
 
 
-
-
-
 void CWinFileOpenImpl::onWMShow(sal_Bool bShow)
 {
     m_Preview->notifyParentShow(bShow);
 }
 
 
-
-
-
 void CWinFileOpenImpl::onWMWindowPosChanged()
 {
     m_Preview->notifyParentWindowPosChanged();
 }
-
-
-
 
 
 void CWinFileOpenImpl::onCustomControlHelpRequest(LPHELPINFO lphi)
@@ -882,9 +812,6 @@ void CWinFileOpenImpl::onCustomControlHelpRequest(LPHELPINFO lphi)
         m_HelpPopupWindow.show(LOWORD(dwMsgPos),HIWORD(dwMsgPos));
     }
 }
-
-
-
 
 
 void SAL_CALL CWinFileOpenImpl::onInitDialog(HWND hwndDlg)
@@ -923,9 +850,6 @@ void CWinFileOpenImpl::postModal(sal_Int16 nDialogResult)
 
     m_FilePickerState = m_NonExecuteFilePickerState;
 }
-
-
-
 
 
 void SAL_CALL CWinFileOpenImpl::SetDefaultExtension()
@@ -973,9 +897,6 @@ void SAL_CALL CWinFileOpenImpl::SetDefaultExtension()
 
     // !!! HACK !!!
 }
-
-
-
 
 
 void SAL_CALL CWinFileOpenImpl::InitialSetDefaultName()

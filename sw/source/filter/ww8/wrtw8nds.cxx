@@ -429,7 +429,7 @@ void SwWW8AttrIter::OutAttr( sal_Int32 nSwPos, bool bRuby )
                 if (nWhich == RES_TXTATR_AUTOFMT)
                 {
                     const SwFormatAutoFormat& rAutoFormat = static_cast<const SwFormatAutoFormat&>(pHt->GetAttr());
-                    const std::shared_ptr<SfxItemSet> pSet = rAutoFormat.GetStyleHandle();
+                    const std::shared_ptr<SfxItemSet>& pSet = rAutoFormat.GetStyleHandle();
                     SfxWhichIter aIter( *pSet );
                     const SfxPoolItem* pItem;
                     sal_uInt16 nWhichId = aIter.FirstWhich();
@@ -555,8 +555,8 @@ FlyProcessingState SwWW8AttrIter::OutFlys(sal_Int32 nSwPos)
     while ( linkedTextboxesIter != maFlyFrames.end() )
     {
         uno::Reference< drawing::XShape > xShape;
-        ww8::Frame xFrame = *linkedTextboxesIter;
-        const SdrObject* pSdrObj = xFrame.GetFrameFormat().FindRealSdrObject();
+        ww8::Frame aFrame = *linkedTextboxesIter;
+        const SdrObject* pSdrObj = aFrame.GetFrameFormat().FindRealSdrObject();
         if( pSdrObj )
             xShape.set(const_cast<SdrObject*>(pSdrObj)->getUnoShape(), uno::UNO_QUERY);
         uno::Reference< beans::XPropertySet > xPropertySet(xShape, uno::UNO_QUERY);
@@ -1205,7 +1205,7 @@ void AttributeOutputBase::TOXMark( const SwTextNode& rNode, const SwTOXMark& rAt
 
         case TOX_USER:
             sText += "\" \\f \"" + OUString((sal_Char)( 'A' + GetExport( ).GetId( *rAttr.GetTOXType() ) ));
-            // fall through - no break;
+            SAL_FALLTHROUGH;
         case TOX_CONTENT:
             {
                 eType = ww::eTC;
@@ -1932,7 +1932,7 @@ bool MSWordExportBase::NearestBookmark( sal_Int32& rNearest, const sal_Int32 nAk
     return bHasBookmark;
 }
 
-bool MSWordExportBase::NearestAnnotationMark( sal_Int32& rNearest, const sal_Int32 nAktPos, bool bNextPositionOnly )
+void MSWordExportBase::NearestAnnotationMark( sal_Int32& rNearest, const sal_Int32 nAktPos, bool bNextPositionOnly )
 {
     bool bHasAnnotationMark = false;
 
@@ -1957,11 +1957,8 @@ bool MSWordExportBase::NearestAnnotationMark( sal_Int32& rNearest, const sal_Int
                 rNearest = nNext;
             else
                 rNearest = std::min( rNearest, nNext );
-            bHasAnnotationMark = true;
         }
     }
-
-    return bHasAnnotationMark;
 }
 
 void MSWordExportBase::GetSortedAnnotationMarks( const SwTextNode& rNode, sal_Int32 nAktPos, sal_Int32 nLen )
@@ -2110,11 +2107,10 @@ void MSWordExportBase::OutputTextNode( const SwTextNode& rNode )
         AppendWordBookmark( sBkmkName );
     }
 
-    OUString aStr( rNode.GetText() );
+    const OUString& aStr( rNode.GetText() );
 
     sal_Int32 nAktPos = 0;
     sal_Int32 const nEnd = aStr.getLength();
-    bool bIsEndOfCell = false;
     bool bIncludeEndOfParaCRInRedlineProperties = false;
     sal_Int32 nOpenAttrWithRange = 0;
     OUString aStringForImage("\001");
@@ -2123,9 +2119,6 @@ void MSWordExportBase::OutputTextNode( const SwTextNode& rNode )
     if ( pTextNodeInfo.get() != nullptr )
     {
         pTextNodeInfoInner = pTextNodeInfo->getFirstInner();
-        if ( pTextNodeInfoInner && pTextNodeInfoInner->isEndOfCell() ) {
-            bIsEndOfCell = true;
-        }
     }
 
     do {
@@ -2164,7 +2157,7 @@ void MSWordExportBase::OutputTextNode( const SwTextNode& rNode )
         AppendAnnotationMarks( rNode, nAktPos, nNextAttr - nAktPos );
 
         // At the moment smarttags are only written for paragraphs, at the
-        // begining of the paragraph.
+        // beginning of the paragraph.
         if (nAktPos == 0)
             AppendSmartTags(rNode);
 
@@ -2335,11 +2328,6 @@ void MSWordExportBase::OutputTextNode( const SwTextNode& rNode )
                     }
 
                     WriteCR( pTextNodeInfoInner );
-
-                    if ( bIsEndOfCell )
-                    {
-                        AttrOutput().OutputFKP(true);
-                    }
                 }
             }
         }
@@ -2367,7 +2355,12 @@ void MSWordExportBase::OutputTextNode( const SwTextNode& rNode )
                     "odd to see this happening, expected 0");
             }
 
-            AttrOutput().OutputFKP();
+            // !bIncludeEndOfParaCRInRedlineProperties implies we have just
+            // emitted a CR, in which case we want to pass force=true to
+            // OutputFKP to ensure that an FKP entry for direct character
+            // formatting is written even if empty, so that the next one will
+            // start after the CR.
+            AttrOutput().OutputFKP(!bIncludeEndOfParaCRInRedlineProperties);
 
             if (bTextAtr || bAttrWithRange || bIncludeEndOfParaCRInRedlineProperties)
             {
@@ -2981,7 +2974,7 @@ void WW8AttributeOutput::OutputFlyFrame_Impl( const ww8::Frame& rFormat, const P
                 // because we deliver the normal content of the table cell, and no border
                 // ( Flag was deleted above in aSaveData() )
                 m_rWW8Export.m_bOutTable = true;
-                const OUString aName = rFrameFormat.GetName();
+                const OUString& aName = rFrameFormat.GetName();
                 m_rWW8Export.StartCommentOutput(aName);
                 m_rWW8Export.WriteText();
                 m_rWW8Export.EndCommentOutput(aName);

@@ -80,7 +80,7 @@ namespace slideshow
             virtual void addViewLayer( const ViewLayerSharedPtr&    rNewLayer,
                                        bool                         bRedrawLayer ) override;
             virtual bool removeViewLayer( const ViewLayerSharedPtr& rNewLayer ) override;
-            virtual bool clearAllViewLayers() override;
+            virtual void clearAllViewLayers() override;
 
 
             // attribute methods
@@ -112,9 +112,6 @@ namespace slideshow
             typedef ::std::vector< ViewBackgroundShapeSharedPtr > ViewBackgroundShapeVector;
             ViewBackgroundShapeVector   maViewShapes;
         };
-
-
-
 
 
         BackgroundShape::BackgroundShape( const uno::Reference< drawing::XDrawPage >& xDrawPage,
@@ -209,10 +206,9 @@ namespace slideshow
             return true;
         }
 
-        bool BackgroundShape::clearAllViewLayers()
+        void BackgroundShape::clearAllViewLayers()
         {
             maViewShapes.clear();
-            return true;
         }
 
         ::basegfx::B2DRectangle BackgroundShape::getBounds() const
@@ -288,7 +284,6 @@ namespace slideshow
         {
             return false; // we're not animatable
         }
-
 
 
         ShapeSharedPtr createBackgroundShape(

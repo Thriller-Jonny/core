@@ -120,9 +120,9 @@ namespace
         o_rStrokeAttributes.StartCapType = rendering::PathCapType::BUTT;
         o_rStrokeAttributes.EndCapType   = rendering::PathCapType::BUTT;
 
-        switch(rLineInfo.GetLineJoin())
+        switch (rLineInfo.GetLineJoin())
         {
-            default: // B2DLineJoin::NONE, B2DLineJoin::Middle
+            case basegfx::B2DLineJoin::NONE:
                 o_rStrokeAttributes.JoinType = rendering::PathJoinType::NONE;
                 break;
             case basegfx::B2DLineJoin::Bevel:
@@ -452,7 +452,7 @@ namespace cppcanvas
 
             // at least _one_ call to GDIMetaFile::NextAction() is
             // executed
-            sal_uIntPtr nPos( 1 );
+            size_t nPos( 1 );
 
             MetaAction* pCurrAct;
             while( (pCurrAct=rMtf.NextAction()) != nullptr )
@@ -759,7 +759,7 @@ namespace cppcanvas
             if( rParms.mrParms.maFontName.is_initialized() )
                 aFontRequest.FontDescription.FamilyName = *rParms.mrParms.maFontName;
             else
-                aFontRequest.FontDescription.FamilyName = rFont.GetName();
+                aFontRequest.FontDescription.FamilyName = rFont.GetFamilyName();
 
             aFontRequest.FontDescription.StyleName = rFont.GetStyleName();
 
@@ -808,7 +808,7 @@ namespace cppcanvas
             // TODO(Q3): This code smells of programming by
             // coincidence (the next two if statements)
 
-            ::Size rFontSizeLog( rFont.GetSize() );
+            ::Size rFontSizeLog( rFont.GetFontSize() );
 
             if (rFontSizeLog.Height() == 0)
             {
@@ -823,8 +823,8 @@ namespace cppcanvas
             if( nFontWidthLog != 0 )
             {
                 vcl::Font aTestFont = rFont;
-                aTestFont.SetWidth( 0 );
-                sal_Int32 nNormalWidth = rParms.mrVDev.GetFontMetric( aTestFont ).GetWidth();
+                aTestFont.SetAverageFontWidth( 0 );
+                sal_Int32 nNormalWidth = rParms.mrVDev.GetFontMetric( aTestFont ).GetAverageFontWidth();
                 if( nNormalWidth != nFontWidthLog )
                     if( nNormalWidth )
                         aFontMatrix.m00 = (double)nFontWidthLog / nNormalWidth;
@@ -888,7 +888,7 @@ namespace cppcanvas
             {
                 // calculate shadow offset (similar to outdev3.cxx)
                 // TODO(F3): better match with outdev3.cxx
-                sal_Int32 nShadowOffset = static_cast<sal_Int32>(1.5 + ((rParms.mrVDev.GetFont().GetHeight()-24.0)/24.0));
+                sal_Int32 nShadowOffset = static_cast<sal_Int32>(1.5 + ((rParms.mrVDev.GetFont().GetFontHeight()-24.0)/24.0));
                 if( nShadowOffset < 1 )
                     nShadowOffset = 1;
 
@@ -1051,7 +1051,6 @@ namespace cppcanvas
                                            bool                             bIntersect )
         {
             ::cppcanvas::internal::OutDevState& rState( rParms.mrStates.getState() );
-            ::basegfx::B2DPolyPolygon aClipPoly( rClipPoly );
 
             const bool bEmptyClipRect( rState.clipRect.IsEmpty() );
             const bool bEmptyClipPoly( rState.clip.count() == 0 );
@@ -1086,7 +1085,7 @@ namespace cppcanvas
 
                 // AW: Simplified
                 rState.clip = basegfx::tools::clipPolyPolygonOnPolyPolygon(
-                    aClipPoly, rState.clip, true, false);
+                    rClipPoly, rState.clip, true, false);
             }
 
             // by now, our clip resides in the OutDevState::clip
@@ -1253,7 +1252,6 @@ namespace cppcanvas
                     // In the first part of this monster-switch, we
                     // handle all state-changing meta actions. These
                     // are all handled locally.
-
 
 
                     case MetaActionType::PUSH:
@@ -1496,10 +1494,10 @@ namespace cppcanvas
                         rState.textReliefStyle          = (sal_Int8)rFont.GetRelief();
                         rState.textOverlineStyle        = (sal_Int8)rFont.GetOverline();
                         rState.textUnderlineStyle       = rParms.maFontUnderline.is_initialized() ?
-                            (*rParms.maFontUnderline ? (sal_Int8)UNDERLINE_SINGLE : (sal_Int8)UNDERLINE_NONE) :
+                            (*rParms.maFontUnderline ? (sal_Int8)LINESTYLE_SINGLE : (sal_Int8)LINESTYLE_NONE) :
                             (sal_Int8)rFont.GetUnderline();
                         rState.textStrikeoutStyle       = (sal_Int8)rFont.GetStrikeout();
-                        rState.textEmphasisMarkStyle    = (sal_Int8)rFont.GetEmphasisMark();
+                        rState.textEmphasisMarkStyle    = rFont.GetEmphasisMark() & FontEmphasisMark::Style;
                         rState.isTextEffectShadowSet    = rFont.IsShadow();
                         rState.isTextWordUnderlineSet   = rFont.IsWordLineMode();
                         rState.isTextOutlineModeSet     = rFont.IsOutline();
@@ -1536,12 +1534,10 @@ namespace cppcanvas
                     break;
 
 
-
                     // In the second part of this monster-switch, we
                     // handle all recursing meta actions. These are the
                     // ones generating a metafile by themselves, which is
                     // then processed by recursively calling this method.
-
 
 
                     case MetaActionType::GRADIENT:
@@ -1801,12 +1797,10 @@ namespace cppcanvas
                     break;
 
 
-
                     // In the third part of this monster-switch, we
                     // handle all 'acting' meta actions. These are all
                     // processed by constructing function objects for
                     // them, which will later ease caching.
-
 
 
                     case MetaActionType::POINT:
@@ -2453,7 +2447,6 @@ namespace cppcanvas
                             internal::TransparencyGroupActionFactory::createTransparencyGroupAction(
                                 std::move(pMtf),
                                 std::move(pGradient),
-                                rParms,
                                 rStates.getState().mapModeTransform *
                                 vcl::unotools::b2DPointFromPoint( pAct->GetPoint() ),
                                 rStates.getState().mapModeTransform *
@@ -2704,7 +2697,7 @@ namespace cppcanvas
                                                                   rSubset ) );
                 }
 
-                ::basegfx::B2DRange getBounds() const
+                const ::basegfx::B2DRange& getBounds() const
                 {
                     return maBounds;
                 }
@@ -2745,7 +2738,7 @@ namespace cppcanvas
             template< typename Functor > bool
                 forSubsetRange( Functor&                                            rFunctor,
                                 ImplRenderer::ActionVector::const_iterator          aRangeBegin,
-                                ImplRenderer::ActionVector::const_iterator          aRangeEnd,
+                                const ImplRenderer::ActionVector::const_iterator&   aRangeEnd,
                                 sal_Int32                                           nStartIndex,
                                 sal_Int32                                           nEndIndex,
                                 const ImplRenderer::ActionVector::const_iterator&   rEnd )
@@ -3005,8 +2998,8 @@ namespace cppcanvas
         ImplRenderer::~ImplRenderer()
         {
             // don't leak EMFPObjects
-            for(unsigned int i=0; i<SAL_N_ELEMENTS(aObjects); ++i)
-                delete aObjects[i];
+            for(EMFPObject* aObject : aObjects)
+                delete aObject;
         }
 
         bool ImplRenderer::drawSubset( sal_Int32    nStartIndex,

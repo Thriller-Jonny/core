@@ -324,6 +324,7 @@ $(eval $(call filter_Configuration_add_types,fcfg_langpack,fcfg_writer_types.xcu
 	writer_WordPerfect_Document \
 	writer_MS_Works_Document \
 	writer_MS_Write \
+	writer_DosWord \
 	writer_ClarisWorks \
 	writer_Mac_Word \
 	writer_Mac_Works \
@@ -367,6 +368,7 @@ $(eval $(call filter_Configuration_add_filters,fcfg_langpack,fcfg_writer_filters
 	WordPerfect \
 	MS_Works \
 	MS_Write \
+	DosWord \
 	ClarisWorks \
 	Mac_Word \
 	Mac_Works \
@@ -416,6 +418,8 @@ $(eval $(call filter_Configuration_add_filters,fcfg_langpack,fcfg_web_filters.xc
 	writer_web_StarOffice_XML_Writer \
 	writer_web_StarOffice_XML_Writer_Web_Template \
 	writer_web_pdf_Export\
+	writer_web_png_Export\
+	writer_web_jpg_Export\
 	writerweb8_writer_template\
 	writerweb8_writer \
 ))
@@ -717,10 +721,8 @@ $(eval $(call filter_Configuration_add_filters,fcfg_langpack,fcfg_drawgraphics_f
 	draw_gif_Export \
 	draw_html_Export \
 	draw_jpg_Export \
-	draw_met_Export \
 	draw_png_Export \
 	draw_svg_Export \
-	draw_svm_Export \
 	draw_tif_Export \
 	draw_wmf_Export \
 ))
@@ -758,10 +760,8 @@ $(eval $(call filter_Configuration_add_filters,fcfg_langpack,fcfg_impressgraphic
 	impress_gif_Export \
 	impress_html_Export \
 	impress_jpg_Export \
-	impress_met_Export \
 	impress_png_Export \
 	impress_svg_Export \
-	impress_svm_Export \
 	impress_tif_Export \
 	impress_wmf_Export \
 ))
@@ -830,7 +830,6 @@ $(eval $(call filter_Configuration_add_internal_filters,fcfg_langpack,fcfg_inter
 	gif_Import \
 	jpg_Export \
 	jpg_Import \
-	met_Export \
 	met_Import \
 	pbm_Import \
 	pcd_Import_Base \

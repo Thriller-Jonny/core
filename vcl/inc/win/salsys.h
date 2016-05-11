@@ -31,19 +31,13 @@ public:
     struct DisplayMonitor
     {
         OUString        m_aName;
-        OUString        m_aDeviceName;
-        Rectangle            m_aArea;
-        sal_Int32            m_nStateFlags;
+        Rectangle       m_aArea;
 
-        DisplayMonitor() : m_nStateFlags( 0 ) {}
+        DisplayMonitor() {}
         DisplayMonitor( const OUString& rName,
-                        const OUString& rDevName,
-                        const Rectangle& rArea,
-                        DWORD nStateFlags )
+                        const Rectangle& rArea )
                         : m_aName( rName ),
-                          m_aDeviceName( rDevName ),
-                          m_aArea( rArea ),
-                          m_nStateFlags( nStateFlags )
+                          m_aArea( rArea )
         {
         }
         ~DisplayMonitor() {}
@@ -60,9 +54,7 @@ public:
     virtual unsigned int GetDisplayBuiltInScreen() override;
     virtual Rectangle GetDisplayScreenPosSizePixel( unsigned int nScreen )  override;
     virtual int ShowNativeMessageBox( const OUString& rTitle,
-                                      const OUString& rMessage,
-                                      int nButtonCombination,
-                                      int nDefaultButton, bool bUseResources)  override;
+                                      const OUString& rMessage)  override;
     bool initMonitors();
     // discards monitorinfo; used by WM_DISPLAYCHANGED handler
     void clearMonitors();

@@ -35,21 +35,23 @@
 #include <vcl/svapp.hxx>
 #include <memory>
 
-#define UNOGRAPHIC_GRAPHICTYPE  1
-#define UNOGRAPHIC_MIMETYPE     2
-#define UNOGRAPHIC_SIZEPIXEL    3
-#define UNOGRAPHIC_SIZE100THMM  4
-#define UNOGRAPHIC_BITSPERPIXEL 5
-#define UNOGRAPHIC_TRANSPARENT  6
-#define UNOGRAPHIC_ALPHA        7
-#define UNOGRAPHIC_ANIMATED     8
+
+enum class UnoGraphicProperty
+{
+      GraphicType = 1
+    , MimeType = 2
+    , SizePixel = 3
+    , Size100thMM = 4
+    , BitsPerPixel = 5
+    , Transparent = 6
+    , Alpha = 7
+    , Animated = 8
+};
+
 
 using namespace ::com::sun::star;
 
 namespace unographic {
-
-
-// - GraphicDescriptor -
 
 
 GraphicDescriptor::GraphicDescriptor() :
@@ -109,32 +111,32 @@ void GraphicDescriptor::implCreate( SvStream& rIStm, const OUString* pURL )
 
         switch( aDescriptor.GetFileFormat() )
         {
-            case( GraphicFileFormat::BMP ): pMimeType = MIMETYPE_BMP; cType = graphic::GraphicType::PIXEL; break;
-            case( GraphicFileFormat::GIF ): pMimeType = MIMETYPE_GIF; cType = graphic::GraphicType::PIXEL; break;
-            case( GraphicFileFormat::JPG ): pMimeType = MIMETYPE_JPG; cType = graphic::GraphicType::PIXEL; break;
-            case( GraphicFileFormat::PCD ): pMimeType = MIMETYPE_PCD; cType = graphic::GraphicType::PIXEL; break;
-            case( GraphicFileFormat::PCX ): pMimeType = MIMETYPE_PCX; cType = graphic::GraphicType::PIXEL; break;
-            case( GraphicFileFormat::PNG ): pMimeType = MIMETYPE_PNG; cType = graphic::GraphicType::PIXEL; break;
-            case( GraphicFileFormat::TIF ): pMimeType = MIMETYPE_TIF; cType = graphic::GraphicType::PIXEL; break;
-            case( GraphicFileFormat::XBM ): pMimeType = MIMETYPE_XBM; cType = graphic::GraphicType::PIXEL; break;
-            case( GraphicFileFormat::XPM ): pMimeType = MIMETYPE_XPM; cType = graphic::GraphicType::PIXEL; break;
-            case( GraphicFileFormat::PBM ): pMimeType = MIMETYPE_PBM; cType = graphic::GraphicType::PIXEL; break;
-            case( GraphicFileFormat::PGM ): pMimeType = MIMETYPE_PGM; cType = graphic::GraphicType::PIXEL; break;
-            case( GraphicFileFormat::PPM ): pMimeType = MIMETYPE_PPM; cType = graphic::GraphicType::PIXEL; break;
-            case( GraphicFileFormat::RAS ): pMimeType = MIMETYPE_RAS; cType = graphic::GraphicType::PIXEL; break;
-            case( GraphicFileFormat::TGA ): pMimeType = MIMETYPE_TGA; cType = graphic::GraphicType::PIXEL; break;
-            case( GraphicFileFormat::PSD ): pMimeType = MIMETYPE_PSD; cType = graphic::GraphicType::PIXEL; break;
+            case GraphicFileFormat::BMP: pMimeType = MIMETYPE_BMP; cType = graphic::GraphicType::PIXEL; break;
+            case GraphicFileFormat::GIF: pMimeType = MIMETYPE_GIF; cType = graphic::GraphicType::PIXEL; break;
+            case GraphicFileFormat::JPG: pMimeType = MIMETYPE_JPG; cType = graphic::GraphicType::PIXEL; break;
+            case GraphicFileFormat::PCD: pMimeType = MIMETYPE_PCD; cType = graphic::GraphicType::PIXEL; break;
+            case GraphicFileFormat::PCX: pMimeType = MIMETYPE_PCX; cType = graphic::GraphicType::PIXEL; break;
+            case GraphicFileFormat::PNG: pMimeType = MIMETYPE_PNG; cType = graphic::GraphicType::PIXEL; break;
+            case GraphicFileFormat::TIF: pMimeType = MIMETYPE_TIF; cType = graphic::GraphicType::PIXEL; break;
+            case GraphicFileFormat::XBM: pMimeType = MIMETYPE_XBM; cType = graphic::GraphicType::PIXEL; break;
+            case GraphicFileFormat::XPM: pMimeType = MIMETYPE_XPM; cType = graphic::GraphicType::PIXEL; break;
+            case GraphicFileFormat::PBM: pMimeType = MIMETYPE_PBM; cType = graphic::GraphicType::PIXEL; break;
+            case GraphicFileFormat::PGM: pMimeType = MIMETYPE_PGM; cType = graphic::GraphicType::PIXEL; break;
+            case GraphicFileFormat::PPM: pMimeType = MIMETYPE_PPM; cType = graphic::GraphicType::PIXEL; break;
+            case GraphicFileFormat::RAS: pMimeType = MIMETYPE_RAS; cType = graphic::GraphicType::PIXEL; break;
+            case GraphicFileFormat::TGA: pMimeType = MIMETYPE_TGA; cType = graphic::GraphicType::PIXEL; break;
+            case GraphicFileFormat::PSD: pMimeType = MIMETYPE_PSD; cType = graphic::GraphicType::PIXEL; break;
 
-            case( GraphicFileFormat::EPS ): pMimeType = MIMETYPE_EPS; cType = graphic::GraphicType::VECTOR; break;
-            case( GraphicFileFormat::DXF ): pMimeType = MIMETYPE_DXF; cType = graphic::GraphicType::VECTOR; break;
-            case( GraphicFileFormat::MET ): pMimeType = MIMETYPE_MET; cType = graphic::GraphicType::VECTOR; break;
-            case( GraphicFileFormat::PCT ): pMimeType = MIMETYPE_PCT; cType = graphic::GraphicType::VECTOR; break;
-            case( GraphicFileFormat::SGF ): pMimeType = MIMETYPE_SGF; cType = graphic::GraphicType::VECTOR; break;
-            case( GraphicFileFormat::SVM ): pMimeType = MIMETYPE_SVM; cType = graphic::GraphicType::VECTOR; break;
-            case( GraphicFileFormat::WMF ): pMimeType = MIMETYPE_WMF; cType = graphic::GraphicType::VECTOR; break;
-            case( GraphicFileFormat::SGV ): pMimeType = MIMETYPE_SGV; cType = graphic::GraphicType::VECTOR; break;
-            case( GraphicFileFormat::EMF ): pMimeType = MIMETYPE_EMF; cType = graphic::GraphicType::VECTOR; break;
-            case( GraphicFileFormat::SVG ): pMimeType = MIMETYPE_SVG; cType = graphic::GraphicType::VECTOR; break;
+            case GraphicFileFormat::EPS: pMimeType = MIMETYPE_EPS; cType = graphic::GraphicType::VECTOR; break;
+            case GraphicFileFormat::DXF: pMimeType = MIMETYPE_DXF; cType = graphic::GraphicType::VECTOR; break;
+            case GraphicFileFormat::MET: pMimeType = MIMETYPE_MET; cType = graphic::GraphicType::VECTOR; break;
+            case GraphicFileFormat::PCT: pMimeType = MIMETYPE_PCT; cType = graphic::GraphicType::VECTOR; break;
+            case GraphicFileFormat::SGF: pMimeType = MIMETYPE_SGF; cType = graphic::GraphicType::VECTOR; break;
+            case GraphicFileFormat::SVM: pMimeType = MIMETYPE_SVM; cType = graphic::GraphicType::VECTOR; break;
+            case GraphicFileFormat::WMF: pMimeType = MIMETYPE_WMF; cType = graphic::GraphicType::VECTOR; break;
+            case GraphicFileFormat::SGV: pMimeType = MIMETYPE_SGV; cType = graphic::GraphicType::VECTOR; break;
+            case GraphicFileFormat::EMF: pMimeType = MIMETYPE_EMF; cType = graphic::GraphicType::VECTOR; break;
+            case GraphicFileFormat::SVG: pMimeType = MIMETYPE_SVG; cType = graphic::GraphicType::VECTOR; break;
 
             default:
             break;
@@ -154,13 +156,11 @@ void GraphicDescriptor::implCreate( SvStream& rIStm, const OUString* pURL )
 }
 
 
-
 OUString GraphicDescriptor::getImplementationName_Static()
     throw()
 {
     return OUString( "com.sun.star.comp.graphic.GraphicDescriptor"  );
 }
-
 
 
 uno::Sequence< OUString > GraphicDescriptor::getSupportedServiceNames_Static()
@@ -169,7 +169,6 @@ uno::Sequence< OUString > GraphicDescriptor::getSupportedServiceNames_Static()
     uno::Sequence< OUString > aSeq { "com.sun.star.graphic.GraphicDescriptor" };
     return aSeq;
 }
-
 
 
 uno::Any SAL_CALL GraphicDescriptor::queryAggregation( const uno::Type & rType )
@@ -194,13 +193,11 @@ uno::Any SAL_CALL GraphicDescriptor::queryAggregation( const uno::Type & rType )
 }
 
 
-
 uno::Any SAL_CALL GraphicDescriptor::queryInterface( const uno::Type & rType )
     throw( uno::RuntimeException, std::exception )
 {
     return OWeakAggObject::queryInterface( rType );
 }
-
 
 
 void SAL_CALL GraphicDescriptor::acquire()
@@ -210,13 +207,11 @@ void SAL_CALL GraphicDescriptor::acquire()
 }
 
 
-
 void SAL_CALL GraphicDescriptor::release()
     throw()
 {
     OWeakAggObject::release();
 }
-
 
 
 OUString SAL_CALL GraphicDescriptor::getImplementationName()
@@ -232,13 +227,11 @@ sal_Bool SAL_CALL GraphicDescriptor::supportsService( const OUString& ServiceNam
 }
 
 
-
 uno::Sequence< OUString > SAL_CALL GraphicDescriptor::getSupportedServiceNames()
     throw( uno::RuntimeException, std::exception )
 {
     return getSupportedServiceNames_Static();
 }
-
 
 
 uno::Sequence< uno::Type > SAL_CALL GraphicDescriptor::getTypes()
@@ -264,7 +257,6 @@ uno::Sequence< sal_Int8 > SAL_CALL GraphicDescriptor::getImplementationId()
 }
 
 
-
 ::comphelper::PropertySetInfo* GraphicDescriptor::createPropertySetInfo()
 {
     SolarMutexGuard aGuard;
@@ -272,14 +264,14 @@ uno::Sequence< sal_Int8 > SAL_CALL GraphicDescriptor::getImplementationId()
 
     static ::comphelper::PropertyMapEntry const aEntries[] =
     {
-        { OUString("GraphicType"), UNOGRAPHIC_GRAPHICTYPE, cppu::UnoType<sal_Int8>::get(), beans::PropertyAttribute::READONLY, 0 },
-        { OUString("MimeType"), UNOGRAPHIC_MIMETYPE, cppu::UnoType<OUString>::get(), beans::PropertyAttribute::READONLY, 0 },
-        { OUString("SizePixel"), UNOGRAPHIC_SIZEPIXEL, cppu::UnoType<awt::Size>::get(), beans::PropertyAttribute::READONLY, 0 },
-        { OUString("Size100thMM"), UNOGRAPHIC_SIZE100THMM, cppu::UnoType<awt::Size>::get(), beans::PropertyAttribute::READONLY, 0 },
-        { OUString("BitsPerPixel"), UNOGRAPHIC_BITSPERPIXEL, cppu::UnoType<sal_uInt8>::get(), beans::PropertyAttribute::READONLY, 0 },
-        { OUString("Transparent"), UNOGRAPHIC_TRANSPARENT, cppu::UnoType<sal_Bool>::get(), beans::PropertyAttribute::READONLY, 0 },
-        { OUString("Alpha"), UNOGRAPHIC_ALPHA, cppu::UnoType<sal_Bool>::get(), beans::PropertyAttribute::READONLY, 0 },
-        { OUString("Animated"), UNOGRAPHIC_ANIMATED, cppu::UnoType<sal_Bool>::get(), beans::PropertyAttribute::READONLY, 0 },
+        { OUString( "GraphicType" ), static_cast< sal_Int32 >( UnoGraphicProperty::GraphicType ), cppu::UnoType< sal_Int8 >::get(), beans::PropertyAttribute::READONLY, 0 },
+        { OUString( "MimeType" ), static_cast< sal_Int32 >( UnoGraphicProperty::MimeType ), cppu::UnoType< OUString >::get(), beans::PropertyAttribute::READONLY, 0 },
+        { OUString( "SizePixel" ), static_cast< sal_Int32 >( UnoGraphicProperty::SizePixel ), cppu::UnoType< awt::Size >::get(), beans::PropertyAttribute::READONLY, 0 },
+        { OUString( "Size100thMM" ), static_cast< sal_Int32 >( UnoGraphicProperty::Size100thMM ), cppu::UnoType< awt::Size >::get(), beans::PropertyAttribute::READONLY, 0 },
+        { OUString( "BitsPerPixel" ), static_cast< sal_Int32 >( UnoGraphicProperty::BitsPerPixel ), cppu::UnoType< sal_uInt8 >::get(), beans::PropertyAttribute::READONLY, 0 },
+        { OUString( "Transparent" ), static_cast< sal_Int32 >( UnoGraphicProperty::Transparent ), cppu::UnoType< sal_Bool >::get(), beans::PropertyAttribute::READONLY, 0 },
+        { OUString( "Alpha" ), static_cast< sal_Int32 >( UnoGraphicProperty::Alpha ), cppu::UnoType< sal_Bool >::get(), beans::PropertyAttribute::READONLY, 0 },
+        { OUString( "Animated" ), static_cast< sal_Int32 >( UnoGraphicProperty::Animated ), cppu::UnoType< sal_Bool >::get(), beans::PropertyAttribute::READONLY, 0 },
         { OUString(), 0, css::uno::Type(), 0, 0 }
     };
 
@@ -288,7 +280,6 @@ uno::Sequence< sal_Int8 > SAL_CALL GraphicDescriptor::getImplementationId()
 
     return pRet;
 }
-
 
 
 void GraphicDescriptor::_setPropertyValues( const comphelper::PropertyMapEntry** /*ppEntries*/, const uno::Any* /*pValues*/ )
@@ -301,7 +292,6 @@ void GraphicDescriptor::_setPropertyValues( const comphelper::PropertyMapEntry**
 }
 
 
-
 void GraphicDescriptor::_getPropertyValues( const comphelper::PropertyMapEntry** ppEntries, uno::Any* pValues )
     throw( beans::UnknownPropertyException, lang::WrappedTargetException, uno::RuntimeException, std::exception )
 {
@@ -309,9 +299,10 @@ void GraphicDescriptor::_getPropertyValues( const comphelper::PropertyMapEntry**
 
     while( *ppEntries )
     {
-        switch( (*ppEntries)->mnHandle )
+        UnoGraphicProperty theProperty = static_cast< UnoGraphicProperty >( (*ppEntries)->mnHandle );
+        switch( theProperty )
         {
-            case( UNOGRAPHIC_GRAPHICTYPE ):
+            case UnoGraphicProperty::GraphicType:
             {
                 const GraphicType eType( mpGraphic ? mpGraphic->GetType() : meType );
 
@@ -321,7 +312,7 @@ void GraphicDescriptor::_getPropertyValues( const comphelper::PropertyMapEntry**
             }
             break;
 
-            case( UNOGRAPHIC_MIMETYPE ):
+            case UnoGraphicProperty::MimeType:
             {
                 OUString aMimeType;
 
@@ -333,19 +324,19 @@ void GraphicDescriptor::_getPropertyValues( const comphelper::PropertyMapEntry**
 
                         switch( mpGraphic->GetLink().GetType() )
                         {
-                            case( GFX_LINK_TYPE_NATIVE_GIF ): pMimeType = MIMETYPE_GIF; break;
+                            case GFX_LINK_TYPE_NATIVE_GIF: pMimeType = MIMETYPE_GIF; break;
 
                             // #i15508# added BMP type for better exports (checked, works)
-                            case( GFX_LINK_TYPE_NATIVE_BMP ): pMimeType = MIMETYPE_BMP; break;
+                            case GFX_LINK_TYPE_NATIVE_BMP: pMimeType = MIMETYPE_BMP; break;
 
-                            case( GFX_LINK_TYPE_NATIVE_JPG ): pMimeType = MIMETYPE_JPG; break;
-                            case( GFX_LINK_TYPE_NATIVE_PNG ): pMimeType = MIMETYPE_PNG; break;
-                            case( GFX_LINK_TYPE_NATIVE_WMF ): pMimeType = MIMETYPE_WMF; break;
-                            case( GFX_LINK_TYPE_NATIVE_MET ): pMimeType = MIMETYPE_MET; break;
-                            case( GFX_LINK_TYPE_NATIVE_PCT ): pMimeType = MIMETYPE_PCT; break;
+                            case GFX_LINK_TYPE_NATIVE_JPG: pMimeType = MIMETYPE_JPG; break;
+                            case GFX_LINK_TYPE_NATIVE_PNG: pMimeType = MIMETYPE_PNG; break;
+                            case GFX_LINK_TYPE_NATIVE_WMF: pMimeType = MIMETYPE_WMF; break;
+                            case GFX_LINK_TYPE_NATIVE_MET: pMimeType = MIMETYPE_MET; break;
+                            case GFX_LINK_TYPE_NATIVE_PCT: pMimeType = MIMETYPE_PCT; break;
 
                             // added Svg mimetype support
-                            case( GFX_LINK_TYPE_NATIVE_SVG ): pMimeType = MIMETYPE_SVG; break;
+                            case GFX_LINK_TYPE_NATIVE_SVG: pMimeType = MIMETYPE_SVG; break;
 
                             default:
                                 pMimeType = nullptr;
@@ -366,7 +357,7 @@ void GraphicDescriptor::_getPropertyValues( const comphelper::PropertyMapEntry**
             }
             break;
 
-            case( UNOGRAPHIC_SIZEPIXEL ):
+            case UnoGraphicProperty::SizePixel:
             {
                 awt::Size aAWTSize( 0, 0 );
 
@@ -385,7 +376,7 @@ void GraphicDescriptor::_getPropertyValues( const comphelper::PropertyMapEntry**
             }
             break;
 
-            case( UNOGRAPHIC_SIZE100THMM ):
+            case UnoGraphicProperty::Size100thMM:
             {
                 awt::Size aAWTSize( 0, 0 );
 
@@ -404,7 +395,7 @@ void GraphicDescriptor::_getPropertyValues( const comphelper::PropertyMapEntry**
             }
             break;
 
-            case( UNOGRAPHIC_BITSPERPIXEL ):
+            case UnoGraphicProperty::BitsPerPixel:
             {
                 sal_uInt16 nBitsPerPixel = 0;
 
@@ -420,19 +411,19 @@ void GraphicDescriptor::_getPropertyValues( const comphelper::PropertyMapEntry**
             }
             break;
 
-            case( UNOGRAPHIC_TRANSPARENT ):
+            case UnoGraphicProperty::Transparent:
             {
                 *pValues <<= mpGraphic ? mpGraphic->IsTransparent() : mbTransparent;
             }
             break;
 
-            case( UNOGRAPHIC_ALPHA ):
+            case UnoGraphicProperty::Alpha:
             {
                 *pValues <<= mpGraphic ? mpGraphic->IsAlpha() : mbAlpha;
             }
             break;
 
-            case( UNOGRAPHIC_ANIMATED ):
+            case UnoGraphicProperty::Animated:
             {
                 *pValues <<= mpGraphic ? mpGraphic->IsAnimated() : mbAnimated;
             }

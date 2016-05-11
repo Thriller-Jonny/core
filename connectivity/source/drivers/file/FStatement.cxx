@@ -256,9 +256,8 @@ sal_Bool SAL_CALL OStatement::execute( const OUString& sql ) throw(SQLException,
 
     executeQuery(sql);
 
-    return m_aSQLIterator.getStatementType() == SQL_STATEMENT_SELECT;
+    return m_aSQLIterator.getStatementType() == OSQLStatementType::Select;
 }
-
 
 
 Reference< XResultSet > SAL_CALL OStatement::executeQuery( const OUString& sql ) throw(SQLException, RuntimeException, std::exception)
@@ -395,26 +394,26 @@ void OStatement_Base::construct(const OUString& sql)  throw(SQLException, Runtim
     {
         m_aSQLIterator.setParseTree(m_pParseTree);
         m_aSQLIterator.traverseAll();
-        const OSQLTables& xTabs = m_aSQLIterator.getTables();
+        const OSQLTables& rTabs = m_aSQLIterator.getTables();
 
         // sanity checks
-        if ( xTabs.empty() )
+        if ( rTabs.empty() )
             // no tables -> nothing to operate on -> error
             m_pConnection->throwGenericSQLException(STR_QUERY_NO_TABLE,*this);
 
-        if ( xTabs.size() > 1 || m_aSQLIterator.hasErrors() )
+        if ( rTabs.size() > 1 || m_aSQLIterator.hasErrors() )
             // more than one table -> can't operate on them -> error
             m_pConnection->throwGenericSQLException(STR_QUERY_MORE_TABLES,*this);
 
-        if ( (m_aSQLIterator.getStatementType() == SQL_STATEMENT_SELECT) && m_aSQLIterator.getSelectColumns()->get().empty() )
+        if ( (m_aSQLIterator.getStatementType() == OSQLStatementType::Select) && m_aSQLIterator.getSelectColumns()->get().empty() )
             // SELECT statement without columns -> error
             m_pConnection->throwGenericSQLException(STR_QUERY_NO_COLUMN,*this);
 
         switch(m_aSQLIterator.getStatementType())
         {
-            case SQL_STATEMENT_CREATE_TABLE:
-            case SQL_STATEMENT_ODBC_CALL:
-            case SQL_STATEMENT_UNKNOWN:
+            case OSQLStatementType::CreateTable:
+            case OSQLStatementType::OdbcCall:
+            case OSQLStatementType::Unknown:
                 m_pConnection->throwGenericSQLException(STR_QUERY_TOO_COMPLEX,*this);
                 break;
             default:
@@ -422,7 +421,7 @@ void OStatement_Base::construct(const OUString& sql)  throw(SQLException, Runtim
         }
 
         // at this moment we support only one table per select statement
-        Reference< ::com::sun::star::lang::XUnoTunnel> xTunnel(xTabs.begin()->second,UNO_QUERY);
+        Reference< ::com::sun::star::lang::XUnoTunnel> xTunnel(rTabs.begin()->second,UNO_QUERY);
         if(xTunnel.is())
         {
             if(m_pTable)
@@ -626,7 +625,7 @@ void OStatement_Base::GetAssignValues()
 
             OSQLParseNode * pComp = pAssignment->getChild(1);
             OSL_ENSURE(pComp != nullptr,"OResultSet: pComp == NULL");
-            OSL_ENSURE(pComp->getNodeType() == SQL_NODE_EQUAL,"OResultSet: pComp->getNodeType() != SQL_NODE_COMPARISON");
+            OSL_ENSURE(pComp->getNodeType() == SQLNodeType::Equal,"OResultSet: pComp->getNodeType() != SQLNodeType::Comparison");
             if (pComp->getTokenValue().toChar() != '=')
             {
                 throwFunctionSequenceException(*this);
@@ -648,9 +647,9 @@ void OStatement_Base::ParseAssignValues(const ::std::vector< OUString>& aColumnN
     OSL_ENSURE(aColumnName.getLength() > 0,"OResultSet: Column-Name nicht gefunden");
     OSL_ENSURE(pRow_Value_Constructor_Elem != nullptr,"OResultSet: pRow_Value_Constructor_Elem darf nicht NULL sein!");
 
-    if (pRow_Value_Constructor_Elem->getNodeType() == SQL_NODE_STRING ||
-        pRow_Value_Constructor_Elem->getNodeType() == SQL_NODE_INTNUM ||
-        pRow_Value_Constructor_Elem->getNodeType() == SQL_NODE_APPROXNUM)
+    if (pRow_Value_Constructor_Elem->getNodeType() == SQLNodeType::String ||
+        pRow_Value_Constructor_Elem->getNodeType() == SQLNodeType::IntNum ||
+        pRow_Value_Constructor_Elem->getNodeType() == SQLNodeType::ApproxNum)
     {
         // set value:
         SetAssignValue(aColumnName, pRow_Value_Constructor_Elem->getTokenValue());
@@ -703,9 +702,9 @@ void OStatement_Base::SetAssignValue(const OUString& aColumnName,
 
         case DataType::BIT:
             if (aValue.equalsIgnoreAsciiCase("TRUE")  || aValue[0] == '1')
-                *(m_aAssignValues->get())[nId] = sal_True;
+                *(m_aAssignValues->get())[nId] = true;
             else if (aValue.equalsIgnoreAsciiCase("FALSE") || aValue[0] == '0')
-                *(m_aAssignValues->get())[nId] = sal_False;
+                *(m_aAssignValues->get())[nId] = false;
             else
                 throwFunctionSequenceException(*this);
             break;

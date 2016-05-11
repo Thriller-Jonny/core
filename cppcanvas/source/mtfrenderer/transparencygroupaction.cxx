@@ -46,8 +46,7 @@
 #include <basegfx/matrix/b2dhommatrix.hxx>
 #include <basegfx/tuple/b2dtuple.hxx>
 #include <basegfx/tools/canvastools.hxx>
-
-#include <boost/noncopyable.hpp>
+#include <basegfx/matrix/b2dhommatrixtools.hxx>
 
 #include "transparencygroupaction.hxx"
 #include "outdevstate.hxx"
@@ -65,7 +64,7 @@ namespace cppcanvas
         // ======================
         namespace
         {
-            class TransparencyGroupAction : public Action, private ::boost::noncopyable
+            class TransparencyGroupAction : public Action
             {
             public:
                 /** Create new transparency group action.
@@ -78,9 +77,6 @@ namespace cppcanvas
                     VCL gradient, to be rendered into the action's alpha
                     channel.
 
-                    @param rParms
-                    Render parameters
-
                     @param rDstPoint
                     Left, top edge of destination, in current state
                     coordinate system
@@ -91,11 +87,13 @@ namespace cppcanvas
                 */
                 TransparencyGroupAction( MtfAutoPtr&&                   rGroupMtf,
                                          GradientAutoPtr&&              rAlphaGradient,
-                                         const Renderer::Parameters&    rParms,
                                          const ::basegfx::B2DPoint&     rDstPoint,
                                          const ::basegfx::B2DVector&    rDstSize,
                                          const CanvasSharedPtr&         rCanvas,
                                          const OutDevState&             rState );
+
+                TransparencyGroupAction(const TransparencyGroupAction&) = delete;
+                const TransparencyGroupAction& operator=(const TransparencyGroupAction&) = delete;
 
                 virtual bool render( const ::basegfx::B2DHomMatrix& rTransformation ) const override;
                 virtual bool renderSubset( const ::basegfx::B2DHomMatrix& rTransformation,
@@ -110,8 +108,6 @@ namespace cppcanvas
             private:
                 MtfAutoPtr                                          mpGroupMtf;
                 GradientAutoPtr                                     mpAlphaGradient;
-
-                const Renderer::Parameters                          maParms;
 
                 const ::basegfx::B2DSize                            maDstSize;
 
@@ -144,14 +140,12 @@ namespace cppcanvas
 
             TransparencyGroupAction::TransparencyGroupAction( MtfAutoPtr&&                  rGroupMtf,
                                                               GradientAutoPtr&&             rAlphaGradient,
-                                                              const Renderer::Parameters&   rParms,
                                                               const ::basegfx::B2DPoint&    rDstPoint,
                                                               const ::basegfx::B2DVector&   rDstSize,
                                                               const CanvasSharedPtr&        rCanvas,
                                                               const OutDevState&            rState ) :
                 mpGroupMtf( std::move(rGroupMtf) ),
                 mpAlphaGradient( std::move(rAlphaGradient) ),
-                maParms( rParms ),
                 maDstSize( rDstSize ),
                 mxBufferBitmap(),
                 maLastTransformation(),
@@ -381,6 +375,15 @@ namespace cppcanvas
                 rendering::RenderState aLocalState( maState );
                 ::canvas::tools::setRenderStateTransform(aLocalState, aTransform);
 
+                if(aLocalState.Clip.is())
+                {
+                    // tdf#95709
+                    // Adjust renderstate clip to modified scale from above
+                    ::basegfx::B2DPolyPolygon aClip = ::basegfx::unotools::b2DPolyPolygonFromXPolyPolygon2D(aLocalState.Clip);
+                    aClip.transform(basegfx::tools::createScaleB2DHomMatrix(aScale));
+                    aLocalState.Clip = ::basegfx::unotools::xPolyPolygonFromB2DPolyPolygon(mpCanvas->getUNOCanvas()->getDevice(), aClip);
+                }
+
 #if OSL_DEBUG_LEVEL > 2
                 aLocalState.Clip.clear();
                 aLocalState.DeviceColor =
@@ -476,7 +479,6 @@ namespace cppcanvas
 
         ActionSharedPtr TransparencyGroupActionFactory::createTransparencyGroupAction( MtfAutoPtr&&                 rGroupMtf,
                                                                                        GradientAutoPtr&&            rAlphaGradient,
-                                                                                       const Renderer::Parameters&  rParms,
                                                                                        const ::basegfx::B2DPoint&   rDstPoint,
                                                                                        const ::basegfx::B2DVector&  rDstSize,
                                                                                        const CanvasSharedPtr&       rCanvas,
@@ -484,7 +486,6 @@ namespace cppcanvas
         {
             return ActionSharedPtr( new TransparencyGroupAction(std::move(rGroupMtf),
                                                                 std::move(rAlphaGradient),
-                                                                rParms,
                                                                 rDstPoint,
                                                                 rDstSize,
                                                                 rCanvas,

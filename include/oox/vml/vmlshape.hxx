@@ -41,7 +41,6 @@ struct ShapeParentAnchor;
 class ShapeContainer;
 
 
-
 const sal_Int32 VML_CLIENTDATA_UNCHECKED        = 0;
 const sal_Int32 VML_CLIENTDATA_CHECKED          = 1;
 const sal_Int32 VML_CLIENTDATA_MIXED            = 2;
@@ -51,7 +50,6 @@ const sal_Int32 VML_CLIENTDATA_INTEGER          = 1;
 const sal_Int32 VML_CLIENTDATA_NUMBER           = 2;
 const sal_Int32 VML_CLIENTDATA_REFERENCE        = 3;
 const sal_Int32 VML_CLIENTDATA_FORMULA          = 4;
-
 
 
 /** The shape model structure contains all properties shared by all types of shapes. */
@@ -104,13 +102,16 @@ struct OOX_DLLPUBLIC ShapeTypeModel
     OUString maWrapDistanceRight;        ///< Distance from the right side of the shape to the text that wraps around it.
     OUString maWrapDistanceTop;          ///< Distance from the top of the shape to the text that wraps around it.
     OUString maWrapDistanceBottom;       ///< Distance from the bottom of the shape to the text that wraps around it.
+    OptValue<OUString> moCropBottom; ///< Specifies the how much to crop the image from the bottom up as a fraction of picture size.
+    OptValue<OUString> moCropLeft; ///< Specifies how much to crop the image from the left in as a fraction of picture size.
+    OptValue<OUString> moCropRight; ///< Specifies how much to crop the image from the right in as a fraction of picture size.
+    OptValue<OUString> moCropTop; ///< Specifies how much to crop the image from the top down as a fraction of picture size.
     OUString maLayoutFlowAlt; ///< Specifies the alternate layout flow for text in textboxes.
 
     explicit            ShapeTypeModel();
 
     void                assignUsed( const ShapeTypeModel& rSource );
 };
-
 
 
 /** A shape template contains all formatting properties of shapes and can serve
@@ -151,7 +152,6 @@ protected:
 };
 
 
-
 /** Excel specific shape client data (such as cell anchor). */
 struct ClientData
 {
@@ -189,7 +189,6 @@ struct ClientData
 };
 
 
-
 struct ShapeModel
 {
     typedef ::std::vector< css::awt::Point >   PointVector;
@@ -215,7 +214,6 @@ struct ShapeModel
     /** Creates and returns a new shape client data structure. */
     ClientData&         createClientData();
 };
-
 
 
 /** A shape object that is part of a drawing. May inherit properties from a
@@ -252,8 +250,7 @@ public:
 
     /** Converts position and formatting into the passed existing XShape. */
     void                convertFormatting(
-                            const css::uno::Reference< css::drawing::XShape >& rxShape,
-                            const ShapeParentAnchor* pParentAnchor = nullptr ) const;
+                            const css::uno::Reference< css::drawing::XShape >& rxShape ) const;
 
 protected:
     explicit            ShapeBase( Drawing& rDrawing );
@@ -276,7 +273,6 @@ protected:
 protected:
     ShapeModel          maShapeModel;       ///< The model structure containing shape data.
 };
-
 
 
 /** A simple shape object based on a specific UNO shape service. */
@@ -303,7 +299,6 @@ private:
 };
 
 
-
 /** A rectangular shape object. */
 class RectangleShape : public SimpleShape
 {
@@ -318,14 +313,12 @@ protected:
 };
 
 
-
 /** An oval shape object. */
 class EllipseShape : public SimpleShape
 {
 public:
     explicit            EllipseShape( Drawing& rDrawing );
 };
-
 
 
 /** A polygon shape object. */
@@ -371,7 +364,6 @@ protected:
 };
 
 
-
 /** A shape object with custom geometry. */
 class CustomShape : public SimpleShape
 {
@@ -385,7 +377,6 @@ protected:
                             const css::uno::Reference< css::drawing::XShapes >& rxShapes,
                             const css::awt::Rectangle& rShapeRect ) const override;
 };
-
 
 
 /** A complex shape object. This can be a picture shape, a custom shape, an OLE
@@ -402,7 +393,6 @@ protected:
                             const css::uno::Reference< css::drawing::XShapes >& rxShapes,
                             const css::awt::Rectangle& rShapeRect ) const override;
 };
-
 
 
 /** A group shape that extends the basic shape by a container of child shapes. */
@@ -436,7 +426,6 @@ private:
     typedef ::std::unique_ptr< ShapeContainer > ShapeContainerPtr;
     ShapeContainerPtr   mxChildren;         ///< Shapes and templates that are part of this group.
 };
-
 
 
 } // namespace vml

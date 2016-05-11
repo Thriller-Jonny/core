@@ -110,7 +110,7 @@ namespace connectivity
 
             bool WriteMemo(const ORowSetValue& aVariable, sal_Size& rBlockNr);
             bool WriteBuffer();
-            bool UpdateBuffer(OValueRefVector& rRow, OValueRefRow pOrgRow,const ::com::sun::star::uno::Reference< ::com::sun::star::container::XIndexAccess>& _xCols, bool bForceAllFields);
+            bool UpdateBuffer(OValueRefVector& rRow, const OValueRefRow& pOrgRow, const ::com::sun::star::uno::Reference< ::com::sun::star::container::XIndexAccess>& _xCols, bool bForceAllFields);
             ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet> isUniqueByColumnName(sal_Int32 _nColumnPos);
             bool AllocBuffer();
 
@@ -129,18 +129,18 @@ namespace connectivity
         public:
             ODbaseTable( sdbcx::OCollection* _pTables,ODbaseConnection* _pConnection);
             ODbaseTable( sdbcx::OCollection* _pTables,ODbaseConnection* _pConnection,
-                    const OUString& _Name,
-                    const OUString& _Type,
-                    const OUString& _Description = OUString(),
-                    const OUString& _SchemaName = OUString(),
-                    const OUString& _CatalogName = OUString()
+                    const OUString& Name,
+                    const OUString& Type,
+                    const OUString& Description = OUString(),
+                    const OUString& SchemaName = OUString(),
+                    const OUString& CatalogName = OUString()
                 );
 
             void construct() override; // can throw any exception
 
             virtual sal_Int32 getCurrentLastPos() const override;
             virtual bool seekRow(IResultSetHelper::Movement eCursorPosition, sal_Int32 nOffset, sal_Int32& nCurPos) override;
-            virtual bool fetchRow(OValueRefRow& _rRow,const OSQLColumns& _rCols, bool _bUseTableDefs, bool bRetrieveData) override;
+            virtual bool fetchRow(OValueRefRow& _rRow,const OSQLColumns& _rCols, bool bRetrieveData) override;
 
             virtual ::com::sun::star::uno::Any SAL_CALL queryInterface( const ::com::sun::star::uno::Type & rType ) throw(::com::sun::star::uno::RuntimeException, std::exception) override;
             //XTypeProvider
@@ -160,7 +160,7 @@ namespace connectivity
             bool    CreateImpl();
 
 
-            virtual bool InsertRow(OValueRefVector& rRow, bool bFlush, const ::com::sun::star::uno::Reference< ::com::sun::star::container::XIndexAccess>& _xCols) override;
+            virtual bool InsertRow(OValueRefVector& rRow, const ::com::sun::star::uno::Reference< ::com::sun::star::container::XIndexAccess>& _xCols) override;
             virtual bool DeleteRow(const OSQLColumns& _rCols) override;
             virtual bool UpdateRow(OValueRefVector& rRow, OValueRefRow& pOrgRow,const ::com::sun::star::uno::Reference< ::com::sun::star::container::XIndexAccess>& _xCols) override;
 

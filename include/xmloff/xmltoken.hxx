@@ -1913,6 +1913,7 @@ namespace xmloff { namespace token {
         XML_TRUE,
         XML_TRUNCATE_ON_OVERFLOW,
         XML_TRY_STAGGERING_FIRST,
+        XML_TSPAN,
         XML_TTB,
         XML_TYPE,
         XML_DOT_DASH,
@@ -1930,6 +1931,7 @@ namespace xmloff { namespace token {
         XML_UPLIMIT,
         XML_UPRIGHT,
         XML_URL,
+        XML_USE,
         XML_USE_CAPTION,
         XML_USE_CELL_PROTECTION,
         XML_USE_CHART_OBJECTS,
@@ -2051,6 +2053,7 @@ namespace xmloff { namespace token {
 
         XML_ENABLE,
         XML_USE_REGULAR_EXPRESSIONS,
+        XML_USE_WILDCARDS,
         XML_DATA_SOURCE_HAS_LABELS,
         XML_LINK_DATA_STYLE_TO_SOURCE,
         XML_SORT_ALGORITHM,

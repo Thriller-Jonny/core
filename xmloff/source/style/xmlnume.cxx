@@ -50,7 +50,6 @@
 #include <tools/fontenum.hxx>
 
 
-
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::style;
@@ -541,14 +540,12 @@ void SvxXMLNumRuleExport::exportLevelStyle( sal_Int32 nLevel,
                 }
                 else
                 {
-                    Any aAny;
                     OUString sTemp;
 
                     const SvXMLUnitConverter& rUnitConv =
                         GetExport().GetMM100UnitConverter();
                     XMLFontFamilyNamePropHdl aFamilyNameHdl;
-                    aAny <<= sBulletFontName;
-                    if( aFamilyNameHdl.exportXML( sTemp, aAny, rUnitConv ) )
+                    if( aFamilyNameHdl.exportXML( sTemp, Any(sBulletFontName), rUnitConv ) )
                         GetExport().AddAttribute( XML_NAMESPACE_FO,
                                                   XML_FONT_FAMILY, sTemp );
 
@@ -558,21 +555,18 @@ void SvxXMLNumRuleExport::exportLevelStyle( sal_Int32 nLevel,
                                                   sBulletFontStyleName );
 
                     XMLFontFamilyPropHdl aFamilyHdl;
-                    aAny <<= (sal_Int16)eBulletFontFamily;
-                    if( aFamilyHdl.exportXML( sTemp, aAny, rUnitConv  ) )
+                    if( aFamilyHdl.exportXML( sTemp, Any((sal_Int16)eBulletFontFamily), rUnitConv  ) )
                         GetExport().AddAttribute( XML_NAMESPACE_STYLE,
                                                   XML_FONT_FAMILY_GENERIC,
                                                   sTemp );
 
                     XMLFontPitchPropHdl aPitchHdl;
-                    aAny <<= (sal_Int16)eBulletFontPitch;
-                    if( aPitchHdl.exportXML( sTemp, aAny, rUnitConv  ) )
+                    if( aPitchHdl.exportXML( sTemp, Any((sal_Int16)eBulletFontPitch), rUnitConv  ) )
                         GetExport().AddAttribute( XML_NAMESPACE_STYLE,
                                                   XML_FONT_PITCH, sTemp );
 
                     XMLFontEncodingPropHdl aEncHdl;
-                    aAny <<= (sal_Int16)eBulletFontEncoding;
-                    if( aEncHdl.exportXML( sTemp, aAny, rUnitConv  ) )
+                    if( aEncHdl.exportXML( sTemp, Any((sal_Int16)eBulletFontEncoding), rUnitConv  ) )
                         GetExport().AddAttribute( XML_NAMESPACE_STYLE,
                                                   XML_FONT_CHARSET, sTemp );
                 }
@@ -696,7 +690,7 @@ void SvxXMLNumRuleExport::exportNumberingRule(
     }
 }
 
-bool SvxXMLNumRuleExport::exportStyle( const Reference< XStyle >& rStyle )
+void SvxXMLNumRuleExport::exportStyle( const Reference< XStyle >& rStyle )
 {
     Reference< XPropertySet > xPropSet( rStyle, UNO_QUERY );
     Reference< XPropertySetInfo > xPropSetInfo = xPropSet->getPropertySetInfo();
@@ -709,7 +703,7 @@ bool SvxXMLNumRuleExport::exportStyle( const Reference< XStyle >& rStyle )
     {
         aAny = xPropSet->getPropertyValue( sIsPhysical );
         if( !*static_cast<sal_Bool const *>(aAny.getValue()) )
-            return false;
+            return;
     }
 
     aAny = xPropSet->getPropertyValue( sNumberingRules );
@@ -726,8 +720,6 @@ bool SvxXMLNumRuleExport::exportStyle( const Reference< XStyle >& rStyle )
     }
 
     exportNumberingRule( sName, bHidden, xNumRule );
-
-    return true;
 }
 
 void SvxXMLNumRuleExport::exportOutline()

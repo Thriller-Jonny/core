@@ -42,7 +42,6 @@
 using namespace osl;
 
 using ::rtl::OUString;
-using ::rtl::OUStringToOString;
 using ::rtl::OString;
 
 /** print last error of pipe system.
@@ -121,14 +120,6 @@ namespace osl_Pipe
     {
     public:
         bool bRes, bRes1;
-
-        void setUp( ) override
-            {
-            }
-
-        void tearDown( ) override
-            {
-            }
 
         void ctors_none( )
             {
@@ -600,7 +591,7 @@ namespace osl_StreamPipe
 
     /** testing the methods:
         inline StreamPipe();
-        inline StreamPipe(oslPipe Pipe);;
+        inline StreamPipe(oslPipe Pipe);
         inline StreamPipe(const StreamPipe& Pipe);
         inline StreamPipe(const ::rtl::OUString& strName, oslPipeOptions Options = osl_Pipe_OPEN);
         inline StreamPipe(const ::rtl::OUString& strName, oslPipeOptions Options, const Security &rSec );

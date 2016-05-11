@@ -64,20 +64,15 @@
 #include "xffontworkstyle.hxx"
 #include "../lwpglobalmgr.hxx"
 XFDrawStyle::XFDrawStyle()
-{
-    m_eWrap = enumXFWrapNone;
-    m_nWrapLines = 0;   //not limited.
-
-    m_pLineStyle = nullptr;
-    m_pAreaStyle = nullptr;
-
-    m_pFontWorkStyle = nullptr;
-
-    m_fArrowStartSize = 0.3;
-    m_fArrowEndSize = 0.3;
-    m_bArrowStartCenter = false;
-    m_bArrowEndCenter = false;
-}
+    : m_pFontWorkStyle(nullptr)
+    , m_eWrap(enumXFWrapNone)
+    , m_pLineStyle(nullptr)
+    , m_pAreaStyle(nullptr)
+    , m_fArrowStartSize(0.3)
+    , m_fArrowEndSize(0.3)
+    , m_bArrowStartCenter(false)
+    , m_bArrowEndCenter(false)
+{}
 
 XFDrawStyle::~XFDrawStyle()
 {
@@ -89,7 +84,7 @@ XFDrawStyle::~XFDrawStyle()
     }
 }
 
-void    XFDrawStyle::SetLineStyle(double width, XFColor color, sal_Int32 transparency)
+void    XFDrawStyle::SetLineStyle(double width, XFColor color)
 {
     if( !m_pLineStyle )
     {
@@ -98,10 +93,10 @@ void    XFDrawStyle::SetLineStyle(double width, XFColor color, sal_Int32 transpa
     }
     m_pLineStyle->SetWidth(width);
     m_pLineStyle->SetColor(color);
-    m_pLineStyle->SetTransparency(transparency);
+    m_pLineStyle->SetTransparency(0);
 }
 
-void    XFDrawStyle::SetLineDashStyle(enumXFLineStyle style, int num1, int num2, double len1, double len2, double space )
+void    XFDrawStyle::SetLineDashStyle(enumXFLineStyle style, double len1, double len2, double space )
 {
     if( !m_pLineStyle )
     {
@@ -109,23 +104,23 @@ void    XFDrawStyle::SetLineDashStyle(enumXFLineStyle style, int num1, int num2,
         m_pLineStyle->SetStyleName( XFGlobal::GenStrokeDashName());
     }
     m_pLineStyle->SetLineStyle(style);
-    m_pLineStyle->SetDot1Number(num1);
+    m_pLineStyle->SetDot1Number(1);
     m_pLineStyle->SetDot1Length(len1);
-    m_pLineStyle->SetDot2Number(num2);
+    m_pLineStyle->SetDot2Number(1);
     m_pLineStyle->SetDot2Length(len2);
     m_pLineStyle->SetSpace(space);
     XFStyleManager* pXFStyleManager = LwpGlobalMgr::GetInstance()->GetXFStyleManager();
     pXFStyleManager->AddStyle(m_pLineStyle);
 }
 
-void XFDrawStyle::SetFontWorkStyle(sal_Int8 nForm, enumXFFWStyle eStyle, enumXFFWAdjust eAdjust)
+void XFDrawStyle::SetFontWorkStyle(enumXFFWStyle eStyle, enumXFFWAdjust eAdjust)
 {
     if (!m_pFontWorkStyle)
     {
         m_pFontWorkStyle = new XFFontWorkStyle();
     }
 
-    m_pFontWorkStyle->SetButtonForm(nForm);
+    m_pFontWorkStyle->SetButtonForm(0);
     m_pFontWorkStyle->SetFWStyleType(eStyle);
     m_pFontWorkStyle->SetFWAdjustType(eAdjust);
 }
@@ -295,7 +290,7 @@ void    XFDrawStyle::ToXml(IXFStream *pStrm)
         aStr.clear();
         switch (m_pFontWorkStyle->GetAdjustType())
         {
-        default: // fall througth
+        default: // fall through
         case enumXFFWAdjustAutosize:
             aStr = "autosize";
             break;

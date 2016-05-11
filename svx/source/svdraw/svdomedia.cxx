@@ -47,8 +47,6 @@
 using namespace ::com::sun::star;
 
 
-// - SdrMediaObj -
-
 // Note: the temp file is read only, until it is deleted!
 // It may be shared between multiple documents in case of copy/paste,
 // hence the shared_ptr.
@@ -76,8 +74,6 @@ struct SdrMediaObj::Impl
     uno::Reference< graphic::XGraphic >   m_xCachedSnapshot;
     OUString m_LastFailedPkgURL;
 };
-
-
 
 
 SdrMediaObj::SdrMediaObj()
@@ -429,7 +425,7 @@ void SdrMediaObj::mediaPropertiesChanged( const ::avmedia::MediaItem& rNewProper
         ( rNewProperties.getURL() != getURL() ))
     {
         m_xImpl->m_xCachedSnapshot.clear();
-        OUString const url(rNewProperties.getURL());
+        OUString const& url(rNewProperties.getURL());
         if (url.startsWithIgnoreAsciiCase("vnd.sun.star.Package:"))
         {
             if (   !m_xImpl->m_pTempFile

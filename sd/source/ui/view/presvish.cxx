@@ -107,7 +107,7 @@ void PresentationViewShell::FinishInitialization( FrameView* pFrameView )
     GetActiveWindow()->GrabFocus();
 }
 
-SvxRuler* PresentationViewShell::CreateHRuler(::sd::Window*, bool)
+SvxRuler* PresentationViewShell::CreateHRuler(::sd::Window*)
 {
     return nullptr;
 }
@@ -125,7 +125,8 @@ void PresentationViewShell::Activate( bool bIsMDIActivate )
     {
         SfxBoolItem aItem( SID_NAVIGATOR_INIT, true );
 
-        GetViewFrame()->GetDispatcher()->Execute( SID_NAVIGATOR_INIT, SfxCallMode::ASYNCHRON | SfxCallMode::RECORD, &aItem, 0L );
+        GetViewFrame()->GetDispatcher()->ExecuteList(SID_NAVIGATOR_INIT,
+                SfxCallMode::ASYNCHRON | SfxCallMode::RECORD, { &aItem });
 
         rtl::Reference< SlideShow > xSlideShow( SlideShow::GetSlideShow( GetViewShellBase() ) );
         if( xSlideShow.is() )

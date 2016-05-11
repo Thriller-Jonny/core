@@ -27,9 +27,7 @@
 #include "intrinsicanimationactivity.hxx"
 #include "intrinsicanimationeventhandler.hxx"
 
-#include <boost/noncopyable.hpp>
-#include <boost/enable_shared_from_this.hpp>
-#include <boost/weak_ptr.hpp>
+#include <memory>
 
 namespace slideshow
 {
@@ -42,9 +40,7 @@ namespace slideshow
             animations directly within a shape, e.g. drawing layer
             animations, or GIF animations.
          */
-        class IntrinsicAnimationActivity : public Activity,
-                                           public boost::enable_shared_from_this<IntrinsicAnimationActivity>,
-                                           private boost::noncopyable
+        class IntrinsicAnimationActivity : public Activity
         {
         public:
             /** Create an IntrinsicAnimationActivity.
@@ -71,6 +67,8 @@ namespace slideshow
                                         const ::std::vector<double>&    rTimeouts,
                                         ::std::size_t                   nNumLoops,
                                         CycleMode                       eCycleMode );
+            IntrinsicAnimationActivity(const IntrinsicAnimationActivity&) = delete;
+            IntrinsicAnimationActivity& operator=(const IntrinsicAnimationActivity&) = delete;
 
             virtual void dispose() override;
             virtual double calcTimeLag() const override;
@@ -83,7 +81,7 @@ namespace slideshow
 
         private:
             SlideShowContext                        maContext;
-            boost::weak_ptr<DrawShape>              mpDrawShape;
+            std::weak_ptr<DrawShape>              mpDrawShape;
             WakeupEventSharedPtr                    mpWakeupEvent;
             IntrinsicAnimationEventHandlerSharedPtr mpListener;
             ::std::vector<double>                   maTimeouts;
@@ -95,14 +93,14 @@ namespace slideshow
         };
 
 
-
-        class IntrinsicAnimationListener : public IntrinsicAnimationEventHandler,
-                                           private boost::noncopyable
+        class IntrinsicAnimationListener : public IntrinsicAnimationEventHandler
         {
         public:
             explicit IntrinsicAnimationListener( IntrinsicAnimationActivity& rActivity ) :
                 mrActivity( rActivity )
             {}
+            IntrinsicAnimationListener(const IntrinsicAnimationListener&) = delete;
+            IntrinsicAnimationListener& operator=(const IntrinsicAnimationListener&) = delete;
 
         private:
 
@@ -111,7 +109,6 @@ namespace slideshow
 
             IntrinsicAnimationActivity& mrActivity;
         };
-
 
 
         IntrinsicAnimationActivity::IntrinsicAnimationActivity( const SlideShowContext&         rContext,
@@ -252,10 +249,9 @@ namespace slideshow
         bool IntrinsicAnimationActivity::enableAnimations()
         {
             mbIsActive = true;
-            return maContext.mrActivitiesQueue.addActivity(
-                shared_from_this() );
-        }
+            return maContext.mrActivitiesQueue.addActivity( std::dynamic_pointer_cast<Activity>(shared_from_this()) );
 
+        }
 
 
         ActivitySharedPtr createIntrinsicAnimationActivity(

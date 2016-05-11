@@ -473,6 +473,7 @@ void  DrawViewShell::ExecCtrl(SfxRequest& rReq)
             UpdatePreview( mpActualPage );
             rReq.Done();
         }
+        break;
 
         default:
         break;
@@ -829,9 +830,8 @@ void  DrawViewShell::ExecRuler(SfxRequest& rReq)
                     if( rFormat != aFormat )
                     {
                         // put all items
-                        SvxNumBulletItem aNumBulletItem(rNumBulletItem);
-                        aNumBulletItem.GetNumRule()->SetLevel(nOutlineLevel,aFormat);
-                        aEditAttr.Put( aNumBulletItem );
+                        rNumBulletItem.GetNumRule()->SetLevel(nOutlineLevel,aFormat);
+                        aEditAttr.Put( rNumBulletItem );
                         aEditAttr.Put( aLRSpaceItem );
                         mpDrawView->SetAttributes( aEditAttr );
 

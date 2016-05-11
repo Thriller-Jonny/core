@@ -71,7 +71,6 @@ void SvxCheckListBox::InsertEntry( const OUString& rStr, sal_uLong nPos,
 }
 
 
-
 void SvxCheckListBox::RemoveEntry( sal_uLong nPos )
 {
     if ( nPos < GetEntryCount() )
@@ -79,13 +78,11 @@ void SvxCheckListBox::RemoveEntry( sal_uLong nPos )
 }
 
 
-
-void SvxCheckListBox::SelectEntryPos( sal_uLong nPos, bool bSelect )
+void SvxCheckListBox::SelectEntryPos( sal_uLong nPos )
 {
     if ( nPos < GetEntryCount() )
-        Select( GetEntry( nPos ), bSelect );
+        Select( GetEntry( nPos ) );
 }
-
 
 
 sal_uLong SvxCheckListBox::GetSelectEntryPos() const
@@ -98,7 +95,6 @@ sal_uLong SvxCheckListBox::GetSelectEntryPos() const
 }
 
 
-
 OUString SvxCheckListBox::GetText( sal_uLong nPos ) const
 {
     SvTreeListEntry* pEntry = GetEntry( nPos );
@@ -107,7 +103,6 @@ OUString SvxCheckListBox::GetText( sal_uLong nPos ) const
         return GetEntryText( pEntry );
     return OUString();
 }
-
 
 
 sal_uLong SvxCheckListBox::GetCheckedEntryCount() const
@@ -124,25 +119,20 @@ sal_uLong SvxCheckListBox::GetCheckedEntryCount() const
 }
 
 
-
 void SvxCheckListBox::CheckEntryPos( sal_uLong nPos, bool bCheck )
 {
     if ( nPos < GetEntryCount() )
-        SetCheckButtonState(
-            GetEntry( nPos ), bCheck ? SvButtonState( SV_BUTTON_CHECKED ) :
-                                       SvButtonState( SV_BUTTON_UNCHECKED ) );
+        SetCheckButtonState( GetEntry( nPos ), bCheck ? SvButtonState::Checked : SvButtonState::Unchecked );
 }
-
 
 
 bool SvxCheckListBox::IsChecked( sal_uLong nPos ) const
 {
     if ( nPos < GetEntryCount() )
-        return (GetCheckButtonState( GetEntry( nPos ) ) == SV_BUTTON_CHECKED);
+        return GetCheckButtonState( GetEntry( nPos ) ) == SvButtonState::Checked;
     else
         return false;
 }
-
 
 
 void* SvxCheckListBox::SetEntryData ( sal_uLong nPos, void* pNewData )
@@ -158,7 +148,6 @@ void* SvxCheckListBox::SetEntryData ( sal_uLong nPos, void* pNewData )
 }
 
 
-
 void* SvxCheckListBox::GetEntryData( sal_uLong nPos ) const
 {
     if ( nPos < GetEntryCount() )
@@ -166,7 +155,6 @@ void* SvxCheckListBox::GetEntryData( sal_uLong nPos ) const
     else
         return nullptr;
 }
-
 
 
 void SvxCheckListBox::ToggleCheckButton( SvTreeListEntry* pEntry )
@@ -181,7 +169,6 @@ void SvxCheckListBox::ToggleCheckButton( SvTreeListEntry* pEntry )
 }
 
 
-
 void SvxCheckListBox::MouseButtonDown( const MouseEvent& rMEvt )
 {
     if ( rMEvt.IsLeft() )
@@ -191,7 +178,7 @@ void SvxCheckListBox::MouseButtonDown( const MouseEvent& rMEvt )
 
         if ( pEntry )
         {
-            bool bCheck = ( GetCheckButtonState( pEntry ) == SV_BUTTON_CHECKED );
+            bool bCheck = GetCheckButtonState( pEntry ) == SvButtonState::Checked;
             SvLBoxItem* pItem = GetItem( pEntry, aPnt.X() );
 
             if (pItem && pItem->GetType() == SV_ITEM_ID_LBOXBUTTON)
@@ -211,7 +198,7 @@ void SvxCheckListBox::MouseButtonDown( const MouseEvent& rMEvt )
                 if ( pNewEntry != pEntry )
                     return;
 
-                if ( bCheck != ( GetCheckButtonState( pEntry ) == SV_BUTTON_CHECKED ) )
+                if ( bCheck != ( GetCheckButtonState( pEntry ) == SvButtonState::Checked ) )
                     CheckButtonHdl();
                 return;
             }
@@ -219,7 +206,6 @@ void SvxCheckListBox::MouseButtonDown( const MouseEvent& rMEvt )
     }
     SvTreeListBox::MouseButtonDown( rMEvt );
 }
-
 
 
 void SvxCheckListBox::KeyInput( const KeyEvent& rKEvt )
@@ -232,16 +218,15 @@ void SvxCheckListBox::KeyInput( const KeyEvent& rKEvt )
 
         if ( pEntry )
         {
-            bool bCheck = ( GetCheckButtonState( pEntry ) == SV_BUTTON_CHECKED );
+            bool bCheck = GetCheckButtonState( pEntry ) == SvButtonState::Checked;
             ToggleCheckButton( pEntry );
-            if ( bCheck != ( GetCheckButtonState( pEntry ) == SV_BUTTON_CHECKED ) )
+            if ( bCheck != ( GetCheckButtonState( pEntry ) == SvButtonState::Checked ) )
                 CheckButtonHdl();
         }
     }
     else if ( GetEntryCount() )
         SvTreeListBox::KeyInput( rKEvt );
 }
-
 
 
 SvTreeListEntry* SvxCheckListBox::InsertEntry( const OUString& rText, SvTreeListEntry* pParent, bool bChildrenOnDemand, sal_uIntPtr nPos, void* pUserData, SvLBoxButtonKind eButtonKind )

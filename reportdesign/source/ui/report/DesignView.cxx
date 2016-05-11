@@ -303,8 +303,6 @@ OUString ODesignView::GetInsertObjString() const
 }
 
 
-
-
 void ODesignView::Cut()
 {
     Copy();
@@ -312,12 +310,10 @@ void ODesignView::Cut()
 }
 
 
-
 void ODesignView::Copy()
 {
     m_aScrollWindow->Copy();
 }
-
 
 
 void ODesignView::Paste()
@@ -411,7 +407,7 @@ IMPL_LINK_NOARG_TYPED( ODesignView, SplitHdl, SplitWindow*, void )
     if ( m_pPropWin && m_pPropWin->IsVisible() )
         nMinWidth = m_pPropWin->GetMinOutputSizePixel().Width();
 
-    if ( (aOutputSize.Width() - nTest) >= nMinWidth && nTest > m_aScrollWindow->getMaxMarkerWidth(false) )
+    if ( (aOutputSize.Width() - nTest) >= nMinWidth && nTest > m_aScrollWindow->getMaxMarkerWidth() )
     {
         long nOldSplitPos = getController().getSplitPos();
         (void)nOldSplitPos;
@@ -424,9 +420,9 @@ void ODesignView::SelectAll(const sal_uInt16 _nObjectType)
      m_aScrollWindow->SelectAll(_nObjectType);
 }
 
-void ODesignView::unmarkAllObjects(OSectionView* _pSectionView)
+void ODesignView::unmarkAllObjects()
 {
-    m_aScrollWindow->unmarkAllObjects(_pSectionView);
+    m_aScrollWindow->unmarkAllObjects(nullptr);
 }
 
 void ODesignView::togglePropertyBrowser(bool _bToogleOn)
@@ -585,9 +581,9 @@ void ODesignView::setCurrentPage(const OUString& _sLastActivePage)
         m_pPropWin->setCurrentPage(_sLastActivePage);
 }
 
-void ODesignView::alignMarkedObjects(sal_Int32 _nControlModification,bool _bAlignAtSection, bool bBoundRects)
+void ODesignView::alignMarkedObjects(sal_Int32 _nControlModification,bool _bAlignAtSection)
 {
-    m_aScrollWindow->alignMarkedObjects(_nControlModification, _bAlignAtSection,bBoundRects);
+    m_aScrollWindow->alignMarkedObjects(_nControlModification, _bAlignAtSection);
 }
 
 bool ODesignView::handleKeyEvent(const KeyEvent& _rEvent)
@@ -639,7 +635,7 @@ uno::Any ODesignView::getCurrentlyShownProperty() const
         pSectionWindow->getReportSection().fillControlModelSelection(aSelection);
         if ( !aSelection.empty() )
         {
-            ::std::vector< uno::Reference< uno::XInterface > >::iterator aIter = aSelection.begin();
+            ::std::vector< uno::Reference< uno::XInterface > >::const_iterator aIter = aSelection.begin();
             uno::Sequence< uno::Reference< report::XReportComponent > > aSeq(aSelection.size());
             for(sal_Int32 i = 0; i < aSeq.getLength(); ++i,++aIter)
             {

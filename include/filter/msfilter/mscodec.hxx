@@ -30,7 +30,6 @@
 namespace msfilter {
 
 
-
 /** Encodes and decodes data from protected MSO 95- documents.
  */
 class MSFILTER_DLLPUBLIC MSCodec_Xor95
@@ -173,8 +172,6 @@ public:
 };
 
 
-
-
 /** Encodes and decodes data from protected MSO 97+ documents.
 
     This is a wrapper class around low level cryptographic functions from RTL.
@@ -252,7 +249,7 @@ public:
     bool                InitCipher( sal_uInt32 nCounter );
 
     /** Creates an MD5 digest of salt digest. */
-    bool                CreateSaltDigest(
+    void               CreateSaltDigest(
                             const sal_uInt8 nSaltData[16], sal_uInt8 nSaltDigest[16] );
 
     /** Encodes a block of memory.
@@ -354,7 +351,6 @@ private:
     sal_uInt8           m_pDigestValue[ RTL_DIGEST_LENGTH_MD5 ];
     sal_uInt8           m_pDocId[16];
 };
-
 
 
 } // namespace msfilter

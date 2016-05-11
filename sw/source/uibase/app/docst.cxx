@@ -93,7 +93,7 @@ void  SwDocShell::StateStyleSheet(SfxItemSet& rSet, SwWrtShell* pSh)
 {
     SfxWhichIter aIter(rSet);
     sal_uInt16  nWhich  = aIter.FirstWhich();
-    sal_uInt16 nActualFamily = USHRT_MAX;
+    SfxStyleFamily nActualFamily = (SfxStyleFamily)USHRT_MAX;
 
     SwWrtShell* pShell = pSh ? pSh : GetWrtShell();
     if(!pShell)
@@ -113,7 +113,7 @@ void  SwDocShell::StateStyleSheet(SfxItemSet& rSet, SwWrtShell* pSh)
         SfxUInt16Item* pFamilyItem = dynamic_cast<SfxUInt16Item*>(pItem.get());
         if (pFamilyItem)
         {
-            nActualFamily = static_cast<sal_uInt16>(SfxTemplate::NIdToSfxFamilyId(pFamilyItem->GetValue()));
+            nActualFamily = SfxTemplate::NIdToSfxFamilyId(pFamilyItem->GetValue());
         }
     }
 
@@ -232,15 +232,15 @@ void  SwDocShell::StateStyleSheet(SfxItemSet& rSet, SwWrtShell* pSh)
             {
                 SwEditWin& rEdtWin = pShell->GetView().GetEditWin();
                 SwApplyTemplate* pApply = rEdtWin.GetApplyTemplate();
-                rSet.Put(SfxBoolItem(nWhich, pApply && pApply->eType != 0));
+                rSet.Put(SfxBoolItem(nWhich, pApply && pApply->eType != (SfxStyleFamily)0));
             }
             break;
             case SID_STYLE_UPDATE_BY_EXAMPLE:
                 if( pShell->IsFrameSelected()
-                        ? SFX_STYLE_FAMILY_FRAME != nActualFamily
-                        : ( SFX_STYLE_FAMILY_FRAME == nActualFamily ||
-                            SFX_STYLE_FAMILY_PAGE == nActualFamily ||
-                            (SFX_STYLE_FAMILY_PSEUDO == nActualFamily && !pShell->GetNumRuleAtCurrCursorPos())) )
+                        ? SfxStyleFamily::Frame != nActualFamily
+                        : ( SfxStyleFamily::Frame == nActualFamily ||
+                            SfxStyleFamily::Page == nActualFamily ||
+                            (SfxStyleFamily::Pseudo == nActualFamily && !pShell->GetNumRuleAtCurrCursorPos())) )
                 {
                     rSet.DisableItem( nWhich );
                 }
@@ -248,14 +248,18 @@ void  SwDocShell::StateStyleSheet(SfxItemSet& rSet, SwWrtShell* pSh)
 
             case SID_STYLE_NEW_BY_EXAMPLE:
                 if( (pShell->IsFrameSelected()
-                        ? SFX_STYLE_FAMILY_FRAME != nActualFamily
-                        : SFX_STYLE_FAMILY_FRAME == nActualFamily) ||
-                    (SFX_STYLE_FAMILY_PSEUDO == nActualFamily && !pShell->GetNumRuleAtCurrCursorPos()) )
+                        ? SfxStyleFamily::Frame != nActualFamily
+                        : SfxStyleFamily::Frame == nActualFamily) ||
+                    (SfxStyleFamily::Pseudo == nActualFamily && !pShell->GetNumRuleAtCurrCursorPos()) )
                 {
                     rSet.DisableItem( nWhich );
                 }
                 break;
 
+            case SID_CLASSIFICATION_APPLY:
+                // Just trigger ClassificationCategoriesController::statusChanged().
+                rSet.InvalidateItem(nWhich);
+                break;
             default:
                 OSL_FAIL("Invalid SlotId");
         }
@@ -277,7 +281,7 @@ void SwDocShell::ExecStyleSheet( SfxRequest& rReq )
         if( pArgs && SfxItemState::SET == pArgs->GetItemState( SID_STYLE_FAMILY,
             false, &pItem ))
         {
-            const sal_uInt16 nFamily = static_cast<const SfxUInt16Item*>(pItem)->GetValue();
+            const SfxStyleFamily nFamily = (SfxStyleFamily) static_cast<const SfxUInt16Item*>(pItem)->GetValue();
 
             OUString sName;
             sal_uInt16 nMask = 0;
@@ -331,7 +335,7 @@ void SwDocShell::ExecStyleSheet( SfxRequest& rReq )
                 }
             }
 
-            // intentionally no break
+            SAL_FALLTHROUGH;
 
         case SID_STYLE_EDIT:
         case SID_STYLE_DELETE:
@@ -343,13 +347,13 @@ void SwDocShell::ExecStyleSheet( SfxRequest& rReq )
         case SID_STYLE_NEW_BY_EXAMPLE:
         {
             OUString aParam;
-            sal_uInt16 nFamily = SFX_STYLE_FAMILY_PARA;
+            SfxStyleFamily nFamily = SfxStyleFamily::Para;
             sal_uInt16 nMask = 0;
             SwWrtShell* pActShell = nullptr;
 
             if( !pArgs )
             {
-                nFamily = SFX_STYLE_FAMILY_PARA;
+                nFamily = SfxStyleFamily::Para;
 
                 switch (nSlot)
                 {
@@ -387,25 +391,25 @@ void SwDocShell::ExecStyleSheet( SfxRequest& rReq )
 
                 if( SfxItemState::SET == pArgs->GetItemState(SID_STYLE_FAMILY,
                     false, &pItem ))
-                    nFamily = static_cast<const SfxUInt16Item*>(pItem)->GetValue();
+                    nFamily = (SfxStyleFamily) static_cast<const SfxUInt16Item*>(pItem)->GetValue();
 
                 if( SfxItemState::SET == pArgs->GetItemState(SID_STYLE_FAMILYNAME, false, &pItem ))
                 {
                     OUString aFamily = static_cast<const SfxStringItem*>(pItem)->GetValue();
                     if(aFamily == "CharacterStyles")
-                        nFamily = SFX_STYLE_FAMILY_CHAR;
+                        nFamily = SfxStyleFamily::Char;
                     else
                     if(aFamily == "ParagraphStyles")
-                        nFamily = SFX_STYLE_FAMILY_PARA;
+                        nFamily = SfxStyleFamily::Para;
                     else
                     if(aFamily == "PageStyles")
-                        nFamily = SFX_STYLE_FAMILY_PAGE;
+                        nFamily = SfxStyleFamily::Page;
                     else
                     if(aFamily == "FrameStyles")
-                        nFamily = SFX_STYLE_FAMILY_FRAME;
+                        nFamily = SfxStyleFamily::Frame;
                     else
                     if(aFamily == "NumberingStyles")
-                        nFamily = SFX_STYLE_FAMILY_PSEUDO;
+                        nFamily = SfxStyleFamily::Pseudo;
                 }
 
                 if( SfxItemState::SET == pArgs->GetItemState(SID_STYLE_MASK,
@@ -415,37 +419,38 @@ void SwDocShell::ExecStyleSheet( SfxRequest& rReq )
                     false, &pItem ))
                     pActShell = pShell = static_cast<SwWrtShell*>(static_cast<const SwPtrItem*>(pItem)->GetValue());
 
-                if( nSlot == SID_STYLE_UPDATE_BY_EXAMPLE )
+                if( nSlot == SID_STYLE_UPDATE_BY_EXAMPLE && aParam.isEmpty() )
                 {
                     switch( nFamily )
                     {
-                        case SFX_STYLE_FAMILY_PARA:
+                        case SfxStyleFamily::Para:
                         {
                             SwTextFormatColl* pColl = pShell->GetCurTextFormatColl();
                             if(pColl)
                                 aParam = pColl->GetName();
                         }
                         break;
-                        case SFX_STYLE_FAMILY_FRAME:
+                        case SfxStyleFamily::Frame:
                         {
                             SwFrameFormat* pFrame = m_pWrtShell->GetSelectedFrameFormat();
                             if( pFrame )
                                 aParam = pFrame->GetName();
                         }
                         break;
-                        case SFX_STYLE_FAMILY_CHAR:
+                        case SfxStyleFamily::Char:
                         {
                             SwCharFormat* pChar = m_pWrtShell->GetCurCharFormat();
                             if( pChar )
                                 aParam = pChar->GetName();
                         }
                         break;
-                        case SFX_STYLE_FAMILY_PSEUDO:
+                        case SfxStyleFamily::Pseudo:
                         if(SfxItemState::SET == pArgs->GetItemState(SID_STYLE_UPD_BY_EX_NAME, false, &pItem))
                         {
                             aParam = static_cast<const SfxStringItem*>(pItem)->GetValue();
                         }
                         break;
+                        default: break;
                     }
                     rReq.AppendItem(SfxStringItem(nSlot, aParam));
                 }
@@ -466,16 +471,16 @@ void SwDocShell::ExecStyleSheet( SfxRequest& rReq )
                         break;
                     case SID_STYLE_APPLY:
                         // Shell-switch in ApplyStyles
-                        nRet = ApplyStyles(aParam, nFamily, pActShell, rReq.GetModifier() );
+                        nRet = (sal_uInt16) ApplyStyles(aParam, nFamily, pActShell, rReq.GetModifier() );
                         break;
                     case SID_STYLE_WATERCAN:
-                        nRet = DoWaterCan(aParam, nFamily);
+                        nRet = (sal_uInt16) DoWaterCan(aParam, nFamily);
                         break;
                     case SID_STYLE_UPDATE_BY_EXAMPLE:
-                        nRet = UpdateStyle(aParam, nFamily, pActShell);
+                        nRet = (sal_uInt16) UpdateStyle(aParam, nFamily, pActShell);
                         break;
                     case SID_STYLE_NEW_BY_EXAMPLE:
-                        nRet = MakeByExample(aParam, nFamily, nMask, pActShell );
+                        nRet = (sal_uInt16) MakeByExample(aParam, nFamily, nMask, pActShell );
                         break;
 
                     default:
@@ -500,7 +505,7 @@ class ApplyStyle
 public:
     ApplyStyle(SwDocShell &rDocSh, bool bNew, SfxStyleSheetBase* pStyle,
         sal_uInt16 nRet, rtl::Reference< SwDocStyleSheet > xTmp,
-        sal_uInt16 nFamily, SfxAbstractApplyTabDialog *pDlg,
+        SfxStyleFamily nFamily, SfxAbstractApplyTabDialog *pDlg,
         rtl::Reference< SfxStyleSheetBasePool > xBasePool,
         bool bModified)
         : m_rDocSh(rDocSh)
@@ -526,7 +531,7 @@ private:
     SfxStyleSheetBase* m_pStyle;
     sal_uInt16 m_nRet;
     rtl::Reference< SwDocStyleSheet > m_xTmp;
-    sal_uInt16 m_nFamily;
+    SfxStyleFamily m_nFamily;
     SfxAbstractApplyTabDialog *m_pDlg;
     rtl::Reference< SfxStyleSheetBasePool > m_xBasePool;
     bool m_bModified;
@@ -543,14 +548,14 @@ IMPL_LINK_NOARG_TYPED(ApplyStyle, ApplyHdl, LinkParamNone*, void)
     // newly set the mask only with paragraph-templates
     if( m_bNew )
     {
-        m_nRet = SFX_STYLE_FAMILY_PARA == m_pStyle->GetFamily()
+        m_nRet = SfxStyleFamily::Para == m_pStyle->GetFamily()
                 ? m_xTmp->GetMask()
                 : SFXSTYLEBIT_USERDEF;
     }
     else if( m_pStyle->GetMask() != m_xTmp->GetMask() )
         m_nRet = m_xTmp->GetMask();
 
-    if( SFX_STYLE_FAMILY_PARA == m_nFamily )
+    if( SfxStyleFamily::Para == m_nFamily )
     {
         SfxItemSet aSet( *m_pDlg->GetOutputItemSet() );
         ::SfxToSwPageDescAttr( *pWrtShell, aSet  );
@@ -560,7 +565,7 @@ IMPL_LINK_NOARG_TYPED(ApplyStyle, ApplyHdl, LinkParamNone*, void)
     }
     else
     {
-        if(SFX_STYLE_FAMILY_PAGE == m_nFamily)
+        if(SfxStyleFamily::Page == m_nFamily)
         {
             static const sal_uInt16 aInval[] = {
                 SID_IMAGE_ORIENTATION,
@@ -569,14 +574,14 @@ IMPL_LINK_NOARG_TYPED(ApplyStyle, ApplyHdl, LinkParamNone*, void)
             pView->GetViewFrame()->GetBindings().Invalidate(aInval);
         }
         SfxItemSet aTmpSet( *m_pDlg->GetOutputItemSet() );
-        if( SFX_STYLE_FAMILY_CHAR == m_nFamily )
+        if( SfxStyleFamily::Char == m_nFamily )
         {
             ::ConvertAttrGenToChar(aTmpSet, m_xTmp->GetItemSet(), CONV_ATTR_STD);
         }
 
         m_xTmp->SetItemSet( aTmpSet );
 
-        if( SFX_STYLE_FAMILY_PAGE == m_nFamily && SvtLanguageOptions().IsCTLFontEnabled() )
+        if( SfxStyleFamily::Page == m_nFamily && SvtLanguageOptions().IsCTLFontEnabled() )
         {
             const SfxPoolItem *pItem = nullptr;
             if( aTmpSet.GetItemState( m_rDocSh.GetPool().GetTrueWhich( SID_ATTR_FRAMEDIRECTION, false ) , true, &pItem ) == SfxItemState::SET )
@@ -587,7 +592,7 @@ IMPL_LINK_NOARG_TYPED(ApplyStyle, ApplyHdl, LinkParamNone*, void)
     //UUUU
     if(m_bNew)
     {
-        if(SFX_STYLE_FAMILY_FRAME == m_nFamily || SFX_STYLE_FAMILY_PARA == m_nFamily)
+        if(SfxStyleFamily::Frame == m_nFamily || SfxStyleFamily::Para == m_nFamily)
         {
             // clear FillStyle so that it works as a derived attribute
             SfxItemSet aTmpSet(*m_pDlg->GetOutputItemSet());
@@ -597,7 +602,7 @@ IMPL_LINK_NOARG_TYPED(ApplyStyle, ApplyHdl, LinkParamNone*, void)
         }
     }
 
-    if(SFX_STYLE_FAMILY_PAGE == m_nFamily)
+    if(SfxStyleFamily::Page == m_nFamily)
         pView->InvalidateRulerPos();
 
     if( m_bNew )
@@ -615,7 +620,7 @@ IMPL_LINK_NOARG_TYPED(ApplyStyle, ApplyHdl, LinkParamNone*, void)
 sal_uInt16 SwDocShell::Edit(
     const OUString &rName,
     const OUString &rParent,
-    const sal_uInt16 nFamily,
+    const SfxStyleFamily nFamily,
     sal_uInt16 nMask,
     const bool bNew,
     const OString& sPage,
@@ -650,7 +655,7 @@ sal_uInt16 SwDocShell::Edit(
         SwDocStyleSheet* pDStyle = static_cast<SwDocStyleSheet*>(pStyle);
         switch( nFamily )
         {
-            case SFX_STYLE_FAMILY_PARA:
+            case SfxStyleFamily::Para:
             {
                 if(!rParent.isEmpty())
                 {
@@ -684,7 +689,7 @@ sal_uInt16 SwDocShell::Edit(
                 }
             }
             break;
-            case SFX_STYLE_FAMILY_CHAR:
+            case SfxStyleFamily::Char:
             {
                 if(!rParent.isEmpty())
                 {
@@ -708,7 +713,7 @@ sal_uInt16 SwDocShell::Edit(
                 }
             }
             break;
-            case SFX_STYLE_FAMILY_FRAME :
+            case SfxStyleFamily::Frame :
             {
                 if(!rParent.isEmpty())
                 {
@@ -724,6 +729,7 @@ sal_uInt16 SwDocShell::Edit(
                 }
             }
             break;
+            default: break;
         }
 
         if (!bBasic)
@@ -744,19 +750,19 @@ sal_uInt16 SwDocShell::Edit(
 
     // put dialogues together
     rtl::Reference< SwDocStyleSheet > xTmp( new SwDocStyleSheet( *static_cast<SwDocStyleSheet*>(pStyle) ) );
-    if( SFX_STYLE_FAMILY_PARA == nFamily )
+    if( SfxStyleFamily::Para == nFamily )
     {
         SfxItemSet& rSet = xTmp->GetItemSet();
         ::SwToSfxPageDescAttr( rSet );
         // merge list level indent attributes into the item set if needed
         xTmp->MergeIndentAttrsOfListStyle( rSet );
     }
-    else if( SFX_STYLE_FAMILY_CHAR == nFamily )
+    else if( SfxStyleFamily::Char == nFamily )
     {
         ::ConvertAttrCharToGen(xTmp->GetItemSet(), CONV_ATTR_STD);
     }
 
-    if(SFX_STYLE_FAMILY_PAGE == nFamily || SFX_STYLE_FAMILY_PARA == nFamily)
+    if(SfxStyleFamily::Page == nFamily || SfxStyleFamily::Para == nFamily)
     {
         //UUUU create needed items for XPropertyList entries from the DrawModel so that
         // the Area TabPage can access them
@@ -788,7 +794,7 @@ sal_uInt16 SwDocShell::Edit(
         SwAbstractDialogFactory* pFact = SwAbstractDialogFactory::Create();
         assert( pFact );
         std::unique_ptr<SfxAbstractApplyTabDialog> pDlg(pFact->CreateTemplateDialog(
-                                                    nullptr, *(xTmp.get()), nFamily, sPage,
+                                                    *(xTmp.get()), nFamily, sPage,
                                                     pActShell ? pActShell : m_pWrtShell, bNew));
         assert( pDlg );
         ApplyStyle aApplyStyleHelper(*this, bNew, pStyle, nRet, xTmp, nFamily, pDlg.get(), m_xBasePool, bModified);
@@ -834,20 +840,20 @@ sal_uInt16 SwDocShell::Edit(
         // newly set the mask only with paragraph-templates
         if( bNew )
         {
-            nRet = SFX_STYLE_FAMILY_PARA == pStyle->GetFamily()
+            nRet = SfxStyleFamily::Para == pStyle->GetFamily()
                     ? xTmp->GetMask()
                     : SFXSTYLEBIT_USERDEF;
         }
         else if( pStyle->GetMask() != xTmp->GetMask() )
             nRet = xTmp->GetMask();
 
-        if( SFX_STYLE_FAMILY_PARA == nFamily )
+        if( SfxStyleFamily::Para == nFamily )
             ::SfxToSwPageDescAttr( *GetWrtShell(), xTmp->GetItemSet() );
         else
         {
             ::ConvertAttrGenToChar(xTmp->GetItemSet(), xTmp->GetItemSet(), CONV_ATTR_STD);
         }
-        if(SFX_STYLE_FAMILY_PAGE == nFamily)
+        if(SfxStyleFamily::Page == nFamily)
             m_pView->InvalidateRulerPos();
 
         if( bNew )
@@ -864,9 +870,9 @@ sal_uInt16 SwDocShell::Edit(
     return nRet;
 }
 
-bool SwDocShell::Delete(const OUString &rName, sal_uInt16 nFamily)
+bool SwDocShell::Delete(const OUString &rName, SfxStyleFamily nFamily)
 {
-    SfxStyleSheetBase *pStyle = m_xBasePool->Find(rName, (SfxStyleFamily)nFamily);
+    SfxStyleSheetBase *pStyle = m_xBasePool->Find(rName, nFamily);
 
     if(pStyle)
     {
@@ -881,9 +887,9 @@ bool SwDocShell::Delete(const OUString &rName, sal_uInt16 nFamily)
     return false;
 }
 
-bool SwDocShell::Hide(const OUString &rName, sal_uInt16 nFamily, bool bHidden)
+bool SwDocShell::Hide(const OUString &rName, SfxStyleFamily nFamily, bool bHidden)
 {
-    SfxStyleSheetBase *pStyle = m_xBasePool->Find(rName, (SfxStyleFamily)nFamily);
+    SfxStyleSheetBase *pStyle = m_xBasePool->Find(rName, nFamily);
 
     if(pStyle)
     {
@@ -900,15 +906,15 @@ bool SwDocShell::Hide(const OUString &rName, sal_uInt16 nFamily, bool bHidden)
 }
 
 // apply template
-sal_uInt16 SwDocShell::ApplyStyles(const OUString &rName, sal_uInt16 nFamily,
+SfxStyleFamily SwDocShell::ApplyStyles(const OUString &rName, SfxStyleFamily nFamily,
                                SwWrtShell* pShell, const sal_uInt16 nMode )
 {
-    SwDocStyleSheet* pStyle = static_cast<SwDocStyleSheet*>( m_xBasePool->Find( rName, (SfxStyleFamily) nFamily ) );
+    SwDocStyleSheet* pStyle = static_cast<SwDocStyleSheet*>( m_xBasePool->Find( rName, nFamily ) );
 
     SAL_WARN_IF( !pStyle, "sw.ui", "Style not found" );
 
     if(!pStyle)
-        return 0;
+        return SfxStyleFamily::None;
 
     SwWrtShell *pSh = pShell ? pShell : GetWrtShell();
 
@@ -918,14 +924,14 @@ sal_uInt16 SwDocShell::ApplyStyles(const OUString &rName, sal_uInt16 nFamily,
 
     switch (nFamily)
     {
-        case SFX_STYLE_FAMILY_CHAR:
+        case SfxStyleFamily::Char:
         {
             SwFormatCharFormat aFormat(pStyle->GetCharFormat());
             pSh->SetAttrItem( aFormat, (nMode & KEY_SHIFT) ?
                 SetAttrMode::DONTREPLACE : SetAttrMode::DEFAULT );
             break;
         }
-        case SFX_STYLE_FAMILY_PARA:
+        case SfxStyleFamily::Para:
         {
             // #i62675#
             // clear also list attributes at affected text nodes, if paragraph
@@ -933,18 +939,18 @@ sal_uInt16 SwDocShell::ApplyStyles(const OUString &rName, sal_uInt16 nFamily,
             pSh->SetTextFormatColl( pStyle->GetCollection(), true );
             break;
         }
-        case SFX_STYLE_FAMILY_FRAME:
+        case SfxStyleFamily::Frame:
         {
             if ( pSh->IsFrameSelected() )
                 pSh->SetFrameFormat( pStyle->GetFrameFormat() );
             break;
         }
-        case SFX_STYLE_FAMILY_PAGE:
+        case SfxStyleFamily::Page:
         {
             pSh->SetPageStyle(pStyle->GetPageDesc()->GetName());
             break;
         }
-        case SFX_STYLE_FAMILY_PSEUDO:
+        case SfxStyleFamily::Pseudo:
         {
             // reset indent attribute on applying list style
             // continue list of list style
@@ -962,13 +968,13 @@ sal_uInt16 SwDocShell::ApplyStyles(const OUString &rName, sal_uInt16 nFamily,
 }
 
 // start watering-can
-sal_uInt16 SwDocShell::DoWaterCan(const OUString &rName, sal_uInt16 nFamily)
+SfxStyleFamily SwDocShell::DoWaterCan(const OUString &rName, SfxStyleFamily nFamily)
 {
     assert( GetWrtShell() );
 
     SwEditWin& rEdtWin = m_pView->GetEditWin();
     SwApplyTemplate* pApply = rEdtWin.GetApplyTemplate();
-    bool bWaterCan = !(pApply && pApply->eType != 0);
+    bool bWaterCan = !(pApply && pApply->eType != (SfxStyleFamily)0);
 
     if( rName.isEmpty() )
         bWaterCan = false;
@@ -987,19 +993,19 @@ sal_uInt16 SwDocShell::DoWaterCan(const OUString &rName, sal_uInt16 nFamily)
 
         switch(nFamily)
         {
-            case SFX_STYLE_FAMILY_CHAR:
+            case SfxStyleFamily::Char:
                 aTemplate.aColl.pCharFormat = pStyle->GetCharFormat();
                 break;
-            case SFX_STYLE_FAMILY_PARA:
+            case SfxStyleFamily::Para:
                 aTemplate.aColl.pTextColl = pStyle->GetCollection();
                 break;
-            case SFX_STYLE_FAMILY_FRAME:
+            case SfxStyleFamily::Frame:
                 aTemplate.aColl.pFrameFormat = pStyle->GetFrameFormat();
                 break;
-            case SFX_STYLE_FAMILY_PAGE:
+            case SfxStyleFamily::Page:
                 aTemplate.aColl.pPageDesc = const_cast<SwPageDesc*>(pStyle->GetPageDesc());
                 break;
-            case SFX_STYLE_FAMILY_PSEUDO:
+            case SfxStyleFamily::Pseudo:
                 aTemplate.aColl.pNumRule = const_cast<SwNumRule*>(pStyle->GetNumRule());
                 break;
 
@@ -1008,7 +1014,7 @@ sal_uInt16 SwDocShell::DoWaterCan(const OUString &rName, sal_uInt16 nFamily)
         }
     }
     else
-        aTemplate.eType = 0;
+        aTemplate.eType = (SfxStyleFamily)0;
 
     m_pView->GetEditWin().SetApplyTemplate(aTemplate);
 
@@ -1016,7 +1022,7 @@ sal_uInt16 SwDocShell::DoWaterCan(const OUString &rName, sal_uInt16 nFamily)
 }
 
 // update template
-sal_uInt16 SwDocShell::UpdateStyle(const OUString &rName, sal_uInt16 nFamily, SwWrtShell* pShell)
+SfxStyleFamily SwDocShell::UpdateStyle(const OUString &rName, SfxStyleFamily nFamily, SwWrtShell* pShell)
 {
     SwWrtShell* pCurrWrtShell = pShell ? pShell : GetWrtShell();
     assert( pCurrWrtShell );
@@ -1029,7 +1035,7 @@ sal_uInt16 SwDocShell::UpdateStyle(const OUString &rName, sal_uInt16 nFamily, Sw
 
     switch(nFamily)
     {
-        case SFX_STYLE_FAMILY_PARA:
+        case SfxStyleFamily::Para:
         {
             SwTextFormatColl* pColl = pStyle->GetCollection();
             if(pColl && !pColl->IsDefault())
@@ -1048,7 +1054,7 @@ sal_uInt16 SwDocShell::UpdateStyle(const OUString &rName, sal_uInt16 nFamily, Sw
             }
             break;
         }
-        case SFX_STYLE_FAMILY_FRAME:
+        case SfxStyleFamily::Frame:
         {
             SwFrameFormat* pFrame = pStyle->GetFrameFormat();
             if( pCurrWrtShell->IsFrameSelected() && pFrame && !pFrame->IsDefault() )
@@ -1069,7 +1075,7 @@ sal_uInt16 SwDocShell::UpdateStyle(const OUString &rName, sal_uInt16 nFamily, Sw
             }
         }
         break;
-        case SFX_STYLE_FAMILY_CHAR:
+        case SfxStyleFamily::Char:
         {
             SwCharFormat* pChar = pStyle->GetCharFormat();
             if( pChar && !pChar->IsDefault() )
@@ -1082,7 +1088,7 @@ sal_uInt16 SwDocShell::UpdateStyle(const OUString &rName, sal_uInt16 nFamily, Sw
 
         }
         break;
-        case SFX_STYLE_FAMILY_PSEUDO:
+        case SfxStyleFamily::Pseudo:
         {
             const SwNumRule* pCurRule;
             if( pStyle->GetNumRule() &&
@@ -1096,12 +1102,13 @@ sal_uInt16 SwDocShell::UpdateStyle(const OUString &rName, sal_uInt16 nFamily, Sw
             }
         }
         break;
+        default: break;
     }
     return nFamily;
 }
 
 // NewByExample
-sal_uInt16 SwDocShell::MakeByExample( const OUString &rName, sal_uInt16 nFamily,
+SfxStyleFamily SwDocShell::MakeByExample( const OUString &rName, SfxStyleFamily nFamily,
                                     sal_uInt16 nMask, SwWrtShell* pShell )
 {
     SwWrtShell* pCurrWrtShell = pShell ? pShell : GetWrtShell();
@@ -1122,7 +1129,7 @@ sal_uInt16 SwDocShell::MakeByExample( const OUString &rName, sal_uInt16 nFamily,
 
     switch(nFamily)
     {
-        case  SFX_STYLE_FAMILY_PARA:
+        case  SfxStyleFamily::Para:
         {
             SwTextFormatColl* pColl = pStyle->GetCollection();
             if(pColl && !pColl->IsDefault())
@@ -1162,7 +1169,7 @@ sal_uInt16 SwDocShell::MakeByExample( const OUString &rName, sal_uInt16 nFamily,
             }
         }
         break;
-        case SFX_STYLE_FAMILY_FRAME:
+        case SfxStyleFamily::Frame:
         {
             SwFrameFormat* pFrame = pStyle->GetFrameFormat();
             if(pCurrWrtShell->IsFrameSelected() && pFrame && !pFrame->IsDefault())
@@ -1182,7 +1189,7 @@ sal_uInt16 SwDocShell::MakeByExample( const OUString &rName, sal_uInt16 nFamily,
             }
         }
         break;
-        case SFX_STYLE_FAMILY_CHAR:
+        case SfxStyleFamily::Char:
         {
             SwCharFormat* pChar = pStyle->GetCharFormat();
             if(pChar && !pChar->IsDefault())
@@ -1197,7 +1204,7 @@ sal_uInt16 SwDocShell::MakeByExample( const OUString &rName, sal_uInt16 nFamily,
         }
         break;
 
-        case SFX_STYLE_FAMILY_PAGE:
+        case SfxStyleFamily::Page:
         {
             pCurrWrtShell->StartAllAction();
             size_t nPgDsc = pCurrWrtShell->GetCurPageDesc();
@@ -1222,7 +1229,7 @@ sal_uInt16 SwDocShell::MakeByExample( const OUString &rName, sal_uInt16 nFamily,
         }
         break;
 
-        case SFX_STYLE_FAMILY_PSEUDO:
+        case SfxStyleFamily::Pseudo:
         {
             const SwNumRule* pCurRule = pCurrWrtShell->GetNumRuleAtCurrCursorPos();
 
@@ -1243,6 +1250,7 @@ sal_uInt16 SwDocShell::MakeByExample( const OUString &rName, sal_uInt16 nFamily,
             }
         }
         break;
+        default: break;
     }
     return nFamily;
 }
@@ -1254,7 +1262,7 @@ std::set<Color> SwDocShell::GetDocColors()
 
 void  SwDocShell::LoadStyles( SfxObjectShell& rSource )
 {
-    _LoadStyles(rSource, false);
+    LoadStyles_(rSource, false);
 }
 
 // bPreserveCurrentDocument determines whether SetFixFields() is called
@@ -1262,7 +1270,7 @@ void  SwDocShell::LoadStyles( SfxObjectShell& rSource )
 // is a document the user is working on.
 // Calls of ::LoadStyles() normally use files especially loaded for the purpose
 // of importing styles.
-void SwDocShell::_LoadStyles( SfxObjectShell& rSource, bool bPreserveCurrentDocument )
+void SwDocShell::LoadStyles_( SfxObjectShell& rSource, bool bPreserveCurrentDocument )
 {
 /*  [Description]
 
@@ -1280,7 +1288,7 @@ void SwDocShell::_LoadStyles( SfxObjectShell& rSource, bool bPreserveCurrentDocu
         // of the template, update all the Source's
         // FixFields once.
         if(!bPreserveCurrentDocument)
-            static_cast<SwDocShell&>(rSource).m_pDoc->getIDocumentFieldsAccess().SetFixFields(false, nullptr);
+            static_cast<SwDocShell&>(rSource).m_pDoc->getIDocumentFieldsAccess().SetFixFields(nullptr);
         if (m_pWrtShell)
         {
             // rhbz#818557, fdo#58893: EndAllAction will call SelectShell(),
@@ -1313,7 +1321,7 @@ void SwDocShell::FormatPage(
     const OString& rPageId,
     SwWrtShell& rActShell )
 {
-    Edit( rPage, aEmptyOUStr, SFX_STYLE_FAMILY_PAGE, 0, false, rPageId, &rActShell);
+    Edit( rPage, aEmptyOUStr, SfxStyleFamily::Page, 0, false, rPageId, &rActShell);
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

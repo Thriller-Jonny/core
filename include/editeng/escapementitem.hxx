@@ -68,25 +68,34 @@ public:
     inline void SetEscapement( const SvxEscapement eNew )
     {
         if( SVX_ESCAPEMENT_OFF == eNew )
-            nEsc = 0, nProp = 100;
+        {
+            nEsc = 0;
+            nProp = 100;
+        }
         else
             if( SVX_ESCAPEMENT_SUPERSCRIPT == eNew )
-                nEsc = DFLT_ESC_SUPER, nProp = DFLT_ESC_PROP;
+            {
+                nEsc = DFLT_ESC_SUPER;
+                nProp = DFLT_ESC_PROP;
+            }
             else
-                nEsc = DFLT_ESC_SUB, nProp = DFLT_ESC_PROP;
+            {
+                nEsc = DFLT_ESC_SUB;
+                nProp = DFLT_ESC_PROP;
+            }
     }
     inline SvxEscapement GetEscapement() const { return static_cast< SvxEscapement >( GetEnumValue() ); }
 
     inline short &GetEsc() { return nEsc; }
     inline short GetEsc() const { return nEsc; }
 
-    inline sal_uInt8 &GetProp() { return nProp; }
-    inline sal_uInt8 GetProp() const { return nProp; }
+    inline sal_uInt8 &GetProportionalHeight() { return nProp; }
+    inline sal_uInt8  GetProportionalHeight() const { return nProp; }
 
     inline SvxEscapementItem& operator=(const SvxEscapementItem& rEsc)
         {
             nEsc  = rEsc.GetEsc();
-            nProp = rEsc.GetProp();
+            nProp = rEsc.GetProportionalHeight();
             return *this;
         }
 

@@ -20,8 +20,8 @@
 #undef ENABLE_PANE_RESIZING
 //#define ENABLE_PANE_RESIZING
 
-#include "vcl/svapp.hxx"
-#include "vcl/settings.hxx"
+#include <vcl/svapp.hxx>
+#include <vcl/settings.hxx>
 #include "PresenterWindowManager.hxx"
 #include "PresenterController.hxx"
 #include "PresenterGeometryHelper.hxx"
@@ -368,7 +368,6 @@ void SAL_CALL PresenterWindowManager::disposing (const lang::EventObject& rEvent
         Reference<awt::XWindow> xWindow (rEvent.Source, UNO_QUERY);
     }
 }
-
 
 
 bool PresenterWindowManager::PaintChildren (const awt::PaintEvent& rEvent) const
@@ -784,7 +783,6 @@ void PresenterWindowManager::LayoutNotesMode()
     }
 
 
-
 }
 
 void PresenterWindowManager::LayoutSlideSorterMode()
@@ -1075,7 +1073,7 @@ void PresenterWindowManager::ProvideBackgroundBitmap()
                     aSize.Width = mxParentWindow->getPosSize().Width;
                 else
                     aSize.Width = xBitmap->getSize().Width;
-                mxScaledBackgroundBitmap = xBitmap->getScaledBitmap(aSize, sal_False);
+                mxScaledBackgroundBitmap = xBitmap->getScaledBitmap(aSize, false);
             }
             else
             {

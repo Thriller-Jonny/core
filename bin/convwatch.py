@@ -13,6 +13,9 @@ import subprocess
 import sys
 import time
 import uuid
+import datetime
+import traceback
+import threading
 try:
     from urllib.parse import quote
 except ImportError:
@@ -37,6 +40,9 @@ except ImportError:
 
 ### utilities ###
 
+def log(*args):
+    print(*args, flush=True)
+
 def partition(list, pred):
     left = []
     right = []
@@ -53,7 +59,7 @@ def filelist(dir, suffix):
     if not(dir[-1] == "/"):
         dir += "/"
     files = [dir + f for f in os.listdir(dir)]
-#    print(files)
+#    log(files)
     return [f for f in files
                     if os.path.isfile(f) and os.path.splitext(f)[1] == suffix]
 
@@ -76,19 +82,19 @@ class OfficeConnection:
         if sep != ":":
             raise Exception("soffice parameter does not specify method")
         if method == "path":
-                socket = "pipe,name=pytest" + str(uuid.uuid1())
+                self.socket = "pipe,name=pytest" + str(uuid.uuid1())
                 try:
                     userdir = self.args["--userdir"]
                 except KeyError:
                     raise Exception("'path' method requires --userdir")
                 if not(userdir.startswith("file://")):
                     raise Exception("--userdir must be file URL")
-                self.soffice = self.bootstrap(rest, userdir, socket)
+                self.soffice = self.bootstrap(rest, userdir, self.socket)
         elif method == "connect":
-                socket = rest
+                self.socket = rest
         else:
             raise Exception("unsupported connection method: " + method)
-        self.xContext = self.connect(socket)
+        self.xContext = self.connect(self.socket)
 
     def bootstrap(self, soffice, userdir, socket):
         argv = [ soffice, "--accept=" + socket + ";urp",
@@ -104,32 +110,32 @@ class OfficeConnection:
         xUnoResolver = xLocalContext.ServiceManager.createInstanceWithContext(
                 "com.sun.star.bridge.UnoUrlResolver", xLocalContext)
         url = "uno:" + socket + ";urp;StarOffice.ComponentContext"
-        print("OfficeConnection: connecting to: " + url)
+        log("OfficeConnection: connecting to: " + url)
         while True:
             try:
                 xContext = xUnoResolver.resolve(url)
                 return xContext
 #            except com.sun.star.connection.NoConnectException
             except pyuno.getClass("com.sun.star.connection.NoConnectException"):
-                print("NoConnectException: sleeping...")
+                log("NoConnectException: sleeping...")
                 time.sleep(1)
 
     def tearDown(self):
         if self.soffice:
             if self.xContext:
                 try:
-                    print("tearDown: calling terminate()...")
+                    log("tearDown: calling terminate()...")
                     xMgr = self.xContext.ServiceManager
                     xDesktop = xMgr.createInstanceWithContext(
                             "com.sun.star.frame.Desktop", self.xContext)
                     xDesktop.terminate()
-                    print("...done")
+                    log("...done")
 #                except com.sun.star.lang.DisposedException:
                 except pyuno.getClass("com.sun.star.beans.UnknownPropertyException"):
-                    print("caught UnknownPropertyException")
+                    log("caught UnknownPropertyException")
                     pass # ignore, also means disposed
                 except pyuno.getClass("com.sun.star.lang.DisposedException"):
-                    print("caught DisposedException")
+                    log("caught DisposedException")
                     pass # ignore
             else:
                 self.soffice.terminate()
@@ -141,10 +147,25 @@ class OfficeConnection:
                 raise Exception("Exit status indicates failure: " + str(ret))
 #            return ret
 
+class WatchDog(threading.Thread):
+    def __init__(self, connection):
+        threading.Thread.__init__(self, name="WatchDog " + connection.socket)
+        self.connection = connection
+    def run(self):
+        try:
+            if self.connection.soffice: # not possible for "connect"
+                self.connection.soffice.wait(timeout=120) # 2 minutes?
+        except subprocess.TimeoutExpired:
+            log("WatchDog: TIMEOUT -> killing soffice")
+            self.connection.soffice.terminate() # actually killing oosplash...
+            self.connection.xContext = None
+            log("WatchDog: killed soffice")
+
 class PerTestConnection:
     def __init__(self, args):
         self.args = args
         self.connection = None
+        self.watchdog = None
     def getContext(self):
         return self.connection.xContext
     def setUp(self):
@@ -153,12 +174,15 @@ class PerTestConnection:
         conn = OfficeConnection(self.args)
         conn.setUp()
         self.connection = conn
+        self.watchdog = WatchDog(self.connection)
+        self.watchdog.start()
     def postTest(self):
         if self.connection:
             try:
                 self.connection.tearDown()
             finally:
                 self.connection = None
+                self.watchdog.join()
     def tearDown(self):
         assert(not(self.connection))
 
@@ -204,14 +228,23 @@ def retryInvoke(connection, test):
         except KeyboardInterrupt:
             raise # Ctrl+C should work
         except:
-            print("retryInvoke: caught exception")
+            log("retryInvoke: caught exception")
     raise Exception("FAILED retryInvoke")
 
 def runConnectionTests(connection, invoker, tests):
     try:
         connection.setUp()
+        failed = []
         for test in tests:
-            invoker(connection, test)
+            try:
+                invoker(connection, test)
+            except KeyboardInterrupt:
+                raise # Ctrl+C should work
+            except:
+                failed.append(test.file)
+                estr = traceback.format_exc()
+                log("... FAILED with exception:\n" + estr)
+        return failed
     finally:
         connection.tearDown()
 
@@ -219,7 +252,7 @@ class EventListener(XDocumentEventListener,unohelper.Base):
     def __init__(self):
         self.layoutFinished = False
     def documentEventOccured(self, event):
-#        print(str(event.EventName))
+#        log(str(event.EventName))
         if event.EventName == "OnLayoutFinished":
             self.layoutFinished = True
     def disposing(event):
@@ -249,14 +282,14 @@ def loadFromURL(xContext, url):
         while time_ < 30:
             if xListener.layoutFinished:
                 return xDoc
-            print("delaying...")
+            log("delaying...")
             time_ += 1
             time.sleep(1)
-        print("timeout: no OnLayoutFinished received")
+        log("timeout: no OnLayoutFinished received")
         return xDoc
     except:
         if xDoc:
-            print("CLOSING")
+            log("CLOSING")
             xDoc.close(True)
         raise
     finally:
@@ -269,20 +302,21 @@ def printDoc(xContext, xDoc, url):
     uno.invoke(xDoc, "print", (tuple(props),)) # damn, that's a keyword!
     busy = True
     while busy:
-        print("printing...")
+        log("printing...")
         time.sleep(1)
         prt = xDoc.getPrinter()
         for value in prt:
             if value.Name == "IsBusy":
                 busy = value.Value
-    print("...done printing")
+    log("...done printing")
 
 class LoadPrintFileTest:
     def __init__(self, file, prtsuffix):
         self.file = file
         self.prtsuffix = prtsuffix
     def run(self, xContext):
-        print("Loading document: " + self.file)
+        start = datetime.datetime.now()
+        log("Time: " + str(start) + " Loading document: " + self.file)
         xDoc = None
         try:
             url = "file://" + quote(self.file)
@@ -291,7 +325,8 @@ class LoadPrintFileTest:
         finally:
             if xDoc:
                 xDoc.close(True)
-            print("...done with: " + self.file)
+            end = datetime.datetime.now()
+            log("...done with: " + self.file + " in: " + str(end - start))
 
 def runLoadPrintFileTests(opts, dirs, suffix, reference):
     if reference:
@@ -300,25 +335,32 @@ def runLoadPrintFileTests(opts, dirs, suffix, reference):
         prtsuffix = ".pdf"
     files = getFiles(dirs, suffix)
     tests = (LoadPrintFileTest(file, prtsuffix) for file in files)
-    connection = PersistentConnection(opts)
-#    connection = PerTestConnection(opts)
-    runConnectionTests(connection, simpleInvoke, tests)
+#    connection = PersistentConnection(opts)
+    connection = PerTestConnection(opts)
+    failed = runConnectionTests(connection, simpleInvoke, tests)
+    print("all printed: FAILURES: " + str(len(failed)))
+    for fail in failed:
+        print(fail)
+    return failed
 
 def mkImages(file, resolution):
     argv = [ "gs", "-r" + resolution, "-sOutputFile=" + file + ".%04d.jpeg",
              "-dNOPROMPT", "-dNOPAUSE", "-dBATCH", "-sDEVICE=jpeg", file ]
     ret = subprocess.check_call(argv)
 
-def mkAllImages(dirs, suffix, resolution, reference):
+def mkAllImages(dirs, suffix, resolution, reference, failed):
     if reference:
         prtsuffix = ".pdf.reference"
     else:
         prtsuffix = ".pdf"
     for dir in dirs:
         files = filelist(dir, suffix)
-        print(files)
+        log(files)
         for f in files:
-            mkImages(f + prtsuffix, resolution)
+            if f in failed:
+                log("Skipping failed: " + f)
+            else:
+                mkImages(f + prtsuffix, resolution)
 
 def identify(imagefile):
     argv = ["identify", "-format", "%k", imagefile]
@@ -327,8 +369,8 @@ def identify(imagefile):
     if process.wait() != 0:
         raise Exception("identify failed")
     if result.partition(b"\n")[0] != b"1":
-        print("identify result: " + result.decode('utf-8'))
-        print("DIFFERENCE in " + imagefile)
+        log("identify result: " + result.decode('utf-8'))
+        log("DIFFERENCE in " + imagefile)
 
 def compose(refimagefile, imagefile, diffimagefile):
     argv = [ "composite", "-compose", "difference",
@@ -340,24 +382,24 @@ def compareImages(file):
                    if f.startswith(file)]
 #    refimages = [f for f in filelist(os.path.dirname(file), ".jpeg")
 #                   if f.startswith(file + ".reference")]
-#    print("compareImages: allimages:" + str(allimages))
+#    log("compareImages: allimages:" + str(allimages))
     (refimages, images) = partition(sorted(allimages),
             lambda f: f.startswith(file + ".pdf.reference"))
-#    print("compareImages: images" + str(images))
+#    log("compareImages: images" + str(images))
     for (image, refimage) in zip(images, refimages):
         compose(image, refimage, image + ".diff")
         identify(image + ".diff")
     if (len(images) != len(refimages)):
-        print("DIFFERENT NUMBER OF IMAGES FOR: " + file)
+        log("DIFFERENT NUMBER OF IMAGES FOR: " + file)
 
 def compareAllImages(dirs, suffix):
-    print("compareAllImages...")
+    log("compareAllImages...")
     for dir in dirs:
         files = filelist(dir, suffix)
-#        print("compareAllImages:" + str(files))
+#        log("compareAllImages:" + str(files))
         for f in files:
             compareImages(f)
-    print("...compareAllImages done")
+    log("...compareAllImages done")
 
 
 def parseArgs(argv):
@@ -392,7 +434,7 @@ def checkTools():
         sys.exit(1)
 
 if __name__ == "__main__":
-#    checkTools()
+    checkTools()
     (opts,args) = parseArgs(sys.argv)
     if len(args) == 0:
         usage()
@@ -402,8 +444,8 @@ if __name__ == "__main__":
         sys.exit()
     elif "--soffice" in opts:
         reference = "-r" in opts or "--reference" in opts
-        runLoadPrintFileTests(opts, args, ".odt", reference)
-        mkAllImages(args, ".odt", "200", reference)
+        failed = runLoadPrintFileTests(opts, args, ".odt", reference)
+        mkAllImages(args, ".odt", "200", reference, failed)
         if not(reference):
             compareAllImages(args, ".odt")
     else:

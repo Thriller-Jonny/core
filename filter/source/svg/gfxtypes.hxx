@@ -155,6 +155,7 @@ struct State
         mbIsText(false),
         maFontFamily(), // app-default
         mnFontSize(12),
+        mnParentFontSize(12),
         maFontStyle("normal"),
         maFontVariant("normal"),
         mnFontWeight(400.0),
@@ -193,13 +194,9 @@ struct State
 
     bool                        mbIsText;
     OUString                    maFontFamily;
-    /** Absolute: xx-small=6.94 | x-small=8.33 | small=10 | medium=12 | large=14.4 | x-large=17.28 | xx-large=20.736
 
-        Relative(to parent): larger (enlarge by 1.2)
-                             smaller (shrink by 1.2)
-
-     */
     double                      mnFontSize;
+    double                      mnParentFontSize;
     OUString                    maFontStyle;
     OUString                    maFontVariant;
     double                      mnFontWeight;
@@ -247,6 +244,7 @@ inline bool operator==(const State& rLHS, const State& rRHS )
         rLHS.mbIsText==rRHS.mbIsText &&
         rLHS.maFontFamily==rRHS.maFontFamily &&
         rLHS.mnFontSize==rRHS.mnFontSize &&
+        rLHS.mnParentFontSize==rRHS.mnParentFontSize &&
         rLHS.maFontStyle==rRHS.maFontStyle &&
         rLHS.maFontVariant==rRHS.maFontVariant &&
         rLHS.mnFontWeight==rRHS.mnFontWeight &&
@@ -300,6 +298,7 @@ namespace std
                 ^  size_t(rState.mbIsText)
                 ^  size_t(rState.maFontFamily.hashCode())
                 ^  std::hash<double>()(rState.mnFontSize)
+                ^  std::hash<double>()(rState.mnParentFontSize)
                 ^  size_t(rState.maFontStyle.hashCode())
                 ^  size_t(rState.maFontVariant.hashCode())
                 ^  std::hash<double>()(rState.mnFontWeight)

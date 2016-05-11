@@ -20,7 +20,6 @@
 #define INCLUDED_SW_INC_SHELLIO_HXX
 
 #include <memory>
-#include <boost/noncopyable.hpp>
 
 #include <com/sun/star/uno/Reference.h>
 #include <com/sun/star/embed/XStorage.hpp>
@@ -68,7 +67,7 @@ class SW_DLLPUBLIC SwAsciiOptions
 
 public:
 
-    OUString GetFontName() const { return sFont; }
+    const OUString& GetFontName() const { return sFont; }
     void SetFontName( const OUString& rFont ) { sFont = rFont; }
 
     rtl_TextEncoding GetCharSet() const { return eCharSet; }
@@ -168,7 +167,7 @@ public:
     bool HasGlossaries( const Reader& );
     bool ReadGlossaries( const Reader&, SwTextBlocks&, bool bSaveRelFiles );
 
-    OUString            GetBaseURL() const { return sBaseURL;}
+    const OUString&     GetBaseURL() const { return sBaseURL;}
 
 protected:
     void                SetBaseURL( const OUString& rURL ) { sBaseURL = rURL; }
@@ -252,8 +251,8 @@ public:
     virtual size_t GetSectionList( SfxMedium& rMedium,
                                    std::vector<OUString*>& rStrings ) const;
 
-    tools::SvRef<SotStorage> getSotStorageRef() { return pStg; };
-    void setSotStorageRef(tools::SvRef<SotStorage> pStgRef) { pStg = pStgRef; };
+    const tools::SvRef<SotStorage>& getSotStorageRef() { return pStg; };
+    void setSotStorageRef(const tools::SvRef<SotStorage>& pStgRef) { pStg = pStgRef; };
 
 private:
     virtual sal_uLong Read(SwDoc &, const OUString& rBaseURL, SwPaM &, const OUString &)=0;
@@ -277,7 +276,7 @@ class SW_DLLPUBLIC StgReader : public Reader
 
 public:
     virtual int GetReaderType() override;
-    OUString GetFltName() { return aFltName; }
+    const OUString& GetFltName() { return aFltName; }
     virtual void SetFltName( const OUString& r ) override;
 };
 
@@ -313,7 +312,7 @@ public:
     OUString GetLongName( sal_uInt16 ) const;           // Get long name for index.
 
     bool   Delete( sal_uInt16 );
-    sal_uInt16 Rename( sal_uInt16, const OUString*, const OUString* );
+    void   Rename( sal_uInt16, const OUString*, const OUString* );
     sal_uLong  CopyBlock( SwTextBlocks& rSource, OUString& rSrcShort,
                                     const OUString& rLong );
 
@@ -355,15 +354,17 @@ class IDocumentStylePoolAccess;
 
 class SW_DLLPUBLIC Writer
     : public SvRefBase
-    , private ::boost::noncopyable
 {
     SwAsciiOptions aAscOpts;
     OUString       sBaseURL;
 
-    void _AddFontItem( SfxItemPool& rPool, const SvxFontItem& rFont );
-    void _AddFontItems( SfxItemPool& rPool, sal_uInt16 nWhichId );
+    void AddFontItem( SfxItemPool& rPool, const SvxFontItem& rFont );
+    void AddFontItems_( SfxItemPool& rPool, sal_uInt16 nWhichId );
 
     ::std::unique_ptr<Writer_Impl> m_pImpl;
+
+    Writer(Writer const&) = delete;
+    Writer& operator=(Writer const&) = delete;
 
 protected:
 
@@ -415,10 +416,12 @@ public:
 
     void SetShowProgress( bool bFlag )  { bShowProgress = bFlag; }
 
+    const OUString* GetOrigFileName() const       { return pOrigFileName; }
+
     const SwAsciiOptions& GetAsciiOptions() const { return aAscOpts; }
     void SetAsciiOptions( const SwAsciiOptions& rOpt ) { aAscOpts = rOpt; }
 
-    OUString GetBaseURL() const { return sBaseURL;}
+    const OUString& GetBaseURL() const { return sBaseURL;}
 
     // Look up next bookmark position from bookmark-table.
     sal_Int32 FindPos_Bkmk( const SwPosition& rPos ) const;
@@ -433,6 +436,9 @@ public:
     // Create new PaM at position.
     static SwPaM * NewSwPaM(SwDoc & rDoc,
                             sal_uLong const nStartIdx, sal_uLong const nEndIdx);
+
+    // If applicable copy a local file into internet.
+    bool CopyLocalFileToINet( OUString& rFileNm );
 
     // Stream-specific routines. Do not use in storage-writer!
 
@@ -526,8 +532,7 @@ struct SwReaderWriterEntry
 
 namespace SwReaderWriter
 {
-    /// Return reader based on ReaderWriterEnum.
-    SW_DLLPUBLIC Reader* GetReader( ReaderWriterEnum eReader );
+    SW_DLLPUBLIC Reader* GetRtfReader();
 
     /// Return reader based on the name.
     Reader* GetReader( const OUString& rFltName );

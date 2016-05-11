@@ -110,7 +110,7 @@ void FuSnapLine::DoExecute( SfxRequest& rReq )
         aNewAttr.Put(SfxInt32Item(ATTR_SNAPLINE_Y, aLinePos.Y()));
 
         SdAbstractDialogFactory* pFact = SdAbstractDialogFactory::Create();
-        std::unique_ptr<AbstractSdSnapLineDlg> pDlg(pFact ? pFact->CreateSdSnapLineDlg( nullptr, aNewAttr, mpView ) : nullptr);
+        std::unique_ptr<AbstractSdSnapLineDlg> pDlg(pFact ? pFact->CreateSdSnapLineDlg( aNewAttr, mpView ) : nullptr);
         OSL_ASSERT(pDlg);
         if (!pDlg)
             return;
@@ -156,7 +156,7 @@ void FuSnapLine::DoExecute( SfxRequest& rReq )
                 // delete snap object
                 if ( !bCreateNew )
                     pPV->DeleteHelpLine(nHelpLine);
-                /*fall-through*/
+                SAL_FALLTHROUGH;
             default:
                 return;
         }

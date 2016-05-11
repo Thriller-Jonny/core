@@ -48,9 +48,7 @@ using namespace linguistic;
 using namespace com::sun::star::registry;
 
 
-
-
-// static member intialization
+// static member initialization
 SvtLinguOptions *   LinguOptions::pData = nullptr;
 oslInterlockedCount LinguOptions::nRefCount;
 
@@ -128,7 +126,7 @@ OUString LinguOptions::GetName( sal_Int32 nWID )
 
     OUString aRes;
 
-    sal_Int32 nLen = sizeof (aWID_Name) / sizeof (aWID_Name[0]);
+    sal_Int32 nLen = SAL_N_ELEMENTS(aWID_Name);
     if (0 <= nWID && nWID < nLen && aWID_Name[ nWID ].nWID == nWID)
         aRes = OUString::createFromAscii(aWID_Name[nWID].pPropertyName);
     else
@@ -136,7 +134,6 @@ OUString LinguOptions::GetName( sal_Int32 nWID )
 
     return aRes;
 }
-
 
 
 //! map must be sorted by first entry in alphabetical increasing order.
@@ -244,7 +241,7 @@ void SAL_CALL LinguProps::setPropertyValue(
         if (aOld != rValue && aConfig.SetProperty( pCur->nWID, rValue ))
         {
             PropertyChangeEvent aChgEvt( static_cast<XPropertySet *>(this), rPropertyName,
-                    sal_False, pCur->nWID, aOld, rValue );
+                    false, pCur->nWID, aOld, rValue );
             launchEvent( aChgEvt );
         }
     }
@@ -321,7 +318,7 @@ void SAL_CALL LinguProps::setFastPropertyValue( sal_Int32 nHandle, const Any& rV
     if (aOld != rValue && aConfig.SetProperty( nHandle, rValue ))
     {
         PropertyChangeEvent aChgEvt( static_cast<XPropertySet *>(this),
-                LinguOptions::GetName( nHandle ), sal_False, nHandle, aOld, rValue );
+                LinguOptions::GetName( nHandle ), false, nHandle, aOld, rValue );
         launchEvent( aChgEvt );
     }
 }

@@ -51,8 +51,7 @@ namespace com { namespace sun { namespace star {
 
 typedef std::unordered_map< OUString,
                          css::beans::PropertyValue,
-                         OUStringHash,
-                         ::std::equal_to< OUString > > tAccParaPropValMap;
+                         OUStringHash > tAccParaPropValMap;
 
 class SwAccessibleParagraph :
         public SwClient, // #i108125#
@@ -158,7 +157,7 @@ class SwAccessibleParagraph :
 
     void _correctValues(
             const sal_Int32 nIndex,
-            css::uno::Sequence< css::beans::PropertyValue >& rValues );
+            std::vector< css::beans::PropertyValue >& rValues );
 
 public:
     SwTOXSortTabBase* GetTOXSortTabBase();
@@ -172,10 +171,10 @@ protected:
     // FOCUSABLE(+) and FOCUSED(+)
     virtual void GetStates( ::utl::AccessibleStateSetHelper& rStateSet ) override;
 
-    virtual void _InvalidateContent( bool bVisibleDataFired ) override;
+    virtual void InvalidateContent_( bool bVisibleDataFired ) override;
 
-    virtual void _InvalidateCursorPos() override;
-    virtual void _InvalidateFocus() override;
+    virtual void InvalidateCursorPos_() override;
+    virtual void InvalidateFocus_() override;
 
     virtual ~SwAccessibleParagraph();
 
@@ -237,7 +236,7 @@ protected:
 
 public:
 
-    SwAccessibleParagraph( SwAccessibleMap& rInitMap,
+    SwAccessibleParagraph( SwAccessibleMap* pInitMap,
                            const SwTextFrame& rTextFrame );
 
     inline operator css::accessibility::XAccessibleText *();

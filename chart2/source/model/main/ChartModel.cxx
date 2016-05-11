@@ -38,7 +38,6 @@
 
 #include <com/sun/star/chart/ChartDataRowSource.hpp>
 
-#include <comphelper/InlineContainer.hxx>
 #include <comphelper/processfactory.hxx>
 #include <cppuhelper/supportsservice.hxx>
 
@@ -169,11 +168,11 @@ ChartModel::ChartModel( const ChartModel & rOther )
         m_xOldModelAgg->setDelegator( *this );
 
         Reference< util::XModifyListener > xListener;
-        Reference< chart2::XTitle > xNewTitle = CreateRefClone< Reference< chart2::XTitle > >()( rOther.m_xTitle );
-        Reference< chart2::XDiagram > xNewDiagram = CreateRefClone< Reference< chart2::XDiagram > >()( rOther.m_xDiagram );
-        Reference< beans::XPropertySet > xNewPageBackground = CreateRefClone< Reference< beans::XPropertySet > >()( rOther.m_xPageBackground );
-        Reference< chart2::XChartTypeManager > xChartTypeManager = CreateRefClone< Reference< chart2::XChartTypeManager > >()( rOther.m_xChartTypeManager );
-        Reference< container::XNameAccess > xXMLNamespaceMap = CreateRefClone< Reference< container::XNameAccess > >()( rOther.m_xXMLNamespaceMap );
+        Reference< chart2::XTitle > xNewTitle = CreateRefClone< chart2::XTitle >()( rOther.m_xTitle );
+        Reference< chart2::XDiagram > xNewDiagram = CreateRefClone< chart2::XDiagram >()( rOther.m_xDiagram );
+        Reference< beans::XPropertySet > xNewPageBackground = CreateRefClone< beans::XPropertySet >()( rOther.m_xPageBackground );
+        Reference< chart2::XChartTypeManager > xChartTypeManager = CreateRefClone< chart2::XChartTypeManager >()( rOther.m_xChartTypeManager );
+        Reference< container::XNameAccess > xXMLNamespaceMap = CreateRefClone< container::XNameAccess >()( rOther.m_xXMLNamespaceMap );
 
         {
             MutexGuard aGuard( m_aModelMutex );
@@ -227,10 +226,10 @@ bool ChartModel::impl_isControllerConnected( const uno::Reference< frame::XContr
 {
     try
     {
-        uno::Sequence< uno::Reference<uno::XInterface> > aSeq = m_aControllers.getElements();
-        for( sal_Int32 nN = aSeq.getLength(); nN--; )
+        std::vector< uno::Reference<uno::XInterface> > aSeq = m_aControllers.getElements();
+        for( const auto & r : aSeq )
         {
-            if( aSeq[nN] == xController )
+            if( r == xController )
                 return true;
         }
     }
@@ -362,11 +361,11 @@ sal_Bool SAL_CALL ChartModel::attachResource( const OUString& rURL
 
     LifeTimeGuard aGuard(m_aLifeTimeManager);
     if(!aGuard.startApiCall())
-        return sal_False; //behave passive if already disposed or closed or throw exception @todo?
+        return false; //behave passive if already disposed or closed or throw exception @todo?
     //mutex is acquired
 
     if(!m_aResource.isEmpty())//we have a resource already //@todo? or is setting a new resource allowed?
-        return sal_False;
+        return false;
     m_aResource = rURL;
     m_aMediaDescriptor = rMediaDescriptor;
 
@@ -374,7 +373,7 @@ sal_Bool SAL_CALL ChartModel::attachResource( const OUString& rURL
     //@todo ? evaluate m_aMediaDescriptor;
     //@todo ? ... ??? --> nothing, this method is only for setting information
 
-    return sal_True;
+    return true;
 }
 
 OUString SAL_CALL ChartModel::getURL() throw(uno::RuntimeException, std::exception)
@@ -481,7 +480,7 @@ sal_Bool SAL_CALL ChartModel::hasControllersLocked() throw(uno::RuntimeException
 {
     LifeTimeGuard aGuard(m_aLifeTimeManager);
     if(!aGuard.startApiCall())
-        return sal_False; //behave passive if already disposed or closed or throw exception @todo?
+        return false; //behave passive if already disposed or closed or throw exception @todo?
     return ( m_nControllerLockCount != 0 ) ;
 }
 
@@ -752,7 +751,7 @@ void SAL_CALL ChartModel::setFirstDiagram( const uno::Reference< chart2::XDiagra
     //don't keep the mutex locked while calling out
     ModifyListenerHelper::removeListener( xOldDiagram, xListener );
     ModifyListenerHelper::addListener( xDiagram, xListener );
-    setModified( sal_True );
+    setModified( true );
 }
 
 Reference< chart2::data::XDataSource > ChartModel::impl_createDefaultData()
@@ -766,7 +765,7 @@ Reference< chart2::data::XDataSource > ChartModel::impl_createDefaultData()
             //init internal dataprovider
             {
                 uno::Sequence< uno::Any > aArgs(1);
-                beans::NamedValue aParam( "CreateDefaultData" ,uno::makeAny(sal_True) );
+                beans::NamedValue aParam( "CreateDefaultData" ,uno::makeAny(true) );
                 aArgs[0] <<= aParam;
                 xIni->initialize(aArgs);
             }
@@ -788,7 +787,7 @@ Reference< chart2::data::XDataSource > ChartModel::impl_createDefaultData()
             aArgs[3] = beans::PropertyValue(
                 "DataRowSource",
                 -1,
-                uno::makeAny( ::com::sun::star::chart::ChartDataRowSource_COLUMNS ),
+                uno::makeAny( css::chart::ChartDataRowSource_COLUMNS ),
                 beans::PropertyState_DIRECT_VALUE );
             xDataSource = m_xInternalDataProvider->createDataSource( aArgs );
         }
@@ -811,7 +810,7 @@ void SAL_CALL ChartModel::createInternalDataProvider( sal_Bool bCloneExistingDat
             m_xInternalDataProvider = ChartModelHelper::createInternalDataProvider( Reference<XChartDocument>(), true );
         m_xDataProvider.set( m_xInternalDataProvider );
     }
-    setModified( sal_True );
+    setModified( true );
 }
 
 sal_Bool SAL_CALL ChartModel::hasInternalDataProvider()
@@ -852,7 +851,7 @@ void SAL_CALL ChartModel::attachDataProvider( const uno::Reference< chart2::data
 
         //the numberformatter is kept independent of the data provider!
     }
-    setModified( sal_True );
+    setModified( true );
 }
 
 void SAL_CALL ChartModel::attachNumberFormatsSupplier( const uno::Reference< util::XNumberFormatsSupplier >& xNewSupplier )
@@ -882,7 +881,7 @@ void SAL_CALL ChartModel::attachNumberFormatsSupplier( const uno::Reference< uti
         m_xNumberFormatsSupplier.set( xNewSupplier );
         m_xOwnNumberFormatsSupplier.clear();
     }
-    setModified( sal_True );
+    setModified( true );
 }
 
 void SAL_CALL ChartModel::setArguments( const Sequence< beans::PropertyValue >& aArguments )
@@ -921,7 +920,7 @@ void SAL_CALL ChartModel::setArguments( const Sequence< beans::PropertyValue >& 
         }
         unlockControllers();
     }
-    setModified( sal_True );
+    setModified( true );
 }
 
 Sequence< OUString > SAL_CALL ChartModel::getUsedRangeRepresentations()
@@ -964,7 +963,7 @@ void SAL_CALL ChartModel::setChartTypeManager( const uno::Reference< chart2::XCh
         MutexGuard aGuard( m_aModelMutex );
         m_xChartTypeManager = xNewManager;
     }
-    setModified( sal_True );
+    setModified( true );
 }
 
 uno::Reference< chart2::XChartTypeManager > SAL_CALL ChartModel::getChartTypeManager()
@@ -1011,7 +1010,7 @@ void SAL_CALL ChartModel::setTitleObject( const uno::Reference< chart2::XTitle >
         m_xTitle = xTitle;
         ModifyListenerHelper::addListener( m_xTitle, this );
     }
-    setModified( sal_True );
+    setModified( true );
 }
 
 // ____ XInterface (for old API wrapper) ____
@@ -1066,7 +1065,7 @@ void SAL_CALL ChartModel::setVisualAreaSize( ::sal_Int64 nAspect, const awt::Siz
 
         m_aVisualAreaSize = aSize;
         if( bChanged )
-            setModified( sal_True );
+            setModified( true );
     }
     else
     {
@@ -1206,20 +1205,17 @@ enum eServiceType
 };
 
 typedef ::std::map< OUString, enum eServiceType > tServiceNameMap;
-typedef ::comphelper::MakeMap< OUString, enum eServiceType > tMakeServiceNameMap;
 
 tServiceNameMap & lcl_getStaticServiceNameMap()
 {
-    static tServiceNameMap aServiceNameMap(
-        tMakeServiceNameMap
-        ( "com.sun.star.drawing.DashTable",                    SERVICE_DASH_TABLE )
-        ( "com.sun.star.drawing.GradientTable",                SERVICE_GARDIENT_TABLE )
-        ( "com.sun.star.drawing.HatchTable",                   SERVICE_HATCH_TABLE )
-        ( "com.sun.star.drawing.BitmapTable",                  SERVICE_BITMAP_TABLE )
-        ( "com.sun.star.drawing.TransparencyGradientTable",    SERVICE_TRANSP_GRADIENT_TABLE )
-        ( "com.sun.star.drawing.MarkerTable",                  SERVICE_MARKER_TABLE )
-        ( "com.sun.star.xml.NamespaceMap",                     SERVICE_NAMESPACE_MAP )
-        );
+    static tServiceNameMap aServiceNameMap{
+        {"com.sun.star.drawing.DashTable",                    SERVICE_DASH_TABLE},
+        {"com.sun.star.drawing.GradientTable",                SERVICE_GARDIENT_TABLE},
+        {"com.sun.star.drawing.HatchTable",                   SERVICE_HATCH_TABLE},
+        {"com.sun.star.drawing.BitmapTable",                  SERVICE_BITMAP_TABLE},
+        {"com.sun.star.drawing.TransparencyGradientTable",    SERVICE_TRANSP_GRADIENT_TABLE},
+        {"com.sun.star.drawing.MarkerTable",                  SERVICE_MARKER_TABLE},
+        {"com.sun.star.xml.NamespaceMap",                     SERVICE_NAMESPACE_MAP}};
     return aServiceNameMap;
 }
 }
@@ -1422,7 +1418,7 @@ void ChartModel::getNextTimePoint()
         {
             if(!bSet)
                 xTimeBased->setRange(mnStart, mnEnd);
-            xTimeBased->switchToNext(sal_True);
+            xTimeBased->switchToNext(true);
         }
     }
     bSet = true;

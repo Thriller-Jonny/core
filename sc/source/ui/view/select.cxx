@@ -32,7 +32,7 @@
 #include "markdata.hxx"
 #include <gridwin.hxx>
 
-#if defined WNT
+#if defined(_WIN32)
 #define SC_SELENG_REFMODE_UPDATE_INTERVAL_MIN 65
 #endif
 
@@ -124,7 +124,7 @@ sal_uLong ScViewFunctionSet::CalcUpdateInterval( const Size& rWinSize, const Poi
             nUpdateInterval = nTmp;
     }
 
-#ifdef WNT
+#ifdef _WIN32
     ScTabViewShell* pViewShell = pViewData->GetViewShell();
     bool bRefMode = pViewShell && pViewShell->IsRefInputMode();
     if (bRefMode && nUpdateInterval < SC_SELENG_REFMODE_UPDATE_INTERVAL_MIN)
@@ -352,18 +352,34 @@ bool ScViewFunctionSet::SetCursorAtPoint( const Point& rPointPixel, bool /* bDon
             if ( aEffPos.X() >= aWinSize.Width() )
             {
                 if ( eWhich == SC_SPLIT_TOPLEFT )
-                    pViewData->GetView()->ActivatePart( SC_SPLIT_TOPRIGHT ), bScroll = false, bDidSwitch = true;
+                {
+                    pViewData->GetView()->ActivatePart( SC_SPLIT_TOPRIGHT );
+                    bScroll = false;
+                    bDidSwitch = true;
+                }
                 else if ( eWhich == SC_SPLIT_BOTTOMLEFT )
-                    pViewData->GetView()->ActivatePart( SC_SPLIT_BOTTOMRIGHT ), bScroll = false, bDidSwitch = true;
+                {
+                    pViewData->GetView()->ActivatePart( SC_SPLIT_BOTTOMRIGHT );
+                    bScroll = false;
+                    bDidSwitch = true;
+                }
             }
 
         if ( pViewData->GetVSplitMode() == SC_SPLIT_FIX )
             if ( aEffPos.Y() >= aWinSize.Height() )
             {
                 if ( eWhich == SC_SPLIT_TOPLEFT )
-                    pViewData->GetView()->ActivatePart( SC_SPLIT_BOTTOMLEFT ), bScroll = false, bDidSwitch = true;
+                {
+                    pViewData->GetView()->ActivatePart( SC_SPLIT_BOTTOMLEFT );
+                    bScroll = false;
+                    bDidSwitch = true;
+                }
                 else if ( eWhich == SC_SPLIT_TOPRIGHT )
-                    pViewData->GetView()->ActivatePart( SC_SPLIT_BOTTOMRIGHT ), bScroll = false, bDidSwitch = true;
+                {
+                    pViewData->GetView()->ActivatePart( SC_SPLIT_BOTTOMRIGHT );
+                    bScroll = false;
+                    bDidSwitch = true;
+                }
             }
     }
 
@@ -819,9 +835,15 @@ bool ScHeaderFunctionSet::SetCursorAtPoint( const Point& rPointPixel, bool /* bD
             if ( rPointPixel.X() > aWinSize.Width() )
             {
                 if ( eWhich == SC_SPLIT_TOPLEFT )
-                    pViewData->GetView()->ActivatePart( SC_SPLIT_TOPRIGHT ), bSwitched = true;
+                {
+                    pViewData->GetView()->ActivatePart( SC_SPLIT_TOPRIGHT );
+                    bSwitched = true;
+                }
                 else if ( eWhich == SC_SPLIT_BOTTOMLEFT )
-                    pViewData->GetView()->ActivatePart( SC_SPLIT_BOTTOMRIGHT ), bSwitched = true;
+                {
+                    pViewData->GetView()->ActivatePart( SC_SPLIT_BOTTOMRIGHT );
+                    bSwitched = true;
+                }
             }
         }
     }
@@ -832,9 +854,15 @@ bool ScHeaderFunctionSet::SetCursorAtPoint( const Point& rPointPixel, bool /* bD
             if ( rPointPixel.Y() > aWinSize.Height() )
             {
                 if ( eWhich == SC_SPLIT_TOPLEFT )
-                    pViewData->GetView()->ActivatePart( SC_SPLIT_BOTTOMLEFT ), bSwitched = true;
+                {
+                    pViewData->GetView()->ActivatePart( SC_SPLIT_BOTTOMLEFT );
+                    bSwitched = true;
+                }
                 else if ( eWhich == SC_SPLIT_TOPRIGHT )
-                    pViewData->GetView()->ActivatePart( SC_SPLIT_BOTTOMRIGHT ), bSwitched = true;
+                {
+                    pViewData->GetView()->ActivatePart( SC_SPLIT_BOTTOMRIGHT );
+                    bSwitched = true;
+                }
             }
         }
     }

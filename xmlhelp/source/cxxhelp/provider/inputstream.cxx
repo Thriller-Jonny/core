@@ -28,7 +28,6 @@ using namespace com::sun::star;
 using namespace com::sun::star::ucb;
 
 
-
 XInputStream_impl::XInputStream_impl( const OUString& aUncPath )
     : m_bIsOpen( false ),
       m_aFile( aUncPath )
@@ -73,7 +72,6 @@ XInputStream_impl::release(
 }
 
 
-
 sal_Int32 SAL_CALL
 XInputStream_impl::readBytes(
                  uno::Sequence< sal_Int8 >& aData,
@@ -86,19 +84,20 @@ XInputStream_impl::readBytes(
     if( ! m_bIsOpen )
         throw io::IOException();
 
-    aData.realloc(nBytesToRead);
+    if (aData.getLength() < nBytesToRead)
+        aData.realloc(nBytesToRead);
     //TODO! translate memory exhaustion (if it were detectable...) into
     // io::BufferSizeExceededException
 
-    sal_uInt64 nrc;
-    m_aFile.read( aData.getArray(),sal_uInt64(nBytesToRead),nrc );
+    sal_uInt64 nBytesRead;
+    m_aFile.read( aData.getArray(), sal_uInt64(nBytesToRead), nBytesRead );
 
     // Shrink aData in case we read less than nBytesToRead (XInputStream
     // documentation does not tell whether this is required, and I do not know
     // if any code relies on this, so be conservative---SB):
-    if (nrc != sal::static_int_cast<sal_uInt64>( nBytesToRead) )
-        aData.realloc(sal_Int32(nrc));
-    return ( sal_Int32 ) nrc;
+    if (nBytesRead != sal::static_int_cast<sal_uInt64>(nBytesToRead) )
+        aData.realloc(sal_Int32(nBytesRead));
+    return ( sal_Int32 ) nBytesRead;
 }
 
 sal_Int32 SAL_CALL

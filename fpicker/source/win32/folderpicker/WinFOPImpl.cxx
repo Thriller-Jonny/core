@@ -19,7 +19,6 @@
 
 #include "WinFOPImpl.hxx"
 #include <osl/diagnose.h>
-#include <com/sun/star/lang/EventObject.hpp>
 
 #include <com/sun/star/ui/dialogs/ExecutableDialogResults.hpp>
 #include "FopEvtDisp.hxx"
@@ -32,13 +31,9 @@
 
 using com::sun::star::uno::RuntimeException;
 using com::sun::star::lang::IllegalArgumentException;
-using com::sun::star::lang::EventObject;
 
 using namespace com::sun::star::ui::dialogs;
 using osl::FileBase;
-
-
-
 
 
 const OUString BACKSLASH( "\\" );
@@ -113,9 +108,6 @@ OUString CWinFolderPickerImpl::getDisplayDirectory( )
 }
 
 
-
-
-
 OUString SAL_CALL CWinFolderPickerImpl::getDirectory( ) throw( RuntimeException )
 {
     OUString sysDir = CMtaFolderPicker::getDirectory( );
@@ -128,18 +120,12 @@ OUString SAL_CALL CWinFolderPickerImpl::getDirectory( ) throw( RuntimeException 
 }
 
 
-
-
-
 sal_Int16 SAL_CALL CWinFolderPickerImpl::execute( ) throw( RuntimeException )
 {
     return m_nLastDlgResult = CMtaFolderPicker::browseForFolder( ) ?
         css::ui::dialogs::ExecutableDialogResults::OK :
         css::ui::dialogs::ExecutableDialogResults::CANCEL;
 }
-
-
-
 
 
 void CWinFolderPickerImpl::onSelChanged( const OUString& aNewPath )

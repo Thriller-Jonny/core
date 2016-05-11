@@ -31,8 +31,6 @@
 #include <basegfx/matrix/b2dhommatrix.hxx>
 #include <canvas/canvastools.hxx>
 
-#include <boost/noncopyable.hpp>
-
 #include "cachedprimitivebase.hxx"
 #include "polypolyaction.hxx"
 #include "outdevstate.hxx"
@@ -229,8 +227,6 @@ namespace cppcanvas
             }
 
 
-
-
             class TexturedPolyPolyAction : public CachedPrimitiveBase
             {
             public:
@@ -342,7 +338,6 @@ namespace cppcanvas
                 // line segments, when subsets are requested.
                 return 1;
             }
-
 
 
             class StrokedPolyPolyAction : public CachedPrimitiveBase

@@ -69,7 +69,6 @@ namespace svt
     using namespace ::comphelper;
     using namespace ::utl;
 
-    typedef std::vector<OUString> StringArray;
     typedef std::set<OUString> StringBag;
     typedef std::map<OUString, OUString> MapString2String;
 
@@ -125,14 +124,12 @@ namespace svt
     class AssigmentTransientData : public IAssigmentData
     {
     protected:
-        Reference< XDataSource >    m_xDataSource;
         OUString             m_sDSName;
         OUString             m_sTableName;
-        MapString2String            m_aAliases;
+        MapString2String     m_aAliases;
 
-public:
+    public:
         AssigmentTransientData(
-            const Reference< XDataSource >& _rxDataSource,
             const OUString& _rDataSourceName,
             const OUString& _rTableName,
             const Sequence< AliasProgrammaticPair >& _rFields
@@ -151,11 +148,10 @@ public:
     };
 
 
-    AssigmentTransientData::AssigmentTransientData( const Reference< XDataSource >& _rxDataSource,
+    AssigmentTransientData::AssigmentTransientData(
             const OUString& _rDataSourceName, const OUString& _rTableName,
             const Sequence< AliasProgrammaticPair >& _rFields )
-        :m_xDataSource( _rxDataSource )
-        ,m_sDSName( _rDataSourceName )
+        :m_sDSName( _rDataSourceName )
         ,m_sTableName( _rTableName )
     {
         // fill our aliases structure
@@ -458,11 +454,11 @@ void AssignmentPersistentData::ImplCommit()
         bool        bWorkingPersistent : 1;
 
         /// the strings to use as labels for the field selection listboxes
-        StringArray     aFieldLabels;
+        std::vector<OUString>     aFieldLabels;
         // the current field assignment
-        StringArray     aFieldAssignments;
+        std::vector<OUString>     aFieldAssignments;
         /// the logical field names
-        StringArray     aLogicalFieldNames;
+        std::vector<OUString>     aLogicalFieldNames;
 
         IAssigmentData* pConfigData;
 
@@ -485,7 +481,7 @@ void AssignmentPersistentData::ImplCommit()
             ,nLastVisibleListIndex(0)
             ,bOddFieldNumber(false)
             ,bWorkingPersistent( false )
-            ,pConfigData( new AssigmentTransientData( m_xTransientDataSource, _rDataSourceName, _rTableName, _rFields ) )
+            ,pConfigData( new AssigmentTransientData( _rDataSourceName, _rTableName, _rFields ) )
         {
             memset(pFieldLabels, 0, sizeof(pFieldLabels));
             memset(pFields, 0, sizeof(pFields));
@@ -503,7 +499,6 @@ void AssignmentPersistentData::ImplCommit()
 
 
     // = AddressBookSourceDialog
-
 
 
     AddressBookSourceDialog::AddressBookSourceDialog(vcl::Window* _pParent,
@@ -595,7 +590,7 @@ void AssignmentPersistentData::ImplCommit()
 
         long nLabelWidth = 0;
         long nListBoxWidth = m_pImpl->pFields[0]->approximate_char_width() * 20;
-        for (StringArray::const_iterator aI = m_pImpl->aFieldLabels.begin(), aEnd = m_pImpl->aFieldLabels.end(); aI != aEnd; ++aI)
+        for (auto aI = m_pImpl->aFieldLabels.cbegin(), aEnd = m_pImpl->aFieldLabels.cend(); aI != aEnd; ++aI)
         {
             nLabelWidth = std::max(nLabelWidth, FixedText::getTextDimensions(m_pImpl->pFieldLabels[0], *aI, 0x7FFFFFFF).Width());
         }
@@ -680,8 +675,8 @@ void AssignmentPersistentData::ImplCommit()
         AliasProgrammaticPair* pPair = _rMapping.getArray();
 
         OUString sCurrent;
-        for (   StringArray::const_iterator aProgrammatic = m_pImpl->aLogicalFieldNames.begin();
-                aProgrammatic != m_pImpl->aLogicalFieldNames.end();
+        for (   auto aProgrammatic = m_pImpl->aLogicalFieldNames.cbegin();
+                aProgrammatic != m_pImpl->aLogicalFieldNames.cend();
                 ++aProgrammatic
             )
         {
@@ -717,8 +712,8 @@ void AssignmentPersistentData::ImplCommit()
         // AddressBookSourceDialog::loadConfiguration: inconsistence between field names and field assignments!
         assert(m_pImpl->aLogicalFieldNames.size() == m_pImpl->aFieldAssignments.size());
 
-        StringArray::const_iterator aLogical = m_pImpl->aLogicalFieldNames.begin();
-        StringArray::iterator aAssignment = m_pImpl->aFieldAssignments.begin();
+        auto aLogical = m_pImpl->aLogicalFieldNames.cbegin();
+        auto aAssignment = m_pImpl->aFieldAssignments.begin();
         for (   ;
                 aLogical != m_pImpl->aLogicalFieldNames.end();
                 ++aLogical, ++aAssignment
@@ -967,7 +962,7 @@ void AssignmentPersistentData::ImplCommit()
         }
 
         // adjust m_pImpl->aFieldAssignments
-        for (   StringArray::iterator aAdjust = m_pImpl->aFieldAssignments.begin();
+        for (   auto aAdjust = m_pImpl->aFieldAssignments.begin();
                 aAdjust != m_pImpl->aFieldAssignments.end();
                 ++aAdjust
             )
@@ -1004,8 +999,8 @@ void AssignmentPersistentData::ImplCommit()
         // for the new texts
         VclPtr<FixedText>* pLeftLabelControl = m_pImpl->pFieldLabels;
         VclPtr<FixedText>* pRightLabelControl = pLeftLabelControl + 1;
-        StringArray::const_iterator pLeftColumnLabel = m_pImpl->aFieldLabels.begin() + 2 * _nPos;
-        StringArray::const_iterator pRightColumnLabel = pLeftColumnLabel + 1;
+        auto pLeftColumnLabel = m_pImpl->aFieldLabels.cbegin() + 2 * _nPos;
+        auto pRightColumnLabel = pLeftColumnLabel + 1;
 
         // for the focus movement and the selection scroll
         VclPtr<ListBox>* pLeftListControl = m_pImpl->pFields;
@@ -1016,8 +1011,8 @@ void AssignmentPersistentData::ImplCommit()
         sal_Int32 nOldFocusColumn = 0;
 
         // for the selection scroll
-        StringArray::const_iterator pLeftAssignment = m_pImpl->aFieldAssignments.begin() + 2 * _nPos;
-        StringArray::const_iterator pRightAssignment = pLeftAssignment + 1;
+        auto pLeftAssignment = m_pImpl->aFieldAssignments.cbegin() + 2 * _nPos;
+        auto pRightAssignment = pLeftAssignment + 1;
 
         m_pImpl->nLastVisibleListIndex = -1;
         // loop
@@ -1157,8 +1152,8 @@ void AssignmentPersistentData::ImplCommit()
         assert(m_pImpl->aLogicalFieldNames.size() == m_pImpl->aFieldAssignments.size());
 
         // set the field assignments
-        StringArray::const_iterator aLogical = m_pImpl->aLogicalFieldNames.begin();
-        StringArray::const_iterator aAssignment = m_pImpl->aFieldAssignments.begin();
+        auto aLogical = m_pImpl->aLogicalFieldNames.cbegin();
+        auto aAssignment = m_pImpl->aFieldAssignments.cbegin();
         for (   ;
                 aLogical != m_pImpl->aLogicalFieldNames.end();
                 ++aLogical, ++aAssignment

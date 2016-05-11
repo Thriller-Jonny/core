@@ -21,6 +21,7 @@
 #define INCLUDED_SC_SOURCE_FILTER_INC_AUTOFILTERBUFFER_HXX
 
 #include <com/sun/star/table/CellRangeAddress.hpp>
+#include <oox/helper/helper.hxx>
 #include <oox/helper/refvector.hxx>
 #include "workbookhelper.hxx"
 
@@ -82,9 +83,8 @@ public:
     virtual ApiFilterSettings finalizeImport( sal_Int32 nMaxCount ) override;
 
 private:
-    typedef ::std::vector< OUString > FilterValueVector;
 
-    FilterValueVector   maValues;
+    std::vector< OUString > maValues;
     sal_Int32           mnCalendarType;
     bool                mbShowBlank;
 };
@@ -142,7 +142,7 @@ public:
     virtual ApiFilterSettings finalizeImport( sal_Int32 nMaxCount ) override;
 
 private:
-    /** Appends the passed filter criteriom, if it contains valid settings. */
+    /** Appends the passed filter criterion, if it contains valid settings. */
     void                appendCriterion( const FilterCriterionModel& rCriterion );
 
 private:

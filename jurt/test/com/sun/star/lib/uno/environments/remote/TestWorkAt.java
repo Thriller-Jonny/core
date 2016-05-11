@@ -1,3 +1,4 @@
+/* -*- Mode: Java; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /*
  * This file is part of the LibreOffice project.
  *
@@ -34,10 +35,7 @@ class TestWorkAt implements TestIWorkAt {
     int _sync_counter;
     int _async_counter;
 
-    private Thread _sync_thread;
-    private Thread _async_thread;
-
-    private boolean _passedAync = true;
+    private boolean _passedAsync = true;
     boolean _notified = false;
 
     public synchronized void syncCall() throws Throwable {
@@ -47,19 +45,13 @@ class TestWorkAt implements TestIWorkAt {
         // defer the check until passedAsyncTest and assert here
         assertEquals(MESSAGES, _async_counter);
         if(_async_counter != MESSAGES)
-            _passedAync = false;
+            _passedAsync = false;
 
-        if(_sync_thread == null)
-            _sync_thread = Thread.currentThread();
-
-        if(DEBUG) System.err.println("syncCall:" + _sync_counter + " " + _passedAync + " " + Thread.currentThread());
+        if(DEBUG) System.err.println("syncCall:" + _sync_counter + " " + _passedAsync + " " + Thread.currentThread());
     }
 
     public synchronized void asyncCall() throws Throwable {
         ++ _async_counter;
-
-        if(_async_thread == null)
-            _async_thread = Thread.currentThread();
 
         if(DEBUG) System.err.println("asyncCall:" + _async_counter + " " + Thread.currentThread());
     }
@@ -79,9 +71,11 @@ class TestWorkAt implements TestIWorkAt {
         _notified = true;
     }
 
-    public boolean passedAsyncTest() {
+    public synchronized boolean passedAsyncTest() {
         assertEquals(MESSAGES, _sync_counter);
-        assertTrue(_passedAync);
-        return  _passedAync && (_sync_counter == MESSAGES);
+        assertTrue(_passedAsync);
+        return  _passedAsync && (_sync_counter == MESSAGES);
     }
 }
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

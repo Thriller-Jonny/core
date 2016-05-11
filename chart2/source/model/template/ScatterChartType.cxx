@@ -37,8 +37,6 @@ using namespace ::com::sun::star;
 using ::com::sun::star::beans::Property;
 using ::com::sun::star::uno::Sequence;
 using ::com::sun::star::uno::Reference;
-using ::com::sun::star::uno::Any;
-using ::osl::MutexGuard;
 
 namespace
 {
@@ -109,7 +107,7 @@ struct StaticScatterChartTypeInfoHelper_Initializer
 private:
     static Sequence< Property > lcl_GetPropertySequence()
     {
-        ::std::vector< ::com::sun::star::beans::Property > aProperties;
+        ::std::vector< css::beans::Property > aProperties;
         lcl_AddPropertiesToVector( aProperties );
 
         ::std::sort( aProperties.begin(), aProperties.end(),
@@ -183,8 +181,7 @@ Reference< chart2::XCoordinateSystem > SAL_CALL
            uno::RuntimeException, std::exception)
 {
     Reference< chart2::XCoordinateSystem > xResult(
-        new CartesianCoordinateSystem(
-            GetComponentContext(), DimensionCount, /* bSwapXAndYAxis */ false ));
+        new CartesianCoordinateSystem( GetComponentContext(), DimensionCount ));
 
     for( sal_Int32 i=0; i<DimensionCount; ++i )
     {

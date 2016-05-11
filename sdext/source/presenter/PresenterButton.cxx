@@ -17,7 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include "vcl/svapp.hxx"
+#include <vcl/svapp.hxx>
 #include "PresenterButton.hxx"
 #include "PresenterCanvasHelper.hxx"
 #include "PresenterController.hxx"
@@ -121,10 +121,10 @@ PresenterButton::PresenterButton (
 
         if (mxPresenterHelper.is())
             mxWindow = mxPresenterHelper->createWindow(rxParentWindow,
-                sal_False,
-                sal_False,
-                sal_False,
-                sal_False);
+                false,
+                false,
+                false,
+                false);
 
         // Make the background transparent.
         Reference<awt::XWindowPeer> xPeer (mxWindow, UNO_QUERY_THROW);
@@ -133,7 +133,7 @@ PresenterButton::PresenterButton (
             xPeer->setBackground(0xff000000);
         }
 
-        mxWindow->setVisible(sal_True);
+        mxWindow->setVisible(true);
         mxWindow->addWindowListener(this);
         mxWindow->addPaintListener(this);
         mxWindow->addMouseListener(this);
@@ -288,7 +288,7 @@ void SAL_CALL PresenterButton::windowPaint (const css::awt::PaintEvent& rEvent)
 
         Reference<rendering::XSpriteCanvas> xSpriteCanvas (mxCanvas, UNO_QUERY);
         if (xSpriteCanvas.is())
-            xSpriteCanvas->updateScreen(sal_False);
+            xSpriteCanvas->updateScreen(false);
     }
 }
 
@@ -360,7 +360,6 @@ void SAL_CALL PresenterButton::disposing (const css::lang::EventObject& rEvent)
     if (rEvent.Source == mxWindow)
         mxWindow = nullptr;
 }
-
 
 
 css::geometry::IntegerSize2D PresenterButton::CalculateButtonSize()

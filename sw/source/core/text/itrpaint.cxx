@@ -37,6 +37,7 @@
 #include <tgrditem.hxx>
 
 #include <EnhancedPDFExportHelper.hxx>
+#include <IDocumentSettingAccess.hxx>
 
 #include "flyfrms.hxx"
 #include "viewsh.hxx"
@@ -60,7 +61,7 @@
 // in SwTextPainter::CheckSpecialUnderline
 bool IsUnderlineBreak( const SwLinePortion& rPor, const SwFont& rFnt )
 {
-    return UNDERLINE_NONE == rFnt.GetUnderline() ||
+    return LINESTYLE_NONE == rFnt.GetUnderline() ||
            rPor.IsFlyPortion() || rPor.IsFlyCntPortion() ||
            rPor.IsBreakPortion() || rPor.IsMarginPortion() ||
            rPor.IsHolePortion() ||
@@ -161,8 +162,24 @@ void SwTextPainter::DrawTextLine( const SwRect &rPaint, SwSaveClip &rClip,
     SwLinePortion *pPor = bEndPor ? m_pCurr->GetFirstPortion() : CalcPaintOfst( rPaint );
 
     // Optimization!
-    const SwTwips nMaxRight = std::min( rPaint.Right(), Right() );
+    SwTwips nMaxRight = std::min( rPaint.Right(), Right() );
     const SwTwips nTmpLeft = GetInfo().X();
+    //compatibility setting: allow tabstop text to exceed right margin
+    if( GetInfo().GetTextFrame()->GetTextNode()->getIDocumentSettingAccess()->get(DocumentSettingId::TAB_OVER_MARGIN) )
+    {
+        SwLinePortion* pPorIter = pPor;
+        while( pPorIter )
+        {
+            if( pPorIter->IsTabRightPortion() )
+            {
+               const SwTabRightPortion *pRightTabPor = static_cast<SwTabRightPortion*>(pPorIter);
+               const SwTwips nTabPos = nTmpLeft + pRightTabPor->GetTabPos();
+                if( nMaxRight < nTabPos )
+                    nMaxRight = std::min( rPaint.Right(), nTabPos );
+            }
+            pPorIter = pPorIter->GetPortion();
+        }
+    }
     if( !bEndPor && nTmpLeft >= nMaxRight )
         return;
 
@@ -485,7 +502,7 @@ void SwTextPainter::CheckSpecialUnderline( const SwLinePortion* pPor,
         return;
     //Bug 120769(End)
 
-    OSL_ENSURE( GetFnt() && UNDERLINE_NONE != GetFnt()->GetUnderline(),
+    OSL_ENSURE( GetFnt() && LINESTYLE_NONE != GetFnt()->GetUnderline(),
             "CheckSpecialUnderline without underlined font" );
     MultiSelection aUnderMulti( Range( 0, GetInfo().GetText().getLength() ) );
     const SwFont* pParaFnt = GetAttrHandler().GetFont();
@@ -608,7 +625,7 @@ void SwTextPainter::CheckSpecialUnderline( const SwLinePortion* pPor,
             pUnderlineFnt = new SwFont( *GetInfo().GetFont() );
 
             // font height
-            const sal_uInt8 nActual = pUnderlineFnt->GetActual();
+            const SwFontScript nActual = pUnderlineFnt->GetActual();
             pUnderlineFnt->SetSize( Size( pUnderlineFnt->GetSize( nActual ).Width(),
                                           nNewFontHeight ), nActual );
 
@@ -635,7 +652,7 @@ void SwTextPainter::CheckSpecialUnderline( const SwLinePortion* pPor,
         pUnderlineFnt->SetProportion( 100 );
         pUnderlineFnt->SetEscapement( 0 );
         pUnderlineFnt->SetStrikeout( STRIKEOUT_NONE );
-        pUnderlineFnt->SetOverline( UNDERLINE_NONE );
+        pUnderlineFnt->SetOverline( LINESTYLE_NONE );
         const Color aFillColor( COL_TRANSPARENT );
         pUnderlineFnt->SetFillColor( aFillColor );
 

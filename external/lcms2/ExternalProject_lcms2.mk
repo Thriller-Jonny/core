@@ -19,6 +19,7 @@ $(call gb_ExternalProject_get_state_target,lcms2,build):
 	$(call gb_ExternalProject_run,build,\
 		$(if $(filter 140,$(VCVER)),$(DEVENV) /Upgrade lcms2_DLL.vcxproj,echo up-to-date) && \
 		MSBuild.exe lcms2_DLL.vcxproj \
+			$(if $(filter 140,$(VCVER)),/p:PlatformToolset=v140,/p:PlatformToolset=v120) \
 			/p:Configuration=$(if $(MSVC_USE_DEBUG_RUNTIME),Debug,Release) \
 			/p:Platform=$(if $(filter INTEL,$(CPUNAME)),Win32,x64) /p:TargetName=lcms2 \
 	,Projects/VC2013/lcms2_DLL)
@@ -26,9 +27,10 @@ else
 $(call gb_ExternalProject_get_state_target,lcms2,build):
 	$(call gb_ExternalProject_run,build,\
 		./configure --without-jpeg --without-tiff --with-pic \
-			$(if $(CROSS_COMPILING),--build=$(BUILD_PLATFORM) --host=$(HOST_PLATFORM)) \
+			$(if $(CROSS_COMPILING),--build=$(BUILD_PLATFORM) --host=$(HOST_PLATFORM) \
+			$(if $(filter INTEL ARM,$(CPUNAME)),ac_cv_c_bigendian=no)) \
 			CPPFLAGS=" $(SOLARINC)" \
-			CFLAGS='$(if $(debug),$(gb_DEBUG_CFLAGS),$(gb_COMPILEROPTFLAGS))' \
+			CFLAGS='$(CFLAGS) $(if $(debug),$(gb_DEBUG_CFLAGS),$(gb_COMPILEROPTFLAGS))' \
 			$(if $(filter-out WNTGCC,$(OS)$(COM)),,CPPFLAGS=" -DCMS_DLL_BUILD") \
 			$(if $(DISABLE_DYNLOADING), \
 				--enable-static --disable-shared \

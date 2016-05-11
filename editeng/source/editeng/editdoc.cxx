@@ -71,8 +71,6 @@
 using namespace ::com::sun::star;
 
 
-
-
 sal_uInt16 GetScriptItemId( sal_uInt16 nItemId, SvtScriptType nScriptType )
 {
     sal_uInt16 nId = nItemId;
@@ -160,61 +158,61 @@ bool IsScriptItemValid( sal_uInt16 nItemId, short nScriptType )
 }
 
 const SfxItemInfo aItemInfos[EDITITEMCOUNT] = {
-        { SID_ATTR_FRAMEDIRECTION, SfxItemPoolFlags::POOLABLE },         // EE_PARA_WRITINGDIR
-        { 0, SfxItemPoolFlags::POOLABLE },                               // EE_PARA_XMLATTRIBS
-        { SID_ATTR_PARA_HANGPUNCTUATION, SfxItemPoolFlags::POOLABLE },   // EE_PARA_HANGINGPUNCTUATION
-        { SID_ATTR_PARA_FORBIDDEN_RULES, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_PARA_SCRIPTSPACE, SfxItemPoolFlags::POOLABLE },       // EE_PARA_ASIANCJKSPACING
-        { SID_ATTR_NUMBERING_RULE, SfxItemPoolFlags::POOLABLE },         // EE_PARA_NUMBULL
-        { 0, SfxItemPoolFlags::POOLABLE },                               // EE_PARA_HYPHENATE
-        { 0, SfxItemPoolFlags::POOLABLE },                               // EE_PARA_BULLETSTATE
-        { 0, SfxItemPoolFlags::POOLABLE },                               // EE_PARA_OUTLLRSPACE
-        { SID_ATTR_PARA_OUTLLEVEL, SfxItemPoolFlags::POOLABLE },         // EE_PARA_OUTLLEVEL
-        { SID_ATTR_PARA_BULLET, SfxItemPoolFlags::POOLABLE },            // EE_PARA_BULLET
-        { SID_ATTR_LRSPACE, SfxItemPoolFlags::POOLABLE },                // EE_PARA_LRSPACE
-        { SID_ATTR_ULSPACE, SfxItemPoolFlags::POOLABLE },                // EE_PARA_ULSPACE
-        { SID_ATTR_PARA_LINESPACE, SfxItemPoolFlags::POOLABLE },         // EE_PARA_SBL
-        { SID_ATTR_PARA_ADJUST, SfxItemPoolFlags::POOLABLE },            // EE_PARA_JUST
-        { SID_ATTR_TABSTOP, SfxItemPoolFlags::POOLABLE },                // EE_PARA_TABS
-        { SID_ATTR_ALIGN_HOR_JUSTIFY_METHOD, SfxItemPoolFlags::POOLABLE }, // EE_PARA_JUST_METHOD
-        { SID_ATTR_ALIGN_VER_JUSTIFY, SfxItemPoolFlags::POOLABLE },      // EE_PARA_VER_JUST
-        { SID_ATTR_CHAR_COLOR, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_FONT, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_FONTHEIGHT, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_SCALEWIDTH, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_WEIGHT, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_UNDERLINE, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_STRIKEOUT, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_POSTURE, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_CONTOUR, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_SHADOWED, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_ESCAPEMENT, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_AUTOKERN, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_KERNING, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_WORDLINEMODE, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_LANGUAGE, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_CJK_LANGUAGE, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_CTL_LANGUAGE, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_CJK_FONT, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_CTL_FONT, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_CJK_FONTHEIGHT, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_CTL_FONTHEIGHT, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_CJK_WEIGHT, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_CTL_WEIGHT, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_CJK_POSTURE, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_CTL_POSTURE, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_EMPHASISMARK, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_RELIEF, SfxItemPoolFlags::POOLABLE },
-        { 0, SfxItemPoolFlags::POOLABLE },                           // EE_CHAR_RUBI_DUMMY
-        { 0, SfxItemPoolFlags::POOLABLE },                           // EE_CHAR_XMLATTRIBS
-        { SID_ATTR_CHAR_OVERLINE, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_CASEMAP, SfxItemPoolFlags::POOLABLE },       // EE_CHAR_CASEMAP
-        { SID_ATTR_CHAR_GRABBAG, SfxItemPoolFlags::POOLABLE },       // EE_CHAR_GRABBAG
-        { SID_ATTR_CHAR_BACK_COLOR, SfxItemPoolFlags::POOLABLE },    // EE_CHAR_BKGCOLOR
-        { 0, SfxItemPoolFlags::POOLABLE },                           // EE_FEATURE_TAB
-        { 0, SfxItemPoolFlags::POOLABLE },                           // EE_FEATURE_LINEBR
-        { SID_ATTR_CHAR_CHARSETCOLOR, SfxItemPoolFlags::POOLABLE },  // EE_FEATURE_NOTCONV
-        { SID_FIELD, SfxItemPoolFlags::POOLABLE }
+        { SID_ATTR_FRAMEDIRECTION, true },         // EE_PARA_WRITINGDIR
+        { 0, true },                               // EE_PARA_XMLATTRIBS
+        { SID_ATTR_PARA_HANGPUNCTUATION, true },   // EE_PARA_HANGINGPUNCTUATION
+        { SID_ATTR_PARA_FORBIDDEN_RULES, true },
+        { SID_ATTR_PARA_SCRIPTSPACE, true },       // EE_PARA_ASIANCJKSPACING
+        { SID_ATTR_NUMBERING_RULE, true },         // EE_PARA_NUMBULL
+        { 0, true },                               // EE_PARA_HYPHENATE
+        { 0, true },                               // EE_PARA_BULLETSTATE
+        { 0, true },                               // EE_PARA_OUTLLRSPACE
+        { SID_ATTR_PARA_OUTLLEVEL, true },         // EE_PARA_OUTLLEVEL
+        { SID_ATTR_PARA_BULLET, true },            // EE_PARA_BULLET
+        { SID_ATTR_LRSPACE, true },                // EE_PARA_LRSPACE
+        { SID_ATTR_ULSPACE, true },                // EE_PARA_ULSPACE
+        { SID_ATTR_PARA_LINESPACE, true },         // EE_PARA_SBL
+        { SID_ATTR_PARA_ADJUST, true },            // EE_PARA_JUST
+        { SID_ATTR_TABSTOP, true },                // EE_PARA_TABS
+        { SID_ATTR_ALIGN_HOR_JUSTIFY_METHOD, true }, // EE_PARA_JUST_METHOD
+        { SID_ATTR_ALIGN_VER_JUSTIFY, true },      // EE_PARA_VER_JUST
+        { SID_ATTR_CHAR_COLOR, true },
+        { SID_ATTR_CHAR_FONT, true },
+        { SID_ATTR_CHAR_FONTHEIGHT, true },
+        { SID_ATTR_CHAR_SCALEWIDTH, true },
+        { SID_ATTR_CHAR_WEIGHT, true },
+        { SID_ATTR_CHAR_UNDERLINE, true },
+        { SID_ATTR_CHAR_STRIKEOUT, true },
+        { SID_ATTR_CHAR_POSTURE, true },
+        { SID_ATTR_CHAR_CONTOUR, true },
+        { SID_ATTR_CHAR_SHADOWED, true },
+        { SID_ATTR_CHAR_ESCAPEMENT, true },
+        { SID_ATTR_CHAR_AUTOKERN, true },
+        { SID_ATTR_CHAR_KERNING, true },
+        { SID_ATTR_CHAR_WORDLINEMODE, true },
+        { SID_ATTR_CHAR_LANGUAGE, true },
+        { SID_ATTR_CHAR_CJK_LANGUAGE, true },
+        { SID_ATTR_CHAR_CTL_LANGUAGE, true },
+        { SID_ATTR_CHAR_CJK_FONT, true },
+        { SID_ATTR_CHAR_CTL_FONT, true },
+        { SID_ATTR_CHAR_CJK_FONTHEIGHT, true },
+        { SID_ATTR_CHAR_CTL_FONTHEIGHT, true },
+        { SID_ATTR_CHAR_CJK_WEIGHT, true },
+        { SID_ATTR_CHAR_CTL_WEIGHT, true },
+        { SID_ATTR_CHAR_CJK_POSTURE, true },
+        { SID_ATTR_CHAR_CTL_POSTURE, true },
+        { SID_ATTR_CHAR_EMPHASISMARK, true },
+        { SID_ATTR_CHAR_RELIEF, true },
+        { 0, true },                           // EE_CHAR_RUBI_DUMMY
+        { 0, true },                           // EE_CHAR_XMLATTRIBS
+        { SID_ATTR_CHAR_OVERLINE, true },
+        { SID_ATTR_CHAR_CASEMAP, true },       // EE_CHAR_CASEMAP
+        { SID_ATTR_CHAR_GRABBAG, true },       // EE_CHAR_GRABBAG
+        { SID_ATTR_CHAR_BACK_COLOR, true },    // EE_CHAR_BKGCOLOR
+        { 0, true },                           // EE_FEATURE_TAB
+        { 0, true },                           // EE_FEATURE_LINEBR
+        { SID_ATTR_CHAR_CHARSETCOLOR, true },  // EE_FEATURE_NOTCONV
+        { SID_FIELD, false }
 };
 
 const sal_uInt16 aV1Map[] = {
@@ -465,7 +463,7 @@ void TextPortionList::Remove(sal_Int32 nPos)
 
 namespace {
 
-class FindTextPortionByAddress : std::unary_function<std::unique_ptr<TextPortion>, bool>
+class FindTextPortionByAddress : public std::unary_function<std::unique_ptr<TextPortion>, bool>
 {
     const TextPortion* mp;
 public:
@@ -690,8 +688,8 @@ void ParaPortion::CorrectValuesBehindLastFormattedLine( sal_Int32 nLastFormatted
 
 namespace {
 
-template<typename _Array, typename _Val>
-sal_Int32 FastGetPos(const _Array& rArray, const _Val* p, sal_Int32& rLastPos)
+template<typename Array, typename Val>
+sal_Int32 FastGetPos(const Array& rArray, const Val* p, sal_Int32& rLastPos)
 {
     sal_Int32 nArrayLen = rArray.size();
 
@@ -805,9 +803,9 @@ void ParaPortionList::Reset()
 long ParaPortionList::GetYOffset(const ParaPortion* pPPortion) const
 {
     long nHeight = 0;
-    for (sal_Int32 i = 0, n = maPortions.size(); i < n; ++i)
+    for (const auto & rPortion : maPortions)
     {
-        const ParaPortion* pTmpPortion = maPortions[i].get();
+        const ParaPortion* pTmpPortion = rPortion.get();
         if ( pTmpPortion == pPPortion )
             return nHeight;
         nHeight += pTmpPortion->GetHeight();
@@ -1004,7 +1002,6 @@ EditLine::~EditLine()
 }
 
 
-
 EditLine* EditLine::Clone() const
 {
     EditLine* pL = new EditLine;
@@ -1167,7 +1164,6 @@ void EditLineList::Insert(sal_Int32 nPos, EditLine* p)
 EditPaM::EditPaM() : pNode(nullptr), nIndex(0) {}
 EditPaM::EditPaM(const EditPaM& r) : pNode(r.pNode), nIndex(r.nIndex) {}
 EditPaM::EditPaM(ContentNode* p, sal_Int32 n) : pNode(p), nIndex(n) {}
-
 
 
 void EditPaM::SetNode(ContentNode* p)
@@ -1984,7 +1980,7 @@ EditDoc::~EditDoc()
 
 namespace {
 
-class RemoveEachItemFromPool : std::unary_function<std::unique_ptr<ContentNode>, void>
+class RemoveEachItemFromPool : public std::unary_function<std::unique_ptr<ContentNode>, void>
 {
     EditDoc& mrDoc;
 public:
@@ -2023,7 +2019,7 @@ void EditDoc::RemoveItemsFromPool(const ContentNode& rNode)
 void CreateFont( SvxFont& rFont, const SfxItemSet& rSet, bool bSearchInParent, SvtScriptType nScriptType )
 {
     vcl::Font aPrevFont( rFont );
-    rFont.SetAlign( ALIGN_BASELINE );
+    rFont.SetAlignment( ALIGN_BASELINE );
     rFont.SetTransparent( true );
 
     sal_uInt16 nWhich_FontInfo = GetScriptItemId( EE_CHAR_FONTINFO, nScriptType );
@@ -2035,7 +2031,7 @@ void CreateFont( SvxFont& rFont, const SfxItemSet& rSet, bool bSearchInParent, S
     if ( bSearchInParent || ( rSet.GetItemState( nWhich_FontInfo ) == SfxItemState::SET ) )
     {
         const SvxFontItem& rFontItem = static_cast<const SvxFontItem&>(rSet.Get( nWhich_FontInfo ));
-        rFont.SetName( rFontItem.GetFamilyName() );
+        rFont.SetFamilyName( rFontItem.GetFamilyName() );
         rFont.SetFamily( rFontItem.GetFamily() );
         rFont.SetPitch( rFontItem.GetPitch() );
         rFont.SetCharSet( rFontItem.GetCharSet() );
@@ -2047,7 +2043,7 @@ void CreateFont( SvxFont& rFont, const SfxItemSet& rSet, bool bSearchInParent, S
     if ( bSearchInParent || ( rSet.GetItemState( EE_CHAR_BKGCOLOR ) == SfxItemState::SET ) )
         rFont.SetFillColor( static_cast<const SvxBackgroundColorItem&>(rSet.Get( EE_CHAR_BKGCOLOR )).GetValue() );
     if ( bSearchInParent || ( rSet.GetItemState( nWhich_FontHeight ) == SfxItemState::SET ) )
-        rFont.SetSize( Size( rFont.GetSize().Width(), static_cast<const SvxFontHeightItem&>(rSet.Get( nWhich_FontHeight ) ).GetHeight() ) );
+        rFont.SetFontSize( Size( rFont.GetFontSize().Width(), static_cast<const SvxFontHeightItem&>(rSet.Get( nWhich_FontHeight ) ).GetHeight() ) );
     if ( bSearchInParent || ( rSet.GetItemState( nWhich_Weight ) == SfxItemState::SET ) )
         rFont.SetWeight( static_cast<const SvxWeightItem&>(rSet.Get( nWhich_Weight )).GetWeight() );
     if ( bSearchInParent || ( rSet.GetItemState( EE_CHAR_UNDERLINE ) == SfxItemState::SET ) )
@@ -2068,7 +2064,7 @@ void CreateFont( SvxFont& rFont, const SfxItemSet& rSet, bool bSearchInParent, S
     {
         const SvxEscapementItem& rEsc = static_cast<const SvxEscapementItem&>( rSet.Get( EE_CHAR_ESCAPEMENT ) );
 
-        sal_uInt16 nProp = rEsc.GetProp();
+        sal_uInt16 const nProp = rEsc.GetProportionalHeight();
         rFont.SetPropr( (sal_uInt8)nProp );
 
         short nEsc = rEsc.GetEsc();
@@ -2085,7 +2081,7 @@ void CreateFont( SvxFont& rFont, const SfxItemSet& rSet, bool bSearchInParent, S
     if ( bSearchInParent || ( rSet.GetItemState( EE_CHAR_WLM ) == SfxItemState::SET ) )
         rFont.SetWordLineMode( static_cast<const SvxWordLineModeItem&>(rSet.Get( EE_CHAR_WLM )).GetValue() );
     if ( bSearchInParent || ( rSet.GetItemState( EE_CHAR_EMPHASISMARK ) == SfxItemState::SET ) )
-        rFont.SetEmphasisMark( static_cast<const SvxEmphasisMarkItem&>(rSet.Get( EE_CHAR_EMPHASISMARK )).GetValue() );
+        rFont.SetEmphasisMark( static_cast<const SvxEmphasisMarkItem&>(rSet.Get( EE_CHAR_EMPHASISMARK )).GetEmphasisMark() );
     if ( bSearchInParent || ( rSet.GetItemState( EE_CHAR_RELIEF ) == SfxItemState::SET ) )
         rFont.SetRelief( (FontRelief)static_cast<const SvxCharReliefItem&>(rSet.Get( EE_CHAR_RELIEF )).GetValue() );
 
@@ -2328,7 +2324,7 @@ EditPaM EditDoc::InsertParaBreak( EditPaM aPaM, bool bKeepEndingAttribs )
     // for a new paragraph we like to have the bullet/numbering visible by default
     aContentAttribs.GetItems().Put( SfxBoolItem( EE_PARA_BULLETSTATE, true), EE_PARA_BULLETSTATE );
 
-    // ContenNode constructor copies also the paragraph attributes
+    // ContentNode constructor copies also the paragraph attributes
     ContentNode* pNode = new ContentNode( aStr, aContentAttribs );
 
     // Copy the Default Font
@@ -2393,15 +2389,13 @@ EditPaM EditDoc::ConnectParagraphs( ContentNode* pLeft, ContentNode* pRight )
     return aPaM;
 }
 
-EditPaM EditDoc::RemoveChars( EditPaM aPaM, sal_Int32 nChars )
+void EditDoc::RemoveChars( EditPaM aPaM, sal_Int32 nChars )
 {
     // Maybe remove Features!
     aPaM.GetNode()->Erase( aPaM.GetIndex(), nChars );
     aPaM.GetNode()->CollapsAttribs( aPaM.GetIndex(), nChars, GetItemPool() );
 
     SetModified( true );
-
-    return aPaM;
 }
 
 void EditDoc::InsertAttribInSelection( ContentNode* pNode, sal_Int32 nStart, sal_Int32 nEnd, const SfxPoolItem& rPoolItem )
@@ -2590,7 +2584,7 @@ void EditDoc::InsertAttrib( ContentNode* pNode, sal_Int32 nStart, sal_Int32 nEnd
         if ( pAttr )
         {
             // Remove attribute....
-            rAttrList.Release(pAttr);
+            rAttrList.Remove(pAttr);
         }
 
         // check whether 'the same' attribute exist at this place.
@@ -2887,10 +2881,9 @@ bool CharAttribList::HasAttrib( sal_Int32 nStartPos, sal_Int32 nEndPos ) const
 }
 
 
-
 namespace {
 
-class FindByAddress : std::unary_function<std::unique_ptr<EditCharAttrib>, bool>
+class FindByAddress : public std::unary_function<std::unique_ptr<EditCharAttrib>, bool>
 {
     const EditCharAttrib* mpAttr;
 public:
@@ -2918,16 +2911,6 @@ void CharAttribList::Remove(sal_Int32 nPos)
     aAttribs.erase(aAttribs.begin()+nPos);
 }
 
-void CharAttribList::Release(const EditCharAttrib* p)
-{
-    AttribsType::iterator it = std::find_if(aAttribs.begin(), aAttribs.end(), FindByAddress(p));
-    if (it != aAttribs.end())
-    {
-        it->release();
-        aAttribs.erase(it);
-    }
-}
-
 void CharAttribList::SetHasEmptyAttribs(bool b)
 {
     bHasEmptyAttribs = b;
@@ -2950,19 +2933,6 @@ bool CharAttribList::HasBoundingAttrib( sal_Int32 nBound ) const
     return false;
 }
 
-const EditCharAttrib* CharAttribList::FindEmptyAttrib( sal_uInt16 nWhich, sal_Int32 nPos ) const
-{
-    if ( !bHasEmptyAttribs )
-        return nullptr;
-
-    for (const std::unique_ptr<EditCharAttrib>& rAttr : aAttribs)
-    {
-        if (rAttr->GetStart() == nPos && rAttr->GetEnd() == nPos && rAttr->Which() == nWhich)
-            return rAttr.get();
-    }
-    return nullptr;
-}
-
 EditCharAttrib* CharAttribList::FindEmptyAttrib( sal_uInt16 nWhich, sal_Int32 nPos )
 {
     if ( !bHasEmptyAttribs )
@@ -2978,7 +2948,7 @@ EditCharAttrib* CharAttribList::FindEmptyAttrib( sal_uInt16 nWhich, sal_Int32 nP
 
 namespace {
 
-class FindByStartPos : std::unary_function<std::unique_ptr<EditCharAttrib>, bool>
+class FindByStartPos : public std::unary_function<std::unique_ptr<EditCharAttrib>, bool>
 {
     sal_Int32 mnPos;
 public:
@@ -3008,7 +2978,7 @@ const EditCharAttrib* CharAttribList::FindFeature( sal_Int32 nPos ) const
 
 namespace {
 
-class RemoveEmptyAttrItem : std::unary_function<std::unique_ptr<EditCharAttrib>, void>
+class RemoveEmptyAttrItem : public std::unary_function<std::unique_ptr<EditCharAttrib>, void>
 {
     SfxItemPool& mrItemPool;
 public:

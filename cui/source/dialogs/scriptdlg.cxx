@@ -27,7 +27,6 @@
 #include <osl/mutex.hxx>
 
 #include <cuires.hrc>
-#include "scriptdlg.hrc"
 #include "scriptdlg.hxx"
 #include <dialmgr.hxx>
 #include "selector.hxx"
@@ -328,11 +327,7 @@ void SFTreeListBox:: RequestSubEntries( SvTreeListEntry* pRootEntry, Reference< 
         }
         else
         {
-            if ( children[ n ]->getType() == browse::BrowseNodeTypes::SCRIPT )
-            {
-                insertEntry( name, RID_CUIIMG_MACRO, pRootEntry, false, std::unique_ptr< SFEntry >(new SFEntry( OBJTYPE_METHOD, children[ n ],model )));
-
-            }
+            insertEntry( name, RID_CUIIMG_MACRO, pRootEntry, false, std::unique_ptr< SFEntry >(new SFEntry( OBJTYPE_METHOD, children[ n ],model )));
         }
     }
 }
@@ -1140,7 +1135,7 @@ bool SvxScriptOrgDialog::getBoolProperty( Reference< beans::XPropertySet >& xPro
     return result;
 }
 
-OUString SvxScriptOrgDialog::getListOfChildren( Reference< browse::XBrowseNode > node, int depth )
+OUString SvxScriptOrgDialog::getListOfChildren( const Reference< browse::XBrowseNode >& node, int depth )
 {
     OUString result = "\n";
     for( int i=0;i<=depth;i++ )

@@ -30,9 +30,6 @@
 #include <memory>
 
 
-// - SvxGraphicFilter -
-
-
 sal_uIntPtr SvxGraphicFilter::ExecuteGrfFilterSlot( SfxRequest& rReq, GraphicObject& rFilterObject )
 {
     const Graphic&  rGraphic = rFilterObject.GetGraphic();
@@ -47,7 +44,7 @@ sal_uIntPtr SvxGraphicFilter::ExecuteGrfFilterSlot( SfxRequest& rReq, GraphicObj
 
         switch( rReq.GetSlot() )
         {
-            case( SID_GRFFILTER_INVERT ):
+            case SID_GRFFILTER_INVERT:
             {
                 if( pShell )
                     pShell->SetWaitCursor( true );
@@ -72,7 +69,7 @@ sal_uIntPtr SvxGraphicFilter::ExecuteGrfFilterSlot( SfxRequest& rReq, GraphicObj
             }
             break;
 
-            case( SID_GRFFILTER_SMOOTH ):
+            case SID_GRFFILTER_SMOOTH:
             {
                 SvxAbstractDialogFactory* pFact = SvxAbstractDialogFactory::Create();
                 if(pFact)
@@ -85,7 +82,7 @@ sal_uIntPtr SvxGraphicFilter::ExecuteGrfFilterSlot( SfxRequest& rReq, GraphicObj
             }
             break;
 
-            case( SID_GRFFILTER_SHARPEN ):
+            case SID_GRFFILTER_SHARPEN:
             {
                 if( pShell )
                     pShell->SetWaitCursor( true );
@@ -110,7 +107,7 @@ sal_uIntPtr SvxGraphicFilter::ExecuteGrfFilterSlot( SfxRequest& rReq, GraphicObj
             }
             break;
 
-            case( SID_GRFFILTER_REMOVENOISE ):
+            case SID_GRFFILTER_REMOVENOISE:
             {
                 if( pShell )
                     pShell->SetWaitCursor( true );
@@ -135,7 +132,7 @@ sal_uIntPtr SvxGraphicFilter::ExecuteGrfFilterSlot( SfxRequest& rReq, GraphicObj
             }
             break;
 
-            case( SID_GRFFILTER_SOBEL ):
+            case SID_GRFFILTER_SOBEL:
             {
                 if( pShell )
                     pShell->SetWaitCursor( true );
@@ -160,12 +157,12 @@ sal_uIntPtr SvxGraphicFilter::ExecuteGrfFilterSlot( SfxRequest& rReq, GraphicObj
             }
             break;
 
-            case( SID_GRFFILTER_MOSAIC ):
+            case SID_GRFFILTER_MOSAIC:
             {
                 SvxAbstractDialogFactory* pFact = SvxAbstractDialogFactory::Create();
                 if(pFact)
                 {
-                    std::unique_ptr<AbstractGraphicFilterDialog> aDlg(pFact->CreateGraphicFilterMosaic(pWindow, rGraphic, 4, 4, false));
+                    std::unique_ptr<AbstractGraphicFilterDialog> aDlg(pFact->CreateGraphicFilterMosaic(pWindow, rGraphic, 4, 4));
                     DBG_ASSERT(aDlg, "Dialog creation failed!");
                     if( aDlg->Execute() == RET_OK )
                         aGraphic = aDlg->GetFilteredGraphic( rGraphic, 1.0, 1.0 );
@@ -173,7 +170,7 @@ sal_uIntPtr SvxGraphicFilter::ExecuteGrfFilterSlot( SfxRequest& rReq, GraphicObj
             }
             break;
 
-            case( SID_GRFFILTER_EMBOSS  ):
+            case SID_GRFFILTER_EMBOSS:
             {
                 SvxAbstractDialogFactory* pFact = SvxAbstractDialogFactory::Create();
                 if(pFact)
@@ -186,7 +183,7 @@ sal_uIntPtr SvxGraphicFilter::ExecuteGrfFilterSlot( SfxRequest& rReq, GraphicObj
             }
             break;
 
-            case( SID_GRFFILTER_POSTER  ):
+            case SID_GRFFILTER_POSTER:
             {
                 SvxAbstractDialogFactory* pFact = SvxAbstractDialogFactory::Create();
                 if(pFact)
@@ -199,7 +196,7 @@ sal_uIntPtr SvxGraphicFilter::ExecuteGrfFilterSlot( SfxRequest& rReq, GraphicObj
             }
             break;
 
-            case( SID_GRFFILTER_POPART  ):
+            case SID_GRFFILTER_POPART:
             {
                 if( pShell )
                     pShell->SetWaitCursor( true );
@@ -224,7 +221,7 @@ sal_uIntPtr SvxGraphicFilter::ExecuteGrfFilterSlot( SfxRequest& rReq, GraphicObj
             }
             break;
 
-            case( SID_GRFFILTER_SEPIA ):
+            case SID_GRFFILTER_SEPIA:
             {
                 SvxAbstractDialogFactory* pFact = SvxAbstractDialogFactory::Create();
                 if(pFact)
@@ -237,12 +234,12 @@ sal_uIntPtr SvxGraphicFilter::ExecuteGrfFilterSlot( SfxRequest& rReq, GraphicObj
             }
             break;
 
-            case( SID_GRFFILTER_SOLARIZE ):
+            case SID_GRFFILTER_SOLARIZE:
             {
                 SvxAbstractDialogFactory* pFact = SvxAbstractDialogFactory::Create();
                 if(pFact)
                 {
-                    std::unique_ptr<AbstractGraphicFilterDialog> aDlg(pFact->CreateGraphicFilterSolarize(pWindow, rGraphic, 128, false));
+                    std::unique_ptr<AbstractGraphicFilterDialog> aDlg(pFact->CreateGraphicFilterSolarize(pWindow, rGraphic, 128));
                     DBG_ASSERT(aDlg, "Dialog creation failed!");
                     if( aDlg->Execute() == RET_OK )
                         aGraphic = aDlg->GetFilteredGraphic( rGraphic, 1.0, 1.0 );
@@ -274,7 +271,6 @@ sal_uIntPtr SvxGraphicFilter::ExecuteGrfFilterSlot( SfxRequest& rReq, GraphicObj
 
     return nRet;
 }
-
 
 
 void SvxGraphicFilter::DisableGraphicFilterSlots( SfxItemSet& rSet )

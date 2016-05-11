@@ -21,6 +21,7 @@
 
 #include <com/sun/star/text/ControlCharacter.hpp>
 #include <com/sun/star/beans/XMultiPropertySet.hpp>
+#include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/text/XTextField.hpp>
 
@@ -29,6 +30,7 @@
 #include "oox/helper/helper.hxx"
 #include "oox/helper/propertyset.hxx"
 #include "oox/core/xmlfilterbase.hxx"
+#include <oox/token/properties.hxx>
 #include "oox/token/tokens.hxx"
 
 using namespace ::com::sun::star::uno;
@@ -74,7 +76,7 @@ sal_Int32 TextRun::insertAt(
             if( mbIsLineBreak )
             {
                 OSL_TRACE( "OOX: TextRun::insertAt() insert line break" );
-                xText->insertControlCharacter( xStart, ControlCharacter::LINE_BREAK, sal_False );
+                xText->insertControlCharacter( xStart, ControlCharacter::LINE_BREAK, false );
             }
             else
             {
@@ -82,7 +84,7 @@ sal_Int32 TextRun::insertAt(
                 sal_Int16 nSymbolFontFamily = 0, nSymbolFontPitch = 0;
 
                 if ( !aTextCharacterProps.maSymbolFont.getFontData( aSymbolFontName, nSymbolFontPitch, nSymbolFontFamily, rFilterBase ) )
-                    xText->insertString( xStart, getText(), sal_False );
+                    xText->insertString( xStart, getText(), false );
                 else if ( !getText().isEmpty() )
                 {
                     // #i113673
@@ -121,7 +123,7 @@ sal_Int32 TextRun::insertAt(
                             }
                         }
                         OUString aSubString( getText().copy( nIndex, nCount ) );
-                        xText->insertString( xStart, aSubString, sal_False );
+                        xText->insertString( xStart, aSubString, false );
                         nIndex += nCount;
 
                         if ( nIndex >= getText().getLength() )
@@ -142,16 +144,17 @@ sal_Int32 TextRun::insertAt(
             if( xField.is() )
             {
                 Reference< XTextCursor > xTextFieldCursor = xText->createTextCursor();
-                xTextFieldCursor->gotoEnd( sal_False );
+                xTextFieldCursor->gotoEnd( false );
 
                 PropertySet aFieldProps( xField );
                 aFieldProps.setProperties( maTextCharacterProperties.maHyperlinkPropertyMap );
                 aFieldProps.setProperty( PROP_Representation, getText() );
-                xText->insertTextContent( xStart, xField, sal_False );
+                xText->insertTextContent( xStart, xField, false );
 
-                xTextFieldCursor->gotoEnd( sal_True );
+                xTextFieldCursor->gotoEnd( true );
 
-                aTextCharacterProps.maCharColor.setSchemeClr( XML_hlink );
+                aTextCharacterProps.maFillProperties.maFillColor.setSchemeClr( XML_hlink );
+                aTextCharacterProps.maFillProperties.moFillType.set(XML_solidFill);
                 if ( !maTextCharacterProperties.moUnderline.has() )
                     aTextCharacterProps.moUnderline.set( XML_sng );
 
@@ -167,7 +170,7 @@ sal_Int32 TextRun::insertAt(
             else
             {
                 OSL_TRACE( "OOX: URL field couldn't be created" );
-                xText->insertString( xStart, getText(), sal_False );
+                xText->insertString( xStart, getText(), false );
             }
         }
     }

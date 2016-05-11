@@ -43,7 +43,7 @@ static sal_Int32                    nRefCount = 0;
 class SvtOptionsDlgOptions_Impl : public utl::ConfigItem
 {
 private:
-    typedef std::unordered_map< OUString, sal_Bool, OUStringHash, std::equal_to< OUString > > OptionNodeList;
+    typedef std::unordered_map< OUString, sal_Bool, OUStringHash > OptionNodeList;
 
     OUString        m_sPathDelimiter;
     OptionNodeList  m_aOptionNodeList;
@@ -136,9 +136,9 @@ void SvtOptionsDlgOptions_Impl::ReadNode( const OUString& _rNode, NodeType _eTyp
     }
 
     Sequence< OUString > lResult( nLen );
-    lResult[0] = OUString( sNode + "Hide" );
+    lResult[0] = sNode + "Hide";
     if ( _eType != NT_Option )
-        lResult[1] = OUString( sNode + sSet );
+        lResult[1] = sNode + sSet;
 
     Sequence< Any > aValues;
     aValues = GetProperties( lResult );

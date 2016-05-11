@@ -38,9 +38,6 @@ using ::rtl::StringToOUString;
 #define USTRING_TO_PCHAR(x) OUStringToString(x , CHARSET_DONTKNOW ).GetCharStr()
 
 
-
-
-
 /*****
 *
 * A Test root object !
@@ -214,7 +211,7 @@ public:
     }
 
 
-    TestListener( XDebuggingRef *p )
+    explicit TestListener( XDebuggingRef *p )
     {
         attach( p  );
     }
@@ -269,7 +266,6 @@ protected:
     osl::Condition m_aDebugCondition;
     XDebuggingRef *m_pDebuggingRef;
 };
-
 
 
 void TestListener::cmdLine()
@@ -388,7 +384,6 @@ BOOL PythonCodeLibrary::queryInterface( Uik aUik, XInterfaceRef & rOut )
 
     return TRUE;
 }
-
 
 
 /*

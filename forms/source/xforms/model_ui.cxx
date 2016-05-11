@@ -41,8 +41,6 @@
 #include <com/sun/star/xml/xpath/XXPathObject.hpp>
 #include <com/sun/star/xml/xpath/XPathObjectType.hpp>
 #include <com/sun/star/beans/PropertyValue.hpp>
-#include <com/sun/star/io/XInputStream.hpp>
-#include <com/sun/star/io/XActiveDataSink.hpp>
 #include <com/sun/star/io/TextInputStream.hpp>
 #include <com/sun/star/container/XEnumeration.hpp>
 #include <com/sun/star/container/XNameContainer.hpp>
@@ -54,8 +52,6 @@
 
 
 using com::sun::star::beans::PropertyValue;
-using com::sun::star::io::XInputStream;
-using com::sun::star::io::XActiveDataSink;
 using com::sun::star::io::TextInputStream;
 using com::sun::star::io::XTextInputStream2;
 using com::sun::star::container::XEnumeration;
@@ -66,8 +62,6 @@ using namespace xforms;
 using namespace com::sun::star::uno;
 using namespace com::sun::star::xml::dom;
 using namespace com::sun::star::xml::xpath;
-
-
 
 
 // implement XFormsUIHelper1
@@ -257,7 +251,6 @@ OUString Model::getDefaultBindingExpressionForNode(
 
     return aBuffer.makeStringAndClear();
 }
-
 
 
 OUString Model::getDefaultBindingExpressionForNode( const XNode_t& xNode )
@@ -530,7 +523,7 @@ css::uno::Reference<css::xforms::XModel> Model::newModel( const Reference<css::f
         xModel.set( pModel );
 
         pModel->setID( sName );
-        pModel->newInstance( OUString(), OUString(), sal_False );
+        pModel->newInstance( OUString(), OUString(), false );
         pModel->initialize();
         xModels->insertByName( sName, makeAny( xModel ) );
     }
@@ -811,7 +804,7 @@ static OUString lcl_serializeForDisplay( const Reference<XNodeList>& xNodes )
         }
 
         // append node
-        xFragment->appendChild( xDocument->importNode( xCurrent, sal_True ) );
+        xFragment->appendChild( xDocument->importNode( xCurrent, true ) );
     }
     OSL_ENSURE( ( nAttributeNodes == 0 ) || ( nAttributeNodes == nLength ),
         "lcl_serializeForDisplay: mixed attribute and non-attribute nodes?" );
@@ -829,7 +822,7 @@ static OUString lcl_serializeForDisplay( const Reference<XNodeList>& xNodes )
     xTextInputStream->setInputStream( aSerialization.getInputStream() );
 
     /* WORK AROUND for problem in serialization: currently, multiple
-      XML delarations (<?xml...?>) are being written out and we don't
+      XML declarations (<?xml...?>) are being written out and we don't
       want them. When this is fixed, the code below is nice and
       simple. The current code filters out the declarations.
     OUString sResult = xTextInputStream->readString( Sequence<sal_Unicode>(),
@@ -954,7 +947,6 @@ void Model::setNodeValue(
 {
     setSimpleContent( xNode, sValue );
 }
-
 
 
 // helper functions from model_helper.hxx

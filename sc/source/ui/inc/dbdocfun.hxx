@@ -61,9 +61,7 @@ public:
     void            UpdateImport( const OUString& rTarget, const svx::ODataAccessDescriptor& rDescriptor );
 
     bool DoImport( SCTAB nTab, const ScImportParam& rParam,
-                   const svx::ODataAccessDescriptor* pDescriptor,      // used for selection an existing ResultSet
-                   bool bRecord,
-                   bool bAddrInsert = false );
+                   const svx::ODataAccessDescriptor* pDescriptor);      // used for selection an existing ResultSet
 
     bool DoImportUno( const ScAddress& rPos,
                       const css::uno::Sequence<css::beans::PropertyValue>& aArgs );
@@ -76,18 +74,18 @@ public:
     SC_DLLPUBLIC bool           Query( SCTAB nTab, const ScQueryParam& rQueryParam,
                             const ScRange* pAdvSource, bool bRecord, bool bApi );
 
-    bool            DoSubTotals( SCTAB nTab, const ScSubTotalParam& rParam,
+    void            DoSubTotals( SCTAB nTab, const ScSubTotalParam& rParam,
                                     const ScSortParam* pForceNewSort,
                                     bool bRecord, bool bApi );
 
     bool AddDBRange( const OUString& rName, const ScRange& rRange, bool bApi );
     bool DeleteDBRange( const OUString& rName );
     bool RenameDBRange( const OUString& rOld, const OUString& rNew );
-    bool ModifyDBData( const ScDBData& rNewData );  // Name unveraendert
+    void ModifyDBData( const ScDBData& rNewData );  // Name unveraendert
 
     void ModifyAllDBData( const ScDBCollection& rNewColl, const std::vector<ScRange>& rDelAreaList );
 
-    bool RepeatDB( const OUString& rDBName, bool bRecord, bool bApi, bool bIsUnnamed=false, SCTAB aTab = 0);
+    bool RepeatDB( const OUString& rDBName, bool bApi, bool bIsUnnamed=false, SCTAB aTab = 0);
 
     bool DataPilotUpdate( ScDPObject* pOldObj, const ScDPObject* pNewObj,
                           bool bRecord, bool bApi, bool bAllowMove = false );
@@ -100,7 +98,7 @@ public:
      * Reload the referenced pivot cache, and refresh all pivot tables that
      * reference the cache.
      */
-    sal_uLong RefreshPivotTables(ScDPObject* pDPObj, bool bApi);
+    void RefreshPivotTables(ScDPObject* pDPObj, bool bApi);
 
     /**
      * Refresh the group dimensions of all pivot tables referencing the same

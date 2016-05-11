@@ -62,7 +62,7 @@ sal_Int32 FilterConfigCache::nIndUserData = -1;
 sal_Int32 FilterConfigCache::nIndFileFormatVersion = -1;
 sal_Int32 FilterConfigCache::nIndTemplateName = -1;
 
-bool FilterConfigCache::FilterConfigCacheEntry::CreateFilterName( const OUString& rUserDataEntry )
+void FilterConfigCache::FilterConfigCacheEntry::CreateFilterName( const OUString& rUserDataEntry )
 {
     bIsPixelFormat = bIsInternalFilter = false;
     sFilterName = rUserDataEntry;
@@ -90,7 +90,6 @@ bool FilterConfigCache::FilterConfigCacheEntry::CreateFilterName( const OUString
         sExternalFilterName = sFilterName;
         sFilterName = SVLIBRARY("gie");
     }
-    return ! sFilterName.isEmpty();
 }
 
 OUString FilterConfigCache::FilterConfigCacheEntry::GetShortName()
@@ -238,7 +237,6 @@ const char* FilterConfigCache::InternalFilterListForSvxLight[] =
     "sgv","1","SVSGV",
     "sgf","1","SVSGF",
     "met","1","ime",
-    "met","2","eme",
     "png","1","SVIPNG",
     "png","2","SVEPNG",
     "pct","1","ipt",

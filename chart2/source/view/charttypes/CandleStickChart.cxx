@@ -36,7 +36,6 @@ namespace chart
 using namespace ::com::sun::star;
 using namespace ::rtl::math;
 using namespace ::com::sun::star::chart2;
-using ::com::sun::star::uno::Reference;
 
 CandleStickChart::CandleStickChart( const uno::Reference<XChartType>& xChartTypeModel
                                     , sal_Int32 nDimensionCount )
@@ -92,7 +91,7 @@ void CandleStickChart::createShapes()
     //(because the text group is created after the series group the texts are displayed on top)
 
     uno::Reference< drawing::XShapes > xSeriesTarget(
-        createGroupShape( m_xLogicTarget,OUString() ));
+        createGroupShape( m_xLogicTarget ));
     uno::Reference< drawing::XShapes > xLossTarget(
         createGroupShape( m_xLogicTarget, ObjectIdentifier::createClassifiedIdentifier(
             OBJECTTYPE_DATA_STOCK_LOSS, OUString() )));
@@ -100,7 +99,7 @@ void CandleStickChart::createShapes()
         createGroupShape( m_xLogicTarget, ObjectIdentifier::createClassifiedIdentifier(
             OBJECTTYPE_DATA_STOCK_GAIN, OUString() )));
     uno::Reference< drawing::XShapes > xTextTarget(
-        m_pShapeFactory->createGroup2D( m_xFinalTarget,OUString() ));
+        m_pShapeFactory->createGroup2D( m_xFinalTarget ));
 
     //check necessary here that different Y axis can not be stacked in the same group? ... hm?
 

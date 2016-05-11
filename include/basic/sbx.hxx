@@ -74,8 +74,8 @@ class BASIC_DLLPUBLIC SbxInfo : public SvRefBase
     void operator=(SbxInfo const&) = delete;
 
 protected:
-    bool LoadData( SvStream&, sal_uInt16 );
-    bool StoreData( SvStream& ) const;
+    void LoadData( SvStream&, sal_uInt16 );
+    void StoreData( SvStream& ) const;
     virtual ~SbxInfo();
 public:
     SbxInfo();
@@ -118,7 +118,7 @@ struct SbxVarEntry;
 
 class BASIC_DLLPUBLIC SbxArray : public SbxBase
 {
-    typedef std::vector<SbxVarEntry*> VarEntriesType;
+    typedef std::vector<SbxVarEntry> VarEntriesType;
 
 // #100883 Method to set method directly to parameter array
     friend class SbMethod;

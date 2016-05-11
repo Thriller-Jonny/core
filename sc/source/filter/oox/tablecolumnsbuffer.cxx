@@ -26,6 +26,7 @@
 #include <oox/helper/containerhelper.hxx>
 #include <oox/helper/propertyset.hxx>
 #include <oox/token/properties.hxx>
+#include <oox/token/tokens.hxx>
 #include "addressconverter.hxx"
 #include "biffinputstream.hxx"
 #include "defnamesbuffer.hxx"
@@ -119,12 +120,11 @@ TableColumns& TableColumnsBuffer::createTableColumns()
     return *xTableColumns;
 }
 
-bool TableColumnsBuffer::finalizeImport( ScDBData* pDBData )
+void TableColumnsBuffer::finalizeImport( ScDBData* pDBData )
 {
     TableColumns* pTableColumns = getActiveTableColumns();
     if ( pTableColumns )
-        return pTableColumns->finalizeImport( pDBData );
-    return false;
+        pTableColumns->finalizeImport( pDBData );
 }
 
 TableColumns* TableColumnsBuffer::getActiveTableColumns()

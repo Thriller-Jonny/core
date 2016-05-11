@@ -24,6 +24,9 @@
 #include "drawingml/chart/chartspacemodel.hxx"
 #include "drawingml/chart/plotareacontext.hxx"
 #include "drawingml/chart/titlecontext.hxx"
+#include <oox/core/xmlfilterbase.hxx>
+#include <oox/helper/attributelist.hxx>
+#include <oox/token/namespaces.hxx>
 
 namespace oox {
 namespace drawingml {

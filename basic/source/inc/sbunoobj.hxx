@@ -38,7 +38,7 @@
 #include <vector>
 #include <map>
 
-void registerComponentToBeDisposedForBasic( css::uno::Reference< css::lang::XComponent > xComponent, StarBASIC* pBasic );
+void registerComponentToBeDisposedForBasic( const css::uno::Reference< css::lang::XComponent >& xComponent, StarBASIC* pBasic );
 
 class StructRefInfo
 {
@@ -49,7 +49,7 @@ public:
     StructRefInfo( css::uno::Any& aAny, css::uno::Type const & rType, sal_Int32 nPos ) : maAny( aAny ), maType( rType ), mnPos( nPos ) {}
 
     sal_Int32 getPos() const { return mnPos; }
-    css::uno::Type getType() const { return maType; }
+    const css::uno::Type& getType() const { return maType; }
     OUString getTypeName() const;
     css::uno::Any& getRootAnyRef() { return maAny; };
 
@@ -59,7 +59,7 @@ public:
     bool isEmpty() { return (mnPos == -1); }
 
     css::uno::Any getValue();
-    bool setValue( const css::uno::Any& );
+    void setValue( const css::uno::Any& );
 };
 
 class SbUnoStructRefObject: public SbxObject
@@ -82,7 +82,7 @@ class SbUnoStructRefObject: public SbxObject
     OUString getDbgObjectName();
 public:
     StructRefInfo getStructMember( const OUString& rMember );
-    StructRefInfo getStructInfo() { return maMemberInfo; }
+    const StructRefInfo& getStructInfo() { return maMemberInfo; }
     SbUnoStructRefObject( const OUString& aName_, const StructRefInfo& rMemberInfo );
     virtual ~SbUnoStructRefObject();
 
@@ -133,8 +133,8 @@ public:
 
     // give out value
     css::uno::Any getUnoAny();
-    css::uno::Reference< css::beans::XIntrospectionAccess > getIntrospectionAccess()    { return mxUnoAccess; }
-    css::uno::Reference< css::script::XInvocation > getInvocation()         { return mxInvocation; }
+    const css::uno::Reference< css::beans::XIntrospectionAccess >& getIntrospectionAccess()    { return mxUnoAccess; }
+    const css::uno::Reference< css::script::XInvocation >& getInvocation()         { return mxInvocation; }
 
     void Notify( SfxBroadcaster&, const SfxHint& rHint ) override;
 
@@ -174,7 +174,6 @@ public:
     bool isInvocationBased()
         { return mbInvocation; }
 };
-
 
 
 class SbUnoProperty : public SbxProperty
@@ -277,7 +276,7 @@ public:
     virtual ~SbUnoServiceCtor();
     virtual SbxInfo* GetInfo() override;
 
-    css::uno::Reference< css::reflection::XServiceConstructorDescription > getServiceCtorDesc()
+    const css::uno::Reference< css::reflection::XServiceConstructorDescription >& getServiceCtorDesc()
         { return m_xServiceCtorDesc; }
 };
 
@@ -285,11 +284,8 @@ public:
 // Wrapper for UNO Singleton
 class SbUnoSingleton : public SbxObject
 {
-    const css::uno::Reference< css::reflection::XSingletonTypeDescription >   m_xSingletonTypeDesc;
-
 public:
-    SbUnoSingleton( const OUString& aName_,
-        const css::uno::Reference< css::reflection::XSingletonTypeDescription >& xSingletonTypeDesc );
+    SbUnoSingleton( const OUString& aName_ );
 
     void Notify( SfxBroadcaster&, const SfxHint& rHint ) override;
 };
@@ -347,7 +343,6 @@ void disposeComVariablesForBasic( StarBASIC* pBasic );
 void clearNativeObjectWrapperVector();
 
 
-
 // #118116 Collection object
 
 class BasicCollection : public SbxObject
@@ -368,11 +363,10 @@ class BasicCollection : public SbxObject
 
 public:
     BasicCollection( const OUString& rClassname );
-    virtual SbxVariable* Find( const OUString&, SbxClassType ) override;
     virtual void Clear() override;
 };
 
-typedef std::unordered_map< OUString, css::uno::Any, OUStringHash, ::std::equal_to< OUString > > VBAConstantsHash;
+typedef std::unordered_map< OUString, css::uno::Any, OUStringHash > VBAConstantsHash;
 
 typedef std::vector< OUString > VBAConstantsVector;
 
@@ -395,9 +389,9 @@ public:
 SbxVariable* getDefaultProp( SbxVariable* pRef );
 
 css::uno::Reference< css::uno::XInterface > createComListener( const css::uno::Any& aControlAny,
-                                                                                         const OUString& aVBAType,
-                                                                                         const OUString& aPrefix,
-                                                                                         SbxObjectRef xScopeObj );
+                                                               const OUString& aVBAType,
+                                                               const OUString& aPrefix,
+                                                               const SbxObjectRef& xScopeObj );
 
 bool checkUnoObjectType(SbUnoObject& refVal, const OUString& aClass);
 

@@ -63,6 +63,7 @@
 #include <com/sun/star/sheet/XConditionalFormats.hpp>
 
 #include "autoform.hxx"
+#include "cellvalue.hxx"
 #include "cellmergeoption.hxx"
 #include "cellsuno.hxx"
 #include "cursuno.hxx"
@@ -1146,7 +1147,7 @@ static bool lcl_PutDataArray( ScDocShell& rDocShell, const ScRange& rRange,
                     case uno::TypeClass_VOID:
                     {
                         // void = "no value"
-                        rDoc.SetError( nDocCol, nDocRow, nTab, NOTAVAILABLE );
+                        rDoc.SetError( nDocCol, nDocRow, nTab, formula::NOTAVAILABLE );
                     }
                     break;
 
@@ -1598,7 +1599,7 @@ void ScCellRangesBase::Notify( SfxBroadcaster&, const SfxHint& rHint )
     }
     else if ( dynamic_cast<const SfxSimpleHint*>(&rHint) )
     {
-        sal_uLong nId = static_cast<const SfxSimpleHint&>(rHint).GetId();
+        const sal_uInt32 nId = static_cast<const SfxSimpleHint&>(rHint).GetId();
         if ( nId == SFX_HINT_DYING )
         {
             ForgetCurrentAttrs();
@@ -1610,8 +1611,8 @@ void ScCellRangesBase::Notify( SfxBroadcaster&, const SfxHint& rHint )
 
                 lang::EventObject aEvent;
                 aEvent.Source.set(static_cast<cppu::OWeakObject*>(this));
-                for ( size_t n=0; n<aValueListeners.size(); n++ )
-                    aValueListeners[n]->disposing( aEvent );
+                for (uno::Reference<util::XModifyListener> & xValueListener : aValueListeners)
+                    xValueListener->disposing( aEvent );
 
                 aValueListeners.clear();
 
@@ -1640,8 +1641,8 @@ void ScCellRangesBase::Notify( SfxBroadcaster&, const SfxHint& rHint )
                 // the EventObject holds a Ref to this object until after the listener calls
 
                 ScDocument& rDoc = pDocShell->GetDocument();
-                for ( size_t n=0; n<aValueListeners.size(); n++ )
-                    rDoc.AddUnoListenerCall( aValueListeners[n], aEvent );
+                for (uno::Reference<util::XModifyListener> & xValueListener : aValueListeners)
+                    rDoc.AddUnoListenerCall( xValueListener, aEvent );
 
                 bGotDataChangedHint = false;
             }
@@ -1809,10 +1810,10 @@ uno::Sequence<sal_Int8> SAL_CALL ScCellRangesBase::getImplementationId()
     return css::uno::Sequence<sal_Int8>();
 }
 
-void ScCellRangesBase::PaintRanges_Impl( sal_uInt16 nPart )
+void ScCellRangesBase::PaintGridRanges_Impl( )
 {
     for (size_t i = 0, nCount = aRanges.size(); i < nCount; ++i)
-        pDocShell->PostPaint( *aRanges[ i ], nPart );
+        pDocShell->PostPaint( *aRanges[ i ], PAINT_GRID );
 }
 
 // XSheetOperation
@@ -2012,7 +2013,7 @@ void SAL_CALL ScCellRangesBase::setPropertyToDefault( const OUString& aPropertyN
             else if ( pEntry->nWID == SC_WID_UNO_CELLSTYL )
             {
                 OUString aStyleName( ScGlobal::GetRscString( STR_STYLENAME_STANDARD ) );
-                pDocShell->GetDocFunc().ApplyStyle( *GetMarkData(), aStyleName, true, true );
+                pDocShell->GetDocFunc().ApplyStyle( *GetMarkData(), aStyleName, true );
             }
         }
     }
@@ -2061,11 +2062,11 @@ uno::Any SAL_CALL ScCellRangesBase::getPropertyDefault( const OUString& aPropert
                 {
                     case SC_WID_UNO_CHCOLHDR:
                     case SC_WID_UNO_CHROWHDR:
-                        ScUnoHelpFunctions::SetBoolInAny( aAny, false );
+                        aAny <<= false;
                         break;
                     case SC_WID_UNO_CELLSTYL:
                         aAny <<= OUString( ScStyleNameConversion::DisplayToProgrammaticName(
-                                    ScGlobal::GetRscString(STR_STYLENAME_STANDARD), SFX_STYLE_FAMILY_PARA ) );
+                                    ScGlobal::GetRscString(STR_STYLENAME_STANDARD), SfxStyleFamily::Para ) );
                         break;
                     case SC_WID_UNO_TBLBORD:
                     case SC_WID_UNO_TBLBORD2:
@@ -2293,7 +2294,7 @@ void ScCellRangesBase::SetOnePropertyValue( const SfxItemPropertySimpleEntry* pE
                     if ( nWhich != nFirstItem && nWhich != nSecondItem )
                         rSet.ClearItem(nWhich);
 
-                pDocShell->GetDocFunc().ApplyAttributes( *GetMarkData(), aPattern, true, true );
+                pDocShell->GetDocFunc().ApplyAttributes( *GetMarkData(), aPattern, true );
             }
         }
         else        // implemented here
@@ -2350,8 +2351,8 @@ void ScCellRangesBase::SetOnePropertyValue( const SfxItemPropertySimpleEntry* pE
                         OUString aStrVal;
                         aValue >>= aStrVal;
                         OUString aString(ScStyleNameConversion::ProgrammaticToDisplayName(
-                                                            aStrVal, SFX_STYLE_FAMILY_PARA ));
-                        pDocShell->GetDocFunc().ApplyStyle( *GetMarkData(), aString, true, true );
+                                                            aStrVal, SfxStyleFamily::Para ));
+                        pDocShell->GetDocFunc().ApplyStyle( *GetMarkData(), aString, true );
                     }
                     break;
                 case SC_WID_UNO_TBLBORD:
@@ -2452,7 +2453,7 @@ void ScCellRangesBase::SetOnePropertyValue( const SfxItemPropertySimpleEntry* pE
 
                                 ScPatternAttr aPattern( rDoc.GetPool() );
                                 aPattern.GetItemSet().Put( SfxUInt32Item( ATTR_VALIDDATA, nIndex ) );
-                                pDocShell->GetDocFunc().ApplyAttributes( *GetMarkData(), aPattern, true, true );
+                                pDocShell->GetDocFunc().ApplyAttributes( *GetMarkData(), aPattern, true );
                             }
                         }
                     }
@@ -2526,10 +2527,10 @@ void ScCellRangesBase::GetOnePropertyValue( const SfxItemPropertySimpleEntry* pE
             switch ( pEntry->nWID )
             {
                 case SC_WID_UNO_CHCOLHDR:
-                    ScUnoHelpFunctions::SetBoolInAny( rAny, bChartColAsHdr );
+                    rAny <<= bChartColAsHdr;
                     break;
                 case SC_WID_UNO_CHROWHDR:
-                    ScUnoHelpFunctions::SetBoolInAny( rAny, bChartRowAsHdr );
+                    rAny <<= bChartRowAsHdr;
                     break;
                 case SC_WID_UNO_CELLSTYL:
                     {
@@ -2538,7 +2539,7 @@ void ScCellRangesBase::GetOnePropertyValue( const SfxItemPropertySimpleEntry* pE
                         if (pStyle)
                             aStyleName = pStyle->GetName();
                         rAny <<= OUString( ScStyleNameConversion::DisplayToProgrammaticName(
-                                                                aStyleName, SFX_STYLE_FAMILY_PARA ) );
+                                                                aStyleName, SfxStyleFamily::Para ) );
                     }
                     break;
                 case SC_WID_UNO_TBLBORD:
@@ -2616,7 +2617,7 @@ void ScCellRangesBase::GetOnePropertyValue( const SfxItemPropertySimpleEntry* pE
                 case SC_WID_UNO_ABSNAME:
                     {
                         OUString sRet;
-                        aRanges.Format(sRet, SCR_ABS_3D, &pDocShell->GetDocument());
+                        aRanges.Format(sRet, ScRefFlags::RANGE_ABS_3D, &pDocShell->GetDocument());
                         rAny <<= sRet;
                     }
             }
@@ -2751,7 +2752,7 @@ void SAL_CALL ScCellRangesBase::setPropertyValues( const uno::Sequence< OUString
         }
 
         if ( pNewPattern && !aRanges.empty() )
-            pDocShell->GetDocFunc().ApplyAttributes( *GetMarkData(), *pNewPattern, true, true );
+            pDocShell->GetDocFunc().ApplyAttributes( *GetMarkData(), *pNewPattern, true );
     }
 }
 
@@ -2918,7 +2919,7 @@ uno::Sequence< beans::SetPropertyTolerantFailed > SAL_CALL ScCellRangesBase::set
         }
 
         if ( pNewPattern && !aRanges.empty() )
-            pDocShell->GetDocFunc().ApplyAttributes( *GetMarkData(), *pNewPattern, true, true );
+            pDocShell->GetDocFunc().ApplyAttributes( *GetMarkData(), *pNewPattern, true );
 
         aReturns.realloc(nFailed);
 
@@ -3174,7 +3175,7 @@ void SAL_CALL ScCellRangesBase::setData( const uno::Sequence< uno::Sequence<doub
                 }
 
                 //! undo
-                PaintRanges_Impl( PAINT_GRID );
+                PaintGridRanges_Impl();
                 pDocShell->SetDocumentModified();
                 ForceChartListener_Impl();          // call listeners for this object synchronously
                 bDone = true;
@@ -3244,7 +3245,7 @@ void SAL_CALL ScCellRangesBase::setRowDescriptions(
                     }
 
                     //! undo
-                    PaintRanges_Impl( PAINT_GRID );
+                    PaintGridRanges_Impl();
                     pDocShell->SetDocumentModified();
                     ForceChartListener_Impl();          // call listeners for this object synchronously
                     bDone = true;
@@ -3315,7 +3316,7 @@ void SAL_CALL ScCellRangesBase::setColumnDescriptions(
                     }
 
                     //! undo
-                    PaintRanges_Impl( PAINT_GRID );
+                    PaintGridRanges_Impl();
                     pDocShell->SetDocumentModified();
                     ForceChartListener_Impl();          // call listeners for this object synchronously
                     bDone = true;
@@ -4292,7 +4293,7 @@ OUString SAL_CALL ScCellRangesObj::getRangeAddressesAsString()
     ScDocShell* pDocSh = GetDocShell();
     const ScRangeList& rRanges = GetRangeList();
     if (pDocSh)
-        rRanges.Format( aString, SCA_VALID | SCA_TAB_3D, &pDocSh->GetDocument() );
+        rRanges.Format( aString, ScRefFlags::VALID | ScRefFlags::TAB_3D, &pDocSh->GetDocument() );
     return aString;
 }
 
@@ -4435,13 +4436,12 @@ void SAL_CALL ScCellRangesObj::insertByName( const OUString& aName, const uno::A
         {
             //  if explicit name is given and already existing, throw exception
 
-            OUString aNamStr(aName);
-            if ( !aNamStr.isEmpty() )
+            if ( !aName.isEmpty() )
             {
                 size_t nNamedCount = m_pImpl->m_aNamedEntries.size();
                 for (size_t n = 0; n < nNamedCount; n++)
                 {
-                    if (m_pImpl->m_aNamedEntries[n].GetName() == aNamStr)
+                    if (m_pImpl->m_aNamedEntries[n].GetName() == aName)
                         throw container::ElementExistException();
                 }
             }
@@ -4459,7 +4459,7 @@ void SAL_CALL ScCellRangesObj::insertByName( const OUString& aName, const uno::A
                 //  if a name is given, also insert into list of named entries
                 //  (only possible for a single range)
                 //  name is not in m_pImpl->m_aNamedEntries (tested above)
-                m_pImpl->m_aNamedEntries.push_back(ScNamedEntry( aNamStr, *rAddRanges[ 0 ] ));
+                m_pImpl->m_aNamedEntries.push_back(ScNamedEntry( aName, *rAddRanges[ 0 ] ));
             }
         }
     }
@@ -4480,7 +4480,7 @@ static bool lcl_FindRangeByName( const ScRangeList& rRanges, ScDocShell* pDocSh,
         ScDocument& rDoc = pDocSh->GetDocument();
         for ( size_t i = 0, nCount = rRanges.size(); i < nCount; i++ )
         {
-            aRangeStr = rRanges[ i ]->Format(SCA_VALID | SCA_TAB_3D, &rDoc);
+            aRangeStr = rRanges[ i ]->Format(ScRefFlags::VALID | ScRefFlags::TAB_3D, &rDoc);
             if ( aRangeStr == rName )
             {
                 rIndex = i;
@@ -4507,8 +4507,9 @@ static bool lcl_FindRangeOrEntry( const ScNamedEntryArr_Impl& rNamedEntries,
     //  range contained in selection? (sheet must be specified)
 
     ScRange aCellRange;
-    sal_uInt16 nParse = aCellRange.ParseAny( rName, &pDocSh->GetDocument() );
-    if ( ( nParse & ( SCA_VALID | SCA_TAB_3D ) ) == ( SCA_VALID | SCA_TAB_3D ) )
+    ScRefFlags nParse = aCellRange.ParseAny( rName, &pDocSh->GetDocument() );
+    if ( (nParse & ( ScRefFlags::VALID | ScRefFlags::TAB_3D ))
+               == ( ScRefFlags::VALID | ScRefFlags::TAB_3D ))
     {
         ScMarkData aMarkData;
         aMarkData.MarkFromRangeList( rRanges, false );
@@ -4524,12 +4525,12 @@ static bool lcl_FindRangeOrEntry( const ScNamedEntryArr_Impl& rNamedEntries,
 
     if ( !rNamedEntries.empty() )
     {
-        for ( size_t n=0; n<rNamedEntries.size(); n++ )
-            if ( rNamedEntries[n].GetName() == rName )
+        for (const auto & rNamedEntry : rNamedEntries)
+            if ( rNamedEntry.GetName() == rName )
             {
                 //  test if named entry is contained in rRanges
 
-                const ScRange& rComp = rNamedEntries[n].GetRange();
+                const ScRange& rComp = rNamedEntry.GetRange();
                 ScMarkData aMarkData;
                 aMarkData.MarkFromRangeList( rRanges, false );
                 aMarkData.MarkToMulti();        // needed for IsAllMarked
@@ -4550,11 +4551,10 @@ void SAL_CALL ScCellRangesObj::removeByName( const OUString& aName )
 {
     SolarMutexGuard aGuard;
     bool bDone = false;
-    OUString aNameStr(aName);
     ScDocShell* pDocSh = GetDocShell();
     const ScRangeList& rRanges = GetRangeList();
     size_t nIndex = 0;
-    if ( lcl_FindRangeByName( rRanges, pDocSh, aNameStr, nIndex ) )
+    if ( lcl_FindRangeByName( rRanges, pDocSh, aName, nIndex ) )
     {
         //  einzelnen Range weglassen
         ScRangeList aNew;
@@ -4568,12 +4568,13 @@ void SAL_CALL ScCellRangesObj::removeByName( const OUString& aName )
     {
         //  deselect any ranges (parsed or named entry)
         ScRangeList aDiff;
-        bool bValid = ( aDiff.Parse( aNameStr, &pDocSh->GetDocument() ) & SCA_VALID ) != 0;
+        bool bValid = ( aDiff.Parse( aName, &pDocSh->GetDocument() ) & ScRefFlags::VALID )
+                                                                       == ScRefFlags::VALID;
         if (!bValid && !m_pImpl->m_aNamedEntries.empty())
         {
             sal_uInt16 nCount = m_pImpl->m_aNamedEntries.size();
             for (sal_uInt16 n=0; n<nCount && !bValid; n++)
-                if (m_pImpl->m_aNamedEntries[n].GetName() == aNameStr)
+                if (m_pImpl->m_aNamedEntries[n].GetName() == aName)
                 {
                     aDiff.RemoveAll();
                     aDiff.Append(m_pImpl->m_aNamedEntries[n].GetRange());
@@ -4601,7 +4602,7 @@ void SAL_CALL ScCellRangesObj::removeByName( const OUString& aName )
     }
 
     if (!m_pImpl->m_aNamedEntries.empty())
-        lcl_RemoveNamedEntry(m_pImpl->m_aNamedEntries, aNameStr);
+        lcl_RemoveNamedEntry(m_pImpl->m_aNamedEntries, aName);
 
     if (!bDone)
         throw container::NoSuchElementException();      // not found
@@ -4628,12 +4629,11 @@ uno::Any SAL_CALL ScCellRangesObj::getByName( const OUString& aName )
     SolarMutexGuard aGuard;
     uno::Any aRet;
 
-    OUString aNameStr(aName);
     ScDocShell* pDocSh = GetDocShell();
     const ScRangeList& rRanges = GetRangeList();
     ScRange aRange;
     if (lcl_FindRangeOrEntry(m_pImpl->m_aNamedEntries, rRanges,
-                pDocSh, aNameStr, aRange))
+                pDocSh, aName, aRange))
     {
         uno::Reference<table::XCellRange> xRange;
         if ( aRange.aStart == aRange.aEnd )
@@ -4682,7 +4682,7 @@ uno::Sequence<OUString> SAL_CALL ScCellRangesObj::getElementNames()
             if (m_pImpl->m_aNamedEntries.empty() ||
                 !lcl_FindEntryName(m_pImpl->m_aNamedEntries, aRange, aRangeStr))
             {
-                aRangeStr = aRange.Format(SCA_VALID | SCA_TAB_3D, &rDoc);
+                aRangeStr = aRange.Format(ScRefFlags::VALID | ScRefFlags::TAB_3D, &rDoc);
             }
             pAry[i] = aRangeStr;
         }
@@ -4695,12 +4695,11 @@ sal_Bool SAL_CALL ScCellRangesObj::hasByName( const OUString& aName )
                                         throw(uno::RuntimeException, std::exception)
 {
     SolarMutexGuard aGuard;
-    OUString aNameStr(aName);
     ScDocShell* pDocSh = GetDocShell();
     const ScRangeList& rRanges = GetRangeList();
     ScRange aRange;
     return lcl_FindRangeOrEntry(m_pImpl->m_aNamedEntries, rRanges, pDocSh,
-                aNameStr, aRange);
+                aName, aRange);
 }
 
 // XEnumerationAccess
@@ -4968,11 +4967,10 @@ uno::Reference<table::XCellRange>  ScCellRangeObj::getCellRangeByName(
 
         ScRange aCellRange;
         bool bFound = false;
-        OUString aString(aName);
-        sal_uInt16 nParse = aCellRange.ParseAny( aString, &rDoc, rDetails );
-        if ( nParse & SCA_VALID )
+        ScRefFlags nParse = aCellRange.ParseAny( aName, &rDoc, rDetails );
+        if ( nParse & ScRefFlags::VALID )
         {
-            if ( !(nParse & SCA_TAB_3D) )   // keine Tabelle angegeben -> auf dieser Tabelle
+            if ( !(nParse & ScRefFlags::TAB_3D) )   // keine Tabelle angegeben -> auf dieser Tabelle
             {
                 aCellRange.aStart.SetTab(nTab);
                 aCellRange.aEnd.SetTab(nTab);
@@ -4982,8 +4980,8 @@ uno::Reference<table::XCellRange>  ScCellRangeObj::getCellRangeByName(
         else
         {
             ScRangeUtil aRangeUtil;
-            if ( ScRangeUtil::MakeRangeFromName( aString, &rDoc, nTab, aCellRange ) ||
-                 ScRangeUtil::MakeRangeFromName( aString, &rDoc, nTab, aCellRange, RUTL_DBASE ) )
+            if ( ScRangeUtil::MakeRangeFromName( aName, &rDoc, nTab, aCellRange ) ||
+                 ScRangeUtil::MakeRangeFromName( aName, &rDoc, nTab, aCellRange, RUTL_DBASE ) )
                 bFound = true;
         }
 
@@ -5453,7 +5451,7 @@ void SAL_CALL ScCellRangeObj::fillSeries( sheet::FillDirection nFillDirection,
 
         if (!bError)
             pDocSh->GetDocFunc().FillSeries( aRange, nullptr, eDir, eCmd, eDateCmd,
-                                                MAXDOUBLE, fStep, fEndValue, true, true );
+                                                MAXDOUBLE, fStep, fEndValue, true );
     }
 }
 
@@ -5497,7 +5495,7 @@ void SAL_CALL ScCellRangeObj::fillAuto( sheet::FillDirection nFillDirection,
             bError = true;
 
         if (!bError)
-            pDocSh->GetDocFunc().FillAuto( aSourceRange, nullptr, eDir, nCount, true, true );
+            pDocSh->GetDocFunc().FillAuto( aSourceRange, nullptr, eDir, nCount, true );
     }
 }
 
@@ -5516,7 +5514,7 @@ void SAL_CALL ScCellRangeObj::autoFormat( const OUString& aName )
         {
             ScAutoFormat::const_iterator itBeg = pAutoFormat->begin();
             size_t nIndex = std::distance(itBeg, it);
-            pDocSh->GetDocFunc().AutoFormat(aRange, nullptr, nIndex, true, true);
+            pDocSh->GetDocFunc().AutoFormat(aRange, nullptr, nIndex, true);
         }
         else
             throw lang::IllegalArgumentException();
@@ -5923,7 +5921,7 @@ void SAL_CALL ScCellRangeObj::doImport( const uno::Sequence<beans::PropertyValue
         pDocSh->GetDBData( aRange, SC_DB_MAKE, SC_DBSEL_FORCE_MARK );       // ggf. Bereich anlegen
 
         ScDBDocFunc aFunc(*pDocSh);                         // Bereich muss angelegt sein
-        aFunc.DoImport( nTab, aParam, nullptr, true );         //! Api-Flag as parameter
+        aFunc.DoImport( nTab, aParam, nullptr );         //! Api-Flag as parameter
     }
 }
 
@@ -6214,20 +6212,19 @@ void ScCellObj::InputEnglishString( const OUString& rText )
     if (!pDocSh)
         return;
 
-    OUString aString(rText);
     ScDocument& rDoc = pDocSh->GetDocument();
     SvNumberFormatter* pFormatter = rDoc.GetFormatTable();
     sal_uInt32 nOldFormat = rDoc.GetNumberFormat( aCellPos );
     if (pFormatter->GetType(nOldFormat) == css::util::NumberFormat::TEXT)
     {
-        SetString_Impl(aString, false, false);      // text cell
+        SetString_Impl(rText, false, false);      // text cell
         return;
     }
 
     ScDocFunc &rFunc = pDocSh->GetDocFunc();
 
     ScInputStringType aRes =
-        ScStringUtil::parseInputString(*pFormatter, aString, LANGUAGE_ENGLISH_US);
+        ScStringUtil::parseInputString(*pFormatter, rText, LANGUAGE_ENGLISH_US);
 
     if (aRes.meType != ScInputStringType::Unknown)
     {
@@ -6240,7 +6237,7 @@ void ScCellObj::InputEnglishString( const OUString& rText )
                 ScPatternAttr aPattern( rDoc.GetPool() );
                 aPattern.GetItemSet().Put( SfxUInt32Item( ATTR_VALUE_FORMAT, nNewFormat ) );
                 // ATTR_LANGUAGE_FORMAT remains unchanged
-                rFunc.ApplyAttributes( *GetMarkData(), aPattern, true, true );
+                rFunc.ApplyAttributes( *GetMarkData(), aPattern, true );
             }
         }
     }
@@ -6259,7 +6256,7 @@ void ScCellObj::InputEnglishString( const OUString& rText )
             rFunc.SetStringOrEditCell(aCellPos, aRes.maText, false);
         break;
         default:
-            SetString_Impl(aString, false, false); // probably empty string
+            SetString_Impl(rText, false, false); // probably empty string
     }
 }
 
@@ -6304,12 +6301,11 @@ OUString SAL_CALL ScCellObj::getString() throw(uno::RuntimeException, std::excep
 void SAL_CALL ScCellObj::setString( const OUString& aText ) throw(uno::RuntimeException, std::exception)
 {
     SolarMutexGuard aGuard;
-    OUString aString(aText);
-    SetString_Impl(aString, false, false);  // immer Text
+    SetString_Impl(aText, false, false);  // immer Text
 
     // don't create pUnoText here if not there
     if (mxUnoText.is())
-        mxUnoText->SetSelection(ESelection( 0,0, 0,aString.getLength() ));
+        mxUnoText->SetSelection(ESelection( 0,0, 0,aText.getLength() ));
 }
 
 void SAL_CALL ScCellObj::insertString( const uno::Reference<text::XTextRange>& xRange,
@@ -6450,8 +6446,7 @@ OUString SAL_CALL ScCellObj::getFormula() throw(uno::RuntimeException, std::exce
 void SAL_CALL ScCellObj::setFormula( const OUString& aFormula ) throw(uno::RuntimeException, std::exception)
 {
     SolarMutexGuard aGuard;
-    OUString aString(aFormula);
-    SetString_Impl(aString, true, true); // Interpret as English
+    SetString_Impl(aFormula, true, true); // Interpret as English
 }
 
 double SAL_CALL ScCellObj::getValue() throw(uno::RuntimeException, std::exception)
@@ -6481,14 +6476,16 @@ void SAL_CALL ScCellObj::setFormulaResult( double nValue ) throw(uno::RuntimeExc
 {
     SolarMutexGuard aGuard;
     ScDocShell* pDocSh = GetDocShell();
-    if ( pDocSh && pDocSh->GetDocument().GetCellType( aCellPos ) == CELLTYPE_FORMULA )
+    if (pDocSh)
     {
-        ScFormulaCell* pCell = pDocSh->GetDocument().GetFormulaCell(aCellPos);
-        if (!pCell)
-            return;
-        pCell->SetHybridDouble( nValue );
-        pCell->ResetDirty();
-        pCell->SetChanged(false);
+        ScRefCellValue aCell(pDocSh->GetDocument(), aCellPos);
+        if (aCell.meType == CELLTYPE_FORMULA)
+        {
+            ScFormulaCell* pCell = aCell.mpFormula;
+            pCell->SetHybridDouble( nValue );
+            pCell->ResetDirty();
+            pCell->SetChanged(false);
+        }
     }
 }
 
@@ -7152,8 +7149,7 @@ void SAL_CALL ScTableSheetObj::setName( const OUString& aNewName )
     ScDocShell* pDocSh = GetDocShell();
     if ( pDocSh )
     {
-        OUString aString(aNewName);
-        pDocSh->GetDocFunc().RenameTable( GetTab_Impl(), aString, true, true );
+        pDocSh->GetDocFunc().RenameTable( GetTab_Impl(), aNewName, true, true );
     }
 }
 
@@ -7240,7 +7236,7 @@ void SAL_CALL ScTableSheetObj::removeRange( const table::CellRangeAddress& rRang
             OSL_ENSURE( rRangeAddress.Sheet == GetTab_Impl(), "falsche Tabelle in CellRangeAddress" );
             ScRange aScRange;
             ScUnoConversion::FillScRange( aScRange, rRangeAddress );
-            pDocSh->GetDocFunc().DeleteCells( aScRange, nullptr, eCmd, true, true );
+            pDocSh->GetDocFunc().DeleteCells( aScRange, nullptr, eCmd, true );
         }
     }
 }
@@ -7634,7 +7630,6 @@ void SAL_CALL ScTableSheetObj::link( const OUString& aUrl, const OUString& aShee
         OUString aFileString = aUrl;
         OUString aFilterString = aFilterName;
         OUString aOptString = aFilterOptions;
-        OUString aSheetString = aSheetName;
 
         aFileString = ScGlobal::GetAbsDocName( aFileString, pDocSh );
         if (aFilterString.isEmpty())
@@ -7651,7 +7646,7 @@ void SAL_CALL ScTableSheetObj::link( const OUString& aUrl, const OUString& aShee
             nLinkMode = ScLinkMode::VALUE;
 
         sal_uLong nRefresh = 0;
-        rDoc.SetLink( nTab, nLinkMode, aFileString, aFilterString, aOptString, aSheetString, nRefresh );
+        rDoc.SetLink( nTab, nLinkMode, aFileString, aFilterString, aOptString, aSheetName, nRefresh );
 
         pDocSh->UpdateLinks();                  // ggf. Link eintragen oder loeschen
         SfxBindings* pBindings = pDocSh->GetViewBindings();
@@ -7894,8 +7889,7 @@ void SAL_CALL ScTableSheetObj::protect( const OUString& aPassword )
     // #i108245# if already protected, don't change anything
     if ( pDocSh && !pDocSh->GetDocument().IsTabProtected( GetTab_Impl() ) )
     {
-        OUString aString(aPassword);
-        pDocSh->GetDocFunc().Protect( GetTab_Impl(), aString, true );
+        pDocSh->GetDocFunc().Protect( GetTab_Impl(), aPassword, true );
     }
 }
 
@@ -7906,8 +7900,7 @@ void SAL_CALL ScTableSheetObj::unprotect( const OUString& aPassword )
     ScDocShell* pDocSh = GetDocShell();
     if ( pDocSh )
     {
-        OUString aString(aPassword);
-        bool bDone = pDocSh->GetDocFunc().Unprotect( GetTab_Impl(), aString, true );
+        bool bDone = pDocSh->GetDocFunc().Unprotect( GetTab_Impl(), aPassword, true );
         if (!bDone)
             throw lang::IllegalArgumentException();
     }
@@ -8007,7 +8000,7 @@ void SAL_CALL ScTableSheetObj::addRanges( const uno::Sequence<table::CellRangeAd
             ScPatternAttr aPattern( rDoc.GetPool() );
             aPattern.GetItemSet().Put( ScMergeFlagAttr( SC_MF_SCENARIO ) );
             aPattern.GetItemSet().Put( ScProtectionAttr( true ) );
-            pDocSh->GetDocFunc().ApplyAttributes( aMarkData, aPattern, true, true );
+            pDocSh->GetDocFunc().ApplyAttributes( aMarkData, aPattern, true );
         }
     }
 }
@@ -8137,7 +8130,7 @@ void ScTableSheetObj::SetOnePropertyValue( const SfxItemPropertySimpleEntry* pEn
             OUString aStrVal;
             aValue >>= aStrVal;
             OUString aNewStr(ScStyleNameConversion::ProgrammaticToDisplayName(
-                                                aStrVal, SFX_STYLE_FAMILY_PAGE ));
+                                                aStrVal, SfxStyleFamily::Page ));
 
             //! Undo? (auch bei SID_STYLE_APPLY an der View)
 
@@ -8462,12 +8455,12 @@ void ScTableSheetObj::GetOnePropertyValue( const SfxItemPropertySimpleEntry* pEn
         else if ( pEntry->nWID == SC_WID_UNO_PAGESTL )
         {
             rAny <<= OUString( ScStyleNameConversion::DisplayToProgrammaticName(
-                                rDoc.GetPageStyle( nTab ), SFX_STYLE_FAMILY_PAGE ) );
+                                rDoc.GetPageStyle( nTab ), SfxStyleFamily::Page ) );
         }
         else if ( pEntry->nWID == SC_WID_UNO_CELLVIS )
         {
             bool bVis = rDoc.IsVisible( nTab );
-            ScUnoHelpFunctions::SetBoolInAny( rAny, bVis );
+            rAny <<= bVis;
         }
         else if ( pEntry->nWID == SC_WID_UNO_LINKDISPBIT )
         {
@@ -8482,7 +8475,7 @@ void ScTableSheetObj::GetOnePropertyValue( const SfxItemPropertySimpleEntry* pEn
         else if ( pEntry->nWID == SC_WID_UNO_ISACTIVE )
         {
             if (rDoc.IsScenario(nTab))
-                ScUnoHelpFunctions::SetBoolInAny( rAny, rDoc.IsActiveScenario( nTab ));
+                rAny <<= rDoc.IsActiveScenario( nTab );
         }
         else if ( pEntry->nWID == SC_WID_UNO_BORDCOL )
         {
@@ -8505,7 +8498,7 @@ void ScTableSheetObj::GetOnePropertyValue( const SfxItemPropertySimpleEntry* pEn
                 sal_uInt16 nFlags;
                 rDoc.GetScenarioData( nTab, aComment, aColor, nFlags );
 
-                ScUnoHelpFunctions::SetBoolInAny( rAny, (nFlags & SC_SCENARIO_PROTECT) != 0 );
+                rAny <<= ((nFlags & SC_SCENARIO_PROTECT) != 0);
             }
         }
         else if ( pEntry->nWID == SC_WID_UNO_SHOWBORD )
@@ -8517,7 +8510,7 @@ void ScTableSheetObj::GetOnePropertyValue( const SfxItemPropertySimpleEntry* pEn
                 sal_uInt16 nFlags;
                 rDoc.GetScenarioData( nTab, aComment, aColor, nFlags );
 
-                ScUnoHelpFunctions::SetBoolInAny( rAny, (nFlags & SC_SCENARIO_SHOWFRAME) != 0 );
+                rAny <<= ((nFlags & SC_SCENARIO_SHOWFRAME) != 0);
             }
         }
         else if ( pEntry->nWID == SC_WID_UNO_PRINTBORD )
@@ -8529,7 +8522,7 @@ void ScTableSheetObj::GetOnePropertyValue( const SfxItemPropertySimpleEntry* pEn
                 sal_uInt16 nFlags;
                 rDoc.GetScenarioData( nTab, aComment, aColor, nFlags );
 
-                ScUnoHelpFunctions::SetBoolInAny( rAny, (nFlags & SC_SCENARIO_PRINTFRAME) != 0 );
+                rAny <<= ((nFlags & SC_SCENARIO_PRINTFRAME) != 0);
             }
         }
         else if ( pEntry->nWID == SC_WID_UNO_COPYBACK )
@@ -8541,7 +8534,7 @@ void ScTableSheetObj::GetOnePropertyValue( const SfxItemPropertySimpleEntry* pEn
                 sal_uInt16 nFlags;
                 rDoc.GetScenarioData( nTab, aComment, aColor, nFlags );
 
-                ScUnoHelpFunctions::SetBoolInAny( rAny, (nFlags & SC_SCENARIO_TWOWAY) != 0 );
+                rAny <<= ((nFlags & SC_SCENARIO_TWOWAY) != 0);
             }
         }
         else if ( pEntry->nWID == SC_WID_UNO_COPYSTYL )
@@ -8553,7 +8546,7 @@ void ScTableSheetObj::GetOnePropertyValue( const SfxItemPropertySimpleEntry* pEn
                 sal_uInt16 nFlags;
                 rDoc.GetScenarioData( nTab, aComment, aColor, nFlags );
 
-                ScUnoHelpFunctions::SetBoolInAny( rAny, (nFlags & SC_SCENARIO_ATTRIB) != 0 );
+                rAny <<= ((nFlags & SC_SCENARIO_ATTRIB) != 0);
             }
         }
         else if ( pEntry->nWID == SC_WID_UNO_COPYFORM )
@@ -8565,7 +8558,7 @@ void ScTableSheetObj::GetOnePropertyValue( const SfxItemPropertySimpleEntry* pEn
                 sal_uInt16 nFlags;
                 rDoc.GetScenarioData( nTab, aComment, aColor, nFlags );
 
-                ScUnoHelpFunctions::SetBoolInAny( rAny, !(nFlags & SC_SCENARIO_VALUE));
+                rAny <<= !(nFlags & SC_SCENARIO_VALUE);
             }
         }
         else if ( pEntry->nWID == SC_WID_UNO_TABLAYOUT )
@@ -8578,7 +8571,7 @@ void ScTableSheetObj::GetOnePropertyValue( const SfxItemPropertySimpleEntry* pEn
         else if ( pEntry->nWID == SC_WID_UNO_AUTOPRINT )
         {
             bool bAutoPrint = rDoc.IsPrintEntireSheet( nTab );
-            ScUnoHelpFunctions::SetBoolInAny( rAny, bAutoPrint );
+            rAny <<= bAutoPrint;
         }
         else if ( pEntry->nWID == SC_WID_UNO_TABCOLOR )
         {
@@ -8840,23 +8833,23 @@ void ScTableColumnObj::GetOnePropertyValue( const SfxItemPropertySimpleEntry* pE
         else if ( pEntry->nWID == SC_WID_UNO_CELLVIS )
         {
             bool bHidden = rDoc.ColHidden(nCol, nTab);
-            ScUnoHelpFunctions::SetBoolInAny( rAny, !bHidden );
+            rAny <<= !bHidden;
         }
         else if ( pEntry->nWID == SC_WID_UNO_OWIDTH )
         {
             //! momentan immer gesetzt ??!?!
             bool bOpt = !(rDoc.GetColFlags( nCol, nTab ) & CR_MANUALSIZE);
-            ScUnoHelpFunctions::SetBoolInAny( rAny, bOpt );
+            rAny <<= bOpt;
         }
         else if ( pEntry->nWID == SC_WID_UNO_NEWPAGE )
         {
             ScBreakType nBreak = rDoc.HasColBreak(nCol, nTab);
-            ScUnoHelpFunctions::SetBoolInAny( rAny, nBreak != BREAK_NONE );
+            rAny <<= (nBreak != BREAK_NONE);
         }
         else if ( pEntry->nWID == SC_WID_UNO_MANPAGE )
         {
             ScBreakType nBreak = rDoc.HasColBreak(nCol, nTab);
-            ScUnoHelpFunctions::SetBoolInAny(rAny, (nBreak & BREAK_MANUAL) != 0);
+            rAny <<= ((nBreak & BREAK_MANUAL) != 0);
         }
         else
             ScCellRangeObj::GetOnePropertyValue(pEntry, rAny);
@@ -8989,27 +8982,27 @@ void ScTableRowObj::GetOnePropertyValue( const SfxItemPropertySimpleEntry* pEntr
         else if ( pEntry->nWID == SC_WID_UNO_CELLVIS )
         {
             bool bHidden = rDoc.RowHidden(nRow, nTab);
-            ScUnoHelpFunctions::SetBoolInAny( rAny, !bHidden );
+            rAny <<= !bHidden;
         }
         else if ( pEntry->nWID == SC_WID_UNO_CELLFILT )
         {
             bool bVis = rDoc.RowFiltered(nRow, nTab);
-            ScUnoHelpFunctions::SetBoolInAny( rAny, bVis );
+            rAny <<= bVis;
         }
         else if ( pEntry->nWID == SC_WID_UNO_OHEIGHT )
         {
             bool bOpt = !(rDoc.GetRowFlags( nRow, nTab ) & CR_MANUALSIZE);
-            ScUnoHelpFunctions::SetBoolInAny( rAny, bOpt );
+            rAny <<= bOpt;
         }
         else if ( pEntry->nWID == SC_WID_UNO_NEWPAGE )
         {
             ScBreakType nBreak = rDoc.HasRowBreak(nRow, nTab);
-            ScUnoHelpFunctions::SetBoolInAny( rAny, nBreak != BREAK_NONE );
+            rAny <<= (nBreak != BREAK_NONE);
         }
         else if ( pEntry->nWID == SC_WID_UNO_MANPAGE )
         {
             bool bBreak = (rDoc.HasRowBreak(nRow, nTab) & BREAK_MANUAL) != 0;
-            ScUnoHelpFunctions::SetBoolInAny( rAny, bBreak );
+            rAny <<= bBreak;
         }
         else
             ScCellRangeObj::GetOnePropertyValue(pEntry, rAny);
@@ -9408,7 +9401,7 @@ void ScCellFormatsEnumeration::Notify( SfxBroadcaster&, const SfxHint& rHint )
     }
     else if ( dynamic_cast<const SfxSimpleHint*>(&rHint) )
     {
-        sal_uLong nId = static_cast<const SfxSimpleHint&>(rHint).GetId();
+        const sal_uInt32 nId = static_cast<const SfxSimpleHint&>(rHint).GetId();
         if ( nId == SFX_HINT_DYING )
         {
             pDocShell = nullptr;                       // ungueltig geworden
@@ -9471,8 +9464,7 @@ void ScUniqueCellFormatsObj::Notify( SfxBroadcaster&, const SfxHint& rHint )
     }
     else if ( dynamic_cast<const SfxSimpleHint*>(&rHint) )
     {
-        sal_uLong nId = static_cast<const SfxSimpleHint&>(rHint).GetId();
-        if ( nId == SFX_HINT_DYING )
+        if ( static_cast<const SfxSimpleHint&>(rHint).GetId() == SFX_HINT_DYING )
             pDocShell = nullptr;                       // ungueltig geworden
     }
 }
@@ -9729,8 +9721,7 @@ void ScUniqueCellFormatsEnumeration::Notify( SfxBroadcaster&, const SfxHint& rHi
     }
     else if ( dynamic_cast<const SfxSimpleHint*>(&rHint) )
     {
-        sal_uLong nId = static_cast<const SfxSimpleHint&>(rHint).GetId();
-        if ( nId == SFX_HINT_DYING )
+        if ( static_cast<const SfxSimpleHint&>(rHint).GetId() == SFX_HINT_DYING )
             pDocShell = nullptr;                       // ungueltig geworden
     }
 }

@@ -36,7 +36,6 @@ using namespace ::com::sun::star;
 using namespace ::com::sun::star::chart2;
 
 using ::com::sun::star::uno::Reference;
-using ::com::sun::star::uno::Sequence;
 using ::rtl::math::cos;
 using ::rtl::math::sin;
 using ::rtl::math::tan;
@@ -206,7 +205,7 @@ void lcl_setLightsForScheme( const uno::Reference< beans::XPropertySet >& xDiagr
     if( rScheme == ThreeDLookScheme_Unknown)
         return;
 
-    xDiagramProps->setPropertyValue( UNO_NAME_3D_SCENE_LIGHTON_2, uno::makeAny( sal_True ) );
+    xDiagramProps->setPropertyValue( UNO_NAME_3D_SCENE_LIGHTON_2, uno::makeAny( true ) );
 
     uno::Reference< chart2::XDiagram > xDiagram( xDiagramProps, uno::UNO_QUERY );
     uno::Reference< chart2::XChartType > xChartType( DiagramHelper::getChartTypeByIndex( xDiagram, 0 ) );
@@ -304,7 +303,7 @@ drawing::CameraGeometry ThreeDHelper::getDefaultCameraGeometry( bool bPie )
 
     if( bPie )
     {
-        vrp = drawing::Position3D( 0.0, 0.0, 87591.2408759124 );//--> 5 percent perspecitve
+        vrp = drawing::Position3D( 0.0, 0.0, 87591.2408759124 );//--> 5 percent perspective
         vpn = drawing::Direction3D( 0.0, 0.0, 1.0 );
         vup = drawing::Direction3D( 0.0, 1.0, 0.0 );
     }
@@ -948,7 +947,7 @@ void ThreeDHelper::getRotationAngleFromDiagram(
     }
 }
 
-void ThreeDHelper::switchRightAngledAxes( const Reference< beans::XPropertySet >& xSceneProperties, bool bRightAngledAxes, bool bRotateLights )
+void ThreeDHelper::switchRightAngledAxes( const Reference< beans::XPropertySet >& xSceneProperties, bool bRightAngledAxes )
 {
     try
     {
@@ -959,18 +958,15 @@ void ThreeDHelper::switchRightAngledAxes( const Reference< beans::XPropertySet >
             if( bOldRightAngledAxes!=bRightAngledAxes)
             {
                 xSceneProperties->setPropertyValue( "RightAngledAxes", uno::makeAny( bRightAngledAxes ));
-                if( bRotateLights )
+                if(bRightAngledAxes)
                 {
-                    if(bRightAngledAxes)
-                    {
-                        ::basegfx::B3DHomMatrix aInverseRotation( lcl_getInverseRotationMatrix( xSceneProperties ) );
-                        lcl_rotateLights( aInverseRotation, xSceneProperties );
-                    }
-                    else
-                    {
-                        ::basegfx::B3DHomMatrix aCompleteRotation( lcl_getCompleteRotationMatrix( xSceneProperties ) );
-                        lcl_rotateLights( aCompleteRotation, xSceneProperties );
-                    }
+                    ::basegfx::B3DHomMatrix aInverseRotation( lcl_getInverseRotationMatrix( xSceneProperties ) );
+                    lcl_rotateLights( aInverseRotation, xSceneProperties );
+                }
+                else
+                {
+                    ::basegfx::B3DHomMatrix aCompleteRotation( lcl_getCompleteRotationMatrix( xSceneProperties ) );
+                    lcl_rotateLights( aCompleteRotation, xSceneProperties );
                 }
             }
         }
@@ -1286,13 +1282,13 @@ void ThreeDHelper::setDefaultIllumination( const uno::Reference< beans::XPropert
     try
     {
         xSceneProperties->getPropertyValue( "D3DSceneShadeMode" )>>= aShadeMode;
-        xSceneProperties->setPropertyValue( UNO_NAME_3D_SCENE_LIGHTON_1, uno::makeAny( sal_False ) );
-        xSceneProperties->setPropertyValue( UNO_NAME_3D_SCENE_LIGHTON_3, uno::makeAny( sal_False ) );
-        xSceneProperties->setPropertyValue( UNO_NAME_3D_SCENE_LIGHTON_4, uno::makeAny( sal_False ) );
-        xSceneProperties->setPropertyValue( UNO_NAME_3D_SCENE_LIGHTON_5, uno::makeAny( sal_False ) );
-        xSceneProperties->setPropertyValue( UNO_NAME_3D_SCENE_LIGHTON_6, uno::makeAny( sal_False ) );
-        xSceneProperties->setPropertyValue( UNO_NAME_3D_SCENE_LIGHTON_7, uno::makeAny( sal_False ) );
-        xSceneProperties->setPropertyValue( UNO_NAME_3D_SCENE_LIGHTON_8, uno::makeAny( sal_False ) );
+        xSceneProperties->setPropertyValue( UNO_NAME_3D_SCENE_LIGHTON_1, uno::makeAny( false ) );
+        xSceneProperties->setPropertyValue( UNO_NAME_3D_SCENE_LIGHTON_3, uno::makeAny( false ) );
+        xSceneProperties->setPropertyValue( UNO_NAME_3D_SCENE_LIGHTON_4, uno::makeAny( false ) );
+        xSceneProperties->setPropertyValue( UNO_NAME_3D_SCENE_LIGHTON_5, uno::makeAny( false ) );
+        xSceneProperties->setPropertyValue( UNO_NAME_3D_SCENE_LIGHTON_6, uno::makeAny( false ) );
+        xSceneProperties->setPropertyValue( UNO_NAME_3D_SCENE_LIGHTON_7, uno::makeAny( false ) );
+        xSceneProperties->setPropertyValue( UNO_NAME_3D_SCENE_LIGHTON_8, uno::makeAny( false ) );
     }
     catch( const uno::Exception & ex )
     {

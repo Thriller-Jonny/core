@@ -68,7 +68,7 @@ XMLHatchStyleImport::~XMLHatchStyleImport()
 {
 }
 
-bool XMLHatchStyleImport::importXML(
+void XMLHatchStyleImport::importXML(
     const uno::Reference< xml::sax::XAttributeList >& xAttrList,
     uno::Any& rValue,
     OUString& rStrName )
@@ -84,10 +84,7 @@ bool XMLHatchStyleImport::importXML(
         XML_TOKEN_MAP_END
     };
 
-    bool bHasName  = false;
     bool bHasStyle = false;
-    bool bHasColor = false;
-    bool bHasDist  = false;
     OUString aDisplayName;
 
     drawing::Hatch aHatch;
@@ -111,10 +108,7 @@ bool XMLHatchStyleImport::importXML(
         switch( aTokenMap.Get( nPrefix, aStrAttrName ) )
         {
             case XML_TOK_HATCH_NAME:
-                {
-                    rStrName = rStrValue;
-                    bHasName = true;
-                }
+                rStrName = rStrValue;
                 break;
             case XML_TOK_HATCH_DISPLAY_NAME:
                 aDisplayName = rStrValue;
@@ -128,13 +122,10 @@ bool XMLHatchStyleImport::importXML(
                 }
                 break;
             case XML_TOK_HATCH_COLOR:
-                {
-                    bHasColor = ::sax::Converter::convertColor(
-                            aHatch.Color, rStrValue);
-                }
+                ::sax::Converter::convertColor(aHatch.Color, rStrValue);
                 break;
             case XML_TOK_HATCH_DISTANCE:
-                bHasDist = rUnitConverter.convertMeasureToCore(
+                rUnitConverter.convertMeasureToCore(
                         (sal_Int32&)aHatch.Distance, rStrValue );
                 break;
             case XML_TOK_HATCH_ROTATION:
@@ -158,10 +149,6 @@ bool XMLHatchStyleImport::importXML(
                                      aDisplayName );
         rStrName = aDisplayName;
     }
-
-    bool bRet = bHasName && bHasStyle && bHasColor && bHasDist;
-
-    return bRet;
 }
 
 // Export
@@ -175,11 +162,10 @@ XMLHatchStyleExport::~XMLHatchStyleExport()
 {
 }
 
-bool XMLHatchStyleExport::exportXML(
+void XMLHatchStyleExport::exportXML(
     const OUString& rStrName,
     const uno::Any& rValue )
 {
-    bool bRet = false;
     drawing::Hatch aHatch;
 
     if( !rStrName.isEmpty() )
@@ -193,11 +179,7 @@ bool XMLHatchStyleExport::exportXML(
                 rExport.GetMM100UnitConverter();
 
             // Style
-            if( !SvXMLUnitConverter::convertEnum( aOut, aHatch.Style, pXML_HatchStyle_Enum ) )
-            {
-                bRet = false;
-            }
-            else
+            if( SvXMLUnitConverter::convertEnum( aOut, aHatch.Style, pXML_HatchStyle_Enum ) )
             {
                 // Name
                 bool bEncoded = false;
@@ -232,8 +214,6 @@ bool XMLHatchStyleExport::exportXML(
             }
         }
     }
-
-    return bRet;
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

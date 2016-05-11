@@ -60,12 +60,12 @@ class EDITENG_DLLPUBLIC SvxNumberType
 public:
     explicit SvxNumberType(sal_Int16 nType = css::style::NumberingType::ARABIC);
     SvxNumberType(const SvxNumberType& rType);
-    ~SvxNumberType();
+    virtual ~SvxNumberType();
 
     OUString        GetNumStr( sal_uLong nNo ) const;
     OUString        GetNumStr( sal_uLong nNo, const css::lang::Locale& rLocale ) const;
 
-    void            SetNumberingType(sal_Int16 nSet) {nNumType = nSet;}
+    virtual void    SetNumberingType(sal_Int16 nSet) {nNumType = nSet;}
     sal_Int16       GetNumberingType() const {return nNumType;}
 
     void            SetShowSymbol(bool bSet) {bShowSymbol = bSet;}
@@ -99,6 +99,7 @@ private:
     OUString       sSuffix;
 
     SvxAdjust           eNumAdjust;
+    bool                mbNumAdjustChanged;
 
     sal_uInt8           nInclUpperLevels;   // Take over numbers from the previous level.
     sal_uInt16          nStart;             // Start of counting
@@ -148,13 +149,14 @@ public:
 
     virtual ~SvxNumberFormat();
 
-    SvStream&       Store(SvStream &rStream, FontToSubsFontConverter pConverter);
+    void            Store(SvStream &rStream, FontToSubsFontConverter pConverter);
 
     SvxNumberFormat& operator=( const SvxNumberFormat&  );
     bool            operator==( const SvxNumberFormat&  ) const;
     bool            operator!=( const SvxNumberFormat& rFmt) const {return !(*this == rFmt);}
 
-    void            SetNumAdjust(SvxAdjust eSet) {eNumAdjust = eSet;}
+    void            SetNumberingType(sal_Int16 nSet) override;
+    void            SetNumAdjust(SvxAdjust eSet);
     SvxAdjust       GetNumAdjust() const {return eNumAdjust;}
     void            SetPrefix(const OUString& rSet) { sPrefix = rSet;}
     const OUString&   GetPrefix() const { return sPrefix;}
@@ -171,7 +173,7 @@ public:
     void            SetBulletRelSize(sal_uInt16 nSet) {nBulletRelSize = nSet;}
     sal_uInt16          GetBulletRelSize() const { return nBulletRelSize;}
     void            SetBulletColor(Color nSet){nBulletColor = nSet;}
-    Color           GetBulletColor()const {return nBulletColor;}
+    const Color&    GetBulletColor()const {return nBulletColor;}
 
     void            SetIncludeUpperLevels( sal_uInt8 nSet ) { nInclUpperLevels = nSet;}
     sal_uInt8           GetIncludeUpperLevels()const  { return nInclUpperLevels;}
@@ -265,7 +267,7 @@ public:
 
     SvxNumRule&             operator=( const SvxNumRule&  );
 
-    SvStream&               Store(SvStream &rStream);
+    void                    Store(SvStream &rStream);
     const SvxNumberFormat*  Get(sal_uInt16 nLevel)const;
     const SvxNumberFormat&  GetLevel(sal_uInt16 nLevel)const;
     void                    SetLevel(sal_uInt16 nLevel, const SvxNumberFormat& rFmt, bool bIsValid = true);
@@ -282,11 +284,11 @@ public:
     SvxNumRuleFlags         GetFeatureFlags() const {return nFeatureFlags;}
     void                    SetFeatureFlag( SvxNumRuleFlags nFlag, bool bSet = true ) { if(bSet) nFeatureFlags |= nFlag; else nFeatureFlags &= ~nFlag; }
 
-    OUString                MakeNumString( const SvxNodeNum&, bool bInclStrings = true ) const;
+    OUString                MakeNumString( const SvxNodeNum& ) const;
 
     SvxNumRuleType          GetNumRuleType() const { return eNumberingType; }
 
-    bool                    UnLinkGraphics();
+    void                    UnLinkGraphics();
 };
 
 class EDITENG_DLLPUBLIC SvxNumBulletItem : public SfxPoolItem
@@ -318,7 +320,7 @@ class SvxNodeNum
     bool       bStartNum;                     // Restart numbering
 
 public:
-    explicit inline SvxNodeNum( sal_uInt8 nLevel = SVX_NO_NUM, sal_uInt16 nSetVal = USHRT_MAX );
+    explicit inline SvxNodeNum( sal_uInt16 nSetVal = USHRT_MAX );
     inline SvxNodeNum& operator=( const SvxNodeNum& rCpy );
 
     sal_uInt8 GetLevel() const                  { return nMyLevel; }
@@ -328,8 +330,8 @@ public:
           sal_uInt16* GetLevelVal()             { return nLevelVal; }
 };
 
-SvxNodeNum::SvxNodeNum( sal_uInt8 nLevel, sal_uInt16 nSetVal )
-    : nSetValue( nSetVal ), nMyLevel( nLevel ), bStartNum( false )
+SvxNodeNum::SvxNodeNum( sal_uInt16 nSetVal )
+    : nSetValue( nSetVal ), nMyLevel( 0 ), bStartNum( false )
 {
     memset( nLevelVal, 0, sizeof( nLevelVal ) );
 }

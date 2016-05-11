@@ -320,12 +320,12 @@ void SwNumberTreeNode::ValidateTree()
     }
 }
 
-void SwNumberTreeNode::_GetNumberVector(vector<SwNumberTree::tSwNumTreeNumber> & rVector,
+void SwNumberTreeNode::GetNumberVector_(vector<SwNumberTree::tSwNumTreeNumber> & rVector,
                                         bool bValidate) const
 {
     if (mpParent)
     {
-        mpParent->_GetNumberVector(rVector, bValidate);
+        mpParent->GetNumberVector_(rVector, bValidate);
         rVector.push_back(GetNumber(bValidate));
     }
 }
@@ -483,7 +483,7 @@ void SwNumberTreeNode::AddChild( SwNumberTreeNode * pChild,
             mChildren.upper_bound(pChild);
 
         OSL_ENSURE(! (aInsertDeepIt != mChildren.end() &&
-                  (*aInsertDeepIt)->IsPhantom()), " unexspected phantom");
+                  (*aInsertDeepIt)->IsPhantom()), " unexpected phantom");
 
         if (aInsertDeepIt == mChildren.begin())
         {
@@ -704,7 +704,7 @@ vector<SwNumberTree::tSwNumTreeNumber> SwNumberTreeNode::GetNumberVector() const
 {
     vector<SwNumberTree::tSwNumTreeNumber> aResult;
 
-    _GetNumberVector(aResult);
+    GetNumberVector_(aResult);
 
     return aResult;
 }
@@ -725,9 +725,9 @@ bool SwNumberTreeNode::IsValid(const SwNumberTreeNode * pChild) const
 }
 
 
-void SwNumberTreeNode::SetPhantom(bool _bPhantom)
+void SwNumberTreeNode::SetPhantom()
 {
-    mbPhantom = _bPhantom;
+    mbPhantom = true;
 }
 
 bool SwNumberTreeNode::HasOnlyPhantoms() const
@@ -1027,7 +1027,7 @@ SwNumberTreeNode * SwNumberTreeNode::GetPred(bool bSibling) const
 }
 
 void SwNumberTreeNode::SetLastValid
-                    ( SwNumberTreeNode::tSwNumberTreeChildren::const_iterator aItValid,
+                    ( const SwNumberTreeNode::tSwNumberTreeChildren::const_iterator& aItValid,
                       bool bValidating ) const
 {
     OSL_ENSURE( (aItValid == mChildren.end() || GetIterator(*aItValid) != mChildren.end()),

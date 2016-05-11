@@ -67,7 +67,9 @@ namespace svgio
 
         basegfx::B2DHomMatrix SvgAspectRatio::createMapping(const basegfx::B2DRange& rTarget, const basegfx::B2DRange& rSource) const
         {
-            if(!isSet() || Align_none == getSvgAlign())
+            // removed !isSet() from below. Due to correct defaults in the constructor an instance
+            // of this class is perfectly useful without being set by any importer
+            if(Align_none == getSvgAlign())
             {
                 // create linear mapping (default)
                 return createLinearMapping(rTarget, rSource);
@@ -187,6 +189,13 @@ namespace svgio
 
                         return fRetval;
                     }
+                    case Unit_none:
+                    {
+#ifdef DBG_UTIL
+                        myAssert("Design error, this case should have been handled in the caller");
+#endif
+                        return mfNumber;
+                    }
                     default:
                     {
                         OSL_ENSURE(false, "Do not use with percentage! ");
@@ -217,6 +226,7 @@ namespace svgio
                     case Unit_in:
                     case Unit_em:
                     case Unit_ex:
+                    case Unit_none:
                     {
                         return solveNonPercentage( rInfoProvider);
                     }
@@ -282,17 +292,17 @@ namespace svgio
             return basegfx::fTools::moreOrEqual(mfNumber, 0.0);
         }
 
-        void skip_char(const OUString& rCandidate, const sal_Unicode& rChar, sal_Int32& nPos, const sal_Int32 nLen)
+        void skip_char(const OUString& rCandidate, sal_Unicode nChar, sal_Int32& nPos, const sal_Int32 nLen)
         {
-            while(nPos < nLen && rChar == rCandidate[nPos])
+            while(nPos < nLen && nChar == rCandidate[nPos])
             {
                 nPos++;
             }
         }
 
-        void skip_char(const OUString& rCandidate, const sal_Unicode& rCharA, const sal_Unicode& rCharB, sal_Int32& nPos, const sal_Int32 nLen)
+        void skip_char(const OUString& rCandidate, sal_Unicode nCharA, sal_Unicode nCharB, sal_Int32& nPos, const sal_Int32 nLen)
         {
-            while(nPos < nLen && (rCharA == rCandidate[nPos] || rCharB == rCandidate[nPos]))
+            while(nPos < nLen && (nCharA == rCandidate[nPos] || nCharB == rCandidate[nPos]))
             {
                 nPos++;
             }
@@ -370,9 +380,9 @@ namespace svgio
             }
         }
 
-        void copyToLimiter(const OUString& rCandidate, const sal_Unicode& rLimiter, sal_Int32& nPos, OUStringBuffer& rTarget, const sal_Int32 nLen)
+        void copyToLimiter(const OUString& rCandidate, sal_Unicode nLimiter, sal_Int32& nPos, OUStringBuffer& rTarget, const sal_Int32 nLen)
         {
-            while(nPos < nLen && rLimiter != rCandidate[nPos])
+            while(nPos < nLen && nLimiter != rCandidate[nPos])
             {
                 rTarget.append(rCandidate[nPos]);
                 nPos++;
@@ -471,13 +481,13 @@ namespace svgio
                             }
                             else if('t' == aCharB)
                             {
-                                // 'pt' == 1.25 px
+                                // 'pt' == 4/3 px
                                 aRetval = Unit_pt;
                                 bTwoCharValid = true;
                             }
                             else if('c' == aCharB)
                             {
-                                // 'pc' == 15 px
+                                // 'pc' == 16 px
                                 aRetval = Unit_pc;
                                 bTwoCharValid = true;
                             }
@@ -487,7 +497,7 @@ namespace svgio
                         {
                             if('n' == aCharB)
                             {
-                                // 'in' == 90 px
+                                // 'in' == 96 px, since CSS 2.1
                                 aRetval = Unit_in;
                                 bTwoCharValid = true;
                             }
@@ -497,7 +507,7 @@ namespace svgio
                         {
                             if('m' == aCharB)
                             {
-                                // 'cm' == 35.43307 px
+                                // 'cm' == 37.79527559 px
                                 aRetval = Unit_cm;
                                 bTwoCharValid = true;
                             }
@@ -507,7 +517,7 @@ namespace svgio
                         {
                             if('m' == aCharB)
                             {
-                                // 'mm' == 3.543307 px
+                                // 'mm' == 3.779528 px
                                 aRetval = Unit_mm;
                                 bTwoCharValid = true;
                             }
@@ -612,19 +622,19 @@ namespace svgio
             return false;
         }
 
-        sal_Int32 read_hex(const sal_Unicode& rChar)
+        sal_Int32 read_hex(sal_Unicode nChar)
         {
-            if(rChar >= '0' && rChar <= '9')
+            if(nChar >= '0' && nChar <= '9')
             {
-                return sal_Int32(rChar - sal_Unicode('0'));
+                return sal_Int32(nChar - sal_Unicode('0'));
             }
-            else if(rChar >= 'A' && rChar <= 'F')
+            else if(nChar >= 'A' && nChar <= 'F')
             {
-                return 10 + sal_Int32(rChar - sal_Unicode('A'));
+                return 10 + sal_Int32(nChar - sal_Unicode('A'));
             }
-            else if(rChar >= 'a' && rChar <= 'f')
+            else if(nChar >= 'a' && nChar <= 'f')
             {
-                return 10 + sal_Int32(rChar - sal_Unicode('a'));
+                return 10 + sal_Int32(nChar - sal_Unicode('a'));
             }
             else
             {
@@ -636,9 +646,7 @@ namespace svgio
         bool match_colorKeyword(basegfx::BColor& rColor, const OUString& rName, bool bCaseIndependent)
         {
             typedef std::unordered_map< OUString, Color,
-                      OUStringHash,
-                      ::std::equal_to< OUString >
-                      > ColorTokenMapper;
+                      OUStringHash > ColorTokenMapper;
             typedef std::pair< OUString, Color > ColorTokenValueType;
             ColorTokenMapper aColorTokenMapperList;
 
@@ -812,7 +820,7 @@ namespace svgio
             }
         }
 
-        bool read_color(const OUString& rCandidate, basegfx::BColor& rColor, bool bCaseIndependent)
+        bool read_color(const OUString& rCandidate, basegfx::BColor& rColor, bool bCaseIndependent, SvgNumber& rOpacity)
         {
             const sal_Int32 nLen(rCandidate.getLength());
 
@@ -864,8 +872,17 @@ namespace svgio
 
                     if(rCandidate.matchIgnoreAsciiCase(aStrRgb, 0))
                     {
-                        // rgb definition
+                        // rgb/rgba definition
                         sal_Int32 nPos(strlen(aStrRgb));
+                        bool bIsRGBA = false;
+
+                        if('a' == rCandidate[nPos])
+                        {
+                            //Delete the 'a' from 'rbga'
+                            skip_char(rCandidate, 'a', nPos, nPos + 1);
+                            bIsRGBA = true;
+                        }
+
                         skip_char(rCandidate, ' ', '(', nPos, nLen);
                         double fR(0.0);
 
@@ -899,16 +916,38 @@ namespace svgio
 
                                     if(readNumber(rCandidate, nPos, fB, nLen))
                                     {
-                                        const double fFac(bIsPercent ? 0.01 : fFactor);
-
-                                        rColor.setRed(fR * fFac);
-                                        rColor.setGreen(fG * fFac);
-                                        rColor.setBlue(fB * fFac);
+                                        double fA(1.0);
 
                                         if(bIsPercent)
                                         {
                                             skip_char(rCandidate, '%', nPos, nLen);
                                         }
+
+                                        skip_char(rCandidate, ' ', ',', nPos, nLen);
+
+                                        if(readNumber(rCandidate, nPos, fA, nLen))
+                                        {
+                                            if(bIsRGBA)
+                                            {
+                                                const double fFac(bIsPercent ? 0.01 : 1);
+                                                rOpacity = SvgNumber(fA * fFac);
+
+                                                if(bIsPercent)
+                                                {
+                                                    skip_char(rCandidate, '%', nPos, nLen);
+                                                }
+                                            }
+                                            else
+                                            {
+                                                return false;
+                                            }
+                                        }
+
+                                        const double fFac(bIsPercent ? 0.01 : fFactor);
+
+                                        rColor.setRed(fR * fFac);
+                                        rColor.setGreen(fG * fFac);
+                                        rColor.setBlue(fB * fFac);
 
                                         skip_char(rCandidate, ' ', ')', nPos, nLen);
                                         return true;
@@ -1205,13 +1244,14 @@ namespace svgio
             return false;
         }
 
-        bool readSvgPaint(const OUString& rCandidate, SvgPaint& rSvgPaint, OUString& rURL, bool bCaseIndependent)
+        bool readSvgPaint(const OUString& rCandidate, SvgPaint& rSvgPaint,
+            OUString& rURL, bool bCaseIndependent, SvgNumber& rOpacity)
         {
             if( !rCandidate.isEmpty() )
             {
                 basegfx::BColor aColor;
 
-                if(read_color(rCandidate, aColor, bCaseIndependent))
+                if(read_color(rCandidate, aColor, bCaseIndependent, rOpacity))
                 {
                     rSvgPaint = SvgPaint(aColor, true, true);
                     return true;
@@ -1270,7 +1310,6 @@ namespace svgio
             {
                 sal_Int32 nPos(0);
                 SvgAlign aSvgAlign(Align_xMidYMid);
-                bool bDefer(false);
                 bool bMeetOrSlice(true);
                 bool bChanged(false);
 
@@ -1287,7 +1326,6 @@ namespace svgio
                         {
                             case SVGTokenDefer:
                             {
-                                bDefer = true;
                                 bChanged = true;
                                 break;
                             }
@@ -1379,7 +1417,7 @@ namespace svgio
 
                 if(bChanged)
                 {
-                    return SvgAspectRatio(aSvgAlign, bDefer, bMeetOrSlice);
+                    return SvgAspectRatio(aSvgAlign, bMeetOrSlice);
                 }
             }
 
@@ -1476,7 +1514,7 @@ namespace svgio
             }
         }
 
-        OUString convert(const OUString& rCandidate, const sal_Unicode& rPattern, const sal_Unicode& rNew, bool bRemove)
+        OUString convert(const OUString& rCandidate, sal_Unicode nPattern, sal_Unicode nNew, bool bRemove)
         {
             const sal_Int32 nLen(rCandidate.getLength());
 
@@ -1490,13 +1528,13 @@ namespace svgio
                 {
                     const sal_Unicode aChar(rCandidate[nPos]);
 
-                    if(rPattern == aChar)
+                    if(nPattern == aChar)
                     {
                         bChanged = true;
 
                         if(!bRemove)
                         {
-                            aBuffer.append(rNew);
+                            aBuffer.append(nNew);
                         }
                     }
                     else
@@ -1650,7 +1688,7 @@ namespace svgio
             return rCandidate;
         }
 
-        ::std::vector< double > solveSvgNumberVector(const SvgNumberVector& rInput, const InfoProvider& rInfoProvider, NumberType aNumberType)
+        ::std::vector< double > solveSvgNumberVector(const SvgNumberVector& rInput, const InfoProvider& rInfoProvider)
         {
             ::std::vector< double > aRetval;
 
@@ -1661,7 +1699,7 @@ namespace svgio
 
                 for(sal_uInt32 a(0); a < nCount; a++)
                 {
-                    aRetval.push_back(rInput[a].solve(rInfoProvider, aNumberType));
+                    aRetval.push_back(rInput[a].solve(rInfoProvider));
                 }
             }
 

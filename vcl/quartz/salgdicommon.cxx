@@ -498,7 +498,7 @@ static void getBoundRect( sal_uInt32 nPoints, const SalPoint *pPtAry,
 static SalColor ImplGetROPSalColor( SalROPColor nROPColor )
 {
     SalColor nSalColor;
-    if ( nROPColor == SAL_ROP_0 )
+    if ( nROPColor == SalROPColor::N0 )
     {
         nSalColor = MAKE_SALCOLOR( 0, 0, 0 );
     }
@@ -961,7 +961,8 @@ bool AquaSalGraphics::drawPolyLine( const basegfx::B2DPolygon& rPolyLine,
                                     double fTransparency,
                                     const basegfx::B2DVector& rLineWidths,
                                     basegfx::B2DLineJoin eLineJoin,
-                                    css::drawing::LineCap eLineCap)
+                                    css::drawing::LineCap eLineCap,
+                                    double fMiterMinimumAngle)
 {
     DBG_DRAW_OPERATION("drawPolyLine", true);
 
@@ -971,13 +972,6 @@ bool AquaSalGraphics::drawPolyLine( const basegfx::B2DPolygon& rPolyLine,
     {
         DBG_DRAW_OPERATION_EXIT_EARLY("drawPolyLine");
         return true;
-    }
-
-    // reject requests that cannot be handled yet
-    if( rLineWidths.getX() != rLineWidths.getY() )
-    {
-        DBG_DRAW_OPERATION_EXIT_EARLY("drawPolyLine");
-        return false;
     }
 
 #ifdef IOS
@@ -1003,12 +997,12 @@ bool AquaSalGraphics::drawPolyLine( const basegfx::B2DPolygon& rPolyLine,
     switch( eLineJoin )
     {
     case basegfx::B2DLineJoin::NONE: aCGLineJoin = /*TODO?*/kCGLineJoinMiter; break;
-    case basegfx::B2DLineJoin::Middle: aCGLineJoin = /*TODO?*/kCGLineJoinMiter; break;
     case basegfx::B2DLineJoin::Bevel: aCGLineJoin = kCGLineJoinBevel; break;
     case basegfx::B2DLineJoin::Miter: aCGLineJoin = kCGLineJoinMiter; break;
     case basegfx::B2DLineJoin::Round: aCGLineJoin = kCGLineJoinRound; break;
     }
-
+    // convert miter minimum angle to miter limit
+    CGFloat fCGMiterLimit = 1.0 / sin(fMiterMinimumAngle / 2.0);
     // setup cap attribute
     CGLineCap aCGLineCap(kCGLineCapButt);
 
@@ -1055,6 +1049,7 @@ bool AquaSalGraphics::drawPolyLine( const basegfx::B2DPolygon& rPolyLine,
         CGContextSetLineJoin( mrContext, aCGLineJoin );
         CGContextSetLineCap( mrContext, aCGLineCap );
         CGContextSetLineWidth( mrContext, rLineWidths.getX() );
+        CGContextSetMiterLimit(mrContext, fCGMiterLimit);
         SAL_INFO( "vcl.cg", "CGContextDrawPath(" << mrContext << ",kCGPathStroke)" );
         CGContextDrawPath( mrContext, kCGPathStroke );
         SAL_INFO( "vcl.cg", "CGContextRestoreGState(" << mrContext << ") " << mnContextStackDepth-- );
@@ -1695,7 +1690,7 @@ void AquaSalGraphics::invert( long nX, long nY, long nWidth, long nHeight, SalIn
         SAL_INFO( "vcl.cg", "CGContextSaveGState(" << mrContext << ") " << ++mnContextStackDepth);
         CGContextSaveGState(mrContext);
 
-        if ( nFlags & SAL_INVERT_TRACKFRAME )
+        if ( nFlags & SalInvert::TrackFrame )
         {
             const CGFloat dashLengths[2]  = { 4.0, 4.0 };     // for drawing dashed line
             CGContextSetBlendMode( mrContext, kCGBlendModeDifference );
@@ -1706,7 +1701,7 @@ void AquaSalGraphics::invert( long nX, long nY, long nWidth, long nHeight, SalIn
             SAL_INFO( "vcl.cg", "CGContextStrokeRect(" << mrContext << "," << aCGRect << ")" );
             CGContextStrokeRect ( mrContext, aCGRect );
         }
-        else if ( nFlags & SAL_INVERT_50 )
+        else if ( nFlags & SalInvert::N50 )
         {
             //CGContextSetAllowsAntialiasing( mrContext, false );
             CGContextSetBlendMode(mrContext, kCGBlendModeDifference);
@@ -1753,7 +1748,7 @@ void AquaSalGraphics::invert( sal_uInt32 nPoints, const SalPoint*  pPtAry, SalIn
         CGContextSaveGState(mrContext);
         CGPoint* CGpoints = makeCGptArray(nPoints,pPtAry);
         CGContextAddLines ( mrContext, CGpoints, nPoints );
-        if ( nSalFlags & SAL_INVERT_TRACKFRAME )
+        if ( nSalFlags & SalInvert::TrackFrame )
         {
             const CGFloat dashLengths[2]  = { 4.0, 4.0 };     // for drawing dashed line
             CGContextSetBlendMode( mrContext, kCGBlendModeDifference );
@@ -1764,7 +1759,7 @@ void AquaSalGraphics::invert( sal_uInt32 nPoints, const SalPoint*  pPtAry, SalIn
             SAL_INFO( "vcl.cg", "CGContextStrokePath(" << mrContext << ")" );
             CGContextStrokePath ( mrContext );
         }
-        else if ( nSalFlags & SAL_INVERT_50 )
+        else if ( nSalFlags & SalInvert::N50 )
         {
             CGContextSetBlendMode(mrContext, kCGBlendModeDifference);
             Pattern50Fill();
@@ -1899,7 +1894,6 @@ bool AquaSalGraphics::supportsOperation( OutDevSupportType eType ) const
     switch( eType )
     {
     case OutDevSupport_TransparentRect:
-    case OutDevSupport_B2DClip:
     case OutDevSupport_B2DDraw:
         bRet = true;
         break;

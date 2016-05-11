@@ -33,7 +33,6 @@
 class INetURLObject;
 
 
-
 namespace migration
 {
 
@@ -42,7 +41,6 @@ namespace migration
     css::uno::Sequence< OUString > SAL_CALL BasicMigration_getSupportedServiceNames();
     css::uno::Reference< css::uno::XInterface > SAL_CALL BasicMigration_create(
         css::uno::Reference< css::uno::XComponentContext > const & xContext );
-
 
 
     // class BasicMigration
@@ -60,7 +58,7 @@ namespace migration
         OUString         m_sSourceDir;
 
         TStringVectorPtr        getFiles( const OUString& rBaseURL ) const;
-        ::osl::FileBase::RC     checkAndCreateDirectory( INetURLObject& rDirURL );
+        void                    checkAndCreateDirectory( INetURLObject& rDirURL );
         void                    copyFiles();
 
     public:

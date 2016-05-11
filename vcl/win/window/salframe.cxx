@@ -138,14 +138,14 @@ static void ImplSaveFrameState( WinSalFrame* pFrame )
         bool bVisible = (GetWindowStyle( pFrame->mhWnd ) & WS_VISIBLE) != 0;
         if ( IsIconic( pFrame->mhWnd ) )
         {
-            pFrame->maState.mnState |= WINDOWSTATE_STATE_MINIMIZED;
+            pFrame->maState.mnState |= WindowStateState::Minimized;
             if ( bVisible )
                 pFrame->mnShowState = SW_SHOWMAXIMIZED;
         }
         else if ( IsZoomed( pFrame->mhWnd ) )
         {
-            pFrame->maState.mnState &= ~WINDOWSTATE_STATE_MINIMIZED;
-            pFrame->maState.mnState |= WINDOWSTATE_STATE_MAXIMIZED;
+            pFrame->maState.mnState &= ~WindowStateState::Minimized;
+            pFrame->maState.mnState |= WindowStateState::Maximized;
             if ( bVisible )
                 pFrame->mnShowState = SW_SHOWMAXIMIZED;
             pFrame->mbRestoreMaximize = TRUE;
@@ -183,7 +183,7 @@ static void ImplSaveFrameState( WinSalFrame* pFrame )
             long nBottomDeco = abs( aRect.bottom - aRect2.bottom );
             long nRightDeco = abs( aRect.right - aRect2.right );
 
-            pFrame->maState.mnState &= ~(WINDOWSTATE_STATE_MINIMIZED | WINDOWSTATE_STATE_MAXIMIZED);
+            pFrame->maState.mnState &= ~WindowStateState(WindowStateState::Minimized | WindowStateState::Maximized);
             // subtract decoration
             pFrame->maState.mnX      = aRect.left+nLeftDeco;
             pFrame->maState.mnY      = aRect.top+nTopDeco;
@@ -371,11 +371,11 @@ SalFrame* ImplSalCreateFrame( WinSalInstance* pInst,
         nExSysStyle |= WS_EX_TOOLWINDOW;
         pFrame->mbFloatWin = TRUE;
 
-        if ( (pEnvTransparentFloats /* does not work remote! || (nSalFrameStyle & SalFrameStyleFlags::FLOAT_FOCUSABLE) */ )  )
+        if (pEnvTransparentFloats)
             nExSysStyle |= WS_EX_LAYERED;
 
     }
-    if( (nSalFrameStyle & SalFrameStyleFlags::TOOLTIP) || (nSalFrameStyle & SalFrameStyleFlags::FLOAT_FOCUSABLE) )
+    if (nSalFrameStyle & SalFrameStyleFlags::TOOLTIP)
         nExSysStyle |= WS_EX_TOPMOST;
 
     // init frame data
@@ -880,8 +880,6 @@ WinSalFrame::WinSalFrame()
     // get data, when making 1st frame
     if ( !pSalData->mpFirstFrame )
     {
-        if ( !aSalShlData.mnWheelMsgId )
-            aSalShlData.mnWheelMsgId = RegisterWindowMessage( MSH_MOUSEWHEEL );
         if ( !aSalShlData.mnWheelScrollLines )
             aSalShlData.mnWheelScrollLines = ImplSalGetWheelScrollLines();
         if ( !aSalShlData.mnWheelScrollChars )
@@ -1061,7 +1059,9 @@ void WinSalFrame::ReleaseGraphics( SalGraphics* pGraphics )
 
 bool WinSalFrame::PostEvent(ImplSVEvent* pData)
 {
-    return (bool)PostMessageW( mhWnd, SAL_MSG_USEREVENT, 0, (LPARAM)pData );
+    BOOL const ret = PostMessageW(mhWnd, SAL_MSG_USEREVENT, 0, (LPARAM)pData);
+    SAL_WARN_IF(0 == ret, "vcl", "ERROR: PostMessage() failed!");
+    return static_cast<bool>(ret);
 }
 
 void WinSalFrame::SetTitle( const OUString& rTitle )
@@ -1207,7 +1207,10 @@ void WinSalFrame::Show( bool bVisible, bool bNoActivate )
     // in the thread of the window, which has create this window.
     // We post this message to avoid deadlocks
     if ( GetSalData()->mnAppThreadId != GetCurrentThreadId() )
-        PostMessageW( mhWnd, SAL_MSG_SHOW, bVisible, bNoActivate );
+    {
+        BOOL const ret = PostMessageW(mhWnd, SAL_MSG_SHOW, bVisible, bNoActivate);
+        SAL_WARN_IF(0 == ret, "vcl", "ERROR: PostMessage() failed!");
+    }
     else
         ImplSalShow( mhWnd, bVisible, bNoActivate );
 }
@@ -1242,7 +1245,7 @@ void WinSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
                 ShowWindow( mhWnd, SW_RESTORE );
     }
 
-    sal_uInt16 nEvent = 0;
+    SalEvent nEvent = SalEvent::NONE;
     UINT    nPosSize = 0;
     RECT    aClientRect, aWindowRect;
     GetClientRect( mhWnd, &aClientRect );   // x,y always 0,0, but width and height without border
@@ -1253,12 +1256,12 @@ void WinSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
     else
     {
         //DBG_ASSERT( nX && nY, " Windowposition of (0,0) requested!" );
-        nEvent = SALEVENT_MOVE;
+        nEvent = SalEvent::Move;
     }
     if ( !(nFlags & (SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT)) )
         nPosSize |= SWP_NOSIZE;
     else
-        nEvent = (nEvent == SALEVENT_MOVE) ? SALEVENT_MOVERESIZE : SALEVENT_RESIZE;
+        nEvent = (nEvent == SalEvent::Move) ? SalEvent::MoveResize : SalEvent::Resize;
 
     if ( !(nFlags & SAL_FRAME_POSSIZE_X) )
         nX = aWindowRect.left;
@@ -1310,6 +1313,9 @@ void WinSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 
                 nX = aPt.x;
                 nY = aPt.y;
+
+                // the position is set
+                mbDefPos = false;
             }
     }
 
@@ -1387,7 +1393,7 @@ void WinSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 
         mbDefPos = FALSE;   // center only once
         nPosSize &= ~SWP_NOMOVE;        // activate positioning
-        nEvent = SALEVENT_MOVERESIZE;
+        nEvent = SalEvent::MoveResize;
     }
 
     // Adjust Window in the screen
@@ -1428,7 +1434,7 @@ void WinSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
     UpdateFrameGeometry( mhWnd, this );
 
     // Notification -- really ???
-    if( nEvent )
+    if( nEvent != SalEvent::NONE )
         CallCallback( nEvent, NULL );
 }
 
@@ -1649,23 +1655,23 @@ void WinSalFrame::SetWindowState( const SalFrameState* pState )
     long nRightDeco = abs( aWinRect.right - aRect2.right );
 
     // adjust window position/size to fit the screen
-    if ( !(pState->mnMask & (WINDOWSTATE_MASK_X | WINDOWSTATE_MASK_Y)) )
+    if ( !(pState->mnMask & (WindowStateMask::X | WindowStateMask::Y)) )
         nPosSize |= SWP_NOMOVE;
-    if ( !(pState->mnMask & (WINDOWSTATE_MASK_WIDTH | WINDOWSTATE_MASK_HEIGHT)) )
+    if ( !(pState->mnMask & (WindowStateMask::Width | WindowStateMask::Height)) )
         nPosSize |= SWP_NOSIZE;
-    if ( pState->mnMask & WINDOWSTATE_MASK_X )
+    if ( pState->mnMask & WindowStateMask::X )
         nX = (int)pState->mnX - nLeftDeco;
     else
         nX = aWinRect.left;
-    if ( pState->mnMask & WINDOWSTATE_MASK_Y )
+    if ( pState->mnMask & WindowStateMask::Y )
         nY = (int)pState->mnY - nTopDeco;
     else
         nY = aWinRect.top;
-    if ( pState->mnMask & WINDOWSTATE_MASK_WIDTH )
+    if ( pState->mnMask & WindowStateMask::Width )
         nWidth = (int)pState->mnWidth + nLeftDeco + nRightDeco;
     else
         nWidth = aWinRect.right-aWinRect.left;
-    if ( pState->mnMask & WINDOWSTATE_MASK_HEIGHT )
+    if ( pState->mnMask & WindowStateMask::Height )
         nHeight = (int)pState->mnHeight + nTopDeco + nBottomDeco;
     else
         nHeight = aWinRect.bottom-aWinRect.top;
@@ -1700,33 +1706,33 @@ void WinSalFrame::SetWindowState( const SalFrameState* pState )
 
         if ( mbOverwriteState )
         {
-            if ( pState->mnMask & WINDOWSTATE_MASK_STATE )
+            if ( pState->mnMask & WindowStateMask::State )
             {
-                if ( pState->mnState & WINDOWSTATE_STATE_MINIMIZED )
+                if ( pState->mnState & WindowStateState::Minimized )
                     mnShowState = SW_SHOWMINIMIZED;
-                else if ( pState->mnState & WINDOWSTATE_STATE_MAXIMIZED )
+                else if ( pState->mnState & WindowStateState::Maximized )
                 {
                     mnShowState = SW_SHOWMAXIMIZED;
                     bUpdateHiddenFramePos = TRUE;
                 }
-                else if ( pState->mnState & WINDOWSTATE_STATE_NORMAL )
+                else if ( pState->mnState & WindowStateState::Normal )
                     mnShowState = SW_SHOWNORMAL;
             }
         }
     }
     else
     {
-        if ( pState->mnMask & WINDOWSTATE_MASK_STATE )
+        if ( pState->mnMask & WindowStateMask::State )
         {
-            if ( pState->mnState & WINDOWSTATE_STATE_MINIMIZED )
+            if ( pState->mnState & WindowStateState::Minimized )
             {
-                if ( pState->mnState & WINDOWSTATE_STATE_MAXIMIZED )
+                if ( pState->mnState & WindowStateState::Maximized )
                     aPlacement.flags |= WPF_RESTORETOMAXIMIZED;
                 aPlacement.showCmd = SW_SHOWMINIMIZED;
             }
-            else if ( pState->mnState & WINDOWSTATE_STATE_MAXIMIZED )
+            else if ( pState->mnState & WindowStateState::Maximized )
                 aPlacement.showCmd = SW_SHOWMAXIMIZED;
-            else if ( pState->mnState & WINDOWSTATE_STATE_NORMAL )
+            else if ( pState->mnState & WindowStateState::Normal )
                 aPlacement.showCmd = SW_RESTORE;
         }
     }
@@ -1779,9 +1785,9 @@ bool WinSalFrame::GetWindowState( SalFrameState* pState )
         *pState = maState;
         // #94144# allow Minimize again, should be masked out when read from configuration
         // 91625 - Don't save minimize
-        //if ( !(pState->mnState & WINDOWSTATE_STATE_MAXIMIZED) )
-        if ( !(pState->mnState & (WINDOWSTATE_STATE_MINIMIZED | WINDOWSTATE_STATE_MAXIMIZED)) )
-            pState->mnState |= WINDOWSTATE_STATE_NORMAL;
+        //if ( !(pState->mnState & WindowStateState::Maximized) )
+        if ( !(pState->mnState & (WindowStateState::Minimized | WindowStateState::Maximized)) )
+            pState->mnState |= WindowStateState::Normal;
         return TRUE;
     }
 
@@ -1930,31 +1936,6 @@ void WinSalFrame::StartPresentation( bool bStart )
     SalData* pSalData = GetSalData();
     if ( bStart )
     {
-        if ( !pSalData->mpSageEnableProc )
-        {
-            if ( pSalData->mnSageStatus != DISABLE_AGENT )
-            {
-                OFSTRUCT aOS;
-                OpenFile( "SAGE.DLL", &aOS, OF_EXIST );
-
-                if ( !aOS.nErrCode )
-                {
-                    OUString aLibraryName( OUString::createFromAscii( aOS.szPathName ) );
-                    oslModule mhSageInst = osl_loadModule( aLibraryName.pData, SAL_LOADMODULE_DEFAULT );
-                    pSalData->mpSageEnableProc = (SysAgt_Enable_PROC)osl_getAsciiFunctionSymbol( mhSageInst, "System_Agent_Enable" );
-                }
-                else
-                    pSalData->mnSageStatus = DISABLE_AGENT;
-            }
-        }
-
-        if ( pSalData->mpSageEnableProc )
-        {
-            pSalData->mnSageStatus = pSalData->mpSageEnableProc( GET_AGENT_STATUS );
-            if ( pSalData->mnSageStatus == ENABLE_AGENT )
-                pSalData->mpSageEnableProc( DISABLE_AGENT );
-        }
-
         // turn off screen-saver when in Presentation mode
         SystemParametersInfo( SPI_GETSCREENSAVEACTIVE, 0,
                               &(pSalData->mbScrSvrEnabled), 0 );
@@ -1966,10 +1947,6 @@ void WinSalFrame::StartPresentation( bool bStart )
         // turn on screen-saver
         if ( pSalData->mbScrSvrEnabled )
             SystemParametersInfo( SPI_SETSCREENSAVEACTIVE, pSalData->mbScrSvrEnabled, 0, 0 );
-
-        // re-activate system agents
-        if ( pSalData->mnSageStatus == ENABLE_AGENT )
-            pSalData->mpSageEnableProc( pSalData->mnSageStatus );
     }
 }
 
@@ -2043,7 +2020,10 @@ void WinSalFrame::ToTop( sal_uInt16 nFlags )
     // in the thread of the window, which has create this window.
     // We post this message to avoid deadlocks
     if ( GetSalData()->mnAppThreadId != GetCurrentThreadId() )
-        PostMessageW( mhWnd, SAL_MSG_TOTOP, nFlags, 0 );
+    {
+        BOOL const ret = PostMessageW( mhWnd, SAL_MSG_TOTOP, nFlags, 0 );
+        SAL_WARN_IF(0 == ret, "vcl", "ERROR: PostMessage() failed!");
+    }
     else
         ImplSalToTop( mhWnd, nFlags );
 }
@@ -2580,12 +2560,12 @@ static void ImplSalUpdateStyleFontW( HDC hDC, const LOGFONTW& rLogFont, vcl::Fon
     // So if it is MS Sans Serif, a none scalable font we use
     // 8 Point as the minimum control height, in all other cases
     // 6 Point is the smallest one
-    if ( rFont.GetHeight() < 8 )
+    if ( rFont.GetFontHeight() < 8 )
     {
         if ( rtl_ustr_compareIgnoreAsciiCase( reinterpret_cast<const sal_Unicode*>(rLogFont.lfFaceName), reinterpret_cast<const sal_Unicode*>(L"MS Sans Serif") ) == 0 )
-            rFont.SetHeight( 8 );
-        else if ( rFont.GetHeight() < 6 )
-            rFont.SetHeight( 6 );
+            rFont.SetFontHeight( 8 );
+        else if ( rFont.GetFontHeight() < 6 )
+            rFont.SetFontHeight( 6 );
     }
 }
 
@@ -2689,7 +2669,7 @@ void WinSalFrame::UpdateSettings( AllSettings& rSettings )
     pSVData->maNWFData.mnMenuFormatBorderX = 0;
     pSVData->maNWFData.mnMenuFormatBorderY = 0;
     pSVData->maNWFData.maMenuBarHighlightTextColor = Color( COL_TRANSPARENT );
-    GetSalData()->mbThemeMenuSupport = FALSE;
+    GetSalData()->mbThemeMenuSupport = false;
     if (officecfg::Office::Common::Accessibility::AutoDetectSystemHC::get())
     {
         aStyleSettings.SetShadowColor( ImplWinColorToSal( GetSysColor( COLOR_ACTIVEBORDER ) ) );
@@ -2787,12 +2767,12 @@ void WinSalFrame::UpdateSettings( AllSettings& rSettings )
     // is to wide for the dialogs
     if ( rSettings.GetLanguageTag().getLanguageType() == LANGUAGE_RUSSIAN )
     {
-        OUString aFontName = aAppFont.GetName();
+        OUString aFontName = aAppFont.GetFamilyName();
         OUString aFirstName = aFontName.getToken( 0, ';' );
         if ( aFirstName.equalsIgnoreAsciiCase( "MS Sans Serif" ) )
         {
             aFontName = "Arial;" + aFontName;
-            aAppFont.SetName( aFontName );
+            aAppFont.SetFamilyName( aFontName );
         }
     }
     aStyleSettings.SetAppFont( aAppFont );
@@ -3033,13 +3013,14 @@ static long ImplHandleMouseMsg( HWND hWnd, UINT nMsg,
         vcl::Window *pWin = pFrame->GetWindow();
         if( pWin && pWin->ImplGetWindowImpl()->mpFrameData->mnFocusId )
         {
-            PostMessageW( hWnd, nMsg, wParam, lParam );
+            BOOL const ret = PostMessageW( hWnd, nMsg, wParam, lParam );
+            SAL_WARN_IF(0 == ret, "vcl", "ERROR: PostMessage() failed!");
             return 1;
         }
     }
     SalMouseEvent   aMouseEvt;
     long            nRet;
-    sal_uInt16          nEvent = 0;
+    SalEvent        nEvent = SalEvent::NONE;
     bool            bCall = TRUE;
 
     aMouseEvt.mnX       = (short)LOWORD( lParam );
@@ -3097,7 +3078,7 @@ static long ImplHandleMouseMsg( HWND hWnd, UINT nMsg,
                 // for mouseleave in the timeout callback
             }
             aMouseEvt.mnButton = 0;
-            nEvent = SALEVENT_MOUSEMOVE;
+            nEvent = SalEvent::MouseMove;
             }
             break;
 
@@ -3121,7 +3102,7 @@ static long ImplHandleMouseMsg( HWND hWnd, UINT nMsg,
                 aMouseEvt.mnX = aPt.x;
                 aMouseEvt.mnY = aPt.y;
                 aMouseEvt.mnButton = 0;
-                nEvent = SALEVENT_MOUSELEAVE;
+                nEvent = SalEvent::MouseLeave;
             }
             else
                 bCall = FALSE;
@@ -3130,32 +3111,32 @@ static long ImplHandleMouseMsg( HWND hWnd, UINT nMsg,
 
         case WM_LBUTTONDOWN:
             aMouseEvt.mnButton = MOUSE_LEFT;
-            nEvent = SALEVENT_MOUSEBUTTONDOWN;
+            nEvent = SalEvent::MouseButtonDown;
             break;
 
         case WM_MBUTTONDOWN:
             aMouseEvt.mnButton = MOUSE_MIDDLE;
-            nEvent = SALEVENT_MOUSEBUTTONDOWN;
+            nEvent = SalEvent::MouseButtonDown;
             break;
 
         case WM_RBUTTONDOWN:
             aMouseEvt.mnButton = MOUSE_RIGHT;
-            nEvent = SALEVENT_MOUSEBUTTONDOWN;
+            nEvent = SalEvent::MouseButtonDown;
             break;
 
         case WM_LBUTTONUP:
             aMouseEvt.mnButton = MOUSE_LEFT;
-            nEvent = SALEVENT_MOUSEBUTTONUP;
+            nEvent = SalEvent::MouseButtonUp;
             break;
 
         case WM_MBUTTONUP:
             aMouseEvt.mnButton = MOUSE_MIDDLE;
-            nEvent = SALEVENT_MOUSEBUTTONUP;
+            nEvent = SalEvent::MouseButtonUp;
             break;
 
         case WM_RBUTTONUP:
             aMouseEvt.mnButton = MOUSE_RIGHT;
-            nEvent = SALEVENT_MOUSEBUTTONUP;
+            nEvent = SalEvent::MouseButtonUp;
             break;
     }
 
@@ -3166,7 +3147,7 @@ static long ImplHandleMouseMsg( HWND hWnd, UINT nMsg,
 
     if ( bCall )
     {
-        if ( nEvent == SALEVENT_MOUSEBUTTONDOWN )
+        if ( nEvent == SalEvent::MouseButtonDown )
             UpdateWindow( hWnd );
 
         // --- RTL --- (mirror mouse pos)
@@ -3192,13 +3173,7 @@ static long ImplHandleMouseActivateMsg( HWND hWnd )
     if ( pFrame->mbFloatWin )
         return TRUE;
 
-    SalMouseActivateEvent   aMouseActivateEvt;
-    POINT                   aPt;
-    GetCursorPos( &aPt );
-    ScreenToClient( hWnd, &aPt );
-    aMouseActivateEvt.mnX = aPt.x;
-    aMouseActivateEvt.mnY = aPt.y;
-    return pFrame->CallCallback( SALEVENT_MOUSEACTIVATE, &aMouseActivateEvt );
+    return pFrame->CallCallback( SalEvent::MouseActivate, nullptr );
 }
 
 static long ImplHandleWheelMsg( HWND hWnd, UINT nMsg, WPARAM wParam, LPARAM lParam )
@@ -3263,7 +3238,7 @@ static long ImplHandleWheelMsg( HWND hWnd, UINT nMsg, WPARAM wParam, LPARAM lPar
         if( AllSettings::GetLayoutRTL() )
             aWheelEvt.mnX = pFrame->maGeometry.nWidth-1-aWheelEvt.mnX;
 
-        nRet = pFrame->CallCallback( SALEVENT_WHEELMOUSE, &aWheelEvt );
+        nRet = pFrame->CallCallback( SalEvent::WheelMouse, &aWheelEvt );
     }
 
     ImplSalYieldMutexRelease();
@@ -3344,7 +3319,7 @@ bool WinSalFrame::MapUnicodeToKeyCode( sal_Unicode aUnicode, LanguageType aLangT
             BYTE vkeycode   = LOBYTE(scan);
             BYTE shiftstate = HIBYTE(scan);
 
-            // Last argument is set to FALSE, because there's no decission made
+            // Last argument is set to FALSE, because there's no decision made
             // yet which key should be assigned to MOD3 modifier on Windows.
             // Windows key - user's can be confused, because it should display
             //               Windows menu (applies to both left/right key)
@@ -3455,8 +3430,8 @@ static long ImplHandleKeyMsg( HWND hWnd, UINT nMsg,
         aKeyEvt.mnRepeat    = nRepeat;
         nLastChar = 0;
         nLastVKChar = 0;
-        long nRet = pFrame->CallCallback( SALEVENT_KEYINPUT, &aKeyEvt );
-        pFrame->CallCallback( SALEVENT_KEYUP, &aKeyEvt );
+        long nRet = pFrame->CallCallback( SalEvent::KeyInput, &aKeyEvt );
+        pFrame->CallCallback( SalEvent::KeyUp, &aKeyEvt );
         return nRet;
     }
      // #i11583#, MCD, 2003-01-13, Support for WM_UNICHAR & Keyman 6.0; addition begins
@@ -3480,8 +3455,8 @@ static long ImplHandleKeyMsg( HWND hWnd, UINT nMsg,
             // sal_Unicode ch = (sal_Unicode) Uni_UTF32ToSurrogate1(wParam);
              nLastChar = 0;
              nLastVKChar = 0;
-             pFrame->CallCallback( SALEVENT_KEYINPUT, &aKeyEvt );
-             pFrame->CallCallback( SALEVENT_KEYUP, &aKeyEvt );
+             pFrame->CallCallback( SalEvent::KeyInput, &aKeyEvt );
+             pFrame->CallCallback( SalEvent::KeyUp, &aKeyEvt );
             wParam = (sal_Unicode) Uni_UTF32ToSurrogate2( wParam );
          }
 
@@ -3489,8 +3464,8 @@ static long ImplHandleKeyMsg( HWND hWnd, UINT nMsg,
 
          nLastChar = 0;
          nLastVKChar = 0;
-         long nRet = pFrame->CallCallback( SALEVENT_KEYINPUT, &aKeyEvt );
-         pFrame->CallCallback( SALEVENT_KEYUP, &aKeyEvt );
+         long nRet = pFrame->CallCallback( SalEvent::KeyInput, &aKeyEvt );
+         pFrame->CallCallback( SalEvent::KeyUp, &aKeyEvt );
 
          return nRet;
      }
@@ -3534,14 +3509,14 @@ static long ImplHandleKeyMsg( HWND hWnd, UINT nMsg,
             if( !tmpCode )
                 bWaitForModKeyRelease = false;
 
-            return pFrame->CallCallback( SALEVENT_KEYMODCHANGE, &aModEvt );
+            return pFrame->CallCallback( SalEvent::KeyModChange, &aModEvt );
         }
         else
         {
             SalKeyEvent     aKeyEvt;
-            sal_uInt16          nEvent;
+            SalEvent        nEvent;
             MSG             aCharMsg;
-            BOOL        bCharPeek = FALSE;
+            BOOL            bCharPeek = FALSE;
             UINT            nCharMsg = WM_CHAR;
             bool            bKeyUp = (nMsg == WM_KEYUP) || (nMsg == WM_SYSKEYUP);
 
@@ -3601,9 +3576,9 @@ static long ImplHandleKeyMsg( HWND hWnd, UINT nMsg,
             if ( aKeyEvt.mnCode || aKeyEvt.mnCharCode )
             {
                 if ( bKeyUp )
-                    nEvent = SALEVENT_KEYUP;
+                    nEvent = SalEvent::KeyUp;
                 else
-                    nEvent = SALEVENT_KEYINPUT;
+                    nEvent = SalEvent::KeyInput;
 
                 aKeyEvt.mnTime      = GetMessageTime();
                 aKeyEvt.mnCode     |= nModCode;
@@ -3614,7 +3589,7 @@ static long ImplHandleKeyMsg( HWND hWnd, UINT nMsg,
                 // independent part only reacts on keyup but Windows does not send
                 // keyup for VK_HANJA
                 if( aKeyEvt.mnCode == KEY_HANGUL_HANJA )
-                    nRet = pFrame->CallCallback( SALEVENT_KEYUP, &aKeyEvt );
+                    nRet = pFrame->CallCallback( SalEvent::KeyUp, &aKeyEvt );
 
                 bIgnoreCharMsg = FALSE;
 
@@ -3662,7 +3637,7 @@ long ImplHandleSalObjKeyMsg( HWND hWnd, UINT nMsg,
         if ( (wParam != VK_SHIFT) && (wParam != VK_CONTROL) && (wParam != VK_MENU) )
         {
             SalKeyEvent     aKeyEvt;
-            sal_uInt16          nEvent;
+            SalEvent        nEvent;
             bool            bKeyUp = (nMsg == WM_KEYUP) || (nMsg == WM_SYSKEYUP);
 
             // convert KeyCode
@@ -3672,9 +3647,9 @@ long ImplHandleSalObjKeyMsg( HWND hWnd, UINT nMsg,
             if ( aKeyEvt.mnCode )
             {
                 if ( bKeyUp )
-                    nEvent = SALEVENT_KEYUP;
+                    nEvent = SalEvent::KeyUp;
                 else
-                    nEvent = SALEVENT_KEYINPUT;
+                    nEvent = SalEvent::KeyInput;
 
                 aKeyEvt.mnTime      = GetMessageTime();
                 aKeyEvt.mnCode     |= nModCode;
@@ -3721,8 +3696,8 @@ long ImplHandleSalObjSysCharMsg( HWND hWnd, WPARAM wParam, LPARAM lParam )
     aKeyEvt.mnCode     |= nModCode;
     aKeyEvt.mnCharCode  = ImplGetCharCode( pFrame, cKeyCode );
     aKeyEvt.mnRepeat    = nRepeat;
-    long nRet = pFrame->CallCallback( SALEVENT_KEYINPUT, &aKeyEvt );
-    pFrame->CallCallback( SALEVENT_KEYUP, &aKeyEvt );
+    long nRet = pFrame->CallCallback( SalEvent::KeyInput, &aKeyEvt );
+    pFrame->CallCallback( SalEvent::KeyUp, &aKeyEvt );
     return nRet;
 }
 
@@ -3766,13 +3741,14 @@ static bool ImplHandlePaintMsg( HWND hWnd )
             if ( bMutex )
             {
                 SalPaintEvent aPEvt( aUpdateRect.left, aUpdateRect.top, aUpdateRect.right-aUpdateRect.left, aUpdateRect.bottom-aUpdateRect.top, pFrame->mbPresentation );
-                pFrame->CallCallback( SALEVENT_PAINT, &aPEvt );
+                pFrame->CallCallback( SalEvent::Paint, &aPEvt );
             }
             else
             {
                 RECT* pRect = new RECT;
                 CopyRect( pRect, &aUpdateRect );
-                PostMessageW( hWnd, SAL_MSG_POSTPAINT, (WPARAM)pRect, 0 );
+                BOOL const ret = PostMessageW(hWnd, SAL_MSG_POSTPAINT, (WPARAM)pRect, 0);
+                SAL_WARN_IF(0 == ret, "vcl", "ERROR: PostMessage() failed!");
             }
             EndPaint( hWnd, &aPs );
         }
@@ -3802,13 +3778,16 @@ static void ImplHandlePaintMsg2( HWND hWnd, RECT* pRect )
         if ( pFrame )
         {
             SalPaintEvent aPEvt( pRect->left, pRect->top, pRect->right-pRect->left, pRect->bottom-pRect->top );
-            pFrame->CallCallback( SALEVENT_PAINT, &aPEvt );
+            pFrame->CallCallback( SalEvent::Paint, &aPEvt );
         }
         ImplSalYieldMutexRelease();
         delete pRect;
     }
     else
-        PostMessageW( hWnd, SAL_MSG_POSTPAINT, (WPARAM)pRect, 0 );
+    {
+        BOOL const ret = PostMessageW(hWnd, SAL_MSG_POSTPAINT, (WPARAM)pRect, 0);
+        SAL_WARN_IF(0 == ret, "vcl", "ERROR: PostMessage() failed!");
+    }
 }
 
 static void SetMaximizedFrameGeometry( HWND hWnd, WinSalFrame* pFrame, RECT* pParentRect )
@@ -3900,7 +3879,7 @@ static void ImplCallMoveHdl( HWND hWnd )
     WinSalFrame* pFrame = GetWindowPtr( hWnd );
     if ( pFrame )
     {
-        pFrame->CallCallback( SALEVENT_MOVE, 0 );
+        pFrame->CallCallback( SalEvent::Move, 0 );
         // to avoid doing Paint twice by VCL and SAL
         //if ( IsWindowVisible( hWnd ) && !pFrame->mbInShow )
         //    UpdateWindow( hWnd );
@@ -3912,7 +3891,7 @@ static void ImplCallClosePopupsHdl( HWND hWnd )
     WinSalFrame* pFrame = GetWindowPtr( hWnd );
     if ( pFrame )
     {
-        pFrame->CallCallback( SALEVENT_CLOSEPOPUPS, 0 );
+        pFrame->CallCallback( SalEvent::ClosePopups, 0 );
     }
 }
 
@@ -3950,7 +3929,10 @@ static void ImplHandleMoveMsg( HWND hWnd )
         ImplSalYieldMutexRelease();
     }
     else
-        PostMessageW( hWnd, SAL_MSG_POSTMOVE, 0, 0 );
+    {
+        BOOL const ret = PostMessageW( hWnd, SAL_MSG_POSTMOVE, 0, 0 );
+        SAL_WARN_IF(0 == ret, "vcl", "ERROR: PostMessage() failed!");
+    }
 }
 
 static void ImplCallSizeHdl( HWND hWnd )
@@ -3962,7 +3944,7 @@ static void ImplCallSizeHdl( HWND hWnd )
         WinSalFrame* pFrame = GetWindowPtr( hWnd );
         if ( pFrame )
         {
-            pFrame->CallCallback( SALEVENT_RESIZE, 0 );
+            pFrame->CallCallback( SalEvent::Resize, 0 );
             // to avoid double Paints by VCL and SAL
             if ( IsWindowVisible( hWnd ) && !pFrame->mbInShow )
                 UpdateWindow( hWnd );
@@ -3971,7 +3953,10 @@ static void ImplCallSizeHdl( HWND hWnd )
         ImplSalYieldMutexRelease();
     }
     else
-        PostMessageW( hWnd, SAL_MSG_POSTCALLSIZE, 0, 0 );
+    {
+        BOOL const ret = PostMessageW( hWnd, SAL_MSG_POSTCALLSIZE, 0, 0 );
+        SAL_WARN_IF(0 == ret, "vcl", "ERROR: PostMessage() failed!");
+    }
 }
 
 static void ImplHandleSizeMsg( HWND hWnd, WPARAM wParam, LPARAM lParam )
@@ -4015,18 +4000,21 @@ static void ImplHandleFocusMsg( HWND hWnd )
                     pFrame->mbHandleIME = !pFrame->mbSpezIME;
                 }
 
-                pFrame->CallCallback( SALEVENT_GETFOCUS, 0 );
+                pFrame->CallCallback( SalEvent::GetFocus, 0 );
             }
             else
             {
-                pFrame->CallCallback( SALEVENT_LOSEFOCUS, 0 );
+                pFrame->CallCallback( SalEvent::LoseFocus, 0 );
             }
         }
 
         ImplSalYieldMutexRelease();
     }
     else
-        PostMessageW( hWnd, SAL_MSG_POSTFOCUS, 0, 0 );
+    {
+        BOOL const ret = PostMessageW( hWnd, SAL_MSG_POSTFOCUS, 0, 0 );
+        SAL_WARN_IF(0 == ret, "vcl", "ERROR: PostMessage() failed!");
+    }
 }
 
 static void ImplHandleCloseMsg( HWND hWnd )
@@ -4036,13 +4024,16 @@ static void ImplHandleCloseMsg( HWND hWnd )
         WinSalFrame* pFrame = GetWindowPtr( hWnd );
         if ( pFrame )
         {
-            pFrame->CallCallback( SALEVENT_CLOSE, 0 );
+            pFrame->CallCallback( SalEvent::Close, 0 );
         }
 
         ImplSalYieldMutexRelease();
     }
     else
-        PostMessageW( hWnd, WM_CLOSE, 0, 0 );
+    {
+        BOOL const ret = PostMessageW( hWnd, WM_CLOSE, 0, 0 );
+        SAL_WARN_IF(0 == ret, "vcl", "ERROR: PostMessage() failed!");
+    }
 }
 
 static long ImplHandleShutDownMsg( HWND hWnd )
@@ -4052,7 +4043,7 @@ static long ImplHandleShutDownMsg( HWND hWnd )
     WinSalFrame*   pFrame = GetWindowPtr( hWnd );
     if ( pFrame )
     {
-        nRet = pFrame->CallCallback( SALEVENT_SHUTDOWN, 0 );
+        nRet = pFrame->CallCallback( SalEvent::Shutdown, 0 );
     }
     ImplSalYieldMutexRelease();
     return nRet;
@@ -4061,20 +4052,20 @@ static long ImplHandleShutDownMsg( HWND hWnd )
 static void ImplHandleSettingsChangeMsg( HWND hWnd, UINT nMsg,
                                          WPARAM wParam, LPARAM lParam )
 {
-    sal_uInt16 nSalEvent = SALEVENT_SETTINGSCHANGED;
+    SalEvent nSalEvent = SalEvent::SettingsChanged;
 
     if ( nMsg == WM_DEVMODECHANGE )
-        nSalEvent = SALEVENT_PRINTERCHANGED;
+        nSalEvent = SalEvent::PrinterChanged;
     else if ( nMsg == WM_DISPLAYCHANGE )
-        nSalEvent = SALEVENT_DISPLAYCHANGED;
+        nSalEvent = SalEvent::DisplayChanged;
     else if ( nMsg == WM_FONTCHANGE )
-        nSalEvent = SALEVENT_FONTCHANGED;
+        nSalEvent = SalEvent::FontChanged;
     else if ( nMsg == WM_WININICHANGE )
     {
         if ( lParam )
         {
             if ( ImplSalWICompareAscii( (const wchar_t*)lParam, "devices" ) == 0 )
-                nSalEvent = SALEVENT_PRINTERCHANGED;
+                nSalEvent = SalEvent::PrinterChanged;
         }
     }
 
@@ -4112,7 +4103,7 @@ static void ImplHandleUserEvent( HWND hWnd, LPARAM lParam )
     WinSalFrame* pFrame = GetWindowPtr( hWnd );
     if ( pFrame )
     {
-        pFrame->CallCallback( SALEVENT_USEREVENT, (void*)lParam );
+        pFrame->CallCallback( SalEvent::UserEvent, (void*)lParam );
     }
     ImplSalYieldMutexRelease();
 }
@@ -4125,7 +4116,8 @@ static void ImplHandleForcePalette( HWND hWnd )
     {
         if ( !ImplSalYieldMutexTryToAcquire() )
         {
-            PostMessageW( hWnd, SAL_MSG_FORCEPALETTE, 0, 0 );
+            BOOL const ret = PostMessageW( hWnd, SAL_MSG_FORCEPALETTE, 0, 0 );
+            SAL_WARN_IF(0 == ret, "vcl", "ERROR: PostMessage() failed!");
             return;
         }
 
@@ -4140,7 +4132,7 @@ static void ImplHandleForcePalette( HWND hWnd )
                 {
                     InvalidateRect( hWnd, NULL, FALSE );
                     UpdateWindow( hWnd );
-                    pFrame->CallCallback( SALEVENT_DISPLAYCHANGED, 0 );
+                    pFrame->CallCallback( SalEvent::DisplayChanged, 0 );
                 }
             }
         }
@@ -4175,9 +4167,15 @@ static LRESULT ImplHandlePalette( bool bFrame, HWND hWnd, UINT nMsg,
         if ( ImplSalYieldMutexTryToAcquire() )
             bReleaseMutex = TRUE;
         else if ( nMsg == WM_QUERYNEWPALETTE )
-            PostMessageW( hWnd, SAL_MSG_POSTQUERYNEWPAL, wParam, lParam );
+        {
+            BOOL const ret = PostMessageW(hWnd, SAL_MSG_POSTQUERYNEWPAL, wParam, lParam);
+            SAL_WARN_IF(0 == ret, "vcl", "ERROR: PostMessage() failed!");
+        }
         else /* ( nMsg == WM_PALETTECHANGED ) */
-            PostMessageW( hWnd, SAL_MSG_POSTPALCHANGED, wParam, lParam );
+        {
+            BOOL const ret = PostMessageW(hWnd, SAL_MSG_POSTPALCHANGED, wParam, lParam);
+            SAL_WARN_IF(0 == ret, "vcl", "ERROR: PostMessage() failed!");
+        }
     }
 
     WinSalVirtualDevice*pTempVD;
@@ -4189,7 +4187,7 @@ static LRESULT ImplHandlePalette( bool bFrame, HWND hWnd, UINT nMsg,
     bool                bStdDC;
     bool                bUpdate;
 
-    pSalData->mbInPalChange = TRUE;
+    pSalData->mbInPalChange = true;
 
     // reset all palettes in VirDevs and Frames
     pTempVD = pSalData->mpFirstVD;
@@ -4280,13 +4278,13 @@ static LRESULT ImplHandlePalette( bool bFrame, HWND hWnd, UINT nMsg,
             {
                 InvalidateRect( pTempFrame->mhWnd, NULL, FALSE );
                 UpdateWindow( pTempFrame->mhWnd );
-                pTempFrame->CallCallback( SALEVENT_DISPLAYCHANGED, 0 );
+                pTempFrame->CallCallback( SalEvent::DisplayChanged, 0 );
             }
             pTempFrame = pTempFrame->mpNextFrame;
         }
     }
 
-    pSalData->mbInPalChange = FALSE;
+    pSalData->mbInPalChange = false;
 
     if ( bReleaseMutex )
         ImplSalYieldMutexRelease();
@@ -4678,9 +4676,9 @@ static int ImplHandleMenuActivate( HWND hWnd, WPARAM wParam, LPARAM )
     else
         aMenuEvt.mpMenu = NULL;
 
-    long nRet = pFrame->CallCallback( SALEVENT_MENUACTIVATE, &aMenuEvt );
+    long nRet = pFrame->CallCallback( SalEvent::MenuActivate, &aMenuEvt );
     if( nRet )
-        nRet = pFrame->CallCallback( SALEVENT_MENUDEACTIVATE, &aMenuEvt );
+        nRet = pFrame->CallCallback( SalEvent::MenuDeactivate, &aMenuEvt );
     if( nRet )
         pFrame->mLastActivatedhMenu = hMenu;
 
@@ -4718,9 +4716,9 @@ static int ImplHandleMenuSelect( HWND hWnd, WPARAM wParam, LPARAM lParam )
         else
             aMenuEvt.mpMenu = NULL;
 
-        nRet = pFrame->CallCallback( SALEVENT_MENUACTIVATE, &aMenuEvt );
+        nRet = pFrame->CallCallback( SalEvent::MenuActivate, &aMenuEvt );
         if( nRet )
-            nRet = pFrame->CallCallback( SALEVENT_MENUDEACTIVATE, &aMenuEvt );
+            nRet = pFrame->CallCallback( SalEvent::MenuDeactivate, &aMenuEvt );
         if( nRet )
             pFrame->mLastActivatedhMenu = hMenu;
     }
@@ -4759,7 +4757,7 @@ static int ImplHandleMenuSelect( HWND hWnd, WPARAM wParam, LPARAM lParam )
         else
             aMenuEvt.mpMenu = NULL;
 
-        nRet = pFrame->CallCallback( SALEVENT_MENUHIGHLIGHT, &aMenuEvt );
+        nRet = pFrame->CallCallback( SalEvent::MenuHighlight, &aMenuEvt );
     }
 
     return (nRet != 0);
@@ -4786,7 +4784,7 @@ static int ImplHandleCommand( HWND hWnd, WPARAM wParam, LPARAM )
             else
                 aMenuEvt.mpMenu = NULL;
 
-            nRet = pFrame->CallCallback( SALEVENT_MENUCOMMAND, &aMenuEvt );
+            nRet = pFrame->CallCallback( SalEvent::MenuCommand, &aMenuEvt );
         }
     }
     return (nRet != 0);
@@ -4845,8 +4843,8 @@ static int ImplHandleSysCommand( HWND hWnd, WPARAM wParam, LPARAM lParam )
             aKeyEvt.mnCode      = KEY_MENU;
             aKeyEvt.mnCharCode  = 0;
             aKeyEvt.mnRepeat    = 0;
-            long nRet = pFrame->CallCallback( SALEVENT_KEYINPUT, &aKeyEvt );
-            pFrame->CallCallback( SALEVENT_KEYUP, &aKeyEvt );
+            long nRet = pFrame->CallCallback( SalEvent::KeyInput, &aKeyEvt );
+            pFrame->CallCallback( SalEvent::KeyUp, &aKeyEvt );
             return (nRet != 0);
         }
         else
@@ -4880,8 +4878,8 @@ static int ImplHandleSysCommand( HWND hWnd, WPARAM wParam, LPARAM lParam )
                     aKeyEvt.mnCode     |= nModCode;
                     aKeyEvt.mnCharCode  = cKeyCode;
                     aKeyEvt.mnRepeat    = 0;
-                    long nRet = pFrame->CallCallback( SALEVENT_KEYINPUT, &aKeyEvt );
-                    pFrame->CallCallback( SALEVENT_KEYUP, &aKeyEvt );
+                    long nRet = pFrame->CallCallback( SalEvent::KeyInput, &aKeyEvt );
+                    pFrame->CallCallback( SalEvent::KeyUp, &aKeyEvt );
                     return (nRet != 0);
                 }
             }
@@ -4917,7 +4915,7 @@ static void ImplHandleInputLangChange( HWND hWnd, WPARAM, LPARAM lParam )
 
     // notify change
     if( nLang != pFrame->mnInputLang )
-        pFrame->CallCallback( SALEVENT_INPUTLANGUAGECHANGE, 0 );
+        pFrame->CallCallback( SalEvent::InputLanguageChange, 0 );
 
     ImplSalYieldMutexRelease();
 }
@@ -4930,7 +4928,7 @@ static void ImplUpdateIMECursorPos( WinSalFrame* pFrame, HIMC hIMC )
     // get cursor position and from it calculate default position
     // for the composition window
     SalExtTextInputPosEvent aPosEvt;
-    pFrame->CallCallback( SALEVENT_EXTTEXTINPUTPOS, (void*)&aPosEvt );
+    pFrame->CallCallback( SalEvent::ExtTextInputPos, (void*)&aPosEvt );
     if ( (aPosEvt.mnX == -1) && (aPosEvt.mnY == -1) )
         aForm.dwStyle |= CFS_DEFAULT;
     else
@@ -5007,8 +5005,8 @@ static bool ImplHandleIMECompositionInput( WinSalFrame* pFrame,
         }
 
         aEvt.mnCursorPos = aEvt.maText.getLength();
-        pFrame->CallCallback( SALEVENT_EXTTEXTINPUT, (void*)&aEvt );
-        pFrame->CallCallback( SALEVENT_ENDEXTTEXTINPUT, (void*)NULL );
+        pFrame->CallCallback( SalEvent::ExtTextInput, (void*)&aEvt );
+        pFrame->CallCallback( SalEvent::EndExtTextInput, (void*)NULL );
         ImplUpdateIMECursorPos( pFrame, hIMC );
     }
 
@@ -5075,8 +5073,8 @@ static bool ImplHandleIMECompositionInput( WinSalFrame* pFrame,
             // End the mode, if the last character is deleted
             if ( !nTextLen && !pFrame->mbCandidateMode )
             {
-                pFrame->CallCallback( SALEVENT_EXTTEXTINPUT, (void*)&aEvt );
-                pFrame->CallCallback( SALEVENT_ENDEXTTEXTINPUT, (void*)NULL );
+                pFrame->CallCallback( SalEvent::ExtTextInput, (void*)&aEvt );
+                pFrame->CallCallback( SalEvent::EndExtTextInput, (void*)NULL );
             }
             else
             {
@@ -5096,7 +5094,7 @@ static bool ImplHandleIMECompositionInput( WinSalFrame* pFrame,
                 if ( lParam & CS_NOMOVECARET )
                     aEvt.mnCursorFlags |= EXTTEXTINPUT_CURSOR_OVERWRITE;
 
-                pFrame->CallCallback( SALEVENT_EXTTEXTINPUT, (void*)&aEvt );
+                pFrame->CallCallback( SalEvent::ExtTextInput, (void*)&aEvt );
             }
             ImplUpdateIMECursorPos( pFrame, hIMC );
         }
@@ -5133,8 +5131,8 @@ static bool ImplHandleIMEComposition( HWND hWnd, LPARAM lParam )
             aEvt.mnCursorPos        = 0;
             aEvt.mbOnlyCursor       = FALSE;
             aEvt.mnCursorFlags      = 0;
-            pFrame->CallCallback( SALEVENT_EXTTEXTINPUT, (void*)&aEvt );
-            pFrame->CallCallback( SALEVENT_ENDEXTTEXTINPUT, (void*)NULL );
+            pFrame->CallCallback( SalEvent::ExtTextInput, (void*)&aEvt );
+            pFrame->CallCallback( SalEvent::EndExtTextInput, (void*)NULL );
         }
         else if ( lParam & (GCS_RESULTSTR | GCS_COMPSTR | GCS_COMPATTR | GCS_CURSORPOS) )
         {
@@ -5240,7 +5238,7 @@ static void ImplHandleIMENotify( HWND hWnd, WPARAM wParam )
                 if ( nBufLen >= 1 )
                 {
                     SalExtTextInputPosEvent aPosEvt;
-                    pFrame->CallCallback( SALEVENT_EXTTEXTINPUTPOS, (void*)&aPosEvt );
+                    pFrame->CallCallback( SalEvent::ExtTextInputPos, (void*)&aPosEvt );
 
                     // Vertical !!!
                     CANDIDATEFORM aForm;
@@ -5328,10 +5326,10 @@ static LRESULT ImplHandleIMEReconvertString( HWND hWnd, LPARAM lParam )
     if( !pReconvertString )
     {
     // The first call for reconversion.
-    pFrame->CallCallback( SALEVENT_STARTRECONVERSION, (void*)NULL );
+    pFrame->CallCallback( SalEvent::StartReconversion, (void*)NULL );
 
     // Retrieve the surrounding text from the focused control.
-    pFrame->CallCallback( SALEVENT_SURROUNDINGTEXTREQUEST, (void*)&aEvt );
+    pFrame->CallCallback( SalEvent::SurroundingTextRequest, (void*)&aEvt );
 
     if( aEvt.maText.isEmpty())
     {
@@ -5345,7 +5343,7 @@ static LRESULT ImplHandleIMEReconvertString( HWND hWnd, LPARAM lParam )
     // The second call for reconversion.
 
     // Retrieve the surrounding text from the focused control.
-    pFrame->CallCallback( SALEVENT_SURROUNDINGTEXTREQUEST, (void*)&aEvt );
+    pFrame->CallCallback( SalEvent::SurroundingTextRequest, (void*)&aEvt );
     nRet = sizeof(RECONVERTSTRING) + (aEvt.maText.getLength() + 1) * sizeof(WCHAR);
 
     pReconvertString->dwStrOffset = sizeof(RECONVERTSTRING);
@@ -5370,7 +5368,7 @@ static LRESULT ImplHandleIMEConfirmReconvertString( HWND hWnd, LPARAM lParam )
     aEvt.maText.clear();
     aEvt.mnStart = aEvt.mnEnd = 0;
 
-    pFrame->CallCallback( SALEVENT_SURROUNDINGTEXTREQUEST, (void*)&aEvt );
+    pFrame->CallCallback( SalEvent::SurroundingTextRequest, (void*)&aEvt );
 
     sal_uLong nTmpStart = pReconvertString->dwCompStrOffset / sizeof(WCHAR);
     sal_uLong nTmpEnd = nTmpStart + pReconvertString->dwCompStrLen;
@@ -5381,7 +5379,7 @@ static LRESULT ImplHandleIMEConfirmReconvertString( HWND hWnd, LPARAM lParam )
     aSelEvt.mnStart = nTmpStart;
     aSelEvt.mnEnd = nTmpEnd;
 
-    pFrame->CallCallback( SALEVENT_SURROUNDINGTEXTSELECTIONCHANGE, (void*)&aSelEvt );
+    pFrame->CallCallback( SalEvent::SurroundingTextSelectionChange, (void*)&aSelEvt );
     }
 
     return TRUE;
@@ -5397,7 +5395,7 @@ static LRESULT ImplHandleIMEQueryCharPosition( HWND hWnd, LPARAM lParam ) {
     aEvt.mbValid = false;
     aEvt.mnCharPos = pQueryCharPosition->dwCharPos;
 
-    pFrame->CallCallback( SALEVENT_QUERYCHARPOSITION, (void*)&aEvt );
+    pFrame->CallCallback( SalEvent::QueryCharPosition, (void*)&aEvt );
 
     if ( !aEvt.mbValid )
         return FALSE;
@@ -5688,7 +5686,7 @@ LRESULT CALLBACK SalFrameWndProc( HWND hWnd, UINT nMsg, WPARAM wParam, LPARAM lP
                     ImplHideSplash();
                     if( pWin )
                     {
-                        pWin->EnableInput( FALSE, TRUE, TRUE, NULL );
+                        pWin->EnableInput( FALSE, nullptr );
                         pWin->ImplIncModalCount();  // #106303# support frame based modal count
                     }
                 }
@@ -5697,7 +5695,7 @@ LRESULT CALLBACK SalFrameWndProc( HWND hWnd, UINT nMsg, WPARAM wParam, LPARAM lP
                     ImplGetSVData()->maAppData.mnModalMode--;
                     if( pWin )
                     {
-                        pWin->EnableInput( TRUE, TRUE, TRUE, NULL );
+                        pWin->EnableInput( TRUE, nullptr );
                         pWin->ImplDecModalCount();  // #106303# support frame based modal count
                     }
                 }
@@ -5766,7 +5764,7 @@ LRESULT CALLBACK SalFrameWndProc( HWND hWnd, UINT nMsg, WPARAM wParam, LPARAM lP
             break;
 
         case WM_THEMECHANGED:
-            GetSalData()->mbThemeChanged = TRUE;
+            GetSalData()->mbThemeChanged = true;
             break;
 
         case SAL_MSG_USEREVENT:
@@ -5863,40 +5861,6 @@ LRESULT CALLBACK SalFrameWndProc( HWND hWnd, UINT nMsg, WPARAM wParam, LPARAM lP
             break;
     }
 
-    // catch WheelMouse-Message
-    if ( rDef && (nMsg == aSalShlData.mnWheelMsgId) && aSalShlData.mnWheelMsgId )
-    {
-        // protect against recursion, in case the message is returned
-        // by IE or the external window
-        if ( !bInWheelMsg )
-        {
-            bInWheelMsg++;
-            // First dispatch the message; and then give the SystemWindow a turn
-            WORD nKeyState = 0;
-            if ( GetKeyState( VK_SHIFT ) & 0x8000 )
-                nKeyState |= MK_SHIFT;
-            if ( GetKeyState( VK_CONTROL ) & 0x8000 )
-                nKeyState |= MK_CONTROL;
-            // Mutex handling is inside from this call
-            rDef = !ImplHandleWheelMsg( hWnd,
-                                        WM_MOUSEWHEEL,
-                                        MAKEWPARAM( nKeyState, (WORD)wParam ),
-                                        lParam );
-            if ( rDef )
-            {
-                HWND hWheelWnd = ::GetFocus();
-                if ( hWheelWnd && (hWheelWnd != hWnd) )
-                {
-                    nRet = SendMessageW( hWheelWnd, nMsg, wParam, lParam );
-                    rDef = FALSE;
-                }
-                else
-                    rDef = ImplSalWheelMousePos( hWnd, nMsg, wParam, lParam, nRet );
-            }
-            bInWheelMsg--;
-        }
-    }
-
     if( bCheckTimers )
     {
         SalData* pSalData = GetSalData();
@@ -5907,7 +5871,10 @@ LRESULT CALLBACK SalFrameWndProc( HWND hWnd, UINT nMsg, WPARAM wParam, LPARAM lP
             {
                 MSG aMsg;
                 if( ! PeekMessageW( &aMsg, 0, WM_PAINT, WM_PAINT, PM_NOREMOVE | PM_NOYIELD ) )
-                    PostMessageW( pSalData->mpFirstInstance->mhComWnd, SAL_MSG_POSTTIMER, 0, nCurTime );
+                {
+                    BOOL const ret = PostMessageW(pSalData->mpFirstInstance->mhComWnd, SAL_MSG_POSTTIMER, 0, nCurTime);
+                    SAL_WARN_IF(0 == ret, "vcl", "ERROR: PostMessage() failed!");
+                }
             }
         }
     }

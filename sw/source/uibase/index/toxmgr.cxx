@@ -22,7 +22,6 @@
 #include <swwait.hxx>
 #include <view.hxx>
 #include <toxmgr.hxx>
-#include <crsskip.hxx>
 #include <doc.hxx>
 #include <IDocumentUndoRedo.hxx>
 #include <swundo.hxx>
@@ -32,14 +31,8 @@
 SwTOXMgr::SwTOXMgr(SwWrtShell* pShell):
     pSh(pShell)
 {
-    GetTOXMarks();
+    pSh->GetCurTOXMarks(aCurMarks);
     SetCurTOXMark(0);
-}
-
-// handle current TOXMarks
-sal_uInt16 SwTOXMgr::GetTOXMarks()
-{
-    return pSh->GetCurTOXMarks(aCurMarks);
 }
 
 SwTOXMark* SwTOXMgr::GetTOXMark(sal_uInt16 nId)
@@ -267,9 +260,9 @@ const SwTOXBase* SwTOXMgr::GetCurTOX()
 {
     return pSh->GetCurTOX();
 }
-const SwTOXType* SwTOXMgr::GetTOXType(TOXTypes eTyp, sal_uInt16 nId) const
+const SwTOXType* SwTOXMgr::GetTOXType(TOXTypes eTyp) const
 {
-    return pSh->GetTOXType(eTyp, nId);
+    return pSh->GetTOXType(eTyp, 0);
 }
 
 void SwTOXMgr::SetCurTOXMark(sal_uInt16 nId)

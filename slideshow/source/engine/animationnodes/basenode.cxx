@@ -37,7 +37,6 @@
 #include <vector>
 #include <algorithm>
 #include <iterator>
-#include <boost/noncopyable.hpp>
 
 using namespace ::com::sun::star;
 
@@ -204,7 +203,7 @@ const int* getStateTransitionTable( sal_Int16 nRestartMode,
         // same value: animations::AnimationRestart::INHERIT:
         OSL_FAIL(
             "getStateTransitionTable(): unexpected case for restart" );
-        // FALLTHROUGH intended
+        SAL_FALLTHROUGH;
     case animations::AnimationRestart::NEVER:
         nRestartValue = 0;
         break;
@@ -224,7 +223,7 @@ const int* getStateTransitionTable( sal_Int16 nRestartMode,
         // same value: animations::AnimationFill::INHERIT:
         OSL_FAIL(
             "getStateTransitionTable(): unexpected case for fill" );
-        // FALLTHROUGH intended
+        SAL_FALLTHROUGH;
     case animations::AnimationFill::REMOVE:
         nFillValue = 0;
         break;
@@ -259,7 +258,7 @@ bool isMainSequenceRootNode_(
 
 /** state transition handling
  */
-class BaseNode::StateTransition : private boost::noncopyable
+class BaseNode::StateTransition
 {
 public:
     enum Options { NONE, FORCE };
@@ -270,6 +269,9 @@ public:
     ~StateTransition() {
         clear();
     }
+
+    StateTransition(const StateTransition&) = delete;
+    StateTransition& operator=(const StateTransition&) = delete;
 
     bool enter( NodeState eToState, int options = NONE )
     {
@@ -353,16 +355,14 @@ void BaseNode::dispose()
 sal_Int16 BaseNode::getRestartMode()
 {
     const sal_Int16 nTmp( mxAnimationNode->getRestart() );
-    return (nTmp != animations::AnimationRestart::DEFAULT &&
-            nTmp != animations::AnimationRestart::INHERIT)
+    return nTmp != animations::AnimationRestart::DEFAULT
         ? nTmp : getRestartDefaultMode();
 }
 
 sal_Int16 BaseNode::getFillMode()
 {
     const sal_Int16 nTmp( mxAnimationNode->getFill() );
-    const sal_Int16 nFill((nTmp != animations::AnimationFill::DEFAULT &&
-                           nTmp != animations::AnimationFill::INHERIT)
+    const sal_Int16 nFill(nTmp != animations::AnimationFill::DEFAULT
                           ? nTmp : getFillDefaultMode());
 
     // For AUTO fill mode, SMIL specifies that fill mode is FREEZE,
@@ -490,14 +490,14 @@ bool BaseNode::resolve_st()
 }
 
 
-bool BaseNode::activate()
+void BaseNode::activate()
 {
     if (! checkValidNode())
-        return false;
+        return;
 
     OSL_ASSERT( meCurrState != ACTIVE );
     if (inStateOrTransition( ACTIVE ))
-        return true;
+        return;
 
     StateTransition st(this);
     if (st.enter( ACTIVE )) {
@@ -507,11 +507,7 @@ bool BaseNode::activate()
         st.commit(); // changing state
 
         maContext.mrEventMultiplexer.notifyAnimationStart( mpSelf );
-
-        return true;
     }
-
-    return false;
 }
 
 void BaseNode::activate_st()
@@ -538,7 +534,7 @@ void BaseNode::scheduleDeactivationEvent( EventSharedPtr const& pEvent )
 
         // xxx todo:
         // think about set node, anim base node!
-        // if anim base node has no activity, this is called to schedule deactivatiion,
+        // if anim base node has no activity, this is called to schedule deactivation,
         // but what if it does not schedule anything?
 
         // TODO(F2): Handle end time attribute, too
@@ -681,13 +677,13 @@ void BaseNode::showState() const
 
     if( eNodeState == AnimationNode::INVALID )
         SAL_INFO("slideshow.verbose", "Node state: n" <<
-                 reinterpret_cast<const char*>(this)+debugGetCurrentOffset() <<
+                 debugGetNodeName(this) <<
                  " [label=\"" <<
                  getDescription() <<
                  "\",style=filled, fillcolor=\"0.5,0.2,0.5\"]");
     else
         SAL_INFO("slideshow.verbose", "Node state: n" <<
-                 reinterpret_cast<const char*>(this)+debugGetCurrentOffset() <<
+                 debugGetNodeName(this) <<
                  " [label=\"" <<
                  getDescription() <<
                  "fillcolor=\"" <<
@@ -721,7 +717,7 @@ void BaseNode::showState() const
             if( xPropSet->getPropertyValue("Name") >>= aName )
             {
                 SAL_INFO("slideshow.verbose", "Node info: n" <<
-                         reinterpret_cast<const char*>(this)+debugGetCurrentOffset() <<
+                         debugGetNodeName(this) <<
                          ", name \"" <<
                          aName <<
                          "\"");

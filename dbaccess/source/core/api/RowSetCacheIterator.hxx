@@ -61,19 +61,15 @@ namespace dbaccess
         operator ORowSetMatrix::iterator();
 
         ORowSetRow& operator *();
-        const ORowSetRow& operator *() const;
 
         ORowSetMatrix::iterator& operator ->();
-        const ORowSetMatrix::iterator& operator ->() const;
 
-        bool operator <=(const ORowSetMatrix::iterator& _rRH) const;
         bool operator <(const ORowSetMatrix::iterator& _rRH) const;
         bool operator !=(const ORowSetMatrix::iterator& _rRH) const;
-        bool operator ==(const ORowSetMatrix::iterator& _rRH) const;
 
         void setBookmark(const css::uno::Any&  _rBookmark);
 
-        ORowSetCacheMap::iterator getIter() const { return m_aIter; }
+        const ORowSetCacheMap::iterator& getIter() const { return m_aIter; }
     };
 }
 #endif // INCLUDED_DBACCESS_SOURCE_CORE_API_ROWSETCACHEITERATOR_HXX

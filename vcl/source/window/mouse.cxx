@@ -37,8 +37,9 @@
 #include <salobj.hxx>
 #include <salgdi.hxx>
 #include <salframe.hxx>
-#include <dndlcon.hxx>
-#include <dndevdis.hxx>
+
+#include "dndlistenercontainer.hxx"
+#include "dndeventdispatcher.hxx"
 
 #include <com/sun/star/datatransfer/dnd/XDragSource.hpp>
 #include <com/sun/star/datatransfer/dnd/XDropTarget.hpp>
@@ -202,7 +203,7 @@ void Window::ImplGrabFocus( GetFocusFlags nFlags )
 
     // some event listeners do really bad stuff
     // => prepare for the worst
-    ImplDelData aDogTag( this );
+    VclPtr<vcl::Window> xWindow( this );
 
     // Currently the client window should always get the focus
     // Should the border window at some point be focusable
@@ -272,9 +273,7 @@ void Window::ImplGrabFocus( GetFocusFlags nFlags )
     vcl::Window *pParent = this;
     while( pParent )
     {
-        // #102158#, ignore grabfocus only if the floating parent grabs keyboard focus by itself (GrabsFocus())
-        // otherwise we cannot set the focus in a floating toolbox
-        if( ( (pParent->mpWindowImpl->mbFloatWin && static_cast<FloatingWindow*>(pParent)->GrabsFocus()) || ( pParent->GetStyle() & WB_SYSTEMFLOATWIN ) ) && !( pParent->GetStyle() & WB_MOVEABLE ) )
+        if ((pParent->GetStyle() & WB_SYSTEMFLOATWIN) && !(pParent->GetStyle() & WB_MOVEABLE))
         {
             bMustNotGrabFocus = true;
             break;
@@ -289,7 +288,7 @@ void Window::ImplGrabFocus( GetFocusFlags nFlags )
         // EndExtTextInput if it is not the same window
         if ( pSVData->maWinData.mpExtTextInputWin &&
              (pSVData->maWinData.mpExtTextInputWin.get() != this) )
-            pSVData->maWinData.mpExtTextInputWin->EndExtTextInput( EndExtTextInputFlags::Complete );
+            pSVData->maWinData.mpExtTextInputWin->EndExtTextInput();
 
         // mark this windows as the last FocusWindow
         vcl::Window* pOverlapWindow = ImplGetFirstOverlapWindow();
@@ -311,8 +310,7 @@ void Window::ImplGrabFocus( GetFocusFlags nFlags )
             }
         }
 
-        vcl::Window* pOldFocusWindow = pSVData->maWinData.mpFocusWin;
-        ImplDelData aOldFocusDel( pOldFocusWindow );
+        VclPtr<vcl::Window> pOldFocusWindow = pSVData->maWinData.mpFocusWin;
 
         pSVData->maWinData.mpFocusWin = this;
 
@@ -320,7 +318,7 @@ void Window::ImplGrabFocus( GetFocusFlags nFlags )
         {
             // Cursor hidden
             if ( pOldFocusWindow->mpWindowImpl->mpCursor )
-                pOldFocusWindow->mpWindowImpl->mpCursor->ImplHide( true );
+                pOldFocusWindow->mpWindowImpl->mpCursor->ImplHide();
         }
 
         // !!!!! due to old SV-Office Activate/Deactivate handling
@@ -347,7 +345,7 @@ void Window::ImplGrabFocus( GetFocusFlags nFlags )
         }
 
         // call Get- and LoseFocus
-        if ( pOldFocusWindow && ! aOldFocusDel.IsDead() )
+        if ( pOldFocusWindow && ! pOldFocusWindow->IsDisposed() )
         {
             if ( pOldFocusWindow->IsTracking() &&
                  (pSVData->maWinData.mnTrackFlags & StartTrackingFlags::FocusCancel) )
@@ -377,15 +375,15 @@ void Window::ImplGrabFocus( GetFocusFlags nFlags )
                 // notify the new focus window so it can restore the inner focus
                 // eg, toolboxes can select their recent active item
                 if( pOldFocusWindow &&
-                    ! aOldFocusDel.IsDead() &&
+                    ! pOldFocusWindow->IsDisposed() &&
                     ( pOldFocusWindow->GetDialogControlFlags() & DialogControlFlags::FloatWinPopupModeEndCancel ) )
                     mpWindowImpl->mnGetFocusFlags |= GetFocusFlags::FloatWinPopupModeEndCancel;
                 NotifyEvent aNEvt( MouseNotifyEvent::GETFOCUS, this );
-                if ( !ImplCallPreNotify( aNEvt ) && !aDogTag.IsDead() )
+                if ( !ImplCallPreNotify( aNEvt ) && !xWindow->IsDisposed() )
                     CompatGetFocus();
-                if( !aDogTag.IsDead() )
-                    ImplCallActivateListeners( (pOldFocusWindow && ! aOldFocusDel.IsDead()) ? pOldFocusWindow : nullptr );
-                if( !aDogTag.IsDead() )
+                if( !xWindow->IsDisposed() )
+                    ImplCallActivateListeners( (pOldFocusWindow && ! pOldFocusWindow->IsDisposed()) ? pOldFocusWindow : nullptr );
+                if( !xWindow->IsDisposed() )
                 {
                     mpWindowImpl->mnGetFocusFlags = GetFocusFlags::NONE;
                     mpWindowImpl->mbInFocusHdl = false;
@@ -733,7 +731,7 @@ Reference< css::datatransfer::dnd::XDragSource > Window::GetDragSource()
                 {
                     Sequence< Any > aDragSourceAL( 2 ), aDropTargetAL( 2 );
                     OUString aDragSourceSN, aDropTargetSN;
-#if defined WNT
+#if defined(_WIN32)
                     aDragSourceSN = "com.sun.star.datatransfer.dnd.OleDragSource";
                     aDropTargetSN = "com.sun.star.datatransfer.dnd.OleDropTarget";
                     aDragSourceAL[ 1 ] = makeAny( static_cast<sal_uInt64>( reinterpret_cast<sal_IntPtr>(pEnvData->hWnd) ) );
@@ -750,6 +748,7 @@ Reference< css::datatransfer::dnd::XDragSource > Window::GetDragSource()
                     aDropTargetSN = "com.sun.star.datatransfer.dnd.X11DropTarget";
 
                     aDragSourceAL[ 0 ] = makeAny( Application::GetDisplayConnection() );
+                    aDragSourceAL[ 1 ] = makeAny( (sal_Size)(pEnvData->aShellWindow) );
                     aDropTargetAL[ 0 ] = makeAny( Application::GetDisplayConnection() );
                     aDropTargetAL[ 1 ] = makeAny( (sal_Size)(pEnvData->aShellWindow) );
 #endif

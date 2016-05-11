@@ -96,7 +96,6 @@ BaseContent::BaseContent( shell* pMyShell,
 }
 
 
-
 // Constructor for full featured Contents
 
 BaseContent::BaseContent( shell* pMyShell,
@@ -131,7 +130,6 @@ BaseContent::~BaseContent( )
     delete m_pPropertyListener;
     delete m_pPropertySetInfoChangeListeners;
 }
-
 
 
 // XInterface
@@ -172,9 +170,6 @@ BaseContent::queryInterface( const Type& rType )
 }
 
 
-
-
-
 // XComponent
 
 
@@ -186,7 +181,7 @@ BaseContent::addEventListener( const Reference< lang::XEventListener >& Listener
 
     if ( ! m_pDisposeEventListeners )
         m_pDisposeEventListeners =
-            new cppu::OInterfaceContainerHelper( m_aEventListenerMutex );
+            new comphelper::OInterfaceContainerHelper2( m_aEventListenerMutex );
 
     m_pDisposeEventListeners->addInterface( Listener );
 }
@@ -208,9 +203,9 @@ BaseContent::dispose()
     throw( RuntimeException, std::exception )
 {
     lang::EventObject aEvt;
-    cppu::OInterfaceContainerHelper* pDisposeEventListeners;
-    cppu::OInterfaceContainerHelper* pContentEventListeners;
-    cppu::OInterfaceContainerHelper* pPropertySetInfoChangeListeners;
+    comphelper::OInterfaceContainerHelper2* pDisposeEventListeners;
+    comphelper::OInterfaceContainerHelper2* pContentEventListeners;
+    comphelper::OInterfaceContainerHelper2* pPropertySetInfoChangeListeners;
     PropertyListeners* pPropertyListener;
 
     {
@@ -218,18 +213,17 @@ BaseContent::dispose()
         aEvt.Source = static_cast< XContent* >( this );
 
 
-        pDisposeEventListeners =
-            m_pDisposeEventListeners, m_pDisposeEventListeners = nullptr;
+        pDisposeEventListeners = m_pDisposeEventListeners;
+        m_pDisposeEventListeners = nullptr;
 
-        pContentEventListeners =
-            m_pContentEventListeners, m_pContentEventListeners = nullptr;
+        pContentEventListeners = m_pContentEventListeners;
+        m_pContentEventListeners = nullptr;
 
-        pPropertySetInfoChangeListeners =
-            m_pPropertySetInfoChangeListeners,
-            m_pPropertySetInfoChangeListeners = nullptr;
+        pPropertySetInfoChangeListeners = m_pPropertySetInfoChangeListeners;
+        m_pPropertySetInfoChangeListeners = nullptr;
 
-        pPropertyListener =
-            m_pPropertyListener, m_pPropertyListener = nullptr;
+        pPropertyListener = m_pPropertyListener;
+        m_pPropertyListener = nullptr;
     }
 
     if ( pDisposeEventListeners && pDisposeEventListeners->getLength() )
@@ -285,7 +279,6 @@ XTYPEPROVIDER_IMPL_10( BaseContent,
                        beans::XPropertiesChangeNotifier,
                        beans::XPropertyContainer,
                        beans::XPropertySetInfoChangeNotifier )
-
 
 
 //  XCommandProcessor
@@ -426,7 +419,6 @@ BaseContent::execute( const Command& aCommand,
 }
 
 
-
 void SAL_CALL
 BaseContent::addPropertiesChangeListener(
     const Sequence< OUString >& PropertyNames,
@@ -472,7 +464,6 @@ BaseContent::removePropertiesChangeListener( const Sequence< OUString >& Propert
 
     m_pPropertyListener->removeInterface( OUString(), Listener );
 }
-
 
 
 // XContent
@@ -535,7 +526,6 @@ BaseContent::getContentType()
 }
 
 
-
 void SAL_CALL
 BaseContent::addContentEventListener(
     const Reference< XContentEventListener >& Listener )
@@ -545,7 +535,7 @@ BaseContent::addContentEventListener(
 
     if ( ! m_pContentEventListeners )
         m_pContentEventListeners =
-            new cppu::OInterfaceContainerHelper( m_aEventListenerMutex );
+            new comphelper::OInterfaceContainerHelper2( m_aEventListenerMutex );
 
 
     m_pContentEventListeners->addInterface( Listener );
@@ -564,10 +554,7 @@ BaseContent::removeContentEventListener(
 }
 
 
-
-
 // XPropertyContainer
-
 
 
 void SAL_CALL
@@ -676,9 +663,7 @@ BaseContent::createNewContent(
 }
 
 
-
 // XPropertySetInfoChangeNotifier
-
 
 
 void SAL_CALL
@@ -688,7 +673,7 @@ BaseContent::addPropertySetInfoChangeListener(
 {
     osl::MutexGuard aGuard( m_aMutex );
     if( ! m_pPropertySetInfoChangeListeners )
-        m_pPropertySetInfoChangeListeners = new cppu::OInterfaceContainerHelper( m_aEventListenerMutex );
+        m_pPropertySetInfoChangeListeners = new comphelper::OInterfaceContainerHelper2( m_aEventListenerMutex );
 
     m_pPropertySetInfoChangeListeners->addInterface( Listener );
 }
@@ -704,7 +689,6 @@ BaseContent::removePropertySetInfoChangeListener(
     if( m_pPropertySetInfoChangeListeners )
         m_pPropertySetInfoChangeListeners->removeInterface( Listener );
 }
-
 
 
 // XChild
@@ -747,9 +731,7 @@ BaseContent::setParent(
 }
 
 
-
 // Private Methods
-
 
 
 Reference< XCommandInfo > SAL_CALL
@@ -962,7 +944,6 @@ BaseContent::setPropertyValues(
 }
 
 
-
 Reference< XDynamicResultSet > SAL_CALL
 BaseContent::open(
     sal_Int32 nMyCommandIdentifier,
@@ -1039,7 +1020,6 @@ BaseContent::open(
 }
 
 
-
 void SAL_CALL
 BaseContent::deleteContent( sal_Int32 nMyCommandIdentifier )
 {
@@ -1052,7 +1032,6 @@ BaseContent::deleteContent( sal_Int32 nMyCommandIdentifier )
         m_nState |= Deleted;
     }
 }
-
 
 
 void SAL_CALL
@@ -1123,8 +1102,6 @@ BaseContent::transfer( sal_Int32 nMyCommandIdentifier,
     else
         m_pMyShell->copy( nMyCommandIdentifier,srcUncPath,dstUncPath,NameClash );
 }
-
-
 
 
 void SAL_CALL BaseContent::insert( sal_Int32 nMyCommandIdentifier,
@@ -1244,13 +1221,11 @@ void SAL_CALL BaseContent::insert( sal_Int32 nMyCommandIdentifier,
 }
 
 
-
 void SAL_CALL BaseContent::endTask( sal_Int32 CommandId )
 {
     // This is the only function allowed to throw an exception
     m_pMyShell->endTask( CommandId,m_aUncPath,this );
 }
-
 
 
 ContentEventNotifier*
@@ -1262,10 +1237,12 @@ BaseContent::cDEL()
 
     ContentEventNotifier* p;
     if( m_pContentEventListeners )
+    {
         p = new ContentEventNotifier( m_pMyShell,
                                       this,
                                       m_xContentIdentifier,
                                       m_pContentEventListeners->getElements() );
+    }
     else
         p = nullptr;
 
@@ -1316,12 +1293,10 @@ BaseContent::cPSL()
     PropertySetInfoChangeNotifier* p = nullptr;
     if( m_pPropertySetInfoChangeListeners  )
         p = new PropertySetInfoChangeNotifier( this,
-                                               m_xContentIdentifier,
                                                m_pPropertySetInfoChangeListeners->getElements() );
 
     return p;
 }
-
 
 
 PropertyChangeNotifier*
@@ -1350,7 +1325,6 @@ BaseContent::cPCL()
         }
 
         p = new PropertyChangeNotifier( this,
-                                        m_xContentIdentifier,
                                         listener );
     }
 

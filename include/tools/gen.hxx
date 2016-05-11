@@ -324,7 +324,6 @@ public:
 
     /// Move the top and left edges by a delta, preserving width and height
     inline void         Move( long nHorzMoveDelta, long nVertMoveDelta );
-    inline void         Transpose();
     inline void         SetPos( const Point& rPoint );
     void                SetSize( const Size& rSize );
     inline Size         GetSize() const;
@@ -497,20 +496,6 @@ inline void Rectangle::Move( long nHorzMove, long nVertMove )
         nBottom += nVertMove;
 }
 
-void Rectangle::Transpose()
-{
-    if ( !IsEmpty() )
-    {
-        long swap( nLeft );
-        nLeft = nTop;
-        nTop = swap;
-
-        swap = nRight;
-        nRight = nBottom;
-        nBottom = swap;
-    }
-}
-
 inline void Rectangle::SetPos( const Point& rPoint )
 {
     if ( nRight != RECT_EMPTY )
@@ -634,7 +619,6 @@ inline void Rectangle::expand(long nExpandBy)
     nRight  += nExpandBy;
     nBottom += nExpandBy;
 }
-
 
 
 template< typename charT, typename traits >

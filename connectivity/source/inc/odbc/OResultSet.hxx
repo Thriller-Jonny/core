@@ -144,7 +144,6 @@ namespace connectivity
             SQLRETURN                                   m_nCurrentFetchState;
             bool                                    m_bWasNull;
             bool                                    m_bEOF;                 // after last record
-            bool                                    m_bLastRecord;
             bool                                    m_bFreeHandle;
             bool                                    m_bInserting;
             bool                                    m_bRowInserted;
@@ -157,7 +156,7 @@ namespace connectivity
             static sal_Int32 getFetchDirection() { return css::sdbc::FetchDirection::FORWARD; }
             sal_Int32 getFetchSize()            const;
             OUString getCursorName()     const;
-            template < typename T, SQLINTEGER BufferLength > T getStmtOption (SQLINTEGER fOption, T dflt = 0) const;
+            template < typename T, SQLINTEGER BufferLength > T getStmtOption (SQLINTEGER fOption) const;
 
             void setFetchDirection(sal_Int32 _par0);
             void setFetchSize(sal_Int32 _par0);
@@ -171,7 +170,7 @@ namespace connectivity
             void releaseBuffer();
             void updateValue(sal_Int32 columnIndex,SQLSMALLINT _nType,void* _pValue) throw(::com::sun::star::sdbc::SQLException, ::com::sun::star::uno::RuntimeException);
             void fillNeededData(SQLRETURN _nRet);
-            bool moveImpl(IResultSetHelper::Movement _eCursorPosition, sal_Int32 _nOffset, bool _bRetrieveData);
+            bool moveImpl(IResultSetHelper::Movement _eCursorPosition, sal_Int32 _nOffset);
             TVoidPtr allocBindColumn(sal_Int32 _nType,sal_Int32 _nColumnIndex);
             SQLRETURN unbind(bool _bUnbindHandle = true);
             SWORD impl_getColumnType_nothrow(sal_Int32 columnIndex);

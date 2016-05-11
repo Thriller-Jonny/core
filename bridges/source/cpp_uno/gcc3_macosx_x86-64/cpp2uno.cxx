@@ -315,8 +315,8 @@ typelib_TypeClass cpp_vtable_call(
                 // is SET method
                 typelib_MethodParameter aParam;
                 aParam.pTypeRef = pAttrTypeRef;
-                aParam.bIn      = sal_True;
-                aParam.bOut     = sal_False;
+                aParam.bIn      = true;
+                aParam.bOut     = false;
 
                 eRet = cpp2uno_call( pCppI, aMemberDescr.get(),
                         nullptr, // indicates void return
@@ -455,7 +455,6 @@ bridges::cpp_uno::shared::VtableFactory::initializeBlock(
     slots[-1].fn = nullptr;
     return slots + slotCount;
 }
-
 
 
 unsigned char * bridges::cpp_uno::shared::VtableFactory::addLocalFunctions(

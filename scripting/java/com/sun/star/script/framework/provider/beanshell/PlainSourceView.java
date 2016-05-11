@@ -24,12 +24,25 @@ import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Polygon;
 import java.awt.Rectangle;
+import java.awt.event.ActionEvent;
+import java.awt.event.InputEvent;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 
+import javax.swing.AbstractAction;
 import javax.swing.JComponent;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
+import javax.swing.KeyStroke;
+import javax.swing.UIManager;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.event.UndoableEditEvent;
+import javax.swing.event.UndoableEditListener;
+import javax.swing.text.BadLocationException;
+import javax.swing.undo.CannotUndoException;
+import javax.swing.undo.CompoundEdit;
+import javax.swing.undo.UndoManager;
 
 public class PlainSourceView extends JScrollPane implements
     ScriptSourceView, DocumentListener {
@@ -39,6 +52,11 @@ public class PlainSourceView extends JScrollPane implements
     private GlyphGutter gg;
     private int linecount;
     private boolean isModified = false;
+    private static final String undoKey = "Undo";
+    private static final String redoKey = "Redo";
+    private CompoundEdit compoundEdit = null;
+    private static final int noLimit = -1;
+    UndoManager undoManager;
 
     public PlainSourceView(ScriptSourceModel model) {
         this.model = model;
@@ -46,6 +64,21 @@ public class PlainSourceView extends JScrollPane implements
         model.setView(this);
     }
 
+    public void undo(){
+        if(compoundEdit!=null){
+            compoundEdit.end();
+            undoManager.addEdit(compoundEdit);
+            compoundEdit = null;
+        }
+        if(undoManager.canUndo()){
+            undoManager.undo();
+        }
+    }
+    public void redo(){
+        if(undoManager.canRedo()){
+            undoManager.redo();
+        }
+    }
     public void clear() {
         ta.setText("");
     }
@@ -62,7 +95,7 @@ public class PlainSourceView extends JScrollPane implements
             try {
                 ta.setCaretPosition(pos);
             } catch (IllegalArgumentException iae) {
-                // do nothing and allow JTextArea to set it's own position
+                // do nothing and allow JTextArea to set its own position
             }
         }
 
@@ -70,8 +103,10 @@ public class PlainSourceView extends JScrollPane implements
         try {
             int line = ta.getLineStartOffset(model.getCurrentPosition());
             Rectangle rect = ta.modelToView(line);
-            ta.scrollRectToVisible(rect);
-        } catch (Exception e) {
+            if (rect != null) {
+                ta.scrollRectToVisible(rect);
+            }
+        } catch (BadLocationException e) {
             // couldn't scroll to line, do nothing
         }
 
@@ -90,11 +125,59 @@ public class PlainSourceView extends JScrollPane implements
     }
 
     private void initUI() {
+        try{
+                UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+        }
+        catch(Exception e){
+                // What to do here
+        }
         ta = new JTextArea();
+        ta.setTabSize(4);
         ta.setRows(15);
         ta.setColumns(40);
         ta.setLineWrap(false);
         ta.insert(model.getText(), 0);
+        ta.setFont(new Font("Monospaced", ta.getFont().getStyle(), ta.getFont().getSize()));
+        undoManager = new UndoManager();
+        undoManager.setLimit(noLimit);
+        ta.getDocument().addUndoableEditListener(new UndoableEditListener(){
+            @Override
+            public void undoableEditHappened(UndoableEditEvent editEvent) {
+                if(compoundEdit == null){
+                    compoundEdit = new CompoundEdit();
+                }
+                compoundEdit.addEdit(editEvent.getEdit());
+            }
+        });
+
+        ta.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_Z, InputEvent.CTRL_MASK), undoKey);
+        ta.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_Y, InputEvent.CTRL_MASK), redoKey);
+
+        ta.addKeyListener(new KeyAdapter(){
+            @Override
+            public void keyReleased(KeyEvent ke){
+                if(ke.getKeyCode() == KeyEvent.VK_SPACE || ke.getKeyCode() == KeyEvent.VK_ENTER){
+                    compoundEdit.end();
+                    undoManager.addEdit(compoundEdit);
+                    compoundEdit = null;
+                }
+            }
+        });
+
+        ta.getActionMap().put(undoKey, new AbstractAction(undoKey){
+            @Override
+            public void actionPerformed(ActionEvent event) {
+                undo();
+            }
+        });
+
+        ta.getActionMap().put(redoKey, new AbstractAction(redoKey){
+            @Override
+            public void actionPerformed(ActionEvent event) {
+                redo();
+            }
+        });
+
         linecount = ta.getLineCount();
 
         gg = new GlyphGutter(this);
@@ -239,3 +322,4 @@ class GlyphGutter extends JComponent {
         g.drawPolygon(arrow);
     }
 }
+

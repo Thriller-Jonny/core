@@ -43,9 +43,6 @@
 using namespace ::com::sun::star;
 
 using ::com::sun::star::uno::Exception;
-using ::com::sun::star::uno::Reference;
-using ::com::sun::star::uno::UNO_QUERY;
-using ::com::sun::star::uno::UNO_QUERY_THROW;
 
 ScDPCache::GroupItems::GroupItems() : mnGroupType(0) {}
 
@@ -117,7 +114,7 @@ OUString createLabelString(ScDocument* pDoc, SCCOL nCol, SCROW nRow, SCTAB nTab)
         aBuf.append(' ');
 
         ScAddress aColAddr(nCol, 0, 0);
-        aBuf.append(aColAddr.Format(SCA_VALID_COL));
+        aBuf.append(aColAddr.Format(ScRefFlags::COL_VALID));
         aDocStr = aBuf.makeStringAndClear();
     }
     return aDocStr;
@@ -156,8 +153,8 @@ struct Bucket
     SCROW mnOrderIndex;
     SCROW mnDataIndex;
     SCROW mnValueSortIndex;
-    Bucket(const ScDPItemData& rValue, SCROW nOrder, SCROW nData) :
-        maValue(rValue), mnOrderIndex(nOrder), mnDataIndex(nData), mnValueSortIndex(0) {}
+    Bucket(const ScDPItemData& rValue, SCROW nData) :
+        maValue(rValue), mnOrderIndex(0), mnDataIndex(nData), mnValueSortIndex(0) {}
 };
 
 #if DEBUG_PIVOT_TABLE
@@ -207,7 +204,7 @@ struct EqualByOrderIndex : std::binary_function<Bucket, Bucket, bool>
     }
 };
 
-class PushBackValue : std::unary_function<Bucket, void>
+class PushBackValue : public std::unary_function<Bucket, void>
 {
     ScDPCache::ScDPItemDataVec& mrItems;
 public:
@@ -218,7 +215,7 @@ public:
     }
 };
 
-class PushBackOrderIndex : std::unary_function<Bucket, void>
+class PushBackOrderIndex : public std::unary_function<Bucket, void>
 {
     ScDPCache::IndexArrayType& mrData;
 public:
@@ -229,7 +226,7 @@ public:
     }
 };
 
-class TagValueSortOrder : std::unary_function<Bucket, void>
+class TagValueSortOrder : public std::unary_function<Bucket, void>
 {
     SCROW mnCurIndex;
 public:
@@ -290,7 +287,7 @@ void processBuckets(std::vector<Bucket>& aBuckets, ScDPCache::Field& rField)
 
 }
 
-bool ScDPCache::InitFromDoc(ScDocument* pDoc, const ScRange& rRange)
+void ScDPCache::InitFromDoc(ScDocument* pDoc, const ScRange& rRange)
 {
     Clear();
 
@@ -305,7 +302,7 @@ bool ScDPCache::InitFromDoc(ScDocument* pDoc, const ScRange& rRange)
 
     // Sanity check
     if (!ValidRow(nStartRow) || !ValidRow(nEndRow) || nEndRow <= nStartRow)
-        return false;
+        return;
 
     sal_uInt16 nStartCol = rRange.aStart.Col();
     sal_uInt16 nEndCol = rRange.aEnd.Col();
@@ -329,7 +326,7 @@ bool ScDPCache::InitFromDoc(ScDocument* pDoc, const ScRange& rRange)
         // possible that the new end row becomes lower than the start row
         // after the shrinkage.
         Clear();
-        return false;
+        return;
     }
 
     maFields.reserve(mnColumnCount);
@@ -353,7 +350,7 @@ bool ScDPCache::InitFromDoc(ScDocument* pDoc, const ScRange& rRange)
             SCROW nRow = i + nOffset;
             sal_uLong nNumFormat = 0;
             initFromCell(*this, pDoc, nCol, nRow, nDocTab, aData, nNumFormat);
-            aBuckets.push_back(Bucket(aData, 0, i));
+            aBuckets.push_back(Bucket(aData, i));
 
             if (!aData.IsEmpty())
             {
@@ -379,7 +376,6 @@ bool ScDPCache::InitFromDoc(ScDocument* pDoc, const ScRange& rRange)
     }
 
     PostInit();
-    return true;
 }
 
 bool ScDPCache::InitFromDataBase(DBConnector& rDB)
@@ -419,7 +415,7 @@ bool ScDPCache::InitFromDataBase(DBConnector& rDB)
                 short nFormatType = css::util::NumberFormat::UNDEFINED;
                 aData.SetEmpty();
                 rDB.getValue(nCol, aData, nFormatType);
-                aBuckets.push_back(Bucket(aData, 0, nRow));
+                aBuckets.push_back(Bucket(aData, nRow));
                 if (!aData.IsEmpty())
                 {
                     maEmptyRows.insert_back(nRow, nRow+1, false);
@@ -530,24 +526,24 @@ bool ScDPCache::ValidQuery( SCROW nRow, const ScQueryParam &rParam) const
         {   // by String
             OUString  aCellStr = pCellData->GetString();
 
-            bool bRealRegExp = (rParam.bRegExp && ((rEntry.eOp == SC_EQUAL)
-                                                   || (rEntry.eOp == SC_NOT_EQUAL)));
-            bool bTestRegExp = false;
-            if (bRealRegExp || bTestRegExp)
+            bool bRealWildOrRegExp = (rParam.eSearchType != utl::SearchParam::SRCH_NORMAL &&
+                    ((rEntry.eOp == SC_EQUAL) || (rEntry.eOp == SC_NOT_EQUAL)));
+            bool bTestWildOrRegExp = false;
+            if (bRealWildOrRegExp || bTestWildOrRegExp)
             {
                 sal_Int32 nStart = 0;
                 sal_Int32 nEnd   = aCellStr.getLength();
 
-                bool bMatch = (bool) rEntry.GetSearchTextPtr( rParam.bCaseSens )
+                bool bMatch = (bool) rEntry.GetSearchTextPtr( rParam.eSearchType, rParam.bCaseSens, bMatchWholeCell )
                               ->SearchForward( aCellStr, &nStart, &nEnd );
                 // from 614 on, nEnd is behind the found text
                 if (bMatch && bMatchWholeCell
                     && (nStart != 0 || nEnd != aCellStr.getLength()))
                     bMatch = false;    // RegExp must match entire cell string
-                if (bRealRegExp)
+                if (bRealWildOrRegExp)
                     bOk = ((rEntry.eOp == SC_NOT_EQUAL) ? !bMatch : bMatch);
             }
-            if (!bRealRegExp)
+            if (!bRealWildOrRegExp)
             {
                 if (rEntry.eOp == SC_EQUAL || rEntry.eOp == SC_NOT_EQUAL)
                 {

@@ -20,6 +20,8 @@
 #ifndef INCLUDED_FILTER_SOURCE_CONFIG_CACHE_FILTERCACHE_HXX
 #define INCLUDED_FILTER_SOURCE_CONFIG_CACHE_FILTERCACHE_HXX
 
+#include <memory>
+
 #include "cacheitem.hxx"
 #include <com/sun/star/uno/Exception.hpp>
 #include <com/sun/star/util/URL.hpp>
@@ -31,6 +33,7 @@
 #include <com/sun/star/uno/Reference.h>
 #include <com/sun/star/uno/Any.h>
 #include <comphelper/documentconstants.hxx>
+#include <rtl/instance.hxx>
 #include <rtl/ref.hxx>
 #include <rtl/ustring.hxx>
 
@@ -39,8 +42,6 @@ namespace filter{
     namespace config{
 
 class CacheUpdateListener;
-
-
 
 
 /** @short      implements a cache, which contains all
@@ -67,7 +68,6 @@ class FilterCache : public BaseLock
     public:
 
 
-
         /** @short  identify the type of a container item.
 
             @descr  Because the cache interface is a generic one
@@ -80,7 +80,6 @@ class FilterCache : public BaseLock
             E_FRAMELOADER   ,
             E_CONTENTHANDLER
         };
-
 
 
         /** @short      indicates, which items already exists inside this cache
@@ -273,11 +272,9 @@ class FilterCache : public BaseLock
         FilterCache();
 
 
-
         /** @short  standard dtor.
          */
-        virtual ~FilterCache();
-
+        ~FilterCache();
 
 
         /** @short  creates a copy of this container.
@@ -297,18 +294,13 @@ class FilterCache : public BaseLock
                     All internal structures will be copied here. But the internal used
                     configuration (update) access wont be copied. The cloned instance contains
                     a different one.
-
-            @note   The cloned instance is created on the heap. The user of this instance
-                    has to remove it later.
          */
-        FilterCache* clone() const;
-
+        std::unique_ptr<FilterCache> clone() const;
 
 
         /** @short  copy the cache content or rClone back to this instance.
          */
         void takeOver(const FilterCache& rClone);
-
 
 
         /** @short      force special fill state of this cache.
@@ -330,7 +322,6 @@ class FilterCache : public BaseLock
             throw(css::uno::Exception);
 
 
-
         /** @short      return the current fill state of this cache.
 
             @descr      This information can be used e.g. to start
@@ -344,7 +335,6 @@ class FilterCache : public BaseLock
          */
         bool isFillState(EFillState eRequired) const
             throw(css::uno::Exception);
-
 
 
         /** @short      return a list of key names for items, which match
@@ -384,7 +374,6 @@ class FilterCache : public BaseLock
             throw(css::uno::Exception);
 
 
-
         /** @short      indicates if the requested sub container
                         contains some items.
 
@@ -408,7 +397,6 @@ class FilterCache : public BaseLock
          */
         bool hasItems(EItemType eType) const
             throw(css::uno::Exception);
-
 
 
         /** @short      return a list of all key names, which represent
@@ -435,7 +423,6 @@ class FilterCache : public BaseLock
             throw(css::uno::Exception);
 
 
-
         /** @short      check if the required item exist inside this container.
 
             @attention  This method exists to supports some UNO container interfaces
@@ -458,7 +445,6 @@ class FilterCache : public BaseLock
         bool hasItem(      EItemType        eType,
                                  const OUString& sItem)
             throw(css::uno::Exception);
-
 
 
         /** @short      return an item, which match the specified type and name.
@@ -490,13 +476,11 @@ class FilterCache : public BaseLock
             throw(css::uno::Exception);
 
 
-
         /** TODO document me ...
          */
         void removeItem(      EItemType        eType,
                                 const OUString& sItem)
             throw(css::uno::Exception);
-
 
 
         /** TODO document me ...
@@ -507,13 +491,11 @@ class FilterCache : public BaseLock
             throw(css::uno::Exception, std::exception);
 
 
-
         /** TODO document me ...
          */
         void refreshItem(      EItemType        eType,
                                  const OUString& sItem)
             throw(css::uno::Exception);
-
 
 
         /** @short      add some implicit properties to the given
@@ -557,12 +539,10 @@ class FilterCache : public BaseLock
             throw(css::uno::Exception);
 
 
-
         /** TODO document me
          */
         static void removeStatePropsFromItem(CacheItem& aValue)
             throw(css::uno::Exception);
-
 
 
         /** @short      force writing of all changes (which was made after
@@ -576,7 +556,6 @@ class FilterCache : public BaseLock
          */
         void flush()
             throw(css::uno::Exception);
-
 
 
         /** @short      supports a flat type detection for given URL.
@@ -615,7 +594,6 @@ class FilterCache : public BaseLock
     private:
 
 
-
         /** @short      return a reference to one of our internal
                         sub container, which contains items of the
                         requested type.
@@ -632,7 +610,6 @@ class FilterCache : public BaseLock
         const CacheItemList& impl_getItemList(EItemType eType) const;
 
         CacheItemList& impl_getItemList(EItemType eType);
-
 
 
         /** @short      return a valid configuration update access
@@ -654,7 +631,6 @@ class FilterCache : public BaseLock
          */
         css::uno::Reference< css::uno::XInterface > impl_openConfig(EConfigProvider eProvide)
             throw(css::uno::Exception);
-
 
 
         /** @short      tries to open the requested configuration root
@@ -680,7 +656,6 @@ class FilterCache : public BaseLock
                                                                                   bool         bLocalesMode);
 
 
-
         /** @short      reads the specified configuration key
                         and return its value.
 
@@ -703,7 +678,6 @@ class FilterCache : public BaseLock
         css::uno::Any impl_getDirectCFGValue(const OUString& sDirectKey);
 
 
-
         /** @short      load the underlying configuration into this cache.
 
             @descr      Which items should be readed can be regulate by the
@@ -716,7 +690,6 @@ class FilterCache : public BaseLock
          */
         void impl_load(EFillState eRequiredState)
             throw(css::uno::Exception);
-
 
 
         /** @short      validate the whole cache and create
@@ -739,7 +712,6 @@ class FilterCache : public BaseLock
             throw(css::uno::Exception);
 
     private:
-
 
 
         /** @short  read the specified config set into the cache.
@@ -774,7 +746,6 @@ class FilterCache : public BaseLock
             throw(css::uno::Exception);
 
 
-
         /** @short  read the specified container item from the given configuration set.
 
             @descr  Its not added to any internal structures here. That must be done
@@ -802,7 +773,6 @@ class FilterCache : public BaseLock
                                 const OUString&                                    sItem  ,
                                       EReadOption                                         eOption)
             throw(css::uno::Exception);
-
 
 
         /** @short  try to load the requested item on demand from the underlying configuration
@@ -835,21 +805,17 @@ class FilterCache : public BaseLock
             throw(css::uno::Exception);
 
 
-
         /** TODO */
         static void impl_saveItem(const css::uno::Reference< css::container::XNameReplace >& xSet  ,
                                  EItemType                                            eType ,
-                           const CacheItem&                                           aValue)
+                           const CacheItem & aValue)
             throw(css::uno::Exception);
-
 
 
         /** TODO */
         void impl_addItem2FlushList(      EItemType        eType,
                                     const OUString& sItem)
             throw(css::uno::Exception);
-
-
 
 
         /** TODO */
@@ -893,12 +859,10 @@ class FilterCache : public BaseLock
             throw(css::uno::Exception);
 
 
-
         /** TODO */
         void impl_readPatchUINames(const css::uno::Reference< css::container::XNameAccess >& xNode,
                                          CacheItem&                                          rItem)
             throw(css::uno::Exception);
-
 
 
         /** TODO */
@@ -916,12 +880,10 @@ class FilterCache : public BaseLock
             throw(css::uno::Exception);
 
 
-
         /** TODO */
         static void impl_interpretDataVal4Type(const OUString& sValue,
                                               sal_Int32        nProp ,
                                               CacheItem&       rItem );
-
 
 
         /** TODO */
@@ -930,11 +892,9 @@ class FilterCache : public BaseLock
                                                 CacheItem&       rItem );
 
 
-
         /** TODO */
         static OUStringList impl_tokenizeString(const OUString& sData     ,
                                                sal_Unicode      cSeparator);
-
 
 
 #if OSL_DEBUG_LEVEL > 0
@@ -954,7 +914,6 @@ class FilterCache : public BaseLock
         bool impl_isModuleInstalled(const OUString& sModule);
 
 
-
         /** @short  convert a list of flag names to its int representation.
 
             @param  lNames
@@ -963,7 +922,6 @@ class FilterCache : public BaseLock
             @return the converted flag field.
          */
         static SfxFilterFlags impl_convertFlagNames2FlagField(const css::uno::Sequence< OUString >& lNames);
-
 
 
         /** @short  convert a flag field value to its list representation of flag names.
@@ -976,6 +934,8 @@ class FilterCache : public BaseLock
          */
         static css::uno::Sequence< OUString > impl_convertFlagField2FlagNames(SfxFilterFlags nFlags);
 };
+
+struct TheFilterCache: public rtl::Static<FilterCache, TheFilterCache> {};
 
     } // namespace config
 } // namespace filter

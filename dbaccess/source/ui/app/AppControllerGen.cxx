@@ -47,7 +47,6 @@
 #include <com/sun/star/ucb/XCommandProcessor.hpp>
 #include <com/sun/star/ui/dialogs/XExecutableDialog.hpp>
 #include <com/sun/star/uno/XNamingService.hpp>
-#include <com/sun/star/util/XCloseable.hpp>
 #include <com/sun/star/util/XRefreshable.hpp>
 
 #include <cppuhelper/exc_hlp.hxx>
@@ -86,7 +85,6 @@ using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::container;
 using namespace ::com::sun::star::ucb;
 
-using ::com::sun::star::util::XCloseable;
 using ::com::sun::star::ui::XContextMenuInterceptor;
 
 namespace DatabaseObject = ::com::sun::star::sdb::application::DatabaseObject;
@@ -118,7 +116,7 @@ void OApplicationController::convertToView(const OUString& _sName)
             OUString sCatalog = aDlg->getCatalog();
             OUString sSchema  = aDlg->getSchema();
             OUString sNewName(
-                ::dbtools::composeTableName( xMeta, sCatalog, sSchema, sName, false, ::dbtools::eInTableDefinitions ) );
+                ::dbtools::composeTableName( xMeta, sCatalog, sSchema, sName, false, ::dbtools::EComposeRule::InTableDefinitions ) );
             Reference<XPropertySet> xView = ::dbaui::createView(sNewName,xConnection,xSourceObject);
             if ( !xView.is() )
                 throw SQLException(OUString(ModuleRes(STR_NO_TABLE_FORMAT_INSIDE)),*this,OUString( "S1000" ) ,0,Any());
@@ -442,26 +440,26 @@ void OApplicationController::impl_validateObjectTypeAndName_throw( const sal_Int
         throw NoSuchElementException( *i_rObjectName, *this );
 }
 
-Reference< XComponent > SAL_CALL OApplicationController::loadComponent( ::sal_Int32 _ObjectType,
-    const OUString& _ObjectName, sal_Bool _ForEditing ) throw (IllegalArgumentException, NoSuchElementException, SQLException, RuntimeException, std::exception)
+Reference< XComponent > SAL_CALL OApplicationController::loadComponent( ::sal_Int32 ObjectType,
+    const OUString& ObjectName, sal_Bool ForEditing ) throw (IllegalArgumentException, NoSuchElementException, SQLException, RuntimeException, std::exception)
 {
-    return loadComponentWithArguments( _ObjectType, _ObjectName, _ForEditing, Sequence< PropertyValue >() );
+    return loadComponentWithArguments( ObjectType, ObjectName, ForEditing, Sequence< PropertyValue >() );
 }
 
-Reference< XComponent > SAL_CALL OApplicationController::loadComponentWithArguments( ::sal_Int32 _ObjectType,
-    const OUString& _ObjectName, sal_Bool _ForEditing, const Sequence< PropertyValue >& _Arguments ) throw (IllegalArgumentException, NoSuchElementException, SQLException, RuntimeException, std::exception)
+Reference< XComponent > SAL_CALL OApplicationController::loadComponentWithArguments( ::sal_Int32 ObjectType,
+    const OUString& ObjectName, sal_Bool ForEditing, const Sequence< PropertyValue >& Arguments ) throw (IllegalArgumentException, NoSuchElementException, SQLException, RuntimeException, std::exception)
 {
     SolarMutexGuard aSolarGuard;
     ::osl::MutexGuard aGuard( getMutex() );
 
-    impl_validateObjectTypeAndName_throw( _ObjectType, _ObjectName );
+    impl_validateObjectTypeAndName_throw( ObjectType, ObjectName );
 
     Reference< XComponent > xComponent( openElementWithArguments(
-        _ObjectName,
-        lcl_objectType2ElementType( _ObjectType ),
-        _ForEditing ? E_OPEN_DESIGN : E_OPEN_NORMAL,
-        _ForEditing ? SID_DB_APP_EDIT : SID_DB_APP_OPEN,
-        ::comphelper::NamedValueCollection( _Arguments )
+        ObjectName,
+        lcl_objectType2ElementType( ObjectType ),
+        ForEditing ? E_OPEN_DESIGN : E_OPEN_NORMAL,
+        ForEditing ? SID_DB_APP_EDIT : SID_DB_APP_OPEN,
+        ::comphelper::NamedValueCollection( Arguments )
     ) );
 
     return xComponent;
@@ -488,15 +486,15 @@ Reference< XComponent > SAL_CALL OApplicationController::createComponentWithArgu
     return xComponent;
 }
 
-void SAL_CALL OApplicationController::registerContextMenuInterceptor( const Reference< XContextMenuInterceptor >& _Interceptor ) throw (RuntimeException, std::exception)
+void SAL_CALL OApplicationController::registerContextMenuInterceptor( const Reference< XContextMenuInterceptor >& Interceptor ) throw (RuntimeException, std::exception)
 {
-    if ( _Interceptor.is() )
-        m_aContextMenuInterceptors.addInterface( _Interceptor );
+    if ( Interceptor.is() )
+        m_aContextMenuInterceptors.addInterface( Interceptor );
 }
 
-void SAL_CALL OApplicationController::releaseContextMenuInterceptor( const Reference< XContextMenuInterceptor >& _Interceptor ) throw (RuntimeException, std::exception)
+void SAL_CALL OApplicationController::releaseContextMenuInterceptor( const Reference< XContextMenuInterceptor >& Interceptor ) throw (RuntimeException, std::exception)
 {
-    m_aContextMenuInterceptors.removeInterface( _Interceptor );
+    m_aContextMenuInterceptors.removeInterface( Interceptor );
 }
 
 void OApplicationController::previewChanged( sal_Int32 _nMode )
@@ -703,16 +701,16 @@ void OApplicationController::doAction(sal_uInt16 _nId, const ElementOpenMode _eO
         eOpenMode = E_OPEN_NORMAL;
     }
 
-    ::std::vector< ::std::pair< OUString ,Reference< XModel > > > aCompoments;
-    ::std::vector< OUString>::iterator aEnd = aList.end();
-    for (::std::vector< OUString>::iterator aIter = aList.begin(); aIter != aEnd; ++aIter)
+    ::std::vector< ::std::pair< OUString ,Reference< XModel > > > aComponents;
+    ::std::vector< OUString>::const_iterator aEnd = aList.end();
+    for (::std::vector< OUString>::const_iterator aIter = aList.begin(); aIter != aEnd; ++aIter)
     {
         if ( SID_DB_APP_CONVERTTOVIEW == _nId )
             convertToView(*aIter);
         else
         {
             Reference< XModel > xModel( openElementWithArguments( *aIter, eType, eOpenMode, _nId,aArguments ), UNO_QUERY );
-            aCompoments.push_back( ::std::pair< OUString, Reference< XModel > >( *aIter, xModel ) );
+            aComponents.push_back( ::std::pair< OUString, Reference< XModel > >( *aIter, xModel ) );
         }
     }
 
@@ -720,8 +718,8 @@ void OApplicationController::doAction(sal_uInt16 _nId, const ElementOpenMode _eO
     if ( _eOpenMode == E_OPEN_FOR_MAIL )
     {
 
-        ::std::vector< ::std::pair< OUString ,Reference< XModel > > >::iterator componentIter = aCompoments.begin();
-        ::std::vector< ::std::pair< OUString ,Reference< XModel > > >::iterator componentEnd = aCompoments.end();
+        ::std::vector< ::std::pair< OUString ,Reference< XModel > > >::const_iterator componentIter = aComponents.begin();
+        ::std::vector< ::std::pair< OUString ,Reference< XModel > > >::const_iterator componentEnd = aComponents.end();
         OUString aDocTypeString;
         SfxMailModel aSendMail;
         SfxMailModel::SendMailResult eResult = SfxMailModel::SEND_MAIL_OK;

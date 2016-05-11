@@ -101,17 +101,13 @@ public:
 
     OUString GetBulletFontName();
 
-    inline OUString GetBulletStyleName() const;
+    const OUString& GetBulletStyleName() const;
 
     OUString GetBulletChar();
 
     static OUString GetPrefix() { return OUString(); }
 
     static OUString GetSuffix() { return OUString(); }
-
-    ;
-
-    ;
 
     bool HasName();
 
@@ -138,7 +134,7 @@ private:
     sal_uInt32      m_nUseCount;
     LwpAtomHolder*  m_pAtomHolder;
 
-    LwpPara* m_pBulletPara;
+    rtl::Reference<LwpPara> m_xBulletPara;
     OUString m_strStyleName;
     sal_uInt16 m_pHideLevels[10];
 
@@ -152,7 +148,7 @@ private:
         CUMULATIVE      = 0x10
     };
 };
-inline OUString LwpSilverBullet::GetBulletStyleName() const
+inline const OUString& LwpSilverBullet::GetBulletStyleName() const
 {
     return m_strStyleName;
 }

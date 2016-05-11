@@ -17,6 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
+#include <com/sun/star/drawing/FillStyle.hpp>
 
 #include <svl/lstner.hxx>
 
@@ -27,6 +28,7 @@
 #include <svx/svdlayer.hxx>
 #include <svx/svdmodel.hxx>
 #include <svx/svdview.hxx>
+#include <svx/xfillit0.hxx>
 #include "svx/svdstr.hrc"
 #include "svdglob.hxx"
 #include <svx/scene3d.hxx>
@@ -54,8 +56,6 @@ static void ImplUnmarkObject( SdrObject* pObj )
         pView->MarkObj( pObj, pView->GetSdrPageView(), true );
     }
 }
-
-
 
 
 SdrUndoAction::~SdrUndoAction() {}
@@ -94,7 +94,6 @@ OUString SdrUndoAction::GetSdrRepeatComment(SdrView& /*rView*/) const
 {
     return OUString();
 }
-
 
 
 SdrUndoGroup::SdrUndoGroup(SdrModel& rNewMod)
@@ -154,8 +153,8 @@ bool SdrUndoGroup::CanSdrRepeat(SdrView& rView) const
     case SDRREPFUNC_OBJ_COMBINE_ONEPOLY :  return rView.IsCombinePossible(true);
     case SDRREPFUNC_OBJ_DISMANTLE_POLYS :  return rView.IsDismantlePossible();
     case SDRREPFUNC_OBJ_DISMANTLE_LINES :  return rView.IsDismantlePossible(true);
-    case SDRREPFUNC_OBJ_CONVERTTOPOLY   :  return rView.IsConvertToPolyObjPossible(false);
-    case SDRREPFUNC_OBJ_CONVERTTOPATH   :  return rView.IsConvertToPathObjPossible(false);
+    case SDRREPFUNC_OBJ_CONVERTTOPOLY   :  return rView.IsConvertToPolyObjPossible();
+    case SDRREPFUNC_OBJ_CONVERTTOPATH   :  return rView.IsConvertToPathObjPossible();
     case SDRREPFUNC_OBJ_GROUP           :  return rView.IsGroupPossible();
     case SDRREPFUNC_OBJ_UNGROUP         :  return rView.IsUnGroupPossible();
     case SDRREPFUNC_OBJ_PUTTOTOP        :  return rView.IsToTopPossible();
@@ -179,7 +178,7 @@ void SdrUndoGroup::SdrRepeat(SdrView& rView)
     case SDRREPFUNC_OBJ_COMBINE_ONEPOLY :  rView.CombineMarkedObjects();        break;
     case SDRREPFUNC_OBJ_DISMANTLE_POLYS :  rView.DismantleMarkedObjects();      break;
     case SDRREPFUNC_OBJ_DISMANTLE_LINES :  rView.DismantleMarkedObjects(true);  break;
-    case SDRREPFUNC_OBJ_CONVERTTOPOLY   :  rView.ConvertMarkedToPolyObj(false); break;
+    case SDRREPFUNC_OBJ_CONVERTTOPOLY   :  rView.ConvertMarkedToPolyObj();      break;
     case SDRREPFUNC_OBJ_CONVERTTOPATH   :  rView.ConvertMarkedToPathObj(false); break;
     case SDRREPFUNC_OBJ_GROUP           :  rView.GroupMarked();                 break;
     case SDRREPFUNC_OBJ_UNGROUP         :  rView.UnGroupMarked();               break;
@@ -553,7 +552,6 @@ OUString SdrUndoAttrObj::GetSdrRepeatComment(SdrView& /*rView*/) const
 }
 
 
-
 SdrUndoMoveObj::~SdrUndoMoveObj() {}
 
 void SdrUndoMoveObj::Undo()
@@ -597,12 +595,12 @@ OUString SdrUndoMoveObj::GetSdrRepeatComment(SdrView& /*rView*/) const
 }
 
 
-
 SdrUndoGeoObj::SdrUndoGeoObj(SdrObject& rNewObj)
      : SdrUndoObj(rNewObj)
      , pUndoGeo(nullptr)
      , pRedoGeo(nullptr)
      , pUndoGroup(nullptr)
+     , mbSkipChangeLayout(false)
 {
     SdrObjList* pOL=rNewObj.GetSubList();
     if (pOL!=nullptr && pOL->GetObjCount() && dynamic_cast<const E3dScene* >( &rNewObj) ==  nullptr)
@@ -645,7 +643,13 @@ void SdrUndoGeoObj::Undo()
     {
         delete pRedoGeo;
         pRedoGeo=pObj->GetGeoData();
+
+        auto pTableObj = dynamic_cast<sdr::table::SdrTableObj*>(pObj);
+        if (pTableObj && mbSkipChangeLayout)
+            pTableObj->SetSkipChangeLayout(true);
         pObj->SetGeoData(*pUndoGeo);
+        if (pTableObj && mbSkipChangeLayout && pTableObj)
+            pTableObj->SetSkipChangeLayout(false);
     }
 }
 
@@ -675,7 +679,6 @@ OUString SdrUndoGeoObj::GetComment() const
     ImpTakeDescriptionStr(STR_DragMethObjOwn,aStr);
     return aStr;
 }
-
 
 
 SdrUndoObjList::SdrUndoObjList(SdrObject& rNewObj, bool bOrdNumDirect)
@@ -760,7 +763,6 @@ void SdrUndoRemoveObj::Redo()
 SdrUndoRemoveObj::~SdrUndoRemoveObj()
 {
 }
-
 
 
 void SdrUndoInsertObj::Undo()
@@ -849,7 +851,6 @@ OUString SdrUndoDelObj::GetSdrRepeatComment(SdrView& /*rView*/) const
     ImpTakeDescriptionStr(STR_EditDelete,aStr,true);
     return aStr;
 }
-
 
 
 void SdrUndoNewObj::Undo()
@@ -971,7 +972,6 @@ void SdrUndoReplaceObj::SetOldOwner(bool bNew)
 }
 
 
-
 OUString SdrUndoCopyObj::GetComment() const
 {
     OUString aStr;
@@ -1000,7 +1000,6 @@ void SdrUndoObjectLayerChange::Redo()
     pObj->SetLayer(maNewLayer);
     ImpShowPageOfThisObject();
 }
-
 
 
 SdrUndoObjOrdNum::SdrUndoObjOrdNum(SdrObject& rNewObj, sal_uInt32 nOldOrdNum1, sal_uInt32 nNewOrdNum1)
@@ -1044,7 +1043,6 @@ OUString SdrUndoObjOrdNum::GetComment() const
     ImpTakeDescriptionStr(STR_UndoObjOrdNum,aStr);
     return aStr;
 }
-
 
 
 SdrUndoObjSetText::SdrUndoObjSetText(SdrObject& rNewObj, sal_Int32 nText)
@@ -1305,7 +1303,6 @@ SdrUndoLayer::~SdrUndoLayer()
 }
 
 
-
 void SdrUndoNewLayer::Undo()
 {
     DBG_ASSERT(!bItsMine,"SdrUndoNewLayer::Undo(): Layer already belongs to UndoAction.");
@@ -1327,7 +1324,6 @@ OUString SdrUndoNewLayer::GetComment() const
 }
 
 
-
 void SdrUndoDelLayer::Undo()
 {
     DBG_ASSERT(bItsMine,"SdrUndoDelLayer::Undo(): Layer does not belong to UndoAction.");
@@ -1347,7 +1343,6 @@ OUString SdrUndoDelLayer::GetComment() const
 {
     return ImpGetResStr(STR_UndoDelLayer);
 }
-
 
 
 void SdrUndoMoveLayer::Undo()
@@ -1427,11 +1422,10 @@ void SdrUndoPage::ImpMovePage(sal_uInt16 nOldNum, sal_uInt16 nNewNum)
     }
 }
 
-void SdrUndoPage::ImpTakeDescriptionStr(sal_uInt16 nStrCacheID, OUString& rStr, sal_uInt16 /*n*/, bool /*bRepeat*/)
+void SdrUndoPage::ImpTakeDescriptionStr(sal_uInt16 nStrCacheID, OUString& rStr)
 {
     rStr = ImpGetResStr(nStrCacheID);
 }
-
 
 
 SdrUndoPageList::SdrUndoPageList(SdrPage& rNewPg)
@@ -1450,12 +1444,26 @@ SdrUndoPageList::~SdrUndoPageList()
 }
 
 
-
 SdrUndoDelPage::SdrUndoDelPage(SdrPage& rNewPg)
     : SdrUndoPageList(rNewPg)
     , pUndoGroup(nullptr)
+    , mbHasFillBitmap(false)
 {
     bItsMine = true;
+
+    // keep fill bitmap separately to remove it from pool if not used elsewhere
+    if (mrPage.IsMasterPage())
+    {
+        SfxStyleSheet* const pStyleSheet = mrPage.getSdrPageProperties().GetStyleSheet();
+        if (pStyleSheet)
+            queryFillBitmap(pStyleSheet->GetItemSet());
+    }
+    else
+    {
+        queryFillBitmap(mrPage.getSdrPageProperties().GetItemSet());
+    }
+    if (bool(mpFillBitmapItem))
+        clearFillBitmap();
 
     // now remember the master page relationships
     if(mrPage.IsMasterPage())
@@ -1491,6 +1499,8 @@ SdrUndoDelPage::~SdrUndoDelPage()
 
 void SdrUndoDelPage::Undo()
 {
+    if (bool(mpFillBitmapItem))
+        restoreFillBitmap();
     ImpInsertPage(nPageNum);
     if (pUndoGroup!=nullptr)
     {
@@ -1504,6 +1514,8 @@ void SdrUndoDelPage::Undo()
 void SdrUndoDelPage::Redo()
 {
     ImpRemovePage(nPageNum);
+    if (bool(mpFillBitmapItem))
+        clearFillBitmap();
     // master page relations are dissolved automatically
     DBG_ASSERT(!bItsMine,"RedoDeletePage: mrPage already belongs to UndoAction.");
     bItsMine=true;
@@ -1532,6 +1544,54 @@ bool SdrUndoDelPage::CanSdrRepeat(SdrView& /*rView*/) const
     return false;
 }
 
+void SdrUndoDelPage::queryFillBitmap(const SfxItemSet& rItemSet)
+{
+    const SfxPoolItem *pItem = nullptr;
+    if (rItemSet.GetItemState(XATTR_FILLBITMAP, false, &pItem) == SfxItemState::SET)
+        mpFillBitmapItem.reset(pItem->Clone());
+    if (rItemSet.GetItemState(XATTR_FILLSTYLE, false, &pItem) == SfxItemState::SET)
+        mbHasFillBitmap = static_cast<const XFillStyleItem*>(pItem)->GetValue() == css::drawing::FillStyle_BITMAP;
+}
+
+void SdrUndoDelPage::clearFillBitmap()
+{
+    if (mrPage.IsMasterPage())
+    {
+        SfxStyleSheet* const pStyleSheet = mrPage.getSdrPageProperties().GetStyleSheet();
+        assert(bool(pStyleSheet)); // who took away my stylesheet?
+        SfxItemSet& rItemSet = pStyleSheet->GetItemSet();
+        rItemSet.ClearItem(XATTR_FILLBITMAP);
+        if (mbHasFillBitmap)
+            rItemSet.ClearItem(XATTR_FILLSTYLE);
+    }
+    else
+    {
+        SdrPageProperties &rPageProps = mrPage.getSdrPageProperties();
+        rPageProps.ClearItem(XATTR_FILLBITMAP);
+        if (mbHasFillBitmap)
+            rPageProps.ClearItem(XATTR_FILLSTYLE);
+    }
+}
+
+void SdrUndoDelPage::restoreFillBitmap()
+{
+    if (mrPage.IsMasterPage())
+    {
+        SfxStyleSheet* const pStyleSheet = mrPage.getSdrPageProperties().GetStyleSheet();
+        assert(bool(pStyleSheet)); // who took away my stylesheet?
+        SfxItemSet& rItemSet = pStyleSheet->GetItemSet();
+        rItemSet.Put(*mpFillBitmapItem);
+        if (mbHasFillBitmap)
+            rItemSet.Put(XFillStyleItem(css::drawing::FillStyle_BITMAP));
+    }
+    else
+    {
+        SdrPageProperties &rPageProps = mrPage.getSdrPageProperties();
+        rPageProps.PutItem(*mpFillBitmapItem);
+        if (mbHasFillBitmap)
+            rPageProps.PutItem(XFillStyleItem(css::drawing::FillStyle_BITMAP));
+    }
+}
 
 
 void SdrUndoNewPage::Undo()
@@ -1554,7 +1614,6 @@ OUString SdrUndoNewPage::GetComment() const
     ImpTakeDescriptionStr(STR_UndoNewPage,aStr);
     return aStr;
 }
-
 
 
 OUString SdrUndoCopyPage::GetComment() const
@@ -1580,7 +1639,6 @@ bool SdrUndoCopyPage::CanSdrRepeat(SdrView& /*rView*/) const
 {
     return false;
 }
-
 
 
 void SdrUndoSetPageNum::Undo()

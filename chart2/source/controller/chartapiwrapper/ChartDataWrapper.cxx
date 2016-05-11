@@ -53,7 +53,6 @@
 using namespace ::com::sun::star;
 using ::com::sun::star::uno::Reference;
 using ::com::sun::star::uno::Sequence;
-using ::osl::MutexGuard;
 using ::com::sun::star::chart2::XAnyDescriptionAccess;
 using ::com::sun::star::chart::XComplexDescriptionAccess;
 using ::com::sun::star::chart::XChartData;
@@ -539,16 +538,14 @@ void SAL_CALL ChartDataWrapper::setDateCategories( const Sequence< double >& rDa
 
 // ____ XChartData (base of XChartDataArray) ____
 void SAL_CALL ChartDataWrapper::addChartDataChangeEventListener(
-    const uno::Reference<
-        ::com::sun::star::chart::XChartDataChangeEventListener >& aListener )
+    const uno::Reference< css::chart::XChartDataChangeEventListener >& aListener )
     throw (uno::RuntimeException, std::exception)
 {
     m_aEventListenerContainer.addInterface( aListener );
 }
 
 void SAL_CALL ChartDataWrapper::removeChartDataChangeEventListener(
-    const uno::Reference<
-        ::com::sun::star::chart::XChartDataChangeEventListener >& aListener )
+    const uno::Reference< css::chart::XChartDataChangeEventListener >& aListener )
     throw (uno::RuntimeException, std::exception)
 {
     m_aEventListenerContainer.removeInterface( aListener );
@@ -596,8 +593,7 @@ void SAL_CALL ChartDataWrapper::disposing( const lang::EventObject& /* Source */
 {
 }
 
-void ChartDataWrapper::fireChartDataChangeEvent(
-    ::com::sun::star::chart::ChartDataChangeEvent& aEvent )
+void ChartDataWrapper::fireChartDataChangeEvent( css::chart::ChartDataChangeEvent& aEvent )
 {
     if( ! m_aEventListenerContainer.getLength() )
         return;
@@ -607,16 +603,7 @@ void ChartDataWrapper::fireChartDataChangeEvent(
     if( xSrc.is() )
         aEvent.Source = xSrc;
 
-    ::cppu::OInterfaceIteratorHelper aIter( m_aEventListenerContainer );
-
-    while( aIter.hasMoreElements() )
-    {
-        uno::Reference<
-            ::com::sun::star::chart::XChartDataChangeEventListener > xListener(
-                aIter.next(), uno::UNO_QUERY );
-        if( xListener.is() )
-            xListener->chartDataChanged( aEvent );
-    }
+    m_aEventListenerContainer.notifyEach( &css::chart::XChartDataChangeEventListener::chartDataChanged, aEvent );
 }
 
 void ChartDataWrapper::switchToInternalDataProvider()
@@ -654,7 +641,7 @@ void ChartDataWrapper::applyData( lcl_Operator& rDataOperator )
     bool bStacked = false;
     bool bPercent = false;
     bool bDeep = false;
-    uno::Reference< ::com::sun::star::chart::XChartDocument > xOldDoc( xChartDoc, uno::UNO_QUERY );
+    uno::Reference< css::chart::XChartDocument > xOldDoc( xChartDoc, uno::UNO_QUERY );
     OSL_ASSERT( xOldDoc.is());
     uno::Reference< beans::XPropertySet > xDiaProp( xOldDoc->getDiagram(), uno::UNO_QUERY );
     if( xDiaProp.is())
@@ -710,9 +697,9 @@ void ChartDataWrapper::applyData( lcl_Operator& rDataOperator )
     }
 
     // notify listeners
-    ::com::sun::star::chart::ChartDataChangeEvent aEvent(
+    css::chart::ChartDataChangeEvent aEvent(
         static_cast< ::cppu::OWeakObject* >( this ),
-        ::com::sun::star::chart::ChartDataChangeType_ALL, 0, 0, 0, 0 );
+        css::chart::ChartDataChangeType_ALL, 0, 0, 0, 0 );
     fireChartDataChangeEvent( aEvent );
     // \-- locked controllers
 }

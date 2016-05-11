@@ -34,7 +34,7 @@
 
 #include <memory>
 
-#ifdef WNT
+#ifdef _WIN32
 #include <windows.h>
 #endif
 
@@ -135,7 +135,7 @@ inline bool compareFileName( const ::rtl::OUString & ustr1, const ::rtl::OUStrin
 {
     bool bOk;
 //on Windows, the separator is '\', so here change to '/', then compare
-#if defined (WNT )
+#if defined(_WIN32)
     ::rtl::OUString ustr1new,ustr2new;
     sal_Unicode reverseSlash = (sal_Unicode)'\\';
 
@@ -314,7 +314,7 @@ inline bool ifFileExist( const ::rtl::OUString & str )
 inline bool ifFileCanWrite( const ::rtl::OUString & str )
 {
     //on Windows, the file has no write right, but can be written
-#ifdef WNT
+#ifdef _WIN32
     bool  bCheckResult = false;
     ::rtl::OUString  aUStr  = str.copy( 0 );
     if ( isURL( str ) )
@@ -707,7 +707,7 @@ namespace osl_FileBase
     }
     void SystemPath_FileURL::checkWNTBehaviour_getSystemPathFromFileURL(rtl::OString const& _sURL, ::osl::FileBase::RC _nAssumeError, rtl::OString const& _sWNTAssumeResultString)
     {
-#if ( defined WNT )
+#if defined(_WIN32)
         check_SystemPath_FileURL(_sURL, _nAssumeError, _sWNTAssumeResultString);
 #else
         (void)_sURL;
@@ -729,7 +729,7 @@ namespace osl_FileBase
 
     void SystemPath_FileURL::checkWNTBehaviour_getFileURLFromSystemPath(rtl::OString const& _sSysPath, ::osl::FileBase::RC _nAssumeError, rtl::OString const& _sWNTAssumeResultString)
     {
-#if ( defined WNT )
+#if defined(_WIN32)
         check_SystemPath_FileURL(_sSysPath, _nAssumeError, _sWNTAssumeResultString, sal_False );
 #else
         (void)_sSysPath;
@@ -773,10 +773,11 @@ namespace osl_FileBase
     }
     void SystemPath_FileURL::getSystemPathFromFileURL_001_21()
     {
-      //        rtl::OString sURL("%2f");
-      rtl::OString sURL("%2F");
+#if 0
+        rtl::OString sURL("%2F");
         checkUNXBehaviour_getSystemPathFromFileURL(sURL, osl::FileBase::E_None, "/"); // LLA: this is may be a BUG
         checkWNTBehaviour_getSystemPathFromFileURL(sURL, osl::FileBase::E_INVAL, "");
+#endif
     }
     void SystemPath_FileURL::getSystemPathFromFileURL_001_22()
     {
@@ -816,9 +817,11 @@ namespace osl_FileBase
     }
     void SystemPath_FileURL::getSystemPathFromFileURL_001_51()
     {
+#if 0
         rtl::OString sURL("file://c:/tmp");
         checkUNXBehaviour_getSystemPathFromFileURL(sURL, osl::FileBase::E_None, "c:/tmp"); // LLA: this is may be a BUG
         checkWNTBehaviour_getSystemPathFromFileURL(sURL, osl::FileBase::E_INVAL, "");
+#endif
     }
     void SystemPath_FileURL::getSystemPathFromFileURL_001_52()
     {
@@ -865,13 +868,15 @@ namespace osl_FileBase
     }
     void SystemPath_FileURL::getSystemPathFromFileURL_001_81()
     {
+#if 0
         rtl::OString sURL("file://~/tmp");
-    char* home_path;
-    home_path = getenv("HOME");
-    rtl::OString expResult(home_path);
-    expResult += "/tmp";
-    checkUNXBehaviour_getSystemPathFromFileURL(sURL, osl::FileBase::E_None, expResult );
-    //  checkWNTBehaviour_getSystemPathFromFileURL(sURL, osl::FileBase::E_None, "\\tmp");
+        char* home_path;
+        home_path = getenv("HOME");
+        rtl::OString expResult(home_path);
+        expResult += "/tmp";
+        checkUNXBehaviour_getSystemPathFromFileURL(sURL, osl::FileBase::E_None, expResult );
+//      checkWNTBehaviour_getSystemPathFromFileURL(sURL, osl::FileBase::E_None, "\\tmp");
+#endif
     }
     void SystemPath_FileURL::getSystemPathFromFileURL_001_9()
     {
@@ -888,9 +893,11 @@ namespace osl_FileBase
 
     void SystemPath_FileURL::getSystemPathFromFileURL_001_92()
     {
+#if 0
         rtl::OString sURL("ca@#;+.,$///78no%01ni..name");
         checkUNXBehaviour_getSystemPathFromFileURL(sURL, osl::FileBase::E_None, "");
         checkWNTBehaviour_getSystemPathFromFileURL(sURL, osl::FileBase::E_INVAL, "");
+#endif
     }
 
         //normal legal case
@@ -969,7 +976,7 @@ namespace osl_FileBase
         checkUNXBehaviour_getFileURLFromSystemPath(sSysPath, osl::FileBase::E_INVAL, "");
         checkWNTBehaviour_getFileURLFromSystemPath(sSysPath, osl::FileBase::E_INVAL, "");
      }
-         // start with "~user", not impletment
+         // start with "~user", not implement
     //      void SystemPath_FileURL::getFileURLFromSystemPath_006()
 
     // testing the method
@@ -1084,10 +1091,6 @@ namespace osl_FileBase
         void setUp() override
         {
              nError = FileBase::getTempDirURL( aUStr );
-        }
-
-        void tearDown() override
-        {
         }
 
         // test code.
@@ -1223,12 +1226,14 @@ namespace osl_FileBase
         CPPUNIT_TEST_SUITE_END();
     };// class createTempFile
 
-    CPPUNIT_TEST_SUITE_NAMED_REGISTRATION( osl_FileBase::getAbsoluteFileURL, "osl_FileBase" );
+// FIXME: remove the _disabled to enable:
+    CPPUNIT_TEST_SUITE_NAMED_REGISTRATION( osl_FileBase::getAbsoluteFileURL, "osl_FileBase_disabled" );
     CPPUNIT_TEST_SUITE_NAMED_REGISTRATION( osl_FileBase::SystemPath_FileURL, "osl_FileBase" );
-  //        CPPUNIT_TEST_SUITE_NAMED_REGISTRATION( osl_FileBase::getFileURLFromSystemPath, "osl_FileBase" );
-    CPPUNIT_TEST_SUITE_NAMED_REGISTRATION( osl_FileBase::searchFileURL, "osl_FileBase" );
-    CPPUNIT_TEST_SUITE_NAMED_REGISTRATION( osl_FileBase::getTempDirURL, "osl_FileBase" );
-    CPPUNIT_TEST_SUITE_NAMED_REGISTRATION( osl_FileBase::createTempFile, "osl_FileBase" );
+    CPPUNIT_TEST_SUITE_NAMED_REGISTRATION( osl_FileBase::searchFileURL, "osl_FileBase_disabled" );
+    CPPUNIT_TEST_SUITE_NAMED_REGISTRATION( osl_FileBase::getTempDirURL, "osl_FileBase_disabled" );
+    CPPUNIT_TEST_SUITE_NAMED_REGISTRATION( osl_FileBase::createTempFile, "osl_FileBase_disabled" );
+
+    CPPUNIT_REGISTRY_ADD_TO_DEFAULT( "osl_FileBase" );
 }// namespace osl_FileBase
 
 namespace osl_FileStatus
@@ -1252,20 +1257,12 @@ namespace osl_FileStatus
             createTestDirectory( aTmpName3 );
             createTestFile( aTmpName4 );
 
-            Directory pDir( aTmpName3 );
-            nError1 = pDir.open();
-            CPPUNIT_ASSERT( ::osl::FileBase::E_None == nError1 );
-            nError1 = pDir.getNextItem( rItem );
-            CPPUNIT_ASSERT( ::osl::FileBase::E_None == nError1 );
-            pDir.close();
-            /*
             Directory aDir( aTmpName3 );
             nError1 = aDir.open();
             CPPUNIT_ASSERT( ::osl::FileBase::E_None == nError1 );
-            nError1 = aDir.getNextItem( rItem, 0 );
+            nError1 = aDir.getNextItem( rItem );
             CPPUNIT_ASSERT( ::osl::FileBase::E_None == nError1 );
             aDir.close();
-            */
         }
 
         void tearDown() override
@@ -2232,7 +2229,7 @@ namespace osl_File
 
             nError1 = testFile.open( osl_File_OpenFlag_Create );
             bool bOK = ( File::E_ACCES == nError1 );
-#ifdef WNT
+#ifdef _WIN32
             bOK = true;  /// in Windows, you can create file in c:/ any way.
             testFile.close();
             deleteTestFile( aTestFile);
@@ -2573,7 +2570,7 @@ namespace osl_File
         void isEndOfFile_001()
         {
             ::osl::File   testFile( aTmpName4 );
-            sal_Bool      bEOF  = sal_False;
+            sal_Bool      bEOF  = false;
             sal_Bool      *pEOF = &bEOF;
 
             nError1 = testFile.open( osl_File_OpenFlag_Read | osl_File_OpenFlag_Write );
@@ -2594,7 +2591,7 @@ namespace osl_File
         void isEndOfFile_002()
         {
              ::osl::File   testFile( aTmpName4 );
-            sal_Bool      bEOF  = sal_False;
+            sal_Bool      bEOF  = false;
             sal_Bool      *pEOF = &bEOF;
             sal_uInt64    nFilePointer = 0;
 
@@ -2603,7 +2600,7 @@ namespace osl_File
 
              nError1 = testFile.setPos( osl_Pos_Absolut, 0 );
             CPPUNIT_ASSERT( ::osl::FileBase::E_None == nError1 );
-            *pEOF = sal_False;
+            *pEOF = false;
              while ( !( *pEOF ) )
             {
                 nError1 = testFile.isEndOfFile( pEOF );
@@ -2947,7 +2944,7 @@ namespace osl_File
         void readLine_002()
         {
             ::osl::File testFile( aTmpName6 );
-            sal_Bool bEOF  = sal_False;
+            sal_Bool bEOF  = false;
             sal_Bool *pEOF = &bEOF;
 
             nError1 = testFile.open( osl_File_OpenFlag_Read | osl_File_OpenFlag_Write );
@@ -3039,7 +3036,7 @@ namespace osl_File
         {
             //copy $TEMP/tmpdir/tmpname to $ROOT/tmpname.
             nError1 = ::osl::File::copy( aTmpName4, aTmpName7 );
-#if defined (WNT )
+#if defined(_WIN32)
             nError1 = ::osl::FileBase::E_ACCES;  /// for Windows, c:/ is writtenable any way.
             deleteTestFile( aTmpName7);
 #endif
@@ -3169,7 +3166,7 @@ namespace osl_File
         {
             //move $TEMP/tmpdir/tmpname to $ROOT/tmpname.
             nError1 = ::osl::File::move( aTmpName4, aTmpName7 );
-#if defined (WNT )
+#if defined(_WIN32)
             nError1 = ::osl::FileBase::E_ACCES;  /// for Windows, c:/ is writtenable any way.
             deleteTestFile( aTmpName7);
 #endif
@@ -3204,7 +3201,7 @@ namespace osl_File
             //move file $TEMP/tmpdir/tmpname to $TEMP/tmpname
             nError2 = ::osl::File::move( aTmpName4, aTmpName6 );
             deleteTestDirectory( aTmpName6 );
-#if defined ( WNT )
+#if defined(_WIN32)
             deleteTestDirectory( aTmpName4 );// in Windows, it can be moved!!!!! this is only for not influence the following test.
             deleteTestFile( aTmpName6 );
             nError1 = ::osl::FileBase::E_NOTDIR;
@@ -3398,7 +3395,7 @@ namespace osl_File
         void setAttributes_002()
         {
         //on UNX, can not set hidden attribute to file, rename file can set the attribute
-#ifdef WNT
+#ifdef _WIN32
             //set the file to hidden
             nError2 = ::osl::File::setAttributes( aTmpName6, osl_File_Attribute_Hidden);
 
@@ -3489,7 +3486,7 @@ namespace osl_File
 
             CPPUNIT_ASSERT_MESSAGE( "test for setTime function: set access time then get it. time precision is still a problem for it cut off the nanosec.",
                 t_compareTime( pTV_access, pTV_current, delta ) );
-#if defined ( WNT )
+#if defined(_WIN32)
             //Unfortunately there is no way to get the creation time of a file under Unix (its a Windows only feature).
             //That means the flag osl_FileStatus_Mask_CreationTime should be deprecated under Unix.
             CPPUNIT_ASSERT_MESSAGE( "test for setTime function: set creation time then get it. ",
@@ -4661,7 +4658,7 @@ namespace osl_Directory
 
         void create_002()
         {
-#if !defined (WNT) && !defined (MACOSX) && defined (SAL_UNX)
+#if !defined(_WIN32) && !defined(MACOSX) && defined(SAL_UNX)
             if (geteuid() == 0) //don't test if building as root
                 return;
 
@@ -4807,7 +4804,7 @@ namespace osl_Directory
 
     // TEST Directory::createPath
 
-    #ifdef WNT
+    #ifdef _WIN32
     #   define PATH_BUFFER_SIZE MAX_PATH
     #else
     #   define PATH_BUFFER_SIZE PATH_MAX
@@ -4842,7 +4839,7 @@ namespace osl_Directory
             if (tmp_x.lastIndexOf('/') != (tmp_x.getLength() - 1))
                 tmp_x += rtl::OString('/');
 
-#if !defined(WNT) && !defined(ANDROID) && !defined(AIX)
+#if !defined(_WIN32) && !defined(ANDROID) && !defined(AIX)
             // FIXME would be nice to create unique dir even on Windows
             tmp_x += rtl::OString("XXXXXX");
             char *out = mkdtemp(const_cast<char*>(tmp_x.getStr()));
@@ -4965,7 +4962,7 @@ namespace osl_Directory
 
         }
 
-#ifdef WNT
+#ifdef _WIN32
 
         const char* get_unused_drive_letter()
         {
@@ -5012,7 +5009,7 @@ namespace osl_Directory
     CPPUNIT_TEST(with_relative_path);
     CPPUNIT_TEST(without_callback);
     CPPUNIT_TEST(with_callback);
-#ifdef WNT
+#ifdef _WIN32
     CPPUNIT_TEST(at_invalid_logical_drive);
 #endif
     CPPUNIT_TEST_SUITE_END();
@@ -5039,7 +5036,7 @@ inline ::rtl::OUString getCurrentPID(  )
 {
     //~ Get current PID and turn it into OUString;
     int nPID = 0;
-#ifdef WNT
+#ifdef _WIN32
     nPID = GetCurrentProcessId();
 #else
     nPID = getpid();

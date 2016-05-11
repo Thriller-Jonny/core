@@ -66,11 +66,6 @@ bool ScPrintOptions::operator==( const ScPrintOptions& rOpt ) const
         && bForceBreaks == rOpt.bForceBreaks;
 }
 
-bool ScPrintOptions::operator!=( const ScPrintOptions& rOpt ) const
-{
-    return !(operator==(rOpt));
-}
-
 ScTpPrintItem::ScTpPrintItem( sal_uInt16 nWhichP, const ScPrintOptions& rOpt ) :
     SfxPoolItem ( nWhichP ),
     theOptions  ( rOpt )
@@ -167,13 +162,13 @@ void ScPrintCfg::ImplCommit()
         {
             case SCPRINTOPT_EMPTYPAGES:
                 // reversed
-                ScUnoHelpFunctions::SetBoolInAny( pValues[nProp], !GetSkipEmpty() );
+                pValues[nProp] <<= !GetSkipEmpty();
                 break;
             case SCPRINTOPT_ALLSHEETS:
-                ScUnoHelpFunctions::SetBoolInAny( pValues[nProp], GetAllSheets() );
+                pValues[nProp] <<= GetAllSheets();
                 break;
             case SCPRINTOPT_FORCEBREAKS:
-                ScUnoHelpFunctions::SetBoolInAny( pValues[nProp], GetForceBreaks() );
+                pValues[nProp] <<= GetForceBreaks();
                 break;
         }
     }

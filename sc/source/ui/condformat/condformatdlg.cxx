@@ -172,14 +172,14 @@ ScConditionalFormat* ScCondFormatList::GetConditionalFormat() const
         return nullptr;
 
     ScConditionalFormat* pFormat = new ScConditionalFormat(0, mpDoc);
+    pFormat->SetRange(maRanges);
+
     for(EntryContainer::const_iterator itr = maEntries.begin(); itr != maEntries.end(); ++itr)
     {
         ScFormatEntry* pEntry = (*itr)->GetEntry();
         if(pEntry)
             pFormat->AddEntry(pEntry);
     }
-
-    pFormat->SetRange(maRanges);
 
     return pFormat;
 }
@@ -412,7 +412,6 @@ IMPL_LINK_NOARG_TYPED( ScCondFormatList, ScrollHdl, ScrollBar*, void )
     DoScroll(mpScrollBar->GetDelta());
 }
 
-// -------------------------------------------------------------------
 // Conditional Format Dialog
 //
 ScCondFormatDlg::ScCondFormatDlg(SfxBindings* pB, SfxChildWindow* pCW,
@@ -452,7 +451,7 @@ ScCondFormatDlg::ScCondFormatDlg(SfxBindings* pB, SfxChildWindow* pCW,
     mpEdRange->SetGetFocusHdl( LINK( this, ScCondFormatDlg, RangeGetFocusHdl ) );
 
     OUString aRangeString;
-    rRange.Format(aRangeString, SCA_VALID, pViewData->GetDocument(),
+    rRange.Format(aRangeString, ScRefFlags::VALID, pViewData->GetDocument(),
                     pViewData->GetDocument()->GetAddressConvention());
     mpEdRange->SetText(aRangeString);
 
@@ -502,7 +501,7 @@ void ScCondFormatDlg::RefInputDone( bool bForced )
     ScAnyRefDlg::RefInputDone(bForced);
 
     // ScAnyRefModalDlg::RefInputDone resets the title back
-    // to it's original state.
+    // to its original state.
     // I.e. if we open the dialog normally, and then click into the sheet
     // to modify the selection, the title is updated such that the range
     // is only a single cell (e.g. $A$1), after which the dialog switches
@@ -526,12 +525,6 @@ bool ScCondFormatDlg::IsRefInputMode() const
     return mpEdRange->IsEnabled();
 }
 
-#define ABS_SREF          SCA_VALID \
-    | SCA_COL_ABSOLUTE | SCA_ROW_ABSOLUTE | SCA_TAB_ABSOLUTE
-#define ABS_DREF          ABS_SREF \
-    | SCA_COL2_ABSOLUTE | SCA_ROW2_ABSOLUTE | SCA_TAB2_ABSOLUTE
-#define ABS_DREF3D      ABS_DREF | SCA_TAB_3D
-
 void ScCondFormatDlg::SetReference(const ScRange& rRef, ScDocument*)
 {
     formula::RefEdit* pEdit = mpLastEdit;
@@ -543,13 +536,13 @@ void ScCondFormatDlg::SetReference(const ScRange& rRef, ScDocument*)
         if(rRef.aStart != rRef.aEnd)
             RefInputStart(pEdit);
 
-        sal_uInt16 n = 0;
+        ScRefFlags nFlags;
         if (mpLastEdit && mpLastEdit != mpEdRange)
-            n = ABS_DREF3D;
+            nFlags = ScRefFlags::RANGE_ABS_3D;
         else
-            n = ABS_DREF;
+            nFlags = ScRefFlags::RANGE_ABS;
 
-        OUString aRefStr(rRef.Format(n, mpViewData->GetDocument(),
+        OUString aRefStr(rRef.Format(nFlags, mpViewData->GetDocument(),
             ScAddress::Details(mpViewData->GetDocument()->GetAddressConvention(), 0, 0)));
         pEdit->SetRefString( aRefStr );
         updateTitle();
@@ -563,11 +556,11 @@ ScConditionalFormat* ScCondFormatDlg::GetConditionalFormat() const
         return nullptr;
 
     ScRangeList aRange;
-    sal_uInt16 nFlags = aRange.Parse(aRangeStr, mpViewData->GetDocument(),
-        SCA_VALID, mpViewData->GetDocument()->GetAddressConvention(), maPos.Tab());
+    ScRefFlags nFlags = aRange.Parse(aRangeStr, mpViewData->GetDocument(),
+        ScRefFlags::VALID, mpViewData->GetDocument()->GetAddressConvention(), maPos.Tab());
     ScConditionalFormat* pFormat = mpCondFormList->GetConditionalFormat();
 
-    if(nFlags & SCA_VALID && !aRange.empty() && pFormat)
+    if((nFlags & ScRefFlags::VALID) && !aRange.empty() && pFormat)
         pFormat->SetRange(aRange);
     else
     {
@@ -583,7 +576,6 @@ void ScCondFormatDlg::InvalidateRefData()
     mpLastEdit = nullptr;
 }
 
-// -------------------------------------------------------------
 // Close the Conditional Format Dialog
 //
 bool ScCondFormatDlg::Close()
@@ -591,7 +583,6 @@ bool ScCondFormatDlg::Close()
     return DoClose( ScCondFormatDlgWrapper::GetChildWindowId() );
 }
 
-// ------------------------------------------------------------------------
 // Occurs when the Conditional Format Dialog the OK button is pressed.
 //
 void ScCondFormatDlg::OkPressed()
@@ -615,7 +606,6 @@ void ScCondFormatDlg::OkPressed()
     Close();
 }
 
-// ------------------------------------------------------------------------
 // Occurs when the Conditional Format Dialog is cancelled.
 //
 void ScCondFormatDlg::CancelPressed()
@@ -630,7 +620,6 @@ void ScCondFormatDlg::CancelPressed()
     Close();
 }
 
-// ------------------------------------------------------------------------------
 // Parse xml string parameters used to initialize the Conditional Format Dialog
 // when it is created.
 //
@@ -706,7 +695,6 @@ bool ScCondFormatDlg::ParseXmlString(const OUString&    sXMLString,
     return bRetVal;
 }
 
-// ---------------------------------------------------------------------------------------
 // Generate xml string parameters used to initialize the Conditional Format Dialog
 // when it is created.
 //
@@ -772,9 +760,9 @@ IMPL_LINK_TYPED( ScCondFormatDlg, EdRangeModifyHdl, Edit&, rEdit, void )
 {
     OUString aRangeStr = rEdit.GetText();
     ScRangeList aRange;
-    sal_uInt16 nFlags = aRange.Parse(aRangeStr, mpViewData->GetDocument(),
-        SCA_VALID, mpViewData->GetDocument()->GetAddressConvention());
-    if(nFlags & SCA_VALID)
+    ScRefFlags nFlags = aRange.Parse(aRangeStr, mpViewData->GetDocument(),
+        ScRefFlags::VALID, mpViewData->GetDocument()->GetAddressConvention());
+    if(nFlags & ScRefFlags::VALID)
         rEdit.SetControlBackground(GetSettings().GetStyleSettings().GetWindowColor());
     else
         rEdit.SetControlBackground(COL_LIGHTRED);
@@ -787,7 +775,6 @@ IMPL_LINK_TYPED( ScCondFormatDlg, RangeGetFocusHdl, Control&, rControl, void )
     mpLastEdit = static_cast<formula::RefEdit*>(&rControl);
 }
 
-// ------------------------------------------------------
 // Conditional Format Dialog button click event handler.
 //
 IMPL_LINK_TYPED( ScCondFormatDlg, BtnPressedHdl, Button*, pBtn, void)

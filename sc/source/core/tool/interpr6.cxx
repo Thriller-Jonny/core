@@ -412,6 +412,16 @@ void IterateMatrix(
         case ifSUM:
         {
             ScMatrix::IterateResult aRes = pMat->Sum(bTextAsZero);
+            // If the first value is a NaN, it probably means it was an empty cell,
+            // and should be treated as zero.
+            if ( !rtl::math::isFinite(aRes.mfFirst) )
+            {
+                sal_uInt32 nErr = reinterpret_cast< sal_math_Double * >(&aRes.mfFirst)->nan_parts.fraction_lo;
+                if (nErr & 0xffff0000)
+                {
+                    aRes.mfFirst = 0;
+                }
+            }
             if ( fMem )
                 fRes += aRes.mfFirst + aRes.mfRest;
             else
@@ -423,10 +433,10 @@ void IterateMatrix(
         }
         break;
         case ifCOUNT:
-            rCount += pMat->Count(bTextAsZero);
+            rCount += pMat->Count(bTextAsZero, false);  // do not count error values
         break;
         case ifCOUNT2:
-            rCount += pMat->Count(true);
+            rCount += pMat->Count(true, true);          // do count error values
         break;
         case ifPRODUCT:
         {
@@ -896,6 +906,29 @@ void ScInterpreter::ScCount()
 void ScInterpreter::ScCount2()
 {
     PushDouble( IterateParameters( ifCOUNT2 ) );
+}
+
+void ScInterpreter::ScRawSubtract()
+{
+    short nParamCount = GetByte();
+    if (!MustHaveParamCountMin( nParamCount, 2))
+        return;
+
+    // Fish the 1st parameter from the stack and push it on top.
+    FormulaToken* p = pStack[ sp - nParamCount ];
+    PushWithoutError( *p );
+    // Obtain the minuend.
+    double fRes = GetDouble();
+
+    while (!nGlobalError && nParamCount-- > 1)
+    {
+        // Simple single values without matrix support.
+        fRes -= GetDouble();
+    }
+    while (nParamCount-- > 0)
+        PopError();
+
+    PushDouble( fRes);
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

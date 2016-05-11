@@ -197,16 +197,16 @@ static void lcl_IterateBookmarkPages( SdDrawDocument &rDoc, SdDrawDocument* pBoo
 }
 
 // Opens a bookmark document
-SdDrawDocument* SdDrawDocument::OpenBookmarkDoc(SfxMedium& rMedium)
+SdDrawDocument* SdDrawDocument::OpenBookmarkDoc(SfxMedium* pMedium)
 {
     bool bOK = true;
     SdDrawDocument* pBookmarkDoc = nullptr;
-    OUString aBookmarkName = rMedium.GetName();
-    const SfxFilter* pFilter = rMedium.GetFilter();
+    OUString aBookmarkName = pMedium->GetName();
+    std::shared_ptr<const SfxFilter> pFilter = pMedium->GetFilter();
     if ( !pFilter )
     {
-        rMedium.UseInteractionHandler( true );
-        SfxGetpApp()->GetFilterMatcher().GuessFilter( rMedium, &pFilter );
+        pMedium->UseInteractionHandler( true );
+        SfxGetpApp()->GetFilterMatcher().GuessFilter(*pMedium, pFilter);
     }
 
     if ( !pFilter )
@@ -231,7 +231,7 @@ SdDrawDocument* SdDrawDocument::OpenBookmarkDoc(SfxMedium& rMedium)
                 // Impress
                 mxBookmarkDocShRef = new ::sd::DrawDocShell(SfxObjectCreateMode::STANDARD, true);
 
-            bOK = mxBookmarkDocShRef->DoLoad(&rMedium);
+            bOK = mxBookmarkDocShRef->DoLoad(pMedium);
             if( bOK )
             {
                 maBookmarkFile = aBookmarkName;
@@ -265,8 +265,8 @@ SdDrawDocument* SdDrawDocument::OpenBookmarkDoc(const OUString& rBookmarkFile)
 
     if (!rBookmarkFile.isEmpty() && maBookmarkFile != rBookmarkFile)
     {
-        SfxMedium* pMedium = new SfxMedium( rBookmarkFile, StreamMode::READ );
-        pBookmarkDoc = OpenBookmarkDoc(*pMedium);
+        std::unique_ptr<SfxMedium> xMedium(new SfxMedium(rBookmarkFile, StreamMode::READ));
+        pBookmarkDoc = OpenBookmarkDoc(xMedium.release());
     }
     else if (mxBookmarkDocShRef.Is())
     {
@@ -277,15 +277,13 @@ SdDrawDocument* SdDrawDocument::OpenBookmarkDoc(const OUString& rBookmarkFile)
 }
 
 // Inserts a bookmark (page or object)
-bool SdDrawDocument::InsertBookmark(
+void SdDrawDocument::InsertBookmark(
     const std::vector<OUString> &rBookmarkList,     // List of names of the bookmarks to be inserted
     std::vector<OUString> &rExchangeList,           // List of the names to be used
     bool bLink,                                     // Insert bookmarks as links?
     bool bReplace,                                  // Replace current default and notes pages?
     sal_uInt16 nInsertPos,                          // Insertion position of pages
-    bool bNoDialogs,                                // Don't show dialogs
     ::sd::DrawDocShell* pBookmarkDocSh,             // If set, this is the source document
-    bool bCopy,                                     // Copy the pages?
     Point* pObjPos)                                 // Insertion position of objects
 {
     bool bOK = true;
@@ -330,7 +328,7 @@ bool SdDrawDocument::InsertBookmark(
     {
         // Insert all page bookmarks
         bOK = InsertBookmarkAsPage(rBookmarkList, &rExchangeList, bLink, bReplace,
-                                   nInsertPos, bNoDialogs, pBookmarkDocSh, bCopy, true, false);
+                                   nInsertPos, false/*bNoDialogs*/, pBookmarkDocSh, true/*bCopy*/, true, false);
     }
 
     if ( bOK && !rBookmarkList.empty() )
@@ -339,8 +337,6 @@ bool SdDrawDocument::InsertBookmark(
         bOK = InsertBookmarkAsObject(rBookmarkList, rExchangeList, bLink,
                                      pBookmarkDocSh, pObjPos, bCalcObjCount);
     }
-
-    return bOK;
 }
 
 namespace
@@ -449,9 +445,9 @@ bool SdDrawDocument::InsertBookmarkAsPage(
         // this will make copied masters to differ from the originals,
         // and thus InsertBookmarkAsPage_FindDuplicateLayouts will
         // duplicate masters on insert to same document
-        bool bIsClipBoard = (SD_MOD()->pTransferClip &&
-                             SD_MOD()->pTransferClip->GetWorkDocument() == this);
-        if (!bIsClipBoard)
+        bTransportContainer = (SD_MOD()->pTransferClip &&
+                               SD_MOD()->pTransferClip->GetWorkDocument() == this);
+        if (!bTransportContainer)
         {
             if (rBookmarkList.empty())
                 bScaleObjects = pRefPage->IsScaleObjects();
@@ -1107,7 +1103,7 @@ bool SdDrawDocument::InsertBookmarkAsObject(
             pBMView->GetDoc().SetAllocDocSh(true);
 
         SdDrawDocument* pTmpDoc = static_cast<SdDrawDocument*>( pBMView->GetMarkedObjModel() );
-        bOK = pView->Paste(*pTmpDoc, aObjPos, pPage, SdrInsertFlags::NONE, OUString(), OUString());
+        bOK = pView->Paste(*pTmpDoc, aObjPos, pPage, SdrInsertFlags::NONE);
 
         if (bOLEObjFound)
             pBMView->GetDoc().SetAllocDocSh(false);
@@ -1467,7 +1463,7 @@ void SdDrawDocument::SetMasterPage(sal_uInt16 nSdPageNum,
             DBG_ASSERT(pMaster, "MasterPage (Standard page) not found");
             DBG_ASSERT(pNotesMaster, "MasterPage (Notes page) not found");
 
-            // this should not happen, but looking at crashreports, it does
+            // this should not happen, but looking at crash reports, it does
             if( (pMaster == nullptr) || (pNotesMaster == nullptr) )
             {
                 // so take the first MasterPage
@@ -1649,8 +1645,8 @@ void SdDrawDocument::SetMasterPage(sal_uInt16 nSdPageNum,
                 }
 
                 // Now look for all of them when searching
-                pSourceStyleSheetPool->SetSearchMask(SFX_STYLE_FAMILY_ALL);
-                mxStyleSheetPool->SetSearchMask(SFX_STYLE_FAMILY_ALL);
+                pSourceStyleSheetPool->SetSearchMask(SfxStyleFamily::All);
+                mxStyleSheetPool->SetSearchMask(SfxStyleFamily::All);
             }
 
             if (bUndo && !aCreatedStyles.empty())

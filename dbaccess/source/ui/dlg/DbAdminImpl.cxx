@@ -69,6 +69,7 @@
 #include <osl/mutex.hxx>
 
 #include <algorithm>
+#include <iterator>
 #include <functional>
 #include <o3tl/functional.hxx>
 
@@ -89,7 +90,7 @@ using namespace com::sun::star::frame;
 
 namespace
 {
-    bool implCheckItemType( SfxItemSet& _rSet, const sal_uInt16 _nId, std::function<bool ( const SfxPoolItem* )> isItemType )
+    bool implCheckItemType( SfxItemSet& _rSet, const sal_uInt16 _nId, const std::function<bool ( const SfxPoolItem* )>& isItemType )
     {
         bool bCorrectType = false;
 
@@ -265,13 +266,13 @@ bool ODbDataSourceAdministrationHelper::getCurrentSettings(Sequence< PropertyVal
             AuthenticationRequest aRequest;
             aRequest.ServerName = sName;
             aRequest.Diagnostic = sLoginRequest;
-            aRequest.HasRealm   = aRequest.HasAccount = sal_False;
+            aRequest.HasRealm   = aRequest.HasAccount = false;
             // aRequest.Realm
             aRequest.HasUserName = pUser != nullptr;
             aRequest.UserName    = pUser ? OUString(pUser->GetValue()) : OUString();
-            aRequest.HasPassword = sal_True;
+            aRequest.HasPassword = true;
             //aRequest.Password
-            aRequest.HasAccount  = sal_False;
+            aRequest.HasAccount  = false;
             // aRequest.Account
 
             comphelper::OInteractionRequest* pRequest = new comphelper::OInteractionRequest(makeAny(aRequest));
@@ -350,7 +351,7 @@ void ODbDataSourceAdministrationHelper::clearPassword()
 ::std::pair< Reference<XConnection>,sal_Bool> ODbDataSourceAdministrationHelper::createConnection()
 {
     ::std::pair< Reference<XConnection>,sal_Bool> aRet;
-    aRet.second = sal_False;
+    aRet.second = false;
     Sequence< PropertyValue > aConnectionParams;
     if ( getCurrentSettings(aConnectionParams) )
     {
@@ -361,7 +362,7 @@ void ODbDataSourceAdministrationHelper::clearPassword()
         {
             WaitObject aWaitCursor(m_pParent);
             aRet.first = getDriver()->connect(getConnectionURL(), aConnectionParams);
-            aRet.second = sal_True;
+            aRet.second = true;
         }
         catch (const SQLContext& e) { aErrorInfo = SQLExceptionInfo(e); }
         catch (const SQLWarning& e) { aErrorInfo = SQLExceptionInfo(e); }
@@ -714,8 +715,8 @@ void ODbDataSourceAdministrationHelper::fillDatasourceInfo(const SfxItemSet& _rS
     // collect the translated property values for the relevant items
     PropertyValueSet aRelevantSettings;
     MapInt2String::const_iterator aTranslation;
-    ::std::vector< sal_Int32>::iterator aDetailsEnd = aDetailIds.end();
-    for (::std::vector< sal_Int32>::iterator aIter = aDetailIds.begin();aIter != aDetailsEnd ; ++aIter)
+    ::std::vector< sal_Int32>::const_iterator aDetailsEnd = aDetailIds.end();
+    for (::std::vector< sal_Int32>::const_iterator aIter = aDetailIds.begin();aIter != aDetailsEnd ; ++aIter)
     {
         const SfxPoolItem* pCurrent = _rSource.GetItem((sal_uInt16)*aIter);
         aTranslation = m_aIndirectPropTranslator.find(*aIter);
@@ -745,7 +746,7 @@ void ODbDataSourceAdministrationHelper::fillDatasourceInfo(const SfxItemSet& _rS
     for (sal_Int32 i = 0; i < nCount; ++i, ++pInfo)
     {
         aSearchFor.Name = pInfo->Name;
-        PropertyValueSet::iterator aOverwrittenSetting = aRelevantSettings.find(aSearchFor);
+        PropertyValueSet::const_iterator aOverwrittenSetting = aRelevantSettings.find(aSearchFor);
         if (aRelevantSettings.end() != aOverwrittenSetting)
         {   // the setting was present in the original sequence, and it is to be overwritten -> replace it
             if ( pInfo->Value != aOverwrittenSetting->Value )

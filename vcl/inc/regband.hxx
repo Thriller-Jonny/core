@@ -20,8 +20,6 @@
 #ifndef INCLUDED_VCL_INC_REGBAND_HXX
 #define INCLUDED_VCL_INC_REGBAND_HXX
 
-#include <sal/types.h>
-
 /*
 
 class ImplRegionBand
@@ -92,7 +90,7 @@ public:
     long                        GetXRightBoundary() const;
 
                                 // combine overlapping bands
-    bool                        OptimizeBand();
+    void                        OptimizeBand();
 
                                 // generate separations from lines and process
                                 // union with existing separations

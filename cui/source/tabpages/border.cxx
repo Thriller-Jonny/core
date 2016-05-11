@@ -169,8 +169,8 @@ SvxBorderTabPage::SvxBorderTabPage(vcl::Window* pParent, const SfxItemSet& rCore
     {
         const SfxIntegerListItem* p = static_cast<const SfxIntegerListItem*>(pItem);
         std::vector<sal_Int32> aUsedStyles = p->GetList();
-        for (size_t i = 0, n = aUsedStyles.size(); i < n; ++i)
-            maUsedBorderStyles.insert(static_cast<sal_Int16>(aUsedStyles[i]));
+        for (int aUsedStyle : aUsedStyles)
+            maUsedBorderStyles.insert(static_cast<sal_Int16>(aUsedStyle));
     }
 
     if (rCoreAttrs.HasItem(SID_ATTR_BORDER_DEFAULT_WIDTH, &pItem))
@@ -417,7 +417,6 @@ bool SvxBorderTabPage::IsBorderLineStyleAllowed( sal_Int16 nStyle ) const
 }
 
 
-
 void SvxBorderTabPage::Reset( const SfxItemSet* rSet )
 {
     SfxTabPage::Reset( rSet );
@@ -642,7 +641,6 @@ SfxTabPage::sfxpg SvxBorderTabPage::DeactivatePage( SfxItemSet* _pSet )
 }
 
 
-
 bool SvxBorderTabPage::FillItemSet( SfxItemSet* rCoreAttrs )
 {
     bool bAttrsChanged = SfxTabPage::FillItemSet( rCoreAttrs );
@@ -667,8 +665,8 @@ bool SvxBorderTabPage::FillItemSet( SfxItemSet* rCoreAttrs )
                                 { svx::FRAMEBORDER_RIGHT,SvxBoxItemLine::RIGHT },
                             };
 
-    for (sal_uInt32 i=0; i < SAL_N_ELEMENTS(eTypes1); ++i)
-        aBoxItem.SetLine( m_pFrameSel->GetFrameBorderStyle( eTypes1[i].first ), eTypes1[i].second );
+    for (std::pair<svx::FrameBorderType,SvxBoxItemLine> const & i : eTypes1)
+        aBoxItem.SetLine( m_pFrameSel->GetFrameBorderStyle( i.first ), i.second );
 
 
     aBoxItem.SetRemoveAdjacentCellBorder( mbRemoveAdjacentCellBorders );
@@ -678,8 +676,8 @@ bool SvxBorderTabPage::FillItemSet( SfxItemSet* rCoreAttrs )
                                 { svx::FRAMEBORDER_HOR,SvxBoxInfoItemLine::HORI },
                                 { svx::FRAMEBORDER_VER,SvxBoxInfoItemLine::VERT }
                             };
-    for (sal_uInt32 j=0; j < SAL_N_ELEMENTS(eTypes2); ++j)
-        aBoxInfoItem.SetLine( m_pFrameSel->GetFrameBorderStyle( eTypes2[j].first ), eTypes2[j].second );
+    for (std::pair<svx::FrameBorderType,SvxBoxInfoItemLine> const & j : eTypes2)
+        aBoxInfoItem.SetLine( m_pFrameSel->GetFrameBorderStyle( j.first ), j.second );
 
     aBoxInfoItem.EnableHor( mbHorEnabled );
     aBoxInfoItem.EnableVer( mbVerEnabled );
@@ -795,12 +793,10 @@ bool SvxBorderTabPage::FillItemSet( SfxItemSet* rCoreAttrs )
 }
 
 
-
 void SvxBorderTabPage::HideShadowControls()
 {
     m_pShadowFrame->Hide();
 }
-
 
 
 IMPL_LINK_NOARG_TYPED(SvxBorderTabPage, SelPreHdl_Impl, ValueSet*, void)
@@ -874,7 +870,6 @@ IMPL_LINK_NOARG_TYPED(SvxBorderTabPage, SelPreHdl_Impl, ValueSet*, void)
 }
 
 
-
 IMPL_LINK_NOARG_TYPED(SvxBorderTabPage, SelSdwHdl_Impl, ValueSet*, void)
 {
     bool bEnable = m_pWndShadows->GetSelectItemId() > 1;
@@ -883,7 +878,6 @@ IMPL_LINK_NOARG_TYPED(SvxBorderTabPage, SelSdwHdl_Impl, ValueSet*, void)
     m_pFtShadowColor->Enable(bEnable);
     m_pLbShadowColor->Enable(bEnable);
 }
-
 
 
 IMPL_LINK_TYPED( SvxBorderTabPage, SelColHdl_Impl, ListBox&, rLb, void )
@@ -910,7 +904,6 @@ IMPL_LINK_NOARG_TYPED(SvxBorderTabPage, ModifyWidthHdl_Impl, Edit&, void)
 }
 
 
-
 IMPL_LINK_TYPED( SvxBorderTabPage, SelStyleHdl_Impl, ListBox&, rLb, void )
 {
     if (&rLb == m_pLbLineStyle)
@@ -933,7 +926,6 @@ const sal_uInt16 SVX_BORDER_PRESET_COUNT = 5;
 
 // number of shadow images to show
 const sal_uInt16 SVX_BORDER_SHADOW_COUNT = 5;
-
 
 
 sal_uInt16 SvxBorderTabPage::GetPresetImageId( sal_uInt16 nValueSetIdx ) const
@@ -1003,7 +995,6 @@ sal_uInt16 SvxBorderTabPage::GetPresetStringId( sal_uInt16 nValueSetIdx ) const
 }
 
 
-
 void SvxBorderTabPage::FillPresetVS()
 {
     ImageList& rImgList = aBorderImgLst;
@@ -1024,7 +1015,6 @@ void SvxBorderTabPage::FillPresetVS()
     m_pWndPresets->SetNoSelection();
     m_pWndPresets->Show();
 }
-
 
 
 void SvxBorderTabPage::FillShadowVS()
@@ -1054,7 +1044,6 @@ void SvxBorderTabPage::FillShadowVS()
     m_pWndShadows->SelectItem( 1 );
     m_pWndShadows->Show();
 }
-
 
 
 void SvxBorderTabPage::FillValueSets()
@@ -1202,7 +1191,6 @@ IMPL_LINK_NOARG_TYPED(SvxBorderTabPage, LinesChanged_Impl, LinkParamNone*, void)
     }
     UpdateRemoveAdjCellBorderCB( SAL_MAX_UINT16 );
 }
-
 
 
 IMPL_LINK_TYPED( SvxBorderTabPage, ModifyDistanceHdl_Impl, Edit&, rField, void)

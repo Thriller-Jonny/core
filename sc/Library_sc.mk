@@ -37,6 +37,8 @@ $(eval $(call gb_Library_use_sdk_api,sc))
 
 $(eval $(call gb_Library_use_externals,sc,\
     boost_headers \
+    $(call gb_Helper_optional,OPENCL, \
+        clew) \
     icu_headers \
     icui18n \
     icuuc \
@@ -62,8 +64,6 @@ endif
 $(eval $(call gb_Library_use_libraries,sc,\
     $(call gb_Helper_optional,AVMEDIA,avmedia) \
     basegfx \
-    $(call gb_Helper_optional,OPENCL, \
-        clew) \
     comphelper \
     cppu \
     cppuhelper \
@@ -107,6 +107,7 @@ $(eval $(call gb_Library_add_exception_objects,sc,\
     sc/source/core/data/cellvalues \
     sc/source/core/data/clipcontext \
     sc/source/core/data/clipparam \
+    sc/source/core/data/colcontainer \
     sc/source/core/data/column \
     sc/source/core/data/column2 \
     sc/source/core/data/column3 \
@@ -165,6 +166,7 @@ $(eval $(call gb_Library_add_exception_objects,sc,\
     sc/source/core/data/listenercontext \
     sc/source/core/data/markarr \
     sc/source/core/data/markdata \
+    sc/source/core/data/markmulti \
     sc/source/core/data/mtvelements \
     sc/source/core/data/olinetab \
     sc/source/core/data/pagepar \
@@ -241,6 +243,7 @@ $(eval $(call gb_Library_add_exception_objects,sc,\
     sc/source/core/tool/interpr5 \
     sc/source/core/tool/interpr6 \
     sc/source/core/tool/interpr7 \
+    sc/source/core/tool/interpr8 \
     sc/source/core/tool/jumpmatrix \
     sc/source/core/tool/listenerquery \
     sc/source/core/tool/lookupcache \
@@ -403,6 +406,7 @@ $(eval $(call gb_Library_add_exception_objects,sc,\
     sc/source/ui/dbgui/PivotLayoutTreeListLabel \
     sc/source/ui/dbgui/PivotLayoutTreeList \
     sc/source/ui/dbgui/sfiltdlg \
+    sc/source/ui/dbgui/validate \
     sc/source/ui/dialogs/searchresults \
     sc/source/ui/docshell/arealink \
     sc/source/ui/docshell/autostyl \

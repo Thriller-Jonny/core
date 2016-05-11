@@ -38,7 +38,6 @@ using namespace ::com::sun::star;
 using ::com::sun::star::beans::Property;
 using ::com::sun::star::uno::Sequence;
 using ::com::sun::star::uno::Reference;
-using ::com::sun::star::uno::Any;
 using ::osl::MutexGuard;
 
 namespace
@@ -63,7 +62,7 @@ struct StaticDataSeriesInfoHelper : public rtl::StaticWithInit< ::cppu::OPropert
 {
     uno::Sequence< Property > operator()()
     {
-        ::std::vector< ::com::sun::star::beans::Property > aProperties;
+        ::std::vector< css::beans::Property > aProperties;
         ::chart::DataSeriesProperties::AddPropertiesToVector( aProperties );
         ::chart::CharacterProperties::AddPropertiesToVector( aProperties );
         ::chart::UserDefinedProperties::AddPropertiesToVector( aProperties );
@@ -92,7 +91,7 @@ void lcl_SetParent(
         xChild->setParent( xParentInterface );
 }
 
-typedef ::std::map< sal_Int32, ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet > >
+typedef ::std::map< sal_Int32, css::uno::Reference< css::beans::XPropertySet > >
     lcl_tDataPointMap;
 
 void lcl_CloneAttributedDataPoints(
@@ -140,12 +139,12 @@ DataSeries::DataSeries( const DataSeries & rOther ) :
 {
     if( ! rOther.m_aDataSequences.empty())
     {
-        CloneHelper::CloneRefVector< tDataSequenceContainer::value_type >(
+        CloneHelper::CloneRefVector<css::chart2::data::XLabeledDataSequence>(
             rOther.m_aDataSequences, m_aDataSequences );
         ModifyListenerHelper::addListenerToAllElements( m_aDataSequences, m_xModifyEventForwarder );
     }
 
-    CloneHelper::CloneRefVector< Reference< chart2::XRegressionCurve > >( rOther.m_aRegressionCurves, m_aRegressionCurves );
+    CloneHelper::CloneRefVector< chart2::XRegressionCurve >( rOther.m_aRegressionCurves, m_aRegressionCurves );
     ModifyListenerHelper::addListenerToAllElements( m_aRegressionCurves, m_xModifyEventForwarder );
 
     // add as listener to XPropertySet properties

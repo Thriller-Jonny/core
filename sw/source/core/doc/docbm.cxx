@@ -57,7 +57,7 @@ using namespace ::sw::mark;
 
 namespace
 {
-    static bool lcl_GreaterThan( const SwPosition& rPos, const SwNodeIndex& rNdIdx, const SwIndex* pIdx )
+    bool lcl_GreaterThan( const SwPosition& rPos, const SwNodeIndex& rNdIdx, const SwIndex* pIdx )
     {
         return pIdx != nullptr
                ? ( rPos.nNode > rNdIdx
@@ -66,7 +66,7 @@ namespace
                : rPos.nNode >= rNdIdx;
     }
 
-    static bool lcl_Lower( const SwPosition& rPos, const SwNodeIndex& rNdIdx, const SwIndex* pIdx )
+    bool lcl_Lower( const SwPosition& rPos, const SwNodeIndex& rNdIdx, const SwIndex* pIdx )
     {
         return rPos.nNode < rNdIdx
                || ( pIdx != nullptr
@@ -74,19 +74,19 @@ namespace
                     && rPos.nContent < pIdx->GetIndex() );
     }
 
-    static bool lcl_MarkOrderingByStart(const IDocumentMarkAccess::pMark_t& rpFirst,
+    bool lcl_MarkOrderingByStart(const IDocumentMarkAccess::pMark_t& rpFirst,
         const IDocumentMarkAccess::pMark_t& rpSecond)
     {
         return rpFirst->GetMarkStart() < rpSecond->GetMarkStart();
     }
 
-    static bool lcl_MarkOrderingByEnd(const IDocumentMarkAccess::pMark_t& rpFirst,
+    bool lcl_MarkOrderingByEnd(const IDocumentMarkAccess::pMark_t& rpFirst,
         const IDocumentMarkAccess::pMark_t& rpSecond)
     {
         return rpFirst->GetMarkEnd() < rpSecond->GetMarkEnd();
     }
 
-    static void lcl_InsertMarkSorted(IDocumentMarkAccess::container_t& io_vMarks,
+    void lcl_InsertMarkSorted(IDocumentMarkAccess::container_t& io_vMarks,
         const IDocumentMarkAccess::pMark_t& pMark)
     {
         io_vMarks.insert(
@@ -98,7 +98,7 @@ namespace
             pMark);
     }
 
-    static inline ::std::unique_ptr<SwPosition> lcl_PositionFromContentNode(
+    inline ::std::unique_ptr<SwPosition> lcl_PositionFromContentNode(
         SwContentNode * const pContentNode,
         const bool bAtEnd=false)
     {
@@ -111,7 +111,7 @@ namespace
     // else set it to the begin of the Node after rEnd, if there is one
     // else set it to the end of the node before rStt
     // else set it to the ContentNode of the Pos outside the Range
-    static inline ::std::unique_ptr<SwPosition> lcl_FindExpelPosition(
+    inline ::std::unique_ptr<SwPosition> lcl_FindExpelPosition(
         const SwNodeIndex& rStt,
         const SwNodeIndex& rEnd,
         const SwPosition& rOtherPosition)
@@ -138,7 +138,7 @@ namespace
         return ::std::unique_ptr<SwPosition>(new SwPosition(rOtherPosition));
     }
 
-    static IMark* lcl_getMarkAfter(const IDocumentMarkAccess::container_t& rMarks, const SwPosition& rPos)
+    IMark* lcl_getMarkAfter(const IDocumentMarkAccess::container_t& rMarks, const SwPosition& rPos)
     {
         IDocumentMarkAccess::const_iterator_t pMarkAfter = upper_bound(
             rMarks.begin(),
@@ -149,7 +149,7 @@ namespace
         return pMarkAfter->get();
     };
 
-    static IMark* lcl_getMarkBefore(const IDocumentMarkAccess::container_t& rMarks, const SwPosition& rPos)
+    IMark* lcl_getMarkBefore(const IDocumentMarkAccess::container_t& rMarks, const SwPosition& rPos)
     {
         // candidates from which to choose the mark before
         IDocumentMarkAccess::container_t vCandidates;
@@ -172,7 +172,7 @@ namespace
         return max_element(vCandidates.begin(), vCandidates.end(), &lcl_MarkOrderingByEnd)->get();
     }
 
-    static bool lcl_FixCorrectedMark(
+    bool lcl_FixCorrectedMark(
         const bool bChangedPos,
         const bool bChangedOPos,
         MarkBase* io_pMark )
@@ -205,7 +205,7 @@ namespace
         return false;
     }
 
-    static IDocumentMarkAccess::iterator_t lcl_FindMark(
+    IDocumentMarkAccess::iterator_t lcl_FindMark(
         IDocumentMarkAccess::container_t& rMarks,
         const IDocumentMarkAccess::pMark_t& rpMarkToFind)
     {
@@ -230,7 +230,7 @@ namespace
         return rMarks.end();
     };
 
-    static IDocumentMarkAccess::iterator_t lcl_FindMarkAtPos(
+    IDocumentMarkAccess::iterator_t lcl_FindMarkAtPos(
         IDocumentMarkAccess::container_t& rMarks,
         const SwPosition& rPos,
         const IDocumentMarkAccess::MarkType eType)
@@ -258,10 +258,10 @@ namespace
         return rMarks.end();
     };
 
-    static IDocumentMarkAccess::const_iterator_t lcl_FindMarkByName(
+    IDocumentMarkAccess::const_iterator_t lcl_FindMarkByName(
         const OUString& rName,
-        IDocumentMarkAccess::const_iterator_t ppMarksBegin,
-        IDocumentMarkAccess::const_iterator_t ppMarksEnd)
+        const IDocumentMarkAccess::const_iterator_t& ppMarksBegin,
+        const  IDocumentMarkAccess::const_iterator_t& ppMarksEnd)
     {
         return find_if(
             ppMarksBegin,
@@ -349,8 +349,7 @@ namespace sw { namespace mark
 
     ::sw::mark::IMark* MarkManager::makeMark(const SwPaM& rPaM,
         const OUString& rName,
-        const IDocumentMarkAccess::MarkType eType,
-        bool const isHorribleHackIgnoreDuplicates)
+        const IDocumentMarkAccess::MarkType eType)
     {
 #if 0
         {
@@ -373,8 +372,7 @@ namespace sw { namespace mark
             " - more than USHRT_MAX marks are not supported correctly");
         // There should only be one CrossRefBookmark per Textnode per Type
         if ((eType == MarkType::CROSSREF_NUMITEM_BOOKMARK || eType == MarkType::CROSSREF_HEADING_BOOKMARK)
-            && (lcl_FindMarkAtPos(m_vBookmarks, *rPaM.Start(), eType) != m_vBookmarks.end())
-            && !isHorribleHackIgnoreDuplicates)
+            && (lcl_FindMarkAtPos(m_vBookmarks, *rPaM.Start(), eType) != m_vBookmarks.end()))
         {   // this can happen via UNO API
             SAL_WARN("sw.core", "MarkManager::makeMark(..)"
                 " - refusing to create duplicate CrossRefBookmark");
@@ -707,7 +705,8 @@ namespace sw { namespace mark
                            && pMark->GetOtherMarkPos().nNode == rEnd
                            && pMark->GetOtherMarkPos().nContent == *pEndIdx ) ) )
             {
-                bIsPosInRange = true, bIsOtherPosInRange = true;
+                bIsPosInRange = true;
+                bIsOtherPosInRange = true;
             }
 
             if ( bIsPosInRange
@@ -743,7 +742,7 @@ namespace sw { namespace mark
                 {
                     if ( pSaveBkmk )
                     {
-                        pSaveBkmk->push_back( SaveBookmark( true, true, *pMark, rStt, pSttIdx ) );
+                        pSaveBkmk->push_back( SaveBookmark( *pMark, rStt, pSttIdx ) );
                     }
                     vMarksToDelete.push_back(ppMark);
                 }
@@ -1179,7 +1178,7 @@ void MarkManager::dumpAsXml(xmlTextWriterPtr pWriter) const
 
 namespace
 {
-    static inline bool lcl_Greater( const SwPosition& rPos, const SwNodeIndex& rNdIdx, const SwIndex* pIdx )
+    inline bool lcl_Greater( const SwPosition& rPos, const SwNodeIndex& rNdIdx, const SwIndex* pIdx )
     {
         return rPos.nNode > rNdIdx || ( pIdx && rPos.nNode == rNdIdx && rPos.nContent > pIdx->GetIndex() );
     }
@@ -1193,16 +1192,14 @@ const IDocumentMarkAccess* SwDoc::getIDocumentMarkAccess() const
     { return static_cast< IDocumentMarkAccess* >(mpMarkManager.get()); }
 
 SaveBookmark::SaveBookmark(
-    bool bSavePos,
-    bool bSaveOtherPos,
     const IMark& rBkmk,
     const SwNodeIndex & rMvPos,
     const SwIndex* pIdx)
     : m_aName(rBkmk.GetName())
     , m_aShortName()
     , m_aCode()
-    , m_bSavePos(bSavePos)
-    , m_bSaveOtherPos(bSaveOtherPos)
+    , m_bSavePos(true)
+    , m_bSaveOtherPos(true)
     , m_eOrigBkmType(IDocumentMarkAccess::GetType(rBkmk))
 {
     const IBookmark* const pBookmark = dynamic_cast< const IBookmark* >(&rBkmk);
@@ -1312,9 +1309,9 @@ void SaveBookmark::SetInDoc(
     }
 }
 
-// _DelBookmarks
+// DelBookmarks
 
-void _DelBookmarks(
+void DelBookmarks(
     const SwNodeIndex& rStt,
     const SwNodeIndex& rEnd,
     ::std::vector<SaveBookmark> * pSaveBkmk,

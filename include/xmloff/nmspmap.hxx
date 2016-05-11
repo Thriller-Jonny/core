@@ -80,7 +80,7 @@ class XMLOFF_DLLPUBLIC SvXMLNamespaceMap
     mutable NameSpaceHash       aNameCache;
     NameSpaceMap                aNameMap;
     mutable QNameCache          aQNameCache;
-    SAL_DLLPRIVATE sal_uInt16 _Add( const OUString& rPrefix, const OUString &rName, sal_uInt16 nKey );
+    SAL_DLLPRIVATE sal_uInt16 Add_( const OUString& rPrefix, const OUString &rName, sal_uInt16 nKey );
 
 public:
 
@@ -111,16 +111,15 @@ public:
     OUString GetAttrNameByKey( sal_uInt16 nKey ) const;
 
     /* This will replace the version with the unused 5th default parameter */
-    sal_uInt16 _GetKeyByAttrName( const OUString& rAttrName,
+    sal_uInt16 GetKeyByAttrName_( const OUString& rAttrName,
                              OUString *pPrefix,
                              OUString *pLocalName,
                              OUString *pNamespace = nullptr,
                              bool bCache = true) const;
 
     /* This will replace the version with the unused 3rd default parameter */
-    sal_uInt16 _GetKeyByAttrName( const OUString& rAttrName,
-                             OUString *pLocalName = nullptr,
-                             bool bCache = true) const;
+    sal_uInt16 GetKeyByAttrName_( const OUString& rAttrName,
+                             OUString *pLocalName = nullptr) const;
 
     sal_uInt16 GetFirstKey() const;
     sal_uInt16 GetNextKey( sal_uInt16 nOldKey ) const;
@@ -134,7 +133,7 @@ public:
     static bool NormalizeW3URI( OUString& rName );
     static bool NormalizeURI( OUString& rName );
 
-/* deprecated */ bool AddAtIndex( sal_uInt16 nIdx, const OUString& rPrefix,
+/* deprecated */ void AddAtIndex( sal_uInt16 nIdx, const OUString& rPrefix,
                      const OUString& rName, sal_uInt16 nKey = XML_NAMESPACE_UNKNOWN );
 /* deprecated */ static sal_uInt16 GetIndexByKey( sal_uInt16 nKey );
 /* deprecated */ sal_uInt16 GetIndexByPrefix( const OUString& rPrefix ) const;

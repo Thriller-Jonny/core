@@ -23,8 +23,9 @@
 #include <sal/types.h>
 #include <config_poppler.h>
 
-#if defined __GNUC__
+#if defined __GNUC__ || defined __clang__
 # pragma GCC diagnostic push
+# pragma GCC diagnostic ignored "-Wundef"
 # pragma GCC diagnostic ignored "-Wunused-parameter"
 #elif defined _MSC_VER
 #pragma warning(push, 1)
@@ -39,7 +40,7 @@
 #include "GlobalParams.h"
 #include "PDFDoc.h"
 
-#if defined __GNUC__
+#if defined __GNUC__ || defined __clang__
 # pragma GCC diagnostic pop
 #elif defined _MSC_VER
 #pragma warning(pop)
@@ -93,7 +94,7 @@ namespace pdfi
             size(0.0)
         {}
 
-        // xdpf goo stuff is so totally borked...
+        // xpdf goo stuff is so totally borked...
         // ...need to hand-code assignment
         FontAttributes( const FontAttributes& rSrc ) :
             familyName(),
@@ -192,7 +193,7 @@ namespace pdfi
         virtual void endPage() override;
 
         //----- link borders
-	#if POPPLER_CHECK_VERSION(0, 19, 0)
+    #if POPPLER_CHECK_VERSION(0, 19, 0)
         virtual void processLink(AnnotLink *link) override;
     #elif POPPLER_CHECK_VERSION(0, 17, 0)
         virtual void processLink(AnnotLink *link, Catalog *catalog) override;

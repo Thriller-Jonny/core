@@ -196,7 +196,7 @@ bool SwDocShell::InitNew( const uno::Reference < embed::XStorage >& xStor )
                     aFont = pPrt->GetFontMetric( aFont );
                 }
 
-                pFontItem.reset(new SvxFontItem(aFont.GetFamily(), aFont.GetName(),
+                pFontItem.reset(new SvxFontItem(aFont.GetFamilyType(), aFont.GetFamilyName(),
                                                 aEmptyOUStr, aFont.GetPitch(), aFont.GetCharSet(), nFontWhich));
             }
             else
@@ -213,7 +213,7 @@ bool SwDocShell::InitNew( const uno::Reference < embed::XStorage >& xStor )
                     nFontTypes[i],
                     eLanguage,
                     GetDefaultFontFlags::OnlyOne );
-                pFontItem.reset(new SvxFontItem(aLangDefFont.GetFamily(), aLangDefFont.GetName(),
+                pFontItem.reset(new SvxFontItem(aLangDefFont.GetFamilyType(), aLangDefFont.GetFamilyName(),
                                                 aEmptyOUStr, aLangDefFont.GetPitch(), aLangDefFont.GetCharSet(), nFontWhich));
             }
             m_pDoc->SetDefault(*pFontItem);
@@ -281,7 +281,7 @@ bool SwDocShell::InitNew( const uno::Reference < embed::XStorage >& xStor )
                     SfxItemState::SET != pColl->GetAttrSet().GetItemState(
                                                     nFontWhich, false ) )
                 {
-                    pColl->SetFormatAttr(SvxFontItem(aFont.GetFamily(), aFont.GetName(),
+                    pColl->SetFormatAttr(SvxFontItem(aFont.GetFamilyType(), aFont.GetFamilyName(),
                                                   aEmptyOUStr, aFont.GetPitch(), aFont.GetCharSet(), nFontWhich));
                 }
             }
@@ -531,7 +531,7 @@ bool  SwDocShell::Load( SfxMedium& rMedium )
                 }
                 // suppress SfxProgress, when we are Embedded
                 SW_MOD()->SetEmbeddedLoadSave( true );
-                // no break;
+                SAL_FALLTHROUGH;
 
             case SfxObjectCreateMode::STANDARD:
             case SfxObjectCreateMode::PREVIEW:
@@ -649,8 +649,8 @@ void SwDocShell::SubInitNew()
         0, 0, 0  };
     if(!bWeb)
     {
-        nRange[ (sizeof(nRange)/sizeof(nRange[0])) - 3 ] = RES_PARATR_TABSTOP;
-        nRange[ (sizeof(nRange)/sizeof(nRange[0])) - 2 ] = RES_PARATR_HYPHENZONE;
+        nRange[ SAL_N_ELEMENTS(nRange) - 3 ] = RES_PARATR_TABSTOP;
+        nRange[ SAL_N_ELEMENTS(nRange) - 2 ] = RES_PARATR_HYPHENZONE;
     }
     SfxItemSet aDfltSet( m_pDoc->GetAttrPool(), nRange );
 

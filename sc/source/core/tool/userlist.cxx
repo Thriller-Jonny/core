@@ -26,7 +26,6 @@
 #include <unotools/transliterationwrapper.hxx>
 #include <o3tl/make_unique.hxx>
 
-#include <boost/bind.hpp>
 #include <algorithm>
 
 namespace {
@@ -125,8 +124,7 @@ bool ScUserListData::GetSubIndex(const OUString& rSubStr, sal_uInt16& rIndex, bo
     }
 
     // When that fails, do a case insensitive search.
-    OUString aTmp = ScGlobal::pCharClass->uppercase(rSubStr);
-    OUString aUpStr = aTmp;
+    OUString aUpStr = ScGlobal::pCharClass->uppercase(rSubStr);
     itr = ::std::find_if(
         maSubStrings.begin(), maSubStrings.end(), FindByName(aUpStr, true));
     if (itr != maSubStrings.end())
@@ -338,7 +336,9 @@ bool ScUserList::operator!=( const ScUserList& r ) const
 
 bool ScUserList::HasEntry( const OUString& rStr ) const
 {
-    return ::std::any_of(maData.begin(), maData.end(), ::boost::bind(&ScUserListData::GetString, _1) == rStr);
+    return ::std::any_of(maData.begin(), maData.end(),
+        [&] (std::unique_ptr<ScUserListData> const& pData)
+            { return pData->GetString() == rStr; } );
 }
 
 ScUserList::iterator ScUserList::begin()
@@ -361,7 +361,7 @@ void ScUserList::push_back(ScUserListData* p)
     maData.push_back(std::unique_ptr<ScUserListData>(p));
 }
 
-void ScUserList::erase(iterator itr)
+void ScUserList::erase(const iterator& itr)
 {
     maData.erase(itr);
 }

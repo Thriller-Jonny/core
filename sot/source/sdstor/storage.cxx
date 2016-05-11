@@ -17,8 +17,8 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <com/sun/star/uno/Sequence.hxx>
-#include <com/sun/star/lang/XSingleServiceFactory.hpp>
+#include <sal/config.h>
+
 #include <com/sun/star/embed/XStorage.hpp>
 #include <com/sun/star/embed/ElementModes.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
@@ -35,42 +35,10 @@
 #include <tools/urlobj.hxx>
 #include <unotools/ucbhelper.hxx>
 #include <comphelper/processfactory.hxx>
+
 #include <memory>
 
 using namespace ::com::sun::star;
-
-/************** class SotStorageStream ***********************************/
-class SotStorageStreamFactory : public SotFactory
-{
-public:
-    explicit SotStorageStreamFactory(const SvGlobalName& rName)
-        : SotFactory(rName)
-    {
-    }
-};
-
-SotFactory * SotStorageStream::ClassFactory()
-{
-    SotFactory **ppFactory = GetFactoryAdress();
-    if( !*ppFactory )
-    {
-        *ppFactory = new SotStorageStreamFactory(
-                            SvGlobalName( 0xd7deb420, 0xf902, 0x11d0,
-                                0xaa, 0xa1, 0x0, 0xa0, 0x24, 0x9d, 0x55, 0x90 ) );
-        (*ppFactory)->PutSuperClass( SotObject::ClassFactory() );
-    }
-    return *ppFactory;
-}
-
-void * SotStorageStream::Cast( const SotFactory * pFact )
-{
-    void * pRet = nullptr;
-    if( !pFact || pFact == ClassFactory() )
-        pRet = this;
-    if( !pRet )
-        pRet = SotObject::Cast( pFact );
-    return pRet;
-}
 
 SvLockBytesRef MakeLockBytes_Impl( const OUString & rName, StreamMode nMode )
 {
@@ -227,7 +195,7 @@ sal_uInt64 SotStorageStream::remainingSize()
     return SvStream::remainingSize();
 }
 
-bool SotStorageStream::CopyTo( SotStorageStream * pDestStm )
+void SotStorageStream::CopyTo( SotStorageStream * pDestStm )
 {
     Flush(); // alle Daten schreiben
     pDestStm->ClearBuffer();
@@ -258,7 +226,6 @@ bool SotStorageStream::CopyTo( SotStorageStream * pDestStm )
         pOwnStm->CopyTo( pDestStm->pOwnStm );
         SetError( pOwnStm->GetError() );
     }
-    return GetError() == SVSTREAM_OK;
 }
 
 bool SotStorageStream::Commit()
@@ -285,40 +252,6 @@ bool SotStorageStream::SetProperty( const OUString& rName, const css::uno::Any& 
         OSL_FAIL("Not implemented!");
         return false;
     }
-}
-
-/************** class SotStorage ******************************************
-*************************************************************************/
-class SotStorageFactory : public SotFactory
-{
-public:
-    explicit SotStorageFactory(const SvGlobalName & rName)
-        : SotFactory(rName)
-    {
-    }
-};
-
-SotFactory * SotStorage::ClassFactory()
-{
-    SotFactory **ppFactory = GetFactoryAdress();
-    if( !*ppFactory )
-    {
-        *ppFactory = new SotStorageFactory(
-                               SvGlobalName( 0x980ce7e0, 0xf905, 0x11d0,
-                                        0xaa, 0xa1, 0x0, 0xa0, 0x24, 0x9d, 0x55, 0x90 ) );
-        (*ppFactory)->PutSuperClass( SotObject::ClassFactory() );
-    }
-    return *ppFactory;
-}
-
-void * SotStorage::Cast( const SotFactory * pFact )
-{
-    void * pRet = nullptr;
-    if( !pFact || pFact == ClassFactory() )
-        pRet = this;
-    if( !pRet )
-        pRet = SotObject::Cast( pFact );
-    return pRet;
 }
 
 /************************************************************************
@@ -361,16 +294,16 @@ SotStorage::SotStorage()
 #include <com/sun/star/ucb/XCommandEnvironment.hpp>
 #include <ucbhelper/content.hxx>
 
-SotStorage::SotStorage( const OUString & rName, StreamMode nMode, bool transacted )
+SotStorage::SotStorage( const OUString & rName, StreamMode nMode )
     INIT_SotStorage()
 {
     m_aName = rName; // Namen merken
-    CreateStorage( true, nMode, transacted );
+    CreateStorage( true, nMode );
     if ( IsOLEStorage() )
         m_nVersion = SOFFICE_FILEFORMAT_50;
 }
 
-void SotStorage::CreateStorage( bool bForceUCBStorage, StreamMode nMode, bool transacted )
+void SotStorage::CreateStorage( bool bForceUCBStorage, StreamMode nMode )
 {
     DBG_ASSERT( !m_pStorStm && !m_pOwnStg, "Use only in ctor!" );
     if( !m_aName.isEmpty() )
@@ -406,31 +339,31 @@ void SotStorage::CreateStorage( bool bForceUCBStorage, StreamMode nMode, bool tr
                 if ( !(UCBStorage::GetLinkedFile( *m_pStorStm ).isEmpty()) )
                 {
                     // detect special unpacked storages
-                    m_pOwnStg = new UCBStorage( *m_pStorStm, !transacted );
+                    m_pOwnStg = new UCBStorage( *m_pStorStm, true );
                     m_bDelStm = true;
                 }
                 else
                 {
                     // UCBStorage always works directly on the UCB content, so discard the stream first
                     DELETEZ( m_pStorStm );
-                    m_pOwnStg = new UCBStorage( m_aName, nMode, !transacted );
+                    m_pOwnStg = new UCBStorage( m_aName, nMode, true );
                 }
             }
             else
             {
                 // OLEStorage can be opened with a stream
-                m_pOwnStg = new Storage( *m_pStorStm, !transacted );
+                m_pOwnStg = new Storage( *m_pStorStm, true );
                 m_bDelStm = true;
             }
         }
         else if ( bForceUCBStorage )
         {
-            m_pOwnStg = new UCBStorage( m_aName, nMode, !transacted );
+            m_pOwnStg = new UCBStorage( m_aName, nMode, true );
             SetError( ERRCODE_IO_NOTSUPPORTED );
         }
         else
         {
-            m_pOwnStg = new Storage( m_aName, nMode, !transacted );
+            m_pOwnStg = new Storage( m_aName, nMode, true );
             SetError( ERRCODE_IO_NOTSUPPORTED );
         }
     }
@@ -438,9 +371,9 @@ void SotStorage::CreateStorage( bool bForceUCBStorage, StreamMode nMode, bool tr
     {
         // temporary storage
         if ( bForceUCBStorage )
-            m_pOwnStg = new UCBStorage( m_aName, nMode, !transacted );
+            m_pOwnStg = new UCBStorage( m_aName, nMode, true );
         else
-            m_pOwnStg = new Storage( m_aName, nMode, !transacted );
+            m_pOwnStg = new Storage( m_aName, nMode, true );
         m_aName = m_pOwnStg->GetName();
     }
 
@@ -453,7 +386,7 @@ SotStorage::SotStorage( bool bUCBStorage, const OUString & rName, StreamMode nMo
     INIT_SotStorage()
 {
     m_aName = rName;
-    CreateStorage( bUCBStorage, nMode, false );
+    CreateStorage( bUCBStorage, nMode );
     if ( IsOLEStorage() )
         m_nVersion = SOFFICE_FILEFORMAT_50;
 }

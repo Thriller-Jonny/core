@@ -45,7 +45,7 @@
 #include <comphelper/processfactory.hxx>
 #include <com/sun/star/ucb/IllegalIdentifierException.hpp>
 
-#if defined WNT
+#if defined(_WIN32)
 
 OUString SfxDdeServiceName_Impl( const OUString& sIn )
 {
@@ -149,10 +149,9 @@ bool ImplDdeService::MakeTopic( const OUString& rNm )
 
             SfxBoolItem aSilent(SID_SILENT, sal_True);
             SfxDispatcher* pDispatcher = SfxGetpApp()->GetDispatcher_Impl();
-            const SfxPoolItem* pRet = pDispatcher->Execute( SID_OPENDOC,
+            const SfxPoolItem* pRet = pDispatcher->ExecuteList(SID_OPENDOC,
                     SfxCallMode::SYNCHRON,
-                    &aName, &aNewView,
-                    &aSilent, 0L );
+                    { &aName, &aNewView, &aSilent });
 
             if( pRet && dynamic_cast< const SfxViewFrameItem *>( pRet ) !=  nullptr &&
                 ((SfxViewFrameItem*)pRet)->GetFrame() &&
@@ -197,7 +196,7 @@ bool ImplDdeService::SysTopicExecute( const OUString* pStr )
 
 class SfxDdeTriggerTopic_Impl : public DdeTopic
 {
-#if defined WNT
+#if defined(_WIN32)
 public:
     SfxDdeTriggerTopic_Impl()
         : DdeTopic( "TRIGGER" )
@@ -209,7 +208,7 @@ public:
 
 class SfxDdeDocTopic_Impl : public DdeTopic
 {
-#if defined WNT
+#if defined(_WIN32)
 public:
     SfxObjectShell* pSh;
     DdeData aData;
@@ -228,7 +227,7 @@ public:
 };
 
 
-#if defined WNT
+#if defined(_WIN32)
 
 namespace {
 
@@ -376,7 +375,6 @@ bool SfxObjectShell::DdeGetData( const OUString&,              // the Item to be
 }
 
 
-
 /*  [Description]
 
     This method can be overridden by application developers, to receive
@@ -424,7 +422,7 @@ void SfxObjectShell::ReconnectDdeLinks(SfxObjectShell& rServer)
 bool SfxApplication::InitializeDde()
 {
     int nError = 0;
-#if defined( WNT )
+#if defined(_WIN32)
     DBG_ASSERT( !pAppData_Impl->pDdeService,
                 "Dde can not be initialized multiple times" );
 
@@ -459,10 +457,9 @@ void SfxAppData_Impl::DeInitDDE()
     DELETEZ( pDdeService );
 }
 
-#if defined( WNT )
+#if defined(_WIN32)
 void SfxApplication::AddDdeTopic( SfxObjectShell* pSh )
 {
-    DBG_ASSERT( pAppData_Impl->pDocTopics, "There is no Dde-Service" );
     //OV: DDE is disconnected in server mode!
     if( !pAppData_Impl->pDocTopics )
         return;
@@ -494,8 +491,7 @@ void SfxApplication::AddDdeTopic( SfxObjectShell* pSh )
 
 void SfxApplication::RemoveDdeTopic( SfxObjectShell* pSh )
 {
-#if defined WNT
-    DBG_ASSERT( pAppData_Impl->pDocTopics, "There is no Dde-Service" );
+#if defined(_WIN32)
     //OV: DDE is disconnected in server mode!
     if( !pAppData_Impl->pDocTopics )
         return;
@@ -525,7 +521,7 @@ DdeService* SfxApplication::GetDdeService()
     return pAppData_Impl->pDdeService;
 }
 
-#if defined WNT
+#if defined(_WIN32)
 
 DdeData* SfxDdeDocTopic_Impl::Get(SotClipboardFormatId nFormat)
 {

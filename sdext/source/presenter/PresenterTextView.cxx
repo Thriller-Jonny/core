@@ -394,7 +394,7 @@ void PresenterTextView::Paint (
     }
 }
 
-SharedPresenterTextCaret PresenterTextView::GetCaret() const
+const SharedPresenterTextCaret& PresenterTextView::GetCaret() const
 {
     return mpCaret;
 }
@@ -792,7 +792,7 @@ sal_Unicode PresenterTextParagraph::GetCharacter (
     }
 }
 
-OUString PresenterTextParagraph::GetText() const
+const OUString& PresenterTextParagraph::GetText() const
 {
     return msParagraphText;
 }
@@ -876,7 +876,7 @@ TextSegment PresenterTextParagraph::GetWordTextSegment (
             nIndex,
             lang::Locale(),
             i18n::WordType::ANYWORD_IGNOREWHITESPACES,
-            sal_True);
+            true);
     else if (nCurrentOffset < 0)
     {
         while (nCurrentOffset<0 && nCurrentIndex>0)
@@ -1126,7 +1126,6 @@ void PresenterTextCaret::HideCaret()
 }
 
 
-
 void PresenterTextCaret::SetPosition (
     const sal_Int32 nParagraphIndex,
     const sal_Int32 nCharacterIndex)
@@ -1167,7 +1166,7 @@ void PresenterTextCaret::SetCaretMotionBroadcaster (
     maBroadcaster = rBroadcaster;
 }
 
-css::awt::Rectangle PresenterTextCaret::GetBounds() const
+const css::awt::Rectangle& PresenterTextCaret::GetBounds() const
 {
     return maCaretBounds;
 }

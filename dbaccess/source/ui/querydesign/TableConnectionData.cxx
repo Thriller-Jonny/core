@@ -87,29 +87,30 @@ OTableConnectionData& OTableConnectionData::operator=( const OTableConnectionDat
     return *this;
 }
 
-bool OTableConnectionData::SetConnLine( sal_uInt16 nIndex, const OUString& rSourceFieldName, const OUString& rDestFieldName )
+void OTableConnectionData::SetConnLine( sal_uInt16 nIndex, const OUString& rSourceFieldName, const OUString& rDestFieldName )
 {
     if (sal_uInt16(m_vConnLineData.size()) < nIndex)
-        return false;
+        return;
 
-        // == still allowed, this correponds to a Append
+        // == still allowed, this corresponds to an Append
 
     if (m_vConnLineData.size() == nIndex)
-        return AppendConnLine(rSourceFieldName, rDestFieldName);
+    {
+        AppendConnLine(rSourceFieldName, rDestFieldName);
+        return;
+    }
 
     OConnectionLineDataRef pConnLineData = m_vConnLineData[nIndex];
     OSL_ENSURE(pConnLineData != nullptr, "OTableConnectionData::SetConnLine : habe ungueltiges LineData-Objekt");
 
     pConnLineData->SetSourceFieldName( rSourceFieldName );
     pConnLineData->SetDestFieldName( rDestFieldName );
-
-    return true;
 }
 
 bool OTableConnectionData::AppendConnLine( const OUString& rSourceFieldName, const OUString& rDestFieldName )
 {
-    OConnectionLineDataVec::iterator aIter = m_vConnLineData.begin();
-    OConnectionLineDataVec::iterator aEnd = m_vConnLineData.end();
+    OConnectionLineDataVec::const_iterator aIter = m_vConnLineData.begin();
+    OConnectionLineDataVec::const_iterator aEnd = m_vConnLineData.end();
     for(;aIter != aEnd;++aIter)
     {
         if((*aIter)->GetDestFieldName() == rDestFieldName && (*aIter)->GetSourceFieldName() == rSourceFieldName)

@@ -671,7 +671,6 @@ void SAL_CALL SVTXGridControl::elementReplaced( const ContainerEvent& ) throw (R
 }
 
 
-
 void SAL_CALL SVTXGridControl::disposing( const EventObject& Source ) throw(RuntimeException, std::exception)
 {
     VCLXWindow::disposing( Source );
@@ -746,7 +745,7 @@ sal_Bool SAL_CALL SVTXGridControl::hasSelectedRows() throw (RuntimeException, st
     SolarMutexGuard aGuard;
 
     VclPtr< TableControl > pTable = GetAsDynamic< TableControl >();
-    ENSURE_OR_RETURN( pTable, "SVTXGridControl::hasSelectedRows: no control (anymore)!", sal_True );
+    ENSURE_OR_RETURN( pTable, "SVTXGridControl::hasSelectedRows: no control (anymore)!", true );
 
     return pTable->GetSelectedRowCount() > 0;
 }
@@ -757,7 +756,7 @@ sal_Bool SAL_CALL SVTXGridControl::isRowSelected( ::sal_Int32 index ) throw (Run
     SolarMutexGuard aGuard;
 
     VclPtr< TableControl > pTable = GetAsDynamic< TableControl >();
-    ENSURE_OR_RETURN( pTable, "SVTXGridControl::isRowSelected: no control (anymore)!", sal_False );
+    ENSURE_OR_RETURN( pTable, "SVTXGridControl::isRowSelected: no control (anymore)!", false );
 
     return pTable->IsRowSelected( index );
 }

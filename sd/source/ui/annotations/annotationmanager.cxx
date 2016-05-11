@@ -103,17 +103,17 @@ namespace sd {
 
 SfxItemPool* GetAnnotationPool()
 {
-    static SfxItemPool* mpAnnotationPool = nullptr;
-    if( mpAnnotationPool == nullptr )
+    static SfxItemPool* s_pAnnotationPool = nullptr;
+    if( s_pAnnotationPool == nullptr )
     {
-        mpAnnotationPool = EditEngine::CreatePool( false );
-        mpAnnotationPool->SetPoolDefaultItem(SvxFontHeightItem(423,100,EE_CHAR_FONTHEIGHT));
+        s_pAnnotationPool = EditEngine::CreatePool( false );
+        s_pAnnotationPool->SetPoolDefaultItem(SvxFontHeightItem(423,100,EE_CHAR_FONTHEIGHT));
 
         vcl::Font aAppFont( Application::GetSettings().GetStyleSettings().GetAppFont() );
-        mpAnnotationPool->SetPoolDefaultItem(SvxFontItem(aAppFont.GetFamily(),aAppFont.GetName(),"",PITCH_DONTKNOW,RTL_TEXTENCODING_DONTKNOW,EE_CHAR_FONTINFO));
+        s_pAnnotationPool->SetPoolDefaultItem(SvxFontItem(aAppFont.GetFamilyType(),aAppFont.GetFamilyName(),"",PITCH_DONTKNOW,RTL_TEXTENCODING_DONTKNOW,EE_CHAR_FONTINFO));
     }
 
-    return mpAnnotationPool;
+    return s_pAnnotationPool;
 }
 
 static SfxBindings* getBindings( ViewShellBase& rBase )
@@ -396,6 +396,7 @@ void AnnotationManagerImpl::InsertAnnotation()
         // set current author to new annotation
         SvtUserOptions aUserOptions;
         xAnnotation->setAuthor( aUserOptions.GetFullName() );
+        xAnnotation->setInitials( aUserOptions.GetID() );
 
         // set current time to new annotation
         xAnnotation->setDateTime( getCurrentDateTime() );
@@ -426,7 +427,7 @@ void AnnotationManagerImpl::ExecuteReplyToAnnotation( SfxRequest& rReq )
     TextApiObject* pTextApi = getTextApiObject( xAnnotation );
     if( pTextApi )
     {
-        std::unique_ptr< ::Outliner > pOutliner( new ::Outliner(GetAnnotationPool(),OUTLINERMODE_TEXTOBJECT) );
+        std::unique_ptr< ::Outliner > pOutliner( new ::Outliner(GetAnnotationPool(),OutlinerMode::TextObject) );
 
         mpDoc->SetCalcFieldValueHdl( pOutliner.get() );
         pOutliner->SetUpdateMode( true );
@@ -467,6 +468,7 @@ void AnnotationManagerImpl::ExecuteReplyToAnnotation( SfxRequest& rReq )
 
         SvtUserOptions aUserOptions;
         xAnnotation->setAuthor( aUserOptions.GetFullName() );
+        xAnnotation->setInitials( aUserOptions.GetID() );
 
         // set current time to reply
         xAnnotation->setDateTime( getCurrentDateTime() );
@@ -476,7 +478,7 @@ void AnnotationManagerImpl::ExecuteReplyToAnnotation( SfxRequest& rReq )
     }
 }
 
-void AnnotationManagerImpl::DeleteAnnotation( Reference< XAnnotation > xAnnotation )
+void AnnotationManagerImpl::DeleteAnnotation( const Reference< XAnnotation >& xAnnotation )
 {
     SdPage* pPage = GetCurrentPage();
 
@@ -717,7 +719,7 @@ void AnnotationManagerImpl::onTagDeselected( AnnotationTag& rTag )
     }
 }
 
-void AnnotationManagerImpl::SelectAnnotation( css::uno::Reference< css::office::XAnnotation > xAnnotation, bool bEdit /* = sal_False */ )
+void AnnotationManagerImpl::SelectAnnotation( const css::uno::Reference< css::office::XAnnotation >& xAnnotation, bool bEdit /* = sal_False */ )
 {
     mxSelectedAnnotation = xAnnotation;
 
@@ -899,7 +901,7 @@ IMPL_LINK_TYPED(AnnotationManagerImpl,EventMultiplexerListener,
     }
 }
 
-void AnnotationManagerImpl::ExecuteAnnotationContextMenu( Reference< XAnnotation > xAnnotation, vcl::Window* pParent, const Rectangle& rContextRect, bool bButtonMenu /* = false */ )
+void AnnotationManagerImpl::ExecuteAnnotationContextMenu( const Reference< XAnnotation >& xAnnotation, vcl::Window* pParent, const Rectangle& rContextRect, bool bButtonMenu /* = false */ )
 {
     SfxDispatcher* pDispatcher( getDispatcher( mrBase ) );
     if( !pDispatcher )
@@ -957,7 +959,7 @@ void AnnotationManagerImpl::ExecuteAnnotationContextMenu( Reference< XAnnotation
             }
             if ( aSet.GetItemState( EE_CHAR_UNDERLINE ) == SfxItemState::SET )
             {
-                if( static_cast<const SvxUnderlineItem&>(aSet.Get( EE_CHAR_UNDERLINE )).GetLineStyle() != UNDERLINE_NONE )
+                if( static_cast<const SvxUnderlineItem&>(aSet.Get( EE_CHAR_UNDERLINE )).GetLineStyle() != LINESTYLE_NONE )
                     pMenu->CheckItem( SID_ATTR_CHAR_UNDERLINE );
             }
 
@@ -994,25 +996,45 @@ void AnnotationManagerImpl::ExecuteAnnotationContextMenu( Reference< XAnnotation
         }
     }
 
+    AnnotationWindow* pParentAnnotationWindow = dynamic_cast< AnnotationWindow* >( pParent );
+
+    if(pParentAnnotationWindow)
+    {
+        // tdf#99388 make known that PopupMenu is active at parent
+        // to allow suppressing closing of that window if needed
+        pParentAnnotationWindow->setPopupMenuActive(true);
+    }
+
     nId = pMenu->Execute( pParent, rContextRect, PopupMenuFlags::ExecuteDown|PopupMenuFlags::NoMouseUpClose );
+
+    if(pParentAnnotationWindow)
+    {
+        // tdf#99388 reset flag, need to be done before reacting
+        // since closing it is one possible reaction
+        pParentAnnotationWindow->setPopupMenuActive(false);
+    }
+
     switch( nId )
     {
     case SID_REPLYTO_POSTIT:
     {
         const SfxUnoAnyItem aItem( SID_REPLYTO_POSTIT, Any( xAnnotation ) );
-        pDispatcher->Execute( SID_REPLYTO_POSTIT, SfxCallMode::ASYNCHRON, &aItem, 0 );
+        pDispatcher->ExecuteList(SID_REPLYTO_POSTIT,
+                SfxCallMode::ASYNCHRON, { &aItem });
         break;
     }
     case SID_DELETE_POSTIT:
     {
         const SfxUnoAnyItem aItem( SID_DELETE_POSTIT, Any( xAnnotation ) );
-        pDispatcher->Execute( SID_DELETE_POSTIT, SfxCallMode::ASYNCHRON, &aItem, 0 );
+        pDispatcher->ExecuteList(SID_DELETE_POSTIT, SfxCallMode::ASYNCHRON,
+                { &aItem });
         break;
     }
     case SID_DELETEALLBYAUTHOR_POSTIT:
     {
         const SfxStringItem aItem( SID_DELETEALLBYAUTHOR_POSTIT, sAuthor );
-        pDispatcher->Execute( SID_DELETEALLBYAUTHOR_POSTIT, SfxCallMode::ASYNCHRON, &aItem, 0 );
+        pDispatcher->ExecuteList( SID_DELETEALLBYAUTHOR_POSTIT,
+                SfxCallMode::ASYNCHRON, { &aItem });
         break;
     }
     case SID_DELETEALL_POSTIT:
@@ -1039,7 +1061,7 @@ Color AnnotationManagerImpl::GetColor(sal_uInt16 aAuthorIndex)
             COL_AUTHOR4_NORMAL,     COL_AUTHOR5_NORMAL,     COL_AUTHOR6_NORMAL,
             COL_AUTHOR7_NORMAL,     COL_AUTHOR8_NORMAL,     COL_AUTHOR9_NORMAL };
 
-        return Color( aArrayNormal[ aAuthorIndex % (sizeof( aArrayNormal )/ sizeof( aArrayNormal[0] ))]);
+        return Color( aArrayNormal[ aAuthorIndex % SAL_N_ELEMENTS( aArrayNormal ) ] );
     }
 
     return Color(COL_WHITE);
@@ -1054,7 +1076,7 @@ Color AnnotationManagerImpl::GetColorLight(sal_uInt16 aAuthorIndex)
             COL_AUTHOR4_LIGHT,      COL_AUTHOR5_LIGHT,      COL_AUTHOR6_LIGHT,
             COL_AUTHOR7_LIGHT,      COL_AUTHOR8_LIGHT,      COL_AUTHOR9_LIGHT };
 
-        return Color( aArrayLight[ aAuthorIndex % (sizeof( aArrayLight )/ sizeof( aArrayLight[0] ))]);
+        return Color( aArrayLight[ aAuthorIndex % SAL_N_ELEMENTS( aArrayLight ) ] );
     }
 
     return Color(COL_WHITE);
@@ -1069,7 +1091,7 @@ Color AnnotationManagerImpl::GetColorDark(sal_uInt16 aAuthorIndex)
             COL_AUTHOR4_DARK,       COL_AUTHOR5_DARK,       COL_AUTHOR6_DARK,
             COL_AUTHOR7_DARK,       COL_AUTHOR8_DARK,       COL_AUTHOR9_DARK };
 
-        return Color( aArrayAnkor[  aAuthorIndex % (sizeof( aArrayAnkor )   / sizeof( aArrayAnkor[0] ))]);
+        return Color( aArrayAnkor[  aAuthorIndex % SAL_N_ELEMENTS( aArrayAnkor ) ] );
     }
 
     return Color(COL_WHITE);

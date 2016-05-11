@@ -55,8 +55,6 @@
 
 using namespace com::sun::star;
 using namespace com::sun::star::sheet;
-using ::com::sun::star::uno::Reference;
-using ::com::sun::star::uno::Any;
 using ::std::unique_ptr;
 
 #define SC_DPSAVEMODE_DONTKNOW 2
@@ -66,7 +64,7 @@ static void lcl_SetBoolProperty( const uno::Reference<beans::XPropertySet>& xPro
 {
     //TODO: move to ScUnoHelpFunctions?
 
-    xProp->setPropertyValue( rName, uno::Any( &bValue, cppu::UnoType<bool>::get() ) );
+    xProp->setPropertyValue( rName, uno::Any( bValue ) );
 }
 
 ScDPSaveMember::ScDPSaveMember(const OUString& rName) :
@@ -564,26 +562,22 @@ void ScDPSaveDimension::WriteToSource( const uno::Reference<uno::XInterface>& xD
     if ( xDimProp.is() )
     {
         // exceptions are caught at ScDPSaveData::WriteToSource
-        uno::Any aAny;
 
         sheet::DataPilotFieldOrientation eOrient = (sheet::DataPilotFieldOrientation)nOrientation;
-        aAny <<= eOrient;
-        xDimProp->setPropertyValue( SC_UNO_DP_ORIENTATION, aAny );
+        xDimProp->setPropertyValue( SC_UNO_DP_ORIENTATION, uno::Any(eOrient) );
 
         sheet::GeneralFunction eFunc = (sheet::GeneralFunction)nFunction;
-        aAny <<= eFunc;
-        xDimProp->setPropertyValue( SC_UNO_DP_FUNCTION, aAny );
+        xDimProp->setPropertyValue( SC_UNO_DP_FUNCTION, uno::Any(eFunc) );
 
         if ( nUsedHierarchy >= 0 )
         {
-            aAny <<= (sal_Int32)nUsedHierarchy;
-            xDimProp->setPropertyValue( SC_UNO_DP_USEDHIERARCHY, aAny );
+            xDimProp->setPropertyValue( SC_UNO_DP_USEDHIERARCHY, uno::Any((sal_Int32)nUsedHierarchy) );
         }
 
         if ( pReferenceValue )
         {
-            aAny <<= *pReferenceValue;
-            xDimProp->setPropertyValue( SC_UNO_DP_REFVALUE, aAny );
+            ;
+            xDimProp->setPropertyValue( SC_UNO_DP_REFVALUE, uno::Any(*pReferenceValue) );
         }
 
         if (mpLayoutName)
@@ -633,7 +627,6 @@ void ScDPSaveDimension::WriteToSource( const uno::Reference<uno::XInterface>& xD
             OSL_ENSURE( xLevProp.is(), "no properties at level" );
             if ( xLevProp.is() )
             {
-                uno::Any aAny;
                 if ( !bSubTotalDefault )
                 {
                     if ( !pSubTotalFuncs )
@@ -643,8 +636,7 @@ void ScDPSaveDimension::WriteToSource( const uno::Reference<uno::XInterface>& xD
                     sheet::GeneralFunction* pArray = aSeq.getArray();
                     for (long i=0; i<nSubTotalCount; i++)
                         pArray[i] = (sheet::GeneralFunction)pSubTotalFuncs[i];
-                    aAny <<= aSeq;
-                    xLevProp->setPropertyValue( SC_UNO_DP_SUBTOTAL, aAny );
+                    xLevProp->setPropertyValue( SC_UNO_DP_SUBTOTAL, uno::Any(aSeq) );
                 }
                 if ( nShowEmptyMode != SC_DPSAVEMODE_DONTKNOW )
                     lcl_SetBoolProperty( xLevProp,
@@ -895,7 +887,7 @@ const OUString* ScDPSaveData::GetGrandTotalName() const
 
 namespace {
 
-class DimOrderInserter : std::unary_function<const ScDPSaveDimension*, void>
+class DimOrderInserter : public std::unary_function<const ScDPSaveDimension*, void>
 {
     ScDPSaveData::DimOrderType& mrNames;
 public:
@@ -1043,10 +1035,10 @@ ScDPSaveDimension* ScDPSaveData::GetInnermostDimension(sal_uInt16 nOrientation)
     // return the innermost dimension for the given orientation,
     // excluding data layout dimension
 
-    for (auto const& iter : m_DimList)
+    for (auto iter = m_DimList.rbegin(); iter != m_DimList.rend(); ++iter)
     {
-        if (iter->GetOrientation() == nOrientation && !iter->IsDataLayout())
-            return &(*iter);
+        if ((*iter)->GetOrientation() == nOrientation && !(*iter)->IsDataLayout())
+            return iter->get();
     }
 
     return nullptr;
@@ -1150,9 +1142,7 @@ static void lcl_ResetOrient( const uno::Reference<sheet::XDimensionsSupplier>& x
         uno::Reference<beans::XPropertySet> xDimProp( xIntDim, uno::UNO_QUERY );
         if (xDimProp.is())
         {
-            uno::Any aAny;
-            aAny <<= eOrient;
-            xDimProp->setPropertyValue( SC_UNO_DP_ORIENTATION, aAny );
+            xDimProp->setPropertyValue( SC_UNO_DP_ORIENTATION, uno::Any(eOrient) );
         }
     }
 }
@@ -1368,8 +1358,8 @@ void ScDPSaveData::BuildAllDimensionMembers(ScDPTableData* pData)
 
         long nDimIndex = itr->second;
         const std::vector<SCROW>& rMembers = pData->GetColumnEntries(nDimIndex);
-        size_t mMemberCount = rMembers.size();
-        for (size_t j = 0; j < mMemberCount; ++j)
+        size_t nMemberCount = rMembers.size();
+        for (size_t j = 0; j < nMemberCount; ++j)
         {
             const ScDPItemData* pMemberData = pData->GetMemberById( nDimIndex, rMembers[j] );
             OUString aMemName = pData->GetFormattedString(nDimIndex, *pMemberData);
@@ -1499,25 +1489,6 @@ ScDPSaveDimension* ScDPSaveData::AppendNewDimension(const OUString& rName, bool 
 void ScDPSaveData::DimensionsChanged()
 {
     mpDimOrder.reset();
-}
-
-bool operator == (const css::sheet::DataPilotFieldSortInfo &l, const css::sheet::DataPilotFieldSortInfo &r )
-{
-    return l.Field == r.Field && l.IsAscending == r.IsAscending && l.Mode == r.Mode;
-}
-bool operator == (const css::sheet::DataPilotFieldAutoShowInfo &l, const css::sheet::DataPilotFieldAutoShowInfo &r )
-{
-    return l.IsEnabled == r.IsEnabled &&
-        l.ShowItemsMode == r.ShowItemsMode &&
-        l.ItemCount == r.ItemCount &&
-        l.DataField == r.DataField;
-}
-bool operator == (const css::sheet::DataPilotFieldReference &l, const css::sheet::DataPilotFieldReference &r )
-{
-    return l.ReferenceType == r.ReferenceType &&
-        l.ReferenceField == r.ReferenceField &&
-        l.ReferenceItemType == r.ReferenceItemType &&
-        l.ReferenceItemName == r.ReferenceItemName;
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -43,6 +43,7 @@
 #include <editeng/flstitem.hxx>
 #include <editeng/justifyitem.hxx>
 #include <sal/macros.h>
+#include <vcl/fontcharmap.hxx>
 #include "document.hxx"
 #include "docpool.hxx"
 #include "attrib.hxx"
@@ -207,9 +208,9 @@ void XclImpFont::SetFontData( const XclFontData& rFontData, bool bHasCharSet )
             {
                 if( const FontList* pFontList = pInfoItem->GetFontList() )
                 {
-                    vcl::FontInfo aFontInfo( pFontList->Get( maData.maName, maData.maStyle ) );
-                    maData.SetScWeight( aFontInfo.GetWeight() );
-                    maData.SetScPosture( aFontInfo.GetItalic() );
+                    FontMetric aFontMetric( pFontList->Get( maData.maName, maData.maStyle ) );
+                    maData.SetScWeight( aFontMetric.GetWeight() );
+                    maData.SetScPosture( aFontMetric.GetItalic() );
                 }
             }
         }
@@ -461,41 +462,39 @@ void XclImpFont::GuessScriptType()
     if( OutputDevice* pPrinter = GetPrinter() )
     {
         vcl::Font aFont( maData.maName, Size( 0, 10 ) );
-        FontCharMapPtr pCharMap;
+        FontCharMapPtr xFontCharMap;
 
         pPrinter->SetFont( aFont );
-        if( pPrinter->GetFontCharMap( pCharMap ) )
+        if( pPrinter->GetFontCharMap( xFontCharMap ) )
         {
             // CJK fonts
             mbHasAsian =
-                pCharMap->HasChar( 0x3041 ) ||   // 3040-309F: Hiragana
-                pCharMap->HasChar( 0x30A1 ) ||   // 30A0-30FF: Katakana
-                pCharMap->HasChar( 0x3111 ) ||   // 3100-312F: Bopomofo
-                pCharMap->HasChar( 0x3131 ) ||   // 3130-318F: Hangul Compatibility Jamo
-                pCharMap->HasChar( 0x3301 ) ||   // 3300-33FF: CJK Compatibility
-                pCharMap->HasChar( 0x3401 ) ||   // 3400-4DBF: CJK Unified Ideographs Extension A
-                pCharMap->HasChar( 0x4E01 ) ||   // 4E00-9FAF: CJK Unified Ideographs
-                pCharMap->HasChar( 0x7E01 ) ||   // 4E00-9FAF: CJK unified ideographs
-                pCharMap->HasChar( 0xA001 ) ||   // A001-A48F: Yi Syllables
-                pCharMap->HasChar( 0xAC01 ) ||   // AC00-D7AF: Hangul Syllables
-                pCharMap->HasChar( 0xCC01 ) ||   // AC00-D7AF: Hangul Syllables
-                pCharMap->HasChar( 0xF901 ) ||   // F900-FAFF: CJK Compatibility Ideographs
-                pCharMap->HasChar( 0xFF71 );     // FF00-FFEF: Halfwidth/Fullwidth Forms
+                xFontCharMap->HasChar( 0x3041 ) ||   // 3040-309F: Hiragana
+                xFontCharMap->HasChar( 0x30A1 ) ||   // 30A0-30FF: Katakana
+                xFontCharMap->HasChar( 0x3111 ) ||   // 3100-312F: Bopomofo
+                xFontCharMap->HasChar( 0x3131 ) ||   // 3130-318F: Hangul Compatibility Jamo
+                xFontCharMap->HasChar( 0x3301 ) ||   // 3300-33FF: CJK Compatibility
+                xFontCharMap->HasChar( 0x3401 ) ||   // 3400-4DBF: CJK Unified Ideographs Extension A
+                xFontCharMap->HasChar( 0x4E01 ) ||   // 4E00-9FAF: CJK Unified Ideographs
+                xFontCharMap->HasChar( 0x7E01 ) ||   // 4E00-9FAF: CJK unified ideographs
+                xFontCharMap->HasChar( 0xA001 ) ||   // A001-A48F: Yi Syllables
+                xFontCharMap->HasChar( 0xAC01 ) ||   // AC00-D7AF: Hangul Syllables
+                xFontCharMap->HasChar( 0xCC01 ) ||   // AC00-D7AF: Hangul Syllables
+                xFontCharMap->HasChar( 0xF901 ) ||   // F900-FAFF: CJK Compatibility Ideographs
+                xFontCharMap->HasChar( 0xFF71 );     // FF00-FFEF: Halfwidth/Fullwidth Forms
             // CTL fonts
             mbHasCmplx =
-                pCharMap->HasChar( 0x05D1 ) ||   // 0590-05FF: Hebrew
-                pCharMap->HasChar( 0x0631 ) ||   // 0600-06FF: Arabic
-                pCharMap->HasChar( 0x0721 ) ||   // 0700-074F: Syriac
-                pCharMap->HasChar( 0x0911 ) ||   // 0900-0DFF: Indic scripts
-                pCharMap->HasChar( 0x0E01 ) ||   // 0E00-0E7F: Thai
-                pCharMap->HasChar( 0xFB21 ) ||   // FB1D-FB4F: Hebrew Presentation Forms
-                pCharMap->HasChar( 0xFB51 ) ||   // FB50-FDFF: Arabic Presentation Forms-A
-                pCharMap->HasChar( 0xFE71 );     // FE70-FEFF: Arabic Presentation Forms-B
+                xFontCharMap->HasChar( 0x05D1 ) ||   // 0590-05FF: Hebrew
+                xFontCharMap->HasChar( 0x0631 ) ||   // 0600-06FF: Arabic
+                xFontCharMap->HasChar( 0x0721 ) ||   // 0700-074F: Syriac
+                xFontCharMap->HasChar( 0x0911 ) ||   // 0900-0DFF: Indic scripts
+                xFontCharMap->HasChar( 0x0E01 ) ||   // 0E00-0E7F: Thai
+                xFontCharMap->HasChar( 0xFB21 ) ||   // FB1D-FB4F: Hebrew Presentation Forms
+                xFontCharMap->HasChar( 0xFB51 ) ||   // FB50-FDFF: Arabic Presentation Forms-A
+                xFontCharMap->HasChar( 0xFE71 );     // FE70-FEFF: Arabic Presentation Forms-B
             // Western fonts
-            mbHasWstrn = (!mbHasAsian && !mbHasCmplx) || pCharMap->HasChar( 'A' );
+            mbHasWstrn = (!mbHasAsian && !mbHasCmplx) || xFontCharMap->HasChar( 'A' );
         }
-
-        pCharMap = nullptr;
     }
 }
 
@@ -1353,7 +1352,7 @@ void XclImpXF::ApplyPatternToAttrList(
             {
                 ScStyleSheet* pStyleSheet = static_cast<ScStyleSheet*>(
                     pStylePool->Find(
-                        ScGlobal::GetRscString(STR_STYLENAME_STANDARD), SFX_STYLE_FAMILY_PARA));
+                        ScGlobal::GetRscString(STR_STYLENAME_STANDARD), SfxStyleFamily::Para));
 
                 if (pStyleSheet)
                     rPat.SetStyleSheet(pStyleSheet, false);
@@ -1399,7 +1398,7 @@ void XclImpXF::ApplyPatternToAttrList(
 
 void XclImpXF::ApplyPattern(
         SCCOL nScCol1, SCROW nScRow1, SCCOL nScCol2, SCROW nScRow2,
-        SCTAB nScTab, sal_uLong nForceScNumFmt )
+        SCTAB nScTab )
 {
     // force creation of cell style and hard formatting, do it here to have mpStyleSheet
     const ScPatternAttr& rPattern = CreatePattern();
@@ -1411,13 +1410,6 @@ void XclImpXF::ApplyPattern(
     if( HasUsedFlags() )
         rDoc.ApplyPatternAreaTab( nScCol1, nScRow1, nScCol2, nScRow2, nScTab, rPattern );
 
-    // #108770# apply special number format
-    if( nForceScNumFmt != NUMBERFORMAT_ENTRY_NOT_FOUND )
-    {
-        ScPatternAttr aPattern( GetDoc().GetPool() );
-        GetNumFmtBuffer().FillScFmtToItemSet( aPattern.GetItemSet(), nForceScNumFmt );
-        rDoc.ApplyPatternAreaTab( nScCol1, nScRow1, nScCol2, nScRow2, nScTab, aPattern );
-    }
 }
 
 /*static*/ void XclImpXF::ApplyPatternForBiff2CellFormat( const XclImpRoot& rRoot,
@@ -1522,7 +1514,7 @@ ScStyleSheet* XclImpStyle::CreateStyleSheet()
             if( pXF ) pXF->SetAllUsedFlags( true );
             // use existing "Default" style sheet
             mpStyleSheet = static_cast< ScStyleSheet* >( GetStyleSheetPool().Find(
-                ScGlobal::GetRscString( STR_STYLENAME_STANDARD ), SFX_STYLE_FAMILY_PARA ) );
+                ScGlobal::GetRscString( STR_STYLENAME_STANDARD ), SfxStyleFamily::Para ) );
             OSL_ENSURE( mpStyleSheet, "XclImpStyle::CreateStyleSheet - Default style not found" );
             bCreatePattern = true;
         }
@@ -1531,10 +1523,10 @@ ScStyleSheet* XclImpStyle::CreateStyleSheet()
             /*  #i103281# do not create another style sheet of the same name,
                 if it exists already. This is needed to prevent that styles
                 pasted from clipboard get duplicated over and over. */
-            mpStyleSheet = static_cast< ScStyleSheet* >( GetStyleSheetPool().Find( maFinalName, SFX_STYLE_FAMILY_PARA ) );
+            mpStyleSheet = static_cast< ScStyleSheet* >( GetStyleSheetPool().Find( maFinalName, SfxStyleFamily::Para ) );
             if( !mpStyleSheet )
             {
-                mpStyleSheet = &static_cast< ScStyleSheet& >( GetStyleSheetPool().Make( maFinalName, SFX_STYLE_FAMILY_PARA, SFXSTYLEBIT_USERDEF ) );
+                mpStyleSheet = &static_cast< ScStyleSheet& >( GetStyleSheetPool().Make( maFinalName, SfxStyleFamily::Para, SFXSTYLEBIT_USERDEF ) );
                 bCreatePattern = true;
             }
         }
@@ -1622,7 +1614,7 @@ void XclImpXFBuffer::CreateUserStyles()
         for styles in different sheets with the same name. Assuming that the
         BIFF4W import filter is never used to import from clipboard... */
     bool bReserveAll = (GetBiff() == EXC_BIFF4) && (GetCurrScTab() > 0);
-    SfxStyleSheetIterator aStyleIter( GetDoc().GetStyleSheetPool(), SFX_STYLE_FAMILY_PARA );
+    SfxStyleSheetIterator aStyleIter( GetDoc().GetStyleSheetPool(), SfxStyleFamily::Para );
     OUString aStandardName = ScGlobal::GetRscString( STR_STYLENAME_STANDARD );
     for( SfxStyleSheetBase* pStyleSheet = aStyleIter.First(); pStyleSheet; pStyleSheet = aStyleIter.Next() )
         if( (pStyleSheet->GetName() != aStandardName) && (bReserveAll || !pStyleSheet->IsUserDefined()) )

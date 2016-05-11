@@ -40,7 +40,6 @@
 #include <com/sun/star/beans/NamedValue.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/container/XEnumerationAccess.hpp>
-#include <com/sun/star/drawing/XDrawPage.hpp>
 #include <com/sun/star/lang/XInitialization.hpp>
 #include <com/sun/star/presentation/EffectNodeType.hpp>
 #include <com/sun/star/presentation/EffectCommands.hpp>
@@ -86,15 +85,11 @@ using ::com::sun::star::container::XEnumerationAccess;
 using ::com::sun::star::container::XEnumeration;
 using ::com::sun::star::beans::NamedValue;
 using ::com::sun::star::container::XChild;
-using ::com::sun::star::container::XElementAccess;
 using ::com::sun::star::drawing::XShape;
 using ::com::sun::star::lang::XInitialization;
-using ::com::sun::star::drawing::XShapes;
-using ::com::sun::star::drawing::XDrawPage;
 using ::com::sun::star::text::XText;
 using ::com::sun::star::text::XTextRange;
 using ::com::sun::star::beans::XPropertySet;
-using ::com::sun::star::lang::XMultiServiceFactory;
 using ::com::sun::star::util::XCloneable;
 using ::com::sun::star::lang::Locale;
 using ::com::sun::star::util::XChangesNotifier;
@@ -338,7 +333,7 @@ sal_Int32 CustomAnimationEffect::getNumberOfSubitems( const Any& aTarget, sal_In
                     {
                         for( nPos = 0; nPos < nEndPos; nPos++ )
                         {
-                            nPos = xBI->getWordBoundary(aText, nPos, aLocale, i18n::WordType::ANY_WORD, sal_True).endPos;
+                            nPos = xBI->getWordBoundary(aText, nPos, aLocale, i18n::WordType::ANY_WORD, true).endPos;
                             nSubItems++;
                         }
                         break;
@@ -1285,6 +1280,7 @@ Any CustomAnimationEffect::getColor( sal_Int32 nIndex )
                     case AnimationNodeType::ANIMATE:
                         if( !implIsColorAttribute( xAnimate->getAttributeName() ) )
                             break;
+                        SAL_FALLTHROUGH;
                     case AnimationNodeType::ANIMATECOLOR:
                         Sequence<Any> aValues( xAnimate->getValues() );
                         if( aValues.hasElements() )
@@ -1331,6 +1327,7 @@ void CustomAnimationEffect::setColor( sal_Int32 nIndex, const Any& rColor )
                     case AnimationNodeType::ANIMATE:
                         if( !implIsColorAttribute( xAnimate->getAttributeName() ) )
                             break;
+                        SAL_FALLTHROUGH;
                     case AnimationNodeType::ANIMATECOLOR:
                     {
                         Sequence<Any> aValues( xAnimate->getValues() );
@@ -1477,7 +1474,7 @@ bool CustomAnimationEffect::setTransformationProperty( sal_Int32 nTransformType,
     return bChanged;
 }
 
-void CustomAnimationEffect::createAudio( const css::uno::Any& rSource, double fVolume /* = 1.0 */ )
+void CustomAnimationEffect::createAudio( const css::uno::Any& rSource )
 {
     DBG_ASSERT( !mxAudio.is(), "sd::CustomAnimationEffect::createAudio(), node already has an audio!" );
 
@@ -1486,7 +1483,7 @@ void CustomAnimationEffect::createAudio( const css::uno::Any& rSource, double fV
         Reference< XComponentContext > xContext( ::comphelper::getProcessComponentContext() );
         Reference< XAudio > xAudio( Audio::create( xContext ) );
         xAudio->setSource( rSource );
-        xAudio->setVolume( fVolume );
+        xAudio->setVolume( 1.0 );
         setAudio( xAudio );
     }
     catch( Exception& )
@@ -1603,8 +1600,8 @@ SdrPathObj* CustomAnimationEffect::createSdrPathObjFromPath()
 
 void CustomAnimationEffect::updateSdrPathObjFromPath( SdrPathObj& rPathObj )
 {
-    ::basegfx::B2DPolyPolygon xPolyPoly;
-    if( ::basegfx::tools::importFromSvgD( xPolyPoly, getPath(), true, nullptr ) )
+    ::basegfx::B2DPolyPolygon aPolyPoly;
+    if( ::basegfx::tools::importFromSvgD( aPolyPoly, getPath(), true, nullptr ) )
     {
         SdrObject* pObj = GetSdrObjectFromXShape( getTargetShape() );
         if( pObj )
@@ -1613,21 +1610,21 @@ void CustomAnimationEffect::updateSdrPathObjFromPath( SdrPathObj& rPathObj )
             if( pPage )
             {
                 const Size aPageSize( pPage->GetSize() );
-                xPolyPoly.transform(basegfx::tools::createScaleB2DHomMatrix((double)aPageSize.Width(), (double)aPageSize.Height()));
+                aPolyPoly.transform(basegfx::tools::createScaleB2DHomMatrix((double)aPageSize.Width(), (double)aPageSize.Height()));
             }
 
             const Rectangle aBoundRect( pObj->GetCurrentBoundRect() );
             const Point aCenter( aBoundRect.Center() );
-            xPolyPoly.transform(basegfx::tools::createTranslateB2DHomMatrix(aCenter.X(), aCenter.Y()));
+            aPolyPoly.transform(basegfx::tools::createTranslateB2DHomMatrix(aCenter.X(), aCenter.Y()));
         }
     }
 
-    rPathObj.SetPathPoly( xPolyPoly );
+    rPathObj.SetPathPoly( aPolyPoly );
 }
 
 void CustomAnimationEffect::updatePathFromSdrPathObj( const SdrPathObj& rPathObj )
 {
-    ::basegfx::B2DPolyPolygon xPolyPoly( rPathObj.GetPathPoly() );
+    ::basegfx::B2DPolyPolygon aPolyPoly( rPathObj.GetPathPoly() );
 
     SdrObject* pObj = GetSdrObjectFromXShape( getTargetShape() );
     if( pObj )
@@ -1647,18 +1644,18 @@ void CustomAnimationEffect::updatePathFromSdrPathObj( const SdrPathObj& rPathObj
 
         const Point aCenter( aBoundRect.Center() );
 
-        xPolyPoly.transform(basegfx::tools::createTranslateB2DHomMatrix(-aCenter.X(), -aCenter.Y()));
+        aPolyPoly.transform(basegfx::tools::createTranslateB2DHomMatrix(-aCenter.X(), -aCenter.Y()));
 
         SdrPage* pPage = pObj->GetPage();
         if( pPage )
         {
             const Size aPageSize( pPage->GetSize() );
-            xPolyPoly.transform(basegfx::tools::createScaleB2DHomMatrix(
+            aPolyPoly.transform(basegfx::tools::createScaleB2DHomMatrix(
                 1.0 / (double)aPageSize.Width(), 1.0 / (double)aPageSize.Height()));
         }
     }
 
-    setPath( ::basegfx::tools::exportToSvgD( xPolyPoly, true, true, true) );
+    setPath( ::basegfx::tools::exportToSvgD( aPolyPoly, true, true, true) );
 }
 
 EffectSequenceHelper::EffectSequenceHelper()
@@ -1737,17 +1734,16 @@ CustomAnimationEffectPtr EffectSequenceHelper::append( const CustomAnimationPres
             }
 
             // check target, maybe we need to force it to text
-            Any aTarget( rTarget );
             sal_Int16 nSubItem = ShapeAnimationSubType::AS_WHOLE;
 
-            if( aTarget.getValueType() == ::cppu::UnoType<ParagraphTarget>::get() )
+            if( rTarget.getValueType() == ::cppu::UnoType<ParagraphTarget>::get() )
             {
                 nSubItem = ShapeAnimationSubType::ONLY_TEXT;
             }
             else if( pPreset->isTextOnly() )
             {
                 Reference< XShape > xShape;
-                aTarget >>= xShape;
+                rTarget >>= xShape;
                 if( xShape.is() )
                 {
                     // thats bad, we target a shape here but the effect is only for text
@@ -1759,7 +1755,7 @@ CustomAnimationEffectPtr EffectSequenceHelper::append( const CustomAnimationPres
             // now create effect from preset
             pEffect.reset( new CustomAnimationEffect( xNode ) );
             pEffect->setEffectSequence( this );
-            pEffect->setTarget( aTarget );
+            pEffect->setTarget( rTarget );
             pEffect->setTargetSubItem( nSubItem );
             if( fDuration != -1.0 )
                 pEffect->setDuration( fDuration );
@@ -1992,7 +1988,7 @@ stl_CustomAnimationEffect_search_node_predict::stl_CustomAnimationEffect_search_
 {
 }
 
-bool stl_CustomAnimationEffect_search_node_predict::operator()( CustomAnimationEffectPtr pEffect ) const
+bool stl_CustomAnimationEffect_search_node_predict::operator()( const CustomAnimationEffectPtr& pEffect ) const
 {
     return pEffect->getNode() == mxSearchNode;
 }
@@ -2299,9 +2295,9 @@ void CustomAnimationTextGroup::reset()
     mfGroupingAuto = -1.0;
     mnLastPara = -1; // used to check for TextReverse
 
-    for (int i = 0; i < PARA_LEVELS; ++i)
+    for (sal_Int8 & rn : mnDepthFlags)
     {
-        mnDepthFlags[i] = 0;
+        rn = 0;
     }
 
     maEffects.clear();
@@ -2450,7 +2446,7 @@ CustomAnimationTextGroupPtr EffectSequenceHelper::createTextGroup( CustomAnimati
     return pTextGroup;
 }
 
-void EffectSequenceHelper::createTextGroupParagraphEffects( CustomAnimationTextGroupPtr pTextGroup, CustomAnimationEffectPtr pEffect, bool bUsed )
+void EffectSequenceHelper::createTextGroupParagraphEffects( const CustomAnimationTextGroupPtr& pTextGroup, const CustomAnimationEffectPtr& pEffect, bool bUsed )
 {
     Reference< XShape > xTarget( pTextGroup->maTarget );
 
@@ -2543,7 +2539,7 @@ void EffectSequenceHelper::createTextGroupParagraphEffects( CustomAnimationTextG
     }
 }
 
-void EffectSequenceHelper::setTextGrouping( CustomAnimationTextGroupPtr pTextGroup, sal_Int32 nTextGrouping )
+void EffectSequenceHelper::setTextGrouping( const CustomAnimationTextGroupPtr& pTextGroup, sal_Int32 nTextGrouping )
 {
     if( pTextGroup->mnTextGrouping == nTextGrouping )
     {
@@ -2623,7 +2619,7 @@ void EffectSequenceHelper::setTextGrouping( CustomAnimationTextGroupPtr pTextGro
     }
 }
 
-void EffectSequenceHelper::setAnimateForm( CustomAnimationTextGroupPtr pTextGroup, bool bAnimateForm )
+void EffectSequenceHelper::setAnimateForm( const CustomAnimationTextGroupPtr& pTextGroup, bool bAnimateForm )
 {
     if( pTextGroup->mbAnimateForm == bAnimateForm )
     {
@@ -2695,7 +2691,7 @@ void EffectSequenceHelper::setAnimateForm( CustomAnimationTextGroupPtr pTextGrou
     }
 }
 
-void EffectSequenceHelper::setTextGroupingAuto( CustomAnimationTextGroupPtr pTextGroup, double fTextGroupingAuto )
+void EffectSequenceHelper::setTextGroupingAuto( const CustomAnimationTextGroupPtr& pTextGroup, double fTextGroupingAuto )
 {
     sal_Int32 nTextGrouping = pTextGroup->mnTextGrouping;
 
@@ -2772,7 +2768,7 @@ bool ImplStlTextGroupSortHelper::operator()( const CustomAnimationEffectPtr& p1,
     }
 }
 
-void EffectSequenceHelper::setTextReverse( CustomAnimationTextGroupPtr pTextGroup, bool bTextReverse )
+void EffectSequenceHelper::setTextReverse( const CustomAnimationTextGroupPtr& pTextGroup, bool bTextReverse )
 {
     if( pTextGroup->mbTextReverse == bTextReverse )
     {

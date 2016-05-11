@@ -25,7 +25,7 @@
 #include <svl/eitem.hxx>
 #include <svl/itemset.hxx>
 #include <vcl/toolbox.hxx>
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 #include <vcl/menubtn.hxx>
 #include <svtools/valueset.hxx>
 #include <svtools/ctrlbox.hxx>
@@ -55,6 +55,7 @@
 #include <com/sun/star/lang/XServiceInfo.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/frame/status/ItemStatus.hpp>
+#include <com/sun/star/util/XNumberFormatsSupplier.hpp>
 #include <svx/dialogs.hrc>
 #include <svx/svxitems.hrc>
 #include "helpid.hrc"
@@ -92,6 +93,8 @@
 #include <svx/xlnclit.hxx>
 #include <svx/xfillit0.hxx>
 #include <svx/xflclit.hxx>
+#include <svl/currencytable.hxx>
+#include <svtools/langtab.hxx>
 
 #define MAX_MRU_FONTNAME_ENTRIES    5
 
@@ -113,6 +116,7 @@ SFX_IMPL_TOOLBOX_CONTROL( SvxFontNameToolBoxControl, SvxFontItem );
 SFX_IMPL_TOOLBOX_CONTROL( SvxFrameToolBoxControl, SvxBoxItem );
 SFX_IMPL_TOOLBOX_CONTROL( SvxFrameLineStyleToolBoxControl, SvxLineItem );
 SFX_IMPL_TOOLBOX_CONTROL( SvxSimpleUndoRedoController, SfxStringItem );
+SFX_IMPL_TOOLBOX_CONTROL( SvxCurrencyToolBoxControl, SfxUInt32Item );
 
 class SvxStyleBox_Impl : public ComboBox
 {
@@ -255,7 +259,6 @@ private:
 protected:
     virtual void    Resize() override;
     virtual bool    Close() override;
-    virtual vcl::Window* GetPreferredKeyInputWindow() override;
     virtual void    GetFocus() override;
 
 public:
@@ -281,13 +284,35 @@ private:
 protected:
     virtual void    Resize() override;
     virtual bool    Close() override;
-    virtual vcl::Window* GetPreferredKeyInputWindow() override;
     virtual void    GetFocus() override;
-    virtual void    DataChanged( const DataChangedEvent& rDCEvt ) override;
 public:
     SvxLineWindow_Impl( sal_uInt16 nId, const Reference< XFrame >& rFrame, vcl::Window* pParentWindow );
     virtual ~SvxLineWindow_Impl() { disposeOnce(); }
     virtual void dispose() override { m_aLineStyleLb.disposeAndClear(); SfxPopupWindow::dispose(); }
+};
+
+class SvxCurrencyToolBoxControl;
+class SvxCurrencyList_Impl : public SfxPopupWindow
+{
+private:
+    VclPtr<ListBox> m_pCurrencyLb;
+    rtl::Reference<SvxCurrencyToolBoxControl> m_xControl;
+    OUString&       m_rSelectedFormat;
+    LanguageType&   m_eSelectedLanguage;
+
+    std::vector<OUString> m_aFormatEntries;
+    LanguageType          m_eFormatLanguage;
+    DECL_LINK_TYPED( SelectHdl, ListBox&, void );
+
+public:
+    SvxCurrencyList_Impl( sal_uInt16 nId, const Reference< XFrame >& rxFrame,
+                          vcl::Window* pParentWindow,
+                          const Reference< css::uno::XComponentContext >& rxContext,
+                          SvxCurrencyToolBoxControl *pControl,
+                          OUString&     rSelectFormat,
+                          LanguageType& eSelectLanguage );
+    virtual ~SvxCurrencyList_Impl() { disposeOnce(); }
+    virtual void dispose() override;
 };
 
 class SvxStyleToolBoxControl;
@@ -373,7 +398,7 @@ void SvxStyleBox_Impl::ReleaseFocus()
 
 IMPL_LINK_TYPED( SvxStyleBox_Impl, MenuSelectHdl, Menu*, pMenu, bool)
 {
-    OUString sEntry = OUString( GetSelectEntry() );
+    OUString sEntry = GetSelectEntry();
     ReleaseFocus(); // It must be after getting entry pos!
     Sequence< PropertyValue > aArgs( 2 );
     aArgs[0].Name   = "Param";
@@ -578,10 +603,10 @@ bool SvxStyleBox_Impl::AdjustFontForItemHeight(OutputDevice* pDevice, Rectangle&
         // the text does not fit, adjust the font size
         double ratio = static_cast< double >( nHeight ) / rTextRect.Bottom();
         vcl::Font aFont(pDevice->GetFont());
-        Size aPixelSize(aFont.GetSize());
+        Size aPixelSize(aFont.GetFontSize());
         aPixelSize.Width() *= ratio;
         aPixelSize.Height() *= ratio;
-        aFont.SetSize(aPixelSize);
+        aFont.SetFontSize(aPixelSize);
         pDevice->SetFont(aFont);
         return true;
     }
@@ -657,9 +682,9 @@ void SvxStyleBox_Impl::SetupEntry(vcl::RenderContext& rRenderContext, vcl::Windo
 
                 // setup the font properties
                 SvxFont aFont;
-                aFont.SetName(pFontItem->GetFamilyName());
+                aFont.SetFamilyName(pFontItem->GetFamilyName());
                 aFont.SetStyleName(pFontItem->GetStyleName());
-                aFont.SetSize(aPixelSize);
+                aFont.SetFontSize(aPixelSize);
 
                 const SfxPoolItem *pItem = pItemSet->GetItem( SID_ATTR_CHAR_WEIGHT );
                 if ( pItem )
@@ -687,7 +712,7 @@ void SvxStyleBox_Impl::SetupEntry(vcl::RenderContext& rRenderContext, vcl::Windo
 
                 pItem = pItemSet->GetItem( SID_ATTR_CHAR_OVERLINE );
                 if ( pItem )
-                    aFont.SetOverline( static_cast< FontUnderline >( static_cast< const SvxOverlineItem* >( pItem )->GetValue() ) );
+                    aFont.SetOverline( static_cast< FontLineStyle >( static_cast< const SvxOverlineItem* >( pItem )->GetValue() ) );
 
                 pItem = pItemSet->GetItem( SID_ATTR_CHAR_STRIKEOUT );
                 if ( pItem )
@@ -840,7 +865,7 @@ IMPL_LINK_TYPED(SvxStyleBox_Impl, CalcOptimalExtraUserWidth, VclWindowEvent&, ev
 // return is always the Font-Color
 //        when both light or dark, change the Contrast
 //        in other case do not change the origin color
-//        when the color is R=G=B=128 the DecreaseContast make 128 the need a exception
+//        when the color is R=G=B=128 the DecreaseContrast make 128 the need a exception
 Color SvxStyleBox_Impl::TestColorsVisible(const Color &FontCol, const Color &BackCol)
 {
     const sal_uInt8  ChgVal = 60;       // increase/decrease the Contrast
@@ -858,7 +883,6 @@ Color SvxStyleBox_Impl::TestColorsVisible(const Color &FontCol, const Color &Bac
 
     return retCol;
 }
-
 
 
 static bool lcl_GetDocFontList( const FontList** ppFontList, SvxFontNameBox_Impl* pBox )
@@ -1000,13 +1024,13 @@ void SvxFontNameBox_Impl::Update( const SvxFontItem* pFontItem )
 {
     if ( pFontItem )
     {
-        aCurFont.SetName        ( pFontItem->GetFamilyName() );
+        aCurFont.SetFamilyName  ( pFontItem->GetFamilyName() );
         aCurFont.SetFamily      ( pFontItem->GetFamily() );
         aCurFont.SetStyleName   ( pFontItem->GetStyleName() );
         aCurFont.SetPitch       ( pFontItem->GetPitch() );
         aCurFont.SetCharSet     ( pFontItem->GetCharSet() );
     }
-    OUString aCurName = aCurFont.GetName();
+    OUString aCurName = aCurFont.GetFamilyName();
     if ( GetText() != aCurName )
         SetText( aCurName );
 }
@@ -1140,15 +1164,15 @@ void SvxFontNameBox_Impl::UserDraw( const UserDrawEvent& rUDEvt )
              fontName = GetEntry(rUDEvt.GetItemId());
         }
         Sequence< PropertyValue > aArgs( 1 );
-        vcl::FontInfo aInfo( pFontList->Get( fontName,
+        FontMetric aFontMetric( pFontList->Get( fontName,
             aCurFont.GetWeight(),
             aCurFont.GetItalic() ) );
 
-        SvxFontItem aFontItem( aInfo.GetFamily(),
-            aInfo.GetName(),
-            aInfo.GetStyleName(),
-            aInfo.GetPitch(),
-            aInfo.GetCharSet(),
+        SvxFontItem aFontItem( aFontMetric.GetFamilyType(),
+            aFontMetric.GetFamilyName(),
+            aFontMetric.GetStyleName(),
+            aFontMetric.GetPitch(),
+            aFontMetric.GetCharSet(),
             SID_ATTR_CHAR_FONT );
         aFontItem.QueryValue( aArgs[0].Value );
         aArgs[0].Name   = "CharPreviewFontName";
@@ -1166,16 +1190,16 @@ void SvxFontNameBox_Impl::Select()
     std::unique_ptr<SvxFontItem> pFontItem;
     if ( pFontList )
     {
-        vcl::FontInfo aInfo( pFontList->Get( GetText(),
+        FontMetric aFontMetric( pFontList->Get( GetText(),
             aCurFont.GetWeight(),
             aCurFont.GetItalic() ) );
-        aCurFont = aInfo;
+        aCurFont = aFontMetric;
 
-        pFontItem.reset( new SvxFontItem( aInfo.GetFamily(),
-            aInfo.GetName(),
-            aInfo.GetStyleName(),
-            aInfo.GetPitch(),
-            aInfo.GetCharSet(),
+        pFontItem.reset( new SvxFontItem( aFontMetric.GetFamilyType(),
+            aFontMetric.GetFamilyName(),
+            aFontMetric.GetStyleName(),
+            aFontMetric.GetPitch(),
+            aFontMetric.GetCharSet(),
             SID_ATTR_CHAR_FONT ) );
 
         Any a;
@@ -1632,11 +1656,6 @@ void SvxFrameWindow_Impl::dispose()
     SfxPopupWindow::dispose();
 }
 
-vcl::Window* SvxFrameWindow_Impl::GetPreferredKeyInputWindow()
-{
-    return aFrameSet.get();
-}
-
 void SvxFrameWindow_Impl::GetFocus()
 {
     if (aFrameSet)
@@ -1841,6 +1860,72 @@ static Color lcl_mediumColor( Color aMain, Color /*aDefault*/ )
     return SvxBorderLine::threeDMediumColor( aMain );
 }
 
+SvxCurrencyList_Impl::SvxCurrencyList_Impl(
+    sal_uInt16 nId, const Reference< XFrame >& rxFrame,
+    vcl::Window* pParentWindow,
+    const Reference< XComponentContext >& rxContext,
+    SvxCurrencyToolBoxControl *pControl,
+    OUString& rSelectedFormat,
+    LanguageType& eSelectedLanguage ) :
+    SfxPopupWindow( nId, rxFrame, pParentWindow, WinBits( WB_STDPOPUP | WB_OWNERDRAWDECORATION | WB_AUTOSIZE | WB_3DLOOK ) ),
+    m_pCurrencyLb( VclPtr<ListBox>::Create(this) ),
+    m_xControl( pControl ),
+    m_rSelectedFormat( rSelectedFormat ),
+    m_eSelectedLanguage( eSelectedLanguage )
+{
+    m_pCurrencyLb->setPosSizePixel( 2, 2, 300, 140 );
+    SetOutputSizePixel( Size( 304, 144 ) );
+
+    std::vector< OUString > aList;
+    std::vector< sal_uInt16 > aCurrencyList;
+    const NfCurrencyTable& rCurrencyTable = SvNumberFormatter::GetTheCurrencyTable();
+    sal_uInt16 nLen = rCurrencyTable.size();
+
+    SvNumberFormatter aFormatter( rxContext, LANGUAGE_SYSTEM );
+    m_eFormatLanguage = aFormatter.GetLanguage();
+
+    SvxCurrencyToolBoxControl::GetCurrencySymbols( aList, true, aCurrencyList );
+
+    sal_uInt16 nPos = 0, nCount = 0;
+    sal_Int32 nSelectedPos = -1;
+    bool bIsSymbol;
+    NfWSStringsDtor aStringsDtor;
+
+    for( std::vector< OUString >::iterator i = aList.begin(); i != aList.end(); ++i, ++nCount )
+    {
+        sal_uInt16& rCurrencyIndex = aCurrencyList[ nCount ];
+        if ( rCurrencyIndex < nLen )
+        {
+            m_pCurrencyLb->InsertEntry( *i );
+            const NfCurrencyEntry& aCurrencyEntry = rCurrencyTable[ rCurrencyIndex ];
+
+            if ( nPos < nLen )
+                bIsSymbol = false;
+            else
+                bIsSymbol = true;
+
+            sal_uInt16 nDefaultFormat = aFormatter.GetCurrencyFormatStrings( aStringsDtor, aCurrencyEntry, bIsSymbol );
+            const OUString& rFormatStr = aStringsDtor[ nDefaultFormat ];
+            m_aFormatEntries.push_back( rFormatStr );
+            if( rFormatStr == m_rSelectedFormat )
+                nSelectedPos = nPos;
+            ++nPos;
+        }
+    }
+    m_pCurrencyLb->SetSelectHdl( LINK( this, SvxCurrencyList_Impl, SelectHdl ) );
+    SetText( SVX_RESSTR( RID_SVXSTR_TBLAFMT_CURRENCY ) );
+    if ( nSelectedPos >= 0 )
+        m_pCurrencyLb->SelectEntryPos( nSelectedPos );
+    m_pCurrencyLb->Show();
+}
+
+void SvxCurrencyList_Impl::dispose()
+{
+    m_xControl.clear();
+    m_pCurrencyLb.disposeAndClear();
+    SfxPopupWindow::dispose();
+}
+
 SvxLineWindow_Impl::SvxLineWindow_Impl( sal_uInt16 nId, const Reference< XFrame >& rFrame, vcl::Window* pParentWindow ) :
 
     SfxPopupWindow( nId, rFrame, pParentWindow, WinBits( WB_STDPOPUP | WB_OWNERDRAWDECORATION | WB_AUTOSIZE ) ),
@@ -1897,6 +1982,20 @@ SvxLineWindow_Impl::SvxLineWindow_Impl( sal_uInt16 nId, const Reference< XFrame 
     m_aLineStyleLb->Show();
 }
 
+IMPL_LINK_NOARG_TYPED(SvxCurrencyList_Impl, SelectHdl, ListBox&, void)
+{
+    if ( IsInPopupMode() )
+        EndPopupMode();
+
+    if (!m_xControl.is())
+        return;
+
+    m_rSelectedFormat = m_aFormatEntries[ m_pCurrencyLb->GetSelectEntryPos() ];
+    m_eSelectedLanguage = m_eFormatLanguage;
+
+    m_xControl->Select( m_pCurrencyLb->GetSelectEntryPos() + 1 );
+}
+
 IMPL_LINK_NOARG_TYPED(SvxLineWindow_Impl, SelectHdl, ListBox&, void)
 {
     SvxLineItem     aLineItem( SID_FRAME_LINESTYLE );
@@ -1936,26 +2035,10 @@ bool SvxLineWindow_Impl::Close()
     return SfxPopupWindow::Close();
 }
 
-vcl::Window* SvxLineWindow_Impl::GetPreferredKeyInputWindow()
-{
-    return m_aLineStyleLb.get();
-}
-
 void SvxLineWindow_Impl::GetFocus()
 {
-    m_aLineStyleLb->GrabFocus();
-}
-
-void SvxLineWindow_Impl::DataChanged( const DataChangedEvent& rDCEvt )
-{
-    SfxPopupWindow::DataChanged( rDCEvt );
-#if 0
-    if( ( rDCEvt.GetType() == DataChangedEventType::SETTINGS ) && ( rDCEvt.GetFlags() & AllSettingsFlags::STYLE ) )
-    {
-        CreateBitmaps();
-        Invalidate();
-    }
-#endif
+    if ( m_aLineStyleLb )
+        m_aLineStyleLb->GrabFocus();
 }
 
 SfxStyleControllerItem_Impl::SfxStyleControllerItem_Impl(
@@ -2012,7 +2095,7 @@ struct SvxStyleToolBoxControl::Impl
 
 
     }
-    void InitializeStyles(Reference < frame::XModel > xModel)
+    void InitializeStyles(const Reference < frame::XModel >& xModel)
     {
         //now convert the default style names to the localized names
         try
@@ -2064,7 +2147,7 @@ struct SvxStyleToolBoxControl::Impl
                 };
                 Reference<container::XNameAccess> xCellStyles;
                 xStylesSupplier->getStyleFamilies()->getByName("CellStyles") >>= xCellStyles;
-                for( sal_uInt32 nStyle = 0; nStyle < sizeof( aCalcStyles ) / sizeof( sal_Char*); ++nStyle )
+                for( sal_uInt32 nStyle = 0; nStyle < SAL_N_ELEMENTS(aCalcStyles); ++nStyle )
                 {
                     try
                     {
@@ -2190,16 +2273,16 @@ SfxStyleFamily SvxStyleToolBoxControl::GetActFamily()
 {
     switch ( nActFamily-1 + SID_STYLE_FAMILY_START )
     {
-        case SID_STYLE_FAMILY1: return SFX_STYLE_FAMILY_CHAR;
-        case SID_STYLE_FAMILY2: return SFX_STYLE_FAMILY_PARA;
-        case SID_STYLE_FAMILY3: return SFX_STYLE_FAMILY_FRAME;
-        case SID_STYLE_FAMILY4: return SFX_STYLE_FAMILY_PAGE;
-        case SID_STYLE_FAMILY5: return SFX_STYLE_FAMILY_PSEUDO;
+        case SID_STYLE_FAMILY1: return SfxStyleFamily::Char;
+        case SID_STYLE_FAMILY2: return SfxStyleFamily::Para;
+        case SID_STYLE_FAMILY3: return SfxStyleFamily::Frame;
+        case SID_STYLE_FAMILY4: return SfxStyleFamily::Page;
+        case SID_STYLE_FAMILY5: return SfxStyleFamily::Pseudo;
         default:
             OSL_FAIL( "unknown style family" );
             break;
     }
-    return SFX_STYLE_FAMILY_PARA;
+    return SfxStyleFamily::Para;
 }
 
 void SvxStyleToolBoxControl::FillStyleBox()
@@ -2460,7 +2543,7 @@ VclPtr<vcl::Window> SvxStyleToolBoxControl::CreateItemWindow( vcl::Window *pPare
 {
     VclPtrInstance<SvxStyleBox_Impl> pBox( pParent,
                                            OUString( ".uno:StyleApply" ),
-                                           SFX_STYLE_FAMILY_PARA,
+                                           SfxStyleFamily::Para,
                                            Reference< XDispatchProvider >( m_xFrame->getController(), UNO_QUERY ),
                                            m_xFrame,
                                            pImpl->aClearForm,
@@ -2611,7 +2694,7 @@ SvxColorToolBoxControl::~SvxColorToolBoxControl()
 {
 }
 
-void SvxColorToolBoxControl::setColorSelectFunction(ColorSelectFunction aColorSelectFunction)
+void SvxColorToolBoxControl::setColorSelectFunction(const ColorSelectFunction& aColorSelectFunction)
 {
     maColorSelectFunction = aColorSelectFunction;
     mPaletteManager.SetColorSelectFunction(aColorSelectFunction);
@@ -2905,6 +2988,82 @@ void SvxSimpleUndoRedoController::StateChanged( sal_uInt16, SfxItemState eState,
     rBox.EnableItem( GetId(), eState != SfxItemState::DISABLED );
 }
 
+SvxCurrencyToolBoxControl::SvxCurrencyToolBoxControl( sal_uInt16 nSlotId, sal_uInt16 nId, ToolBox& rBox ) :
+    SfxToolBoxControl( nSlotId, nId, rBox ),
+    m_eLanguage( Application::GetSettings().GetLanguageTag().getLanguageType() ),
+    m_nFormatKey( NUMBERFORMAT_ENTRY_NOT_FOUND )
+{
+    rBox.SetItemBits( nId, rBox.GetItemBits( nId ) | ToolBoxItemBits::DROPDOWN );
+}
+
+SvxCurrencyToolBoxControl::~SvxCurrencyToolBoxControl() {}
+
+VclPtr<SfxPopupWindow> SvxCurrencyToolBoxControl::CreatePopupWindow()
+{
+    VclPtr<SvxCurrencyList_Impl> xCurrencyWin =
+        VclPtr<SvxCurrencyList_Impl>::Create( GetSlotId(), m_xFrame,
+                                              &GetToolBox(), getContext(),
+                                              this, m_aFormatString,
+                                              m_eLanguage );
+    xCurrencyWin->StartPopupMode( &GetToolBox(),
+                              FloatWinPopupFlags::GrabFocus |
+                              FloatWinPopupFlags::AllowTearOff |
+                              FloatWinPopupFlags::NoAppFocusClose );
+    SetPopupWindow( xCurrencyWin );
+
+    return xCurrencyWin;
+}
+
+void SvxCurrencyToolBoxControl::Select( sal_uInt16 nSelectModifier )
+{
+    sal_uInt32 nFormatKey;
+    if (m_aFormatString.isEmpty())
+        nFormatKey = NUMBERFORMAT_ENTRY_NOT_FOUND;
+    else
+    {
+        if ( nSelectModifier > 0 )
+        {
+            try
+            {
+                uno::Reference< util::XNumberFormatsSupplier > xRef( m_xFrame->getController()->getModel(), uno::UNO_QUERY );
+                uno::Reference< util::XNumberFormats > rxNumberFormats( xRef->getNumberFormats(), uno::UNO_QUERY_THROW );
+                css::lang::Locale aLocale = LanguageTag::convertToLocale( m_eLanguage );
+                nFormatKey = rxNumberFormats->queryKey( m_aFormatString, aLocale, false );
+                if ( nFormatKey == NUMBERFORMAT_ENTRY_NOT_FOUND )
+                    nFormatKey = rxNumberFormats->addNew( m_aFormatString, aLocale );
+                }
+                catch( const uno::Exception& )
+                {
+                    nFormatKey = m_nFormatKey;
+                }
+        }
+        else
+            nFormatKey = m_nFormatKey;
+    }
+
+    Sequence< PropertyValue > aArgs( 1 );
+    aArgs[0].Name = "NumberFormatCurrency";
+    if( nFormatKey != NUMBERFORMAT_ENTRY_NOT_FOUND )
+    {
+        aArgs[0].Value = makeAny( nFormatKey );
+        m_nFormatKey = nFormatKey;
+    }
+    SfxToolBoxControl::Dispatch( Reference< XDispatchProvider >( m_xFrame->getController(), UNO_QUERY ),
+                                 ".uno:NumberFormatCurrency",
+                                 aArgs );
+}
+
+void SvxCurrencyToolBoxControl::StateChanged(
+    sal_uInt16, SfxItemState eState, const SfxPoolItem* )
+{
+    sal_uInt16                  nId     = GetId();
+    ToolBox&                    rTbx    = GetToolBox();
+
+    rTbx.EnableItem( nId, SfxItemState::DISABLED != eState );
+    rTbx.SetItemState( nId, (SfxItemState::DONTCARE == eState)
+                            ? TRISTATE_INDET
+                            : TRISTATE_FALSE );
+}
 
 
 static void lcl_CalcSizeValueSet( vcl::Window &rWin, ValueSet &rValueSet, const Size &aItemSize )
@@ -2919,6 +3078,82 @@ Reference< css::accessibility::XAccessible > SvxFontNameBox_Impl::CreateAccessib
 {
     FillList();
     return FontNameBox::CreateAccessible();
+}
+
+//static
+void SvxCurrencyToolBoxControl::GetCurrencySymbols( std::vector<OUString>& rList, bool bFlag,
+                                                    std::vector<sal_uInt16>& rCurrencyList )
+{
+    rCurrencyList.clear();
+
+    const NfCurrencyTable& rCurrencyTable = SvNumberFormatter::GetTheCurrencyTable();
+    sal_uInt16 nCount = rCurrencyTable.size();
+
+    sal_uInt16 nStart = 1;
+
+    OUString aString( ApplyLreOrRleEmbedding( rCurrencyTable[0].GetSymbol() ) );
+    aString += " ";
+    aString += ApplyLreOrRleEmbedding( SvtLanguageTable::GetLanguageString(
+                                       rCurrencyTable[0].GetLanguage() ) );
+
+    rList.push_back( aString );
+    sal_uInt16 nAuto = ( sal_uInt16 )-1;
+    rCurrencyList.push_back( nAuto );
+
+    if( bFlag )
+    {
+        rList.push_back( aString );
+        rCurrencyList.push_back( 0 );
+        ++nStart;
+    }
+
+    CollatorWrapper aCollator( ::comphelper::getProcessComponentContext() );
+    aCollator.loadDefaultCollator( Application::GetSettings().GetLanguageTag().getLocale(), 0 );
+
+    const OUString aTwoSpace("  ");
+
+    for( sal_uInt16 i = 1; i < nCount; ++i )
+    {
+        OUString aStr( ApplyLreOrRleEmbedding( rCurrencyTable[i].GetBankSymbol() ) );
+        aStr += aTwoSpace;
+        aStr += ApplyLreOrRleEmbedding( rCurrencyTable[i].GetSymbol() );
+        aStr += aTwoSpace;
+        aStr += ApplyLreOrRleEmbedding( SvtLanguageTable::GetLanguageString(
+                                        rCurrencyTable[i].GetLanguage() ) );
+
+        sal_uInt16 j = nStart;
+        for( ; j < rList.size(); ++j )
+            if ( aCollator.compareString( aStr, rList[j] ) < 0 )
+                break;  // insert before first greater than
+
+        rList.insert( rList.begin() + j, aStr );
+        rCurrencyList.insert( rCurrencyList.begin() + j, i );
+    }
+
+    // Append ISO codes to symbol list.
+    // XXX If this is to be changed, various other places would had to be
+    // adapted that assume this order!
+    sal_uInt16 nCont = rList.size();
+
+    for ( sal_uInt16 i = 1; i < nCount; ++i )
+    {
+        bool bInsert = true;
+        OUString aStr( ApplyLreOrRleEmbedding( rCurrencyTable[i].GetBankSymbol() ) );
+
+        sal_uInt16 j = nCont;
+        for ( ; j < rList.size() && bInsert; ++j )
+        {
+            if( rList[j] == aStr )
+                bInsert = false;
+            else if ( aCollator.compareString( aStr, rList[j] ) < 0 )
+                break;  // insert before first greater than
+        }
+        if ( bInsert )
+        {
+            rList.insert( rList.begin() + j, aStr );
+            rCurrencyList.insert( rCurrencyList.begin() + j, i );
+        }
+    }
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

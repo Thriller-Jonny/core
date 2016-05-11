@@ -204,10 +204,8 @@ SchXMLPlotAreaContext::SchXMLPlotAreaContext(
             xProp->setPropertyValue("HasZAxis", aFalseBool );
             xProp->setPropertyValue("HasZAxisDescription", aFalseBool );
 
-            uno::Any aAny;
             chart::ChartDataRowSource eSource = chart::ChartDataRowSource_COLUMNS;
-            aAny <<= eSource;
-            xProp->setPropertyValue("DataRowSource", aAny );
+            xProp->setPropertyValue("DataRowSource", uno::Any(eSource) );
         }
         catch( const beans::UnknownPropertyException & )
         {
@@ -282,12 +280,8 @@ void SchXMLPlotAreaContext::StartElement( const uno::Reference< xml::sax::XAttri
         {
             try
             {
-                uno::Any aAny;
-                aAny <<= mrColHasLabels;
-                xDocProp->setPropertyValue("DataSourceLabelsInFirstColumn", aAny );
-
-                aAny <<= mrRowHasLabels;
-                xDocProp->setPropertyValue("DataSourceLabelsInFirstRow", aAny );
+                xDocProp->setPropertyValue("DataSourceLabelsInFirstColumn", uno::Any(mrColHasLabels) );
+                xDocProp->setPropertyValue("DataSourceLabelsInFirstRow", uno::Any(mrRowHasLabels) );
             }
             catch( const beans::UnknownPropertyException & )
             {
@@ -655,7 +649,7 @@ void SchXMLDataPointContext::StartElement( const uno::Reference< xml::sax::XAttr
     mrIndex += nRepeat;
 }
 
-SchXMLPositonAttributesHelper::SchXMLPositonAttributesHelper( SvXMLImport& rImporter )
+SchXMLPositionAttributesHelper::SchXMLPositionAttributesHelper( SvXMLImport& rImporter )
     : m_rImport( rImporter )
     , m_aPosition(0,0)
     , m_aSize(0,0)
@@ -668,32 +662,29 @@ SchXMLPositonAttributesHelper::SchXMLPositonAttributesHelper( SvXMLImport& rImpo
 {
 }
 
-SchXMLPositonAttributesHelper::~SchXMLPositonAttributesHelper()
+SchXMLPositionAttributesHelper::~SchXMLPositionAttributesHelper()
 {
 }
 
-bool SchXMLPositonAttributesHelper::hasSize() const
+bool SchXMLPositionAttributesHelper::hasSize() const
 {
     return m_bHasSizeWidth && m_bHasSizeHeight;
 }
-bool SchXMLPositonAttributesHelper::hasPosition() const
+bool SchXMLPositionAttributesHelper::hasPosition() const
 {
     return m_bHasPositionX && m_bHasPositionY;
 }
-bool SchXMLPositonAttributesHelper::hasPosSize() const
+bool SchXMLPositionAttributesHelper::hasPosSize() const
 {
     return hasPosition() && hasSize();
 }
-bool SchXMLPositonAttributesHelper::isAutomatic() const
+bool SchXMLPositionAttributesHelper::isAutomatic() const
 {
     return m_bAutoSize || m_bAutoPosition;
 }
 
-bool SchXMLPositonAttributesHelper::readPositioningAttribute( sal_uInt16 nPrefix, const OUString& rLocalName, const OUString& rValue )
+void SchXMLPositionAttributesHelper::readPositioningAttribute( sal_uInt16 nPrefix, const OUString& rLocalName, const OUString& rValue )
 {
-    //returns true if the attribute was proccessed
-    bool bReturn = true;
-
     if( XML_NAMESPACE_SVG == nPrefix )
     {
         if( IsXMLToken( rLocalName, XML_X ) )
@@ -720,16 +711,10 @@ bool SchXMLPositonAttributesHelper::readPositioningAttribute( sal_uInt16 nPrefix
                     m_aSize.Height, rValue );
             m_bHasSizeHeight = true;
         }
-        else
-            bReturn = false;
     }
-    else
-        bReturn = false;
-
-    return bReturn;
 }
 
-void SchXMLPositonAttributesHelper::readAutomaticPositioningProperties( XMLPropStyleContext* pPropStyleContext, const SvXMLStylesContext* pStylesCtxt )
+void SchXMLPositionAttributesHelper::readAutomaticPositioningProperties( XMLPropStyleContext* pPropStyleContext, const SvXMLStylesContext* pStylesCtxt )
 {
     if( pPropStyleContext && pStylesCtxt )
     {
@@ -745,7 +730,7 @@ SchXMLCoordinateRegionContext::SchXMLCoordinateRegionContext(
           SvXMLImport& rImport
         , sal_uInt16 nPrefix
         , const OUString& rLocalName
-        , SchXMLPositonAttributesHelper& rPositioning )
+        , SchXMLPositionAttributesHelper& rPositioning )
         : SvXMLImportContext( rImport, nPrefix, rLocalName )
         , m_rPositioning( rPositioning )
 {
@@ -986,7 +971,7 @@ SchXMLStatisticsObjectContext::~SchXMLStatisticsObjectContext()
 
 namespace {
 
-void SetErrorBarStyleProperties( const OUString& rStyleName, uno::Reference< beans::XPropertySet > xBarProp,
+void SetErrorBarStyleProperties( const OUString& rStyleName, const uno::Reference< beans::XPropertySet >& xBarProp,
                                         SchXMLImportHelper& rImportHelper )
 {
     const SvXMLStylesContext* pStylesCtxt = rImportHelper.GetAutoStylesContext();
@@ -999,7 +984,7 @@ void SetErrorBarStyleProperties( const OUString& rStyleName, uno::Reference< bea
     rSeriesStyleContext.FillPropertySet( xBarProp );
 }
 
-void SetErrorBarPropertiesFromStyleName( const OUString& aStyleName, uno::Reference< beans::XPropertySet> xBarProp,
+void SetErrorBarPropertiesFromStyleName( const OUString& aStyleName, const uno::Reference< beans::XPropertySet>& xBarProp,
                                             SchXMLImportHelper& rImportHelper, OUString& aPosRange, OUString& aNegRange)
 {
     const SvXMLStylesContext* pStylesCtxt = rImportHelper.GetAutoStylesContext();
@@ -1161,8 +1146,8 @@ void SchXMLStatisticsObjectContext::StartElement( const uno::Reference< xml::sax
                     xBarProp->setPropertyValue("PositiveError",uno::makeAny(static_cast<double>(0.0)));
                     xBarProp->setPropertyValue("NegativeError",uno::makeAny(static_cast<double>(0.0)));
                     xBarProp->setPropertyValue("Weight",uno::makeAny(static_cast<double>(1.0)));
-                    xBarProp->setPropertyValue("ShowPositiveError",uno::makeAny(sal_True));
-                    xBarProp->setPropertyValue("ShowNegativeError",uno::makeAny(sal_True));
+                    xBarProp->setPropertyValue("ShowPositiveError",uno::makeAny(true));
+                    xBarProp->setPropertyValue("ShowNegativeError",uno::makeAny(true));
 
                     // first import defaults from parent style
                     SetErrorBarStyleProperties( maSeriesStyleName, xBarProp, mrImportHelper );

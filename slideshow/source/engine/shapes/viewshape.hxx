@@ -26,9 +26,6 @@
 #include <basegfx/range/b2drectangle.hxx>
 #include <basegfx/polygon/b2dpolygon.hxx>
 
-#include <boost/shared_ptr.hpp>
-#include <boost/noncopyable.hpp>
-
 #include "tools.hxx"
 #include "shapeattributelayer.hxx"
 #include "animatedsprite.hxx"
@@ -36,6 +33,7 @@
 #include "doctreenode.hxx"
 
 #include <vector>
+#include <memory>
 
 
 namespace slideshow
@@ -48,7 +46,7 @@ namespace slideshow
             The class is able to render the associated XShape on
             View implementations.
          */
-        class ViewShape : private boost::noncopyable
+        class ViewShape
         {
         public:
             /** Create a ViewShape for the given View
@@ -58,9 +56,14 @@ namespace slideshow
              */
             explicit ViewShape( const ViewLayerSharedPtr& rViewLayer );
 
+            ///Forbid copy construction
+            ViewShape(const ViewShape&) = delete;
+            /// Forbid copy assignment
+            ViewShape& operator=(const ViewShape&) = delete;
+
             /** Query the associated view layer of this shape
              */
-            ViewLayerSharedPtr getViewLayer() const;
+            const ViewLayerSharedPtr& getViewLayer() const;
 
             /** Query dimension of a safety border around the shape for AA
 
@@ -219,7 +222,7 @@ namespace slideshow
                 {
                 }
 
-                ::cppcanvas::CanvasSharedPtr getDestinationCanvas() const
+                const ::cppcanvas::CanvasSharedPtr& getDestinationCanvas() const
                 {
                     return mpDestinationCanvas;
                 }
@@ -314,7 +317,7 @@ namespace slideshow
             mutable bool                                mbForceUpdate;
         };
 
-        typedef ::boost::shared_ptr< ViewShape > ViewShapeSharedPtr;
+        typedef ::std::shared_ptr< ViewShape > ViewShapeSharedPtr;
 
     }
 }

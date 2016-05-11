@@ -18,7 +18,6 @@
  */
 
 
-
 //  File:       ooofilt.cxx
 //  Contents:   Filter Implementation for OpenOffice.Org Document using
 //              Indexing Service
@@ -29,10 +28,10 @@
 
 //  Platform:   Windows 2000, Windows XP
 
-#include "internal/contentreader.hxx"
-#include "internal/metainforeader.hxx"
-#include "internal/registry.hxx"
-#include "internal/fileextensions.hxx"
+#include "contentreader.hxx"
+#include "metainforeader.hxx"
+#include "registry.hxx"
+#include "fileextensions.hxx"
 
 
 //  Include file    Purpose
@@ -67,7 +66,7 @@
 using ::std::min;
 #endif
 
-#include "internal/stream_helper.hxx"
+#include "stream_helper.hxx"
 
 //C-------------------------------------------------------------------------
 //  Class:      COooFilter
@@ -957,7 +956,6 @@ STDAPI DllRegisterServer()
 {
     return S_OK;
 }
-
 
 
 STDAPI DllUnregisterServer()

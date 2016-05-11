@@ -87,10 +87,8 @@ namespace DOM
 
     };
 
-    CDocumentBuilder::CDocumentBuilder(
-            Reference< XMultiServiceFactory > const& xFactory)
-        : m_xFactory(xFactory)
-        , m_xEntityResolver(new CDefaultEntityResolver())
+    CDocumentBuilder::CDocumentBuilder()
+        : m_xEntityResolver(new CDefaultEntityResolver())
     {
         // init libxml. libxml will protect itself against multiple
         // initializations so there is no problem here if this gets
@@ -98,9 +96,9 @@ namespace DOM
         xmlInitParser();
     }
 
-    Reference< XInterface > CDocumentBuilder::_getInstance(const Reference< XMultiServiceFactory >& rSMgr)
+    Reference< XInterface > CDocumentBuilder::_getInstance(const Reference< XMultiServiceFactory >& )
     {
-        return static_cast< XDocumentBuilder* >(new CDocumentBuilder(rSMgr));
+        return static_cast< XDocumentBuilder* >(new CDocumentBuilder);
     }
 
     const char* CDocumentBuilder::aImplementationName = "com.sun.star.comp.xml.dom.DocumentBuilder";
@@ -151,13 +149,13 @@ namespace DOM
     sal_Bool SAL_CALL CDocumentBuilder::isNamespaceAware()
         throw (RuntimeException, std::exception)
     {
-        return sal_True;
+        return true;
     }
 
     sal_Bool SAL_CALL CDocumentBuilder::isValidating()
         throw (RuntimeException, std::exception)
     {
-        return sal_False;
+        return false;
     }
 
     Reference< XDocument > SAL_CALL CDocumentBuilder::newDocument()

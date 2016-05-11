@@ -21,7 +21,6 @@
 #include <wrtsh.hxx>
 #include <view.hxx>
 #include <viewopt.hxx>
-#include <crsskip.hxx>
 
 /**
    Always:
@@ -128,7 +127,7 @@ bool SwWrtShell::Right( sal_uInt16 nMode, bool bSelect,
     }
 }
 
-bool SwWrtShell::Up( bool bSelect, sal_uInt16 nCount, bool bBasicCall )
+bool SwWrtShell::Up( bool bSelect, bool bBasicCall )
 {
     if ( !bSelect && !bBasicCall && IsCursorReadonly()  && !GetViewOptions()->IsSelectionInReadonly())
     {
@@ -139,10 +138,10 @@ bool SwWrtShell::Up( bool bSelect, sal_uInt16 nCount, bool bBasicCall )
     }
 
     ShellMoveCursor aTmp( this, bSelect );
-    return SwCursorShell::Up( nCount );
+    return SwCursorShell::Up();
 }
 
-bool SwWrtShell::Down( bool bSelect, sal_uInt16 nCount, bool bBasicCall )
+bool SwWrtShell::Down( bool bSelect, bool bBasicCall )
 {
     if ( !bSelect && !bBasicCall && IsCursorReadonly() && !GetViewOptions()->IsSelectionInReadonly())
     {
@@ -154,7 +153,7 @@ bool SwWrtShell::Down( bool bSelect, sal_uInt16 nCount, bool bBasicCall )
     }
 
     ShellMoveCursor aTmp( this, bSelect );
-    return SwCursorShell::Down( nCount );
+    return SwCursorShell::Down();
 }
 
 bool SwWrtShell::LeftMargin( bool bSelect, bool bBasicCall )
@@ -309,16 +308,16 @@ bool SwWrtShell::SttNxtPg( bool bSelect )
     return MovePage( fnPageNext, fnPageStart );
 }
 
-bool SwWrtShell::SttPrvPg( bool bSelect )
+void SwWrtShell::SttPrvPg( bool bSelect )
 {
     ShellMoveCursor aTmp( this, bSelect );
-    return MovePage( fnPagePrev, fnPageStart );
+    MovePage( fnPagePrev, fnPageStart );
 }
 
-bool SwWrtShell::EndNxtPg( bool bSelect )
+void SwWrtShell::EndNxtPg( bool bSelect )
 {
     ShellMoveCursor aTmp( this, bSelect );
-    return MovePage( fnPageNext, fnPageEnd );
+    MovePage( fnPageNext, fnPageEnd );
 }
 
 bool SwWrtShell::EndPrvPg( bool bSelect )
@@ -345,50 +344,50 @@ bool SwWrtShell::SttPara( bool bSelect )
     return MovePara( fnParaCurr, fnParaStart );
 }
 
-bool SwWrtShell::EndPara( bool bSelect )
+void SwWrtShell::EndPara( bool bSelect )
 {
     ShellMoveCursor aTmp( this, bSelect );
-    return MovePara(fnParaCurr,fnParaEnd);
+    MovePara(fnParaCurr,fnParaEnd);
 }
 
 // Column-by-jumping.
 // SSelection with or without
 // returns success or failure
 
-bool SwWrtShell::StartOfColumn( bool bSelect )
+void SwWrtShell::StartOfColumn()
 {
-    ShellMoveCursor aTmp( this, bSelect);
-    return MoveColumn(fnColumnCurr, fnColumnStart);
+    ShellMoveCursor aTmp( this, false/*bSelect*/);
+    MoveColumn(fnColumnCurr, fnColumnStart);
 }
 
-bool SwWrtShell::EndOfColumn( bool bSelect )
+void SwWrtShell::EndOfColumn()
 {
-    ShellMoveCursor aTmp( this, bSelect);
-    return MoveColumn(fnColumnCurr, fnColumnEnd);
+    ShellMoveCursor aTmp( this, false/*bSelect*/);
+    MoveColumn(fnColumnCurr, fnColumnEnd);
 }
 
-bool SwWrtShell::StartOfNextColumn( bool bSelect )
+void SwWrtShell::StartOfNextColumn()
 {
-    ShellMoveCursor aTmp( this, bSelect);
-    return MoveColumn( fnColumnNext, fnColumnStart);
+    ShellMoveCursor aTmp( this, false/*bSelect*/);
+    MoveColumn( fnColumnNext, fnColumnStart);
 }
 
-bool SwWrtShell::EndOfNextColumn( bool bSelect )
+void SwWrtShell::EndOfNextColumn()
 {
-    ShellMoveCursor aTmp( this, bSelect);
-    return MoveColumn(fnColumnNext, fnColumnEnd);
+    ShellMoveCursor aTmp( this, false/*bSelect*/);
+    MoveColumn(fnColumnNext, fnColumnEnd);
 }
 
-bool SwWrtShell::StartOfPrevColumn( bool bSelect )
+void SwWrtShell::StartOfPrevColumn()
 {
-    ShellMoveCursor aTmp( this, bSelect);
-    return MoveColumn(fnColumnPrev, fnColumnStart);
+    ShellMoveCursor aTmp( this, false/*bSelect*/);
+    MoveColumn(fnColumnPrev, fnColumnStart);
 }
 
-bool SwWrtShell::EndOfPrevColumn( bool bSelect )
+void SwWrtShell::EndOfPrevColumn()
 {
-    ShellMoveCursor aTmp( this, bSelect);
-    return MoveColumn(fnColumnPrev, fnColumnEnd);
+    ShellMoveCursor aTmp( this, false/*bSelect*/);
+    MoveColumn(fnColumnPrev, fnColumnEnd);
 }
 
 bool SwWrtShell::PushCursor(SwTwips lOffset, bool bSelect)
@@ -500,7 +499,7 @@ bool SwWrtShell::PopCursor(bool bUpdate, bool bSelect)
             // positions are thrown away.
         else
         {
-            _ResetCursorStack();
+            ResetCursorStack_();
             return false;
         }
     }
@@ -518,7 +517,7 @@ bool SwWrtShell::PopCursor(bool bUpdate, bool bSelect)
 // Reset of all pushed cursor positions; these will
 // not be displayed ( --> No Start-/EndAction!!)
 
-void SwWrtShell::_ResetCursorStack()
+void SwWrtShell::ResetCursorStack_()
 {
     while(m_pCursorStack)
     {
@@ -550,7 +549,7 @@ bool SwWrtShell::PageCursor(SwTwips lOffset, bool bSelect)
         // no updating of the display of the cursor position takes place.
         // The CursorShell-Actionparentheses cannot be used, because it
         // always leads to displaying the cursor, thus also,
-        // if after the scroll scrolled in a region without a valid postition.
+        // if after the scroll scrolled in a region without a valid position.
         // SwViewShell::StartAction();
     PageMove eDir = lOffset > 0? MV_PAGE_DOWN: MV_PAGE_UP;
         // Change of direction and stack present
@@ -577,11 +576,11 @@ bool SwWrtShell::GotoPage(sal_uInt16 nPage, bool bRecord)
     return false;
 }
 
-bool SwWrtShell::GotoMark( const ::sw::mark::IMark* const pMark, bool bSelect, bool bStart )
+bool SwWrtShell::GotoMark( const ::sw::mark::IMark* const pMark, bool bSelect )
 {
     ShellMoveCursor aTmp( this, bSelect );
     SwPosition aPos = *GetCursor()->GetPoint();
-    bool bRet = SwCursorShell::GotoMark( pMark, bStart );
+    bool bRet = SwCursorShell::GotoMark( pMark, true/*bStart*/ );
     if (bRet)
         m_aNavigationMgr.addEntry(aPos);
     return bRet;
@@ -629,14 +628,13 @@ bool SwWrtShell::GotoRegion( const OUString& rName )
     return bRet;
  }
 
-bool SwWrtShell::GotoRefMark( const OUString& rRefMark, sal_uInt16 nSubType,
+void SwWrtShell::GotoRefMark( const OUString& rRefMark, sal_uInt16 nSubType,
                                     sal_uInt16 nSeqNo )
 {
     SwPosition aPos = *GetCursor()->GetPoint();
     bool bRet = SwCursorShell::GotoRefMark(rRefMark, nSubType, nSeqNo);
     if (bRet)
         m_aNavigationMgr.addEntry(aPos);
-    return bRet;
 }
 
 bool SwWrtShell::GotoNextTOXBase( const OUString* pName )

@@ -25,6 +25,7 @@
 #include <comphelper/uno3.hxx>
 #include <comphelper/types.hxx>
 #include <cppuhelper/propertysetmixin.hxx>
+#include <comphelper/interfacecontainer2.hxx>
 #include <com/sun/star/uno/XComponentContext.hpp>
 #include <com/sun/star/drawing/XDrawPage.hpp>
 #include <com/sun/star/drawing/XShapeGrouper.hpp>
@@ -52,7 +53,7 @@ namespace reportdesign
                     public SectionBase,
                     public SectionPropertySet
     {
-        ::cppu::OInterfaceContainerHelper                                                   m_aContainerListeners;
+        ::comphelper::OInterfaceContainerHelper2                                                  m_aContainerListeners;
         css::uno::Reference< css::uno::XComponentContext >                                  m_xContext;
         css::uno::Reference< css::drawing::XDrawPage >                                      m_xDrawPage;
         css::uno::Reference< css::drawing::XShapeGrouper >                                  m_xDrawPage_ShapeGrouper;
@@ -78,31 +79,31 @@ namespace reportdesign
         OSection& operator=(const OSection&) = delete;
 
         template <typename T> void set(  const OUString& _sProperty
-                                        ,const T& _Value
+                                        ,const T& Value
                                         ,T& _member)
         {
             BoundListeners l;
             {
                 ::osl::MutexGuard aGuard(m_aMutex);
-                if ( _member != _Value )
+                if ( _member != Value )
                 {
-                    prepareSet(_sProperty, css::uno::makeAny(_member), css::uno::makeAny(_Value), &l);
-                    _member = _Value;
+                    prepareSet(_sProperty, css::uno::makeAny(_member), css::uno::makeAny(Value), &l);
+                    _member = Value;
                 }
             }
             l.notify();
         }
         void set(  const OUString& _sProperty
-                  ,bool _Value
+                  ,bool Value
                   ,bool& _member)
         {
             BoundListeners l;
             {
                 ::osl::MutexGuard aGuard(m_aMutex);
-                if ( _member != _Value )
+                if ( _member != Value )
                 {
-                    prepareSet(_sProperty, css::uno::makeAny(_member), css::uno::makeAny(_Value), &l);
-                    _member = _Value;
+                    prepareSet(_sProperty, css::uno::makeAny(_member), css::uno::makeAny(Value), &l);
+                    _member = Value;
                 }
             }
             l.notify();

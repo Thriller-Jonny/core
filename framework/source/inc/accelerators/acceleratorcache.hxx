@@ -36,7 +36,7 @@ namespace framework
     @short  implements a cache for any accelerator configuration.
 
     @descr  Its implemented threadsafe, supports copy-on-write pattern
-            and a flush mechansim to support concurrent access to the same
+            and a flush mechanism to support concurrent access to the same
             configuration.
 
             copy-on-write ... How? Do the following:
@@ -52,7 +52,7 @@ class AcceleratorCache
             commands -> keys
         */
         typedef ::std::vector< css::awt::KeyEvent > TKeyList;
-        typedef BaseHash< TKeyList > TCommand2Keys;
+        typedef std::unordered_map<OUString, TKeyList, OUStringHash> TCommand2Keys;
 
         /** TODO document me
             keys -> commands

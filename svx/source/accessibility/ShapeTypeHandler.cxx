@@ -52,8 +52,6 @@ AccessibleShape*
 }
 
 
-
-
 ShapeTypeHandler& ShapeTypeHandler::Instance()
 {
     // Using double check pattern to make sure that exactly one instance of
@@ -75,15 +73,13 @@ ShapeTypeHandler& ShapeTypeHandler::Instance()
 }
 
 
-
-
 /** The given service name is first transformed into a slot id that
     identifies the place of the type descriptor.  From that descriptor the
     shape type id is returned.
 */
 ShapeTypeId ShapeTypeHandler::GetTypeId (const OUString& aServiceName) const
 {
-    tServiceNameToSlotId::iterator I (maServiceNameToSlotId.find (aServiceName));
+    tServiceNameToSlotId::const_iterator I (maServiceNameToSlotId.find (aServiceName));
     if (I != maServiceNameToSlotId.end())
     {
         return maShapeTypeDescriptorList[I->second].mnShapeTypeId;
@@ -91,7 +87,6 @@ ShapeTypeId ShapeTypeHandler::GetTypeId (const OUString& aServiceName) const
     else
         return -1;
 }
-
 
 
 /** Extract the specified shape's service name and forward the request to
@@ -105,8 +100,6 @@ ShapeTypeId ShapeTypeHandler::GetTypeId (const uno::Reference<drawing::XShape>& 
     else
         return -1;
 }
-
-
 
 
 /** This factory method determines the type descriptor for the type of the
@@ -128,8 +121,6 @@ rtl::Reference<AccessibleShape>
 }
 
 
-
-
 /** Create the single instance of this class and initialize its list of
     type descriptors with an entry of an unknown type.
 */
@@ -145,8 +136,6 @@ ShapeTypeHandler::ShapeTypeHandler()
 }
 
 
-
-
 ShapeTypeHandler::~ShapeTypeHandler()
 {
     //  Because this class is a singleton and the only instance, whose
@@ -158,9 +147,7 @@ ShapeTypeHandler::~ShapeTypeHandler()
 }
 
 
-
-
-bool ShapeTypeHandler::AddShapeTypeList (int nDescriptorCount,
+void ShapeTypeHandler::AddShapeTypeList (int nDescriptorCount,
     ShapeTypeDescriptor aDescriptorList[])
 {
     SolarMutexGuard aGuard;
@@ -186,23 +173,17 @@ bool ShapeTypeHandler::AddShapeTypeList (int nDescriptorCount,
         // Update inverse mapping from service name to the descriptor's position.
         maServiceNameToSlotId[aDescriptorList[i].msServiceName] = nFirstId+i;
     }
-
-    return true;
 }
-
-
 
 
 long ShapeTypeHandler::GetSlotId (const OUString& aServiceName) const
 {
-    tServiceNameToSlotId::iterator I (maServiceNameToSlotId.find (aServiceName));
+    tServiceNameToSlotId::const_iterator I (maServiceNameToSlotId.find (aServiceName));
     if (I != maServiceNameToSlotId.end())
         return I->second;
     else
         return 0;
 }
-
-
 
 
 // Extract the given shape's service name and forward request to appropriate

@@ -17,13 +17,10 @@
  */
 
 interface GraphicDocument : DrawDocument
-[
-    uuid ( "D7474100-ACDF-11D0-89CB-008029E4B0B1" ) ; // created at 04.04.97
-]
 {
 }
 
 shell GraphicDocShell
 {
-    import GraphicDocument[Automation];
+    import GraphicDocument;
 }

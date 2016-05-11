@@ -36,10 +36,11 @@ namespace reportdesign
 
     using namespace com::sun::star;
     using namespace comphelper;
+
 uno::Sequence< OUString > lcl_getFixedTextOptionals()
 {
     OUString pProps[] = { OUString(PROPERTY_DATAFIELD),OUString(PROPERTY_MASTERFIELDS),OUString(PROPERTY_DETAILFIELDS) };
-    return uno::Sequence< OUString >(pProps,sizeof(pProps)/sizeof(pProps[0]));
+    return uno::Sequence< OUString >(pProps,SAL_N_ELEMENTS(pProps));
 }
 
 OFixedText::OFixedText(uno::Reference< uno::XComponentContext > const & _xContext)
@@ -178,7 +179,6 @@ void SAL_CALL OFixedText::setDataField( const OUString& /*_datafield*/ ) throw (
 {
     throw beans::UnknownPropertyException();
 }
-
 
 
 sal_Bool SAL_CALL OFixedText::getPrintWhenGroupChange() throw (beans::UnknownPropertyException, uno::RuntimeException, std::exception)
@@ -321,7 +321,6 @@ OUString SAL_CALL OFixedText::getShapeType(  ) throw (uno::RuntimeException, std
         return m_aProps.aComponent.m_xShape->getShapeType();
     return OUString("com.sun.star.drawing.ControlShape");
 }
-
 
 
 } // namespace reportdesign

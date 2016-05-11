@@ -50,8 +50,6 @@ using com::sun::star::system::XSimpleMailClient;
 using com::sun::star::system::XSimpleMailMessage;
 using com::sun::star::system::XSimpleMailMessage2;
 using com::sun::star::container::XNameAccess;
-using com::sun::star::container::NoSuchElementException;
-using osl::MutexGuard;
 using osl::FileBase;
 
 using namespace cppu;
@@ -69,7 +67,6 @@ namespace // private
     }
 
 } // end private namespace
-
 
 
 CmdMailSuppl::CmdMailSuppl( const Reference< XComponentContext >& xContext ) :

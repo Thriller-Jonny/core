@@ -19,13 +19,16 @@
 #ifndef INCLUDED_COM_SUN_STAR_UNO_ANY_H
 #define INCLUDED_COM_SUN_STAR_UNO_ANY_H
 
+#include <sal/config.h>
+
+#include <cstddef>
+
+#include <rtl/ustring.hxx>
 #include <uno/any2.h>
 #include <typelib/typedescription.h>
 #include <cppu/unotype.hxx>
 #include <com/sun/star/uno/TypeClass.hdl>
 #include <rtl/alloc.h>
-
-namespace rtl { class OUString; }
 
 namespace com
 {
@@ -74,6 +77,11 @@ public:
     /// Ctor support for C++ bool.
     explicit inline Any( bool value );
 
+#if defined LIBO_INTERNAL_ONLY
+    template<typename T1, typename T2>
+    explicit inline Any(rtl::OUStringConcat<T1, T2> const & value);
+#endif
+
     /** Copy constructor: Sets value of the given any.
 
         @param rAny another any
@@ -100,6 +108,21 @@ public:
         @param pType_ type of value
     */
     inline Any( const void * pData_, typelib_TypeDescriptionReference * pType_ );
+
+#if defined LIBO_INTERNAL_ONLY
+    Any(bool const *, Type const &) = delete;
+    Any(bool const *, typelib_TypeDescription *) = delete;
+    Any(bool const *, typelib_TypeDescriptionReference *) = delete;
+    Any(sal_Bool const *, Type const &) = delete;
+    Any(sal_Bool const *, typelib_TypeDescription *) = delete;
+    Any(sal_Bool const *, typelib_TypeDescriptionReference *) = delete;
+    Any(std::nullptr_t, Type const & type):
+        Any(static_cast<void *>(nullptr), type) {}
+    Any(std::nullptr_t, typelib_TypeDescription * type):
+        Any(static_cast<void *>(nullptr), type) {}
+    Any(std::nullptr_t, typelib_TypeDescriptionReference * type):
+        Any(static_cast<void *>(nullptr), type) {}
+#endif
 
     /** Destructor: Destructs any content and frees memory.
     */
@@ -197,6 +220,22 @@ public:
     */
     inline void SAL_CALL setValue( const void * pData_, typelib_TypeDescription * pTypeDescr );
 
+#if defined LIBO_INTERNAL_ONLY
+    void setValue(bool const *, Type const &) = delete;
+    void setValue(bool const *, typelib_TypeDescriptionReference *) = delete;
+    void setValue(bool const *, typelib_TypeDescription *) = delete;
+    void setValue(sal_Bool const *, Type const &) = delete;
+    void setValue(sal_Bool const *, typelib_TypeDescriptionReference *)
+        = delete;
+    void setValue(sal_Bool const *, typelib_TypeDescription *) = delete;
+    void setValue(std::nullptr_t, Type const & type)
+    { setValue(static_cast<void *>(nullptr), type); }
+    void setValue(std::nullptr_t, typelib_TypeDescriptionReference * type)
+    { setValue(static_cast<void *>(nullptr), type); }
+    void setValue(std::nullptr_t, typelib_TypeDescription * type)
+    { setValue(static_cast<void *>(nullptr), type); }
+#endif
+
     /** Clears this any. If the any already contains a value, that value will be destructed
         and its memory freed. After this has been called, the any does not contain a value.
     */
@@ -235,19 +274,28 @@ public:
     inline bool SAL_CALL operator != ( const Any & rAny ) const;
 
 private:
+#if !defined LIBO_INTERNAL_ONLY
     /// @cond INTERNAL
     // Forbid use with ambiguous type (sal_Unicode, sal_uInt16):
     explicit Any(sal_uInt16) SAL_DELETED_FUNCTION;
     /// @endcond
+#endif
 };
 
+#if !defined LIBO_INTERNAL_ONLY
 /// @cond INTERNAL
 // Forbid use with ambiguous type (sal_Unicode, sal_uInt16):
 template<> sal_uInt16 Any::get<sal_uInt16>() const SAL_DELETED_FUNCTION;
 template<> bool Any::has<sal_uInt16>() const SAL_DELETED_FUNCTION;
 /// @endcond
+#endif
 
 /** Template function to generically construct an any from a C++ value.
+
+    This can be useful with an explicitly specified template parameter, when the
+    (UNO) type recorded in the Any instance shall be different from what would
+    be deduced from the (C++) type of the argument if no template parameter were
+    specified explicitly.
 
     @tparam C value type
     @param value a value
@@ -256,9 +304,9 @@ template<> bool Any::has<sal_uInt16>() const SAL_DELETED_FUNCTION;
 template< class C >
 inline Any SAL_CALL makeAny( const C & value );
 
-// additionally specialized for C++ bool
-template<>
-inline Any SAL_CALL makeAny( bool const & value );
+#if !defined LIBO_INTERNAL_ONLY
+template<> inline Any SAL_CALL makeAny(sal_uInt16 const & value);
+#endif
 
 template<> Any SAL_CALL makeAny(Any const &) SAL_DELETED_FUNCTION;
 

@@ -7,7 +7,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#ifdef WNT
+#ifdef _WIN32
 # undef ERROR
 #endif
 
@@ -50,7 +50,6 @@ public:
     Test();
     virtual ~Test();
 
-    virtual void setUp() override;
     virtual void tearDown() override;
 
     void testNumberFormat();
@@ -96,10 +95,6 @@ Test::Test()
     //of retaining references to the root ServiceFactory as its passed around
     comphelper::setProcessServiceFactory(xSM);
     m_pDefaultTimeZone.reset(icu::TimeZone::createDefault());
-}
-
-void Test::setUp()
-{
 }
 
 void Test::tearDown()

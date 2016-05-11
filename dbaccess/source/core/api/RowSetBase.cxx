@@ -97,7 +97,7 @@ ORowSetBase::ORowSetBase( const Reference<XComponentContext>& _rContext, ::cppu:
     sal_Int32 nRBT  = PropertyAttribute::READONLY   | PropertyAttribute::BOUND      | PropertyAttribute::TRANSIENT;
 
     sal_Int32 nInitialRowCountValue = 0;
-    sal_Bool bInitialRowCountFinalValue( sal_False );
+    sal_Bool bInitialRowCountFinalValue( false );
     registerPropertyNoMember( PROPERTY_ROWCOUNT,        PROPERTY_ID_ROWCOUNT,        nRBT, cppu::UnoType<decltype(nInitialRowCountValue)>::get(), &nInitialRowCountValue );
     registerPropertyNoMember( PROPERTY_ISROWCOUNTFINAL, PROPERTY_ID_ISROWCOUNTFINAL, nRBT, cppu::UnoType<bool>::get(),                  &bInitialRowCountFinalValue );
 }
@@ -141,7 +141,7 @@ void SAL_CALL ORowSetBase::getFastPropertyValue(Any& rValue,sal_Int32 nHandle) c
             rValue <<= impl_getRowCount();
             break;
         case PROPERTY_ID_ISROWCOUNTFINAL:
-            rValue.setValue(&m_pCache->m_bRowCountFinal,cppu::UnoType<bool>::get());
+            rValue <<= m_pCache->m_bRowCountFinal;
             break;
         default:
             OPropertyStateContainer::getFastPropertyValue(rValue,nHandle);
@@ -207,7 +207,7 @@ const ORowSetValue& ORowSetBase::impl_getValue(sal_Int32 columnIndex)
     if ( m_bBeforeFirst || m_bAfterLast )
     {
         SAL_WARN("dbaccess", "ORowSetBase::getValue: Illegal call here (we're before first or after last)!");
-        ::dbtools::throwSQLException( DBACORE_RESSTRING( RID_STR_CURSOR_BEFORE_OR_AFTER ), SQL_INVALID_CURSOR_POSITION, *m_pMySelf );
+        ::dbtools::throwSQLException( DBACORE_RESSTRING( RID_STR_CURSOR_BEFORE_OR_AFTER ), StandardSQLState::INVALID_CURSOR_POSITION, *m_pMySelf );
     }
 
     if ( impl_rowDeleted() )
@@ -230,13 +230,13 @@ const ORowSetValue& ORowSetBase::impl_getValue(sal_Int32 columnIndex)
     if ( bValidCurrentRow )
     {
 #if OSL_DEBUG_LEVEL > 0
-        ORowSetMatrix::iterator aCacheEnd;
+        ORowSetMatrix::const_iterator aCacheEnd;
         ORowSetMatrix::iterator aCurrentRow;
         aCacheEnd = m_pCache->getEnd();
         aCurrentRow = m_aCurrentRow;
-        ORowSetCacheMap::iterator aCacheIter = m_aCurrentRow.getIter();
+        ORowSetCacheMap::const_iterator aCacheIter = m_aCurrentRow.getIter();
         ORowSetCacheIterator_Helper aHelper = aCacheIter->second;
-        ORowSetMatrix::iterator k = aHelper.aIterator;
+        ORowSetMatrix::const_iterator k = aHelper.aIterator;
         for (; k != m_pCache->getEnd(); ++k)
         {
             ORowSetValueVector* pTemp = k->get();
@@ -333,7 +333,7 @@ Reference< css::io::XInputStream > SAL_CALL ORowSetBase::getBinaryStream( sal_In
     if ( m_bBeforeFirst || m_bAfterLast )
     {
         SAL_WARN("dbaccess", "ORowSetBase::getBinaryStream: Illegal call here (we're before first or after last)!");
-        ::dbtools::throwSQLException( DBACORE_RESSTRING( RID_STR_CURSOR_BEFORE_OR_AFTER ), SQL_INVALID_CURSOR_POSITION, *m_pMySelf );
+        ::dbtools::throwSQLException( DBACORE_RESSTRING( RID_STR_CURSOR_BEFORE_OR_AFTER ), StandardSQLState::INVALID_CURSOR_POSITION, *m_pMySelf );
     }
 
     if ( impl_rowDeleted() )
@@ -403,10 +403,10 @@ Any SAL_CALL ORowSetBase::getBookmark(  ) throw(SQLException, RuntimeException, 
     checkCache();
 
     if ( m_bBeforeFirst || m_bAfterLast )
-        ::dbtools::throwSQLException( DBACORE_RESSTRING( RID_STR_NO_BOOKMARK_BEFORE_OR_AFTER ), SQL_INVALID_CURSOR_POSITION, *m_pMySelf );
+        ::dbtools::throwSQLException( DBACORE_RESSTRING( RID_STR_NO_BOOKMARK_BEFORE_OR_AFTER ), StandardSQLState::INVALID_CURSOR_POSITION, *m_pMySelf );
 
     if ( impl_rowDeleted() )
-        ::dbtools::throwSQLException( DBACORE_RESSTRING( RID_STR_NO_BOOKMARK_DELETED ), SQL_INVALID_CURSOR_POSITION, *m_pMySelf );
+        ::dbtools::throwSQLException( DBACORE_RESSTRING( RID_STR_NO_BOOKMARK_DELETED ), StandardSQLState::INVALID_CURSOR_POSITION, *m_pMySelf );
 
     OSL_ENSURE( m_aBookmark.hasValue(), "ORowSetBase::getBookmark: bookmark has no value!" );
     return m_aBookmark;
@@ -660,7 +660,7 @@ sal_Bool SAL_CALL ORowSetBase::isFirst(  ) throw(SQLException, RuntimeException,
     checkCache();
 
     if ( m_bBeforeFirst || m_bAfterLast )
-        return sal_False;
+        return false;
 
     if ( impl_rowDeleted() )
         return ( m_nDeletedPosition == 1 );
@@ -685,12 +685,12 @@ sal_Bool SAL_CALL ORowSetBase::isLast(  ) throw(SQLException, RuntimeException, 
     checkCache();
 
     if ( m_bBeforeFirst || m_bAfterLast )
-        return sal_False;
+        return false;
 
     if ( impl_rowDeleted() )
     {
         if ( !m_pCache->m_bRowCountFinal )
-            return sal_False;
+            return false;
         else
             return ( m_nDeletedPosition == impl_getRowCount() );
     }
@@ -927,7 +927,7 @@ sal_Bool SAL_CALL ORowSetBase::relative( sal_Int32 rows ) throw(SQLException, Ru
     ::osl::ResettableMutexGuard aGuard( *m_pMutex );
 
     if(!rows)
-        return sal_True; // in this case do nothing
+        return true; // in this case do nothing
 
     checkPositioningAllowed();
 
@@ -1094,7 +1094,7 @@ void SAL_CALL ORowSetBase::refreshRow(  ) throw(SQLException, RuntimeException, 
     ::osl::MutexGuard aGuard( *m_pMutex );
     checkCache();
     if ( impl_rowDeleted() )
-        throwSQLException( "The current row is deleted", SQL_INVALID_CURSOR_STATE, Reference< XRowSet >( this ) );
+        throwSQLException( "The current row is deleted", StandardSQLState::INVALID_CURSOR_STATE, Reference< XRowSet >( this ) );
 
     if(!(m_bBeforeFirst || m_bAfterLast))
     {
@@ -1112,7 +1112,7 @@ sal_Bool SAL_CALL ORowSetBase::rowUpdated(  ) throw(SQLException, RuntimeExcepti
     checkCache();
 
     if ( impl_rowDeleted() )
-        return sal_False;
+        return false;
 
     return m_pCache->rowUpdated();
 }
@@ -1124,7 +1124,7 @@ sal_Bool SAL_CALL ORowSetBase::rowInserted(  ) throw(SQLException, RuntimeExcept
     checkCache();
 
     if ( impl_rowDeleted() )
-        return sal_False;
+        return false;
 
     return m_pCache->rowInserted();
 }
@@ -1177,8 +1177,8 @@ void ORowSetBase::firePropertyChange(const ORowSetRow& _rOldRow)
     SAL_INFO("dbaccess", "ORowSetBase::firePropertyChange() Clone = " << m_bClone);
     OSL_ENSURE(m_pColumns,"Columns can not be NULL here!");
     sal_Int32 i=0;
-    TDataColumns::iterator aEnd = m_aDataColumns.end();
-    for(TDataColumns::iterator aIter = m_aDataColumns.begin();aIter != aEnd;++aIter,++i)
+    TDataColumns::const_iterator aEnd = m_aDataColumns.end();
+    for(TDataColumns::const_iterator aIter = m_aDataColumns.begin();aIter != aEnd;++aIter,++i)
     {
         try
         {
@@ -1224,7 +1224,7 @@ void ORowSetBase::fireProperty( sal_Int32 _nProperty, bool _bNew, bool _bOld )
 {
     Any aNew = css::uno::makeAny( _bNew );
     Any aOld = css::uno::makeAny( _bOld );
-    fire( &_nProperty, &aNew, &aOld, 1, sal_False );
+    fire( &_nProperty, &aNew, &aOld, 1, false );
 }
 
 void ORowSetBase::positionCache( CursorMoveDirection _ePrepareForDirection )
@@ -1444,7 +1444,7 @@ void ORowSetNotifier::firePropertyChange()
     OSL_ENSURE(m_pImpl.get(),"Illegal CTor call, use the other one!");
     if( m_pImpl.get() )
     {
-        ::std::vector<sal_Int32>::iterator aIter = m_pImpl->aChangedColumns.begin();
+        ::std::vector<sal_Int32>::const_iterator aIter = m_pImpl->aChangedColumns.begin();
         for(;aIter != m_pImpl->aChangedColumns.end();++aIter)
         {
             m_pRowSet->firePropertyChange((*aIter)-1 ,m_pImpl->aRow[(*aIter)-1], ORowSetBase::GrantNotifierAccess());

@@ -21,12 +21,10 @@
 #include "comphelper/processfactory.hxx"
 
 using ::com::sun::star::uno::Reference;
-using ::com::sun::star::lang::XMultiServiceFactory;
 using ::com::sun::star::uno::Sequence;
 using ::com::sun::star::uno::Type;
 using ::com::sun::star::uno::XComponentContext;
 using ::com::sun::star::beans::Property;
-using ::com::sun::star::uno::Exception;
 using ::com::sun::star::uno::XInterface;
 using ::com::sun::star::uno::Any;
 using ::com::sun::star::uno::makeAny;
@@ -71,7 +69,6 @@ Sequence<Type> OPatternModel::_getTypes()
 }
 
 
-
 OPatternModel::OPatternModel(const Reference<XComponentContext>& _rxFactory)
     :OEditBaseModel( _rxFactory, VCL_CONTROLMODEL_PATTERNFIELD, FRM_SUN_CONTROL_PATTERNFIELD, false, false )
                                     // use the old control name for compytibility reasons
@@ -109,7 +106,6 @@ css::uno::Sequence<OUString> SAL_CALL OPatternModel::getSupportedServiceNames() 
     pArray[aSupported.getLength()-1] = FRM_COMPONENT_PATTERNFIELD;
     return aSupported;
 }
-
 
 
 void OPatternModel::describeFixedProperties( Sequence< Property >& _rProps ) const

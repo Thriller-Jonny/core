@@ -25,7 +25,6 @@
 #include <com/sun/star/xml/sax/XAttributeList.hpp>
 #include <com/sun/star/container/XIndexContainer.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
-#include <com/sun/star/drawing/PointSequenceSequence.hpp>
 #include <com/sun/star/document/XEventsSupplier.hpp>
 #include <com/sun/star/awt/Rectangle.hpp>
 #include <xmloff/xmltoken.hxx>
@@ -54,7 +53,6 @@ using ::com::sun::star::uno::UNO_QUERY;
 using ::com::sun::star::xml::sax::XAttributeList;
 using ::com::sun::star::uno::XInterface;
 using ::com::sun::star::uno::Any;
-using ::com::sun::star::drawing::PointSequenceSequence;
 using ::com::sun::star::document::XEventsSupplier;
 
 
@@ -92,7 +90,6 @@ static SvXMLTokenMapEntry aImageMapObjectTokenMap[] =
     { XML_NAMESPACE_OFFICE, XML_TARGET_FRAME_NAME, XML_TOK_IMAP_TARGET      },
     XML_TOKEN_MAP_END
 };
-
 
 
 class XMLImageMapObjectContext : public SvXMLImportContext
@@ -151,7 +148,6 @@ protected:
     virtual void Prepare(
         css::uno::Reference<css::beans::XPropertySet> & rPropertySet);
 };
-
 
 
 XMLImageMapObjectContext::XMLImageMapObjectContext(
@@ -224,9 +220,7 @@ void XMLImageMapObjectContext::EndElement()
         Prepare( xMapEntry );
 
         // insert into image map
-        Any aAny;
-        aAny <<= xMapEntry;
-        xImageMap->insertByIndex( xImageMap->getCount(), aAny );
+        xImageMap->insertByIndex( xImageMap->getCount(), Any(xMapEntry) );
     }
     // else: not valid -> don't create and insert
 }
@@ -300,7 +294,6 @@ void XMLImageMapObjectContext::Prepare(
 }
 
 
-
 class XMLImageMapRectangleContext : public XMLImageMapObjectContext
 {
     awt::Rectangle aRectangle;
@@ -328,8 +321,6 @@ protected:
     virtual void Prepare(
         css::uno::Reference<css::beans::XPropertySet> & rPropertySet) override;
 };
-
-
 
 
 XMLImageMapRectangleContext::XMLImageMapRectangleContext(
@@ -399,9 +390,7 @@ void XMLImageMapRectangleContext::ProcessAttribute(
 void XMLImageMapRectangleContext::Prepare(
     Reference<XPropertySet> & rPropertySet)
 {
-    Any aAny;
-    aAny <<= aRectangle;
-    rPropertySet->setPropertyValue( sBoundary, aAny );
+    rPropertySet->setPropertyValue( sBoundary, uno::Any(aRectangle) );
 
     // common properties handled by super class
     XMLImageMapObjectContext::Prepare(rPropertySet);
@@ -434,8 +423,6 @@ protected:
     virtual void Prepare(
         css::uno::Reference<css::beans::XPropertySet> & rPropertySet) override;
 };
-
-
 
 
 XMLImageMapPolygonContext::XMLImageMapPolygonContext(
@@ -489,11 +476,8 @@ void XMLImageMapPolygonContext::Prepare(Reference<XPropertySet> & rPropertySet)
         if(aPolygon.count())
         {
             css::drawing::PointSequence aPointSequence;
-            uno::Any aAny;
-
             basegfx::tools::B2DPolygonToUnoPointSequence(aPolygon, aPointSequence);
-            aAny <<= aPointSequence;
-            rPropertySet->setPropertyValue(sPolygon, aAny);
+            rPropertySet->setPropertyValue(sPolygon, Any(aPointSequence));
         }
     }
 
@@ -590,26 +574,13 @@ void XMLImageMapCircleContext::Prepare(
     Reference<XPropertySet> & rPropertySet)
 {
     // center (x,y)
-    Any aAny;
-    aAny <<= aCenter;
-    rPropertySet->setPropertyValue( sCenter, aAny );
-
+    rPropertySet->setPropertyValue( sCenter, uno::Any(aCenter) );
     // radius
-    aAny <<= nRadius;
-    rPropertySet->setPropertyValue( sRadius, aAny );
+    rPropertySet->setPropertyValue( sRadius, uno::Any(nRadius) );
 
     // common properties handled by super class
     XMLImageMapObjectContext::Prepare(rPropertySet);
 }
-
-
-
-
-
-
-
-
-
 
 
 XMLImageMapContext::XMLImageMapContext(

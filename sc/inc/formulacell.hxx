@@ -23,8 +23,6 @@
 #include <set>
 #include <memory>
 
-#include <boost/noncopyable.hpp>
-
 #include <formula/tokenarray.hxx>
 #include <osl/conditn.hxx>
 #include <osl/mutex.hxx>
@@ -46,6 +44,7 @@ struct RefUpdateDeleteTabContext;
 struct RefUpdateMoveTabContext;
 class CompileFormulaContext;
 class FormulaGroupAreaListener;
+class UpdatedRangeNames;
 
 }
 
@@ -53,7 +52,7 @@ class ScFormulaCell;
 class ScProgress;
 class ScTokenArray;
 
-struct SC_DLLPUBLIC ScFormulaCellGroup : boost::noncopyable
+struct SC_DLLPUBLIC ScFormulaCellGroup
 {
 private:
     struct Impl;
@@ -64,7 +63,6 @@ public:
     mutable size_t mnRefCount;
 
     ScTokenArray* mpCode;
-    sc::CompiledFormula* mpCompiledFormula;
     ScFormulaCell *mpTopCell;
     SCROW mnLength; // How many of these do we have ?
     short mnFormatType;
@@ -74,6 +72,8 @@ public:
     sal_uInt8 meCalcState;
 
     ScFormulaCellGroup();
+    ScFormulaCellGroup(const ScFormulaCellGroup&) = delete;
+    const ScFormulaCellGroup& operator=(const ScFormulaCellGroup&) = delete;
     ~ScFormulaCellGroup();
 
     void setCode( const ScTokenArray& rCode );
@@ -158,7 +158,7 @@ public:
                     virtual ~ScFormulaCell();
 
     ScFormulaCell* Clone() const;
-    ScFormulaCell* Clone( const ScAddress& rPos, int nCloneFlags ) const;
+    ScFormulaCell* Clone( const ScAddress& rPos ) const;
 
     ScFormulaCell( ScDocument* pDoc, const ScAddress& rPos );
 
@@ -273,11 +273,11 @@ public:
 
     void            UpdateInsertTab( sc::RefUpdateInsertTabContext& rCxt );
     void            UpdateInsertTabAbs(SCTAB nTable);
-    bool            UpdateDeleteTab( sc::RefUpdateDeleteTabContext& rCxt );
+    void            UpdateDeleteTab( sc::RefUpdateDeleteTabContext& rCxt );
     void            UpdateMoveTab( sc::RefUpdateMoveTabContext& rCxt, SCTAB nTabNo );
     bool            TestTabRefAbs(SCTAB nTable);
     void            UpdateCompile( bool bForceIfNameInUse = false );
-    void            FindRangeNamesInUse(std::set<sal_uInt16>& rIndexes) const;
+    void            FindRangeNamesInUse(sc::UpdatedRangeNames& rIndexes) const;
     bool            IsSubTotal() const { return bSubTotal;}
     bool            IsChanged() const { return bChanged;}
     void            SetChanged(bool b);
@@ -323,7 +323,7 @@ public:
 
     void SetCompile( bool bVal );
     ScDocument* GetDocument() const { return pDocument;}
-    void            SetMatColsRows( SCCOL nCols, SCROW nRows, bool bDirtyFlag=true );
+    void            SetMatColsRows( SCCOL nCols, SCROW nRows );
     void            GetMatColsRows( SCCOL& nCols, SCROW& nRows ) const;
 
                     // cell belongs to ChangeTrack and not to the real document
@@ -382,7 +382,7 @@ public:
      * Turn a non-grouped cell into the top of a grouped cell.
      */
     ScFormulaCellGroupRef CreateCellGroup( SCROW nLen, bool bInvariant );
-    ScFormulaCellGroupRef GetCellGroup() const { return mxGroup;}
+    const ScFormulaCellGroupRef& GetCellGroup() const { return mxGroup;}
     void SetCellGroup( const ScFormulaCellGroupRef &xRef );
 
     CompareState CompareByTokenArray( ScFormulaCell& rOther ) const;

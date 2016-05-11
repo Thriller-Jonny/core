@@ -75,9 +75,25 @@
 
 #define ZOOM_MIN    10
 
-#define GET_BOOL(set,which)   static_cast<const SfxBoolItem&>((set)->Get((which))).GetValue()
-#define GET_USHORT(set,which) static_cast<const SfxUInt16Item&>((set)->Get((which))).GetValue()
-#define GET_SHOW(set,which)   ( VOBJ_MODE_SHOW == ScVObjMode( static_cast<const ScViewObjectModeItem&>((set)->Get((which))).GetValue()) )
+namespace{
+
+inline bool lcl_GetBool(const SfxItemSet* pSet, sal_uInt16 nWhich)
+{
+    return static_cast<const SfxBoolItem&>(pSet->Get(nWhich)).GetValue();
+}
+
+inline sal_uInt16 lcl_GetUShort(const SfxItemSet* pSet, sal_uInt16 nWhich)
+{
+    return static_cast<const SfxUInt16Item&>(pSet->Get(nWhich)).GetValue();
+}
+
+inline bool lcl_GetShow(const SfxItemSet* pSet, sal_uInt16 nWhich)
+{
+    return ScVObjMode::VOBJ_MODE_SHOW == ScVObjMode( static_cast<const ScViewObjectModeItem&>(pSet->Get(nWhich)).GetValue() );
+}
+
+
+} // namespace
 
 ScPageRowEntry::ScPageRowEntry(const ScPageRowEntry& r)
 {
@@ -187,7 +203,7 @@ void ScPrintFunc::Construct( const ScPrintOptions* pOptions )
     ScStyleSheetPool* pStylePool    = pDoc->GetStyleSheetPool();
     SfxStyleSheetBase* pStyleSheet  = pStylePool->Find(
                                             pDoc->GetPageStyle( nPrintTab ),
-                                            SFX_STYLE_FAMILY_PAGE );
+                                            SfxStyleFamily::Page );
     if (pStyleSheet)
         pParamSet = &pStyleSheet->GetItemSet();
     else
@@ -408,7 +424,7 @@ void ScPrintFunc::DrawToDev( ScDocument* pDoc, OutputDevice* pDev, double /* nPr
 
     bool bDoGrid, bNullVal, bFormula;
     ScStyleSheetPool* pStylePool = pDoc->GetStyleSheetPool();
-    SfxStyleSheetBase* pStyleSheet = pStylePool->Find( pDoc->GetPageStyle( nTab ), SFX_STYLE_FAMILY_PAGE );
+    SfxStyleSheetBase* pStyleSheet = pStylePool->Find( pDoc->GetPageStyle( nTab ), SfxStyleFamily::Page );
     if (pStyleSheet)
     {
         SfxItemSet& rSet = pStyleSheet->GetItemSet();
@@ -879,17 +895,17 @@ void ScPrintFunc::InitParam( const ScPrintOptions* pOptions )
     OSL_ENSURE( pScaleItem && pScaleToItem && pScaleToPagesItem, "Missing ScaleItem! :-/" );
 
     aTableParam.bCellContent    = true;
-    aTableParam.bNotes          = GET_BOOL(pParamSet,ATTR_PAGE_NOTES);
-    aTableParam.bGrid           = GET_BOOL(pParamSet,ATTR_PAGE_GRID);
-    aTableParam.bHeaders        = GET_BOOL(pParamSet,ATTR_PAGE_HEADERS);
-    aTableParam.bFormulas       = GET_BOOL(pParamSet,ATTR_PAGE_FORMULAS);
-    aTableParam.bNullVals       = GET_BOOL(pParamSet,ATTR_PAGE_NULLVALS);
-    aTableParam.bCharts         = GET_SHOW(pParamSet,ATTR_PAGE_CHARTS);
-    aTableParam.bObjects        = GET_SHOW(pParamSet,ATTR_PAGE_OBJECTS);
-    aTableParam.bDrawings       = GET_SHOW(pParamSet,ATTR_PAGE_DRAWINGS);
-    aTableParam.bTopDown        = GET_BOOL(pParamSet,ATTR_PAGE_TOPDOWN);
+    aTableParam.bNotes          = lcl_GetBool(pParamSet,ATTR_PAGE_NOTES);
+    aTableParam.bGrid           = lcl_GetBool(pParamSet,ATTR_PAGE_GRID);
+    aTableParam.bHeaders        = lcl_GetBool(pParamSet,ATTR_PAGE_HEADERS);
+    aTableParam.bFormulas       = lcl_GetBool(pParamSet,ATTR_PAGE_FORMULAS);
+    aTableParam.bNullVals       = lcl_GetBool(pParamSet,ATTR_PAGE_NULLVALS);
+    aTableParam.bCharts         = lcl_GetShow(pParamSet,ATTR_PAGE_CHARTS);
+    aTableParam.bObjects        = lcl_GetShow(pParamSet,ATTR_PAGE_OBJECTS);
+    aTableParam.bDrawings       = lcl_GetShow(pParamSet,ATTR_PAGE_DRAWINGS);
+    aTableParam.bTopDown        = lcl_GetBool(pParamSet,ATTR_PAGE_TOPDOWN);
     aTableParam.bLeftRight      = !aTableParam.bLeftRight;
-    aTableParam.nFirstPageNo    = GET_USHORT(pParamSet,ATTR_PAGE_FIRSTPAGENO);
+    aTableParam.nFirstPageNo    = lcl_GetUShort(pParamSet,ATTR_PAGE_FIRSTPAGENO);
     if (!aTableParam.nFirstPageNo)
         aTableParam.nFirstPageNo = (sal_uInt16) nPageStart;     // from previous table
 
@@ -1665,7 +1681,7 @@ void ScPrintFunc::MakeEditEngine()
     {
         //  can't use document's edit engine pool here,
         //  because pool must have twips as default metric
-        pEditEngine = new ScHeaderEditEngine( EditEngine::CreatePool(), true );
+        pEditEngine = new ScHeaderEditEngine( EditEngine::CreatePool() );
 
         pEditEngine->EnableUndo(false);
         //fdo#45869 we want text to be positioned as it would be for the
@@ -1882,7 +1898,7 @@ long ScPrintFunc::DoNotes( long nNoteStart, bool bDoPrint, ScPreviewLocationData
                     {
                         pEditEngine->Draw( pDev, Point( nPosX, nPosY ) );
 
-                        OUString aMarkStr(rPos.Format(SCA_VALID, pDoc, pDoc->GetAddressConvention()));
+                        OUString aMarkStr(rPos.Format(ScRefFlags::VALID, pDoc, pDoc->GetAddressConvention()));
                         aMarkStr += ":";
 
                         //  cell position also via EditEngine, for correct positioning

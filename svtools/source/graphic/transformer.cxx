@@ -28,7 +28,7 @@
 #include <svl/solar.hrc>
 #include <vcl/salbtype.hxx>
 #include <vcl/virdev.hxx>
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 #include <com/sun/star/text/GraphicCrop.hpp>
 
 #include "graphic.hxx"
@@ -39,19 +39,14 @@ using namespace com::sun::star;
 namespace unographic {
 
 
-// - GraphicTransformer -
-
-
 GraphicTransformer::GraphicTransformer()
 {
 }
 
 
-
 GraphicTransformer::~GraphicTransformer()
 {
 }
-
 
 
 void setAlpha( Bitmap& rBitmap, AlphaMask& rAlpha, sal_uInt8 cIndexFrom, sal_Int8 nAlphaTo )

@@ -105,10 +105,10 @@ namespace dbaui
         void setSlotEnabled(sal_Int32 _nSlotId, bool _bEnable);
         void setNoneVisbleRow(sal_Int32 _nRows);
 
-        css::lang::Locale      getLocale() const           { return m_aLocale;}
-        OUString                     getDecimalSeparator() const { return m_sDecimalSep;}
+        const css::lang::Locale&      getLocale() const           { return m_aLocale;}
+        const OUString&               getDecimalSeparator() const { return m_sDecimalSep;}
 
-        SqlParseError   InsertField( const OTableFieldDescRef& rInfo, bool bVis = true, bool bActivate = true);
+        SqlParseError   InsertField( const OTableFieldDescRef& rInfo, bool bActivate = true);
         bool            HasFieldByAliasName(const OUString& rFieldName, OTableFieldDescRef& rInfo) const;
         // save the position of the table window and the pos of the splitters
         // called when fields are deleted
@@ -140,7 +140,7 @@ namespace dbaui
                     const css::uno::Sequence< css::beans::PropertyValue >& i_rFieldDescriptions
                 );
 
-        ::connectivity::OSQLParseNode* getPredicateTreeFromEntry(   OTableFieldDescRef pEntry,
+        ::connectivity::OSQLParseNode* getPredicateTreeFromEntry(   const OTableFieldDescRef& pEntry,
                                                                     const OUString& _sCriteria,
                                                                     OUString& _rsErrorMessage,
                                                                     css::uno::Reference< css::beans::XPropertySet>& _rxColumn) const;

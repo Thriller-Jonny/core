@@ -159,7 +159,9 @@ struct AnnotatingVisitor
     AnnotatingVisitor(StatePool&                                        rStatePool,
                       StateMap&                                         rStateMap,
                       const State&                                       rInitialState,
-                      const uno::Reference<xml::sax::XDocumentHandler>& xDocumentHandler) :
+                      const uno::Reference<xml::sax::XDocumentHandler>& xDocumentHandler,
+                      std::vector< uno::Reference<xml::dom::XElement> >& rUseElementVector,
+                      bool& rGradientNotFound) :
         mnCurrStateId(0),
         maCurrState(),
         maParentStates(),
@@ -167,7 +169,10 @@ struct AnnotatingVisitor
         mrStateMap(rStateMap),
         mxDocumentHandler(xDocumentHandler),
         maGradientVector(),
-        maGradientStopVector()
+        maGradientStopVector(),
+        maElementVector(),
+        mrUseElementVector(rUseElementVector),
+        mrGradientNotFound(rGradientNotFound)
     {
         maParentStates.push_back(rInitialState);
     }
@@ -175,7 +180,7 @@ struct AnnotatingVisitor
     void operator()( const uno::Reference<xml::dom::XElement>& xElem)
     {
         const sal_Int32 nTagId(getTokenId(xElem->getTagName()));
-        if (nTagId != XML_TEXT)
+        if (nTagId != XML_TEXT && nTagId != XML_TSPAN)
             return;
 
         maCurrState = maParentStates.back();
@@ -212,6 +217,12 @@ struct AnnotatingVisitor
 
                     if( aFound != maGradientIdMap.end() )
                         maGradientVector.back() = maGradientVector[aFound->second];
+                    else
+                    {
+                        mrGradientNotFound = true;
+                        maGradientVector.pop_back();
+                        return;
+                    }
                 }
 
                 // do that after dereferencing, to prevent hyperlinked
@@ -249,6 +260,12 @@ struct AnnotatingVisitor
 
                     if( aFound != maGradientIdMap.end() )
                         maGradientVector.back() = maGradientVector[aFound->second];
+                    else
+                    {
+                        mrGradientNotFound = true;
+                        maGradientVector.pop_back();
+                        return;
+                    }
                 }
 
                 // do that after dereferencing, to prevent hyperlinked
@@ -265,71 +282,199 @@ struct AnnotatingVisitor
                 }
                 break;
             }
+            case XML_USE:
+            {
+                uno::Reference<xml::dom::XNode> xNode(xAttributes->getNamedItem("href"));
+                if(xNode.is())
+                {
+                    OUString sValue(xNode->getNodeValue());
+                    ElementRefMapType::iterator aFound=maElementIdMap.end();
+                    if ( sValue.copy(0,1) == "#" )
+                        sValue = sValue.copy(1);
+                    aFound = maElementIdMap.find(sValue);
+                    bool bFound = aFound != maElementIdMap.end();
+                    if (bFound)
+                    {
+                        bool bSelfCycle = false;
+
+                        uno::Reference<xml::dom::XNode> xParentNode(xElem->getParentNode());
+                        if (xParentNode.is() && xParentNode->hasAttributes())
+                        {
+                            const uno::Reference<xml::dom::XNamedNodeMap> xParentAttributes = xParentNode->getAttributes();
+                            const sal_Int32 nFooNumAttrs(xParentAttributes->getLength());
+                            for (sal_Int32 i=0; i < nFooNumAttrs; ++i)
+                            {
+                                const sal_Int32 nTokenId(getTokenId(xParentAttributes->item(i)->getNodeName()));
+                                if (XML_ID == nTokenId)
+                                {
+                                    OUString sParentID = xParentAttributes->item(i)->getNodeValue();
+                                    bSelfCycle = sParentID == sValue;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (bSelfCycle)
+                        {
+                            //drop this invalid self-referencing "use" node
+                            maElementIdMap.erase(aFound);
+                            bFound = false;
+                        }
+                    }
+
+                    if (bFound)
+                    {
+                        uno::Reference<xml::dom::XElement> xRefElem(
+                            maElementVector[aFound->second]->cloneNode(true), uno::UNO_QUERY);
+
+                        xRefElem->removeAttribute("id");
+                        uno::Reference<xml::dom::XNode> xAttrNode;
+
+                        const sal_Int32 nNumAttrs( xAttributes->getLength() );
+                        OUString sAttributeValue;
+                        double x=0.0, y=0.0;
+                        for( sal_Int32 i=0; i<nNumAttrs; ++i )
+                        {
+                            sAttributeValue = xAttributes->item(i)->getNodeValue();
+                            const sal_Int32 nAttribId(
+                                getTokenId(xAttributes->item(i)->getNodeName()));
+
+                            switch(nAttribId)
+                            {
+                                case XML_ID:
+                                    maElementVector.push_back(xElem);
+                                    maElementIdMap.insert(std::make_pair(sAttributeValue,
+                                        maElementVector.size() - 1));
+                                    break;
+                                case XML_X:
+                                    x = convLength(sAttributeValue,maCurrState,'h');
+                                    break;
+                                case XML_Y:
+                                    y = convLength(sAttributeValue,maCurrState,'v');
+                                    break;
+                                case XML_TRANSFORM:
+                                    break;
+                                default:
+                                    OUString sAttributeName = xAttributes->item(i)->getNodeName();
+                                    xRefElem->setAttribute(sAttributeName, sAttributeValue);
+                                    break;
+                            }
+                        }
+                        std::stringstream ssAttrValue;
+                        ssAttrValue << xRefElem->getAttribute("transform");
+                        ssAttrValue << xElem->getAttribute("transform");
+                        ssAttrValue << " translate(" << x << "," << y << ")";
+
+                        OUString attrValue(OUString::createFromAscii (ssAttrValue.str().c_str()));
+                        xRefElem->setAttribute("transform", attrValue);
+
+                        mrUseElementVector.push_back(xRefElem);
+
+                        visitElements((*this), xRefElem, STYLE_ANNOTATOR);
+                    }
+                }
+                break;
+            }
             case XML_STOP:
             {
-                const sal_Int32 nNumAttrs( xAttributes->getLength() );
-                maGradientStopVector.push_back(GradientStop());
-                maGradientVector.back().maStops.push_back(maGradientStopVector.size()-1);
-                for( sal_Int32 i=0; i<nNumAttrs; ++i )
+                if (!maGradientVector.empty())
                 {
-                    parseGradientStop( maGradientStopVector.back(),
-                                       maGradientStopVector.size()-1,
-                                       getTokenId(xAttributes->item(i)->getNodeName()),
-                                       xAttributes->item(i)->getNodeValue() );
+                    const sal_Int32 nNumAttrs( xAttributes->getLength() );
+                    maGradientStopVector.push_back(GradientStop());
+                    maGradientVector.back().maStops.push_back(maGradientStopVector.size()-1);
+
+                    // first parse 'color' as 'stop-color' might depend on it
+                    // if 'stop-color''s value is "currentColor" and parsed previously
+                    uno::Reference<xml::dom::XNode> xNodeColor(xAttributes->getNamedItem("color"));
+                    if(xNodeColor.is())
+                        parseGradientStop( maGradientStopVector.back(),
+                            maGradientStopVector.size()-1,
+                            XML_STOP_COLOR,
+                            xNodeColor->getNodeValue() );
+
+                    //now, parse the rest of attributes
+                    for( sal_Int32 i=0; i<nNumAttrs; ++i )
+                    {
+                        const sal_Int32 nTokenId(
+                            getTokenId(xAttributes->item(i)->getNodeName()));
+                        if ( nTokenId != XML_COLOR )
+                            parseGradientStop( maGradientStopVector.back(),
+                                               maGradientStopVector.size()-1,
+                                               nTokenId,
+                                               xAttributes->item(i)->getNodeValue() );
+                    }
                 }
                 break;
             }
             default:
             {
-                // init state. inherit defaults from parent.
-                maCurrState = maParentStates.back();
-                maCurrState.maTransform.identity();
-                maCurrState.maViewBox.reset();
-
-                // scan for style info
-                const sal_Int32 nNumAttrs( xAttributes->getLength() );
-                OUString sAttributeValue;
-                for( sal_Int32 i=0; i<nNumAttrs; ++i )
+                if ( !mrGradientNotFound )
                 {
-                    sAttributeValue = xAttributes->item(i)->getNodeValue();
-                    const sal_Int32 nTokenId(
-                        getTokenId(xAttributes->item(i)->getNodeName()));
-                    if( XML_STYLE == nTokenId )
-                        parseStyle(sAttributeValue);
-                    else
-                        parseAttribute(nTokenId,
-                                       sAttributeValue);
+                    // init state. inherit defaults from parent.
+                    maCurrState = maParentStates.back();
+                    maCurrState.maTransform.identity();
+                    maCurrState.maViewBox.reset();
+
+                    // first parse 'color' and 'style' as 'fill' and 'stroke' might depend on them
+                    // if their values are "currentColor" and parsed previously
+                    uno::Reference<xml::dom::XNode> xNodeColor(xAttributes->getNamedItem("color"));
+                    if(xNodeColor.is())
+                        parseAttribute(XML_COLOR, xNodeColor->getNodeValue());
+
+                    uno::Reference<xml::dom::XNode> xNodeStyle(xAttributes->getNamedItem("style"));
+                    if(xNodeStyle.is())
+                        parseStyle(xNodeStyle->getNodeValue());
+
+                    const sal_Int32 nNumAttrs( xAttributes->getLength() );
+                    OUString sAttributeValue;
+
+                    //now, parse the rest of attributes
+                    for( sal_Int32 i=0; i<nNumAttrs; ++i )
+                    {
+                        sAttributeValue = xAttributes->item(i)->getNodeValue();
+                        const sal_Int32 nTokenId(
+                            getTokenId(xAttributes->item(i)->getNodeName()));
+                        if( XML_ID == nTokenId )
+                        {
+                            maElementVector.push_back(xElem);
+                            maElementIdMap.insert(std::make_pair(sAttributeValue,
+                                maElementVector.size() - 1));
+                        }
+                        else if (nTokenId != XML_COLOR && nTokenId != XML_STYLE)
+                            parseAttribute(nTokenId,
+                                sAttributeValue);
+                    }
+
+                    // all attributes parsed, can calc total CTM now
+                    basegfx::B2DHomMatrix aLocalTransform;
+                    if( !maCurrState.maViewBox.isEmpty() &&
+                        maCurrState.maViewBox.getWidth() != 0.0 &&
+                        maCurrState.maViewBox.getHeight() != 0.0 )
+                    {
+                        // transform aViewBox into viewport, keep aspect ratio
+                        aLocalTransform.translate(-maCurrState.maViewBox.getMinX(),
+                                                  -maCurrState.maViewBox.getMinY());
+                        double scaleW = maCurrState.maViewport.getWidth()/maCurrState.maViewBox.getWidth();
+                        double scaleH = maCurrState.maViewport.getHeight()/maCurrState.maViewBox.getHeight();
+                        double scale = (scaleW < scaleH) ? scaleW : scaleH;
+                        aLocalTransform.scale(scale,scale);
+                    }
+                    else if( !maParentStates.back().maViewBox.isEmpty() )
+                                        maCurrState.maViewBox = maParentStates.back().maViewBox;
+
+                    maCurrState.maCTM = maCurrState.maCTM*maCurrState.maTransform*aLocalTransform;
+
+                    OSL_TRACE("annotateStyle - CTM is: %f %f %f %f %f %f",
+                              maCurrState.maCTM.get(0,0),
+                              maCurrState.maCTM.get(0,1),
+                              maCurrState.maCTM.get(0,2),
+                              maCurrState.maCTM.get(1,0),
+                              maCurrState.maCTM.get(1,1),
+                              maCurrState.maCTM.get(1,2));
+
+                    // if necessary, serialize to automatic-style section
+                    writeStyle(xElem,nTagId);
                 }
-
-                // all attributes parsed, can calc total CTM now
-                basegfx::B2DHomMatrix aLocalTransform;
-                if( !maCurrState.maViewBox.isEmpty() &&
-                    maCurrState.maViewBox.getWidth() != 0.0 &&
-                    maCurrState.maViewBox.getHeight() != 0.0 )
-                {
-                    // transform aViewBox into viewport, keep aspect ratio
-                    aLocalTransform.translate(-maCurrState.maViewBox.getMinX(),
-                                              -maCurrState.maViewBox.getMinY());
-                    double scaleW = maCurrState.maViewport.getWidth()/maCurrState.maViewBox.getWidth();
-                    double scaleH = maCurrState.maViewport.getHeight()/maCurrState.maViewBox.getHeight();
-                    double scale = (scaleW < scaleH) ? scaleW : scaleH;
-                    aLocalTransform.scale(scale,scale);
-                }
-                else if( !maParentStates.back().maViewBox.isEmpty() )
-                                    maCurrState.maViewBox = maParentStates.back().maViewBox;
-
-                maCurrState.maCTM = maCurrState.maCTM*maCurrState.maTransform*aLocalTransform;
-
-                OSL_TRACE("annotateStyle - CTM is: %f %f %f %f %f %f",
-                          maCurrState.maCTM.get(0,0),
-                          maCurrState.maCTM.get(0,1),
-                          maCurrState.maCTM.get(0,2),
-                          maCurrState.maCTM.get(1,0),
-                          maCurrState.maCTM.get(1,1),
-                          maCurrState.maCTM.get(1,2));
-
-                // if necessary, serialize to automatic-style section
-                writeStyle(xElem,nTagId);
             }
         }
     }
@@ -476,7 +621,7 @@ struct AnnotatingVisitor
         rtl::Reference<SvXMLAttributeList> xAttrs( new SvXMLAttributeList() );
         uno::Reference<xml::sax::XAttributeList> xUnoAttrs( xAttrs.get() );
 
-        if (XML_TEXT == nTagId) {
+        if (XML_TEXT == nTagId || XML_TSPAN == nTagId) {
             rState.mbIsText = true;
             basegfx::B2DTuple aScale, aTranslate;
             double fRotate, fShearX;
@@ -587,7 +732,7 @@ struct AnnotatingVisitor
         }
 
         // serialize to automatic-style section
-        if( nTagId == XML_TEXT )
+        if( nTagId == XML_TEXT || nTagId == XML_TSPAN)
         {
             // write paragraph style attributes
             xAttrs->Clear();
@@ -633,7 +778,7 @@ struct AnnotatingVisitor
         // text or shape? if the former, no use in processing any
         // graphic attributes except stroke color, ODF can do ~nothing
         // with text shapes
-        if( nTagId == XML_TEXT )
+        if( nTagId == XML_TEXT || nTagId == XML_TSPAN )
         {
             //xAttrs->AddAttribute( "draw:auto-grow-height", "true");
             xAttrs->AddAttribute( "draw:auto-grow-width", "true");
@@ -656,18 +801,24 @@ struct AnnotatingVisitor
             {
                 if( rState.meFillType == GRADIENT )
                 {
-                    xAttrs->AddAttribute( "draw:fill", "gradient");
-                    xAttrs->AddAttribute( "draw:fill-gradient-name",
-                                          getStyleName("svggradient", rState.maFillGradient.mnId) );
-                    if( hasGradientOpacity(rState.maFillGradient) )
+                    // don't fill the gradient if there's no stop element present
+                    if( rState.maFillGradient.maStops.size() == 0 )
+                        xAttrs->AddAttribute( "draw:fill", "none" );
+                    else
                     {
-                        // needs transparency gradient as well
-                        xAttrs->AddAttribute( "draw:opacity-name",
-                                              getStyleName("svgopacity", rState.maFillGradient.mnId) );
+                        xAttrs->AddAttribute( "draw:fill", "gradient");
+                        xAttrs->AddAttribute( "draw:fill-gradient-name",
+                                              getStyleName("svggradient", rState.maFillGradient.mnId) );
+                        if( hasGradientOpacity(rState.maFillGradient) )
+                        {
+                            // needs transparency gradient as well
+                            xAttrs->AddAttribute( "draw:opacity-name",
+                                                  getStyleName("svgopacity", rState.maFillGradient.mnId) );
+                        }
+                        else if( maCurrState.mnFillOpacity*maCurrState.mnOpacity != 1.0 )
+                            xAttrs->AddAttribute( "draw:opacity",
+                                                  OUString::number(100.0*maCurrState.mnFillOpacity*maCurrState.mnOpacity)+"%" );
                     }
-                    else if( maCurrState.mnFillOpacity*maCurrState.mnOpacity != 1.0 )
-                        xAttrs->AddAttribute( "draw:opacity",
-                                              OUString::number(100.0*maCurrState.mnFillOpacity*maCurrState.mnOpacity)+"%" );
                 }
                 else
                 {
@@ -1059,6 +1210,7 @@ struct AnnotatingVisitor
                 maCurrState.maFontFamily=sValue;
                 break;
             case XML_FONT_SIZE:
+                maCurrState.mnParentFontSize=maParentStates.back().mnFontSize;
                 maCurrState.mnFontSize=convLength(sValue,maCurrState,'v');
                 break;
             case XML_FONT_STYLE:
@@ -1212,19 +1364,32 @@ struct AnnotatingVisitor
     uno::Reference<xml::sax::XDocumentHandler> mxDocumentHandler;
     std::vector< Gradient >                    maGradientVector;
     std::vector< GradientStop >                maGradientStopVector;
+    std::vector< uno::Reference<xml::dom::XElement> > maElementVector;
+    std::vector< uno::Reference<xml::dom::XElement> >& mrUseElementVector;
     ElementRefMapType                          maGradientIdMap;
     ElementRefMapType                          maStopIdMap;
+    ElementRefMapType                          maElementIdMap;
+    bool&                                      mrGradientNotFound;
 };
 
 /// Annotate svg styles with unique references to state pool
-static void annotateStyles( StatePool&                                        rStatePool,
+void annotateStyles( StatePool&                                        rStatePool,
                             StateMap&                                         rStateMap,
                             const State&                                       rInitialState,
-                            const uno::Reference<xml::dom::XElement>&         rElem,
-                            const uno::Reference<xml::sax::XDocumentHandler>& xDocHdl )
+                            uno::Reference<xml::dom::XElement>&         rElem,
+                            const uno::Reference<xml::sax::XDocumentHandler>& xDocHdl,
+                            std::vector< uno::Reference<xml::dom::XElement> >& rUseElementVector )
 {
-    AnnotatingVisitor aVisitor(rStatePool,rStateMap,rInitialState,xDocHdl);
+    bool bGradientNotFound = false;
+    AnnotatingVisitor aVisitor(rStatePool, rStateMap, rInitialState, xDocHdl, rUseElementVector, bGradientNotFound);
     visitElements(aVisitor, rElem, STYLE_ANNOTATOR);
+
+    //Sometimes, xlink:href in gradients refers to another gradient which hasn't been parsed yet.
+    // if that happens, we'll need to parse the styles again, so everything gets referred.
+    if( bGradientNotFound )
+    {
+        visitElements(aVisitor, rElem, STYLE_ANNOTATOR);
+    }
 }
 
 struct ShapeWritingVisitor
@@ -1440,6 +1605,7 @@ struct ShapeWritingVisitor
                             break;
                         case XML_R:
                             r = convLength(sAttributeValue,maCurrState,'r');
+                            break;
                         default:
                             // skip
                             break;
@@ -1478,6 +1644,7 @@ struct ShapeWritingVisitor
                             break;
                         case XML_RY:
                             ry = convLength(sAttributeValue,maCurrState,'v');
+                            break;
                         default:
                             // skip
                             break;
@@ -1546,6 +1713,7 @@ struct ShapeWritingVisitor
                     writeBinaryData(xAttrs, xUnoAttrs, xElem, basegfx::B2DRange(x,y,x+width,y+height), sLinkValue);
                 break;
             }
+            case XML_TSPAN:
             case XML_TEXT:
             {
                 // collect text from all TEXT_NODE children into sText
@@ -1686,14 +1854,13 @@ struct ShapeWritingVisitor
     void writePathShape( rtl::Reference<SvXMLAttributeList>&             xAttrs,
                          const uno::Reference<xml::sax::XAttributeList>& xUnoAttrs,
                          const uno::Reference<xml::dom::XElement>&       xElem,
-                         const OUString&                            rStyleId,
+                         const OUString&                                 rStyleId,
                          const basegfx::B2DPolyPolygon&                  rPoly )
     {
         // we might need to split up polypolygon into multiple path
         // shapes (e.g. when emulating line stroking)
         std::vector<basegfx::B2DPolyPolygon> aPolys(1,rPoly);
         State aState = maCurrState;
-        OUString aStyleId(rStyleId);
 
         xAttrs->Clear();
 
@@ -1712,17 +1879,17 @@ struct ShapeWritingVisitor
                       boost::bind(&basegfx::B2DPolyPolygon::transform,
                                   _1,boost::cref(aState.maCTM)));
 
-        for( size_t i=0; i<aPolys.size(); ++i )
+        for(basegfx::B2DPolyPolygon & aPoly : aPolys)
         {
             const basegfx::B2DRange aBounds(
-                aPolys[i].areControlPointsUsed() ?
+                aPoly.areControlPointsUsed() ?
                 basegfx::tools::getRange(
-                    basegfx::tools::adaptiveSubdivideByAngle(aPolys[i])) :
-                basegfx::tools::getRange(aPolys[i]));
+                    basegfx::tools::adaptiveSubdivideByAngle(aPoly)) :
+                basegfx::tools::getRange(aPoly));
             fillShapeProperties(xAttrs,
                                 xElem,
                                 aBounds,
-                                "svggraphicstyle"+aStyleId);
+                                "svggraphicstyle"+rStyleId);
 
             // force path coordinates to 100th millimeter, after
             // putting polygon data at origin (ODF viewbox
@@ -1731,10 +1898,10 @@ struct ShapeWritingVisitor
             basegfx::B2DHomMatrix aNormalize;
             aNormalize.translate(-aBounds.getMinX(),-aBounds.getMinY());
             aNormalize.scale(2540.0/72.0,2540.0/72.0);
-            aPolys[i].transform(aNormalize);
+            aPoly.transform(aNormalize);
 
             xAttrs->AddAttribute( "svg:d", basegfx::tools::exportToSvgD(
-                aPolys[i],
+                aPoly,
                 false,   // no relative coords. causes rounding errors
                 false,   // no quad bezier detection. crashes older versions.
                 false ));
@@ -1776,13 +1943,20 @@ struct ShapeWritingVisitor
 };
 
 /// Write out shapes from DOM tree
-static void writeShapes( StatePool&                                        rStatePool,
+void writeShapes( StatePool&                                        rStatePool,
                          StateMap&                                         rStateMap,
                          const uno::Reference<xml::dom::XElement>&         rElem,
-                         const uno::Reference<xml::sax::XDocumentHandler>& xDocHdl )
+                         const uno::Reference<xml::sax::XDocumentHandler>& xDocHdl,
+                         std::vector< uno::Reference<xml::dom::XElement> >& rUseElementVector )
 {
     ShapeWritingVisitor aVisitor(rStatePool,rStateMap,xDocHdl);
     visitElements(aVisitor, rElem, SHAPE_WRITER);
+
+    std::vector< uno::Reference<xml::dom::XElement> >::iterator it;
+    for ( it = rUseElementVector.begin() ; it != rUseElementVector.end(); ++it)
+    {
+        visitElements(aVisitor, *it, SHAPE_WRITER);
+    }
 }
 
 } // namespace
@@ -1899,9 +2073,10 @@ static void writeOfficeStyles(  StateMap&                                       
 {
     OfficeStylesWritingVisitor aVisitor( rStateMap, xDocHdl );
     visitElements( aVisitor, rElem, STYLE_WRITER );
+
 }
 
-#if OSL_DEBUG_LEVEL > 2
+#ifdef DEBUG_FILTER_SVGREADER
 struct DumpingVisitor
 {
     void operator()( const uno::Reference<xml::dom::XElement>& xElem )
@@ -1939,7 +2114,7 @@ struct DumpingVisitor
 static void dumpTree( const uno::Reference<xml::dom::XElement> xElem )
 {
     DumpingVisitor aVisitor;
-    visitElements(aVisitor, xElem);
+    visitElements(aVisitor, xElem, STYLE_ANNOTATOR);
 }
 #endif
 
@@ -2003,6 +2178,7 @@ bool SVGReader::parseAndConvert()
     xAttrs->AddAttribute( "xmlns:math", "http://www.w3.org/1998/Math/MathML");
     xAttrs->AddAttribute( "xmlns:form", OASIS_STR "form:1.0" );
     xAttrs->AddAttribute( "xmlns:script", OASIS_STR "script:1.0" );
+    xAttrs->AddAttribute( "xmlns:config", OASIS_STR "config:1.0" );
     xAttrs->AddAttribute( "xmlns:dom", "http://www.w3.org/2001/xml-events");
     xAttrs->AddAttribute( "xmlns:xforms", "http://www.w3.org/2002/xforms");
     xAttrs->AddAttribute( "xmlns:xsd", "http://www.w3.org/2001/XMLSchema");
@@ -2103,16 +2279,16 @@ bool SVGReader::parseAndConvert()
 
     StatePool aStatePool;
     StateMap  aStateMap;
-    annotateStyles(aStatePool,aStateMap,aInitialState,
-                   xDocElem,m_xDocumentHandler);
+    std::vector< uno::Reference<xml::dom::XElement> > aUseElementVector;
 
-#if OSL_DEBUG_LEVEL > 2
+    annotateStyles(aStatePool,aStateMap,aInitialState,
+                   xDocElem,m_xDocumentHandler,aUseElementVector);
+
+#ifdef DEBUG_FILTER_SVGREADER
     dumpTree(xDocElem);
 #endif
 
     m_xDocumentHandler->endElement( "office:automatic-styles" );
-
-
 
     xAttrs->Clear();
     m_xDocumentHandler->startElement( "office:styles", xUnoAttrs);
@@ -2120,7 +2296,6 @@ bool SVGReader::parseAndConvert()
                        xDocElem,
                        m_xDocumentHandler);
     m_xDocumentHandler->endElement( "office:styles" );
-
 
 
     m_xDocumentHandler->startElement( "office:master-styles", xUnoAttrs );
@@ -2132,7 +2307,6 @@ bool SVGReader::parseAndConvert()
     m_xDocumentHandler->endElement( "style:master-page" );
 
     m_xDocumentHandler->endElement( "office:master-styles" );
-
 
 
     xAttrs->Clear();
@@ -2148,7 +2322,8 @@ bool SVGReader::parseAndConvert()
     writeShapes(aStatePool,
                 aStateMap,
                 xDocElem,
-                m_xDocumentHandler);
+                m_xDocumentHandler,
+                aUseElementVector);
 
     m_xDocumentHandler->endElement( "draw:page" );
     m_xDocumentHandler->endElement( "office:drawing" );

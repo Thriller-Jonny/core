@@ -109,17 +109,15 @@ SvxPostItDialog::SvxPostItDialog(vcl::Window* pParent, const SfxItemSet& rCoreSe
 
     ShowLastAuthor(aAuthorStr, aDateStr);
 
-    //lock to initial .ui placeholder size before replacing contents
-    Size aSize(m_pEditED->get_preferred_size());
-    m_pEditED->set_width_request(aSize.Width());
-    m_pEditED->set_height_request(aSize.Height());
+    //lock to an initial size before replacing contents
+    m_pEditED->set_width_request(m_pEditED->approximate_char_width() * 40);
+    m_pEditED->set_height_request(m_pEditED->GetTextHeight() * 10);
 
     m_pEditED->SetText(convertLineEnd(aTextStr, GetSystemLineEnd()));
 
     if (!bNew)
         SetText( get<FixedText>("alttitle")->GetText() );
 }
-
 
 
 SvxPostItDialog::~SvxPostItDialog()
@@ -142,7 +140,6 @@ void SvxPostItDialog::dispose()
 }
 
 
-
 void SvxPostItDialog::ShowLastAuthor(const OUString& rAuthor, const OUString& rDate)
 {
     OUString sTxt( rAuthor );
@@ -150,7 +147,6 @@ void SvxPostItDialog::ShowLastAuthor(const OUString& rAuthor, const OUString& rD
     sTxt += rDate;
     m_pLastEditFT->SetText( sTxt );
 }
-
 
 
 const sal_uInt16* SvxPostItDialog::GetRanges()
@@ -165,13 +161,11 @@ const sal_uInt16* SvxPostItDialog::GetRanges()
 }
 
 
-
 void SvxPostItDialog::EnableTravel(bool bNext, bool bPrev)
 {
     m_pPrevBtn->Enable(bPrev);
     m_pNextBtn->Enable(bNext);
 }
-
 
 
 IMPL_LINK_NOARG_TYPED(SvxPostItDialog, PrevHdl, Button*, void)
@@ -210,7 +204,6 @@ IMPL_LINK_NOARG_TYPED(SvxPostItDialog, Stamp, Button*, void)
     m_pEditED->GrabFocus();
     m_pEditED->SetSelection( Selection( nLen, nLen ) );
 }
-
 
 
 IMPL_LINK_NOARG_TYPED(SvxPostItDialog, OKHdl, Button*, void)

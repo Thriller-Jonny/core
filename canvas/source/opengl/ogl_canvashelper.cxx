@@ -197,19 +197,19 @@ namespace oglcanvas
 
             switch( rValues.meType )
             {
-                case ::canvas::ParametricPolyPolygon::GRADIENT_LINEAR:
+                case ::canvas::ParametricPolyPolygon::GradientType::Linear:
                     rHelper.getDeviceHelper()->useLinearGradientShader(pColors,
                                                                        rValues.maStops,
                                                                        aTextureTransform);
                     break;
 
-                case ::canvas::ParametricPolyPolygon::GRADIENT_ELLIPTICAL:
+                case ::canvas::ParametricPolyPolygon::GradientType::Elliptical:
                     rHelper.getDeviceHelper()->useRadialGradientShader(pColors,
                                                                        rValues.maStops,
                                                                        aTextureTransform);
                     break;
 
-                case ::canvas::ParametricPolyPolygon::GRADIENT_RECTANGULAR:
+                case ::canvas::ParametricPolyPolygon::GradientType::Rectangular:
                     rHelper.getDeviceHelper()->useRectangularGradientShader(pColors,
                                                                             rValues.maStops,
                                                                             aTextureTransform);
@@ -729,7 +729,7 @@ namespace oglcanvas
                     rFontRequest.FontDescription.StyleName,
                     Size( 0, ::basegfx::fround(rFontRequest.CellSize)));
 
-                aFont.SetAlign( ALIGN_BASELINE );
+                aFont.SetAlignment( ALIGN_BASELINE );
                 aFont.SetCharSet( (rFontRequest.FontDescription.IsSymbolFont==util::TriState_YES) ? RTL_TEXTENCODING_SYMBOL : RTL_TEXTENCODING_UNICODE );
                 aFont.SetVertical( rFontRequest.FontDescription.IsVertical==util::TriState_YES );
                 aFont.SetWeight( static_cast<FontWeight>(rFontRequest.FontDescription.FontDescription.Weight) );
@@ -738,7 +738,7 @@ namespace oglcanvas
                 // adjust to stretched font
                 if(!::rtl::math::approxEqual(rFontMatrix.m00, rFontMatrix.m11))
                 {
-                    const Size aSize = pVDev->GetFontMetric( aFont ).GetSize();
+                    const Size aSize = pVDev->GetFontMetric( aFont ).GetFontSize();
                     const double fDividend( rFontMatrix.m10 + rFontMatrix.m11 );
                     double fStretch = (rFontMatrix.m00 + rFontMatrix.m01);
 
@@ -747,7 +747,7 @@ namespace oglcanvas
 
                     const sal_Int32 nNewWidth = ::basegfx::fround( aSize.Width() * fStretch );
 
-                    aFont.SetWidth( nNewWidth );
+                    aFont.SetAverageFontWidth( nNewWidth );
                 }
 
                 // set font

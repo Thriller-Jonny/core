@@ -32,7 +32,6 @@ namespace accessibility {
     class AccessibleGridControl_Impl;
 
 
-
 /** This class represents the complete accessible Grid Control object. */
 class AccessibleGridControl : public AccessibleGridControlBase
 {
@@ -185,7 +184,6 @@ public:
 
     /// returns the AccessibleContext belonging to this Accessible
     inline AccessibleGridControl*            getContext()         { return m_pContext; }
-    inline const AccessibleGridControl*      getContext() const   { return m_pContext; }
 
 protected:
     virtual ~AccessibleGridControlAccess();
@@ -234,7 +232,6 @@ private:
 
 
 } // namespace accessibility
-
 
 
 #endif

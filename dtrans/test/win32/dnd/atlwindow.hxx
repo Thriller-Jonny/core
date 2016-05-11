@@ -49,10 +49,8 @@ class AWindow: public CWindowImpl<AWindow, CWindow,
 
     HWND m_hwndEdit;
 
-    CDTransObjFactory m_aDataConverter;
-
 public:
-    AWindow(LPCTSTR strName)
+    explicit AWindow(LPCTSTR strName)
     {
         RECT rcPos= {0,0,200,200};
         Create(0, rcPos, strName);

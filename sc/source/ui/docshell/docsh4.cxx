@@ -28,6 +28,7 @@ using namespace ::com::sun::star;
 #include <math.h>
 
 #include "scitems.hxx"
+#include <editeng/flstitem.hxx>
 #include <sfx2/fcontnr.hxx>
 #include <sfx2/objface.hxx>
 #include <sfx2/docfile.hxx>
@@ -97,18 +98,9 @@ using namespace ::com::sun::star;
 #include "sharedocdlg.hxx"
 #include "conditio.hxx"
 #include "sheetevents.hxx"
+#include "formulacell.hxx"
 #include <documentlinkmgr.hxx>
 #include <memory>
-
-#define IS_SHARE_HEADER(set) \
-    static_cast<const SfxBoolItem&>( \
-        static_cast<const SvxSetItem&>((set).Get(ATTR_PAGE_HEADERSET)).GetItemSet(). \
-            Get(ATTR_PAGE_SHARED)).GetValue()
-
-#define IS_SHARE_FOOTER(set) \
-    static_cast<const SfxBoolItem&>( \
-        static_cast<const SvxSetItem&>((set).Get(ATTR_PAGE_FOOTERSET)).GetItemSet(). \
-            Get(ATTR_PAGE_SHARED)).GetValue()
 
 void ScDocShell::Execute( SfxRequest& rReq )
 {
@@ -198,7 +190,7 @@ void ScDocShell::Execute( SfxRequest& rReq )
                     if ( !pDBColl || !pDBColl->getNamedDBs().findByUpperName(ScGlobal::pCharClass->uppercase(sTarget)) )
                     {
                         ScAddress aPos;
-                        if ( aPos.Parse( sTarget, &aDocument, aDocument.GetAddressConvention() ) & SCA_VALID )
+                        if ( aPos.Parse( sTarget, &aDocument, aDocument.GetAddressConvention() ) & ScRefFlags::VALID )
                         {
                             bMakeArea = true;
                             if (bUndo)
@@ -283,7 +275,7 @@ void ScDocShell::Execute( SfxRequest& rReq )
                 }
 
                 ScAddress::Details aDetails(rDoc.GetAddressConvention(), 0, 0);
-                bool bValid = ( aSingleRange.ParseAny( aRangeName, &rDoc, aDetails ) & SCA_VALID ) != 0;
+                bool bValid = (aSingleRange.ParseAny(aRangeName, &rDoc, aDetails) & ScRefFlags::VALID) == ScRefFlags::ZERO;
                 if (!bValid)
                 {
                     aRangeListRef = new ScRangeList;
@@ -717,7 +709,7 @@ void ScDocShell::Execute( SfxRequest& rReq )
                     //  GetFilter needs name without the prefix.
                     ScDocumentLoader::RemoveAppPrefix( aFilterName );
 
-                    const SfxFilter* pFilter = ScDocShell::Factory().GetFilterContainer()->GetFilter4FilterName( aFilterName );
+                    std::shared_ptr<const SfxFilter> pFilter = ScDocShell::Factory().GetFilterContainer()->GetFilter4FilterName( aFilterName );
                     SfxItemSet* pSet = new SfxAllItemSet( pApp->GetPool() );
                     if (!aOptions.isEmpty())
                         pSet->Put( SfxStringItem( SID_FILE_FILTEROPTIONS, aOptions ) );
@@ -1013,7 +1005,7 @@ void ScDocShell::Execute( SfxRequest& rReq )
                                     uno::Reference< frame::XStorable > xStorable( xModel, uno::UNO_QUERY_THROW );
                                     if ( xStorable->isReadonly() )
                                     {
-                                        xCloseable->close( sal_True );
+                                        xCloseable->close( true );
 
                                         OUString aUserName( ScGlobal::GetRscString( STR_UNKNOWN_USER ) );
                                         try
@@ -1046,7 +1038,7 @@ void ScDocShell::Execute( SfxRequest& rReq )
                                             ScGlobal::GetRscString( STR_DOC_DISABLESHARED ) );
                                         if ( aBox->Execute() == RET_YES )
                                         {
-                                            xCloseable->close( sal_True );
+                                            xCloseable->close( true );
 
                                             if ( !SwitchToShared( false, true ) )
                                             {
@@ -1069,13 +1061,13 @@ void ScDocShell::Execute( SfxRequest& rReq )
                                         }
                                         else
                                         {
-                                            xCloseable->close( sal_True );
+                                            xCloseable->close( true );
                                         }
                                     }
                                 }
                                 else
                                 {
-                                    xCloseable->close( sal_True );
+                                    xCloseable->close( true );
                                     ScopedVclPtrInstance<WarningBox> aBox( GetActiveDialogParent(), WinBits( WB_OK ),
                                         ScGlobal::GetRscString( STR_DOC_NOLONGERSHARED ) );
                                     aBox->Execute();
@@ -1089,7 +1081,7 @@ void ScDocShell::Execute( SfxRequest& rReq )
                                 try
                                 {
                                     uno::Reference< util::XCloseable > xClose( xModel, uno::UNO_QUERY_THROW );
-                                    xClose->close( sal_True );
+                                    xClose->close( true );
                                 }
                                 catch ( uno::Exception& )
                                 {
@@ -1106,8 +1098,9 @@ void ScDocShell::Execute( SfxRequest& rReq )
         {
             SfxStringItem aApp(SID_DOC_SERVICE, OUString("com.sun.star.sheet.SpreadsheetDocument"));
             SfxStringItem aTarget(SID_TARGETNAME, OUString("_blank"));
-            GetViewData()->GetDispatcher().Execute(
-                SID_OPENDOC, SfxCallMode::API|SfxCallMode::SYNCHRON, &aApp, &aTarget, 0L);
+            GetViewData()->GetDispatcher().ExecuteList(
+                SID_OPENDOC, SfxCallMode::API|SfxCallMode::SYNCHRON,
+                { &aApp, &aTarget });
         }
         break;
         default:
@@ -1204,9 +1197,9 @@ void ScDocShell::DoRecalc( bool bApi )
 {
     bool bDone = false;
     ScTabViewShell* pSh = GetBestViewShell();
+    ScInputHandler* pHdl = ( pSh ? SC_MOD()->GetInputHdl( pSh ) : nullptr );
     if ( pSh )
     {
-        ScInputHandler* pHdl = SC_MOD()->GetInputHdl(pSh);
         if ( pHdl && pHdl->IsInputMode() && pHdl->IsFormulaMode() && !bApi )
         {
             pHdl->FormulaPreview();     // Teilergebnis als QuickHelp
@@ -1221,6 +1214,13 @@ void ScDocShell::DoRecalc( bool bApi )
     if (!bDone)                         // sonst Dokument neu berechnen
     {
         WaitObject aWaitObj( GetActiveDialogParent() );
+        if ( pHdl )
+        {
+            // tdf97897 set current cell to Dirty to force recalculation of cell
+            ScFormulaCell* pFC = aDocument.GetFormulaCell( pHdl->GetCursorPos());
+            if (pFC)
+                pFC->SetDirty();
+        }
         aDocument.CalcFormulaTree();
         if ( pSh )
             pSh->UpdateCharts(true);
@@ -1256,9 +1256,8 @@ void ScDocShell::DoHardRecalc( bool /* bApi */ )
     // set notification flags for "calculate" event (used in SFX_HINT_DATACHANGED broadcast)
     // (might check for the presence of any formulas on each sheet)
     SCTAB nTabCount = aDocument.GetTableCount();
-    SCTAB nTab;
     if (aDocument.HasAnySheetEventScript( ScSheetEventId::CALCULATE, true )) // search also for VBA handler
-        for (nTab=0; nTab<nTabCount; nTab++)
+        for (SCTAB nTab=0; nTab<nTabCount; nTab++)
             aDocument.SetCalcNotification(nTab);
 
     // CalcAll doesn't broadcast value changes, so SC_HINT_CALCALL is broadcasted globally
@@ -1268,7 +1267,7 @@ void ScDocShell::DoHardRecalc( bool /* bApi */ )
 
     // use hard recalc also to disable stream-copying of all sheets
     // (somewhat consistent with charts)
-    for (nTab=0; nTab<nTabCount; nTab++)
+    for (SCTAB nTab=0; nTab<nTabCount; nTab++)
         if (aDocument.IsStreamValid(nTab))
             aDocument.SetStreamValid(nTab, false);
 
@@ -1279,10 +1278,10 @@ void ScDocShell::DoAutoStyle( const ScRange& rRange, const OUString& rStyle )
 {
     ScStyleSheetPool* pStylePool = aDocument.GetStyleSheetPool();
     ScStyleSheet* pStyleSheet =
-        pStylePool->FindCaseIns( rStyle, SFX_STYLE_FAMILY_PARA );
+        pStylePool->FindCaseIns( rStyle, SfxStyleFamily::Para );
     if (!pStyleSheet)
         pStyleSheet = static_cast<ScStyleSheet*>(
-            pStylePool->Find( ScGlobal::GetRscString(STR_STYLENAME_STANDARD), SFX_STYLE_FAMILY_PARA ));
+            pStylePool->Find( ScGlobal::GetRscString(STR_STYLENAME_STANDARD), SfxStyleFamily::Para ));
     if (pStyleSheet)
     {
         OSL_ENSURE(rRange.aStart.Tab() == rRange.aEnd.Tab(),
@@ -1305,7 +1304,7 @@ void ScDocShell::NotifyStyle( const SfxStyleSheetHint& rHint )
     if (!pStyle)
         return;
 
-    if ( pStyle->GetFamily() == SFX_STYLE_FAMILY_PAGE )
+    if ( pStyle->GetFamily() == SfxStyleFamily::Page )
     {
         if ( nId == SfxStyleSheetHintId::MODIFIED )
         {
@@ -1345,7 +1344,7 @@ void ScDocShell::NotifyStyle( const SfxStyleSheetHint& rHint )
             }
         }
     }
-    else if ( pStyle->GetFamily() == SFX_STYLE_FAMILY_PARA )
+    else if ( pStyle->GetFamily() == SfxStyleFamily::Para )
     {
         if ( nId == SfxStyleSheetHintId::MODIFIED)
         {
@@ -1376,7 +1375,7 @@ void ScDocShell::SetPrintZoom( SCTAB nTab, sal_uInt16 nScale, sal_uInt16 nPages 
 {
     OUString aStyleName = aDocument.GetPageStyle( nTab );
     ScStyleSheetPool* pStylePool = aDocument.GetStyleSheetPool();
-    SfxStyleSheetBase* pStyleSheet = pStylePool->Find( aStyleName, SFX_STYLE_FAMILY_PAGE );
+    SfxStyleSheetBase* pStyleSheet = pStylePool->Find( aStyleName, SfxStyleFamily::Page );
     OSL_ENSURE( pStyleSheet, "PageStyle not found" );
     if ( pStyleSheet )
     {
@@ -1412,7 +1411,7 @@ bool ScDocShell::AdjustPrintZoom( const ScRange& rRange )
 
     OUString aStyleName = aDocument.GetPageStyle( nTab );
     ScStyleSheetPool* pStylePool = aDocument.GetStyleSheetPool();
-    SfxStyleSheetBase* pStyleSheet = pStylePool->Find( aStyleName, SFX_STYLE_FAMILY_PAGE );
+    SfxStyleSheetBase* pStyleSheet = pStylePool->Find( aStyleName, SfxStyleFamily::Page );
     OSL_ENSURE( pStyleSheet, "PageStyle not found" );
     if ( pStyleSheet )
     {
@@ -1535,15 +1534,12 @@ void ScDocShell::ExecutePageStyle( SfxViewShell& rCaller,
         case SID_STATUS_PAGESTYLE:  // Click auf StatusBar-Control
         case SID_FORMATPAGE:
             {
-                if ( pReqArgs != nullptr )
-                {
-                }
-                else if ( pReqArgs == nullptr )
+                if ( pReqArgs == nullptr )
                 {
                     OUString aOldName = aDocument.GetPageStyle( nCurTab );
                     ScStyleSheetPool* pStylePool = aDocument.GetStyleSheetPool();
                     SfxStyleSheetBase* pStyleSheet
-                        = pStylePool->Find( aOldName, SFX_STYLE_FAMILY_PAGE );
+                        = pStylePool->Find( aOldName, SfxStyleFamily::Page );
 
                     OSL_ENSURE( pStyleSheet, "PageStyle not found! :-/" );
 
@@ -1592,7 +1588,7 @@ void ScDocShell::ExecutePageStyle( SfxViewShell& rCaller,
                             if (bUndo)
                             {
                                 GetUndoManager()->AddUndoAction(
-                                        new ScUndoModifyStyle( this, SFX_STYLE_FAMILY_PAGE,
+                                        new ScUndoModifyStyle( this, SfxStyleFamily::Page,
                                                     aOldData, aNewData ) );
                             }
 
@@ -1609,10 +1605,7 @@ void ScDocShell::ExecutePageStyle( SfxViewShell& rCaller,
 
         case SID_HFEDIT:
             {
-                if ( pReqArgs != nullptr )
-                {
-                }
-                else if ( pReqArgs == nullptr )
+                if ( pReqArgs == nullptr )
                 {
                     OUString aStr( aDocument.GetPageStyle( nCurTab ) );
 
@@ -1620,7 +1613,7 @@ void ScDocShell::ExecutePageStyle( SfxViewShell& rCaller,
                         = aDocument.GetStyleSheetPool();
 
                     SfxStyleSheetBase* pStyleSheet
-                        = pStylePool->Find( aStr, SFX_STYLE_FAMILY_PAGE );
+                        = pStylePool->Find( aStr, SfxStyleFamily::Page );
 
                     OSL_ENSURE( pStyleSheet, "PageStyle not found! :-/" );
 
@@ -1632,8 +1625,18 @@ void ScDocShell::ExecutePageStyle( SfxViewShell& rCaller,
                             SvxPageUsage( static_cast<const SvxPageItem&>(
                                             rStyleSet.Get( ATTR_PAGE )).
                                                 GetPageUsage() );
-                        bool bShareHeader = IS_SHARE_HEADER(rStyleSet);
-                        bool bShareFooter = IS_SHARE_FOOTER(rStyleSet);
+                        bool bShareHeader = static_cast<const SfxBoolItem&>(
+                                                static_cast<const SvxSetItem&>(rStyleSet
+                                                        .Get(ATTR_PAGE_HEADERSET))
+                                                    .GetItemSet()
+                                                    .Get(ATTR_PAGE_SHARED))
+                                                .GetValue();
+                        bool bShareFooter = static_cast<const SfxBoolItem&>(
+                                                static_cast<const SvxSetItem&>(rStyleSet
+                                                        .Get(ATTR_PAGE_FOOTERSET))
+                                                    .GetItemSet()
+                                                    .Get(ATTR_PAGE_SHARED))
+                                                .GetValue();
                         sal_uInt16 nResId = 0;
 
                         switch ( eUsage )
@@ -1758,7 +1761,7 @@ void ScDocShell::GetStatePageStyle( SfxViewShell&   /* rCaller */,
                 {
                     OUString            aStr        = aDocument.GetPageStyle( nCurTab );
                     ScStyleSheetPool*   pStylePool  = aDocument.GetStyleSheetPool();
-                    SfxStyleSheetBase*  pStyleSheet = pStylePool->Find( aStr, SFX_STYLE_FAMILY_PAGE );
+                    SfxStyleSheetBase*  pStyleSheet = pStylePool->Find( aStr, SfxStyleFamily::Page );
 
                     OSL_ENSURE( pStyleSheet, "PageStyle not found! :-/" );
 
@@ -1848,6 +1851,10 @@ void ScDocShell::GetState( SfxItemSet &rSet )
                         rSet.DisableItem( nWhich );
                     }
                 }
+                break;
+
+            case SID_ATTR_CHAR_FONTLIST:
+                rSet.Put( SvxFontListItem( pImpl->pFontList, nWhich ) );
                 break;
 
             default:
@@ -2061,7 +2068,7 @@ void ScDocShell::GetPageOnFromPageStyleSet( const SfxItemSet* pStyleSet,
         ScStyleSheetPool*  pStylePool  = aDocument.GetStyleSheetPool();
         SfxStyleSheetBase* pStyleSheet = pStylePool->
                                             Find( aDocument.GetPageStyle( nCurTab ),
-                                                  SFX_STYLE_FAMILY_PAGE );
+                                                  SfxStyleFamily::Page );
 
         OSL_ENSURE( pStyleSheet, "PageStyle not found! :-/" );
 
@@ -2087,7 +2094,7 @@ void ScDocShell::GetPageOnFromPageStyleSet( const SfxItemSet* pStyleSet,
     rbFooter = static_cast<const SfxBoolItem&>(pSet->Get(ATTR_PAGE_ON)).GetValue();
 }
 
-#if defined WNT
+#if defined(_WIN32)
 bool ScDocShell::DdeGetData( const OUString& rItem,
                              const OUString& rMimeType,
                              css::uno::Any & rValue )
@@ -2186,20 +2193,20 @@ bool ScDocShell::DdeSetData( const OUString& rItem,
         const ScRangeData* pData = pRange->findByUpperName(ScGlobal::pCharClass->uppercase(aPos));
         if (pData)
         {
-            if( pData->HasType( RT_REFAREA )
-                || pData->HasType( RT_ABSAREA )
-                || pData->HasType( RT_ABSPOS ) )
+            if( pData->HasType( ScRangeData::Type::RefArea    )
+                || pData->HasType( ScRangeData::Type::AbsArea )
+                || pData->HasType( ScRangeData::Type::AbsPos  ) )
                 pData->GetSymbol( aPos );           // continue with the name's contents
         }
     }
 
     // Address in DDE function must be always parsed as CONV_OOO so that it
-    // would always work regardless of current address convension.  We do this
+    // would always work regardless of current address conversion.  We do this
     // because the address item in a DDE entry is *not* normalized when saved
     // into ODF.
     ScRange aRange;
-    bool bValid = ( (aRange.Parse(aPos, &aDocument, formula::FormulaGrammar::CONV_OOO ) & SCA_VALID) ||
-                    (aRange.aStart.Parse(aPos, &aDocument, formula::FormulaGrammar::CONV_OOO) & SCA_VALID) );
+    bool bValid = ( (aRange.Parse(aPos, &aDocument, formula::FormulaGrammar::CONV_OOO ) & ScRefFlags::VALID) ||
+                    (aRange.aStart.Parse(aPos, &aDocument, formula::FormulaGrammar::CONV_OOO) & ScRefFlags::VALID) );
 
     ScServerObject* pObj = nullptr;            // NULL = error
     if ( bValid )
@@ -2361,7 +2368,7 @@ uno::Reference< frame::XModel > ScDocShell::LoadSharedDocument()
         uno::Reference< frame::XDesktop2 > xLoader = frame::Desktop::create( ::comphelper::getProcessComponentContext() );
         uno::Sequence < beans::PropertyValue > aArgs( 1 );
         aArgs[0].Name = "Hidden";
-        aArgs[0].Value <<= sal_True;
+        aArgs[0].Value <<= true;
 
         if ( GetMedium() )
         {
@@ -2386,7 +2393,7 @@ uno::Reference< frame::XModel > ScDocShell::LoadSharedDocument()
         try
         {
             uno::Reference< util::XCloseable > xClose( xModel, uno::UNO_QUERY_THROW );
-            xClose->close( sal_True );
+            xClose->close( true );
             return uno::Reference< frame::XModel >();
         }
         catch ( uno::Exception& )

@@ -35,16 +35,12 @@ namespace dbaccess
 {
 
     using ::com::sun::star::uno::Reference;
-    using ::com::sun::star::uno::XInterface;
     using ::com::sun::star::uno::UNO_QUERY;
     using ::com::sun::star::uno::UNO_QUERY_THROW;
     using ::com::sun::star::uno::UNO_SET_THROW;
     using ::com::sun::star::uno::Exception;
     using ::com::sun::star::uno::RuntimeException;
-    using ::com::sun::star::uno::Any;
-    using ::com::sun::star::uno::makeAny;
     using ::com::sun::star::uno::Sequence;
-    using ::com::sun::star::uno::Type;
     using ::com::sun::star::uno::WeakReference;
     using ::com::sun::star::uno::XComponentContext;
     using ::com::sun::star::document::XDocumentEventBroadcaster;
@@ -76,7 +72,7 @@ namespace dbaccess
 
     namespace
     {
-        static void lcl_dispatchScriptURL_throw( DocumentEventExecutor_Data& _rDocExecData,
+        void lcl_dispatchScriptURL_throw( DocumentEventExecutor_Data& _rDocExecData,
             const OUString& _rScriptURL, const DocumentEvent& _rTrigger )
         {
             Reference< XModel > xDocument( _rDocExecData.xDocument.get(), UNO_QUERY_THROW );
@@ -142,7 +138,7 @@ namespace dbaccess
     {
     }
 
-    void SAL_CALL DocumentEventExecutor::documentEventOccured( const DocumentEvent& _Event ) throw (RuntimeException, std::exception)
+    void SAL_CALL DocumentEventExecutor::documentEventOccured( const DocumentEvent& Event ) throw (RuntimeException, std::exception)
     {
         Reference< XEventsSupplier > xEventsSupplier( m_pData->xDocument.get(), UNO_QUERY );
         if ( !xEventsSupplier.is() )
@@ -156,7 +152,7 @@ namespace dbaccess
         try
         {
             Reference< XNameAccess > xDocEvents( xEventsSupplier->getEvents().get(), UNO_SET_THROW );
-            if ( !xDocEvents->hasByName( _Event.EventName ) )
+            if ( !xDocEvents->hasByName( Event.EventName ) )
             {
                 // this is worth an assertion: We are listener at the very same document which we just asked
                 // for its events. So when EventName is fired, why isn't it supported by xDocEvents?
@@ -164,7 +160,7 @@ namespace dbaccess
                 return;
             }
 
-            const ::comphelper::NamedValueCollection aScriptDescriptor( xDocEvents->getByName( _Event.EventName ) );
+            const ::comphelper::NamedValueCollection aScriptDescriptor( xDocEvents->getByName( Event.EventName ) );
 
             OUString sEventType;
             bool bScriptAssigned = aScriptDescriptor.get_ensureType( "EventType", sEventType );
@@ -184,7 +180,7 @@ namespace dbaccess
 
             if ( bDispatchScriptURL && bNonEmptyScript )
             {
-                lcl_dispatchScriptURL_throw( *m_pData, sScript, _Event );
+                lcl_dispatchScriptURL_throw( *m_pData, sScript, Event );
             }
         }
         catch( const RuntimeException& ) { throw; }

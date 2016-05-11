@@ -28,7 +28,6 @@
 using namespace com::sun::star;
 
 
-
 static const LanguageType kSAME = 0xffff;
 
 namespace {
@@ -123,7 +122,6 @@ struct IsoLangOtherEntry
     LanguageType        mnLang;
     const sal_Char*     mpLanguage;
 };
-
 
 
 // Entries for languages are lower case, for countries upper case, as
@@ -239,7 +237,8 @@ static IsoLanguageCountryEntry const aImplIsoLangEntries[] =
     { LANGUAGE_USER_ARABIC_SOMALIA,         "ar", "SO", 0     },
     { LANGUAGE_USER_ARABIC_SUDAN,           "ar", "SD", 0     },
     { LANGUAGE_ARABIC_PRIMARY_ONLY,         "ar", ""  , 0     },
-    { LANGUAGE_BASQUE,                      "eu", ""  , 0     },
+    { LANGUAGE_BASQUE,                      "eu", "ES", 0     },
+    { LANGUAGE_BASQUE,                      "eu", ""  , kSAME },    // our earlier definition
     { LANGUAGE_BULGARIAN,                   "bg", "BG", 0     },
     { LANGUAGE_CZECH,                       "cs", "CZ", 0     },
     { LANGUAGE_CZECH,                       "cz", ""  , kSAME },
@@ -498,6 +497,7 @@ static IsoLanguageCountryEntry const aImplIsoLangEntries[] =
     { LANGUAGE_LATIN_LSO,                   "la", ""  , 0     },
     { LANGUAGE_USER_ESPERANTO,              "eo", ""  , 0     },
     { LANGUAGE_USER_INTERLINGUA,            "ia", ""  , 0     },
+    { LANGUAGE_USER_INTERLINGUE,            "ie", ""  , 0     },
     { LANGUAGE_MAORI_NEW_ZEALAND,           "mi", "NZ", 0     },
     { LANGUAGE_OBSOLETE_USER_MAORI,         "mi", "NZ", 0     },
     { LANGUAGE_KINYARWANDA_RWANDA,          "rw", "RW", 0     },
@@ -660,6 +660,9 @@ static IsoLanguageCountryEntry const aImplIsoLangEntries[] =
     { LANGUAGE_USER_ARPITAN_FRANCE,        "frp", "FR", 0     },
     { LANGUAGE_USER_ARPITAN_ITALY,         "frp", "IT", 0     },
     { LANGUAGE_USER_ARPITAN_SWITZERLAND,   "frp", "CH", 0     },
+    { LANGUAGE_USER_APATANI,               "apt", "IN", 0     },
+    { LANGUAGE_USER_ENGLISH_MAURITIUS,      "en", "MU", 0     },
+    { LANGUAGE_USER_FRENCH_MAURITIUS,       "fr", "MU", 0     },
     { LANGUAGE_MULTIPLE,                   "mul", ""  , 0     },    // multiple languages, many languages are used
     { LANGUAGE_UNDETERMINED,               "und", ""  , 0     },    // undetermined language, language cannot be identified
     { LANGUAGE_NONE,                       "zxx", ""  , 0     },    // added to ISO 639-2 on 2006-01-11: Used to declare the absence of linguistic information
@@ -739,8 +742,10 @@ static IsoLanguageScriptCountryEntry const aImplIsoLangScriptEntries[] =
     { LANGUAGE_BOSNIAN_LATIN_LSO,                   "bs-Latn", ""  , LANGUAGE_BOSNIAN_LSO },   // MS, though Latn is suppress-script
     { LANGUAGE_CHINESE_TRADITIONAL_LSO,             "zh-Hant", ""  , 0     },
     { LANGUAGE_USER_MANINKAKAN_EASTERN_LATIN,      "emk-Latn", "GN", 0     },
-    { LANGUAGE_USER_CREE_PLAINS_LATIN,             "crk-Latn", "CN", 0     },
-    { LANGUAGE_USER_CREE_PLAINS_SYLLABICS,         "crk-Cans", "CN", 0     },
+    { LANGUAGE_USER_CREE_PLAINS_LATIN,             "crk-Latn", "CA", 0     },
+    { LANGUAGE_USER_CREE_PLAINS_SYLLABICS,         "crk-Cans", "CA", 0     },
+    { LANGUAGE_USER_CREE_PLAINS_LATIN,             "crk-Latn", "CN", kSAME },   // erroneous tdf#73973
+    { LANGUAGE_USER_CREE_PLAINS_SYLLABICS,         "crk-Cans", "CN", kSAME },   // erroneous tdf#73973
     { LANGUAGE_DONTKNOW,                            "",        ""  , 0     }    // marks end of table
 };
 
@@ -798,7 +803,6 @@ css::lang::Locale Bcp47CountryEntry::getLocale() const
 {
     return lang::Locale( I18NLANGTAG_QLT, OUString::createFromAscii( maCountry), getTagString());
 }
-
 
 
 // In this table are the countries which should mapped to a specific
@@ -869,7 +873,6 @@ static IsoLangEngEntry const aImplIsoLangEngEntries[] =
 };
 
 
-
 static IsoLangNoneStdEntry const aImplIsoNoneStdLangEntries[] =
 {
     { LANGUAGE_NORWEGIAN_BOKMAL,            "no", "BOK"      }, // registered subtags for "no" in rfc1766
@@ -882,7 +885,6 @@ static IsoLangNoneStdEntry const aImplIsoNoneStdLangEntries[] =
 };
 
 
-
 // in this table are only names to find the best language
 static IsoLangNoneStdEntry const aImplIsoNoneStdLangEntries2[] =
 {
@@ -891,7 +893,6 @@ static IsoLangNoneStdEntry const aImplIsoNoneStdLangEntries2[] =
     { LANGUAGE_NORWEGIAN_NYNORSK,           "no", "nynorsk"  },
     { LANGUAGE_DONTKNOW,                    "",   ""         }  // marks end of table
 };
-
 
 
 // in this table are only names to find the best language
@@ -917,7 +918,6 @@ static IsoLangOtherEntry const aImplPrivateUseEntries[] =
     { LANGUAGE_USER_PRIV_JOKER,             "*"              }, //! not BCP47 but transferable in configmgr
     { LANGUAGE_DONTKNOW,                    nullptr             }  // marks end of table
 };
-
 
 
 // static
@@ -1001,7 +1001,6 @@ Label_Override_Lang_Locale:
 
     // Not found. Passed rLocale argument remains unchanged.
 }
-
 
 
 // static
@@ -1113,9 +1112,9 @@ css::lang::Locale MsLangId::Conversion::lookupFallbackLocale(
                 switch (pEntry->mnLang)
                 {
                     // These are known to have no country assigned.
-                    case LANGUAGE_BASQUE:
                     case LANGUAGE_USER_ESPERANTO:
                     case LANGUAGE_USER_INTERLINGUA:
+                    case LANGUAGE_USER_INTERLINGUE:
                     case LANGUAGE_USER_LOJBAN:
                     case LANGUAGE_KASHMIRI:
                     case LANGUAGE_USER_KEYID:
@@ -1150,7 +1149,6 @@ css::lang::Locale MsLangId::Conversion::lookupFallbackLocale(
 
     return aLastResortFallbackEntry.getLocale();
 }
-
 
 
 // static
@@ -1263,38 +1261,42 @@ css::lang::Locale MsLangId::Conversion::getOverride( const css::lang::Locale& rL
 
 // static
 LanguageType MsLangId::Conversion::convertIsoNamesToLanguage( const OUString& rLang,
-        const OUString& rCountry )
+        const OUString& rCountry, bool bSkipIsoTable )
 {
     // language is lower case in table
     OUString aLowerLang = rLang.toAsciiLowerCase();
     // country is upper case in table
     OUString aUpperCountry = rCountry.toAsciiUpperCase();
 
-    //  first look for exact match
     const IsoLanguageCountryEntry* pFirstLang = nullptr;
-    for (const IsoLanguageCountryEntry* pEntry = aImplIsoLangEntries;
-            pEntry->mnLang != LANGUAGE_DONTKNOW; ++pEntry)
-    {
-        if ( aLowerLang.equalsAscii( pEntry->maLanguage ) )
-        {
-            if ( aUpperCountry.isEmpty() ||
-                 aUpperCountry.equalsAscii( pEntry->maCountry ) )
-                return pEntry->mnLang;
-            if ( !pFirstLang )
-                pFirstLang = pEntry;
-            else if ( !*pEntry->maCountry )
-                pFirstLang = pEntry;
-        }
-    }
 
-    // some eng countries should be mapped to a specific english language
-    if ( aLowerLang == "en" )
+    if (!bSkipIsoTable)
     {
-        for (const IsoLangEngEntry* pEngEntry = aImplIsoLangEngEntries;
-                pEngEntry->mnLang != LANGUAGE_DONTKNOW; ++pEngEntry)
+        //  first look for exact match
+        for (const IsoLanguageCountryEntry* pEntry = aImplIsoLangEntries;
+                pEntry->mnLang != LANGUAGE_DONTKNOW; ++pEntry)
         {
-            if ( aUpperCountry.equalsAscii( pEngEntry->maCountry ) )
-                return pEngEntry->mnLang;
+            if ( aLowerLang.equalsAscii( pEntry->maLanguage ) )
+            {
+                if ( aUpperCountry.isEmpty() ||
+                        aUpperCountry.equalsAscii( pEntry->maCountry ) )
+                    return pEntry->mnLang;
+                if ( !pFirstLang )
+                    pFirstLang = pEntry;
+                else if ( !*pEntry->maCountry )
+                    pFirstLang = pEntry;
+            }
+        }
+
+        // some eng countries should be mapped to a specific english language
+        if ( aLowerLang == "en" )
+        {
+            for (const IsoLangEngEntry* pEngEntry = aImplIsoLangEngEntries;
+                    pEngEntry->mnLang != LANGUAGE_DONTKNOW; ++pEngEntry)
+            {
+                if ( aUpperCountry.equalsAscii( pEngEntry->maCountry ) )
+                    return pEngEntry->mnLang;
+            }
         }
     }
 
@@ -1320,22 +1322,25 @@ LanguageType MsLangId::Conversion::convertIsoNamesToLanguage( const OUString& rL
         }
     }
 
-    // If the language is correct, then we return the default language
-    if ( pFirstLang )
-        return pFirstLang->mnLang;
-
-    //  if only the country is set, look for any entry matching the country
-    //  (to allow reading country and language in separate steps, in any order)
-    if ( !rCountry.isEmpty() && rLang.isEmpty() )
+    if (!bSkipIsoTable)
     {
-        for (const IsoLanguageCountryEntry* pEntry2 = aImplIsoLangEntries;
-                pEntry2->mnLang != LANGUAGE_DONTKNOW; ++pEntry2)
-        {
-            if ( aUpperCountry.equalsAscii( pEntry2->maCountry ) )
-                return pEntry2->mnLang;
-        }
+        // If the language is correct, then we return the default language
+        if ( pFirstLang )
+            return pFirstLang->mnLang;
 
-        aLowerLang = aUpperCountry.toAsciiLowerCase();
+        //  if only the country is set, look for any entry matching the country
+        //  (to allow reading country and language in separate steps, in any order)
+        if ( !rCountry.isEmpty() && rLang.isEmpty() )
+        {
+            for (const IsoLanguageCountryEntry* pEntry2 = aImplIsoLangEntries;
+                    pEntry2->mnLang != LANGUAGE_DONTKNOW; ++pEntry2)
+            {
+                if ( aUpperCountry.equalsAscii( pEntry2->maCountry ) )
+                    return pEntry2->mnLang;
+            }
+
+            aLowerLang = aUpperCountry.toAsciiLowerCase();
+        }
     }
 
     // Look for privateuse definitions.
@@ -1355,16 +1360,14 @@ LanguageType MsLangId::Conversion::convertIsoNamesToLanguage( const OUString& rL
 }
 
 
-
 // static
 LanguageType MsLangId::Conversion::convertIsoNamesToLanguage( const OString& rLang,
         const OString& rCountry )
 {
     OUString aLang = OStringToOUString( rLang, RTL_TEXTENCODING_ASCII_US);
     OUString aCountry = OStringToOUString( rCountry, RTL_TEXTENCODING_ASCII_US);
-    return convertIsoNamesToLanguage( aLang, aCountry);
+    return convertIsoNamesToLanguage( aLang, aCountry, false);
 }
-
 
 
 struct IsoLangGLIBCModifiersEntry

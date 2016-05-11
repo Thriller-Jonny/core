@@ -30,6 +30,7 @@
 #include <sfx2/sfxuno.hxx>
 #include <sfx2/dispatch.hxx>
 #include <tools/urlobj.hxx>
+#include <o3tl/make_unique.hxx>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <comphelper/processfactory.hxx>
 #include <com/sun/star/linguistic2/LinguServiceManager.hpp>
@@ -259,8 +260,7 @@ class BrwStringDic_Impl : public SvLBoxString
 {
 public:
 
-    BrwStringDic_Impl( SvTreeListEntry* pEntry, sal_uInt16 nFlags,
-        const OUString& rStr ) : SvLBoxString( pEntry, nFlags, rStr ) {}
+    explicit BrwStringDic_Impl( const OUString& rStr ) : SvLBoxString( rStr ) {}
 
     virtual void Paint(const Point& rPos, SvTreeListBox& rOutDev, vcl::RenderContext& rRenderContext,
                        const SvViewDataEntry* pView, const SvTreeListEntry& rEntry) override;
@@ -436,8 +436,7 @@ class BrwString_Impl : public SvLBoxString
 {
 public:
 
-    BrwString_Impl( SvTreeListEntry* pEntry, sal_uInt16 nFlags,
-        const OUString& rStr ) : SvLBoxString( pEntry, nFlags, rStr ) {}
+    explicit BrwString_Impl( const OUString& rStr ) : SvLBoxString( rStr ) {}
 
     virtual void Paint(const Point& rPos, SvTreeListBox& rOutDev, vcl::RenderContext& rRenderContext,
                        const SvViewDataEntry* pView, const SvTreeListEntry& rEntry) override;
@@ -629,8 +628,6 @@ ServiceInfo_Impl * SvxLinguData_Impl::GetInfoByImplName( const OUString &rSvcImp
     }
     return nullptr;
 }
-
-
 
 
 static void lcl_MergeLocales(Sequence< Locale >& aAllLocales, const Sequence< Locale >& rAdd)
@@ -1217,7 +1214,6 @@ bool SvxLinguTabPage::FillItemSet( SfxItemSet* rCoreSet )
     }
 
 
-
     // activate dictionaries according to checkbox state
 
     Sequence< OUString > aActiveDics;
@@ -1359,7 +1355,6 @@ void SvxLinguTabPage::AddDicBoxEntry(
 }
 
 
-
 void SvxLinguTabPage::UpdateDicBox_Impl()
 {
     m_pLinguDicsCLB->SetUpdateMode(false);
@@ -1376,7 +1371,6 @@ void SvxLinguTabPage::UpdateDicBox_Impl()
 
     m_pLinguDicsCLB->SetUpdateMode(true);
 }
-
 
 
 void SvxLinguTabPage::UpdateModulesBox_Impl()
@@ -1401,7 +1395,6 @@ void SvxLinguTabPage::UpdateModulesBox_Impl()
 }
 
 
-
 void SvxLinguTabPage::Reset( const SfxItemSet* rSet )
 {
     // if not HideGroups was called with GROUP_MODULES...
@@ -1411,7 +1404,6 @@ void SvxLinguTabPage::Reset( const SfxItemSet* rSet )
             pLinguData = new SvxLinguData_Impl;
         UpdateModulesBox_Impl();
     }
-
 
 
     //  get data from configuration
@@ -1512,7 +1504,6 @@ void SvxLinguTabPage::Reset( const SfxItemSet* rSet )
 }
 
 
-
 IMPL_LINK_TYPED( SvxLinguTabPage, BoxDoubleClickHdl_Impl, SvTreeListBox *, pBox, bool )
 {
     if (pBox == m_pLinguModulesCLB)
@@ -1531,12 +1522,10 @@ IMPL_LINK_TYPED( SvxLinguTabPage, BoxDoubleClickHdl_Impl, SvTreeListBox *, pBox,
 }
 
 
-
 IMPL_LINK_NOARG_TYPED(SvxLinguTabPage, PostDblClickHdl_Impl, void*, void)
 {
     ClickHdl_Impl(m_pLinguModulesEditPB);
 }
-
 
 
 IMPL_LINK_NOARG_TYPED(SvxLinguTabPage, OpenURLHdl_Impl, FixedHyperlink&, void)
@@ -1544,7 +1533,6 @@ IMPL_LINK_NOARG_TYPED(SvxLinguTabPage, OpenURLHdl_Impl, FixedHyperlink&, void)
     OUString sURL( m_pMoreDictsLink->GetURL() );
     lcl_OpenURL( sURL );
 }
-
 
 
 IMPL_LINK_TYPED( SvxLinguTabPage, BoxCheckButtonHdl_Impl, SvTreeListBox *, pBox, void )
@@ -1574,7 +1562,6 @@ IMPL_LINK_TYPED( SvxLinguTabPage, BoxCheckButtonHdl_Impl, SvTreeListBox *, pBox,
         }
     }
 }
-
 
 
 IMPL_LINK_TYPED( SvxLinguTabPage, ClickHdl_Impl, Button *, pBtn, void )
@@ -1613,11 +1600,10 @@ IMPL_LINK_TYPED( SvxLinguTabPage, ClickHdl_Impl, Button *, pBtn, void )
     }
     else if (m_pLinguDicsNewPB == pBtn)
     {
-        uno::Reference< XSpellChecker1 > xSpellChecker1;
         SvxAbstractDialogFactory* pFact = SvxAbstractDialogFactory::Create();
         if(pFact)
         {
-            std::unique_ptr<AbstractSvxNewDictionaryDialog> aDlg(pFact->CreateSvxNewDictionaryDialog( this, xSpellChecker1 ));
+            std::unique_ptr<AbstractSvxNewDictionaryDialog> aDlg(pFact->CreateSvxNewDictionaryDialog( this ));
             DBG_ASSERT(aDlg, "Dialog creation failed!");
             uno::Reference< XDictionary >  xNewDic;
             if ( aDlg->Execute() == RET_OK )
@@ -1652,7 +1638,7 @@ IMPL_LINK_TYPED( SvxLinguTabPage, ClickHdl_Impl, Button *, pBtn, void )
                     SvxAbstractDialogFactory* pFact = SvxAbstractDialogFactory::Create();
                     if(pFact)
                     {
-                        std::unique_ptr<VclAbstractDialog> aDlg(pFact->CreateSvxEditDictionaryDialog( this, xDic->getName(), xSpellChecker1, RID_SFXDLG_EDITDICT ));
+                        std::unique_ptr<VclAbstractDialog> aDlg(pFact->CreateSvxEditDictionaryDialog( this, xDic->getName(), RID_SFXDLG_EDITDICT ));
                         DBG_ASSERT(aDlg, "Dialog creation failed!");
                         aDlg->Execute();
                     }
@@ -1756,7 +1742,6 @@ IMPL_LINK_TYPED( SvxLinguTabPage, ClickHdl_Impl, Button *, pBtn, void )
 }
 
 
-
 IMPL_LINK_TYPED( SvxLinguTabPage, SelectHdl_Impl, SvTreeListBox*, pBox, void )
 {
     if (m_pLinguModulesCLB == pBox)
@@ -1790,7 +1775,6 @@ IMPL_LINK_TYPED( SvxLinguTabPage, SelectHdl_Impl, SvTreeListBox*, pBox, void )
 }
 
 
-
 SvTreeListEntry* SvxLinguTabPage::CreateEntry( OUString& rTxt, sal_uInt16 nCol )
 {
     SvTreeListEntry* pEntry = new SvTreeListEntry;
@@ -1799,19 +1783,14 @@ SvTreeListEntry* SvxLinguTabPage::CreateEntry( OUString& rTxt, sal_uInt16 nCol )
         pCheckButtonData = new SvLBoxButtonData(m_pLinguOptionsCLB);
 
     if (CBCOL_FIRST == nCol)
-        pEntry->AddItem(std::unique_ptr<SvLBoxButton>(new SvLBoxButton(
-            pEntry, SvLBoxButtonKind_enabledCheckbox, 0, pCheckButtonData)));
+        pEntry->AddItem(o3tl::make_unique<SvLBoxButton>(SvLBoxButtonKind::EnabledCheckbox, pCheckButtonData));
     if (CBCOL_SECOND == nCol)
-        pEntry->AddItem(std::unique_ptr<SvLBoxString>(new SvLBoxString(
-            pEntry, 0, "")));    // empty column
-    pEntry->AddItem(std::unique_ptr<SvLBoxContextBmp>(new SvLBoxContextBmp(
-            pEntry, 0, Image(), Image(), false)));
-    pEntry->AddItem(std::unique_ptr<BrwString_Impl>(new BrwString_Impl(
-            pEntry, 0, rTxt)));
+        pEntry->AddItem(o3tl::make_unique<SvLBoxString>(""));    // empty column
+    pEntry->AddItem(o3tl::make_unique<SvLBoxContextBmp>(Image(), Image(), false));
+    pEntry->AddItem(o3tl::make_unique<BrwString_Impl>(rTxt));
 
     return pEntry;
 }
-
 
 
 void SvxLinguTabPage::HideGroups( sal_uInt16 nGrp )
@@ -1933,11 +1912,11 @@ SvTreeListEntry* SvxEditModulesDlg::CreateEntry( OUString& rTxt, sal_uInt16 nCol
     }
 
     if (CBCOL_FIRST == nCol)
-        pEntry->AddItem(std::unique_ptr<SvLBoxButton>(new SvLBoxButton(pEntry, SvLBoxButtonKind_enabledCheckbox, 0, pCheckButtonData)));
+        pEntry->AddItem(o3tl::make_unique<SvLBoxButton>(SvLBoxButtonKind::EnabledCheckbox, pCheckButtonData));
     if (CBCOL_SECOND == nCol)
-        pEntry->AddItem(std::unique_ptr<SvLBoxString>(new SvLBoxString(pEntry, 0, "")));    // empty column
-    pEntry->AddItem(std::unique_ptr<SvLBoxContextBmp>(new SvLBoxContextBmp( pEntry, 0, Image(), Image(), false)));
-    pEntry->AddItem(std::unique_ptr<BrwStringDic_Impl>(new BrwStringDic_Impl(pEntry, 0, rTxt)));
+        pEntry->AddItem(o3tl::make_unique<SvLBoxString>(""));    // empty column
+    pEntry->AddItem(o3tl::make_unique<SvLBoxContextBmp>(Image(), Image(), false));
+    pEntry->AddItem(o3tl::make_unique<BrwStringDic_Impl>(rTxt));
 
     return pEntry;
 }
@@ -2307,7 +2286,6 @@ IMPL_LINK_NOARG_TYPED(SvxEditModulesDlg, BackHdl_Impl, Button*, void)
     rLinguData = *pDefaultLinguData;
     LangSelectHdl_Impl(nullptr);
 }
-
 
 
 IMPL_LINK_NOARG_TYPED(SvxEditModulesDlg, OpenURLHdl_Impl, FixedHyperlink&, void)

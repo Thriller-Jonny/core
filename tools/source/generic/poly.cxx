@@ -28,7 +28,6 @@
 #include <tools/gen.hxx>
 #include <poly.h>
 #include <tools/line.hxx>
-#include <tools/vector2d.hxx>
 #include <tools/poly.hxx>
 #include <basegfx/polygon/b2dpolygon.hxx>
 #include <basegfx/point/b2dpoint.hxx>
@@ -622,21 +621,19 @@ Polygon::Polygon( const Rectangle& rRect, sal_uInt32 nHorzRound, sal_uInt32 nVer
     }
 }
 
-Polygon::Polygon( const Point& rCenter, long nRadX, long nRadY, sal_uInt16 nPoints )
+Polygon::Polygon( const Point& rCenter, long nRadX, long nRadY )
 {
     if( nRadX && nRadY )
     {
+        sal_uInt16 nPoints = 0;
         // Compute default (depends on size)
-        if( !nPoints )
-        {
-            nPoints = (sal_uInt16) MinMax(
-                ( F_PI * ( 1.5 * ( nRadX + nRadY ) -
-                           sqrt( (double) labs( nRadX * nRadY ) ) ) ),
-                32, 256 );
+        nPoints = (sal_uInt16) MinMax(
+            ( F_PI * ( 1.5 * ( nRadX + nRadY ) -
+                       sqrt( (double) labs( nRadX * nRadY ) ) ) ),
+            32, 256 );
 
-            if( ( nRadX > 32 ) && ( nRadY > 32 ) && ( nRadX + nRadY ) < 8192 )
-                nPoints >>= 1;
-        }
+        if( ( nRadX > 32 ) && ( nRadY > 32 ) && ( nRadX + nRadY ) < 8192 )
+            nPoints >>= 1;
 
         // Ceil number of points until divisible by four
         mpImplPolygon = new ImplPolygon( nPoints = (nPoints + 3) & ~3 );
@@ -769,8 +766,12 @@ Polygon::Polygon( const Point& rBezPt1, const Point& rCtrlPt1,
     {
         Point& rPt = mpImplPolygon->mpPointAry[ i ];
 
-        fK_2 = fK_1, fK_3 = ( fK_2 *= fK_1 ), fK_3 *= fK_1;
-        fK1_2 = fK1_1, fK1_3 = ( fK1_2 *= fK1_1 ), fK1_3 *= fK1_1;
+        fK_2 = fK_1;
+        fK_3 = ( fK_2 *= fK_1 );
+        fK_3 *= fK_1;
+        fK1_2 = fK1_1;
+        fK1_3 = ( fK1_2 *= fK1_1 );
+        fK1_3 *= fK1_1;
         double fK12 = fK_1 * fK1_2;
         double fK21 = fK_2 * fK1_1;
 
@@ -1122,6 +1123,33 @@ void Polygon::AdaptiveSubdivide( Polygon& rResult, const double d ) const
     }
 }
 
+class Vector2D
+{
+private:
+    double              mfX;
+    double              mfY;
+public:
+    explicit     Vector2D( const Point& rPair ) : mfX( rPair.A() ), mfY( rPair.B() ) {};
+    double       GetLength() const { return hypot( mfX, mfY ); }
+    Vector2D&    operator-=( const Vector2D& rVec ) { mfX -= rVec.mfX; mfY -= rVec.mfY; return *this; }
+    double       Scalar( const Vector2D& rVec ) const { return mfX * rVec.mfX + mfY * rVec.mfY ; }
+    Vector2D&    Normalize();
+    bool         IsPositive( Vector2D& rVec ) const { return ( mfX * rVec.mfY - mfY * rVec.mfX ) >= 0.0; }
+    bool         IsNegative( Vector2D& rVec ) const { return !IsPositive( rVec ); }
+};
+Vector2D& Vector2D::Normalize()
+{
+    double fLen = Scalar( *this );
+
+    if( ( fLen != 0.0 ) && ( fLen != 1.0 ) && ( ( fLen = sqrt( fLen ) ) != 0.0 ) )
+    {
+        mfX /= fLen;
+        mfY /= fLen;
+    }
+
+    return *this;
+}
+
 void Polygon::ImplReduceEdges( tools::Polygon& rPoly, const double& rArea, sal_uInt16 nPercent )
 {
     const double    fBound = 2000.0 * ( 100 - nPercent ) * 0.01;
@@ -1144,10 +1172,10 @@ void Polygon::ImplReduceEdges( tools::Polygon& rPoly, const double& rArea, sal_u
                 sal_uInt16      nIndPrevPrev = !nIndPrev ? nPntCnt - 1 : nIndPrev - 1;
                 sal_uInt16      nIndNext = ( n == nPntCnt-1 ) ? 0 : n + 1;
                 sal_uInt16      nIndNextNext = ( nIndNext == nPntCnt - 1 ) ? 0 : nIndNext + 1;
-                Vector2D    aVec1( rPoly[ nIndPrev ] ); aVec1 -= rPoly[ nIndPrevPrev ];
-                Vector2D    aVec2( rPoly[ n ] ); aVec2 -= rPoly[ nIndPrev ];
-                Vector2D    aVec3( rPoly[ nIndNext ] ); aVec3 -= rPoly[ n ];
-                Vector2D    aVec4( rPoly[ nIndNextNext ] ); aVec4 -= rPoly[ nIndNext ];
+                Vector2D    aVec1( rPoly[ nIndPrev ] ); aVec1 -= Vector2D(rPoly[ nIndPrevPrev ]);
+                Vector2D    aVec2( rPoly[ n ] ); aVec2 -= Vector2D(rPoly[ nIndPrev ]);
+                Vector2D    aVec3( rPoly[ nIndNext ] ); aVec3 -= Vector2D(rPoly[ n ]);
+                Vector2D    aVec4( rPoly[ nIndNextNext ] ); aVec4 -= Vector2D(rPoly[ nIndNext ]);
                 double      fDist1 = aVec1.GetLength(), fDist2 = aVec2.GetLength();
                 double      fDist3 = aVec3.GetLength(), fDist4 = aVec4.GetLength();
                 double      fTurnB = aVec2.Normalize().Scalar( aVec3.Normalize() );
@@ -1157,7 +1185,7 @@ void Polygon::ImplReduceEdges( tools::Polygon& rPoly, const double& rArea, sal_u
                 else
                 {
                     Vector2D    aVecB( rPoly[ nIndNext ] );
-                    double      fDistB = ( aVecB -= rPoly[ nIndPrev ] ).GetLength();
+                    double      fDistB = ( aVecB -= Vector2D(rPoly[ nIndPrev ] )).GetLength();
                     double      fLenWithB = fDist2 + fDist3;
                     double      fLenFact = ( fDistB != 0.0 ) ? fLenWithB / fDistB : 1.0;
                     double      fTurnPrev = aVec1.Normalize().Scalar( aVec2 );
@@ -1289,7 +1317,7 @@ void Polygon::Rotate( const Point& rCenter, double fSin, double fCos )
     }
 }
 
-void Polygon::Clip( const Rectangle& rRect, bool bPolygon )
+void Polygon::Clip( const Rectangle& rRect )
 {
     // #105251# Justify rect before edge filtering
     Rectangle               aJustifiedRect( rRect );
@@ -1304,7 +1332,7 @@ void Polygon::Clip( const Rectangle& rRect, bool bPolygon )
 
     for ( sal_uInt16 i = 0; i < nSourceSize; i++ )
         aVertFilter.Input( mpImplPolygon->mpPointAry[i] );
-    if ( bPolygon || aVertFilter.IsPolygon() )
+    if ( aVertFilter.IsPolygon() )
         aVertFilter.LastPoint();
     else
         aPolygon.LastPoint();
@@ -1325,7 +1353,7 @@ Rectangle Polygon::GetBoundRect() const
     // Removing the assert. Bezier curves have the attribute that each single
     // curve segment defined by four points can not exit the four-point polygon
     // defined by that points. This allows to say that the curve segment can also
-    // never leave the Range of it's defining points.
+    // never leave the Range of its defining points.
     // The result is that Polygon::GetBoundRect() may not create the minimal
     // BoundRect of the Polygon (to get that, use basegfx::B2DPolygon classes),
     // but will always create a valid BoundRect, at least as long as this method
@@ -1438,7 +1466,7 @@ bool Polygon::IsRightOrientated() const
     return GetSignedArea() >= 0.0;
 }
 
-void Polygon::Insert( sal_uInt16 nPos, const Point& rPt, PolyFlags eFlags )
+void Polygon::Insert( sal_uInt16 nPos, const Point& rPt )
 {
     ImplMakeUnique();
 
@@ -1447,12 +1475,6 @@ void Polygon::Insert( sal_uInt16 nPos, const Point& rPt, PolyFlags eFlags )
 
     mpImplPolygon->ImplSplit( nPos, 1 );
     mpImplPolygon->mpPointAry[ nPos ] = rPt;
-
-    if( POLY_NORMAL != eFlags )
-    {
-        mpImplPolygon->ImplCreateFlagArray();
-        mpImplPolygon->mpFlagAry[ nPos ] = (sal_uInt8) eFlags;
-    }
 }
 
 void Polygon::Insert( sal_uInt16 nPos, const tools::Polygon& rPoly )

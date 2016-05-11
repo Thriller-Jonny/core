@@ -120,13 +120,6 @@ public:
     (const css::uno::Reference< css::frame::XModel > & the_value)
         throw (css::uno::RuntimeException, std::exception) override;
 
-    virtual css::uno::Reference< css::io::XInputStream > SAL_CALL
-    getInputStream() throw (css::uno::RuntimeException, std::exception) override;
-
-    virtual void SAL_CALL setInputStream
-    (const css::uno::Reference< css::io::XInputStream > & the_value)
-        throw (css::uno::RuntimeException, std::exception) override;
-
     virtual OUString SAL_CALL getRelationFragmentPath()
         throw (css::uno::RuntimeException, std::exception) override;
     virtual void SAL_CALL setRelationFragmentPath
@@ -143,6 +136,10 @@ public:
         throw (css::uno::RuntimeException, std::exception) override;
     virtual css::uno::Reference<css::document::XDocumentProperties> SAL_CALL getDocumentProperties()
         throw (css::uno::RuntimeException, std::exception) override;
+    virtual css::uno::Sequence<css::beans::PropertyValue> SAL_CALL getMediaDescriptor()
+        throw (css::uno::RuntimeException, std::exception) override;
+    virtual void SAL_CALL setMediaDescriptor(const css::uno::Sequence<css::beans::PropertyValue>& rMediaDescriptor)
+        throw (css::uno::RuntimeException, std::exception) override;
 
 private:
     ShapeContextHandler(ShapeContextHandler &) = delete;
@@ -151,7 +148,6 @@ private:
     ::sal_uInt32 mnStartToken;
     css::awt::Point maPosition;
 
-    css::uno::Reference< css::uno::XComponentContext > m_xContext;
     drawingml::ShapePtr mpShape;
     std::shared_ptr< vml::Drawing > mpDrawing;
 
@@ -166,11 +162,11 @@ private:
     css::uno::Reference<XFastContextHandler> mxWpgContext;
     css::uno::Reference<XFastContextHandler> mxChartShapeContext;
     css::uno::Reference<css::document::XDocumentProperties> mxDocumentProperties;
+    css::uno::Sequence<css::beans::PropertyValue> maMediaDescriptor;
 
     ::rtl::Reference< core::XmlFilterBase > mxFilterBase;
     drawingml::ThemePtr mpThemePtr;
     css::uno::Reference<css::drawing::XDrawPage> mxDrawPage;
-    css::uno::Reference<css::io::XInputStream> mxInputStream;
     OUString msRelationFragmentPath;
 
     css::uno::Reference<XFastContextHandler> getGraphicShapeContext(::sal_Int32 Element);

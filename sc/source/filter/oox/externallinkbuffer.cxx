@@ -19,6 +19,7 @@
 
 #include "externallinkbuffer.hxx"
 
+#include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/sheet/ComplexReference.hpp>
 #include <com/sun/star/sheet/DDELinkInfo.hpp>
 #include <com/sun/star/sheet/ExternalLinkType.hpp>
@@ -34,7 +35,9 @@
 #include <rtl/strbuf.hxx>
 #include <oox/core/filterbase.hxx>
 #include <oox/helper/attributelist.hxx>
+#include <oox/token/namespaces.hxx>
 #include <oox/token/properties.hxx>
+#include <oox/token/tokens.hxx>
 #include "addressconverter.hxx"
 #include "biffinputstream.hxx"
 #include "excelhandlers.hxx"
@@ -257,8 +260,8 @@ void ExternalName::setResultSize( sal_Int32 nColumns, sal_Int32 nRows )
     OSL_ENSURE( (mrParentLink.getLinkType() == LINKTYPE_DDE) || (mrParentLink.getLinkType() == LINKTYPE_OLE) ||
         (mrParentLink.getLinkType() == LINKTYPE_MAYBE_DDE_OLE), "ExternalName::setResultSize - wrong link type" );
     OSL_ENSURE( (nRows > 0) && (nColumns > 0), "ExternalName::setResultSize - invalid matrix size" );
-    const CellAddress& rMaxPos = getAddressConverter().getMaxApiAddress();
-    if( (0 < nRows) && (nRows <= rMaxPos.Row + 1) && (0 < nColumns) && (nColumns <= rMaxPos.Column + 1) )
+    const ScAddress& rMaxPos = getAddressConverter().getMaxApiAddress();
+    if( (0 < nRows) && (nRows <= rMaxPos.Row() + 1) && (0 < nColumns) && (nColumns <= rMaxPos.Col() + 1) )
         maResults.resize( static_cast< size_t >( nColumns ), static_cast< size_t >( nRows ), Any( BiffHelper::calcDoubleFromError( BIFF_ERR_NA ) ) );
     else
         maResults.clear();

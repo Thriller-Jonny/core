@@ -36,7 +36,7 @@ private:
     ScopedVclPtr<VirtualDevice> maVDev;
     MapMode             maDestMapMode;
     SvStream& m_rStm;
-    bool*               mpHandlesUsed;
+    std::vector<bool>       mHandlesUsed;
     sal_uLong               mnHandleCount;
     sal_uLong               mnRecordCount;
     sal_uLong               mnRecordPos;
@@ -83,8 +83,8 @@ private:
     void                ImplWrite( const GDIMetaFile& rMtf );
     void                WriteEMFPlusHeader( const Size &rMtfSizePix, const Size &rMtfSizeLog );
     void                ImplWritePlusEOF();
-    void                ImplWritePlusFillPolygonRecord( const tools::Polygon& rPoly, const sal_uInt32& nTrans );
-    void                ImplWritePlusColor( const Color& rColor, const sal_uInt32& nTrans );
+    void                ImplWritePlusFillPolygonRecord( const tools::Polygon& rPoly, sal_uInt32 nTrans );
+    void                ImplWritePlusColor( const Color& rColor, sal_uInt32 nTrans );
     void                ImplWritePlusPoint( const Point& rPoint );
 
 public:
@@ -92,7 +92,6 @@ public:
     explicit EMFWriter(SvStream &rStream)
         : maVDev( VclPtr<VirtualDevice>::Create() )
         , m_rStm(rStream)
-        , mpHandlesUsed(nullptr)
         , mnHandleCount(0)
         , mnRecordCount(0)
         , mnRecordPos(0)

@@ -94,7 +94,7 @@ OutlineView::OutlineView( DrawDocShell& rDocSh, vcl::Window* pWindow, OutlineVie
     {
         // initialize Outliner: set Reference Device
         bInitOutliner = true;
-        mrOutliner.Init( OUTLINERMODE_OUTLINEVIEW );
+        mrOutliner.Init( OutlinerMode::OutlineView );
         mrOutliner.SetRefDevice( SD_MOD()->GetRefDevice( rDocSh ) );
         //viewsize without the width of the image and number in front
         mnPaperWidth = (mrOutlineViewShell.GetActiveWindow()->GetViewSize().Width() - 4000);
@@ -102,9 +102,9 @@ OutlineView::OutlineView( DrawDocShell& rDocSh, vcl::Window* pWindow, OutlineVie
     }
 
     // insert View into Outliner
-    for (sal_uInt16 nView = 0; nView < MAX_OUTLINERVIEWS; nView++)
+    for (OutlinerView* & rp : mpOutlinerView)
     {
-        mpOutlinerView[nView] = nullptr;
+        rp = nullptr;
     }
 
     mpOutlinerView[0] = new OutlinerView(&mrOutliner, pWindow);
@@ -129,14 +129,14 @@ OutlineView::OutlineView( DrawDocShell& rDocSh, vcl::Window* pWindow, OutlineVie
 
     LanguageType eLang = mrOutliner.GetDefaultLanguage();
     maPageNumberFont = OutputDevice::GetDefaultFont( DefaultFontType::SANS_UNICODE, eLang, GetDefaultFontFlags::NONE );
-    maPageNumberFont.SetHeight( 500 );
+    maPageNumberFont.SetFontHeight( 500 );
 
     maBulletFont.SetColor( COL_AUTO );
-    maBulletFont.SetHeight( 1000 );
+    maBulletFont.SetFontHeight( 1000 );
     maBulletFont.SetCharSet(RTL_TEXTENCODING_MS_1252);   // and replacing other values by standard
-    maBulletFont.SetName( "StarSymbol" );
+    maBulletFont.SetFamilyName( "StarSymbol" );
     maBulletFont.SetWeight(WEIGHT_NORMAL);
-    maBulletFont.SetUnderline(UNDERLINE_NONE);
+    maBulletFont.SetUnderline(LINESTYLE_NONE);
     maBulletFont.SetStrikeout(STRIKEOUT_NONE);
     maBulletFont.SetItalic(ITALIC_NONE);
     maBulletFont.SetOutline(false);
@@ -168,13 +168,13 @@ OutlineView::~OutlineView()
     delete mpProgress;
 
     // unregister OutlinerViews and destroy them
-    for (sal_uInt16 nView = 0; nView < MAX_OUTLINERVIEWS; nView++)
+    for (OutlinerView* & rpView : mpOutlinerView)
     {
-        if (mpOutlinerView[nView] != nullptr)
+        if (rpView != nullptr)
         {
-            mrOutliner.RemoveView( mpOutlinerView[nView] );
-            delete mpOutlinerView[nView];
-            mpOutlinerView[nView] = nullptr;
+            mrOutliner.RemoveView( rpView );
+            delete rpView;
+            rpView = nullptr;
         }
     }
 
@@ -295,13 +295,13 @@ void OutlineView::DeleteWindowFromPaintView(OutputDevice* pWin)
 OutlinerView* OutlineView::GetViewByWindow (vcl::Window* pWin) const
 {
     OutlinerView* pOlView = nullptr;
-    for (sal_uInt16 nView = 0; nView < MAX_OUTLINERVIEWS; nView++)
+    for (OutlinerView* pView : mpOutlinerView)
     {
-        if (mpOutlinerView[nView] != nullptr)
+        if (pView != nullptr)
         {
-            if ( pWin == mpOutlinerView[nView]->GetWindow() )
+            if ( pWin == pView->GetWindow() )
             {
-                pOlView = mpOutlinerView[nView];
+                pOlView = pView;
             }
         }
     }
@@ -1040,14 +1040,13 @@ bool OutlineView::SetAttributes(const SfxItemSet& rSet, bool )
 /**
  * Get attributes of the selected text
  */
-bool OutlineView::GetAttributes( SfxItemSet& rTargetSet, bool ) const
+void OutlineView::GetAttributes( SfxItemSet& rTargetSet, bool ) const
 {
     OutlinerView* pOlView = GetViewByWindow(
                                 mrOutlineViewShell.GetActiveWindow());
     assert(pOlView && "keine OutlinerView gefunden");
 
     rTargetSet.Put( pOlView->GetAttribs(), false );
-    return true;
 }
 
 /** creates outliner model from draw model */
@@ -1140,12 +1139,12 @@ void OutlineView::FillOutliner()
 
     // place cursor at the start
     Paragraph* pFirstPara = mrOutliner.GetParagraph( 0 );
-    mpOutlinerView[0]->Select( pFirstPara, true, false );
-    mpOutlinerView[0]->Select( pFirstPara, false, false );
+    mpOutlinerView[0]->Select( pFirstPara );
+    mpOutlinerView[0]->Select( pFirstPara, false );
 
     // select title of slide that was selected
     if (pTitleToSelect)
-        mpOutlinerView[0]->Select(pTitleToSelect, true, false);
+        mpOutlinerView[0]->Select(pTitleToSelect);
 
     SetLinks();
 
@@ -1264,7 +1263,7 @@ void OutlineView::SetActualPage( SdPage* pActual )
         // if we found a paragraph, select its text at the outliner view
         Paragraph* pPara = GetParagraphForPage( mrOutliner, pActual );
         if( pPara )
-            mpOutlinerView[0]->Select( pPara, true, false );
+            mpOutlinerView[0]->Select( pPara );
     }
 }
 
@@ -1687,7 +1686,7 @@ IMPL_LINK_TYPED(OutlineView, PaintingFirstLineHdl, PaintFirstLineInfo*, pInfo, v
 
         Point aTextPos( aImagePos.X() - aOffset.Width(), pInfo->mrStartPos.Y() );
         vcl::Font aNewFont( OutputDevice::GetDefaultFont( DefaultFontType::SANS_UNICODE, eLang, GetDefaultFontFlags::NONE ) );
-        aNewFont.SetSize( aFontSz );
+        aNewFont.SetFontSize( aFontSz );
         aNewFont.SetVertical( bVertical );
         aNewFont.SetOrientation( bVertical ? 2700 : 0 );
         aNewFont.SetColor( COL_AUTO );
@@ -1724,18 +1723,18 @@ void OutlineView::UpdateParagraph( sal_Int32 nPara )
     mrOutliner.SetParaAttribs( nPara, aNewAttrs2 );
 }
 
-void OutlineView::OnBeginPasteOrDrop( PasteOrDropInfos* /*pInfos*/ )
+void OutlineView::OnBeginPasteOrDrop( PasteOrDropInfos* /*pInfo*/ )
 {
 }
 
 /** this is called after a paste or drop operation, make sure that the newly inserted paragraphs
     get the correct style sheet and new slides are inserted. */
-void OutlineView::OnEndPasteOrDrop( PasteOrDropInfos* pInfos )
+void OutlineView::OnEndPasteOrDrop( PasteOrDropInfos* pInfo )
 {
     SdPage* pPage = nullptr;
     SfxStyleSheetBasePool* pStylePool = GetDoc().GetStyleSheetPool();
 
-    for( sal_Int32 nPara = pInfos->nStartPara; nPara <= pInfos->nEndPara; nPara++ )
+    for( sal_Int32 nPara = pInfo->nStartPara; nPara <= pInfo->nEndPara; nPara++ )
     {
         Paragraph* pPara = mrOutliner.GetParagraph( nPara );
 
@@ -1755,7 +1754,7 @@ void OutlineView::OnEndPasteOrDrop( PasteOrDropInfos* pInfos )
         if( !pPara )
             continue; // fatality!?
 
-        if( bPage && (nPara != pInfos->nStartPara) )
+        if( bPage && (nPara != pInfo->nStartPara) )
         {
             // insert new slide for this paragraph
             pPage = InsertSlideForParagraph( pPara );
@@ -1792,7 +1791,6 @@ void OutlineView::OnEndPasteOrDrop( PasteOrDropInfos* pInfos )
     }
 }
 
-// - OutlineViewModelChangeGuard -
 
 OutlineViewModelChangeGuard::OutlineViewModelChangeGuard( OutlineView& rView )
 : mrView( rView )
@@ -1805,7 +1803,6 @@ OutlineViewModelChangeGuard::~OutlineViewModelChangeGuard()
     mrView.EndModelChange();
 }
 
-// - OutlineViewPageChangesGuard -
 
 OutlineViewPageChangesGuard::OutlineViewPageChangesGuard( OutlineView* pView )
 : mpView( pView )

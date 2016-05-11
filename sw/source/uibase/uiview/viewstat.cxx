@@ -21,7 +21,6 @@
 
 #include <hintids.hxx>
 #include <com/sun/star/linguistic2/XThesaurus.hpp>
-#include <com/sun/star/uno/Sequence.hxx>
 #include <svl/aeitem.hxx>
 #include <svl/whiter.hxx>
 #include <svl/cjkoptions.hxx>
@@ -84,6 +83,11 @@ void SwView::GetState(SfxItemSet &rSet)
             {
                 rSet.DisableItem(nWhich);
             }
+            break;
+
+        case SID_DRAWTBX_LINES:
+            if ( bWeb )
+                rSet.DisableItem(nWhich);
             break;
 
         case SID_INSERT_GRAPHIC:
@@ -214,7 +218,7 @@ void SwView::GetState(SfxItemSet &rSet)
             break;
             case SID_TWAIN_SELECT:
             case SID_TWAIN_TRANSFER:
-#if defined WNT || defined UNX
+#if defined(_WIN32) || defined UNX
             {
                 if(!SW_MOD()->GetScannerManager().is())
                     rSet.DisableItem(nWhich);
@@ -390,14 +394,6 @@ void SwView::GetState(SfxItemSet &rSet)
             break;
             case FN_MAILMERGE_SENDMAIL_CHILDWINDOW:
             break;
-#if HAVE_FEATURE_DBCONNECTIVITY
-            case FN_MAILMERGE_CHILDWINDOW:
-            {
-                if(!GetMailMergeConfigItem())
-                    rSet.DisableItem(nWhich);
-            }
-            break;
-#endif
             case SID_ALIGN_ANY_LEFT :
             case SID_ALIGN_ANY_HCENTER  :
             case SID_ALIGN_ANY_RIGHT    :
@@ -472,19 +468,34 @@ void SwView::GetDrawState(SfxItemSet &rSet)
                                             nWhich = aIter.NextWhich() )
         switch(nWhich)
         {
-        case SID_INSERT_DRAW:
+        case SID_DRAW_LINE:
+        case SID_DRAW_RECT:
+        case SID_DRAW_ELLIPSE:
+        case SID_DRAW_XPOLYGON_NOFILL:
+        case SID_DRAW_XPOLYGON:
+        case SID_DRAW_POLYGON_NOFILL:
+        case SID_DRAW_POLYGON:
+        case SID_DRAW_BEZIER_NOFILL:
+        case SID_DRAW_BEZIER_FILL:
+        case SID_DRAW_FREELINE_NOFILL:
+        case SID_DRAW_FREELINE:
+        case SID_DRAW_ARC:
+        case SID_DRAW_PIE:
+        case SID_DRAW_CIRCLECUT:
+        case SID_DRAW_TEXT:
+        case SID_DRAW_CAPTION:
             if ( bWeb )
                 rSet.DisableItem( nWhich );
             else
-            {
-                SfxAllEnumItem aEnum(SID_INSERT_DRAW, m_nDrawSfxId);
-                if ( !SvtLanguageOptions().IsVerticalTextEnabled() )
-                {
-                    aEnum.DisableValue( SID_DRAW_CAPTION_VERTICAL );
-                    aEnum.DisableValue( SID_DRAW_TEXT_VERTICAL );
-                }
-                rSet.Put(aEnum);
-            }
+                rSet.Put( SfxBoolItem( nWhich, m_nDrawSfxId == nWhich ) );
+            break;
+
+        case SID_DRAW_TEXT_VERTICAL:
+        case SID_DRAW_CAPTION_VERTICAL:
+            if ( bWeb || !SvtLanguageOptions().IsVerticalTextEnabled() )
+                rSet.DisableItem( nWhich );
+            else
+                rSet.Put( SfxBoolItem( nWhich, m_nDrawSfxId == nWhich ) );
             break;
 
         case SID_SHOW_HIDDEN:
@@ -503,6 +514,7 @@ void SwView::GetDrawState(SfxItemSet &rSet)
                                           m_nFormSfxId == nWhich));
             break;
 
+        case SID_INSERT_DRAW:
         case SID_FONTWORK_GALLERY_FLOATER :
         {
             if ( bWeb )

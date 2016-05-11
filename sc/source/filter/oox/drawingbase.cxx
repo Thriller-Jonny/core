@@ -25,7 +25,9 @@
 #include <oox/helper/binaryinputstream.hxx>
 #include "unitconverter.hxx"
 #include <oox/helper/propertyset.hxx>
+#include <oox/token/namespaces.hxx>
 #include <oox/token/properties.hxx>
+#include <oox/token/tokens.hxx>
 
 namespace oox {
 namespace xls {
@@ -233,18 +235,18 @@ EmuRectangle ShapeAnchor::calcAnchorRectEmu( const css::awt::Size& rPageSizeHmm 
             {
                 /*  Pass a valid cell address to calcCellAnchorEmu(), otherwise
                     nothing useful is returned, even if either row or column is valid. */
-                CellAddress aToCell = rAddrConv.createValidCellAddress( BinAddress( maTo.mnCol, maTo.mnRow ), getSheetIndex(), true );
+                ScAddress aToCell = rAddrConv.createValidCellAddress( BinAddress( maTo.mnCol, maTo.mnRow ), getSheetIndex(), true );
                 CellAnchorModel aValidTo = maTo;
-                aValidTo.mnCol = aToCell.Column;
-                aValidTo.mnRow = aToCell.Row;
+                aValidTo.mnCol = aToCell.Col();
+                aValidTo.mnRow = aToCell.Row();
                 EmuPoint aPoint = calcCellAnchorEmu( aValidTo );
                 // width (if column index is valid, use the calculated offset, otherwise stretch to maximum available X position)
                 aAnchorRect.Width = aPageSize.Width - aAnchorRect.X;
-                if( aToCell.Column == maTo.mnCol )
+                if( aToCell.Col() == maTo.mnCol )
                     aAnchorRect.Width = ::std::min< sal_Int64 >( aPoint.X - aAnchorRect.X + 1, aAnchorRect.Width );
                 // height (if row index is valid, use the calculated offset, otherwise stretch to maximum available Y position)
                 aAnchorRect.Height = aPageSize.Height - aAnchorRect.Y;
-                if( aToCell.Row == maTo.mnRow )
+                if( aToCell.Row() == maTo.mnRow )
                     aAnchorRect.Height = ::std::min< sal_Int64 >( aPoint.Y - aAnchorRect.Y + 1, aAnchorRect.Height );
             }
         break;

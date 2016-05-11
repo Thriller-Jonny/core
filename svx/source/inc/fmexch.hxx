@@ -39,8 +39,6 @@ namespace svxform
 {
 
 
-
-
     typedef ::std::set< SvTreeListEntry* >  ListBoxEntrySet;
 
 
@@ -83,9 +81,9 @@ namespace svxform
         virtual bool GetData( const css::datatransfer::DataFlavor& rFlavor, const OUString& rDestDoc ) override;
 
     private:
-        void StartDrag( vcl::Window* pWindow, sal_Int8 nDragSourceActions, sal_Int32 nDragPointer = DND_POINTER_NONE, sal_Int32 nDragImage = DND_IMAGE_NONE )
+        void StartDrag( vcl::Window* pWindow, sal_Int8 nDragSourceActions, sal_Int32 nDragPointer = DND_POINTER_NONE )
         {   // don't allow this base class method to be called from outside
-            TransferableHelper::StartDrag(pWindow, nDragSourceActions, nDragPointer, nDragImage);
+            TransferableHelper::StartDrag(pWindow, nDragSourceActions, nDragPointer);
         }
     };
 
@@ -185,10 +183,10 @@ namespace svxform
             // Aufrufer sicherstellen)
 
         const ListBoxEntrySet&      selected() const { return m_aSelectedEntries; }
-        css::uno::Sequence< css::uno::Reference< css::uno::XInterface > >
+        const css::uno::Sequence< css::uno::Reference< css::uno::XInterface > >&
                                     hiddenControls() const { return m_aHiddenControlModels; }
 
-        css::uno::Reference< css::form::XForms >
+        const css::uno::Reference< css::form::XForms >&
                                 getFormsRoot() const { return m_xFormsRoot; }
     };
 
@@ -229,7 +227,6 @@ namespace svxform
     protected:
         virtual OLocalExchange* createExchange() const override;
     };
-
 
 
     inline bool OControlExchange::hasFieldExchangeFormat( const DataFlavorExVector& _rFormats )

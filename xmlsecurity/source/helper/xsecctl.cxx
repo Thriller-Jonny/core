@@ -19,6 +19,8 @@
 
 
 #include "xsecctl.hxx"
+#include <algorithm>
+#include <initializer_list>
 #include <tools/debug.hxx>
 
 #include <com/sun/star/xml/crypto/sax/ElementMarkPriority.hpp>
@@ -27,16 +29,24 @@
 #include <com/sun/star/xml/crypto/sax/XReferenceCollector.hpp>
 #include <com/sun/star/xml/crypto/sax/XSAXEventKeeperStatusChangeBroadcaster.hpp>
 #include <com/sun/star/xml/crypto/SecurityOperationStatus.hpp>
+#include <com/sun/star/embed/XHierarchicalStorageAccess.hpp>
+#include <com/sun/star/embed/ElementModes.hpp>
+#include <com/sun/star/beans/StringPair.hpp>
 
 #include <xmloff/attrlist.hxx>
 #include <rtl/math.hxx>
+#include <rtl/ref.hxx>
 #include <unotools/datetime.hxx>
+#include <comphelper/ofopxmlhelper.hxx>
+#include <sax/tools/converter.hxx>
+#include <ooxmlsecexporter.hxx>
 
 namespace cssu = com::sun::star::uno;
 namespace cssl = com::sun::star::lang;
 namespace cssxc = com::sun::star::xml::crypto;
 namespace cssxs = com::sun::star::xml::sax;
 namespace cssxw = com::sun::star::xml::wrapper;
+using namespace com::sun::star;
 
 /* bridge component names */
 #define XMLSIGNATURE_COMPONENT "com.sun.star.xml.crypto.XMLSignature"
@@ -55,7 +65,6 @@ XSecController::XSecController( const cssu::Reference<cssu::XComponentContext>& 
     , m_nStatusOfSecurityComponents(UNINITIALIZED)
     , m_bIsSAXEventKeeperSticky(false)
     , m_pErrorMessage(nullptr)
-    , m_pXSecParser(nullptr)
     , m_nReservedSignatureId(0)
     , m_bVerifyCurrentSignature(false)
 {
@@ -79,19 +88,12 @@ int XSecController::findSignatureInfor( sal_Int32 nSecurityId) const
  *   SYNOPSIS
  *  index = findSignatureInfor( nSecurityId );
  *
- *   FUNCTION
- *  see NAME.
- *
  *   INPUTS
  *  nSecurityId - the signature's id
  *
  *   RESULT
  *  index - the index of the signature, or -1 when no such signature
  *          existing
- *
- *   AUTHOR
- *  Michael Mi
- *  Email: michael.mi@sun.com
  ******************************************************************************/
 {
     int i;
@@ -114,24 +116,11 @@ void XSecController::createXSecComponent( )
  *   NAME
  *  bResult = createXSecComponent -- creates xml security components
  *
- *   SYNOPSIS
- *  createXSecComponent( );
- *
  *   FUNCTION
  *  Creates xml security components, including:
  *  1. an xml signature bridge component ( Java based or C based)
  *  2. an XMLDocumentWrapper component ( Java based or C based)
  *  3. a SAXEventKeeper component
- *
- *   INPUTS
- *  empty
- *
- *   RESULT
- *  empty
- *
- *   AUTHOR
- *  Michael Mi
- *  Email: michael.mi@sun.com
  ******************************************************************************/
 {
     OUString sSAXEventKeeper( SAXEVENTKEEPER_COMPONENT );
@@ -234,10 +223,6 @@ bool XSecController::chainOn( bool bRetrievingLastEvent )
  *  So for the SAXEventKeeper, it needs to receive all missed key SAX
  *  events except that startElement event, then adds a new
  *  ElementCollector, then receives that startElement event.
- *
- *   AUTHOR
- *  Michael Mi
- *  Email: michael.mi@sun.com
  ******************************************************************************/
 {
     bool rc = false;
@@ -319,22 +304,6 @@ void XSecController::chainOff()
  *
  *   NAME
  *  chainOff -- disconnects the SAXEventKeeper from the SAX chain.
- *
- *   SYNOPSIS
- *  chainOff( );
- *
- *   FUNCTION
- *  See NAME.
- *
- *   INPUTS
- *  empty
- *
- *   RESULT
- *  empty
- *
- *   AUTHOR
- *  Michael Mi
- *  Email: michael.mi@sun.com
  ******************************************************************************/
 {
     if (!m_bIsSAXEventKeeperSticky )
@@ -390,16 +359,6 @@ void XSecController::checkChainingStatus()
  *  1. some element is being collected, or
  *  2. the SAX event stream is blocking.
  *  Otherwise, chain off the SAXEventKeeper.
- *
- *   INPUTS
- *  empty
- *
- *   RESULT
- *  empty
- *
- *   AUTHOR
- *  Michael Mi
- *  Email: michael.mi@sun.com
  ******************************************************************************/
 {
     if ( m_bIsCollectingElement || m_bIsBlocking )
@@ -419,23 +378,10 @@ void XSecController::initializeSAXChain()
  *  initializeSAXChain -- initializes the SAX chain according to the
  *  current setting.
  *
- *   SYNOPSIS
- *  initializeSAXChain( );
- *
  *   FUNCTION
  *  Initializes the SAX chain, if the SAXEventKeeper is asked to be always
  *  on the SAX chain, chains it on. Otherwise, starts the
  *  ElementStackKeeper to reserve key SAX events.
- *
- *   INPUTS
- *  empty
- *
- *   RESULT
- *  empty
- *
- *   AUTHOR
- *  Michael Mi
- *  Email: michael.mi@sun.com
  ******************************************************************************/
 {
     m_bIsSAXEventKeeperConnected = false;
@@ -453,7 +399,7 @@ void XSecController::initializeSAXChain()
     chainOff();
 }
 
-cssu::Reference< com::sun::star::io::XInputStream >
+cssu::Reference< css::io::XInputStream >
     XSecController::getObjectInputStream( const OUString& objectURL )
 /****** XSecController/getObjectInputStream ************************************
  *
@@ -463,21 +409,14 @@ cssu::Reference< com::sun::star::io::XInputStream >
  *   SYNOPSIS
  *  xInputStream = getObjectInputStream( objectURL );
  *
- *   FUNCTION
- *  See NAME.
- *
  *   INPUTS
  *  objectURL - the object uri
  *
  *   RESULT
  *  xInputStream - the XInputStream interface
- *
- *   AUTHOR
- *  Michael Mi
- *  Email: michael.mi@sun.com
  ******************************************************************************/
 {
-        cssu::Reference< com::sun::star::io::XInputStream > xObjectInputStream;
+        cssu::Reference< css::io::XInputStream > xObjectInputStream;
 
     DBG_ASSERT( m_xUriBinding.is(), "Need XUriBinding!" );
 
@@ -505,9 +444,6 @@ void XSecController::startMission(
  *   NAME
  *  startMission -- starts a new security mission.
  *
- *   SYNOPSIS
- *  startMission( xUriBinding, xSecurityContect );
- *
  *   FUNCTION
  *  get ready for a new mission.
  *
@@ -516,13 +452,6 @@ void XSecController::startMission(
  *                          XInputStreams
  *  xSecurityContext  - the security context component which can provide
  *                      cryptoken
- *
- *   RESULT
- *  empty
- *
- *   AUTHOR
- *  Michael Mi
- *  Email: michael.mi@sun.com
  ******************************************************************************/
 {
     m_xUriBinding = xUriBinding;
@@ -551,21 +480,11 @@ void XSecController::setSAXChainConnector(
  *                        xDocumentHandler,
  *                        xElementStackKeeper );
  *
- *   FUNCTION
- *  See NAME.
- *
  *   INPUTS
  *  xInitialization     - the previous node on the SAX chain
  *  xDocumentHandler    - the next node on the SAX chain
  *  xElementStackKeeper - the ElementStackKeeper component which reserves
  *                        missed key SAX events for the SAXEventKeeper
- *
- *   RESULT
- *  empty
- *
- *   AUTHOR
- *  Michael Mi
- *  Email: michael.mi@sun.com
  ******************************************************************************/
 {
     m_bIsPreviousNodeInitializable = true;
@@ -581,22 +500,6 @@ void XSecController::clearSAXChainConnector()
  *
  *   NAME
  *  clearSAXChainConnector -- resets the collaborating components.
- *
- *   SYNOPSIS
- *  clearSAXChainConnector( );
- *
- *   FUNCTION
- *  See NAME.
- *
- *   INPUTS
- *  empty
- *
- *   RESULT
- *  empty
- *
- *   AUTHOR
- *  Michael Mi
- *  Email: michael.mi@sun.com
  ******************************************************************************/
 {
     /*
@@ -608,7 +511,7 @@ void XSecController::clearSAXChainConnector()
     if (m_xElementStackKeeper.is() && m_xSAXEventKeeper.is())
     {
         cssu::Reference< cssxs::XDocumentHandler > xSEKHandler(m_xSAXEventKeeper, cssu::UNO_QUERY);
-        m_xElementStackKeeper->retrieve(xSEKHandler, sal_True);
+        m_xElementStackKeeper->retrieve(xSEKHandler, true);
     }
 
     chainOff();
@@ -624,21 +527,8 @@ void XSecController::endMission()
  *   NAME
  *  endMission -- forces to end all missions
  *
- *   SYNOPSIS
- *  endMission( );
- *
  *   FUNCTION
  *  Deletes all signature information and forces all missions to an end.
- *
- *   INPUTS
- *  empty
- *
- *   RESULT
- *  empty
- *
- *   AUTHOR
- *  Michael Mi
- *  Email: michael.mi@sun.com
  ******************************************************************************/
 {
     sal_Int32 size = m_vInternalSignatureInformations.size();
@@ -687,19 +577,9 @@ void XSecController::exportSignature(
  *   SYNOPSIS
  *  exportSignature( xDocumentHandler, signatureInfo);
  *
- *   FUNCTION
- *  see NAME.
- *
  *   INPUTS
  *  xDocumentHandler    - the document handler to receive the signature
  *  signatureInfo       - signature to be exported
- *
- *   RESULT
- *  empty
- *
- *   AUTHOR
- *  Michael Mi
- *  Email: michael.mi@sun.com
  ******************************************************************************/
 {
     /*
@@ -725,6 +605,7 @@ void XSecController::exportSignature(
     OUString tag_SignatureProperties(TAG_SIGNATUREPROPERTIES);
     OUString tag_SignatureProperty(TAG_SIGNATUREPROPERTY);
     OUString tag_Date(TAG_DATE);
+    OUString tag_Description(TAG_DESCRIPTION);
 
     const SignatureReferenceInformations& vReferenceInfors = signatureInfo.vSignatureReferenceInfors;
     SvXMLAttributeList *pAttributeList;
@@ -776,7 +657,7 @@ void XSecController::exportSignature(
                 const SignatureReferenceInformation& refInfor = vReferenceInfors[j];
 
                 pAttributeList = new SvXMLAttributeList();
-                if ( refInfor.nType != TYPE_SAMEDOCUMENT_REFERENCE )
+                if ( refInfor.nType != SignatureReferenceType::SAMEDOCUMENT )
                 /*
                  * stream reference
                  */
@@ -798,7 +679,7 @@ void XSecController::exportSignature(
                 xDocumentHandler->startElement( tag_Reference, cssu::Reference< cssxs::XAttributeList > (pAttributeList) );
                 {
                     /* Write Transforms element */
-                    if (refInfor.nType == TYPE_XMLSTREAM_REFERENCE)
+                    if (refInfor.nType == SignatureReferenceType::XMLSTREAM)
                     /*
                      * xml stream, so c14n transform is needed
                      */
@@ -944,11 +825,40 @@ void XSecController::exportSignature(
                 }
                 xDocumentHandler->endElement( tag_SignatureProperty );
             }
+
+            // Write signature description.
+            if (!signatureInfo.ouDescription.isEmpty())
+            {
+                // SignatureProperty element.
+                pAttributeList = new SvXMLAttributeList();
+                pAttributeList->AddAttribute(ATTR_ID, signatureInfo.ouDescriptionPropertyId);
+                pAttributeList->AddAttribute(ATTR_TARGET, CHAR_FRAGMENT + signatureInfo.ouSignatureId);
+                xDocumentHandler->startElement(tag_SignatureProperty, uno::Reference<xml::sax::XAttributeList>(pAttributeList));
+
+                {
+                    // Description element.
+                    pAttributeList = new SvXMLAttributeList();
+                    pAttributeList->AddAttribute(ATTR_XMLNS ":" NSTAG_DC, NS_DC);
+
+                    xDocumentHandler->startElement(NSTAG_DC ":" + tag_Description, uno::Reference<xml::sax::XAttributeList>(pAttributeList));
+                    xDocumentHandler->characters(signatureInfo.ouDescription);
+                    xDocumentHandler->endElement(NSTAG_DC ":" + tag_Description);
+                }
+
+                xDocumentHandler->endElement(tag_SignatureProperty);
+            }
+
             xDocumentHandler->endElement( tag_SignatureProperties );
         }
         xDocumentHandler->endElement( tag_Object );
     }
     xDocumentHandler->endElement( tag_Signature );
+}
+
+void XSecController::exportOOXMLSignature(const uno::Reference<embed::XStorage>& xRootStorage, const uno::Reference<xml::sax::XDocumentHandler>& xDocumentHandler, const SignatureInformation& rInformation)
+{
+    OOXMLSecExporter aExporter(mxCtx, xRootStorage, xDocumentHandler, rInformation);
+    aExporter.writeSignature();
 }
 
 SignatureInformation XSecController::getSignatureInformation( sal_Int32 nSecurityId ) const
@@ -1015,8 +925,8 @@ void SAL_CALL XSecController::bufferStatusChanged( sal_Bool /*isBufferEmpty*/)
 /*
  * XSignatureCreationResultListener
  */
-void SAL_CALL XSecController::signatureCreated( sal_Int32 securityId, com::sun::star::xml::crypto::SecurityOperationStatus nResult )
-        throw (com::sun::star::uno::RuntimeException, std::exception)
+void SAL_CALL XSecController::signatureCreated( sal_Int32 securityId, css::xml::crypto::SecurityOperationStatus nResult )
+        throw (css::uno::RuntimeException, std::exception)
 {
     int index = findSignatureInfor(securityId);
     assert(index != -1 && "Signature Not Found!");
@@ -1027,8 +937,8 @@ void SAL_CALL XSecController::signatureCreated( sal_Int32 securityId, com::sun::
 /*
  * XSignatureVerifyResultListener
  */
-void SAL_CALL XSecController::signatureVerified( sal_Int32 securityId, com::sun::star::xml::crypto::SecurityOperationStatus nResult )
-        throw (com::sun::star::uno::RuntimeException, std::exception)
+void SAL_CALL XSecController::signatureVerified( sal_Int32 securityId, css::xml::crypto::SecurityOperationStatus nResult )
+        throw (css::uno::RuntimeException, std::exception)
 {
     int index = findSignatureInfor(securityId);
     assert(index != -1 && "Signature Not Found!");

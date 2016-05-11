@@ -34,7 +34,6 @@ public:
 };
 
 
-
 class SVL_DLLPUBLIC SfxUndoContext
 {
 public:
@@ -73,7 +72,6 @@ private:
     SfxUndoAction( const SfxUndoAction& ) = delete;
     SfxUndoAction& operator=( const SfxUndoAction& ) = delete;
 };
-
 
 
 /// is a mark on the Undo stack
@@ -119,7 +117,6 @@ struct SVL_DLLPUBLIC SfxUndoArray
 };
 
 
-
 /** do not make use of these implementation details, unless you
     really really have to! */
 class SVL_DLLPUBLIC SfxListUndoAction : public SfxUndoAction, public SfxUndoArray
@@ -159,7 +156,6 @@ public:
 };
 
 
-
 /**  is a callback interface for notifications about state changes of an SfxUndoManager
 */
 class SAL_NO_VTABLE SfxUndoListener
@@ -179,7 +175,6 @@ public:
 protected:
     ~SfxUndoListener() {}
 };
-
 
 
 namespace svl
@@ -204,7 +199,7 @@ namespace svl
 
         virtual size_t          GetRedoActionCount( bool const i_currentLevel = CurrentLevel ) const = 0;
         virtual OUString        GetRedoActionComment( size_t nNo=0, bool const i_currentLevel = CurrentLevel ) const = 0;
-        virtual SfxUndoAction*  GetRedoAction( size_t nNo=0, bool const i_currentLevel = CurrentLevel ) const = 0;
+        virtual SfxUndoAction*  GetRedoAction() const = 0;
 
         virtual bool            Undo() = 0;
         virtual bool            Redo() = 0;
@@ -295,7 +290,6 @@ namespace svl
 }
 
 
-
 namespace svl { namespace undo { namespace impl
 {
     class UndoManagerGuard;
@@ -323,7 +317,7 @@ public:
     virtual SfxUndoAction*  GetUndoAction( size_t nNo=0 ) const override;
     virtual size_t          GetRedoActionCount( bool const i_currentLevel = CurrentLevel ) const override;
     virtual OUString        GetRedoActionComment( size_t nNo=0, bool const i_currentLevel = CurrentLevel ) const override;
-    virtual SfxUndoAction*  GetRedoAction( size_t nNo=0, bool const i_currentLevel = CurrentLevel ) const override;
+    virtual SfxUndoAction*  GetRedoAction() const override;
     virtual bool            Undo() override;
     virtual bool            Redo() override;
     virtual void            Clear() override;
@@ -360,7 +354,7 @@ public:
 
     /** removes the oldest Undo actions from the stack
     */
-    void            RemoveOldestUndoActions( size_t const i_count );
+    void            RemoveOldestUndoAction();
 
     void dumpAsXml(struct _xmlTextWriter* pWriter) const;
 
@@ -397,7 +391,6 @@ private:
 
     friend class ::svl::undo::impl::LockGuard;
 };
-
 
 
 class SVL_DLLPUBLIC SfxLinkUndoAction : public SfxUndoAction

@@ -24,7 +24,6 @@
 #include <basic/sbuno.hxx>
 #include "sbintern.hxx"
 
-#include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/document/XStorageBasedDocument.hpp>
 #include <com/sun/star/document/XEmbeddedScripts.hpp>
 #include <com/sun/star/frame/Desktop.hpp>
@@ -60,10 +59,7 @@ namespace basic
     using ::com::sun::star::uno::UNO_QUERY;
     using ::com::sun::star::embed::XStorage;
     using ::com::sun::star::script::XPersistentLibraryContainer;
-    using ::com::sun::star::uno::Any;
-    using ::com::sun::star::lang::XMultiServiceFactory;
     using ::com::sun::star::uno::UNO_QUERY_THROW;
-    using ::com::sun::star::beans::XPropertySet;
     using ::com::sun::star::uno::Exception;
     using ::com::sun::star::document::XStorageBasedDocument;
     using ::com::sun::star::lang::XComponent;
@@ -183,7 +179,7 @@ namespace basic
 
         /** removes the Model/BasicManager pair given by iterator from our store
         */
-        void impl_removeFromRepository( BasicManagerStore::iterator _pos );
+        void impl_removeFromRepository( const BasicManagerStore::iterator& _pos );
 
     private:
         StarBASIC* impl_getDefaultAppBasicLibrary();
@@ -478,8 +474,8 @@ namespace basic
         // #i104876: Library container must not be modified just after
         // creation. This happens as side effect when creating default
         // "Standard" libraries and needs to be corrected here
-        xBasicLibs->setModified( sal_False );
-        xDialogLibs->setModified( sal_False );
+        xBasicLibs->setModified( false );
+        xDialogLibs->setModified( false );
 
     }
 
@@ -520,7 +516,7 @@ namespace basic
     }
 
 
-    void ImplRepository::impl_removeFromRepository( BasicManagerStore::iterator _pos )
+    void ImplRepository::impl_removeFromRepository( const BasicManagerStore::iterator& _pos )
     {
         OSL_PRECOND( _pos != m_aStore.end(), "ImplRepository::impl_removeFromRepository: invalid position!" );
 
@@ -591,15 +587,15 @@ namespace basic
     }
 
 
-    BasicManager* BasicManagerRepository::getApplicationBasicManager( bool _bCreate )
+    BasicManager* BasicManagerRepository::getApplicationBasicManager()
     {
-        return ImplRepository::Instance().getApplicationBasicManager( _bCreate );
+        return ImplRepository::Instance().getApplicationBasicManager( true/*_bCreate*/ );
     }
 
 
     void BasicManagerRepository::resetApplicationBasicManager()
     {
-        return ImplRepository::Instance().setApplicationBasicManager( nullptr );
+        ImplRepository::Instance().setApplicationBasicManager( nullptr );
     }
 
 

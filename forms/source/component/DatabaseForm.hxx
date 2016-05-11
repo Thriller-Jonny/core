@@ -86,7 +86,6 @@ namespace frm
 {
 
 
-
 //= html tools
 
 
@@ -160,11 +159,10 @@ class ODatabaseForm :public OFormComponents
     friend class OFormSubmitResetThread;
 
     // listener administration
-    ::cppu::OInterfaceContainerHelper   m_aLoadListeners;
-    ::cppu::OInterfaceContainerHelper   m_aRowSetApproveListeners;
-    ::cppu::OInterfaceContainerHelper   m_aRowSetListeners;
-    ::cppu::OInterfaceContainerHelper   m_aSubmitListeners;
-    ::cppu::OInterfaceContainerHelper   m_aErrorListeners;
+    ::comphelper::OInterfaceContainerHelper2   m_aLoadListeners;
+    ::comphelper::OInterfaceContainerHelper2   m_aRowSetApproveListeners;
+    ::comphelper::OInterfaceContainerHelper2   m_aSubmitListeners;
+    ::comphelper::OInterfaceContainerHelper2   m_aErrorListeners;
     ResetListeners                      m_aResetListeners;
     ::osl::Mutex                        m_aResetSafety;
     css::uno::Any                       m_aCycle;
@@ -242,7 +240,7 @@ public:
 
     css::uno::Any  SAL_CALL getFastPropertyValue( sal_Int32 nHandle )
        throw(css::beans::UnknownPropertyException, css::lang::WrappedTargetException, css::uno::RuntimeException, std::exception) override;
-    void fire( sal_Int32 * pnHandles, const css::uno::Any * pNewValues, const css::uno::Any * pOldValues, sal_Int32 nCount, bool bVetoable );
+    void fire( sal_Int32 * pnHandles, const css::uno::Any * pNewValues, const css::uno::Any * pOldValues, sal_Int32 nCount );
 
     // IPropertyBagHelperContext
     virtual ::osl::Mutex&   getMutex() override;
@@ -463,7 +461,7 @@ private:
     void    reload_impl(bool bMoveToFirst,
         const css::uno::Reference< css::task::XInteractionHandler >& _rxCompletionHandler = css::uno::Reference< css::task::XInteractionHandler >())
         throw(css::uno::RuntimeException, std::exception);
-    void    submit_impl(const css::uno::Reference< css::awt::XControl>& Control, const css::awt::MouseEvent& MouseEvt, bool _bAproveByListeners);
+    void    submit_impl(const css::uno::Reference< css::awt::XControl>& Control, const css::awt::MouseEvent& MouseEvt);
     void    reset_impl(bool _bAproveByListeners);
 
     bool    implEnsureConnection();

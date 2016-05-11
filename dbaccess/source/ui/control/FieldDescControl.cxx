@@ -275,8 +275,8 @@ void OFieldDescControl::CheckScrollBars()
     // horizontal :
     long lMaxXPosition = 0;
     Control* ppAggregates[] = { pRequired, pNumType, pAutoIncrement, pDefault, pTextLen, pLength, pScale, pFormat, m_pColumnName, m_pType,m_pAutoIncrementValue};
-    for (sal_uInt16 i=0; i<sizeof(ppAggregates)/sizeof(ppAggregates[0]); ++i)
-        getMaxXPosition(ppAggregates[i],lMaxXPosition);
+    for (Control* ppAggregate : ppAggregates)
+        getMaxXPosition(ppAggregate,lMaxXPosition);
 
     lMaxXPosition += m_pHorzScroll->GetThumbPos() * HSCROLL_STEP;
 
@@ -386,9 +386,9 @@ void OFieldDescControl::ScrollAllAggregates()
                                         , pTextLenText, pLengthText
                                         , pScaleText, m_pColumnNameText
                                         , m_pTypeText, m_pAutoIncrementValueText};
-        OSL_ENSURE(sizeof(ppAggregates)/sizeof(ppAggregates[0]) == sizeof(ppAggregatesText)/sizeof(ppAggregatesText[0]),"Lists are not identical!");
+        OSL_ENSURE(SAL_N_ELEMENTS(ppAggregates) == SAL_N_ELEMENTS(ppAggregatesText),"Lists are not identical!");
 
-        for (sal_uInt16 i=0; i<sizeof(ppAggregates)/sizeof(ppAggregates[0]); ++i)
+        for (sal_uInt16 i=0; i<SAL_N_ELEMENTS(ppAggregates); ++i)
             ScrollAggregate(ppAggregatesText[i],ppAggregates[i],nullptr,nDeltaX, nDeltaY);
 
         ScrollAggregate(pFormatText,pFormatSample,pFormat,nDeltaX, nDeltaY);
@@ -399,8 +399,8 @@ sal_uInt16 OFieldDescControl::CountActiveAggregates() const
 {
     Control* ppAggregates[] = { pRequired, pNumType, pAutoIncrement, pDefault, pTextLen, pLength, pScale, pFormat, m_pColumnName, m_pType,m_pAutoIncrementValue};
     sal_uInt16 nVisibleAggregates = 0;
-    for (sal_uInt16 i=0; i<sizeof(ppAggregates)/sizeof(ppAggregates[0]); ++i)
-        if (ppAggregates[i])
+    for (Control* pAggregate : ppAggregates)
+        if (pAggregate)
             ++nVisibleAggregates;
     return nVisibleAggregates;
 }
@@ -409,11 +409,11 @@ sal_Int32 OFieldDescControl::GetMaxControlHeight() const
 {
     Size aHeight;
     Control* ppAggregates[] = { pRequired, pNumType, pAutoIncrement, pDefault, pTextLen, pLength, pScale, pFormat, m_pColumnName, m_pType,m_pAutoIncrementValue};
-    for (sal_uInt16 i=0; i<sizeof(ppAggregates)/sizeof(ppAggregates[0]); ++i)
+    for (Control* pAggregate : ppAggregates)
     {
-        if ( ppAggregates[i] )
+        if ( pAggregate )
         {
-            const Size aTemp(ppAggregates[i]->GetOptimalSize());
+            const Size aTemp(pAggregate->GetOptimalSize());
             if ( aTemp.Height() > aHeight.Height() )
                 aHeight.Height() = aTemp.Height();
         }
@@ -438,9 +438,9 @@ void OFieldDescControl::SetReadOnly( bool bReadOnly )
                                         , m_pTypeText, m_pAutoIncrementValueText
                                         , pFormatText};
 
-    OSL_ENSURE(sizeof(ppAggregates)/sizeof(ppAggregates[0]) == sizeof(ppAggregatesText)/sizeof(ppAggregatesText[0]),"Lists are not identical!");
+    OSL_ENSURE(SAL_N_ELEMENTS(ppAggregates) == SAL_N_ELEMENTS(ppAggregatesText),"Lists are not identical!");
 
-    for (sal_uInt16 i=0; i<sizeof(ppAggregates)/sizeof(ppAggregates[0]); ++i)
+    for (sal_uInt16 i=0; i<SAL_N_ELEMENTS(ppAggregates); ++i)
     {
         if ( ppAggregatesText[i] )
             ppAggregatesText[i]->Enable( !bReadOnly );
@@ -662,11 +662,11 @@ void OFieldDescControl::ArrangeAggregates()
     };
 
     long nMaxWidth = 0;
-    for (size_t i=0; i<sizeof(adAggregates)/sizeof(adAggregates[0]); i++)
+    for (const AGGREGATE_DESCRIPTION & adAggregate : adAggregates)
     {
-        if (adAggregates[i].pctrlTextControl)
+        if (adAggregate.pctrlTextControl)
         {
-            nMaxWidth = ::std::max<long>(OutputDevice::GetTextWidth(adAggregates[i].pctrlTextControl->GetText()),nMaxWidth);
+            nMaxWidth = ::std::max<long>(OutputDevice::GetTextWidth(adAggregate.pctrlTextControl->GetText()),nMaxWidth);
         }
     }
 
@@ -675,19 +675,19 @@ void OFieldDescControl::ArrangeAggregates()
     // And go ...
     int nCurrentControlPos = 0;
     Control* pZOrderPredecessor = nullptr;
-    for (size_t i=0; i<sizeof(adAggregates)/sizeof(adAggregates[0]); i++)
+    for (AGGREGATE_DESCRIPTION & adAggregate : adAggregates)
     {
-        if (adAggregates[i].pctrlInputControl)
+        if (adAggregate.pctrlInputControl)
         {
-            SetPosSize(adAggregates[i].pctrlTextControl, nCurrentControlPos, 0);
-            SetPosSize(adAggregates[i].pctrlInputControl, nCurrentControlPos, adAggregates[i].nPosSizeArgument);
+            SetPosSize(adAggregate.pctrlTextControl, nCurrentControlPos, 0);
+            SetPosSize(adAggregate.pctrlInputControl, nCurrentControlPos, adAggregate.nPosSizeArgument);
 
             // Set the z-order in a way such that the Controls can be traversed in the same sequence in which they have been arranged here
-            adAggregates[i].pctrlTextControl->SetZOrder(pZOrderPredecessor, pZOrderPredecessor ? ZOrderFlags::Behind : ZOrderFlags::First);
-            adAggregates[i].pctrlInputControl->SetZOrder(adAggregates[i].pctrlTextControl, ZOrderFlags::Behind );
-            pZOrderPredecessor = adAggregates[i].pctrlInputControl;
+            adAggregate.pctrlTextControl->SetZOrder(pZOrderPredecessor, pZOrderPredecessor ? ZOrderFlags::Behind : ZOrderFlags::First);
+            adAggregate.pctrlInputControl->SetZOrder(adAggregate.pctrlTextControl, ZOrderFlags::Behind );
+            pZOrderPredecessor = adAggregate.pctrlInputControl;
 
-            if (adAggregates[i].pctrlInputControl == pFormatSample)
+            if (adAggregate.pctrlInputControl == pFormatSample)
             {
                 pFormat->SetZOrder(pZOrderPredecessor, ZOrderFlags::Behind);
                 pZOrderPredecessor = pFormat;
@@ -1188,7 +1188,7 @@ void OFieldDescControl::DisplayData(OFieldDescription* pFieldDescr )
                     DeactivateAggregate( tpBoolDefault );
                     break;
                 }
-                // run through
+                SAL_FALLTHROUGH;
             case DataType::BOOLEAN:
                 DeactivateAggregate( tpTextLen );
                 DeactivateAggregate( tpFormat );
@@ -1670,7 +1670,7 @@ OUString OFieldDescControl::getControlDefault( const OFieldDescription* _pFieldD
 
                 Reference< css::util::XNumberFormatPreviewer> xPreviewer(xNumberFormatter,UNO_QUERY);
                 OSL_ENSURE(xPreviewer.is(),"XNumberFormatPreviewer is null!");
-                sDefault = xPreviewer->convertNumberToPreviewString(sFormat,nValue,aLocale,sal_True);
+                sDefault = xPreviewer->convertNumberToPreviewString(sFormat,nValue,aLocale,true);
             }
             else if ( !(_bCheck && sDefault.isEmpty()) )
                 sDefault = xNumberFormatter->formatString(nFormatKey, sDefault.isEmpty() ? sFormat : sDefault);

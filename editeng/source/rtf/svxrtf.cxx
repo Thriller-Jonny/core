@@ -59,8 +59,7 @@ static rtl_TextEncoding lcl_GetDefaultTextEncodingForRTF()
 // -------------- Methods --------------------
 
 SvxRTFParser::SvxRTFParser( SfxItemPool& rPool, SvStream& rIn,
-            uno::Reference<document::XDocumentProperties> i_xDocProps,
-            bool const bReadNewDoc )
+            uno::Reference<document::XDocumentProperties> i_xDocProps )
     : SvRTFParser( rIn, 5 )
     , aPlainMap(rPool)
     , aPardMap(rPool)
@@ -68,9 +67,8 @@ SvxRTFParser::SvxRTFParser( SfxItemPool& rPool, SvStream& rIn,
     , pAttrPool( &rPool )
     , m_xDocProps( i_xDocProps )
     , pRTFDefaults( nullptr )
-    , nVersionNo( 0 )
     , nDfltFont( 0)
-    , bNewDoc( bReadNewDoc )
+    , bNewDoc( true )
     , bNewGroup( false)
     , bIsSetDfltTab( false)
     , bChkStyleAttr( false )
@@ -180,16 +178,16 @@ void SvxRTFParser::NextToken( int nToken )
     case RTF_TAB:           cCh = '\t'; goto INSINGLECHAR;
     case RTF_SUBENTRYINDEX: cCh = ':';  goto INSINGLECHAR;
 
-    case RTF_EMDASH:		cCh = 0x2014;	goto INSINGLECHAR;
-    case RTF_ENDASH:		cCh = 0x2013;	goto INSINGLECHAR;
-    case RTF_BULLET:		cCh = 0x2022;	goto INSINGLECHAR;
-    case RTF_LQUOTE:		cCh = 0x2018;	goto INSINGLECHAR;
-    case RTF_RQUOTE:		cCh = 0x2019;	goto INSINGLECHAR;
-    case RTF_LDBLQUOTE:		cCh = 0x201C;	goto INSINGLECHAR;
-    case RTF_RDBLQUOTE:		cCh = 0x201D;	goto INSINGLECHAR;
+    case RTF_EMDASH:        cCh = 0x2014;   goto INSINGLECHAR;
+    case RTF_ENDASH:        cCh = 0x2013;   goto INSINGLECHAR;
+    case RTF_BULLET:        cCh = 0x2022;   goto INSINGLECHAR;
+    case RTF_LQUOTE:        cCh = 0x2018;   goto INSINGLECHAR;
+    case RTF_RQUOTE:        cCh = 0x2019;   goto INSINGLECHAR;
+    case RTF_LDBLQUOTE:     cCh = 0x201C;   goto INSINGLECHAR;
+    case RTF_RDBLQUOTE:     cCh = 0x201D;   goto INSINGLECHAR;
 INSINGLECHAR:
         aToken = OUString(cCh);
-        // no Break, aToken is set as Text
+        SAL_FALLTHROUGH; // aToken is set as Text
     case RTF_TEXTTOKEN:
         {
             InsertText();
@@ -209,7 +207,7 @@ INSINGLECHAR:
         break;
     case '{':
         if (bNewGroup)          // Nesting!
-            _GetAttrSet();
+            GetAttrSet_();
         bNewGroup = true;
         break;
     case '}':
@@ -226,7 +224,7 @@ INSINGLECHAR:
 
     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     // First overwrite all (all have to be in one group!!)
-    // Could also appear in the RTF-filewithout the IGNORE-Flag; all Groups
+    // Could also appear in the RTF-file without the IGNORE-Flag; all Groups
     // with the IGNORE-Flag are overwritten in the default branch.
 
     case RTF_SWG_PRTDATA:
@@ -420,7 +418,7 @@ void SvxRTFParser::ReadColorTable()
                     : -1 == aToken.indexOf( ";" ) )
                 break;      // At least the ';' must be found
 
-            // else no break !!
+            SAL_FALLTHROUGH;
 
         case ';':
             if( IsParserWorking() )
@@ -432,7 +430,9 @@ void SvxRTFParser::ReadColorTable()
                     sal_uInt8(-1) == nRed && sal_uInt8(-1) == nGreen && sal_uInt8(-1) == nBlue )
                     pColor->SetColor( COL_AUTO );
                 aColorTbl.push_back( pColor );
-                nRed = 0, nGreen = 0, nBlue = 0;
+                nRed = 0;
+                nGreen = 0;
+                nBlue = 0;
 
                 // Color has been completely read,
                 // so this is still a stable status
@@ -509,7 +509,7 @@ void SvxRTFParser::ReadFontTable()
             // for technical/symbolic font of the rtl_TextEncoding is changed!
             case RTF_FTECH:
                 pFont->SetCharSet( RTL_TEXTENCODING_SYMBOL );
-                // deliberate fall through
+                SAL_FALLTHROUGH;
             case RTF_FNIL:
                 pFont->SetFamily( FAMILY_DONTKNOW );
                 break;
@@ -563,7 +563,7 @@ void SvxRTFParser::ReadFontTable()
             if (!sAltNm.isEmpty())
                 sFntNm = sFntNm + ";" + sAltNm;
 
-            pFont->SetName( sFntNm );
+            pFont->SetFamilyName( sFntNm );
             m_FontTable.insert(std::make_pair(nInsFontNo, std::move(pFont)));
             pFont.reset(new vcl::Font);
             pFont->SetCharSet( nSystemChar );
@@ -651,13 +651,12 @@ util::DateTime SvxRTFParser::GetDateTimeStamp( )
     return aDT;
 }
 
-void SvxRTFParser::ReadInfo( const sal_Char* pChkForVerNo )
+void SvxRTFParser::ReadInfo()
 {
     int _nOpenBrakets = 1;  // the first was already detected earlier!!
     DBG_ASSERT(m_xDocProps.is(),
         "SvxRTFParser::ReadInfo: no DocumentProperties");
     OUString sStr, sComment;
-    long nVersNo = 0;
 
     while( _nOpenBrakets && IsParserWorking() )
     {
@@ -732,7 +731,6 @@ void SvxRTFParser::ReadInfo( const sal_Char* pChkForVerNo )
             break;
 
         case RTF_VERN:
-            nVersNo = nTokenValue;
             break;
 
         case RTF_EDMINS:
@@ -743,14 +741,8 @@ void SvxRTFParser::ReadInfo( const sal_Char* pChkForVerNo )
         case RTF_NOFCHARS:
             NextToken( nToken );
             break;
-
-//      default:
         }
     }
-
-    if( pChkForVerNo &&
-        sComment == OUString::createFromAscii( pChkForVerNo ) )
-        nVersionNo = nVersNo;
 
     SkipToken();        // the closing brace is evaluated "above"
 }
@@ -806,17 +798,17 @@ const vcl::Font& SvxRTFParser::GetFont( sal_uInt16 nId )
     }
     const SvxFontItem& rDfltFont = static_cast<const SvxFontItem&>(
                     pAttrPool->GetDefaultItem( aPlainMap.nFont ));
-    pDfltFont->SetName( rDfltFont.GetStyleName() );
+    pDfltFont->SetFamilyName( rDfltFont.GetStyleName() );
     pDfltFont->SetFamily( rDfltFont.GetFamily() );
     return *pDfltFont;
 }
 
-SvxRTFItemStackType* SvxRTFParser::_GetAttrSet( bool const bCopyAttr )
+SvxRTFItemStackType* SvxRTFParser::GetAttrSet_()
 {
     SvxRTFItemStackType* pAkt = aAttrStack.empty() ? nullptr : aAttrStack.back();
     SvxRTFItemStackType* pNew;
     if( pAkt )
-        pNew = new SvxRTFItemStackType( *pAkt, *pInsPos, bCopyAttr );
+        pNew = new SvxRTFItemStackType( *pAkt, *pInsPos, false/*bCopyAttr*/ );
     else
         pNew = new SvxRTFItemStackType( *pAttrPool, &aWhichMap[0],
                                         *pInsPos );
@@ -828,7 +820,7 @@ SvxRTFItemStackType* SvxRTFParser::_GetAttrSet( bool const bCopyAttr )
 }
 
 
-void SvxRTFParser::_ClearStyleAttr( SvxRTFItemStackType& rStkType )
+void SvxRTFParser::ClearStyleAttr_( SvxRTFItemStackType& rStkType )
 {
     // check attributes to the attributes of the stylesheet or to
     // the default attrs of the document
@@ -965,8 +957,8 @@ void SvxRTFParser::AttrGroupEnd()   // process the current, delete from Stack
 
                             if( IsChkStyleAttr() )
                             {
-                                _ClearStyleAttr( *pOld );
-                                _ClearStyleAttr( *pNew );   //#i10381#, methinks.
+                                ClearStyleAttr_( *pOld );
+                                ClearStyleAttr_( *pNew );   //#i10381#, methinks.
                             }
 
                             if( pAkt )
@@ -1002,7 +994,7 @@ void SvxRTFParser::AttrGroupEnd()   // process the current, delete from Stack
                 redundant properties.
                 */
                 if (IsChkStyleAttr() && !pAkt)
-                    _ClearStyleAttr( *pOld );
+                    ClearStyleAttr_( *pOld );
 
                 if( pAkt )
                 {

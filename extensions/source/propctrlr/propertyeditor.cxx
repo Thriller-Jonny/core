@@ -297,7 +297,7 @@ namespace pcr
     }
 
 
-    void OPropertyEditor::forEachPage( PageOperation _pOperation, const void* _pArgument )
+    void OPropertyEditor::forEachPage( PageOperation _pOperation )
     {
         sal_uInt16 nCount = m_aTabControl->GetPageCount();
         for ( sal_uInt16 i=0; i<nCount; ++i )
@@ -306,7 +306,7 @@ namespace pcr
             OBrowserPage* pPage = static_cast< OBrowserPage* >( m_aTabControl->GetTabPage( nID ) );
             if ( !pPage )
                 continue;
-            (this->*_pOperation)( *pPage, _pArgument );
+            (this->*_pOperation)( *pPage, nullptr );
         }
     }
 
@@ -342,8 +342,6 @@ namespace pcr
         m_bHasHelpSection = _bEnable;
         forEachPage( &OPropertyEditor::enableHelpSection );
     }
-
-
 
 
     void OPropertyEditor::SetHelpText( const OUString& _rHelpText )
@@ -391,21 +389,19 @@ namespace pcr
     }
 
 
-    sal_uInt16 OPropertyEditor::InsertEntry( const OLineDescriptor& rData, sal_uInt16 _nPageId, sal_uInt16 nPos )
+    void OPropertyEditor::InsertEntry( const OLineDescriptor& rData, sal_uInt16 _nPageId, sal_uInt16 nPos )
     {
         // let the current page handle this
         OBrowserPage* pPage = getPage( _nPageId );
         DBG_ASSERT( pPage, "OPropertyEditor::InsertEntry: don't have such a page!" );
         if ( !pPage )
-            return EDITOR_LIST_ENTRY_NOTFOUND;
+            return;
 
-        sal_uInt16 nEntry = pPage->getListBox().InsertEntry( rData, nPos );
+        pPage->getListBox().InsertEntry( rData, nPos );
 
         OSL_ENSURE( m_aPropertyPageIds.find( rData.sName ) == m_aPropertyPageIds.end(),
             "OPropertyEditor::InsertEntry: property already present in the map!" );
         m_aPropertyPageIds.insert( MapStringToPageId::value_type( rData.sName, _nPageId ) );
-
-        return nEntry;
     }
 
 
@@ -517,7 +513,7 @@ namespace pcr
 
     IMPL_LINK_NOARG_TYPED(OPropertyEditor, OnPageDeactivate, TabControl *, bool)
     {
-        // commit the data on the current (to-be-decativated) tab page
+        // commit the data on the current (to-be-deactivated) tab page
         // (79404)
         sal_Int32 nCurrentId = m_aTabControl->GetCurPageId();
         OBrowserPage* pCurrentPage = static_cast<OBrowserPage*>(m_aTabControl->GetTabPage((sal_uInt16)nCurrentId));
@@ -532,7 +528,6 @@ namespace pcr
 
 
 } // namespace pcr
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

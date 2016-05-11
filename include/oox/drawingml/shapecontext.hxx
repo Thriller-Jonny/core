@@ -20,11 +20,13 @@
 #ifndef INCLUDED_OOX_DRAWINGML_SHAPECONTEXT_HXX
 #define INCLUDED_OOX_DRAWINGML_SHAPECONTEXT_HXX
 
-#include <com/sun/star/drawing/XShapes.hpp>
-
+#include <oox/core/contexthandler.hxx>
 #include <oox/core/contexthandler2.hxx>
-#include <oox/drawingml/shape.hxx>
 #include <oox/dllapi.h>
+#include <oox/drawingml/drawingmltypes.hxx>
+#include <sal/types.h>
+
+namespace oox { class AttributeList; }
 
 namespace oox { namespace drawingml {
 
@@ -36,7 +38,7 @@ public:
 
     virtual ::oox::core::ContextHandlerRef onCreateContext( ::sal_Int32 Element, const ::oox::AttributeList& rAttribs ) override;
 
-    ShapePtr getShape() { return mpShapePtr;}
+    const ShapePtr& getShape() { return mpShapePtr;}
 
 protected:
 

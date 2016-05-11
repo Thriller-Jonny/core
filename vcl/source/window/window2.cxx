@@ -36,7 +36,7 @@
 #include <vcl/settings.hxx>
 
 #include <window.h>
-#include <outfont.hxx>
+#include <fontinstance.hxx>
 #include <outdev.h>
 #include <svdata.hxx>
 #include <impbmp.hxx>
@@ -211,18 +211,18 @@ void Window::InvertTracking( const Rectangle& rRect, sal_uInt16 nFlags )
 
     sal_uInt16 nStyle = nFlags & SHOWTRACK_STYLE;
     if ( nStyle == SHOWTRACK_OBJECT )
-        pGraphics->Invert( aRect.Left(), aRect.Top(), aRect.GetWidth(), aRect.GetHeight(), SAL_INVERT_TRACKFRAME, this );
+        pGraphics->Invert( aRect.Left(), aRect.Top(), aRect.GetWidth(), aRect.GetHeight(), SalInvert::TrackFrame, this );
     else if ( nStyle == SHOWTRACK_SPLIT )
-        pGraphics->Invert( aRect.Left(), aRect.Top(), aRect.GetWidth(), aRect.GetHeight(), SAL_INVERT_50, this );
+        pGraphics->Invert( aRect.Left(), aRect.Top(), aRect.GetWidth(), aRect.GetHeight(), SalInvert::N50, this );
     else
     {
         long nBorder = 1;
         if ( nStyle == SHOWTRACK_BIG )
             nBorder = 5;
-        pGraphics->Invert( aRect.Left(), aRect.Top(), aRect.GetWidth(), nBorder, SAL_INVERT_50, this );
-        pGraphics->Invert( aRect.Left(), aRect.Bottom()-nBorder+1, aRect.GetWidth(), nBorder, SAL_INVERT_50, this );
-        pGraphics->Invert( aRect.Left(), aRect.Top()+nBorder, nBorder, aRect.GetHeight()-(nBorder*2), SAL_INVERT_50, this );
-        pGraphics->Invert( aRect.Right()-nBorder+1, aRect.Top()+nBorder, nBorder, aRect.GetHeight()-(nBorder*2), SAL_INVERT_50, this );
+        pGraphics->Invert( aRect.Left(), aRect.Top(), aRect.GetWidth(), nBorder, SalInvert::N50, this );
+        pGraphics->Invert( aRect.Left(), aRect.Bottom()-nBorder+1, aRect.GetWidth(), nBorder, SalInvert::N50, this );
+        pGraphics->Invert( aRect.Left(), aRect.Top()+nBorder, nBorder, aRect.GetHeight()-(nBorder*2), SalInvert::N50, this );
+        pGraphics->Invert( aRect.Right()-nBorder+1, aRect.Top()+nBorder, nBorder, aRect.GetHeight()-(nBorder*2), SalInvert::N50, this );
     }
 }
 
@@ -274,7 +274,7 @@ void Window::InvertTracking( const tools::Polygon& rPoly, sal_uInt16 nFlags )
     }
 
     const SalPoint* pPtAry = reinterpret_cast<const SalPoint*>(aPoly.GetConstPointAry());
-    pGraphics->Invert( nPoints, pPtAry, SAL_INVERT_TRACKFRAME, this );
+    pGraphics->Invert( nPoints, pPtAry, SalInvert::TrackFrame, this );
 }
 
 IMPL_LINK_TYPED( Window, ImplTrackTimerHdl, Timer*, pTimer, void )
@@ -326,6 +326,12 @@ void Window::StartTracking( StartTrackingFlags nFlags )
     pSVData->maWinData.mpTrackWin   = this;
     pSVData->maWinData.mnTrackFlags = nFlags;
     CaptureMouse();
+
+    if (nFlags & StartTrackingFlags::UseToolKitDrag)
+    {
+        SalFrame* pFrame = mpWindowImpl->mpFrame;
+        pFrame->StartToolKitMoveBy();
+    }
 }
 
 void Window::EndTracking( TrackingEventFlags nFlags )
@@ -404,37 +410,31 @@ void Window::EndAutoScroll()
     }
 }
 
-sal_uIntPtr Window::SaveFocus()
+VclPtr<vcl::Window> Window::SaveFocus()
 {
     ImplSVData* pSVData = ImplGetSVData();
     if ( pSVData->maWinData.mpFocusWin )
     {
-        ImplFocusDelData* pDelData = new ImplFocusDelData;
-        pSVData->maWinData.mpFocusWin->ImplAddDel( pDelData );
-        pDelData->mpFocusWin = pSVData->maWinData.mpFocusWin;
-        return reinterpret_cast<sal_uIntPtr>(pDelData);
+        return pSVData->maWinData.mpFocusWin;
     }
     else
-        return 0;
+        return nullptr;
 }
 
-bool Window::EndSaveFocus( sal_uIntPtr nSaveId, bool bRestore )
+bool Window::EndSaveFocus( const VclPtr<vcl::Window>& xFocusWin, bool bRestore )
 {
-    if ( !nSaveId )
+    if ( xFocusWin == nullptr )
         return false;
     else
     {
         bool                bOK = true;
-        ImplFocusDelData*   pDelData = reinterpret_cast<ImplFocusDelData*>(nSaveId);
-        if ( !pDelData->IsDead() )
+        if ( !xFocusWin->IsDisposed() )
         {
-            pDelData->mpFocusWin->ImplRemoveDel( pDelData );
             if ( bRestore )
-                pDelData->mpFocusWin->GrabFocus();
+                xFocusWin->GrabFocus();
         }
         else
             bOK = !bRestore;
-        delete pDelData;
         return bOK;
     }
 }
@@ -459,7 +459,7 @@ void Window::SetZoomedPointFont(vcl::RenderContext& rRenderContext, const vcl::F
     if (rZoom.GetNumerator() != rZoom.GetDenominator())
     {
         vcl::Font aFont(rFont);
-        Size aSize = aFont.GetSize();
+        Size aSize = aFont.GetFontSize();
         double n = double(aSize.Width());
         n *= double(rZoom.GetNumerator());
         n /= double(rZoom.GetDenominator());
@@ -468,13 +468,13 @@ void Window::SetZoomedPointFont(vcl::RenderContext& rRenderContext, const vcl::F
         n *= double(rZoom.GetNumerator());
         n /= double(rZoom.GetDenominator());
         aSize.Height() = WinFloatRound(n);
-        aFont.SetSize(aSize);
+        aFont.SetFontSize(aSize);
         SetPointFont(rRenderContext, aFont);
 
         // Use another font if the representation is to be scaled,
         // and the actual font is not scalable
         FontMetric aMetric = rRenderContext.GetFontMetric();
-        long nFontDiff = std::abs(rRenderContext.GetFont().GetSize().Height() - aMetric.GetSize().Height());
+        long nFontDiff = std::abs(rRenderContext.GetFont().GetFontSize().Height() - aMetric.GetFontSize().Height());
         if ((aMetric.GetType() == TYPE_RASTER) && (nFontDiff >= 2))
         {
             DefaultFontType nType;
@@ -483,7 +483,7 @@ void Window::SetZoomedPointFont(vcl::RenderContext& rRenderContext, const vcl::F
             else
                 nType = DefaultFontType::UI_SANS;
             vcl::Font aTempFont = OutputDevice::GetDefaultFont(nType, rRenderContext.GetSettings().GetLanguageTag().getLanguageType(), GetDefaultFontFlags::NONE);
-            aFont.SetName(aTempFont.GetName());
+            aFont.SetFamilyName(aTempFont.GetFamilyName());
             SetPointFont(rRenderContext, aFont);
         }
     }
@@ -655,10 +655,10 @@ Size Window::CalcOutputSize( const Size& rWinSz ) const
 vcl::Font Window::GetDrawPixelFont(OutputDevice* pDev) const
 {
     vcl::Font aFont = GetPointFont(*pDev);
-    Size aFontSize = aFont.GetSize();
+    Size aFontSize = aFont.GetFontSize();
     MapMode aPtMapMode(MAP_POINT);
     aFontSize = pDev->LogicToPixel( aFontSize, aPtMapMode );
-    aFont.SetSize( aFontSize );
+    aFont.SetFontSize( aFontSize );
     return aFont;
 }
 
@@ -1024,12 +1024,15 @@ void Window::SetCompoundControl( bool bCompound )
 
 void Window::IncrementLockCount()
 {
+    assert( mpWindowImpl != nullptr );
     mpWindowImpl->mnLockCount++;
 }
 
 void Window::DecrementLockCount()
 {
-    mpWindowImpl->mnLockCount--;
+    assert( mpWindowImpl != nullptr );
+    if (mpWindowImpl)
+        mpWindowImpl->mnLockCount--;
 }
 
 WinBits Window::GetStyle() const
@@ -1096,9 +1099,9 @@ bool Window::IsToolbarFloatingWindow() const
     return mpWindowImpl && mpWindowImpl->mbToolbarFloatingWindow;
 }
 
-void Window::EnableAllResize( bool bEnable )
+void Window::EnableAllResize()
 {
-    mpWindowImpl->mbAllResize = bEnable;
+    mpWindowImpl->mbAllResize = true;
 }
 
 void Window::EnableChildTransparentMode( bool bEnable )
@@ -1151,7 +1154,7 @@ bool Window::IsControlFont() const
     return (mpWindowImpl->mpControlFont != nullptr);
 }
 
-Color Window::GetControlForeground() const
+const Color& Window::GetControlForeground() const
 {
     return mpWindowImpl->maControlForeground;
 }
@@ -1161,7 +1164,7 @@ bool Window::IsControlForeground() const
     return mpWindowImpl->mbControlForeground;
 }
 
-Color Window::GetControlBackground() const
+const Color& Window::GetControlBackground() const
 {
     return mpWindowImpl->maControlBackground;
 }
@@ -1492,14 +1495,14 @@ bool Window::set_font_attribute(const OString &rKey, const OString &rValue)
     else if (rKey == "underline")
     {
         vcl::Font aFont(GetControlFont());
-        aFont.SetUnderline(toBool(rValue) ? UNDERLINE_SINGLE : UNDERLINE_NONE);
+        aFont.SetUnderline(toBool(rValue) ? LINESTYLE_SINGLE : LINESTYLE_NONE);
         SetControlFont(aFont);
     }
     else if (rKey == "size")
     {
         vcl::Font aFont(GetControlFont());
         sal_Int32 nHeight = rValue.toInt32() / 1000;
-        aFont.SetHeight(nHeight);
+        aFont.SetFontHeight(nHeight);
         SetControlFont(aFont);
     }
     else
@@ -1973,7 +1976,7 @@ void Window::set_non_homogeneous(bool bNonHomogeneous)
     pWindowImpl->mbNonHomogeneous = bNonHomogeneous;
 }
 
-void Window::add_to_size_group(std::shared_ptr<VclSizeGroup> xGroup)
+void Window::add_to_size_group(const std::shared_ptr<VclSizeGroup>& xGroup)
 {
     WindowImpl *pWindowImpl = mpWindowImpl->mpBorderWindow ? mpWindowImpl->mpBorderWindow->mpWindowImpl : mpWindowImpl;
     //To-Do, multiple groups
@@ -2015,7 +2018,7 @@ void Window::remove_mnemonic_label(FixedText *pLabel)
     pLabel->set_mnemonic_widget(nullptr);
 }
 
-std::vector<VclPtr<FixedText> > Window::list_mnemonic_labels() const
+const std::vector<VclPtr<FixedText> >& Window::list_mnemonic_labels() const
 {
     return mpWindowImpl->m_aMnemonicLabels;
 }

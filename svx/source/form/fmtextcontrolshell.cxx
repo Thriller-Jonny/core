@@ -183,7 +183,6 @@ namespace svx
     };
 
 
-
     FmFocusListenerAdapter::FmFocusListenerAdapter( const Reference< css::awt::XControl >& _rxControl, IFocusObserver* _pObserver )
         :m_pObserver( _pObserver )
         ,m_xWindow( _rxControl, UNO_QUERY )
@@ -483,7 +482,7 @@ namespace svx
         }
 
 
-        static vcl::Window* lcl_getWindow( const Reference< css::awt::XControl >& _rxControl )
+        vcl::Window* lcl_getWindow( const Reference< css::awt::XControl >& _rxControl )
         {
             vcl::Window* pWindow = nullptr;
             try
@@ -750,7 +749,7 @@ namespace svx
     }
 
 
-    bool FmTextControlShell::executeSelectAll( )
+    void FmTextControlShell::executeSelectAll( )
     {
         try
         {
@@ -758,18 +757,16 @@ namespace svx
             {
                 sal_Int32 nTextLen = m_xActiveTextComponent->getText().getLength();
                 m_xActiveTextComponent->setSelection( css::awt::Selection( 0, nTextLen ) );
-                return true;
             }
         }
         catch( const Exception& )
         {
             DBG_UNHANDLED_EXCEPTION();
         }
-        return false;   // not handled
     }
 
 
-    bool FmTextControlShell::executeClipboardSlot( SfxSlotId _nSlot )
+    void FmTextControlShell::executeClipboardSlot( SfxSlotId _nSlot )
     {
         try
         {
@@ -800,14 +797,12 @@ namespace svx
                 default:
                     OSL_FAIL( "FmTextControlShell::executeClipboardSlot: invalid slot!" );
                 }
-                return true;
             }
         }
         catch( const Exception& )
         {
             DBG_UNHANDLED_EXCEPTION();
         }
-        return false;   // not handled
     }
 
 
@@ -865,11 +860,11 @@ namespace svx
                     DBG_ASSERT( pTextLine, "FmTextControlShell::ExecuteTextAttribute: ooops - no underline/overline item!" );
                     if ( pTextLine )
                     {
-                        FontUnderline eTL = pTextLine->GetLineStyle();
+                        FontLineStyle eTL = pTextLine->GetLineStyle();
                         if ( SID_ATTR_CHAR_UNDERLINE == nSlot ) {
-                            aToggled.Put( SvxUnderlineItem( eTL == UNDERLINE_SINGLE ? UNDERLINE_NONE : UNDERLINE_SINGLE, nWhich ) );
+                            aToggled.Put( SvxUnderlineItem( eTL == LINESTYLE_SINGLE ? LINESTYLE_NONE : LINESTYLE_SINGLE, nWhich ) );
                         } else {
-                            aToggled.Put( SvxOverlineItem( eTL == UNDERLINE_SINGLE ? UNDERLINE_NONE : UNDERLINE_SINGLE, nWhich ) );
+                            aToggled.Put( SvxOverlineItem( eTL == LINESTYLE_SINGLE ? LINESTYLE_NONE : LINESTYLE_SINGLE, nWhich ) );
                         }
                     }
                 }
@@ -1126,8 +1121,9 @@ namespace svx
         OSL_PRECOND( isControllerListening(), "FmTextControlShell::stopControllerListening: inconsistence!" );
 
         // dispose all listeners associated with the controls of the active controller
+        FocusListenerAdapters::const_iterator aEnd = m_aControlObservers.end();
         for (   FocusListenerAdapters::iterator aLoop = m_aControlObservers.begin();
-                aLoop != m_aControlObservers.end();
+                aLoop != aEnd;
                 ++aLoop
             )
         {
@@ -1144,8 +1140,9 @@ namespace svx
     void FmTextControlShell::implClearActiveControlRef()
     {
         // no more features for this control
+        ControlFeatures::const_iterator aEnd = m_aControlFeatures.end();
         for (   ControlFeatures::iterator aLoop = m_aControlFeatures.begin();
-                aLoop != m_aControlFeatures.end();
+                aLoop != aEnd;
                 ++aLoop
             )
         {
@@ -1360,7 +1357,7 @@ namespace svx
 
     void FmTextControlShell::contextMenuRequested( const css::awt::MouseEvent& /*_rEvent*/ )
     {
-        m_rBindings.GetDispatcher()->ExecutePopup( SVX_RES( RID_FM_TEXTATTRIBUTE_MENU ) );
+        m_rBindings.GetDispatcher()->ExecutePopup( "formrichtext" );
     }
 
 

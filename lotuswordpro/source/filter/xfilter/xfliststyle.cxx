@@ -60,15 +60,14 @@
 #include "xfliststyle.hxx"
 
 XFListLevel::XFListLevel()
-{
-    m_nLevel = 0;
-    m_nDisplayLevel = 0;
-    m_fIndent = 0;
-    m_fMinLabelWidth = 0.499;
-    m_fMinLabelDistance = 0;
-    m_eAlign = enumXFAlignStart;
-    m_eListType = enumXFListLevelNumber;
-}
+    : m_nLevel(0)
+    , m_nDisplayLevel(0)
+    , m_fIndent(0)
+    , m_fMinLabelWidth(0.499)
+    , m_fMinLabelDistance(0)
+    , m_eAlign(enumXFAlignStart)
+    , m_eListType(enumXFListLevelNumber)
+{}
 
 void XFListLevel::ToXml(IXFStream * /*pStrm*/)
 {
@@ -209,10 +208,9 @@ XFListStyle& XFListStyle::operator=(const XFListStyle& other)
 
 XFListStyle::~XFListStyle()
 {
-    for( int i=0; i<10; i++ )
+    for(XFListLevel* p : m_pListLevels)
     {
-        if( m_pListLevels[i] )
-            delete m_pListLevels[i];
+        delete p;
     }
 }
 
@@ -318,9 +316,8 @@ void XFListStyle::ToXml(IXFStream *pStrm)
         pAttrList->AddAttribute("style:parent-style-name",GetParentStyleName());
     pStrm->StartElement( "text:list-style" );
 
-    for( int i=0; i<10; i++ )
+    for(XFListLevel* pLevel : m_pListLevels)
     {
-        XFListLevel *pLevel = m_pListLevels[i];
         if( pLevel )
             pLevel->ToXml(pStrm);
     }

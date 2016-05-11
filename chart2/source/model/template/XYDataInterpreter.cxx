@@ -211,11 +211,11 @@ chart2::InterpretedData SAL_CALL XYDataInterpreter::reinterpretDataSeries(
             Sequence< Reference< data::XLabeledDataSequence > > aSeqs( xSeriesSource->getDataSequences());
             if( aSeqs.getLength() != aNewSequences.getLength() )
             {
-#if OSL_DEBUG_LEVEL > 1
+#ifdef DBG_UTIL
                 sal_Int32 j=0;
                 for( ; j<aSeqs.getLength(); ++j )
                 {
-                    OSL_ENSURE( aSeqs[j] == xValuesY || aSeqs[j] == xValuesX, "All sequences should be used" );
+                    SAL_WARN_IF((aSeqs[j] == xValuesY || aSeqs[j] == xValuesX), "chart2.template", "All sequences should be used" );
                 }
 #endif
                 Reference< data::XDataSink > xSink( xSeriesSource, uno::UNO_QUERY_THROW );
@@ -244,7 +244,7 @@ sal_Bool SAL_CALL XYDataInterpreter::isDataCompatible(
             Reference< data::XDataSource > xSrc( aSeries[i], uno::UNO_QUERY_THROW );
             Sequence< Reference< data::XLabeledDataSequence > > aSeq( xSrc->getDataSequences());
             if( aSeq.getLength() != 2 )
-                return sal_False;
+                return false;
         }
         catch( const uno::Exception & ex )
         {
@@ -252,7 +252,7 @@ sal_Bool SAL_CALL XYDataInterpreter::isDataCompatible(
         }
     }
 
-    return sal_True;
+    return true;
 }
 
 } // namespace chart

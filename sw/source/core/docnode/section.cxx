@@ -498,7 +498,7 @@ void SwSection::Modify( const SfxPoolItem* pOld, const SfxPoolItem* pNew )
         return;
 
     case RES_COL:
-        // Is handeled by the Layout, if appropriate
+        // Is handled by the Layout, if appropriate
         break;
 
     case RES_FTN_AT_TXTEND:
@@ -581,17 +581,13 @@ OUString SwSection::GetLinkFileName() const
     return m_Data.GetLinkFileName();
 }
 
-void SwSection::SetLinkFileName(const OUString& rNew, OUString const*const pPassWd)
+void SwSection::SetLinkFileName(const OUString& rNew)
 {
     if (m_RefLink.Is())
     {
         m_RefLink->SetLinkSourceName( rNew );
     }
     m_Data.SetLinkFileName(rNew);
-    if( pPassWd )
-    {
-        SetLinkFilePassword( *pPassWd );
-    }
 }
 
 // If it was a Linked Section, we need to make all Child Links visible
@@ -786,7 +782,7 @@ void SwSectionFormat::Modify( const SfxPoolItem* pOld, const SfxPoolItem* pNew )
     case RES_SECTION_RESETHIDDENFLAG:
     case RES_FTN_AT_TXTEND:
     case RES_END_AT_TXTEND : bClients = true;
-                            // no break !!
+        SAL_FALLTHROUGH;
     case RES_SECTION_HIDDEN:
     case RES_SECTION_NOT_HIDDEN:
         {
@@ -1018,10 +1014,10 @@ void SwSectionFormat::UpdateParent()
     }
 }
 
-SwSectionNode* SwSectionFormat::GetSectionNode(bool const bAlways)
+SwSectionNode* SwSectionFormat::GetSectionNode()
 {
     const SwNodeIndex* pIdx = GetContent(false).GetContentIdx();
-    if( pIdx && ( bAlways || &pIdx->GetNodes() == &GetDoc()->GetNodes() ))
+    if( pIdx && ( &pIdx->GetNodes() == &GetDoc()->GetNodes() ))
         return pIdx->GetNode().GetSectionNode();
     return nullptr;
 }
@@ -1233,7 +1229,7 @@ static void lcl_UpdateLinksInSect( SwBaseLink& rUpdLnk, SwSectionNode& rSectNd )
         // Delete everything succeeding it
         --aIdx;
         DelFlyInRange( aIdx, aEndIdx );
-        _DelBookmarks(aIdx, aEndIdx);
+        DelBookmarks(aIdx, aEndIdx);
         ++aIdx;
 
         pDoc->GetNodes().Delete( aIdx, aEndIdx.GetIndex() - aIdx.GetIndex() );
@@ -1250,7 +1246,7 @@ static void lcl_UpdateLinksInSect( SwBaseLink& rUpdLnk, SwSectionNode& rSectNd )
         break;
 
     case SotClipboardFormatId::RTF:
-        pRead = SwReaderWriter::GetReader( READER_WRITER_RTF );
+        pRead = SwReaderWriter::GetRtfReader();
         break;
 
     case SotClipboardFormatId::SIMPLE_FILE:
@@ -1337,7 +1333,10 @@ static void lcl_UpdateLinksInSect( SwBaseLink& rUpdLnk, SwSectionNode& rSectNd )
                     }
                     if( pCpyRg && pSrcDoc == pDoc &&
                         pCpyRg->aStart < rInsPos && rInsPos < pCpyRg->aEnd )
-                        delete pCpyRg, pCpyRg = nullptr;
+                    {
+                        delete pCpyRg;
+                        pCpyRg = nullptr;
+                    }
                 }
                 else if( pSrcDoc != pDoc )
                     pCpyRg = new SwNodeRange( pSrcDoc->GetNodes().GetEndOfExtras(), 2,

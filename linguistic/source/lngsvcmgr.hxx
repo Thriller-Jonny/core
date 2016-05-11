@@ -21,7 +21,7 @@
 #define INCLUDED_LINGUISTIC_SOURCE_LNGSVCMGR_HXX
 
 #include <cppuhelper/implbase.hxx>
-#include <cppuhelper/interfacecontainer.h>
+#include <comphelper/interfacecontainer2.hxx>
 
 
 #include <com/sun/star/uno/Reference.h>
@@ -54,7 +54,6 @@ namespace com { namespace sun { namespace star { namespace linguistic2 {
 } } } }
 
 
-
 class LngSvcMgr :
     public cppu::WeakImplHelper
     <
@@ -66,7 +65,7 @@ class LngSvcMgr :
 {
     friend class LngSvcMgrListenerHelper;
 
-    ::cppu::OInterfaceContainerHelper                   aEvtListeners;
+    ::comphelper::OInterfaceContainerHelper2                   aEvtListeners;
 
     css::uno::Reference<
         css::linguistic2::XSpellChecker >              xSpellDsp;
@@ -188,7 +187,6 @@ inline OUString LngSvcMgr::getImplementationName_Static()
 {
     return OUString( "com.sun.star.lingu2.LngSvcMgr" );
 }
-
 
 
 #endif

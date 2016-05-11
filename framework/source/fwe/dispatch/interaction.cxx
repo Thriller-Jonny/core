@@ -31,7 +31,7 @@ namespace framework{
                     to ask user for his decision. These continuation transport selected filter by user to
                     code user of interaction.
 
-    @attention      This implementation could be used one times only. We don't support a resetable continuation yet!
+    @attention      This implementation could be used one times only. We don't support a resettable continuation yet!
                     Why? Normally interaction should show a filter selection dialog and ask user for his decision.
                     He can select any filter - then instances of these class will be called by handler... or user
                     close dialog without any selection. Then another continuation should be selected by handler to
@@ -86,7 +86,7 @@ OUString SAL_CALL ContinuationFilterSelect::getFilter() throw( css::uno::Runtime
 class RequestFilterSelect_Impl : public ::cppu::WeakImplHelper< css::task::XInteractionRequest >
 {
 public:
-    RequestFilterSelect_Impl( const OUString& sURL );
+    explicit RequestFilterSelect_Impl(const OUString& rURL);
     bool     isAbort  () const;
     OUString getFilter() const;
 

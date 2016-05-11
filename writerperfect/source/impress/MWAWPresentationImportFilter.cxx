@@ -9,7 +9,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include <com/sun/star/uno/Reference.h>
 #include <cppuhelper/supportsservice.hxx>
 
 #include <libmwaw/libmwaw.hxx>
@@ -18,10 +17,7 @@
 #include "MWAWPresentationImportFilter.hxx"
 
 using com::sun::star::uno::Sequence;
-using com::sun::star::uno::Reference;
-using com::sun::star::uno::Any;
 using com::sun::star::uno::XInterface;
-using com::sun::star::uno::Exception;
 using com::sun::star::uno::RuntimeException;
 using com::sun::star::uno::XComponentContext;
 
@@ -78,33 +74,11 @@ void MWAWPresentationImportFilter::doRegisterHandlers(OdpGenerator &rGenerator)
     rGenerator.registerEmbeddedObjectHandler("image/mwaw-ods", &handleEmbeddedMWAWSpreadsheetObject);
 }
 
-OUString MWAWPresentationImportFilter_getImplementationName()
-throw (RuntimeException)
-{
-    return OUString("com.sun.star.comp.Impress.MWAWPresentationImportFilter");
-}
-
-Sequence< OUString > SAL_CALL MWAWPresentationImportFilter_getSupportedServiceNames()
-throw (RuntimeException)
-{
-    Sequence < OUString > aRet(2);
-    OUString *pArray = aRet.getArray();
-    pArray[0] =  "com.sun.star.document.ImportFilter";
-    pArray[1] =  "com.sun.star.document.ExtendedTypeDetection";
-    return aRet;
-}
-
-Reference< XInterface > SAL_CALL MWAWPresentationImportFilter_createInstance(const Reference< XComponentContext > &rContext)
-throw(Exception)
-{
-    return static_cast<cppu::OWeakObject *>(new MWAWPresentationImportFilter(rContext));
-}
-
 // XServiceInfo
 OUString SAL_CALL MWAWPresentationImportFilter::getImplementationName()
 throw (RuntimeException, std::exception)
 {
-    return MWAWPresentationImportFilter_getImplementationName();
+    return OUString("com.sun.star.comp.Impress.MWAWPresentationImportFilter");
 }
 sal_Bool SAL_CALL MWAWPresentationImportFilter::supportsService(const OUString &rServiceName)
 throw (RuntimeException, std::exception)
@@ -114,7 +88,20 @@ throw (RuntimeException, std::exception)
 Sequence< OUString > SAL_CALL MWAWPresentationImportFilter::getSupportedServiceNames()
 throw (RuntimeException, std::exception)
 {
-    return MWAWPresentationImportFilter_getSupportedServiceNames();
+    Sequence < OUString > aRet(2);
+    OUString *pArray = aRet.getArray();
+    pArray[0] =  "com.sun.star.document.ImportFilter";
+    pArray[1] =  "com.sun.star.document.ExtendedTypeDetection";
+    return aRet;
+}
+
+extern "C"
+SAL_DLLPUBLIC_EXPORT css::uno::XInterface *SAL_CALL
+com_sun_star_comp_Impress_MWAWPresentationImportFilter_get_implementation(
+    css::uno::XComponentContext *const context,
+    const css::uno::Sequence<css::uno::Any> &)
+{
+    return cppu::acquire(new MWAWPresentationImportFilter(context));
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

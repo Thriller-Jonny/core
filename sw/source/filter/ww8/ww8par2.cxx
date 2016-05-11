@@ -19,7 +19,6 @@
 
 #include <sal/config.h>
 
-#include <boost/noncopyable.hpp>
 #include <comphelper/string.hxx>
 #include <tools/solar.h>
 #include <vcl/vclenum.hxx>
@@ -76,8 +75,12 @@
 using namespace ::com::sun::star;
 
 class WW8SelBoxInfo
-    : public std::vector<SwTableBox*>, private boost::noncopyable
+    : public std::vector<SwTableBox*>
 {
+private:
+    WW8SelBoxInfo(WW8SelBoxInfo const&) = delete;
+    WW8SelBoxInfo& operator=(WW8SelBoxInfo const&) = delete;
+
 public:
     short nGroupXStart;
     short nGroupWidth;
@@ -102,7 +105,7 @@ WW8TabBandDesc::~WW8TabBandDesc()
     delete[] pNewSHDs;
 }
 
-class WW8TabDesc: private boost::noncopyable
+class WW8TabDesc
 {
     std::vector<OUString> aNumRuleNames;
     sw::util::RedlineStack *mpOldRedlineStack;
@@ -154,7 +157,7 @@ class WW8TabDesc: private boost::noncopyable
     void SetTabVertAlign( SwTableBox* pBox, short nWwIdx );
     void SetTabDirection( SwTableBox* pBox, short nWwIdx );
     void CalcDefaults();
-    bool SetPamInCell(short nWwCol, bool bPam);
+    void SetPamInCell(short nWwCol, bool bPam);
     void InsertCells( short nIns );
     void AdjustNewBand();
 
@@ -162,10 +165,13 @@ class WW8TabDesc: private boost::noncopyable
 
     // single box - maybe used in a merge group
     // (the merge groups are processed later at once)
-    SwTableBox* UpdateTableMergeGroup(WW8_TCell& rCell,
+    void UpdateTableMergeGroup(WW8_TCell& rCell,
         WW8SelBoxInfo* pActGroup, SwTableBox* pActBox, sal_uInt16 nCol  );
     void StartMiserableHackForUnsupportedDirection(short nWwCol);
     void EndMiserableHackForUnsupportedDirection(short nWwCol);
+
+    WW8TabDesc(WW8TabDesc const&) = delete;
+    WW8TabDesc& operator=(WW8TabDesc const&) = delete;
 
 public:
     const SwTable* pTable;          // table
@@ -480,11 +486,11 @@ ApoTestResults SwWW8ImplReader::TestApo(int nCellLevel, bool bTableRowEnd,
     /*
     #i1140#
     If I have a table and apply a style to one of its frames that should cause
-    a paragraph that its applied to it to only exist as a separate floating
+    a paragraph that it is applied to it to only exist as a separate floating
     frame, then the behaviour depends on which cell that it has been applied
-    to. If its the first cell of a row then the whole table row jumps into the
-    new frame, if its not then then the paragraph attributes are applied
-    "except" for the floating frame stuff. i.e. its ignored. So if theres a
+    to. If it is the first cell of a row then the whole table row jumps into the
+    new frame, if it isn't then the paragraph attributes are applied
+    "except" for the floating frame stuff. i.e. it's ignored. So if there's a
     table, and we're not in the first cell then we ignore the fact that the
     paragraph style wants to be in a different frame.
 
@@ -692,7 +698,7 @@ void SwWW8ImplReader::SetAnlvStrings(SwNumFormat &rNum, WW8_ANLV const &rAV,
                                 ePitch, eCharSet ) ){
 
                 vcl::Font aFont;
-                aFont.SetName( aName );
+                aFont.SetFamilyName( aName );
                 aFont.SetFamily( eFamily );
 
                 aFont.SetCharSet( eCharSet );
@@ -1133,9 +1139,12 @@ void WW8TabBandDesc::ReadDef(bool bVer67, const sal_uInt8* pS)
     nLen -= 2 * ( nCols + 1 );
     if( nCols != nOldCols ) // different column count
     {
-        delete[] pTCs, pTCs = nullptr;
-        delete[] pSHDs, pSHDs = nullptr;
-        delete[] pNewSHDs, pNewSHDs = nullptr;
+        delete[] pTCs;
+        pTCs = nullptr;
+        delete[] pSHDs;
+        pSHDs = nullptr;
+        delete[] pNewSHDs;
+        pNewSHDs = nullptr;
     }
 
     short nFileCols = nLen / ( bVer67 ? 10 : 20 );  // really saved
@@ -1544,13 +1553,13 @@ void WW8TabBandDesc::ReadShd(const sal_uInt8* pS )
         memset( pSHDs, 0, nWwCols * sizeof( WW8_SHD ) );
     }
 
-    short nAnz = nLen >> 1;
-    if (nAnz > nWwCols)
-        nAnz = nWwCols;
+    short nCount = nLen >> 1;
+    if (nCount > nWwCols)
+        nCount = nWwCols;
 
     SVBT16 const * pShd;
     int i;
-    for(i=0, pShd = reinterpret_cast<SVBT16 const *>(pS); i<nAnz; i++, pShd++ )
+    for(i=0, pShd = reinterpret_cast<SVBT16 const *>(pS); i<nCount; i++, pShd++ )
         pSHDs[i].SetWWValue( *pShd );
 }
 
@@ -1563,12 +1572,12 @@ void WW8TabBandDesc::ReadNewShd(const sal_uInt8* pS, bool bVer67)
     if (!pNewSHDs)
         pNewSHDs = new sal_uInt32[nWwCols];
 
-    short nAnz = nLen / 10; //10 bytes each
-    if (nAnz > nWwCols)
-        nAnz = nWwCols;
+    short nCount = nLen / 10; //10 bytes each
+    if (nCount > nWwCols)
+        nCount = nWwCols;
 
     int i=0;
-    while (i < nAnz)
+    while (i < nCount)
         pNewSHDs[i++] = SwWW8ImplReader::ExtractColour(pS, bVer67);
 
     while (i < nWwCols)
@@ -2143,7 +2152,7 @@ void WW8TabDesc::CalcDefaults()
     // 2. pass: Detect number of writer columns. This can exceed the count
     // of columns in WW by 2, because SW in constrast to WW does not provide
     // fringed left and right borders and has to fill with empty boxes.
-    // Non exisitent cells can reduce the number of columns.
+    // Non existent cells can reduce the number of columns.
 
     // 3. pass: Replace border with defaults if needed
     nConvertedLeft = nMinLeft;
@@ -2682,7 +2691,8 @@ void WW8TabDesc::FinishSwTable()
     pIo->m_pCtrlStck->SetAttr( *pIo->m_pPaM->GetPoint(), 0, false);
 
     MoveOutsideTable();
-    delete pTmpPos, pTmpPos = nullptr;
+    delete pTmpPos;
+    pTmpPos = nullptr;
 
     aDup.Insert(*pIo->m_pPaM->GetPoint());
 
@@ -2821,11 +2831,11 @@ void WW8TabDesc::EndMiserableHackForUnsupportedDirection(short nWwCol)
         pIo->m_pCtrlStck->SetAttr(*pIo->m_pPaM->GetPoint(), RES_CHRATR_ROTATE);
 }
 
-bool WW8TabDesc::SetPamInCell(short nWwCol, bool bPam)
+void WW8TabDesc::SetPamInCell(short nWwCol, bool bPam)
 {
     OSL_ENSURE( pActBand, "pActBand ist 0" );
     if (!pActBand)
-        return false;
+        return;
 
     sal_uInt16 nCol = pActBand->transCell(nWwCol);
 
@@ -2834,7 +2844,7 @@ bool WW8TabDesc::SetPamInCell(short nWwCol, bool bPam)
         OSL_ENSURE(false, "Actual row bigger than expected." );
         if (bPam)
             MoveOutsideTable();
-        return false;
+        return;
     }
 
     pTabLine = (*pTabLines)[nAktRow];
@@ -2861,7 +2871,7 @@ bool WW8TabDesc::SetPamInCell(short nWwCol, bool bPam)
 
             ParkPaM();
         }
-        return false;
+        return;
     }
     pTabBox = (*pTabBoxes)[nCol];
     if( !pTabBox->GetSttNd() )
@@ -2869,7 +2879,7 @@ bool WW8TabDesc::SetPamInCell(short nWwCol, bool bPam)
         OSL_ENSURE(pTabBox->GetSttNd(), "Probleme beim Aufbau der Tabelle");
         if (bPam)
             MoveOutsideTable();
-        return false;
+        return;
     }
     if (bPam)
     {
@@ -2884,7 +2894,7 @@ bool WW8TabDesc::SetPamInCell(short nWwCol, bool bPam)
             pIo->SetLowerSpacing(*pIo->m_pPaM, 0);
 
         //We need to set the pPaM on the first cell, invalid
-        //or not so that we can collect paragraph proproties over
+        //or not so that we can collect paragraph properties over
         //all the cells, but in that case on the valid cell we do not
         //want to reset the fmt properties
         sal_uLong nSttNd = pTabBox->GetSttIdx() + 1,
@@ -2927,7 +2937,6 @@ bool WW8TabDesc::SetPamInCell(short nWwCol, bool bPam)
 
         StartMiserableHackForUnsupportedDirection(nWwCol);
     }
-    return true;
 }
 
 void WW8TabDesc::InsertCells( short nIns )
@@ -3033,7 +3042,7 @@ SvxFrameDirection MakeDirection(sal_uInt16 nCode, bool bIsBiDi)
     {
         default:
             OSL_ENSURE(eDir == 4, "unknown direction code, maybe it's a bitfield");
-            //fall-through
+            SAL_FALLTHROUGH;
         case 3:
             eDir = bIsBiDi ? FRMDIR_HORI_RIGHT_TOP : FRMDIR_HORI_LEFT_TOP; // #i38158# - Consider RTL tables
             break;
@@ -3253,14 +3262,11 @@ void WW8TabDesc::TableCellEnd()
 }
 
 // if necessary register the box for the merge group for this column
-SwTableBox* WW8TabDesc::UpdateTableMergeGroup(  WW8_TCell&     rCell,
+void WW8TabDesc::UpdateTableMergeGroup(  WW8_TCell&     rCell,
                                                 WW8SelBoxInfo* pActGroup,
                                                 SwTableBox*    pActBox,
                                                 sal_uInt16         nCol )
 {
-    // set default for return
-    SwTableBox* pResult = nullptr;
-
     // check if the box has to be merged
     // If cell is the first one to be merged, a new merge group has to be provided.
     // E.g., it could be that a cell is the first one to be merged, but no
@@ -3287,11 +3293,8 @@ SwTableBox* WW8TabDesc::UpdateTableMergeGroup(  WW8_TCell&     rCell,
         {
             // add current box to merge group
             pTheMergeGroup->push_back(pActBox);
-            // return target box
-            pResult = (*pTheMergeGroup)[ 0 ];
         }
     }
-    return pResult;
 }
 
 sal_uInt16 WW8TabDesc::GetLogicalWWCol() const // returns number of col as INDICATED within WW6 UI status line -1

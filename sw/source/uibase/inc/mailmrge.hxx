@@ -103,6 +103,7 @@ class SwMailMergeDlg : public SvxStandardDialog
 
     Size            m_aDialogSize;
     OUString m_sSaveFilter;
+    OUString m_sFilename;
 
     DECL_LINK_TYPED( ButtonHdl, Button*, void );
     DECL_LINK_TYPED( InsertPathHdl, Button*, void );
@@ -113,6 +114,8 @@ class SwMailMergeDlg : public SvxStandardDialog
 
     virtual void    Apply() override;
     bool            ExecQryShell();
+    bool            AskUserFilename() const;
+    OUString        GetURLfromPath() const;
 
 public:
     SwMailMergeDlg(vcl::Window* pParent, SwWrtShell& rSh,
@@ -128,11 +131,11 @@ public:
 
     bool IsSaveSingleDoc() const { return m_pSaveSingleDocRB->IsChecked(); }
     bool IsGenerateFromDataBase() const { return m_pGenerateFromDataBaseCB->IsChecked(); }
-    OUString GetColumnName() const { return m_pColumnLB->GetSelectEntry();}
-    OUString GetPath() const { return m_pPathED->GetText();}
+    OUString GetColumnName() const { return m_pColumnLB->GetSelectEntry(); }
+    OUString GetTargetURL() const;
 
     const OUString& GetSaveFilter() const {return m_sSaveFilter;}
-    inline const css::uno::Sequence< css::uno::Any > GetSelection() const { return m_aSelection; }
+    const css::uno::Sequence< css::uno::Any >& GetSelection() const { return m_aSelection; }
     css::uno::Reference< css::sdbc::XResultSet> GetResultSet() const;
 
 };

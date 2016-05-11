@@ -30,17 +30,19 @@
 
 #include "outdevprovider.hxx"
 
-#include <boost/noncopyable.hpp>
-
 
 /* Definition of DeviceHelper class */
 
 namespace vclcanvas
 {
-    class DeviceHelper : private ::boost::noncopyable
+    class DeviceHelper
     {
     public:
         DeviceHelper();
+
+        /// make noncopyable
+        DeviceHelper(const DeviceHelper&) = delete;
+        const DeviceHelper& operator=(const DeviceHelper&) = delete;
 
         void init( const OutDevProviderSharedPtr& rOutDev );
 
@@ -75,7 +77,7 @@ namespace vclcanvas
         css::uno::Reference<
             css::rendering::XColorSpace > getColorSpace() const;
 
-        OutDevProviderSharedPtr getOutDev() const { return mpOutDev; }
+        const OutDevProviderSharedPtr& getOutDev() const { return mpOutDev; }
 
         /** called when DumpScreenContent property is enabled on
             XGraphicDevice, and writes out bitmaps of current screen.

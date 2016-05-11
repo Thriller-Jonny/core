@@ -406,7 +406,7 @@ void MSWordExportBase::OutputSectionBreaks( const SfxItemSet *pSet, const SwNode
     //section.
     bool bBreakSet = false;
 
-    const SwPageDesc * pPageDesc = rNd.FindPageDesc(false);
+    const SwPageDesc * pPageDesc = rNd.FindPageDesc();
 
     // Even if pAktPageDesc != pPageDesc ,it might be because of the different header & footer types.
     if (m_pAktPageDesc != pPageDesc)
@@ -762,7 +762,7 @@ void MSWordExportBase::OutputFormat( const SwFormat& rFormat, bool bPapFormat, b
                 if ( m_bStyDef && DisallowInheritingOutlineNumbering(rFormat) )
                 {
                     SfxItemSet aSet( rFormat.GetAttrSet() );
-                    SvxLRSpaceItem aLR(
+                    const SvxLRSpaceItem& aLR(
                         ItemGet<SvxLRSpaceItem>(aSet, RES_LR_SPACE));
                     aSet.Put( aLR );
                     OutputItemSet( aSet, bPapFormat, bChpFormat,
@@ -951,8 +951,6 @@ void WW8AttributeOutput::EndParagraph( ww8::WW8TableNodeInfoInner::Pointer_t pTe
             TableInfoRow( pTextNodeInfoInner );
             m_rWW8Export.m_pPapPlc->AppendFkpEntry( m_rWW8Export.Strm().Tell(), m_rWW8Export.pO->size(), m_rWW8Export.pO->data());
             m_rWW8Export.pO->clear();
-            //For Bug 119650, should break the properties of CHP PLC after a paragraph end.
-            m_rWW8Export.m_pChpPlc->AppendFkpEntry( m_rWW8Export.Strm().Tell(), m_rWW8Export.pO->size(), m_rWW8Export.pO->data());
         }
     }
 }
@@ -1208,60 +1206,60 @@ void WW8AttributeOutput::CharUnderline( const SvxUnderlineItem& rUnderline )
     sal_uInt8 b = 0;
     switch ( rUnderline.GetLineStyle() )
     {
-        case UNDERLINE_SINGLE:
+        case LINESTYLE_SINGLE:
             b = ( bWord ) ? 2 : 1;
             break;
-        case UNDERLINE_BOLD:
+        case LINESTYLE_BOLD:
             b = 6;
             break;
-        case UNDERLINE_DOUBLE:
+        case LINESTYLE_DOUBLE:
             b = 3;
             break;
-        case UNDERLINE_DOTTED:
+        case LINESTYLE_DOTTED:
             b = 4;
             break;
-        case UNDERLINE_DASH:
+        case LINESTYLE_DASH:
             b = 7;
             break;
-        case UNDERLINE_DASHDOT:
+        case LINESTYLE_DASHDOT:
             b = 9;
             break;
-        case UNDERLINE_DASHDOTDOT:
+        case LINESTYLE_DASHDOTDOT:
             b = 10;
             break;
-        case UNDERLINE_WAVE:
+        case LINESTYLE_WAVE:
             b = 11;
             break;
         // new in WW2000
-        case UNDERLINE_BOLDDOTTED:
+        case LINESTYLE_BOLDDOTTED:
             b = 20;
             break;
-        case UNDERLINE_BOLDDASH:
+        case LINESTYLE_BOLDDASH:
             b = 23;
             break;
-        case UNDERLINE_LONGDASH:
+        case LINESTYLE_LONGDASH:
             b = 39;
             break;
-        case UNDERLINE_BOLDLONGDASH:
+        case LINESTYLE_BOLDLONGDASH:
             b = 55;
             break;
-        case UNDERLINE_BOLDDASHDOT:
+        case LINESTYLE_BOLDDASHDOT:
             b = 25;
             break;
-        case UNDERLINE_BOLDDASHDOTDOT:
+        case LINESTYLE_BOLDDASHDOTDOT:
             b = 26;
             break;
-        case UNDERLINE_BOLDWAVE:
+        case LINESTYLE_BOLDWAVE:
             b = 27;
             break;
-        case UNDERLINE_DOUBLEWAVE:
+        case LINESTYLE_DOUBLEWAVE:
             b = 43;
             break;
-        case UNDERLINE_NONE:
+        case LINESTYLE_NONE:
             b = 0;
             break;
         default:
-            OSL_ENSURE( rUnderline.GetLineStyle() == UNDERLINE_NONE, "Unhandled underline type" );
+            OSL_ENSURE( rUnderline.GetLineStyle() == LINESTYLE_NONE, "Unhandled underline type" );
             break;
     }
 
@@ -1315,7 +1313,7 @@ void WW8AttributeOutput::CharLanguage( const SvxLanguageItem& rLanguage )
 void WW8AttributeOutput::CharEscapement( const SvxEscapementItem& rEscapement )
 {
     sal_uInt8 b = 0xFF;
-    short nEsc = rEscapement.GetEsc(), nProp = rEscapement.GetProp();
+    short nEsc = rEscapement.GetEsc(), nProp = rEscapement.GetProportionalHeight();
     if ( !nEsc )
     {
         b = 0;
@@ -1450,15 +1448,18 @@ void WW8AttributeOutput::CharRotate( const SvxCharRotateItem& rRotate )
 void WW8AttributeOutput::CharEmphasisMark( const SvxEmphasisMarkItem& rEmphasisMark )
 {
     sal_uInt8 nVal;
-    switch ( rEmphasisMark.GetValue() )
-    {
-        case EMPHASISMARK_NONE:             nVal = 0;   break;
-        case EMPHASISMARK_SIDE_DOTS:        nVal = 2;   break;
-        case EMPHASISMARK_CIRCLE_ABOVE:     nVal = 3;   break;
-        case EMPHASISMARK_DOTS_BELOW:       nVal = 4;   break;
+    const FontEmphasisMark v = rEmphasisMark.GetEmphasisMark();
+    if (v == FontEmphasisMark::NONE)
+        nVal = 0;
+    else if (v == (FontEmphasisMark::Accent | FontEmphasisMark::PosAbove))
+        nVal = 2;
+    else if (v == (FontEmphasisMark::Circle | FontEmphasisMark::PosAbove))
+        nVal = 3;
+    else if (v == (FontEmphasisMark::Dot | FontEmphasisMark::PosBelow))
+        nVal = 4;
+    else
         // case 1:
-        default:                            nVal = 1;   break;
-    }
+        nVal = 1;
 
     m_rWW8Export.InsUInt16( NS_sprm::LN_CKcd );
     m_rWW8Export.pO->push_back( nVal );
@@ -1680,7 +1681,7 @@ void WW8Export::OutputField( const SwField* pField, ww::eField eFieldType,
             break;
         case ww::eCITATION:
             eFieldType = ww::eQUOTE;
-            assert(rFieldCmd.startsWith(FieldString(ww::eCITATION)));
+            assert(rFieldCmd.trim().startsWith("CITATION"));
             sFieldCmd = rFieldCmd.replaceFirst(FieldString(ww::eCITATION),
                                                FieldString(ww::eQUOTE));
             break;
@@ -1727,7 +1728,7 @@ void WW8Export::OutputField( const SwField* pField, ww::eField eFieldType,
             if ( nSubType == REF_SETREFATTR ||
                  nSubType == REF_BOOKMARK )
             {
-                const OUString aRefName(rRField.GetSetRefName());
+                const OUString& aRefName(rRField.GetSetRefName());
                 aLinkStr = GetBookmarkName( nSubType, &aRefName, 0 );
             }
             else if ( nSubType == REF_FOOTNOTE ||
@@ -2336,7 +2337,7 @@ void AttributeOutputBase::GetNumberPara( OUString& rStr, const SwField& rField )
         default:
             OSL_ENSURE(rField.GetFormat() == SVX_NUM_ARABIC,
                 "Unknown numbering type exported as default of Arabic\n");
-            //fallthrough
+            SAL_FALLTHROUGH;
         case SVX_NUM_ARABIC:
             rStr += "\\* ARABIC ";
             break;
@@ -2756,7 +2757,7 @@ void AttributeOutputBase::TextField( const SwFormatField& rField )
                             break;
                     }
                     {
-                        const OUString aRefName(rRField.GetSetRefName());
+                        const OUString& aRefName(rRField.GetSetRefName());
                         sStr = FieldString(eField)
                             + MSWordExportBase::GetBookmarkName(nSubType, &aRefName, 0);
                     }
@@ -3468,7 +3469,7 @@ void AttributeOutputBase::FormatBreak( const SvxFormatBreakItem& rBreak )
 
             case SVX_BREAK_COLUMN_BEFORE:                       // ColumnBreak
                 bBefore = true;
-                // no break;
+                SAL_FALLTHROUGH;
             case SVX_BREAK_COLUMN_AFTER:
             case SVX_BREAK_COLUMN_BOTH:
                 if ( GetExport().Sections().CurrentNumberOfColumns( *GetExport().m_pDoc ) > 1 || GetExport().SupportsOneColumnBreak() )
@@ -3568,7 +3569,7 @@ void WW8AttributeOutput::FormatTextGrid( const SwTextGridItem& rGrid )
         {
             default:
                 OSL_FAIL("Unknown grid type");
-                //fall-through
+                SAL_FALLTHROUGH;
             case GRID_NONE:
                 nGridType = 0;
                 break;
@@ -4445,7 +4446,7 @@ void WW8AttributeOutput::FormatFrameDirection( const SvxFrameDirectionItem& rDir
         default:
             //Can't get an unknown type here
             OSL_FAIL("Unknown frame direction");
-            //fall-through
+            SAL_FALLTHROUGH;
         case FRMDIR_HORI_LEFT_TOP:
             nTextFlow = 0;
             break;

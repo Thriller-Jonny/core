@@ -67,7 +67,7 @@
 #include <svx/svdogrp.hxx>
 #include "propread.hxx"
 #include <cusshow.hxx>
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 #include "customshowlist.hxx"
 #include "sddll.hxx"
 
@@ -142,7 +142,7 @@ SdPPTImport::SdPPTImport( SdDrawDocument* pDocument, SvStream& rDocStream, SotSt
         // iterate over all styles
         SdStyleSheetPool* pStyleSheetPool = pDocument->GetSdStyleSheetPool();
         SfxStyleSheetIteratorPtr aIter =
-                std::make_shared<SfxStyleSheetIterator>(pStyleSheetPool, SFX_STYLE_FAMILY_ALL);
+                std::make_shared<SfxStyleSheetIterator>(pStyleSheetPool, SfxStyleFamily::All);
 
         for (SfxStyleSheetBase *pSheet = aIter->First(); pSheet; pSheet = aIter->Next())
         {
@@ -530,9 +530,8 @@ bool ImplSdPPTImport::Import()
         if ( SeekToRec( rStCtrl, PPT_PST_ExObjList, maDocHd.GetRecEndFilePos(), &aHyperHd ) )
         {
             sal_uInt32 nExObjHyperListLen = aHyperHd.GetRecEndFilePos();
-            for ( size_t i = 0, n = aHyperList.size(); i < n; ++i )
+            for (SdHyperlinkEntry* pPtr : aHyperList)
             {
-                SdHyperlinkEntry* pPtr = aHyperList[ i ];
                 DffRecordHeader aHyperE;
                 if ( !SeekToRec( rStCtrl, PPT_PST_ExHyperlink, nExObjHyperListLen, &aHyperE ) )
                     break;
@@ -1255,7 +1254,7 @@ bool ImplSdPPTImport::Import()
                     break;
                     case 10 :   // titlemaster
                         nSelectedPage = 1;
-                        //fall-through
+                        SAL_FALLTHROUGH;
                     case 2 :    // master
                     {
                         ePageKind = PK_STANDARD;
@@ -1264,7 +1263,7 @@ bool ImplSdPPTImport::Import()
                     break;
                     case 5 :    // notes master
                         eEditMode = EM_MASTERPAGE;
-                        //fall-through
+                        SAL_FALLTHROUGH;
                     case 3 :    // notes
                         ePageKind = PK_NOTES;
                     break;
@@ -1864,7 +1863,7 @@ void ImplSdPPTImport::ImportPageEffect( SdPage* pPage, const bool bNewAnimations
 
         for( ;aIter != aEnd; ++aIter )
         {
-            Ppt97AnimationPtr pPpt97Animation = (*aIter).second;;
+            Ppt97AnimationPtr pPpt97Animation = (*aIter).second;
             if( pPpt97Animation.get() )
                 pPpt97Animation->createAndSetCustomAnimationEffect( (*aIter).first );
         }
@@ -2103,9 +2102,9 @@ void ImplSdPPTImport::FillSdAnimationInfo( SdAnimationInfo* pInfo, PptInteractiv
         case 0x04 :
         {
             SdHyperlinkEntry* pPtr = nullptr;
-            for ( size_t i = 0, n = aHyperList.size(); i < n; ++i ) {
-                if ( aHyperList[ i ]->nIndex == pIAtom->nExHyperlinkId ) {
-                    pPtr = aHyperList[ i ];
+            for (SdHyperlinkEntry* pEntry : aHyperList) {
+                if ( pEntry->nIndex == pIAtom->nExHyperlinkId ) {
+                    pPtr = pEntry;
                     break;
                 }
             }
@@ -2367,10 +2366,12 @@ SdrObject* ImplSdPPTImport::ApplyTextObj( PPTTextObj* pTextObj, SdrTextObj* pObj
                         {
                             case PptPlaceholder::NOTESBODY :            ePresObjKind = PRESOBJ_NOTES;   break;
                             case PptPlaceholder::VERTICALTEXTTITLE :
-                                bVertical = true;   // PASSTHROUGH !!!
+                                bVertical = true;
+                                SAL_FALLTHROUGH;
                             case PptPlaceholder::TITLE :                ePresObjKind = PRESOBJ_TITLE;   break;
                             case PptPlaceholder::VERTICALTEXTBODY :
-                                bVertical = true;   // PASSTHROUGH !!!
+                                bVertical = true;
+                                SAL_FALLTHROUGH;
                             case PptPlaceholder::BODY :                 ePresObjKind = PRESOBJ_OUTLINE; break;
                             case PptPlaceholder::CENTEREDTITLE :        ePresObjKind = PRESOBJ_TITLE;   break;
                             case PptPlaceholder::SUBTITLE :             ePresObjKind = PRESOBJ_TEXT;    break;      // PRESOBJ_OUTLINE
@@ -2696,7 +2697,8 @@ SdrObject* ImplSdPPTImport::ProcessObj( SvStream& rSt, DffObjData& rObjData, voi
                                                 maAnimations[pMediaObj] = pAnimation;
                                             }
 
-                                            SdrObject::Free( pObj ), pObj = pMediaObj;  // SJ: hoping that pObj is not inserted in any list
+                                            SdrObject::Free( pObj );
+                                            pObj = pMediaObj;  // SJ: hoping that pObj is not inserted in any list
                                             pMediaObj->setURL( aMediaURL, ""/*TODO?*/ );
                                         }
                                     }
@@ -2733,8 +2735,8 @@ ImplSdPPTImport::ReadFormControl( tools::SvRef<SotStorage>& rSrc1, css::uno::Ref
     if (  mpDoc->GetDocSh() )
     {
         xModel = mpDoc->GetDocSh()->GetModel();
-        oox::ole::MSConvertOCXControls mCtrlImporter( xModel );
-        return mCtrlImporter.ReadOCXStorage( rSrc1, rFormComp );
+        oox::ole::MSConvertOCXControls aCtrlImporter( xModel );
+        return aCtrlImporter.ReadOCXStorage( rSrc1, rFormComp );
     }
     return false;
 }

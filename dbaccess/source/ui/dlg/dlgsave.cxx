@@ -64,7 +64,7 @@ public:
     sal_Int32                  m_nType;
     sal_Int32                  m_nFlags;
 
-    OSaveAsDlgImpl( OSaveAsDlg* pParent,const sal_Int32& _rType,
+    OSaveAsDlgImpl( OSaveAsDlg* pParent, sal_Int32 _rType,
                     const css::uno::Reference< css::sdbc::XConnection>& _xConnection,
                     const OUString& rDefault,
                     const IObjectNameCheck& _rObjectNameCheck,
@@ -78,7 +78,7 @@ public:
 } // dbaui
 
 OSaveAsDlgImpl::OSaveAsDlgImpl(OSaveAsDlg* pParent,
-                               const sal_Int32& _rType,
+                               sal_Int32 _rType,
                                const Reference< XConnection>& _xConnection,
                                const OUString& rDefault,
                                const IObjectNameCheck& _rObjectNameCheck,
@@ -144,12 +144,12 @@ namespace
 typedef Reference< XResultSet > (SAL_CALL XDatabaseMetaData::*FGetMetaStrings)();
 
 void lcl_fillComboList( ComboBox& _rList, const Reference< XConnection >& _rxConnection,
-                        FGetMetaStrings _GetAll, const OUString& _rCurrent )
+                        FGetMetaStrings GetAll, const OUString& _rCurrent )
 {
     try {
         Reference< XDatabaseMetaData > xMetaData( _rxConnection->getMetaData(), UNO_QUERY_THROW );
 
-        Reference< XResultSet > xRes = (xMetaData.get()->*_GetAll)();
+        Reference< XResultSet > xRes = (xMetaData.get()->*GetAll)();
         Reference< XRow > xRow( xRes, UNO_QUERY_THROW );
         OUString sValue;
         while ( xRes->next() ) {
@@ -170,7 +170,7 @@ void lcl_fillComboList( ComboBox& _rList, const Reference< XConnection >& _rxCon
 }
 
 OSaveAsDlg::OSaveAsDlg( vcl::Window * pParent,
-                        const sal_Int32& _rType,
+                        sal_Int32 _rType,
                         const Reference< XComponentContext >& _rxContext,
                         const Reference< XConnection>& _xConnection,
                         const OUString& rDefault,
@@ -215,7 +215,7 @@ OSaveAsDlg::OSaveAsDlg( vcl::Window * pParent,
                                                    sCatalog,
                                                    sSchema,
                                                    sTable,
-                                                   ::dbtools::eInDataManipulation);
+                                                   ::dbtools::EComposeRule::InDataManipulation);
 
                 sal_Int32 nPos = m_pImpl->m_pCatalog->GetEntryPos(OUString(sCatalog));
                 if ( nPos != COMBOBOX_ENTRY_NOTFOUND )
@@ -291,7 +291,7 @@ IMPL_LINK_TYPED(OSaveAsDlg, ButtonClickHdl, Button *, pButton, void)
                                getSchema(),
                                sNameToCheck,
                                false,  // no quoting
-                               ::dbtools::eInDataManipulation
+                               ::dbtools::EComposeRule::InDataManipulation
                            );
         }
 
@@ -339,7 +339,7 @@ void OSaveAsDlg::implInit()
     m_pImpl->m_pTitle->GrabFocus();
 }
 
-OUString OSaveAsDlg::getName() const
+const OUString& OSaveAsDlg::getName() const
 {
     return m_pImpl->m_aName;
 }

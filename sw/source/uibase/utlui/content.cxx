@@ -55,7 +55,6 @@
 #include <IDocumentOutlineNodes.hxx>
 #include <unotools.hxx>
 #include <unotxvw.hxx>
-#include <crsskip.hxx>
 #include <cmdid.h>
 #include <helpid.h>
 #include <navipi.hrc>
@@ -119,17 +118,17 @@ bool SwContentTree::bIsInDrag = false;
 
 namespace
 {
-    static bool lcl_IsContent(const SvTreeListEntry* pEntry)
+    bool lcl_IsContent(const SvTreeListEntry* pEntry)
     {
         return static_cast<const SwTypeNumber*>(pEntry->GetUserData())->GetTypeId() == CTYPE_CNT;
     }
 
-    static bool lcl_IsContentType(const SvTreeListEntry* pEntry)
+    bool lcl_IsContentType(const SvTreeListEntry* pEntry)
     {
         return static_cast<const SwTypeNumber*>(pEntry->GetUserData())->GetTypeId() == CTYPE_CTT;
     }
 
-    static bool lcl_FindShell(SwWrtShell* pShell)
+    bool lcl_FindShell(SwWrtShell* pShell)
     {
         bool bFound = false;
         SwView *pView = SwModule::GetFirstView();
@@ -145,7 +144,7 @@ namespace
         return bFound;
     }
 
-    static bool lcl_IsUiVisibleBookmark(const IDocumentMarkAccess::pMark_t& rpMark)
+    bool lcl_IsUiVisibleBookmark(const IDocumentMarkAccess::pMark_t& rpMark)
     {
         return IDocumentMarkAccess::GetType(*rpMark) == IDocumentMarkAccess::MarkType::BOOKMARK;
     }
@@ -216,8 +215,6 @@ SwGraphicContent::~SwGraphicContent()
 SwTOXBaseContent::~SwTOXBaseContent()
 {
 }
-
-// Content type, knows it's contents and the WrtShell.
 
 SwContentType::SwContentType(SwWrtShell* pShell, ContentTypeId nType, sal_uInt8 nLevel) :
     SwTypeNumber(CTYPE_CTT),
@@ -457,8 +454,6 @@ SwContentType::~SwContentType()
     delete pMember;
 }
 
-// Deliver content, for that if necessary fill the list
-
 const SwContent* SwContentType::GetMember(size_t nIndex)
 {
     if(!bDataValid || !pMember)
@@ -471,14 +466,12 @@ const SwContent* SwContentType::GetMember(size_t nIndex)
     return nullptr;
 }
 
-void    SwContentType::Invalidate()
+void SwContentType::Invalidate()
 {
     bDataValid = false;
 }
 
-// Fill the List of contents
-
-void    SwContentType::FillMemberList(bool* pbLevelOrVisibilityChanged)
+void SwContentType::FillMemberList(bool* pbLevelOrVisibilityChanged)
 {
     SwContentArr*   pOldMember = nullptr;
     size_t nOldMemberCount = 0;
@@ -538,7 +531,7 @@ void    SwContentType::FillMemberList(bool* pbLevelOrVisibilityChanged)
             for(size_t i = 0; i < nMemberCount; ++i)
             {
                 const SwFrameFormat& rTableFormat = pWrtShell->GetTableFrameFormat(i, true);
-                const OUString sTableName( rTableFormat.GetName() );
+                const OUString& sTableName( rTableFormat.GetName() );
 
                 SwContent* pCnt = new SwContent(this, sTableName,
                         rTableFormat.FindLayoutRect(false, &aNullPt).Top() );
@@ -778,8 +771,6 @@ void    SwContentType::FillMemberList(bool* pbLevelOrVisibilityChanged)
 
 }
 
-// TreeListBox for content indicator
-
 SwContentTree::SwContentTree(vcl::Window* pParent, const ResId& rResId)
     : SvTreeListBox(pParent, rResId)
     , m_sSpace(OUString("                    "))
@@ -884,9 +875,7 @@ OUString SwContentTree::GetEntryAltText( SvTreeListEntry* pEntry ) const
                         case OBJ_wegFITTEXT:
                         case OBJ_LINE:
                         case OBJ_RECT:
-                            //caoxueqin added custom shape
                         case OBJ_CUSTOMSHAPE:
-                            //end 2005/08/05
                         case OBJ_CIRC:
                         case OBJ_SECT:
                         case OBJ_CARC:
@@ -905,11 +894,10 @@ OUString SwContentTree::GetEntryAltText( SvTreeListEntry* pEntry ) const
                         default:
                             nCmpId = pTemp->GetObjIdentifier();
                         }
-                        if(nCmpId == OBJ_GRUP /*dynamic_cast< const SdrObjGroup *>( pTemp ) !=  nullptr*/ && pTemp->GetName() == pCnt->GetName())
+                        if(nCmpId == OBJ_GRUP && pTemp->GetName() == pCnt->GetName())
                         {
                             return pTemp->GetTitle();
                         }
-                        //Commented End
                     }
                 }
             }
@@ -920,13 +908,7 @@ OUString SwContentTree::GetEntryAltText( SvTreeListEntry* pEntry ) const
                 {
                     const SwFlyFrameFormat* pFrameFormat = m_pActiveShell->GetDoc()->FindFlyByName( pCnt->GetName());
                     if( pFrameFormat )
-                    {
-//                        SwNodeIndex aIdx( *(pFrameFormat->GetContent().GetContentIdx()), 1 );
-//                        const SwGrfNode* pGrfNd = aIdx.GetNode().GetGrfNode();
-//                        if( pGrfNd )
-//                            return pGrfNd->GetAlternateText();
                         return pFrameFormat->GetObjTitle();
-                    }
                 }
             }
             break;
@@ -977,9 +959,7 @@ OUString SwContentTree::GetEntryLongDescription( SvTreeListEntry* pEntry ) const
                         case OBJ_wegFITTEXT:
                         case OBJ_LINE:
                         case OBJ_RECT:
-                            //caoxueqin added custom shape
                         case OBJ_CUSTOMSHAPE:
-                            //end 2005/08/05
                         case OBJ_CIRC:
                         case OBJ_SECT:
                         case OBJ_CARC:
@@ -1002,7 +982,6 @@ OUString SwContentTree::GetEntryLongDescription( SvTreeListEntry* pEntry ) const
                         {
                             return pTemp->GetDescription();
                         }
-                        //Commented End
                     }
                 }
             }
@@ -1301,7 +1280,7 @@ sal_IntPtr SwContentTree::GetTabPos( SvTreeListEntry* pEntry, SvLBoxTab* pTab)
 
 // Content will be integrated into the Box only on demand.
 
-void  SwContentTree::RequestingChildren( SvTreeListEntry* pParent )
+void SwContentTree::RequestingChildren( SvTreeListEntry* pParent )
 {
     // Is this a content type?
     if(lcl_IsContentType(pParent))
@@ -1378,7 +1357,6 @@ void  SwContentTree::RequestingChildren( SvTreeListEntry* pParent )
                                 bool Marked = pDrawView->IsObjMarked(pObj);
                                 if(Marked)
                                 {
-                                    //sEntry += String::CreateFromAscii(" *");
                                     pChild->SetMarked(true);
                                 }
                             }
@@ -1390,7 +1368,6 @@ void  SwContentTree::RequestingChildren( SvTreeListEntry* pParent )
     }
 }
 
-//Get drawing Objects by content .
 SdrObject* SwContentTree::GetDrawingObjectsByContent(const SwContent *pCnt)
 {
     SdrObject *pRetObj = nullptr;
@@ -1423,8 +1400,6 @@ SdrObject* SwContentTree::GetDrawingObjectsByContent(const SwContent *pCnt)
     return pRetObj;
 }
 
-// Expand - Remember the state for content types.
-
 bool  SwContentTree::Expand( SvTreeListEntry* pParent )
 {
     if(!m_bIsRoot || (static_cast<SwContentType*>(pParent->GetUserData())->GetType() == ContentTypeId::OUTLINE) ||
@@ -1443,7 +1418,7 @@ bool  SwContentTree::Expand( SvTreeListEntry* pParent )
                 m_nHiddenBlock |= nOr;
             if((pCntType->GetType() == ContentTypeId::OUTLINE))
             {
-                std::map< void*, bool > mCurrOutLineNodeMap;
+                std::map< void*, bool > aCurrOutLineNodeMap;
 
                 SwWrtShell* pShell = GetWrtShell();
                 bool bBool = SvTreeListBox::Expand(pParent);
@@ -1454,17 +1429,17 @@ bool  SwContentTree::Expand( SvTreeListEntry* pParent )
                     {
                         sal_Int32 nPos = static_cast<SwContent*>(pChild->GetUserData())->GetYPos();
                         void* key = static_cast<void*>(pShell->getIDocumentOutlineNodesAccess()->getOutlineNode( nPos ));
-                        mCurrOutLineNodeMap.insert(std::map<void*, bool>::value_type( key, false ) );
+                        aCurrOutLineNodeMap.insert(std::map<void*, bool>::value_type( key, false ) );
                         std::map<void*, bool>::iterator iter = mOutLineNodeMap.find( key );
                         if( iter != mOutLineNodeMap.end() && mOutLineNodeMap[key])
                         {
-                            mCurrOutLineNodeMap[key] = true;
+                            aCurrOutLineNodeMap[key] = true;
                             SvTreeListBox::Expand(pChild);
                         }
                     }
                     pChild = Next(pChild);
                 }
-                mOutLineNodeMap = mCurrOutLineNodeMap;
+                mOutLineNodeMap = aCurrOutLineNodeMap;
                 return bBool;
             }
 
@@ -1479,8 +1454,6 @@ bool  SwContentTree::Expand( SvTreeListEntry* pParent )
     }
     return SvTreeListBox::Expand(pParent);
 }
-
-// Collapse - Remember the state for content types.
 
 bool  SwContentTree::Collapse( SvTreeListEntry* pParent )
 {
@@ -1540,8 +1513,6 @@ IMPL_LINK_NOARG_TYPED(SwContentTree, ContentDoubleClickHdl, SvTreeListBox*, bool
     }
     return false;
 }
-
-// Show the file
 
 void SwContentTree::Display( bool bActive )
 {
@@ -1750,8 +1721,6 @@ void SwContentTree::Display( bool bActive )
     m_bActiveDocModified = false;
 }
 
-// In the Clear the content types have to be deleted, also.
-
 void SwContentTree::Clear()
 {
     SetUpdateMode(false);
@@ -1811,11 +1780,11 @@ bool SwContentTree::FillTransferData( TransferDataContainer& rTransfer,
         case ContentTypeId::POSTIT:
         case ContentTypeId::INDEX:
         case ContentTypeId::REFERENCE :
-            // cannot inserted as URL or as  koennen weder als URL noch als region
+            // cannot be inserted, neither as URL nor as region
         break;
         case ContentTypeId::URLFIELD:
             sUrl = static_cast<SwURLFieldContent*>(pCnt)->GetURL();
-        // no break;
+            SAL_FALLTHROUGH;
         case ContentTypeId::OLE:
         case ContentTypeId::GRAPHIC:
             if(GetParentWindow()->GetRegionDropMode() != RegionMode::NONE)
@@ -1894,9 +1863,7 @@ bool SwContentTree::FillTransferData( TransferDataContainer& rTransfer,
     return bRet;
 }
 
-// Switch the display to Root
-
-bool SwContentTree::ToggleToRoot()
+void SwContentTree::ToggleToRoot()
 {
     if(!m_bIsRoot)
     {
@@ -1928,10 +1895,7 @@ bool SwContentTree::ToggleToRoot()
     }
     m_pConfig->SetRootType( m_nRootType );
     GetParentWindow()->m_aContentToolBox->CheckItem(FN_SHOW_ROOT, m_bIsRoot);
-    return m_bIsRoot;
 }
-
-// Check if the displayed content is valid.
 
 bool SwContentTree::HasContentChanged()
 {
@@ -2146,9 +2110,6 @@ bool SwContentTree::HasContentChanged()
     return bRepaint;
 }
 
-// Before any data will be deleted, the last active entry has to be found.
-// After this the UserData will be deleted
-
 void SwContentTree::FindActiveTypeAndRemoveUserData()
 {
     SvTreeListEntry* pEntry = FirstSelected();
@@ -2170,9 +2131,6 @@ void SwContentTree::FindActiveTypeAndRemoveUserData()
     }
 }
 
-// After a file is dropped on the Navigator,
-// the new shell will be set.
-
 void SwContentTree::SetHiddenShell(SwWrtShell* pSh)
 {
     m_pHiddenShell = pSh;
@@ -2187,8 +2145,6 @@ void SwContentTree::SetHiddenShell(SwWrtShell* pSh)
 
     GetParentWindow()->UpdateListBox();
 }
-
-//  Document change - set new Shell
 
 void SwContentTree::SetActiveShell(SwWrtShell* pSh)
 {
@@ -2227,8 +2183,6 @@ void SwContentTree::SetActiveShell(SwWrtShell* pSh)
     }
 }
 
-// Set an open view as active.
-
 void SwContentTree::SetConstantShell(SwWrtShell* pSh)
 {
     if (m_pActiveShell)
@@ -2244,7 +2198,6 @@ void SwContentTree::SetConstantShell(SwWrtShell* pSh)
     }
     Display(true);
 }
-
 
 
 void SwContentTree::Notify(SfxBroadcaster & rBC, SfxHint const& rHint)
@@ -2271,8 +2224,6 @@ void SwContentTree::Notify(SfxBroadcaster & rBC, SfxHint const& rHint)
     }
 }
 
-// Execute commands of the Navigator
-
 void SwContentTree::ExecCommand(sal_uInt16 nCmd, bool bModifier)
 {
     bool bMove = false;
@@ -2281,7 +2232,7 @@ void SwContentTree::ExecCommand(sal_uInt16 nCmd, bool bModifier)
         case FN_ITEM_DOWN:
         case FN_ITEM_UP:
             bMove = true;
-            //fall-through
+            SAL_FALLTHROUGH;
         case FN_ITEM_LEFT:
         case FN_ITEM_RIGHT:
         if( !GetWrtShell()->GetView().GetDocShell()->IsReadOnly() &&
@@ -2375,8 +2326,7 @@ void SwContentTree::ExecCommand(sal_uInt16 nCmd, bool bModifier)
                                 pEntry = Prev(pEntry);
                                 if(pEntry &&
                                     (nActLevel >= static_cast<SwOutlineContent*>(pEntry->GetUserData())->GetOutlineLevel()||
-                                     CTYPE_CNT !=
-                                        static_cast<SwTypeNumber*>(pEntry->GetUserData())->GetTypeId()))
+                                     CTYPE_CNT != static_cast<SwTypeNumber*>(pEntry->GetUserData())->GetTypeId()))
                                 {
                                     break;
                                 }
@@ -2422,7 +2372,7 @@ void SwContentTree::ExecCommand(sal_uInt16 nCmd, bool bModifier)
     }
 }
 
-void    SwContentTree::ShowTree()
+void SwContentTree::ShowTree()
 {
     SvTreeListBox::Show();
 }
@@ -2436,16 +2386,13 @@ void SwContentTree::Paint( vcl::RenderContext& rRenderContext,
     SvTreeListBox::Paint( rRenderContext, rRect );
 }
 
-// folded together will not be glidled
-
-void    SwContentTree::HideTree()
+void SwContentTree::HideTree()
 {
     m_aUpdTimer.Stop();
     SvTreeListBox::Hide();
 }
 
-// No idle with focus or while dragging.
-
+/** No idle with focus or while dragging */
 IMPL_LINK_NOARG_TYPED(SwContentTree, TimerUpdate, Timer *, void)
 {
     if (IsDisposed())
@@ -2498,8 +2445,8 @@ DragDropMode SwContentTree::NotifyStartDrag(
 {
     DragDropMode eMode = (DragDropMode)0;
     if( m_bIsActive && m_nRootType == ContentTypeId::OUTLINE &&
-        GetModel()->GetAbsPos( pEntry ) > 0
-        && !GetWrtShell()->GetView().GetDocShell()->IsReadOnly())
+            GetModel()->GetAbsPos( pEntry ) > 0
+            && !GetWrtShell()->GetView().GetDocShell()->IsReadOnly())
         eMode = GetDragDropMode();
     else if(!m_bIsActive && GetWrtShell()->GetView().GetDocShell()->HasName())
         eMode = DragDropMode::APP_COPY;
@@ -2593,7 +2540,7 @@ bool  SwContentTree::NotifyAcceptDrop( SvTreeListEntry* pEntry)
 // If a Ctrl + DoubleClick are executed in an open area,
 // then the base function of the control is to be called.
 
-void  SwContentTree::MouseButtonDown( const MouseEvent& rMEvt )
+void SwContentTree::MouseButtonDown( const MouseEvent& rMEvt )
 {
     Point aPos( rMEvt.GetPosPixel());
     SvTreeListEntry* pEntry = GetEntry( aPos, true );
@@ -2605,7 +2552,7 @@ void  SwContentTree::MouseButtonDown( const MouseEvent& rMEvt )
 
 // Update immediately
 
-void  SwContentTree::GetFocus()
+void SwContentTree::GetFocus()
 {
     SwView* pActView = GetParentWindow()->GetCreateView();
     if(pActView)
@@ -2629,7 +2576,7 @@ void  SwContentTree::GetFocus()
     SvTreeListBox::GetFocus();
 }
 
-void  SwContentTree::KeyInput(const KeyEvent& rEvent)
+void SwContentTree::KeyInput(const KeyEvent& rEvent)
 {
     const vcl::KeyCode aCode = rEvent.GetKeyCode();
     if(aCode.GetCode() == KEY_RETURN)
@@ -2764,12 +2711,10 @@ void  SwContentTree::KeyInput(const KeyEvent& rEvent)
                             }
                             if ( !hasObjectMarked )
                             {
-                                SwEditWin& pEditWindow =
-                                    m_pActiveShell->GetView().GetEditWin();
+                                SwEditWin& rEditWindow = m_pActiveShell->GetView().GetEditWin();
                                 vcl::KeyCode tempKeycode( KEY_ESCAPE );
                                 KeyEvent rKEvt( 0 , tempKeycode );
-                                static_cast<vcl::Window*>(&pEditWindow)->KeyInput( rKEvt );
-                                //rView.GetEditWin().GrabFocus();
+                                static_cast<vcl::Window*>(&rEditWindow)->KeyInput( rKEvt );
                             }
                         }
                     }
@@ -2787,7 +2732,7 @@ void  SwContentTree::KeyInput(const KeyEvent& rEvent)
 
 }
 
-void  SwContentTree::RequestHelp( const HelpEvent& rHEvt )
+void SwContentTree::RequestHelp( const HelpEvent& rHEvt )
 {
     bool bCallBase = true;
     if( rHEvt.GetMode() & HelpEventMode::QUICK )
@@ -2903,7 +2848,7 @@ void  SwContentTree::RequestHelp( const HelpEvent& rHEvt )
         Window::RequestHelp( rHEvt );
 }
 
-void    SwContentTree::ExcecuteContextMenuAction( sal_uInt16 nSelectedPopupEntry )
+void SwContentTree::ExcecuteContextMenuAction( sal_uInt16 nSelectedPopupEntry )
 {
     SvTreeListEntry* pFirst = FirstSelected();
     switch( nSelectedPopupEntry )
@@ -3236,8 +3181,8 @@ void SwContentTree::EditEntry(SvTreeListEntry* pEntry, EditEntryMode nMode)
                     {
                         SwPtrItem aPtrItem( FN_INSERT_MULTI_TOX, const_cast<SwTOXBase *>(pBase));
                         m_pActiveShell->GetView().GetViewFrame()->
-                            GetDispatcher()->Execute(FN_INSERT_MULTI_TOX,
-                                            SfxCallMode::ASYNCHRON, &aPtrItem, 0L);
+                            GetDispatcher()->ExecuteList(FN_INSERT_MULTI_TOX,
+                                SfxCallMode::ASYNCHRON, { &aPtrItem });
 
                     }
                 break;
@@ -3388,7 +3333,6 @@ void SwContentTree::GotoContent(SwContent* pCnt)
                 for( size_t i=0; i<nCount; ++i )
                 {
                     SdrObject* pTemp = pPage->GetObj(i);
-                    // #i51726# - all drawing objects can be named now
                     if (pTemp->GetName().equals(pCnt->GetName()))
                     {
                         SdrPageView* pPV = pDrawView->GetSdrPageView();
@@ -3463,8 +3407,7 @@ bool NaviContentBookmark::Paste( TransferableDataHelper& rData )
 class SwContentLBoxString : public SvLBoxString
 {
 public:
-    SwContentLBoxString( SvTreeListEntry* pEntry, sal_uInt16 nFlags,
-        const OUString& rStr ) : SvLBoxString(pEntry,nFlags,rStr) {}
+    explicit SwContentLBoxString(const OUString& rStr) : SvLBoxString(rStr) {}
 
     virtual void Paint(const Point& rPos, SvTreeListBox& rDev, vcl::RenderContext& rRenderContext,
                        const SvViewDataEntry* pView, const SvTreeListEntry& rEntry) override;
@@ -3477,7 +3420,7 @@ void SwContentTree::InitEntry(SvTreeListEntry* pEntry,
     const size_t nColToHilite = 1; //0==Bitmap;1=="Column1";2=="Column2"
     SvTreeListBox::InitEntry( pEntry, rStr, rImg1, rImg2, eButtonKind );
     SvLBoxString& rCol = static_cast<SvLBoxString&>(pEntry->GetItem( nColToHilite ));
-    pEntry->ReplaceItem(o3tl::make_unique<SwContentLBoxString>(pEntry, 0, rCol.GetText()), nColToHilite);
+    pEntry->ReplaceItem(o3tl::make_unique<SwContentLBoxString>(rCol.GetText()), nColToHilite);
 }
 
 void SwContentLBoxString::Paint(const Point& rPos, SvTreeListBox& rDev, vcl::RenderContext& rRenderContext,
@@ -3493,26 +3436,10 @@ void SwContentLBoxString::Paint(const Point& rPos, SvTreeListBox& rDev, vcl::Ren
         rRenderContext.DrawText(rPos, GetText());
         rRenderContext.SetFont(aOldFont);
     }
-    // IA2 CWS. MT: Removed for now (also in SvLBoxEntry) - only used in Sw/Sd/ScContentLBoxString, they should decide if they need this
-    /*
-    else if (rEntry.IsMarked())
-    {
-            rDev.DrawText( rPos, GetText() );
-            XubString str;
-            str = XubString::CreateFromAscii("*");
-            Point rPosStar(rPos.X()-6,rPos.Y());
-            Font aOldFont( rDev.GetFont());
-            Font aFont(aOldFont);
-            Color aCol( aOldFont.GetColor() );
-            aCol.DecreaseLuminance( 200 );
-            aFont.SetColor( aCol );
-            rDev.SetFont( aFont );
-            rDev.DrawText( rPosStar, str);
-            rDev.SetFont( aOldFont );
-    }
-    */
     else
+    {
         SvLBoxString::Paint(rPos, rDev, rRenderContext, pView, rEntry);
+    }
 }
 
 void SwContentTree::DataChanged(const DataChangedEvent& rDCEvt)
@@ -3525,6 +3452,7 @@ void SwContentTree::DataChanged(const DataChangedEvent& rDCEvt)
         m_bIsImageListInitialized = false;
         Display(true);
     }
+
     SvTreeListBox::DataChanged( rDCEvt );
 }
 

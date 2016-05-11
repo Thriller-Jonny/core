@@ -89,8 +89,6 @@ inline void reduceRange( Any& any);
 #endif
 
 
-
-
 // createUnoObjectWrapper gets a wrapper instance by calling createUnoWrapperInstance
     // and initializes it via XInitialization. The wrapper object is required to implement
     // XBridgeSupplier so that it can convert itself to IDispatch.
@@ -101,7 +99,7 @@ template< class >
 class UnoConversionUtilities
 {
 public:
-    UnoConversionUtilities( const Reference<XMultiServiceFactory> & smgr):
+    explicit UnoConversionUtilities( const Reference<XMultiServiceFactory> & smgr):
         m_nUnoWrapperClass( INTERFACE_OLE_WRAPPER_IMPL),
         m_nComWrapperClass( IUNKNOWN_WRAPPER_IMPL),
         m_smgr( smgr)
@@ -266,7 +264,6 @@ bool convertSelfToCom( T& unoInterface, VARIANT * pVar)
 }
 
 
-
 // Gets the invocation factory depending on the Type in the Any.
 // The factory can be created by a local or remote multi service factory.
 // In case there is a remote multi service factory available there are
@@ -401,7 +398,7 @@ void UnoConversionUtilities<T>::variantToAny( const VARIANTARG* pArg, Any& rAny,
                 }
                 break;
             case TypeClass_VOID:
-                rAny.setValue(NULL,Type());
+                rAny.setValue(nullptr,Type());
                 break;
             case TypeClass_ANY:     //  Any
                 // There could be a JScript Array that needs special handling
@@ -1315,7 +1312,7 @@ SAFEARRAY*  UnoConversionUtilities<T>::createUnoSequenceWrapper(const Any& rSeq)
     pArray = SafeArrayCreate(VT_VARIANT, 1, rgsabound);
 
     Any unoElement;
-    sal_uInt8 * pSeqData= (sal_uInt8*) punoSeq->elements;
+    char * pSeqData= punoSeq->elements;
 
     for (sal_uInt32 i = 0; i < n; i++)
     {
@@ -1412,8 +1409,8 @@ void UnoConversionUtilities<T>::createUnoObjectWrapper(const Any & rObj, VARIANT
         {
             Sequence<Any> params(1);
             params.getArray()[0] = rObj;
-            Reference<XInterface> xInt = xInvFactory->createInstanceWithArguments(params);
-            xInv.set(xInt, UNO_QUERY);
+            Reference<XInterface> xInt2 = xInvFactory->createInstanceWithArguments(params);
+            xInv.set(xInt2, UNO_QUERY);
         }
     }
 
@@ -1481,10 +1478,10 @@ void UnoConversionUtilities<T>::variantToAny( const VARIANT* pVariant, Any& rAny
                 switch (var.vt)
                 {
                 case VT_EMPTY:
-                    rAny.setValue(NULL, Type());
+                    rAny.setValue(nullptr, Type());
                     break;
                 case VT_NULL:
-                    rAny.setValue(NULL, Type());
+                    rAny.setValue(nullptr, Type());
                     break;
                 case VT_I2:
                     rAny.setValue( & var.iVal, cppu::UnoType<sal_Int16>::get());
@@ -1560,15 +1557,14 @@ void UnoConversionUtilities<T>::variantToAny( const VARIANT* pVariant, Any& rAny
                 }
                 case VT_BOOL:
                 {
-                    sal_Bool b= var.boolVal == VARIANT_TRUE;
-                    rAny.setValue( &b, cppu::UnoType<decltype(b)>::get());
+                    rAny <<= (var.boolVal == VARIANT_TRUE);
                     break;
                 }
                 case VT_I1:
                     rAny.setValue( & var.cVal, cppu::UnoType<sal_Int8>::get());
                     break;
                 case VT_UI1: // there is no unsigned char in UNO
-                    rAny.setValue( & var.bVal, cppu::UnoType<sal_Int8>::get());
+                    rAny <<= sal_Int8(var.bVal);
                     break;
                 case VT_UI2:
                     rAny.setValue( & var.uiVal, cppu::UnoType<cppu::UnoUnsignedShortType>::get() );
@@ -1583,7 +1579,7 @@ void UnoConversionUtilities<T>::variantToAny( const VARIANT* pVariant, Any& rAny
                     rAny.setValue( & var.uintVal, cppu::UnoType<sal_uInt32>::get());
                     break;
                 case VT_VOID:
-                    rAny.setValue( NULL, Type());
+                    rAny.setValue( nullptr, Type());
                     break;
                 case VT_DECIMAL:
                 {
@@ -1678,12 +1674,12 @@ Any UnoConversionUtilities<T>::createOleObjectWrapper(VARIANT* pVar, const Type&
     }
     else if (pVar->vt == VT_DISPATCH && pVar->pdispVal != NULL)
     {
-        CComPtr<IDispatch> spDispatch(pVar->pdispVal);
-        if (spDispatch)
+        CComPtr<IDispatch> spDispatch2(pVar->pdispVal);
+        if (spDispatch2)
 #ifdef __MINGW32__
-            spDispatch->QueryInterface( IID_IUnknown, reinterpret_cast<LPVOID*>( & spUnknown.p));
+            spDispatch2->QueryInterface( IID_IUnknown, reinterpret_cast<LPVOID*>( & spUnknown.p));
 #else
-            spDispatch.QueryInterface( & spUnknown.p);
+            spDispatch2.QueryInterface( & spUnknown.p);
 #endif
     }
 
@@ -1716,7 +1712,7 @@ Any UnoConversionUtilities<T>::createOleObjectWrapper(VARIANT* pVar, const Type&
         if( aType.getTypeClass() == TypeClass_INTERFACE)
             ret.setValue( &xInt, aType);
         else if( aType.getTypeClass() == TypeClass_STRUCT)
-            ret.setValue( NULL, aType);
+            ret.setValue( nullptr, aType);
         else
             ret <<= xInt;
         return ret;
@@ -1824,8 +1820,7 @@ Any UnoConversionUtilities<T>::createOleObjectWrapper(VARIANT* pVar, const Type&
 
     Any  params[3];
     params[0] <<= reinterpret_cast<sal_uIntPtr>(spUnknown.p);
-    sal_Bool bDisp = pVar->vt == VT_DISPATCH ? sal_True : sal_False;
-    params[1].setValue( & bDisp, cppu::UnoType<bool>::get());
+    params[1] <<= (pVar->vt == VT_DISPATCH);
     params[2] <<= seqTypes;
 
     xInit->initialize( Sequence<Any>( params, 3));

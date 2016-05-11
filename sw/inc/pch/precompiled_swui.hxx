@@ -13,11 +13,11 @@
  manual changes will be rewritten by the next run of update_pch.sh (which presumably
  also fixes all possible problems, so it's usually better to use it).
 
- Generated on 2015-12-02 12:43:12 using:
+ Generated on 2016-02-06 12:31:01 using:
  ./bin/update_pch sw swui --cutoff=3 --exclude:system --include:module --include:local
 
  If after updating build fails, use the following command to locate conflicting headers:
- ./bin/update_pch_bisect ./sw/inc/pch/precompiled_swui.hxx "/opt/lo/bin/make sw.build" --find-conflicts
+ ./bin/update_pch_bisect ./sw/inc/pch/precompiled_swui.hxx "make sw.build" --find-conflicts
 */
 
 #include <algorithm>
@@ -25,7 +25,6 @@
 #include <cassert>
 #include <climits>
 #include <cmdid.h>
-#include <config_features.h>
 #include <config_global.h>
 #include <config_typesizes.h>
 #include <config_vcl.h>
@@ -61,11 +60,8 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
-#include <boost/functional/hash.hpp>
 #include <boost/intrusive_ptr.hpp>
-#include <boost/noncopyable.hpp>
 #include <boost/optional.hpp>
-#include <boost/shared_array.hpp>
 #include <osl/diagnose.h>
 #include <osl/doublecheckedlocking.h>
 #include <osl/endian.h>
@@ -114,7 +110,6 @@
 #include <vcl/accel.hxx>
 #include <vcl/alpha.hxx>
 #include <vcl/animate.hxx>
-#include <vcl/apptypes.hxx>
 #include <vcl/bitmap.hxx>
 #include <vcl/bitmapex.hxx>
 #include <vcl/builder.hxx>
@@ -122,7 +117,7 @@
 #include <vcl/button.hxx>
 #include <vcl/cairo.hxx>
 #include <vcl/checksum.hxx>
-#include <vcl/cmdevt.hxx>
+#include <vcl/commandevent.hxx>
 #include <vcl/combobox.hxx>
 #include <vcl/ctrl.hxx>
 #include <vcl/cursor.hxx>
@@ -146,8 +141,8 @@
 #include <vcl/help.hxx>
 #include <vcl/idle.hxx>
 #include <vcl/image.hxx>
-#include <vcl/impdel.hxx>
 #include <vcl/inputctx.hxx>
+#include <vcl/inputtypes.hxx>
 #include <vcl/keycod.hxx>
 #include <vcl/keycodes.hxx>
 #include <vcl/layout.hxx>
@@ -192,10 +187,6 @@
 #include <IMark.hxx>
 #include <SwNumberTreeTypes.hxx>
 #include <SwStyleNameMapper.hxx>
-#include <basebmp/basebmpdllapi.h>
-#include <basebmp/bitmapdevice.hxx>
-#include <basebmp/drawmodes.hxx>
-#include <basebmp/scanlineformats.hxx>
 #include <basegfx/basegfxdllapi.h>
 #include <basegfx/color/bcolor.hxx>
 #include <basegfx/color/bcolormodifier.hxx>
@@ -213,8 +204,10 @@
 #include <basegfx/vector/b2enums.hxx>
 #include <basegfx/vector/b2ivector.hxx>
 #include <basic/basicdllapi.h>
+#include <basic/codecompletecache.hxx>
 #include <basic/sbdef.hxx>
 #include <basic/sberrors.hxx>
+#include <basic/sbmod.hxx>
 #include <basic/sbx.hxx>
 #include <basic/sbxcore.hxx>
 #include <basic/sbxdef.hxx>
@@ -337,6 +330,7 @@
 #include <com/sun/star/rdf/XMetadatable.hpp>
 #include <com/sun/star/registry/XRegistryKey.hpp>
 #include <com/sun/star/script/ModuleInfo.hpp>
+#include <com/sun/star/script/XInvocation.hpp>
 #include <com/sun/star/script/XStarBasicAccess.hpp>
 #include <com/sun/star/script/provider/XScriptProviderSupplier.hpp>
 #include <com/sun/star/style/NumberingType.hpp>
@@ -372,7 +366,7 @@
 #include <com/sun/star/util/Date.hpp>
 #include <com/sun/star/util/DateTime.hpp>
 #include <com/sun/star/util/NumberFormat.hpp>
-#include <com/sun/star/util/SearchOptions.hpp>
+#include <com/sun/star/util/SearchOptions2.hpp>
 #include <com/sun/star/util/Time.hpp>
 #include <com/sun/star/util/URL.hpp>
 #include <com/sun/star/util/XChangesBatch.hpp>
@@ -381,7 +375,7 @@
 #include <com/sun/star/util/XCloseable.hpp>
 #include <com/sun/star/util/XModifiable2.hpp>
 #include <com/sun/star/util/XModifyListener.hpp>
-#include <com/sun/star/util/XTextSearch.hpp>
+#include <com/sun/star/util/XTextSearch2.hpp>
 #include <com/sun/star/view/XPrintJobBroadcaster.hpp>
 #include <com/sun/star/view/XPrintable.hpp>
 #include <com/sun/star/view/XRenderable.hpp>
@@ -428,7 +422,10 @@
 #include <editeng/borderline.hxx>
 #include <editeng/brushitem.hxx>
 #include <editeng/colritem.hxx>
+#include <editeng/editdata.hxx>
 #include <editeng/editengdllapi.h>
+#include <editeng/editstat.hxx>
+#include <editeng/eedata.hxx>
 #include <editeng/flstitem.hxx>
 #include <editeng/fontitem.hxx>
 #include <editeng/frmdiritem.hxx>
@@ -436,9 +433,11 @@
 #include <editeng/lrspitem.hxx>
 #include <editeng/numdef.hxx>
 #include <editeng/numitem.hxx>
+#include <editeng/paragraphdata.hxx>
 #include <editeng/scripttypeitem.hxx>
 #include <editeng/sizeitem.hxx>
 #include <editeng/svxenum.hxx>
+#include <editeng/svxfont.hxx>
 #include <editeng/ulspitem.hxx>
 #include <editeng/unolingu.hxx>
 #include <expfld.hxx>
@@ -479,6 +478,7 @@
 #include <paratr.hxx>
 #include <poolfmt.hxx>
 #include <rsc/rsc-vcl-shared-types.hxx>
+#include <rsc/rscsfx.hxx>
 #include <sfx2/Metadatable.hxx>
 #include <sfx2/app.hxx>
 #include <sfx2/basedlgs.hxx>
@@ -510,6 +510,7 @@
 #include <svl/intitem.hxx>
 #include <svl/itempool.hxx>
 #include <svl/itemset.hxx>
+#include <svl/languageoptions.hxx>
 #include <svl/lstner.hxx>
 #include <svl/nfkeytab.hxx>
 #include <svl/ondemand.hxx>
@@ -528,6 +529,7 @@
 #include <svtools/colorcfg.hxx>
 #include <svtools/ctrlbox.hxx>
 #include <svtools/embedhlp.hxx>
+#include <svtools/grfmgr.hxx>
 #include <svtools/headbar.hxx>
 #include <svtools/htmlcfg.hxx>
 #include <svtools/miscopt.hxx>
@@ -550,7 +552,6 @@
 #include <svx/xenum.hxx>
 #include <svx/xtable.hxx>
 #include <swabstdlg.hxx>
-#include <swatrset.hxx>
 #include <swmodule.hxx>
 #include <swrect.hxx>
 #include <swtable.hxx>

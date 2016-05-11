@@ -87,7 +87,6 @@ class UcbLockBytes : public virtual SvLockBytes
     css::uno::Reference < css::io::XInputStream >  m_xInputStream;
     css::uno::Reference < css::io::XOutputStream > m_xOutputStream;
     css::uno::Reference < css::io::XSeekable >     m_xSeekable;
-    tools::SvRef<UcbLockBytesHandler>              m_xHandler;
 
     ErrCode                 m_nError;
 
@@ -95,7 +94,7 @@ class UcbLockBytes : public virtual SvLockBytes
     bool                    m_bDontClose;
     bool                    m_bStreamValid;
 
-                            UcbLockBytes( UcbLockBytesHandler* pHandler );
+                            UcbLockBytes();
 protected:
     virtual                 ~UcbLockBytes();
 
@@ -129,7 +128,7 @@ public:
 
     bool                    setInputStream_Impl( const css::uno::Reference < css::io::XInputStream > &rxInputStream,
                                                  bool bSetXSeekable = true );
-    bool                    setStream_Impl( const css::uno::Reference < css::io::XStream > &rxStream );
+    void                    setStream_Impl( const css::uno::Reference < css::io::XStream > &rxStream );
     void                    terminate_Impl();
 
     css::uno::Reference < css::io::XInputStream > getInputStream_Impl() const

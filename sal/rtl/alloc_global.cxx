@@ -26,8 +26,8 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "internal/rtllifecycle.h"
-#include <internal/oslmemory.h>
+#include "rtllifecycle.h"
+#include <oslmemory.h>
 
 AllocMode alloc_mode = AMode_UNSET;
 
@@ -173,7 +173,8 @@ void * SAL_CALL rtl_reallocateMemory_CUSTOM (void * p, sal_Size n) SAL_THROW_EXT
     }
     else if (p != nullptr)
     {
-        rtl_freeMemory (p), p = nullptr;
+        rtl_freeMemory (p);
+        p = nullptr;
     }
     return p;
 }
@@ -237,6 +238,7 @@ void rtl_memory_fini()
     int i, n;
 
     /* clear g_alloc_table */
+    // cppcheck-suppress sizeofwithsilentarraypointer
     memset (g_alloc_table, 0, sizeof(g_alloc_table));
 
     /* cleanup g_alloc_caches */

@@ -254,7 +254,7 @@ void OJoinController::Execute(sal_uInt16 _nId, const Sequence< PropertyValue >& 
                         return;
                     case RET_NO:
                         reset();
-                        setModified(sal_False);     // and we are not modified yet
+                        setModified(false);     // and we are not modified yet
                         break;
                     default:
                         break;
@@ -298,8 +298,8 @@ void OJoinController::SaveTabWinsPosSize( OJoinTableView::OTableWindowMap* pTabW
     OSL_ENSURE(m_vTableData.size() == pTabWinList->size(),
         "OJoinController::SaveTabWinsPosSize : inkonsistenter Zustand : sollte genausviel TabWinDatas haben wie TabWins !");
 
-    OJoinTableView::OTableWindowMap::iterator aIter = pTabWinList->begin();
-    OJoinTableView::OTableWindowMap::iterator aEnd = pTabWinList->end();
+    OJoinTableView::OTableWindowMap::const_iterator aIter = pTabWinList->begin();
+    OJoinTableView::OTableWindowMap::const_iterator aEnd = pTabWinList->end();
     for(;aIter != aEnd;++aIter)
         SaveTabWinPosSize(aIter->second, nOffsetX, nOffsetY);
 }
@@ -322,12 +322,12 @@ void OJoinController::describeSupportedFeatures()
 sal_Bool SAL_CALL OJoinController::suspend(sal_Bool _bSuspend) throw( RuntimeException, std::exception )
 {
     if ( getBroadcastHelper().bInDispose || getBroadcastHelper().bDisposed )
-        return sal_True;
+        return true;
 
     SolarMutexGuard aSolarGuard;
     ::osl::MutexGuard aGuard( getMutex() );
     if ( getView() && getView()->IsInModalMode() )
-        return sal_False;
+        return false;
     bool bCheck = true;
     if ( _bSuspend )
     {

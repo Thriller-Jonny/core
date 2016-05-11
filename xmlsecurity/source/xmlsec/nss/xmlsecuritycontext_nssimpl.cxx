@@ -64,8 +64,8 @@ XMLSecurityContext_NssImpl::~XMLSecurityContext_NssImpl()
 }
 
 sal_Int32 SAL_CALL XMLSecurityContext_NssImpl::addSecurityEnvironment(
-    const ::com::sun::star::uno::Reference< ::com::sun::star::xml::crypto::XSecurityEnvironment >& aSecurityEnvironment)
-    throw (::com::sun::star::security::SecurityInfrastructureException, ::com::sun::star::uno::RuntimeException, std::exception)
+    const css::uno::Reference< css::xml::crypto::XSecurityEnvironment >& aSecurityEnvironment)
+    throw (css::security::SecurityInfrastructureException, css::uno::RuntimeException, std::exception)
 {
     if( !aSecurityEnvironment.is() )
     {
@@ -79,16 +79,16 @@ sal_Int32 SAL_CALL XMLSecurityContext_NssImpl::addSecurityEnvironment(
 
 
 sal_Int32 SAL_CALL XMLSecurityContext_NssImpl::getSecurityEnvironmentNumber(  )
-    throw (::com::sun::star::uno::RuntimeException, std::exception)
+    throw (css::uno::RuntimeException, std::exception)
 {
     return m_vSecurityEnvironments.size();
 }
 
-::com::sun::star::uno::Reference< ::com::sun::star::xml::crypto::XSecurityEnvironment > SAL_CALL
+css::uno::Reference< css::xml::crypto::XSecurityEnvironment > SAL_CALL
     XMLSecurityContext_NssImpl::getSecurityEnvironmentByIndex( sal_Int32 index )
-    throw (::com::sun::star::uno::RuntimeException, std::exception)
+    throw (css::uno::RuntimeException, std::exception)
 {
-    ::com::sun::star::uno::Reference< ::com::sun::star::xml::crypto::XSecurityEnvironment > xSecurityEnvironment;
+    css::uno::Reference< css::xml::crypto::XSecurityEnvironment > xSecurityEnvironment;
 
     if (index >= 0 && index < ( sal_Int32 )m_vSecurityEnvironments.size())
     {
@@ -100,9 +100,9 @@ sal_Int32 SAL_CALL XMLSecurityContext_NssImpl::getSecurityEnvironmentNumber(  )
     return xSecurityEnvironment;
 }
 
-::com::sun::star::uno::Reference< ::com::sun::star::xml::crypto::XSecurityEnvironment > SAL_CALL
+css::uno::Reference< css::xml::crypto::XSecurityEnvironment > SAL_CALL
     XMLSecurityContext_NssImpl::getSecurityEnvironment(  )
-    throw (::com::sun::star::uno::RuntimeException, std::exception)
+    throw (css::uno::RuntimeException, std::exception)
 {
     if (m_nDefaultEnvIndex >= 0 && m_nDefaultEnvIndex < ( sal_Int32 )m_vSecurityEnvironments.size())
         return getSecurityEnvironmentByIndex(m_nDefaultEnvIndex);
@@ -111,13 +111,13 @@ sal_Int32 SAL_CALL XMLSecurityContext_NssImpl::getSecurityEnvironmentNumber(  )
 }
 
 sal_Int32 SAL_CALL XMLSecurityContext_NssImpl::getDefaultSecurityEnvironmentIndex(  )
-    throw (::com::sun::star::uno::RuntimeException, std::exception)
+    throw (css::uno::RuntimeException, std::exception)
 {
     return m_nDefaultEnvIndex ;
 }
 
 void SAL_CALL XMLSecurityContext_NssImpl::setDefaultSecurityEnvironmentIndex( sal_Int32 nDefaultEnvIndex )
-    throw (::com::sun::star::uno::RuntimeException, std::exception)
+    throw (css::uno::RuntimeException, std::exception)
 {
     m_nDefaultEnvIndex = nDefaultEnvIndex;
 }
@@ -133,9 +133,9 @@ sal_Bool SAL_CALL XMLSecurityContext_NssImpl::supportsService( const OUString& s
     const OUString* pArray = seqServiceNames.getConstArray() ;
     for( sal_Int32 i = 0 ; i < seqServiceNames.getLength() ; i ++ ) {
         if( *( pArray + i ) == serviceName )
-            return sal_True ;
+            return true ;
     }
-    return sal_False ;
+    return false ;
 }
 
 /* XServiceInfo */

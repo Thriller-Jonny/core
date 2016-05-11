@@ -13,18 +13,21 @@
  manual changes will be rewritten by the next run of update_pch.sh (which presumably
  also fixes all possible problems, so it's usually better to use it).
 
- Generated on 2015-11-14 14:16:45 using:
+ Generated on 2016-01-25 19:34:08 using:
  ./bin/update_pch vcl vcl --cutoff=6 --exclude:system --include:module --include:local
 
  If after updating build fails, use the following command to locate conflicting headers:
- ./bin/update_pch_bisect ./vcl/inc/pch/precompiled_vcl.hxx "/opt/lo/bin/make vcl.build" --find-conflicts
+ ./bin/update_pch_bisect ./vcl/inc/pch/precompiled_vcl.hxx "make vcl.build" --find-conflicts
 */
 
 #include <algorithm>
 #include <cassert>
+#include <climits>
+#include <cmath>
 #include <config_features.h>
 #include <config_folders.h>
 #include <config_global.h>
+#include <config_graphite.h>
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>
@@ -33,7 +36,6 @@
 #include <functional>
 #include <iomanip>
 #include <limits.h>
-#include <map>
 #include <math.h>
 #include <memory>
 #include <new>
@@ -41,13 +43,11 @@
 #include <outdev.h>
 #include <set>
 #include <sstream>
-#include <stack>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 #include <string>
 #include <type_traits>
-#include <typeinfo>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -59,8 +59,6 @@
 #include <boost/multi_array.hpp>
 #include <boost/optional.hpp>
 #include <boost/shared_array.hpp>
-#include <boost/signals2/connection.hpp>
-#include <boost/signals2/signal.hpp>
 #include <osl/conditn.hxx>
 #include <osl/diagnose.h>
 #include <osl/diagnose.hxx>
@@ -70,7 +68,6 @@
 #include <osl/file.hxx>
 #include <osl/getglobalmutex.hxx>
 #include <osl/interlck.h>
-#include <osl/module.h>
 #include <osl/module.hxx>
 #include <osl/mutex.hxx>
 #include <osl/pipe.h>
@@ -128,12 +125,12 @@
 #include <salsys.hxx>
 #include <saltimer.hxx>
 #include <salvd.hxx>
+#include <vcl/alpha.hxx>
 #include <vcl/bitmap.hxx>
 #include <vcl/bitmapex.hxx>
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 #include <vcl/button.hxx>
 #include <vcl/canvastools.hxx>
-#include <vcl/combobox.hxx>
 #include <vcl/configsettings.hxx>
 #include <vcl/ctrl.hxx>
 #include <vcl/cursor.hxx>
@@ -149,6 +146,7 @@
 #include <vcl/floatwin.hxx>
 #include <vcl/fntstyle.hxx>
 #include <vcl/font.hxx>
+#include <vcl/fontcharmap.hxx>
 #include <vcl/gdimtf.hxx>
 #include <vcl/gradient.hxx>
 #include <vcl/graph.hxx>
@@ -168,7 +166,6 @@
 #include <vcl/metaact.hxx>
 #include <vcl/metric.hxx>
 #include <vcl/mnemonic.hxx>
-#include <vcl/opengl/OpenGLHelper.hxx>
 #include <vcl/outdev.hxx>
 #include <vcl/region.hxx>
 #include <vcl/salbtype.hxx>
@@ -179,6 +176,7 @@
 #include <vcl/svapp.hxx>
 #include <vcl/syswin.hxx>
 #include <vcl/tabctrl.hxx>
+#include <vcl/tabpage.hxx>
 #include <vcl/taskpanelist.hxx>
 #include <vcl/timer.hxx>
 #include <vcl/toolbox.hxx>
@@ -192,6 +190,7 @@
 #include <GL/glew.h>
 #include <PhysicalFontCollection.hxx>
 #include <PhysicalFontFace.hxx>
+#include <PhysicalFontFamily.hxx>
 #include <basegfx/basegfxdllapi.h>
 #include <basegfx/color/bcolor.hxx>
 #include <basegfx/matrix/b2dhommatrix.hxx>
@@ -256,20 +255,23 @@
 #include <cppuhelper/weak.hxx>
 #include <cppuhelper/weakagg.hxx>
 #include <cppuhelper/weakref.hxx>
-#include <dndlcon.hxx>
+#include <dndlistenercontainer.hxx>
+#include <fontattributes.hxx>
+#include <fontinstance.hxx>
 #include <helpwin.hxx>
 #include <i18nlangtag/i18nlangtagdllapi.h>
 #include <i18nlangtag/lang.h>
 #include <i18nlangtag/languagetag.hxx>
 #include <i18nlangtag/mslangid.hxx>
 #include <impbmp.hxx>
+#include <impfont.hxx>
 #include <o3tl/typed_flags_set.hxx>
 #include <opengl/texture.hxx>
 #include <opengl/zone.hxx>
 #include <outdata.hxx>
-#include <outfont.hxx>
 #include <rsc/rsc-vcl-shared-types.hxx>
 #include <svdata.hxx>
+#include <svl/hint.hxx>
 #include <svl/svldllapi.h>
 #include <tools/color.hxx>
 #include <tools/date.hxx>
@@ -285,7 +287,6 @@
 #include <tools/poly.hxx>
 #include <tools/rc.h>
 #include <tools/resid.hxx>
-#include <tools/resmgr.hxx>
 #include <tools/solar.h>
 #include <tools/stream.hxx>
 #include <tools/time.hxx>

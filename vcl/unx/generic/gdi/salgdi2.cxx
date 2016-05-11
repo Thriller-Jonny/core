@@ -20,7 +20,7 @@
 #include <poll.h>
 #include "salgdiimpl.hxx"
 
-#include "vcl/salbtype.hxx"
+#include <vcl/salbtype.hxx>
 
 #include "unx/pixmap.hxx"
 #include "unx/salunx.h"
@@ -34,9 +34,9 @@
 #include <unx/x11/xlimits.hxx>
 #include "xrender_peer.hxx"
 
-#include "generic/printergfx.hxx"
+#include "unx/printergfx.hxx"
 
-#include "vcl/bmpacc.hxx"
+#include <vcl/bitmapaccess.hxx>
 #include <outdata.hxx>
 
 void X11SalGraphics::CopyScreenArea( Display* pDisplay,
@@ -76,10 +76,10 @@ void X11SalGraphics::CopyScreenArea( Display* pDisplay,
     }
 }
 
-bool X11SalGraphics::FillPixmapFromScreen( X11Pixmap* pPixmap, int nX, int nY )
+void X11SalGraphics::FillPixmapFromScreen( X11Pixmap* pPixmap, int nX, int nY )
 {
     X11GraphicsImpl& rImpl = dynamic_cast<X11GraphicsImpl&>(*mxImpl.get());
-    return rImpl.FillPixmapFromScreen( pPixmap, nX, nY );
+    rImpl.FillPixmapFromScreen( pPixmap, nX, nY );
 }
 
 bool X11SalGraphics::RenderPixmapToScreen( X11Pixmap* pPixmap, X11Pixmap* pMask, int nX, int nY )
@@ -141,7 +141,7 @@ void X11SalGraphics::YieldGraphicsExpose()
     while( XCheckTypedWindowEvent( pDisplay, aWindow, Expose, &aEvent ) )
     {
         SalPaintEvent aPEvt( aEvent.xexpose.x, aEvent.xexpose.y, aEvent.xexpose.width+1, aEvent.xexpose.height+1 );
-        pFrame->CallCallback( SALEVENT_PAINT, &aPEvt );
+        pFrame->CallCallback( SalEvent::Paint, &aPEvt );
     }
 
     do
@@ -156,7 +156,7 @@ void X11SalGraphics::YieldGraphicsExpose()
         if( pFrame )
         {
             SalPaintEvent aPEvt( aEvent.xgraphicsexpose.x, aEvent.xgraphicsexpose.y, aEvent.xgraphicsexpose.width+1, aEvent.xgraphicsexpose.height+1 );
-            pFrame->CallCallback( SALEVENT_PAINT, &aPEvt );
+            pFrame->CallCallback( SalEvent::Paint, &aPEvt );
         }
     } while( aEvent.xgraphicsexpose.count != 0 );
 }

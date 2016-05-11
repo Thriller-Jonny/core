@@ -34,9 +34,7 @@
 #include <svtools/ctrlbox.hxx>
 
 
-
 namespace sfx {
-
 
 
 /** List position type of VCL ListBox. */
@@ -81,7 +79,7 @@ public:
         is used (simply casting between list position and values). If the map
         exists, it *MUST* be terminated by an entry containing the special
         "not found" list position. */
-    inline explicit     PosValueMapper( PosT nNFPos, const MapEntryType* pMap = 0 ) :
+    inline explicit     PosValueMapper( PosT nNFPos, const MapEntryType* pMap = nullptr ) :
                             mpMap( pMap ), mnNFPos( nNFPos ) {}
 
     /** Returns the value at the specified list position.
@@ -212,7 +210,6 @@ private:
 };
 
 
-
 /** A dummy wrapper for a VCL Window that does nothing special.
 
     This wrapper is used to implement the DummyItemConnection. It does not
@@ -233,7 +230,6 @@ public:
 };
 
 
-
 /** A wrapper for the VCL CheckBox. */
 class SFX2_DLLPUBLIC CheckBoxWrapper:
     public SingleControlWrapper< CheckBox, bool >
@@ -247,7 +243,6 @@ public:
     virtual bool        GetControlValue() const override;
     virtual void        SetControlValue( bool bValue ) override;
 };
-
 
 
 /** A wrapper for the SVTOOLS ColorListBox. */
@@ -270,7 +265,6 @@ public:
 };
 
 
-
 /** A wrapper for the VCL NumericField. */
 template< typename ValueT >
 class NumericFieldWrapper : public SingleControlWrapper< NumericField, ValueT >
@@ -285,11 +279,6 @@ public:
     virtual ValueT      GetControlValue() const SAL_OVERRIDE;
     virtual void        SetControlValue( ValueT nValue ) SAL_OVERRIDE;
 };
-
-
-
-
-
 
 
 /** A wrapper for the VCL MetricField.
@@ -316,8 +305,6 @@ private:
 };
 
 
-
-
 #define WRAPPER_LISTBOX_ENTRY_NOTFOUND  0xFFFF  /* XXX was value of LISTBOX_ENTRY_NOTFOUND */
 
 /** A wrapper for the VCL ListBox.
@@ -338,7 +325,7 @@ public:
 
     /** @param pMap  Optional list position <-> value map.
         See PosValueMapper documentation for details. */
-    inline explicit     ListBoxWrapper( ListBox& rListBox, const MapEntryType* pMap = 0 ) :
+    inline explicit     ListBoxWrapper( ListBox& rListBox, const MapEntryType* pMap = nullptr ) :
                             SingleControlWrapper< ListBox, ValueT >( rListBox ), MapperType( WRAPPER_LISTBOX_ENTRY_NOTFOUND, pMap ) {}
 
     virtual bool        IsControlDontKnow() const SAL_OVERRIDE
@@ -349,11 +336,6 @@ public:
     virtual ValueT      GetControlValue() const SAL_OVERRIDE;
     virtual void        SetControlValue( ValueT nValue ) SAL_OVERRIDE;
 };
-
-
-
-
-
 
 
 #define WRAPPER_VALUESET_ITEM_NOTFOUND  0xFFFF  /* XXX was value of VALUESET_ITEM_NOTFOUND */
@@ -376,7 +358,7 @@ public:
 
     /** @param pMap  Optional position <-> value map.
         See PosValueMapper documentation for details. */
-    inline explicit     ValueSetWrapper( ValueSet& rValueSet, const MapEntryType* pMap = 0 ) :
+    inline explicit     ValueSetWrapper( ValueSet& rValueSet, const MapEntryType* pMap = nullptr ) :
                             SingleControlWrapper< ValueSet, ValueT >( rValueSet ), MapperType( WRAPPER_VALUESET_ITEM_NOTFOUND, pMap ) {}
 
     virtual bool        IsControlDontKnow() const SAL_OVERRIDE
@@ -387,10 +369,6 @@ public:
     virtual ValueT      GetControlValue() const SAL_OVERRIDE;
     virtual void        SetControlValue( ValueT nValue ) SAL_OVERRIDE;
 };
-
-
-
-
 
 
 // Multi control wrappers
@@ -426,7 +404,6 @@ public:
 private:
     std::unique_ptr< MultiControlWrapperHelper_Impl > mxImpl;
 };
-
 
 
 /** A multi control wrapper with extended interface.
@@ -465,11 +442,7 @@ private:
 };
 
 
-
-
-
 //               ***  Implementation of template functions  ***
-
 
 
 // Helpers
@@ -525,7 +498,6 @@ inline void SingleControlWrapper< ControlT, ValueT >::ModifyControl( TriState eE
 }
 
 
-
 template< typename ValueT >
 bool NumericFieldWrapper< ValueT >::IsControlDontKnow() const
 {
@@ -550,7 +522,6 @@ void NumericFieldWrapper< ValueT >::SetControlValue( ValueT nValue )
 {
     this->GetControl().SetValue( this->GetControl().Normalize( static_cast< sal_Int64 >( nValue ) ) );
 }
-
 
 
 template< typename ValueT >
@@ -579,7 +550,6 @@ void MetricFieldWrapper< ValueT >::SetControlValue( ValueT nValue )
 }
 
 
-
 template< typename ValueT >
 ValueT ListBoxWrapper< ValueT >::GetControlValue() const
 {
@@ -595,7 +565,6 @@ void ListBoxWrapper< ValueT >::SetControlValue( ValueT nValue )
 }
 
 
-
 template< typename ValueT >
 ValueT ValueSetWrapper< ValueT >::GetControlValue() const
 {
@@ -609,8 +578,6 @@ void ValueSetWrapper< ValueT >::SetControlValue( ValueT nValue )
     if( nPos != this->GetNotFoundPos() )
         this->GetControl().SelectItem( nPos );
 }
-
-
 
 
 } // namespace sfx

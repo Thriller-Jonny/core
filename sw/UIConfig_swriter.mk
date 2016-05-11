@@ -14,8 +14,20 @@ $(eval $(call gb_UIConfig_add_menubarfiles,modules/swriter,\
 ))
 
 $(eval $(call gb_UIConfig_add_popupmenufiles,modules/swriter,\
+	sw/uiconfig/swriter/popupmenu/anchor \
+	sw/uiconfig/swriter/popupmenu/annotation \
+	sw/uiconfig/swriter/popupmenu/draw \
+	sw/uiconfig/swriter/popupmenu/drawtext \
+	sw/uiconfig/swriter/popupmenu/form \
+	sw/uiconfig/swriter/popupmenu/formrichtext \
+	sw/uiconfig/swriter/popupmenu/frame \
+	sw/uiconfig/swriter/popupmenu/graphic \
+	sw/uiconfig/swriter/popupmenu/insertfield \
+	sw/uiconfig/swriter/popupmenu/media \
+	sw/uiconfig/swriter/popupmenu/oleobject \
 	sw/uiconfig/swriter/popupmenu/preview \
 	sw/uiconfig/swriter/popupmenu/table \
+	sw/uiconfig/swriter/popupmenu/text \
 ))
 
 $(eval $(call gb_UIConfig_add_statusbarfiles,modules/swriter,\
@@ -29,6 +41,7 @@ $(eval $(call gb_UIConfig_add_toolbarfiles,modules/swriter,\
 	sw/uiconfig/swriter/toolbar/bezierobjectbar \
 	sw/uiconfig/swriter/toolbar/calloutshapes \
 	sw/uiconfig/swriter/toolbar/changes \
+	sw/uiconfig/swriter/toolbar/classificationbar \
 	sw/uiconfig/swriter/toolbar/colorbar \
 	sw/uiconfig/swriter/toolbar/drawbar \
 	sw/uiconfig/swriter/toolbar/drawingobjectbar \
@@ -48,6 +61,8 @@ $(eval $(call gb_UIConfig_add_toolbarfiles,modules/swriter,\
 	sw/uiconfig/swriter/toolbar/graffilterbar \
 	sw/uiconfig/swriter/toolbar/graphicobjectbar \
 	sw/uiconfig/swriter/toolbar/insertbar \
+	sw/uiconfig/swriter/toolbar/linesbar \
+	sw/uiconfig/swriter/toolbar/mailmerge \
 	sw/uiconfig/swriter/toolbar/mediaobjectbar \
 	sw/uiconfig/swriter/toolbar/moreformcontrols \
 	sw/uiconfig/swriter/toolbar/navigationobjectbar \
@@ -55,6 +70,7 @@ $(eval $(call gb_UIConfig_add_toolbarfiles,modules/swriter,\
 	sw/uiconfig/swriter/toolbar/oleobjectbar \
 	sw/uiconfig/swriter/toolbar/optimizetablebar \
 	sw/uiconfig/swriter/toolbar/previewobjectbar \
+	sw/uiconfig/swriter/toolbar/singlemode \
 	sw/uiconfig/swriter/toolbar/standardbar \
 	sw/uiconfig/swriter/toolbar/starshapes \
 	sw/uiconfig/swriter/toolbar/symbolshapes \
@@ -117,7 +133,6 @@ $(eval $(call gb_UIConfig_add_uifiles,modules/swriter,\
 	sw/uiconfig/swriter/ui/fldfuncpage \
 	sw/uiconfig/swriter/ui/fldrefpage \
 	sw/uiconfig/swriter/ui/fldvarpage \
-	sw/uiconfig/swriter/ui/floatingmmchild \
 	sw/uiconfig/swriter/ui/floatingnavigation \
 	sw/uiconfig/swriter/ui/floatingsync \
 	sw/uiconfig/swriter/ui/formatsectiondialog \
@@ -180,13 +195,14 @@ $(eval $(call gb_UIConfig_add_uifiles,modules/swriter,\
 	sw/uiconfig/swriter/ui/mmcreatingdialog \
 	sw/uiconfig/swriter/ui/mmlayoutpage \
 	sw/uiconfig/swriter/ui/mmmailbody \
-	sw/uiconfig/swriter/ui/mmmergepage \
-	sw/uiconfig/swriter/ui/mmoutputpage \
 	sw/uiconfig/swriter/ui/mmoutputtypepage \
-	sw/uiconfig/swriter/ui/mmpreparepage \
+	sw/uiconfig/swriter/ui/mmresultemaildialog \
+	sw/uiconfig/swriter/ui/mmresultprintdialog \
+	sw/uiconfig/swriter/ui/mmresultsavedialog \
 	sw/uiconfig/swriter/ui/mmselectpage \
 	sw/uiconfig/swriter/ui/mmsendmails \
 	sw/uiconfig/swriter/ui/mmsalutationpage \
+	sw/uiconfig/swriter/ui/notebookbar \
 	sw/uiconfig/swriter/ui/paradialog \
 	sw/uiconfig/swriter/ui/picturedialog \
 	sw/uiconfig/swriter/ui/picturepage \

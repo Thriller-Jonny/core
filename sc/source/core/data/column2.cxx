@@ -129,6 +129,13 @@ long ScColumn::GetNeededSize(
     //      conditional formatting
     const SfxItemSet* pCondSet = pDocument->GetCondResult( nCol, nRow, nTab );
 
+    //The pPattern may change in GetCondResult
+    if (aCell.meType == CELLTYPE_FORMULA)
+    {
+        pPattern = pAttrArray->GetPattern( nRow );
+        if (ppPatternChange)
+            *ppPatternChange = pPattern;
+    }
     //  line break?
 
     const SfxPoolItem* pCondItem;
@@ -304,7 +311,7 @@ long ScColumn::GetNeededSize(
                 if ( bBreak && !rOptions.bTotalSize )
                 {
                     //  limit size for line break
-                    long nCmp = pDev->GetFont().GetSize().Height() * SC_ROT_BREAK_FACTOR;
+                    long nCmp = pDev->GetFont().GetFontSize().Height() * SC_ROT_BREAK_FACTOR;
                     if ( nHeight > nCmp )
                         nHeight = nCmp;
                 }
@@ -485,7 +492,7 @@ long ScColumn::GetNeededSize(
                 if ( bBreak && !rOptions.bTotalSize )
                 {
                     //  limit size for line break
-                    long nCmp = aOldFont.GetSize().Height() * SC_ROT_BREAK_FACTOR;
+                    long nCmp = aOldFont.GetFontSize().Height() * SC_ROT_BREAK_FACTOR;
                     if ( nValue > nCmp )
                         nValue = nCmp;
                 }
@@ -750,7 +757,7 @@ static sal_uInt16 lcl_GetAttribHeight( const ScPatternAttr& rPattern, sal_uInt16
     nHeight *= 1.18;
 
     if ( static_cast<const SvxEmphasisMarkItem&>(rPattern.
-            GetItem(ATTR_FONT_EMPHASISMARK)).GetEmphasisMark() != EMPHASISMARK_NONE )
+            GetItem(ATTR_FONT_EMPHASISMARK)).GetEmphasisMark() != FontEmphasisMark::NONE )
     {
         //  add height for emphasis marks
         //TODO: font metrics should be used instead
@@ -1089,7 +1096,7 @@ public:
             }
         }
         //  change URL field to text (not possible otherwise, thus pType=0)
-        mpEngine->RemoveFields(true);
+        mpEngine->RemoveFields();
 
         bool bSpellErrors = mpEngine->HasOnlineSpellErrors();
         bool bNeedObject = bSpellErrors || nParCount>1;         // keep errors/paragraphs
@@ -2150,10 +2157,12 @@ class FillMatrixHandler
     SCTAB mnTab;
     ScDocument* mpDoc;
     svl::SharedStringPool& mrPool;
+    svl::SharedStringPool* mpPool; // if matrix is not in the same document
 
 public:
-    FillMatrixHandler(ScMatrix& rMat, size_t nMatCol, size_t nTopRow, SCCOL nCol, SCTAB nTab, ScDocument* pDoc) :
-        mrMat(rMat), mnMatCol(nMatCol), mnTopRow(nTopRow), mnCol(nCol), mnTab(nTab), mpDoc(pDoc), mrPool(pDoc->GetSharedStringPool()) {}
+    FillMatrixHandler(ScMatrix& rMat, size_t nMatCol, size_t nTopRow, SCCOL nCol, SCTAB nTab, ScDocument* pDoc, svl::SharedStringPool* pPool) :
+        mrMat(rMat), mnMatCol(nMatCol), mnTopRow(nTopRow), mnCol(nCol), mnTab(nTab),
+        mpDoc(pDoc), mrPool(pDoc->GetSharedStringPool()), mpPool(pPool) {}
 
     void operator() (const sc::CellStoreType::value_type& node, size_t nOffset, size_t nDataSize)
     {
@@ -2169,8 +2178,22 @@ public:
             break;
             case sc::element_type_string:
             {
-                const svl::SharedString* p = &sc::string_block::at(*node.data, nOffset);
-                mrMat.PutString(p, nDataSize, mnMatCol, nMatRow);
+                if (!mpPool)
+                {
+                    const svl::SharedString* p = &sc::string_block::at(*node.data, nOffset);
+                    mrMat.PutString(p, nDataSize, mnMatCol, nMatRow);
+                }
+                else
+                {
+                    std::vector<svl::SharedString> aStrings;
+                    aStrings.reserve(nDataSize);
+                    const svl::SharedString* p = &sc::string_block::at(*node.data, nOffset);
+                    for (size_t i = 0; i < nDataSize; ++i)
+                    {
+                        aStrings.push_back(mpPool->intern(p[i].getString()));
+                    }
+                    mrMat.PutString(aStrings.data(), aStrings.size(), mnMatCol, nMatRow);
+                }
             }
             break;
             case sc::element_type_edittext:
@@ -2184,7 +2207,10 @@ public:
                 for (; it != itEnd; ++it)
                 {
                     OUString aStr = ScEditUtil::GetString(**it, mpDoc);
-                    aSSs.push_back(mrPool.intern(aStr));
+                    if (!mpPool)
+                        aSSs.push_back(mrPool.intern(aStr));
+                    else
+                        aSSs.push_back(mpPool->intern(aStr));
                 }
 
                 const svl::SharedString* p = &aSSs[0];
@@ -2228,7 +2254,7 @@ public:
                         ScAddress aAdr(mnCol, nThisRow, mnTab);
 
                         if (nErr)
-                            fVal = CreateDoubleError(nErr);
+                            fVal = formula::CreateDoubleError(nErr);
 
                         if (!aBucket.maNumVals.empty() && nThisRow == nPrevRow + 1)
                         {
@@ -2246,6 +2272,8 @@ public:
                     }
 
                     svl::SharedString aStr = rCell.GetString();
+                    if (mpPool)
+                        aStr = mpPool->intern(aStr.getString());
                     if (!aBucket.maStrVals.empty() && nThisRow == nPrevRow + 1)
                     {
                         // Secondary strings.
@@ -2271,24 +2299,24 @@ public:
 
 }
 
-void ScColumn::FillMatrix( ScMatrix& rMat, size_t nMatCol, SCROW nRow1, SCROW nRow2 ) const
+void ScColumn::FillMatrix( ScMatrix& rMat, size_t nMatCol, SCROW nRow1, SCROW nRow2, svl::SharedStringPool* pPool ) const
 {
-    FillMatrixHandler aFunc(rMat, nMatCol, nRow1, nCol, nTab, pDocument);
+    FillMatrixHandler aFunc(rMat, nMatCol, nRow1, nCol, nTab, pDocument, pPool);
     sc::ParseBlock(maCells.begin(), maCells, aFunc, nRow1, nRow2);
 }
 
 namespace {
 
-template<typename _Blk>
+template<typename Blk>
 void getBlockIterators(
     const sc::CellStoreType::iterator& it, size_t& rLenRemain,
-    typename _Blk::iterator& rData, typename _Blk::iterator& rDataEnd )
+    typename Blk::iterator& rData, typename Blk::iterator& rDataEnd )
 {
-    rData = _Blk::begin(*it->data);
+    rData = Blk::begin(*it->data);
     if (rLenRemain >= it->size)
     {
         // Block is shorter than the remaining requested length.
-        rDataEnd = _Blk::end(*it->data);
+        rDataEnd = Blk::end(*it->data);
         rLenRemain -= it->size;
     }
     else
@@ -2359,7 +2387,7 @@ bool appendToBlock(
 
                     if (aRes.meType == sc::FormulaResultValue::Invalid || aRes.mnError)
                     {
-                        if (aRes.mnError == ScErrorCodes::errCircularReference)
+                        if (aRes.mnError == formula::errCircularReference)
                         {
                             // This cell needs to be recalculated on next visit.
                             rFC.SetErrCode(0);
@@ -2480,7 +2508,7 @@ copyFirstFormulaBlock(
         sc::FormulaResultValue aRes = rFC.GetResult();
         if (aRes.meType == sc::FormulaResultValue::Invalid || aRes.mnError)
         {
-            if (aRes.mnError == ScErrorCodes::errCircularReference)
+            if (aRes.mnError == formula::errCircularReference)
             {
                 // This cell needs to be recalculated on next visit.
                 rFC.SetErrCode(0);
@@ -2725,7 +2753,7 @@ void ScColumn::SetFormulaResults( SCROW nRow, const double* pResults, size_t nLe
     for (; pResults != pResEnd; ++pResults, ++itCell)
     {
         ScFormulaCell& rCell = **itCell;
-        sal_uInt16 nErr = GetDoubleErrorValue(*pResults);
+        sal_uInt16 nErr = formula::GetDoubleErrorValue(*pResults);
         if (nErr != 0)
             rCell.SetResultError(nErr);
         else
@@ -2877,14 +2905,14 @@ bool ScColumn::GetFirstVisibleAttr( SCROW& rFirstRow ) const
         return false;
 }
 
-bool ScColumn::GetLastVisibleAttr( SCROW& rLastRow, bool bFullFormattedArea ) const
+bool ScColumn::GetLastVisibleAttr( SCROW& rLastRow ) const
 {
     if (pAttrArray)
     {
         // row of last cell is needed
         SCROW nLastData = GetLastDataPos();    // always including notes, 0 if none
 
-        return pAttrArray->GetLastVisibleAttr( rLastRow, nLastData, bFullFormattedArea );
+        return pAttrArray->GetLastVisibleAttr( rLastRow, nLastData );
     }
     else
         return false;

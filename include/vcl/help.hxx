@@ -30,8 +30,6 @@ class Rectangle;
 namespace vcl { class Window; }
 
 
-// - Help-Types -
-
 enum class QuickHelpFlags
 {
     NONE              = 0x0000,
@@ -43,23 +41,20 @@ enum class QuickHelpFlags
     Bottom            = 0x0020,
     NoAutoPos         = Left | Center | Right | Top | VCenter | Bottom,
     CtrlText          = 0x0040,
-/// force the existent tip window to be re-positioned, even if the previous incarnation has the same text. Applies to ShowBallon and ShowQuickHelp.
-    ForceReposition   = 0x0080,
 /// no delay when opening the quick help. Applies to ShowBallon and ShowQuickHelp
-    NoDelay           = 0x0100,
-/// force balloon-style in ShowTip
-    TipStyleBalloon   = 0x0200,
-    NoEvadePointer    = 0x4000,
-    BiDiRtl           = 0x8000,
+    NoDelay           = 0x0080,
+/// force balloon-style in ShowPopover
+    TipStyleBalloon   = 0x0100,
+    NoEvadePointer    = 0x0200,
+    BiDiRtl           = 0x0400,
 };
 namespace o3tl
 {
-    template<> struct typed_flags<QuickHelpFlags> : is_typed_flags<QuickHelpFlags, 0xc3ff> {};
+    template<> struct typed_flags<QuickHelpFlags> : is_typed_flags<QuickHelpFlags, 0x7ff> {};
 }
 
 #define OOO_HELP_INDEX          ".help:index"
 
-// - Help -
 
 class VCL_DLLPUBLIC Help
 {
@@ -105,14 +100,15 @@ public:
 
     static void         HideBalloonAndQuickHelp();
 
-    static sal_uLong    ShowTip( vcl::Window* pParent,
-                                 const Rectangle& rScreenRect,
-                                 const OUString& rText, QuickHelpFlags nStyle = QuickHelpFlags::NONE );
-    static void         UpdateTip( sal_uLong nId,
-                                   vcl::Window* pParent,
-                                   const Rectangle& rScreenRect,
-                                   const OUString& rText );
-    static void         HideTip( sal_uLong nId );
+    static sal_uLong    ShowPopover(vcl::Window* pParent,
+                                    const Rectangle& rScreenRect,
+                                    const OUString& rText,
+                                    QuickHelpFlags nStyle = QuickHelpFlags::NONE);
+    static void         UpdatePopover(sal_uLong nId,
+                                      vcl::Window* pParent,
+                                      const Rectangle& rScreenRect,
+                                      const OUString& rText);
+    static void         HidePopover(vcl::Window* pParent, sal_uLong nId);
 };
 
 #endif // INCLUDED_VCL_HELP_HXX

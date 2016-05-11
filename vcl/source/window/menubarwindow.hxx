@@ -41,7 +41,7 @@ class DecoToolBox : public ToolBox
 
     using Window::ImplInit;
 public:
-             DecoToolBox( vcl::Window* pParent, WinBits nStyle = 0 );
+    explicit DecoToolBox(vcl::Window* pParent);
     virtual ~DecoToolBox() {}
 
     void    ImplInit();
@@ -78,7 +78,7 @@ private:
     PopupMenu*      pActivePopup;
     sal_uInt16      nHighlightedItem;
     sal_uInt16      nRolloveredItem;
-    sal_uLong       nSaveFocusId;
+    VclPtr<vcl::Window> xSaveFocusId;
     bool            mbAutoPopup;
     bool            bIgnoreFirstMove;
     bool            bStayActive;
@@ -91,7 +91,7 @@ private:
 
     std::map< sal_uInt16, AddButtonEntry > m_aAddButtons;
 
-    void            HighlightItem(vcl::RenderContext& rRenderContext, sal_uInt16 nPos, bool bHighlight);
+    void            HighlightItem(vcl::RenderContext& rRenderContext, sal_uInt16 nPos);
     void    ChangeHighlightItem(sal_uInt16 n, bool bSelectPopupEntry, bool bAllowRestoreFocus = true, bool bDefaultToDocument = true);
 
     sal_uInt16      ImplFindEntry( const Point& rMousePos ) const;
@@ -127,9 +127,6 @@ public:
     virtual void    Resize() override;
     virtual void    RequestHelp( const HelpEvent& rHEvt ) override;
 
-    void    SetFocusId(sal_uLong nId) { nSaveFocusId = nId; }
-    sal_uLong GetFocusId() const { return nSaveFocusId; }
-
     void    SetMenu(MenuBar* pMenu);
     void    SetHeight(long nHeight);
     void    KillActivePopup();
@@ -151,6 +148,7 @@ public:
     bool GetMBWHideAccel() const { return mbHideAccel; }
     void SetMBWMenuKey(bool val) { mbMenuKey = val; }
     bool GetMBWMenuKey() const { return mbMenuKey; }
+    bool CanGetFocus() const;
 };
 
 #endif // INCLUDED_VCL_SOURCE_WINDOW_MENUBARWINDOW_HXX

@@ -38,7 +38,6 @@
 #include <rtl/strbuf.hxx>
 
 #include <com/sun/star/sdbc/XRow.hpp>
-#include <com/sun/star/sdbc/XParameters.hpp>
 #include <com/sun/star/sdbc/DataType.hpp>
 #include <com/sun/star/sdbc/ColumnValue.hpp>
 
@@ -59,21 +58,14 @@ using com::sun::star::beans::PropertyChangeEvent;
 using com::sun::star::uno::Any;
 using com::sun::star::uno::makeAny;
 using com::sun::star::uno::UNO_QUERY;
-using com::sun::star::uno::Type;
-using com::sun::star::uno::XInterface;
 using com::sun::star::uno::Reference;
-using com::sun::star::uno::Sequence;
 using com::sun::star::uno::RuntimeException;
 
 using com::sun::star::container::NoSuchElementException;
-using com::sun::star::lang::WrappedTargetException;
 
 using com::sun::star::sdbc::XRow;
-using com::sun::star::sdbc::XCloseable;
 using com::sun::star::sdbc::XStatement;
 using com::sun::star::sdbc::XResultSet;
-using com::sun::star::sdbc::XParameters;
-using com::sun::star::sdbc::XPreparedStatement;
 using com::sun::star::sdbc::XDatabaseMetaData;
 using com::sun::star::sdbc::SQLException;
 
@@ -82,8 +74,7 @@ namespace pq_sdbc_driver
 
 static Any isCurrency( const OUString & typeName )
 {
-    sal_Bool b = typeName.equalsIgnoreAsciiCase("money");
-    return Any( &b, cppu::UnoType<bool>::get() );
+    return Any( typeName.equalsIgnoreAsciiCase("money") );
 }
 
 // static sal_Bool isAutoIncrement8( const OUString & typeName )
@@ -94,7 +85,7 @@ static Any isCurrency( const OUString & typeName )
 
 static Any isAutoIncrement( const OUString & defaultValue )
 {
-    sal_Bool ret = defaultValue.startsWith( "nextval(" );
+    bool ret = defaultValue.startsWith( "nextval(" );
 //     printf( "%s %d\n",
 //             OUStringToOString(defaultValue, RTL_TEXTENCODING_ASCII_US).getStr(),
 //             ret );
@@ -108,7 +99,7 @@ static Any isAutoIncrement( const OUString & defaultValue )
 //     {
 //         b = b || typeName.equalsIgnoreAsciiCaseAscii( serials[i] );
 //     }
-    return Any ( &ret, cppu::UnoType<bool>::get() );
+    return Any ( ret );
 }
 
 Columns::Columns(
@@ -311,7 +302,7 @@ void Columns::refresh()
 
         String2IntMap map;
 
-        m_values = Sequence< com::sun::star::uno::Any > ();
+        m_values.clear();
         int columnIndex = 0;
         while( rs->next() )
         {
@@ -331,11 +322,9 @@ void Columns::refresh()
 //                     name ) );
 
             {
-                const int currentColumnIndex = columnIndex++;
-                assert(currentColumnIndex  == m_values.getLength());
-                m_values.realloc( columnIndex );
-                m_values[currentColumnIndex] = makeAny( prop );
-                map[ name ] = currentColumnIndex;
+                m_values.push_back( makeAny( prop ) );
+                map[ name ] = columnIndex;
+                ++columnIndex;
             }
         }
         m_name2index.swap( map );
@@ -514,11 +503,11 @@ void Columns::dropByIndex( sal_Int32 index )
            ::com::sun::star::uno::RuntimeException, std::exception)
 {
     osl::MutexGuard guard( m_refMutex->mutex );
-    if( index < 0 ||  index >= m_values.getLength() )
+    if( index < 0 ||  index >= (sal_Int32)m_values.size() )
     {
         OUStringBuffer buf( 128 );
         buf.append( "COLUMNS: Index out of range (allowed 0 to " );
-        buf.append((sal_Int32)(m_values.getLength() -1) );
+        buf.append((sal_Int32)(m_values.size() -1) );
         buf.append( ", got " );
         buf.append( index );
         buf.append( ")" );
@@ -566,7 +555,6 @@ Reference< com::sun::star::container::XNameAccess > Columns::create(
 
     return ret;
 }
-
 
 
 ColumnDescriptors::ColumnDescriptors(

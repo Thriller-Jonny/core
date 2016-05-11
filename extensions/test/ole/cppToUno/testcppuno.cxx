@@ -31,10 +31,8 @@
 #include <com/sun/star/script/XInvocation.hpp>
 #include <oletest/XCallback.hpp>
 #include <rtl/process.h>
-#include <com/sun/star/uno/Reference.h>
 #include <cppuhelper/servicefactory.hxx>
 #include <rtl/string.h>
-
 
 
 using namespace com::sun::star::lang;
@@ -70,8 +68,6 @@ int SAL_CALL _tmain( int /*argc*/, _TCHAR * /*argv[]*/ )
     CoUninitialize();
     return 0;
 }
-
-
 
 
 HRESULT doTest()
@@ -164,7 +160,6 @@ HRESULT doTest()
                 varj.Clear();
                 hr= SafeArrayGetElement( ari, &j, &varj);
             }
-
 
 
         }

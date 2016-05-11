@@ -40,15 +40,10 @@ namespace com { namespace sun { namespace star {
 namespace sdr { namespace contact {
 
 
-
     //= ViewContactOfUnoControl
 
-    class ViewContactOfUnoControl_Impl;
     class SVX_DLLPRIVATE ViewContactOfUnoControl : public ViewContactOfSdrObj
     {
-    private:
-        ::std::unique_ptr< ViewContactOfUnoControl_Impl >   m_pImpl;
-
     public:
         // access to SdrObject
         const SdrUnoObj& GetSdrUnoObj() const

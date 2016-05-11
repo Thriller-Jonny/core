@@ -23,6 +23,7 @@
 #include <vcl/ctrl.hxx>
 #include <sfx2/sidebar/SidebarPanelBase.hxx>
 #include <sfx2/sidebar/ControllerItem.hxx>
+#include <sfx2/sidebar/IContextChangeReceiver.hxx>
 #include <vcl/fixed.hxx>
 #include <vcl/field.hxx>
 #include <vcl/layout.hxx>
@@ -55,9 +56,9 @@ namespace sidebar
 {
 
 class PopupContainer;
-class LineWidthControl;
 
 class LinePropertyPanel : public LinePropertyPanelBase,
+                          public sfx2::sidebar::IContextChangeReceiver,
                           public sfx2::sidebar::ControllerItem::ItemUpdateReceiverInterface
 {
 public:
@@ -68,6 +69,9 @@ public:
         vcl::Window* pParent,
         const css::uno::Reference<css::frame::XFrame>& rxFrame,
         SfxBindings* pBindings);
+
+    virtual void HandleContextChange(
+        const ::sfx2::sidebar::EnumContext& rContext) override;
 
     virtual void NotifyItemUpdate(
         const sal_uInt16 nSId,
@@ -108,8 +112,8 @@ private:
     sfx2::sidebar::ControllerItem maEdgeStyle;
     sfx2::sidebar::ControllerItem maCapStyle;
 
-    css::uno::Reference<css::frame::XFrame> mxFrame;
     SfxBindings* mpBindings;
+    sfx2::sidebar::EnumContext maContext;
 
     void Initialize();
 };

@@ -27,9 +27,6 @@
 namespace unographic {
 
 
-// - GraphicTransformer -
-
-
 typedef ::cppu::WeakAggImplHelper1<
     css::graphic::XGraphicTransformer
     > GraphicTransformer_UnoImplHelper1;

@@ -67,16 +67,25 @@ struct ProcessDocumentsRequest
 };
 
 class DispatchWatcher;
-class OfficeIPCThread : public salhelper::Thread
-{
-  private:
-    static rtl::Reference< OfficeIPCThread > pGlobalOfficeIPCThread;
+class IpcThread;
+class PipeIpcThread;
+class DbusIpcThread;
 
-    osl::Pipe                   maPipe;
-    bool                        mbDowning;
-    bool                        mbRequestsEnabled;
+class RequestHandler: public salhelper::SimpleReferenceObject
+{
+    friend IpcThread;
+    friend PipeIpcThread;
+    friend DbusIpcThread;
+
+  private:
+    static rtl::Reference< RequestHandler > pGlobal;
+
+    enum class State { Starting, RequestsEnabled, Downing };
+
+    State                       mState;
     int                         mnPendingRequests;
-    DispatchWatcher*            mpDispatchWatcher;
+    rtl::Reference<DispatchWatcher> mpDispatchWatcher;
+    rtl::Reference<IpcThread> mIpcThread;
 
     /* condition to be set when the request has been processed */
     ::osl::Condition cProcessed;
@@ -88,12 +97,9 @@ class OfficeIPCThread : public salhelper::Thread
 
     static ::osl::Mutex&        GetMutex();
 
-    OfficeIPCThread();
+    RequestHandler();
 
-    virtual ~OfficeIPCThread();
-
-    /// Working method which should be overridden
-    virtual void execute() override;
+    virtual ~RequestHandler();
 
   public:
     enum Status
@@ -106,34 +112,30 @@ class OfficeIPCThread : public salhelper::Thread
 
     // controlling pipe communication during shutdown
     static void                 SetDowning();
-    static void                 EnableRequests( bool i_bEnable = true );
+    static void                 EnableRequests();
     static bool                 AreRequestsPending();
-    static void                 RequestsCompleted( int n = 1 );
-    static bool                 ExecuteCmdLineRequests( ProcessDocumentsRequest& );
+    static void                 RequestsCompleted();
+    static bool                 ExecuteCmdLineRequests(
+        ProcessDocumentsRequest&, bool noTerminate);
 
     // return sal_False if second office
-    static Status               EnableOfficeIPCThread();
-    static void                 DisableOfficeIPCThread(bool join = true);
+    static Status               Enable(bool ipc);
+    static void                 Disable();
     // start dispatching events...
-    static void                 SetReady(
-        rtl::Reference< OfficeIPCThread > const & pThread =
-            rtl::Reference< OfficeIPCThread >());
-    static void                 WaitForReady(
-        rtl::Reference< OfficeIPCThread > const & pThread =
-            rtl::Reference< OfficeIPCThread >());
-    static bool                 IsEnabled();
+    static void                 SetReady();
+    static void                 WaitForReady();
 
-    bool                        AreRequestsEnabled() const { return mbRequestsEnabled && ! mbDowning; }
+    bool                        AreRequestsEnabled() const { return mState == State::RequestsEnabled; }
 };
 
 
-class OfficeIPCThreadController : public ::cppu::WeakImplHelper<
+class RequestHandlerController : public ::cppu::WeakImplHelper<
                                             css::lang::XServiceInfo,
                                             css::frame::XTerminateListener >
 {
     public:
-        OfficeIPCThreadController() {}
-        virtual ~OfficeIPCThreadController() {}
+        RequestHandlerController() {}
+        virtual ~RequestHandlerController() {}
 
         // XServiceInfo
         virtual OUString SAL_CALL getImplementationName()

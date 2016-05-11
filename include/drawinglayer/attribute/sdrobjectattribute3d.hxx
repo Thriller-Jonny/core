@@ -37,7 +37,6 @@ namespace drawinglayer { namespace attribute {
 }}
 
 
-
 namespace drawinglayer
 {
     namespace attribute
@@ -65,10 +64,14 @@ namespace drawinglayer
                 bool bTextureFilter,
                 bool bReducedLineGeometry);
             Sdr3DObjectAttribute(const Sdr3DObjectAttribute& rCandidate);
+            Sdr3DObjectAttribute();
             ~Sdr3DObjectAttribute();
 
             // assignment operator
             Sdr3DObjectAttribute& operator=(const Sdr3DObjectAttribute& rCandidate);
+
+            // checks if the incarnation is default constructed
+            bool isDefault() const;
 
             // compare operator
             bool operator==(const Sdr3DObjectAttribute& rCandidate) const;
@@ -88,7 +91,6 @@ namespace drawinglayer
         };
     } // end of namespace attribute
 } // end of namespace drawinglayer
-
 
 
 #endif //INCLUDED_DRAWINGLAYER_ATTRIBUTE_SDROBJECTATTRIBUTE3D_HXX

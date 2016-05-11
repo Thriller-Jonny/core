@@ -18,31 +18,25 @@
  */
 
 
-
-
 // Global header
-
 
 
 #include <limits.h>
 #include <utility>
 #include <vector>
 #include <algorithm>
-#include <boost/ref.hpp>
+#include <functional>
 #include <osl/mutex.hxx>
 #include <vcl/window.hxx>
 #include <vcl/svapp.hxx>
 #include <comphelper/sequence.hxx>
-#include <com/sun/star/uno/Any.hxx>
 #include <com/sun/star/uno/Reference.hxx>
 #include <com/sun/star/awt/Point.hpp>
 #include <com/sun/star/awt/Rectangle.hpp>
 #include <com/sun/star/accessibility/AccessibleTextType.hpp>
 
 
-
 // Project-local header
-
 
 
 #include <editeng/editdata.hxx>
@@ -97,10 +91,7 @@ namespace accessibility
     }
 
 
-
     // AccessibleStaticTextBase_Impl declaration
-
-
 
 
     /** AccessibleStaticTextBase_Impl
@@ -186,9 +177,7 @@ namespace accessibility
     };
 
 
-
     // AccessibleStaticTextBase_Impl implementation
-
 
 
     AccessibleStaticTextBase_Impl::AccessibleStaticTextBase_Impl() :
@@ -943,7 +932,7 @@ namespace accessibility
             {
                 const beans::PropertyValue* pItr = aSeq.getConstArray();
                 const beans::PropertyValue* pEnd  = pItr + aSeq.getLength();
-                const beans::PropertyValue* pFind = ::std::find_if( pItr, pEnd, ::std::bind2nd( PropertyValueEqualFunctor(), boost::cref( *aItr ) ) );
+                const beans::PropertyValue* pFind = ::std::find_if( pItr, pEnd, ::std::bind2nd( PropertyValueEqualFunctor(), std::cref( *aItr ) ) );
                 if ( pFind != pEnd )
                 {
                     aIntersectionVec.push_back( *pFind );
@@ -981,7 +970,7 @@ namespace accessibility
         {
             const beans::PropertyValue* pItr = aIntersectionSeq.getConstArray();
             const beans::PropertyValue* pEnd  = pItr + aIntersectionSeq.getLength();
-            bool bNone = ::std::none_of( pItr, pEnd, ::std::bind2nd( PropertyValueEqualFunctor(), boost::cref( pDefAttr[i] ) ) );
+            bool bNone = ::std::none_of( pItr, pEnd, ::std::bind2nd( PropertyValueEqualFunctor(), std::cref( pDefAttr[i] ) ) );
             if ( bNone && pDefAttr[i].Handle != 0)
             {
                 aDiffVec.push_back( pDefAttr[i] );
@@ -997,7 +986,6 @@ namespace accessibility
     }
 
 }  // end of namespace accessibility
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -66,7 +66,6 @@
 #include <basegfx/polygon/b2dpolygon.hxx>
 #include <drawinglayer/geometry/viewinformation2d.hxx>
 #include <canvas/elapsedtime.hxx>
-#include <boost/noncopyable.hpp>
 
 //#define DEBUG_TIMING
 #ifdef DEBUG_TIMING
@@ -104,12 +103,13 @@ namespace {
 }
 
 class BackgroundPainter
-    : public ILayerPainter,
-      public ::boost::noncopyable
+    : public ILayerPainter
 {
 public:
     explicit BackgroundPainter (const Color& rBackgroundColor) : maBackgroundColor(rBackgroundColor) {}
     virtual ~BackgroundPainter() {}
+    BackgroundPainter(const BackgroundPainter&) = delete;
+    BackgroundPainter& operator=(const BackgroundPainter&) = delete;
 
     virtual void Paint (OutputDevice& rDevice, const Rectangle& rRepaintArea) override
     {
@@ -144,7 +144,6 @@ SlideSorterView::SlideSorterView (SlideSorter& rSlideSorter)
       maPreviewSize(0,0),
       mbPreciousFlagUpdatePending(true),
       meOrientation(Layouter::GRID),
-      mpProperties(rSlideSorter.GetProperties()),
       mpPageUnderMouse(),
       mpPageObjectPainter(),
       mpSelectionPainter(),
@@ -419,7 +418,7 @@ void SlideSorterView::Layout ()
             mpLayouter->GetPageObjectLayouter());
         if (pPageObjectLayouter)
         {
-            const Size aNewPreviewSize (mpLayouter->GetPageObjectLayouter()->GetPreviewSize(PageObjectLayouter::WindowCoordinateSystem));
+            const Size aNewPreviewSize (mpLayouter->GetPageObjectLayouter()->GetPreviewSize());
             if (maPreviewSize != aNewPreviewSize && GetPreviewCache())
             {
                 mpPreviewCache->ChangeSize(aNewPreviewSize, Bitmap::HasFastScale());
@@ -816,22 +815,21 @@ bool SlideSorterView::SetState (
     const PageDescriptor::State eState,
     const bool bStateValue)
 {
-    model::SharedPageDescriptor pDescriptor (rpDescriptor);
-    if ( ! pDescriptor)
+    if ( ! rpDescriptor)
         return false;
 
-    const bool bModified (pDescriptor->SetState(eState, bStateValue));
+    const bool bModified (rpDescriptor->SetState(eState, bStateValue));
     if ( ! bModified)
         return false;
 
     // When the page object is not visible (i.e. not on the screen then
     // nothing has to be painted.
-    if (pDescriptor->HasState(PageDescriptor::ST_Visible))
+    if (rpDescriptor->HasState(PageDescriptor::ST_Visible))
     {
         // For most states a change of that state leads to visible
         // difference and we have to request a repaint.
         if (eState != PageDescriptor::ST_WasSelected)
-            RequestRepaint(pDescriptor);
+            RequestRepaint(rpDescriptor);
     }
 
     return bModified;

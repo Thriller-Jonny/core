@@ -154,7 +154,7 @@ public:
         with intervening linear white space and comments (cf. RFCs 822, 2045).
         The RFC 2231 extension are supported.  The encoding of rMediaType
         should be US-ASCII, but any Unicode values in the range U+0080..U+FFFF
-        are interpretet 'as appropriate.'
+        are interpreted 'as appropriate.'
 
         @param pType  If not null, returns the type (the first of the above
         tokens), in US-ASCII encoding and converted to lower case.
@@ -255,10 +255,8 @@ private:
 
         @param pOctets  A null terminated sequence of octets, must not be
         null.
-
-        @return  The length of pOctets (without the terminating null).
      */
-    sal_Size writeSequence(const sal_Char * pSequence);
+    void writeSequence(const sal_Char * pSequence);
 
     /** Write a sequence of octets.
 
@@ -303,28 +301,6 @@ public:
         @return  This instance.
      */
     inline INetMIMEOutputSink & operator <<(const sal_Char * pOctets);
-
-    /** Write a sequence of octets.
-
-        @param rOctets  A OString, interpreted as a sequence of octets.
-
-        @return  This instance.
-     */
-    INetMIMEOutputSink & operator <<(const OString& rOctets)
-    {
-        writeSequence(rOctets.getStr(), rOctets.getStr() + rOctets.getLength());
-        return *this;
-    }
-
-    /** Call a manipulator function.
-
-        @param  pManipulator  A manipulator function.
-
-        @return  Whatever the manipulator function returns.
-     */
-    INetMIMEOutputSink &
-    operator <<(INetMIMEOutputSink & (* pManipulator)(INetMIMEOutputSink &))
-    { return pManipulator(*this); }
 
     OString takeBuffer()
     {

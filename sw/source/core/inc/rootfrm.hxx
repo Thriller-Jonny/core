@@ -23,6 +23,8 @@
 #include <viewsh.hxx>
 #include <doc.hxx>
 #include <IDocumentTimerAccess.hxx>
+#include <o3tl/typed_flags_set.hxx>
+#include <vector>
 
 class SwContentFrame;
 class SwViewShell;
@@ -40,15 +42,21 @@ class SwSelectionList;
 struct SwPosition;
 struct SwCursorMoveState;
 
-#define INV_SIZE    1
-#define INV_PRTAREA 2
-#define INV_POS     4
-#define INV_TABLE   8
-#define INV_SECTION 16
-#define INV_LINENUM 32
-#define INV_DIRECTION 64
+enum class SwInvalidateFlags
+{
+    Size      = 0x01,
+    PrtArea   = 0x02,
+    Pos       = 0x04,
+    Table     = 0x08,
+    Section   = 0x10,
+    LineNum   = 0x20,
+    Direction = 0x40,
+};
 
-#include <vector>
+namespace o3tl
+{
+    template<> struct typed_flags<SwInvalidateFlags> : is_typed_flags<SwInvalidateFlags, 0x7f> {};
+};
 
 /// The root element of a Writer document layout.
 class SwRootFrame: public SwLayoutFrame
@@ -60,8 +68,8 @@ class SwRootFrame: public SwLayoutFrame
     friend inline void SetLastPage( SwPageFrame* );
 
     // For creating and destroying of the virtual output device manager
-    friend void _FrameInit(); // Creates s_pVout
-    friend void _FrameFinit(); // Destroys s_pVout
+    friend void FrameInit(); // Creates s_pVout
+    friend void FrameFinit(); // Destroys s_pVout
 
     std::vector<SwRect> maPageRects;// returns the current rectangle for each page frame
                                     // the rectangle is extended to the top/bottom/left/right
@@ -142,8 +150,8 @@ class SwRootFrame: public SwLayoutFrame
     void ImplCalcBrowseWidth();
     void ImplInvalidateBrowseWidth();
 
-    void _DeleteEmptySct(); // Destroys the registered SectionFrames
-    void _RemoveFromList( SwSectionFrame* pSct ); // Removes SectionFrames from the Delete List
+    void DeleteEmptySct_(); // Destroys the registered SectionFrames
+    void RemoveFromList_( SwSectionFrame* pSct ); // Removes SectionFrames from the Delete List
 
     virtual void DestroyImpl() override;
     virtual ~SwRootFrame();
@@ -254,7 +262,7 @@ public:
     static void AssertPageFlys( SwPageFrame * );
 
     /// Invalidate all Content, Size or PrtArea
-    void InvalidateAllContent( sal_uInt8 nInvalidate );
+    void InvalidateAllContent( SwInvalidateFlags nInvalidate );
 
     /**
      * Invalidate/re-calculate the position of all floating
@@ -343,8 +351,8 @@ public:
      * destroyed later on or deregistered.
      */
     void InsertEmptySct( SwSectionFrame* pDel );
-    void DeleteEmptySct() { if( mpDestroy ) _DeleteEmptySct(); }
-    void RemoveFromList( SwSectionFrame* pSct ) { if( mpDestroy ) _RemoveFromList( pSct ); }
+    void DeleteEmptySct() { if( mpDestroy ) DeleteEmptySct_(); }
+    void RemoveFromList( SwSectionFrame* pSct ) { if( mpDestroy ) RemoveFromList_( pSct ); }
 #ifdef DBG_UTIL
     bool IsInDelList( SwSectionFrame* pSct ) const;
 #endif

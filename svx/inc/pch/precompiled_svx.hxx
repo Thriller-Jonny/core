@@ -20,7 +20,7 @@
  ./bin/update_pch_bisect ./svx/inc/pch/precompiled_svx.hxx "/opt/lo/bin/make svx.build" --find-conflicts
 */
 
-#ifdef WNT
+#ifdef _WIN32
 #define UNICODE
 #define _UNICODE
 #endif
@@ -44,9 +44,7 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
-#include <boost/bind.hpp>
 #include <boost/intrusive_ptr.hpp>
-#include <boost/noncopyable.hpp>
 #include <boost/optional.hpp>
 #include <osl/diagnose.h>
 #include <osl/diagnose.hxx>
@@ -327,7 +325,6 @@
 #include <sfx2/dockwin.hxx>
 #include <sfx2/imagemgr.hxx>
 #include <sfx2/itemconnect.hxx>
-#include <sfx2/mnuitem.hxx>
 #include <sfx2/module.hxx>
 #include <sfx2/objsh.hxx>
 #include <sfx2/request.hxx>

@@ -72,7 +72,7 @@ public:
     void Insert( const SearchAttrItem& rItem )
         { SrchAttrItemList::push_back( rItem ); }
     // deletes the pointer to the items
-    void Remove(size_t nPos, size_t nLen = 1);
+    void Remove(size_t nPos);
 };
 
 
@@ -98,6 +98,7 @@ public:
     virtual ~SvxSearchDialogWrapper ();
     SvxSearchDialog *getDialog () { return dialog;}
     static void SetSearchLabel(const SearchLabel& rSL);
+    static void SetSearchLabel(const OUString& sStr);
     SFX_DECL_CHILDWINDOW_WITHID(SvxSearchDialogWrapper);
 };
 
@@ -161,7 +162,8 @@ private:
     VclPtr<ListBox>        m_pReplaceTmplLB;
     VclPtr<FixedText>      m_pReplaceAttrText;
 
-    VclPtr<PushButton>    m_pSearchBtn;
+    VclPtr<PushButton>     m_pSearchBtn;
+    VclPtr<PushButton>     m_pBackSearchBtn;
     VclPtr<PushButton>     m_pSearchAllBtn;
     VclPtr<PushButton>     m_pReplaceBtn;
     VclPtr<PushButton>     m_pReplaceAllBtn;
@@ -178,14 +180,15 @@ private:
     VclPtr<CheckBox>       m_pIgnoreDiacritics;
     VclPtr<CheckBox>       m_pIgnoreKashida;
     VclPtr<CheckBox>       m_pSelectionBtn;
-    VclPtr<CheckBox>       m_pBackwardsBtn;
     VclPtr<CheckBox>       m_pRegExpBtn;
+    VclPtr<CheckBox>       m_pWildcardBtn;
     VclPtr<CheckBox>       m_pSimilarityBox;
     VclPtr<PushButton>     m_pSimilarityBtn;
     VclPtr<CheckBox>       m_pLayoutBtn;
     VclPtr<CheckBox>       m_pNotesBtn;
     VclPtr<CheckBox>       m_pJapMatchFullHalfWidthCB;
     VclPtr<CheckBox>       m_pJapOptionsCB;
+    VclPtr<CheckBox>       m_pReplaceBackwardsCB;
     VclPtr<PushButton>     m_pJapOptionsBtn;
 
     VclPtr<PushButton>     m_pAttributeBtn;
@@ -204,6 +207,7 @@ private:
     bool            bWriter;
     bool            bSearch;
     bool            bFormat;
+    bool            bReplaceBackwards;
     SearchOptionFlags  nOptions;
     bool            bSet;
     bool            bConstruct;

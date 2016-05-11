@@ -18,7 +18,7 @@
 #include "compat.hxx"
 #include "plugin.hxx"
 
-#if __clang_major__ == 3 && __clang_minor__ < 7
+#if CLANG_VERSION < 30700
 
 template<> struct std::iterator_traits<ExprIterator> {
     typedef std::ptrdiff_t difference_type;
@@ -108,6 +108,11 @@ bool isBool(Expr const * expr, bool allowTypedefs = true) {
 bool isMatchingBool(Expr const * expr, Expr const * comparisonExpr) {
     return isBool(expr, false)
         || areSameTypedef(expr->getType(), comparisonExpr->getType());
+}
+
+bool isSalBool(QualType type) {
+    auto t = type->getAs<TypedefType>();
+    return t != nullptr && t->getDecl()->getName() == "sal_Bool";
 }
 
 bool isBoolExpr(Expr const * expr) {
@@ -230,7 +235,7 @@ bool hasCLanguageLinkageType(FunctionDecl const * decl) {
     if (decl->isExternC()) {
         return true;
     }
-#if (__clang_major__ == 3 && __clang_minor__ >= 3) || __clang_major__ > 3
+#if CLANG_VERSION >= 30300
     if (decl->isInExternCContext()) {
         return true;
     }
@@ -287,6 +292,8 @@ public:
     bool TraverseBinOrAssign(CompoundAssignOperator * expr);
 
     bool TraverseBinXorAssign(CompoundAssignOperator * expr);
+
+    bool TraverseCXXStdInitializerListExpr(CXXStdInitializerListExpr * expr);
 
     bool TraverseReturnStmt(ReturnStmt * stmt);
 
@@ -368,14 +375,15 @@ bool ImplicitBoolConversion::TraverseCallExpr(CallExpr * expr) {
                                 .getNonReferenceType());
                         if (t2 != nullptr) {
                             //TODO: fix this superficial nonsense check:
-                            ASTTemplateArgumentListInfo const & ai
-                                = dr->getExplicitTemplateArgs();
-                            if (ai.NumTemplateArgs == 1
-                                && (ai[0].getArgument().getKind()
-                                    == TemplateArgument::Type)
-                                && isBool(ai[0].getTypeSourceInfo()->getType()))
-                            {
-                                continue;
+                            if (dr->getNumTemplateArgs() == 1) {
+                                auto const ta = dr->getTemplateArgs();
+                                if ((ta[0].getArgument().getKind()
+                                     == TemplateArgument::Type)
+                                    && isBool(
+                                        ta[0].getTypeSourceInfo()->getType()))
+                                {
+                                    continue;
+                                }
                             }
                         }
                     }
@@ -760,6 +768,43 @@ bool ImplicitBoolConversion::TraverseBinXorAssign(CompoundAssignOperator * expr)
     return bRet;
 }
 
+bool ImplicitBoolConversion::TraverseCXXStdInitializerListExpr(
+    CXXStdInitializerListExpr * expr)
+{
+    // Must be some std::initializer_list<T>; check whether T is sal_Bool (i.e.,
+    // unsigned char) [TODO: check for real sal_Bool instead]:
+    auto t = expr->getType();
+    if (auto et = dyn_cast<ElaboratedType>(t)) {
+        t = et->desugar();
+    }
+    auto ts = t->getAs<TemplateSpecializationType>();
+    if (ts == nullptr
+        || !ts->getArg(0).getAsType()->isSpecificBuiltinType(
+            clang::BuiltinType::UChar))
+    {
+        return RecursiveASTVisitor::TraverseCXXStdInitializerListExpr(expr);
+    }
+    // Avoid warnings for code like
+    //
+    //  Sequence<sal_Bool> arBool({true, false, true});
+    //
+    auto e = dyn_cast<InitListExpr>(
+        ignoreParenAndTemporaryMaterialization(expr->getSubExpr()));
+    if (e == nullptr) {
+        return RecursiveASTVisitor::TraverseCXXStdInitializerListExpr(expr);
+    }
+    nested.push(std::vector<ImplicitCastExpr const *>());
+    bool ret = RecursiveASTVisitor::TraverseCXXStdInitializerListExpr(expr);
+    assert(!nested.empty());
+    for (auto i: nested.top()) {
+        if (std::find(e->begin(), e->end(), i) == e->end()) {
+            reportWarning(i);
+        }
+    }
+    nested.pop();
+    return ret;
+}
+
 bool ImplicitBoolConversion::TraverseReturnStmt(ReturnStmt * stmt) {
     nested.push(std::vector<ImplicitCastExpr const *>());
     bool bRet = RecursiveASTVisitor::TraverseReturnStmt(stmt);
@@ -835,6 +880,14 @@ bool ImplicitBoolConversion::VisitImplicitCastExpr(
             == expr->getType().IgnoreParens())
         && isBool(sub->getSubExpr()->IgnoreParenImpCasts()))
     {
+        // Ignore "normalizing cast" bool(b) from sal_Bool b to bool, then
+        // implicitly cast back again to sal_Bool:
+        if (dyn_cast<CXXFunctionalCastExpr>(sub) != nullptr
+            && sub->getType()->isBooleanType() && isSalBool(expr->getType())
+            && isSalBool(sub->getSubExpr()->IgnoreParenImpCasts()->getType()))
+        {
+            return true;
+        }
         report(
             DiagnosticsEngine::Warning,
             "explicit conversion (%0) from %1 to %2 implicitly cast back to %3",

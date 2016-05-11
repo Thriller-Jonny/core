@@ -465,6 +465,20 @@ void ScDocumentImport::setAttrEntries( SCTAB nTab, SCCOL nCol, Attrs& rAttrs )
     pCol->pAttrArray->SetAttrEntries(rAttrs.mpData, rAttrs.mnSize);
 }
 
+void ScDocumentImport::setRowsVisible(SCTAB nTab, SCROW nRowStart, SCROW nRowEnd, bool bVisible)
+{
+    if (!bVisible)
+    {
+        getDoc().ShowRows(nRowStart, nRowEnd, nTab, false);
+        getDoc().SetDrawPageSize(nTab);
+        getDoc().UpdatePageBreaks( nTab );
+    }
+    else
+    {
+        assert(false);
+    }
+}
+
 namespace {
 
 class CellStoreInitializer
@@ -593,11 +607,12 @@ void ScDocumentImport::finalize()
             continue;
 
         ScTable& rTab = **itTab;
-        ScColumn* pCol = &rTab.aCol[0];
-        ScColumn* pColEnd = pCol + static_cast<size_t>(MAXCOLCOUNT);
-        for (; pCol != pColEnd; ++pCol)
-            initColumn(*pCol);
+        SCCOL nNumCols = rTab.aCol.size();
+        for (SCCOL nColIdx = 0; nColIdx < nNumCols; ++nColIdx)
+            initColumn(rTab.aCol[nColIdx]);
     }
+
+    mpImpl->mrDoc.finalizeOutlineImport();
 }
 
 void ScDocumentImport::initColumn(ScColumn& rCol)

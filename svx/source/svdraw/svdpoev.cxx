@@ -36,7 +36,6 @@
 using namespace sdr;
 
 
-
 void SdrPolyEditView::ImpResetPolyPossibilityFlags()
 {
     eMarkedPointsSmooth=SDRPATHSMOOTH_DONTCARE;
@@ -90,9 +89,9 @@ void SdrPolyEditView::CheckPolyPossibilitiesHelper( SdrMark* pM, bool& b1stSmoot
 
     if(pPath && pPts)
     {
-        const sal_uInt32 nMarkedPntAnz(pPts->size());
+        const sal_uInt32 nMarkedPointCount(pPts->size());
 
-        if(nMarkedPntAnz)
+        if(nMarkedPointCount)
         {
             bool bClosed(pPath->IsClosed());
             bSetMarkedPointsSmoothPossible = true;
@@ -610,7 +609,6 @@ void SdrPolyEditView::ImpTransformMarkedPoints(PPolyTrFunc pTrFunc, const void* 
         }
     }
 }
-
 
 
 static void ImpMove(Point& rPt, Point* pC1, Point* pC2, const void* p1, const void* /*p2*/, const void* /*p3*/, const void* /*p4*/, const void* /*p5*/)

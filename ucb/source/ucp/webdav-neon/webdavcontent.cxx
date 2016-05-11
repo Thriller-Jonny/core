@@ -96,9 +96,6 @@ using namespace webdav_ucp;
 // Content Implementation.
 
 
-
-
-
 // ctr for content on an existing webdav resource
 Content::Content(
           const uno::Reference< uno::XComponentContext >& rxContext,
@@ -168,9 +165,7 @@ Content::~Content()
 }
 
 
-
 // XInterface methods.
-
 
 
 // virtual
@@ -230,9 +225,7 @@ uno::Any SAL_CALL Content::queryInterface( const uno::Type & rType )
 }
 
 
-
 // XTypeProvider methods.
-
 
 
 XTYPEPROVIDER_COMMON_IMPL( Content );
@@ -328,9 +321,7 @@ uno::Sequence< uno::Type > SAL_CALL Content::getTypes()
 }
 
 
-
 // XServiceInfo methods.
-
 
 
 // virtual
@@ -350,9 +341,7 @@ uno::Sequence< OUString > SAL_CALL Content::getSupportedServiceNames()
 }
 
 
-
 // XContent methods.
-
 
 
 // virtual
@@ -380,9 +369,7 @@ OUString SAL_CALL Content::getContentType()
 }
 
 
-
 // XCommandProcessor methods.
-
 
 
 // virtual
@@ -559,7 +546,7 @@ uno::Any SAL_CALL Content::execute(
         destroy( bDeletePhysical );
 
         // Remove own and all children's Additional Core Properties.
-        removeAdditionalPropertySet( true );
+        removeAdditionalPropertySet();
     }
     else if ( aCommand.Name == "transfer" && isFolder( Environment ) )
     {
@@ -754,9 +741,7 @@ void SAL_CALL Content::abort( sal_Int32 /*CommandId*/ )
 }
 
 
-
 // XPropertyContainer methods.
-
 
 
 void Content::addProperty( const ucb::PropertyCommandArgument& aCmdArg,
@@ -1014,9 +999,7 @@ void SAL_CALL Content::removeProperty( const OUString& Name )
 }
 
 
-
 // XContentCreator methods.
-
 
 
 // virtual
@@ -1135,9 +1118,7 @@ OUString Content::getParentURL()
 }
 
 
-
 // Non-interface methods.
-
 
 
 // static
@@ -1383,6 +1364,9 @@ uno::Reference< sdbc::XRow > Content::getPropertyValues(
 
         if ( bNetworkAccessAllowed )
         {
+            if( eType != DAV )
+                m_bDidGetOrHead = false;
+
             // All properties obtained already?
             std::vector< OUString > aMissingProps;
             if ( !( xProps.get()
@@ -1561,7 +1545,7 @@ uno::Sequence< uno::Any > Content::setPropertyValues(
 
     beans::PropertyChangeEvent aEvent;
     aEvent.Source         = static_cast< cppu::OWeakObject * >( this );
-    aEvent.Further        = sal_False;
+    aEvent.Further        = false;
     // aEvent.PropertyName =
     aEvent.PropertyHandle = -1;
     // aEvent.OldValue   =
@@ -1850,11 +1834,10 @@ uno::Sequence< uno::Any > Content::setPropertyValues(
 
         uno::Reference< ucb::XContentIdentifier > xNewId
             = new ::ucbhelper::ContentIdentifier( aNewURL );
-        uno::Reference< ucb::XContentIdentifier > xOldId = xIdentifier;
 
         try
         {
-            NeonUri sourceURI( xOldId->getContentIdentifier() );
+            NeonUri sourceURI( xIdentifier->getContentIdentifier() );
             NeonUri targetURI( xNewId->getContentIdentifier() );
             targetURI.SetScheme( sourceURI.GetScheme() );
 
@@ -2702,7 +2685,7 @@ void Content::transfer(
                                 task::InteractionClassification_ERROR,
                                 aTargetURI ) ),
                         Environment );
-                    // Unreachable
+                    SAL_FALLTHROUGH; // Unreachable
                 }
 
                 case ucb::NameClash::OVERWRITE:
@@ -2998,7 +2981,7 @@ void Content::lock(
                 // since it mostly happens on read/only part of webdav, this appears to be the most correct exception available
                 throw
                     ucb::InteractiveNetworkWriteException(
-                        OUString( "Authentication error while tring to lock! Write only WebDAV perhaps?" ),
+                        OUString( "Authentication error while trying to lock! Write only WebDAV perhaps?" ),
                         static_cast< cppu::OWeakObject * >( this ),
                         task::InteractionClassification_ERROR,
                         e.getData() );
@@ -3039,7 +3022,7 @@ void Content::lock(
                 break;
             case DAVException::DAV_LOCKED_SELF:
                 // we already hold the lock and it is in our internal lockstore
-                // just return as if the lock was successfull
+                // just return as if the lock was successful
                 return;
                 break;
             default:
@@ -3294,6 +3277,7 @@ uno::Any Content::MapDAVException( const DAVException & e, bool bWrite )
 //    case DAVException::DAV_HTTP_AUTHPROXY:
 //        break;
 
+    case DAVException::DAV_HTTP_TIMEOUT:
     case DAVException::DAV_HTTP_CONNECT:
         aException <<=
             ucb::InteractiveNetworkConnectException(
@@ -3302,10 +3286,6 @@ uno::Any Content::MapDAVException( const DAVException & e, bool bWrite )
                 task::InteractionClassification_ERROR,
                 e.getData() );
         break;
-
-// @@@ No matching InteractiveNetwork*Exception
-//    case DAVException::DAV_HTTP_TIMEOUT:
-//        break;
 
 // @@@ No matching InteractiveNetwork*Exception
 //     case DAVException::DAV_HTTP_REDIRECT:
@@ -3378,6 +3358,7 @@ uno::Any Content::MapDAVException( const DAVException & e, bool bWrite )
 bool Content::shouldAccessNetworkAfterException( const DAVException & e )
 {
     if ( ( e.getStatus() == SC_NOT_FOUND ) ||
+         ( e.getError() == DAVException::DAV_HTTP_TIMEOUT ) ||
          ( e.getError() == DAVException::DAV_HTTP_LOOKUP ) ||
          ( e.getError() == DAVException::DAV_HTTP_CONNECT ) ||
          ( e.getError() == DAVException::DAV_HTTP_AUTH ) ||

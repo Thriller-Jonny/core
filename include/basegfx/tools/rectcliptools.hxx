@@ -24,7 +24,6 @@
 #include <basegfx/range/b2ibox.hxx>
 
 
-
 namespace basegfx
 {
     namespace tools
@@ -70,24 +69,6 @@ namespace basegfx
             return clip;
         }
 
-        /** Determine number of clip planes hit by given clip mask
-
-            This method returns the number of one bits in the four
-            least significant bits of the argument, which amounts to
-            the number of clip planes hit within the
-            getCohenSutherlandClipFlags() method.
-         */
-        inline sal_uInt32 getNumberOfClipPlanes( sal_uInt32 nFlags )
-        {
-            // classic bit count algo, see e.g. Reingold, Nievergelt,
-            // Deo: Combinatorial Algorithms, Theory and Practice,
-            // Prentice-Hall 1977
-            nFlags = (nFlags & 0x05) + ((nFlags >> 1) & 0x05);
-            nFlags = (nFlags & 0x03) + (nFlags >> 2); // no need for &
-                                                      // 0x03, can't
-                                                      // overflow
-            return nFlags;
-        }
     }
 }
 

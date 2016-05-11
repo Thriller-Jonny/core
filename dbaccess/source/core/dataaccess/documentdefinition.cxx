@@ -332,8 +332,8 @@ namespace dbaccess
     public:
         ODocumentSaveContinuation() { }
 
-        inline Reference<XContent>  getContent() const { return m_xParentContainer; }
-        inline OUString      getName() const { return m_sName; }
+        const Reference<XContent>& getContent() const { return m_xParentContainer; }
+        const OUString&       getName() const { return m_sName; }
 
         // XInteractionDocumentSave
         virtual void SAL_CALL setName( const OUString& _sName,const Reference<XContent>& _xParent) throw(RuntimeException, std::exception) override;
@@ -452,7 +452,7 @@ void ODocumentDefinition::closeObject()
         {
             Reference< css::util::XCloseable> xCloseable(m_xEmbeddedObject,UNO_QUERY);
             if ( xCloseable.is() )
-                xCloseable->close(sal_True);
+                xCloseable->close(true);
         }
         catch(const Exception&)
         {
@@ -728,12 +728,12 @@ void ODocumentDefinition::impl_initFormEditView( const Reference< XController >&
         LayoutManagerLock aLockLayout( _rxController );
 
         // setting of the visual properties
-        xViewSettings->setPropertyValue("ShowRulers",makeAny(sal_True));
-        xViewSettings->setPropertyValue("ShowVertRuler",makeAny(sal_True));
-        xViewSettings->setPropertyValue("ShowHoriRuler",makeAny(sal_True));
-        xViewSettings->setPropertyValue("IsRasterVisible",makeAny(sal_True));
-        xViewSettings->setPropertyValue("IsSnapToRaster",makeAny(sal_True));
-        xViewSettings->setPropertyValue("ShowOnlineLayout",makeAny(sal_True));
+        xViewSettings->setPropertyValue("ShowRulers",makeAny(true));
+        xViewSettings->setPropertyValue("ShowVertRuler",makeAny(true));
+        xViewSettings->setPropertyValue("ShowHoriRuler",makeAny(true));
+        xViewSettings->setPropertyValue("IsRasterVisible",makeAny(true));
+        xViewSettings->setPropertyValue("IsSnapToRaster",makeAny(true));
+        xViewSettings->setPropertyValue("ShowOnlineLayout",makeAny(true));
         xViewSettings->setPropertyValue("RasterSubdivisionX",makeAny(sal_Int32(5)));
         xViewSettings->setPropertyValue("RasterSubdivisionY",makeAny(sal_Int32(5)));
     }
@@ -1201,7 +1201,7 @@ void ODocumentDefinition::onCommandInsert( const OUString& _sURL, const Referenc
             {
                 Reference< css::util::XCloseable> xCloseable(m_xEmbeddedObject,UNO_QUERY);
                 if ( xCloseable.is() )
-                    xCloseable->close(sal_True);
+                    xCloseable->close(true);
             }
             catch(const Exception&)
             {
@@ -1299,18 +1299,19 @@ bool ODocumentDefinition::save(bool _bApprove)
     return true;
 }
 
-bool ODocumentDefinition::saveAs()
+void ODocumentDefinition::saveAs()
 {
     // default handling: instantiate an interaction handler and let it handle the parameter request
     if ( !m_bOpenInDesign )
-        return false;
+        return;
 
     {
         osl::ClearableGuard< osl::Mutex > aGuard( m_aMutex );
         if ( m_pImpl->m_aProps.aTitle.isEmpty() )
         {
             aGuard.clear();
-            return save(false); // (sal_False) : we don't want an approve dialog
+            save(false); // (sal_False) : we don't want an approve dialog
+            return;
         }
     }
     try
@@ -1340,9 +1341,9 @@ bool ODocumentDefinition::saveAs()
             xHandler->handle(xRequest);
 
             if ( pAbort->wasSelected() )
-                return false;
+                return;
             if  ( pDisApprove->wasSelected() )
-                return true;
+                return;
             if ( pDocuSave->wasSelected() )
             {
                 ::osl::MutexGuard aGuard(m_aMutex);
@@ -1403,7 +1404,6 @@ bool ODocumentDefinition::saveAs()
     {
         OSL_FAIL("ODocumentDefinition::save: caught an Exception (tried to let the InteractionHandler handle it)!");
     }
-    return true;
 }
 
 namespace
@@ -1472,16 +1472,16 @@ void ODocumentDefinition::separateOpenCommandArguments( const Sequence< Property
 {
     ::comphelper::NamedValueCollection aOpenCommandArguments( i_rOpenCommandArguments );
 
-    const sal_Char* pObjectDescriptorArgs[] =
+    const char* pObjectDescriptorArgs[] =
     {
         "RecoveryStorage"
     };
-    for ( size_t i=0; i < sizeof( pObjectDescriptorArgs ) / sizeof( pObjectDescriptorArgs[0] ); ++i )
+    for (const char* pObjectDescriptorArg : pObjectDescriptorArgs)
     {
-        if ( aOpenCommandArguments.has( pObjectDescriptorArgs[i] ) )
+        if ( aOpenCommandArguments.has( pObjectDescriptorArg ) )
         {
-            o_rEmbeddedObjectDescriptor.put( pObjectDescriptorArgs[i], aOpenCommandArguments.get( pObjectDescriptorArgs[i] ) );
-            aOpenCommandArguments.remove( pObjectDescriptorArgs[i] );
+            o_rEmbeddedObjectDescriptor.put( pObjectDescriptorArg, aOpenCommandArguments.get( pObjectDescriptorArg ) );
+            aOpenCommandArguments.remove( pObjectDescriptorArg );
         }
     }
 
@@ -2005,7 +2005,7 @@ bool ODocumentDefinition::prepareClose()
             // document has not yet been activated, i.e. has no UI, yet
             return true;
 
-        bool bCouldSuspend = xController->suspend( sal_True );
+        bool bCouldSuspend = xController->suspend( true );
         if ( !bCouldSuspend )
             // controller vetoed the closing
             return false;
@@ -2022,7 +2022,7 @@ bool ODocumentDefinition::prepareClose()
             {
                 if ( bCouldSuspend )
                     // revert suspension
-                    xController->suspend( sal_False );
+                    xController->suspend( false );
                 // saving failed or was cancelled
                 return false;
             }

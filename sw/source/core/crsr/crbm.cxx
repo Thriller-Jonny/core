@@ -33,8 +33,7 @@ namespace
     struct CursorStateHelper
     {
         explicit CursorStateHelper(SwCursorShell& rShell)
-            : m_aLink(rShell)
-            , m_pCursor(rShell.GetSwCursor())
+            : m_pCursor(rShell.GetSwCursor())
             , m_aSaveState(*m_pCursor)
         { }
 
@@ -61,18 +60,17 @@ namespace
             return false;
         }
 
-        SwCallLink m_aLink;
         SwCursor* m_pCursor;
         SwCursorSaveState m_aSaveState;
     };
 
-    static bool lcl_ReverseMarkOrderingByEnd(const IDocumentMarkAccess::pMark_t& rpFirst,
+    bool lcl_ReverseMarkOrderingByEnd(const IDocumentMarkAccess::pMark_t& rpFirst,
         const IDocumentMarkAccess::pMark_t& rpSecond)
     {
         return rpFirst->GetMarkEnd() > rpSecond->GetMarkEnd();
     }
 
-    static bool lcl_IsInvisibleBookmark(IDocumentMarkAccess::pMark_t pMark)
+    bool lcl_IsInvisibleBookmark(const IDocumentMarkAccess::pMark_t& pMark)
     {
         return IDocumentMarkAccess::GetType(*pMark) != IDocumentMarkAccess::MarkType::BOOKMARK;
     }

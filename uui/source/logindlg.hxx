@@ -38,9 +38,6 @@
 #define LF_NO_USESYSCREDS       0x0100  // hide "use system credentials"
 
 
-
-
-
 class LoginDialog : public ModalDialog
 {
     VclPtr<FixedText>      m_pErrorFT;
@@ -58,9 +55,12 @@ class LoginDialog : public ModalDialog
     VclPtr<CheckBox>       m_pSavePasswdBtn;
     VclPtr<CheckBox>       m_pUseSysCredsCB;
     VclPtr<OKButton>       m_pOKBtn;
+    OUString m_server;
+    OUString m_realm;
 
     void            HideControls_Impl( sal_uInt16 nFlags );
     void            EnableUseSysCredsControls_Impl( bool bUseSysCredsEnabled );
+    void            SetRequest();
 
     DECL_LINK_TYPED(OKHdl_Impl, Button*, void);
     DECL_LINK_TYPED(PathHdl_Impl, Button*, void);
@@ -75,7 +75,7 @@ public:
     OUString        GetName() const                             { return m_pNameED->GetText(); }
     void            SetName( const OUString& rNewName )           { m_pNameED->SetText( rNewName ); }
     OUString        GetPassword() const                         { return m_pPasswordED->GetText(); }
-    void            SetPassword( const OUString& rNew )           { m_pPasswordED->SetText( rNew ); }
+    void            SetPassword( const OUString& rNew );
     OUString        GetAccount() const                          { return m_pAccountED->GetText(); }
     bool            IsSavePassword() const                      { return m_pSavePasswdBtn->IsChecked(); }
     void            SetSavePassword( bool bSave )               { m_pSavePasswdBtn->Check( bSave ); }
@@ -86,11 +86,6 @@ public:
     void            ClearPassword();
     void            ClearAccount();
 };
-
-
-
-
-
 
 
 #endif // INCLUDED_UUI_SOURCE_LOGINDLG_HXX

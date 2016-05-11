@@ -121,11 +121,11 @@ private:
     BASIC_DLLPRIVATE void Init();
 
 protected:
-    bool            ImpLoadLibrary( BasicLibInfo* pLibInfo, SotStorage* pCurStorage, bool bInfosOnly = false );
+    bool            ImpLoadLibrary( BasicLibInfo* pLibInfo, SotStorage* pCurStorage );
     void            ImpCreateStdLib( StarBASIC* pParentFromStdLib );
     void            ImpMgrNotLoaded(  const OUString& rStorageName  );
     BasicLibInfo*   CreateLibInfo();
-    void            LoadBasicManager( SotStorage& rStorage, const OUString& rBaseURL, bool bLoadBasics = true );
+    void            LoadBasicManager( SotStorage& rStorage, const OUString& rBaseURL );
     void            LoadOldBasicManager( SotStorage& rStorage );
     bool            ImplLoadBasic( SvStream& rStrm, StarBASICRef& rOldBasic ) const;
     static bool     ImplEncryptStream( SvStream& rStream );
@@ -147,9 +147,9 @@ public:
     static void     LegacyDeleteBasicManager( BasicManager*& _rpManager );
 
     void            SetStorageName( const OUString& rName )   { maStorageName = rName; }
-    OUString        GetStorageName() const                  { return maStorageName; }
+    const OUString& GetStorageName() const                  { return maStorageName; }
     void            SetName( const OUString& rName )          { aName = rName; }
-    OUString        GetName() const                         { return aName; }
+    const OUString& GetName() const                         { return aName; }
 
 
     sal_uInt16      GetLibCount() const;
@@ -185,16 +185,16 @@ public:
         returned. If it does not yet exist, it is newly created, and inserted into the basic library.
     */
     css::uno::Any
-                    SetGlobalUNOConstant( const sal_Char* _pAsciiName, const css::uno::Any& _rValue );
+                    SetGlobalUNOConstant( const OUString& rName, const css::uno::Any& _rValue );
 
     /** retrieves a global constant in the basic library, referring to some UNO object, returns true if a value is found ( value is in aOut ) false otherwise. */
-                    bool GetGlobalUNOConstant( const sal_Char* _pAsciiName, css::uno::Any& aOut );
+                    bool GetGlobalUNOConstant( const OUString& rName, css::uno::Any& aOut );
     /** determines whether there are password-protected modules whose size exceedes the
         legacy module size
         @param _out_rModuleNames
             takes the names of modules whose size exceeds the legacy limit
     */
-    bool            LegacyPsswdBinaryLimitExceeded( css::uno::Sequence< OUString >& _out_rModuleNames );
+    bool            LegacyPsswdBinaryLimitExceeded( std::vector< OUString >& _out_rModuleNames );
     bool HasExeCode( const OUString& );
     /// determines whether the Basic Manager has a given macro, given by fully qualified name
     bool            HasMacro( OUString const& i_fullyQualifiedName ) const;
@@ -208,7 +208,7 @@ private:
 
     BASIC_DLLPRIVATE StarBASIC* GetStdLib() const;
     BASIC_DLLPRIVATE StarBASIC* AddLib( SotStorage& rStorage, const OUString& rLibName, bool bReference );
-    BASIC_DLLPRIVATE bool RemoveLib( sal_uInt16 nLib );
+    BASIC_DLLPRIVATE void RemoveLib( sal_uInt16 nLib );
     BASIC_DLLPRIVATE bool HasLib( const OUString& rName ) const;
 
     BASIC_DLLPRIVATE StarBASIC* CreateLibForLibContainer( const OUString& rLibName,

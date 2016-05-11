@@ -103,7 +103,7 @@ css::uno::Sequence< css::frame::DispatchInformation > SAL_CALL CloseDispatcher::
 {
     if (nCommandGroup == css::frame::CommandGroup::VIEW)
     {
-        /* Attention: Dont add .uno:CloseFrame here. Because its not really
+        /* Attention: Don't add .uno:CloseFrame here. Because its not really
                       a configurable feature ... and further it does not have
                       a valid UIName entry inside the GenericCommands.xcu ... */
         css::uno::Sequence< css::frame::DispatchInformation > lViewInfos(1);
@@ -322,7 +322,7 @@ IMPL_LINK_NOARG_TYPED(CloseDispatcher, impl_asyncCallback, LinkParamNone*, void)
             // c1) there is as minimum 1 frame open, which is visible and contains a document
             //     different from our one. And its not the help!
             //     => close our frame only - nothing else.
-            if (aCheck2.m_lOtherVisibleFrames.getLength()>0)
+            if (!aCheck2.m_lOtherVisibleFrames.empty())
                 bCloseFrame = true;
             else
 
@@ -332,7 +332,7 @@ IMPL_LINK_NOARG_TYPED(CloseDispatcher, impl_asyncCallback, LinkParamNone*, void)
             //     close the frame.
             if (
                 (!bCloseAllViewsToo                    ) &&
-                (aCheck2.m_lModelFrames.getLength() > 0)
+                (!aCheck2.m_lModelFrames.empty())
                )
                 bCloseFrame = true;
 
@@ -372,7 +372,7 @@ IMPL_LINK_NOARG_TYPED(CloseDispatcher, impl_asyncCallback, LinkParamNone*, void)
             if( xSet.is() )
             {
                 css::uno::Any aVal( xSet->getFastPropertyValue( 0 ) );
-                sal_Bool bState = sal_False;
+                sal_Bool bState = false;
                 if( aVal >>= bState )
                     bQuickstarterRunning = bState;
             }
@@ -395,7 +395,7 @@ IMPL_LINK_NOARG_TYPED(CloseDispatcher, impl_asyncCallback, LinkParamNone*, void)
     {
         css::uno::Reference< css::frame::XController > xController = xCloseFrame->getController();
         if (xController.is())
-            xController->suspend(sal_False);
+            xController->suspend(false);
     }
 
     // inform listener
@@ -443,8 +443,8 @@ bool CloseDispatcher::implts_prepareFrameForClosing(const css::uno::Reference< c
         css::uno::Reference< css::frame::XFramesSupplier > xDesktop( css::frame::Desktop::create( xContext ), css::uno::UNO_QUERY_THROW);
         FrameListAnalyzer aCheck(xDesktop, xFrame, FrameListAnalyzer::E_ALL);
 
-        sal_Int32 c = aCheck.m_lModelFrames.getLength();
-        sal_Int32 i = 0;
+        size_t c = aCheck.m_lModelFrames.size();
+        size_t i = 0;
         for (i=0; i<c; ++i)
         {
             if (!fpf::closeIt(aCheck.m_lModelFrames[i], false))
@@ -459,7 +459,7 @@ bool CloseDispatcher::implts_prepareFrameForClosing(const css::uno::Reference< c
         css::uno::Reference< css::frame::XController > xController = xFrame->getController();
         if (xController.is()) // some views don't uses a controller .-( (e.g. the help window)
         {
-            bControllerSuspended = xController->suspend(sal_True);
+            bControllerSuspended = xController->suspend(true);
             if (! bControllerSuspended)
                 return false;
         }
@@ -523,7 +523,7 @@ bool CloseDispatcher::implts_establishBackingMode()
     css::uno::Reference< css::awt::XWindow > xBackingWin(xStartModule, css::uno::UNO_QUERY);
     xFrame->setComponent(xBackingWin, xStartModule);
     xStartModule->attachFrame(xFrame);
-    xContainerWindow->setVisible(sal_True);
+    xContainerWindow->setVisible(true);
 
     return true;
 }

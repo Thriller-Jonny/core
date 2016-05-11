@@ -17,7 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include "vcl/svapp.hxx"
+#include <vcl/svapp.hxx>
 #include "PresenterPaneBorderPainter.hxx"
 #include "PresenterCanvasHelper.hxx"
 #include "PresenterConfigurationAccess.hxx"
@@ -120,8 +120,7 @@ public:
         const std::shared_ptr<RendererPaneStyle>& rpStyle,
         const awt::Rectangle& rUpdateBox,
         const awt::Rectangle& rOuterBox,
-        const awt::Rectangle& rInnerBox,
-        const bool bPaintBackground);
+        const awt::Rectangle& rInnerBox);
     void SetupClipping (
         const awt::Rectangle& rUpdateBox,
         const awt::Rectangle& rOuterBox,
@@ -292,7 +291,6 @@ awt::Point SAL_CALL PresenterPaneBorderPainter::getCalloutOffset (
 }
 
 
-
 bool PresenterPaneBorderPainter::ProvideTheme (const Reference<rendering::XCanvas>& rxCanvas)
 {
     bool bModified (false);
@@ -326,19 +324,15 @@ bool PresenterPaneBorderPainter::ProvideTheme (const Reference<rendering::XCanva
     return bModified;
 }
 
-bool PresenterPaneBorderPainter::ProvideTheme()
+void PresenterPaneBorderPainter::ProvideTheme()
 {
     if (mpTheme.get() == nullptr)
     {
         // Create a theme without bitmaps (no canvas => no bitmaps).
-        return ProvideTheme(nullptr);
+        ProvideTheme(nullptr);
     }
-    else
-    {
         // When there already is a theme then without a canvas we can not
         // add anything new.
-        return false;
-    }
 }
 
 void PresenterPaneBorderPainter::SetTheme (const std::shared_ptr<PresenterTheme>& rpTheme)
@@ -496,12 +490,12 @@ void PresenterPaneBorderPainter::Renderer::PaintBorder (
     PaintBitmap(aCenterBox, rUpdateBox, +1,+1, 0,0, false, pBottomRight, pBackground);
 
     // Paint the title.
-    PaintTitle(rsTitle, pStyle, rUpdateBox, aOuterBox, aInnerBox, false);
+    PaintTitle(rsTitle, pStyle, rUpdateBox, aOuterBox, aInnerBox);
 
     // In a double buffering environment request to make the changes visible.
     Reference<rendering::XSpriteCanvas> xSpriteCanvas (mxCanvas, UNO_QUERY);
     if (xSpriteCanvas.is())
-        xSpriteCanvas->updateScreen(sal_False);
+        xSpriteCanvas->updateScreen(false);
 }
 
 void PresenterPaneBorderPainter::Renderer::PaintTitle (
@@ -509,8 +503,7 @@ void PresenterPaneBorderPainter::Renderer::PaintTitle (
     const std::shared_ptr<RendererPaneStyle>& rpStyle,
     const awt::Rectangle& rUpdateBox,
     const awt::Rectangle& rOuterBox,
-    const awt::Rectangle& rInnerBox,
-    bool bPaintBackground)
+    const awt::Rectangle& rInnerBox)
 {
     if ( ! mxCanvas.is())
         return;
@@ -571,35 +564,14 @@ void PresenterPaneBorderPainter::Renderer::PaintTitle (
         Sequence<double>(4),
         rendering::CompositeOperation::SOURCE);
 
-    if (bPaintBackground)
-    {
-        PresenterCanvasHelper::SetDeviceColor(aRenderState, util::Color(0x00ffffff));
-        Sequence<Sequence<geometry::RealPoint2D> > aPolygons(1);
-        aPolygons[0] = Sequence<geometry::RealPoint2D>(4);
-        aPolygons[0][0] = geometry::RealPoint2D(0, -nTextHeight);
-        aPolygons[0][1] = geometry::RealPoint2D(0, 0);
-        aPolygons[0][2] = geometry::RealPoint2D(nTextWidth, 0);
-        aPolygons[0][3] = geometry::RealPoint2D(nTextWidth, -nTextHeight);
-        Reference<rendering::XPolyPolygon2D> xPolygon (
-        mxCanvas->getDevice()->createCompatibleLinePolyPolygon(aPolygons), UNO_QUERY);
-        if (xPolygon.is())
-            xPolygon->setClosed(0, sal_True);
-        mxCanvas->fillPolyPolygon(
-            xPolygon,
-            maViewState,
-            aRenderState);
-    }
-    else
-    {
-        PresenterCanvasHelper::SetDeviceColor(
+    PresenterCanvasHelper::SetDeviceColor(
             aRenderState,
             rpStyle->mpFont->mnColor);
 
-        mxCanvas->drawTextLayout (
+    mxCanvas->drawTextLayout (
             xLayout,
             maViewState,
             aRenderState);
-    }
 }
 
 std::shared_ptr<RendererPaneStyle>

@@ -20,16 +20,18 @@
 #ifndef INCLUDED_VCL_OPENGLGDIIMPL_HXX
 #define INCLUDED_VCL_OPENGLGDIIMPL_HXX
 
+#include <vcl/dllapi.h>
+#include <vcl/opengl/OpenGLContext.hxx>
+
+#include "regionband.hxx"
 #include "salgeom.hxx"
 #include "salgdiimpl.hxx"
-#include <vcl/dllapi.h>
-
 #include "opengl/framebuffer.hxx"
 #include "opengl/program.hxx"
 #include "opengl/texture.hxx"
-#include "regionband.hxx"
+#include "opengl/AccumulatedTextures.hxx"
 
-#include <vcl/opengl/OpenGLContext.hxx>
+#include <memory>
 
 class SalFrame;
 class SalVirtualDevice;
@@ -59,17 +61,16 @@ class VCL_DLLPUBLIC OpenGLSalGraphicsImpl : public SalGraphicsImpl
     friend class OpenGLTests;
 protected:
 
-    /// This context is solely for blitting @maOffscreenTex
+    /// This context is solely for blitting maOffscreenTex
     rtl::Reference<OpenGLContext> mpWindowContext;
 
     /// This context is whatever is most convenient to render
-    /// to @maOffscreenTex with.
+    /// to maOffscreenTex with.
     rtl::Reference<OpenGLContext> mpContext;
 
     SalGraphics& mrParent;
     /// Pointer to the SalFrame or SalVirtualDevice
     SalGeometryProvider* mpProvider;
-    OpenGLFramebuffer* mpFramebuffer;
     OpenGLProgram* mpProgram;
 
     /// This idle handler is used to swap buffers after rendering.
@@ -79,6 +80,8 @@ protected:
     vcl::Region maClipRegion;
     bool mbUseScissor;
     bool mbUseStencil;
+
+    bool mbXORMode;
 
     /**
      * All rendering happens to this off-screen texture. For
@@ -97,6 +100,8 @@ protected:
     SalColor mProgramSolidColor;
     double mProgramSolidTransparency;
 
+    std::unique_ptr<AccumulatedTextures> mpAccumulatedTextures;
+
     void ImplInitClipRegion();
     void ImplSetClipBit( const vcl::Region& rClip, GLuint nMask );
     void ImplDrawLineAA( double nX1, double nY1, double nX2, double nY2, bool edge = false );
@@ -111,7 +116,9 @@ public:
     bool UseSolid( SalColor nColor );
     bool UseSolidAA( SalColor nColor, double fTransparency );
     bool UseSolidAA( SalColor nColor );
-    bool UseInvert();
+    bool UseLine(SalColor nColor, double fTransparency, GLfloat fLineWidth);
+    bool UseInvert50();
+    bool UseInvert(SalInvert nFlags);
 
     void DrawPoint( long nX, long nY );
     void DrawLine( double nX1, double nY1, double nX2, double nY2 );
@@ -124,6 +131,9 @@ public:
     void DrawRect( long nX, long nY, long nWidth, long nHeight );
     void DrawRect( const Rectangle& rRect );
     void DrawPolygon( sal_uInt32 nPoints, const SalPoint* pPtAry );
+    void DrawLineSegment(float x1, float y1, float x2, float y2);
+    void DrawLineCap(float x1, float y1, float x2, float y2, css::drawing::LineCap eLineCap, float fLineWidth);
+    void DrawPolyLine( const basegfx::B2DPolygon& rPolygon, float fLineWidth, basegfx::B2DLineJoin eLineJoin, css::drawing::LineCap eLineCap, float fMiterMinimumAngle);
     void DrawPolyPolygon( const basegfx::B2DPolyPolygon& rPolyPolygon, bool blockAA = false );
     void DrawRegionBand( const RegionBand& rRegion );
     void DrawTextureRect( OpenGLTexture& rTexture, const SalTwoRect& rPosAry, bool bInverted = false );
@@ -137,6 +147,8 @@ public:
     void DrawLinearGradient( const Gradient& rGradient, const Rectangle& rRect );
     void DrawAxialGradient( const Gradient& rGradient, const Rectangle& rRect );
     void DrawRadialGradient( const Gradient& rGradient, const Rectangle& rRect );
+    void DeferredTextDraw(OpenGLTexture& rTexture, const SalColor nMaskColor, const SalTwoRect& rPosAry);
+    void FlushDeferredDrawing();
 
 public:
     // get the width of the device
@@ -151,18 +163,21 @@ public:
      */
     bool IsOffscreen() const { return mpProvider == nullptr || mpProvider->IsOffScreen(); }
 
+    /// Oddly not all operations obey the XOR option.
+    enum XOROption { IGNORE_XOR, IMPLEMENT_XOR };
+
+    // initialize pre-draw state
+    void InitializePreDrawState(XOROption eOpt = IGNORE_XOR);
+
     // operations to do before painting
-    void PreDraw();
+    void PreDraw(XOROption eOpt = IGNORE_XOR);
 
     // operations to do after painting
     void PostDraw();
 
 protected:
-    bool AcquireContext();
+    bool AcquireContext(bool bForceCreate = false);
     bool ReleaseContext();
-
-    /// retrieve the default context for offscreen rendering
-    static rtl::Reference<OpenGLContext> GetDefaultContext();
 
     /// create a new context for rendering to the underlying window
     virtual rtl::Reference<OpenGLContext> CreateWinContext() = 0;
@@ -242,7 +257,8 @@ public:
                 double fTransparency,
                 const basegfx::B2DVector& rLineWidths,
                 basegfx::B2DLineJoin,
-                css::drawing::LineCap) override;
+                css::drawing::LineCap,
+                double fMiterMinimumAngle) override;
 
     virtual bool drawPolyLineBezier(
                 sal_uInt32 nPoints,
@@ -338,9 +354,18 @@ public:
 
     /** Render solid rectangle with given transparency
 
-        @param nTransparency
-        Transparency value (0-255) to use. 0 blits and opaque, 255 a
-        fully transparent rectangle
+      @param nX             Top left coordinate of rectangle
+
+      @param nY             Bottom right coordinate of rectangle
+
+      @param nWidth         Width of rectangle
+
+      @param nHeight        Height of rectangle
+
+      @param nTransparency  Transparency value (0-255) to use. 0 blits and opaque, 255 a
+                            fully transparent rectangle
+
+      @returns true if successfully drawn, false if not able to draw rectangle
      */
     virtual bool drawAlphaRect(
                     long nX, long nY,

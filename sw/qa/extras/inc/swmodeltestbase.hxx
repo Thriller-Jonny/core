@@ -11,6 +11,7 @@
 #define INCLUDED_SW_QA_EXTRAS_INC_SWMODELTESTBASE_HXX
 
 #include <com/sun/star/container/XContentEnumerationAccess.hpp>
+#include <com/sun/star/container/XNameAccess.hpp>
 #include <com/sun/star/frame/Desktop.hpp>
 #include <com/sun/star/packages/zip/ZipFileAccess.hpp>
 #include <com/sun/star/style/XStyleFamiliesSupplier.hpp>
@@ -27,6 +28,7 @@
 #include <com/sun/star/sdb/CommandType.hpp>
 #include <com/sun/star/sdb/DatabaseContext.hpp>
 #include <com/sun/star/sdb/XDocumentDataSource.hpp>
+#include <com/sun/star/xml/AttributeData.hpp>
 
 #include <test/bootstrapfixture.hxx>
 #include <test/xmltesttools.hxx>
@@ -49,8 +51,6 @@
 #include <rootfrm.hxx>
 
 using namespace css;
-
-#define DEFAULT_STYLE "Default Style"
 
 /**
  * Macro to declare a new test (with full round-trip. To test
@@ -145,6 +145,31 @@ protected:
     bool mbExported; ///< Does maTempFile already contain something useful?
 
 protected:
+
+    class Resetter
+    {
+    private:
+        std::function<void ()> m_Func;
+
+    public:
+        Resetter(std::function<void ()> const& rFunc)
+            : m_Func(rFunc)
+        {
+        }
+        ~Resetter()
+        {
+            try
+            {
+                m_Func();
+            }
+            catch (...) // has to be reliable
+            {
+                fprintf(stderr, "resetter failed with exception\n");
+                abort();
+            }
+        }
+    };
+
     virtual OUString getTestName() { return OUString(); }
 
 public:
@@ -193,7 +218,7 @@ protected:
         {
             maTempFile.EnableKillingFile(false);
             header();
-            preTest(filename);
+            std::unique_ptr<Resetter> const pChanges(preTest(filename));
             load(mpTestDocumentPath, filename);
             postTest(filename);
             verify();
@@ -211,7 +236,7 @@ protected:
     {
         maTempFile.EnableKillingFile(false);
         header();
-        preTest(filename);
+        std::unique_ptr<Resetter> const pChanges(preTest(filename));
         load(mpTestDocumentPath, filename);
         postLoad(filename);
         reload(mpFilter, filename);
@@ -231,7 +256,7 @@ protected:
     {
         maTempFile.EnableKillingFile(false);
         header();
-        preTest(filename);
+        std::unique_ptr<Resetter> const pChanges(preTest(filename));
         load(mpTestDocumentPath, filename);
         save(OUString::createFromAscii(mpFilter), maTempFile);
         maTempFile.EnableKillingFile(false);
@@ -259,8 +284,9 @@ protected:
     /**
      * Override this function if some special filename-specific setup is needed
      */
-    virtual void preTest(const char* /*filename*/)
+    virtual std::unique_ptr<Resetter> preTest(const char* /*filename*/)
     {
+        return nullptr;
     }
 
     /// Override this function if some special file-specific setup is needed during export test: after load, but before save.
@@ -373,7 +399,7 @@ protected:
         if (!mpXmlBuffer)
             dumpLayout();
 
-        return xmlParseMemory(reinterpret_cast<const char*>(xmlBufferContent(mpXmlBuffer)), xmlBufferLength(mpXmlBuffer));;
+        return xmlParseMemory(reinterpret_cast<const char*>(xmlBufferContent(mpXmlBuffer)), xmlBufferLength(mpXmlBuffer));
     }
 
     /**
@@ -431,6 +457,18 @@ protected:
         return properties->getPropertySetInfo()->hasPropertyByName(name);
     }
 
+    xml::AttributeData getUserDefineAttribute(const uno::Any& obj, const OUString& name, const OUString& rValue = OUString()) const
+    {
+        uno::Reference<container::XNameContainer> attrsCnt(getProperty<uno::Any>(obj, "UserDefinedAttributes"), uno::UNO_QUERY_THROW);
+
+        xml::AttributeData aValue;
+        attrsCnt->getByName(name) >>= aValue;
+        if (!rValue.isEmpty())
+            CPPUNIT_ASSERT_EQUAL_MESSAGE("attribute of cell does not contain expected value", rValue, aValue.Value);
+
+        return aValue;
+    }
+
     /// Get number of paragraphs of the document.
     int getParagraphs()
     {
@@ -448,6 +486,7 @@ protected:
 
     uno::Reference<text::XTextContent> getParagraphOrTable(int number, uno::Reference<text::XText> xText = uno::Reference<text::XText>()) const
     {
+        assert(number != 0); // this thing is 1-based
         uno::Reference<container::XEnumerationAccess> paraEnumAccess;
         if (xText.is())
             paraEnumAccess.set(xText, uno::UNO_QUERY);
@@ -568,7 +607,7 @@ protected:
 
     void load(const char* pDir, const char* pName)
     {
-        return loadURL(getURLFromSrc(pDir) + OUString::createFromAscii(pName), pName);
+        return loadURL(m_directories.getURLFromSrc(pDir) + OUString::createFromAscii(pName), pName);
     }
 
     void loadURL(OUString const& rURL, const char* pName)
@@ -577,7 +616,7 @@ protected:
             mxComponent->dispose();
         // Output name early, so in the case of a hang, the name of the hanging input file is visible.
         if (pName)
-            std::cout << pName << ",";
+            std::cout << pName << ":\n";
         mnStartTime = osl_getGlobalTimer();
         mxComponent = loadFromDesktop(rURL, "com.sun.star.text.TextDocument");
         discardDumpedLayout();

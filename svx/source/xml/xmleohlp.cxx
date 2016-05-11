@@ -18,7 +18,6 @@
  */
 
 
-#include <stdio.h>
 #include <com/sun/star/io/XStream.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/embed/XTransactedObject.hpp>
@@ -62,7 +61,6 @@ using namespace ::com::sun::star::lang;
 #define XML_CONTAINERSTORAGE_NAME       "ObjectReplacements"
 #define XML_EMBEDDEDOBJECT_URL_BASE     "vnd.sun.star.EmbeddedObject:"
 #define XML_EMBEDDEDOBJECTGRAPHIC_URL_BASE      "vnd.sun.star.GraphicObject:"
-
 
 
 class OutputStorageWrapper_Impl : public ::cppu::WeakImplHelper<XOutputStream>
@@ -367,7 +365,7 @@ uno::Reference < embed::XStorage > SvXMLEmbeddedObjectHelper::ImplGetContainerSt
     return mxContainerStorage;
 }
 
-bool SvXMLEmbeddedObjectHelper::ImplReadObject(
+void SvXMLEmbeddedObjectHelper::ImplReadObject(
         const OUString& rContainerStorageName,
         OUString& rObjName,
         const SvGlobalName *pClassId,
@@ -379,7 +377,7 @@ bool SvXMLEmbeddedObjectHelper::ImplReadObject(
     uno::Reference < embed::XStorage > xCntnrStor( ImplGetContainerStorage( rContainerStorageName ) );
 
     if( !xCntnrStor.is() && !pTemp )
-        return false;
+        return;
 
     OUString aSrcObjName( rObjName );
     comphelper::EmbeddedObjectContainer& rContainer = mpDocPersist->getEmbeddedObjectContainer();
@@ -420,7 +418,7 @@ bool SvXMLEmbeddedObjectHelper::ImplReadObject(
             }
             catch ( uno::Exception& )
             {
-                return false;
+                return;
             }
         }
         else
@@ -431,7 +429,7 @@ bool SvXMLEmbeddedObjectHelper::ImplReadObject(
             }
             catch ( uno::Exception& )
             {
-                return false;
+                return;
             }
         }
     }
@@ -447,8 +445,6 @@ bool SvXMLEmbeddedObjectHelper::ImplReadObject(
     //             area.
     OUString const baseURL(mpDocPersist->getDocumentBaseURL());
     rContainer.GetEmbeddedObject(aName, &baseURL);
-
-    return true;
 }
 
 OUString SvXMLEmbeddedObjectHelper::ImplInsertEmbeddedObjectURL(
@@ -745,7 +741,7 @@ sal_Bool SAL_CALL SvXMLEmbeddedObjectHelper::hasByName( const OUString& rURLStr 
     MutexGuard          aGuard( maMutex );
     if( EMBEDDEDOBJECTHELPER_MODE_READ == meCreateMode )
     {
-        return sal_True;
+        return true;
     }
     else
     {
@@ -753,7 +749,7 @@ sal_Bool SAL_CALL SvXMLEmbeddedObjectHelper::hasByName( const OUString& rURLStr 
         if( !ImplGetStorageNames( rURLStr, aContainerStorageName,
                                   aObjectStorageName,
                                   true ) )
-            return sal_False;
+            return false;
 
         comphelper::EmbeddedObjectContainer& rContainer = mpDocPersist->getEmbeddedObjectContainer();
         return !aObjectStorageName.isEmpty() &&
@@ -778,7 +774,7 @@ sal_Bool SAL_CALL SvXMLEmbeddedObjectHelper::hasElements()
     MutexGuard          aGuard( maMutex );
     if( EMBEDDEDOBJECTHELPER_MODE_READ == meCreateMode )
     {
-        return sal_True;
+        return true;
     }
     else
     {

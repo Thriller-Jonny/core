@@ -20,14 +20,14 @@
 #ifndef INCLUDED_VCL_INC_UNX_SALFRAME_H
 #define INCLUDED_VCL_INC_UNX_SALFRAME_H
 
-#include <prex.h>
-#include <postx.h>
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
 
 #include <unx/salunx.h>
 #include <unx/saltype.h>
 #include <unx/saldisp.hxx>
 #include <unx/screensaverinhibitor.hxx>
-#include <unx/x11windowprovider.hxx>
+#include <unx/nativewindowhandleprovider.hxx>
 #include <salframe.hxx>
 #include <salwtype.hxx>
 #include <salinst.hxx>
@@ -50,7 +50,7 @@ namespace vcl_sal { class WMAdaptor; class NetWMAdaptor; class GnomeWMAdaptor; }
 #define SHOWSTATE_NORMAL        1
 #define SHOWSTATE_HIDDEN        2
 
-class VCLPLUG_GEN_PUBLIC X11SalFrame : public SalFrame, public X11WindowProvider
+class VCLPLUG_GEN_PUBLIC X11SalFrame : public SalFrame, public NativeWindowHandleProvider
 {
     friend class vcl_sal::WMAdaptor;
     friend class vcl_sal::NetWMAdaptor;
@@ -176,12 +176,12 @@ public:
     {
         return pDisplay_->GetDisplay();
     }
-    SalX11Screen            GetScreenNumber() const { return m_nXScreen; }
+    const SalX11Screen&     GetScreenNumber() const { return m_nXScreen; }
     ::Window                GetWindow() const { return mhWindow; }
     ::Window                GetShellWindow() const { return mhShellWindow; }
     ::Window                GetForeignParent() const { return mhForeignParent; }
     ::Window                GetStackingWindow() const { return mhStackingWindow; }
-    long                    Close() const { return CallCallback( SALEVENT_CLOSE, NULL ); }
+    void                    Close() const { CallCallback( SalEvent::Close, NULL ); }
     SalFrameStyleFlags      GetStyle() const { return nStyle_; }
 
     Cursor                  GetCursor() const { return hCursor_; }
@@ -261,7 +261,7 @@ public:
     // done setting up the clipregion
     virtual void                    EndSetClipRegion() override;
 
-    virtual Window GetX11Window() override;
+    virtual sal_uIntPtr         GetNativeWindowHandle() override;
 
     /// @internal
     void setPendingSizeEvent();

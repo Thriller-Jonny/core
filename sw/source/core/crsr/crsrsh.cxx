@@ -17,7 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <com/sun/star/util/SearchOptions.hpp>
+#include <com/sun/star/util/SearchOptions2.hpp>
 #include <com/sun/star/text/XTextRange.hpp>
 
 #include <hintids.hxx>
@@ -230,7 +230,7 @@ void SwCursorShell::StartAction()
 
 void SwCursorShell::EndAction( const bool bIdleEnd, const bool DoSetPosX )
 {
-    comphelper::FlagRestorationGuard g(mbSelectAll, StartsWithTable() && ExtendedSelectedAll(/*bFootnotes =*/ false));
+    comphelper::FlagRestorationGuard g(mbSelectAll, StartsWithTable() && ExtendedSelectedAll());
     bool bVis = m_bSVCursorVis;
 
     sal_uInt16 eFlags = SwCursorShell::CHKRANGE;
@@ -414,13 +414,13 @@ void SwCursorShell::MarkListLevel( const OUString& sListId,
 
 void SwCursorShell::UpdateMarkedListLevel()
 {
-    SwTextNode * pTextNd = _GetCursor()->GetNode().GetTextNode();
+    SwTextNode * pTextNd = GetCursor_()->GetNode().GetTextNode();
 
     if ( pTextNd )
     {
         if ( !pTextNd->IsNumbered() )
         {
-            m_pCurrentCursor->_SetInFrontOfLabel( false );
+            m_pCurrentCursor->SetInFrontOfLabel_( false );
             MarkListLevel( OUString(), 0 );
         }
         else if ( m_pCurrentCursor->IsInFrontOfLabel() )
@@ -550,13 +550,13 @@ bool SwCursorShell::LRMargin( bool bLeft, bool bAPI)
         m_pBlockCursor->clearPoints();
 
     const bool bWasAtLM =
-            ( 0 == _GetCursor()->GetPoint()->nContent.GetIndex() );
+            ( 0 == GetCursor_()->GetPoint()->nContent.GetIndex() );
 
     bool bRet = pTmpCursor->LeftRightMargin( bLeft, bAPI );
 
-    if ( bLeft && !bTableMode && bRet && bWasAtLM && !_GetCursor()->HasMark() )
+    if ( bLeft && !bTableMode && bRet && bWasAtLM && !GetCursor_()->HasMark() )
     {
-        const SwTextNode * pTextNd = _GetCursor()->GetNode().GetTextNode();
+        const SwTextNode * pTextNd = GetCursor_()->GetNode().GetTextNode();
         if ( pTextNd && pTextNd->HasVisibleNumberingOrBullet() )
             SetInFrontOfLabel( true );
     }
@@ -611,10 +611,10 @@ void SwCursorShell::ExtendedSelectAll(bool bFootnotes)
     pPos->nContent.Assign( pCNd, pCNd ? pCNd->Len() : 0 );
 }
 
-bool SwCursorShell::ExtendedSelectedAll(bool bFootnotes)
+bool SwCursorShell::ExtendedSelectedAll()
 {
     SwNodes& rNodes = GetDoc()->GetNodes();
-    SwNodeIndex nNode = bFootnotes ? rNodes.GetEndOfPostIts() : rNodes.GetEndOfAutotext();
+    SwNodeIndex nNode = rNodes.GetEndOfAutotext();
     SwContentNode* pStart = rNodes.GoNext(&nNode);
 
     nNode = rNodes.GetEndOfContent();
@@ -827,7 +827,7 @@ int SwCursorShell::SetCursor( const Point &rLPt, bool bOnlyText, bool bBlock )
     // #i41424# Only update the marked number levels if necessary
     // Force update of marked number levels if necessary.
     if ( bNewInFrontOfLabel || bOldInFrontOfLabel )
-        m_pCurrentCursor->_SetInFrontOfLabel( !bNewInFrontOfLabel );
+        m_pCurrentCursor->SetInFrontOfLabel_( !bNewInFrontOfLabel );
     SetInFrontOfLabel( bNewInFrontOfLabel );
 
     if( !pCursor->IsSelOvr( nsSwCursorSelOverFlags::SELOVER_CHANGEPOS ) )
@@ -868,7 +868,8 @@ int SwCursorShell::SetCursor( const Point &rLPt, bool bOnlyText, bool bBlock )
 void SwCursorShell::TableCursorToCursor()
 {
     OSL_ENSURE( m_pTableCursor, "TableCursorToCursor: Why?" );
-    delete m_pTableCursor, m_pTableCursor = nullptr;
+    delete m_pTableCursor;
+    m_pTableCursor = nullptr;
 }
 
 void SwCursorShell::BlockCursorToCursor()
@@ -884,7 +885,8 @@ void SwCursorShell::BlockCursorToCursor()
         else
             m_pCurrentCursor->DeleteMark();
     }
-    delete m_pBlockCursor, m_pBlockCursor = nullptr;
+    delete m_pBlockCursor;
+    m_pBlockCursor = nullptr;
 }
 
 void SwCursorShell::CursorToBlockCursor()
@@ -923,7 +925,8 @@ void SwCursorShell::ClearMark()
 
         *m_pCurrentCursor->GetPoint() = *m_pTableCursor->GetPoint();
         m_pCurrentCursor->GetPtPos() = m_pTableCursor->GetPtPos();
-        delete m_pTableCursor, m_pTableCursor = nullptr;
+        delete m_pTableCursor;
+        m_pTableCursor = nullptr;
         m_pCurrentCursor->SwSelPaintRects::Show();
     }
     else
@@ -951,23 +954,20 @@ void SwCursorShell::SwapPam()
 //TODO: provide documentation
 /** Search in the selected area for a Selection that covers the given point.
 
-    If only a test run is made, then it checks if a SSelection exists but does
-    not move the current cursor. In a normal run the cursor will be moved to the
-    chosen SSelection.
+    It checks if a Selection exists but does
+    not move the current cursor.
 
     @param rPt      The point to search at.
-    @param bTstOnly Should I only do a test run? If true so do not move cursor.
     @param bTstHit ???
 */
-bool SwCursorShell::ChgCurrPam(
+bool SwCursorShell::TestCurrPam(
     const Point & rPt,
-    bool bTstOnly,
     bool bTstHit )
 {
     SET_CURR_SHELL( this );
 
     // check if the SPoint is in a table selection
-    if( bTstOnly && m_pTableCursor )
+    if( m_pTableCursor )
         return m_pTableCursor->IsInside( rPt );
 
     SwCallLink aLk( *this ); // watch Cursor-Moves; call Link if needed
@@ -986,12 +986,7 @@ bool SwCursorShell::ChgCurrPam(
         if( pCmp && pCmp->HasMark() &&
             *pCmp->Start() <= aPtPos && *pCmp->End() > aPtPos )
         {
-            if( bTstOnly || m_pCurrentCursor == pCmp ) // is the current
-                return true;               // return without update
-
-            m_pCurrentCursor = pCmp;
-            UpdateCursor(); // cursor is already at the right position
-            return true;
+            return true;               // return without update
         }
     } while( m_pCurrentCursor !=
         ( pCmp = dynamic_cast<SwShellCursor*>(pCmp->GetNext()) ) );
@@ -1110,7 +1105,7 @@ bool SwCursorShell::SetInFrontOfLabel( bool bNew )
 {
     if ( bNew != IsInFrontOfLabel() )
     {
-        m_pCurrentCursor->_SetInFrontOfLabel( bNew );
+        m_pCurrentCursor->SetInFrontOfLabel_( bNew );
         UpdateMarkedListLevel();
         return true;
     }
@@ -1260,7 +1255,7 @@ bool SwCursorShell::GoPrevCursor()
 
 void SwCursorShell::Paint(vcl::RenderContext& rRenderContext, const Rectangle &rRect)
 {
-    comphelper::FlagRestorationGuard g(mbSelectAll, StartsWithTable() && ExtendedSelectedAll(/*bFootnotes =*/ false));
+    comphelper::FlagRestorationGuard g(mbSelectAll, StartsWithTable() && ExtendedSelectedAll());
     SET_CURR_SHELL( this );
 
     // always switch off all cursors when painting
@@ -1605,7 +1600,8 @@ void SwCursorShell::UpdateCursor( sal_uInt16 eFlags, bool bIdleEnd )
         m_pCurrentCursor->DeleteMark();
         *m_pCurrentCursor->GetPoint() = *m_pTableCursor->GetPoint();
         m_pCurrentCursor->GetPtPos() = m_pTableCursor->GetPtPos();
-        delete m_pTableCursor, m_pTableCursor = nullptr;
+        delete m_pTableCursor;
+        m_pTableCursor = nullptr;
     }
 
     m_pVisibleCursor->Hide(); // always hide visible Cursor
@@ -2172,21 +2168,19 @@ void SwCursorShell::HideCursor()
     }
 }
 
-void SwCursorShell::ShLooseFcs()
+void SwCursorShell::ShellLoseFocus()
 {
     if( !m_bBasicHideCursor )
         HideCursors();
     m_bHasFocus = false;
 }
 
-void SwCursorShell::ShGetFcs( bool bUpdate )
+void SwCursorShell::ShellGetFocus()
 {
     m_bHasFocus = true;
     if( !m_bBasicHideCursor && VisArea().Width() )
     {
-        UpdateCursor( static_cast<sal_uInt16>( bUpdate ?
-                    SwCursorShell::CHKRANGE|SwCursorShell::SCROLLWIN
-                    : SwCursorShell::CHKRANGE ) );
+        UpdateCursor( static_cast<sal_uInt16>( SwCursorShell::CHKRANGE ) );
         ShowCursors( m_bSVCursorVis );
     }
 }
@@ -2499,7 +2493,7 @@ bool SwCursorShell::ParkTableCursor()
     return true;
 }
 
-void SwCursorShell::_ParkPams( SwPaM* pDelRg, SwShellCursor** ppDelRing )
+void SwCursorShell::ParkPams( SwPaM* pDelRg, SwShellCursor** ppDelRing )
 {
     const SwPosition *pStt = pDelRg->Start(),
         *pEnd = pDelRg->GetPoint() == pStt ? pDelRg->GetMark() : pDelRg->GetPoint();
@@ -2603,9 +2597,9 @@ void SwCursorShell::ParkCursor( const SwNodeIndex &rIdx )
         {
             SwCursorShell* pSh = static_cast<SwCursorShell*>(&rTmp);
             if( pSh->m_pCursorStack )
-                pSh->_ParkPams( pNew, &pSh->m_pCursorStack );
+                pSh->ParkPams( pNew, &pSh->m_pCursorStack );
 
-            pSh->_ParkPams( pNew, &pSh->m_pCurrentCursor );
+            pSh->ParkPams( pNew, &pSh->m_pCurrentCursor );
             if( pSh->m_pTableCursor )
             {
                 // set table cursor always to 0 and the current one always to
@@ -3123,9 +3117,9 @@ bool SwCursorShell::IsInVerticalText( const Point* pPt ) const
     return FRMDIR_VERT_TOP_RIGHT == nDir || FRMDIR_VERT_TOP_LEFT == nDir;
 }
 
-bool SwCursorShell::IsInRightToLeftText( const Point* pPt ) const
+bool SwCursorShell::IsInRightToLeftText() const
 {
-    const short nDir = GetTextDirection( pPt );
+    const short nDir = GetTextDirection();
     // GetTextDirection uses FRMDIR_VERT_TOP_LEFT to indicate RTL in
     // vertical environment
     return FRMDIR_VERT_TOP_LEFT == nDir || FRMDIR_HORI_RIGHT_TOP == nDir;
@@ -3161,7 +3155,7 @@ bool SwCursorShell::SelectHiddenRange()
     return bRet;
 }
 
-sal_uLong SwCursorShell::Find( const SearchOptions& rSearchOpt,
+sal_uLong SwCursorShell::Find( const SearchOptions2& rSearchOpt,
                              bool bSearchInNotes,
                              SwDocPositions eStart, SwDocPositions eEnd,
                              bool& bCancel,
@@ -3170,7 +3164,8 @@ sal_uLong SwCursorShell::Find( const SearchOptions& rSearchOpt,
 {
     if( m_pTableCursor )
         GetCursor();
-    delete m_pTableCursor, m_pTableCursor = nullptr;
+    delete m_pTableCursor;
+    m_pTableCursor = nullptr;
     SwCallLink aLk( *this ); // watch Cursor-Moves; call Link if needed
     sal_uLong nRet = m_pCurrentCursor->Find( rSearchOpt, bSearchInNotes, eStart, eEnd,
                                      bCancel, eRng, bReplace );
@@ -3187,7 +3182,8 @@ sal_uLong SwCursorShell::Find( const SwTextFormatColl& rFormatColl,
 {
     if( m_pTableCursor )
         GetCursor();
-    delete m_pTableCursor, m_pTableCursor = nullptr;
+    delete m_pTableCursor;
+    m_pTableCursor = nullptr;
     SwCallLink aLk( *this ); // watch Cursor-Moves; call Link if needed
     sal_uLong nRet = m_pCurrentCursor->Find( rFormatColl, eStart, eEnd, bCancel, eRng,
                                      pReplFormat );
@@ -3201,12 +3197,13 @@ sal_uLong SwCursorShell::Find( const SfxItemSet& rSet,
                              SwDocPositions eStart, SwDocPositions eEnd,
                              bool& bCancel,
                              FindRanges eRng,
-                             const SearchOptions* pSearchOpt,
+                             const SearchOptions2* pSearchOpt,
                              const SfxItemSet* rReplSet )
 {
     if( m_pTableCursor )
         GetCursor();
-    delete m_pTableCursor, m_pTableCursor = nullptr;
+    delete m_pTableCursor;
+    m_pTableCursor = nullptr;
     SwCallLink aLk( *this ); // watch Cursor-Moves; call Link if needed
     sal_uLong nRet = m_pCurrentCursor->Find( rSet, bNoCollections, eStart, eEnd,
                                      bCancel, eRng, pSearchOpt, rReplSet );
@@ -3469,20 +3466,11 @@ void SwCursorShell::GetSmartTagRect( const Point& rPt, SwRect& rSelectRect )
         nullptr != (pSmartTagList = pNode->GetSmartTags()) &&
         !pNode->IsInProtectSect() )
     {
-        sal_Int32 nCurrent = aPos.nContent.GetIndex();
-        sal_Int32 nBegin = nCurrent;
+        sal_Int32 nBegin = aPos.nContent.GetIndex();
         sal_Int32 nLen = 1;
 
         if( pSmartTagList->InWrongWord( nBegin, nLen ) && !pNode->IsSymbol(nBegin) )
         {
-            const sal_uInt16 nIndex = pSmartTagList->GetWrongPos( nBegin );
-            const SwWrongList* pSubList = pSmartTagList->SubList( nIndex );
-            if ( pSubList )
-            {
-                pSmartTagList = pSubList;
-                nCurrent = eTmpState.m_pSpecialPos->nCharOfst;
-            }
-
             // get smarttag word
             OUString aText( pNode->GetText().copy(nBegin, nLen) );
 

@@ -104,7 +104,7 @@ bool EnumContext::operator!= (const EnumContext& rOther)
 void EnumContext::AddEntry (const ::rtl::OUString& rsName, const Application eApplication)
 {
     maApplicationMap[rsName] = eApplication;
-    OSL_ASSERT(eApplication<=__LastApplicationEnum);
+    OSL_ASSERT(eApplication<=LastApplicationEnum);
     if (maApplicationVector.size() <= size_t(eApplication))
         maApplicationVector.resize(eApplication+1);
     maApplicationVector[eApplication]=rsName;
@@ -114,7 +114,7 @@ void EnumContext::ProvideApplicationContainers()
 {
     if (maApplicationMap.empty())
     {
-        maApplicationVector.resize(static_cast<size_t>(EnumContext::__LastApplicationEnum)+1);
+        maApplicationVector.resize(static_cast<size_t>(EnumContext::LastApplicationEnum)+1);
         AddEntry("com.sun.star.text.TextDocument", EnumContext::Application_Writer);
         AddEntry("com.sun.star.text.GlobalDocument", EnumContext::Application_WriterGlobal);
         AddEntry("com.sun.star.text.WebDocument", EnumContext::Application_WriterWeb);
@@ -148,7 +148,7 @@ const ::rtl::OUString& EnumContext::GetApplicationName (const Application eAppli
     ProvideApplicationContainers();
 
     const sal_Int32 nIndex (eApplication);
-    if (nIndex<0 || nIndex>= __LastApplicationEnum)
+    if (nIndex<0 || nIndex>= LastApplicationEnum)
         return maApplicationVector[Application_None];
     else
         return maApplicationVector[nIndex];
@@ -157,7 +157,7 @@ const ::rtl::OUString& EnumContext::GetApplicationName (const Application eAppli
 void EnumContext::AddEntry (const ::rtl::OUString& rsName, const Context eApplication)
 {
     maContextMap[rsName] = eApplication;
-    OSL_ASSERT(eApplication<=__LastContextEnum);
+    OSL_ASSERT(eApplication<=LastContextEnum);
     if (maContextVector.size() <= size_t(eApplication))
         maContextVector.resize(eApplication+1);
     maContextVector[eApplication] = rsName;
@@ -167,44 +167,41 @@ void EnumContext::ProvideContextContainers()
 {
     if (maContextMap.empty())
     {
-        maContextVector.resize(static_cast<size_t>(__LastContextEnum)+1);
+        maContextVector.resize(static_cast<size_t>(LastContextEnum)+1);
         AddEntry("any", Context_Any);
         AddEntry("default", Context_Default);
         AddEntry("empty", Context_Empty);
-#define AddContext(context) AddEntry(#context, Context_##context);
-        AddContext(3DObject);
-        AddContext(Annotation);
-        AddContext(Auditing);
-        AddContext(Axis);
-        AddContext(Cell);
-        AddContext(Chart);
-        AddContext(Chart);
-        AddContext(ChartElements);
-        AddContext(Draw);
-        AddContext(DrawLine);
-        AddContext(DrawPage);
-        AddContext(DrawText);
-        AddContext(EditCell);
-        AddContext(ErrorBar);
-        AddContext(Form);
-        AddContext(Frame);
-        AddContext(Graphic);
-        AddContext(Grid);
-        AddContext(HandoutPage);
-        AddContext(MasterPage);
-        AddContext(Media);
-        AddContext(MultiObject);
-        AddContext(NotesPage);
-        AddContext(OLE);
-        AddContext(OutlineText);
-        AddContext(Pivot);
-        AddContext(Series);
-        AddContext(SlidesorterPage);
-        AddContext(Table);
-        AddContext(Text);
-        AddContext(TextObject);
-        AddContext(Trendline);
-#undef AddContext
+        AddEntry("3DObject", Context_3DObject);
+        AddEntry("Annotation", Context_Annotation);
+        AddEntry("Auditing", Context_Auditing);
+        AddEntry("Axis", Context_Axis);
+        AddEntry("Cell", Context_Cell);
+        AddEntry("Chart", Context_Chart);
+        AddEntry("ChartElements", Context_ChartElements);
+        AddEntry("Draw", Context_Draw);
+        AddEntry("DrawLine", Context_DrawLine);
+        AddEntry("DrawPage", Context_DrawPage);
+        AddEntry("DrawText", Context_DrawText);
+        AddEntry("EditCell", Context_EditCell);
+        AddEntry("ErrorBar", Context_ErrorBar);
+        AddEntry("Form", Context_Form);
+        AddEntry("Frame", Context_Frame);
+        AddEntry("Graphic", Context_Graphic);
+        AddEntry("Grid", Context_Grid);
+        AddEntry("HandoutPage", Context_HandoutPage);
+        AddEntry("MasterPage", Context_MasterPage);
+        AddEntry("Media", Context_Media);
+        AddEntry("MultiObject", Context_MultiObject);
+        AddEntry("NotesPage", Context_NotesPage);
+        AddEntry("OLE", Context_OLE);
+        AddEntry("OutlineText", Context_OutlineText);
+        AddEntry("Pivot", Context_Pivot);
+        AddEntry("Series", Context_Series);
+        AddEntry("SlidesorterPage", Context_SlidesorterPage);
+        AddEntry("Table", Context_Table);
+        AddEntry("Text", Context_Text);
+        AddEntry("TextObject", Context_TextObject);
+        AddEntry("Trendline", Context_Trendline);
     }
 }
 
@@ -224,7 +221,7 @@ const ::rtl::OUString& EnumContext::GetContextName (const Context eContext)
     ProvideContextContainers();
 
     const sal_Int32 nIndex (eContext);
-    if (nIndex<0 || nIndex>= __LastContextEnum)
+    if (nIndex<0 || nIndex>= LastContextEnum)
         return maContextVector[Context_Unknown];
     else
         return maContextVector[nIndex];

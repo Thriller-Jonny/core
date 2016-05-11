@@ -75,13 +75,13 @@ ScProgress* GetProgressBar(
 
     if (nCount > 1)
         return new ScProgress(
-            pDoc->GetDocumentShell(), ScGlobal::GetRscString(STR_PROGRESS_HEIGHTING), nTotalCount);
+            pDoc->GetDocumentShell(), ScGlobal::GetRscString(STR_PROGRESS_HEIGHTING), nTotalCount, true);
 
     return nullptr;
 }
 
 void GetOptimalHeightsInColumn(
-    sc::RowHeightContext& rCxt, ScColumn* pCol, SCROW nStartRow, SCROW nEndRow,
+    sc::RowHeightContext& rCxt, ScColContainer& rCol, SCROW nStartRow, SCROW nEndRow,
     ScProgress* pProgress, sal_uInt32 nProgressStart )
 {
     assert(nStartRow <= nEndRow);
@@ -94,7 +94,7 @@ void GetOptimalHeightsInColumn(
 
     std::vector<sal_uInt16>& rHeights = rCxt.getHeightArray();
 
-    pCol[MAXCOL].GetOptimalHeight(rCxt, nStartRow, nEndRow, 0, 0);
+    rCol[MAXCOL].GetOptimalHeight(rCxt, nStartRow, nEndRow, 0, 0);
 
     //  from there search for the standard height that is in use in the lower part
 
@@ -107,11 +107,11 @@ void GetOptimalHeightsInColumn(
     sal_uLong nWeightedCount = 0;
     for (SCCOL nCol=0; nCol<MAXCOL; nCol++)     // MAXCOL already above
     {
-        pCol[nCol].GetOptimalHeight(rCxt, nStartRow, nEndRow, nMinHeight, nMinStart);
+        rCol[nCol].GetOptimalHeight(rCxt, nStartRow, nEndRow, nMinHeight, nMinStart);
 
         if (pProgress)
         {
-            sal_uLong nWeight = pCol[nCol].GetWeightedCount();
+            sal_uLong nWeight = rCol[nCol].GetWeightedCount();
             if (nWeight)        // does not have to be the same Status
             {
                 nWeightedCount += nWeight;
@@ -227,6 +227,7 @@ bool SetOptimalHeightsToRows(
 
 ScTable::ScTable( ScDocument* pDoc, SCTAB nNewTab, const OUString& rNewName,
                     bool bColInfo, bool bRowInfo ) :
+    aCol( pDoc, MAXCOLCOUNT ),
     aName( rNewName ),
     aCodeName( rNewName ),
     nLinkRefreshDelay( 0 ),
@@ -349,9 +350,11 @@ ScTable::~ScTable()
     delete mpRangeName;
     delete pDBDataNoName;
     DestroySortCollator();
+}
 
-    for (SCCOL k=0; k<=MAXCOL; k++)
-        aCol[k].PrepareBroadcastersForDestruction();
+sal_Int64 ScTable::GetHashCode() const
+{
+    return sal::static_int_cast<sal_Int64>(reinterpret_cast<sal_IntPtr>(this));
 }
 
 void ScTable::GetName( OUString& rName ) const
@@ -565,7 +568,7 @@ bool ScTable::GetTableArea( SCCOL& rEndCol, SCROW& rEndRow ) const
 
 const SCCOL SC_COLUMNS_STOP = 30;
 
-bool ScTable::GetPrintArea( SCCOL& rEndCol, SCROW& rEndRow, bool bNotes, bool bFullFormattedArea ) const
+bool ScTable::GetPrintArea( SCCOL& rEndCol, SCROW& rEndRow, bool bNotes ) const
 {
     bool bFound = false;
     SCCOL nMaxX = 0;
@@ -607,7 +610,7 @@ bool ScTable::GetPrintArea( SCCOL& rEndCol, SCROW& rEndRow, bool bNotes, bool bF
     for (i=0; i<=MAXCOL; i++)               // Test attribute
     {
         SCROW nLastRow;
-        if (aCol[i].GetLastVisibleAttr( nLastRow, bFullFormattedArea ))
+        if (aCol[i].GetLastVisibleAttr( nLastRow ))
         {
             bFound = true;
             nMaxX = i;
@@ -807,7 +810,7 @@ void ScTable::GetDataArea( SCCOL& rStartCol, SCROW& rStartRow, SCCOL& rEndCol, S
     // Flags as modifiers:
     //
     //     bIncludeOld = true ensure that the returned area contains at least the initial area,
-    //                   independently of the emptniess of rows / columns (i.e. does not allow shrinking)
+    //                   independently of the emptiness of rows / columns (i.e. does not allow shrinking)
     //     bOnlyDown = true means extend / shrink the inputed area only down, i.e modifiy only rEndRow
 
     bool bLeft = false;
@@ -919,13 +922,25 @@ bool ScTable::ShrinkToUsedDataArea( bool& o_bShrunk, SCCOL& rStartCol, SCROW& rS
     PutInOrder( rStartCol, rEndCol);
     PutInOrder( rStartRow, rEndRow);
     if (rStartCol < 0)
-        rStartCol = 0, o_bShrunk = true;
+    {
+        rStartCol = 0;
+        o_bShrunk = true;
+    }
     if (rStartRow < 0)
-        rStartRow = 0, o_bShrunk = true;
+    {
+        rStartRow = 0;
+        o_bShrunk = true;
+    }
     if (rEndCol > MAXCOL)
-        rEndCol = MAXCOL, o_bShrunk = true;
+    {
+        rEndCol = MAXCOL;
+        o_bShrunk = true;
+    }
     if (rEndRow > MAXROW)
-        rEndRow = MAXROW, o_bShrunk = true;
+    {
+        rEndRow = MAXROW;
+        o_bShrunk = true;
+    }
 
     while (rStartCol < rEndCol)
     {
@@ -1390,22 +1405,17 @@ void ScTable::GetNextPos( SCCOL& rCol, SCROW& rRow, SCsCOL nMovX, SCsROW nMovY,
 
 bool ScTable::GetNextMarkedCell( SCCOL& rCol, SCROW& rRow, const ScMarkData& rMark ) const
 {
-    const ScMarkArray* pMarkArray = rMark.GetArray();
-    OSL_ENSURE(pMarkArray,"GetNextMarkedCell without MarkArray");
-    if ( !pMarkArray )
-        return false;
-
     ++rRow;                 // next row
 
     while ( rCol <= MAXCOL )
     {
-        const ScMarkArray& rArray = pMarkArray[rCol];
+        ScMarkArray aArray( rMark.GetMarkArray( rCol ) );
         while ( rRow <= MAXROW )
         {
-            SCROW nStart = (SCROW) rArray.GetNextMarked( (SCsROW) rRow, false );
+            SCROW nStart = (SCROW) aArray.GetNextMarked( (SCsROW) rRow, false );
             if ( nStart <= MAXROW )
             {
-                SCROW nEnd = rArray.GetMarkEnd( nStart, false );
+                SCROW nEnd = aArray.GetMarkEnd( nStart, false );
 
                 const sc::CellStoreType& rCells = aCol[rCol].maCells;
                 std::pair<sc::CellStoreType::const_iterator,size_t> aPos = rCells.position(nStart);
@@ -1704,7 +1714,7 @@ void ScTable::SetTabNo(SCTAB nNewTab)
 }
 
 void ScTable::FindRangeNamesInUse(SCCOL nCol1, SCROW nRow1, SCCOL nCol2, SCROW nRow2,
-                               std::set<sal_uInt16>& rIndexes) const
+                               sc::UpdatedRangeNames& rIndexes) const
 {
     for (SCCOL i = nCol1; i <= nCol2 && ValidCol(i); i++)
         aCol[i].FindRangeNamesInUse(nRow1, nRow2, rIndexes);
@@ -2224,11 +2234,11 @@ bool ScTable::HasBroadcaster( SCCOL nCol ) const
     return aCol[nCol].HasBroadcaster();
 }
 
-void ScTable::FillMatrix( ScMatrix& rMat, SCCOL nCol1, SCROW nRow1, SCCOL nCol2, SCROW nRow2 ) const
+void ScTable::FillMatrix( ScMatrix& rMat, SCCOL nCol1, SCROW nRow1, SCCOL nCol2, SCROW nRow2, svl::SharedStringPool* pPool ) const
 {
     size_t nMatCol = 0;
     for (SCCOL nCol = nCol1; nCol <= nCol2; ++nCol, ++nMatCol)
-        aCol[nCol].FillMatrix(rMat, nMatCol, nRow1, nRow2);
+        aCol[nCol].FillMatrix(rMat, nMatCol, nRow1, nRow2, pPool);
 }
 
 void ScTable::InterpretDirtyCells( SCCOL nCol1, SCROW nRow1, SCCOL nCol2, SCROW nRow2 )

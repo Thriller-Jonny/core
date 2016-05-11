@@ -16,14 +16,9 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-module
-"9F76B581-23DD-101C-80B6-000024021835"
-"A1810F00-23DE-101C-80B6-000024021835"
-StarWriter
+module StarWriter
 [
-HelpText( "StarWriter Application" )
-SlotIdFile( "swslots.hrc" )
-ModulePrefix( "Sw" )
+    SlotIdFile( "swslots.hrc" )
 ]
 {
     include "sfxitems.sdi"
@@ -32,26 +27,6 @@ ModulePrefix( "Sw" )
     include "xoitems.sdi"
     include "svx.sdi"
 
-    item String TbxDummyItem;
-/*
-    item String XFillAttrSetItem;
-    item String XFillBitmapItem;
-    item String XFillColorItem;
-    item String XFillGradientItem;
-    item String XFillHatchItem;
-    item String XFillStyleItem;
-    item String XLineAttrSetItem;
-    item String XLineColorItem;
-    item String XLineDashItem;
-    item String XLineEndItem;
-    item String XLineEndWidthItem;
-    item String XLineEndCenterItem;
-    item String XLineStartItem;
-    item String XLineStartWidthItem;
-    item String XLineStartCenterItem;
-    item String XLineStyleItem;
-    item String XLineWidthItem;
-*/
     include "switems.sdi"
     include "swriter.sdi"
 

@@ -50,7 +50,6 @@
 #include <xmloff/xmlprhdl.hxx>
 #include "xmlithlp.hxx"
 #include <com/sun/star/uno/Any.hxx>
-#include <boost/noncopyable.hpp>
 
 using ::editeng::SvxBorderLine;
 using namespace ::com::sun::star;
@@ -222,12 +221,15 @@ SvXMLImportItemMapper::finished(SfxItemSet &, SvXMLUnitConverter const&) const
     // nothing to do here
 }
 
-struct BoxHolder : private boost::noncopyable
+struct BoxHolder
 {
     SvxBorderLine* pTop;
     SvxBorderLine* pBottom;
     SvxBorderLine* pLeft;
     SvxBorderLine* pRight;
+
+    BoxHolder(BoxHolder const&) = delete;
+    BoxHolder& operator=(BoxHolder const&) = delete;
 
     explicit BoxHolder(SvxBoxItem& rBox)
     {
@@ -661,9 +663,7 @@ bool SvXMLImportItemMapper::PutXMLValue(
                 case MID_GRAPHIC_LINK:
                 {
                     SvxGraphicPosition eOldGraphicPos = rBrush.GetGraphicPos();
-                    uno::Any aAny;
-                    aAny <<= rValue;
-                    rBrush.PutValue( aAny, MID_GRAPHIC_URL );
+                    rBrush.PutValue( Any(rValue), MID_GRAPHIC_URL );
                     if( GPOS_NONE == eOldGraphicPos &&
                         GPOS_NONE != rBrush.GetGraphicPos() )
                         rBrush.SetGraphicPos( GPOS_TILED );

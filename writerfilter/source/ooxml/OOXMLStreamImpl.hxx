@@ -24,7 +24,6 @@
 #include <ooxml/OOXMLDocument.hxx>
 #include <comphelper/storagehelper.hxx>
 #include <com/sun/star/embed/XRelationshipAccess.hpp>
-#include <com/sun/star/io/XStream.hpp>
 
 extern OUString customTarget;
 extern OUString embeddingsTarget;
@@ -54,8 +53,7 @@ class OOXMLStreamImpl : public OOXMLStream
     /// Cache holding an Id <-> Target map of external relations.
     std::map<OUString, OUString> maIdCache;
 
-    bool lcl_getTarget(css::uno::Reference<css::embed::XRelationshipAccess>
-                       xRelationshipAccess,
+    bool lcl_getTarget(const css::uno::Reference<css::embed::XRelationshipAccess>& xRelationshipAccess,
                        StreamType_t nStreamType,
                        const OUString & rId,
                        OUString & rDocumentTarget);
@@ -82,7 +80,7 @@ public:
     virtual css::uno::Reference<css::xml::sax::XFastTokenHandler> getFastTokenHandler() override;
 
     // Giving access to mxDocumentStream. It is needed by resolving custom xml to get list of customxml's used in document.
-    css::uno::Reference<css::io::XStream> accessDocumentStream() { return mxDocumentStream;}
+    const css::uno::Reference<css::io::XStream>& accessDocumentStream() { return mxDocumentStream;}
 };
 }}
 #endif // INCLUDED_WRITERFILTER_SOURCE_OOXML_OOXMLSTREAMIMPL_HXX

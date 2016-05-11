@@ -88,7 +88,7 @@ const sal_Char sCalc_Round[]=   "round";
 const sal_Char sCalc_Date[] =   "date";
 
 // ATTENTION: sorted list of all operators
-struct _CalcOp
+struct CalcOp
 {
     union{
         const sal_Char* pName;
@@ -97,7 +97,7 @@ struct _CalcOp
     SwCalcOper eOp;
 };
 
-_CalcOp const aOpTable[] = {
+CalcOp const aOpTable[] = {
 /* ACOS */    {{sCalc_Acos},       CALC_ACOS},  // Arc cosine
 /* ADD */     {{sCalc_Add},        CALC_PLUS},  // Addition
 /* AND */     {{sCalc_And},        CALC_AND},   // log. AND
@@ -150,38 +150,38 @@ extern "C" {
 static int SAL_CALL OperatorCompare( const void *pFirst, const void *pSecond)
 {
     int nRet = 0;
-    if( CALC_NAME == static_cast<const _CalcOp*>(pFirst)->eOp )
+    if( CALC_NAME == static_cast<const CalcOp*>(pFirst)->eOp )
     {
-        if( CALC_NAME == static_cast<const _CalcOp*>(pSecond)->eOp )
-            nRet = static_cast<const _CalcOp*>(pFirst)->pUName->compareTo(
-                   *static_cast<const _CalcOp*>(pSecond)->pUName );
+        if( CALC_NAME == static_cast<const CalcOp*>(pSecond)->eOp )
+            nRet = static_cast<const CalcOp*>(pFirst)->pUName->compareTo(
+                   *static_cast<const CalcOp*>(pSecond)->pUName );
         else
-            nRet = static_cast<const _CalcOp*>(pFirst)->pUName->compareToAscii(
-                   static_cast<const _CalcOp*>(pSecond)->pName );
+            nRet = static_cast<const CalcOp*>(pFirst)->pUName->compareToAscii(
+                   static_cast<const CalcOp*>(pSecond)->pName );
     }
     else
     {
-        if( CALC_NAME == static_cast<const _CalcOp*>(pSecond)->eOp )
-            nRet = -1 * static_cast<const _CalcOp*>(pSecond)->pUName->compareToAscii(
-                        static_cast<const _CalcOp*>(pFirst)->pName );
+        if( CALC_NAME == static_cast<const CalcOp*>(pSecond)->eOp )
+            nRet = -1 * static_cast<const CalcOp*>(pSecond)->pUName->compareToAscii(
+                        static_cast<const CalcOp*>(pFirst)->pName );
         else
-            nRet = strcmp( static_cast<const _CalcOp*>(pFirst)->pName,
-                           static_cast<const _CalcOp*>(pSecond)->pName );
+            nRet = strcmp( static_cast<const CalcOp*>(pFirst)->pName,
+                           static_cast<const CalcOp*>(pSecond)->pName );
     }
     return nRet;
 }
 }// extern "C"
 
-_CalcOp* FindOperator( const OUString& rSrch )
+CalcOp* FindOperator( const OUString& rSrch )
 {
-    _CalcOp aSrch;
+    CalcOp aSrch;
     aSrch.pUName = &rSrch;
     aSrch.eOp = CALC_NAME;
 
-    return static_cast<_CalcOp*>(bsearch( static_cast<void*>(&aSrch),
+    return static_cast<CalcOp*>(bsearch( static_cast<void*>(&aSrch),
                               static_cast<void const *>(aOpTable),
-                              sizeof( aOpTable ) / sizeof( _CalcOp ),
-                              sizeof( _CalcOp ),
+                              sizeof( aOpTable ) / sizeof( CalcOp ),
+                              sizeof( CalcOp ),
                               OperatorCompare ));
 }
 
@@ -396,23 +396,13 @@ SwSbxValue SwCalc::Calculate( const OUString& rStr )
     return nResult;
 }
 
-//TODO: provide documentation
-/** ???
-
-  @param rVal ???
-  @param bRound In previous times <bRound> had a default value of <true>.
-                There it should be only changed when calculating table cells,
-                so that no rounding errors would occur while composing a formula.
-                Now this parameter is ignored.
-  @return ???
-*/
-OUString SwCalc::GetStrResult( const SwSbxValue& rVal, bool bRound )
+OUString SwCalc::GetStrResult( const SwSbxValue& rVal )
 {
     if( !rVal.IsDouble() )
     {
         return rVal.GetOUString();
     }
-    return GetStrResult( rVal.GetDouble(), bRound );
+    return GetStrResult( rVal.GetDouble() );
 }
 
 OUString SwCalc::GetStrResult( double nValue, bool )
@@ -687,10 +677,10 @@ SwCalcOper SwCalc::GetToken()
             }
 
             // catch operators
-            _CalcOp* pFnd = ::FindOperator( sLowerCaseName );
+            CalcOp* pFnd = ::FindOperator( sLowerCaseName );
             if( pFnd )
             {
-                switch( ( eCurrOper = static_cast<_CalcOp*>(pFnd)->eOp ) )
+                switch( ( eCurrOper = static_cast<CalcOp*>(pFnd)->eOp ) )
                 {
                 case CALC_SUM:
                 case CALC_MEAN:
@@ -758,9 +748,15 @@ SwCalcOper SwCalc::GetToken()
                     {
                         SwCalcOper eTmp2;
                         if( '=' == ch )
-                            eCurrOper = SwCalcOper('='), eTmp2 = CALC_EQ;
+                        {
+                            eCurrOper = SwCalcOper('=');
+                            eTmp2 = CALC_EQ;
+                        }
                         else
-                            eCurrOper = CALC_NOT, eTmp2 = CALC_NEQ;
+                        {
+                            eCurrOper = CALC_NOT;
+                            eTmp2 = CALC_NEQ;
+                        }
 
                         if( aRes.EndPos < sCommand.getLength() &&
                             '=' == sCommand[aRes.EndPos] )
@@ -1038,10 +1034,10 @@ SwCalcOper SwCalc::GetToken()
                     return GetToken();  // call again
 
                 // catch operators
-                _CalcOp* pFnd = ::FindOperator( aStr );
+                CalcOp* pFnd = ::FindOperator( aStr );
                 if( pFnd )
                 {
-                    switch( ( eCurrOper = static_cast<_CalcOp*>(pFnd)->eOp ) )
+                    switch( ( eCurrOper = static_cast<CalcOp*>(pFnd)->eOp ) )
                     {
                     case CALC_SUM :
                     case CALC_MEAN :
@@ -1200,9 +1196,15 @@ SwSbxValue SwCalc::Term()
                 if( fNum > 0 )
                 {
                     while( fNum < 1.0 )
-                        fNum *= 10.0, --nExp;
+                    {
+                        fNum *= 10.0;
+                        --nExp;
+                    }
                     while( fNum >= 10.0 )
-                        fNum /= 10.0, ++nExp;
+                    {
+                        fNum /= 10.0;
+                        ++nExp;
+                    }
                 }
                 nExp = 15 - nExp;
                 if( nExp > 15 )
@@ -1500,7 +1502,7 @@ OUString SwCalc::GetDBName(const OUString& rName)
 
 namespace
 {
-    static bool lcl_Str2Double( const OUString& rCommand, sal_Int32& rCommandPos,
+    bool lcl_Str2Double( const OUString& rCommand, sal_Int32& rCommandPos,
                                 double& rVal,
                                 const LocaleDataWrapper* const pLclData )
     {
@@ -1522,11 +1524,10 @@ namespace
 }
 
 bool SwCalc::Str2Double( const OUString& rCommand, sal_Int32& rCommandPos,
-                         double& rVal, const LocaleDataWrapper* const pLclData )
+                         double& rVal )
 {
     const SvtSysLocale aSysLocale;
-    return lcl_Str2Double( rCommand, rCommandPos, rVal,
-            pLclData ? pLclData : aSysLocale.GetLocaleDataPtr() );
+    return lcl_Str2Double( rCommand, rCommandPos, rVal, aSysLocale.GetLocaleDataPtr() );
 }
 
 bool SwCalc::Str2Double( const OUString& rCommand, sal_Int32& rCommandPos,

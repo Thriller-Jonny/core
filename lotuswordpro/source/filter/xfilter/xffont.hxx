@@ -189,7 +189,7 @@ public:
     /**
      * @descr   Set crossout.
      */
-    void    SetCrossout(enumXFCrossout cross,bool wordByWord=false);
+    void    SetCrossout(enumXFCrossout cross);
 
     /**
      * @descr   Set font transform type,pls refer to enumXFTransform.
@@ -216,7 +216,7 @@ public:
     enumXFTransform GetTransform();
 
     sal_Int16 GetFontSize();
-    XFColor GetColor();
+    const XFColor& GetColor();
 
     void    ToXml(IXFStream *pStrm);
 
@@ -354,10 +354,10 @@ inline void XFFont::SetUnderline(enumXFUnderline underline, bool wordByWord)
     m_nFlag |= XFFONT_FLAG_UNDERLINE;
 }
 
-inline void XFFont::SetCrossout(enumXFCrossout cross, bool wordByWord)
+inline void XFFont::SetCrossout(enumXFCrossout cross)
 {
     m_eCrossout = cross;
-    m_bWordByWord = wordByWord;
+    m_bWordByWord = false;
     m_nFlag |= XFFONT_FLAG_CROSSOUT;
 }
 
@@ -415,7 +415,7 @@ inline sal_Int16 XFFont::GetFontSize()
     return m_nFontSize;
 }
 
-inline XFColor XFFont::GetColor()
+inline const XFColor& XFFont::GetColor()
 {
     return m_aColor;
 }

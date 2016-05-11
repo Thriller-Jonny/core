@@ -88,14 +88,14 @@ public:
     void            SetAttrib( const TextAttrib& rAttr, sal_uLong nPara, sal_uInt16 nStart, sal_uInt16 nEnd );
     void            SetText( const OUString& rStr ) override;
 
-    bool            MarkNextError( bool bIgnoreCurrentError, css::uno::Reference<css::linguistic2::XSpellChecker1> );
+    bool            MarkNextError( bool bIgnoreCurrentError, const css::uno::Reference<css::linguistic2::XSpellChecker1>& );
     void            ChangeMarkedWord(const OUString& rNewWord, LanguageType eLanguage);
     void            MoveErrorMarkTo(sal_uInt16 nErrorStart, sal_uInt16 nErrorEnd, bool bGrammar);
     OUString        GetErrorText() const;
     void            RestoreCurrentError();
 
     void            SetAlternatives(
-                        css::uno::Reference<css::linguistic2::XSpellAlternatives> );
+                        const css::uno::Reference<css::linguistic2::XSpellAlternatives>& );
 
     const SpellErrorDescription* GetAlternatives();
 
@@ -107,11 +107,11 @@ public:
     bool            IsUndoEditMode() const { return m_bIsUndoEditMode;}
     void            SetUndoEditMode(bool bSet);
 
-    svx::SpellPortions  CreateSpellPortions( bool bSetIgnoreFlag ) const;
+    svx::SpellPortions  CreateSpellPortions() const;
 
     void            ResetUndo();
     void            Undo();
-    void            AddUndoAction( SfxUndoAction *pAction, bool bTryMerg=false );
+    void            AddUndoAction( SfxUndoAction *pAction );
     sal_uInt16      GetUndoActionCount();
     void            UndoActionStart( sal_uInt16 nId );
     void            UndoActionEnd();
@@ -197,14 +197,14 @@ private:
 
     DECL_LINK_TYPED( InitHdl, void*, void );
 
-    int             AddToDictionaryExecute( sal_uInt16 ItemId, PopupMenu *pMenu );
+    void            AddToDictionaryExecute( sal_uInt16 ItemId, PopupMenu *pMenu );
     void            StartSpellOptDlg_Impl();
     int             InitUserDicts();
     void            UpdateBoxes_Impl();
     void            Init_Impl();
     void            SpellContinue_Impl(bool UseSavedSentence = false, bool bIgnoreCurrentError = false );
     void            LockFocusChanges( bool bLock ) {bFocusLocked = bLock;}
-    void            Impl_Restore();
+    void            Impl_Restore(bool bUseSavedSentence);
 
     void            SetSelectedLang_Impl( LanguageType nLang );
     LanguageType    GetSelectedLang_Impl() const;

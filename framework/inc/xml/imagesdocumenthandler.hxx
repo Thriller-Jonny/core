@@ -24,6 +24,7 @@
 
 #include <com/sun/star/xml/sax/XDocumentHandler.hpp>
 
+#include <xml/saxnamespacefilter.hxx> // HACK: needed for MSVC 2013 ENABLE_LTO build: WeakImplHelper<XDocumentHandler>
 #include <xml/imagesconfiguration.hxx>
 #include <rtl/ustring.hxx>
 #include <cppuhelper/implbase.hxx>
@@ -110,8 +111,7 @@ class OReadImagesDocumentHandler : public ::cppu::WeakImplHelper< css::xml::sax:
 
         class ImageHashMap : public std::unordered_map< OUString     ,
                                                         Image_XML_Entry        ,
-                                                        OUStringHash,
-                                                        std::equal_to< OUString > >
+                                                        OUStringHash >
         {
         };
 

@@ -21,24 +21,6 @@
 
 #include <algorithm>
 
-class ScFormulaListener : public SvtListener
-{
-private:
-    std::vector<ScRange> maCells;
-    mutable bool mbDirty;
-    ScDocument* mpDoc;
-
-    void startListening(ScTokenArray* pTokens, const ScAddress& rPos);
-
-public:
-    explicit ScFormulaListener(ScFormulaCell* pCell);
-    virtual ~ScFormulaListener();
-
-    void Notify( const SfxHint& rHint ) override;
-
-    bool NeedsRepaint() const;
-};
-
 ScFormulaListener::ScFormulaListener(ScFormulaCell* pCell):
     mbDirty(false),
     mpDoc(pCell->GetDocument())
@@ -46,19 +28,30 @@ ScFormulaListener::ScFormulaListener(ScFormulaCell* pCell):
     startListening( pCell->GetCode(), pCell->aPos );
 }
 
-void ScFormulaListener::startListening(ScTokenArray* pArr, const ScAddress& rPos)
+ScFormulaListener::ScFormulaListener(ScDocument* pDoc):
+    mbDirty(false),
+    mpDoc(pDoc)
 {
+}
+
+void ScFormulaListener::startListening(ScTokenArray* pArr, const ScRange& rRange)
+{
+    if (!pArr)
+        return;
+
     pArr->Reset();
     formula::FormulaToken* t;
-    while ( ( t = pArr->GetNextReferenceRPN() ) != nullptr )
+    while ( ( t = pArr->GetNextReference() ) != nullptr )
     {
         switch (t->GetType())
         {
             case formula::svSingleRef:
             {
-                ScAddress aCell =  t->GetSingleRef()->toAbs(rPos);
-                if (aCell.IsValid())
-                    mpDoc->StartListeningCell(aCell, this);
+                ScAddress aCell = t->GetSingleRef()->toAbs(rRange.aStart);
+                ScAddress aCell2 = t->GetSingleRef()->toAbs(rRange.aEnd);
+                ScRange aRange(aCell, aCell2);
+                if (aRange.IsValid())
+                    mpDoc->StartListeningArea(aRange, false, this);
 
                 maCells.push_back(aCell);
             }
@@ -67,23 +60,28 @@ void ScFormulaListener::startListening(ScTokenArray* pArr, const ScAddress& rPos
             {
                 const ScSingleRefData& rRef1 = *t->GetSingleRef();
                 const ScSingleRefData& rRef2 = *t->GetSingleRef2();
-                ScAddress aCell1 = rRef1.toAbs(rPos);
-                ScAddress aCell2 = rRef2.toAbs(rPos);
-                if (aCell1.IsValid() && aCell2.IsValid())
+                ScAddress aCell1 = rRef1.toAbs(rRange.aStart);
+                ScAddress aCell2 = rRef2.toAbs(rRange.aStart);
+                ScAddress aCell3 = rRef1.toAbs(rRange.aEnd);
+                ScAddress aCell4 = rRef2.toAbs(rRange.aEnd);
+                ScRange aRange1(aCell1, aCell3);
+                ScRange aRange2(aCell2, aCell4);
+                aRange1.ExtendTo(aRange2);
+                if (aRange1.IsValid())
                 {
                     if (t->GetOpCode() == ocColRowNameAuto)
                     {   // automagically
                         if ( rRef1.IsColRel() )
                         {   // ColName
-                            aCell2.SetRow(MAXROW);
+                            aRange1.aEnd.SetRow(MAXROW);
                         }
                         else
                         {   // RowName
-                            aCell2.SetCol(MAXCOL);
+                            aRange1.aEnd.SetCol(MAXCOL);
                         }
                     }
-                    mpDoc->StartListeningArea(ScRange(aCell1, aCell2), false, this);
-                    maCells.push_back(ScRange(aCell1, aCell2));
+                    mpDoc->StartListeningArea(aRange1, false, this);
+                    maCells.push_back(aRange1);
                 }
             }
             break;
@@ -91,7 +89,22 @@ void ScFormulaListener::startListening(ScTokenArray* pArr, const ScAddress& rPos
                 ;   // nothing
         }
     }
+}
 
+void ScFormulaListener::resetTokenArray(ScTokenArray* pArray, const ScRange& rRange)
+{
+    stopListening();
+    startListening(pArray, rRange);
+}
+
+void ScFormulaListener::addTokenArray(ScTokenArray* pArray, const ScRange& rRange)
+{
+    startListening(pArray, rRange);
+}
+
+void ScFormulaListener::setCallback(const std::function<void()>& aCallback)
+{
+    maCallbackFunction = aCallback;
 }
 
 namespace {
@@ -101,21 +114,10 @@ struct StopListeningCell
     StopListeningCell(ScDocument* pDoc, SvtListener* pListener):
         mpDoc(pDoc), mpListener(pListener) {}
 
+    // TODO: moggi: use EndListeningArea
     void operator()(const ScRange& rRange)
     {
-        for(SCTAB nTab = rRange.aStart.Tab(),
-                nTabEnd = rRange.aEnd.Tab(); nTab <= nTabEnd; ++nTab)
-        {
-            for(SCCOL nCol = rRange.aStart.Col(),
-                    nColEnd = rRange.aEnd.Col(); nCol <= nColEnd; ++nCol)
-            {
-                for(SCROW nRow = rRange.aStart.Row(),
-                        nRowEnd = rRange.aEnd.Row(); nRow <= nRowEnd; ++nRow)
-                {
-                    mpDoc->EndListeningCell(ScAddress(nCol, nRow, nTab), mpListener);
-                }
-            }
-        }
+        mpDoc->EndListeningArea(rRange, false, mpListener);
     }
 
 private:
@@ -125,14 +127,21 @@ private:
 
 }
 
-ScFormulaListener::~ScFormulaListener()
+void ScFormulaListener::stopListening()
 {
     std::for_each(maCells.begin(), maCells.end(), StopListeningCell(mpDoc, this));
+}
+
+ScFormulaListener::~ScFormulaListener()
+{
+    stopListening();
 }
 
 void ScFormulaListener::Notify( const SfxHint& )
 {
     mbDirty = true;
+    if (maCallbackFunction)
+        maCallbackFunction();
 }
 
 bool ScFormulaListener::NeedsRepaint() const
@@ -404,20 +413,11 @@ std::vector<double>& ScColorFormat::getValues() const
                 for(SCROW nRow = nRowStart; nRow <= nRowEnd; ++nRow)
                 {
                     ScAddress aAddr(nCol, nRow, nTab);
-                    CellType eType = mpDoc->GetCellType(aAddr);
-                    if(eType == CELLTYPE_VALUE)
+                    ScRefCellValue rCell(*mpDoc, aAddr);
+                    if(rCell.hasNumeric())
                     {
-                        double aVal = mpDoc->GetValue(nCol, nRow, nTab);
+                        double aVal = rCell.getValue();
                         rValues.push_back(aVal);
-                    }
-                    else if(eType == CELLTYPE_FORMULA)
-                    {
-                        ScFormulaCell *pCell = mpDoc->GetFormulaCell(aAddr);
-                        if (pCell && pCell->IsValue())
-                        {
-                            double aVal = mpDoc->GetValue(nCol, nRow, nTab);
-                            rValues.push_back(aVal);
-                        }
                     }
                 }
             }
@@ -531,19 +531,12 @@ double ScColorScaleFormat::CalcValue(double nMin, double nMax, ScColorScaleEntri
 
 Color* ScColorScaleFormat::GetColor( const ScAddress& rAddr ) const
 {
-    CellType eCellType = mpDoc->GetCellType(rAddr);
-    if(eCellType != CELLTYPE_VALUE && eCellType != CELLTYPE_FORMULA)
+    ScRefCellValue rCell(*mpDoc, rAddr);
+    if(!rCell.hasNumeric())
         return nullptr;
 
-    if (eCellType == CELLTYPE_FORMULA)
-    {
-        ScFormulaCell *pCell = mpDoc->GetFormulaCell(rAddr);
-        if (!pCell || !pCell->IsValue())
-            return nullptr;
-    }
-
     // now we have for sure a value
-    double nVal = mpDoc->GetValue(rAddr);
+    double nVal = rCell.getValue();
 
     if (maColorScales.size() < 2)
         return nullptr;
@@ -612,7 +605,6 @@ bool ScColorScaleFormat::NeedsRepaint() const
     }
     return false;
 }
-
 
 
 condformat::ScFormatEntryType ScColorScaleFormat::GetType() const
@@ -788,16 +780,9 @@ double ScDataBarFormat::getMax(double nMin, double nMax) const
 
 ScDataBarInfo* ScDataBarFormat::GetDataBarInfo(const ScAddress& rAddr) const
 {
-    CellType eCellType = mpDoc->GetCellType(rAddr);
-    if(eCellType != CELLTYPE_VALUE && eCellType != CELLTYPE_FORMULA)
+    ScRefCellValue rCell(*mpDoc, rAddr);
+    if(!rCell.hasNumeric())
         return nullptr;
-
-    if (eCellType == CELLTYPE_FORMULA)
-    {
-        ScFormulaCell *pCell = mpDoc->GetFormulaCell(rAddr);
-        if (!pCell || !pCell->IsValue())
-            return nullptr;
-    }
 
     // now we have for sure a value
 
@@ -808,7 +793,7 @@ ScDataBarInfo* ScDataBarFormat::GetDataBarInfo(const ScAddress& rAddr) const
     double nMinLength = mpFormatData->mnMinLength;
     double nMaxLength = mpFormatData->mnMaxLength;
 
-    double nValue = mpDoc->GetValue(rAddr);
+    double nValue = rCell.getValue();
 
     ScDataBarInfo* pInfo = new ScDataBarInfo();
     if(mpFormatData->meAxisPosition == databar::NONE)
@@ -974,19 +959,12 @@ const ScIconSetFormatData* ScIconSetFormat::GetIconSetData() const
 
 ScIconSetInfo* ScIconSetFormat::GetIconSetInfo(const ScAddress& rAddr) const
 {
-    CellType eCellType = mpDoc->GetCellType(rAddr);
-    if(eCellType != CELLTYPE_VALUE && eCellType != CELLTYPE_FORMULA)
+    ScRefCellValue rCell(*mpDoc, rAddr);
+    if(!rCell.hasNumeric())
         return nullptr;
 
-    if (eCellType == CELLTYPE_FORMULA)
-    {
-        ScFormulaCell *pCell = mpDoc->GetFormulaCell(rAddr);
-        if (!pCell || !pCell->IsValue())
-            return nullptr;
-    }
-
     // now we have for sure a value
-    double nVal = mpDoc->GetValue(rAddr);
+    double nVal = rCell.getValue();
 
     if (mpFormatData->m_Entries.size() < 2)
         return nullptr;
@@ -1338,11 +1316,11 @@ BitmapEx& ScIconSetFormat::getBitmap(sc::IconSetBitmapMap & rIconSetBitmapMap,
 {
     sal_Int32 nBitmap = -1;
 
-    for(size_t i = 0; i < SAL_N_ELEMENTS(aBitmapMap); ++i)
+    for(const ScIconSetBitmapMap & i : aBitmapMap)
     {
-        if(aBitmapMap[i].eType == eType)
+        if(i.eType == eType)
         {
-            nBitmap = *(aBitmapMap[i].nBitmaps + nIndex);
+            nBitmap = *(i.nBitmaps + nIndex);
             break;
         }
     }
@@ -1363,9 +1341,9 @@ BitmapEx& ScIconSetFormat::getBitmap(sc::IconSetBitmapMap & rIconSetBitmapMap,
 void ScIconSetFormat::EnsureSize()
 {
     ScIconSetType eType = mpFormatData->eIconSetType;
-    for (size_t i = 0; i < SAL_N_ELEMENTS(aIconSetMap); ++i)
+    for (ScIconSetMap & i : aIconSetMap)
     {
-        if (aIconSetMap[i].eType == eType)
+        if (i.eType == eType)
         {
             // size_t nElements = aIconSetMap[i].nElements;
             // TODO: implement

@@ -49,9 +49,6 @@ using namespace ::com::sun::star;
 namespace unogallery {
 
 
-// - GalleryItem -
-
-
 GalleryItem::GalleryItem( ::unogallery::GalleryTheme& rTheme, const GalleryObject& rObject ) :
     ::comphelper::PropertySetHelper( createPropertySetInfo() ),
     mpTheme( &rTheme ),
@@ -59,7 +56,6 @@ GalleryItem::GalleryItem( ::unogallery::GalleryTheme& rTheme, const GalleryObjec
 {
     mpTheme->implRegisterGalleryItem( *this );
 }
-
 
 
 GalleryItem::~GalleryItem()
@@ -70,12 +66,10 @@ GalleryItem::~GalleryItem()
 }
 
 
-
 bool GalleryItem::isValid() const
 {
     return( mpTheme != nullptr );
 }
-
 
 
 uno::Any SAL_CALL GalleryItem::queryAggregation( const uno::Type & rType )
@@ -102,13 +96,11 @@ uno::Any SAL_CALL GalleryItem::queryAggregation( const uno::Type & rType )
 }
 
 
-
 uno::Any SAL_CALL GalleryItem::queryInterface( const uno::Type & rType )
     throw( uno::RuntimeException, std::exception )
 {
     return OWeakAggObject::queryInterface( rType );
 }
-
 
 
 void SAL_CALL GalleryItem::acquire()
@@ -118,7 +110,6 @@ void SAL_CALL GalleryItem::acquire()
 }
 
 
-
 void SAL_CALL GalleryItem::release()
     throw()
 {
@@ -126,13 +117,11 @@ void SAL_CALL GalleryItem::release()
 }
 
 
-
 OUString GalleryItem::getImplementationName_Static()
     throw()
 {
     return OUString( "com.sun.star.comp.gallery.GalleryItem" );
 }
-
 
 
 uno::Sequence< OUString > GalleryItem::getSupportedServiceNames_Static()
@@ -183,7 +172,6 @@ uno::Sequence< sal_Int8 > SAL_CALL GalleryItem::getImplementationId()
 }
 
 
-
 sal_Int8 SAL_CALL GalleryItem::getType()
     throw (uno::RuntimeException, std::exception)
 {
@@ -194,12 +182,12 @@ sal_Int8 SAL_CALL GalleryItem::getType()
     {
         switch( implGetObject()->eObjKind )
         {
-            case( SGA_OBJ_SOUND ):
-            case( SGA_OBJ_VIDEO ):
+            case SGA_OBJ_SOUND:
+            case SGA_OBJ_VIDEO:
                 nRet = gallery::GalleryItemType::MEDIA;
             break;
 
-            case( SGA_OBJ_SVDRAW ):
+            case SGA_OBJ_SVDRAW:
                 nRet = gallery::GalleryItemType::DRAWING;
             break;
 
@@ -211,7 +199,6 @@ sal_Int8 SAL_CALL GalleryItem::getType()
 
     return nRet;
 }
-
 
 
 ::comphelper::PropertySetInfo* GalleryItem::createPropertySetInfo()
@@ -305,13 +292,13 @@ void GalleryItem::_getPropertyValues( const comphelper::PropertyMapEntry** ppEnt
     {
         switch( (*ppEntries)->mnHandle )
         {
-            case( UNOGALLERY_GALLERYITEMTYPE ):
+            case UNOGALLERY_GALLERYITEMTYPE:
             {
                 *pValue <<= sal_Int8( getType() );
             }
             break;
 
-            case( UNOGALLERY_URL ):
+            case UNOGALLERY_URL:
             {
                 ::GalleryTheme* pGalTheme = ( isValid() ? mpTheme->implGetTheme() : nullptr );
 
@@ -320,7 +307,7 @@ void GalleryItem::_getPropertyValues( const comphelper::PropertyMapEntry** ppEnt
             }
             break;
 
-            case( UNOGALLERY_TITLE ):
+            case UNOGALLERY_TITLE:
             {
                 ::GalleryTheme* pGalTheme = ( isValid() ? mpTheme->implGetTheme() : nullptr );
 
@@ -337,7 +324,7 @@ void GalleryItem::_getPropertyValues( const comphelper::PropertyMapEntry** ppEnt
             }
             break;
 
-            case( UNOGALLERY_THUMBNAIL ):
+            case UNOGALLERY_THUMBNAIL:
             {
                 ::GalleryTheme* pGalTheme = ( isValid() ? mpTheme->implGetTheme() : nullptr );
 
@@ -361,7 +348,7 @@ void GalleryItem::_getPropertyValues( const comphelper::PropertyMapEntry** ppEnt
             }
             break;
 
-            case( UNOGALLERY_GRAPHIC ):
+            case UNOGALLERY_GRAPHIC:
             {
                 ::GalleryTheme* pGalTheme = ( isValid() ? mpTheme->implGetTheme() : nullptr );
                 Graphic         aGraphic;
@@ -371,7 +358,7 @@ void GalleryItem::_getPropertyValues( const comphelper::PropertyMapEntry** ppEnt
             }
             break;
 
-            case( UNOGALLERY_DRAWING ):
+            case UNOGALLERY_DRAWING:
             {
                 if( gallery::GalleryItemType::DRAWING == getType() )
                 {
@@ -400,10 +387,6 @@ void GalleryItem::_getPropertyValues( const comphelper::PropertyMapEntry** ppEnt
 }
 
 
-
-
-
-
 void GalleryItem::implSetInvalid()
 {
     if( mpTheme )
@@ -414,9 +397,6 @@ void GalleryItem::implSetInvalid()
 }
 
 
-// - GalleryDrawingModel -
-
-
 GalleryDrawingModel::GalleryDrawingModel( SdrModel* pDoc )
     throw() :
     SvxUnoDrawingModel( pDoc )
@@ -424,13 +404,11 @@ GalleryDrawingModel::GalleryDrawingModel( SdrModel* pDoc )
 }
 
 
-
 GalleryDrawingModel::~GalleryDrawingModel()
     throw()
 {
     delete GetDoc();
 }
-
 
 
 UNO3_GETIMPLEMENTATION_IMPL( GalleryDrawingModel );

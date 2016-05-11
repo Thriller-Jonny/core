@@ -86,6 +86,7 @@ public:
     void testTdf43534();
     void testTdf91979();
     // void testTdf40110();
+    void testTdf98657();
 
     CPPUNIT_TEST_SUITE(ScFiltersTest);
     CPPUNIT_TEST(testTdf64229);
@@ -94,6 +95,7 @@ public:
     CPPUNIT_TEST(testTdf43534);
     CPPUNIT_TEST(testTdf91979);
     // CPPUNIT_TEST(testTdf40110);
+    CPPUNIT_TEST(testTdf98657);
     CPPUNIT_TEST_SUITE_END();
 private:
     uno::Reference<uno::XInterface> m_xCalcComponent;
@@ -178,7 +180,7 @@ void ScFiltersTest::testTdf91979()
 
     Sequence < beans::PropertyValue > args(1);
     args[0].Name = "Hidden";
-    args[0].Value <<= sal_True;
+    args[0].Value <<= true;
 
     uno::Reference< lang::XComponent > xComponent = xDesktop->loadComponentFromURL(
         "private:factory/scalc",
@@ -207,7 +209,7 @@ void ScFiltersTest::testTdf91979()
     CPPUNIT_ASSERT(aPos.getX() == (MAXCOL - 1) * nColWidth);
     CPPUNIT_ASSERT(aPos.getY() == 10000 * nRowHeight);
 
-    xDocSh->DoClose();
+    xComponent->dispose();
 }
 
 /*
@@ -229,6 +231,17 @@ void ScFiltersTest::testTdf40110()
     xDocSh->DoClose();
 }
 */
+
+void ScFiltersTest::testTdf98657()
+{
+    ScDocShellRef xDocSh = loadDoc("tdf98657.", FORMAT_ODS);
+    ScDocument& rDoc = xDocSh->GetDocument();
+
+    xDocSh->DoHardRecalc(true);
+
+    // this was a NaN before the fix
+    CPPUNIT_ASSERT_EQUAL(double(285.0), rDoc.GetValue(ScAddress(1, 1, 0)));
+}
 
 
 ScFiltersTest::ScFiltersTest()

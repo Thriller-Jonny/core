@@ -1123,15 +1123,15 @@ double getYield_( sal_Int32 nNullDate, sal_Int32 nSettle, sal_Int32 nMat, double
     double      fPrice2 = getPrice_( nNullDate, nSettle, nMat, fRate, fYield2, fRedemp, nFreq, nBase );
     double      fYieldN = ( fYield2 - fYield1 ) * 0.5;
 
-    for( sal_uInt32 nIter = 0 ; nIter < 100 && fPriceN != fPrice ; nIter++ )
+    for( sal_uInt32 nIter = 0 ; nIter < 100 && !rtl::math::approxEqual(fPriceN, fPrice) ; nIter++ )
     {
         fPriceN = getPrice_( nNullDate, nSettle, nMat, fRate, fYieldN, fRedemp, nFreq, nBase );
 
-        if( fPrice == fPrice1 )
+        if( rtl::math::approxEqual(fPrice, fPrice1) )
             return fYield1;
-        else if( fPrice == fPrice2 )
+        else if( rtl::math::approxEqual(fPrice, fPrice2) )
             return fYield2;
-        else if( fPrice == fPriceN )
+        else if( rtl::math::approxEqual(fPrice, fPriceN) )
             return fYieldN;
         else if( fPrice < fPrice2 )
         {
@@ -1377,7 +1377,6 @@ double GetCoupnum( sal_Int32 nNullDate, sal_Int32 nSettle, sal_Int32 nMat, sal_I
 }
 
 
-
 class AnalysisRscStrArrLoader : public Resource
 {
 private:
@@ -1437,8 +1436,8 @@ sal_uInt16 FuncData::GetStrIndex( sal_uInt16 nParamNum ) const
 
 void InitFuncDataList( FuncDataList& rList, ResMgr& rResMgr )
 {
-    for( sal_uInt16 n = 0 ; n < SAL_N_ELEMENTS(pFuncDatas) ; n++ )
-        rList.push_back( FuncData( pFuncDatas[ n ], rResMgr ) );
+    for(const auto & rFuncData : pFuncDatas)
+        rList.push_back( FuncData( rFuncData, rResMgr ) );
 }
 
 
@@ -1534,8 +1533,7 @@ void SortedIndividualInt32List::InsertHolidayList(
         ScaAnyConverter& rAnyConv,
         const uno::Reference< beans::XPropertySet >& xOptions,
         const uno::Any& rHolAny,
-        sal_Int32 nNullDate,
-        bool bInsertOnWeekend ) throw( uno::RuntimeException, lang::IllegalArgumentException )
+        sal_Int32 nNullDate ) throw( uno::RuntimeException, lang::IllegalArgumentException )
 {
     rAnyConv.init( xOptions );
     if( rHolAny.getValueTypeClass() == uno::TypeClass_SEQUENCE )
@@ -1550,16 +1548,15 @@ void SortedIndividualInt32List::InsertHolidayList(
                 const uno::Any* pAnyArray = rSubSeq.getConstArray();
 
                 for( sal_Int32 nIndex2 = 0; nIndex2 < rSubSeq.getLength(); nIndex2++ )
-                    InsertHolidayList( rAnyConv, pAnyArray[ nIndex2 ], nNullDate, bInsertOnWeekend );
+                    InsertHolidayList( rAnyConv, pAnyArray[ nIndex2 ], nNullDate, false/*bInsertOnWeekend*/ );
             }
         }
         else
             throw lang::IllegalArgumentException();
     }
     else
-        InsertHolidayList( rAnyConv, rHolAny, nNullDate, bInsertOnWeekend );
+        InsertHolidayList( rAnyConv, rHolAny, nNullDate, false/*bInsertOnWeekend*/ );
 }
-
 
 
 void ScaDoubleList::Append(
@@ -1631,11 +1628,10 @@ void ScaDoubleList::Append(
 void ScaDoubleList::Append(
         ScaAnyConverter& rAnyConv,
         const uno::Reference< beans::XPropertySet >& xOpt,
-        const uno::Sequence< uno::Any >& rAnySeq,
-        bool bIgnoreEmpty ) throw( uno::RuntimeException, lang::IllegalArgumentException )
+        const uno::Sequence< uno::Any >& rAnySeq ) throw( uno::RuntimeException, lang::IllegalArgumentException )
 {
     rAnyConv.init( xOpt );
-    Append( rAnyConv, rAnySeq, bIgnoreEmpty );
+    Append( rAnyConv, rAnySeq, true/*bIgnoreEmpty*/ );
 }
 
 
@@ -1643,7 +1639,6 @@ bool ScaDoubleList::CheckInsert( double ) const throw( uno::RuntimeException, la
 {
     return true;
 }
-
 
 
 bool ScaDoubleListGT0::CheckInsert( double fValue ) const throw( uno::RuntimeException, lang::IllegalArgumentException )
@@ -1654,14 +1649,12 @@ bool ScaDoubleListGT0::CheckInsert( double fValue ) const throw( uno::RuntimeExc
 }
 
 
-
 bool ScaDoubleListGE0::CheckInsert( double fValue ) const throw( uno::RuntimeException, lang::IllegalArgumentException )
 {
     if( fValue < 0.0 )
         throw lang::IllegalArgumentException();
     return true;
 }
-
 
 
 Complex::Complex( const OUString& rStr ) throw( uno::RuntimeException, lang::IllegalArgumentException )
@@ -1848,7 +1841,7 @@ void Complex::Sin() throw( uno::RuntimeException, lang::IllegalArgumentException
 
 void Complex::Cos() throw( uno::RuntimeException, lang::IllegalArgumentException )
 {
-	if( !::rtl::math::isValidArcArg( r ) )
+    if( !::rtl::math::isValidArcArg( r ) )
         throw lang::IllegalArgumentException();
 
     if( i )
@@ -2009,13 +2002,13 @@ void Complex::Sinh() throw( uno::RuntimeException, lang::IllegalArgumentExceptio
 
     if( i )
     {
-        double	r_;
+        double  r_;
         r_ = sinh( r ) * cos( i );
-		i = cosh( r ) * sin( i );
-		r = r_;
-	}
-	else
-		r = sinh( r );
+        i = cosh( r ) * sin( i );
+        r = r_;
+    }
+    else
+        r = sinh( r );
 }
 
 
@@ -2026,13 +2019,13 @@ void Complex::Cosh() throw( uno::RuntimeException, lang::IllegalArgumentExceptio
 
     if( i )
     {
-        double	r_;
+        double  r_;
         r_ = cosh( r ) * cos( i );
-		i = sinh( r ) * sin( i );
-		r = r_;
-	}
-	else
-		r = cosh( r );
+        i = sinh( r ) * sin( i );
+        r = r_;
+    }
+    else
+        r = cosh( r );
 }
 
 
@@ -2080,8 +2073,8 @@ void Complex::Csch() throw( uno::RuntimeException, lang::IllegalArgumentExceptio
 
 ComplexList::~ComplexList()
 {
-    for( size_t i = 0; i < maVector.size(); ++i )
-        delete maVector[i];
+    for(Complex* p : maVector)
+        delete p;
 }
 
 
@@ -2605,7 +2598,6 @@ double ConvertDataList::Convert( double fVal, const OUString& rFrom, const OUStr
 }
 
 
-
 ScaDate::ScaDate() :
     nOrigDay( 1 ),
     nDay( 1 ),
@@ -2800,7 +2792,6 @@ bool ScaDate::operator<( const ScaDate& rCmp ) const
         return !bLastDay && rCmp.bLastDay;
     return nOrigDay < rCmp.nOrigDay;
 }
-
 
 
 ScaAnyConverter::ScaAnyConverter( const uno::Reference< uno::XComponentContext >& xContext )

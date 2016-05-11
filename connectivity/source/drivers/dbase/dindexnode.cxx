@@ -65,7 +65,6 @@ ONDXKey::ONDXKey(double aVal, sal_uInt32 nRec)
 }
 
 
-
 // index page
 
 ONDXPage::ONDXPage(ODbaseIndex& rInd, sal_uInt32 nPos, ONDXPage* pParent)
@@ -363,10 +362,10 @@ void ONDXPage::Release(bool bSave)
     aParent.Clear();
 }
 
-void ONDXPage::ReleaseFull(bool bSave)
+void ONDXPage::ReleaseFull()
 {
     ONDXPagePtr aTempParent = aParent;
-    Release(bSave);
+    Release();
 
     if (aTempParent.Is())
     {
@@ -430,7 +429,6 @@ bool ONDXPage::Delete(sal_uInt16 nNodePos)
 }
 
 
-
 ONDXNode ONDXPage::Split(ONDXPage& rPage)
 {
     DBG_ASSERT(IsFull(), "Incorrect Splitting");
@@ -481,7 +479,7 @@ ONDXNode ONDXPage::Split(ONDXPage& rPage)
 }
 
 
-void ONDXPage::Merge(sal_uInt16 nParentNodePos, ONDXPagePtr xPage)
+void ONDXPage::Merge(sal_uInt16 nParentNodePos, const ONDXPagePtr& xPage)
 {
     DBG_ASSERT(HasParent(), "kein Vater vorhanden");
     DBG_ASSERT(nParentNodePos != NODE_NOTFOUND, "Falscher Indexaufbau");
@@ -667,7 +665,6 @@ void ONDXPage::Merge(sal_uInt16 nParentNodePos, ONDXPagePtr xPage)
 // ONDXNode
 
 
-
 void ONDXNode::Read(SvStream &rStream, ODbaseIndex& rIndex)
 {
     rStream.ReadUInt32( aKey.nRecord ); // key
@@ -731,7 +728,6 @@ void ONDXNode::Write(SvStream &rStream, const ONDXPage& rPage) const
     }
     WriteONDXPagePtr( rStream, aChild );
 }
-
 
 
 ONDXPagePtr& ONDXNode::GetChild(ODbaseIndex* pIndex, ONDXPage* pParent)

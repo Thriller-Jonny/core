@@ -86,7 +86,7 @@ namespace
         {
         }
 
-        OUString  getLabel() const
+        const OUString&  getLabel() const
         {
             return m_label;
         }
@@ -114,12 +114,12 @@ namespace
 
             switch ( _eType )
             {
-            case SQLExceptionInfo::SQL_WARNING:
+            case SQLExceptionInfo::TYPE::SQLWarning:
                 ppProvider = &m_pWarningsImage;
                 nNormalImageID = BMP_EXCEPTION_WARNING;
                 break;
 
-            case SQLExceptionInfo::SQL_CONTEXT:
+            case SQLExceptionInfo::TYPE::SQLContext:
                 ppProvider = &m_pInfoImage;
                 nNormalImageID = BMP_EXCEPTION_INFO;
                 break;
@@ -140,12 +140,12 @@ namespace
 
             switch ( _eType )
             {
-            case SQLExceptionInfo::SQL_WARNING:
+            case SQLExceptionInfo::TYPE::SQLWarning:
                 ppProvider = &m_pWarningsLabel;
                 nLabelID = STR_EXCEPTION_WARNING;
                 break;
 
-            case SQLExceptionInfo::SQL_CONTEXT:
+            case SQLExceptionInfo::TYPE::SQLContext:
                 ppProvider = &m_pInfoLabel;
                 nLabelID = _bSubLabel ? STR_EXCEPTION_DETAILS : STR_EXCEPTION_INFO;
                 break;
@@ -174,11 +174,11 @@ namespace
         OUString                                sSQLState;
         OUString                                sErrorCode;
 
-        ExceptionDisplayInfo() : eType( SQLExceptionInfo::UNDEFINED ), bSubEntry( false ) { }
+        ExceptionDisplayInfo() : eType( SQLExceptionInfo::TYPE::Undefined ), bSubEntry( false ) { }
         explicit ExceptionDisplayInfo( SQLExceptionInfo::TYPE _eType ) : eType( _eType ), bSubEntry( false ) { }
     };
 
-    static bool lcl_hasDetails( const ExceptionDisplayInfo& _displayInfo )
+    bool lcl_hasDetails( const ExceptionDisplayInfo& _displayInfo )
     {
         return  ( !_displayInfo.sErrorCode.isEmpty() )
                 ||  (   !_displayInfo.sSQLState.isEmpty()
@@ -247,7 +247,7 @@ namespace
 
             _out_rChain.push_back( aDisplayInfo );
 
-            if ( aCurrentElement.getType() == SQLExceptionInfo::SQL_CONTEXT )
+            if ( aCurrentElement.getType() == SQLExceptionInfo::TYPE::SQLContext )
             {
                 const SQLContext* pContext = static_cast<const SQLContext*>(aCurrentElement);
                 if ( !pContext->Details.isEmpty() )
@@ -342,8 +342,8 @@ OExceptionChainDialog::OExceptionChainDialog(vcl::Window* pParent, const Excepti
 
         ExceptionDisplayInfo aInfo22018;
         aInfo22018.sMessage = ModuleRes( STR_EXPLAN_STRINGCONVERSION_ERROR );
-        aInfo22018.pLabelProvider = aProviderFactory.getLabelProvider( SQLExceptionInfo::SQL_CONTEXT, false );
-        aInfo22018.pImageProvider = aProviderFactory.getImageProvider( SQLExceptionInfo::SQL_CONTEXT );
+        aInfo22018.pLabelProvider = aProviderFactory.getLabelProvider( SQLExceptionInfo::TYPE::SQLContext, false );
+        aInfo22018.pImageProvider = aProviderFactory.getImageProvider( SQLExceptionInfo::TYPE::SQLContext );
         m_aExceptions.push_back( aInfo22018 );
 
         lcl_insertExceptionEntry( *m_pExceptionList, m_aExceptions.size() - 1, aInfo22018 );
@@ -402,10 +402,10 @@ struct SQLMessageBox_Impl
 
 namespace
 {
-    void lcl_positionInAppFont( const vcl::Window& _rParent, vcl::Window& _rChild, long _nX, long _nY, long _Width, long _Height )
+    void lcl_positionInAppFont( const vcl::Window& _rParent, vcl::Window& _rChild, long _nX, long _nY, long Width, long Height )
     {
         Point aPos = _rParent.LogicToPixel( Point( _nX, _nY ), MAP_APPFONT );
-        Size aSize = _rParent.LogicToPixel( Size( _Width, _Height ), MAP_APPFONT );
+        Size aSize = _rParent.LogicToPixel( Size( Width, Height ), MAP_APPFONT );
         _rChild.SetPosSizePixel( aPos, aSize );
     }
 
@@ -449,8 +449,8 @@ void OSQLMessageBox::impl_positionControls()
         //   element denotes its sub entry
         // - the first and the second element are both independent (i.e. the second
         //   is no sub entry), and none of them is a context.
-        bool bFirstElementIsContext = ( rFirstInfo.eType == SQLExceptionInfo::SQL_CONTEXT );
-        bool bSecondElementIsContext = ( pSecondInfo->eType == SQLExceptionInfo::SQL_CONTEXT );
+        bool bFirstElementIsContext = ( rFirstInfo.eType == SQLExceptionInfo::TYPE::SQLContext );
+        bool bSecondElementIsContext = ( pSecondInfo->eType == SQLExceptionInfo::TYPE::SQLContext );
 
         if ( bFirstElementIsContext && pSecondInfo->bSubEntry )
             sSecondary = pSecondInfo->sMessage;
@@ -533,7 +533,7 @@ void OSQLMessageBox::impl_initImage( MessageType _eImage )
     {
         default:
             OSL_FAIL( "OSQLMessageBox::impl_initImage: unsupported image type!" );
-            /* Fall through */
+            SAL_FALLTHROUGH;
         case Info:
             m_aInfoImage->SetImage(InfoBox::GetStandardImage());
             break;
@@ -638,9 +638,9 @@ void OSQLMessageBox::Construct( WinBits _nStyle, MessageType _eImage )
     {
         switch ( m_pImpl->aDisplayInfo[0].eType )
         {
-        case SQLExceptionInfo::SQL_EXCEPTION: eType = Error;    break;
-        case SQLExceptionInfo::SQL_WARNING:   eType = Warning;  break;
-        case SQLExceptionInfo::SQL_CONTEXT:   eType = Info;     break;
+        case SQLExceptionInfo::TYPE::SQLException: eType = Error;    break;
+        case SQLExceptionInfo::TYPE::SQLWarning:   eType = Warning;  break;
+        case SQLExceptionInfo::TYPE::SQLContext:   eType = Info;     break;
         default: OSL_FAIL( "OSQLMessageBox::Construct: invalid type!" );
         }
     }

@@ -25,7 +25,6 @@
 
 class Edit;
 class PopupMenu;
-class SfxTemplateInfoDlg;
 class TemplateAbstractView;
 class TemplateLocalView;
 class TemplateRemoteView;
@@ -70,6 +69,8 @@ private:
     DECL_LINK_TYPED(TBXTemplateHdl, ToolBox*, void);
     DECL_LINK_TYPED(TBXDropdownHdl, ToolBox*, void);
 
+    DECL_LINK_TYPED(OkClickHdl, Button*, void);
+
     DECL_LINK_TYPED(TVItemStateHdl, const ThumbnailViewItem*, void);
 
     DECL_LINK_TYPED(MenuSelectHdl, Menu*, bool);
@@ -87,7 +88,6 @@ private:
     static void OnTemplateLink ();
     void OnTemplateOpen ();
     void OnTemplateEdit ();
-    void OnTemplateProperties ();
     void OnTemplateDelete ();
     void OnTemplateAsDefault ();
     void OnTemplateExport ();
@@ -146,6 +146,7 @@ private:
     VclPtr<TabControl> mpTabControl;
 
     VclPtr<Edit> mpSearchEdit;
+    VclPtr<PushButton> mpOKButton;
     VclPtr<ToolBox> mpViewBar;
     VclPtr<ToolBox> mpActionBar;
     VclPtr<ToolBox> mpTemplateBar;

@@ -22,7 +22,6 @@
 #include <rtl/ustring.hxx>
 
 
-
 namespace drawinglayer
 {
     namespace attribute
@@ -143,6 +142,11 @@ namespace drawinglayer
 
         FontAttribute::~FontAttribute()
         {
+        }
+
+        bool FontAttribute::isDefault() const
+        {
+            return mpFontAttribute.same_object(theGlobalDefault::get());
         }
 
         FontAttribute& FontAttribute::operator=(const FontAttribute& rCandidate)

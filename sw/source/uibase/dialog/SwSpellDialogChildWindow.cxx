@@ -685,7 +685,7 @@ bool SwSpellDialogChildWindow::MakeTextSelection_Impl(SwWrtShell& rShell, ShellM
                 rView.AttrChangedNotify(&rShell);
                 break;
             }
-        // otherwise no break to deselect the object
+            SAL_FALLTHROUGH; // to deselect the object
         case SHELL_MODE_GRAPHIC:
         case SHELL_MODE_OBJECT:
         {
@@ -768,7 +768,7 @@ bool SwSpellDialogChildWindow::FindNextDrawTextError_Impl(SwWrtShell& rSh)
                 {
                     SdrOutliner aTmpOutliner(pDoc->getIDocumentDrawModelAccess().GetDrawModel()->
                                              GetDrawOutliner().GetEmptyItemSet().GetPool(),
-                                                OUTLINERMODE_TEXTOBJECT );
+                                                OutlinerMode::TextObject );
                     aTmpOutliner.SetRefDevice( pDoc->getIDocumentDeviceAccess().getPrinter( false ) );
                     MapMode aMapMode (MAP_TWIP);
                     aTmpOutliner.SetRefMapMode(aMapMode);

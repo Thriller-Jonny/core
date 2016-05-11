@@ -150,7 +150,6 @@ namespace svgio
 } // end of namespace svgio
 
 
-
 namespace svgio
 {
     namespace svgreader
@@ -193,7 +192,6 @@ namespace svgio
 
     } // end of namespace svgreader
 } // end of namespace svgio
-
 
 
 namespace svgio
@@ -272,8 +270,8 @@ namespace svgio
                     bRTL,
                     bBiDiStrong);
 
-                // prepare FontSize
-                double fFontWidth(rSvgStyleAttributes.getFontSize().solve(*this));
+                // prepare FontSizeNumber
+                double fFontWidth(rSvgStyleAttributes.getFontSizeNumber().solve(*this));
                 double fFontHeight(fFontWidth);
 
                 // prepare locale
@@ -448,7 +446,7 @@ namespace svgio
                     || TextDecoration_overline == aDeco
                     || TextDecoration_line_through == aDeco)
                 {
-                    // get the fill for decroation as described by SVG. We cannot
+                    // get the fill for decoration as described by SVG. We cannot
                     // have different stroke colors/definitions for those, though
                     const SvgStyleAttributes* pDecoDef = rSvgStyleAttributes.getTextDecorationDefiningSvgStyleAttributes();
                     const basegfx::BColor aDecoColor(pDecoDef && pDecoDef->getFill() ? *pDecoDef->getFill() : aFill);
@@ -473,7 +471,7 @@ namespace svgio
                         false,
                         TextDecoration_line_through == aDeco ? drawinglayer::primitive2d::TEXT_STRIKEOUT_SINGLE : drawinglayer::primitive2d::TEXT_STRIKEOUT_NONE,
                         false,
-                        drawinglayer::primitive2d::TEXT_EMPHASISMARK_NONE,
+                        drawinglayer::primitive2d::TEXT_FONT_EMPHASIS_MARK_NONE,
                         true,
                         false,
                         drawinglayer::primitive2d::TEXT_RELIEF_NONE,
@@ -510,7 +508,7 @@ namespace svgio
                     rSvgTextPosition,
                     rSvgStyleAttributes));
 
-            if(xRef.is())
+            if(xRef.is() && (Visibility_visible == rSvgStyleAttributes.getVisibility()))
             {
                 if(!rSvgTextPosition.isRotated())
                 {
@@ -581,7 +579,6 @@ namespace svgio
 
     } // end of namespace svgreader
 } // end of namespace svgio
-
 
 
 namespace svgio

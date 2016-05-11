@@ -17,9 +17,10 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <sot/factory.hxx>
+#include <sal/config.h>
+
 #include <tools/poly.hxx>
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 #include <vcl/virdev.hxx>
 #include <vcl/wrkwin.hxx>
 #include <svl/solar.hrc>
@@ -144,7 +145,7 @@ sal_uInt16 XOutBitmap::WriteGraphic( const Graphic& rGraphic, OUString& rFileNam
         }
 
         // #i121128# use shortcut to write SVG data in original form (if possible)
-        const SvgDataPtr aSvgDataPtr(rGraphic.getSvgData());
+        const SvgDataPtr& aSvgDataPtr(rGraphic.getSvgData());
 
         if(aSvgDataPtr.get()
             && aSvgDataPtr->getSvgDataArrayLength()
@@ -161,7 +162,7 @@ sal_uInt16 XOutBitmap::WriteGraphic( const Graphic& rGraphic, OUString& rFileNam
 
             if(pOStm)
             {
-                pOStm->Write(aSvgDataPtr->getSvgDataArray().get(), aSvgDataPtr->getSvgDataArrayLength());
+                pOStm->Write(aSvgDataPtr->getSvgDataArray().getConstArray(), aSvgDataPtr->getSvgDataArrayLength());
                 aMedium.Commit();
 
                 if(!aMedium.GetError())
@@ -183,13 +184,13 @@ sal_uInt16 XOutBitmap::WriteGraphic( const Graphic& rGraphic, OUString& rFileNam
 
                 switch( aGfxLink.GetType() )
                 {
-                    case( GFX_LINK_TYPE_NATIVE_GIF ): aExt = FORMAT_GIF; break;
+                    case GFX_LINK_TYPE_NATIVE_GIF: aExt = FORMAT_GIF; break;
 
                     // #i15508# added BMP type for better exports (no call/trigger found, prob used in HTML export)
-                    case( GFX_LINK_TYPE_NATIVE_BMP ): aExt = FORMAT_BMP; break;
+                    case GFX_LINK_TYPE_NATIVE_BMP: aExt = FORMAT_BMP; break;
 
-                    case( GFX_LINK_TYPE_NATIVE_JPG ): aExt = FORMAT_JPG; break;
-                    case( GFX_LINK_TYPE_NATIVE_PNG ): aExt = FORMAT_PNG; break;
+                    case GFX_LINK_TYPE_NATIVE_JPG: aExt = FORMAT_JPG; break;
+                    case GFX_LINK_TYPE_NATIVE_PNG: aExt = FORMAT_PNG; break;
 
                     default:
                     break;
@@ -335,15 +336,15 @@ bool XOutBitmap::GraphicToBase64(const Graphic& rGraphic, OUString& rOUString)
     ConvertDataFormat aCvtType;
     switch(  aLink.GetType() )
     {
-        case( GFX_LINK_TYPE_NATIVE_JPG ):
+        case GFX_LINK_TYPE_NATIVE_JPG:
             aCvtType = ConvertDataFormat::JPG;
             aMimeType = "image/jpeg";
             break;
-        case( GFX_LINK_TYPE_NATIVE_PNG ):
+        case GFX_LINK_TYPE_NATIVE_PNG:
             aCvtType = ConvertDataFormat::PNG;
             aMimeType = "image/png";
             break;
-        case( GFX_LINK_TYPE_NATIVE_SVG ):
+        case GFX_LINK_TYPE_NATIVE_SVG:
             aCvtType = ConvertDataFormat::SVG;
             aMimeType = "image/svg+xml";
             break;
@@ -363,7 +364,25 @@ bool XOutBitmap::GraphicToBase64(const Graphic& rGraphic, OUString& rOUString)
     css::uno::Sequence<sal_Int8> aOStmSeq( static_cast<sal_Int8 const *>(aOStm.GetData()),aOStm.Tell() );
     OUStringBuffer aStrBuffer;
     ::sax::Converter::encodeBase64(aStrBuffer,aOStmSeq);
-    rOUString = aMimeType + ";base64," + aStrBuffer.makeStringAndClear();
+    OUString aEncodedBase64Image = aStrBuffer.makeStringAndClear();
+    if( aLink.GetType() == GFX_LINK_TYPE_NATIVE_SVG )
+    {
+      sal_Int32 ite(8);
+      sal_Int32 nBufferLength(aOStmSeq.getLength());
+      const sal_Int8* pBuffer = aOStmSeq.getConstArray();
+      css::uno::Sequence<sal_Int8> newTempSeq = aOStmSeq;        // creates new Sequence to remove front 8 bits of garbage and encodes in base64
+      sal_Int8 *pOutBuffer = newTempSeq.getArray();
+      while(ite < nBufferLength)
+      {
+        *pOutBuffer++ = pBuffer[ite];
+        ite++;
+      }
+      ::sax::Converter::encodeBase64(aStrBuffer, newTempSeq);
+      aEncodedBase64Image = aStrBuffer.makeStringAndClear();
+      sal_Int32 SVGFixLength = aEncodedBase64Image.getLength();
+      aEncodedBase64Image = aEncodedBase64Image.replaceAt(SVGFixLength - 12, SVGFixLength, "") + "PC9zdmc+Cg=="; // removes rear 12 bits of garbage and adds svg closing tag in base64
+    }
+    rOUString = aMimeType + ";base64," + aEncodedBase64Image;
     return true;
 }
 

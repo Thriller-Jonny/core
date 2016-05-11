@@ -33,7 +33,6 @@
 #include <editeng/lineitem.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/settings.hxx>
-#include <boost/bind.hpp>
 #include <svx/sidebar/PopupContainer.hxx>
 #include "CellLineStyleControl.hxx"
 #include "CellLineStylePopup.hxx"
@@ -125,7 +124,6 @@ CellAppearancePropertyPanel::CellAppearancePropertyPanel(
     mpCellLineStylePopup(),
     mpCellBorderStylePopup(),
 
-    mxFrame(rxFrame),
     maContext(),
     mpBindings(pBindings)
 {
@@ -288,10 +286,10 @@ void CellAppearancePropertyPanel::NotifyItemUpdate(
 
             if(pSvxLineItem)
             {
-                const editeng::SvxBorderLine* mbLineItem = pSvxLineItem->GetLine();
-                mnIn = mbLineItem->GetInWidth();
-                mnOut = mbLineItem->GetOutWidth();
-                mnDis = mbLineItem->GetDistance();
+                const editeng::SvxBorderLine* pLineItem = pSvxLineItem->GetLine();
+                mnIn = pLineItem->GetInWidth();
+                mnOut = pLineItem->GetOutWidth();
+                mnDis = pLineItem->GetDistance();
 
                 if(mnIn == 0 && mnOut == 0 && mnDis == 0)
                     mbBorderStyleAvailable = false;
@@ -313,7 +311,10 @@ void CellAppearancePropertyPanel::NotifyItemUpdate(
 
             if(pBoxItem)
             {
-                mbLeft=false, mbRight=false, mbTop=false, mbBottom=false;
+                mbLeft=false;
+                mbRight=false;
+                mbTop=false;
+                mbBottom=false;
 
                 if(pBoxItem->GetLeft())
                     mbLeft = true;
@@ -350,7 +351,8 @@ void CellAppearancePropertyPanel::NotifyItemUpdate(
             {
                 bool bLeft(false), bRight(false), bTop(false), bBottom(false);
 
-                mbVer = false, mbHor = false;
+                mbVer = false;
+                mbHor = false;
 
                 if(!pBoxInfoItem->IsValid( SvxBoxInfoItemValidFlags::VERT )  || pBoxInfoItem->GetVert())
                     mbVer = true;

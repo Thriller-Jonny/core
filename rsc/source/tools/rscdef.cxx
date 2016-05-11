@@ -21,6 +21,8 @@
 // overall program includes
 #include <rscdef.hxx>
 
+#include <limits.h>
+
 bool RscId::bNames = true;
 
 void RscId::SetNames( bool bSet )
@@ -160,14 +162,10 @@ void RscDefine::DefineToNumber()
     SetName(OString::number(lId));
 }
 
-bool RscDefine::Evaluate()
+void RscDefine::Evaluate()
 {
-    bool    bRet = true;
-
     if( pExp )
-        bRet = !pExp->Evaluate( &lId );
-
-    return bRet;
+        pExp->Evaluate( &lId );
 }
 
 RscDefine * RscDefine::Search( const char * pStr )
@@ -408,13 +406,13 @@ bool RscFile::Depend( sal_uLong lDepend, sal_uLong lFree )
     return true;
 }
 
-bool RscFile::InsertDependFile( sal_uLong lIncFile, size_t lPos )
+void RscFile::InsertDependFile( sal_uLong lIncFile, size_t lPos )
 {
     for ( size_t i = 0, n = aDepLst.size(); i < n; ++i )
     {
         RscDepend* pDep = aDepLst[ i ];
         if( pDep->GetFileKey() == lIncFile )
-            return true;
+            return;
     }
 
     // current pointer points to last element
@@ -429,7 +427,6 @@ bool RscFile::InsertDependFile( sal_uLong lIncFile, size_t lPos )
         ::std::advance( it, lPos );
         aDepLst.insert( it, new RscDepend( lIncFile ) );
     }
-    return true;
 }
 
 RscDefTree::~RscDefTree()
@@ -494,24 +491,21 @@ RscFileTab::~RscFileTab()
 
     aDefTree.Remove();
 
-    sal_uIntPtr aIndex = LastIndex();
-    while( aIndex != UNIQUEINDEX_ENTRY_NOTFOUND )
+    Index aIndex = LastIndex();
+    while( aIndex != IndexNotFound )
     {
         delete Remove( aIndex );
         aIndex = LastIndex();
     };
 }
 
-sal_uLong  RscFileTab::Find( const OString& rName )
+RscFileTab::Index RscFileTab::Find( const OString& rName )
 {
-    sal_uIntPtr aIndex = FirstIndex();
-    while( aIndex != UNIQUEINDEX_ENTRY_NOTFOUND && (Get(aIndex)->aFileName != rName) )
+    Index aIndex = FirstIndex();
+    while( aIndex != IndexNotFound && (Get(aIndex)->aFileName != rName) )
         aIndex = NextIndex(aIndex);
 
-    if( aIndex != UNIQUEINDEX_ENTRY_NOTFOUND )
-        return aIndex;
-    else
-        return NOFILE_INDEX;
+    return aIndex;
 }
 
 RscDefine * RscFileTab::FindDef( const char * pName )
@@ -521,13 +515,13 @@ RscDefine * RscFileTab::FindDef( const char * pName )
 
 /* This method gives back true when lDepend
    exists and is behind lFree, or when lDepend does not exist. */
-bool RscFileTab::Depend( sal_uLong lDepend, sal_uLong lFree )
+bool RscFileTab::Depend( Index lDepend, Index lFree )
 {
     if( lDepend == lFree )
         return true;
 
-    sal_uIntPtr aIndex = FirstIndex();
-    while( aIndex != UNIQUEINDEX_ENTRY_NOTFOUND )
+    Index aIndex = FirstIndex();
+    while( aIndex != IndexNotFound )
     {
         RscFile * pFile = Get(aIndex);
         if( !pFile->IsIncFile() )
@@ -541,7 +535,7 @@ bool RscFileTab::Depend( sal_uLong lDepend, sal_uLong lFree )
     return true;
 }
 
-bool RscFileTab::TestDef( sal_uLong lFileKey, size_t lPos,
+bool RscFileTab::TestDef( Index lFileKey, size_t lPos,
                           const RscDefine * pDefDec )
 {
     if( lFileKey == pDefDec->GetFileKey() )
@@ -559,7 +553,7 @@ bool RscFileTab::TestDef( sal_uLong lFileKey, size_t lPos,
     return TestDef( lFileKey, lPos, pDefDec->pExp );
 }
 
-bool RscFileTab::TestDef( sal_uLong lFileKey, size_t lPos,
+bool RscFileTab::TestDef( Index lFileKey, size_t lPos,
                           const RscExpression * pExpDec )
 {
     if( !pExpDec )
@@ -584,7 +578,7 @@ bool RscFileTab::TestDef( sal_uLong lFileKey, size_t lPos,
     return true;
 }
 
-RscDefine * RscFileTab::NewDef( sal_uLong lFileKey, const OString& rDefName,
+RscDefine * RscFileTab::NewDef( Index lFileKey, const OString& rDefName,
                                 sal_Int32 lId, sal_uLong lPos )
 {
     RscDefine * pDef = FindDef( rDefName );
@@ -605,7 +599,7 @@ RscDefine * RscFileTab::NewDef( sal_uLong lFileKey, const OString& rDefName,
     return pDef;
 }
 
-RscDefine * RscFileTab::NewDef( sal_uLong lFileKey, const OString& rDefName,
+RscDefine * RscFileTab::NewDef( Index lFileKey, const OString& rDefName,
                                 RscExpression * pExp, sal_uLong lPos )
 {
     RscDefine * pDef = FindDef( rDefName );
@@ -629,17 +623,15 @@ RscDefine * RscFileTab::NewDef( sal_uLong lFileKey, const OString& rDefName,
 
     if( !pDef )
     {
-        // pExp is always always owned and must be deleted after used
+        // pExp is always owned and must be deleted after used
         delete pExp;
     }
     return pDef;
 }
 
-void RscFileTab::DeleteFileContext( sal_uLong lFileKey )
+void RscFileTab::DeleteFileContext( Index lFileKey )
 {
-    RscFile     * pFName;
-
-    pFName = GetFile( lFileKey );
+    RscFile* pFName = GetFile( lFileKey );
     if( pFName )
     {
         for ( size_t i = 0, n = pFName->aDefLst.maList.size(); i < n; ++i )
@@ -652,10 +644,10 @@ void RscFileTab::DeleteFileContext( sal_uLong lFileKey )
     }
 }
 
-sal_uLong  RscFileTab::NewCodeFile( const OString& rName )
+RscFileTab::Index RscFileTab::NewCodeFile( const OString& rName )
 {
-    sal_uLong lKey = Find( rName );
-    if( UNIQUEINDEX_ENTRY_NOTFOUND == lKey )
+    Index lKey = Find( rName );
+    if( lKey == IndexNotFound )
     {
         RscFile * pFName = new RscFile();
         pFName->aFileName = rName;
@@ -666,11 +658,11 @@ sal_uLong  RscFileTab::NewCodeFile( const OString& rName )
     return lKey;
 }
 
-sal_uLong  RscFileTab::NewIncFile(const OString& rName,
+RscFileTab::Index RscFileTab::NewIncFile(const OString& rName,
                                     const OString& rPath)
 {
-    sal_uLong lKey = Find( rName );
-    if( UNIQUEINDEX_ENTRY_NOTFOUND == lKey )
+    Index lKey = Find( rName );
+    if( lKey == IndexNotFound )
     {
         RscFile * pFName = new RscFile();
         pFName->aFileName = rName;

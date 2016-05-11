@@ -500,10 +500,10 @@ void SwDoc::ChgDBData(const SwDBData& rNewData)
     getIDocumentFieldsAccess().GetSysFieldType(RES_DBNAMEFLD)->UpdateFields();
 }
 
-struct _PostItField : public _SetGetExpField
+struct PostItField_ : public SetGetExpField
 {
-    _PostItField( const SwNodeIndex& rNdIdx, const SwTextField* pField,  const SwIndex* pIdx = nullptr )
-        : _SetGetExpField( rNdIdx, pField, pIdx ) {}
+    PostItField_( const SwNodeIndex& rNdIdx, const SwTextField* pField,  const SwIndex* pIdx = nullptr )
+        : SetGetExpField( rNdIdx, pField, pIdx ) {}
 
     sal_uInt16 GetPageNo( const StringRangeEnumerator &rRangeEnum,
             const std::set< sal_Int32 > &rPossiblePages,
@@ -515,7 +515,7 @@ struct _PostItField : public _SetGetExpField
     }
 };
 
-sal_uInt16 _PostItField::GetPageNo(
+sal_uInt16 PostItField_::GetPageNo(
     const StringRangeEnumerator &rRangeEnum,
     const std::set< sal_Int32 > &rPossiblePages,
     /* out */ sal_uInt16& rVirtPgNo, /* out */ sal_uInt16& rLineNo )
@@ -547,7 +547,7 @@ sal_uInt16 _PostItField::GetPageNo(
 
 bool sw_GetPostIts(
     IDocumentFieldsAccess* pIDFA,
-    _SetGetExpFields * pSrtLst )
+    SetGetExpFields * pSrtLst )
 {
     bool bHasPostIts = false;
 
@@ -568,7 +568,7 @@ bool sw_GetPostIts(
                 if (pSrtLst)
                 {
                     SwNodeIndex aIdx( pTextField->GetTextNode() );
-                    _PostItField* pNew = new _PostItField( aIdx, pTextField );
+                    PostItField_* pNew = new PostItField_( aIdx, pTextField );
                     pSrtLst->insert( pNew );
                 }
                 else
@@ -625,7 +625,7 @@ static void lcl_FormatPostIt(
 
     pIDCO->SplitNode( *aPam.GetPoint(), false );
     aStr = pField->GetPar2();
-#if defined( WNT )
+#if defined(_WIN32)
     // Throw out all CR in Windows
     aStr = comphelper::string::remove(aStr, '\r');
 #endif
@@ -703,7 +703,7 @@ void SwDoc::CalculatePagesForPrinting(
         // 1 -> print range according to PageRange
         // 2 -> print selection
         if (1 == nContent)
-            aPageRange = rOptions.getStringValue( "PageRange", OUString() );
+            aPageRange = rOptions.getStringValue( "PageRange" );
         if (2 == nContent)
         {
             // note that printing selections is actually implemented by copying
@@ -724,9 +724,54 @@ void SwDoc::CalculatePagesForPrinting(
 
     // get vector of pages to print according to PageRange and valid pages set from above
     // (result may be an empty vector, for example if the range string is not correct)
-    StringRangeEnumerator::getRangesFromString(
+    // If excluding empty pages, allow range to specify range of printable pages
+    if (bPrintEmptyPages || nContent == 0)
+    {
+        // Use range enumerator directly
+        StringRangeEnumerator::getRangesFromString(
             aPageRange, rData.GetPagesToPrint(),
             1, nDocPageCount, 0, &rData.GetValidPagesSet() );
+    }
+    else // not printing blanks and not printing all
+    {
+        // Use range enumerator to adjust for empty pages - numbers in range are
+        // essentially indexes into the valid page number set
+        StringRangeEnumerator aEnum( aPageRange, 1, nDocPageCount, 0);
+        rData.GetPagesToPrint().clear();
+        rData.GetPagesToPrint().reserve(static_cast<size_t>(aEnum.size()));
+
+        std::set<sal_Int32>::iterator valIt = rData.GetValidPagesSet().begin();
+        sal_Int32 lastRangeValue = 1;
+        for (StringRangeEnumerator::Iterator it = aEnum.begin(); it != aEnum.end(); ++it)
+        {
+            // Move valid page set iterator forward/back by diff between current
+            // and previous numbers expressed in range
+            if ((*it) - lastRangeValue > 0)
+            {
+                // Fast-forward
+                for (sal_Int32 i = 0;
+                     i < (*it) - lastRangeValue && valIt != rData.GetValidPagesSet().end();
+                     ++i, ++valIt)
+                    ;
+            }
+            else if (lastRangeValue - (*it) > 0)
+            {
+                // Rewind
+                for (sal_Int32 i = 0;
+                     i < lastRangeValue - (*it) && valIt != rData.GetValidPagesSet().begin();
+                     ++i, --valIt)
+                    ;
+            }
+
+            // Range encompasses more values than are listed as valid
+            if (valIt == rData.GetValidPagesSet().end())
+                break;
+
+            rData.GetPagesToPrint().push_back(*valIt);
+
+            lastRangeValue = *it;
+        }
+    }
 }
 
 void SwDoc::UpdatePagesForPrintingWithPostItData(
@@ -739,7 +784,7 @@ void SwDoc::UpdatePagesForPrintingWithPostItData(
     SwPostItMode nPostItMode = static_cast<SwPostItMode>( rOptions.getIntValue( "PrintAnnotationMode", 0 ) );
     OSL_ENSURE(nPostItMode == SwPostItMode::NONE || rData.HasPostItData(),
             "print post-its without post-it data?" );
-    const _SetGetExpFields::size_type nPostItCount =
+    const SetGetExpFields::size_type nPostItCount =
         rData.HasPostItData() ? rData.m_pPostItFields->size() : 0;
     if (nPostItMode != SwPostItMode::NONE && nPostItCount > 0)
     {
@@ -767,9 +812,9 @@ void SwDoc::UpdatePagesForPrintingWithPostItData(
         // already get them in the correct order
         sal_uInt16 nVirtPg = 0, nLineNo = 0, nLastPageNum = 0, nPhyPageNum = 0;
         bool bIsFirstPostIt = true;
-        for (_SetGetExpFields::size_type i = 0; i < nPostItCount; ++i)
+        for (SetGetExpFields::size_type i = 0; i < nPostItCount; ++i)
         {
-            _PostItField& rPostIt = static_cast<_PostItField&>(*(*rData.m_pPostItFields)[ i ]);
+            PostItField_& rPostIt = static_cast<PostItField_&>(*(*rData.m_pPostItFields)[ i ]);
             nLastPageNum = nPhyPageNum;
             nPhyPageNum = rPostIt.GetPageNo(
                     aRangeEnum, rData.GetValidPagesSet(), nVirtPg, nLineNo );
@@ -885,7 +930,7 @@ void SwDoc::CalculatePagePairsForProspectPrinting(
     // 2 -> print selection
     const sal_Int64 nContent = rOptions.getIntValue( "PrintContent", 0 );
     if (nContent == 1)
-        aPageRange = rOptions.getStringValue( "PageRange", OUString() );
+        aPageRange = rOptions.getStringValue( "PageRange" );
     if (aPageRange.isEmpty())    // empty string -> print all
     {
         // set page range to print to 'all pages'
@@ -968,7 +1013,8 @@ void SwDoc::CalculatePagePairsForProspectPrinting(
     else if ( !bPrintRightPages )
     {
         ++nStep;
-        ++nSPg, --nEPg;
+        ++nSPg;
+        --nEPg;
     }
 
     // the number of 'virtual' pages to be printed
@@ -1077,8 +1123,8 @@ sal_uInt16 SwDoc::GetRefMarks( std::vector<OUString>* pNames ) const
         {
             if( pNames )
             {
-                OUString pTmp(static_cast<const SwFormatRefMark*>(pItem)->GetRefName());
-                pNames->insert(pNames->begin() + nCount, pTmp);
+                OUString aTmp(static_cast<const SwFormatRefMark*>(pItem)->GetRefName());
+                pNames->insert(pNames->begin() + nCount, aTmp);
             }
             ++nCount;
         }
@@ -1229,7 +1275,7 @@ void SwDoc::Summary( SwDoc* pExtDoc, sal_uInt8 nLevel, sal_uInt8 nPara, bool bIm
             }
 
             SwNodeRange aRange( *rOutNds[ i ], 0, *rOutNds[ i ], nEndOfs );
-            GetNodes()._Copy( aRange, aEndOfDoc );
+            GetNodes().Copy_( aRange, aEndOfDoc );
         }
         const SwTextFormatColls *pColl = pExtDoc->GetTextFormatColls();
         for( SwTextFormatColls::size_type i = 0; i < pColl->size(); ++i )

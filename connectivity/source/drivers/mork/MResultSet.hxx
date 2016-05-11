@@ -85,7 +85,6 @@ namespace connectivity
             sal_Int32                                   m_nResultSetConcurrency;
 
 
-
             std::shared_ptr< ::connectivity::OSQLParseTreeIterator >
                                                         m_pSQLIterator;
             const connectivity::OSQLParseNode*          m_pParseTree;
@@ -117,12 +116,6 @@ namespace connectivity
             DECLARE_SERVICE_INFO();
 
             OResultSet(OCommonStatement* pStmt, const std::shared_ptr< ::connectivity::OSQLParseTreeIterator >& _pSQLIterator );
-
-
-            ::com::sun::star::uno::Reference< ::com::sun::star::uno::XInterface > operator *()
-            {
-                return ::com::sun::star::uno::Reference< ::com::sun::star::uno::XInterface >(*static_cast<OResultSet_BASE*>(this));
-            }
 
             // ::cppu::OComponentHelper
             virtual void SAL_CALL disposing() override;

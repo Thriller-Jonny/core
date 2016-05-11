@@ -19,7 +19,6 @@
 
 #include <sal/config.h>
 
-#include <boost/noncopyable.hpp>
 #include <svtools/contextmenuhelper.hxx>
 #include <svtools/menuoptions.hxx>
 #include <svtools/miscopt.hxx>
@@ -56,14 +55,15 @@ namespace svt
 
 // internal helper class to retrieve status updates
 class StateEventHelper : public css::frame::XStatusListener,
-                         public ::cppu::OWeakObject,
-                         private boost::noncopyable
+                         public ::cppu::OWeakObject
 {
     public:
         StateEventHelper( const uno::Reference< frame::XDispatchProvider >& xDispatchProvider,
                           const uno::Reference< util::XURLTransformer >& xURLTransformer,
                           const OUString& aCommandURL );
         virtual ~StateEventHelper();
+        StateEventHelper(const StateEventHelper&) = delete;
+        StateEventHelper& operator=(const StateEventHelper&) = delete;
 
         bool isCommandEnabled();
 
@@ -251,30 +251,16 @@ static OUString lcl_GetItemCommandRecursive( const PopupMenu* pPopupMenu, sal_uI
 /*************************************************************************/
 
 ContextMenuHelper::ContextMenuHelper(
-    const uno::Reference< frame::XFrame >& xFrame,
-    bool bAutoRefresh ) :
+    const uno::Reference< frame::XFrame >& xFrame ) :
     m_xWeakFrame( xFrame ),
     m_aSelf( "_self" ),
-    m_bAutoRefresh( bAutoRefresh ),
+    m_bAutoRefresh( true ),
     m_bUICfgMgrAssociated( false )
 {
 }
 
 ContextMenuHelper::~ContextMenuHelper()
 {
-}
-
-void
-ContextMenuHelper::completeAndExecute(
-    const Point& aPos,
-    PopupMenu& rPopupMenu )
-{
-    SolarMutexGuard aSolarGuard;
-
-    associateUIConfigurationManagers();
-    completeMenuProperties( &rPopupMenu );
-    executePopupMenu( aPos, &rPopupMenu );
-    resetAssociations();
 }
 
 void
@@ -377,7 +363,7 @@ ContextMenuHelper::dispatchCommand(
 // retrieves and stores references to our user-interface
 // configuration managers, like image manager, ui command
 // description manager.
-bool
+void
 ContextMenuHelper::associateUIConfigurationManagers()
 {
     uno::Reference< frame::XFrame > xFrame( m_xWeakFrame );
@@ -445,13 +431,9 @@ ContextMenuHelper::associateUIConfigurationManagers()
         }
         catch ( uno::Exception& )
         {
-            m_bUICfgMgrAssociated = true;
-            return false;
         }
         m_bUICfgMgrAssociated = true;
     }
-
-    return true;
 }
 
 Image

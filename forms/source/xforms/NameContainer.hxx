@@ -29,7 +29,6 @@
 #include <com/sun/star/lang/IllegalArgumentException.hpp>
 #include <com/sun/star/lang/WrappedTargetException.hpp>
 #include <com/sun/star/uno/Any.hxx>
-#include <com/sun/star/uno/Reference.hxx>
 #include <com/sun/star/uno/RuntimeException.hpp>
 #include <com/sun/star/uno/Type.hxx>
 #include <osl/diagnose.h>
@@ -104,7 +103,6 @@ public:
     }
 
 
-
     // methods for XNameAccess (inherits XElementAccess)
 
 
@@ -135,7 +133,6 @@ public:
     }
 
 
-
     // methods for XNameReplace (inherits XNameAccess)
 
 
@@ -156,7 +153,6 @@ public:
         else
             throw css::lang::IllegalArgumentException();
     }
-
 
 
     // methods for XNameContainer (inherits XNameReplace)

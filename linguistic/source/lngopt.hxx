@@ -22,6 +22,7 @@
 
 #include <cppuhelper/implbase.hxx>
 #include <cppuhelper/interfacecontainer.hxx>
+#include <comphelper/interfacecontainer2.hxx>
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/beans/XFastPropertySet.hpp>
 #include <com/sun/star/beans/XPropertyAccess.hpp>
@@ -43,7 +44,6 @@ namespace com { namespace sun { namespace star {
 }}}
 
 
-
 // LinguOptions
 // This class represents all Linguistik relevant options.
 
@@ -59,7 +59,7 @@ public:
 
     static OUString    GetName( sal_Int32 nWID );
 
-    const css::uno::Sequence< OUString >
+    const css::uno::Sequence< OUString >&
             GetActiveDics() const   { return pData->aActiveDics; }
 };
 
@@ -76,7 +76,7 @@ class LinguProps :
         css::lang::XServiceInfo
     >
 {
-    ::cppu::OInterfaceContainerHelper           aEvtListeners;
+    ::comphelper::OInterfaceContainerHelper2           aEvtListeners;
     OPropertyListenerContainerHelper            aPropListeners;
 
     SfxItemPropertyMap                          aPropertyMap;

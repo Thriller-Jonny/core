@@ -31,7 +31,6 @@
 #include <vcl/dibtools.hxx>
 
 
-
 namespace sdr
 {
     namespace overlay
@@ -170,7 +169,7 @@ namespace sdr
                 vcl::Region aPaintRegionPixel = rWindow.LogicToPixel(rWindow.GetPaintRegion());
                 aRegion.Intersect(aPaintRegionPixel);
 
-                // #i72754# Make sure content is completetly rendered, the window
+                // #i72754# Make sure content is completely rendered, the window
                 // will be used as source of a DrawOutDev soon
                 rWindow.Flush();
             }
@@ -337,7 +336,7 @@ namespace sdr
                 }
 
                 // VCL hack for transparent child windows
-                // Problem is e.g. a radiobuttion form control in life mode. The used window
+                // Problem is e.g. a radiobutton form control in life mode. The used window
                 // is a transparence vcl childwindow. This flag only allows the parent window to
                 // paint into the child windows area, but there is no mechanism which takes
                 // care for a repaint of the child window. A transparent child window is NOT
@@ -376,25 +375,23 @@ namespace sdr
 
         OverlayManagerBuffered::OverlayManagerBuffered(
             OutputDevice& rOutputDevice,
-            const SdrModel* pModel,
             bool bRefreshWithPreRendering)
-        :   OverlayManager(rOutputDevice, pModel),
+        :   OverlayManager(rOutputDevice),
             mpBufferDevice(VclPtr<VirtualDevice>::Create()),
             mpOutputBufferDevice(VclPtr<VirtualDevice>::Create()),
+            maBufferIdle("sdr overlay OverlayManagerBuffered Idle"),
             mbRefreshWithPreRendering(bRefreshWithPreRendering)
         {
             // Init timer
-            maBufferIdle.SetPriority( SchedulerPriority::HIGH );
+            maBufferIdle.SetPriority( SchedulerPriority::POST_PAINT );
             maBufferIdle.SetIdleHdl(LINK(this, OverlayManagerBuffered, ImpBufferTimerHandler));
         }
 
         rtl::Reference<OverlayManager> OverlayManagerBuffered::create(
             OutputDevice& rOutputDevice,
-            const SdrModel* pModel,
             bool bRefreshWithPreRendering)
         {
             return rtl::Reference<OverlayManager>(new OverlayManagerBuffered(rOutputDevice,
-                pModel,
                 bRefreshWithPreRendering));
         }
 

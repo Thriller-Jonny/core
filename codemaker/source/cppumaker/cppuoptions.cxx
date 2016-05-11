@@ -24,8 +24,6 @@
 #include "osl/thread.h"
 #include "osl/process.h"
 
-using ::rtl::OUString;
-using ::rtl::OUStringToOString;
 using ::rtl::OString;
 
 #ifdef SAL_UNX
@@ -333,7 +331,6 @@ OString CppuOptions::prepareVersion()
     version += " Version 2.0\n\n";
     return version;
 }
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

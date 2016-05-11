@@ -27,6 +27,7 @@
 #include <rtl/textenc.h>
 #include <rtl/ustring.hxx>
 #include <vector>
+#include <memory>
 
 struct SvParser_Impl;
 class SvStream;
@@ -51,7 +52,7 @@ protected:
     sal_uLong           nlLineNr;           // current line number
     sal_uLong           nlLinePos;          // current column number
 
-    SvParser_Impl       *pImplData;         // internal data
+    std::unique_ptr<SvParser_Impl> pImplData; // internal data
     long                nTokenValue;        // additional value (RTF)
     bool                bTokenHasValue;     // indicates whether nTokenValue is valid
     SvParserState       eState;             // status also in derived classes
@@ -59,7 +60,7 @@ protected:
     rtl_TextEncoding    eSrcEnc;        // Source encoding
 
     sal_uLong nNextChPos;
-    sal_Unicode nNextCh;                // current character for the "lex"
+    sal_uInt32 nNextCh;                // current character codepoint in UTF32 for the "lex"
 
 
     bool                bDownloadingFile : 1; // true: An external file is
@@ -96,10 +97,10 @@ protected:
     TokenStackType* GetStackPtr( short nCnt );
 
     // scan the next token:
-    //  work off Token stack and call _GetNextToken() if necessary.
+    //  work off Token stack and call GetNextToken_() if necessary.
     //  That one is responsible for the recognition of new Tokens.
     int GetNextToken();
-    virtual int _GetNextToken() = 0;
+    virtual int GetNextToken_() = 0;
 
     // is called for each Token that is recognized in CallParser
     virtual void NextToken( int nToken );
@@ -123,12 +124,12 @@ public:
 
     inline sal_uLong    GetLineNr() const       { return nlLineNr; }
     inline sal_uLong    GetLinePos() const      { return nlLinePos; }
-    inline sal_uLong    IncLineNr()             { return ++nlLineNr; }
+    inline void         IncLineNr()             { ++nlLineNr; }
     inline sal_uLong    IncLinePos()            { return ++nlLinePos; }
-    inline sal_uLong    SetLineNr( sal_uLong nlNum );           // inline bottom
-    inline sal_uLong    SetLinePos( sal_uLong nlPos );          // inline bottom
+    inline void         SetLineNr( sal_uLong nlNum );           // inline bottom
+    inline void         SetLinePos( sal_uLong nlPos );          // inline bottom
 
-    sal_Unicode GetNextChar();
+    sal_uInt32 GetNextChar();   // Return next Unicode codepoint in UTF32.
     void RereadLookahead();
 
     inline bool IsParserWorking() const { return SVPAR_WORKING == eState; }
@@ -167,11 +168,11 @@ public:
 };
 
 
-inline sal_uLong SvParser::SetLineNr( sal_uLong nlNum )
-{   sal_uLong nlOld = nlLineNr; nlLineNr = nlNum; return nlOld; }
+inline void SvParser::SetLineNr( sal_uLong nlNum )
+{   nlLineNr = nlNum; }
 
-inline sal_uLong SvParser::SetLinePos( sal_uLong nlPos )
-{   sal_uLong nlOld = nlLinePos; nlLinePos = nlPos; return nlOld; }
+inline void SvParser::SetLinePos( sal_uLong nlPos )
+{   nlLinePos = nlPos; }
 
 inline sal_uInt16 SvParser::GetCharSize() const
 {
@@ -230,7 +231,7 @@ public:
 class SVT_DLLPUBLIC SvKeyValueIterator : public SvRefBase
 {
     struct Impl;
-    Impl* mpImpl;
+    std::unique_ptr<Impl> mpImpl;
 
 public:
     /** Construction/Destruction.

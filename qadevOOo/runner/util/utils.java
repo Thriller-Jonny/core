@@ -82,7 +82,7 @@ public class utils {
                     }
                 });
 
-                if (list[0] != null) {
+                if (list != null && list[0] != null) {
                     String tDoc = srcRoot.concat(pthSep).concat(list[0]).concat(pthSep).concat("testdocs");
 
                     if (new File(tDoc).exists()) {
@@ -193,25 +193,14 @@ public class utils {
         return fulldocURL;
     }
 
-
-
-
-
     /**
      *
      * This method get's the user dir of the connected office
      *
      */
     public static String getOfficeUserPath(XMultiServiceFactory msf) {
-        String userPath = null;
-
         // get a folder located in the user dir
-        try {
-            userPath = getOfficeSettingsValue(msf, "UserConfig");
-        } catch (Exception e) {
-            System.out.println("Couldn't get Office User Path");
-            e.printStackTrace();
-        }
+        String userPath = getOfficeSettingsValue(msf, "UserConfig");
 
         // strip the returned folder to the user dir
         if (userPath.charAt(userPath.length() - 1) == '/') {
@@ -236,22 +225,15 @@ public class utils {
      * @return the value as String
      */
     private static String getOfficeSettingsValue(XMultiServiceFactory msf, String setting) {
-
-        String settingPath = null;
         try {
             Object settings = msf.createInstance("com.sun.star.comp.framework.PathSettings");
-            try {
-                XPropertySet pthSettings = (XPropertySet) AnyConverter.toObject(
-                    new Type(XPropertySet.class), settings);
-                settingPath = (String) pthSettings.getPropertyValue(setting);
-            } catch (com.sun.star.lang.IllegalArgumentException iae) {
-                System.out.println("### couldn't get Office Settings");
-            }
-        } catch (Exception e) {
-            System.out.println("Couldn't get string value for " + setting);
+            XPropertySet pthSettings = (XPropertySet) AnyConverter.toObject(
+                new Type(XPropertySet.class), settings);
+            return (String) pthSettings.getPropertyValue(setting);
+        } catch (com.sun.star.uno.Exception e) {
             e.printStackTrace();
+            throw new RuntimeException(e);
         }
-        return settingPath;
     }
 
     /**
@@ -594,7 +576,8 @@ public class utils {
         } catch (com.sun.star.uno.Exception e) {
         }
 
-        xTrans.parseStrict(rUrl);
+        if (xTrans != null)
+            xTrans.parseStrict(rUrl);
 
         return rUrl[0];
     }
@@ -685,18 +668,19 @@ public class utils {
         appExecCommand = appExecCommand.replace("\"", "");
         appExecCommand = appExecCommand.replace("'", "");
         StringTokenizer commandTokens = new StringTokenizer(appExecCommand, " \t");
-        String officeExecutable = "";
         String officeExecCommand = "soffice";
+        StringBuilder sb = new StringBuilder();
         // is there a 'soffice' in the command? 2do: eliminate case sensitivity on windows
         int index = -1;
         while (commandTokens.hasMoreTokens() && index == -1) {
-            officeExecutable += commandTokens.nextToken() + " ";
-            index = officeExecutable.indexOf(officeExecCommand);
+            sb.append(commandTokens.nextToken()).append(" ");
+            index = sb.indexOf(officeExecCommand);
         }
         if (index == -1) {
             errorMessage = "Error: Your 'AppExecutionCommand' parameter does not " +
                 "contain '" + officeExecCommand + "'.";
         } else {
+            String officeExecutable = sb.toString();
             // does the directory exist?
             officeExecutable = officeExecutable.trim();
             String officePath = officeExecutable.substring(0, index);

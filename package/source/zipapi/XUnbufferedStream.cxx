@@ -36,7 +36,6 @@ using namespace ::com::sun::star;
 using namespace com::sun::star::packages::zip::ZipConstants;
 using namespace com::sun::star::io;
 using namespace com::sun::star::uno;
-using com::sun::star::lang::IllegalArgumentException;
 using com::sun::star::packages::zip::ZipIOException;
 
 XUnbufferedStream::XUnbufferedStream(
@@ -53,7 +52,6 @@ XUnbufferedStream::XUnbufferedStream(
 , mxZipStream ( xNewZipStream )
 , mxZipSeek ( xNewZipStream, UNO_QUERY )
 , maEntry ( rEntry )
-, mxData ( rData )
 , mnBlockSize( 1 )
 , maInflater ( true )
 , mbRawStream ( nStreamMode == UNBUFF_STREAM_RAW || nStreamMode == UNBUFF_STREAM_WRAPPEDRAW )
@@ -116,7 +114,6 @@ XUnbufferedStream::XUnbufferedStream(
 : maMutexHolder( new SotMutexHolder )
 , mxZipStream ( xRawStream )
 , mxZipSeek ( xRawStream, UNO_QUERY )
-, mxData ( rData )
 , mnBlockSize( 1 )
 , maInflater ( true )
 , mbRawStream ( false )

@@ -137,7 +137,7 @@ namespace rptui
 
         /** align all marked objects in all sections
         */
-        void alignMarkedObjects(sal_Int32 _nControlModification, bool _bAlignAtSection, bool bBoundRects = false);
+        void alignMarkedObjects(sal_Int32 _nControlModification, bool _bAlignAtSection);
 
         /** All objects will be marked.
         */
@@ -164,8 +164,8 @@ namespace rptui
                                     ,const OUString& _sColorEntry
                                     ,sal_uInt16 _nPosition = USHRT_MAX);
 
-        inline Size     getGridSizeCoarse() const { return m_aGridSizeCoarse; }
-        inline Size     getGridSizeFine() const { return m_aGridSizeFine; }
+        const Size&     getGridSizeCoarse() const { return m_aGridSizeCoarse; }
+        const Size&     getGridSizeFine() const { return m_aGridSizeFine; }
         inline bool     isGridSnap() const { return m_bGridSnap; }
         void            setGridSnap(bool bOn);
         void            setDragStripes(bool bOn);
@@ -187,11 +187,9 @@ namespace rptui
         */
         void            showRuler(bool _bShow);
 
-        /** unmark all objects on the views without the given one.
-        *
-        * @param _pSectionView The view where the objects should not be unmarked.
+        /** unmark all objects on the views.
         */
-        void            unmarkAllObjects(OSectionView* _pSectionView);
+        void            unmarkAllObjects();
 
         /** triggers the property browser with the section
             @param  _xReportComponent the report component

@@ -23,6 +23,7 @@
 #include <com/sun/star/uno/Sequence.hxx>
 #include <cppuhelper/weakref.hxx>
 #include <editeng/forbiddencharacterstable.hxx>
+#include <editeng/outliner.hxx>
 #include <rtl/ustring.hxx>
 #include <tools/link.hxx>
 #include <tools/weakbase.hxx>
@@ -140,15 +141,9 @@ public:
 };
 
 
-
-// Flag for cleaning up after the loading of the pools, meaning the
-// recalculate the RefCounts and dispose unused items)
-// sal_False == active
-#define LOADREFCOUNTS (false)
-
 struct SdrModelImpl;
 
-class SVX_DLLPUBLIC SdrModel : public SfxBroadcaster, public tools::WeakBase< SdrModel >
+class SVX_DLLPUBLIC SdrModel : public SfxBroadcaster, public tools::WeakBase< SdrModel >, public OutlinerSearchable
 {
 protected:
     std::vector<SdrPage*> maMaPag;     // master pages
@@ -173,10 +168,10 @@ protected:
     SdrOutliner*    pChainingOutliner; // an Outliner for chaining overflowing text
     sal_uIntPtr           nDefTextHgt;    // Default text height in logical units
     VclPtr<OutputDevice>  pRefOutDev;     // ReferenceDevice for the EditEngine
-    /// Set if we are doing tiled rendering.
-    bool mbTiledRendering;
     LibreOfficeKitCallback mpLibreOfficeKitCallback;
     void* mpLibreOfficeKitData;
+    /// Set if we are in the middle of a tiled search.
+    bool mbTiledSearching;
     sal_uIntPtr           nProgressAkt;   // for the
     sal_uIntPtr           nProgressMax;   // ProgressBar-
     sal_uIntPtr           nProgressOfs;   // -Handler
@@ -198,14 +193,14 @@ protected:
     bool                bInfoChanged:1;
     bool                bPagNumsDirty:1;
     bool                bMPgNumsDirty:1;
-    bool                bPageNotValid:1;  // TRUE=Doc is only object container. Page is invalid.
+    bool                bTransportContainer:1;  // doc is temporary object container, no display (e.g. clipboard)
     bool                bSavePortable:1;  // save metafiles portably
     bool                bNoBitmapCaching:1;   // cache bitmaps for screen output
     bool                bReadOnly:1;
     bool                bTransparentTextFrames:1;
     bool                bSaveCompressed:1;
     bool                bSwapGraphics:1;
-    bool                bPasteResize:1; // Objects are beingresized due to Paste with different MapMode
+    bool                bPasteResize:1; // Objects are being resized due to Paste with different MapMode
     bool                bSaveOLEPreview:1;      // save preview metafile of OLE objects
     bool                bSaveNative:1;
     bool                bStarDrawPreviewMode:1;
@@ -266,14 +261,15 @@ private:
     SVX_DLLPRIVATE void ImpReformatAllTextObjects();
     SVX_DLLPRIVATE void ImpReformatAllEdgeObjects();
     SVX_DLLPRIVATE void ImpCreateTables();
-    SVX_DLLPRIVATE void ImpCtor(SfxItemPool* pPool, ::comphelper::IEmbeddedHelper* pPers, bool bUseExtColorTable,
-        bool bLoadRefCounts = true);
+    SVX_DLLPRIVATE void ImpCtor(SfxItemPool* pPool, ::comphelper::IEmbeddedHelper* pPers, bool bUseExtColorTable);
 
 
     // this is a weak reference to a possible living api wrapper for this model
     css::uno::Reference< css::uno::XInterface > mxUnoModel;
 
 public:
+    SVX_DLLPRIVATE virtual bool IsCreatingDataObj() const { return false; }
+    bool     IsTransportContainer() const { return bTransportContainer; }
     bool     IsPasteResize() const        { return bPasteResize; }
     void     SetPasteResize(bool bOn) { bPasteResize=bOn; }
     // If a custom Pool is put here, the class will call methods
@@ -286,8 +282,8 @@ public:
     // If, however, you use objects inheriting from SdrObject you are free
     // to chose a pool of your liking.
     explicit SdrModel();
-    explicit SdrModel(SfxItemPool* pPool, ::comphelper::IEmbeddedHelper* pPers, bool bUseExtColorTable, bool bLoadRefCounts);
-    explicit SdrModel(const OUString& rPath, SfxItemPool* pPool, ::comphelper::IEmbeddedHelper* pPers, bool bUseExtColorTable, bool bLoadRefCounts);
+    explicit SdrModel(SfxItemPool* pPool, ::comphelper::IEmbeddedHelper* pPers, bool bUseExtColorTable);
+    explicit SdrModel(const OUString& rPath, SfxItemPool* pPool, ::comphelper::IEmbeddedHelper* pPers, bool bUseExtColorTable);
     virtual ~SdrModel();
     void ClearModel(bool bCalledFromDestructor);
 
@@ -332,18 +328,16 @@ public:
     // ReferenceDevice for the EditEngine
     void                 SetRefDevice(OutputDevice* pDev);
     OutputDevice*        GetRefDevice() const                   { return pRefOutDev.get(); }
-    /// Set if we are doing tiled rendering.
-    void                 setTiledRendering(bool bTiledRendering);
-    /// Are we doing tiled rendering?
-    bool                 isTiledRendering() const;
     /// The actual implementation of the vcl::ITiledRenderable::registerCallback() API.
     void                 registerLibreOfficeKitCallback(LibreOfficeKitCallback pCallback, void* pLibreOfficeKitData);
-    /// Gets the LOK callback registered by registerLibreOfficeKitCallback().
-    LibreOfficeKitCallback getLibreOfficeKitCallback() const;
     /// Gets the LOK data registered by registerLibreOfficeKitCallback().
     void*                getLibreOfficeKitData() const;
     /// Invokes the registered callback, if there are any.
-    void                 libreOfficeKitCallback(int nType, const char* pPayload) const;
+    void                 libreOfficeKitCallback(int nType, const char* pPayload) const override;
+    /// Set if we are doing tiled searching.
+    void                 setTiledSearching(bool bTiledSearching);
+    /// Are we doing tiled searching?
+    bool                 isTiledSearching() const;
     // If a new MapMode is set on the RefDevice (or similar)
     void                 RefDeviceChanged(); // not yet implemented
     // default font height in logical units
@@ -404,7 +398,7 @@ public:
     static void      TakeUnitStr(FieldUnit eUnit, OUString& rStr);
     void             TakeMetricStr(long nVal, OUString& rStr, bool bNoUnitChars = false, sal_Int32 nNumDigits = -1) const;
     static void      TakeAngleStr(long nAngle, OUString& rStr, bool bNoDegChar = false);
-    static void      TakePercentStr(const Fraction& rVal, OUString& rStr, bool bNoPercentChar = false);
+    static void      TakePercentStr(const Fraction& rVal, OUString& rStr);
 
     // RecalcPageNums is ordinarily only called by the Page.
     bool             IsPagNumsDirty() const                     { return bPagNumsDirty; };
@@ -444,7 +438,7 @@ public:
     // For that to work, override the virtual method GetDocumentStream().
     // Default=FALSE. Flag is not persistent.
     bool            IsSwapGraphics() const { return bSwapGraphics; }
-    void            SetSwapGraphics(bool bJa = true);
+    void            SetSwapGraphics();
     void            SetSwapGraphicsMode(SdrSwapGraphicsMode nMode) { nSwapGraphicsMode = nMode; }
     SdrSwapGraphicsMode GetSwapGraphicsMode() const { return nSwapGraphicsMode; }
 
@@ -515,9 +509,9 @@ public:
 
     bool HasUndoActions() const;
     bool HasRedoActions() const;
-    bool Undo();
-    bool Redo();
-    bool Repeat(SfxRepeatTarget&);
+    void Undo();
+    void Redo();
+    void Repeat(SfxRepeatTarget&);
 
     // The application can set a handler here which collects the UndoActions einsammelt.
     // The handler has the following signature:
@@ -542,7 +536,7 @@ public:
 
     // Accessor methods for Palettes, Lists and Tables
     // FIXME: this badly needs re-factoring...
-    XPropertyListRef GetPropertyList( XPropertyListType t ) const { return maProperties[ t ]; }
+    const XPropertyListRef& GetPropertyList( XPropertyListType t ) const { return maProperties[ t ]; }
     void             SetPropertyList( XPropertyListRef p ) { maProperties[ p->Type() ] = p; }
 
     // friendlier helpers
@@ -565,14 +559,14 @@ public:
     void SetDisableTextEditUsesCommonUndoManager(bool bNew) { mbDisableTextEditUsesCommonUndoManager = bNew; }
 
     css::uno::Reference< css::uno::XInterface > getUnoModel();
-    void setUnoModel( css::uno::Reference< css::uno::XInterface > xModel );
+    void setUnoModel( const css::uno::Reference< css::uno::XInterface >& xModel );
 
     // these functions are used by the api to disable repaints during a
     // set of api calls.
     bool isLocked() const { return mbModelLocked; }
     void setLock( bool bLock );
 
-    void            SetForbiddenCharsTable( rtl::Reference<SvxForbiddenCharactersTable> xForbiddenChars );
+    void            SetForbiddenCharsTable( const rtl::Reference<SvxForbiddenCharactersTable>& xForbiddenChars );
     rtl::Reference<SvxForbiddenCharactersTable> GetForbiddenCharsTable() const { return mpForbiddenCharactersTable;}
 
     void SetCharCompressType( sal_uInt16 nType );
@@ -586,7 +580,7 @@ public:
 
     void ReformatAllTextObjects();
 
-    SdrOutliner* createOutliner( sal_uInt16 nOutlinerMode );
+    SdrOutliner* createOutliner( OutlinerMode nOutlinerMode );
     void disposeOutliner( SdrOutliner* pOutliner );
 
     bool IsWriter() const { return !bMyPool; }
@@ -616,8 +610,6 @@ public:
 
     virtual void dumpAsXml(struct _xmlTextWriter* pWriter) const;
 };
-
-
 
 
 #endif // INCLUDED_SVX_SVDMODEL_HXX

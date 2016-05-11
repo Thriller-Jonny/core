@@ -50,7 +50,6 @@ namespace ole_adapter
 {
 
 
-
 typedef std::unordered_map<OUString, pair<DISPID, unsigned short>, OUStringHash> DispIdMap;
 
 typedef std::unordered_multimap<OUString, unsigned int, OUStringHash> TLBFuncIndexMap;
@@ -215,7 +214,7 @@ protected:
     void getFuncDescForInvoke(const OUString & sFuncName,
                               const Sequence<Any> & seqArgs, FUNCDESC** pFuncDesc);
 
-    // Finds out whether the wrapped IDispatch is an JScript Object. This is is
+    // Finds out whether the wrapped IDispatch is an JScript Object. This is
     // done by
     // asking for the property "_environment". If it has the value "JScript"
     // (case insensitive) then the IDispatch is considered a JScript object.

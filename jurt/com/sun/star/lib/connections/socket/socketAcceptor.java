@@ -1,3 +1,4 @@
+/* -*- Mode: Java; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /*
  * This file is part of the LibreOffice project.
  *
@@ -155,8 +156,11 @@ public final class socketAcceptor implements XAcceptor {
             if (tcpNoDelay != null) {
                 socket.setTcpNoDelay(tcpNoDelay.booleanValue());
             }
-            else if (((InetSocketAddress)socket.getRemoteSocketAddress()).getAddress().isLoopbackAddress()) {
-                socket.setTcpNoDelay(true);
+            else {
+                InetSocketAddress address = (InetSocketAddress)socket.getRemoteSocketAddress();
+                if (address != null && address.getAddress().isLoopbackAddress()) {
+                    socket.setTcpNoDelay(true);
+                }
             }
             return new SocketConnection(acceptingDescription, socket);
         }
@@ -188,3 +192,5 @@ public final class socketAcceptor implements XAcceptor {
     private String acceptingDescription;
     private Boolean tcpNoDelay;
 }
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

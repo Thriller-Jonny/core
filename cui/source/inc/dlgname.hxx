@@ -97,14 +97,9 @@ public:
     void GetName(OUString& rName) {rName = pEdtName->GetText(); }
 
     // set handler
-    void SetCheckNameHdl(const Link<SvxObjectNameDialog&,bool>& rLink, bool bCheckImmediately = false)
+    void SetCheckNameHdl(const Link<SvxObjectNameDialog&,bool>& rLink)
     {
         aCheckNameHdl = rLink;
-
-        if(bCheckImmediately)
-        {
-            pBtnOK->Enable(rLink.Call(*this));
-        }
     }
 };
 
@@ -149,7 +144,6 @@ public:
 
     void    SetButtonText( sal_uInt16 nBtnId, const OUString& rNewTxt );
 };
-
 
 
 #endif // INCLUDED_CUI_SOURCE_INC_DLGNAME_HXX

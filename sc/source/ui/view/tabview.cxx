@@ -245,7 +245,7 @@ void ScTabView::InitScrollBar( ScrollBar& rScrollBar, long nMaxVal )
 {
     rScrollBar.SetRange( Range( 0, nMaxVal ) );
     rScrollBar.SetLineSize( 1 );
-    rScrollBar.SetPageSize( 1 );                // is queried seperately
+    rScrollBar.SetPageSize( 1 );                // is queried separately
     rScrollBar.SetVisibleSize( 10 );            // is reset by Resize
 
     rScrollBar.SetScrollHdl( LINK(this, ScTabView, ScrollHdl) );
@@ -348,7 +348,7 @@ void ScTabView::DoResize( const Point& rOffset, const Size& rSize, bool bInner )
 
     const StyleSettings& rStyleSettings = pFrameWin->GetSettings().GetStyleSettings();
 
-    sal_Int32 nTabWidth = pFrameWin->GetFont().GetHeight() + WIDTH_MARGIN;
+    sal_Int32 nTabWidth = pFrameWin->GetFont().GetFontHeight() + WIDTH_MARGIN;
 
     if ( aViewData.GetHSplitMode() != SC_SPLIT_NONE )
     {
@@ -896,9 +896,7 @@ long ScTabView::GetTabBarWidth() const
 
 double ScTabView::GetRelTabBarWidth() const
 {
-    if( long nFrameWidth = pFrameWin->GetSizePixel().Width() )
-        return static_cast< double >( GetTabBarWidth() ) / nFrameWidth;
-    return 0.0;
+    return 0.5;
 }
 
 ScGridWindow* ScTabView::GetActiveWin()
@@ -910,9 +908,9 @@ ScGridWindow* ScTabView::GetActiveWin()
 
 void ScTabView::SetActivePointer( const Pointer& rPointer )
 {
-    for (sal_uInt16 i=0; i<4; i++)
-        if (pGridWin[i])
-            pGridWin[i]->SetPointer( rPointer );
+    for (VclPtr<ScGridWindow> & pWin : pGridWin)
+        if (pWin)
+            pWin->SetPointer( rPointer );
 }
 
 void ScTabView::ActiveGrabFocus()
@@ -978,7 +976,7 @@ bool ScTabView::ScrollCommand( const CommandEvent& rCEvt, ScSplitPos ePos )
 
             const Fraction& rOldY = aViewData.GetZoomY();
             long nOld = (long)(( rOldY.GetNumerator() * 100 ) / rOldY.GetDenominator());
-            long nNew = nOld;
+            long nNew;
             if ( pData->GetMode() == CommandWheelMode::ZOOM_SCALE )
             {
                 nNew = 100 * (long) ((nOld / 100.0) * (pData->GetDelta() / 100.0));
@@ -1060,7 +1058,7 @@ IMPL_LINK_TYPED( ScTabView, ScrollHdl, ScrollBar*, pScroll, void )
             /*  Convert scrollbar mouse position to screen position. If RTL
                 mode of scrollbar differs from RTL mode of its parent, then the
                 direct call to Window::OutputToNormalizedScreenPixel() will
-                give unusable results, because calcualtion of screen position
+                give unusable results, because calculation of screen position
                 is based on parent orientation and expects equal orientation of
                 the child position. Need to mirror mouse position before. */
             Point aMousePos = pScroll->GetPointerPosPixel();
@@ -1518,12 +1516,12 @@ void ScTabView::UpdateShow()
 bool ScTabView::UpdateVisibleRange()
 {
     bool bChanged = false;
-    for (int i = 0; i < 4; ++i)
+    for (VclPtr<ScGridWindow> & pWin : pGridWin)
     {
-        if (!pGridWin[i] || !pGridWin[i]->IsVisible())
+        if (!pWin || !pWin->IsVisible())
             continue;
 
-        if (pGridWin[i]->UpdateVisibleRange())
+        if (pWin->UpdateVisibleRange())
             bChanged = true;
     }
 
@@ -1604,9 +1602,9 @@ void ScTabView::DoHSplit(long nSplitPos)
 
         // Form Layer needs to know the visible part of all windows
         // that is why MapMode must already be correct here
-        for (sal_uInt16 i=0; i<4; i++)
-            if (pGridWin[i])
-                pGridWin[i]->SetMapMode( pGridWin[i]->GetDrawMapMode() );
+        for (VclPtr<ScGridWindow> & pWin : pGridWin)
+            if (pWin)
+                pWin->SetMapMode( pWin->GetDrawMapMode() );
         SetNewVisArea();
 
         PaintGrid();
@@ -1676,9 +1674,9 @@ void ScTabView::DoVSplit(long nSplitPos)
 
         // Form Layer needs to know the visible part of all windows
         // that is why MapMode must already be correct here
-        for (sal_uInt16 i=0; i<4; i++)
-            if (pGridWin[i])
-                pGridWin[i]->SetMapMode( pGridWin[i]->GetDrawMapMode() );
+        for (VclPtr<ScGridWindow> & pWin : pGridWin)
+            if (pWin)
+                pWin->SetMapMode( pWin->GetDrawMapMode() );
         SetNewVisArea();
 
         PaintGrid();
@@ -1931,7 +1929,7 @@ Point ScTabView::GetMousePosPixel()
     return aPos;
 }
 
-void ScTabView::FreezeSplitters( bool bFreeze )
+void ScTabView::FreezeSplitters( bool bFreeze, SplitMethod eSplitMetod)
 {
     ScSplitMode eOldH = aViewData.GetHSplitMode();
     ScSplitMode eOldV = aViewData.GetVSplitMode();
@@ -1949,19 +1947,20 @@ void ScTabView::FreezeSplitters( bool bFreeze )
         aViewData.GetDocShell()->SetDocumentModified();
 
         Point aSplit;
-        SCsCOL nPosX;
-        SCsROW nPosY;
-        if (eOldH != SC_SPLIT_NONE || eOldV != SC_SPLIT_NONE)
+        SCsCOL nPosX = 1;
+        SCsROW nPosY = 1;
+        if (eOldV != SC_SPLIT_NONE || eOldH != SC_SPLIT_NONE)
         {
-            if (eOldH != SC_SPLIT_NONE)
+            if ( eOldV != SC_SPLIT_NONE && (eSplitMetod == SC_SPLIT_METHOD_FIRST_ROW || eSplitMetod == SC_SPLIT_METHOD_CURSOR))
+                aSplit.Y() = aViewData.GetVSplitPos() - aWinStart.Y();
+
+            if ( eOldH != SC_SPLIT_NONE && (eSplitMetod == SC_SPLIT_METHOD_FIRST_COL || eSplitMetod == SC_SPLIT_METHOD_CURSOR))
             {
                 long nSplitPos = aViewData.GetHSplitPos();
                 if ( bLayoutRTL )
                     nSplitPos = pFrameWin->GetOutputSizePixel().Width() - nSplitPos - 1;
                 aSplit.X() = nSplitPos - aWinStart.X();
             }
-            if (eOldV != SC_SPLIT_NONE)
-                aSplit.Y() = aViewData.GetVSplitPos() - aWinStart.Y();
 
             aViewData.GetPosFromPixel( aSplit.X(), aSplit.Y(), ePos, nPosX, nPosY );
             bool bLeft;
@@ -1974,51 +1973,80 @@ void ScTabView::FreezeSplitters( bool bFreeze )
         }
         else
         {
-            nPosX = static_cast<SCsCOL>( aViewData.GetCurX());
-            nPosY = static_cast<SCsROW>( aViewData.GetCurY());
+            switch(eSplitMetod)
+            {
+                case SC_SPLIT_METHOD_FIRST_ROW:
+                {
+                    nPosX = 0;
+                    nPosY = 1;
+                }
+                break;
+                case SC_SPLIT_METHOD_FIRST_COL:
+                {
+                    nPosX = 1;
+                    nPosY = 0;
+                }
+                break;
+                case SC_SPLIT_METHOD_CURSOR:
+                {
+                    nPosX = static_cast<SCsCOL>( aViewData.GetCurX());
+                    nPosY = static_cast<SCsROW>( aViewData.GetCurY());
+                }
+                break;
+            }
         }
 
-        SCCOL nLeftPos = aViewData.GetPosX(SC_SPLIT_LEFT);
         SCROW nTopPos = aViewData.GetPosY(SC_SPLIT_BOTTOM);
-        SCCOL nRightPos = static_cast<SCCOL>(nPosX);
         SCROW nBottomPos = static_cast<SCROW>(nPosY);
-        if (eOldH != SC_SPLIT_NONE)
-            if (aViewData.GetPosX(SC_SPLIT_RIGHT) > nRightPos)
-                nRightPos = aViewData.GetPosX(SC_SPLIT_RIGHT);
-        if (eOldV != SC_SPLIT_NONE)
+        SCCOL nLeftPos = aViewData.GetPosX(SC_SPLIT_LEFT);
+        SCCOL nRightPos = static_cast<SCCOL>(nPosX);
+
+        if (eSplitMetod == SC_SPLIT_METHOD_FIRST_ROW || eSplitMetod == SC_SPLIT_METHOD_CURSOR)
         {
-            nTopPos = aViewData.GetPosY(SC_SPLIT_TOP);
-            if (aViewData.GetPosY(SC_SPLIT_BOTTOM) > nBottomPos)
-                nBottomPos = aViewData.GetPosY(SC_SPLIT_BOTTOM);
+             if (eOldV != SC_SPLIT_NONE)
+             {
+                 nTopPos = aViewData.GetPosY(SC_SPLIT_TOP);
+                 if (aViewData.GetPosY(SC_SPLIT_BOTTOM) > nBottomPos)
+                     nBottomPos = aViewData.GetPosY(SC_SPLIT_BOTTOM);
+             }
+             aSplit = aViewData.GetScrPos( static_cast<SCCOL>(nPosX), static_cast<SCROW>(nPosY), ePos, true );
+             if (aSplit.Y() > 0)
+             {
+                 aViewData.SetVSplitMode( SC_SPLIT_FIX );
+                 aViewData.SetVSplitPos( aSplit.Y() + aWinStart.Y() );
+                 aViewData.SetFixPosY( nPosY );
+
+                 aViewData.SetPosY(SC_SPLIT_TOP, nTopPos);
+                 aViewData.SetPosY(SC_SPLIT_BOTTOM, nBottomPos);
+             }
+             else
+                 aViewData.SetVSplitMode( SC_SPLIT_NONE );
         }
 
-        aSplit = aViewData.GetScrPos( static_cast<SCCOL>(nPosX), static_cast<SCROW>(nPosY), ePos, true );
-        if (nPosX > aViewData.GetPosX(SC_SPLIT_LEFT))       // (aSplit.X() > 0) doesn't work for RTL
+        if (eSplitMetod == SC_SPLIT_METHOD_FIRST_COL || eSplitMetod == SC_SPLIT_METHOD_CURSOR)
         {
-            long nSplitPos = aSplit.X() + aWinStart.X();
-            if ( bLayoutRTL )
-                nSplitPos = pFrameWin->GetOutputSizePixel().Width() - nSplitPos - 1;
+            if (eOldH != SC_SPLIT_NONE)
+            {
+                if (aViewData.GetPosX(SC_SPLIT_RIGHT) > nRightPos)
+                    nRightPos = aViewData.GetPosX(SC_SPLIT_RIGHT);
+            }
+            aSplit = aViewData.GetScrPos( static_cast<SCCOL>(nPosX), static_cast<SCROW>(nPosY), ePos, true );
+            if (nPosX > aViewData.GetPosX(SC_SPLIT_LEFT))       // (aSplit.X() > 0) doesn't work for RTL
+            {
+                long nSplitPos = aSplit.X() + aWinStart.X();
+                if ( bLayoutRTL )
+                    nSplitPos = pFrameWin->GetOutputSizePixel().Width() - nSplitPos - 1;
 
-            aViewData.SetHSplitMode( SC_SPLIT_FIX );
-            aViewData.SetHSplitPos( nSplitPos );
-            aViewData.SetFixPosX( nPosX );
+                aViewData.SetHSplitMode( SC_SPLIT_FIX );
+                aViewData.SetHSplitPos( nSplitPos );
+                aViewData.SetFixPosX( nPosX );
 
-            aViewData.SetPosX(SC_SPLIT_LEFT, nLeftPos);
-            aViewData.SetPosX(SC_SPLIT_RIGHT, nRightPos);
+                aViewData.SetPosX(SC_SPLIT_LEFT, nLeftPos);
+                aViewData.SetPosX(SC_SPLIT_RIGHT, nRightPos);
+            }
+            else
+                aViewData.SetHSplitMode( SC_SPLIT_NONE );
         }
-        else
-            aViewData.SetHSplitMode( SC_SPLIT_NONE );
-        if (aSplit.Y() > 0)
-        {
-            aViewData.SetVSplitMode( SC_SPLIT_FIX );
-            aViewData.SetVSplitPos( aSplit.Y() + aWinStart.Y() );
-            aViewData.SetFixPosY( nPosY );
-
-            aViewData.SetPosY(SC_SPLIT_TOP, nTopPos);
-            aViewData.SetPosY(SC_SPLIT_BOTTOM, nBottomPos);
-        }
-        else
-            aViewData.SetVSplitMode( SC_SPLIT_NONE );
     }
     else                        // unfreeze
     {
@@ -2030,9 +2058,9 @@ void ScTabView::FreezeSplitters( bool bFreeze )
 
     // Form Layer needs to know the visible part of all windows
     // that is why MapMode must already be correct here
-    for (sal_uInt16 i=0; i<4; i++)
-        if (pGridWin[i])
-            pGridWin[i]->SetMapMode( pGridWin[i]->GetDrawMapMode() );
+    for (VclPtr<ScGridWindow> & p : pGridWin)
+        if (p)
+            p->SetMapMode( p->GetDrawMapMode() );
     SetNewVisArea();
 
     RepeatResize(false);
@@ -2078,24 +2106,18 @@ void ScTabView::SplitAtCursor()
     RepeatResize();
 }
 
-void ScTabView::SplitAtPixel( const Point& rPixel, bool bHor, bool bVer )
+void ScTabView::SplitAtPixel( const Point& rPixel )
 {
     // pixel is relative to the entire View, not to the first GridWin
 
-    if (bHor)
-    {
-        if ( rPixel.X() > 0 )
-            DoHSplit( rPixel.X() );
-        else
-            DoHSplit( 0 );
-    }
-    if (bVer)
-    {
-        if ( rPixel.Y() > 0 )
-            DoVSplit( rPixel.Y() );
-        else
-            DoVSplit( 0 );
-    }
+    if ( rPixel.X() > 0 )
+        DoHSplit( rPixel.X() );
+    else
+        DoHSplit( 0 );
+    if ( rPixel.Y() > 0 )
+        DoVSplit( rPixel.Y() );
+    else
+        DoVSplit( 0 );
     RepeatResize();
 }
 
@@ -2104,6 +2126,8 @@ void ScTabView::InvalidateSplit()
     SfxBindings& rBindings = aViewData.GetBindings();
     rBindings.Invalidate( SID_WINDOW_SPLIT );
     rBindings.Invalidate( SID_WINDOW_FIX );
+    rBindings.Invalidate( SID_WINDOW_FIX_COL );
+    rBindings.Invalidate( SID_WINDOW_FIX_ROW );
 
     pHSplitter->SetFixed( aViewData.GetHSplitMode() == SC_SPLIT_FIX );
     pVSplitter->SetFixed( aViewData.GetVSplitMode() == SC_SPLIT_FIX );
@@ -2202,7 +2226,7 @@ void ScTabView::StartDataSelect()
     if (pAttr->HasAutoFilter())
         pWin->LaunchAutoFilterMenu(nCol, nRow);
     else
-        pWin->LaunchDataSelectMenu(nCol, nRow, true);
+        pWin->LaunchDataSelectMenu(nCol, nRow);
 }
 
 void ScTabView::EnableRefInput(bool bFlag)
@@ -2234,12 +2258,12 @@ void ScTabView::EnableRefInput(bool bFlag)
 bool ScTabView::ContinueOnlineSpelling()
 {
     bool bChanged = false;
-    for (int i = 0; i < 4; ++i)
+    for (VclPtr<ScGridWindow> & pWin : pGridWin)
     {
-        if (!pGridWin[i] || !pGridWin[i]->IsVisible())
+        if (!pWin || !pWin->IsVisible())
             continue;
 
-        if (pGridWin[i]->ContinueOnlineSpelling())
+        if (pWin->ContinueOnlineSpelling())
             bChanged = true;
     }
 
@@ -2248,34 +2272,34 @@ bool ScTabView::ContinueOnlineSpelling()
 
 void ScTabView::EnableAutoSpell( bool bEnable )
 {
-    for (int i = 0; i < 4; ++i)
+    for (VclPtr<ScGridWindow> & pWin : pGridWin)
     {
-        if (!pGridWin[i])
+        if (!pWin)
             continue;
 
-        pGridWin[i]->EnableAutoSpell(bEnable);
+        pWin->EnableAutoSpell(bEnable);
     }
 }
 
 void ScTabView::ResetAutoSpell()
 {
-    for (int i = 0; i < 4; ++i)
+    for (VclPtr<ScGridWindow> & pWin : pGridWin)
     {
-        if (!pGridWin[i])
+        if (!pWin)
             continue;
 
-        pGridWin[i]->ResetAutoSpell();
+        pWin->ResetAutoSpell();
     }
 }
 
 void ScTabView::SetAutoSpellData( SCCOL nPosX, SCROW nPosY, const std::vector<editeng::MisspellRanges>* pRanges )
 {
-    for (int i = 0; i < 4; ++i)
+    for (VclPtr<ScGridWindow> & pWin: pGridWin)
     {
-        if (!pGridWin[i])
+        if (!pWin)
             continue;
 
-        pGridWin[i]->SetAutoSpellData(nPosX, nPosY, pRanges);
+        pWin->SetAutoSpellData(nPosX, nPosY, pRanges);
     }
 }
 
@@ -2294,7 +2318,8 @@ OUString ScTabView::getRowColumnHeaders(const Rectangle& rRectangle)
     long nTotalPixels = 0;
     for (SCROW nRow = 0; nRow <= nEndRow; ++nRow)
     {
-        sal_uInt16 nSize = pDoc->GetOriginalHeight(nRow, aViewData.GetTabNo());
+        // nSize will be 0 for hidden rows.
+        sal_uInt16 nSize = pDoc->GetRowHeight(nRow, aViewData.GetTabNo());
         long nSizePixels = ScViewData::ToPixel(nSize, aViewData.GetPPTY());
         OUString aText = pRowBar[SC_SPLIT_BOTTOM]->GetEntryText(nRow);
 

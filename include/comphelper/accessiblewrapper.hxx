@@ -46,7 +46,6 @@ namespace comphelper
 {
 
 
-
     //= OAccessibleWrapper
 
 
@@ -104,7 +103,7 @@ namespace comphelper
         virtual css::uno::Reference< css::accessibility::XAccessibleContext > SAL_CALL
                     getAccessibleContext(  ) throw (css::uno::RuntimeException, std::exception) override;
 
-        css::uno::Reference< css::accessibility::XAccessible >
+        const css::uno::Reference< css::accessibility::XAccessible >&
                     getParent() const { return m_xParentAccessible; }
 
         // own overridables
@@ -226,9 +225,8 @@ namespace comphelper
     protected:
         virtual ~OAccessibleContextWrapperHelper( );
 
-        OAccessibleContextWrapperHelper( );                                             // never implemented
-        OAccessibleContextWrapperHelper( const OAccessibleContextWrapperHelper& );              // never implemented
-        OAccessibleContextWrapperHelper& operator=( const OAccessibleContextWrapperHelper& );   // never implemented
+        OAccessibleContextWrapperHelper(const OAccessibleContextWrapperHelper&) = delete;
+        OAccessibleContextWrapperHelper& operator=(const OAccessibleContextWrapperHelper&) = delete;
     };
 
 
@@ -337,7 +335,7 @@ namespace comphelper
             const css::uno::Reference< css::uno::XComponentContext >& _rxContext
         );
 
-        /** specifies if the children are to be consideren transient (i.e.: not cached)
+        /** specifies if the children are to be considered transient (i.e.: not cached)
             <p>to be called only once per lifetime</p>
         */
         void    setTransientChildren( bool _bSet = true );
@@ -350,8 +348,7 @@ namespace comphelper
         /// retrieves a wrapper for the given accessible
         css::uno::Reference< css::accessibility::XAccessible >
                 getAccessibleWrapperFor(
-                    const css::uno::Reference< css::accessibility::XAccessible >& _rxKey,
-                    bool _bCreate = true
+                    const css::uno::Reference< css::accessibility::XAccessible >& _rxKey
                 );
 
         /// erases the given key from the map (if it is present there)

@@ -18,6 +18,7 @@
  */
 #ifndef INCLUDED_SW_INC_SWTABLE_HXX
 #define INCLUDED_SW_INC_SWTABLE_HXX
+
 #include <tools/mempool.hxx>
 #include <tools/ref.hxx>
 #include <tblenum.hxx>
@@ -27,7 +28,6 @@
 #include <swtblfmt.hxx>
 
 #include <memory>
-#include <boost/noncopyable.hpp>
 #include <vector>
 #include <algorithm>
 #include <o3tl/sorted_vector.hxx>
@@ -125,7 +125,7 @@ protected:
 
     bool IsModifyLocked(){ return m_bModifyLocked;}
 
-   virtual void Modify( const SfxPoolItem* pOld, const SfxPoolItem* pNew ) override;
+    virtual void Modify( const SfxPoolItem* pOld, const SfxPoolItem* pNew ) override;
 
 public:
     enum SearchType
@@ -154,9 +154,9 @@ private:
     bool NewSplitRow( SwDoc*, const SwSelBoxes&, sal_uInt16, bool );
     SwBoxSelection* CollectBoxSelection( const SwPaM& rPam ) const;
     void InsertSpannedRow( SwDoc* pDoc, sal_uInt16 nIdx, sal_uInt16 nCnt );
-    bool _InsertRow( SwDoc*, const SwSelBoxes&, sal_uInt16 nCnt, bool bBehind );
+    bool InsertRow_( SwDoc*, const SwSelBoxes&, sal_uInt16 nCnt, bool bBehind );
     bool NewInsertCol( SwDoc*, const SwSelBoxes& rBoxes, sal_uInt16 nCnt, bool );
-    void _FindSuperfluousRows( SwSelBoxes& rBoxes, SwTableLine*, SwTableLine* );
+    void FindSuperfluousRows_( SwSelBoxes& rBoxes, SwTableLine*, SwTableLine* );
     void AdjustWidths( const long nOld, const long nNew );
     void NewSetTabCols( Parm &rP, const SwTabCols &rNew, const SwTabCols &rOld,
                         const SwTableBox *pStart, bool bCurRowOnly );
@@ -177,13 +177,13 @@ public:
     bool IsNewModel() const { return m_bNewModel; }
 
     /// Return the table style name of this table.
-    OUString GetTableStyleName() const { return maTableStyleName; }
+    const OUString& GetTableStyleName() const { return maTableStyleName; }
 
     /// Set the new table style name for this table.
     void SetTableStyleName(const OUString& rName) { maTableStyleName = rName; }
 
     sal_uInt16 GetRowsToRepeat() const { return std::min( (sal_uInt16)GetTabLines().size(), m_nRowsToRepeat ); }
-    sal_uInt16 _GetRowsToRepeat() const { return m_nRowsToRepeat; }
+    sal_uInt16 GetRowsToRepeat_() const { return m_nRowsToRepeat; }
     void SetRowsToRepeat( sal_uInt16 nNumOfRows ) { m_nRowsToRepeat = nNumOfRows; }
 
     bool IsHeadline( const SwTableLine& rLine ) const;
@@ -252,7 +252,7 @@ public:
     bool SplitCol( SwDoc* pDoc, const SwSelBoxes& rBoxes, sal_uInt16 nCnt=1 );
 
     void FindSuperfluousRows( SwSelBoxes& rBoxes )
-        { _FindSuperfluousRows( rBoxes, nullptr, nullptr ); }
+        { FindSuperfluousRows_( rBoxes, nullptr, nullptr ); }
     void CheckRowSpan( SwTableLine* &rpLine, bool bUp ) const;
 
           SwTableSortBoxes& GetTabSortBoxes()       { return m_TabSortContentBoxes; }
@@ -262,7 +262,7 @@ public:
 
     // #i80314#
     // add 3rd parameter in order to control validation check on <rStr>
-    static sal_uInt16 _GetBoxNum( OUString& rStr,
+    static sal_uInt16 GetBoxNum( OUString& rStr,
                               bool bFirst = false,
                               const bool bPerformValidCheck = false );
 
@@ -270,12 +270,12 @@ public:
 
     // #i80314#
     // add 2nd parameter in order to control validation check in called method
-    // <_GetBoxNum(..)>
+    // <GetBoxNum(..)>
     const SwTableBox* GetTableBox( const OUString& rName,
                                  const bool bPerformValidCheck = false ) const;
     // Copy selected boxes to another document.
     bool MakeCopy( SwDoc*, const SwPosition&, const SwSelBoxes&,
-                    bool bCpyNds = true, bool bCpyName = false ) const;
+                    bool bCpyName = false ) const;
     // Copy table in this
     bool InsTable( const SwTable& rCpyTable, const SwNodeIndex&,
                     SwUndoTableCpyTable* pUndo = nullptr );
@@ -441,8 +441,7 @@ public:
     // Search next/previous box with content.
     SwTableBox* FindNextBox( const SwTable&, const SwTableBox* =nullptr,
                             bool bOvrTableLns=true ) const;
-    SwTableBox* FindPreviousBox( const SwTable&, const SwTableBox* =nullptr,
-                            bool bOvrTableLns=true ) const;
+    SwTableBox* FindPreviousBox( const SwTable&, const SwTableBox* =nullptr ) const;
     // Return name of this box. It is determined dynamically and
     // is calculated from the position in the lines/boxes/table.
     OUString GetName() const;
@@ -497,12 +496,15 @@ public:
 };
 
 class SwCellFrame;
-class SW_DLLPUBLIC SwTableCellInfo : public ::boost::noncopyable
+class SW_DLLPUBLIC SwTableCellInfo
 {
     struct Impl;
     ::std::unique_ptr<Impl> m_pImpl;
 
-    const SwCellFrame * getCellFrame() const ;
+    const SwCellFrame * getCellFrame() const;
+
+    SwTableCellInfo(SwTableCellInfo const&) = delete;
+    SwTableCellInfo& operator=(SwTableCellInfo const&) = delete;
 
 public:
     SwTableCellInfo(const SwTable * pTable);

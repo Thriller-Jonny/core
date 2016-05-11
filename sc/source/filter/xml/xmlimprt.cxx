@@ -96,7 +96,7 @@
 
 #include <memory>
 #include <utility>
-
+#include <o3tl/make_unique.hxx>
 #define SC_LOCALE           "Locale"
 #define SC_CURRENCYSYMBOL   "CurrencySymbol"
 #define SC_REPEAT_ROW "repeat-row"
@@ -106,8 +106,6 @@
 using namespace com::sun::star;
 using namespace ::xmloff::token;
 using namespace ::formula;
-using ::com::sun::star::uno::Reference;
-using ::com::sun::star::uno::UNO_QUERY;
 
 OUString SAL_CALL ScXMLImport_getImplementationName() throw()
 {
@@ -1986,9 +1984,6 @@ ScXMLImport::ScXMLImport(
     sLocale(SC_LOCALE),
     sCellStyle(SC_UNONAME_CELLSTYL),
     pDocElemTokenMap( nullptr ),
-    pStylesElemTokenMap( nullptr ),
-    pStylesAttrTokenMap( nullptr ),
-    pStyleElemTokenMap( nullptr ),
     pBodyElemTokenMap( nullptr ),
     pContentValidationsElemTokenMap( nullptr ),
     pContentValidationElemTokenMap( nullptr ),
@@ -2118,12 +2113,11 @@ ScXMLImport::ScXMLImport(
         { XML_CURRENCY,     util::NumberFormat::CURRENCY },
         { XML_BOOLEAN,      util::NumberFormat::LOGICAL }
     };
-    size_t n = sizeof(aCellTypePairs)/sizeof(aCellTypePairs[0]);
-    for (size_t i = 0; i < n; ++i)
+    for (const auto & aCellTypePair : aCellTypePairs)
     {
         aCellTypeMap.insert(
             CellTypeMap::value_type(
-                GetXMLToken(aCellTypePairs[i]._token), aCellTypePairs[i]._type));
+                GetXMLToken(aCellTypePair._token), aCellTypePair._type));
     }
 }
 
@@ -2131,9 +2125,6 @@ ScXMLImport::~ScXMLImport() throw()
 {
     //  delete pI18NMap;
     delete pDocElemTokenMap;
-    delete pStylesElemTokenMap;
-    delete pStylesAttrTokenMap;
-    delete pStyleElemTokenMap;
     delete pBodyElemTokenMap;
     delete pContentValidationsElemTokenMap;
     delete pContentValidationElemTokenMap;
@@ -2308,9 +2299,7 @@ SvXMLImportContext *ScXMLImport::CreateScriptContext(
 
     if( !(IsStylesOnlyMode()) )
     {
-        pContext = new XMLScriptContext( *this,
-            XML_NAMESPACE_OFFICE, rLocalName,
-            GetModel() );
+        pContext = new XMLScriptContext( *this, rLocalName, GetModel() );
     }
 
     if( !pContext )
@@ -2401,9 +2390,8 @@ void ScXMLImport::AddNamedExpression(SCTAB nTab, ScMyNamedExpression* pNamedExp)
     if (itr == m_SheetNamedExpressions.end())
     {
         // No chain exists for this sheet.  Create one.
-        ::std::unique_ptr<ScMyNamedExpressions> pNew(new ScMyNamedExpressions);
         ::std::pair<SheetNamedExpMap::iterator, bool> r =
-            m_SheetNamedExpressions.insert(std::make_pair(nTab, std::move(pNew)));
+            m_SheetNamedExpressions.insert(std::make_pair(nTab, o3tl::make_unique<ScMyNamedExpressions>()));
         if (!r.second)
             // insertion failed.
             return;
@@ -2492,8 +2480,7 @@ void ScXMLImport::SetChangeTrackingViewSettings(const css::uno::Sequence<css::be
                     OUString sOUName;
                     if (rChangeProps[i].Value >>= sOUName)
                     {
-                        OUString sAuthorName(sOUName);
-                        pViewSettings->SetTheAuthorToShow(sAuthorName);
+                        pViewSettings->SetTheAuthorToShow(sOUName);
                     }
                 }
                 else if (sName == "ShowChangesByComment")
@@ -2503,8 +2490,7 @@ void ScXMLImport::SetChangeTrackingViewSettings(const css::uno::Sequence<css::be
                     OUString sOUComment;
                     if (rChangeProps[i].Value >>= sOUComment)
                     {
-                        OUString sComment(sOUComment);
-                        pViewSettings->SetTheComment(sComment);
+                        pViewSettings->SetTheComment(sOUComment);
                     }
                 }
                 else if (sName == "ShowChangesByRanges")
@@ -3106,11 +3092,11 @@ public:
         const OUString& aType = p->sRangeType;
         sal_uInt32 nUnoType = ScXMLImport::GetRangeType(aType);
 
-        sal_uInt16 nNewType = RT_NAME;
-        if ( nUnoType & sheet::NamedRangeFlag::FILTER_CRITERIA )    nNewType |= RT_CRITERIA;
-        if ( nUnoType & sheet::NamedRangeFlag::PRINT_AREA )         nNewType |= RT_PRINTAREA;
-        if ( nUnoType & sheet::NamedRangeFlag::COLUMN_HEADER )      nNewType |= RT_COLHEADER;
-        if ( nUnoType & sheet::NamedRangeFlag::ROW_HEADER )         nNewType |= RT_ROWHEADER;
+        ScRangeData::Type nNewType = ScRangeData::Type::Name;
+        if ( nUnoType & sheet::NamedRangeFlag::FILTER_CRITERIA )    nNewType |= ScRangeData::Type::Criteria;
+        if ( nUnoType & sheet::NamedRangeFlag::PRINT_AREA )         nNewType |= ScRangeData::Type::PrintArea;
+        if ( nUnoType & sheet::NamedRangeFlag::COLUMN_HEADER )      nNewType |= ScRangeData::Type::ColHeader;
+        if ( nUnoType & sheet::NamedRangeFlag::ROW_HEADER )         nNewType |= ScRangeData::Type::RowHeader;
 
         if (mpDoc)
         {
@@ -3210,10 +3196,9 @@ void SAL_CALL ScXMLImport::endDocument()
                             OUString sName(aSeq[i].Name);
                             if (sName == SC_ACTIVETABLE)
                             {
-                                OUString sValue;
-                                if(aSeq[i].Value >>= sValue)
+                                OUString sTabName;
+                                if(aSeq[i].Value >>= sTabName)
                                 {
-                                    OUString sTabName(sValue);
                                     SCTAB nTab(0);
                                     if (pDoc->GetTable(sTabName, nTab))
                                     {
@@ -3273,7 +3258,7 @@ void SAL_CALL ScXMLImport::endDocument()
     SvXMLImport::endDocument();
 
     if(pDoc && bSelfImportingXMLSet)
-        ScModelObj::getImplementation(GetModel())->AfterXMLLoading(true);
+        ScModelObj::getImplementation(GetModel())->AfterXMLLoading();
 }
 
 // XEventListener
@@ -3346,10 +3331,10 @@ void ScXMLImport::SetRangeOverflowType(sal_uInt32 nType)
         pDoc->SetRangeOverflowType( nType );
 }
 
-void ScXMLImport::ProgressBarIncrement(bool bEditCell, sal_Int32 nInc)
+void ScXMLImport::ProgressBarIncrement()
 {
-    nProgressCount += nInc;
-    if (bEditCell || nProgressCount > 100)
+    nProgressCount++;
+    if (nProgressCount > 100)
     {
         GetProgressBarHelper()->Increment(nProgressCount);
         nProgressCount = 0;
@@ -3362,7 +3347,7 @@ void ScXMLImport::ExtractFormulaNamespaceGrammar(
 {
     // parse the attribute value, extract namespace ID, literal namespace, and formula string
     rFormulaNmsp.clear();
-    sal_uInt16 nNsId = GetNamespaceMap()._GetKeyByAttrName( rAttrValue, nullptr, &rFormula, &rFormulaNmsp, false );
+    sal_uInt16 nNsId = GetNamespaceMap().GetKeyByAttrName_( rAttrValue, nullptr, &rFormula, &rFormulaNmsp, false );
 
     // check if we have an ODF formula namespace
     if( !bRestrictToExternalNmsp ) switch( nNsId )

@@ -545,9 +545,9 @@ lcl_TryMergeBorderLine(BorderLinePrimitive2D const& rThis,
     double otherWidth  = rOther.getEnd().getX() -  rOther.getStart().getX();
     // check for same orientation, same line width, same style and matching colors
     if (    ((thisHeight > thisWidth) == (otherHeight > otherWidth))
-        &&  (rThis.getLeftWidth()     == rOther.getLeftWidth())
-        &&  (rThis.getDistance()      == rOther.getDistance())
-        &&  (rThis.getRightWidth()    == rOther.getRightWidth())
+        &&  (rtl::math::approxEqual(rThis.getLeftWidth(),  rOther.getLeftWidth()))
+        &&  (rtl::math::approxEqual(rThis.getDistance(),   rOther.getDistance()))
+        &&  (rtl::math::approxEqual(rThis.getRightWidth(), rOther.getRightWidth()))
         &&  (rThis.getStyle()         == rOther.getStyle())
         &&  (rThis.getRGBColorLeft()  == rOther.getRGBColorLeft())
         &&  (rThis.getRGBColorRight() == rOther.getRGBColorRight())
@@ -558,9 +558,9 @@ lcl_TryMergeBorderLine(BorderLinePrimitive2D const& rThis,
         int nRet = 0;
         if (thisHeight > thisWidth) // vertical line
         {
-            if (rThis.getStart().getX() == rOther.getStart().getX())
+            if (rtl::math::approxEqual(rThis.getStart().getX(), rOther.getStart().getX()))
             {
-                assert(rThis.getEnd().getX() == rOther.getEnd().getX());
+                assert(rtl::math::approxEqual(rThis.getEnd().getX(), rOther.getEnd().getX()));
                 nRet = lcl_TryMergeLines(
                     make_pair(rThis.getStart().getY(), rThis.getEnd().getY()),
                     make_pair(rOther.getStart().getY(),rOther.getEnd().getY()),
@@ -569,9 +569,9 @@ lcl_TryMergeBorderLine(BorderLinePrimitive2D const& rThis,
         }
         else // horizontal line
         {
-            if (rThis.getStart().getY() == rOther.getStart().getY())
+            if (rtl::math::approxEqual(rThis.getStart().getY(), rOther.getStart().getY()))
             {
-                assert(rThis.getEnd().getY() == rOther.getEnd().getY());
+                assert(rtl::math::approxEqual(rThis.getEnd().getY(), rOther.getEnd().getY()));
                 nRet = lcl_TryMergeLines(
                     make_pair(rThis.getStart().getX(), rThis.getEnd().getX()),
                     make_pair(rOther.getStart().getX(),rOther.getEnd().getX()),
@@ -2157,13 +2157,13 @@ void DrawGraphic(
             GraphicObject *pGrf = const_cast<GraphicObject*>(pBrush->GetGraphicObject());
             if ( bConsiderBackgroundTransparency )
             {
-                GraphicAttr pGrfAttr = pGrf->GetAttr();
-                if ( (pGrfAttr.GetTransparency() != 0) &&
+                GraphicAttr aGrfAttr = pGrf->GetAttr();
+                if ( (aGrfAttr.GetTransparency() != 0) &&
                      (pBrush->GetColor() == COL_TRANSPARENT)
                    )
                 {
                     bTransparentGrfWithNoFillBackgrd = true;
-                    nGrfTransparency = pGrfAttr.GetTransparency();
+                    nGrfTransparency = aGrfAttr.GetTransparency();
                 }
             }
             if ( pGrf->IsTransparent() )
@@ -2703,21 +2703,21 @@ void SwTabFramePainter::PaintLines(OutputDevice& rDev, const SwRect& rRect) cons
                 // borders match the subsidiary lines of the upper:
                 if (aStart.X() == aUpper.Left())
                     aPaintStart.X() = aUpperAligned.Left();
-                else if (aStart.X() == aUpper._Right())
-                    aPaintStart.X() = aUpperAligned._Right();
+                else if (aStart.X() == aUpper.Rigth_())
+                    aPaintStart.X() = aUpperAligned.Rigth_();
                 if (aStart.Y() == aUpper.Top())
                     aPaintStart.Y() = aUpperAligned.Top();
-                else if (aStart.Y() == aUpper._Bottom())
-                    aPaintStart.Y() = aUpperAligned._Bottom();
+                else if (aStart.Y() == aUpper.Bottom_())
+                    aPaintStart.Y() = aUpperAligned.Bottom_();
 
                 if (aEnd.X() == aUpper.Left())
                     aPaintEnd.X() = aUpperAligned.Left();
-                else if (aEnd.X() == aUpper._Right())
-                    aPaintEnd.X() = aUpperAligned._Right();
+                else if (aEnd.X() == aUpper.Rigth_())
+                    aPaintEnd.X() = aUpperAligned.Rigth_();
                 if (aEnd.Y() == aUpper.Top())
                     aPaintEnd.Y() = aUpperAligned.Top();
-                else if (aEnd.Y() == aUpper._Bottom())
-                    aPaintEnd.Y() = aUpperAligned._Bottom();
+                else if (aEnd.Y() == aUpper.Bottom_())
+                    aPaintEnd.Y() = aUpperAligned.Bottom_();
             }
 
             // logically vertical lines are painted centered on the line,
@@ -3007,10 +3007,10 @@ void SwTabFramePainter::Insert( const SwFrame& rFrame, const SvxBoxItem& rBoxIte
     aR.MirrorSelf();
     aB.MirrorSelf();
 
-    const SwTwips nLeft   = aBorderRect._Left();
-    const SwTwips nRight  = aBorderRect._Right();
-    const SwTwips nTop    = aBorderRect._Top();
-    const SwTwips nBottom = aBorderRect._Bottom();
+    const SwTwips nLeft   = aBorderRect.Left_();
+    const SwTwips nRight  = aBorderRect.Rigth_();
+    const SwTwips nTop    = aBorderRect.Top_();
+    const SwTwips nBottom = aBorderRect.Bottom_();
 
     aL.SetRefMode( svx::frame::REFMODE_CENTERED );
     aR.SetRefMode( svx::frame::REFMODE_CENTERED );
@@ -3315,7 +3315,7 @@ void SwRootFrame::Paint(vcl::RenderContext& rRenderContext, SwRect const& rRect,
                 }
                 gProp.pBLines = new BorderLines;
 
-                aPaintRect._Intersection( aRect );
+                aPaintRect.Intersection_( aRect );
 
                 if ( bExtraData &&
                      pSh->GetWin() && pSh->IsInEndAction() )
@@ -3327,7 +3327,7 @@ void SwRootFrame::Paint(vcl::RenderContext& rRenderContext, SwRect const& rRect,
                     (aPageRectTemp.*fnRect->fnSetLeftAndWidth)(
                          (pPage->Frame().*fnRect->fnGetLeft)(),
                          (pPage->Frame().*fnRect->fnGetWidth)() );
-                    aPageRectTemp._Intersection( pSh->VisArea() );
+                    aPageRectTemp.Intersection_( pSh->VisArea() );
                     vcl::Region aPageRectRegion( aPageRectTemp.SVRect() );
                     aPageRectRegion.Exclude( aPaintRect.SVRect() );
                     pSh->GetWin()->Invalidate( aPageRectRegion, InvalidateFlags::Children );
@@ -3370,7 +3370,7 @@ void SwRootFrame::Paint(vcl::RenderContext& rRenderContext, SwRect const& rRect,
                 // calls, paint <hell> or <heaven>
                 const Color aPageBackgrdColor(pPage->GetDrawBackgrdColor());
 
-                pPage->PaintBaBo( aPaintRect, pPage, true );
+                pPage->PaintBaBo( aPaintRect, pPage );
 
                 if ( pSh->Imp()->HasDrawView() )
                 {
@@ -3387,7 +3387,7 @@ void SwRootFrame::Paint(vcl::RenderContext& rRenderContext, SwRect const& rRect,
                 }
 
                 if ( pSh->GetDoc()->GetDocumentSettingManager().get( DocumentSettingId::BACKGROUND_PARA_OVER_DRAWINGS ) )
-                    pPage->PaintBaBo( aPaintRect, pPage, true, /*bOnlyTextBackground=*/true );
+                    pPage->PaintBaBo( aPaintRect, pPage, /*bOnlyTextBackground=*/true );
 
                 if( pSh->GetWin() )
                 {
@@ -3469,7 +3469,7 @@ void SwRootFrame::Paint(vcl::RenderContext& rRenderContext, SwRect const& rRect,
 
             SwPageFrame::GetBorderAndShadowBoundRect( aEmptyPageRect, pSh, &rRenderContext, aPaintRect,
                 bPaintLeftShadow, bPaintRightShadow, bRightSidebar );
-            aPaintRect._Intersection( aRect );
+            aPaintRect.Intersection_( aRect );
 
             if ( aRect.IsOver( aEmptyPageRect ) )
             {
@@ -3635,7 +3635,7 @@ void SwLayoutFrame::Paint(vcl::RenderContext& rRenderContext, SwRect const& rRec
             if ( pFrame->IsRetoucheFrame() && bWin && !pFrame->GetNext() )
             {   if ( !pPage )
                     pPage = FindPageFrame();
-               pFrame->Retouche( pPage, rRect );
+               pFrame->Retouch( pPage, rRect );
             }
             pFrame->ResetRetouche();
         }
@@ -3676,7 +3676,7 @@ void SwLayoutFrame::Paint(vcl::RenderContext& rRenderContext, SwRect const& rRec
                 }
             }
             pFrame->ResetCompletePaint();
-            aPaintRect._Intersection( rRect );
+            aPaintRect.Intersection_( rRect );
 
             pFrame->Paint( rRenderContext, aPaintRect );
 
@@ -3849,7 +3849,7 @@ void SwColumnFrame::PaintBreak( ) const
                     basegfx::B2DVector aFontSize;
                     OutputDevice* pOut = gProp.pSGlobalShell->GetOut();
                     vcl::Font aFont = pOut->GetSettings().GetStyleSettings().GetToolFont();
-                    aFont.SetHeight( 8 * 20 );
+                    aFont.SetFontHeight( 8 * 20 );
                     pOut->SetFont( aFont );
                     drawinglayer::attribute::FontAttribute aFontAttr = drawinglayer::primitive2d::getFontAttributeFromVclFont(
                             aFontSize, aFont, false, false );
@@ -4143,7 +4143,7 @@ void SwFlyFrame::Paint(vcl::RenderContext& rRenderContext, SwRect const& rRect, 
     BorderLinesGuard blg; // this should not paint borders added from PaintBaBo
 
     SwRect aRect( rRect );
-    aRect._Intersection( Frame() );
+    aRect.Intersection_( Frame() );
 
     rRenderContext.Push( PushFlags::CLIPREGION );
     rRenderContext.SetClipRegion();
@@ -4235,7 +4235,7 @@ void SwFlyFrame::Paint(vcl::RenderContext& rRenderContext, SwRect const& rRect, 
                 SwBorderAttrAccess aAccess( SwFrame::GetCache(), pParentFlyFrame );
                 const SwBorderAttrs &rAttrs = *aAccess.Get();
                 SwRect aPaintRect( aRect );
-                aPaintRect._Intersection( pParentFlyFrame->Frame() );
+                aPaintRect.Intersection_( pParentFlyFrame->Frame() );
                 pParentFlyFrame->PaintBackground( aPaintRect, pPage, rAttrs );
 
                 gProp.pSRetoucheFly2 = pOldRet;
@@ -4295,10 +4295,7 @@ void SwFlyFrame::Paint(vcl::RenderContext& rRenderContext, SwRect const& rRect, 
 
             // OD 06.08.2002 #99657# - paint border before painting background
             // paint border
-            {
-                SwRect aTmp( rRect );
-                PaintBorder( aTmp, pPage, rAttrs );
-            }
+            PaintBorder( rRect, pPage, rAttrs );
 
             rRenderContext.Pop();
         }
@@ -4622,7 +4619,7 @@ static void lcl_PaintShadow( const SwRect& rRect, SwRect& rOutRect,
         aOut = rOut;
         if ( rRect.IsOver( aOut ) && aOut.Height() > 0 && aOut.Width() > 0 )
         {
-            aOut._Intersection( rRect );
+            aOut.Intersection_( rRect );
             pOut->DrawRect( aOut.SVRect() );
         }
     }
@@ -4685,7 +4682,7 @@ void SwFrame::PaintBorderLine( const SwRect& rRect,
         return;
 
     SwRect aOut( rOutRect );
-    aOut._Intersection( rRect );
+    aOut.Intersection_( rRect );
 
     const SwTabFrame *pTab = IsCellFrame() ? FindTabFrame() : nullptr;
     sal_uInt8 nSubCol = ( IsCellFrame() || IsRowFrame() ) ? SUBCOL_TAB :
@@ -5431,7 +5428,7 @@ void SwFrame::PaintBorder( const SwRect& rRect, const SwPageFrame *pPage,
                          const SwBorderAttrs &rAttrs ) const
 {
     // There's nothing (Row,Body,Footnote,Root,Column,NoText) need to do here
-    if ((GetType() & (FRM_NOTXT|FRM_ROW|FRM_BODY|FRM_FTN|FRM_COLUMN|FRM_ROOT)))
+    if ((GetType() & (SwFrameType::NoTxt|SwFrameType::Row|SwFrameType::Body|SwFrameType::Ftn|SwFrameType::Column|SwFrameType::Root)))
         return;
 
     if (IsCellFrame() && !gProp.pSGlobalShell->GetViewOptions()->IsTable())
@@ -5990,7 +5987,7 @@ void SwPageFrame::PaintMarginArea( const SwRect& _rOutputRect,
     {
         //UUUU Simplified paint with DrawingLayer FillStyle
         SwRect aPgRect = Frame();
-        aPgRect._Intersection( _rOutputRect );
+        aPgRect.Intersection_( _rOutputRect );
 
         if(!aPgRect.IsEmpty())
         {
@@ -6427,7 +6424,7 @@ SwRect SwPageFrame::GetBoundRect(OutputDevice* pOutputDevice) const
 }
 
 void SwFrame::PaintBaBo( const SwRect& rRect, const SwPageFrame *pPage,
-                       const bool bLowerBorder, const bool bOnlyTextBackground ) const
+                         const bool bOnlyTextBackground ) const
 {
     if ( !pPage )
         pPage = FindPageFrame();
@@ -6454,7 +6451,7 @@ void SwFrame::PaintBaBo( const SwRect& rRect, const SwPageFrame *pPage,
 
     // paint background
     {
-        PaintBackground( rRect, pPage, rAttrs, false, bLowerBorder, bOnlyTextBackground );
+        PaintBackground( rRect, pPage, rAttrs, false, true/*bLowerBorder*/, bOnlyTextBackground );
     }
 
     // OD 06.08.2002 #99657# - paint border before painting background
@@ -6690,7 +6687,7 @@ void SwFrame::PaintBackground( const SwRect &rRect, const SwPageFrame *pPage,
     {
         SwRect aFrameRect;
         SwRect aRect( PaintArea() );
-        aRect._Intersection( rRect );
+        aRect.Intersection_( rRect );
         SwRect aBorderRect( aRect );
         SwShortCut aShortCut( *pFrame, aBorderRect );
         do
@@ -6720,8 +6717,7 @@ void SwPageFrame::RefreshSubsidiary( const SwRect &rRect ) const
 {
     if ( IS_SUBS || isTableBoundariesEnabled() || IS_SUBS_SECTION || IS_SUBS_FLYS )
     {
-        SwRect aRect( rRect );
-        if ( aRect.HasArea() )
+        if ( rRect.HasArea() )
         {
             //During paint using the root, the array is controlled from there.
             //Otherwise we'll handle it for our self.
@@ -6734,7 +6730,7 @@ void SwPageFrame::RefreshSubsidiary( const SwRect &rRect ) const
                 bDelSubs = true;
             }
 
-            RefreshLaySubsidiary( this, aRect );
+            RefreshLaySubsidiary( this, rRect );
 
             if ( bDelSubs )
             {
@@ -7150,7 +7146,7 @@ void SwLayoutFrame::PaintSubsidiaryLines( const SwPageFrame *pPage,
         return;
 
     SwRect aOut( aOriginal );
-    aOut._Intersection( rRect );
+    aOut.Intersection_( rRect );
 
     const SwTwips nRight = aOut.Right();
     const SwTwips nBottom= aOut.Bottom();
@@ -7367,10 +7363,10 @@ const vcl::Font& SwPageFrame::GetEmptyPageFont()
     if ( nullptr == pEmptyPgFont )
     {
         pEmptyPgFont = new vcl::Font;
-        pEmptyPgFont->SetSize( Size( 0, 80 * 20 )); // == 80 pt
+        pEmptyPgFont->SetFontSize( Size( 0, 80 * 20 )); // == 80 pt
         pEmptyPgFont->SetWeight( WEIGHT_BOLD );
         pEmptyPgFont->SetStyleName( aEmptyOUStr );
-        pEmptyPgFont->SetName("Helvetica");
+        pEmptyPgFont->SetFamilyName("Helvetica");
         pEmptyPgFont->SetFamily( FAMILY_SWISS );
         pEmptyPgFont->SetTransparent( true );
         pEmptyPgFont->SetColor( COL_GRAY );
@@ -7386,7 +7382,7 @@ const vcl::Font& SwPageFrame::GetEmptyPageFont()
  * The whole area of the upper which is located below the Frame will be
  * cleared using PaintBackground.
  */
-void SwFrame::Retouche( const SwPageFrame * pPage, const SwRect &rRect ) const
+void SwFrame::Retouch( const SwPageFrame * pPage, const SwRect &rRect ) const
 {
     if ( gProp.bSFlyMetafile )
         return;
@@ -7411,15 +7407,14 @@ void SwFrame::Retouche( const SwPageFrame * pPage, const SwRect &rRect ) const
 
         for ( size_t i = 0; i < aRegion.size(); ++i )
         {
-            SwRect &rRetouche = aRegion[i];
+            const SwRect &rRetouche = aRegion[i];
 
-            GetUpper()->PaintBaBo( rRetouche, pPage, true );
+            GetUpper()->PaintBaBo( rRetouche, pPage );
 
             //Hell and Heaven need to be refreshed too.
             //To avoid recursion my retouch flag needs to be reset first!
             ResetRetouche();
-            SwRect aRetouchePart( rRetouche );
-            if ( aRetouchePart.HasArea() )
+            if ( rRetouche.HasArea() )
             {
                 const Color aPageBackgrdColor(pPage->GetDrawBackgrdColor());
                 const IDocumentDrawModelAccess& rIDDMA = pSh->getIDocumentDrawModelAccess();
@@ -7428,11 +7423,11 @@ void SwFrame::Retouche( const SwPageFrame * pPage, const SwRect &rRect ) const
                 // <--
 
                 pSh->Imp()->PaintLayer( rIDDMA.GetHellId(), nullptr,
-                                        aRetouchePart, &aPageBackgrdColor,
+                                        rRetouche, &aPageBackgrdColor,
                                         pPage->IsRightToLeft(),
                                         &aSwRedirector );
                 pSh->Imp()->PaintLayer( rIDDMA.GetHeavenId(), nullptr,
-                                        aRetouchePart, &aPageBackgrdColor,
+                                        rRetouche, &aPageBackgrdColor,
                                         pPage->IsRightToLeft(),
                                         &aSwRedirector );
             }
@@ -7441,7 +7436,7 @@ void SwFrame::Retouche( const SwPageFrame * pPage, const SwRect &rRect ) const
 
             //Because we leave all paint areas, we need to refresh the
             //subsidiary lines.
-            pPage->RefreshSubsidiary( aRetouchePart );
+            pPage->RefreshSubsidiary( rRetouche );
         }
     }
     if ( SwViewShell::IsLstEndAction() )

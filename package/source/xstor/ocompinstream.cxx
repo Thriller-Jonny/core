@@ -270,7 +270,7 @@ void SAL_CALL OInputCompStream::addEventListener( const uno::Reference< lang::XE
     }
 
     if ( !m_pInterfaceContainer )
-        m_pInterfaceContainer = new ::cppu::OInterfaceContainerHelper( m_rMutexRef->GetMutex() );
+        m_pInterfaceContainer = new ::comphelper::OInterfaceContainerHelper2( m_rMutexRef->GetMutex() );
 
     m_pInterfaceContainer->addInterface( xListener );
 }
@@ -307,12 +307,12 @@ sal_Bool SAL_CALL OInputCompStream::hasByID(  const OUString& sID )
     try
     {
         getRelationshipByID( sID );
-        return sal_True;
+        return true;
     }
     catch( container::NoSuchElementException& )
     {}
 
-    return sal_False;
+    return false;
 }
 
 OUString SAL_CALL OInputCompStream::getTargetByID(  const OUString& sID  )

@@ -181,7 +181,7 @@ public:
             RECORD_NEW
         };
 
-        NavigationBar(vcl::Window* pParent, WinBits nStyle = 0);
+        NavigationBar(vcl::Window* pParent);
         virtual ~NavigationBar();
         virtual void dispose() override;
 
@@ -459,7 +459,7 @@ public:
     bool IsUpdating() const {return m_bUpdating;}
 
     void RowRemoved( long nRow, long nNumRows = 1, bool bDoPaint = true );
-    void RowInserted( long nRow, long nNumRows = 1, bool bDoPaint = true, bool bKeepSelection = false );
+    void RowInserted( long nRow, long nNumRows = 1, bool bDoPaint = true );
     void RowModified( long nRow, sal_uInt16 nColId = USHRT_MAX );
 
     void resetCurrentRow();
@@ -492,9 +492,9 @@ public:
         bar <b>always</b> implies a horizontal scroll bar
         @seealso EnableNavigationBar
     */
-    void        ForceHideScrollbars( bool _bForce );
+    void        ForceHideScrollbars();
 
-    css::uno::Reference< css::uno::XComponentContext >
+    const css::uno::Reference< css::uno::XComponentContext >&
         getContext() const { return m_xContext; }
 
     /// returns <TRUE/> if the text of the given cell can be copied into the clipboard

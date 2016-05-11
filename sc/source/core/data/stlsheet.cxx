@@ -76,8 +76,8 @@ bool ScStyleSheet::HasParentSupport () const
 
     switch ( GetFamily() )
     {
-    case SFX_STYLE_FAMILY_PARA: bHasParentSupport = true;   break;
-    case SFX_STYLE_FAMILY_PAGE: bHasParentSupport = false;  break;
+    case SfxStyleFamily::Para: bHasParentSupport = true;   break;
+    case SfxStyleFamily::Page: bHasParentSupport = false;  break;
     default:
         {
             // added to avoid warnings
@@ -131,7 +131,7 @@ SfxItemSet& ScStyleSheet::GetItemSet()
     {
         switch ( GetFamily() )
         {
-            case SFX_STYLE_FAMILY_PAGE:
+            case SfxStyleFamily::Page:
                 {
                     // Page templates should not be derivable,
                     // therefore suitable values are set at this point.
@@ -218,7 +218,7 @@ SfxItemSet& ScStyleSheet::GetItemSet()
                 }
                 break;
 
-            case SFX_STYLE_FAMILY_PARA:
+            case SfxStyleFamily::Para:
             default:
                 pSet = new SfxItemSet( GetPool().GetPool(), ATTR_PATTERN_START, ATTR_PATTERN_END );
                 break;
@@ -250,12 +250,12 @@ SfxItemSet& ScStyleSheet::GetItemSet()
 
 bool ScStyleSheet::IsUsed() const
 {
-    if ( GetFamily() == SFX_STYLE_FAMILY_PARA )
+    if ( GetFamily() == SfxStyleFamily::Para )
     {
         // Always query the document to let it decide if a rescan is necessary,
         // and store the state.
         ScDocument* pDoc = static_cast<ScStyleSheetPool*>(pPool)->GetDocument();
-        if ( pDoc && pDoc->IsStyleSheetUsed( *this, true ) )
+        if ( pDoc && pDoc->IsStyleSheetUsed( *this ) )
             eUsage = USED;
         else
             eUsage = NOTUSED;
@@ -314,7 +314,7 @@ const OUString& ScStyleSheet::GetFollow() const
 
 bool ScStyleSheet::SetName(const OUString& rNew, bool bReindexNow)
 {
-    OUString aFileStdName = OUString(STRING_STANDARD);
+    OUString aFileStdName = STRING_STANDARD;
     if ( rNew == aFileStdName && aFileStdName != ScGlobal::GetRscString(STR_STYLENAME_STANDARD) )
         return false;
     else

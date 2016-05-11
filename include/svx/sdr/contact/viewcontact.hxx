@@ -94,12 +94,12 @@ public:
     // ObjectContact (->View). Always needs to return something.
     ViewObjectContact& GetViewObjectContact(ObjectContact& rObjectContact);
 
-    // Test if this ViewContact has ViewObjectContacts at all. This can
+    // Test if this ViewContact has ViewObjectContacts(excluding previews) at all. This can
     // be used to test if this ViewContact is visualized ATM or not
-    bool HasViewObjectContacts(bool bExcludePreviews = false) const;
+    bool HasViewObjectContacts() const;
 
     // Check if this primitive is animated in any OC (View) which means it has
-    // generated a PrimitiveAnimation in it's VOC
+    // generated a PrimitiveAnimation in its VOC
     bool isAnimatedInAnyViewObjectContact() const;
 
     // Access to possible sub-hierarchy and parent. GetObjectCount() default is 0L
@@ -142,7 +142,6 @@ public:
 };
 
 }}
-
 
 
 #endif // INCLUDED_SVX_SDR_CONTACT_VIEWCONTACT_HXX

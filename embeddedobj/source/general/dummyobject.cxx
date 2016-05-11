@@ -30,8 +30,6 @@
 #include <com/sun/star/embed/NoVisualAreaSizeException.hpp>
 #include <com/sun/star/lang/DisposedException.hpp>
 
-#include <cppuhelper/interfacecontainer.h>
-
 #include <dummyobject.hxx>
 
 
@@ -465,9 +463,9 @@ sal_Bool SAL_CALL ODummyEmbeddedObject::hasEntry()
                     static_cast< ::cppu::OWeakObject* >(this) );
 
     if ( !m_aEntryName.isEmpty() )
-        return sal_True;
+        return true;
 
-    return sal_False;
+    return false;
 }
 
 
@@ -519,7 +517,7 @@ sal_Bool SAL_CALL ODummyEmbeddedObject::isReadonly()
                     static_cast< ::cppu::OWeakObject* >(this) );
 
     // this object can not be changed
-    return sal_True;
+    return true;
 }
 
 
@@ -594,7 +592,7 @@ void SAL_CALL ODummyEmbeddedObject::addStateChangeListener( const uno::Reference
         return;
 
     if ( !m_pInterfaceContainer )
-        m_pInterfaceContainer = new ::cppu::OMultiTypeInterfaceContainerHelper( m_aMutex );
+        m_pInterfaceContainer.reset(new ::cppu::OMultiTypeInterfaceContainerHelper( m_aMutex ));
 
     m_pInterfaceContainer->addInterface( cppu::UnoType<embed::XStateChangeListener>::get(),
                                                         xListener );
@@ -676,7 +674,7 @@ void SAL_CALL ODummyEmbeddedObject::addCloseListener( const uno::Reference< util
         return;
 
     if ( !m_pInterfaceContainer )
-        m_pInterfaceContainer = new ::cppu::OMultiTypeInterfaceContainerHelper( m_aMutex );
+        m_pInterfaceContainer.reset(new ::cppu::OMultiTypeInterfaceContainerHelper( m_aMutex ));
 
     m_pInterfaceContainer->addInterface( cppu::UnoType<util::XCloseListener>::get(), xListener );
 }
@@ -700,7 +698,7 @@ void SAL_CALL ODummyEmbeddedObject::addEventListener( const uno::Reference< docu
         return;
 
     if ( !m_pInterfaceContainer )
-        m_pInterfaceContainer = new ::cppu::OMultiTypeInterfaceContainerHelper( m_aMutex );
+        m_pInterfaceContainer.reset(new ::cppu::OMultiTypeInterfaceContainerHelper( m_aMutex ));
 
     m_pInterfaceContainer->addInterface( cppu::UnoType<document::XEventListener>::get(), xListener );
 }

@@ -127,8 +127,8 @@ void ScCondFrmtEntry::Select()
 
 void ScCondFrmtEntry::Deselect()
 {
-    OUString maCondText = GetExpressionString();
-    maFtCondition->SetText(maCondText);
+    OUString aCondText = GetExpressionString();
+    maFtCondition->SetText(aCondText);
     maFtCondition->Show();
     maLbType->Hide();
     mbActive = false;
@@ -143,7 +143,7 @@ void FillStyleListBox( ScDocument* pDoc, ListBox& rLbStyle )
 {
     rLbStyle.SetSeparatorPos(0);
     std::set<OUString> aStyleNames;
-    SfxStyleSheetIterator aStyleIter( pDoc->GetStyleSheetPool(), SFX_STYLE_FAMILY_PARA );
+    SfxStyleSheetIterator aStyleIter( pDoc->GetStyleSheetPool(), SfxStyleFamily::Para );
     for ( SfxStyleSheetBase* pStyle = aStyleIter.First(); pStyle; pStyle = aStyleIter.Next() )
     {
         OUString aName = pStyle->GetName();
@@ -483,7 +483,7 @@ void StyleSelect( ListBox& rLbStyle, ScDocument* pDoc, SvxFontPrevWindow& rWdPre
     if(rLbStyle.GetSelectEntryPos() == 0)
     {
         // call new style dialog
-        SfxUInt16Item aFamilyItem( SID_STYLE_FAMILY, SFX_STYLE_FAMILY_PARA );
+        SfxUInt16Item aFamilyItem( SID_STYLE_FAMILY, (sal_uInt16) SfxStyleFamily::Para );
         SfxStringItem aRefItem( SID_STYLE_REFERENCE, ScGlobal::GetRscString(STR_STYLENAME_STANDARD) );
 
         // unlock the dispatcher so SID_STYLE_NEW can be executed
@@ -496,16 +496,15 @@ void StyleSelect( ListBox& rLbStyle, ScDocument* pDoc, SvxFontPrevWindow& rWdPre
 
         // Execute the "new style" slot, complete with undo and all necessary updates.
         // The return value (SfxUInt16Item) is ignored, look for new styles instead.
-        pDisp->Execute( SID_STYLE_NEW, SfxCallMode::SYNCHRON | SfxCallMode::RECORD | SfxCallMode::MODAL,
-                &aFamilyItem,
-                &aRefItem,
-                0L );
+        pDisp->ExecuteList(SID_STYLE_NEW,
+            SfxCallMode::SYNCHRON | SfxCallMode::RECORD | SfxCallMode::MODAL,
+            { &aFamilyItem, &aRefItem });
 
         if (bLocked)
             pDisp->Lock(true);
 
         // Find the new style and add it into the style list boxes
-        SfxStyleSheetIterator aStyleIter( pDoc->GetStyleSheetPool(), SFX_STYLE_FAMILY_PARA );
+        SfxStyleSheetIterator aStyleIter( pDoc->GetStyleSheetPool(), SfxStyleFamily::Para );
         bool bFound = false;
         for ( SfxStyleSheetBase* pStyle = aStyleIter.First(); pStyle && !bFound; pStyle = aStyleIter.Next() )
         {
@@ -533,7 +532,7 @@ void StyleSelect( ListBox& rLbStyle, ScDocument* pDoc, SvxFontPrevWindow& rWdPre
     }
 
     OUString aStyleName = rLbStyle.GetSelectEntry();
-    SfxStyleSheetBase* pStyleSheet = pDoc->GetStyleSheetPool()->Find( aStyleName, SFX_STYLE_FAMILY_PARA );
+    SfxStyleSheetBase* pStyleSheet = pDoc->GetStyleSheetPool()->Find( aStyleName, SfxStyleFamily::Para );
     if(pStyleSheet)
     {
         const SfxItemSet& rSet = pStyleSheet->GetItemSet();

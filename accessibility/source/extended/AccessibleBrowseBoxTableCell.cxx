@@ -20,7 +20,6 @@
 
 #include "accessibility/extended/AccessibleBrowseBoxTableCell.hxx"
 #include <svtools/accessibletableprovider.hxx>
-#include "accessibility/extended/AccessibleBrowseBox.hxx"
 #include <toolkit/helper/vclunohelper.hxx>
 #include <com/sun/star/accessibility/AccessibleEventId.hpp>
 
@@ -28,13 +27,13 @@ namespace accessibility
 {
     namespace
     {
-        static void checkIndex_Impl( sal_Int32 _nIndex, const OUString& _sText ) throw (css::lang::IndexOutOfBoundsException)
+        void checkIndex_Impl( sal_Int32 _nIndex, const OUString& _sText ) throw (css::lang::IndexOutOfBoundsException)
         {
             if ( _nIndex >= _sText.getLength() )
                 throw css::lang::IndexOutOfBoundsException();
         }
 
-        static sal_Int32 getIndex_Impl( sal_Int32 _nRow, sal_uInt16 _nColumn, sal_uInt16 _nColumnCount )
+        sal_Int32 getIndex_Impl( sal_Int32 _nRow, sal_uInt16 _nColumn, sal_uInt16 _nColumnCount )
         {
             return _nRow * _nColumnCount + _nColumn;
         }
@@ -42,7 +41,6 @@ namespace accessibility
     using namespace ::com::sun::star::lang;
     using namespace utl;
     using namespace comphelper;
-    using ::accessibility::AccessibleBrowseBox;
     using namespace ::com::sun::star::uno;
     using ::com::sun::star::accessibility::XAccessible;
     using namespace ::com::sun::star::accessibility;

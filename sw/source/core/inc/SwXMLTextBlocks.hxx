@@ -64,7 +64,7 @@ public:
     virtual sal_uLong PutText( const OUString&, const OUString&, const OUString& ) override;
     virtual sal_uLong MakeBlockList() override;
 
-    virtual short GetFileType() const override;
+    virtual FileType GetFileType() const override;
     virtual sal_uLong OpenFile( bool bReadOnly = true ) override;
     virtual void  CloseFile() override;
 
@@ -77,11 +77,9 @@ public:
     bool IsOnlyTextBlock( sal_uInt16 nIdx ) const;
     void SetIsTextOnly( const OUString& rShort, bool bNewValue );
 
-    virtual sal_uLong GetMacroTable( sal_uInt16, SvxMacroTableDtor& rMacroTable,
-                                 bool bFileAlreadyOpen = false ) override;
+    virtual sal_uLong GetMacroTable( sal_uInt16, SvxMacroTableDtor& rMacroTable ) override;
     virtual sal_uLong SetMacroTable( sal_uInt16 nIdx,
-                                 const SvxMacroTableDtor& rMacroTable,
-                                 bool bFileAlreadyOpen = false ) override;
+                                 const SvxMacroTableDtor& rMacroTable ) override;
     virtual bool PutMuchEntries( bool bOn ) override;
 
 public:

@@ -34,7 +34,6 @@
 #include <basegfx/polygon/b2dpolypolygon.hxx>
 
 
-
 namespace vcl { class Region; }
 class SdrObjList;
 class SdrObject;
@@ -58,7 +57,6 @@ namespace sdr
 // typedefs for a list of SdrPageWindow
 class SdrPageWindow;
 typedef ::std::vector< SdrPageWindow* > SdrPageWindowVector;
-
 
 
 class SVX_DLLPUBLIC SdrPageView
@@ -114,7 +112,7 @@ public:
     const SdrPageWindow* FindPatchedPageWindow( const OutputDevice& rOutDev ) const;
 
 private:
-    SVX_DLLPRIVATE SdrPageWindow& CreateNewPageWindowEntry(SdrPaintWindow& rPaintWindow);
+    SVX_DLLPRIVATE void CreateNewPageWindowEntry(SdrPaintWindow& rPaintWindow);
 
     void ImpInvalidateHelpLineArea(sal_uInt16 nNum) const;
 
@@ -193,7 +191,11 @@ public:
     Rectangle& MarkBound() { return aMarkBound; }
     Rectangle& MarkSnap() { return aMarkSnap; }
 
-    void SetLayerVisible(const OUString& rName, bool bShow = true) { SetLayer(rName, aLayerVisi, bShow); if(!bShow) AdjHdl(); InvalidateAllWin(); }
+    void SetLayerVisible(const OUString& rName, bool bShow = true) {
+        SetLayer(rName, aLayerVisi, bShow);
+        if(!bShow) AdjHdl();
+        InvalidateAllWin();
+    }
     bool IsLayerVisible(const OUString& rName) const { return IsLayer(rName, aLayerVisi); }
 
     void SetLayerLocked(const OUString& rName, bool bLock = true) { SetLayer(rName, aLayerLock, bLock); if(bLock) AdjHdl(); }
@@ -225,7 +227,7 @@ public:
     //void SetHelpLinePos(sal_uInt16 nNum, const Point& rNewPos);
     void SetHelpLine(sal_uInt16 nNum, const SdrHelpLine& rNewHelpLine);
     void DeleteHelpLine(sal_uInt16 nNum);
-    void InsertHelpLine(const SdrHelpLine& rHL, sal_uInt16 nNum=0xFFFF);
+    void InsertHelpLine(const SdrHelpLine& rHL);
 
     /// At least one member must be visible for the Group object and
     /// it must not be locked
@@ -256,13 +258,12 @@ public:
     // #103834# Set background color for svx at SdrPageViews
     void SetApplicationBackgroundColor(Color aBackgroundColor);
 
-    Color GetApplicationBackgroundColor() const { return maBackgroundColor;}
+    const Color& GetApplicationBackgroundColor() const { return maBackgroundColor;}
 
     // #103911# Set/Get document color for svx at SdrPageViews
     void SetApplicationDocumentColor(Color aDocumentColor);
-    Color GetApplicationDocumentColor() const { return maDocumentColor;}
+    const Color& GetApplicationDocumentColor() const { return maDocumentColor;}
 };
-
 
 
 #endif // INCLUDED_SVX_SVDPAGV_HXX

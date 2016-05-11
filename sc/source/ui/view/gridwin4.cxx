@@ -30,6 +30,7 @@
 #include <vcl/settings.hxx>
 
 #include <LibreOfficeKit/LibreOfficeKitEnums.h>
+#include <comphelper/lok.hxx>
 
 #include <svx/svdview.hxx>
 #include "tabvwsh.hxx"
@@ -70,7 +71,7 @@ static void lcl_LimitRect( Rectangle& rRect, const Rectangle& rVisible )
     if ( rRect.Top()    < rVisible.Top()-1 )    rRect.Top()    = rVisible.Top()-1;
     if ( rRect.Bottom() > rVisible.Bottom()+1 ) rRect.Bottom() = rVisible.Bottom()+1;
 
-    // The header row must be drawn also when the inner rectangle is not visable,
+    // The header row must be drawn also when the inner rectangle is not visible,
     // that is why there is no return value anymore.
     // When it is far away, then lcl_DrawOneFrame is not even called.
 }
@@ -80,7 +81,7 @@ static void lcl_DrawOneFrame( vcl::RenderContext* pDev, const Rectangle& rInnerP
                         double nPPTX, double nPPTY, const Fraction& rZoomY,
                         ScDocument* pDoc, ScViewData* pButtonViewData, bool bLayoutRTL )
 {
-    // pButtonViewData is only used to set the the button size,
+    // pButtonViewData is only used to set the button size,
     // can otherwise be NULL!
 
     Rectangle aInner = rInnerPixel;
@@ -108,9 +109,9 @@ static void lcl_DrawOneFrame( vcl::RenderContext* pDev, const Rectangle& rInnerP
 
     //  everything else from application font
     vcl::Font aAppFont = pDev->GetSettings().GetStyleSettings().GetAppFont();
-    aAppFont.SetSize( aAttrFont.GetSize() );
+    aAppFont.SetFontSize( aAttrFont.GetFontSize() );
 
-    aAppFont.SetAlign( ALIGN_TOP );
+    aAppFont.SetAlignment( ALIGN_TOP );
     pDev->SetFont( aAppFont );
 
     Size aTextSize( pDev->GetTextWidth( rTitle ), pDev->GetTextHeight() );
@@ -137,7 +138,7 @@ static void lcl_DrawOneFrame( vcl::RenderContext* pDev, const Rectangle& rInnerP
     long nBHeight = nVer + aTextSize.Height() + 1;
     Size aButSize( nBWidth, nBHeight );
     long nButtonPos = bLayoutRTL ? aOuter.Left() : aOuter.Right()-nBWidth+1;
-    aComboButton.Draw( Point(nButtonPos, nButtonY), aButSize, false );
+    aComboButton.Draw( Point(nButtonPos, nButtonY), aButSize );
     if (pButtonViewData)
         pButtonViewData->SetScenButSize( aButSize );
 
@@ -383,7 +384,7 @@ void ScGridWindow::Draw( SCCOL nX1, SCROW nY1, SCCOL nX2, SCROW nY2, ScUpdateMod
     // all the rendering should go through PaintTile() in that case.
     // TODO revisit if we can actually turn this into an assert(), and clean
     // up the callers
-    if (rDoc.GetDrawLayer()->isTiledRendering())
+    if (comphelper::LibreOfficeKit::isActive())
         return;
 
     ScModule* pScMod = SC_MOD();
@@ -523,7 +524,7 @@ void ScGridWindow::DrawContent(OutputDevice &rDevice, const ScTableInfo& rTableI
     ScDocShell* pDocSh = pViewData->GetDocShell();
     ScDocument& rDoc = pDocSh->GetDocument();
     const ScViewOptions& rOpts = pViewData->GetOptions();
-    bool bIsTiledRendering = rDoc.GetDrawLayer()->isTiledRendering();
+    bool bIsTiledRendering = comphelper::LibreOfficeKit::isActive();
 
     SCTAB nTab = aOutputData.nTab;
     SCCOL nX1 = aOutputData.nX1;
@@ -594,7 +595,7 @@ void ScGridWindow::DrawContent(OutputDevice &rDevice, const ScTableInfo& rTableI
         // FIXME this shouldn't be necessary once we change the entire Calc to
         // work in the logic coordinates (ideally 100ths of mm - so that it is
         // the same as editeng and drawinglayer), and get rid of all the
-        // SetMapMode's and other unneccessary fun we have with pixels
+        // SetMapMode's and other unnecessary fun we have with pixels
         // See also ScGridWindow::GetDrawMapMode() for the rest of this hack
         aDrawMode.SetOrigin(PixelToLogic(Point(nScrX, nScrY), aDrawMode));
     }
@@ -899,6 +900,14 @@ void ScGridWindow::DrawContent(OutputDevice &rDevice, const ScTableInfo& rTableI
         aEnd.X() -= 2 * nLayoutSign;
         aEnd.Y() -= 2;
 
+        // toggle the cursor off if its on to ensure the cursor invert
+        // background logic remains valid after the background is cleared on
+        // the next cursor flash
+        vcl::Cursor* pCrsr = pEditView->GetCursor();
+        const bool bVisCursor = pCrsr && pCrsr->IsVisible();
+        if (bVisCursor)
+            pCrsr->Hide();
+
         // set the correct mapmode
         Rectangle aBackground(aStart, aEnd);
         if (bIsTiledRendering)
@@ -915,6 +924,10 @@ void ScGridWindow::DrawContent(OutputDevice &rDevice, const ScTableInfo& rTableI
         // paint the editeng text
         pEditView->Paint(rDevice.PixelToLogic(Rectangle(Point(nScrX, nScrY), Size(aOutputData.GetScrW(), aOutputData.GetScrH()))), &rDevice);
         rDevice.SetMapMode(MAP_PIXEL);
+
+        // restore the cursor it was originally visible
+        if (bVisCursor)
+            pCrsr->Show();
     }
 
     if (pViewData->HasEditView(eWhich))
@@ -1251,7 +1264,7 @@ void ScGridWindow::DrawPagePreview( SCCOL nX1, SCROW nY1, SCCOL nX2, SCROW nY2, 
                                 else
                                     nPageNo += ((long)nRowPos)*nColBreaks+nColPos;
 
-                                OUString aThisPageStr = OUString(aPageStr).replaceFirst("%1", OUString::number(nPageNo));
+                                OUString aThisPageStr = aPageStr.replaceFirst("%1", OUString::number(nPageNo));
 
                                 if ( pEditEng )
                                 {
@@ -1280,14 +1293,14 @@ void ScGridWindow::DrawPagePreview( SCCOL nX1, SCROW nY1, SCCOL nX2, SCROW nY2, 
                                 else
                                 {
                                     //  find right font size for DrawText
-                                    aFont.SetSize( Size( 0,100 ) );
+                                    aFont.SetFontSize( Size( 0,100 ) );
                                     rRenderContext.SetFont( aFont );
                                     Size aSize100(rRenderContext.GetTextWidth( aThisPageStr ), rRenderContext.GetTextHeight() );
 
                                     //  40% of width or 60% of height
                                     long nSizeX = 40 * ( aPageEnd.X() - aPageStart.X() ) / aSize100.Width();
                                     long nSizeY = 60 * ( aPageEnd.Y() - aPageStart.Y() ) / aSize100.Height();
-                                    aFont.SetSize( Size( 0,std::min(nSizeX,nSizeY) ) );
+                                    aFont.SetFontSize( Size( 0,std::min(nSizeX,nSizeY) ) );
                                     rRenderContext.SetFont( aFont );
 
                                     //  centered output with DrawText
@@ -1449,7 +1462,7 @@ void ScGridWindow::DrawButtons(SCCOL nX1, SCCOL nX2, const ScTableInfo& rTabInfo
             aComboButton.SetPosPixel( aRect.TopLeft() );
             aComboButton.SetSizePixel( aRect.GetSize() );
             pContentDev->SetClipRegion(vcl::Region(aRect));
-            aComboButton.Draw( false );
+            aComboButton.Draw();
             pContentDev->SetClipRegion();           // always called from Draw() without clip region
             aComboButton.SetPosPixel( aOldPos );    // restore old state
             aComboButton.SetSizePixel( aOldSize );  // for MouseUp/Down (AutoFilter)
@@ -1588,7 +1601,7 @@ void ScGridWindow::GetSelectionRects( ::std::vector< Rectangle >& rPixelRects )
     if (nY1 < nPosY)
         nY1 = nPosY;
 
-    if (!pDoc->GetDrawLayer()->isTiledRendering())
+    if (!comphelper::LibreOfficeKit::isActive())
     {
         // limit the selection to only what is visible on the screen
         SCCOL nXRight = nPosX + pViewData->VisibleCellsX(eHWhich);
@@ -1607,6 +1620,17 @@ void ScGridWindow::GetSelectionRects( ::std::vector< Rectangle >& rPixelRects )
             nX2 = nXRight;
         if (nY2 > nYBottom)
             nY2 = nYBottom;
+    }
+    else
+    {
+        SCCOL nMaxTiledCol;
+        SCROW nMaxTiledRow;
+        pDoc->GetTiledRenderingArea(nTab, nMaxTiledCol, nMaxTiledRow);
+
+        if (nX2 > nMaxTiledCol)
+            nX2 = nMaxTiledCol;
+        if (nY2 > nMaxTiledRow)
+            nY2 = nMaxTiledRow;
     }
 
     double nPPTX = pViewData->GetPPTX();

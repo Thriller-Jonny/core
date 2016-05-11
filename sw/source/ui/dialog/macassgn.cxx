@@ -38,8 +38,6 @@
 
 #include <doc.hxx>
 
-using ::com::sun::star::uno::Reference;
-using ::com::sun::star::frame::XFrame;
 
 SfxEventNamesItem SwMacroAssignDlg::AddEvents( DlgEventType eType )
 {
@@ -67,7 +65,7 @@ SfxEventNamesItem SwMacroAssignDlg::AddEvents( DlgEventType eType )
             aItem.AddEvent( OUString( SW_RES(STR_EVENT_IMAGE_LOAD) ), OUString(),
                                 SVX_EVENT_IMAGE_LOAD);
         }
-        // no break;
+        SAL_FALLTHROUGH;
     case MACASSGN_FRMURL:           // Frame - URL-Attributes
         {
             if( !bHtmlMode &&
@@ -83,14 +81,14 @@ SfxEventNamesItem SwMacroAssignDlg::AddEvents( DlgEventType eType )
                                 SW_EVENT_FRM_MOVE );
             }
         }
-        // no break;
+        SAL_FALLTHROUGH;
     case MACASSGN_OLE:              // OLE
         {
             if( !bHtmlMode )
                 aItem.AddEvent( OUString( SW_RES(STR_EVENT_OBJECT_SELECT) ), OUString(),
                                 SW_EVENT_OBJECT_SELECT );
         }
-        // no break;
+        SAL_FALLTHROUGH;
     case MACASSGN_INETFMT:          // INetFormat-Attributes
         {
             aItem.AddEvent( OUString( SW_RES(STR_EVENT_MOUSEOVER_OBJECT) ), OUString(),

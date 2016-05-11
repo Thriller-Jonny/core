@@ -82,7 +82,6 @@ enum SdrHdlKind
 };
 
 
-
 enum BitmapColorIndex
 {
     LightGreen,
@@ -92,7 +91,6 @@ enum BitmapColorIndex
     LightRed,
     Yellow
 };
-
 
 
 enum BitmapMarkerKind
@@ -130,7 +128,6 @@ enum BitmapMarkerKind
 };
 
 
-
 class SVX_DLLPUBLIC SdrHdl
 {
     friend class                SdrMarkView; // for the access to nObjHdlNum
@@ -149,7 +146,7 @@ protected:
 
     SdrHdlKind                  eKind;
 
-    long                        nRotationAngle; // turn handle or mouspointer
+    long                        nRotationAngle; // turn handle or mousepointer
     sal_uInt32                  nObjHdlNum;     // required by MarkView
     sal_uInt32                  nPolyNum;       // Polygonpoint
     sal_uInt32                  nPPntNum;       // Point number of the polygon
@@ -241,7 +238,6 @@ public:
 };
 
 
-
 #define SDR_HANDLE_COLOR_SIZE_NORMAL            Size(13, 13)
 #define SDR_HANDLE_COLOR_SIZE_SELECTED          Size(17, 17)
 
@@ -274,14 +270,13 @@ public:
 
     bool IsUseLuminance() const { return bUseLuminance; }
 
-    Color GetColor() const { return aMarkerColor; }
+    const Color& GetColor() const { return aMarkerColor; }
     void SetColor(Color aNew, bool bCallLink = false);
 
     void SetSize(const Size& rNew);
 
     void SetColorChangeHdl(const Link<SdrHdlColor*,void>& rLink) { aColorChangeHdl = rLink; }
 };
-
 
 
 class SdrHdlGradient : public SdrHdl
@@ -332,7 +327,6 @@ public:
 };
 
 
-
 // Spiegelachse
 class SdrHdlLine: public SdrHdl
 {
@@ -368,7 +362,6 @@ public:
 };
 
 
-
 class E3dVolumeMarker : public SdrHdl
 {
     basegfx::B2DPolyPolygon             aWireframePoly;
@@ -379,7 +372,6 @@ class E3dVolumeMarker : public SdrHdl
 public:
     explicit E3dVolumeMarker(const basegfx::B2DPolyPolygon& rWireframePoly);
 };
-
 
 
 class ImpEdgeHdl: public SdrHdl
@@ -400,7 +392,6 @@ public:
 };
 
 
-
 class ImpMeasureHdl: public SdrHdl
 {
     // create marker for this kind
@@ -414,7 +405,6 @@ public:
 };
 
 
-
 class ImpTextframeHdl: public SdrHdl
 {
     const Rectangle maRect;
@@ -425,9 +415,6 @@ class ImpTextframeHdl: public SdrHdl
 public:
     explicit ImpTextframeHdl(const Rectangle& rRect);
 };
-
-
-
 
 
 class SVX_DLLPUBLIC SdrHdlList
@@ -445,8 +432,6 @@ protected:
 private:
     SVX_DLLPRIVATE SdrHdlList(const SdrHdlList&): aList()  {}
     SVX_DLLPRIVATE void operator=(const SdrHdlList&)                 {}
-    SVX_DLLPRIVATE bool operator==(const SdrHdlList&) const      { return false; }
-    SVX_DLLPRIVATE bool operator!=(const SdrHdlList&) const      { return false; }
 
 public:
     explicit SdrHdlList(SdrMarkView* pV);
@@ -480,15 +465,14 @@ public:
 
     // AddHdl takes ownership of the handle. It should be on the Heap
     // as Clear() deletes it.
-    void    AddHdl(SdrHdl* pHdl, bool bAtBegin=false);
+    void    AddHdl(SdrHdl* pHdl);
     SdrHdl* RemoveHdl(size_t nNum);
     void RemoveAllByKind(SdrHdlKind eKind);
 
     // Last inserted handles are likely hit (if the handles are above each other)
-    SdrHdl* IsHdlListHit(const Point& rPnt, bool bBack=false, bool bNext=false, SdrHdl* pHdl0=nullptr) const;
+    SdrHdl* IsHdlListHit(const Point& rPnt) const;
     SdrHdl* GetHdl(SdrHdlKind eKind1) const;
 };
-
 
 
 class SVX_DLLPUBLIC SdrCropHdl : public SdrHdl
@@ -516,7 +500,6 @@ protected:
 };
 
 
-
 class SVX_DLLPUBLIC SdrCropViewHdl : public SdrHdl
 {
 private:
@@ -540,7 +523,6 @@ protected:
     // create marker for this kind
     virtual void CreateB2dIAObject() override;
 };
-
 
 
 #endif // INCLUDED_SVX_SVDHDL_HXX

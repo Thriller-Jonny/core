@@ -251,9 +251,9 @@ void SvxPageWindow::DrawPage(vcl::RenderContext& rRenderContext, const Point& rO
     {
         Point aPos;
         vcl::Font aFont(rRenderContext.GetFont());
-        const Size aSaveSize = aFont.GetSize();
+        const Size aSaveSize = aFont.GetFontSize();
         Size aDrawSize(0,aRect.GetHeight() / 6);
-        aFont.SetSize(aDrawSize);
+        aFont.SetFontSize(aDrawSize);
         rRenderContext.SetFont(aFont);
         OUString sText("ABC");
         Point aMove(1, rRenderContext.GetTextHeight());
@@ -308,7 +308,7 @@ void SvxPageWindow::DrawPage(vcl::RenderContext& rRenderContext, const Point& rO
                 aPos.Y() += aMove.Y();
             }
         }
-        aFont.SetSize(aSaveSize);
+        aFont.SetFontSize(aSaveSize);
         rRenderContext.SetFont(aFont);
 
     }
@@ -402,13 +402,11 @@ void SvxPageWindow::drawFillAttributes(vcl::RenderContext& rRenderContext,
 }
 
 
-
 void SvxPageWindow::SetBorder(const SvxBoxItem& rNew)
 {
     delete pBorder;
     pBorder = new SvxBoxItem(rNew);
 }
-
 
 
 void SvxPageWindow::SetHdBorder(const SvxBoxItem& rNew)

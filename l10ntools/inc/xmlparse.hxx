@@ -38,11 +38,13 @@
 class XMLParentNode;
 class XMLElement;
 
-#define XML_NODE_TYPE_FILE          0x001
-#define XML_NODE_TYPE_ELEMENT       0x002
-#define XML_NODE_TYPE_DATA          0x003
-#define XML_NODE_TYPE_COMMENT       0x004
-#define XML_NODE_TYPE_DEFAULT       0x005
+enum class XMLNodeType{
+    XFILE   = 0x001,
+    ELEMENT = 0x002,
+    DATA    = 0x003,
+    COMMENT = 0x004,
+    DEFAULT = 0x005
+};
 
 /** Holds data of Attributes
  */
@@ -60,8 +62,8 @@ public:
     )
     : m_sName( rName ), m_sValue( rValue ) {}
 
-    OString GetName() const { return m_sName; }
-    OString GetValue() const { return m_sValue; }
+    const OString& GetName() const { return m_sName; }
+    const OString& GetValue() const { return m_sValue; }
 
     void setValue( const OString &rValue ){ m_sValue = rValue; }
 };
@@ -77,7 +79,7 @@ protected:
     XMLNode(){}
 
 public:
-    virtual sal_uInt16 GetNodeType() const = 0;
+    virtual XMLNodeType GetNodeType() const = 0;
     virtual ~XMLNode(){}
 };
 
@@ -156,7 +158,7 @@ public:
 
     void Print( XMLNode *pCur = nullptr, sal_uInt16 nLevel = 0 );
     void SearchL10NElements( XMLChildNode *pCur, int pos = 0 );
-    void Extract( XMLFile *pCur = nullptr );
+    void Extract();
 
     XMLHashMap* GetStrings(){ return m_pXMLStrings.get(); }
     void Write( OString const &rFilename );
@@ -166,10 +168,10 @@ public:
 
     XMLFile& operator=(const XMLFile& rObj);
 
-    virtual sal_uInt16 GetNodeType() const override { return XML_NODE_TYPE_FILE; }
+    virtual XMLNodeType GetNodeType() const override { return XMLNodeType::XFILE; }
 
     /// returns file name
-    OString GetName() const { return m_sFileName; }
+    const OString& GetName() const { return m_sFileName; }
     void SetName( const OString &rFilename ) { m_sFileName = rFilename; }
     const std::vector<OString>& getOrder() const { return m_vOrder; }
 
@@ -224,10 +226,10 @@ public:
     XMLElement(const XMLElement&);
 
     XMLElement& operator=(const XMLElement& rObj);
-    virtual sal_uInt16 GetNodeType() const override { return XML_NODE_TYPE_ELEMENT; }
+    virtual XMLNodeType GetNodeType() const override { return XMLNodeType::ELEMENT; }
 
     /// returns element name
-    OString GetName() const { return m_sElementName; }
+    const OString& GetName() const { return m_sElementName; }
 
     /// returns list of attributes of this element
     XMLAttributeList *GetAttributeList() { return m_pAttributes.get(); }
@@ -245,7 +247,7 @@ public:
     void SetPos             ( int nPos )                    { m_nPos = nPos; }
     void SetOldRef          ( OString const & sOldRef )     { m_sOldRef = sOldRef; }
 
-    OString GetOldref() const       { return m_sOldRef;      }
+    const OString& GetOldref() const       { return m_sOldRef;      }
 };
 
 /** Holds character data
@@ -265,10 +267,10 @@ public:
 
     // Default copy constructor and copy operator work well.
 
-    virtual sal_uInt16 GetNodeType() const override { return XML_NODE_TYPE_DATA; }
+    virtual XMLNodeType GetNodeType() const override { return XMLNodeType::DATA; }
 
     /// returns the data
-    OString GetData() const { return m_sData; }
+    const OString& GetData() const { return m_sData; }
 
     /// adds new character data to the existing one
     void AddData( const OString &rData ) { m_sData += rData; }
@@ -291,10 +293,10 @@ public:
 
     // Default copy constructor and copy operator work well.
 
-    virtual sal_uInt16 GetNodeType() const override { return XML_NODE_TYPE_COMMENT; }
+    virtual XMLNodeType GetNodeType() const override { return XMLNodeType::COMMENT; }
 
     /// returns the comment
-    OString GetComment() const { return m_sComment; }
+    const OString& GetComment() const { return m_sComment; }
 };
 
 /** Holds additional file content like those for which no handler exists
@@ -314,10 +316,10 @@ public:
 
     // Default copy constructor and copy operator work well.
 
-    virtual sal_uInt16 GetNodeType() const override { return XML_NODE_TYPE_DEFAULT; }
+    virtual XMLNodeType GetNodeType() const override { return XMLNodeType::DEFAULT; }
 
     /// returns the comment
-    OString GetDefault() const { return m_sDefault; }
+    const OString& GetDefault() const { return m_sDefault; }
 };
 
 /** struct for error information, used by class SimpleXMLParser

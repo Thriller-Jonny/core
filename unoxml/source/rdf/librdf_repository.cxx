@@ -28,9 +28,6 @@
 #include <functional>
 #include <algorithm>
 
-#include <boost/noncopyable.hpp>
-#include <boost/shared_array.hpp>
-#include <boost/bind.hpp>
 #include <boost/optional.hpp>
 
 #include <libxslt/security.h>
@@ -92,7 +89,6 @@ const char s_sparql [] = "sparql";
 const char s_nsOOo  [] = "http://openoffice.org/2004/office/rdfa/";
 
 
-
 //FIXME: this approach is not ideal. can we use blank nodes instead?
 bool isInternalContext(librdf_node *i_pNode) throw ()
 {
@@ -117,57 +113,53 @@ bool isInternalContext(librdf_node *i_pNode) throw ()
 }
 
 
-
-
 // n.b.: librdf destructor functions dereference null pointers!
 //       so they need to be wrapped to be usable with std::shared_ptr.
-static void safe_librdf_free_world(librdf_world *const world)
+void safe_librdf_free_world(librdf_world *const world)
 {
     if (world) { librdf_free_world(world); }
 }
-static void safe_librdf_free_model(librdf_model *const model)
+void safe_librdf_free_model(librdf_model *const model)
 {
     if (model) { librdf_free_model(model); }
 }
-static void safe_librdf_free_node(librdf_node* node)
+void safe_librdf_free_node(librdf_node* node)
 {
     if (node) { librdf_free_node(node); }
 }
-static void safe_librdf_free_parser(librdf_parser *const parser)
+void safe_librdf_free_parser(librdf_parser *const parser)
 {
     if (parser) { librdf_free_parser(parser); }
 }
-static void safe_librdf_free_query(librdf_query *const query)
+void safe_librdf_free_query(librdf_query *const query)
 {
     if (query) { librdf_free_query(query); }
 }
-static void
+void
 safe_librdf_free_query_results(librdf_query_results *const query_results)
 {
     if (query_results) { librdf_free_query_results(query_results); }
 }
-static void safe_librdf_free_serializer(librdf_serializer *const serializer)
+void safe_librdf_free_serializer(librdf_serializer *const serializer)
 {
     if (serializer) { librdf_free_serializer(serializer); }
 }
-static void safe_librdf_free_statement(librdf_statement *const statement)
+void safe_librdf_free_statement(librdf_statement *const statement)
 {
     if (statement) { librdf_free_statement(statement); }
 }
-static void safe_librdf_free_storage(librdf_storage *const storage)
+void safe_librdf_free_storage(librdf_storage *const storage)
 {
     if (storage) { librdf_free_storage(storage); }
 }
-static void safe_librdf_free_stream(librdf_stream *const stream)
+void safe_librdf_free_stream(librdf_stream *const stream)
 {
     if (stream) { librdf_free_stream(stream); }
 }
-static void safe_librdf_free_uri(librdf_uri *const uri)
+void safe_librdf_free_uri(librdf_uri *const uri)
 {
     if (uri) { librdf_free_uri(uri); }
 }
-
-
 
 
 /** converts between librdf types and UNO API types.
@@ -264,12 +256,9 @@ private:
 };
 
 
-
-
 /** implements the repository service.
  */
 class librdf_Repository:
-    private boost::noncopyable,
 //    private ::cppu::BaseMutex,
     public ::cppu::WeakImplHelper<
         lang::XServiceInfo,
@@ -383,8 +372,7 @@ public:
             const uno::Reference< rdf::XResource > & i_xSubject,
             const uno::Reference< rdf::XURI > & i_xPredicate,
             const uno::Reference< rdf::XNode > & i_xObject,
-            const uno::Reference< rdf::XURI > & i_xName,
-            bool i_Internal = false );
+            const uno::Reference< rdf::XURI > & i_xName );
 //        throw (uno::RuntimeException, lang::IllegalArgumentException,
 //            container::NoSuchElementException, rdf::RepositoryException);
     void addStatementGraph_Lock(
@@ -410,6 +398,9 @@ public:
     const librdf_TypeConverter& getTypeConverter() { return m_TypeConverter; };
 
 private:
+
+    librdf_Repository(librdf_Repository const&) = delete;
+    librdf_Repository& operator=(librdf_Repository const&) = delete;
 
     /// this is const, no need to lock m_aMutex to access it
     uno::Reference< uno::XComponentContext > const m_xContext;
@@ -448,13 +439,10 @@ private:
 };
 
 
-
-
 /** result of operations that return a graph, i.e.,
     an XEnumeration of statements.
  */
 class librdf_GraphResult:
-    private boost::noncopyable,
     public ::cppu::WeakImplHelper<
         container::XEnumeration>
 {
@@ -489,6 +477,10 @@ public:
             lang::WrappedTargetException, std::exception) override;
 
 private:
+
+    librdf_GraphResult(librdf_GraphResult const&) = delete;
+    librdf_GraphResult& operator=(librdf_GraphResult const&) = delete;
+
     // NB: this is not a weak pointer: streams _must_ be deleted before the
     //     storage they point into, so we keep the repository alive here
     // also, sequence is important: the stream must be destroyed first.
@@ -563,12 +555,9 @@ throw (uno::RuntimeException, container::NoSuchElementException,
 }
 
 
-
-
 /** result of tuple queries ("SELECT").
  */
 class librdf_QuerySelectResult:
-    private boost::noncopyable,
     public ::cppu::WeakImplHelper<
         rdf::XQuerySelectResult>
 {
@@ -606,6 +595,9 @@ public:
         throw (uno::RuntimeException, std::exception) override;
 
 private:
+
+    librdf_QuerySelectResult(librdf_QuerySelectResult const&) = delete;
+    librdf_QuerySelectResult& operator=(librdf_QuerySelectResult const&) = delete;
 
     // NB: this is not a weak pointer: streams _must_ be deleted before the
     //     storage they point into, so we keep the repository alive here
@@ -652,10 +644,10 @@ throw (uno::RuntimeException, container::NoSuchElementException,
     if (!librdf_query_results_finished(m_pQueryResult.get())) {
         sal_Int32 count(m_BindingNames.getLength());
         OSL_ENSURE(count >= 0, "negative length?");
-        boost::shared_array<librdf_node*> pNodes( new librdf_node*[count],
+        std::shared_ptr<librdf_node*> const pNodes(new librdf_node*[count],
             NodeArrayDeleter(count));
         for (int i = 0; i < count; ++i) {
-            pNodes[i] = nullptr;
+            pNodes.get()[i] = nullptr;
         }
         if (librdf_query_results_get_bindings(m_pQueryResult.get(), nullptr,
                     pNodes.get()))
@@ -670,7 +662,7 @@ throw (uno::RuntimeException, container::NoSuchElementException,
         }
         uno::Sequence< uno::Reference< rdf::XNode > > ret(count);
         for (int i = 0; i < count; ++i) {
-            ret[i] = m_xRep->getTypeConverter().convertToXNode(pNodes[i]);
+            ret[i] = m_xRep->getTypeConverter().convertToXNode(pNodes.get()[i]);
         }
         // NB: this will invalidate current item.
         librdf_query_results_next(m_pQueryResult.get());
@@ -689,12 +681,9 @@ librdf_QuerySelectResult::getBindingNames() throw (uno::RuntimeException, std::e
 }
 
 
-
-
 /** represents a named graph, and forwards all the work to repository.
  */
 class librdf_NamedGraph:
-    private boost::noncopyable,
     public ::cppu::WeakImplHelper<
         rdf::XNamedGraph>
 {
@@ -744,6 +733,9 @@ public:
             container::NoSuchElementException, rdf::RepositoryException, std::exception) override;
 
 private:
+
+    librdf_NamedGraph(librdf_NamedGraph const&) = delete;
+    librdf_NamedGraph& operator=(librdf_NamedGraph const&) = delete;
 
     /// weak reference: this is needed to check if m_pRep is valid
     uno::WeakReference< rdf::XRepository > const m_wRep;
@@ -844,8 +836,6 @@ throw (uno::RuntimeException,
     return m_pRep->getStatementsGraph_NoLock(
             i_xSubject, i_xPredicate, i_xObject, m_xName);
 }
-
-
 
 
 std::shared_ptr<librdf_world> librdf_Repository::m_pWorld;
@@ -1253,8 +1243,8 @@ throw (uno::RuntimeException, rdf::RepositoryException, std::exception)
     ::std::vector< uno::Reference<rdf::XURI> > ret;
     std::transform(m_NamedGraphs.begin(), m_NamedGraphs.end(),
         std::back_inserter(ret),
-        boost::bind(&rdf::XNamedGraph::getName,
-            boost::bind(&NamedGraphMap_t::value_type::second, _1)));
+        [](std::pair<OUString, ::rtl::Reference<librdf_NamedGraph>> const& it)
+            { return it.second->getName(); });
     return comphelper::containerToSequence(ret);
 }
 
@@ -1329,7 +1319,7 @@ throw (uno::RuntimeException, lang::IllegalArgumentException,
     m_NamedGraphs.erase(iter);
 }
 
-static bool isMetadatableWithoutMetadata(
+bool isMetadatableWithoutMetadata(
     uno::Reference<uno::XInterface> const & i_xNode)
 {
     const uno::Reference<rdf::XMetadatable> xMeta( i_xNode, uno::UNO_QUERY );
@@ -1585,7 +1575,8 @@ throw (uno::RuntimeException, lang::IllegalArgumentException,
         predicates;
     ::std::transform(i_rPredicates.begin(), i_rPredicates.end(),
         ::std::back_inserter(predicates),
-        ::boost::bind(&librdf_TypeConverter::extractResource_NoLock, _1));
+        [](uno::Reference<rdf::XURI> const& xURI)
+            { return librdf_TypeConverter::extractResource_NoLock(xURI); });
 
     removeStatementRDFa(i_xObject); // not atomic with insertion?
 
@@ -1820,8 +1811,7 @@ void librdf_Repository::addStatementGraph_NoLock(
     const uno::Reference< rdf::XResource > & i_xSubject,
     const uno::Reference< rdf::XURI > & i_xPredicate,
     const uno::Reference< rdf::XNode > & i_xObject,
-    const uno::Reference< rdf::XURI > & i_xGraphName,
-    bool i_Internal)
+    const uno::Reference< rdf::XURI > & i_xGraphName)
 //throw (uno::RuntimeException, lang::IllegalArgumentException,
 //    container::NoSuchElementException, rdf::RepositoryException)
 {
@@ -1847,7 +1837,7 @@ void librdf_Repository::addStatementGraph_NoLock(
 
     ::osl::MutexGuard g(m_aMutex); // don't call i_x* with mutex locked
 
-    addStatementGraph_Lock(stmt, contextU, i_Internal);
+    addStatementGraph_Lock(stmt, contextU, false/*i_Internal*/);
 }
 
 void librdf_Repository::addStatementGraph_Lock(
@@ -2428,7 +2418,6 @@ librdf_TypeConverter::convertToStatement(librdf_statement* i_pStmt,
 }
 
 } // closing anonymous implementation namespace
-
 
 
 // component helper namespace

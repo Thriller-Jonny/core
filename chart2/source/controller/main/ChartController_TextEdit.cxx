@@ -69,7 +69,7 @@ void ChartController::StartTextEdit( const Point* pMousePixel )
     //#i77362 change notification for changes on additional shapes are missing
     uno::Reference< beans::XPropertySet > xChartViewProps( m_xChartView, uno::UNO_QUERY );
     if( xChartViewProps.is() )
-        xChartViewProps->setPropertyValue( "SdrViewIsInEditMode", uno::makeAny(sal_True) );
+        xChartViewProps->setPropertyValue( "SdrViewIsInEditMode", uno::makeAny(true) );
 
     bool bEdit = m_pDrawViewWrapper->SdrBeginTextEdit( pTextObj
                     , m_pDrawViewWrapper->GetPageView()
@@ -109,7 +109,7 @@ bool ChartController::EndTextEdit()
     //#i77362 change notification for changes on additional shapes are missing
     uno::Reference< beans::XPropertySet > xChartViewProps( m_xChartView, uno::UNO_QUERY );
     if( xChartViewProps.is() )
-        xChartViewProps->setPropertyValue( "SdrViewIsInEditMode", uno::makeAny(sal_False) );
+        xChartViewProps->setPropertyValue( "SdrViewIsInEditMode", uno::makeAny(false) );
 
     SdrObject* pTextObject = m_pDrawViewWrapper->getTextEditObject();
     if(!pTextObject)
@@ -135,7 +135,7 @@ bool ChartController::EndTextEdit()
             ControllerLockGuardUNO aCLGuard( getModel() );
 
             TitleHelper::setCompleteString( aString, uno::Reference<
-                ::com::sun::star::chart2::XTitle >::query( xPropSet ), m_xCC );
+                css::chart2::XTitle >::query( xPropSet ), m_xCC );
 
             OSL_ENSURE( m_pTextActionUndoGuard.get(), "ChartController::EndTextEdit: no TextUndoGuard!" );
             if ( m_pTextActionUndoGuard.get() )
@@ -167,7 +167,7 @@ void ChartController::executeDispatch_InsertSpecialCharacter()
     aSet.Put( SfxBoolItem( FN_PARAM_2, true ) ); //maybe not necessary in future
 
     vcl::Font aCurFont = m_pDrawViewWrapper->getOutliner()->GetRefDevice()->GetFont();
-    aSet.Put( SvxFontItem( aCurFont.GetFamily(), aCurFont.GetName(), aCurFont.GetStyleName(), aCurFont.GetPitch(), aCurFont.GetCharSet(), SID_ATTR_CHAR_FONT ) );
+    aSet.Put( SvxFontItem( aCurFont.GetFamilyType(), aCurFont.GetFamilyName(), aCurFont.GetStyleName(), aCurFont.GetPitch(), aCurFont.GetCharSet(), SID_ATTR_CHAR_FONT ) );
 
     std::unique_ptr<SfxAbstractDialog> pDlg(pFact->CreateSfxDialog( m_pChartWindow, aSet, getFrame(), RID_SVXDLG_CHARMAP ));
     OSL_ENSURE( pDlg, "Couldn't create SvxCharacterMap dialog" );
@@ -209,10 +209,10 @@ void ChartController::executeDispatch_InsertSpecialCharacter()
     }
 }
 
-uno::Reference< ::com::sun::star::accessibility::XAccessibleContext >
+uno::Reference< css::accessibility::XAccessibleContext >
     ChartController::impl_createAccessibleTextContext()
 {
-    uno::Reference< ::com::sun::star::accessibility::XAccessibleContext > xResult(
+    uno::Reference< css::accessibility::XAccessibleContext > xResult(
         new AccessibleTextHelper( m_pDrawViewWrapper ));
 
     return xResult;

@@ -41,6 +41,7 @@
 #include "chartlock.hxx"
 #include "refupdat.hxx"
 #include "docoptio.hxx"
+#include "clipoptions.hxx"
 #include "viewopti.hxx"
 #include "scextopt.hxx"
 #include "brdcst.hxx"
@@ -74,6 +75,8 @@
 
 #include "globalnames.hxx"
 #include <LibreOfficeKit/LibreOfficeKitEnums.h>
+#include <comphelper/lok.hxx>
+#include <o3tl/make_unique.hxx>
 #include <memory>
 
 using namespace com::sun::star;
@@ -215,8 +218,18 @@ bool ScDocument::InsertNewRangeName( const OUString& rName, const ScAddress& rPo
     if (!pGlobalNames)
         return false;
 
-    ScRangeData* pName = new ScRangeData(this, rName, rExpr, rPos, RT_NAME, GetGrammar());
+    ScRangeData* pName = new ScRangeData(this, rName, rExpr, rPos, ScRangeData::Type::Name, GetGrammar());
     return pGlobalNames->insert(pName);
+}
+
+bool ScDocument::InsertNewRangeName( SCTAB nTab, const OUString& rName, const ScAddress& rPos, const OUString& rExpr )
+{
+    ScRangeName* pLocalNames = GetRangeName(nTab);
+    if (!pLocalNames)
+        return false;
+
+    ScRangeData* pName = new ScRangeData(this, rName, rExpr, rPos, ScRangeData::Type::Name, GetGrammar());
+    return pLocalNames->insert(pName);
 }
 
 const ScRangeData* ScDocument::GetRangeAtBlock( const ScRange& rBlock, OUString* pName ) const
@@ -229,6 +242,12 @@ const ScRangeData* ScDocument::GetRangeAtBlock( const ScRange& rBlock, OUString*
             *pName = pData->GetName();
     }
     return pData;
+}
+
+ScRangeData* ScDocument::FindRangeNameBySheetAndIndex( SCTAB nTab, sal_uInt16 nIndex ) const
+{
+    const ScRangeName* pRN = (nTab < 0 ? GetRangeName() : GetRangeName(nTab));
+    return (pRN ? pRN->findByIndex( nIndex) : nullptr);
 }
 
 void ScDocument::SetDBCollection( ScDBCollection* pNewDBCollection, bool bRemoveAutoFilter )
@@ -1301,7 +1320,7 @@ bool ScDocument::SearchAndReplace(
                                     rSearchItem, nCol, nRow );
 
                                 // notify LibreOfficeKit about changed page
-                                if ( GetDrawLayer() && GetDrawLayer()->isTiledRendering() )
+                                if ( comphelper::LibreOfficeKit::isActive() )
                                 {
                                     OString aPayload = OString::number(nTab);
                                     GetDrawLayer()->libreOfficeKitCallback(LOK_CALLBACK_SET_PART, aPayload.getStr());
@@ -1331,7 +1350,7 @@ bool ScDocument::SearchAndReplace(
                                     rSearchItem, nCol, nRow );
 
                                 // notify LibreOfficeKit about changed page
-                                if ( GetDrawLayer() && GetDrawLayer()->isTiledRendering() )
+                                if ( comphelper::LibreOfficeKit::isActive() )
                                 {
                                     OString aPayload = OString::number(nTab);
                                     GetDrawLayer()->libreOfficeKitCallback(LOK_CALLBACK_SET_PART, aPayload.getStr());
@@ -1463,11 +1482,23 @@ bool ScDocument::HasRowHeader( SCCOL nStartCol, SCROW nStartRow, SCCOL nEndCol, 
     return ValidTab(nTab) && maTabs[nTab] && maTabs[nTab]->HasRowHeader( nStartCol, nStartRow, nEndCol, nEndRow );
 }
 
+void ScDocument::GetFilterSelCount( SCCOL nCol, SCROW nRow, SCTAB nTab, SCSIZE& nSelected, SCSIZE& nTotal )
+{
+    nSelected = 0;
+    nTotal = 0;
+    if ( ValidTab(nTab) && nTab < static_cast<SCTAB>(maTabs.size()) && maTabs[nTab] )
+    {
+        ScDBData* pDBData = GetDBAtCursor( nCol, nRow, nTab, ScDBDataPortion::AREA );
+        if( pDBData && pDBData->HasAutoFilter() )
+            pDBData->GetFilterSelCount( nSelected, nTotal );
+    }
+}
+
 /**
  * Entries for AutoFilter listbox
  */
-bool ScDocument::GetFilterEntries(
-    SCCOL nCol, SCROW nRow, SCTAB nTab, bool bFilter, std::vector<ScTypedStrData>& rStrings, bool& rHasDates)
+void ScDocument::GetFilterEntries(
+    SCCOL nCol, SCROW nRow, SCTAB nTab, std::vector<ScTypedStrData>& rStrings, bool& rHasDates)
 {
     if ( ValidTab(nTab) && nTab < static_cast<SCTAB>(maTabs.size()) && maTabs[nTab] && pDBCollection )
     {
@@ -1489,17 +1520,15 @@ bool ScDocument::GetFilterEntries(
             pDBData->GetQueryParam( aParam );
 
             // Return all filter entries, if a filter condition is connected with a boolean OR
-            if ( bFilter )
+            bool bFilter = true;
+            SCSIZE nEntryCount = aParam.GetEntryCount();
+            for ( SCSIZE i = 0; i < nEntryCount && aParam.GetEntry(i).bDoQuery; ++i )
             {
-                SCSIZE nEntryCount = aParam.GetEntryCount();
-                for ( SCSIZE i = 0; i < nEntryCount && aParam.GetEntry(i).bDoQuery; ++i )
+                ScQueryEntry& rEntry = aParam.GetEntry(i);
+                if ( rEntry.eConnect != SC_AND )
                 {
-                    ScQueryEntry& rEntry = aParam.GetEntry(i);
-                    if ( rEntry.eConnect != SC_AND )
-                    {
-                        bFilter = false;
-                        break;
-                    }
+                    bFilter = false;
+                    break;
                 }
             }
 
@@ -1513,17 +1542,14 @@ bool ScDocument::GetFilterEntries(
             }
 
             sortAndRemoveDuplicates(rStrings, aParam.bCaseSens);
-            return true;
         }
     }
-
-    return false;
 }
 
 /**
  * Entries for Filter dialog
  */
-bool ScDocument::GetFilterEntriesArea(
+void ScDocument::GetFilterEntriesArea(
     SCCOL nCol, SCROW nStartRow, SCROW nEndRow, SCTAB nTab, bool bCaseSens,
     std::vector<ScTypedStrData>& rStrings, bool& rHasDates)
 {
@@ -1531,17 +1557,14 @@ bool ScDocument::GetFilterEntriesArea(
     {
         maTabs[nTab]->GetFilterEntries( nCol, nStartRow, nEndRow, rStrings, rHasDates );
         sortAndRemoveDuplicates(rStrings, bCaseSens);
-        return true;
     }
-
-    return false;
 }
 
 /**
  * Entries for selection list listbox (no numbers/formulas)
  */
-bool ScDocument::GetDataEntries(
-    SCCOL nCol, SCROW nRow, SCTAB nTab, bool bCaseSens,
+void ScDocument::GetDataEntries(
+    SCCOL nCol, SCROW nRow, SCTAB nTab,
     std::vector<ScTypedStrData>& rStrings, bool bLimit )
 {
     if( !bLimit )
@@ -1556,31 +1579,29 @@ bool ScDocument::GetDataEntries(
             if( pData && pData->FillSelectionList( rStrings, ScAddress( nCol, nRow, nTab ) ) )
             {
                 if (pData->GetListType() == css::sheet::TableValidationVisibility::SORTEDASCENDING)
-                    sortAndRemoveDuplicates(rStrings, bCaseSens);
+                    sortAndRemoveDuplicates(rStrings, true/*bCaseSens*/);
 
-                return true;
+                return;
             }
         }
     }
 
     if (!ValidTab(nTab) || nTab >= static_cast<SCTAB>(maTabs.size()))
-        return false;
+        return;
 
     if (!maTabs[nTab])
-        return false;
+        return;
 
     std::set<ScTypedStrData> aStrings;
-    bool bRet = maTabs[nTab]->GetDataEntries(nCol, nRow, aStrings, bLimit);
+    maTabs[nTab]->GetDataEntries(nCol, nRow, aStrings, bLimit);
     rStrings.insert(rStrings.end(), aStrings.begin(), aStrings.end());
-    sortAndRemoveDuplicates(rStrings, bCaseSens);
-
-    return bRet;
+    sortAndRemoveDuplicates(rStrings, true/*bCaseSens*/);
 }
 
 /**
  * Entries for Formula auto input
  */
-bool ScDocument::GetFormulaEntries( ScTypedCaseStrSet& rStrings )
+void ScDocument::GetFormulaEntries( ScTypedCaseStrSet& rStrings )
 {
 
     // Range name
@@ -1604,9 +1625,8 @@ bool ScDocument::GetFormulaEntries( ScTypedCaseStrSet& rStrings )
     ScRangePairList* pLists[2];
     pLists[0] = GetColNameRanges();
     pLists[1] = GetRowNameRanges();
-    for (sal_uInt16 nListNo=0; nListNo<2; nListNo++)
+    for (ScRangePairList* pList : pLists)
     {
-        ScRangePairList* pList = pLists[ nListNo ];
         if (!pList)
             continue;
 
@@ -1625,8 +1645,6 @@ bool ScDocument::GetFormulaEntries( ScTypedCaseStrSet& rStrings )
             }
         }
     }
-
-    return true;
 }
 
 void ScDocument::GetEmbedded( ScRange& rRange ) const
@@ -1950,6 +1968,11 @@ void ScDocument::SetExtDocOptions( ScExtDocOptions* pNewOptions )
     pExtDocOptions = pNewOptions;
 }
 
+void ScDocument::SetClipOptions(const ScClipOptions& rClipOptions)
+{
+    mpClipOptions = o3tl::make_unique<ScClipOptions>(rClipOptions);
+}
+
 void ScDocument::DoMergeContents( SCTAB nTab, SCCOL nStartCol, SCROW nStartRow,
                                     SCCOL nEndCol, SCROW nEndRow )
 {
@@ -2036,12 +2059,10 @@ SCSIZE ScDocument::GetPatternCount( SCTAB nTab, SCCOL nCol, SCROW nRow1, SCROW n
         return 0;
 }
 
-bool ScDocument::ReservePatternCount( SCTAB nTab, SCCOL nCol, SCSIZE nReserve )
+void ScDocument::ReservePatternCount( SCTAB nTab, SCCOL nCol, SCSIZE nReserve )
 {
     if( ValidTab(nTab) && nTab < static_cast<SCTAB>(maTabs.size()) && maTabs[nTab] )
-        return maTabs[nTab]->ReservePatternCount( nCol, nReserve );
-    else
-        return false;
+        maTabs[nTab]->ReservePatternCount( nCol, nReserve );
 }
 
 void ScDocument::GetSortParam( ScSortParam& rParam, SCTAB nTab )

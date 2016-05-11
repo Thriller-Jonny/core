@@ -70,7 +70,7 @@ namespace rptui
         }
         inline css::uno::Reference< css::report::XSection >   getHeader() { return m_xGroup->getHeader(); }
         inline css::uno::Reference< css::report::XSection >   getFooter() { return m_xGroup->getFooter(); }
-        inline css::uno::Reference< css::report::XGroup >     getGroup() { return m_xGroup; }
+        const css::uno::Reference< css::report::XGroup >&     getGroup() { return m_xGroup; }
 
         inline bool getHeaderOn() { return m_xGroup->getHeaderOn(); }
         inline bool getFooterOn() { return m_xGroup->getFooterOn(); }
@@ -177,8 +177,6 @@ namespace rptui
                         m_xOwnElement;  // object owned by the action
         css::uno::Reference< css::container::XIndexContainer >
                         m_xContainer;
-        css::uno::Reference< css::report::XSection >
-                        m_xSection;
         Action          m_eAction;
 
     public:

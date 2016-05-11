@@ -65,7 +65,7 @@
 
 using ::com::sun::star::i18n::LocaleDataItem;
 
-// Err527 Workaroand
+// Err527 Workaround
 extern const ScFormulaCell* pLastFormulaTreeTop; // in cellform.cxx
 using namespace formula;
 
@@ -75,7 +75,7 @@ void ScColumn::Broadcast( SCROW nRow )
     pDocument->Broadcast(aHint);
 }
 
-void ScColumn::BroadcastCells( const std::vector<SCROW>& rRows, sal_uLong nHint )
+void ScColumn::BroadcastCells( const std::vector<SCROW>& rRows, sal_uInt32 nHint )
 {
     if (rRows.empty())
         return;
@@ -720,18 +720,17 @@ bool ScColumn::InitBlockPosition( sc::ColumnBlockPosition& rBlockPos )
     return true;
 }
 
-bool ScColumn::InitBlockPosition( sc::ColumnBlockConstPosition& rBlockPos ) const
+void ScColumn::InitBlockPosition( sc::ColumnBlockConstPosition& rBlockPos ) const
 {
     rBlockPos.miBroadcasterPos = maBroadcasters.begin();
     rBlockPos.miCellNotePos = maCellNotes.begin();
     rBlockPos.miCellTextAttrPos = maCellTextAttrs.begin();
     rBlockPos.miCellPos = maCells.begin();
-    return true;
 }
 
 namespace {
 
-class CopyAttrArrayByRange : std::unary_function<sc::RowSpan, void>
+class CopyAttrArrayByRange : public std::unary_function<sc::RowSpan, void>
 {
     ScAttrArray& mrDestAttrArray;
     ScAttrArray& mrSrcAttrArray;
@@ -1117,7 +1116,7 @@ void ScColumn::MixMarked(
 
     if (rMark.IsMultiMarked())
     {
-        ScMarkArrayIter aIter( rMark.GetArray()+nCol );
+        ScMultiSelIter aIter( rMark.GetMultiSelData(), nCol );
         while (aIter.Next( nRow1, nRow2 ))
             MixData(rCxt, nRow1, nRow2, nFunction, bSkipEmpty, rSrcCol);
     }
@@ -1729,7 +1728,7 @@ bool ScColumn::ParseString(
                 if (!pLocale)
                     break;
 
-                LocaleDataItem aLocaleItem = pLocale->getLocaleItem();
+                const LocaleDataItem& aLocaleItem = pLocale->getLocaleItem();
                 const OUString& rDecSep = aLocaleItem.decimalSeparator;
                 const OUString& rGroupSep = aLocaleItem.thousandSeparator;
                 if (rDecSep.getLength() != 1 || rGroupSep.getLength() != 1)
@@ -1892,7 +1891,7 @@ ScFormulaCell* ScColumn::SetFormulaCell(
     return pCell;
 }
 
-ScFormulaCell* ScColumn::SetFormulaCell(
+void ScColumn::SetFormulaCell(
     sc::ColumnBlockPosition& rBlockPos, SCROW nRow, ScFormulaCell* pCell,
     sc::StartListeningType eListenType )
 {
@@ -1907,7 +1906,6 @@ ScFormulaCell* ScColumn::SetFormulaCell(
     CellStorageModified();
 
     AttachNewFormulaCell(rBlockPos.miCellPos, nRow, *pCell, true, eListenType);
-    return pCell;
 }
 
 bool ScColumn::SetFormulaCells( SCROW nRow, std::vector<ScFormulaCell*>& rCells )
@@ -2331,6 +2329,7 @@ public:
                 break;
                 case CELLTYPE_STRING:
                     rColumn.SetRawString(aBlockPos, r.mnRow, *r.maValue.mpString, false);
+                break;
                 default:
                     ;
             }
@@ -2383,7 +2382,7 @@ void ScColumn::SetError( SCROW nRow, const sal_uInt16 nError)
     AttachNewFormulaCell(it, nRow, *pCell);
 }
 
-void ScColumn::SetRawString( SCROW nRow, const OUString& rStr, bool bBroadcast )
+void ScColumn::SetRawString( SCROW nRow, const OUString& rStr )
 {
     if (!ValidRow(nRow))
         return;
@@ -2392,10 +2391,10 @@ void ScColumn::SetRawString( SCROW nRow, const OUString& rStr, bool bBroadcast )
     if (!aSS.getData())
         return;
 
-    SetRawString(nRow, aSS, bBroadcast);
+    SetRawString(nRow, aSS);
 }
 
-void ScColumn::SetRawString( SCROW nRow, const svl::SharedString& rStr, bool bBroadcast )
+void ScColumn::SetRawString( SCROW nRow, const svl::SharedString& rStr )
 {
     if (!ValidRow(nRow))
         return;
@@ -2406,8 +2405,7 @@ void ScColumn::SetRawString( SCROW nRow, const svl::SharedString& rStr, bool bBr
 
     CellStorageModified();
 
-    if (bBroadcast)
-        BroadcastNewCell(nRow);
+    BroadcastNewCell(nRow);
 }
 
 void ScColumn::SetRawString(
@@ -2933,7 +2931,6 @@ namespace {
 
 class GroupFormulaCells
 {
-    ScFormulaCellGroupRef mxNone;
     std::vector<ScAddress>* mpGroupPos;
 
 public:

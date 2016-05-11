@@ -59,14 +59,14 @@ namespace utl {
     class AccessibleStateSetHelper;
 }
 
-enum SvLBoxButtonKind
+enum class SvLBoxButtonKind
 {
-    SvLBoxButtonKind_enabledCheckbox,
-    SvLBoxButtonKind_disabledCheckbox,
-    SvLBoxButtonKind_staticImage
+    EnabledCheckbox,
+    DisabledCheckbox,
+    StaticImage
 };
 
-enum SvButtonState { SV_BUTTON_UNCHECKED, SV_BUTTON_CHECKED, SV_BUTTON_TRISTATE };
+enum class SvButtonState { Unchecked, Checked, Tristate };
 
 // *********************************************************************
 // *************************** Tabulators ******************************
@@ -159,7 +159,6 @@ public:
 class SVT_DLLPUBLIC SvLBoxItem
 {
 public:
-                        SvLBoxItem( SvTreeListEntry*, sal_uInt16 nFlags );
                         SvLBoxItem();
     virtual             ~SvLBoxItem();
     virtual sal_uInt16 GetType() const = 0;
@@ -228,10 +227,10 @@ class SVT_DLLPUBLIC SvTreeListBox
                 ,public vcl::ISearchableStringList
 {
     friend class SvImpLBox;
+    friend class IconViewImpl;
     friend class TreeControlPeer;
 
     SvTreeListBoxImpl* mpImpl;
-    SvImpLBox*      pImp;
     Link<SvTreeListBox*,void>  aCheckButtonHdl;
     Link<SvTreeListBox*,void>  aScrolledHdl;
     Link<SvTreeListBox*,void>  aExpandedHdl;
@@ -239,14 +238,12 @@ class SVT_DLLPUBLIC SvTreeListBox
     Link<SvTreeListBox*,void>  aSelectHdl;
     Link<SvTreeListBox*,void>  aDeselectHdl;
 
-    Accelerator     aInpEditAcc;
     Image           aPrevInsertedExpBmp;
     Image           aPrevInsertedColBmp;
     Image           aCurInsertedExpBmp;
     Image           aCurInsertedColBmp;
 
     short           nContextBmpWidthMax;
-    short           nEntryHeight;
     short           nEntryHeightOffs;
     short           nIndent;
     short           nFocusWidth;
@@ -270,6 +267,12 @@ class SVT_DLLPUBLIC SvTreeListBox
     SvLBoxItem*             pEdItem;
 
 protected:
+    SvImpLBox*              pImp;
+    short                   nColumns;
+    short                   nEntryHeight;
+    short                   nEntryWidth;
+    bool                    mbCenterAndClipText;
+
     Link<SvTreeListBox*,bool> aDoubleClickHdl;
     SvTreeListEntry*        pTargetEntry;
     SvLBoxButtonData*       pCheckButtonData;
@@ -301,8 +304,7 @@ protected:
 
     bool            CheckDragAndDropMode( SvTreeListBox* pSource, sal_Int8 );
     void            ImplShowTargetEmphasis( SvTreeListEntry* pEntry, bool bShow);
-    void            EnableSelectionAsDropTarget( bool bEnable = true,
-                                                 bool bWithChildren = true );
+    void            EnableSelectionAsDropTarget( bool bEnable = true );
     // Standard impl returns 0; derived classes which support D'n'D must override
     using Window::GetDropTarget;
     virtual SvTreeListEntry* GetDropTarget( const Point& );
@@ -316,7 +318,6 @@ protected:
     // In-place editing
     SvInplaceEdit2*  pEdCtrl;
     void            EditText( const OUString&, const Rectangle&,const Selection&);
-    void            EditText( const OUString&, const Rectangle&,const Selection&, bool bMulti);
     void            CancelTextEditing();
     bool            EditingCanceled() const;
     bool            IsEmptyTextAllowed() const;
@@ -377,13 +378,13 @@ public:
     {
         return pModel ? pModel->First() : nullptr;
     }
-    SvTreeListEntry* Next( SvTreeListEntry* pEntry, sal_uInt16* pDepth = nullptr ) const
+    SvTreeListEntry* Next( SvTreeListEntry* pEntry ) const
     {
-         return pModel->Next(pEntry, pDepth);
+         return pModel->Next(pEntry);
     }
-    SvTreeListEntry* Prev( SvTreeListEntry* pEntry, sal_uInt16* pDepth = nullptr ) const
+    SvTreeListEntry* Prev( SvTreeListEntry* pEntry ) const
     {
-        return pModel->Prev(pEntry, pDepth);
+        return pModel->Prev(pEntry);
     }
     SvTreeListEntry* Last() const
     {
@@ -441,8 +442,10 @@ public:
 
         Be aware that enabling mnemonics gets more expensive as you add to the list.
     */
-    void            EnableEntryMnemonics( bool _bEnable = true );
+    void            EnableEntryMnemonics();
     bool            IsEntryMnemonicsEnabled() const;
+
+    bool            TextCenterAndClipEnabled() const { return mbCenterAndClipText; }
 
     /** Handles the given key event.
 
@@ -550,20 +553,18 @@ protected:
     using SvListView::SelectAll;
 
     SVT_DLLPRIVATE short        GetHeightOffset( const Image& rBmp, Size& rLogicSize);
-    SVT_DLLPRIVATE short        GetHeightOffset( const vcl::Font& rFont, Size& rLogicSize);
+    SVT_DLLPRIVATE void         GetHeightOffset( Size& rLogicSize);
 
     SVT_DLLPRIVATE void         SetEntryHeight( SvTreeListEntry* pEntry );
     SVT_DLLPRIVATE void         AdjustEntryHeight( const Image& rBmp );
-    SVT_DLLPRIVATE void         AdjustEntryHeight( const vcl::Font& rFont );
+    SVT_DLLPRIVATE void         AdjustEntryHeight();
 
     SVT_DLLPRIVATE void         ImpEntryInserted( SvTreeListEntry* pEntry );
-    SVT_DLLPRIVATE long         PaintEntry1( SvTreeListEntry&, long nLine, vcl::RenderContext& rRenderContext,
-                                             SvLBoxTabFlags nTabFlagMask = SvLBoxTabFlags::ALL,
-                                             bool bHasClipRegion=false );
+    SVT_DLLPRIVATE void         PaintEntry1( SvTreeListEntry&, long nLine, vcl::RenderContext& rRenderContext,
+                                             SvLBoxTabFlags nTabFlagMask = SvLBoxTabFlags::ALL );
 
     SVT_DLLPRIVATE void         InitTreeView();
-    SVT_DLLPRIVATE SvLBoxItem*  GetItem_Impl( SvTreeListEntry*, long nX, SvLBoxTab** ppTab,
-                                              sal_uInt16 nEmptyWidth );
+    SVT_DLLPRIVATE SvLBoxItem*  GetItem_Impl( SvTreeListEntry*, long nX, SvLBoxTab** ppTab );
     SVT_DLLPRIVATE void         ImplInitStyle();
 
 protected:
@@ -582,7 +583,7 @@ protected:
     SvLBoxTab*      GetFirstDynamicTab() const;
     SvLBoxTab*      GetFirstDynamicTab( sal_uInt16& rTabPos ) const;
     SvLBoxTab*      GetFirstTab( SvLBoxTabFlags nFlagMask, sal_uInt16& rTabPos );
-    SvLBoxTab*      GetLastTab( SvLBoxTabFlags nFlagMask, sal_uInt16& rTabPos );
+    void            GetLastTab( SvLBoxTabFlags nFlagMask, sal_uInt16& rTabPos );
     SvLBoxTab*      GetTab( SvTreeListEntry*, SvLBoxItem* ) const;
     void            ClearTabList();
 
@@ -599,7 +600,7 @@ protected:
     virtual void    PreparePaint(vcl::RenderContext& rRenderContext, SvTreeListEntry& rEntry);
     virtual void    DataChanged( const DataChangedEvent& rDCEvt ) override;
 
-    void            InitSettings(bool bFont, bool bForeground, bool bBackground);
+    void            InitSettings();
 
     virtual void    ApplySettings(vcl::RenderContext& rRenderContext) override;
 
@@ -613,7 +614,7 @@ protected:
     bool            AreChildrenTransient() const;
     void            SetChildrenNotTransient();
 
-    void            AdjustEntryHeightAndRecalc( const vcl::Font& rFont );
+    void            AdjustEntryHeightAndRecalc();
 public:
 
     void            SetExtendedWinBits( ExtendedWinBits _nBits );
@@ -647,7 +648,7 @@ public:
     virtual SvTreeListEntry*    InsertEntry( const OUString& rText, SvTreeListEntry* pParent = nullptr,
                                          bool bChildrenOnDemand = false,
                                          sal_uLong nPos=TREELIST_APPEND, void* pUserData = nullptr,
-                                         SvLBoxButtonKind eButtonKind = SvLBoxButtonKind_enabledCheckbox );
+                                         SvLBoxButtonKind eButtonKind = SvLBoxButtonKind::EnabledCheckbox );
 
     virtual SvTreeListEntry*    InsertEntry( const OUString& rText,
                                          const Image& rExpandedEntryBmp,
@@ -655,7 +656,7 @@ public:
                                          SvTreeListEntry* pParent = nullptr,
                                          bool bChildrenOnDemand = false,
                                          sal_uLong nPos = TREELIST_APPEND, void* pUserData = nullptr,
-                                         SvLBoxButtonKind eButtonKind = SvLBoxButtonKind_enabledCheckbox );
+                                         SvLBoxButtonKind eButtonKind = SvLBoxButtonKind::EnabledCheckbox );
 
     const Image&    GetDefaultExpandedEntryBmp( ) const;
     const Image&    GetDefaultCollapsedEntryBmp( ) const;
@@ -676,11 +677,11 @@ public:
     static const Image&    GetCollapsedEntryBmp(const SvTreeListEntry* _pEntry );
 
     void            SetCheckButtonHdl( const Link<SvTreeListBox*,void>& rLink )  { aCheckButtonHdl=rLink; }
-    Link<SvTreeListBox*,void>          GetCheckButtonHdl() const { return aCheckButtonHdl; }
+    const Link<SvTreeListBox*,void>& GetCheckButtonHdl() const { return aCheckButtonHdl; }
     virtual void    CheckButtonHdl();
 
-    void            SetSublistOpenWithReturn( bool bMode = true );      // open/close sublist with return/enter
-    void            SetSublistOpenWithLeftRight( bool bMode = true );   // open/close sublist with cursor left/right
+    void            SetSublistOpenWithReturn();      // open/close sublist with return/enter
+    void            SetSublistOpenWithLeftRight();   // open/close sublist with cursor left/right
 
     void            EnableInplaceEditing( bool bEnable );
     // Edits the Entry's first StringItem, 0 == Cursor
@@ -711,8 +712,11 @@ public:
     void            ShowTargetEmphasis( SvTreeListEntry*, bool bShow );
     void            ScrollOutputArea( short nDeltaEntries );
 
+    short           GetColumnsCount() const { return nColumns; }
     short           GetEntryHeight() const  { return nEntryHeight; }
-    void            SetEntryHeight( short nHeight, bool bAlways = false );
+    void            SetEntryHeight( short nHeight );
+    short           GetEntryWidth() const { return nEntryWidth; }
+    void            SetEntryWidth( short nWidth );
     Size            GetOutputSizePixel() const;
     short           GetIndent() const { return nIndent; }
     void            SetIndent( short nIndent );
@@ -815,7 +819,7 @@ class SvInplaceEdit2
 public:
                 SvInplaceEdit2( vcl::Window* pParent, const Point& rPos, const Size& rSize,
                    const OUString& rData, const Link<SvInplaceEdit2&,void>& rNotifyEditEnd,
-                   const Selection&, bool bMultiLine = false );
+                   const Selection& );
                ~SvInplaceEdit2();
     bool        KeyInput( const KeyEvent& rKEvt );
     void        LoseFocus();

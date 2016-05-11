@@ -179,15 +179,10 @@ void lcl_resetSymbolSizeForPointsIfNecessary( const uno::Reference< beans::XProp
 
 void lcl_insertErrorBarLSequencesToMap(
     tSchXMLLSequencesPerIndex & rInOutMap,
-    const uno::Reference< beans::XPropertySet > & xSeriesProp,
-    bool bYError = true )
+    const uno::Reference< beans::XPropertySet > & xSeriesProp )
 {
     Reference< chart2::data::XDataSource > xErrorBarSource;
-    const OUString aPropName(
-        bYError
-        ? OUString(  "ErrorBarY" )
-        : OUString(  "ErrorBarX" ));
-    if( ( xSeriesProp->getPropertyValue( aPropName ) >>= xErrorBarSource ) &&
+    if( ( xSeriesProp->getPropertyValue( "ErrorBarY" ) >>= xErrorBarSource ) &&
         xErrorBarSource.is() )
     {
         Sequence< Reference< chart2::data::XLabeledDataSequence > > aLSequences(
@@ -1070,7 +1065,7 @@ void SchXMLSeries2Context::setStylesToDataPoints( SeriesDefaultsAndStyles& rSeri
                 {
                     //need to set this explicitly here for old files as the new api does not support this property fully anymore
                     if( bSwitchOffLinesForScatter )
-                        xPointProp->setPropertyValue("Lines",uno::makeAny(sal_False));
+                        xPointProp->setPropertyValue("Lines",uno::makeAny(false));
                 }
                 catch( const uno::Exception & )
                 {
@@ -1119,7 +1114,7 @@ void SchXMLSeries2Context::switchSeriesLinesOff( ::std::list< DataRowPointStyle 
             if( !xSeries.is() )
                 continue;
 
-            xSeries->setPropertyValue("Lines",uno::makeAny(sal_False));
+            xSeries->setPropertyValue("Lines",uno::makeAny(false));
         }
         catch( uno::Exception &  )
         {

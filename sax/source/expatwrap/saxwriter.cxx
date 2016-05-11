@@ -39,6 +39,7 @@
 #include <cppuhelper/supportsservice.hxx>
 
 #include <osl/diagnose.h>
+#include <rtl/character.hxx>
 #include <rtl/ref.hxx>
 #include <rtl/ustrbuf.hxx>
 
@@ -120,7 +121,7 @@ public:
     ~SaxWriterHelper()
     {
         OSL_ENSURE(!nCurrentPos, "cached Sequence not written");
-        OSL_ENSURE(m_bStartElementFinished, "StartElement not complettly written");
+        OSL_ENSURE(m_bStartElementFinished, "StartElement not completely written");
     }
 
     inline void insertIndentation(sal_uInt32 m_nLevel)  throw( SAXException );
@@ -164,13 +165,13 @@ public:
     inline void clearBuffer() throw( SAXException );
 };
 
-const sal_Bool g_bValidCharsBelow32[32] =
+const bool g_bValidCharsBelow32[32] =
 {
-//  0 1 2 3 4 5 6 7
-    0,0,0,0,0,0,0,0,  //0
-    0,1,1,0,0,1,0,0,  //8
-    0,0,0,0,0,0,0,0,  //16
-    0,0,0,0,0,0,0,0
+//  0     1     2     3     4     5     6     7
+    false,false,false,false,false,false,false,false,  //0
+    false,true, true, false,false,true, false,false,  //8
+    false,false,false,false,false,false,false,false,  //16
+    false,false,false,false,false,false,false,false
 };
 
 inline bool IsInvalidChar(const sal_Unicode aChar)
@@ -388,7 +389,7 @@ inline bool SaxWriterHelper::convertToXML( const sal_Unicode * pStr,
             OSL_ENSURE( nSurrogate != 0, "lone 2nd Unicode surrogate" );
 
             nSurrogate = ( nSurrogate << 10 ) | ( c & 0x03ff );
-            if( nSurrogate >= 0x00010000  &&  nSurrogate <= 0x0010FFFF )
+            if( rtl::isUnicodeCodePoint(nSurrogate) && nSurrogate >= 0x00010000 )
             {
                 sal_Int8 aBytes[] = { sal_Int8(0xF0 | ((nSurrogate >> 18) & 0x0F)),
                                       sal_Int8(0x80 | ((nSurrogate >> 12) & 0x3F)),
@@ -831,7 +832,7 @@ inline sal_Int32 calcXMLByteLength( const sal_Unicode *pStr, sal_Int32 nStrLen,
         {
             // 2. surrogate: write as UTF-8 (if range is OK
             nSurrogate = ( nSurrogate << 10 ) | ( c & 0x03ff );
-            if( nSurrogate >= 0x00010000  &&  nSurrogate <= 0x0010FFFF )
+            if( rtl::isUnicodeCodePoint(nSurrogate) && nSurrogate >= 0x00010000 )
                 nOutputLength += 4;
             nSurrogate = 0;
         }
@@ -854,7 +855,7 @@ inline sal_Int32 calcXMLByteLength( const sal_Unicode *pStr, sal_Int32 nStrLen,
 
 /** returns position of first ascii 10 within the string, -1 when no 10 in string.
  */
-static inline sal_Int32 getFirstLineBreak( const OUString & str ) throw ()
+inline sal_Int32 getFirstLineBreak( const OUString & str ) throw ()
 {
     const sal_Unicode *pSource = str.getStr();
     sal_Int32 nLen  = str.getLength();
@@ -990,7 +991,7 @@ sal_Int32 SAXWriter::getIndentPrefixLength( sal_Int32 nFirstLineBreakOccurrence 
     return nLength;
 }
 
-static inline bool isFirstCharWhitespace( const sal_Unicode *p ) throw()
+inline bool isFirstCharWhitespace( const sal_Unicode *p ) throw()
 {
     return *p == ' ';
 }

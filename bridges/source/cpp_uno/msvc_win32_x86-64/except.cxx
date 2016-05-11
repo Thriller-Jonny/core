@@ -309,7 +309,7 @@ static inline OUString toRTTIname(
 
 //RTTI simulation
 
-typedef std::unordered_map< OUString, void *, OUStringHash, equal_to< OUString > > t_string2PtrMap;
+typedef std::unordered_map< OUString, void *, OUStringHash > t_string2PtrMap;
 class __type_info_descriptor;
 
 class RTTInfos
@@ -578,7 +578,7 @@ struct RaiseInfo
     unsigned char *        _code;
     sal_uInt64         _codeBase;
 
-    RaiseInfo( typelib_TypeDescription * pTD ) throw ();
+    explicit RaiseInfo(typelib_TypeDescription * pTD) throw ();
 
     ~RaiseInfo() throw ();
 };
@@ -625,8 +625,7 @@ RaiseInfo::RaiseInfo(typelib_TypeDescription * pTD)throw ()
     for (pCompTD = (typelib_CompoundTypeDescription*)pTD;
         pCompTD; pCompTD = pCompTD->pBaseTypeDescription)
     {
-        typelib_TypeDescription * pTD = (typelib_TypeDescription *)pCompTD;
-        int typeInfoLen = mscx_getRTTI_len(pTD->pTypeName);
+        int typeInfoLen = mscx_getRTTI_len(pCompTD->aBase.pTypeName);
         // Mem has to be on 4-byte Boundary
         if (typeInfoLen % 4 != 0)
         {

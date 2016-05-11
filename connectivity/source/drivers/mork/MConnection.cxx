@@ -14,18 +14,13 @@
 #include "MPreparedStatement.hxx"
 #include "MorkParser.hxx"
 
-#include <connectivity/dbcharset.hxx>
 #include <connectivity/dbexception.hxx>
-#include <connectivity/sqlerror.hxx>
 
 #include "resource/mork_res.hrc"
 #include "resource/common_res.hrc"
 
-#include <com/sun/star/sdbc/ColumnValue.hpp>
-#include <com/sun/star/sdbc/XRow.hpp>
 #include <com/sun/star/sdbc/TransactionIsolation.hpp>
 
-#include <comphelper/officeresourcebundle.hxx>
 #include <comphelper/processfactory.hxx>
 
 using namespace dbtools;
@@ -41,7 +36,6 @@ using namespace com::sun::star::sdbcx;
 namespace connectivity { namespace mork {
 
 static const int defaultScope = 0x80;
-
 
 
 OConnection::OConnection(MorkDriver* _pDriver)
@@ -157,7 +151,7 @@ void OConnection::construct(const OUString& url,const Sequence< PropertyValue >&
 
     // check that we can retrieve the tables:
     MorkTableMap *Tables = m_pBook->getTables( defaultScope );
-    MorkTableMap::Map::iterator tableIter;
+    MorkTableMap::Map::const_iterator tableIter;
     if (Tables)
     {
         // Iterate all tables
@@ -249,7 +243,7 @@ sal_Bool SAL_CALL OConnection::getAutoCommit(  ) throw(SQLException, RuntimeExce
     // you have to distinguish which if you are in autocommit mode or not
     // at normal case true should be fine here
 
-    return sal_True;
+    return true;
 }
 
 void SAL_CALL OConnection::commit(  ) throw(SQLException, RuntimeException, std::exception)
@@ -297,7 +291,7 @@ void SAL_CALL OConnection::setReadOnly( sal_Bool /*readOnly*/ ) throw(SQLExcepti
 sal_Bool SAL_CALL OConnection::isReadOnly(  ) throw(SQLException, RuntimeException, std::exception)
 {
     // return if your connection to readonly
-    return sal_False;
+    return false;
 }
 
 void SAL_CALL OConnection::setCatalog( const OUString& /*catalog*/ ) throw(SQLException, RuntimeException, std::exception)
@@ -381,7 +375,6 @@ Reference< XTablesSupplier > SAL_CALL OConnection::createCatalog()
 }
 
 
-
 void OConnection::throwSQLException( const ErrorDescriptor& _rError, const Reference< XInterface >& _rxContext )
 {
     if ( _rError.getResId() != 0 )
@@ -389,7 +382,7 @@ void OConnection::throwSQLException( const ErrorDescriptor& _rError, const Refer
         OSL_ENSURE( ( _rError.getErrorCondition() == 0 ),
             "OConnection::throwSQLException: unsupported error code combination!" );
 
-        OUString sParameter( _rError.getParameter() );
+        const OUString& sParameter( _rError.getParameter() );
         if ( !sParameter.isEmpty() )
         {
             const OUString sError( getResources().getResourceStringWithSubstitution(
@@ -407,7 +400,7 @@ void OConnection::throwSQLException( const ErrorDescriptor& _rError, const Refer
     if ( _rError.getErrorCondition() != 0 )
     {
         SQLError aErrorHelper( comphelper::getComponentContext(getDriver()->getFactory()) );
-        OUString sParameter( _rError.getParameter() );
+        const OUString& sParameter( _rError.getParameter() );
         if ( !sParameter.isEmpty() )
             aErrorHelper.raiseException( _rError.getErrorCondition(), _rxContext, sParameter );
         else

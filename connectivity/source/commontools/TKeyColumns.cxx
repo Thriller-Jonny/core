@@ -98,7 +98,7 @@ sdbcx::ObjectType OKeyColumnsHelper::createObject(const OUString& _rName)
                 }
                 catch(const SQLException&)
                 {
-                    // somethimes we get an error when asking for this param
+                    // sometimes we get an error when asking for this param
                 }
 
                 OKeyColumn* pRet = new OKeyColumn(aRefColumnName,
@@ -133,7 +133,6 @@ void OKeyColumnsHelper::impl_refresh() throw(::com::sun::star::uno::RuntimeExcep
 {
     m_pKey->refreshColumns();
 }
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -20,7 +20,6 @@
 #ifndef INCLUDED_SLIDESHOW_SOURCE_ENGINE_ANIMATIONNODES_NODETOOLS_HXX
 #define INCLUDED_SLIDESHOW_SOURCE_ENGINE_ANIMATIONNODES_NODETOOLS_HXX
 
-#include <com/sun/star/uno/Sequence.hxx>
 #include <com/sun/star/beans/NamedValue.hpp>
 #include <com/sun/star/drawing/XShape.hpp>
 
@@ -45,8 +44,8 @@ namespace slideshow
 
 
 #if defined(DBG_UTIL)
-        int& debugGetCurrentOffset();
-        void debugNodesShowTree( const BaseNode* );
+        OUString debugGetNodeName( const BaseNode *pNode );
+        void     debugNodesShowTree( const BaseNode* );
 #endif
 
         /** Look up an AttributableShape from ShapeManager.

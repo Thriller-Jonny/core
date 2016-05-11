@@ -17,14 +17,12 @@
  */
 
 interface TextInTable
-[ uuid = "63C33940-69D8-101D-9757-C667E8298000" ]
 {
     import Text;
         import TextTable;
 }
 
 interface ListInTable
-[ uuid="7F1A6E20-69D8-101D-9757-C667E8298000" ]
 {
     import Text;
         import TextList;
@@ -32,18 +30,19 @@ interface ListInTable
 }
 
 interface ListInText
-[ uuid = "8A4C07E0-69D8-101D-9757-C667E8298000"]
 {
     import TextList;
     import Text;
 }
 
 interface TextEditView : BaseTextEditView
-[
-    uuid = "09782660-111A-101D-9757-6E74207A7520"
-]
 {
      // Slots, which are not needed in the WebDocShell
+    SID_DRAWTBX_LINES
+    [
+        StateMethod = GetState ;
+    ]
+
     FN_INSERT_OBJ_CTRL
     [
         StateMethod = GetState ;
@@ -75,6 +74,100 @@ interface TextEditView : BaseTextEditView
         DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
     ]
     SID_INSERT_DRAW // status()
+    [
+        StateMethod = GetDrawState ;
+    ]
+    SID_DRAW_LINE
+    [
+        ExecMethod = ExecDraw ;
+        StateMethod = GetDrawState ;
+    ]
+    SID_DRAW_RECT
+    [
+        ExecMethod = ExecDraw ;
+        StateMethod = GetDrawState ;
+    ]
+    SID_DRAW_ELLIPSE
+    [
+        ExecMethod = ExecDraw ;
+        StateMethod = GetDrawState ;
+    ]
+    SID_DRAW_XPOLYGON_NOFILL
+    [
+        ExecMethod = ExecDraw ;
+        StateMethod = GetDrawState ;
+    ]
+    SID_DRAW_XPOLYGON
+    [
+        ExecMethod = ExecDraw ;
+        StateMethod = GetDrawState ;
+    ]
+    SID_DRAW_POLYGON_NOFILL
+    [
+        ExecMethod = ExecDraw ;
+        StateMethod = GetDrawState ;
+    ]
+    SID_DRAW_POLYGON
+    [
+        ExecMethod = ExecDraw ;
+        StateMethod = GetDrawState ;
+    ]
+    SID_DRAW_BEZIER_NOFILL
+    [
+        ExecMethod = ExecDraw ;
+        StateMethod = GetDrawState ;
+    ]
+    SID_DRAW_BEZIER_FILL
+    [
+        ExecMethod = ExecDraw ;
+        StateMethod = GetDrawState ;
+    ]
+    SID_DRAW_FREELINE_NOFILL
+    [
+        ExecMethod = ExecDraw ;
+        StateMethod = GetDrawState ;
+    ]
+    SID_DRAW_FREELINE
+    [
+        ExecMethod = ExecDraw ;
+        StateMethod = GetDrawState ;
+    ]
+    SID_DRAW_ARC
+    [
+        ExecMethod = ExecDraw ;
+        StateMethod = GetDrawState ;
+    ]
+    SID_DRAW_PIE
+    [
+        ExecMethod = ExecDraw ;
+        StateMethod = GetDrawState ;
+    ]
+    SID_DRAW_CIRCLECUT
+    [
+        ExecMethod = ExecDraw ;
+        StateMethod = GetDrawState ;
+    ]
+    SID_DRAW_TEXT
+    [
+        ExecMethod = ExecDraw ;
+        StateMethod = GetDrawState ;
+    ]
+    SID_DRAW_TEXT_VERTICAL
+    [
+        ExecMethod = ExecDraw ;
+        StateMethod = GetDrawState ;
+    ]
+    SID_DRAW_TEXT_MARQUEE
+    [
+        ExecMethod = ExecDraw ;
+        StateMethod = GetDrawState ;
+    ]
+    SID_DRAW_CAPTION
+    [
+        ExecMethod = ExecDraw ;
+        StateMethod = GetDrawState ;
+    ]
+    SID_DRAW_CAPTION_VERTICAL
     [
         ExecMethod = ExecDraw ;
         StateMethod = GetDrawState ;
@@ -132,17 +225,11 @@ interface TextEditView : BaseTextEditView
 }
 
 shell SwView
-
 {
-    import TextEditView [Automation];
-//  import TextPage "Page";
-//  import SearchSettings;
-//  import SearchAttributes;
-//  import ReplaceAttributes;
+    import TextEditView;
 }
 
 interface TextPrintPreview
-[ uuid = "1622A480-111A-101D-9757-6E74207A7520" ]
 {
     SID_BROWSER_MODE
     [
@@ -323,6 +410,6 @@ interface TextPrintPreview
 
 shell SwPagePreview
 {
-    import TextPrintPreview[Automation];
+    import TextPrintPreview;
 }
 

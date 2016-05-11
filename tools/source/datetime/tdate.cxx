@@ -17,7 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#if defined( WNT )
+#if defined(_WIN32)
 #include <windows.h>
 #else
 #include <time.h>
@@ -144,7 +144,7 @@ static Date lcl_DaysToDate( long nDays )
 
 Date::Date( DateInitSystem )
 {
-#if defined WNT
+#if defined(_WIN32)
     SYSTEMTIME aDateTime;
     GetLocalTime( &aDateTime );
 
@@ -435,20 +435,6 @@ Date& Date::operator --()
 {
     *this = lcl_DaysToDate( GetAsNormalizedDays() - 1 );
     return *this;
-}
-
-Date Date::operator ++( int )
-{
-    Date aOldDate = *this;
-    Date::operator++();
-    return aOldDate;
-}
-
-Date Date::operator --( int )
-{
-    Date aOldDate = *this;
-    Date::operator--();
-    return aOldDate;
 }
 
 Date operator +( const Date& rDate, long nDays )

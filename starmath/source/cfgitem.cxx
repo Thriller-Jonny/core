@@ -33,9 +33,9 @@
 
 #include "starmath.hrc"
 #include "smdll.hxx"
+#include "smmod.hxx"
 #include "format.hxx"
 
-using namespace com::sun::star;
 using namespace com::sun::star::uno;
 using namespace com::sun::star::beans;
 
@@ -134,50 +134,52 @@ struct SmCfgOther
 
 
 SmCfgOther::SmCfgOther()
+    : ePrintSize(PRINT_SIZE_NORMAL)
+    , nPrintZoomFactor(100)
+    , bPrintTitle(true)
+    , bPrintFormulaText(true)
+    , bPrintFrame(true)
+    , bIsSaveOnlyUsedSymbols(true)
+    , bIsAutoCloseBrackets(true)
+    , bIgnoreSpacesRight(true)
+    , bToolboxVisible(true)
+    , bAutoRedraw(true)
+    , bFormulaCursor(true)
 {
-    ePrintSize          = PRINT_SIZE_NORMAL;
-    nPrintZoomFactor    = 100;
-    bPrintTitle         = bPrintFormulaText   =
-    bPrintFrame         = bIgnoreSpacesRight  =
-    bToolboxVisible     = bAutoRedraw         =
-    bIsAutoCloseBrackets = bFormulaCursor
-    = bIsSaveOnlyUsedSymbols = true;
 }
 
 
-
-
 SmFontFormat::SmFontFormat()
+    : aName(FONTNAME_MATH)
+    , nCharSet(RTL_TEXTENCODING_UNICODE)
+    , nFamily(FAMILY_DONTKNOW)
+    , nPitch(PITCH_DONTKNOW)
+    , nWeight(WEIGHT_DONTKNOW)
+    , nItalic(ITALIC_NONE)
 {
-    aName       = FONTNAME_MATH;
-    nCharSet    = RTL_TEXTENCODING_UNICODE;
-    nFamily     = FAMILY_DONTKNOW;
-    nPitch      = PITCH_DONTKNOW;
-    nWeight     = WEIGHT_DONTKNOW;
-    nItalic     = ITALIC_NONE;
 }
 
 
 SmFontFormat::SmFontFormat( const vcl::Font &rFont )
+    : aName(rFont.GetFamilyName())
+    , nCharSet(static_cast<sal_Int16>(rFont.GetCharSet()))
+    , nFamily(static_cast<sal_Int16>(rFont.GetFamilyType()))
+    , nPitch(static_cast<sal_Int16>(rFont.GetPitch()))
+    , nWeight(static_cast<sal_Int16>(rFont.GetWeight()))
+    , nItalic(static_cast<sal_Int16>(rFont.GetItalic()))
 {
-    aName       = rFont.GetName();
-    nCharSet    = (sal_Int16) rFont.GetCharSet();
-    nFamily     = (sal_Int16) rFont.GetFamily();
-    nPitch      = (sal_Int16) rFont.GetPitch();
-    nWeight     = (sal_Int16) rFont.GetWeight();
-    nItalic     = (sal_Int16) rFont.GetItalic();
 }
 
 
 const vcl::Font SmFontFormat::GetFont() const
 {
     vcl::Font aRes;
-    aRes.SetName( aName );
-    aRes.SetCharSet( (rtl_TextEncoding) nCharSet );
-    aRes.SetFamily( (FontFamily) nFamily );
-    aRes.SetPitch( (FontPitch) nPitch );
-    aRes.SetWeight( (FontWeight) nWeight );
-    aRes.SetItalic( (FontItalic) nItalic );
+    aRes.SetFamilyName( aName );
+    aRes.SetCharSet( static_cast<rtl_TextEncoding>(nCharSet) );
+    aRes.SetFamily( static_cast<FontFamily>(nFamily) );
+    aRes.SetPitch( static_cast<FontPitch>(nPitch) );
+    aRes.SetWeight( static_cast<FontWeight>(nWeight) );
+    aRes.SetItalic( static_cast<FontItalic>(nItalic) );
     return aRes;
 }
 
@@ -193,8 +195,6 @@ bool SmFontFormat::operator == ( const SmFontFormat &rFntFmt ) const
 }
 
 
-
-
 SmFntFmtListEntry::SmFntFmtListEntry( const OUString &rId, const SmFontFormat &rFntFmt ) :
     aId     (rId),
     aFntFmt (rFntFmt)
@@ -203,8 +203,8 @@ SmFntFmtListEntry::SmFntFmtListEntry( const OUString &rId, const SmFontFormat &r
 
 
 SmFontFormatList::SmFontFormatList()
+    : bModified(false)
 {
-    bModified = false;
 }
 
 
@@ -264,7 +264,6 @@ const SmFontFormat * SmFontFormatList::GetFontFormat( const OUString &rFntFmtId 
 
     return pRes;
 }
-
 
 
 const SmFontFormat * SmFontFormatList::GetFontFormat( size_t nPos ) const
@@ -330,7 +329,6 @@ const OUString SmFontFormatList::GetNewFontFormatId() const
 
     return OUString();
 }
-
 
 
 SmMathConfig::SmMathConfig() :
@@ -438,11 +436,11 @@ void SmMathConfig::ReadSymbol( SmSym &rSymbol,
             if (bPredefined)
             {
                 OUString aTmp;
-                aTmp = GetUiSymbolName( rSymbolName );
+                aTmp = SmLocalizedSymbolData::GetUiSymbolName( rSymbolName );
                 OSL_ENSURE( !aTmp.isEmpty(), "localized symbol-name not found" );
                 if (!aTmp.isEmpty())
                     aUiName = aTmp;
-                aTmp = GetUiSymbolSetName( aSet );
+                aTmp = SmLocalizedSymbolData::GetUiSymbolSetName( aSet );
                 OSL_ENSURE( !aTmp.isEmpty(), "localized symbolset-name not found" );
                 if (!aTmp.isEmpty())
                     aUiSetName = aTmp;
@@ -536,7 +534,7 @@ void SmMathConfig::SetSymbols( const std::vector< SmSym > &rNewSymbols )
         pVal->Name += *pName++;
         OUString aTmp( rSymbol.GetSymbolSetName() );
         if (rSymbol.IsPredefined())
-            aTmp = GetExportSymbolSetName( aTmp );
+            aTmp = SmLocalizedSymbolData::GetExportSymbolSetName( aTmp );
         pVal->Value <<= aTmp;
         pVal++;
         // Predefined
@@ -702,27 +700,27 @@ void SmMathConfig::SaveFontFormatList()
         // CharSet
         pVal->Name  = aNodeNameDelim;
         pVal->Name += *pName++;
-        pVal->Value <<= (sal_Int16) aFntFmt.nCharSet; // 6.0 file-format GetSOStoreTextEncoding not needed
+        pVal->Value <<= static_cast<sal_Int16>(aFntFmt.nCharSet); // 6.0 file-format GetSOStoreTextEncoding not needed
         pVal++;
         // Family
         pVal->Name  = aNodeNameDelim;
         pVal->Name += *pName++;
-        pVal->Value <<= (sal_Int16) aFntFmt.nFamily;
+        pVal->Value <<= static_cast<sal_Int16>(aFntFmt.nFamily);
         pVal++;
         // Pitch
         pVal->Name  = aNodeNameDelim;
         pVal->Name += *pName++;
-        pVal->Value <<= (sal_Int16) aFntFmt.nPitch;
+        pVal->Value <<= static_cast<sal_Int16>(aFntFmt.nPitch);
         pVal++;
         // Weight
         pVal->Name  = aNodeNameDelim;
         pVal->Name += *pName++;
-        pVal->Value <<= (sal_Int16) aFntFmt.nWeight;
+        pVal->Value <<= static_cast<sal_Int16>(aFntFmt.nWeight);
         pVal++;
         // Italic
         pVal->Name  = aNodeNameDelim;
         pVal->Name += *pName++;
-        pVal->Value <<= (sal_Int16) aFntFmt.nItalic;
+        pVal->Value <<= static_cast<sal_Int16>(aFntFmt.nItalic);
         pVal++;
     }
     OSL_ENSURE( sal::static_int_cast<size_t>(pVal - pValues) == nCount * nSymbolProps, "properties missing" );
@@ -848,7 +846,7 @@ void SmMathConfig::LoadFormat()
         ++pVal;
         // StandardFormat/HorizontalAlignment
         if (pVal->hasValue()  &&  (*pVal >>= nTmp16))
-            pFormat->SetHorAlign( (SmHorAlign) nTmp16 );
+            pFormat->SetHorAlign( static_cast<SmHorAlign>(nTmp16) );
         ++pVal;
         // StandardFormat/BaseSize
         if (pVal->hasValue()  &&  (*pVal >>= nTmp16))
@@ -881,7 +879,7 @@ void SmMathConfig::LoadFormat()
                 if (bUseDefaultFont)
                 {
                     aFnt = pFormat->GetFont( i );
-                    aFnt.SetName( GetDefaultFontName( nLang, i ) );
+                    aFnt.SetFamilyName( GetDefaultFontName( nLang, i ) );
                 }
                 else
                 {
@@ -893,7 +891,7 @@ void SmMathConfig::LoadFormat()
             }
             ++pVal;
 
-            aFnt.SetSize( pFormat->GetBaseSize() );
+            aFnt.SetFontSize( pFormat->GetBaseSize() );
             pFormat->SetFont( i, aFnt, bUseDefaultFont );
         }
 
@@ -918,21 +916,21 @@ void SmMathConfig::SaveFormat()
     // StandardFormat/Textmode
     *pValue++ <<= pFormat->IsTextmode();
     // StandardFormat/GreekCharStyle
-    *pValue++ <<= (sal_Int16) pFormat->GetGreekCharStyle();
+    *pValue++ <<= static_cast<sal_Int16>(pFormat->GetGreekCharStyle());
     // StandardFormat/ScaleNormalBracket
     *pValue++ <<= pFormat->IsScaleNormalBrackets();
     // StandardFormat/HorizontalAlignment
-    *pValue++ <<= (sal_Int16) pFormat->GetHorAlign();
+    *pValue++ <<= static_cast<sal_Int16>(pFormat->GetHorAlign());
     // StandardFormat/BaseSize
-    *pValue++ <<= (sal_Int16) SmRoundFraction( Sm100th_mmToPts(
-                                    pFormat->GetBaseSize().Height() ) );
+    *pValue++ <<= static_cast<sal_Int16>(SmRoundFraction( Sm100th_mmToPts(
+                                    pFormat->GetBaseSize().Height() ) ));
 
     sal_uInt16 i;
     for (i = SIZ_BEGIN;  i <= SIZ_END;  ++i)
-        *pValue++ <<= (sal_Int16) pFormat->GetRelSize( i );
+        *pValue++ <<= static_cast<sal_Int16>(pFormat->GetRelSize( i ));
 
     for (i = DIS_BEGIN;  i <= DIS_END;  ++i)
-        *pValue++ <<= (sal_Int16) pFormat->GetDistance( i );
+        *pValue++ <<= static_cast<sal_Int16>(pFormat->GetDistance( i ));
 
     for (i = FNT_BEGIN;  i < FNT_END;  ++i)
     {
@@ -1169,7 +1167,7 @@ void SmMathConfig::ItemSetToConfig(const SfxItemSet &rSet)
     bool bVal;
     if (rSet.GetItemState(SID_PRINTSIZE, true, &pItem) == SfxItemState::SET)
     {   nU16 = static_cast<const SfxUInt16Item *>(pItem)->GetValue();
-        SetPrintSize( (SmPrintSize) nU16 );
+        SetPrintSize( static_cast<SmPrintSize>(nU16) );
     }
     if (rSet.GetItemState(SID_PRINTZOOM, true, &pItem) == SfxItemState::SET)
     {   nU16 = static_cast<const SfxUInt16Item *>(pItem)->GetValue();
@@ -1221,9 +1219,9 @@ void SmMathConfig::ConfigToItemSet(SfxItemSet &rSet) const
     const SfxItemPool *pPool = rSet.GetPool();
 
     rSet.Put(SfxUInt16Item(pPool->GetWhich(SID_PRINTSIZE),
-                           (sal_uInt16) GetPrintSize()));
+                           sal::static_int_cast<sal_uInt16>(GetPrintSize())));
     rSet.Put(SfxUInt16Item(pPool->GetWhich(SID_PRINTZOOM),
-                           (sal_uInt16) GetPrintZoomFactor()));
+                           GetPrintZoomFactor()));
 
     rSet.Put(SfxBoolItem(pPool->GetWhich(SID_PRINTTITLE), IsPrintTitle()));
     rSet.Put(SfxBoolItem(pPool->GetWhich(SID_PRINTTEXT),  IsPrintFormulaText()));

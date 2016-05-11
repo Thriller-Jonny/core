@@ -32,7 +32,7 @@ namespace framework{
 
 /**
     @short  represent a result of a finished job execution
-    @descr  Such result instance transport all neccessarry
+    @descr  Such result instance transport all necessary
             data from the code place where the job was finished
             to the outside code, where e.g. listener must be notified.
  */
@@ -83,7 +83,7 @@ class JobResult
             write it to the configuration. But that's part of any
             user of us. We provide this information here only.
          */
-        css::uno::Sequence< css::beans::NamedValue > m_lArguments;
+        std::vector< css::beans::NamedValue > m_lArguments;
 
         /**
             an executed job can force his deactivation
@@ -112,8 +112,8 @@ class JobResult
         void operator=( const JobResult& rCopy );
 
         bool                                     existPart        ( sal_uInt32 eParts ) const;
-        css::uno::Sequence< css::beans::NamedValue > getArguments     (                   ) const;
-        css::frame::DispatchResultEvent              getDispatchResult(                   ) const;
+        std::vector< css::beans::NamedValue >    getArguments     (                   ) const;
+        css::frame::DispatchResultEvent          getDispatchResult(                   ) const;
 };
 
 } // namespace framework

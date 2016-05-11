@@ -85,7 +85,6 @@ inline Reference<XIdlClass> TypeToIdlClass( const Type& rType, const Reference< 
 }
 
 
-
 class Invocation_Impl
     : public OWeakObject
     , public XInvocation2
@@ -199,14 +198,13 @@ public:
     virtual OUString SAL_CALL getExactName( const OUString& rApproximateName ) throw( RuntimeException, std::exception ) override;
 
 
-
 private:
     void setMaterial( const Any& rMaterial );
 
     void getInfoSequenceImpl( Sequence< OUString >* pStringSeq, Sequence< InvocationInfo >* pInfoSeq );
     void fillInfoForNameAccess( InvocationInfo& rInfo, const OUString& aName );
     static void fillInfoForProperty( InvocationInfo& rInfo, const Property& rProp );
-    static void fillInfoForMethod( InvocationInfo& rInfo, const Reference< XIdlMethod > xMethod );
+    static void fillInfoForMethod( InvocationInfo& rInfo, const Reference< XIdlMethod >& xMethod );
 
     Reference<XTypeConverter>           xTypeConverter;
     Reference<XIntrospection>           xIntrospection;
@@ -234,11 +232,6 @@ private:
 };
 
 
-
-
-
-
-
 Invocation_Impl::Invocation_Impl
 (
     const Any & rAdapted,
@@ -257,7 +250,6 @@ Invocation_Impl::~Invocation_Impl() {}
 
 
 //### INTERFACE IMPLEMENTATIONS ####################################################################
-
 
 
 Any SAL_CALL Invocation_Impl::queryInterface( const Type & aType )
@@ -339,7 +331,6 @@ Any SAL_CALL Invocation_Impl::queryInterface( const Type & aType )
 
     return OWeakObject::queryInterface( aType );
 }
-
 
 
 Any Invocation_Impl::getMaterial() throw(RuntimeException, std::exception)
@@ -499,7 +490,7 @@ sal_Bool Invocation_Impl::hasMethod( const OUString& Name )
         return _xDirect->hasMethod( Name );
     if( _xIntrospectionAccess.is() )
         return _xIntrospectionAccess->hasMethod( Name, MethodConcept::ALL ^ MethodConcept::DANGEROUS );
-    return sal_False;
+    return false;
 }
 
 
@@ -511,11 +502,11 @@ sal_Bool Invocation_Impl::hasProperty( const OUString& Name )
     // PropertySet
     if( _xIntrospectionAccess.is()
         && _xIntrospectionAccess->hasProperty( Name, PropertyConcept::ALL ^ PropertyConcept::DANGEROUS ) )
-        return sal_True;
+        return true;
     // NameAccess
     if( _xNameAccess.is() )
         return _xNameAccess->hasByName( Name );
-    return sal_False;
+    return false;
 }
 
 
@@ -730,7 +721,6 @@ Any Invocation_Impl::invoke( const OUString& FunctionName, const Sequence<Any>& 
     aExc.Message = "invocation lacking of introspection access!";
     throw aExc;
 }
-
 
 
 // Struct to optimize sorting
@@ -970,7 +960,7 @@ void Invocation_Impl::fillInfoForProperty
 void Invocation_Impl::fillInfoForMethod
 (
     InvocationInfo& rInfo,
-    const Reference< XIdlMethod > xMethod
+    const Reference< XIdlMethod >& xMethod
 )
 {
     rInfo.aName = xMethod->getName();
@@ -982,7 +972,7 @@ void Invocation_Impl::fillInfoForMethod
     sal_Int32 nParamCount = aParamInfos.getLength();
     if( nParamCount > 0 )
     {
-        const ParamInfo* pInfos = aParamInfos.getConstArray();
+        const ParamInfo* pInfo = aParamInfos.getConstArray();
 
         rInfo.aParamTypes.realloc( nParamCount );
         Type* pParamTypes = rInfo.aParamTypes.getArray();
@@ -991,10 +981,10 @@ void Invocation_Impl::fillInfoForMethod
 
         for( sal_Int32 i = 0 ; i < nParamCount ; i++ )
         {
-            Reference< XIdlClass > xParamClass = pInfos[i].aType;
+            Reference< XIdlClass > xParamClass = pInfo[i].aType;
             Type aParamType( xParamClass->getTypeClass(), xParamClass->getName() );
             pParamTypes[ i ] = aParamType;
-            pParamModes[ i ] = pInfos[i].aMode;
+            pParamModes[ i ] = pInfo[i].aMode;
         }
     }
 }
@@ -1081,8 +1071,6 @@ Sequence< sal_Int8 > SAL_CALL Invocation_Impl::getImplementationId(  ) throw( Ru
 }
 
 
-
-
 class InvocationService
     : public WeakImplHelper< XSingleServiceFactory, XServiceInfo >
 {
@@ -1161,7 +1149,6 @@ Reference<XInterface> InvocationService::createInstanceWithArguments(
         return Reference<XInterface>();
     }
 }
-
 
 
 Reference<XInterface> SAL_CALL InvocationService_CreateInstance( const Reference<XComponentContext> & xCtx )

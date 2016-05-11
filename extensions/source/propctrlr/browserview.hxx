@@ -44,7 +44,7 @@ namespace pcr
         virtual bool Notify( NotifyEvent& _rNEvt ) override;
 
     public:
-        OPropertyBrowserView( vcl::Window* pParent, WinBits nBits = 0);
+        explicit OPropertyBrowserView( vcl::Window* pParent);
 
         virtual ~OPropertyBrowserView();
         virtual void dispose() override;
@@ -62,7 +62,6 @@ namespace pcr
     protected:
         DECL_LINK_TYPED(OnPageActivation, LinkParamNone*, void);
     };
-
 
 
 } // namespace pcr

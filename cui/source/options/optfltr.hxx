@@ -68,8 +68,8 @@ class OfaMSFilterTabPage2 : public SfxTabPage
         virtual void    KeyInput( const KeyEvent& rKEvt ) override;
 
     public:
-        MSFltrSimpleTable(SvSimpleTableContainer& rParent, WinBits nBits = 0)
-            : SvSimpleTable(rParent, nBits)
+        explicit MSFltrSimpleTable(SvSimpleTableContainer& rParent)
+            : SvSimpleTable(rParent, 0)
         {
         }
     };
@@ -92,7 +92,7 @@ class OfaMSFilterTabPage2 : public SfxTabPage
 
     void                InsertEntry( const OUString& _rTxt, sal_IntPtr _nType );
     void                InsertEntry( const OUString& _rTxt, sal_IntPtr _nType,
-                                     bool loadEnabled, bool saveEnabled );
+                                     bool saveEnabled );
     SvTreeListEntry*    GetEntry4Type( sal_IntPtr _nType ) const;
 
 public:

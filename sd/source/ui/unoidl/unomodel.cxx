@@ -60,10 +60,10 @@
 #include <editeng/unolingu.hxx>
 #include <svx/svdpagv.hxx>
 #include <svtools/unoimap.hxx>
-#include <svtools/miscopt.hxx>
 #include <svx/unoshape.hxx>
 #include <editeng/unonrule.hxx>
 #include <editeng/eeitem.hxx>
+#include <unotools/saveopt.hxx>
 
 // Support creation of GraphicObjectResolver and EmbeddedObjectResolver
 #include <svx/xmleohlp.hxx>
@@ -78,7 +78,6 @@
 #include <sdpage.hxx>
 
 #include <strings.hrc>
-#include "unohelp.hxx"
 #include <unolayer.hxx>
 #include <unoprnms.hxx>
 #include <unopage.hxx>
@@ -563,10 +562,10 @@ SdPage* SdXImpressDocument::InsertSdPage( sal_uInt16 nPage, bool bDuplicate )
     return pStandardPage;
 }
 
-void SdXImpressDocument::SetModified( bool bModified /* = sal_True */ ) throw()
+void SdXImpressDocument::SetModified() throw()
 {
     if( mpDoc )
-        mpDoc->SetChanged( bModified );
+        mpDoc->SetChanged();
 }
 
 // XModel
@@ -1384,9 +1383,8 @@ uno::Any SAL_CALL SdXImpressDocument::getPropertyValue( const OUString& Property
                 const SfxItemPool& rPool = mpDoc->GetPool();
                 const SfxPoolItem* pItem;
 
-                for( sal_uInt16 i=0; i<3; i++ )
+                for(sal_uInt16 nWhichId : aWhichIds)
                 {
-                    sal_uInt16 nWhichId = aWhichIds[i];
                     sal_uInt32 nItems = rPool.GetItemCount2( nWhichId );
 
                     aSeq.realloc( aSeq.getLength() + nItems*5 + 5 );
@@ -1601,7 +1599,7 @@ sal_Int32 ImplPDFGetBookmarkPage( const OUString& rBookmark, SdDrawDocument& rDo
     return nPage;
 }
 
-void ImplPDFExportComments( uno::Reference< drawing::XDrawPage > xPage, vcl::PDFExtOutDevData& rPDFExtOutDevData )
+void ImplPDFExportComments( const uno::Reference< drawing::XDrawPage >& xPage, vcl::PDFExtOutDevData& rPDFExtOutDevData )
 {
     try
     {
@@ -1636,7 +1634,7 @@ void ImplPDFExportComments( uno::Reference< drawing::XDrawPage > xPage, vcl::PDF
     }
 }
 
-void ImplPDFExportShapeInteraction( uno::Reference< drawing::XShape > xShape, SdDrawDocument& rDoc, vcl::PDFExtOutDevData& rPDFExtOutDevData )
+void ImplPDFExportShapeInteraction( const uno::Reference< drawing::XShape >& xShape, SdDrawDocument& rDoc, vcl::PDFExtOutDevData& rPDFExtOutDevData )
 {
     if ( xShape->getShapeType() == "com.sun.star.drawing.GroupShape" )
     {
@@ -2328,6 +2326,18 @@ OUString SdXImpressDocument::getPartName( int nPart )
     return pPage->GetName();
 }
 
+OUString SdXImpressDocument::getPartHash( int nPart )
+{
+    SdPage* pPage = mpDoc->GetSdPage( nPart, PK_STANDARD );
+    if (!pPage)
+    {
+        SAL_WARN("sd", "DrawViewShell not available!");
+        return OUString();
+    }
+
+    return OUString::number(pPage->GetHashCode());
+}
+
 void SdXImpressDocument::setPartMode( int nPartMode )
 {
     DrawViewShell* pViewSh = GetViewShell();
@@ -2352,7 +2362,13 @@ Size SdXImpressDocument::getDocumentSize()
     if (!pViewSh)
         return Size();
 
-    SdrPageView* pCurPageView = pViewSh->GetView()->GetSdrPageView();
+    SdrView *pSdrView = pViewSh->GetView();
+    if (!pSdrView)
+        return Size();
+
+    SdrPageView* pCurPageView = pSdrView->GetSdrPageView();
+    if (!pCurPageView)
+        return Size();
 
     Size aSize = pCurPageView->GetPageRect().GetSize();
     // Convert the size in 100th mm to TWIP
@@ -2360,7 +2376,7 @@ Size SdXImpressDocument::getDocumentSize()
     return Size(convertMm100ToTwip(aSize.getWidth()), convertMm100ToTwip(aSize.getHeight()));
 }
 
-void SdXImpressDocument::initializeForTiledRendering(const css::uno::Sequence<css::beans::PropertyValue>& /*rArguments*/)
+void SdXImpressDocument::initializeForTiledRendering(const css::uno::Sequence<css::beans::PropertyValue>& rArguments)
 {
     SolarMutexGuard aGuard;
 
@@ -2368,10 +2384,15 @@ void SdXImpressDocument::initializeForTiledRendering(const css::uno::Sequence<cs
         // tiled rendering works only when we are in the 'Normal' view, switch to that
         mpDocShell->GetViewShell()->GetViewFrame()->GetDispatcher()->Execute(SID_VIEWSHELL0, SfxCallMode::SYNCHRON | SfxCallMode::RECORD);
 
-    mpDoc->setTiledRendering(true);
-
     if (DrawViewShell* pViewShell = GetViewShell())
     {
+        DrawView* pDrawView = pViewShell->GetDrawView();
+        for (sal_Int32 i = 0; i < rArguments.getLength(); ++i)
+        {
+            const beans::PropertyValue& rValue = rArguments[i];
+            if (rValue.Name == ".uno:ShowBorderShadow" && rValue.Value.has<bool>())
+                pDrawView->SetPageShadowVisible(rValue.Value.get<bool>());
+        }
         // Disable map mode, so that it's possible to send mouse event coordinates
         // in logic units.
         if (sd::Window* pWindow = pViewShell->GetActiveWindow())
@@ -2384,11 +2405,14 @@ void SdXImpressDocument::initializeForTiledRendering(const css::uno::Sequence<cs
         // (whereas with async loading images start being loaded after
         //  we have painted the tile, resulting in an invalidate, followed
         //  by the tile being rerendered - which is wasteful and ugly).
-        pViewShell->GetDrawView()->SetSwapAsynchron(false);
+        pDrawView->SetSwapAsynchron(false);
     }
-    // tdf#93154: in tiled rendering LO doesn't always detect changes
-    SvtMiscOptions aMiscOpt;
-    aMiscOpt.SetSaveAlwaysAllowed(true);
+
+    // when the "This document may contain formatting or content that cannot
+    // be saved..." dialog appears, it is auto-cancelled with tiled rendering,
+    // causing 'Save' being disabled; so let's always save to the original
+    // format
+    SvtSaveOptions().SetWarnAlienFormat(false);
 }
 
 void SdXImpressDocument::registerCallback(LibreOfficeKitCallback pCallback, void* pData)
@@ -2432,14 +2456,22 @@ void SdXImpressDocument::postMouseEvent(int nType, int nX, int nY, int nCount, i
     DrawViewShell* pViewShell = GetViewShell();
     if (!pViewShell)
         return;
+    Window* pWindow = pViewShell->GetActiveWindow();
 
-    MouseEvent aEvent(Point(convertTwipToMm100(nX), convertTwipToMm100(nY)), nCount,
+    Point aPos(Point(convertTwipToMm100(nX), convertTwipToMm100(nY)));
+    MouseEvent aEvent(aPos, nCount,
             MouseEventModifiers::SIMPLECLICK, nButtons, nModifier);
 
     switch (nType)
     {
     case LOK_MOUSEEVENT_MOUSEBUTTONDOWN:
         pViewShell->LogicMouseButtonDown(aEvent);
+
+        if (nButtons & MOUSE_RIGHT)
+        {
+            const CommandEvent aCEvt(aPos, CommandEventId::ContextMenu, true, nullptr);
+            pViewShell->Command(aCEvt, pWindow);
+        }
         break;
     case LOK_MOUSEEVENT_MOUSEBUTTONUP:
         pViewShell->LogicMouseButtonUp(aEvent);
@@ -2820,10 +2852,10 @@ sal_Bool SAL_CALL SdDrawPagesAccess::hasByName( const OUString& aName ) throw(un
             continue;
 
         if( aName == SdDrawPage::getPageApiName( pPage ) )
-            return sal_True;
+            return true;
     }
 
-    return sal_False;
+    return false;
 }
 
 // XElementAccess
@@ -3050,11 +3082,11 @@ uno::Reference< drawing::XDrawPage > SAL_CALL SdMasterPagesAccess::insertNewByIn
 
     uno::Reference< drawing::XDrawPage > xDrawPage;
 
-    SdDrawDocument* mpDoc = mpModel->mpDoc;
-    if( mpDoc )
+    SdDrawDocument* pDoc = mpModel->mpDoc;
+    if( pDoc )
     {
         // calculate internal index and check for range errors
-        const sal_Int32 nMPageCount = mpDoc->GetMasterPageCount();
+        const sal_Int32 nMPageCount = pDoc->GetMasterPageCount();
         nInsertPos = nInsertPos * 2 + 1;
         if( nInsertPos < 0 || nInsertPos > nMPageCount )
             nInsertPos = nMPageCount;
@@ -3070,7 +3102,7 @@ uno::Reference< drawing::XDrawPage > SAL_CALL SdMasterPagesAccess::insertNewByIn
             bUnique = true;
             for( sal_Int32 nMaster = 1; nMaster < nMPageCount; nMaster++ )
             {
-                SdPage* pPage = static_cast<SdPage*>(mpDoc->GetMasterPage((sal_uInt16)nMaster));
+                SdPage* pPage = static_cast<SdPage*>(pDoc->GetMasterPage((sal_uInt16)nMaster));
                 if( pPage && pPage->GetName() == aPrefix )
                 {
                     bUnique = false;
@@ -3091,7 +3123,7 @@ uno::Reference< drawing::XDrawPage > SAL_CALL SdMasterPagesAccess::insertNewByIn
         aLayoutName += SD_RESSTR(STR_LAYOUT_OUTLINE);
 
         // create styles
-        static_cast<SdStyleSheetPool*>(mpDoc->GetStyleSheetPool())->CreateLayoutStyleSheets( aPrefix );
+        static_cast<SdStyleSheetPool*>(pDoc->GetStyleSheetPool())->CreateLayoutStyleSheets( aPrefix );
 
         // get the first page for initial size and border settings
         SdPage* pPage = mpModel->mpDoc->GetSdPage( (sal_uInt16)0, PK_STANDARD );
@@ -3105,7 +3137,7 @@ uno::Reference< drawing::XDrawPage > SAL_CALL SdMasterPagesAccess::insertNewByIn
                            pPage->GetRgtBorder(),
                            pPage->GetLwrBorder() );
         pMPage->SetLayoutName( aLayoutName );
-        mpDoc->InsertMasterPage(pMPage,  (sal_uInt16)nInsertPos);
+        pDoc->InsertMasterPage(pMPage,  (sal_uInt16)nInsertPos);
 
         {
             // ensure default MasterPage fill
@@ -3123,7 +3155,7 @@ uno::Reference< drawing::XDrawPage > SAL_CALL SdMasterPagesAccess::insertNewByIn
                                 pRefNotesPage->GetRgtBorder(),
                                 pRefNotesPage->GetLwrBorder() );
         pMNotesPage->SetLayoutName( aLayoutName );
-        mpDoc->InsertMasterPage(pMNotesPage,  (sal_uInt16)nInsertPos + 1);
+        pDoc->InsertMasterPage(pMNotesPage,  (sal_uInt16)nInsertPos + 1);
         pMNotesPage->SetAutoLayout(AUTOLAYOUT_NOTES, true, true);
         mpModel->SetModified();
     }
@@ -3268,17 +3300,17 @@ uno::Sequence< OUString > SAL_CALL SdDocLinkTargets::getElementNames()
     if( nullptr == mpModel )
         throw lang::DisposedException();
 
-    SdDrawDocument* mpDoc = mpModel->GetDoc();
-    if( mpDoc == nullptr )
+    SdDrawDocument* pDoc = mpModel->GetDoc();
+    if( pDoc == nullptr )
     {
         uno::Sequence< OUString > aSeq;
         return aSeq;
     }
 
-    if( mpDoc->GetDocumentType() == DOCUMENT_TYPE_DRAW )
+    if( pDoc->GetDocumentType() == DOCUMENT_TYPE_DRAW )
     {
-        const sal_uInt16 nMaxPages = mpDoc->GetSdPageCount( PK_STANDARD );
-        const sal_uInt16 nMaxMasterPages = mpDoc->GetMasterSdPageCount( PK_STANDARD );
+        const sal_uInt16 nMaxPages = pDoc->GetSdPageCount( PK_STANDARD );
+        const sal_uInt16 nMaxMasterPages = pDoc->GetMasterSdPageCount( PK_STANDARD );
 
         uno::Sequence< OUString > aSeq( nMaxPages + nMaxMasterPages );
         OUString* pStr = aSeq.getArray();
@@ -3286,17 +3318,17 @@ uno::Sequence< OUString > SAL_CALL SdDocLinkTargets::getElementNames()
         sal_uInt16 nPage;
         // standard pages
         for( nPage = 0; nPage < nMaxPages; nPage++ )
-            *pStr++ = mpDoc->GetSdPage( nPage, PK_STANDARD )->GetName();
+            *pStr++ = pDoc->GetSdPage( nPage, PK_STANDARD )->GetName();
 
         // master pages
         for( nPage = 0; nPage < nMaxMasterPages; nPage++ )
-            *pStr++ = mpDoc->GetMasterSdPage( nPage, PK_STANDARD )->GetName();
+            *pStr++ = pDoc->GetMasterSdPage( nPage, PK_STANDARD )->GetName();
         return aSeq;
     }
     else
     {
-        const sal_uInt16 nMaxPages = mpDoc->GetPageCount();
-        const sal_uInt16 nMaxMasterPages = mpDoc->GetMasterPageCount();
+        const sal_uInt16 nMaxPages = pDoc->GetPageCount();
+        const sal_uInt16 nMaxMasterPages = pDoc->GetMasterPageCount();
 
         uno::Sequence< OUString > aSeq( nMaxPages + nMaxMasterPages );
         OUString* pStr = aSeq.getArray();
@@ -3304,11 +3336,11 @@ uno::Sequence< OUString > SAL_CALL SdDocLinkTargets::getElementNames()
         sal_uInt16 nPage;
         // standard pages
         for( nPage = 0; nPage < nMaxPages; nPage++ )
-            *pStr++ = static_cast<SdPage*>(mpDoc->GetPage( nPage ))->GetName();
+            *pStr++ = static_cast<SdPage*>(pDoc->GetPage( nPage ))->GetName();
 
         // master pages
         for( nPage = 0; nPage < nMaxMasterPages; nPage++ )
-            *pStr++ = static_cast<SdPage*>(mpDoc->GetMasterPage( nPage ))->GetName();
+            *pStr++ = static_cast<SdPage*>(pDoc->GetMasterPage( nPage ))->GetName();
         return aSeq;
     }
 }
@@ -3344,33 +3376,31 @@ sal_Bool SAL_CALL SdDocLinkTargets::hasElements()
 
 SdPage* SdDocLinkTargets::FindPage( const OUString& rName ) const throw(std::exception)
 {
-    SdDrawDocument* mpDoc = mpModel->GetDoc();
-    if( mpDoc == nullptr )
+    SdDrawDocument* pDoc = mpModel->GetDoc();
+    if( pDoc == nullptr )
         return nullptr;
 
-    const sal_uInt16 nMaxPages = mpDoc->GetPageCount();
-    const sal_uInt16 nMaxMasterPages = mpDoc->GetMasterPageCount();
+    const sal_uInt16 nMaxPages = pDoc->GetPageCount();
+    const sal_uInt16 nMaxMasterPages = pDoc->GetMasterPageCount();
 
     sal_uInt16 nPage;
     SdPage* pPage;
 
-    const OUString aName( rName );
-
-    const bool bDraw = mpDoc->GetDocumentType() == DOCUMENT_TYPE_DRAW;
+    const bool bDraw = pDoc->GetDocumentType() == DOCUMENT_TYPE_DRAW;
 
     // standard pages
     for( nPage = 0; nPage < nMaxPages; nPage++ )
     {
-        pPage = static_cast<SdPage*>(mpDoc->GetPage( nPage ));
-        if( (pPage->GetName() == aName) && (!bDraw || (pPage->GetPageKind() == PK_STANDARD)) )
+        pPage = static_cast<SdPage*>(pDoc->GetPage( nPage ));
+        if( (pPage->GetName() == rName) && (!bDraw || (pPage->GetPageKind() == PK_STANDARD)) )
             return pPage;
     }
 
     // master pages
     for( nPage = 0; nPage < nMaxMasterPages; nPage++ )
     {
-        pPage = static_cast<SdPage*>(mpDoc->GetMasterPage( nPage ));
-        if( (pPage->GetName() == aName) && (!bDraw || (pPage->GetPageKind() == PK_STANDARD)) )
+        pPage = static_cast<SdPage*>(pDoc->GetMasterPage( nPage ));
+        if( (pPage->GetName() == rName) && (!bDraw || (pPage->GetPageKind() == PK_STANDARD)) )
             return pPage;
     }
 

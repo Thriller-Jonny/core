@@ -19,6 +19,7 @@
 
 #include "oox/ole/vbaproject.hxx"
 
+#include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/document/XStorageBasedDocument.hpp>
 #include <com/sun/star/embed/ElementModes.hpp>
 #include <com/sun/star/embed/XTransactedObject.hpp>
@@ -85,7 +86,7 @@ VbaFilterConfig::VbaFilterConfig( const Reference< XComponentContext >& rxContex
     {
         OSL_ENSURE( !rConfigCompName.isEmpty(), "VbaFilterConfig::VbaFilterConfig - invalid configuration component name" );
         OUString aConfigPackage = "org.openoffice.Office." + rConfigCompName;
-        mxConfigAccess = ConfigurationHelper::openConfig( rxContext, aConfigPackage, ConfigurationHelper::E_READONLY );
+        mxConfigAccess = ConfigurationHelper::openConfig( rxContext, aConfigPackage, comphelper::EConfigurationModes::ReadOnly );
     }
     catch(const Exception& )
     {
@@ -167,13 +168,13 @@ bool VbaProject::importVbaProject( StorageBase& rVbaPrjStrg )
    return hasModules() || hasDialogs();
 }
 
-void VbaProject::importVbaProject( StorageBase& rVbaPrjStrg, const GraphicHelper& rGraphicHelper, bool bDefaultColorBgr )
+void VbaProject::importVbaProject( StorageBase& rVbaPrjStrg, const GraphicHelper& rGraphicHelper )
 {
     if( rVbaPrjStrg.isStorage() )
     {
         // load the code modules and forms
         if( isImportVba() )
-            importVba( rVbaPrjStrg, rGraphicHelper, bDefaultColorBgr );
+            importVba( rVbaPrjStrg, rGraphicHelper, true/*bDefaultColorBgr*/ );
         // copy entire storage into model
         if( isExportVba() )
             copyStorage( rVbaPrjStrg );
@@ -399,7 +400,7 @@ void VbaProject::readVbaModules( StorageBase& rVbaPrjStrg )
         try
         {
             Reference< XVBACompatibility > xVBACompat( getLibraryContainer( PROP_BasicLibraries ), UNO_QUERY_THROW );
-            xVBACompat->setVBACompatibilityMode( sal_True );
+            xVBACompat->setVBACompatibilityMode( true );
             xVBACompat->setProjectName( maPrjName );
 
         }
@@ -455,14 +456,14 @@ void VbaProject::importModulesAndForms( StorageBase& rVbaPrjStrg, const GraphicH
         if( xBasicLib.is() )
         {
             // #TODO cater for mxOleOverridesSink, like I used to before
-            // call Basic source code import for each module, boost::[c]ref enforces pass-by-ref
+            // call Basic source code import for each module, std::[c]ref enforces pass-by-ref
             maModules.forEachMem( &VbaModule::createAndImportModule,
-                ::boost::ref( *xVbaStrg ), ::boost::cref( xBasicLib ),
-                ::boost::cref( xDocObjectNA ) );
+                ::std::ref( *xVbaStrg ), ::std::cref( xBasicLib ),
+                ::std::cref( xDocObjectNA ) );
 
             // create empty dummy modules
             aDummyModules.forEachMem( &VbaModule::createEmptyModule,
-                ::boost::cref( xBasicLib ), ::boost::cref( xDocObjectNA ) );
+                ::std::cref( xBasicLib ), ::std::cref( xDocObjectNA ) );
         }
     }
     catch(const Exception& )
@@ -516,7 +517,7 @@ void VbaProject::attachMacros()
         aArgs[ 1 ] <<= maPrjName;
         Reference< XVBAMacroResolver > xResolver( xFactory->createInstanceWithArgumentsAndContext(
             "com.sun.star.script.vba.VBAMacroResolver", aArgs, mxContext ), UNO_QUERY_THROW );
-        maMacroAttachers.forEachMem( &VbaMacroAttacherBase::resolveAndAttachMacro, ::boost::cref( xResolver ) );
+        maMacroAttachers.forEachMem( &VbaMacroAttacherBase::resolveAndAttachMacro, ::std::cref( xResolver ) );
     }
     catch(const Exception& )
     {

@@ -159,22 +159,22 @@ SfxDockingWrapper::SfxDockingWrapper( vcl::Window* pParentWnd ,
             xFactoryMgr->createInstanceWithArgumentsAndContext( aArgs, xContext ),
             uno::UNO_QUERY );
 
-        static uno::WeakReference< frame::XModuleManager2 >  m_xModuleManager;
+        static uno::WeakReference< frame::XModuleManager2 >  s_xModuleManager;
 
-        uno::Reference< frame::XModuleManager2 > xModuleManager( m_xModuleManager );
+        uno::Reference< frame::XModuleManager2 > xModuleManager( s_xModuleManager );
         if ( !xModuleManager.is() )
         {
             xModuleManager = frame::ModuleManager::create(xContext);
-            m_xModuleManager = xModuleManager;
+            s_xModuleManager = xModuleManager;
         }
 
-        static uno::WeakReference< container::XNameAccess > m_xWindowStateConfiguration;
+        static uno::WeakReference< container::XNameAccess > s_xWindowStateConfiguration;
 
-        uno::Reference< container::XNameAccess > xWindowStateConfiguration( m_xWindowStateConfiguration );
+        uno::Reference< container::XNameAccess > xWindowStateConfiguration( s_xWindowStateConfiguration );
         if ( !xWindowStateConfiguration.is() )
         {
             xWindowStateConfiguration = ui::theWindowStateConfiguration::get( xContext );
-            m_xWindowStateConfiguration = xWindowStateConfiguration;
+            s_xWindowStateConfiguration = xWindowStateConfiguration;
         }
 
         OUString sModuleIdentifier = xModuleManager->identify( xFrame );
@@ -1120,7 +1120,7 @@ void SfxDockingWindow::Initialize(SfxChildWinInfo *pInfo)
         {
             //?????? Currently not supported
             // Window is docked individually; size is calculated.
-            // It must therefore be initialized with the DloatingSize if
+            // It must therefore be initialized with the FloatingSize if
             // someone relies on it that a reasonable size is set
             SetSizePixel(GetFloatingSize());
             SetSizePixel(CalcDockingSize(GetAlignment()));
@@ -1661,8 +1661,9 @@ bool SfxDockingWindow::Close()
         return true;
 
     SfxBoolItem aValue( pMgr->GetType(), false);
-    pBindings->GetDispatcher_Impl()->Execute(
-        pMgr->GetType(), SfxCallMode::RECORD | SfxCallMode::ASYNCHRON, &aValue, 0L );
+    pBindings->GetDispatcher_Impl()->ExecuteList(
+        pMgr->GetType(), SfxCallMode::RECORD | SfxCallMode::ASYNCHRON,
+        { &aValue });
     return true;
 }
 
@@ -1723,7 +1724,7 @@ void SfxDockingWindow::SetMinOutputSizePixel( const Size& rSize )
 }
 
 /** Set the minimum size which is returned.*/
-Size SfxDockingWindow::GetMinOutputSizePixel() const
+const Size& SfxDockingWindow::GetMinOutputSizePixel() const
 {
     return pImp->aMinSize;
 }
@@ -1774,7 +1775,6 @@ SplitWindowItemFlags SfxDockingWindow::GetWinBits_Impl() const
 }
 
 
-
 void SfxDockingWindow::SetItemSize_Impl( const Size& rSize )
 {
     pImp->aSplitSize = rSize;
@@ -1808,14 +1808,11 @@ bool SfxDockingWindow::IsAutoHide_Impl() const
         return false;
 }
 
-void SfxDockingWindow::AutoShow_Impl( bool bShow )
+void SfxDockingWindow::AutoShow_Impl()
 {
     if ( pImp->pSplitWin )
     {
-        if ( bShow )
-            pImp->pSplitWin->FadeIn();
-        else
-            pImp->pSplitWin->FadeOut();
+        pImp->pSplitWin->FadeIn();
     }
 }
 

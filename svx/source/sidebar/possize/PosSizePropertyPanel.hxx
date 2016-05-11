@@ -136,7 +136,6 @@ private:
     ::sfx2::sidebar::ControllerItem         maAutoHeightControl;
     ::sfx2::sidebar::ControllerItem         m_aMetricCtl;
 
-    css::uno::Reference< css::frame::XFrame >   mxFrame;
     ::sfx2::sidebar::EnumContext            maContext;
     SfxBindings*                            mpBindings;
 
@@ -168,7 +167,7 @@ private:
     void MetricState( SfxItemState eState, const SfxPoolItem* pState );
     static FieldUnit GetCurrentUnit( SfxItemState eState, const SfxPoolItem* pState );
     void DisableControls();
-    void SetPosXYMinMax();
+    void SetPosSizeMinMax();
 
     /** Check if the UI scale has changed and handle such a change.
         UI scale is an SD only feature.  The UI scale is represented by items
@@ -185,7 +184,6 @@ private:
 
 
 } } // end of namespace svx::sidebar
-
 
 
 #endif // INCLUDED_SVX_SOURCE_SIDEBAR_POSSIZE_POSSIZEPROPERTYPANEL_HXX

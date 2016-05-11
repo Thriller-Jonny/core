@@ -136,6 +136,8 @@ private:
     SCROW           nOldCurY;
     SCCOL           nPosX[2];                   ///< X position of the top left cell of the visible area.
     SCROW           nPosY[2];                   ///< Y position of the top left cell of the visible area.
+    SCCOL           nMaxTiledCol;
+    SCROW           nMaxTiledRow;
 
     bool            bShowGrid;                  // per sheet show grid lines option.
     bool            mbOldCursorValid;           // "virtual" Cursor position when combined
@@ -245,7 +247,7 @@ public:
     ScDrawView*     GetScDrawView();            // from View
     bool            IsMinimized();              // from View
 
-    void            UpdateInputHandler( bool bForce = false, bool bStopEditing = true );
+    void            UpdateInputHandler( bool bForce = false );
 
     void            WriteUserData(OUString& rData);
     void            ReadUserData(const OUString& rData);
@@ -283,6 +285,9 @@ public:
     long            GetVSplitPos() const                    { return pThisTab->nVSplitPos; }
     SCCOL           GetFixPosX() const                      { return pThisTab->nFixPosX; }
     SCROW           GetFixPosY() const                      { return pThisTab->nFixPosY; }
+    SCCOL           GetMaxTiledCol() const                  { return pThisTab->nMaxTiledCol; }
+    SCROW           GetMaxTiledRow() const                  { return pThisTab->nMaxTiledRow; }
+
     bool            IsPagebreakMode() const                 { return bPagebreak; }
     bool            IsPasteMode() const                     { return (nPasteFlags & SC_PASTE_MODE) != 0; }
     bool            ShowPasteSource() const                 { return (nPasteFlags & SC_PASTE_BORDER) != 0; }
@@ -299,6 +304,9 @@ public:
     void            SetVSplitPos( long nPos )                       { pThisTab->nVSplitPos = nPos; }
     void            SetFixPosX( SCCOL nPos )                        { pThisTab->nFixPosX = nPos; }
     void            SetFixPosY( SCROW nPos )                        { pThisTab->nFixPosY = nPos; }
+    void            SetMaxTiledCol( SCCOL nCol )                    { pThisTab->nMaxTiledCol = nCol; }
+    void            SetMaxTiledRow( SCROW nRow )                    { pThisTab->nMaxTiledRow = nRow; }
+
     void            SetPagebreakMode( bool bSet );
     void            SetPasteMode ( ScPasteFlags nFlags )            { nPasteFlags = nFlags; }
 
@@ -347,10 +355,9 @@ public:
 
                     // TRUE: Cell is merged
     bool            GetMergeSizePixel( SCCOL nX, SCROW nY, long& rSizeXPix, long& rSizeYPix ) const;
-    bool            GetPosFromPixel( long nClickX, long nClickY, ScSplitPos eWhich,
+    void            GetPosFromPixel( long nClickX, long nClickY, ScSplitPos eWhich,
                                         SCsCOL& rPosX, SCsROW& rPosY,
-                                        bool bTestMerge = true, bool bRepair = false,
-                                        bool bNextIfLarge = true );
+                                        bool bTestMerge = true, bool bRepair = false );
     void            GetMouseQuadrant( const Point& rClickPos, ScSplitPos eWhich,
                                         SCsCOL nPosX, SCsROW nPosY, bool& rLeft, bool& rTop );
 
@@ -444,7 +451,7 @@ public:
 
     void            UpdateScreenZoom( const Fraction& rNewX, const Fraction& rNewY );
 
-    Size            GetScrSize() const              { return aScrSize; }
+    const Size&     GetScrSize() const              { return aScrSize; }
 
     void            RecalcPixPos();
     Point           GetPixPos( ScSplitPos eWhich ) const

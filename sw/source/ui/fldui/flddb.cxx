@@ -33,9 +33,9 @@
 #define USER_DATA_VERSION_1     "1"
 #define USER_DATA_VERSION USER_DATA_VERSION_1
 
-SwFieldDBPage::SwFieldDBPage(vcl::Window* pParent, const SfxItemSet& rCoreSet)
+SwFieldDBPage::SwFieldDBPage(vcl::Window* pParent, const SfxItemSet *const pCoreSet)
     : SwFieldPage(pParent, "FieldDbPage",
-        "modules/swriter/ui/flddbpage.ui", rCoreSet)
+        "modules/swriter/ui/flddbpage.ui", pCoreSet)
     , m_nOldFormat(0)
     , m_nOldSubType(0)
 {
@@ -131,7 +131,7 @@ void SwFieldDBPage::Reset(const SfxItemSet*)
 
     m_pFormatLB->Clear();
 
-    const sal_uInt16 nSize = GetFieldMgr().GetFormatCount(TYP_DBSETNUMBERFLD, false, IsFieldDlgHtmlMode());
+    const sal_uInt16 nSize = GetFieldMgr().GetFormatCount(TYP_DBSETNUMBERFLD, IsFieldDlgHtmlMode());
     for( sal_uInt16 i = 0; i < nSize; ++i )
     {
         const sal_Int32 nEntryPos = m_pFormatLB->InsertEntry(GetFieldMgr().GetFormatStr(TYP_DBSETNUMBERFLD, i));
@@ -265,9 +265,9 @@ bool SwFieldDBPage::FillItemSet(SfxItemSet* )
 }
 
 VclPtr<SfxTabPage> SwFieldDBPage::Create( vcl::Window* pParent,
-                                        const SfxItemSet* rAttrSet )
+                                        const SfxItemSet *const pAttrSet )
 {
-    return VclPtr<SwFieldDBPage>::Create( pParent, *rAttrSet );
+    return VclPtr<SwFieldDBPage>::Create( pParent, pAttrSet );
 }
 
 sal_uInt16 SwFieldDBPage::GetGroup()
@@ -345,7 +345,7 @@ void SwFieldDBPage::TypeHdl( ListBox* pBox )
 
             case TYP_DBNUMSETFLD:
                 bSetNo = true;
-                // no break!
+                SAL_FALLTHROUGH;
             case TYP_DBNEXTSETFLD:
                 bCond = true;
                 if (IsFieldEdit())

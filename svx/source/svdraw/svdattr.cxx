@@ -115,7 +115,7 @@ SdrItemPool::SdrItemPool(
     // init the non-persistent items
     for(sal_uInt16 i(SDRATTR_NOTPERSIST_FIRST); i <= SDRATTR_NOTPERSIST_LAST; i++)
     {
-        mpLocalItemInfos[i - SDRATTR_START]._nFlags = SfxItemPoolFlags::NONE;
+        mpLocalItemInfos[i - SDRATTR_START]._bPoolable = false;
     }
 
     // init own PoolDefaults
@@ -171,7 +171,7 @@ SdrItemPool::SdrItemPool(
     mppLocalPoolDefaults[SDRATTR_EDGENODE2VERTDIST-SDRATTR_START]=new SdrEdgeNode2VertDistItem(nDefEdgeDist);
     mppLocalPoolDefaults[SDRATTR_EDGENODE1GLUEDIST-SDRATTR_START]=new SdrEdgeNode1GlueDistItem;
     mppLocalPoolDefaults[SDRATTR_EDGENODE2GLUEDIST-SDRATTR_START]=new SdrEdgeNode2GlueDistItem;
-    mppLocalPoolDefaults[SDRATTR_EDGELINEDELTAANZ -SDRATTR_START]=new SdrEdgeLineDeltaAnzItem;
+    mppLocalPoolDefaults[SDRATTR_EDGELINEDELTAANZ -SDRATTR_START]=new SdrEdgeLineDeltaCountItem;
     mppLocalPoolDefaults[SDRATTR_EDGELINE1DELTA   -SDRATTR_START]=new SdrMetricItem(SDRATTR_EDGELINE1DELTA, 0);
     mppLocalPoolDefaults[SDRATTR_EDGELINE2DELTA   -SDRATTR_START]=new SdrMetricItem(SDRATTR_EDGELINE2DELTA, 0);
     mppLocalPoolDefaults[SDRATTR_EDGELINE3DELTA   -SDRATTR_START]=new SdrMetricItem(SDRATTR_EDGELINE3DELTA, 0);
@@ -625,7 +625,6 @@ void SdrItemPool::TakeItemName(sal_uInt16 nWhich, OUString& rItemName)
 // FractionItem
 
 
-
 SdrFractionItem::SdrFractionItem(sal_uInt16 nId, SvStream& rIn):
     SfxPoolItem(nId)
 {
@@ -695,7 +694,6 @@ SfxPoolItem* SdrFractionItem::Clone(SfxItemPool * /*pPool*/) const
 // ScaleItem
 
 
-
 bool SdrScaleItem::GetPresentation(
     SfxItemPresentation ePresentation, SfxMapUnit /*eCoreMetric*/,
     SfxMapUnit /*ePresentationMetric*/, OUString &rText, const IntlWrapper *) const
@@ -734,7 +732,6 @@ SfxPoolItem* SdrScaleItem::Clone(SfxItemPool * /*pPool*/) const
 
 
 // OnOffItem
-
 
 
 SfxPoolItem* SdrOnOffItem::Clone(SfxItemPool* /*pPool*/) const
@@ -802,7 +799,6 @@ bool SdrYesNoItem::GetPresentation(SfxItemPresentation ePres,
 // class SdrPercentItem
 
 
-
 SfxPoolItem* SdrPercentItem::Clone(SfxItemPool* /*pPool*/) const
 {
     return new SdrPercentItem(Which(),GetValue());
@@ -833,7 +829,6 @@ bool SdrPercentItem::GetPresentation(
 
 
 // class SdrAngleItem
-
 
 
 SfxPoolItem* SdrAngleItem::Clone(SfxItemPool* /*pPool*/) const
@@ -923,7 +918,6 @@ bool SdrAngleItem::GetPresentation(
 // class SdrMetricItem
 
 
-
 SfxPoolItem* SdrMetricItem::Clone(SfxItemPool* /*pPool*/) const
 {
     return new SdrMetricItem(Which(),GetValue());
@@ -939,7 +933,7 @@ bool SdrMetricItem::HasMetrics() const
     return true;
 }
 
-bool SdrMetricItem::ScaleMetrics(long nMul, long nDiv)
+void SdrMetricItem::ScaleMetrics(long nMul, long nDiv)
 {
     if (GetValue()!=0) {
         BigInt aVal(GetValue());
@@ -948,7 +942,6 @@ bool SdrMetricItem::ScaleMetrics(long nMul, long nDiv)
         aVal/=nDiv;
         SetValue(long(aVal));
     }
-    return true;
 }
 
 bool SdrMetricItem::GetPresentation(SfxItemPresentation ePres,
@@ -971,7 +964,6 @@ bool SdrMetricItem::GetPresentation(SfxItemPresentation ePres,
 
 
 // items of the legend object
-
 
 
 SfxPoolItem* SdrCaptionTypeItem::Clone(SfxItemPool* /*pPool*/) const                { return new SdrCaptionTypeItem(*this); }
@@ -1312,7 +1304,7 @@ bool SdrTextAniAmountItem::HasMetrics() const
     return GetValue()>0;
 }
 
-bool SdrTextAniAmountItem::ScaleMetrics(long nMul, long nDiv)
+void SdrTextAniAmountItem::ScaleMetrics(long nMul, long nDiv)
 {
     if (GetValue()>0) {
         BigInt aVal(GetValue());
@@ -1320,8 +1312,7 @@ bool SdrTextAniAmountItem::ScaleMetrics(long nMul, long nDiv)
         aVal+=nDiv/2; // to round accurately
         aVal/=nDiv;
         SetValue(short(aVal));
-        return true;
-    } else return false;
+    }
 }
 
 bool SdrTextAniAmountItem::GetPresentation(
@@ -1970,7 +1961,6 @@ bool SdrCircKindItem::PutValue( const uno::Any& rVal, sal_uInt8 /*nMemberId*/)
 
 
 // class SdrSignedPercentItem
-
 
 
 SfxPoolItem* SdrSignedPercentItem::Clone(SfxItemPool* /*pPool*/) const

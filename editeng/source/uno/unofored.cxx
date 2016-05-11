@@ -36,7 +36,6 @@
 using namespace ::com::sun::star;
 
 
-
 SvxEditEngineForwarder::SvxEditEngineForwarder( EditEngine& rEngine ) :
     rEditEngine( rEngine )
 {
@@ -113,9 +112,9 @@ void SvxEditEngineForwarder::SetParaAttribs( sal_Int32 nPara, const SfxItemSet& 
     rEditEngine.SetParaAttribs( nPara, rSet );
 }
 
-void SvxEditEngineForwarder::RemoveAttribs( const ESelection& rSelection, bool bRemoveParaAttribs, sal_uInt16 nWhich )
+void SvxEditEngineForwarder::RemoveAttribs( const ESelection& rSelection )
 {
-    rEditEngine.RemoveAttribs( rSelection, bRemoveParaAttribs, nWhich );
+    rEditEngine.RemoveAttribs( rSelection, false/*bRemoveParaAttribs*/, 0 );
 }
 
 SfxItemPool* SvxEditEngineForwarder::GetPool() const
@@ -500,7 +499,6 @@ void SvxEditEngineForwarder::CopyText(const SvxTextForwarder& rSource)
     rEditEngine.SetText( *pNewTextObject );
     delete pNewTextObject;
 }
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

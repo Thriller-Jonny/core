@@ -32,6 +32,8 @@
 #include <IDocumentMarkAccess.hxx>
 #include <ndtxt.hxx>
 
+#include <comphelper/string.hxx>
+
 #include <svtools/treelistentry.hxx>
 
 #define REFFLDFLAG          0x4000
@@ -47,9 +49,9 @@ static sal_uInt16 nFieldDlgFormatSel = 0;
 #define USER_DATA_VERSION_1 "1"
 #define USER_DATA_VERSION USER_DATA_VERSION_1
 
-SwFieldRefPage::SwFieldRefPage(vcl::Window* pParent, const SfxItemSet& rCoreSet )
+SwFieldRefPage::SwFieldRefPage(vcl::Window* pParent, const SfxItemSet *const pCoreSet )
     : SwFieldPage(pParent, "FieldRefPage",
-        "modules/swriter/ui/fldrefpage.ui", rCoreSet)
+        "modules/swriter/ui/fldrefpage.ui", pCoreSet)
     , maOutlineNodes()
     , maNumItems()
     , mpSavedSelectedTextNode(nullptr)
@@ -66,6 +68,7 @@ SwFieldRefPage::SwFieldRefPage(vcl::Window* pParent, const SfxItemSet& rCoreSet 
     get(m_pNameFT, "nameft");
     get(m_pNameED, "name");
     get(m_pValueED, "value");
+    get(m_pFilterED, "filter");
 
     sBookmarkText = m_pTypeLB->GetEntry(0);
     sFootnoteText = m_pTypeLB->GetEntry(1);
@@ -90,6 +93,7 @@ SwFieldRefPage::SwFieldRefPage(vcl::Window* pParent, const SfxItemSet& rCoreSet 
     m_pSelectionToolTipLB->set_width_request(nWidth*2);
 
     m_pNameED->SetModifyHdl(LINK(this, SwFieldRefPage, ModifyHdl));
+    m_pFilterED->SetModifyHdl( LINK( this, SwFieldRefPage, ModifyHdl_Impl ) );
 
     m_pTypeLB->SetDoubleClickHdl       (LINK(this, SwFieldRefPage, ListBoxInsertHdl));
     m_pTypeLB->SetSelectHdl            (LINK(this, SwFieldRefPage, TypeHdl));
@@ -120,8 +124,15 @@ void SwFieldRefPage::dispose()
     m_pFormatLB.clear();
     m_pNameFT.clear();
     m_pNameED.clear();
+    m_pFilterED.clear();
     m_pValueED.clear();
     SwFieldPage::dispose();
+}
+
+IMPL_LINK_NOARG_TYPED(SwFieldRefPage, ModifyHdl_Impl, Edit&, void)
+{
+    OUString sFilter = comphelper::string::strip(m_pFilterED->GetText(), ' ');
+    UpdateSubType(sFilter);
 }
 
 // #i83479#
@@ -245,6 +256,7 @@ void SwFieldRefPage::Reset(const SfxItemSet* )
 
     nFieldDlgFormatSel = 0;
 
+    sal_uInt16 nFormatBoxPosition = USHRT_MAX;
     if( !IsRefresh() )
     {
         OUString sUserData = GetUserData();
@@ -256,16 +268,26 @@ void SwFieldRefPage::Reset(const SfxItemSet* )
             if(nVal != USHRT_MAX)
             {
                 for(sal_Int32 i = 0; i < m_pTypeLB->GetEntryCount(); i++)
+                {
                     if(nVal == (sal_uInt16)reinterpret_cast<sal_uLong>(m_pTypeLB->GetEntryData(i)))
                     {
                         m_pTypeLB->SelectEntryPos(i);
                         break;
                     }
+                }
+                sVal = sUserData.getToken(2, ';');
+                if(!sVal.isEmpty())
+                {
+                    nFormatBoxPosition = static_cast< sal_uInt16 >(sVal.toInt32());
+                }
             }
         }
     }
     TypeHdl(*m_pTypeLB);
-
+    if(nFormatBoxPosition != USHRT_MAX)
+    {
+        m_pFormatLB->SelectEntryPos(nFormatBoxPosition);
+    }
     if (IsFieldEdit())
     {
         m_pTypeLB->SaveValue();
@@ -273,6 +295,7 @@ void SwFieldRefPage::Reset(const SfxItemSet* )
         m_pFormatLB->SaveValue();
         m_pNameED->SaveValue();
         m_pValueED->SaveValue();
+        m_pFilterED->SetText(OUString());
     }
 }
 
@@ -360,7 +383,8 @@ IMPL_LINK_NOARG_TYPED(SwFieldRefPage, TypeHdl, ListBox&, void)
         sal_uInt16 nTypeId = (sal_uInt16)reinterpret_cast<sal_uLong>(m_pTypeLB->GetEntryData(GetTypeSel()));
 
         // fill selection-ListBox
-        UpdateSubType();
+        OUString sFilter = comphelper::string::strip(m_pFilterED->GetText(), ' ');
+        UpdateSubType(sFilter);
 
         bool bName = false;
         nFieldDlgFormatSel = 0;
@@ -370,6 +394,7 @@ IMPL_LINK_NOARG_TYPED(SwFieldRefPage, TypeHdl, ListBox&, void)
         {
             m_pNameED->SetText(aEmptyOUStr);
             m_pValueED->SetText(aEmptyOUStr);
+            m_pFilterED->SetText(aEmptyOUStr);
         }
 
         switch (nTypeId)
@@ -387,7 +412,7 @@ IMPL_LINK_NOARG_TYPED(SwFieldRefPage, TypeHdl, ListBox&, void)
 
             case REFFLDFLAG_BOOKMARK:
                 bName = true;
-                // no break!!!
+                SAL_FALLTHROUGH;
             default:
                 if( REFFLDFLAG & nTypeId )
                 {
@@ -409,6 +434,7 @@ IMPL_LINK_NOARG_TYPED(SwFieldRefPage, TypeHdl, ListBox&, void)
 
         SubTypeHdl();
         ModifyHdl(*m_pNameED);
+        ModifyHdl(*m_pFilterED);
     }
 }
 
@@ -465,8 +491,8 @@ void SwFieldRefPage::SubTypeHdl()
     }
 }
 
-// renew types in SelectionLB
-void SwFieldRefPage::UpdateSubType()
+// renew types in SelectionLB after filtering
+void SwFieldRefPage::UpdateSubType(const OUString& filterString)
 {
     SwWrtShell *pSh = GetWrtShell();
     if(!pSh)
@@ -507,7 +533,13 @@ void SwFieldRefPage::UpdateSubType()
             {
                 const ::sw::mark::IMark* pBkmk = ppMark->get();
                 if(IDocumentMarkAccess::MarkType::BOOKMARK == IDocumentMarkAccess::GetType(*pBkmk))
-                    m_pSelectionLB->InsertEntry( pBkmk->GetName() );
+                {
+                    bool isSubstring = MatchSubstring(pBkmk->GetName(), filterString);
+                    if(isSubstring)
+                    {
+                        m_pSelectionLB->InsertEntry( pBkmk->GetName() );
+                    }
+                }
             }
             if (IsFieldEdit())
                 sOldSel = pRefField->GetSetRefName();
@@ -520,7 +552,11 @@ void SwFieldRefPage::UpdateSubType()
 
             for( size_t n = 0; n < nCnt; ++n )
             {
-                m_pSelectionLB->InsertEntry( aArr[ n ]->sDlgEntry );
+                bool isSubstring = MatchSubstring(aArr[ n ]->sDlgEntry, filterString);
+                if(isSubstring)
+                {
+                    m_pSelectionLB->InsertEntry( aArr[ n ]->sDlgEntry );
+                }
                 if (IsFieldEdit() && pRefField->GetSeqNo() == aArr[ n ]->nSeqNo)
                     sOldSel = aArr[n]->sDlgEntry;
             }
@@ -533,7 +569,11 @@ void SwFieldRefPage::UpdateSubType()
 
             for( size_t n = 0; n < nCnt; ++n )
             {
-                m_pSelectionLB->InsertEntry( aArr[ n ]->sDlgEntry );
+                bool isSubstring = MatchSubstring(aArr[ n ]->sDlgEntry, filterString);
+                if(isSubstring)
+                {
+                    m_pSelectionLB->InsertEntry( aArr[ n ]->sDlgEntry );
+                }
                 if (IsFieldEdit() && pRefField->GetSeqNo() == aArr[ n ]->nSeqNo)
                     sOldSel = aArr[n]->sDlgEntry;
             }
@@ -548,21 +588,26 @@ void SwFieldRefPage::UpdateSubType()
             bool bCertainTextNodeSelected( false );
             for ( size_t nOutlIdx = 0; nOutlIdx < maOutlineNodes.size(); ++nOutlIdx )
             {
-                SvTreeListEntry* pEntry = m_pSelectionToolTipLB->InsertEntry(
-                                pIDoc->getOutlineText( nOutlIdx, true, true, false ) );
-                pEntry->SetUserData( reinterpret_cast<void*>(nOutlIdx) );
-                if ( ( IsFieldEdit() &&
+                SvTreeListEntry* pEntry = nullptr;
+                bool isSubstring = MatchSubstring(pIDoc->getOutlineText( nOutlIdx, true, true, false ), filterString);
+                if(isSubstring)
+                {
+                    pEntry = m_pSelectionToolTipLB->InsertEntry(
+                    pIDoc->getOutlineText( nOutlIdx, true, true, false ) );
+                    pEntry->SetUserData( reinterpret_cast<void*>(nOutlIdx) );
+                    if ( ( IsFieldEdit() &&
                        pRefField->GetReferencedTextNode() == maOutlineNodes[nOutlIdx] ) ||
-                     mpSavedSelectedTextNode == maOutlineNodes[nOutlIdx] )
-                {
-                    m_pSelectionToolTipLB->Select( pEntry );
-                    sOldSel.clear();
-                    bCertainTextNodeSelected = true;
-                }
-                else if ( !bCertainTextNodeSelected && mnSavedSelectedPos == nOutlIdx )
-                {
-                    m_pSelectionToolTipLB->Select( pEntry );
-                    sOldSel.clear();
+                        mpSavedSelectedTextNode == maOutlineNodes[nOutlIdx] )
+                    {
+                        m_pSelectionToolTipLB->Select( pEntry );
+                        sOldSel.clear();
+                        bCertainTextNodeSelected = true;
+                    }
+                    else if ( !bCertainTextNodeSelected && mnSavedSelectedPos == nOutlIdx )
+                    {
+                        m_pSelectionToolTipLB->Select( pEntry );
+                        sOldSel.clear();
+                    }
                 }
             }
         }
@@ -575,21 +620,26 @@ void SwFieldRefPage::UpdateSubType()
             bool bCertainTextNodeSelected( false );
             for ( size_t nNumItemIdx = 0; nNumItemIdx < maNumItems.size(); ++nNumItemIdx )
             {
-                SvTreeListEntry* pEntry = m_pSelectionToolTipLB->InsertEntry(
-                            pIDoc->getListItemText( *maNumItems[nNumItemIdx], true, true ) );
-                pEntry->SetUserData( reinterpret_cast<void*>(nNumItemIdx) );
-                if ( ( IsFieldEdit() &&
-                       pRefField->GetReferencedTextNode() == maNumItems[nNumItemIdx]->GetTextNode() ) ||
-                     mpSavedSelectedTextNode == maNumItems[nNumItemIdx]->GetTextNode() )
+                SvTreeListEntry* pEntry = nullptr;
+                bool isSubstring = MatchSubstring(pIDoc->getListItemText( *maNumItems[nNumItemIdx] ), filterString);
+                if(isSubstring)
                 {
-                    m_pSelectionToolTipLB->Select( pEntry );
-                    sOldSel.clear();
-                    bCertainTextNodeSelected = true;
-                }
-                else if ( !bCertainTextNodeSelected && mnSavedSelectedPos == nNumItemIdx )
-                {
-                    m_pSelectionToolTipLB->Select( pEntry );
-                    sOldSel.clear();
+                    pEntry = m_pSelectionToolTipLB->InsertEntry(
+                    pIDoc->getListItemText( *maNumItems[nNumItemIdx] ) );
+                    pEntry->SetUserData( reinterpret_cast<void*>(nNumItemIdx) );
+                    if ( ( IsFieldEdit() &&
+                           pRefField->GetReferencedTextNode() == maNumItems[nNumItemIdx]->GetTextNode() ) ||
+                        mpSavedSelectedTextNode == maNumItems[nNumItemIdx]->GetTextNode() )
+                    {
+                        m_pSelectionToolTipLB->Select( pEntry );
+                        sOldSel.clear();
+                        bCertainTextNodeSelected = true;
+                    }
+                    else if ( !bCertainTextNodeSelected && mnSavedSelectedPos == nNumItemIdx )
+                    {
+                        m_pSelectionToolTipLB->Select( pEntry );
+                        sOldSel.clear();
+                    }
                 }
             }
         }
@@ -610,7 +660,11 @@ void SwFieldRefPage::UpdateSubType()
                 const size_t nCnt = pType->GetSeqFieldList( aArr );
                 for( size_t n = 0; n < nCnt; ++n )
                 {
-                    m_pSelectionLB->InsertEntry( aArr[ n ]->sDlgEntry );
+                    bool isSubstring = MatchSubstring(aArr[ n ]->sDlgEntry, filterString);
+                    if(isSubstring)
+                    {
+                        m_pSelectionLB->InsertEntry( aArr[ n ]->sDlgEntry );
+                    }
                     if (IsFieldEdit() && sOldSel.isEmpty() &&
                         aArr[ n ]->nSeqNo == pRefField->GetSeqNo())
                         sOldSel = aArr[ n ]->sDlgEntry;
@@ -626,7 +680,13 @@ void SwFieldRefPage::UpdateSubType()
         std::vector<OUString> aLst;
         GetFieldMgr().GetSubTypes(nTypeId, aLst);
         for(size_t i = 0; i < aLst.size(); ++i)
-            m_pSelectionLB->InsertEntry(aLst[i]);
+        {
+            bool isSubstring = MatchSubstring( aLst[i] , filterString );
+            if(isSubstring)
+            {
+                m_pSelectionLB->InsertEntry(aLst[i]);
+            }
+        }
 
         if (IsFieldEdit())
             sOldSel = pRefField->GetSetRefName();
@@ -672,6 +732,17 @@ void SwFieldRefPage::UpdateSubType()
     }
 }
 
+bool SwFieldRefPage::MatchSubstring( const OUString& rListString, const OUString& rSubstr )
+{
+    if(rSubstr.isEmpty())
+        return true;
+    OUString aListString = rListString.toAsciiLowerCase();
+    OUString aSubstr = rSubstr.toAsciiLowerCase();
+    if(aListString.indexOf(aSubstr) >= 0)
+        return true;
+    return false;
+}
+
 sal_Int32 SwFieldRefPage::FillFormatLB(sal_uInt16 nTypeId)
 {
     OUString sOldSel;
@@ -692,7 +763,7 @@ sal_Int32 SwFieldRefPage::FillFormatLB(sal_uInt16 nTypeId)
         case REFFLDFLAG_HEADING:
         case REFFLDFLAG_NUMITEM:
             bAddCrossRefFormats = true;
-            // intentional no break here
+            SAL_FALLTHROUGH;
 
         case TYP_GETREFFLD:
         case REFFLDFLAG_BOOKMARK:
@@ -710,7 +781,7 @@ sal_Int32 SwFieldRefPage::FillFormatLB(sal_uInt16 nTypeId)
             }
             else
             {
-                nSize = GetFieldMgr().GetFormatCount( nTypeId, false, IsFieldDlgHtmlMode() );
+                nSize = GetFieldMgr().GetFormatCount( nTypeId, IsFieldDlgHtmlMode() );
             }
             break;
     }
@@ -826,7 +897,7 @@ bool SwFieldRefPage::FillItemSet(SfxItemSet* )
         else if (REFFLDFLAG_FOOTNOTE == nTypeId)        // footnotes
         {
             SwSeqFieldList aArr;
-            _SeqFieldLstElem aElem( m_pSelectionLB->GetSelectEntry(), 0 );
+            SeqFieldLstElem aElem( m_pSelectionLB->GetSelectEntry(), 0 );
 
             size_t nPos = 0;
 
@@ -847,7 +918,7 @@ bool SwFieldRefPage::FillItemSet(SfxItemSet* )
         else if (REFFLDFLAG_ENDNOTE == nTypeId)         // endnotes
         {
             SwSeqFieldList aArr;
-            _SeqFieldLstElem aElem( m_pSelectionLB->GetSelectEntry(), 0 );
+            SeqFieldLstElem aElem( m_pSelectionLB->GetSelectEntry(), 0 );
 
             size_t nPos = 0;
 
@@ -916,7 +987,7 @@ bool SwFieldRefPage::FillItemSet(SfxItemSet* )
             if( pType )
             {
                 SwSeqFieldList aArr;
-                _SeqFieldLstElem aElem( m_pSelectionLB->GetSelectEntry(), 0 );
+                SeqFieldLstElem aElem( m_pSelectionLB->GetSelectEntry(), 0 );
 
                 size_t nPos = 0;
 
@@ -958,9 +1029,9 @@ bool SwFieldRefPage::FillItemSet(SfxItemSet* )
 }
 
 VclPtr<SfxTabPage> SwFieldRefPage::Create( vcl::Window* pParent,
-                                         const SfxItemSet* rAttrSet )
+                                         const SfxItemSet *const pAttrSet)
 {
-    return VclPtr<SwFieldRefPage>::Create( pParent, *rAttrSet );
+    return VclPtr<SwFieldRefPage>::Create( pParent, pAttrSet );
 }
 
 sal_uInt16 SwFieldRefPage::GetGroup()
@@ -975,7 +1046,11 @@ void    SwFieldRefPage::FillUserData()
         ? USHRT_MAX
         : sal::static_int_cast< sal_uInt16 >
             (reinterpret_cast< sal_uIntPtr >(m_pTypeLB->GetEntryData( nEntryPos )));
-    SetUserData( USER_DATA_VERSION ";" + OUString::number( nTypeSel ));
+    const sal_Int32 nFormatEntryPos = m_pFormatLB->GetSelectEntryPos();
+    const sal_uInt32 nFormatSel = LISTBOX_ENTRY_NOTFOUND == nFormatEntryPos ? USHRT_MAX : nFormatEntryPos;
+    SetUserData( USER_DATA_VERSION ";" +
+        OUString::number( nTypeSel ) + ";" +
+        OUString::number( nFormatSel ));
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

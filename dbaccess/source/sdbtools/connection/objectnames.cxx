@@ -22,7 +22,6 @@
 #include "module_sdbt.hxx"
 #include "sdbt_resource.hrc"
 
-#include <com/sun/star/lang/NullPointerException.hpp>
 #include <com/sun/star/sdb/CommandType.hpp>
 #include <com/sun/star/sdbcx/XTablesSupplier.hpp>
 #include <com/sun/star/sdb/XQueriesSupplier.hpp>
@@ -34,7 +33,6 @@
 #include <cppuhelper/exc_hlp.hxx>
 #include <rtl/ustrbuf.hxx>
 
-#include <boost/noncopyable.hpp>
 #include <memory>
 
 namespace sdbtools
@@ -42,18 +40,15 @@ namespace sdbtools
 
     using ::com::sun::star::uno::Reference;
     using ::com::sun::star::sdbc::XConnection;
-    using ::com::sun::star::lang::NullPointerException;
     using ::com::sun::star::lang::IllegalArgumentException;
     using ::com::sun::star::uno::RuntimeException;
     using ::com::sun::star::sdbc::SQLException;
     using ::com::sun::star::sdbc::XDatabaseMetaData;
-    using ::com::sun::star::uno::XInterface;
     using ::com::sun::star::container::XNameAccess;
     using ::com::sun::star::uno::UNO_QUERY_THROW;
     using ::com::sun::star::sdbcx::XTablesSupplier;
     using ::com::sun::star::sdb::XQueriesSupplier;
     using ::com::sun::star::uno::Exception;
-    using ::com::sun::star::uno::makeAny;
     using ::com::sun::star::uno::Any;
     using ::com::sun::star::uno::XComponentContext;
 
@@ -134,7 +129,7 @@ namespace sdbtools
 
             OUString sCatalog, sSchema, sName;
             ::dbtools::qualifiedNameComponents(
-                m_xConnection->getMetaData(), _rName, sCatalog, sSchema, sName, ::dbtools::eInTableDefinitions );
+                m_xConnection->getMetaData(), _rName, sCatalog, sSchema, sName, ::dbtools::EComposeRule::InTableDefinitions );
 
             OUString sExtraNameCharacters( m_xConnection->getMetaData()->getExtraNameCharacters() );
             if  (   ( !sCatalog.isEmpty() && !::dbtools::isValidSQLName( sCatalog, sExtraNameCharacters ) )
@@ -233,9 +228,11 @@ namespace sdbtools
     };
 
     // NameCheckFactory
-    class NameCheckFactory: private boost::noncopyable
+    class NameCheckFactory
     {
     public:
+        NameCheckFactory(const NameCheckFactory&) = delete;
+        const NameCheckFactory& operator=(const NameCheckFactory&) = delete;
         /** creates an INameValidation instance which can be used to check the existence of query or table names
 
             @param _rContext
@@ -375,21 +372,21 @@ namespace sdbtools
     {
     }
 
-    OUString SAL_CALL ObjectNames::suggestName( ::sal_Int32 _CommandType, const OUString& _BaseName ) throw (IllegalArgumentException, SQLException, RuntimeException, std::exception)
+    OUString SAL_CALL ObjectNames::suggestName( ::sal_Int32 CommandType, const OUString& BaseName ) throw (IllegalArgumentException, SQLException, RuntimeException, std::exception)
     {
         EntryGuard aGuard( *this );
 
-        PNameValidation pNameCheck( NameCheckFactory::createExistenceCheck( getContext(), _CommandType, getConnection() ) );
+        PNameValidation pNameCheck( NameCheckFactory::createExistenceCheck( getContext(), CommandType, getConnection() ) );
 
-        OUString sBaseName( _BaseName );
+        OUString sBaseName( BaseName );
         if ( sBaseName.isEmpty() )
         {
-            if ( _CommandType == CommandType::TABLE )
+            if ( CommandType == CommandType::TABLE )
                 sBaseName = OUString( SdbtRes( STR_BASENAME_TABLE ) );
             else
                 sBaseName = OUString( SdbtRes( STR_BASENAME_QUERY ) );
         }
-        else if( _CommandType == CommandType::QUERY )
+        else if( CommandType == CommandType::QUERY )
         {
             sBaseName=sBaseName.replace('/', '_');
         }
@@ -411,31 +408,31 @@ namespace sdbtools
         return ::dbtools::convertName2SQLName( Name, xMeta->getExtraNameCharacters() );
     }
 
-    sal_Bool SAL_CALL ObjectNames::isNameUsed( ::sal_Int32 _CommandType, const OUString& _Name ) throw (IllegalArgumentException, SQLException, RuntimeException, std::exception)
+    sal_Bool SAL_CALL ObjectNames::isNameUsed( ::sal_Int32 CommandType, const OUString& Name ) throw (IllegalArgumentException, SQLException, RuntimeException, std::exception)
     {
         EntryGuard aGuard( *this );
 
-        PNameValidation pNameCheck( NameCheckFactory::createExistenceCheck( getContext(), _CommandType, getConnection()) );
-        return !pNameCheck->validateName( _Name );
+        PNameValidation pNameCheck( NameCheckFactory::createExistenceCheck( getContext(), CommandType, getConnection()) );
+        return !pNameCheck->validateName( Name );
     }
 
-    sal_Bool SAL_CALL ObjectNames::isNameValid( ::sal_Int32 _CommandType, const OUString& _Name ) throw (IllegalArgumentException, RuntimeException, std::exception)
+    sal_Bool SAL_CALL ObjectNames::isNameValid( ::sal_Int32 CommandType, const OUString& Name ) throw (IllegalArgumentException, RuntimeException, std::exception)
     {
         EntryGuard aGuard( *this );
 
-        PNameValidation pNameCheck( NameCheckFactory::createValidityCheck( getContext(), _CommandType, getConnection()) );
-        return pNameCheck->validateName( _Name );
+        PNameValidation pNameCheck( NameCheckFactory::createValidityCheck( getContext(), CommandType, getConnection()) );
+        return pNameCheck->validateName( Name );
     }
 
-    void SAL_CALL ObjectNames::checkNameForCreate( ::sal_Int32 _CommandType, const OUString& _Name ) throw (SQLException, RuntimeException, std::exception)
+    void SAL_CALL ObjectNames::checkNameForCreate( ::sal_Int32 CommandType, const OUString& Name ) throw (SQLException, RuntimeException, std::exception)
     {
         EntryGuard aGuard( *this );
 
-        PNameValidation pNameCheck( NameCheckFactory::createExistenceCheck( getContext(), _CommandType, getConnection() ) );
-        pNameCheck->validateName_throw( _Name );
+        PNameValidation pNameCheck( NameCheckFactory::createExistenceCheck( getContext(), CommandType, getConnection() ) );
+        pNameCheck->validateName_throw( Name );
 
-        pNameCheck = NameCheckFactory::createValidityCheck( getContext(), _CommandType, getConnection() );
-        pNameCheck->validateName_throw( _Name );
+        pNameCheck = NameCheckFactory::createValidityCheck( getContext(), CommandType, getConnection() );
+        pNameCheck->validateName_throw( Name );
     }
 
 } // namespace sdbtools

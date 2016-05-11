@@ -36,7 +36,6 @@ namespace com { namespace sun { namespace star {
 namespace vcl { class Window; }
 
 
-
 namespace abp
 {
 
@@ -58,7 +57,7 @@ namespace abp
         void    getDataSourceNames( StringBag& _rNames ) const;
 
         /// disambiguates the given name by appending successive numbers
-        OUString& disambiguate(OUString& _rDataSourceName);
+        void disambiguate(OUString& _rDataSourceName);
 
         /// creates a new MORK data source
         ODataSource createNewMORK( const OUString& _rName );
@@ -145,7 +144,7 @@ namespace abp
         */
         bool    connect( vcl::Window* _pMessageParent );
 
-        /// returns <TRUE/> if the object has a valid connection, obtained from it's data source
+        /// returns <TRUE/> if the object has a valid connection, obtained from its data source
         bool    isConnected( ) const;
 
         /// disconnects from the data source (i.e. disposes the UNO connection hold internally)
@@ -169,7 +168,6 @@ namespace abp
 
         /// return the intern data source object
         css::uno::Reference< css::beans::XPropertySet > getDataSource() const;
-
 
 
         /** set a new data source.

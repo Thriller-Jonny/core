@@ -26,7 +26,6 @@
 #include "com/sun/star/lang/Locale.hpp"
 #include "com/sun/star/lang/XMultiServiceFactory.hpp"
 #include "com/sun/star/packages/zip/ZipFileAccess.hpp"
-#include "com/sun/star/uno/Any.hxx"
 #include "com/sun/star/uno/Exception.hpp"
 #include "com/sun/star/uno/RuntimeException.hpp"
 #include "com/sun/star/uno/Sequence.hxx"
@@ -38,12 +37,12 @@
 
 #include "tools/stream.hxx"
 #include "tools/urlobj.hxx"
-#include "vcl/bitmapex.hxx"
+#include <vcl/bitmapex.hxx>
 #include <vcl/dibtools.hxx>
 #include <vcl/implimagetree.hxx>
-#include "vcl/pngread.hxx"
-#include "vcl/settings.hxx"
-#include "vcl/svapp.hxx"
+#include <vcl/pngread.hxx>
+#include <vcl/settings.hxx>
+#include <vcl/svapp.hxx>
 #include <vcldemo-debug.hxx>
 
 #include <vcl/BitmapProcessor.hxx>
@@ -53,12 +52,12 @@ using namespace css;
 
 namespace {
 
-static OUString createPath(OUString const & name, sal_Int32 pos, OUString const & locale)
+OUString createPath(OUString const & name, sal_Int32 pos, OUString const & locale)
 {
     return name.copy(0, pos + 1) + locale + name.copy(pos);
 }
 
-static std::shared_ptr<SvStream> wrapStream(css::uno::Reference< css::io::XInputStream > const & stream)
+std::shared_ptr<SvStream> wrapStream(css::uno::Reference< css::io::XInputStream > const & stream)
 {
     // This could use SvInputStream instead if that did not have a broken
     // SeekPos implementation for an XInputStream that is not also XSeekable
@@ -79,7 +78,7 @@ static std::shared_ptr<SvStream> wrapStream(css::uno::Reference< css::io::XInput
     return s;
 }
 
-static void loadImageFromStream(std::shared_ptr<SvStream> xStream, OUString const & rPath, BitmapEx & rBitmap)
+void loadImageFromStream(std::shared_ptr<SvStream> xStream, OUString const & rPath, BitmapEx & rBitmap)
 {
     if (rPath.endsWith(".png"))
     {
@@ -188,7 +187,7 @@ OUString ImplImageTree::fallbackStyle(const OUString &style)
 }
 
 bool ImplImageTree::loadImage(OUString const & name, OUString const & style, BitmapEx & bitmap,
-    bool localized, bool loadMissing)
+    bool localized)
 {
     OUString aStyle(style);
     while (!aStyle.isEmpty())
@@ -207,12 +206,7 @@ bool ImplImageTree::loadImage(OUString const & name, OUString const & style, Bit
         aStyle = fallbackStyle(aStyle);
     }
 
-    if (!loadMissing)
-        return false;
-
-    SAL_INFO("vcl", "ImplImageTree::loadImage couldn't load \"" << name << "\", fetching default image");
-
-    return loadDefaultImage(style, bitmap);
+    return false;
 }
 
 bool ImplImageTree::loadDefaultImage(OUString const & style, BitmapEx& bitmap)

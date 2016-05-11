@@ -17,6 +17,8 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
+#include <svtools/treelistbox.hxx>
+#include <svtools/iconview.hxx>
 #include "fileview.hxx"
 #include <sal/config.h>
 #include <svtools/treelistentry.hxx>
@@ -131,7 +133,6 @@ namespace
 }
 
 
-
 void FilterMatch::createWildCardFilterList(const OUString& _rFilterList,::std::vector< WildCard >& _rFilters)
 {
     if( _rFilterList.getLength() )
@@ -177,7 +178,7 @@ private:
     bool                    mbShowHeader;
 
     void            DeleteEntries();
-    void            DoQuickSearch( const sal_Unicode& rChar );
+    void            DoQuickSearch( sal_Unicode rChar );
     bool            Kill( const OUString& rURL );
 
 protected:
@@ -199,7 +200,7 @@ public:
     void            EnableAutoResize() { mbAutoResize = true; }
     void            EnableDelete( bool bEnable ) { mbEnableDelete = bEnable; }
 
-    Reference< XCommandEnvironment >    GetCommandEnvironment() const { return mxCmdEnv; }
+    const Reference< XCommandEnvironment >& GetCommandEnvironment() const { return mxCmdEnv; }
 
     DECL_LINK_TYPED(ResetQuickSearch_Impl, Timer *, void);
 
@@ -323,13 +324,17 @@ protected:
     bool                                m_bRunningAsyncAction;
     bool                                m_bAsyncActionCancelled;
 
+    FileViewMode                        m_eViewMode;
+
 
 public:
 
     ::std::vector< SortingData_Impl* >  maContent;
     ::osl::Mutex                        maMutex;
 
+    VclPtr<SvTreeListBox>               mpCurView;
     VclPtr<ViewTabListBox_Impl>         mpView;
+    VclPtr<IconView>                    mpIconView;
     NameTranslator_Impl*    mpNameTrans;
     sal_uInt16              mnSortColumn;
     bool                    mbAscending     : 1;
@@ -379,6 +384,8 @@ public:
 
     sal_uLong               GetEntryPos( const OUString& rURL );
 
+    void                    SetViewMode( FileViewMode eMode );
+
     inline void             EnableDelete( bool bEnable );
 
     void                    Resort_Impl( sal_Int16 nColumn, bool bAscending );
@@ -393,7 +400,7 @@ public:
     void                    InitSelection();
     void                    ResetCursor();
 
-    inline void             EndEditing( bool _bCancel );
+    inline void             EndEditing();
 
     void                    onTimeout();
 
@@ -412,10 +419,10 @@ inline void SvtFileView_Impl::EnableDelete( bool bEnable )
         mbReplaceNames = false;
 }
 
-inline void SvtFileView_Impl::EndEditing( bool _bCancel )
+inline void SvtFileView_Impl::EndEditing()
 {
-    if ( mpView->IsEditingActive() )
-        mpView->EndEditing(_bCancel);
+    if ( mpCurView->IsEditingActive() )
+        mpCurView->EndEditing();
 }
 
 // functions -------------------------------------------------------------
@@ -534,7 +541,6 @@ ViewTabListBox_Impl::ViewTabListBox_Impl( vcl::Window* pParentWin,
 }
 
 
-
 ViewTabListBox_Impl::~ViewTabListBox_Impl()
 {
     disposeOnce();
@@ -549,7 +555,6 @@ void ViewTabListBox_Impl::dispose()
 }
 
 
-
 IMPL_LINK_NOARG_TYPED(ViewTabListBox_Impl, ResetQuickSearch_Impl, Timer *, void)
 {
     ::osl::MutexGuard aGuard( maMutex );
@@ -557,7 +562,6 @@ IMPL_LINK_NOARG_TYPED(ViewTabListBox_Impl, ResetQuickSearch_Impl, Timer *, void)
     maQuickSearchText.clear();
     mnSearchIndex = 0;
 }
-
 
 
 void ViewTabListBox_Impl::Resize()
@@ -584,7 +588,6 @@ void ViewTabListBox_Impl::Resize()
         mbResizeDisabled = false;
     }
 }
-
 
 
 void ViewTabListBox_Impl::KeyInput( const KeyEvent& rKEvt )
@@ -621,7 +624,6 @@ void ViewTabListBox_Impl::KeyInput( const KeyEvent& rKEvt )
         SvHeaderTabListBox::KeyInput( rKEvt );
     }
 }
-
 
 
 std::unique_ptr<PopupMenu> ViewTabListBox_Impl::CreateContextMenu()
@@ -709,7 +711,6 @@ std::unique_ptr<PopupMenu> ViewTabListBox_Impl::CreateContextMenu()
 }
 
 
-
 void ViewTabListBox_Impl::ExcecuteContextMenuAction( sal_uInt16 nSelectedPopupEntry )
 {
     switch ( nSelectedPopupEntry )
@@ -723,7 +724,6 @@ void ViewTabListBox_Impl::ExcecuteContextMenuAction( sal_uInt16 nSelectedPopupEn
             break;
     }
 }
-
 
 
 void ViewTabListBox_Impl::ClearAll()
@@ -860,7 +860,7 @@ bool ViewTabListBox_Impl::EditedEntry( SvTreeListEntry* pEntry,
 }
 
 
-void ViewTabListBox_Impl::DoQuickSearch( const sal_Unicode& rChar )
+void ViewTabListBox_Impl::DoQuickSearch( sal_Unicode rChar )
 {
     ::osl::MutexGuard aGuard( maMutex );
 
@@ -1020,6 +1020,11 @@ Size SvtFileView::GetOptimalSize() const
     return LogicToPixel(Size(208, 50), MAP_APPFONT);
 }
 
+void SvtFileView::SetViewMode( FileViewMode eMode )
+{
+    mpImp->SetViewMode( eMode );
+}
+
 OUString SvtFileView::GetURL( SvTreeListEntry* pEntry )
 {
     OUString aURL;
@@ -1029,11 +1034,10 @@ OUString SvtFileView::GetURL( SvTreeListEntry* pEntry )
 }
 
 
-
 OUString SvtFileView::GetCurrentURL() const
 {
     OUString aURL;
-    SvTreeListEntry* pEntry = mpImp->mpView->FirstSelected();
+    SvTreeListEntry* pEntry = mpImp->mpCurView->FirstSelected();
     if ( pEntry && pEntry->GetUserData() )
         aURL = static_cast<SvtContentEntry*>(pEntry->GetUserData())->maURL;
     return aURL;
@@ -1043,12 +1047,17 @@ OUString SvtFileView::GetCurrentURL() const
 void SvtFileView::CreatedFolder( const OUString& rUrl, const OUString& rNewFolder )
 {
     OUString sEntry = mpImp->FolderInserted( rUrl, rNewFolder );
+
     SvTreeListEntry* pEntry = mpImp->mpView->InsertEntry( sEntry, mpImp->maFolderImage, mpImp->maFolderImage );
     SvtContentEntry* pUserData = new SvtContentEntry( rUrl, true );
     pEntry->SetUserData( pUserData );
     mpImp->mpView->MakeVisible( pEntry );
-}
 
+    SvTreeListEntry* pEntry2 = mpImp->mpIconView->InsertEntry( sEntry.getToken( 0, '\t' ), mpImp->maFolderImage, mpImp->maFolderImage );
+    SvtContentEntry* pUserData2 = new SvtContentEntry( rUrl, true );
+    pEntry2->SetUserData( pUserData2 );
+    mpImp->mpIconView->MakeVisible( pEntry2 );
+}
 
 
 FileViewResult SvtFileView::PreviousLevel( const FileViewAsyncAction* pAsyncDescriptor )
@@ -1061,7 +1070,6 @@ FileViewResult SvtFileView::PreviousLevel( const FileViewAsyncAction* pAsyncDesc
 
     return eResult;
 }
-
 
 
 bool SvtFileView::GetParentURL( OUString& rParentURL ) const
@@ -1091,12 +1099,10 @@ bool SvtFileView::GetParentURL( OUString& rParentURL ) const
 }
 
 
-
 const OString& SvtFileView::GetHelpId( ) const
 {
     return mpImp->mpView->GetHelpId( );
 }
-
 
 
 void SvtFileView::SetHelpId( const OString& rHelpId )
@@ -1105,13 +1111,12 @@ void SvtFileView::SetHelpId( const OString& rHelpId )
 }
 
 
-
 void SvtFileView::SetSizePixel( const Size& rNewSize )
 {
     Control::SetSizePixel( rNewSize );
     mpImp->mpView->SetSizePixel( rNewSize );
+    mpImp->mpIconView->SetSizePixel( rNewSize );
 }
-
 
 
 void SvtFileView::SetPosSizePixel( const Point& rNewPos, const Size& rNewSize )
@@ -1165,6 +1170,7 @@ FileViewResult SvtFileView::Initialize(
 
     case eStillRunning:
         OSL_ENSURE( pAsyncDescriptor, "SvtFileView::Initialize: we told it to read synchronously!" );
+        SAL_FALLTHROUGH;
     case eSuccess:
         return eResult;
     }
@@ -1190,18 +1196,16 @@ void SvtFileView::CancelRunningAsyncAction()
 
 void SvtFileView::SetNoSelection()
 {
-    mpImp->mpView->SelectAll( false );
+    mpImp->mpCurView->SelectAll( false );
 }
-
 
 
 void SvtFileView::GetFocus()
 {
     Control::GetFocus();
-    if ( mpImp && mpImp->mpView )
-        mpImp->mpView->GrabFocus();
+    if ( mpImp && mpImp->mpCurView )
+        mpImp->mpCurView->GrabFocus();
 }
-
 
 
 void SvtFileView::SetSelectHdl( const Link<SvTreeListBox*,void>& rHdl )
@@ -1210,31 +1214,28 @@ void SvtFileView::SetSelectHdl( const Link<SvTreeListBox*,void>& rHdl )
 }
 
 
-
 void SvtFileView::SetDoubleClickHdl( const Link<SvTreeListBox*,bool>& rHdl )
 {
     mpImp->mpView->SetDoubleClickHdl( rHdl );
+    mpImp->mpIconView->SetDoubleClickHdl( rHdl );
 }
-
 
 
 sal_uLong SvtFileView::GetSelectionCount() const
 {
-    return mpImp->mpView->GetSelectionCount();
+    return mpImp->mpCurView->GetSelectionCount();
 }
-
 
 
 SvTreeListEntry* SvtFileView::FirstSelected() const
 {
-    return mpImp->mpView->FirstSelected();
+    return mpImp->mpCurView->FirstSelected();
 }
-
 
 
 SvTreeListEntry* SvtFileView::NextSelected( SvTreeListEntry* pEntry ) const
 {
-    return mpImp->mpView->NextSelected( pEntry );
+    return mpImp->mpCurView->NextSelected( pEntry );
 }
 
 void SvtFileView::EnableAutoResize()
@@ -1257,9 +1258,9 @@ void SvtFileView::EnableDelete( bool bEnable )
     mpImp->EnableDelete( bEnable );
 }
 
-void SvtFileView::EndInplaceEditing( bool _bCancel )
+void SvtFileView::EndInplaceEditing()
 {
-    return mpImp->EndEditing( _bCancel );
+    return mpImp->EndEditing();
 }
 
 IMPL_LINK_TYPED( SvtFileView, HeaderSelect_Impl, HeaderBar*, pBar, void )
@@ -1464,6 +1465,7 @@ SvtFileView_Impl::SvtFileView_Impl( SvtFileView* pAntiImpl, Reference < XCommand
     ,m_eAsyncActionResult       ( ::svt::ERROR )
     ,m_bRunningAsyncAction      ( false )
     ,m_bAsyncActionCancelled    ( false )
+    ,m_eViewMode                ( eDetailedList )
     ,mpNameTrans                ( nullptr )
     ,mnSortColumn               ( COLUMN_TITLE )
     ,mbAscending                ( true )
@@ -1478,6 +1480,9 @@ SvtFileView_Impl::SvtFileView_Impl( SvtFileView* pAntiImpl, Reference < XCommand
 {
     maAllFilter = "*.*";
     mpView = VclPtr<ViewTabListBox_Impl>::Create( mpAntiImpl, this, nFlags );
+    mpCurView = mpView;
+    mpIconView = VclPtr<IconView>::Create( mpAntiImpl, WB_TABSTOP );
+    mpIconView->Hide();
     mpView->EnableCellFocus();
 }
 
@@ -1486,6 +1491,9 @@ SvtFileView_Impl::~SvtFileView_Impl()
 {
     Clear();
     mpView.disposeAndClear();
+    mpCurView.clear();
+    mpIconView.disposeAndClear();
+    mpAntiImpl.clear();
 }
 
 
@@ -1604,6 +1612,7 @@ FileViewResult SvtFileView_Impl::GetFolderContent_Impl(
         m_aCurrentAsyncActionHandler = pAsyncDescriptor->aFinishHandler;
         DBG_ASSERT( m_aCurrentAsyncActionHandler.IsSet(), "SvtFileView_Impl::GetFolderContent_Impl: nobody interested when it's finished?" );
         mpView->ClearAll();
+        mpIconView->ClearAll();
         return eStillRunning;
     }
 
@@ -1729,15 +1738,16 @@ void SvtFileView_Impl::SetSelectHandler( const Link<SvTreeListBox*,void>& _rHdl 
         aMasterHandler = LINK( this, SvtFileView_Impl, SelectionMultiplexer );
 
     mpView->SetSelectHdl( aMasterHandler );
+    mpIconView->SetSelectHdl( aMasterHandler );
 }
 
 
 void SvtFileView_Impl::InitSelection()
 {
-    mpView->SelectAll( false );
-    SvTreeListEntry* pFirst = mpView->First();
+    mpCurView->SelectAll( false );
+    SvTreeListEntry* pFirst = mpCurView->First();
     if ( pFirst )
-        mpView->SetCursor( pFirst, true );
+        mpCurView->SetCursor( pFirst, true );
 }
 
 
@@ -1746,7 +1756,9 @@ void SvtFileView_Impl::OpenFolder_Impl()
     ::osl::MutexGuard aGuard( maMutex );
 
     mpView->SetUpdateMode( false );
+    mpIconView->SetUpdateMode( false );
     mpView->ClearAll();
+    mpIconView->ClearAll();
 
     std::vector< SortingData_Impl* >::iterator aIt;
 
@@ -1760,15 +1772,23 @@ void SvtFileView_Impl::OpenFolder_Impl()
                                                    (*aIt)->maImage,
                                                    (*aIt)->maImage );
 
+        SvTreeListEntry* pEntry2 = mpIconView->InsertEntry( (*aIt)->maDisplayText.getToken( 0, '\t' ),
+                                                   (*aIt)->maImage, (*aIt)->maImage );
+
         SvtContentEntry* pUserData = new SvtContentEntry( (*aIt)->maTargetURL,
                                                           (*aIt)->mbIsFolder );
+        SvtContentEntry* pUserData2 = new SvtContentEntry( (*aIt)->maTargetURL,
+                                                          (*aIt)->mbIsFolder );
+
         pEntry->SetUserData( pUserData );
+        pEntry2->SetUserData( pUserData2 );
     }
 
     InitSelection();
 
     ++mnSuspendSelectCallback;
     mpView->SetUpdateMode( true );
+    mpIconView->SetUpdateMode( true );
     --mnSuspendSelectCallback;
 
     ResetCursor();
@@ -1778,12 +1798,12 @@ void SvtFileView_Impl::OpenFolder_Impl()
 void SvtFileView_Impl::ResetCursor()
 {
     // deselect
-    SvTreeListEntry* pEntry = mpView->FirstSelected();
+    SvTreeListEntry* pEntry = mpCurView->FirstSelected();
     if ( pEntry )
-        mpView->Select( pEntry, false );
+        mpCurView->Select( pEntry, false );
     // set cursor to the first entry
-    mpView->SetCursor( mpView->First(), true );
-    mpView->Update();
+    mpCurView->SetCursor( mpCurView->First(), true );
+    mpCurView->Update();
 }
 
 
@@ -1922,6 +1942,7 @@ void SvtFileView_Impl::CreateDisplayText_Impl()
 
 void SvtFileView_Impl::Resort_Impl( sal_Int16 nColumn, bool bAscending )
 {
+    // TODO: IconView ()
     ::osl::MutexGuard aGuard( maMutex );
 
     if ( ( nColumn == mnSortColumn ) &&
@@ -2164,6 +2185,34 @@ sal_uLong SvtFileView_Impl::GetEntryPos( const OUString& rURL )
     }
 
     return nPos;
+}
+
+
+void SvtFileView_Impl::SetViewMode( FileViewMode eMode )
+{
+    m_eViewMode = eMode;
+    switch ( eMode )
+    {
+        case eDetailedList:
+            mpCurView = mpView;
+            mpView->Show();
+            mpView->GetHeaderBar()->Show();
+            mpIconView->Hide();
+            break;
+
+        case eIcon:
+            mpCurView = mpIconView;
+            mpView->Hide();
+            mpView->GetHeaderBar()->Hide();
+            mpIconView->Show();
+            break;
+
+        default:
+            mpCurView = mpView;
+            mpView->Show();
+            mpView->GetHeaderBar()->Show();
+            mpIconView->Hide();
+    };
 }
 
 

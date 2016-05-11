@@ -116,7 +116,7 @@ SwASCIIParser::SwASCIIParser(SwDoc* pD, const SwPaM& rCursor, SvStream& rIn,
         vcl::Font aTextFont( rOpt.GetFontName(), Size( 0, 10 ) );
         if( pDoc->getIDocumentDeviceAccess().getPrinter( false ) )
             aTextFont = pDoc->getIDocumentDeviceAccess().getPrinter( false )->GetFontMetric( aTextFont );
-        SvxFontItem aFont( aTextFont.GetFamily(), aTextFont.GetName(),
+        SvxFontItem aFont( aTextFont.GetFamilyType(), aTextFont.GetFamilyName(),
                            OUString(), aTextFont.GetPitch(), aTextFont.GetCharSet(), RES_CHRATR_FONT );
         pItemSet->Put( aFont );
         pItemSet->Put( aFont, RES_CHRATR_CJK_FONT );
@@ -234,7 +234,8 @@ sal_uLong SwASCIIParser::CallParser()
                 pDoc->getIDocumentContentOperations().InsertItemSet( *pInsPam, *pItemSet );
             }
         }
-        delete pItemSet, pItemSet = nullptr;
+        delete pItemSet;
+        pItemSet = nullptr;
     }
 
     delete pInsPam;

@@ -137,7 +137,7 @@ using namespace ::com::sun::star::document;
 namespace
 {
     // lp#527938, debian#602953, fdo#33266, i#105408
-    static bool lcl_isBaseAvailable()
+    bool lcl_isBaseAvailable()
     {
         try
         {
@@ -153,7 +153,7 @@ namespace
             return false;
         }
     }
-    static void lcl_tryLoadBibliography()
+    void lcl_tryLoadBibliography()
     {
         // lp#527938, debian#602953, fdo#33266, i#105408
         // make sure we actually can instanciate services from base first
@@ -185,7 +185,8 @@ namespace
             SfxStringItem aURL(SID_FILE_NAME, OUString(".component:Bibliography/View1"));
             SfxStringItem aRef(SID_REFERER, OUString("private:user"));
             SfxStringItem aTarget(SID_TARGETNAME, OUString("_blank"));
-            SfxViewFrame::Current()->GetDispatcher()->Execute( SID_OPENDOC, SfxCallMode::ASYNCHRON, &aURL, &aRef, &aTarget, 0L);
+            SfxViewFrame::Current()->GetDispatcher()->ExecuteList(SID_OPENDOC,
+                SfxCallMode::ASYNCHRON, { &aURL, &aRef, &aTarget });
         }
         catch (const Exception & e)
         {
@@ -222,8 +223,8 @@ static void showDocument( const char* pBaseName )
     try {
         Reference < XDesktop2 > xDesktop = Desktop::create( ::comphelper::getProcessComponentContext() );
         auto args(::comphelper::InitPropertySequence({
-            {"ViewOnly",    makeAny(sal_True)},
-            {"ReadOnly",    makeAny(sal_True)}
+            {"ViewOnly",    makeAny(true)},
+            {"ReadOnly",    makeAny(true)}
         }));
 
         OUString aURL;
@@ -299,14 +300,15 @@ void SfxApplication::MiscExec_Impl( SfxRequest& rReq )
 
                 SfxStringItem aNameItem( SID_FILE_NAME, OUString("vnd.sun.star.cmd:logout") );
                 SfxStringItem aReferer( SID_REFERER, "private/user" );
-                pAppData_Impl->pAppDispat->Execute( SID_OPENDOC, SfxCallMode::SLOT, &aNameItem, &aReferer, 0L );
+                pAppData_Impl->pAppDispat->ExecuteList(SID_OPENDOC,
+                        SfxCallMode::SLOT, { &aNameItem, &aReferer });
                 return;
             }
 
             // aus verschachtelten Requests nach 100ms nochmal probieren
             if( Application::GetDispatchLevel() > 1 )
             {
-                /* Dont save the request for closing the application and try it later
+                /* Don't save the request for closing the application and try it later
                    again. This is an UI bound functionality ... and the user will  try it again
                    if the dialog is closed. But we should not close the application automatically
                    if this dialog is closed by the user ...
@@ -397,7 +399,7 @@ void SfxApplication::MiscExec_Impl( SfxRequest& rReq )
                 aAny >>= xTask;
                 try
                 {
-                    xTask->close(sal_True);
+                    xTask->close(true);
                     n++;
                 }
                 catch( CloseVetoException& )
@@ -625,7 +627,7 @@ void SfxApplication::MiscExec_Impl( SfxRequest& rReq )
                     break;
             }
 
-            pCurrentShell->GetDispatcher()->Execute(SID_ATTR_ZOOM, SfxCallMode::ASYNCHRON, &aZoom, 0L);
+            pCurrentShell->GetDispatcher()->ExecuteList(SID_ATTR_ZOOM, SfxCallMode::ASYNCHRON, { &aZoom });
 
             break;
         }
@@ -687,7 +689,6 @@ void SfxApplication::MiscExec_Impl( SfxRequest& rReq )
     if ( bDone )
         rReq.Done();
 }
-
 
 
 void SfxApplication::MiscState_Impl(SfxItemSet &rSet)
@@ -841,7 +842,7 @@ extern "C" rtl_uString* basicide_choose_macro(void*, sal_Bool, rtl_uString*);
 
 #endif
 
-OUString ChooseMacro( const Reference< XModel >& rxLimitToDocument, bool bChooseOnly, const OUString& rMacroDesc = OUString() )
+OUString ChooseMacro( const Reference< XModel >& rxLimitToDocument, bool bChooseOnly )
 {
 #ifndef DISABLE_DYNLOADING
     osl::Module aMod;
@@ -860,6 +861,7 @@ OUString ChooseMacro( const Reference< XModel >& rxLimitToDocument, bool bChoose
 #endif
 
     // call basicide_choose_macro in basctl
+    OUString rMacroDesc;
     rtl_uString* pScriptURL = pSymbol( rxLimitToDocument.get(), bChooseOnly, rMacroDesc.pData );
     OUString aScriptURL( pScriptURL );
     rtl_uString_release( pScriptURL );
@@ -896,7 +898,7 @@ namespace
         return _pFallback;
     }
 
-    static OUString lcl_getBasicIDEServiceName()
+    OUString lcl_getBasicIDEServiceName()
     {
         return OUString( "com.sun.star.script.BasicIDE");
     }
@@ -973,7 +975,7 @@ void SfxApplication::OfaExec_Impl( SfxRequest& rReq )
             if ( pFact )
             {
                 VclAbstractDialog* pDlg =
-                    pFact->CreateFrameDialog( nullptr, xFrame, rReq.GetSlot(), sPageURL );
+                    pFact->CreateFrameDialog( xFrame, rReq.GetSlot(), sPageURL );
                 short nRet = pDlg->Execute();
                 delete pDlg;
                 SfxViewFrame* pView = SfxViewFrame::GetFirst();
@@ -1151,7 +1153,7 @@ void SfxApplication::OfaExec_Impl( SfxRequest& rReq )
             do  // artificial loop for flow control
             {
                 std::unique_ptr<AbstractScriptSelectorDialog> pDlg(pFact->CreateScriptSelectorDialog(
-                    lcl_getDialogParent( xFrame, GetTopWindow() ), false, xFrame ));
+                    lcl_getDialogParent( xFrame, GetTopWindow() ), xFrame ));
                 OSL_ENSURE( pDlg, "SfxApplication::OfaExec_Impl( SID_RUNMACRO ): no dialog!" );
                 if ( !pDlg )
                     break;

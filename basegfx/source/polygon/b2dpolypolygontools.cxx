@@ -35,13 +35,13 @@ namespace basegfx
             B2DPolyPolygon aRetval(rCandidate);
             const sal_uInt32 nCount(aRetval.count());
 
-            for(sal_uInt32 a(0L); a < nCount; a++)
+            for(sal_uInt32 a(0); a < nCount; a++)
             {
                 const B2DPolygon aCandidate(rCandidate.getB2DPolygon(a));
                 const B2VectorOrientation aOrientation(tools::getOrientation(aCandidate));
-                sal_uInt32 nDepth(0L);
+                sal_uInt32 nDepth(0);
 
-                for(sal_uInt32 b(0L); b < nCount; b++)
+                for(sal_uInt32 b(0); b < nCount; b++)
                 {
                     if(b != a)
                     {
@@ -74,12 +74,12 @@ namespace basegfx
 
             if(nCount > 1L)
             {
-                for(sal_uInt32 a(0L); a < nCount; a++)
+                for(sal_uInt32 a(0); a < nCount; a++)
                 {
                     const B2DPolygon aCandidate(rCandidate.getB2DPolygon(a));
-                    sal_uInt32 nDepth(0L);
+                    sal_uInt32 nDepth(0);
 
-                    for(sal_uInt32 b(0L); b < nCount; b++)
+                    for(sal_uInt32 b(0); b < nCount; b++)
                     {
                         if(b != a)
                         {
@@ -96,11 +96,11 @@ namespace basegfx
                     {
                         B2DPolyPolygon aRetval(rCandidate);
 
-                        if(a != 0L)
+                        if(a != 0)
                         {
-                            // exchange polygon a and polygon 0L
-                            aRetval.setB2DPolygon(0L, aCandidate);
-                            aRetval.setB2DPolygon(a, rCandidate.getB2DPolygon(0L));
+                            // exchange polygon a and polygon 0
+                            aRetval.setB2DPolygon(0, aCandidate);
+                            aRetval.setB2DPolygon(a, rCandidate.getB2DPolygon(0));
                         }
 
                         // exit
@@ -119,7 +119,7 @@ namespace basegfx
                 const sal_uInt32 nPolygonCount(rCandidate.count());
                 B2DPolyPolygon aRetval;
 
-                for(sal_uInt32 a(0L); a < nPolygonCount; a++)
+                for(sal_uInt32 a(0); a < nPolygonCount; a++)
                 {
                     const B2DPolygon aCandidate(rCandidate.getB2DPolygon(a));
 
@@ -148,7 +148,7 @@ namespace basegfx
                 const sal_uInt32 nPolygonCount(rCandidate.count());
                 B2DPolyPolygon aRetval;
 
-                for(sal_uInt32 a(0L); a < nPolygonCount; a++)
+                for(sal_uInt32 a(0); a < nPolygonCount; a++)
                 {
                     const B2DPolygon aCandidate(rCandidate.getB2DPolygon(a));
 
@@ -170,48 +170,19 @@ namespace basegfx
             }
         }
 
-        B2DPolyPolygon adaptiveSubdivideByCount(const B2DPolyPolygon& rCandidate, sal_uInt32 nCount)
-        {
-            if(rCandidate.areControlPointsUsed())
-            {
-                const sal_uInt32 nPolygonCount(rCandidate.count());
-                B2DPolyPolygon aRetval;
-
-                for(sal_uInt32 a(0L); a < nPolygonCount; a++)
-                {
-                    const B2DPolygon aCandidate(rCandidate.getB2DPolygon(a));
-
-                    if(aCandidate.areControlPointsUsed())
-                    {
-                        aRetval.append(tools::adaptiveSubdivideByCount(aCandidate, nCount));
-                    }
-                    else
-                    {
-                        aRetval.append(aCandidate);
-                    }
-                }
-
-                return aRetval;
-            }
-            else
-            {
-                return rCandidate;
-            }
-        }
-
         bool isInside(const B2DPolyPolygon& rCandidate, const B2DPoint& rPoint, bool bWithBorder)
         {
             const sal_uInt32 nPolygonCount(rCandidate.count());
 
             if(1L == nPolygonCount)
             {
-                return isInside(rCandidate.getB2DPolygon(0L), rPoint, bWithBorder);
+                return isInside(rCandidate.getB2DPolygon(0), rPoint, bWithBorder);
             }
             else
             {
-                sal_Int32 nInsideCount(0L);
+                sal_Int32 nInsideCount(0);
 
-                for(sal_uInt32 a(0L); a < nPolygonCount; a++)
+                for(sal_uInt32 a(0); a < nPolygonCount; a++)
                 {
                     const B2DPolygon aPolygon(rCandidate.getB2DPolygon(a));
                     const bool bInside(isInside(aPolygon, rPoint, bWithBorder));
@@ -231,7 +202,7 @@ namespace basegfx
             B2DRange aRetval;
             const sal_uInt32 nPolygonCount(rCandidate.count());
 
-            for(sal_uInt32 a(0L); a < nPolygonCount; a++)
+            for(sal_uInt32 a(0); a < nPolygonCount; a++)
             {
                 B2DPolygon aCandidate = rCandidate.getB2DPolygon(a);
                 aRetval.expand(tools::getRange(aCandidate));
@@ -245,7 +216,7 @@ namespace basegfx
             double fRetval(0.0);
             const sal_uInt32 nPolygonCount(rCandidate.count());
 
-            for(sal_uInt32 a(0L); a < nPolygonCount; a++)
+            for(sal_uInt32 a(0); a < nPolygonCount; a++)
             {
                 const B2DPolygon aCandidate(rCandidate.getB2DPolygon(a));
 
@@ -262,7 +233,7 @@ namespace basegfx
 
         void applyLineDashing(const B2DPolyPolygon& rCandidate, const ::std::vector<double>& rDotDashArray, B2DPolyPolygon* pLineTarget, B2DPolyPolygon* pGapTarget, double fFullDashDotLen)
         {
-            if(0.0 == fFullDashDotLen && rDotDashArray.size())
+            if(rtl::math::approxEqual(0.0, fFullDashDotLen) && rDotDashArray.size())
             {
                 // calculate fFullDashDotLen from rDotDashArray
                 fFullDashDotLen = ::std::accumulate(rDotDashArray.begin(), rDotDashArray.end(), 0.0);
@@ -272,7 +243,7 @@ namespace basegfx
             {
                 B2DPolyPolygon aLineTarget, aGapTarget;
 
-                for(sal_uInt32 a(0L); a < rCandidate.count(); a++)
+                for(sal_uInt32 a(0); a < rCandidate.count(); a++)
                 {
                     const B2DPolygon aCandidate(rCandidate.getB2DPolygon(a));
 
@@ -300,7 +271,7 @@ namespace basegfx
         {
             const sal_uInt32 nPolygonCount(rCandidate.count());
 
-            for(sal_uInt32 a(0L); a < nPolygonCount; a++)
+            for(sal_uInt32 a(0); a < nPolygonCount; a++)
             {
                 B2DPolygon aCandidate(rCandidate.getB2DPolygon(a));
 
@@ -318,7 +289,7 @@ namespace basegfx
             const sal_uInt32 nPolygonCount(rCandidate.count());
             B3DPolyPolygon aRetval;
 
-            for(sal_uInt32 a(0L); a < nPolygonCount; a++)
+            for(sal_uInt32 a(0); a < nPolygonCount; a++)
             {
                 B2DPolygon aCandidate(rCandidate.getB2DPolygon(a));
 
@@ -333,7 +304,7 @@ namespace basegfx
             const sal_uInt32 nPolygonCount(rCandidate.count());
             B2DPolyPolygon aRetval;
 
-            for(sal_uInt32 a(0L); a < nPolygonCount; a++)
+            for(sal_uInt32 a(0); a < nPolygonCount; a++)
             {
                 B3DPolygon aCandidate(rCandidate.getB3DPolygon(a));
 
@@ -349,7 +320,7 @@ namespace basegfx
             const double fZero(0.0);
             const sal_uInt32 nPolygonCount(rCandidate.count());
 
-            for(sal_uInt32 a(0L); a < nPolygonCount; a++)
+            for(sal_uInt32 a(0); a < nPolygonCount; a++)
             {
                 const B2DPolygon aCandidate(rCandidate.getB2DPolygon(a));
                 sal_uInt32 nNewEdgeIndex;
@@ -380,7 +351,7 @@ namespace basegfx
             const sal_uInt32 nPolygonCount(rCandidate.count());
             B2DPolyPolygon aRetval;
 
-            for(sal_uInt32 a(0L); a < nPolygonCount; a++)
+            for(sal_uInt32 a(0); a < nPolygonCount; a++)
             {
                 const B2DPolygon aCandidate(rCandidate.getB2DPolygon(a));
 
@@ -395,7 +366,7 @@ namespace basegfx
             const sal_uInt32 nPolygonCount(rCandidate.count());
             B2DPolyPolygon aRetval;
 
-            for(sal_uInt32 a(0L); a < nPolygonCount; a++)
+            for(sal_uInt32 a(0); a < nPolygonCount; a++)
             {
                 const B2DPolygon aCandidate(rCandidate.getB2DPolygon(a));
 
@@ -407,11 +378,11 @@ namespace basegfx
 
         B2DPolyPolygon growInNormalDirection(const B2DPolyPolygon& rCandidate, double fValue)
         {
-            if(0.0 != fValue)
+            if(!rtl::math::approxEqual(0.0, fValue))
             {
                 B2DPolyPolygon aRetval;
 
-                for(sal_uInt32 a(0L); a < rCandidate.count(); a++)
+                for(sal_uInt32 a(0); a < rCandidate.count(); a++)
                 {
                     aRetval.append(growInNormalDirection(rCandidate.getB2DPolygon(a), fValue));
                 }
@@ -433,7 +404,7 @@ namespace basegfx
         {
             B2DPolyPolygon aRetval;
 
-            for(sal_uInt32 a(0L); a < rCandidate.count(); a++)
+            for(sal_uInt32 a(0); a < rCandidate.count(); a++)
             {
                 aRetval.append(reSegmentPolygon(rCandidate.getB2DPolygon(a), nSegments));
             }
@@ -446,7 +417,7 @@ namespace basegfx
             OSL_ENSURE(rOld1.count() == rOld2.count(), "B2DPolyPolygon interpolate: Different geometry (!)");
             B2DPolyPolygon aRetval;
 
-            for(sal_uInt32 a(0L); a < rOld1.count(); a++)
+            for(sal_uInt32 a(0); a < rOld1.count(); a++)
             {
                 aRetval.append(interpolate(rOld1.getB2DPolygon(a), rOld2.getB2DPolygon(a), t));
             }
@@ -470,7 +441,7 @@ namespace basegfx
             {
                 B2DPolyPolygon aRetval;
 
-                for(sal_uInt32 a(0L); a < rCandidate.count(); a++)
+                for(sal_uInt32 a(0); a < rCandidate.count(); a++)
                 {
                     aRetval.append(simplifyCurveSegments(rCandidate.getB2DPolygon(a)));
                 }
@@ -487,7 +458,7 @@ namespace basegfx
         {
             B2DPolyPolygon aRetval;
 
-            for(sal_uInt32 a(0L); a < rCandidate.count(); a++)
+            for(sal_uInt32 a(0); a < rCandidate.count(); a++)
             {
                 aRetval.append(snapPointsOfHorizontalOrVerticalEdges(rCandidate.getB2DPolygon(a)));
             }
@@ -607,7 +578,7 @@ namespace basegfx
                     B2DPoint end  (corners[index2corner[j+1]],
                                    corners[index2corner[j+1]+1]);
 
-                    if( start.getX() == end.getX() )
+                    if( rtl::math::approxEqual(start.getX(), end.getX()) )
                     {
                         start.setY(start.getY()+fSegmentEndChopVert);
                         end.setY(end.getY()-fSegmentEndChopVert);

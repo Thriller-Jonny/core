@@ -56,8 +56,6 @@ using namespace ::com::sun::star::frame;
 using namespace ::com::sun::star::ui;
 using namespace framework;
 
-#undef WINDOWSTATE_MASK_POS
-
 namespace {
 
 // Zero based indexes, order must be the same as WindowStateMask && CONFIGURATION_PROPERTIES!
@@ -213,13 +211,12 @@ class ConfigurationAccess_WindowState : public  ::cppu::WeakImplHelper< XNameCon
         Any                       impl_getSequenceFromStruct( const WindowStateInfo& rWinStateInfo );
         void                      impl_fillStructFromSequence( WindowStateInfo& rWinStateInfo, const Sequence< PropertyValue >& rSeq );
         Any                       impl_getWindowStateFromResourceURL( const OUString& rResourceURL );
-        bool                      impl_initializeConfigAccess();
+        void                      impl_initializeConfigAccess();
 
     private:
         typedef std::unordered_map< OUString,
                                     WindowStateInfo,
-                                    OUStringHash,
-                                    std::equal_to< OUString > > ResourceURLToInfoCache;
+                                    OUStringHash > ResourceURLToInfoCache;
 
         osl::Mutex                        m_aMutex;
         OUString                          m_aConfigWindowAccess;
@@ -306,14 +303,14 @@ throw (css::uno::RuntimeException, std::exception)
 
     ResourceURLToInfoCache::const_iterator pIter = m_aResourceURLToInfoCache.find( rResourceURL );
     if ( pIter != m_aResourceURLToInfoCache.end() )
-        return sal_True;
+        return true;
     else
     {
         Any a( impl_getWindowStateFromResourceURL( rResourceURL ) );
         if ( a == Any() )
-            return sal_False;
+            return false;
         else
-            return sal_True;
+            return true;
     }
 }
 
@@ -339,7 +336,7 @@ throw ( RuntimeException, std::exception )
     if ( m_xConfigAccess.is() )
         return m_xConfigAccess->hasElements();
     else
-        return sal_False;
+        return false;
 }
 
 // XNameContainer
@@ -546,58 +543,58 @@ Any ConfigurationAccess_WindowState::impl_getSequenceFromStruct( const WindowSta
 {
     sal_Int32                 i( 0 );
     sal_Int32                 nCount( m_aPropArray.size() );
-    Sequence< PropertyValue > aPropSeq;
+    std::vector< PropertyValue > aPropVec;
 
     for ( i = 0; i < nCount; i++ )
     {
         if ( rWinStateInfo.nMask & ( 1 << i ))
         {
             // put value into the return sequence
-            sal_Int32 nIndex( aPropSeq.getLength());
-            aPropSeq.realloc( nIndex+1 );
-            aPropSeq[nIndex].Name = m_aPropArray[i];
+            PropertyValue pv;
+            pv.Name = m_aPropArray[i];
 
             switch ( i )
             {
                 case PROPERTY_LOCKED:
-                    aPropSeq[nIndex].Value = makeAny( rWinStateInfo.bLocked ); break;
+                    pv.Value = makeAny( rWinStateInfo.bLocked ); break;
                 case PROPERTY_DOCKED:
-                    aPropSeq[nIndex].Value = makeAny( rWinStateInfo.bDocked ); break;
+                    pv.Value = makeAny( rWinStateInfo.bDocked ); break;
                 case PROPERTY_VISIBLE:
-                    aPropSeq[nIndex].Value = makeAny( rWinStateInfo.bVisible ); break;
+                    pv.Value = makeAny( rWinStateInfo.bVisible ); break;
                 case PROPERTY_CONTEXT:
-                    aPropSeq[nIndex].Value = makeAny( rWinStateInfo.bContext ); break;
+                    pv.Value = makeAny( rWinStateInfo.bContext ); break;
                 case PROPERTY_HIDEFROMMENU:
-                    aPropSeq[nIndex].Value = makeAny( rWinStateInfo.bHideFromMenu ); break;
+                    pv.Value = makeAny( rWinStateInfo.bHideFromMenu ); break;
                 case PROPERTY_NOCLOSE:
-                    aPropSeq[nIndex].Value = makeAny( rWinStateInfo.bNoClose ); break;
+                    pv.Value = makeAny( rWinStateInfo.bNoClose ); break;
                 case PROPERTY_SOFTCLOSE:
-                    aPropSeq[nIndex].Value = makeAny( rWinStateInfo.bSoftClose ); break;
+                    pv.Value = makeAny( rWinStateInfo.bSoftClose ); break;
                 case PROPERTY_CONTEXTACTIVE:
-                    aPropSeq[nIndex].Value = makeAny( rWinStateInfo.bContextActive ); break;
+                    pv.Value = makeAny( rWinStateInfo.bContextActive ); break;
                 case PROPERTY_DOCKINGAREA:
-                    aPropSeq[nIndex].Value = makeAny( rWinStateInfo.aDockingArea ); break;
+                    pv.Value = makeAny( rWinStateInfo.aDockingArea ); break;
                 case PROPERTY_POS:
-                    aPropSeq[nIndex].Value = makeAny( rWinStateInfo.aPos ); break;
+                    pv.Value = makeAny( rWinStateInfo.aPos ); break;
                 case PROPERTY_SIZE:
-                    aPropSeq[nIndex].Value = makeAny( rWinStateInfo.aSize ); break;
+                    pv.Value = makeAny( rWinStateInfo.aSize ); break;
                 case PROPERTY_UINAME:
-                    aPropSeq[nIndex].Value = makeAny( rWinStateInfo.aUIName ); break;
+                    pv.Value = makeAny( rWinStateInfo.aUIName ); break;
                 case PROPERTY_INTERNALSTATE:
-                    aPropSeq[nIndex].Value = makeAny( sal_Int32( rWinStateInfo.nInternalState )); break;
+                    pv.Value = makeAny( sal_Int32( rWinStateInfo.nInternalState )); break;
                 case PROPERTY_STYLE:
-                    aPropSeq[nIndex].Value = makeAny( sal_Int16( rWinStateInfo.nStyle )); break;
+                    pv.Value = makeAny( sal_Int16( rWinStateInfo.nStyle )); break;
                 case PROPERTY_DOCKPOS:
-                    aPropSeq[nIndex].Value = makeAny( rWinStateInfo.aDockPos ); break;
+                    pv.Value = makeAny( rWinStateInfo.aDockPos ); break;
                 case PROPERTY_DOCKSIZE:
-                    aPropSeq[nIndex].Value = makeAny( rWinStateInfo.aDockSize ); break;
+                    pv.Value = makeAny( rWinStateInfo.aDockSize ); break;
                 default:
-                    DBG_ASSERT( false, "Wrong value for ConfigurationAccess_WindowState. Who has forgotten to add this new property!" );
+                    assert( false && "Wrong value for ConfigurationAccess_WindowState. Who has forgotten to add this new property!" );
             }
+            aPropVec.push_back(pv);
         }
     }
 
-    return makeAny( aPropSeq );
+    return makeAny( comphelper::containerToSequence(aPropVec) );
 }
 
 Any ConfigurationAccess_WindowState::impl_insertCacheAndReturnSequence( const OUString& rResourceURL, Reference< XNameAccess >& xNameAccess )
@@ -605,8 +602,7 @@ Any ConfigurationAccess_WindowState::impl_insertCacheAndReturnSequence( const OU
     sal_Int32                 nMask( 0 );
     sal_Int32                 nCount( m_aPropArray.size() );
     sal_Int32                 i( 0 );
-    sal_Int32                 nIndex( 0 );
-    Sequence< PropertyValue > aPropSeq;
+    std::vector< PropertyValue > aPropVec;
     WindowStateInfo           aWindowStateInfo;
 
     for ( i = 0; i < nCount; i++ )
@@ -772,16 +768,16 @@ Any ConfigurationAccess_WindowState::impl_insertCacheAndReturnSequence( const OU
                 break;
 
                 default:
-                    DBG_ASSERT( false, "Wrong value for ConfigurationAccess_WindowState. Who has forgotten to add this new property!" );
+                   assert( false && "Wrong value for ConfigurationAccess_WindowState. Who has forgotten to add this new property!" );
             }
 
             if ( bAddToSeq )
             {
                 // put value into the return sequence
-                nIndex = aPropSeq.getLength();
-                aPropSeq.realloc( nIndex+1 );
-                aPropSeq[nIndex].Name  = m_aPropArray[i];
-                aPropSeq[nIndex].Value = a;
+                PropertyValue pv;
+                pv.Name  = m_aPropArray[i];
+                pv.Value = a;
+                aPropVec.push_back(pv);
             }
         }
         catch( const css::container::NoSuchElementException& )
@@ -794,7 +790,7 @@ Any ConfigurationAccess_WindowState::impl_insertCacheAndReturnSequence( const OU
 
     aWindowStateInfo.nMask = nMask;
     m_aResourceURLToInfoCache.insert( ResourceURLToInfoCache::value_type( rResourceURL, aWindowStateInfo ));
-    return makeAny( aPropSeq );
+    return makeAny( comphelper::containerToSequence(aPropVec) );
 }
 
 ConfigurationAccess_WindowState::WindowStateInfo& ConfigurationAccess_WindowState::impl_insertCacheAndReturnWinState( const OUString& rResourceURL, Reference< XNameAccess >& rNameAccess )
@@ -844,7 +840,7 @@ ConfigurationAccess_WindowState::WindowStateInfo& ConfigurationAccess_WindowStat
                             case PROPERTY_CONTEXTACTIVE:
                                 aWindowStateInfo.bContextActive = bValue; break;
                             default:
-                                DBG_ASSERT( false, "Unknown boolean property in WindowState found!" );
+                                SAL_WARN( "fwk.uiconfiguration", "Unknown boolean property in WindowState found!" );
                         }
                     }
                 }
@@ -956,7 +952,7 @@ ConfigurationAccess_WindowState::WindowStateInfo& ConfigurationAccess_WindowStat
                 break;
 
                 default:
-                    DBG_ASSERT( false, "Wrong value for ConfigurationAccess_WindowState. Who has forgotten to add this new property!" );
+                   assert( false && "Wrong value for ConfigurationAccess_WindowState. Who has forgotten to add this new property!" );
             }
         }
         catch( const css::container::NoSuchElementException& )
@@ -1145,7 +1141,7 @@ void ConfigurationAccess_WindowState::impl_fillStructFromSequence( WindowStateIn
                     break;
 
                     default:
-                        DBG_ASSERT( false, "Wrong value for ConfigurationAccess_WindowState. Who has forgotten to add this new property!" );
+                       assert( false && "Wrong value for ConfigurationAccess_WindowState. Who has forgotten to add this new property!" );
                 }
 
                 break;
@@ -1226,7 +1222,7 @@ void ConfigurationAccess_WindowState::impl_putPropertiesFromStruct( const Window
                     case PROPERTY_STYLE:
                         xPropSet->setPropertyValue( m_aPropArray[i], makeAny( sal_Int32( rWinStateInfo.nStyle )) ); break;
                     default:
-                        DBG_ASSERT( false, "Wrong value for ConfigurationAccess_WindowState. Who has forgotten to add this new property!" );
+                       assert( false && "Wrong value for ConfigurationAccess_WindowState. Who has forgotten to add this new property!" );
                 }
             }
             catch( const Exception& )
@@ -1236,7 +1232,7 @@ void ConfigurationAccess_WindowState::impl_putPropertiesFromStruct( const Window
     }
 }
 
-bool ConfigurationAccess_WindowState::impl_initializeConfigAccess()
+void ConfigurationAccess_WindowState::impl_initializeConfigAccess()
 {
     Sequence< Any > aArgs( 2 );
     PropertyValue   aPropValue;
@@ -1247,7 +1243,7 @@ bool ConfigurationAccess_WindowState::impl_initializeConfigAccess()
         aPropValue.Value <<= m_aConfigWindowAccess;
         aArgs[0] <<= aPropValue;
         aPropValue.Name = "lazywrite";
-        aPropValue.Value <<= sal_True;
+        aPropValue.Value <<= true;
         aArgs[1] <<= aPropValue;
 
         m_xConfigAccess.set( m_xConfigProvider->createInstanceWithArguments(
@@ -1262,8 +1258,6 @@ bool ConfigurationAccess_WindowState::impl_initializeConfigAccess()
                 xContainer->addContainerListener(m_xConfigListener);
             }
         }
-
-        return true;
     }
     catch ( const WrappedTargetException& )
     {
@@ -1271,8 +1265,6 @@ bool ConfigurationAccess_WindowState::impl_initializeConfigAccess()
     catch ( const Exception& )
     {
     }
-
-    return false;
 }
 
 typedef ::cppu::WeakComponentImplHelper< css::container::XNameAccess,
@@ -1322,13 +1314,11 @@ public:
 
     typedef std::unordered_map< OUString,
                                 OUString,
-                                OUStringHash,
-                                std::equal_to< OUString > > ModuleToWindowStateFileMap;
+                                OUStringHash > ModuleToWindowStateFileMap;
 
     typedef std::unordered_map< OUString,
                                 css::uno::Reference< css::container::XNameAccess >,
-                                OUStringHash,
-                                std::equal_to< OUString > > ModuleToWindowStateConfigHashMap;
+                                OUStringHash > ModuleToWindowStateConfigHashMap;
 
 private:
     css::uno::Reference< css::uno::XComponentContext>         m_xContext;
@@ -1450,7 +1440,7 @@ sal_Bool SAL_CALL WindowStateConfiguration::hasElements()
 throw (css::uno::RuntimeException, std::exception)
 {
     // We always have at least one module. So it is valid to return true!
-    return sal_True;
+    return true;
 }
 
 struct Instance {

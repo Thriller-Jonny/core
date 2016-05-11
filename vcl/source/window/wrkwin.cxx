@@ -155,12 +155,12 @@ void WorkWindow::ShowFullScreenMode( bool bFullScreenMode, sal_Int32 nDisplayScr
     }
 }
 
-void WorkWindow::StartPresentationMode( bool bPresentation, PresentationFlags nFlags )
+void WorkWindow::StartPresentationMode( PresentationFlags nFlags )
 {
-    return StartPresentationMode( bPresentation, nFlags, GetScreenNumber());
+    return StartPresentationMode( false/*bPresentation*/, nFlags, GetScreenNumber());
 }
 
-void WorkWindow::StartPresentationMode( bool bPresentation, PresentationFlags nFlags, sal_Int32 nDisplayScreen )
+void WorkWindow::StartPresentationMode( bool bPresentation, PresentationFlags nFlags, sal_uInt32 nDisplayScreen )
 {
     if ( !bPresentation == !mbPresentationMode )
         return;
@@ -208,8 +208,10 @@ bool WorkWindow::IsMinimized() const
 {
     //return mpWindowImpl->mpFrameData->mbMinimized;
     SalFrameState aState;
-    mpWindowImpl->mpFrame->GetWindowState(&aState);
-    return (( aState.mnState & WINDOWSTATE_STATE_MINIMIZED ) != 0);
+    if (mpWindowImpl->mpFrame->GetWindowState(&aState))
+        return bool(aState.mnState & WindowStateState::Minimized);
+    else
+        return false;
 }
 
 bool WorkWindow::SetPluginParent( SystemParentData* pParent )
@@ -229,22 +231,22 @@ bool WorkWindow::SetPluginParent( SystemParentData* pParent )
     return bRet;
 }
 
-void WorkWindow::ImplSetFrameState( sal_uLong aFrameState )
+void WorkWindow::ImplSetFrameState( WindowStateState aFrameState )
 {
     SalFrameState   aState;
-    aState.mnMask   = WINDOWSTATE_MASK_STATE;
+    aState.mnMask   = WindowStateMask::State;
     aState.mnState  = aFrameState;
     mpWindowImpl->mpFrame->SetWindowState( &aState );
 }
 
 void WorkWindow::Minimize()
 {
-    ImplSetFrameState( WINDOWSTATE_STATE_MINIMIZED );
+    ImplSetFrameState( WindowStateState::Minimized );
 }
 
 void WorkWindow::Restore()
 {
-    ImplSetFrameState( WINDOWSTATE_STATE_NORMAL );
+    ImplSetFrameState( WindowStateState::Normal );
 }
 
 bool WorkWindow::Close()
@@ -260,7 +262,7 @@ bool WorkWindow::Close()
 
 void WorkWindow::Maximize( bool bMaximize )
 {
-    ImplSetFrameState( bMaximize ? WINDOWSTATE_STATE_MAXIMIZED : WINDOWSTATE_STATE_NORMAL );
+    ImplSetFrameState( bMaximize ? WindowStateState::Maximized : WindowStateState::Normal );
 }
 
 bool WorkWindow::IsMaximized() const
@@ -270,9 +272,9 @@ bool WorkWindow::IsMaximized() const
     SalFrameState aState;
     if( mpWindowImpl->mpFrame->GetWindowState( &aState ) )
     {
-        if( aState.mnState & (WINDOWSTATE_STATE_MAXIMIZED          |
-                              WINDOWSTATE_STATE_MAXIMIZED_HORZ     |
-                              WINDOWSTATE_STATE_MAXIMIZED_VERT ) )
+        if( aState.mnState & (WindowStateState::Maximized          |
+                              WindowStateState::MaximizedHorz     |
+                              WindowStateState::MaximizedVert ) )
             bRet = true;
     }
     return bRet;

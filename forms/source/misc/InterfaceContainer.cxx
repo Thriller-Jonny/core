@@ -71,7 +71,7 @@ using namespace ::com::sun::star::util;
 namespace
 {
 
-    static void lcl_throwIllegalArgumentException()
+    void lcl_throwIllegalArgumentException()
     {
         throw IllegalArgumentException();
     }
@@ -565,7 +565,7 @@ void SAL_CALL OInterfaceContainer::read( const Reference< XObjectInputStream >& 
             {
                 // Clear the map
                 while (!m_aItems.empty())
-                    removeElementsNoEvents(0);
+                    removeElementsNoEvents();
 
                 // Rethrow the exception
                 throw;
@@ -586,7 +586,7 @@ void SAL_CALL OInterfaceContainer::read( const Reference< XObjectInputStream >& 
                 }
                 catch( const Exception& )
                 {
-                    SAL_WARN("forms.misc", "OInterfaceContainerHelper::read: reading succeeded, but not inserting!" );
+                    SAL_WARN("forms.misc", "OInterfaceContainerHelper2::read: reading succeeded, but not inserting!" );
                     // create a placeholder
                     xElement.set(lcl_createPlaceHolder( m_xContext ), css::uno::UNO_QUERY);
                     if ( !xElement.is() )
@@ -890,9 +890,9 @@ void OInterfaceContainer::implInsert(sal_Int32 _nIndex, const Reference< XProper
 }
 
 
-void OInterfaceContainer::removeElementsNoEvents(sal_Int32 nIndex)
+void OInterfaceContainer::removeElementsNoEvents()
 {
-    OInterfaceArray::iterator i = m_aItems.begin() + nIndex;
+    OInterfaceArray::iterator i = m_aItems.begin();
     css::uno::Reference<css::uno::XInterface>  xElement(*i);
 
     OInterfaceMap::iterator j = m_aMap.begin();

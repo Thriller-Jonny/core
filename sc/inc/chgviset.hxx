@@ -96,13 +96,13 @@ public:
     bool                HasAuthor() const {return bIsAuthor;}
     void                SetHasAuthor(bool bFlag) {bIsAuthor=bFlag;}
 
-    OUString            GetTheAuthorToShow()const {return aAuthorToShow;}
+    const OUString&     GetTheAuthorToShow()const {return aAuthorToShow;}
     void                SetTheAuthorToShow(const OUString& aString){aAuthorToShow=aString;}
 
     bool                HasComment() const {return bIsComment;}
     void                SetHasComment(bool bFlag) {bIsComment=bFlag;}
 
-    OUString            GetTheComment()const {return aComment;}
+    const OUString&     GetTheComment()const {return aComment;}
     void                SetTheComment(const OUString& aString);
 
     bool                IsValidComment(const OUString* pCommentStr) const;
@@ -127,7 +127,7 @@ public:
     void                AdjustDateMode( const ScDocument& rDoc );
 
     bool                HasActionRange() const { return mbIsActionRange; }
-    void                SetHasActionRange( bool bFlag = true ) { mbIsActionRange = bFlag; }
+    void                SetHasActionRange() { mbIsActionRange = true; }
     void                GetTheActionRange( sal_uLong& nFirst, sal_uLong& nLast ) const { nFirst = mnFirstAction; nLast = mnLastAction; }
     void                SetTheActionRange( sal_uLong nFirst, sal_uLong nLast ) { mnFirstAction = nFirst; mnLastAction = nLast; }
 };

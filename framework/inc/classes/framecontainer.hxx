@@ -20,9 +20,8 @@
 #ifndef INCLUDED_FRAMEWORK_INC_CLASSES_FRAMECONTAINER_HXX
 #define INCLUDED_FRAMEWORK_INC_CLASSES_FRAMECONTAINER_HXX
 
-/** Attention: stl headers must(!) be included at first. Otherwise it can make trouble
-               with solaris headers ...
-*/
+#include <sal/config.h>
+
 #include <vector>
 #include <stdexcept>
 #include <algorithm>
@@ -87,7 +86,7 @@ class FrameContainer
         sal_uInt32                                getCount  (                   ) const;
         css::uno::Reference< css::frame::XFrame > operator[]( sal_uInt32 nIndex ) const;
 
-        /// replacement for deprectaed index access
+        /// replacement for deprecated index access
         css::uno::Sequence< css::uno::Reference< css::frame::XFrame > > getAllElements() const;
 
         /// special helper for Frame::findFrame()

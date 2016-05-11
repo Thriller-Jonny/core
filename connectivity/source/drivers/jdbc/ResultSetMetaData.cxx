@@ -33,9 +33,8 @@ using namespace ::com::sun::star::lang;
 
 
 jclass java_sql_ResultSetMetaData::theClass = nullptr;
-java_sql_ResultSetMetaData::java_sql_ResultSetMetaData( JNIEnv * pEnv, jobject myObj, const java::sql::ConnectionLog& _rResultSetLogger, java_sql_Connection& _rCon  )
+java_sql_ResultSetMetaData::java_sql_ResultSetMetaData( JNIEnv * pEnv, jobject myObj, java_sql_Connection& _rCon  )
     :java_lang_Object( pEnv, myObj )
-    ,m_aLogger( _rResultSetLogger )
     ,m_pConnection( &_rCon )
     ,m_nColumnCount(-1)
 {
@@ -134,7 +133,7 @@ OUString SAL_CALL java_sql_ResultSetMetaData::getColumnServiceName( sal_Int32 co
 sal_Bool SAL_CALL java_sql_ResultSetMetaData::isCurrency( sal_Int32 column ) throw(SQLException, RuntimeException, std::exception)
 {
     if ( m_pConnection->isIgnoreCurrencyEnabled() )
-        return sal_False;
+        return false;
     static jmethodID mID(nullptr);
     return callBooleanMethodWithIntArg( "isCurrency", mID,column );
 }
@@ -145,7 +144,6 @@ sal_Bool SAL_CALL java_sql_ResultSetMetaData::isAutoIncrement( sal_Int32 column 
     static jmethodID mID(nullptr);
     return callBooleanMethodWithIntArg( "isAutoIncrement", mID,column );
 }
-
 
 
 sal_Bool SAL_CALL java_sql_ResultSetMetaData::isSigned( sal_Int32 column ) throw(SQLException, RuntimeException, std::exception)

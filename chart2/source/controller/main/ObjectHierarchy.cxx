@@ -34,6 +34,7 @@
 
 #include <map>
 #include <algorithm>
+#include <iterator>
 
 #include <com/sun/star/chart2/XTitled.hpp>
 #include <com/sun/star/chart2/XCoordinateSystemContainer.hpp>
@@ -348,7 +349,7 @@ void ImplObjectHierarchy::createAxesTree(
                     ObjectIdentifier( ObjectIdentifier( ObjectIdentifier::createClassifiedIdentifierForGrid( xAxis, xChartModel ) ) ) );
             }
 
-            Sequence< Reference< beans::XPropertySet > > aSubGrids( xAxis->getSubGridProperties() );;
+            Sequence< Reference< beans::XPropertySet > > aSubGrids( xAxis->getSubGridProperties() );
             sal_Int32 nSubGrid = 0;
             for( nSubGrid = 0; nSubGrid < aSubGrids.getLength(); ++nSubGrid )
             {
@@ -472,9 +473,9 @@ void ImplObjectHierarchy::createDataSeriesTree(
                                 (xSeriesProp->getPropertyValue( CHART_UNONAME_ERRORBAR_Y) >>= xErrorBarProp) &&
                                 xErrorBarProp.is())
                             {
-                                sal_Int32 nStyle = ::com::sun::star::chart::ErrorBarStyle::NONE;
+                                sal_Int32 nStyle = css::chart::ErrorBarStyle::NONE;
                                 if( ( xErrorBarProp->getPropertyValue( "ErrorBarStyle") >>= nStyle ) &&
-                                    ( nStyle != ::com::sun::star::chart::ErrorBarStyle::NONE ) )
+                                    ( nStyle != css::chart::ErrorBarStyle::NONE ) )
                                 {
                                     aSeriesSubContainer.push_back(
                                         ObjectIdentifier( ObjectIdentifier::createClassifiedIdentifierWithParent(
@@ -486,9 +487,9 @@ void ImplObjectHierarchy::createDataSeriesTree(
                                 (xSeriesProp->getPropertyValue(CHART_UNONAME_ERRORBAR_X) >>= xErrorBarProp) &&
                                 xErrorBarProp.is())
                             {
-                                sal_Int32 nStyle = ::com::sun::star::chart::ErrorBarStyle::NONE;
+                                sal_Int32 nStyle = css::chart::ErrorBarStyle::NONE;
                                 if( ( xErrorBarProp->getPropertyValue( "ErrorBarStyle") >>= nStyle ) &&
-                                    ( nStyle != ::com::sun::star::chart::ErrorBarStyle::NONE ) )
+                                    ( nStyle != css::chart::ErrorBarStyle::NONE ) )
                                 {
                                     aSeriesSubContainer.push_back(
                                         ObjectIdentifier( ObjectIdentifier::createClassifiedIdentifierWithParent(

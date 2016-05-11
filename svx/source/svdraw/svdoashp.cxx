@@ -73,7 +73,7 @@
 #include <svx/xflgrit.hxx>
 #include <svx/xflhtit.hxx>
 #include <svx/xbtmpit.hxx>
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 #include <svx/svdview.hxx>
 #include <basegfx/polygon/b2dpolypolygontools.hxx>
 #include <basegfx/matrix/b2dhommatrix.hxx>
@@ -405,7 +405,6 @@ SdrObject* ImpCreateShadowObjectClone(const SdrObject& rOriginal, const SfxItemS
 }
 
 
-
 Reference< XCustomShapeEngine > SdrObjCustomShape::GetCustomShapeEngine() const
 {
     if (mxCustomShapeEngine.is())
@@ -602,7 +601,7 @@ basegfx::B2DPolyPolygon SdrObjCustomShape::GetLineGeometry( const bool bBezierAl
 
 std::vector< SdrCustomShapeInteraction > SdrObjCustomShape::GetInteractionHandles() const
 {
-    std::vector< SdrCustomShapeInteraction > xRet;
+    std::vector< SdrCustomShapeInteraction > aRet;
     try
     {
         Reference< XCustomShapeEngine > xCustomShapeEngine( GetCustomShapeEngine() );
@@ -677,7 +676,7 @@ std::vector< SdrCustomShapeInteraction > SdrObjCustomShape::GetInteractionHandle
                         default: break;
                     }
                     aSdrCustomShapeInteraction.nMode = nMode;
-                    xRet.push_back( aSdrCustomShapeInteraction );
+                    aRet.push_back( aSdrCustomShapeInteraction );
                 }
             }
         }
@@ -685,7 +684,7 @@ std::vector< SdrCustomShapeInteraction > SdrObjCustomShape::GetInteractionHandle
     catch( const uno::RuntimeException& )
     {
     }
-    return xRet;
+    return aRet;
 }
 
 
@@ -1410,7 +1409,6 @@ sal_uInt16 SdrObjCustomShape::GetObjIdentifier() const
 }
 
 
-
 void SdrObjCustomShape::RecalcSnapRect()
 {
     SdrTextObj::RecalcSnapRect();
@@ -1432,7 +1430,7 @@ const Rectangle& SdrObjCustomShape::GetLogicRect() const
 // state of the ResizeShapeToFitText flag to correctly set TextMinFrameWidth/Height
 void SdrObjCustomShape::AdaptTextMinSize()
 {
-    if(!pModel || !pModel->IsPasteResize())
+    if (!pModel || (!pModel->IsCreatingDataObj() && !pModel->IsPasteResize()))
     {
         const bool bResizeShapeToFitText(static_cast< const SdrOnOffItem& >(GetObjectItem(SDRATTR_TEXT_AUTOGROWHEIGHT)).GetValue());
         SfxItemSet aSet(
@@ -1559,25 +1557,22 @@ void SdrObjCustomShape::Resize( const Point& rRef, const Fraction& xFact, const 
 
 void SdrObjCustomShape::NbcResize( const Point& rRef, const Fraction& rxFact, const Fraction& ryFact )
 {
-    Fraction xFact( rxFact );
-    Fraction yFact( ryFact );
-
     // taking care of handles that should not been changed
     Rectangle aOld( maRect );
     std::vector< SdrCustomShapeInteraction > aInteractionHandles( GetInteractionHandles() );
 
-    SdrTextObj::NbcResize( rRef, xFact, yFact );
+    SdrTextObj::NbcResize( rRef, rxFact, ryFact );
 
-    if ( ( xFact.GetNumerator() != xFact.GetDenominator() )
-        || ( yFact.GetNumerator()!= yFact.GetDenominator() ) )
+    if ( ( rxFact.GetNumerator() != rxFact.GetDenominator() )
+        || ( ryFact.GetNumerator()!= ryFact.GetDenominator() ) )
     {
-        if ( ( ( xFact.GetNumerator() < 0 ) && ( xFact.GetDenominator() > 0 ) ) ||
-            ( ( xFact.GetNumerator() > 0 ) && ( xFact.GetDenominator() < 0 ) ) )
+        if ( ( ( rxFact.GetNumerator() < 0 ) && ( rxFact.GetDenominator() > 0 ) ) ||
+            ( ( rxFact.GetNumerator() > 0 ) && ( rxFact.GetDenominator() < 0 ) ) )
         {
             SetMirroredX( !IsMirroredX() );
         }
-        if ( ( ( yFact.GetNumerator() < 0 ) && ( yFact.GetDenominator() > 0 ) ) ||
-            ( ( yFact.GetNumerator() > 0 ) && ( yFact.GetDenominator() < 0 ) ) )
+        if ( ( ( ryFact.GetNumerator() < 0 ) && ( ryFact.GetDenominator() > 0 ) ) ||
+            ( ( ryFact.GetNumerator() > 0 ) && ( ryFact.GetDenominator() < 0 ) ) )
         {
             SetMirroredY( !IsMirroredY() );
         }
@@ -1728,7 +1723,6 @@ void SdrObjCustomShape::NbcShear( const Point& rRef, long nAngle, double tn, boo
 }
 
 
-
 SdrGluePoint SdrObjCustomShape::GetVertexGluePoint(sal_uInt16 nPosNum) const
 {
     sal_Int32 nWdt = ImpGetLineWdt(); // #i25616#
@@ -1754,7 +1748,6 @@ SdrGluePoint SdrObjCustomShape::GetVertexGluePoint(sal_uInt16 nPosNum) const
     aGP.SetPercent(false);
     return aGP;
 }
-
 
 
 // #i38892#
@@ -1879,7 +1872,6 @@ SdrGluePointList* SdrObjCustomShape::ForceGluePointList()
 }
 
 
-
 sal_uInt32 SdrObjCustomShape::GetHdlCount() const
 {
     const sal_uInt32 nBasicHdlCount(SdrTextObj::GetHdlCount());
@@ -1918,7 +1910,6 @@ SdrHdl* SdrObjCustomShape::GetHdl( sal_uInt32 nHdlNum ) const
     }
     return pH;
 }
-
 
 
 bool SdrObjCustomShape::hasSpecialDrag() const
@@ -2142,7 +2133,6 @@ bool SdrObjCustomShape::applySpecialDrag(SdrDragStat& rDrag)
 }
 
 
-
 void SdrObjCustomShape::DragCreateObject( SdrDragStat& rStat )
 {
     Rectangle aRect1;
@@ -2211,14 +2201,13 @@ bool SdrObjCustomShape::EndCreate( SdrDragStat& rStat, SdrCreateCmd eCmd )
     AdaptTextMinSize();
 
     SetRectsDirty();
-    return ( eCmd == SDRCREATE_FORCEEND || rStat.GetPointAnz() >= 2 );
+    return ( eCmd == SDRCREATE_FORCEEND || rStat.GetPointCount() >= 2 );
 }
 
 basegfx::B2DPolyPolygon SdrObjCustomShape::TakeCreatePoly(const SdrDragStat& /*rDrag*/) const
 {
     return GetLineGeometry( false );
 }
-
 
 
 // in context with the SdrObjCustomShape the SdrTextAutoGrowHeightItem == true -> Resize Shape to fit text,
@@ -2521,9 +2510,9 @@ bool SdrObjCustomShape::NbcAdjustTextFrameWidthAndHeight(bool bHgt, bool bWdt)
     }
     return bRet;
 }
-bool SdrObjCustomShape::AdjustTextFrameWidthAndHeight(bool bHgt, bool bWdt)
+bool SdrObjCustomShape::AdjustTextFrameWidthAndHeight()
 {
-    Rectangle aNewTextRect = ImpCalculateTextFrame( bHgt, bWdt );
+    Rectangle aNewTextRect = ImpCalculateTextFrame( true/*bHgt*/, true/*bWdt*/ );
     bool bRet = !aNewTextRect.IsEmpty() && ( aNewTextRect != maRect );
     if ( bRet )
     {

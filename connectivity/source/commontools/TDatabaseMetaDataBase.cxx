@@ -38,19 +38,19 @@ using namespace connectivity;
 
 ODatabaseMetaDataBase::ODatabaseMetaDataBase(const Reference< XConnection >& _rxConnection,const Sequence< PropertyValue >& _rInfo)
     : m_aConnectionInfo(_rInfo)
-    ,m_isCatalogAtStart(false,sal_False)
+    ,m_isCatalogAtStart(false,false)
     ,m_sCatalogSeparator(false,OUString())
     ,m_sIdentifierQuoteString(false,OUString())
-    ,m_supportsCatalogsInTableDefinitions(false,sal_False)
-    ,m_supportsSchemasInTableDefinitions(false,sal_False)
-    ,m_supportsCatalogsInDataManipulation(false,sal_False)
-    ,m_supportsSchemasInDataManipulation(false,sal_False)
-    ,m_supportsMixedCaseQuotedIdentifiers(false,sal_False)
-    ,m_supportsAlterTableWithAddColumn(false,sal_False)
-    ,m_supportsAlterTableWithDropColumn(false,sal_False)
+    ,m_supportsCatalogsInTableDefinitions(false,false)
+    ,m_supportsSchemasInTableDefinitions(false,false)
+    ,m_supportsCatalogsInDataManipulation(false,false)
+    ,m_supportsSchemasInDataManipulation(false,false)
+    ,m_supportsMixedCaseQuotedIdentifiers(false,false)
+    ,m_supportsAlterTableWithAddColumn(false,false)
+    ,m_supportsAlterTableWithDropColumn(false,false)
     ,m_MaxStatements(false,0)
     ,m_MaxTablesInSelect(false,0)
-    ,m_storesMixedCaseQuotedIdentifiers(false,sal_False)
+    ,m_storesMixedCaseQuotedIdentifiers(false,false)
     , m_xConnection(_rxConnection)
 {
     osl_atomic_increment( &m_refCount );
@@ -138,7 +138,7 @@ Reference< XResultSet > SAL_CALL ODatabaseMetaDataBase::getTypeInfo(  ) throw(SQ
                 ::connectivity::ODatabaseMetaDataResultSet::ORow aRow;
                 aRow.push_back(ODatabaseMetaDataResultSet::getEmptyValue());
                 const sal_Int32* pType = pTypes;
-                for (sal_Int32 i = 1; i <= sal_Int32(sizeof(pTypes)/sizeof(pTypes[0])); ++i,++pType)
+                for (sal_Int32 i = 1; i <= sal_Int32(SAL_N_ELEMENTS(pTypes)); ++i,++pType)
                 {
                     ORowSetValue aValue;
                     aValue.fill(i,*pType,xRow);
@@ -146,7 +146,7 @@ Reference< XResultSet > SAL_CALL ODatabaseMetaDataBase::getTypeInfo(  ) throw(SQ
                 }
 
                 ::std::vector<ExpressionNodeSharedPtr>::iterator aIter = aConditions.begin();
-                ::std::vector<ExpressionNodeSharedPtr>::iterator aEnd = aConditions.end();
+                ::std::vector<ExpressionNodeSharedPtr>::const_iterator aEnd = aConditions.end();
                 for (; aIter != aEnd; ++aIter)
                 {
                     if ( (*aIter)->evaluate(aRow)->getValue().getBool() )

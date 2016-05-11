@@ -644,11 +644,8 @@ OUString SAL_CALL ODocumentContainer::getHierarchicalName() throw (RuntimeExcept
 
 OUString SAL_CALL ODocumentContainer::composeHierarchicalName( const OUString& i_rRelativeName ) throw (IllegalArgumentException, NoSupportException, RuntimeException, std::exception)
 {
-    OUStringBuffer aBuffer;
-    aBuffer.append( getHierarchicalName() );
-    aBuffer.append( '/' );
-    aBuffer.append( i_rRelativeName );
-    return aBuffer.makeStringAndClear();
+    OUString aBuffer = getHierarchicalName() + "/" + i_rRelativeName;
+    return aBuffer;
 }
 
 ::rtl::Reference<OContentHelper> ODocumentContainer::getContent(const OUString& _sName) const
@@ -674,8 +671,8 @@ void ODocumentContainer::getPropertyDefaultByHandle( sal_Int32 /*_nHandle*/, Any
 void SAL_CALL ODocumentContainer::commit(  ) throw (css::io::IOException, css::lang::WrappedTargetException, css::uno::RuntimeException, std::exception)
 {
     MutexGuard aGuard(m_aMutex);
-    Documents::iterator aIter = m_aDocumentMap.begin();
-    Documents::iterator aEnd = m_aDocumentMap.end();
+    Documents::const_iterator aIter = m_aDocumentMap.begin();
+    Documents::const_iterator aEnd = m_aDocumentMap.end();
     for (; aIter != aEnd ; ++aIter)
     {
         Reference<XTransactedObject> xTrans(aIter->second.get(),UNO_QUERY);
@@ -690,8 +687,8 @@ void SAL_CALL ODocumentContainer::commit(  ) throw (css::io::IOException, css::l
 void SAL_CALL ODocumentContainer::revert(  ) throw (css::io::IOException, css::lang::WrappedTargetException, css::uno::RuntimeException, std::exception)
 {
     MutexGuard aGuard(m_aMutex);
-    Documents::iterator aIter = m_aDocumentMap.begin();
-    Documents::iterator aEnd = m_aDocumentMap.end();
+    Documents::const_iterator aIter = m_aDocumentMap.begin();
+    Documents::const_iterator aEnd = m_aDocumentMap.end();
     for (; aIter != aEnd ; ++aIter)
     {
         Reference<XTransactedObject> xTrans(aIter->second.get(),UNO_QUERY);
@@ -749,9 +746,9 @@ void SAL_CALL ODocumentContainer::rename( const OUString& newName ) throw (SQLEx
         Any aNew = makeAny(newName);
 
         aGuard.clear();
-        fire(&nHandle, &aNew, &aOld, 1, sal_True );
+        fire(&nHandle, &aNew, &aOld, 1, true );
         m_pImpl->m_aProps.aTitle = newName;
-        fire(&nHandle, &aNew, &aOld, 1, sal_False );
+        fire(&nHandle, &aNew, &aOld, 1, false );
     }
     catch(const PropertyVetoException&)
     {

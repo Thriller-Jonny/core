@@ -19,12 +19,10 @@
 
 #include <SpellAttrib.hxx>
 #include <vcl/font.hxx>
-#include <com/sun/star/uno/Reference.hxx>
 #include <com/sun/star/linguistic2/XSpellAlternatives.hpp>
 using namespace svx;
 using namespace com::sun::star::linguistic2;
 using namespace com::sun::star::uno;
-
 
 
 SpellErrorAttrib::SpellErrorAttrib( const SpellErrorDescription& rDesc ) :
@@ -32,7 +30,6 @@ SpellErrorAttrib::SpellErrorAttrib( const SpellErrorDescription& rDesc ) :
     m_aSpellErrorDescription( rDesc )
 {
 }
-
 
 
 SpellErrorAttrib::SpellErrorAttrib( const SpellErrorAttrib& rAttr ) :

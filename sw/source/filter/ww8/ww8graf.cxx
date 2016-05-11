@@ -246,7 +246,7 @@ static void SetFill( SfxItemSet& rSet, WW8_DP_FILL& rFill )
     else
     {
         rSet.Put(XFillStyleItem(drawing::FillStyle_SOLID));  // necessary for textbox
-        if (nPat <= 1 || ((sizeof(nPatA)/sizeof(nPatA[0])) <= nPat))
+        if (nPat <= 1 || (SAL_N_ELEMENTS(nPatA) <= nPat))
         {
             // Solid background or unknown
             rSet.Put(XFillColorItem(OUString(), WW8TransCol(rFill.dlpcBg)));
@@ -963,7 +963,7 @@ OutlinerParaObject* SwWW8ImplReader::ImportAsOutliner(OUString &rString, WW8_CP 
 
         EditTextObject* pTemporaryText = m_pDrawEditEngine->CreateTextObject();
         pRet = new OutlinerParaObject(*pTemporaryText);
-        pRet->SetOutlinerMode( OUTLINERMODE_TEXTOBJECT );
+        pRet->SetOutlinerMode( OutlinerMode::TextObject );
         delete pTemporaryText;
 
         m_pDrawEditEngine->SetText( OUString() );
@@ -985,7 +985,7 @@ OutlinerParaObject* SwWW8ImplReader::ImportAsOutliner(OUString &rString, WW8_CP 
 
 // InsertTxbxText() fuegt fuer TextBoxen und CaptionBoxen den Text
 // und die Attribute ein
-SwFrameFormat* SwWW8ImplReader::InsertTxbxText(SdrTextObj* pTextObj,
+void SwWW8ImplReader::InsertTxbxText(SdrTextObj* pTextObj,
     Size* pObjSiz, sal_uInt16 nTxBxS, sal_uInt16 nSequence, long nPosCp,
     SwFrameFormat* pOldFlyFormat, bool bMakeSdrGrafObj, bool& rbEraseTextObj,
     bool* pbTestTxbxContainsText, long* pnStartCp, long* pnEndCp,
@@ -1172,7 +1172,7 @@ SwFrameFormat* SwWW8ImplReader::InsertTxbxText(SdrTextObj* pTextObj,
         bool bVertical = pTextObj->IsVerticalWriting();
         EditTextObject* pTemporaryText = m_pDrawEditEngine->CreateTextObject();
         OutlinerParaObject* pOp = new OutlinerParaObject(*pTemporaryText);
-        pOp->SetOutlinerMode( OUTLINERMODE_TEXTOBJECT );
+        pOp->SetOutlinerMode( OutlinerMode::TextObject );
         pOp->SetVertical( bVertical );
         delete pTemporaryText;
         pTextObj->NbcSetOutlinerParaObject( pOp );
@@ -1191,7 +1191,6 @@ SwFrameFormat* SwWW8ImplReader::InsertTxbxText(SdrTextObj* pTextObj,
     m_pStrm->Seek( nOld );
     if (pbContainsGraphics)
         *pbContainsGraphics = bContainsGraphics;
-    return pFlyFormat;
 }
 
 bool SwWW8ImplReader::TxbxChainContainsRealText(sal_uInt16 nTxBxS, long& rStartCp,
@@ -2093,6 +2092,24 @@ SwWW8ImplReader::SetAttributesAtGrfNode(SvxMSDffImportRec const*const pRecord,
             }
 
             pGrfNd->SetAttr( aCrop );
+        }
+
+        bool bFlipH = pRecord->nFlags & SHAPEFLAG_FLIPH;
+        bool bFlipV = pRecord->nFlags & SHAPEFLAG_FLIPV;
+        if ( bFlipH || bFlipV )
+        {
+            SwMirrorGrf aMirror = pGrfNd->GetSwAttrSet().GetMirrorGrf();
+            if( bFlipH )
+            {
+                if( bFlipV )
+                    aMirror.SetValue(RES_MIRROR_GRAPH_BOTH);
+                else
+                    aMirror.SetValue(RES_MIRROR_GRAPH_VERT);
+            }
+            else
+                aMirror.SetValue(RES_MIRROR_GRAPH_HOR);
+
+            pGrfNd->SetAttr( aMirror );
         }
 
         if (pRecord->pObj)

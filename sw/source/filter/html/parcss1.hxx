@@ -128,8 +128,7 @@ public:
 
     ~CSS1Expression();
 
-    inline void Set( CSS1Token eTyp, const OUString &rVal, double nVal,
-                     sal_Unicode cO = 0 );
+    inline void Set( CSS1Token eTyp, const OUString &rVal, double nVal );
 
     CSS1Token GetType() const { return eType; }
     const OUString& GetString() const { return aValue; }
@@ -138,7 +137,7 @@ public:
     inline sal_Int32 GetSLength() const;
     sal_Unicode GetOp() const { return cOp; }
 
-    bool GetURL( OUString& rURL ) const;
+    void GetURL( OUString& rURL ) const;
     bool GetColor( Color &rRGB ) const;
 
     void SetNext( CSS1Expression *pNxt ) { pNext = pNxt; }
@@ -146,9 +145,9 @@ public:
 };
 
 inline void CSS1Expression::Set( CSS1Token eTyp, const OUString &rVal,
-                                 double nVal, sal_Unicode cO )
+                                 double nVal )
 {
-    cOp = cO; eType = eTyp; aValue = rVal; nValue = nVal; pNext = nullptr;
+    cOp = 0; eType = eTyp; aValue = rVal; nValue = nVal; pNext = nullptr;
 }
 
 inline sal_uInt32 CSS1Expression::GetULength() const
@@ -208,9 +207,9 @@ class CSS1Parser
 
     bool IsEOF() const { return bEOF; }
 
-    sal_uInt32 IncLineNr() { return ++nlLineNr; }
+    void IncLineNr() { ++nlLineNr; }
     sal_uInt32 IncLinePos() { return ++nlLinePos; }
-    inline sal_uInt32 SetLinePos( sal_uInt32 nlPos ); // inline declaration below
+    inline void SetLinePos( sal_uInt32 nlPos ); // inline declaration below
 
     // parse parts of the grammar
     void ParseRule();
@@ -262,11 +261,9 @@ public:
     virtual ~CSS1Parser();
 };
 
-inline sal_uInt32 CSS1Parser::SetLinePos( sal_uInt32 nlPos )
+inline void CSS1Parser::SetLinePos( sal_uInt32 nlPos )
 {
-    sal_uInt32 nlOld = nlLinePos;
     nlLinePos = nlPos;
-    return nlOld;
 }
 
 #endif

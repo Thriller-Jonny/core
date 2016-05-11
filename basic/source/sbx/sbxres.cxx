@@ -72,13 +72,9 @@ static const char* pSbxRes[] = {
     "True"
 };
 
-const char* GetSbxRes( sal_uInt16 nId )
+OUString GetSbxRes( StringId nId )
 {
-    return ( ( nId > SBXRES_MAX ) ? "???" : pSbxRes[ nId ] );
+    return OUString::createFromAscii( ( nId > StringId::LastValue ) ? "???" : pSbxRes[ static_cast<int>( nId ) ] );
 }
-
-SbxRes::SbxRes( sal_uInt16 nId )
-    : OUString( OUString::createFromAscii( GetSbxRes( nId ) ) )
-{}
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

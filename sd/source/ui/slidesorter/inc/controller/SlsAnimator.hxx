@@ -37,7 +37,6 @@ namespace sd { namespace slidesorter { namespace controller {
 /** Experimental class for simple eye candy animations.
 */
 class Animator
-    : private ::boost::noncopyable
 {
 public:
     /** In some circumstances we have to avoid animation and jump to the
@@ -46,8 +45,10 @@ public:
     */
     enum AnimationMode { AM_Animated, AM_Immediate };
 
-    Animator (SlideSorter& rSlideSorter);
+    explicit Animator (SlideSorter& rSlideSorter);
     ~Animator();
+    Animator(const Animator&) = delete;
+    Animator& operator=(const Animator&) = delete;
 
     /** When disposed the animator will stop its work immediately and not
         process any timer events anymore.
@@ -68,14 +69,11 @@ public:
         the specified duration.
         @param rAnimation
             The animation operation.
-        @param nStartOffset
-            Time in milli seconds before the animation is started.
         @param nDuration
             The duration in milli seconds.
     */
     AnimationId AddAnimation (
         const AnimationFunctor& rAnimation,
-        const sal_Int32 nStartOffset,
         const sal_Int32 nDuration,
         const FinishFunctor& rFinishFunctor = FinishFunctor());
 
@@ -120,7 +118,7 @@ private:
     */
     void CleanUpAnimationList();
 
-    void RequestNextFrame (const double nFrameStart = 0);
+    void RequestNextFrame();
 };
 
 } } } // end of namespace ::sd::slidesorter::controller

@@ -67,13 +67,13 @@ extern HTMLOptionEnum aHTMLImgVAlignTable[];
 
 // der Attribut Stack:
 
-class _HTMLAttr;
-typedef std::deque<_HTMLAttr *> _HTMLAttrs;
+class HTMLAttr;
+typedef std::deque<HTMLAttr *> HTMLAttrs;
 
-class _HTMLAttr
+class HTMLAttr
 {
     friend class SwHTMLParser;
-    friend class _CellSaveStruct;
+    friend class CellSaveStruct;
 
     SwNodeIndex nSttPara, nEndPara;
     sal_Int32 nSttContent, nEndContent;
@@ -82,24 +82,23 @@ class _HTMLAttr
     bool bValid : 1;    // ist das Attribut gueltig?
 
     SfxPoolItem* pItem;
-    sal_uInt16 nCount;      // Anzahl noch zu schliessender Attrs mit einem Wert
-    _HTMLAttr *pNext;   // noch zu schliessene Attrs mit unterschiedl. Werten
-    _HTMLAttr *pPrev;   // bereits geschlossene aber noch nicht gesetze Attrs
-    _HTMLAttr **ppHead; // der Listenkopf
+    HTMLAttr *pNext;   // noch zu schliessene Attrs mit unterschiedl. Werten
+    HTMLAttr *pPrev;   // bereits geschlossene aber noch nicht gesetze Attrs
+    HTMLAttr **ppHead; // der Listenkopf
 
-    _HTMLAttr( const SwPosition& rPos, const SfxPoolItem& rItem,
-               _HTMLAttr **pHd=nullptr );
+    HTMLAttr( const SwPosition& rPos, const SfxPoolItem& rItem,
+               HTMLAttr **pHd=nullptr );
 
-    _HTMLAttr( const _HTMLAttr &rAttr, const SwNodeIndex &rEndPara,
-               sal_Int32 nEndCnt, _HTMLAttr **pHd );
+    HTMLAttr( const HTMLAttr &rAttr, const SwNodeIndex &rEndPara,
+               sal_Int32 nEndCnt, HTMLAttr **pHd );
 
 public:
 
-    ~_HTMLAttr();
+    ~HTMLAttr();
 
-    _HTMLAttr *Clone( const SwNodeIndex& rEndPara, sal_Int32 nEndCnt ) const;
+    HTMLAttr *Clone( const SwNodeIndex& rEndPara, sal_Int32 nEndCnt ) const;
     void Reset( const SwNodeIndex& rSttPara, sal_Int32 nSttCnt,
-                _HTMLAttr **pHd );
+                HTMLAttr **pHd );
     inline void SetStart( const SwPosition& rPos );
 
     sal_uInt32 GetSttParaIdx() const { return nSttPara.GetIndex(); }
@@ -112,33 +111,33 @@ public:
     sal_Int32 GetEndCnt() const { return nEndContent; }
 
     bool IsLikePara() const { return bLikePara; }
-    void SetLikePara( bool bPara=true ) { bLikePara = bPara; }
+    void SetLikePara() { bLikePara = true; }
 
           SfxPoolItem& GetItem()        { return *pItem; }
     const SfxPoolItem& GetItem() const  { return *pItem; }
 
-    _HTMLAttr *GetNext() const { return pNext; }
-    void InsertNext( _HTMLAttr *pNxt ) { pNext = pNxt; }
+    HTMLAttr *GetNext() const { return pNext; }
+    void InsertNext( HTMLAttr *pNxt ) { pNext = pNxt; }
 
-    _HTMLAttr *GetPrev() const { return pPrev; }
-    void InsertPrev( _HTMLAttr *pPrv );
+    HTMLAttr *GetPrev() const { return pPrev; }
+    void InsertPrev( HTMLAttr *pPrv );
     void ClearPrev() { pPrev = nullptr; }
 
-    void SetHead( _HTMLAttr **ppHd ) { ppHead = ppHd; }
+    void SetHead( HTMLAttr **ppHd ) { ppHead = ppHd; }
 
     // Beim Setzen von Attributen aus Vorlagen kann es passieren,
     // dass Attribute doch nicht mehr gesetzt werden sollen. Die zu loeschen
     // waere sehr aufwendig, da man nicht so genau weiss, wo sie eingekettet
     // sind. Sie werden deshalb einfach invalidiert und erst beim naechsten
-    // _SetAttr() geloescht.
+    // SetAttr_() geloescht.
     void Invalidate() { bValid = false; }
 };
 
 // Tabelle der Attribute: Hier ist die Reihenfolge wichtig: Die Attribute
 // vorne in der Tabelle werden in EndAllAttrs auch zuerst gesetzt.
-struct _HTMLAttrTable
+struct HTMLAttrTable
 {
-    _HTMLAttr
+    HTMLAttr
                 *pKeep,         // Frame-Attribute
                 *pBox,
                 *pBrush,
@@ -185,7 +184,7 @@ struct _HTMLAttrTable
                 ;
 };
 
-class _HTMLAttrContext_SaveDoc;
+class HTMLAttrContext_SaveDoc;
 
 enum SwHTMLAppendMode {
      AM_NORMAL,         // keine Absatz-Abstand-Behandlung
@@ -195,13 +194,13 @@ enum SwHTMLAppendMode {
      AM_NONE            // gar kein Append
 };
 
-class _HTMLAttrContext
+class HTMLAttrContext
 {
-    _HTMLAttrs aAttrs;      // die in dem Kontext gestarteten Attribute
+    HTMLAttrs aAttrs;      // die in dem Kontext gestarteten Attribute
 
     OUString    aClass;          // die Klasse des Kontexts
 
-    _HTMLAttrContext_SaveDoc *pSaveDocContext;
+    HTMLAttrContext_SaveDoc *pSaveDocContext;
     SfxItemSet *pFrameItemSet;
 
     sal_uInt16  nToken;         // das Token, zu dem der Kontext gehoehrt
@@ -230,7 +229,7 @@ class _HTMLAttrContext
 public:
     void ClearSaveDocContext();
 
-    _HTMLAttrContext( sal_uInt16 nTokn, sal_uInt16 nPoolId, const OUString& rClass,
+    HTMLAttrContext( sal_uInt16 nTokn, sal_uInt16 nPoolId, const OUString& rClass,
                       bool bDfltColl=false ) :
         aClass( rClass ),
         pSaveDocContext( nullptr ),
@@ -254,7 +253,7 @@ public:
         bRestartListing( false )
     {}
 
-    explicit _HTMLAttrContext( sal_uInt16 nTokn ) :
+    explicit HTMLAttrContext( sal_uInt16 nTokn ) :
         pSaveDocContext( nullptr ),
         pFrameItemSet( nullptr ),
         nToken( nTokn ),
@@ -276,7 +275,7 @@ public:
         bRestartListing( false )
     {}
 
-    ~_HTMLAttrContext() { ClearSaveDocContext(); delete pFrameItemSet; }
+    ~HTMLAttrContext() { ClearSaveDocContext(); delete pFrameItemSet; }
 
     sal_uInt16 GetToken() const { return nToken; }
 
@@ -296,8 +295,8 @@ public:
     inline void GetULSpace( sal_uInt16& rUpper, sal_uInt16& rLower ) const;
 
     bool HasAttrs() const { return !aAttrs.empty(); }
-    const _HTMLAttrs& GetAttrs() const { return aAttrs; }
-    _HTMLAttrs& GetAttrs() { return aAttrs; }
+    const HTMLAttrs& GetAttrs() const { return aAttrs; }
+    HTMLAttrs& GetAttrs() { return aAttrs; }
 
     void SetSpansSection( bool bSet ) { bSpansSection = bSet; }
     bool GetSpansSection() const { return bSpansSection; }
@@ -306,7 +305,7 @@ public:
     bool GetPopStack() const { return bPopStack; }
 
     bool HasSaveDocContext() const { return pSaveDocContext!=nullptr; }
-    _HTMLAttrContext_SaveDoc *GetSaveDocContext( bool bCreate=false );
+    HTMLAttrContext_SaveDoc *GetSaveDocContext( bool bCreate=false );
 
     const SfxItemSet *GetFrameItemSet() const { return pFrameItemSet; }
     SfxItemSet *GetFrameItemSet( SwDoc *pCreateDoc );
@@ -327,7 +326,7 @@ public:
     SwHTMLAppendMode GetAppendMode() const { return eAppend; }
 };
 
-typedef std::vector<_HTMLAttrContext *> _HTMLAttrContexts;
+typedef std::vector<HTMLAttrContext *> HTMLAttrContexts;
 
 class HTMLTable;
 class SwCSS1Parser;
@@ -353,9 +352,9 @@ typedef ::std::vector<std::unique_ptr<ImageMap>> ImageMaps;
 
 class SwHTMLParser : public SfxHTMLParser, public SwClient
 {
-    friend class _SectionSaveStruct;
-    friend class _CellSaveStruct;
-    friend class _CaptionSaveStruct;
+    friend class SectionSaveStruct;
+    friend class CellSaveStruct;
+    friend class CaptionSaveStruct;
 
     OUString      m_aPathToFile;
     OUString      m_sBaseURL;
@@ -377,10 +376,10 @@ class SwHTMLParser : public SfxHTMLParser, public SwClient
                                 // Bit 0-2: Fontgroesse (1-7)
                                 // Bit 15: Fontfarbe wurde gesetzt
 
-    _HTMLAttrs      m_aSetAttrTab;// "geschlossene", noch nicht gesetzte Attr.
-    _HTMLAttrs      m_aParaAttrs; // vorlauefige Absatz-Attribute
-    _HTMLAttrTable  m_aAttrTab;   // "offene" Attribute
-    _HTMLAttrContexts m_aContexts;// der aktuelle Attribut/Token-Kontext
+    HTMLAttrs      m_aSetAttrTab;// "geschlossene", noch nicht gesetzte Attr.
+    HTMLAttrs      m_aParaAttrs; // vorlauefige Absatz-Attribute
+    HTMLAttrTable  m_aAttrTab;   // "offene" Attribute
+    HTMLAttrContexts m_aContexts;// der aktuelle Attribut/Token-Kontext
     std::vector<SwFrameFormat *> m_aMoveFlyFrames;// Fly-Frames, the anchor is moved
     std::deque<sal_Int32> m_aMoveFlyCnts;// and the Content-Positions
 
@@ -419,7 +418,7 @@ class SwHTMLParser : public SfxHTMLParser, public SwClient
     size_t m_nParaCnt;
     size_t m_nContextStMin;           // Untergrenze fuer PopContext
     size_t m_nContextStAttrMin;       // Untergrenze fuer Attributierung
-    sal_uInt16  m_nSelectEntryCnt;    // Anzahl der Eintraege der akt. Listbox
+    sal_uInt16  m_nSelectEntryCnt;    // Number of entries in the actual listbox
     sal_uInt16  m_nOpenParaToken;     // ein geoeffnetes Absatz-Element
 
     enum JumpToMarks { JUMPTO_NONE, JUMPTO_MARK, JUMPTO_TABLE, JUMPTO_FRAME,
@@ -489,15 +488,15 @@ class SwHTMLParser : public SfxHTMLParser, public SwClient
     DECL_LINK_TYPED( AsyncCallback, void*, void );
 
     // Attribute am Dok setzen
-    void _SetAttr( bool bChkEnd, bool bBeforeTable, _HTMLAttrs *pPostIts );
+    void SetAttr_( bool bChkEnd, bool bBeforeTable, HTMLAttrs *pPostIts );
     inline void SetAttr( bool bChkEnd = true, bool bBeforeTable = false,
-                         _HTMLAttrs *pPostIts = nullptr )
+                         HTMLAttrs *pPostIts = nullptr )
     {
         if( !m_aSetAttrTab.empty() || !m_aMoveFlyFrames.empty() )
-            _SetAttr( bChkEnd, bBeforeTable, pPostIts );
+            SetAttr_( bChkEnd, bBeforeTable, pPostIts );
     }
 
-    _HTMLAttr **GetAttrTabEntry( sal_uInt16 nWhich );
+    HTMLAttr **GetAttrTabEntry( sal_uInt16 nWhich );
 
     // Einen neuen Textknoten an PaM-Position anlegen
     bool AppendTextNode( SwHTMLAppendMode eMode=AM_NORMAL, bool bUpdateNum=true );
@@ -506,38 +505,36 @@ class SwHTMLParser : public SfxHTMLParser, public SwClient
     // Ein Attribut beginnen/beenden
     // ppDepAttr gibt einen Attribut-Tabellen-Eintrag an, dessen Attribute
     // gesetzt sein muessen, bevor das Attribut beendet werden darf
-    void NewAttr( _HTMLAttr **ppAttr, const SfxPoolItem& rItem );
-    bool EndAttr( _HTMLAttr *pAttr, _HTMLAttr **ppDepAttr=nullptr,
+    void NewAttr( HTMLAttr **ppAttr, const SfxPoolItem& rItem );
+    bool EndAttr( HTMLAttr *pAttr, HTMLAttr **ppDepAttr=nullptr,
                   bool bChkEmpty=true );
-    void DeleteAttr( _HTMLAttr* pAttr );
+    void DeleteAttr( HTMLAttr* pAttr );
 
-    void EndContextAttrs( _HTMLAttrContext *pContext, bool bRemove=false );
-    void SaveAttrTab( _HTMLAttrTable& rNewAttrTab );
+    void EndContextAttrs( HTMLAttrContext *pContext );
+    void SaveAttrTab( HTMLAttrTable& rNewAttrTab );
     void SplitAttrTab( const SwPosition& rNewPos );
-    void SplitAttrTab( _HTMLAttrTable& rNewAttrTab, bool bMoveEndBack = true );
-    void RestoreAttrTab( _HTMLAttrTable& rNewAttrTab,
-                         bool bSetNewStart = false );
-    void InsertAttr( const SfxPoolItem& rItem, bool bLikePara = false,
-                     bool bInsAtStart=false );
-    void InsertAttrs( _HTMLAttrs& rAttrs );
+    void SplitAttrTab( HTMLAttrTable& rNewAttrTab, bool bMoveEndBack = true );
+    void RestoreAttrTab( HTMLAttrTable& rNewAttrTab );
+    void InsertAttr( const SfxPoolItem& rItem, bool bInsAtStart );
+    void InsertAttrs( HTMLAttrs& rAttrs );
 
     bool DoPositioning( SfxItemSet &rItemSet,
                         SvxCSS1PropertyInfo &rPropInfo,
-                        _HTMLAttrContext *pContext );
+                        HTMLAttrContext *pContext );
     bool CreateContainer( const OUString& rClass, SfxItemSet &rItemSet,
                           SvxCSS1PropertyInfo &rPropInfo,
-                          _HTMLAttrContext *pContext );
+                          HTMLAttrContext *pContext );
     bool EndSection( bool bLFStripped=false );
 
     void InsertAttrs( SfxItemSet &rItemSet, SvxCSS1PropertyInfo &rPropInfo,
-                      _HTMLAttrContext *pContext, bool bCharLvl=false );
-    void InsertAttr( _HTMLAttr **ppAttr, const SfxPoolItem & rItem,
-                     _HTMLAttrContext *pCntxt );
-    void SplitPREListingXMP( _HTMLAttrContext *pCntxt );
+                      HTMLAttrContext *pContext, bool bCharLvl=false );
+    void InsertAttr( HTMLAttr **ppAttr, const SfxPoolItem & rItem,
+                     HTMLAttrContext *pCntxt );
+    void SplitPREListingXMP( HTMLAttrContext *pCntxt );
     void FixHeaderFooterDistance( bool bHeader, const SwPosition *pOldPos );
 
-    void EndContext( _HTMLAttrContext *pContext );
-    void ClearContext( _HTMLAttrContext *pContext );
+    void EndContext( HTMLAttrContext *pContext );
+    void ClearContext( HTMLAttrContext *pContext );
 
     const SwFormatColl *GetCurrFormatColl() const;
 
@@ -545,29 +542,28 @@ class SwHTMLParser : public SfxHTMLParser, public SwClient
 
     SwHTMLNumRuleInfo& GetNumInfo() { return *m_pNumRuleInfo; }
     // add parameter <bCountedInList>
-    void SetNodeNum( sal_uInt8 nLevel, bool bCountedInList );
+    void SetNodeNum( sal_uInt8 nLevel );
 
     // Verwalten von Absatz-Vorlagen
 
     // die Vorlagen auf dem Stack bzw. deren Attribute setzen
-    void SetTextCollAttrs( _HTMLAttrContext *pContext = nullptr );
+    void SetTextCollAttrs( HTMLAttrContext *pContext = nullptr );
 
     void InsertParaAttrs( const SfxItemSet& rItemSet );
 
     // Verwalten des Attribut-Kontexts
 
     // aktuellen Kontext merken
-    inline void PushContext( _HTMLAttrContext *pCntxt );
+    inline void PushContext( HTMLAttrContext *pCntxt );
 
     // den obersten/spezifizierten Kontext holen, aber nicht ausserhalb
     // des Kontexts mit Token nLimit suchen. Wenn bRemove gesetzt ist,
     // wird er entfernt
-    _HTMLAttrContext *PopContext( sal_uInt16 nToken=0, sal_uInt16 nLimit=0,
-                                  bool bRemove=true );
+    HTMLAttrContext *PopContext( sal_uInt16 nToken=0 );
 
     bool GetMarginsFromContext( sal_uInt16 &nLeft, sal_uInt16 &nRight, short& nIndent,
                                 bool bIgnoreCurrent=false ) const;
-    bool GetMarginsFromContextWithNumBul( sal_uInt16 &nLeft, sal_uInt16 &nRight,
+    void GetMarginsFromContextWithNumBul( sal_uInt16 &nLeft, sal_uInt16 &nRight,
                                           short& nIndent ) const;
     void GetULSpaceFromContext( sal_uInt16 &rUpper, sal_uInt16 &rLower ) const;
 
@@ -590,12 +586,12 @@ class SwHTMLParser : public SfxHTMLParser, public SwClient
     void EndDivision( int nToken );
 
     // Fly-Frames einfuegen/verlassen
-    void InsertFlyFrame( const SfxItemSet& rItemSet, _HTMLAttrContext *pCntxt,
+    void InsertFlyFrame( const SfxItemSet& rItemSet, HTMLAttrContext *pCntxt,
                          const OUString& rId, sal_uInt16 nFlags );
 
-    void SaveDocContext( _HTMLAttrContext *pCntxt, sal_uInt16 nFlags,
+    void SaveDocContext( HTMLAttrContext *pCntxt, sal_uInt16 nFlags,
                        const SwPosition *pNewPos );
-    void RestoreDocContext( _HTMLAttrContext *pCntxt );
+    void RestoreDocContext( HTMLAttrContext *pCntxt );
 
     // alle durch <DIV> aufgespannten Bereiche verlassen
     bool EndSections( bool bLFStripped );
@@ -621,8 +617,7 @@ class SwHTMLParser : public SfxHTMLParser, public SwClient
     void NewDefList();
     void EndDefList();
     void NewDefListItem( int nToken );
-    void EndDefListItem( int nToken=0, bool bSetColl=true,
-                         bool bLastPara=false );
+    void EndDefListItem( int nToken=0, bool bLastPara=false );
 
     // Behandlung von Tags auf Zeichen-Ebene
 
@@ -630,9 +625,9 @@ class SwHTMLParser : public SfxHTMLParser, public SwClient
     // an und ausschalten, oder die wie SPAN nur Attribute aus Styles holen
     void NewStdAttr( int nToken );
     void NewStdAttr( int nToken,
-                     _HTMLAttr **ppAttr, const SfxPoolItem & rItem,
-                     _HTMLAttr **ppAttr2=nullptr, const SfxPoolItem *pItem2=nullptr,
-                     _HTMLAttr **ppAttr3=nullptr, const SfxPoolItem *pItem3=nullptr );
+                     HTMLAttr **ppAttr, const SfxPoolItem & rItem,
+                     HTMLAttr **ppAttr2=nullptr, const SfxPoolItem *pItem2=nullptr,
+                     HTMLAttr **ppAttr3=nullptr, const SfxPoolItem *pItem3=nullptr );
     void EndTag( int nToken );
 
     // Font-Attribute behandeln
@@ -768,9 +763,8 @@ private:
                            sal_Int16 eVertOri,
                            sal_Int16 eHoriOri,
                            SfxItemSet& rCSS1ItemSet,
-                           SvxCSS1PropertyInfo& rCSS1PropInfo,
-                           bool bHidden=false );
-     css::uno::Reference< css::drawing::XShape >  InsertControl(
+                           SvxCSS1PropertyInfo& rCSS1PropInfo );
+    css::uno::Reference< css::drawing::XShape >  InsertControl(
                         const css::uno::Reference< css::form::XFormComponent > & rFormComp,
                         const css::uno::Reference< css::beans::XPropertySet > & rFCompPropSet,
                         const Size& rSize,
@@ -918,7 +912,7 @@ struct SwPendingStack
         {}
 };
 
-inline void _HTMLAttr::SetStart( const SwPosition& rPos )
+inline void HTMLAttr::SetStart( const SwPosition& rPos )
 {
     nSttPara = rPos.nNode;
     nSttContent = rPos.nContent.GetIndex();
@@ -926,7 +920,7 @@ inline void _HTMLAttr::SetStart( const SwPosition& rPos )
     nEndContent = nSttContent;
 }
 
-inline void _HTMLAttrContext::SetMargins( sal_uInt16 nLeft, sal_uInt16 nRight,
+inline void HTMLAttrContext::SetMargins( sal_uInt16 nLeft, sal_uInt16 nRight,
                                           short nIndent )
 {
     nLeftMargin = nLeft;
@@ -935,7 +929,7 @@ inline void _HTMLAttrContext::SetMargins( sal_uInt16 nLeft, sal_uInt16 nRight,
     bLRSpaceChanged = true;
 }
 
-inline void _HTMLAttrContext::GetMargins( sal_uInt16& nLeft,
+inline void HTMLAttrContext::GetMargins( sal_uInt16& nLeft,
                                           sal_uInt16& nRight,
                                           short& nIndent ) const
 {
@@ -947,14 +941,14 @@ inline void _HTMLAttrContext::GetMargins( sal_uInt16& nLeft,
     }
 }
 
-inline void _HTMLAttrContext::SetULSpace( sal_uInt16 nUpper, sal_uInt16 nLower )
+inline void HTMLAttrContext::SetULSpace( sal_uInt16 nUpper, sal_uInt16 nLower )
 {
     nUpperSpace = nUpper;
     nLowerSpace = nLower;
     bULSpaceChanged = true;
 }
 
-inline void _HTMLAttrContext::GetULSpace( sal_uInt16& rUpper,
+inline void HTMLAttrContext::GetULSpace( sal_uInt16& rUpper,
                                           sal_uInt16& rLower ) const
 {
     if( bULSpaceChanged )
@@ -974,7 +968,7 @@ inline bool SwHTMLParser::HasStyleOptions( const OUString &rStyle,
            (pLang && !pLang->isEmpty()) || (pDir && !pDir->isEmpty());
 }
 
-inline void SwHTMLParser::PushContext( _HTMLAttrContext *pCntxt )
+inline void SwHTMLParser::PushContext( HTMLAttrContext *pCntxt )
 {
     m_aContexts.push_back( pCntxt );
 }

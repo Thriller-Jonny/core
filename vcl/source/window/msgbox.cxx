@@ -24,6 +24,7 @@
 #include <brdwin.hxx>
 #include <window.h>
 
+#include <vcl/textrectinfo.hxx>
 #include <vcl/metric.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/wrkwin.hxx>
@@ -40,7 +41,7 @@ static void ImplInitMsgBoxImageList()
     if ( !pSVData->maWinData.mpMsgBoxImgList )
     {
         ResMgr* pResMgr = ImplGetResMgr();
-        pSVData->maWinData.mpMsgBoxImgList = new ImageList(4);
+        pSVData->maWinData.mpMsgBoxImgList = new ImageList();
         if( pResMgr )
         {
             Color aNonAlphaMask( 0xC0, 0xC0, 0xC0 );

@@ -47,7 +47,6 @@ const sal_Char sAPI_DDECommandElement[] = "DDECommandElement";
 const sal_Char sAPI_IsAutomaticUpdate[] = "IsAutomaticUpdate";
 
 
-
 XMLSectionSourceDDEImportContext::XMLSectionSourceDDEImportContext(
     SvXMLImport& rImport,
     sal_uInt16 nPrfx,
@@ -93,7 +92,7 @@ void XMLSectionSourceDDEImportContext::StartElement(
     OUString sApplication;
     OUString sTopic;
     OUString sItem;
-    sal_Bool bAutomaticUpdate = sal_False;
+    bool bAutomaticUpdate = false;
 
     sal_Int16 nLength = xAttrList->getLength();
     for(sal_Int16 nAttr = 0; nAttr < nLength; nAttr++)
@@ -147,7 +146,7 @@ void XMLSectionSourceDDEImportContext::StartElement(
         aValues[2] <<= sItem;
         aNames[2] = sDdeCommandElement;
 
-        aValues[3].setValue(&bAutomaticUpdate, cppu::UnoType<bool>::get());
+        aValues[3] <<= bAutomaticUpdate;
         aNames[3] = sIsAutomaticUpdate;
 
         Reference<XMultiPropertySet> rMultiPropSet(rSectionPropertySet,

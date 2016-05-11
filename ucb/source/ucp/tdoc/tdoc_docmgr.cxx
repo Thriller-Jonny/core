@@ -50,12 +50,7 @@ using namespace tdoc_ucp;
 // OfficeDocumentsCloseListener Implementation.
 
 
-
-
-
-
 // util::XCloseListener
-
 
 
 // virtual
@@ -80,9 +75,7 @@ void SAL_CALL OfficeDocumentsManager::OfficeDocumentsCloseListener::notifyClosin
 }
 
 
-
 // lang::XDocumentEventListener (base of util::XCloseListener)
-
 
 
 // virtual
@@ -93,11 +86,7 @@ void SAL_CALL OfficeDocumentsManager::OfficeDocumentsCloseListener::disposing(
 }
 
 
-
-
 // OfficeDocumentsManager Implementation.
-
-
 
 
 OfficeDocumentsManager::OfficeDocumentsManager(
@@ -174,9 +163,7 @@ getDocumentId( const uno::Reference< uno::XInterface > & xDoc )
 }
 
 
-
 // document::XDocumentEventListener
-
 
 
 // virtual
@@ -425,9 +412,7 @@ void SAL_CALL OfficeDocumentsManager::documentEventOccured(
 }
 
 
-
 // lang::XDocumentEventListener (base of document::XDocumentEventListener)
-
 
 
 // virtual
@@ -438,9 +423,7 @@ void SAL_CALL OfficeDocumentsManager::disposing(
 }
 
 
-
 // Non-interface.
-
 
 
 void OfficeDocumentsManager::buildDocumentsList()
@@ -576,7 +559,7 @@ bool OfficeDocumentsManager::isDocumentPreview(
 
     ::comphelper::NamedValueCollection aArgs(
         xModel->getArgs() );
-    bool bIsPreview = aArgs.getOrDefault( "Preview", sal_False );
+    bool bIsPreview = aArgs.getOrDefault( "Preview", false );
     return bIsPreview;
 }
 

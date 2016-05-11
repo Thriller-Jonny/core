@@ -41,7 +41,7 @@ namespace sdr
 
         public:
             // constructor/destructor
-            SAL_DLLPRIVATE explicit Event(sal_uInt32 nTime);
+            SAL_DLLPRIVATE explicit Event();
             virtual ~Event();
 
             // access to mpNext
@@ -140,7 +140,6 @@ namespace sdr
         };
     } // end of namespace animation
 } // end of namespace sdr
-
 
 
 #endif // INCLUDED_SVX_SDR_ANIMATION_SCHEDULER_HXX

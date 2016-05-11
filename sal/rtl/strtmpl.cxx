@@ -972,7 +972,7 @@ sal_Bool SAL_CALL IMPL_RTL_STRNAME( toBoolean )( const IMPL_RTL_STRCODE* pStr )
 {
     assert(pStr);
     if ( *pStr == '1' )
-        return sal_True;
+        return true;
 
     if ( (*pStr == 'T') || (*pStr == 't') )
     {
@@ -984,17 +984,17 @@ sal_Bool SAL_CALL IMPL_RTL_STRNAME( toBoolean )( const IMPL_RTL_STRCODE* pStr )
             {
                 pStr++;
                 if ( (*pStr == 'E') || (*pStr == 'e') )
-                    return sal_True;
+                    return true;
             }
         }
     }
 
-    return sal_False;
+    return false;
 }
 
 /* ----------------------------------------------------------------------- */
 namespace {
-    template<typename T, typename U> static inline T IMPL_RTL_STRNAME( toInt )( const IMPL_RTL_STRCODE* pStr,
+    template<typename T, typename U> inline T IMPL_RTL_STRNAME( toInt )( const IMPL_RTL_STRCODE* pStr,
                                                                      sal_Int16 nRadix )
     {
         static_assert(std::numeric_limits<T>::is_signed, "is signed");
@@ -1084,7 +1084,7 @@ sal_Int64 SAL_CALL IMPL_RTL_STRNAME( toInt64 )( const IMPL_RTL_STRCODE* pStr,
 
 /* ----------------------------------------------------------------------- */
 namespace {
-    template <typename T> static inline T IMPL_RTL_STRNAME( toUInt )( const IMPL_RTL_STRCODE* pStr,
+    template <typename T> inline T IMPL_RTL_STRNAME( toUInt )( const IMPL_RTL_STRCODE* pStr,
                                                                       sal_Int16 nRadix )
     {
         static_assert(!std::numeric_limits<T>::is_signed, "is not signed");
@@ -1214,7 +1214,7 @@ void SAL_CALL IMPL_RTL_STRINGNAME( acquire )( IMPL_RTL_STRINGDATA* pThis )
 void SAL_CALL IMPL_RTL_STRINGNAME( release )( IMPL_RTL_STRINGDATA* pThis )
     SAL_THROW_EXTERN_C()
 {
-    if (SAL_STRING_IS_STATIC (pThis))
+    if (SAL_UNLIKELY(SAL_STRING_IS_STATIC (pThis)))
         return;
 
 /* OString doesn't have an 'intern' */

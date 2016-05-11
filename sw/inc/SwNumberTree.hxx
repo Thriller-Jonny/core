@@ -439,13 +439,13 @@ protected:
     SwNumberTreeNode& operator=( const SwNumberTreeNode& );
 
     /**
-       Calls _GetNumberVector on parent and adds number of this node
+       Calls GetNumberVector_ on parent and adds number of this node
        at the end.
 
        @param rVector     return value
        @param bValidate   validate the number?
      */
-    void _GetNumberVector( SwNumberTree::tNumberVector& rVector,
+    void GetNumberVector_( SwNumberTree::tNumberVector& rVector,
                            bool bValidate = true ) const;
 
     /**
@@ -476,7 +476,7 @@ protected:
                               - false   only set if aItLastValid is preceding
                                         the current last valid node
      */
-    void SetLastValid(tSwNumberTreeChildren::const_iterator aItLastValid,
+    void SetLastValid(const tSwNumberTreeChildren::const_iterator& aItLastValid,
                       bool bValidating = false) const;
 
     /**
@@ -579,25 +579,16 @@ protected:
 
     /**
        Set if this node is a phantom.
-
-       @param bPhantom   - true this node is a phantom
-                         - false this node is a phantom
      */
-    void SetPhantom(bool bPhantom = true);
+    void SetPhantom();
 
     /**
        Return if phantoms are counted.
-
-       @retval true phantoms are counted
-       @retval false else
      */
     virtual bool IsCountPhantoms() const = 0;
 
     /**
        Return if all descendants of this node are phantoms.
-
-       @retval true   all descendants are phantoms
-       @retval false  else
      */
     bool HasOnlyPhantoms() const;
 
@@ -655,19 +646,6 @@ protected:
 
 };
 
-/**
-   Functor. Checks if a certain node is less than the functor's member.
- */
-struct SwNumberTreeNodeIsLessThan
-{
-    const SwNumberTreeNode * pNode;
-
-    SwNumberTreeNodeIsLessThan(const SwNumberTreeNode * _pNode)
-        : pNode(_pNode) {}
-
-    bool operator()(const SwNumberTreeNode * _pNode) const
-    { return SwNumberTreeNodeLessThan(_pNode, pNode); }
-};
 #endif // INCLUDED_SW_INC_SWNUMBERTREE_HXX
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

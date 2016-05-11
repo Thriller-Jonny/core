@@ -21,13 +21,13 @@
 #define INCLUDED_OOX_VML_VMLTEXTBOXCONTEXT_HXX
 
 #include <oox/core/contexthandler2.hxx>
+#include <oox/helper/attributelist.hxx>
 #include <oox/vml/vmltextbox.hxx>
 
 namespace oox {
     class GraphicHelper;
 
 namespace vml {
-
 
 
 class TextPortionContext : public ::oox::core::ContextHandler2
@@ -55,7 +55,6 @@ private:
 };
 
 
-
 class TextBoxContext : public ::oox::core::ContextHandler2
 {
 public:
@@ -74,7 +73,6 @@ private:
     TextBox&            mrTextBox;
     TextParagraphModel  maParagraph;
 };
-
 
 
 } // namespace vml

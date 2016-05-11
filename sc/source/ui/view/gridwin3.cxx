@@ -42,6 +42,7 @@
 #include "userdat.hxx"
 #include "unitconv.hxx"
 #include <svx/svdpage.hxx>
+#include <comphelper/lok.hxx>
 
 bool ScGridWindow::DrawMouseButtonDown(const MouseEvent& rMEvt)
 {
@@ -241,8 +242,8 @@ MapMode ScGridWindow::GetDrawMapMode( bool bForce )
     // FIXME this shouldn't be necessary once we change the entire Calc to
     // work in the logic coordinates (ideally 100ths of mm - so that it is
     // the same as editeng and drawinglayer), and get rid of all the
-    // SetMapMode's and other unneccessary fun we have with pixels
-    if (pDoc->GetDrawLayer() && pDoc->GetDrawLayer()->isTiledRendering())
+    // SetMapMode's and other unnecessary fun we have with pixels
+    if (comphelper::LibreOfficeKit::isActive())
     {
         return pViewData->GetLogicMode();
     }

@@ -92,7 +92,7 @@ private:
     sal_Int32 mnTop;
     sal_Int32 mnTotalHeight;
 
-    EditEngine * GetEditEngine();
+    void GetEditEngine();
     EditEngine* CreateEditEngine();
     void CheckTop();
 };
@@ -264,11 +264,10 @@ PresenterTextView::Implementation::~Implementation()
     mpOutputDevice.disposeAndClear();
 }
 
-EditEngine * PresenterTextView::Implementation::GetEditEngine()
+void PresenterTextView::Implementation::GetEditEngine()
 {
     if (mpEditEngine == nullptr)
         mpEditEngine = CreateEditEngine ();
-    return mpEditEngine;
 }
 
 EditEngine* PresenterTextView::Implementation::CreateEditEngine()
@@ -303,17 +302,16 @@ EditEngine* PresenterTextView::Implementation::CreateEditEngine()
         aTable[1].nLang = MsLangId::resolveSystemLanguageByScriptType(aOpt.nDefaultLanguage_CJK, css::i18n::ScriptType::ASIAN);
         aTable[2].nLang = MsLangId::resolveSystemLanguageByScriptType(aOpt.nDefaultLanguage_CTL, css::i18n::ScriptType::COMPLEX);
 
-        for (int i = 0;  i < 3;  ++i)
+        for (FontDta & rFntDta : aTable)
         {
-            const FontDta &rFntDta = aTable[i];
             LanguageType nLang = (LANGUAGE_NONE == rFntDta.nLang) ?
                 rFntDta.nFallbackLang : rFntDta.nLang;
             vcl::Font aFont = OutputDevice::GetDefaultFont(
                 rFntDta.nFontType, nLang, GetDefaultFontFlags::OnlyOne);
             mpEditEngineItemPool->SetPoolDefaultItem(
                 SvxFontItem(
-                    aFont.GetFamily(),
-                    aFont.GetName(),
+                    aFont.GetFamilyType(),
+                    aFont.GetFamilyName(),
                     aFont.GetStyleName(),
                     aFont.GetPitch(),
                     aFont.GetCharSet(),
@@ -525,7 +523,6 @@ com_sun_star_comp_Draw_PresenterTextView_get_implementation(css::uno::XComponent
 {
     return cppu::acquire(new sd::presenter::PresenterTextView(context));
 }
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

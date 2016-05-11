@@ -30,13 +30,4 @@ String STR_SFX_UNDOCK
     Text [ en-US ] = "Undock";
 };
 
-String STR_SFX_TASK_PANE_VIEW
-{
-    Text [ en-US ] = "View";
-};
-String STR_SFX_TASKS
-{
-    Text [ en-US ] = "Tasks";
-};
-
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

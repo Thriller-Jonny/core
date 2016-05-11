@@ -29,9 +29,6 @@ namespace com { namespace sun { namespace star { namespace uno { class Any; }}}}
 struct SystemParentData;
 
 
-// - WorkWindow - Types -
-
-
 // Presentation Flags
 enum class PresentationFlags
 {
@@ -40,13 +37,11 @@ enum class PresentationFlags
     NoFullScreen   = 0x0002,
     NoAutoShow     = 0x0004,
 };
+
 namespace o3tl
 {
     template<> struct typed_flags<PresentationFlags> : is_typed_flags<PresentationFlags, 0x0007> {};
 }
-
-
-// - WorkWindow -
 
 
 class VCL_DLLPUBLIC WorkWindow : public SystemWindow
@@ -68,7 +63,7 @@ private:
 protected:
     explicit        WorkWindow( WindowType nType );
     SAL_DLLPRIVATE void ImplInit( vcl::Window* pParent, WinBits nStyle, SystemParentData* pSystemParentData = nullptr );
-    SAL_DLLPRIVATE void ImplSetFrameState( sal_uLong aFrameState );
+    SAL_DLLPRIVATE void ImplSetFrameState( WindowStateState aFrameState );
 
 public:
     explicit        WorkWindow( vcl::Window* pParent, WinBits nStyle = WB_STDWORK );
@@ -90,12 +85,11 @@ public:
 
     void            StartPresentationMode( bool   bPresentation,
                                            PresentationFlags nFlags,
-                                           sal_Int32  nDisplayScreen );
+                                           sal_uInt32  nDisplayScreen );
     /**
-     @overload void StartPresentationMode( bool bPresentation, sal_uInt16 nFlags, sal_uInt32 nDisplayScreen)
+     @overload void StartPresentationMode( PresentationFlags nFlags, sal_uInt32 nDisplayScreen)
     */
-    void            StartPresentationMode( bool   bPresentation = true,
-                                           PresentationFlags nFlags = PresentationFlags::NONE );
+    void            StartPresentationMode( PresentationFlags nFlags = PresentationFlags::NONE );
     bool            IsPresentationMode() const { return mbPresentationMode; }
 
     bool            IsMinimized() const;

@@ -20,7 +20,6 @@
 #ifndef INCLUDED_SC_SOURCE_FILTER_INC_XEHELPER_HXX
 #define INCLUDED_SC_SOURCE_FILTER_INC_XEHELPER_HXX
 
-#include <boost/noncopyable.hpp>
 #include <memory>
 #include "xladdress.hxx"
 #include "xeroot.hxx"
@@ -186,7 +185,7 @@ public:
 
     /** Returns true, if a single HLINK record has been created. */
     bool                HasLinkRecord() const;
-    /** Returns the craeted single HLINk record, or an empty reference. */
+    /** Returns the created single HLINk record, or an empty reference. */
     XclExpHyperlinkRef  GetLinkRecord();
 
     /** Returns true, if multiple URLs have been processed. */
@@ -209,9 +208,17 @@ class ScPatternAttr;
 /** This class provides methods to create an XclExpString.
     @descr  The string can be created from an edit engine text object or
     directly from a Calc edit cell. */
-class XclExpStringHelper : boost::noncopyable
+class XclExpStringHelper
 {
 public:
+    /** removes copy constructor */
+    XclExpStringHelper(const XclExpStringHelper &) = delete;
+    /** remove copy-assignment operator */
+    const XclExpStringHelper& operator=(const XclExpStringHelper&) = delete;
+    /** We don't want anybody to instantiate this class, since it is just a
+        collection of static methods */
+    XclExpStringHelper() = delete;
+
     /** Creates a new unformatted string from the passed string.
         @descr  Creates a Unicode string or a byte string, depending on the
                 current BIFF version contained in the passed XclExpRoot object.
@@ -297,34 +304,24 @@ public:
                 current BIFF version contained in the passed XclExpRoot object.
         @param rTextObj  The text box object.
         @param nFlags  Modifiers for string export.
-        @param nMaxLen  The maximum number of characters to store in this string.
         @return  The new string object (shared pointer). */
     static XclExpStringRef CreateString(
                             const XclExpRoot& rRoot,
                             const SdrTextObj& rTextObj,
-                            XclStrFlags nFlags = EXC_STR_DEFAULT,
-                            sal_uInt16 nMaxLen = EXC_STR_MAXLEN );
+                            XclStrFlags nFlags = EXC_STR_DEFAULT );
 
     /** Creates a new formatted string from a edit text string.
         @param rEditObj  The edittext object.
         @param nFlags  Modifiers for string export.
-        @param nMaxLen The maximum number of characters to store in this string.
         @return  The new string object. */
     static XclExpStringRef CreateString(
                             const XclExpRoot& rRoot,
                             const EditTextObject& rEditObj,
-                            XclStrFlags nFlags = EXC_STR_DEFAULT,
-                            sal_uInt16 nMaxLen = EXC_STR_MAXLEN );
+                            XclStrFlags nFlags = EXC_STR_DEFAULT );
 
     /** Returns the script type first text portion different to WEAK, or the system
         default script type, if there is only weak script in the passed string. */
     static sal_Int16    GetLeadingScriptType( const XclExpRoot& rRoot, const OUString& rString );
-
-private:
-    /** We don't want anybody to instantiate this class, since it is just a
-        collection of static methods. To enforce this, the default constructor
-        is made private */
-    XclExpStringHelper();
 };
 
 // Header/footer conversion ===================================================
@@ -360,9 +357,14 @@ class EditEngine;
     Known but unsupported control sequences:
     &G                      picture
  */
-class XclExpHFConverter : protected XclExpRoot, private boost::noncopyable
+class XclExpHFConverter : protected XclExpRoot
 {
 public:
+    /** delete copy constructor */
+    XclExpHFConverter(const XclExpHFConverter&) = delete;
+    /** delete copy-assignment operator */
+    const XclExpHFConverter& operator=(const XclExpHFConverter&) = delete;
+
     explicit            XclExpHFConverter( const XclExpRoot& rRoot );
 
     /** Generates the header/footer string from the passed edit engine text objects. */
@@ -393,20 +395,22 @@ private:
 /** This class contains static methods to encode a file URL.
     @descr  Excel stores URLs in a format that contains special control characters,
     i.e. for directory separators or volume names. */
-class XclExpUrlHelper : boost::noncopyable
+class XclExpUrlHelper
 {
 public:
+    /** delete copy constructor */
+    XclExpUrlHelper(const XclExpUrlHelper&) = delete;
+    /** delete copy-assignment operator */
+    const XclExpUrlHelper& operator=(const XclExpUrlHelper&) = delete;
+    /** We don't want anybody to instantiate this class, since it is just a
+        collection of static methods. */
+    XclExpUrlHelper() = delete;
+
     /** Encodes and returns the URL passed in rAbsUrl to an Excel like URL.
         @param pTableName  Optional pointer to a table name to be encoded in this URL. */
     static OUString EncodeUrl( const XclExpRoot& rRoot, const OUString& rAbsUrl, const OUString* pTableName = nullptr );
     /** Encodes and returns the passed DDE link to an Excel like DDE link. */
     static OUString EncodeDde( const OUString& rApplic, const OUString& rTopic );
-
-private:
-    /** We don't want anybody to instantiate this class, since it is just a
-        collection of static methods. To enforce this, the default constructor
-        is made private */
-    XclExpUrlHelper();
 };
 
 class ScMatrix;

@@ -227,7 +227,6 @@ static OUString ImplPatternReformat( const OUString& rStr,
     if (rEditMask.isEmpty())
         return rStr;
 
-    OUString    aStr    = rStr;
     OUStringBuffer    aOutStr = OUString(rLiteralMask);
     sal_Unicode cTempChar;
     sal_Unicode cChar;
@@ -239,10 +238,10 @@ static OUString ImplPatternReformat( const OUString& rStr,
 
     while ( i < rEditMask.getLength() )
     {
-        if ( nStrIndex >= aStr.getLength() )
+        if ( nStrIndex >= rStr.getLength() )
             break;
 
-        cChar = aStr[nStrIndex];
+        cChar = rStr[nStrIndex];
         cLiteral = rLiteralMask[i];
         cMask = rEditMask[i];
 
@@ -1180,7 +1179,7 @@ OUString DateFormatter::ImplGetDateAsText( const Date& rDate,
     {
         case XTDATEF_SYSTEM_LONG:
         {
-            return ImplGetLocaleDataWrapper().getLongDate( rDate, GetCalendarWrapper(), 1, false, 1, !bShowCentury );
+            return ImplGetLocaleDataWrapper().getLongDate( rDate, GetCalendarWrapper(), !bShowCentury );
         }
         case XTDATEF_SHORT_DDMMYY:
         case XTDATEF_SHORT_DDMMYYYY:

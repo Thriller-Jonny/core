@@ -52,7 +52,6 @@ using pyuno::NOT_NULL;
 using pyuno::Runtime;
 using pyuno::PyThreadAttach;
 
-using com::sun::star::registry::XRegistryKey;
 using com::sun::star::uno::Reference;
 using com::sun::star::uno::XInterface;
 using com::sun::star::uno::Sequence;
@@ -199,7 +198,7 @@ Reference< XInterface > CreateInstance( const Reference< XComponentContext > & c
         if( !pythonPath.isEmpty() )
             prependPythonPath( pythonPath );
 
-#ifdef WNT
+#ifdef _WIN32
     //extend PATH under windows to include the branddir/program so ssl libs will be found
     //for use by terminal mailmerge dependency _ssl.pyd
     OUString sEnvName("PATH");

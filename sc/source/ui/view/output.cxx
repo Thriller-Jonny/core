@@ -273,9 +273,9 @@ void ScOutputData::SetShowSpellErrors( bool bSet )
     bShowSpellErrors = bSet;
 }
 
-void ScOutputData::SetSnapPixel( bool bSet )
+void ScOutputData::SetSnapPixel()
 {
-    bSnapPixel = bSet;
+    bSnapPixel = true;
 }
 
 void ScOutputData::SetEditCell( SCCOL nCol, SCROW nRow )
@@ -338,7 +338,7 @@ void ScOutputData::DrawGrid(vcl::RenderContext& rRenderContext, bool bGrid, bool
     //   * when bWorksInPixels is false: these are in the logic units
     //
     // This is where all the confusion comes from, ultimately we want them
-    // always in the logic units (100th of milimiters), but we need to get
+    // always in the logic units (100th of millimiters), but we need to get
     // there gradually (get rid of setting MAP_PIXEL first), otherwise we'd
     // break all the drawing by one change.
     // So until that happens, we need to special case.
@@ -873,7 +873,7 @@ void drawDataBars(vcl::RenderContext& rRenderContext, const ScDataBarInfo* pOldD
     }
 }
 
-BitmapEx& getIcon(sc::IconSetBitmapMap & rIconSetBitmapMap, ScIconSetType eType, sal_Int32 nIndex)
+const BitmapEx& getIcon(sc::IconSetBitmapMap & rIconSetBitmapMap, ScIconSetType eType, sal_Int32 nIndex)
 {
     return ScIconSetFormat::getBitmap(rIconSetBitmapMap, eType, nIndex);
 }
@@ -884,7 +884,7 @@ void drawIconSets(vcl::RenderContext& rRenderContext, const ScIconSetInfo* pOldI
     //long nSize = 16;
     ScIconSetType eType = pOldIconSetInfo->eIconSetType;
     sal_Int32 nIndex = pOldIconSetInfo->nIconIndex;
-    BitmapEx& rIcon = getIcon(rIconSetBitmapMap, eType, nIndex);
+    const BitmapEx& rIcon = getIcon(rIconSetBitmapMap, eType, nIndex);
     long aOrigSize = std::max<long>(0,std::min(rRect.GetSize().getWidth() - 4 * nOneX, rRect.GetSize().getHeight() -4 * nOneY));
     rRenderContext.DrawBitmapEx( Point( rRect.Left() + 2 * nOneX, rRect.Top() + 2 * nOneY), Size(aOrigSize, aOrigSize), rIcon );
 }
@@ -2466,7 +2466,7 @@ void ScOutputData::AddPDFNotes()
 
                         // Note title is the cell address (as on printed note pages)
                         ScAddress aAddress( nMergeX, nMergeY, nTab );
-                        OUString aTitle(aAddress.Format(SCA_VALID, mpDoc, mpDoc->GetAddressConvention()));
+                        OUString aTitle(aAddress.Format(ScRefFlags::VALID, mpDoc, mpDoc->GetAddressConvention()));
 
                         // Content has to be a simple string without line breaks
                         OUString aContent = pNote->GetText();

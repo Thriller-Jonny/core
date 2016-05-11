@@ -29,8 +29,6 @@
 #include <cppuhelper/basemutex.hxx>
 #include <cppuhelper/compbase.hxx>
 
-#include <boost/noncopyable.hpp>
-
 #include <functional>
 #include <memory>
 
@@ -51,13 +49,14 @@ namespace {
 /** Base class of horizontal and vertical scroll bars.
 */
 class PresenterScrollBar
-    : private ::boost::noncopyable,
-      private ::cppu::BaseMutex,
+    : private ::cppu::BaseMutex,
       public PresenterScrollBarInterfaceBase
 {
 public:
     typedef ::std::function<void (double)> ThumbMotionListener;
     virtual ~PresenterScrollBar();
+    PresenterScrollBar(const PresenterScrollBar&) = delete;
+    PresenterScrollBar& operator=(const PresenterScrollBar&) = delete;
 
     virtual void SAL_CALL disposing() override;
 
@@ -107,8 +106,7 @@ public:
         scrollbar from the outside.
     */
     void Paint (
-        const css::awt::Rectangle& rUpdateBox,
-        bool bNoClip = false);
+        const css::awt::Rectangle& rUpdateBox);
 
     virtual sal_Int32 GetSize() const = 0;
 
@@ -158,11 +156,10 @@ public:
         throw (css::uno::RuntimeException, std::exception) override;
 
     enum Area { Total, Pager, Thumb, PagerUp, PagerDown, PrevButton, NextButton, None,
-                __AreaCount__ = None };
+                AreaCount = None };
 
 protected:
     css::uno::Reference<css::uno::XComponentContext> mxComponentContext;
-    css::uno::Reference<css::awt::XWindow> mxParentWindow;
     css::uno::Reference<css::awt::XWindow> mxWindow;
     css::uno::Reference<css::rendering::XCanvas> mxCanvas;
     css::uno::Reference<css::drawing::XPresenterHelper> mxPresenterHelper;
@@ -175,7 +172,7 @@ protected:
     ::std::function<void (double)> maThumbMotionListener;
     Area meButtonDownArea;
     Area meMouseMoveArea;
-    css::geometry::RealRectangle2D maBox[__AreaCount__];
+    css::geometry::RealRectangle2D maBox[AreaCount];
     bool mbIsNotificationActive;
     static std::weak_ptr<PresenterBitmapContainer> mpSharedBitmaps;
     std::shared_ptr<PresenterBitmapContainer> mpBitmaps;
@@ -187,7 +184,7 @@ protected:
     SharedBitmapDescriptor mpThumbStartDescriptor;
     SharedBitmapDescriptor mpThumbCenterDescriptor;
     SharedBitmapDescriptor mpThumbEndDescriptor;
-    bool maEnabledState[__AreaCount__];
+    bool maEnabledState[AreaCount];
 
     css::geometry::RealRectangle2D GetRectangle (const Area eArea) const;
     virtual double GetDragDistance (const sal_Int32 nX, const sal_Int32 nY) const = 0;
@@ -227,11 +224,6 @@ protected:
         const Area eArea) const;
     bool IsDisabled (const Area eArea) const;
     double ValidateThumbPosition (double nPosition);
-    void SetThumbPosition (
-        double nPosition,
-        const bool bAsynchronousRepaint,
-        const bool bValidate,
-        const bool bNotify);
 
 private:
     class MousePressRepeater;

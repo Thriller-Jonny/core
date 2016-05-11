@@ -109,8 +109,7 @@ namespace basegfx
                             o_rPolyPolygon.append(aCurrPoly);
                             aCurrPoly.clear();
                         }
-
-                        // FALLTHROUGH intended to add coordinate data as 1st point of new polygon
+                        SAL_FALLTHROUGH; // to add coordinate data as 1st point of new polygon
                     }
                     case 'l' :
                     case 'L' :
@@ -150,7 +149,7 @@ namespace basegfx
                     case 'h' :
                     {
                         bRelative = true;
-                        // FALLTHROUGH intended
+                        SAL_FALLTHROUGH;
                     }
                     case 'H' :
                     {
@@ -180,7 +179,7 @@ namespace basegfx
                     case 'v' :
                     {
                         bRelative = true;
-                        // FALLTHROUGH intended
+                        SAL_FALLTHROUGH;
                     }
                     case 'V' :
                     {
@@ -210,7 +209,7 @@ namespace basegfx
                     case 's' :
                     {
                         bRelative = true;
-                        // FALLTHROUGH intended
+                        SAL_FALLTHROUGH;
                     }
                     case 'S' :
                     {
@@ -269,7 +268,7 @@ namespace basegfx
                     case 'c' :
                     {
                         bRelative = true;
-                        // FALLTHROUGH intended
+                        SAL_FALLTHROUGH;
                     }
                     case 'C' :
                     {
@@ -319,7 +318,7 @@ namespace basegfx
                     case 'q' :
                     {
                         bRelative = true;
-                        // FALLTHROUGH intended
+                        SAL_FALLTHROUGH;
                     }
                     case 'Q' :
                     {
@@ -370,7 +369,7 @@ namespace basegfx
                     case 't' :
                     {
                         bRelative = true;
-                        // FALLTHROUGH intended
+                        SAL_FALLTHROUGH;
                     }
                     case 'T' :
                     {
@@ -444,7 +443,7 @@ namespace basegfx
                     case 'a' :
                     {
                         bRelative = true;
-                        // FALLTHROUGH intended
+                        SAL_FALLTHROUGH;
                     }
                     case 'A' :
                     {
@@ -471,10 +470,10 @@ namespace basegfx
                                 nY += nLastY;
                             }
 
-                            if( nX == nLastX && nY == nLastY )
+                            if( rtl::math::approxEqual(nX, nLastX) && rtl::math::approxEqual(nY, nLastY) )
                                 continue; // start==end -> skip according to SVG spec
 
-                            if( fRX == 0.0 || fRY == 0.0 )
+                            if( rtl::math::approxEqual(fRX, 0.0) || rtl::math::approxEqual(fRY, 0.0) )
                             {
                                 // straight line segment according to SVG spec
                                 aCurrPoly.append(B2DPoint(nX, nY));
@@ -857,8 +856,8 @@ namespace basegfx
                             }
                             else
                             {
-                                const bool bXEqual(aEdgeStart.getX() == aEdgeEnd.getX());
-                                const bool bYEqual(aEdgeStart.getY() == aEdgeEnd.getY());
+                                const bool bXEqual(rtl::math::approxEqual(aEdgeStart.getX(), aEdgeEnd.getX()));
+                                const bool bYEqual(rtl::math::approxEqual(aEdgeStart.getY(), aEdgeEnd.getY()));
 
                                 if(bXEqual && bYEqual)
                                 {

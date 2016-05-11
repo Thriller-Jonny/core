@@ -60,7 +60,7 @@
 #include <accmap.hxx>
 #include <vcl/bitmapex.hxx>
 #include <svtools/colorcfg.hxx>
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 #include <vcl/alpha.hxx>
 #include <svtools/accessibilityoptions.hxx>
 #include <accessibilityoptions.hxx>
@@ -88,7 +88,7 @@
 
 bool SwViewShell::mbLstAct = false;
 ShellResource *SwViewShell::mpShellRes = nullptr;
-VclPtr<vcl::Window> SwViewShell::mpCareWindow = nullptr;
+vcl::DeleteOnDeinit< VclPtr<vcl::Window> > SwViewShell::mpCareWindow(new VclPtr<vcl::Window>);
 
 bool bInSizeNotify = false;
 
@@ -119,7 +119,7 @@ void SwViewShell::registerLibreOfficeKitCallback(LibreOfficeKitCallback pCallbac
 {
     getIDocumentDrawModelAccess().GetDrawModel()->registerLibreOfficeKitCallback(pCallback, pData);
     if (SwPostItMgr* pPostItMgr = GetPostItMgr())
-        pPostItMgr->registerLibreOfficeKitCallback(pCallback, pData);
+        pPostItMgr->registerLibreOfficeKitCallback(getIDocumentDrawModelAccess().GetDrawModel());
 }
 
 void SwViewShell::libreOfficeKitCallback(int nType, const char* pPayload) const
@@ -128,11 +128,6 @@ void SwViewShell::libreOfficeKitCallback(int nType, const char* pPayload) const
         return;
 
     getIDocumentDrawModelAccess().GetDrawModel()->libreOfficeKitCallback(nType, pPayload);
-}
-
-void SwViewShell::setTiledRendering(bool bTiledRendering)
-{
-    getIDocumentDrawModelAccess().GetDrawModel()->setTiledRendering(bTiledRendering);
 }
 
 void SwViewShell::setOutputToWindow(bool bOutputToWindow)
@@ -204,8 +199,8 @@ void SwViewShell::DLPrePaint2(const vcl::Region& rRegion)
             mpBufferedOut = mpOut;
             mpOut = &(mpTargetPaintWindow->GetTargetOutputDevice());
         }
-        else
-            // In case mpOut is used without buffering, need to set clipping.
+        else if (isOutputToWindow())
+            // In case mpOut is used without buffering and we're not printing, need to set clipping.
             mpOut->SetClipRegion(rRegion);
 
         // remember original paint MapMode for wrapped FlyFrame paints
@@ -656,7 +651,7 @@ void SwViewShell::UpdateFields(bool bCloseDB)
     else
         StartAction();
 
-    GetDoc()->getIDocumentFieldsAccess().UpdateFields(nullptr, bCloseDB);
+    GetDoc()->getIDocumentFieldsAccess().UpdateFields(bCloseDB);
 
     if ( bCursor )
         static_cast<SwCursorShell*>(this)->EndAction();
@@ -725,7 +720,7 @@ void SwViewShell::LayoutIdle()
     }
 }
 
-static void lcl_InvalidateAllContent( SwViewShell& rSh, sal_uInt8 nInv )
+static void lcl_InvalidateAllContent( SwViewShell& rSh, SwInvalidateFlags nInv )
 {
     bool bCursor = dynamic_cast<const SwCursorShell*>( &rSh) !=  nullptr;
     if ( bCursor )
@@ -770,7 +765,7 @@ void SwViewShell::SetParaSpaceMax( bool bNew )
     {
         SwWait aWait( *GetDoc()->GetDocShell(), true );
         rIDSA.set(DocumentSettingId::PARA_SPACE_MAX, bNew );
-        const sal_uInt8 nInv = INV_PRTAREA | INV_TABLE | INV_SECTION;
+        const SwInvalidateFlags nInv = SwInvalidateFlags::PrtArea | SwInvalidateFlags::Table | SwInvalidateFlags::Section;
         lcl_InvalidateAllContent( *this,  nInv );
     }
 }
@@ -782,7 +777,7 @@ void SwViewShell::SetParaSpaceMaxAtPages( bool bNew )
     {
         SwWait aWait( *GetDoc()->GetDocShell(), true );
         rIDSA.set(DocumentSettingId::PARA_SPACE_MAX_AT_PAGES, bNew );
-        const sal_uInt8 nInv = INV_PRTAREA | INV_TABLE | INV_SECTION;
+        const SwInvalidateFlags nInv = SwInvalidateFlags::PrtArea | SwInvalidateFlags::Table | SwInvalidateFlags::Section;
         lcl_InvalidateAllContent( *this,  nInv );
     }
 }
@@ -794,7 +789,7 @@ void SwViewShell::SetTabCompat( bool bNew )
     {
         SwWait aWait( *GetDoc()->GetDocShell(), true );
         rIDSA.set(DocumentSettingId::TAB_COMPAT, bNew );
-        const sal_uInt8 nInv = INV_PRTAREA | INV_SIZE | INV_TABLE | INV_SECTION;
+        const SwInvalidateFlags nInv = SwInvalidateFlags::PrtArea | SwInvalidateFlags::Size | SwInvalidateFlags::Table | SwInvalidateFlags::Section;
         lcl_InvalidateAllContent( *this, nInv );
     }
 }
@@ -809,7 +804,7 @@ void SwViewShell::SetAddExtLeading( bool bNew )
         SwDrawModel* pTmpDrawModel = getIDocumentDrawModelAccess().GetDrawModel();
         if ( pTmpDrawModel )
             pTmpDrawModel->SetAddExtLeading( bNew );
-        const sal_uInt8 nInv = INV_PRTAREA | INV_SIZE | INV_TABLE | INV_SECTION;
+        const SwInvalidateFlags nInv = SwInvalidateFlags::PrtArea | SwInvalidateFlags::Size | SwInvalidateFlags::Table | SwInvalidateFlags::Section;
         lcl_InvalidateAllContent( *this, nInv );
     }
 }
@@ -837,7 +832,7 @@ void SwViewShell::SetAddParaSpacingToTableCells( bool _bAddParaSpacingToTableCel
     {
         SwWait aWait( *GetDoc()->GetDocShell(), true );
         rIDSA.set(DocumentSettingId::ADD_PARA_SPACING_TO_TABLE_CELLS, _bAddParaSpacingToTableCells );
-        const sal_uInt8 nInv = INV_PRTAREA;
+        const SwInvalidateFlags nInv = SwInvalidateFlags::PrtArea;
         lcl_InvalidateAllContent( *this, nInv );
     }
 }
@@ -854,7 +849,7 @@ void SwViewShell::SetUseFormerLineSpacing( bool _bUseFormerLineSpacing )
     {
         SwWait aWait( *GetDoc()->GetDocShell(), true );
         rIDSA.set(DocumentSettingId::OLD_LINE_SPACING, _bUseFormerLineSpacing );
-        const sal_uInt8 nInv = INV_PRTAREA;
+        const SwInvalidateFlags nInv = SwInvalidateFlags::PrtArea;
         lcl_InvalidateAllContent( *this, nInv );
     }
 }
@@ -894,7 +889,7 @@ void SwViewShell::SetUseFormerTextWrapping( bool _bUseFormerTextWrapping )
     {
         SwWait aWait( *GetDoc()->GetDocShell(), true );
         rIDSA.set(DocumentSettingId::USE_FORMER_TEXT_WRAPPING, _bUseFormerTextWrapping );
-        const sal_uInt8 nInv = INV_PRTAREA | INV_SIZE | INV_TABLE | INV_SECTION;
+        const SwInvalidateFlags nInv = SwInvalidateFlags::PrtArea | SwInvalidateFlags::Size | SwInvalidateFlags::Table | SwInvalidateFlags::Section;
         lcl_InvalidateAllContent( *this, nInv );
     }
 }
@@ -907,10 +902,17 @@ void SwViewShell::SetDoNotJustifyLinesWithManualBreak( bool _bDoNotJustifyLinesW
     {
         SwWait aWait( *GetDoc()->GetDocShell(), true );
         rIDSA.set(DocumentSettingId::DO_NOT_JUSTIFY_LINES_WITH_MANUAL_BREAK, _bDoNotJustifyLinesWithManualBreak );
-        const sal_uInt8 nInv = INV_PRTAREA | INV_SIZE | INV_TABLE | INV_SECTION;
+        const SwInvalidateFlags nInv = SwInvalidateFlags::PrtArea | SwInvalidateFlags::Size | SwInvalidateFlags::Table | SwInvalidateFlags::Section;
         lcl_InvalidateAllContent( *this, nInv );
     }
 }
+
+void SwViewShell::SetProtectForm( bool _bProtectForm )
+{
+    IDocumentSettingAccess& rIDSA = getIDocumentSettingAccess();
+    rIDSA.set(DocumentSettingId::PROTECT_FORM, _bProtectForm );
+}
+
 
 void SwViewShell::Reformat()
 {
@@ -924,7 +926,7 @@ void SwViewShell::Reformat()
     if( GetLayout()->IsCallbackActionEnabled() )
     {
         StartAction();
-        GetLayout()->InvalidateAllContent( INV_SIZE | INV_POS | INV_PRTAREA );
+        GetLayout()->InvalidateAllContent( SwInvalidateFlags::Size | SwInvalidateFlags::Pos | SwInvalidateFlags::PrtArea );
         EndAction();
     }
 }
@@ -1519,11 +1521,11 @@ void SwViewShell::PaintDesktop(vcl::RenderContext& rRenderContext, const SwRect 
         }
     }
     if ( !aRegion.empty() )
-        _PaintDesktop(rRenderContext, aRegion);
+        PaintDesktop_(rRenderContext, aRegion);
 }
 
 // PaintDesktop is split in two, this part is also used by PreviewPage
-void SwViewShell::_PaintDesktop(vcl::RenderContext& /*rRenderContext*/, const SwRegionRects &rRegion)
+void SwViewShell::PaintDesktop_(vcl::RenderContext& /*rRenderContext*/, const SwRegionRects &rRegion)
 {
     // OD 2004-04-23 #116347#
     GetOut()->Push( PushFlags::FILLCOLOR|PushFlags::LINECOLOR );
@@ -1856,8 +1858,6 @@ void SwViewShell::PaintTile(VirtualDevice &rDevice, int contextWidth, int contex
     // TODO clean up SwViewShell's approach to output devices (the many of
     // them - mpBufferedOut, mpOut, mpWin, ...)
     OutputDevice *pSaveOut = mpOut;
-    bool bTiledRendering = comphelper::LibreOfficeKit::isActive();
-    setTiledRendering(true);
     mbInLibreOfficeKitCallback = true;
     mpOut = &rDevice;
 
@@ -1912,7 +1912,6 @@ void SwViewShell::PaintTile(VirtualDevice &rDevice, int contextWidth, int contex
     // SwViewShell's output device tear down
     mpOut = pSaveOut;
     mbInLibreOfficeKitCallback = false;
-    setTiledRendering(bTiledRendering);
 }
 
 void SwViewShell::SetBrowseBorder( const Size& rNew )
@@ -1963,7 +1962,7 @@ void SwViewShell::InvalidateLayout( bool bSizeChanged )
         SwFrame* pPage = GetLayout()->Lower();
         while( pPage )
         {
-            pPage->_InvalidateSize();
+            pPage->InvalidateSize_();
             pPage = pPage->GetNext();
         }
         return;
@@ -1975,7 +1974,7 @@ void SwViewShell::InvalidateLayout( bool bSizeChanged )
     SwPageFrame *pPg = static_cast<SwPageFrame*>(GetLayout()->Lower());
     do
     {   pPg->InvalidateSize();
-        pPg->_InvalidatePrt();
+        pPg->InvalidatePrt_();
         pPg->InvaPercentLowers();
         if ( bSizeChanged )
         {
@@ -1987,11 +1986,11 @@ void SwViewShell::InvalidateLayout( bool bSizeChanged )
 
     // When the size ratios in browse mode change,
     // the Position and PrtArea of the Content and Tab frames must be Invalidated.
-    sal_uInt8 nInv = INV_PRTAREA | INV_TABLE | INV_POS;
+    SwInvalidateFlags nInv = SwInvalidateFlags::PrtArea | SwInvalidateFlags::Table | SwInvalidateFlags::Pos;
     // In case of layout or mode change, the ContentFrames need a size-Invalidate
     // because of printer/screen formatting.
     if ( bSizeChanged )
-        nInv |= INV_SIZE | INV_DIRECTION;
+        nInv |= SwInvalidateFlags::Size | SwInvalidateFlags::Direction;
 
     GetLayout()->InvalidateAllContent( nInv );
 
@@ -2363,7 +2362,7 @@ void SwViewShell::InvalidateAccessibleParaFlowRelation( const SwTextFrame* _pFro
 {
     if ( GetLayout() && GetLayout()->IsAnyShellAccessible() )
     {
-        Imp()->_InvalidateAccessibleParaFlowRelation( _pFromTextFrame, _pToTextFrame );
+        Imp()->InvalidateAccessibleParaFlowRelation_( _pFromTextFrame, _pToTextFrame );
     }
 }
 
@@ -2374,7 +2373,7 @@ void SwViewShell::InvalidateAccessibleParaTextSelection()
 {
     if ( GetLayout() && GetLayout()->IsAnyShellAccessible() )
     {
-        Imp()->_InvalidateAccessibleParaTextSelection();
+        Imp()->InvalidateAccessibleParaTextSelection_();
     }
 }
 
@@ -2385,7 +2384,7 @@ void SwViewShell::InvalidateAccessibleParaAttrs( const SwTextFrame& rTextFrame )
 {
     if ( GetLayout() && GetLayout()->IsAnyShellAccessible() )
     {
-        Imp()->_InvalidateAccessibleParaAttrs( rTextFrame );
+        Imp()->InvalidateAccessibleParaAttrs_( rTextFrame );
     }
 }
 
@@ -2426,7 +2425,7 @@ ShellResource* SwViewShell::GetShellRes()
 
 void SwViewShell::SetCareWin( vcl::Window* pNew )
 {
-    mpCareWindow = pNew;
+    (*mpCareWindow.get()) = pNew;
 }
 
 sal_uInt16 SwViewShell::GetPageCount() const

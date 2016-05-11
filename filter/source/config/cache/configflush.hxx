@@ -31,8 +31,6 @@ namespace filter{
     namespace config{
 
 
-
-
 /** @short      supports registration of XRefreshListener
                 on the global filter configuration.
 
@@ -50,10 +48,6 @@ class ConfigFlush : public BaseLock
 
     protected:
 
-        /** @short  reference to an uno service manager, which can be used
-                    to create own needed services. */
-        css::uno::Reference< css::lang::XMultiServiceFactory > m_xSMGR;
-
         /** @short  holds all listener, which are registered at this instance. */
         ::cppu::OMultiTypeInterfaceContainerHelper m_lListener;
 
@@ -67,8 +61,7 @@ class ConfigFlush : public BaseLock
 
         /** @short  standard ctor.
          */
-        explicit ConfigFlush(const css::uno::Reference< css::lang::XMultiServiceFactory >& xSMGR);
-
+        ConfigFlush();
 
 
         /** @short  standard dtor.

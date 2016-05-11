@@ -34,6 +34,8 @@
 #include <grouparealistener.hxx>
 #endif
 
+#include <o3tl/make_unique.hxx>
+
 // Number of slots per dimension
 // must be integer divisors of MAXCOLCOUNT respectively MAXROWCOUNT
 #define BCA_SLOTS_COL ((MAXCOLCOUNT_DEFINE) / 16)
@@ -61,30 +63,6 @@
 #if BCA_SLOTS_DEFINE > 268435456
 #error BCA_SLOTS_DEFINE DOOMed!
 #endif
-
-namespace sc {
-
-bool AreaListener::SortByArea::operator ()( const AreaListener& rLeft, const AreaListener& rRight ) const
-{
-    if (rLeft.maArea.aStart.Tab() != rRight.maArea.aStart.Tab())
-        return rLeft.maArea.aStart.Tab() < rRight.maArea.aStart.Tab();
-
-    if (rLeft.maArea.aStart.Col() != rRight.maArea.aStart.Col())
-        return rLeft.maArea.aStart.Col() < rRight.maArea.aStart.Col();
-
-    if (rLeft.maArea.aStart.Row() != rRight.maArea.aStart.Row())
-        return rLeft.maArea.aStart.Row() < rRight.maArea.aStart.Row();
-
-    if (rLeft.maArea.aEnd.Tab() != rRight.maArea.aEnd.Tab())
-        return rLeft.maArea.aEnd.Tab() < rRight.maArea.aEnd.Tab();
-
-    if (rLeft.maArea.aEnd.Col() != rRight.maArea.aEnd.Col())
-        return rLeft.maArea.aEnd.Col() < rRight.maArea.aEnd.Col();
-
-    return rLeft.maArea.aEnd.Row() < rRight.maArea.aEnd.Row();
-}
-
-}
 
 struct ScSlotData
 {
@@ -282,7 +260,7 @@ ScBroadcastAreas::iterator ScBroadcastAreaSlot::FindBroadcastArea(
 
 namespace {
 
-void broadcastRangeByCell( SvtBroadcaster& rBC, const ScRange& rRange, sal_uLong nHint )
+void broadcastRangeByCell( SvtBroadcaster& rBC, const ScRange& rRange, sal_uInt32 nHint )
 {
     ScHint aHint(nHint, ScAddress());
     ScAddress& rPos = aHint.GetAddress();
@@ -303,7 +281,7 @@ void broadcastRangeByCell( SvtBroadcaster& rBC, const ScRange& rRange, sal_uLong
 
 }
 
-bool ScBroadcastAreaSlot::AreaBroadcast( const ScRange& rRange, sal_uLong nHint )
+bool ScBroadcastAreaSlot::AreaBroadcast( const ScRange& rRange, sal_uInt32 nHint )
 {
     if (aBroadcastAreaTbl.empty())
         return false;
@@ -615,7 +593,7 @@ void ScBroadcastAreaSlot::Dump() const
         const SvtBroadcaster::ListenersType& rListeners = rBC.GetAllListeners();
         size_t n = rListeners.size();
 
-        cout << "  * range: " << rtl::OUStringToOString(pArea->GetRange().Format(SCA_VALID|SCA_TAB_3D, pDoc), RTL_TEXTENCODING_UTF8).getStr()
+        cout << "  * range: " << rtl::OUStringToOString(pArea->GetRange().Format(ScRefFlags::VALID|ScRefFlags::TAB_3D, pDoc), RTL_TEXTENCODING_UTF8).getStr()
             << ", group: " << pArea->IsGroupListening()
             << ", listener count: " << n << endl;
 
@@ -625,7 +603,7 @@ void ScBroadcastAreaSlot::Dump() const
             if (pFC)
             {
                 cout << "    * listener: formula cell: "
-                     << rtl::OUStringToOString(pFC->aPos.Format(SCA_VALID|SCA_TAB_3D, pDoc), RTL_TEXTENCODING_UTF8).getStr()
+                     << rtl::OUStringToOString(pFC->aPos.Format(ScRefFlags::VALID|ScRefFlags::TAB_3D, pDoc), RTL_TEXTENCODING_UTF8).getStr()
                      << endl;
                 continue;
             }
@@ -634,7 +612,7 @@ void ScBroadcastAreaSlot::Dump() const
             if (pFGListener)
             {
                 cout << "    * listener: formula group: (pos: "
-                     << rtl::OUStringToOString(pFGListener->getTopCellPos().Format(SCA_VALID | SCA_TAB_3D, pDoc), RTL_TEXTENCODING_UTF8).getStr()
+                     << rtl::OUStringToOString(pFGListener->getTopCellPos().Format(ScRefFlags::VALID | ScRefFlags::TAB_3D, pDoc), RTL_TEXTENCODING_UTF8).getStr()
                      << ", length: " << pFGListener->getGroupLength()
                      << ")" << endl;
                 continue;
@@ -702,11 +680,11 @@ inline SCSIZE ScBroadcastAreaSlotMachine::ComputeSlotOffset(
         OSL_FAIL( "Row/Col invalid, using first slot!" );
         return 0;
     }
-    for (size_t i=0; i < aSlotDistribution.size(); ++i)
+    for (ScSlotData & i : aSlotDistribution)
     {
-        if (nRow < aSlotDistribution[i].nStopRow)
+        if (nRow < i.nStopRow)
         {
-            const ScSlotData& rSD = aSlotDistribution[i];
+            const ScSlotData& rSD = i;
             return rSD.nCumulated +
                 (static_cast<SCSIZE>(nRow - rSD.nStartRow)) / rSD.nSlice +
                 static_cast<SCSIZE>(nCol) / BCA_SLOT_COLS * nBcaSlotsRow;
@@ -842,7 +820,7 @@ void ScBroadcastAreaSlotMachine::EndListeningArea(
     }
 }
 
-bool ScBroadcastAreaSlotMachine::AreaBroadcast( const ScRange& rRange, sal_uLong nHint )
+bool ScBroadcastAreaSlotMachine::AreaBroadcast( const ScRange& rRange, sal_uInt32 nHint )
 {
     bool bBroadcasted = false;
     SCTAB nEndTab = rRange.aEnd.Tab();
@@ -1128,27 +1106,27 @@ bool ScBroadcastAreaSlotMachine::InsertBulkArea( const ScBroadcastArea* pArea )
 
 void ScBroadcastAreaSlotMachine::InsertBulkGroupArea( ScBroadcastArea* pArea, const ScRange& rRange )
 {
-    BulkGroupAreasType::iterator it = maBulkGroupAreas.lower_bound(pArea);
-    if (it == maBulkGroupAreas.end() || maBulkGroupAreas.key_comp()(pArea, it->first))
+    BulkGroupAreasType::iterator it = m_BulkGroupAreas.lower_bound(pArea);
+    if (it == m_BulkGroupAreas.end() || m_BulkGroupAreas.key_comp()(pArea, it->first))
     {
         // Insert a new one.
-        it = maBulkGroupAreas.insert(it, pArea, new sc::ColumnSpanSet(false));
+        it = m_BulkGroupAreas.insert(it, std::make_pair(pArea, o3tl::make_unique<sc::ColumnSpanSet>(false)));
     }
 
-    sc::ColumnSpanSet* pSet = it->second;
+    sc::ColumnSpanSet *const pSet = it->second.get();
     assert(pSet);
     pSet->set(rRange, true);
 }
 
 void ScBroadcastAreaSlotMachine::BulkBroadcastGroupAreas()
 {
-    if (maBulkGroupAreas.empty())
+    if (m_BulkGroupAreas.empty())
         return;
 
     sc::BulkDataHint aHint(*pDoc, nullptr);
 
     bool bBroadcasted = false;
-    BulkGroupAreasType::iterator it = maBulkGroupAreas.begin(), itEnd = maBulkGroupAreas.end();
+    BulkGroupAreasType::iterator it = m_BulkGroupAreas.begin(), itEnd = m_BulkGroupAreas.end();
     for (; it != itEnd; ++it)
     {
         ScBroadcastArea* pArea = it->first;
@@ -1162,7 +1140,7 @@ void ScBroadcastAreaSlotMachine::BulkBroadcastGroupAreas()
         }
         else
         {
-            const sc::ColumnSpanSet* pSpans = it->second;
+            const sc::ColumnSpanSet *const pSpans = it->second.get();
             assert(pSpans);
             aHint.setSpans(pSpans);
             rBC.Broadcast(aHint);
@@ -1170,7 +1148,7 @@ void ScBroadcastAreaSlotMachine::BulkBroadcastGroupAreas()
         }
     }
 
-    maBulkGroupAreas.clear();
+    m_BulkGroupAreas.clear();
     if (bBroadcasted)
         pDoc->TrackFormulas();
 }

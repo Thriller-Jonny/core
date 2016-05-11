@@ -21,19 +21,23 @@
 
 #include <sal/config.h>
 
-#include <boost/noncopyable.hpp>
 #include <osl/module.h>
 #include <osl/module.hxx>
 
 class SwViewShell;
 
-void _InitCore();   // bastyp/init.cxx
-void _FinitCore();
+void InitCore();   // bastyp/init.cxx
+void FinitCore();
 
 namespace sw {
 
 // basflt/fltini.cxx
-class Filters: private boost::noncopyable {
+class Filters
+{
+private:
+    Filters(Filters const&) = delete;
+    Filters& operator=(Filters const&) = delete;
+
 public:
     Filters();
 
@@ -49,13 +53,13 @@ private:
 }
 
 // layout/newfrm.cxx
-void _FrameInit();
-void _FrameFinit();
+void FrameInit();
+void FrameFinit();
 void SetShell( SwViewShell *pSh );
 
 // text/txtfrm.cxx
-void _TextInit();
-void _TextFinit();
+void TextInit_();
+void TextFinit();
 
 #endif
 

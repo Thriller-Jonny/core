@@ -183,7 +183,7 @@ namespace drawinglayer
         double TextLayouterDevice::getOverlineOffset() const
         {
             const ::FontMetric& rMetric = mrDevice.GetFontMetric();
-            double fRet = (rMetric.GetIntLeading() / 2.0) - rMetric.GetAscent();
+            double fRet = (rMetric.GetInternalLeading() / 2.0) - rMetric.GetAscent();
             return fRet;
         }
 
@@ -197,14 +197,14 @@ namespace drawinglayer
         double TextLayouterDevice::getStrikeoutOffset() const
         {
             const ::FontMetric& rMetric = mrDevice.GetFontMetric();
-            double fRet = (rMetric.GetAscent() - rMetric.GetIntLeading()) / 3.0;
+            double fRet = (rMetric.GetAscent() - rMetric.GetInternalLeading()) / 3.0;
             return fRet;
         }
 
         double TextLayouterDevice::getOverlineHeight() const
         {
             const ::FontMetric& rMetric = mrDevice.GetFontMetric();
-            double fRet = rMetric.GetIntLeading() / 2.5;
+            double fRet = rMetric.GetInternalLeading() / 2.5;
             return fRet;
         }
 
@@ -380,7 +380,7 @@ namespace drawinglayer
             const sal_uInt32 nWidth(basegfx::fround(fabs(fFontScaleX)));
             const bool bFontIsScaled(nHeight != nWidth);
 
-#ifdef WIN32
+#ifdef _WIN32
             // for WIN32 systems, start with creating an unscaled font. If FontScaling
             // is wanted, that width needs to be adapted using FontMetric again to get a
             // width of the unscaled font
@@ -400,7 +400,7 @@ namespace drawinglayer
                 Size(bFontIsScaled ? std::max<sal_uInt32>(nWidth, 1) : 0, nHeight));
 #endif
             // define various other FontAttribute
-            aRetval.SetAlign(ALIGN_BASELINE);
+            aRetval.SetAlignment(ALIGN_BASELINE);
             aRetval.SetCharSet(rFontAttribute.getSymbol() ? RTL_TEXTENCODING_SYMBOL : RTL_TEXTENCODING_UNICODE);
             aRetval.SetVertical(rFontAttribute.getVertical());
             aRetval.SetWeight(static_cast<FontWeight>(rFontAttribute.getWeight()));
@@ -409,17 +409,17 @@ namespace drawinglayer
             aRetval.SetPitch(rFontAttribute.getMonospaced() ? PITCH_FIXED : PITCH_VARIABLE);
             aRetval.SetLanguage(LanguageTag::convertToLanguageType( rLocale, false));
 
-#ifdef WIN32
+#ifdef _WIN32
             // for WIN32 systems, correct the FontWidth if FontScaling is used
             if(bFontIsScaled && nHeight > 0)
             {
                 const FontMetric aUnscaledFontMetric(Application::GetDefaultDevice()->GetFontMetric(aRetval));
 
-                if(aUnscaledFontMetric.GetWidth() > 0)
+                if(aUnscaledFontMetric.GetAverageFontWidth() > 0)
                 {
                     const double fScaleFactor((double)nWidth / (double)nHeight);
-                    const sal_uInt32 nScaledWidth(basegfx::fround((double)aUnscaledFontMetric.GetWidth() * fScaleFactor));
-                    aRetval.SetWidth(nScaledWidth);
+                    const sal_uInt32 nScaledWidth(basegfx::fround((double)aUnscaledFontMetric.GetAverageFontWidth() * fScaleFactor));
+                    aRetval.SetAverageFontWidth(nScaledWidth);
                 }
             }
 #endif
@@ -440,7 +440,7 @@ namespace drawinglayer
             bool bBiDiStrong)
         {
             const attribute::FontAttribute aRetval(
-                rFont.GetName(),
+                rFont.GetFamilyName(),
                 rFont.GetStyleName(),
                 static_cast<sal_uInt16>(rFont.GetWeight()),
                 RTL_TEXTENCODING_SYMBOL == rFont.GetCharSet(),
@@ -453,24 +453,24 @@ namespace drawinglayer
             // TODO: eKerning
 
             // set FontHeight and init to no FontScaling
-            o_rSize.setY(rFont.GetSize().getHeight() > 0 ? rFont.GetSize().getHeight() : 0);
+            o_rSize.setY(rFont.GetFontSize().getHeight() > 0 ? rFont.GetFontSize().getHeight() : 0);
             o_rSize.setX(o_rSize.getY());
 
-#ifdef WIN32
+#ifdef _WIN32
             // for WIN32 systems, the FontScaling at the Font is detected by
             // checking that FontWidth != 0. When FontScaling is used, WIN32
             // needs to do extra stuff to detect the correct width (since it's
             // zero and not equal the font height) and its relationship to
             // the height
-            if(rFont.GetSize().getWidth() > 0)
+            if(rFont.GetFontSize().getWidth() > 0)
             {
                 vcl::Font aUnscaledFont(rFont);
-                aUnscaledFont.SetWidth(0);
+                aUnscaledFont.SetAverageFontWidth(0);
                 const FontMetric aUnscaledFontMetric(Application::GetDefaultDevice()->GetFontMetric(aUnscaledFont));
 
-                if(aUnscaledFontMetric.GetWidth() > 0)
+                if(aUnscaledFontMetric.GetAverageFontWidth() > 0)
                 {
-                    const double fScaleFactor((double)rFont.GetSize().getWidth() / (double)aUnscaledFontMetric.GetWidth());
+                    const double fScaleFactor((double)rFont.GetFontSize().getWidth() / (double)aUnscaledFontMetric.GetAverageFontWidth());
                     o_rSize.setX(fScaleFactor * o_rSize.getY());
                 }
             }
@@ -479,9 +479,9 @@ namespace drawinglayer
             // is easier achieved since width == height is interpreted as no
             // scaling. Ergo, Width == 0 means width == height, and width != 0
             // means the scaling is in the direct relation of width to height
-            if(rFont.GetSize().getWidth() > 0)
+            if(rFont.GetFontSize().getWidth() > 0)
             {
-                o_rSize.setX((double)rFont.GetSize().getWidth());
+                o_rSize.setX((double)rFont.GetFontSize().getWidth());
             }
 #endif
             return aRetval;

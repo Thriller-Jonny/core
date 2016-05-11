@@ -86,11 +86,10 @@ private:
     };
     void setError(INSTALL_ERROR err, OUString const & sExtension, OUString const & exceptionMessage);
     void setError(OUString const & exceptionMessage);
-    css::uno::Reference< css::deployment::XExtensionManager > getExtensionManager() const
+    const css::uno::Reference< css::deployment::XExtensionManager >& getExtensionManager() const
             { return m_xExtensionManager; }
 
     rtl::Reference< Thread > m_thread;
-    css::uno::Reference< css::uno::XComponentContext >        m_xComponentContext;
     css::uno::Reference< css::deployment::XExtensionManager > m_xExtensionManager;
     //Signals that an error occurred during download and installation
     bool m_bError;

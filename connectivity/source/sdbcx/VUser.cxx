@@ -44,11 +44,11 @@ OUser::OUser(bool _bCase)  : OUser_BASE(m_aMutex)
 {
 }
 
-OUser::OUser(const OUString& _Name, bool _bCase) :    OUser_BASE(m_aMutex)
+OUser::OUser(const OUString& Name, bool _bCase) :    OUser_BASE(m_aMutex)
                         ,ODescriptor(OUser_BASE::rBHelper,_bCase)
                         ,m_pGroups(nullptr)
 {
-    m_Name = _Name;
+    m_Name = Name;
 }
 
 OUser::~OUser( )
@@ -182,7 +182,6 @@ void SAL_CALL OUser::release() throw()
 {
     OUser_BASE::release();
 }
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

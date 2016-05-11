@@ -20,6 +20,7 @@
 #include "sal/config.h"
 
 #include <cassert>
+#include <chrono>
 #include <algorithm>
 #include <unordered_map>
 
@@ -99,8 +100,6 @@ namespace cppu_threadpool
     }
 
 
-
-
     ThreadPool::ThreadPool() :
         m_DisposedCallerAdmin( DisposedCallerAdmin::getInstance() )
     {
@@ -150,8 +149,7 @@ namespace cppu_threadpool
         }
 
         // let the thread wait 2 seconds
-        TimeValue time = { 2 , 0 };
-        waitingThread.condition.wait( &time );
+        waitingThread.condition.wait( std::chrono::seconds(2) );
 
         {
             MutexGuard guard ( m_mutexWaitingThreadList );
@@ -228,7 +226,7 @@ namespace cppu_threadpool
             if( (*ii).second.first )
             {
                 // all oneway request have been processed, now
-                // synchronus requests may go on
+                // synchronous requests may go on
                 (*ii).second.first->resume();
             }
         }
@@ -368,7 +366,6 @@ struct uno_ThreadPool_Hash
             return reinterpret_cast<sal_Size>( a );
         }
 };
-
 
 
 typedef std::unordered_map< uno_ThreadPool, ThreadPoolHolder, uno_ThreadPool_Hash, uno_ThreadPool_Equal > ThreadpoolHashSet;

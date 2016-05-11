@@ -46,7 +46,6 @@ class XMLPropertySetMapper;
 class SvXMLImportPropertyMapper;
 
 
-
 enum SdXMLGroupShapeElemTokenMap
 {
     XML_TOK_GROUP_GROUP,
@@ -199,7 +198,6 @@ public:
 };
 
 
-
 class SdXML3DSceneAttributesHelper
 {
 protected:
@@ -243,7 +241,6 @@ public:
 };
 
 
-
 class SvXMLShapeContext : public SvXMLImportContext
 {
 protected:
@@ -262,7 +259,6 @@ public:
 };
 
 
-
 class ShapeSortContext;
 struct XMLShapeImportHelperImpl;
 struct XMLShapeImportPageContextImpl;
@@ -272,8 +268,6 @@ class XMLOFF_DLLPUBLIC XMLShapeImportHelper : public salhelper::SimpleReferenceO
     std::unique_ptr<XMLShapeImportHelperImpl> mpImpl;
 
     XMLShapeImportPageContextImpl*  mpPageContext;
-
-    css::uno::Reference< css::frame::XModel > mxModel;
 
     // PropertySetMappers and factory
     XMLSdPropHdlFactory*        mpSdPropHdlFactory;
@@ -292,10 +286,7 @@ class XMLOFF_DLLPUBLIC XMLShapeImportHelper : public salhelper::SimpleReferenceO
     SvXMLTokenMap*              mp3DPolygonBasedAttrTokenMap;
     SvXMLTokenMap*              mp3DCubeObjectAttrTokenMap;
     SvXMLTokenMap*              mp3DSphereObjectAttrTokenMap;
-    SvXMLTokenMap*              mp3DSceneShapeAttrTokenMap;
     SvXMLTokenMap*              mp3DLightAttrTokenMap;
-    SvXMLTokenMap*              mpPathShapeAttrTokenMap;
-    SvXMLTokenMap*              mpPolygonShapeAttrTokenMap;
 
     const OUString       msStartShape;
     const OUString       msEndShape;
@@ -412,7 +403,7 @@ public:
         const css::uno::Reference< css::frame::XModel>& rModel, SvXMLImport& rImport );
 
     /** defines if the import should increment the progress bar or not */
-    void enableHandleProgressBar( bool bEnable = true );
+    void enableHandleProgressBar();
     bool IsHandleProgressBarEnabled() const;
 
     /** queries the capability of the current model to create presentation shapes */

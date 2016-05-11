@@ -182,7 +182,7 @@ void OButtonModel::read(const Reference<XObjectInputStream>& _rxInStream) throw 
         case 0x0003:
         {
             OStreamSection aSection( _rxInStream.get() );
-            // this will skip any unknown bytes in it's dtor
+            // this will skip any unknown bytes in its dtor
 
             // button type
             m_eButtonType = (FormButtonType)_rxInStream->readShort();
@@ -448,7 +448,7 @@ IMPL_LINK_NOARG_TYPED(OButtonControl, OnClick, void*, void)
         if (FormButtonType_PUSH == *static_cast<FormButtonType const *>(xSet->getPropertyValue(PROPERTY_BUTTONTYPE).getValue()))
         {
             // notify the action listeners for a push button
-            ::cppu::OInterfaceIteratorHelper aIter(m_aActionListeners);
+            ::comphelper::OInterfaceIteratorHelper2 aIter(m_aActionListeners);
             ActionEvent aEvt(static_cast<XWeak*>(this), m_aActionCommand);
             while(aIter.hasMoreElements() )
             {

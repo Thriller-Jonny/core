@@ -12,7 +12,7 @@
 
 #include <com/sun/star/container/XNameAccess.hpp>
 #include <com/sun/star/beans/NamedValue.hpp>
-#include <com/sun/star/util/SearchOptions.hpp>
+#include <com/sun/star/util/SearchOptions2.hpp>
 
 #include <sfx2/tabdlg.hxx>
 #include <svtools/simptabl.hxx>
@@ -52,7 +52,7 @@ private:
     VclPtr< SvSimpleTable > m_pPrefBox;
 
      //for search
-    css::util::SearchOptions m_options;
+    css::util::SearchOptions2 m_options;
     SvTreeListEntries m_prefBoxEntries;
 
     void AddToModifiedVector( const std::shared_ptr< Prop_Impl >& rProp );
@@ -75,7 +75,7 @@ public:
    void     FillItems(const css::uno::Reference<css::container::XNameAccess>& xNameAccess,
                       SvTreeListEntry *pParentEntry = nullptr, int lineage = 0, bool bLoadAll = false);
    static css::uno::Reference< css::container::XNameAccess > getConfigAccess( const OUString& sNodePath, bool bUpdate );
-   bool FillItemSet();
+   void FillItemSet();
 };
 
 class CuiAboutConfigValueDialog : public ModalDialog

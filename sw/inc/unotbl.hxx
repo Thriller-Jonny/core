@@ -33,7 +33,6 @@
 #include <com/sun/star/table/XAutoFormattable.hpp>
 
 #include <cppuhelper/implbase.hxx>
-#include <cppuhelper/interfacecontainer.h>
 
 #include <comphelper/uno3.hxx>
 
@@ -41,7 +40,6 @@
 #include <TextCursorHelper.hxx>
 #include <unotext.hxx>
 #include <frmfmt.hxx>
-#include <tuple>
 #include <unocrsr.hxx>
 
 class SwTable;
@@ -287,7 +285,6 @@ struct SwRangeDescriptor
     void Normalize();
 };
 
-class SwTableProperties_Impl;
 class SwXTextTable : public cppu::WeakImplHelper
 <
     css::text::XTextTable,
@@ -300,36 +297,25 @@ class SwXTextTable : public cppu::WeakImplHelper
     css::util::XSortable,
     css::lang::XUnoTunnel,
     css::sheet::XCellRangeData
->,
-    public SwClient
+>
 {
 private:
     class Impl;
     ::sw::UnoImplPtr<Impl> m_pImpl;
-    css::uno::WeakReference< css::table::XTableRows > m_xRows;
-    css::uno::WeakReference< css::table::XTableColumns > m_xColumns;
 
-    const SfxItemPropertySet*       m_pPropSet;
-
-    // Descriptor-interface
-    SwTableProperties_Impl*     pTableProps;
-    OUString                    m_sTableName;
-    bool                    bIsDescriptor;
-    unsigned short              nRows;
-    unsigned short              nColumns;
-
-    bool m_bFirstRowAsLabel;
-    bool m_bFirstColumnAsLabel;
-protected:
-    virtual ~SwXTextTable();
     SwXTextTable();
     SwXTextTable(SwFrameFormat& rFrameFormat);
+    virtual ~SwXTextTable();
 
 public:
     static css::uno::Reference<css::text::XTextTable>
             CreateXTextTable(SwFrameFormat * pFrameFormat);
 
     SW_DLLPUBLIC static const css::uno::Sequence< sal_Int8 > & getUnoTunnelId();
+
+    SW_DLLPUBLIC static void GetCellPosition(const OUString& rCellName, sal_Int32& o_rColumn, sal_Int32& o_rRow);
+
+    SW_DLLPUBLIC SwFrameFormat* GetFrameFormat();
 
     //XUnoTunnel
     virtual sal_Int64 SAL_CALL getSomething( const css::uno::Sequence< sal_Int8 >& aIdentifier ) throw(css::uno::RuntimeException, std::exception) override;
@@ -422,20 +408,6 @@ public:
     virtual sal_Bool SAL_CALL supportsService(const OUString& ServiceName) throw( css::uno::RuntimeException, std::exception ) override;
     virtual css::uno::Sequence< OUString > SAL_CALL getSupportedServiceNames() throw( css::uno::RuntimeException, std::exception ) override;
 
-    void attachToRange(const css::uno::Reference< css::text::XTextRange > & xTextRange)throw( css::lang::IllegalArgumentException, css::uno::RuntimeException, std::exception );
-
-    sal_uInt16          getRowCount();
-    sal_uInt16          getColumnCount();
-    static css::uno::Reference< css::table::XCellRange >     GetRangeByName(SwFrameFormat* pFormat, SwTable* pTable,
-                        const OUString& sTLName, const OUString& sBRName,
-                        SwRangeDescriptor& rDesc);
-
-    //SwClient
-   virtual void Modify( const SfxPoolItem* pOld, const SfxPoolItem *pNew) override;
-
-    SwFrameFormat* GetFrameFormat() const { return const_cast<SwFrameFormat*>(static_cast<const SwFrameFormat*>(GetRegisteredIn())); }
-    SW_DLLPUBLIC static void GetCellPosition(const OUString& rCellName, sal_Int32& o_rColumn, sal_Int32& o_rRow);
-
 };
 
 class SwXCellRange : public cppu::WeakImplHelper
@@ -447,32 +419,27 @@ class SwXCellRange : public cppu::WeakImplHelper
     css::chart::XChartDataArray,
     css::util::XSortable,
     css::sheet::XCellRangeData
->,
-    public SwClient
+>
 {
-    ::osl::Mutex m_Mutex;
-    ::cppu::OInterfaceContainerHelper m_ChartListeners;
+private:
+    class Impl;
+    ::sw::UnoImplPtr<Impl> m_pImpl;
 
-    SwRangeDescriptor           aRgDesc;
-    const SfxItemPropertySet*   m_pPropSet;
-
-    sw::UnoCursorPointer m_pTableCursor;
-
-    bool m_bFirstRowAsLabel;
-    bool m_bFirstColumnAsLabel;
-    std::tuple<sal_uInt32, sal_uInt32, sal_uInt32, sal_uInt32> getLabelCoordinates(bool bRow);
-    css::uno::Sequence<OUString> getLabelDescriptions(bool bRow);
-    void setLabelDescriptions(const css::uno::Sequence<OUString>& rDesc, bool bRow);
+    SwXCellRange(const sw::UnoCursorPointer& pCursor, SwFrameFormat& rFrameFormat, SwRangeDescriptor& rDesc);
+    virtual ~SwXCellRange();
 
 public:
-    SwXCellRange(sw::UnoCursorPointer pCursor, SwFrameFormat& rFrameFormat, SwRangeDescriptor& rDesc);
-    void SetLabels(bool bFirstRowAsLabel, bool bFirstColumnAsLabel)
-        { m_bFirstRowAsLabel = bFirstRowAsLabel, m_bFirstColumnAsLabel = bFirstColumnAsLabel; }
-    virtual ~SwXCellRange() {};
-    std::vector< css::uno::Reference< css::table::XCell > > GetCells();
-
+    static ::rtl::Reference<SwXCellRange> CreateXCellRange(
+            const sw::UnoCursorPointer& pCursor, SwFrameFormat& rFrameFormat,
+            SwRangeDescriptor& rDesc);
 
     static const css::uno::Sequence< sal_Int8 > & getUnoTunnelId();
+
+    void SetLabels(bool bFirstRowAsLabel, bool bFirstColumnAsLabel);
+
+    std::vector<css::uno::Reference<css::table::XCell>> GetCells();
+
+    const SwUnoCursor* GetTableCursor() const;
 
     //XUnoTunnel
     virtual sal_Int64 SAL_CALL getSomething( const css::uno::Sequence< sal_Int8 >& aIdentifier ) throw(css::uno::RuntimeException, std::exception) override;
@@ -533,14 +500,6 @@ public:
     virtual sal_Bool SAL_CALL supportsService(const OUString& ServiceName) throw( css::uno::RuntimeException, std::exception ) override;
     virtual css::uno::Sequence< OUString > SAL_CALL getSupportedServiceNames() throw( css::uno::RuntimeException, std::exception ) override;
 
-    //SwClient
-    virtual void Modify( const SfxPoolItem* pOld, const SfxPoolItem *pNew) override;
-
-    SwFrameFormat*   GetFrameFormat() const { return const_cast<SwFrameFormat*>(static_cast<const SwFrameFormat*>(GetRegisteredIn())); }
-    sal_uInt16      getRowCount();
-    sal_uInt16      getColumnCount();
-
-    const SwUnoCursor* GetTableCursor() const;
 };
 
 class SwXTableRows final : public cppu::WeakImplHelper
@@ -550,8 +509,8 @@ class SwXTableRows final : public cppu::WeakImplHelper
 >
 {
 private:
-   class Impl;
-   ::sw::UnoImplPtr<Impl> m_pImpl;
+    class Impl;
+    ::sw::UnoImplPtr<Impl> m_pImpl;
     SwFrameFormat* GetFrameFormat();
     const SwFrameFormat* GetFrameFormat() const { return const_cast<SwXTableRows*>(this)->GetFrameFormat(); }
 protected:
@@ -589,8 +548,8 @@ class SwXTableColumns : public cppu::WeakImplHelper
 >
 {
 private:
-   class Impl;
-   ::sw::UnoImplPtr<Impl> m_pImpl;
+    class Impl;
+    ::sw::UnoImplPtr<Impl> m_pImpl;
     SwFrameFormat* GetFrameFormat() const;
 protected:
     virtual ~SwXTableColumns();

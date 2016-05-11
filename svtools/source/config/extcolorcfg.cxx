@@ -80,7 +80,7 @@ class ExtendedColorConfig_Impl : public utl::ConfigItem, public SfxBroadcaster
     virtual void                    ImplCommit() override;
 
 public:
-    explicit ExtendedColorConfig_Impl(bool bEditMode = false);
+    explicit ExtendedColorConfig_Impl();
     virtual ~ExtendedColorConfig_Impl();
 
     void                            Load(const OUString& rScheme);
@@ -118,8 +118,8 @@ public:
     void                            SetColorConfigValue(const OUString& _sName,
                                                             const ExtendedColorConfigValue& rValue );
 
-    bool                            AddScheme(const OUString& rNode);
-    bool                            RemoveScheme(const OUString& rNode);
+    void                            AddScheme(const OUString& rNode);
+    void                            RemoveScheme(const OUString& rNode);
     void                            SetModified(){ConfigItem::SetModified();}
     void                            ClearModified(){ConfigItem::ClearModified();}
     void                            SettingsChanged();
@@ -195,9 +195,9 @@ OUString ExtendedColorConfig_Impl::GetComponentName(sal_uInt32 _nPos) const
 
 bool ExtendedColorConfig_Impl::m_bLockBroadcast = false;
 bool ExtendedColorConfig_Impl::m_bBroadcastWhenUnlocked = false;
-ExtendedColorConfig_Impl::ExtendedColorConfig_Impl(bool bEditMode) :
+ExtendedColorConfig_Impl::ExtendedColorConfig_Impl() :
     ConfigItem(OUString("Office.ExtendedColorScheme")),
-    m_bEditMode(bEditMode),
+    m_bEditMode(false),
     m_bIsBroadcastEnabled(true)
 {
     if(!m_bEditMode)
@@ -490,21 +490,19 @@ void ExtendedColorConfig_Impl::SetColorConfigValue(const OUString& _sName, const
     }
 }
 
-bool ExtendedColorConfig_Impl::AddScheme(const OUString& rScheme)
+void ExtendedColorConfig_Impl::AddScheme(const OUString& rScheme)
 {
     if(ConfigItem::AddNode("ExtendedColorScheme/ColorSchemes", rScheme))
     {
         m_sLoadedScheme = rScheme;
         Commit();
-        return true;
     }
-    return false;
 }
 
-bool ExtendedColorConfig_Impl::RemoveScheme(const OUString& rScheme)
+void ExtendedColorConfig_Impl::RemoveScheme(const OUString& rScheme)
 {
     uno::Sequence< OUString > aElements { rScheme };
-    return ClearNodeElements("ExtendedColorScheme/ColorSchemes", aElements);
+    ClearNodeElements("ExtendedColorScheme/ColorSchemes", aElements);
 }
 
 void ExtendedColorConfig_Impl::SettingsChanged()
@@ -548,9 +546,6 @@ IMPL_LINK_TYPED( ExtendedColorConfig_Impl, DataChangedEventListener, VclSimpleEv
         }
     }
 }
-
-
-
 
 
 ExtendedColorConfig::ExtendedColorConfig()

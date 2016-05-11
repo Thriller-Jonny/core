@@ -18,7 +18,6 @@
  */
 
 
-#include <boost/current_function.hpp>
 #include <rtl/ustrbuf.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/gdimtf.hxx>
@@ -104,7 +103,7 @@ public:
 private:
     ::canvas::tools::ElapsedTime    maTimer;
     double                          mnNextTime;
-    boost::weak_ptr<Activity>       mpActivity;
+    std::weak_ptr<Activity>       mpActivity;
     ActivitiesQueue&                mrActivityQueue;
 };
 
@@ -153,9 +152,9 @@ RehearseTimingsActivity::RehearseTimingsActivity( const SlideShowContext& rConte
     mbActive(false),
     mbDrawPressed(false)
 {
-    maFont.SetHeight( maFont.GetHeight() * 2 );
-    maFont.SetWidth( maFont.GetWidth() * 2 );
-    maFont.SetAlign( ALIGN_BASELINE );
+    maFont.SetFontHeight( maFont.GetFontHeight() * 2 );
+    maFont.SetAverageFontWidth( maFont.GetAverageFontWidth() * 2 );
+    maFont.SetAlignment( ALIGN_BASELINE );
     maFont.SetColor( COL_BLACK );
 
     // determine sprite size (in pixel):
@@ -189,10 +188,10 @@ RehearseTimingsActivity::~RehearseTimingsActivity()
     }
 }
 
-boost::shared_ptr<RehearseTimingsActivity> RehearseTimingsActivity::create(
+std::shared_ptr<RehearseTimingsActivity> RehearseTimingsActivity::create(
     const SlideShowContext& rContext )
 {
-    boost::shared_ptr<RehearseTimingsActivity> pActivity(
+    std::shared_ptr<RehearseTimingsActivity> pActivity(
         new RehearseTimingsActivity( rContext ));
 
     pActivity->mpMouseHandler.reset(
@@ -218,7 +217,7 @@ void RehearseTimingsActivity::start()
     for_each_sprite( []( const ::cppcanvas::CustomSpriteSharedPtr& pSprite )
                      { return pSprite->show(); } );
 
-    mrActivitiesQueue.addActivity( shared_from_this() );
+    mrActivitiesQueue.addActivity( std::dynamic_pointer_cast<Activity>(shared_from_this()) );
 
     mpMouseHandler->reset();
     mrEventMultiplexer.addClickHandler(

@@ -33,7 +33,7 @@
 /**********************************************************************
  stl container elements must fulfill the following requirements:
  1. they need a copy ctor and assignement operator(?)
- 2. they must be compareable
+ 2. they must be comparable
  because the FORMATETC structure has a pointer to a TARGETDEVICE
  structure we need a simple wrapper class to fulfill these needs
 ***********************************************************************/
@@ -42,7 +42,7 @@ class CFormatEtc
 {
 public:
     CFormatEtc( );
-    CFormatEtc( const FORMATETC& aFormatEtc );
+    explicit CFormatEtc( const FORMATETC& aFormatEtc );
     CFormatEtc( CLIPFORMAT cf, DWORD tymed = TYMED_HGLOBAL, DVTARGETDEVICE* ptd = NULL, DWORD dwAspect = DVASPECT_CONTENT, LONG lindex = -1 );
     CFormatEtc( const CFormatEtc& theOther );
 

@@ -359,7 +359,7 @@ void applyTheme(SfxStyleSheetBasePool* pPool, const OUString& sFontSetName, cons
 
     svx::ColorSet aColorSet = rColorSets.getColorSet(sColorSetName);
 
-    pPool->SetSearchMask(SFX_STYLE_FAMILY_PARA);
+    pPool->SetSearchMask(SfxStyleFamily::Para);
     pStyle = static_cast<SwDocStyleSheet*>(pPool->First());
 
     while (pStyle)
@@ -378,7 +378,7 @@ void applyTheme(SfxStyleSheetBasePool* pPool, const OUString& sFontSetName, cons
         pStyle = static_cast<SwDocStyleSheet*>(pPool->Next());
     }
 
-    pPool->SetSearchMask(SFX_STYLE_FAMILY_CHAR);
+    pPool->SetSearchMask(SfxStyleFamily::Char);
     pStyle = static_cast<SwDocStyleSheet*>(pPool->First());
 
     while (pStyle)
@@ -465,7 +465,7 @@ ThemePanel::ThemePanel(vcl::Window* pParent,
     {
         const svx::ColorSet& rColorSet = aColorSets[i];
 
-        OUString aName = rColorSet.getName();
+        const OUString& aName = rColorSet.getName();
         BitmapEx aPreview = GenerateColorPreview(rColorSet);
         mpValueSetColors->InsertItem(i, Image(aPreview), aName);
     }

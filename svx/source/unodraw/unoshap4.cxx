@@ -81,7 +81,7 @@ SvxOle2Shape::~SvxOle2Shape() throw()
 
 css::uno::Any SAL_CALL SvxOle2Shape::queryAggregation( const css::uno::Type & rType ) throw(css::uno::RuntimeException, std::exception)
 {
-	return SvxShapeText::queryAggregation( rType );
+    return SvxShapeText::queryAggregation( rType );
 }
 
 //XPropertySet
@@ -303,12 +303,8 @@ bool SvxOle2Shape::getPropertyValueImpl( const OUString& rName, const SfxItemPro
                 // usage. Removed it, former fallback is used now
                 if ( pProperty->nWID == OWN_ATTR_OLEMODEL || pProperty->nWID == OWN_ATTR_OLE_EMBEDDED_OBJECT )
                 {
-#if OSL_DEBUG_LEVEL > 0
                     const bool bSuccess(pObj->AddOwnLightClient());
-                    OSL_ENSURE( bSuccess, "An object without client is provided!" );
-#else
-                    pObj->AddOwnLightClient();
-#endif
+                    SAL_WARN_IF(!bSuccess, "svx.svdraw", "An object without client is provided!");
                 }
 
                 if ( pProperty->nWID == OWN_ATTR_OLEMODEL )
@@ -457,13 +453,13 @@ bool SvxOle2Shape::createObject( const SvGlobalName &aClassName )
     return xObj.is();
 }
 
-bool SvxOle2Shape::createLink( const OUString& aLinkURL )
+void SvxOle2Shape::createLink( const OUString& aLinkURL )
 {
     DBG_TESTSOLARMUTEX();
 
     SdrOle2Obj* pOle2Obj = dynamic_cast< SdrOle2Obj* >( mpObj.get() );
     if ( !pOle2Obj || !pOle2Obj->IsEmpty() )
-        return false;
+        return;
 
     OUString aPersistName;
 
@@ -516,8 +512,6 @@ bool SvxOle2Shape::createLink( const OUString& aLinkURL )
         if ( pOle2Obj->IsEmpty() )
             pOle2Obj->SetObjRef( xObj );
     }
-
-    return xObj.is();
 }
 
 void SvxOle2Shape::resetModifiedState()
@@ -531,7 +525,7 @@ void SvxOle2Shape::resetModifiedState()
             uno::Reference < util::XModifiable > xMod( pOle->GetObjRef(), uno::UNO_QUERY );
             if( xMod.is() )
                 // TODO/MBA: what's this?!
-                xMod->setModified( sal_False );
+                xMod->setModified( false );
         }
     }
 }
@@ -574,7 +568,6 @@ const SvGlobalName SvxOle2Shape::GetClassName_Impl(OUString& rHexCLSID)
 
     return aClassName;
 }
-
 
 
 SvxAppletShape::SvxAppletShape( SdrObject* pObject ) throw()
@@ -649,7 +642,6 @@ bool SvxAppletShape::getPropertyValueImpl( const OUString& rName, const SfxItemP
 }
 
 
-
 SvxPluginShape::SvxPluginShape( SdrObject* pObject ) throw()
 : SvxOle2Shape( pObject, getSvxMapProvider().GetMap(SVXMAP_PLUGIN), getSvxMapProvider().GetPropertySet(SVXMAP_PLUGIN, SdrObject::GetGlobalDrawObjectItemPool()) )
 {
@@ -676,7 +668,7 @@ void SAL_CALL SvxPluginShape::setPropertyValue( const OUString& aPropertyName, c
 
 void SAL_CALL SvxPluginShape::setPropertyValues( const css::uno::Sequence< OUString >& aPropertyNames, const css::uno::Sequence< css::uno::Any >& rValues ) throw (css::beans::PropertyVetoException, css::lang::IllegalArgumentException, css::lang::WrappedTargetException, css::uno::RuntimeException, std::exception)
 {
-	SvxShape::setPropertyValues( aPropertyNames, rValues );
+    SvxShape::setPropertyValues( aPropertyNames, rValues );
     resetModifiedState();
 }
 
@@ -722,7 +714,6 @@ bool SvxPluginShape::getPropertyValueImpl( const OUString& rName, const SfxItemP
 }
 
 
-
 SvxFrameShape::SvxFrameShape( SdrObject* pObject ) throw()
 : SvxOle2Shape( pObject, getSvxMapProvider().GetMap(SVXMAP_FRAME), getSvxMapProvider().GetPropertySet(SVXMAP_FRAME, SdrObject::GetGlobalDrawObjectItemPool())  )
 {
@@ -749,7 +740,7 @@ void SAL_CALL SvxFrameShape::setPropertyValue( const OUString& aPropertyName, co
 
 void SAL_CALL SvxFrameShape::setPropertyValues( const css::uno::Sequence< OUString >& aPropertyNames, const css::uno::Sequence< css::uno::Any >& rValues ) throw (css::beans::PropertyVetoException, css::lang::IllegalArgumentException, css::lang::WrappedTargetException, css::uno::RuntimeException, std::exception)
 {
-	SvxShape::setPropertyValues( aPropertyNames, rValues );
+    SvxShape::setPropertyValues( aPropertyNames, rValues );
     resetModifiedState();
 }
 
@@ -834,7 +825,7 @@ bool SvxMediaShape::setPropertyValueImpl( const OUString& rName, const SfxItemPr
         }
         break;
 
-        case( OWN_ATTR_MEDIA_LOOP ):
+        case OWN_ATTR_MEDIA_LOOP:
         {
             bool bLoop;
 
@@ -846,7 +837,7 @@ bool SvxMediaShape::setPropertyValueImpl( const OUString& rName, const SfxItemPr
         }
         break;
 
-        case( OWN_ATTR_MEDIA_MUTE ):
+        case OWN_ATTR_MEDIA_MUTE:
         {
             bool bMute;
 
@@ -858,7 +849,7 @@ bool SvxMediaShape::setPropertyValueImpl( const OUString& rName, const SfxItemPr
         }
         break;
 
-        case( OWN_ATTR_MEDIA_VOLUMEDB ):
+        case OWN_ATTR_MEDIA_VOLUMEDB:
         {
             sal_Int16 nVolumeDB = sal_Int16();
 
@@ -870,7 +861,7 @@ bool SvxMediaShape::setPropertyValueImpl( const OUString& rName, const SfxItemPr
         }
         break;
 
-        case( OWN_ATTR_MEDIA_ZOOM ):
+        case OWN_ATTR_MEDIA_ZOOM:
         {
             css::media::ZoomLevel eLevel;
 
@@ -937,7 +928,6 @@ bool SvxMediaShape::setPropertyValueImpl( const OUString& rName, const SfxItemPr
 }
 
 
-
 bool SvxMediaShape::getPropertyValueImpl( const OUString& rName, const SfxItemPropertySimpleEntry* pProperty, css::uno::Any& rValue ) throw(css::beans::UnknownPropertyException, css::lang::WrappedTargetException, css::uno::RuntimeException, std::exception)
 {
     if (   ((pProperty->nWID >= OWN_ATTR_MEDIA_URL) &&
@@ -956,19 +946,19 @@ bool SvxMediaShape::getPropertyValueImpl( const OUString& rName, const SfxItemPr
                 rValue <<= aItem.getURL();
                 break;
 
-            case( OWN_ATTR_MEDIA_LOOP ):
+            case OWN_ATTR_MEDIA_LOOP:
                 rValue <<= aItem.isLoop();
                 break;
 
-            case( OWN_ATTR_MEDIA_MUTE ):
+            case OWN_ATTR_MEDIA_MUTE:
                 rValue <<= aItem.isMute();
                 break;
 
-            case( OWN_ATTR_MEDIA_VOLUMEDB ):
+            case OWN_ATTR_MEDIA_VOLUMEDB:
                 rValue <<= (sal_Int16) aItem.getVolumeDB();
                 break;
 
-            case( OWN_ATTR_MEDIA_ZOOM ):
+            case OWN_ATTR_MEDIA_ZOOM:
                 rValue <<= aItem.getZoom();
                 break;
 

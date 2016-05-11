@@ -39,7 +39,8 @@ namespace sw
 
 DocumentTimerManager::DocumentTimerManager( SwDoc& i_rSwdoc ) : m_rDoc( i_rSwdoc ),
                                                                 mbStartIdleTimer( false ),
-                                                                mIdleBlockCount( 0 )
+                                                                mIdleBlockCount( 0 ),
+                                                                maIdle("DocumentTimerManagerIdleTimer")
 {
     maIdle.SetPriority( SchedulerPriority::LOWEST );
     maIdle.SetIdleHdl( LINK( this, DocumentTimerManager, DoIdleJobs) );
@@ -170,7 +171,6 @@ IMPL_LINK_TYPED( DocumentTimerManager, DoIdleJobs, Idle*, pIdle, void )
 DocumentTimerManager::~DocumentTimerManager() {}
 
 }
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

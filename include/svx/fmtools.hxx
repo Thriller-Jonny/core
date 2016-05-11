@@ -79,7 +79,7 @@ namespace vcl { class Window; }
 // display info about a simple css::sdbc::SQLException
 void displayException(const css::sdbc::SQLException&, vcl::Window* _pParent = nullptr);
 SVX_DLLPUBLIC void displayException(const css::sdb::SQLContext&, vcl::Window* _pParent = nullptr);
-void displayException(const css::sdb::SQLErrorEvent&, vcl::Window* _pParent = nullptr);
+void displayException(const css::sdb::SQLErrorEvent&);
 void displayException(const css::uno::Any&, vcl::Window* _pParent = nullptr);
 
 sal_Int32 getElementPos(const css::uno::Reference< css::container::XIndexAccess>& xCont, const css::uno::Reference< css::uno::XInterface>& xElement);
@@ -116,14 +116,11 @@ public:
     bool is() const { return m_xMoveOperations.is(); }
     bool Is() const { return m_xMoveOperations.is(); }
 
-    CursorWrapper* operator ->() { return this; }
     operator const css::uno::Reference< css::uno::XInterface>& () const{ return m_xGeneric; }
 
     // 'Conversions'
     const CursorWrapper& operator=(const css::uno::Reference< css::sdbc::XRowSet>& xCursor);
     operator const css::uno::Reference< css::sdbc::XResultSet>& () const          { return m_xMoveOperations; }
-    operator const css::uno::Reference< css::sdbcx::XRowLocate>& () const         { return m_xBookmarkOperations; }
-    operator const css::uno::Reference< css::sdbcx::XColumnsSupplier>& () const   { return m_xColumnsSupplier; }
 
     const css::uno::Reference< css::beans::XPropertySet >&        getPropertySet() const      { return m_xPropertyAccess; }
 
@@ -181,7 +178,7 @@ class SAL_WARN_UNUSED FmXDisposeMultiplexer : public ::cppu::WeakImplHelper1< cs
 
     virtual ~FmXDisposeMultiplexer();
 public:
-    FmXDisposeMultiplexer(FmXDisposeListener* _pListener, const css::uno::Reference< css::lang::XComponent>& _rxObject, sal_Int16 _nId = -1);
+    FmXDisposeMultiplexer(FmXDisposeListener* _pListener, const css::uno::Reference< css::lang::XComponent>& _rxObject);
 
 // css::lang::XEventListener
     virtual void SAL_CALL disposing( const css::lang::EventObject& Source ) throw(css::uno::RuntimeException, std::exception) override;

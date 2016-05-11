@@ -74,9 +74,11 @@
 LwpVirtualLayout::LwpVirtualLayout(LwpObjectHeader &objHdr, LwpSvStream* pStrm)
     : LwpDLNFPVList(objHdr, pStrm)
     , m_bGettingHonorProtection(false)
+    , m_bGettingMarginsSameAsParent(false)
     , m_bGettingHasProtection(false)
     , m_bGettingIsProtected(false)
     , m_bGettingMarginsValue(false)
+    , m_bGettingExtMarginsValue(false)
     , m_nAttributes(0)
     , m_nAttributes2(0)
     , m_nAttributes3(0)
@@ -560,9 +562,12 @@ void LwpLayoutMisc::Read(LwpObjectStream* pStrm)
 }
 
 LwpMiddleLayout::LwpMiddleLayout( LwpObjectHeader &objHdr, LwpSvStream* pStrm )
-    : LwpVirtualLayout(objHdr, pStrm),
-      m_pStyleStuff(new LwpLayoutStyle), m_pMiscStuff(new LwpLayoutMisc)
-{}
+    : LwpVirtualLayout(objHdr, pStrm)
+    , m_pStyleStuff(new LwpLayoutStyle)
+    , m_pMiscStuff(new LwpLayoutMisc)
+    , m_bGettingGeometry(false)
+{
+}
 
 LwpMiddleLayout::~LwpMiddleLayout()
 {
@@ -637,7 +642,7 @@ rtl::Reference<LwpObject> LwpMiddleLayout::GetBasedOnStyle()
 * @descr:   Get the geometry of current layout
 *
 */
-LwpLayoutGeometry* LwpMiddleLayout::GetGeometry()
+LwpLayoutGeometry* LwpMiddleLayout::Geometry()
 {
     if( !m_LayGeometry.IsNull() )
     {
@@ -697,7 +702,7 @@ bool LwpMiddleLayout::MarginsSameAsParent()
     rtl::Reference<LwpObject> xBase(GetBasedOnStyle());
     if (LwpVirtualLayout* pLay = dynamic_cast<LwpVirtualLayout*>(xBase.get()))
     {
-        pLay->MarginsSameAsParent();
+        pLay->GetMarginsSameAsParent();
     }
     return LwpVirtualLayout::MarginsSameAsParent();
 }
@@ -711,7 +716,7 @@ double LwpMiddleLayout::MarginsValue(const sal_uInt8 &nWhichSide)
     double fValue = 0;
     if((nWhichSide==MARGIN_LEFT)||(nWhichSide==MARGIN_RIGHT))
     {
-        if ( MarginsSameAsParent() )
+        if ( GetMarginsSameAsParent() )
         {
             rtl::Reference<LwpVirtualLayout> xParent(dynamic_cast<LwpVirtualLayout*>(GetParent().obj().get()));
             if (xParent.is() && !xParent->IsHeader())
@@ -746,7 +751,7 @@ double LwpMiddleLayout::MarginsValue(const sal_uInt8 &nWhichSide)
  * @param:
  * @return:
 */
-double LwpMiddleLayout::GetExtMarginsValue(const sal_uInt8 &nWhichSide)
+double LwpMiddleLayout::ExtMarginsValue(const sal_uInt8 &nWhichSide)
 {
     double fValue = 0;
     if(m_nOverrideFlag & OVER_MARGINS)
@@ -764,7 +769,7 @@ double LwpMiddleLayout::GetExtMarginsValue(const sal_uInt8 &nWhichSide)
         fValue = pStyle->GetExtMarginsValue(nWhichSide);
         return fValue;
     }
-    return LwpVirtualLayout::GetExtMarginsValue(nWhichSide);
+    return LwpVirtualLayout::ExtMarginsValue(nWhichSide);
 }
 /**
  * @descr:  Get the LwpBorderStuff object according to m_LayBorderStuff id.
@@ -821,11 +826,11 @@ XFBorders* LwpMiddleLayout::GetXFBorders()
         LwpBorderStuff::BorderType pType[] = { LwpBorderStuff::LEFT, LwpBorderStuff::RIGHT,
             LwpBorderStuff::TOP, LwpBorderStuff::BOTTOM };
 
-        for (sal_uInt8 nC = 0; nC < 4; nC++)
+        for (LwpBorderStuff::BorderType & nC : pType)
         {
-            if (pBorderStuff->HasSide(pType[nC]))
+            if (pBorderStuff->HasSide(nC))
             {
-                LwpParaStyle::ApplySubBorder(pBorderStuff, pType[nC], pXFBorders);
+                LwpParaStyle::ApplySubBorder(pBorderStuff, nC, pXFBorders);
             }
         }
         return pXFBorders;
@@ -1303,7 +1308,7 @@ bool LwpMiddleLayout::HonorProtection()
 }
 
 /**
-* @descr:   Whether it is pretected
+* @descr:   Whether it is protected
 *
 */
 bool LwpMiddleLayout::IsProtected()
@@ -1494,7 +1499,7 @@ void LwpLayout::Read()
 
             sal_uInt8 nFlag = pStrm->QuickReaduInt8();
             if (nFlag)
-                m_Positon.ReadIndexed(pStrm);
+                m_Position.ReadIndexed(pStrm);
         }
 
         m_LayColumns.ReadIndexed(pStrm);
@@ -1651,12 +1656,12 @@ XFColumnSep* LwpLayout::GetColumnSep()
         return nullptr;
     }
 
-    LwpBorderStuff& pBorderStuff = pLayoutGutters->GetBorderStuff();
+    LwpBorderStuff& rBorderStuff = pLayoutGutters->GetBorderStuff();
 
     LwpBorderStuff::BorderType eType = LwpBorderStuff::LEFT;
-    LwpColor    aColor = pBorderStuff.GetSideColor(eType);
-    double  fWidth = pBorderStuff.GetSideWidth(eType);
-    //sal_uInt16    nType = pBorderStuff->GetSideType(eType);
+    LwpColor    aColor = rBorderStuff.GetSideColor(eType);
+    double  fWidth = rBorderStuff.GetSideWidth(eType);
+    //sal_uInt16    nType = rBorderStuff->GetSideType(eType);
 
     XFColumnSep* pColumnSep = new XFColumnSep();
     XFColor aXFColor(aColor.To24Color());

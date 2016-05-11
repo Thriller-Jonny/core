@@ -143,14 +143,6 @@ enum SdXMLPresentationPlaceholderAttrTokenMap
     XML_TOK_PRESENTATIONPLACEHOLDER_HEIGHT
 };
 
-struct SdXMLltXDrawPageId
-{
-  bool operator()(sal_Int32 nId1, sal_Int32 nId2 ) const
-  {
-    return nId1 < nId2;
-  }
-};
-
 class SvXMLUnitConverter;
 class SvXMLTokenMap;
 class SdXMLMasterStylesContext;
@@ -195,9 +187,6 @@ class SdXMLImport: public SvXMLImport
     bool                        mbIsDraw;
     bool                        mbLoadDoc;
     bool                        mbPreview;
-
-    std::map< sal_Int32, css::uno::Reference< css::drawing::XDrawPage >, SdXMLltXDrawPageId >
-                                maDrawPageIds;
 
     OUString                    msPageLayouts;
     OUString                    msPreview;
@@ -271,7 +260,7 @@ public:
     sal_Int32 GetNewMasterPageCount() const { return mnNewMasterPageCount; }
     void IncrementNewMasterPageCount() { mnNewMasterPageCount++; }
 
-    css::uno::Reference< css::container::XNameAccess > getPageLayouts() const { return mxPageLayouts; }
+    const css::uno::Reference< css::container::XNameAccess >& getPageLayouts() const { return mxPageLayouts; }
 
     bool IsDraw() const { return mbIsDraw; }
     bool IsImpress() const { return !mbIsDraw; }

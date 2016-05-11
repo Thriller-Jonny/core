@@ -106,7 +106,6 @@ namespace accessibility
     }
 
 
-
     Rectangle AccessibleListBoxEntry::GetBoundingBox_Impl() const
     {
         Rectangle aRect;
@@ -152,11 +151,11 @@ namespace accessibility
         Reference< XAccessible > xParent = implGetParentAccessible( );
 
         bool bShowing = false;
-        Reference< XAccessibleContext > m_xParentContext =
+        Reference< XAccessibleContext > xParentContext =
             xParent.is() ? xParent->getAccessibleContext() : Reference< XAccessibleContext >();
-        if( m_xParentContext.is() )
+        if( xParentContext.is() )
         {
-            Reference< XAccessibleComponent > xParentComp( m_xParentContext, uno::UNO_QUERY );
+            Reference< XAccessibleComponent > xParentComp( xParentContext, uno::UNO_QUERY );
             if( xParentComp.is() )
                 bShowing = GetBoundingBox_Impl().IsOver( VCLRectangle( xParentComp->getBounds() ) );
         }
@@ -429,10 +428,10 @@ namespace accessibility
                 SvButtonState eState = pBox->GetCheckButtonState( pEntry );
                 switch( eState )
                 {
-                case SV_BUTTON_CHECKED:
-                case SV_BUTTON_UNCHECKED:
+                case SvButtonState::Checked:
+                case SvButtonState::Unchecked:
                     return AccessibleRole::CHECK_BOX;
-                case SV_BUTTON_TRISTATE:
+                case SvButtonState::Tristate:
                 default:
                     return AccessibleRole::LABEL;
                 }
@@ -787,10 +786,10 @@ namespace accessibility
             {
                 SvTreeListEntry* pEntry = getListBox()->GetEntryFromPath( m_aEntryPath );
                 SvButtonState state = getListBox()->GetCheckButtonState( pEntry );
-                if ( state == SV_BUTTON_CHECKED )
-                    getListBox()->SetCheckButtonState(pEntry, SV_BUTTON_UNCHECKED);
-                else if (state == SV_BUTTON_UNCHECKED)
-                    getListBox()->SetCheckButtonState(pEntry, SV_BUTTON_CHECKED);
+                if ( state == SvButtonState::Checked )
+                    getListBox()->SetCheckButtonState(pEntry, SvButtonState::Unchecked);
+                else if (state == SvButtonState::Unchecked)
+                    getListBox()->SetCheckButtonState(pEntry, SvButtonState::Checked);
             }
         }
         else if( (nIndex == 1 && (treeFlag & SvTreeFlags::CHKBTN) ) || (nIndex == 0) )
@@ -827,9 +826,9 @@ namespace accessibility
         {
             if(getAccessibleRole() == AccessibleRole::CHECK_BOX)
             {
-                if ( state == SV_BUTTON_CHECKED )
+                if ( state == SvButtonState::Checked )
                     return OUString(sActionDesc2);
-                else if (state == SV_BUTTON_UNCHECKED)
+                else if (state == SvButtonState::Unchecked)
                     return OUString(sActionDesc1);
             }
             else
@@ -1124,7 +1123,6 @@ namespace accessibility
     }
 
 
-
     sal_Bool AccessibleListBoxEntry::setCurrentValue( const Any& aNumber ) throw (RuntimeException, std::exception)
     {
         ::osl::MutexGuard aGuard( m_aMutex );
@@ -1156,7 +1154,6 @@ namespace accessibility
     }
 
 
-
     Any AccessibleListBoxEntry::getMaximumValue(  ) throw (RuntimeException, std::exception)
     {
         ::osl::MutexGuard aGuard( m_aMutex );
@@ -1177,7 +1174,6 @@ namespace accessibility
     }
 
 
-
     Any AccessibleListBoxEntry::getMinimumValue(  ) throw (RuntimeException, std::exception)
     {
         ::osl::MutexGuard aGuard( m_aMutex );
@@ -1196,7 +1192,6 @@ namespace accessibility
 
         return aValue;
     }
-
 
 
     SvTreeListEntry* AccessibleListBoxEntry::GetRealChild(sal_Int32 nIndex)

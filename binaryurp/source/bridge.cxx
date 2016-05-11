@@ -104,7 +104,7 @@ public:
 
     ~AttachThread();
 
-    rtl::ByteSequence getTid() throw () { return tid_;}
+    const rtl::ByteSequence& getTid() throw () { return tid_;}
 
 private:
     AttachThread(const AttachThread&) = delete;
@@ -348,8 +348,6 @@ void Bridge::terminate(bool final) {
     }
     terminated_.set();
 }
-
-
 
 
 BinaryAny Bridge::mapCppToBinaryAny(css::uno::Any const & cppAny) {

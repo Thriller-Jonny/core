@@ -56,8 +56,6 @@ DomainMapperTableHandler::DomainMapperTableHandler(
             DomainMapper_Impl& rDMapper_Impl)
     : m_xText(xText),
         m_rDMapper_Impl( rDMapper_Impl ),
-        m_nCellIndex(0),
-        m_nRowIndex(0),
         m_bHadFootOrEndnote(false)
 {
 }
@@ -66,17 +64,14 @@ DomainMapperTableHandler::~DomainMapperTableHandler()
 {
 }
 
-void DomainMapperTableHandler::startTable(unsigned int nRows,
-                                          unsigned int /*nDepth*/,
-                                          TablePropertyMapPtr pProps)
+void DomainMapperTableHandler::startTable(unsigned int /*nDepth*/,
+                                          const TablePropertyMapPtr& pProps)
 {
     m_aTableProperties = pProps;
-    m_pTableSeq = TableSequencePointer_t(new TableSequence_t(nRows));
-    m_nRowIndex = 0;
+    m_aTableRanges.clear();
 
 #ifdef DEBUG_WRITERFILTER
     TagLogger::getInstance().startElement("tablehandler.table");
-    TagLogger::getInstance().attribute("rows", nRows);
 
     if (pProps.get() != nullptr)
         pProps->dumpXml();
@@ -84,8 +79,7 @@ void DomainMapperTableHandler::startTable(unsigned int nRows,
 }
 
 
-
-PropertyMapPtr lcl_SearchParentStyleSheetAndMergeProperties(const StyleSheetEntryPtr& rStyleSheet, StyleSheetTablePtr pStyleSheetTable)
+PropertyMapPtr lcl_SearchParentStyleSheetAndMergeProperties(const StyleSheetEntryPtr& rStyleSheet, const StyleSheetTablePtr& pStyleSheetTable)
 {
     PropertyMapPtr pRet;
 
@@ -114,7 +108,7 @@ PropertyMapPtr lcl_SearchParentStyleSheetAndMergeProperties(const StyleSheetEntr
     return pRet;
 }
 
-void lcl_mergeBorder( PropertyIds nId, PropertyMapPtr pOrig, PropertyMapPtr pDest )
+void lcl_mergeBorder( PropertyIds nId, const PropertyMapPtr& pOrig, const PropertyMapPtr& pDest )
 {
     boost::optional<PropertyMap::Property> pOrigVal = pOrig->getProperty(nId);
 
@@ -124,7 +118,7 @@ void lcl_mergeBorder( PropertyIds nId, PropertyMapPtr pOrig, PropertyMapPtr pDes
     }
 }
 
-void lcl_computeCellBorders( PropertyMapPtr pTableBorders, PropertyMapPtr pCellProps,
+void lcl_computeCellBorders( const PropertyMapPtr& pTableBorders, const PropertyMapPtr& pCellProps,
         sal_Int32 nCell, sal_Int32 nRow, bool bIsEndCol, bool bIsEndRow )
 {
     boost::optional<PropertyMap::Property> pVerticalVal = pCellProps->getProperty(META_PROP_VERTICAL_BORDER);
@@ -268,7 +262,7 @@ struct TableInfo
 namespace
 {
 
-bool lcl_extractTableBorderProperty(PropertyMapPtr pTableProperties, const PropertyIds nId, TableInfo& rInfo, table::BorderLine2& rLine)
+bool lcl_extractTableBorderProperty(const PropertyMapPtr& pTableProperties, const PropertyIds nId, TableInfo& rInfo, table::BorderLine2& rLine)
 {
     if (!pTableProperties)
         return false;
@@ -287,20 +281,21 @@ bool lcl_extractTableBorderProperty(PropertyMapPtr pTableProperties, const Prope
     return false;
 }
 
-}
-
-bool lcl_extractHoriOrient(std::vector<beans::PropertyValue>& rFrameProperties, sal_Int32& nHoriOrient)
+void lcl_extractHoriOrient(std::vector<beans::PropertyValue>& rFrameProperties, sal_Int32& nHoriOrient)
 {
     // Shifts the frame left by the given value.
     for (size_t i = 0; i < rFrameProperties.size(); ++i)
     {
         if (rFrameProperties[i].Name == "HoriOrient")
         {
-            nHoriOrient = rFrameProperties[i].Value.get<sal_Int32>();
-            return true;
+            sal_Int32 nValue = rFrameProperties[i].Value.get<sal_Int32>();
+            if (nValue != text::HoriOrientation::NONE)
+                nHoriOrient = nValue;
+            return;
         }
     }
-    return false;
+}
+
 }
 
 void lcl_DecrementHoriOrientPosition(std::vector<beans::PropertyValue>& rFrameProperties, sal_Int32 nAmount)
@@ -481,7 +476,7 @@ TableStyleSheetEntry * DomainMapperTableHandler::endTableGetTableStyle(TableInfo
         aDistances.IsTopDistanceValid =
         aDistances.IsBottomDistanceValid =
         aDistances.IsLeftDistanceValid =
-        aDistances.IsRightDistanceValid = sal_True;
+        aDistances.IsRightDistanceValid = true;
         aDistances.TopDistance = static_cast<sal_Int16>( rInfo.nTopBorderDistance );
         aDistances.BottomDistance = static_cast<sal_Int16>( rInfo.nBottomBorderDistance );
         aDistances.LeftDistance = static_cast<sal_Int16>( rInfo.nLeftBorderDistance );
@@ -503,17 +498,17 @@ TableStyleSheetEntry * DomainMapperTableHandler::endTableGetTableStyle(TableInfo
         if (lcl_extractTableBorderProperty(m_aTableProperties, PROP_TOP_BORDER, rInfo, aBorderLine))
         {
             aTableBorder.TopLine = aBorderLine;
-            aTableBorder.IsTopLineValid = sal_True;
+            aTableBorder.IsTopLineValid = true;
         }
         if (lcl_extractTableBorderProperty(m_aTableProperties, PROP_BOTTOM_BORDER, rInfo, aBorderLine))
         {
             aTableBorder.BottomLine = aBorderLine;
-            aTableBorder.IsBottomLineValid = sal_True;
+            aTableBorder.IsBottomLineValid = true;
         }
         if (lcl_extractTableBorderProperty(m_aTableProperties, PROP_LEFT_BORDER, rInfo, aLeftBorder))
         {
             aTableBorder.LeftLine = aLeftBorder;
-            aTableBorder.IsLeftLineValid = sal_True;
+            aTableBorder.IsLeftLineValid = true;
             // Only top level table position depends on border width
             if (rInfo.nNestLevel == 1)
             {
@@ -526,21 +521,21 @@ TableStyleSheetEntry * DomainMapperTableHandler::endTableGetTableStyle(TableInfo
         if (lcl_extractTableBorderProperty(m_aTableProperties, PROP_RIGHT_BORDER, rInfo, aBorderLine))
         {
             aTableBorder.RightLine = aBorderLine;
-            aTableBorder.IsRightLineValid = sal_True;
+            aTableBorder.IsRightLineValid = true;
         }
         if (lcl_extractTableBorderProperty(m_aTableProperties, META_PROP_HORIZONTAL_BORDER, rInfo, aBorderLine))
         {
             aTableBorder.HorizontalLine = aBorderLine;
-            aTableBorder.IsHorizontalLineValid = sal_True;
+            aTableBorder.IsHorizontalLineValid = true;
         }
         if (lcl_extractTableBorderProperty(m_aTableProperties, META_PROP_VERTICAL_BORDER, rInfo, aBorderLine))
         {
             aTableBorder.VerticalLine = aBorderLine;
-            aTableBorder.IsVerticalLineValid = sal_True;
+            aTableBorder.IsVerticalLineValid = true;
         }
 
         aTableBorder.Distance = 0;
-        aTableBorder.IsDistanceValid = sal_False;
+        aTableBorder.IsDistanceValid = false;
 
         m_aTableProperties->Insert( PROP_TABLE_BORDER, uno::makeAny( aTableBorder ) );
 
@@ -629,7 +624,6 @@ CellPropertyValuesSeq_t DomainMapperTableHandler::endTableGetCellProperties(Tabl
     PropertyMapVector2::const_iterator aLastRowIterator = m_aCellProperties.end() - 1;
     sal_Int32 nRow = 0;
 
-    //it's a uno::Sequence< beans::PropertyValues >*
     css::uno::Sequence<css::beans::PropertyValues>* pCellProperties = aCellProperties.getArray();
     PropertyMapVector1::const_iterator aRowIter = m_aRowProperties.begin();
     while( aRowOfCellsIterator != aRowOfCellsIteratorEnd )
@@ -794,7 +788,7 @@ CellPropertyValuesSeq_t DomainMapperTableHandler::endTableGetCellProperties(Tabl
                 const boost::optional<PropertyMap::Property> aHorizontalMergeVal = (*aCellIterator)->getProperty(PROP_HORIZONTAL_MERGE);
                 if (aHorizontalMergeVal)
                 {
-                    if (aHorizontalMergeVal->second.get<sal_Bool>())
+                    if (aHorizontalMergeVal->second.get<bool>())
                     {
                         // first cell in a merge
                         HorizontallyMergedCell aMerge(nRow, nCell);
@@ -817,7 +811,7 @@ CellPropertyValuesSeq_t DomainMapperTableHandler::endTableGetCellProperties(Tabl
                     if (aCellDirectionVal->second.get<sal_Int32>() == static_cast<sal_Int32>(NS_ooxml::LN_Value_ST_TextDirection_btLr))
                     {
                         // btLr, so map ParagraphAdjust_CENTER to VertOrientation::CENTER.
-                        uno::Reference<beans::XPropertySet> xPropertySet((*m_pTableSeq)[nRow][nCell][0], uno::UNO_QUERY);
+                        uno::Reference<beans::XPropertySet> xPropertySet(m_aTableRanges[nRow][nCell][0], uno::UNO_QUERY);
                         if (xPropertySet->getPropertyValue("ParaAdjust").get<sal_Int16>() == style::ParagraphAdjust_CENTER)
                             (*aCellIterator)->Insert(PROP_VERT_ORIENT, uno::makeAny(text::VertOrientation::CENTER));
                     }
@@ -875,18 +869,18 @@ bool lcl_hideMarks(PropertyMapVector1& rCellProperties)
 }
 
 /// Are all cells in this row empty?
-bool lcl_emptyRow(TableSequence_t& rTableSeq, sal_Int32 nRow)
+bool lcl_emptyRow(std::vector<RowSequence_t>& rTableRanges, sal_Int32 nRow)
 {
-    if (nRow >= rTableSeq.getLength())
+    if (nRow >= static_cast<sal_Int32>(rTableRanges.size()))
     {
-        SAL_WARN("writerfilter", "m_aCellProperties not in sync with m_pTableSeq?");
+        SAL_WARN("writerfilter", "m_aCellProperties not in sync with rTableRanges?");
         return false;
     }
 
-    RowSequence_t rRowSeq = rTableSeq[nRow];
+    RowSequence_t rRowSeq = rTableRanges[nRow];
     if (rRowSeq.getLength() == 0)
     {
-        SAL_WARN("writerfilter", "m_aCellProperties not in sync with m_pTableSeq?");
+        SAL_WARN("writerfilter", "m_aCellProperties not in sync with rTableRanges?");
         return false;
     }
 
@@ -927,11 +921,11 @@ css::uno::Sequence<css::beans::PropertyValues> DomainMapperTableHandler::endTabl
         if( aRowIter->get() )
         {
             //set default to 'break across pages"
-            (*aRowIter)->Insert( PROP_IS_SPLIT_ALLOWED, uno::makeAny(sal_True ), false );
+            (*aRowIter)->Insert( PROP_IS_SPLIT_ALLOWED, uno::makeAny(true ), false );
             // tblHeader is only our property, remove before the property map hits UNO
             (*aRowIter)->Erase(PROP_TBL_HEADER);
 
-            if (lcl_hideMarks(m_aCellProperties[nRow]) && lcl_emptyRow(*m_pTableSeq, nRow))
+            if (lcl_hideMarks(m_aCellProperties[nRow]) && lcl_emptyRow(m_aTableRanges, nRow))
             {
                 // We have CellHideMark on all cells, and also all cells are empty:
                 // Set the row height to minimal as Word does.
@@ -999,17 +993,17 @@ void DomainMapperTableHandler::endTable(unsigned int nestedTableLevel)
     lcl_DumpPropertyValueSeq(aRowProperties);
 #endif
 
-    if (m_pTableSeq->getLength() > 0)
+    if (!m_aTableRanges.empty())
     {
         uno::Reference<text::XTextRange> xStart;
         uno::Reference<text::XTextRange> xEnd;
 
         bool bFloating = !aFrameProperties.empty();
         // Additional checks: if we can do this.
-        if (bFloating && (*m_pTableSeq)[0].getLength() > 0 && (*m_pTableSeq)[0][0].getLength() > 0)
+        if (bFloating && m_aTableRanges[0].getLength() > 0 && m_aTableRanges[0][0].getLength() > 0)
         {
-            xStart = (*m_pTableSeq)[0][0][0];
-            uno::Sequence< uno::Sequence< uno::Reference<text::XTextRange> > >& rLastRow = (*m_pTableSeq)[m_pTableSeq->getLength() - 1];
+            xStart = m_aTableRanges[0][0][0];
+            uno::Sequence< uno::Sequence< uno::Reference<text::XTextRange> > >& rLastRow = m_aTableRanges[m_aTableRanges.size() - 1];
             uno::Sequence< uno::Reference<text::XTextRange> >& rLastCell = rLastRow[rLastRow.getLength() - 1];
             xEnd = rLastCell[1];
         }
@@ -1018,10 +1012,7 @@ void DomainMapperTableHandler::endTable(unsigned int nestedTableLevel)
         {
             if (m_xText.is())
             {
-                xTable = m_xText->convertToTable(*m_pTableSeq,
-                        aCellProperties,
-                        aRowProperties,
-                        aTableInfo.aTableProperties);
+                xTable = m_xText->convertToTable(comphelper::containerToSequence(m_aTableRanges), aCellProperties, aRowProperties, aTableInfo.aTableProperties);
 
                 if (xTable.is())
                 {
@@ -1141,35 +1132,30 @@ void DomainMapperTableHandler::endTable(unsigned int nestedTableLevel)
 #endif
 }
 
-void DomainMapperTableHandler::startRow(unsigned int nCells,
-                                        TablePropertyMapPtr pProps)
+void DomainMapperTableHandler::startRow(const TablePropertyMapPtr& pProps)
 {
     m_aRowProperties.push_back( pProps );
     m_aCellProperties.push_back( PropertyMapVector1() );
 
 #ifdef DEBUG_WRITERFILTER
     TagLogger::getInstance().startElement("table.row");
-    TagLogger::getInstance().attribute("cells", nCells);
     if (pProps != nullptr)
         pProps->dumpXml();
 #endif
 
-    m_pRowSeq = RowSequencePointer_t(new RowSequence_t(nCells));
-    m_nCellIndex = 0;
+    m_aRowRanges.clear();
 }
 
 void DomainMapperTableHandler::endRow()
 {
-    (*m_pTableSeq)[m_nRowIndex] = *m_pRowSeq;
-    ++m_nRowIndex;
-    m_nCellIndex = 0;
+    m_aTableRanges.push_back(comphelper::containerToSequence(m_aRowRanges));
 #ifdef DEBUG_WRITERFILTER
     TagLogger::getInstance().endElement();
 #endif
 }
 
 void DomainMapperTableHandler::startCell(const css::uno::Reference< css::text::XTextRange > & start,
-                                         TablePropertyMapPtr pProps )
+                                         const TablePropertyMapPtr& pProps )
 {
     sal_uInt32 nRow = m_aRowProperties.size();
     if ( pProps.get( ) )
@@ -1192,10 +1178,11 @@ void DomainMapperTableHandler::startCell(const css::uno::Reference< css::text::X
 #endif
 
     //add a new 'row' of properties
-    m_pCellSeq = CellSequencePointer_t(new CellSequence_t(2));
-    if (!start.get())
-        return;
-    (*m_pCellSeq)[0] = start->getStart();
+    m_aCellRange.clear();
+    uno::Reference<text::XTextRange> xStart;
+    if (start.get())
+        xStart = start->getStart();
+    m_aCellRange.push_back(xStart);
 }
 
 void DomainMapperTableHandler::endCell(const css::uno::Reference< css::text::XTextRange > & end)
@@ -1207,11 +1194,11 @@ void DomainMapperTableHandler::endCell(const css::uno::Reference< css::text::XTe
     TagLogger::getInstance().endElement();
 #endif
 
-    if (!end.get())
-        return;
-    (*m_pCellSeq)[1] = end->getEnd();
-    (*m_pRowSeq)[m_nCellIndex] = *m_pCellSeq;
-    ++m_nCellIndex;
+    uno::Reference<text::XTextRange> xEnd;
+    if (end.get())
+        xEnd = end->getEnd();
+    m_aCellRange.push_back(xEnd);
+    m_aRowRanges.push_back(comphelper::containerToSequence(m_aCellRange));
 }
 
 void DomainMapperTableHandler::setHadFootOrEndnote(bool bHadFootOrEndnote)

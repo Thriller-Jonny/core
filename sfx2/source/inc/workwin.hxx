@@ -43,13 +43,12 @@ class SfxSplitWindow;
 class SfxWorkWindow;
 
 
-// This struct makes all relevant Informationen available of Toolboxes
+// This struct makes all relevant Information available of Toolboxes
 struct SfxObjectBar_Impl
 {
     sal_uInt16        nId;   // Resource - and ConfigId of Toolbox
     sal_uInt16        nMode; // special visibility flags
     sal_uInt16        nPos;
-    sal_uInt16        nIndex;
     bool              bDestroy;
     SfxInterface*     pIFace;
 
@@ -57,7 +56,6 @@ struct SfxObjectBar_Impl
         nId(0),
         nMode(0),
         nPos(0),
-        nIndex(0),
         bDestroy(false),
         pIFace(nullptr)
     {}
@@ -160,7 +158,6 @@ enum class SfxDockingConfig
 #define SFX_SPLITWINDOWS_TOP    2
 #define SFX_SPLITWINDOWS_RIGHT  1
 #define SFX_SPLITWINDOWS_MAX    4
-
 
 
 class LayoutManagerListener : public ::cppu::WeakImplHelper<
@@ -307,8 +304,7 @@ public:
     bool                    IsVisible_Impl( sal_uInt16 nMode ) const;
     bool                    IsFloating( sal_uInt16 nId );
     void                    SetActiveChild_Impl( vcl::Window *pChild );
-    VclPtr<vcl::Window>     GetActiveChild_Impl() const { return pActiveChild; }
-    bool                    AllowChildWindowCreation_Impl( const SfxChildWin_Impl& i_rCW ) const;
+    const VclPtr<vcl::Window>& GetActiveChild_Impl() const { return pActiveChild; }
 
     // Methods for StatusBar
     void                    ResetStatusBar_Impl();

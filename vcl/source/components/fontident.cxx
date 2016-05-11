@@ -17,8 +17,8 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include "vcl/svapp.hxx"
-#include "vcl/font.hxx"
+#include <vcl/svapp.hxx>
+#include <vcl/font.hxx>
 
 #include "factory.hxx"
 #include "svdata.hxx"
@@ -93,7 +93,7 @@ Any SAL_CALL FontIdentificator::getMaterial() throw(RuntimeException, std::excep
         return Any(); // VCL not initialized
 
     FontDescriptor aFD;
-    aFD.Name                = m_aFont.GetName();
+    aFD.Name                = m_aFont.GetFamilyName();
     aFD.Height              = 0;
     aFD.Width               = 0;
     aFD.StyleName           = m_aFont.GetStyleName();
@@ -105,7 +105,7 @@ Any SAL_CALL FontIdentificator::getMaterial() throw(RuntimeException, std::excep
     aFD.Kerning             = false;
     aFD.WordLineMode        = false;
     aFD.Type                = 0;
-    switch( m_aFont.GetFamily() )
+    switch( m_aFont.GetFamilyType() )
     {
     case FAMILY_DECORATIVE: aFD.Family = css::awt::FontFamily::DECORATIVE;break;
     case FAMILY_MODERN: aFD.Family = css::awt::FontFamily::MODERN;break;

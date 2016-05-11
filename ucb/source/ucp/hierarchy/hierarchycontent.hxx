@@ -44,7 +44,6 @@ namespace hierarchy_ucp
 {
 
 
-
 class HierarchyContentProperties
 {
 public:
@@ -90,7 +89,6 @@ private:
     HierarchyEntryData m_aData;
     OUString m_aContentType;
 };
-
 
 
 class HierarchyContentProvider;
@@ -143,7 +141,7 @@ private:
             const css::uno::Reference< css::ucb::XContentIdentifier >& Identifier,
             HierarchyContentProperties& rProps );
     bool storeData();
-    bool renameData( const css::uno::Reference< css::ucb::XContentIdentifier >& xOldId,
+    void renameData( const css::uno::Reference< css::ucb::XContentIdentifier >& xOldId,
                      const css::uno::Reference< css::ucb::XContentIdentifier >& xNewId );
     bool removeData();
 

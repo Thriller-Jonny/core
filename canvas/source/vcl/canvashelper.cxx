@@ -43,7 +43,7 @@
 #include <tools/diagnose_ex.h>
 #include <tools/poly.hxx>
 #include <vcl/bitmapex.hxx>
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 #include <vcl/canvastools.hxx>
 #include <vcl/window.hxx>
 
@@ -303,7 +303,7 @@ namespace vclcanvas
             else
             {
                 // mixed open/closed state. Cannot render open polygon
-                // via DrawPolyPolygon(), since that implicitley
+                // via DrawPolyPolygon(), since that implicitly
                 // closed every polygon. OTOH, no need to distinguish
                 // further and render closed polygons via
                 // DrawPolygon(), and open ones via DrawPolyLine():
@@ -390,8 +390,15 @@ namespace vclcanvas
 
                 for( sal_uInt32 i=0; i<aPolyPoly.count(); ++i )
                 {
-                    // TODO(F2): Use MiterLimit from StrokeAttributes,
-                    // need to convert it here to angle.
+                    double fMiterMinimumAngle;
+                    if (strokeAttributes.MiterLimit <= 1.0)
+                    {
+                        fMiterMinimumAngle = F_PI2;
+                    }
+                    else
+                    {
+                        fMiterMinimumAngle = 2.0 * asin(1.0/strokeAttributes.MiterLimit);
+                    }
 
                     // TODO(F2): Also use Cap settings from
                     // StrokeAttributes, the
@@ -403,7 +410,10 @@ namespace vclcanvas
                         aPolyPoly.getB2DPolygon(i),
                         strokeAttributes.StrokeWidth*0.5,
                         b2DJoineFromJoin(strokeAttributes.JoinType),
-                        unoCapeFromCap(strokeAttributes.StartCapType)
+                        unoCapeFromCap(strokeAttributes.StartCapType),
+                        12.5 * F_PI180 /* default fMaxAllowedAngle*/ ,
+                        0.4 /* default fMaxPartOfEdge*/ ,
+                        fMiterMinimumAngle
                         ));
                     //aStrokedPolyPoly.append(
                     //    ::basegfx::tools::createAreaGeometryForPolygon( aPolyPoly.getB2DPolygon(i),
@@ -598,7 +608,7 @@ namespace vclcanvas
 
                 case rendering::TextDirection::WEAK_RIGHT_TO_LEFT:
                     nLayoutMode |= TEXT_LAYOUT_BIDI_RTL;
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case rendering::TextDirection::STRONG_RIGHT_TO_LEFT:
                     nLayoutMode |= TEXT_LAYOUT_BIDI_RTL | TEXT_LAYOUT_BIDI_STRONG;
                     nLayoutMode |= TEXT_LAYOUT_TEXTORIGIN_RIGHT;
@@ -677,7 +687,7 @@ namespace vclcanvas
                              "bitmap is NULL");
 
         ::canvas::tools::verifyInput( renderState,
-                                      BOOST_CURRENT_FUNCTION,
+                                      OSL_THIS_FUNC,
                                       mpDevice,
                                       4,
                                       bModulateColors ? 3 : 0 );
@@ -1180,11 +1190,11 @@ namespace vclcanvas
         if( !mpOutDev.get() )
             return rendering::IntegerBitmapLayout(); // we're disposed
 
-        rendering::IntegerBitmapLayout xBitmapLayout( ::canvas::tools::getStdMemoryLayout(getSize()) );
+        rendering::IntegerBitmapLayout aBitmapLayout( ::canvas::tools::getStdMemoryLayout(getSize()) );
         if ( !mbHaveAlpha )
-            xBitmapLayout.ColorSpace = canvas::tools::getStdColorSpaceWithoutAlpha();
+            aBitmapLayout.ColorSpace = canvas::tools::getStdColorSpaceWithoutAlpha();
 
-        return xBitmapLayout;
+        return aBitmapLayout;
     }
 
     int CanvasHelper::setupOutDevState( const rendering::ViewState&     viewState,
@@ -1195,7 +1205,7 @@ namespace vclcanvas
                          "outdev null. Are we disposed?" );
 
         ::canvas::tools::verifyInput( renderState,
-                                      BOOST_CURRENT_FUNCTION,
+                                      OSL_THIS_FUNC,
                                       mpDevice,
                                       2,
                                       eColorType == IGNORE_COLOR ? 0 : 3 );

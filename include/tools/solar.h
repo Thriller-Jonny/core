@@ -17,8 +17,8 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef _SOLAR_H
-#define _SOLAR_H
+#ifndef INCLUDED_TOOLS_SOLAR_H
+#define INCLUDED_TOOLS_SOLAR_H
 
 #include <sal/types.h>
 #include <osl/endian.h>
@@ -106,7 +106,7 @@ inline void     DoubleToSVBT64( double n, SVBT64 p ) { p[0] = reinterpret_cast<s
 #endif
 #endif
 
-#if defined WNT
+#if defined(_WIN32)
 #define SVLIBRARY( Base ) Base "lo.dll"
 #elif defined MACOSX
 #define SVLIBRARY( Base ) "lib" Base "lo.dylib"

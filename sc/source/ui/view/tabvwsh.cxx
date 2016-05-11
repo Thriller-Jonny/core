@@ -39,6 +39,7 @@
 #include "dwfunctr.hxx"
 #include "sc.hrc"
 #include "spelldialog.hxx"
+#include "formulacell.hxx"
 #include <searchresults.hxx>
 
 #include <sfx2/request.hxx>
@@ -76,7 +77,6 @@ void ScTabViewShell::InitInterface_Impl()
     GetStaticInterface()->RegisterChildWindow(ScColRowNameRangesDlgWrapper::GetChildWindowId());
     GetStaticInterface()->RegisterChildWindow(ScFormulaDlgWrapper::GetChildWindowId());
     GetStaticInterface()->RegisterChildWindow(SvxIMapDlgChildWindow::GetChildWindowId());
-    GetStaticInterface()->RegisterChildWindow(ScFunctionChildWindow::GetChildWindowId());
     GetStaticInterface()->RegisterChildWindow(ScFormulaDlgWrapper::GetChildWindowId());
     GetStaticInterface()->RegisterChildWindow(ScAcceptChgDlgWrapper::GetChildWindowId());
     GetStaticInterface()->RegisterChildWindow(ScHighlightChgDlgWrapper::GetChildWindowId());
@@ -115,7 +115,7 @@ OUString ScTabViewShell::GetFormula(ScAddress& rAddress)
     ScRefCellValue aCell(*pDoc, rAddress);
     if (!aCell.isEmpty() && aCell.meType == CELLTYPE_FORMULA)
     {
-        sFormula = aCell.mpString->getString();
+        aCell.mpFormula->GetFormula( sFormula);
     }
     return sFormula;
 }

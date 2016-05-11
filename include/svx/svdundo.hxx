@@ -22,6 +22,7 @@
 
 #include <sal/config.h>
 
+#include <memory>
 #include <vector>
 
 #include <svl/solar.hrc>
@@ -33,6 +34,7 @@
 #include <svx/svxdllapi.h>
 
 class SfxItemSet;
+class SfxPoolItem;
 class SfxStyleSheet;
 class SdrView;
 class SdrPageView;
@@ -213,6 +215,8 @@ protected:
     SdrObjGeoData*              pRedoGeo;
     // If we have a group object:
     SdrUndoGroup*               pUndoGroup;
+    /// If we have a table object, should its layout change?
+    bool mbSkipChangeLayout;
 
 public:
     SdrUndoGeoObj(SdrObject& rNewObj);
@@ -222,6 +226,7 @@ public:
     virtual void Redo() override;
 
     virtual OUString GetComment() const override;
+    void SetSkipChangeLayout(bool bOn) { mbSkipChangeLayout=bOn; }
 };
 
 /**
@@ -550,7 +555,7 @@ protected:
 protected:
     SdrUndoPage(SdrPage& rNewPg);
 
-    static void ImpTakeDescriptionStr(sal_uInt16 nStrCacheID, OUString& rStr, sal_uInt16 n=0, bool bRepeat = false);
+    static void ImpTakeDescriptionStr(sal_uInt16 nStrCacheID, OUString& rStr);
 };
 
 /**
@@ -581,6 +586,8 @@ class SVX_DLLPUBLIC SdrUndoDelPage : public SdrUndoPageList
     // When deleting a MasterPage, we remember all relations of the
     // Character Page with the MasterPage in this UndoGroup.
     SdrUndoGroup*               pUndoGroup;
+    std::unique_ptr<SfxPoolItem> mpFillBitmapItem;
+    bool mbHasFillBitmap;
 
 public:
     SdrUndoDelPage(SdrPage& rNewPg);
@@ -594,6 +601,11 @@ public:
 
     virtual void SdrRepeat(SdrView& rView) override;
     virtual bool CanSdrRepeat(SdrView& rView) const override;
+
+private:
+    void queryFillBitmap(const SfxItemSet &rItemSet);
+    void clearFillBitmap();
+    void restoreFillBitmap();
 };
 
 /**
@@ -710,7 +722,6 @@ public:
 
     virtual OUString GetComment() const override;
 };
-
 
 
 /**

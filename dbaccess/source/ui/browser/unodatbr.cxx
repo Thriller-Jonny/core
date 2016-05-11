@@ -542,11 +542,11 @@ bool SbaTableQueryBrowser::InitializeForm( const Reference< XPropertySet > & i_f
             OUString(PROPERTY_HAVING_CLAUSE),
             OUString(PROPERTY_ORDER)
         };
-        for (size_t i = 0; i < SAL_N_ELEMENTS(aTransferProperties); ++i)
+        for (const auto & aTransferPropertie : aTransferProperties)
         {
-            if ( !xPSI->hasPropertyByName( aTransferProperties[i] ) )
+            if ( !xPSI->hasPropertyByName( aTransferPropertie ) )
                 continue;
-            aPropertyValues.put( aTransferProperties[i], pData->xObjectProperties->getPropertyValue( aTransferProperties[i] ) );
+            aPropertyValues.put( aTransferPropertie, pData->xObjectProperties->getPropertyValue( aTransferPropertie ) );
         }
 
         ::std::vector< OUString > aNames( aPropertyValues.getNames() );
@@ -576,14 +576,14 @@ void SbaTableQueryBrowser::initializePreviewMode()
     {
         getBrowserView()->getVclControl()->AlwaysEnableInput( false );
         getBrowserView()->getVclControl()->EnableInput( false );
-        getBrowserView()->getVclControl()->ForceHideScrollbars( true );
+        getBrowserView()->getVclControl()->ForceHideScrollbars();
     }
     Reference< XPropertySet >  xDataSourceSet(getRowSet(), UNO_QUERY);
     if ( xDataSourceSet.is() )
     {
-        xDataSourceSet->setPropertyValue("AllowInserts",makeAny(sal_False));
-        xDataSourceSet->setPropertyValue("AllowUpdates",makeAny(sal_False));
-        xDataSourceSet->setPropertyValue("AllowDeletes",makeAny(sal_False));
+        xDataSourceSet->setPropertyValue("AllowInserts",makeAny(false));
+        xDataSourceSet->setPropertyValue("AllowUpdates",makeAny(false));
+        xDataSourceSet->setPropertyValue("AllowDeletes",makeAny(false));
     }
 }
 
@@ -617,7 +617,7 @@ bool SbaTableQueryBrowser::InitializeGridModel(const Reference< css::form::XForm
                 if ( m_bPreview )
                 {
                     *pStringIter++  = "AlwaysShowCursor";
-                    *pValueIter++   <<= sal_False;
+                    *pValueIter++   <<= false;
                     *pStringIter++  = PROPERTY_BORDER;
                     *pValueIter++   <<= sal_Int16(0);
                 }
@@ -631,16 +631,16 @@ bool SbaTableQueryBrowser::InitializeGridModel(const Reference< css::form::XForm
                 if ( m_bPreview )
                 {
                     *pStringIter++  = "HasNavigationBar";
-                    *pValueIter++       <<= sal_False;
+                    *pValueIter++       <<= false;
                     *pStringIter++  = "HasRecordMarker";
-                    *pValueIter++       <<= sal_False;
+                    *pValueIter++       <<= false;
                 }
                 *pStringIter++  = PROPERTY_ROW_HEIGHT;
                 *pValueIter++   = pData->xObjectProperties->getPropertyValue(PROPERTY_ROW_HEIGHT);
                 if ( m_bPreview )
                 {
                     *pStringIter++  = "Tabstop";
-                    *pValueIter++       <<= sal_False;
+                    *pValueIter++       <<= false;
                 }
                 *pStringIter++  = PROPERTY_TEXTCOLOR;
                 *pValueIter++   = pData->xObjectProperties->getPropertyValue(PROPERTY_TEXTCOLOR);
@@ -718,7 +718,7 @@ bool SbaTableQueryBrowser::InitializeGridModel(const Reference< css::form::XForm
                     case DataType::LONGVARCHAR:
                     case DataType::CLOB:
                         aInitialValues.push_back( NamedValue( OUString( "MultiLine" ), makeAny( true ) ) );
-                        // NO break!
+                        SAL_FALLTHROUGH;
                     case DataType::BINARY:
                     case DataType::VARBINARY:
                     case DataType::LONGVARBINARY:
@@ -729,7 +729,7 @@ bool SbaTableQueryBrowser::InitializeGridModel(const Reference< css::form::XForm
                     case DataType::VARCHAR:
                     case DataType::CHAR:
                         bFormattedIsNumeric = false;
-                        // NO break!
+                        SAL_FALLTHROUGH;
                     default:
                         aCurrentModelType = "FormattedField";
                         sDefaultProperty = PROPERTY_EFFECTIVEDEFAULT;
@@ -963,7 +963,7 @@ sal_Bool SbaTableQueryBrowser::suspend(sal_Bool bSuspend) throw( RuntimeExceptio
     SolarMutexGuard aSolarGuard;
     ::osl::MutexGuard aGuard( getMutex() );
     if ( getView() && getView()->IsInModalMode() )
-        return sal_False;
+        return false;
     bool bRet = false;
     if ( !m_bInSuspend )
     {
@@ -1035,7 +1035,7 @@ void SbaTableQueryBrowser::checkDocumentDataSource()
 {
     SvTreeListEntry* pDataSourceEntry = nullptr;
     SvTreeListEntry* pContainerEntry = nullptr;
-    SvTreeListEntry* pObjectEntry = getObjectEntry( m_aDocumentDataSource, &pDataSourceEntry, &pContainerEntry, false );
+    SvTreeListEntry* pObjectEntry = getObjectEntry( m_aDocumentDataSource, &pDataSourceEntry, &pContainerEntry );
     bool bKnownDocDataSource = (nullptr != pObjectEntry);
     if (!bKnownDocDataSource)
     {
@@ -1190,7 +1190,6 @@ SvTreeListEntry* SbaTableQueryBrowser::getObjectEntry(const OUString& _rDataSour
                 }
 
                 // look for the object
-                OUString sCommand = _rCommand;
                 sal_Int32 nIndex = 0;
                 do
                 {
@@ -1198,7 +1197,7 @@ SvTreeListEntry* SbaTableQueryBrowser::getObjectEntry(const OUString& _rDataSour
                     switch (_nCommandType)
                     {
                     case CommandType::TABLE:
-                        sPath = sCommand;
+                        sPath = _rCommand;
                         nIndex = -1;
                         break;
 
@@ -1206,7 +1205,7 @@ SvTreeListEntry* SbaTableQueryBrowser::getObjectEntry(const OUString& _rDataSour
                         assert(false);
                         // in non-debug builds, fall through.
                     case CommandType::QUERY:
-                        sPath = sCommand.getToken( 0, '/', nIndex );
+                        sPath = _rCommand.getToken( 0, '/', nIndex );
                         break;
                     }
                     pObject = m_pTreeView->getListBox().GetEntryPosByName(sPath, pCommandType);
@@ -1218,7 +1217,7 @@ SvTreeListEntry* SbaTableQueryBrowser::getObjectEntry(const OUString& _rDataSour
                             DBTreeListUserData* pParentData = static_cast< DBTreeListUserData* >( pObject->GetUserData() );
                             Reference< XNameAccess > xCollection( pParentData->xContainer, UNO_QUERY );
                             sal_Int32 nIndex2 = nIndex;
-                            sPath = sCommand.getToken( 0, '/', nIndex2 );
+                            sPath = _rCommand.getToken( 0, '/', nIndex2 );
                             try
                             {
                                 if ( xCollection->hasByName(sPath) )
@@ -1251,8 +1250,7 @@ SvTreeListEntry* SbaTableQueryBrowser::getObjectEntry(const OUString& _rDataSour
 }
 
 SvTreeListEntry* SbaTableQueryBrowser::getObjectEntry(const svx::ODataAccessDescriptor& _rDescriptor,
-        SvTreeListEntry** _ppDataSourceEntry, SvTreeListEntry** _ppContainerEntry,
-        bool _bExpandAncestors)
+        SvTreeListEntry** _ppDataSourceEntry, SvTreeListEntry** _ppContainerEntry)
 {
     // extract the props from the descriptor
     OUString sDataSource;
@@ -1261,7 +1259,7 @@ SvTreeListEntry* SbaTableQueryBrowser::getObjectEntry(const svx::ODataAccessDesc
     bool bEscapeProcessing = true;
     extractDescriptorProps(_rDescriptor, sDataSource, sCommand, nCommandType, bEscapeProcessing);
 
-    return getObjectEntry( sDataSource, sCommand, nCommandType, _ppDataSourceEntry, _ppContainerEntry, _bExpandAncestors, SharedConnection() );
+    return getObjectEntry( sDataSource, sCommand, nCommandType, _ppDataSourceEntry, _ppContainerEntry, false/*_bExpandAncestors*/ );
 }
 
 void SbaTableQueryBrowser::connectExternalDispatches()
@@ -1285,7 +1283,7 @@ void SbaTableQueryBrowser::connectExternalDispatches()
                 ID_BROWSER_INSERTCONTENT
             };
 
-            for ( size_t i=0; i < sizeof( pURLs ) / sizeof( pURLs[0] ); ++i )
+            for ( size_t i=0; i < SAL_N_ELEMENTS( pURLs ); ++i )
             {
                 URL aURL;
                 aURL.Complete = OUString::createFromAscii( pURLs[i] );
@@ -1362,11 +1360,11 @@ void SAL_CALL SbaTableQueryBrowser::disposing( const css::lang::EventObject& _rS
         Reference< XDispatch > xSource(_rSource.Source, UNO_QUERY);
         if(xSource.is())
         {
-            ExternalFeaturesMap::iterator aLoop = m_aExternalFeatures.begin();
-            ExternalFeaturesMap::iterator aEnd = m_aExternalFeatures.end();
+            ExternalFeaturesMap::const_iterator aLoop = m_aExternalFeatures.begin();
+            ExternalFeaturesMap::const_iterator aEnd = m_aExternalFeatures.end();
             while (aLoop != aEnd)
             {
-                ExternalFeaturesMap::iterator aI = aLoop++;
+                ExternalFeaturesMap::const_iterator aI = aLoop++;
                 if ( aI->second.xDispatcher.get() == xSource.get() )
                 {
                     sal_uInt16 nSlot = aI->first;
@@ -1678,7 +1676,7 @@ FeatureState SbaTableQueryBrowser::GetState(sal_uInt16 nId) const
             if ( !m_pTreeView->HasChildPathFocus() )
                 // handled below
                 break;
-            // NO break!
+            SAL_FALLTHROUGH;
         case ID_TREE_CLOSE_CONN:
         case ID_TREE_EDIT_DATABASE:
         {
@@ -1825,7 +1823,7 @@ FeatureState SbaTableQueryBrowser::GetState(sal_uInt16 nId) const
                         aReturn.bEnabled = pControl->canCopyCellText(pControl->GetCurRow(), pControl->GetCurColumnId());
                     break;
                 }
-                // NO break here
+                SAL_FALLTHROUGH;
             default:
                 return SbaXDataBrowserController::GetState(nId);
         }
@@ -1885,7 +1883,7 @@ void SbaTableQueryBrowser::Execute(sal_uInt16 nId, const Sequence< PropertyValue
                 SbaXDataBrowserController::Execute(nId,aArgs);
                 break;
             }
-            // NO break here!
+            SAL_FALLTHROUGH;
         }
 
         case ID_BROWSER_REFRESH_REBUILD:
@@ -1988,7 +1986,7 @@ void SbaTableQueryBrowser::Execute(sal_uInt16 nId, const Sequence< PropertyValue
                         if ( aSelection.getLength() )
                         {
                             aDescriptor[daSelection]            <<= aSelection;
-                            aDescriptor[daBookmarkSelection]    <<= sal_False;
+                            aDescriptor[daBookmarkSelection]    <<= false;
                                 // these are selection indices
                                 // before we change this, all clients have to be adjusted
                                 // so that they recognize the new BookmarkSelection property!
@@ -2383,7 +2381,7 @@ bool SbaTableQueryBrowser::implLoadAnything(const OUString& _rDataSourceName, co
         initFormatter();
 
         // switch the grid to design mode while loading
-        getBrowserView()->getGridControl()->setDesignMode(sal_True);
+        getBrowserView()->getGridControl()->setDesignMode(true);
         InitializeForm( xProp );
 
         bool bSuccess = true;
@@ -3006,7 +3004,7 @@ void SbaTableQueryBrowser::unloadAndCleanup( bool _bDisposeConnection )
         Reference< XPropertySet > xRowSetProps(getRowSet(),UNO_QUERY);
         Reference< XConnection > xConn;
         xRowSetProps->getPropertyValue(PROPERTY_ACTIVE_CONNECTION) >>= xConn;
-#if OSL_DEBUG_LEVEL > 1
+#if OSL_DEBUG_LEVEL > 0
         {
             Reference< XComponent > xComp(
                 xRowSetProps->getPropertyValue(PROPERTY_ACTIVE_CONNECTION),
@@ -3104,16 +3102,16 @@ void SbaTableQueryBrowser::impl_initialize()
 
     // disable the browser if either of ShowTreeViewButton (compatibility name) or EnableBrowser
     // is present and set to FALSE
-    bool bDisableBrowser =  !rArguments.getOrDefault( "ShowTreeViewButton", sal_True )   // compatibility name
-                            ||  !rArguments.getOrDefault( PROPERTY_ENABLE_BROWSER, sal_True );
+    bool bDisableBrowser =  !rArguments.getOrDefault( "ShowTreeViewButton", true )   // compatibility name
+                            ||  !rArguments.getOrDefault( PROPERTY_ENABLE_BROWSER, true );
     OSL_ENSURE( !rArguments.has( "ShowTreeViewButton" ),
         "SbaTableQueryBrowser::impl_initialize: ShowTreeViewButton is superseded by EnableBrowser!" );
     m_bEnableBrowser = !bDisableBrowser;
 
     // hide the tree view it is disabled in general, or if the settings tell to hide it initially
     bool bHideTreeView =    ( !m_bEnableBrowser )
-                            ||  !rArguments.getOrDefault( "ShowTreeView", sal_True )  // compatibility name
-                            ||  !rArguments.getOrDefault( PROPERTY_SHOW_BROWSER, sal_True );
+                            ||  !rArguments.getOrDefault( "ShowTreeView", true )  // compatibility name
+                            ||  !rArguments.getOrDefault( PROPERTY_SHOW_BROWSER, true );
     OSL_ENSURE( !rArguments.has( "ShowTreeView" ),
         "SbaTableQueryBrowser::impl_initialize: ShowTreeView is superseded by ShowBrowser!" );
 
@@ -3132,17 +3130,17 @@ void SbaTableQueryBrowser::impl_initialize()
             OUString* pStringIter = aProperties.getArray();
             Any* pValueIter = aValues.getArray();
             *pStringIter++  = "AlwaysShowCursor";
-            *pValueIter++   <<= sal_False;
+            *pValueIter++   <<= false;
             *pStringIter++  = PROPERTY_BORDER;
             *pValueIter++   <<= sal_Int16(0);
 
             *pStringIter++  = "HasNavigationBar";
-            *pValueIter++   <<= sal_False;
+            *pValueIter++   <<= false;
             *pStringIter++  = "HasRecordMarker";
-            *pValueIter++   <<= sal_False;
+            *pValueIter++   <<= false;
 
             *pStringIter++  = "Tabstop";
-            *pValueIter++   <<= sal_False;
+            *pValueIter++   <<= false;
 
             Reference< XMultiPropertySet >  xFormMultiSet(getFormComponent(), UNO_QUERY);
             if ( xFormMultiSet.is() )
@@ -3491,7 +3489,7 @@ IController& SbaTableQueryBrowser::getCommandController()
     return *this;
 }
 
-::cppu::OInterfaceContainerHelper* SbaTableQueryBrowser::getContextMenuInterceptors()
+::comphelper::OInterfaceContainerHelper2* SbaTableQueryBrowser::getContextMenuInterceptors()
 {
     return &m_aContextMenuInterceptors;
 }
@@ -3664,7 +3662,7 @@ bool SbaTableQueryBrowser::preReloadForm()
     if ( !m_pCurrentlyDisplayed )
     {
         // switch the grid to design mode while loading
-        getBrowserView()->getGridControl()->setDesignMode(sal_True);
+        getBrowserView()->getGridControl()->setDesignMode(true);
         // we had an invalid statement so we need to connect the column models
         Reference<XPropertySet> xRowSetProps(getRowSet(),UNO_QUERY);
         svx::ODataAccessDescriptor aDesc(xRowSetProps);
@@ -3678,7 +3676,7 @@ bool SbaTableQueryBrowser::preReloadForm()
         {
             SvTreeListEntry* pDataSource = nullptr;
             SvTreeListEntry* pCommandType = nullptr;
-            m_pCurrentlyDisplayed = getObjectEntry( sDataSource, sCommand, nCommandType, &pDataSource, &pCommandType, true, SharedConnection() );
+            m_pCurrentlyDisplayed = getObjectEntry( sDataSource, sCommand, nCommandType, &pDataSource, &pCommandType );
             bIni = true;
         }
     }
@@ -3716,22 +3714,22 @@ Reference< XEmbeddedScripts > SAL_CALL SbaTableQueryBrowser::getScriptContainer(
     return xScripts;
 }
 
-void SAL_CALL SbaTableQueryBrowser::registerContextMenuInterceptor( const Reference< XContextMenuInterceptor >& _Interceptor ) throw (RuntimeException, std::exception)
+void SAL_CALL SbaTableQueryBrowser::registerContextMenuInterceptor( const Reference< XContextMenuInterceptor >& Interceptor ) throw (RuntimeException, std::exception)
 {
-    if ( _Interceptor.is() )
-        m_aContextMenuInterceptors.addInterface( _Interceptor );
+    if ( Interceptor.is() )
+        m_aContextMenuInterceptors.addInterface( Interceptor );
 }
 
-void SAL_CALL SbaTableQueryBrowser::releaseContextMenuInterceptor( const Reference< XContextMenuInterceptor >& _Interceptor ) throw (RuntimeException, std::exception)
+void SAL_CALL SbaTableQueryBrowser::releaseContextMenuInterceptor( const Reference< XContextMenuInterceptor >& Interceptor ) throw (RuntimeException, std::exception)
 {
-    if ( _Interceptor.is() )
-        m_aContextMenuInterceptors.removeInterface( _Interceptor );
+    if ( Interceptor.is() )
+        m_aContextMenuInterceptors.removeInterface( Interceptor );
 }
 
-void SAL_CALL SbaTableQueryBrowser::registeredDatabaseLocation( const DatabaseRegistrationEvent& _Event ) throw (RuntimeException, std::exception)
+void SAL_CALL SbaTableQueryBrowser::registeredDatabaseLocation( const DatabaseRegistrationEvent& Event ) throw (RuntimeException, std::exception)
 {
     SolarMutexGuard aGuard;
-    implAddDatasource( _Event.Name, SharedConnection() );
+    implAddDatasource( Event.Name, SharedConnection() );
 }
 
 void SbaTableQueryBrowser::impl_cleanupDataSourceEntry( const OUString& _rDataSourceName )
@@ -3763,10 +3761,10 @@ void SbaTableQueryBrowser::impl_cleanupDataSourceEntry( const OUString& _rDataSo
             "SbaTableQueryBrowser::impl_cleanupDataSourceEntry: inconsistence (2)!");
 
     // delete any user data of the child entries of the to-be-removed entry
-    std::pair<SvTreeListEntries::iterator, SvTreeListEntries::iterator> aIters =
+    std::pair<SvTreeListEntries::const_iterator, SvTreeListEntries::const_iterator> aIters =
         m_pTreeModel->GetChildIterators(pDataSourceEntry);
 
-    SvTreeListEntries::iterator it = aIters.first, itEnd = aIters.second;
+    SvTreeListEntries::const_iterator it = aIters.first, itEnd = aIters.second;
 
     for (; it != itEnd; ++it)
     {
@@ -3783,24 +3781,24 @@ void SbaTableQueryBrowser::impl_cleanupDataSourceEntry( const OUString& _rDataSo
     m_pTreeModel->Remove( pDataSourceEntry );
 }
 
-void SAL_CALL SbaTableQueryBrowser::revokedDatabaseLocation( const DatabaseRegistrationEvent& _Event ) throw (RuntimeException, std::exception)
+void SAL_CALL SbaTableQueryBrowser::revokedDatabaseLocation( const DatabaseRegistrationEvent& Event ) throw (RuntimeException, std::exception)
 {
     SolarMutexGuard aGuard;
 
-    impl_cleanupDataSourceEntry( _Event.Name );
+    impl_cleanupDataSourceEntry( Event.Name );
 
     // maybe the object which is part of the document data source has been removed
     checkDocumentDataSource();
 }
 
-void SAL_CALL SbaTableQueryBrowser::changedDatabaseLocation( const DatabaseRegistrationEvent& _Event ) throw (RuntimeException, std::exception)
+void SAL_CALL SbaTableQueryBrowser::changedDatabaseLocation( const DatabaseRegistrationEvent& Event ) throw (RuntimeException, std::exception)
 {
     SolarMutexGuard aGuard;
 
     // in case the data source was expanded, and connected, we need to clean it up
     // for simplicity, just do as if the data source were completely removed and re-added
-    impl_cleanupDataSourceEntry( _Event.Name );
-    implAddDatasource( _Event.Name, SharedConnection() );
+    impl_cleanupDataSourceEntry( Event.Name );
+    implAddDatasource( Event.Name, SharedConnection() );
 }
 
 }   // namespace dbaui

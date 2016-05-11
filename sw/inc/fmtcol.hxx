@@ -87,7 +87,7 @@ protected:
     }
 
     /// To get UL- / LR- / FontHeight-changes.
-   virtual void Modify( const SfxPoolItem*, const SfxPoolItem* ) override;
+    virtual void Modify( const SfxPoolItem*, const SfxPoolItem* ) override;
 
 public:
 
@@ -113,8 +113,7 @@ public:
     // If a Paragraph Style is assigned to list level N of the Outline Style,
     // then its outline level - AttrOutlineLevel - is set to N+1
     void AssignToListLevelOfOutlineStyle(const int nAssignedListLevel);
-    void DeleteAssignmentToListLevelOfOutlineStyle(const bool bResetOutlineLevel
-                                                   = true);
+    void DeleteAssignmentToListLevelOfOutlineStyle();
 
     /** Override to recognize changes on the <SwNumRuleItem> and register/unregister
      the paragragh style at the corresponding <SwNumRule> instance. */
@@ -197,8 +196,6 @@ private:
 public:
 
     bool operator==( const SwCollCondition& rCmp ) const;
-    bool operator!=( const SwCollCondition& rCmp ) const
-                            { return ! (*this == rCmp); }
 
     sal_uLong GetCondition() const      { return m_nCondition; }
     sal_uLong GetSubCondition() const   { return m_aSubCondition.nSubCondition; }

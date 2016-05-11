@@ -121,12 +121,10 @@ VclPtr<SfxTabPage> SvxHeaderPage::Create( vcl::Window* pParent, const SfxItemSet
 }
 
 
-
 VclPtr<SfxTabPage> SvxFooterPage::Create( vcl::Window* pParent, const SfxItemSet* rSet )
 {
     return VclPtr<SvxFooterPage>::Create( pParent, *rSet );
 }
-
 
 
 SvxHeaderPage::SvxHeaderPage( vcl::Window* pParent, const SfxItemSet& rAttr ) :
@@ -135,7 +133,6 @@ SvxHeaderPage::SvxHeaderPage( vcl::Window* pParent, const SfxItemSet& rAttr ) :
 
 {
 }
-
 
 
 SvxFooterPage::SvxFooterPage( vcl::Window* pParent, const SfxItemSet& rAttr ) :
@@ -200,7 +197,6 @@ SvxHFPage::SvxHFPage( vcl::Window* pParent, const SfxItemSet& rSet, sal_uInt16 n
 }
 
 
-
 SvxHFPage::~SvxHFPage()
 {
     disposeOnce();
@@ -227,7 +223,6 @@ void SvxHFPage::dispose()
     m_pBackgroundBtn.clear();
     SfxTabPage::dispose();
 }
-
 
 
 bool SvxHFPage::FillItemSet( SfxItemSet* rSet )
@@ -643,7 +638,7 @@ IMPL_LINK_NOARG_TYPED(SvxHFPage, BackgroundHdl, Button*, void)
         if(SfxItemState::SET == GetItemSet().GetItemState(GetWhich(nId), false, &pItem))
         {
             // If a SfxItemSet from the SetItem for SID_ATTR_PAGE_HEADERSET or
-            // SID_ATTR_PAGE_FOOTERSET exists, use it's content
+            // SID_ATTR_PAGE_FOOTERSET exists, use its content
             pBBSet->Put(static_cast<const SvxSetItem*>(pItem)->GetItemSet());
         }
         else

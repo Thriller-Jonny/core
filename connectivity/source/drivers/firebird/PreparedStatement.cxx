@@ -100,10 +100,11 @@ void OPreparedStatement::ensurePrepared()
         m_pInSqlda = static_cast<XSQLDA*>(calloc(1, XSQLDA_LENGTH(nItems)));
         m_pInSqlda->version = SQLDA_VERSION1;
         m_pInSqlda->sqln = nItems;
-        isc_dsql_describe_bind(m_statusVector,
-                               &m_aStatementHandle,
-                               1,
-                               m_pInSqlda);
+        aErr = isc_dsql_describe_bind(m_statusVector,
+                                      &m_aStatementHandle,
+                                      1,
+                                      m_pInSqlda);
+        SAL_WARN_IF(aErr, "connectivity.firebird", "isc_dsql_describe_bind failed");
     }
 
     if (!aErr)
@@ -226,7 +227,7 @@ void SAL_CALL OPreparedStatement::setString(sal_Int32 nParameterIndex,
     default:
         ::dbtools::throwSQLException(
             "Incorrect type for setString",
-            ::dbtools::SQL_INVALID_SQL_DATA_TYPE,
+            ::dbtools::StandardSQLState::INVALID_SQL_DATA_TYPE,
             *this);
     }
 }
@@ -342,7 +343,7 @@ void OPreparedStatement::setValue(sal_Int32 nIndex, T& nValue, ISC_SHORT nType)
     {
        ::dbtools::throwSQLException(
             "Incorrect type for setString",
-            ::dbtools::SQL_INVALID_SQL_DATA_TYPE,
+            ::dbtools::StandardSQLState::INVALID_SQL_DATA_TYPE,
             *this);
     }
 
@@ -525,7 +526,6 @@ void SAL_CALL OPreparedStatement::setBlob(sal_Int32 nParameterIndex,
 }
 
 
-
 void SAL_CALL OPreparedStatement::setArray( sal_Int32 parameterIndex, const Reference< XArray >& x ) throw(SQLException, RuntimeException, std::exception)
 {
     (void) parameterIndex;
@@ -623,7 +623,6 @@ void SAL_CALL OPreparedStatement::setBytes(sal_Int32 nParameterIndex,
 }
 
 
-
 void SAL_CALL OPreparedStatement::setCharacterStream( sal_Int32 parameterIndex, const Reference< ::com::sun::star::io::XInputStream >& x, sal_Int32 length ) throw(SQLException, RuntimeException, std::exception)
 {
     (void) parameterIndex;
@@ -695,7 +694,7 @@ void OPreparedStatement::checkParameterIndex(sal_Int32 nParameterIndex)
     {
         ::dbtools::throwSQLException(
             "No column " + OUString::number(nParameterIndex),
-            ::dbtools::SQL_COLUMN_NOT_FOUND,
+            ::dbtools::StandardSQLState::COLUMN_NOT_FOUND,
             *this);
     }
 }
@@ -704,13 +703,13 @@ void OPreparedStatement::setParameterNull(sal_Int32 nParameterIndex,
                                           bool bSetNull)
 {
     XSQLVAR* pVar = m_pInSqlda->sqlvar + (nParameterIndex - 1);
-    if (pVar->sqltype & 1)
+    if (bSetNull)
     {
-        if (bSetNull)
-            *pVar->sqlind = -1;
-        else
-            *pVar->sqlind = 0;
+        pVar->sqltype |= 1;
+        *pVar->sqlind = -1;
     }
+    else
+        *pVar->sqlind = 0;
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

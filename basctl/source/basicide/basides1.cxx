@@ -302,16 +302,16 @@ void Shell::ExecuteGlobal( SfxRequest& rReq )
                 SbModule* pModule = pBasic->FindModule( rInfo.GetModule() );
                 if ( !pModule )
                 {
-                    if ( !rInfo.GetModule().isEmpty() || !pBasic->GetModules()->Count() )
+                    if ( !rInfo.GetModule().isEmpty() || pBasic->GetModules().empty() )
                     {
-                        OUString aModName = rInfo.GetModule();
+                        const OUString& aModName = rInfo.GetModule();
 
                         OUString sModuleCode;
                         if ( aDocument.createModule( aLibName, aModName, false, sModuleCode ) )
                             pModule = pBasic->FindModule( aModName );
                     }
                     else
-                        pModule = static_cast<SbModule*>( pBasic->GetModules()->Get(0) );
+                        pModule = pBasic->GetModules().front();
                 }
                 DBG_ASSERT( pModule, "Kein Modul!" );
                 if ( pModule && !pModule->GetMethods()->Find( rInfo.GetMethod(), SbxCLASS_METHOD ) )
@@ -345,7 +345,7 @@ void Shell::ExecuteGlobal( SfxRequest& rReq )
             if ( aWindowTable.find( rTabId.GetValue() ) !=  aWindowTable.end() )
             {
                 BaseWindow* pWin = aWindowTable[ rTabId.GetValue() ];
-                OUString aNewName( rModName.GetValue() );
+                const OUString& aNewName( rModName.GetValue() );
                 OUString aOldName( pWin->GetName() );
                 if ( aNewName != aOldName )
                 {
@@ -431,7 +431,7 @@ void Shell::ExecuteGlobal( SfxRequest& rReq )
             uno::Reference< frame::XModel > xModel( rShellItem.GetValue(), UNO_QUERY );
             ScriptDocument aDocument( xModel.is() ? ScriptDocument( xModel ) : ScriptDocument::getApplicationScriptDocument() );
             const SfxStringItem& rLibNameItem = static_cast<const SfxStringItem&>(rReq.GetArgs()->Get( SID_BASICIDE_ARG_LIBNAME ));
-            OUString aLibName( rLibNameItem.GetValue() );
+            const OUString& aLibName( rLibNameItem.GetValue() );
 
             if ( nSlot == SID_BASICIDE_LIBSELECTED )
             {
@@ -467,7 +467,7 @@ void Shell::ExecuteGlobal( SfxRequest& rReq )
             {
                 if ( m_aCurLibName.isEmpty() || ( aDocument == m_aCurDocument && aLibName == m_aCurLibName ) )
                 {
-                    RemoveWindows( aDocument, aLibName, true );
+                    RemoveWindows( aDocument, aLibName );
                     if ( aDocument == m_aCurDocument && aLibName == m_aCurLibName )
                     {
                         m_aCurDocument = ScriptDocument::getApplicationScriptDocument();
@@ -505,9 +505,9 @@ void Shell::ExecuteGlobal( SfxRequest& rReq )
         {
             DBG_ASSERT( rReq.GetArgs(), "arguments expected" );
             const SbxItem& rSbxItem = static_cast<const SbxItem&>(rReq.GetArgs()->Get(SID_BASICIDE_ARG_SBX ));
-            ScriptDocument aDocument( rSbxItem.GetDocument() );
-            OUString aLibName( rSbxItem.GetLibName() );
-            OUString aName( rSbxItem.GetName() );
+            const ScriptDocument& aDocument( rSbxItem.GetDocument() );
+            const OUString& aLibName( rSbxItem.GetLibName() );
+            const OUString& aName( rSbxItem.GetName() );
             if ( m_aCurLibName.isEmpty() || ( aDocument == m_aCurDocument && aLibName == m_aCurLibName ) )
             {
                 if ( rSbxItem.GetType() == TYPE_MODULE )
@@ -521,7 +521,7 @@ void Shell::ExecuteGlobal( SfxRequest& rReq )
         {
             DBG_ASSERT( rReq.GetArgs(), "arguments expected" );
             const SbxItem& rSbxItem = static_cast<const SbxItem&>(rReq.GetArgs()->Get(SID_BASICIDE_ARG_SBX ));
-            ScriptDocument aDocument( rSbxItem.GetDocument() );
+            const ScriptDocument& aDocument( rSbxItem.GetDocument() );
             BaseWindow* pWin = FindWindow( aDocument, rSbxItem.GetLibName(), rSbxItem.GetName(), rSbxItem.GetType(), true );
             if ( pWin )
                 RemoveWindow( pWin, true );
@@ -531,9 +531,9 @@ void Shell::ExecuteGlobal( SfxRequest& rReq )
         {
             DBG_ASSERT( rReq.GetArgs(), "arguments expected" );
             const SbxItem& rSbxItem = static_cast<const SbxItem&>(rReq.GetArgs()->Get(SID_BASICIDE_ARG_SBX ));
-            ScriptDocument aDocument( rSbxItem.GetDocument() );
-            OUString aLibName( rSbxItem.GetLibName() );
-            OUString aName( rSbxItem.GetName() );
+            const ScriptDocument& aDocument( rSbxItem.GetDocument() );
+            const OUString& aLibName( rSbxItem.GetLibName() );
+            const OUString& aName( rSbxItem.GetName() );
             SetCurLib( aDocument, aLibName );
             BaseWindow* pWin = nullptr;
             if ( rSbxItem.GetType() == TYPE_DIALOG )
@@ -1186,30 +1186,21 @@ void Shell::AdjustPosSizePixel( const Point &rPos, const Size &rSize )
     if ( GetViewFrame()->GetWindow().GetOutputSizePixel().Height() == 0 )
         return;
 
+    Size aTabBarSize;
+    aTabBarSize.Height() = GetViewFrame()->GetWindow().GetFont().GetFontHeight() + 4;
+    aTabBarSize.Width() = rSize.Width();
+
     Size aSz( rSize );
     Size aScrollBarBoxSz( aScrollBarBox->GetSizePixel() );
     aSz.Height() -= aScrollBarBoxSz.Height();
+    aSz.Height() -= aTabBarSize.Height();
 
     Size aOutSz( aSz );
     aSz.Width() -= aScrollBarBoxSz.Width();
     aScrollBarBox->SetPosPixel( Point( rSize.Width() - aScrollBarBoxSz.Width(), rSize.Height() - aScrollBarBoxSz.Height() ) );
     aVScrollBar->SetPosSizePixel( Point( rPos.X()+aSz.Width(), rPos.Y() ), Size( aScrollBarBoxSz.Width(), aSz.Height() ) );
-    if ( bTabBarSplitted )
-    {
-        // SplitSize is 0 at a resize!
-        long nSplitPos = pTabBar->GetSizePixel().Width();
-        if ( nSplitPos > aSz.Width() )
-            nSplitPos = aSz.Width();
-        pTabBar->SetPosSizePixel( Point( rPos.X(), rPos.Y()+aSz.Height() ), Size( nSplitPos, aScrollBarBoxSz.Height() ) );
-        long nScrlStart = rPos.X() + nSplitPos;
-        aHScrollBar->SetPosSizePixel( Point( nScrlStart, rPos.Y()+aSz.Height() ), Size( aSz.Width() - nScrlStart + 1, aScrollBarBoxSz.Height() ) );
-        aHScrollBar->Update();
-    }
-    else
-    {
-        aHScrollBar->SetPosSizePixel( Point( rPos.X()+ aSz.Width()/2 - 1, rPos.Y()+aSz.Height() ), Size( aSz.Width()/2 + 2, aScrollBarBoxSz.Height() ) );
-        pTabBar->SetPosSizePixel( Point( rPos.X(), rPos.Y()+aSz.Height() ), Size( aSz.Width()/2, aScrollBarBoxSz.Height() ) );
-    }
+    aHScrollBar->SetPosSizePixel( Point( rPos.X(), rPos.Y()+aSz.Height() ), Size( aSz.Width(), aScrollBarBoxSz.Height() ) );
+    pTabBar->SetPosSizePixel( Point( rPos.X(), rPos.Y()+aScrollBarBoxSz.Height()+aSz.Height()), aTabBarSize );
 
     if (pLayout)
         pLayout->SetPosSizePixel(rPos, dynamic_cast<DialogWindow*>(pCurWin.get()) ? aSz : aOutSz);

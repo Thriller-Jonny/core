@@ -27,7 +27,6 @@
 #include <cppuhelper/implbase.hxx>
 
 using ::com::sun::star::uno::Any;
-using ::com::sun::star::uno::Type;
 using ::com::sun::star::uno::Reference;
 using ::com::sun::star::uno::RuntimeException;
 using ::com::sun::star::uno::Sequence;
@@ -40,10 +39,8 @@ using ::com::sun::star::task::PasswordRequestMode;
 using ::com::sun::star::task::XInteractionAbort;
 using ::com::sun::star::task::XInteractionContinuation;
 using ::com::sun::star::task::XInteractionPassword2;
-using ::com::sun::star::task::XInteractionRequest;
 
 namespace comphelper {
-
 
 
 class AbortContinuation : public ::cppu::WeakImplHelper< XInteractionAbort >
@@ -51,7 +48,6 @@ class AbortContinuation : public ::cppu::WeakImplHelper< XInteractionAbort >
 public:
     virtual void SAL_CALL select() throw( RuntimeException, std::exception ) override {}
 };
-
 
 
 class PasswordContinuation : public ::cppu::WeakImplHelper< XInteractionPassword2 >
@@ -78,7 +74,6 @@ private:
     bool            mbReadOnly;
     bool            mbSelected;
 };
-
 
 
 SimplePasswordRequest::SimplePasswordRequest( PasswordRequestMode eMode )
@@ -118,20 +113,19 @@ Sequence< Reference< XInteractionContinuation > > SAL_CALL SimplePasswordRequest
 }
 
 
-
 DocPasswordRequest::DocPasswordRequest( DocPasswordRequestType eType,
         PasswordRequestMode eMode, const OUString& rDocumentUrl, bool bPasswordToModify )
 {
     switch( eType )
     {
-        case DocPasswordRequestType_STANDARD:
+        case DocPasswordRequestType::Standard:
         {
             DocumentPasswordRequest2 aRequest( OUString(), Reference< XInterface >(),
                 InteractionClassification_QUERY, eMode, rDocumentUrl, bPasswordToModify );
             maRequest <<= aRequest;
         }
         break;
-        case DocPasswordRequestType_MS:
+        case DocPasswordRequestType::MS:
         {
             DocumentMSPasswordRequest2 aRequest( OUString(), Reference< XInterface >(),
                 InteractionClassification_QUERY, eMode, rDocumentUrl, bPasswordToModify );
@@ -181,7 +175,6 @@ Sequence< Reference< XInteractionContinuation > > SAL_CALL DocPasswordRequest::g
 {
     return maContinuations;
 }
-
 
 
 } // namespace comphelper

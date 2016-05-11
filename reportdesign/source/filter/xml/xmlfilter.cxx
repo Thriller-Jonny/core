@@ -19,7 +19,6 @@
 
 #include <sal/config.h>
 
-#include <boost/noncopyable.hpp>
 #include <com/sun/star/packages/zip/ZipIOException.hpp>
 #include <com/sun/star/embed/ElementModes.hpp>
 #include <com/sun/star/beans/NamedValue.hpp>
@@ -78,12 +77,8 @@ using namespace ::com::sun::star::xml::sax;
 using namespace xmloff;
 using namespace ::com::sun::star::util;
 
-    sal_Char const sXML_np__rpt[] = "_report";
-    sal_Char const sXML_np___rpt[] = "__report";
-
-
 class RptMLMasterStylesContext_Impl:
-    public XMLTextMasterStylesContext, private boost::noncopyable
+    public XMLTextMasterStylesContext
 {
     ORptFilter& m_rImport;
 
@@ -95,6 +90,8 @@ public:
             const OUString& rLName ,
             const uno::Reference< xml::sax::XAttributeList > & xAttrList );
     virtual ~RptMLMasterStylesContext_Impl();
+    RptMLMasterStylesContext_Impl(const RptMLMasterStylesContext_Impl&) = delete;
+    RptMLMasterStylesContext_Impl& operator=(const RptMLMasterStylesContext_Impl&) = delete;
     virtual void EndElement() override;
 };
 
@@ -192,7 +189,7 @@ sal_Int32 ReadThroughComponent(
 
 /// read a component (storage version)
 sal_Int32 ReadThroughComponent(
-    uno::Reference< embed::XStorage > xStorage,
+    const uno::Reference< embed::XStorage >& xStorage,
     const uno::Reference<XComponent>& xModelComponent,
     const sal_Char* pStreamName,
     const sal_Char* pCompatibilityStreamName,
@@ -351,18 +348,16 @@ Sequence< OUString > ORptMetaImportHelper::getSupportedServiceNames_Static(  ) t
 }
 
 
-// - ORptFilter -
-
 ORptFilter::ORptFilter( const uno::Reference< XComponentContext >& _rxContext, SvXMLImportFlags nImportFlags )
     :SvXMLImport(_rxContext, getImplementationName_Static(), nImportFlags)
 {
     GetMM100UnitConverter().SetCoreMeasureUnit(util::MeasureUnit::MM_100TH);
     GetMM100UnitConverter().SetXMLMeasureUnit(util::MeasureUnit::CM);
-    GetNamespaceMap().Add( sXML_np__rpt,
+    GetNamespaceMap().Add( "_report",
                         GetXMLToken(XML_N_RPT),
                         XML_NAMESPACE_REPORT );
 
-    GetNamespaceMap().Add( sXML_np___rpt,
+    GetNamespaceMap().Add( "__report",
                         GetXMLToken(XML_N_RPT_OASIS),
                         XML_NAMESPACE_REPORT );
 
@@ -372,7 +367,6 @@ ORptFilter::ORptFilter( const uno::Reference< XComponentContext >& _rxContext, S
     m_xRowStylesPropertySetMapper = new XMLPropertySetMapper(OXMLHelper::GetRowStyleProps(), m_xPropHdlFactory, false);
     m_xTableStylesPropertySetMapper = new XMLTextPropertySetMapper( TextPropMap::TABLE_DEFAULTS, false );
 }
-
 
 
 ORptFilter::~ORptFilter() throw()
@@ -512,6 +506,7 @@ bool ORptFilter::implImport( const Sequence< PropertyValue >& rDescriptor )
         utl::MediaDescriptor aDescriptor(rDescriptor);
         uno::Reference<beans::XPropertySet> xProp = comphelper::GenericPropertySet_CreateInstance(new comphelper::PropertySetInfo(pMap));
         const OUString sVal( aDescriptor.getUnpackedValueOrDefault(utl::MediaDescriptor::PROP_DOCUMENTBASEURL(),OUString()) );
+        assert(!sVal.isEmpty()); // needed for relative URLs
         xProp->setPropertyValue("BaseURI", uno::makeAny(sVal));
         const OUString sHierarchicalDocumentName( aDescriptor.getUnpackedValueOrDefault("HierarchicalDocumentName",OUString()) );
         xProp->setPropertyValue("StreamRelPath", uno::makeAny(sHierarchicalDocumentName));
@@ -538,7 +533,7 @@ bool ORptFilter::implImport( const Sequence< PropertyValue >& rDescriptor )
         }
         catch (const uno::Exception&)
         {
-            xProp->setPropertyValue(s_sOld,uno::makeAny(sal_True));
+            xProp->setPropertyValue(s_sOld,uno::makeAny(true));
         }
 
         if ( nRet == 0 )
@@ -589,7 +584,7 @@ bool ORptFilter::implImport( const Sequence< PropertyValue >& rDescriptor )
 
         if ( bRet )
         {
-            m_xReportDefinition->setModified(sal_False);
+            m_xReportDefinition->setModified(false);
         }
         else
         {
@@ -601,7 +596,7 @@ bool ORptFilter::implImport( const Sequence< PropertyValue >& rDescriptor )
                         // TODO/LATER: no way to transport the error outside from the filter!
                         break;
                     }
-                    // fall through intended
+                    SAL_FALLTHROUGH;
                 default:
                     {
                         // TODO/LATER: this is completely wrong! Filter code should never call ErrorHandler directly! But for now this is the only way!
@@ -962,7 +957,7 @@ void ORptFilter::FinishStyles()
         GetStyles()->FinishStyles( true );
 }
 
-OUString ORptFilter::convertFormula(const OUString& _sFormula)
+const OUString& ORptFilter::convertFormula(const OUString& _sFormula)
 {
     return _sFormula;
 }

@@ -40,8 +40,6 @@ namespace vcl { class Font; }
 struct HDCCache;
 struct TempFontItem;
 
-typedef HRESULT (WINAPI  *DwmIsCompositionEnabled_ptr)(BOOL*);
-
 #define MAX_STOCKPEN            4
 #define MAX_STOCKBRUSH          4
 #define SAL_CLIPRECT_COUNT      16
@@ -87,7 +85,6 @@ public:
     DWORD                   mnNextTimerTime;
     DWORD                   mnLastEventTime;
     HANDLE                  mnTimerId;              ///< Windows timer id
-    bool                    mbInTimerProc;          // timer event is currently being dispatched
     HHOOK                   mhSalObjMsgHook;        // hook to get interesting msg for SalObject
     HWND                    mhWantLeaveMsg;         // window handle, that want a MOUSELEAVE message
     AutoTimer*              mpMouseLeaveTimer;      // Timer for MouseLeave Test
@@ -109,10 +106,8 @@ public:
     BYTE                    mnCacheDCInUse;         // count of CacheDC in use
     bool                    mbObjClassInit;         // is SALOBJECTCLASS initialised
     bool                    mbInPalChange;          // is in WM_QUERYNEWPALETTE
-    DWORD                   mnAppThreadId;          // Id from Applikation-Thread
+    DWORD                   mnAppThreadId;          // Id from Application-Thread
     BOOL                    mbScrSvrEnabled;        // ScreenSaver enabled
-    int                     mnSageStatus;           // status of Sage-DLL (DISABLE_AGENT == does not exist)
-    SysAgt_Enable_PROC      mpSageEnableProc;       // funktion to deactivate the system agent
     SalIcon*                mpFirstIcon;            // icon cache, points to first icon, NULL if none
     TempFontItem*           mpTempFontItem;
     bool                    mbThemeChanged;         // true if visual theme was changed: throw away theme handles
@@ -123,8 +118,6 @@ public:
 
     std::set< HMENU >       mhMenuSet;              // keeps track of menu handles created by VCL, used by IsKnownMenuHandle()
     std::map< UINT,sal_uInt16 > maVKMap;      // map some dynamic VK_* entries
-    oslModule               maDwmLib;
-    DwmIsCompositionEnabled_ptr mpDwmIsCompositionEnabled;
 };
 
 inline void SetSalData( SalData* pData ) { ImplGetSVData()->mpSalData = pData; }
@@ -135,7 +128,6 @@ struct SalShlData
     HINSTANCE               mhInst;                 // Instance of SAL-DLL
     UINT                    mnWheelScrollLines;     // WheelScrollLines
     UINT                    mnWheelScrollChars;     // WheelScrollChars
-    UINT                    mnWheelMsgId;           // Wheel-Message-Id fuer W95
     BOOL                    mbWXP;                  // Windows XP
     BOOL                    mbWVista;               // Windows Vista
     BOOL                    mbW7;                   // Windows 7
@@ -214,8 +206,6 @@ int ImplSalWICompareAscii( const wchar_t* pStr1, const char* pStr2 );
 
 // wParam == bWait; lParam == 0
 #define SAL_MSG_THREADYIELD         (WM_USER+111)
-// wParam == 0; lParam == 0
-#define SAL_MSG_RELEASEWAITYIELD    (WM_USER+112)
 // wParam == 0; lParam == nMS
 #define SAL_MSG_STARTTIMER          (WM_USER+113)
 // wParam == nFrameStyle; lParam == pParent; lResult == pFrame
@@ -279,6 +269,8 @@ int ImplSalWICompareAscii( const wchar_t* pStr1, const char* pStr2 );
 
 // Call the Timer's callback from the main thread
 #define SAL_MSG_TIMER_CALLBACK      (WM_USER+162)
+// Stop the timer from the main thread; wParam = 0, lParam = 0
+#define SAL_MSG_STOPTIMER           (WM_USER+163)
 
 inline void SetWindowPtr( HWND hWnd, WinSalFrame* pThis )
 {

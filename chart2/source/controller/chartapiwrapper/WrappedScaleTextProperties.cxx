@@ -26,7 +26,6 @@
 using namespace ::com::sun::star;
 using ::com::sun::star::uno::Any;
 using ::com::sun::star::uno::Reference;
-using ::com::sun::star::uno::Sequence;
 using ::com::sun::star::beans::Property;
 
 namespace chart
@@ -137,7 +136,7 @@ void WrappedScaleTextProperties::addProperties( ::std::vector< Property > & rOut
 }
 
 void WrappedScaleTextProperties::addWrappedProperties( std::vector< WrappedProperty* >& rList
-                                 , std::shared_ptr< Chart2ModelContact > spChart2ModelContact )
+                                 , const std::shared_ptr< Chart2ModelContact >& spChart2ModelContact )
 {
     rList.push_back( new WrappedScaleTextProperty( spChart2ModelContact ) );
 }

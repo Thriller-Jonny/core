@@ -42,7 +42,6 @@
 #include <typelib/typeclass.h>
 #include <osl/diagnose.h>
 #include <osl/mutex.hxx>
-#include <com/sun/star/uno/Reference.h>
 #include <rtl/process.h>
 #include <rtl/uuid.h>
 
@@ -59,7 +58,7 @@ using namespace std;
 namespace ole_adapter
 {
 
-const VARTYPE getVarType( const Any& val);
+VARTYPE getVarType( const Any& val);
 /* creates a Type object for a given type name.
 
     The function returns false if the name does not represent
@@ -82,7 +81,6 @@ public:
 Mutex* getBridgeMutex();
 
 } // end namespace
-
 
 
 #endif // INCLUDED_EXTENSIONS_SOURCE_OLE_OLE2UNO_HXX

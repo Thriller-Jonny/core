@@ -208,7 +208,6 @@ struct OStorage_Impl
     void ReadContents();
     void ReadRelInfoIfNecessary();
 
-    css::uno::Reference< css::uno::XComponentContext > GetComponentContext();
     SotElementList_Impl& GetChildrenList();
     void GetStorageProperties();
 
@@ -227,14 +226,14 @@ struct OStorage_Impl
     void CopyToStorage( const css::uno::Reference< css::embed::XStorage >& xDest,
                         bool bDirect );
     void CopyStorageElement( SotElement_Impl* pElement,
-                            css::uno::Reference< css::embed::XStorage > xDest,
+                            const css::uno::Reference< css::embed::XStorage >& xDest,
                             const OUString& aName,
                             bool bDirect );
 
     SotElement_Impl* FindElement( const OUString& rName );
 
     SotElement_Impl* InsertStream( const OUString& aName, bool bEncr );
-    SotElement_Impl* InsertRawStream( const OUString& aName, const css::uno::Reference< css::io::XInputStream >& xInStream );
+    void InsertRawStream( const OUString& aName, const css::uno::Reference< css::io::XInputStream >& xInStream );
 
     OStorage_Impl* CreateNewStorageImpl( sal_Int32 nStorageMode );
     SotElement_Impl* InsertStorage( const OUString& aName, sal_Int32 nStorageMode );

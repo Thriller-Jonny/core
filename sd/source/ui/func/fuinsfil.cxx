@@ -97,7 +97,7 @@ OUString lcl_GetExtensionsList ( ::std::vector< FilterDesc > const& rFilterDescL
 }
 
 void lcl_AddFilter ( ::std::vector< FilterDesc >& rFilterDescList,
-                     const SfxFilter *pFilter )
+                     const std::shared_ptr<const SfxFilter>& pFilter )
 {
     if (pFilter)
         rFilterDescList.push_back( ::std::make_pair( pFilter->GetUIName(), pFilter->GetDefaultExtension() ) );
@@ -165,7 +165,7 @@ void FuInsertFile::DoExecute( SfxRequest& rReq )
             try
             {
                 // Get main filter
-                const SfxFilter* pFilter = SfxFilter::GetDefaultFilterFromFactory( aOwnCont );
+                std::shared_ptr<const SfxFilter> pFilter = SfxFilter::GetDefaultFilterFromFactory( aOwnCont );
                 lcl_AddFilter( aFilterVector, pFilter );
 
                 // get template filter
@@ -258,20 +258,20 @@ void FuInsertFile::DoExecute( SfxRequest& rReq )
 
     mpDocSh->SetWaitCursor( true );
 
-    SfxMedium*          pMedium = new SfxMedium( aFile, StreamMode::READ | StreamMode::NOCREATE );
-    const SfxFilter*    pFilter = nullptr;
+    std::unique_ptr<SfxMedium>  xMedium(new SfxMedium(aFile, StreamMode::READ | StreamMode::NOCREATE));
+    std::shared_ptr<const SfxFilter> pFilter;
 
-    SfxGetpApp()->GetFilterMatcher().GuessFilter( *pMedium, &pFilter );
+    SfxGetpApp()->GetFilterMatcher().GuessFilter(*xMedium, pFilter);
 
     bool                bDrawMode = mpViewShell && dynamic_cast< const DrawViewShell *>( mpViewShell ) !=  nullptr;
     bool                bInserted = false;
 
     if( pFilter )
     {
-        pMedium->SetFilter( pFilter );
+        xMedium->SetFilter( pFilter );
         aFilterName = pFilter->GetFilterName();
 
-        if( pMedium->IsStorage() || ( pMedium->GetInStream() && SotStorage::IsStorageFile( pMedium->GetInStream() ) ) )
+        if( xMedium->IsStorage() || ( xMedium->GetInStream() && SotStorage::IsStorageFile( xMedium->GetInStream() ) ) )
         {
             if ( pFilter->GetServiceName() == "com.sun.star.presentation.PresentationDocument" ||
                  pFilter->GetServiceName() == "com.sun.star.drawing.DrawingDocument" )
@@ -279,11 +279,11 @@ void FuInsertFile::DoExecute( SfxRequest& rReq )
                 // Draw, Impress or PowerPoint document
                 // the ownership of the Medium is transferred
                 if( bDrawMode )
-                    InsSDDinDrMode( pMedium );
+                    InsSDDinDrMode(xMedium.release());
                 else
-                    InsSDDinOlMode( pMedium );
+                    InsSDDinOlMode(xMedium.release());
 
-                // don't delete Medium here, ownership of pMedium has changed in this case
+                // ownership of pMedium has changed in this case
                 bInserted = true;
             }
         }
@@ -302,12 +302,12 @@ void FuInsertFile::DoExecute( SfxRequest& rReq )
             if( bFound )
             {
                 if( bDrawMode )
-                    InsTextOrRTFinDrMode(pMedium);
+                    InsTextOrRTFinDrMode(xMedium.get());
                 else
-                    InsTextOrRTFinOlMode(pMedium);
+                    InsTextOrRTFinOlMode(xMedium.get());
 
                 bInserted = true;
-                delete pMedium;
+                xMedium.reset();
             }
         }
     }
@@ -318,7 +318,6 @@ void FuInsertFile::DoExecute( SfxRequest& rReq )
     {
         ScopedVclPtrInstance< MessageDialog > aErrorBox(mpWindow, SD_RESSTR( STR_READ_DATA_ERROR));
         aErrorBox->Execute();
-        delete pMedium;
     }
 }
 
@@ -328,7 +327,7 @@ bool FuInsertFile::InsSDDinDrMode(SfxMedium* pMedium)
 
     mpDocSh->SetWaitCursor( false );
     SdAbstractDialogFactory* pFact = SdAbstractDialogFactory::Create();
-    std::unique_ptr<AbstractSdInsertPagesObjsDlg> pDlg(pFact ? pFact->CreateSdInsertPagesObjsDlg( nullptr, mpDoc, pMedium, aFile ) : nullptr);
+    std::unique_ptr<AbstractSdInsertPagesObjsDlg> pDlg(pFact ? pFact->CreateSdInsertPagesObjsDlg( mpDoc, pMedium, aFile ) : nullptr);
 
     if( !pDlg )
         return false;
@@ -420,7 +419,7 @@ bool FuInsertFile::InsSDDinDrMode(SfxMedium* pMedium)
 void FuInsertFile::InsTextOrRTFinDrMode(SfxMedium* pMedium)
 {
     SdAbstractDialogFactory* pFact = SdAbstractDialogFactory::Create();
-    std::unique_ptr<AbstractSdInsertPagesObjsDlg> pDlg(pFact ? pFact->CreateSdInsertPagesObjsDlg(nullptr, mpDoc, nullptr, aFile ) : nullptr);
+    std::unique_ptr<AbstractSdInsertPagesObjsDlg> pDlg(pFact ? pFact->CreateSdInsertPagesObjsDlg( mpDoc, nullptr, aFile ) : nullptr);
     if( !pDlg )
         return;
 
@@ -445,7 +444,7 @@ void FuInsertFile::InsTextOrRTFinDrMode(SfxMedium* pMedium)
            - the draw outliner of the drawing engine has to draw something in
              between
            - the global outliner could be used in SdPage::CreatePresObj */
-        std::unique_ptr<SdrOutliner> pOutliner(new ::sd::Outliner( mpDoc, OUTLINERMODE_TEXTOBJECT ));
+        std::unique_ptr<SdrOutliner> pOutliner(new ::sd::Outliner( mpDoc, OutlinerMode::TextObject ));
 
         // set reference device
         pOutliner->SetRefDevice( SD_MOD()->GetRefDevice( *mpDocSh ) );
@@ -595,7 +594,7 @@ void FuInsertFile::InsTextOrRTFinOlMode(SfxMedium* pMedium)
        - the draw outliner of the drawing engine has to draw something in
          between
        - the global outliner could be used in SdPage::CreatePresObj */
-    std::unique_ptr< ::Outliner> pOutliner(new ::Outliner( &mpDoc->GetItemPool(), OUTLINERMODE_OUTLINEOBJECT ));
+    std::unique_ptr< ::Outliner> pOutliner(new ::Outliner( &mpDoc->GetItemPool(), OutlinerMode::OutlineObject ));
     pOutliner->SetStyleSheetPool(static_cast<SfxStyleSheetPool*>(mpDoc->GetStyleSheetPool()));
 
     // set reference device
@@ -727,7 +726,7 @@ bool FuInsertFile::InsSDDinOlMode(SfxMedium* pMedium)
 void FuInsertFile::GetSupportedFilterVector( ::std::vector< OUString >& rFilterVector )
 {
     SfxFilterMatcher&   rMatcher = SfxGetpApp()->GetFilterMatcher();
-    const SfxFilter*    pSearchFilter = nullptr;
+    std::shared_ptr<const SfxFilter> pSearchFilter;
 
     rFilterVector.clear();
 

@@ -20,15 +20,22 @@
 #ifndef INCLUDED_OOX_HELPER_BINARYOUTPUTSTREAM_HXX
 #define INCLUDED_OOX_HELPER_BINARYOUTPUTSTREAM_HXX
 
-#include <oox/helper/binarystreambase.hxx>
+#include <cstddef>
 #include <memory>
+
+#include <com/sun/star/uno/Reference.hxx>
+#include <oox/dllapi.h>
+#include <oox/helper/binarystreambase.hxx>
+#include <oox/helper/helper.hxx>
+#include <rtl/textenc.h>
+#include <rtl/ustring.hxx>
+#include <sal/types.h>
 
 namespace com { namespace sun { namespace star {
     namespace io { class XOutputStream; }
 } } }
 
 namespace oox {
-
 
 
 /** Interface for binary output stream classes.
@@ -74,16 +81,23 @@ public:
     BinaryOutputStream&   WriteUInt32(sal_uInt32 x) { writeValue(x); return *this; }
     BinaryOutputStream&   WriteInt64(sal_Int64 x)   { writeValue(x); return *this; }
 
-    void writeCompressedUnicodeArray( const OUString& rString, bool bCompressed, bool bAllowNulChars = false );
+    void writeCompressedUnicodeArray( const OUString& rString, bool bCompressed );
 
-    void writeCharArrayUC( const OUString& rString, rtl_TextEncoding eTextEnc, bool bAllowNulChars = false );
+    void writeCharArrayUC( const OUString& rString, rtl_TextEncoding eTextEnc );
 
-    void writeUnicodeArray( const OUString& rString, bool bAllowNulChars = false );
+    void writeUnicodeArray( const OUString& rString );
 
 protected:
     /** This dummy default c'tor will never call the c'tor of the virtual base
         class BinaryStreamBase as this class cannot be instantiated directly. */
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning( disable : 4702)
+#endif
     BinaryOutputStream() : BinaryStreamBase( false ) {}
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 private:
     BinaryOutputStream( BinaryOutputStream const& ) = delete;
@@ -112,7 +126,6 @@ void BinaryOutputStream::writeValue( Type nValue )
     ByteOrderConverter::convertLittleEndian( nValue );
     writeMemory( &nValue, static_cast< sal_Int32 >( sizeof( Type ) ), sizeof( Type ) );
 }
-
 
 
 /** Wraps a UNO output stream and provides convenient access functions.
@@ -156,7 +169,6 @@ private:
 };
 
 
-
 /** Wraps a StreamDataSequence and provides convenient access functions.
 
     The binary data in the stream is written in little-endian format. After
@@ -181,7 +193,6 @@ public:
     /** Write nBytes bytes from the (preallocated!) buffer pMem. */
     virtual void        writeMemory( const void* pMem, sal_Int32 nBytes, size_t nAtomSize = 1 ) override;
 };
-
 
 
 } // namespace oox

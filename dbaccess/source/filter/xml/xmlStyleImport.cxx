@@ -50,8 +50,8 @@ using namespace xmloff::token;
 OTableStyleContext::OTableStyleContext( ODBFilter& rImport,
         sal_uInt16 nPrfx, const OUString& rLName,
         const Reference< XAttributeList > & xAttrList,
-        SvXMLStylesContext& rStyles, sal_uInt16 nFamily, bool bDefaultStyle )
-    :XMLPropStyleContext( rImport, nPrfx, rLName, xAttrList, rStyles, nFamily, bDefaultStyle )
+        SvXMLStylesContext& rStyles, sal_uInt16 nFamily )
+    :XMLPropStyleContext( rImport, nPrfx, rLName, xAttrList, rStyles, nFamily, false )
     ,pStyles(&rStyles)
     ,m_nNumberFormat(-1)
 {
@@ -72,9 +72,7 @@ void OTableStyleContext::FillPropertySet(
         {
             if ( !sPageStyle.isEmpty() )
             {
-                uno::Any aAny;
-                aAny <<= sPageStyle;
-                AddProperty(CTF_DB_MASTERPAGENAME, aAny);
+                AddProperty(CTF_DB_MASTERPAGENAME, Any(sPageStyle));
             }
         }
         else if ( GetFamily() == XML_STYLE_FAMILY_TABLE_COLUMN )

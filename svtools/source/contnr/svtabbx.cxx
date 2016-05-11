@@ -27,7 +27,7 @@
 #include <com/sun/star/accessibility/AccessibleStateType.hpp>
 #include <com/sun/star/accessibility/AccessibleEventId.hpp>
 #include "svtaccessiblefactory.hxx"
-
+#include <o3tl/make_unique.hxx>
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::accessibility;
 
@@ -83,8 +83,7 @@ void SvTabListBox::InitEntry(SvTreeListEntry* pEntry, const OUString& rStr,
     for( sal_uInt16 nToken = 0; nToken < nCount; nToken++ )
     {
         const OUString aToken = GetToken(aCurEntry, nIndex);
-        std::unique_ptr<SvLBoxString> pStr(new SvLBoxString(pEntry, 0, aToken));
-        pEntry->AddItem(std::move(pStr));
+        pEntry->AddItem(o3tl::make_unique<SvLBoxString>(aToken));
     }
 }
 SvTabListBox::SvTabListBox( vcl::Window* pParent, WinBits nBits )
@@ -544,7 +543,7 @@ void SvHeaderTabListBox::InitHeaderBar( HeaderBar* pHeaderBar )
 
 bool SvHeaderTabListBox::IsItemChecked( SvTreeListEntry* pEntry, sal_uInt16 nCol )
 {
-    SvButtonState eState = SV_BUTTON_UNCHECKED;
+    SvButtonState eState = SvButtonState::Unchecked;
     SvLBoxButton& rItem = static_cast<SvLBoxButton&>( pEntry->GetItem( nCol + 1 ) );
 
     if (rItem.GetType() == SV_ITEM_ID_LBOXBUTTON)
@@ -553,7 +552,7 @@ bool SvHeaderTabListBox::IsItemChecked( SvTreeListEntry* pEntry, sal_uInt16 nCol
         eState = SvLBoxButtonData::ConvertToButtonState( nButtonFlags );
     }
 
-    return ( eState == SV_BUTTON_CHECKED );
+    return ( eState == SvButtonState::Checked );
 }
 
 SvTreeListEntry* SvHeaderTabListBox::InsertEntryToColumn(
@@ -1124,9 +1123,9 @@ void SvHeaderTabListBox::GrabFocus()
     Control::GrabFocus();
 }
 
-Reference< XAccessible > SvHeaderTabListBox::GetAccessible( bool bCreate )
+Reference< XAccessible > SvHeaderTabListBox::GetAccessible()
 {
-    return Control::GetAccessible( bCreate );
+    return Control::GetAccessible();
 }
 
 vcl::Window* SvHeaderTabListBox::GetAccessibleParentWindow() const

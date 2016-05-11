@@ -35,8 +35,6 @@
 #include <memory>
 #include <vector>
 
-#include <boost/noncopyable.hpp>
-
 class ImpEditEngine;
 class SvxTabStop;
 
@@ -82,10 +80,10 @@ struct ScriptTypePosInfo
     sal_Int32  nStartPos;
     sal_Int32  nEndPos;
 
-    ScriptTypePosInfo( short _Type, sal_Int32 _Start, sal_Int32 _End )
-    : nScriptType(_Type)
-    , nStartPos(_Start)
-    , nEndPos(_End)
+    ScriptTypePosInfo( short Type, sal_Int32 Start, sal_Int32 End )
+    : nScriptType(Type)
+    , nStartPos(Start)
+    , nEndPos(End)
     {
     }
 };
@@ -98,10 +96,10 @@ struct WritingDirectionInfo
     sal_Int32  nStartPos;
     sal_Int32  nEndPos;
 
-    WritingDirectionInfo( sal_uInt8 _Type, sal_Int32 _Start, sal_Int32 _End )
-    : nType(_Type)
-    , nStartPos(_Start)
-    , nEndPos(_End)
+    WritingDirectionInfo( sal_uInt8 Type, sal_Int32 Start, sal_Int32 End )
+    : nType(Type)
+    , nStartPos(Start)
+    , nEndPos(End)
     {
     }
 };
@@ -201,7 +199,6 @@ public:
     const EditCharAttrib* FindAttrib( sal_uInt16 nWhich, sal_Int32 nPos ) const;
     EditCharAttrib* FindAttrib( sal_uInt16 nWhich, sal_Int32 nPos );
     const EditCharAttrib* FindNextAttrib( sal_uInt16 nWhich, sal_Int32 nFromPos ) const;
-    const EditCharAttrib* FindEmptyAttrib( sal_uInt16 nWhich, sal_Int32 nPos ) const;
     EditCharAttrib* FindEmptyAttrib( sal_uInt16 nWhich, sal_Int32 nPos );
     const EditCharAttrib* FindFeature( sal_Int32 nPos ) const;
 
@@ -225,7 +222,6 @@ public:
 
     void Remove(const EditCharAttrib* p);
     void Remove(sal_Int32 nPos);
-    void Release(const EditCharAttrib* p);
 
 #if OSL_DEBUG_LEVEL > 0
     static void DbgCheckAttribs(CharAttribList const& rAttribs);
@@ -235,7 +231,7 @@ public:
 
 // class ContentNode
 
-class ContentNode : boost::noncopyable
+class ContentNode
 {
 private:
     OUString maString;
@@ -249,6 +245,8 @@ public:
                     ContentNode( SfxItemPool& rItemPool );
                     ContentNode( const OUString& rStr, const ContentAttribs& rContentAttribs );
                     ~ContentNode();
+                    ContentNode(const ContentNode&) = delete;
+    ContentNode&    operator=(const ContentNode&) = delete;
 
     ContentAttribs& GetContentAttribs()     { return aContentAttribs; }
     const ContentAttribs& GetContentAttribs() const { return aContentAttribs; }
@@ -263,7 +261,6 @@ public:
     void            SetStyleSheet( SfxStyleSheet* pS, bool bRecalcFont = true );
     void            SetStyleSheet( SfxStyleSheet* pS, const SvxFont& rFontFromStyle );
     SfxStyleSheet*  GetStyleSheet() { return aContentAttribs.GetStyleSheet(); }
-    const SfxStyleSheet* GetStyleSheet() const { return aContentAttribs.GetStyleSheet(); }
 
     void            CreateDefFont();
 
@@ -371,7 +368,6 @@ struct ExtraPortionInfo
 };
 
 
-
 // class TextPortion
 
 class TextPortion
@@ -381,7 +377,7 @@ private:
     sal_Int32           nLen;
     Size                aOutSz;
     PortionKind         nKind;
-    sal_uInt8           nRightToLeft;
+    sal_uInt8           nRightToLeftLevel;
     sal_Unicode         nExtraValue;
 
 
@@ -390,7 +386,7 @@ private:
                 , nLen( 0 )
                 , aOutSz()
                 , nKind( PortionKind::TEXT )
-                , nRightToLeft( sal_False )
+                , nRightToLeftLevel( 0 )
                 , nExtraValue( 0 )
                 {
                 }
@@ -401,7 +397,7 @@ public:
                 , nLen( nL )
                 , aOutSz( -1, -1 )
                 , nKind( PortionKind::TEXT )
-                , nRightToLeft( sal_False )
+                , nRightToLeftLevel( 0 )
                 , nExtraValue( 0 )
                 {
                 }
@@ -411,7 +407,7 @@ public:
                 , nLen( r.nLen )
                 , aOutSz( r.aOutSz )
                 , nKind( r.nKind )
-                , nRightToLeft( r.nRightToLeft )
+                , nRightToLeftLevel( r.nRightToLeftLevel )
                 , nExtraValue( r.nExtraValue )
                 {
                 }
@@ -426,9 +422,9 @@ public:
     PortionKind&   GetKind()                   { return nKind; }
     PortionKind    GetKind() const             { return nKind; }
 
-    void           SetRightToLeft( sal_uInt8 b )    { nRightToLeft = b; }
-    sal_uInt8      GetRightToLeft() const      { return nRightToLeft; }
-    bool           IsRightToLeft() const       { return (nRightToLeft&1); }
+    void           SetRightToLeftLevel( sal_uInt8 n ) { nRightToLeftLevel = n; }
+    sal_uInt8      GetRightToLeftLevel() const { return nRightToLeftLevel; }
+    bool           IsRightToLeft() const       { return (nRightToLeftLevel&1); }
 
     sal_Unicode    GetExtraValue() const       { return nExtraValue; }
     void           SetExtraValue( sal_Unicode n )  { nExtraValue = n; }
@@ -552,7 +548,6 @@ public:
     EditLine&   operator = ( const EditLine& rLine );
     friend bool operator == ( const EditLine& r1,  const EditLine& r2  );
 };
-
 
 
 // class LineList
@@ -783,7 +778,7 @@ public:
 
     EditPaM         Clear();
     EditPaM         RemoveText();
-    EditPaM         RemoveChars( EditPaM aPaM, sal_Int32 nChars );
+    void            RemoveChars( EditPaM aPaM, sal_Int32 nChars );
     EditPaM         InsertText( EditPaM aPaM, const OUString& rStr );
     EditPaM         InsertParaBreak( EditPaM aPaM, bool bKeepEndingAttribs );
     EditPaM         InsertFeature( EditPaM aPaM, const SfxPoolItem& rItem );

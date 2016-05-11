@@ -189,7 +189,7 @@ struct MSFILTER_DLLPUBLIC PptDocumentAtom
 
 public:
 
-    static Size GetPageSize( const Size& rSiz );
+    static const Size& GetPageSize( const Size& rSiz );
     Size        GetSlidesPageSize() const { return GetPageSize( aSlidesPageSize ); }
     Size        GetNotesPageSize() const { return GetPageSize( aNotesPageSize ); }
 
@@ -463,8 +463,6 @@ public:
 };
 
 
-
-
 class SvxFieldItem;
 struct MSFILTER_DLLPUBLIC PPTFieldEntry
 {
@@ -508,15 +506,12 @@ struct ProcessData
     PptSlidePersistEntry&       rPersistEntry;
     SdPageCapsule               pPage;
     ::std::vector< SdrObject* > aBackgroundColoredObjects;
-    sal_uInt32*                 pTableRowProperties;
+    std::unique_ptr<sal_uInt32[]> pTableRowProperties;
 
     ProcessData( PptSlidePersistEntry& rP, SdPageCapsule pP ) :
         rPersistEntry               ( rP ),
-        pPage                       ( pP ),
-        pTableRowProperties         ( nullptr ) {};
-    ~ProcessData() { delete[] pTableRowProperties; };
+        pPage                       ( pP ) {};
 };
-
 
 
 class SdrTextObj;
@@ -780,7 +775,7 @@ public:
                     explicit PPTParaSheet( sal_uInt32 nInstance );
                     PPTParaSheet( const PPTParaSheet& rParaSheet );
 
-    bool            Read(
+    void            Read(
                         SdrPowerPointImport& rMan,
                         SvStream& rIn,
                         bool bMasterStyle,
@@ -1279,17 +1274,15 @@ public:
 
 class PPTConvertOCXControls : public SvxMSConvertOCXControls
 {
-    virtual const css::uno::Reference< css::drawing::XDrawPage > & GetDrawPage() override;
+    virtual void GetDrawPage() override;
     PptPageKind     ePageKind;
     const SdrPowerPointImport* mpPPTImporter;
-    css::uno::Reference< css::io::XInputStream > mxInStrm;
 public:
 
-    PPTConvertOCXControls( const SdrPowerPointImport* pPPTImporter, css::uno::Reference< css::io::XInputStream >& rxInStrm, const css::uno::Reference< css::frame::XModel >& rxModel, PptPageKind ePKind ) :
+    PPTConvertOCXControls( const SdrPowerPointImport* pPPTImporter, const css::uno::Reference< css::frame::XModel >& rxModel, PptPageKind ePKind ) :
         SvxMSConvertOCXControls ( rxModel ),
         ePageKind               ( ePKind ),
-        mpPPTImporter           ( pPPTImporter ),
-        mxInStrm                ( rxInStrm )
+        mpPPTImporter           ( pPPTImporter )
     {};
     bool ReadOCXStream( tools::SvRef<SotStorage>& rSrc1,
         css::uno::Reference<

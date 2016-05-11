@@ -21,8 +21,6 @@
 #define INCLUDED_VCL_INC_SALBMP_HXX
 
 #include <tools/gen.hxx>
-#include <tools/solar.h>
-#include <vcl/dllapi.h>
 #include <vcl/checksum.hxx>
 #include <vcl/salbtype.hxx>
 
@@ -71,15 +69,18 @@ public:
     virtual bool            Scale( const double& rScaleX, const double& rScaleY, BmpScaleFlag nScaleFlag ) = 0;
     virtual bool            Replace( const Color& rSearchColor, const Color& rReplaceColor, sal_uLong nTol ) = 0;
 
+    virtual bool            ConvertToGreyscale()
+    {
+        return false;
+    }
 
-    bool GetChecksum(ChecksumType& rChecksum) const
+    void GetChecksum(ChecksumType& rChecksum) const
     {
         updateChecksum();
         if (!mbChecksumValid)
             rChecksum = 0; // back-compat
         else
             rChecksum = mnChecksum;
-        return mbChecksumValid;
     }
 
     void InvalidateChecksum()

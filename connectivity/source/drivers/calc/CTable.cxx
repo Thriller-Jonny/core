@@ -115,7 +115,7 @@ static void lcl_GetDataArea( const Reference<XSpreadsheet>& xSheet, sal_Int32& r
         //  If the used area is larger than the contiguous cell area, find non-empty
         //  cells in that area.
 
-        xUsed->gotoEndOfUsedArea( sal_False );
+        xUsed->gotoEndOfUsedArea( false );
         CellRangeAddress aUsedAddr = xRange->getRangeAddress();
 
         if ( aUsedAddr.EndColumn > aRegionAddr.EndColumn )
@@ -305,7 +305,6 @@ static void lcl_GetColumnInfo( const Reference<XSpreadsheet>& xSheet, const Refe
 }
 
 
-
 static void lcl_SetValue( ORowSetValue& rValue, const Reference<XSpreadsheet>& xSheet,
                     sal_Int32 nStartCol, sal_Int32 nStartRow, bool bHasHeaders,
                     const ::Date& rNullDate,
@@ -420,7 +419,6 @@ static void lcl_SetValue( ORowSetValue& rValue, const Reference<XSpreadsheet>& x
 }
 
 
-
 static OUString lcl_GetColumnStr( sal_Int32 nColumn )
 {
     if ( nColumn < 26 )
@@ -512,16 +510,16 @@ void OCalcTable::fillColumns()
 
 
 OCalcTable::OCalcTable(sdbcx::OCollection* _pTables,OCalcConnection* _pConnection,
-                    const OUString& _Name,
-                    const OUString& _Type,
-                    const OUString& _Description ,
-                    const OUString& _SchemaName,
-                    const OUString& _CatalogName
-                ) : OCalcTable_BASE(_pTables,_pConnection,_Name,
-                                  _Type,
-                                  _Description,
-                                  _SchemaName,
-                                  _CatalogName)
+                    const OUString& Name,
+                    const OUString& Type,
+                    const OUString& Description ,
+                    const OUString& SchemaName,
+                    const OUString& CatalogName
+                ) : OCalcTable_BASE(_pTables,_pConnection,Name,
+                                  Type,
+                                  Description,
+                                  SchemaName,
+                                  CatalogName)
                 ,m_pConnection(_pConnection)
                 ,m_nStartCol(0)
                 ,m_nStartRow(0)
@@ -785,7 +783,7 @@ End:
 }
 
 bool OCalcTable::fetchRow( OValueRefRow& _rRow, const OSQLColumns & _rCols,
-                           bool _bUseTableDefs, bool bRetrieveData )
+                           bool bRetrieveData )
 {
     // read the bookmark
 
@@ -806,12 +804,7 @@ bool OCalcTable::fetchRow( OValueRefRow& _rRow, const OSQLColumns & _rCols,
     {
         if ( (_rRow->get())[i]->isBound() )
         {
-            sal_Int32 nType = 0;
-            if ( _bUseTableDefs )
-                nType = m_aTypes[i-1];
-            else
-                (*aIter)->getPropertyValue(OMetaConnection::getPropMap().getNameByIndex(PROPERTY_ID_TYPE)) >>= nType;
-
+            sal_Int32 nType = m_aTypes[i-1];
 
             lcl_SetValue( (_rRow->get())[i]->get(), m_xSheet, m_nStartCol, m_nStartRow, m_bHasHeaders,
                                 m_aNullDate, m_nFilePos, i, nType );

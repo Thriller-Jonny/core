@@ -43,7 +43,7 @@ public:
                           Val * pTheValue):
         m_aRegexp(rTheRegexp), m_pValue(pTheValue) {}
 
-    OUString getRegexp() const { return m_aRegexp; }
+    const OUString& getRegexp() const { return m_aRegexp; }
 
     Val const & getValue() const { return *m_pValue; }
 
@@ -53,7 +53,6 @@ private:
     OUString m_aRegexp;
     Val * m_pValue;
 };
-
 
 
 template< typename Val >
@@ -76,7 +75,7 @@ struct RegexpMapImpl
     List< Val > m_aList[Regexp::KIND_DOMAIN + 1];
     Entry< Val > * m_pDefault;
 
-    RegexpMapImpl(): m_pDefault(0) {}
+    RegexpMapImpl(): m_pDefault(nullptr) {}
 
     ~RegexpMapImpl() { delete m_pDefault; }
 };
@@ -127,7 +126,7 @@ private:
 template< typename Val >
 inline RegexpMapIterImpl< Val >::RegexpMapIterImpl():
     m_aEntry(rtl::OUString(), 0),
-    m_pMap(0),
+    m_pMap(nullptr),
     m_nList(-1),
     m_bEntrySet(false)
 {}
@@ -151,7 +150,7 @@ void RegexpMapIterImpl< Val >::setEntry() const
         Entry< Val > const & rTheEntry
             = m_nList == -1 ? *m_pMap->m_pDefault : *m_aIndex;
         m_aEntry
-            = RegexpMapEntry< Val >(rTheEntry.m_aRegexp.getRegexp(false),
+            = RegexpMapEntry< Val >(rTheEntry.m_aRegexp.getRegexp(),
                                     const_cast< Val * >(&rTheEntry.m_aValue));
         m_bEntrySet = true;
     }
@@ -221,13 +220,13 @@ void RegexpMapIterImpl< Val >::next()
         case Regexp::KIND_DOMAIN:
             if (m_aIndex == m_pMap->m_aList[m_nList].end())
                 return;
-            //fall-through
+            SAL_FALLTHROUGH;
         default:
             ++m_aIndex;
             if (m_nList == Regexp::KIND_DOMAIN
                 || m_aIndex != m_pMap->m_aList[m_nList].end())
                 break;
-            //fall-through
+            SAL_FALLTHROUGH;
         case -1:
             do
             {
@@ -265,10 +264,6 @@ public:
     RegexpMapConstIter & operator =(RegexpMapConstIter const & rOther);
 
     RegexpMapConstIter & operator ++();
-
-    RegexpMapConstIter operator ++(int);
-
-    RegexpMapEntry< Val > const & operator *() const;
 
     RegexpMapEntry< Val > const * operator ->() const;
 
@@ -320,20 +315,6 @@ RegexpMapConstIter< Val > & RegexpMapConstIter< Val >::operator ++()
 }
 
 template< typename Val >
-RegexpMapConstIter< Val > RegexpMapConstIter< Val >::operator ++(int)
-{
-    RegexpMapConstIter aTemp(*this);
-    m_pImpl->next();
-    return aTemp;
-}
-
-template< typename Val >
-RegexpMapEntry< Val > const & RegexpMapConstIter< Val >::operator *() const
-{
-    return m_pImpl->get();
-}
-
-template< typename Val >
 RegexpMapEntry< Val > const * RegexpMapConstIter< Val >::operator ->() const
 {
     return &m_pImpl->get();
@@ -355,14 +336,6 @@ class RegexpMapIter: public RegexpMapConstIter< Val >
 public:
     RegexpMapIter() {}
 
-    RegexpMapIter & operator ++();
-
-    RegexpMapIter operator ++(int);
-
-    RegexpMapEntry< Val > & operator *();
-
-    RegexpMapEntry< Val > const & operator *() const;
-
     RegexpMapEntry< Val > * operator ->();
 
     RegexpMapEntry< Val > const * operator ->() const;
@@ -375,33 +348,6 @@ template< typename Val >
 RegexpMapIter< Val >::RegexpMapIter(RegexpMapIterImpl< Val > * pTheImpl):
     RegexpMapConstIter< Val >(pTheImpl)
 {}
-
-template< typename Val >
-RegexpMapIter< Val > & RegexpMapIter< Val >::operator ++()
-{
-    this->m_pImpl->next();
-    return *this;
-}
-
-template< typename Val >
-RegexpMapIter< Val > RegexpMapIter< Val >::operator ++(int)
-{
-    RegexpMapIter aTemp(*this);
-    this->m_pImpl->next();
-    return aTemp;
-}
-
-template< typename Val >
-RegexpMapEntry< Val > & RegexpMapIter< Val >::operator *()
-{
-    return this->m_pImpl->get();
-}
-
-template< typename Val >
-RegexpMapEntry< Val > const & RegexpMapIter< Val >::operator *() const
-{
-    return this->m_pImpl->get();
-}
 
 template< typename Val >
 RegexpMapEntry< Val > * RegexpMapIter< Val >::operator ->()
@@ -432,10 +378,9 @@ public:
 
     RegexpMap & operator =(RegexpMap const & rOther);
 
-    bool add(OUString const & rKey, Val const & rValue, bool bOverwrite,
-             OUString * pReverse = nullptr);
+    void add(OUString const & rKey, Val const & rValue);
 
-    iterator find(OUString const & rKey, OUString * pReverse = nullptr);
+    iterator find(OUString const & rKey);
 
     void erase(iterator const & rPos);
 
@@ -449,9 +394,7 @@ public:
 
     size_type size() const;
 
-    Val const * map(OUString const & rString,
-                    OUString * pTranslation = nullptr, bool * pTranslated = nullptr)
-        const;
+    Val const * map(OUString const & rString) const;
 
 private:
     RegexpMapImpl< Val > * m_pImpl;
@@ -481,8 +424,7 @@ RegexpMap< Val > & RegexpMap< Val >::operator =(RegexpMap const & rOther)
 }
 
 template< typename Val >
-bool RegexpMap< Val >::add(rtl::OUString const & rKey, Val const & rValue,
-                           bool bOverwrite, rtl::OUString * pReverse)
+void RegexpMap< Val >::add(rtl::OUString const & rKey, Val const & rValue)
 {
     Regexp aRegexp(Regexp::parse(rKey));
 
@@ -490,9 +432,7 @@ bool RegexpMap< Val >::add(rtl::OUString const & rKey, Val const & rValue,
     {
         if (m_pImpl->m_pDefault)
         {
-            if (!bOverwrite)
-                return false;
-            delete m_pImpl->m_pDefault;
+            return;
         }
         m_pImpl->m_pDefault = new Entry< Val >(aRegexp, rValue);
     }
@@ -505,33 +445,18 @@ bool RegexpMap< Val >::add(rtl::OUString const & rKey, Val const & rValue,
         {
             if (aIt->m_aRegexp == aRegexp)
             {
-                if (bOverwrite)
-                {
-                    rTheList.erase(aIt);
-                    break;
-                }
-                else
-                    return false;
+               return;
             }
         }
 
         rTheList.push_back(Entry< Val >(aRegexp, rValue));
     }
-
-    if (pReverse)
-        *pReverse = aRegexp.getRegexp(true);
-
-    return true;
 }
 
 template< typename Val >
-typename RegexpMap< Val >::iterator RegexpMap< Val >::find(rtl::OUString const & rKey,
-                                                  rtl::OUString * pReverse)
+typename RegexpMap< Val >::iterator RegexpMap< Val >::find(rtl::OUString const & rKey)
 {
     Regexp aRegexp(Regexp::parse(rKey));
-
-    if (pReverse)
-        *pReverse = aRegexp.getRegexp(true);
 
     if (aRegexp.isDefault())
     {
@@ -609,9 +534,7 @@ typename RegexpMap< Val >::size_type RegexpMap< Val >::size() const
 }
 
 template< typename Val >
-Val const * RegexpMap< Val >::map(rtl::OUString const & rString,
-                                  rtl::OUString * pTranslation,
-                                  bool * pTranslated) const
+Val const * RegexpMap< Val >::map(rtl::OUString const & rString) const
 {
     for (int n = Regexp::KIND_DOMAIN; n >= Regexp::KIND_PREFIX; --n)
     {
@@ -620,12 +543,11 @@ Val const * RegexpMap< Val >::map(rtl::OUString const & rString,
         typename List< Val >::const_iterator aEnd(rTheList.end());
         for (typename List< Val >::const_iterator aIt(rTheList.begin()); aIt != aEnd;
              ++aIt)
-            if (aIt->m_aRegexp.matches(rString, pTranslation, pTranslated))
+            if (aIt->m_aRegexp.matches(rString, nullptr, nullptr))
                 return &aIt->m_aValue;
     }
     if (m_pImpl->m_pDefault
-        && m_pImpl->m_pDefault->m_aRegexp.matches(rString, pTranslation,
-                                                  pTranslated))
+        && m_pImpl->m_pDefault->m_aRegexp.matches(rString, nullptr, nullptr))
         return &m_pImpl->m_pDefault->m_aValue;
     return 0;
 }

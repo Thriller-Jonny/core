@@ -23,7 +23,6 @@
 #include <deque>
 #include <list>
 #include <unordered_map>
-#include <com/sun/star/uno/Any.h>
 #include <com/sun/star/uno/Sequence.h>
 #include <com/sun/star/beans/PropertyValue.hpp>
 #include <com/sun/star/beans/NamedValue.hpp>
@@ -52,7 +51,6 @@ struct BaseLock
 typedef ::std::vector< OUString > OUStringList;
 
 
-
 /** @short  represent an item of a FilterCache
             instance.
 
@@ -71,7 +69,6 @@ class CacheItem : public ::comphelper::SequenceAsHashMap
         CacheItem();
 
 
-
         /** @short  update only properties, which are given by the
                     specified rItem.
 
@@ -84,7 +81,6 @@ class CacheItem : public ::comphelper::SequenceAsHashMap
                     this one.
          */
         void update(const CacheItem& rUpdateItem);
-
 
 
         /** @short  check, if the given properties exist
@@ -103,7 +99,6 @@ class CacheItem : public ::comphelper::SequenceAsHashMap
         bool haveProps(const CacheItem& lProps) const;
 
 
-
         /** @short  check, if the given properties don't exist
                     at this item.
 
@@ -120,7 +115,6 @@ class CacheItem : public ::comphelper::SequenceAsHashMap
         bool dontHaveProps(const CacheItem& lProps) const;
 
 
-
         /** @short  because we know two UIName properties
                     (a list with all locales and the value
                     for the current locale only), we must be sure
@@ -132,7 +126,6 @@ class CacheItem : public ::comphelper::SequenceAsHashMap
                     the list of possible ones.
          */
         void validateUINames(const OUString& sActLocale);
-
 
 
         /** @short  convert this structure to a seq< PropertyValue >
@@ -151,15 +144,12 @@ class CacheItem : public ::comphelper::SequenceAsHashMap
 };
 
 
-
 /** @short  represent an item list of a FilterCache
             instance.
  */
 typedef std::unordered_map< OUString                    ,
                             CacheItem                          ,
-                            OUStringHash                ,
-                            std::equal_to< OUString > > CacheItemList;
-
+                            OUStringHash > CacheItemList;
 
 
 /** @short  supports registration of multiple key to
@@ -176,9 +166,7 @@ typedef std::unordered_map< OUString                    ,
  */
 typedef std::unordered_map< OUString                    ,
                             OUStringList                       ,
-                            OUStringHash                ,
-                            std::equal_to< OUString > > CacheItemRegistration;
-
+                            OUStringHash > CacheItemRegistration;
 
 
 /** @short  is used to collect all matching types of an URL

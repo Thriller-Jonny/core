@@ -21,7 +21,6 @@
 
 #include "dllapi.h"
 
-#include <boost/noncopyable.hpp>
 #include <svx/svdoole2.hxx>
 #include <svx/svdouno.hxx>
 
@@ -66,7 +65,7 @@ typedef ::std::multimap< sal_Int16, OUString, ::std::less< sal_Int16 > > IndexTo
 class OReportPage;
 class OPropertyMediator;
 
-class REPORTDESIGN_DLLPUBLIC OObjectBase: private boost::noncopyable
+class REPORTDESIGN_DLLPUBLIC OObjectBase
 {
 public:
     typedef rtl::Reference<OPropertyMediator> TMediator;
@@ -75,8 +74,6 @@ protected:
     mutable TMediator                                                 m_xMediator;
     mutable css::uno::Reference< css::beans::XPropertyChangeListener> m_xPropertyChangeListener;
     mutable css::uno::Reference< css::report::XReportComponent>       m_xReportComponent;
-    css::uno::Reference< css::container::XContainerListener>          m_xContainerListener;
-    css::uno::Reference< css::report::XSection>                       m_xSection;
     css::uno::Reference< css::uno::XInterface >                       m_xKeepShapeAlive;
     OUString m_sComponentName;
     bool        m_bIsListening;
@@ -102,6 +99,8 @@ private:
                     const css::uno::Reference< css::uno::XInterface >& _rxShape );
 
 public:
+    OObjectBase(const OObjectBase&) = delete;
+    OObjectBase& operator=(const OObjectBase&) = delete;
     void StartListening();
     void EndListening(bool bRemoveListener = true);
     // PropertyChangeListener
@@ -110,10 +109,10 @@ public:
 
     bool        supportsService( const OUString& _sServiceName ) const;
 
-    css::uno::Reference< css::report::XReportComponent> getReportComponent() const { return m_xReportComponent;}
+    const css::uno::Reference< css::report::XReportComponent>& getReportComponent() const { return m_xReportComponent;}
     virtual css::uno::Reference< css::beans::XPropertySet> getAwtComponent();
     css::uno::Reference< css::report::XSection> getSection() const;
-    inline const OUString getServiceName() const { return m_sComponentName; }
+    const OUString& getServiceName() const { return m_sComponentName; }
 
     /** releases the reference to our UNO shape (m_xKeepShapeAlive)
     */

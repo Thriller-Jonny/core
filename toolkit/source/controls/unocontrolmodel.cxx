@@ -683,7 +683,7 @@ void UnoControlModel::write( const css::uno::Reference< css::io::XObjectOutputSt
                 OUString sTypeName( rType.getTypeName() );
                 sMessage += OString( sTypeName.getStr(), sTypeName.getLength(), RTL_TEXTENCODING_ASCII_US );
                 sMessage += "'.\n(Currently handling property '";
-                OUString sPropertyName( GetPropertyName( *it ) );
+                const OUString& sPropertyName( GetPropertyName( *it ) );
                 sMessage += OString( sPropertyName.getStr(), sPropertyName.getLength(), osl_getThreadTextEncoding() );
                 sMessage += "'.)";
                 OSL_FAIL( sMessage.getStr() );
@@ -710,7 +710,7 @@ void UnoControlModel::write( const css::uno::Reference< css::io::XObjectOutputSt
             sal_Int32 nPropDataBeginMark = xMark->createMark();
             OutStream->writeLong( 0L ); // DataLen
             OutStream->writeShort( n ); // PropId
-            OutStream->writeBoolean( sal_False );   // Void
+            OutStream->writeBoolean( false );   // Void
 
             if ( n == BASEPROPERTY_FONT_TYPE )
             {
@@ -895,7 +895,7 @@ void UnoControlModel::read( const css::uno::Reference< css::io::XObjectInputStre
                     OUString sTypeName( pType->getTypeName() );
                     sMessage += OString( sTypeName.getStr(), sTypeName.getLength(), RTL_TEXTENCODING_ASCII_US );
                     sMessage += "'.\n(Currently handling property '";
-                    OUString sPropertyName( GetPropertyName( nPropId ) );
+                    const OUString& sPropertyName( GetPropertyName( nPropId ) );
                     sMessage += OString( sPropertyName.getStr(), sPropertyName.getLength(), osl_getThreadTextEncoding() );
                     sMessage += "'.)";
                     OSL_FAIL( sMessage.getStr() );
@@ -1279,7 +1279,7 @@ void UnoControlModel::setFastPropertyValue( sal_Int32 nPropId, const css::uno::A
 
         aGuard.clear();
         setFastPropertyValues( 1, &nDescriptorId, &aNewValue, 1 );
-        fire( &nPropId, &aNewSingleValue, &aOldSingleValue, 1, sal_False );
+        fire( &nPropId, &aNewSingleValue, &aOldSingleValue, 1, false );
        }
     else
         setFastPropertyValues( 1, &nPropId, &rValue, 1 );
@@ -1354,7 +1354,6 @@ void UnoControlModel::setPropertyValues( const css::uno::Sequence< OUString >& r
         }
     }
 }
-
 
 
 void UnoControlModel::ImplNormalizePropertySequence( const sal_Int32, sal_Int32*,

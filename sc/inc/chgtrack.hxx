@@ -256,14 +256,12 @@ protected:
 
     ScBigRange& GetBigRange() { return aBigRange; }
 
-    ScChangeActionLinkEntry* AddLink(
-        ScChangeAction* p, ScChangeActionLinkEntry* pL )
+    void AddLink( ScChangeAction* p, ScChangeActionLinkEntry* pL )
     {
         ScChangeActionLinkEntry* pLnk =
             new ScChangeActionLinkEntry(
             &pLinkAny, p );
         pLnk->SetLink( pL );
-        return pLnk;
     }
 
     void RemoveAllAnyLinks();
@@ -1186,7 +1184,7 @@ public:
 
     void                SetProtection( const css::uno::Sequence< sal_Int8 >& rPass )
                             { aProtectPass = rPass; }
-    css::uno::Sequence< sal_Int8 >   GetProtection() const
+    const css::uno::Sequence< sal_Int8 >& GetProtection() const
                                     { return aProtectPass; }
     bool IsProtected() const { return aProtectPass.getLength() != 0; }
 

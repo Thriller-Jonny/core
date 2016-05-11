@@ -40,8 +40,8 @@
 // GUID import/export
 
 XclGuid::XclGuid()
+    : mpnData{}
 {
-    ::std::fill( mpnData, STATIC_ARRAY_END( mpnData ), 0 );
 }
 
 XclGuid::XclGuid(
@@ -65,7 +65,7 @@ XclGuid::XclGuid(
 
 bool operator==( const XclGuid& rCmp1, const XclGuid& rCmp2 )
 {
-    return ::std::equal( rCmp1.mpnData, STATIC_ARRAY_END( rCmp1.mpnData ), rCmp2.mpnData );
+    return ::std::equal( rCmp1.mpnData, std::end( rCmp1.mpnData ), rCmp2.mpnData );
 }
 
 XclImpStream& operator>>( XclImpStream& rStrm, XclGuid& rGuid )
@@ -199,44 +199,42 @@ sal_uInt8 XclTools::GetXclOrientFromRot( sal_uInt16 nXclRot )
 
 sal_uInt8 XclTools::GetXclErrorCode( sal_uInt16 nScError )
 {
-    using namespace ScErrorCodes;
     switch( nScError )
     {
-        case errIllegalArgument:        return EXC_ERR_VALUE;
-        case errIllegalFPOperation:     return EXC_ERR_NUM;     // maybe DIV/0 or NUM...
-        case errDivisionByZero:         return EXC_ERR_DIV0;
-        case errIllegalParameter:       return EXC_ERR_VALUE;
-        case errPairExpected:           return EXC_ERR_VALUE;
-        case errOperatorExpected:       return EXC_ERR_VALUE;
-        case errVariableExpected:       return EXC_ERR_VALUE;
-        case errParameterExpected:      return EXC_ERR_VALUE;
-        case errNoValue:                return EXC_ERR_VALUE;
-        case errCircularReference:      return EXC_ERR_VALUE;
-        case errNoCode:                 return EXC_ERR_NULL;
-        case errNoRef:                  return EXC_ERR_REF;
-        case errNoName:                 return EXC_ERR_NAME;
-        case errNoAddin:                return EXC_ERR_NAME;
-        case errNoMacro:                return EXC_ERR_NAME;
-        case NOTAVAILABLE:              return EXC_ERR_NA;
+        case formula::errIllegalArgument:        return EXC_ERR_VALUE;
+        case formula::errIllegalFPOperation:     return EXC_ERR_NUM;     // maybe DIV/0 or NUM...
+        case formula::errDivisionByZero:         return EXC_ERR_DIV0;
+        case formula::errIllegalParameter:       return EXC_ERR_VALUE;
+        case formula::errPairExpected:           return EXC_ERR_VALUE;
+        case formula::errOperatorExpected:       return EXC_ERR_VALUE;
+        case formula::errVariableExpected:       return EXC_ERR_VALUE;
+        case formula::errParameterExpected:      return EXC_ERR_VALUE;
+        case formula::errNoValue:                return EXC_ERR_VALUE;
+        case formula::errCircularReference:      return EXC_ERR_VALUE;
+        case formula::errNoCode:                 return EXC_ERR_NULL;
+        case formula::errNoRef:                  return EXC_ERR_REF;
+        case formula::errNoName:                 return EXC_ERR_NAME;
+        case formula::errNoAddin:                return EXC_ERR_NAME;
+        case formula::errNoMacro:                return EXC_ERR_NAME;
+        case formula::NOTAVAILABLE:              return EXC_ERR_NA;
     }
     return EXC_ERR_NA;
 }
 
 sal_uInt16 XclTools::GetScErrorCode( sal_uInt8 nXclError )
 {
-    using namespace ScErrorCodes;
     switch( nXclError )
     {
-        case EXC_ERR_NULL:  return errNoCode;
-        case EXC_ERR_DIV0:  return errDivisionByZero;
-        case EXC_ERR_VALUE: return errNoValue;
-        case EXC_ERR_REF:   return errNoRef;
-        case EXC_ERR_NAME:  return errNoName;
-        case EXC_ERR_NUM:   return errIllegalFPOperation;
-        case EXC_ERR_NA:    return NOTAVAILABLE;
+        case EXC_ERR_NULL:  return formula::errNoCode;
+        case EXC_ERR_DIV0:  return formula::errDivisionByZero;
+        case EXC_ERR_VALUE: return formula::errNoValue;
+        case EXC_ERR_REF:   return formula::errNoRef;
+        case EXC_ERR_NAME:  return formula::errNoName;
+        case EXC_ERR_NUM:   return formula::errIllegalFPOperation;
+        case EXC_ERR_NA:    return formula::NOTAVAILABLE;
         default:            OSL_FAIL( "XclTools::GetScErrorCode - unknown error code" );
     }
-    return NOTAVAILABLE;
+    return formula::NOTAVAILABLE;
 }
 
 double XclTools::ErrorToDouble( sal_uInt8 nXclError )
@@ -391,7 +389,7 @@ pCodePageTable[] =
     {   32768,  RTL_TEXTENCODING_APPLE_ROMAN    },  // Apple Roman
     {   32769,  RTL_TEXTENCODING_MS_1252        }   // MS Windows Latin I (BIFF2-BIFF3)
 };
-const XclCodePageEntry* const pCodePageTableEnd = STATIC_ARRAY_END( pCodePageTable );
+const XclCodePageEntry* const pCodePageTableEnd = std::end(pCodePageTable);
 
 struct XclCodePageEntry_CPPred
 {

@@ -50,6 +50,7 @@ void SdrDragStat::Reset()
     pDragMethod=nullptr;
     bEndDragChangesAttributes=false;
     bEndDragChangesGeoAndAttributes=false;
+    mbEndDragChangesLayout=false;
     bMouseIsUp=false;
     Clear(true);
     aActionRect=Rectangle();
@@ -71,10 +72,9 @@ void SdrDragStat::NextMove(const Point& rPnt)
     Now()=aBla;
 }
 
-void SdrDragStat::NextPoint(bool bSaveReal)
+void SdrDragStat::NextPoint()
 {
     Point aPnt(GetNow());
-    if (bSaveReal) aPnt=aRealNow;
     aPnts.push_back(new Point(KorregPos(GetRealNow(),aPnt)));
     Prev()=aPnt;
 }
@@ -127,7 +127,7 @@ Fraction SdrDragStat::GetYFact() const
 void SdrDragStat::TakeCreateRect(Rectangle& rRect) const
 {
     rRect=Rectangle(GetStart(),GetNow());
-    if (GetPointAnz()>=2) {
+    if (GetPointCount()>=2) {
         Point aBtmRgt(GetPoint(1));
         rRect.Right()=aBtmRgt.X();
         rRect.Bottom()=aBtmRgt.Y();

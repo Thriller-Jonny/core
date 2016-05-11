@@ -36,15 +36,6 @@ namespace rtl_random
 class createPool : public CppUnit::TestFixture
 {
 public:
-    // initialise your test code values here.
-    void setUp()
-    {
-    }
-
-    void tearDown()
-    {
-    }
-
     // insert your test code here.
     // this is only demonstration code
     void createPool_001()
@@ -54,7 +45,7 @@ public:
         rtlRandomPool aPool = rtl_random_createPool();
 
         // LLA: seems to be that an other test is not possible for createPool()
-        CPPUNIT_ASSERT_MESSAGE("create failed", aPool != NULL);
+        CPPUNIT_ASSERT_MESSAGE("create failed", aPool != nullptr);
 
         rtl_random_destroyPool(aPool);
     }
@@ -71,20 +62,11 @@ public:
 class destroyPool : public CppUnit::TestFixture
 {
 public:
-    // initialise your test code values here.
-    void setUp()
-    {
-    }
-
-    void tearDown()
-    {
-    }
-
     // insert your test code here.
     void destroyPool_000()
     {
         // GPF, if failed
-        rtl_random_destroyPool(NULL);
+        rtl_random_destroyPool(nullptr);
     }
 
     void destroyPool_001()
@@ -92,7 +74,7 @@ public:
         rtlRandomPool aPool = rtl_random_createPool();
 
         // LLA: seems to be that an other test is not possible for createPool()
-        CPPUNIT_ASSERT_MESSAGE("create failed", aPool != NULL);
+        CPPUNIT_ASSERT_MESSAGE("create failed", aPool != nullptr);
 
         rtl_random_destroyPool(aPool);
     }
@@ -109,15 +91,6 @@ public:
 class addBytes : public CppUnit::TestFixture
 {
 public:
-    // initialise your test code values here.
-    void setUp()
-    {
-    }
-
-    void tearDown()
-    {
-    }
-
     // insert your test code here.
     // this is only demonstration code
     void addBytes_000()
@@ -128,10 +101,10 @@ public:
         sal_uInt8   *pBuffer = new sal_uInt8[ nBufLen ];
         memset(pBuffer, 0, nBufLen);
 
-        rtlRandomError aError = rtl_random_addBytes(NULL, NULL, 0);
+        rtlRandomError aError = rtl_random_addBytes(nullptr, nullptr, 0);
         CPPUNIT_ASSERT_MESSAGE("wrong parameter", aError == rtl_Random_E_Argument);
 
-        /* rtlRandomError */ aError = rtl_random_addBytes(aPool, NULL, 0);
+        /* rtlRandomError */ aError = rtl_random_addBytes(aPool, nullptr, 0);
         CPPUNIT_ASSERT_MESSAGE("wrong parameter", aError == rtl_Random_E_Argument);
 
         /* rtlRandomError */ aError = rtl_random_addBytes(aPool, pBuffer, nBufLen);
@@ -198,9 +171,8 @@ public:
     }
     ~Statistics(){}
 
-    void addValue(sal_Int16 _nIndex, sal_Int32 _nValue)
+    void addValue(sal_uInt8 _nIndex, sal_Int32 _nValue)
     {
-        OSL_ASSERT(_nIndex >= 0 && _nIndex < 256);
         m_nDispensation[_nIndex] += _nValue;
     }
 
@@ -243,15 +215,6 @@ public:
 class getBytes : public CppUnit::TestFixture
 {
 public:
-    // initialise your test code values here.
-    void setUp()
-    {
-    }
-
-    void tearDown()
-    {
-    }
-
     // insert your test code here.
     void getBytes_000()
     {
@@ -261,10 +224,10 @@ public:
         sal_uInt8   *pBuffer = new sal_uInt8[ nBufLen ];
         memset(pBuffer, 0, nBufLen);
 
-        rtlRandomError aError = rtl_random_getBytes(NULL, NULL, 0);
+        rtlRandomError aError = rtl_random_getBytes(nullptr, nullptr, 0);
         CPPUNIT_ASSERT_MESSAGE("wrong parameter", aError == rtl_Random_E_Argument);
 
-        /* rtlRandomError */ aError = rtl_random_getBytes(aPool, NULL, 0);
+        /* rtlRandomError */ aError = rtl_random_getBytes(aPool, nullptr, 0);
         CPPUNIT_ASSERT_MESSAGE("wrong parameter", aError == rtl_Random_E_Argument);
 
         /* rtlRandomError */ aError = rtl_random_getBytes(aPool, pBuffer, nBufLen);

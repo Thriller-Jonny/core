@@ -163,7 +163,7 @@ class SW_DLLPUBLIC SwPagePreview: public SfxViewShell
     // ViewWindow and handle to core
     // current dispatcher shell
     VclPtr<SwPagePreviewWin> pViewWin;
-    //viewdata of the previous SwView and the new crsrposition
+    //viewdata of the previous SwView and the new cursor position
     OUString sSwViewData;
     //and the new cursor position if the user double click in the PagePreview
     OUString sNewCursorPos;
@@ -179,8 +179,6 @@ class SW_DLLPUBLIC SwPagePreview: public SfxViewShell
     VclPtr<SwScrollbar> pVScrollbar;
     bool mbHScrollbarEnabled : 1;
     bool mbVScrollbarEnabled : 1;
-    VclPtr<ImageButton> pPageUpBtn;
-    VclPtr<ImageButton> pPageDownBtn;
     // dummy window for filling the lower right edge when both scrollbars are active
     VclPtr<vcl::Window> pScrollFill;
 
@@ -192,16 +190,16 @@ class SW_DLLPUBLIC SwPagePreview: public SfxViewShell
     bool mbResetFormDesignMode:1;
     bool mbFormDesignModeToReset:1;
 
-    SAL_DLLPRIVATE void Init(const SwViewOption* = nullptr);
+    SAL_DLLPRIVATE void Init();
     SAL_DLLPRIVATE Point AlignToPixel(const Point& rPt) const;
 
-    SAL_DLLPRIVATE int _CreateScrollbar( bool bHori);
+    SAL_DLLPRIVATE void CreateScrollbar( bool bHori);
     DECL_DLLPRIVATE_LINK_TYPED(ScrollHdl, ScrollBar*, void);
     DECL_DLLPRIVATE_LINK_TYPED(EndScrollHdl, ScrollBar*, void);
     SAL_DLLPRIVATE bool ChgPage( int eMvMode, bool bUpdateScrollbar = true );
 
     SAL_DLLPRIVATE virtual SfxPrinter*     GetPrinter( bool bCreate = false ) override;
-    SAL_DLLPRIVATE virtual sal_uInt16      SetPrinter( SfxPrinter *pNewPrinter, SfxPrinterChangeFlags nDiffFlags = SFX_PRINTER_ALL, bool bIsAPI=false ) override;
+    SAL_DLLPRIVATE virtual sal_uInt16      SetPrinter( SfxPrinter *pNewPrinter, SfxPrinterChangeFlags nDiffFlags = SFX_PRINTER_ALL ) override;
     SAL_DLLPRIVATE virtual bool            HasPrintOptionsPage() const override;
     SAL_DLLPRIVATE virtual VclPtr<SfxTabPage> CreatePrintOptionsPage(vcl::Window *pParent, const SfxItemSet &rOptions ) override;
 
@@ -216,7 +214,7 @@ class SW_DLLPUBLIC SwPagePreview: public SfxViewShell
         @param _pReq
         optional input parameter - pointer to the <SfxRequest> instance, if existing.
     */
-    SAL_DLLPRIVATE void _ExecPgUpAndPgDown( const bool  _bPgUp,
+    SAL_DLLPRIVATE void ExecPgUpAndPgDown( const bool  _bPgUp,
                              SfxRequest* _pReq = nullptr );
 
 protected:
@@ -241,7 +239,7 @@ public:
 
     void DocSzChgd(const Size& rNewSize);
 
-    void SetVisArea( const Rectangle&, bool bUpdateScrollbar = true);
+    void SetVisArea( const Rectangle& );
 
     void ScrollViewSzChg();
     void ScrollDocSzChg();
@@ -255,7 +253,7 @@ public:
 
     bool HandleWheelCommands( const CommandEvent& );
 
-    OUString GetPrevSwViewData() const       { return sSwViewData; }
+    const OUString& GetPrevSwViewData() const       { return sSwViewData; }
     void SetNewCursorPos( const OUString& rStr ) { sNewCursorPos = rStr; }
     const OUString& GetNewCursorPos() const           { return sNewCursorPos; }
 

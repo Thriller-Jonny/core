@@ -23,6 +23,7 @@
 #include <com/sun/star/script/ModuleType.hpp>
 #include <svtools/miscopt.hxx>
 #include <rtl/character.hxx>
+#include <o3tl/make_unique.hxx>
 
 struct SbiParseStack {              // "Stack" for statement-blocks
     SbiParseStack* pNext;           // Chain
@@ -45,7 +46,7 @@ static const SbiStatement StmntTable [] = {
 { ATTRIBUTE, &SbiParser::Attribute, Y, Y, }, // ATTRIBUTE
 { CALL,     &SbiParser::Call,       N, Y, }, // CALL
 { CLOSE,    &SbiParser::Close,      N, Y, }, // CLOSE
-{ _CONST_,  &SbiParser::Dim,        Y, Y, }, // CONST
+{ CONST_,   &SbiParser::Dim,        Y, Y, }, // CONST
 { DECLARE,  &SbiParser::Declare,    Y, N, }, // DECLARE
 { DEFBOOL,  &SbiParser::DefXXX,     Y, N, }, // DEFBOOL
 { DEFCUR,   &SbiParser::DefXXX,     Y, N, }, // DEFCUR
@@ -66,7 +67,7 @@ static const SbiStatement StmntTable [] = {
 { END,      &SbiParser::Stop,       N, Y, }, // END
 { ENUM,     &SbiParser::Enum,       Y, N, }, // TYPE
 { ERASE,    &SbiParser::Erase,      N, Y, }, // ERASE
-{ _ERROR_,  &SbiParser::ErrorStmnt, N, Y, }, // ERROR
+{ ERROR_,   &SbiParser::ErrorStmnt, N, Y, }, // ERROR
 { EXIT,     &SbiParser::Exit,       N, Y, }, // EXIT
 { FOR,      &SbiParser::For,        N, Y, }, // FOR
 { FUNCTION, &SbiParser::SubFunc,    Y, N, }, // FUNCTION
@@ -132,14 +133,14 @@ SbiParser::SbiParser( StarBASIC* pb, SbModule* pm )
     bClassModule = ( pm->GetModuleType() == css::script::ModuleType::CLASS );
     OSL_TRACE("Parser - %s, bClassModule %d", OUStringToOString( pm->GetName(), RTL_TEXTENCODING_UTF8 ).getStr(), bClassModule );
     pPool    = &aPublics;
-    for( short i = 0; i < 26; i++ )
-        eDefTypes[ i ] = SbxVARIANT;    // no explicit default type
+    for(SbxDataType & eDefType : eDefTypes)
+        eDefType = SbxVARIANT;    // no explicit default type
 
     aPublics.SetParent( &aGlobals );
     aGlobals.SetParent( &aRtlSyms );
 
 
-    nGblChain = aGen.Gen( _JUMP, 0 );
+    nGblChain = aGen.Gen( SbiOpcode::JUMP_, 0 );
 
     rTypeArray = new SbxArray; // array for user defined types
     rEnumArray = new SbxArray; // array for Enum types
@@ -183,7 +184,7 @@ bool SbiParser::HasGlobalCode()
     if( bGblDefs && nGblChain )
     {
         aGen.BackChain( nGblChain );
-        aGen.Gen( _LEAVE );
+        aGen.Gen( SbiOpcode::LEAVE_ );
         nGblChain = 0;
     }
     return bGblDefs;
@@ -232,7 +233,7 @@ void SbiParser::Exit()
         if( eTok == eExitTok ||
             (eTok == PROPERTY && (eExitTok == GET || eExitTok == LET) ) )   // #i109051
         {
-            p->nChain = aGen.Gen( _JUMP, p->nChain );
+            p->nChain = aGen.Gen( SbiOpcode::JUMP_, p->nChain );
             return;
         }
     }
@@ -242,17 +243,16 @@ void SbiParser::Exit()
         Error( ERRCODE_BASIC_BAD_EXIT );
 }
 
-bool SbiParser::TestSymbol( bool bKwdOk )
+bool SbiParser::TestSymbol()
 {
     Peek();
-    if( eCurTok == SYMBOL || ( bKwdOk && IsKwd( eCurTok ) ) )
+    if( eCurTok == SYMBOL )
     {
         Next(); return true;
     }
     Error( ERRCODE_BASIC_SYMBOL_EXPECTED );
     return false;
 }
-
 
 
 bool SbiParser::TestToken( SbiToken t )
@@ -267,7 +267,6 @@ bool SbiParser::TestToken( SbiToken t )
         return false;
     }
 }
-
 
 
 bool SbiParser::TestComma()
@@ -288,7 +287,6 @@ bool SbiParser::TestComma()
 }
 
 
-
 void SbiParser::TestEoln()
 {
     if( !IsEoln( Next() ) )
@@ -297,7 +295,6 @@ void SbiParser::TestEoln()
         while( !IsEoln( Next() ) ) {}
     }
 }
-
 
 
 void SbiParser::StmntBlock( SbiToken eEnd )
@@ -313,7 +310,7 @@ void SbiParser::StmntBlock( SbiToken eEnd )
     }
 }
 
-void SbiParser::SetCodeCompleting( const bool& b )
+void SbiParser::SetCodeCompleting( bool b )
 {
     bCodeCompleting = b;
 }
@@ -336,7 +333,7 @@ bool SbiParser::Parse()
         // AB #40689: Due to the new static-handling there
         // can be another nGblChain, so ask for it before.
         if( bNewGblDefs && nGblChain == 0 )
-            nGblChain = aGen.Gen( _JUMP, 0 );
+            nGblChain = aGen.Gen( SbiOpcode::JUMP_, 0 );
         return false;
     }
 
@@ -379,17 +376,17 @@ bool SbiParser::Parse()
         Next(); return true;
     }
 
-        // In vba it's possible to do Error.foobar ( even if it results in
+    // In vba it's possible to do Error.foobar ( even if it results in
     // a runtime error
-        if ( eCurTok == _ERROR_ && IsVBASupportOn() ) // we probably need to define a subset of keywords where this madness applies e.g. if ( IsVBASupportOn() && SymbolCanBeRedined( eCurTok ) )
+    if ( eCurTok == ERROR_ && IsVBASupportOn() ) // we probably need to define a subset of keywords where this madness applies e.g. if ( IsVBASupportOn() && SymbolCanBeRedined( eCurTok ) )
+    {
+        SbiTokenizer tokens( *this );
+        tokens.Next();
+        if ( tokens.Peek()  == DOT )
         {
-            SbiTokenizer tokens( *static_cast<SbiTokenizer*>(this) );
-            tokens.Next();
-            if ( tokens.Peek()  == DOT )
-            {
-                eCurTok = SYMBOL;
-        ePush = eCurTok;
-            }
+            eCurTok = SYMBOL;
+            ePush = eCurTok;
+        }
     }
     // if there's a symbol, it's either a variable (LET)
     // or a SUB-procedure (CALL without brackets)
@@ -430,7 +427,7 @@ bool SbiParser::Parse()
                 if( bNewGblDefs && nGblChain == 0 &&
                     ( eCurTok == SUB || eCurTok == FUNCTION || eCurTok == PROPERTY ) )
                 {
-                    nGblChain = aGen.Gen( _JUMP, 0 );
+                    nGblChain = aGen.Gen( SbiOpcode::JUMP_, 0 );
                     bNewGblDefs = false;
                 }
                 // statement-opcode at the beginning of a sub, too, please
@@ -440,7 +437,10 @@ bool SbiParser::Parse()
                 (this->*( p->Func ) )();
                 SbxError nSbxErr = SbxBase::GetError();
                 if( nSbxErr )
-                    SbxBase::ResetError(), Error( (SbError)nSbxErr );
+                {
+                    SbxBase::ResetError();
+                    Error( (SbError)nSbxErr );
+                }
             }
         }
         else
@@ -510,10 +510,10 @@ void SbiParser::Symbol( const KeywordSymbolInfo* pKeywordSymbolInfo )
                 if( nParCount == 2 || nParCount == 3 )
                 {
                     if( nParCount == 2 )
-                        pPar->addExpression( new SbiExpression( this, -1, SbxLONG ) );
+                        pPar->addExpression( o3tl::make_unique<SbiExpression>( this, -1, SbxLONG ) );
 
                     TestToken( EQ );
-                    pPar->addExpression( new SbiExpression( this ) );
+                    pPar->addExpression( o3tl::make_unique<SbiExpression>( this ) );
 
                     bSpecialMidHandling = true;
                 }
@@ -525,7 +525,7 @@ void SbiParser::Symbol( const KeywordSymbolInfo* pKeywordSymbolInfo )
     {
         if( !bEQ )
         {
-            aGen.Gen( _GET );
+            aGen.Gen( SbiOpcode::GET_ );
         }
         else
         {
@@ -535,17 +535,17 @@ void SbiParser::Symbol( const KeywordSymbolInfo* pKeywordSymbolInfo )
             TestToken( EQ );
             SbiExpression aExpr( this );
             aExpr.Gen();
-            SbiOpcode eOp = _PUT;
+            SbiOpcode eOp = SbiOpcode::PUT_;
             if( pDef )
             {
                 if( pDef->GetConstDef() )
                     Error( ERRCODE_BASIC_DUPLICATE_DEF, pDef->GetName() );
                 if( pDef->GetType() == SbxOBJECT )
                 {
-                    eOp = _SET;
+                    eOp = SbiOpcode::SET_;
                     if( pDef->GetTypeId() )
                     {
-                        aGen.Gen( _SETCLASS, pDef->GetTypeId() );
+                        aGen.Gen( SbiOpcode::SETCLASS_, pDef->GetTypeId() );
                         return;
                     }
                 }
@@ -571,8 +571,8 @@ void SbiParser::Assign()
         nLen = aLvalue.GetRealVar()->GetLen();
     }
     if( nLen )
-        aGen.Gen( _PAD, nLen );
-    aGen.Gen( _PUT );
+        aGen.Gen( SbiOpcode::PAD_, nLen );
+    aGen.Gen( SbiOpcode::PUT_ );
 }
 
 // assignments of an object-variable
@@ -597,8 +597,8 @@ void SbiParser::Set()
         TypeDecl( *pTypeDef, true );
 
         aLvalue.Gen();
-        aGen.Gen( _CREATE, pDef->GetId(), pTypeDef->GetTypeId() );
-        aGen.Gen( _SETCLASS, pDef->GetTypeId() );
+        aGen.Gen( SbiOpcode::CREATE_, pDef->GetId(), pTypeDef->GetTypeId() );
+        aGen.Gen( SbiOpcode::SETCLASS_, pDef->GetTypeId() );
     }
     else
     {
@@ -613,16 +613,16 @@ void SbiParser::Set()
         if( pDef->GetTypeId() )
         {
             if ( bVBASupportOn )
-                aGen.Gen( _VBASETCLASS, pDef->GetTypeId() );
+                aGen.Gen( SbiOpcode::VBASETCLASS_, pDef->GetTypeId() );
             else
-                aGen.Gen( _SETCLASS, pDef->GetTypeId() );
+                aGen.Gen( SbiOpcode::SETCLASS_, pDef->GetTypeId() );
         }
         else
         {
             if ( bVBASupportOn )
-                aGen.Gen( _VBASET );
+                aGen.Gen( SbiOpcode::VBASET_ );
             else
-                aGen.Gen( _SET );
+                aGen.Gen( SbiOpcode::SET_ );
         }
     }
 }
@@ -644,7 +644,7 @@ void SbiParser::LSet()
     SbiExpression aExpr( this );
     aLvalue.Gen();
     aExpr.Gen();
-    aGen.Gen( _LSET );
+    aGen.Gen( SbiOpcode::LSET_ );
 }
 
 // JSM 07.10.95
@@ -662,7 +662,7 @@ void SbiParser::RSet()
     SbiExpression aExpr( this );
     aLvalue.Gen();
     aExpr.Gen();
-    aGen.Gen( _RSET );
+    aGen.Gen( SbiOpcode::RSET_ );
 }
 
 // DEFINT, DEFLNG, DEFSNG, DEFDBL, DEFSTR and so on
@@ -684,7 +684,11 @@ void SbiParser::DefXXX()
             else
             {
                 ch2 = rtl::toAsciiUpperCase(aSym[0]);
-                if( ch2 < ch1 ) Error( ERRCODE_BASIC_SYNTAX ), ch2 = 0;
+                if( ch2 < ch1 )
+                {
+                    Error( ERRCODE_BASIC_SYNTAX );
+                    ch2 = 0;
+                }
             }
         }
         if (!ch2) ch2 = ch1;
@@ -698,7 +702,7 @@ void SbiParser::DefXXX()
 
 void SbiParser::Stop()
 {
-    aGen.Gen( _STOP );
+    aGen.Gen( SbiOpcode::STOP_ );
     Peek();     // #35694: only Peek(), so that EOL is recognized in Single-Line-If
 }
 
@@ -851,7 +855,7 @@ void SbiParser::AddConstants()
     addStringConst( aPublics, "vbCrLf", "\x0D\x0A" );
     addStringConst( aPublics, "vbFormFeed", "\x0C" );
     addStringConst( aPublics, "vbLf", "\x0A" );
-#ifndef WNT
+#ifndef WIN32_
     addStringConst( aPublics, "vbNewLine", "\x0D\x0A" );
 #else
     addStringConst( aPublics, "vbNewLine", "\x0A" );
@@ -871,7 +875,7 @@ void SbiParser::ErrorStmnt()
 {
     SbiExpression aPar( this );
     aPar.Gen();
-    aGen.Gen( _ERROR );
+    aGen.Gen( SbiOpcode::ERROR_ );
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

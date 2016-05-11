@@ -47,7 +47,6 @@
 #include <com/sun/star/lang/NullPointerException.hpp>
 #include <com/sun/star/script/XEventAttacherManager.hpp>
 #include <com/sun/star/script/XScriptEventsSupplier.hpp>
-#include <com/sun/star/util/XModifiable.hpp>
 #include <com/sun/star/uri/UriReferenceFactory.hpp>
 #include <com/sun/star/uri/XVndSunStarScriptUrlReference.hpp>
 
@@ -69,6 +68,7 @@
 
 #include <map>
 #include <algorithm>
+#include <iterator>
 #include <o3tl/functional.hxx>
 
 extern "C" void SAL_CALL createRegistryInfo_EventHandler()
@@ -81,7 +81,6 @@ namespace pcr
 
     using ::com::sun::star::uno::Reference;
     using ::com::sun::star::uno::XComponentContext;
-    using ::com::sun::star::beans::XPropertySet;
     using ::com::sun::star::uno::Any;
     using ::com::sun::star::uno::TypeClass_STRING;
     using ::com::sun::star::uno::Type;
@@ -123,7 +122,6 @@ namespace pcr
     using ::com::sun::star::inspection::InteractiveSelectionResult_Cancelled;
     using ::com::sun::star::inspection::InteractiveSelectionResult_Success;
     using ::com::sun::star::inspection::XObjectInspectorUI;
-    using ::com::sun::star::util::XModifiable;
     using ::com::sun::star::beans::PropertyChangeEvent;
     using ::com::sun::star::frame::XFrame;
     using ::com::sun::star::frame::XModel;
@@ -224,7 +222,7 @@ namespace pcr
             return aPropertyName.makeStringAndClear();
         }
 
-        ScriptEventDescriptor lcl_getAssignedScriptEvent( const EventDescription& _rEvent, const Sequence< ScriptEventDescriptor >& _rAllAssignedMacros )
+        ScriptEventDescriptor lcl_getAssignedScriptEvent( const EventDescription& _rEvent, const std::vector< ScriptEventDescriptor >& _rAllAssignedMacros )
         {
             ScriptEventDescriptor aScriptEvent;
             // for the case there is actually no event assigned, initialize at least ListenerType and MethodName,
@@ -232,24 +230,22 @@ namespace pcr
             aScriptEvent.ListenerType = _rEvent.sListenerClassName;
             aScriptEvent.EventMethod = _rEvent.sListenerMethodName;
 
-            const ScriptEventDescriptor* pAssignedEvent = _rAllAssignedMacros.getConstArray();
-            sal_Int32 assignedEventCount( _rAllAssignedMacros.getLength() );
-            for ( sal_Int32 assignedEvent = 0; assignedEvent < assignedEventCount; ++assignedEvent, ++pAssignedEvent )
+            for ( const ScriptEventDescriptor& rSED :  _rAllAssignedMacros )
             {
-                if  (   ( pAssignedEvent->ListenerType != _rEvent.sListenerClassName )
-                    ||  ( pAssignedEvent->EventMethod != _rEvent.sListenerMethodName )
+                if  (   rSED.ListenerType != _rEvent.sListenerClassName
+                    ||  rSED.EventMethod != _rEvent.sListenerMethodName
                     )
                     continue;
 
-                if  (   ( pAssignedEvent->ScriptCode.isEmpty() )
-                    ||  ( pAssignedEvent->ScriptType.isEmpty() )
+                if  (  rSED.ScriptCode.isEmpty()
+                    || rSED.ScriptType.isEmpty()
                     )
                 {
                     OSL_FAIL( "lcl_getAssignedScriptEvent: me thinks this should not happen!" );
                     continue;
                 }
 
-                aScriptEvent = *pAssignedEvent;
+                aScriptEvent = rSED;
 
                 if ( aScriptEvent.ScriptType != "StarBasic" )
                     continue;
@@ -307,16 +303,6 @@ namespace pcr
 
             ::std::copy( aListeners.begin(), aListeners.end(),
                          ::std::insert_iterator< TypeBag >( _out_rTypes, _out_rTypes.begin() ) );
-        }
-
-        bool operator ==( const ScriptEventDescriptor& _lhs, const ScriptEventDescriptor& _rhs )
-        {
-            return  (   ( _lhs.ListenerType         == _rhs.ListenerType        )
-                    &&  ( _lhs.EventMethod          == _rhs.EventMethod         )
-                    &&  ( _lhs.AddListenerParam     == _rhs.AddListenerParam    )
-                    &&  ( _lhs.ScriptType           == _rhs.ScriptType          )
-                    &&  ( _lhs.ScriptCode           == _rhs.ScriptCode          )
-                    );
         }
     }
 
@@ -546,20 +532,17 @@ namespace pcr
 
         const EventDescription& rEvent = impl_getEventForName_throw( _rPropertyName );
 
-        Sequence< ScriptEventDescriptor > aEvents;
+        std::vector< ScriptEventDescriptor > aEvents;
         impl_getComponentScriptEvents_nothrow( aEvents );
 
-        sal_Int32 nEventCount = aEvents.getLength();
-        const ScriptEventDescriptor* pEvents = aEvents.getConstArray();
-
         ScriptEventDescriptor aPropertyValue;
-        for ( sal_Int32 event = 0; event < nEventCount; ++event, ++pEvents )
+        for ( const ScriptEventDescriptor& rSCD : aEvents )
         {
-            if  (   rEvent.sListenerClassName == pEvents->ListenerType
-                &&  rEvent.sListenerMethodName == pEvents->EventMethod
+            if  (   rEvent.sListenerClassName == rSCD.ListenerType
+                &&  rEvent.sListenerMethodName == rSCD.EventMethod
                 )
             {
-                aPropertyValue = *pEvents;
+                aPropertyValue = rSCD;
                 break;
             }
         }
@@ -604,7 +587,7 @@ namespace pcr
         OUString sNewScriptCode;
         OSL_VERIFY( _rControlValue >>= sNewScriptCode );
 
-        Sequence< ScriptEventDescriptor > aAllAssignedEvents;
+        std::vector< ScriptEventDescriptor > aAllAssignedEvents;
         impl_getComponentScriptEvents_nothrow( aAllAssignedEvents );
 
         const EventDescription& rEvent = impl_getEventForName_throw( _rPropertyName );
@@ -798,21 +781,21 @@ namespace pcr
 
         LineDescriptor aDescriptor;
 
-        aDescriptor.Control = _rxControlFactory->createPropertyControl( PropertyControlType::TextField, sal_True );
+        aDescriptor.Control = _rxControlFactory->createPropertyControl( PropertyControlType::TextField, true );
         Reference< XEventListener > xControlExtender = new PropertyControlExtender( aDescriptor.Control );
 
         const EventDescription& rEvent = impl_getEventForName_throw( _rPropertyName );
         aDescriptor.DisplayName = rEvent.sDisplayName;
         aDescriptor.HelpURL = HelpIdUrl::getHelpURL( rEvent.sHelpId );
         aDescriptor.PrimaryButtonId = OStringToOUString(rEvent.sUniqueBrowseId, RTL_TEXTENCODING_UTF8);
-        aDescriptor.HasPrimaryButton = sal_True;
+        aDescriptor.HasPrimaryButton = true;
         aDescriptor.Category = "Events";
         return aDescriptor;
     }
 
     sal_Bool SAL_CALL EventHandler::isComposable( const OUString& /*_rPropertyName*/ ) throw (UnknownPropertyException, RuntimeException, std::exception)
     {
-        return sal_False;
+        return false;
     }
 
     InteractiveSelectionResult SAL_CALL EventHandler::onInteractivePropertySelection( const OUString& _rPropertyName, sal_Bool /*_bPrimary*/, Any& /*_rData*/, const Reference< XObjectInspectorUI >& _rxInspectorUI ) throw (UnknownPropertyException, NullPointerException, RuntimeException, std::exception)
@@ -823,7 +806,7 @@ namespace pcr
         ::osl::MutexGuard aGuard( m_aMutex );
         const EventDescription& rForEvent = impl_getEventForName_throw( _rPropertyName );
 
-        Sequence< ScriptEventDescriptor > aAllAssignedEvents;
+        std::vector< ScriptEventDescriptor > aAllAssignedEvents;
         impl_getComponentScriptEvents_nothrow( aAllAssignedEvents );
 
         // SvxMacroAssignDlg-compatible structure holding all event/assignments
@@ -905,7 +888,7 @@ namespace pcr
 
     sal_Bool SAL_CALL EventHandler::suspend( sal_Bool /*_bSuspend*/ ) throw (RuntimeException, std::exception)
     {
-        return sal_True;
+        return true;
     }
 
     Reference< XFrame > EventHandler::impl_getContextFrame_nothrow() const
@@ -942,23 +925,20 @@ namespace pcr
         throw NoSuchElementException();
     }
 
-    void EventHandler::impl_getFormComponentScriptEvents_nothrow( Sequence < ScriptEventDescriptor >& _out_rEvents ) const
+    void EventHandler::impl_getFormComponentScriptEvents_nothrow( std::vector < ScriptEventDescriptor >& _out_rEvents ) const
     {
-        _out_rEvents = Sequence < ScriptEventDescriptor >();
+        _out_rEvents.clear();
         try
         {
             Reference< XChild > xChild( m_xComponent, UNO_QUERY_THROW );
             Reference< XEventAttacherManager > xEventManager( xChild->getParent(), UNO_QUERY_THROW );
-            _out_rEvents = xEventManager->getScriptEvents( impl_getComponentIndexInParent_throw() );
+            comphelper::sequenceToContainer(_out_rEvents, xEventManager->getScriptEvents( impl_getComponentIndexInParent_throw() ));
 
             // the form component script API has unqualified listener names, but for normalization
             // purpose, we want fully qualified ones
-            ScriptEventDescriptor* pEvents = _out_rEvents.getArray();
-            ScriptEventDescriptor* pEventsEnd = _out_rEvents.getArray() + _out_rEvents.getLength();
-            while ( pEvents != pEventsEnd )
+            for ( ScriptEventDescriptor& rSED :  _out_rEvents)
             {
-                pEvents->ListenerType = lcl_getQualifiedKnownListenerName( *pEvents );
-                ++pEvents;
+                rSED.ListenerType = lcl_getQualifiedKnownListenerName( rSED );
             }
         }
         catch( const Exception& )
@@ -997,9 +977,9 @@ namespace pcr
         }
     }
 
-    void EventHandler::impl_getDialogElementScriptEvents_nothrow( Sequence < ScriptEventDescriptor >& _out_rEvents ) const
+    void EventHandler::impl_getDialogElementScriptEvents_nothrow( std::vector < ScriptEventDescriptor >& _out_rEvents ) const
     {
-        _out_rEvents = Sequence < ScriptEventDescriptor >();
+        _out_rEvents.clear();
         try
         {
             Reference< XScriptEventsSupplier > xEventsSupplier( m_xComponent, UNO_QUERY_THROW );
@@ -1007,13 +987,10 @@ namespace pcr
             Sequence< OUString > aEventNames( xEvents->getElementNames() );
 
             sal_Int32 nEventCount = aEventNames.getLength();
-            _out_rEvents.realloc( nEventCount );
+            _out_rEvents.resize( nEventCount );
 
-            const OUString* pNames = aEventNames.getConstArray();
-            ScriptEventDescriptor* pDescs = _out_rEvents.getArray();
-
-            for( sal_Int32 i = 0 ; i < nEventCount ; ++i, ++pNames, ++pDescs )
-                OSL_VERIFY( xEvents->getByName( *pNames ) >>= *pDescs );
+            for( sal_Int32 i = 0; i < nEventCount; ++i )
+                OSL_VERIFY( xEvents->getByName( aEventNames[i] ) >>= _out_rEvents[i] );
         }
         catch( const Exception& )
         {
@@ -1055,7 +1032,7 @@ namespace pcr
 
     namespace
     {
-        static bool lcl_endsWith( const OUString& _rText, const OUString& _rCheck )
+        bool lcl_endsWith( const OUString& _rText, const OUString& _rCheck )
         {
             sal_Int32 nTextLen = _rText.getLength();
             sal_Int32 nCheckLen = _rCheck.getLength();
@@ -1077,13 +1054,14 @@ namespace pcr
             sal_Int32 nObjectIndex = impl_getComponentIndexInParent_throw();
             Reference< XChild > xChild( m_xComponent, UNO_QUERY_THROW );
             Reference< XEventAttacherManager > xEventManager( xChild->getParent(), UNO_QUERY_THROW );
-            Sequence< ScriptEventDescriptor > aEvents( xEventManager->getScriptEvents( nObjectIndex ) );
+            std::vector< ScriptEventDescriptor > aEvents;
+            comphelper::sequenceToContainer( aEvents, xEventManager->getScriptEvents( nObjectIndex ) );
 
             // is there already a registered script for this event?
-            ScriptEventDescriptor* pEvent = aEvents.getArray();
-            sal_Int32 eventCount = aEvents.getLength(), event = 0;
-            for ( event = 0; event < eventCount; ++event, ++pEvent )
+            sal_Int32 eventCount = aEvents.size(), event = 0;
+            for ( event = 0; event < eventCount; ++event )
             {
+                ScriptEventDescriptor* pEvent = &aEvents[event];
                 if  (   ( pEvent->EventMethod == _rScriptEvent.EventMethod )
                     &&  ( lcl_endsWith( _rScriptEvent.ListenerType, pEvent->ListenerType ) )
                           // (strange enough, the events we get from getScriptEvents are not fully qualified)
@@ -1098,9 +1076,8 @@ namespace pcr
                     }
                     else
                     {
-                        // set to empty -> remove from sequence
-                        ::std::copy( pEvent + 1, aEvents.getArray() + eventCount, pEvent );
-                        aEvents.realloc( eventCount - 1 );
+                        // set to empty -> remove from vector
+                        aEvents.erase(aEvents.begin() + event );
                         --eventCount;
                     }
                     break;
@@ -1109,12 +1086,11 @@ namespace pcr
             if ( ( event >= eventCount ) && !bResetScript )
             {
                 // no, did not find it -> append
-                aEvents.realloc( eventCount + 1 );
-                aEvents[ eventCount ] = _rScriptEvent;
+                aEvents.push_back( _rScriptEvent );
             }
 
             xEventManager->revokeScriptEvents( nObjectIndex );
-            xEventManager->registerScriptEvents( nObjectIndex, aEvents );
+            xEventManager->registerScriptEvents( nObjectIndex, comphelper::containerToSequence(aEvents) );
 
             PropertyHandlerHelper::setContextDocumentModified( m_xContext );
         }
@@ -1166,7 +1142,7 @@ namespace pcr
     bool EventHandler::impl_filterMethod_nothrow( const EventDescription& _rEvent ) const
     {
         // some (control-triggered) events do not make sense for certain grid control columns. However,
-        // our mechnism to retrieve control-triggered events does not know about this, so we do some
+        // our mechanism to retrieve control-triggered events does not know about this, so we do some
         // late filtering here.
         switch ( m_nGridColumnType )
         {

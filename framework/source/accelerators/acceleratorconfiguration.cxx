@@ -18,7 +18,7 @@
  */
 
 #include <accelerators/acceleratorconfiguration.hxx>
-
+#include <accelerators/keymapping.hxx>
 #include <accelerators/presethandler.hxx>
 
 #include <xml/saxnamespacefilter.hxx>
@@ -57,10 +57,10 @@ namespace framework
     const char CFG_ENTRY_SECONDARY[] = "SecondaryKeys";
     const char CFG_PROP_COMMAND[] = "Command";
 
-    OUString lcl_getKeyString(salhelper::SingletonRef<framework::KeyMapping>& _rKeyMapping, const css::awt::KeyEvent& aKeyEvent)
+    OUString lcl_getKeyString(const css::awt::KeyEvent& aKeyEvent)
     {
         const sal_Int32 nBeginIndex = 4; // "KEY_" is the prefix of a identifier...
-        OUStringBuffer sKeyBuffer((_rKeyMapping->mapCodeToIdentifier(aKeyEvent.KeyCode)).copy(nBeginIndex));
+        OUStringBuffer sKeyBuffer((KeyMapping::get().mapCodeToIdentifier(aKeyEvent.KeyCode)).copy(nBeginIndex));
 
         if ( (aKeyEvent.Modifiers & css::awt::KeyModifier::SHIFT) == css::awt::KeyModifier::SHIFT )
             sKeyBuffer.append("_SHIFT");
@@ -232,10 +232,10 @@ void SAL_CALL XMLBasedAcceleratorConfiguration::reload()
     css::uno::Reference< css::io::XStream > xStreamNoLang;
     {
         SolarMutexGuard g;
-        xStream = m_aPresetHandler.openTarget(TARGET_CURRENT, true); // sal_True => open or create!
+        xStream = m_aPresetHandler.openTarget(TARGET_CURRENT); // open or create!
         try
         {
-            xStreamNoLang = m_aPresetHandler.openPreset(PRESET_DEFAULT, true);
+            xStreamNoLang = m_aPresetHandler.openPreset(PRESET_DEFAULT);
         }
         catch(const css::io::IOException&) {} // does not have to exist
     }
@@ -273,7 +273,7 @@ void SAL_CALL XMLBasedAcceleratorConfiguration::store()
     css::uno::Reference< css::io::XStream > xStream;
     {
         SolarMutexGuard g;
-        xStream = m_aPresetHandler.openTarget(TARGET_CURRENT, true); // sal_True => open or create!
+        xStream = m_aPresetHandler.openTarget(TARGET_CURRENT); // open or create!
     }
 
     css::uno::Reference< css::io::XOutputStream > xOut;
@@ -329,7 +329,7 @@ sal_Bool SAL_CALL XMLBasedAcceleratorConfiguration::isReadOnly()
     css::uno::Reference< css::io::XStream > xStream;
     {
         SolarMutexGuard g;
-        xStream = m_aPresetHandler.openTarget(TARGET_CURRENT, true); // sal_True => open or create!
+        xStream = m_aPresetHandler.openTarget(TARGET_CURRENT); // open or create!
     }
 
     css::uno::Reference< css::io::XOutputStream > xOut;
@@ -348,7 +348,7 @@ sal_Bool SAL_CALL XMLBasedAcceleratorConfiguration::hasStorage()
     throw(css::uno::RuntimeException, std::exception)
 {
     SAL_INFO("fwk", "XMLBasedAcceleratorConfiguration::hasStorage(): implement this HACK .-)");
-    return sal_False;
+    return false;
 }
 
 void SAL_CALL XMLBasedAcceleratorConfiguration::addConfigurationListener(const css::uno::Reference< css::ui::XUIConfigurationListener >& /*xListener*/)
@@ -522,7 +522,7 @@ XCUBasedAcceleratorConfiguration::XCUBasedAcceleratorConfiguration(const css::un
 {
     const OUString CFG_ENTRY_ACCELERATORS("org.openoffice.Office.Accelerators");
     m_xCfg.set(
-             ::comphelper::ConfigurationHelper::openConfig( m_xContext, CFG_ENTRY_ACCELERATORS, ::comphelper::ConfigurationHelper::E_ALL_LOCALES ),
+             ::comphelper::ConfigurationHelper::openConfig( m_xContext, CFG_ENTRY_ACCELERATORS, ::comphelper::EConfigurationModes::AllLocales ),
              css::uno::UNO_QUERY );
 }
 
@@ -930,13 +930,13 @@ void SAL_CALL XCUBasedAcceleratorConfiguration::storeToStorage(const css::uno::R
 sal_Bool SAL_CALL XCUBasedAcceleratorConfiguration::isModified()
     throw(css::uno::RuntimeException, std::exception)
 {
-    return sal_False;
+    return false;
 }
 
 sal_Bool SAL_CALL XCUBasedAcceleratorConfiguration::isReadOnly()
     throw(css::uno::RuntimeException, std::exception)
 {
-    return sal_False;
+    return false;
 }
 
 void SAL_CALL XCUBasedAcceleratorConfiguration::setStorage(const css::uno::Reference< css::embed::XStorage >& /*xStorage*/)
@@ -949,7 +949,7 @@ sal_Bool SAL_CALL XCUBasedAcceleratorConfiguration::hasStorage()
     throw(css::uno::RuntimeException, std::exception)
 {
     SAL_INFO("fwk", "XCUBasedAcceleratorConfiguration::hasStorage(): implement this HACK .-)");
-        return sal_False;
+        return false;
 }
 
 void SAL_CALL XCUBasedAcceleratorConfiguration::addConfigurationListener(const css::uno::Reference< css::ui::XUIConfigurationListener >& /*xListener*/)
@@ -972,14 +972,14 @@ void SAL_CALL XCUBasedAcceleratorConfiguration::reset()
     if ( sConfig == "Global" )
     {
         m_xCfg.set(
-            ::comphelper::ConfigurationHelper::openConfig( m_xContext, CFG_ENTRY_GLOBAL, ::comphelper::ConfigurationHelper::E_ALL_LOCALES ),
+            ::comphelper::ConfigurationHelper::openConfig( m_xContext, CFG_ENTRY_GLOBAL, ::comphelper::EConfigurationModes::AllLocales ),
             css::uno::UNO_QUERY );
         XCUBasedAcceleratorConfiguration::reload();
     }
     else if ( sConfig == "Modules" )
     {
         m_xCfg.set(
-            ::comphelper::ConfigurationHelper::openConfig( m_xContext, CFG_ENTRY_MODULES, ::comphelper::ConfigurationHelper::E_ALL_LOCALES ),
+            ::comphelper::ConfigurationHelper::openConfig( m_xContext, CFG_ENTRY_MODULES, ::comphelper::EConfigurationModes::AllLocales ),
             css::uno::UNO_QUERY );
         XCUBasedAcceleratorConfiguration::reload();
     }
@@ -1135,7 +1135,7 @@ void XCUBasedAcceleratorConfiguration::impl_ts_load( bool bPreferred, const css:
             sal_Int32 nIndex = 0;
             OUString sKeyCommand = sKey.getToken(0, '_', nIndex);
             OUString sPrefix("KEY_");
-            aKeyEvent.KeyCode = m_rKeyMapping->mapIdentifierToCode(sPrefix + sKeyCommand);
+            aKeyEvent.KeyCode = KeyMapping::get().mapIdentifierToCode(sPrefix + sKeyCommand);
 
             css::uno::Sequence< OUString > sToken(4);
             const sal_Int32 nToken = 4;
@@ -1289,7 +1289,7 @@ void XCUBasedAcceleratorConfiguration::insertKeyToConfiguration( const css::awt:
         xModules->getByName(m_sModuleCFG) >>= xContainer;
     }
 
-    const OUString sKey = lcl_getKeyString(m_rKeyMapping,aKeyEvent);
+    const OUString sKey = lcl_getKeyString(aKeyEvent);
     css::uno::Reference< css::container::XNameAccess > xKey;
     css::uno::Reference< css::container::XNameContainer > xCommand;
     if ( !xContainer->hasByName(sKey) )
@@ -1329,7 +1329,7 @@ void XCUBasedAcceleratorConfiguration::removeKeyFromConfiguration( const css::aw
         xModules->getByName(m_sModuleCFG) >>= xContainer;
     }
 
-    const OUString sKey = lcl_getKeyString(m_rKeyMapping,aKeyEvent);
+    const OUString sKey = lcl_getKeyString(aKeyEvent);
     xContainer->removeByName(sKey);
 }
 
@@ -1355,7 +1355,7 @@ void XCUBasedAcceleratorConfiguration::reloadChanged( const OUString& sPrimarySe
 
     sal_Int32 nIndex = 0;
     sKeyIdentifier = sKey.getToken(0, '_', nIndex);
-    aKeyEvent.KeyCode = m_rKeyMapping->mapIdentifierToCode("KEY_"+sKeyIdentifier);
+    aKeyEvent.KeyCode = KeyMapping::get().mapIdentifierToCode("KEY_"+sKeyIdentifier);
 
     css::uno::Sequence< OUString > sToken(3);
     const sal_Int32 nToken = 3;

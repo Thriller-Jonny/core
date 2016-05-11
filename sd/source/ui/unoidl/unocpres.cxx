@@ -27,7 +27,6 @@
 #include <cppuhelper/supportsservice.hxx>
 
 #include "createunocustomshow.hxx"
-#include "unohelp.hxx"
 #include "unomodel.hxx"
 #include "drawdoc.hxx"
 #include "unocpres.hxx"
@@ -467,19 +466,17 @@ sal_Bool SAL_CALL SdXCustomPresentationAccess::hasElements()
     return pList && !pList->empty();
 }
 
-SdCustomShow * SdXCustomPresentationAccess::getSdCustomShow( const OUString& Name ) const throw()
+SdCustomShow * SdXCustomPresentationAccess::getSdCustomShow( const OUString& rName ) const throw()
 {
     sal_uInt32 nIdx = 0;
 
     SdCustomShowList* pList = GetCustomShowList();
     const sal_uInt32 nCount = pList ? pList->size() : 0;
 
-    const OUString aName( Name );
-
     while( nIdx < nCount )
     {
         SdCustomShow* pShow = (*pList)[nIdx];
-        if( pShow->GetName() == aName )
+        if( pShow->GetName() == rName )
             return pShow;
         nIdx++;
     }

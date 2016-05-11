@@ -123,7 +123,7 @@ using namespace css::system;
 
 namespace {
 
-static sal_uInt16 getSlotIDFromMode( sal_Int8 nStoreMode )
+sal_uInt16 getSlotIDFromMode( sal_Int8 nStoreMode )
 {
     // This is a temporary hardcoded solution must be removed when
     // dialogs do not need parameters in SidSet representation any more
@@ -147,7 +147,7 @@ static sal_uInt16 getSlotIDFromMode( sal_Int8 nStoreMode )
 }
 
 
-static sal_Int8 getStoreModeFromSlotName( const OUString& aSlotName )
+sal_Int8 getStoreModeFromSlotName( const OUString& aSlotName )
 {
     sal_Int8 nResult = 0;
     if ( aSlotName == "ExportTo" )
@@ -172,14 +172,14 @@ static sal_Int8 getStoreModeFromSlotName( const OUString& aSlotName )
 }
 
 
-static SfxFilterFlags getMustFlags( sal_Int8 nStoreMode )
+SfxFilterFlags getMustFlags( sal_Int8 nStoreMode )
 {
     return ( SfxFilterFlags::EXPORT
             | ( ( ( nStoreMode & EXPORT_REQUESTED ) && !( nStoreMode & WIDEEXPORT_REQUESTED ) ) ? SfxFilterFlags::NONE : SfxFilterFlags::IMPORT ) );
 }
 
 
-static SfxFilterFlags getDontFlags( sal_Int8 nStoreMode )
+SfxFilterFlags getDontFlags( sal_Int8 nStoreMode )
 {
     return ( SfxFilterFlags::INTERNAL
             | SfxFilterFlags::NOTINFILEDLG
@@ -257,7 +257,6 @@ class ModelData_Impl
     uno::Reference< frame::XModel > m_xModel;
     uno::Reference< frame::XStorable > m_xStorable;
     uno::Reference< frame::XStorable2 > m_xStorable2;
-    uno::Reference< util::XModifiable > m_xModifiable;
 
     OUString m_aModuleName;
     ::comphelper::SequenceAsHashMap* m_pDocumentPropsHM;
@@ -279,7 +278,6 @@ public:
     uno::Reference< frame::XModel > GetModel();
     uno::Reference< frame::XStorable > GetStorable();
     uno::Reference< frame::XStorable2 > GetStorable2();
-    uno::Reference< util::XModifiable > GetModifiable();
 
     ::comphelper::SequenceAsHashMap& GetMediaDescr() { return m_aMediaDescrHM; }
 
@@ -419,19 +417,6 @@ uno::Reference< frame::XStorable2 > ModelData_Impl::GetStorable2()
 }
 
 
-uno::Reference< util::XModifiable > ModelData_Impl::GetModifiable()
-{
-    if ( !m_xModifiable.is() )
-    {
-        m_xModifiable.set( m_xModel, uno::UNO_QUERY );
-        if ( !m_xModifiable.is() )
-            throw uno::RuntimeException();
-    }
-
-    return m_xModifiable;
-}
-
-
 const ::comphelper::SequenceAsHashMap& ModelData_Impl::GetDocProps()
 {
     if ( !m_pDocumentPropsHM )
@@ -528,7 +513,6 @@ uno::Sequence< beans::PropertyValue > ModelData_Impl::GetDocServiceDefaultFilter
 
     return aFilterProps;
 }
-
 
 
 uno::Sequence< beans::PropertyValue > ModelData_Impl::GetDocServiceAnyFilter( SfxFilterFlags nMust, SfxFilterFlags nDont )
@@ -689,7 +673,6 @@ sal_Int8 ModelData_Impl::CheckStateForSave()
         return STATUS_SAVEAS;
 
     // check acceptable entries for media descriptor
-    bool bVersInfoNeedsStore = false;
     ::comphelper::SequenceAsHashMap aAcceptedArgs;
 
     OUString aVersionCommentString("VersionComment");
@@ -699,33 +682,21 @@ sal_Int8 ModelData_Impl::CheckStateForSave()
     OUString aFailOnWarningString("FailOnWarning");
 
     if ( GetMediaDescr().find( aVersionCommentString ) != GetMediaDescr().end() )
-    {
-        bVersInfoNeedsStore = true;
         aAcceptedArgs[ aVersionCommentString ] = GetMediaDescr()[ aVersionCommentString ];
-    }
     if ( GetMediaDescr().find( aAuthorString ) != GetMediaDescr().end() )
         aAcceptedArgs[ aAuthorString ] = GetMediaDescr()[ aAuthorString ];
     if ( GetMediaDescr().find( aInteractionHandlerString ) != GetMediaDescr().end() )
         aAcceptedArgs[ aInteractionHandlerString ] = GetMediaDescr()[ aInteractionHandlerString ];
     if ( GetMediaDescr().find( aStatusIndicatorString ) != GetMediaDescr().end() )
         aAcceptedArgs[ aStatusIndicatorString ] = GetMediaDescr()[ aStatusIndicatorString ];
-	if ( GetMediaDescr().find( aFailOnWarningString ) != GetMediaDescr().end() )
-		aAcceptedArgs[ aFailOnWarningString ] = GetMediaDescr()[ aFailOnWarningString ];
+    if ( GetMediaDescr().find( aFailOnWarningString ) != GetMediaDescr().end() )
+        aAcceptedArgs[ aFailOnWarningString ] = GetMediaDescr()[ aFailOnWarningString ];
 
     // remove unacceptable entry if there is any
     DBG_ASSERT( GetMediaDescr().size() == aAcceptedArgs.size(),
                 "Unacceptable parameters are provided in Save request!\n" );
     if ( GetMediaDescr().size() != aAcceptedArgs.size() )
         GetMediaDescr() = aAcceptedArgs;
-
-    // the document must be modified unless the always-save flag is set.
-    SvtMiscOptions aMiscOptions;
-    bool bAlwaysAllowSave = aMiscOptions.IsSaveAlwaysAllowed();
-    if (!bAlwaysAllowSave)
-    {
-        if ( !GetModifiable()->isModified() && !bVersInfoNeedsStore )
-            return STATUS_NO_ACTION;
-    }
 
     // check that the old filter is acceptable
     OUString aOldFilterName = GetDocProps().getUnpackedValueOrDefault(
@@ -806,10 +777,10 @@ bool ModelData_Impl::CheckFilterOptionsDialogExistence()
 
     while ( xFilterEnum->hasMoreElements() )
     {
-        uno::Sequence< beans::PropertyValue > pProps;
-        if ( xFilterEnum->nextElement() >>= pProps )
+        uno::Sequence< beans::PropertyValue > aProps;
+        if ( xFilterEnum->nextElement() >>= aProps )
         {
-            ::comphelper::SequenceAsHashMap aPropsHM( pProps );
+            ::comphelper::SequenceAsHashMap aPropsHM( aProps );
             OUString aUIServName = aPropsHM.getUnpackedValueOrDefault(
                                             "UIComponent",
                                             OUString() );
@@ -1000,7 +971,7 @@ bool ModelData_Impl::OutputFileDialog( sal_Int8 nStoreMode,
 
     uno::Reference < view::XSelectionSupplier > xSel( GetModel()->getCurrentController(), uno::UNO_QUERY );
     if ( xSel.is() && xSel->getSelection().hasValue() )
-        GetMediaDescr()[OUString("SelectionOnly")] <<= sal_True;
+        GetMediaDescr()[OUString("SelectionOnly")] <<= true;
 
     // This is a temporary hardcoded solution must be removed when
     // dialogs do not need parameters in SidSet representation any more
@@ -1281,7 +1252,6 @@ OUString ModelData_Impl::GetRecommendedName( const OUString& aSuggestedName, con
 }
 
 
-
 // class SfxStoringHelper
 
 
@@ -1330,7 +1300,7 @@ uno::Reference< css::frame::XModuleManager2 > SfxStoringHelper::GetModuleManager
 }
 
 
-bool SfxStoringHelper::GUIStoreModel( uno::Reference< frame::XModel > xModel,
+bool SfxStoringHelper::GUIStoreModel( const uno::Reference< frame::XModel >& xModel,
                                             const OUString& aSlotName,
                                             uno::Sequence< beans::PropertyValue >& aArgsSequence,
                                             bool bPreselectPassword,

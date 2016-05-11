@@ -69,11 +69,10 @@ class TabStopCollectionHelper : public ::cppu::WeakImplHelper< container::XIndex
 private:
     uno::Reference< XHelperInterface > mxParent;
     uno::Reference< uno::XComponentContext > mxContext;
-    uno::Reference< beans::XPropertySet > mxParaProps;
     sal_Int32 mnTabStops;
 
 public:
-    TabStopCollectionHelper( const css::uno::Reference< ov::XHelperInterface >& xParent, const css::uno::Reference< css::uno::XComponentContext > & xContext, const css::uno::Reference< css::beans::XPropertySet >& xParaProps ) throw ( css::uno::RuntimeException ): mxParent( xParent ), mxContext( xContext ), mxParaProps( xParaProps )
+    TabStopCollectionHelper( const css::uno::Reference< ov::XHelperInterface >& xParent, const css::uno::Reference< css::uno::XComponentContext > & xContext, const css::uno::Reference< css::beans::XPropertySet >& xParaProps ) throw ( css::uno::RuntimeException ): mxParent( xParent ), mxContext( xContext )
     {
         mnTabStops = lcl_getTabStops( xParaProps ).getLength();
     }
@@ -89,7 +88,7 @@ public:
         if ( Index < 0 || Index >= getCount() )
             throw css::lang::IndexOutOfBoundsException();
 
-        return uno::makeAny( uno::Reference< word::XTabStop >( new SwVbaTabStop( mxParent, mxContext, mxParaProps ) ) );
+        return uno::makeAny( uno::Reference< word::XTabStop >( new SwVbaTabStop( mxParent, mxContext ) ) );
     }
     virtual uno::Type SAL_CALL getElementType(  ) throw (uno::RuntimeException, std::exception) override
     {
@@ -97,7 +96,7 @@ public:
     }
     virtual sal_Bool SAL_CALL hasElements(  ) throw (uno::RuntimeException, std::exception) override
     {
-        return sal_True;
+        return true;
     }
     // XEnumerationAccess
     virtual uno::Reference< container::XEnumeration > SAL_CALL createEnumeration(  ) throw (uno::RuntimeException, std::exception) override
@@ -222,7 +221,7 @@ uno::Reference< word::XTabStop > SAL_CALL SwVbaTabStops::Add( float Position, co
     else
         lcl_setTabStops( mxParaProps, aNewTabs );
 
-    return uno::Reference< word::XTabStop >( new SwVbaTabStop( this, mxContext, mxParaProps ) );
+    return uno::Reference< word::XTabStop >( new SwVbaTabStop( this, mxContext ) );
 }
 
 void SAL_CALL SwVbaTabStops::ClearAll() throw (uno::RuntimeException, std::exception)

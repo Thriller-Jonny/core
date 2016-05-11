@@ -55,7 +55,6 @@ PageSelector::PageSelector (SlideSorter& rSlideSorter)
       mbSelectionChangeBroadcastPending(false),
       mpMostRecentlySelectedPage(),
       mpSelectionAnchor(),
-      mpCurrentPage(),
       mnUpdateLockCount(0),
       mbIsUpdateCurrentPagePending(true)
 {
@@ -167,13 +166,11 @@ void PageSelector::SelectPage (const SharedPageDescriptor& rpDescriptor)
     }
 }
 
-void PageSelector::DeselectPage (
-    int nPageIndex,
-    const bool bUpdateCurrentPage)
+void PageSelector::DeselectPage (int nPageIndex)
 {
     model::SharedPageDescriptor pDescriptor (mrModel.GetPageDescriptor(nPageIndex));
     if (pDescriptor.get() != nullptr)
-        DeselectPage(pDescriptor, bUpdateCurrentPage);
+        DeselectPage(pDescriptor);
 }
 
 void PageSelector::DeselectPage (

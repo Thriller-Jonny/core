@@ -22,7 +22,7 @@
 
 #include <sal/config.h>
 
-#include <vector>
+#include <unordered_map>
 
 #include <com/sun/star/uno/XAggregation.hpp>
 #include <com/sun/star/beans/XPropertyState.hpp>
@@ -46,39 +46,8 @@ namespace frm
 
 class PropertyInfoService
 {
-
-    struct PropertyAssignment
-    {
-        OUString     sName;
-        sal_Int32           nHandle;
-
-        PropertyAssignment() { nHandle = -1; }
-        PropertyAssignment(const PropertyAssignment& _rSource)
-            :sName(_rSource.sName), nHandle(_rSource.nHandle) { }
-        PropertyAssignment(const OUString& _rName, sal_Int32 _nHandle)
-            :sName(_rName), nHandle(_nHandle) { }
-
-    };
-
-    typedef std::vector<PropertyAssignment> PropertyMap;
+    typedef std::unordered_map<OUString, sal_Int32, OUStringHash> PropertyMap;
     static PropertyMap      s_AllKnownProperties;
-
-
-    // comparing two PropertyAssignment's
-public:
-    typedef PropertyAssignment PUBLIC_SOLARIS_COMPILER_HACK;
-        // did not get the following compiled under with SUNPRO 5 without this
-        // public typedef
-private:
-    friend struct PropertyAssignmentNameCompareLess;
-    typedef ::std::binary_function< PUBLIC_SOLARIS_COMPILER_HACK, PUBLIC_SOLARIS_COMPILER_HACK, sal_Bool > PropertyAssignmentNameCompareLess_Base;
-    struct PropertyAssignmentNameCompareLess : public PropertyAssignmentNameCompareLess_Base
-    {
-        inline bool operator() (const PUBLIC_SOLARIS_COMPILER_HACK& _rL, const PUBLIC_SOLARIS_COMPILER_HACK& _rR) const
-        {
-            return (_rL.sName.compareTo(_rR.sName) < 0);
-        }
-    };
 
 public:
     PropertyInfoService() { }
@@ -122,15 +91,6 @@ public:
 #define BEGIN_DESCRIBE_BASE_PROPERTIES( count ) \
     _rProps.realloc( count );   \
     css::beans::Property* pProperties = _rProps.getArray();       \
-
-
-#define BEGIN_DESCRIBE_AGGREGATION_PROPERTIES( count, aggregate )   \
-    _rProps.realloc( count );   \
-    css::beans::Property* pProperties = _rProps.getArray();       \
-    \
-    if (aggregate.is()) \
-        _rAggregateProps = aggregate->getPropertySetInfo()->getProperties();    \
-
 
 
 #define DECL_PROP0(varname, type)   \
@@ -180,10 +140,8 @@ public:
         DECL_BOOL_PROP_IMPL(varname) css::beans::PropertyAttribute::attrib1 | css::beans::PropertyAttribute::attrib2 | css::beans::PropertyAttribute::attrib3 )
 
 
-
 #define END_DESCRIBE_PROPERTIES()   \
     DBG_ASSERT( pProperties == _rProps.getArray() + _rProps.getLength(), "<...>::describeFixedProperties/getInfoHelper: forgot to adjust the count ?"); \
-
 
 
 #define REGISTER_PROP_2( prop, member, attrib1, attrib2 ) \

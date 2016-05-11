@@ -42,7 +42,6 @@
 
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/reflection/XConstantTypeDescription.hpp>
-#include <com/sun/star/reflection/XIdlReflection.hpp>
 #include <com/sun/star/reflection/XIdlClass.hpp>
 #include <com/sun/star/registry/InvalidRegistryException.hpp>
 
@@ -51,7 +50,6 @@ using osl::Module;
 
 using com::sun::star::uno::Sequence;
 using com::sun::star::uno::Reference;
-using com::sun::star::uno::XInterface;
 using com::sun::star::uno::Any;
 using com::sun::star::uno::makeAny;
 using com::sun::star::uno::UNO_QUERY;
@@ -59,7 +57,6 @@ using com::sun::star::uno::RuntimeException;
 using com::sun::star::uno::TypeDescription;
 using com::sun::star::uno::XComponentContext;
 using com::sun::star::container::NoSuchElementException;
-using com::sun::star::reflection::XIdlReflection;
 using com::sun::star::reflection::XIdlClass;
 using com::sun::star::script::XInvocation2;
 
@@ -140,7 +137,7 @@ public:
     }
 };
 
-static void fillStruct(
+void fillStruct(
     const Reference< XInvocation2 > &inv,
     typelib_CompoundTypeDescription *pCompType,
     PyObject *initializer,
@@ -173,11 +170,11 @@ static void fillStruct(
         for( int i = 0 ; i < remainingPosInitialisers && i < nMembers ; i ++ )
         {
             const int tupleIndex = state.getCntConsumed();
-            const OUString pMemberName (pCompType->ppMemberNames[i]);
-            state.setInitialised(pMemberName, tupleIndex);
+            const OUString& rMemberName (pCompType->ppMemberNames[i]);
+            state.setInitialised(rMemberName, tupleIndex);
             PyObject *element = PyTuple_GetItem( initializer, tupleIndex );
             Any a = runtime.pyObject2Any( element, ACCEPT_UNO_ANY );
-            inv->setValue( pMemberName, a );
+            inv->setValue( rMemberName, a );
         }
     }
     if ( PyTuple_Size( initializer ) > 0 )
@@ -635,7 +632,7 @@ static PyObject * generateUuid(
     SAL_UNUSED_PARAMETER PyObject *, SAL_UNUSED_PARAMETER PyObject * )
 {
     Sequence< sal_Int8 > seq( 16 );
-    rtl_createUuid( reinterpret_cast<sal_uInt8*>(seq.getArray()) , nullptr , sal_False );
+    rtl_createUuid( reinterpret_cast<sal_uInt8*>(seq.getArray()) , nullptr , false );
     PyRef ret;
     try
     {

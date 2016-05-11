@@ -19,7 +19,7 @@
 
 #include <vcl/salbtype.hxx>
 #include <vcl/bitmap.hxx>
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 
 #include <impbmp.hxx>
 
@@ -48,38 +48,35 @@ BitmapInfoAccess::~BitmapInfoAccess()
 
 void BitmapInfoAccess::ImplCreate( Bitmap& rBitmap )
 {
-    ImpBitmap* pImpBmp = rBitmap.ImplGetImpBitmap();
+    std::shared_ptr<ImpBitmap> xImpBmp = rBitmap.ImplGetImpBitmap();
 
-    DBG_ASSERT( pImpBmp, "Forbidden Access to empty bitmap!" );
+    DBG_ASSERT( xImpBmp, "Forbidden Access to empty bitmap!" );
 
-    if( pImpBmp )
+    if( xImpBmp )
     {
         if( mnAccessMode == BITMAP_WRITE_ACCESS && !maBitmap.ImplGetImpBitmap() )
         {
             rBitmap.ImplMakeUnique();
-            pImpBmp = rBitmap.ImplGetImpBitmap();
+            xImpBmp = rBitmap.ImplGetImpBitmap();
         }
         else
         {
             DBG_ASSERT( mnAccessMode != BITMAP_WRITE_ACCESS ||
-                        pImpBmp->ImplGetRefCount() == 2,
+                        xImpBmp.use_count() == 2,
                         "Unpredictable results: bitmap is referenced more than once!" );
         }
 
-        mpBuffer = pImpBmp->ImplAcquireBuffer( mnAccessMode );
+        mpBuffer = xImpBmp->ImplAcquireBuffer( mnAccessMode );
 
         if( !mpBuffer )
         {
-            ImpBitmap* pNewImpBmp = new ImpBitmap;
-
-            if( pNewImpBmp->ImplCreate( *pImpBmp, rBitmap.GetBitCount()  ) )
+            std::shared_ptr<ImpBitmap> xNewImpBmp(new ImpBitmap);
+            if (xNewImpBmp->ImplCreate(*xImpBmp, rBitmap.GetBitCount()))
             {
-                pImpBmp = pNewImpBmp;
-                rBitmap.ImplSetImpBitmap( pImpBmp );
-                mpBuffer = pImpBmp->ImplAcquireBuffer( mnAccessMode );
+                xImpBmp = xNewImpBmp;
+                rBitmap.ImplSetImpBitmap( xImpBmp );
+                mpBuffer = xImpBmp->ImplAcquireBuffer( mnAccessMode );
             }
-            else
-                delete pNewImpBmp;
         }
 
         maBitmap = rBitmap;
@@ -88,11 +85,11 @@ void BitmapInfoAccess::ImplCreate( Bitmap& rBitmap )
 
 void BitmapInfoAccess::ImplDestroy()
 {
-    ImpBitmap* pImpBmp = maBitmap.ImplGetImpBitmap();
+    std::shared_ptr<ImpBitmap> xImpBmp = maBitmap.ImplGetImpBitmap();
 
-    if( mpBuffer && pImpBmp )
+    if (mpBuffer && xImpBmp)
     {
-        pImpBmp->ImplReleaseBuffer( mpBuffer, mnAccessMode );
+        xImpBmp->ImplReleaseBuffer( mpBuffer, mnAccessMode );
         mpBuffer = nullptr;
     }
 }
@@ -130,8 +127,8 @@ void BitmapReadAccess::ImplInitScanBuffer( Bitmap& rBitmap )
     if (!mpBuffer)
         return;
 
-    ImpBitmap* pImpBmp = rBitmap.ImplGetImpBitmap();
-    if (!pImpBmp)
+    std::shared_ptr<ImpBitmap> xImpBmp = rBitmap.ImplGetImpBitmap();
+    if (!xImpBmp)
         return;
 
     maColorMask = mpBuffer->maColorMask;
@@ -164,7 +161,7 @@ void BitmapReadAccess::ImplInitScanBuffer( Bitmap& rBitmap )
         delete[] mpScanBuf;
         mpScanBuf = nullptr;
 
-        pImpBmp->ImplReleaseBuffer( mpBuffer, mnAccessMode );
+        xImpBmp->ImplReleaseBuffer( mpBuffer, mnAccessMode );
         mpBuffer = nullptr;
     }
 }
@@ -449,22 +446,22 @@ void BitmapWriteAccess::CopyScanline( long nY, ConstScanline aSrcScanline,
 
             switch( nFormat )
             {
-                case( BMP_FORMAT_1BIT_MSB_PAL ):    pFncGetPixel = GetPixelFor_1BIT_MSB_PAL; break;
-                case( BMP_FORMAT_1BIT_LSB_PAL ):    pFncGetPixel = GetPixelFor_1BIT_LSB_PAL; break;
-                case( BMP_FORMAT_4BIT_MSN_PAL ):    pFncGetPixel = GetPixelFor_4BIT_MSN_PAL; break;
-                case( BMP_FORMAT_4BIT_LSN_PAL ):    pFncGetPixel = GetPixelFor_4BIT_LSN_PAL; break;
-                case( BMP_FORMAT_8BIT_PAL ):        pFncGetPixel = GetPixelFor_8BIT_PAL; break;
-                case( BMP_FORMAT_8BIT_TC_MASK ):    pFncGetPixel = GetPixelFor_8BIT_TC_MASK; break;
-                case( BMP_FORMAT_16BIT_TC_MSB_MASK ):   pFncGetPixel = GetPixelFor_16BIT_TC_MSB_MASK; break;
-                case( BMP_FORMAT_16BIT_TC_LSB_MASK ):   pFncGetPixel = GetPixelFor_16BIT_TC_LSB_MASK; break;
-                case( BMP_FORMAT_24BIT_TC_BGR ):    pFncGetPixel = GetPixelFor_24BIT_TC_BGR; break;
-                case( BMP_FORMAT_24BIT_TC_RGB ):    pFncGetPixel = GetPixelFor_24BIT_TC_RGB; break;
-                case( BMP_FORMAT_24BIT_TC_MASK ):   pFncGetPixel = GetPixelFor_24BIT_TC_MASK; break;
-                case( BMP_FORMAT_32BIT_TC_ABGR ):   pFncGetPixel = GetPixelFor_32BIT_TC_ABGR; break;
-                case( BMP_FORMAT_32BIT_TC_ARGB ):   pFncGetPixel = GetPixelFor_32BIT_TC_ARGB; break;
-                case( BMP_FORMAT_32BIT_TC_BGRA ):   pFncGetPixel = GetPixelFor_32BIT_TC_BGRA; break;
-                case( BMP_FORMAT_32BIT_TC_RGBA ):   pFncGetPixel = GetPixelFor_32BIT_TC_RGBA; break;
-                case( BMP_FORMAT_32BIT_TC_MASK ):   pFncGetPixel = GetPixelFor_32BIT_TC_MASK; break;
+                case BMP_FORMAT_1BIT_MSB_PAL:    pFncGetPixel = GetPixelFor_1BIT_MSB_PAL; break;
+                case BMP_FORMAT_1BIT_LSB_PAL:    pFncGetPixel = GetPixelFor_1BIT_LSB_PAL; break;
+                case BMP_FORMAT_4BIT_MSN_PAL:    pFncGetPixel = GetPixelFor_4BIT_MSN_PAL; break;
+                case BMP_FORMAT_4BIT_LSN_PAL:    pFncGetPixel = GetPixelFor_4BIT_LSN_PAL; break;
+                case BMP_FORMAT_8BIT_PAL:        pFncGetPixel = GetPixelFor_8BIT_PAL; break;
+                case BMP_FORMAT_8BIT_TC_MASK:    pFncGetPixel = GetPixelFor_8BIT_TC_MASK; break;
+                case BMP_FORMAT_16BIT_TC_MSB_MASK:   pFncGetPixel = GetPixelFor_16BIT_TC_MSB_MASK; break;
+                case BMP_FORMAT_16BIT_TC_LSB_MASK:   pFncGetPixel = GetPixelFor_16BIT_TC_LSB_MASK; break;
+                case BMP_FORMAT_24BIT_TC_BGR:    pFncGetPixel = GetPixelFor_24BIT_TC_BGR; break;
+                case BMP_FORMAT_24BIT_TC_RGB:    pFncGetPixel = GetPixelFor_24BIT_TC_RGB; break;
+                case BMP_FORMAT_24BIT_TC_MASK:   pFncGetPixel = GetPixelFor_24BIT_TC_MASK; break;
+                case BMP_FORMAT_32BIT_TC_ABGR:   pFncGetPixel = GetPixelFor_32BIT_TC_ABGR; break;
+                case BMP_FORMAT_32BIT_TC_ARGB:   pFncGetPixel = GetPixelFor_32BIT_TC_ARGB; break;
+                case BMP_FORMAT_32BIT_TC_BGRA:   pFncGetPixel = GetPixelFor_32BIT_TC_BGRA; break;
+                case BMP_FORMAT_32BIT_TC_RGBA:   pFncGetPixel = GetPixelFor_32BIT_TC_RGBA; break;
+                case BMP_FORMAT_32BIT_TC_MASK:   pFncGetPixel = GetPixelFor_32BIT_TC_MASK; break;
 
                 default:
                     pFncGetPixel = nullptr;

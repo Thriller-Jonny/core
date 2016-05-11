@@ -314,8 +314,8 @@ typelib_TypeClass cpp_vtable_call(
                 // is SET method
                 typelib_MethodParameter aParam;
                 aParam.pTypeRef = pAttrTypeRef;
-                aParam.bIn      = sal_True;
-                aParam.bOut     = sal_False;
+                aParam.bIn      = true;
+                aParam.bOut     = false;
 
                 eRet = cpp2uno_call( pCppI, aMemberDescr.get(),
                         nullptr, // indicates void return
@@ -364,7 +364,8 @@ typelib_TypeClass cpp_vtable_call(
                         }
                         TYPELIB_DANGER_RELEASE( pTD );
                     }
-                } // else perform queryInterface()
+                    SAL_FALLTHROUGH; // else perform queryInterface()
+                }
                 default:
                 {
                     typelib_InterfaceMethodTypeDescription *pMethodTD =
@@ -464,7 +465,6 @@ bridges::cpp_uno::shared::VtableFactory::initializeBlock(
 #endif
     return slots + slotCount;
 }
-
 
 
 unsigned char * bridges::cpp_uno::shared::VtableFactory::addLocalFunctions(

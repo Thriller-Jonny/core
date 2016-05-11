@@ -65,7 +65,7 @@ css::uno::Sequence< css::uno::Type > SAL_CALL SvxFmDrawPage::getTypes(  ) throw(
     return aTypes;
 }
 
-SdrObject *SvxFmDrawPage::_CreateSdrObject( const css::uno::Reference< css::drawing::XShape > & xDescr )
+SdrObject *SvxFmDrawPage::CreateSdrObject_( const css::uno::Reference< css::drawing::XShape > & xDescr )
     throw (css::uno::RuntimeException, std::exception)
 {
     OUString aShapeType( xDescr->getShapeType() );
@@ -75,11 +75,11 @@ SdrObject *SvxFmDrawPage::_CreateSdrObject( const css::uno::Reference< css::draw
         )
         return new FmFormObj();
     else
-        return SvxDrawPage::_CreateSdrObject( xDescr );
+        return SvxDrawPage::CreateSdrObject_( xDescr );
 
 }
 
-css::uno::Reference< css::drawing::XShape >  SvxFmDrawPage::_CreateShape( SdrObject *pObj ) const
+css::uno::Reference< css::drawing::XShape >  SvxFmDrawPage::CreateShape( SdrObject *pObj ) const
     throw (css::uno::RuntimeException, std::exception)
 {
     if( FmFormInventor == pObj->GetObjInventor() )
@@ -88,7 +88,7 @@ css::uno::Reference< css::drawing::XShape >  SvxFmDrawPage::_CreateShape( SdrObj
         return xShape;
     }
     else
-        return SvxDrawPage::_CreateShape( pObj );
+        return SvxDrawPage::CreateShape( pObj );
 }
 
 // XFormsSupplier

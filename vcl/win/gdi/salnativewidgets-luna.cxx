@@ -36,7 +36,7 @@
 #include "osl/module.h"
 
 #include <opengl/win/gdiimpl.hxx>
-#include "vcl/svapp.hxx"
+#include <vcl/svapp.hxx>
 #include <vcl/settings.hxx>
 
 #include "win/svsys.h"
@@ -206,8 +206,6 @@ void SalData::deInitNWF()
         ++iter;
     }
     aThemeMap.clear();
-    if( maDwmLib )
-        osl_unloadModule( maDwmLib );
 }
 
 static HTHEME getThemeHandle( HWND hWnd, LPCWSTR name )
@@ -216,7 +214,7 @@ static HTHEME getThemeHandle( HWND hWnd, LPCWSTR name )
     {
         // throw away invalid theme handles
         GetSalData()->deInitNWF();
-        GetSalData()->mbThemeChanged = FALSE;
+        GetSalData()->mbThemeChanged = false;
     }
 
     ThemeMap::iterator iter;
@@ -666,9 +664,6 @@ bool ImplDrawNativeControl( HDC hDC, HTHEME hTheme, RECT rc,
     }
     if( nType == CTRL_SPINBOX )
     {
-        // decrease spinbutton rects a little
-        //rc.right--;
-        //rc.bottom--;
         if( nPart == PART_ALL_BUTTONS )
         {
             if( aValue.getType() == CTRL_SPINBUTTONS )
@@ -1162,20 +1157,35 @@ bool ImplDrawNativeControl( HDC hDC, HTHEME hTheme, RECT rc,
  *  aCaption:   A caption or title string (like button text etc)
  */
 bool WinSalGraphics::drawNativeControl( ControlType nType,
-                            ControlPart nPart,
-                            const Rectangle& rControlRegion,
-                            ControlState nState,
-                            const ImplControlValue& aValue,
-                            const OUString& aCaption )
+                                        ControlPart nPart,
+                                        const Rectangle& rControlRegion,
+                                        ControlState nState,
+                                        const ImplControlValue& aValue,
+                                        const OUString& aCaption )
 {
     bool bOk = false;
     HTHEME hTheme = NULL;
 
     Rectangle buttonRect = rControlRegion;
+    Rectangle cacheRect = rControlRegion;
+    Size keySize = cacheRect.GetSize();
 
     WinOpenGLSalGraphicsImpl* pImpl = dynamic_cast<WinOpenGLSalGraphicsImpl*>(mpImpl.get());
 
-    ControlCacheKey aControlCacheKey(nType, nPart, nState, buttonRect.GetSize());
+    // tdf#95618 - A few controls render outside the region they're given.
+    if (pImpl && nType == CTRL_TAB_ITEM)
+    {
+        Rectangle rNativeBoundingRegion;
+        Rectangle rNativeContentRegion;
+        if (getNativeControlRegion(nType, nPart, rControlRegion, nState, aValue, aCaption,
+                                   rNativeBoundingRegion, rNativeContentRegion))
+        {
+            cacheRect = rNativeBoundingRegion;
+            keySize = rNativeBoundingRegion.GetSize();
+        }
+    }
+
+    ControlCacheKey aControlCacheKey(nType, nPart, nState, keySize);
     if (pImpl != NULL && pImpl->TryRenderCachedNativeControl(aControlCacheKey, buttonRect.Left(), buttonRect.Top()))
     {
         return true;
@@ -1288,18 +1298,18 @@ bool WinSalGraphics::drawNativeControl( ControlType nType,
     else
     {
         // We can do OpenGL
-        OpenGLCompatibleDC aBlackDC(*this, buttonRect.Left(), buttonRect.Top(), buttonRect.GetWidth(), buttonRect.GetHeight());
+        OpenGLCompatibleDC aBlackDC(*this, cacheRect.Left(), cacheRect.Top(), cacheRect.GetWidth()+1, cacheRect.GetHeight()+1);
         SetTextAlign(aBlackDC.getCompatibleHDC(), TA_LEFT|TA_TOP|TA_NOUPDATECP);
         aBlackDC.fill(MAKE_SALCOLOR(0, 0, 0));
 
-        OpenGLCompatibleDC aWhiteDC(*this, buttonRect.Left(), buttonRect.Top(), buttonRect.GetWidth(), buttonRect.GetHeight());
+        OpenGLCompatibleDC aWhiteDC(*this, cacheRect.Left(), cacheRect.Top(), cacheRect.GetWidth()+1, cacheRect.GetHeight()+1);
         SetTextAlign(aWhiteDC.getCompatibleHDC(), TA_LEFT|TA_TOP|TA_NOUPDATECP);
         aWhiteDC.fill(MAKE_SALCOLOR(0xff, 0xff, 0xff));
 
         if (ImplDrawNativeControl(aBlackDC.getCompatibleHDC(), hTheme, rc, nType, nPart, nState, aValue, aCaptionStr) &&
             ImplDrawNativeControl(aWhiteDC.getCompatibleHDC(), hTheme, rc, nType, nPart, nState, aValue, aCaptionStr))
         {
-            bOk = pImpl->RenderAndCacheNativeControl(aWhiteDC, aBlackDC, buttonRect.Left(), buttonRect.Top(), aControlCacheKey);
+            bOk = pImpl->RenderAndCacheNativeControl(aWhiteDC, aBlackDC, cacheRect.Left(), cacheRect.Top(), aControlCacheKey);
         }
     }
 
@@ -1329,6 +1339,9 @@ bool WinSalGraphics::getNativeControlRegion(  ControlType nType,
                                 Rectangle &rNativeContentRegion )
 {
     bool bRet = FALSE;
+
+    // FIXME: rNativeBoundingRegion has a different origin
+    //        depending on which part is used; horrors.
 
     HDC hDC = GetDC( mhWnd );
     if( nType == CTRL_TOOLBAR )
@@ -1548,7 +1561,7 @@ void WinSalGraphics::updateSettingsNative( AllSettings& rSettings )
         pSVData->maNWFData.mnMenuFormatBorderX = 2;
         pSVData->maNWFData.mnMenuFormatBorderY = 2;
         pSVData->maNWFData.maMenuBarHighlightTextColor = aMenuBarTextColor;
-        GetSalData()->mbThemeMenuSupport = TRUE;
+        GetSalData()->mbThemeMenuSupport = true;
     }
 
     rSettings.SetStyleSettings( aStyleSettings );

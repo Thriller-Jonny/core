@@ -36,14 +36,13 @@ class PersistentMap
 {
     ::osl::File m_MapFile;
     t_string2string_map m_entries;
-    bool m_bReadOnly;
     bool m_bIsOpen;
     bool m_bToBeCreated;
     bool m_bIsDirty;
 
 public:
     ~PersistentMap();
-    PersistentMap( OUString const & url, bool readOnly );
+    PersistentMap( OUString const & url );
     /** in mem db */
     PersistentMap();
 
@@ -51,11 +50,11 @@ public:
     bool get( OString * value, OString const & key ) const;
     const t_string2string_map& getEntries() const { return m_entries; }
     void put( OString const & key, OString const & value );
-    bool erase( OString const & key, bool flush_immediately = true );
+    bool erase( OString const & key );
 
 protected:
-    bool open();
-    bool readAll();
+    void open();
+    void readAll();
     void add( OString const & key, OString const & value );
     void flush();
 };

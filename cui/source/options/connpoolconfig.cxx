@@ -93,7 +93,7 @@ namespace offapp
                 ++aLoopDrivers
             )
         {
-            aSettings.push_back(DriverPooling(*aLoopDrivers, false, 120));
+            aSettings.push_back(DriverPooling(*aLoopDrivers, 120));
         }
 
         // then look for which of them settings are stored in the configuration
@@ -121,7 +121,7 @@ namespace offapp
 
             if (aLookup == aSettings.end())
             {   // do not know the driver - add it
-                aSettings.push_back(DriverPooling(sThisDriverName, false, 120));
+                aSettings.push_back(DriverPooling(sThisDriverName, 120));
 
                 // and the position of the new entry
                 aLookup = aSettings.end();
@@ -153,8 +153,8 @@ namespace offapp
         const SfxBoolItem* pEnabled = _rSourceItems.GetItem<SfxBoolItem>(SID_SB_POOLING_ENABLED);
         if (pEnabled)
         {
-            sal_Bool bEnabled = pEnabled->GetValue();
-            aConnectionPoolRoot.setNodeValue(getEnablePoolingNodeName(), Any(&bEnabled, cppu::UnoType<bool>::get()));
+            bool bEnabled = pEnabled->GetValue();
+            aConnectionPoolRoot.setNodeValue(getEnablePoolingNodeName(), Any(bEnabled));
             bNeedCommit = true;
         }
 
@@ -186,7 +186,7 @@ namespace offapp
 
                 // set the values
                 aThisDriverSettings.setNodeValue(getDriverNameNodeName(), makeAny(sThisDriverName));
-                aThisDriverSettings.setNodeValue(getEnableNodeName(), Any(&aLoop->bEnabled, cppu::UnoType<bool>::get()));
+                aThisDriverSettings.setNodeValue(getEnableNodeName(), Any(aLoop->bEnabled));
                 aThisDriverSettings.setNodeValue(getTimeoutNodeName(), makeAny(aLoop->nTimeoutSeconds));
             }
             bNeedCommit = true;
@@ -197,7 +197,6 @@ namespace offapp
 
 
 }   // namespace offapp
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

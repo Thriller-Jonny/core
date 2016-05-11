@@ -26,13 +26,8 @@
 
 #include <com/sun/star/sdb/application/XDatabaseDocumentUI.hpp>
 #include <com/sun/star/embed/ElementModes.hpp>
-#include <com/sun/star/document/XStorageBasedDocument.hpp>
-#include <com/sun/star/io/XTextOutputStream.hpp>
 #include <com/sun/star/io/TextInputStream.hpp>
-#include <com/sun/star/io/XActiveDataSource.hpp>
-#include <com/sun/star/io/XActiveDataSink.hpp>
 #include <com/sun/star/util/XModifiable.hpp>
-#include <com/sun/star/beans/XPropertySet.hpp>
 
 #include <comphelper/namedvaluecollection.hxx>
 #include <rtl/ustrbuf.hxx>
@@ -44,39 +39,27 @@ namespace dbaccess
 {
 
     using css::uno::Reference;
-    using css::uno::XInterface;
     using css::uno::UNO_QUERY;
     using css::uno::UNO_QUERY_THROW;
     using css::uno::UNO_SET_THROW;
     using css::uno::Exception;
-    using css::uno::RuntimeException;
-    using css::uno::Any;
-    using css::uno::makeAny;
     using css::uno::Sequence;
-    using css::uno::Type;
     using css::uno::XComponentContext;
     using css::embed::XStorage;
     using css::frame::XController;
     using css::sdb::application::XDatabaseDocumentUI;
     using css::lang::XComponent;
-    using css::document::XStorageBasedDocument;
-    using css::beans::PropertyValue;
     using css::io::XStream;
-    using css::io::XTextOutputStream;
-    using css::io::XActiveDataSource;
     using css::io::TextInputStream;
     using css::io::XTextInputStream2;
-    using css::io::XActiveDataSink;
-    using css::frame::XModel;
     using css::util::XModifiable;
-    using css::beans::XPropertySet;
 
     namespace ElementModes = css::embed::ElementModes;
 
     // helpers
     namespace
     {
-        static void lcl_getPersistentRepresentation( const MapStringToCompDesc::value_type& i_rComponentDesc, OUStringBuffer& o_rBuffer )
+        void lcl_getPersistentRepresentation( const MapStringToCompDesc::value_type& i_rComponentDesc, OUStringBuffer& o_rBuffer )
         {
             o_rBuffer.append( i_rComponentDesc.first );
             o_rBuffer.append( '=' );
@@ -85,7 +68,7 @@ namespace dbaccess
             o_rBuffer.append( sal_Unicode( i_rComponentDesc.second.bForEditing ? '1' : '0' ) );
         }
 
-        static bool lcl_extractCompDesc( const OUString& i_rIniLine, OUString& o_rStorName, SubComponentDescriptor& o_rCompDesc )
+        bool lcl_extractCompDesc( const OUString& i_rIniLine, OUString& o_rStorName, SubComponentDescriptor& o_rCompDesc )
         {
             const sal_Int32 nEqualSignPos = i_rIniLine.indexOf( '=' );
             if ( nEqualSignPos < 1 )
@@ -110,7 +93,7 @@ namespace dbaccess
 
         static const char sObjectMapStreamName[] = "storage-component-map.ini";
 
-        static void lcl_writeObjectMap_throw( const Reference<XComponentContext> & i_rContext, const Reference< XStorage >& i_rStorage,
+        void lcl_writeObjectMap_throw( const Reference<XComponentContext> & i_rContext, const Reference< XStorage >& i_rStorage,
             const MapStringToCompDesc& i_mapStorageToCompDesc )
         {
             if ( i_mapStorageToCompDesc.empty() )
@@ -135,7 +118,7 @@ namespace dbaccess
             aTextOutput.writeLine();
         }
 
-        static bool lcl_isSectionStart( const OUString& i_rIniLine, OUString& o_rSectionName )
+        bool lcl_isSectionStart( const OUString& i_rIniLine, OUString& o_rSectionName )
         {
             const sal_Int32 nLen = i_rIniLine.getLength();
             if ( i_rIniLine.startsWith("[") && i_rIniLine.endsWith("]") )
@@ -146,14 +129,14 @@ namespace dbaccess
             return false;
         }
 
-        static void lcl_stripTrailingLineFeed( OUString& io_rLine )
+        void lcl_stripTrailingLineFeed( OUString& io_rLine )
         {
             const sal_Int32 nLen = io_rLine.getLength();
             if ( io_rLine.endsWith("\n") )
                 io_rLine = io_rLine.copy( 0, nLen - 1 );
         }
 
-        static void lcl_readObjectMap_throw( const Reference<XComponentContext> & i_rxContext, const Reference< XStorage >& i_rStorage,
+        void lcl_readObjectMap_throw( const Reference<XComponentContext> & i_rxContext, const Reference< XStorage >& i_rStorage,
             MapStringToCompDesc& o_mapStorageToObjectName )
         {
             ENSURE_OR_THROW( i_rStorage.is(), "invalid storage" );
@@ -204,7 +187,7 @@ namespace dbaccess
             }
         }
 
-        static void lcl_markModified( const Reference< XComponent >& i_rSubComponent )
+        void lcl_markModified( const Reference< XComponent >& i_rSubComponent )
         {
             const Reference< XModifiable > xModify( i_rSubComponent, UNO_QUERY );
             if ( !xModify.is() )
@@ -213,7 +196,7 @@ namespace dbaccess
                 return;
             }
 
-            xModify->setModified( sal_True );
+            xModify->setModified( true );
         }
     }
 
@@ -307,15 +290,15 @@ namespace dbaccess
 
         // read the map from sub storages to object names
         MapCompTypeToCompDescs aMapCompDescs;
-        SubComponentType aKnownTypes[] = { TABLE, QUERY, FORM, REPORT, RELATION_DESIGN };
-        for ( size_t i = 0; i < sizeof( aKnownTypes ) / sizeof( aKnownTypes[0] ); ++i )
+        const SubComponentType aKnownTypes[] = { TABLE, QUERY, FORM, REPORT, RELATION_DESIGN };
+        for (SubComponentType aKnownType : aKnownTypes)
         {
-            if ( !xRecoveryStorage->hasByName( SubComponentRecovery::getComponentsStorageName( aKnownTypes[i] ) ) )
+            if ( !xRecoveryStorage->hasByName( SubComponentRecovery::getComponentsStorageName( aKnownType ) ) )
                 continue;
 
             Reference< XStorage > xComponentsStor( xRecoveryStorage->openStorageElement(
-                SubComponentRecovery::getComponentsStorageName( aKnownTypes[i] ), ElementModes::READ ) );
-            lcl_readObjectMap_throw( m_pData->aContext, xComponentsStor, aMapCompDescs[ aKnownTypes[i] ] );
+                SubComponentRecovery::getComponentsStorageName( aKnownType ), ElementModes::READ ) );
+            lcl_readObjectMap_throw( m_pData->aContext, xComponentsStor, aMapCompDescs[ aKnownType ] );
             xComponentsStor->dispose();
         }
 

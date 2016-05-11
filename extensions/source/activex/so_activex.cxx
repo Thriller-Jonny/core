@@ -27,7 +27,15 @@
 #include "stdafx2.h"
 #include "resource.h"
 #include <initguid.h>
+
+#if defined __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnon-virtual-dtor"
+#endif
 #include "so_activex.h"
+#if defined __clang__
+#pragma clang diagnostic pop
+#endif
 
 #if defined __clang__
 #pragma clang diagnostic push
@@ -47,8 +55,14 @@ CComModule _Module;
 
 BEGIN_OBJECT_MAP(ObjectMap)
 OBJECT_ENTRY(CLSID_SOActiveX, CSOActiveX)
+#if defined __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wmissing-field-initializers"
+#endif
 END_OBJECT_MAP()
-
+#if defined __clang__
+#pragma clang diagnostic pop
+#endif
 
 #define X64_LIB_NAME "so_activex_x64.dll"
 #define X32_LIB_NAME "so_activex.dll"
@@ -359,7 +373,6 @@ STDAPI DllRegisterServerNative( int nMode, BOOL bForAllUsers, BOOL bFor64Bit, co
 }
 
 
-
 // DllUnregisterServer - Removes entries from the system registry
 HRESULT DeleteKeyTree( HKEY hkey, const char* pPath, REGSAM nKeyAccess )
 {
@@ -479,7 +492,6 @@ STDAPI DllUnregisterServerNative( int nMode, BOOL bForAllUsers, BOOL bFor64Bit )
 }
 
 
-
 // DllRegisterServerDoc - Adds entries to the system registry
 
 #define SUPPORTED_MSEXT_NUM 7
@@ -580,7 +592,6 @@ STDAPI DllRegisterServerDoc( int nMode, BOOL bForAllUsers, BOOL bFor64Bit )
 
     return hr;
 }
-
 
 
 // DllUnregisterServerDoc - Removes entries from the system registry

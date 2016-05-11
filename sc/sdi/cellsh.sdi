@@ -18,13 +18,7 @@
 
 
 interface CellSelection
-[
-    uuid ( "D7680520-137B-11D3-B25B-006097DA68F3" )
-]
 {
-    SbxObject Movement
-    [
-    ]
     // Slot's die in der DrawShell disabled werden. {
     FID_DEFINE_NAME             [ ExecMethod = ExecuteEdit; StateMethod = GetState; ]
     FID_ADD_NAME                [ ExecMethod = ExecuteEdit; StateMethod = GetState; ]
@@ -139,7 +133,6 @@ interface CellSelection
         ExecMethod = ExecuteEdit ;
         StateMethod = GetBlockState ;
         GroupId = GID_EDIT ;  //FS
-        Cachable , HasDialog ;
         MenuConfig , AccelConfig ;
     ]
     SID_DELETE_CONTENTS [ ExecMethod = ExecuteEdit; StateMethod = GetBlockState; ]
@@ -206,6 +199,7 @@ interface CellSelection
     FID_USE_NAME    [ ExecMethod = ExecuteEdit; StateMethod = GetState; ]
     SID_CANCEL      [ ExecMethod = Execute; ]
     SID_TOGGLE_REL  [ ExecMethod = ExecuteEdit; StateMethod = GetState; ]
+    SID_POPUP_CONDFRMT []
     SID_OPENDLG_CONDFRMT    [ ExecMethod = ExecuteEdit; StateMethod = GetState; ]
     SID_OPENDLG_COLORSCALE  [ ExecMethod = ExecuteEdit; ]
     SID_OPENDLG_DATABAR     [ ExecMethod = ExecuteEdit; ]
@@ -242,36 +236,29 @@ interface CellSelection
 
 
 interface CellMovement
-[
-    uuid ( "FF2E35C0-137B-11D3-B25B-006097DA68F3" )
-]
 {
     SID_NEXT_TABLE
     [
         ExecMethod = ExecuteMove ;
         StateMethod = GetStateCursor ;
-        Cachable ;
     ]
 
     SID_PREV_TABLE
     [
         ExecMethod = ExecuteMove ;
         StateMethod = GetStateCursor ;
-        Cachable ;
     ]
 
     SID_NEXT_TABLE_SEL
     [
         ExecMethod = ExecuteMove ;
         StateMethod = GetStateCursor ;
-        Cachable ;
     ]
 
     SID_PREV_TABLE_SEL
     [
         ExecMethod = ExecuteMove ;
         StateMethod = GetStateCursor ;
-        Cachable ;
     ]
 
     SfxVoidItem GoDown SID_CURSORDOWN
@@ -282,7 +269,6 @@ interface CellMovement
     [
         ExecMethod = ExecuteCursor ;
         StateMethod = GetStateCursor ;
-        Cachable ;
     ]
 
     SfxVoidItem GoDownSel SID_CURSORDOWN_SEL
@@ -293,7 +279,6 @@ interface CellMovement
         Export = FALSE ;
         ExecMethod = ExecuteCursorSel ;
         StateMethod = GetStateCursor ;
-        Cachable ;
     ]
     SID_CURSORBLKDOWN       [ ExecMethod = ExecuteCursor;    StateMethod = GetStateCursor; ]
     SID_CURSORBLKDOWN_SEL   [ ExecMethod = ExecuteCursorSel; StateMethod = GetStateCursor; ]
@@ -306,7 +291,6 @@ interface CellMovement
     [
         ExecMethod = ExecuteCursor ;
         StateMethod = GetStateCursor ;
-        Cachable ;
     ]
     SID_CURSORUP_SEL    [ ExecMethod = ExecuteCursorSel; StateMethod = GetStateCursor; ]
     SID_CURSORBLKUP     [ ExecMethod = ExecuteCursor;    StateMethod = GetStateCursor; ]
@@ -320,7 +304,6 @@ interface CellMovement
     [
         ExecMethod = ExecuteCursor ;
         StateMethod = GetStateCursor ;
-        Cachable ;
     ]
     SID_CURSORLEFT_SEL      [ ExecMethod = ExecuteCursorSel; StateMethod = GetStateCursor; ]
     SID_CURSORBLKLEFT       [ ExecMethod = ExecuteCursor;    StateMethod = GetStateCursor; ]
@@ -334,7 +317,6 @@ interface CellMovement
     [
         ExecMethod = ExecuteCursor ;
         StateMethod = GetStateCursor ;
-        Cachable ;
     ]
 
     SID_CURSORRIGHT_SEL     [ ExecMethod = ExecuteCursorSel; StateMethod = GetStateCursor; ]
@@ -353,7 +335,6 @@ interface CellMovement
     [
         ExecMethod = ExecuteCursor ;
         StateMethod = GetStateCursor ;
-        Cachable ;
     ]
     SID_CURSORPAGEDOWN_SEL  [ ExecMethod = ExecuteCursorSel; StateMethod = GetStateCursor; ]
 
@@ -365,7 +346,6 @@ interface CellMovement
     [
         ExecMethod = ExecuteCursor ;
         StateMethod = GetStateCursor ;
-        Cachable ;
     ]
     SID_CURSORPAGEUP_SEL    [ ExecMethod = ExecuteCursorSel; StateMethod = GetStateCursor; ]
     SID_CURSORPAGELEFT_     [ ExecMethod = ExecuteCursor;    StateMethod = GetStateCursor; ]
@@ -381,7 +361,6 @@ interface CellMovement
     [
         ExecMethod = ExecutePage ;
         StateMethod = GetStateCursor ;
-        Cachable ;
     ]
     SID_CURSORENDOFFILE_SEL [ ExecMethod = ExecutePageSel; StateMethod = GetStateCursor; ]
 
@@ -392,7 +371,6 @@ interface CellMovement
     [
         ExecMethod = ExecutePage ;
         StateMethod = GetStateCursor ;
-        Cachable ;
     ]
     SID_CURSORTOPOFSCREEN   [ ExecMethod = ExecuteMove; StateMethod = GetStateCursor; ]
     SID_CURSORENDOFSCREEN   [ ExecMethod = ExecuteMove; StateMethod = GetStateCursor; ]
@@ -404,7 +382,6 @@ interface CellMovement
     [
         ExecMethod = ExecutePage ;
         StateMethod = GetStateCursor ;
-        Cachable ;
     ]
 
     SID_CURSOREND   [ ExecMethod = ExecutePage; StateMethod = GetStateCursor; ]
@@ -427,7 +404,6 @@ interface CellMovement
     SID_TABLE_CELL
     [
          // "Tabellenzelle" soll nicht im Anpassen-Dialog auftauchen:
-        StatusBarConfig = FALSE ;
         StateMethod = GetState ;
     ]
     SID_DATA_SELECT         [ ExecMethod = Execute; StateMethod = GetState; ]
@@ -436,9 +412,6 @@ interface CellMovement
 
 
 interface RangeSelection
-[
-    uuid ( "0CAB4620-137C-11D3-B25B-006097DA68F3" )
-]
 {
     import CellSelection;
     import FormatForSelection;
@@ -447,9 +420,6 @@ interface RangeSelection
 }
 
 interface Cell
-[
-    uuid ( "F0645A00-1921-11D3-B25B-006097DA68F3" )
-]
 {
     import CellSelection;
     import CellMovement;
@@ -458,5 +428,5 @@ interface Cell
 
 shell ScCellShell : ScFormatShell
 {
-    import Cell[Automation];
+    import Cell;
 }

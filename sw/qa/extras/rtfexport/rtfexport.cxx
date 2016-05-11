@@ -59,7 +59,7 @@ public:
 
     bool CjkNumberedListTestHelper(sal_Int16& rValue)
     {
-        sal_Bool isNumber = false;
+        bool isNumber = false;
         uno::Reference<text::XTextRange> xPara(getParagraph(1));
         uno::Reference<beans::XPropertySet> properties(xPara, uno::UNO_QUERY);
         properties->getPropertyValue("NumberingIsNumber") >>= isNumber;
@@ -664,7 +664,7 @@ DECLARE_RTFEXPORT_TEST(testFdo66743, "fdo66743.rtf")
 
 DECLARE_RTFEXPORT_TEST(testFdo68787, "fdo68787.rtf")
 {
-    uno::Reference<beans::XPropertySet> xPageStyle(getStyles("PageStyles")->getByName(DEFAULT_STYLE), uno::UNO_QUERY);
+    uno::Reference<beans::XPropertySet> xPageStyle(getStyles("PageStyles")->getByName("Standard"), uno::UNO_QUERY);
     // This was 0, the 'lack of \chftnsep' <-> '0 line width' mapping was missing in the RTF tokenizer / exporter.
     CPPUNIT_ASSERT_EQUAL(sal_Int32(25), getProperty<sal_Int32>(xPageStyle, "FootnoteLineRelativeWidth"));
 }
@@ -696,7 +696,7 @@ DECLARE_RTFEXPORT_TEST(testLineNumbering, "linenumbering.rtf")
 {
     uno::Reference<text::XLineNumberingProperties> xLineNumberingProperties(mxComponent, uno::UNO_QUERY_THROW);
     uno::Reference<beans::XPropertySet> xPropertySet = xLineNumberingProperties->getLineNumberingProperties();
-    CPPUNIT_ASSERT_EQUAL(true, bool(getProperty<sal_Bool>(xPropertySet, "IsOn")));
+    CPPUNIT_ASSERT_EQUAL(true, bool(getProperty<bool>(xPropertySet, "IsOn")));
     CPPUNIT_ASSERT_EQUAL(sal_Int32(5), getProperty<sal_Int32>(xPropertySet, "Interval"));
 }
 
@@ -876,8 +876,8 @@ DECLARE_RTFEXPORT_TEST(testNumOverrideStart, "num-override-start.rtf")
 DECLARE_RTFEXPORT_TEST(testFdo82006, "fdo82006.rtf")
 {
     // These were 176 (100 twips), as \sbauto and \sbbefore were ignored.
-    CPPUNIT_ASSERT_EQUAL(sal_Int32(convertTwipToMm100(280)), getProperty<sal_Int32>(getParagraph(0), "ParaTopMargin"));
-    CPPUNIT_ASSERT_EQUAL(sal_Int32(convertTwipToMm100(280)), getProperty<sal_Int32>(getParagraph(0), "ParaBottomMargin"));
+    CPPUNIT_ASSERT_EQUAL(sal_Int32(convertTwipToMm100(280)), getProperty<sal_Int32>(getParagraph(1), "ParaTopMargin"));
+    CPPUNIT_ASSERT_EQUAL(sal_Int32(convertTwipToMm100(280)), getProperty<sal_Int32>(getParagraph(1), "ParaBottomMargin"));
 }
 
 DECLARE_RTFEXPORT_TEST(testTdf88583, "tdf88583.odt")
@@ -964,6 +964,79 @@ DECLARE_RTFEXPORT_TEST(testTdf94377, "tdf94377.rtf")
     // 2) direct formatting of runs were not exported, so this was 12 (the document default).
     CPPUNIT_ASSERT_EQUAL(10.f, getProperty<float>(getRun(getParagraphOfText(1, xText, "Asdf10"), 1), "CharHeight"));
     CPPUNIT_ASSERT_EQUAL(12.f, getProperty<float>(getRun(getParagraphOfText(2, xText, "asdf12"), 1), "CharHeight"));
+}
+
+DECLARE_RTFEXPORT_TEST(testPageBackground, "page-background.rtf")
+{
+    // The problem was that \background was ignored.
+    uno::Reference<beans::XPropertySet> xPageStyle(getStyles("PageStyles")->getByName("Standard"), uno::UNO_QUERY);
+    CPPUNIT_ASSERT_EQUAL(sal_Int32(0x92D050), getProperty<sal_Int32>(xPageStyle, "BackColor"));
+}
+
+DECLARE_RTFEXPORT_TEST(testTdf96175, "tdf96175.rtf")
+{
+    // The problem that a user defined property named "Company" was lost on export.
+    uno::Reference<document::XDocumentPropertiesSupplier> xDocumentPropertiesSupplier(mxComponent, uno::UNO_QUERY);
+    uno::Reference<document::XDocumentProperties> xDocumentProperties(xDocumentPropertiesSupplier->getDocumentProperties(), uno::UNO_QUERY);
+    uno::Reference<beans::XPropertyContainer> xUserDefinedProperties = xDocumentProperties->getUserDefinedProperties();
+    // This resulted in a beans::UnknownPropertyException.
+    CPPUNIT_ASSERT_EQUAL(OUString("foobar"), getProperty<OUString>(xUserDefinedProperties, "Company"));
+}
+
+DECLARE_RTFEXPORT_TEST(testRedline, "redline.rtf")
+{
+    CPPUNIT_ASSERT_EQUAL(OUString("Rebecca Lopez"), getProperty<OUString>(getRun(getParagraph(1), 2), "RedlineAuthor"));
+    CPPUNIT_ASSERT_EQUAL(OUString("Dorothy Jones"), getProperty<OUString>(getRun(getParagraph(2), 2), "RedlineAuthor"));
+}
+
+DECLARE_RTFEXPORT_TEST(testCustomDocProps, "custom-doc-props.rtf")
+{
+    // Custom document properties were not improved, this resulted in a beans::UnknownPropertyException.
+    uno::Reference<document::XDocumentPropertiesSupplier> xDocumentPropertiesSupplier(mxComponent, uno::UNO_QUERY);
+    uno::Reference<document::XDocumentProperties> xDocumentProperties = xDocumentPropertiesSupplier->getDocumentProperties();
+    uno::Reference<beans::XPropertyContainer> xUserDefinedProperties = xDocumentProperties->getUserDefinedProperties();
+    CPPUNIT_ASSERT_EQUAL(OUString("2016-03-08T10:55:18,531376147"), getProperty<OUString>(xUserDefinedProperties, "urn:bails:IntellectualProperty:Authorization:StartValidity"));
+    CPPUNIT_ASSERT_EQUAL(OUString("None"), getProperty<OUString>(xUserDefinedProperties, "urn:bails:IntellectualProperty:Authorization:StopValidity"));
+}
+
+DECLARE_RTFEXPORT_TEST(testTdf65642, "tdf65642.rtf")
+{
+    // The second page's numbering type: this was style::NumberingType::ARABIC.
+    CPPUNIT_ASSERT_EQUAL(style::NumberingType::CHARS_UPPER_LETTER_N, getProperty<sal_Int16>(getStyles("PageStyles")->getByName("Converted1"), "NumberingType"));
+    // The second page's restart value: this was 0.
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(1), getProperty<sal_Int32>(getParagraph(2), "PageNumberOffset"));
+}
+
+DECLARE_RTFEXPORT_TEST(testPgnlcltr, "pgnlcltr.rtf")
+{
+    // The second page's numbering type: this was style::NumberingType::ARABIC.
+    CPPUNIT_ASSERT_EQUAL(style::NumberingType::CHARS_LOWER_LETTER_N, getProperty<sal_Int16>(getStyles("PageStyles")->getByName("Converted1"), "NumberingType"));
+}
+
+DECLARE_RTFEXPORT_TEST(testPgnucrm, "pgnucrm.rtf")
+{
+    // The second page's numbering type: this was style::NumberingType::ARABIC.
+    CPPUNIT_ASSERT_EQUAL(style::NumberingType::ROMAN_UPPER, getProperty<sal_Int16>(getStyles("PageStyles")->getByName("Converted1"), "NumberingType"));
+}
+
+DECLARE_RTFEXPORT_TEST(testPgnlcrm, "pgnlcrm.rtf")
+{
+    // The second page's numbering type: this was style::NumberingType::ARABIC.
+    CPPUNIT_ASSERT_EQUAL(style::NumberingType::ROMAN_LOWER, getProperty<sal_Int16>(getStyles("PageStyles")->getByName("Converted1"), "NumberingType"));
+}
+
+DECLARE_RTFEXPORT_TEST(testPgndec, "pgndec.rtf")
+{
+    // The second page's numbering type: this was style::NumberingType::ROMAN_LOWER.
+    CPPUNIT_ASSERT_EQUAL(style::NumberingType::ARABIC, getProperty<sal_Int16>(getStyles("PageStyles")->getByName("Converted1"), "NumberingType"));
+}
+
+DECLARE_RTFEXPORT_TEST(testTdf98806, "tdf98806.rtf")
+{
+    uno::Reference<text::XBookmarksSupplier> xBookmarksSupplier(mxComponent, uno::UNO_QUERY);
+    uno::Reference<text::XTextContent> xBookmark(xBookmarksSupplier->getBookmarks()->getByName("bookmark"), uno::UNO_QUERY);
+    // This was empty, bookmark in table wasn't imported correctly.
+    CPPUNIT_ASSERT_EQUAL(OUString("BBB"), xBookmark->getAnchor()->getString());
 }
 
 CPPUNIT_PLUGIN_IMPLEMENT();

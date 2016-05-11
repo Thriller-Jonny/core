@@ -578,7 +578,7 @@ CSS1Token CSS1Parser::GetNextToken()
                 bNextCh = false;
                 break;
             }
-            // no break
+            SAL_FALLTHROUGH;
 
         default: // IDENT | syntax error
             if (rtl::isAsciiAlpha(cNextCh))
@@ -1043,7 +1043,7 @@ CSS1Expression *CSS1Parser::ParseDeclaration( OUString& rProperty )
         case CSS1_EMX:
             if( '-'==cSign )
                 nValue = -nValue;
-            //fall-through
+            SAL_FALLTHROUGH;
         case CSS1_STRING:
         case CSS1_PERCENTAGE:
         case CSS1_IDENT:
@@ -1224,7 +1224,7 @@ CSS1Expression::~CSS1Expression()
     delete pNext;
 }
 
-bool CSS1Expression::GetURL( OUString& rURL  ) const
+void CSS1Expression::GetURL( OUString& rURL  ) const
 {
     OSL_ENSURE( CSS1_URL==eType, "CSS1-Ausruck ist keine Farbe URL" );
 
@@ -1233,8 +1233,6 @@ bool CSS1Expression::GetURL( OUString& rURL  ) const
                 '(' == aValue[3] &&
                 ')' == aValue[aValue.getLength()-1],
                 "keine gueltiges URL(...)" );
-
-    bool bRet = false;
 
     if( aValue.getLength() > 5 )
     {
@@ -1249,11 +1247,7 @@ bool CSS1Expression::GetURL( OUString& rURL  ) const
         rURL = comphelper::string::strip(rURL, aSpace);
         rURL = comphelper::string::strip(rURL, aSingleQuote);
         rURL = comphelper::string::strip(rURL, aSpace);
-
-        bRet = true;
     }
-
-    return bRet;
 }
 
 bool CSS1Expression::GetColor( Color &rColor ) const
@@ -1318,7 +1312,7 @@ bool CSS1Expression::GetColor( Color &rColor ) const
         if( bRet || CSS1_STRING != eType || aValue.isEmpty() ||
             aValue[0] != '#' )
             break;
-
+        SAL_FALLTHROUGH;
     case CSS1_HEXCOLOR:
         {
             // HACK fuer MS-IE: DIe Farbe kann auch in einem String stehen

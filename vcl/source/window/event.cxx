@@ -26,10 +26,11 @@
 #include <window.h>
 #include <svdata.hxx>
 #include <salframe.hxx>
-
+#include <config_features.h>
 #include <com/sun/star/awt/MouseEvent.hpp>
 #include <com/sun/star/awt/KeyModifier.hpp>
 #include <com/sun/star/awt/MouseButton.hpp>
+#include <comphelper/scopeguard.hxx>
 
 namespace vcl {
 
@@ -204,61 +205,72 @@ void Window::CallEventListeners( sal_uLong nEvent, void* pData )
 {
     VclWindowEvent aEvent( this, nEvent, pData );
 
-    ImplDelData aDelData;
-    ImplAddDel( &aDelData );
+    VclPtr<vcl::Window> xWindow = this;
 
     Application::ImplCallEventListeners( aEvent );
 
-    if ( aDelData.IsDead() )
+    if ( xWindow->IsDisposed() )
         return;
 
     if (!mpWindowImpl->maEventListeners.empty())
     {
         // Copy the list, because this can be destroyed when calling a Link...
         std::vector<Link<VclWindowEvent&,void>> aCopy( mpWindowImpl->maEventListeners );
+        // we use an iterating counter/flag and a set of deleted Link's to avoid O(n^2) behaviour
+        mpWindowImpl->mnEventListenersIteratingCount++;
+        auto& rWindowImpl = *mpWindowImpl;
+        comphelper::ScopeGuard aGuard(
+            [&rWindowImpl]()
+            {
+                rWindowImpl.mnEventListenersIteratingCount--;
+                if (rWindowImpl.mnEventListenersIteratingCount == 0)
+                    rWindowImpl.maEventListenersDeleted.clear();
+            }
+        );
         for ( Link<VclWindowEvent&,void>& rLink : aCopy )
         {
-            if (aDelData.IsDead()) break;
+            if (xWindow->IsDisposed()) break;
             // check this hasn't been removed in some re-enterancy scenario fdo#47368
-            if( std::find(mpWindowImpl->maEventListeners.begin(), mpWindowImpl->maEventListeners.end(), rLink) != mpWindowImpl->maEventListeners.end() )
+            if( rWindowImpl.maEventListenersDeleted.find(rLink) == rWindowImpl.maEventListenersDeleted.end() )
                 rLink.Call( aEvent );
         }
     }
 
-    if ( aDelData.IsDead() )
-        return;
-
-    ImplRemoveDel( &aDelData );
-
-    vcl::Window* pWindow = this;
-    while ( pWindow )
+    while ( xWindow )
     {
-        pWindow->ImplAddDel( &aDelData );
 
-        if ( aDelData.IsDead() )
+        if ( xWindow->IsDisposed() )
             return;
 
-        auto& rChildListeners = pWindow->mpWindowImpl->maChildEventListeners;
-        if (!rChildListeners.empty())
+        auto& rWindowImpl = *xWindow->mpWindowImpl;
+        if (!rWindowImpl.maChildEventListeners.empty())
         {
             // Copy the list, because this can be destroyed when calling a Link...
-            std::vector<Link<VclWindowEvent&,void>> aCopy( rChildListeners );
+            std::vector<Link<VclWindowEvent&,void>> aCopy( rWindowImpl.maChildEventListeners );
+            // we use an iterating counter/flag and a set of deleted Link's to avoid O(n^2) behaviour
+            rWindowImpl.mnChildEventListenersIteratingCount++;
+            comphelper::ScopeGuard aGuard(
+                [&rWindowImpl]()
+                {
+                    rWindowImpl.mnChildEventListenersIteratingCount--;
+                    if (rWindowImpl.mnChildEventListenersIteratingCount == 0)
+                        rWindowImpl.maChildEventListenersDeleted.clear();
+                }
+            );
             for ( Link<VclWindowEvent&,void>& rLink : aCopy )
             {
-                if (aDelData.IsDead())
+                if (xWindow->IsDisposed())
                     return;
-                // check this hasn't been removed in some re-enterancy scenario fdo#47368
-                if( std::find(rChildListeners.begin(), rChildListeners.end(), rLink) != rChildListeners.end() )
+                // Check this hasn't been removed in some re-enterancy scenario fdo#47368.
+                if( rWindowImpl.maChildEventListenersDeleted.find(rLink) == rWindowImpl.maChildEventListenersDeleted.end() )
                     rLink.Call( aEvent );
             }
         }
 
-        if ( aDelData.IsDead() )
+        if ( xWindow->IsDisposed() )
             return;
 
-        pWindow->ImplRemoveDel( &aDelData );
-
-        pWindow = pWindow->GetParent();
+        xWindow = xWindow->GetParent();
     }
 }
 
@@ -278,6 +290,8 @@ void Window::RemoveEventListener( const Link<VclWindowEvent&,void>& rEventListen
     {
         auto& rListeners = mpWindowImpl->maEventListeners;
         rListeners.erase( std::remove(rListeners.begin(), rListeners.end(), rEventListener ), rListeners.end() );
+        if (mpWindowImpl->mnEventListenersIteratingCount)
+            mpWindowImpl->maEventListenersDeleted.insert(rEventListener);
     }
 }
 
@@ -292,6 +306,8 @@ void Window::RemoveChildEventListener( const Link<VclWindowEvent&,void>& rEventL
     {
         auto& rListeners = mpWindowImpl->maChildEventListeners;
         rListeners.erase( std::remove(rListeners.begin(), rListeners.end(), rEventListener ), rListeners.end() );
+        if (mpWindowImpl->mnChildEventListenersIteratingCount)
+            mpWindowImpl->maChildEventListenersDeleted.insert(rEventListener);
     }
 }
 
@@ -311,10 +327,8 @@ ImplSVEvent * Window::PostUserEvent( const Link<void*,void>& rLink, void* pCalle
         pSVEvent->mpInstanceRef = static_cast<vcl::Window *>(rLink.GetInstance());
     }
 
-    ImplAddDel( &(pSVEvent->maDelData) );
     if ( !mpWindowImpl->mpFrame->PostEvent( pSVEvent ) )
     {
-        ImplRemoveDel( &(pSVEvent->maDelData) );
         delete pSVEvent;
         pSVEvent = nullptr;
     }
@@ -330,7 +344,6 @@ void Window::RemoveUserEvent( ImplSVEvent * nUserEvent )
 
     if ( nUserEvent->mpWindow )
     {
-        nUserEvent->mpWindow->ImplRemoveDel( &(nUserEvent->maDelData) );
         nUserEvent->mpWindow = nullptr;
     }
 
@@ -338,21 +351,13 @@ void Window::RemoveUserEvent( ImplSVEvent * nUserEvent )
 }
 
 
-MouseEvent ImplTranslateMouseEvent( const MouseEvent& rE, vcl::Window* pSource, vcl::Window* pDest )
+static MouseEvent ImplTranslateMouseEvent( const MouseEvent& rE, vcl::Window* pSource, vcl::Window* pDest )
 {
+    // the mouse event occured in a different window, we need to translate the coordinates of
+    // the mouse cursor within that (source) window to the coordinates the mouse cursor would
+    // be in the destination window
     Point aPos = pSource->OutputToScreenPixel( rE.GetPosPixel() );
-    aPos = pDest->ScreenToOutputPixel( aPos );
-    return MouseEvent( aPos, rE.GetClicks(), rE.GetMode(), rE.GetButtons(), rE.GetModifier() );
-}
-
-CommandEvent ImplTranslateCommandEvent( const CommandEvent& rCEvt, vcl::Window* pSource, vcl::Window* pDest )
-{
-    if ( !rCEvt.IsMouseEvent() )
-        return rCEvt;
-
-    Point aPos = pSource->OutputToScreenPixel( rCEvt.GetMousePosPixel() );
-    aPos = pDest->ScreenToOutputPixel( aPos );
-    return CommandEvent( aPos, rCEvt.GetCommand(), rCEvt.IsMouseEvent(), rCEvt.GetEventData() );
+    return MouseEvent( pDest->ScreenToOutputPixel( aPos ), rE.GetClicks(), rE.GetMode(), rE.GetButtons(), rE.GetModifier() );
 }
 
 void Window::ImplNotifyKeyMouseCommandEventListeners( NotifyEvent& rNEvt )
@@ -367,13 +372,26 @@ void Window::ImplNotifyKeyMouseCommandEventListeners( NotifyEvent& rNEvt )
 
         if ( mpWindowImpl->mbCompoundControl || ( rNEvt.GetWindow() == this ) )
         {
-            if ( rNEvt.GetWindow() == this )
-                // not interested in: The event listeners are already called in ::Command,
-                // and calling them here a second time doesn't make sense
-                ;
-            else
+            // not interested: The event listeners are already called in ::Command,
+            // and calling them here a second time doesn't make sense
+            if ( rNEvt.GetWindow() != this )
             {
-                CommandEvent aCommandEvent = ImplTranslateCommandEvent( *pCEvt, rNEvt.GetWindow(), this );
+                CommandEvent aCommandEvent;
+
+                if ( !pCEvt->IsMouseEvent() )
+                {
+                    aCommandEvent = *pCEvt;
+                }
+                else
+                {
+                    // the mouse event occured in a different window, we need to translate the coordinates of
+                    // the mouse cursor within that window to the coordinates the mouse cursor would be in the
+                    // current window
+                    vcl::Window* pSource = rNEvt.GetWindow();
+                    Point aPos = pSource->OutputToScreenPixel( pCEvt->GetMousePosPixel() );
+                    aCommandEvent = CommandEvent( ScreenToOutputPixel( aPos ), pCEvt->GetCommand(), pCEvt->IsMouseEvent(), pCEvt->GetEventData() );
+                }
+
                 CallEventListeners( VCLEVENT_WINDOW_COMMAND, &aCommandEvent );
             }
         }
@@ -384,8 +402,7 @@ void Window::ImplNotifyKeyMouseCommandEventListeners( NotifyEvent& rNEvt )
     // this allows for processing those events internally first and pass it to
     // the toolkit later
 
-    ImplDelData aDelData;
-    ImplAddDel( &aDelData );
+    VclPtr<vcl::Window> xWindow = this;
 
     if( rNEvt.GetType() == MouseNotifyEvent::MOUSEMOVE )
     {
@@ -437,9 +454,8 @@ void Window::ImplNotifyKeyMouseCommandEventListeners( NotifyEvent& rNEvt )
             CallEventListeners( VCLEVENT_WINDOW_KEYUP, const_cast<KeyEvent *>(rNEvt.GetKeyEvent()) );
     }
 
-    if ( aDelData.IsDead() )
+    if ( xWindow->IsDisposed() )
         return;
-    ImplRemoveDel( &aDelData );
 
     // #106721# check if we're part of a compound control and notify
     vcl::Window *pParent = ImplGetParent();
@@ -486,11 +502,14 @@ void Window::ImplCallResize()
     // OpenGL has a charming feature of black clearing the whole window
     // some legacy code eg. the app-menu has the beautiful feature of
     // avoiding re-paints when width doesn't change => invalidate all.
+#if HAVE_FEATURE_OPENGL
     if( OpenGLWrapper::isVCLOpenGLEnabled() )
         Invalidate();
 
     // Normally we avoid blanking on re-size unless people might notice:
-    else if( GetBackground().IsGradient() )
+    else
+#endif
+        if( GetBackground().IsGradient() )
         Invalidate();
 
     Resize();
@@ -623,12 +642,12 @@ void Window::ImplCallFocusChangeActivate( vcl::Window* pNewOverlapWindow,
 
 
 NotifyEvent::NotifyEvent( MouseNotifyEvent nEventType, vcl::Window* pWindow,
-                          const void* pEvent, long nRet )
+                          const void* pEvent )
 {
     mpWindow    = pWindow;
     mpData      = const_cast<void*>(pEvent);
     mnEventType  = nEventType;
-    mnRetValue  = nRet;
+    mnRetValue  = 0;
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

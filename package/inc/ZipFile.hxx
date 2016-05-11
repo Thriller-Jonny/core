@@ -62,7 +62,6 @@ protected:
     css::uno::Reference < css::io::XInputStream > xStream;
     css::uno::Reference < css::io::XSeekable > xSeek;
     const css::uno::Reference < css::uno::XComponentContext > m_xContext;
-    css::uno::Reference < css::ucb::XProgressHandler > xProgressHandler;
 
     bool bRecoveryMode;
 
@@ -94,8 +93,7 @@ public:
     ZipFile( css::uno::Reference < css::io::XInputStream > &xInput,
              const css::uno::Reference < css::uno::XComponentContext > &rxContext,
              bool bInitialise,
-             bool bForceRecover,
-             css::uno::Reference < css::ucb::XProgressHandler > xProgress
+             bool bForceRecover
              )
         throw(css::io::IOException, css::packages::zip::ZipException, css::uno::RuntimeException);
 
@@ -103,7 +101,7 @@ public:
 
     EntryHash& GetEntryHash() { return aEntries; }
 
-    void setInputStream ( css::uno::Reference < css::io::XInputStream > xNewStream );
+    void setInputStream ( const css::uno::Reference < css::io::XInputStream >& xNewStream );
     css::uno::Reference< css::io::XInputStream > SAL_CALL getRawData(
             ZipEntry& rEntry,
             const ::rtl::Reference < EncryptionData > &rData,
@@ -182,7 +180,7 @@ protected:
         throw(css::io::IOException, css::packages::zip::ZipException, css::uno::RuntimeException);
     sal_Int32       findEND()
         throw(css::io::IOException, css::packages::zip::ZipException, css::uno::RuntimeException);
-    sal_Int32       recover()
+    void            recover()
         throw(css::io::IOException, css::packages::zip::ZipException, css::uno::RuntimeException);
 
 };

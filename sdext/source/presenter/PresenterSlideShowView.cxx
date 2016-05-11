@@ -19,7 +19,7 @@
  */
 
 #include "PresenterSlideShowView.hxx"
-#include "vcl/svapp.hxx"
+#include <vcl/svapp.hxx>
 #include "PresenterCanvasHelper.hxx"
 #include "PresenterGeometryHelper.hxx"
 #include "PresenterHelper.hxx"
@@ -150,7 +150,7 @@ void PresenterSlideShowView::LateInit()
         Resize();
 
     if (mxWindow.is())
-        mxWindow->setVisible(sal_True);
+        mxWindow->setVisible(true);
 
     // Add the new slide show view to the slide show.
     if (mxSlideShow.is() && ! mbIsViewAdded)
@@ -362,7 +362,7 @@ geometry::AffineMatrix2D SAL_CALL PresenterSlideShowView::getTransformation()
         // optimizations the avoid updates when the transformation is
         // unchanged (when the window size changes then due to the constant
         // aspect ratio the size of the preview may remain the same while
-        // the position changes.  The position, however, is repesented by
+        // the position changes.  The position, however, is rapresented by
         // the position of the view window.  This transformation is given
         // relative to the view window and therefore does not contain the
         // position.)
@@ -687,7 +687,6 @@ void PresenterSlideShowView::DeactivatePresenterView()
 }
 
 
-
 void PresenterSlideShowView::PaintOuterWindow (const awt::Rectangle& rRepaintBox)
 {
     if ( ! mxCanvas.is())
@@ -799,9 +798,9 @@ void PresenterSlideShowView::PaintEndSlide (const awt::Rectangle& rRepaintBox)
 
     // Finally, in double buffered environments, request the changes to be
     // made visible.
-    Reference<rendering::XSpriteCanvas> mxSpriteCanvas (mxCanvas, UNO_QUERY);
-    if (mxSpriteCanvas.is())
-        mxSpriteCanvas->updateScreen(sal_True);
+    Reference<rendering::XSpriteCanvas> xSpriteCanvas (mxCanvas, UNO_QUERY);
+    if (xSpriteCanvas.is())
+        xSpriteCanvas->updateScreen(true);
 }
 
 void PresenterSlideShowView::PaintInnerWindow (const awt::PaintEvent& rEvent)
@@ -821,9 +820,9 @@ void PresenterSlideShowView::PaintInnerWindow (const awt::PaintEvent& rEvent)
 
     // Finally, in double buffered environments, request the changes to be
     // made visible.
-    Reference<rendering::XSpriteCanvas> mxSpriteCanvas (mxCanvas, UNO_QUERY);
-    if (mxSpriteCanvas.is())
-        mxSpriteCanvas->updateScreen(sal_True);
+    Reference<rendering::XSpriteCanvas> xSpriteCanvas (mxCanvas, UNO_QUERY);
+    if (xSpriteCanvas.is())
+        xSpriteCanvas->updateScreen(true);
 }
 
 Reference<awt::XWindow> PresenterSlideShowView::CreateViewWindow (
@@ -855,7 +854,7 @@ Reference<awt::XWindow> PresenterSlideShowView::CreateViewWindow (
             xPeer->setBackground(0xff000000);
         }
 
-        xViewWindow->setVisible(sal_True);
+        xViewWindow->setVisible(true);
     }
     catch (RuntimeException&)
     {
@@ -1008,7 +1007,7 @@ void PresenterSlideShowView::impl_addAndConfigureView()
     aProperty.Name = "IsSoundEnabled";
     Sequence<Any> aValues (2);
     aValues[0] <<= xView;
-    aValues[1] <<= sal_False;
+    aValues[1] <<= false;
     aProperty.Value <<= aValues;
     mxSlideShow->setProperty(aProperty);
 }

@@ -55,6 +55,7 @@ static const char CONFIGURATION_PROPERTY_LABEL[]        = "Label";
 static const char CONFIGURATION_PROPERTY_CONTEXT_LABEL[] = "ContextLabel";
 static const char CONFIGURATION_PROPERTY_POPUP_LABEL[]   = "PopupLabel";
 static const char CONFIGURATION_PROPERTY_TOOLTIP_LABEL[] = "TooltipLabel";
+static const char CONFIGURATION_PROPERTY_TARGET_URL[]    = "TargetURL";
 
 // Property names of the resulting Property Set
 static const char PROPSET_LABEL[]                       = "Label";
@@ -62,6 +63,7 @@ static const char PROPSET_NAME[]                        = "Name";
 static const char PROPSET_POPUP[]                       = "Popup";
 static const char PROPSET_POPUPLABEL[]                  = "PopupLabel";
 static const char PROPSET_TOOLTIPLABEL[]                = "TooltipLabel";
+static const char PROPSET_TARGETURL[]                   = "TargetURL";
 static const char PROPSET_PROPERTIES[]                  = "Properties";
 
 // Special resource URLs to retrieve additional information
@@ -123,6 +125,7 @@ class ConfigurationAccess_UICommand : // Order is necessary for right initializa
             OUString            aCommandName;
             OUString            aPopupLabel;
             OUString            aTooltipLabel;
+            OUString            aTargetURL;
             bool                bPopup : 1,
                                 bCommandNameCreated : 1;
             sal_Int32           nProperties;
@@ -132,8 +135,8 @@ class ConfigurationAccess_UICommand : // Order is necessary for right initializa
         Any                       getInfoFromCommand( const OUString& rCommandURL );
         void                      fillInfoFromResult( CmdToInfoMap& rCmdInfo, const OUString& aLabel );
         Sequence< OUString > getAllCommands();
-        bool                  fillCache();
-        bool                  addGenericInfoToCache();
+        void                  fillCache();
+        void                  addGenericInfoToCache();
         void                      impl_fill(const Reference< XNameAccess >& _xConfigAccess,bool _bPopup,
                                                 std::vector< OUString >& aImageCommandVector,
                                                 std::vector< OUString >& aImageRotateVector,
@@ -142,10 +145,9 @@ class ConfigurationAccess_UICommand : // Order is necessary for right initializa
     private:
         typedef std::unordered_map< OUString,
                                     CmdToInfoMap,
-                                    OUStringHash,
-                                    std::equal_to< OUString > > CommandToInfoCache;
+                                    OUStringHash > CommandToInfoCache;
 
-        bool initializeConfigAccess();
+        void initializeConfigAccess();
 
         OUString                     m_aConfigCmdAccess;
         OUString                     m_aConfigPopupAccess;
@@ -153,11 +155,13 @@ class ConfigurationAccess_UICommand : // Order is necessary for right initializa
         OUString                     m_aPropUIContextLabel;
         OUString                     m_aPropUIPopupLabel;
         OUString                     m_aPropUITooltipLabel;
+        OUString                     m_aPropUITargetURL;
         OUString                     m_aPropLabel;
         OUString                     m_aPropName;
         OUString                     m_aPropPopup;
         OUString                     m_aPropPopupLabel;
         OUString                     m_aPropTooltipLabel;
+        OUString                     m_aPropTargetURL;
         OUString                     m_aPropProperties;
         OUString                     m_aPrivateResourceURL;
         Reference< XNameAccess >          m_xGenericUICommands;
@@ -184,11 +188,13 @@ ConfigurationAccess_UICommand::ConfigurationAccess_UICommand( const OUString& aM
     m_aPropUIContextLabel( CONFIGURATION_PROPERTY_CONTEXT_LABEL ),
     m_aPropUIPopupLabel( CONFIGURATION_PROPERTY_POPUP_LABEL ),
     m_aPropUITooltipLabel( CONFIGURATION_PROPERTY_TOOLTIP_LABEL ),
+    m_aPropUITargetURL( CONFIGURATION_PROPERTY_TARGET_URL ),
     m_aPropLabel( PROPSET_LABEL ),
     m_aPropName( PROPSET_NAME ),
     m_aPropPopup( PROPSET_POPUP ),
     m_aPropPopupLabel( PROPSET_POPUPLABEL ),
     m_aPropTooltipLabel( PROPSET_TOOLTIPLABEL ),
+    m_aPropTargetURL( PROPSET_TARGETURL ),
     m_aPropProperties( PROPSET_PROPERTIES ),
     m_aPrivateResourceURL( PRIVATE_RESOURCE_URL ),
     m_xGenericUICommands( rGenericUICommands ),
@@ -287,7 +293,7 @@ sal_Bool SAL_CALL ConfigurationAccess_UICommand::hasElements()
 throw ( RuntimeException, std::exception )
 {
     // There must are global commands!
-    return sal_True;
+    return true;
 }
 
 void ConfigurationAccess_UICommand::fillInfoFromResult( CmdToInfoMap& rCmdInfo, const OUString& aLabel )
@@ -307,7 +313,7 @@ Any ConfigurationAccess_UICommand::getSequenceFromCache( const OUString& aComman
         if ( !pIter->second.bCommandNameCreated )
             fillInfoFromResult( pIter->second, pIter->second.aLabel );
 
-        Sequence< PropertyValue > aPropSeq( 6 );
+        Sequence< PropertyValue > aPropSeq( 7 );
         aPropSeq[0].Name  = m_aPropLabel;
         aPropSeq[0].Value = !pIter->second.aContextLabel.isEmpty() ?
                 makeAny( pIter->second.aContextLabel ): makeAny( pIter->second.aLabel );
@@ -321,6 +327,8 @@ Any ConfigurationAccess_UICommand::getSequenceFromCache( const OUString& aComman
         aPropSeq[4].Value <<= pIter->second.aPopupLabel;
         aPropSeq[5].Name  = m_aPropTooltipLabel;
         aPropSeq[5].Value <<= pIter->second.aTooltipLabel;
+        aPropSeq[6].Name  = m_aPropTargetURL;
+        aPropSeq[6].Value <<= pIter->second.aTargetURL;
         return makeAny( aPropSeq );
     }
 
@@ -349,6 +357,7 @@ void ConfigurationAccess_UICommand::impl_fill(const Reference< XNameAccess >& _x
                     xNameAccess->getByName( m_aPropUIContextLabel ) >>= aCmdToInfo.aContextLabel;
                     xNameAccess->getByName( m_aPropUIPopupLabel )   >>= aCmdToInfo.aPopupLabel;
                     xNameAccess->getByName( m_aPropUITooltipLabel )   >>= aCmdToInfo.aTooltipLabel;
+                    xNameAccess->getByName( m_aPropUITargetURL )    >>= aCmdToInfo.aTargetURL;
                     xNameAccess->getByName( m_aPropProperties )     >>= aCmdToInfo.nProperties;
 
                     m_aCmdInfoCache.insert( CommandToInfoCache::value_type( aNameSeq[i], aCmdToInfo ));
@@ -370,11 +379,11 @@ void ConfigurationAccess_UICommand::impl_fill(const Reference< XNameAccess >& _x
         }
     }
 }
-bool ConfigurationAccess_UICommand::fillCache()
+void ConfigurationAccess_UICommand::fillCache()
 {
 
     if ( m_bCacheFilled )
-        return true;
+        return;
 
     std::vector< OUString > aImageCommandVector;
     std::vector< OUString > aImageRotateVector;
@@ -388,11 +397,9 @@ bool ConfigurationAccess_UICommand::fillCache()
     m_aCommandMirrorImageList = comphelper::containerToSequence( aImageMirrorVector );
 
     m_bCacheFilled = true;
-
-    return true;
 }
 
-bool ConfigurationAccess_UICommand::addGenericInfoToCache()
+void ConfigurationAccess_UICommand::addGenericInfoToCache()
 {
     if ( m_xGenericUICommands.is() && !m_bGenericDataRetrieved )
     {
@@ -427,8 +434,6 @@ bool ConfigurationAccess_UICommand::addGenericInfoToCache()
 
         m_bGenericDataRetrieved = true;
     }
-
-    return true;
 }
 
 Any ConfigurationAccess_UICommand::getInfoFromCommand( const OUString& rCommandURL )
@@ -514,7 +519,7 @@ Sequence< OUString > ConfigurationAccess_UICommand::getAllCommands()
     return Sequence< OUString >();
 }
 
-bool ConfigurationAccess_UICommand::initializeConfigAccess()
+void ConfigurationAccess_UICommand::initializeConfigAccess()
 {
     Sequence< Any > aArgs( 1 );
     PropertyValue   aPropValue;
@@ -552,8 +557,6 @@ bool ConfigurationAccess_UICommand::initializeConfigAccess()
                 xContainer->addContainerListener(m_xConfigAccessListener);
             }
         }
-
-        return true;
     }
     catch (const WrappedTargetException&)
     {
@@ -561,8 +564,6 @@ bool ConfigurationAccess_UICommand::initializeConfigAccess()
     catch (const Exception&)
     {
     }
-
-    return false;
 }
 
 // container.XContainerListener
@@ -738,7 +739,7 @@ sal_Bool SAL_CALL UICommandDescription::hasElements()
 throw (css::uno::RuntimeException, std::exception)
 {
     // generic UI commands are always available!
-    return sal_True;
+    return true;
 }
 
 } // namespace framework

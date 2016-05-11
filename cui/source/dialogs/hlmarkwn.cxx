@@ -217,11 +217,11 @@ void SvxHlinkDlgMarkWnd::Move ()
         mbUserMoved = true;
 }
 
-bool SvxHlinkDlgMarkWnd::ConnectToDialog( bool bDoit )
+bool SvxHlinkDlgMarkWnd::ConnectToDialog()
 {
     bool bOldStatus = mbUserMoved;
 
-    mbUserMoved = !bDoit;
+    mbUserMoved = true;
 
     return bOldStatus;
 }
@@ -396,7 +396,7 @@ bool SvxHlinkDlgMarkWnd::RefreshFromDoc(const OUString& aURL)
 |*
 |************************************************************************/
 
-int SvxHlinkDlgMarkWnd::FillTree( uno::Reference< container::XNameAccess > xLinks, SvTreeListEntry* pParentEntry )
+int SvxHlinkDlgMarkWnd::FillTree( const uno::Reference< container::XNameAccess >& xLinks, SvTreeListEntry* pParentEntry )
 {
     int nEntries=0;
     const uno::Sequence< OUString > aNames( xLinks->getElementNames() );

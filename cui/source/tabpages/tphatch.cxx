@@ -166,7 +166,6 @@ void SvxHatchTabPage::Construct()
 }
 
 
-
 void SvxHatchTabPage::ActivatePage( const SfxItemSet& rSet )
 {
     sal_Int32 nPos;
@@ -236,7 +235,6 @@ void SvxHatchTabPage::ActivatePage( const SfxItemSet& rSet )
 }
 
 
-
 SfxTabPage::sfxpg SvxHatchTabPage::DeactivatePage( SfxItemSet* _pSet )
 {
     if ( CheckChanges_Impl() == -1L )
@@ -247,7 +245,6 @@ SfxTabPage::sfxpg SvxHatchTabPage::DeactivatePage( SfxItemSet* _pSet )
 
     return LEAVE_PAGE;
 }
-
 
 
 long SvxHatchTabPage::CheckChanges_Impl()
@@ -298,7 +295,6 @@ long SvxHatchTabPage::CheckChanges_Impl()
 }
 
 
-
 bool SvxHatchTabPage::FillItemSet( SfxItemSet* rSet )
 {
     if( m_nDlgType == 0 && !*m_pbAreaTP ) // area dialog
@@ -332,7 +328,6 @@ bool SvxHatchTabPage::FillItemSet( SfxItemSet* rSet )
 }
 
 
-
 void SvxHatchTabPage::Reset( const SfxItemSet* rSet )
 {
     ChangeHatchHdl_Impl( *m_pLbHatchings );
@@ -358,13 +353,11 @@ void SvxHatchTabPage::Reset( const SfxItemSet* rSet )
 }
 
 
-
 VclPtr<SfxTabPage> SvxHatchTabPage::Create( vcl::Window* pWindow,
                                             const SfxItemSet* rSet )
 {
     return VclPtr<SvxHatchTabPage>::Create( pWindow, *rSet );
 }
-
 
 
 IMPL_LINK_TYPED( SvxHatchTabPage, ModifiedListBoxHdl_Impl, ListBox&, rListBox, void )
@@ -403,7 +396,6 @@ void SvxHatchTabPage::ModifiedHdl_Impl( void* p )
 
     m_pCtlPreview->Invalidate();
 }
-
 
 
 IMPL_LINK_NOARG_TYPED(SvxHatchTabPage, ChangeHatchHdl_Impl, ListBox&, void)
@@ -474,7 +466,6 @@ IMPL_LINK_NOARG_TYPED(SvxHatchTabPage, ChangeHatchHdl_Impl, ListBox&, void)
     m_pLbLineColor->SaveValue();
     m_pLbHatchings->SaveValue();
 }
-
 
 
 IMPL_LINK_NOARG_TYPED(SvxHatchTabPage, ClickAddHdl_Impl, Button*, void)
@@ -548,7 +539,7 @@ IMPL_LINK_NOARG_TYPED(SvxHatchTabPage, ClickAddHdl_Impl, Button*, void)
 
         m_pLbHatchings->SelectEntryPos( m_pLbHatchings->GetEntryCount() - 1 );
 
-#ifdef WNT
+#ifdef _WIN32
         // hack: #31355# W.P.
         Rectangle aRect( m_pLbHatchings->GetPosPixel(), m_pLbHatchings->GetSizePixel() );
         if( sal_True ) {                // ??? overlapped with pDlg
@@ -570,7 +561,6 @@ IMPL_LINK_NOARG_TYPED(SvxHatchTabPage, ClickAddHdl_Impl, Button*, void)
         m_pBtnSave->Enable();
     }
 }
-
 
 
 IMPL_LINK_NOARG_TYPED(SvxHatchTabPage, ClickModifyHdl_Impl, Button*, void)
@@ -639,7 +629,6 @@ IMPL_LINK_NOARG_TYPED(SvxHatchTabPage, ClickModifyHdl_Impl, Button*, void)
 }
 
 
-
 IMPL_LINK_NOARG_TYPED(SvxHatchTabPage, ClickDeleteHdl_Impl, Button*, void)
 {
     sal_Int32 nPos = m_pLbHatchings->GetSelectEntryPos();
@@ -669,7 +658,6 @@ IMPL_LINK_NOARG_TYPED(SvxHatchTabPage, ClickDeleteHdl_Impl, Button*, void)
         m_pBtnSave->Disable();
     }
 }
-
 
 
 IMPL_LINK_NOARG_TYPED(SvxHatchTabPage, ClickLoadHdl_Impl, Button*, void)
@@ -766,7 +754,6 @@ IMPL_LINK_NOARG_TYPED(SvxHatchTabPage, ClickLoadHdl_Impl, Button*, void)
 }
 
 
-
 IMPL_LINK_NOARG_TYPED(SvxHatchTabPage, ClickSaveHdl_Impl, Button*, void)
 {
     ::sfx2::FileDialogHelper aDlg( css::ui::dialogs::TemplateDescription::FILESAVE_SIMPLE, 0 );
@@ -831,7 +818,6 @@ IMPL_LINK_NOARG_TYPED(SvxHatchTabPage, ClickSaveHdl_Impl, Button*, void)
         }
     }
 }
-
 
 
 void SvxHatchTabPage::PointChanged( vcl::Window* pWindow, RECT_POINT eRcPt )

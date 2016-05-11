@@ -43,11 +43,7 @@ using namespace ::com::sun::star::container ;
 using namespace ::com::sun::star::lang      ;
 using namespace ::com::sun::star::registry  ;
 using namespace ::cppu                      ;
-using ::com::sun::star::ui::dialogs::XFilePicker;
 using ::com::sun::star::ui::dialogs::XFilePicker2;
-
-
-
 
 
 static Reference< XInterface > SAL_CALL createInstance(

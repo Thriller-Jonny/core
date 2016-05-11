@@ -57,9 +57,6 @@
 using namespace ::com::sun::star;
 
 
-//  class VCLUnoHelper
-
-
 uno::Reference< css::awt::XToolkit> VCLUnoHelper::CreateToolkit()
 {
     uno::Reference< uno::XComponentContext > xContext = ::comphelper::getProcessComponentContext();
@@ -366,11 +363,11 @@ FontItalic VCLUnoHelper::ConvertFontSlant(css::awt::FontSlant eSlant)
 css::awt::FontDescriptor VCLUnoHelper::CreateFontDescriptor( const vcl::Font& rFont )
 {
     css::awt::FontDescriptor aFD;
-    aFD.Name = rFont.GetName();
+    aFD.Name = rFont.GetFamilyName();
     aFD.StyleName = rFont.GetStyleName();
-    aFD.Height = (sal_Int16)rFont.GetSize().Height();
-    aFD.Width = (sal_Int16)rFont.GetSize().Width();
-    aFD.Family = sal::static_int_cast< sal_Int16 >(rFont.GetFamily());
+    aFD.Height = (sal_Int16)rFont.GetFontSize().Height();
+    aFD.Width = (sal_Int16)rFont.GetFontSize().Width();
+    aFD.Family = sal::static_int_cast< sal_Int16 >(rFont.GetFamilyType());
     aFD.CharSet = rFont.GetCharSet();
     aFD.Pitch = sal::static_int_cast< sal_Int16 >(rFont.GetPitch());
     aFD.CharacterWidth = VCLUnoHelper::ConvertFontWidth( rFont.GetWidthType() );
@@ -381,7 +378,7 @@ css::awt::FontDescriptor VCLUnoHelper::CreateFontDescriptor( const vcl::Font& rF
     aFD.Orientation = rFont.GetOrientation();
     aFD.Kerning = rFont.IsKerning();
     aFD.WordLineMode = rFont.IsWordLineMode();
-    aFD.Type = 0;   // ??? => Nur an Metric...
+    aFD.Type = 0;   // ??? => Only in Metric...
     return aFD;
 }
 
@@ -389,11 +386,11 @@ vcl::Font VCLUnoHelper::CreateFont( const css::awt::FontDescriptor& rDescr, cons
 {
     vcl::Font aFont( rInitFont );
     if ( !rDescr.Name.isEmpty() )
-        aFont.SetName( rDescr.Name );
+        aFont.SetFamilyName( rDescr.Name );
     if ( !rDescr.StyleName.isEmpty() )
         aFont.SetStyleName( rDescr.StyleName );
     if ( rDescr.Height )
-        aFont.SetSize( Size( rDescr.Width, rDescr.Height ) );
+        aFont.SetFontSize( Size( rDescr.Width, rDescr.Height ) );
     if ( (FontFamily)rDescr.Family != FAMILY_DONTKNOW )
         aFont.SetFamily( (FontFamily)rDescr.Family );
     if ( (rtl_TextEncoding)rDescr.CharSet != RTL_TEXTENCODING_DONTKNOW )
@@ -406,12 +403,12 @@ vcl::Font VCLUnoHelper::CreateFont( const css::awt::FontDescriptor& rDescr, cons
         aFont.SetWeight( VCLUnoHelper::ConvertFontWeight( rDescr.Weight ) );
     if ( rDescr.Slant != css::awt::FontSlant_DONTKNOW )
         aFont.SetItalic( VCLUnoHelper::ConvertFontSlant( rDescr.Slant ) );
-    if ( (FontUnderline)rDescr.Underline != UNDERLINE_DONTKNOW )
-        aFont.SetUnderline( (FontUnderline)rDescr.Underline );
+    if ( (FontLineStyle)rDescr.Underline != LINESTYLE_DONTKNOW )
+        aFont.SetUnderline( (FontLineStyle)rDescr.Underline );
     if ( (FontStrikeout)rDescr.Strikeout != STRIKEOUT_DONTKNOW )
         aFont.SetStrikeout( (FontStrikeout)rDescr.Strikeout );
 
-    // Kein DONTKNOW
+    // Not DONTKNOW
     aFont.SetOrientation( (short)rDescr.Orientation );
     aFont.SetKerning( static_cast<FontKerning>(rDescr.Kerning) );
     aFont.SetWordLineMode( rDescr.WordLineMode );
@@ -434,7 +431,7 @@ css::awt::SimpleFontMetric VCLUnoHelper::CreateFontMetric( const FontMetric& rFo
     css::awt::SimpleFontMetric aFM;
     aFM.Ascent = (sal_Int16)rFontMetric.GetAscent();
     aFM.Descent = (sal_Int16)rFontMetric.GetDescent();
-    aFM.Leading = (sal_Int16)rFontMetric.GetIntLeading();
+    aFM.Leading = (sal_Int16)rFontMetric.GetInternalLeading();
     aFM.Slant = (sal_Int16)rFontMetric.GetSlant();
     aFM.FirstChar = 0x0020;
     aFM.LastChar = 0xFFFD;
@@ -513,8 +510,6 @@ sal_Int32 VCLUnoHelper::VCL2UnoEmbedMapUnit( MapUnit nVCLMapUnit )
 
 using namespace ::com::sun::star::util;
 
-
-//= file-local helpers
 
 namespace
 {
@@ -710,7 +705,7 @@ awt::MouseEvent VCLUnoHelper::createMouseEvent( const ::MouseEvent& _rVclEvent, 
     aMouseEvent.X = _rVclEvent.GetPosPixel().X();
     aMouseEvent.Y = _rVclEvent.GetPosPixel().Y();
     aMouseEvent.ClickCount = _rVclEvent.GetClicks();
-    aMouseEvent.PopupTrigger = sal_False;
+    aMouseEvent.PopupTrigger = false;
 
     return aMouseEvent;
 }

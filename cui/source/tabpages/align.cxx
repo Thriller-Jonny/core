@@ -91,7 +91,6 @@ static const RotateModeConnection::MapEntryType s_pRotateModeMap[] =
 };
 
 
-
 const sal_uInt16 AlignmentTabPage::s_pRanges[] =
 {
     SID_ATTR_ALIGN_HOR_JUSTIFY,SID_ATTR_ALIGN_VER_JUSTIFY,
@@ -107,12 +106,11 @@ const sal_uInt16 AlignmentTabPage::s_pRanges[] =
 };
 
 
-
 namespace {
 
-template<typename _JustContainerType, typename _JustEnumType>
+template<typename JustContainerType, typename JustEnumType>
 void lcl_MaybeResetAlignToDistro(
-    ListBox& rLB, sal_uInt16 nListPos, const SfxItemSet& rCoreAttrs, sal_uInt16 nWhichAlign, sal_uInt16 nWhichJM, _JustEnumType eBlock)
+    ListBox& rLB, sal_uInt16 nListPos, const SfxItemSet& rCoreAttrs, sal_uInt16 nWhichAlign, sal_uInt16 nWhichJM, JustEnumType eBlock)
 {
     const SfxPoolItem* pItem;
     if (rCoreAttrs.GetItemState(nWhichAlign, true, &pItem) != SfxItemState::SET)
@@ -120,7 +118,7 @@ void lcl_MaybeResetAlignToDistro(
         return;
 
     const SfxEnumItem* p = static_cast<const SfxEnumItem*>(pItem);
-    _JustContainerType eVal = static_cast<_JustContainerType>(p->GetEnumValue());
+    JustContainerType eVal = static_cast<JustContainerType>(p->GetEnumValue());
     if (eVal != eBlock)
         // alignment is not 'justify'.  No need to go further.
         return;
@@ -147,7 +145,6 @@ void lcl_SetJustifyMethodToItemSet(SfxItemSet& rSet, sal_uInt16 nWhichJM, const 
 }
 
 }//namespace
-
 
 
 AlignmentTabPage::AlignmentTabPage( vcl::Window* pParent, const SfxItemSet& rCoreAttrs ) :
@@ -211,19 +208,9 @@ AlignmentTabPage::AlignmentTabPage( vcl::Window* pParent, const SfxItemSet& rCor
     // Asian vertical mode
     m_pCbAsianMode->Show( SvtCJKOptions().IsVerticalTextEnabled() );
 
-
-    if( !SvtLanguageOptions().IsCTLFontEnabled() )
-    {
-        m_pBoxDirection->Hide();
-    }
-    else
-    {
-       // CTL frame direction
-       m_pLbFrameDir->InsertEntryValue( CUI_RESSTR( RID_SVXSTR_FRAMEDIR_LTR ), FRMDIR_HORI_LEFT_TOP );
-       m_pLbFrameDir->InsertEntryValue( CUI_RESSTR( RID_SVXSTR_FRAMEDIR_RTL ), FRMDIR_HORI_RIGHT_TOP );
-       m_pLbFrameDir->InsertEntryValue( CUI_RESSTR( RID_SVXSTR_FRAMEDIR_SUPER ), FRMDIR_ENVIRONMENT );
-       m_pBoxDirection->Show();
-    }
+    m_pLbFrameDir->InsertEntryValue( CUI_RESSTR( RID_SVXSTR_FRAMEDIR_LTR ), FRMDIR_HORI_LEFT_TOP );
+    m_pLbFrameDir->InsertEntryValue( CUI_RESSTR( RID_SVXSTR_FRAMEDIR_RTL ), FRMDIR_HORI_RIGHT_TOP );
+    m_pLbFrameDir->InsertEntryValue( CUI_RESSTR( RID_SVXSTR_FRAMEDIR_SUPER ), FRMDIR_ENVIRONMENT );
 
     // This page needs ExchangeSupport.
     SetExchangeSupport();
@@ -439,7 +426,6 @@ IMPL_LINK_NOARG_TYPED(AlignmentTabPage, UpdateEnableHdl, ListBox&, void)
 {
     UpdateEnableControls();
 }
-
 
 
 }

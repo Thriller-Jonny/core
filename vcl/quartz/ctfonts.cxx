@@ -31,7 +31,8 @@
 #include "osx/saldata.hxx"
 #include "osx/salinst.h"
 #endif
-#include "outfont.hxx"
+#include "fontinstance.hxx"
+#include "fontattributes.hxx"
 #include "PhysicalFontCollection.hxx"
 #include "quartz/salgdi.h"
 #include "quartz/utils.h"
@@ -44,7 +45,7 @@ inline double toRadian(int nDegree)
 }
 
 CoreTextStyle::CoreTextStyle( const FontSelectPattern& rFSD )
-    : mpFontData( static_cast<CoreTextFontData const *>(rFSD.mpFontData) )
+    : mpFontData( static_cast<CoreTextFontFace const *>(rFSD.mpFontData) )
     , mfFontStretch( 1.0 )
     , mfFontRotation( 0.0 )
     , mpStyleDict( nullptr )
@@ -86,9 +87,9 @@ CoreTextStyle::CoreTextStyle( const FontSelectPattern& rFSD )
     }
 
     // fake italic
-    if (((pReqFont->GetSlant() == ITALIC_NORMAL) ||
-         (pReqFont->GetSlant() == ITALIC_OBLIQUE)) &&
-        (mpFontData->GetSlant() == ITALIC_NONE))
+    if (((pReqFont->GetItalic() == ITALIC_NORMAL) ||
+         (pReqFont->GetItalic() == ITALIC_OBLIQUE)) &&
+        (mpFontData->GetItalic() == ITALIC_NONE))
     {
         aMatrix = CGAffineTransformConcat(aMatrix, CGAffineTransformMake(1, 0, toRadian(120), 1, 0, 0));
     }
@@ -116,7 +117,7 @@ CoreTextStyle::~CoreTextStyle()
         CFRelease( mpStyleDict );
 }
 
-void CoreTextStyle::GetFontMetric( ImplFontMetricData& rMetric ) const
+void CoreTextStyle::GetFontMetric( ImplFontMetricDataPtr& rxFontMetric ) const
 {
     // get the matching CoreText font handle
     // TODO: is it worth it to cache the CTFontRef in SetFont() and reuse it here?
@@ -124,20 +125,20 @@ void CoreTextStyle::GetFontMetric( ImplFontMetricData& rMetric ) const
 
     const CGFloat fAscent = CTFontGetAscent( aCTFontRef );
     const CGFloat fCapHeight = CTFontGetCapHeight( aCTFontRef );
-    rMetric.mnAscent       = lrint( fAscent );
-    rMetric.mnDescent      = lrint( CTFontGetDescent( aCTFontRef ));
-    rMetric.mnExtLeading   = lrint( CTFontGetLeading( aCTFontRef ));
-    rMetric.mnIntLeading   = lrint( fAscent - fCapHeight );
+    rxFontMetric->SetAscent( lrint( fAscent ) );
+    rxFontMetric->SetDescent( lrint( CTFontGetDescent( aCTFontRef )) );
+    rxFontMetric->SetExternalLeading( lrint( CTFontGetLeading( aCTFontRef )) );
+    rxFontMetric->SetInternalLeading( lrint( fAscent - fCapHeight ) );
 
     // since ImplFontMetricData::mnWidth is only used for stretching/squeezing fonts
     // setting this width to the pixel height of the fontsize is good enough
     // it also makes the calculation of the stretch factor simple
-    rMetric.mnWidth        = lrint( CTFontGetSize( aCTFontRef ) * mfFontStretch);
+    rxFontMetric->SetWidth( lrint( CTFontGetSize( aCTFontRef ) * mfFontStretch) );
 
     // all CoreText fonts are scalable
-    rMetric.mbScalableFont = true;
-    rMetric.mbTrueTypeFont = true; // Not sure, but this field is used only for Windows so far
-    rMetric.mbKernableFont = true;
+    rxFontMetric->SetScalableFlag( true );
+    rxFontMetric->SetTrueTypeFlag( true ); // Not sure, but this field is used only for Windows so far
+    rxFontMetric->SetKernableFlag( true );
 }
 
 bool CoreTextStyle::GetGlyphBoundRect( sal_GlyphId aGlyphId, Rectangle& rRect ) const
@@ -234,19 +235,19 @@ bool CoreTextStyle::GetGlyphOutline( sal_GlyphId aGlyphId, basegfx::B2DPolyPolyg
     return true;
 }
 
-PhysicalFontFace* CoreTextFontData::Clone() const
+PhysicalFontFace* CoreTextFontFace::Clone() const
 {
-    return new CoreTextFontData( *this);
+    return new CoreTextFontFace( *this);
 }
 
-ImplFontEntry* CoreTextFontData::CreateFontInstance( /*const*/ FontSelectPattern& rFSD ) const
+LogicalFontInstance* CoreTextFontFace::CreateFontInstance( /*const*/ FontSelectPattern& rFSD ) const
 {
-    return new ImplFontEntry( rFSD);
+    return new LogicalFontInstance( rFSD);
 }
 
-int CoreTextFontData::GetFontTable( const char pTagName[5], unsigned char* pResultBuf ) const
+int CoreTextFontFace::GetFontTable( const char pTagName[5], unsigned char* pResultBuf ) const
 {
-    DBG_ASSERT( pTagName[4]=='\0', "CoreTextFontData::GetFontTable with invalid tagname!\n" );
+    DBG_ASSERT( pTagName[4]=='\0', "CoreTextFontFace::GetFontTable with invalid tagname!\n" );
 
     const CTFontTableTag nTagCode = (pTagName[0]<<24) + (pTagName[1]<<16) + (pTagName[2]<<8) + (pTagName[3]<<0);
 
@@ -273,13 +274,13 @@ int CoreTextFontData::GetFontTable( const char pTagName[5], unsigned char* pResu
     return (int)nByteLength;
 }
 
-ImplDevFontAttributes DevFontFromCTFontDescriptor( CTFontDescriptorRef pFD, bool* bFontEnabled )
+FontAttributes DevFontFromCTFontDescriptor( CTFontDescriptorRef pFD, bool* bFontEnabled )
 {
     // all CoreText fonts are device fonts that can rotate just fine
-    ImplDevFontAttributes rDFA;
-    rDFA.mbOrientation = true;
-    rDFA.mbDevice = true;
-    rDFA.mnQuality = 0;
+    FontAttributes rDFA;
+    rDFA.SetOrientationFlag( true );
+    rDFA.SetBuiltInFontFlag( true );
+    rDFA.SetQuality( 0 );
 
     // reset the font attributes
     rDFA.SetFamilyType( FAMILY_DONTKNOW );
@@ -290,8 +291,8 @@ ImplDevFontAttributes DevFontFromCTFontDescriptor( CTFontDescriptorRef pFD, bool
     rDFA.SetSymbolFlag( false );
 
     // all scalable fonts on this platform are subsettable
-    rDFA.mbEmbeddable = false;
-    rDFA.mbSubsettable = true;
+    rDFA.SetEmbeddableFlag( false );
+    rDFA.SetSubsettableFlag( true );
 
     // get font name
 #ifdef MACOSX
@@ -414,12 +415,12 @@ static void CTFontEnumCallBack( const void* pValue, void* pContext )
     CTFontDescriptorRef pFD = static_cast<CTFontDescriptorRef>(pValue);
 
     bool bFontEnabled;
-    ImplDevFontAttributes rDFA = DevFontFromCTFontDescriptor( pFD, &bFontEnabled );
+    FontAttributes rDFA = DevFontFromCTFontDescriptor( pFD, &bFontEnabled );
 
     if( bFontEnabled)
     {
         const sal_IntPtr nFontId = reinterpret_cast<sal_IntPtr>(pValue);
-        CoreTextFontData* pFontData = new CoreTextFontData( rDFA, nFontId );
+        CoreTextFontFace* pFontData = new CoreTextFontFace( rDFA, nFontId );
         SystemFontList* pFontList = static_cast<SystemFontList*>(pContext);
         pFontList->AddFont( pFontData );
     }
@@ -449,7 +450,7 @@ SystemFontList::~SystemFontList()
     }
 }
 
-void SystemFontList::AddFont( CoreTextFontData* pFontData )
+void SystemFontList::AddFont( CoreTextFontFace* pFontData )
 {
     sal_IntPtr nFontId = pFontData->GetFontId();
     maFontContainer[ nFontId ] = pFontData;
@@ -464,7 +465,7 @@ void SystemFontList::AnnounceFonts( PhysicalFontCollection& rFontCollection ) co
     }
 }
 
-CoreTextFontData* SystemFontList::GetFontDataFromId( sal_IntPtr nFontId ) const
+CoreTextFontFace* SystemFontList::GetFontDataFromId( sal_IntPtr nFontId ) const
 {
     CTFontContainer::const_iterator it = maFontContainer.find( nFontId );
     if( it == maFontContainer.end() )

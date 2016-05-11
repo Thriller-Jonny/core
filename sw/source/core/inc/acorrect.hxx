@@ -62,7 +62,7 @@ public:
     virtual bool Replace( sal_Int32 nPos, const OUString& rText ) override;
     virtual bool ReplaceRange( sal_Int32 nPos, sal_Int32 nLen, const OUString& rText ) override;
 
-    virtual bool SetAttr( sal_Int32 nStt, sal_Int32 nEnd, sal_uInt16 nSlotId,
+    virtual void SetAttr( sal_Int32 nStt, sal_Int32 nEnd, sal_uInt16 nSlotId,
                             SfxPoolItem& ) override;
 
     virtual bool SetINetAttr( sal_Int32 nStt, sal_Int32 nEnd, const OUString& rURL ) override;
@@ -84,7 +84,7 @@ public:
     // Afterwards the words can be added into exception list if needed.
     virtual void SaveCpltSttWord( sal_uLong nFlag, sal_Int32 nPos,
                                     const OUString& rExceptWord, sal_Unicode cChar ) override;
-    virtual LanguageType GetLanguage( sal_Int32 nPos, bool bPrevPara ) const override;
+    virtual LanguageType GetLanguage( sal_Int32 nPos ) const override;
 };
 
 class SwAutoCorrExceptWord

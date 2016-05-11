@@ -174,7 +174,7 @@ $(eval $(call gb_Library_add_exception_objects,sd,\
 	sd/source/ui/accessibility/AccessibleSlideSorterView \
 	sd/source/ui/accessibility/AccessibleViewForwarder \
 	sd/source/ui/accessibility/SdShapeTypes \
-	sd/source/ui/animations/CustomAnimationCreateDialog \
+    sd/source/ui/animations/CategoryListBox \
 	sd/source/ui/animations/CustomAnimationDialog \
 	sd/source/ui/animations/CustomAnimationList \
 	sd/source/ui/animations/CustomAnimationPane \
@@ -341,6 +341,7 @@ $(eval $(call gb_Library_add_exception_objects,sd,\
 	sd/source/ui/sidebar/RecentlyUsedMasterPages \
 	sd/source/ui/sidebar/RecentMasterPagesSelector \
 	sd/source/ui/sidebar/SlideTransitionPanel \
+	sd/source/ui/sidebar/SlideBackground \
 	sd/source/ui/sidebar/TableDesignPanel \
 	sd/source/ui/slideshow/PaneHider \
 	sd/source/ui/slideshow/SlideShowRestarter \

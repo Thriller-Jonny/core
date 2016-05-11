@@ -200,13 +200,13 @@ class DisposeListenerGridBridge : public FmXDisposeListener
     FmXDisposeMultiplexer*  m_pRealListener;
 
 public:
-    DisposeListenerGridBridge(  DbGridControl& _rParent, const Reference< XComponent >& _rxObject, sal_Int16 _rId = -1);
+    DisposeListenerGridBridge(  DbGridControl& _rParent, const Reference< XComponent >& _rxObject);
     virtual ~DisposeListenerGridBridge();
 
     virtual void disposing(const EventObject& _rEvent, sal_Int16 _nId) throw( RuntimeException ) override { m_rParent.disposing(_nId, _rEvent); }
 };
 
-DisposeListenerGridBridge::DisposeListenerGridBridge(DbGridControl& _rParent, const Reference< XComponent >& _rxObject, sal_Int16 _rId)
+DisposeListenerGridBridge::DisposeListenerGridBridge(DbGridControl& _rParent, const Reference< XComponent >& _rxObject)
     :FmXDisposeListener(m_aMutex)
     ,m_rParent(_rParent)
     ,m_pRealListener(nullptr)
@@ -214,7 +214,7 @@ DisposeListenerGridBridge::DisposeListenerGridBridge(DbGridControl& _rParent, co
 
     if (_rxObject.is())
     {
-        m_pRealListener = new FmXDisposeMultiplexer(this, _rxObject, _rId);
+        m_pRealListener = new FmXDisposeMultiplexer(this, _rxObject);
         m_pRealListener->acquire();
     }
 }
@@ -332,8 +332,8 @@ void DbGridControl::NavigationBar::PositionDataSource(sal_Int32 nRecord)
     m_bPositioning = false;
 }
 
-DbGridControl::NavigationBar::NavigationBar(vcl::Window* pParent, WinBits nStyle)
-          :Control(pParent, nStyle)
+DbGridControl::NavigationBar::NavigationBar(vcl::Window* pParent)
+          :Control(pParent, 0)
           ,m_aRecordText(VclPtr<FixedText>::Create(this, WB_VCENTER))
           ,m_aAbsolute(VclPtr<DbGridControl::NavigationBar::AbsolutePos>::Create(this, WB_CENTER | WB_VCENTER))
           ,m_aRecordOf(VclPtr<FixedText>::Create(this, WB_VCENTER))
@@ -446,7 +446,7 @@ sal_uInt16 DbGridControl::NavigationBar::ArrangeControls()
     {
         vcl::Font aApplFont (m_aAbsolute->GetFont());
         const Size pointAbsoluteSize(m_aAbsolute->PixelToLogic( Size( 0, nH - 2 ), MapMode(MAP_POINT) ));
-        aApplFont.SetSize( pointAbsoluteSize );
+        aApplFont.SetFontSize( pointAbsoluteSize );
         m_aAbsolute->SetControlFont( aApplFont );
 
         aApplFont.SetTransparent( true );
@@ -541,7 +541,7 @@ sal_uInt16 DbGridControl::NavigationBar::ArrangeControls()
             m_aNewBtn.get()
         };
 
-        for (size_t i=0; i < (sizeof (pWindows) / sizeof(pWindows[0])); ++i)
+        for (size_t i=0; i < SAL_N_ELEMENTS(pWindows); ++i)
         {
             if (pWindows[i]->GetPosPixel().X() < 0)
                 pWindows[i]->SetSizePixel(Size(0, nH));
@@ -812,7 +812,7 @@ void DbGridControl::NavigationBar::StateChanged(StateChangedType nType)
         case StateChangedType::Mirroring:
         {
             bool bIsRTLEnabled = IsRTLEnabled();
-            for (size_t i=0; i < (sizeof (pWindows) / sizeof(pWindows[0])); ++i)
+            for (size_t i=0; i < SAL_N_ELEMENTS(pWindows); ++i)
                 pWindows[i]->EnableRTL( bIsRTLEnabled );
         }
         break;
@@ -826,7 +826,7 @@ void DbGridControl::NavigationBar::StateChanged(StateChangedType nType)
             if (IsControlFont())
                 aFont.Merge(GetControlFont());
 
-            for (size_t i=0; i < sizeof(pWindows)/sizeof(pWindows[0]); ++i)
+            for (size_t i=0; i < SAL_N_ELEMENTS(pWindows); ++i)
             {
                 pWindows[i]->SetZoom(aZoom);
                 pWindows[i]->SetZoomedPointFont(*pWindows[i], aFont);
@@ -1375,12 +1375,12 @@ sal_uInt16 DbGridControl::SetOptions(sal_uInt16 nOpt)
     return m_nOptions;
 }
 
-void DbGridControl::ForceHideScrollbars( bool _bForce )
+void DbGridControl::ForceHideScrollbars()
 {
-    if ( m_bHideScrollbars == _bForce )
+    if ( m_bHideScrollbars )
         return;
 
-    m_bHideScrollbars = _bForce;
+    m_bHideScrollbars = true;
 
     if ( adjustModeForScrollbars( m_nMode, m_bNavigationBar, m_bHideScrollbars ) )
         SetMode( m_nMode );
@@ -1657,7 +1657,7 @@ void DbGridControl::setDataSource(const Reference< XRowSet >& _xCursor, sal_uInt
 
     // start listening on the seek cursor
     if (m_pSeekCursor)
-        m_pCursorDisposeListener = new DisposeListenerGridBridge(*this, Reference< XComponent > (Reference< XInterface >(*m_pSeekCursor), UNO_QUERY), 0);
+        m_pCursorDisposeListener = new DisposeListenerGridBridge(*this, Reference< XComponent > (Reference< XInterface >(*m_pSeekCursor), UNO_QUERY));
 }
 
 void DbGridControl::RemoveColumns()
@@ -1922,7 +1922,7 @@ void DbGridControl::RecalcRows(long nNewTopRow, sal_uInt16 nLinesOnScreen, bool 
     EnablePaint(true);
 }
 
-void DbGridControl::RowInserted(long nRow, long nNumRows, bool bDoPaint, bool bKeepSelection)
+void DbGridControl::RowInserted(long nRow, long nNumRows, bool bDoPaint)
 {
     if (nNumRows)
     {
@@ -1937,7 +1937,7 @@ void DbGridControl::RowInserted(long nRow, long nNumRows, bool bDoPaint, bool bK
         else if (m_nTotalCount >= 0)
             m_nTotalCount += nNumRows;
 
-        DbGridControl_Base::RowInserted(nRow, nNumRows, bDoPaint, bKeepSelection);
+        DbGridControl_Base::RowInserted(nRow, nNumRows, bDoPaint);
         m_aBar->InvalidateState(NavigationBar::RECORD_COUNT);
     }
 }
@@ -2254,7 +2254,7 @@ void DbGridControl::AdjustDataSource(bool bFull)
             {
                 // position of my data cursor is the same as the position our current row points tpo
                 // sync the status, repaint, done
-                DBG_ASSERT(m_xDataRow == m_xCurrentRow, "Fehler in den Datenzeilen");
+                DBG_ASSERT(m_xDataRow == m_xCurrentRow, "Errors in the data row");
                 SAL_INFO("svx.fmcomp", "same position, new state: " << ROWSTATUS(m_xCurrentRow));
                 RowModified(m_nCurrentPos);
                 return;
@@ -2901,8 +2901,9 @@ void DbGridControl::Command(const CommandEvent& rEvt)
                 DbGridControl_Base::Command(rEvt);
                 return;
             }
+
+            SAL_FALLTHROUGH;
         }
-        //fall-through
         default:
             DbGridControl_Base::Command(rEvt);
     }
@@ -3321,7 +3322,9 @@ bool DbGridControl::PreNotify(NotifyEvent& rEvt)
                     return true;
                 }
             }
-        }   // no break!
+
+            SAL_FALLTHROUGH;
+        }
         default:
             return DbGridControl_Base::PreNotify(rEvt);
     }
@@ -3652,7 +3655,7 @@ void DbGridControl::FieldListenerDisposing(sal_uInt16 _nId)
         return;
     }
 
-    ColumnFieldValueListeners::iterator aPos = pListeners->find(_nId);
+    ColumnFieldValueListeners::const_iterator aPos = pListeners->find(_nId);
     if (aPos == pListeners->end())
     {
         OSL_FAIL("DbGridControl::FieldListenerDisposing : invalid call (did not find the listener) !");

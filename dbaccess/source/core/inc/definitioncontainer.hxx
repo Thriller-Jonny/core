@@ -64,10 +64,10 @@ public:
     inline const_iterator end() const     { return m_aDefinitions.end(); }
 
     inline const_iterator find( const OUString& _rName ) const { return m_aDefinitions.find( _rName ); }
-           const_iterator find( TContentPtr _pDefinition ) const;
+           const_iterator find( const TContentPtr& _pDefinition ) const;
 
     inline void erase( const OUString& _rName ) { m_aDefinitions.erase( _rName ); }
-    void erase( TContentPtr _pDefinition );
+    void erase( const TContentPtr& _pDefinition );
 
     inline void insert( const OUString& _rName, TContentPtr _pDefinition )
     {
@@ -75,7 +75,7 @@ public:
     }
 
 private:
-    iterator find( TContentPtr _pDefinition );
+    iterator find( const TContentPtr& _pDefinition );
         // (for the moment, this is private. Make it public if needed. If really needed.)
 };
 
@@ -120,9 +120,9 @@ protected:
     DocumentsIndexAccess    m_aDocuments;               // for a efficient index access
     Documents               m_aDocumentMap;             // for a efficient name access
 
-    ::cppu::OInterfaceContainerHelper
+    ::comphelper::OInterfaceContainerHelper2
                             m_aApproveListeners;
-    ::cppu::OInterfaceContainerHelper
+    ::comphelper::OInterfaceContainerHelper2
                             m_aContainerListeners;
 
     bool                    m_bInPropertyChange;
@@ -137,7 +137,7 @@ protected:
         given here.
     */
     void                setElementApproval( PContainerApprove _pElementApproval ) { m_pElementApproval = _pElementApproval; }
-    PContainerApprove   getElementApproval() const { return m_pElementApproval; }
+    const PContainerApprove& getElementApproval() const { return m_pElementApproval; }
 
 protected:
     virtual ~ODefinitionContainer();
@@ -216,7 +216,7 @@ protected:
     // helper
     virtual void SAL_CALL disposing() override;
 
-    /** create a object from it's persistent data within the configuration. To be overwritten by derived classes.
+    /** create a object from its persistent data within the configuration. To be overwritten by derived classes.
         @param      _rName          the name the object has within the container
         @return                     the newly created object or an empty reference if something went wrong
     */

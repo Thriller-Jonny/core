@@ -33,10 +33,12 @@
 #include "FrameView.hxx"
 #include "Outliner.hxx"
 #include "OutlineViewShell.hxx"
+#include "SlideSorterViewShell.hxx"
 
 #include <basegfx/polygon/b2dpolygon.hxx>
 #include <basegfx/polygon/b2dpolypolygon.hxx>
 #include <basegfx/matrix/b2dhommatrix.hxx>
+#include <rtl/ustrbuf.hxx>
 #include <sfx2/printer.hxx>
 #include <editeng/editstat.hxx>
 #include <editeng/outlobj.hxx>
@@ -330,35 +332,30 @@ namespace {
     /** Read the resource file and process it into a sequence of properties
         that can be passed to the printing dialog.
     */
-    class DialogCreator : Resource
+    class DialogCreator : public Resource
     {
     public:
-        DialogCreator (bool bImpress, sal_Int32 nCurPage)
-            : Resource(SdResId(_STR_IMPRESS_PRINT_UI_OPTIONS))
+        DialogCreator (ViewShellBase &rBase, bool bImpress, sal_Int32 nCurPage)
+            : Resource(SdResId(STR_IMPRESS_PRINT_UI_OPTIONS))
+            , mrBase(rBase)
             , mbImpress(bImpress)
             , mnCurPage(nCurPage)
         {
             ProcessResource();
         }
 
-        Sequence< beans::PropertyValue > GetDialogControls() const
+        const std::vector< beans::PropertyValue >& GetDialogControls() const
         {
-            if (maProperties.empty())
-                return Sequence< beans::PropertyValue >();
-            else
-            {
-                return Sequence<beans::PropertyValue>(
-                        &maProperties.front(),
-                        maProperties.size());
-            }
+            return maProperties;
         }
 
-        std::vector<sal_Int32> GetSlidesPerPage() const
+        const std::vector<sal_Int32>& GetSlidesPerPage() const
         {
             return maSlidesPerPage;
         }
 
     private:
+        ViewShellBase &mrBase;
         std::vector<beans::PropertyValue> maProperties;
         std::vector<sal_Int32> maSlidesPerPage;
         bool mbImpress;
@@ -376,7 +373,7 @@ namespace {
             maProperties.push_back(aOptionsUIFile);
 
             SvtModuleOptions aOpt;
-            OUString aAppGroupname(SD_RESSTR(_STR_IMPRESS_PRINT_UI_GROUP_NAME));
+            OUString aAppGroupname(SD_RESSTR(STR_IMPRESS_PRINT_UI_GROUP_NAME));
             aAppGroupname = aAppGroupname.replaceFirst("%s", aOpt.GetModuleName(
                 mbImpress ? SvtModuleOptions::EModule::IMPRESS : SvtModuleOptions::EModule::DRAW));
             AddDialogControl(vcl::PrinterOptionsHelper::setGroupControlOpt("tabcontrol-page2", aAppGroupname, ".HelpID:vcl:PrintDialog:TabPage:AppPage"));
@@ -387,7 +384,7 @@ namespace {
                 vcl::PrinterOptionsHelper::UIControlOptions aPrintOpt;
                 aPrintOpt.maGroupHint = "JobPage" ;
                 AddDialogControl( vcl::PrinterOptionsHelper::setSubgroupControlOpt("extraimpressprintoptions",
-                                    SD_RESSTR(_STR_IMPRESS_PRINT_UI_PRINT_GROUP),
+                                    SD_RESSTR(STR_IMPRESS_PRINT_UI_PRINT_GROUP),
                                     "",
                                     aPrintOpt ));
 
@@ -395,10 +392,10 @@ namespace {
                 aHelpIds[0] = ".HelpID:vcl:PrintDialog:PageContentType:ListBox" ;
                 AddDialogControl( vcl::PrinterOptionsHelper::setChoiceListControlOpt(
                                     "impressdocument",
-                                    SD_RESSTR(_STR_IMPRESS_PRINT_UI_CONTENT),
+                                    SD_RESSTR(STR_IMPRESS_PRINT_UI_CONTENT),
                                     aHelpIds,
                                     "PageContentType" ,
-                                    CreateChoice(_STR_IMPRESS_PRINT_UI_CONTENT_CHOICES),
+                                    CreateChoice(STR_IMPRESS_PRINT_UI_CONTENT_CHOICES),
                                     0)
                                 );
 
@@ -406,7 +403,7 @@ namespace {
                 vcl::PrinterOptionsHelper::UIControlOptions aContentOpt( "PageContentType" , 1 );
                 AddDialogControl( vcl::PrinterOptionsHelper::setChoiceListControlOpt(
                                     "slidesperpage",
-                                    SD_RESSTR(_STR_IMPRESS_PRINT_UI_SLIDESPERPAGE),
+                                    SD_RESSTR(STR_IMPRESS_PRINT_UI_SLIDESPERPAGE),
                                     aHelpIds,
                                     "SlidesPerPage" ,
                                     GetSlidesPerPageSequence(),
@@ -420,10 +417,10 @@ namespace {
                 vcl::PrinterOptionsHelper::UIControlOptions aSlidesPerPageOpt( "SlidesPerPage" , -1, true );
                 AddDialogControl( vcl::PrinterOptionsHelper::setChoiceListControlOpt(
                                     "slidesperpageorder",
-                                    SD_RESSTR(_STR_IMPRESS_PRINT_UI_ORDER),
+                                    SD_RESSTR(STR_IMPRESS_PRINT_UI_ORDER),
                                     aHelpIds,
                                     "SlidesPerPageOrder" ,
-                                    CreateChoice(_STR_IMPRESS_PRINT_UI_ORDER_CHOICES),
+                                    CreateChoice(STR_IMPRESS_PRINT_UI_ORDER_CHOICES),
                                     0,
                                     Sequence< sal_Bool >(),
                                     aSlidesPerPageOpt )
@@ -431,12 +428,12 @@ namespace {
             }
 
             AddDialogControl( vcl::PrinterOptionsHelper::setSubgroupControlOpt("contents",
-                               SD_RESSTR(_STR_IMPRESS_PRINT_UI_INCLUDE_CONTENT), "" ) );
+                               SD_RESSTR(STR_IMPRESS_PRINT_UI_INCLUDE_CONTENT), "" ) );
 
             if( mbImpress )
             {
                 AddDialogControl( vcl::PrinterOptionsHelper::setBoolControlOpt("printname",
-                                    SD_RESSTR(_STR_IMPRESS_PRINT_UI_IS_PRINT_NAME),
+                                    SD_RESSTR(STR_IMPRESS_PRINT_UI_IS_PRINT_NAME),
                                     ".HelpID:vcl:PrintDialog:IsPrintName:CheckBox" ,
                                     "IsPrintName" ,
                                     false
@@ -446,7 +443,7 @@ namespace {
             else
             {
                 AddDialogControl( vcl::PrinterOptionsHelper::setBoolControlOpt("printname",
-                                    SD_RESSTR(_STR_DRAW_PRINT_UI_IS_PRINT_NAME),
+                                    SD_RESSTR(STR_DRAW_PRINT_UI_IS_PRINT_NAME),
                                     ".HelpID:vcl:PrintDialog:IsPrintName:CheckBox" ,
                                     "IsPrintName" ,
                                     false
@@ -455,7 +452,7 @@ namespace {
             }
 
             AddDialogControl( vcl::PrinterOptionsHelper::setBoolControlOpt("printdatetime",
-                                SD_RESSTR(_STR_IMPRESS_PRINT_UI_IS_PRINT_DATE),
+                                SD_RESSTR(STR_IMPRESS_PRINT_UI_IS_PRINT_DATE),
                                 ".HelpID:vcl:PrintDialog:IsPrintDateTime:CheckBox" ,
                                 "IsPrintDateTime" ,
                                 false
@@ -465,7 +462,7 @@ namespace {
             if( mbImpress )
             {
                 AddDialogControl( vcl::PrinterOptionsHelper::setBoolControlOpt("printhidden",
-                                    SD_RESSTR(_STR_IMPRESS_PRINT_UI_IS_PRINT_HIDDEN),
+                                    SD_RESSTR(STR_IMPRESS_PRINT_UI_IS_PRINT_HIDDEN),
                                     ".HelpID:vcl:PrintDialog:IsPrintHidden:CheckBox" ,
                                     "IsPrintHidden" ,
                                     false
@@ -474,7 +471,7 @@ namespace {
             }
 
             AddDialogControl( vcl::PrinterOptionsHelper::setSubgroupControlOpt("color",
-                               SD_RESSTR(_STR_IMPRESS_PRINT_UI_QUALITY), "" ) );
+                               SD_RESSTR(STR_IMPRESS_PRINT_UI_QUALITY), "" ) );
 
             aHelpIds.realloc( 3 );
             aHelpIds[0] = ".HelpID:vcl:PrintDialog:Quality:RadioButton:0" ;
@@ -489,12 +486,12 @@ namespace {
                                 "",
                                 aHelpIds,
                                 "Quality" ,
-                                CreateChoice(_STR_IMPRESS_PRINT_UI_QUALITY_CHOICES),
+                                CreateChoice(STR_IMPRESS_PRINT_UI_QUALITY_CHOICES),
                                 0)
                             );
 
             AddDialogControl( vcl::PrinterOptionsHelper::setSubgroupControlOpt("pagesizes",
-                               SD_RESSTR(_STR_IMPRESS_PRINT_UI_PAGE_OPTIONS), "" ) );
+                               SD_RESSTR(STR_IMPRESS_PRINT_UI_PAGE_OPTIONS), "" ) );
 
             aHelpIds.realloc( 4 );
             aHelpIds[0] = ".HelpID:vcl:PrintDialog:PageOptions:RadioButton:0" ;
@@ -513,7 +510,7 @@ namespace {
                                 "",
                                 aHelpIds,
                                 "PageOptions" ,
-                                CreateChoice(mbImpress ? _STR_IMPRESS_PRINT_UI_PAGE_OPTIONS_CHOICES : _STR_IMPRESS_PRINT_UI_PAGE_OPTIONS_CHOICES_DRAW),
+                                CreateChoice(mbImpress ? STR_IMPRESS_PRINT_UI_PAGE_OPTIONS_CHOICES : STR_IMPRESS_PRINT_UI_PAGE_OPTIONS_CHOICES_DRAW),
                                 0,
                                 Sequence< sal_Bool >(),
                                 aPageOptionsOpt
@@ -523,12 +520,12 @@ namespace {
             vcl::PrinterOptionsHelper::UIControlOptions aBrochureOpt;
             aBrochureOpt.maGroupHint = "LayoutPage" ;
             AddDialogControl( vcl::PrinterOptionsHelper::setSubgroupControlOpt("pagesides",
-                               SD_RESSTR(_STR_IMPRESS_PRINT_UI_PAGE_SIDES), "",
+                               SD_RESSTR(STR_IMPRESS_PRINT_UI_PAGE_SIDES), "",
                                aBrochureOpt ) );
 
             // brochure printing
             AddDialogControl( vcl::PrinterOptionsHelper::setBoolControlOpt("brochure",
-                                SD_RESSTR(_STR_IMPRESS_PRINT_UI_BROCHURE),
+                                SD_RESSTR(STR_IMPRESS_PRINT_UI_BROCHURE),
                                 ".HelpID:vcl:PrintDialog:PrintProspect:CheckBox" ,
                                 "PrintProspect" ,
                                 false,
@@ -543,10 +540,10 @@ namespace {
             aHelpIds[0] = ".HelpID:vcl:PrintDialog:PrintProspectInclude:ListBox" ;
             AddDialogControl( vcl::PrinterOptionsHelper::setChoiceListControlOpt(
                                 "brochureinclude",
-                                SD_RESSTR(_STR_IMPRESS_PRINT_UI_BROCHURE_INCLUDE),
+                                SD_RESSTR(STR_IMPRESS_PRINT_UI_BROCHURE_INCLUDE),
                                 aHelpIds,
                                 "PrintProspectInclude" ,
-                                CreateChoice(_STR_IMPRESS_PRINT_UI_BROCHURE_INCLUDE_LIST),
+                                CreateChoice(STR_IMPRESS_PRINT_UI_BROCHURE_INCLUDE_LIST),
                                 0,
                                 Sequence< sal_Bool >(),
                                 aIncludeOpt
@@ -557,7 +554,7 @@ namespace {
             vcl::PrinterOptionsHelper::UIControlOptions aPaperTrayOpt;
             aPaperTrayOpt.maGroupHint = "OptionsPageOptGroup" ;
             AddDialogControl( vcl::PrinterOptionsHelper::setBoolControlOpt("printpaperfromsetup",
-                                SD_RESSTR(_STR_IMPRESS_PRINT_UI_PAPER_TRAY),
+                                SD_RESSTR(STR_IMPRESS_PRINT_UI_PAPER_TRAY),
                                 ".HelpID:vcl:PrintDialog:PrintPaperFromSetup:CheckBox" ,
                                 "PrintPaperFromSetup" ,
                                 false,
@@ -569,7 +566,7 @@ namespace {
             aPrintRangeOpt.mbInternalOnly = true;
             aPrintRangeOpt.maGroupHint = "PrintRange" ;
             AddDialogControl( vcl::PrinterOptionsHelper::setSubgroupControlOpt("printrange",
-                                SD_RESSTR(_STR_IMPRESS_PRINT_UI_PAGE_RANGE),
+                                SD_RESSTR(STR_IMPRESS_PRINT_UI_PAGE_RANGE),
                                 "",
                                 aPrintRangeOpt )
                              );
@@ -584,19 +581,47 @@ namespace {
             aWidgetIds[0] = "printallpages";
             aWidgetIds[1] = "printpages";
             aWidgetIds[2] = "printselection";
+
+            // check if there is a selection of slides
+            OUString aPageRange(OUString::number(mnCurPage + 1));
+            int nPrintRange(0);
+            using sd::slidesorter::SlideSorterViewShell;
+            SlideSorterViewShell* const pSSViewSh(SlideSorterViewShell::GetSlideSorter(mrBase));
+            if (pSSViewSh)
+            {
+                const std::shared_ptr<SlideSorterViewShell::PageSelection> pPageSelection(pSSViewSh->GetPageSelection());
+                if (bool(pPageSelection) && pPageSelection->size() > 1)
+                {
+                    OUStringBuffer aBuf;
+                    // TODO: this could be improved by writing ranges instead of consecutive page
+                    // numbers if appropriate. Do we have a helper function for that somewhere?
+                    bool bFirst(true);
+                    for (auto pPage: *pPageSelection)
+                    {
+                        if (bFirst)
+                            bFirst = false;
+                        else
+                            aBuf.append(',');
+                        aBuf.append(OUString::number(pPage->GetPageNum() / 2 + 1));
+                    }
+                    aPageRange = aBuf.getStr();
+                    nPrintRange = 1;
+                }
+            }
+
             AddDialogControl( vcl::PrinterOptionsHelper::setChoiceRadiosControlOpt(aWidgetIds, "",
                                 aHelpIds,
                                 aPrintRangeName,
                                 CreateChoice(mbImpress
-                                             ? _STR_IMPRESS_PRINT_UI_PAGE_RANGE_CHOICE
-                                             : _STR_DRAW_PRINT_UI_PAGE_RANGE_CHOICE),
-                                0 )
+                                             ? STR_IMPRESS_PRINT_UI_PAGE_RANGE_CHOICE
+                                             : STR_DRAW_PRINT_UI_PAGE_RANGE_CHOICE),
+                                nPrintRange )
                             );
             // create a an Edit dependent on "Pages" selected
             vcl::PrinterOptionsHelper::UIControlOptions aPageRangeOpt( aPrintRangeName, 1, true );
             AddDialogControl(vcl::PrinterOptionsHelper::setEditControlOpt("pagerange", "",
                                 ".HelpID:vcl:PrintDialog:PageRange:Edit", "PageRange",
-                                OUString::number(mnCurPage + 1), aPageRangeOpt));
+                                aPageRange, aPageRangeOpt));
 
             FreeResource();
         }
@@ -624,7 +649,7 @@ namespace {
         Sequence<OUString> GetSlidesPerPageSequence()
         {
             const Sequence<OUString> aChoice (
-                CreateChoice(_STR_IMPRESS_PRINT_UI_SLIDESPERPAGE_CHOICES));
+                CreateChoice(STR_IMPRESS_PRINT_UI_SLIDESPERPAGE_CHOICES));
             maSlidesPerPage.clear();
             maSlidesPerPage.push_back(0); // first is using the default
             for (sal_Int32 nIndex=1,nCount=aChoice.getLength(); nIndex<nCount; ++nIndex)
@@ -1094,11 +1119,11 @@ namespace {
             // Get and set up the outliner.
             const Rectangle aOutRect (rPrinter.GetPageOffset(), rPrinter.GetOutputSize());
             Outliner* pOutliner = rDocument.GetInternalOutliner();
-            const sal_uInt16 nSavedOutlMode (pOutliner->GetMode());
+            const OutlinerMode nSavedOutlMode (pOutliner->GetMode());
             const bool bSavedUpdateMode (pOutliner->GetUpdateMode());
             const Size aSavedPaperSize (pOutliner->GetPaperSize());
 
-            pOutliner->Init(OUTLINERMODE_OUTLINEVIEW);
+            pOutliner->Init(OutlinerMode::OutlineView);
             pOutliner->SetPaperSize(aOutRect.GetSize());
             pOutliner->SetUpdateMode(true);
             pOutliner->Clear();
@@ -1140,7 +1165,7 @@ public:
         , mpPrintView()
         , mbHasOrientationWarningBeenShown(false)
     {
-        DialogCreator aCreator( mrBase.GetDocShell()->GetDocumentType() == DOCUMENT_TYPE_IMPRESS, GetCurrentPageIndex() );
+        DialogCreator aCreator( mrBase, mrBase.GetDocShell()->GetDocumentType() == DOCUMENT_TYPE_IMPRESS, GetCurrentPageIndex() );
         m_aUIProperties = aCreator.GetDialogControls();
         maSlidesPerPage = aCreator.GetSlidesPerPage();
 
@@ -1154,10 +1179,11 @@ public:
 
     virtual void Notify (SfxBroadcaster& rBroadcaster, const SfxHint& rHint) override
     {
+        if (&rBroadcaster != &static_cast<SfxBroadcaster&>(mrBase))
+            return;
+
         const SfxSimpleHint* pSimpleHint = dynamic_cast<const SfxSimpleHint*>(&rHint);
-        if (pSimpleHint != nullptr
-            && pSimpleHint->GetId() == SFX_HINT_DYING
-            && &rBroadcaster == &static_cast<SfxBroadcaster&>(mrBase))
+        if (pSimpleHint != nullptr && pSimpleHint->GetId() == SFX_HINT_DYING)
         {
             Dispose();
         }
@@ -1225,14 +1251,14 @@ public:
         css::uno::Sequence<css::beans::PropertyValue> aProperties (3);
 
         aProperties[0].Name = "ExtraPrintUIOptions";
-        aProperties[0].Value <<= m_aUIProperties;
+        aProperties[0].Value <<= comphelper::containerToSequence(m_aUIProperties);
 
         aProperties[1].Name = "PageSize";
         aProperties[1].Value <<= maPrintSize;
 
         // FIXME: is this always true ?
         aProperties[2].Name = "PageIncludesNonprintableArea";
-        aProperties[2].Value = makeAny( sal_True );
+        aProperties[2].Value = makeAny( true );
 
         return aProperties;
     }
@@ -1610,8 +1636,8 @@ private:
         }
 
         Outliner* pOutliner = mrBase.GetDocument()->GetInternalOutliner();
-        pOutliner->Init(OUTLINERMODE_OUTLINEVIEW);
-        const sal_uInt16 nSavedOutlMode (pOutliner->GetMode());
+        pOutliner->Init(OutlinerMode::OutlineView);
+        const OutlinerMode nSavedOutlMode (pOutliner->GetMode());
         const bool bSavedUpdateMode (pOutliner->GetUpdateMode());
         const Size aSavedPaperSize (pOutliner->GetPaperSize());
         const MapMode aSavedMapMode (pOutliner->GetRefMapMode());

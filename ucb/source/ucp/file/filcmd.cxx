@@ -32,15 +32,13 @@ using namespace com::sun::star::ucb;
 #endif
 
 XCommandInfo_impl::XCommandInfo_impl( shell* pMyShell )
-    : m_pMyShell( pMyShell ),
-      m_xProvider( pMyShell->m_pProvider )
+    : m_pMyShell( pMyShell )
 {
 }
 
 XCommandInfo_impl::~XCommandInfo_impl()
 {
 }
-
 
 
 void SAL_CALL

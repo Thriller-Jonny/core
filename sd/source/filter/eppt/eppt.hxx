@@ -31,7 +31,6 @@
 #include "text.hxx"
 
 #include <vcl/mapmod.hxx>
-#include <com/sun/star/uno/Any.hxx>
 #include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/drawing/FillStyle.hpp>
 #include <com/sun/star/drawing/LineStyle.hpp>
@@ -166,10 +165,6 @@ class PPTWriter : public PPTWriterBase, public PPTExBulletProvider
         OUString                   maBaseURI;
 
         css::uno::Reference< css::text::XSimpleText >             mXText;             // TextRef of the global text
-        css::uno::Reference< css::text::XTextCursor >             mXCursor;
-        css::uno::Reference< css::text::XTextRange >              mXCursorText;       // TextRef of part of the cursor
-        css::uno::Reference< css::beans::XPropertySet >           mXCursorPropSet;    // properties of the part
-        css::uno::Reference< css::text::XTextField >              mXTextField;
         sal_uInt32          mnTextStyle;
 
         bool                mbFontIndependentLineSpacing;
@@ -223,7 +218,7 @@ class PPTWriter : public PPTWriterBase, public PPTExBulletProvider
                                 css::uno::Reference< css::beans::XPropertySet >& rXPagePropSet );
         void                ImplCreateHeaderFooters( css::uno::Reference< css::beans::XPropertySet >& rXPagePropSet );
         virtual bool        ImplCreateDocument() override;
-        bool                ImplCreateHyperBlob( SvMemoryStream& rStream );
+        void                ImplCreateHyperBlob( SvMemoryStream& rStream );
         sal_uInt32          ImplInsertBookmarkURL( const OUString& rBookmark, const sal_uInt32 nType,
                                 const OUString& rStringVer0, const OUString& rStringVer1, const OUString& rStringVer2, const OUString& rStringVer3 );
         virtual bool        ImplCreateMainNotes() override;

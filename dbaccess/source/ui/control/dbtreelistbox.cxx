@@ -29,7 +29,7 @@
 #include <com/sun/star/frame/XFrame.hpp>
 #include <com/sun/star/util/URL.hpp>
 #include <cppuhelper/implbase.hxx>
-#include <cppuhelper/interfacecontainer.hxx>
+#include <comphelper/interfacecontainer2.hxx>
 #include <vcl/help.hxx>
 #include <vcl/commandinfoprovider.hxx>
 #include <dbaccess/IController.hxx>
@@ -39,7 +39,7 @@
 #include "svtools/treelistentry.hxx"
 
 #include <memory>
-
+#include <o3tl/make_unique.hxx>
 namespace dbaui
 {
 
@@ -54,12 +54,12 @@ using namespace ::com::sun::star::view;
 
 #define SPACEBETWEENENTRIES     4
 // class DBTreeListBox
-DBTreeListBox::DBTreeListBox( vcl::Window* pParent, WinBits nWinStyle ,bool _bHandleEnterKey)
+DBTreeListBox::DBTreeListBox( vcl::Window* pParent, WinBits nWinStyle )
     :SvTreeListBox(pParent,nWinStyle)
     ,m_pDragedEntry(nullptr)
     ,m_pActionListener(nullptr)
     ,m_pContextMenuProvider( nullptr )
-    ,m_bHandleEnterKey(_bHandleEnterKey)
+    ,m_bHandleEnterKey(false)
 {
     init();
 }
@@ -96,11 +96,11 @@ void DBTreeListBox::dispose()
 SvTreeListEntry* DBTreeListBox::GetEntryPosByName( const OUString& aName, SvTreeListEntry* pStart, const IEntryFilter* _pFilter ) const
 {
     SvTreeList* myModel = GetModel();
-    std::pair<SvTreeListEntries::iterator,SvTreeListEntries::iterator> aIters =
+    std::pair<SvTreeListEntries::const_iterator,SvTreeListEntries::const_iterator> aIters =
         myModel->GetChildIterators(pStart);
 
     SvTreeListEntry* pEntry = nullptr;
-    SvTreeListEntries::iterator it = aIters.first, itEnd = aIters.second;
+    SvTreeListEntries::const_iterator it = aIters.first, itEnd = aIters.second;
     for (; it != itEnd; ++it)
     {
         pEntry = (*it).get();
@@ -139,8 +139,7 @@ void DBTreeListBox::InitEntry(SvTreeListEntry* _pEntry, const OUString& aStr, co
 {
     SvTreeListBox::InitEntry( _pEntry, aStr, _rCollEntryBmp,_rExpEntryBmp, eButtonKind);
     SvLBoxItem* pTextItem(_pEntry->GetFirstItem(SV_ITEM_ID_LBOXSTRING));
-    std::unique_ptr<SvLBoxString> pString(new OBoldListboxString(_pEntry, 0, aStr));
-    _pEntry->ReplaceItem(std::move(pString), _pEntry->GetPos(pTextItem));
+    _pEntry->ReplaceItem(o3tl::make_unique<OBoldListboxString>(aStr), _pEntry->GetPos(pTextItem));
 }
 
 void DBTreeListBox::implStopSelectionTimer()
@@ -387,7 +386,7 @@ bool DBTreeListBox::EditedEntry( SvTreeListEntry* pEntry, const OUString& rNewTe
 bool DBTreeListBox::DoubleClickHdl()
 {
     // continue default processing if the DoubleClickHandler didn't handle it
-    return aDoubleClickHdl.Call( this );
+    return !aDoubleClickHdl.Call( this );
 }
 
 void scrollWindow(DBTreeListBox* _pListBox, const Point& _rPos,bool _bUp)
@@ -566,7 +565,7 @@ std::unique_ptr<PopupMenu> DBTreeListBox::CreateContextMenu()
     // set images
     lcl_insertMenuItemImages( *pContextMenu, m_pContextMenuProvider->getCommandController() );
     // allow context menu interception
-    ::cppu::OInterfaceContainerHelper* pInterceptors = m_pContextMenuProvider->getContextMenuInterceptors();
+    ::comphelper::OInterfaceContainerHelper2* pInterceptors = m_pContextMenuProvider->getContextMenuInterceptors();
     if ( !pInterceptors || !pInterceptors->getLength() )
         return pContextMenu;
 
@@ -578,7 +577,7 @@ std::unique_ptr<PopupMenu> DBTreeListBox::CreateContextMenu()
         pContextMenu.get(), nullptr );
     aEvent.Selection = new SelectionSupplier( m_pContextMenuProvider->getCurrentSelection( *this ) );
 
-    ::cppu::OInterfaceIteratorHelper aIter( *pInterceptors );
+    ::comphelper::OInterfaceIteratorHelper2 aIter( *pInterceptors );
     bool bModifiedMenu = false;
     bool bAskInterceptors = true;
     while ( aIter.hasMoreElements() && bAskInterceptors )
@@ -607,7 +606,7 @@ std::unique_ptr<PopupMenu> DBTreeListBox::CreateContextMenu()
 
                 default:
                     OSL_FAIL( "DBTreeListBox::CreateContextMenu: unexpected return value of the interceptor call!" );
-
+                    SAL_FALLTHROUGH;
                 case ContextMenuInterceptorAction_IGNORED:
                     break;
             }

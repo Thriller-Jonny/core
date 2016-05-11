@@ -141,9 +141,13 @@ Writer& OutHTML_NumBulListStart( SwHTMLWriter& rWrt,
                             if( pTextNd->GetActualListLevel() + 1 <
                                 rInfo.GetDepth() )
                             {
-                                // node is numbered, but level is lower
+                                if (rPrevInfo.GetDepth() == 0)
+                                    // previous node had no numbering => write start value
+                                    bStartValue = true;
+                                else
+                                    // node is numbered, but level is lower
+                                    bStartValue = false;
                                 // => check completed
-                                bStartValue = false;
                                 break;
                             }
                             nPos++;
@@ -215,7 +219,8 @@ Writer& OutHTML_NumBulListStart( SwHTMLWriter& rWrt,
             rWrt.Strm().WriteOString( sOut );
             OutHTML_BulletImage( rWrt,
                                     nullptr,
-                                    rNumFormat.GetBrush() );
+                                    rNumFormat.GetBrush(),
+                                    rWrt.m_aBulletGrfs[i]);
         }
         else
         {
@@ -249,7 +254,6 @@ Writer& OutHTML_NumBulListStart( SwHTMLWriter& rWrt,
             sal_uInt16 nStartVal = rNumFormat.GetStart();
             if( bStartValue && 1 == nStartVal && i == rInfo.GetDepth()-1 )
             {
-                // #i51089 - TUNING#
                 if ( rWrt.pCurPam->GetNode().GetTextNode()->GetNum() )
                 {
                     nStartVal = static_cast< sal_uInt16 >( rWrt.pCurPam->GetNode()
@@ -266,7 +270,7 @@ Writer& OutHTML_NumBulListStart( SwHTMLWriter& rWrt,
             }
         }
 
-        if (!sOut.isEmpty())
+        if (!sOut.isEmpty() && SVX_NUM_BITMAP != eType)  // second condition to avoid adding extra ul, already done before.
             rWrt.Strm().WriteOString( sOut );
 
         if( rWrt.m_bCfgOutStyles )

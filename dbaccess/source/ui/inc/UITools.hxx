@@ -26,6 +26,8 @@
 #include <vcl/taskpanelist.hxx>
 #include <connectivity/dbtools.hxx>
 
+#include <memory>
+
 #define RET_ALL     10
 
 // we only need forward decl here
@@ -164,7 +166,7 @@ namespace dbaui
         getDataSourceByName(
                 const OUString& _rDataSourceName,
                 vcl::Window* _pErrorMessageParent,
-                css::uno::Reference< css::uno::XComponentContext > _rxContext,
+                const css::uno::Reference< css::uno::XComponentContext >& _rxContext,
                 ::dbtools::SQLExceptionInfo* _pErrorInfo
             );
 
@@ -178,7 +180,7 @@ namespace dbaui
         @param css::awt::TextAlign& _nAlignment
         @return the corresponding SvxCellHorJustify
     */
-    SvxCellHorJustify mapTextJustify(const sal_Int32& _nAlignment);
+    SvxCellHorJustify mapTextJustify(sal_Int32 _nAlignment);
 
     /** call the format dialog and set the selected format at the column
         @param  _xAffectedCol   Font to be converted
@@ -366,7 +368,7 @@ namespace dbaui
         @retrun
             the filter
     */
-    const SfxFilter* getStandardDatabaseFilter();
+    std::shared_ptr<const SfxFilter> getStandardDatabaseFilter();
 
     /** opens a save dialog to store a form or report folder in the current hierarchy.
         @param  _pParent

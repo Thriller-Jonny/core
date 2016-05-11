@@ -30,7 +30,6 @@
 #include <sax/tools/converter.hxx>
 
 #include <com/sun/star/beans/XPropertySet.hpp>
-#include <com/sun/star/uno/Type.hxx>
 #include <com/sun/star/util/Date.hpp>
 #include <com/sun/star/util/Time.hpp>
 #include <com/sun/star/util/DateTime.hpp>
@@ -52,11 +51,8 @@ using namespace com::sun::star;
 using com::sun::star::util::Duration;
 using com::sun::star::xml::sax::XAttributeList;
 using com::sun::star::beans::XPropertySet;
-using com::sun::star::beans::XPropertySetInfo;
 using com::sun::star::xforms::XDataTypeRepository;
 using namespace xmloff::token;
-
-
 
 
 static const SvXMLTokenMapEntry aAttributes[] =

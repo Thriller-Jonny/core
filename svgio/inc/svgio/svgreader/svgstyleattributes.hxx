@@ -32,8 +32,9 @@ namespace svgio { namespace svgreader {
     class SvgGradientNode;
     class SvgPatternNode;
     class SvgMarkerNode;
+    class SvgClipPathNode;
+    class SvgMaskNode;
 }}
-
 
 
 namespace svgio
@@ -54,6 +55,21 @@ namespace svgio
             StrokeLinejoin_miter,
             StrokeLinejoin_round,
             StrokeLinejoin_bevel
+        };
+
+        enum FontSize
+        {
+            FontSize_notset,
+            FontSize_xx_small,
+            FontSize_x_small,
+            FontSize_small,
+            FontSize_smaller,
+            FontSize_medium,
+            FontSize_large,
+            FontSize_larger,
+            FontSize_x_large,
+            FontSize_xx_large,
+            FontSize_initial
         };
 
         enum FontStretch
@@ -155,6 +171,7 @@ namespace svgio
 
         enum Visibility
         {
+            Visibility_notset,
             Visibility_visible,
             Visibility_hidden,
             Visibility_collapse,
@@ -183,7 +200,8 @@ namespace svgio
             SvgNumber                   maStrokeMiterLimit;
             SvgNumber                   maStrokeOpacity;
             SvgStringVector             maFontFamily;
-            SvgNumber                   maFontSize;
+            FontSize                    maFontSize;
+            SvgNumber                   maFontSizeNumber;
             FontStretch                 maFontStretch;
             FontStyle                   maFontStyle;
             FontVariant                 maFontVariant;
@@ -199,7 +217,9 @@ namespace svgio
 
             /// link to content. If set, the node can be fetched on demand
             OUString               maClipPathXLink;
+            const SvgClipPathNode* mpClipPathXLink;
             OUString               maMaskXLink;
+            const SvgMaskNode*     mpMaskXLink;
 
             /// link to markers. If set, the node can be fetched on demand
             OUString               maMarkerStartXLink;
@@ -212,7 +232,7 @@ namespace svgio
             /// fill rule
             FillRule                    maFillRule;
 
-            // ClipRule setting (only valid wne mbIsClipPathContent == true, default is FillRule_nonzero)
+            // ClipRule setting (only valid when mbIsClipPathContent == true, default is FillRule_nonzero)
             FillRule                    maClipRule;
 
             // BaselineShift: Type and number (in case of BaselineShift_Percentage or BaselineShift_Length)
@@ -358,7 +378,7 @@ namespace svgio
 
             /// StrokeMiterLimit content
             SvgNumber getStrokeMiterLimit() const;
-            void setStrokeMiterLimit(const SvgNumber& rStrokeMiterLimit = SvgNumber()) { maStrokeMiterLimit = rStrokeMiterLimit; }
+            void setStrokeMiterLimit(const SvgNumber& rStrokeMiterLimit = SvgNumber(4.0,Unit_none,false)) { maStrokeMiterLimit = rStrokeMiterLimit; }
 
             /// StrokeOpacity content
             SvgNumber getStrokeOpacity() const;
@@ -369,8 +389,9 @@ namespace svgio
             void setFontFamily(const SvgStringVector& rSvgStringVector = SvgStringVector()) { maFontFamily = rSvgStringVector; }
 
             /// FontSize content
-            SvgNumber getFontSize() const;
-            void setFontSize(const SvgNumber& rFontSize = SvgNumber()) { maFontSize = rFontSize; }
+            void setFontSize(const FontSize aFontSize = FontSize_notset) { maFontSize = aFontSize; }
+            void setFontSizeNumber(const SvgNumber& rFontSize = SvgNumber()) { maFontSizeNumber = rFontSize; }
+            SvgNumber getFontSizeNumber() const;
 
             /// FontStretch content
             FontStretch getFontStretch() const;
@@ -408,12 +429,12 @@ namespace svgio
             const basegfx::BColor* getCurrentColor() const;
 
             /// Opacity content
-            SvgNumber getOpacity() const { return maOpacity; }
+            SvgNumber getOpacity() const;
             void setOpacity(const SvgNumber& rOpacity = SvgNumber()) { maOpacity = rOpacity; }
 
             /// Visibility
-            Visibility getVisibility() const { return maVisibility; }
-            void setVisibility(Visibility eVisibility) { maVisibility = eVisibility; }
+            Visibility getVisibility() const;
+            void setVisibility(const Visibility aVisibility = Visibility_notset) { maVisibility = aVisibility; }
 
             // Title content
             const OUString& getTitle() const { return maTitle; }
@@ -424,10 +445,12 @@ namespace svgio
             void setDesc(const OUString& rNew) { maDesc = rNew; }
 
             // ClipPathXLink content
-            const OUString getClipPathXLink() const { return maClipPathXLink; }
+            OUString getClipPathXLink() const;
+            const SvgClipPathNode* accessClipPathXLink() const;
 
             // MaskXLink content
-            const OUString getMaskXLink() const { return maMaskXLink; }
+            OUString getMaskXLink() const;
+            const SvgMaskNode* accessMaskXLink() const;
 
             // MarkerStartXLink content
             OUString getMarkerStartXLink() const;

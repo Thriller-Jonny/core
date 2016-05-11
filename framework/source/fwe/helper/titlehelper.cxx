@@ -249,13 +249,13 @@ void SAL_CALL TitleHelper::disposing(const css::lang::EventObject& aEvent)
     // SYNCHRONIZED ->
     aLock.reset ();
 
+         m_xOwner        = nullptr;
          m_sTitle        = OUString ();
          m_nLeasedNumber = css::frame::UntitledNumbersConst::INVALID_NUMBER;
 
     aLock.clear ();
     // <- SYNCHRONIZED
 
-    impl_sendTitleChangedEvent ();
 }
 
 void TitleHelper::impl_sendTitleChangedEvent ()
@@ -267,6 +267,9 @@ void TitleHelper::impl_sendTitleChangedEvent ()
 
     aLock.clear ();
     // <- SYNCHRONIZED
+
+    if( ! (aEvent.Source).is() )
+        return;
 
     ::cppu::OInterfaceContainerHelper* pContainer = m_aListener.getContainer( cppu::UnoType<css::frame::XTitleChangeListener>::get());
     if ( ! pContainer)
@@ -317,7 +320,7 @@ void TitleHelper::impl_updateTitleForModel (const css::uno::Reference< css::fram
     // SYNCHRONIZED ->
     ::osl::ResettableMutexGuard aLock(m_aMutex);
 
-        // external title wont be updated internally !
+        // external title won't be updated internally!
         // It has to be set from outside new.
         if (m_bExternalTitle)
             return;
@@ -387,7 +390,7 @@ void TitleHelper::impl_updateTitleForController (const css::uno::Reference< css:
     // SYNCHRONIZED ->
     ::osl::ResettableMutexGuard aLock(m_aMutex);
 
-        // external title wont be updated internally !
+        // external title won't be updated internally!
         // It has to be set from outside new.
         if (m_bExternalTitle)
             return;
@@ -466,7 +469,7 @@ void TitleHelper::impl_updateTitleForFrame (const css::uno::Reference< css::fram
     // SYNCHRONIZED ->
     ::osl::ResettableMutexGuard aLock(m_aMutex);
 
-        // external title wont be updated internally !
+        // external title won't be updated internally!
         // It has to be set from outside new.
         if (m_bExternalTitle)
             return;
@@ -587,6 +590,7 @@ void TitleHelper::impl_startListeningForModel (const css::uno::Reference< css::f
 
 void TitleHelper::impl_startListeningForController (const css::uno::Reference< css::frame::XController >& xController)
 {
+    xController->addEventListener (static_cast< css::lang::XEventListener* > (static_cast< css::frame::XFrameActionListener* > (this) ) );
     css::uno::Reference< css::frame::XTitle > xSubTitle(xController->getModel (), css::uno::UNO_QUERY);
     impl_setSubTitle (xSubTitle);
 }

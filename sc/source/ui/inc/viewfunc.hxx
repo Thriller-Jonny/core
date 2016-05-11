@@ -97,11 +97,11 @@ public:
 
     void            EnterDataAtCursor( const OUString& rString );         //! Not used?
 
-    SC_DLLPUBLIC void           CutToClip( ScDocument* pClipDoc = nullptr, bool bIncludeObjects = false );
+    SC_DLLPUBLIC void           CutToClip();
     SC_DLLPUBLIC bool           CopyToClip( ScDocument* pClipDoc = nullptr, bool bCut = false, bool bApi = false,
                                             bool bIncludeObjects = false, bool bStopEdit = true );
     SC_DLLPUBLIC bool           CopyToClip( ScDocument* pClipDoc, const ScRangeList& rRange, bool bCut = false,
-                                            bool bApi = false, bool bIncludeObjects = false, bool bStopEdit = true, bool bUseRangeForVBA = true );
+                                            bool bApi = false, bool bIncludeObjects = false, bool bStopEdit = true );
     ScTransferObj*              CopyToTransferable();
     SC_DLLPUBLIC bool           PasteFromClip( InsertDeleteFlags nFlags, ScDocument* pClipDoc,
                                     ScPasteFunc nFunction = ScPasteFunc::NONE, bool bSkipEmpty = false,
@@ -147,9 +147,9 @@ public:
     bool            HasBookmarkAtCursor( SvxHyperlinkItem* pContent );
 
     bool            MoveBlockTo( const ScRange& rSource, const ScAddress& rDestPos,
-                                    bool bCut, bool bRecord, bool bPaint, bool bApi );
+                                    bool bCut );
 
-    bool            LinkBlock( const ScRange& rSource, const ScAddress& rDestPos, bool bApi );
+    bool            LinkBlock( const ScRange& rSource, const ScAddress& rDestPos );
 
     void            CreateNames( sal_uInt16 nFlags );
     sal_uInt16      GetCreateNameFlags();
@@ -157,22 +157,19 @@ public:
     bool            InsertName( const OUString& rName, const OUString& rSymbol,
                                 const OUString& rType );
 
-    void            ApplyAttributes( const SfxItemSet* pDialogSet, const SfxItemSet* pOldSet,
-                                        bool bRecord = true );
+    void            ApplyAttributes( const SfxItemSet* pDialogSet, const SfxItemSet* pOldSet );
     void            ApplyAttr( const SfxPoolItem& rAttrItem );
     void            ApplySelectionPattern( const ScPatternAttr& rAttr,
-                                            bool bRecord = true,
-                                            bool bCursorOnly = false );
+                                            bool bCursorOnly = false);
     void            ApplyPatternLines( const ScPatternAttr& rAttr,
                                         const SvxBoxItem* pNewOuter,
-                                        const SvxBoxInfoItem* pNewInner, bool bRecord = true );
+                                        const SvxBoxInfoItem* pNewInner );
 
     void            ApplyUserItemSet( const SfxItemSet& rItemSet );
 
     const SfxStyleSheet*
                     GetStyleSheetFromMarked();
-    void            SetStyleSheetToMarked( SfxStyleSheet* pStyleSheet,
-                                                        bool bRecord = true );
+    void            SetStyleSheetToMarked( SfxStyleSheet* pStyleSheet );
     void            RemoveStyleSheetInUse( const SfxStyleSheetBase* pStyleSheet );
     void            UpdateStyleSheetInUse( const SfxStyleSheetBase* pStyleSheet );
 
@@ -189,21 +186,20 @@ public:
     void            Protect( SCTAB nTab, const OUString& rPassword );
     bool            Unprotect( SCTAB nTab, const OUString& rPassword );
 
-    void            DeleteCells( DelCellCmd eCmd, bool bRecord = true );
+    void            DeleteCells( DelCellCmd eCmd );
     bool            InsertCells( InsCellCmd eCmd, bool bRecord = true, bool bPartOfPaste = false );
-    void            DeleteMulti( bool bRows, bool bRecord = true );
+    void            DeleteMulti( bool bRows );
 
-    void            DeleteContents( InsertDeleteFlags nFlags, bool bRecord = true );
+    void            DeleteContents( InsertDeleteFlags nFlags );
 
     void SetWidthOrHeight(
         bool bWidth, const std::vector<sc::ColRowSpan>& rRanges, ScSizeMode eMode,
-        sal_uInt16 nSizeTwips, bool bRecord = true, bool bPaint = true, ScMarkData* pMarkData = nullptr );
+        sal_uInt16 nSizeTwips, bool bRecord = true, ScMarkData* pMarkData = nullptr );
 
-    void            SetMarkedWidthOrHeight( bool bWidth, ScSizeMode eMode, sal_uInt16 nSizeTwips,
-                                        bool bRecord = true, bool bPaint = true );
+    void            SetMarkedWidthOrHeight( bool bWidth, ScSizeMode eMode, sal_uInt16 nSizeTwips );
 
     bool            AdjustBlockHeight( bool bPaint = true, ScMarkData* pMarkData = nullptr );
-    bool            AdjustRowHeight( SCROW nStartRow, SCROW nEndRow, bool bPaint = true );
+    bool            AdjustRowHeight( SCROW nStartRow, SCROW nEndRow );
 
     void            ModifyCellSize( ScDirection eDir, bool bOptimal );
 
@@ -218,27 +214,27 @@ public:
 
     void            RemoveManualBreaks();
 
-    void            SetPrintZoom(sal_uInt16 nScale, sal_uInt16 nPages);
+    void            SetPrintZoom(sal_uInt16 nScale);
     void            AdjustPrintZoom();
 
     bool            TestMergeCells();
     bool            TestRemoveMerge();
 
-    bool            MergeCells( bool bApi, bool& rDoContents, bool bRecord = true, bool bCenter = false );
-    bool            RemoveMerge( bool bRecord = true );
+    bool            MergeCells( bool bApi, bool& rDoContents, bool bCenter = false );
+    bool            RemoveMerge();
 
-    void            FillSimple( FillDir eDir, bool bRecord = true );
+    void            FillSimple( FillDir eDir );
     void            FillSeries( FillDir eDir, FillCmd eCmd, FillDateCmd eDateCmd,
-                                double fStart, double fStep, double fMax, bool bRecord = true );
+                                double fStart, double fStep, double fMax );
     void            FillAuto( FillDir eDir, SCCOL nStartCol, SCROW nStartRow,
-                                SCCOL nEndCol, SCROW nEndRow, sal_uLong nCount, bool bRecord = true );
+                                SCCOL nEndCol, SCROW nEndRow, sal_uLong nCount );
     void            FillCrossDblClick();
     void            ConvertFormulaToValue();
 
     void            TransliterateText( sal_Int32 nType );
 
     ScAutoFormatData* CreateAutoFormatData();
-    void            AutoFormat( sal_uInt16 nFormatNo, bool bRecord = true );
+    void            AutoFormat( sal_uInt16 nFormatNo );
 
     bool            SearchAndReplace( const SvxSearchItem* pSearchItem,
                                         bool bAddUndo, bool bIsApi );
@@ -247,13 +243,13 @@ public:
     void            TabOp( const ScTabOpParam& rParam,  bool bRecord = true );
 
     bool            InsertTable( const OUString& rName, SCTAB nTabNr, bool bRecord = true );
-    bool            InsertTables(std::vector<OUString>& aNames, SCTAB nTab, SCTAB nCount, bool bRecord = true);
+    void            InsertTables(std::vector<OUString>& aNames, SCTAB nTab, SCTAB nCount, bool bRecord = true);
 
     bool            AppendTable( const OUString& rName, bool bRecord = true );
 
-    bool            DeleteTable( SCTAB nTabNr, bool bRecord = true );
+    void            DeleteTable( SCTAB nTabNr, bool bRecord = true );
     bool            DeleteTables(const std::vector<SCTAB>& TheTabs, bool bRecord = true );
-    bool                DeleteTables(SCTAB nTab, SCTAB nSheets);
+    void            DeleteTables(SCTAB nTab, SCTAB nSheets);
 
     bool            RenameTable( const OUString& rName, SCTAB nTabNr );
     void            MoveTable( sal_uInt16 nDestDocNo, SCTAB nDestTab, bool bCopy, const OUString* pNewTabName = nullptr );
@@ -269,7 +265,7 @@ public:
                                         const OUString& rTabName );
     void            InsertAreaLink( const OUString& rFile,
                                         const OUString& rFilter, const OUString& rOptions,
-                                        const OUString& rSource, sal_uLong nRefresh );
+                                        const OUString& rSource );
 
     void            ShowTable( const std::vector<OUString>& rNames );
     void            HideTable( const ScMarkData& rMark );
@@ -286,13 +282,13 @@ public:
 
     void            SetNoteText( const ScAddress& rPos, const OUString& rNoteText );
     void            ReplaceNote( const ScAddress& rPos, const OUString& rNoteText, const OUString* pAuthor, const OUString* pDate );
-    void            DoRefConversion( bool bRecord = true );
+    void            DoRefConversion();
 
-    void            DoHangulHanjaConversion( bool bRecord = true );
-    void            DoThesaurus( bool bRecord = true );
+    void            DoHangulHanjaConversion();
+    void            DoThesaurus();
 
     /** Generic implementation of sheet conversion functions. */
-    void            DoSheetConversion( const ScConversionParam& rParam, bool bRecord = true );
+    void            DoSheetConversion( const ScConversionParam& rParam );
 
     void            SetPrintRanges( bool bEntireSheet,
                                     const OUString* pPrint,
@@ -351,7 +347,7 @@ private:
     void            StartFormatArea();
     bool            TestFormatArea( SCCOL nCol, SCROW nRow, SCTAB nTab, bool bAttrChanged );
     void            DoAutoAttributes( SCCOL nCol, SCROW nRow, SCTAB nTab,
-                                        bool bAttrChanged, bool bAddUndo );
+                                        bool bAttrChanged );
 
     void            MarkAndJumpToRanges(const ScRangeList& rRanges);
     void            CopyAutoSpellData( FillDir eDir, SCCOL nStartCol, SCROW nStartRow,

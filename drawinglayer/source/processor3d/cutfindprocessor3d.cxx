@@ -28,7 +28,6 @@
 #include <drawinglayer/primitive3d/hiddengeometryprimitive3d.hxx>
 
 
-
 namespace drawinglayer
 {
     namespace processor3d
@@ -135,7 +134,7 @@ namespace drawinglayer
                 case PRIMITIVE3D_ID_UNIFIEDTRANSPARENCETEXTUREPRIMITIVE3D :
                 {
                     const primitive3d::UnifiedTransparenceTexturePrimitive3D& rPrimitive = static_cast< const primitive3d::UnifiedTransparenceTexturePrimitive3D& >(rCandidate);
-                       const primitive3d::Primitive3DContainer rChildren = rPrimitive.getChildren();
+                    const primitive3d::Primitive3DContainer& rChildren = rPrimitive.getChildren();
 
                     if(rChildren.size())
                     {

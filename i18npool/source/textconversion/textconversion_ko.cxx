@@ -295,7 +295,7 @@ TextConversion_ko::getConversions( const OUString& aText, sal_Int32 nStartPos, s
             }
             // found match
             if (result.Candidates.hasElements()) {
-                result.Boundary.startPos = start + nStartPos;;
+                result.Boundary.startPos = start + nStartPos;
                 result.Boundary.endPos = start + len + nStartPos;
                 return result;
             }
@@ -352,7 +352,7 @@ sal_Bool SAL_CALL
 TextConversion_ko::interactiveConversion( const Locale& /*rLocale*/, sal_Int16 /*nTextConversionType*/, sal_Int32 /*nTextConversionOptions*/ )
     throw(  RuntimeException, IllegalArgumentException, NoSupportException, std::exception )
 {
-    return sal_True;
+    return true;
 }
 
 } } } }

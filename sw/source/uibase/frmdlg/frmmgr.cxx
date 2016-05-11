@@ -56,7 +56,7 @@ static sal_uInt16 aFrameMgrRange[] = {
                             0};
 
 // determine frame attributes via Shell
-SwFlyFrameAttrMgr::SwFlyFrameAttrMgr( bool bNew, SwWrtShell* pSh, sal_uInt8 nType ) :
+SwFlyFrameAttrMgr::SwFlyFrameAttrMgr( bool bNew, SwWrtShell* pSh, Frmmgr_Type nType ) :
     m_aSet( static_cast<SwAttrPool&>(pSh->GetAttrPool()), aFrameMgrRange ),
     m_pOwnSh( pSh ),
     m_bAbsPos( false ),
@@ -66,20 +66,21 @@ SwFlyFrameAttrMgr::SwFlyFrameAttrMgr( bool bNew, SwWrtShell* pSh, sal_uInt8 nTyp
 {
     if ( m_bNewFrame )
     {
-        // set defaults:
-        sal_uInt16 nId = 0;
+        sal_uInt16 nId;
         switch ( nType )
         {
-            case FRMMGR_TYPE_TEXT:  nId = RES_POOLFRM_FRAME;    break;
-            case FRMMGR_TYPE_OLE:   nId = RES_POOLFRM_OLE;      break;
-            case FRMMGR_TYPE_GRF:   nId = RES_POOLFRM_GRAPHIC;  break;
+            case Frmmgr_Type::TEXT:  nId = RES_POOLFRM_FRAME;    break;
+            case Frmmgr_Type::OLE:   nId = RES_POOLFRM_OLE;      break;
+            case Frmmgr_Type::GRF:   nId = RES_POOLFRM_GRAPHIC;  break;
+            // set defaults:
+            default:    nId=0; break;
         }
         m_aSet.SetParent( &m_pOwnSh->GetFormatFromPool( nId )->GetAttrSet());
         m_aSet.Put( SwFormatFrameSize( ATT_MIN_SIZE, DFLT_WIDTH, DFLT_HEIGHT ));
         if ( 0 != ::GetHtmlMode(pSh->GetView().GetDocShell()) )
             m_aSet.Put( SwFormatHoriOrient( 0, text::HoriOrientation::LEFT, text::RelOrientation::PRINT_AREA ) );
     }
-    else if ( nType == FRMMGR_TYPE_NONE )
+    else if ( nType == Frmmgr_Type::NONE )
     {
         m_pOwnSh->GetFlyFrameAttr( m_aSet );
         bool bRightToLeft;
@@ -111,7 +112,7 @@ void SwFlyFrameAttrMgr::UpdateAttrMgr()
     ::PrepareBoxInfo( m_aSet, *m_pOwnSh );
 }
 
-void SwFlyFrameAttrMgr::_UpdateFlyFrame()
+void SwFlyFrameAttrMgr::UpdateFlyFrame_()
 {
     const SfxPoolItem* pItem = nullptr;
 
@@ -152,14 +153,14 @@ void SwFlyFrameAttrMgr::UpdateFlyFrame()
         {
             m_pOwnSh->StartAllAction();
             m_pOwnSh->SetFlyFrameAttr( m_aSet );
-            _UpdateFlyFrame();
+            UpdateFlyFrame_();
             m_pOwnSh->EndAllAction();
         }
     }
 }
 
 // insert frame
-bool SwFlyFrameAttrMgr::InsertFlyFrame()
+void SwFlyFrameAttrMgr::InsertFlyFrame()
 {
     m_pOwnSh->StartAllAction();
 
@@ -168,20 +169,18 @@ bool SwFlyFrameAttrMgr::InsertFlyFrame()
     // turn on the right mode at the shell, frame got selected automatically.
     if ( bRet )
     {
-        _UpdateFlyFrame();
+        UpdateFlyFrame_();
         m_pOwnSh->EnterSelFrameMode();
         FrameNotify(m_pOwnSh, FLY_DRAG_START);
     }
     m_pOwnSh->EndAllAction();
-    return bRet;
 }
 
 // Insert frames of type eAnchorType. Position and size are being set explicitly.
 // Not-allowed values of the enumeration type get corrected.
 void SwFlyFrameAttrMgr::InsertFlyFrame(RndStdIds    eAnchorType,
                                    const Point  &rPos,
-                                   const Size   &rSize,
-                                   bool bAbs )
+                                   const Size   &rSize )
 {
     OSL_ENSURE( eAnchorType == FLY_AT_PAGE ||
             eAnchorType == FLY_AT_PARA ||
@@ -189,10 +188,7 @@ void SwFlyFrameAttrMgr::InsertFlyFrame(RndStdIds    eAnchorType,
             eAnchorType == FLY_AT_FLY  ||
             eAnchorType == FLY_AS_CHAR,     "invalid frame type" );
 
-    if ( bAbs )
-        SetAbsPos( rPos );
-    else
-        SetPos( rPos );
+    SetPos( rPos );
 
     SetSize( rSize );
     SetAnchor( eAnchorType );

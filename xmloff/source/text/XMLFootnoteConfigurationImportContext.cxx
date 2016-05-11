@@ -42,7 +42,6 @@
 #include <com/sun/star/style/NumberingType.hpp>
 
 
-
 using namespace ::com::sun::star::text;
 using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::uno;
@@ -108,10 +107,7 @@ void XMLFootnoteConfigHelper::Characters( const OUString& rChars )
 }
 
 
-
 // XMLFootnoteConfigurationImportContext
-
-
 
 
 XMLFootnoteConfigurationImportContext::XMLFootnoteConfigurationImportContext(
@@ -389,11 +385,9 @@ void XMLFootnoteConfigurationImportContext::ProcessSettings(
         rConfig->setPropertyValue(sPropertyParagraphStyleName, aAny);
     }
 
-    aAny <<= sPrefix;
-    rConfig->setPropertyValue(sPropertyPrefix, aAny);
+    rConfig->setPropertyValue(sPropertyPrefix, Any(sPrefix));
 
-    aAny <<= sSuffix;
-    rConfig->setPropertyValue(sPropertySuffix, aAny);
+    rConfig->setPropertyValue(sPropertySuffix, Any(sSuffix));
 
     sal_Int16 nNumType = NumberingType::ARABIC;
     GetImport().GetMM100UnitConverter().convertNumFormat( nNumType, sNumFormat,
@@ -403,25 +397,16 @@ void XMLFootnoteConfigurationImportContext::ProcessSettings(
     if( NumberingType::CHAR_SPECIAL == nNumType )
         nNumType = NumberingType::ARABIC;
 
-    aAny <<=  nNumType;
-    rConfig->setPropertyValue(sPropertyNumberingType, aAny);
+    rConfig->setPropertyValue(sPropertyNumberingType, Any(nNumType));
 
-    aAny <<= nOffset;
-    rConfig->setPropertyValue(sPropertyStartAt, aAny);
+    rConfig->setPropertyValue(sPropertyStartAt, Any(nOffset));
 
     if (!bIsEndnote)
     {
-        aAny.setValue(&bPosition, cppu::UnoType<bool>::get());
-        rConfig->setPropertyValue(sPropertyPositionEndOfDoc, aAny);
-
-        aAny <<= nNumbering;
-        rConfig->setPropertyValue(sPropertyFootnoteCounting, aAny);
-
-        aAny <<= sEndNotice;
-        rConfig->setPropertyValue(sPropertyEndNotice, aAny);
-
-        aAny <<= sBeginNotice;
-        rConfig->setPropertyValue(sPropertyBeginNotice, aAny);
+        rConfig->setPropertyValue(sPropertyPositionEndOfDoc, Any(bPosition));
+        rConfig->setPropertyValue(sPropertyFootnoteCounting, Any(nNumbering));
+        rConfig->setPropertyValue(sPropertyEndNotice, Any(sEndNotice));
+        rConfig->setPropertyValue(sPropertyBeginNotice, Any(sBeginNotice));
     }
 }
 

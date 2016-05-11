@@ -41,7 +41,6 @@ namespace comphelper
     using ::com::sun::star::logging::XLogger;
     using ::com::sun::star::uno::UNO_QUERY_THROW;
     using ::com::sun::star::uno::Exception;
-    using ::com::sun::star::logging::XLogHandler;
     using ::com::sun::star::resource::XResourceBundle;
     using ::com::sun::star::resource::XResourceBundleLoader;
 
@@ -62,9 +61,9 @@ namespace comphelper
             impl_createLogger_nothrow();
         }
 
-        inline bool isValid() const { return m_xLogger.is(); }
-        inline const Reference< XLogger >& getLogger() const { return m_xLogger; }
-        inline Reference< XComponentContext > getContext() const { return m_aContext; }
+        bool isValid() const { return m_xLogger.is(); }
+        const Reference< XLogger >& getLogger() const { return m_xLogger; }
+        const Reference< XComponentContext >& getContext() const { return m_aContext; }
 
     private:
         void    impl_createLogger_nothrow();

@@ -24,6 +24,7 @@
 #include <osl/conditn.hxx>
 #include <ucbhelper/macros.hxx>
 #include <cppuhelper/weak.hxx>
+#include <comphelper/interfacecontainer2.hxx>
 #include <com/sun/star/lang/XTypeProvider.hpp>
 #include <com/sun/star/lang/XServiceInfo.hpp>
 #include <cppuhelper/interfacecontainer.hxx>
@@ -32,7 +33,6 @@
 #include <com/sun/star/lang/DisposedException.hpp>
 #include <com/sun/star/ucb/XDynamicResultSetListener.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
-
 
 
 class DynamicResultSetWrapperListener;
@@ -46,7 +46,7 @@ private:
     bool                    m_bDisposed; ///Dispose call ready.
     bool                    m_bInDispose;///In dispose call
     osl::Mutex              m_aContainerMutex;
-    cppu::OInterfaceContainerHelper*
+    comphelper::OInterfaceContainerHelper2*
                             m_pDisposeEventListeners;
 protected:
     css::uno::Reference< css::ucb::XDynamicResultSetListener >
@@ -162,7 +162,6 @@ public:
     impl_notify( const css::ucb::ListEvent& Changes )
         throw( css::uno::RuntimeException );
 };
-
 
 
 class DynamicResultSetWrapperListener

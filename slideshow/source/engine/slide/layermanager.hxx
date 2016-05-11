@@ -20,9 +20,6 @@
 #ifndef INCLUDED_SLIDESHOW_SOURCE_ENGINE_SLIDE_LAYERMANAGER_HXX
 #define INCLUDED_SLIDESHOW_SOURCE_ENGINE_SLIDE_LAYERMANAGER_HXX
 
-#include <boost/shared_ptr.hpp>
-#include <boost/noncopyable.hpp>
-
 #include <cppcanvas/spritecanvas.hxx>
 
 #include "unoview.hxx"
@@ -33,6 +30,7 @@
 
 #include <algorithm>
 #include <functional>
+#include <memory>
 #include <map>
 #include <unordered_map>
 #include <vector>
@@ -59,7 +57,7 @@ namespace slideshow
             @see Layer
             @see Shape
          */
-        class LayerManager : private boost::noncopyable
+        class LayerManager
         {
         public:
             /** Create a new layer manager for the given page bounds
@@ -79,20 +77,19 @@ namespace slideshow
                           const ::basegfx::B2DRange& rPageBounds,
                           bool                       bDisableAnimationZOrder );
 
+            /// Forbid copy construction
+            LayerManager(const LayerManager&) = delete;
+
+            /// Forbid copy assignment
+            LayerManager& operator=(const LayerManager&) = delete;
+
             /** Activate the LayerManager
 
                 This method activates the LayerManager. Prior to
                 activation, this instance will be passive, i.e. won't
                 render anything to any view.
-
-                @param bSlideBackgoundPainted
-                When true, the initial slide content on the background
-                layer is already rendered (e.g. from a previous slide
-                transition). When false, LayerManager also renders
-                initial content of background layer on next update()
-                call.
              */
-            void activate( bool bSlideBackgoundPainted );
+            void activate();
 
             /** Deactivate the LayerManager
 
@@ -250,9 +247,6 @@ namespace slideshow
             typedef ::std::set< ShapeSharedPtr > ShapeUpdateSet;
 
 
-
-
-
             /// Adds shape area to containing layer's damage area
             void addUpdateArea( ShapeSharedPtr const& rShape );
 
@@ -276,7 +270,7 @@ namespace slideshow
              */
             void           commitLayerChanges( std::size_t                    nCurrLayerIndex,
                                                LayerShapeMap::const_iterator  aFirstLayerShape,
-                                               LayerShapeMap::const_iterator  aEndLayerShapes );
+                                               const LayerShapeMap::const_iterator& aEndLayerShapes );
 
             /** Init Shape layers with background layer.
              */
@@ -362,7 +356,7 @@ namespace slideshow
             bool                     mbDisableAnimationZOrder;
         };
 
-        typedef ::boost::shared_ptr< LayerManager > LayerManagerSharedPtr;
+        typedef ::std::shared_ptr< LayerManager > LayerManagerSharedPtr;
     }
 }
 

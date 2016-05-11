@@ -37,13 +37,10 @@
 #include "eventnotification.hxx"
 
 
-
-
-
 class CAsyncEventNotifier
 {
 public:
-    CAsyncEventNotifier(cppu::OBroadcastHelper& rBroadcastHelper);
+    explicit CAsyncEventNotifier(cppu::OBroadcastHelper& rBroadcastHelper);
     ~CAsyncEventNotifier();
 
     bool SAL_CALL startup(bool bCreateSuspended = true);

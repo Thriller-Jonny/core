@@ -124,9 +124,9 @@ void VbaCommandBarHelper::Init( ) throw (css::uno::RuntimeException)
 css::uno::Reference< css::container::XIndexAccess > VbaCommandBarHelper::getSettings( const OUString& sResourceUrl ) throw (css::uno::RuntimeException)
 {
     if( m_xDocCfgMgr->hasSettings( sResourceUrl ) )
-        return m_xDocCfgMgr->getSettings( sResourceUrl, sal_True );
+        return m_xDocCfgMgr->getSettings( sResourceUrl, true );
     else if( m_xAppCfgMgr->hasSettings( sResourceUrl ) )
-        return m_xAppCfgMgr->getSettings( sResourceUrl, sal_True );
+        return m_xAppCfgMgr->getSettings( sResourceUrl, true );
     else
     {
         css::uno::Reference< css::container::XIndexAccess > xSettings( m_xAppCfgMgr->createSettings( ), uno::UNO_QUERY_THROW );
@@ -144,7 +144,7 @@ void VbaCommandBarHelper::removeSettings( const OUString& sResourceUrl ) throw (
     // persistChanges();
 }
 
-void VbaCommandBarHelper::ApplyChange( const OUString& sResourceUrl, const css::uno::Reference< css::container::XIndexAccess >& xSettings, bool bTemporary ) throw (css::uno::RuntimeException)
+void VbaCommandBarHelper::ApplyTempChange( const OUString& sResourceUrl, const css::uno::Reference< css::container::XIndexAccess >& xSettings ) throw (css::uno::RuntimeException)
 {
     if( m_xDocCfgMgr->hasSettings( sResourceUrl ) )
     {
@@ -154,22 +154,15 @@ void VbaCommandBarHelper::ApplyChange( const OUString& sResourceUrl, const css::
     {
         m_xDocCfgMgr->insertSettings( sResourceUrl, xSettings );
     }
-    if( !bTemporary )
-    {
-        persistChanges();
-    }
 }
 
-bool VbaCommandBarHelper::persistChanges() throw (css::uno::RuntimeException)
+void VbaCommandBarHelper::persistChanges() throw (css::uno::RuntimeException)
 {
     uno::Reference< css::ui::XUIConfigurationPersistence > xConfigPersistence( m_xDocCfgMgr, uno::UNO_QUERY_THROW );
-    bool result = false;
     if( xConfigPersistence->isModified() )
     {
         xConfigPersistence->store();
-        result = true;
     }
-    return result;
 }
 
 uno::Reference< frame::XLayoutManager > VbaCommandBarHelper::getLayoutManager() throw (uno::RuntimeException)
@@ -185,7 +178,7 @@ bool VbaCommandBarHelper::hasToolbar( const OUString& sResourceUrl, const OUStri
     if( m_xDocCfgMgr->hasSettings( sResourceUrl ) )
     {
         OUString sUIName;
-        uno::Reference< beans::XPropertySet > xPropertySet( m_xDocCfgMgr->getSettings( sResourceUrl, sal_False ), uno::UNO_QUERY_THROW );
+        uno::Reference< beans::XPropertySet > xPropertySet( m_xDocCfgMgr->getSettings( sResourceUrl, false ), uno::UNO_QUERY_THROW );
         xPropertySet->getPropertyValue( ITEM_DESCRIPTOR_UINAME ) >>= sUIName;
         if( sName.equalsIgnoreAsciiCase( sUIName ) )
             return true;

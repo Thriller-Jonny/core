@@ -15,17 +15,14 @@
 
 #include <android/androidinst.hxx>
 #include <headless/svpdummies.hxx>
-#include <generic/gendata.hxx>
+#include <unx/gendata.hxx>
 #include <osl/detail/android-bootstrap.h>
 #include <rtl/strbuf.hxx>
-#include <basebmp/scanlineformats.hxx>
 #include <vcl/settings.hxx>
 
 #define LOGTAG "LibreOffice/androidinst"
 #define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, LOGTAG, __VA_ARGS__))
 #define LOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR, LOGTAG, __VA_ARGS__))
-
-static jclass appClass = 0;
 
 // Horrible hack
 static int viewWidth = 1, viewHeight = 1;
@@ -37,26 +34,6 @@ public:
     virtual void ErrorTrapPush() {}
     virtual bool ErrorTrapPop( bool ) { return false; }
 };
-
-void AndroidSalInstance::damaged(AndroidSalFrame* /* frame */)
-{
-    static bool beenHere = false;
-    static jmethodID nCallbackDamaged = 0;
-
-    // Check if we are running in an app that has registered for damage callbacks
-    // static public void callbackDamaged();
-    // Call the Java layer to post an invalidate if necessary
-
-    if (appClass != 0 && !beenHere) {
-        nCallbackDamaged = m_pJNIEnv->GetStaticMethodID(appClass, "callbackDamaged", "()V");
-        if (nCallbackDamaged == 0)
-            LOGE("Could not find the callbackDamaged method");
-        beenHere = true;
-    }
-
-    if (appClass != 0 && nCallbackDamaged != 0)
-        m_pJNIEnv->CallStaticVoidMethod(appClass, nCallbackDamaged);
-}
 
 void AndroidSalInstance::GetWorkArea( Rectangle& rRect )
 {
@@ -121,10 +98,8 @@ public:
                      SalFrameStyleFlags  nSalFrameStyle,
                      SystemParentData   *pSysParent )
         : SvpSalFrame( pInstance, pParent, nSalFrameStyle,
-                       basebmp::Format::ThirtyTwoBitTcMaskRGBA,
                        pSysParent )
     {
-        enableDamageTracker();
         if (pParent == NULL && viewWidth > 1 && viewHeight > 1)
             SetPosSize(0, 0, viewWidth, viewHeight, SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT);
     }
@@ -132,16 +107,6 @@ public:
     virtual void GetWorkArea( Rectangle& rRect )
     {
         AndroidSalInstance::getInstance()->GetWorkArea( rRect );
-    }
-
-    virtual void damaged( const basegfx::B2IBox& rDamageRect)
-    {
-        if (rDamageRect.getWidth() <= 0 ||
-            rDamageRect.getHeight() <= 0)
-        {
-            return;
-        }
-        AndroidSalInstance::getInstance()->damaged( this );
     }
 
     virtual void UpdateSettings( AllSettings &rSettings )

@@ -86,10 +86,8 @@ void ScDrawView::CheckOle( const SdrMarkList& rMarkList, bool& rAnyOle, bool& rO
     }
 }
 
-bool ScDrawView::BeginDrag( vcl::Window* pWindow, const Point& rStartPos )
+void ScDrawView::BeginDrag( vcl::Window* pWindow, const Point& rStartPos )
 {
-    bool bReturn = false;
-
     if ( AreObjectsMarked() )
     {
         BrkAction();
@@ -134,8 +132,6 @@ bool ScDrawView::BeginDrag( vcl::Window* pWindow, const Point& rStartPos )
         SC_MOD()->SetDragObject( nullptr, pTransferObj );     // for internal D&D
         pTransferObj->StartDrag( pWindow, DND_ACTION_COPYMOVE | DND_ACTION_LINK );
     }
-
-    return bReturn;
 }
 
 namespace {
@@ -277,17 +273,17 @@ void getChartSourceRanges(ScDocument* pDoc, const SdrMarkList& rObjs, std::vecto
     {
         ScRangeList aRange;
         ScAddress aAddr;
-        if (aRange.Parse(*it, pDoc, pDoc->GetAddressConvention()) & SCA_VALID)
+        if (aRange.Parse(*it, pDoc, ScRefFlags::VALID, pDoc->GetAddressConvention()) & ScRefFlags::VALID)
         {
             for(size_t i = 0; i < aRange.size(); ++i)
                 rRanges.push_back(*aRange[i]);
         }
-        else if (aAddr.Parse(*it, pDoc, pDoc->GetAddressConvention()) & SCA_VALID)
+        else if (aAddr.Parse(*it, pDoc, pDoc->GetAddressConvention()) & ScRefFlags::VALID)
             rRanges.push_back(aAddr);
     }
 }
 
-class InsertTabIndex : std::unary_function<ScRange, void>
+class InsertTabIndex : public std::unary_function<ScRange, void>
 {
     std::vector<SCTAB>& mrTabs;
 public:
@@ -298,7 +294,7 @@ public:
     }
 };
 
-class CopyRangeData : std::unary_function<ScRange, void>
+class CopyRangeData : public std::unary_function<ScRange, void>
 {
     ScDocument* mpSrc;
     ScDocument* mpDest;

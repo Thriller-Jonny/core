@@ -35,7 +35,7 @@
 #include <numeric>
 
 
-// decompositon helpers for extrude/lathe (rotation) objects
+// decomposition helpers for extrude/lathe (rotation) objects
 
 namespace
 {
@@ -344,7 +344,6 @@ namespace
         return false;
     }
 } // end of anonymous namespace
-
 
 
 namespace drawinglayer

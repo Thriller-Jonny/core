@@ -13,17 +13,16 @@
  manual changes will be rewritten by the next run of update_pch.sh (which presumably
  also fixes all possible problems, so it's usually better to use it).
 
- Generated on 2015-11-14 14:16:37 using:
+ Generated on 2016-02-06 12:33:50 using:
  ./bin/update_pch starmath sm --cutoff=5 --exclude:system --exclude:module --include:local
 
  If after updating build fails, use the following command to locate conflicting headers:
- ./bin/update_pch_bisect ./starmath/inc/pch/precompiled_sm.hxx "/opt/lo/bin/make starmath.build" --find-conflicts
+ ./bin/update_pch_bisect ./starmath/inc/pch/precompiled_sm.hxx "make starmath.build" --find-conflicts
 */
 
 #include <algorithm>
 #include <cassert>
 #include <climits>
-#include <config_features.h>
 #include <cstdarg>
 #include <cstddef>
 #include <cstdlib>
@@ -40,11 +39,8 @@
 #include <unordered_map>
 #include <vector>
 #include <boost/checked_delete.hpp>
-#include <boost/current_function.hpp>
 #include <boost/intrusive_ptr.hpp>
-#include <boost/optional.hpp>
 #include <boost/optional/optional.hpp>
-#include <boost/signals2/signal.hpp>
 #include <osl/diagnose.h>
 #include <osl/module.hxx>
 #include <osl/mutex.hxx>
@@ -68,7 +64,6 @@
 #include <sal/macros.h>
 #include <sal/types.h>
 #include <salhelper/singletonref.hxx>
-#include <vcl/apptypes.hxx>
 #include <vcl/cairo.hxx>
 #include <vcl/cursor.hxx>
 #include <vcl/devicecoordinate.hxx>
@@ -76,6 +71,7 @@
 #include <vcl/event.hxx>
 #include <vcl/font.hxx>
 #include <vcl/inputctx.hxx>
+#include <vcl/inputtypes.hxx>
 #include <vcl/keycodes.hxx>
 #include <vcl/mapmod.hxx>
 #include <vcl/metaact.hxx>
@@ -100,7 +96,6 @@
 #include <com/sun/star/beans/PropertyValue.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/drawing/LineCap.hpp>
-#include <com/sun/star/io/XInputStream.hpp>
 #include <com/sun/star/uno/Any.hxx>
 #include <com/sun/star/uno/Reference.h>
 #include <com/sun/star/uno/Reference.hxx>
@@ -121,7 +116,6 @@
 #include <format.hxx>
 #include <i18nlangtag/lang.h>
 #include <node.hxx>
-#include <o3tl/cow_wrapper.hxx>
 #include <o3tl/typed_flags_set.hxx>
 #include <rect.hxx>
 #include <rsc/rsc-vcl-shared-types.hxx>
@@ -149,7 +143,6 @@
 #include <tools/debug.hxx>
 #include <tools/errcode.hxx>
 #include <tools/gen.hxx>
-#include <tools/globname.hxx>
 #include <tools/link.hxx>
 #include <tools/mapunit.hxx>
 #include <tools/poly.hxx>

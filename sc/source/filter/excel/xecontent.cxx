@@ -21,8 +21,6 @@
 
 #include <list>
 #include <algorithm>
-#include <com/sun/star/container/XIndexAccess.hpp>
-#include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/sheet/XAreaLinks.hpp>
 #include <com/sun/star/sheet/XAreaLink.hpp>
 #include <comphelper/string.hxx>
@@ -52,9 +50,6 @@ using namespace ::oox;
 using ::com::sun::star::uno::Reference;
 using ::com::sun::star::uno::Any;
 using ::com::sun::star::uno::UNO_QUERY;
-using ::com::sun::star::beans::XPropertySet;
-using ::com::sun::star::container::XIndexAccess;
-using ::com::sun::star::frame::XModel;
 using ::com::sun::star::table::CellRangeAddress;
 using ::com::sun::star::sheet::XAreaLinks;
 using ::com::sun::star::sheet::XAreaLink;
@@ -234,7 +229,7 @@ XclExpSst::~XclExpSst()
 {
 }
 
-sal_uInt32 XclExpSst::Insert( XclExpStringRef xString )
+sal_uInt32 XclExpSst::Insert( const XclExpStringRef& xString )
 {
     return mxImpl->Insert( xString );
 }
@@ -545,7 +540,7 @@ XclExpLabelranges::XclExpLabelranges( const XclExpRoot& rRoot ) :
 }
 
 void XclExpLabelranges::FillRangeList( ScRangeList& rScRanges,
-        ScRangePairListRef xLabelRangesRef, SCTAB nScTab )
+        const ScRangePairListRef& xLabelRangesRef, SCTAB nScTab )
 {
     for ( size_t i = 0, nPairs = xLabelRangesRef->size(); i < nPairs; ++i )
     {
@@ -602,6 +597,7 @@ private:
     bool                mbStrikeUsed;       /// true = Font strikeout used.
     bool                mbBorderUsed;       /// true = Border attribute used.
     bool                mbPattUsed;         /// true = Pattern attribute used.
+    bool                mbFormula2;
 };
 
 XclExpCFImpl::XclExpCFImpl( const XclExpRoot& rRoot, const ScCondFormatEntry& rFormatEntry, sal_Int32 nPriority ) :
@@ -619,12 +615,13 @@ XclExpCFImpl::XclExpCFImpl( const XclExpRoot& rRoot, const ScCondFormatEntry& rF
     mbItalicUsed( false ),
     mbStrikeUsed( false ),
     mbBorderUsed( false ),
-    mbPattUsed( false )
+    mbPattUsed( false ),
+    mbFormula2(false)
 {
     /*  Get formatting attributes here, and not in WriteBody(). This is needed to
         correctly insert all colors into the palette. */
 
-    if( SfxStyleSheetBase* pStyleSheet = GetDoc().GetStyleSheetPool()->Find( mrFormatEntry.GetStyle(), SFX_STYLE_FAMILY_PARA ) )
+    if( SfxStyleSheetBase* pStyleSheet = GetDoc().GetStyleSheetPool()->Find( mrFormatEntry.GetStyle(), SfxStyleFamily::Para ) )
     {
         const SfxItemSet& rItemSet = pStyleSheet->GetItemSet();
 
@@ -657,39 +654,62 @@ XclExpCFImpl::XclExpCFImpl( const XclExpRoot& rRoot, const ScCondFormatEntry& rF
 
     // *** mode and comparison operator ***
 
-    bool bFmla2 = false;
     switch( rFormatEntry.GetOperation() )
     {
-        case SC_COND_NONE:          mnType = EXC_CF_TYPE_NONE;                              break;
-        case SC_COND_BETWEEN:       mnOperator = EXC_CF_CMP_BETWEEN;        bFmla2 = true;  break;
-        case SC_COND_NOTBETWEEN:    mnOperator = EXC_CF_CMP_NOT_BETWEEN;    bFmla2 = true;  break;
-        case SC_COND_EQUAL:         mnOperator = EXC_CF_CMP_EQUAL;                          break;
-        case SC_COND_NOTEQUAL:      mnOperator = EXC_CF_CMP_NOT_EQUAL;                      break;
-        case SC_COND_GREATER:       mnOperator = EXC_CF_CMP_GREATER;                        break;
-        case SC_COND_LESS:          mnOperator = EXC_CF_CMP_LESS;                           break;
-        case SC_COND_EQGREATER:     mnOperator = EXC_CF_CMP_GREATER_EQUAL;                  break;
-        case SC_COND_EQLESS:        mnOperator = EXC_CF_CMP_LESS_EQUAL;                     break;
-        case SC_COND_DIRECT:        mnType = EXC_CF_TYPE_FMLA;                              break;
-        default:                    mnType = EXC_CF_TYPE_NONE;
+        case SC_COND_NONE:
+            mnType = EXC_CF_TYPE_NONE;
+        break;
+        case SC_COND_BETWEEN:
+            mnOperator = EXC_CF_CMP_BETWEEN;
+            mbFormula2 = true;
+        break;
+        case SC_COND_NOTBETWEEN:
+            mnOperator = EXC_CF_CMP_NOT_BETWEEN;
+            mbFormula2 = true;
+        break;
+        case SC_COND_EQUAL:
+            mnOperator = EXC_CF_CMP_EQUAL;
+        break;
+        case SC_COND_NOTEQUAL:
+            mnOperator = EXC_CF_CMP_NOT_EQUAL;
+        break;
+        case SC_COND_GREATER:
+            mnOperator = EXC_CF_CMP_GREATER;
+        break;
+        case SC_COND_LESS:
+            mnOperator = EXC_CF_CMP_LESS;
+        break;
+        case SC_COND_EQGREATER:
+            mnOperator = EXC_CF_CMP_GREATER_EQUAL;
+        break;
+        case SC_COND_EQLESS:
+            mnOperator = EXC_CF_CMP_LESS_EQUAL;
+        break;
+        case SC_COND_DIRECT:
+            mnType = EXC_CF_TYPE_FMLA;
+        break;
+        default:
+            mnType = EXC_CF_TYPE_NONE;
             OSL_FAIL( "XclExpCF::WriteBody - unknown condition type" );
-    }
-
-    // *** formulas ***
-
-    XclExpFormulaCompiler& rFmlaComp = GetFormulaCompiler();
-
-    std::unique_ptr< ScTokenArray > xScTokArr( mrFormatEntry.CreateTokenArry( 0 ) );
-    mxTokArr1 = rFmlaComp.CreateFormula( EXC_FMLATYPE_CONDFMT, *xScTokArr );
-
-    if( bFmla2 )
-    {
-        xScTokArr.reset( mrFormatEntry.CreateTokenArry( 1 ) );
-        mxTokArr2 = rFmlaComp.CreateFormula( EXC_FMLATYPE_CONDFMT, *xScTokArr );
     }
 }
 
 void XclExpCFImpl::WriteBody( XclExpStream& rStrm )
 {
+
+    // *** formulas ***
+
+    XclExpFormulaCompiler& rFmlaComp = GetFormulaCompiler();
+
+    std::unique_ptr< ScTokenArray > xScTokArr( mrFormatEntry.CreateFlatCopiedTokenArray( 0 ) );
+    mxTokArr1 = rFmlaComp.CreateFormula( EXC_FMLATYPE_CONDFMT, *xScTokArr );
+
+    if (mbFormula2)
+    {
+        xScTokArr.reset( mrFormatEntry.CreateFlatCopiedTokenArray( 1 ) );
+        mxTokArr2 = rFmlaComp.CreateFormula( EXC_FMLATYPE_CONDFMT, *xScTokArr );
+    }
+
     // *** mode and comparison operator ***
 
     rStrm << mnType << mnOperator;
@@ -924,7 +944,7 @@ void XclExpCFImpl::SaveXml( XclExpXmlStream& rStrm )
         // we need to write the text without quotes
         // we have to actually get the string from
         // the token array for that
-        std::unique_ptr<ScTokenArray> pTokenArray(mrFormatEntry.CreateTokenArry(0));
+        std::unique_ptr<ScTokenArray> pTokenArray(mrFormatEntry.CreateFlatCopiedTokenArray(0));
         if(pTokenArray->GetLen())
             aText = XclXmlUtils::ToOString(pTokenArray->First()->GetString().getString());
     }
@@ -945,14 +965,16 @@ void XclExpCFImpl::SaveXml( XclExpXmlStream& rStrm )
     if(!IsTextRule(eOperation) && !IsTopBottomRule(eOperation))
     {
         rWorksheet->startElement( XML_formula, FSEND );
+        std::unique_ptr<ScTokenArray> pTokenArray(mrFormatEntry.CreateFlatCopiedTokenArray(0));
         rWorksheet->writeEscaped(XclXmlUtils::ToOUString( GetCompileFormulaContext(), mrFormatEntry.GetValidSrcPos(),
-                    mrFormatEntry.CreateTokenArry(0)));
+                    pTokenArray.get()));
         rWorksheet->endElement( XML_formula );
         if (bFmla2)
         {
             rWorksheet->startElement( XML_formula, FSEND );
+            std::unique_ptr<ScTokenArray> pTokenArray2(mrFormatEntry.CreateFlatCopiedTokenArray(1));
             rWorksheet->writeEscaped(XclXmlUtils::ToOUString( GetCompileFormulaContext(), mrFormatEntry.GetValidSrcPos(),
-                        mrFormatEntry.CreateTokenArry(1)));
+                        pTokenArray2.get()));
             rWorksheet->endElement( XML_formula );
         }
     }
@@ -1091,7 +1113,7 @@ void XclExpCfvo::SaveXml( XclExpXmlStream& rStrm )
     if(mrEntry.GetType() == COLORSCALE_FORMULA)
     {
         OUString aFormula = XclXmlUtils::ToOUString( GetCompileFormulaContext(), maSrcPos,
-                mrEntry.GetFormula()->Clone());
+                mrEntry.GetFormula());
         aValue = OUStringToOString(aFormula, RTL_TEXTENCODING_UTF8 );
     }
     else
@@ -1226,7 +1248,7 @@ XclExpCondfmt::XclExpCondfmt( const XclExpRoot& rRoot, const ScConditionalFormat
                 else if(pFormatEntry->GetType() == condformat::DATE)
                     maCFList.AppendNewRecord( new XclExpDateFormat( GetRoot(), static_cast<const ScCondDateFormatEntry&>(*pFormatEntry), ++rIndex ) );
             }
-        aScRanges.Format( msSeqRef, SCA_VALID, nullptr, formula::FormulaGrammar::CONV_XL_A1 );
+        aScRanges.Format( msSeqRef, ScRefFlags::VALID, nullptr, formula::FormulaGrammar::CONV_XL_A1 );
 
         if(!aExtEntries.empty() && xExtLst.get())
         {
@@ -1598,7 +1620,7 @@ XclExpDV::XclExpDV( const XclExpRoot& rRoot, sal_uLong nScHandle ) :
         std::unique_ptr< ScTokenArray > xScTokArr;
 
         // first formula
-        xScTokArr.reset( pValData->CreateTokenArry( 0 ) );
+        xScTokArr.reset( pValData->CreateFlatCopiedTokenArray( 0 ) );
         if( xScTokArr.get() )
         {
             if( pValData->GetDataMode() == SC_VALID_LIST )
@@ -1660,7 +1682,7 @@ XclExpDV::XclExpDV( const XclExpRoot& rRoot, sal_uLong nScHandle ) :
         }
 
         // second formula
-        xScTokArr.reset( pValData->CreateTokenArry( 1 ) );
+        xScTokArr.reset( pValData->CreateFlatCopiedTokenArray( 1 ) );
         if( xScTokArr.get() )
         {
             if(GetOutput() == EXC_OUTPUT_BINARY)
@@ -1851,7 +1873,7 @@ XclExpWebQuery::XclExpWebQuery(
     maDestRange( rRangeName ),
     maUrl( rUrl ),
     // refresh delay time: seconds -> minutes
-    mnRefresh( ulimit_cast< sal_Int16 >( (nRefrSecs + 59L) / 60L ) ),
+    mnRefresh( ulimit_cast< sal_Int16 >( (nRefrSecs + 59) / 60 ) ),
     mbEntireDoc( false )
 {
     // comma separated list of HTML table names or indexes

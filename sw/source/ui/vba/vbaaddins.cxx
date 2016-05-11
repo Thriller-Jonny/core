@@ -27,7 +27,7 @@ using namespace ::com::sun::star;
 
 static uno::Reference< container::XIndexAccess > lcl_getAddinCollection( const uno::Reference< XHelperInterface >& xParent, const uno::Reference< uno::XComponentContext >& xContext )
 {
-    XNamedObjectCollectionHelper< word::XAddin >::XNamedVec maAddins;
+    XNamedObjectCollectionHelper< word::XAddin >::XNamedVec aAddins;
 
     // first get the autoload addins in the directory STARTUP
     uno::Reference< lang::XMultiComponentFactory > xMCF( xContext->getServiceManager(), uno::UNO_QUERY_THROW );
@@ -38,21 +38,21 @@ static uno::Reference< container::XIndexAccess > lcl_getAddinCollection( const u
     OSL_TRACE("lcl_getAddinCollection: %s", OUStringToOString( aAddinPath, RTL_TEXTENCODING_UTF8 ).getStr() );
     if( xSFA->isFolder( aAddinPath ) )
     {
-        uno::Sequence< OUString > sEntries = xSFA->getFolderContents( aAddinPath, sal_False );
+        uno::Sequence< OUString > sEntries = xSFA->getFolderContents( aAddinPath, false );
         sal_Int32 nEntry = sEntries.getLength();
         for( sal_Int32 index = 0; index < nEntry; ++index )
         {
             OUString sUrl = sEntries[ index ];
             if( !xSFA->isFolder( sUrl ) && sUrl.endsWithIgnoreAsciiCase( ".dot" ) )
             {
-                maAddins.push_back( uno::Reference< word::XAddin >( new SwVbaAddin( xParent, xContext, sUrl, true ) ) );
+                aAddins.push_back( uno::Reference< word::XAddin >( new SwVbaAddin( xParent, xContext, sUrl ) ) );
             }
         }
     }
 
     // TODO: second get the customize addins in the org.openoffice.Office.Writer/GlobalTemplateList
 
-    uno::Reference< container::XIndexAccess > xAddinsAccess( new XNamedObjectCollectionHelper< word::XAddin >( maAddins ) );
+    uno::Reference< container::XIndexAccess > xAddinsAccess( new XNamedObjectCollectionHelper< word::XAddin >( aAddins ) );
     return xAddinsAccess;
 }
 

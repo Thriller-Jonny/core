@@ -39,9 +39,9 @@
 #include <vcl/layout.hxx>
 #include <svl/sharedstringpool.hxx>
 
-#include <limits>
+#include <o3tl/make_unique.hxx>
 
-#define ERRORBOX(rid)   ScopedVclPtrInstance<MessageDialog>::Create(this, ScGlobal::GetRscString(rid))->Execute()
+#include <limits>
 
 #define QUERY_ENTRY_COUNT 4
 #define INVALID_HEADER_POS std::numeric_limits<size_t>::max()
@@ -106,7 +106,7 @@ ScFilterDlg::ScFilterDlg(SfxBindings* pB, SfxChildWindow* pCW, vcl::Window* pPar
     Init( rArgSet );
 
     // Hack: RefInput control
-    pTimer = new Timer;
+    pTimer = new Timer("ScFilterTimer");
     pTimer->SetTimeout( 50 ); // Wait 50ms
     pTimer->SetTimeoutHdl( LINK( this, ScFilterDlg, TimeOutHdl ) );
 
@@ -441,7 +441,7 @@ void ScFilterDlg::SetReference( const ScRange& rRef, ScDocument* pDocP )
     {
         if ( rRef.aStart != rRef.aEnd )
             RefInputStart( pEdCopyArea );
-        OUString aRefStr(rRef.aStart.Format(SCA_ABS_3D, pDocP, pDocP->GetAddressConvention()));
+        OUString aRefStr(rRef.aStart.Format(ScRefFlags::ADDR_ABS_3D, pDocP, pDocP->GetAddressConvention()));
         pEdCopyArea->SetRefString( aRefStr );
     }
 }
@@ -517,7 +517,7 @@ void ScFilterDlg::UpdateValueList( size_t nList )
 
             SCCOL nColumn = theQueryData.nCol1 + static_cast<SCCOL>(nFieldSelPos) - 1;
             EntryList* pList = nullptr;
-            if (!maEntryLists.count(nColumn))
+            if (!m_EntryLists.count(nColumn))
             {
                 size_t nOffset = GetSliderPos();
                 SCTAB nTab       = nSrcTab;
@@ -529,12 +529,12 @@ void ScFilterDlg::UpdateValueList( size_t nList )
 
                 // first without the first line
                 std::pair<EntryListsMap::iterator, bool> r =
-                    maEntryLists.insert(nColumn, new EntryList);
+                    m_EntryLists.insert(std::make_pair(nColumn, o3tl::make_unique<EntryList>()));
                 if (!r.second)
                     // insertion failed.
                     return;
 
-                pList = r.first->second;
+                pList = r.first->second.get();
                 pDoc->GetFilterEntriesArea(
                     nColumn, nFirstRow+1, nLastRow,
                     nTab, bCaseSens, pList->maList, maHasDates[nOffset+nList-1] );
@@ -571,7 +571,7 @@ void ScFilterDlg::UpdateValueList( size_t nList )
                 }
             }
             else
-                pList = &maEntryLists[nColumn];
+                pList = m_EntryLists[nColumn].get();
 
             OSL_ASSERT(pList);
 
@@ -603,20 +603,20 @@ void ScFilterDlg::UpdateHdrInValueList( size_t nList )
         return;
 
     SCCOL nColumn = theQueryData.nCol1 + static_cast<SCCOL>(nFieldSelPos) - 1;
-    if (!maEntryLists.count(nColumn))
+    if (!m_EntryLists.count(nColumn))
     {
         OSL_FAIL("Spalte noch nicht initialisiert");
         return;
     }
 
-    size_t nPos = maEntryLists[nColumn].mnHeaderPos;
+    size_t const nPos = m_EntryLists[nColumn]->mnHeaderPos;
     if (nPos == INVALID_HEADER_POS)
         return;
 
     ComboBox* pValList = maValueEdArr[nList-1];
     size_t nListPos = nPos + 2;                 // for "empty" and "non-empty"
 
-    const ScTypedStrData& rHdrEntry = maEntryLists[nColumn].maList[nPos];
+    const ScTypedStrData& rHdrEntry = m_EntryLists[nColumn]->maList[nPos];
 
     const OUString& aHdrStr = rHdrEntry.GetString();
     bool bWasThere = aHdrStr.equals(pValList->GetEntry(nListPos));
@@ -662,9 +662,9 @@ ScQueryItem* ScFilterDlg::GetOutputItem()
 
     if ( pBtnCopyResult->IsChecked() )
     {
-        sal_uInt16 nResult = theCopyPos.Parse(
+        ScRefFlags nResult = theCopyPos.Parse(
             pEdCopyArea->GetText(), pDoc, pDoc->GetAddressConvention());
-        bCopyPosOk = ( SCA_VALID == (nResult & SCA_VALID) );
+        bCopyPosOk = (nResult & ScRefFlags::VALID) == ScRefFlags::VALID;
     }
 
     if ( pBtnCopyResult->IsChecked() && bCopyPosOk )
@@ -686,7 +686,7 @@ ScQueryItem* ScFilterDlg::GetOutputItem()
     theParam.bByRow         = true;
     theParam.bDuplicate     = !pBtnUnique->IsChecked();
     theParam.bCaseSens      = pBtnCase->IsChecked();
-    theParam.bRegExp        = pBtnRegExp->IsChecked();
+    theParam.eSearchType    = pBtnRegExp->IsChecked() ? utl::SearchParam::SRCH_REGEXP : utl::SearchParam::SRCH_NORMAL;
     theParam.bDestPers      = pBtnDestPers->IsChecked();
 
     // only set the three - reset everything else
@@ -717,7 +717,7 @@ IMPL_LINK_TYPED( ScFilterDlg, EndDlgHdl, Button*, pBtn, void )
                 if (!pExpander->get_expanded())
                   pExpander->set_expanded(true);
 
-                ERRORBOX( STR_INVALID_TABREF );
+                ScopedVclPtrInstance<MessageDialog>::Create(this, ScGlobal::GetRscString(STR_INVALID_TABREF))->Execute();
                 pEdCopyArea->GrabFocus();
                 bAreaInputOk = false;
             }
@@ -727,9 +727,9 @@ IMPL_LINK_TYPED( ScFilterDlg, EndDlgHdl, Button*, pBtn, void )
         {
             SetDispatcherLock( false );
             SwitchToDocument();
-            GetBindings().GetDispatcher()->Execute( FID_FILTER_OK,
+            GetBindings().GetDispatcher()->ExecuteList(FID_FILTER_OK,
                                       SfxCallMode::SLOT | SfxCallMode::RECORD,
-                                      GetOutputItem(), 0L, 0L );
+                                      { GetOutputItem() });
             Close();
         }
     }
@@ -1043,7 +1043,7 @@ IMPL_LINK_TYPED( ScFilterDlg, CheckBoxHdl, Button*, pBox, void )
 
     if ( pBox == pBtnCase )            // Complete value list
     {
-        maEntryLists.clear();
+        m_EntryLists.clear();
         UpdateValueList( 1 );       // current text is recorded
         UpdateValueList( 2 );
         UpdateValueList( 3 );

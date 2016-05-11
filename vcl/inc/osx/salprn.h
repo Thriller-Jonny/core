@@ -24,9 +24,7 @@
 
 #include "salprn.hxx"
 
-#include <boost/shared_array.hpp>
-
-// - AquaSalInfoPrinter -
+#include <memory>
 
 class AquaSalGraphics;
 
@@ -49,7 +47,7 @@ class AquaSalInfoPrinter : public SalInfoPrinter
     /// graphics context for Quartz 2D
     CGContextRef                            mrContext;
     /// memory for graphics bitmap context for querying metrics
-    boost::shared_array< sal_uInt8 >        maContextMemory;
+    std::shared_ptr<sal_uInt8> mpContextMemory;
 
     // since changes to NSPrintInfo during a job are ignored
     // we have to care for some settings ourselves
@@ -72,12 +70,12 @@ class AquaSalInfoPrinter : public SalInfoPrinter
     virtual void                ReleaseGraphics( SalGraphics* i_pGraphics ) override;
     virtual bool                Setup( SalFrame* i_pFrame, ImplJobSetup* i_pSetupData ) override;
     virtual bool                SetPrinterData( ImplJobSetup* pSetupData ) override;
-    virtual bool                SetData( sal_uLong i_nFlags, ImplJobSetup* i_pSetupData ) override;
+    virtual bool                SetData( JobSetFlags i_nFlags, ImplJobSetup* i_pSetupData ) override;
     virtual void                GetPageInfo( const ImplJobSetup* i_pSetupData,
                                              long& o_rOutWidth, long& o_rOutHeight,
                                              long& o_rPageOffX, long& o_rPageOffY,
                                              long& o_rPageWidth, long& o_rPageHeight ) override;
-    virtual sal_uLong           GetCapabilities( const ImplJobSetup* i_pSetupData, PrinterCapType i_nType ) override;
+    virtual sal_uInt32          GetCapabilities( const ImplJobSetup* i_pSetupData, PrinterCapType i_nType ) override;
     virtual sal_uLong           GetPaperBinCount( const ImplJobSetup* i_pSetupData ) override;
     virtual OUString            GetPaperBinName( const ImplJobSetup* i_pSetupData, sal_uLong i_nPaperBin ) override;
     virtual void                InitPaperFormats( const ImplJobSetup* i_pSetupData ) override;
@@ -113,7 +111,6 @@ class AquaSalInfoPrinter : public SalInfoPrinter
     AquaSalInfoPrinter& operator=(const AquaSalInfoPrinter&) = delete;
 };
 
-// - AquaSalPrinter -
 
 class AquaSalPrinter : public SalPrinter
 {
@@ -125,7 +122,7 @@ class AquaSalPrinter : public SalPrinter
     virtual bool                    StartJob( const OUString* i_pFileName,
                                               const OUString& i_rJobName,
                                               const OUString& i_rAppName,
-                                              sal_uLong i_nCopies,
+                                              sal_uInt32 i_nCopies,
                                               bool i_bCollate,
                                               bool i_bDirect,
                                               ImplJobSetup* i_pSetupData ) override;
@@ -138,7 +135,7 @@ class AquaSalPrinter : public SalPrinter
 
     virtual bool                    EndJob() override;
     virtual SalGraphics*            StartPage( ImplJobSetup* i_pSetupData, bool i_bNewJobData ) override;
-    virtual bool                    EndPage() override;
+    virtual void                    EndPage() override;
     virtual sal_uLong               GetErrorCode() override;
 
     private:

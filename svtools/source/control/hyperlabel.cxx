@@ -24,7 +24,6 @@
 #include <vcl/tabpage.hxx>
 
 
-
 namespace svt
 {
     class HyperLabelImpl
@@ -113,7 +112,7 @@ namespace svt
 
     void HyperLabel::ActivateHyperMode(vcl::Font aFont, const Color aColor)
     {
-        aFont.SetUnderline(UNDERLINE_SINGLE);
+        aFont.SetUnderline(LINESTYLE_SINGLE);
         m_pImpl->m_bHyperMode = true;
         SetPointer( PointerStyle::RefHand );
         SetControlFont( aFont);
@@ -124,7 +123,7 @@ namespace svt
     void HyperLabel::DeactivateHyperMode(vcl::Font aFont, const Color aColor)
     {
         m_pImpl->m_bHyperMode = false;
-        aFont.SetUnderline(UNDERLINE_NONE);
+        aFont.SetUnderline(LINESTYLE_NONE);
         SetPointer( PointerStyle::Arrow );
         SetControlFont( aFont);
         SetTextColor( aColor);
@@ -179,21 +178,20 @@ namespace svt
         return m_pImpl->Index;
     }
 
-    void HyperLabel::SetID( sal_Int16 _ID )
+    void HyperLabel::SetID( sal_Int16 ID )
     {
-        m_pImpl->ID = _ID;
+        m_pImpl->ID = ID;
     }
 
-    void HyperLabel::SetIndex( sal_Int32 _Index )
+    void HyperLabel::SetIndex( sal_Int32 Index )
     {
-        m_pImpl->Index = _Index;
+        m_pImpl->Index = Index;
     }
 
     void HyperLabel::SetLabel( const OUString& _rText )
     {
         SetText(_rText);
     }
-
 
 
     void HyperLabel::DataChanged( const DataChangedEvent& rDCEvt )

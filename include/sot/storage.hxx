@@ -22,22 +22,15 @@
 
 #include <com/sun/star/uno/Any.hxx>
 #include <com/sun/star/uno/Reference.h>
-
-#include <com/sun/star/io/XInputStream.hpp>
 #include <com/sun/star/embed/XStorage.hpp>
 #include <sot/object.hxx>
-#include <sot/factory.hxx>
 #include <tools/stream.hxx>
 #include <tools/errcode.hxx>
 #include <sot/storinfo.hxx>
 #include <sot/sotdllapi.h>
 
-class SotStorage;
-
 enum class SotClipboardFormatId : sal_uLong;
 
-/*************************************************************************
-*************************************************************************/
 class SotStorage;
 class BaseStorageStream;
 class SOT_DLLPUBLIC SotStorageStream : virtual public SotObject, public SvStream
@@ -56,30 +49,17 @@ public:
                         SotStorageStream( BaseStorageStream *pStm );
                         SotStorageStream();
 
-private:
-    static SotFactory **       GetFactoryAdress()
-                              { return &(SOTDATA()->pSotStorageStreamFactory); }
-public:
-    static SotFactory *        ClassFactory();
-    virtual void *             Cast( const SotFactory * ) override;
-
     virtual void        ResetError() override;
 
     virtual void        SetSize( sal_uInt64 nNewSize ) override;
     sal_uInt32          GetSize() const;
-    bool                CopyTo( SotStorageStream * pDestStm );
+    void                CopyTo( SotStorageStream * pDestStm );
     bool                Commit();
     bool                SetProperty( const OUString& rName, const css::uno::Any& rValue );
     virtual sal_uInt64 remainingSize() override;
 };
 
-namespace ucbhelper
-{
-    class Content;
-}
-
 class  BaseStorage;
-class  UNOStorageHolder;
 class SOT_DLLPUBLIC SotStorage : virtual public SotObject
 {
 friend class SotStorageStream;
@@ -95,11 +75,10 @@ friend class SotStorageStream;
 
 protected:
                         virtual ~SotStorage();
-   void                 CreateStorage( bool bUCBStorage, StreamMode, bool transacted );
+   void                 CreateStorage( bool bUCBStorage, StreamMode );
 public:
                         SotStorage( const OUString &,
-                                    StreamMode = STREAM_STD_READWRITE,
-                                    bool transacted = false );
+                                    StreamMode = STREAM_STD_READWRITE );
                         SotStorage( bool bUCBStorage, const OUString &,
                                     StreamMode = STREAM_STD_READWRITE );
                         SotStorage( BaseStorage * );
@@ -107,13 +86,6 @@ public:
                         SotStorage( bool bUCBStorage, SvStream & rStm );
                         SotStorage( SvStream * pStm, bool bDelete );
                         SotStorage();
-
-private:
-    static SotFactory **       GetFactoryAdress()
-                              { return &(SOTDATA()->pSotStorageFactory); }
-public:
-    static SotFactory *        ClassFactory();
-    virtual void *             Cast( const SotFactory * ) override;
 
     SvMemoryStream *    CreateMemoryStream();
 

@@ -20,15 +20,11 @@
 #ifndef INCLUDED_FRAMEWORK_INC_CLASSES_FILTERCACHEDATA_HXX
 #define INCLUDED_FRAMEWORK_INC_CLASSES_FILTERCACHEDATA_HXX
 
-#include <classes/checkediterator.hxx>
 #include <classes/wildcard.hxx>
 #include <classes/converter.hxx>
 #include <macros/xinterface.hxx>
 #include <general.h>
 
-#include <com/sun/star/uno/Sequence.hxx>
-#include <com/sun/star/uno/Any.hxx>
-#include <com/sun/star/uno/Reference.hxx>
 #include <com/sun/star/beans/PropertyValue.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/util/XChangesListener.hpp>
@@ -87,9 +83,9 @@ struct FileType
             sMediaType.clear();
             sClipboardFormat.clear();
             nDocumentIconID     = 0;
-            lUINames.free   ();
-            framework::free(lURLPattern);
-            framework::free(lExtensions);
+            lUINames.clear();
+            lURLPattern.clear();
+            lExtensions.clear();
         }
 
         inline FileType& impl_copy( const FileType& rCopy )
@@ -115,8 +111,8 @@ struct FileType
         OUString            sMediaType;
         OUString            sClipboardFormat;
         sal_Int32           nDocumentIconID;
-        OUStringList        lURLPattern;
-        OUStringList        lExtensions;
+        std::vector<OUString> lURLPattern;
+        std::vector<OUString> lExtensions;
 };
 
 // These struct describe a filter which is registered for one type.
@@ -149,8 +145,8 @@ struct Filter
             nFlags              = 0;
             nFileFormatVersion  = 0;
             sTemplateName.clear();
-            lUINames.free();
-            framework::free(lUserData);
+            lUINames.clear();
+            lUserData.clear();
         }
 
         inline Filter& impl_copy( const Filter& rCopy )
@@ -181,7 +177,7 @@ struct Filter
         OUString     sFilterService;
         OUString     sUIComponent;
         sal_Int32           nFlags;
-        OUStringList        lUserData;
+        std::vector<OUString> lUserData;
         sal_Int32           nFileFormatVersion;
         OUString     sTemplateName;
 };
@@ -207,7 +203,7 @@ struct Detector
         inline void impl_clear()
         {
             sName.clear();
-            framework::free(lTypes);
+            lTypes.clear();
         }
 
         inline Detector& impl_copy( const Detector& rCopy )
@@ -222,7 +218,7 @@ struct Detector
     public:
 
         OUString     sName;
-        OUStringList        lTypes;
+        std::vector<OUString> lTypes;
 };
 
 // Programmer can register his own services for loading documents in a frame.
@@ -246,8 +242,8 @@ struct Loader
         inline void impl_clear()
         {
             sName.clear();
-            lUINames.free();
-            framework::free(lTypes);
+            lUINames.clear();
+            lTypes.clear();
         }
 
         inline Loader& impl_copy( const Loader& rCopy )
@@ -264,7 +260,7 @@ struct Loader
 
         OUString sName;
         OUStringHashMap lUINames;
-        OUStringList    lTypes;
+        std::vector<OUString> lTypes;
 };
 
 // Programmer can register his own services to handle a FileType and intercept dispatches.
@@ -287,7 +283,7 @@ struct ContentHandler
         inline void impl_clear()
         {
             sName.clear();
-            framework::free(lTypes);
+            lTypes.clear();
         }
 
         inline ContentHandler& impl_copy( const ContentHandler& rCopy )
@@ -302,7 +298,7 @@ struct ContentHandler
     public:
 
         OUString     sName;
-        OUStringList        lTypes;
+        std::vector<OUString> lTypes;
 };
 
 // We need different hash maps for different tables of our configuration management.
@@ -312,8 +308,7 @@ struct ContentHandler
 template< class HashType >
 class SetNodeHash : public std::unordered_map< OUString                    ,
                                                HashType                           ,
-                                               OUStringHash                  ,
-                                               std::equal_to< OUString > >
+                                               OUStringHash >
 {
 };
 
@@ -322,9 +317,8 @@ class SetNodeHash : public std::unordered_map< OUString                    ,
 // The preferred hash maps file extensions to preferred types to find these ones faster.
 
 class PerformanceHash   :   public  std::unordered_map< OUString,
-                                                        OUStringList,
-                                                        OUStringHash,
-                                                        std::equal_to< OUString >  >
+                                                        std::vector<OUString>,
+                                                        OUStringHash >
 {
 };
 

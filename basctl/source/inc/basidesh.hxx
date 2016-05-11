@@ -75,7 +75,6 @@ private:
     VclPtr<ScrollBar>         aVScrollBar;
     VclPtr<ScrollBarBox>      aScrollBarBox;
     VclPtr<TabBar> pTabBar; // basctl::TabBar
-    bool                bTabBarSplitted;
     bool                bCreatingWindow;
     // layout windows
     VclPtr<ModulWindowLayout> pModulLayout;
@@ -94,7 +93,7 @@ private:
     void                InitTabBar();
     void                InitScrollBars();
     void                CheckWindows();
-    void                RemoveWindows( const ScriptDocument& rDocument, const OUString& rLibName, bool bDestroy );
+    void                RemoveWindows( const ScriptDocument& rDocument, const OUString& rLibName );
     void                UpdateWindows();
     static void         InvalidateBasicIDESlots();
     void                StoreAllWindowData( bool bPersistent = true );
@@ -106,7 +105,6 @@ private:
     void                ImplStartListening( StarBASIC* pBasic );
 
     DECL_LINK_TYPED( TabBarHdl, ::TabBar*, void );
-    DECL_LINK_TYPED( TabBarSplitHdl, ::TabBar *, void );
 
     static unsigned nShellCount;
 
@@ -118,7 +116,6 @@ private:
 
     void                SetCurWindow (BaseWindow* pNewWin, bool bUpdateTabBar = false, bool bRememberAsCurrent = true);
     void                ManageToolbars();
-    void                ArrangeTabBar();
 
     VclPtr<ModulWindow>  CreateBasWin( const ScriptDocument& rDocument, const OUString& rLibName, const OUString& rModName );
     VclPtr<DialogWindow> CreateDlgWin( const ScriptDocument& rDocument, const OUString& rLibName, const OUString& rDlgName );
@@ -159,7 +156,7 @@ public:
     BaseWindow*      GetCurWindow() const    { return pCurWin; }
     ScriptDocument const& GetCurDocument() const { return m_aCurDocument; }
     OUString const&  GetCurLibName() const { return m_aCurLibName; }
-    std::shared_ptr<LocalizationMgr> GetCurLocalizationMgr() const { return m_pCurLocalizationMgr; }
+    const std::shared_ptr<LocalizationMgr>& GetCurLocalizationMgr() const { return m_pCurLocalizationMgr; }
 
     TabBar&             GetTabBar()             { return *pTabBar; }
     WindowTable&        GetWindowTable()        { return aWindowTable; }
@@ -173,7 +170,7 @@ public:
 
     // virtual sal_uInt16           Print( SfxProgress &rProgress, sal_Bool bIsAPI, PrintDialog *pPrintDialog = 0 );
     virtual SfxPrinter*     GetPrinter( bool bCreate ) override;
-    virtual sal_uInt16      SetPrinter( SfxPrinter *pNewPrinter, SfxPrinterChangeFlags nDiffFlags = SFX_PRINTER_ALL, bool bIsAPI=false ) override;
+    virtual sal_uInt16      SetPrinter( SfxPrinter *pNewPrinter, SfxPrinterChangeFlags nDiffFlags = SFX_PRINTER_ALL ) override;
     virtual OUString        GetSelectionText( bool bCompleteWords ) override;
     virtual bool            HasSelection( bool bText ) const override;
 

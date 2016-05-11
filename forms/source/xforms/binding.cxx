@@ -48,7 +48,6 @@
 #include <com/sun/star/xml/dom/events/XDocumentEvent.hpp>
 #include <com/sun/star/lang/XUnoTunnel.hpp>
 #include <com/sun/star/lang/IndexOutOfBoundsException.hpp>
-#include <com/sun/star/container/XSet.hpp>
 #include <com/sun/star/container/XNameContainer.hpp>
 
 #include <comphelper/propertysetinfo.hxx>
@@ -64,20 +63,15 @@ using xforms::MIP;
 using xforms::Model;
 using xforms::getResource;
 using xforms::EvaluationContext;
-using com::sun::star::beans::PropertyVetoException;
-using com::sun::star::beans::UnknownPropertyException;
 using com::sun::star::beans::XPropertySet;
-using com::sun::star::container::XSet;
 using com::sun::star::container::XNameAccess;
 using com::sun::star::form::binding::IncompatibleTypesException;
 using com::sun::star::form::binding::InvalidBindingStateException;
 using com::sun::star::form::binding::XValueBinding;
 using com::sun::star::lang::EventObject;
-using com::sun::star::lang::IllegalArgumentException;
 using com::sun::star::lang::IndexOutOfBoundsException;
 using com::sun::star::lang::NoSupportException;
 using com::sun::star::lang::NullPointerException;
-using com::sun::star::lang::WrappedTargetException;
 using com::sun::star::lang::XUnoTunnel;
 using com::sun::star::uno::Any;
 using com::sun::star::uno::Reference;
@@ -97,8 +91,6 @@ using com::sun::star::xml::dom::XNodeList;
 using com::sun::star::xml::dom::events::XEventListener;
 using com::sun::star::xml::dom::events::XEventTarget;
 using com::sun::star::xsd::XDataType;
-
-
 
 
 #define EXCEPT(msg) OUString(msg),static_cast<XValueBinding*>(this)
@@ -295,7 +287,6 @@ OUString Binding::explainInvalid()
 }
 
 
-
 EvaluationContext Binding::getEvaluationContext() const
 {
     OSL_ENSURE( getModelImpl() != nullptr, "need model impl" );
@@ -327,9 +318,6 @@ Binding* SAL_CALL Binding::getBinding( const Reference<XPropertySet>& xPropertyS
         ? reinterpret_cast<Binding*>( xTunnel->getSomething(getUnoTunnelID()))
         : nullptr;
 }
-
-
-
 
 
 void Binding::setBindingID( const OUString& sBindingID )
@@ -496,8 +484,8 @@ Model* Binding::getModelImpl( const css::uno::Reference<css::xforms::XModel>& xM
     return pModel;
 }
 
-static void lcl_addListenerToNode( Reference<XNode> xNode,
-                            Reference<XEventListener> xListener )
+static void lcl_addListenerToNode( const Reference<XNode>& xNode,
+                                   const Reference<XEventListener>& xListener )
 {
     Reference<XEventTarget> xTarget( xNode, UNO_QUERY );
     if( xTarget.is() )
@@ -517,8 +505,8 @@ static void lcl_addListenerToNode( Reference<XNode> xNode,
     }
 }
 
-static void lcl_removeListenerFromNode( Reference<XNode> xNode,
-                                 Reference<XEventListener> xListener )
+static void lcl_removeListenerFromNode( const Reference<XNode>& xNode,
+                                        const Reference<XEventListener>& xListener )
 {
     Reference<XEventTarget> xTarget( xNode, UNO_QUERY );
     if( xTarget.is() )
@@ -553,8 +541,7 @@ static void lcl_removeListenerFromNode( Reference<XNode> xNode,
 
         // create proper evaluation context for this MIP
         aVector.push_back( EvaluationContext( *aIter, getModel(),
-                                              getBindingNamespaces(),
-                                              nCount, aNodes.size() ) );
+                                              getBindingNamespaces() ) );
     }
     return aVector;
 }
@@ -729,7 +716,7 @@ void Binding::distributeMIP( const css::uno::Reference<css::xml::dom::XNode> & r
 
     OUString sEventName("xforms-generic");
     css::xforms::XFormsEventConcrete *pEvent = new css::xforms::XFormsEventConcrete;
-    pEvent->initXFormsEvent(sEventName, sal_True, sal_False);
+    pEvent->initXFormsEvent(sEventName, true, false);
     Reference<XEvent> xEvent(pEvent);
 
     // naive depth-first traversal
@@ -1009,9 +996,6 @@ void Binding::_checkBindingID()
 }
 
 
-
-
-
 // XValueBinding
 
 
@@ -1078,7 +1062,6 @@ void Binding::setValue( const css::uno::Any& aValue )
     else
         throw InvalidBindingStateException( EXCEPT( "no suitable node found" ) );
 }
-
 
 
 // XListEntry Source
@@ -1175,7 +1158,6 @@ void Binding::removeListEntryListener( const css::uno::Reference<css::form::bind
 }
 
 
-
 // XValidator
 
 
@@ -1224,8 +1206,6 @@ void Binding::removeValidityConstraintListener(
 }
 
 
-
-
 // xml::dom::event::XEventListener
 
 
@@ -1256,7 +1236,6 @@ void Binding::handleEvent( const css::uno::Reference<css::xml::dom::events::XEve
     // our value was maybe modified
     valueModified();
 }
-
 
 
 // lang::XUnoTunnel
@@ -1351,8 +1330,6 @@ void Binding::removeModifyListener(
     if( aIter != maModifyListeners.end() )
         maModifyListeners.erase( aIter );
 }
-
-
 
 
 OUString Binding::getName()

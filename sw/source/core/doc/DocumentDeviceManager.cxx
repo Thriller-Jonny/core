@@ -106,14 +106,13 @@ VirtualDevice* DocumentDeviceManager::getVirtualDevice(/*[in]*/ bool bCreate ) c
     return pRet;
 }
 
-void DocumentDeviceManager::setVirtualDevice(/*[in]*/ VirtualDevice* pVd,/*[in]*/ bool bDeleteOld, /*[in]*/ bool )
+void DocumentDeviceManager::setVirtualDevice(/*[in]*/ VirtualDevice* pVd )
 {
     assert ( !pVd->isDisposed() );
 
     if ( mpVirDev.get() != pVd )
     {
-        if ( bDeleteOld )
-            mpVirDev.disposeAndClear();
+        mpVirDev.disposeAndClear();
         mpVirDev = pVd;
 
         if ( m_rDoc.getIDocumentDrawModelAccess().GetDrawModel() && m_rDoc.GetDocumentSettingManager().get( DocumentSettingId::USE_VIRTUAL_DEVICE ) )
@@ -276,7 +275,7 @@ VirtualDevice& DocumentDeviceManager::CreateVirtualDevice_() const
     aMapMode.SetMapUnit( MAP_TWIP );
     pNewVir->SetMapMode( aMapMode );
 
-    const_cast<DocumentDeviceManager*>(this)->setVirtualDevice( pNewVir, true, true );
+    const_cast<DocumentDeviceManager*>(this)->setVirtualDevice( pNewVir );
     return *mpVirDev;
 }
 
@@ -340,7 +339,7 @@ void DocumentDeviceManager::PrtDataChanged()
             pFntCache->Flush();
 
             for(SwRootFrame* aLayout : m_rDoc.GetAllLayouts())
-                aLayout->InvalidateAllContent(INV_SIZE);
+                aLayout->InvalidateAllContent(SwInvalidateFlags::Size);
 
             for(SwViewShell& rShell : pSh->GetRingContainer())
                 rShell.InitPrt(getPrinter(false));

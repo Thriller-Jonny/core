@@ -41,7 +41,6 @@ namespace reportdesign
                             public FunctionPropertySet
     {
         css::beans::Optional< OUString> m_sInitialFormula;
-        css::uno::Reference< css::uno::XComponentContext >  m_xContext;
         css::uno::WeakReference< css::report::XFunctions >  m_xParent;
         OUString m_sName;
         OUString m_sFormula;
@@ -52,26 +51,26 @@ namespace reportdesign
         OFunction& operator=(const OFunction&) = delete;
 
         template <typename T> void set(  const OUString& _sProperty
-                                        ,const T& _Value
+                                        ,const T& Value
                                         ,T& _member)
         {
             BoundListeners l;
             {
                 ::osl::MutexGuard aGuard(m_aMutex);
-                prepareSet(_sProperty, css::uno::makeAny(_member), css::uno::makeAny(_Value), &l);
-                _member = _Value;
+                prepareSet(_sProperty, css::uno::makeAny(_member), css::uno::makeAny(Value), &l);
+                _member = Value;
             }
             l.notify();
         }
         void set(  const OUString& _sProperty
-                  ,bool _Value
+                  ,bool Value
                   ,bool& _member)
         {
             BoundListeners l;
             {
                 ::osl::MutexGuard aGuard(m_aMutex);
-                prepareSet(_sProperty, css::uno::makeAny(_member), css::uno::makeAny(_Value), &l);
-                _member = _Value;
+                prepareSet(_sProperty, css::uno::makeAny(_member), css::uno::makeAny(Value), &l);
+                _member = Value;
             }
             l.notify();
         }

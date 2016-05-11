@@ -60,8 +60,6 @@ using std::endl;
 using namespace com::sun::star;
 
 
-
-
 XEditAttribute* MakeXEditAttribute( SfxItemPool& rPool, const SfxPoolItem& rItem, sal_uInt16 nStart, sal_uInt16 nEnd )
 {
     // Create thw new attribute in the pool
@@ -114,12 +112,12 @@ const XParaPortion& XParaPortionList::operator [](size_t i) const
 }
 
 ContentInfo::ContentInfo( SfxItemPool& rPool ) :
-    eFamily(SFX_STYLE_FAMILY_PARA),
+    eFamily(SfxStyleFamily::Para),
     aParaAttribs(rPool, EE_PARA_START, EE_CHAR_END)
 {
 }
 
-// the real Copy constructor is nonsens, since I have to work with another Pool!
+// the real Copy constructor is nonsense, since I have to work with another Pool!
 ContentInfo::ContentInfo( const ContentInfo& rCopyFrom, SfxItemPool& rPoolToUse ) :
     maText(rCopyFrom.maText),
     aStyle(rCopyFrom.aStyle),
@@ -129,9 +127,9 @@ ContentInfo::ContentInfo( const ContentInfo& rCopyFrom, SfxItemPool& rPoolToUse 
     // this should ensure that the Items end up in the correct Pool!
     aParaAttribs.Set( rCopyFrom.GetParaAttribs() );
 
-    for (size_t i = 0; i < rCopyFrom.aAttribs.size(); ++i)
+    for (const auto & aAttrib : rCopyFrom.aAttribs)
     {
-        const XEditAttribute& rAttr = *rCopyFrom.aAttribs[i].get();
+        const XEditAttribute& rAttr = *aAttrib.get();
         XEditAttribute* pMyAttr = MakeXEditAttribute(
             rPoolToUse, *rAttr.GetItem(), rAttr.GetStart(), rAttr.GetEnd());
         aAttribs.push_back(std::unique_ptr<XEditAttribute>(pMyAttr));
@@ -205,31 +203,6 @@ void ContentInfo::Dump() const
     }
 }
 #endif
-
-bool ContentInfo::operator==( const ContentInfo& rCompare ) const
-{
-    if( (maText == rCompare.maText) &&
-            (aStyle == rCompare.aStyle ) &&
-            (aAttribs.size() == rCompare.aAttribs.size()) &&
-            (eFamily == rCompare.eFamily ) &&
-            (aParaAttribs == rCompare.aParaAttribs ) )
-    {
-        for (size_t i = 0, n = aAttribs.size(); i < n; ++i)
-        {
-            if (aAttribs[i] != rCompare.aAttribs[i])
-                return false;
-        }
-
-        return true;
-    }
-
-    return false;
-}
-
-bool ContentInfo::operator!=(const ContentInfo& rCompare) const
-{
-    return !operator==(rCompare);
-}
 
 EditTextObject::EditTextObject( SfxItemPool* pPool ) :
     mpImpl(new EditTextObjectImpl(this, pPool))
@@ -348,12 +321,12 @@ const SfxItemPool* EditTextObject::GetPool() const
     return mpImpl->GetPool();
 }
 
-sal_uInt16 EditTextObject::GetUserType() const
+OutlinerMode EditTextObject::GetUserType() const
 {
     return mpImpl->GetUserType();
 }
 
-void EditTextObject::SetUserType( sal_uInt16 n )
+void EditTextObject::SetUserType( OutlinerMode n )
 {
     mpImpl->SetUserType(n);
 }
@@ -374,10 +347,10 @@ SvtScriptType EditTextObject::GetScriptType() const
 }
 
 
-bool EditTextObject::Store( SvStream& rOStream ) const
+void EditTextObject::Store( SvStream& rOStream ) const
 {
     if ( rOStream.GetError() )
-        return false;
+        return;
 
     sal_Size nStartPos = rOStream.Tell();
 
@@ -394,11 +367,9 @@ bool EditTextObject::Store( SvStream& rOStream ) const
     rOStream.Seek( nStartPos + sizeof( nWhich ) );
     rOStream.WriteUInt32( nStructSz );
     rOStream.Seek( nEndPos );
-
-    return rOStream.GetError() == 0;
 }
 
-EditTextObject* EditTextObject::Create( SvStream& rIStream, SfxItemPool* pGlobalTextObjectPool )
+EditTextObject* EditTextObject::Create( SvStream& rIStream )
 {
     sal_Size nStartPos = rIStream.Tell();
 
@@ -419,7 +390,7 @@ EditTextObject* EditTextObject::Create( SvStream& rIStream, SfxItemPool* pGlobal
     if ( rIStream.GetError() )
         return nullptr;
 
-    EditTextObject* pTxtObj = new EditTextObject(pGlobalTextObjectPool);;
+    EditTextObject* pTxtObj = new EditTextObject(nullptr);
     pTxtObj->CreateData(rIStream);
 
     // Make sure that the stream is left at the correct place.
@@ -539,7 +510,7 @@ EditTextObjectImpl::EditTextObjectImpl( EditTextObject* pFront, SfxItemPool* pP 
 {
     nVersion = 0;
     nMetric = 0xFFFF;
-    nUserType = 0;
+    nUserType = OutlinerMode::DontKnow;
     nObjSettings = 0;
     pPortionInfo = nullptr;
 
@@ -633,7 +604,7 @@ EditTextObjectImpl::~EditTextObjectImpl()
 }
 
 
-void EditTextObjectImpl::SetUserType( sal_uInt16 n )
+void EditTextObjectImpl::SetUserType( OutlinerMode n )
 {
     nUserType = n;
 }
@@ -689,7 +660,6 @@ void EditTextObjectImpl::DestroyAttrib( XEditAttribute* pAttr )
 }
 
 
-
 ContentInfo* EditTextObjectImpl::CreateAndInsertContent()
 {
     aContents.push_back(std::unique_ptr<ContentInfo>(new ContentInfo(*pPool)));
@@ -742,9 +712,9 @@ void EditTextObjectImpl::GetCharAttribs( sal_Int32 nPara, std::vector<EECharAttr
 
     rLst.clear();
     const ContentInfo& rC = *aContents[nPara].get();
-    for (size_t nAttr = 0; nAttr < rC.aAttribs.size(); ++nAttr)
+    for (const auto & aAttrib : rC.aAttribs)
     {
-        const XEditAttribute& rAttr = *rC.aAttribs[nAttr].get();
+        const XEditAttribute& rAttr = *aAttrib.get();
         EECharAttrib aEEAttr;
         aEEAttr.pAttr = rAttr.GetItem();
         aEEAttr.nPara = nPara;
@@ -872,7 +842,7 @@ bool EditTextObjectImpl::RemoveCharAttribs( sal_uInt16 _nWhich )
 
 namespace {
 
-class FindByParagraph : std::unary_function<editeng::Section, bool>
+class FindByParagraph : public std::unary_function<editeng::Section, bool>
 {
     sal_Int32 mnPara;
 public:
@@ -883,7 +853,7 @@ public:
     }
 };
 
-class FindBySectionStart : std::unary_function<editeng::Section, bool>
+class FindBySectionStart : public std::unary_function<editeng::Section, bool>
 {
     sal_Int32 mnPara;
     sal_Int32 mnStart;
@@ -910,9 +880,9 @@ void EditTextObjectImpl::GetAllSections( std::vector<editeng::Section>& rAttrs )
         SectionBordersType& rBorders = aParaBorders[nPara];
         rBorders.push_back(0);
         rBorders.push_back(rC.GetText().getLength());
-        for (size_t nAttr = 0; nAttr < rC.aAttribs.size(); ++nAttr)
+        for (const auto & aAttrib : rC.aAttribs)
         {
-            const XEditAttribute& rAttr = *rC.aAttribs[nAttr].get();
+            const XEditAttribute& rAttr = *aAttrib.get();
             const SfxPoolItem* pItem = rAttr.GetItem();
             if (!pItem)
                 continue;
@@ -976,9 +946,9 @@ void EditTextObjectImpl::GetAllSections( std::vector<editeng::Section>& rAttrs )
             return;
         }
 
-        for (size_t i = 0; i < rC.aAttribs.size(); ++i)
+        for (const auto & aAttrib : rC.aAttribs)
         {
-            const XEditAttribute& rXAttr = *rC.aAttribs[i].get();
+            const XEditAttribute& rXAttr = *aAttrib.get();
             const SfxPoolItem* pItem = rXAttr.GetItem();
             if (!pItem)
                 continue;
@@ -1212,7 +1182,7 @@ void EditTextObjectImpl::StoreData( SvStream& rOStream ) const
 
         // StyleName and Family...
         write_uInt16_lenPrefixed_uInt8s_FromOUString(rOStream, rC.GetStyle(), eEncoding);
-        rOStream.WriteUInt16( rC.GetFamily() );
+        rOStream.WriteUInt16( (sal_uInt16)rC.GetFamily() );
 
         // Paragraph attributes ...
         rC.GetParaAttribs().Store( rOStream );
@@ -1237,7 +1207,7 @@ void EditTextObjectImpl::StoreData( SvStream& rOStream ) const
 
     rOStream.WriteUInt16( nMetric );
 
-    rOStream.WriteUInt16( nUserType );
+    rOStream.WriteUInt16( (sal_uInt16)nUserType );
     rOStream.WriteUInt32( nObjSettings );
 
     rOStream.WriteBool( bVertical );
@@ -1484,7 +1454,9 @@ void EditTextObjectImpl::CreateData( SvStream& rIStream )
 
     if ( nVersion >= 600 )
     {
-        rIStream.ReadUInt16( nUserType );
+        sal_uInt16 nTmp;
+        rIStream.ReadUInt16( nTmp );
+        nUserType = (OutlinerMode)nTmp;
         rIStream.ReadUInt32( nObjSettings );
     }
 
@@ -1554,9 +1526,9 @@ void EditTextObjectImpl::CreateData( SvStream& rIStream )
     // Works only if tab positions are set, not when DefTab.
     if ( nVersion < 500 )
     {
-        for (size_t i = 0, n = aContents.size(); i < n; ++i)
+        for (std::unique_ptr<ContentInfo> & aContent : aContents)
         {
-            ContentInfo& rC = *aContents[i].get();
+            ContentInfo& rC = *aContent.get();
             const SvxLRSpaceItem& rLRSpace = static_cast<const SvxLRSpaceItem&>(rC.GetParaAttribs().Get(EE_PARA_LRSPACE));
             if ( rLRSpace.GetTextLeft() && ( rC.GetParaAttribs().GetItemState( EE_PARA_TABS ) == SfxItemState::SET ) )
             {

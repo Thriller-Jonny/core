@@ -44,8 +44,9 @@
 
 #include <memory>
 
-namespace dbaxml
-{
+
+namespace dbaxml {
+
 using namespace ::xmloff::token;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::container;
@@ -56,8 +57,9 @@ using namespace ::com::sun::star::sdbcx;
 using namespace ::com::sun::star::text;
 using namespace ::com::sun::star::io;
 using namespace ::com::sun::star::xml::sax;
-// - ODBExport -
+
 #define PROGRESS_BAR_STEP 20
+
 
 class ODBExport : public SvXMLExport
 {
@@ -108,7 +110,6 @@ class ODBExport : public SvXMLExport
     mutable rtl::Reference < XMLPropertySetMapper >   m_xTableStylesPropertySetMapper;
     mutable rtl::Reference < XMLPropertySetMapper >   m_xColumnStylesPropertySetMapper;
     mutable rtl::Reference < XMLPropertySetMapper >   m_xCellStylesPropertySetMapper;
-    mutable rtl::Reference < XMLPropertySetMapper >   m_xRowStylesPropertySetMapper;
 
     Reference<XPropertySet>                         m_xDataSource;
     ::dbaccess::ODsnTypeCollection                  m_aTypeCollection;
@@ -159,11 +160,11 @@ private:
                             ODBExport();
 protected:
 
-    virtual void                    _ExportStyles( bool bUsed ) override;
-    virtual void                    _ExportAutoStyles() override;
-    virtual void                    _ExportContent() override;
-    virtual void                    _ExportMasterStyles() override;
-    virtual void                    _ExportFontDecls() override;
+    virtual void                    ExportStyles_( bool bUsed ) override;
+    virtual void                    ExportAutoStyles_() override;
+    virtual void                    ExportContent_() override;
+    virtual void                    ExportMasterStyles_() override;
+    virtual void                    ExportFontDecls_() override;
     virtual sal_uInt32              exportDoc( enum ::xmloff::token::XMLTokenEnum eClass ) override;
     virtual SvXMLAutoStylePoolP*    CreateAutoStylePool() override;
 
@@ -190,7 +191,7 @@ public:
     // XExporter
     virtual void SAL_CALL setSourceDocument( const css::uno::Reference< css::lang::XComponent >& xDoc ) throw(css::lang::IllegalArgumentException, css::uno::RuntimeException, std::exception) override;
 
-    inline Reference<XPropertySet> getDataSource() const { return m_xDataSource; }
+    const Reference<XPropertySet>& getDataSource() const { return m_xDataSource; }
 };
 
 } // dbaxml

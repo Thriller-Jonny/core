@@ -118,15 +118,15 @@ class SvxIconChoiceCtrlEntry
                             }
 
 public:
-                            SvxIconChoiceCtrlEntry( const OUString& rText, const Image& rImage, SvxIconViewFlags nFlags = SvxIconViewFlags::NONE );
+                            SvxIconChoiceCtrlEntry( const OUString& rText, const Image& rImage );
                             ~SvxIconChoiceCtrlEntry () {}
 
-    Image                   GetImage () const { return aImage; }
+    const Image&            GetImage () const { return aImage; }
     void                    SetText ( const OUString& rText ) { aText = rText; }
-    OUString                GetText () const { return aText; }
+    const OUString&         GetText () const { return aText; }
     OUString SVT_DLLPUBLIC  GetDisplayText() const;
     void                    SetQuickHelpText( const OUString& rText ) { aQuickHelpText = rText; }
-    OUString                GetQuickHelpText() const { return aQuickHelpText; }
+    const OUString&         GetQuickHelpText() const { return aQuickHelpText; }
     void                    SetUserData ( void* _pUserData ) { pUserData = _pUserData; }
     void*                   GetUserData () { return pUserData; }
 
@@ -153,12 +153,11 @@ class SvxIconChoiceCtrlColumnInfo
     Image                   aColImage;
     long                    nWidth;
     SvxIconChoiceCtrlColumnAlign    eAlignment;
-    sal_uInt16                  nSubItem;
+    sal_uInt16              nSubItem;
 
 public:
-                            SvxIconChoiceCtrlColumnInfo( sal_uInt16 nSub, long nWd,
-                                SvxIconChoiceCtrlColumnAlign eAlign ) :
-                                nWidth( nWd ), eAlignment( eAlign ), nSubItem( nSub ) {}
+                            SvxIconChoiceCtrlColumnInfo( long nWd ) :
+                                nWidth( nWd ), eAlignment( IcnViewAlignLeft ), nSubItem( 0 ) {}
                             SvxIconChoiceCtrlColumnInfo( const SvxIconChoiceCtrlColumnInfo& );
 
     void                    SetWidth( long nWd ) { nWidth = nWd; }
@@ -248,7 +247,7 @@ public:
     void                SetStyle( WinBits nWinStyle );
     WinBits             GetStyle() const;
 
-    bool                SetChoiceWithCursor ( bool bDo = true );
+    void                SetChoiceWithCursor();
 
     void                SetFont( const vcl::Font& rFont );
     void                SetPointFont( const vcl::Font& rFont );
@@ -263,11 +262,7 @@ public:
 
 
     SvxIconChoiceCtrlEntry* InsertEntry( const OUString& rText,
-                                         const Image& rImage,
-                                         sal_uLong nPos = CONTAINER_APPEND,
-                                         const Point* pPos = nullptr,
-                                         SvxIconViewFlags nFlags = SvxIconViewFlags::NONE
-                                       );
+                                         const Image& rImage);
 
     /** creates automatic mnemonics for all icon texts in the control
 
@@ -292,9 +287,8 @@ public:
     // Re-calculation of cached view-data and invalidatiopn of those in the view
     void                    InvalidateEntry( SvxIconChoiceCtrlEntry* pEntry );
 
-    // bHit == false: Entry is selectd, if the BoundRect is selected
-    //      == true : Bitmap or Text must be selected
-    SvxIconChoiceCtrlEntry* GetEntry( const Point& rPosPixel, bool bHit = false ) const;
+    // Entry is selectd, if the BoundRect is selected
+    SvxIconChoiceCtrlEntry* GetEntry( const Point& rPosPixel ) const;
 
     // sal_uLong is the position of the selected element in the list
     SvxIconChoiceCtrlEntry* GetSelectedEntry() const;

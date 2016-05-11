@@ -30,7 +30,6 @@
 using namespace ::com::sun::star::uno;
 
 
-
 namespace sfx2 {
 
 #define MAX_SAVE_COUNT      (sal_uInt16)10
@@ -85,10 +84,9 @@ void SearchDialog::LoadConfig()
     {
         m_sWinState = OUStringToOString(aViewOpt.GetWindowState(), RTL_TEXTENCODING_ASCII_US);
         Any aUserItem = aViewOpt.GetUserItem( "UserItem" );
-        OUString aTemp;
-        if ( aUserItem >>= aTemp )
+        OUString sUserData;
+        if ( aUserItem >>= sUserData )
         {
-            OUString sUserData( aTemp );
             DBG_ASSERT( comphelper::string::getTokenCount(sUserData, ';') == 5, "invalid config data" );
             sal_Int32 nIdx = 0;
             OUString sSearchText = sUserData.getToken( 0, ';', nIdx );
@@ -173,13 +171,11 @@ void SearchDialog::Move()
 {
     ModelessDialog::Move();
     if ( m_bIsConstructed && IsReallyVisible() )
-        m_sWinState = GetWindowState( WINDOWSTATE_MASK_POS | WINDOWSTATE_MASK_STATE );
+        m_sWinState = GetWindowState( WindowStateMask::Pos | WindowStateMask::State );
 }
 
 
-
 } // namespace sfx2
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

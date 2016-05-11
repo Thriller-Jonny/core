@@ -38,14 +38,14 @@ class SW_DLLPUBLIC SwDDEFieldType : public SwFieldType
     bool bCRLFFlag : 1;
     bool bDeleted : 1;
 
-    SAL_DLLPRIVATE void _RefCntChgd();
+    SAL_DLLPRIVATE void RefCntChgd();
 
 public:
     SwDDEFieldType( const OUString& rName, const OUString& rCmd,
                     SfxLinkUpdateMode = SfxLinkUpdateMode::ONCALL );
     virtual ~SwDDEFieldType();
 
-    OUString GetExpansion() const               { return aExpansion; }
+    const OUString& GetExpansion() const               { return aExpansion; }
     void SetExpansion( const OUString& rStr )   { aExpansion = rStr;
                                                   bCRLFFlag = false; }
 
@@ -74,8 +74,8 @@ public:
           SwDoc* GetDoc()           { return pDoc; }
     void SetDoc( SwDoc* pDoc );
 
-    void IncRefCnt() {  if( !nRefCnt++ && pDoc ) _RefCntChgd(); }
-    void DecRefCnt() {  if( !--nRefCnt && pDoc ) _RefCntChgd(); }
+    void IncRefCnt() {  if( !nRefCnt++ && pDoc ) RefCntChgd(); }
+    void DecRefCnt() {  if( !--nRefCnt && pDoc ) RefCntChgd(); }
 
     void SetCRLFDelFlag( bool bFlag = true )    { bCRLFFlag = bFlag; }
 };

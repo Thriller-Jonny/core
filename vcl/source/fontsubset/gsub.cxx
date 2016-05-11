@@ -30,7 +30,6 @@
 namespace vcl
 {
 
-typedef sal_uIntPtr sal_uLong;
 typedef sal_uInt8 FT_Byte;
 
 typedef std::map<sal_uInt16,sal_uInt16> GlyphSubstitution;
@@ -51,7 +50,7 @@ inline sal_uInt16 NEXT_UShort( const unsigned char* &p )
 
 #define MKTAG(s) ((((((s[0]<<8)+s[1])<<8)+s[2])<<8)+s[3])
 
-bool ReadGSUB( struct _TrueTypeFont* pTTFile,
+bool ReadGSUB( struct TrueTypeFont* pTTFile,
     int nRequestedScript, int nRequestedLangsys )
 {
     const FT_Byte* pGsubBase = pTTFile->tables[ O_gsub ];
@@ -63,7 +62,7 @@ bool ReadGSUB( struct _TrueTypeFont* pTTFile,
 
     // parse GSUB header
     const FT_Byte* pGsubHeader = pGsubBase;
-    const sal_uLong nVersion            = NEXT_Long( pGsubHeader );
+    const sal_uInt32 nVersion           = NEXT_Long( pGsubHeader );
     const sal_uInt16 nOfsScriptList     = NEXT_UShort( pGsubHeader );
     const sal_uInt16 nOfsFeatureTable   = NEXT_UShort( pGsubHeader );
     const sal_uInt16 nOfsLookupList     = NEXT_UShort( pGsubHeader );
@@ -73,13 +72,12 @@ bool ReadGSUB( struct _TrueTypeFont* pTTFile,
         if( nVersion != 0x00001000 )    // workaround for SunBatang etc.
             return false;               // unknown format or broken
 
-    typedef std::vector<sal_uLong> ReqFeatureTagList;
+    typedef std::vector<sal_uInt32> ReqFeatureTagList;
     ReqFeatureTagList aReqFeatureTagList;
 
     aReqFeatureTagList.push_back( MKTAG("vert") );
 
-    typedef std::vector<sal_uInt16> UshortList;
-    UshortList aFeatureIndexList;
+    std::vector<sal_uInt16> aFeatureIndexList;
 
     // parse Script Table
     const FT_Byte* pScriptHeader = pGsubBase + nOfsScriptList;
@@ -88,7 +86,7 @@ bool ReadGSUB( struct _TrueTypeFont* pTTFile,
         return false;
     for( sal_uInt16 nScriptIndex = 0; nScriptIndex < nCntScript; ++nScriptIndex )
     {
-        const sal_uLong nTag            = NEXT_Long( pScriptHeader ); // e.g. hani/arab/kana/hang
+        const sal_uInt32 nTag            = NEXT_Long( pScriptHeader ); // e.g. hani/arab/kana/hang
         const sal_uInt16 nOfsScriptTable= NEXT_UShort( pScriptHeader );
         if( (nTag != (sal_uInt16)nRequestedScript) && (nRequestedScript != 0) )
             continue;
@@ -103,7 +101,7 @@ bool ReadGSUB( struct _TrueTypeFont* pTTFile,
             return false;
         for( sal_uInt16 nLangsysIndex = 0; nLangsysIndex < nCntLangSystem; ++nLangsysIndex )
         {
-            const sal_uLong nInnerTag = NEXT_Long( pScriptTable );    // e.g. KOR/ZHS/ZHT/JAN
+            const sal_uInt32 nInnerTag = NEXT_Long( pScriptTable );    // e.g. KOR/ZHS/ZHT/JAN
             const sal_uInt16 nOffset= NEXT_UShort( pScriptTable );
             if( (nInnerTag != (sal_uInt16)nRequestedLangsys) && (nRequestedLangsys != 0) )
                 continue;
@@ -151,8 +149,8 @@ bool ReadGSUB( struct _TrueTypeFont* pTTFile,
     if( aFeatureIndexList.empty() )
         return true;
 
-    UshortList aLookupIndexList;
-    UshortList aLookupOffsetList;
+    std::vector<sal_uInt16> aLookupIndexList;
+    std::vector<sal_uInt16> aLookupOffsetList;
 
     // parse Feature Table
     const FT_Byte* pFeatureHeader = pGsubBase + nOfsFeatureTable;
@@ -163,7 +161,7 @@ bool ReadGSUB( struct _TrueTypeFont* pTTFile,
           return false;
     for( sal_uInt16 nFeatureIndex = 0; nFeatureIndex < nCntFeature; ++nFeatureIndex )
     {
-        const sal_uLong nTag    = NEXT_Long( pFeatureHeader ); // e.g. locl/vert/trad/smpl/liga/fina/...
+        const sal_uInt32 nTag    = NEXT_Long( pFeatureHeader ); // e.g. locl/vert/trad/smpl/liga/fina/...
         const sal_uInt16 nOffset= NEXT_UShort( pFeatureHeader );
 
         // ignore unneeded feature lookups
@@ -206,7 +204,7 @@ bool ReadGSUB( struct _TrueTypeFont* pTTFile,
             aLookupOffsetList.push_back( nOffset );
     }
 
-    UshortList::const_iterator it = aLookupOffsetList.begin();
+    std::vector<sal_uInt16>::const_iterator it = aLookupOffsetList.begin();
     for(; it != aLookupOffsetList.end(); ++it )
     {
         const sal_uInt16 nOfsLookupTable = *it;
@@ -316,13 +314,13 @@ bool ReadGSUB( struct _TrueTypeFont* pTTFile,
     return true;
 }
 
-void ReleaseGSUB(struct _TrueTypeFont* pTTFile)
+void ReleaseGSUB(struct TrueTypeFont* pTTFile)
 {
     GlyphSubstitution* pGlyphSubstitution = static_cast<GlyphSubstitution*>(pTTFile->pGSubstitution);
     delete pGlyphSubstitution;
 }
 
-int UseGSUB( struct _TrueTypeFont* pTTFile, int nGlyph )
+int UseGSUB( struct TrueTypeFont* pTTFile, int nGlyph )
 {
     GlyphSubstitution* pGlyphSubstitution = static_cast<GlyphSubstitution*>(pTTFile->pGSubstitution);
     if( pGlyphSubstitution != nullptr )
@@ -335,7 +333,7 @@ int UseGSUB( struct _TrueTypeFont* pTTFile, int nGlyph )
     return nGlyph;
 }
 
-int HasVerticalGSUB( struct _TrueTypeFont* pTTFile )
+int HasVerticalGSUB( struct TrueTypeFont* pTTFile )
 {
     GlyphSubstitution* pGlyphSubstitution = static_cast<GlyphSubstitution*>(pTTFile->pGSubstitution);
     return pGlyphSubstitution ? +1 : 0;

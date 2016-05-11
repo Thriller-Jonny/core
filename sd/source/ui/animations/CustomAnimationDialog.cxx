@@ -42,6 +42,7 @@
 #include <vcl/menubtn.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/fixed.hxx>
+#include <vcl/field.hxx>
 #include <vcl/lstbox.hxx>
 #include <vcl/layout.hxx>
 #include <vcl/field.hxx>
@@ -940,7 +941,7 @@ void FontStylePropertyBox::update()
     vcl::Font aFont( mpEdit->GetFont() );
     aFont.SetWeight( mfFontWeight == awt::FontWeight::BOLD ? WEIGHT_BOLD : WEIGHT_NORMAL );
     aFont.SetItalic( meFontSlant == awt::FontSlant_ITALIC ? ITALIC_NORMAL : ITALIC_NONE  );
-    aFont.SetUnderline( mnFontUnderline == awt::FontUnderline::NONE ? UNDERLINE_NONE : UNDERLINE_SINGLE );
+    aFont.SetUnderline( mnFontUnderline == awt::FontUnderline::NONE ? LINESTYLE_NONE : LINESTYLE_SINGLE );
     mpEdit->SetFont( aFont );
     mpEdit->Invalidate();
 }
@@ -1132,7 +1133,7 @@ CustomAnimationEffectTabPage::CustomAnimationEffectTabPage( vcl::Window* pParent
 
         mpFTProperty1->Enable( mpLBProperty1->IsEnabled() );
 
-        // accelerate & deccelerate
+        // accelerate & decelerate
 
         if( pSet->getPropertyState( nHandleAccelerate ) == STLPropertyState_DIRECT )
         {
@@ -1508,10 +1509,9 @@ void CustomAnimationEffectTabPage::fillSoundListBox()
 
     mpLBSound->InsertEntry( SD_RESSTR(STR_CUSTOMANIMATION_NO_SOUND) );
     mpLBSound->InsertEntry( SD_RESSTR(STR_CUSTOMANIMATION_STOP_PREVIOUS_SOUND) );
-    for( size_t i = 0; i < maSoundList.size(); i++ )
+    for(const OUString & rString : maSoundList)
     {
-        OUString aString = maSoundList[ i ];
-        INetURLObject aURL( aString );
+        INetURLObject aURL( rString );
         mpLBSound->InsertEntry( aURL.GetBase() );
     }
     mpLBSound->InsertEntry( SD_RESSTR(STR_CUSTOMANIMATION_BROWSE_SOUND) );
@@ -1617,6 +1617,7 @@ public:
 
     DECL_LINK_TYPED( implControlHdl, ListBox&, void );
     DECL_LINK_TYPED( implClickHdl, Button*, void );
+    DECL_LINK_TYPED( DurationModifiedHdl, Edit&, void );
     void implHdl(Control*);
 
 private:
@@ -1627,7 +1628,7 @@ private:
     VclPtr<FixedText> mpFTStartDelay;
     VclPtr<MetricField> mpMFStartDelay;
     VclPtr<FixedText> mpFTDuration;
-    VclPtr<ListBox> mpCBDuration;
+    VclPtr<MetricBox> mpCBXDuration;
     VclPtr<FixedText> mpFTRepeat;
     VclPtr<ListBox> mpCBRepeat;
     VclPtr<CheckBox> mpCBXRewind;
@@ -1644,7 +1645,7 @@ CustomAnimationDurationTabPage::CustomAnimationDurationTabPage(vcl::Window* pPar
     get(mpFTStartDelay, "delay_label" );
     get(mpMFStartDelay, "delay_value" );
     get(mpFTDuration, "duration_label" );
-    get(mpCBDuration, "duration_list" );
+    get(mpCBXDuration, "anim_duration" );
     get(mpFTRepeat, "repeat_label" );
     get(mpCBRepeat, "repeat_list" );
     get(mpCBXRewind, "rewind" );
@@ -1654,10 +1655,18 @@ CustomAnimationDurationTabPage::CustomAnimationDurationTabPage(vcl::Window* pPar
     mpLBTrigger->set_width_request(approximate_char_width() * 40);
 
     fillRepeatComboBox( mpCBRepeat );
-    fillDurationComboBox( mpCBDuration );
+
+    //fillDurationMetricComboBox
+    mpCBXDuration->InsertValue(50, FUNIT_CUSTOM);
+    mpCBXDuration->InsertValue(100, FUNIT_CUSTOM);
+    mpCBXDuration->InsertValue(200, FUNIT_CUSTOM);
+    mpCBXDuration->InsertValue(300, FUNIT_CUSTOM);
+    mpCBXDuration->InsertValue(500, FUNIT_CUSTOM);
+    mpCBXDuration->AdaptDropDownLineCountToMaximum();
 
     mpRBClickSequence->SetClickHdl( LINK( this, CustomAnimationDurationTabPage, implClickHdl ) );
     mpLBTrigger->SetSelectHdl( LINK( this, CustomAnimationDurationTabPage, implControlHdl ) );
+    mpCBXDuration->SetModifyHdl(LINK( this, CustomAnimationDurationTabPage, DurationModifiedHdl));
 
     if( pSet->getPropertyState( nHandleStart ) != STLPropertyState_AMBIGUOUS )
     {
@@ -1687,30 +1696,14 @@ CustomAnimationDurationTabPage::CustomAnimationDurationTabPage(vcl::Window* pPar
         if( fDuration == 0.001 )
         {
             mpFTDuration->Disable();
-            mpCBDuration->Disable();
+            mpCBXDuration->Disable();
             mpFTRepeat->Disable();
             mpCBRepeat->Disable();
             mpCBXRewind->Disable();
         }
         else
         {
-            sal_Int32 nPos = LISTBOX_ENTRY_NOTFOUND;
-
-            if( fDuration == 5.0 )
-                nPos = 0;
-            else if( fDuration == 3.0 )
-                nPos = 1;
-            else if( fDuration == 2.0 )
-                nPos = 2;
-            else if( fDuration == 1.0 )
-                nPos = 3;
-            else if( fDuration == 0.5 )
-                nPos = 4;
-
-            if( nPos != LISTBOX_ENTRY_NOTFOUND )
-                mpCBDuration->SelectEntryPos( nPos );
-            else
-                mpCBDuration->SetText(OUString::number(fDuration));
+            mpCBXDuration->SetValue( (fDuration)*100.0 );
         }
     }
 
@@ -1821,7 +1814,7 @@ void CustomAnimationDurationTabPage::dispose()
     mpFTStartDelay.clear();
     mpMFStartDelay.clear();
     mpFTDuration.clear();
-    mpCBDuration.clear();
+    mpCBXDuration.clear();
     mpFTRepeat.clear();
     mpCBRepeat.clear();
     mpCBXRewind.clear();
@@ -1835,9 +1828,22 @@ IMPL_LINK_TYPED( CustomAnimationDurationTabPage, implClickHdl, Button*, pBtn, vo
 {
     implHdl(pBtn);
 }
+
 IMPL_LINK_TYPED( CustomAnimationDurationTabPage, implControlHdl, ListBox&, rListBox, void )
 {
     implHdl(&rListBox);
+}
+
+IMPL_LINK_NOARG_TYPED(CustomAnimationDurationTabPage, DurationModifiedHdl, Edit&, void)
+{
+    if(!(mpCBXDuration->GetText()).isEmpty() )
+    {
+        double duration_value = static_cast<double>(mpCBXDuration->GetValue());
+        if(duration_value <= 0.0)
+            mpCBXDuration->SetValue(1);
+        else
+            mpCBXDuration->SetValue(duration_value);
+    }
 }
 
 void CustomAnimationDurationTabPage::implHdl( Control* pControl )
@@ -1901,7 +1907,7 @@ void CustomAnimationDurationTabPage::update( STLPropertySet* pSet )
                 aEvent.Repeat = 0;
                 aEnd <<= aEvent;
             }
-            // ATTENTION: FALL THROUGH INTENDED!
+            SAL_FALLTHROUGH;
         case 7:
             aRepeatCount <<= Timing_INDEFINITE;
             break;
@@ -1929,18 +1935,13 @@ void CustomAnimationDurationTabPage::update( STLPropertySet* pSet )
     }
 
     double fDuration = -1.0;
-    nPos = mpCBDuration->GetSelectEntryPos();
-    if( nPos != LISTBOX_ENTRY_NOTFOUND )
+
+    if(!(mpCBXDuration->GetText()).isEmpty() )
     {
-        fDuration = *static_cast< const double * >( mpCBDuration->GetEntryData(nPos) );
-    }
-    else
-    {
-        OUString aText( mpCBDuration->GetText() );
-        if( !aText.isEmpty() )
-        {
-            fDuration = aText.toDouble();
-        }
+        double duration_value = static_cast<double>(mpCBXDuration->GetValue());
+
+        if(duration_value > 0)
+            fDuration = duration_value/100.0;
     }
 
     if( fDuration != -1.0 )
@@ -2207,14 +2208,14 @@ CustomAnimationDialog::CustomAnimationDialog(vcl::Window* pParent, STLPropertySe
 {
     get(mpTabControl, "tabs");
 
-    sal_uInt16 mnEffectId = mpTabControl->GetPageId("effect");
-    sal_uInt16 mnTimingId = mpTabControl->GetPageId("timing");
-    sal_uInt16 mnTextAnimId = mpTabControl->GetPageId("textanim");
+    sal_uInt16 nEffectId = mpTabControl->GetPageId("effect");
+    sal_uInt16 nTimingId = mpTabControl->GetPageId("timing");
+    sal_uInt16 nTextAnimId = mpTabControl->GetPageId("textanim");
 
     mpEffectTabPage = VclPtr<CustomAnimationEffectTabPage>::Create( mpTabControl, mpSet );
-    mpTabControl->SetTabPage( mnEffectId, mpEffectTabPage );
+    mpTabControl->SetTabPage( nEffectId, mpEffectTabPage );
     mpDurationTabPage = VclPtr<CustomAnimationDurationTabPage>::Create( mpTabControl, mpSet );
-    mpTabControl->SetTabPage( mnTimingId, mpDurationTabPage );
+    mpTabControl->SetTabPage( nTimingId, mpDurationTabPage );
 
     bool bHasText = false;
     if( pSet->getPropertyState( nHandleHasText ) != STLPropertyState_AMBIGUOUS )
@@ -2223,12 +2224,12 @@ CustomAnimationDialog::CustomAnimationDialog(vcl::Window* pParent, STLPropertySe
     if( bHasText )
     {
         mpTextAnimTabPage = VclPtr<CustomAnimationTextAnimTabPage>::Create( mpTabControl, mpSet );
-        mpTabControl->SetTabPage( mnTextAnimId, mpTextAnimTabPage );
+        mpTabControl->SetTabPage( nTextAnimId, mpTextAnimTabPage );
     }
     else
     {
         mpTextAnimTabPage = nullptr;
-        mpTabControl->RemovePage( mnTextAnimId );
+        mpTabControl->RemovePage( nTextAnimId );
     }
 
     if (!sPage.isEmpty())
@@ -2298,12 +2299,12 @@ STLPropertySet* CustomAnimationDialog::createDefaultSet()
     pSet->setPropertyDefaultValue( nHandleAutoReverse, aEmpty );
     pSet->setPropertyDefaultValue( nHandleTrigger, aEmpty );
 
-    pSet->setPropertyDefaultValue( nHandleHasText, makeAny( sal_False ) );
-    pSet->setPropertyDefaultValue( nHandleHasVisibleShape, makeAny( sal_False ) );
+    pSet->setPropertyDefaultValue( nHandleHasText, makeAny( false ) );
+    pSet->setPropertyDefaultValue( nHandleHasVisibleShape, makeAny( false ) );
     pSet->setPropertyDefaultValue( nHandleTextGrouping, makeAny( (sal_Int32)-1 ) );
-    pSet->setPropertyDefaultValue( nHandleAnimateForm, makeAny( sal_True ) );
+    pSet->setPropertyDefaultValue( nHandleAnimateForm, makeAny( true ) );
     pSet->setPropertyDefaultValue( nHandleTextGroupingAuto, makeAny( (double)-1.0 ) );
-    pSet->setPropertyDefaultValue( nHandleTextReverse, makeAny( sal_False ) );
+    pSet->setPropertyDefaultValue( nHandleTextReverse, makeAny( false ) );
 
     pSet->setPropertyDefaultValue( nHandleCurrentPage, aEmpty );
 

@@ -18,8 +18,6 @@
  */
 
 
-
-
 // Global header
 
 
@@ -31,9 +29,7 @@
 #include <svx/svdpool.hxx>
 
 
-
 // Project-local header
-
 
 
 #include "AccessibleEmptyEditSource.hxx"
@@ -104,7 +100,7 @@ namespace accessibility
         }
         SfxItemSet      GetParaAttribs( sal_Int32 /*nPara*/ ) const override { return GetAttribs(ESelection()); }
         void            SetParaAttribs( sal_Int32 /*nPara*/, const SfxItemSet& /*rSet*/ ) override {}
-        void            RemoveAttribs( const ESelection& /*rSelection*/, bool /*bRemoveParaAttribs*/, sal_uInt16 /*nWhich*/ ) override {}
+        void            RemoveAttribs( const ESelection& /*rSelection*/ ) override {}
         void            GetPortions( sal_Int32 /*nPara*/, std::vector<sal_Int32>& /*rList*/ ) const override {}
 
         SfxItemState    GetItemState( const ESelection& /*rSel*/, sal_uInt16 /*nWhich*/ ) const override { return SfxItemState::UNKNOWN; }
@@ -153,7 +149,7 @@ namespace accessibility
         // a switch to a real EditSource, too. Fortunately, the
         // AccessibleEditableTextPara implementation currently always
         // calls GetEditViewForwarder(true) before doing
-        // changes. Thus, we rely on this behabviour here (problem
+        // changes. Thus, we rely on this behaviour here (problem
         // when that changes: via accessibility API, it would no
         // longer be possible to enter text in previously empty
         // shapes).
@@ -213,7 +209,6 @@ namespace accessibility
     {
         return maEditSource.GetBroadcaster();
     }
-
 
 
     // Implementing AccessibleEmptyEditSource
@@ -336,7 +331,6 @@ namespace accessibility
     }
 
 } // end of namespace accessibility
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

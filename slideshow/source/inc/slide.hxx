@@ -26,7 +26,7 @@
 #include "slidebitmap.hxx"
 #include "shapemaps.hxx"
 
-#include <boost/shared_ptr.hpp>
+#include <memory>
 
 namespace com {  namespace sun { namespace star {
     namespace drawing {
@@ -67,7 +67,7 @@ namespace slideshow
                 prefetch() is not called explicitly, the named
                 methods will call it implicitly.
              */
-            virtual bool prefetch() = 0;
+            virtual void prefetch() = 0;
 
             /** Shows the slide on all registered views
 
@@ -80,7 +80,7 @@ namespace slideshow
                 transition). When false, Slide renders initial content of
                 slide.
              */
-            virtual bool show( bool bSlideBackgoundPainted ) = 0;
+            virtual void show( bool bSlideBackgoundPainted ) = 0;
 
             /** Force-ends the slide
 
@@ -149,7 +149,7 @@ namespace slideshow
             ~Slide() {}
         };
 
-        typedef ::boost::shared_ptr< Slide > SlideSharedPtr;
+        typedef ::std::shared_ptr< Slide > SlideSharedPtr;
 
         class EventQueue;
         class CursorManager;

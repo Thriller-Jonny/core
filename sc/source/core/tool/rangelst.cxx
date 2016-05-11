@@ -115,7 +115,7 @@ private:
 class FormatString : public ::std::unary_function<const ScRange*, void>
 {
 public:
-    FormatString(OUString& rStr, sal_uInt16 nFlags, ScDocument* pDoc, FormulaGrammar::AddressConvention eConv, sal_Unicode cDelim) :
+    FormatString(OUString& rStr, ScRefFlags nFlags, ScDocument* pDoc, FormulaGrammar::AddressConvention eConv, sal_Unicode cDelim) :
         mrStr(rStr),
         mnFlags(nFlags),
         mpDoc(pDoc),
@@ -142,7 +142,7 @@ public:
     }
 private:
     OUString& mrStr;
-    sal_uInt16 mnFlags;
+    ScRefFlags mnFlags;
     ScDocument* mpDoc;
     FormulaGrammar::AddressConvention meConv;
     sal_Unicode mcDelim;
@@ -157,7 +157,7 @@ ScRangeList::~ScRangeList()
     RemoveAll();
 }
 
-sal_uInt16 ScRangeList::Parse( const OUString& rStr, ScDocument* pDoc, sal_uInt16 nMask,
+ScRefFlags ScRangeList::Parse( const OUString& rStr, ScDocument* pDoc, ScRefFlags nMask,
                            formula::FormulaGrammar::AddressConvention eConv,
                            SCTAB nDefaultTab, sal_Unicode cDelimiter )
 {
@@ -166,8 +166,8 @@ sal_uInt16 ScRangeList::Parse( const OUString& rStr, ScDocument* pDoc, sal_uInt1
         if (!cDelimiter)
             cDelimiter = ScCompiler::GetNativeSymbolChar(ocSep);
 
-        nMask |= SCA_VALID;             // falls das jemand vergessen sollte
-        sal_uInt16 nResult = (sal_uInt16)~0;    // alle Bits setzen
+        nMask |= ScRefFlags::VALID;             // falls das jemand vergessen sollte
+        ScRefFlags nResult = ~ScRefFlags::ZERO;    // alle Bits setzen
         ScRange aRange;
         const SCTAB nTab = pDoc ? nDefaultTab : 0;
 
@@ -176,15 +176,15 @@ sal_uInt16 ScRangeList::Parse( const OUString& rStr, ScDocument* pDoc, sal_uInt1
         {
             const OUString aOne = rStr.getToken( 0, cDelimiter, nPos );
             aRange.aStart.SetTab( nTab );   // Default Tab wenn nicht angegeben
-            sal_uInt16 nRes = aRange.ParseAny( aOne, pDoc, eConv );
-            sal_uInt16 nEndRangeBits = SCA_VALID_COL2 | SCA_VALID_ROW2 | SCA_VALID_TAB2;
-            sal_uInt16 nTmp1 = ( nRes & SCA_BITS );
-            sal_uInt16 nTmp2 = ( nRes & nEndRangeBits );
+            ScRefFlags nRes = aRange.ParseAny( aOne, pDoc, eConv );
+            ScRefFlags nEndRangeBits = ScRefFlags::COL2_VALID | ScRefFlags::ROW2_VALID | ScRefFlags::TAB2_VALID;
+            ScRefFlags nTmp1 = ( nRes & ScRefFlags::BITS );
+            ScRefFlags nTmp2 = ( nRes & nEndRangeBits );
             // If we have a valid single range with
             // any of the address bits we are interested in
             // set - set the equiv end range bits
-            if ( (nRes & SCA_VALID ) && nTmp1 && ( nTmp2 != nEndRangeBits ) )
-                    nRes |= ( nTmp1 << 4 );
+            if ( (nRes & ScRefFlags::VALID ) && (nTmp1 != ScRefFlags::ZERO) && ( nTmp2 != nEndRangeBits ) )
+                applyStartToEndFlags(nRes, nTmp1);
 
             if ( (nRes & nMask) == nMask )
                 Append( aRange );
@@ -192,13 +192,13 @@ sal_uInt16 ScRangeList::Parse( const OUString& rStr, ScDocument* pDoc, sal_uInt1
         }
         while (nPos >= 0);
 
-        return nResult;             // SCA_VALID gesetzt wenn alle ok
+        return nResult;             // ScRefFlags::VALID gesetzt wenn alle ok
     }
     else
-        return 0;
+        return ScRefFlags::ZERO;
 }
 
-void ScRangeList::Format( OUString& rStr, sal_uInt16 nFlags, ScDocument* pDoc,
+void ScRangeList::Format( OUString& rStr, ScRefFlags nFlags, ScDocument* pDoc,
                           formula::FormulaGrammar::AddressConvention eConv,
                           sal_Unicode cDelimiter ) const
 {
@@ -1214,17 +1214,15 @@ ScRangePairList::~ScRangePairList()
     maPairs.clear();
 }
 
-ScRangePair* ScRangePairList::Remove(size_t nPos)
+void ScRangePairList::Remove(size_t nPos)
 {
     if (maPairs.size() <= nPos)
         // Out-of-bound condition.  Bail out.
-        return nullptr;
+        return;
 
     vector<ScRangePair*>::iterator itr = maPairs.begin();
     advance(itr, nPos);
-    ScRangePair* p = *itr;
     maPairs.erase(itr);
-    return p;
 }
 
 ScRangePair* ScRangePairList::Remove( ScRangePair* Adr)
@@ -1244,20 +1242,6 @@ ScRangePair* ScRangePairList::Remove( ScRangePair* Adr)
     return p;
 }
 
-bool ScRangePairList::operator==( const ScRangePairList& r ) const
-{
-    if ( this == &r )
-        return true;                // identical reference
-    if ( maPairs.size() != r.size() )
-        return false;
-    for ( size_t nIdx = 0, nCnt = maPairs.size(); nIdx < nCnt; ++nIdx )
-    {
-        if ( *maPairs[ nIdx ] != *r[ nIdx ] )
-            return false;           // auch andere Reihenfolge ist ungleich
-    }
-    return true;
-}
-
 ScRangePair* ScRangePairList::operator [](size_t idx)
 {
     return maPairs[idx];
@@ -1273,11 +1257,10 @@ size_t ScRangePairList::size() const
     return maPairs.size();
 }
 
-bool ScRangePairList::UpdateReference( UpdateRefMode eUpdateRefMode,
+void ScRangePairList::UpdateReference( UpdateRefMode eUpdateRefMode,
                                     ScDocument* pDoc, const ScRange& rWhere,
                                     SCsCOL nDx, SCsROW nDy, SCsTAB nDz )
 {
-    bool bChanged = false;
     if ( !maPairs.empty() )
     {
         SCCOL nCol1;
@@ -1287,9 +1270,8 @@ bool ScRangePairList::UpdateReference( UpdateRefMode eUpdateRefMode,
         SCROW nRow2;
         SCTAB nTab2;
         rWhere.GetVars( nCol1, nRow1, nTab1, nCol2, nRow2, nTab2 );
-        for ( size_t i = 0, nPairs = maPairs.size(); i < nPairs; ++i )
+        for (ScRangePair* pR : maPairs)
         {
-            ScRangePair* pR = maPairs[ i ];
             for ( sal_uInt16 j=0; j<2; j++ )
             {
                 ScRange& rRange = pR->GetRange(j);
@@ -1306,14 +1288,12 @@ bool ScRangePairList::UpdateReference( UpdateRefMode eUpdateRefMode,
                         theCol1, theRow1, theTab1, theCol2, theRow2, theTab2 )
                         != UR_NOTHING )
                 {
-                    bChanged = true;
                     rRange.aStart.Set( theCol1, theRow1, theTab1 );
                     rRange.aEnd.Set( theCol2, theRow2, theTab2 );
                 }
             }
         }
     }
-    return bChanged;
 }
 
 // Delete entries that have the labels (first range) on nTab
@@ -1338,9 +1318,8 @@ void ScRangePairList::DeleteOnTab( SCTAB nTab )
 
 ScRangePair* ScRangePairList::Find( const ScAddress& rAdr ) const
 {
-    for ( size_t j = 0, nListCount = maPairs.size(); j < nListCount; j++ )
+    for (ScRangePair* pR : maPairs)
     {
-        ScRangePair* pR = maPairs[ j ];
         if ( pR->GetRange(0).In( rAdr ) )
             return pR;
     }
@@ -1349,9 +1328,8 @@ ScRangePair* ScRangePairList::Find( const ScAddress& rAdr ) const
 
 ScRangePair* ScRangePairList::Find( const ScRange& rRange ) const
 {
-    for ( size_t j = 0, nListCount = maPairs.size(); j < nListCount; j++ )
+    for (ScRangePair* pR : maPairs)
     {
-        ScRangePair* pR = maPairs[ j ];
         if ( pR->GetRange(0) == rRange )
             return pR;
     }
@@ -1361,9 +1339,9 @@ ScRangePair* ScRangePairList::Find( const ScRange& rRange ) const
 ScRangePairList* ScRangePairList::Clone() const
 {
     ScRangePairList* pNew = new ScRangePairList;
-    for ( size_t j = 0, nListCount = maPairs.size(); j < nListCount; j++ )
+    for (const ScRangePair* pR : maPairs)
     {
-        pNew->Append( *maPairs[ j ] );
+        pNew->Append( *pR );
     }
     return pNew;
 }

@@ -22,9 +22,7 @@
 
 #include <sal/log.hxx>
 
-#include <tools/rcid.h>
 #include <tools/stream.hxx>
-#include "tools/resmgr.hxx"
 
 #include <sfx2/module.hxx>
 #include <sfx2/objface.hxx>
@@ -61,10 +59,10 @@ struct SfxObjectUI_Impl
     bool        bContext;
     sal_uInt32  nFeature;
 
-    SfxObjectUI_Impl(sal_uInt16 n, sal_uInt32 nId, bool bVis, sal_uInt32 nFeat) :
+    SfxObjectUI_Impl(sal_uInt16 n, sal_uInt32 nId, sal_uInt32 nFeat) :
         nPos(n),
         nResId(nId),
-        bVisible(bVis),
+        bVisible(true),
         bContext(false),
         nFeature(nFeat)
     {
@@ -77,17 +75,15 @@ struct SfxInterface_Impl
 {
     SfxObjectUIArr_Impl     aObjectBars;    // registered ObjectBars
     SfxObjectUIArr_Impl     aChildWindows;  // registered ChildWindows
-    OUString                aPopupName;     // registered xml-based PopupMenu
-    ResId                   aPopupRes;      // registered PopupMenu
-    ResId                   aStatBarRes;    // registered StatusBar
+    OUString                aPopupName;     // registered PopupMenu
+    sal_uInt32              nStatBarResId;  // registered StatusBar
     SfxModule*              pModule;
     bool                    bRegistered;
 
-    SfxInterface_Impl() :
-        aPopupRes(nullptr, *SfxApplication::GetSfxResManager()),
-        aStatBarRes(nullptr, *SfxApplication::GetSfxResManager())
-    , pModule(nullptr)
-    , bRegistered(false)
+    SfxInterface_Impl()
+        : nStatBarResId(0)
+        , pModule(nullptr)
+        , bRegistered(false)
     {
     }
 
@@ -153,7 +149,7 @@ void SfxInterface::SetSlotMap( SfxSlot& rSlotMap, sal_uInt16 nSlotCount )
             // every master refers to his first slave (ENUM),
             // all slaves refer to their master.
             // Slaves refer in a circle to the other slaves with the same master
-            if ( pIter->GetKind() == SFX_KIND_ENUM )
+            if ( pIter->GetKind() == SfxSlotKind::Enum )
             {
                 pIter->pLinkedSlot = GetSlot( pIter->nMasterSlotId );
                 assert( pIter->pLinkedSlot );
@@ -203,7 +199,7 @@ void SfxInterface::SetSlotMap( SfxSlot& rSlotMap, sal_uInt16 nSlotCount )
             if ( pNext->GetSlotId() <= pIter->GetSlotId() )
                 SAL_WARN( "sfx.control", "Wrong order" );
 
-            if ( pIter->GetKind() == SFX_KIND_ENUM )
+            if ( pIter->GetKind() == SfxSlotKind::Enum )
             {
                 const SfxSlot *pMasterSlot = GetSlot(pIter->nMasterSlotId);
                 const SfxSlot *pFirstSlave = pMasterSlot->pLinkedSlot;
@@ -240,7 +236,7 @@ void SfxInterface::SetSlotMap( SfxSlot& rSlotMap, sal_uInt16 nSlotCount )
             {
                 if ( pIter->pLinkedSlot )
                 {
-                    if ( pIter->pLinkedSlot->GetKind() != SFX_KIND_ENUM )
+                    if ( pIter->pLinkedSlot->GetKind() != SfxSlotKind::Enum )
                     {
                         OStringBuffer aStr("Slave is no enum: ");
                         aStr.append(static_cast<sal_Int32>(pIter->GetSlotId()));
@@ -275,7 +271,6 @@ void SfxInterface::SetSlotMap( SfxSlot& rSlotMap, sal_uInt16 nSlotCount )
 }
 
 
-
 SfxInterface::~SfxInterface()
 {
     SfxModule *pMod = pImpData->pModule;
@@ -290,7 +285,6 @@ SfxInterface::~SfxInterface()
             SfxGetpApp()->GetAppSlotPool_Impl().ReleaseInterface(*this);
     }
 }
-
 
 
 // searches for the specified func
@@ -329,7 +323,6 @@ const SfxSlot* SfxInterface::GetSlot( const OUString& rCommand ) const
 }
 
 
-
 const SfxSlot* SfxInterface::GetRealSlot( const SfxSlot *pSlot ) const
 {
 
@@ -348,7 +341,6 @@ const SfxSlot* SfxInterface::GetRealSlot( const SfxSlot *pSlot ) const
 }
 
 
-
 const SfxSlot* SfxInterface::GetRealSlot( sal_uInt16 nSlotId ) const
 {
 
@@ -365,12 +357,6 @@ const SfxSlot* SfxInterface::GetRealSlot( sal_uInt16 nSlotId ) const
     }
 
     return pSlot->pLinkedSlot;
-}
-
-void SfxInterface::RegisterPopupMenu( const ResId& rResId )
-{
-
-    pImpData->aPopupRes = rResId;
 }
 
 void SfxInterface::RegisterPopupMenu( const OUString& rResourceName )
@@ -395,7 +381,7 @@ SfxObjectUI_Impl* CreateObjectBarUI_Impl(sal_uInt16 nPos, sal_uInt32 nResId, sal
     if ((nPos & SFX_VISIBILITY_MASK) == 0)
         nPos |= SFX_VISIBILITY_STANDARD;
 
-    return new SfxObjectUI_Impl(nPos, nResId, true, nFeature);
+    return new SfxObjectUI_Impl(nPos, nResId, nFeature);
 }
 
 sal_uInt32 SfxInterface::GetObjectBarId(sal_uInt16 nNo) const
@@ -451,14 +437,14 @@ void SfxInterface::RegisterChildWindow(sal_uInt16 nId, bool bContext)
 
 void SfxInterface::RegisterChildWindow(sal_uInt16 nId, bool bContext, sal_uInt32 nFeature)
 {
-    SfxObjectUI_Impl* pUI = new SfxObjectUI_Impl(0, nId, true, nFeature);
+    SfxObjectUI_Impl* pUI = new SfxObjectUI_Impl(0, nId, nFeature);
     pUI->bContext = bContext;
     pImpData->aChildWindows.push_back(pUI);
 }
 
-void SfxInterface::RegisterStatusBar(const ResId& rResId)
+void SfxInterface::RegisterStatusBar(sal_uInt32 nResId)
 {
-    pImpData->aStatBarRes = rResId;
+    pImpData->nStatBarResId = nResId;
 }
 
 sal_uInt32 SfxInterface::GetChildWindowId (sal_uInt16 nNo) const
@@ -501,8 +487,6 @@ sal_uInt32 SfxInterface::GetChildWindowFeature (sal_uInt16 nNo) const
 }
 
 
-
-
 sal_uInt16 SfxInterface::GetChildWindowCount() const
 {
     if (pGenoType)
@@ -511,22 +495,17 @@ sal_uInt16 SfxInterface::GetChildWindowCount() const
         return pImpData->aChildWindows.size();
 }
 
-const ResId& SfxInterface::GetPopupMenuResId() const
-{
-    return pImpData->aPopupRes;
-}
-
 const OUString& SfxInterface::GetPopupMenuName() const
 {
     return pImpData->aPopupName;
 }
 
-const ResId& SfxInterface::GetStatusBarResId() const
+sal_uInt32 SfxInterface::GetStatusBarId() const
 {
-    if (pImpData->aStatBarRes.GetId() == 0 && pGenoType)
-        return pGenoType->GetStatusBarResId();
+    if (pImpData->nStatBarResId == 0 && pGenoType)
+        return pGenoType->GetStatusBarId();
     else
-        return pImpData->aStatBarRes;
+        return pImpData->nStatBarResId;
 }
 
 sal_uInt32 SfxInterface::GetObjectBarFeature ( sal_uInt16 nNo ) const

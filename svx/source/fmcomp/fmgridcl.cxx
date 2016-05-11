@@ -803,51 +803,61 @@ void FmGridHeader::PostExecuteColumnContextMenu(sal_uInt16 nColId, const PopupMe
             break;
         case SID_FM_EDIT + nChangeTypeOffset:
             bReplace = true;
+            SAL_FALLTHROUGH;
         case SID_FM_EDIT:
             aFieldType = FM_COL_TEXTFIELD;
             break;
         case SID_FM_COMBOBOX + nChangeTypeOffset:
             bReplace = true;
+            SAL_FALLTHROUGH;
         case SID_FM_COMBOBOX:
             aFieldType = FM_COL_COMBOBOX;
             break;
         case SID_FM_LISTBOX + nChangeTypeOffset:
             bReplace = true;
+            SAL_FALLTHROUGH;
         case SID_FM_LISTBOX:
             aFieldType = FM_COL_LISTBOX;
             break;
         case SID_FM_CHECKBOX + nChangeTypeOffset:
             bReplace = true;
+            SAL_FALLTHROUGH;
         case SID_FM_CHECKBOX:
             aFieldType = FM_COL_CHECKBOX;
             break;
         case SID_FM_DATEFIELD + nChangeTypeOffset:
             bReplace = true;
+            SAL_FALLTHROUGH;
         case SID_FM_DATEFIELD:
             aFieldType = FM_COL_DATEFIELD;
             break;
         case SID_FM_TIMEFIELD + nChangeTypeOffset:
             bReplace = true;
+            SAL_FALLTHROUGH;
         case SID_FM_TIMEFIELD:
             aFieldType = FM_COL_TIMEFIELD;
             break;
         case SID_FM_NUMERICFIELD + nChangeTypeOffset:
             bReplace = true;
+            SAL_FALLTHROUGH;
         case SID_FM_NUMERICFIELD:
             aFieldType = FM_COL_NUMERICFIELD;
             break;
         case SID_FM_CURRENCYFIELD + nChangeTypeOffset:
             bReplace = true;
+            SAL_FALLTHROUGH;
         case SID_FM_CURRENCYFIELD:
             aFieldType = FM_COL_CURRENCYFIELD;
             break;
         case SID_FM_PATTERNFIELD + nChangeTypeOffset:
             bReplace = true;
+            SAL_FALLTHROUGH;
         case SID_FM_PATTERNFIELD:
             aFieldType = FM_COL_PATTERNFIELD;
             break;
         case SID_FM_FORMATTEDFIELD + nChangeTypeOffset:
             bReplace = true;
+            SAL_FALLTHROUGH;
         case SID_FM_FORMATTEDFIELD:
             aFieldType = FM_COL_FORMATTEDFIELD;
             break;
@@ -862,7 +872,7 @@ void FmGridHeader::PostExecuteColumnContextMenu(sal_uInt16 nColId, const PopupMe
             SvxAbstractDialogFactory* pFact = SvxAbstractDialogFactory::Create();
             if(pFact)
             {
-                std::unique_ptr<AbstractFmShowColsDialog> pDlg(pFact->CreateFmShowColsDialog(nullptr));
+                std::unique_ptr<AbstractFmShowColsDialog> pDlg(pFact->CreateFmShowColsDialog());
                 DBG_ASSERT(pDlg, "Dialog creation failed!");
                 pDlg->SetColumns(xCols);
                 pDlg->Execute();
@@ -959,8 +969,9 @@ void FmGridHeader::PostExecuteColumnContextMenu(sal_uInt16 nColId, const PopupMe
             FmInterfaceItem aIFaceItem( SID_FM_SHOW_PROPERTY_BROWSER, xColumnToInspect );
             SfxBoolItem aShowItem( SID_FM_SHOW_PROPERTIES, eInspectorAction != eCloseInspector );
 
-            pCurrentFrame->GetBindings().GetDispatcher()->Execute( SID_FM_SHOW_PROPERTY_BROWSER, SfxCallMode::ASYNCHRON,
-                                      &aIFaceItem, &aShowItem, 0L );
+            pCurrentFrame->GetBindings().GetDispatcher()->ExecuteList(
+                    SID_FM_SHOW_PROPERTY_BROWSER, SfxCallMode::ASYNCHRON,
+                    { &aIFaceItem, &aShowItem });
         }
     }
 }
@@ -1030,7 +1041,7 @@ void FmGridControl::Command(const CommandEvent& _rEvt)
                 ::Rectangle aColRect( GetFieldRectPixel( 0, nSelId, false ) );
 
                 Point aRelativePos( pMyHeader->ScreenToOutputPixel( OutputToScreenPixel( aColRect.TopCenter() ) ) );
-                pMyHeader->triggerColumnContextMenu( aRelativePos, FmGridHeader::AccessControl() );
+                pMyHeader->triggerColumnContextMenu(aRelativePos);
 
                 // handled
                 return;
@@ -1802,7 +1813,7 @@ Sequence< Any> FmGridControl::getSelectionBookmarks()
         // navigation bar and the grid. The latter itself will result in SeekRow calls. So after (successfully) returning
         // from the moveRelative the getPosition returns an invalid value. And so the SeekCursor fails.
         // In the consequence ALL parts of code where two calls to the seek cursor are done, while the second call _relys_ on
-        // the first one, should be secured against recursion, with a broad-minded interpretion of "recursion": if any of these
+        // the first one, should be secured against recursion, with a broad-minded interpretation of "recursion": if any of these
         // code parts is executed, no other should be accessible. But this sounds very difficult to achieve...
         // )
 

@@ -181,7 +181,7 @@ SvStream& ScPatternAttr::Store(SvStream& rStream, sal_uInt16 /* nItemVersion */)
         rStream.WriteUniOrByteString( ScGlobal::GetRscString(STR_STYLENAME_STANDARD),
                                     rStream.GetStreamCharSet() );
 
-    rStream.WriteInt16( SFX_STYLE_FAMILY_PARA );  // due to old data format
+    rStream.WriteInt16( (sal_uInt16) SfxStyleFamily::Para );  // due to old data format
 
     GetItemSet().Store( rStream );
 
@@ -258,8 +258,8 @@ void ScPatternAttr::GetFont(
     sal_uInt32 nFontHeight;
     FontWeight eWeight;
     FontItalic eItalic;
-    FontUnderline eUnder;
-    FontUnderline eOver;
+    FontLineStyle eUnder;
+    FontLineStyle eOver;
     bool bWordLine;
     FontStrikeout eStrike;
     bool bOutline;
@@ -294,11 +294,11 @@ void ScPatternAttr::GetFont(
 
         if ( pCondSet->GetItemState( ATTR_FONT_UNDERLINE, true, &pItem ) != SfxItemState::SET )
             pItem = &rItemSet.Get( ATTR_FONT_UNDERLINE );
-        eUnder = (FontUnderline)static_cast<const SvxUnderlineItem*>(pItem)->GetValue();
+        eUnder = (FontLineStyle)static_cast<const SvxUnderlineItem*>(pItem)->GetValue();
 
         if ( pCondSet->GetItemState( ATTR_FONT_OVERLINE, true, &pItem ) != SfxItemState::SET )
             pItem = &rItemSet.Get( ATTR_FONT_OVERLINE );
-        eOver = (FontUnderline)static_cast<const SvxOverlineItem*>(pItem)->GetValue();
+        eOver = (FontLineStyle)static_cast<const SvxOverlineItem*>(pItem)->GetValue();
 
         if ( pCondSet->GetItemState( ATTR_FONT_WORDLINE, true, &pItem ) != SfxItemState::SET )
             pItem = &rItemSet.Get( ATTR_FONT_WORDLINE );
@@ -341,9 +341,9 @@ void ScPatternAttr::GetFont(
                         rItemSet.Get( nWeightId )).GetValue();
         eItalic = (FontItalic)static_cast<const SvxPostureItem&>(
                         rItemSet.Get( nPostureId )).GetValue();
-        eUnder = (FontUnderline)static_cast<const SvxUnderlineItem&>(
+        eUnder = (FontLineStyle)static_cast<const SvxUnderlineItem&>(
                         rItemSet.Get( ATTR_FONT_UNDERLINE )).GetValue();
-        eOver = (FontUnderline)static_cast<const SvxOverlineItem&>(
+        eOver = (FontLineStyle)static_cast<const SvxOverlineItem&>(
                         rItemSet.Get( ATTR_FONT_OVERLINE )).GetValue();
         bWordLine = static_cast<const SvxWordLineModeItem&>(
                         rItemSet.Get( ATTR_FONT_WORDLINE )).GetValue();
@@ -368,8 +368,8 @@ void ScPatternAttr::GetFont(
 
     //  FontItem:
 
-    if (rFont.GetName() != pFontAttr->GetFamilyName())
-        rFont.SetName( pFontAttr->GetFamilyName() );
+    if (rFont.GetFamilyName() != pFontAttr->GetFamilyName())
+        rFont.SetFamilyName( pFontAttr->GetFamilyName() );
     if (rFont.GetStyleName() != pFontAttr->GetStyleName())
         rFont.SetStyleName( pFontAttr->GetStyleName() );
 
@@ -399,11 +399,11 @@ void ScPatternAttr::GetFont(
             aDestMode.SetScaleY( aFractOne );
             aEffSize = OutputDevice::LogicToLogic( aSize, aSrcMode, aDestMode );
         }
-        rFont.SetSize( aEffSize );
+        rFont.SetFontSize( aEffSize );
     }
     else /* if pOutDev != NULL */
     {
-        rFont.SetSize( Size( 0, (long) nFontHeight ) );
+        rFont.SetFontSize( Size( 0, (long) nFontHeight ) );
     }
 
     //  determine effective font color
@@ -532,13 +532,13 @@ ScDxfFont ScPatternAttr::GetDxfFont(const SfxItemSet& rItemSet, SvtScriptType nS
     if ( rItemSet.GetItemState( ATTR_FONT_UNDERLINE, true, &pItem ) == SfxItemState::SET )
     {
         pItem = &rItemSet.Get( ATTR_FONT_UNDERLINE );
-        aReturn.eUnder = (FontUnderline)static_cast<const SvxUnderlineItem*>(pItem)->GetValue();
+        aReturn.eUnder = (FontLineStyle)static_cast<const SvxUnderlineItem*>(pItem)->GetValue();
     }
 
     if ( rItemSet.GetItemState( ATTR_FONT_OVERLINE, true, &pItem ) == SfxItemState::SET )
     {
         pItem = &rItemSet.Get( ATTR_FONT_OVERLINE );
-        aReturn.eOver = (FontUnderline)static_cast<const SvxOverlineItem*>(pItem)->GetValue();
+        aReturn.eOver = (FontLineStyle)static_cast<const SvxOverlineItem*>(pItem)->GetValue();
     }
 
     if ( rItemSet.GetItemState( ATTR_FONT_WORDLINE, true, &pItem ) == SfxItemState::SET )
@@ -602,8 +602,8 @@ void ScPatternAttr::FillToEditItemSet( SfxItemSet& rEditSet, const SfxItemSet& r
     SvxFontItem     aCtlFontItem(EE_CHAR_FONTINFO_CTL);
     long            nTHeight, nCjkTHeight, nCtlTHeight;     // Twips
     FontWeight      eWeight, eCjkWeight, eCtlWeight;
-    SvxUnderlineItem aUnderlineItem(UNDERLINE_NONE, EE_CHAR_UNDERLINE);
-    SvxOverlineItem aOverlineItem(UNDERLINE_NONE, EE_CHAR_OVERLINE);
+    SvxUnderlineItem aUnderlineItem(LINESTYLE_NONE, EE_CHAR_UNDERLINE);
+    SvxOverlineItem aOverlineItem(LINESTYLE_NONE, EE_CHAR_OVERLINE);
     bool            bWordLine;
     FontStrikeout   eStrike;
     FontItalic      eItalic, eCjkItalic, eCtlItalic;
@@ -867,9 +867,9 @@ void ScPatternAttr::GetFromEditItemSet( SfxItemSet& rDestSet, const SfxItemSet& 
 
     // SvxTextLineItem contains enum and color
     if (rEditSet.GetItemState(EE_CHAR_UNDERLINE,true,&pItem) == SfxItemState::SET)
-        rDestSet.Put( SvxUnderlineItem(UNDERLINE_NONE,ATTR_FONT_UNDERLINE) = *static_cast<const SvxUnderlineItem*>(pItem) );
+        rDestSet.Put( SvxUnderlineItem(LINESTYLE_NONE,ATTR_FONT_UNDERLINE) = *static_cast<const SvxUnderlineItem*>(pItem) );
     if (rEditSet.GetItemState(EE_CHAR_OVERLINE,true,&pItem) == SfxItemState::SET)
-        rDestSet.Put( SvxOverlineItem(UNDERLINE_NONE,ATTR_FONT_OVERLINE) = *static_cast<const SvxOverlineItem*>(pItem) );
+        rDestSet.Put( SvxOverlineItem(LINESTYLE_NONE,ATTR_FONT_OVERLINE) = *static_cast<const SvxOverlineItem*>(pItem) );
     if (rEditSet.GetItemState(EE_CHAR_WLM,true,&pItem) == SfxItemState::SET)
         rDestSet.Put( SvxWordLineModeItem( static_cast<const SvxWordLineModeItem*>(pItem)->GetValue(),
                         ATTR_FONT_WORDLINE) );
@@ -1245,14 +1245,14 @@ void ScPatternAttr::UpdateStyleSheet(ScDocument* pDoc)
 {
     if (pName)
     {
-        pStyle = static_cast<ScStyleSheet*>(pDoc->GetStyleSheetPool()->Find(*pName, SFX_STYLE_FAMILY_PARA));
+        pStyle = static_cast<ScStyleSheet*>(pDoc->GetStyleSheetPool()->Find(*pName, SfxStyleFamily::Para));
 
         //  use Standard if Style is not found,
         //  to avoid empty display in Toolbox-Controller
         //  Assumes that "Standard" is always the 1st entry!
         if (!pStyle)
         {
-            SfxStyleSheetIteratorPtr pIter = pDoc->GetStyleSheetPool()->CreateIterator( SFX_STYLE_FAMILY_PARA, SFXSTYLEBIT_ALL );
+            SfxStyleSheetIteratorPtr pIter = pDoc->GetStyleSheetPool()->CreateIterator( SfxStyleFamily::Para, SFXSTYLEBIT_ALL );
             pStyle = dynamic_cast< ScStyleSheet* >(pIter->First());
         }
 
@@ -1291,12 +1291,24 @@ bool ScPatternAttr::IsSymbolFont() const
         return false;
 }
 
+namespace {
+
+sal_uInt32 getNumberFormatKey(const SfxItemSet& rSet)
+{
+    return static_cast<const SfxUInt32Item&>(rSet.Get(ATTR_VALUE_FORMAT)).GetValue();
+}
+
+LanguageType getLanguageType(const SfxItemSet& rSet)
+{
+    return static_cast<const SvxLanguageItem&>(rSet.Get(ATTR_LANGUAGE_FORMAT)).GetLanguage();
+}
+
+}
+
 sal_uLong ScPatternAttr::GetNumberFormat( SvNumberFormatter* pFormatter ) const
 {
-    sal_uLong nFormat =
-        static_cast<const SfxUInt32Item*>(&GetItemSet().Get( ATTR_VALUE_FORMAT ))->GetValue();
-    LanguageType eLang =
-        static_cast<const SvxLanguageItem*>(&GetItemSet().Get( ATTR_LANGUAGE_FORMAT ))->GetLanguage();
+    sal_uLong nFormat = getNumberFormatKey(GetItemSet());
+    LanguageType eLang = getLanguageType(GetItemSet());
     if ( nFormat < SV_COUNTRY_LANGUAGE_OFFSET && eLang == LANGUAGE_SYSTEM )
         ;       // it remains as it is
     else if ( pFormatter )
@@ -1309,19 +1321,37 @@ sal_uLong ScPatternAttr::GetNumberFormat( SvNumberFormatter* pFormatter ) const
 sal_uLong ScPatternAttr::GetNumberFormat( SvNumberFormatter* pFormatter,
                                         const SfxItemSet* pCondSet ) const
 {
-    OSL_ENSURE(pFormatter,"GetNumberFormat without Formatter");
+    assert(pFormatter);
+    if (!pCondSet)
+        return GetNumberFormat(pFormatter);
+
+    /* In the case of a conditional format we need to overwrite a cell style
+     * but leave a hard cell formatting alone. So check first if the number
+     * format is set in the cell format, then the conditional format and
+     * finally in the style.
+     *
+     * The style is represented here if the name is empty.
+     */
 
     const SfxPoolItem* pFormItem;
-    if ( !pCondSet || pCondSet->GetItemState(ATTR_VALUE_FORMAT,true,&pFormItem) != SfxItemState::SET )
-        pFormItem = &GetItemSet().Get(ATTR_VALUE_FORMAT);
+    sal_uLong nFormat = 0;
+    if (GetItemSet().GetItemState(ATTR_VALUE_FORMAT, false, &pFormItem) == SfxItemState::SET)
+        nFormat = static_cast<const SfxUInt32Item*>(pFormItem)->GetValue();
+    else if (pCondSet->GetItemState(ATTR_VALUE_FORMAT, true, &pFormItem) == SfxItemState::SET )
+        nFormat = getNumberFormatKey(*pCondSet);
+    else
+        nFormat = getNumberFormatKey(GetItemSet());
 
     const SfxPoolItem* pLangItem;
-    if ( !pCondSet || pCondSet->GetItemState(ATTR_LANGUAGE_FORMAT,true,&pLangItem) != SfxItemState::SET )
-        pLangItem = &GetItemSet().Get(ATTR_LANGUAGE_FORMAT);
+    LanguageType eLang;
+    if (GetItemSet().GetItemState(ATTR_LANGUAGE_FORMAT, false, &pLangItem) == SfxItemState::SET)
+        eLang = static_cast<const SvxLanguageItem*>(pLangItem)->GetLanguage();
+    else if (pCondSet->GetItemState(ATTR_LANGUAGE_FORMAT, true, &pLangItem) == SfxItemState::SET)
+        eLang = getLanguageType(*pCondSet);
+    else
+        eLang = getLanguageType(GetItemSet());
 
-    return pFormatter->GetFormatForLanguageIfBuiltIn(
-                    static_cast<const SfxUInt32Item*>(pFormItem)->GetValue(),
-                    static_cast<const SvxLanguageItem*>(pLangItem)->GetLanguage() );
+    return pFormatter->GetFormatForLanguageIfBuiltIn(nFormat, eLang);
 }
 
 const SfxPoolItem& ScPatternAttr::GetItem( sal_uInt16 nWhich, const SfxItemSet& rItemSet, const SfxItemSet* pCondSet )

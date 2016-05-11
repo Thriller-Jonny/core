@@ -21,10 +21,10 @@
 
 #include <pattern/frame.hxx>
 #include <framework/framelistanalyzer.hxx>
-#include <dispatchcommands.h>
 #include <targets.h>
 #include <services.h>
 #include <general.h>
+#include <isstartmoduledispatch.hxx>
 
 #include <com/sun/star/frame/Desktop.hpp>
 #include <com/sun/star/frame/XController.hpp>
@@ -70,7 +70,7 @@ void SAL_CALL StartModuleDispatcher::dispatchWithNotification(const css::util::U
     throw(css::uno::RuntimeException, std::exception)
 {
     ::sal_Int16 nResult = css::frame::DispatchResultState::DONTKNOW;
-    if ( aURL.Complete == CMD_UNO_SHOWSTARTMODULE )
+    if (isStartModuleDispatch(aURL))
     {
         nResult = css::frame::DispatchResultState::FAILURE;
         if (implts_isBackingModePossible ())
@@ -121,12 +121,9 @@ bool StartModuleDispatcher::implts_isBackingModePossible()
         FrameListAnalyzer::E_HELP | FrameListAnalyzer::E_BACKINGCOMPONENT);
 
     bool  bIsPossible    = false;
-    ::sal_Int32 nVisibleFrames = aCheck.m_lOtherVisibleFrames.getLength ();
 
-    if (
-        ( ! aCheck.m_xBackingComponent.is ()) &&
-        (   nVisibleFrames < 1              )
-       )
+    if ( ! aCheck.m_xBackingComponent.is()
+         && aCheck.m_lOtherVisibleFrames.empty() )
     {
         bIsPossible = true;
     }
@@ -144,7 +141,7 @@ bool StartModuleDispatcher::implts_establishBackingMode()
     css::uno::Reference< css::awt::XWindow > xComponentWindow(xStartModule, css::uno::UNO_QUERY);
     xFrame->setComponent(xComponentWindow, xStartModule);
     xStartModule->attachFrame(xFrame);
-    xContainerWindow->setVisible(sal_True);
+    xContainerWindow->setVisible(true);
 
     return true;
 }

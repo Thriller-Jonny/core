@@ -60,7 +60,7 @@
 #include <tools/diagnose_ex.h>
 #include <sfx2/docfilt.hxx>
 
-#if defined(WNT)
+#if defined(_WIN32)
 #define _ADO_DATALINK_BROWSE_
 #endif
 
@@ -230,7 +230,7 @@ namespace dbaui
             break;
             case  ::dbaccess::DST_MSACCESS:
             {
-                const OUString sExt("*.mdb");
+                const OUString sExt("*.mdb;*.mde");
                 OUString sFilterName(ModuleRes (STR_MSACCESS_FILTERNAME));
                 ::sfx2::FileDialogHelper aFileDlg(
                     ui::dialogs::TemplateDescription::FILEOPEN_READONLY_VERSION,
@@ -242,7 +242,7 @@ namespace dbaui
             break;
             case  ::dbaccess::DST_MSACCESS_2007:
             {
-                const OUString sAccdb("*.accdb");
+                const OUString sAccdb("*.accdb;*.accde");
                 OUString sFilterName2(ModuleRes (STR_MSACCESS_2007_FILTERNAME));
                 ::sfx2::FileDialogHelper aFileDlg(
                     ui::dialogs::TemplateDescription::FILEOPEN_READONLY_VERSION,
@@ -331,6 +331,7 @@ namespace dbaui
                 aFileDlg.AddFilter(sFilterName,sExt);
                 aFileDlg.SetCurrentFilter(sFilterName);
                 askForFileName(aFileDlg);
+                break;
             }
             default:
                 break;
@@ -355,6 +356,7 @@ namespace dbaui
                 aFileDlg.AddFilter(sFilterName,sExt);
                 aFileDlg.SetCurrentFilter(sFilterName);
                 askForFileName(aFileDlg);
+                break;
             }
             default:
                 break;
@@ -411,10 +413,10 @@ namespace dbaui
         implUpdateURLDependentStates();
     }
 
-    OUString OConnectionHelper::impl_getURL( bool _bPrefix ) const
+    OUString OConnectionHelper::impl_getURL() const
     {
         // get the pure text
-        OUString sURL = _bPrefix ? m_pConnectionURL->GetText() : OUString(m_pConnectionURL->GetTextNoPrefix());
+        OUString sURL = m_pConnectionURL->GetTextNoPrefix();
 
         OSL_ENSURE( m_pCollection, "OConnectionHelper::impl_getURL: have no interpreter for the URLs!" );
 
@@ -424,15 +426,7 @@ namespace dbaui
             {
                 // get the two parts: prefix and file URL
                 OUString sTypePrefix, sFileURLDecoded;
-                if ( _bPrefix )
-                {
-                    sTypePrefix = m_pCollection->getPrefix( m_eType );
-                    sFileURLDecoded = m_pCollection->cutPrefix( sURL );
-                }
-                else
-                {
-                    sFileURLDecoded = sURL;
-                }
+                sFileURLDecoded = sURL;
 
                 sURL = sTypePrefix;
                 if ( !sFileURLDecoded.isEmpty() )
@@ -456,7 +450,7 @@ namespace dbaui
 
     OUString OConnectionHelper::getURLNoPrefix( ) const
     {
-        return impl_getURL( false );
+        return impl_getURL();
     }
 
     void OConnectionHelper::setURLNoPrefix( const OUString& _rURL )
@@ -629,7 +623,7 @@ namespace dbaui
             Sequence< Any > aNewDirectoryAttributes(1);
 
             // loop
-            for (   ::std::vector< OUString >::reverse_iterator aLocalName = aToBeCreated.rbegin();
+            for (   ::std::vector< OUString >::const_reverse_iterator aLocalName = aToBeCreated.rbegin();
                     aLocalName != aToBeCreated.rend();
                     ++aLocalName
                 )

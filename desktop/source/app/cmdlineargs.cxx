@@ -30,6 +30,7 @@
 #include <rtl/uri.hxx>
 #include <rtl/ustring.hxx>
 #include <rtl/process.h>
+#include <comphelper/lok.hxx>
 #include <comphelper/processfactory.hxx>
 #include <com/sun/star/uri/ExternalUriReferenceTranslator.hpp>
 #include <tools/getprocessworkingdir.hxx>
@@ -70,7 +71,9 @@ std::vector< OUString > translateExternalUris(
 class ExtCommandLineSupplier: public CommandLineArgs::Supplier {
 public:
     explicit ExtCommandLineSupplier():
-        m_count(rtl_getAppCommandArgCount()),
+        m_count(
+            comphelper::LibreOfficeKit::isActive()
+            ? 0 : rtl_getAppCommandArgCount()),
         m_index(0)
     {
         OUString url;
@@ -296,7 +299,7 @@ void CommandLineArgs::ParseCommandLine_Impl( Supplier& supplier )
                 exit(0);
             }
 #endif
-#ifdef WIN32
+#ifdef _WIN32
             /* fdo#57203 ignore -Embedding on Windows
                when LibreOffice is launched by COM+
             */

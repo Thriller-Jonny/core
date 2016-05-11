@@ -46,17 +46,15 @@ HelpInterceptor_Impl::HelpInterceptor_Impl() :
 }
 
 
-
 HelpInterceptor_Impl::~HelpInterceptor_Impl()
 {
     if ( m_pHistory )
     {
-        for ( size_t i = 0, n = m_pHistory->size(); i < n; ++i )
-            delete m_pHistory->at( i );
+        for (HelpHistoryEntry_Impl* p : *m_pHistory)
+            delete p;
         delete m_pHistory;
     }
 }
-
 
 
 void HelpInterceptor_Impl::addURL( const OUString& rURL )
@@ -103,15 +101,13 @@ void HelpInterceptor_Impl::addURL( const OUString& rURL )
 }
 
 
-
-void HelpInterceptor_Impl::setInterception( Reference< XFrame > xFrame )
+void HelpInterceptor_Impl::setInterception( const Reference< XFrame >& xFrame )
 {
     m_xIntercepted.set( xFrame, UNO_QUERY );
 
     if ( m_xIntercepted.is() )
         m_xIntercepted->registerDispatchProviderInterceptor( static_cast<XDispatchProviderInterceptor*>(this) );
 }
-
 
 
 bool HelpInterceptor_Impl::HasHistoryPred() const
@@ -123,7 +119,6 @@ bool HelpInterceptor_Impl::HasHistorySucc() const
 {
     return m_pHistory && ( m_nCurPos < ( m_pHistory->size() - 1 ) );
 }
-
 
 
 // XDispatchProvider
@@ -150,7 +145,6 @@ Reference< XDispatch > SAL_CALL HelpInterceptor_Impl::queryDispatch(
 
     return xResult;
 }
-
 
 
 Sequence < Reference < XDispatch > > SAL_CALL HelpInterceptor_Impl::queryDispatches(
@@ -182,7 +176,6 @@ Reference< XDispatchProvider > SAL_CALL HelpInterceptor_Impl::getSlaveDispatchPr
 }
 
 
-
 void SAL_CALL HelpInterceptor_Impl::setSlaveDispatchProvider( const Reference< XDispatchProvider >& xNewSlave )
 
     throw( RuntimeException, std::exception )
@@ -192,7 +185,6 @@ void SAL_CALL HelpInterceptor_Impl::setSlaveDispatchProvider( const Reference< X
 }
 
 
-
 Reference< XDispatchProvider > SAL_CALL HelpInterceptor_Impl::getMasterDispatchProvider()
 
     throw( RuntimeException, std::exception )
@@ -200,7 +192,6 @@ Reference< XDispatchProvider > SAL_CALL HelpInterceptor_Impl::getMasterDispatchP
 {
     return m_xMasterDispatcher;
 }
-
 
 
 void SAL_CALL HelpInterceptor_Impl::setMasterDispatchProvider( const Reference< XDispatchProvider >& xNewMaster )
@@ -264,14 +255,12 @@ void SAL_CALL HelpInterceptor_Impl::dispatch(
 }
 
 
-
 void SAL_CALL HelpInterceptor_Impl::addStatusListener(
     const Reference< XStatusListener >& xControl, const URL& ) throw( RuntimeException, std::exception )
 {
     DBG_ASSERT( !m_xListener.is(), "listener already exists" );
     m_xListener = xControl;
 }
-
 
 
 void SAL_CALL HelpInterceptor_Impl::removeStatusListener(
@@ -289,7 +278,6 @@ HelpListener_Impl::HelpListener_Impl( HelpInterceptor_Impl* pInter )
 }
 
 
-
 void SAL_CALL HelpListener_Impl::statusChanged( const css::frame::FeatureStateEvent& Event )
     throw( css::uno::RuntimeException, std::exception )
 {
@@ -297,7 +285,6 @@ void SAL_CALL HelpListener_Impl::statusChanged( const css::frame::FeatureStateEv
     aFactory = aObj.GetHost();
     aChangeLink.Call( *this );
 }
-
 
 
 void SAL_CALL HelpListener_Impl::disposing( const css::lang::EventObject& )

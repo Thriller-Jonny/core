@@ -46,11 +46,7 @@ class AccessibleStateSetHelper;
 }
 
 
-
 //  class VCLXAccessibleComponent
-
-
-typedef ::comphelper::OAccessibleExtendedComponentHelper    AccessibleExtendedComponentHelper_BASE;
 
 typedef ::cppu::ImplHelper1<
     css::lang::XServiceInfo > VCLXAccessibleComponent_BASE;
@@ -58,20 +54,21 @@ typedef ::cppu::ImplHelper1<
 class VCLExternalSolarLock;
 
 class TOOLKIT_DLLPUBLIC VCLXAccessibleComponent
-        :public AccessibleExtendedComponentHelper_BASE
+        :public comphelper::OAccessibleExtendedComponentHelper
         ,public ::comphelper::OAccessibleImplementationAccess
         ,public VCLXAccessibleComponent_BASE
 {
 private:
-    css::uno::Reference< css::awt::XWindow> mxWindow;
-    VCLXWindow*                         mpVCLXindow;
+    rtl::Reference<VCLXWindow>      m_xVCLXWindow;
+    VclPtr<vcl::Window>             m_xEventSource;
 
     VCLExternalSolarLock*           m_pSolarLock;
 
-protected:
-     DECL_LINK_TYPED( WindowEventListener, VclWindowEvent&, void );
-     DECL_LINK_TYPED( WindowChildEventListener, VclWindowEvent&, void );
+    DECL_LINK_TYPED( WindowEventListener, VclWindowEvent&, void );
+    DECL_LINK_TYPED( WindowChildEventListener, VclWindowEvent&, void );
+    void            DisconnectEvents();
 
+protected:
     virtual void    ProcessWindowEvent( const VclWindowEvent& rVclWindowEvent );
     virtual void    ProcessWindowChildEvent( const VclWindowEvent& rVclWindowEvent );
     virtual void    FillAccessibleRelationSet( utl::AccessibleRelationSetHelper& rRelationSet );
@@ -80,10 +77,10 @@ protected:
     virtual css::uno::Reference< css::accessibility::XAccessible > GetChildAccessible( const VclWindowEvent& rVclWindowEvent );
 
 public:
-    VCLXAccessibleComponent( VCLXWindow* pVCLXindow );
+    VCLXAccessibleComponent( VCLXWindow* pVCLXWindow );
     virtual ~VCLXAccessibleComponent();
 
-    VCLXWindow*    GetVCLXWindow() const { return mpVCLXindow; }
+    VCLXWindow*    GetVCLXWindow() const;
     VclPtr<vcl::Window> GetWindow() const;
     template< class derived_type > VclPtr< derived_type > GetAs() const {
         return VclPtr< derived_type >( static_cast< derived_type * >( GetWindow().get() ) ); }

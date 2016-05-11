@@ -20,7 +20,7 @@
 #include "alloc_cache.hxx"
 #include "alloc_impl.hxx"
 #include "alloc_arena.hxx"
-#include "internal/rtllifecycle.h"
+#include "rtllifecycle.h"
 #include "sal/macros.h"
 #include "osl/diagnose.h"
 #include <osl/thread.hxx>
@@ -28,8 +28,6 @@
 #include <cassert>
 #include <string.h>
 #include <stdio.h>
-
-extern AllocMode alloc_mode;
 
 /* ================================================================= *
  *
@@ -191,7 +189,8 @@ rtl_cache_hash_remove (
     {
         if (bufctl->m_addr == addr)
         {
-            *ppHead = bufctl->m_next, bufctl->m_next = nullptr;
+            *ppHead = bufctl->m_next;
+            bufctl->m_next = nullptr;
             break;
         }
 
@@ -270,7 +269,7 @@ rtl_cache_slab_create (
 
     size = cache->m_slab_size;
     addr = rtl_arena_alloc (cache->m_source, &size);
-    if (addr != nullptr)
+    if (SAL_LIKELY(addr != nullptr))
     {
         assert(size >= cache->m_slab_size);
 
@@ -286,7 +285,7 @@ rtl_cache_slab_create (
             slab = RTL_CACHE_SLAB(addr, cache->m_slab_size);
             (void) rtl_cache_slab_constructor (slab, nullptr);
         }
-        if (slab != nullptr)
+        if (SAL_LIKELY(slab != nullptr))
         {
             slab->m_data = reinterpret_cast<sal_uIntPtr>(addr);
 
@@ -324,7 +323,8 @@ rtl_cache_slab_destroy (
             rtl_cache_bufctl_type * bufctl = slab->m_sp;
 
             /* pop from freelist */
-            slab->m_sp = bufctl->m_next, bufctl->m_next = nullptr;
+            slab->m_sp = bufctl->m_next;
+            bufctl->m_next = nullptr;
 
             /* return bufctl struct to bufctl cache */
             rtl_cache_free (gp_cache_bufctl_cache, bufctl);
@@ -916,7 +916,8 @@ rtl_cache_deactivate (
         rtl_cache_magazine_type * mag;
 
         /* prevent recursion */
-        mag_cache = cache->m_magazine_cache, cache->m_magazine_cache = nullptr;
+        mag_cache = cache->m_magazine_cache;
+        cache->m_magazine_cache = nullptr;
 
         /* cleanup cpu layer */
         if ((mag = cache->m_cpu_curr) != nullptr)
@@ -980,7 +981,8 @@ rtl_cache_deactivate (
                 while ((bufctl = cache->m_hash_table[i]) != nullptr)
                 {
                     /* pop from hash table */
-                    cache->m_hash_table[i] = bufctl->m_next, bufctl->m_next = nullptr;
+                    cache->m_hash_table[i] = bufctl->m_next;
+                    bufctl->m_next = nullptr;
 
                     /* return to bufctl cache */
                     rtl_cache_free (gp_cache_bufctl_cache, bufctl);
@@ -1139,14 +1141,15 @@ SAL_CALL rtl_cache_alloc (
             if (!((cache->m_constructor)(obj, cache->m_userarg)))
             {
                 /* construction failure */
-                rtl_freeMemory(obj), obj = nullptr;
+                rtl_freeMemory(obj);
+                obj = nullptr;
             }
         }
         return obj;
     }
 
     RTL_MEMORY_LOCK_ACQUIRE(&(cache->m_depot_lock));
-    if (cache->m_cpu_curr != nullptr)
+    if (SAL_LIKELY(cache->m_cpu_curr != nullptr))
     {
         for (;;)
         {
@@ -1196,7 +1199,8 @@ SAL_CALL rtl_cache_alloc (
         if (!((cache->m_constructor)(obj, cache->m_userarg)))
         {
             /* construction failure */
-            rtl_cache_slab_free (cache, obj), obj = nullptr;
+            rtl_cache_slab_free (cache, obj);
+            obj = nullptr;
         }
     }
     return (obj);
@@ -1281,36 +1285,6 @@ SAL_CALL rtl_cache_free (
         rtl_cache_slab_free (cache, obj);
     }
 }
-
-/* ================================================================= *
- *
- * cache wsupdate (machdep) internals.
- *
- * ================================================================= */
-
-/** rtl_cache_wsupdate_init()
- *
- *  @precond g_cache_list.m_lock initialized
- */
-static void
-rtl_cache_wsupdate_init();
-
-/** rtl_cache_wsupdate_wait()
- *
- *  @precond g_cache_list.m_lock acquired
- */
-static void
-rtl_cache_wsupdate_wait (
-    unsigned int seconds
-);
-
-/** rtl_cache_wsupdate_fini()
- *
- */
-static void
-rtl_cache_wsupdate_fini();
-
-/* ================================================================= */
 
 #if defined(SAL_UNX)
 
@@ -1645,19 +1619,22 @@ rtl_cache_fini()
 
         if (gp_cache_bufctl_cache != nullptr)
         {
-            cache = gp_cache_bufctl_cache, gp_cache_bufctl_cache = nullptr;
+            cache = gp_cache_bufctl_cache;
+            gp_cache_bufctl_cache = nullptr;
             rtl_cache_deactivate (cache);
             rtl_cache_destructor (cache);
         }
         if (gp_cache_slab_cache != nullptr)
         {
-            cache = gp_cache_slab_cache, gp_cache_slab_cache = nullptr;
+            cache = gp_cache_slab_cache;
+            gp_cache_slab_cache = nullptr;
             rtl_cache_deactivate (cache);
             rtl_cache_destructor (cache);
         }
         if (gp_cache_magazine_cache != nullptr)
         {
-            cache = gp_cache_magazine_cache, gp_cache_magazine_cache = nullptr;
+            cache = gp_cache_magazine_cache;
+            gp_cache_magazine_cache = nullptr;
             rtl_cache_deactivate (cache);
             rtl_cache_destructor (cache);
         }

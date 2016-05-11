@@ -65,7 +65,7 @@
 #include <svx/svdogrp.hxx>
 #include <svx/svdotable.hxx>
 #include <tools/urlobj.hxx>
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 #include <svtools/sfxecode.hxx>
 #include <com/sun/star/beans/PropertyState.hpp>
 #include <tools/resmgr.hxx>
@@ -1488,7 +1488,7 @@ OUString HtmlExport::TextAttribToHTMLString( SfxItemSet* pSet, HtmlState* pState
 
     if ( pSet->GetItemState( EE_CHAR_UNDERLINE ) == SfxItemState::SET )
     {
-        bTemp = static_cast<const SvxUnderlineItem&>(pSet->Get( EE_CHAR_UNDERLINE )).GetLineStyle() != UNDERLINE_NONE;
+        bTemp = static_cast<const SvxUnderlineItem&>(pSet->Get( EE_CHAR_UNDERLINE )).GetLineStyle() != LINESTYLE_NONE;
         aTemp = pState->SetUnderline( bTemp );
         if( bTemp )
             aStr.insert(0, aTemp);
@@ -1681,9 +1681,8 @@ bool HtmlExport::CreateHtmlForPresPages()
         {
             aStr.append("<map name=\"map0\">\r\n");
 
-            for (sal_uInt32 nObject = 0, n = aClickableObjects.size(); nObject < n; nObject++)
+            for (SdrObject* pObject : aClickableObjects)
             {
-                SdrObject* pObject = aClickableObjects[nObject];
                 SdAnimationInfo* pInfo     = mpDoc->GetAnimationInfo(pObject);
                 SdIMapInfo*      pIMapInfo = mpDoc->GetIMapInfo(pObject);
 
@@ -1843,7 +1842,7 @@ bool HtmlExport::CreateHtmlForPresPages()
 
                         case presentation::ClickAction_NEXTPAGE:
                         {
-                            sal_uLong nPage = nSdPage;
+                            sal_uLong nPage;
                             if (nSdPage == mnSdPageCount - 1)
                                 nPage = mnSdPageCount - 1;
                             else
@@ -2729,8 +2728,7 @@ OUString HtmlExport::CreateLink( const OUString& aLink,
 
 // creates a image tag
 OUString HtmlExport::CreateImage( const OUString& aImage, const OUString& aAltText,
-                                sal_Int16 nWidth,
-                                sal_Int16 nHeight )
+                                sal_Int16 nWidth )
 {
     OUStringBuffer aStr( "<img src=\"");
     aStr.append(aImage);
@@ -2751,11 +2749,6 @@ OUString HtmlExport::CreateImage( const OUString& aImage, const OUString& aAltTe
     if(nWidth > -1)
     {
         aStr.append(" width=" + OUString::number(nWidth));
-    }
-
-    if(nHeight > -1)
-    {
-        aStr.append(" height=" + OUString::number(nHeight));
     }
 
     aStr.append('>');
@@ -2945,9 +2938,9 @@ static const char * ASP_Scripts[] = { "common.inc", "webcast.asp", "show.asp", "
 /** creates and saves the ASP scripts for WebShow */
 bool HtmlExport::CreateASPScripts()
 {
-    for( sal_uInt16 n = 0; n < (sizeof( ASP_Scripts ) / sizeof(char *)); n++ )
+    for(const char * p : ASP_Scripts)
     {
-        OUString aScript = OUString::createFromAscii(ASP_Scripts[n]);
+        OUString aScript = OUString::createFromAscii(p);
 
         if(!CopyScript(maExportPath, aScript, aScript))
             return false;
@@ -2964,9 +2957,9 @@ static const char *PERL_Scripts[] = { "webcast.pl", "common.pl", "editpic.pl", "
 // creates and saves the PERL scripts for WebShow
 bool HtmlExport::CreatePERLScripts()
 {
-    for( sal_uInt16 n = 0; n < (sizeof( PERL_Scripts ) / sizeof(char *)); n++ )
+    for(const char * p : PERL_Scripts)
     {
-        OUString aScript = OUString::createFromAscii(PERL_Scripts[n]);
+        OUString aScript = OUString::createFromAscii(p);
 
         if(!CopyScript(maExportPath, aScript, aScript, true))
             return false;

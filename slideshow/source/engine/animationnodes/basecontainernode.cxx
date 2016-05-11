@@ -163,13 +163,12 @@ bool BaseContainerNode::notifyDeactivatedChild(
     return bFinished;
 }
 
-bool BaseContainerNode::repeat()
+void BaseContainerNode::repeat()
 {
     forEachChildNode( boost::mem_fn(&AnimationNode::end), ~ENDED );
     bool bState = init_children();
     if( bState )
         activate_st();
-    return bState;
 }
 
 #if defined(DBG_UTIL)
@@ -178,12 +177,12 @@ void BaseContainerNode::showState() const
     for( std::size_t i=0; i<maChildren.size(); ++i )
     {
         BaseNodeSharedPtr pNode =
-            boost::dynamic_pointer_cast<BaseNode>(maChildren[i]);
+            std::dynamic_pointer_cast<BaseNode>(maChildren[i]);
         SAL_INFO("slideshow.verbose",
                  "Node connection: n" <<
-                 reinterpret_cast<const char*>(this)+debugGetCurrentOffset() <<
+                 debugGetNodeName(this) <<
                  " -> n" <<
-                 reinterpret_cast<const char*>(pNode.get())+debugGetCurrentOffset() );
+                 debugGetNodeName(pNode.get()));
         pNode->showState();
     }
 

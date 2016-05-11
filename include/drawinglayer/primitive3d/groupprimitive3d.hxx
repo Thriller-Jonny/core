@@ -25,7 +25,6 @@
 #include <drawinglayer/primitive3d/baseprimitive3d.hxx>
 
 
-
 namespace drawinglayer
 {
     namespace primitive3d
@@ -60,7 +59,7 @@ namespace drawinglayer
             explicit GroupPrimitive3D(const Primitive3DContainer& rChildren);
 
             /// data read access
-            Primitive3DContainer getChildren() const { return maChildren; }
+            const Primitive3DContainer& getChildren() const { return maChildren; }
 
             /// compare operator
             virtual bool operator==( const BasePrimitive3D& rPrimitive ) const override;
@@ -73,7 +72,6 @@ namespace drawinglayer
         };
     } // end of namespace primitive3d
 } // end of namespace drawinglayer
-
 
 
 #endif //INCLUDED_DRAWINGLAYER_PRIMITIVE3D_GROUPPRIMITIVE3D_HXX

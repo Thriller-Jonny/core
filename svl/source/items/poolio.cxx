@@ -70,7 +70,6 @@ static SfxItemKind convertUInt16ToSfxItemKind(sal_uInt16 x)
 }
 
 
-
 /**
  * The SfxItemPool is saved to the specified Stream (together with all its
  * secondary Pools) using its Pool Defaults and pooled Items.
@@ -155,7 +154,7 @@ SvStream &SfxItemPool::Store(SvStream &rStream) const
 
     // VersionMaps
     {
-        SfxMultiVarRecordWriter aVerRec( &rStream, SFX_ITEMPOOL_REC_VERSIONMAP, 0 );
+        SfxMultiVarRecordWriter aVerRec( &rStream, SFX_ITEMPOOL_REC_VERSIONMAP );
         for ( size_t nVerNo = 0; nVerNo < pImp->aVersions.size(); ++nVerNo )
         {
             aVerRec.NewContent();
@@ -177,14 +176,14 @@ SvStream &SfxItemPool::Store(SvStream &rStream) const
 
     // Pooled Items
     {
-        SfxMultiMixRecordWriter aWhichIdsRec( &rStream, SFX_ITEMPOOL_REC_WHICHIDS, 0 );
+        SfxMultiMixRecordWriter aWhichIdsRec( &rStream, SFX_ITEMPOOL_REC_WHICHIDS );
 
         // First write the atomic Items and then write the Sets (important when loading)
         for (int ft = 0 ; ft < 2 && !rStream.GetError(); ft++)
         {
             pImp->bInSetItem = ft != 0;
 
-            std::vector<SfxPoolItemArray_Impl*>::iterator itrArr = pImp->maPoolItems.begin();
+            std::vector<SfxPoolItemArray_Impl*>::const_iterator itrArr = pImp->maPoolItems.begin();
             SfxPoolItem **ppDefItem = pImp->ppStaticDefaults;
             const sal_uInt16 nSize = GetSize_Impl();
             for ( size_t i = 0; i < nSize && !rStream.GetError(); ++i, ++itrArr, ++ppDefItem )
@@ -197,7 +196,7 @@ SvStream &SfxItemPool::Store(SvStream &rStream) const
 
                 // ! Poolable is not even saved in the Pool
                 // And itemsets/plain-items depending on the round
-                if ( *itrArr && IsItemFlag(**ppDefItem, SfxItemPoolFlags::POOLABLE) &&
+                if ( *itrArr && IsItemPoolable(**ppDefItem) &&
                      pImp->bInSetItem == (dynamic_cast< const SfxSetItem* >(*ppDefItem) !=  nullptr) )
                 {
                     // Own signature, global WhichId and ItemVersion
@@ -210,7 +209,7 @@ SvStream &SfxItemPool::Store(SvStream &rStream) const
                     rStream.WriteUInt32( nCount );
 
                     // Write Items
-                    SfxMultiMixRecordWriter aItemsRec( &rStream, SFX_ITEMPOOL_REC_ITEMS, 0 );
+                    SfxMultiMixRecordWriter aItemsRec( &rStream, SFX_ITEMPOOL_REC_ITEMS );
                     for ( size_t j = 0; j < nCount; ++j )
                     {
                         // Get Item
@@ -255,7 +254,7 @@ SvStream &SfxItemPool::Store(SvStream &rStream) const
     // Save the set Defaults (PoolDefaults)
     if ( !rStream.GetError() )
     {
-        SfxMultiMixRecordWriter aDefsRec( &rStream, SFX_ITEMPOOL_REC_DEFAULTS, 0 );
+        SfxMultiMixRecordWriter aDefsRec( &rStream, SFX_ITEMPOOL_REC_DEFAULTS );
         sal_uInt16 nCount = GetSize_Impl();
         for ( sal_uInt16 n = 0; n < nCount; ++n )
         {
@@ -313,7 +312,7 @@ void SfxItemPool::LoadCompleted()
     if ( pImp->nInitRefCount > 1 )
     {
         // Iterate over all Which values
-        std::vector<SfxPoolItemArray_Impl*>::iterator itrItemArr = pImp->maPoolItems.begin();
+        std::vector<SfxPoolItemArray_Impl*>::const_iterator itrItemArr = pImp->maPoolItems.begin();
         for( sal_uInt16 nArrCnt = GetSize_Impl(); nArrCnt; --nArrCnt, ++itrItemArr )
         {
             // Is there an item with the Which value present at all?
@@ -471,13 +470,13 @@ SvStream &SfxItemPool::Load(SvStream &rStream)
     {
 
         // Iterate over all Which values
-        std::vector<SfxPoolItemArray_Impl*>::iterator itrItemArr = pImp->maPoolItems.begin();
+        std::vector<SfxPoolItemArray_Impl*>::const_iterator itrItemArr = pImp->maPoolItems.begin();
         for( size_t nArrCnt = GetSize_Impl(); nArrCnt; --nArrCnt, ++itrItemArr )
         {
             // Is there an Item with that Which value present at all?
             if ( *itrItemArr )
             {
-                SfxPoolItemArrayBase_Impl::iterator ppHtArr = (*itrItemArr)->begin();
+                SfxPoolItemArrayBase_Impl::const_iterator ppHtArr = (*itrItemArr)->begin();
                 for( size_t n = (*itrItemArr)->size(); n; --n, ++ppHtArr )
                     if (*ppHtArr)
                     {
@@ -738,7 +737,7 @@ sal_uInt16 SfxItemPool::GetSize_Impl() const
  * Loads surrogate from 'rStream' and returns the corresponding SfxPoolItem
  * from the rRefPool.
  * If the surrogate contained within the stream == SFX_ITEMS_DIRECT
- * (!SfxItemPoolFlags::POOLABLE), we return 0 and the Item is to be loaded directly
+ * (!poolable), we return 0 and the Item is to be loaded directly
  * from the stream.
  * We also return 0 for 0xfffffff0 (SFX_ITEMS_NULL) and rWhich is set to 0,
  * making the Items unavailable.
@@ -870,7 +869,7 @@ bool SfxItemPool::StoreSurrogate ( SvStream& rStream, const SfxPoolItem*  pItem)
 {
     if ( pItem )
     {
-        bool bRealSurrogate = IsItemFlag(*pItem, SfxItemPoolFlags::POOLABLE);
+        bool bRealSurrogate = IsItemPoolable(*pItem);
         rStream.WriteUInt32( bRealSurrogate
                         ? GetSurrogate( pItem )
                         : SFX_ITEMS_DIRECT  );
@@ -880,7 +879,6 @@ bool SfxItemPool::StoreSurrogate ( SvStream& rStream, const SfxPoolItem*  pItem)
     rStream.WriteUInt32( SFX_ITEMS_NULL );
     return true;
 }
-
 
 
 sal_uInt32 SfxItemPool::GetSurrogate(const SfxPoolItem *pItem) const
@@ -1103,8 +1101,6 @@ sal_uInt16 SfxItemPool::GetNewWhich
 }
 
 
-
-
 bool SfxItemPool::IsInVersionsRange( sal_uInt16 nWhich ) const
 {
     return nWhich >= pImp->nVerStart && nWhich <= pImp->nVerEnd;
@@ -1191,7 +1187,7 @@ bool SfxItemPool::StoreItem( SvStream &rStream, const SfxPoolItem &rItem,
 /**
  * If pRefPool==-1 => do not put!
  */
-const SfxPoolItem* SfxItemPool::LoadItem( SvStream &rStream, bool bDirect,
+const SfxPoolItem* SfxItemPool::LoadItem( SvStream &rStream,
                                           const SfxItemPool *pRefPool )
 {
     sal_uInt16 nWhich(0), nSlot(0); // nSurrogate;
@@ -1232,19 +1228,16 @@ const SfxPoolItem* SfxItemPool::LoadItem( SvStream &rStream, bool bDirect,
 
     // Are we loading via surrogate?
     const SfxPoolItem *pItem = nullptr;
-    if ( !bDirect )
-    {
-        // WhichId known in this version?
-        if ( nWhich )
-            // Load surrogate and react if none present
-            pItem = LoadSurrogate( rStream, nWhich, nSlot, pRefPool );
-        else
-            // Else skip it
-            rStream.SeekRel( sizeof(sal_uInt16) );
-    }
+    // WhichId known in this version?
+    if ( nWhich )
+        // Load surrogate and react if none present
+        pItem = LoadSurrogate( rStream, nWhich, nSlot, pRefPool );
+    else
+        // Else skip it
+        rStream.SeekRel( sizeof(sal_uInt16) );
 
     // Is loaded directly (not via surrogate)?
-    if ( bDirect || ( nWhich && !pItem ) )
+    if ( nWhich && !pItem )
     {
         // bDirekt or not IsPoolable() => Load Item directly
         sal_uInt16 nVersion(0);
@@ -1252,29 +1245,22 @@ const SfxPoolItem* SfxItemPool::LoadItem( SvStream &rStream, bool bDirect,
         rStream.ReadUInt16( nVersion ).ReadUInt32( nLen );
         sal_uLong nIStart = rStream.Tell();
 
-        // WhichId known in this version?
-        if ( nWhich )
-        {
-            // Load Item directly
-            SfxPoolItem *pNewItem =
-                    pRefPool->GetDefaultItem(nWhich).Create(rStream, nVersion);
-            if ( bDontPut )
-                pItem = pNewItem;
-            else
-                if ( pNewItem )
-                {
-                    pItem = &Put(*pNewItem);
-                    delete pNewItem;
-                }
-                else
-                    pItem = nullptr;
-            sal_uLong nIEnd = rStream.Tell();
-            DBG_ASSERT( nIEnd <= (nIStart+nLen), "read past end of item" );
-            if ( (nIStart+nLen) != nIEnd )
-                rStream.Seek( nIStart+nLen );
-        }
+        // Load Item directly
+        SfxPoolItem *pNewItem =
+                pRefPool->GetDefaultItem(nWhich).Create(rStream, nVersion);
+        if ( bDontPut )
+            pItem = pNewItem;
         else
-            // SKip Item
+            if ( pNewItem )
+            {
+                pItem = &Put(*pNewItem);
+                delete pNewItem;
+            }
+            else
+                pItem = nullptr;
+        sal_uLong nIEnd = rStream.Tell();
+        DBG_ASSERT( nIEnd <= (nIStart+nLen), "read past end of item" );
+        if ( (nIStart+nLen) != nIEnd )
             rStream.Seek( nIStart+nLen );
     }
 

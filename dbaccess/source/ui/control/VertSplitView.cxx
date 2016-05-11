@@ -28,13 +28,13 @@
 using namespace ::dbaui;
 
 // class OSplitterView
-OSplitterView::OSplitterView(vcl::Window* _pParent,bool _bVertical) : Window(_pParent,WB_DIALOGCONTROL) // ,WB_BORDER
+OSplitterView::OSplitterView(vcl::Window* _pParent) : Window(_pParent,WB_DIALOGCONTROL) // ,WB_BORDER
     ,m_pSplitter( nullptr )
     ,m_pLeft(nullptr)
     ,m_pRight(nullptr)
-    ,m_bVertical(_bVertical)
+    ,m_bVertical(false)
 {
-    ImplInitSettings( true, true, true );
+    ImplInitSettings();
 }
 
 OSplitterView::~OSplitterView()
@@ -64,35 +64,26 @@ IMPL_LINK_NOARG_TYPED( OSplitterView, SplitHdl, Splitter*, void )
     Resize();
 }
 
-void OSplitterView::ImplInitSettings( bool bFont, bool bForeground, bool bBackground )
+void OSplitterView::ImplInitSettings()
 {
     // FIXME RenderContext
     const StyleSettings& rStyleSettings = GetSettings().GetStyleSettings();
 
-    if ( bFont )
-    {
-        vcl::Font aFont = rStyleSettings.GetAppFont();
-        if ( IsControlFont() )
-            aFont.Merge( GetControlFont() );
-        SetPointFont(*this, aFont);
-//      Set/*Zoomed*/PointFont( aFont );
-    }
+    vcl::Font aFont = rStyleSettings.GetAppFont();
+    if ( IsControlFont() )
+        aFont.Merge( GetControlFont() );
+    SetPointFont(*this, aFont);
+//  Set/*Zoomed*/PointFont( aFont );
 
-    if ( bFont || bForeground )
-    {
-        Color aTextColor = rStyleSettings.GetButtonTextColor();
-        if ( IsControlForeground() )
-            aTextColor = GetControlForeground();
-        SetTextColor( aTextColor );
-    }
+    Color aTextColor = rStyleSettings.GetButtonTextColor();
+    if ( IsControlForeground() )
+         aTextColor = GetControlForeground();
+    SetTextColor( aTextColor );
 
-    if ( bBackground )
-    {
-        if( IsControlBackground() )
-            SetBackground( GetControlBackground() );
-        else
-            SetBackground( rStyleSettings.GetFaceColor() );
-    }
+    if( IsControlBackground() )
+        SetBackground( GetControlBackground() );
+    else
+        SetBackground( rStyleSettings.GetFaceColor() );
 }
 
 void OSplitterView::DataChanged( const DataChangedEvent& rDCEvt )
@@ -102,7 +93,7 @@ void OSplitterView::DataChanged( const DataChangedEvent& rDCEvt )
     if ( (rDCEvt.GetType() == DataChangedEventType::SETTINGS) &&
          (rDCEvt.GetFlags() & AllSettingsFlags::STYLE) )
     {
-        ImplInitSettings( true, true, true );
+        ImplInitSettings();
         Invalidate();
     }
 }

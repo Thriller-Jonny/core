@@ -69,7 +69,7 @@ public:
         calls to the PageSelector) to invalidate the relevant slots and send
         appropriate events.
     */
-    void SelectionHasChanged (const bool bMakeSelectionVisible = true);
+    void SelectionHasChanged ();
 
     /** Add a listener that is called when the selection of the slide sorter
         changes.
@@ -103,7 +103,7 @@ public:
     */
     void SetInsertionPosition (const sal_Int32 nInsertionPosition);
 
-    std::shared_ptr<SelectionObserver> GetSelectionObserver() const { return mpSelectionObserver;}
+    const std::shared_ptr<SelectionObserver>& GetSelectionObserver() const { return mpSelectionObserver;}
 
 private:
     SlideSorter& mrSlideSorter;
@@ -126,9 +126,6 @@ private:
         and left of the visible area to maRequestedTopLeft.
     */
     Animator::AnimationId mnAnimationId;
-
-    class PageInsertionListener;
-    std::unique_ptr<PageInsertionListener> mpPageInsertionListener;
 
     std::shared_ptr<SelectionObserver> mpSelectionObserver;
 

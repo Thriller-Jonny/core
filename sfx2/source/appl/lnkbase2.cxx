@@ -99,7 +99,7 @@ class ImplDdeItem : public DdeGetPutItem
     bool bIsValidData : 1;
     bool bIsInDTOR : 1;
 public:
-#if defined WNT
+#if defined(_WIN32)
     ImplDdeItem( SvBaseLink& rLink, const OUString& rStr )
         : DdeGetPutItem( rStr ), pLink( &rLink ), bIsValidData( false ),
         bIsInDTOR( false )
@@ -121,7 +121,6 @@ public:
 };
 
 
-
 SvBaseLink::SvBaseLink()
     : pImpl ( new BaseLink_Impl ),
       m_bIsReadOnly(false)
@@ -131,7 +130,6 @@ SvBaseLink::SvBaseLink()
     bVisible = bSynchron = bUseCache = true;
     bWasLastEditOK = false;
 }
-
 
 
 SvBaseLink::SvBaseLink( SfxLinkUpdateMode nUpdateMode, SotClipboardFormatId nContentType )
@@ -149,7 +147,7 @@ SvBaseLink::SvBaseLink( SfxLinkUpdateMode nUpdateMode, SotClipboardFormatId nCon
     pImplData->ClientType.bIntrnlLnk = false;
 }
 
-#if defined WNT
+#if defined(_WIN32)
 
 static DdeTopic* FindTopic( const OUString & rLinkName, sal_uInt16* pItemStt )
 {
@@ -173,18 +171,10 @@ static DdeTopic* FindTopic( const OUString & rLinkName, sal_uInt16* pItemStt )
 
             std::vector<DdeTopic*>& rTopics = pService->GetTopics();
 
-            for( int i = 0; i < 2; ++i )
-            {
-                for( std::vector<DdeTopic*>::iterator iterTopic = rTopics.begin();
-                     iterTopic != rTopics.end(); ++iterTopic )
-                    if( (*iterTopic)->GetName() == sTopic )
-                        return *iterTopic;
-
-                // Topic not found?
-                // then we try once to create it
-                if( i || !pService->MakeTopic( sTopic ) )
-                    break;  // did not work, exiting
-            }
+            for( std::vector<DdeTopic*>::iterator iterTopic = rTopics.begin();
+                 iterTopic != rTopics.end(); ++iterTopic )
+                if( (*iterTopic)->GetName() == sTopic )
+                    return *iterTopic;
             break;
         }
     }
@@ -255,7 +245,6 @@ IMPL_LINK_TYPED( SvBaseLink, EndEditHdl, const OUString&, _rNewName, void )
 }
 
 
-
 void SvBaseLink::SetObjType( sal_uInt16 nObjTypeP )
 {
     DBG_ASSERT( nObjType != OBJECT_CLIENT_DDE, "type already set" );
@@ -265,12 +254,10 @@ void SvBaseLink::SetObjType( sal_uInt16 nObjTypeP )
 }
 
 
-
 void SvBaseLink::SetName( const OUString & rNm )
 {
     aLinkName = rNm;
 }
-
 
 
 void SvBaseLink::SetObj( SvLinkSource * pObj )
@@ -281,7 +268,6 @@ void SvBaseLink::SetObj( SvLinkSource * pObj )
                 "no intern link" );
     xObj = pObj;
 }
-
 
 
 void SvBaseLink::SetLinkSourceName( const OUString & rLnkNm )
@@ -296,13 +282,9 @@ void SvBaseLink::SetLinkSourceName( const OUString & rLnkNm )
     aLinkName = rLnkNm;
 
     // New Connection
-    _GetRealObject();
+    GetRealObject_();
     ReleaseRef(); // should be superfluous
 }
-
-
-
-
 
 
 void SvBaseLink::SetUpdateMode( SfxLinkUpdateMode nMode )
@@ -314,7 +296,7 @@ void SvBaseLink::SetUpdateMode( SfxLinkUpdateMode nMode )
         Disconnect();
 
         pImplData->ClientType.nUpdateMode = nMode;
-        _GetRealObject();
+        GetRealObject_();
         ReleaseRef();
     }
 }
@@ -336,7 +318,7 @@ bool SvBaseLink::Update()
         AddNextRef();
         Disconnect();
 
-        _GetRealObject();
+        GetRealObject_();
         ReleaseRef();
         if( xObj.Is() )
         {
@@ -380,7 +362,7 @@ SfxLinkUpdateMode SvBaseLink::GetUpdateMode() const
 }
 
 
-void SvBaseLink::_GetRealObject( bool bConnect)
+void SvBaseLink::GetRealObject_( bool bConnect)
 {
     if( !pImpl->m_pLinkMgr )
         return;
@@ -422,14 +404,12 @@ SotClipboardFormatId SvBaseLink::GetContentType() const
 }
 
 
-bool SvBaseLink::SetContentType( SotClipboardFormatId nType )
+void SvBaseLink::SetContentType( SotClipboardFormatId nType )
 {
     if( OBJECT_CLIENT_SO & nObjType )
     {
         pImplData->ClientType.nCntntType = nType;
-        return true;
     }
-    return false;
 }
 
 LinkManager* SvBaseLink::GetLinkManager()
@@ -475,7 +455,7 @@ void SvBaseLink::Edit( vcl::Window* pParent, const Link<SvBaseLink&,void>& rEndE
     pImpl->m_aEndEditLink = rEndEditHdl;
     pImpl->m_bIsConnect = xObj.Is();
     if( !pImpl->m_bIsConnect )
-        _GetRealObject( xObj.Is() );
+        GetRealObject_( xObj.Is() );
 
     bool bAsync = false;
     Link<const OUString&, void> aLink = LINK( this, SvBaseLink, EndEditHdl );

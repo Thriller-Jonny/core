@@ -23,7 +23,7 @@
 #include <vector>
 
 #include <sal/main.h>
-#include <vcl/cmdevt.hxx>
+#include <vcl/commandevent.hxx>
 #include <vcl/implimagetree.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/window.hxx>
@@ -405,7 +405,7 @@
         {
             // the following QueryExit will likely present a message box, activate application
             [NSApp activateIgnoringOtherApps: YES];
-            aReply = pSalData->maFrames.front()->CallCallback( SALEVENT_SHUTDOWN, nullptr ) ? NSTerminateCancel : NSTerminateNow;
+            aReply = pSalData->maFrames.front()->CallCallback( SalEvent::Shutdown, nullptr ) ? NSTerminateCancel : NSTerminateNow;
         }
 
         if( aReply == NSTerminateNow )
@@ -428,7 +428,7 @@
 
     const SalData* pSalData = GetSalData();
 	if( !pSalData->maFrames.empty() )
-		pSalData->maFrames.front()->CallCallback( SALEVENT_SETTINGSCHANGED, nullptr );
+		pSalData->maFrames.front()->CallCallback( SalEvent::SettingsChanged, nullptr );
 }
 
 -(void)screenParametersChanged: (NSNotification*) pNotification

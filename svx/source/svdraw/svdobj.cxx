@@ -141,8 +141,6 @@
 using namespace ::com::sun::star;
 
 
-
-
 SdrObjUserCall::~SdrObjUserCall()
 {
 }
@@ -159,16 +157,13 @@ SdrObjMacroHitRec::SdrObjMacroHitRec() :
     bDown(false) {}
 
 
-
-SdrObjUserData::SdrObjUserData(sal_uInt32 nInv, sal_uInt16 nId, sal_uInt16 nVer) :
+SdrObjUserData::SdrObjUserData(sal_uInt32 nInv, sal_uInt16 nId) :
     nInventor(nInv),
-    nIdentifier(nId),
-    nVersion(nVer) {}
+    nIdentifier(nId) {}
 
 SdrObjUserData::SdrObjUserData(const SdrObjUserData& rData) :
     nInventor(rData.nInventor),
-    nIdentifier(rData.nIdentifier),
-    nVersion(rData.nVersion) {}
+    nIdentifier(rData.nIdentifier) {}
 
 SdrObjUserData::~SdrObjUserData() {}
 
@@ -288,13 +283,10 @@ void SdrObject::ActionChanged() const
 }
 
 
-
 void SdrObject::SetBoundRectDirty()
 {
     aOutRect = Rectangle();
 }
-
-
 
 
 SdrObject::SdrObject() :
@@ -456,11 +448,12 @@ void SdrObject::SetPage(SdrPage* pNewPage)
     SdrPage* pOldPage = pPage;
 
     pPage=pNewPage;
-    if (pPage!=nullptr) {
+    if (pPage!=nullptr)
+    {
         SdrModel* pMod=pPage->GetModel();
-        if (pMod!=pModel && pMod!=nullptr) {
+        if (pMod!=pModel && pMod!=nullptr)
             SetModel(pMod);
-        }}
+    }
 
     // The creation of the UNO shape in SdrObject::getUnoShape is influenced
     // by pPage, so when the page changes we need to discard the cached UNO
@@ -831,14 +824,10 @@ sal_uInt32 SdrObject::GetNavigationPosition()
 }
 
 
-
-
 void SdrObject::SetNavigationPosition (const sal_uInt32 nNewPosition)
 {
     mnNavigationPosition = nNewPosition;
 }
-
-
 
 
 // To make clearer that this method may trigger RecalcBoundRect and thus may be
@@ -932,7 +921,7 @@ void SdrObject::SetChanged()
 }
 
 // tooling for painting a single object to an OutputDevice.
-bool SdrObject::SingleObjectPainter(OutputDevice& rOut) const
+void SdrObject::SingleObjectPainter(OutputDevice& rOut) const
 {
     sdr::contact::SdrObjectVector aObjectVector;
     aObjectVector.push_back(const_cast< SdrObject* >(this));
@@ -941,8 +930,6 @@ bool SdrObject::SingleObjectPainter(OutputDevice& rOut) const
     sdr::contact::DisplayInfo aDisplayInfo;
 
     aPainter.ProcessDisplay(aDisplayInfo);
-
-    return true;
 }
 
 bool SdrObject::LineGeometryUsageIsNecessary() const
@@ -954,11 +941,6 @@ bool SdrObject::LineGeometryUsageIsNecessary() const
 SdrObject* SdrObject::Clone() const
 {
     return CloneHelper< SdrObject >();
-}
-
-SdrObject* SdrObject::CloneWithShellIDs( const OUString& /*rSrcShellID*/, const OUString& /*rDestShellID*/ ) const
-{
-    return Clone();
 }
 
 SdrObject& SdrObject::operator=(const SdrObject& rObj)
@@ -1037,7 +1019,7 @@ OUString SdrObject::TakeObjNamePlural() const
     return ImpGetResStr(STR_ObjNamePluralNONE);
 }
 
-void SdrObject::ImpTakeDescriptionStr(sal_uInt16 nStrCacheID, OUString& rStr, sal_uInt16 nVal) const
+void SdrObject::ImpTakeDescriptionStr(sal_uInt16 nStrCacheID, OUString& rStr) const
 {
     rStr = ImpGetResStr(nStrCacheID);
     sal_Int32 nPos = rStr.indexOf("%1");
@@ -1051,8 +1033,7 @@ void SdrObject::ImpTakeDescriptionStr(sal_uInt16 nStrCacheID, OUString& rStr, sa
     nPos = rStr.indexOf("%2");
     if (nPos >= 0)
         // Replace '%2' with the passed value.
-        rStr = rStr.replaceAt(
-            nPos, 2, OUString::number(nVal));
+        rStr = rStr.replaceAt(nPos, 2, "0");
 }
 
 void SdrObject::ImpForcePlusData()
@@ -1061,20 +1042,20 @@ void SdrObject::ImpForcePlusData()
         pPlusData = NewPlusData();
 }
 
-OUString SdrObject::GetAngleStr(long nAngle, bool bNoDegChar) const
+OUString SdrObject::GetAngleStr(long nAngle) const
 {
     OUString aStr;
     if (pModel!=nullptr) {
-        SdrModel::TakeAngleStr(nAngle,aStr,bNoDegChar);
+        SdrModel::TakeAngleStr(nAngle,aStr);
     }
     return aStr;
 }
 
-OUString SdrObject::GetMetrStr(long nVal, MapUnit /*eWantMap*/, bool bNoUnitChars) const
+OUString SdrObject::GetMetrStr(long nVal) const
 {
     OUString aStr;
     if (pModel!=nullptr) {
-        pModel->TakeMetricStr(nVal,aStr,bNoUnitChars);
+        pModel->TakeMetricStr(nVal,aStr);
     }
     return aStr;
 }
@@ -1295,7 +1276,6 @@ Rectangle SdrObject::ImpDragCalcRect(const SdrDragStat& rDrag) const
 }
 
 
-
 bool SdrObject::hasSpecialDrag() const
 {
     return false;
@@ -1377,7 +1357,7 @@ bool SdrObject::EndCreate(SdrDragStat& rStat, SdrCreateCmd eCmd)
     rStat.TakeCreateRect(aOutRect);
     aOutRect.Justify();
 
-    return (eCmd==SDRCREATE_FORCEEND || rStat.GetPointAnz()>=2);
+    return (eCmd==SDRCREATE_FORCEEND || rStat.GetPointCount()>=2);
 }
 
 void SdrObject::BrkCreate(SdrDragStat& /*rStat*/)
@@ -1752,12 +1732,7 @@ OString SdrObject::stringify() const
             //append(maBLIPSizeRectangle).
             append(mnLayerID);
 
-    SvMemoryStream aStream;
-    SfxItemSet aSet(GetMergedItemSet());
-    aSet.InvalidateDefaultItems();
-    aSet.Store(aStream, true);
-    aStream.Flush(); // for correct results from aStream.GetEndOfData()
-    aString.append(static_cast<const char *>(aStream.GetBuffer()), aStream.GetEndOfData());
+    aString.append(GetMergedItemSet().stringify());
 
     return aString.makeStringAndClear();
 }
@@ -1880,7 +1855,6 @@ bool SdrObject::IsMacroHit(const SdrObjMacroHitRec& rRec) const
 {
     return CheckMacroHit(rRec) != nullptr;
 }
-
 
 
 SdrObjGeoData* SdrObject::NewGeoData() const
@@ -2189,47 +2163,47 @@ static void lcl_SetItem(SfxItemSet& rAttr, bool bMerge, const SfxPoolItem& rItem
     else rAttr.Put(rItem);
 }
 
-void SdrObject::TakeNotPersistAttr(SfxItemSet& rAttr, bool bMerge) const
+void SdrObject::TakeNotPersistAttr(SfxItemSet& rAttr) const
 {
     const Rectangle& rSnap=GetSnapRect();
     const Rectangle& rLogic=GetLogicRect();
-    lcl_SetItem(rAttr,bMerge,SdrYesNoItem(SDRATTR_OBJMOVEPROTECT, IsMoveProtect()));
-    lcl_SetItem(rAttr,bMerge,SdrYesNoItem(SDRATTR_OBJSIZEPROTECT, IsResizeProtect()));
-    lcl_SetItem(rAttr,bMerge,SdrObjPrintableItem(IsPrintable()));
-    lcl_SetItem(rAttr,bMerge,SdrObjVisibleItem(IsVisible()));
-    lcl_SetItem(rAttr,bMerge,makeSdrRotateAngleItem(GetRotateAngle()));
-    lcl_SetItem(rAttr,bMerge,SdrShearAngleItem(GetShearAngle()));
-    lcl_SetItem(rAttr,bMerge,SdrOneSizeWidthItem(rSnap.GetWidth()-1));
-    lcl_SetItem(rAttr,bMerge,SdrOneSizeHeightItem(rSnap.GetHeight()-1));
-    lcl_SetItem(rAttr,bMerge,SdrOnePositionXItem(rSnap.Left()));
-    lcl_SetItem(rAttr,bMerge,SdrOnePositionYItem(rSnap.Top()));
+    lcl_SetItem(rAttr,false,SdrYesNoItem(SDRATTR_OBJMOVEPROTECT, IsMoveProtect()));
+    lcl_SetItem(rAttr,false,SdrYesNoItem(SDRATTR_OBJSIZEPROTECT, IsResizeProtect()));
+    lcl_SetItem(rAttr,false,SdrObjPrintableItem(IsPrintable()));
+    lcl_SetItem(rAttr,false,SdrObjVisibleItem(IsVisible()));
+    lcl_SetItem(rAttr,false,makeSdrRotateAngleItem(GetRotateAngle()));
+    lcl_SetItem(rAttr,false,SdrShearAngleItem(GetShearAngle()));
+    lcl_SetItem(rAttr,false,SdrOneSizeWidthItem(rSnap.GetWidth()-1));
+    lcl_SetItem(rAttr,false,SdrOneSizeHeightItem(rSnap.GetHeight()-1));
+    lcl_SetItem(rAttr,false,SdrOnePositionXItem(rSnap.Left()));
+    lcl_SetItem(rAttr,false,SdrOnePositionYItem(rSnap.Top()));
     if (rLogic.GetWidth()!=rSnap.GetWidth()) {
-        lcl_SetItem(rAttr,bMerge,SdrLogicSizeWidthItem(rLogic.GetWidth()-1));
+        lcl_SetItem(rAttr,false,SdrLogicSizeWidthItem(rLogic.GetWidth()-1));
     }
     if (rLogic.GetHeight()!=rSnap.GetHeight()) {
-        lcl_SetItem(rAttr,bMerge,SdrLogicSizeHeightItem(rLogic.GetHeight()-1));
+        lcl_SetItem(rAttr,false,SdrLogicSizeHeightItem(rLogic.GetHeight()-1));
     }
     OUString aName(GetName());
 
     if (!aName.isEmpty())
     {
-        lcl_SetItem(rAttr, bMerge, makeSdrObjectNameItem(aName));
+        lcl_SetItem(rAttr, false, makeSdrObjectNameItem(aName));
     }
 
-    lcl_SetItem(rAttr,bMerge,SdrLayerIdItem(GetLayer()));
+    lcl_SetItem(rAttr,false,SdrLayerIdItem(GetLayer()));
     const SdrLayerAdmin* pLayAd=pPage!=nullptr ? &pPage->GetLayerAdmin() : pModel!=nullptr ? &pModel->GetLayerAdmin() : nullptr;
     if (pLayAd!=nullptr) {
         const SdrLayer* pLayer=pLayAd->GetLayerPerID(GetLayer());
         if (pLayer!=nullptr) {
-            lcl_SetItem(rAttr,bMerge,SdrLayerNameItem(pLayer->GetName()));
+            lcl_SetItem(rAttr,false,SdrLayerNameItem(pLayer->GetName()));
         }
     }
     Point aRef1(rSnap.Center());
     Point aRef2(aRef1); aRef2.Y()++;
-    lcl_SetItem(rAttr,bMerge,SdrTransformRef1XItem(aRef1.X()));
-    lcl_SetItem(rAttr,bMerge,SdrTransformRef1YItem(aRef1.Y()));
-    lcl_SetItem(rAttr,bMerge,SdrTransformRef2XItem(aRef2.X()));
-    lcl_SetItem(rAttr,bMerge,SdrTransformRef2YItem(aRef2.Y()));
+    lcl_SetItem(rAttr,false,SdrTransformRef1XItem(aRef1.X()));
+    lcl_SetItem(rAttr,false,SdrTransformRef1YItem(aRef1.Y()));
+    lcl_SetItem(rAttr,false,SdrTransformRef2XItem(aRef2.X()));
+    lcl_SetItem(rAttr,false,SdrTransformRef2YItem(aRef2.Y()));
 }
 
 SfxStyleSheet* SdrObject::GetStyleSheet() const
@@ -2253,7 +2227,7 @@ void SdrObject::SetStyleSheet(SfxStyleSheet* pNewStyleSheet, bool bDontRemoveHar
 void SdrObject::NbcSetStyleSheet(SfxStyleSheet* pNewStyleSheet, bool bDontRemoveHardAttr)
 {
     // only allow graphic and presentation styles for shapes
-    if( pNewStyleSheet && (pNewStyleSheet->GetFamily() == SFX_STYLE_FAMILY_PARA) && (pNewStyleSheet->GetFamily() == SFX_STYLE_FAMILY_PAGE) )
+    if( pNewStyleSheet && (pNewStyleSheet->GetFamily() == SfxStyleFamily::Para) && (pNewStyleSheet->GetFamily() == SfxStyleFamily::Page) )
         return;
 
     GetProperties().SetStyleSheet(pNewStyleSheet, bDontRemoveHardAttr);
@@ -2374,7 +2348,6 @@ SdrObject* SdrObject::GetConnectedNode(bool /*bTail1*/) const
 }
 
 
-
 void extractLineContourFromPrimitive2DSequence(
     const drawinglayer::primitive2d::Primitive2DContainer& rxSequence,
     basegfx::B2DPolygonVector& rExtractedHairlines,
@@ -2399,7 +2372,6 @@ void extractLineContourFromPrimitive2DSequence(
         rExtractedLineFills = aExtractor.getExtractedLineFills();
     }
 }
-
 
 
 SdrObject* SdrObject::ImpConvertToContourObj(SdrObject* pRet, bool bForceLineDash)
@@ -2566,19 +2538,10 @@ SdrObject* SdrObject::ImpConvertToContourObj(SdrObject* pRet, bool bForceLineDas
 }
 
 
-
-
-
-
 void SdrObject::SetMarkProtect(bool bProt)
 {
     bMarkProt = bProt;
 }
-
-
-
-
-
 
 
 void SdrObject::SetEmptyPresObj(bool bEpt)
@@ -2591,8 +2554,6 @@ void SdrObject::SetNotVisibleAsMaster(bool bFlg)
 {
     bNotVisibleAsMaster=bFlg;
 }
-
-
 
 
 // convert this path object to contour object, even when it is a group
@@ -2635,7 +2596,6 @@ SdrObject* SdrObject::ConvertToContourObj(SdrObject* pRet, bool bForceLineDash) 
 }
 
 
-
 SdrObject* SdrObject::ConvertToPolyObj(bool bBezier, bool bLineToArea) const
 {
     SdrObject* pRet = DoConvertToPolyObj(bBezier, true);
@@ -2657,12 +2617,10 @@ SdrObject* SdrObject::ConvertToPolyObj(bool bBezier, bool bLineToArea) const
 }
 
 
-
 SdrObject* SdrObject::DoConvertToPolyObj(bool /*bBezier*/, bool /*bAddText*/) const
 {
     return nullptr;
 }
-
 
 
 void SdrObject::SetInserted(bool bIns)
@@ -2730,7 +2688,6 @@ void SdrObject::SetVisible(bool bVisible)
         }
     }
 }
-
 
 
 sal_uInt16 SdrObject::GetUserDataCount() const
@@ -2848,7 +2805,7 @@ void SdrObject::SendUserCall(SdrUserCallType eUserCall, const Rectangle& rBoundR
     {
     case SDRUSERCALL_RESIZE:
         notifyShapePropertyChange( svx::eShapeSize );
-        // fall through - RESIZE might also imply a change of the position
+        SAL_FALLTHROUGH; // RESIZE might also imply a change of the position
     case SDRUSERCALL_MOVEONLY:
         notifyShapePropertyChange( svx::eShapePosition );
         break;
@@ -2939,7 +2896,7 @@ css::uno::Reference< css::uno::XInterface > SdrObject::getUnoShape()
                 if( pDrawPage )
                 {
                     // create one
-                    xShape = pDrawPage->_CreateShape( this );
+                    xShape = pDrawPage->CreateShape( this );
                     impl_setUnoShape( xShape );
                 }
             }
@@ -2976,7 +2933,6 @@ void SdrObject::notifyShapePropertyChange( const svx::ShapeProperty _eProperty )
     if ( pSvxShape )
         return pSvxShape->getShapePropertyChangeNotifier().notifyPropertyChange( _eProperty );
 }
-
 
 
 // transformation interface for StarOfficeAPI. This implements support for

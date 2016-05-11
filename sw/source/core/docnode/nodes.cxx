@@ -197,7 +197,6 @@ void SwNodes::ChgNode( SwNodeIndex& rDelPos, sal_uLong nSz,
             bSavePersData = bRestPersData = true;
 
         OUString sNumRule;
-        SwNodeIndex aInsPos( rInsPos );
         for( sal_uLong n = 0; n < nSz; n++ )
         {
             SwNode* pNd = &rDelPos.GetNode();
@@ -241,7 +240,7 @@ void SwNodes::ChgNode( SwNodeIndex& rDelPos, sal_uLong nSz,
 
             RemoveNode( rDelPos.GetIndex(), 1, false ); // move indices
             SwContentNode * pCNd = pNd->GetContentNode();
-            rNds.InsertNode( pNd, aInsPos );
+            rNds.InsertNode( pNd, rInsPos );
 
             if( pCNd )
             {
@@ -404,7 +403,7 @@ void SwNodes::ChgNode( SwNodeIndex& rDelPos, sal_uLong nSz,
  * @param bNewFrames
  * @return
  */
-bool SwNodes::_MoveNodes( const SwNodeRange& aRange, SwNodes & rNodes,
+bool SwNodes::MoveNodes( const SwNodeRange& aRange, SwNodes & rNodes,
                     const SwNodeIndex& aIndex, bool bNewFrames )
 {
     SwNode * pAktNode;
@@ -699,7 +698,7 @@ bool SwNodes::_MoveNodes( const SwNodeRange& aRange, SwNodes & rNodes,
                 --aIdx;
                 break;
             }
-            // no break !!
+            SAL_FALLTHROUGH;
         case ND_TABLENODE:
         case ND_STARTNODE:
             {
@@ -1648,7 +1647,7 @@ void SwNodes::MoveRange( SwPaM & rPam, SwPosition & rPos, SwNodes& rNodes )
         // move the nodes into the NodesArary
         const sal_uLong nSttDiff = aSttIdx.GetIndex() - pStt->nNode.GetIndex();
         SwNodeRange aRg( aSttIdx, aEndIdx );
-        _MoveNodes( aRg, rNodes, rPos.nNode );
+        MoveNodes( aRg, rNodes, rPos.nNode );
 
         // if in the same node array, all indices are now at new positions (so correct them)
         if( &rNodes == this )
@@ -1676,8 +1675,8 @@ void SwNodes::MoveRange( SwPaM & rPam, SwPosition & rPos, SwNodes& rNodes )
                 rNodes.IsDocNodes() ? SwFormatFieldHintWhich::INSERTED : SwFormatFieldHintWhich::REMOVED ) );
 }
 
-///@see SwNodes::_MoveNodes (TODO: seems to be C&P programming here)
-void SwNodes::_CopyNodes( const SwNodeRange& rRange,
+///@see SwNodes::MoveNodes (TODO: seems to be C&P programming here)
+void SwNodes::CopyNodes( const SwNodeRange& rRange,
             const SwNodeIndex& rIndex, bool bNewFrames, bool bTableInsDummyNode ) const
 {
     SwDoc* pDoc = rIndex.GetNode().GetDoc();
@@ -1765,7 +1764,7 @@ void SwNodes::_CopyNodes( const SwNodeRange& rRange,
                         new SwPlaceholderNode(aInsPos);
 
                     SwStartNode* pSttNd = aRg.aStart.GetNode().GetStartNode();
-                    _CopyNodes( SwNodeRange( *pSttNd, + 1,
+                    CopyNodes( SwNodeRange( *pSttNd, + 1,
                                             *pSttNd->EndOfSectionNode() ),
                                 aInsPos, bNewFrames );
 
@@ -1884,7 +1883,7 @@ void SwNodes::_CopyNodes( const SwNodeRange& rRange,
     }
 }
 
-void SwNodes::_DelDummyNodes( const SwNodeRange& rRg )
+void SwNodes::DelDummyNodes( const SwNodeRange& rRg )
 {
     SwNodeIndex aIdx( rRg.aStart );
     while( aIdx.GetIndex() < rRg.aEnd.GetIndex() )
@@ -1906,12 +1905,11 @@ SwStartNode* SwNodes::MakeEmptySection( const SwNodeIndex& rIdx,
 
 SwStartNode* SwNodes::MakeTextSection( const SwNodeIndex & rWhere,
                                         SwStartNodeType eSttNdTyp,
-                                        SwTextFormatColl *pColl,
-                                        SwAttrSet* pAutoAttr )
+                                        SwTextFormatColl *pColl )
 {
     SwStartNode* pSttNd = new SwStartNode( rWhere, ND_STARTNODE, eSttNdTyp );
     new SwEndNode( rWhere, *pSttNd );
-    MakeTextNode( SwNodeIndex( rWhere, - 1 ), pColl, pAutoAttr );
+    MakeTextNode( SwNodeIndex( rWhere, - 1 ), pColl );
     return pSttNd;
 }
 

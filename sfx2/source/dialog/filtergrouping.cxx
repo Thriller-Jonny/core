@@ -119,8 +119,6 @@ namespace sfx2
     */
 
 
-
-
     typedef StringPair                          FilterDescriptor;   // a single filter or a filter class (display name and filter mask)
     typedef ::std::list< FilterDescriptor >     FilterGroup;        // a list of single filter entries
     typedef ::std::list< FilterGroup >          GroupedFilterList;  // a list of all filters, already grouped
@@ -147,7 +145,6 @@ namespace sfx2
 
 
 // = reading of configuration data
-
 
 
     void lcl_ReadFilterClass( const OConfigurationNode& _rClassesNode, const OUString& _rLogicalClassName,
@@ -337,7 +334,6 @@ namespace sfx2
 // = grouping and classifying
 
 
-
     // a struct which adds helps remembering a reference to a class entry
     struct ReferToFilterEntry : public ::std::unary_function< FilterName, void >
     {
@@ -520,7 +516,7 @@ namespace sfx2
             FillClassGroup( rGlobalFilters, _rGlobalClassesRef )
         );
             // now we have:
-            // in rGlobalFilters: a list of FilterDescriptor's, where each's discriptor's display name is set to the name of a class
+            // in rGlobalFilters: a list of FilterDescriptor's, where each's descriptor's display name is set to the name of a class
             // in aGlobalClassesRef: a mapping from logical filter names to positions within rGlobalFilters
             //  this way, if we encounter an arbitrary filter, we can easily (and efficient) check if it belongs to a global class
             //  and modify the descriptor for this class accordingly
@@ -611,7 +607,7 @@ namespace sfx2
         OUString sFilterWildcard;
         OUString sFilterName;
         // loop through all the filters
-        for ( const SfxFilter* pFilter = _rFilterMatcher.First(); pFilter; pFilter = _rFilterMatcher.Next() )
+        for ( std::shared_ptr<const SfxFilter> pFilter = _rFilterMatcher.First(); pFilter; pFilter = _rFilterMatcher.Next() )
         {
             sFilterName = pFilter->GetFilterName();
             sFilterWildcard = pFilter->GetWildcard().getGlob();
@@ -625,8 +621,6 @@ namespace sfx2
             if ( aServiceName != aCurrentServiceName )
             {   // we reached a new group
 
-                OUString sDocServName = aServiceName;
-
                 // look for the place in _rAllFilters where this ne group belongs - this is determined
                 // by the order of classes in aGlobalClassNames
                 GroupedFilterList::iterator aGroupPos = _rAllFilters.begin();
@@ -637,7 +631,7 @@ namespace sfx2
                 StringArray::iterator aGlobalIter = aGlobalClassNames.begin();
                 while   (   ( aGroupPos != _rAllFilters.end() )
                         &&  ( aGlobalIter != aGlobalClassNames.end() )
-                        &&  ( *aGlobalIter != sDocServName )
+                        &&  ( *aGlobalIter != aServiceName )
                         )
                 {
                     ++aGlobalIter;
@@ -672,7 +666,7 @@ namespace sfx2
             );
 
 
-            // add the filter to it's group
+            // add the filter to its group
 
             // for this, check if the filter is part of a local filter
             FilterGroupEntryReferrer::iterator aBelongsToLocal = aLocalClassesRef.find( sFilterName );
@@ -759,7 +753,6 @@ namespace sfx2
 // = handling for the "all files" entry
 
 
-
     bool lcl_hasAllFilesFilter( TSortedFilterList& _rFilterMatcher, OUString& /* [out] */ _rAllFilterName )
     {
         bool        bHasAll = false;
@@ -767,7 +760,7 @@ namespace sfx2
 
 
         // check if there's already a filter <ALL>
-        for ( const SfxFilter* pFilter = _rFilterMatcher.First(); pFilter && !bHasAll; pFilter = _rFilterMatcher.Next() )
+        for ( std::shared_ptr<const SfxFilter> pFilter = _rFilterMatcher.First(); pFilter && !bHasAll; pFilter = _rFilterMatcher.Next() )
         {
             if ( pFilter->GetUIName() == _rAllFilterName )
                 bHasAll = true;
@@ -794,7 +787,6 @@ namespace sfx2
 
 
 // = filling an XFilterManager
-
 
 
     struct AppendFilterGroup : public ::std::unary_function< FilterGroup, void >
@@ -875,21 +867,21 @@ namespace sfx2
     }
 
 
-    const SfxFilter* TSortedFilterList::First()
+    std::shared_ptr<const SfxFilter> TSortedFilterList::First()
     {
         m_nIterator = 0;
         return impl_getFilter(m_nIterator);
     }
 
 
-    const SfxFilter* TSortedFilterList::Next()
+    std::shared_ptr<const SfxFilter> TSortedFilterList::Next()
     {
         ++m_nIterator;
         return impl_getFilter(m_nIterator);
     }
 
 
-    const SfxFilter* TSortedFilterList::impl_getFilter(sal_Int32 nIndex)
+    std::shared_ptr<const SfxFilter> TSortedFilterList::impl_getFilter(sal_Int32 nIndex)
     {
         if (nIndex<0 || nIndex>=(sal_Int32)m_lFilters.size())
             return nullptr;
@@ -914,7 +906,7 @@ namespace sfx2
 
         // retrieve the default filter for this application module.
         // It must be set as first of the generated filter list.
-        const SfxFilter* pDefaultFilter = SfxFilterContainer::GetDefaultFilter_Impl(_rFactory);
+        std::shared_ptr<const SfxFilter> pDefaultFilter = SfxFilterContainer::GetDefaultFilter_Impl(_rFactory);
         // Only use one extension (#i32434#)
         // (and always the first if there are more than one)
         sExtension = pDefaultFilter->GetWildcard().getGlob().getToken(0, ';');
@@ -930,7 +922,7 @@ namespace sfx2
             SAL_WARN( "sfx.dialog", "Could not append DefaultFilter" << sUIName );
         }
 
-        for ( const SfxFilter* pFilter = _rFilterMatcher.First(); pFilter; pFilter = _rFilterMatcher.Next() )
+        for ( std::shared_ptr<const SfxFilter> pFilter = _rFilterMatcher.First(); pFilter; pFilter = _rFilterMatcher.Next() )
         {
             if (pFilter->GetName() == pDefaultFilter->GetName())
                 continue;
@@ -981,7 +973,7 @@ namespace sfx2
         Reference< XFilterGroupManager >    xFilterGroupManager( _rxFilterManager, UNO_QUERY );
         OUString                     sTypeName;
 
-        for ( const SfxFilter* pFilter = _rFilterMatcher.First(); pFilter; pFilter = _rFilterMatcher.Next() )
+        for ( std::shared_ptr<const SfxFilter> pFilter = _rFilterMatcher.First(); pFilter; pFilter = _rFilterMatcher.Next() )
         {
             sTypeName   = pFilter->GetTypeName();
             sUIName     = pFilter->GetUIName();
@@ -1185,7 +1177,6 @@ namespace sfx2
 
 
 }   // namespace sfx2
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

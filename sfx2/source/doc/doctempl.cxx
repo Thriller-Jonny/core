@@ -98,12 +98,10 @@ using ::std::vector;
 using ::std::advance;
 
 
-
 #define TITLE                   "Title"
 #define TARGET_URL              "TargetURL"
 
 #define COMMAND_TRANSFER        "transfer"
-
 
 
 class RegionData_Impl;
@@ -147,7 +145,6 @@ public:
 using namespace ::DocTempl;
 
 
-
 class RegionData_Impl
 {
     const SfxDocTemplate_Impl*  mpParent;
@@ -188,7 +185,6 @@ public:
 };
 
 typedef vector< RegionData_Impl* > RegionList_Impl;
-
 
 
 class SfxDocTemplate_Impl : public SvRefBase
@@ -235,11 +231,10 @@ public:
 
     bool            GetTitleFromURL( const OUString& rURL, OUString& aTitle );
     bool            InsertRegion( RegionData_Impl *pData, size_t nPos = size_t(-1) );
-    OUString            GetRootURL() const { return maRootURL; }
+    const OUString& GetRootURL() const { return maRootURL; }
 
-    uno::Reference< XDocumentTemplates >     getDocTemplates() { return mxTemplates; }
+    const uno::Reference< XDocumentTemplates >& getDocTemplates() { return mxTemplates; }
 };
-
 
 
 class DocTemplLocker_Impl
@@ -258,21 +253,12 @@ public:
     }
 };
 
-
-
-#ifndef SFX_DECL_DOCTEMPLATES_DEFINED
-#define SFX_DECL_DOCTEMPLATES_DEFINED
-typedef tools::SvRef<SfxDocTemplate_Impl> SfxDocTemplate_ImplRef;
-#endif
-
 SfxDocTemplate_Impl *gpTemplateData = nullptr;
-
 
 
 static bool getTextProperty_Impl( Content& rContent,
                                       const OUString& rPropName,
                                       OUString& rPropValue );
-
 
 
 OUString SfxDocumentTemplates::GetFullRegionName
@@ -310,8 +296,7 @@ OUString SfxDocumentTemplates::GetFullRegionName
 }
 
 
-
-const OUString& SfxDocumentTemplates::GetRegionName
+OUString SfxDocumentTemplates::GetRegionName
 (
     sal_uInt16 nIdx                 // vcl::Region Index
 )   const
@@ -326,7 +311,7 @@ const OUString& SfxDocumentTemplates::GetRegionName
 
 */
 {
-    static OUString maTmpString;
+    OUString aTmpString;
 
     DocTemplLocker_Impl aLocker( *pImp );
 
@@ -335,16 +320,11 @@ const OUString& SfxDocumentTemplates::GetRegionName
         RegionData_Impl *pData = pImp->GetRegion( nIdx );
 
         if ( pData )
-            maTmpString = pData->GetTitle();
-        else
-            maTmpString.clear();
+            aTmpString = pData->GetTitle();
     }
-    else
-        maTmpString.clear();
 
-    return maTmpString;
+    return aTmpString;
 }
-
 
 
 sal_uInt16 SfxDocumentTemplates::GetRegionCount() const
@@ -367,7 +347,6 @@ sal_uInt16 SfxDocumentTemplates::GetRegionCount() const
 
     return (sal_uInt16) nCount;
 }
-
 
 
 sal_uInt16 SfxDocumentTemplates::GetCount
@@ -400,8 +379,7 @@ sal_uInt16 SfxDocumentTemplates::GetCount
 }
 
 
-
-const OUString& SfxDocumentTemplates::GetName
+OUString SfxDocumentTemplates::GetName
 (
     sal_uInt16 nRegion,     //  vcl::Region Index, in which the entry lies
     sal_uInt16 nIdx         //  Index of the entry
@@ -419,7 +397,7 @@ const OUString& SfxDocumentTemplates::GetName
 {
     DocTemplLocker_Impl aLocker( *pImp );
 
-    static OUString maTmpString;
+    OUString aTmpString;
 
     if ( pImp->Construct() )
     {
@@ -430,16 +408,11 @@ const OUString& SfxDocumentTemplates::GetName
             pEntry = pRegion->GetEntry( nIdx );
 
         if ( pEntry )
-            maTmpString = pEntry->GetTitle();
-        else
-            maTmpString.clear();
+            aTmpString = pEntry->GetTitle();
     }
-    else
-        maTmpString.clear();
 
-    return maTmpString;
+    return aTmpString;
 }
-
 
 
 OUString SfxDocumentTemplates::GetPath
@@ -475,7 +448,6 @@ OUString SfxDocumentTemplates::GetPath
 }
 
 
-
 OUString SfxDocumentTemplates::GetTemplateTargetURLFromComponent( const OUString& aGroupName,
                                                                          const OUString& aTitle )
 {
@@ -484,11 +456,11 @@ OUString SfxDocumentTemplates::GetTemplateTargetURLFromComponent( const OUString
     INetURLObject aTemplateObj( pImp->GetRootURL() );
 
     aTemplateObj.insertName( aGroupName, false,
-                        INetURLObject::LAST_SEGMENT, true,
+                        INetURLObject::LAST_SEGMENT,
                         INetURLObject::ENCODE_ALL );
 
     aTemplateObj.insertName( aTitle, false,
-                        INetURLObject::LAST_SEGMENT, true,
+                        INetURLObject::LAST_SEGMENT,
                         INetURLObject::ENCODE_ALL );
 
 
@@ -504,7 +476,6 @@ OUString SfxDocumentTemplates::GetTemplateTargetURLFromComponent( const OUString
 
     return aResult;
 }
-
 
 
 /** Convert a resource string - a template name - to its localised pair if it exists.
@@ -529,7 +500,6 @@ OUString SfxDocumentTemplates::ConvertResourceString (
     }
     return rString;
 }
-
 
 
 bool SfxDocumentTemplates::CopyOrMove
@@ -637,7 +607,6 @@ bool SfxDocumentTemplates::CopyOrMove
 }
 
 
-
 bool SfxDocumentTemplates::Move
 (
     sal_uInt16 nTargetRegion,       //  Target vcl::Region Index
@@ -665,7 +634,6 @@ bool SfxDocumentTemplates::Move
     return CopyOrMove( nTargetRegion, nTargetIdx,
                        nSourceRegion, nSourceIdx, true );
 }
-
 
 
 bool SfxDocumentTemplates::Copy
@@ -696,7 +664,6 @@ bool SfxDocumentTemplates::Copy
     return CopyOrMove( nTargetRegion, nTargetIdx,
                        nSourceRegion, nSourceIdx, false );
 }
-
 
 
 bool SfxDocumentTemplates::CopyTo
@@ -751,7 +718,7 @@ bool SfxDocumentTemplates::CopyTo
         aTarget = Content( aParentURL, aCmdEnv, comphelper::getProcessComponentContext() );
 
         TransferInfo aTransferInfo;
-        aTransferInfo.MoveData = sal_False;
+        aTransferInfo.MoveData = false;
         aTransferInfo.SourceURL = pSource->GetTargetURL();
         aTransferInfo.NewTitle = aTitle;
         aTransferInfo.NameClash = NameClash::OVERWRITE;
@@ -768,7 +735,6 @@ bool SfxDocumentTemplates::CopyTo
 
     return true;
 }
-
 
 
 bool SfxDocumentTemplates::CopyFrom
@@ -820,11 +786,11 @@ bool SfxDocumentTemplates::CopyFrom
     }
     else
     {
-        uno::Reference< XDesktop2 > xDesktop = Desktop::create( ::comphelper::getProcessComponentContext() );;
+        uno::Reference< XDesktop2 > xDesktop = Desktop::create( ::comphelper::getProcessComponentContext() );
 
         Sequence< PropertyValue > aArgs( 1 );
         aArgs[0].Name = "Hidden";
-        aArgs[0].Value <<= sal_True;
+        aArgs[0].Value <<= true;
 
         INetURLObject   aTemplURL( rName );
         uno::Reference< XDocumentPropertiesSupplier > xDocPropsSupplier;
@@ -874,7 +840,7 @@ bool SfxDocumentTemplates::CopyFrom
     {
         INetURLObject aTemplObj( pTargetRgn->GetHierarchyURL() );
         aTemplObj.insertName( aTitle, false,
-                              INetURLObject::LAST_SEGMENT, true,
+                              INetURLObject::LAST_SEGMENT,
                               INetURLObject::ENCODE_ALL );
         OUString aTemplURL = aTemplObj.GetMainURL( INetURLObject::NO_DECODE );
 
@@ -912,7 +878,6 @@ bool SfxDocumentTemplates::CopyFrom
 
     return false;
 }
-
 
 
 bool SfxDocumentTemplates::Delete
@@ -976,7 +941,6 @@ bool SfxDocumentTemplates::Delete
 
     return bRet;
 }
-
 
 
 bool SfxDocumentTemplates::InsertDir
@@ -1098,7 +1062,6 @@ bool SfxDocumentTemplates::SetName( const OUString& rName, sal_uInt16 nRegion, s
 }
 
 
-
 bool SfxDocumentTemplates::GetFull
 (
     const OUString &rRegion,      // vcl::Region Name
@@ -1152,7 +1115,6 @@ bool SfxDocumentTemplates::GetFull
 
     return ( pEntry != nullptr );
 }
-
 
 
 bool SfxDocumentTemplates::GetLogicNames
@@ -1222,7 +1184,6 @@ bool SfxDocumentTemplates::GetLogicNames
 }
 
 
-
 SfxDocumentTemplates::SfxDocumentTemplates()
 
 /*  [Description]
@@ -1237,7 +1198,6 @@ SfxDocumentTemplates::SfxDocumentTemplates()
 }
 
 
-
 SfxDocumentTemplates::~SfxDocumentTemplates()
 
 /*  [Description]
@@ -1250,11 +1210,9 @@ SfxDocumentTemplates::~SfxDocumentTemplates()
     pImp = nullptr;
 }
 
-void SfxDocumentTemplates::Update( bool _bSmart )
+void SfxDocumentTemplates::Update( )
 {
-    if  (   !_bSmart                                                // don't be smart
-        ||  ::svt::TemplateFolderCache( true ).needsUpdate()    // update is really necessary
-        )
+    if ( ::svt::TemplateFolderCache( true ).needsUpdate() )   // update is really necessary
     {
         if ( pImp->Construct() )
             pImp->Rescan();
@@ -1291,7 +1249,7 @@ const OUString& DocTempl_EntryData_Impl::GetHierarchyURL()
         INetURLObject aTemplateObj( GetParent()->GetHierarchyURL() );
 
         aTemplateObj.insertName( GetTitle(), false,
-                     INetURLObject::LAST_SEGMENT, true,
+                     INetURLObject::LAST_SEGMENT,
                      INetURLObject::ENCODE_ALL );
 
         maOwnURL = aTemplateObj.GetMainURL( INetURLObject::NO_DECODE );
@@ -1335,8 +1293,8 @@ RegionData_Impl::RegionData_Impl( const SfxDocTemplate_Impl* pParent,
 
 RegionData_Impl::~RegionData_Impl()
 {
-    for ( size_t i = 0, n = maEntries.size(); i < n; ++i )
-        delete maEntries[ i ];
+    for (DocTempl_EntryData_Impl* p : maEntries)
+        delete p;
     maEntries.clear();
 }
 
@@ -1408,7 +1366,7 @@ void RegionData_Impl::AddEntry( const OUString& rTitle,
 {
     INetURLObject aLinkObj( GetHierarchyURL() );
     aLinkObj.insertName( rTitle, false,
-                      INetURLObject::LAST_SEGMENT, true,
+                      INetURLObject::LAST_SEGMENT,
                       INetURLObject::ENCODE_ALL );
     OUString aLinkURL = aLinkObj.GetMainURL( INetURLObject::NO_DECODE );
 
@@ -1448,7 +1406,7 @@ const OUString& RegionData_Impl::GetHierarchyURL()
         INetURLObject aRegionObj( GetParent()->GetRootURL() );
 
         aRegionObj.insertName( GetTitle(), false,
-                     INetURLObject::LAST_SEGMENT, true,
+                     INetURLObject::LAST_SEGMENT,
                      INetURLObject::ENCODE_ALL );
 
         maOwnURL = aRegionObj.GetMainURL( INetURLObject::NO_DECODE );
@@ -1499,7 +1457,6 @@ int RegionData_Impl::Compare( RegionData_Impl* pCompare ) const
 }
 
 
-
 SfxDocTemplate_Impl::SfxDocTemplate_Impl()
 : mbConstructed( false )
 , mnLockCounter( 0 )
@@ -1541,9 +1498,8 @@ RegionData_Impl* SfxDocTemplate_Impl::GetRegion( size_t nIndex ) const
 RegionData_Impl* SfxDocTemplate_Impl::GetRegion( const OUString& rName )
     const
 {
-    for ( size_t i = 0, n = maRegions.size(); i < n; ++i )
+    for (RegionData_Impl* pData : maRegions)
     {
-        RegionData_Impl* pData = maRegions[ i ];
         if( pData->GetTitle() == rName )
             return pData;
     }
@@ -1588,7 +1544,7 @@ void SfxDocTemplate_Impl::AddRegion( const OUString& rTitle,
         ResultSetInclude eInclude = INCLUDE_DOCUMENTS_ONLY;
         Sequence< NumberedSortingInfo >     aSortingInfo(1);
         aSortingInfo.getArray()->ColumnIndex = 1;
-        aSortingInfo.getArray()->Ascending = sal_True;
+        aSortingInfo.getArray()->Ascending = true;
         xResultSet = rContent.createSortedCursor( aProps, aSortingInfo, m_rCompareFactory, eInclude );
     }
     catch ( Exception& ) {}
@@ -1623,7 +1579,7 @@ void SfxDocTemplate_Impl::CreateFromHierarchy( Content &rTemplRoot )
         ResultSetInclude eInclude = INCLUDE_FOLDERS_ONLY;
         Sequence< NumberedSortingInfo >     aSortingInfo(1);
         aSortingInfo.getArray()->ColumnIndex = 1;
-        aSortingInfo.getArray()->Ascending = sal_True;
+        aSortingInfo.getArray()->Ascending = true;
         xResultSet = rTemplRoot.createSortedCursor( aProps, aSortingInfo, m_rCompareFactory, eInclude );
     }
     catch ( Exception& ) {}
@@ -1709,8 +1665,8 @@ bool SfxDocTemplate_Impl::InsertRegion( RegionData_Impl *pNew, size_t nPos )
     ::osl::MutexGuard   aGuard( maMutex );
 
     // return false (not inserted) if the entry already exists
-    for ( size_t i = 0, n = maRegions.size(); i < n; ++i )
-        if ( maRegions[ i ]->Compare( pNew ) == 0 )
+    for (const RegionData_Impl* pRegion : maRegions)
+        if ( pRegion->Compare( pNew ) == 0 )
             return false;
 
     size_t newPos = nPos;
@@ -1799,15 +1755,14 @@ bool SfxDocTemplate_Impl::GetTitleFromURL( const OUString& rURL,
 }
 
 
-
 void SfxDocTemplate_Impl::Clear()
 {
     ::osl::MutexGuard   aGuard( maMutex );
     if ( mnLockCounter )
         return;
 
-    for ( size_t i = 0, n = maRegions.size(); i < n; ++i )
-        delete maRegions[ i ];
+    for (RegionData_Impl* pRegion : maRegions)
+        delete pRegion;
     maRegions.clear();
 }
 

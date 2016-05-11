@@ -27,7 +27,7 @@
 #include "rtl/ustring.hxx"
 #include "osl/file.hxx"
 
-#ifdef WNT
+#ifdef _WIN32
 #   include <windows.h>
 #endif
 
@@ -153,8 +153,8 @@ bool Options::checkCommandFile (std::vector< std::string > & rArgs, char const *
               }
               break;
           }
+          SAL_FALLTHROUGH;
         default:
-          // quoted white-space fall through
           buffer.push_back(sal::static_int_cast<char>(c));
           break;
         }
@@ -191,7 +191,7 @@ bool Options::setOption(char const * option, std::string const & rArg)
   return result;
 }
 
-#ifdef WNT
+#ifdef _WIN32
 /* Helper functiopn to convert windows paths including spaces, brackets etc. into
    a windows short Url. The ucpp preprocessor has problems with such paths and returns
    with error.
@@ -270,7 +270,7 @@ bool Options::initOptions(std::vector< std::string > & rArgs) throw(IllegalArgum
             if (!buffer.isEmpty())
               buffer.append(' ');
 //          buffer.append("-I\"");
-#ifdef WNT
+#ifdef _WIN32
             OString incpath = convertIncPathtoShortWindowsPath(param.getToken(0, ';', k));
 #else
             OString incpath = param.getToken(0, ';', k);

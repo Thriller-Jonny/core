@@ -21,15 +21,13 @@
 #define INCLUDED_SW_SOURCE_CORE_INC_DOCUMENTSTATEMANAGER_HXX
 
 #include <IDocumentState.hxx>
-#include <boost/noncopyable.hpp>
 
 class SwDoc;
 
 
 namespace sw {
 
-class DocumentStateManager : public IDocumentState,
-                             public ::boost::noncopyable
+class DocumentStateManager : public IDocumentState
 {
 
 public:
@@ -43,9 +41,13 @@ public:
     bool IsNewDoc() const override;
     void SetNewDoc(bool b) override;
     void SetUpdateExpFieldStat(bool b) override;
-    void SetLoaded(bool b) override;
+    void SetLoaded() override;
 
 private:
+
+    DocumentStateManager(DocumentStateManager const&) = delete;
+    DocumentStateManager& operator=(DocumentStateManager const&) = delete;
+
     SwDoc& m_rDoc;
 
     bool mbModified      ;    //< TRUE: document has changed.

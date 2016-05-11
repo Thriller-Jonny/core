@@ -362,15 +362,14 @@ void FileDialogHelper_Impl::SaveLastUsedFilter()
         SaveLastUsedFilter( *pConfigId );
 }
 
-const SfxFilter* FileDialogHelper_Impl::getCurentSfxFilter()
+std::shared_ptr<const SfxFilter> FileDialogHelper_Impl::getCurentSfxFilter()
 {
     OUString aFilterName = getCurrentFilterUIName();
 
-    const SfxFilter* pFilter = nullptr;
     if ( mpMatcher && !aFilterName.isEmpty() )
-        pFilter = mpMatcher->GetFilter4UIName( aFilterName, m_nMustFlags, m_nDontFlags );
+        return mpMatcher->GetFilter4UIName( aFilterName, m_nMustFlags, m_nDontFlags );
 
-    return pFilter;
+    return nullptr;
 }
 
 bool FileDialogHelper_Impl::updateExtendedControl( sal_Int16 _nExtendedControlId, bool _bEnable )
@@ -393,7 +392,7 @@ bool FileDialogHelper_Impl::updateExtendedControl( sal_Int16 _nExtendedControlId
     return bIsEnabled;
 }
 
-bool FileDialogHelper_Impl::CheckFilterOptionsCapability( const SfxFilter* _pFilter )
+bool FileDialogHelper_Impl::CheckFilterOptionsCapability( const std::shared_ptr<const SfxFilter>& _pFilter )
 {
     bool bResult = false;
 
@@ -512,7 +511,7 @@ void FileDialogHelper_Impl::updateSelectionBox()
 
     if ( bSelectionBoxFound )
     {
-        const SfxFilter* pFilter = getCurentSfxFilter();
+        std::shared_ptr<const SfxFilter> pFilter = getCurentSfxFilter();
         mbSelectionFltrEnabled = updateExtendedControl(
             ExtendedFilePickerElementIds::CHECKBOX_SELECTION,
             ( mbSelectionEnabled && pFilter && ( pFilter->GetFilterFlags() & SfxFilterFlags::SUPPORTSSELECTION ) ) );
@@ -528,7 +527,7 @@ void FileDialogHelper_Impl::enablePasswordBox( bool bInit )
 
     bool bWasEnabled = mbIsPwdEnabled;
 
-    const SfxFilter* pCurrentFilter = getCurentSfxFilter();
+    std::shared_ptr<const SfxFilter> pCurrentFilter = getCurentSfxFilter();
     mbIsPwdEnabled = updateExtendedControl(
         ExtendedFilePickerElementIds::CHECKBOX_PASSWORD,
         pCurrentFilter && ( pCurrentFilter->GetFilterFlags() & SfxFilterFlags::ENCRYPTION )
@@ -541,14 +540,14 @@ void FileDialogHelper_Impl::enablePasswordBox( bool bInit )
         {
             uno::Reference< XFilePickerControlAccess > xCtrlAccess( mxFileDlg, UNO_QUERY );
             if( mbPwdCheckBoxState )
-                xCtrlAccess->setValue( ExtendedFilePickerElementIds::CHECKBOX_PASSWORD, 0, makeAny( sal_True ) );
+                xCtrlAccess->setValue( ExtendedFilePickerElementIds::CHECKBOX_PASSWORD, 0, makeAny( true ) );
         }
     }
     else if( !bWasEnabled && mbIsPwdEnabled )
     {
         uno::Reference< XFilePickerControlAccess > xCtrlAccess( mxFileDlg, UNO_QUERY );
         if( mbPwdCheckBoxState )
-            xCtrlAccess->setValue( ExtendedFilePickerElementIds::CHECKBOX_PASSWORD, 0, makeAny( sal_True ) );
+            xCtrlAccess->setValue( ExtendedFilePickerElementIds::CHECKBOX_PASSWORD, 0, makeAny( true ) );
     }
     else if( bWasEnabled && !mbIsPwdEnabled )
     {
@@ -557,7 +556,7 @@ void FileDialogHelper_Impl::enablePasswordBox( bool bInit )
         Any aValue = xCtrlAccess->getValue( ExtendedFilePickerElementIds::CHECKBOX_PASSWORD, 0 );
         bool bPassWord = false;
         mbPwdCheckBoxState = ( aValue >>= bPassWord ) && bPassWord;
-        xCtrlAccess->setValue( ExtendedFilePickerElementIds::CHECKBOX_PASSWORD, 0, makeAny( sal_False ) );
+        xCtrlAccess->setValue( ExtendedFilePickerElementIds::CHECKBOX_PASSWORD, 0, makeAny( false ) );
     }
 }
 
@@ -788,7 +787,7 @@ ErrCode FileDialogHelper_Impl::getGraphic( Graphic& rGraphic ) const
 
     // rhbz#1079672 do not return maGraphic, it need not be the selected file
 
-    OUString aPath;;
+    OUString aPath;
     Sequence<OUString> aPathSeq = mxFileDlg->getFiles();
 
     if (aPathSeq.getLength() == 1)
@@ -1039,11 +1038,9 @@ FileDialogHelper_Impl::FileDialogHelper_Impl(
                                     makeAny( nTemplateDescription )
                                 );
 
-            OUString sStandardDirTemp = sStandardDir;
-
             aInitArguments[1] <<= NamedValue(
                                     OUString( "StandardDir"  ),
-                                    makeAny( sStandardDirTemp )
+                                    makeAny( sStandardDir )
                                 );
 
             aInitArguments[2] <<= NamedValue(
@@ -1072,7 +1069,7 @@ FileDialogHelper_Impl::FileDialogHelper_Impl(
 
     // set multiselection mode
     if ( nFlags & SFXWB_MULTISELECTION )
-        mxFileDlg->setMultiSelectionMode( sal_True );
+        mxFileDlg->setMultiSelectionMode( true );
 
     if (mbAddGraphicFilter) // generate graphic filter only on demand
     {
@@ -1085,7 +1082,7 @@ FileDialogHelper_Impl::FileDialogHelper_Impl(
         mxFileDlg->setTitle( SfxResId( STR_SFX_EXPLORERFILE_EXPORT ).toString() );
         try {
                 css::uno::Reference < XFilePickerControlAccess > xCtrlAccess( mxFileDlg, UNO_QUERY_THROW );
-                xCtrlAccess->enableControl( ExtendedFilePickerElementIds::LISTBOX_FILTER_SELECTOR, sal_True );
+                xCtrlAccess->enableControl( ExtendedFilePickerElementIds::LISTBOX_FILTER_SELECTOR, true );
         }
         catch( const Exception & ) { }
     }
@@ -1180,7 +1177,7 @@ void FileDialogHelper_Impl::preExecute()
 
     implInitializeFileName( );
 
-#if !(defined(MACOSX) && defined(MACOSX)) && !defined(WNT)
+#if !(defined(MACOSX) && defined(MACOSX)) && !defined(_WIN32)
     // allow for dialog implementations which need to be executed before they return valid values for
     // current filter and such
 
@@ -1252,7 +1249,7 @@ sal_Int16 FileDialogHelper_Impl::implDoExecute()
     {
         try
         {
-#ifdef WNT
+#ifdef _WIN32
             if ( mbSystemPicker )
             {
                 SolarMutexReleaser aSolarMutex;
@@ -1305,7 +1302,7 @@ void lcl_saveLastURLs(std::vector<OUString>& rpURLList,
         lLastURLs.push_back(*i);
 }
 
-void FileDialogHelper_Impl::implGetAndCacheFiles(const uno::Reference< XInterface >& xPicker, std::vector<OUString>& rpURLList, const SfxFilter* pFilter)
+void FileDialogHelper_Impl::implGetAndCacheFiles(const uno::Reference< XInterface >& xPicker, std::vector<OUString>& rpURLList, const std::shared_ptr<const SfxFilter>& pFilter)
 {
     rpURLList.clear();
 
@@ -1471,7 +1468,7 @@ ErrCode FileDialogHelper_Impl::execute( std::vector<OUString>& rpURLList,
         // set the filter
         getRealFilter( rFilter );
 
-        const SfxFilter* pCurrentFilter = getCurentSfxFilter();
+        std::shared_ptr<const SfxFilter> pCurrentFilter = getCurentSfxFilter();
 
         // fill the rpURLList
         implGetAndCacheFiles( mxFileDlg, rpURLList, pCurrentFilter );
@@ -1553,7 +1550,7 @@ void FileDialogHelper_Impl::getRealFilter( OUString& _rFilter ) const
 
     if ( !_rFilter.isEmpty() && mpMatcher )
     {
-        const SfxFilter* pFilter =
+        std::shared_ptr<const SfxFilter> pFilter =
             mpMatcher->GetFilter4UIName( _rFilter, m_nMustFlags, m_nDontFlags );
         _rFilter = pFilter ? pFilter->GetFilterName() : OUString("");
     }
@@ -1579,7 +1576,7 @@ void FileDialogHelper_Impl::verifyPath()
         return;
     }
     url.insertName(
-        maFileName, false, INetURLObject::LAST_SEGMENT, true,
+        maFileName, false, INetURLObject::LAST_SEGMENT,
         INetURLObject::ENCODE_ALL);
     OUString sysPathU;
     osl::FileBase::RC e = osl::FileBase::getSystemPathFromFileURL(
@@ -1664,7 +1661,7 @@ void FileDialogHelper_Impl::setFilter( const OUString& rFilter )
 
     if ( !rFilter.isEmpty() && mpMatcher )
     {
-        const SfxFilter* pFilter = mpMatcher->GetFilter4FilterName(
+        std::shared_ptr<const SfxFilter> pFilter = mpMatcher->GetFilter4FilterName(
                                         rFilter, m_nMustFlags, m_nDontFlags );
         if ( pFilter )
             maCurFilter = pFilter->GetUIName();
@@ -1815,7 +1812,7 @@ void FileDialogHelper_Impl::addGraphicFilter()
         }
     }
 
-#if defined(WNT)
+#if defined(_WIN32)
     if ( aExtensions.getLength() > 240 )
         aExtensions = FILEDIALOG_FILTER_ALL;
 #endif
@@ -1894,7 +1891,7 @@ static void SetToken( OUString& rOrigStr, sal_Int32 nToken, sal_Unicode cTok, co
             }
         }
 
-        ++pStr,
+        ++pStr;
         ++i;
     }
 
@@ -1998,7 +1995,7 @@ void FileDialogHelper_Impl::saveConfig()
 
 namespace
 {
-    static OUString getInitPath( const OUString& _rFallback, const sal_Int32 _nFallbackToken )
+    OUString getInitPath( const OUString& _rFallback, const sal_Int32 _nFallbackToken )
     {
         SfxApplication *pSfxApp = SfxGetpApp();
         OUString sPath = pSfxApp->GetLastDir_Impl();
@@ -2131,7 +2128,7 @@ void FileDialogHelper_Impl::loadConfig()
 
 void FileDialogHelper_Impl::setDefaultValues()
 {
-    // when no filter is set, we set the curentFilter to <all>
+    // when no filter is set, we set the currentFilter to <all>
     if ( maCurFilter.isEmpty() && !maSelectFilter.isEmpty() )
     {
         uno::Reference< XFilterManager > xFltMgr( mxFileDlg, UNO_QUERY );
@@ -2538,7 +2535,7 @@ void FileDialogHelper::SetCurrentFilter( const OUString& rFilter )
     mpImp->setFilter( sFilter );
 }
 
-uno::Reference < XFilePicker2 > FileDialogHelper::GetFilePicker() const
+const uno::Reference < XFilePicker2 >& FileDialogHelper::GetFilePicker() const
 {
     return mpImp->mxFileDlg;
 }
@@ -2600,15 +2597,15 @@ ErrCode FileOpenDialog_Impl( sal_Int16 nDialogType,
     return nRet;
 }
 
-ErrCode RequestPassword(const SfxFilter* pCurrentFilter, OUString& aURL, SfxItemSet* pSet)
+ErrCode RequestPassword(const std::shared_ptr<const SfxFilter>& pCurrentFilter, OUString& aURL, SfxItemSet* pSet)
 {
     uno::Reference < task::XInteractionHandler2 > xInteractionHandler = task::InteractionHandler::createWithParent( ::comphelper::getProcessComponentContext(), nullptr );
     // TODO: need a save way to distinguish MS filters from other filters
     // for now MS-filters are the only alien filters that support encryption
     bool bMSType = !pCurrentFilter->IsOwnFormat();
     ::comphelper::DocPasswordRequestType eType = bMSType ?
-        ::comphelper::DocPasswordRequestType_MS :
-        ::comphelper::DocPasswordRequestType_STANDARD;
+        ::comphelper::DocPasswordRequestType::MS :
+        ::comphelper::DocPasswordRequestType::Standard;
 
     ::rtl::Reference< ::comphelper::DocPasswordRequest > pPasswordRequest( new ::comphelper::DocPasswordRequest( eType, css::task::PasswordRequestMode_PASSWORD_CREATE, aURL, bool( pCurrentFilter->GetFilterFlags() & SfxFilterFlags::PASSWORDTOMODIFY ) ) );
 

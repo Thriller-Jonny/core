@@ -64,7 +64,6 @@
 #include "bibview.hxx"
 #include "bibprop.hrc"
 #include "toolbar.hxx"
-#include "toolbar.hrc"
 #include "bibconfig.hxx"
 #include "bibbeam.hxx"
 #include "general.hxx"
@@ -235,7 +234,6 @@ class MappingDialog_Impl : public ModalDialog
     bool        bModified;
 
 
-
     DECL_LINK_TYPED(OkHdl, Button*, void);
     DECL_LINK_TYPED(ListBoxSelectHdl, ListBox&, void);
 
@@ -367,12 +365,12 @@ MappingDialog_Impl::MappingDialog_Impl(vcl::Window* pParent, BibDataManager* pMa
     const Mapping* pMapping = pConfig->GetMapping(aDesc);
     if(pMapping)
     {
-        for(sal_uInt16 nEntry = 0; nEntry < COLUMN_COUNT; nEntry++)
+        for(const auto & aColumnPair : pMapping->aColumnPairs)
         {
-            sal_uInt16 nListBoxIndex = lcl_FindLogicalName( pConfig, pMapping->aColumnPairs[nEntry].sLogicalColumnName);
+            sal_uInt16 nListBoxIndex = lcl_FindLogicalName( pConfig, aColumnPair.sLogicalColumnName);
             if(nListBoxIndex < COLUMN_COUNT)
             {
-                aListBoxes[nListBoxIndex]->SelectEntry(pMapping->aColumnPairs[nEntry].sRealColumnName);
+                aListBoxes[nListBoxIndex]->SelectEntry(aColumnPair.sRealColumnName);
             }
         }
     }
@@ -427,10 +425,10 @@ IMPL_LINK_TYPED(MappingDialog_Impl, ListBoxSelectHdl, ListBox&, rListBox, void)
     const sal_Int32 nEntryPos = rListBox.GetSelectEntryPos();
     if(0 < nEntryPos)
     {
-        for(sal_uInt16 i = 0; i < COLUMN_COUNT; i++)
+        for(VclPtr<ListBox> & aListBoxe : aListBoxes)
         {
-            if(&rListBox != aListBoxes[i] && aListBoxes[i]->GetSelectEntryPos() == nEntryPos)
-                aListBoxes[i]->SelectEntryPos(0);
+            if(&rListBox != aListBoxe && aListBoxe->GetSelectEntryPos() == nEntryPos)
+                aListBoxe->SelectEntryPos(0);
         }
     }
     SetModified();
@@ -690,7 +688,7 @@ void BibDataManager::InsertFields(const Reference< XFormComponent > & _rxGrid)
             const OUString sType("Type");
             sal_Int32 nType = 0;
             bool bIsFormatted           = false;
-            sal_Bool bFormattedIsNumeric    = sal_True;
+            bool bFormattedIsNumeric    = true;
             xField->getPropertyValue(sType) >>= nType;
             switch(nType)
             {
@@ -710,8 +708,8 @@ void BibDataManager::InsertFields(const Reference< XFormComponent > & _rxGrid)
                 case DataType::LONGVARCHAR:
                 case DataType::CHAR:
                 case DataType::CLOB:
-                    bFormattedIsNumeric = sal_False;
-                    // _NO_ break !
+                    bFormattedIsNumeric = false;
+                    SAL_FALLTHROUGH;
                 default:
                     sCurrentModelType = "FormattedField";
                     bIsFormatted = true;
@@ -723,7 +721,7 @@ void BibDataManager::InsertFields(const Reference< XFormComponent > & _rxGrid)
             {
                 OUString sFormatKey("FormatKey");
                 xCurrentCol->setPropertyValue(sFormatKey, xField->getPropertyValue(sFormatKey));
-                Any aFormatted(&bFormattedIsNumeric, cppu::UnoType<bool>::get());
+                Any aFormatted(bFormattedIsNumeric);
                 xCurrentCol->setPropertyValue("TreatAsNumber", aFormatted);
             }
             Any aColName = makeAny( *pFields );
@@ -834,7 +832,7 @@ Reference< XForm >  BibDataManager::createDatabaseForm(BibDBDescriptor& rDesc)
                 OUString aString("SELECT * FROM ");
 
                 OUString sCatalog, sSchema, sName;
-                ::dbtools::qualifiedNameComponents( xMetaData, aActiveDataTable, sCatalog, sSchema, sName, ::dbtools::eInDataManipulation );
+                ::dbtools::qualifiedNameComponents( xMetaData, aActiveDataTable, sCatalog, sSchema, sName, ::dbtools::EComposeRule::InDataManipulation );
                 aString += ::dbtools::composeTableNameForSelect( xConnection, sCatalog, sSchema, sName );
 
                 m_xParser->setElementaryQuery(aString);
@@ -886,7 +884,7 @@ void BibDataManager::setFilter(const OUString& rQuery)
         OUString aQuery = m_xParser->getFilter();
         Reference< XPropertySet >  xFormProps( m_xForm, UNO_QUERY_THROW );
         xFormProps->setPropertyValue( "Filter", makeAny( aQuery ) );
-        xFormProps->setPropertyValue( "ApplyFilter", makeAny( sal_True ) );
+        xFormProps->setPropertyValue( "ApplyFilter", makeAny( true ) );
         reload();
     }
     catch (const Exception&)
@@ -1013,7 +1011,7 @@ void BibDataManager::setActiveDataSource(const OUString& rURL)
             aQuoteChar = xMetaData->getIdentifierQuoteString();
 
             OUString sCatalog, sSchema, sName;
-            ::dbtools::qualifiedNameComponents( xMetaData, aActiveDataTable, sCatalog, sSchema, sName, ::dbtools::eInDataManipulation );
+            ::dbtools::qualifiedNameComponents( xMetaData, aActiveDataTable, sCatalog, sSchema, sName, ::dbtools::EComposeRule::InDataManipulation );
             aString += ::dbtools::composeTableNameForSelect( xConnection, sCatalog, sSchema, sName );
 
             m_xParser->setElementaryQuery(aString);
@@ -1024,8 +1022,8 @@ void BibDataManager::setActiveDataSource(const OUString& rURL)
         }
         FeatureStateEvent aEvent;
         util::URL aURL;
-        aEvent.IsEnabled  = sal_True;
-        aEvent.Requery    = sal_False;
+        aEvent.IsEnabled  = true;
+        aEvent.Requery    = false;
         aEvent.FeatureDescriptor = getActiveDataTable();
 
         aEvent.State = makeAny( getDataSources() );
@@ -1083,7 +1081,7 @@ void BibDataManager::setActiveDataTable(const OUString& rTable)
                 OUString aString("SELECT * FROM ");
 
                 OUString sCatalog, sSchema, sName;
-                ::dbtools::qualifiedNameComponents( xMetaData, aActiveDataTable, sCatalog, sSchema, sName, ::dbtools::eInDataManipulation );
+                ::dbtools::qualifiedNameComponents( xMetaData, aActiveDataTable, sCatalog, sSchema, sName, ::dbtools::EComposeRule::InDataManipulation );
                 aString += ::dbtools::composeTableNameForSelect( xConnection, sCatalog, sSchema, sName );
 
                 m_xParser->setElementaryQuery(aString);
@@ -1371,9 +1369,7 @@ Reference< awt::XControlModel > BibDataManager::loadControlModel(
 
                 xPropSet->setPropertyValue("StringItemList", aAny);
 
-                sal_Bool bTrue = sal_True;
-                aAny.setValue( &bTrue, cppu::UnoType<bool>::get() );
-                xPropSet->setPropertyValue( "Dropdown", aAny );
+                xPropSet->setPropertyValue( "Dropdown", Any(true) );
             }
 
             Reference< XFormComponent >  aFormComp(xModel,UNO_QUERY );
@@ -1563,8 +1559,8 @@ OUString BibDataManager::CreateDBChangeDialog(vcl::Window* pParent)
 
 void BibDataManager::DispatchDBChangeDialog()
 {
-    if(pToolbar)
-        pToolbar->SendDispatch(TBC_BT_CHANGESOURCE, Sequence< PropertyValue >());
+    if (pToolbar)
+        pToolbar->SendDispatch(pToolbar->GetChangeSourceId(), Sequence< PropertyValue >());
 }
 
 const OUString& BibDataManager::GetIdentifierMapping()
@@ -1580,11 +1576,11 @@ const OUString& BibDataManager::GetIdentifierMapping()
         sIdentifierMapping = pConfig->GetDefColumnName(IDENTIFIER_POS);
         if(pMapping)
         {
-            for(sal_uInt16 nEntry = 0; nEntry < COLUMN_COUNT; nEntry++)
+            for(const auto & aColumnPair : pMapping->aColumnPairs)
             {
-                if(pMapping->aColumnPairs[nEntry].sLogicalColumnName == sIdentifierMapping)
+                if(aColumnPair.sLogicalColumnName == sIdentifierMapping)
                 {
-                    sIdentifierMapping = pMapping->aColumnPairs[nEntry].sRealColumnName;
+                    sIdentifierMapping = aColumnPair.sRealColumnName;
                     break;
                 }
             }

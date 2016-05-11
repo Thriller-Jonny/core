@@ -23,7 +23,6 @@
 
 #include <sal/config.h>
 
-#include <boost/noncopyable.hpp>
 #include <svtools/AccessibleBrowseBoxObjType.hxx>
 #include <rtl/ustring.hxx>
 #include <tools/gen.hxx>
@@ -46,7 +45,6 @@
 #include <comphelper/uno3.hxx>
 
 
-
 namespace vcl { class Window; }
 
 namespace utl {
@@ -57,11 +55,7 @@ namespace svt {
     class IAccessibleTableProvider;
 }
 
-
-
 namespace accessibility {
-
-
 
 typedef ::cppu::WeakAggComponentImplHelper5<
             css::accessibility::XAccessibleContext,
@@ -73,7 +67,7 @@ typedef ::cppu::WeakAggComponentImplHelper5<
 
 /** The BrowseBox accessible objects inherit from this base class. It
     implements basic functionality for various Accessibility interfaces and
-    the event broadcaster and contains the ::osl::Mutex. */
+    the event broadcaster and contains the osl::Mutex. */
 class AccessibleBrowseBoxBase :
     public ::comphelper::OBaseMutex,
     public AccessibleBrowseBoxImplHelper
@@ -84,30 +78,31 @@ public:
         implSetName() (in Ctor) or later via
         setAccessibleName() and setAccessibleDescription() (these methods
         notify the listeners about the change).
-        @param rxParent  XAccessible interface of the parent object.
-        @param rBrowseBox  The BrowseBox control.
-        @param eNameText  The constant for the name text.
-        @param eDescrText  The constant for the description text. */
+
+        @param rxParent         XAccessible interface of the parent object.
+        @param rBrowseBox       The BrowseBox control.
+        @param _xFocusWindow    The window that gets all the focus events.
+        @param eObjType         Object type */
     AccessibleBrowseBoxBase(
-        const css::uno::Reference<
-                  css::accessibility::XAccessible >& rxParent,
-        ::svt::IAccessibleTableProvider&                  rBrowseBox,
+        const css::uno::Reference< css::accessibility::XAccessible >& rxParent,
+        ::svt::IAccessibleTableProvider& rBrowseBox,
         const css::uno::Reference< css::awt::XWindow >& _xFocusWindow,
-        ::svt::AccessibleBrowseBoxObjType  eObjType );
+        ::svt::AccessibleBrowseBoxObjType eObjType );
 
     /** Constructor sets specified name and description.
-        @param rxParent  XAccessible interface of the parent object.
-        @param rBrowseBox  The BrowseBox control.
-        @param rName  The name of this object.
-        @param rDescription  The description text of this object. */
+        @param rxParent         XAccessible interface of the parent object.
+        @param rBrowseBox       The BrowseBox control.
+        @param _xFocusWindow    The window that gets all the focus events.
+        @param eObjType         Object type
+        @param rName            The name of this object.
+        @param rDescription     The description text of this object. */
     AccessibleBrowseBoxBase(
-        const css::uno::Reference<
-                  css::accessibility::XAccessible >& rxParent,
-        ::svt::IAccessibleTableProvider&                  rBrowseBox,
+        const css::uno::Reference< css::accessibility::XAccessible >& rxParent,
+        ::svt::IAccessibleTableProvider& rBrowseBox,
         const css::uno::Reference< css::awt::XWindow >& _xFocusWindow,
-        ::svt::AccessibleBrowseBoxObjType  eObjType,
-        const OUString&      rName,
-        const OUString&      rDescription );
+        ::svt::AccessibleBrowseBoxObjType eObjType,
+        const OUString& rName,
+        const OUString& rDescription );
 
 protected:
     virtual ~AccessibleBrowseBoxBase();
@@ -116,7 +111,7 @@ protected:
     virtual void SAL_CALL disposing() override;
 
 public:
-    // XAccessibleContext -----------------------------------------------------
+    // XAccessibleContext
 
     /** @return  A reference to the parent accessible object. */
     virtual css::uno::Reference<css::accessibility::XAccessible > SAL_CALL getAccessibleParent()
@@ -166,10 +161,10 @@ public:
         Derived classes may overwrite getAccessibleIndexInParent to increase
         performance. */
 
-    // XAccessibleComponent ---------------------------------------------------
+    // XAccessibleComponent
 
     /** @return
-        <TRUE/>, if the point lies within the bounding box of this object. */
+        TRUE, if the point lies within the bounding box of this object. */
     virtual sal_Bool SAL_CALL containsPoint( const css::awt::Point& rPoint )
         throw ( css::uno::RuntimeException, std::exception ) override;
 
@@ -209,7 +204,7 @@ public:
     virtual css::uno::Reference< css::accessibility::XAccessible > SAL_CALL getAccessibleAtPoint( const css::awt::Point& rPoint )
         throw ( css::uno::RuntimeException, std::exception ) override;
 
-    // XAccessibleEventBroadcaster --------------------------------------------
+    // XAccessibleEventBroadcaster
 
     /** Adds a new event listener */
     virtual void SAL_CALL addAccessibleEventListener(
@@ -221,13 +216,13 @@ public:
             const css::uno::Reference< css::accessibility::XAccessibleEventListener>& rxListener )
         throw ( css::uno::RuntimeException, std::exception ) override;
 
-    // XTypeProvider ----------------------------------------------------------
+    // XTypeProvider
 
     /** @return  An unique implementation ID. */
     virtual css::uno::Sequence< sal_Int8 > SAL_CALL getImplementationId()
         throw ( css::uno::RuntimeException, std::exception ) override;
 
-    // XServiceInfo -----------------------------------------------------------
+    // XServiceInfo
 
     /** @return  Whether the specified service is supported by this class. */
     virtual sal_Bool SAL_CALL supportsService( const OUString& rServiceName )
@@ -240,7 +235,7 @@ public:
     /*  Derived classes have to implement:
         -   getImplementationName. */
 
-    // helper methods ---------------------------------------------------------
+    // helper methods
 
     /** @return  The BrowseBox object type. */
     inline ::svt::AccessibleBrowseBoxObjType getType() const;
@@ -255,17 +250,17 @@ public:
             sal_Int16 nEventId,
             const css::uno::Any& rNewValue,
             const css::uno::Any& rOldValue );
-    /** @return  <TRUE/>, if the object is not disposed or disposing. */
+    /** @return  TRUE, if the object is not disposed or disposing. */
     bool isAlive() const;
 
 protected:
-    // internal virtual methods -----------------------------------------------
+    // internal virtual methods
 
     /** Determines whether the BrowseBox control is really showing inside of
         its parent accessible window. Derived classes may implement different
         behaviour.
         @attention  This method requires locked mutex's and a living object.
-        @return  <TRUE/>, if the object is really showing. */
+        @return  TRUE, if the object is really showing. */
     bool implIsShowing();
 
     /** Derived classes return the bounding box relative to the parent window.
@@ -285,13 +280,13 @@ protected:
         @return  A filled AccessibleStateSetHelper. */
     virtual ::utl::AccessibleStateSetHelper* implCreateStateSetHelper();
 
-    // internal helper methods ------------------------------------------------
+    // internal helper methods
 
     /** @throws <type>DisposedException</type>  If the object is not alive. */
     void ensureIsAlive() const
         throw ( css::lang::DisposedException );
 
-    /** @return  The ::osl::Mutex member provided by the class OBaseMutex. */
+    /** @return  The osl::Mutex member provided by the class OBaseMutex. */
     inline ::osl::Mutex& getOslMutex();
 
     /** Changes the name of the object (flat assignment, no notify).
@@ -320,7 +315,7 @@ public:
     inline void             ensureIsAlive( const AccessControl& ) { ensureIsAlive(); }
 
 protected:
-    // members ----------------------------------------------------------------
+    // members
 
     /** The parent accessible object. */
     css::uno::Reference< css::accessibility::XAccessible > mxParent;
@@ -353,7 +348,6 @@ typedef ::cppu::ImplHelper1 <   css::accessibility::XAccessible
 class BrowseBoxAccessibleElement
             :public AccessibleBrowseBoxBase
             ,public BrowseBoxAccessibleElement_Base
-            ,private boost::noncopyable
 {
 protected:
     /** Constructor sets specified name and description. If the constant of a
@@ -362,35 +356,38 @@ protected:
         setAccessibleName() and setAccessibleDescription() (these methods
         notify the listeners about the change).
 
-        @param rxParent  XAccessible interface of the parent object.
-        @param rBrowseBox  The BrowseBox control.
-        @param eNameText  The constant for the name text.
-        @param eDescrText  The constant for the description text.
+        @param rxParent         XAccessible interface of the parent object.
+        @param rBrowseBox       The BrowseBox control.
+        @param _xFocusWindow    The window that gets all the focus events.
+        @param eObjType         Object type
     */
     BrowseBoxAccessibleElement(
-        const css::uno::Reference<
-                  css::accessibility::XAccessible >& rxParent,
-        ::svt::IAccessibleTableProvider&                  rBrowseBox,
+        const css::uno::Reference< css::accessibility::XAccessible >& rxParent,
+        ::svt::IAccessibleTableProvider& rBrowseBox,
         const css::uno::Reference< css::awt::XWindow >& _xFocusWindow,
-        ::svt::AccessibleBrowseBoxObjType  eObjType );
+        ::svt::AccessibleBrowseBoxObjType eObjType );
 
     /** Constructor sets specified name and description.
 
-        @param rxParent  XAccessible interface of the parent object.
-        @param rBrowseBox  The BrowseBox control.
-        @param rName  The name of this object.
-        @param rDescription  The description text of this object.
+        @param rxParent         XAccessible interface of the parent object.
+        @param rBrowseBox       The BrowseBox control.
+        @param _xFocusWindow    The window that gets all the focus events.
+        @param eObjType         Object type
+        @param rName            The name of this object.
+        @param rDescription     The description text of this object.
     */
     BrowseBoxAccessibleElement(
-        const css::uno::Reference<
-                  css::accessibility::XAccessible >& rxParent,
-        ::svt::IAccessibleTableProvider&                  rBrowseBox,
+        const css::uno::Reference< css::accessibility::XAccessible >& rxParent,
+        ::svt::IAccessibleTableProvider& rBrowseBox,
         const css::uno::Reference< css::awt::XWindow >& _xFocusWindow,
-        ::svt::AccessibleBrowseBoxObjType  eObjType,
-        const OUString&      rName,
-        const OUString&      rDescription );
+        ::svt::AccessibleBrowseBoxObjType eObjType,
+        const OUString& rName,
+        const OUString& rDescription );
 
 public:
+    // noncopyable
+    BrowseBoxAccessibleElement(const BrowseBoxAccessibleElement&) = delete;
+    const BrowseBoxAccessibleElement& operator=(const BrowseBoxAccessibleElement&) = delete;
     // XInterface
     DECLARE_XINTERFACE( )
     // XTypeProvider
@@ -400,7 +397,7 @@ protected:
     virtual ~BrowseBoxAccessibleElement();
 
 protected:
-    // XAccessible ------------------------------------------------------------
+    // XAccessible
 
     /** @return  The XAccessibleContext interface of this object. */
     virtual css::uno::Reference< css::accessibility::XAccessibleContext > SAL_CALL getAccessibleContext()
@@ -424,7 +421,7 @@ public:
     }
 };
 
-// inlines --------------------------------------------------------------------
+// inlines
 
 inline ::svt::AccessibleBrowseBoxObjType AccessibleBrowseBoxBase::getType() const
 {
@@ -443,7 +440,6 @@ inline void AccessibleBrowseBoxBase::implSetName(
 }
 
 } // namespace accessibility
-
 
 
 #endif

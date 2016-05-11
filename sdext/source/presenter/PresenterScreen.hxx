@@ -34,7 +34,6 @@
 #include <com/sun/star/presentation/XSlideShowController.hpp>
 #include <com/sun/star/presentation/XPresentation2.hpp>
 #include <rtl/ref.hxx>
-#include <boost/noncopyable.hpp>
 
 namespace sdext { namespace presenter {
 
@@ -55,11 +54,12 @@ namespace {
     object.
 */
 class PresenterScreenJob
-    : private ::boost::noncopyable,
-      private ::cppu::BaseMutex,
+    : private ::cppu::BaseMutex,
       public PresenterScreenJobInterfaceBase
 {
 public:
+    PresenterScreenJob(const PresenterScreenJob&) = delete;
+    PresenterScreenJob& operator=(const PresenterScreenJob&) = delete;
     static OUString getImplementationName_static();
     static css::uno::Sequence< OUString > getSupportedServiceNames_static();
     static css::uno::Reference<css::uno::XInterface> Create(
@@ -76,7 +76,7 @@ public:
             css::uno::RuntimeException, std::exception) override;
 
 private:
-    PresenterScreenJob (const css::uno::Reference<css::uno::XComponentContext>& rxContext);
+    explicit PresenterScreenJob (const css::uno::Reference<css::uno::XComponentContext>& rxContext);
     virtual ~PresenterScreenJob();
 
     css::uno::Reference<css::uno::XComponentContext> mxComponentContext;
@@ -94,8 +94,7 @@ private:
     the presenter screen.</p>
 */
 class PresenterScreen
-    : private ::boost::noncopyable,
-      private ::cppu::BaseMutex,
+    : private ::cppu::BaseMutex,
       public PresenterScreenInterfaceBase
 {
 public:
@@ -103,6 +102,8 @@ public:
         const css::uno::Reference<css::uno::XComponentContext>& rxContext,
         const css::uno::Reference<css::frame::XModel2>& rxModel);
     virtual ~PresenterScreen();
+    PresenterScreen(const PresenterScreen&) = delete;
+    PresenterScreen& operator=(const PresenterScreen&) = delete;
 
     virtual void SAL_CALL disposing() override;
 
@@ -134,7 +135,6 @@ private:
     css::uno::WeakReference<css::uno::XComponentContext> mxContextWeak;
     css::uno::WeakReference<css::presentation::XSlideShowController> mxSlideShowControllerWeak;
     ::rtl::Reference<PresenterController> mpPresenterController;
-    css::uno::Reference<css::drawing::framework::XResourceId> mxSlideShowViewId;
     css::uno::Reference<css::drawing::framework::XConfiguration> mxSavedConfiguration;
     ::rtl::Reference<PresenterPaneContainer> mpPaneContainer;
     sal_Int32 mnComponentIndex;

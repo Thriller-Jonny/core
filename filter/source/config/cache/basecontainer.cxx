@@ -28,43 +28,25 @@
 #include <comphelper/sequence.hxx>
 #include <cppuhelper/supportsservice.hxx>
 #include <osl/diagnose.h>
-#include <rtl/instance.hxx>
 
 #define LOAD_IMPLICIT
 
 namespace filter{
     namespace config{
 
-
-namespace
-{
-    typedef ::salhelper::SingletonRef< FilterCache > FilterCacheRefHold;
-    /** @short  hold at least one filter cache instance alive and
-                prevent the office from unloading this cache if no filter
-                is currently used.*/
-    struct thePerformanceOptimizer :
-        public rtl::Static<FilterCacheRefHold, thePerformanceOptimizer>
-    {
-    };
-}
-
 BaseContainer::BaseContainer()
     : BaseLock     (       )
-    , m_rCache     (       )
-    , m_pFlushCache(nullptr   )
+    , m_pFlushCache()
     , m_eType()
     , m_lListener  (m_aLock)
 {
-    m_rCache->load(FilterCache::E_CONTAINS_STANDARD);
-    thePerformanceOptimizer::get();
+    TheFilterCache::get().load(FilterCache::E_CONTAINS_STANDARD);
 }
-
 
 
 BaseContainer::~BaseContainer()
 {
 }
-
 
 
 void BaseContainer::init(const css::uno::Reference< css::uno::XComponentContext >&     rxContext              ,
@@ -81,7 +63,6 @@ void BaseContainer::init(const css::uno::Reference< css::uno::XComponentContext 
     m_xRefreshBroadcaster = css::document::FilterConfigRefresh::create(rxContext);
     // <- SAFE
 }
-
 
 
 void BaseContainer::impl_loadOnDemand()
@@ -114,11 +95,10 @@ void BaseContainer::impl_loadOnDemand()
             break;
     }
 
-    m_rCache->load(eRequiredState);
+    TheFilterCache::get().load(eRequiredState);
     // <- SAFE
 #endif
 }
-
 
 
 void BaseContainer::impl_initFlushMode()
@@ -127,7 +107,7 @@ void BaseContainer::impl_initFlushMode()
     // SAFE ->
     ::osl::ResettableMutexGuard aLock(m_aLock);
     if (!m_pFlushCache)
-        m_pFlushCache = m_rCache->clone();
+        m_pFlushCache = TheFilterCache::get().clone();
     if (!m_pFlushCache)
         throw css::uno::RuntimeException( "Can not create write copy of internal used cache on demand.",
                 static_cast< OWeakObject* >(this));
@@ -135,18 +115,16 @@ void BaseContainer::impl_initFlushMode()
 }
 
 
-
 FilterCache* BaseContainer::impl_getWorkingCache() const
 {
     // SAFE ->
     ::osl::ResettableMutexGuard aLock(m_aLock);
     if (m_pFlushCache)
-        return m_pFlushCache;
+        return m_pFlushCache.get();
     else
-        return &(*m_rCache);
+        return &TheFilterCache::get();
     // <- SAFE
 }
-
 
 
 OUString SAL_CALL BaseContainer::getImplementationName()
@@ -154,7 +132,6 @@ OUString SAL_CALL BaseContainer::getImplementationName()
 {
     return m_sImplementationName;
 }
-
 
 
 sal_Bool SAL_CALL BaseContainer::supportsService(const OUString& sServiceName)
@@ -168,7 +145,6 @@ css::uno::Sequence< OUString > SAL_CALL BaseContainer::getSupportedServiceNames(
 {
     return m_lServiceNames;
 }
-
 
 
 void SAL_CALL BaseContainer::insertByName(const OUString& sItem ,
@@ -211,7 +187,6 @@ void SAL_CALL BaseContainer::insertByName(const OUString& sItem ,
 }
 
 
-
 void SAL_CALL BaseContainer::removeByName(const OUString& sItem)
     throw (css::container::NoSuchElementException,
            css::lang::WrappedTargetException     ,
@@ -231,7 +206,6 @@ void SAL_CALL BaseContainer::removeByName(const OUString& sItem)
     aLock.clear();
     // <- SAFE ----------------------------------
 }
-
 
 
 void SAL_CALL BaseContainer::replaceByName(const OUString& sItem ,
@@ -274,7 +248,6 @@ void SAL_CALL BaseContainer::replaceByName(const OUString& sItem ,
 }
 
 
-
 css::uno::Any SAL_CALL BaseContainer::getByName(const OUString& sItem)
     throw (css::container::NoSuchElementException,
            css::lang::WrappedTargetException     ,
@@ -315,7 +288,6 @@ css::uno::Any SAL_CALL BaseContainer::getByName(const OUString& sItem)
 }
 
 
-
 css::uno::Sequence< OUString > SAL_CALL BaseContainer::getElementNames()
     throw (css::uno::RuntimeException, std::exception)
 {
@@ -342,7 +314,6 @@ css::uno::Sequence< OUString > SAL_CALL BaseContainer::getElementNames()
 
     return lNames;
 }
-
 
 
 sal_Bool SAL_CALL BaseContainer::hasByName(const OUString& sItem)
@@ -372,7 +343,6 @@ sal_Bool SAL_CALL BaseContainer::hasByName(const OUString& sItem)
 }
 
 
-
 css::uno::Type SAL_CALL BaseContainer::getElementType()
     throw (css::uno::RuntimeException, std::exception)
 {
@@ -380,7 +350,6 @@ css::uno::Type SAL_CALL BaseContainer::getElementType()
     // is fix! no internal call or member needed ...
     return cppu::UnoType<css::uno::Sequence< css::beans::PropertyValue >>::get();
 }
-
 
 
 sal_Bool SAL_CALL BaseContainer::hasElements()
@@ -410,7 +379,6 @@ sal_Bool SAL_CALL BaseContainer::hasElements()
 }
 
 
-
 css::uno::Reference< css::container::XEnumeration > SAL_CALL BaseContainer::createSubSetEnumerationByQuery(const OUString& /* sQuery */ )
     throw (css::uno::RuntimeException, std::exception)
 {
@@ -419,7 +387,6 @@ css::uno::Reference< css::container::XEnumeration > SAL_CALL BaseContainer::crea
     ::comphelper::OEnumerationByName* pEnum = new ::comphelper::OEnumerationByName(this, css::uno::Sequence< OUString >());
     return css::uno::Reference< css::container::XEnumeration >(static_cast< css::container::XEnumeration* >(pEnum), css::uno::UNO_QUERY);
 }
-
 
 
 css::uno::Reference< css::container::XEnumeration > SAL_CALL BaseContainer::createSubSetEnumerationByProperties(const css::uno::Sequence< css::beans::NamedValue >& lProperties)
@@ -469,7 +436,6 @@ css::uno::Reference< css::container::XEnumeration > SAL_CALL BaseContainer::crea
 }
 
 
-
 void SAL_CALL BaseContainer::flush()
     throw (css::uno::RuntimeException, std::exception)
 {
@@ -492,11 +458,11 @@ void SAL_CALL BaseContainer::flush()
                 If the global cache gets this information via listener,
                 we should remove this method!
         */
-        m_rCache->takeOver(*m_pFlushCache);
+        TheFilterCache::get().takeOver(*m_pFlushCache);
     }
     catch(const css::uno::Exception& ex)
     {
-        // Dont remove the clone. May be the outside
+        // Don't remove the clone. May be the outside
         // user wish to repair it now and calls flush()
         // later again ...
 
@@ -505,8 +471,7 @@ void SAL_CALL BaseContainer::flush()
                 css::uno::makeAny(ex));
     }
 
-    delete m_pFlushCache;
-    m_pFlushCache = nullptr;
+    m_pFlushCache.reset();
 
     css::uno::Reference< css::util::XRefreshable > xRefreshBroadcaster = m_xRefreshBroadcaster;
 
@@ -531,7 +496,7 @@ void SAL_CALL BaseContainer::flush()
             try
             {
                 // ... this pointer can be interesting to find out, where will be called as listener
-                // Dont optimize it to a direct iterator cast :-)
+                // Don't optimize it to a direct iterator cast :-)
                 css::util::XFlushListener* pListener = static_cast<css::util::XFlushListener*>(pIterator.next());
                 pListener->flushed(aSource);
             }
@@ -546,7 +511,6 @@ void SAL_CALL BaseContainer::flush()
 }
 
 
-
 void SAL_CALL BaseContainer::addFlushListener(const css::uno::Reference< css::util::XFlushListener >& xListener)
     throw (css::uno::RuntimeException, std::exception)
 {
@@ -554,7 +518,6 @@ void SAL_CALL BaseContainer::addFlushListener(const css::uno::Reference< css::ut
     // used helper lives if we live and is threadsafe by itself ...
     m_lListener.addInterface(cppu::UnoType<css::util::XFlushListener>::get(), xListener);
 }
-
 
 
 void SAL_CALL BaseContainer::removeFlushListener(const css::uno::Reference< css::util::XFlushListener >& xListener)

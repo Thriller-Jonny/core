@@ -18,8 +18,11 @@
  */
 
 #include <sal/config.h>
+#include <config_features.h>
+#include <config_version.h>
+#include <config_folders.h>
 
-#include "desktopdllapi.h"
+#include <desktop/dllapi.h>
 
 #include "app.hxx"
 #include "exithelper.h"
@@ -40,6 +43,16 @@
 #include <cppuhelper/bootstrap.hxx>
 #include <unotools/mediadescriptor.hxx>
 
+#if HAVE_FEATURE_BREAKPAD
+#include <fstream>
+#include <desktop/crashreport.hxx>
+
+#if defined( UNX ) && !defined MACOSX && !defined IOS && !defined ANDROID
+#include <client/linux/handler/exception_handler.h>
+#endif
+
+#endif
+
 
 #ifdef ANDROID
 #  include <jni.h>
@@ -50,9 +63,35 @@
 #  define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, LOGTAG, __VA_ARGS__))
 #endif
 
+#if HAVE_FEATURE_BREAKPAD
+
+#if defined( UNX ) && !defined MACOSX && !defined IOS && !defined ANDROID
+static bool dumpCallback(const google_breakpad::MinidumpDescriptor& descriptor, void* /*context*/, bool succeeded)
+{
+    std::string ini_path = CrashReporter::getIniFileName();
+    std::ofstream minidump_file(ini_path, std::ios_base::app);
+    minidump_file << "DumpFile=" << descriptor.path() << "\n";;
+    minidump_file.close();
+    SAL_WARN("desktop", "minidump generated: " << descriptor.path());
+    return succeeded;
+}
+#endif
+
+#endif
 extern "C" int DESKTOP_DLLPUBLIC soffice_main()
 {
-#if defined( UNX ) && !defined MACOSX && !defined IOS && !defined ANDROID && !defined(LIBO_HEADLESS)
+#if HAVE_FEATURE_BREAKPAD
+
+#if defined( UNX ) && !defined MACOSX && !defined IOS && !defined ANDROID
+    // TODO: we need a better location for this
+    google_breakpad::MinidumpDescriptor descriptor("/tmp");
+    google_breakpad::ExceptionHandler eh(descriptor, nullptr, dumpCallback, nullptr, true, -1);
+#else
+
+#endif
+#endif
+
+#if defined( UNX ) && !defined MACOSX && !defined IOS && !defined ANDROID && !defined(LIBO_HEADLESS) && HAVE_FEATURE_OPENGL
     /* Run test for OpenGL support in own process to avoid crash with broken
      * OpenGL drivers. Start process as early as possible.
      */
@@ -73,7 +112,7 @@ extern "C" int DESKTOP_DLLPUBLIC soffice_main()
     // handle --version and --help already here, otherwise they would be handled
     // after VCL initialization that might fail if $DISPLAY is not set
     const desktop::CommandLineArgs& rCmdLineArgs = desktop::Desktop::GetCommandLineArgs();
-    OUString aUnknown( rCmdLineArgs.GetUnknown() );
+    const OUString& aUnknown( rCmdLineArgs.GetUnknown() );
     if ( !aUnknown.isEmpty() )
     {
         desktop::Desktop::InitApplicationServiceManager();
@@ -102,33 +141,5 @@ extern "C" int DESKTOP_DLLPUBLIC soffice_main()
     }
 #endif
 }
-
-#if defined(ANDROID) || defined(IOS)
-
-extern "C" void PtylTestEncryptionAndExport(const char *pathname)
-{
-    OUString sUri(pathname, strlen(pathname), RTL_TEXTENCODING_UTF8);
-    sUri = "file://" + sUri;
-
-    css::uno::Reference<css::frame::XComponentLoader> loader(css::frame::Desktop::create(cppu::defaultBootstrap_InitialComponentContext()), css::uno::UNO_QUERY);
-    css::uno::Reference<css::lang::XComponent> component;
-    component.set(loader->loadComponentFromURL(sUri, "_default", 0, {}));
-
-    utl::MediaDescriptor media;
-    media[utl::MediaDescriptor::PROP_FILTERNAME()] <<= OUString("MS Word 2007 XML");
-    OUString password("myPassword");
-    css::uno::Sequence<css::beans::NamedValue> encryptionData { { "OOXPassword", css::uno::makeAny(password) } };
-    media[utl::MediaDescriptor::PROP_ENCRYPTIONDATA()] <<= encryptionData;
-
-    css::uno::Reference<css::frame::XModel> model(component, css::uno::UNO_QUERY);
-    css::uno::Reference<css::frame::XStorable2> storable2(model, css::uno::UNO_QUERY);
-    OUString saveAsUri(sUri + ".new.docx");
-    SAL_INFO("desktop.app", "Trying to store as " << saveAsUri);
-    OUString testPathName;
-    osl::File::getSystemPathFromFileURL(saveAsUri+".txt", testPathName);
-    storable2->storeToURL(saveAsUri, media.getAsConstPropertyValueList());
-}
-
-#endif
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -34,25 +34,13 @@ namespace dbmm
 {
 
     using ::com::sun::star::uno::Reference;
-    using ::com::sun::star::uno::XInterface;
-    using ::com::sun::star::uno::UNO_QUERY;
     using ::com::sun::star::uno::UNO_QUERY_THROW;
-    using ::com::sun::star::uno::UNO_SET_THROW;
     using ::com::sun::star::uno::Exception;
-    using ::com::sun::star::uno::RuntimeException;
-    using ::com::sun::star::uno::Any;
-    using ::com::sun::star::uno::makeAny;
-    using ::com::sun::star::uno::Sequence;
     using ::com::sun::star::frame::XModel;
 
     MacroMigrationPage::MacroMigrationPage(vcl::Window *pParent, const OString& rID, const OUString& rUIXMLDescription)
         : MacroMigrationPage_Base(pParent, rID, rUIXMLDescription)
     {
-    }
-
-    const MacroMigrationDialog& MacroMigrationPage::getDialog() const
-    {
-        return *dynamic_cast< const MacroMigrationDialog* >( GetParentDialog() );
     }
 
     MacroMigrationDialog& MacroMigrationPage::getDialog()

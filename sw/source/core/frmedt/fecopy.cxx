@@ -90,6 +90,7 @@ bool SwFEShell::Copy( SwDoc* pClpDoc, const OUString* pNewClpText )
 
     // delete content if ClpDocument contains content
     SwNodeIndex aSttIdx( pClpDoc->GetNodes().GetEndOfExtras(), 2 );
+    SwNodeIndex aEndNdIdx( *aSttIdx.GetNode().EndOfSectionNode() );
     SwTextNode* pTextNd = aSttIdx.GetNode().GetTextNode();
     if (!pTextNd || !pTextNd->GetText().isEmpty() ||
         aSttIdx.GetIndex()+1 != pClpDoc->GetNodes().GetEndOfContent().GetIndex() )
@@ -102,11 +103,19 @@ bool SwFEShell::Copy( SwDoc* pClpDoc, const OUString* pNewClpText )
     }
 
     // also delete surrounding FlyFrames if any
-    for( auto pFormat : *pClpDoc->GetSpzFrameFormats() )
+    for( const auto pFly : *pClpDoc->GetSpzFrameFormats() )
     {
-        SwFlyFrameFormat* pFly = static_cast<SwFlyFrameFormat*>(pFormat);
-        pClpDoc->getIDocumentLayoutAccess().DelLayoutFormat( pFly );
+        SwFormatAnchor const*const pAnchor = &pFly->GetAnchor();
+        SwPosition const*const pAPos = pAnchor->GetContentAnchor();
+        if (pAPos &&
+            ((FLY_AT_PARA == pAnchor->GetAnchorId()) ||
+             (FLY_AT_CHAR == pAnchor->GetAnchorId())) &&
+            aSttIdx <= pAPos->nNode && pAPos->nNode <= aEndNdIdx )
+        {
+            pClpDoc->getIDocumentLayoutAccess().DelLayoutFormat( pFly );
+        }
     }
+
     pClpDoc->GetDocumentFieldsManager().GCFieldTypes();        // delete the FieldTypes
 
     // if a string was passed, copy it to the clipboard-
@@ -216,7 +225,7 @@ bool SwFEShell::Copy( SwDoc* pClpDoc, const OUString* pNewClpText )
         bRet = true;
     }
     else
-        bRet = _CopySelToDoc( pClpDoc );     // copy the selections
+        bRet = CopySelToDoc( pClpDoc );     // copy the selections
 
     pClpDoc->getIDocumentRedlineAccess().SetRedlineMode_intern((RedlineMode_t)0 );
     pClpDoc->getIDocumentFieldsAccess().UnlockExpFields();
@@ -554,11 +563,11 @@ bool SwFEShell::Copy( SwFEShell* pDestShell, const Point& rSttPt,
                 {
                     //JP 12.05.98: should this be in SelectFlyFrame???
                     pDestShell->Imp()->GetDrawView()->UnmarkAll();
-                    pDestShell->SelectFlyFrame( *pFlyFrame, true );
+                    pDestShell->SelectFlyFrame( *pFlyFrame );
                 }
             }
 
-            if( this != pDestShell && !pDestShell->HasShFcs() )
+            if (this != pDestShell && !pDestShell->HasShellFocus())
                 pDestShell->Imp()->GetDrawView()->hideMarkHandles();
         }
     }
@@ -655,7 +664,7 @@ bool SwFEShell::Copy( SwFEShell* pDestShell, const Point& rSttPt,
             pDestShell->StartAllAction();
     }
     pDestShell->GetDoc()->getIDocumentFieldsAccess().UnlockExpFields();
-    pDestShell->GetDoc()->getIDocumentFieldsAccess().UpdateFields(nullptr, false);
+    pDestShell->GetDoc()->getIDocumentFieldsAccess().UpdateFields(false);
 
     pDestShell->EndAllAction();
     return bRet;
@@ -674,11 +683,10 @@ namespace {
     }
 }
 
-bool SwFEShell::Paste( SwDoc* pClpDoc, bool bIncludingPageFrames )
+bool SwFEShell::Paste( SwDoc* pClpDoc )
 {
     SET_CURR_SHELL( this );
     OSL_ENSURE( pClpDoc, "no clipboard document"  );
-    const sal_uInt16 nStartPageNumber = GetPhyPageNum();
     // then till end of the nodes array
     SwNodeIndex aIdx( pClpDoc->GetNodes().GetEndOfExtras(), 2 );
     SwPaM aCpyPam( aIdx ); //DocStart
@@ -753,7 +761,7 @@ bool SwFEShell::Paste( SwDoc* pClpDoc, bool bIncludingPageFrames )
                 {   // Now we have to look for insertion positions...
                     if( !nMove ) // Annotate the last given insert position
                         aStartPos = aInsertPos;
-                    SwCursor aCursor( aStartPos, nullptr, false);
+                    SwCursor aCursor( aStartPos, nullptr);
                     // Check if we find another insert position by moving
                     // down the last given position
                     if( aCursor.UpDown( false, ++nMove, nullptr, 0 ) )
@@ -990,7 +998,7 @@ bool SwFEShell::Paste( SwDoc* pClpDoc, bool bIncludingPageFrames )
                                 SwFlyFrame* pFlyFrame = static_cast<SwFlyFrameFormat*>(pNew)->
                                                         GetFrame( &aPt );
                                 if( pFlyFrame )
-                                    SelectFlyFrame( *pFlyFrame, true );
+                                    SelectFlyFrame( *pFlyFrame );
                                 // always pick the first FlyFrame only; the others
                                 // were copied to the clipboard via Fly in Fly
                                 break;
@@ -1043,8 +1051,6 @@ bool SwFEShell::Paste( SwDoc* pClpDoc, bool bIncludingPageFrames )
                 // ** Update SwDoc::Append, if you change the following code **
                 // **
 
-                // find out if the clipboard document starts with a table
-                bool bStartWithTable = nullptr != aCpyPam.Start()->nNode.GetNode().FindTableNode();
                 SwPosition aInsertPosition( rInsPos );
 
                 {
@@ -1077,28 +1083,6 @@ bool SwFEShell::Paste( SwDoc* pClpDoc, bool bIncludingPageFrames )
                 }
 
                 SaveTableBoxContent( &rInsPos );
-                if(bIncludingPageFrames && bStartWithTable)
-                {
-                    //remove the paragraph in front of the table
-                    SwPaM aPara(aInsertPosition);
-                    GetDoc()->getIDocumentContentOperations().DelFullPara(aPara);
-                }
-                //additionally copy page bound frames
-                if( bIncludingPageFrames && pClpDoc->GetSpzFrameFormats()->size() )
-                {
-                    // create a draw view if necessary
-                    if( !Imp()->GetDrawView() )
-                        MakeDrawView();
-
-                    for ( auto pCpyFormat : *pClpDoc->GetSpzFrameFormats() )
-                    {
-                        SwFormatAnchor aAnchor( pCpyFormat->GetAnchor() );
-                        if ( FLY_AT_PAGE != aAnchor.GetAnchorId() )
-                            continue;
-                        aAnchor.SetPageNum( aAnchor.GetPageNum() + nStartPageNumber - 1 );
-                        GetDoc()->getIDocumentLayoutAccess().CopyLayoutFormat( *pCpyFormat, aAnchor, true, true );
-                    }
-                }
             }
         }
     }
@@ -1118,7 +1102,7 @@ bool SwFEShell::Paste( SwDoc* pClpDoc, bool bIncludingPageFrames )
             StartAllAction();
     }
     GetDoc()->getIDocumentFieldsAccess().UnlockExpFields();
-    GetDoc()->getIDocumentFieldsAccess().UpdateFields(nullptr, false);
+    GetDoc()->getIDocumentFieldsAccess().UpdateFields(false);
     EndAllAction();
 
     return bRet;
@@ -1203,7 +1187,7 @@ bool SwFEShell::PastePages( SwFEShell& rToFill, sal_uInt16 nStartPage, sal_uInt1
         }
     }
     GetDoc()->getIDocumentFieldsAccess().UnlockExpFields();
-    GetDoc()->getIDocumentFieldsAccess().UpdateFields(nullptr, false);
+    GetDoc()->getIDocumentFieldsAccess().UpdateFields(false);
     Pop(false);
     EndAllAction();
 
@@ -1518,7 +1502,7 @@ void SwFEShell::Paste( SvStream& rStrm, SwPasteSdr nAction, const Point* pPt )
         // #i50824#
         // method <lcl_RemoveOleObjsFromSdrModel> replaced by <lcl_ConvertSdrOle2ObjsToSdrGrafObjs>
         lcl_ConvertSdrOle2ObjsToSdrGrafObjs( pModel );
-        pView->Paste(*pModel, aPos, nullptr, SdrInsertFlags::NONE, OUString(), OUString());
+        pView->Paste(*pModel, aPos, nullptr, SdrInsertFlags::NONE);
 
         const size_t nCnt = pView->GetMarkedObjectList().GetMarkCount();
         if( nCnt )

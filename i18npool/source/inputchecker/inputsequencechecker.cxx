@@ -43,8 +43,8 @@ InputSequenceCheckerImpl::InputSequenceCheckerImpl(const char *pServiceName)
 InputSequenceCheckerImpl::~InputSequenceCheckerImpl()
 {
     // Clear lookuptable
-    for (size_t l = 0; l < lookupTable.size(); l++)
-        delete lookupTable[l];
+    for (lookupTableItem* p : lookupTable)
+        delete p;
 
     lookupTable.clear();
 }
@@ -54,14 +54,14 @@ InputSequenceCheckerImpl::checkInputSequence(const OUString& Text, sal_Int32 nSt
         sal_Unicode inputChar, sal_Int16 inputCheckMode) throw(RuntimeException, std::exception)
 {
     if (inputCheckMode == InputSequenceCheckMode::PASSTHROUGH)
-        return sal_True;
+        return true;
 
     sal_Char* language = getLanguageByScripType(Text[nStartPos], inputChar);
 
     if (language)
         return getInputSequenceChecker(language)->checkInputSequence(Text, nStartPos, inputChar, inputCheckMode);
     else
-        return sal_True; // not a checkable languages.
+        return true; // not a checkable languages.
 }
 
 sal_Int32 SAL_CALL
@@ -111,8 +111,8 @@ InputSequenceCheckerImpl::getInputSequenceChecker(sal_Char* rLanguage) throw (Ru
         return cachedItem->xISC;
     }
     else {
-        for (size_t l = 0; l < lookupTable.size(); l++) {
-            cachedItem = lookupTable[l];
+        for (lookupTableItem* l : lookupTable) {
+            cachedItem = l;
             if (cachedItem->aLanguage == rLanguage)
                 return cachedItem->xISC;
         }

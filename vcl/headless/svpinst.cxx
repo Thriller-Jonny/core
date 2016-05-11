@@ -18,34 +18,33 @@
  */
 
 #include <unistd.h>
+#include <errno.h>
 #include <fcntl.h>
+#include <pthread.h>
 #include <sys/time.h>
 #include <sys/poll.h>
 
 #include <sal/types.h>
 
-#include <vcl/apptypes.hxx>
+#include <vcl/inputtypes.hxx>
 
-#include "headless/svpinst.hxx"
-#include "headless/svpframe.hxx"
-#include "headless/svpdummies.hxx"
-#include "headless/svpvd.hxx"
+#include <headless/svpinst.hxx>
+#include <headless/svpframe.hxx>
+#include <headless/svpdummies.hxx>
+#include <headless/svpvd.hxx>
 #ifdef IOS
-#include "quartz/salbmp.h"
-#include "quartz/salgdi.h"
-#include "quartz/salvd.h"
+#include <quartz/salbmp.h>
+#include <quartz/salgdi.h>
+#include <quartz/salvd.h>
 #endif
-#include "headless/svpbmp.hxx"
-#include "headless/svpgdi.hxx"
+#include <headless/svpbmp.hxx>
+#include <headless/svpgdi.hxx>
 
-#include <salframe.hxx>
-#include <svdata.hxx>
-#include <generic/gendata.hxx>
-#include <basebmp/scanlineformats.hxx>
+#include "salframe.hxx"
+#include "svdata.hxx"
+#include "unx/gendata.hxx"
 // FIXME: remove when we re-work the svp mainloop
-#include <unx/salunxtime.h>
-
-using namespace basebmp;
+#include "unx/salunxtime.h"
 
 bool SvpSalInstance::isFrameAlive( const SalFrame* pFrame ) const
 {
@@ -62,6 +61,19 @@ bool SvpSalInstance::isFrameAlive( const SalFrame* pFrame ) const
 
 SvpSalInstance* SvpSalInstance::s_pDefaultInstance = nullptr;
 
+#ifndef ANDROID
+
+static void atfork_child()
+{
+    if (SvpSalInstance::s_pDefaultInstance != nullptr)
+    {
+        SvpSalInstance::s_pDefaultInstance->CloseWakeupPipe(false);
+        SvpSalInstance::s_pDefaultInstance->CreateWakeupPipe(false);
+    }
+}
+
+#endif
+
 SvpSalInstance::SvpSalInstance( SalYieldMutex *pMutex ) :
     SalGenericInstance( pMutex )
 {
@@ -70,8 +82,52 @@ SvpSalInstance::SvpSalInstance( SalYieldMutex *pMutex ) :
     m_nTimeoutMS            = 0;
 
     m_pTimeoutFDS[0] = m_pTimeoutFDS[1] = -1;
-    if (pipe (m_pTimeoutFDS) != -1)
+    CreateWakeupPipe(true);
+    if( s_pDefaultInstance == nullptr )
+        s_pDefaultInstance = this;
+#ifndef ANDROID
+    pthread_atfork(nullptr, nullptr, atfork_child);
+#endif
+}
+
+SvpSalInstance::~SvpSalInstance()
+{
+    if( s_pDefaultInstance == this )
+        s_pDefaultInstance = nullptr;
+
+    CloseWakeupPipe(true);
+}
+
+void SvpSalInstance::CloseWakeupPipe(bool log)
+{
+    if (m_pTimeoutFDS[0] != -1)
     {
+        if (log)
+        {
+            SAL_INFO("vcl.headless", "CloseWakeupPipe: Closing inherited wakeup pipe: [" << m_pTimeoutFDS[0] << "," << m_pTimeoutFDS[1] << "]");
+        }
+        close (m_pTimeoutFDS[0]);
+        close (m_pTimeoutFDS[1]);
+        m_pTimeoutFDS[0] = m_pTimeoutFDS[1] = -1;
+    }
+}
+
+void SvpSalInstance::CreateWakeupPipe(bool log)
+{
+    if (pipe (m_pTimeoutFDS) == -1)
+    {
+        if (log)
+        {
+            SAL_WARN("vcl.headless", "Could not create wakeup pipe: " << strerror(errno));
+        }
+    }
+    else
+    {
+        if (log)
+        {
+            SAL_INFO("vcl.headless", "CreateWakeupPipe: Created wakeup pipe: [" << m_pTimeoutFDS[0] << "," << m_pTimeoutFDS[1] << "]");
+        }
+
         // initialize 'wakeup' pipe.
         int flags;
 
@@ -99,28 +155,13 @@ SvpSalInstance::SvpSalInstance( SalYieldMutex *pMutex ) :
             (void)fcntl(m_pTimeoutFDS[1], F_SETFL, flags);
         }
     }
-    m_aEventGuard = osl_createMutex();
-    if( s_pDefaultInstance == nullptr )
-        s_pDefaultInstance = this;
 }
 
-SvpSalInstance::~SvpSalInstance()
+void SvpSalInstance::PostEvent(const SalFrame* pFrame, ImplSVEvent* pData, SalEvent nEvent)
 {
-    if( s_pDefaultInstance == this )
-        s_pDefaultInstance = nullptr;
-
-    // close 'wakeup' pipe.
-    close (m_pTimeoutFDS[0]);
-    close (m_pTimeoutFDS[1]);
-    osl_destroyMutex( m_aEventGuard );
-}
-
-void SvpSalInstance::PostEvent(const SalFrame* pFrame, ImplSVEvent* pData, sal_uInt16 nEvent)
-{
-    if( osl_acquireMutex( m_aEventGuard ) )
     {
+        osl::MutexGuard g(m_aEventGuard);
         m_aUserEvents.push_back( SalUserEvent( pFrame, pData, nEvent ) );
-        osl_releaseMutex( m_aEventGuard );
     }
     Wakeup();
 }
@@ -129,10 +170,9 @@ void SvpSalInstance::PostEvent(const SalFrame* pFrame, ImplSVEvent* pData, sal_u
 bool SvpSalInstance::PostedEventsInQueue()
 {
     bool result = false;
-    if( osl_acquireMutex( m_aEventGuard ) )
     {
+        osl::MutexGuard g(m_aEventGuard);
         result = m_aUserEvents.size() > 0;
-        osl_releaseMutex( m_aEventGuard );
     }
     return result;
 }
@@ -142,23 +182,24 @@ void SvpSalInstance::deregisterFrame( SalFrame* pFrame )
 {
     m_aFrames.remove( pFrame );
 
-    if( osl_acquireMutex( m_aEventGuard ) )
+    osl::MutexGuard g(m_aEventGuard);
+    // cancel outstanding events for this frame
+    if( ! m_aUserEvents.empty() )
     {
-        // cancel outstanding events for this frame
-        if( ! m_aUserEvents.empty() )
+        std::list< SalUserEvent >::iterator it = m_aUserEvents.begin();
+        do
         {
-            std::list< SalUserEvent >::iterator it = m_aUserEvents.begin();
-            do
+            if( it->m_pFrame == pFrame )
             {
-                if( it->m_pFrame    == pFrame )
+                if (it->m_nEvent == SalEvent::UserEvent)
                 {
-                    it = m_aUserEvents.erase( it );
+                    delete static_cast<ImplSVEvent *>(it->m_pData);
                 }
-                else
-                    ++it;
-            } while( it != m_aUserEvents.end() );
-        }
-        osl_releaseMutex( m_aEventGuard );
+                it = m_aUserEvents.erase( it );
+            }
+            else
+                ++it;
+        } while( it != m_aUserEvents.end() );
     }
 }
 
@@ -200,12 +241,12 @@ bool SvpSalInstance::CheckTimeout( bool bExecuteTimers )
 
 SalFrame* SvpSalInstance::CreateChildFrame( SystemParentData* pParent, SalFrameStyleFlags nStyle )
 {
-    return new SvpSalFrame( this, nullptr, nStyle, SVP_CAIRO_FORMAT, pParent );
+    return new SvpSalFrame( this, nullptr, nStyle, pParent );
 }
 
 SalFrame* SvpSalInstance::CreateFrame( SalFrame* pParent, SalFrameStyleFlags nStyle )
 {
-    return new SvpSalFrame( this, pParent, nStyle, SVP_CAIRO_FORMAT );
+    return new SvpSalFrame( this, pParent, nStyle );
 }
 
 void SvpSalInstance::DestroyFrame( SalFrame* pFrame )
@@ -270,8 +311,8 @@ SalYieldResult SvpSalInstance::DoYield(bool bWait, bool bHandleAllCurrentEvents,
     // release yield mutex
     std::list< SalUserEvent > aEvents;
     sal_uLong nAcquireCount = ReleaseYieldMutex();
-    if( osl_acquireMutex( m_aEventGuard ) )
     {
+        osl::MutexGuard g(m_aEventGuard);
         if( ! m_aUserEvents.empty() )
         {
             if( bHandleAllCurrentEvents )
@@ -285,7 +326,6 @@ SalYieldResult SvpSalInstance::DoYield(bool bWait, bool bHandleAllCurrentEvents,
                 m_aUserEvents.pop_front();
             }
         }
-        osl_releaseMutex( m_aEventGuard );
     }
     // acquire yield mutex again
     AcquireYieldMutex( nAcquireCount );
@@ -298,11 +338,11 @@ SalYieldResult SvpSalInstance::DoYield(bool bWait, bool bHandleAllCurrentEvents,
             if ( isFrameAlive( it->m_pFrame ) )
             {
                 it->m_pFrame->CallCallback( it->m_nEvent, it->m_pData );
-                if( it->m_nEvent == SALEVENT_RESIZE )
+                if( it->m_nEvent == SalEvent::Resize )
                 {
                     // this would be a good time to post a paint
                     const SvpSalFrame* pSvpFrame = static_cast<const SvpSalFrame*>(it->m_pFrame);
-                    pSvpFrame->PostPaint(false);
+                    pSvpFrame->PostPaint();
                 }
             }
         }
@@ -415,41 +455,6 @@ void SvpSalTimer::Stop()
 void SvpSalTimer::Start( sal_uLong nMS )
 {
     m_pInstance->StartTimer( nMS );
-}
-
-Format SvpSalInstance::getBaseBmpFormatForBitCount( sal_uInt16 nBitCount )
-{
-    switch( nBitCount )
-    {
-        case 1:
-            return Format::OneBitMsbPal;
-        case 4:
-            return Format::FourBitMsbPal;
-        case 8:
-            return Format::EightBitPal;
-        case 16:
-#ifdef OSL_BIGENDIAN
-            return Format::SixteenBitMsbTcMask;
-#else
-            return Format::SixteenBitLsbTcMask;
-#endif
-        case 32:
-            return Format::ThirtyTwoBitTcMaskBGRA;
-        default:
-            return SVP_CAIRO_FORMAT;
-     }
-
-}
-
-Format SvpSalInstance::getBaseBmpFormatForDeviceFormat(DeviceFormat eFormat)
-{
-    switch (eFormat)
-    {
-        case DeviceFormat::BITMASK:
-            return Format::OneBitMsbPal;
-        default:
-            return SVP_CAIRO_FORMAT;
-    }
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

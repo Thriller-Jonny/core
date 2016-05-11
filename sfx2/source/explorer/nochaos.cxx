@@ -19,7 +19,6 @@
 
 #include <sal/config.h>
 
-#include <boost/noncopyable.hpp>
 #include <svl/itempool.hxx>
 #include <svl/poolitem.hxx>
 #include <svl/stritem.hxx>
@@ -34,25 +33,24 @@
 
 class CntItemPool;
 
-class CntStaticPoolDefaults_Impl: private boost::noncopyable
+class CntStaticPoolDefaults_Impl
 {
     sal_uInt32        m_nItems;
     SfxPoolItem** m_ppDefaults;
     SfxItemInfo*  m_pItemInfos;
 
 private:
-    inline void Insert( SfxPoolItem* pItem, sal_uInt16 nSID, SfxItemPoolFlags nFlags );
+    inline void Insert( SfxPoolItem* pItem );
 
 public:
     explicit CntStaticPoolDefaults_Impl( CntItemPool* pPool );
     ~CntStaticPoolDefaults_Impl();
+    CntStaticPoolDefaults_Impl(const CntStaticPoolDefaults_Impl&) = delete;
+    CntStaticPoolDefaults_Impl& operator=(const CntStaticPoolDefaults_Impl&) = delete;
 
     SfxPoolItem**      GetDefaults() const  { return m_ppDefaults; }
     const SfxItemInfo* GetItemInfos() const { return m_pItemInfos; }
 };
-
-
-
 
 
 class CntItemPool: public SfxItemPool
@@ -68,8 +66,6 @@ public:
     static CntItemPool* Acquire();
     static sal_uInt16       Release();
 };
-
-
 
 
 // static
@@ -162,14 +158,13 @@ sal_uInt16 CntItemPool::Release()
 
 
 inline void CntStaticPoolDefaults_Impl::Insert(
-         SfxPoolItem* pItem,        /* Static Pool Default Item */
-         sal_uInt16 nSID, SfxItemPoolFlags nFlags  /* Item Info */    )
+         SfxPoolItem* pItem        /* Static Pool Default Item */ )
 {
     sal_uInt16 nPos = pItem->Which() - WID_CHAOS_START;
 
     m_ppDefaults[ nPos ]         = pItem;
-    m_pItemInfos[ nPos ]._nSID   = nSID;
-    m_pItemInfos[ nPos ]._nFlags = nFlags;
+    m_pItemInfos[ nPos ]._nSID   = 0;
+    m_pItemInfos[ nPos ]._bPoolable = true;
 }
 
 
@@ -190,10 +185,7 @@ CntStaticPoolDefaults_Impl::CntStaticPoolDefaults_Impl( CntItemPool* /*pPool*/ )
 {
     memset( m_ppDefaults, 0, sizeof( SfxPoolItem* ) * m_nItems );
     memset( m_pItemInfos, 0, sizeof( SfxItemInfo ) * m_nItems );
-    Insert(
-        new SfxStringItem( WID_CHAOS_START, OUString() ),
-        0,
-        SfxItemPoolFlags::POOLABLE );
+    Insert( new SfxStringItem( WID_CHAOS_START, OUString() ) );
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

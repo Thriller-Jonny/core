@@ -36,6 +36,9 @@
 #include "view/SlideSorterView.hxx"
 #include "view/SlsLayouter.hxx"
 #include "drawdoc.hxx"
+#include "drawview.hxx"
+#include "DrawViewShell.hxx"
+#include "ViewShellBase.hxx"
 #include "Window.hxx"
 #include <svx/svxids.hrc>
 #include <com/sun/star/drawing/XMasterPagesSupplier.hpp>
@@ -56,20 +59,12 @@ using namespace ::sd::slidesorter::controller;
 
 namespace sd { namespace slidesorter { namespace controller {
 
-class SelectionManager::PageInsertionListener
-    : public SfxListener
-{
-public:
-
-};
-
 SelectionManager::SelectionManager (SlideSorter& rSlideSorter)
     : mrSlideSorter(rSlideSorter),
       mrController(rSlideSorter.GetController()),
       mbIsMakeSelectionVisiblePending(true),
       mnInsertionPosition(-1),
       mnAnimationId(Animator::NotAnAnimationId),
-      mpPageInsertionListener(),
       mpSelectionObserver(new SelectionObserver(rSlideSorter))
 {
 }
@@ -116,6 +111,13 @@ void SelectionManager::DeleteSelectedPages (const bool bSelectFollowingPage)
     else
         --nNewCurrentSlide;
 
+    const auto pViewShell = mrSlideSorter.GetViewShell();
+    const auto pDrawViewShell = pViewShell ? std::dynamic_pointer_cast<sd::DrawViewShell>(pViewShell->GetViewShellBase().GetMainViewShell()) : nullptr;
+    const auto pDrawView = pDrawViewShell ? dynamic_cast<sd::DrawView*>(pDrawViewShell->GetDrawView()) : nullptr;
+
+    if (pDrawView)
+        pDrawView->BlockPageOrderChangedHint(true);
+
     // The actual deletion of the selected pages is done in one of two
     // helper functions.  They are specialized for normal respectively for
     // master pages.
@@ -128,6 +130,12 @@ void SelectionManager::DeleteSelectedPages (const bool bSelectFollowingPage)
 
     mrController.HandleModelChange();
     aLock.Release();
+    if (pDrawView)
+    {
+        assert(pDrawViewShell);
+        pDrawView->BlockPageOrderChangedHint(false);
+        pDrawViewShell->ResetActualPage();
+    }
 
     // Show focus and move it to next valid location.
     if (bIsFocusShowing)
@@ -209,10 +217,9 @@ void SelectionManager::DeleteSelectedMasterPages (const ::std::vector<SdPage*>& 
     }
 }
 
-void SelectionManager::SelectionHasChanged (const bool bMakeSelectionVisible)
+void SelectionManager::SelectionHasChanged ()
 {
-    if (bMakeSelectionVisible)
-        mbIsMakeSelectionVisiblePending = true;
+    mbIsMakeSelectionVisiblePending = true;
 
     ViewShell* pViewShell = mrSlideSorter.GetViewShell();
     if (pViewShell != nullptr)

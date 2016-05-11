@@ -176,7 +176,7 @@ void SlideSorterViewShell::Initialize()
 
     // For accessibility we have to shortly hide the content window.
     // This triggers the construction of a new accessibility object for
-    // the new view shell.  (One is created earlier while the construtor
+    // the new view shell.  (One is created earlier while the constructor
     // of the base class is executed.  At that time the correct
     // accessibility object can not be constructed.)
     sd::Window *pWindow (mpSlideSorter->GetContentWindow());
@@ -259,7 +259,6 @@ css::uno::Reference<css::accessibility::XAccessible>
     ::accessibility::AccessibleSlideSorterView *pAccessibleView =
     new ::accessibility::AccessibleSlideSorterView(
         *mpSlideSorter.get(),
-        pWindow->GetAccessibleParentWindow()->GetAccessible(),
         pWindow);
 
     css::uno::Reference< css::accessibility::XAccessible> xRet(pAccessibleView);
@@ -269,7 +268,7 @@ css::uno::Reference<css::accessibility::XAccessible>
     return xRet;
 }
 
-void SlideSorterViewShell::SwitchViewFireFocus(css::uno::Reference< css::accessibility::XAccessible > xAcc )
+void SlideSorterViewShell::SwitchViewFireFocus(const css::uno::Reference< css::accessibility::XAccessible >& xAcc )
 {
     if (xAcc.get())
     {

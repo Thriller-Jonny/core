@@ -91,7 +91,7 @@ namespace connectivity
             virtual ~ODbaseIndex();
         public:
             ODbaseIndex(ODbaseTable* _pTable);
-            ODbaseIndex(ODbaseTable* _pTable,const NDXHeader& _aHeader,const OUString& _Name);
+            ODbaseIndex(ODbaseTable* _pTable,const NDXHeader& _aHeader,const OUString& Name);
 
             bool openIndexFile();
             virtual void refreshColumns() override;
@@ -105,8 +105,7 @@ namespace connectivity
 
             const ODbaseTable* getTable() const { return m_pTable; }
             const NDXHeader& getHeader() const { return m_aHeader; }
-            OIndexIterator* createIterator(OBoolOperator_BASE* pOp,
-                                                         const OOperand_BASE* pOperand = nullptr);
+            OIndexIterator* createIterator();
 
             void SetRootPos(sal_uInt32 nPos)        {m_nRootPage = nPos;}
             void SetPageCount(sal_uInt32 nCount)    {m_nPageCount = nCount;}

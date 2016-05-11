@@ -64,7 +64,7 @@ public:
     // #i89179# - made public
     inline const SwFont *GetFont() const { return pFnt; }
 
-    inline OUString GetExp() const { return aExpand; }
+    const OUString& GetExp() const { return aExpand; }
     virtual bool GetExpText( const SwTextSizeInfo &rInf, OUString &rText ) const override;
     virtual bool Format( SwTextFormatInfo &rInf ) override;
     virtual void Paint( const SwTextPaintInfo &rInf ) const override;
@@ -212,8 +212,8 @@ public:
 class SwCombinedPortion : public SwFieldPortion
 {
     sal_uInt16 aPos[6];     // up to six X positions
-    sal_uInt16 aWidth[3];   // one width for every scripttype
-    sal_uInt8 aScrType[6];  // scripttype of every character
+    o3tl::enumarray<SwFontScript,sal_uInt16> aWidth;   // one width for every scripttype
+    SwFontScript aScrType[6];  // scripttype of every character
     sal_uInt16 nUpPos;      // the Y position of the upper baseline
     sal_uInt16 nLowPos;     // the Y position of the lower baseline
     sal_uInt8 nProportion;  // relative font height

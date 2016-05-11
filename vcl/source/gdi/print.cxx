@@ -17,60 +17,46 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <list>
+#include <sal/types.h>
 
-#include <tools/debug.hxx>
 #include <tools/resary.hxx>
-#include <tools/stream.hxx>
-#include <tools/vcompat.hxx>
 #include <tools/helpers.hxx>
 
-#include <vcl/unohelp.hxx>
-#include <vcl/svapp.hxx>
-#include <vcl/wrkwin.hxx>
 #include <vcl/virdev.hxx>
-#include <vcl/window.hxx>
-#include <vcl/gdimtf.hxx>
-#include <vcl/metaact.hxx>
 #include <vcl/print.hxx>
 
-#include <salinst.hxx>
-#include <salvd.hxx>
-#include <salgdi.hxx>
-#include <salptype.hxx>
-#include <salprn.hxx>
-#include <svdata.hxx>
-#include <svids.hrc>
-#include <jobset.h>
-#include <outdev.h>
-#include "PhysicalFontCollection.hxx"
-#include <print.h>
-
 #include <comphelper/processfactory.hxx>
+
+#include "salinst.hxx"
+#include "salvd.hxx"
+#include "salgdi.hxx"
+#include "salptype.hxx"
+#include "salprn.hxx"
+#include "svdata.hxx"
+#include "svids.hrc"
+#include "jobset.h"
+#include "outdev.h"
+#include "PhysicalFontCollection.hxx"
+#include "print.h"
 
 #include "com/sun/star/beans/XPropertySet.hpp"
 #include "com/sun/star/configuration/theDefaultProvider.hpp"
 #include "com/sun/star/container/XNameAccess.hpp"
 #include "com/sun/star/lang/XMultiServiceFactory.hpp"
-
-using namespace com::sun::star::uno;
-using namespace com::sun::star::lang;
-using namespace com::sun::star::beans;
-using namespace com::sun::star::container;
-using namespace com::sun::star::configuration;
+#include "com/sun/star/uno/Sequence.h"
 
 int nImplSysDialog = 0;
 
 namespace
 {
-    static Paper ImplGetPaperFormat( long nWidth100thMM, long nHeight100thMM )
+    Paper ImplGetPaperFormat( long nWidth100thMM, long nHeight100thMM )
     {
         PaperInfo aInfo(nWidth100thMM, nHeight100thMM);
         aInfo.doSloppyFit();
         return aInfo.getPaper();
     }
 
-    static const PaperInfo& ImplGetEmptyPaper()
+    const PaperInfo& ImplGetEmptyPaper()
     {
         static PaperInfo aInfo(PAPER_USER);
         return aInfo;
@@ -138,19 +124,19 @@ bool PrinterOptions::ReadFromConfig( bool i_bFile )
     PrinterOptions aOldValues( *this );
 
     // get the configuration service
-    Reference< XMultiServiceFactory > xConfigProvider;
-    Reference< XNameAccess > xConfigAccess;
+    css::uno::Reference< css::lang::XMultiServiceFactory > xConfigProvider;
+    css::uno::Reference< css::container::XNameAccess > xConfigAccess;
     try
     {
         // get service provider
-        Reference< XComponentContext > xContext( comphelper::getProcessComponentContext() );
+        css::uno::Reference< css::uno::XComponentContext > xContext( comphelper::getProcessComponentContext() );
         // create configuration hierarchical access name
         try
         {
-            xConfigProvider = theDefaultProvider::get( xContext );
+            xConfigProvider = css::configuration::theDefaultProvider::get( xContext );
 
-            Sequence< Any > aArgs(1);
-            PropertyValue aVal;
+            css::uno::Sequence< css::uno::Any > aArgs(1);
+            css::beans::PropertyValue aVal;
             aVal.Name = "nodepath";
             if( i_bFile )
                 aVal.Value <<= OUString( "/org.openoffice.Office.Common/Print/Option/File" );
@@ -160,10 +146,10 @@ bool PrinterOptions::ReadFromConfig( bool i_bFile )
             xConfigAccess.set(
                     xConfigProvider->createInstanceWithArguments(
                         "com.sun.star.configuration.ConfigurationAccess", aArgs ),
-                        UNO_QUERY );
+                        css::uno::UNO_QUERY );
             if( xConfigAccess.is() )
             {
-                Reference< XPropertySet > xSet( xConfigAccess, UNO_QUERY );
+                css::uno::Reference< css::beans::XPropertySet > xSet( xConfigAccess, css::uno::UNO_QUERY );
                 if( xSet.is() )
                 {
                     sal_Int32 nValue = 0;
@@ -195,11 +181,11 @@ bool PrinterOptions::ReadFromConfig( bool i_bFile )
                 }
             }
         }
-        catch( const Exception& )
+        catch( const css::uno::Exception& )
         {
         }
     }
-    catch( const WrappedTargetException& )
+    catch( const css::lang::WrappedTargetException& )
     {
     }
 
@@ -276,12 +262,12 @@ void Printer::EmulateDrawTransparent ( const tools::PolyPolygon& rPolyPoly,
 
     switch( nTrans )
     {
-        case( 25 ): nMove = nBaseExtent * 3; break;
-        case( 50 ): nMove = nBaseExtent * 4; break;
-        case( 75 ): nMove = nBaseExtent * 6; break;
+        case 25: nMove = nBaseExtent * 3; break;
+        case 50: nMove = nBaseExtent * 4; break;
+        case 75: nMove = nBaseExtent * 6; break;
 
             // #i112959#  very transparent (88 < nTransparencePercent <= 99)
-        case( 100 ): nMove = nBaseExtent * 8; break;
+        case 100: nMove = nBaseExtent * 8; break;
 
             // #i112959# not transparent (nTransparencePercent < 13)
         default:    nMove = 0; break;
@@ -374,17 +360,6 @@ QueueInfo::QueueInfo( const QueueInfo& rInfo ) :
 
 QueueInfo::~QueueInfo()
 {
-}
-
-bool QueueInfo::operator==( const QueueInfo& rInfo ) const
-{
-    return
-        maPrinterName   == rInfo.maPrinterName  &&
-        maDriver        == rInfo.maDriver       &&
-        maLocation      == rInfo.maLocation     &&
-        maComment       == rInfo.maComment      &&
-        mnStatus        == rInfo.mnStatus       &&
-        mnJobs          == rInfo.mnJobs;
 }
 
 SalPrinterQueueInfo::SalPrinterQueueInfo()
@@ -630,22 +605,22 @@ void Printer::ImplReleaseFonts()
     mbNewFont = true;
     mbInitFont = true;
 
-    if ( mpFontEntry )
+    if ( mpFontInstance )
     {
-        mpFontCache->Release( mpFontEntry );
-        mpFontEntry = nullptr;
+        mpFontCache->Release( mpFontInstance );
+        mpFontInstance = nullptr;
     }
 
-    if ( mpGetDevFontList )
+    if ( mpDeviceFontList )
     {
-        delete mpGetDevFontList;
-        mpGetDevFontList = nullptr;
+        delete mpDeviceFontList;
+        mpDeviceFontList = nullptr;
     }
 
-    if ( mpGetDevSizeList )
+    if ( mpDeviceFontSizeList )
     {
-        delete mpGetDevSizeList;
-        mpGetDevSizeList = nullptr;
+        delete mpDeviceFontSizeList;
+        mpDeviceFontSizeList = nullptr;
     }
 }
 
@@ -737,14 +712,14 @@ void Printer::ImplInit( SalPrinterQueueInfo* pInfo )
 
     if ( !mpInfoPrinter )
     {
-        ImplInitDisplay( nullptr );
+        ImplInitDisplay();
         return;
     }
 
     // we need a graphics
     if ( !AcquireGraphics() )
     {
-        ImplInitDisplay( nullptr );
+        ImplInitDisplay();
         return;
     }
 
@@ -755,7 +730,7 @@ void Printer::ImplInit( SalPrinterQueueInfo* pInfo )
     mpGraphics->GetDevFontList( mpFontCollection );
 }
 
-void Printer::ImplInitDisplay( const vcl::Window* pWindow )
+void Printer::ImplInitDisplay()
 {
     ImplSVData* pSVData = ImplGetSVData();
 
@@ -763,10 +738,7 @@ void Printer::ImplInitDisplay( const vcl::Window* pWindow )
     mpPrinter           = nullptr;
     mpJobGraphics       = nullptr;
 
-    if ( pWindow )
-        mpDisplayDev = VclPtr<VirtualDevice>::Create( *pWindow );
-    else
-        mpDisplayDev = VclPtr<VirtualDevice>::Create();
+    mpDisplayDev = VclPtr<VirtualDevice>::Create();
     mpFontCollection          = pSVData->maGDIData.mpScreenFontList;
     mpFontCache         = pSVData->maGDIData.mpScreenFontCache;
     mnDPIX              = mpDisplayDev->mnDPIX;
@@ -921,7 +893,7 @@ void Printer::ImplUpdatePageData()
 
 void Printer::ImplUpdateFontList()
 {
-    ImplUpdateFontData( true );
+    ImplUpdateFontData();
 }
 
 long Printer::GetGradientStepCount( long nMinRect )
@@ -943,7 +915,7 @@ Printer::Printer()
             mbDefPrinter = true;
     }
     else
-        ImplInitDisplay( nullptr );
+        ImplInitDisplay();
 }
 
 Printer::Printer( const JobSetup& rJobSetup ) :
@@ -959,7 +931,7 @@ Printer::Printer( const JobSetup& rJobSetup ) :
     }
     else
     {
-        ImplInitDisplay( nullptr );
+        ImplInitDisplay();
         maJobSetup = JobSetup();
     }
 }
@@ -972,7 +944,7 @@ Printer::Printer( const QueueInfo& rQueueInfo )
     if ( pInfo )
         ImplInit( pInfo );
     else
-        ImplInitDisplay( nullptr );
+        ImplInitDisplay();
 }
 
 Printer::Printer( const OUString& rPrinterName )
@@ -982,7 +954,7 @@ Printer::Printer( const OUString& rPrinterName )
     if ( pInfo )
         ImplInit( pInfo );
     else
-        ImplInitDisplay( nullptr );
+        ImplInitDisplay();
 }
 
 Printer::~Printer()
@@ -1008,20 +980,20 @@ void Printer::dispose()
         // OutputDevice Dtor is trying the same thing; that why we need to set
         // the FontEntry to NULL here
         // TODO: consolidate duplicate cleanup by Printer and OutputDevice
-        if ( mpFontEntry )
+        if ( mpFontInstance )
         {
-            mpFontCache->Release( mpFontEntry );
-            mpFontEntry = nullptr;
+            mpFontCache->Release( mpFontInstance );
+            mpFontInstance = nullptr;
         }
-        if ( mpGetDevFontList )
+        if ( mpDeviceFontList )
         {
-            delete mpGetDevFontList;
-            mpGetDevFontList = nullptr;
+            delete mpDeviceFontList;
+            mpDeviceFontList = nullptr;
         }
-        if ( mpGetDevSizeList )
+        if ( mpDeviceFontSizeList )
         {
-            delete mpGetDevSizeList;
-            mpGetDevSizeList = nullptr;
+            delete mpDeviceFontSizeList;
+            mpDeviceFontSizeList = nullptr;
         }
         delete mpFontCache;
         mpFontCache = nullptr;
@@ -1044,7 +1016,7 @@ void Printer::dispose()
     OutputDevice::dispose();
 }
 
-sal_uLong Printer::GetCapabilities( PrinterCapType nType ) const
+sal_uInt32 Printer::GetCapabilities( PrinterCapType nType ) const
 {
     if ( IsDisplayPrinter() )
         return 0;
@@ -1162,20 +1134,20 @@ bool Printer::SetPrinterProps( const Printer* pPrinter )
         {
             ReleaseGraphics();
             pSVData->mpDefInst->DestroyInfoPrinter( mpInfoPrinter );
-            if ( mpFontEntry )
+            if ( mpFontInstance )
             {
-                mpFontCache->Release( mpFontEntry );
-                mpFontEntry = nullptr;
+                mpFontCache->Release( mpFontInstance );
+                mpFontInstance = nullptr;
             }
-            if ( mpGetDevFontList )
+            if ( mpDeviceFontList )
             {
-                delete mpGetDevFontList;
-                mpGetDevFontList = nullptr;
+                delete mpDeviceFontList;
+                mpDeviceFontList = nullptr;
             }
-            if ( mpGetDevSizeList )
+            if ( mpDeviceFontSizeList )
             {
-                delete mpGetDevSizeList;
-                mpGetDevSizeList = nullptr;
+                delete mpDeviceFontSizeList;
+                mpDeviceFontSizeList = nullptr;
             }
             // clean up font list
             delete mpFontCache;
@@ -1189,7 +1161,7 @@ bool Printer::SetPrinterProps( const Printer* pPrinter )
         }
 
         // Construct new printer
-        ImplInitDisplay( nullptr );
+        ImplInitDisplay();
         return true;
     }
 
@@ -1205,20 +1177,20 @@ bool Printer::SetPrinterProps( const Printer* pPrinter )
         {
             pSVData->mpDefInst->DestroyInfoPrinter( mpInfoPrinter );
 
-            if ( mpFontEntry )
+            if ( mpFontInstance )
             {
-                mpFontCache->Release( mpFontEntry );
-                mpFontEntry = nullptr;
+                mpFontCache->Release( mpFontInstance );
+                mpFontInstance = nullptr;
             }
-            if ( mpGetDevFontList )
+            if ( mpDeviceFontList )
             {
-                delete mpGetDevFontList;
-                mpGetDevFontList = nullptr;
+                delete mpDeviceFontList;
+                mpDeviceFontList = nullptr;
             }
-            if ( mpGetDevSizeList )
+            if ( mpDeviceFontSizeList )
             {
-                delete mpGetDevSizeList;
-                mpGetDevSizeList = nullptr;
+                delete mpDeviceFontSizeList;
+                mpDeviceFontSizeList = nullptr;
             }
             delete mpFontCache;
             delete mpFontCollection;
@@ -1238,7 +1210,7 @@ bool Printer::SetPrinterProps( const Printer* pPrinter )
             SetJobSetup( pPrinter->GetJobSetup() );
         }
         else
-            ImplInitDisplay( nullptr );
+            ImplInitDisplay();
     }
     else
         SetJobSetup( pPrinter->GetJobSetup() );
@@ -1265,7 +1237,7 @@ bool Printer::SetOrientation( Orientation eOrientation )
         }
 
         ReleaseGraphics();
-        if ( mpInfoPrinter->SetData( SAL_JOBSET_ORIENTATION, pSetupData ) )
+        if ( mpInfoPrinter->SetData( JobSetFlags::ORIENTATION, pSetupData ) )
         {
             ImplUpdateJobSetupPaper( aJobSetup );
             mbNewJobSetup = true;
@@ -1306,7 +1278,7 @@ bool Printer::SetPaperBin( sal_uInt16 nPaperBin )
         }
 
         ReleaseGraphics();
-        if ( mpInfoPrinter->SetData( SAL_JOBSET_PAPERBIN, pSetupData ) )
+        if ( mpInfoPrinter->SetData( JobSetFlags::PAPERBIN, pSetupData ) )
         {
             ImplUpdateJobSetupPaper( aJobSetup );
             mbNewJobSetup = true;
@@ -1444,7 +1416,7 @@ bool Printer::SetPaper( Paper ePaper )
         ReleaseGraphics();
         if ( ePaper == PAPER_USER )
             ImplFindPaperFormatForUserSize( aJobSetup, false );
-        if ( mpInfoPrinter->SetData( SAL_JOBSET_PAPERSIZE|SAL_JOBSET_ORIENTATION, pSetupData ) )
+        if ( mpInfoPrinter->SetData( JobSetFlags::PAPERSIZE | JobSetFlags::ORIENTATION, pSetupData ) )
         {
             ImplUpdateJobSetupPaper( aJobSetup );
             mbNewJobSetup = true;
@@ -1507,7 +1479,7 @@ bool Printer::SetPaperSizeUser( const Size& rSize, bool bMatchNearest )
         ImplFindPaperFormatForUserSize( aJobSetup, bMatchNearest );
 
         // Changing the paper size can also change the orientation!
-        if ( mpInfoPrinter->SetData( SAL_JOBSET_PAPERSIZE|SAL_JOBSET_ORIENTATION, pSetupData ) )
+        if ( mpInfoPrinter->SetData( JobSetFlags::PAPERSIZE | JobSetFlags::ORIENTATION, pSetupData ) )
         {
             ImplUpdateJobSetupPaper( aJobSetup );
             mbNewJobSetup = true;
@@ -1562,13 +1534,13 @@ OUString Printer::GetPaperName( Paper ePaper )
     return (it != pSVData->mpPaperNames->end()) ? it->second : OUString();
 }
 
-OUString Printer::GetPaperName( bool i_bPaperUser ) const
+OUString Printer::GetPaperName() const
 {
     Size  aPageSize = PixelToLogic( GetPaperSizePixel(), MAP_100TH_MM );
     Paper ePaper    = ImplGetPaperFormat( aPageSize.Width(), aPageSize.Height() );
     if( ePaper == PAPER_USER )
         ePaper = ImplGetPaperFormat( aPageSize.Height(), aPageSize.Width() );
-    return (ePaper != PAPER_USER || i_bPaperUser ) ? GetPaperName( ePaper ) : OUString();
+    return (ePaper != PAPER_USER) ? GetPaperName( ePaper ) : OUString();
 }
 
 const PaperInfo& Printer::GetPaperInfo( int nPaper ) const
@@ -1601,7 +1573,7 @@ bool Printer::SetDuplexMode( DuplexMode eDuplex )
         }
 
         ReleaseGraphics();
-        if ( mpInfoPrinter->SetData( SAL_JOBSET_DUPLEXMODE, pSetupData ) )
+        if ( mpInfoPrinter->SetData( JobSetFlags::DUPLEXMODE, pSetupData ) )
         {
             ImplUpdateJobSetupPaper( aJobSetup );
             mbNewJobSetup = true;
@@ -1804,34 +1776,21 @@ void Printer::InitFont() const
 {
     DBG_TESTSOLARMUTEX();
 
-    if (!mpFontEntry)
+    if (!mpFontInstance)
         return;
 
     if ( mbInitFont )
     {
         // select font in the device layers
-        mpFontEntry->mnSetFontFlags = mpGraphics->SetFont( &(mpFontEntry->maFontSelData), 0 );
+        mpFontInstance->mnSetFontFlags = mpGraphics->SetFont( &(mpFontInstance->maFontSelData), 0 );
         mbInitFont = false;
     }
 }
 
-void Printer::SetFontOrientation( ImplFontEntry* const pFontEntry ) const
+void Printer::SetFontOrientation( LogicalFontInstance* const pFontEntry ) const
 {
-    pFontEntry->mnOrientation = pFontEntry->maMetric.mnOrientation;
+    pFontEntry->mnOrientation = pFontEntry->mxFontMetric->GetOrientation();
 }
-
-void Printer::DrawImage( const Point&, const Image&, DrawImageFlags )
-{
-    SAL_WARN ("vcl.gdi", "DrawImage(): Images can't be drawn on any Printer instance");
-    assert(false);
-}
-
-void Printer::DrawImage( const Point&, const Size&, const Image&, DrawImageFlags )
-{
-    SAL_WARN ("vcl.gdi", "DrawImage(): Images can't be drawn on any Printer instance");
-    assert(false);
-}
-
 
 Bitmap Printer::GetBitmap( const Point& rSrcPt, const Size& rSize ) const
 {

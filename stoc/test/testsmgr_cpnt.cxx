@@ -60,7 +60,6 @@ using namespace osl;
 using namespace cppu;
 
 
-
 Reference<XMultiServiceFactory> getProcessServiceManager()
 {
     Reference<XMultiServiceFactory > s_x;
@@ -115,7 +114,6 @@ Reference< XInterface > SAL_CALL Test_Manager_Impl_CreateInstance_Impl()
 }
 
 
-
 // Test_Manager_Impl_CreateInstance()
 
 Reference < XInterface > SAL_CALL Test_Manager_Impl_CreateInstance(
@@ -125,7 +123,6 @@ Reference < XInterface > SAL_CALL Test_Manager_Impl_CreateInstance(
 
     return xService;
 }
-
 
 
 // Test_Manager_Impl::getImplementationName
@@ -159,8 +156,6 @@ Sequence< OUString > Test_Manager_Impl::getSupportedServiceNames_Static() throw 
     aSNS.getArray()[1] = "com.sun.star.bridge.Bridge";
     return aSNS;
 }
-
-
 
 
 /****
@@ -236,7 +231,7 @@ extern "C" void SAL_CALL test_ServiceManager()
 
         // getImplementations() check
          Sequence<OUString> seqImpl = xInst->getImplementations(OUString("com.sun.star.loader.SharedLibrary"), atUModule2);
-        OSL_ENSURE( seqImpl.getLength() == 1, "count of implementantions is wrong" );
+        OSL_ENSURE( seqImpl.getLength() == 1, "count of implementations is wrong" );
         OSL_ENSURE( seqImpl.getConstArray()[0] == "com.sun.star.DummyService.V10", "implementation name is not equal" );
 
 
@@ -255,7 +250,6 @@ extern "C" void SAL_CALL test_ServiceManager()
     xComp.clear();
     xSMgr.clear();
 }
-
 
 
 extern "C"
@@ -311,7 +305,6 @@ SAL_DLLPUBLIC_EXPORT void * SAL_CALL component_getFactory(
     return pRet;
 }
 }
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

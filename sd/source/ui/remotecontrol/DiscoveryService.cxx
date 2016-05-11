@@ -20,7 +20,7 @@
 
 #include "DiscoveryService.hxx"
 
-#ifdef WIN32
+#ifdef _WIN32
   // LO vs WinAPI conflict
   #undef WB_LEFT
   #undef WB_RIGHT
@@ -63,7 +63,7 @@ DiscoveryService::~DiscoveryService()
 {
     if (mSocket != -1)
     {
-#ifdef WNT
+#ifdef _WIN32
         closesocket( mSocket );
 #else
         close( mSocket );
@@ -91,7 +91,7 @@ void DiscoveryService::setupSockets()
     zService = new AvahiNetworkService(hostname);
 #endif
 
-#ifdef WIN32
+#ifdef _WIN32
     zService = new WINNetworkService();
 #endif
 
@@ -137,7 +137,7 @@ void DiscoveryService::setupSockets()
     multicastRequest.imr_interface.s_addr = htonl(INADDR_ANY);
 
     rc = setsockopt( mSocket, IPPROTO_IP, IP_ADD_MEMBERSHIP,
-    #ifdef WNT
+    #ifdef _WIN32
         (const char*)
     #endif
         &multicastRequest, sizeof(multicastRequest));

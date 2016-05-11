@@ -457,16 +457,16 @@ ODbaseTable::ODbaseTable(sdbcx::OCollection* _pTables, ODbaseConnection* _pConne
 }
 
 ODbaseTable::ODbaseTable(sdbcx::OCollection* _pTables, ODbaseConnection* _pConnection,
-                         const OUString& _Name,
-                         const OUString& _Type,
-                         const OUString& _Description ,
-                         const OUString& _SchemaName,
-                         const OUString& _CatalogName )
-    : ODbaseTable_BASE(_pTables,_pConnection,_Name,
-                       _Type,
-                       _Description,
-                       _SchemaName,
-                       _CatalogName)
+                         const OUString& Name,
+                         const OUString& Type,
+                         const OUString& Description ,
+                         const OUString& SchemaName,
+                         const OUString& CatalogName )
+    : ODbaseTable_BASE(_pTables,_pConnection,Name,
+                       Type,
+                       Description,
+                       SchemaName,
+                       CatalogName)
     , m_pMemoStream(nullptr)
     , m_bWriteableMemo(false)
 {
@@ -778,7 +778,7 @@ sal_Int64 ODbaseTable::getSomething( const Sequence< sal_Int8 > & rId ) throw (R
                 : ODbaseTable_BASE::getSomething(rId);
 }
 
-bool ODbaseTable::fetchRow(OValueRefRow& _rRow, const OSQLColumns & _rCols, bool _bUseTableDefs, bool bRetrieveData)
+bool ODbaseTable::fetchRow(OValueRefRow& _rRow, const OSQLColumns & _rCols, bool bRetrieveData)
 {
     if (!m_pBuffer)
         return false;
@@ -805,16 +805,8 @@ bool ODbaseTable::fetchRow(OValueRefRow& _rRow, const OSQLColumns & _rCols, bool
         // Lengths depending on data type:
         sal_Int32 nLen = 0;
         sal_Int32 nType = 0;
-        if(_bUseTableDefs)
-        {
-            nLen    = m_aPrecisions[i-1];
-            nType   = m_aTypes[i-1];
-        }
-        else
-        {
-            (*aIter)->getPropertyValue(OMetaConnection::getPropMap().getNameByIndex(PROPERTY_ID_PRECISION)) >>= nLen;
-            (*aIter)->getPropertyValue(OMetaConnection::getPropMap().getNameByIndex(PROPERTY_ID_TYPE))      >>= nType;
-        }
+        nLen    = m_aPrecisions[i-1];
+        nType   = m_aTypes[i-1];
 
         switch(nType)
         {
@@ -828,10 +820,7 @@ bool ODbaseTable::fetchRow(OValueRefRow& _rRow, const OSQLColumns & _rCols, bool
                 nLen = m_aRealFieldLengths[i-1];
                 break;
             case DataType::DECIMAL:
-                if(_bUseTableDefs)
-                    nLen = SvDbaseConverter::ConvertPrecisionToDbase(nLen,m_aScales[i-1]);
-                else
-                    nLen = SvDbaseConverter::ConvertPrecisionToDbase(nLen,getINT32((*aIter)->getPropertyValue(OMetaConnection::getPropMap().getNameByIndex(PROPERTY_ID_SCALE))));
+                nLen = SvDbaseConverter::ConvertPrecisionToDbase(nLen,m_aScales[i-1]);
                 break;  // the sign and the comma
 
             case DataType::BINARY:
@@ -1300,7 +1289,7 @@ bool ODbaseTable::CreateFile(const INetURLObject& aFile, bool& bCreateMemo)
                     break;
                 case DataType::LONGVARBINARY:
                     bBinary = true;
-                    // run through
+                    SAL_FALLTHROUGH;
                 case DataType::LONGVARCHAR:
                     cTyp = 'M';
                     break;
@@ -1500,7 +1489,7 @@ bool ODbaseTable::DropImpl()
 }
 
 
-bool ODbaseTable::InsertRow(OValueRefVector& rRow, bool bFlush, const Reference<XIndexAccess>& _xCols)
+bool ODbaseTable::InsertRow(OValueRefVector& rRow, const Reference<XIndexAccess>& _xCols)
 {
     // fill buffer with blanks
     if (!AllocBuffer())
@@ -1542,9 +1531,7 @@ bool ODbaseTable::InsertRow(OValueRefVector& rRow, bool bFlush, const Reference<
             m_pFileStream->Seek( 4L );
             (*m_pFileStream).WriteUInt32( m_aHeader.db_anz + 1 );
 
-            // if AppendOnly no flush!
-            if (bFlush)
-                m_pFileStream->Flush();
+            m_pFileStream->Flush();
 
             // raise number if successfully
             m_aHeader.db_anz++;
@@ -1598,7 +1585,7 @@ bool ODbaseTable::DeleteRow(const OSQLColumns& _rCols)
 
     OValueRefRow aRow = new OValueRefVector(_rCols.get().size());
 
-    if (!fetchRow(aRow,_rCols,true,true))
+    if (!fetchRow(aRow,_rCols,true))
         return false;
 
     Reference<XPropertySet> xCol;
@@ -1675,7 +1662,7 @@ static double toDouble(const OString& rString)
 }
 
 
-bool ODbaseTable::UpdateBuffer(OValueRefVector& rRow, OValueRefRow pOrgRow, const Reference<XIndexAccess>& _xCols, const bool bForceAllFields)
+bool ODbaseTable::UpdateBuffer(OValueRefVector& rRow, const OValueRefRow& pOrgRow, const Reference<XIndexAccess>& _xCols, const bool bForceAllFields)
 {
     OSL_ENSURE(m_pBuffer,"Buffer is NULL!");
     if ( !m_pBuffer )
@@ -1783,7 +1770,7 @@ bool ODbaseTable::UpdateBuffer(OValueRefVector& rRow, OValueRefRow pOrgRow, cons
             case DataType::DOUBLE:
             case DataType::TIMESTAMP:
                 bSetZero = true;
-                //fall-through
+                SAL_FALLTHROUGH;
             case DataType::LONGVARBINARY:
             case DataType::DATE:
             case DataType::BIT:
@@ -1817,7 +1804,6 @@ bool ODbaseTable::UpdateBuffer(OValueRefVector& rRow, OValueRefRow pOrgRow, cons
                 continue;
             }
         }
-
 
 
         ++nPos; // the row values start at 1
@@ -2537,13 +2523,13 @@ void ODbaseTable::copyData(ODbaseTable* _pNewTable,sal_Int32 _nPos)
 
 
     sal_Int32 nCurPos;
-    OValueRefVector::Vector::iterator aIter;
+    OValueRefVector::Vector::const_iterator aIter;
     for(sal_uInt32 nRowPos = 0; nRowPos < m_aHeader.db_anz;++nRowPos)
     {
         bool bOk = seekRow( IResultSetHelper::BOOKMARK, nRowPos+1, nCurPos );
         if ( bOk )
         {
-            bOk = fetchRow( aRow, *m_aColumns, true, true);
+            bOk = fetchRow( aRow, *m_aColumns, true);
             if ( bOk && !aRow->isDeleted() ) // copy only not deleted rows
             {
                 // special handling when pos == 0 then we don't have to distinguish between the two rows
@@ -2560,7 +2546,7 @@ void ODbaseTable::copyData(ODbaseTable* _pNewTable,sal_Int32 _nPos)
                         }
                     }
                 }
-                bOk = _pNewTable->InsertRow(*aInsertRow,true,_pNewTable->m_pColumns);
+                bOk = _pNewTable->InsertRow(*aInsertRow,_pNewTable->m_pColumns);
                 SAL_WARN_IF(!bOk, "connectivity.drivers", "Row could not be inserted!"); (void)bOk;
             }
             else

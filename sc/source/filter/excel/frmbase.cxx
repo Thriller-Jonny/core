@@ -19,33 +19,28 @@
 
 #include "formel.hxx"
 
-_ScRangeListTabs::_ScRangeListTabs()
+#include <o3tl/make_unique.hxx>
+
+ScRangeListTabs::ScRangeListTabs()
 {
 }
 
-_ScRangeListTabs::~_ScRangeListTabs()
+ScRangeListTabs::~ScRangeListTabs()
 {
 }
 
-void _ScRangeListTabs::Append( const ScAddress& aSRD, SCTAB nTab, const bool b )
+void ScRangeListTabs::Append( const ScAddress& aSRD, SCTAB nTab )
 {
     ScAddress a = aSRD;
 
-    if( b )
-    {
-        if (a.Tab() > MAXTAB)
-            a.SetTab(MAXTAB);
+    if (a.Tab() > MAXTAB)
+        a.SetTab(MAXTAB);
 
-        if (a.Col() > MAXCOL)
-            a.SetCol(MAXCOL);
+    if (a.Col() > MAXCOL)
+        a.SetCol(MAXCOL);
 
-        if (a.Row() > MAXROW)
-            a.SetRow(MAXROW);
-    }
-    else
-    {
-        OSL_ENSURE( ValidTab(a.Tab()), "-_ScRangeListTabs::Append(): A lie has no crash!" );
-    }
+    if (a.Row() > MAXROW)
+        a.SetRow(MAXROW);
 
     if( nTab == SCTAB_MAX)
         return;
@@ -55,12 +50,12 @@ void _ScRangeListTabs::Append( const ScAddress& aSRD, SCTAB nTab, const bool b )
     if (nTab < 0 || MAXTAB < nTab)
         return;
 
-    TabRangeType::iterator itr = maTabRanges.find(nTab);
-    if (itr == maTabRanges.end())
+    TabRangeType::iterator itr = m_TabRanges.find(nTab);
+    if (itr == m_TabRanges.end())
     {
         // No entry for this table yet.  Insert a new one.
         std::pair<TabRangeType::iterator, bool> r =
-            maTabRanges.insert(nTab, new RangeListType);
+            m_TabRanges.insert(std::make_pair(nTab, o3tl::make_unique<RangeListType>()));
 
         if (!r.second)
             // Insertion failed.
@@ -71,50 +66,38 @@ void _ScRangeListTabs::Append( const ScAddress& aSRD, SCTAB nTab, const bool b )
     itr->second->push_back(ScRange(a.Col(),a.Row(),a.Tab()));
 }
 
-void _ScRangeListTabs::Append( const ScRange& aCRD, SCTAB nTab, bool b )
+void ScRangeListTabs::Append( const ScRange& aCRD, SCTAB nTab )
 {
     ScRange a = aCRD;
 
-    if( b )
-    {
-        // ignore 3D ranges
-        if (a.aStart.Tab() != a.aEnd.Tab())
-            return;
+    // ignore 3D ranges
+    if (a.aStart.Tab() != a.aEnd.Tab())
+        return;
 
-        if (a.aStart.Tab() > MAXTAB)
-            a.aStart.SetTab(MAXTAB);
-        else if (a.aStart.Tab() < 0)
-            a.aStart.SetTab(0);
+    if (a.aStart.Tab() > MAXTAB)
+        a.aStart.SetTab(MAXTAB);
+    else if (a.aStart.Tab() < 0)
+        a.aStart.SetTab(0);
 
-        if (a.aStart.Col() > MAXCOL)
-            a.aStart.SetCol(MAXCOL);
-        else if (a.aStart.Col() < 0)
-            a.aStart.SetCol(0);
+    if (a.aStart.Col() > MAXCOL)
+        a.aStart.SetCol(MAXCOL);
+    else if (a.aStart.Col() < 0)
+        a.aStart.SetCol(0);
 
-        if (a.aStart.Row() > MAXROW)
-            a.aStart.SetRow(MAXROW);
-        else if (a.aStart.Row() < 0)
-            a.aStart.SetRow(0);
+    if (a.aStart.Row() > MAXROW)
+        a.aStart.SetRow(MAXROW);
+    else if (a.aStart.Row() < 0)
+        a.aStart.SetRow(0);
 
-        if (a.aEnd.Col() > MAXCOL)
-            a.aEnd.SetCol(MAXCOL);
-        else if (a.aEnd.Col() < 0)
-            a.aEnd.SetCol(0);
+    if (a.aEnd.Col() > MAXCOL)
+        a.aEnd.SetCol(MAXCOL);
+    else if (a.aEnd.Col() < 0)
+        a.aEnd.SetCol(0);
 
-        if (a.aEnd.Row() > MAXROW)
-            a.aEnd.SetRow(MAXROW);
-        else if (a.aEnd.Row() < 0)
-            a.aEnd.SetRow(0);
-    }
-#if 0 // no members 'Ref1' or 'Ref2' in 'ScRange'
-    else
-    {
-        OSL_ENSURE( ValidTab(a.Ref1.nTab),
-            "-_ScRangeListTabs::Append(): Luegen haben kurze Abstuerze!" );
-        OSL_ENSURE( a.Ref1.nTab == a.Ref2.nTab,
-            "+_ScRangeListTabs::Append(): 3D-Ranges werden in SC nicht unterstuetzt!" );
-    }
-#endif
+    if (a.aEnd.Row() > MAXROW)
+        a.aEnd.SetRow(MAXROW);
+    else if (a.aEnd.Row() < 0)
+        a.aEnd.SetRow(0);
 
     if( nTab == SCTAB_MAX)
         return;
@@ -125,12 +108,12 @@ void _ScRangeListTabs::Append( const ScRange& aCRD, SCTAB nTab, bool b )
     if (nTab < 0 || MAXTAB < nTab)
         return;
 
-    TabRangeType::iterator itr = maTabRanges.find(nTab);
-    if (itr == maTabRanges.end())
+    TabRangeType::iterator itr = m_TabRanges.find(nTab);
+    if (itr == m_TabRanges.end())
     {
         // No entry for this table yet.  Insert a new one.
         std::pair<TabRangeType::iterator, bool> r =
-            maTabRanges.insert(nTab, new RangeListType);
+            m_TabRanges.insert(std::make_pair(nTab, o3tl::make_unique<RangeListType>()));
 
         if (!r.second)
             // Insertion failed.
@@ -141,12 +124,12 @@ void _ScRangeListTabs::Append( const ScRange& aCRD, SCTAB nTab, bool b )
     itr->second->push_back(a);
 }
 
-const ScRange* _ScRangeListTabs::First( SCTAB n )
+const ScRange* ScRangeListTabs::First( SCTAB n )
 {
-    OSL_ENSURE( ValidTab(n), "-_ScRangeListTabs::First(): Good bye!" );
+    OSL_ENSURE( ValidTab(n), "-ScRangeListTabs::First(): Good bye!" );
 
-    TabRangeType::iterator itr = maTabRanges.find(n);
-    if (itr == maTabRanges.end())
+    TabRangeType::iterator itr = m_TabRanges.find(n);
+    if (itr == m_TabRanges.end())
         // No range list exists for this table.
         return nullptr;
 
@@ -156,7 +139,7 @@ const ScRange* _ScRangeListTabs::First( SCTAB n )
     return rList.empty() ? nullptr : &(*maItrCur);
 }
 
-const ScRange* _ScRangeListTabs::Next ()
+const ScRange* ScRangeListTabs::Next ()
 {
     ++maItrCur;
     if (maItrCur == maItrCurEnd)

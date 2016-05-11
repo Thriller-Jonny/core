@@ -8,8 +8,10 @@
  */
 
 #include "opengl/x11/X11DeviceInfo.hxx"
+#include "opengl/x11//glxtest.hxx"
 
-#include <vcl/opengl/glxtest.hxx>
+#include <config_features.h>
+
 #include <rtl/ustring.hxx>
 
 #include <unistd.h>
@@ -17,6 +19,8 @@
 #include <sys/wait.h>
 #include <errno.h>
 #include <sys/utsname.h>
+
+#include <desktop/crashreport.hxx>
 
 namespace glx {
 
@@ -285,6 +289,9 @@ bool X11OpenGLDeviceInfo::isDeviceBlocked()
     // don't even try to use OpenGL 1.x
     if (mnGLMajorVersion == 1)
         return true;
+
+    CrashReporter::AddKeyValue("AdapterVendorId", rtl::OStringToOUString(maVendor, RTL_TEXTENCODING_UTF8));
+    CrashReporter::AddKeyValue("AdapterDeviceId", rtl::OStringToOUString(maRenderer, RTL_TEXTENCODING_UTF8));
 
     SAL_INFO("vcl.opengl", "Vendor: " << maVendor);
     SAL_INFO("vcl.opengl", "Renderer: " << maRenderer);

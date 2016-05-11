@@ -17,15 +17,16 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-
-#include <vector>
-
 #include <memory>
+#include <tuple>
+#include <vector>
 
 #include <com/sun/star/container/XEnumerationAccess.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/style/XStyleFamiliesSupplier.hpp>
+#include <com/sun/star/text/ReferenceFieldSource.hpp>
 #include <com/sun/star/text/XChapterNumberingSupplier.hpp>
+#include <com/sun/star/text/XTextFieldsSupplier.hpp>
 #include <com/sun/star/text/XTextFramesSupplier.hpp>
 #include <com/sun/star/text/XTextGraphicObjectsSupplier.hpp>
 #include <com/sun/star/text/XTextEmbeddedObjectsSupplier.hpp>
@@ -60,7 +61,6 @@
 #include <com/sun/star/beans/XPropertyState.hpp>
 #include <txtlists.hxx>
 #include <xmloff/odffields.hxx>
-#include <boost/noncopyable.hpp>
 
 using ::com::sun::star::ucb::XAnyCompare;
 
@@ -489,7 +489,6 @@ static const SvXMLTokenMapEntry aTextFieldAttrTokenMap[] =
 #define MAX_COMBINED_CHARACTERS 6
 
 struct XMLTextImportHelper::Impl
-    : private ::boost::noncopyable
 {
     std::unique_ptr<SvXMLTokenMap> m_xTextElemTokenMap;
     std::unique_ptr<SvXMLTokenMap> m_xTextPElemTokenMap;
@@ -507,7 +506,6 @@ struct XMLTextImportHelper::Impl
     std::unique_ptr<XMLTextListsHelper> m_xTextListsHelper;
 
     SvXMLImportContextRef m_xAutoStyles;
-    SvXMLImportContextRef m_xFontDecls;
 
     rtl::Reference< SvXMLImportPropertyMapper > m_xParaImpPrMap;
     rtl::Reference< SvXMLImportPropertyMapper > m_xTextImpPrMap;
@@ -523,18 +521,18 @@ struct XMLTextImportHelper::Impl
        - data structure contains more than one candidate for each list level
          of the outline style (#i69629#)
     */
-    ::std::unique_ptr< ::std::vector< OUString > []>
+    std::unique_ptr< std::vector< OUString > []>
         m_xOutlineStylesCandidates;
 
     // start range, xml:id, RDFa stuff
-    typedef ::boost::tuple<
+    typedef std::tuple<
         uno::Reference<text::XTextRange>, OUString,
         std::shared_ptr< ::xmloff::ParsedRDFaAttributes > >
             BookmarkMapEntry_t;
     /// start ranges for open bookmarks
-    ::std::map< OUString, BookmarkMapEntry_t > m_BookmarkStartRanges;
+    std::map< OUString, BookmarkMapEntry_t > m_BookmarkStartRanges;
 
-    typedef ::std::vector< OUString > BookmarkVector_t;
+    typedef std::vector< OUString > BookmarkVector_t;
     BookmarkVector_t m_BookmarkVector;
 
     /// name of the last 'open' redline that started between paragraphs
@@ -576,6 +574,8 @@ struct XMLTextImportHelper::Impl
 
     OUString m_sCellParaStyleDefault;
 
+    std::unique_ptr<std::map<OUString, OUString>> m_pCrossRefHeadingBookmarkMap;
+
     Impl(       uno::Reference<frame::XModel> const& rModel,
                 SvXMLImport & rImport,
                 bool const bInsertMode, bool const bStylesOnlyMode,
@@ -594,6 +594,8 @@ struct XMLTextImportHelper::Impl
         ,   m_bInsideDeleteContext( false )
     {
     }
+    Impl(const Impl&) = delete;
+    Impl& operator=(const Impl&) = delete;
 
     void InitOutlineStylesCandidates()
     {
@@ -1091,7 +1093,7 @@ void XMLTextImportHelper::InsertString( const OUString& rChars )
     if (m_xImpl->m_xText.is())
     {
         m_xImpl->m_xText->insertString(m_xImpl->m_xCursorAsRange,
-            rChars, sal_False);
+            rChars, false);
     }
 }
 
@@ -1125,7 +1127,7 @@ void XMLTextImportHelper::InsertString( const OUString& rChars,
             }
         }
         m_xImpl->m_xText->insertString(m_xImpl->m_xCursorAsRange,
-                                       sChars.makeStringAndClear(), sal_False);
+                                       sChars.makeStringAndClear(), false);
     }
 }
 
@@ -1136,7 +1138,7 @@ void XMLTextImportHelper::InsertControlCharacter( sal_Int16 nControl )
     if (m_xImpl->m_xText.is())
     {
         m_xImpl->m_xText->insertControlCharacter(
-            m_xImpl->m_xCursorAsRange, nControl, sal_False);
+            m_xImpl->m_xCursorAsRange, nControl, false);
     }
 }
 
@@ -1148,7 +1150,7 @@ void XMLTextImportHelper::InsertTextContent(
     if (m_xImpl->m_xText.is())
     {
         // note: this may throw IllegalArgumentException and callers handle it
-        m_xImpl->m_xText->insertTextContent( m_xImpl->m_xCursorAsRange, xContent, sal_False);
+        m_xImpl->m_xText->insertTextContent( m_xImpl->m_xCursorAsRange, xContent, false);
     }
 }
 
@@ -1179,10 +1181,10 @@ void XMLTextImportHelper::DeleteParagraph()
     }
     if( bDelete )
     {
-        if (m_xImpl->m_xCursor->goLeft( 1, sal_True ))
+        if (m_xImpl->m_xCursor->goLeft( 1, true ))
         {
             m_xImpl->m_xText->insertString(m_xImpl->m_xCursorAsRange,
-                                           "", sal_True);
+                                           "", true);
         }
     }
 }
@@ -1216,7 +1218,7 @@ OUString XMLTextImportHelper::ConvertStarFonts( const OUString& rChars,
 
                 if( pStyle )
                 {
-                    sal_Int32 nCount = pStyle->_GetProperties().size();
+                    sal_Int32 nCount = pStyle->GetProperties_().size();
                     if( nCount )
                     {
                         rtl::Reference < SvXMLImportPropertyMapper > xImpPrMap =
@@ -1228,7 +1230,7 @@ OUString XMLTextImportHelper::ConvertStarFonts( const OUString& rChars,
                                 xImpPrMap->getPropertySetMapper();
                             for( sal_Int32 i=0; i < nCount; i++ )
                             {
-                                const XMLPropertyState& rProp = pStyle->_GetProperties()[i];
+                                const XMLPropertyState& rProp = pStyle->GetProperties_()[i];
                                 sal_Int32 nIdx = rProp.mnIndex;
                                 sal_uInt32 nContextId = rPropMapper->GetEntryContextId(nIdx);
                                 if( CTF_FONTFAMILYNAME == nContextId )
@@ -1556,7 +1558,7 @@ OUString XMLTextImportHelper::SetStyleAndAttrs(
             if (!bNumberingIsNumber &&
                 xPropSetInfo->hasPropertyByName(s_NumberingIsNumber))
             {
-                xPropSet->setPropertyValue(s_NumberingIsNumber, Any(sal_False));
+                xPropSet->setPropertyValue(s_NumberingIsNumber, Any(false));
             }
 
             xPropSet->setPropertyValue( s_NumberingLevel, Any(nLevel) );
@@ -1683,8 +1685,8 @@ OUString XMLTextImportHelper::SetStyleAndAttrs(
                     if (rCursor->getString().getLength() >
                             MAX_COMBINED_CHARACTERS)
                     {
-                        rCursor->gotoRange(rCursor->getStart(), sal_False);
-                        rCursor->goRight(MAX_COMBINED_CHARACTERS, sal_True);
+                        rCursor->gotoRange(rCursor->getStart(), false);
+                        rCursor->goRight(MAX_COMBINED_CHARACTERS, true);
                     }
 
                     // set field value (the combined character string)
@@ -1697,7 +1699,7 @@ OUString XMLTextImportHelper::SetStyleAndAttrs(
                     {
                         // #i107225# the combined characters need to be inserted first
                         // the selected text has to be removed afterwards
-                        m_xImpl->m_xText->insertTextContent( rCursor->getStart(), xTextContent, sal_True );
+                        m_xImpl->m_xText->insertTextContent( rCursor->getStart(), xTextContent, true );
 
                         if( !rCursor->getString().isEmpty() )
                         {
@@ -2148,6 +2150,7 @@ SvXMLImportContext *XMLTextImportHelper::CreateTextChildContext(
     {
     case XML_TOK_TEXT_H:
         bHeading = true;
+        SAL_FALLTHROUGH;
     case XML_TOK_TEXT_P:
         pContext = new XMLParaContext( rImport,
                                        nPrefix, rLocalName,
@@ -2432,9 +2435,9 @@ XMLPropStyleContext* XMLTextImportHelper::FindPageMaster(
 }
 
 
-void XMLTextImportHelper::PushListContext(XMLTextListBlockContext *i_pListBlock)
+void XMLTextImportHelper::PushListContext()
 {
-    GetTextListHelper().PushListContext(i_pListBlock);
+    GetTextListHelper().PushListContext(static_cast<XMLTextListBlockContext*>(nullptr));
 }
 
 void XMLTextImportHelper::PopListContext()
@@ -2489,7 +2492,7 @@ void XMLTextImportHelper::InsertBookmarkStartRange(
     std::shared_ptr< ::xmloff::ParsedRDFaAttributes > & i_rpRDFaAttributes)
 {
     m_xImpl->m_BookmarkStartRanges[sName] =
-        ::boost::make_tuple(rRange, i_rXmlId, i_rpRDFaAttributes);
+        std::make_tuple(rRange, i_rXmlId, i_rpRDFaAttributes);
     m_xImpl->m_BookmarkVector.push_back(sName);
 }
 
@@ -2503,9 +2506,9 @@ bool XMLTextImportHelper::FindAndRemoveBookmarkStartRange(
     {
         Impl::BookmarkMapEntry_t & rEntry =
             (*m_xImpl->m_BookmarkStartRanges.find(sName)).second;
-        o_rRange.set(rEntry.get<0>());
-        o_rXmlId = rEntry.get<1>();
-        o_rpRDFaAttributes = rEntry.get<2>();
+        o_rRange.set(std::get<0>(rEntry));
+        o_rXmlId = std::get<1>(rEntry);
+        o_rpRDFaAttributes = std::get<2>(rEntry);
         m_xImpl->m_BookmarkStartRanges.erase(sName);
         Impl::BookmarkVector_t::iterator it(m_xImpl->m_BookmarkVector.begin());
         while (it != m_xImpl->m_BookmarkVector.end() && it->compareTo(sName)!=0)
@@ -2624,7 +2627,7 @@ void XMLTextImportHelper::ConnectFrameChains(
         {
             if((*j).equals(rFrmName))
             {
-                // The previuous frame must exist, because it existing than
+                // The previous frame must exist, because it existing than
                 // inserting the entry
                 rFrmPropSet->setPropertyValue(s_ChainPrevName, makeAny(*i));
 
@@ -2796,6 +2799,62 @@ XMLTextImportHelper::SetCellParaStyleDefault(OUString const& rNewValue)
 OUString const& XMLTextImportHelper::GetCellParaStyleDefault()
 {
     return m_xImpl->m_sCellParaStyleDefault;
+}
+
+void XMLTextImportHelper::AddCrossRefHeadingMapping(OUString const& rFrom, OUString const& rTo)
+{
+    if (!m_xImpl->m_pCrossRefHeadingBookmarkMap)
+    {
+        m_xImpl->m_pCrossRefHeadingBookmarkMap.reset(new std::map<OUString, OUString>);
+    }
+    m_xImpl->m_pCrossRefHeadingBookmarkMap->insert(std::make_pair(rFrom, rTo));
+}
+
+// tdf#94804: hack to map cross reference fields that reference duplicate marks
+// note that we can't really check meta:generator for this since the file might
+// be round-tripped by different versions preserving duplicates => always map
+void XMLTextImportHelper::MapCrossRefHeadingFieldsHorribly()
+{
+    if (!m_xImpl->m_pCrossRefHeadingBookmarkMap)
+    {
+        return;
+    }
+
+    uno::Reference<text::XTextFieldsSupplier> const xFieldsSupplier(
+            m_xImpl->m_rSvXMLImport.GetModel(), uno::UNO_QUERY);
+    if (!xFieldsSupplier.is())
+    {
+        return;
+    }
+    uno::Reference<container::XEnumerationAccess> const xFieldsEA(
+            xFieldsSupplier->getTextFields());
+    uno::Reference<container::XEnumeration> const xFields(
+            xFieldsEA->createEnumeration());
+    while (xFields->hasMoreElements())
+    {
+        uno::Reference<lang::XServiceInfo> const xFieldInfo(
+                xFields->nextElement(), uno::UNO_QUERY);
+        if (!xFieldInfo->supportsService("com.sun.star.text.textfield.GetReference"))
+        {
+            continue;
+        }
+        uno::Reference<beans::XPropertySet> const xField(
+                xFieldInfo, uno::UNO_QUERY);
+        sal_uInt16 nType(0);
+        xField->getPropertyValue("ReferenceFieldSource") >>= nType;
+        if (text::ReferenceFieldSource::BOOKMARK != nType)
+        {
+            continue;
+        }
+        OUString name;
+        xField->getPropertyValue("SourceName") >>= name;
+        auto const iter(m_xImpl->m_pCrossRefHeadingBookmarkMap->find(name));
+        if (iter == m_xImpl->m_pCrossRefHeadingBookmarkMap->end())
+        {
+            continue;
+        }
+        xField->setPropertyValue("SourceName", uno::makeAny(iter->second));
+    }
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -40,7 +40,7 @@ namespace framework {
 
 class QuietInteraction;
 
-/** @short  implements general mechainsm for loading documents.
+/** @short  implements general mechanism for loading documents.
 
     @descr  An instance of this class can be used inside the API calls
             XComponentLoader::loadComponentFromURL() and
@@ -77,7 +77,7 @@ public:
 
         @descr  The load environment must know, if a content
                 is related to a target frame or not. Only "visible"
-                components, which fullfil the requirements of the
+                components, which fulfill the requirements of the
                 model-controller-view paradigm can be loaded into a frame.
                 Such contents are classified as E_CAN_BE_LOADED.
 
@@ -253,18 +253,6 @@ public:
                 flag field, which enable/disable special features of this
                 new instance for following load call.
 
-        @param  eContentType
-                classify the given content.
-                This value is set to a default value "UNKNOWN_CONTENT", which force
-                an internal check, if this content is loadable or not.
-                But may this check was already made by the caller of this method and
-                passing this information to this LoadEnv instance can suppress this
-                might expensive check.
-                That can be useful in case this information is needed outside too,
-                to decide if its necessary to create some resources for this load
-                request ... or to reject the request immediately if it seems to be not
-                loadable in general.
-
         @throw  A LoadEnvException e.g. if another load operation is till in progress
                 or initialization of a new one fail by other reasons.
                 The real reason, a suitable message and ID will be given here immidiatly.
@@ -273,12 +261,11 @@ public:
                 the whole runtime can't be used any longer.
      */
     void initializeLoading(const OUString&                                           sURL            ,
-                                   const css::uno::Sequence< css::beans::PropertyValue >&           lMediaDescriptor,
-                                   const css::uno::Reference< css::frame::XFrame >&                 xBaseFrame      ,
-                                   const OUString&                                           sTarget         ,
-                                         sal_Int32                                                  nSearchFlags    ,
-                                         EFeature                                                   eFeature        = E_NO_FEATURE         ,
-                                         EContentType                                               eContentType    = E_UNSUPPORTED_CONTENT);
+                           const css::uno::Sequence< css::beans::PropertyValue >&    lMediaDescriptor,
+                           const css::uno::Reference< css::frame::XFrame >&          xBaseFrame      ,
+                           const OUString&                                           sTarget         ,
+                                 sal_Int32                                           nSearchFlags    ,
+                                 EFeature                                            eFeature        = E_NO_FEATURE);
 
     /** @short  start loading of the resource represented by this loadenv instance.
 
@@ -497,7 +484,7 @@ private:
 
                 If a suitable target is located it will be locked. Thats why the last rule
                 exists! If this method returns a valid frame reference, it was locked to be useable
-                for this load request only. (Dont forget to reset this state later!)
+                for this load request only. (Don't forget to reset this state later!)
                 Concurrent LoadEnv instances can synchronize her work be using such locks :-) HOPEFULLY
 
         @throw  A LoadEnvException only in cases, where an internal error indicates,
@@ -518,7 +505,7 @@ private:
                    Showing of such frame is not needed really.. because we recycle
                    visible frames only!
                 b) If the document was already shown (e.g. by our progress implementation)
-                   we do nothing here. The reason  behind: The document was already shown...
+                   we do nothing here. The reason behind: The document was already shown...
                    and it was already make a top window...
                    If the user activated another frame inbetween (because loading needed some time)
                    it's not allowed to disturb the user again. Then the frame must resists in the background.

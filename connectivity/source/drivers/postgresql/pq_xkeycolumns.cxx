@@ -38,7 +38,6 @@
 #include <rtl/strbuf.hxx>
 
 #include <com/sun/star/sdbc/XRow.hpp>
-#include <com/sun/star/sdbc/XParameters.hpp>
 #include <com/sun/star/sdbc/DataType.hpp>
 #include <com/sun/star/sdbc/ColumnValue.hpp>
 
@@ -50,27 +49,18 @@
 
 using osl::MutexGuard;
 
-
 using com::sun::star::beans::XPropertySet;
 
 using com::sun::star::uno::Any;
 using com::sun::star::uno::makeAny;
 using com::sun::star::uno::UNO_QUERY;
-using com::sun::star::uno::Type;
-using com::sun::star::uno::XInterface;
 using com::sun::star::uno::Reference;
 using com::sun::star::uno::Sequence;
 using com::sun::star::uno::RuntimeException;
 
-using com::sun::star::container::NoSuchElementException;
-using com::sun::star::lang::WrappedTargetException;
-
 using com::sun::star::sdbc::XRow;
-using com::sun::star::sdbc::XCloseable;
 using com::sun::star::sdbc::XStatement;
 using com::sun::star::sdbc::XResultSet;
-using com::sun::star::sdbc::XParameters;
-using com::sun::star::sdbc::XPreparedStatement;
 using com::sun::star::sdbc::XDatabaseMetaData;
 using com::sun::star::sdbc::SQLException;
 
@@ -124,7 +114,7 @@ void KeyColumns::refresh()
 
         String2IntMap map;
 
-        m_values = Sequence< com::sun::star::uno::Any > ();
+        m_values.clear();
         sal_Int32 columnIndex = 0;
         while( rs->next() )
         {
@@ -151,11 +141,9 @@ void KeyColumns::refresh()
             }
 
             {
-                const int currentColumnIndex = columnIndex++;
-                assert(currentColumnIndex  == m_values.getLength());
-                m_values.realloc( columnIndex );
-                m_values[currentColumnIndex] = makeAny( prop );
-                map[ name ] = currentColumnIndex;
+                m_values.push_back( makeAny( prop ) );
+                map[ name ] = columnIndex;
+                ++columnIndex;
             }
         }
         m_name2index.swap( map );
@@ -167,7 +155,6 @@ void KeyColumns::refresh()
 
     fire( RefreshedBroadcaster( *this ) );
 }
-
 
 
 void KeyColumns::appendByDescriptor(

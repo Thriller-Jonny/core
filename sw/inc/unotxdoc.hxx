@@ -171,7 +171,6 @@ private:
     css::uno::Reference< css::beans::XPropertySet >             mxXLineNumberingProperties;
     css::uno::Reference< css::container::XNameAccess >          mxLinkTargetSupplier;
     css::uno::Reference< css::container::XEnumerationAccess >   mxXRedlines;
-    css::uno::Reference< css::container::XNameContainer>        xXFormsContainer;
 
     //temporary frame to enable PDF export if no valid view is available
     SfxViewFrame*                                   m_pHiddenViewFrame;
@@ -413,6 +412,8 @@ public:
     virtual int getPart() override;
     /// @see vcl::ITiledRenderable::getPartName().
     virtual OUString getPartName(int nPart) override;
+    /// @see vcl::ITiledRenderable::getPartHash().
+    virtual OUString getPartHash(int nPart) override;
     /// @see vcl::ITiledRenderable::initializeForTiledRendering().
     virtual void initializeForTiledRendering(const css::uno::Sequence<css::beans::PropertyValue>& rArguments) override;
     /// @see vcl::ITiledRenderable::registerCallback().
@@ -435,6 +436,8 @@ public:
     virtual void setClipboard(const css::uno::Reference<css::datatransfer::clipboard::XClipboard>& xClipboard) override;
     /// @see vcl::ITiledRenderable::isMimeTypeSupported().
     virtual bool isMimeTypeSupported() override;
+    /// @see vcl::ITiledRenderable::setClientVisibleArea().
+    virtual void setClientVisibleArea(const Rectangle& rRectangle) override;
     /// @see vcl::ITiledRenderable::getPointer().
     virtual Pointer getPointer() override;
 
@@ -506,11 +509,10 @@ class SwXLinkNameAccessWrapper : public cppu::WeakImplHelper
 >
 {
     css::uno::Reference< css::container::XNameAccess >    xRealAccess;
-    const SfxItemPropertySet*                                                       pPropSet;
-    const OUString                                                                    sLinkSuffix;
-    const OUString                                                                    sLinkDisplayName;
-    css::uno::Reference< css::text::XTextDocument >         xDoc;
-    SwXTextDocument*                                                                pxDoc;
+    const SfxItemPropertySet*                             pPropSet;
+    const OUString                                        sLinkSuffix;
+    const OUString                                        sLinkDisplayName;
+    SwXTextDocument*                                      pxDoc;
 
 public:
     SwXLinkNameAccessWrapper(css::uno::Reference< css::container::XNameAccess >  xAccess,

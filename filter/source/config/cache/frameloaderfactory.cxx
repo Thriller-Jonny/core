@@ -42,11 +42,9 @@ FrameLoaderFactory::FrameLoaderFactory(const css::uno::Reference< css::uno::XCom
 }
 
 
-
 FrameLoaderFactory::~FrameLoaderFactory()
 {
 }
-
 
 
 css::uno::Reference< css::uno::XInterface > SAL_CALL FrameLoaderFactory::createInstance(const OUString& sLoader)
@@ -55,7 +53,6 @@ css::uno::Reference< css::uno::XInterface > SAL_CALL FrameLoaderFactory::createI
 {
     return createInstanceWithArguments(sLoader, css::uno::Sequence< css::uno::Any >());
 }
-
 
 
 css::uno::Reference< css::uno::XInterface > SAL_CALL FrameLoaderFactory::createInstanceWithArguments(const OUString&                     sLoader  ,
@@ -68,7 +65,7 @@ css::uno::Reference< css::uno::XInterface > SAL_CALL FrameLoaderFactory::createI
 
     OUString sRealLoader = sLoader;
 
-    #ifdef _FILTER_CONFIG_MIGRATION_Q_
+    #ifdef FILTER_CONFIG_MIGRATION_Q_
 
         /* -> TODO - HACK
             check if the given loader name really exist ...
@@ -76,9 +73,11 @@ css::uno::Reference< css::uno::XInterface > SAL_CALL FrameLoaderFactory::createI
             type name instead of a loader name. For a small migration time
             we must simulate this old feature :-( */
 
-        if (!m_rCache->hasItem(FilterCache::E_FRAMELOADER, sLoader) && m_rCache->hasItem(FilterCache::E_TYPE, sLoader))
+        auto & cache = TheFilterCache::get();
+
+        if (!cache.hasItem(FilterCache::E_FRAMELOADER, sLoader) && cache.hasItem(FilterCache::E_TYPE, sLoader))
         {
-            _FILTER_CONFIG_LOG_("FrameLoaderFactory::createInstanceWithArguments() ... simulate old type search functionality!\n");
+            FILTER_CONFIG_LOG_("FrameLoaderFactory::createInstanceWithArguments() ... simulate old type search functionality!\n");
 
             css::uno::Sequence< OUString > lTypes { sLoader };
 
@@ -94,16 +93,16 @@ css::uno::Reference< css::uno::XInterface > SAL_CALL FrameLoaderFactory::createI
 
             // prevent outside code against NoSuchElementException!
             // But don't implement such defensive strategy for our new create handling :-)
-            if (!m_rCache->hasItem(FilterCache::E_FRAMELOADER, sRealLoader))
+            if (!cache.hasItem(FilterCache::E_FRAMELOADER, sRealLoader))
                 return css::uno::Reference< css::uno::XInterface>();
         }
 
         /* <- HACK */
 
-    #endif // _FILTER_CONFIG_MIGRATION_Q_
+    #endif // FILTER_CONFIG_MIGRATION_Q_
 
     // search loader on cache
-    CacheItem aLoader = m_rCache->getItem(m_eType, sRealLoader);
+    CacheItem aLoader = cache.getItem(m_eType, sRealLoader);
 
     // create service instance
     css::uno::Reference< css::uno::XInterface > xLoader = m_xContext->getServiceManager()->createInstanceWithContext(sRealLoader, m_xContext);
@@ -130,7 +129,6 @@ css::uno::Reference< css::uno::XInterface > SAL_CALL FrameLoaderFactory::createI
 }
 
 
-
 css::uno::Sequence< OUString > SAL_CALL FrameLoaderFactory::getAvailableServiceNames()
     throw(css::uno::RuntimeException, std::exception)
 {
@@ -139,20 +137,16 @@ css::uno::Sequence< OUString > SAL_CALL FrameLoaderFactory::getAvailableServiceN
 }
 
 
-
 OUString FrameLoaderFactory::impl_getImplementationName()
 {
     return OUString( "com.sun.star.comp.filter.config.FrameLoaderFactory" );
 }
 
 
-
 css::uno::Sequence< OUString > FrameLoaderFactory::impl_getSupportedServiceNames()
 {
-    css::uno::Sequence< OUString > lServiceNames { "com.sun.star.frame.FrameLoaderFactory" };
-    return lServiceNames;
+    return { "com.sun.star.frame.FrameLoaderFactory" };
 }
-
 
 
 css::uno::Reference< css::uno::XInterface > SAL_CALL FrameLoaderFactory::impl_createInstance(const css::uno::Reference< css::lang::XMultiServiceFactory >& xSMGR)

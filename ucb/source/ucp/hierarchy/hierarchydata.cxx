@@ -94,11 +94,7 @@ void makeXMLName( const OUString & rIn, OUStringBuffer & rBuffer  )
 }
 
 
-
-
 // HierarchyEntry Implementation.
-
-
 
 
 #define READ_SERVICE_NAME      "com.sun.star.ucb.HierarchyDataReadAccess"
@@ -257,8 +253,7 @@ bool HierarchyEntry::getData( HierarchyEntryData& rData )
 }
 
 
-bool HierarchyEntry::setData(
-                    const HierarchyEntryData& rData, bool bCreate )
+bool HierarchyEntry::setData( const HierarchyEntryData& rData )
 {
     try
     {
@@ -355,9 +350,6 @@ bool HierarchyEntry::setData(
                 }
                 else
                 {
-                    if ( !bCreate )
-                        return true;
-
                     // Key does not exist. Create / fill / insert it.
 
                     uno::Reference< lang::XSingleServiceFactory > xFac;
@@ -1061,11 +1053,7 @@ HierarchyEntry::getRootReadAccess()
 }
 
 
-
-
 // HierarchyEntry::iterator Implementation.
-
-
 
 
 HierarchyEntry::iterator::iterator()

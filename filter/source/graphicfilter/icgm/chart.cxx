@@ -26,9 +26,6 @@ CGMChart::CGMChart()
 {
     for ( sal_Int8 i = 0; i < 7; i++ )
     {
-        mDataNode[ i ].nBoxX1 = mDataNode[ i ].nBoxY1 = 0 ;
-        mDataNode[ i ].nBoxX2 = mDataNode[ i ].nBoxY2 = 0 ;
-
         mDataNode[ i ].nZoneEnum = i;
     }
 }
@@ -48,12 +45,6 @@ void CGMChart::DeleteTextEntry( TextEntry* pTextEntry )
     if ( pTextEntry )
     {
         delete pTextEntry->pText;
-        for ( TextAttribute* pTAttr = pTextEntry->pAttribute; pTAttr != nullptr ; )
-        {
-            TextAttribute* pTempTAttr = pTAttr;
-            pTAttr = pTAttr->pNextAttribute;
-            delete pTempTAttr;
-        }
         ::std::vector< TextEntry* >::iterator it;
         for ( it = maTextEntryList.begin(); it != maTextEntryList.end(); ++it )
         {

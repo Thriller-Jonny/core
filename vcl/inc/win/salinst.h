@@ -33,14 +33,6 @@ public:
     HWND                mhComWnd;
     /// The Yield mutex ensures that only one thread calls into VCL
     SalYieldMutex*      mpSalYieldMutex;
-    /// The Wait mutex ensures increment of mnYieldWaitCount and acquisition
-    /// or release of mpSalYieldMutex is atomic
-    osl::Mutex*         mpSalWaitMutex;
-    /// count main thread's pending ImplSalYieldMutexAcquireWithWait() calls
-    /// (it's not clear to me if this will be > 1 in practice; it would be
-    /// possible if main thread's handling of SAL_MSG_* sent by other threads
-    /// via SendMessage() ends up calling ImplSalYieldMutexAcquireWithWait())
-    sal_uInt16          mnYieldWaitCount;
 
 public:
     WinSalInstance();
@@ -91,6 +83,7 @@ SalFrame* ImplSalCreateFrame( WinSalInstance* pInst, HWND hWndParent, SalFrameSt
 SalObject* ImplSalCreateObject( WinSalInstance* pInst, WinSalFrame* pParent );
 HWND ImplSalReCreateHWND( HWND hWndParent, HWND oldhWnd, bool bAsChild );
 void ImplSalStartTimer( sal_uIntPtr nMS, bool bMutex = false );
+void ImplSalStopTimer();
 
 #endif // INCLUDED_VCL_INC_WIN_SALINST_H
 

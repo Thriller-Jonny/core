@@ -82,7 +82,7 @@ namespace writerfilter {
 
 namespace dmapper{
 
-struct _PageSz
+struct
 {
     sal_Int32 code;
     sal_Int32 h;
@@ -121,7 +121,7 @@ DomainMapper::DomainMapper( const uno::Reference< uno::XComponentContext >& xCon
     try
     {
         uno::Reference<rdf::XDocumentMetadataAccess> xDocumentMetadataAccess(xModel, uno::UNO_QUERY_THROW);
-        uno::Reference<embed::XStorage> xStorage(comphelper::OStorageHelper::GetStorageOfFormatFromInputStream(OFOPXML_STORAGE_FORMAT_STRING, xInputStream, xContext, bRepairStorage));
+        uno::Reference<embed::XStorage> xStorage = comphelper::OStorageHelper::GetTemporaryStorage();
         OUString aBaseURL = rMediaDesc.getUnpackedValueOrDefault("URL", OUString());
         OUString aStreamPath;
         const uno::Reference<rdf::XURI> xBaseURI(sfx2::createBaseURI(xContext, xStorage, aBaseURL, aStreamPath));
@@ -984,6 +984,34 @@ void DomainMapper::lcl_attribute(Id nName, Value & val)
             if (pSectionContext != nullptr)
                 pSectionContext->SetPageNumber(nIntValue);
         break;
+        case NS_ooxml::LN_CT_PageNumber_fmt:
+            if (pSectionContext)
+            {
+                switch (nIntValue)
+                {
+                case NS_ooxml::LN_Value_ST_NumberFormat_decimal:
+                    // 1, 2, ...
+                    pSectionContext->SetPageNumberType(style::NumberingType::ARABIC);
+                break;
+                case NS_ooxml::LN_Value_ST_NumberFormat_upperLetter:
+                    // A, B, ...
+                    pSectionContext->SetPageNumberType(style::NumberingType::CHARS_UPPER_LETTER_N);
+                break;
+                case NS_ooxml::LN_Value_ST_NumberFormat_lowerLetter:
+                    // a, b, ...
+                    pSectionContext->SetPageNumberType(style::NumberingType::CHARS_LOWER_LETTER_N);
+                break;
+                case NS_ooxml::LN_Value_ST_NumberFormat_upperRoman:
+                    // I, II, ...
+                    pSectionContext->SetPageNumberType(style::NumberingType::ROMAN_UPPER);
+                break;
+                case NS_ooxml::LN_Value_ST_NumberFormat_lowerRoman:
+                    // i, ii, ...
+                    pSectionContext->SetPageNumberType(style::NumberingType::ROMAN_LOWER);
+                break;
+                }
+            }
+        break;
         case NS_ooxml::LN_CT_FtnEdn_type:
             // This is the "separator" footnote, ignore its linebreak.
             if (static_cast<sal_uInt32>(nIntValue) == NS_ooxml::LN_Value_doc_ST_FtnEdn_separator)
@@ -1139,7 +1167,7 @@ static sal_Int32 lcl_getListId(const StyleSheetEntryPtr& rEntry, const StyleShee
     return lcl_getListId(pParent, rStyleTable);
 }
 
-void DomainMapper::sprmWithProps( Sprm& rSprm, PropertyMapPtr rContext )
+void DomainMapper::sprmWithProps( Sprm& rSprm, const PropertyMapPtr& rContext )
 {
     // These SPRM's are not specific to any section, so it's expected that there is no context yet.
     switch (rSprm.getId())
@@ -1213,6 +1241,14 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, PropertyMapPtr rContext )
                     rContext->Insert( PROP_NUMBERING_RULES, aRules );
                     // erase numbering from pStyle if already set
                     rContext->Erase(PROP_NUMBERING_STYLE_NAME);
+
+                    // Indentation can came from:
+                    // 1) Paragraph style's numbering's indentation: the current non-style numId has priority over it.
+                    // 2) Numbering's indentation: Writer handles that natively, so it should not be set on rContext.
+                    // 3) Paragraph style's indentation: ditto.
+                    // 4) Direct paragraph formatting: that will came later.
+                    // So no situation where keeping indentation at this point would make sense -> erase.
+                    rContext->Erase(PROP_PARA_FIRST_LINE_INDENT);
                 }
             }
             else
@@ -1653,7 +1689,7 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, PropertyMapPtr rContext )
     case NS_ooxml::LN_EG_RPrBase_effect:
         // The file-format has many character animations. We have only
         // one, so we use it always. Suboptimal solution though.
-        if (nIntValue)
+        if (nIntValue != NS_ooxml::LN_Value_ST_TextEffect_none)
             rContext->Insert(PROP_CHAR_FLASH, uno::makeAny( true ));
         else
             rContext->Insert(PROP_CHAR_FLASH, uno::makeAny( false ));
@@ -1926,7 +1962,7 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, PropertyMapPtr rContext )
         OSL_ENSURE(pSectionContext, "SectionContext unavailable!");
         if(pSectionContext)
         {
-            const _PageMar& rPageMar = m_pImpl->GetPageMargins();
+            const PageMar& rPageMar = m_pImpl->GetPageMargins();
             pSectionContext->SetTopMargin( rPageMar.top );
             pSectionContext->SetRightMargin( rPageMar.right );
             pSectionContext->SetBottomMargin( rPageMar.bottom );
@@ -1958,7 +1994,7 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, PropertyMapPtr rContext )
                     pSectionContext->SetEvenlySpaced( false );
                     pSectionContext->SetColumnDistance( pSectHdl->GetSpace() );
                     pSectionContext->SetColumnCount( (sal_Int16)(pSectHdl->GetColumns().size() -1));
-                    std::vector<_Column>::const_iterator tmpIter = pSectHdl->GetColumns().begin();
+                    std::vector<Column_>::const_iterator tmpIter = pSectHdl->GetColumns().begin();
                     for (; tmpIter != pSectHdl->GetColumns().end(); ++tmpIter)
                     {
                         pSectionContext->AppendColumnWidth( tmpIter->nWidth );
@@ -2237,7 +2273,7 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, PropertyMapPtr rContext )
     break;
     case NS_ooxml::LN_paratrackchange:
         m_pImpl->StartParaMarkerChange( );
-        /* fallthrough */
+        SAL_FALLTHROUGH;
     case NS_ooxml::LN_CT_PPr_pPrChange:
     case NS_ooxml::LN_trackchange:
     case NS_ooxml::LN_EG_RPrContent_rPrChange:
@@ -2898,7 +2934,7 @@ void DomainMapper::lcl_endShape( )
     }
 }
 
-void DomainMapper::PushStyleSheetProperties( PropertyMapPtr pStyleProperties, bool bAffectTableMngr )
+void DomainMapper::PushStyleSheetProperties( const PropertyMapPtr& pStyleProperties, bool bAffectTableMngr )
 {
     m_pImpl->PushStyleProperties( pStyleProperties );
     if ( bAffectTableMngr )
@@ -2915,7 +2951,7 @@ void DomainMapper::PopStyleSheetProperties( bool bAffectTableMngr )
     }
 }
 
-void DomainMapper::PushListProperties( ::std::shared_ptr<PropertyMap> pListProperties )
+void DomainMapper::PushListProperties( const ::std::shared_ptr<PropertyMap>& pListProperties )
 {
     m_pImpl->PushListProperties( pListProperties );
 }
@@ -3081,7 +3117,7 @@ void DomainMapper::lcl_utext(const sal_uInt8 * data_, size_t len)
     {
         PropertyMapPtr pContext = m_pImpl->GetTopContext();
         PropertyValueVector_t aProps = comphelper::sequenceToContainer< PropertyValueVector_t >(pContext->GetPropertyValues());
-        OUString sStyle = getOrCreateCharStyle(aProps);
+        OUString sStyle = getOrCreateCharStyle(aProps, /*bAlwaysCreate=*/false);
         m_pImpl->SetRubyText(sText,sStyle);
         return;
     }
@@ -3186,10 +3222,19 @@ void DomainMapper::lcl_utext(const sal_uInt8 * data_, size_t len)
             bool bSingleParagraph = m_pImpl->GetIsFirstParagraphInSection() && m_pImpl->GetIsLastParagraphInSection();
             // If the paragraph contains only the section properties and it has
             // no runs, we should not create a paragraph for it in Writer, unless that would remove the whole section.
-            bool bRemove = !m_pImpl->GetParaChanged() && m_pImpl->GetParaSectpr() && !bSingleParagraph;
+            bool bRemove = !m_pImpl->GetParaChanged() && m_pImpl->GetParaSectpr() && !bSingleParagraph && !m_pImpl->GetIsDummyParaAddedForTableInSection();
+            if (bRemove)
+            {
+                // tdf#97417 delete numbering of the paragraph
+                // it will be deleted anyway, and the numbering would be copied
+                // to the next paragraph in sw SplitNode and then be applied to
+                // every following paragraph
+                m_pImpl->GetTopContextOfType(CONTEXT_PARAGRAPH)->Erase(PROP_NUMBERING_RULES);
+                m_pImpl->GetTopContextOfType(CONTEXT_PARAGRAPH)->Erase(PROP_NUMBERING_LEVEL);
+            }
             m_pImpl->SetParaSectpr(false);
             m_pImpl->finishParagraph(m_pImpl->GetTopContextOfType(CONTEXT_PARAGRAPH));
-            if (bRemove && !m_pImpl->GetIsDummyParaAddedForTableInSection())
+            if (bRemove)
                 m_pImpl->RemoveLastParagraph();
         }
         else
@@ -3319,7 +3364,7 @@ void DomainMapper::handleUnderlineType(const Id nId, const ::std::shared_ptr<Pro
         break;
     case NS_ooxml::LN_Value_ST_Underline_words:
         rContext->Insert(PROP_CHAR_WORD_MODE, uno::makeAny(true));
-        // fall-through intended
+        SAL_FALLTHROUGH;
     case NS_ooxml::LN_Value_ST_Underline_single:
         nUnderline = awt::FontUnderline::SINGLE;
         break;
@@ -3390,7 +3435,7 @@ void DomainMapper::handleParaJustification(const sal_Int32 nIntValue, const ::st
         break;
     case 4:
         nLastLineAdjust = style::ParagraphAdjust_BLOCK;
-        //no break;
+        SAL_FALLTHROUGH;
     case NS_ooxml::LN_Value_ST_Jc_both:
         nAdjust = style::ParagraphAdjust_BLOCK;
         aStringValue = "both";
@@ -3542,10 +3587,10 @@ uno::Reference< text::XTextRange > DomainMapper::GetCurrentTextRange()
     return m_pImpl->GetTopTextAppend()->getEnd();
 }
 
-OUString DomainMapper::getOrCreateCharStyle( PropertyValueVector_t& rCharProperties )
+OUString DomainMapper::getOrCreateCharStyle( PropertyValueVector_t& rCharProperties, bool bAlwaysCreate )
 {
     StyleSheetTablePtr pStyleSheets = m_pImpl->GetStyleSheetTable();
-    return pStyleSheets->getOrCreateCharStyle( rCharProperties );
+    return pStyleSheets->getOrCreateCharStyle( rCharProperties, bAlwaysCreate );
 }
 
 StyleSheetTablePtr DomainMapper::GetStyleSheetTable( )

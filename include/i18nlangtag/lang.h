@@ -107,6 +107,16 @@ typedef unsigned short LanguageType;
 /* NOTE: this is taken from the MS documentation! Not supported by OOo/SO! */
 #define LANGUAGE_INVARIANT                  0x007F
 
+/* Naming conventions:
+ * * ..._LSO suffix indicates a Language-Script-Only mapping, i.e. no country
+ *   assignment in i18nlangtag/source/isolang/isolang.cxx.
+ *   Used for backward compatibility or where MS assigned such values and they
+ *   should be explicitly handled.
+ * * LANGUAGE_USER_... for our user-defined IDs.
+ * * LANGUAGE_OBSOLETE_USER_... for a user-defined ID that has been replaced by
+ *   a value defined by MS.
+ */
+
 #define LANGUAGE_AFRIKAANS                  0x0436
 #define LANGUAGE_ALBANIAN                   0x041C
 #define LANGUAGE_ALSATIAN_FRANCE            0x0484
@@ -434,10 +444,10 @@ typedef unsigned short LanguageType;
 #define LANGUAGE_qps_ploca                  0x05FE  /* 'qps-ploca', qps is a reserved for local use code */
 #define LANGUAGE_qps_plocm                  0x09FF  /* 'qps-plocm', qps is a reserved for local use code */
 
-#define LANGUAGE_ar_Ploc_SA__reserved       0x4401  /* 'ar-Ploc-SA', 'Ploc'?? */
-#define LANGUAGE_ja_Ploc_JP__reserved       0x0811  /* 'ja-Ploc-JP', 'Ploc'?? */
-#define LANGUAGE_pap_029__reserved          0x0479  /* 'pap-029' */
-#define LANGUAGE_ar_145__reserved           0x4801  /* 'ar-145' */
+#define LANGUAGE_ar_Ploc_SA_reserved        0x4401  /* 'ar-Ploc-SA', 'Ploc'?? */
+#define LANGUAGE_ja_Ploc_JP_reserved        0x0811  /* 'ja-Ploc-JP', 'Ploc'?? */
+#define LANGUAGE_pap_029_reserved           0x0479  /* 'pap-029' */
+#define LANGUAGE_ar_145_reserved            0x4801  /* 'ar-145' */
 #define LANGUAGE_es_419                     0x580A  /* 'es-419', not reserved, used? */
 
 /* Seems these values were used or reserved at one point of time ... */
@@ -702,6 +712,14 @@ typedef unsigned short LanguageType;
 #define LANGUAGE_USER_ARPITAN_ITALY         0x0A96  /* makeLangID( 0x02, getPrimaryLanguage( LANGUAGE_USER_ARPITAN_FRANCE)) */
 #define LANGUAGE_USER_ARPITAN_SWITZERLAND   0x0E96  /* makeLangID( 0x03, getPrimaryLanguage( LANGUAGE_USER_ARPITAN_FRANCE)) */
 #define LANGUAGE_USER_ENGLISH_BOTSWANA      0x9809  /* makeLangID( 0x26, getPrimaryLanguage( LANGUAGE_ENGLISH_UK)) */
+#define LANGUAGE_USER_INTERLINGUE           0x0697  /* no locale */
+#define LANGUAGE_USER_APATANI               0x0698
+#define LANGUAGE_USER_ENGLISH_MAURITIUS     0x9C09  /* makeLangID( 0x27, getPrimaryLanguage( LANGUAGE_ENGLISH_UK)) */
+#define LANGUAGE_USER_FRENCH_MAURITIUS      0x900C  /* makeLangID( 0x24, getPrimaryLanguage( LANGUAGE_FRENCH)) */
+
+
+/* XXX Add new user defined LCIDs ^^^ there.
+ * Note that we run out of IDs with sublanguage ID 0x01 after 0x07DF ... */
 
 
 /* Primary language ID range for on-the-fly assignment. */

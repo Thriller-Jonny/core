@@ -766,13 +766,12 @@ static void init(struct DocumentMetadataAccess_Impl & i_rImpl)
 }
 
 
-
 DocumentMetadataAccess::DocumentMetadataAccess(
         uno::Reference< uno::XComponentContext > const & i_xContext,
         const IXmlIdRegistrySupplier & i_rRegistrySupplier)
     : m_pImpl(new DocumentMetadataAccess_Impl(i_xContext, i_rRegistrySupplier))
 {
-    // no initalization: must call loadFrom...
+    // no initialization: must call loadFrom...
 }
 
 DocumentMetadataAccess::DocumentMetadataAccess(

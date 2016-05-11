@@ -51,7 +51,7 @@ namespace chart
 {
 
 DrawModelWrapper::DrawModelWrapper( const uno::Reference<uno::XComponentContext>& /*xContext*/ )
-        : SdrModel( SvtPathOptions().GetPalettePath(), nullptr, nullptr, false, false )
+        : SdrModel( SvtPathOptions().GetPalettePath(), nullptr, nullptr, false )
         , m_pChartItemPool(nullptr)
         , m_xMainDrawPage(nullptr)
         , m_xHiddenDrawPage(nullptr)
@@ -257,10 +257,6 @@ OutputDevice* DrawModelWrapper::getReferenceDevice() const
 }
 
 SfxItemPool& DrawModelWrapper::GetItemPool()
-{
-    return this->SdrModel::GetItemPool();
-}
-const SfxItemPool& DrawModelWrapper::GetItemPool() const
 {
     return this->SdrModel::GetItemPool();
 }

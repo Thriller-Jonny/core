@@ -444,7 +444,7 @@ public:
 LinguMgrExitLstnr::LinguMgrExitLstnr()
 {
     // add object to frame::Desktop EventListeners in order to properly call
-    // the AtExit function at appliction exit.
+    // the AtExit function at application exit.
 
     uno::Reference< XComponentContext >  xContext = getProcessComponentContext();
     xDesktop = Desktop::create( xContext );
@@ -458,7 +458,7 @@ LinguMgrExitLstnr::~LinguMgrExitLstnr()
         xDesktop->removeEventListener( this );
         xDesktop = nullptr;    //! release reference to desktop
     }
-    OSL_ENSURE(!xDesktop.is(), "reference to desktop should be realeased");
+    OSL_ENSURE(!xDesktop.is(), "reference to desktop should be released");
 }
 
 void LinguMgrExitLstnr::disposing(const EventObject& rSource)
@@ -699,7 +699,7 @@ uno::Reference< XDictionary > LinguMgr::GetStandard()
         if (xTmp.is())
         {
             xTmpDicList->addDictionary( xTmp );
-            xTmp->setActive( sal_True );
+            xTmp->setActive( true );
         }
         xDic.set( xTmp, UNO_QUERY );
     }
@@ -790,7 +790,7 @@ SvxAlternativeSpelling SvxGetAltSpelling(
                && pWord[ nIdx-- ] == pAltWord[ nAltIdx-- ])
             ++nR;
 
-        aRes.aReplacement       = OUString( aAltWord.copy( nL, nAltLen - nL - nR ) );
+        aRes.aReplacement       = aAltWord.copy( nL, nAltLen - nL - nR );
         aRes.nChangedPos        = (sal_Int16) nL;
         aRes.nChangedLength     = nLen - nL - nR;
         aRes.bIsAltSpelling     = true;

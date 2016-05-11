@@ -23,16 +23,20 @@
 
 namespace svx { namespace sidebar {
 
-LineWidthValueSet::LineWidthValueSet (
-    vcl::Window* pParent, const ResId& rResId)
-    : ValueSet( pParent, rResId ),
-      pVDev(nullptr),
-      nSelItem(0),
-      bCusEnable(false)
+LineWidthValueSet::LineWidthValueSet(vcl::Window* pParent)
+    : ValueSet(pParent, WB_TABSTOP)
+    , pVDev(nullptr)
+    , nSelItem(0)
+    , bCusEnable(false)
 {
     strUnit = new OUString[9];
+}
+
+void LineWidthValueSet::Resize()
+{
     SetColCount();
-    SetLineCount( 9);
+    SetLineCount(9);
+    ValueSet::Resize();
 }
 
 LineWidthValueSet::~LineWidthValueSet()
@@ -70,7 +74,7 @@ void LineWidthValueSet::SetSelItem(sal_uInt16 nSel)
     }
 }
 
-void LineWidthValueSet::SetImage(Image img)
+void LineWidthValueSet::SetImage(const Image& img)
 {
     imgCus = img;
 }
@@ -98,9 +102,9 @@ void  LineWidthValueSet::UserDraw( const UserDrawEvent& rUDEvt )
     Color aOldFillColor = pDev->GetFillColor();
 
     vcl::Font aFont(OutputDevice::GetDefaultFont(DefaultFontType::UI_SANS, MsLangId::getSystemLanguage(), GetDefaultFontFlags::OnlyOne));
-    Size aSize = aFont.GetSize();
+    Size aSize = aFont.GetFontSize();
     aSize.Height() = nRectHeight*3/5;
-    aFont.SetSize( aSize );
+    aFont.SetFontSize( aSize );
 
     Point aLineStart(aBLPos.X() + 5,            aBLPos.Y() + ( nRectHeight - nItemId )/2);
     Point aLineEnd(aBLPos.X() + nRectWidth * 7 / 9 - 10, aBLPos.Y() + ( nRectHeight - nItemId )/2);
@@ -165,6 +169,11 @@ void  LineWidthValueSet::UserDraw( const UserDrawEvent& rUDEvt )
     pDev->SetLineColor(aOldColor);
     pDev->SetFillColor(aOldFillColor);
     pDev->SetFont(aOldFont);
+}
+
+Size LineWidthValueSet::GetOptimalSize() const
+{
+    return LogicToPixel(Size(80, 12 * 9), MAP_APPFONT);
 }
 
 } } // end of namespace svx::sidebar

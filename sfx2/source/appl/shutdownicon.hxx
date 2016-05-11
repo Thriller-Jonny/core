@@ -17,8 +17,8 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef __SHUTDOWNICON_HXX__
-#define __SHUTDOWNICON_HXX__
+#ifndef INCLUDED_SFX2_SOURCE_APPL_SHUTDOWNICON_HXX
+#define INCLUDED_SFX2_SOURCE_APPL_SHUTDOWNICON_HXX
 
 #include <com/sun/star/frame/XTerminateListener.hpp>
 #include <com/sun/star/frame/XDesktop2.hpp>
@@ -150,7 +150,7 @@ class SFX2_DLLPUBLIC ShutdownIcon : public ShutdownIconServiceBase
 
         css::uno::Reference< css::frame::XDesktop2 > m_xDesktop;
 
-#ifdef WNT
+#ifdef _WIN32
         static void EnableAutostartW32( const OUString &aShortcutName );
         static OUString GetAutostartFolderNameW32();
 #endif

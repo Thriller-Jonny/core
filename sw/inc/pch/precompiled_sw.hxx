@@ -46,18 +46,16 @@
 #include <string>
 #include <swdllapi.h>
 #include <swerror.h>
+#include <tuple>
 #include <typeinfo>
 #include <unomid.h>
 #include <unordered_map>
 #include <utility>
 #include <vector>
-#include <boost/current_function.hpp>
-#include <boost/noncopyable.hpp>
 #include <boost/numeric/conversion/cast.hpp>
 #include <boost/optional.hpp>
 #include <boost/optional/optional.hpp>
 #include <boost/property_tree/json_parser.hpp>
-#include <boost/tuple/tuple.hpp>
 #include <osl/diagnose.h>
 #include <osl/diagnose.hxx>
 #include <osl/endian.h>
@@ -264,7 +262,6 @@
 #include <cppuhelper/typeprovider.hxx>
 #include <cppuhelper/weak.hxx>
 #include <crsrsh.hxx>
-#include <crsskip.hxx>
 #include <crstate.hxx>
 #include <dbfld.hxx>
 #include <dbmgr.hxx>

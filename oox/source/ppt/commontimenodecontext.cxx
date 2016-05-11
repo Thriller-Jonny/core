@@ -38,6 +38,8 @@
 #include "oox/ppt/pptimport.hxx"
 #include <oox/ppt/pptfilterhelpers.hxx>
 #include "oox/drawingml/drawingmltypes.hxx"
+#include <oox/token/namespaces.hxx>
+#include <oox/token/tokens.hxx>
 
 #include "animationtypes.hxx"
 
@@ -47,7 +49,6 @@ using namespace ::com::sun::star::animations;
 using namespace ::com::sun::star::presentation;
 using namespace ::com::sun::star::xml::sax;
 
-using ::com::sun::star::beans::NamedValue;
 
 namespace oox { namespace ppt {
 

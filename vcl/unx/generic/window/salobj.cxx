@@ -21,9 +21,10 @@
 #include <stdio.h>
 #endif
 
-#include <prex.h>
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
 #include <X11/extensions/shape.h>
-#include <postx.h>
+
 #include <tools/debug.hxx>
 
 #include <vcl/keycodes.hxx>
@@ -77,11 +78,11 @@ X11SalObject* X11SalObject::CreateObject( SalFrame* pParent, SystemWindowData* p
     XVisualInfo aTemplate;
     aTemplate.visualid = aVisID;
     int nVisuals = 0;
-    XVisualInfo* pInfos = XGetVisualInfo( pDisp, VisualIDMask, &aTemplate, &nVisuals );
+    XVisualInfo* pInfo = XGetVisualInfo( pDisp, VisualIDMask, &aTemplate, &nVisuals );
     // only one VisualInfo structure can match the visual id
     DBG_ASSERT( nVisuals == 1, "match count for visual id is not 1" );
-    unsigned int nDepth     = pInfos->depth;
-    XFree( pInfos );
+    unsigned int nDepth     = pInfo->depth;
+    XFree( pInfo );
     XSetWindowAttributes aAttribs;
     aAttribs.event_mask =   StructureNotifyMask
                           | ButtonPressMask
@@ -177,14 +178,13 @@ void X11SalInstance::DestroyObject( SalObject* pObject )
 }
 
 // SalClipRegion is a member of SalObject
-// definition of SalClipRegion my be found in unx/inc/salobj.h
+// definition of SalClipRegion my be found in vcl/inc/unx/salobj.h
 
 SalClipRegion::SalClipRegion()
 {
     ClipRectangleList = nullptr;
     numClipRectangles = 0;
     maxClipRectangles = 0;
-    nClipRegionType   = SAL_OBJECT_CLIP_INCLUDERECTS;
 }
 
 SalClipRegion::~SalClipRegion()
@@ -308,43 +308,17 @@ void
 X11SalObject::EndSetClipRegion()
 {
     XRectangle *pRectangles = maClipRegion.EndSetClipRegion ();
-    const int   nType       = maClipRegion.GetClipRegionType();
     const int   nRectangles = maClipRegion.GetRectangleCount();
-
-    const int   dest_kind   = ShapeBounding;
-    const int   ordering    = YSorted;
-    int         op;
-
-    switch ( nType )
-    {
-        case SAL_OBJECT_CLIP_INCLUDERECTS :
-            op = ShapeSet;
-            break;
-        case SAL_OBJECT_CLIP_EXCLUDERECTS :
-            op = ShapeSubtract;
-            break;
-        case SAL_OBJECT_CLIP_ABSOLUTE :
-            op = ShapeSet;
-            break;
-        default :
-            op = ShapeUnion;
-    }
 
     ::Window aShapeWindow = maPrimary;
 
     XShapeCombineRectangles ( static_cast<Display*>(maSystemChildData.pDisplay),
                               aShapeWindow,
-                              dest_kind,
+                              ShapeBounding,
                               0, 0, // x_off, y_off
                               pRectangles,
                               nRectangles,
-                              op, ordering );
-}
-
-sal_uInt16
-X11SalObject::GetClipRegionType()
-{
-    return maClipRegion.GetClipRegionType();
+                              ShapeSet, YSorted );
 }
 
 void
@@ -453,7 +427,7 @@ bool X11SalObject::Dispatch( XEvent* pEvent )
                 aEvt.mnTime     = pEvent->xbutton.time;
                 aEvt.mnCode     = sal_GetCode( pEvent->xbutton.state );
                 aEvt.mnButton   = 0;
-                sal_uInt16 nEvent = 0;
+                SalEvent nEvent = SalEvent::NONE;
                 if( pEvent->type == ButtonPress ||
                     pEvent->type == ButtonRelease )
                 {
@@ -464,13 +438,13 @@ bool X11SalObject::Dispatch( XEvent* pEvent )
                         case Button3: aEvt.mnButton = MOUSE_RIGHT;break;
                     }
                     nEvent = (pEvent->type == ButtonPress) ?
-                             SALEVENT_MOUSEBUTTONDOWN :
-                             SALEVENT_MOUSEBUTTONUP;
+                             SalEvent::MouseButtonDown :
+                             SalEvent::MouseButtonUp;
                 }
                 else if( pEvent->type == EnterNotify )
-                    nEvent = SALEVENT_MOUSELEAVE;
+                    nEvent = SalEvent::MouseLeave;
                 else
-                    nEvent = SALEVENT_MOUSEMOVE;
+                    nEvent = SalEvent::MouseMove;
                 pObject->mpParent->CallCallback( nEvent, &aEvt );
             }
             else
@@ -484,13 +458,13 @@ bool X11SalObject::Dispatch( XEvent* pEvent )
                     pObject->mbVisible = true;
                     return true;
                     case ButtonPress:
-                    pObject->CallCallback( SALOBJ_EVENT_TOTOP, nullptr );
+                    pObject->CallCallback( SalObjEvent::ToTop, nullptr );
                     return true;
                     case FocusIn:
-                    pObject->CallCallback( SALOBJ_EVENT_GETFOCUS, nullptr );
+                    pObject->CallCallback( SalObjEvent::GetFocus, nullptr );
                     return true;
                     case FocusOut:
-                    pObject->CallCallback( SALOBJ_EVENT_LOSEFOCUS, nullptr );
+                    pObject->CallCallback( SalObjEvent::LoseFocus, nullptr );
                     return true;
                     default: break;
                 }

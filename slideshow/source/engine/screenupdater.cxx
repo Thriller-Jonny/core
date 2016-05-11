@@ -22,8 +22,8 @@
 
 #include <osl/diagnose.h>
 
-#include <boost/shared_ptr.hpp>
 #include <boost/mem_fn.hpp>
+#include <memory>
 #include <vector>
 #include <algorithm>
 
@@ -31,7 +31,7 @@ namespace {
     class UpdateLock : public ::slideshow::internal::ScreenUpdater::UpdateLock
     {
     public:
-        UpdateLock (::slideshow::internal::ScreenUpdater& rUpdater, const bool bStartLocked);
+        explicit UpdateLock (::slideshow::internal::ScreenUpdater& rUpdater);
         virtual ~UpdateLock();
         virtual void Activate() override;
     private:
@@ -212,9 +212,9 @@ namespace internal
         }
     }
 
-    ::boost::shared_ptr<ScreenUpdater::UpdateLock> ScreenUpdater::createLock (const bool bStartLocked)
+    ::std::shared_ptr<ScreenUpdater::UpdateLock> ScreenUpdater::createLock()
     {
-        return ::boost::shared_ptr<ScreenUpdater::UpdateLock>(new ::UpdateLock(*this, bStartLocked));
+        return ::std::shared_ptr<ScreenUpdater::UpdateLock>(new ::UpdateLock(*this));
     }
 
 
@@ -224,16 +224,11 @@ namespace internal
 namespace {
 
 UpdateLock::UpdateLock (
-    ::slideshow::internal::ScreenUpdater& rUpdater,
-    const bool bStartLocked)
+    ::slideshow::internal::ScreenUpdater& rUpdater)
     : mrUpdater(rUpdater),
       mbIsActivated(false)
 {
-    if (bStartLocked)
-        Activate();
 }
-
-
 
 
 UpdateLock::~UpdateLock()
@@ -241,8 +236,6 @@ UpdateLock::~UpdateLock()
     if (mbIsActivated)
         mrUpdater.unlockUpdates();
 }
-
-
 
 
 void UpdateLock::Activate()

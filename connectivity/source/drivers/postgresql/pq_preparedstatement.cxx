@@ -46,7 +46,7 @@
 
 #include <cppuhelper/typeprovider.hxx>
 #include <cppuhelper/queryinterface.hxx>
-
+#include <comphelper/sequence.hxx>
 #include <com/sun/star/beans/PropertyAttribute.hpp>
 
 #include <com/sun/star/sdbc/ResultSetConcurrency.hpp>
@@ -67,29 +67,21 @@ using com::sun::star::uno::RuntimeException;
 using com::sun::star::uno::Exception;
 using com::sun::star::uno::Sequence;
 using com::sun::star::uno::Reference;
-using com::sun::star::uno::XInterface;
 using com::sun::star::uno::UNO_QUERY;
 
 using com::sun::star::lang::IllegalArgumentException;
 
-using com::sun::star::sdbc::XWarningsSupplier;
 using com::sun::star::sdbc::XCloseable;
-using com::sun::star::sdbc::XPreparedStatement;
-using com::sun::star::sdbc::XParameters;
 using com::sun::star::sdbc::XResultSet;
 using com::sun::star::sdbc::XRef;
 using com::sun::star::sdbc::XBlob;
 using com::sun::star::sdbc::XClob;
 using com::sun::star::sdbc::XArray;
 using com::sun::star::sdbc::XConnection;
-using com::sun::star::sdbc::XGeneratedResultSet;
 using com::sun::star::sdbc::SQLException;
 
 using com::sun::star::beans::Property;
 using com::sun::star::beans::XPropertySetInfo;
-using com::sun::star::beans::XPropertySet;
-using com::sun::star::beans::XMultiPropertySet;
-using com::sun::star::beans::XFastPropertySet;
 
 using namespace dbtools;
 
@@ -134,7 +126,7 @@ static ::cppu::IPropertyArrayHelper & getPreparedStatementPropertyArrayHelper()
                         ::cppu::UnoType<sal_Int32>::get() , 0 )
                 };
             OSL_ASSERT( sizeof(aTable)/ sizeof(Property)  == PREPARED_STATEMENT_SIZE );
-            static ::cppu::OPropertyArrayHelper arrayHelper( aTable, PREPARED_STATEMENT_SIZE, sal_True );
+            static ::cppu::OPropertyArrayHelper arrayHelper( aTable, PREPARED_STATEMENT_SIZE, true );
             pArrayHelper = &arrayHelper;
         }
     }
@@ -169,8 +161,8 @@ PreparedStatement::PreparedStatement(
     const Reference< XConnection > & conn,
     struct ConnectionSettings *pSettings,
     const OString & stmt )
-    : OComponentHelper(refMutex->mutex)
-    , OPropertySetHelper(OComponentHelper::rBHelper)
+    : PreparedStatement_BASE(refMutex->mutex)
+    , OPropertySetHelper(PreparedStatement_BASE::rBHelper)
     , m_connection(conn)
     , m_pSettings(pSettings)
     , m_stmt(stmt)
@@ -188,9 +180,8 @@ PreparedStatement::PreparedStatement(
 
     splitSQL( m_stmt, m_splittedStatement );
     int elements = 0;
-    for( int i = 0, max = m_splittedStatement.size(); i < max ; i ++ )
+    for(OString & str : m_splittedStatement)
     {
-        const OString &str = m_splittedStatement[i];
         // ignore quoted strings ....
         if( ! isQuoted( str ) )
         {
@@ -240,49 +231,29 @@ void PreparedStatement::checkClosed() throw (SQLException, RuntimeException )
             *this, OUString(),1,Any());
 }
 
-Any PreparedStatement::queryInterface( const Type & reqType ) throw (RuntimeException, std::exception)
+Any PreparedStatement::queryInterface( const Type & rType ) throw (RuntimeException, std::exception)
 {
-    Any ret;
-
-    ret = OComponentHelper::queryInterface( reqType );
-    if( ! ret.hasValue() )
-        ret = ::cppu::queryInterface( reqType,
-                                    static_cast< XWarningsSupplier * > ( this  ),
-                                    static_cast< XPreparedStatement * > ( this ),
-                                    static_cast< com::sun::star::sdbc::XResultSetMetaDataSupplier * > ( this ),
-                                    static_cast< XParameters * > ( this ),
-                                    static_cast< XCloseable * > ( this ),
-                                    static_cast< XGeneratedResultSet * > ( this ),
-                                    static_cast< XPropertySet * > ( this ),
-                                    static_cast< XMultiPropertySet * > ( this ),
-                                    static_cast< XFastPropertySet * > ( this ) );
-    return ret;
+    Any aRet = PreparedStatement_BASE::queryInterface(rType);
+    return aRet.hasValue() ? aRet : OPropertySetHelper::queryInterface(rType);
 }
 
 
 Sequence< Type > PreparedStatement::getTypes() throw ( RuntimeException, std::exception )
 {
-    static cppu::OTypeCollection *pCollection;
+    static Sequence< Type > *pCollection;
     if( ! pCollection )
     {
         MutexGuard guard( osl::Mutex::getGlobalMutex() );
         if( !pCollection )
         {
-            static cppu::OTypeCollection collection(
-                cppu::UnoType<XWarningsSupplier>::get(),
-                cppu::UnoType<XPreparedStatement>::get(),
-                cppu::UnoType<com::sun::star::sdbc::XResultSetMetaDataSupplier>::get(),
-                cppu::UnoType<XParameters>::get(),
-                cppu::UnoType<XCloseable>::get(),
-                cppu::UnoType<XGeneratedResultSet>::get(),
-                cppu::UnoType<XPropertySet>::get(),
-                cppu::UnoType<XFastPropertySet>::get(),
-                cppu::UnoType<XMultiPropertySet>::get(),
-                OComponentHelper::getTypes());
+            static Sequence< Type > collection(
+                ::comphelper::concatSequences(
+                    OPropertySetHelper::getTypes(),
+                    PreparedStatement_BASE::getTypes()));
             pCollection = &collection;
         }
     }
-    return pCollection->getTypes();
+    return *pCollection;
 }
 
 Sequence< sal_Int8> PreparedStatement::getImplementationId() throw ( RuntimeException, std::exception )
@@ -310,18 +281,11 @@ void PreparedStatement::close(  ) throw (SQLException, RuntimeException, std::ex
     }
 }
 
-void PreparedStatement::raiseSQLException(
-    const char * errorMsg, const char *errorType )
+void PreparedStatement::raiseSQLException( const char * errorMsg )
     throw( SQLException )
 {
     OUStringBuffer buf(128);
     buf.append( "pq_driver: ");
-    if( errorType )
-    {
-        buf.append( "[" );
-        buf.appendAscii( errorType );
-        buf.append( "]" );
-    }
     buf.append(
         OUString( errorMsg, strlen(errorMsg) , m_pSettings->encoding ) );
     buf.append( " (caused by statement '" );
@@ -364,13 +328,13 @@ sal_Bool PreparedStatement::execute( )
     OStringBuffer buf( m_stmt.getLength() *2 );
 
     OStringVector::size_type vars = 0;
-    for( OStringVector::size_type i = 0 ; i < m_splittedStatement.size() ; ++i )
+    for(OString & str : m_splittedStatement)
     {
         // LEM TODO: instead of this manual mucking with SQL
         // could we use PQexecParams / PQExecPrepared / ...?
         // Only snafu is giving the types of the parameters and
         // that it needs $1, $2, etc instead of "?"
-        const OString &str = m_splittedStatement[i];
+
 //         printf( "Splitted %d %s\n" , i , str.getStr() );
         if( isQuoted( str ) )
         {
@@ -846,7 +810,7 @@ sal_Int32 PreparedStatement::getUpdateCount(  )
 sal_Bool PreparedStatement::getMoreResults(  )
     throw (::com::sun::star::sdbc::SQLException, ::com::sun::star::uno::RuntimeException, std::exception)
 {
-    return sal_False;
+    return false;
 }
 
 Reference< XResultSet > PreparedStatement::getGeneratedValues(  )

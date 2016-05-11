@@ -99,7 +99,8 @@ public class LocalOfficeConnection
             catch (Throwable e)
             {
                 // loading twice would fail
-                System.err.println( "cannot find uwinapi" );
+                System.err.println("cannot find uwinapi:");
+                e.printStackTrace();
             }
 
             try
@@ -109,7 +110,8 @@ public class LocalOfficeConnection
             catch (Throwable e)
             {
                 // loading twice would fail
-                System.err.println( "cannot find jawt" );
+                System.err.println("cannot find jawt:");
+                e.printStackTrace();
             }
         }
 
@@ -122,8 +124,8 @@ public class LocalOfficeConnection
      * Constructor.
      * Sets up paths to the office application and native libraries if
      * values are available in <code>OFFICE_PROP_FILE</code> in the user
-     * home directory.<br />
-     * "com.sun.star.beans.path" - the office application directory;<br/>
+     * home directory.<br>
+     * "com.sun.star.beans.path" - the office application directory;<br>
      * "com.sun.star.beans.libpath" - native libraries directory.
      */
     public LocalOfficeConnection()
@@ -156,7 +158,7 @@ public class LocalOfficeConnection
 
         /**
      * Sets a connection URL.
-     * This implementation accepts a UNO URL with following format:<br />
+     * This implementation accepts a UNO URL with following format:<br>
      * <pre>
      * url    := uno:localoffice[,&lt;params&gt;];urp;StarOffice.ServiceManager
      * params := &lt;path&gt;[,&lt;pipe&gt;]
@@ -226,9 +228,7 @@ public class LocalOfficeConnection
     }
 
     /**
-     * Creates an office window.
-     * The window is either a sub-class of java.awt.Canvas (local) or
-     * java.awt.Container (RVP).
+     * Creates an office java.awt.Canvas based window.
      *
      * @param container This is an AWT container.
      * @return The office window instance.
@@ -459,7 +459,7 @@ public class LocalOfficeConnection
 
     /**
      * Parses a connection URL.
-     * This method accepts a UNO URL with following format:<br />
+     * This method accepts a UNO URL with following format:<br>
      * <pre>
      * url    := uno:localoffice[,&lt;params&gt;];urp;StarOffice.NamingService
      * params := &lt;path&gt;[,&lt;pipe&gt;]
@@ -775,3 +775,5 @@ public class LocalOfficeConnection
     }
 
 }
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -33,7 +33,7 @@
 #include <sal/macros.h>
 #include <memory>
 
-#if (OSL_DEBUG_LEVEL > 1) || defined DBG_UTIL
+#if (OSL_DEBUG_LEVEL > 0) || defined DBG_UTIL
 #include <stdarg.h>
 #define dump_state( a, b, c, d ) fprintf( stderr, a, b, c, d );
 #else
@@ -41,7 +41,7 @@
 #endif
 inline void dbg_msg( const char* pString, ... )
 {
-#if (OSL_DEBUG_LEVEL > 1) || defined DBG_UTIL
+#if (OSL_DEBUG_LEVEL > 0) || defined DBG_UTIL
     va_list ap;
     va_start( ap, pString );
     vfprintf( stderr, pString, ap );
@@ -125,7 +125,7 @@ SANE_Status Sane::ControlOption( int nOption, SANE_Action nAction,
     SANE_Status nStatus = p_control_option( maHandle, (SANE_Int)nOption,
                                 nAction, pData, &nInfo );
     DUMP_STATE( nStatus, "sane_control_option" );
-#if OSL_DEBUG_LEVEL > 1
+#if OSL_DEBUG_LEVEL > 0
     if( nStatus != SANE_STATUS_GOOD )
     {
         const char* pAction = "Unknown";
@@ -232,7 +232,7 @@ void Sane::Init()
             for( nDevices = 0 ; ppDevices[ nDevices ]; nDevices++ ) ;
         }
     }
-#if (OSL_DEBUG_LEVEL > 1) || defined DBG_UTIL
+#if (OSL_DEBUG_LEVEL > 0) || defined DBG_UTIL
     else
         fprintf( stderr, "libsane%s could not be opened: %s\n", SAL_DLLEXTENSION,
                  dlerror() );
@@ -475,7 +475,7 @@ enum FrameStyleType {
 
 #define BYTE_BUFFER_SIZE 32768
 
-static inline sal_uInt8 _ReadValue( FILE* fp, int depth )
+static inline sal_uInt8 ReadValue( FILE* fp, int depth )
 {
     if( depth == 16 )
     {
@@ -618,7 +618,7 @@ bool Sane::Start( BitmapTransporter& rBitmap )
                 bSuccess = false;
                 break;
             }
-#if (OSL_DEBUG_LEVEL > 1) || defined DBG_UTIL
+#if (OSL_DEBUG_LEVEL > 0) || defined DBG_UTIL
             const char* ppFormats[] = { "SANE_FRAME_GRAY", "SANE_FRAME_RGB",
                                   "SANE_FRAME_RED", "SANE_FRAME_GREEN",
                                   "SANE_FRAME_BLUE", "Unknown !!!" };
@@ -735,9 +735,8 @@ bool Sane::Start( BitmapTransporter& rBitmap )
                     nWidthMM = (int)(((double)nWidth / fResl) * 25.4);
                 if( ! nHeightMM )
                     nHeightMM = (int)(((double)nHeight / fResl) * 25.4);
-#if OSL_DEBUG_LEVEL > 1
-                fprintf( stderr, "set dimensions to (%d, %d) Pixel, (%d, %d) mm, resolution is %lg\n", (int)nWidth, (int)nHeight, (int)nWidthMM, (int)nHeightMM, fResl );
-#endif
+                SAL_INFO("extensions.scanner", "set dimensions to(" << nWidth << ", " << nHeight << ") Pixel, (" << nWidthMM << ", " << nHeightMM <<
+                    ") mm, resolution is " << fResl);
 
                 aConverter.Seek( 18 );
                 aConverter.WriteUInt32( nWidth );
@@ -800,7 +799,7 @@ bool Sane::Start( BitmapTransporter& rBitmap )
                 {
                     for( i = 0; i < (aParams.pixels_per_line); i++ )
                     {
-                        sal_uInt8 nGray = _ReadValue( pFrame, aParams.depth );
+                        sal_uInt8 nGray = ReadValue( pFrame, aParams.depth );
                         aConverter.WriteUChar( nGray );
                     }
                 }
@@ -809,9 +808,9 @@ bool Sane::Start( BitmapTransporter& rBitmap )
                     for( i = 0; i < (aParams.pixels_per_line); i++ )
                     {
                         sal_uInt8 nRed, nGreen, nBlue;
-                        nRed    = _ReadValue( pFrame, aParams.depth );
-                        nGreen  = _ReadValue( pFrame, aParams.depth );
-                        nBlue   = _ReadValue( pFrame, aParams.depth );
+                        nRed    = ReadValue( pFrame, aParams.depth );
+                        nGreen  = ReadValue( pFrame, aParams.depth );
+                        nBlue   = ReadValue( pFrame, aParams.depth );
                         aConverter.WriteUChar( nBlue );
                         aConverter.WriteUChar( nGreen );
                         aConverter.WriteUChar( nRed );
@@ -821,7 +820,7 @@ bool Sane::Start( BitmapTransporter& rBitmap )
                 {
                     for( i = 0; i < (aParams.pixels_per_line); i++ )
                     {
-                        sal_uInt8 nValue = _ReadValue( pFrame, aParams.depth );
+                        sal_uInt8 nValue = ReadValue( pFrame, aParams.depth );
                         switch( aParams.format )
                         {
                             case SANE_FRAME_RED:

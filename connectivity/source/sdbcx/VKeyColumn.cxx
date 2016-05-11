@@ -55,37 +55,37 @@ OKeyColumn::OKeyColumn(bool _bCase) : OColumn(_bCase)
     construct();
 }
 
-OKeyColumn::OKeyColumn( const OUString&  _ReferencedColumn,
-                        const OUString&  _Name,
-                        const OUString&  _TypeName,
-                        const OUString&  _DefaultValue,
-                        sal_Int32        _IsNullable,
-                        sal_Int32        _Precision,
-                        sal_Int32        _Scale,
-                        sal_Int32        _Type,
-                        bool             _IsAutoIncrement,
-                        bool             _IsRowVersion,
-                        bool             _IsCurrency,
+OKeyColumn::OKeyColumn( const OUString&  ReferencedColumn,
+                        const OUString&  Name,
+                        const OUString&  TypeName,
+                        const OUString&  DefaultValue,
+                        sal_Int32        IsNullable,
+                        sal_Int32        Precision,
+                        sal_Int32        Scale,
+                        sal_Int32        Type,
+                        bool             IsAutoIncrement,
+                        bool             IsRowVersion,
+                        bool             IsCurrency,
                         bool             _bCase,
-                        const OUString&  _CatalogName,
-                        const OUString&  _SchemaName,
-                        const OUString&  _TableName
-                        ) : OColumn(_Name,
-                            _TypeName,
-                            _DefaultValue,
+                        const OUString&  CatalogName,
+                        const OUString&  SchemaName,
+                        const OUString&  TableName
+                        ) : OColumn(Name,
+                            TypeName,
+                            DefaultValue,
                             OUString(),
-                            _IsNullable,
-                            _Precision,
-                            _Scale,
-                            _Type,
-                            _IsAutoIncrement,
-                            _IsRowVersion,
-                            _IsCurrency,
+                            IsNullable,
+                            Precision,
+                            Scale,
+                            Type,
+                            IsAutoIncrement,
+                            IsRowVersion,
+                            IsCurrency,
                             _bCase,
-                            _CatalogName,
-                            _SchemaName,
-                            _TableName)
-                        ,   m_ReferencedColumn(_ReferencedColumn)
+                            CatalogName,
+                            SchemaName,
+                            TableName)
+                        ,   m_ReferencedColumn(ReferencedColumn)
 {
     construct();
 }
@@ -109,9 +109,6 @@ void OKeyColumn::construct()
     sal_Int32 nAttrib = isNew() ? 0 : PropertyAttribute::READONLY;
     registerProperty(OMetaConnection::getPropMap().getNameByIndex(PROPERTY_ID_RELATEDCOLUMN),   PROPERTY_ID_RELATEDCOLUMN,  nAttrib,&m_ReferencedColumn,    ::cppu::UnoType<OUString>::get());
 }
-
-
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

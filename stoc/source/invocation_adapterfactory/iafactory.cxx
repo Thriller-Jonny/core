@@ -75,8 +75,8 @@ struct hash_ptr
     inline size_t operator() ( void * p ) const
         { return reinterpret_cast<size_t>(p); }
 };
-typedef std::unordered_set< void *, hash_ptr, equal_to< void * > > t_ptr_set;
-typedef std::unordered_map< void *, t_ptr_set, hash_ptr, equal_to< void * > > t_ptr_map;
+typedef std::unordered_set< void *, hash_ptr > t_ptr_set;
+typedef std::unordered_map< void *, t_ptr_set, hash_ptr > t_ptr_map;
 
 
 class FactoryImpl
@@ -756,8 +756,8 @@ FactoryImpl::~FactoryImpl()
 
     (*m_pConverter->release)( m_pConverter );
 
-#if OSL_DEBUG_LEVEL > 1
-    OSL_ENSURE( m_receiver2adapters.empty(), "### still adapters out there!?" );
+#if OSL_DEBUG_LEVEL > 0
+    assert(m_receiver2adapters.empty() && "still adapters out there!?");
 #endif
 }
 
@@ -903,10 +903,6 @@ static Reference< XInterface > SAL_CALL FactoryImpl_create(
 }
 
 }
-
-
-
-
 
 
 static const struct ::cppu::ImplementationEntry g_entries[] =

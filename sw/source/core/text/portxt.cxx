@@ -277,7 +277,7 @@ static bool lcl_HasContent( const SwFieldPortion& rField, SwTextFormatInfo &rInf
     return rField.GetExpText( rInf, aText ) && !aText.isEmpty();
 }
 
-bool SwTextPortion::_Format( SwTextFormatInfo &rInf )
+bool SwTextPortion::Format_( SwTextFormatInfo &rInf )
 {
     // 5744: If only the hyphen does not fit anymore, we still need to wrap
     // the word, or else return true!
@@ -450,7 +450,7 @@ bool SwTextPortion::Format( SwTextFormatInfo &rInf )
         "SwTextPortion::Format: missing real width" );
     OSL_ENSURE( Height(), "SwTextPortion::Format: missing height" );
 
-    return _Format( rInf );
+    return Format_( rInf );
 }
 
 // Format end of line
@@ -548,7 +548,7 @@ void SwTextPortion::Paint( const SwTextPaintInfo &rInf ) const
         const bool bSmartTags = nullptr != pSmarttags;
 
         if ( bWrong || bSmartTags || bGrammarCheck )
-            rInf.DrawMarkedText( *this, rInf.GetLen(), false, bWrong, bSmartTags, bGrammarCheck );
+            rInf.DrawMarkedText( *this, rInf.GetLen(), bWrong, bSmartTags, bGrammarCheck );
         else
             rInf.DrawText( *this, rInf.GetLen() );
     }
@@ -745,13 +745,13 @@ void SwHolePortion::Paint( const SwTextPaintInfo &rInf ) const
     const SwFont* pOrigFont = rInf.GetFont();
     SwFont* pHoleFont = nullptr;
     SwFontSave* pFontSave = nullptr;
-    if( pOrigFont->GetUnderline() != UNDERLINE_NONE
-    ||  pOrigFont->GetOverline() != UNDERLINE_NONE
+    if( pOrigFont->GetUnderline() != LINESTYLE_NONE
+    ||  pOrigFont->GetOverline() != LINESTYLE_NONE
     ||  pOrigFont->GetStrikeout() != STRIKEOUT_NONE )
     {
         pHoleFont = new SwFont( *pOrigFont );
-        pHoleFont->SetUnderline( UNDERLINE_NONE );
-        pHoleFont->SetOverline( UNDERLINE_NONE );
+        pHoleFont->SetUnderline( LINESTYLE_NONE );
+        pHoleFont->SetOverline( LINESTYLE_NONE );
         pHoleFont->SetStrikeout( STRIKEOUT_NONE );
         pFontSave = new SwFontSave( rInf, pHoleFont );
     }

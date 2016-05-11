@@ -18,6 +18,8 @@
 #include <test/bootstrapfixture.hxx>
 
 #include <DirectoryStream.hxx>
+#include <com/sun/star/container/XChild.hpp>
+#include <com/sun/star/ucb/XContent.hpp>
 
 namespace ucb = com::sun::star::ucb;
 namespace uno = com::sun::star::uno;
@@ -60,6 +62,38 @@ static const char g_aDirPath[] = "/writerperfect/qa/unit/data/stream/test.dir";
 static const char g_aNondirPath[] = "/writerperfect/qa/unit/data/stream/test.dir/mimetype";
 static const char g_aNonexistentPath[] = "/writerperfect/qa/unit/data/stream/foo/bar";
 
+DirectoryStream *createForParent(const css::uno::Reference<css::ucb::XContent> &xContent)
+{
+    try
+    {
+        if (!xContent.is())
+            return nullptr;
+
+        DirectoryStream *pDir(nullptr);
+
+        const uno::Reference<css::container::XChild> xChild(xContent, uno::UNO_QUERY);
+        if (xChild.is())
+        {
+            const uno::Reference<ucb::XContent> xDirContent(xChild->getParent(), uno::UNO_QUERY);
+            if (xDirContent.is())
+            {
+                pDir = new writerperfect::DirectoryStream(xDirContent);
+                if (!pDir->isStructured())
+                {
+                    delete pDir;
+                    pDir = nullptr;
+                }
+            }
+        }
+
+        return pDir;
+    }
+    catch (...)
+    {
+        return nullptr;
+    }
+}
+
 DirectoryStreamTest::DirectoryStreamTest()
 {
     const uno::Reference<ucb::XCommandEnvironment> xCmdEnv;
@@ -67,24 +101,24 @@ DirectoryStreamTest::DirectoryStreamTest()
 
     using ucbhelper::Content;
 
-    m_xDir = Content(getURLFromSrc(g_aDirPath), xCmdEnv, xContext).get();
-    m_xFile = Content(getURLFromSrc(g_aNondirPath), xCmdEnv, xContext).get();
-    m_xNonexistent = Content(getURLFromSrc(g_aNonexistentPath), xCmdEnv, xContext).get();
+    m_xDir = Content(m_directories.getURLFromSrc(g_aDirPath), xCmdEnv, xContext).get();
+    m_xFile = Content(m_directories.getURLFromSrc(g_aNondirPath), xCmdEnv, xContext).get();
+    m_xNonexistent = Content(m_directories.getURLFromSrc(g_aNonexistentPath), xCmdEnv, xContext).get();
 }
 
 void DirectoryStreamTest::testConstruction()
 {
-    const unique_ptr<DirectoryStream> pDir(DirectoryStream::createForParent(m_xFile));
+    const unique_ptr<DirectoryStream> pDir(createForParent(m_xFile));
     CPPUNIT_ASSERT(bool(pDir));
     CPPUNIT_ASSERT(pDir->isStructured());
 
     // this should work for dirs too
-    const unique_ptr<DirectoryStream> pDir2(DirectoryStream::createForParent(m_xDir));
+    const unique_ptr<DirectoryStream> pDir2(createForParent(m_xDir));
     CPPUNIT_ASSERT(bool(pDir2));
     CPPUNIT_ASSERT(pDir2->isStructured());
 
     // for nonexistent dirs nothing is created
-    const unique_ptr<DirectoryStream> pNondir(DirectoryStream::createForParent(m_xNonexistent));
+    const unique_ptr<DirectoryStream> pNondir(createForParent(m_xNonexistent));
     CPPUNIT_ASSERT(!pNondir);
 
     // even if we try harder, just an empty shell is created
@@ -136,7 +170,7 @@ void DirectoryStreamTest::testStructuredOperations()
     DirectoryStream aDir(m_xDir);
     lcl_testStructuredOperations(aDir);
 
-    unique_ptr<DirectoryStream> pDir(DirectoryStream::createForParent(m_xFile));
+    unique_ptr<DirectoryStream> pDir(createForParent(m_xFile));
     CPPUNIT_ASSERT(bool(pDir));
     lcl_testStructuredOperations(*pDir.get());
 }

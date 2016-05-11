@@ -33,7 +33,7 @@ bool hasCLanguageLinkageType(FunctionDecl const * decl) {
     if (decl->isExternC()) {
         return true;
     }
-#if (__clang_major__ == 3 && __clang_minor__ >= 3) || __clang_major__ > 3
+#if CLANG_VERSION >= 30300
     if (decl->isInExternCContext()) {
         return true;
     }
@@ -74,7 +74,7 @@ bool UnrefFun::VisitFunctionDecl(FunctionDecl const * decl) {
     }
 
     //TODO, filtering out any functions relating to (class) templates for now:
-    CXXRecordDecl const * r = dyn_cast<CXXRecordDecl>(decl->getDeclContext());;
+    CXXRecordDecl const * r = dyn_cast<CXXRecordDecl>(decl->getDeclContext());
     if (r != nullptr
         && (r->getTemplateSpecializationKind() != TSK_Undeclared
             || r->isDependentContext()))
@@ -147,7 +147,7 @@ bool UnrefFun::VisitFunctionDecl(FunctionDecl const * decl) {
     report(
         DiagnosticsEngine::Warning,
         (canon->isDefined()
-#if (__clang_major__ == 3 && __clang_minor__ >= 4) || __clang_major__ > 3
+#if CLANG_VERSION >= 30400
          ? (canon->isExternallyVisible()
             ? "Unreferenced externally visible function%0 definition"
             : "Unreferenced externally invisible function%0 definition")

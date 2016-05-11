@@ -86,12 +86,12 @@ public:
     /**
      * @descr   Set drawing object border line.
      */
-    void    SetLineStyle(double width, XFColor color = XFColor(0,0,0), sal_Int32 transparency = 0);
+    void    SetLineStyle(double width, XFColor color = XFColor(0,0,0));
 
     /**
      * @descr   Set drawing object dash border style.
      */
-    void    SetLineDashStyle(enumXFLineStyle style, int num1, int num2, double len1, double len2, double space );
+    void    SetLineDashStyle(enumXFLineStyle style, double len1, double len2, double space );
 
     /**
      * @descr   Set drawing object area fill color.
@@ -106,14 +106,14 @@ public:
     /**
      * @descr   Set drawing object arrow start style,only lines can have arrows.
      */
-    void    SetArrowStart(const OUString& start, double size=0.3, bool center = false);
+    void    SetArrowStart(const OUString& start, double size=0.3);
 
     /**
      * @descr   Set drawing object arrow end style,only lines can have arrows.
      */
-    void    SetArrowEnd(const OUString& end, double size=0.3, bool center = false);
+    void    SetArrowEnd(const OUString& end, double size=0.3);
 
-    void SetFontWorkStyle(sal_Int8 nForm, enumXFFWStyle eStyle, enumXFFWAdjust eAdjust);
+    void SetFontWorkStyle(enumXFFWStyle eStyle, enumXFFWAdjust eAdjust);
 
     virtual enumXFStyle GetStyleFamily() override;
 
@@ -122,7 +122,6 @@ public:
 private:
     XFFontWorkStyle* m_pFontWorkStyle;
     enumXFWrap  m_eWrap;
-    sal_Int32   m_nWrapLines;
     XFDrawLineStyle *m_pLineStyle;
     XFDrawAreaStyle *m_pAreaStyle;
     OUString   m_strArrowStart;
@@ -133,20 +132,20 @@ private:
     bool m_bArrowEndCenter;
 };
 
-inline void XFDrawStyle::SetArrowStart(const OUString& start, double size, bool center)
+inline void XFDrawStyle::SetArrowStart(const OUString& start, double size)
 {
     assert(size>0);
     m_strArrowStart = start;
     m_fArrowStartSize = size;
-    m_bArrowStartCenter = center;
+    m_bArrowStartCenter = true;
 }
 
-inline void XFDrawStyle::SetArrowEnd(const OUString& end, double size, bool center)
+inline void XFDrawStyle::SetArrowEnd(const OUString& end, double size)
 {
     assert(size>0);
     m_strArrowEnd = end;
     m_fArrowEndSize = size;
-    m_bArrowEndCenter = center;
+    m_bArrowEndCenter = true;
 }
 
 #endif

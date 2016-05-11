@@ -63,7 +63,7 @@ namespace frm
     namespace
     {
 
-        static ::comphelper::IPropertyInfoService& lcl_getPropertyInfos()
+        ::comphelper::IPropertyInfoService& lcl_getPropertyInfos()
         {
             static ConcreteInfoService s_aPropInfos;
             return s_aPropInfos;
@@ -80,7 +80,8 @@ namespace frm
 
     PropertyBagHelper::~PropertyBagHelper()
     {
-        delete m_pPropertyArrayHelper, m_pPropertyArrayHelper = nullptr;
+        delete m_pPropertyArrayHelper;
+        m_pPropertyArrayHelper = nullptr;
     }
 
 
@@ -99,7 +100,8 @@ namespace frm
 
     void PropertyBagHelper::impl_nts_invalidatePropertySetInfo()
     {
-        delete m_pPropertyArrayHelper, m_pPropertyArrayHelper = nullptr;
+        delete m_pPropertyArrayHelper;
+        m_pPropertyArrayHelper = nullptr;
     }
 
 
@@ -243,7 +245,7 @@ namespace frm
 
         struct PropertyValueLessByName : public ::std::binary_function< PropertyValue, PropertyValue, bool >
         {
-            bool operator()( const PropertyValue& _lhs, const PropertyValue _rhs ) const
+            bool operator()( const PropertyValue& _lhs, const PropertyValue& _rhs ) const
             {
                 return _lhs.Name < _rhs.Name;
             }

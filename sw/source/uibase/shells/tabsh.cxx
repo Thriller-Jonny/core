@@ -170,7 +170,7 @@ static SwTableRep*  lcl_TableParamToItemSet( SfxItemSet& rSet, SwWrtShell &rSh )
     if(rSh.GetBoxDirection( aBoxDirection ))
         rSet.Put(aBoxDirection, FN_TABLE_BOX_TEXTORIENTATION);
 
-    bool bSelectAll = rSh.StartsWithTable() && rSh.ExtendedSelectedAll(/*bFootnotes=*/false);
+    bool bSelectAll = rSh.StartsWithTable() && rSh.ExtendedSelectedAll();
     bool bTableSel = rSh.IsTableMode() || bSelectAll;
     if(!bTableSel)
     {
@@ -242,10 +242,12 @@ static SwTableRep*  lcl_TableParamToItemSet( SfxItemSet& rSet, SwWrtShell &rSh )
                 nLeft = nRight = nLR / 2;
                 break;
             case text::HoriOrientation::LEFT:
-                nRight = nLR; nLeft = 0;
+                nRight = nLR;
+                nLeft = 0;
                 break;
             case text::HoriOrientation::RIGHT:
-                nLeft = nLR, nRight = 0;
+                nLeft = nLR;
+                nRight = 0;
                 break;
             case text::HoriOrientation::LEFT_AND_WIDTH:
                 nRight = nLR - nLeft;
@@ -521,19 +523,30 @@ void SwTableShell::Execute(SfxRequest &rReq)
                 aBorderLine.SetWidth( DEF_LINE_WIDTH_0 );
             }
 
-            bool bLine = false;
             if( aBox.GetTop() != nullptr )
-                aBox.SetLine(&aBorderLine, SvxBoxItemLine::TOP), bLine |= true;
+            {
+                aBox.SetLine(&aBorderLine, SvxBoxItemLine::TOP);
+            }
             if( aBox.GetBottom() != nullptr )
-                aBox.SetLine(&aBorderLine, SvxBoxItemLine::BOTTOM), bLine |= true;
+            {
+                aBox.SetLine(&aBorderLine, SvxBoxItemLine::BOTTOM);
+            }
             if( aBox.GetLeft() != nullptr )
-                aBox.SetLine(&aBorderLine, SvxBoxItemLine::LEFT), bLine |= true;
+            {
+                aBox.SetLine(&aBorderLine, SvxBoxItemLine::LEFT);
+            }
             if( aBox.GetRight() != nullptr )
-                aBox.SetLine(&aBorderLine, SvxBoxItemLine::RIGHT), bLine |= true;
+            {
+                aBox.SetLine(&aBorderLine, SvxBoxItemLine::RIGHT);
+            }
             if( aInfo.GetHori() != nullptr )
-                aInfo.SetLine(&aBorderLine, SvxBoxInfoItemLine::HORI), bLine |= true;
+            {
+                aInfo.SetLine(&aBorderLine, SvxBoxInfoItemLine::HORI);
+            }
             if( aInfo.GetVert() != nullptr )
-                aInfo.SetLine(&aBorderLine, SvxBoxInfoItemLine::VERT), bLine |= true;
+            {
+                aInfo.SetLine(&aBorderLine, SvxBoxInfoItemLine::VERT);
+            }
 
             aCoreSet.Put( aBox  );
             aCoreSet.Put( aInfo );
@@ -731,7 +744,7 @@ void SwTableShell::Execute(SfxRequest &rReq)
                 {
                     case TBLMERGE_OK:
                          bCallDone = true;
-                        //no break;
+                         SAL_FALLTHROUGH;
                     case TBLMERGE_NOSELECTION:
                         break;
                     case TBLMERGE_TOOCOMPLEX:
@@ -912,8 +925,9 @@ void SwTableShell::Execute(SfxRequest &rReq)
             }
 
             nSlot = bColumn ? FN_TABLE_INSERT_COL_DLG : FN_TABLE_INSERT_ROW_DLG;
+
+            SAL_FALLTHROUGH; // on Count = 0 appears the dialog
         }
-        // No break;  on Count = 0 appears the dialog
         case FN_TABLE_INSERT_COL_DLG:
         case FN_TABLE_INSERT_ROW_DLG:
         {
@@ -931,7 +945,9 @@ void SwTableShell::Execute(SfxRequest &rReq)
                     SfxBoolItem  aAfter( FN_PARAM_INSERT_AFTER, !pDlg->isInsertBefore() );
                     SfxViewFrame* pVFrame = GetView().GetViewFrame();
                     if( pVFrame )
-                        pVFrame->GetDispatcher()->Execute( nDispatchSlot, SfxCallMode::SYNCHRON|SfxCallMode::RECORD, &aCountItem, &aAfter, 0L);
+                        pVFrame->GetDispatcher()->ExecuteList(nDispatchSlot,
+                            SfxCallMode::SYNCHRON|SfxCallMode::RECORD,
+                            { &aCountItem, &aAfter });
                 }
             }
             break;
@@ -994,6 +1010,7 @@ void SwTableShell::Execute(SfxRequest &rReq)
                     case HEADLINE_BOXATTRCOPY:
                     case HEADLINE_BOXATRCOLLCOPY:
                         rSh.SplitTable(pType->GetValue()) ;
+                        break;
                     default: ;//wrong parameter, do nothing
                 }
             }
@@ -1126,7 +1143,7 @@ void SwTableShell::Execute(SfxRequest &rReq)
         // The last case branch which needs a table manager!!
         case FN_TABLE_SET_COL_WIDTH:
         {
-            SwTableFUNC aMgr( &rSh, false);
+            SwTableFUNC aMgr( &rSh );
             aMgr.ColWidthDlg(GetView().GetWindow());
             break;
         }

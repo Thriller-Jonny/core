@@ -103,19 +103,17 @@ SdrEditView::~SdrEditView()
 }
 
 
-
-SdrLayer* SdrEditView::InsertNewLayer(const OUString& rName, sal_uInt16 nPos)
+void SdrEditView::InsertNewLayer(const OUString& rName, sal_uInt16 nPos)
 {
     SdrLayerAdmin& rLA=mpModel->GetLayerAdmin();
     sal_uInt16 nMax=rLA.GetLayerCount();
     if (nPos>nMax) nPos=nMax;
-    SdrLayer* pNewLayer=rLA.NewLayer(rName,nPos);
+    rLA.NewLayer(rName,nPos);
 
     if( GetModel()->IsUndoEnabled() )
         AddUndo(GetModel()->GetSdrUndoFactory().CreateUndoNewLayer(nPos,rLA,*mpModel));
 
     mpModel->SetChanged();
-    return pNewLayer;
 }
 
 #include <svx/svdogrp.hxx>
@@ -281,7 +279,6 @@ void SdrEditView::DeleteLayer(const OUString& rName)
         mpModel->SetChanged();
     }
 }
-
 
 
 void SdrEditView::EndUndo()
@@ -661,7 +658,6 @@ void SdrEditView::CheckPossibilities()
 }
 
 
-
 void SdrEditView::ForceMarkedObjToAnotherPage()
 {
     bool bFlg=false;
@@ -959,7 +955,6 @@ void SdrEditView::CopyMarkedObj()
 }
 
 
-
 bool SdrEditView::InsertObjectAtView(SdrObject* pObj, SdrPageView& rPV, SdrInsertFlags nOptions)
 {
     if (nOptions & SdrInsertFlags::SETDEFLAYER) {
@@ -1032,7 +1027,6 @@ void SdrEditView::ReplaceObjectAtView(SdrObject* pOldObj, SdrPageView& rPV, SdrO
 
     if (bMark) MarkObj(pNewObj,&rPV);
 }
-
 
 
 bool SdrEditView::IsUndoEnabled() const

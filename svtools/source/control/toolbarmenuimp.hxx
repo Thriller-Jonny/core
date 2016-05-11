@@ -56,9 +56,6 @@ const int BORDER_X = 0;
 const int BORDER_Y = 0;
 
 
-// - ToolbarMenuEntry -
-
-
 class ToolbarMenuEntry
 {
 public:
@@ -88,7 +85,7 @@ public:
 
     void init( int nEntryId, MenuItemBits nBits );
 
-    const css::uno::Reference< css::accessibility::XAccessibleContext >& GetAccessible( bool bCreate = false );
+    const css::uno::Reference< css::accessibility::XAccessibleContext >& GetAccessible();
 
     sal_Int32 getAccessibleChildCount() throw (css::uno::RuntimeException);
     css::uno::Reference< css::accessibility::XAccessible > getAccessibleChild( sal_Int32 index ) throw (css::lang::IndexOutOfBoundsException, css::uno::RuntimeException);
@@ -98,9 +95,6 @@ public:
         return mbChecked || ( mnBits & ( MenuItemBits::RADIOCHECK | MenuItemBits::CHECKABLE | MenuItemBits::AUTOCHECK ) );
     }
 };
-
-
-// - ToolbarMenuAcc -
 
 
 typedef ::cppu::WeakComponentImplHelper<
@@ -188,9 +182,6 @@ private:
 };
 
 
-// - ToolbarMenuEntryAcc -
-
-
 typedef ::cppu::WeakComponentImplHelper< css::accessibility::XAccessible,
                                                      css::accessibility::XAccessibleEventBroadcaster,
                                                      css::accessibility::XAccessibleContext,
@@ -243,7 +234,6 @@ private:
     */
     virtual void SAL_CALL disposing() override;
 };
-
 
 
 struct ToolbarMenu_Impl

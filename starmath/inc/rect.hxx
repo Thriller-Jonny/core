@@ -39,9 +39,8 @@ bool SmIsMathAlpha(const OUString &rText);
 
 inline long SmFromTo(long nFrom, long nTo, double fRelDist)
 {
-    return nFrom + (long) (fRelDist * (nTo - nFrom));
+    return nFrom + static_cast<long>(fRelDist * (nTo - nFrom));
 }
-
 
 
 // SmRect
@@ -52,27 +51,42 @@ inline long SmFromTo(long nFrom, long nTo, double fRelDist)
 
 
 // possible positions and alignments for the 'AlignTo' function
-enum RectPos
-    // (RP_LEFT : align the current object to the left of the argument, ...)
-{   RP_LEFT, RP_RIGHT,
-    RP_TOP, RP_BOTTOM,
-    RP_ATTRIBUT
+enum class RectPos
+{
+    Left, // align the current object to the left of the argument
+    Right,
+    Top,
+    Bottom,
+    Attribute
 };
-enum RectHorAlign
-{   RHA_LEFT, RHA_CENTER, RHA_RIGHT
+
+enum class RectHorAlign
+{
+    Left,
+    Center,
+    Right
 };
-enum RectVerAlign
-{   RVA_TOP, RVA_MID, RVA_BOTTOM, RVA_BASELINE, RVA_CENTERY,
-    RVA_ATTRIBUT_HI, RVA_ATTRIBUT_MID, RVA_ATTRIBUT_LO
+
+enum class RectVerAlign
+{
+    Top,
+    Mid,
+    Bottom,
+    Baseline,
+    CenterY,
+    AttributeHi,
+    AttributeMid,
+    AttributeLo
 };
 
 // different methods of copying baselines and mid's in 'ExtendBy' function
-enum RectCopyMBL
-{   RCP_THIS,   // keep baseline of current object even if it has none
-    RCP_ARG,    // as above but for the argument
-    RCP_NONE,   // result will have no baseline
-    RCP_XOR     // if current object has a baseline keep it else copy
-                //   the arguments baseline (even if it has none)
+enum class RectCopyMBL
+{
+    This,   // keep baseline of current object even if it has none
+    Arg,    // as above but for the argument
+    None,   // result will have no baseline
+    Xor     // if current object has a baseline keep it else copy
+            //   the arguments baseline (even if it has none)
 };
 
 
@@ -104,7 +118,7 @@ protected:
     inline  void CopyMBL(const SmRect& rRect);
             void CopyAlignInfo(const SmRect& rRect);
 
-            SmRect & Union(const SmRect &rRect);
+            void Union(const SmRect &rRect);
 
 public:
             SmRect();
@@ -131,7 +145,7 @@ public:
             long GetLeft()    const { return GetTopLeft().X(); }
             long GetBottom()  const { return GetTop() + GetHeight() - 1; }
             long GetRight()   const { return GetLeft() + GetWidth() - 1; }
-            long GetCenterY() const { return (GetTop() + GetBottom()) / 2L; }
+            long GetCenterY() const { return (GetTop() + GetBottom()) / 2; }
             long GetWidth()   const { return GetSize().Width(); }
             long GetHeight()  const { return GetSize().Height(); }
 
@@ -173,7 +187,7 @@ public:
                                 RectHorAlign eHor, RectVerAlign eVer) const;
 
             SmRect & ExtendBy(const SmRect &rRect, RectCopyMBL eCopyMode);
-            SmRect & ExtendBy(const SmRect &rRect, RectCopyMBL eCopyMode,
+            void     ExtendBy(const SmRect &rRect, RectCopyMBL eCopyMode,
                               long nNewAlignM);
             SmRect & ExtendBy(const SmRect &rRect, RectCopyMBL eCopyMode,
                       bool bKeepVerAlignParams);

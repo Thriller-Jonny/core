@@ -22,8 +22,6 @@
 
 #include <config_oox.h>
 
-#include <rtl/ustring.hxx>
-
 #if USE_TLS_OPENSSL
 #include <openssl/evp.h>
 #include <openssl/sha.h>
@@ -35,8 +33,9 @@
 #include <sechash.h>
 #endif // USE_TLS_NSS
 
-#include <rtl/digest.h>
 #include <vector>
+
+#include <sal/types.h>
 
 namespace oox {
 namespace core {
@@ -144,8 +143,8 @@ public:
     Digest(DigestType eType);
     virtual ~Digest();
 
-    bool update(std::vector<sal_uInt8>& input);
-    bool finalize(std::vector<sal_uInt8>& digest);
+    void update(std::vector<sal_uInt8>& input);
+    void finalize(std::vector<sal_uInt8>& digest);
 
     sal_uInt32 getLength();
 

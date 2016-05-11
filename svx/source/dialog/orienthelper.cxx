@@ -28,7 +28,6 @@
 namespace svx {
 
 
-
 struct OrientationHelper_Impl
 {
     typedef std::pair< VclPtr<vcl::Window>, TriState >  WindowPair;
@@ -53,7 +52,6 @@ struct OrientationHelper_Impl
 };
 
 
-
 OrientationHelper_Impl::OrientationHelper_Impl( DialControl& rCtrlDial, CheckBox& rCbStacked ) :
     mrCtrlDial( rCtrlDial ),
     mrCbStacked( rCbStacked ),
@@ -73,7 +71,8 @@ void OrientationHelper_Impl::AddDependentWindow( vcl::Window& rWindow, TriState 
 
 void OrientationHelper_Impl::EnableDependentWindows()
 {
-    for( WindowVec::iterator aIt = maWinVec.begin(), aEnd = maWinVec.end(); aIt != aEnd; ++aIt )
+    WindowVec::const_iterator aEnd = maWinVec.end();
+    for( WindowVec::iterator aIt = maWinVec.begin(); aIt != aEnd; ++aIt )
         EnableWindow( *aIt->first, aIt->second );
 }
 
@@ -93,7 +92,8 @@ void OrientationHelper_Impl::EnableWindow( vcl::Window& rWindow, TriState eDisab
 
 void OrientationHelper_Impl::ShowDependentWindows()
 {
-    for( WindowVec::iterator aIt = maWinVec.begin(), aEnd = maWinVec.end(); aIt != aEnd; ++aIt )
+    WindowVec::const_iterator aEnd = maWinVec.end();
+    for( WindowVec::iterator aIt = maWinVec.begin(); aIt != aEnd; ++aIt )
         aIt->first->Show( mbVisible );
 }
 
@@ -101,7 +101,6 @@ IMPL_LINK_NOARG_TYPED(OrientationHelper_Impl, ClickHdl, Button*, void)
 {
     EnableDependentWindows();
 }
-
 
 
 OrientationHelper::OrientationHelper( DialControl& rCtrlDial, NumericField& rNfRotation, CheckBox& rCbStacked ) :
@@ -153,7 +152,6 @@ void OrientationHelper::EnableStackedTriState( bool bEnable )
 }
 
 
-
 OrientStackedWrapper::OrientStackedWrapper( OrientationHelper& rOrientHlp ) :
     SingleControlWrapperType( rOrientHlp )
 {
@@ -179,7 +177,6 @@ void OrientStackedWrapper::SetControlValue( bool bValue )
 {
     GetControl().SetStackedState( bValue ? TRISTATE_TRUE : TRISTATE_FALSE );
 }
-
 
 
 }

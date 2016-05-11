@@ -51,6 +51,7 @@ public:
         if (   type.Class("Image").GlobalNamespace()
             || type.Class("Bitmap").GlobalNamespace()
             || type.Class("BitmapEx").GlobalNamespace()
+            || type.Class("VclPtr").GlobalNamespace()
            )
         {
             return std::make_pair(true, chain);
@@ -113,11 +114,10 @@ public:
                 || name == "g_pDDTarget" // SvTreeListBox::dispose()
                 || name == "g_pSfxApplication" // SfxApplication::~SfxApplication()
                 || name == "s_SidebarResourceManagerInstance" // ResourceManager::disposeDecks()
-                || name == "pStaticThesSubMenu" // wtf is this nonsense
                 || name == "s_pGallery" // this is not entirely clear but apparently the GalleryThemeCacheEntry are deleted by GalleryBrowser2::SelectTheme() or GalleryBrowser2::dispose()
                 || name == "s_ExtMgr" // TheExtensionManager::disposing()
                 || name == "s_pDocLockedInsertingLinks" // not owning
-                || name == "s_pVout" // _FrameFinit()
+                || name == "s_pVout" // FrameFinit()
                 || name == "s_pPaintQueue" // SwPaintQueue::Remove()
                 || name == "gProp" // only owned (VclPtr) member cleared again
                 || name == "g_pColumnCacheLastTabFrame" // not owning
@@ -144,6 +144,18 @@ public:
                     // sd/source/ui/tools/IconCache.cxx, leaked
                ) // these variables appear unproblematic
             {
+                return true;
+            }
+            // these two are fairly harmless because they're both empty objects
+            if (   name == "s_xEmptyController" // svx/source/fmcomp/gridcell.cxx
+                || name == "xCell"              // svx/source/table/svdotable.cxx
+               )
+            {
+                return true;
+            }
+            // ignore pointers, nothing happens to them on shutdown
+            QualType const pCanonical(pVarDecl->getType().getUnqualifiedType().getCanonicalType());
+            if (pCanonical->isPointerType()) {
                 return true;
             }
             std::vector<FieldDecl const*> pad;

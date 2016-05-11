@@ -17,7 +17,6 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 #include <sfx2/sidebar/ResourceDefinitions.hrc>
-#include <sfx2/sidebar/Theme.hxx>
 #include <sfx2/sidebar/ControlFactory.hxx>
 #include "PosSizePropertyPanel.hxx"
 #include <svx/sidebar/SidebarDialControl.hxx>
@@ -41,7 +40,6 @@
 
 using namespace css;
 using namespace css::uno;
-using ::sfx2::sidebar::Theme;
 
 const char UNO_FLIPHORIZONTAL[] = ".uno:FlipHorizontal";
 const char UNO_FLIPVERTICAL[]   = ".uno:FlipVertical";
@@ -49,7 +47,6 @@ const char UNO_FLIPVERTICAL[]   = ".uno:FlipVertical";
 const char USERITEM_NAME[]      = "FitItem";
 
 namespace svx { namespace sidebar {
-
 
 
 PosSizePropertyPanel::PosSizePropertyPanel(
@@ -81,7 +78,6 @@ PosSizePropertyPanel::PosSizePropertyPanel(
     maAutoWidthControl(SID_ATTR_TRANSFORM_AUTOWIDTH, *pBindings, *this),
     maAutoHeightControl(SID_ATTR_TRANSFORM_AUTOHEIGHT, *pBindings, *this),
     m_aMetricCtl(SID_ATTR_METRIC, *pBindings, *this),
-    mxFrame(rxFrame),
     maContext(),
     mpBindings(pBindings),
     mbMtrPosXMirror(false),
@@ -182,7 +178,6 @@ namespace
 } // end of anonymous namespace
 
 
-
 void PosSizePropertyPanel::Initialize()
 {
     //Position : Horizontal / Vertical
@@ -252,7 +247,6 @@ VclPtr<vcl::Window> PosSizePropertyPanel::Create (
 }
 
 
-
 void PosSizePropertyPanel::DataChanged(
     const DataChangedEvent& /*rEvent*/)
 {
@@ -285,8 +279,10 @@ void PosSizePropertyPanel::HandleContextChange(
             break;
 
         case CombinedEnumContext(Application_Calc, Context_Draw):
+        case CombinedEnumContext(Application_Calc, Context_DrawLine):
         case CombinedEnumContext(Application_Calc, Context_Graphic):
         case CombinedEnumContext(Application_DrawImpress, Context_Draw):
+        case CombinedEnumContext(Application_DrawImpress, Context_DrawLine):
         case CombinedEnumContext(Application_DrawImpress, Context_TextObject):
         case CombinedEnumContext(Application_DrawImpress, Context_Graphic):
             bShowPosition = true;
@@ -329,7 +325,6 @@ void PosSizePropertyPanel::HandleContextChange(
 }
 
 
-
 IMPL_LINK_NOARG_TYPED( PosSizePropertyPanel, ChangeWidthHdl, Edit&, void )
 {
     if( mpCbxScale->IsChecked() &&
@@ -350,7 +345,6 @@ IMPL_LINK_NOARG_TYPED( PosSizePropertyPanel, ChangeWidthHdl, Edit&, void )
     }
     executeSize();
 }
-
 
 
 IMPL_LINK_NOARG_TYPED( PosSizePropertyPanel, ChangeHeightHdl, Edit&, void )
@@ -375,19 +369,16 @@ IMPL_LINK_NOARG_TYPED( PosSizePropertyPanel, ChangeHeightHdl, Edit&, void )
 }
 
 
-
 IMPL_LINK_NOARG_TYPED( PosSizePropertyPanel, ChangePosXHdl, Edit&, void )
 {
     executePosX();
 }
 
 
-
 IMPL_LINK_NOARG_TYPED( PosSizePropertyPanel, ChangePosYHdl, Edit&, void )
 {
     executePosY();
 }
-
 
 
 IMPL_LINK_NOARG_TYPED( PosSizePropertyPanel, ClickAutoHdl, Button*, void )
@@ -402,7 +393,6 @@ IMPL_LINK_NOARG_TYPED( PosSizePropertyPanel, ClickAutoHdl, Button*, void )
     SvtViewOptions aPageOpt(E_TABPAGE, "cui/ui/possizetabpage/PositionAndSize");
     aPageOpt.SetUserItem( USERITEM_NAME, css::uno::makeAny( ::rtl::OUString::number( int(mpCbxScale->IsChecked()) ) ) );
 }
-
 
 
 IMPL_LINK_NOARG_TYPED( PosSizePropertyPanel, AngleModifiedHdl, Edit&, void )
@@ -445,10 +435,9 @@ IMPL_LINK_NOARG_TYPED( PosSizePropertyPanel, AngleModifiedHdl, Edit&, void )
     SfxInt32Item aRotXItem( SID_ATTR_TRANSFORM_ROT_X, basegfx::fround(mlRotX * fUIScale));
     SfxInt32Item aRotYItem( SID_ATTR_TRANSFORM_ROT_Y, basegfx::fround(mlRotY * fUIScale));
 
-    GetBindings()->GetDispatcher()->Execute(
-        SID_ATTR_TRANSFORM, SfxCallMode::RECORD, &aAngleItem, &aRotXItem, &aRotYItem, 0L );
+    GetBindings()->GetDispatcher()->ExecuteList(SID_ATTR_TRANSFORM,
+            SfxCallMode::RECORD, { &aAngleItem, &aRotXItem, &aRotYItem });
 }
-
 
 
 IMPL_LINK_NOARG_TYPED( PosSizePropertyPanel, RotationHdl, DialControl*, void )
@@ -461,10 +450,9 @@ IMPL_LINK_NOARG_TYPED( PosSizePropertyPanel, RotationHdl, DialControl*, void )
     SfxInt32Item aRotXItem( SID_ATTR_TRANSFORM_ROT_X, basegfx::fround(mlRotX * fUIScale));
     SfxInt32Item aRotYItem( SID_ATTR_TRANSFORM_ROT_Y, basegfx::fround(mlRotY * fUIScale));
 
-    GetBindings()->GetDispatcher()->Execute(
-        SID_ATTR_TRANSFORM, SfxCallMode::RECORD, &aAngleItem, &aRotXItem, &aRotYItem, 0L );
+    GetBindings()->GetDispatcher()->ExecuteList(SID_ATTR_TRANSFORM,
+            SfxCallMode::RECORD, { &aAngleItem, &aRotXItem, &aRotYItem });
 }
-
 
 
 IMPL_LINK_TYPED( PosSizePropertyPanel, FlipHdl, ToolBox*, pBox, void )
@@ -474,17 +462,16 @@ IMPL_LINK_TYPED( PosSizePropertyPanel, FlipHdl, ToolBox*, pBox, void )
     if(aCommand == UNO_FLIPHORIZONTAL)
     {
         SfxVoidItem aHoriItem(SID_FLIP_HORIZONTAL);
-        GetBindings()->GetDispatcher()->Execute(
-                SID_FLIP_HORIZONTAL, SfxCallMode::RECORD, &aHoriItem, 0L );
+        GetBindings()->GetDispatcher()->ExecuteList(SID_FLIP_HORIZONTAL,
+                SfxCallMode::RECORD, { &aHoriItem });
     }
     else if(aCommand == UNO_FLIPVERTICAL)
     {
         SfxVoidItem aVertItem(SID_FLIP_VERTICAL);
-        GetBindings()->GetDispatcher()->Execute(
-                SID_FLIP_VERTICAL, SfxCallMode::RECORD, &aVertItem, 0L );
+        GetBindings()->GetDispatcher()->ExecuteList(SID_FLIP_VERTICAL,
+                SfxCallMode::RECORD, { &aVertItem });
     }
 }
-
 
 
 void PosSizePropertyPanel::NotifyItemUpdate(
@@ -815,11 +802,6 @@ void PosSizePropertyPanel::NotifyItemUpdate(
 }
 
 
-
-
-
-
-
 void PosSizePropertyPanel::executeSize()
 {
     if ( mpMtrWidth->IsValueModified() || mpMtrHeight->IsValueModified())
@@ -850,20 +832,23 @@ void PosSizePropertyPanel::executeSize()
             || nCombinedContext == CombinedEnumContext(Application_WriterVariants, Context_OLE)
             )
         {
-            GetBindings()->GetDispatcher()->Execute(SID_ATTR_TRANSFORM, SfxCallMode::RECORD, &aWidthItem, &aHeightItem, &aPointItem, 0L );
+            GetBindings()->GetDispatcher()->ExecuteList(SID_ATTR_TRANSFORM,
+                SfxCallMode::RECORD, { &aWidthItem, &aHeightItem, &aPointItem });
         }
         else
         {
             if ( (mpMtrWidth->IsValueModified()) && (mpMtrHeight->IsValueModified()))
-                GetBindings()->GetDispatcher()->Execute(SID_ATTR_TRANSFORM, SfxCallMode::RECORD, &aWidthItem, &aHeightItem, &aPointItem, 0L );
+                GetBindings()->GetDispatcher()->ExecuteList(SID_ATTR_TRANSFORM,
+                    SfxCallMode::RECORD, { &aWidthItem, &aHeightItem, &aPointItem });
             else if( mpMtrWidth->IsValueModified())
-                GetBindings()->GetDispatcher()->Execute(SID_ATTR_TRANSFORM, SfxCallMode::RECORD, &aWidthItem, &aPointItem, 0L );
+                GetBindings()->GetDispatcher()->ExecuteList(SID_ATTR_TRANSFORM,
+                    SfxCallMode::RECORD, { &aWidthItem, &aPointItem });
             else if ( mpMtrHeight->IsValueModified())
-                GetBindings()->GetDispatcher()->Execute(SID_ATTR_TRANSFORM, SfxCallMode::RECORD, &aHeightItem, &aPointItem, 0L );
+                GetBindings()->GetDispatcher()->ExecuteList(SID_ATTR_TRANSFORM,
+                    SfxCallMode::RECORD, { &aHeightItem, &aPointItem });
         }
     }
 }
-
 
 
 void PosSizePropertyPanel::executePosX()
@@ -884,11 +869,10 @@ void PosSizePropertyPanel::executePosX()
         SfxInt32Item aPosXItem( SID_ATTR_TRANSFORM_POS_X,(sal_uInt32) lX);
         SfxInt32Item aPosYItem( SID_ATTR_TRANSFORM_POS_Y,(sal_uInt32) lY);
 
-        GetBindings()->GetDispatcher()->Execute(
-            SID_ATTR_TRANSFORM, SfxCallMode::RECORD, &aPosXItem, 0L );
+        GetBindings()->GetDispatcher()->ExecuteList(
+            SID_ATTR_TRANSFORM, SfxCallMode::RECORD, { &aPosXItem });
     }
 }
-
 
 
 void PosSizePropertyPanel::executePosY()
@@ -907,11 +891,10 @@ void PosSizePropertyPanel::executePosY()
         SfxInt32Item aPosXItem( SID_ATTR_TRANSFORM_POS_X,(sal_uInt32) lX);
         SfxInt32Item aPosYItem( SID_ATTR_TRANSFORM_POS_Y,(sal_uInt32) lY);
 
-        GetBindings()->GetDispatcher()->Execute(
-            SID_ATTR_TRANSFORM, SfxCallMode::RECORD, &aPosYItem, 0L );
+        GetBindings()->GetDispatcher()->ExecuteList(
+            SID_ATTR_TRANSFORM, SfxCallMode::RECORD, { &aPosYItem });
     }
 }
-
 
 
 void PosSizePropertyPanel::MetricState( SfxItemState eState, const SfxPoolItem* pState )
@@ -936,7 +919,7 @@ void PosSizePropertyPanel::MetricState( SfxItemState eState, const SfxPoolItem* 
     SetFieldUnit( *mpMtrPosY, meDlgUnit, true );
     if(bPosYBlank)
         mpMtrPosY->SetText(OUString());
-    SetPosXYMinMax();
+    SetPosSizeMinMax();
 
     if (mpMtrWidth->GetText().isEmpty())
         bWidthBlank = true;
@@ -950,7 +933,6 @@ void PosSizePropertyPanel::MetricState( SfxItemState eState, const SfxPoolItem* 
     if(bHeightBlank)
         mpMtrHeight->SetText(OUString());
 }
-
 
 
 FieldUnit PosSizePropertyPanel::GetCurrentUnit( SfxItemState eState, const SfxPoolItem* pState )
@@ -985,7 +967,6 @@ FieldUnit PosSizePropertyPanel::GetCurrentUnit( SfxItemState eState, const SfxPo
 
     return eUnit;
 }
-
 
 
 void PosSizePropertyPanel::DisableControls()
@@ -1072,7 +1053,7 @@ void PosSizePropertyPanel::DisableControls()
     }
 }
 
-void PosSizePropertyPanel::SetPosXYMinMax()
+void PosSizePropertyPanel::SetPosSizeMinMax()
 {
     SdrPageView* pPV = mpView->GetSdrPageView();
     if (!pPV)
@@ -1117,6 +1098,13 @@ void PosSizePropertyPanel::SetPosXYMinMax()
     mpMtrPosY->SetFirst(basegfx::fround64(fTop));
     mpMtrPosY->SetMax(basegfx::fround64(fBottom));
     mpMtrPosY->SetLast(basegfx::fround64(fBottom));
+
+    double fMaxWidth = maWorkArea.getWidth() - (maRect.getMinX() - fLeft);
+    double fMaxHeight = maWorkArea.getHeight() - (maRect.getMinY() - fTop);
+    mpMtrWidth->SetMax(basegfx::fround64(fMaxWidth));
+    mpMtrWidth->SetLast(basegfx::fround64(fMaxWidth));
+    mpMtrHeight->SetMax(basegfx::fround64(fMaxHeight));
+    mpMtrHeight->SetLast(basegfx::fround64(fMaxHeight));
 }
 
 void PosSizePropertyPanel::UpdateUIScale()

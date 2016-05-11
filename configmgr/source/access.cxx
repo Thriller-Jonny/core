@@ -96,7 +96,6 @@
 #include "modifications.hxx"
 #include "node.hxx"
 #include "nodemap.hxx"
-#include "path.hxx"
 #include "propertynode.hxx"
 #include "rootaccess.hxx"
 #include "setnode.hxx"
@@ -253,7 +252,7 @@ css::uno::Sequence< OUString > Access::getSupportedServiceNames()
     assert(thisIs(IS_ANY));
     osl::MutexGuard g(*lock_);
     checkLocalizedPropertyAccess();
-    std::vector< OUString > services;
+    std::vector<OUString> services;
     services.push_back("com.sun.star.configuration.ConfigurationAccess");
     if (getRootAccess()->isUpdate()) {
         services.push_back(
@@ -348,7 +347,7 @@ css::uno::Type Access::getElementType() throw (css::uno::RuntimeException, std::
     case Node::KIND_GROUP:
         //TODO: Should a specific type be returned for a non-extensible group
         // with homogeneous members or for an extensible group that currently
-        // has only homegeneous members?
+        // has only homogeneous members?
         return cppu::UnoType<void>::get();
     case Node::KIND_SET:
         return cppu::UnoType<void>::get(); //TODO: correct?
@@ -424,7 +423,7 @@ css::uno::Sequence< OUString > Access::getElementNames()
     osl::MutexGuard g(*lock_);
     checkLocalizedPropertyAccess();
     std::vector< rtl::Reference< ChildAccess > > children(getAllChildren());
-    std::vector< OUString > names;
+    std::vector<OUString> names;
     for (std::vector< rtl::Reference< ChildAccess > >::iterator i(
              children.begin());
          i != children.end(); ++i)
@@ -696,7 +695,7 @@ void Access::setName(OUString const & aName)
                     }
                 }
             }
-            // fall through
+            SAL_FALLTHROUGH;
         case Node::KIND_LOCALIZED_PROPERTY:
             // renaming a property could only work for an extension property,
             // but a localized property is never an extension property
@@ -1673,7 +1672,7 @@ void Access::commitChildChanges(
             }
         }
         if (childValid && i->second.directlyModified) {
-            Path path(getAbsolutePath());
+            std::vector<OUString> path(getAbsolutePath());
             path.push_back(i->first);
             components_.addModification(path);
             globalModifications->add(path);
@@ -1690,18 +1689,16 @@ void Access::initBroadcasterAndChanges(
     assert(broadcaster != nullptr);
     std::vector< css::beans::PropertyChangeEvent > propChanges;
     bool collectPropChanges = !propertiesChangeListeners_.empty();
-    for (Modifications::Node::Children::const_iterator i(
-             modifications.children.begin());
-         i != modifications.children.end(); ++i)
+    for (const auto & i : modifications.children)
     {
-        rtl::Reference< ChildAccess > child(getChild(i->first));
+        rtl::Reference< ChildAccess > child(getChild(i.first));
         if (child.is()) {
             switch (child->getNode()->kind()) {
             case Node::KIND_LOCALIZED_PROPERTY:
-                if (!i->second.children.empty()) {
+                if (!i.second.children.empty()) {
                     if (Components::allLocales(getRootAccess()->getLocale())) {
                         child->initBroadcasterAndChanges(
-                            i->second, broadcaster, allChanges);
+                            i.second, broadcaster, allChanges);
                             //TODO: if allChanges==0, recurse only into children
                             // w/ listeners
                     } else {
@@ -1717,12 +1714,12 @@ void Access::initBroadcasterAndChanges(
                                     css::container::ContainerEvent(
                                         static_cast< cppu::OWeakObject * >(
                                             this),
-                                        css::uno::makeAny(i->first),
+                                        css::uno::makeAny(i.first),
                                         css::uno::Any(), css::uno::Any()));
                                 //TODO: non-void Element, ReplacedElement
                         }
                         PropertyChangeListeners::iterator j(
-                            propertyChangeListeners_.find(i->first));
+                            propertyChangeListeners_.find(i.first));
                         if (j != propertyChangeListeners_.end()) {
                             for (PropertyChangeListenersElement::iterator k(
                                      j->second.begin());
@@ -1733,7 +1730,7 @@ void Access::initBroadcasterAndChanges(
                                     css::beans::PropertyChangeEvent(
                                         static_cast< cppu::OWeakObject * >(
                                             this),
-                                        i->first, false, -1, css::uno::Any(),
+                                        i.first, false, -1, css::uno::Any(),
                                         css::uno::Any()));
                             }
                         }
@@ -1748,7 +1745,7 @@ void Access::initBroadcasterAndChanges(
                                     css::beans::PropertyChangeEvent(
                                         static_cast< cppu::OWeakObject * >(
                                             this),
-                                        i->first, false, -1, css::uno::Any(),
+                                        i.first, false, -1, css::uno::Any(),
                                         css::uno::Any()));
                             }
                         }
@@ -1764,7 +1761,7 @@ void Access::initBroadcasterAndChanges(
                             propChanges.push_back(
                                 css::beans::PropertyChangeEvent(
                                     static_cast< cppu::OWeakObject * >(this),
-                                    i->first, false, -1, css::uno::Any(),
+                                    i.first, false, -1, css::uno::Any(),
                                     css::uno::Any()));
                         }
                     }
@@ -1781,7 +1778,7 @@ void Access::initBroadcasterAndChanges(
                         *j,
                         css::container::ContainerEvent(
                             static_cast< cppu::OWeakObject * >(this),
-                            css::uno::makeAny(i->first), child->asValue(),
+                            css::uno::makeAny(i.first), child->asValue(),
                             css::uno::Any()));
                         //TODO: distinguish add/modify; non-void ReplacedElement
                 }
@@ -1805,13 +1802,13 @@ void Access::initBroadcasterAndChanges(
                             *j,
                             css::container::ContainerEvent(
                                 static_cast< cppu::OWeakObject * >(this),
-                                css::uno::makeAny(i->first), child->asValue(),
+                                css::uno::makeAny(i.first), child->asValue(),
                                 css::uno::Any()));
                             //TODO: distinguish add/remove/modify; non-void
                             // ReplacedElement
                     }
                     PropertyChangeListeners::iterator j(
-                        propertyChangeListeners_.find(i->first));
+                        propertyChangeListeners_.find(i.first));
                     if (j != propertyChangeListeners_.end()) {
                         for (PropertyChangeListenersElement::iterator k(
                                  j->second.begin());
@@ -1821,7 +1818,7 @@ void Access::initBroadcasterAndChanges(
                                 *k,
                                 css::beans::PropertyChangeEvent(
                                     static_cast< cppu::OWeakObject * >(this),
-                                    i->first, false, -1, css::uno::Any(),
+                                    i.first, false, -1, css::uno::Any(),
                                     css::uno::Any()));
                         }
                     }
@@ -1835,7 +1832,7 @@ void Access::initBroadcasterAndChanges(
                                 *k,
                                 css::beans::PropertyChangeEvent(
                                     static_cast< cppu::OWeakObject * >(this),
-                                    i->first, false, -1, css::uno::Any(),
+                                    i.first, false, -1, css::uno::Any(),
                                     css::uno::Any()));
                         }
                     }
@@ -1851,14 +1848,14 @@ void Access::initBroadcasterAndChanges(
                         propChanges.push_back(
                             css::beans::PropertyChangeEvent(
                                 static_cast< cppu::OWeakObject * >(this),
-                                i->first, false, -1, css::uno::Any(),
+                                i.first, false, -1, css::uno::Any(),
                                 css::uno::Any()));
                     }
                 }
                 break;
             case Node::KIND_GROUP:
             case Node::KIND_SET:
-                if (i->second.children.empty()) {
+                if (i.second.children.empty()) {
                     if (!child->getNode()->getTemplateName().isEmpty()) {
                         for (ContainerListeners::iterator j(
                                  containerListeners_.begin());
@@ -1870,7 +1867,7 @@ void Access::initBroadcasterAndChanges(
                                     css::container::ContainerEvent(
                                         static_cast< cppu::OWeakObject * >(
                                             this),
-                                        css::uno::makeAny(i->first),
+                                        css::uno::makeAny(i.first),
                                         child->asValue(), css::uno::Any()));
                         }
                         if (allChanges != nullptr) {
@@ -1886,7 +1883,7 @@ void Access::initBroadcasterAndChanges(
                     // change
                 } else {
                     child->initBroadcasterAndChanges(
-                        i->second, broadcaster, allChanges);
+                        i.second, broadcaster, allChanges);
                         //TODO: if allChanges==0, recurse only into children w/
                         // listeners
                 }
@@ -1908,7 +1905,7 @@ void Access::initBroadcasterAndChanges(
                         *j,
                         css::container::ContainerEvent(
                             static_cast< cppu::OWeakObject * >(this),
-                            css::uno::makeAny(i->first), css::uno::Any(),
+                            css::uno::makeAny(i.first), css::uno::Any(),
                             css::uno::Any()));
                         //TODO: non-void ReplacedElement
                 }
@@ -1917,7 +1914,7 @@ void Access::initBroadcasterAndChanges(
                     if (!path.isEmpty()) {
                         path.append('/');
                     }
-                    path.append(Data::createSegment("*", i->first));
+                    path.append(Data::createSegment("*", i.first));
                     allChanges->push_back(
                         css::util::ElementChange(
                             css::uno::makeAny(path.makeStringAndClear()),
@@ -1937,12 +1934,12 @@ void Access::initBroadcasterAndChanges(
                             *j,
                             css::container::ContainerEvent(
                                 static_cast< cppu::OWeakObject * >(this),
-                                css::uno::makeAny(i->first), css::uno::Any(),
+                                css::uno::makeAny(i.first), css::uno::Any(),
                                 css::uno::Any()));
                             //TODO: non-void ReplacedElement
                     }
                     PropertyChangeListeners::iterator j(
-                        propertyChangeListeners_.find(i->first));
+                        propertyChangeListeners_.find(i.first));
                     if (j != propertyChangeListeners_.end()) {
                         for (PropertyChangeListenersElement::iterator k(
                                  j->second.begin());
@@ -1952,7 +1949,7 @@ void Access::initBroadcasterAndChanges(
                                 *k,
                                 css::beans::PropertyChangeEvent(
                                     static_cast< cppu::OWeakObject * >(this),
-                                    i->first, false, -1, css::uno::Any(),
+                                    i.first, false, -1, css::uno::Any(),
                                     css::uno::Any()));
                         }
                     }
@@ -1966,7 +1963,7 @@ void Access::initBroadcasterAndChanges(
                                 *k,
                                 css::beans::PropertyChangeEvent(
                                     static_cast< cppu::OWeakObject * >(this),
-                                    i->first, false, -1, css::uno::Any(),
+                                    i.first, false, -1, css::uno::Any(),
                                     css::uno::Any()));
                         }
                     }
@@ -1976,7 +1973,7 @@ void Access::initBroadcasterAndChanges(
                         if (!path.isEmpty()) {
                             path.append('/');
                         }
-                        path.append(i->first);
+                        path.append(i.first);
                         allChanges->push_back(
                             css::util::ElementChange(
                                 css::uno::makeAny(path.makeStringAndClear()),
@@ -1987,14 +1984,14 @@ void Access::initBroadcasterAndChanges(
                         propChanges.push_back(
                             css::beans::PropertyChangeEvent(
                                 static_cast< cppu::OWeakObject * >(this),
-                                i->first, false, -1, css::uno::Any(),
+                                i.first, false, -1, css::uno::Any(),
                                 css::uno::Any()));
                     }
                 }
                 break;
             case Node::KIND_SET:
                 // Removed set member:
-                if (i->second.children.empty()) {
+                if (i.second.children.empty()) {
                     for (ContainerListeners::iterator j(
                              containerListeners_.begin());
                          j != containerListeners_.end(); ++j)
@@ -2003,7 +2000,7 @@ void Access::initBroadcasterAndChanges(
                             *j,
                             css::container::ContainerEvent(
                                 static_cast< cppu::OWeakObject * >(this),
-                                css::uno::makeAny(i->first),
+                                css::uno::makeAny(i.first),
                                 css::uno::Any(), css::uno::Any()));
                             //TODO: non-void ReplacedElement
                     }
@@ -2013,7 +2010,7 @@ void Access::initBroadcasterAndChanges(
                         if (!path.isEmpty()) {
                             path.append('/');
                         }
-                        path.append(Data::createSegment("*", i->first));
+                        path.append(Data::createSegment("*", i.first));
                         allChanges->push_back(
                             css::util::ElementChange(
                                 css::uno::makeAny(path.makeStringAndClear()),
@@ -2100,8 +2097,8 @@ rtl::Reference< ChildAccess > Access::getSubChild(OUString const & path) {
         if (!getRootAccess().is()) {
             return rtl::Reference< ChildAccess >();
         }
-        Path abs(getAbsolutePath());
-        for (Path::iterator j(abs.begin()); j != abs.end(); ++j) {
+        std::vector<OUString> abs(getAbsolutePath());
+        for (auto j(abs.begin()); j != abs.end(); ++j) {
             OUString name1;
             bool setElement1;
             OUString templateName1;

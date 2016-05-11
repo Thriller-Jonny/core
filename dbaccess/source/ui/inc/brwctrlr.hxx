@@ -124,13 +124,13 @@ namespace dbaui
 
     // attribute access
     protected:
-        css::uno::Reference< css::sdbc::XRowSet >             getRowSet()         const   { return m_xRowSet; }
-        css::uno::Reference< css::sdbcx::XColumnsSupplier >   getColumnsSupplier()const   { return m_xColumnsSupplier; }
-        css::uno::Reference< css::form::XLoadable >           getLoadable()       const   { return m_xLoadable; }
+        const css::uno::Reference< css::sdbc::XRowSet >&             getRowSet()         const   { return m_xRowSet; }
+        const css::uno::Reference< css::sdbcx::XColumnsSupplier >&   getColumnsSupplier()const   { return m_xColumnsSupplier; }
+        const css::uno::Reference< css::form::XLoadable >&           getLoadable()       const   { return m_xLoadable; }
 
-        css::uno::Reference< css::form::XFormComponent >      getFormComponent()  const   { return m_xGridModel; }
-        css::uno::Reference< css::awt::XControlModel >        getControlModel()   const   { return css::uno::Reference< css::awt::XControlModel > (m_xGridModel, css::uno::UNO_QUERY); }
-        css::uno::Reference< css::util::XNumberFormatter >    getNumberFormatter()const   { return m_xFormatter; }
+        const css::uno::Reference< css::form::XFormComponent >&      getFormComponent()  const   { return m_xGridModel; }
+        css::uno::Reference< css::awt::XControlModel >               getControlModel()   const   { return css::uno::Reference< css::awt::XControlModel > (m_xGridModel, css::uno::UNO_QUERY); }
+        const css::uno::Reference< css::util::XNumberFormatter >&    getNumberFormatter()const   { return m_xFormatter; }
 
         bool    isValid() const         { return m_xRowSet.is() && m_xGridModel.is(); }
         bool    isValidCursor() const;  // checks the css::data::XDatabaseCursor-interface of m_xRowSet
@@ -288,9 +288,9 @@ namespace dbaui
         bool SaveModified(bool bAskFor = true);
             // save the modified record
 
-        css::uno::Reference< css::beans::XPropertySet >   getBoundField(sal_uInt16 nViewPos = (sal_uInt16)-1) const;
-            // a PropertySet corresponding to the cursor field a column is bound to
-            // if nViewPos is (sal_uInt16)-1 (the default) then the field for the current column will be retrieved
+        css::uno::Reference< css::beans::XPropertySet >   getBoundField() const;
+            // a PropertySet corresponding to the cursor field a column is bound to.
+            // The field for the current column will be retrieved.
 
         void enterFormAction();
         void leaveFormAction();

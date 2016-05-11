@@ -39,7 +39,6 @@
 using namespace ::com::sun::star;
 
 
-
 SvxOutlinerForwarder::SvxOutlinerForwarder( Outliner& rOutl, bool bOutlText /* = false */ ) :
     rOutliner( rOutl ),
     bOutlinerText( bOutlText ),
@@ -181,9 +180,9 @@ void SvxOutlinerForwarder::SetParaAttribs( sal_Int32 nPara, const SfxItemSet& rS
         const_cast<SfxItemSet*>(&rSet)->SetParent( pOldParent );
 }
 
-void SvxOutlinerForwarder::RemoveAttribs( const ESelection& rSelection, bool bRemoveParaAttribs, sal_uInt16 nWhich )
+void SvxOutlinerForwarder::RemoveAttribs( const ESelection& rSelection )
 {
-    rOutliner.RemoveAttribs( rSelection, bRemoveParaAttribs, nWhich );
+    rOutliner.RemoveAttribs( rSelection, false/*bRemoveParaAttribs*/, 0 );
 }
 
 SfxItemPool* SvxOutlinerForwarder::GetPool() const
@@ -577,8 +576,6 @@ void  SvxOutlinerForwarder::CopyText(const SvxTextForwarder& rSource)
 }
 
 
-
-
 sal_Int32 SvxTextForwarder::GetNumberingStartValue( sal_Int32 )
 {
     return -1;
@@ -596,7 +593,6 @@ bool SvxTextForwarder::IsParaIsNumberingRestart( sal_Int32  )
 void SvxTextForwarder::SetParaIsNumberingRestart( sal_Int32, bool )
 {
 }
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -45,6 +45,7 @@ struct TickInfo
     sal_Int32 nFactorForLimitedTextWidth;//categories in higher levels of complex categories can have more place than a single simple category
 
 //methods:
+    TickInfo() = delete;
     explicit TickInfo( const css::uno::Reference<css::chart2::XScaling>& xInverse );
 
     /**
@@ -54,8 +55,6 @@ struct TickInfo
      */
     double getUnscaledTickValue() const;
     sal_Int32 getScreenDistanceBetweenTicks( const TickInfo& rOherTickInfo ) const;
-private:
-    TickInfo();
 };
 
 typedef std::vector<TickInfo>           TickInfoArrayType;
@@ -104,8 +103,7 @@ private: //methods
 protected: //member
     ExplicitScaleData     m_rScale;
     ExplicitIncrementData m_rIncrement;
-    ::com::sun::star::uno::Reference< ::com::sun::star::chart2::XScaling >
-                                                m_xInverseScaling;
+    css::uno::Reference< css::chart2::XScaling > m_xInverseScaling;
 
     //minimum and maximum of the visible range after scaling
     double    m_fScaledVisibleMin;
@@ -125,8 +123,8 @@ public:
 
     static sal_Int32    getTickScreenDistance( TickIter& rIter );
 
-    void createPointSequenceForAxisMainLine( ::com::sun::star::drawing::PointSequenceSequence& rPoints ) const;
-    void addPointSequenceForTickLine( ::com::sun::star::drawing::PointSequenceSequence& rPoints
+    void createPointSequenceForAxisMainLine( css::drawing::PointSequenceSequence& rPoints ) const;
+    void addPointSequenceForTickLine( css::drawing::PointSequenceSequence& rPoints
                             , sal_Int32 nSequenceIndex
                             , double fScaledLogicTickValue, double fInnerDirectionSign
                             , const TickmarkProperties& rTickmarkProperties, bool bPlaceAtLabels ) const;

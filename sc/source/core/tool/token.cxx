@@ -139,27 +139,33 @@ namespace
 
         bool skipToken( size_t i, const FormulaToken* const * pp )
         {
-            // Handle all tokens in RPN, and code tokens only if they have a
-            // reference count of 1, which means they are not referenced in
-            // RPN.
-            if (i == 0)
-                return (*pp)->GetRef() > 1;
-
-            if (mbSkipRelName)
+            // Handle all code tokens, and tokens in RPN only if they have a
+            // reference count of 1, which means they are not referenced in the
+            // code array. Doing it the other way would skip code tokens that
+            // are held by flat copied token arrays and thus are shared. For
+            // flat copy arrays the caller has to know what it does and should
+            // discard all RPN, update only one array and regenerate all RPN.
+            if (i == 1)
             {
-                // Skip (do not adjust) relative references resulting from
-                // named expressions.
-                switch ((*pp)->GetType())
+                if ((*pp)->GetRef() > 1)
+                    return true;
+
+                if (mbSkipRelName)
                 {
-                    case svSingleRef:
-                        return (*pp)->GetSingleRef()->IsRelName();
-                    case svDoubleRef:
-                        {
-                            const ScComplexRefData& rRef = *(*pp)->GetDoubleRef();
-                            return rRef.Ref1.IsRelName() || rRef.Ref2.IsRelName();
-                        }
-                    default:
-                        ;   // nothing
+                    // Skip (do not adjust) relative references resulting from
+                    // named expressions. Resolved expressions are only in RPN.
+                    switch ((*pp)->GetType())
+                    {
+                        case svSingleRef:
+                            return (*pp)->GetSingleRef()->IsRelName();
+                        case svDoubleRef:
+                            {
+                                const ScComplexRefData& rRef = *(*pp)->GetDoubleRef();
+                                return rRef.Ref1.IsRelName() || rRef.Ref2.IsRelName();
+                            }
+                        default:
+                            ;   // nothing
+                    }
                 }
             }
 
@@ -293,12 +299,12 @@ void ScRawToken::SetErrorConstant( sal_uInt16 nErr )
     nError = nErr;
 }
 
-void ScRawToken::SetName(bool bGlobal, sal_uInt16 nIndex)
+void ScRawToken::SetName(sal_Int16 nSheet, sal_uInt16 nIndex)
 {
     eOp = ocName;
     eType = svIndex;
 
-    name.bGlobal = bGlobal;
+    name.nSheet = nSheet;
     name.nIndex = nIndex;
 }
 
@@ -372,8 +378,8 @@ bool ScRawToken::IsValidReference() const
 
 FormulaToken* ScRawToken::CreateToken() const
 {
-#if OSL_DEBUG_LEVEL > 1
-#define IF_NOT_OPCODE_ERROR(o,c) if (eOp!=o) OSL_TRACE( #c "::ctor: OpCode %d lost, converted to " #o "; maybe inherit from FormulaToken instead!", int(eOp))
+#if OSL_DEBUG_LEVEL > 0
+#define IF_NOT_OPCODE_ERROR(o,c) if (eOp!=o) SAL_INFO( "sc.core", #c "::ctor: OpCode " << (int)eOp << " lost, converted to " #o "; maybe inherit from FormulaToken instead!")
 #else
 #define IF_NOT_OPCODE_ERROR(o,c)
 #endif
@@ -409,7 +415,7 @@ FormulaToken* ScRawToken::CreateToken() const
             if (eOp == ocTableRef)
                 return new ScTableRefToken( table.nIndex, table.eItem);
             else
-                return new FormulaIndexToken( eOp, name.nIndex, name.bGlobal);
+                return new FormulaIndexToken( eOp, name.nIndex, name.nSheet);
         case svExternalSingleRef:
             {
                 OUString aTabName(extref.cTabName);
@@ -933,13 +939,13 @@ void ScTableRefToken::SetIndex( sal_uInt16 n )
     mnIndex = n;
 }
 
-bool ScTableRefToken::IsGlobal() const
+sal_Int16 ScTableRefToken::GetSheet() const
 {
     // Code asking for this may have to be adapted as it might assume an
     // svIndex token would always be ocName or ocDBArea.
-    SAL_WARN("sc.core","ScTableRefToken::IsGlobal - maybe adapt caller to know about TableRef?");
+    SAL_WARN("sc.core","ScTableRefToken::GetSheet - maybe adapt caller to know about TableRef?");
     // Database range is always global.
-    return true;
+    return -1;
 }
 
 ScTableRefToken::Item ScTableRefToken::GetItem() const
@@ -1130,7 +1136,7 @@ void ScMatrixFormulaCellToken::SetUpperLeftDouble( double f )
                 xUpperLeft = new FormulaDoubleToken( f);
                 break;
             }
-            // fall through
+            SAL_FALLTHROUGH;
         default:
             {
                 OSL_FAIL("ScMatrixFormulaCellToken::SetUpperLeftDouble: not modifying unhandled token type");
@@ -1212,7 +1218,13 @@ bool ScTokenArray::AddFormulaToken(
                         sheet::NameToken aTokenData;
                         rToken.Data >>= aTokenData;
                         if ( eOpCode == ocName )
-                            AddRangeName(aTokenData.Index, aTokenData.Global);
+                        {
+                            SAL_WARN_IF( aTokenData.Sheet < -1 || std::numeric_limits<sal_Int16>::max() < aTokenData.Sheet,
+                                    "sc.core",
+                                    "ScTokenArray::AddFormulaToken - NameToken.Sheet out of limits: " << aTokenData.Sheet);
+                            sal_Int16 nSheet = static_cast<sal_Int16>(aTokenData.Sheet);
+                            AddRangeName(aTokenData.Index, nSheet);
+                        }
                         else if (eOpCode == ocDBArea)
                             AddDBRange(aTokenData.Index);
                         else if (eOpCode == ocTableRef)
@@ -1514,10 +1526,8 @@ void ScTokenArray::CheckToken( const FormulaToken& r )
             default:
                 meVectorState = FormulaVectorDisabled;
         }
-        return;
     }
-
-    if (eOp == ocPush)
+    else if (eOp == ocPush)
     {
         // This is a stack variable.  See if this is a reference.
 
@@ -1554,31 +1564,25 @@ void ScTokenArray::CheckToken( const FormulaToken& r )
             case svUnknown:
                 // We don't support vectorization on these.
                 meVectorState = FormulaVectorDisabled;
+            break;
             default:
                 ;
         }
-        return;
     }
-
-    if (eOp >= SC_OPCODE_START_BIN_OP &&
-        eOp <= SC_OPCODE_STOP_UN_OP &&
+    else if (SC_OPCODE_START_BIN_OP <= eOp && eOp < SC_OPCODE_STOP_UN_OP &&
         ScInterpreter::GetGlobalConfig().mbOpenCLSubsetOnly &&
         ScInterpreter::GetGlobalConfig().mpOpenCLSubsetOpCodes->find(eOp) == ScInterpreter::GetGlobalConfig().mpOpenCLSubsetOpCodes->end())
     {
         meVectorState = FormulaVectorDisabled;
-        return;
     }
-
     // only when openCL interpreter is not enabled - the assumption is that
     // the S/W interpreter blacklist is more strict
-    if (eOp >= SC_OPCODE_START_BIN_OP &&
-        eOp <= SC_OPCODE_STOP_UN_OP &&
+    else if (SC_OPCODE_START_BIN_OP <= eOp && eOp < SC_OPCODE_STOP_UN_OP &&
         ScCalcConfig::isSwInterpreterEnabled() &&
         (dynamic_cast<sc::FormulaGroupInterpreterSoftware*>(sc::FormulaGroupInterpreter::getStatic()) != nullptr) &&
         ScInterpreter::GetGlobalConfig().mpSwInterpreterSubsetOpCodes->find(eOp) == ScInterpreter::GetGlobalConfig().mpSwInterpreterSubsetOpCodes->end())
     {
         meVectorState = FormulaVectorDisabled;
-        return;
     }
 }
 
@@ -1908,7 +1912,7 @@ FormulaToken* ScTokenArray::MergeArray( )
 
             case ocArrayOpen :
                 nStart = i; // stop iteration
-                // fall through to ArrayRowSep
+                SAL_FALLTHROUGH; // to ArrayRowSep
 
             case ocArrayRowSep :
                 if( checkArraySep( bPrevWasSep, true ) )
@@ -2015,10 +2019,10 @@ FormulaToken* ScTokenArray::MergeArray( )
     return AddMatrix( pArray );
 }
 
-FormulaToken* ScTokenArray::MergeRangeReference( const ScAddress & rPos )
+void ScTokenArray::MergeRangeReference( const ScAddress & rPos )
 {
     if (!pCode || !nLen)
-        return nullptr;
+        return;
     sal_uInt16 nIdx = nLen;
     FormulaToken *p1, *p2, *p3;      // ref, ocRange, ref
     // The actual types are checked in extendRangeReference().
@@ -2037,7 +2041,6 @@ FormulaToken* ScTokenArray::MergeRangeReference( const ScAddress & rPos )
             pCode[ nLen-1 ] = p.get();
         }
     }
-    return pCode[ nLen-1 ];
 }
 
 FormulaToken* ScTokenArray::AddOpCode( OpCode e )
@@ -2067,9 +2070,9 @@ FormulaToken* ScTokenArray::AddMatrix( const ScMatrixRef& p )
     return Add( new ScMatrixToken( p ) );
 }
 
-FormulaToken* ScTokenArray::AddRangeName( sal_uInt16 n, bool bGlobal )
+FormulaToken* ScTokenArray::AddRangeName( sal_uInt16 n, sal_Int16 nSheet )
 {
-    return Add( new FormulaIndexToken( ocName, n, bGlobal));
+    return Add( new FormulaIndexToken( ocName, n, nSheet));
 }
 
 FormulaToken* ScTokenArray::AddDBRange( sal_uInt16 n )
@@ -2082,9 +2085,9 @@ FormulaToken* ScTokenArray::AddExternalName( sal_uInt16 nFileId, const OUString&
     return Add( new ScExternalNameToken(nFileId, rName) );
 }
 
-FormulaToken* ScTokenArray::AddExternalSingleReference( sal_uInt16 nFileId, const OUString& rTabName, const ScSingleRefData& rRef )
+void ScTokenArray::AddExternalSingleReference( sal_uInt16 nFileId, const OUString& rTabName, const ScSingleRefData& rRef )
 {
-    return Add( new ScExternalSingleRefToken(nFileId, rTabName, rRef) );
+    Add( new ScExternalSingleRefToken(nFileId, rTabName, rRef) );
 }
 
 FormulaToken* ScTokenArray::AddExternalDoubleReference( sal_uInt16 nFileId, const OUString& rTabName, const ScComplexRefData& rRef )
@@ -2272,7 +2275,7 @@ void ScTokenArray::ReadjustRelative3DReferences( const ScAddress& rOldPos,
                             rRef2.SetAddress(aAbs, rNewPos);
                         }
                     }
-                    // fall through
+                    SAL_FALLTHROUGH;
                 case svSingleRef :
                     {
                         ScSingleRefData& rRef1 = *p->GetSingleRef();
@@ -2289,7 +2292,7 @@ void ScTokenArray::ReadjustRelative3DReferences( const ScAddress& rOldPos,
                         ScAddress aAbs = rRef2.toAbs(rOldPos);
                         rRef2.SetAddress(aAbs, rNewPos);
                     }
-                    // fall through
+                    SAL_FALLTHROUGH;
                 case svExternalSingleRef :
                     {
                         ScSingleRefData& rRef1 = *p->GetSingleRef();
@@ -2310,7 +2313,7 @@ namespace {
 
 void GetExternalTableData(const ScDocument* pOldDoc, const ScDocument* pNewDoc, const SCTAB nTab, OUString& rTabName, sal_uInt16& rFileId)
 {
-    OUString aFileName = pOldDoc->GetFileURL();;
+    OUString aFileName = pOldDoc->GetFileURL();
     rFileId = pNewDoc->GetExternalRefManager()->getExternalFileId(aFileName);
     rTabName = pOldDoc->GetCopyTabName(nTab);
     if (rTabName.isEmpty())
@@ -2339,7 +2342,8 @@ bool SkipReference(formula::FormulaToken* pToken, const ScAddress& rPos, const S
                     ScSingleRefData& rRef = *pToken->GetSingleRef2();
                     if (rRef.IsColRel() || rRef.IsRowRel())
                         return true;
-                } // fall through
+                }
+                SAL_FALLTHROUGH;
             case svSingleRef:
                 {
                     ScSingleRefData& rRef = *pToken->GetSingleRef();
@@ -2396,7 +2400,7 @@ void ScTokenArray::ReadjustAbsolute3DReferences( const ScDocument* pOldDoc, cons
                     OUString aTabName;
                     sal_uInt16 nFileId;
                     GetExternalTableData(pOldDoc, pNewDoc, rRef1.Tab(), aTabName, nFileId);
-                    ReplaceToken( j, new ScExternalDoubleRefToken(nFileId, aTabName, rRef), FORWARD_CODE_AND_RPN);
+                    ReplaceToken( j, new ScExternalDoubleRefToken(nFileId, aTabName, rRef), CODE_AND_RPN);
                     // ATTENTION: rRef can't be used after this point
                 }
             }
@@ -2413,7 +2417,7 @@ void ScTokenArray::ReadjustAbsolute3DReferences( const ScDocument* pOldDoc, cons
                     OUString aTabName;
                     sal_uInt16 nFileId;
                     GetExternalTableData(pOldDoc, pNewDoc, rRef.Tab(), aTabName, nFileId);
-                    ReplaceToken( j, new ScExternalSingleRefToken(nFileId, aTabName, rRef), FORWARD_CODE_AND_RPN);
+                    ReplaceToken( j, new ScExternalSingleRefToken(nFileId, aTabName, rRef), CODE_AND_RPN);
                     // ATTENTION: rRef can't be used after this point
                 }
             }
@@ -2427,9 +2431,9 @@ void ScTokenArray::ReadjustAbsolute3DReferences( const ScDocument* pOldDoc, cons
 }
 
 void ScTokenArray::AdjustAbsoluteRefs( const ScDocument* pOldDoc, const ScAddress& rOldPos, const ScAddress& rNewPos,
-        bool bRangeName, bool bCheckCopyRange)
+        bool bCheckCopyRange)
 {
-    TokenPointers aPtrs( pCode, nLen, pRPN, nRPN, !bRangeName);
+    TokenPointers aPtrs( pCode, nLen, pRPN, nRPN, true);
     for (size_t j=0; j<2; ++j)
     {
         FormulaToken** pp = aPtrs.maPointerRange[j].mpStart;
@@ -2451,11 +2455,8 @@ void ScTokenArray::AdjustAbsoluteRefs( const ScDocument* pOldDoc, const ScAddres
                         ScSingleRefData& rRef2 = rRef.Ref2;
                         ScSingleRefData& rRef1 = rRef.Ref1;
 
-                        // for range names only adjust if all parts are absolute
-                        if (!bRangeName || !(rRef1.IsColRel() || rRef1.IsRowRel() || rRef1.IsTabRel()))
-                            AdjustSingleRefData( rRef1, rOldPos, rNewPos );
-                        if (!bRangeName || !(rRef2.IsColRel() || rRef2.IsRowRel() || rRef2.IsTabRel()))
-                            AdjustSingleRefData( rRef2, rOldPos, rNewPos );
+                        AdjustSingleRefData( rRef1, rOldPos, rNewPos );
+                        AdjustSingleRefData( rRef2, rOldPos, rNewPos );
                     }
                     break;
                 case svSingleRef :
@@ -2465,9 +2466,7 @@ void ScTokenArray::AdjustAbsoluteRefs( const ScDocument* pOldDoc, const ScAddres
 
                         ScSingleRefData& rRef = *p->GetSingleRef();
 
-                        // for range names only adjust if all parts are absolute
-                        if (!bRangeName || !(rRef.IsColRel() || rRef.IsRowRel() || rRef.IsTabRel()))
-                            AdjustSingleRefData( rRef, rOldPos, rNewPos );
+                        AdjustSingleRefData( rRef, rOldPos, rNewPos );
                     }
                     break;
                 default:
@@ -2477,6 +2476,104 @@ void ScTokenArray::AdjustAbsoluteRefs( const ScDocument* pOldDoc, const ScAddres
             }
         }
     }
+}
+
+void ScTokenArray::AdjustSheetLocalNameReferences( SCTAB nOldTab, SCTAB nNewTab )
+{
+    TokenPointers aPtrs( pCode, nLen, pRPN, nRPN, false);
+    for (size_t j=0; j<2; ++j)
+    {
+        FormulaToken** pp = aPtrs.maPointerRange[j].mpStart;
+        FormulaToken** pEnd = aPtrs.maPointerRange[j].mpStop;
+        for (; pp != pEnd; ++pp)
+        {
+            FormulaToken* p = aPtrs.getHandledToken(j,pp);
+            if (!p)
+                continue;
+
+            switch ( p->GetType() )
+            {
+                case svDoubleRef :
+                    {
+                        ScComplexRefData& rRef = *p->GetDoubleRef();
+                        ScSingleRefData& rRef2 = rRef.Ref2;
+                        ScSingleRefData& rRef1 = rRef.Ref1;
+
+                        if (!rRef1.IsTabRel() && rRef1.Tab() == nOldTab)
+                            rRef1.SetAbsTab( nNewTab);
+                        if (!rRef2.IsTabRel() && rRef2.Tab() == nOldTab)
+                            rRef2.SetAbsTab( nNewTab);
+                        if (!rRef1.IsTabRel() && !rRef2.IsTabRel() && rRef1.Tab() > rRef2.Tab())
+                        {
+                            SCTAB nTab = rRef1.Tab();
+                            rRef1.SetAbsTab( rRef2.Tab());
+                            rRef2.SetAbsTab( nTab);
+                        }
+                    }
+                    break;
+                case svSingleRef :
+                    {
+                        ScSingleRefData& rRef = *p->GetSingleRef();
+
+                        if (!rRef.IsTabRel() && rRef.Tab() == nOldTab)
+                            rRef.SetAbsTab( nNewTab);
+                    }
+                    break;
+                default:
+                    ;
+            }
+        }
+    }
+}
+
+bool ScTokenArray::ReferencesSheet( SCTAB nTab, SCTAB nPosTab ) const
+{
+    TokenPointers aPtrs( pCode, nLen, pRPN, nRPN, false);
+    for (size_t j=0; j<2; ++j)
+    {
+        FormulaToken* const * pp = aPtrs.maPointerRange[j].mpStart;
+        FormulaToken* const * const pEnd = aPtrs.maPointerRange[j].mpStop;
+        for (; pp != pEnd; ++pp)
+        {
+            const FormulaToken* p = aPtrs.getHandledToken(j,pp);
+            if (!p)
+                continue;
+
+            switch ( p->GetType() )
+            {
+                case svDoubleRef :
+                    {
+                        const ScComplexRefData& rRef = *p->GetDoubleRef();
+                        const ScSingleRefData& rRef2 = rRef.Ref2;
+                        const ScSingleRefData& rRef1 = rRef.Ref1;
+
+                        SCTAB nTab1 = (rRef1.IsTabRel() ? rRef1.Tab() + nPosTab : rRef1.Tab());
+                        SCTAB nTab2 = (rRef2.IsTabRel() ? rRef2.Tab() + nPosTab : rRef2.Tab());
+                        if (nTab1 <= nTab && nTab <= nTab2)
+                            return true;
+                    }
+                    break;
+                case svSingleRef :
+                    {
+                        const ScSingleRefData& rRef = *p->GetSingleRef();
+                        if (rRef.IsTabRel())
+                        {
+                            if (rRef.Tab() + nPosTab == nTab)
+                                return true;
+                        }
+                        else
+                        {
+                            if (rRef.Tab() == nTab)
+                                return true;
+                        }
+                    }
+                    break;
+                default:
+                    ;
+            }
+        }
+    }
+    return false;
 }
 
 namespace {
@@ -2834,7 +2931,7 @@ bool expandRangeByEdge( const sc::RefUpdateContext& rCxt, ScRange& rRefRange, co
 bool isNameModified( const sc::UpdatedRangeNames& rUpdatedNames, SCTAB nOldTab, const formula::FormulaToken& rToken )
 {
     SCTAB nTab = -1;
-    if (!rToken.IsGlobal())
+    if (rToken.GetSheet() >= 0)
         nTab = nOldTab;
 
     // Check if this named expression has been modified.
@@ -3011,8 +3108,17 @@ sc::RefUpdateResult ScTokenArray::AdjustReferenceOnShift( const sc::RefUpdateCon
                 switch ((*pp)->GetOpCode())
                 {
                     case ocName:
-                        if (isNameModified(rCxt.maUpdatedNames, rOldPos.Tab(), **pp))
-                            aRes.mbNameModified = true;
+                        {
+                            SCTAB nOldTab = (*pp)->GetSheet();
+                            if (isNameModified(rCxt.maUpdatedNames, nOldTab, **pp))
+                                aRes.mbNameModified = true;
+                            if (rCxt.mnTabDelta &&
+                                    rCxt.maRange.aStart.Tab() <= nOldTab && nOldTab <= rCxt.maRange.aEnd.Tab())
+                            {
+                                aRes.mbNameModified = true;
+                                (*pp)->SetSheet( nOldTab + rCxt.mnTabDelta);
+                            }
+                        }
                         break;
                     case ocDBArea:
                     case ocTableRef:
@@ -3107,8 +3213,17 @@ sc::RefUpdateResult ScTokenArray::AdjustReferenceOnMove(
                 switch ((*pp)->GetOpCode())
                 {
                     case ocName:
-                        if (isNameModified(rCxt.maUpdatedNames, rOldPos.Tab(), **pp))
-                            aRes.mbNameModified = true;
+                        {
+                            SCTAB nOldTab = (*pp)->GetSheet();
+                            if (isNameModified(rCxt.maUpdatedNames, nOldTab, **pp))
+                                aRes.mbNameModified = true;
+                            if (rCxt.mnTabDelta &&
+                                    rCxt.maRange.aStart.Tab() <= nOldTab && nOldTab <= rCxt.maRange.aEnd.Tab())
+                            {
+                                aRes.mbNameModified = true;
+                                (*pp)->SetSheet( nOldTab + rCxt.mnTabDelta);
+                            }
+                        }
                         break;
                     case ocDBArea:
                     case ocTableRef:
@@ -3179,8 +3294,17 @@ sc::RefUpdateResult ScTokenArray::MoveReference( const ScAddress& rPos, const sc
                 switch ((*p)->GetOpCode())
                 {
                     case ocName:
-                        if (isNameModified(rCxt.maUpdatedNames, aOldRange.aStart.Tab(), **p))
-                            aRes.mbNameModified = true;
+                        {
+                            SCTAB nOldTab = (*p)->GetSheet();
+                            if (isNameModified(rCxt.maUpdatedNames, nOldTab, **p))
+                                aRes.mbNameModified = true;
+                            if (rCxt.mnTabDelta &&
+                                    rCxt.maRange.aStart.Tab() <= nOldTab && nOldTab <= rCxt.maRange.aEnd.Tab())
+                            {
+                                aRes.mbNameModified = true;
+                                (*p)->SetSheet( nOldTab + rCxt.mnTabDelta);
+                            }
+                        }
                         break;
                     case ocDBArea:
                     case ocTableRef:
@@ -3396,17 +3520,33 @@ bool adjustDoubleRefInName(
     ScComplexRefData& rRef, const sc::RefUpdateContext& rCxt, const ScAddress& rPos )
 {
     bool bRefChanged = false;
-    if (rCxt.mnRowDelta > 0 && rCxt.mrDoc.IsExpandRefs() && !rRef.Ref1.IsRowRel() && !rRef.Ref2.IsRowRel())
+    if (rCxt.mrDoc.IsExpandRefs())
     {
-        // Check and see if we should expand the range at the top.
-        ScRange aSelectedRange = getSelectedRange(rCxt);
-        ScRange aAbs = rRef.toAbs(rPos);
-        if (aSelectedRange.Intersects(aAbs))
+        if (rCxt.mnRowDelta > 0 && !rRef.Ref1.IsRowRel() && !rRef.Ref2.IsRowRel())
         {
-            // Selection intersects the referenced range. Only expand the
-            // bottom position.
-            rRef.IncEndRowSticky(rCxt.mnRowDelta, rPos);
-            return true;
+            // Check and see if we should expand the range at the top.
+            ScRange aSelectedRange = getSelectedRange(rCxt);
+            ScRange aAbs = rRef.toAbs(rPos);
+            if (aSelectedRange.Intersects(aAbs))
+            {
+                // Selection intersects the referenced range. Only expand the
+                // bottom position.
+                rRef.IncEndRowSticky(rCxt.mnRowDelta, rPos);
+                return true;
+            }
+        }
+        if (rCxt.mnColDelta > 0 && !rRef.Ref1.IsColRel() && !rRef.Ref2.IsColRel())
+        {
+            // Check and see if we should expand the range at the left.
+            ScRange aSelectedRange = getSelectedRange(rCxt);
+            ScRange aAbs = rRef.toAbs(rPos);
+            if (aSelectedRange.Intersects(aAbs))
+            {
+                // Selection intersects the referenced range. Only expand the
+                // right position.
+                rRef.IncEndColSticky(rCxt.mnColDelta, rPos);
+                return true;
+            }
         }
     }
 
@@ -3457,6 +3597,10 @@ sc::RefUpdateResult ScTokenArray::AdjustReferenceInName(
         return AdjustReferenceInMovedName(rCxt, rPos);
 
     sc::RefUpdateResult aRes;
+
+    if (rCxt.meMode == URM_COPY)
+        // Copying cells does not modify named expressions.
+        return aRes;
 
     TokenPointers aPtrs( pCode, nLen, pRPN, nRPN);
     for (size_t j=0; j<2; ++j)
@@ -3548,6 +3692,66 @@ sc::RefUpdateResult ScTokenArray::AdjustReferenceInName(
 
                             aRes.mbReferenceModified = true;
                         }
+                        else if (rCxt.mnColDelta < 0)
+                        {
+                            // column(s) deleted.
+
+                            if (rRef.IsEntireRow())
+                                // Rows of entire rows are not affected.
+                                break;
+
+                            if (rRef.Ref1.IsColRel() || rRef.Ref2.IsColRel())
+                                // Don't modify relative references in names.
+                                break;
+
+                            if (aAbs.aStart.Row() < rCxt.maRange.aStart.Row() || rCxt.maRange.aEnd.Row() < aAbs.aEnd.Row())
+                                // row range of the reference is not entirely in the deleted row range.
+                                break;
+
+                            if (aAbs.aStart.Tab() > rCxt.maRange.aEnd.Tab() || aAbs.aEnd.Tab() < rCxt.maRange.aStart.Tab())
+                                // wrong tables
+                                break;
+
+                            ScRange aDeleted = rCxt.maRange;
+                            aDeleted.aStart.IncCol(rCxt.mnColDelta);
+                            aDeleted.aEnd.SetCol(aDeleted.aStart.Col()-rCxt.mnColDelta-1);
+
+                            if (aAbs.aEnd.Col() < aDeleted.aStart.Col() || aDeleted.aEnd.Col() < aAbs.aStart.Col())
+                                // reference range doesn't intersect with the deleted range.
+                                break;
+
+                            if (aDeleted.aStart.Col() <= aAbs.aStart.Col() && aAbs.aEnd.Col() <= aDeleted.aEnd.Col())
+                            {
+                                // This reference is entirely deleted.
+                                rRef.Ref1.SetColDeleted(true);
+                                rRef.Ref2.SetColDeleted(true);
+                                aRes.mbReferenceModified = true;
+                                break;
+                            }
+
+                            if (aAbs.aStart.Col() < aDeleted.aStart.Col())
+                            {
+                                if (!aAbs.IsEndColSticky())
+                                {
+                                    if (aDeleted.aEnd.Col() < aAbs.aEnd.Col())
+                                        // Deleted in the middle.  Make the reference shorter.
+                                        rRef.Ref2.IncCol(rCxt.mnColDelta);
+                                    else
+                                        // Deleted at tail end.  Cut off the right part.
+                                        rRef.Ref2.SetAbsCol(aDeleted.aStart.Col()-1);
+                                }
+                            }
+                            else
+                            {
+                                // Deleted at the left.  Cut the left off and shift left.
+                                rRef.Ref1.SetAbsCol(aDeleted.aEnd.Col()+1);
+                                rRef.Ref1.IncCol(rCxt.mnColDelta);
+                                if (!aAbs.IsEndColSticky())
+                                    rRef.Ref2.IncCol(rCxt.mnColDelta);
+                            }
+
+                            aRes.mbReferenceModified = true;
+                        }
                         else if (rCxt.maRange.Intersects(aAbs))
                         {
                             if (rCxt.mnColDelta && rCxt.maRange.aStart.Row() <= aAbs.aStart.Row() && aAbs.aEnd.Row() <= rCxt.maRange.aEnd.Row())
@@ -3570,6 +3774,18 @@ sc::RefUpdateResult ScTokenArray::AdjustReferenceInName(
                             {
                                 // Expand by the bottom edge.
                                 rRef.Ref2.IncRow(rCxt.mnRowDelta);
+                                aRes.mbReferenceModified = true;
+                            }
+                        }
+                        else if (rCxt.mnColDelta > 0 && rCxt.mrDoc.IsExpandRefs())
+                        {
+                            // Check if we could expand range reference by the right
+                            // edge. For named expressions, we only expand absolute
+                            // references.
+                            if (!rRef.Ref1.IsColRel() && !rRef.Ref2.IsColRel() && aAbs.aEnd.Col()+1 == rCxt.maRange.aStart.Col())
+                            {
+                                // Expand by the right edge.
+                                rRef.Ref2.IncCol(rCxt.mnColDelta);
                                 aRes.mbReferenceModified = true;
                             }
                         }
@@ -3788,8 +4004,20 @@ sc::RefUpdateResult ScTokenArray::AdjustReferenceOnDeletedTab( sc::RefUpdateDele
                 switch ((*pp)->GetOpCode())
                 {
                     case ocName:
-                        if (isNameModified(rCxt.maUpdatedNames, rOldPos.Tab(), **pp))
-                            aRes.mbNameModified = true;
+                        {
+                            SCTAB nOldTab = (*pp)->GetSheet();
+                            if (isNameModified(rCxt.maUpdatedNames, nOldTab, **pp))
+                                aRes.mbNameModified = true;
+                            if (rCxt.mnDeletePos <= nOldTab)
+                            {
+                                aRes.mbNameModified = true;
+                                if (rCxt.mnDeletePos + rCxt.mnSheets < nOldTab)
+                                    (*pp)->SetSheet( nOldTab - rCxt.mnSheets);
+                                else
+                                    // Would point to a deleted sheet. Invalidate.
+                                    (*pp)->SetSheet( SCTAB_MAX);
+                            }
+                        }
                         break;
                     case ocDBArea:
                     case ocTableRef:
@@ -3852,8 +4080,16 @@ sc::RefUpdateResult ScTokenArray::AdjustReferenceOnInsertedTab( sc::RefUpdateIns
                 switch ((*pp)->GetOpCode())
                 {
                     case ocName:
-                        if (isNameModified(rCxt.maUpdatedNames, rOldPos.Tab(), **pp))
-                            aRes.mbNameModified = true;
+                        {
+                            SCTAB nOldTab = (*pp)->GetSheet();
+                            if (isNameModified(rCxt.maUpdatedNames, nOldTab, **pp))
+                                aRes.mbNameModified = true;
+                            if (rCxt.mnInsertPos <= nOldTab)
+                            {
+                                aRes.mbNameModified = true;
+                                (*pp)->SetSheet( nOldTab + rCxt.mnSheets);
+                            }
+                        }
                         break;
                     case ocDBArea:
                     case ocTableRef:
@@ -3937,8 +4173,17 @@ sc::RefUpdateResult ScTokenArray::AdjustReferenceOnMovedTab( sc::RefUpdateMoveTa
                 switch ((*pp)->GetOpCode())
                 {
                     case ocName:
-                        if (isNameModified(rCxt.maUpdatedNames, rOldPos.Tab(), **pp))
-                            aRes.mbNameModified = true;
+                        {
+                            SCTAB nOldTab = (*pp)->GetSheet();
+                            if (isNameModified(rCxt.maUpdatedNames, nOldTab, **pp))
+                                aRes.mbNameModified = true;
+                            SCTAB nNewTab = rCxt.getNewTab( nOldTab);
+                            if (nNewTab != nOldTab)
+                            {
+                                aRes.mbNameModified = true;
+                                (*pp)->SetSheet( nNewTab);
+                            }
+                        }
                         break;
                     case ocDBArea:
                     case ocTableRef:
@@ -4011,7 +4256,7 @@ void ScTokenArray::AdjustReferenceOnMovedOriginIfOtherSheet( const ScAddress& rO
             {
                 case svExternalSingleRef:
                     bAdjust = true;     // always
-                    // fallthru
+                    SAL_FALLTHROUGH;
                 case svSingleRef:
                     {
                         ScSingleRefData& rRef = *p->GetSingleRef();
@@ -4024,7 +4269,7 @@ void ScTokenArray::AdjustReferenceOnMovedOriginIfOtherSheet( const ScAddress& rO
                     break;
                 case svExternalDoubleRef:
                     bAdjust = true;     // always
-                    // fallthru
+                    SAL_FALLTHROUGH;
                 case svDoubleRef:
                     {
                         ScComplexRefData& rRef = *p->GetDoubleRef();
@@ -4534,7 +4779,8 @@ void appendTokenByType( sc::TokenStringContext& rCxt, OUStringBuffer& rBuf, cons
             {
                 case ocName:
                 {
-                    if (rToken.IsGlobal())
+                    SCTAB nTab = rToken.GetSheet();
+                    if (nTab < 0)
                     {
                         // global named range
                         NameType::const_iterator it = rCxt.maGlobalRangeNames.find(nIndex);
@@ -4549,7 +4795,23 @@ void appendTokenByType( sc::TokenStringContext& rCxt, OUStringBuffer& rBuf, cons
                     else
                     {
                         // sheet-local named range
-                        sc::TokenStringContext::TabIndexMapType::const_iterator itTab = rCxt.maSheetRangeNames.find(rPos.Tab());
+                        if (nTab != rPos.Tab())
+                        {
+                            // On other sheet.
+                            OUString aName;
+                            if (static_cast<size_t>(nTab) < rCxt.maTabNames.size())
+                                aName = rCxt.maTabNames[nTab];
+                            if (!aName.isEmpty())
+                            {
+                                ScCompiler::CheckTabQuotes( aName, rCxt.mpRefConv->meConv);
+                                rBuf.append( aName);
+                            }
+                            else
+                                rBuf.append( ScGlobal::GetRscString( STR_NO_NAME_REF));
+                            rBuf.append( rCxt.mpRefConv->getSpecialSymbol( ScCompiler::Convention::SHEET_SEPARATOR));
+                        }
+
+                        sc::TokenStringContext::TabIndexMapType::const_iterator itTab = rCxt.maSheetRangeNames.find(nTab);
                         if (itTab == rCxt.maSheetRangeNames.end())
                         {
                             rBuf.append(ScGlobal::GetRscString(STR_NO_NAME_REF));

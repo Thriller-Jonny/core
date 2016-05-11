@@ -79,14 +79,14 @@ namespace dbtools
     class ISQLStatementHelper;
     typedef ::utl::SharedUNOComponent< css::sdbc::XConnection > SharedConnection;
 
-    enum EComposeRule
+    enum class EComposeRule
     {
-        eInTableDefinitions,
-        eInIndexDefinitions,
-        eInDataManipulation,
-        eInProcedureCalls,
-        eInPrivilegeDefinitions,
-        eComplete
+        InTableDefinitions,
+        InIndexDefinitions,
+        InDataManipulation,
+        InProcedureCalls,
+        InPrivilegeDefinitions,
+        Complete
     };
 
     // date conversion
@@ -106,7 +106,6 @@ namespace dbtools
                                      bool _bIsCurrency,
                                      const css::uno::Reference< css::util::XNumberFormatTypes >& _xTypes,
                                      const css::lang::Locale& _rLocale);
-
 
 
     /** creates a connection which can be used for the rowset given
@@ -307,8 +306,7 @@ namespace dbtools
         const css::sdbc::SQLException& _rChainedException,
         const css::uno::Reference< css::uno::XInterface >& _rxContext,
         const OUString& _rAdditionalError,
-        const StandardSQLState _eSQLState = SQL_ERROR_UNSPECIFIED,
-        const sal_Int32 _nErrorCode = 0);
+        const StandardSQLState _eSQLState = StandardSQLState::ERROR_UNSPECIFIED);
 
     /** search the parent hierarchy for a data source.
     */
@@ -376,7 +374,7 @@ namespace dbtools
                                     , const OUString& _rName
                                     ,EComposeRule _eComposeRule);
 
-    /** split a fully qualified table name (including catalog and schema, if appliable) into it's component parts.
+    /** split a fully qualified table name (including catalog and schema, if applicable) into its component parts.
         @param  _rxConnMetaData     meta data describing the connection where you got the table name from
         @param  _rQualifiedName     fully qualified table name
         @param  _rCatalog           (out parameter) upon return, contains the catalog name
@@ -439,7 +437,7 @@ namespace dbtools
     OOO_DLLPUBLIC_DBTOOLS bool canDelete(const css::uno::Reference< css::beans::XPropertySet>& _rxCursorSet);
 
 
-    /** compose a complete table name from it's up to three parts, regarding to the database meta data composing rules
+    /** compose a complete table name from its up to three parts, regarding to the database meta data composing rules
     */
     OOO_DLLPUBLIC_DBTOOLS OUString composeTableName( const css::uno::Reference< css::sdbc::XDatabaseMetaData >& _rxMetaData,
                             const OUString& _rCatalog,
@@ -552,7 +550,6 @@ namespace dbtools
     bool implUpdateObject(  const css::uno::Reference< css::sdbc::XRowUpdate >& _rxUpdatedObject,
                                 const sal_Int32 _nColumnIndex,
                                 const css::uno::Any& _rValue);
-
 
 
     /** ask the user for parameters if the prepared statement needs some and sets them in the prepared statement
@@ -720,7 +717,7 @@ namespace dbtools
         @param  _rxContext
             Used to create the drivermanager.
         @return
-            The datadefintion object.
+            The datadefinition object.
     */
     OOO_DLLPUBLIC_DBTOOLS css::uno::Reference< css::sdbcx::XTablesSupplier> getDataDefinitionByURLAndConnection(
             const OUString& _rsUrl,

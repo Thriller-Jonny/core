@@ -125,20 +125,20 @@ public:
     bool IsReadOnly( ) { return bReadOnly; }
     bool IsDocConfig( ) { return bDocConfig; }
 
-    css::uno::Reference
-        < css::ui::XUIConfigurationManager >
+    const css::uno::Reference
+        < css::ui::XUIConfigurationManager >&
             GetConfigManager() { return m_xCfgMgr; };
 
-    css::uno::Reference
-        < css::ui::XUIConfigurationManager >
+    const css::uno::Reference
+        < css::ui::XUIConfigurationManager >&
             GetParentConfigManager() { return m_xParentCfgMgr; };
 
-    css::uno::Reference
-        < css::ui::XImageManager >
+    const css::uno::Reference
+        < css::ui::XImageManager >&
             GetImageManager() { return m_xImgMgr; };
 
-    css::uno::Reference
-        < css::ui::XImageManager >
+    const css::uno::Reference
+        < css::ui::XImageManager >&
             GetParentImageManager() { return m_xParentImgMgr; };
 
     css::uno::Reference
@@ -176,10 +176,8 @@ private:
     static MenuSaveInData* GetDefaultData() { return pDefaultData; }
 
     void        Apply(
-        SvxConfigEntry* pRootEntry,
         css::uno::Reference< css::container::XIndexContainer >& rNewMenuBar,
-        css::uno::Reference< css::lang::XSingleComponentFactory >& rFactory,
-        SvTreeListEntry *pParent = nullptr );
+        css::uno::Reference< css::lang::XSingleComponentFactory >& rFactory );
 
 public:
 
@@ -290,7 +288,7 @@ public:
     SvxEntries* GetEntries() const { return mpEntries; }
     void    SetEntries( SvxEntries* entries ) { mpEntries = entries; }
 
-    void    SetMain( bool bValue = true ) { bIsMain = bValue; }
+    void    SetMain() { bIsMain = true; }
     bool    IsMain() { return bIsMain; }
 
     void    SetParentData( bool bValue = true ) { bIsParentData = bValue; }
@@ -309,7 +307,7 @@ public:
     void    SetBackupGraphic( css::uno::Reference< css::graphic::XGraphic > graphic )
                 { xBackupGraphic = graphic; }
 
-    css::uno::Reference< css::graphic::XGraphic > GetBackupGraphic()
+    const css::uno::Reference< css::graphic::XGraphic >& GetBackupGraphic()
                 { return xBackupGraphic; }
 
     bool    IsIconModified() { return xBackupGraphic.is(); }
@@ -443,7 +441,7 @@ public:
     bool            FillItemSet( SfxItemSet* ) override;
     void            Reset( const SfxItemSet* ) override;
 
-    virtual bool    DeleteSelectedContent() = 0;
+    virtual void    DeleteSelectedContent() = 0;
     virtual void    DeleteSelectedTopLevel() = 0;
 
     SvxConfigEntry* GetTopLevelSelection()
@@ -481,7 +479,7 @@ private:
     void            Init() override;
     void            UpdateButtonStates() override;
     short           QueryReset() override;
-    bool            DeleteSelectedContent() override;
+    void            DeleteSelectedContent() override;
     void            DeleteSelectedTopLevel() override;
 
 public:
@@ -574,7 +572,7 @@ private:
     void            UpdateButtonStates() override;
     short           QueryReset() override;
     void            Init() override;
-    bool            DeleteSelectedContent() override;
+    void            DeleteSelectedContent() override;
     void            DeleteSelectedTopLevel() override;
 
 public:
@@ -582,9 +580,8 @@ public:
     virtual ~SvxToolbarConfigPage();
     virtual void dispose() override;
 
-    SvTreeListEntry*    AddFunction( SvTreeListEntry* pTarget = nullptr,
-                                             bool bFront = false,
-                                             bool bAllowDuplicates = true );
+    void            AddFunction( SvTreeListEntry* pTarget = nullptr,
+                                             bool bFront = false );
 
     void            MoveEntry( bool bMoveUp ) override;
 
@@ -607,7 +604,7 @@ private:
     css::uno::Reference
         < css::container::XNameAccess > m_xPersistentWindowState;
 
-    bool        LoadToolbar(
+    void        LoadToolbar(
         const css::uno::Reference< css::container::XIndexAccess >& xToolBarSettings,
         SvxConfigEntry* pParentData );
 
@@ -638,7 +635,7 @@ public:
     void            SetSystemStyle( const OUString& rResourceURL, sal_Int32 nStyle );
 
     void            SetSystemStyle(
-        css::uno::Reference< css::frame::XFrame > xFrame,
+        const css::uno::Reference< css::frame::XFrame >& xFrame,
         const OUString& rResourceURL, sal_Int32 nStyle );
 
     SvxEntries*     GetEntries() override;
@@ -666,11 +663,6 @@ public:
     {
         return m_pEdtName->GetText();
     }
-};
-
-struct SvxIconSelectorToolBoxItem
-{
-    Image aImg;
 };
 
 class SvxIconSelectorDialog : public ModalDialog

@@ -39,8 +39,8 @@ BreakIteratorImpl::BreakIteratorImpl()
 BreakIteratorImpl::~BreakIteratorImpl()
 {
     // Clear lookuptable
-    for (size_t l = 0; l < lookupTable.size(); l++)
-        delete lookupTable[l];
+    for (lookupTableItem* p : lookupTable)
+        delete p;
     lookupTable.clear();
 }
 
@@ -112,7 +112,7 @@ Boundary SAL_CALL BreakIteratorImpl::nextWord( const OUString& Text, sal_Int32 n
             if( nStartPos >= len )
                 result.startPos = result.endPos = len;
             else {
-                result = LBI->getWordBoundary(Text, nStartPos, rLocale, rWordType, sal_True);
+                result = LBI->getWordBoundary(Text, nStartPos, rLocale, rWordType, true);
                 // i88041: avoid startPos goes back to nStartPos when switching between Latin and CJK scripts
                 if (result.startPos < nStartPos) result.startPos = nStartPos;
             }
@@ -172,9 +172,9 @@ Boundary SAL_CALL BreakIteratorImpl::getWordBoundary( const OUString& Text, sal_
         } else {
             if (next != prev) {
                 if (next == nPos && next != len)
-                    bDirection = sal_True;
+                    bDirection = true;
                 else if (prev == nPos && prev != 0)
-                    bDirection = sal_False;
+                    bDirection = false;
                 else
                     nPos = bDirection ? next : prev;
             }
@@ -189,13 +189,13 @@ sal_Bool SAL_CALL BreakIteratorImpl::isBeginWord( const OUString& Text, sal_Int3
 {
     sal_Int32 len = Text.getLength();
 
-    if (nPos < 0 || nPos >= len) return sal_False;
+    if (nPos < 0 || nPos >= len) return false;
 
     sal_Int32 tmp = skipSpace(Text, nPos, len, rWordType, true);
 
-    if (tmp != nPos) return sal_False;
+    if (tmp != nPos) return false;
 
-    result = getWordBoundary(Text, nPos, rLocale, rWordType, sal_True);
+    result = getWordBoundary(Text, nPos, rLocale, rWordType, true);
 
     return result.startPos == nPos;
 }
@@ -205,13 +205,13 @@ sal_Bool SAL_CALL BreakIteratorImpl::isEndWord( const OUString& Text, sal_Int32 
 {
     sal_Int32 len = Text.getLength();
 
-    if (nPos <= 0 || nPos > len) return sal_False;
+    if (nPos <= 0 || nPos > len) return false;
 
     sal_Int32 tmp = skipSpace(Text, nPos, len, rWordType, false);
 
-    if (tmp != nPos) return sal_False;
+    if (tmp != nPos) return false;
 
-    result = getWordBoundary(Text, nPos, rLocale, rWordType, sal_False);
+    result = getWordBoundary(Text, nPos, rLocale, rWordType, false);
 
     return result.endPos == nPos;
 }
@@ -420,7 +420,6 @@ sal_Int32 SAL_CALL BreakIteratorImpl::previousCharBlock( const OUString& Text, s
 }
 
 
-
 sal_Int16 SAL_CALL BreakIteratorImpl::getWordType( const OUString& /*Text*/,
         sal_Int32 /*nPos*/, const Locale& /*rLocale*/ ) throw(RuntimeException, std::exception)
 {
@@ -524,15 +523,10 @@ sal_Int16  BreakIteratorImpl::getScriptClass(sal_uInt32 currentChar)
     return nRet;
 }
 
-static inline bool operator == (const Locale& l1, const Locale& l2) {
-        return l1.Language == l2.Language && l1.Country == l2.Country && l1.Variant == l2.Variant;
-}
-
 bool SAL_CALL BreakIteratorImpl::createLocaleSpecificBreakIterator(const OUString& aLocaleName) throw( RuntimeException )
 {
     // to share service between same Language but different Country code, like zh_CN and zh_TW
-    for (size_t l = 0; l < lookupTable.size(); l++) {
-        lookupTableItem *listItem = lookupTable[l];
+    for (lookupTableItem* listItem : lookupTable) {
         if (aLocaleName == listItem->aLocale.Language) {
             xBI = listItem->xBI;
             return true;
@@ -560,8 +554,7 @@ BreakIteratorImpl::getLocaleSpecificBreakIterator(const Locale& rLocale) throw (
     else if (m_xContext.is()) {
         aLocale = rLocale;
 
-        for (size_t i = 0; i < lookupTable.size(); i++) {
-            lookupTableItem *listItem = lookupTable[i];
+        for (lookupTableItem* listItem : lookupTable) {
             if (rLocale == listItem->aLocale)
                 return xBI = listItem->xBI;
         }

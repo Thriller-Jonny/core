@@ -711,18 +711,18 @@ void SAL_CALL Moderator::onTerminated()
    Function for opening UCB contents synchronously,
    but with handled timeout;
 */
-static bool _UCBOpenContentSync(
-    UcbLockBytesRef xLockBytes,
-    Reference < XContent > xContent,
+static bool UCBOpenContentSync_(
+    const UcbLockBytesRef& xLockBytes,
+    const Reference < XContent >& xContent,
     const Command& rArg,
-    Reference < XInterface > xSink,
-    Reference < XInteractionHandler > xInteract );
+    const Reference < XInterface >& xSink,
+    const Reference < XInteractionHandler >& xInteract );
 
 static bool UCBOpenContentSync(
-    UcbLockBytesRef xLockBytes,
+    const UcbLockBytesRef& xLockBytes,
     Reference < XContent > xContent,
     const Command& rArg,
-    Reference < XInterface > xSink,
+    const Reference < XInterface >& xSink,
     Reference < XInteractionHandler > xInteract )
 {
     // http protocol must be handled in a special way:
@@ -743,7 +743,7 @@ static bool UCBOpenContentSync(
         ! aScheme.equalsIgnoreAsciiCase("vnd.sun.star.webdav") &&
         ! aScheme.equalsIgnoreAsciiCase("vnd.sun.star.webdavs") &&
         ! aScheme.equalsIgnoreAsciiCase("ftp"))
-        return _UCBOpenContentSync(
+        return UCBOpenContentSync_(
             xLockBytes,xContent,rArg,xSink,xInteract);
 
     if ( !aScheme.equalsIgnoreAsciiCase( "http" ) &&
@@ -956,12 +956,12 @@ static bool UCBOpenContentSync(
 /**
     Function for opening UCB contents synchronously
  */
-static bool _UCBOpenContentSync(
-    UcbLockBytesRef xLockBytes,
-    Reference < XContent > xContent,
+static bool UCBOpenContentSync_(
+    const UcbLockBytesRef& xLockBytes,
+    const Reference < XContent >& xContent,
     const Command& rArg,
-    Reference < XInterface > xSink,
-    Reference < XInteractionHandler > xInteract )
+    const Reference < XInterface >& xSink,
+    const Reference < XInteractionHandler >& xInteract )
 {
     ::ucbhelper::Content aContent(
         xContent, new UcbTaskEnvironment( xInteract, nullptr ),
@@ -1041,10 +1041,9 @@ static bool _UCBOpenContentSync(
     return ( bAborted || bException );
 }
 
-UcbLockBytes::UcbLockBytes( UcbLockBytesHandler* pHandler )
+UcbLockBytes::UcbLockBytes()
     : m_aExpireDate( DateTime::EMPTY )
     , m_xInputStream (nullptr)
-    , m_xHandler( pHandler )
     , m_nError( ERRCODE_NONE )
     , m_bTerminated  (false)
     , m_bDontClose( false )
@@ -1094,7 +1093,7 @@ Reference < XInputStream > UcbLockBytes::getInputStream()
     return m_xInputStream;
 }
 
-bool UcbLockBytes::setStream_Impl( const Reference<XStream>& aStream )
+void UcbLockBytes::setStream_Impl( const Reference<XStream>& aStream )
 {
     osl::MutexGuard aGuard( m_aMutex );
     if ( aStream.is() )
@@ -1108,8 +1107,6 @@ bool UcbLockBytes::setStream_Impl( const Reference<XStream>& aStream )
         m_xOutputStream.clear();
         setInputStream_Impl( Reference < XInputStream >() );
     }
-
-    return m_xInputStream.is();
 }
 
 bool UcbLockBytes::setInputStream_Impl( const Reference<XInputStream> &rxInputStream, bool bSetXSeekable )
@@ -1375,7 +1372,7 @@ UcbLockBytesRef UcbLockBytes::CreateInputLockBytes( const Reference< XInputStrea
     if( !xInputStream.is() )
         return nullptr;
 
-    UcbLockBytesRef xLockBytes = new UcbLockBytes(nullptr);
+    UcbLockBytesRef xLockBytes = new UcbLockBytes;
     xLockBytes->setDontClose_Impl();
     xLockBytes->setInputStream_Impl( xInputStream );
     xLockBytes->terminate_Impl();
@@ -1387,7 +1384,7 @@ UcbLockBytesRef UcbLockBytes::CreateLockBytes( const Reference< XStream >& xStre
     if( !xStream.is() )
         return nullptr;
 
-    UcbLockBytesRef xLockBytes = new UcbLockBytes(nullptr);
+    UcbLockBytesRef xLockBytes = new UcbLockBytes;
     xLockBytes->setDontClose_Impl();
     xLockBytes->setStream_Impl( xStream );
     xLockBytes->terminate_Impl();
@@ -1400,7 +1397,7 @@ UcbLockBytesRef UcbLockBytes::CreateLockBytes( const Reference < XContent >& xCo
     if( !xContent.is() )
         return nullptr;
 
-    UcbLockBytesRef xLockBytes = new UcbLockBytes( pHandler );
+    UcbLockBytesRef xLockBytes = new UcbLockBytes;
     xLockBytes->SetSynchronMode( !pHandler );
     Reference< XActiveDataControl > xSink;
     if ( eOpenMode & StreamMode::WRITE )

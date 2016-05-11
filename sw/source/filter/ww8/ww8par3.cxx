@@ -313,7 +313,8 @@ eF_ResT SwWW8ImplReader::Read_F_HTMLControl(WW8FieldDesc*, OUString&)
 
 void SwWW8ImplReader::DeleteFormImpl()
 {
-    delete m_pFormImpl, m_pFormImpl = nullptr;
+    delete m_pFormImpl;
+    m_pFormImpl = nullptr;
 }
 
 // Hilfs-Deklarationen
@@ -1096,11 +1097,11 @@ void WW8ListManager::AdjustLVL( sal_uInt8 nLevel, SwNumRule& rNumRule,
         else
         {
             const SvxFontItem& rFontItem = pFormat->GetFont();
-            aFont.SetFamily(    rFontItem.GetFamily()     );
-            aFont.SetName(      rFontItem.GetFamilyName() );
-            aFont.SetStyleName( rFontItem.GetStyleName()  );
-            aFont.SetPitch(     rFontItem.GetPitch()      );
-            aFont.SetCharSet(   rFontItem.GetCharSet()    );
+            aFont.SetFamily(        rFontItem.GetFamily()     );
+            aFont.SetFamilyName(    rFontItem.GetFamilyName() );
+            aFont.SetStyleName(     rFontItem.GetStyleName()  );
+            aFont.SetPitch(         rFontItem.GetPitch()      );
+            aFont.SetCharSet(       rFontItem.GetCharSet()    );
         }
         aNumFormat.SetBulletFont( &aFont );
     }
@@ -1565,14 +1566,14 @@ SwNumRule* WW8ListManager::GetNumRuleForActivation(sal_uInt16 nLFOPosition,
 
     // #i25545#
     // #i100132# - a number format does not have to exist on given list level
-    SwNumFormat pFormat(rLFOInfo.pNumRule->Get(nLevel));
+    SwNumFormat aFormat(rLFOInfo.pNumRule->Get(nLevel));
 
     if (rReader.IsRightToLeft() && nLastLFOPosition != nLFOPosition) {
-        if ( pFormat.GetNumAdjust() == SVX_ADJUST_RIGHT)
-            pFormat.SetNumAdjust(SVX_ADJUST_LEFT);
-        else if ( pFormat.GetNumAdjust() == SVX_ADJUST_LEFT)
-            pFormat.SetNumAdjust(SVX_ADJUST_RIGHT);
-        rLFOInfo.pNumRule->Set(nLevel, pFormat);
+        if ( aFormat.GetNumAdjust() == SVX_ADJUST_RIGHT)
+            aFormat.SetNumAdjust(SVX_ADJUST_LEFT);
+        else if ( aFormat.GetNumAdjust() == SVX_ADJUST_LEFT)
+            aFormat.SetNumAdjust(SVX_ADJUST_RIGHT);
+        rLFOInfo.pNumRule->Set(nLevel, aFormat);
     }
     nLastLFOPosition = nLFOPosition;
     /*
@@ -2139,26 +2140,23 @@ bool SwWW8ImplReader::ImportFormulaControl(WW8FormulaControl &aFormula,
     return bRet;
 }
 
-bool SwMSConvertControls::InsertFormula(WW8FormulaControl &rFormula)
+void SwMSConvertControls::InsertFormula(WW8FormulaControl &rFormula)
 {
-    bool bRet = false;
-
     const uno::Reference< lang::XMultiServiceFactory > & rServiceFactory =
         GetServiceFactory();
 
     if(!rServiceFactory.is())
-        return false;
+        return;
 
     awt::Size aSz;
     uno::Reference< form::XFormComponent> xFComp;
 
-    if ((bRet = rFormula.Import(rServiceFactory, xFComp, aSz)))
+    if (rFormula.Import(rServiceFactory, xFComp, aSz))
     {
         uno::Reference <drawing::XShape> xShapeRef;
-        if ((bRet = InsertControl(xFComp, aSz, &xShapeRef, false)))
+        if (InsertControl(xFComp, aSz, &xShapeRef, false))
             GetShapes()->add(xShapeRef);
     }
-    return bRet;
 }
 
 void WW8FormulaControl::FormulaRead(SwWw8ControlType nWhich,
@@ -2318,11 +2316,11 @@ awt::Size SwWW8ImplReader::MiserableDropDownFormHack(const OUString &rString,
         {
         case RES_CHRATR_COLOR:
             {
-                OUString pNm;
-                if (xPropSetInfo->hasPropertyByName(pNm = "TextColor"))
+                OUString aNm;
+                if (xPropSetInfo->hasPropertyByName(aNm = "TextColor"))
                 {
                     aTmp <<= (sal_Int32)static_cast<const SvxColorItem*>(pItem)->GetValue().GetColor();
-                    rPropSet->setPropertyValue(pNm, aTmp);
+                    rPropSet->setPropertyValue(aNm, aTmp);
                 }
             }
             aFont.SetColor(static_cast<const SvxColorItem*>(pItem)->GetValue());
@@ -2330,30 +2328,30 @@ awt::Size SwWW8ImplReader::MiserableDropDownFormHack(const OUString &rString,
         case RES_CHRATR_FONT:
             {
                 const SvxFontItem *pFontItem = static_cast<const SvxFontItem *>(pItem);
-                OUString pNm;
-                if (xPropSetInfo->hasPropertyByName(pNm = "FontStyleName"))
+                OUString aNm;
+                if (xPropSetInfo->hasPropertyByName(aNm = "FontStyleName"))
                 {
                     aTmp <<= OUString( pFontItem->GetStyleName());
-                    rPropSet->setPropertyValue( pNm, aTmp );
+                    rPropSet->setPropertyValue( aNm, aTmp );
                 }
-                if (xPropSetInfo->hasPropertyByName(pNm = "FontFamily"))
+                if (xPropSetInfo->hasPropertyByName(aNm = "FontFamily"))
                 {
                     aTmp <<= (sal_Int16)pFontItem->GetFamily();
-                    rPropSet->setPropertyValue( pNm, aTmp );
+                    rPropSet->setPropertyValue( aNm, aTmp );
                 }
-                if (xPropSetInfo->hasPropertyByName(pNm = "FontCharset"))
+                if (xPropSetInfo->hasPropertyByName(aNm = "FontCharset"))
                 {
                     aTmp <<= (sal_Int16)pFontItem->GetCharSet();
-                    rPropSet->setPropertyValue( pNm, aTmp );
+                    rPropSet->setPropertyValue( aNm, aTmp );
                 }
-                if (xPropSetInfo->hasPropertyByName(pNm = "FontPitch"))
+                if (xPropSetInfo->hasPropertyByName(aNm = "FontPitch"))
                 {
                     aTmp <<= (sal_Int16)pFontItem->GetPitch();
-                    rPropSet->setPropertyValue( pNm, aTmp );
+                    rPropSet->setPropertyValue( aNm, aTmp );
                 }
 
                 aTmp <<= OUString( pFontItem->GetFamilyName());
-                aFont.SetName( pFontItem->GetFamilyName() );
+                aFont.SetFamilyName( pFontItem->GetFamilyName() );
                 aFont.SetStyleName( pFontItem->GetStyleName() );
                 aFont.SetFamily( pFontItem->GetFamily() );
                 aFont.SetCharSet( pFontItem->GetCharSet() );
@@ -2363,11 +2361,11 @@ awt::Size SwWW8ImplReader::MiserableDropDownFormHack(const OUString &rString,
 
         case RES_CHRATR_FONTSIZE:
             {
-                Size aSize( aFont.GetSize().Width(),
+                Size aSize( aFont.GetFontSize().Width(),
                             static_cast<const SvxFontHeightItem*>(pItem)->GetHeight() );
                 aTmp <<= ((float)aSize.Height()) / 20.0;
 
-                aFont.SetSize(OutputDevice::LogicToLogic(aSize, MAP_TWIP,
+                aFont.SetFontSize(OutputDevice::LogicToLogic(aSize, MAP_TWIP,
                     MAP_100TH_MM));
             }
             break;
@@ -2452,7 +2450,7 @@ bool WW8FormulaListBox::Import(const uno::Reference <
         sal_uInt32 nLen = maListEntries.size();
         uno::Sequence< OUString > aListSource(nLen);
         for (sal_uInt32 nI = 0; nI < nLen; ++nI)
-            aListSource[nI] = OUString(maListEntries[nI]);
+            aListSource[nI] = maListEntries[nI];
         aTmp <<= aListSource;
         xPropSet->setPropertyValue("StringItemList", aTmp );
 

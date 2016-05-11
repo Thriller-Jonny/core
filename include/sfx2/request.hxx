@@ -50,11 +50,10 @@ friend struct SfxRequest_Impl;
 
 public:
     SAL_DLLPRIVATE void Record_Impl( SfxShell &rSh, const SfxSlot &rSlot,
-                                     css::uno::Reference< css::frame::XDispatchRecorder > xRecorder,
+                                     const css::uno::Reference< css::frame::XDispatchRecorder >& xRecorder,
                                      SfxViewFrame* );
 private:
     SAL_DLLPRIVATE void Done_Impl( const SfxItemSet *pSet );
-
 
 
 public:
@@ -109,7 +108,7 @@ public:
     void                Ignore();
     void                Cancel();
     bool                IsCancelled() const;
-    void                Done(const SfxItemSet &, bool bKeep = true );
+    void                Done(const SfxItemSet &);
 
     void                ForgetAllArgs();
 

@@ -155,7 +155,6 @@ namespace connectivity
         css::uno::Reference< css::uno::XComponentContext >    m_xContext;
         css::uno::Reference< css::i18n::XCharacterClassification> m_xCharClass;
         static css::uno::Reference< css::i18n::XLocaleData4>       s_xLocaleData;
-        css::uno::Reference< css::i18n::XLocaleData>      xDummy; // can be deleted after 627
 
         // convert a string into double trim it to scale of _nscale and than transform it back to string
         OUString stringToDouble(const OUString& _rValue,sal_Int16 _nScale);
@@ -197,7 +196,7 @@ namespace connectivity
         // TokenIDToStr: token name belonging to a token number.
         static OString TokenIDToStr(sal_uInt32 nTokenID, const IParseContext* pContext = nullptr);
 
-#if OSL_DEBUG_LEVEL > 1
+#if OSL_DEBUG_LEVEL > 0
         // (empty string if not found)
         static OUString RuleIDToStr(sal_uInt32 nRuleID);
 #endif

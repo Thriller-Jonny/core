@@ -56,26 +56,56 @@ public:
         return std::find(aBlacklist.begin(), aBlacklist.end(), filename) == aBlacklist.end();
     }
 
-    virtual void preTest(const char* pFilename) override
+    virtual std::unique_ptr<Resetter> preTest(const char* pFilename) override
     {
         if (OString(pFilename) == "fdo58949.docx")
         {
+            std::unique_ptr<Resetter> pResetter(new Resetter(
+                [] () {
+                    std::shared_ptr<comphelper::ConfigurationChanges> pBatch(
+                            comphelper::ConfigurationChanges::create());
+                    officecfg::Office::Common::Filter::Microsoft::Import::MathTypeToMath::set(true, pBatch);
+                    return pBatch->commit();
+                }));
+
             std::shared_ptr<comphelper::ConfigurationChanges> pBatch(comphelper::ConfigurationChanges::create());
             officecfg::Office::Common::Filter::Microsoft::Import::MathTypeToMath::set(false, pBatch);
             pBatch->commit();
+            return pResetter;
         }
-    }
-
-    virtual void postTest(const char* pFilename) override
-    {
-        if (OString(pFilename) == "fdo58949.docx")
+        if (OString(pFilename) == "2_MathType3.docx")
         {
-            std::shared_ptr<comphelper::ConfigurationChanges> pBatch(comphelper::ConfigurationChanges::create());
-            officecfg::Office::Common::Filter::Microsoft::Import::MathTypeToMath::set(true, pBatch);
+            std::unique_ptr<Resetter> pResetter(new Resetter(
+                [this] () {
+                    mpFilter = "writer8";
+                    std::shared_ptr<comphelper::ConfigurationChanges> pBatch(
+                            comphelper::ConfigurationChanges::create());
+                    officecfg::Office::Common::Cache::Writer::OLE_Objects::set(20, pBatch);
+                    return pBatch->commit();
+                }));
+            mpFilter = "OpenDocument Text Flat XML"; // doesn't happen with ODF package
+            std::shared_ptr<comphelper::ConfigurationChanges> pBatch(
+                    comphelper::ConfigurationChanges::create());
+            officecfg::Office::Common::Cache::Writer::OLE_Objects::set(1, pBatch);
             pBatch->commit();
+            return pResetter;
         }
+        return nullptr;
     }
 };
+
+DECLARE_ODFEXPORT_TEST(testMathObjectFlatExport, "2_MathType3.docx")
+{
+    uno::Reference<util::XModifiable> xModifiable(mxComponent, uno::UNO_QUERY);
+    CPPUNIT_ASSERT(!xModifiable->isModified());
+    // see preTest(), set the OLE cache to 1 for this test
+    // and the problem was that the formulas that were in the cache
+    // (the second one) were lost
+    OUString formula1(getFormula(getRun(getParagraph(1), 1)));
+    CPPUNIT_ASSERT_EQUAL(OUString(" size 12{1+1=2} {}"), formula1);
+    OUString formula2(getFormula(getRun(getParagraph(2), 1)));
+    CPPUNIT_ASSERT_EQUAL(OUString(" size 12{2+2=4} {}"), formula2);
+}
 
 DECLARE_ODFEXPORT_TEST(testFramebackgrounds, "framebackgrounds.odt")
 {
@@ -421,9 +451,7 @@ DECLARE_ODFEXPORT_TEST(testDuplicateCrossRefHeadingBookmark, "CrossRefHeadingBoo
     uno::Reference<text::XTextContent> xBookmark1(
         xBookmarks->getByName("__RefHeading__8284_1826734303"), uno::UNO_QUERY);
     CPPUNIT_ASSERT(xBookmark1.is());
-    uno::Reference<text::XTextContent> xBookmark2(
-        xBookmarks->getByName("__RefHeading__1673_25705824"), uno::UNO_QUERY);
-    CPPUNIT_ASSERT(xBookmark2.is());
+    CPPUNIT_ASSERT_THROW(xBookmarks->getByName("__RefHeading__1673_25705824"), container::NoSuchElementException);
 
     uno::Reference<text::XTextFieldsSupplier> xTextFieldsSupplier(mxComponent, uno::UNO_QUERY);
     uno::Reference<util::XRefreshable>(xTextFieldsSupplier->getTextFields(), uno::UNO_QUERY)->refresh();
@@ -768,6 +796,17 @@ DECLARE_ODFEXPORT_TEST(testOdtBorderTypes, "border_types.odt")
             }
         }
     } while (xParaEnum->hasMoreElements());
+}
+
+DECLARE_ODFEXPORT_TEST(testCellUserDefineAttr, "userdefattr-tablecell.odt")
+{
+    uno::Reference<text::XTextTable> xTable(getParagraphOrTable(1), uno::UNO_QUERY);
+    uno::Reference<table::XCell> const xCellA1(xTable->getCellByName("A1"), uno::UNO_SET_THROW);
+    uno::Reference<table::XCell> const xCellB1(xTable->getCellByName("B1"), uno::UNO_SET_THROW);
+    uno::Reference<table::XCell> const xCellC1(xTable->getCellByName("C1"), uno::UNO_SET_THROW);
+    getUserDefineAttribute(uno::makeAny(xCellA1), "proName", "v1");
+    getUserDefineAttribute(uno::makeAny(xCellB1), "proName", "v2");
+    getUserDefineAttribute(uno::makeAny(xCellC1), "proName", "v3");
 }
 
 #endif

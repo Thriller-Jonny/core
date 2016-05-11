@@ -20,8 +20,9 @@
 #ifndef INCLUDED_VCL_INC_UNX_SALBMP_H
 #define INCLUDED_VCL_INC_UNX_SALBMP_H
 
-#include <prex.h>
-#include <postx.h>
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
+
 #include <vcl/salgtype.hxx>
 #include <unx/saldisp.hxx>
 #include <salbmp.hxx>
@@ -34,7 +35,6 @@ class   SalGraphics;
 class   ImplSalDDB;
 class   ImplSalBitmapCache;
 
-// - SalBitmap -
 
 class VCLPLUG_GEN_PUBLIC X11SalBitmap : public SalBitmap
 {
@@ -148,7 +148,6 @@ public:
     virtual bool                Replace( const Color& rSearchColor, const Color& rReplaceColor, sal_uLong nTol ) override;
 };
 
-// - ImplSalDDB -
 
 class ImplSalDDB
 {
@@ -202,7 +201,7 @@ public:
                     {
                         return( ( maTwoRect.mnDestWidth * maTwoRect.mnDestHeight * mnDepth ) >> 3 );
                     }
-    SalX11Screen    ImplGetScreen() const { return mnXScreen; }
+    const SalX11Screen& ImplGetScreen() const { return mnXScreen; }
 
     bool            ImplMatches( SalX11Screen nXScreen, long nDepth, const SalTwoRect& rTwoRect ) const;
 
@@ -214,7 +213,6 @@ public:
                     ) const;
 };
 
-// - ImplSalBitmapCache -
 
 struct ImplBmpObj;
 
@@ -231,7 +229,7 @@ public:
                     ImplSalBitmapCache();
                     ~ImplSalBitmapCache();
 
-    void            ImplAdd( X11SalBitmap* pBmp, sal_uIntPtr nMemSize = 0UL, sal_uIntPtr nFlags = 0UL );
+    void            ImplAdd( X11SalBitmap* pBmp, sal_uIntPtr nMemSize = 0UL );
     void            ImplRemove( X11SalBitmap* pBmp );
     void            ImplClear();
 };

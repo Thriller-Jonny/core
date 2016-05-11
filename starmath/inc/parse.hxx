@@ -19,7 +19,7 @@
 #ifndef INCLUDED_STARMATH_INC_PARSE_HXX
 #define INCLUDED_STARMATH_INC_PARSE_HXX
 
-#include <vcl/svapp.hxx>
+#include <com/sun/star/lang/Locale.hpp>
 #include <memory>
 #include <set>
 #include <vector>
@@ -36,7 +36,6 @@ class SmParser
     SmNodeStack     m_aNodeStack;
     std::vector<std::unique_ptr<SmErrorDesc>> m_aErrDescList;
     int             m_nCurError;
-    LanguageType    m_nLang;
     sal_Int32       m_nBufferIndex,
                     m_nTokenIndex;
     sal_Int32       m_Row,
@@ -53,9 +52,6 @@ class SmParser
     SmParser(const SmParser&) = delete;
     SmParser& operator=(const SmParser&) = delete;
 
-#if OSL_DEBUG_LEVEL > 1
-    bool            IsDelimiter( const OUString &rTxt, sal_Int32 nPos );
-#endif
     void            NextToken();
     sal_Int32       GetTokenIndex() const   { return m_nTokenIndex; }
     void            Replace( sal_Int32 nPos, sal_Int32 nLen, const OUString &rText );
@@ -94,8 +90,6 @@ class SmParser
     void    DoGlyphSpecial();
     // end of grammar
 
-    void            SetLanguage( LanguageType nNewLang ) { m_nLang = nNewLang; }
-
     void    Error(SmParseError Error);
 
     void    ClearUsedSymbols()                              { m_aUsedSymbols.clear(); }
@@ -116,12 +110,12 @@ public:
     bool        IsExportSymbolNames() const        { return m_bExportSymNames; }
     void        SetExportSymbolNames(bool bVal)    { m_bExportSymNames = bVal; }
 
-    size_t      AddError(SmParseError Type, SmNode *pNode);
+    void        AddError(SmParseError Type, SmNode *pNode);
     const SmErrorDesc*  NextError();
     const SmErrorDesc*  PrevError();
     const SmErrorDesc*  GetError(size_t i);
     static const SmTokenTableEntry* GetTokenTableEntry( const OUString &rName );
-    std::set< OUString >   GetUsedSymbols() const      { return m_aUsedSymbols; }
+    const std::set< OUString >&   GetUsedSymbols() const      { return m_aUsedSymbols; }
 };
 
 

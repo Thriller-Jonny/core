@@ -226,8 +226,8 @@ private:
 class VCL_DLLPUBLIC VclVButtonBox : public VclButtonBox
 {
 public:
-    VclVButtonBox(vcl::Window *pParent, int nSpacing = 0)
-        : VclButtonBox(pParent, nSpacing)
+    VclVButtonBox(vcl::Window *pParent)
+        : VclButtonBox(pParent, 0)
     {
         m_bVerticalContainer = true;
     }
@@ -265,8 +265,8 @@ protected:
 class VCL_DLLPUBLIC VclHButtonBox : public VclButtonBox
 {
 public:
-    VclHButtonBox(vcl::Window *pParent, int nSpacing = 0)
-        : VclButtonBox(pParent, nSpacing)
+    VclHButtonBox(vcl::Window *pParent)
+        : VclButtonBox(pParent, 0)
     {
         m_bVerticalContainer = false;
     }
@@ -704,7 +704,6 @@ inline bool isContainerWindow(const vcl::Window &rWindow)
 {
     WindowType eType = rWindow.GetType();
     return eType == WINDOW_CONTAINER || eType == WINDOW_SCROLLWINDOW ||
-            eType == WINDOW_TABCONTROL || eType == WINDOW_TABPAGE ||
            (eType == WINDOW_DOCKINGWINDOW && ::isLayoutEnabled(&rWindow));
 }
 

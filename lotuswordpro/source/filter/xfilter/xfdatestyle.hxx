@@ -95,15 +95,15 @@ public:
 
     void    AddWeekDay( bool bLongFmt = true );
 
-    void    AddEra(bool bLongFmt = false);
+    void    AddEra();
 
     void    AddHour( bool bLongFmt = true );
 
     void    AddMinute( bool bLongFmt = true );
 
-    void    AddSecond( bool bLongFmt = true, sal_Int16 nDecimalPos = 2);
+    void    AddSecond( bool bLongFmt = true );
 
-    void    AddAmPm(bool bAmPm);
+    void    AddAmPm();
 
     void    AddText( const OUString& part );
 
@@ -155,11 +155,11 @@ inline void XFDateStyle::AddWeekDay( bool bLongFmt )
     m_aParts.AddStyle(part);
 }
 
-inline void XFDateStyle::AddEra(bool bLongFmt)
+inline void XFDateStyle::AddEra()
 {
     XFDatePart  *part = new XFDatePart();
     part->SetPartType(enumXFDateEra);
-    part->SetLongFmt(bLongFmt);
+    part->SetLongFmt(false);
     m_aParts.AddStyle(part);
 }
 
@@ -187,16 +187,16 @@ inline void XFDateStyle::AddMinute( bool bLongFmt )
     m_aParts.AddStyle(part);
 }
 
-inline void XFDateStyle::AddSecond( bool bLongFmt, sal_Int16 pos)
+inline void XFDateStyle::AddSecond( bool bLongFmt )
 {
     XFDatePart  *part = new XFDatePart();
     part->SetPartType(enumXFDateSecond);
     part->SetLongFmt(bLongFmt);
-    part->SetDecimalPos(pos);
+    part->SetDecimalPos(0);
     m_aParts.AddStyle(part);
 }
 
-inline void XFDateStyle::AddAmPm(bool /*bAmPm*/)
+inline void XFDateStyle::AddAmPm()
 {
     XFDatePart  *part = new XFDatePart();
     part->SetPartType(enumXFDateAmPm);

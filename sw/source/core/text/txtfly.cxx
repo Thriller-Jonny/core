@@ -388,14 +388,13 @@ void SwTextFly::CtorInitTextFly( const SwTextFrame *pFrame )
     nIndex = ULONG_MAX;
 }
 
-SwRect SwTextFly::_GetFrame( const SwRect &rRect, bool bTop ) const
+SwRect SwTextFly::GetFrame_( const SwRect &rRect ) const
 {
     SwRect aRet;
     if( ForEach( rRect, &aRet, true ) )
     {
         SWRECTFN( pCurrFrame )
-        if( bTop )
-            (aRet.*fnRect->fnSetTop)( (rRect.*fnRect->fnGetTop)() );
+        (aRet.*fnRect->fnSetTop)( (rRect.*fnRect->fnGetTop)() );
 
         // Do not always adapt the bottom
         const SwTwips nRetBottom = (aRet.*fnRect->fnGetBottom)();
@@ -449,7 +448,7 @@ bool SwTextFly::IsAnyObj( const SwRect &rRect ) const
     return false;
 }
 
-const SwContentFrame* SwTextFly::_GetMaster()
+const SwContentFrame* SwTextFly::GetMaster_()
 {
     pMaster = pCurrFrame;
     while( pMaster && pMaster->IsFollow() )
@@ -554,9 +553,9 @@ bool SwTextFly::DrawTextOpaque( SwDrawTextInfo &rInf )
     if( !bOpaque )
     {
         if( rInf.GetKern() )
-            rInf.GetFont()->_DrawStretchText( rInf );
+            rInf.GetFont()->DrawStretchText_( rInf );
         else
-            rInf.GetFont()->_DrawText( rInf );
+            rInf.GetFont()->DrawText_( rInf );
         rInf.SetPos(aOldPos);
         return false;
     }
@@ -570,17 +569,16 @@ bool SwTextFly::DrawTextOpaque( SwDrawTextInfo &rInf )
             if( rRect != aRegion.GetOrigin() )
                 aClipVout.ChgClip( rRect );
             if( rInf.GetKern() )
-                rInf.GetFont()->_DrawStretchText( rInf );
+                rInf.GetFont()->DrawStretchText_( rInf );
             else
-                rInf.GetFont()->_DrawText( rInf );
+                rInf.GetFont()->DrawText_( rInf );
         }
     }
     rInf.SetPos(aOldPos);
     return true;
 }
 
-void SwTextFly::DrawFlyRect( OutputDevice* pOut, const SwRect &rRect,
-        const SwTextPaintInfo &rInf, bool bNoGraphic )
+void SwTextFly::DrawFlyRect( OutputDevice* pOut, const SwRect &rRect )
 {
     SwRegionRects aRegion( rRect );
     OSL_ENSURE( !bTopRule, "DrawFlyRect: Wrong TopRule" );
@@ -632,21 +630,7 @@ void SwTextFly::DrawFlyRect( OutputDevice* pOut, const SwRect &rRect,
 
     for( size_t i = 0; i < aRegion.size(); ++i )
     {
-        if ( bNoGraphic )
-        {
-            pOut->DrawRect( aRegion[i].SVRect() );
-        }
-        else
-        {
-            if(reinterpret_cast<SvxBrushItem*>(-1) != rInf.GetBrushItem())
-            {
-                ::DrawGraphic(rInf.GetBrushItem(), pOut, rInf.GetBrushRect(), aRegion[i] );
-            }
-            else
-            {
-                OSL_ENSURE(false, "DrawRect: Uninitialized BrushItem!" );
-            }
-        }
+        pOut->DrawRect( aRegion[i].SVRect() );
     }
 }
 
@@ -685,7 +669,7 @@ bool SwTextFly::GetTop( const SwAnchoredObject* _pAnchoredObj,
 
                 if ( bInFooterOrHeader )
                 {
-                    SwFormatVertOrient aVert( rFrameFormat.GetVertOrient() );
+                    const SwFormatVertOrient& aVert( rFrameFormat.GetVertOrient() );
                     bool bVertPrt = aVert.GetRelationOrient() == text::RelOrientation::PRINT_AREA ||
                             aVert.GetRelationOrient() == text::RelOrientation::PAGE_PRINT_AREA;
                     if( bVertPrt )
@@ -815,7 +799,7 @@ bool SwTextFly::GetTop( const SwAnchoredObject* _pAnchoredObj,
             const IDocumentSettingAccess* pIDSA = pCurrFrame->GetTextNode()->getIDocumentSettingAccess();
             if ( (  pIDSA->get(DocumentSettingId::CONSIDER_WRAP_ON_OBJECT_POSITION) ||
                    !pIDSA->get(DocumentSettingId::USE_FORMER_TEXT_WRAPPING) ) &&
-                 ::FindKontext( pTmp, 0 ) == ::FindKontext( pCurrFrame, 0 ) )
+                 ::FindKontext( pTmp, SwFrameType::None ) == ::FindKontext( pCurrFrame, SwFrameType::None ) )
             {
                 return true;
             }
@@ -1151,7 +1135,7 @@ void SwTextFly::CalcRightMargin( SwRect &rFly,
         const SwAnchoredObject* pNext = (*mpAnchoredObjList)[ nPos++ ];
         if ( pNext == mpCurrAnchoredObj )
             continue;
-        eSurroundForTextWrap = _GetSurroundForTextWrap( pNext );
+        eSurroundForTextWrap = GetSurroundForTextWrap( pNext );
         if( SURROUND_THROUGHT == eSurroundForTextWrap )
             continue;
 
@@ -1243,7 +1227,7 @@ void SwTextFly::CalcLeftMargin( SwRect &rFly,
         const SwAnchoredObject* pNext = (*mpAnchoredObjList)[ nFlyPos ];
         if( pNext == mpCurrAnchoredObj )
             continue;
-        SwSurround eSurroundForTextWrap = _GetSurroundForTextWrap( pNext );
+        SwSurround eSurroundForTextWrap = GetSurroundForTextWrap( pNext );
         if( SURROUND_THROUGHT == eSurroundForTextWrap )
             continue;
 
@@ -1295,7 +1279,7 @@ SwRect SwTextFly::AnchoredObjToRect( const SwAnchoredObject* pAnchoredObj,
     //  + RIGHT is the opposite.
     // Otherwise the set distance between text and frame is always
     // added up.
-    switch( _GetSurroundForTextWrap( pAnchoredObj ) )
+    switch( GetSurroundForTextWrap( pAnchoredObj ) )
     {
         case SURROUND_LEFT :
         {
@@ -1330,7 +1314,7 @@ SwRect SwTextFly::AnchoredObjToRect( const SwAnchoredObject* pAnchoredObj,
 // Wrap on both sides up to a frame width of 1.5cm
 #define FRAME_MAX 850
 
-SwSurround SwTextFly::_GetSurroundForTextWrap( const SwAnchoredObject* pAnchoredObj ) const
+SwSurround SwTextFly::GetSurroundForTextWrap( const SwAnchoredObject* pAnchoredObj ) const
 {
     const SwFrameFormat* pFormat = &(pAnchoredObj->GetFrameFormat());
     const SwFormatSurround &rFlyFormat = pFormat->GetSurround();

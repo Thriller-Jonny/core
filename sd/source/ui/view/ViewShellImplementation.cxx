@@ -42,7 +42,6 @@
 #include "DrawViewShell.hxx"
 #include "ViewShellHint.hxx"
 #include "SidebarPanelId.hxx"
-#include "framework/FrameworkHelper.hxx"
 
 #include <sfx2/bindings.hxx>
 #include <sfx2/dispatch.hxx>
@@ -58,7 +57,6 @@
 
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::drawing::framework;
-using ::sd::framework::FrameworkHelper;
 
 namespace sd {
 
@@ -94,8 +92,6 @@ void ViewShell::Implementation::ProcessModifyPageSlot (
 {
     SdDrawDocument* pDocument = mrViewShell.GetDoc();
     SdrLayerAdmin& rLayerAdmin = pDocument->GetLayerAdmin();
-    sal_uInt8 aBckgrnd = rLayerAdmin.GetLayerID(SD_RESSTR(STR_LAYER_BCKGRND), false);
-    sal_uInt8 aBckgrndObj = rLayerAdmin.GetLayerID(SD_RESSTR(STR_LAYER_BCKGRNDOBJ), false);
     SetOfByte aVisibleLayers;
     bool bHandoutMode = false;
     SdPage* pHandoutMPage = nullptr;
@@ -133,8 +129,8 @@ void ViewShell::Implementation::ProcessModifyPageSlot (
             const SfxBoolItem* pBVisible = rRequest.GetArg<SfxBoolItem>(ID_VAL_ISPAGEBACK);
             const SfxBoolItem* pBObjsVisible = rRequest.GetArg<SfxBoolItem>(ID_VAL_ISPAGEOBJ);
             AutoLayout aLayout ((AutoLayout)pNewAutoLayout->GetValue ());
-            if (aLayout >= AUTOLAYOUT__START
-                && aLayout < AUTOLAYOUT__END)
+            if (aLayout >= AUTOLAYOUT_START
+                && aLayout < AUTOLAYOUT_END)
             {
                 aNewName        = pNewName->GetValue ();
                 aNewAutoLayout = (AutoLayout) pNewAutoLayout->GetValue ();
@@ -199,8 +195,8 @@ void ViewShell::Implementation::ProcessModifyPageSlot (
 
                 pCurrentPage->SetAutoLayout(aNewAutoLayout, true);
 
-                aBckgrnd = rLayerAdmin.GetLayerID(SD_RESSTR(STR_LAYER_BCKGRND), false);
-                aBckgrndObj = rLayerAdmin.GetLayerID(SD_RESSTR(STR_LAYER_BCKGRNDOBJ), false);
+                sal_uInt8 aBckgrnd = rLayerAdmin.GetLayerID(SD_RESSTR(STR_LAYER_BCKGRND), false);
+                sal_uInt8 aBckgrndObj = rLayerAdmin.GetLayerID(SD_RESSTR(STR_LAYER_BCKGRNDOBJ), false);
                 aVisibleLayers.Set(aBckgrnd, bBVisible);
                 aVisibleLayers.Set(aBckgrndObj, bBObjsVisible);
                 pCurrentPage->TRG_SetMasterPageVisibleLayers(aVisibleLayers);

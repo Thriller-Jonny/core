@@ -32,7 +32,6 @@
 #include "cfgitem.hxx"
 #include <stack>
 
-using namespace ::com::sun::star;
 using namespace ::com::sun::star::i18n;
 
 
@@ -60,8 +59,6 @@ SmToken::SmToken(SmTokenType eTokenType,
     , nCol(0)
 {
 }
-
-
 
 
 static const SmTokenTableEntry aTokenTable[] =
@@ -291,42 +288,25 @@ static const SmTokenTableEntry aTokenTable[] =
     { "wideslash", TWIDESLASH, MS_SLASH, TGPRODUCT, 0 },
     { "widevec", TWIDEVEC, MS_VEC, TGATTRIBUT, 5},
     { "wp" , TWP, MS_WP, TGSTANDALONE, 5},
-    { "yellow", TYELLOW, '\0', TGCOLOR, 0},
-    { "", TEND, '\0', 0, 0}
+    { "yellow", TYELLOW, '\0', TGCOLOR, 0}
 };
 
 const SmTokenTableEntry * SmParser::GetTokenTableEntry( const OUString &rName )
 {
-    const SmTokenTableEntry * pRes = nullptr;
     if (!rName.isEmpty())
     {
-        for (size_t i = 0; i < SAL_N_ELEMENTS(aTokenTable); ++i)
+        for (auto const &token : aTokenTable)
         {
-            if (rName.equalsIgnoreAsciiCase( OUString::createFromAscii(aTokenTable[i].pIdent) ))
-            {
-                pRes = &aTokenTable[i];
-                break;
-            }
+            if (rName.equalsIgnoreAsciiCase( OUString::createFromAscii(token.pIdent) ))
+                return &token;
         }
     }
-
-    return pRes;
+    return nullptr;
 }
 
+namespace {
 
-
-
-#if OSL_DEBUG_LEVEL > 1
-
-static const sal_Unicode aDelimiterTable[] =
-{
-    ' ',    '\t',   '\n',   '\r',   '+',    '-',    '*',    '/',    '=',    '#',
-    '%',    '\\',   '"',    '~',    '`',    '>',    '<',    '&',    '|',    '(',
-    ')',    '{',    '}',    '[',    ']',    '^',    '_',
-    '\0'    // end of list symbol
-};
-
-bool SmParser::IsDelimiter( const OUString &rTxt, sal_Int32 nPos )
+bool IsDelimiter( const OUString &rTxt, sal_Int32 nPos )
     // returns 'true' iff cChar is '\0' or a delimiter
 {
     assert(nPos <= rTxt.getLength()); //index out of range
@@ -337,21 +317,24 @@ bool SmParser::IsDelimiter( const OUString &rTxt, sal_Int32 nPos )
     sal_Unicode cChar = rTxt[nPos];
 
     // check if 'cChar' is in the delimiter table
-    const sal_Unicode *pDelim = &aDelimiterTable[0];
-    for ( ;  *pDelim != 0;  pDelim++)
-        if (*pDelim == cChar)
-            break;
-
+    static const sal_Unicode aDelimiterTable[] =
+    {
+        ' ',  '\t', '\n', '\r', '+',  '-',  '*',  '/',  '=',  '#',
+        '%',  '\\', '"',  '~',  '`',  '>',  '<',  '&',  '|',  '(',
+        ')',  '{',  '}',  '[',  ']',  '^',  '_'
+    };
+    for (auto const &cDelimiter : aDelimiterTable)
+    {
+        if (cDelimiter == cChar)
+            return true;
+    }
 
     sal_Int16 nTypJp = SM_MOD()->GetSysLocale().GetCharClass().getType( rTxt, nPos );
-    bool bIsDelim = (*pDelim != 0 ||
-            nTypJp == css::i18n::UnicodeType::SPACE_SEPARATOR ||
-            nTypJp == css::i18n::UnicodeType::CONTROL);
-
-    return bIsDelim;
+    return ( nTypJp == css::i18n::UnicodeType::SPACE_SEPARATOR ||
+             nTypJp == css::i18n::UnicodeType::CONTROL);
 }
 
-#endif
+}
 
 void SmParser::Replace( sal_Int32 nPos, sal_Int32 nLen, const OUString &rText )
 {
@@ -377,9 +360,9 @@ void SmParser::NextToken()
 
     // user-defined char continuing characters may be any alphanumeric or dot.
     static const sal_Int32 coUserDefinedCharContFlags =
-        ((KParseTokens::ANY_LETTER_OR_NUMBER | KParseTokens::IGNORE_LEADING_WS | KParseTokens::ASC_DOT)
-         & ~KParseTokens::IGNORE_LEADING_WS)
-        | KParseTokens::TWO_DOUBLE_QUOTES_BREAK_STRING;
+        KParseTokens::ANY_LETTER_OR_NUMBER |
+        KParseTokens::ASC_DOT |
+        KParseTokens::TWO_DOUBLE_QUOTES_BREAK_STRING;
 
     // First character for numbers, may be any numeric or dot
     static const sal_Int32 coNumStartFlags =
@@ -467,6 +450,14 @@ void SmParser::NextToken()
     }
     else if (aRes.TokenType & KParseType::ANY_NUMBER)
     {
+        assert(aRes.EndPos > 0);
+        if ( m_aBufferString[aRes.EndPos-1] == ',' &&
+             aRes.EndPos < nBufLen &&
+             aCC.getType( m_aBufferString, aRes.EndPos ) != UnicodeType::SPACE_SEPARATOR )
+        {
+            // Comma followed by a non-space char is unlikely for decimal/thousands separator.
+            --aRes.EndPos;
+        }
         sal_Int32 n = aRes.EndPos - nRealStart;
         OSL_ENSURE( n >= 0, "length < 0" );
         m_aCurToken.eType      = TNUMBER;
@@ -475,10 +466,7 @@ void SmParser::NextToken()
         m_aCurToken.nLevel     = 5;
         m_aCurToken.aText      = m_aBufferString.copy( nRealStart, n );
 
-#if OSL_DEBUG_LEVEL > 1
-        if (!IsDelimiter( m_aBufferString, aRes.EndPos ))
-            SAL_WARN( "starmath", "identifier really finished? (compatibility!)" );
-#endif
+        SAL_WARN_IF( !IsDelimiter( m_aBufferString, aRes.EndPos ), "starmath", "identifier really finished? (compatibility!)" );
     }
     else if (aRes.TokenType & KParseType::DOUBLE_QUOTE_STRING)
     {
@@ -513,10 +501,7 @@ void SmParser::NextToken()
             m_aCurToken.nLevel     = 5;
             m_aCurToken.aText      = aName;
 
-#if OSL_DEBUG_LEVEL > 1
-            if (!IsDelimiter( m_aBufferString, aRes.EndPos ))
-                SAL_WARN( "starmath", "identifier really finished? (compatibility!)" );
-#endif
+            SAL_WARN_IF(!IsDelimiter(m_aBufferString, aRes.EndPos),"starmath", "identifier really finished? (compatibility!)");
         }
     }
     else if (aRes.TokenType == 0  &&  '_' == m_aBufferString[ nRealStart ])
@@ -961,8 +946,6 @@ void SmParser::NextToken()
 
 void SmParser::DoTable()
 {
-    SmNodeArray  LineArray;
-
     DoLine();
     while (m_aCurToken.eType == TNEWLINE)
     {
@@ -973,15 +956,10 @@ void SmParser::DoTable()
     if (m_aCurToken.eType != TEND)
         Error(PE_UNEXPECTED_CHAR);
 
-    auto n = m_aNodeStack.size();
-
-    LineArray.resize(n);
-
-    for (size_t i = 0; i < n; i++)
+    SmNodeArray  LineArray(m_aNodeStack.size());
+    for (auto rIt = LineArray.rbegin(), rEnd = LineArray.rend(); rIt != rEnd; ++rIt)
     {
-        auto pNode = std::move(m_aNodeStack.front());
-        m_aNodeStack.pop_front();
-        LineArray[n - (i + 1)] = pNode.release();
+        *rIt = popOrZero(m_aNodeStack);
     }
 
     std::unique_ptr<SmStructureNode> pSNode(new SmTableNode(m_aCurToken));
@@ -1223,11 +1201,8 @@ void SmParser::DoSubSup(sal_uLong nActiveGroup)
     pNode->SetUseLimits(nActiveGroup == TGLIMIT);
 
     // initialize subnodes array
-    SmNodeArray  aSubNodes;
-    aSubNodes.resize(1 + SUBSUP_NUM_ENTRIES);
+    SmNodeArray aSubNodes(1 + SUBSUP_NUM_ENTRIES, nullptr);
     aSubNodes[0] = popOrZero(m_aNodeStack);
-    for (size_t i = 1;  i < aSubNodes.size();  i++)
-        aSubNodes[i] = nullptr;
 
     // process all sub-/supscripts
     int  nIndex = 0;
@@ -1248,20 +1223,19 @@ void SmParser::DoSubSup(sal_uLong nActiveGroup)
 
         switch (eType)
         {
-            case TRSUB :    nIndex = (int) RSUB;    break;
-            case TRSUP :    nIndex = (int) RSUP;    break;
+            case TRSUB :    nIndex = static_cast<int>(RSUB);    break;
+            case TRSUP :    nIndex = static_cast<int>(RSUP);    break;
             case TFROM :
-            case TCSUB :    nIndex = (int) CSUB;    break;
+            case TCSUB :    nIndex = static_cast<int>(CSUB);    break;
             case TTO :
-            case TCSUP :    nIndex = (int) CSUP;    break;
-            case TLSUB :    nIndex = (int) LSUB;    break;
-            case TLSUP :    nIndex = (int) LSUP;    break;
+            case TCSUP :    nIndex = static_cast<int>(CSUP);    break;
+            case TLSUB :    nIndex = static_cast<int>(LSUB);    break;
+            case TLSUP :    nIndex = static_cast<int>(LSUP);    break;
             default :
                 SAL_WARN( "starmath", "unknown case");
         }
         nIndex++;
-        OSL_ENSURE(1 <= nIndex  &&  nIndex <= 1 + SUBSUP_NUM_ENTRIES,
-                   "SmParser::Power() : sub-/supscript index falsch");
+        assert(1 <= nIndex  &&  nIndex <= SUBSUP_NUM_ENTRIES);
 
         // set sub-/supscript if not already done
         if (aSubNodes[nIndex] != nullptr)
@@ -1414,7 +1388,7 @@ void SmParser::DoTerm(bool bGroupNumberIdent)
                     if (m_aCurToken.eType != TNUMBER &&
                         m_aCurToken.eType != TIDENT)
                     {
-                        // Neither a number nor an indentifier. We just moved to
+                        // Neither a number nor an identifier. We just moved to
                         // the next token, so no need to do that again.
                         moveToNextToken = false;
                         break;
@@ -1431,12 +1405,10 @@ void SmParser::DoTerm(bool bGroupNumberIdent)
                 {
                     // We have several concatenated identifiers and numbers.
                     // Let's group them into one SmExpressionNode.
-                    SmNodeArray nodeArray;
-                    nodeArray.resize(nTokens);
-                    while (nTokens > 0)
+                    SmNodeArray nodeArray(nTokens);
+                    for (auto rIt = nodeArray.rbegin(), rEnd = nodeArray.rend(); rIt != rEnd; ++rIt)
                     {
-                        nodeArray[nTokens-1] = popOrZero(m_aNodeStack);
-                        nTokens--;
+                        *rIt = popOrZero(m_aNodeStack);
                     }
                     std::unique_ptr<SmExpressionNode> pNode(new SmExpressionNode(SmToken()));
                     pNode->SetSubNodes(nodeArray);
@@ -1737,7 +1709,7 @@ void SmParser::DoUnOper()
         pSNode->SetScaleMode(SCALE_HEIGHT);
 
         // build nodes for left & right lines
-        // (text, group, level of the used token are of no interrest here)
+        // (text, group, level of the used token are of no interest here)
         // we'll use row & column of the keyword for abs
         aNodeToken.eType = TABS;
 
@@ -2073,7 +2045,6 @@ void SmParser::DoBrace()
 void SmParser::DoBracebody(bool bIsLeftRight)
 {
     std::unique_ptr<SmStructureNode> pBody(new SmBracebodyNode(m_aCurToken));
-    SmNodeArray      aNodes;
     sal_uInt16           nNum = 0;
 
     // get body if any
@@ -2119,10 +2090,10 @@ void SmParser::DoBracebody(bool bIsLeftRight)
     }
 
     // build argument vector in parsing order
-    aNodes.resize(nNum);
-    for (sal_uInt16 i = 0;  i < nNum;  i++)
+    SmNodeArray aNodes(nNum);
+    for (auto rIt = aNodes.rbegin(), rEnd = aNodes.rend(); rIt != rEnd; ++rIt)
     {
-        aNodes[nNum - 1 - i] = popOrZero(m_aNodeStack);
+        *rIt = popOrZero(m_aNodeStack);
     }
 
     pBody->SetSubNodes(aNodes);
@@ -2136,7 +2107,7 @@ void SmParser::DoFunction()
     {
         case TFUNC:
             NextToken();    // skip "FUNC"-statement
-            // fall through
+            SAL_FALLTHROUGH;
 
         case TSIN :
         case TCOS :
@@ -2168,7 +2139,6 @@ void SmParser::DoFunction()
 
 void SmParser::DoBinom()
 {
-    SmNodeArray  ExpressionArray;
     std::unique_ptr<SmStructureNode> pSNode(new SmTableNode(m_aCurToken));
 
     NextToken();
@@ -2176,12 +2146,9 @@ void SmParser::DoBinom()
     DoSum();
     DoSum();
 
-    ExpressionArray.resize(2);
-
-    for (int i = 0;  i < 2;  i++)
-    {
-        ExpressionArray[2 - (i + 1)] = popOrZero(m_aNodeStack);
-    }
+    SmNodeArray ExpressionArray(2);
+    ExpressionArray[1] = popOrZero(m_aNodeStack);
+    ExpressionArray[0] = popOrZero(m_aNodeStack);
 
     pSNode->SetSubNodes(ExpressionArray);
     m_aNodeStack.push_front(std::move(pSNode));
@@ -2189,7 +2156,6 @@ void SmParser::DoBinom()
 
 void SmParser::DoStack()
 {
-    SmNodeArray  ExpressionArray;
     NextToken();
     if (m_aCurToken.eType == TLGROUP)
     {
@@ -2203,11 +2169,10 @@ void SmParser::DoStack()
         }
         while (m_aCurToken.eType == TPOUND);
 
-        ExpressionArray.resize(n);
-
-        for (sal_uInt16 i = 0; i < n; i++)
+        SmNodeArray ExpressionArray(n);
+        for (auto rIt = ExpressionArray.rbegin(), rEnd = ExpressionArray.rend(); rIt != rEnd; ++rIt)
         {
-            ExpressionArray[n - (i + 1)] = popOrZero(m_aNodeStack);
+            *rIt = popOrZero(m_aNodeStack);
         }
 
         if (m_aCurToken.eType != TRGROUP)
@@ -2229,8 +2194,6 @@ void SmParser::DoStack()
 
 void SmParser::DoMatrix()
 {
-    SmNodeArray  ExpressionArray;
-
     NextToken();
     if (m_aCurToken.eType == TLGROUP)
     {
@@ -2268,11 +2231,10 @@ void SmParser::DoMatrix()
 
         size_t nRC = static_cast<size_t>(r) * c;
 
-        ExpressionArray.resize(nRC);
-
-        for (size_t i = 0; i < (nRC); ++i)
+        SmNodeArray ExpressionArray(nRC);
+        for (auto rIt = ExpressionArray.rbegin(), rEnd = ExpressionArray.rend(); rIt != rEnd; ++rIt)
         {
-            ExpressionArray[(nRC) - (i + 1)] = popOrZero(m_aNodeStack);
+            *rIt = popOrZero(m_aNodeStack);
         }
 
         if (m_aCurToken.eType != TRGROUP)
@@ -2358,7 +2320,6 @@ void SmParser::Error(SmParseError eError)
 
 SmParser::SmParser()
     : m_nCurError( 0 )
-    , m_nLang( Application::GetSettings().GetUILanguageTag().getLanguageType() )
     , m_nBufferIndex( 0 )
     , m_nTokenIndex( 0 )
     , m_Row( 0 )
@@ -2384,7 +2345,6 @@ SmNode *SmParser::Parse(const OUString &rBuffer)
 
     m_aNodeStack.clear();
 
-    SetLanguage( Application::GetSettings().GetUILanguageTag().getLanguageType() );
     NextToken();
     DoTable();
 
@@ -2405,7 +2365,6 @@ SmNode *SmParser::ParseExpression(const OUString &rBuffer)
 
     m_aNodeStack.clear();
 
-    SetLanguage( Application::GetSettings().GetUILanguageTag().getLanguageType() );
     NextToken();
     DoExpression();
 
@@ -2414,7 +2373,7 @@ SmNode *SmParser::ParseExpression(const OUString &rBuffer)
 }
 
 
-size_t SmParser::AddError(SmParseError Type, SmNode *pNode)
+void SmParser::AddError(SmParseError Type, SmNode *pNode)
 {
     std::unique_ptr<SmErrorDesc> pErrDesc(new SmErrorDesc);
 
@@ -2445,8 +2404,6 @@ size_t SmParser::AddError(SmParseError Type, SmNode *pNode)
     pErrDesc->m_aText += SM_RESSTR(nRID);
 
     m_aErrDescList.push_back(std::move(pErrDesc));
-
-    return m_aErrDescList.size()-1;
 }
 
 
@@ -2466,10 +2423,10 @@ const SmErrorDesc *SmParser::NextError()
 const SmErrorDesc *SmParser::PrevError()
 {
     if ( !m_aErrDescList.empty() )
-        if (m_nCurError < (int) (m_aErrDescList.size() - 1)) return m_aErrDescList[ ++m_nCurError ].get();
+        if (m_nCurError < static_cast<int>(m_aErrDescList.size() - 1)) return m_aErrDescList[ ++m_nCurError ].get();
         else
         {
-            m_nCurError = (int) (m_aErrDescList.size() - 1);
+            m_nCurError = static_cast<int>(m_aErrDescList.size() - 1);
             return m_aErrDescList[ m_nCurError ].get();
         }
     else return nullptr;
@@ -2481,7 +2438,7 @@ const SmErrorDesc *SmParser::GetError(size_t i)
     if ( i < m_aErrDescList.size() )
         return m_aErrDescList[ i ].get();
 
-    if ( (size_t)m_nCurError < m_aErrDescList.size() )
+    if ( static_cast<size_t>(m_nCurError) < m_aErrDescList.size() )
         return m_aErrDescList[ m_nCurError ].get();
 
     return nullptr;

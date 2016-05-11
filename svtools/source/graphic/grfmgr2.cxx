@@ -21,7 +21,7 @@
 
 #include <cstdlib>
 
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 #include <tools/poly.hxx>
 #include <vcl/outdev.hxx>
 #include <vcl/window.hxx>
@@ -35,15 +35,10 @@
 #include <svtools/grfmgr.hxx>
 #include <memory>
 
-// - defines -
-
 
 #define WATERMARK_LUM_OFFSET        50
 #define WATERMARK_CON_OFFSET        -70
 #define MAP( cVal0, cVal1, nFrac )  ((sal_uInt8)((((long)(cVal0)<<20L)+nFrac*((long)(cVal1)-(cVal0)))>>20L))
-
-
-// - GraphicManager -
 
 
 GraphicManager::GraphicManager( sal_uLong nCacheSize, sal_uLong nMaxObjCacheSize ) :
@@ -70,9 +65,9 @@ sal_uLong GraphicManager::GetMaxCacheSize() const
     return mpCache->GetMaxDisplayCacheSize();
 }
 
-void GraphicManager::SetMaxObjCacheSize( sal_uLong nNewMaxObjSize, bool bDestroyGreaterCached )
+void GraphicManager::SetMaxObjCacheSize( sal_uLong nNewMaxObjSize )
 {
-    mpCache->SetMaxObjDisplayCacheSize( nNewMaxObjSize, bDestroyGreaterCached );
+    mpCache->SetMaxObjDisplayCacheSize( nNewMaxObjSize );
 }
 
 void GraphicManager::SetCacheTimeout( sal_uLong nTimeoutSeconds )
@@ -483,8 +478,10 @@ bool ImplCreateRotatedScaled( const BitmapEx& rBmpEx, const GraphicAttr& rAttrib
                             if( ( nUnRotX >= 0L ) && ( nUnRotX < aUnrotatedWidth ) &&
                                 ( nUnRotY >= 0L ) && ( nUnRotY < aUnrotatedHeight ) )
                             {
-                                nTmpX = pMapIX[ nUnRotX ]; nTmpFX = pMapFX[ nUnRotX ];
-                                nTmpY = pMapIY[ nUnRotY ], nTmpFY = pMapFY[ nUnRotY ];
+                                nTmpX = pMapIX[ nUnRotX ];
+                                nTmpFX = pMapFX[ nUnRotX ];
+                                nTmpY = pMapIY[ nUnRotY ];
+                                nTmpFY = pMapFY[ nUnRotY ];
 
                                 const BitmapColor& rCol0 = pReadAccess->GetPaletteColor( pReadAccess->GetPixelIndex( nTmpY, nTmpX ) );
                                 const BitmapColor& rCol1 = pReadAccess->GetPaletteColor( pReadAccess->GetPixelIndex( nTmpY, ++nTmpX ) );
@@ -523,8 +520,10 @@ bool ImplCreateRotatedScaled( const BitmapEx& rBmpEx, const GraphicAttr& rAttrib
                             if( ( nUnRotX >= 0L ) && ( nUnRotX < aUnrotatedWidth ) &&
                                 ( nUnRotY >= 0L ) && ( nUnRotY < aUnrotatedHeight ) )
                             {
-                                nTmpX = pMapIX[ nUnRotX ]; nTmpFX = pMapFX[ nUnRotX ];
-                                nTmpY = pMapIY[ nUnRotY ], nTmpFY = pMapFY[ nUnRotY ];
+                                nTmpX = pMapIX[ nUnRotX ];
+                                nTmpFX = pMapFX[ nUnRotX ];
+                                nTmpY = pMapIY[ nUnRotY ];
+                                nTmpFY = pMapFY[ nUnRotY ];
 
                                 aCol0 = pReadAccess->GetPixel( nTmpY, nTmpX );
                                 aCol1 = pReadAccess->GetPixel( nTmpY, ++nTmpX );
@@ -648,7 +647,8 @@ bool ImplCreateRotatedScaled( const BitmapEx& rBmpEx, const GraphicAttr& rAttrib
 
                             for( long nY = 0; nY < aTargetHeight; nY++ )
                             {
-                                nSinY = pSinY[ nY ], nCosY = pCosY[ nY ];
+                                nSinY = pSinY[ nY ];
+                                nCosY = pCosY[ nY ];
                                 pLineW = pWriteAccess->GetScanline( nY );
 
                                 for( long nX = 0; nX < aTargetWidth; nX++ )
@@ -659,8 +659,10 @@ bool ImplCreateRotatedScaled( const BitmapEx& rBmpEx, const GraphicAttr& rAttrib
                                     if( ( nUnRotX >= 0L ) && ( nUnRotX < aUnrotatedWidth ) &&
                                         ( nUnRotY >= 0L ) && ( nUnRotY < aUnrotatedHeight ) )
                                     {
-                                        nTmpX = pMapIX[ nUnRotX ], nTmpFX = pMapFX[ nUnRotX ];
-                                        nTmpY = pMapIY[ nUnRotY ], nTmpFY = pMapFY[ nUnRotY ];
+                                        nTmpX = pMapIX[ nUnRotX ];
+                                        nTmpFX = pMapFX[ nUnRotX ];
+                                        nTmpY = pMapIY[ nUnRotY ];
+                                        nTmpFY = pMapFY[ nUnRotY ];
 
                                         pLine0 = pReadAccess->GetScanline( nTmpY++ );
                                         pLine1 = pReadAccess->GetScanline( nTmpY );
@@ -745,7 +747,8 @@ bool ImplCreateRotatedScaled( const BitmapEx& rBmpEx, const GraphicAttr& rAttrib
 
                         for( long nY = 0; nY < aTargetHeight; nY++ )
                         {
-                            nSinY = pSinY[ nY ], nCosY = pCosY[ nY ];
+                            nSinY = pSinY[ nY ];
+                            nCosY = pCosY[ nY ];
 
                             for( long nX = 0; nX < aTargetWidth; nX++ )
                             {
@@ -755,8 +758,10 @@ bool ImplCreateRotatedScaled( const BitmapEx& rBmpEx, const GraphicAttr& rAttrib
                                 if( ( nUnRotX >= 0L ) && ( nUnRotX < aUnrotatedWidth ) &&
                                     ( nUnRotY >= 0L ) && ( nUnRotY < aUnrotatedHeight ) )
                                 {
-                                    nTmpX = pMapIX[ nUnRotX ]; nTmpFX = pMapFX[ nUnRotX ];
-                                    nTmpY = pMapIY[ nUnRotY ], nTmpFY = pMapFY[ nUnRotY ];
+                                    nTmpX = pMapIX[ nUnRotX ];
+                                    nTmpFX = pMapFX[ nUnRotX ];
+                                    nTmpY = pMapIY[ nUnRotY ];
+                                    nTmpFY = pMapFY[ nUnRotY ];
 
                                     const long  nAlpha0 = pReadAccess->GetPixel( nTmpY, nTmpX ).GetIndex();
                                     const long  nAlpha1 = pReadAccess->GetPixel( nTmpY, ++nTmpX ).GetIndex();
@@ -897,7 +902,6 @@ bool GraphicManager::ImplCreateOutput( OutputDevice* pOutputDevice,
 
     if( aUnrotatedSizePix.Width() && aUnrotatedSizePix.Height() )
     {
-        BitmapEx        aBmpEx( rBitmapEx );
         BitmapEx        aOutBmpEx;
         Point           aOutPoint;
         Size            aOutSize;
@@ -956,14 +960,14 @@ bool GraphicManager::ImplCreateOutput( OutputDevice* pOutputDevice,
             {
                 if( bSimple )
                 {
-                    bRet = ( aOutBmpEx = aBmpEx ).Scale( aUnrotatedSizePix );
+                    bRet = ( aOutBmpEx = rBitmapEx ).Scale( aUnrotatedSizePix );
 
                     if( bRet )
                         aOutBmpEx.Rotate( nRot10, COL_TRANSPARENT );
                 }
                 else
                 {
-                    bRet = ImplCreateRotatedScaled( aBmpEx, rAttributes,
+                    bRet = ImplCreateRotatedScaled( rBitmapEx, rAttributes,
                                                     nRot10, aUnrotatedSizePix,
                                                     nStartX, nEndX, nStartY, nEndY,
                                                     aOutBmpEx );
@@ -975,18 +979,18 @@ bool GraphicManager::ImplCreateOutput( OutputDevice* pOutputDevice,
                 {
                     aOutPoint = pOutputDevice->PixelToLogic( aOutputPointPix );
                     aOutSize  = pOutputDevice->PixelToLogic( aOutputSizePix );
-                    aOutBmpEx = aBmpEx;
+                    aOutBmpEx = rBitmapEx;
                     bRet      = true;
                 }
                 else
                 {
                     if( bSimple )
                     {
-                        bRet = ( aOutBmpEx = aBmpEx ).Scale( Size( nEndX - nStartX + 1, nEndY - nStartY + 1 ) );
+                        bRet = ( aOutBmpEx = rBitmapEx ).Scale( Size( nEndX - nStartX + 1, nEndY - nStartY + 1 ) );
                     }
                     else
                     {
-                        bRet = ImplCreateRotatedScaled( aBmpEx, rAttributes,
+                        bRet = ImplCreateRotatedScaled( rBitmapEx, rAttributes,
                                                     nRot10, aUnrotatedSizePix,
                                                     nStartX, nEndX, nStartY, nEndY,
                                                     aOutBmpEx );
@@ -1106,7 +1110,7 @@ bool GraphicManager::ImplCreateOutput( OutputDevice* pOut,
         const double fScaleX = fOutWH / fGrfWH;
         const double fScaleY = 1.0;
 
-        const MapMode rPrefMapMode( rMtf.GetPrefMapMode() );
+        const MapMode& rPrefMapMode( rMtf.GetPrefMapMode() );
         const Size rSizePix( pOut->LogicToPixel( aNewSize, rPrefMapMode ) );
 
 // NOTE: If you do changes in this function, check GraphicDisplayCacheEntry::IsCacheableAsBitmap
@@ -1134,41 +1138,41 @@ bool GraphicManager::ImplCreateOutput( OutputDevice* pOut,
                     // taking care of font width default if scaling metafile.
                     MetaFontAction* pA = static_cast<MetaFontAction*>(pAct);
                     vcl::Font aFont( pA->GetFont() );
-                    if ( !aFont.GetWidth() )
+                    if ( !aFont.GetAverageFontWidth() )
                     {
                         FontMetric aFontMetric( pOut->GetFontMetric( aFont ) );
-                        aFont.SetWidth( aFontMetric.GetWidth() );
+                        aFont.SetAverageFontWidth( aFontMetric.GetAverageFontWidth() );
                         pModAct = new MetaFontAction( aFont );
                     }
+                    SAL_FALLTHROUGH;
                 }
-                    // FALLTHROUGH intended
                 case MetaActionType::NONE:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
 
                     // OutDev state changes (which don't affect bitmap
                     // output)
                 case MetaActionType::LINECOLOR:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::FILLCOLOR:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::TEXTCOLOR:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::TEXTFILLCOLOR:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::TEXTALIGN:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::TEXTLINECOLOR:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::TEXTLINE:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::PUSH:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::POP:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::LAYOUTMODE:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::TEXTLANGUAGE:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::COMMENT:
                     break;
 
@@ -1285,79 +1289,79 @@ bool GraphicManager::ImplCreateOutput( OutputDevice* pOut,
                 case MetaActionType::RASTEROP:
                     if( static_cast<MetaRasterOpAction*>(pAct)->GetRasterOp() == ROP_OVERPAINT )
                         break;
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::PIXEL:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::POINT:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::LINE:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::RECT:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::ROUNDRECT:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::ELLIPSE:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::ARC:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::PIE:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::CHORD:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::POLYLINE:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::POLYGON:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::POLYPOLYGON:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
 
                 case MetaActionType::TEXT:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::TEXTARRAY:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::STRETCHTEXT:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::TEXTRECT:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
 
                 case MetaActionType::MASK:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::MASKSCALE:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::MASKSCALEPART:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
 
                 case MetaActionType::GRADIENT:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::HATCH:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::WALLPAPER:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
 
                 case MetaActionType::Transparent:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::EPS:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::FLOATTRANSPARENT:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::GRADIENTEX:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
 
                     // OutDev state changes that _do_ affect bitmap
                     // output
                 case MetaActionType::CLIPREGION:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::ISECTRECTCLIPREGION:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::ISECTREGIONCLIPREGION:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::MOVECLIPREGION:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
 
                 case MetaActionType::MAPMODE:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::REFPOINT:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 default:
                     bNonBitmapActionEncountered = true;
                     break;
@@ -1405,15 +1409,15 @@ void GraphicManager::ImplAdjust( BitmapEx& rBmpEx, const GraphicAttr& rAttr, Gra
     {
         switch( aAttr.GetDrawMode() )
         {
-            case( GRAPHICDRAWMODE_MONO ):
+            case GRAPHICDRAWMODE_MONO:
                 rBmpEx.Convert( BMP_CONVERSION_1BIT_THRESHOLD );
             break;
 
-            case( GRAPHICDRAWMODE_GREYS ):
+            case GRAPHICDRAWMODE_GREYS:
                 rBmpEx.Convert( BMP_CONVERSION_8BIT_GREYS );
             break;
 
-            case( GRAPHICDRAWMODE_WATERMARK ):
+            case GRAPHICDRAWMODE_WATERMARK:
             {
                 aAttr.SetLuminance( aAttr.GetLuminance() + WATERMARK_LUM_OFFSET );
                 aAttr.SetContrast( aAttr.GetContrast() + WATERMARK_CON_OFFSET );
@@ -1508,15 +1512,15 @@ void GraphicManager::ImplAdjust( GDIMetaFile& rMtf, const GraphicAttr& rAttr, Gr
     {
         switch( aAttr.GetDrawMode() )
         {
-            case( GRAPHICDRAWMODE_MONO ):
+            case GRAPHICDRAWMODE_MONO:
                 rMtf.Convert( MTF_CONVERSION_1BIT_THRESHOLD );
             break;
 
-            case( GRAPHICDRAWMODE_GREYS ):
+            case GRAPHICDRAWMODE_GREYS:
                 rMtf.Convert( MTF_CONVERSION_8BIT_GREYS );
             break;
 
-            case( GRAPHICDRAWMODE_WATERMARK ):
+            case GRAPHICDRAWMODE_WATERMARK:
             {
                 aAttr.SetLuminance( aAttr.GetLuminance() + WATERMARK_LUM_OFFSET );
                 aAttr.SetContrast( aAttr.GetContrast() + WATERMARK_CON_OFFSET );
@@ -1559,15 +1563,15 @@ void GraphicManager::ImplAdjust( Animation& rAnimation, const GraphicAttr& rAttr
     {
         switch( aAttr.GetDrawMode() )
         {
-            case( GRAPHICDRAWMODE_MONO ):
+            case GRAPHICDRAWMODE_MONO:
                 rAnimation.Convert( BMP_CONVERSION_1BIT_THRESHOLD );
             break;
 
-            case( GRAPHICDRAWMODE_GREYS ):
+            case GRAPHICDRAWMODE_GREYS:
                 rAnimation.Convert( BMP_CONVERSION_8BIT_GREYS );
             break;
 
-            case( GRAPHICDRAWMODE_WATERMARK ):
+            case GRAPHICDRAWMODE_WATERMARK:
             {
                 aAttr.SetLuminance( aAttr.GetLuminance() + WATERMARK_LUM_OFFSET );
                 aAttr.SetContrast( aAttr.GetContrast() + WATERMARK_CON_OFFSET );

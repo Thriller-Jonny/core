@@ -19,7 +19,6 @@
 
 #include <com/sun/star/beans/PropertyAttribute.hpp>
 #include <com/sun/star/drawing/framework/XControllerManager.hpp>
-#include <com/sun/star/container/XIndexAccess.hpp>
 #include <com/sun/star/frame/XDispatchProvider.hpp>
 #include <com/sun/star/util/URL.hpp>
 
@@ -51,11 +50,9 @@
 #include "SlideShowRestarter.hxx"
 #include "DrawController.hxx"
 #include "customshowlist.hxx"
-#include <boost/bind.hpp>
 #include "unopage.hxx"
 
 using ::com::sun::star::presentation::XSlideShowController;
-using ::com::sun::star::container::XIndexAccess;
 using ::sd::framework::FrameworkHelper;
 using ::com::sun::star::awt::XWindow;
 using namespace ::sd;
@@ -184,12 +181,11 @@ css::uno::Reference< css::presentation::XSlideShowController > SlideShow::GetSli
 
 bool SlideShow::StartPreview( ViewShellBase& rBase,
     const css::uno::Reference< css::drawing::XDrawPage >& xDrawPage,
-    const css::uno::Reference< css::animations::XAnimationNode >& xAnimationNode,
-    vcl::Window* pParent /* = 0 */ )
+    const css::uno::Reference< css::animations::XAnimationNode >& xAnimationNode )
 {
     rtl::Reference< SlideShow > xSlideShow( GetSlideShow( rBase ) );
     if( xSlideShow.is() )
-        return xSlideShow->startPreview( xDrawPage, xAnimationNode, pParent );
+        return xSlideShow->startPreview( xDrawPage, xAnimationNode );
 
     return false;
 }
@@ -325,12 +321,10 @@ void SAL_CALL SlideShow::setPropertyValue( const OUString& aPropertyName, const 
     }
     case ATTR_PRESENT_CUSTOMSHOW:
     {
-        OUString aShow;
-        if( aValue >>= aShow )
+        OUString aShowName;
+        if( aValue >>= aShowName )
         {
             bIllegalArgument = false;
-
-            const OUString aShowName( aShow );
 
             SdCustomShowList* pCustomShowList = mpDoc->GetCustomShowList();
             if(pCustomShowList)
@@ -441,21 +435,9 @@ void SAL_CALL SlideShow::setPropertyValue( const OUString& aPropertyName, const 
         break;
     }
     case ATTR_PRESENT_NAVIGATOR:
-    {
-        bool bVal = false;
-
-        if( aValue >>= bVal )
-        {
-            bIllegalArgument = false;
-
-            if( rPresSettings.mbStartWithNavigator != bVal)
-            {
-                bValuesChanged = true;
-                rPresSettings.mbStartWithNavigator = bVal;
-            }
-        }
+        bIllegalArgument = false;
+        //ignored, but exists in some older documents
         break;
-    }
     case ATTR_PRESENT_PEN:
     {
         bool bVal = false;
@@ -579,7 +561,7 @@ Any SAL_CALL SlideShow::getPropertyValue( const OUString& PropertyName ) throw(U
     case ATTR_PRESENT_ALWAYS_ON_TOP:
         return Any( rPresSettings.mbAlwaysOnTop );
     case ATTR_PRESENT_NAVIGATOR:
-        return Any( rPresSettings.mbStartWithNavigator );
+        return Any( false );
     case ATTR_PRESENT_PEN:
         return Any( rPresSettings.mbMouseAsPen );
     case ATTR_PRESENT_PAUSE_TIMEOUT:
@@ -689,7 +671,7 @@ void SAL_CALL SlideShow::end()
                 WorkWindow* pWorkWindow = dynamic_cast<WorkWindow*>(pShell->GetViewFrame()->GetTopFrame().GetWindow().GetParent());
                 if( pWorkWindow )
                 {
-                    pWorkWindow->StartPresentationMode( false, isAlwaysOnTop() ? PresentationFlags::HideAllApps : PresentationFlags::NONE );
+                    pWorkWindow->StartPresentationMode( isAlwaysOnTop() ? PresentationFlags::HideAllApps : PresentationFlags::NONE );
                 }
             }
         }
@@ -739,7 +721,7 @@ void SAL_CALL SlideShow::end()
             if( pViewShell )
             {
                 // invalidate the view shell so the presentation slot will be re-enabled
-                // and the rehersing will be updated
+                // and the rehearsing will be updated
                 pViewShell->Invalidate();
 
                 if( xController->meAnimationMode ==ANIMATIONMODE_SHOW )
@@ -795,7 +777,7 @@ void SAL_CALL SlideShow::rehearseTimings() throw(RuntimeException, std::exceptio
 {
     Sequence< PropertyValue > aArguments(1);
     aArguments[0].Name = "RehearseTimings";
-    aArguments[0].Value <<= sal_True;
+    aArguments[0].Value <<= true;
     startWithArguments( aArguments );
 }
 
@@ -905,7 +887,7 @@ bool SlideShow::startPreview( const Reference< XDrawPage >& xDrawPage, const Ref
     Sequence< PropertyValue > aArguments(4);
 
     aArguments[0].Name = "Preview";
-    aArguments[0].Value <<= sal_True;
+    aArguments[0].Value <<= true;
 
     aArguments[1].Name = "FirstPage";
     aArguments[1].Value <<= xDrawPage;
@@ -1021,7 +1003,7 @@ bool SlideShow::isAlwaysOnTop()
     return mxController.is() && mxController->maPresSettings.mbAlwaysOnTop;
 }
 
-bool SlideShow::pause( bool bPause )
+void SlideShow::pause( bool bPause )
 {
     if( mxController.is() )
     {
@@ -1030,33 +1012,6 @@ bool SlideShow::pause( bool bPause )
         else
             mxController->resume();
     }
-    return true;
-}
-
-void SlideShow::receiveRequest(SfxRequest& rReq)
-{
-    if( mxController.is() )
-        mxController->receiveRequest( rReq );
-}
-
-sal_Int32 SlideShow::getFirstPageNumber()
-{
-    return mxController.is() ? mxController->getFirstSlideNumber() : 0;
-}
-
-sal_Int32 SlideShow::getLastPageNumber()
-{
-    return mxController.is() ? mxController->getLastSlideNumber() : 0;
-}
-
-bool SlideShow::isEndless()
-{
-    return mxController.is() && mxController->isEndless();
-}
-
-bool SlideShow::isDrawingPossible()
-{
-    return mxController.is() && mxController->getUsePen();
 }
 
 bool SlideShow::swipe(const CommandSwipeData& rSwipeData)
@@ -1112,7 +1067,9 @@ void SlideShow::StartInPlacePresentation()
             }
 
             pHelper->RequestView( FrameworkHelper::msImpressViewURL, FrameworkHelper::msCenterPaneURL );
-            pHelper->RunOnConfigurationEvent( FrameworkHelper::msConfigurationUpdateEndEvent, ::boost::bind(&SlideShow::StartInPlacePresentationConfigurationCallback, this) );
+            pHelper->RunOnConfigurationEvent(
+                FrameworkHelper::msConfigurationUpdateEndEvent,
+                [this] (bool const) { return this->StartInPlacePresentationConfigurationCallback(); } );
             return;
         }
         else

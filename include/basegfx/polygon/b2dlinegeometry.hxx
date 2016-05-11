@@ -28,7 +28,6 @@
 #include <basegfx/basegfxdllapi.h>
 
 
-
 namespace basegfx
 {
     namespace tools
@@ -115,7 +114,7 @@ namespace basegfx
 
             @param fMaxPartOfEdge
             Allows to influence from with relative length of a control vector
-            compared to it's edge a split is forced. The smaller, the more
+            compared to its edge a split is forced. The smaller, the more
             subdivisions will be needed to create the filled geometry. Allowed
             range is cropped to [1.0 .. 0.01]
 
@@ -138,6 +137,12 @@ namespace basegfx
             double fMaxAllowedAngle = (12.5 * F_PI180),
             double fMaxPartOfEdge = 0.4,
             double fMiterMinimumAngle = (15.0 * F_PI180));
+
+        BASEGFX_DLLPUBLIC B2DPolygon polygonSubdivide(
+            const B2DPolygon& rCandidate,
+            double fMaxAllowedAngle = (12.5 * F_PI180),
+            double fMaxPartOfEdge = 0.4);
+
     } // end of namespace tools
 } // end of namespace basegfx
 

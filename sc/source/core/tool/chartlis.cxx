@@ -480,7 +480,7 @@ OUString ScChartListenerCollection::getUniqueName(const OUString& rPrefix) const
 }
 
 void ScChartListenerCollection::ChangeListening( const OUString& rName,
-        const ScRangeListRef& rRangeListRef, bool bDirty )
+        const ScRangeListRef& rRangeListRef )
 {
     ScChartListener* pCL = findByName(rName);
     if (pCL)
@@ -494,8 +494,6 @@ void ScChartListenerCollection::ChangeListening( const OUString& rName,
         insert(pCL);
     }
     pCL->StartListeningTo();
-    if ( bDirty )
-        pCL->SetDirty( true );
 }
 
 namespace {
@@ -575,7 +573,7 @@ void ScChartListenerCollection::FreeUno( const uno::Reference< chart::XChartData
     }
 
     // Release all pointers currently managed by the ptr_map container.
-    // coverity[leaked_storage] - no leak, because because we will take care of them below
+    // coverity[leaked_storage] - no leak, because we will take care of them below
     for (auto & it : m_Listeners)
     {
         it.second.release();
@@ -728,11 +726,6 @@ bool ScChartListenerCollection::operator==( const ScChartListenerCollection& r )
             return false;
     }
     return true;
-}
-
-bool ScChartListenerCollection::operator!=( const ScChartListenerCollection& r ) const
-{
-    return !operator==(r);
 }
 
 void ScChartListenerCollection::StartListeningHiddenRange( const ScRange& rRange, ScChartHiddenRangeListener* pListener )

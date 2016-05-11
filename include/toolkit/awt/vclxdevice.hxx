@@ -59,7 +59,7 @@ public:
                             virtual ~VCLXDevice();
 
     void                    SetOutputDevice( const VclPtr<OutputDevice> &pOutDev ) { mpOutputDevice = pOutDev; }
-    VclPtr<OutputDevice>    GetOutputDevice() const { return mpOutputDevice; }
+    const VclPtr<OutputDevice>& GetOutputDevice() const { return mpOutputDevice; }
 
     void                    SetCreatedWithToolkit( bool bCreatedWithToolkit );
 
@@ -106,8 +106,6 @@ public:
 
     void            SetVirtualDevice( VirtualDevice* pVDev ) { SetOutputDevice( pVDev ); }
 };
-
-
 
 
 #endif // INCLUDED_TOOLKIT_AWT_VCLXDEVICE_HXX

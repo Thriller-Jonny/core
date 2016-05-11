@@ -17,11 +17,19 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include "winmtf.hxx"
 #include <osl/endian.h>
 #include <basegfx/matrix/b2dhommatrix.hxx>
 #include <vcl/dibtools.hxx>
+#include <o3tl/make_unique.hxx>
+
+#include "winmtf.hxx"
+
 #include <memory>
+
+#ifdef DBG_UTIL
+#include <tools/stream.hxx>
+#include <vcl/pngwrite.hxx>
+#endif
 
 using namespace std;
 
@@ -354,7 +362,7 @@ SvStream& operator>>(SvStream& rInStream, XForm& rXForm)
     return rInStream;
 }
 
-static bool ImplReadRegion( tools::PolyPolygon& rPolyPoly, SvStream& rStream, sal_uInt32 nLen )
+bool ImplReadRegion( tools::PolyPolygon& rPolyPoly, SvStream& rStream, sal_uInt32 nLen )
 {
     if (nLen == 0)
         return false;
@@ -394,7 +402,7 @@ static bool ImplReadRegion( tools::PolyPolygon& rPolyPoly, SvStream& rStream, sa
 } // anonymous namespace
 
 EnhWMFReader::EnhWMFReader(SvStream& rStream,GDIMetaFile& rGDIMetaFile,FilterConfigItem* pConfigItem)
-    : WinMtf(new WinMtfOutput(rGDIMetaFile), rStream , pConfigItem)
+    : WinMtf(rGDIMetaFile, rStream , pConfigItem)
     , bRecordPath(false)
     , nRecordCount(0)
     , bEMFPlus(false)
@@ -491,7 +499,7 @@ void EnhWMFReader::ReadAndDrawPolygon(Drawer drawer, const bool skipFirst)
  * The \<class T> parameter is for the type of the points
  * nStartIndex: which is the starting index in the polygon of the first point read
  * nPoints: number of points
- * pWMF: the stream containings the polygons
+ * pWMF: the stream containing the polygons
  * */
 template <class T>
 tools::Polygon EnhWMFReader::ReadPolygon(sal_uInt32 nStartIndex, sal_uInt32 nPoints)
@@ -695,26 +703,26 @@ bool EnhWMFReader::ReadEnhWMF()
             switch( nRecType )
             {
                 case EMR_POLYBEZIERTO :
-                    ReadAndDrawPolygon<sal_Int32>( [] ( WinMtfOutput* pWinMtfOutput, tools::Polygon& rPolygon, bool aTo, bool aRecordPath )
+                    ReadAndDrawPolygon<sal_Int32>( [] ( std::unique_ptr<WinMtfOutput> &pWinMtfOutput, tools::Polygon& rPolygon, bool aTo, bool aRecordPath )
                                                    { pWinMtfOutput->DrawPolyBezier( rPolygon, aTo, aRecordPath ); }, true );
                 break;
                 case EMR_POLYBEZIER :
-                    ReadAndDrawPolygon<sal_Int32>( [] ( WinMtfOutput* pWinMtfOutput, tools::Polygon& rPolygon, bool aTo, bool aRecordPath )
+                    ReadAndDrawPolygon<sal_Int32>( [] ( std::unique_ptr<WinMtfOutput> &pWinMtfOutput, tools::Polygon& rPolygon, bool aTo, bool aRecordPath )
                                                    { pWinMtfOutput->DrawPolyBezier( rPolygon, aTo, aRecordPath ); }, false );
                 break;
 
                 case EMR_POLYGON :
-                    ReadAndDrawPolygon<sal_Int32>( [] ( WinMtfOutput* pWinMtfOutput, tools::Polygon& rPolygon, bool aTo, bool aRecordPath )
+                    ReadAndDrawPolygon<sal_Int32>( [] ( std::unique_ptr<WinMtfOutput> &pWinMtfOutput, tools::Polygon& rPolygon, bool aTo, bool aRecordPath )
                                                    { pWinMtfOutput->DrawPolygon( rPolygon, aTo, aRecordPath ); }, false );
                 break;
 
                 case EMR_POLYLINETO :
-                    ReadAndDrawPolygon<sal_Int32>( [] ( WinMtfOutput* pWinMtfOutput, tools::Polygon& rPolygon, bool aTo, bool aRecordPath )
+                    ReadAndDrawPolygon<sal_Int32>( [] ( std::unique_ptr<WinMtfOutput> &pWinMtfOutput, tools::Polygon& rPolygon, bool aTo, bool aRecordPath )
                                                    { pWinMtfOutput->DrawPolyLine( rPolygon, aTo, aRecordPath ); }, true );
                 break;
 
                 case EMR_POLYLINE :
-                    ReadAndDrawPolygon<sal_Int32>( [] ( WinMtfOutput* pWinMtfOutput, tools::Polygon& rPolygon, bool aTo, bool aRecordPath )
+                    ReadAndDrawPolygon<sal_Int32>( [] ( std::unique_ptr<WinMtfOutput> &pWinMtfOutput, tools::Polygon& rPolygon, bool aTo, bool aRecordPath )
                                                    { pWinMtfOutput->DrawPolyLine( rPolygon, aTo, aRecordPath ); }, false );
                 break;
 
@@ -907,37 +915,27 @@ bool EnhWMFReader::ReadEnhWMF()
                             aLineInfo.SetWidth( aSize.Width() );
 
                         bool bTransparent = false;
-                        switch( nStyle & 0xFF )
+                        switch( nStyle & PS_STYLE_MASK )
                         {
                             case PS_DASHDOTDOT :
                                 aLineInfo.SetStyle( LINE_DASH );
                                 aLineInfo.SetDashCount( 1 );
                                 aLineInfo.SetDotCount( 2 );
-                                aLineInfo.SetDashLen( 150 );
-                                aLineInfo.SetDotLen( 30 );
-                                aLineInfo.SetDistance( 50 );
                             break;
                             case PS_DASHDOT :
                                 aLineInfo.SetStyle( LINE_DASH );
                                 aLineInfo.SetDashCount( 1 );
                                 aLineInfo.SetDotCount( 1 );
-                                aLineInfo.SetDashLen( 150 );
-                                aLineInfo.SetDotLen( 30 );
-                                aLineInfo.SetDistance( 90 );
                             break;
                             case PS_DOT :
                                 aLineInfo.SetStyle( LINE_DASH );
                                 aLineInfo.SetDashCount( 0 );
                                 aLineInfo.SetDotCount( 1 );
-                                aLineInfo.SetDotLen( 30 );
-                                aLineInfo.SetDistance( 50 );
                             break;
                             case PS_DASH :
                                 aLineInfo.SetStyle( LINE_DASH );
                                 aLineInfo.SetDashCount( 1 );
                                 aLineInfo.SetDotCount( 0 );
-                                aLineInfo.SetDashLen( 225 );
-                                aLineInfo.SetDistance( 100 );
                             break;
                             case PS_NULL :
                                 bTransparent = true;
@@ -948,7 +946,7 @@ bool EnhWMFReader::ReadEnhWMF()
                             default :
                                 aLineInfo.SetStyle( LINE_SOLID );
                         }
-                        switch( nStyle & 0xF00 )
+                        switch( nStyle & PS_ENDCAP_STYLE_MASK )
                         {
                             case PS_ENDCAP_ROUND :
                                 if ( aSize.Width() )
@@ -956,17 +954,19 @@ bool EnhWMFReader::ReadEnhWMF()
                                     aLineInfo.SetLineCap( css::drawing::LineCap_ROUND );
                                     break;
                                 }
+                                SAL_FALLTHROUGH;
                             case PS_ENDCAP_SQUARE :
                                 if ( aSize.Width() )
                                 {
                                     aLineInfo.SetLineCap( css::drawing::LineCap_SQUARE );
                                     break;
                                 }
+                                SAL_FALLTHROUGH;
                             case PS_ENDCAP_FLAT :
                             default :
                                 aLineInfo.SetLineCap( css::drawing::LineCap_BUTT );
                         }
-                        switch( nStyle & 0xF000 )
+                        switch( nStyle & PS_JOIN_STYLE_MASK )
                         {
                             case PS_JOIN_ROUND :
                                 aLineInfo.SetLineJoin ( basegfx::B2DLineJoin::Round );
@@ -980,7 +980,7 @@ bool EnhWMFReader::ReadEnhWMF()
                             default :
                                 aLineInfo.SetLineJoin ( basegfx::B2DLineJoin::NONE );
                         }
-                        pOut->CreateObject( nIndex, GDI_PEN, new WinMtfLineStyle( ReadColor(), aLineInfo, bTransparent ) );
+                        pOut->CreateObjectIndexed(nIndex, o3tl::make_unique<WinMtfLineStyle>( ReadColor(), aLineInfo, bTransparent ));
                     }
                 }
                 break;
@@ -1003,20 +1003,28 @@ bool EnhWMFReader::ReadEnhWMF()
                             aLineInfo.SetWidth( nWidth );
 
                         bool bTransparent = false;
-                        sal_uInt16 nDashCount = 0;
-                        sal_uInt16 nDotCount = 0;
 
                         switch( nStyle & PS_STYLE_MASK )
                         {
                             case PS_DASHDOTDOT :
-                                nDotCount++;
+                                aLineInfo.SetStyle( LINE_DASH );
+                                aLineInfo.SetDashCount( 1 );
+                                aLineInfo.SetDotCount( 2 );
+                            break;
                             case PS_DASHDOT :
-                                nDashCount++;
+                                aLineInfo.SetStyle( LINE_DASH );
+                                aLineInfo.SetDashCount( 1 );
+                                aLineInfo.SetDotCount( 1 );
+                            break;
                             case PS_DOT :
-                                nDotCount++;
+                                aLineInfo.SetStyle( LINE_DASH );
+                                aLineInfo.SetDashCount( 0 );
+                                aLineInfo.SetDotCount( 1 );
                             break;
                             case PS_DASH :
-                                nDashCount++;
+                                aLineInfo.SetStyle( LINE_DASH );
+                                aLineInfo.SetDashCount( 1 );
+                                aLineInfo.SetDotCount( 0 );
                             break;
                             case PS_NULL :
                                 bTransparent = true;
@@ -1028,13 +1036,41 @@ bool EnhWMFReader::ReadEnhWMF()
                             default :
                                 aLineInfo.SetStyle( LINE_SOLID );
                         }
-                        if ( nDashCount | nDotCount )
+                        switch( nStyle & PS_ENDCAP_STYLE_MASK )
                         {
-                            aLineInfo.SetStyle( LINE_DASH );
-                            aLineInfo.SetDashCount( nDashCount );
-                            aLineInfo.SetDotCount( nDotCount );
+                            case PS_ENDCAP_ROUND :
+                                if ( aLineInfo.GetWidth() )
+                                {
+                                    aLineInfo.SetLineCap( css::drawing::LineCap_ROUND );
+                                    break;
+                                }
+                                SAL_FALLTHROUGH;
+                            case PS_ENDCAP_SQUARE :
+                                if ( aLineInfo.GetWidth() )
+                                {
+                                    aLineInfo.SetLineCap( css::drawing::LineCap_SQUARE );
+                                    break;
+                                }
+                                SAL_FALLTHROUGH;
+                            case PS_ENDCAP_FLAT :
+                            default :
+                                aLineInfo.SetLineCap( css::drawing::LineCap_BUTT );
                         }
-                        pOut->CreateObject( nIndex, GDI_PEN, new WinMtfLineStyle( aColorRef, aLineInfo, bTransparent ) );
+                        switch( nStyle & PS_JOIN_STYLE_MASK )
+                        {
+                            case PS_JOIN_ROUND :
+                                aLineInfo.SetLineJoin ( basegfx::B2DLineJoin::Round );
+                            break;
+                            case PS_JOIN_MITER :
+                                aLineInfo.SetLineJoin ( basegfx::B2DLineJoin::Miter );
+                            break;
+                            case PS_JOIN_BEVEL :
+                                aLineInfo.SetLineJoin ( basegfx::B2DLineJoin::Bevel );
+                            break;
+                            default :
+                                aLineInfo.SetLineJoin ( basegfx::B2DLineJoin::NONE );
+                        }
+                        pOut->CreateObjectIndexed(nIndex, o3tl::make_unique<WinMtfLineStyle>( aColorRef, aLineInfo, bTransparent ));
                     }
                 }
                 break;
@@ -1046,7 +1082,7 @@ bool EnhWMFReader::ReadEnhWMF()
                     if ( ( nIndex & ENHMETA_STOCK_OBJECT ) == 0 )
                     {
                         pWMF->ReadUInt32( nStyle );
-                        pOut->CreateObject( nIndex, GDI_BRUSH, new WinMtfFillStyle( ReadColor(), ( nStyle == BS_HOLLOW ) ) );
+                        pOut->CreateObjectIndexed(nIndex, o3tl::make_unique<WinMtfFillStyle>( ReadColor(), ( nStyle == BS_HOLLOW ) ));
                     }
                 }
                 break;
@@ -1136,6 +1172,7 @@ bool EnhWMFReader::ReadEnhWMF()
 
                 case EMR_ABORTPATH :
                     pOut->ClearPath();
+                    SAL_FALLTHROUGH;
                 case EMR_ENDPATH :
                     bRecordPath = false;
                 break;
@@ -1208,43 +1245,110 @@ bool EnhWMFReader::ReadEnhWMF()
                                .ReadUInt32( offBitsSrc ).ReadUInt32( cbBitsSrc ).ReadInt32( cxSrc ).ReadInt32( cySrc ) ;
 
                     sal_uInt32  dwRop = SRCAND|SRCINVERT;
-
-                    Bitmap      aBitmap;
                     Rectangle   aRect( Point( xDest, yDest ), Size( cxDest+1, cyDest+1 ) );
 
                     if ( (cbBitsSrc > (SAL_MAX_UINT32 - 14)) || ((SAL_MAX_UINT32 - 14) - cbBitsSrc < cbBmiSrc) )
                         bStatus = false;
                     else
                     {
-                        sal_uInt32 nSize = cbBmiSrc + cbBitsSrc + 14;
-                        if ( nSize <= ( nEndPos - nStartPos ) )
+                        const sal_uInt32 nSourceSize = cbBmiSrc + cbBitsSrc + 14;
+                        if ( nSourceSize <= ( nEndPos - nStartPos ) )
                         {
-                            char* pBuf = new char[ nSize ];
-                            SvMemoryStream aTmp( pBuf, nSize, StreamMode::READ | StreamMode::WRITE );
+                            // we need to read alpha channel data if AlphaFormat of BLENDFUNCTION is
+                            // AC_SRC_ALPHA (==0x01). To read it, create a temp DIB-File which is ready
+                            // for DIB-5 format
+                            const bool bReadAlpha(0x01 == aFunc.aAlphaFormat);
+                            const sal_uInt32 nDeltaToDIB5HeaderSize(bReadAlpha ? getDIBV5HeaderSize() - cbBmiSrc : 0);
+                            const sal_uInt32 nTargetSize(cbBmiSrc + nDeltaToDIB5HeaderSize + cbBitsSrc + 14);
+                            char* pBuf = new char[ nTargetSize ];
+                            SvMemoryStream aTmp( pBuf, nTargetSize, StreamMode::READ | StreamMode::WRITE );
+
                             aTmp.ObjectOwnsMemory( true );
+
+                            // write BM-Header (14 bytes)
                             aTmp.WriteUChar( 'B' )
                                 .WriteUChar( 'M' )
                                 .WriteUInt32( cbBitsSrc )
                                 .WriteUInt16( 0 )
                                 .WriteUInt16( 0 )
-                                .WriteUInt32( cbBmiSrc + 14 );
+                                .WriteUInt32( cbBmiSrc + nDeltaToDIB5HeaderSize + 14 );
+
+                            // copy DIBInfoHeader from source (cbBmiSrc bytes)
                             pWMF->Seek( nStart + offBmiSrc );
                             pWMF->Read( pBuf + 14, cbBmiSrc );
-                            pWMF->Seek( nStart + offBitsSrc );
-                            pWMF->Read( pBuf + 14 + cbBmiSrc, cbBitsSrc );
-                            aTmp.Seek( 0 );
-                            ReadDIB(aBitmap, aTmp, true);
 
-                            // test if it is sensible to crop
-                            if ( ( cxSrc > 0 ) && ( cySrc > 0 ) &&
-                                ( xSrc >= 0 ) && ( ySrc >= 0 ) &&
-                                    ( xSrc + cxSrc <= aBitmap.GetSizePixel().Width() ) &&
-                                        ( ySrc + cySrc <= aBitmap.GetSizePixel().Height() ) )
+                            if(bReadAlpha)
                             {
-                                Rectangle aCropRect( Point( xSrc, ySrc ), Size( cxSrc, cySrc ) );
-                                aBitmap.Crop( aCropRect );
+                                // need to add values for all stuff that DIBV5Header is bigger
+                                // than DIBInfoHeader, all values are correctly initialized to zero,
+                                // so we can use memset here
+                                memset(pBuf + cbBmiSrc + 14, 0, nDeltaToDIB5HeaderSize);
                             }
-                            aBmpSaveList.push_back( new BSaveStruct( aBitmap, aRect, dwRop, pOut->GetFillStyle () ) );
+
+                            // copy bitmap data from source (offBitsSrc bytes)
+                            pWMF->Seek( nStart + offBitsSrc );
+                            pWMF->Read( pBuf + 14 + nDeltaToDIB5HeaderSize + cbBmiSrc, cbBitsSrc );
+                            aTmp.Seek( 0 );
+
+                            // prepare to read and fill BitmapEx
+                            BitmapEx aBitmapEx;
+
+                            if(bReadAlpha)
+                            {
+                                Bitmap aBitmap;
+                                AlphaMask aAlpha;
+
+                                if(ReadDIBV5(aBitmap, aAlpha, aTmp))
+                                {
+                                    aBitmapEx = BitmapEx(aBitmap, aAlpha);
+                                }
+                            }
+                            else
+                            {
+                                Bitmap aBitmap;
+
+                                if(ReadDIB(aBitmap, aTmp, true))
+                                {
+                                    if(0xff != aFunc.aSrcConstantAlpha)
+                                    {
+                                        // add const alpha channel
+                                        aBitmapEx = BitmapEx(
+                                            aBitmap,
+                                            AlphaMask(aBitmap.GetSizePixel(), &aFunc.aSrcConstantAlpha));
+                                    }
+                                    else
+                                    {
+                                        // just use Bitmap
+                                        aBitmapEx = BitmapEx(aBitmap);
+                                    }
+                                }
+                            }
+
+                            if(!aBitmapEx.IsEmpty())
+                            {
+                                // test if it is sensible to crop
+                                if ( ( cxSrc > 0 ) && ( cySrc > 0 ) &&
+                                    ( xSrc >= 0 ) && ( ySrc >= 0 ) &&
+                                        ( xSrc + cxSrc < aBitmapEx.GetSizePixel().Width() ) &&
+                                            ( ySrc + cySrc < aBitmapEx.GetSizePixel().Height() ) )
+                                {
+                                    const Rectangle aCropRect( Point( xSrc, ySrc ), Size( cxSrc, cySrc ) );
+
+                                    aBitmapEx.Crop( aCropRect );
+                                }
+
+#ifdef DBG_UTIL
+                                static bool bDoSaveForVisualControl(false);
+
+                                if(bDoSaveForVisualControl)
+                                {
+                                    SvFileStream aNew(OUString("c:\\metafile_content.png"), StreamMode::WRITE|StreamMode::TRUNC);
+                                    vcl::PNGWriter aPNGWriter(aBitmapEx);
+                                    aPNGWriter.Write(aNew);
+                                }
+#endif
+                                aBmpSaveList.emplace_back(new BSaveStruct(aBitmapEx, aRect, dwRop));
+                            }
                         }
                     }
                 }
@@ -1305,7 +1409,7 @@ bool EnhWMFReader::ReadEnhWMF()
                                 Rectangle aCropRect( Point( xSrc, ySrc ), Size( cxSrc, cySrc ) );
                                 aBitmap.Crop( aCropRect );
                             }
-                            aBmpSaveList.push_back( new BSaveStruct( aBitmap, aRect, dwRop, pOut->GetFillStyle () ) );
+                            aBmpSaveList.emplace_back(new BSaveStruct(aBitmap, aRect, dwRop));
                         }
                     }
                 }
@@ -1372,7 +1476,7 @@ bool EnhWMFReader::ReadEnhWMF()
                                 Rectangle aCropRect( Point( xSrc, ySrc ), Size( cxSrc, cySrc ) );
                                 aBitmap.Crop( aCropRect );
                             }
-                        aBmpSaveList.push_back( new BSaveStruct( aBitmap, aRect, dwRop, pOut->GetFillStyle () ) );
+                            aBmpSaveList.emplace_back(new BSaveStruct(aBitmap, aRect, dwRop));
                         }
                     }
                 }
@@ -1421,13 +1525,14 @@ bool EnhWMFReader::ReadEnhWMF()
                         // aLogFont.lfWidth = aTransVec.getX();
                         // aLogFont.lfHeight = aTransVec.getY();
 
-                        pOut->CreateObject( nIndex, GDI_FONT, new WinMtfFontStyle( aLogFont ) );
+                        pOut->CreateObjectIndexed(nIndex, o3tl::make_unique<WinMtfFontStyle>( aLogFont ));
                     }
                 }
                 break;
 
                 case EMR_EXTTEXTOUTA :
                     bFlag = true;
+                    SAL_FALLTHROUGH;
                 case EMR_EXTTEXTOUTW :
                 {
                     sal_Int32   nLeft, nTop, nRight, nBottom, ptlReferenceX, ptlReferenceY, nGfxMode, nXScale, nYScale;
@@ -1519,27 +1624,27 @@ bool EnhWMFReader::ReadEnhWMF()
                 break;
 
                 case EMR_POLYBEZIERTO16 :
-                    ReadAndDrawPolygon<sal_Int16>( [] ( WinMtfOutput* pWinMtfOutput, tools::Polygon& rPolygon, bool aTo, bool aRecordPath )
+                    ReadAndDrawPolygon<sal_Int16>( [] ( std::unique_ptr<WinMtfOutput> &pWinMtfOutput, tools::Polygon& rPolygon, bool aTo, bool aRecordPath )
                                                    { pWinMtfOutput->DrawPolyBezier( rPolygon, aTo, aRecordPath ); }, true );
                 break;
 
                 case EMR_POLYBEZIER16 :
-                    ReadAndDrawPolygon<sal_Int16>( [] ( WinMtfOutput* pWinMtfOutput, tools::Polygon& rPolygon, bool aTo, bool aRecordPath )
+                    ReadAndDrawPolygon<sal_Int16>( [] ( std::unique_ptr<WinMtfOutput> &pWinMtfOutput, tools::Polygon& rPolygon, bool aTo, bool aRecordPath )
                                                    { pWinMtfOutput->DrawPolyBezier( rPolygon, aTo, aRecordPath ); }, false );
                 break;
 
                 case EMR_POLYGON16 :
-                    ReadAndDrawPolygon<sal_Int16>( [] ( WinMtfOutput* pWinMtfOutput, tools::Polygon& rPolygon, bool aTo, bool aRecordPath )
+                    ReadAndDrawPolygon<sal_Int16>( [] ( std::unique_ptr<WinMtfOutput> &pWinMtfOutput, tools::Polygon& rPolygon, bool aTo, bool aRecordPath )
                                                    { pWinMtfOutput->DrawPolygon( rPolygon, aTo, aRecordPath ); }, false );
                 break;
 
                 case EMR_POLYLINETO16 :
-                    ReadAndDrawPolygon<sal_Int16>( [] ( WinMtfOutput* pWinMtfOutput, tools::Polygon& rPolygon, bool aTo, bool aRecordPath )
+                    ReadAndDrawPolygon<sal_Int16>( [] ( std::unique_ptr<WinMtfOutput> &pWinMtfOutput, tools::Polygon& rPolygon, bool aTo, bool aRecordPath )
                                                    { pWinMtfOutput->DrawPolyLine( rPolygon, aTo, aRecordPath ); }, true );
                 break;
 
                 case EMR_POLYLINE16 :
-                    ReadAndDrawPolygon<sal_Int16>( [] ( WinMtfOutput* pWinMtfOutput, tools::Polygon& rPolygon, bool aTo, bool aRecordPath )
+                    ReadAndDrawPolygon<sal_Int16>( [] ( std::unique_ptr<WinMtfOutput> &pWinMtfOutput, tools::Polygon& rPolygon, bool aTo, bool aRecordPath )
                                                    { pWinMtfOutput->DrawPolyLine( rPolygon, aTo, aRecordPath ); }, false );
                 break;
 
@@ -1612,7 +1717,7 @@ bool EnhWMFReader::ReadEnhWMF()
                         }
                     }
 
-                    pOut->CreateObject( nIndex, GDI_BRUSH, new WinMtfFillStyle( aBitmap ) );
+                    pOut->CreateObjectIndexed(nIndex, o3tl::make_unique<WinMtfFillStyle>( aBitmap ));
                 }
                 break;
 

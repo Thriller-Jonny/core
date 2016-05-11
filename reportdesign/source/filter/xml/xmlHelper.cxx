@@ -91,8 +91,9 @@ const XMLPropertyHandler* OPropertyHandlerFactory::GetPropertyHandler(sal_Int32 
             break;
         case (XML_SD_TYPES_START+34):
             pHandler = new xmloff::ImageScaleModeHandler();
+            break;
         default:
-            ;
+            break;
     }
 
     if ( !pHandler )
@@ -280,7 +281,7 @@ void OXMLHelper::copyStyleElements(const bool _bOld,const OUString& _sStyleName,
         {
             pAutoStyle->FillPropertySet(_xProp);
             if ( _bOld && _xProp->getPropertySetInfo()->hasPropertyByName(PROPERTY_CHARHIDDEN) )
-                _xProp->setPropertyValue(PROPERTY_CHARHIDDEN,uno::makeAny(sal_False));
+                _xProp->setPropertyValue(PROPERTY_CHARHIDDEN,uno::makeAny(false));
 
             uno::Reference<beans::XPropertySet> xProp = comphelper::GenericPropertySet_CreateInstance(new comphelper::PropertySetInfo(pMap));
             pAutoStyle->FillPropertySet(xProp);

@@ -27,7 +27,7 @@
 #include <typelib/typedescription.hxx>
 #include <uno/data.h>
 
-#ifdef WNT
+#ifdef _WIN32
 #include <cmath>
 #else
 #include <math.h>
@@ -80,7 +80,6 @@ static inline double unsigned_int64_to_double( sal_uInt64 n )
 #endif
 
 
-
 static inline double round( double aVal )
 {
     bool bPos   = (aVal >= 0.0);
@@ -121,6 +120,7 @@ static bool getNumericValue( double & rfVal, const OUString & rStr )
                     bNeg = true;
                 else if (trim[0] != '+')
                     return false;
+                break;
             case 1: // 0x...
                 break;
             default:
@@ -201,6 +201,7 @@ static bool getHyperValue( sal_Int64 & rnVal, const OUString & rStr )
                     bNeg = true;
                 else if (trim[0] != '+')
                     return false;
+                break;
             case 1: // 0x...
                 break;
             default:
@@ -487,7 +488,7 @@ double TypeConverter_Impl::toDouble( const Any& rAny, double min, double max )
 Any SAL_CALL TypeConverter_Impl::convertTo( const Any& rVal, const Type& aDestType )
     throw( IllegalArgumentException, CannotConvertException, RuntimeException, std::exception)
 {
-    Type aSourceType = rVal.getValueType();
+    const Type& aSourceType = rVal.getValueType();
     if (aSourceType == aDestType)
         return rVal;
 
@@ -706,7 +707,7 @@ Any TypeConverter_Impl::convertToSimpleType( const Any& rVal, TypeClass aDestina
             Reference< XInterface >(), (sal_Int16) 1 );
     }
 
-    Type aSourceType = rVal.getValueType();
+    const Type& aSourceType = rVal.getValueType();
     TypeClass aSourceClass = aSourceType.getTypeClass();
     if (aDestinationClass == aSourceClass)
         return rVal;
@@ -729,10 +730,8 @@ Any TypeConverter_Impl::convertToSimpleType( const Any& rVal, TypeClass aDestina
         switch (aSourceClass)
         {
         default:
-        {
-            sal_Bool bTmp = (toDouble( rVal ) != 0.0);
-            aRet.setValue( &bTmp, cppu::UnoType<bool>::get() );
-        }
+            aRet <<= (toDouble( rVal ) != 0.0);
+            break;
         case TypeClass_ENUM:  // exclude enums
             break;
 
@@ -741,13 +740,11 @@ Any TypeConverter_Impl::convertToSimpleType( const Any& rVal, TypeClass aDestina
             const OUString & aStr = *static_cast<const OUString *>(rVal.getValue());
             if ( aStr == "0" || aStr.equalsIgnoreAsciiCase( "false" ))
             {
-                sal_Bool bFalse = sal_False;
-                aRet.setValue( &bFalse, cppu::UnoType<bool>::get() );
+                aRet <<= false;
             }
             else if ( aStr == "1" || aStr.equalsIgnoreAsciiCase( "true" ))
             {
-                sal_Bool bTrue = sal_True;
-                aRet.setValue( &bTrue, cppu::UnoType<bool>::get() );
+                aRet <<= true;
             }
             else
             {

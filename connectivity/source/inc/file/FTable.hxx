@@ -56,11 +56,11 @@ namespace connectivity
         public:
             OFileTable( sdbcx::OCollection* _pTables,OConnection* _pConnection);
             OFileTable( sdbcx::OCollection* _pTables,OConnection* _pConnection,
-                    const OUString& _Name,
-                    const OUString& _Type,
-                    const OUString& _Description = OUString(),
-                    const OUString& _SchemaName = OUString(),
-                    const OUString& _CatalogName = OUString()
+                    const OUString& Name,
+                    const OUString& Type,
+                    const OUString& Description = OUString(),
+                    const OUString& SchemaName = OUString(),
+                    const OUString& CatalogName = OUString()
                 );
 
             //XInterface
@@ -74,10 +74,10 @@ namespace connectivity
             virtual sal_Int32 getCurrentLastPos() const {return -1;}
 
             virtual bool seekRow(IResultSetHelper::Movement eCursorPosition, sal_Int32 nOffset, sal_Int32& nCurPos) = 0;
-            virtual bool fetchRow(OValueRefRow& _rRow, const OSQLColumns& _rCols, bool _bUseTableDefs, bool bRetrieveData) = 0;
+            virtual bool fetchRow(OValueRefRow& _rRow, const OSQLColumns& _rCols, bool bRetrieveData) = 0;
 
-            ::rtl::Reference<OSQLColumns> getTableColumns() const {return m_aColumns;}
-            virtual bool InsertRow(OValueRefVector& rRow, bool bFlush, const ::com::sun::star::uno::Reference< ::com::sun::star::container::XIndexAccess>& _xCols);
+            const ::rtl::Reference<OSQLColumns>& getTableColumns() const {return m_aColumns;}
+            virtual bool InsertRow(OValueRefVector& rRow, const ::com::sun::star::uno::Reference< ::com::sun::star::container::XIndexAccess>& _xCols);
             virtual bool DeleteRow(const OSQLColumns& _rCols);
             virtual bool UpdateRow(OValueRefVector& rRow, OValueRefRow& pOrgRow,const ::com::sun::star::uno::Reference< ::com::sun::star::container::XIndexAccess>& _xCols);
             virtual void addColumn(const ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet>& descriptor);
@@ -87,7 +87,7 @@ namespace connectivity
 
             OUString SAL_CALL getName() throw(std::exception) override { return m_Name; }
 
-            OUString getSchema() { return m_SchemaName; }
+            const OUString& getSchema() { return m_SchemaName; }
             bool isReadOnly() const { return !m_bWriteable; }
                 // m_pFileStream && !m_pFileStream->IsWritable(); }
             // com::sun::star::lang::XUnoTunnel

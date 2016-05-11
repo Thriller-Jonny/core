@@ -37,65 +37,70 @@ public:
     CPPUNIT_TEST_SUITE_END();
 };
 
+std::ostream& operator<<(std::ostream& rStrm, const TokenType& tt)
+{
+    return rStrm << (int)tt;
+}
+
 void SyntaxHighlightTest::testBasicString() {
     OUString s("\"foo\"");
     std::vector<HighlightPortion> ps;
-    SyntaxHighlighter(HIGHLIGHT_BASIC).getHighlightPortions(s, ps);
+    SyntaxHighlighter(HighlighterLanguage::Basic).getHighlightPortions(s, ps);
     CPPUNIT_ASSERT_EQUAL(
         static_cast<std::vector<HighlightPortion>::size_type>(1), ps.size());
     CPPUNIT_ASSERT_EQUAL(sal_Int32(0), ps[0].nBegin);
     CPPUNIT_ASSERT_EQUAL(sal_Int32(5), ps[0].nEnd);
-    CPPUNIT_ASSERT_EQUAL(TT_STRING, ps[0].tokenType);
+    CPPUNIT_ASSERT_EQUAL(TokenType::String, ps[0].tokenType);
 }
 
 void SyntaxHighlightTest::testBasicComment() {
     OUString s("' foo");
     std::vector<HighlightPortion> ps;
-    SyntaxHighlighter(HIGHLIGHT_BASIC).getHighlightPortions(s, ps);
+    SyntaxHighlighter(HighlighterLanguage::Basic).getHighlightPortions(s, ps);
     CPPUNIT_ASSERT_EQUAL(
         static_cast<std::vector<HighlightPortion>::size_type>(1), ps.size());
     CPPUNIT_ASSERT_EQUAL(sal_Int32(0), ps[0].nBegin);
     CPPUNIT_ASSERT_EQUAL(sal_Int32(5), ps[0].nEnd);
-    CPPUNIT_ASSERT_EQUAL(TT_COMMENT, ps[0].tokenType);
+    CPPUNIT_ASSERT_EQUAL(TokenType::Comment, ps[0].tokenType);
 }
 
 void SyntaxHighlightTest::testBasicCommentNewline() {
     OUString s("' foo\n");
     std::vector<HighlightPortion> ps;
-    SyntaxHighlighter(HIGHLIGHT_BASIC).getHighlightPortions(s, ps);
+    SyntaxHighlighter(HighlighterLanguage::Basic).getHighlightPortions(s, ps);
     CPPUNIT_ASSERT_EQUAL(
         static_cast<std::vector<HighlightPortion>::size_type>(2), ps.size());
     CPPUNIT_ASSERT_EQUAL(sal_Int32(0), ps[0].nBegin);
     CPPUNIT_ASSERT_EQUAL(sal_Int32(5), ps[0].nEnd);
-    CPPUNIT_ASSERT_EQUAL(TT_COMMENT, ps[0].tokenType);
+    CPPUNIT_ASSERT_EQUAL(TokenType::Comment, ps[0].tokenType);
     CPPUNIT_ASSERT_EQUAL(sal_Int32(5), ps[1].nBegin);
     CPPUNIT_ASSERT_EQUAL(sal_Int32(6), ps[1].nEnd);
-    CPPUNIT_ASSERT_EQUAL(TT_EOL, ps[1].tokenType);
+    CPPUNIT_ASSERT_EQUAL(TokenType::EOL, ps[1].tokenType);
 }
 
 void SyntaxHighlightTest::testBasicEmptyComment() {
     OUString s("'");
     std::vector<HighlightPortion> ps;
-    SyntaxHighlighter(HIGHLIGHT_BASIC).getHighlightPortions(s, ps);
+    SyntaxHighlighter(HighlighterLanguage::Basic).getHighlightPortions(s, ps);
     CPPUNIT_ASSERT_EQUAL(
         static_cast<std::vector<HighlightPortion>::size_type>(1), ps.size());
     CPPUNIT_ASSERT_EQUAL(sal_Int32(0), ps[0].nBegin);
     CPPUNIT_ASSERT_EQUAL(sal_Int32(1), ps[0].nEnd);
-    CPPUNIT_ASSERT_EQUAL(TT_COMMENT, ps[0].tokenType);
+    CPPUNIT_ASSERT_EQUAL(TokenType::Comment, ps[0].tokenType);
 }
 
 void SyntaxHighlightTest::testBasicEmptyCommentNewline() {
     OUString s("'\n");
     std::vector<HighlightPortion> ps;
-    SyntaxHighlighter(HIGHLIGHT_BASIC).getHighlightPortions(s, ps);
+    SyntaxHighlighter(HighlighterLanguage::Basic).getHighlightPortions(s, ps);
     CPPUNIT_ASSERT_EQUAL(
         static_cast<std::vector<HighlightPortion>::size_type>(2), ps.size());
     CPPUNIT_ASSERT_EQUAL(sal_Int32(0), ps[0].nBegin);
     CPPUNIT_ASSERT_EQUAL(sal_Int32(1), ps[0].nEnd);
-    CPPUNIT_ASSERT_EQUAL(TT_COMMENT, ps[0].tokenType);
+    CPPUNIT_ASSERT_EQUAL(TokenType::Comment, ps[0].tokenType);
     CPPUNIT_ASSERT_EQUAL(sal_Int32(1), ps[1].nBegin);
     CPPUNIT_ASSERT_EQUAL(sal_Int32(2), ps[1].nEnd);
-    CPPUNIT_ASSERT_EQUAL(TT_EOL, ps[1].tokenType);
+    CPPUNIT_ASSERT_EQUAL(TokenType::EOL, ps[1].tokenType);
 }
 
 void SyntaxHighlightTest::testBasic()
@@ -103,7 +108,7 @@ void SyntaxHighlightTest::testBasic()
     OUString aBasicString("        if Mid(sText,iRun,1 )<> \" \" then Mid( sText ,iRun, 1, Chr( 1 + Asc( Mid(sText,iRun,1 )) ) '");
 
     std::vector<HighlightPortion> aPortions;
-    SyntaxHighlighter(HIGHLIGHT_BASIC).getHighlightPortions(
+    SyntaxHighlighter(HighlighterLanguage::Basic).getHighlightPortions(
         aBasicString, aPortions );
 
     sal_Int32 prevEnd = 0;

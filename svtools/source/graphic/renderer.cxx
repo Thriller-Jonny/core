@@ -49,12 +49,10 @@ GraphicRendererVCL::GraphicRendererVCL() :
 }
 
 
-
 GraphicRendererVCL::~GraphicRendererVCL()
     throw()
 {
 }
-
 
 
 uno::Any SAL_CALL GraphicRendererVCL::queryAggregation( const uno::Type & rType )
@@ -81,13 +79,11 @@ uno::Any SAL_CALL GraphicRendererVCL::queryAggregation( const uno::Type & rType 
 }
 
 
-
 uno::Any SAL_CALL GraphicRendererVCL::queryInterface( const uno::Type & rType )
     throw( uno::RuntimeException, std::exception )
 {
     return OWeakAggObject::queryInterface( rType );
 }
-
 
 
 void SAL_CALL GraphicRendererVCL::acquire()
@@ -97,13 +93,11 @@ void SAL_CALL GraphicRendererVCL::acquire()
 }
 
 
-
 void SAL_CALL GraphicRendererVCL::release()
     throw()
 {
     OWeakAggObject::release();
 }
-
 
 
 OUString SAL_CALL GraphicRendererVCL::getImplementationName()
@@ -119,14 +113,12 @@ sal_Bool SAL_CALL GraphicRendererVCL::supportsService( const OUString& ServiceNa
 }
 
 
-
 uno::Sequence< OUString > SAL_CALL GraphicRendererVCL::getSupportedServiceNames()
     throw( uno::RuntimeException, std::exception )
 {
     uno::Sequence<OUString> aSeq { "com.sun.star.graphic.GraphicRendererVCL" };
     return aSeq;
 }
-
 
 
 uno::Sequence< uno::Type > SAL_CALL GraphicRendererVCL::getTypes()
@@ -153,7 +145,6 @@ uno::Sequence< sal_Int8 > SAL_CALL GraphicRendererVCL::getImplementationId()
 }
 
 
-
 ::comphelper::PropertySetInfo* GraphicRendererVCL::createPropertySetInfo()
 {
     SolarMutexGuard aGuard;
@@ -174,7 +165,6 @@ uno::Sequence< sal_Int8 > SAL_CALL GraphicRendererVCL::getImplementationId()
 }
 
 
-
 void GraphicRendererVCL::_setPropertyValues( const comphelper::PropertyMapEntry** ppEntries, const uno::Any* pValues )
     throw( beans::UnknownPropertyException,
            beans::PropertyVetoException,
@@ -187,7 +177,7 @@ void GraphicRendererVCL::_setPropertyValues( const comphelper::PropertyMapEntry*
     {
         switch( (*ppEntries)->mnHandle )
         {
-            case( UNOGRAPHIC_DEVICE ):
+            case UNOGRAPHIC_DEVICE:
             {
                 uno::Reference< awt::XDevice > xDevice;
 
@@ -204,7 +194,7 @@ void GraphicRendererVCL::_setPropertyValues( const comphelper::PropertyMapEntry*
             }
             break;
 
-            case( UNOGRAPHIC_DESTINATIONRECT ):
+            case UNOGRAPHIC_DESTINATIONRECT:
             {
                 awt::Rectangle aAWTRect;
 
@@ -216,7 +206,7 @@ void GraphicRendererVCL::_setPropertyValues( const comphelper::PropertyMapEntry*
             }
             break;
 
-            case( UNOGRAPHIC_RENDERDATA ):
+            case UNOGRAPHIC_RENDERDATA:
             {
                 *pValues >>= maRenderData;
             }
@@ -229,7 +219,6 @@ void GraphicRendererVCL::_setPropertyValues( const comphelper::PropertyMapEntry*
 }
 
 
-
 void GraphicRendererVCL::_getPropertyValues( const comphelper::PropertyMapEntry** ppEntries, uno::Any* pValues )
     throw( beans::UnknownPropertyException, lang::WrappedTargetException )
 {
@@ -239,14 +228,14 @@ void GraphicRendererVCL::_getPropertyValues( const comphelper::PropertyMapEntry*
     {
         switch( (*ppEntries)->mnHandle )
         {
-            case( UNOGRAPHIC_DEVICE ):
+            case UNOGRAPHIC_DEVICE:
             {
                 if( mxDevice.is() )
                     *pValues <<= mxDevice;
             }
             break;
 
-            case( UNOGRAPHIC_DESTINATIONRECT ):
+            case UNOGRAPHIC_DESTINATIONRECT:
             {
                 const awt::Rectangle aAWTRect( maDestRect.Left(), maDestRect.Top(),
                                                maDestRect.GetWidth(), maDestRect.GetHeight() );
@@ -255,7 +244,7 @@ void GraphicRendererVCL::_getPropertyValues( const comphelper::PropertyMapEntry*
             }
             break;
 
-            case( UNOGRAPHIC_RENDERDATA ):
+            case UNOGRAPHIC_RENDERDATA:
             {
                 *pValues <<= maRenderData;
             }
@@ -266,7 +255,6 @@ void GraphicRendererVCL::_getPropertyValues( const comphelper::PropertyMapEntry*
         ++pValues;
     }
 }
-
 
 
 void SAL_CALL GraphicRendererVCL::render( const uno::Reference< graphic::XGraphic >& rxGraphic )

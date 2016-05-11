@@ -59,7 +59,6 @@ using ::com::sun::star::lang::XServiceInfo;
 using ::com::sun::star::lang::XInitialization;
 using ::com::sun::star::uno::Type;
 using ::com::sun::star::uno::XWeak;
-using ::com::sun::star::lang::XMultiServiceFactory;
 using ::com::sun::star::presentation::ParagraphTarget;
 using ::com::sun::star::drawing::XShape;
 
@@ -453,7 +452,7 @@ Type SAL_CALL RandomAnimationNode::getElementType() throw (RuntimeException, std
 // XElementAccess
 sal_Bool SAL_CALL RandomAnimationNode::hasElements() throw (RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 // XEnumerationAccess

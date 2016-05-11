@@ -46,11 +46,14 @@
 #include <com/sun/star/ui/dialogs/ExecutableDialogResults.hpp>
 #include <com/sun/star/ui/dialogs/XAsynchronousExecutableDialog.hpp>
 #include <com/sun/star/ui/dialogs/FolderPicker.hpp>
+#include <com/sun/star/ui/dialogs/FilePicker.hpp>
+#include <com/sun/star/ui/dialogs/TemplateDescription.hpp>
 #include <com/sun/star/util/thePathSettings.hpp>
 #include <officecfg/Office/Common.hxx>
 #include "optHeaderTabListbox.hxx"
 #include <vcl/help.hxx>
 
+using namespace css;
 using namespace css::beans;
 using namespace css::lang;
 using namespace css::ui::dialogs;
@@ -115,6 +118,7 @@ static Handle2CfgNameMapping_Impl const Hdl2CfgMap_Impl[] =
     { SvtPathOptions::PATH_TEMPLATE,    "Template" },
     { SvtPathOptions::PATH_WORK,        "Work" },
     { SvtPathOptions::PATH_DICTIONARY,        "Dictionary" },
+    { SvtPathOptions::PATH_CLASSIFICATION, "Classification" },
 #if OSL_DEBUG_LEVEL > 1
     { SvtPathOptions::PATH_LINGUISTIC,        "Linguistic" },
 #endif
@@ -234,7 +238,6 @@ SvxPathTabPage::SvxPathTabPage(vcl::Window* pParent, const SfxItemSet& rSet)
 }
 
 
-
 SvxPathTabPage::~SvxPathTabPage()
 {
     disposeOnce();
@@ -275,7 +278,6 @@ bool SvxPathTabPage::FillItemSet( SfxItemSet* )
 }
 
 
-
 void SvxPathTabPage::Reset( const SfxItemSet* )
 {
     pPathBox->Clear();
@@ -284,7 +286,7 @@ void SvxPathTabPage::Reset( const SfxItemSet* )
     long nWidth1 = rBar.GetTextWidth(rBar.GetItemText(1));
     long nWidth2 = rBar.GetTextWidth(rBar.GetItemText(2));
 
-    for( sal_uInt16 i = 0; i <= (sal_uInt16)SvtPathOptions::PATH_WORK; ++i )
+    for( sal_uInt16 i = 0; i <= (sal_uInt16)SvtPathOptions::PATH_CLASSIFICATION; ++i )
     {
         // only writer uses autotext
         if ( i == SvtPathOptions::PATH_AUTOTEXT
@@ -301,12 +303,18 @@ void SvxPathTabPage::Reset( const SfxItemSet* )
             case SvtPathOptions::PATH_TEMP:
             case SvtPathOptions::PATH_TEMPLATE:
             case SvtPathOptions::PATH_DICTIONARY:
+            case SvtPathOptions::PATH_CLASSIFICATION:
 #if OSL_DEBUG_LEVEL > 1
             case SvtPathOptions::PATH_LINGUISTIC:
 #endif
             case SvtPathOptions::PATH_WORK:
             {
-                OUString aStr( CUI_RES( RID_SVXSTR_PATH_NAME_START + i ) );
+                sal_uInt32 nId = RID_SVXSTR_PATH_NAME_START + i;
+                if (i == SvtPathOptions::PATH_CLASSIFICATION)
+                    // RID_SVXSTR_KEY_USERDICTIONARY_DIR already took our slot, so name the key explicitly.
+                    nId = RID_SVXSTR_KEY_CLASSIFICATION_PATH;
+                OUString aStr(CUI_RES(nId));
+
                 nWidth1 = std::max(nWidth1, pPathBox->GetTextWidth(aStr));
                 aStr += "\t";
                 OUString sInternal, sUser, sWritable;
@@ -368,7 +376,6 @@ void SvxPathTabPage::Reset( const SfxItemSet* )
 }
 
 
-
 void SvxPathTabPage::FillUserData()
 {
     HeaderBar &rBar = pPathBox->GetTheHeaderBar();
@@ -379,7 +386,6 @@ void SvxPathTabPage::FillUserData()
     aUserData += bUp ? OUString("1") : OUString("0");
     SetUserData( aUserData );
 }
-
 
 
 IMPL_LINK_NOARG_TYPED(SvxPathTabPage, PathSelect_Impl, SvTreeListBox*, void)
@@ -401,7 +407,6 @@ IMPL_LINK_NOARG_TYPED(SvxPathTabPage, PathSelect_Impl, SvTreeListBox*, void)
     m_pPathBtn->Enable( 1 == nSelCount && bEnable);
     m_pStandardBtn->Enable( nSelCount > 0 && bEnable);
 }
-
 
 
 IMPL_LINK_NOARG_TYPED(SvxPathTabPage, StandardHdl_Impl, Button*, void)
@@ -470,7 +475,6 @@ IMPL_LINK_NOARG_TYPED(SvxPathTabPage, StandardHdl_Impl, Button*, void)
 }
 
 
-
 void SvxPathTabPage::ChangeCurrentEntry( const OUString& _rFolder )
 {
     SvTreeListEntry* pEntry = pPathBox->GetCurEntry();
@@ -486,7 +490,6 @@ void SvxPathTabPage::ChangeCurrentEntry( const OUString& _rFolder )
     GetPathList( pPathImpl->nRealId, sInternal, sUser, sWritable, bReadOnly );
     sUser = pPathImpl->sUserPath;
     sWritable = pPathImpl->sWritablePath;
-    sal_uInt16 nPos = pPathImpl->nRealId;
 
     // old path is an URL?
     INetURLObject aObj( sWritable );
@@ -508,7 +511,7 @@ void SvxPathTabPage::ChangeCurrentEntry( const OUString& _rFolder )
     if ( bChanged )
     {
         pPathBox->SetEntryText( Convert_Impl( sNewPathStr ), pEntry, 1 );
-        nPos = (sal_uInt16)pPathBox->GetModel()->GetAbsPos( pEntry );
+        sal_uInt16 nPos = (sal_uInt16)pPathBox->GetModel()->GetAbsPos( pEntry );
         pPathImpl = static_cast<PathUserData_Impl*>(pPathBox->GetEntry(nPos)->GetUserData());
         pPathImpl->eState = SfxItemState::SET;
         pPathImpl->sWritablePath = sNewPathStr;
@@ -534,7 +537,6 @@ void SvxPathTabPage::ChangeCurrentEntry( const OUString& _rFolder )
 }
 
 
-
 IMPL_LINK_NOARG_TYPED(SvxPathTabPage, DoubleClickPathHdl_Impl, SvTreeListBox*, bool)
 {
     PathHdl_Impl(nullptr);
@@ -546,6 +548,7 @@ IMPL_LINK_NOARG_TYPED(SvxPathTabPage, PathHdl_Impl, Button*, void)
     SvTreeListEntry* pEntry = pPathBox->GetCurEntry();
     sal_uInt16 nPos = ( pEntry != nullptr ) ? static_cast<PathUserData_Impl*>(pEntry->GetUserData())->nRealId : 0;
     OUString sInternal, sUser, sWritable;
+    bool bPickFile = false;
     if ( pEntry )
     {
         PathUserData_Impl* pPathImpl = static_cast<PathUserData_Impl*>(pEntry->GetUserData());
@@ -553,6 +556,7 @@ IMPL_LINK_NOARG_TYPED(SvxPathTabPage, PathHdl_Impl, Button*, void)
         GetPathList( pPathImpl->nRealId, sInternal, sUser, sWritable, bReadOnly );
         sUser = pPathImpl->sUserPath;
         sWritable = pPathImpl->sWritablePath;
+        bPickFile = pPathImpl->nRealId == SvtPathOptions::PATH_CLASSIFICATION;
     }
 
     if(pEntry && !(!SvTreeListBox::GetCollapsedEntryBmp(pEntry)))
@@ -614,12 +618,12 @@ IMPL_LINK_NOARG_TYPED(SvxPathTabPage, PathHdl_Impl, Button*, void)
             }
         }
     }
-    else if ( pEntry )
+    else if (pEntry && !bPickFile)
     {
         try
         {
             Reference < XComponentContext > xContext( ::comphelper::getProcessComponentContext() );
-            xFolderPicker = FolderPicker::create(xContext);;
+            xFolderPicker = FolderPicker::create(xContext);
 
             INetURLObject aURL( sWritable, INetProtocol::File );
             xFolderPicker->setDisplayDirectory( aURL.GetMainURL( INetURLObject::NO_DECODE ) );
@@ -642,8 +646,25 @@ IMPL_LINK_NOARG_TYPED(SvxPathTabPage, PathHdl_Impl, Button*, void)
             SAL_WARN( "cui.options", "SvxPathTabPage::PathHdl_Impl: exception from folder picker" );
         }
     }
+    else if (pEntry)
+    {
+        try
+        {
+            uno::Reference<uno::XComponentContext> xComponentContext(comphelper::getProcessComponentContext());
+            uno::Reference<ui::dialogs::XFilePicker3> xFilePicker = ui::dialogs::FilePicker::createWithMode(xComponentContext, ui::dialogs::TemplateDescription::FILEOPEN_SIMPLE);
+            xFilePicker->appendFilter(OUString(), "*.xml");
+            if (xFilePicker->execute() == ui::dialogs::ExecutableDialogResults::OK)
+            {
+                uno::Sequence<OUString> aPathSeq(xFilePicker->getSelectedFiles());
+                ChangeCurrentEntry(aPathSeq[0]);
+            }
+        }
+        catch (const uno::Exception& rException)
+        {
+            SAL_WARN("cui.options", "SvxPathTabPage::PathHdl_Impl: exception from file picker: " << rException.Message);
+        }
+    }
 }
-
 
 
 IMPL_LINK_TYPED( SvxPathTabPage, HeaderSelect_Impl, HeaderBar*, pBar, void )
@@ -671,7 +692,6 @@ IMPL_LINK_TYPED( SvxPathTabPage, HeaderSelect_Impl, HeaderBar*, pBar, void )
     pModel->SetSortMode( eMode );
     pModel->Resort();
 }
-
 
 
 IMPL_LINK_TYPED( SvxPathTabPage, HeaderEndDrag_Impl, HeaderBar*, pBar, void )
@@ -703,7 +723,6 @@ IMPL_LINK_TYPED( SvxPathTabPage, HeaderEndDrag_Impl, HeaderBar*, pBar, void )
 }
 
 
-
 IMPL_LINK_TYPED( SvxPathTabPage, DialogClosedHdl, DialogClosedEvent*, pEvt, void )
 {
     if ( RET_OK == pEvt->DialogResult )
@@ -714,7 +733,6 @@ IMPL_LINK_TYPED( SvxPathTabPage, DialogClosedHdl, DialogClosedEvent*, pEvt, void
         ChangeCurrentEntry( sURL );
     }
 }
-
 
 
 void SvxPathTabPage::GetPathList(
@@ -780,7 +798,6 @@ void SvxPathTabPage::GetPathList(
         OSL_FAIL( "SvxPathTabPage::GetPathList(): caught an exception!" );
     }
 }
-
 
 
 void SvxPathTabPage::SetPathList(

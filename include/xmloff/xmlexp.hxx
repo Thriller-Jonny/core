@@ -154,10 +154,8 @@ class XMLOFF_DLLPUBLIC SvXMLExport : public ::cppu::WeakImplHelper6<
     XMLImageMapExport* mpImageMapExport;
     XMLErrors*  mpXMLErrors;
 
-    bool                        mbExtended;     // Does document contain extens.
-
     const enum ::xmloff::token::XMLTokenEnum meClass;
-    SAL_DLLPRIVATE void _InitCtor();
+    SAL_DLLPRIVATE void InitCtor_();
 
     SvXMLExportFlags  mnExportFlags;
     SvXMLErrorFlags   mnErrorFlags;
@@ -170,14 +168,14 @@ private:
 
     // Shapes in Writer cannot be named via context menu (#i51726#)
     SvtModuleOptions::EFactory meModelType;
-    SAL_DLLPRIVATE void _DetermineModelType();
+    SAL_DLLPRIVATE void DetermineModelType_();
 
     SAL_DLLPRIVATE void ImplExportMeta(); // <office:meta>
     SAL_DLLPRIVATE void ImplExportSettings(); // <office:settings>
-    SAL_DLLPRIVATE void ImplExportStyles( bool bUsed ); // <office:styles>
-    SAL_DLLPRIVATE void ImplExportAutoStyles( bool bUsed );
+    SAL_DLLPRIVATE void ImplExportStyles(); // <office:styles>
+    SAL_DLLPRIVATE void ImplExportAutoStyles();
         // <office:automatic-styles>
-    SAL_DLLPRIVATE void ImplExportMasterStyles( bool bUsed );
+    SAL_DLLPRIVATE void ImplExportMasterStyles();
         // <office:master-styles>
     SAL_DLLPRIVATE void ImplExportContent(); // <office:body>
     virtual void SetBodyAttributes();
@@ -187,42 +185,40 @@ protected:
     void setExportFlags( SvXMLExportFlags nExportFlags ) { mnExportFlags = nExportFlags; }
 
     // Get (modifyable) namespace map
-    SvXMLNamespaceMap& _GetNamespaceMap() { return *mpNamespaceMap; }
+    SvXMLNamespaceMap& GetNamespaceMap_() { return *mpNamespaceMap; }
 
     // get a new namespave map (used in starmath to have a default namespace)
     void ResetNamespaceMap();
 
     /// Override this method to export the content of <office:meta>.
     /// There is a default implementation.
-    virtual void _ExportMeta();
+    virtual void ExportMeta_();
 
     /// Override this method to export the content of <office:scripts>.
     /// There is a default implementation.
-    virtual void _ExportScripts();
+    virtual void ExportScripts_();
 
     /// Override this method to export the font declarations
     /// The default implementation will export the contents of the
     /// XMLFontAutoStylePool if it has been created.
-    virtual void _ExportFontDecls();
+    virtual void ExportFontDecls_();
 
     /// Override this method to export the content of <style:styles>.
     /// If bUsed is set, used styles should be exported only.
     /// Overriding Methods must call this method !
-    virtual void _ExportStyles( bool bUsed );
+    virtual void ExportStyles_( bool bUsed );
 
     /// Override this method to export the contents of <style:auto-styles>.
-    virtual void _ExportAutoStyles() = 0;
+    virtual void ExportAutoStyles_() = 0;
 
     /// Override this method to export the contents of <style:master-styles>.
-    virtual void _ExportMasterStyles() = 0;
+    virtual void ExportMasterStyles_() = 0;
 
     /// Override this method to export the content of <office:body>.
-    virtual void _ExportContent() = 0;
+    virtual void ExportContent_() = 0;
 
     OUString GetSourceShellID() const;
     OUString GetDestinationShellID() const;
-
-    void SetExtended( bool bSet=true ) { mbExtended = bSet; }
 
     // save linked sections? (may be false in global documents)
     bool mbSaveLinkedSections;
@@ -301,7 +297,7 @@ public:
     virtual ~SvXMLExport();
 
     static const css::uno::Sequence< sal_Int8 > & getUnoTunnelId() throw();
-    static SvXMLExport* getImplementation( css::uno::Reference< css::uno::XInterface > ) throw();
+    static SvXMLExport* getImplementation( const css::uno::Reference< css::uno::XInterface >& ) throw();
 
     // XExporter
     virtual void SAL_CALL setSourceDocument( const css::uno::Reference< css::lang::XComponent >& xDoc ) throw(css::lang::IllegalArgumentException, css::uno::RuntimeException, std::exception) override;
@@ -332,12 +328,10 @@ public:
         be added, as well.</p>
 
         @param i_rNamespace         the namespace to be declared
-        @param i_rPreferredPrefix   (opt.) preferred prefix for the namespace
 
         @returns the actual prefix that the namespace is associated with
       */
-    OUString EnsureNamespace(OUString const & i_rNamespace,
-                             OUString const & i_rPreferredPrefix = OUString("gen") );
+    OUString EnsureNamespace(OUString const & i_rNamespace );
 
     // Check if common attribute list is empty.
 #ifndef DBG_UTIL
@@ -378,24 +372,15 @@ public:
         @param  bWriteEmpty
                 Whether to write empty *:language and *:country attribute
                 values in case of an empty locale (denoting system).
-
-        @param  eClass
-                default, XML_LANGUAGE: XML_SCRIPT, XML_COUNTRY, XML_RFC_LANGUAGE_TAG
-                XML_LANGUAGE_ASIAN: XML_SCRIPT_ASIAN, XML_COUNTRY_ASIAN, XML_RFC_LANGUAGE_TAG_ASIAN
-                    also switches nPrefix XML_NAMESPACE_FO to XML_NAMESPACE_STYLE
-                XML_LANGUAGE_COMPLEX: XML_SCRIPT_COMPLEX, XML_COUNTRY_COMPLEX, XML_RFC_LANGUAGE_TAG_COMPLEX
-                    also switches nPrefix XML_NAMESPACE_FO to XML_NAMESPACE_STYLE
      */
     void AddLanguageTagAttributes( sal_uInt16 nPrefix, sal_uInt16 nPrefixRfc,
-            const css::lang::Locale& rLocale, bool bWriteEmpty,
-            enum ::xmloff::token::XMLTokenEnum eClass = ::xmloff::token::XML_LANGUAGE );
+            const css::lang::Locale& rLocale, bool bWriteEmpty);
 
     /** Same as AddLanguageTagAttributes() but with LanguageTag parameter
         instead of Locale.
      */
     void AddLanguageTagAttributes( sal_uInt16 nPrefix, sal_uInt16 nPrefixRfc,
-            const LanguageTag& rLanguageTag, bool bWriteEmpty,
-            enum ::xmloff::token::XMLTokenEnum eClass = ::xmloff::token::XML_LANGUAGE );
+            const LanguageTag& rLanguageTag, bool bWriteEmpty );
 
     // add several attributes to the common attribute list
     void AddAttributeList( const css::uno::Reference<
@@ -470,9 +455,9 @@ public:
     inline bool HasFormExport();
 
     // get XPropertySet with export information
-    inline css::uno::Reference< css::beans::XPropertySet > getExportInfo() const { return mxExportInfo; }
+    const css::uno::Reference< css::beans::XPropertySet >& getExportInfo() const { return mxExportInfo; }
 
-    css::uno::Reference< css::task::XStatusIndicator > GetStatusIndicator() { return mxStatusIndicator; }
+    const css::uno::Reference< css::task::XStatusIndicator >& GetStatusIndicator() { return mxStatusIndicator; }
 
     /// get Event export, with handlers for script types "None" and
     /// "StarBasic" already registered; other handlers may be registered, too.
@@ -500,7 +485,7 @@ public:
     // get export flags
     SvXMLExportFlags getExportFlags() const { return mnExportFlags; }
 
-    bool ExportEmbeddedOwnObject(
+    void ExportEmbeddedOwnObject(
         css::uno::Reference<css::lang::XComponent >& rComp );
 
     OUString GetRelativeReference(const OUString& rValue);
@@ -545,7 +530,7 @@ public:
 
     ::comphelper::UnoInterfaceToUniqueIdentifierMapper& getInterfaceToIdentifierMapper();
 
-    css::uno::Reference< css::uno::XComponentContext > getComponentContext() { return m_xContext;}
+    const css::uno::Reference< css::uno::XComponentContext >& getComponentContext() { return m_xContext;}
 
     // Shapes in Writer cannot be named via context menu (#i51726#)
     SvtModuleOptions::EFactory GetModelType() const

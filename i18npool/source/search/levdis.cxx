@@ -23,7 +23,7 @@
     including wildcards
     '*' for any number (0 or more) of arbitrary characters
     '?' for exactly one arbitrary character
-    escapeable with  backslash, "\*" or "\?"
+    escapable with  backslash, "\*" or "\?"
 
     Return:
         WLD if WLD <= nLimit, else nLimit+1
@@ -177,7 +177,7 @@ int WLevDistance::WLD( const sal_Unicode* cString, sal_Int32 nStringLen )
             nP = nRepP0;
         if ( c == '*' && bpPatIsWild[j] )
         {
-            nQ = 0;     // instertion and deletion without penalty
+            nQ = 0;     // insertion and deletion without penalty
             nR = 0;
         }
         else
@@ -266,7 +266,7 @@ int WLevDistance::WLD( const sal_Unicode* cString, sal_Int32 nStringLen )
 
 // Calculating      nLimit,   nReplP0,    nInsQ0,     nDelR0,     bSplitCount
 // from user values           nOtherX,    nShorterY,  nLongerZ,   bRelaxed
-int WLevDistance::CalcLPQR( int nX, int nY, int nZ, bool bRelaxed )
+void WLevDistance::CalcLPQR( int nX, int nY, int nZ, bool bRelaxed )
 {
     if ( nX < 0 ) nX = 0;       // only positive values
     if ( nY < 0 ) nY = 0;
@@ -286,7 +286,6 @@ int WLevDistance::CalcLPQR( int nX, int nY, int nZ, bool bRelaxed )
     nInsQ0 = ( nY ? nLimit / nY : nLimit + 1 );
     nDelR0 = ( nZ ? nLimit / nZ : nLimit + 1 );
     bSplitCount = bRelaxed;
-    return nLimit;
 }
 
 // greatest common divisor according to Euklid (chaindivision)

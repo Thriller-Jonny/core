@@ -53,7 +53,6 @@ namespace vcl {
     class IconThemeInfo;
 }
 
-// - MouseSettings -
 
 enum class MouseSettingsOptions
 {
@@ -176,27 +175,15 @@ struct FrameStyle
 };
 
 
-
-// - StyleSettings -
-
-
 enum class StyleSettingsOptions
 {
     NONE           = 0x0000,
     Mono           = 0x0001,
-    Color          = 0x0002,
-    Flat           = 0x0004,
-    Great          = 0x0008,
-    Highlight      = 0x0010,
-    AdvancedUser   = 0x0020,
-    ScrollArrow    = 0x0040,
-    SpinArrow      = 0x0080,
-    SpinUpDown     = 0x0100,
-    NoMnemonics    = 0x0200,
+    NoMnemonics    = 0x0002,
 };
 namespace o3tl
 {
-    template<> struct typed_flags<StyleSettingsOptions> : is_typed_flags<StyleSettingsOptions, 0x03ff> {};
+    template<> struct typed_flags<StyleSettingsOptions> : is_typed_flags<StyleSettingsOptions, 0x0003> {};
 }
 
 enum class DragFullOptions
@@ -626,9 +613,6 @@ public:
 };
 
 
-// - MiscSettings -
-
-
 class VCL_DLLPUBLIC MiscSettings
 {
     void                            CopyData();
@@ -640,7 +624,7 @@ public:
                                     MiscSettings();
                                     ~MiscSettings();
 
-#ifdef WNT
+#ifdef _WIN32
     void                            SetEnableATToolSupport( bool bEnable );
 #endif
     bool                            GetEnableATToolSupport() const;
@@ -653,8 +637,6 @@ public:
     bool                            operator !=( const MiscSettings& rSet ) const;
 };
 
-
-// - HelpSettings -
 
 class VCL_DLLPUBLIC HelpSettings
 {
@@ -674,8 +656,6 @@ public:
     bool                            operator !=( const HelpSettings& rSet ) const;
 };
 
-
-// - AllSettings -
 
 enum class AllSettingsFlags {
     NONE     = 0x0000,

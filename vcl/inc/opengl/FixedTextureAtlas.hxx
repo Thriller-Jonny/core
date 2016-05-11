@@ -13,10 +13,11 @@
 
 #include "opengl/texture.hxx"
 
+struct FixedTexture;
 
 class VCL_PLUGIN_PUBLIC FixedTextureAtlasManager
 {
-    std::vector<std::unique_ptr<ImplOpenGLTexture>> mpTextures;
+    std::vector<std::unique_ptr<FixedTexture>> maFixedTextures;
 
     int mWidthFactor;
     int mHeightFactor;
@@ -26,7 +27,9 @@ class VCL_PLUGIN_PUBLIC FixedTextureAtlasManager
 
 public:
     FixedTextureAtlasManager(int nWidthFactor, int nHeightFactor, int nTextureSize);
+    ~FixedTextureAtlasManager();
     OpenGLTexture InsertBuffer(int nWidth, int nHeight, int nFormat, int nType, sal_uInt8* pData);
+    OpenGLTexture Reserve(int nWidth, int nHeight);
 
     int GetSubtextureSize()
     {

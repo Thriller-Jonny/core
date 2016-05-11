@@ -57,7 +57,7 @@ class XInteractionSupplyNameImpl : public cppu::WeakImplHelper<
             m_aNewName = Name;
         }
 
-        OUString getName() const
+        const OUString& getName() const
         {
             return m_aNewName;
         }
@@ -72,7 +72,6 @@ class XInteractionSupplyNameImpl : public cppu::WeakImplHelper<
         bool          m_bSelected;
         OUString m_aNewName;
     };
-
 
 
     class XInteractionAbortImpl : public cppu::WeakImplHelper<
@@ -101,7 +100,6 @@ class XInteractionSupplyNameImpl : public cppu::WeakImplHelper<
 
         bool          m_bSelected;
     };
-
 
 
     class XInteractionRequestImpl

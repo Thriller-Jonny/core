@@ -28,7 +28,6 @@
 #include <vcl/outdev.hxx>
 
 
-
 /**
  * Get ExchangeFormatID of the DrawingEngine.
  * The data can then be made available via
@@ -54,7 +53,7 @@ namespace com { namespace sun { namespace star { namespace lang {
  * The resulting default font height, however, stays the same (the logical
  * font height is converted).
  */
-SVX_DLLPUBLIC SdrOutliner* SdrMakeOutliner(sal_uInt16 nOutlinerMode, SdrModel& rMod);
+SVX_DLLPUBLIC SdrOutliner* SdrMakeOutliner(OutlinerMode nOutlinerMode, SdrModel& rMod);
 
 /**
  * Global default settings for the DrawingEngine.
@@ -96,7 +95,7 @@ public:
     // Create an Outliner with the engine-global default values on the heap.
     // If pMod != nullptr, the MapMode of the passed model is used.
     // The resulting default font height, however, stays the same (the logical font height is converted).
-    friend SVX_DLLPUBLIC SdrOutliner* SdrMakeOutliner(sal_uInt16 nOutlinerMode, SdrModel& rMod);
+    friend SVX_DLLPUBLIC SdrOutliner* SdrMakeOutliner(OutlinerMode nOutlinerMode, SdrModel& rMod);
 };
 
 class SfxItemSet;
@@ -107,7 +106,6 @@ class SfxItemSet;
  * @returns false for XFILL_NONE and rCol remains unchanged
  */
 SVX_DLLPUBLIC bool GetDraftFillColor(const SfxItemSet& rSet, Color& rCol);
-
 
 
 /**
@@ -130,17 +128,17 @@ sal_uInt16* RemoveWhichRange(const sal_uInt16* pOldWhichTable, sal_uInt16 nRange
 class SVX_DLLPUBLIC SvdProgressInfo
 {
 private:
-    sal_uIntPtr nSumActionCount; // Sum of all Actions
-    sal_uIntPtr nSumCurAction;   // Sum of all handled Actions
+    sal_uIntPtr m_nSumActionCount; // Sum of all Actions
+    sal_uIntPtr m_nSumCurAction;   // Sum of all handled Actions
 
-    sal_uIntPtr nActionCount;   // Count of Actions in the current object
-    sal_uIntPtr nCurAction;     // Count of handled Actions in the current object
+    sal_uIntPtr m_nActionCount;   // Count of Actions in the current object
+    sal_uIntPtr m_nCurAction;     // Count of handled Actions in the current object
 
-    sal_uIntPtr nInsertCount;   // Count of to-be-inserted Actions in the current object
-    sal_uIntPtr nCurInsert;     // Count of already inserted Actions
+    sal_uIntPtr m_nInsertCount;   // Count of to-be-inserted Actions in the current object
+    sal_uIntPtr m_nCurInsert;     // Count of already inserted Actions
 
-    sal_uIntPtr nObjCount;      // Count of selected objects
-    sal_uIntPtr nCurObj;        // Current object
+    sal_uIntPtr m_nObjCount;      // Count of selected objects
+    sal_uIntPtr m_nCurObj;        // Current object
 
     Link<void*,bool>  maLink;
 
@@ -149,25 +147,25 @@ public:
 
     void Init( sal_uIntPtr _nSumActionCount, sal_uIntPtr _nObjCount );
 
-    bool SetNextObject();
+    void SetNextObject();
 
     void SetActionCount( sal_uIntPtr _nActionCount );
     void SetInsertCount( sal_uIntPtr _nInsertCount );
 
     bool ReportActions( sal_uIntPtr nActionCount );
-    bool ReportInserts( sal_uIntPtr nInsertCount );
+    void ReportInserts( sal_uIntPtr nInsertCount );
 
-    sal_uIntPtr GetSumCurAction() const { return nSumCurAction; };
-    sal_uIntPtr GetObjCount() const { return nObjCount; };
-    sal_uIntPtr GetCurObj() const { return nCurObj; };
+    sal_uIntPtr GetSumCurAction() const { return m_nSumCurAction; };
+    sal_uIntPtr GetObjCount() const { return m_nObjCount; };
+    sal_uIntPtr GetCurObj() const { return m_nCurObj; };
 
-    sal_uIntPtr GetActionCount() const { return nActionCount; };
-    sal_uIntPtr GetCurAction() const { return nCurAction; };
+    sal_uIntPtr GetActionCount() const { return m_nActionCount; };
+    sal_uIntPtr GetCurAction() const { return m_nCurAction; };
 
-    sal_uIntPtr GetInsertCount() const { return nInsertCount; };
-    sal_uIntPtr GetCurInsert() const { return nCurInsert; };
+    sal_uIntPtr GetInsertCount() const { return m_nInsertCount; };
+    sal_uIntPtr GetCurInsert() const { return m_nCurInsert; };
 
-    bool ReportRescales( sal_uIntPtr nRescaleCount );
+    void ReportRescales( sal_uIntPtr nRescaleCount );
 };
 
 
@@ -185,7 +183,7 @@ public:
     unsigned GetLinkCount() const            { return (unsigned)aList.size(); }
     Link<SdrObjFactory*,void>& GetLink(unsigned nNum)           { return aList[nNum]; }
     const Link<SdrObjFactory*,void>& GetLink(unsigned nNum) const { return aList[nNum]; }
-    void InsertLink(const Link<SdrObjFactory*,void>& rLink, unsigned nPos=0xFFFF);
+    void InsertLink(const Link<SdrObjFactory*,void>& rLink);
     void RemoveLink(const Link<SdrObjFactory*,void>& rLink);
 };
 
@@ -251,7 +249,6 @@ namespace sdr
 class SdrObjEditView;
 
 SVX_DLLPUBLIC Color GetTextEditBackgroundColor(const SdrObjEditView& rView);
-
 
 
 #endif // INCLUDED_SVX_SVDETC_HXX

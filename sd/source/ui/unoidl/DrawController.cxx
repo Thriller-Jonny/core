@@ -195,7 +195,7 @@ sal_Bool SAL_CALL DrawController::suspend( sal_Bool Suspend ) throw (css::uno::R
             // do not allow suspend if a slideshow needs this controller!
             rtl::Reference< SlideShow > xSlideShow( SlideShow::GetSlideShow( *pViewShellBase ) );
             if( xSlideShow.is() && xSlideShow->dependsOn(pViewShellBase) )
-                return sal_False;
+                return false;
         }
     }
 
@@ -205,7 +205,7 @@ sal_Bool SAL_CALL DrawController::suspend( sal_Bool Suspend ) throw (css::uno::R
 // XServiceInfo
 OUString SAL_CALL DrawController::getImplementationName(  ) throw(RuntimeException, std::exception)
 {
-    // Do not throw an excepetion at the moment.  This leads to a crash
+    // Do not throw an exception at the moment.  This leads to a crash
     // under Solaris on reload.  See issue i70929 for details.
     //    ThrowIfDisposed();
     return OUString("DrawController") ;
@@ -451,7 +451,7 @@ void DrawController::NotifyAccUpdate()
 {
     sal_Int32 nHandle = PROPERTY_UPDATEACC;
     Any aNewValue, aOldValue;
-    fire (&nHandle, &aNewValue, &aOldValue, 1, sal_False);
+    fire (&nHandle, &aNewValue, &aOldValue, 1, false);
 }
 
 void DrawController::fireChangeLayer( css::uno::Reference< css::drawing::XLayer>* pCurrentLayer ) throw()
@@ -464,7 +464,7 @@ void DrawController::fireChangeLayer( css::uno::Reference< css::drawing::XLayer>
 
         Any aOldValue ;
 
-        fire (&nHandle, &aNewValue, &aOldValue, 1, sal_False);
+        fire (&nHandle, &aNewValue, &aOldValue, 1, false);
 
         mpCurrentLayer = pCurrentLayer;
     }
@@ -482,7 +482,7 @@ void DrawController::fireSwitchCurrentPage(sal_Int32 pageIndex ) throw()
 
         // Use new property to handle page change event
         sal_Int32 nHandles = PROPERTY_PAGE_CHANGE;
-        fire( &nHandles, &aNewValue, &aOldValue, 1, sal_False );
+        fire( &nHandles, &aNewValue, &aOldValue, 1, false );
 }
 
 void DrawController::FirePropertyChange (
@@ -492,7 +492,7 @@ void DrawController::FirePropertyChange (
 {
     try
     {
-        fire (&nHandle, &rNewValue, &rOldValue, 1, sal_False);
+        fire (&nHandle, &rNewValue, &rOldValue, 1, false);
     }
     catch (const RuntimeException&)
     {
@@ -677,7 +677,7 @@ IPropertyArrayHelper & DrawController::getInfoHelper()
     {
         ::std::vector<beans::Property> aProperties;
         FillPropertyTable(aProperties);
-        mpPropertyArrayHelper.reset(new OPropertyArrayHelper(comphelper::containerToSequence(aProperties), sal_False));
+        mpPropertyArrayHelper.reset(new OPropertyArrayHelper(comphelper::containerToSequence(aProperties), false));
     }
 
     return *mpPropertyArrayHelper.get();
@@ -720,13 +720,13 @@ sal_Bool SAL_CALL DrawController::isFormDesignMode(  ) throw (uno::RuntimeExcept
     return bIsDesignMode;
 }
 
-void SAL_CALL DrawController::setFormDesignMode( sal_Bool _DesignMode ) throw (uno::RuntimeException, std::exception)
+void SAL_CALL DrawController::setFormDesignMode( sal_Bool DesignMode ) throw (uno::RuntimeException, std::exception)
 {
     SolarMutexGuard aGuard;
 
     FmFormShell* pFormShell = mpBase->GetFormShellManager()->GetFormShell();
     if ( pFormShell )
-        pFormShell->SetDesignMode( _DesignMode );
+        pFormShell->SetDesignMode( DesignMode );
 }
 
 uno::Reference< awt::XControl > SAL_CALL DrawController::getControl( const uno::Reference< awt::XControlModel >& xModel ) throw (container::NoSuchElementException, uno::RuntimeException, std::exception)

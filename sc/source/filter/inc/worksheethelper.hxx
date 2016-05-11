@@ -199,6 +199,9 @@ public:
     /** Returns the XCell interface for the passed cell address. */
     css::uno::Reference< css::table::XCell >
                         getCell( const css::table::CellAddress& rAddress ) const;
+
+    css::uno::Reference< css::table::XCell >
+                        getCell( const ScAddress& rAddress ) const;
     /** Returns the XCellRange interface for the passed cell range address. */
     css::uno::Reference< css::table::XCellRange >
                         getCellRange( const css::table::CellRangeAddress& rRange ) const;
@@ -248,6 +251,7 @@ public:
 
     /** Extends the used area of this sheet by the passed cell position. */
     void                extendUsedArea( const css::table::CellAddress& rAddress );
+    void                extendUsedArea( const ScAddress& rAddress );
     /** Extends the used area of this sheet by the passed cell range. */
     void                extendUsedArea( const css::table::CellRangeAddress& rRange );
     /** Extends the shape bounding box by the position and size of the passed rectangle (in 1/100 mm). */
@@ -275,16 +279,26 @@ public:
 
     /** Inserts a value cell directly into the Calc sheet. */
     void putValue( const css::table::CellAddress& rAddress, double fValue );
+    void putValue( const ScAddress& rAddress, double fValue );
 
     /** Inserts a string cell directly into the Calc sheet. */
     void putString( const css::table::CellAddress& rAddress, const OUString& rText );
+    void putString( const ScAddress& rAddress, const OUString& rText );
+
     /** Inserts a rich-string cell directly into the Calc sheet. */
     void putRichString(
         const css::table::CellAddress& rAddress,
         const RichString& rString, const oox::xls::Font* pFirstPortionFont );
+
+    void putRichString(
+        const ScAddress& rAddress,
+        const RichString& rString, const oox::xls::Font* pFirstPortionFont );
+
     /** Inserts a formula cell directly into the Calc sheet. */
     void putFormulaTokens(
         const css::table::CellAddress& rAddress, const ApiTokenSequence& rTokens );
+    void putFormulaTokens(
+        const ScAddress& rAddress, const ApiTokenSequence& rTokens );
 
     /** Initial conversion before importing the worksheet. */
     void                initializeWorksheetImport();
@@ -294,19 +308,29 @@ public:
     void finalizeDrawingImport();
 
     void                setCellFormula( const css::table::CellAddress& rTokenAddress, const OUString&  );
+    void                setCellFormula( const ScAddress& rTokenAddress, const OUString&  );
 
     void setCellFormula(
         const css::table::CellAddress& rAddr, sal_Int32 nSharedId,
         const OUString& rCellValue, sal_Int32 nValueType );
+    void setCellFormula(
+        const ScAddress& rAddr, sal_Int32 nSharedId,
+        const OUString& rCellValue, sal_Int32 nValueType );
 
     void                setCellArrayFormula( const css::table::CellRangeAddress& rRangeAddress, const css::table::CellAddress& rTokenAddress, const OUString&  );
+    void                setCellArrayFormula( const css::table::CellRangeAddress& rRangeAddress, const ScAddress& rTokenAddress, const OUString&  );
 
     void createSharedFormulaMapEntry(
         const css::table::CellAddress& rAddress,
         sal_Int32 nSharedId, const OUString& rTokens );
+    void createSharedFormulaMapEntry(
+        const ScAddress& rAddress,
+        sal_Int32 nSharedId, const OUString& rTokens );
 
     void setCellFormulaValue(
         const css::table::CellAddress& rAddress, const OUString& rValueStr, sal_Int32 nCellType );
+    void setCellFormulaValue(
+        const ScAddress& rAddress, const OUString& rValueStr, sal_Int32 nCellType );
 
 private:
     WorksheetGlobals&   mrSheetGlob;

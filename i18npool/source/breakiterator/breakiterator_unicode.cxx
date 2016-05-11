@@ -52,8 +52,8 @@ BreakIterator_Unicode::~BreakIterator_Unicode()
     delete character.aBreakIterator;
     delete sentence.aBreakIterator;
     delete line.aBreakIterator;
-    for (size_t i = 0; i < SAL_N_ELEMENTS(words); i++)
-        delete words[i].aBreakIterator;
+    for (BI_Data & word : words)
+        delete word.aBreakIterator;
 }
 
 /*
@@ -123,7 +123,7 @@ void SAL_CALL BreakIterator_Unicode::loadICUBreakIterator(const css::lang::Local
                     OUStringToOString(breakRules[breakType], RTL_TEXTENCODING_ASCII_US).getStr(), &status), status);
             }
             //use icu's breakiterator for Thai, Tibetan and Dzongkha
-            else if (rLocale.Language != "th" && rLocale.Language != "lo" && rLocale.Language != "bo" && rLocale.Language != "dz")
+            else if (rLocale.Language != "th" && rLocale.Language != "lo" && rLocale.Language != "bo" && rLocale.Language != "dz" && rLocale.Language != "km")
             {
                 status = U_ZERO_ERROR;
                 OStringBuffer aUDName(64);
@@ -412,7 +412,7 @@ LineBreakResults SAL_CALL BreakIterator_Unicode::getLineBreak(
 
             } else {
                 lbr.breakIndex = line.aBreakIterator->preceding(nStartPos);
-                lbr.breakType = BreakType::WORDBOUNDARY;;
+                lbr.breakType = BreakType::WORDBOUNDARY;
             }
         } else { //word boundary break
             lbr.breakIndex = line.aBreakIterator->preceding(nStartPos);

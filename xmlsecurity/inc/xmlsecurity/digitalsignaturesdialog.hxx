@@ -29,6 +29,7 @@
 
 #include <xmlsecurity/documentsignaturehelper.hxx>
 #include <xmlsecurity/xmlsignaturehelper.hxx>
+#include <documentsignaturemanager.hxx>
 
 #include <vector>
 
@@ -52,16 +53,10 @@ class DigitalSignaturesDialog : public ModalDialog
 {
 private:
     css::uno::Reference< css::uno::XComponentContext >& mxCtx;
-    XMLSignatureHelper      maSignatureHelper;
 
-    css::uno::Reference < css::embed::XStorage > mxStore;
-    css::uno::Reference < css::io::XStream > mxSignatureStream;
-    css::uno::Reference < css::io::XStream > mxTempSignatureStream;
-    SignatureInformations   maCurrentSignatureInformations;
+    DocumentSignatureManager maSignatureManager;
     bool                    mbVerifySignatures;
     bool                    mbSignaturesChanged;
-    DocumentSignatureMode   meSignatureMode;
-    css::uno::Sequence < css::uno::Sequence < css::beans::PropertyValue > > m_manifest;
 
     VclPtr<FixedText>          m_pHintDocFT;
     VclPtr<FixedText>          m_pHintBasicFT;
@@ -96,10 +91,9 @@ private:
     DECL_LINK_TYPED(StartVerifySignatureHdl, LinkParamNone*, bool );
     DECL_LINK_TYPED(OKButtonHdl, Button*, void );
 
-    void                ImplGetSignatureInformations(bool bUseTempStream);
+    void                ImplGetSignatureInformations(bool bUseTempStream, bool bCacheLastSignature = true);
     void                ImplFillSignaturesBox();
     void                ImplShowSignaturesDetails();
-    SignatureStreamHelper ImplOpenSignatureStream( sal_Int32 eStreamMode, bool bTempStream );
 
     //Checks if adding is allowed.
     //See the spec at specs/www/appwide/security/Electronic_Signatures_and_Security.sxw
@@ -107,9 +101,6 @@ private:
     bool canAdd();
     bool canRemove();
 
-    //Checks if a particular stream is a valid xml stream. Those are treated differently
-    //when they are signed (c14n transformation)
-    bool isXML(const OUString& rURI );
     bool canAddRemove();
 
 public:

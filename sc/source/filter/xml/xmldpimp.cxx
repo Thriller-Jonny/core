@@ -634,12 +634,7 @@ SvXMLImportContext *ScXMLDPSourceSQLContext::CreateChildContext( sal_uInt16 nPre
                                             const OUString& rLName,
                                             const css::uno::Reference<css::xml::sax::XAttributeList>& /* xAttrList */ )
 {
-    SvXMLImportContext *pContext = nullptr;
-
-    if( !pContext )
-        pContext = new SvXMLImportContext( GetImport(), nPrefix, rLName );
-
-    return pContext;
+    return new SvXMLImportContext( GetImport(), nPrefix, rLName );
 }
 
 void ScXMLDPSourceSQLContext::EndElement()
@@ -688,12 +683,7 @@ SvXMLImportContext *ScXMLDPSourceTableContext::CreateChildContext( sal_uInt16 nP
                                             const OUString& rLName,
                                             const css::uno::Reference<css::xml::sax::XAttributeList>& /* xAttrList */ )
 {
-    SvXMLImportContext *pContext = nullptr;
-
-    if( !pContext )
-        pContext = new SvXMLImportContext( GetImport(), nPrefix, rLName );
-
-    return pContext;
+    return new SvXMLImportContext( GetImport(), nPrefix, rLName );
 }
 
 void ScXMLDPSourceTableContext::EndElement()
@@ -742,12 +732,7 @@ SvXMLImportContext *ScXMLDPSourceQueryContext::CreateChildContext( sal_uInt16 nP
                                             const OUString& rLName,
                                             const css::uno::Reference<css::xml::sax::XAttributeList>& /* xAttrList */ )
 {
-    SvXMLImportContext *pContext = nullptr;
-
-    if( !pContext )
-        pContext = new SvXMLImportContext( GetImport(), nPrefix, rLName );
-
-    return pContext;
+    return new SvXMLImportContext( GetImport(), nPrefix, rLName );
 }
 
 void ScXMLDPSourceQueryContext::EndElement()
@@ -811,12 +796,7 @@ SvXMLImportContext *ScXMLSourceServiceContext::CreateChildContext( sal_uInt16 nP
                                             const OUString& rLName,
                                             const css::uno::Reference<css::xml::sax::XAttributeList>& /* xAttrList */ )
 {
-    SvXMLImportContext *pContext = nullptr;
-
-    if( !pContext )
-        pContext = new SvXMLImportContext( GetImport(), nPrefix, rLName );
-
-    return pContext;
+    return new SvXMLImportContext( GetImport(), nPrefix, rLName );
 }
 
 void ScXMLSourceServiceContext::EndElement()
@@ -1335,7 +1315,7 @@ ScXMLDataPilotDisplayInfoContext::ScXMLDataPilotDisplayInfoContext( ScXMLImport&
             if (IsXMLToken(aLocalName, XML_ENABLED))
             {
                 if (IsXMLToken(sValue, XML_TRUE))
-                    aInfo.IsEnabled = sal_True;
+                    aInfo.IsEnabled = true;
                 else
                     aInfo.IsEnabled = false;
             }
@@ -1385,7 +1365,7 @@ ScXMLDataPilotSortInfoContext::ScXMLDataPilotSortInfoContext( ScXMLImport& rImpo
             if (IsXMLToken(aLocalName, XML_ORDER))
             {
                 if (IsXMLToken(sValue, XML_ASCENDING))
-                    aInfo.IsAscending = sal_True;
+                    aInfo.IsAscending = true;
                 else if (IsXMLToken(sValue, XML_DESCENDING))
                     aInfo.IsAscending = false;
             }
@@ -1433,7 +1413,7 @@ ScXMLDataPilotLayoutInfoContext::ScXMLDataPilotLayoutInfoContext( ScXMLImport& r
             if (IsXMLToken(aLocalName, XML_ADD_EMPTY_LINES))
             {
                 if (IsXMLToken(sValue, XML_TRUE))
-                    aInfo.AddEmptyLines = sal_True;
+                    aInfo.AddEmptyLines = true;
                 else
                     aInfo.AddEmptyLines = false;
             }
@@ -1567,12 +1547,7 @@ SvXMLImportContext *ScXMLDataPilotSubTotalContext::CreateChildContext( sal_uInt1
                                             const OUString& rLName,
                                             const css::uno::Reference<css::xml::sax::XAttributeList>& /* xAttrList */ )
 {
-    SvXMLImportContext *pContext = nullptr;
-
-    if( !pContext )
-        pContext = new SvXMLImportContext( GetImport(), nPrefix, rLName );
-
-    return pContext;
+    return new SvXMLImportContext( GetImport(), nPrefix, rLName );
 }
 
 void ScXMLDataPilotSubTotalContext::EndElement()
@@ -1676,12 +1651,7 @@ SvXMLImportContext *ScXMLDataPilotMemberContext::CreateChildContext( sal_uInt16 
                                             const OUString& rLName,
                                             const css::uno::Reference<css::xml::sax::XAttributeList>& /* xAttrList */ )
 {
-    SvXMLImportContext *pContext = nullptr;
-
-    if( !pContext )
-        pContext = new SvXMLImportContext( GetImport(), nPrefix, rLName );
-
-    return pContext;
+    return new SvXMLImportContext( GetImport(), nPrefix, rLName );
 }
 
 void ScXMLDataPilotMemberContext::EndElement()
@@ -1905,12 +1875,7 @@ SvXMLImportContext *ScXMLDataPilotGroupMemberContext::CreateChildContext( sal_uI
                                             const OUString& rLName,
                                             const css::uno::Reference<css::xml::sax::XAttributeList>& /* xAttrList */ )
 {
-    SvXMLImportContext *pContext = nullptr;
-
-    if( !pContext )
-        pContext = new SvXMLImportContext( GetImport(), nPrefix, rLName );
-
-    return pContext;
+    return new SvXMLImportContext( GetImport(), nPrefix, rLName );
 }
 
 void ScXMLDataPilotGroupMemberContext::EndElement()

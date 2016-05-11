@@ -17,6 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
+#include <basegfx/matrix/b2dhommatrix.hxx>
 #include "oox/ppt/timenode.hxx"
 #include "oox/ppt/pptshape.hxx"
 #include "oox/ppt/slidepersist.hxx"
@@ -25,6 +26,8 @@
 #include "oox/helper/propertymap.hxx"
 #include "oox/helper/propertyset.hxx"
 #include "oox/vml/vmldrawing.hxx"
+#include <oox/token/properties.hxx>
+#include <oox/token/tokens.hxx>
 #include "oox/core/xmlfilterbase.hxx"
 #include "drawingml/textliststyle.hxx"
 #include "drawingml/textparagraphproperties.hxx"

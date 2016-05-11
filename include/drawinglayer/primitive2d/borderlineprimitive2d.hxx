@@ -30,7 +30,6 @@
 #include <com/sun/star/table/BorderLineStyle.hpp>
 
 
-
 namespace drawinglayer
 {
     namespace primitive2d
@@ -132,6 +131,8 @@ namespace drawinglayer
             bool hasGapColor( ) const { return mbHasGapColor; }
             short getStyle () const { return mnStyle; }
             double getPatternScale() const { return mfPatternScale; }
+            /// Same as create2DDecomposition(), but can do pixel correction if requested.
+            Primitive2DContainer createDecomposition(const geometry::ViewInformation2D& rViewInformation, bool bPixelCorrection) const;
 
             /// compare operator
             virtual bool operator==(const BasePrimitive2D& rPrimitive) const override;
@@ -141,7 +142,6 @@ namespace drawinglayer
         };
     } // end of namespace primitive2d
 } // end of namespace drawinglayer
-
 
 
 #endif //INCLUDED_DRAWINGLAYER_PRIMITIVE2D_BORDERLINEPRIMITIVE2D_HXX

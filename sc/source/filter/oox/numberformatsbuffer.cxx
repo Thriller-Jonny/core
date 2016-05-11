@@ -36,6 +36,8 @@
 #include <oox/core/filterbase.hxx>
 #include <oox/helper/attributelist.hxx>
 #include <oox/helper/propertymap.hxx>
+#include <oox/token/properties.hxx>
+#include <oox/token/tokens.hxx>
 #include "biffinputstream.hxx"
 #include "scitems.hxx"
 #include "document.hxx"
@@ -1903,13 +1905,12 @@ void NumberFormat::setPredefinedId( const Locale& rLocale, sal_Int16 nPredefId )
     maModel.mnPredefId = nPredefId;
 }
 
-sal_Int32 NumberFormat::finalizeImport( const Reference< XNumberFormats >& rxNumFmts, const Locale& rFromLocale )
+void NumberFormat::finalizeImport( const Reference< XNumberFormats >& rxNumFmts, const Locale& rFromLocale )
 {
     if( rxNumFmts.is() && !maModel.maFmtCode.isEmpty() )
         maApiData.mnIndex = lclCreateFormat( rxNumFmts, maModel.maFmtCode, maModel.maLocale, rFromLocale );
     else
         maApiData.mnIndex = lclCreatePredefinedFormat( rxNumFmts, maModel.mnPredefId, maModel.maLocale );
-    return maApiData.mnIndex;
 }
 
 sal_uLong NumberFormat::fillToItemSet( SfxItemSet& rItemSet, bool bSkipPoolDefs ) const
@@ -2002,9 +2003,8 @@ void NumberFormatsBuffer::insertBuiltinFormats()
     // build a map containing pointers to all tables
     typedef ::std::map< OUString, const BuiltinFormatTable* > BuiltinMap;
     BuiltinMap aBuiltinMap;
-    for( const BuiltinFormatTable* pTable = spBuiltinFormatTables;
-            pTable != STATIC_ARRAY_END( spBuiltinFormatTables ); ++pTable )
-        aBuiltinMap[ OUString::createFromAscii( pTable->mpcLocale ) ] = pTable;
+    for(auto const &rTable : spBuiltinFormatTables)
+        aBuiltinMap[ OUString::createFromAscii(rTable.mpcLocale) ] = &rTable;
 
     // convert locale string to locale struct
     Locale aSysLocale( LanguageTag::convertToLocale( maLocaleStr));

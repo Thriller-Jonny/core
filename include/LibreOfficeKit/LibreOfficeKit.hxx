@@ -48,6 +48,11 @@ public:
      * @param pUrl the location where to store the document
      * @param pFormat the format to use while exporting, when omitted, then deducted from pURL's extension
      * @param pFilterOptions options for the export filter, e.g. SkipImages.
+     *        Another useful FilterOption is "TakeOwnership".  It is consumed
+     *        by the saveAs() itself, and when provided, the document identity
+     *        changes to the provided pUrl - meaning that '.uno:ModifiedStatus'
+     *        is triggered as with the "Save As..." in the UI.
+     *        "TakeOwnership" mode must not be used when saving to PNG or PDF.
      */
     inline bool saveAs(const char* pUrl, const char* pFormat = NULL, const char* pFilterOptions = NULL)
     {
@@ -109,6 +114,12 @@ public:
     inline char* getPartName(int nPart)
     {
         return mpDoc->pClass->getPartName(mpDoc, nPart);
+    }
+
+    /// Get the current part's hash.
+    inline char* getPartHash(int nPart)
+    {
+        return mpDoc->pClass->getPartHash(mpDoc, nPart);
     }
 
     inline void setPartMode(int nMode)
@@ -333,6 +344,21 @@ public:
     }
 
     /**
+     * Inform core about the currently visible area of the document on the
+     * client, so that it can perform e.g. page down (which depends on the
+     * visible height) in a sane way.
+     *
+     * @param nX - top left corner horizontal position
+     * @param nY - top left corner vertical position
+     * @param nWidth - area width
+     * @param nHeight - area height
+     */
+    inline void setClientVisibleArea(int nX, int nY, int nWidth, int nHeight)
+    {
+        mpDoc->pClass->setClientVisibleArea(mpDoc, nX, nY, nWidth, nHeight);
+    }
+
+    /**
      * Create a new view for an existing document.
      * By default a loaded document has 1 view.
      * @return the ID of the new view.
@@ -388,6 +414,27 @@ public:
         return mpDoc->pClass->renderFont(mpDoc, pFontName, pFontWidth, pFontHeight);
     }
 
+    /**
+     * Renders a subset of the document's part to a pre-allocated buffer.
+     *
+     * @param nPart the part number of the document of which the tile is painted.
+     * @see paintTile.
+     */
+    inline void paintPartTile(unsigned char* pBuffer,
+                              const int nPart,
+                              const int nCanvasWidth,
+                              const int nCanvasHeight,
+                              const int nTilePosX,
+                              const int nTilePosY,
+                              const int nTileWidth,
+                              const int nTileHeight)
+    {
+        return mpDoc->pClass->paintPartTile(mpDoc, pBuffer, nPart,
+                                            nCanvasWidth, nCanvasHeight,
+                                            nTilePosX, nTilePosY,
+                                            nTileWidth, nTileHeight);
+    }
+
 #endif // defined LOK_USE_UNSTABLE_API || defined LIBO_INTERNAL_ONLY
 };
 
@@ -413,6 +460,7 @@ public:
      *
      * @param pUrl the URL of the document to load
      * @param pFilterOptions options for the import filter, e.g. SkipImages.
+     * @since pFilterOptions argument added in LibreOffice 5.0
      */
     inline Document* documentLoad(const char* pUrl, const char* pFilterOptions = NULL)
     {
@@ -435,6 +483,16 @@ public:
         return mpThis->pClass->getError(mpThis);
     }
 
+    /**
+     * Frees the memory pointed to by pFree.
+     *
+     * @since LibreOffice 5.2
+     */
+    inline void freeError(char* pFree)
+    {
+        mpThis->pClass->freeError(pFree);
+    }
+
 #if defined LOK_USE_UNSTABLE_API || defined LIBO_INTERNAL_ONLY
     /**
      * Returns details of filter types.
@@ -454,13 +512,47 @@ public:
     {
         return mpThis->pClass->getFilterTypes(mpThis);
     }
+
+    /**
+     * Set bitmask of optional features supported by the client.
+     *
+     * @see LibreOfficeKitOptionalFeatures
+     */
+    void setOptionalFeatures(uint64_t features)
+    {
+        return mpThis->pClass->setOptionalFeatures(mpThis, features);
+    }
+
+    /**
+     * Set password required for loading or editing a document.
+     *
+     * Loading the document is blocked until the password is provided.
+     *
+     * @param pURL      the URL of the document, as sent to the callback
+     * @param pPassword the password, nullptr indicates no password
+     *
+     * In response to LOK_CALLBACK_DOCUMENT_PASSWORD, a vaild password
+     * will continue loading the document, an invalid password will
+     * result in another LOK_CALLBACK_DOCUMENT_PASSWORD request,
+     * and a NULL password will abort loading the document.
+     *
+     * In response to LOK_CALLBACK_DOCUMENT_PASSWORD_TO_MODIFY, a vaild
+     * password will continue loading the document, an invalid password will
+     * result in another LOK_CALLBACK_DOCUMENT_PASSWORD_TO_MODIFY request,
+     * and a NULL password will continue loading the document in read-only
+     * mode.
+     */
+    inline void setDocumentPassword(char const* pURL, char const* pPassword)
+    {
+        mpThis->pClass->setDocumentPassword(mpThis, pURL, pPassword);
+    }
 #endif // defined LOK_USE_UNSTABLE_API || defined LIBO_INTERNAL_ONLY
 };
 
 /// Factory method to create a lok::Office instance.
-inline Office* lok_cpp_init(const char* pInstallPath, const char* pUserProfilePath = NULL)
+inline Office* lok_cpp_init(const char* pInstallPath, const char* pUserProfileUrl = NULL)
 {
-    LibreOfficeKit* pThis = lok_init_2(pInstallPath, pUserProfilePath);
+    LibreOfficeKit* pThis = lok_init_2(pInstallPath, pUserProfileUrl);
     if (pThis == NULL || pThis->pClass->nSize == 0)
         return NULL;
     return new ::lok::Office(pThis);

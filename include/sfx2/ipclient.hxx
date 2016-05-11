@@ -37,7 +37,6 @@ class SfxObjectShell;
 class Fraction;
 
 
-
 class SFX2_DLLPUBLIC SfxInPlaceClient
 {
 friend class SfxInPlaceClient_Impl;
@@ -61,17 +60,17 @@ public:
 
     SfxViewShell*       GetViewShell() const { return m_pViewSh; }
     vcl::Window*             GetEditWin() const { return m_pEditWin; }
-    css::uno::Reference < css::embed::XEmbeddedObject > GetObject() const;
+    const css::uno::Reference < css::embed::XEmbeddedObject >& GetObject() const;
     void                SetObject( const css::uno::Reference < css::embed::XEmbeddedObject >& rObject );
     void                SetObjectState( sal_Int32 );
     bool                IsObjectUIActive() const;
     bool                IsObjectInPlaceActive() const;
     void                DeactivateObject();
     bool                SetObjArea( const Rectangle & );
-    Rectangle           GetObjArea() const;
+    const Rectangle&    GetObjArea() const;
     Rectangle           GetScaledObjArea() const;
     void                SetSizeScale( const Fraction & rScaleWidth, const Fraction & rScaleHeight );
-    bool                SetObjAreaAndScale( const Rectangle&, const Fraction&, const Fraction& );
+    void                SetObjAreaAndScale( const Rectangle&, const Fraction&, const Fraction& );
     const Fraction&     GetScaleWidth() const;
     const Fraction&     GetScaleHeight() const;
     void                Invalidate();

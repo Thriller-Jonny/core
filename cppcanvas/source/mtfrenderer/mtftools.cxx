@@ -39,7 +39,6 @@
 #include <basegfx/matrix/b2dhommatrixtools.hxx>
 
 
-
 using namespace ::com::sun::star;
 
 namespace cppcanvas
@@ -66,7 +65,7 @@ namespace cppcanvas
             {
                 case ALIGN_TOP:
                     return ::Size( 0,
-                                   aMetric.GetIntLeading() + aMetric.GetAscent() );
+                                   aMetric.GetInternalLeading() + aMetric.GetAscent() );
 
                 default:
                     ENSURE_OR_THROW( false,
@@ -126,8 +125,8 @@ namespace cppcanvas
         {
             const bool bOffsetting( !rOffset.equalZero() );
             const bool bScaling( pScaling &&
-                                 pScaling->getX() != 1.0 &&
-                                 pScaling->getY() != 1.0 );
+                                 !rtl::math::approxEqual(pScaling->getX(), 1.0) &&
+                                 !rtl::math::approxEqual(pScaling->getY(), 1.0) );
             const bool bRotation( pRotation &&
                                   *pRotation != 0.0 );
 
@@ -243,10 +242,10 @@ namespace cppcanvas
 
             TextLineInfo aTextInfo(
                 (aMetric.GetDescent() + 2) / 4.0,
-                ((aMetric.GetIntLeading() + 1.5) / 3.0),
-                (aMetric.GetIntLeading() / 2.0) - aMetric.GetAscent(),
+                ((aMetric.GetInternalLeading() + 1.5) / 3.0),
+                (aMetric.GetInternalLeading() / 2.0) - aMetric.GetAscent(),
                 aMetric.GetDescent() / 2.0,
-                (aMetric.GetIntLeading() - aMetric.GetAscent()) / 3.0,
+                (aMetric.GetInternalLeading() - aMetric.GetAscent()) / 3.0,
                 rState.textOverlineStyle,
                 rState.textUnderlineStyle,
                 rState.textStrikeoutStyle );
@@ -320,16 +319,16 @@ namespace cppcanvas
 
             switch( rTextLineInfo.mnOverlineStyle )
             {
-                case UNDERLINE_NONE:          // nothing to do
+                case LINESTYLE_NONE:          // nothing to do
                     // FALLTHROUGH intended
-                case UNDERLINE_DONTKNOW:
+                case LINESTYLE_DONTKNOW:
                     break;
 
-                case UNDERLINE_SMALLWAVE:     // TODO(F3): NYI
+                case LINESTYLE_SMALLWAVE:     // TODO(F3): NYI
                     // FALLTHROUGH intended
-                case UNDERLINE_WAVE:          // TODO(F3): NYI
+                case LINESTYLE_WAVE:          // TODO(F3): NYI
                     // FALLTHROUGH intended
-                case UNDERLINE_SINGLE:
+                case LINESTYLE_SINGLE:
                     appendRect(
                         aTextLinesPolyPoly,
                         rStartPos,
@@ -339,19 +338,19 @@ namespace cppcanvas
                         rTextLineInfo.mnOverlineOffset + rTextLineInfo.mnOverlineHeight );
                     break;
 
-                case UNDERLINE_BOLDDOTTED:    // TODO(F3): NYI
+                case LINESTYLE_BOLDDOTTED:    // TODO(F3): NYI
                     // FALLTHROUGH intended
-                case UNDERLINE_BOLDDASH:      // TODO(F3): NYI
+                case LINESTYLE_BOLDDASH:      // TODO(F3): NYI
                     // FALLTHROUGH intended
-                case UNDERLINE_BOLDLONGDASH:  // TODO(F3): NYI
+                case LINESTYLE_BOLDLONGDASH:  // TODO(F3): NYI
                     // FALLTHROUGH intended
-                case UNDERLINE_BOLDDASHDOT:   // TODO(F3): NYI
+                case LINESTYLE_BOLDDASHDOT:   // TODO(F3): NYI
                     // FALLTHROUGH intended
-                case UNDERLINE_BOLDDASHDOTDOT:// TODO(F3): NYI
+                case LINESTYLE_BOLDDASHDOTDOT:// TODO(F3): NYI
                     // FALLTHROUGH intended
-                case UNDERLINE_BOLDWAVE:      // TODO(F3): NYI
+                case LINESTYLE_BOLDWAVE:      // TODO(F3): NYI
                     // FALLTHROUGH intended
-                case UNDERLINE_BOLD:
+                case LINESTYLE_BOLD:
                     appendRect(
                         aTextLinesPolyPoly,
                         rStartPos,
@@ -361,9 +360,9 @@ namespace cppcanvas
                         rTextLineInfo.mnOverlineOffset + rTextLineInfo.mnOverlineHeight );
                     break;
 
-                case UNDERLINE_DOUBLEWAVE:    // TODO(F3): NYI
+                case LINESTYLE_DOUBLEWAVE:    // TODO(F3): NYI
                     // FALLTHROUGH intended
-                case UNDERLINE_DOUBLE:
+                case LINESTYLE_DOUBLE:
                     appendRect(
                         aTextLinesPolyPoly,
                         rStartPos,
@@ -381,9 +380,9 @@ namespace cppcanvas
                         rTextLineInfo.mnOverlineOffset + rTextLineInfo.mnOverlineHeight * 2.0 );
                     break;
 
-                case UNDERLINE_DASHDOTDOT:    // TODO(F3): NYI
+                case LINESTYLE_DASHDOTDOT:    // TODO(F3): NYI
                     // FALLTHROUGH intended
-                case UNDERLINE_DOTTED:
+                case LINESTYLE_DOTTED:
                     appendDashes(
                         aTextLinesPolyPoly,
                         rStartPos.getX(),
@@ -394,9 +393,9 @@ namespace cppcanvas
                         2*rTextLineInfo.mnOverlineHeight );
                     break;
 
-                case UNDERLINE_DASHDOT:       // TODO(F3): NYI
+                case LINESTYLE_DASHDOT:       // TODO(F3): NYI
                     // FALLTHROUGH intended
-                case UNDERLINE_DASH:
+                case LINESTYLE_DASH:
                     appendDashes(
                         aTextLinesPolyPoly,
                         rStartPos.getX(),
@@ -407,7 +406,7 @@ namespace cppcanvas
                         6*rTextLineInfo.mnOverlineHeight );
                     break;
 
-                case UNDERLINE_LONGDASH:
+                case LINESTYLE_LONGDASH:
                     appendDashes(
                         aTextLinesPolyPoly,
                         rStartPos.getX(),
@@ -425,16 +424,16 @@ namespace cppcanvas
 
             switch( rTextLineInfo.mnUnderlineStyle )
             {
-                case UNDERLINE_NONE:          // nothing to do
+                case LINESTYLE_NONE:          // nothing to do
                     // FALLTHROUGH intended
-                case UNDERLINE_DONTKNOW:
+                case LINESTYLE_DONTKNOW:
                     break;
 
-                case UNDERLINE_SMALLWAVE:     // TODO(F3): NYI
+                case LINESTYLE_SMALLWAVE:     // TODO(F3): NYI
                     // FALLTHROUGH intended
-                case UNDERLINE_WAVE:          // TODO(F3): NYI
+                case LINESTYLE_WAVE:          // TODO(F3): NYI
                     // FALLTHROUGH intended
-                case UNDERLINE_SINGLE:
+                case LINESTYLE_SINGLE:
                     appendRect(
                         aTextLinesPolyPoly,
                         rStartPos,
@@ -444,19 +443,19 @@ namespace cppcanvas
                         rTextLineInfo.mnUnderlineOffset + rTextLineInfo.mnLineHeight );
                     break;
 
-                case UNDERLINE_BOLDDOTTED:    // TODO(F3): NYI
+                case LINESTYLE_BOLDDOTTED:    // TODO(F3): NYI
                     // FALLTHROUGH intended
-                case UNDERLINE_BOLDDASH:      // TODO(F3): NYI
+                case LINESTYLE_BOLDDASH:      // TODO(F3): NYI
                     // FALLTHROUGH intended
-                case UNDERLINE_BOLDLONGDASH:  // TODO(F3): NYI
+                case LINESTYLE_BOLDLONGDASH:  // TODO(F3): NYI
                     // FALLTHROUGH intended
-                case UNDERLINE_BOLDDASHDOT:   // TODO(F3): NYI
+                case LINESTYLE_BOLDDASHDOT:   // TODO(F3): NYI
                     // FALLTHROUGH intended
-                case UNDERLINE_BOLDDASHDOTDOT:// TODO(F3): NYI
+                case LINESTYLE_BOLDDASHDOTDOT:// TODO(F3): NYI
                     // FALLTHROUGH intended
-                case UNDERLINE_BOLDWAVE:      // TODO(F3): NYI
+                case LINESTYLE_BOLDWAVE:      // TODO(F3): NYI
                     // FALLTHROUGH intended
-                case UNDERLINE_BOLD:
+                case LINESTYLE_BOLD:
                     appendRect(
                         aTextLinesPolyPoly,
                         rStartPos,
@@ -466,9 +465,9 @@ namespace cppcanvas
                         rTextLineInfo.mnUnderlineOffset + 2*rTextLineInfo.mnLineHeight );
                     break;
 
-                case UNDERLINE_DOUBLEWAVE:    // TODO(F3): NYI
+                case LINESTYLE_DOUBLEWAVE:    // TODO(F3): NYI
                     // FALLTHROUGH intended
-                case UNDERLINE_DOUBLE:
+                case LINESTYLE_DOUBLE:
                     appendRect(
                         aTextLinesPolyPoly,
                         rStartPos,
@@ -486,9 +485,9 @@ namespace cppcanvas
                         rTextLineInfo.mnUnderlineOffset + 3*rTextLineInfo.mnLineHeight );
                     break;
 
-                case UNDERLINE_DASHDOTDOT:    // TODO(F3): NYI
+                case LINESTYLE_DASHDOTDOT:    // TODO(F3): NYI
                     // FALLTHROUGH intended
-                case UNDERLINE_DOTTED:
+                case LINESTYLE_DOTTED:
                     appendDashes(
                         aTextLinesPolyPoly,
                         rStartPos.getX(),
@@ -499,9 +498,9 @@ namespace cppcanvas
                         2*rTextLineInfo.mnLineHeight );
                     break;
 
-                case UNDERLINE_DASHDOT:       // TODO(F3): NYI
+                case LINESTYLE_DASHDOT:       // TODO(F3): NYI
                     // FALLTHROUGH intended
-                case UNDERLINE_DASH:
+                case LINESTYLE_DASH:
                     appendDashes(
                         aTextLinesPolyPoly,
                         rStartPos.getX(),
@@ -512,7 +511,7 @@ namespace cppcanvas
                         6*rTextLineInfo.mnLineHeight );
                     break;
 
-                case UNDERLINE_LONGDASH:
+                case LINESTYLE_LONGDASH:
                     appendDashes(
                         aTextLinesPolyPoly,
                         rStartPos.getX(),

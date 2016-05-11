@@ -14,9 +14,13 @@ $(eval $(call gb_PythonTest_set_defs,sw_python,\
 ))
 
 $(eval $(call gb_PythonTest_add_modules,sw_python,$(SRCDIR)/sw/qa/python,\
+	check_change_color \
 	check_index \
-        check_flies \
- 	check_fields \
+	check_flies \
+	check_fields \
+	check_cross_references \
+	check_named_property_values \
+	check_indexed_property_values \
 	check_styles \
 	check_table \
 	get_expression \

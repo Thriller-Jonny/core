@@ -46,6 +46,8 @@ $(eval $(call gb_Library_use_libraries,svx,\
     comphelper \
     cppuhelper \
     cppu \
+    $(call gb_Helper_optional,BREAKPAD, \
+		crashreport) \
     $(call gb_Helper_optional,DBCONNECTIVITY, \
         dbtools) \
     drawinglayer \
@@ -108,6 +110,9 @@ $(eval $(call gb_Library_add_exception_objects,svx,\
     svx/source/dialog/_contdlg \
     svx/source/dialog/contwnd \
     svx/source/dialog/compressgraphicdialog \
+    $(call gb_Helper_optional,BREAKPAD, \
+		svx/source/dialog/crashreportdlg \
+		svx/source/dialog/crashreportui) \
     svx/source/dialog/ctredlin \
     svx/source/dialog/databaseregistrationui \
     svx/source/dialog/dialcontrol \
@@ -133,7 +138,6 @@ $(eval $(call gb_Library_add_exception_objects,svx,\
     svx/source/dialog/pagectrl \
     svx/source/dialog/paraprev \
     svx/source/dialog/passwd \
-    svx/source/dialog/pfiledlg \
     svx/source/dialog/prtqry \
     svx/source/dialog/relfld \
     svx/source/dialog/rlrcitem \
@@ -164,9 +168,6 @@ $(eval $(call gb_Library_add_exception_objects,svx,\
     svx/source/items/viewlayoutitem \
     svx/source/items/zoomslideritem \
     svx/source/mnuctrls/clipboardctl \
-    svx/source/mnuctrls/fntctl \
-    svx/source/mnuctrls/fntszctl \
-    svx/source/mnuctrls/SmartTagCtl \
     svx/source/mnuctrls/smarttagmenu \
     svx/source/sidebar/ContextChangeEventMultiplexer \
     svx/source/sidebar/EmptyPanel \
@@ -193,7 +194,6 @@ $(eval $(call gb_Library_add_exception_objects,svx,\
     svx/source/sidebar/graphic/GraphicPropertyPanel \
     svx/source/sidebar/line/LinePropertyPanel \
     svx/source/sidebar/line/LinePropertyPanelBase \
-    svx/source/sidebar/line/LineWidthControl \
     svx/source/sidebar/line/LineWidthValueSet \
     svx/source/sidebar/line/LineWidthPopup \
     svx/source/sidebar/possize/PosSizePropertyPanel \
@@ -202,7 +202,6 @@ $(eval $(call gb_Library_add_exception_objects,svx,\
     svx/source/sidebar/tools/PopupContainer \
     svx/source/sidebar/tools/Popup \
     svx/source/sidebar/tools/ValueSetWithTextControl \
-    svx/source/sidebar/insert/InsertPropertyPanel \
     svx/source/stbctrls/pszctrl \
     svx/source/stbctrls/insctrl \
     svx/source/stbctrls/selctrl \

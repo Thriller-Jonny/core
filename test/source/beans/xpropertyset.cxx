@@ -80,7 +80,7 @@ bool XPropertySet::isPropertyValueChangeable(const OUString& rName)
         if (type == cppu::UnoType<bool>::get())
         {
             // boolean type
-            bool bOld = any.get<sal_Bool>();
+            bool bOld = any.get<bool>();
             xPropSet->setPropertyValue(rName, makeAny(!bOld));
         }
         else if (type == cppu::UnoType<sal_Int8>::get())
@@ -141,6 +141,12 @@ bool XPropertySet::isPropertyValueChangeable(const OUString& rName)
         }
         else
         {
+            bool bIgnore = isPropertyIgnored(rName);
+            if (bIgnore)
+                return false;
+
+            std::cout << type.getTypeName() << std::endl;
+            std::cout << rName << std::endl;
             CPPUNIT_ASSERT_MESSAGE("XPropertySet::isChangeable: unknown type in Any tested.", false);
         }
 
@@ -213,6 +219,11 @@ bool XPropertySet::getSinglePropertyValue(
     catch (const uno::Exception&)
     {
     }
+    return false;
+}
+
+bool XPropertySet::isPropertyIgnored(const OUString& /*rName*/)
+{
     return false;
 }
 

@@ -42,7 +42,7 @@ class SfxStyleFamilyItem: public Resource
     Bitmap          aBitmap;
     OUString        aText;
     OUString        aHelpText;
-    sal_uInt16      nFamily;
+    SfxStyleFamily  nFamily;
     SfxStyleFilter  aFilterList;
 
 public:
@@ -50,7 +50,7 @@ public:
                     ~SfxStyleFamilyItem();
 
     const OUString& GetText() const { return aText; }
-    SfxStyleFamily  GetFamily() const { return (SfxStyleFamily)nFamily; }
+    SfxStyleFamily  GetFamily() const { return nFamily; }
     const SfxStyleFilter& GetFilterList() const { return aFilterList; }
     const Image&    GetImage() const { return aImage; }
 
@@ -80,11 +80,8 @@ public:
         requested bitmap mode, incremented by 1.</p>
 
         <p>Usually, you will use the same resource which originally constructed the object.</p>
-
-        @return
-            <TRUE/> if an image list for the requested mode could be found in the given resource.
     */
-    bool    updateImages( const ResId& _rId );
+    void    updateImages( const ResId& _rId );
 };
 
 #endif

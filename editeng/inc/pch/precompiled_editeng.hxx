@@ -49,10 +49,7 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
-#include <boost/current_function.hpp>
-#include <boost/functional/hash.hpp>
 #include <boost/intrusive_ptr.hpp>
-#include <boost/ref.hpp>
 #include <boost/shared_array.hpp>
 #include <osl/diagnose.h>
 #include <osl/doublecheckedlocking.h>
@@ -107,7 +104,6 @@
 #include <vcl/graph.hxx>
 #include <vcl/idle.hxx>
 #include <vcl/image.hxx>
-#include <vcl/impdel.hxx>
 #include <vcl/keycod.hxx>
 #include <vcl/keycodes.hxx>
 #include <vcl/lstbox.hxx>
@@ -129,10 +125,6 @@
 #include <vcl/vclptr.hxx>
 #include <vcl/window.hxx>
 #include <vcl/wrkwin.hxx>
-#include <basebmp/basebmpdllapi.h>
-#include <basebmp/bitmapdevice.hxx>
-#include <basebmp/drawmodes.hxx>
-#include <basebmp/scanlineformats.hxx>
 #include <basegfx/basegfxdllapi.h>
 #include <basegfx/color/bcolor.hxx>
 #include <basegfx/color/bcolormodifier.hxx>

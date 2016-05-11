@@ -40,7 +40,6 @@ using ::com::sun::star::task::XStatusIndicator;
 namespace pwp {
 
 
-
 class PlaceWareExportFilter : public cppu::WeakImplHelper
 <
     css::document::XFilter,
@@ -72,12 +71,10 @@ public:
 };
 
 
-
 PlaceWareExportFilter::PlaceWareExportFilter(const Reference< XComponentContext > &rxContext)
 :   mxContext( rxContext )
 {
 }
-
 
 
 sal_Bool SAL_CALL PlaceWareExportFilter::filter( const css::uno::Sequence< css::beans::PropertyValue >& aDescriptor )
@@ -111,13 +108,12 @@ sal_Bool SAL_CALL PlaceWareExportFilter::filter( const css::uno::Sequence< css::
     if ( !xOutputStream.is() )
     {
         OSL_ASSERT ( false );
-        return sal_False;
+        return false;
     }
 
     PlaceWareExporter aExporter( mxContext );
     return aExporter.doExport( mxDoc, xOutputStream, sURL, xInteractionHandler, xStatusIndicator );
 }
-
 
 
 void SAL_CALL PlaceWareExportFilter::cancel(  )
@@ -126,14 +122,12 @@ void SAL_CALL PlaceWareExportFilter::cancel(  )
 }
 
 
-
 // XExporter
 void SAL_CALL PlaceWareExportFilter::setSourceDocument( const css::uno::Reference< css::lang::XComponent >& xDoc )
     throw (css::lang::IllegalArgumentException, RuntimeException, std::exception)
 {
     mxDoc = xDoc;
 }
-
 
 
 // XInitialization
@@ -179,7 +173,6 @@ css::uno::Sequence< OUString > SAL_CALL PlaceWareExportFilter::getSupportedServi
 {
     return PlaceWareExportFilter_getSupportedServiceNames();
 }
-
 
 
 }

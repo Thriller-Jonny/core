@@ -29,7 +29,6 @@
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 
 #include <comphelper/processfactory.hxx>
-#include <salhelper/singletonref.hxx>
 #include <i18nlangtag/languagetag.hxx>
 
 namespace framework
@@ -68,34 +67,6 @@ class PresetHandler
 
     private:
 
-        /** @short  because a concurrent access to the same storage from different implementations
-                    isn't supported, we have to share it with others.
-
-            @descr  This struct makes it possible to use any shared storage
-                    in combination with a SingletonRef<> template ...
-
-                    This struct is allegedly shared and must be used within a
-                    synchronized section. But it isn't.
-         */
-        struct TSharedStorages
-        {
-            public:
-
-                StorageHolder m_lStoragesShare;
-                StorageHolder m_lStoragesUser;
-
-                TSharedStorages()
-                    : m_lStoragesShare()
-                    , m_lStoragesUser ()
-                {};
-
-                virtual ~TSharedStorages() {};
-        };
-
-    // member
-
-    private:
-
         /** @short  can be used to create on needed uno resources. */
         css::uno::Reference< css::uno::XComponentContext > m_xContext;
 
@@ -120,12 +91,6 @@ class PresetHandler
                     then ...
          */
         OUString m_sModule;
-
-        /** @short  provides access to the:
-                    a) shared root storages
-                    b) shared "inbetween" storages
-                    of the share and user layer. */
-        ::salhelper::SingletonRef< TSharedStorages > m_aSharedStorages;
 
         /** @short  if we run in document mode, we can't use the global root storages!
                     We have to use a special document storage explicitly. */
@@ -161,11 +126,11 @@ class PresetHandler
 
         /** @short  knows the names of all presets inside the current
                     working storage of the share layer. */
-        OUStringList m_lPresets;
+        std::vector<OUString> m_lPresets;
 
         /** @short  knows the names of all targets inside the current
                     working storage of the user layer. */
-        OUStringList m_lTargets;
+        std::vector<OUString> m_lTargets;
 
         /** @short  its the current office locale and will be used
                     to handle localized presets.
@@ -185,10 +150,6 @@ class PresetHandler
 
         /** @short  does nothing real.
 
-            @descr  Because this class should be useable in combination
-                    with ::salhelper::SingletonRef template this ctor
-                    can't have any special parameters!
-
             @param  xContext
                     points to an uno service manager, which is used internally
                     to create own needed uno resources.
@@ -199,7 +160,7 @@ class PresetHandler
         PresetHandler(const PresetHandler& rCopy);
 
         /** @short  closes all open storages ... if user forgot that .-) */
-        virtual ~PresetHandler();
+        ~PresetHandler();
 
         /** @short  free all currently cache(!) storages. */
         void forgetCachedStorages();
@@ -316,13 +277,11 @@ class PresetHandler
             @param  sPreset
                     the ALIAS name of an existing preset.
 
-            @param  bNoLangGlobal
-                    access the global language-independent storage instead of the preset storage
+            Accesses the global language-independent storage instead of the preset storage
 
             @return The opened preset stream ... or NULL if the preset does not exists.
          */
-        css::uno::Reference< css::io::XStream > openPreset(const OUString& sPreset,
-                                                           bool bUseNoLangGlobal = false);
+        css::uno::Reference< css::io::XStream > openPreset(const OUString& sPreset);
 
         /** @short  open the specified target as stream object
                     and return it.
@@ -335,15 +294,10 @@ class PresetHandler
             @param  sTarget
                     the ALIAS name of the target.
 
-            @param  bCreateIfMissing
-                    create target file, if it does not still exists.
-                    Note: That does not means reseting of an existing file!
-
             @return The opened target stream ... or NULL if the target does not exists
                     or couldnt be created as new one.
          */
-        css::uno::Reference< css::io::XStream > openTarget(const OUString& sTarget         ,
-                                                                 bool         bCreateIfMissing);
+        css::uno::Reference< css::io::XStream > openTarget(const OUString& sTarget);
 
         /** @short  do anything which is necessary to flush all changes
                     back to disk.

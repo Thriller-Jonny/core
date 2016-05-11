@@ -35,10 +35,10 @@ public:
     explicit PlaceWareExporter( const css::uno::Reference< css::uno::XComponentContext >& rxContext );
     ~PlaceWareExporter();
 
-    bool doExport( css::uno::Reference< css::lang::XComponent > xDoc,
+    bool doExport( const css::uno::Reference< css::lang::XComponent >& xDoc,
                    css::uno::Reference < css::io::XOutputStream > xOutputStream,
                    const OUString& rURL,
-                   css::uno::Reference < css::uno::XInterface > xHandler,
+                   const css::uno::Reference < css::uno::XInterface >& xHandler,
                    css::uno::Reference < css::task::XStatusIndicator >& rxStatusIndicator );
 
 private:
@@ -46,7 +46,6 @@ private:
 
     css::uno::Reference< css::uno::XComponentContext >        mxContext;
     css::uno::Reference< css::drawing::XGraphicExportFilter > mxGraphicExporter;
-    css::uno::Reference< css::task::XInteractionHandler >     mxInteractionHandler;
 };
 
 #endif

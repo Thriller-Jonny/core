@@ -19,6 +19,11 @@ String RID_SVXSTR_SELECT_FILE_IFRAME
     Text [ en-US ] = "Select File for Floating Frame" ;
 };
 
+String RID_SVXSTR_ALLFUNCTIONS
+{
+    Text [ en-US ] = "All categories";
+};
+
 String RID_SVXSTR_MYMACROS
 {
     Text [ en-US ] = "My Macros";
@@ -58,16 +63,6 @@ String RID_SVXSTR_COL
 String RID_SVXSTR_AUTO_ENTRY
 {
     Text [ en-US ] = "Automatic";
-};
-
-String RID_SVXSTR_THOUSAND_SEP
-{
-    Text [ en-US ] = "Thousands separator";
-};
-
-String RID_SVXSTR_ENGINEERING
-{
-    Text [ en-US ] = "Engineering notation";
 };
 
 String RID_SVXSTR_EDIT_GRAPHIC

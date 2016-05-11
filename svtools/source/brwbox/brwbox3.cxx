@@ -66,7 +66,6 @@ namespace svt
     }
 
 
-
     Reference< XAccessible > BrowseBoxImpl::getAccessibleHeaderBar( AccessibleBrowseBoxObjType _eObjType )
     {
         if ( m_pAccessible && m_pAccessible->isAlive() )
@@ -82,7 +81,6 @@ namespace svt
         return nullptr;
     }
 }
-
 
 
 Reference< XAccessible > BrowseBox::CreateAccessible()
@@ -230,13 +228,13 @@ OUString BrowseBox::GetAccessibleObjectName( ::svt::AccessibleBrowseBoxObjType e
             {
 
                 sal_Int32 columnId = _nPosition % ColCount() +1;
-                aRetText = OUString( GetColumnDescription( sal_Int16( columnId ) ) );
+                aRetText = GetColumnDescription( sal_Int16( columnId ) );
                 sal_Int32 rowId = _nPosition / GetRowCount() + 1;
                 aRetText += OUString::number(rowId);
             }
             else
                 aRetText = "TableCell";
-#if OSL_DEBUG_LEVEL > 1
+#if OSL_DEBUG_LEVEL > 0
             aRetText += " [";
             aRetText += OUString::number(sal_Int32(GetCurRow()));
             aRetText += ",";
@@ -249,7 +247,7 @@ OUString BrowseBox::GetAccessibleObjectName( ::svt::AccessibleBrowseBoxObjType e
                 sal_Int32 rowId = _nPosition + 1;
                 aRetText = OUString::number( rowId );
             }
-#if OSL_DEBUG_LEVEL > 1
+#if OSL_DEBUG_LEVEL > 0
             aRetText += " [";
             aRetText += OUString::number(sal_Int32(GetCurRow()));
             aRetText += ",";
@@ -258,8 +256,8 @@ OUString BrowseBox::GetAccessibleObjectName( ::svt::AccessibleBrowseBoxObjType e
 #endif
             break;
         case ::svt::BBTYPE_COLUMNHEADERCELL:
-            aRetText = OUString( GetColumnDescription( sal_Int16( _nPosition ) ) );
-#if OSL_DEBUG_LEVEL > 1
+            aRetText = GetColumnDescription( sal_Int16( _nPosition ) );
+#if OSL_DEBUG_LEVEL > 0
             aRetText += " [";
             aRetText += OUString::number(sal_Int32(GetCurRow()));
             aRetText += ",";
@@ -317,7 +315,6 @@ OUString BrowseBox::GetColumnDescription( sal_uInt16 _nColumn ) const
 {
     return OUString( GetColumnTitle( GetColumnId( _nColumn ) ) );
 }
-
 
 
 void BrowseBox::FillAccessibleStateSet(
@@ -547,9 +544,9 @@ void BrowseBox::GrabFocus()
     Control::GrabFocus();
 }
 
-Reference< XAccessible > BrowseBox::GetAccessible( bool bCreate )
+Reference< XAccessible > BrowseBox::GetAccessible()
 {
-    return Control::GetAccessible( bCreate );
+    return Control::GetAccessible();
 }
 
 vcl::Window* BrowseBox::GetAccessibleParentWindow() const

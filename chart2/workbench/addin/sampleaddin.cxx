@@ -350,9 +350,7 @@ void SAL_CALL SampleAddIn::refresh() throw( uno::RuntimeException )
                     uno::Reference< beans::XPropertySet > xShapeProp( mxMyRedLine, uno::UNO_QUERY );
                     if( xShapeProp.is())
                     {
-                        uno::Any aAny;
-                        aAny <<= aPtSeq;
-                        xShapeProp->setPropertyValue( "PolyPolygon" , aAny );
+                        xShapeProp->setPropertyValue( "PolyPolygon" , Any(aPtSeq) );
                     }
                 }
                 if( mxMyText.is())
@@ -468,7 +466,7 @@ void SAL_CALL SampleAddIn::setPosition( const awt::Point& aPos )
 }
 
 // XShapeDescriptor ( ::XShape ::XDiagram )
-OUString SAL_CALL SampleAddIn::getShapeType() throw( com::sun::star::uno::RuntimeException )
+OUString SAL_CALL SampleAddIn::getShapeType() throw( css::uno::RuntimeException )
 {
     return "com.sun.star.chart.SampleAddinShape";
 }

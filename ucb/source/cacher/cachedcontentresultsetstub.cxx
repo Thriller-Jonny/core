@@ -104,7 +104,7 @@ void SAL_CALL CachedContentResultSetStub
 
     PropertyChangeEvent aEvt( rEvt );
     aEvt.Source = static_cast< XPropertySet * >( this );
-    aEvt.Further = sal_False;
+    aEvt.Further = false;
 
     impl_notifyPropertyChangeListeners( aEvt );
 }
@@ -126,7 +126,7 @@ void SAL_CALL CachedContentResultSetStub
 
     PropertyChangeEvent aEvt( rEvt );
     aEvt.Source = static_cast< XPropertySet * >( this );
-    aEvt.Further = sal_False;
+    aEvt.Further = false;
 
     impl_notifyVetoableChangeListeners( aEvt );
 }
@@ -332,7 +332,7 @@ sal_Int32 SAL_CALL CachedContentResultSetStub
 
 void SAL_CALL CachedContentResultSetStub
     ::impl_getCurrentRowContent( Any& rRowContent
-        , Reference< XRow > xRow )
+        , const Reference< XRow >& xRow )
         throw ( SQLException, RuntimeException )
 {
     sal_Int32 nCount = impl_getColumnCount();
@@ -350,7 +350,7 @@ void SAL_CALL CachedContentResultSetStub
     ::impl_propagateFetchSizeAndDirection( sal_Int32 nFetchSize, bool bFetchDirection )
         throw ( RuntimeException )
 {
-    //this is done only for the case, that there is another CachedContentResultSet in the chain of underlying ResulSets
+    //this is done only for the case, that there is another CachedContentResultSet in the chain of underlying ResultSets
 
     //we do not propagate the property 'FetchSize' or 'FetchDirection' via 'setPropertyValue' from the above CachedContentResultSet to save remote calls
 
@@ -437,7 +437,7 @@ void SAL_CALL CachedContentResultSetStub
 
 void SAL_CALL CachedContentResultSetStub
     ::impl_getCurrentContentIdentifierString( Any& rAny
-        , Reference< XContentAccess > xContentAccess )
+        , const Reference< XContentAccess >& xContentAccess )
         throw ( RuntimeException )
 {
      rAny <<= xContentAccess->queryContentIdentifierString();
@@ -445,7 +445,7 @@ void SAL_CALL CachedContentResultSetStub
 
 void SAL_CALL CachedContentResultSetStub
     ::impl_getCurrentContentIdentifier( Any& rAny
-        , Reference< XContentAccess > xContentAccess )
+        , const Reference< XContentAccess >& xContentAccess )
         throw ( RuntimeException )
 {
      rAny <<= xContentAccess->queryContentIdentifier();
@@ -453,7 +453,7 @@ void SAL_CALL CachedContentResultSetStub
 
 void SAL_CALL CachedContentResultSetStub
     ::impl_getCurrentContent( Any& rAny
-        , Reference< XContentAccess > xContentAccess )
+        , const Reference< XContentAccess >& xContentAccess )
         throw ( RuntimeException )
 {
      rAny <<= xContentAccess->queryContent();
@@ -490,9 +490,7 @@ FetchResult SAL_CALL CachedContentResultSetStub
 }
 
 
-
 // class CachedContentResultSetStubFactory
-
 
 
 CachedContentResultSetStubFactory::CachedContentResultSetStubFactory(

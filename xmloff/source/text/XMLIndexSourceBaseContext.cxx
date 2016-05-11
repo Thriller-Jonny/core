@@ -33,7 +33,6 @@
 #include <rtl/ustring.hxx>
 
 
-
 using namespace ::xmloff::token;
 
 using ::com::sun::star::beans::XPropertySet;
@@ -145,7 +144,6 @@ static const SvXMLTokenMapEntry aIndexSourceTokenMap[] =
 };
 
 
-
 XMLIndexSourceBaseContext::XMLIndexSourceBaseContext(
     SvXMLImport& rImport,
     sal_uInt16 nPrfx,
@@ -218,13 +216,8 @@ void XMLIndexSourceBaseContext::ProcessAttribute(
 
 void XMLIndexSourceBaseContext::EndElement()
 {
-    Any aAny;
-
-    aAny.setValue(&bRelativeTabs, cppu::UnoType<bool>::get());
-    rIndexPropertySet->setPropertyValue(sIsRelativeTabstops, aAny);
-
-    aAny.setValue(&bChapterIndex, cppu::UnoType<bool>::get());
-    rIndexPropertySet->setPropertyValue(sCreateFromChapter, aAny);
+    rIndexPropertySet->setPropertyValue(sIsRelativeTabstops, css::uno::Any(bRelativeTabs));
+    rIndexPropertySet->setPropertyValue(sCreateFromChapter, css::uno::Any(bChapterIndex));
 }
 
 SvXMLImportContext* XMLIndexSourceBaseContext::CreateChildContext(

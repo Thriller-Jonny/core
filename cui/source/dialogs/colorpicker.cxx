@@ -33,7 +33,7 @@
 #include <vcl/fixed.hxx>
 #include <vcl/edit.hxx>
 #include <vcl/field.hxx>
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 #include <vcl/decoview.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/builderfactory.hxx>
@@ -134,7 +134,7 @@ static void RGBtoCMYK( double dR, double dG, double dB, double& fCyan, double& f
 class HexColorControl : public Edit
 {
 public:
-    HexColorControl( vcl::Window* pParent, const WinBits& nStyle );
+    HexColorControl( vcl::Window* pParent, WinBits nStyle );
 
     virtual bool PreNotify( NotifyEvent& rNEvt ) override;
     virtual void Paste() override;
@@ -146,7 +146,7 @@ private:
     static bool ImplProcessKeyInput( const KeyEvent& rKEv );
 };
 
-HexColorControl::HexColorControl( vcl::Window* pParent, const WinBits& nStyle )
+HexColorControl::HexColorControl( vcl::Window* pParent, WinBits nStyle )
     : Edit(pParent, nStyle)
 {
     SetMaxTextLen( 6 );
@@ -256,7 +256,7 @@ bool HexColorControl::ImplProcessKeyInput( const KeyEvent& rKEv )
 class ColorPreviewControl : public Control
 {
 public:
-    ColorPreviewControl( vcl::Window* pParent, const WinBits& nStyle );
+    ColorPreviewControl( vcl::Window* pParent, WinBits nStyle );
 
     virtual void Paint(vcl::RenderContext& rRenderContext, const Rectangle& rRect) override;
 
@@ -266,7 +266,7 @@ private:
     Color maColor;
 };
 
-ColorPreviewControl::ColorPreviewControl(vcl::Window* pParent, const WinBits& nStyle)
+ColorPreviewControl::ColorPreviewControl(vcl::Window* pParent, WinBits nStyle)
     : Control(pParent, nStyle)
 {
 }
@@ -304,7 +304,7 @@ const ColorMode DefaultMode = HUE;
 class ColorFieldControl : public Control
 {
 public:
-    ColorFieldControl(vcl::Window* pParent, const WinBits& nStyle);
+    ColorFieldControl(vcl::Window* pParent, WinBits nStyle);
     virtual ~ColorFieldControl();
 
     virtual void dispose() override;
@@ -346,7 +346,7 @@ private:
     std::vector<sal_uInt16> maPercent_Vert;
 };
 
-ColorFieldControl::ColorFieldControl( vcl::Window* pParent, const WinBits& nStyle )
+ColorFieldControl::ColorFieldControl( vcl::Window* pParent, WinBits nStyle )
 : Control( pParent, nStyle )
 , meMode( DefaultMode )
 , mdX( -1.0 )
@@ -389,7 +389,10 @@ void ColorFieldControl::UpdateBitmap()
     const Size aSize(GetOutputSizePixel());
 
     if (mpBitmap && mpBitmap->GetSizePixel() != aSize)
-        delete mpBitmap, mpBitmap = nullptr;
+    {
+        delete mpBitmap;
+        mpBitmap = nullptr;
+    }
 
     const sal_Int32 nWidth = aSize.Width();
     const sal_Int32 nHeight = aSize.Height();
@@ -712,7 +715,7 @@ void ColorFieldControl::UpdatePosition()
 class ColorSliderControl : public Control
 {
 public:
-    ColorSliderControl( vcl::Window* pParent, const WinBits& nStyle );
+    ColorSliderControl( vcl::Window* pParent, WinBits nStyle );
     virtual ~ColorSliderControl();
     virtual void dispose() override;
 
@@ -745,7 +748,7 @@ private:
     double mdValue;
 };
 
-ColorSliderControl::ColorSliderControl( vcl::Window* pParent, const WinBits& nStyle )
+ColorSliderControl::ColorSliderControl( vcl::Window* pParent, WinBits nStyle )
     : Control( pParent, nStyle )
     , meMode( DefaultMode )
     , mpBitmap( nullptr )
@@ -783,7 +786,10 @@ void ColorSliderControl::UpdateBitmap()
     Size aSize(1, GetOutputSizePixel().Height());
 
     if (mpBitmap && mpBitmap->GetSizePixel() != aSize)
-        delete mpBitmap, mpBitmap = nullptr;
+    {
+        delete mpBitmap;
+        mpBitmap = nullptr;
+    }
 
     if (!mpBitmap)
         mpBitmap = new Bitmap(aSize, 24);
@@ -1518,11 +1524,11 @@ void ColorPickerDialog::setColorComponent( sal_uInt16 nComp, double dValue )
 
 typedef ::cppu::WeakComponentImplHelper< XServiceInfo, XExecutableDialog, XInitialization, XPropertyAccess > ColorPickerBase;
 
-class ColorPicker : protected ::comphelper::OBaseMutex,    // Struct for right initalization of mutex member! Must be first of baseclasses.
+class ColorPicker : protected ::comphelper::OBaseMutex,    // Struct for right initialization of mutex member! Must be first of baseclasses.
                     public ColorPickerBase
 {
 public:
-    explicit ColorPicker( Reference< XComponentContext > const & xContext );
+    explicit ColorPicker();
 
     // XInitialization
     virtual void SAL_CALL initialize( const Sequence< Any >& aArguments ) throw (Exception, RuntimeException, std::exception) override;
@@ -1541,7 +1547,6 @@ public:
     virtual sal_Int16 SAL_CALL execute(  ) throw (RuntimeException, std::exception) override;
 
 private:
-    Reference< XComponentContext > mxContext;
     OUString msTitle;
     const OUString msColorKey;
     const OUString msModeKey;
@@ -1555,9 +1560,9 @@ OUString SAL_CALL ColorPicker_getImplementationName()
     return OUString( "com.sun.star.cui.ColorPicker" );
 }
 
-Reference< XInterface > SAL_CALL ColorPicker_createInstance( Reference< XComponentContext > const & xContext )
+Reference< XInterface > SAL_CALL ColorPicker_createInstance( Reference< XComponentContext > const & )
 {
-    return static_cast<XWeak*>( new ColorPicker( xContext ) );
+    return static_cast<XWeak*>( new ColorPicker );
 }
 
 Sequence< OUString > SAL_CALL ColorPicker_getSupportedServiceNames() throw( RuntimeException )
@@ -1566,9 +1571,8 @@ Sequence< OUString > SAL_CALL ColorPicker_getSupportedServiceNames() throw( Runt
     return seq;
 }
 
-ColorPicker::ColorPicker( Reference< XComponentContext > const & xContext )
+ColorPicker::ColorPicker()
     : ColorPickerBase( m_aMutex )
-    , mxContext( xContext )
     , msColorKey( "Color" )
     , msModeKey( "Mode" )
     , mnColor( 0 )

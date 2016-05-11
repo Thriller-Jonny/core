@@ -25,10 +25,9 @@
 #include <tools/solar.h>
 #include <tools/stream.hxx>
 #include <stgelem.hxx>
-#include <boost/noncopyable.hpp>
-#include <boost/functional/hash.hpp>
 #include <salhelper/simplereferenceobject.hxx>
 #include <unordered_map>
+#include <functional>
 
 class UCBStorageStream;
 class StgPage;
@@ -39,8 +38,7 @@ class StgCache
 {
     typedef std::unordered_map
     <
-        sal_Int32, rtl::Reference< StgPage >,
-        boost::hash< sal_Int32 >, std::equal_to< sal_Int32 >
+        sal_Int32, rtl::Reference< StgPage >
     > IndexToStgPage;
 
     typedef std::vector< rtl::Reference< StgPage > > LRUList;
@@ -67,21 +65,21 @@ public:
     void  IncRef()                          { m_nRef++;           }
     sal_uInt16 DecRef()                     { return --m_nRef;    }
     void  SetPhysPageSize( short );
-    sal_Int32 GetPhysPages()                { return m_nPages;    }
-    short GetPhysPageSize()                 { return m_nPageSize; }
+    sal_Int32 GetPhysPages() const          { return m_nPages;    }
+    short GetPhysPageSize() const           { return m_nPageSize; }
     SvStream* GetStrm()                     { return m_pStrm;     }
     void  SetStrm( SvStream*, bool );
     void  SetStrm( UCBStorageStream* );
-    bool  IsWritable()                      { return ( m_pStrm && m_pStrm->IsWritable() ); }
-    bool  Good()                            { return m_nError == SVSTREAM_OK; }
+    bool  IsWritable() const                { return ( m_pStrm && m_pStrm->IsWritable() ); }
+    bool  Good() const                      { return m_nError == SVSTREAM_OK; }
     ErrCode GetError()                      { return m_nError;    }
     void  MoveError( StorageBase& );
     void  SetError( ErrCode );
     void  ResetError();
     bool  Open( const OUString& rName, StreamMode );
     void  Close();
-    bool  Read( sal_Int32 nPage, void* pBuf, sal_Int32 nPages );
-    bool  Write( sal_Int32 nPage, void* pBuf, sal_Int32 nPages );
+    bool  Read( sal_Int32 nPage, void* pBuf );
+    bool  Write( sal_Int32 nPage, void* pBuf );
 
     // two routines for accessing FAT pages
     // Assume that the data is a FAT page and get/put FAT data.
@@ -96,7 +94,7 @@ public:
     void Clear();                           // clear the cache
 };
 
-class StgPage : public salhelper::SimpleReferenceObject, private boost::noncopyable
+class StgPage : public salhelper::SimpleReferenceObject
 {
     const sal_Int32 mnPage;                // page index
     sal_uInt8*      mpData;                // nSize bytes
@@ -104,6 +102,8 @@ class StgPage : public salhelper::SimpleReferenceObject, private boost::noncopya
              StgPage( short nData, sal_Int32 nPage );
     virtual ~StgPage();
 public:
+             StgPage(const StgPage&) = delete;
+    StgPage& operator=(const StgPage&) = delete;
     static rtl::Reference< StgPage > Create( short nData, sal_Int32 nPage );
 
     sal_Int32 GetPage()  { return mnPage; }

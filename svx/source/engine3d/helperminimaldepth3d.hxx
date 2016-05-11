@@ -28,7 +28,7 @@
 class E3dCompoundObject;
 
 
-/** support extracting the minimal depth of a 3d object in it's scene
+/** support extracting the minimal depth of a 3d object in its scene
 
     @param rObject
     The 3D Object from which the minimal depth needs to be calculated. The scene
@@ -40,10 +40,9 @@ class E3dCompoundObject;
     means the transformations (esp. rotation) of the scene are taken into account
 
 */
-// support extracting the minimal depth of a 3d object in it's scene
+// support extracting the minimal depth of a 3d object in its scene
 
 double getMinimalDepthInViewCoordinates(const E3dCompoundObject& rObject);
-
 
 
 #endif // INCLUDED_SVX_SOURCE_ENGINE3D_HELPERMINIMALDEPTH3D_HXX

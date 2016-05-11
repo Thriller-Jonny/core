@@ -12,17 +12,15 @@
 
 #include <osl/file.hxx>
 #include <rtl/bootstrap.hxx>
-#include <vcl/outdev.hxx>
 #include <vcl/svapp.hxx>
+#include <vcl/embeddedfontshelper.hxx>
 
 #include "fontsubset.hxx"
 #include "outdev.h"
-#include "outfont.hxx"
 #include "PhysicalFontCollection.hxx"
 #include "salgdi.hxx"
 #include "sft.hxx"
 
-#include <vcl/embeddedfontshelper.hxx>
 
 #if ENABLE_EOT
 extern "C"
@@ -63,7 +61,7 @@ void EmbeddedFontsHelper::clearTemporaryFontFiles()
     clearDir( path + "fromsystem/" );
 }
 
-bool EmbeddedFontsHelper::addEmbeddedFont( uno::Reference< io::XInputStream > stream, const OUString& fontName,
+bool EmbeddedFontsHelper::addEmbeddedFont( const uno::Reference< io::XInputStream >& stream, const OUString& fontName,
     const char* extra, std::vector< unsigned char > key, bool eot )
 {
     OUString fileUrl = EmbeddedFontsHelper::fileUrlForTemporaryFont( fontName, extra );
@@ -230,7 +228,7 @@ OUString EmbeddedFontsHelper::fontFileUrl( const OUString& familyName, FontFamil
     SalGraphics* graphics = Application::GetDefaultDevice()->GetGraphics();
     PhysicalFontCollection fonts;
     graphics->GetDevFontList( &fonts );
-    std::unique_ptr< ImplGetDevFontList > fontInfo( fonts.GetDevFontList());
+    std::unique_ptr< ImplDeviceFontList > fontInfo( fonts.GetDeviceFontList());
     PhysicalFontFace* selected = nullptr;
     for( int i = 0;
          i < fontInfo->Count();
@@ -245,7 +243,7 @@ OUString EmbeddedFontsHelper::fontFileUrl( const OUString& familyName, FontFamil
             // It is possible that it still may be needed to do at least some checks here
             // for some encodings (can one font have more font files for more encodings?).
             if(( family == FAMILY_DONTKNOW || f->GetFamilyType() == family )
-                && ( italic == ITALIC_DONTKNOW || f->GetSlant() == italic )
+                && ( italic == ITALIC_DONTKNOW || f->GetItalic() == italic )
                 && ( weight == WEIGHT_DONTKNOW || f->GetWeight() == weight )
                 && ( pitch == PITCH_DONTKNOW || f->GetPitch() == pitch ))
             { // Exact match, return it immediately.
@@ -253,7 +251,7 @@ OUString EmbeddedFontsHelper::fontFileUrl( const OUString& familyName, FontFamil
                 break;
             }
             if(( f->GetFamilyType() == FAMILY_DONTKNOW || family == FAMILY_DONTKNOW || f->GetFamilyType() == family )
-                && ( f->GetSlant() == ITALIC_DONTKNOW || italic == ITALIC_DONTKNOW || f->GetSlant() == italic )
+                && ( f->GetItalic() == ITALIC_DONTKNOW || italic == ITALIC_DONTKNOW || f->GetItalic() == italic )
                 && ( f->GetWeight() == WEIGHT_DONTKNOW || weight == WEIGHT_DONTKNOW || f->GetWeight() == weight )
                 && ( f->GetPitch() == PITCH_DONTKNOW || pitch == PITCH_DONTKNOW || f->GetPitch() == pitch ))
             { // Some fonts specify 'DONTKNOW' for some things, still a good match, if we don't find a better one.

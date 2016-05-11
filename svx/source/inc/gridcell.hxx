@@ -40,6 +40,7 @@
 #include <com/sun/star/awt/XWindow.hpp>
 
 #include <comphelper/propmultiplex.hxx>
+#include <comphelper/interfacecontainer2.hxx>
 #include <cppuhelper/component.hxx>
 #include <cppuhelper/implbase1.hxx>
 #include <cppuhelper/implbase2.hxx>
@@ -119,7 +120,7 @@ public:
     ~DbGridColumn();
 
     const css::uno::Reference< css::beans::XPropertySet >& getModel() const { return m_xModel; }
-    void  setModel(css::uno::Reference< css::beans::XPropertySet >  _xModel);
+    void  setModel(const css::uno::Reference< css::beans::XPropertySet >&  _xModel);
 
 
     sal_uInt16  GetId() const {return m_nId;}
@@ -260,7 +261,7 @@ protected:
 
 
 public:
-    DbCellControl(DbGridColumn& _rColumn, bool _bText = true);
+    DbCellControl(DbGridColumn& _rColumn);
     virtual ~DbCellControl();
 
 
@@ -334,7 +335,6 @@ private:
     /// updates the "enabled" setting on m_pWindow, according to the respective property value in the given model
     void implAdjustEnabled( const css::uno::Reference< css::beans::XPropertySet >& _rxModel );
 };
-
 
 
 inline  bool    DbCellControl::isValuePropertyLocked() const
@@ -717,11 +717,11 @@ protected:
     DbCellControl*      m_pCellControl;
 
 private:
-    ::cppu::OInterfaceContainerHelper   m_aWindowListeners;
-    ::cppu::OInterfaceContainerHelper   m_aFocusListeners;
-    ::cppu::OInterfaceContainerHelper   m_aKeyListeners;
-    ::cppu::OInterfaceContainerHelper   m_aMouseListeners;
-    ::cppu::OInterfaceContainerHelper   m_aMouseMotionListeners;
+    ::comphelper::OInterfaceContainerHelper2   m_aWindowListeners;
+    ::comphelper::OInterfaceContainerHelper2   m_aFocusListeners;
+    ::comphelper::OInterfaceContainerHelper2   m_aKeyListeners;
+    ::comphelper::OInterfaceContainerHelper2   m_aMouseListeners;
+    ::comphelper::OInterfaceContainerHelper2   m_aMouseMotionListeners;
 
 protected:
     virtual ~FmXGridCell();
@@ -754,12 +754,12 @@ public:
     virtual void SAL_CALL createPeer(const css::uno::Reference< css::awt::XToolkit >& /*Toolkit*/, const css::uno::Reference< css::awt::XWindowPeer >& /*Parent*/) throw(css::uno::RuntimeException, std::exception) override {}
 
     virtual css::uno::Reference< css::awt::XWindowPeer > SAL_CALL getPeer() throw (css::uno::RuntimeException, std::exception) override {return css::uno::Reference< css::awt::XWindowPeer > ();}
-    virtual sal_Bool SAL_CALL setModel(const css::uno::Reference< css::awt::XControlModel >& /*Model*/) throw (css::uno::RuntimeException, std::exception) override {return sal_False;}
+    virtual sal_Bool SAL_CALL setModel(const css::uno::Reference< css::awt::XControlModel >& /*Model*/) throw (css::uno::RuntimeException, std::exception) override {return false;}
     virtual css::uno::Reference< css::awt::XControlModel > SAL_CALL getModel() throw (css::uno::RuntimeException, std::exception) override;
     virtual css::uno::Reference< css::awt::XView > SAL_CALL getView() throw (css::uno::RuntimeException, std::exception) override {return css::uno::Reference< css::awt::XView > ();}
     virtual void SAL_CALL setDesignMode(sal_Bool /*bOn*/) throw (css::uno::RuntimeException, std::exception) override {}
-    virtual sal_Bool SAL_CALL isDesignMode() throw (css::uno::RuntimeException, std::exception) override {return sal_False;}
-    virtual sal_Bool SAL_CALL isTransparent() throw (css::uno::RuntimeException, std::exception) override {return sal_False;}
+    virtual sal_Bool SAL_CALL isDesignMode() throw (css::uno::RuntimeException, std::exception) override {return false;}
+    virtual sal_Bool SAL_CALL isTransparent() throw (css::uno::RuntimeException, std::exception) override {return false;}
 
 // css::form::XBoundControl
     virtual sal_Bool SAL_CALL getLock() throw(css::uno::RuntimeException, std::exception) override;
@@ -870,8 +870,8 @@ private:
     OUString                     m_sValueOnEnter;
 
 protected:
-    ::cppu::OInterfaceContainerHelper   m_aTextListeners;
-    ::cppu::OInterfaceContainerHelper   m_aChangeListeners;
+    ::comphelper::OInterfaceContainerHelper2   m_aTextListeners;
+    ::comphelper::OInterfaceContainerHelper2   m_aChangeListeners;
     ::svt::IEditImplementation*         m_pEditImplementation;
     bool                                m_bOwnEditImplementation;
 
@@ -924,8 +924,8 @@ typedef ::cppu::ImplHelper2 <   css::awt::XCheckBox
 class FmXCheckBoxCell : public FmXDataCell,
                         public FmXCheckBoxCell_Base
 {
-    ::cppu::OInterfaceContainerHelper   m_aItemListeners;
-    ::cppu::OInterfaceContainerHelper   m_aActionListeners;
+    ::comphelper::OInterfaceContainerHelper2   m_aItemListeners;
+    ::comphelper::OInterfaceContainerHelper2   m_aActionListeners;
     OUString                            m_aActionCommand;
     VclPtr<CheckBox>                    m_pBox;
 
@@ -969,7 +969,7 @@ typedef ::cppu::ImplHelper1 <   css::awt::XListBox
 class FmXListBoxCell    :public FmXTextCell
                         ,public FmXListBoxCell_Base
 {
-    ::cppu::OInterfaceContainerHelper   m_aItemListeners,
+    ::comphelper::OInterfaceContainerHelper2   m_aItemListeners,
                                         m_aActionListeners;
     VclPtr<ListBox>                     m_pBox;
 
@@ -1024,7 +1024,7 @@ class FmXComboBoxCell   :public FmXTextCell
                         ,public FmXComboBoxCell_Base
 {
 private:
-    ::cppu::OInterfaceContainerHelper   m_aItemListeners,
+    ::comphelper::OInterfaceContainerHelper2   m_aItemListeners,
                                         m_aActionListeners;
     VclPtr<ComboBox>                    m_pComboBox;
 
@@ -1043,18 +1043,18 @@ public:
     virtual void SAL_CALL disposing() override;
 
     // XComboBox
-    virtual void SAL_CALL addItemListener( const css::uno::Reference< css::awt::XItemListener >& _Listener ) throw (css::uno::RuntimeException, std::exception) override;
-    virtual void SAL_CALL removeItemListener( const css::uno::Reference< css::awt::XItemListener >& _Listener ) throw (css::uno::RuntimeException, std::exception) override;
-    virtual void SAL_CALL addActionListener( const css::uno::Reference< css::awt::XActionListener >& _Listener ) throw (css::uno::RuntimeException, std::exception) override;
-    virtual void SAL_CALL removeActionListener( const css::uno::Reference< css::awt::XActionListener >& _Listener ) throw (css::uno::RuntimeException, std::exception) override;
-    virtual void SAL_CALL addItem( const OUString& _Item, ::sal_Int16 _Pos ) throw (css::uno::RuntimeException, std::exception) override;
-    virtual void SAL_CALL addItems( const css::uno::Sequence< OUString >& _Items, ::sal_Int16 _Pos ) throw (css::uno::RuntimeException, std::exception) override;
+    virtual void SAL_CALL addItemListener( const css::uno::Reference< css::awt::XItemListener >& Listener ) throw (css::uno::RuntimeException, std::exception) override;
+    virtual void SAL_CALL removeItemListener( const css::uno::Reference< css::awt::XItemListener >& Listener ) throw (css::uno::RuntimeException, std::exception) override;
+    virtual void SAL_CALL addActionListener( const css::uno::Reference< css::awt::XActionListener >& Listener ) throw (css::uno::RuntimeException, std::exception) override;
+    virtual void SAL_CALL removeActionListener( const css::uno::Reference< css::awt::XActionListener >& Listener ) throw (css::uno::RuntimeException, std::exception) override;
+    virtual void SAL_CALL addItem( const OUString& Item, ::sal_Int16 Pos ) throw (css::uno::RuntimeException, std::exception) override;
+    virtual void SAL_CALL addItems( const css::uno::Sequence< OUString >& Items, ::sal_Int16 Pos ) throw (css::uno::RuntimeException, std::exception) override;
     virtual void SAL_CALL removeItems( ::sal_Int16 nPos, ::sal_Int16 nCount ) throw (css::uno::RuntimeException, std::exception) override;
     virtual ::sal_Int16 SAL_CALL getItemCount(  ) throw (css::uno::RuntimeException, std::exception) override;
-    virtual OUString SAL_CALL getItem( ::sal_Int16 _Pos ) throw (css::uno::RuntimeException, std::exception) override;
+    virtual OUString SAL_CALL getItem( ::sal_Int16 Pos ) throw (css::uno::RuntimeException, std::exception) override;
     virtual css::uno::Sequence< OUString > SAL_CALL getItems(  ) throw (css::uno::RuntimeException, std::exception) override;
     virtual ::sal_Int16 SAL_CALL getDropDownLineCount(  ) throw (css::uno::RuntimeException, std::exception) override;
-    virtual void SAL_CALL setDropDownLineCount( ::sal_Int16 _Lines ) throw (css::uno::RuntimeException, std::exception) override;
+    virtual void SAL_CALL setDropDownLineCount( ::sal_Int16 Lines ) throw (css::uno::RuntimeException, std::exception) override;
 
 protected:
     virtual void onWindowEvent( const sal_uLong _nEventId, const vcl::Window& _rWindow, const void* _pEventData ) override;
@@ -1067,7 +1067,7 @@ typedef ::cppu::ImplHelper2 <   css::awt::XTextComponent
 class FmXFilterCell :public FmXGridCell
                     ,public FmXFilterCell_Base
 {
-    ::cppu::OInterfaceContainerHelper m_aTextListeners;
+    ::comphelper::OInterfaceContainerHelper2 m_aTextListeners;
 protected:
     virtual ~FmXFilterCell();
 public:

@@ -22,15 +22,11 @@
 #define INCLUDED_SVX_SOURCE_DIALOG_IMAPIMP_HXX
 
 
-// - IMapOwnData -
-
-
 class IMapOwnData
 {
 public:
 
     Idle            aIdle;
-    Timer           aTbxTimer;
     Graphic         aUpdateGraphic;
     ImageMap        aUpdateImageMap;
     TargetList      aUpdateTargetList;

@@ -124,7 +124,7 @@ uno::Sequence< OUString > lcl_getLineOptionals()
 
 
     };
-    return uno::Sequence< OUString >(pProps,sizeof(pProps)/sizeof(pProps[0]));
+    return uno::Sequence< OUString >(pProps,SAL_N_ELEMENTS(pProps));
 }
 
 OFixedLine::OFixedLine(uno::Reference< uno::XComponentContext > const & _xContext)
@@ -564,7 +564,6 @@ void SAL_CALL OFixedLine::setPrintRepeatedValues( sal_Bool /*_printrepeatedvalue
 {
     throw beans::UnknownPropertyException();
 }
-
 
 
 } // namespace reportdesign

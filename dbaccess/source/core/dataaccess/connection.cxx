@@ -265,7 +265,7 @@ OConnection::OConnection(ODatabaseSource& _rDB
                          , const Reference< XComponentContext >& _rxORB)
             :OSubComponent(m_aMutex, static_cast< OWeakObject* >(&_rDB))
                 // as the queries reroute their refcounting to us, this m_aMutex is okey. If the queries
-                // container would do it's own refcounting, it would have to acquire m_pMutex
+                // container would do its own refcounting, it would have to acquire m_pMutex
                 // same for tables
             ,m_aTableFilter(_rDB.m_pImpl->m_aTableFilter)
             ,m_aTableTypeFilter(_rDB.m_pImpl->m_aTableTypeFilter)
@@ -459,8 +459,8 @@ void OConnection::disposing()
     OSubComponent::disposing();
     OConnectionWrapper::disposing();
 
-    connectivity::OWeakRefArray::iterator aEnd = m_aStatements.end();
-    for (connectivity::OWeakRefArray::iterator i = m_aStatements.begin(); aEnd != i; ++i)
+    connectivity::OWeakRefArray::const_iterator aEnd = m_aStatements.end();
+    for (connectivity::OWeakRefArray::const_iterator i = m_aStatements.begin(); aEnd != i; ++i)
     {
         Reference<XComponent> xComp(i->get(),UNO_QUERY);
         ::comphelper::disposeComponent(xComp);
@@ -475,8 +475,8 @@ void OConnection::disposing()
 
     ::comphelper::disposeComponent(m_xQueries);
 
-    connectivity::OWeakRefArray::iterator aComposerEnd = m_aComposers.end();
-    for (connectivity::OWeakRefArray::iterator j = m_aComposers.begin(); aComposerEnd != j; ++j)
+    connectivity::OWeakRefArray::const_iterator aComposerEnd = m_aComposers.end();
+    for (connectivity::OWeakRefArray::const_iterator j = m_aComposers.begin(); aComposerEnd != j; ++j)
     {
         Reference<XComponent> xComp(j->get(),UNO_QUERY);
         ::comphelper::disposeComponent(xComp);
@@ -610,7 +610,7 @@ Reference< XPreparedStatement >  SAL_CALL OConnection::prepareCommand( const OUS
                 aStatement = "SELECT * FROM ";
 
                 OUString sCatalog, sSchema, sTable;
-                ::dbtools::qualifiedNameComponents( getMetaData(), command, sCatalog, sSchema, sTable, ::dbtools::eInDataManipulation );
+                ::dbtools::qualifiedNameComponents( getMetaData(), command, sCatalog, sSchema, sTable, ::dbtools::EComposeRule::InDataManipulation );
                 aStatement += ::dbtools::composeTableNameForSelect( this, sCatalog, sSchema, sTable );
             }
             break;
@@ -640,7 +640,7 @@ Reference< XInterface > SAL_CALL OConnection::createInstance( const OUString& _s
     {
         if ( !_sServiceSpecifier.isEmpty() )
         {
-            TSupportServices::iterator aFind = m_aSupportServices.find(_sServiceSpecifier);
+            TSupportServices::const_iterator aFind = m_aSupportServices.find(_sServiceSpecifier);
             if ( aFind == m_aSupportServices.end() )
             {
                 Sequence<Any> aArgs(1);
@@ -790,13 +790,13 @@ void OConnection::impl_checkTableQueryNames_nothrow()
     }
 }
 
-Reference< XGraphic > SAL_CALL OConnection::getTableIcon( const OUString& _TableName, ::sal_Int32 _ColorMode ) throw (RuntimeException, std::exception)
+Reference< XGraphic > SAL_CALL OConnection::getTableIcon( const OUString& TableName, ::sal_Int32 ColorMode ) throw (RuntimeException, std::exception)
 {
     Reference< XGraphic > xReturn;
 
     // ask our aggregate
     if ( m_xTableUIProvider.is() )
-        xReturn = m_xTableUIProvider->getTableIcon( _TableName, _ColorMode );
+        xReturn = m_xTableUIProvider->getTableIcon( TableName, ColorMode );
 
     // ask ourself
     // well, we don't have own functionality here ...
@@ -806,13 +806,13 @@ Reference< XGraphic > SAL_CALL OConnection::getTableIcon( const OUString& _Table
     return xReturn;
 }
 
-Reference< XInterface > SAL_CALL OConnection::getTableEditor( const Reference< XDatabaseDocumentUI >& _DocumentUI, const OUString& _TableName ) throw (IllegalArgumentException, WrappedTargetException, RuntimeException, std::exception)
+Reference< XInterface > SAL_CALL OConnection::getTableEditor( const Reference< XDatabaseDocumentUI >& DocumentUI, const OUString& TableName ) throw (IllegalArgumentException, WrappedTargetException, RuntimeException, std::exception)
 {
     Reference< XInterface > xReturn;
 
     // ask our aggregate
     if ( m_xTableUIProvider.is() )
-        xReturn = m_xTableUIProvider->getTableEditor( _DocumentUI, _TableName );
+        xReturn = m_xTableUIProvider->getTableEditor( DocumentUI, TableName );
 
     // ask ourself
     // well, we don't have own functionality here ...

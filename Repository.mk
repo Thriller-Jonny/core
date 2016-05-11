@@ -33,6 +33,7 @@ $(eval $(call gb_Helper_register_executables,NONE, \
 	genconv_dict \
 	gendict \
 	genindex_data \
+	genlang \
 	helpex \
 	idxdict \
 	langsupport \
@@ -58,7 +59,6 @@ $(eval $(call gb_Helper_register_executables,NONE, \
 	treex \
 	uiex \
 	ulfex \
-	unoidl-check \
 	unoidl-read \
 	unoidl-write \
 	xrmex \
@@ -68,13 +68,13 @@ $(eval $(call gb_Helper_register_executables,NONE, \
         svptest \
         svpclient \
         pixelctl ) \
-	$(if $(and $(ENABLE_GTK), $(filter LINUX %BSD SOLARIS,$(OS))), tilebench) \
+	$(if $(and $(ENABLE_GTK3), $(filter LINUX %BSD SOLARIS,$(OS))), tilebench) \
 	$(if $(filter LINUX MACOSX SOLARIS WNT %BSD,$(OS)),icontest \
 	    outdevgrind) \
 	vcldemo \
 	tiledrendering \
     mtfdemo \
-	$(if $(and $(ENABLE_GTK), $(filter LINUX %BSD SOLARIS,$(OS))), gtktiledviewer) \
+	$(if $(and $(ENABLE_GTK3), $(filter LINUX %BSD SOLARIS,$(OS))), gtktiledviewer) \
 ))
 
 $(eval $(call gb_Helper_register_executables_for_install,SDK,sdk, \
@@ -82,13 +82,14 @@ $(eval $(call gb_Helper_register_executables_for_install,SDK,sdk, \
 	cppumaker \
 	idlc \
 	javamaker \
-	regcompare \
 	$(if $(filter UCPP,$(BUILD_TYPE)),ucpp) \
 	$(if $(filter ODK,$(BUILD_TYPE)),unoapploader) \
+	unoidl-check \
 	$(if $(filter ODK,$(BUILD_TYPE)),uno-skeletonmaker) \
 ))
 
 $(eval $(call gb_Helper_register_executables_for_install,OOO,brand, \
+	$(call gb_Helper_optional,BREAKPAD,minidump_upload) \
 	$(if $(filter-out ANDROID IOS MACOSX WNT,$(OS)),oosplash) \
 	soffice_bin \
 	$(if $(filter DESKTOP,$(BUILD_TYPE)),unopkg_bin) \
@@ -145,9 +146,10 @@ $(eval $(call gb_Helper_register_executables_for_install,OOO,writer_brand, \
 
 $(eval $(call gb_Helper_register_executables_for_install,OOO,ooo, \
 	gengal \
-	$(if $(filter TRUE-TRUE,$(USING_X11)-$(ENABLE_NPAPI_FROM_BROWSER)),pluginapp.bin) \
 	$(if $(filter WNT,$(OS)),,uri-encode) \
-	ui-previewer \
+	$(if $(ENABLE_MACOSX_SANDBOX),, \
+		ui-previewer \
+	) \
 	$(if $(filter WNT,$(OS)), \
 		senddoc \
 	) \
@@ -188,8 +190,10 @@ endif
 
 $(eval $(call gb_Helper_register_executables_for_install,UREBIN,ure,\
 	$(if $(and $(ENABLE_JAVA),$(filter-out MACOSX WNT,$(OS)),$(filter DESKTOP,$(BUILD_TYPE))),javaldx) \
-	regmerge \
-	regview \
+	$(if $(ENABLE_MACOSX_SANDBOX),, \
+		regmerge \
+		regview \
+	) \
 	$(if $(filter DESKTOP,$(BUILD_TYPE)),uno) \
 ))
 
@@ -282,9 +286,6 @@ $(eval $(call gb_Helper_register_libraries_for_install,OOOLIBS,ooo, \
 		basctl \
 		basprov \
 	) \
-	$(if $(filter $(OS),ANDROID),, \
-		basebmp \
-	) \
 	basegfx \
 	bib \
 	$(if $(ENABLE_CAIRO_CANVAS),cairocanvas) \
@@ -360,7 +361,6 @@ $(eval $(call gb_Helper_register_libraries_for_install,OOOLIBS,ooo, \
 	$(call gb_Helper_optional,OPENCL,opencl) \
 	passwordcontainer \
 	pcr \
-	$(if $(ENABLE_NPAPI_FROM_BROWSER),pl) \
 	pdffilter \
 	$(call gb_Helper_optional,SCRIPTING,protocolhandler) \
 	res \
@@ -543,11 +543,11 @@ $(eval $(call gb_Helper_register_libraries_for_install,PLAINLIBS_OOO,ooo, \
 	$(if $(ENABLE_GSTREAMER_1_0),avmediagst) \
 	$(if $(ENABLE_GSTREAMER_0_10),avmediagst_0_10) \
 	$(if $(ENABLE_DIRECTX),avmediawin) \
-	$(if $(ENABLE_GLTF),avmediaogl) \
 	cached1 \
 	collator_data \
 	comphelper \
 	$(call gb_Helper_optional,DBCONNECTIVITY,dbpool2) \
+	$(call gb_Helper_optional,BREAKPAD,crashreport) \
 	deployment \
 	deploymentgui \
 	dict_ja \
@@ -604,6 +604,14 @@ $(eval $(call gb_Helper_register_libraries_for_install,PLAINLIBS_OOO,ooo, \
 		) \
 	) \
 ))
+
+ifeq ($(ENABLE_OPENGL),TRUE)
+ifeq ($(ENABLE_GLTF),TRUE)
+$(eval $(call gb_Helper_register_libraries_for_install,PLAINLIBS_OOO,ooo, \
+    avmediaogl \
+))
+endif
+endif
 
 ifeq ($(OS),WNT)
 $(eval $(call gb_Helper_register_libraries_for_install,PLAINLIBS_OOO,activexbinarytable, \
@@ -816,7 +824,19 @@ $(eval $(call gb_Helper_register_packages_for_install,ooo,\
 	xmlsec \
 	chart2_opengl_shader \
 	vcl_opengl_shader \
+	$(if $(filter WNT,$(OS)), \
+		vcl_opengl_blacklist \
+	) \
 	$(if $(ENABLE_OPENGL_CANVAS),canvas_opengl_shader) \
+	$(if $(DISABLE_PYTHON),,$(if $(filter-out AIX,$(OS)), \
+		Pyuno/commonwizards \
+		Pyuno/fax \
+		Pyuno/letter \
+		Pyuno/agenda \
+		Pyuno/web \
+		Pyuno/mailmerge \
+	)) \
+	sfx2_classification \
 ))
 
 $(eval $(call gb_Helper_register_packages_for_install,ogltrans,\

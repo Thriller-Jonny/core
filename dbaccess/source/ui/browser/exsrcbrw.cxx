@@ -123,7 +123,7 @@ void SbaExternalSourceBrowser::modified(const css::lang::EventObject& aEvent) th
 
     // multiplex this event to all my listeners
     css::lang::EventObject aEvt(*this);
-    ::cppu::OInterfaceIteratorHelper aIt(m_aModifyListeners);
+    ::comphelper::OInterfaceIteratorHelper2 aIt(m_aModifyListeners);
     while (aIt.hasMoreElements())
         static_cast< css::util::XModifyListener*>(aIt.next())->modified(aEvt);
 }
@@ -335,7 +335,7 @@ void SbaExternalSourceBrowser::Attach(const Reference< XRowSet > & xMaster)
     {
         // switch the control to design mode
         if (getBrowserView() && getBrowserView()->getGridControl().is())
-            getBrowserView()->getGridControl()->setDesignMode(sal_True);
+            getBrowserView()->getGridControl()->setDesignMode(true);
 
         // the grid will move the form's cursor to the first record, but we want the form to remain unchanged
         // restore the old position

@@ -20,7 +20,6 @@
 #ifndef INCLUDED_FILTER_SOURCE_SVG_SVGFILTER_HXX
 #define INCLUDED_FILTER_SOURCE_SVG_SVGFILTER_HXX
 
-#include <com/sun/star/uno/Type.hxx>
 #include <com/sun/star/animations/XAnimationNodeSupplier.hpp>
 #include <com/sun/star/drawing/XMasterPageTarget.hpp>
 #include <com/sun/star/drawing/XDrawPagesSupplier.hpp>
@@ -114,10 +113,10 @@ public:
 
 protected:
 
-    virtual void            _ExportStyles( bool /* bUsed */ ) override {}
-    virtual void            _ExportAutoStyles() override {}
-    virtual void            _ExportContent() override {}
-    virtual void            _ExportMasterStyles() override {}
+    virtual void            ExportStyles_( bool /* bUsed */ ) override {}
+    virtual void            ExportAutoStyles_() override {}
+    virtual void            ExportContent_() override {}
+    virtual void            ExportMasterStyles_() override {}
     virtual sal_uInt32        exportDoc( enum ::xmloff::token::XMLTokenEnum /* eClass */ ) override { return 0; }
 
 private:
@@ -141,7 +140,6 @@ public:
                                       ~ObjectRepresentation();
 
     ObjectRepresentation&             operator=( const ObjectRepresentation& rPresentation );
-    bool                          operator==( const ObjectRepresentation& rPresentation ) const;
 
     const Reference< XInterface >&    GetObject() const { return mxObject; }
     bool                          HasRepresentation() const { return mpMtf != nullptr; }
@@ -202,7 +200,6 @@ public:
     typedef std::unordered_map< Reference< XInterface >, ObjectRepresentation, HashReferenceXInterface >    ObjectMap;
     typedef std::unordered_set< Reference< XInterface >, HashReferenceXInterface >                          ObjectSet;
     typedef Sequence< Reference< XInterface > >                                                                 ObjectSequence;
-    typedef Sequence< Reference< XDrawPage > >                                                                  XDrawPageSequence;
 
     typedef std::unordered_set< sal_Unicode, HashUChar >                                                    UCharSet;
     typedef std::unordered_map< OUString, UCharSet, OUStringHash >                                          UCharSetMap;
@@ -241,7 +238,7 @@ private:
     // #i124608# explicit ShapeSelection for export when export of the selection is wanted
     Reference< XShapes >                maShapeSelection;
     bool                                mbExportShapeSelection;
-    XDrawPageSequence                   mSelectedPages;
+    std::vector< Reference< XDrawPage > > mSelectedPages;
     std::vector< Reference< XDrawPage > > mMasterPageTargets;
 
     Link<EditFieldInfo*,void>           maOldFieldHdl;
@@ -252,20 +249,20 @@ private:
     bool                            implExport( const Sequence< PropertyValue >& rDescriptor ) throw (RuntimeException, std::exception);
     static Reference< XWriter >     implCreateExportDocumentHandler( const Reference< XOutputStream >& rxOStm );
 
-    bool                            implGetPagePropSet( const Reference< XDrawPage > & rxPage );
-    bool                            implGenerateMetaData();
+    void                            implGetPagePropSet( const Reference< XDrawPage > & rxPage );
+    void                            implGenerateMetaData();
     void                            implExportTextShapeIndex();
     void                            implEmbedBulletGlyphs();
     void                            implEmbedBulletGlyph( sal_Unicode cBullet, const OUString & sPathData );
-    bool                            implExportTextEmbeddedBitmaps();
-    bool                            implGenerateScript();
+    void                            implExportTextEmbeddedBitmaps();
+    void                            implGenerateScript();
 
     bool                            implExportDocument();
-    bool                            implExportAnimations();
+    void                            implExportAnimations();
 
     bool                            implExportMasterPages( const std::vector< Reference< XDrawPage > >& rxPages,
                                                                sal_Int32 nFirstPage, sal_Int32 nLastPage );
-    bool                            implExportDrawPages( const XDrawPageSequence& rxPages,
+    void                            implExportDrawPages( const std::vector< Reference< XDrawPage > >& rxPages,
                                                              sal_Int32 nFirstPage, sal_Int32 nLastPage );
     bool                            implExportPage( const OUString & sPageId,
                                                         const Reference< XDrawPage > & rxPage,
@@ -280,7 +277,7 @@ private:
     bool                            implCreateObjects();
     bool                            implCreateObjectsFromShapes( const Reference< XDrawPage > & rxPage, const Reference< XShapes >& rxShapes );
     bool                            implCreateObjectsFromShape( const Reference< XDrawPage > & rxPage, const Reference< XShape >& rxShape );
-    bool                            implCreateObjectsFromBackground( const Reference< XDrawPage >& rxMasterPage );
+    void                            implCreateObjectsFromBackground( const Reference< XDrawPage >& rxMasterPage );
 
     static OUString                 implGetClassFromShape( const Reference< XShape >& rxShape );
     void                            implRegisterInterface( const Reference< XInterface >& rxIf );
@@ -292,8 +289,8 @@ private:
                                                                 const Reference< XPropertySetInfo > & rxPropSetInfo );
     DECL_LINK_TYPED( CalcFieldHdl, EditFieldInfo*, void );
 
-    static bool isStreamGZip(css::uno::Reference<css::io::XInputStream> xInput);
-    static bool isStreamSvg(css::uno::Reference<css::io::XInputStream> xInput);
+    static bool isStreamGZip(const css::uno::Reference<css::io::XInputStream>& xInput);
+    static bool isStreamSvg(const css::uno::Reference<css::io::XInputStream>& xInput);
 
 protected:
 

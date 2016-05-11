@@ -36,7 +36,6 @@
 #include <com/sun/star/task/InteractionHandler.hpp>
 #include <com/sun/star/task/XInteractionAbort.hpp>
 #include <com/sun/star/task/XInteractionApprove.hpp>
-#include <com/sun/star/task/XInteractionAskLater.hpp>
 #include <com/sun/star/task/XInteractionDisapprove.hpp>
 #include <com/sun/star/task/XInteractionHandler2.hpp>
 #include <com/sun/star/task/XInteractionRequest.hpp>
@@ -94,7 +93,6 @@ using ::com::sun::star::uno::Reference;
 using ::com::sun::star::task::XInteractionContinuation;
 using ::com::sun::star::task::XInteractionAbort;
 using ::com::sun::star::task::XInteractionApprove;
-using ::com::sun::star::task::XInteractionAskLater;
 using ::com::sun::star::uno::XInterface;
 using ::com::sun::star::lang::XInitialization;
 using ::com::sun::star::uno::UNO_QUERY_THROW;
@@ -300,7 +298,7 @@ UUIInteractionHelper::tryOtherInteractionHandler(
 namespace
 {
 
-    static bool lcl_matchesRequest( const Any& i_rRequest, const OUString& i_rTypeName, const OUString& i_rPropagation )
+    bool lcl_matchesRequest( const Any& i_rRequest, const OUString& i_rTypeName, const OUString& i_rPropagation )
     {
         const css::uno::TypeDescription aTypeDesc( i_rTypeName );
         const typelib_TypeDescription* pTypeDesc = aTypeDesc.get();
@@ -780,7 +778,6 @@ UUIInteractionHelper::handleRequest_impl(
         }
 
 
-
         // Handle requests which do not have a plain string representation.
 
         if (!bObtainErrorStringOnly)
@@ -974,13 +971,13 @@ UUIInteractionHelper::getParentProperty()
     return nullptr;
 }
 
-uno::Reference< awt::XWindow>
+const uno::Reference< awt::XWindow>&
 UUIInteractionHelper::getParentXWindow() const
 {
     return m_xWindowParam;
 }
 
-OUString
+const OUString&
 UUIInteractionHelper::getContextProperty()
 {
     return m_aContextParam;

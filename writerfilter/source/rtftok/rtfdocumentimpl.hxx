@@ -12,9 +12,9 @@
 
 #include <stack>
 #include <queue>
+#include <tuple>
 #include <vector>
 #include <boost/optional.hpp>
-#include <boost/tuple/tuple.hpp>
 
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
@@ -44,7 +44,7 @@ enum class RTFBorderState
     CHARACTER
 };
 
-/// Minimalistic buffer of elements for nested cells.
+/// Different kind of buffers for table cell contents.
 enum RTFBufferTypes
 {
     BUFFER_PROPS,
@@ -56,6 +56,8 @@ enum RTFBufferTypes
     BUFFER_ENDRUN,
     BUFFER_PAR,
     BUFFER_STARTSHAPE,
+    /// Imports a shape.
+    BUFFER_RESOLVESHAPE,
     BUFFER_ENDSHAPE,
     BUFFER_RESOLVESUBSTREAM
 };
@@ -73,7 +75,8 @@ enum class RTFBmpStyle
 {
     NONE,
     PNG,
-    JPEG
+    JPEG,
+    DIBITMAP
 };
 
 enum class RTFFieldStatus
@@ -86,8 +89,8 @@ enum class RTFFieldStatus
 struct TableRowBuffer;
 
 /// A buffer storing dmapper calls.
-typedef ::boost::tuple<RTFBufferTypes, RTFValue::Pointer_t,
-        ::std::shared_ptr<TableRowBuffer> > Buf_t;
+typedef std::tuple<RTFBufferTypes, RTFValue::Pointer_t,
+        std::shared_ptr<TableRowBuffer> > Buf_t;
 typedef std::deque< Buf_t > RTFBuffer_t;
 
 /// holds one nested table row
@@ -185,14 +188,14 @@ class RTFFrame
 {
 private:
     RTFParserState* m_pParserState;
-    sal_Int32 nX, nY, nW, nH;
-    sal_Int32 nHoriPadding, nVertPadding;
-    sal_Int32 nHoriAlign, nHoriAnchor, nVertAlign, nVertAnchor;
-    Id nHRule;
-    boost::optional<Id> oWrap;
+    sal_Int32 m_nX, m_nY, m_nW, m_nH;
+    sal_Int32 m_nHoriPadding, m_nVertPadding;
+    sal_Int32 m_nHoriAlign, m_nHoriAnchor, m_nVertAlign, m_nVertAnchor;
+    Id m_nHRule;
+    boost::optional<Id> m_oWrap;
 public:
     RTFFrame(RTFParserState* pParserState);
-    sal_Int16 nAnchorType;
+    sal_Int16 m_nAnchorType;
 
     /// Convert the stored properties to Sprms
     RTFSprms getSprms();
@@ -210,8 +213,6 @@ class RTFParserState
 {
 public:
     RTFParserState(RTFDocumentImpl* pDocumentImpl);
-    /// Resets aFrame.
-    void resetFrame();
 
     RTFDocumentImpl* m_pDocumentImpl;
     RTFInternalState nInternalState;
@@ -299,6 +300,11 @@ public:
     bool bInShape; ///< If we're inside a \shp group.
     bool bCreatedShapeGroup; ///< A GroupShape was created and pushed to the parent stack.
     bool bStartedTrackchange; ///< Track change is started, need to end it before popping.
+
+    /// User-defined property: key name.
+    OUString aPropName;
+    /// User-defined property: value type.
+    css::uno::Type aPropType;
 };
 
 /// An RTF stack is similar to std::stack, except that it has an operator[].
@@ -318,6 +324,16 @@ struct RTFStack : public std::deque<RTFParserState>
     }
 };
 
+void putBorderProperty(RTFStack& aStates, Id nId, const RTFValue::Pointer_t& pValue);
+void putNestedSprm(RTFSprms& rSprms, Id nParent, Id nId, const RTFValue::Pointer_t& pValue);
+Id getParagraphBorder(sal_uInt32 nIndex);
+void putNestedAttribute(RTFSprms& rSprms, Id nParent, Id nId, const RTFValue::Pointer_t& pValue, RTFOverwrite eOverwrite = RTFOverwrite::YES, bool bAttribute = true);
+bool eraseNestedAttribute(RTFSprms& rSprms, Id nParent, Id nId);
+/// Checks if rName is contained at least once in rProperties as a key.
+bool findPropertyName(const std::vector<css::beans::PropertyValue>& rProperties, const OUString& rName);
+RTFSprms& getLastAttributes(RTFSprms& rSprms, Id nId);
+OString DTTM22OString(long nDTTM);
+
 class RTFTokenizer;
 class RTFSdrImport;
 
@@ -332,7 +348,7 @@ public:
                     css::uno::Reference<css::lang::XComponent> const& xDstDoc,
                     css::uno::Reference<css::frame::XFrame> const& xFrame,
                     css::uno::Reference<css::task::XStatusIndicator> const& xStatusIndicator,
-                    bool bIsNewDoc);
+                    const utl::MediaDescriptor& rMediaDescriptor);
     virtual ~RTFDocumentImpl();
 
     // RTFDocument
@@ -366,14 +382,14 @@ public:
     void setAuthorInitials(OUString& rAuthorInitials);
     void setIgnoreFirst(OUString& rIgnoreFirst);
     void seek(sal_Size nPos);
-    css::uno::Reference<css::lang::XMultiServiceFactory> getModelFactory()
+    const css::uno::Reference<css::lang::XMultiServiceFactory>& getModelFactory()
     {
         return m_xModelFactory;
     }
     bool isInBackground();
     void setDestinationText(OUString& rString);
     /// Resolve a picture: If not inline, then anchored.
-    RTFError resolvePict(bool bInline, css::uno::Reference<css::drawing::XShape> const& xShape);
+    void resolvePict(bool bInline, css::uno::Reference<css::drawing::XShape> const& xShape);
 
     /// If this is the first run of the document, starts the initial paragraph.
     void checkFirstRun();
@@ -395,6 +411,10 @@ public:
     /// Get the default parser state.
     RTFParserState& getDefaultState();
     oox::GraphicHelper& getGraphicHelper();
+    /// Are we inside the stylesheet table?
+    bool isStyleSheetImport();
+    /// Resets m_aStates.top().aFrame.
+    void resetFrame();
 
 private:
     SvStream& Strm();
@@ -415,7 +435,7 @@ private:
     void tableBreak();
     writerfilter::Reference<Properties>::Pointer_t getProperties(RTFSprms& rAttributes, RTFSprms& rSprms);
     void checkNeedPap();
-    void sectBreak(bool bFinal);
+    void sectBreak(bool bFinal = false);
     void prepareProperties(
         RTFParserState& rState,
         writerfilter::Reference<Properties>::Pointer_t&,
@@ -437,7 +457,7 @@ private:
     /// If we have some unicode or hex characters to send.
     void checkUnicode(bool bUnicode, bool bHex);
     /// If we need a final section break at the end of the document.
-    void setNeedSect(bool bNeedSect = true);
+    void setNeedSect(bool bNeedSect);
     void resetTableRowProperties();
     void backupTableRowProperties();
     void restoreTableRowProperties();
@@ -521,7 +541,6 @@ private:
     /// Buffered superscript, till footnote is reached (or not).
     RTFBuffer_t m_aSuperBuffer;
 
-    bool m_bHasFootnote;
     /// Superstream of this substream.
     RTFDocumentImpl* m_pSuperstream;
     /// Type of the stream: header, footer, footnote, etc.
@@ -563,6 +582,8 @@ private:
     RTFReferenceTable::Entries_t m_aStyleTableEntries;
     int m_nCurrentStyleIndex;
     bool m_bFormField;
+    /// For the INCLUDEPICTURE field's argument.
+    OUString m_aPicturePath;
     // Unicode characters are collected here so we don't have to send them one by one.
     OUStringBuffer m_aUnicodeBuffer;
     /// Same for hex characters.
@@ -591,6 +612,8 @@ private:
 
     /// New document means not pasting into an existing one.
     bool m_bIsNewDoc;
+    /// The media descriptor contains e.g. the base URL of the document.
+    const utl::MediaDescriptor& m_rMediaDescriptor;
 };
 } // namespace rtftok
 } // namespace writerfilter

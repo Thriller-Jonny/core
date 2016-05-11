@@ -17,9 +17,6 @@
  */
 
 interface BaseTextEditView
-[
-    Automation = FALSE;
-]
 {
     FN_REFRESH_VIEW // status(final|play)
     [
@@ -475,9 +472,8 @@ interface BaseTextEditView
                 StateMethod = GetState ;
                 DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
         ]
-    /*
-    search and replace
-*/
+
+    /* search and replace */
 
     SID_SEARCH_ITEM // status()
     [
@@ -567,17 +563,11 @@ interface BaseTextEditView
     [
         ExecMethod = Execute ;
         StateMethod = NoState ;
-        FastCall , Cachable ;
     ]
 
     FN_SYNC_LABELS  // status(play)
     [
         ExecMethod = Execute ;
-    ]
-    FN_MAILMERGE_CHILDWINDOW
-    [
-        ExecMethod = Execute ;
-        StateMethod = GetState;
     ]
 
     FN_MAILMERGE_SENDMAIL_CHILDWINDOW
@@ -704,7 +694,6 @@ interface BaseTextEditView
         ExecMethod = ExecViewOptions ;
         StateMethod = StateViewOptions ;
         Export = FALSE;
-        Cachable;
         DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
     ]
 
@@ -713,7 +702,6 @@ interface BaseTextEditView
         ExecMethod = ExecViewOptions ;
         StateMethod = StateViewOptions ;
         Export = FALSE;
-        Cachable;
     ]
 
     FN_VIEW_GRAPHIC // status()
@@ -733,7 +721,6 @@ interface BaseTextEditView
     [
         ExecMethod = ExecViewOptions ;
         StateMethod = StateViewOptions ;
-        Cachable ;
         Export = FALSE;
     ]
 
@@ -741,7 +728,6 @@ interface BaseTextEditView
     [
         ExecMethod = ExecViewOptions ;
         StateMethod = StateViewOptions ;
-        Cachable ;
         Export = FALSE;
     ]
 
@@ -749,7 +735,6 @@ interface BaseTextEditView
     [
         ExecMethod = ExecViewOptions ;
         StateMethod = StateViewOptions ;
-        Cachable ;
         Export = FALSE;
     ]
 
@@ -803,33 +788,31 @@ interface BaseTextEditView
         StateMethod = StateViewOptions ;
         DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
     ]
+    SID_TRACK_CHANGES_BAR
+    [
+        ExecMethod = ExecViewOptions ;
+        StateMethod = StateViewOptions ;
+    ]
 }
 
 interface GlobalContents
-[   uuid = "1FD80520-F517-11d0-AC9B-008029E867C6"; ]
 {
     UINT16  Type    FN_COLL_TYPE
     (
         UINT16  Position        FN_COLL_TYPE
     )
-    [
-    ]
 
     // Areaname, Index-Titel or Empty String
     String  Title FN_COLL_TITLE
     (
         UINT16  Position        FN_COLL_TITLE
     )
-    [
-    ]
+
     // Without a FileName an area of the text is inserted at this location.
     BOOL    InsertDocument  FN_COLL_ADD
     (
         UINT16  Position        FN_COLL_ADD,
         UINT16  FileName        FN_PARAM_1
     )
-    [
-    ]
-
 }
 

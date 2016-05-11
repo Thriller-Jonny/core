@@ -176,15 +176,17 @@ int HWPFile::Read1b(void *ptr, size_t nmemb)
     return hiodev ? hiodev->read1b(ptr, nmemb) : 0;
 }
 
-int HWPFile::Read2b(void *ptr, size_t nmemb)
+void HWPFile::Read2b(void *ptr, size_t nmemb)
 {
-    return hiodev ? hiodev->read2b(ptr, nmemb) : 0;
+    if (hiodev)
+        hiodev->read2b(ptr, nmemb);
 }
 
 
-int HWPFile::Read4b(void *ptr, size_t nmemb)
+void HWPFile::Read4b(void *ptr, size_t nmemb)
 {
-    return hiodev ? hiodev->read4b(ptr, nmemb) : 0;
+    if (hiodev)
+        hiodev->read4b(ptr, nmemb);
 }
 
 
@@ -200,9 +202,10 @@ size_t HWPFile::SkipBlock(size_t size)
 }
 
 
-bool HWPFile::SetCompressed(bool flag)
+void HWPFile::SetCompressed(bool flag)
 {
-    return hiodev && hiodev->setCompressed(flag);
+    if (hiodev)
+        hiodev->setCompressed(flag);
 }
 
 
@@ -218,27 +221,27 @@ HIODev *HWPFile::SetIODevice(HIODev * new_hiodev)
 
 // end of HIODev wrapper
 
-bool HWPFile::InfoRead()
+void HWPFile::InfoRead()
 {
-    return _hwpInfo.Read(*this);
+    _hwpInfo.Read(*this);
 }
 
 
-bool HWPFile::FontRead()
+void HWPFile::FontRead()
 {
-    return _hwpFont.Read(*this);
+    _hwpFont.Read(*this);
 }
 
 
-bool HWPFile::StyleRead()
+void HWPFile::StyleRead()
 {
-    return _hwpStyle.Read(*this);
+    _hwpStyle.Read(*this);
 }
 
 
-bool HWPFile::ParaListRead()
+void HWPFile::ParaListRead()
 {
-    return ReadParaList(plist);
+    ReadParaList(plist);
 }
 
 bool HWPFile::ReadParaList(std::list < HWPPara* > &aplist, unsigned char flag)
@@ -381,7 +384,7 @@ ColumnDef *HWPFile::GetColumnDef(int num)
 
     for(int i = 0; it != columnlist.end() ; ++it, i++){
         if( i == num )
-	  break;
+            break;
     }
 
     if( it != columnlist.end() )
@@ -408,8 +411,8 @@ HyperText *HWPFile::GetHyperText()
     std::list<HyperText*>::iterator it = hyperlist.begin();
 
     for( int i = 0; it != hyperlist.end(); ++it, i++ ){
-	if( i == currenthyper )
-	  break;
+        if( i == currenthyper )
+          break;
     }
 
     currenthyper++;
@@ -465,8 +468,8 @@ ParaShape *HWPFile::getParaShape(int index)
     std::list<ParaShape*>::iterator it = pslist.begin();
 
     for( int i = 0; it != pslist.end(); ++it, i++ ){
-	if( i == index )
-	  break;
+    if( i == index )
+      break;
     }
 
     return it != pslist.end() ? *it : nullptr;
@@ -478,8 +481,8 @@ CharShape *HWPFile::getCharShape(int index)
     std::list<CharShape*>::iterator it = cslist.begin();
 
     for( int i = 0; it != cslist.end(); ++it, i++ ){
-	if( i == index )
-	  break;
+        if( i == index )
+          break;
     }
 
     return it != cslist.end() ? *it : nullptr;
@@ -491,8 +494,8 @@ FBoxStyle *HWPFile::getFBoxStyle(int index)
     std::list<FBoxStyle*>::iterator it = fbslist.begin();
 
     for( int i = 0; it != fbslist.end(); ++it, i++ ){
-	if( i == index )
-	  break;
+        if( i == index )
+          break;
     }
 
     return it != fbslist.end() ? *it : nullptr;
@@ -503,8 +506,8 @@ DateCode *HWPFile::getDateCode(int index)
     std::list<DateCode*>::iterator it = datecodes.begin();
 
     for( int i = 0; it != datecodes.end(); ++it, i++ ){
-	if( i == index )
-	  break;
+        if( i == index )
+          break;
     }
 
     return it != datecodes.end() ? *it : nullptr;
@@ -515,8 +518,8 @@ HeaderFooter *HWPFile::getHeaderFooter(int index)
     std::list<HeaderFooter*>::iterator it = headerfooters.begin();
 
     for( int i = 0; it != headerfooters.end(); ++it, i++ ){
-	if( i == index )
-	  break;
+        if( i == index )
+          break;
     }
 
     return it != headerfooters.end() ? *it : nullptr;
@@ -527,8 +530,8 @@ ShowPageNum *HWPFile::getPageNumber(int index)
     std::list<ShowPageNum*>::iterator it = pagenumbers.begin();
 
     for( int i = 0; it != pagenumbers.end(); ++it, i++ ){
-	if( i == index )
-	  break;
+        if( i == index )
+          break;
     }
 
     return it != pagenumbers.end() ? *it : nullptr;
@@ -540,8 +543,8 @@ Table *HWPFile::getTable(int index)
     std::list<Table*>::iterator it = tables.begin();
 
     for( int i = 0; it != tables.end(); ++it, i++ ){
-	if( i == index )
-	  break;
+        if( i == index )
+          break;
     }
 
     return it != tables.end() ? *it : nullptr;
@@ -552,22 +555,24 @@ void HWPFile::AddParaShape(ParaShape * pshape)
     int nscount = 0;
     for(int j = 0 ; j < MAXTABS-1 ; j++)
     {
-          if( j > 0 && pshape->tabs[j].position == 0 )
-                break;
-          if( pshape->tabs[0].position == 0 ){
-                if( pshape->tabs[j].type || pshape->tabs[j].dot_continue ||
-                     (pshape->tabs[j].position != 1000 *j) )
-                          nscount = j;
-          }
-          else{
-                if( pshape->tabs[j].type || pshape->tabs[j].dot_continue ||
-                     (pshape->tabs[j].position != 1000 * (j + 1)) )
-                          nscount = j;
+        if( j > 0 && pshape->tabs[j].position == 0 )
+          break;
+        if( pshape->tabs[0].position == 0 ){
+            if( pshape->tabs[j].type || pshape->tabs[j].dot_continue ||
+                 (pshape->tabs[j].position != 1000 *j) )
+                      nscount = j;
+        }
+        else {
+            if( pshape->tabs[j].type || pshape->tabs[j].dot_continue ||
+                (pshape->tabs[j].position != 1000 * (j + 1)) )
+                    nscount = j;
           }
     }
     if( nscount )
         pshape->tabs[MAXTABS-1].type = sal::static_int_cast<char>(nscount);
-     int value = compareParaShape(pshape);
+
+    int value = compareParaShape(pshape);
+
     if( value == 0 || nscount )
     {
         pshape->index = ++pcount;

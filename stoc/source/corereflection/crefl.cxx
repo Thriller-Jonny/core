@@ -60,7 +60,6 @@ static OUString core_getImplementationName()
 IdlReflectionServiceImpl::IdlReflectionServiceImpl(
     const Reference< XComponentContext > & xContext )
     : OComponentHelper( _aComponentMutex )
-    , _xMgr( xContext->getServiceManager(), UNO_QUERY )
     , _aElements( CACHE_SIZE )
 {
     xContext->getValueByName(
@@ -211,12 +210,7 @@ inline Reference< XIdlClass > IdlReflectionServiceImpl::constructClass(
         return new IdlClassImpl( this, pTypeDescr->pTypeName, pTypeDescr->eTypeClass, pTypeDescr );
 
     default:
-#if OSL_DEBUG_LEVEL > 1
-        OSL_TRACE( "### corereflection type unsupported: " );
-        OString aName( OUStringToOString( pTypeDescr->pTypeName, RTL_TEXTENCODING_ASCII_US ) );
-        OSL_TRACE( "%s", aName.getStr() );
-        OSL_TRACE( "\n" );
-#endif
+        SAL_INFO("stoc", "corereflection type unsupported: " << pTypeDescr->pTypeName);
         return Reference< XIdlClass >();
     }
 }
@@ -314,7 +308,7 @@ sal_Bool IdlReflectionServiceImpl::hasByHierarchicalName( const OUString & rName
     catch (container::NoSuchElementException &)
     {
     }
-    return sal_False;
+    return false;
 }
 
 

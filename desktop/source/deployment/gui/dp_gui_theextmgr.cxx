@@ -42,7 +42,6 @@ using namespace ::com::sun::star;
 namespace dp_gui {
 
 
-
 ::rtl::Reference< TheExtensionManager > TheExtensionManager::s_ExtMgr;
 
 
@@ -189,7 +188,7 @@ bool TheExtensionManager::isVisible()
 }
 
 
-bool TheExtensionManager::checkUpdates( bool /* bShowUpdateOnly */, bool /*bParentVisible*/ )
+void TheExtensionManager::checkUpdates( bool /* bShowUpdateOnly */, bool /*bParentVisible*/ )
 {
     std::vector< uno::Reference< deployment::XPackage >  > vEntries;
     uno::Sequence< uno::Sequence< uno::Reference< deployment::XPackage > > > xAllPackages;
@@ -198,11 +197,11 @@ bool TheExtensionManager::checkUpdates( bool /* bShowUpdateOnly */, bool /*bPare
         xAllPackages = m_xExtensionManager->getAllExtensions( uno::Reference< task::XAbortChannel >(),
                                                               uno::Reference< ucb::XCommandEnvironment >() );
     } catch ( const deployment::DeploymentException & ) {
-        return false;
+        return;
     } catch ( const ucb::CommandFailedException & ) {
-        return false;
+        return;
     } catch ( const ucb::CommandAbortedException & ) {
-        return false;
+        return;
     } catch ( const lang::IllegalArgumentException & e ) {
         throw uno::RuntimeException( e.Message, e.Context );
     }
@@ -218,7 +217,6 @@ bool TheExtensionManager::checkUpdates( bool /* bShowUpdateOnly */, bool /*bPare
     }
 
     m_pExecuteCmdQueue->checkForUpdates( vEntries );
-    return true;
 }
 
 
@@ -378,7 +376,7 @@ bool TheExtensionManager::supportsOptions( const uno::Reference< deployment::XPa
     for ( int i = 0; i < seqNames.getLength(); i++ )
     {
         uno::Any anyNode = m_xNameAccessNodes->getByName( seqNames[i] );
-        //If we have a node then then it must contain the set of leaves. This is part of OptionsDialog.xcs
+        //If we have a node then it must contain the set of leaves. This is part of OptionsDialog.xcs
         uno::Reference< XInterface> xIntNode = anyNode.get< uno::Reference< XInterface > >();
         uno::Reference< container::XNameAccess > xNode( xIntNode, uno::UNO_QUERY_THROW );
 

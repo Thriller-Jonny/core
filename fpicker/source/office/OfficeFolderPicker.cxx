@@ -25,7 +25,6 @@
 #include <tools/urlobj.hxx>
 #include <com/sun/star/container/XContentEnumerationAccess.hpp>
 #include <com/sun/star/container/XSet.hpp>
-#include <com/sun/star/uno/Any.hxx>
 #include <cppuhelper/factory.hxx>
 #include <cppuhelper/supportsservice.hxx>
 #include <com/sun/star/beans/XPropertySet.hpp>
@@ -36,8 +35,7 @@ using namespace     ::com::sun::star::lang;
 using namespace     ::com::sun::star::uno;
 using namespace     ::com::sun::star::beans;
 
-SvtFolderPicker::SvtFolderPicker( const Reference < XMultiServiceFactory >& _rxFactory )
-    :SvtFolderPicker_Base( _rxFactory )
+SvtFolderPicker::SvtFolderPicker()
 {
 }
 
@@ -184,11 +182,10 @@ OUString SvtFolderPicker::impl_getStaticImplementationName()
 }
 
 /* Helper for registry */
-Reference< XInterface > SAL_CALL SvtFolderPicker::impl_createInstance( const Reference< XComponentContext >& rxContext )
+Reference< XInterface > SAL_CALL SvtFolderPicker::impl_createInstance( const Reference< XComponentContext >&  )
     throw( Exception )
 {
-    Reference< XMultiServiceFactory > xServiceManager (rxContext->getServiceManager(), UNO_QUERY_THROW);
-    return Reference< XInterface >( *new SvtFolderPicker( xServiceManager ) );
+    return Reference< XInterface >( *new SvtFolderPicker );
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

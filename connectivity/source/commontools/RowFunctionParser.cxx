@@ -33,7 +33,6 @@
 #include <tools/fract.hxx>
 
 
-
 #if (OSL_DEBUG_LEVEL > 0)
 #include <iostream>
 #endif
@@ -122,10 +121,7 @@ public:
 };
 
 
-
-
 // FUNCTION PARSER
-
 
 
 typedef const sal_Char* StringIteratorT;
@@ -247,8 +243,8 @@ class UnaryFunctionFunctor
 
 public:
 
-    UnaryFunctionFunctor( const ParserContextSharedPtr& rContext ) :
-        mpContext( rContext )
+    explicit UnaryFunctionFunctor(const ParserContextSharedPtr& rContext)
+        : mpContext(rContext)
     {
     }
     void operator()( StringIteratorT, StringIteratorT ) const
@@ -306,12 +302,9 @@ public:
         // grammar definition
         explicit definition( const ExpressionGrammar& self )
         {
-            using ::boost::spirit::str_p;
             using ::boost::spirit::space_p;
             using ::boost::spirit::range_p;
             using ::boost::spirit::lexeme_d;
-            using ::boost::spirit::real_parser;
-            using ::boost::spirit::chseq_p;
             using ::boost::spirit::ch_p;
             using ::boost::spirit::int_p;
             using ::boost::spirit::as_lower_d;

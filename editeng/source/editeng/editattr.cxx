@@ -49,7 +49,6 @@
 #include "editattr.hxx"
 
 
-
 // class EditCharAttrib
 
 EditCharAttrib::EditCharAttrib( const SfxPoolItem& rAttr, sal_uInt16 nS, sal_uInt16 nE ) :
@@ -70,7 +69,6 @@ void EditCharAttrib::SetFont( SvxFont&, OutputDevice* )
 }
 
 
-
 // class EditCharAttribFont
 
 EditCharAttribFont::EditCharAttribFont( const SvxFontItem& rAttr, sal_uInt16 _nStart, sal_uInt16 _nEnd )
@@ -83,7 +81,7 @@ void EditCharAttribFont::SetFont( SvxFont& rFont, OutputDevice* )
 {
     const SvxFontItem& rAttr = static_cast<const SvxFontItem&>(*GetItem());
 
-    rFont.SetName( rAttr.GetFamilyName() );
+    rFont.SetFamilyName( rAttr.GetFamilyName() );
     rFont.SetFamily( rAttr.GetFamily() );
     rFont.SetPitch( rAttr.GetPitch() );
     rFont.SetCharSet( rAttr.GetCharSet() );
@@ -128,7 +126,7 @@ EditCharAttribUnderline::EditCharAttribUnderline( const SvxUnderlineItem& rAttr,
 
 void EditCharAttribUnderline::SetFont( SvxFont& rFont, OutputDevice* pOutDev )
 {
-    rFont.SetUnderline( (FontUnderline)static_cast<const SvxUnderlineItem*>(GetItem())->GetValue() );
+    rFont.SetUnderline( (FontLineStyle)static_cast<const SvxUnderlineItem*>(GetItem())->GetValue() );
 
     if ( pOutDev )
         pOutDev->SetTextLineColor( static_cast<const SvxUnderlineItem*>(GetItem())->GetColor() );
@@ -146,7 +144,7 @@ EditCharAttribOverline::EditCharAttribOverline( const SvxOverlineItem& rAttr, sa
 
 void EditCharAttribOverline::SetFont( SvxFont& rFont, OutputDevice* pOutDev )
 {
-    rFont.SetOverline( (FontUnderline)static_cast<const SvxOverlineItem*>(GetItem())->GetValue() );
+    rFont.SetOverline( (FontLineStyle)static_cast<const SvxOverlineItem*>(GetItem())->GetValue() );
     if ( pOutDev )
         pOutDev->SetOverlineColor( static_cast<const SvxOverlineItem*>(GetItem())->GetColor() );
 }
@@ -163,7 +161,7 @@ EditCharAttribFontHeight::EditCharAttribFontHeight( const SvxFontHeightItem& rAt
 void EditCharAttribFontHeight::SetFont( SvxFont& rFont, OutputDevice* )
 {
     // Property is ignored
-    rFont.SetSize( Size( rFont.GetSize().Width(), static_cast<const SvxFontHeightItem*>(GetItem())->GetHeight() ) );
+    rFont.SetFontSize( Size( rFont.GetFontSize().Width(), static_cast<const SvxFontHeightItem*>(GetItem())->GetHeight() ) );
 }
 
 
@@ -278,7 +276,7 @@ EditCharAttribEscapement::EditCharAttribEscapement( const SvxEscapementItem& rAt
 
 void EditCharAttribEscapement::SetFont( SvxFont& rFont, OutputDevice* )
 {
-    sal_uInt16 nProp = static_cast<const SvxEscapementItem*>(GetItem())->GetProp();
+    sal_uInt16 const nProp = static_cast<const SvxEscapementItem*>(GetItem())->GetProportionalHeight();
     rFont.SetPropr( (sal_uInt8)nProp );
 
     short nEsc = static_cast<const SvxEscapementItem*>(GetItem())->GetEsc();

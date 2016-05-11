@@ -52,9 +52,7 @@
 #define FORMAT_WMF      12
 #define FORMAT_EMF      13
 #define FORMAT_EPS      14
-#define FORMAT_MET      15
 #define FORMAT_SVG      16
-#define FORMAT_SVM      17
 
 #define UNIT_DEFAULT    -1
 #define UNIT_INCH       0
@@ -85,12 +83,8 @@ static sal_Int16 GetFilterFormat(const OUString& rExt)
         nFormat = FORMAT_EMF;
     else if ( rExt == "EPS" )
         nFormat = FORMAT_EPS;
-    else if ( rExt == "MET" )
-        nFormat = FORMAT_MET;
     else if ( rExt == "SVG" )
         nFormat = FORMAT_SVG;
-    else if ( rExt == "SVM" )
-        nFormat = FORMAT_SVM;
     return nFormat;
 }
 
@@ -393,15 +387,14 @@ void ExportDialog::GetGraphicSource()
     }
 }
 
-bool ExportDialog::GetGraphicStream()
+void ExportDialog::GetGraphicStream()
 {
-    bool bRet = false;
-
     if ( !IsTempExportAvailable() )
     {
-        delete mpTempStream, mpTempStream = new SvMemoryStream();
+        delete mpTempStream;
+        mpTempStream = new SvMemoryStream();
         maBitmap = Bitmap();
-        return bRet;
+        return;
     }
 
     bool bRecreateOutputStream = mpTempStream->Tell() == 0;
@@ -417,7 +410,8 @@ bool ExportDialog::GetGraphicStream()
     {
         if ( bRecreateOutputStream )
         {
-            delete mpTempStream, mpTempStream = new SvMemoryStream();
+            delete mpTempStream;
+            mpTempStream = new SvMemoryStream();
             maBitmap = Bitmap();
 
             uno::Reference < io::XStream > xStream( new utl::OStreamWrapper( *mpTempStream ) );
@@ -446,7 +440,6 @@ bool ExportDialog::GetGraphicStream()
             {
                 xGraphicExporter->setSourceDocument( xSourceDoc );
                 xGraphicExporter->filter( aDescriptor );
-                bRet = true;
 
                 if ( mnFormat == FORMAT_JPG )
                 {
@@ -456,8 +449,6 @@ bool ExportDialog::GetGraphicStream()
                 }
             }
         }
-        else
-            bRet = true;
     }
     catch( uno::Exception& )
     {
@@ -465,7 +456,6 @@ bool ExportDialog::GetGraphicStream()
         // ups
 
     }
-    return bRet;
 }
 
 Bitmap ExportDialog::GetGraphicBitmap( SvStream& rInputStream )
@@ -589,7 +579,7 @@ ExportDialog::ExportDialog(FltCallDialogParameter& rPara,
     GetGraphicSource();
 
     get(mpInfo, "information");
-    get(mpFtEstimatedSize, "estsizeft");;
+    get(mpFtEstimatedSize, "estsizeft");
 
     get(mpBtnOK, "ok");
 

@@ -34,7 +34,7 @@ void XMLPersAttrListTContext::AddAttribute(
            ::xmloff::token::XMLTokenEnum eAToken,
            ::xmloff::token::XMLTokenEnum eVToken )
 {
-    OUString aAttrValue( ::xmloff::token::GetXMLToken( eVToken ) );
+    const OUString& aAttrValue( ::xmloff::token::GetXMLToken( eVToken ) );
     AddAttribute( nAPrefix, eAToken, aAttrValue );
 }
 
@@ -45,7 +45,7 @@ void XMLPersAttrListTContext::AddAttribute(
 {
     OUString aAttrQName( GetTransformer().GetNamespaceMap().GetQNameByKey(
                 nAPrefix, ::xmloff::token::GetXMLToken( eAToken ) ) );
-    OUString aAttrValue( rValue );
+    const OUString& aAttrValue( rValue );
 
     XMLMutableAttributeList *pMutableAttrList;
     if( m_xAttrList.is() )
@@ -110,7 +110,7 @@ XMLPersAttrListTContext::~XMLPersAttrListTContext()
 {
 }
 
-XMLTransformerContext *XMLPersAttrListTContext::CreateChildContext(
+rtl::Reference<XMLTransformerContext> XMLPersAttrListTContext::CreateChildContext(
         sal_uInt16 /*nPrefix*/,
         const OUString& /*rLocalName*/,
         const OUString& rQName,

@@ -9,6 +9,9 @@
  */
 
 #include "drawingml/texteffectscontext.hxx"
+#include <oox/helper/attributelist.hxx>
+#include <oox/token/namespaces.hxx>
+#include <oox/token/tokens.hxx>
 
 #include <map>
 
@@ -118,7 +121,7 @@ TextEffectsContext::~TextEffectsContext()
 {
 }
 
-void TextEffectsContext::pushAttributeToGrabBag (const sal_Int32& aAttributeId, const OUString& rElementName, const AttributeList& rAttribs)
+void TextEffectsContext::pushAttributeToGrabBag (sal_Int32 aAttributeId, const OUString& rElementName, const AttributeList& rAttribs)
 {
     if (!rAttribs.hasAttribute(aAttributeId))
         return;

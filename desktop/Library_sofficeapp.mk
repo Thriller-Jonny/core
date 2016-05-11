@@ -23,7 +23,14 @@ $(eval $(call gb_Library_add_libs,sofficeapp,\
     ) \
 ))
 
-$(eval $(call gb_Library_use_external,sofficeapp,boost_headers))
+$(eval $(call gb_Library_use_externals,sofficeapp, \
+    boost_headers \
+    dbus \
+))
+
+ifeq ($(ENABLE_BREAKPAD),TRUE)
+$(eval $(call gb_Library_use_external,sofficeapp,breakpad))
+endif
 
 $(eval $(call gb_Library_use_custom_headers,sofficeapp,\
 	officecfg/registry \
@@ -41,10 +48,12 @@ $(eval $(call gb_Library_add_defs,sofficeapp,\
 $(eval $(call gb_Library_set_precompiled_header,sofficeapp,$(SRCDIR)/desktop/inc/pch/precompiled_sofficeapp))
 
 $(eval $(call gb_Library_use_libraries,sofficeapp,\
-    $(if $(filter $(OS),ANDROID),,basebmp) \
     comphelper \
     cppu \
     cppuhelper \
+    $(if $(filter TRUE,$(ENABLE_BREAKPAD)), \
+        crashreport \
+    ) \
     deploymentmisc \
     editeng \
     i18nlangtag \
@@ -118,7 +127,7 @@ endif
 endif
 
 # LibreOfficeKit bits
-ifneq ($(filter $(OS),ANDROID IOS MACOSX),)
+ifneq ($(filter $(OS),ANDROID IOS MACOSX WNT),)
 $(eval $(call gb_Library_add_exception_objects,sofficeapp,\
 	desktop/source/lib/init \
 	desktop/source/lib/lokinteractionhandler \
@@ -132,6 +141,13 @@ $(eval $(call gb_Library_add_exception_objects,sofficeapp,\
 	desktop/source/lib/init \
 	desktop/source/lib/lokinteractionhandler \
 	desktop/source/lib/lokclipboard \
+))
+endif
+ifeq ($(ENABLE_HEADLESS),TRUE)
+$(eval $(call gb_Library_add_exception_objects,sofficeapp,\
+    desktop/source/lib/init \
+    desktop/source/lib/lokinteractionhandler \
+    desktop/source/lib/lokclipboard \
 ))
 endif
 endif

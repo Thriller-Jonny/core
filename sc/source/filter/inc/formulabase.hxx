@@ -308,7 +308,6 @@ public:
     explicit            ApiTokenIterator( const ApiTokenSequence& rTokens, sal_Int32 nSpacesOpCode, bool bSkipSpaces );
     inline bool         is() const { return mpToken != mpTokenEnd; }
     inline const ApiToken* operator->() const { return mpToken; }
-    inline const ApiToken& operator*() const { return *mpToken; }
 
     ApiTokenIterator&   operator++();
 
@@ -597,8 +596,7 @@ class OpCodeProvider : public FunctionProvider // not derived from WorkbookHelpe
 public:
     explicit            OpCodeProvider(
                             const css::uno::Reference< css::lang::XMultiServiceFactory >& rxModelFactory,
-                            FilterType eFilter, BiffType eBiff, bool bImportFilter,
-                            bool bCallerKnowsAboutMacroExport = false );
+                            FilterType eFilter, BiffType eBiff, bool bImportFilter );
     virtual             ~OpCodeProvider();
 
     /** Returns the structure containing all token op-codes for operators and
@@ -657,6 +655,10 @@ public:
      */
     static OUString generateAddress2dString(
                             const css::table::CellAddress& rAddress,
+                            bool bAbsolute );
+
+    static OUString generateAddress2dString(
+                            const ScAddress& rAddress,
                             bool bAbsolute );
 
     /** Generates a cell address string in A1 notation from the passed binary
@@ -787,7 +789,7 @@ public:
         @param orTokens  (input/output parameter) Expects a single string token
             in this token sequence (whitespace tokens are allowed). The string
             is split into substrings. A list of string tokens separated with
-            parameter separator tokens is returned in this psrameter.
+            parameter separator tokens is returned in this parameter.
 
         @param cStringSep  The separator character used to split the input
             string.

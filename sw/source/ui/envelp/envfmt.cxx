@@ -60,7 +60,7 @@ namespace {
     /// @returns A vector containing one element for each item covered by the
     ///          ranges. This is not guaranteed to be sorted and may contain
     ///          duplicates if the original ranges contained overlaps.
-    static std::vector<sal_uInt16> lcl_convertRangesToList(const sal_uInt16 aRanges[]) {
+    std::vector<sal_uInt16> lcl_convertRangesToList(const sal_uInt16 aRanges[]) {
         std::vector<sal_uInt16> aVec;
         int i = 0;
         while (aRanges[i])
@@ -83,7 +83,7 @@ namespace {
     ///          is two consecutive entries that specify the start and end
     ///          points of the range. This list will be sorted and will not
     ///          contain any overlapping ranges.
-    static sal_uInt16* lcl_convertListToRanges(std::vector<sal_uInt16> &rElements) {
+    sal_uInt16* lcl_convertListToRanges(std::vector<sal_uInt16> &rElements) {
         std::sort(rElements.begin(), rElements.end());
         std::vector<sal_uInt16> aRanges;
         size_t i;
@@ -283,7 +283,7 @@ IMPL_LINK_TYPED( SwEnvFormatPage, EditHdl, MenuButton *, pButton, void )
         OSL_ENSURE(pFact, "SwAbstractDialogFactory fail!");
 
         const OUString sFormatStr = pColl->GetName();
-        std::unique_ptr<SfxAbstractTabDialog> pDlg(pFact->CreateSwCharDlg(GetParentSwEnvDlg(), pSh->GetView(), aTmpSet, DLG_CHAR_ENV, &sFormatStr));
+        std::unique_ptr<SfxAbstractTabDialog> pDlg(pFact->CreateSwCharDlg(GetParentSwEnvDlg(), pSh->GetView(), aTmpSet, SwCharDlgMode::Env, &sFormatStr));
         OSL_ENSURE(pDlg, "Dialog creation failed!");
         if (pDlg->Execute() == RET_OK)
         {
@@ -370,10 +370,10 @@ SfxItemSet *SwEnvFormatPage::GetCollItemSet(SwTextFormatColl* pColl, bool bSende
         };
 
         // BruteForce merge because MergeRange in SvTools is buggy:
-        std::vector<sal_uInt16> pVec = ::lcl_convertRangesToList(pRanges);
+        std::vector<sal_uInt16> aVec2 = ::lcl_convertRangesToList(pRanges);
         std::vector<sal_uInt16> aVec = ::lcl_convertRangesToList(aRanges);
-        pVec.insert(pVec.end(), aVec.begin(), aVec.end());
-        std::unique_ptr<sal_uInt16[]> pNewRanges(::lcl_convertListToRanges(pVec));
+        aVec2.insert(aVec2.end(), aVec.begin(), aVec.end());
+        std::unique_ptr<sal_uInt16[]> pNewRanges(::lcl_convertListToRanges(aVec2));
 
         pAddrSet = new SfxItemSet(GetParentSwEnvDlg()->pSh->GetView().GetCurShell()->GetPool(),
                                   pNewRanges.get());

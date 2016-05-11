@@ -20,7 +20,6 @@
 #ifndef INCLUDED_SVGIO_INC_SVGIO_SVGREADER_SVGDOCUMENT_HXX
 #define INCLUDED_SVGIO_INC_SVGIO_SVGREADER_SVGDOCUMENT_HXX
 
-#include <boost/noncopyable.hpp>
 #include <svgio/svgreader/svgnode.hxx>
 #include <unordered_map>
 
@@ -28,7 +27,7 @@ namespace svgio
 {
     namespace svgreader
     {
-        class SvgDocument : private boost::noncopyable
+        class SvgDocument
         {
         private:
             /// the document hierarchy with all root nodes
@@ -39,19 +38,21 @@ namespace svgio
 
             /// hash mapper to find nodes by their id
             typedef std::unordered_map< OUString, const SvgNode*,
-                      OUStringHash,
-                      ::std::equal_to< OUString > > IdTokenMapper;
+                      OUStringHash > IdTokenMapper;
             typedef std::pair< const OUString, const SvgNode* > IdTokenValueType;
             IdTokenMapper           maIdTokenMapperList;
 
             /// hash mapper to find css styles by their id
-            typedef std::unordered_map< OUString, const SvgStyleAttributes*, OUStringHash, ::std::equal_to< OUString > > IdStyleTokenMapper;
+            typedef std::unordered_map< OUString, const SvgStyleAttributes*, OUStringHash > IdStyleTokenMapper;
             typedef std::pair< const OUString, const SvgStyleAttributes* > IdStyleTokenValueType;
             IdStyleTokenMapper      maIdStyleTokenMapperList;
 
         public:
-            SvgDocument(const OUString& rAbsolutePath);
+            explicit SvgDocument(const OUString& rAbsolutePath);
             ~SvgDocument();
+
+            SvgDocument(const SvgDocument&) = delete;
+            SvgDocument& operator=(const SvgDocument&) = delete;
 
             /// append another root node, ownership changes
             void appendNode(SvgNode* pNode);

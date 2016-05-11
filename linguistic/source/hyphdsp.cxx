@@ -47,7 +47,6 @@ using namespace com::sun::star::linguistic2;
 using namespace linguistic;
 
 
-
 HyphenatorDispatcher::HyphenatorDispatcher( LngSvcMgr &rLngSvcMgr ) :
     rMgr    (rLngSvcMgr)
 {
@@ -121,8 +120,7 @@ Reference<XHyphenatedWord>  HyphenatorDispatcher::buildHyphWord(
 
             if (nHyphenationPos > 0)
             {
-
-#if OSL_DEBUG_LEVEL > 1
+#if OSL_DEBUG_LEVEL > 0
                 {
                     if (aTmp.toString() != rOrigWord)
                     {
@@ -143,8 +141,7 @@ Reference<XHyphenatedWord>  HyphenatorDispatcher::buildHyphWord(
                         sal_Int32 nL = aLonger.getLength();
                         if (nS > 0 && nL > 0)
                         {
-                            DBG_ASSERT( (nS + 1 == nL) && aLonger[nL-1] == '.',
-                                "HyphenatorDispatcher::buildHyphWord: unexpected difference between words!" );
+                            assert( ((nS + 1 == nL) && aLonger[nL-1] == '.') && "HyphenatorDispatcher::buildHyphWord: unexpected difference between words!" );
                         }
                     }
                 }
@@ -319,7 +316,7 @@ Reference< XHyphenatedWord > SAL_CALL
         if (GetDicList().is()  &&  IsUseDicList( rProperties, GetPropSet() ))
         {
             xEntry = GetDicList()->queryDictionaryEntry( aChkWord, rLocale,
-                        sal_True, sal_False );
+                        true, false );
         }
 
         if (xEntry.is())
@@ -455,7 +452,7 @@ Reference< XHyphenatedWord > SAL_CALL
         if (GetDicList().is()  &&  IsUseDicList( rProperties, GetPropSet() ))
         {
             xEntry = GetDicList()->queryDictionaryEntry( aChkWord, rLocale,
-                        sal_True, sal_False );
+                        true, false );
         }
 
         if (xEntry.is())
@@ -580,7 +577,7 @@ Reference< XPossibleHyphens > SAL_CALL
         if (GetDicList().is()  &&  IsUseDicList( rProperties, GetPropSet() ))
         {
             xEntry = GetDicList()->queryDictionaryEntry( aChkWord, rLocale,
-                        sal_True, sal_False );
+                        true, false );
         }
 
         if (xEntry.is())

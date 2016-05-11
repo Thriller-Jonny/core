@@ -131,18 +131,18 @@ class SvtSecurityOptions_Impl : public ConfigItem
 
         bool                IsReadOnly      ( SvtSecurityOptions::EOption eOption                   ) const;
 
-        Sequence< OUString >    GetSecureURLs   (                                                       ) const { return m_seqSecureURLs;}
-        void                    SetSecureURLs   (   const   Sequence< OUString >&   seqURLList          );
+        const Sequence< OUString >& GetSecureURLs(                                                       ) const { return m_seqSecureURLs;}
+        void                    SetSecureURLs    (   const   Sequence< OUString >&   seqURLList          );
         inline sal_Int32        GetMacroSecurityLevel   (                                               ) const;
         void                    SetMacroSecurityLevel   ( sal_Int32 _nLevel                             );
 
         inline bool         IsMacroDisabled         (                                               ) const;
 
-        Sequence< SvtSecurityOptions::Certificate > GetTrustedAuthors       (                                                                                       ) const { return m_seqTrustedAuthors;}
+        const Sequence< SvtSecurityOptions::Certificate >& GetTrustedAuthors(                                                                                       ) const { return m_seqTrustedAuthors;}
         void                                        SetTrustedAuthors       ( const Sequence< SvtSecurityOptions::Certificate >& rAuthors                           );
 
         bool                IsOptionSet     ( SvtSecurityOptions::EOption eOption                   ) const;
-        bool                SetOption       ( SvtSecurityOptions::EOption eOption, bool bValue  );
+        void                SetOption       ( SvtSecurityOptions::EOption eOption, bool bValue  );
         bool                IsOptionEnabled ( SvtSecurityOptions::EOption eOption                   ) const;
 
         /*-****************************************************************************************************
@@ -399,11 +399,11 @@ void SvtSecurityOptions_Impl::SetProperty( sal_Int32 nProperty, const Any& rValu
         break;
         // xmlsec05 deprecated
 
-        #if OSL_DEBUG_LEVEL > 1
+#if OSL_DEBUG_LEVEL > 0
         default:
-            DBG_ASSERT( false, "SvtSecurityOptions_Impl::SetProperty()\nUnknown property!\n" );
-        #endif
-    }
+            assert(false && "SvtSecurityOptions_Impl::SetProperty()\nUnknown property!\n");
+#endif
+        }
 }
 
 void SvtSecurityOptions_Impl::LoadAuthors()
@@ -878,26 +878,16 @@ bool SvtSecurityOptions_Impl::IsOptionSet( SvtSecurityOptions::EOption eOption )
     return bRet;
 }
 
-bool SvtSecurityOptions_Impl::SetOption( SvtSecurityOptions::EOption eOption, bool bValue )
+void SvtSecurityOptions_Impl::SetOption( SvtSecurityOptions::EOption eOption, bool bValue )
 {
     bool*   pValue;
     bool*   pRO;
-    bool    bRet = false;
 
-    if( GetOption( eOption, pValue, pRO ) )
+    if( GetOption( eOption, pValue, pRO ) && !*pRO && *pValue != bValue)
     {
-        if( !*pRO )
-        {
-            bRet = true;
-            if( *pValue != bValue )
-            {
-                *pValue = bValue;
-                SetModified();
-            }
-        }
+        *pValue = bValue;
+        SetModified();
     }
-
-    return bRet;
 }
 
 bool SvtSecurityOptions_Impl::IsOptionEnabled( SvtSecurityOptions::EOption eOption ) const
@@ -1005,7 +995,7 @@ bool SvtSecurityOptions::isSecureMacroUri(
             // is considered safe:
             return true;
         }
-        // fall through
+        SAL_FALLTHROUGH;
     case INetProtocol::Slot:
         return referer.equalsIgnoreAsciiCase("private:user")
             || isTrustedLocationUri(referer);
@@ -1079,10 +1069,10 @@ bool SvtSecurityOptions::IsOptionSet( EOption eOption ) const
     return m_pDataContainer->IsOptionSet( eOption );
 }
 
-bool SvtSecurityOptions::SetOption( EOption eOption, bool bValue )
+void SvtSecurityOptions::SetOption( EOption eOption, bool bValue )
 {
     MutexGuard aGuard( GetInitMutex() );
-    return m_pDataContainer->SetOption( eOption, bValue );
+    m_pDataContainer->SetOption( eOption, bValue );
 }
 
 bool SvtSecurityOptions::IsOptionEnabled( EOption eOption ) const

@@ -20,7 +20,8 @@
 #ifndef INCLUDED_VCL_INC_UNX_GTK_GTKFRAME_HXX
 #define INCLUDED_VCL_INC_UNX_GTK_GTKFRAME_HXX
 
-#include <prex.h>
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
 #include <cairo.h>
 #include <gdk/gdk.h>
 #include <gdk/gdkx.h>
@@ -29,22 +30,27 @@
 #  include <gtk/gtkx.h>
 #endif
 #include <gdk/gdkkeysyms.h>
-#include <postx.h>
 
 #include <salframe.hxx>
 #include <vcl/sysdata.hxx>
-#include <unx/x11windowprovider.hxx>
+#include <unx/nativewindowhandleprovider.hxx>
 #include <unx/saltype.h>
 #include <unx/screensaverinhibitor.hxx>
 
 #include "tools/link.hxx"
 
-#include <basebmp/bitmapdevice.hxx>
-#include <basebmp/scanlineformats.hxx>
 #include <com/sun/star/awt/XTopWindow.hpp>
+#include <com/sun/star/datatransfer/DataFlavor.hpp>
+#include <com/sun/star/datatransfer/dnd/XDragSource.hpp>
+#include <com/sun/star/datatransfer/dnd/XDropTarget.hpp>
 
 #include <list>
 #include <vector>
+
+#include <config_dbus.h>
+#include <config_gio.h>
+
+#include "headless/svpgdi.hxx"
 
 class GtkSalGraphics;
 class GtkSalDisplay;
@@ -54,13 +60,17 @@ typedef ::Window GdkNativeWindow;
 #define GDK_WINDOW_XWINDOW(o) GDK_WINDOW_XID(o)
 #define gdk_set_sm_client_id(i) gdk_x11_set_sm_client_id(i)
 #define gdk_window_foreign_new_for_display(a,b) gdk_x11_window_foreign_new_for_display(a,b)
+class GtkDropTarget;
+class GtkDragSource;
+class GtkDnDTransferable;
 #endif
 
 #if !(GLIB_MAJOR_VERSION > 2 || GLIB_MINOR_VERSION >= 26)
     typedef void GDBusConnection;
 #endif
 
-class GtkSalFrame : public SalFrame, public X11WindowProvider
+class GtkSalFrame : public SalFrame
+                  , public NativeWindowHandleProvider
 {
     struct IMHandler
     {
@@ -161,6 +171,9 @@ class GtkSalFrame : public SalFrame, public X11WindowProvider
 
     SalX11Screen                    m_nXScreen;
     GtkWidget*                      m_pWindow;
+#if GTK_CHECK_VERSION(3,0,0)
+    GtkGrid*                        m_pTopLevelGrid;
+#endif
     GtkEventBox*                    m_pEventBox;
     GtkFixed*                       m_pFixedContainer;
     GdkWindow*                      m_pForeignParent;
@@ -205,17 +218,18 @@ class GtkSalFrame : public SalFrame, public X11WindowProvider
     long                            m_nWidthRequest;
     long                            m_nHeightRequest;
     cairo_region_t*                 m_pRegion;
+    GtkDropTarget*                  m_pDropTarget;
+    GtkDragSource*                  m_pDragSource;
+    bool                            m_bInDrag;
+    GtkDnDTransferable*             m_pFormatConversionRequest;
 #else
     GdkRegion*                      m_pRegion;
 #endif
 
     SalMenu*                        m_pSalMenu;
 
-#if defined(ENABLE_DBUS) && defined(ENABLE_GIO)
-    public:
-    void EnsureDbusMenuSynced();
+#if ENABLE_DBUS && ENABLE_GIO
     private:
-    SalMenu*                        m_pLastSyncedDbusMenu;
     friend void ensure_dbus_setup(GdkWindow* gdkWindow, GtkSalFrame* pSalFrame);
     friend void on_registrar_available (GDBusConnection*, const gchar*, const gchar*, gpointer);
     friend void on_registrar_unavailable (GDBusConnection*, const gchar*, gpointer);
@@ -236,6 +250,20 @@ class GtkSalFrame : public SalFrame, public X11WindowProvider
     static gboolean     signalTooltipQuery(GtkWidget*, gint x, gint y,
                                      gboolean keyboard_mode, GtkTooltip *tooltip,
                                      gpointer frame);
+    static gboolean     signalDragMotion(GtkWidget *widget, GdkDragContext *context, gint x, gint y,
+                                         guint time, gpointer frame);
+    static gboolean     signalDragDrop(GtkWidget* widget, GdkDragContext *context, gint x, gint y,
+                                       guint time, gpointer frame);
+    static void         signalDragDropReceived(GtkWidget *widget, GdkDragContext *context, gint x, gint y,
+                                               GtkSelectionData *data, guint ttype, guint time, gpointer frame);
+    static void         signalDragLeave(GtkWidget *widget, GdkDragContext *context, guint time, gpointer frame);
+
+    static gboolean     signalDragFailed(GtkWidget *widget, GdkDragContext *context, GtkDragResult result, gpointer frame);
+    static void         signalDragDelete(GtkWidget *widget, GdkDragContext *context, gpointer frame);
+    static void         signalDragEnd(GtkWidget *widget, GdkDragContext *context, gpointer frame);
+    static void         signalDragDataGet(GtkWidget* widget, GdkDragContext* context, GtkSelectionData *data, guint info,
+                                          guint time, gpointer frame);
+
 #if GTK_CHECK_VERSION(3,14,0)
     static void         gestureSwipe(GtkGestureSwipe* gesture, gdouble velocity_x, gdouble velocity_y, gpointer frame);
     static void         gestureLongPress(GtkGestureLongPress* gesture, gpointer frame);
@@ -272,14 +300,14 @@ class GtkSalFrame : public SalFrame, public X11WindowProvider
     static GdkNativeWindow findTopLevelSystemWindow( GdkNativeWindow aWindow );
 
     static int m_nFloats;
+    static std::vector<GtkWidget*> m_aGrabWidgetsBeforeShowFloat;
 
     bool isFloatGrabWindow() const
     {
         return
             (m_nStyle & SalFrameStyleFlags::FLOAT) &&                // only a float can be floatgrab
             !(m_nStyle & SalFrameStyleFlags::TOOLTIP) &&             // tool tips are not
-            !(m_nStyle & SalFrameStyleFlags::OWNERDRAWDECORATION) && // toolbars are also not
-            !(m_nStyle & SalFrameStyleFlags::FLOAT_FOCUSABLE);       // focusable floats are not
+            !(m_nStyle & SalFrameStyleFlags::OWNERDRAWDECORATION);   // toolbars are also not
     }
 
     bool isChild( bool bPlug = true, bool bSysChild = true )
@@ -302,10 +330,7 @@ class GtkSalFrame : public SalFrame, public X11WindowProvider
     void widget_set_size_request(long nWidth, long nHeight);
 
     void resizeWindow( long nWidth, long nHeight );
-    void moveWindow(long nX, long nY);
-#if GTK_CHECK_VERSION(3,0,0)
-    void dragWindowTo(long nX, long nY);
-#endif
+    void moveWindow( long nX, long nY );
 
     Size calcDefaultSize();
 
@@ -321,7 +346,8 @@ class GtkSalFrame : public SalFrame, public X11WindowProvider
 
 public:
 #if GTK_CHECK_VERSION(3,0,0)
-    basebmp::BitmapDeviceSharedPtr  m_aFrame;
+    cairo_surface_t*                m_pSurface;
+    DamageHandler                   m_aDamageHandler;
 #endif
     GtkSalFrame( SalFrame* pParent, SalFrameStyleFlags nStyle );
     GtkSalFrame( SystemParentData* pSysData );
@@ -345,19 +371,56 @@ public:
     GtkWidget*  getWindow() const { return m_pWindow; }
     GtkFixed*   getFixedContainer() const { return m_pFixedContainer; }
     GtkWidget*  getMouseEventWidget() const;
+#if GTK_CHECK_VERSION(3,0,0)
+    GtkGrid*    getTopLevelGridWidget() const { return m_pTopLevelGrid; }
+#endif
     GdkWindow*  getForeignParent() const { return m_pForeignParent; }
     GdkNativeWindow getForeignParentWindow() const { return m_aForeignParentWindow; }
     GdkWindow*  getForeignTopLevel() const { return m_pForeignTopLevel; }
     GdkNativeWindow getForeignTopLevelWindow() const { return m_aForeignTopLevelWindow; }
     Pixmap getBackgroundPixmap() const { return m_hBackgroundPixmap; }
-    SalX11Screen getXScreenNumber() const { return m_nXScreen; }
+    const SalX11Screen& getXScreenNumber() const { return m_nXScreen; }
     int          GetDisplayScreen() const { return maGeometry.nDisplayScreenNumber; }
     void updateScreenNumber();
 
 #if GTK_CHECK_VERSION(3,0,0)
     // only for gtk3 ...
     cairo_t* getCairoContext() const;
-    void damaged (const basegfx::B2IBox& rDamageRect);
+    void damaged(sal_Int32 nExtentsLeft, sal_Int32 nExtentsTop,
+                 sal_Int32 nExtentsRight, sal_Int32 nExtentsBottom) const;
+
+    void registerDropTarget(GtkDropTarget* pDropTarget)
+    {
+        assert(!m_pDropTarget);
+        m_pDropTarget = pDropTarget;
+    }
+
+    void deregisterDropTarget(GtkDropTarget* pDropTarget)
+    {
+        assert(m_pDropTarget == pDropTarget); (void)pDropTarget;
+        m_pDropTarget = nullptr;
+    }
+
+    void registerDragSource(GtkDragSource* pDragSource)
+    {
+        assert(!m_pDragSource);
+        m_pDragSource = pDragSource;
+    }
+
+    void deregisterDragSource(GtkDragSource* pDragSource)
+    {
+        assert(m_pDragSource == pDragSource); (void)pDragSource;
+        m_pDragSource = nullptr;
+    }
+
+    void SetFormatConversionRequest(GtkDnDTransferable *pRequest)
+    {
+        m_pFormatConversionRequest = pRequest;
+    }
+
+    void startDrag(gint nButton, gint nDragOriginX, gint nDragOriginY,
+                   GdkDragAction sourceActions, GtkTargetList* pTargetList);
+
 #endif
     virtual ~GtkSalFrame();
 
@@ -458,11 +521,17 @@ public:
 #if GTK_CHECK_VERSION(3,0,0)
     virtual void                SetModal(bool bModal) override;
     virtual bool                ShowTooltip(const OUString& rHelpText, const Rectangle& rHelpArea) override;
+    virtual sal_uIntPtr         ShowPopover(const OUString& rHelpText, const Rectangle& rHelpArea, QuickHelpFlags nFlags) override;
+    virtual bool                UpdatePopover(sal_uIntPtr nId, const OUString& rHelpText, const Rectangle& rHelpArea) override;
+    virtual bool                HidePopover(sal_uIntPtr nId) override;
+
+    virtual void                StartToolKitMoveBy() override;
 #endif
 
     static GtkSalFrame         *getFromWindow( GtkWindow *pWindow );
 
-    virtual Window              GetX11Window() override;
+    sal_uIntPtr                 GetNativeWindowHandle(GtkWidget *pWidget);
+    virtual sal_uIntPtr         GetNativeWindowHandle() override;
 
     static void                 KeyCodeToGdkKey(const vcl::KeyCode& rKeyCode,
         guint* pGdkKeyCode, GdkModifierType *pGdkModifiers);

@@ -23,7 +23,7 @@
 #include <tools/poly.hxx>
 #include <tools/rc.h>
 #include <vcl/salbtype.hxx>
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 #include <vcl/outdev.hxx>
 #include <vcl/bitmap.hxx>
 #include <vcl/bitmapex.hxx>
@@ -34,13 +34,11 @@
 #include <salbmp.hxx>
 #include <memory>
 
-Bitmap::Bitmap() :
-    mpImpBmp( nullptr )
+Bitmap::Bitmap()
 {
 }
 
-Bitmap::Bitmap( const ResId& rResId ) :
-    mpImpBmp( nullptr )
+Bitmap::Bitmap( const ResId& rResId )
 {
     const BitmapEx aBmpEx( rResId );
 
@@ -48,26 +46,23 @@ Bitmap::Bitmap( const ResId& rResId ) :
         *this = aBmpEx.GetBitmap();
 }
 
-Bitmap::Bitmap( const Bitmap& rBitmap ) :
-    maPrefMapMode   ( rBitmap.maPrefMapMode ),
-    maPrefSize      ( rBitmap.maPrefSize )
+Bitmap::Bitmap(const Bitmap& rBitmap)
+    : mxImpBmp(rBitmap.mxImpBmp)
+    , maPrefMapMode(rBitmap.maPrefMapMode)
+    , maPrefSize(rBitmap.maPrefSize)
 {
-    mpImpBmp = rBitmap.mpImpBmp;
-
-    if ( mpImpBmp )
-        mpImpBmp->ImplIncRefCount();
 }
 
-Bitmap::Bitmap( SalBitmap* pSalBitmap )
+Bitmap::Bitmap(SalBitmap* pSalBitmap)
+    : mxImpBmp(new ImpBitmap(pSalBitmap))
+    , maPrefMapMode(MapMode(MAP_PIXEL))
+    , maPrefSize(mxImpBmp->ImplGetSize())
 {
-    mpImpBmp = new ImpBitmap(pSalBitmap);
-    maPrefMapMode = MapMode( MAP_PIXEL );
-    maPrefSize = mpImpBmp->ImplGetSize();
 }
 
 Bitmap::Bitmap( const Size& rSizePixel, sal_uInt16 nBitCount, const BitmapPalette* pPal )
 {
-    if( rSizePixel.Width() && rSizePixel.Height() )
+    if (rSizePixel.Width() && rSizePixel.Height())
     {
         BitmapPalette   aPal;
         BitmapPalette*  pRealPal = nullptr;
@@ -121,16 +116,13 @@ Bitmap::Bitmap( const Size& rSizePixel, sal_uInt16 nBitCount, const BitmapPalett
                 pRealPal = const_cast<BitmapPalette*>(pPal);
         }
 
-        mpImpBmp = new ImpBitmap;
-        mpImpBmp->ImplCreate( rSizePixel, nBitCount, pRealPal ? *pRealPal : aPal );
+        mxImpBmp.reset(new ImpBitmap);
+        mxImpBmp->ImplCreate( rSizePixel, nBitCount, pRealPal ? *pRealPal : aPal );
     }
-    else
-        mpImpBmp = nullptr;
 }
 
 Bitmap::~Bitmap()
 {
-    ImplReleaseRef();
 }
 
 const BitmapPalette& Bitmap::GetGreyPalette( int nEntries )
@@ -233,12 +225,7 @@ Bitmap& Bitmap::operator=( const Bitmap& rBitmap )
 
     maPrefSize = rBitmap.maPrefSize;
     maPrefMapMode = rBitmap.maPrefMapMode;
-
-    if ( rBitmap.mpImpBmp )
-        rBitmap.mpImpBmp->ImplIncRefCount();
-
-    ImplReleaseRef();
-    mpImpBmp = rBitmap.mpImpBmp;
+    mxImpBmp = rBitmap.mxImpBmp;
 
     return *this;
 }
@@ -246,26 +233,24 @@ Bitmap& Bitmap::operator=( const Bitmap& rBitmap )
 bool Bitmap::IsEqual( const Bitmap& rBmp ) const
 {
     return(IsSameInstance(rBmp) || // Includes both are nullptr
-        (rBmp.mpImpBmp && mpImpBmp && mpImpBmp->ImplIsEqual(*rBmp.mpImpBmp)));
+        (rBmp.mxImpBmp && mxImpBmp && mxImpBmp->ImplIsEqual(*rBmp.mxImpBmp)));
 }
 
 void Bitmap::SetEmpty()
 {
     maPrefMapMode = MapMode();
     maPrefSize = Size();
-
-    ImplReleaseRef();
-    mpImpBmp = nullptr;
+    mxImpBmp.reset();
 }
 
 Size Bitmap::GetSizePixel() const
 {
-    return( mpImpBmp ? mpImpBmp->ImplGetSize() : Size() );
+    return( mxImpBmp ? mxImpBmp->ImplGetSize() : Size() );
 }
 
 sal_uInt16 Bitmap::GetBitCount() const
 {
-    return( mpImpBmp ? mpImpBmp->ImplGetBitCount() : 0 );
+    return( mxImpBmp ? mxImpBmp->ImplGetBitCount() : 0 );
 }
 
 bool Bitmap::HasGreyPalette() const
@@ -288,38 +273,21 @@ BitmapChecksum Bitmap::GetChecksum() const
 {
     BitmapChecksum nRet = 0;
 
-    if( mpImpBmp )
+    if( mxImpBmp )
     {
-        nRet = mpImpBmp->ImplGetChecksum();
+        nRet = mxImpBmp->ImplGetChecksum();
     }
 
     return nRet;
 }
 
-void Bitmap::ImplReleaseRef()
-{
-    if( mpImpBmp )
-    {
-        if( mpImpBmp->ImplGetRefCount() > 1UL )
-            mpImpBmp->ImplDecRefCount();
-        else
-        {
-            delete mpImpBmp;
-            mpImpBmp = nullptr;
-        }
-    }
-}
-
 void Bitmap::ImplMakeUnique()
 {
-    if( mpImpBmp && mpImpBmp->ImplGetRefCount() > 1UL )
+    if (mxImpBmp && !mxImpBmp.unique())
     {
-        ImpBitmap* pOldImpBmp = mpImpBmp;
-
-        pOldImpBmp->ImplDecRefCount();
-
-        mpImpBmp = new ImpBitmap;
-        mpImpBmp->ImplCreate( *pOldImpBmp );
+        std::shared_ptr<ImpBitmap> xOldImpBmp = mxImpBmp;
+        mxImpBmp.reset(new ImpBitmap);
+        mxImpBmp->ImplCreate(*xOldImpBmp);
     }
 }
 
@@ -345,13 +313,9 @@ void Bitmap::ImplAssignWithSize( const Bitmap& rBitmap )
 }
 
 
-void Bitmap::ImplSetImpBitmap( ImpBitmap* pImpBmp )
+void Bitmap::ImplSetImpBitmap(const std::shared_ptr<ImpBitmap>& xImpBmp)
 {
-    if( pImpBmp != mpImpBmp )
-    {
-        ImplReleaseRef();
-        mpImpBmp = pImpBmp;
-    }
+    mxImpBmp = xImpBmp;
 }
 
 BitmapInfoAccess* Bitmap::AcquireInfoAccess()
@@ -504,7 +468,7 @@ bool Bitmap::Invert()
                     pAcc->SetPixel( nY, nX, pAcc->GetPixel( nY, nX ).Invert() );
         }
 
-        mpImpBmp->ImplInvalidateChecksum();
+        mxImpBmp->ImplInvalidateChecksum();
         ReleaseAccess( pAcc );
         bRet = true;
     }
@@ -809,7 +773,7 @@ bool Bitmap::CopyPixel( const Rectangle& rRectDst,
 
             if( nSrcBitCount > nDstBitCount )
             {
-                long nNextIndex = 0L;
+                int nNextIndex = 0;
 
                 if( ( nSrcBitCount == 24 ) && ( nDstBitCount < 24 ) )
                     Convert( BMP_CONVERSION_24BIT );
@@ -831,16 +795,16 @@ bool Bitmap::CopyPixel( const Rectangle& rRectDst,
 
                     if( pSrcAcc && pDstAcc )
                     {
-                        const long      nSrcCount = pDstAcc->GetPaletteEntryCount();
-                        const long      nDstCount = 1 << nDstBitCount;
+                        const int nSrcCount = pDstAcc->GetPaletteEntryCount();
+                        const int nDstCount = 1 << nDstBitCount;
 
-                        for( long i = 0L; ( i < nSrcCount ) && ( nNextIndex < nSrcCount ); i++ )
+                        for (int i = 0; ( i < nSrcCount ) && ( nNextIndex < nSrcCount ); ++i)
                         {
                             const BitmapColor& rSrcCol = pSrcAcc->GetPaletteColor( (sal_uInt16) i );
 
                             bool bFound = false;
 
-                            for( long j = 0L; j < nDstCount; j++ )
+                            for (int j = 0; j < nDstCount; ++j)
                             {
                                 if( rSrcCol == pDstAcc->GetPaletteColor( (sal_uInt16) j ) )
                                 {
@@ -1551,21 +1515,16 @@ bool Bitmap::Replace( const AlphaMask& rAlpha, const Color& rMergeColor )
 
 bool Bitmap::Replace( const Color& rSearchColor, const Color& rReplaceColor, sal_uLong nTol )
 {
-    if( mpImpBmp )
+    if( mxImpBmp )
     {
         // implementation specific replace
-        ImpBitmap* pImpBmp = new ImpBitmap;
-
-        if( pImpBmp->ImplCreate( *mpImpBmp ) && pImpBmp->ImplReplace( rSearchColor, rReplaceColor, nTol ) )
+        std::shared_ptr<ImpBitmap> xImpBmp(new ImpBitmap);
+        if (xImpBmp->ImplCreate(*mxImpBmp) && xImpBmp->ImplReplace(rSearchColor, rReplaceColor, nTol))
         {
-            ImplSetImpBitmap( pImpBmp );
+            ImplSetImpBitmap(xImpBmp);
             maPrefMapMode = MapMode( MAP_PIXEL );
-            maPrefSize = pImpBmp->ImplGetSize();
+            maPrefSize = xImpBmp->ImplGetSize();
             return true;
-        }
-        else
-        {
-            delete pImpBmp;
         }
     }
 
@@ -1733,14 +1692,11 @@ Bitmap Bitmap::CreateDisplayBitmap( OutputDevice* pDisplay )
 
     SalGraphics* pDispGraphics = pDisplay->GetGraphics();
 
-    if( mpImpBmp && pDispGraphics )
+    if( mxImpBmp && pDispGraphics )
     {
-        ImpBitmap* pImpDispBmp = new ImpBitmap;
-
-        if( pImpDispBmp->ImplCreate( *mpImpBmp, pDispGraphics ) )
-            aDispBmp.ImplSetImpBitmap( pImpDispBmp );
-        else
-            delete pImpDispBmp;
+        std::shared_ptr<ImpBitmap> xImpDispBmp(new ImpBitmap);
+        if (xImpDispBmp->ImplCreate(*mxImpBmp, pDispGraphics))
+            aDispBmp.ImplSetImpBitmap(xImpDispBmp);
     }
 
     return aDispBmp;
@@ -1765,7 +1721,7 @@ bool Bitmap::CombineSimple( const Bitmap& rMask, BmpCombine eCombine )
 
         switch( eCombine )
         {
-            case( BMP_COMBINE_COPY ):
+            case BMP_COMBINE_COPY:
             {
                 for( long nY = 0L; nY < nHeight; nY++ ) for( long nX = 0L; nX < nWidth; nX++ )
                 {
@@ -1777,7 +1733,7 @@ bool Bitmap::CombineSimple( const Bitmap& rMask, BmpCombine eCombine )
             }
             break;
 
-            case( BMP_COMBINE_INVERT ):
+            case BMP_COMBINE_INVERT:
             {
                 for( long nY = 0L; nY < nHeight; nY++ ) for( long nX = 0L; nX < nWidth; nX++ )
                 {
@@ -1789,7 +1745,7 @@ bool Bitmap::CombineSimple( const Bitmap& rMask, BmpCombine eCombine )
             }
             break;
 
-            case( BMP_COMBINE_AND ):
+            case BMP_COMBINE_AND:
             {
                 for( long nY = 0L; nY < nHeight; nY++ ) for( long nX = 0L; nX < nWidth; nX++ )
                 {
@@ -1801,7 +1757,7 @@ bool Bitmap::CombineSimple( const Bitmap& rMask, BmpCombine eCombine )
             }
             break;
 
-            case( BMP_COMBINE_NAND ):
+            case BMP_COMBINE_NAND:
             {
                 for( long nY = 0L; nY < nHeight; nY++ ) for( long nX = 0L; nX < nWidth; nX++ )
                 {
@@ -1813,7 +1769,7 @@ bool Bitmap::CombineSimple( const Bitmap& rMask, BmpCombine eCombine )
             }
             break;
 
-            case( BMP_COMBINE_OR ):
+            case BMP_COMBINE_OR:
             {
                 for( long nY = 0L; nY < nHeight; nY++ ) for( long nX = 0L; nX < nWidth; nX++ )
                 {
@@ -1825,7 +1781,7 @@ bool Bitmap::CombineSimple( const Bitmap& rMask, BmpCombine eCombine )
             }
             break;
 
-            case( BMP_COMBINE_NOR ):
+            case BMP_COMBINE_NOR:
             {
                 for( long nY = 0L; nY < nHeight; nY++ ) for( long nX = 0L; nX < nWidth; nX++ )
                 {
@@ -1837,7 +1793,7 @@ bool Bitmap::CombineSimple( const Bitmap& rMask, BmpCombine eCombine )
             }
             break;
 
-            case( BMP_COMBINE_XOR ):
+            case BMP_COMBINE_XOR:
             {
                 for( long nY = 0L; nY < nHeight; nY++ ) for( long nX = 0L; nX < nWidth; nX++ )
                 {
@@ -1855,7 +1811,7 @@ bool Bitmap::CombineSimple( const Bitmap& rMask, BmpCombine eCombine )
             }
             break;
 
-            case( BMP_COMBINE_NXOR ):
+            case BMP_COMBINE_NXOR:
             {
                 for( long nY = 0L; nY < nHeight; nY++ ) for( long nX = 0L; nX < nWidth; nX++ )
                 {
@@ -1924,9 +1880,9 @@ bool Bitmap::MakeMono( sal_uInt8 cThreshold )
 bool Bitmap::GetSystemData( BitmapSystemData& rData ) const
 {
     bool bRet = false;
-    if( mpImpBmp )
+    if (mxImpBmp)
     {
-        SalBitmap* pSalBitmap = mpImpBmp->ImplGetSalBitmap();
+        SalBitmap* pSalBitmap = mxImpBmp->ImplGetSalBitmap();
         if( pSalBitmap )
             bRet = pSalBitmap->GetSystemData( rData );
     }

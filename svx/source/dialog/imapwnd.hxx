@@ -61,22 +61,22 @@ class IMapUserData : public SdrObjUserData
 public:
 
                             IMapUserData() :
-                                SdrObjUserData  ( IMapInventor, SVD_IMAP_USERDATA, 0 ),
+                                SdrObjUserData  ( IMapInventor, SVD_IMAP_USERDATA ),
                                 mpObj           ( ) {}
 
                    explicit IMapUserData( const IMapObjectPtr& rIMapObj ) :
-                                SdrObjUserData  ( IMapInventor, SVD_IMAP_USERDATA, 0 ),
+                                SdrObjUserData  ( IMapInventor, SVD_IMAP_USERDATA ),
                                 mpObj           ( rIMapObj ) {}
 
                             IMapUserData( const IMapUserData& rIMapUserData ) :
-                                SdrObjUserData  ( IMapInventor, SVD_IMAP_USERDATA, 0 ),
+                                SdrObjUserData  ( IMapInventor, SVD_IMAP_USERDATA ),
                                 mpObj           ( rIMapUserData.mpObj ) {}
 
                             virtual ~IMapUserData() { }
 
     virtual SdrObjUserData* Clone( SdrObject * ) const override { return new IMapUserData( *this ); }
 
-    const IMapObjectPtr     GetObject() const { return mpObj; }
+    const IMapObjectPtr&    GetObject() const { return mpObj; }
     void                    ReplaceObject( const IMapObjectPtr& pNewIMapObject ) { mpObj = pNewIMapObject; }
 };
 
@@ -109,7 +109,7 @@ protected:
     virtual sal_Int8    AcceptDrop( const AcceptDropEvent& rEvt ) override;
     virtual sal_Int8    ExecuteDrop( const ExecuteDropEvent& rEvt ) override;
 
-    void                ReplaceImageMap( const ImageMap& rNewImageMap, bool bScaleToGraphic );
+    void                ReplaceImageMap( const ImageMap& rNewImageMap );
 
     SdrObject*          CreateObj( const IMapObject* pIMapObj );
     static IMapObject*  GetIMapObj( const SdrObject* pSdrObj );
@@ -123,7 +123,7 @@ public:
                         virtual ~IMapWindow();
     virtual void        dispose() override;
 
-    bool                ReplaceActualIMapInfo( const NotifyInfo& rNewInfo );
+    void                ReplaceActualIMapInfo( const NotifyInfo& rNewInfo );
 
     void                SetImageMap( const ImageMap& rImageMap );
     const ImageMap&     GetImageMap();

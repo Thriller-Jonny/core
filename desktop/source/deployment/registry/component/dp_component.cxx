@@ -310,9 +310,9 @@ class BackendImpl : public ::dp_registry::backend::PackageRegistryBackend
         OUString const & id, Reference<XInterface> const & xObject );
     void releaseObject( OUString const & id );
 
-    bool addToUnoRc( RcItem kind, OUString const & url,
+    void addToUnoRc( RcItem kind, OUString const & url,
                      Reference<XCommandEnvironment> const & xCmdEnv );
-    bool removeFromUnoRc( RcItem kind, OUString const & url,
+    void removeFromUnoRc( RcItem kind, OUString const & url,
                           Reference<XCommandEnvironment> const & xCmdEnv );
     bool hasInUnoRc( RcItem kind, OUString const & url );
 
@@ -335,7 +335,6 @@ public:
     //Will be called from ComponentPackageImpl
     void initServiceRdbFiles();
 };
-
 
 
 BackendImpl::ComponentPackageImpl::ComponentPackageImpl(
@@ -388,7 +387,6 @@ BackendImpl * BackendImpl::ComponentPackageImpl::getMyBackend() const
     }
     return pBackend;
 }
-
 
 
 void BackendImpl::ComponentPackageImpl::disposing()
@@ -747,7 +745,6 @@ Reference<deployment::XPackage> BackendImpl::bindPackage_(
 }
 
 
-
 void BackendImpl::unorc_verify_init(
     Reference<XCommandEnvironment> const & xCmdEnv )
 {
@@ -956,9 +953,8 @@ void BackendImpl::unorc_flush( Reference<XCommandEnvironment> const & xCmdEnv )
 
             const Reference<io::XInputStream> xData(
                 ::xmlscript::createInputStream(
-                    ::rtl::ByteSequence(
                         reinterpret_cast<sal_Int8 const *>(buf2.getStr()),
-                        buf2.getLength() ) ) );
+                        buf2.getLength() ) );
             ::ucbhelper::Content ucb_content(
                 makeURL( getCachePath(), getPlatformString() + "rc" ),
                 xCmdEnv, m_xComponentContext );
@@ -981,9 +977,8 @@ void BackendImpl::unorc_flush( Reference<XCommandEnvironment> const & xCmdEnv )
     // write unorc:
     const Reference<io::XInputStream> xData(
         ::xmlscript::createInputStream(
-            ::rtl::ByteSequence(
                 reinterpret_cast<sal_Int8 const *>(buf.getStr()),
-                buf.getLength() ) ) );
+                buf.getLength() ) );
     ::ucbhelper::Content ucb_content(
         makeURL( getCachePath(), "unorc" ), xCmdEnv, m_xComponentContext );
     ucb_content.writeStream( xData, true /* replace existing */ );
@@ -992,7 +987,7 @@ void BackendImpl::unorc_flush( Reference<XCommandEnvironment> const & xCmdEnv )
 }
 
 
-bool BackendImpl::addToUnoRc( RcItem kind, OUString const & url_,
+void BackendImpl::addToUnoRc( RcItem kind, OUString const & url_,
                               Reference<XCommandEnvironment> const & xCmdEnv )
 {
     const OUString rcterm( dp_misc::makeRcTerm(url_) );
@@ -1004,14 +999,11 @@ bool BackendImpl::addToUnoRc( RcItem kind, OUString const & url_,
         // write immediately:
         m_unorc_modified = true;
         unorc_flush( xCmdEnv );
-        return true;
     }
-    else
-        return false;
 }
 
 
-bool BackendImpl::removeFromUnoRc(
+void BackendImpl::removeFromUnoRc(
     RcItem kind, OUString const & url_,
     Reference<XCommandEnvironment> const & xCmdEnv )
 {
@@ -1022,7 +1014,6 @@ bool BackendImpl::removeFromUnoRc(
     // write immediately:
     m_unorc_modified = true;
     unorc_flush( xCmdEnv );
-    return true;
 }
 
 
@@ -1108,10 +1099,10 @@ Reference<XComponentContext> raise_uno_process(
             url, comphelper::containerToSequence(args) );
     }
     catch (...) {
-        OUString sMsg = "error starting process: " + url;
-        for(auto arg : args)
-            sMsg += " " + arg;
-        throw uno::RuntimeException(sMsg);
+        OUStringBuffer sMsg = "error starting process: " + url;
+        for(const auto& arg : args)
+            sMsg.append(" ").append(arg);
+        throw uno::RuntimeException(sMsg.makeStringAndClear());
     }
     try {
         return Reference<XComponentContext>(
@@ -1633,8 +1624,8 @@ BackendImpl::OtherPlatformPackageImpl::isRegistered_(
     ::rtl::Reference<AbortChannel> const& /* abortChannel */,
     Reference<XCommandEnvironment> const& /* xCmdEnv */ )
 {
-    return beans::Optional<beans::Ambiguous<sal_Bool> >(sal_True,
-            beans::Ambiguous<sal_Bool>(sal_True, sal_False));
+    return beans::Optional<beans::Ambiguous<sal_Bool> >(true,
+            beans::Ambiguous<sal_Bool>(true, false));
 }
 
 void

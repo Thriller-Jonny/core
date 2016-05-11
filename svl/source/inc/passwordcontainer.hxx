@@ -124,7 +124,7 @@ public:
         return *this;
     }
 
-    OUString GetUserName() const
+    const OUString& GetUserName() const
     {
         return m_aName;
     }
@@ -402,7 +402,6 @@ public:
     RW_SvMemoryStream( sal_uLong InitSize=512, sal_uLong Resize=64 ):
             SvMemoryStream( InitSize, Resize ){}
 };
-
 
 
 #endif // INCLUDED_SVL_SOURCE_INC_PASSWORDCONTAINER_HXX

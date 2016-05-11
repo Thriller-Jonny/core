@@ -361,7 +361,7 @@ public:
     bool            WriteByteStringLine( const OUString& rStr, rtl_TextEncoding eDestCharSet );
 
     /// Switch to no endian swapping and write 0xfeff
-    bool            StartWritingUnicodeText();
+    void            StartWritingUnicodeText();
 
     /** If eReadBomCharSet==RTL_TEXTENCODING_DONTKNOW: read 16bit, if 0xfeff do
         nothing (UTF-16), if 0xfffe switch endian swapping (UTF-16), if 0xefbb
@@ -372,7 +372,7 @@ public:
 
         If eReadBomCharSet!=RTL_TEXTENCODING_DONTKNOW: only read a BOM of that
         encoding and switch endian swapping if UTF-16 and 0xfffe. */
-    bool            StartReadingUnicodeText( rtl_TextEncoding eReadBomCharSet );
+    void            StartReadingUnicodeText( rtl_TextEncoding eReadBomCharSet );
 
     /** Read a line of Unicode.
 
@@ -555,13 +555,6 @@ inline OString read_uInt8_lenPrefixed_uInt8s_ToOString(SvStream& rStrm)
     return read_uInt8s_ToOString(rStrm, nUnits);
 }
 
-inline OString read_uInt32_lenPrefixed_uInt8s_ToOString(SvStream& rStrm)
-{
-    sal_uInt32 nUnits = 0;
-    rStrm.ReadUInt32( nUnits );
-    return read_uInt8s_ToOString(rStrm, nUnits);
-}
-
 /// Attempt to read a pascal-style length (of type prefix) prefixed sequence of
 /// 8bit units to an OUString
 inline OUString read_uInt16_lenPrefixed_uInt8s_ToOUString(SvStream& rStrm,
@@ -621,7 +614,7 @@ private:
     bool LockRange( sal_Size nByteOffset, sal_Size nBytes );
     bool UnlockRange( sal_Size nByteOffset, sal_Size nBytes );
     bool LockFile();
-    bool UnlockFile();
+    void UnlockFile();
 
 protected:
     virtual sal_Size GetData( void* pData, sal_Size nSize ) override;
@@ -695,11 +688,11 @@ public:
     sal_uInt64     GetSize();
     sal_Size        GetEndOfData() const { return nEndOfData; }
     const void*     GetData() { Flush(); return pBuf; }
-    operator const  void*() { Flush(); return pBuf; }
 
-    void*           SwitchBuffer( sal_Size nInitSize=512, sal_Size nResize=64 );
-    void*           SetBuffer( void* pBuf, sal_Size nSize,
-                               bool bOwnsData=true, sal_Size nEOF=0 );
+    void*           SwitchBuffer();
+    // the buffer is not owned by this class
+    void            SetBuffer( void* pBuf, sal_Size nSize,
+                               sal_Size nEOF=0 );
 
     void            ObjectOwnsMemory( bool bOwn ) { bOwnsData = bOwn; }
     void            SetResizeOffset( sal_Size nNewResize ) { nResize = nNewResize; }

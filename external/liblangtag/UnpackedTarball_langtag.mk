@@ -15,10 +15,13 @@ $(eval $(call gb_UnpackedTarball_set_pre_action,langtag,\
 	$(GNUTAR) -x -j -f $(gb_UnpackedTarget_TARFILE_LOCATION)/$(LANGTAGREG_TARBALL) \
 ))
 
-# Currently no patches applied, if there were it would be:
-#$(eval $(call gb_UnpackedTarball_add_patches,langtag,\
-#	external/liblangtag/your-modification.patch \
-#))
+ifneq ($(OS),MACOSX)
+ifneq ($(OS),WNT)
+$(eval $(call gb_UnpackedTarball_add_patches,langtag,\
+	external/liblangtag/liblangtag-bundled-soname.patch.0 \
+))
+endif
+endif
 
 ifeq ($(OS),WNT)
 ifeq ($(COM),GCC)
@@ -27,4 +30,9 @@ $(eval $(call gb_UnpackedTarball_add_patches,langtag,\
 ))
 endif
 endif
+
+$(eval $(call gb_UnpackedTarball_add_patches,langtag, \
+    external/liblangtag/clang-cl.patch.0 \
+))
+
 # vim: set noet sw=4 ts=4:

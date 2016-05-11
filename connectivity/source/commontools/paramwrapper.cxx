@@ -185,7 +185,7 @@ namespace param
         // we're lazy here ...
         rOldValue = m_aValue.makeAny();
         rConvertedValue = rValue;
-        return sal_True;    // assume "modified" ...
+        return true;    // assume "modified" ...
     }
 
 
@@ -205,7 +205,7 @@ namespace param
 
                 if ( m_xValueDestination.is() )
                 {
-                    for ( ::std::vector< sal_Int32 >::iterator aIter = m_aIndexes.begin(); aIter != m_aIndexes.end(); ++aIter )
+                    for ( ::std::vector< sal_Int32 >::const_iterator aIter = m_aIndexes.begin(); aIter != m_aIndexes.end(); ++aIter )
                     {
                         m_xValueDestination->setObjectWithInfo( *aIter + 1, rValue, nParamType, nScale );
                             // (the index of the parameters is one-based)
@@ -255,7 +255,7 @@ namespace param
         m_xDelegatorPSI.clear();
         m_xValueDestination.clear();
 
-        m_aBHelper.bDisposed = sal_True;
+        m_aBHelper.bDisposed = true;
     }
 
     ParameterWrapperContainer::ParameterWrapperContainer()

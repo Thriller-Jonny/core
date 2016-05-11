@@ -125,10 +125,11 @@ bool Converter::convertMeasure( sal_Int32& rValue,
         else
         {
             OSL_ENSURE( MeasureUnit::TWIP == nTargetUnit || MeasureUnit::POINT == nTargetUnit ||
-                        MeasureUnit::MM_100TH == nTargetUnit || MeasureUnit::MM_10TH == nTargetUnit, "unit is not supported");
-            const sal_Char *aCmpsL[2] = { nullptr, nullptr };
-            const sal_Char *aCmpsU[2] = { nullptr, nullptr };
-            double aScales[2] = { 1., 1. };
+                        MeasureUnit::MM_100TH == nTargetUnit || MeasureUnit::MM_10TH == nTargetUnit ||
+                        MeasureUnit::PIXEL == nTargetUnit, "unit is not supported");
+            const sal_Char *aCmpsL[3] = { nullptr, nullptr, nullptr };
+            const sal_Char *aCmpsU[3] = { nullptr, nullptr, nullptr };
+            double aScales[3] = { 1., 1., 1. };
 
             if( MeasureUnit::TWIP == nTargetUnit )
             {
@@ -196,6 +197,10 @@ bool Converter::convertMeasure( sal_Int32& rValue,
                     aCmpsL[1] = "pc";
                     aCmpsU[1] = "PC";
                     aScales[1] = (10.0 * nScaleFactor*2.54)/12.; // mm/100
+
+                    aCmpsL[2] = "px";
+                    aCmpsU[2] = "PX";
+                    aScales[2] = 0.28 * nScaleFactor; // mm/100
                     break;
                 }
             }
@@ -213,22 +218,23 @@ bool Converter::convertMeasure( sal_Int32& rValue,
                 return false;
 
             double nScale = 0.;
-            for( sal_uInt16 i= 0; i < 2; i++ )
+            for( sal_uInt16 i= 0; i < 3; i++ )
             {
+                sal_Int32 nTmp = nPos; // come back to the initial position before each iteration
                 const sal_Char *pL = aCmpsL[i];
                 if( pL )
                 {
                     const sal_Char *pU = aCmpsU[i];
-                    while( nPos < nLen && *pL )
+                    while( nTmp < nLen && *pL )
                     {
-                        sal_Unicode c = rString[nPos];
+                        sal_Unicode c = rString[nTmp];
                         if( c != *pL && c != *pU )
                             break;
                         pL++;
                         pU++;
-                        nPos++;
+                        nTmp++;
                     }
-                    if( !*pL && (nPos == nLen || ' ' == rString[nPos]) )
+                    if( !*pL && (nTmp == nLen || ' ' == rString[nTmp]) )
                     {
                         nScale = aScales[i];
                         break;
@@ -295,7 +301,7 @@ void Converter::convertMeasure( OUStringBuffer& rBuffer,
         case MeasureUnit::MM_100TH:
         case MeasureUnit::MM_10TH:
             OSL_ENSURE( MeasureUnit::INCH == nTargetUnit,"output unit not supported for twip values" );
-            //fall-through
+            SAL_FALLTHROUGH;
         case MeasureUnit::MM:
             // 0.01mm = 0.57twip (exactly)
             nMul = 25400;   // 25.4 * 1000
@@ -352,7 +358,7 @@ void Converter::convertMeasure( OUStringBuffer& rBuffer,
             case MeasureUnit::MM_10TH:
                 OSL_ENSURE( MeasureUnit::INCH == nTargetUnit,
                             "output unit not supported for 1/100mm values" );
-                //fall-through
+                SAL_FALLTHROUGH;
             case MeasureUnit::MM:
                 // 0.01mm = 1 mm/100 (exactly)
                 nMul = 10;
@@ -1250,7 +1256,7 @@ bool Converter::convertDuration(util::Duration& rDuration,
 
 
 static void
-lcl_AppendTimezone(OUStringBuffer & i_rBuffer, sal_Int16 const nOffset)
+lcl_AppendTimezone(OUStringBuffer & i_rBuffer, int const nOffset)
 {
     if (0 == nOffset)
     {
@@ -1435,7 +1441,7 @@ lcl_MaxDaysPerMonth(const sal_Int32 nMonth, const sal_Int32 nYear)
 static void lcl_ConvertToUTC(
         sal_Int16 & o_rYear, sal_uInt16 & o_rMonth, sal_uInt16 & o_rDay,
         sal_uInt16 & o_rHours, sal_uInt16 & o_rMinutes,
-        sal_Int16 const nSourceOffset)
+        int const nSourceOffset)
 {
     sal_Int16 nOffsetHours(abs(nSourceOffset) / 60);
     sal_Int16 const nOffsetMinutes(abs(nSourceOffset) % 60);
@@ -1559,7 +1565,7 @@ static bool lcl_parseDate(
 
     {
         // While W3C XMLSchema specifies years with a minimum of 4 digits, be
-        // leninent in what we accept for years < 1000. One digit is acceptable
+        // lenient in what we accept for years < 1000. One digit is acceptable
         // if the remainders match.
         bSuccess = readDateTimeComponent(string, nPos, nYear, 1, false);
         if (!bIgnoreInvalidOrMissingDate)
@@ -1944,7 +1950,6 @@ const
 //    p   q   r   s   t   u   v   w   x   y   z
 
 
-
 void ThreeByteToFourByte (const sal_Int8* pBuffer, const sal_Int32 nStart, const sal_Int32 nFullLen, OUStringBuffer& sBuffer)
 {
     sal_Int32 nLen(nFullLen - nStart);
@@ -2089,7 +2094,7 @@ sal_Int32 Converter::decodeBase64SomeChars(
 double Converter::GetConversionFactor(OUStringBuffer& rUnit, sal_Int16 nSourceUnit, sal_Int16 nTargetUnit)
 {
     double fRetval(1.0);
-    rUnit.setLength(0L);
+    rUnit.setLength(0);
 
 
     if(nSourceUnit != nTargetUnit)
@@ -2444,7 +2449,7 @@ double Converter::GetConversionFactor(OUStringBuffer& rUnit, sal_Int16 nSourceUn
 
 sal_Int16 Converter::GetUnitFromString(const OUString& rString, sal_Int16 nDefaultUnit)
 {
-    sal_Int32 nPos = 0L;
+    sal_Int32 nPos = 0;
     sal_Int32 nLen = rString.getLength();
     sal_Int16 nRetUnit = nDefaultUnit;
 

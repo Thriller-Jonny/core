@@ -41,8 +41,6 @@ namespace dbtools
     using ::com::sun::star::sdbc::XConnection;
     using ::com::sun::star::util::XNumberFormatsSupplier;
     using ::com::sun::star::util::NumberFormatter;
-    using ::com::sun::star::util::XNumberFormatter;
-    using ::com::sun::star::uno::UNO_QUERY;
     using ::com::sun::star::uno::UNO_QUERY_THROW;
     using ::com::sun::star::uno::XComponentContext;
     using ::com::sun::star::beans::XPropertySet;
@@ -51,7 +49,6 @@ namespace dbtools
     using ::com::sun::star::uno::Exception;
     using ::com::sun::star::uno::Reference;
     using ::com::sun::star::i18n::LocaleData;
-    using ::com::sun::star::i18n::XLocaleData;
     using ::com::sun::star::i18n::LocaleDataItem;
     using ::com::sun::star::uno::Any;
 
@@ -59,7 +56,6 @@ namespace dbtools
     using namespace ::connectivity;
 
     using ::connectivity::OSQLParseNode;
-
 
 
     static sal_Unicode lcl_getSeparatorChar( const OUString& _rSeparator, sal_Unicode _nFallback )
@@ -277,22 +273,17 @@ namespace dbtools
 
 
     OUString OPredicateInputController::getPredicateValueStr(
-        const OUString& _rPredicateValue, const Reference< XPropertySet > & _rxField,
-        OUString* _pErrorMessage ) const
+        const OUString& _rPredicateValue, const Reference< XPropertySet > & _rxField ) const
     {
         OSL_ENSURE( _rxField.is(), "OPredicateInputController::getPredicateValue: invalid params!" );
         OUString sReturn;
         if ( _rxField.is() )
         {
-            OUString sValue( _rPredicateValue );
-
             // The following is mostly stolen from the former implementation in the parameter dialog
             // (dbaccess/source/ui/dlg/paramdialog.cxx). I do not fully understand this .....
 
             OUString sError;
-            OSQLParseNode* pParseNode = implPredicateTree( sError, sValue, _rxField );
-            if ( _pErrorMessage )
-                *_pErrorMessage = sError;
+            OSQLParseNode* pParseNode = implPredicateTree( sError, _rPredicateValue, _rxField );
 
             implParseNode(pParseNode, true) >>= sReturn;
         }
@@ -301,7 +292,7 @@ namespace dbtools
     }
 
     OUString OPredicateInputController::getPredicateValueStr(
-        const OUString& _sField, const OUString& _rPredicateValue, OUString* _pErrorMessage ) const
+        const OUString& _sField, const OUString& _rPredicateValue ) const
     {
         OUString sReturn = _rPredicateValue;
         OUString sError;
@@ -346,8 +337,6 @@ namespace dbtools
         pColumn->setRealName(sField);
 
         OSQLParseNode* pParseNode = implPredicateTree( sError, _rPredicateValue, xColumn );
-        if ( _pErrorMessage )
-            *_pErrorMessage = sError;
         if(pParseNode)
         {
             implParseNode(pParseNode, true) >>= sReturn;
@@ -356,22 +345,17 @@ namespace dbtools
     }
 
     Any OPredicateInputController::getPredicateValue(
-        const OUString& _rPredicateValue, const Reference< XPropertySet > & _rxField,
-        OUString* _pErrorMessage ) const
+        const OUString& _rPredicateValue, const Reference< XPropertySet > & _rxField ) const
     {
         OSL_ENSURE( _rxField.is(), "OPredicateInputController::getPredicateValue: invalid params!" );
 
         if ( _rxField.is() )
         {
-            OUString sValue( _rPredicateValue );
-
             // The following is mostly stolen from the former implementation in the parameter dialog
             // (dbaccess/source/ui/dlg/paramdialog.cxx). I do not fully understand this .....
 
             OUString sError;
-            OSQLParseNode* pParseNode = implPredicateTree( sError, sValue, _rxField );
-            if ( _pErrorMessage )
-                *_pErrorMessage = sError;
+            OSQLParseNode* pParseNode = implPredicateTree( sError, _rPredicateValue, _rxField );
 
             return implParseNode(pParseNode, false);
         }
@@ -400,7 +384,7 @@ namespace dbtools
                 else
                 {
                     OSQLParseNode* pValueNode = pOdbcSpec->getChild(1);
-                    if ( SQL_NODE_STRING == pValueNode->getNodeType() )
+                    if ( SQLNodeType::String == pValueNode->getNodeType() )
                         sReturn = pValueNode->getTokenValue();
                     else
                         pValueNode->parseNodeToStr(sReturn, m_xConnection, &m_aParser.getContext());
@@ -420,7 +404,7 @@ namespace dbtools
                     assert(pValueNode && "OPredicateInputController::getPredicateValue: invalid node child!");
                     if ( !_bForStatementUse )
                     {
-                        if ( SQL_NODE_STRING == pValueNode->getNodeType() )
+                        if ( SQLNodeType::String == pValueNode->getNodeType() )
                             sReturn = pValueNode->getTokenValue();
                         else
                             pValueNode->parseNodeToStr(
@@ -443,7 +427,6 @@ namespace dbtools
     }
 
 }   // namespace dbtools
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

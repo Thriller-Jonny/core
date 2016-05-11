@@ -25,7 +25,7 @@
 #include <string.h>
 #endif // End UNIX
 
-#ifdef WNT
+#ifdef _WIN32
 #include <windows.h>
 #include <stdlib.h>
 #include <shlobj.h>
@@ -40,12 +40,12 @@ using namespace ::com::sun::star::mozilla;
 namespace
 {
 
-    static OUString lcl_getUserDataDirectory()
+    OUString lcl_getUserDataDirectory()
     {
         ::osl::Security   aSecurity;
         OUString   aConfigPath;
 
-    #if defined(XP_WIN) || defined(MACOSX)
+    #if defined(_WIN32) || defined(MACOSX)
         aSecurity.getConfigDir( aConfigPath );
     #else
         //This is to find the dir under which .mozilla/.thunderbird is created.
@@ -67,7 +67,7 @@ namespace
     // DO NOT CHANGE THE ORDER; ADD ONLY TO THE END
     static const char* DefaultProductDir[NB_PRODUCTS][NB_CANDIDATES] =
     {
-    #if defined(XP_WIN)
+    #if defined(_WIN32)
         { "Mozilla/SeaMonkey/", NULL, NULL, NULL },
         { "Mozilla/Firefox/", NULL, NULL, NULL },
         { "Thunderbird/", "Mozilla/Thunderbird/", NULL, NULL }
@@ -90,7 +90,7 @@ namespace
     };
 
 
-    static OUString lcl_guessProfileRoot( MozillaProductType _product )
+    OUString lcl_guessProfileRoot( MozillaProductType _product )
     {
         size_t productIndex = _product - 1;
 
@@ -100,7 +100,7 @@ namespace
         {
             OUString sProductPath;
 
-            // check whether we have an anevironment variable which helps us
+            // check whether we have an environment variable which help us
             const char* pProfileByEnv = getenv( ProductRootEnvironmentVariable[ productIndex ] );
             if ( pProfileByEnv )
             {

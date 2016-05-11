@@ -20,7 +20,6 @@
 #include <sal/config.h>
 
 #include <comphelper/string.hxx>
-#include <o3tl/ptr_container.hxx>
 
 #include "scitems.hxx"
 #include <editeng/eeitem.hxx>
@@ -58,7 +57,7 @@
 #include "rangelst.hxx"
 
 #include <config_orcus.h>
-
+#include <o3tl/make_unique.hxx>
 #if ENABLE_ORCUS
 #include <orcus/css_parser.hpp>
 #endif
@@ -83,19 +82,19 @@ void ScHTMLStyles::add(const char* pElemName, size_t nElemName, const char* pCla
         if (pClassName)
         {
             // Both element and class names given.
-            ElemsType::iterator itrElem = maElemProps.find(aElem);
-            if (itrElem == maElemProps.end())
+            ElemsType::iterator itrElem = m_ElemProps.find(aElem);
+            if (itrElem == m_ElemProps.end())
             {
                 // new element
-                std::unique_ptr<NamePropsType> p(new NamePropsType);
-                std::pair<ElemsType::iterator, bool> r = o3tl::ptr_container::insert(maElemProps, aElem, std::move(p));
+                std::pair<ElemsType::iterator, bool> r =
+                    m_ElemProps.insert(std::make_pair(aElem, o3tl::make_unique<NamePropsType>()));
                 if (!r.second)
                     // insertion failed.
                     return;
                 itrElem = r.first;
             }
 
-            NamePropsType* pClsProps = itrElem->second;
+            NamePropsType *const pClsProps = itrElem->second.get();
             OUString aClass(pClassName, nClassName, RTL_TEXTENCODING_UTF8);
             aClass = aClass.toAsciiLowerCase();
             insertProp(*pClsProps, aClass, aProp, aValue);
@@ -103,7 +102,7 @@ void ScHTMLStyles::add(const char* pElemName, size_t nElemName, const char* pCla
         else
         {
             // Element name only. Add it to the element global.
-            insertProp(maElemGlobalProps, aElem, aProp, aValue);
+            insertProp(m_ElemGlobalProps, aElem, aProp, aValue);
         }
     }
     else
@@ -113,7 +112,7 @@ void ScHTMLStyles::add(const char* pElemName, size_t nElemName, const char* pCla
             // Class name only. Add it to the global.
             OUString aClass(pClassName, nClassName, RTL_TEXTENCODING_UTF8);
             aClass = aClass.toAsciiLowerCase();
-            insertProp(maGlobalProps, aClass, aProp, aValue);
+            insertProp(m_GlobalProps, aClass, aProp, aValue);
         }
     }
 }
@@ -123,14 +122,14 @@ const OUString& ScHTMLStyles::getPropertyValue(
 {
     // First, look into the element-class storage.
     {
-        ElemsType::const_iterator itr = maElemProps.find(rElem);
-        if (itr != maElemProps.end())
+        auto const itr = m_ElemProps.find(rElem);
+        if (itr != m_ElemProps.end())
         {
-            const NamePropsType* pClasses = itr->second;
+            const NamePropsType *const pClasses = itr->second.get();
             NamePropsType::const_iterator itr2 = pClasses->find(rClass);
             if (itr2 != pClasses->end())
             {
-                const PropsType* pProps = itr2->second;
+                const PropsType *const pProps = itr2->second.get();
                 PropsType::const_iterator itr3 = pProps->find(rPropName);
                 if (itr3 != pProps->end())
                     return itr3->second;
@@ -139,10 +138,10 @@ const OUString& ScHTMLStyles::getPropertyValue(
     }
     // Next, look into the class global storage.
     {
-        NamePropsType::const_iterator itr = maGlobalProps.find(rClass);
-        if (itr != maGlobalProps.end())
+        auto const itr = m_GlobalProps.find(rClass);
+        if (itr != m_GlobalProps.end())
         {
-            const PropsType* pProps = itr->second;
+            const PropsType *const pProps = itr->second.get();
             PropsType::const_iterator itr2 = pProps->find(rPropName);
             if (itr2 != pProps->end())
                 return itr2->second;
@@ -150,10 +149,10 @@ const OUString& ScHTMLStyles::getPropertyValue(
     }
     // As the last resort, look into the element global storage.
     {
-        NamePropsType::const_iterator itr = maElemGlobalProps.find(rClass);
-        if (itr != maElemGlobalProps.end())
+        auto const itr = m_ElemGlobalProps.find(rClass);
+        if (itr != m_ElemGlobalProps.end())
         {
-            const PropsType* pProps = itr->second;
+            const PropsType *const pProps = itr->second.get();
             PropsType::const_iterator itr2 = pProps->find(rPropName);
             if (itr2 != pProps->end())
                 return itr2->second;
@@ -171,8 +170,8 @@ void ScHTMLStyles::insertProp(
     if (itr == rStore.end())
     {
         // new element
-        std::unique_ptr<PropsType> p(new PropsType);
-        std::pair<NamePropsType::iterator, bool> r = o3tl::ptr_container::insert(rStore, aName, std::move(p));
+        std::pair<NamePropsType::iterator, bool> r =
+            rStore.insert(std::make_pair(aName, o3tl::make_unique<PropsType>()));
         if (!r.second)
             // insertion failed.
             return;
@@ -180,7 +179,7 @@ void ScHTMLStyles::insertProp(
         itr = r.first;
     }
 
-    PropsType* pProps = itr->second;
+    PropsType *const pProps = itr->second.get();
     pProps->insert(PropsType::value_type(aProp, aValue));
 }
 
@@ -236,9 +235,9 @@ ScHTMLLayoutParser::~ScHTMLLayoutParser()
         aTableStack.pop();
 
         bool found = false;
-        for ( size_t i = 0, nListSize = maList.size(); i < nListSize; ++i )
+        for (ScEEParseEntry* p : maList)
         {
-            if ( pS->pCellEntry == maList[ i ] )
+            if ( pS->pCellEntry == p )
             {
                 found = true;
                 break;
@@ -497,9 +496,8 @@ void ScHTMLLayoutParser::Adjust()
     SCROW nCurRow = 0;
     sal_uInt16 nPageWidth = (sal_uInt16) aPageSize.Width();
     InnerMap* pTab = nullptr;
-    for ( size_t i = 0, nListSize = maList.size(); i < nListSize; ++i )
+    for (ScEEParseEntry* pE : maList)
     {
-        ScEEParseEntry* pE = maList[ i ];
         if ( pE->nTab < nTab )
         {   // Table finished
             if ( !aStack.empty() )
@@ -835,9 +833,9 @@ void ScHTMLLayoutParser::CloseEntry( ImportInfo* pInfo )
     {   // From the stack in TableOff
         bTabInTabCell = false;
         bool found = false;
-        for ( size_t i = 0, nListSize = maList.size(); i < nListSize; ++i )
+        for (ScEEParseEntry* p : maList)
         {
-            if ( pActEntry == maList[ i ] )
+            if ( pActEntry == p )
             {
                 found = true;
                 break;
@@ -961,9 +959,8 @@ void ScHTMLLayoutParser::TableDataOn( ImportInfo* pInfo )
     bInCell = true;
     bool bHorJustifyCenterTH = (pInfo->nToken == HTML_TABLEHEADER_ON);
     const HTMLOptions& rOptions = static_cast<HTMLParser*>(pInfo->pParser)->GetOptions();
-    for (size_t i = 0, n = rOptions.size(); i < n; ++i)
+    for (const auto & rOption : rOptions)
     {
-        const HTMLOption& rOption = rOptions[i];
         switch( rOption.GetToken() )
         {
             case HTML_O_COLSPAN:
@@ -1083,9 +1080,8 @@ void ScHTMLLayoutParser::TableOn( ImportInfo* pInfo )
         if ( pInfo->nToken == HTML_TABLE_ON )
         {   // It can still be TD or TH, if we didn't have a TABLE earlier
             const HTMLOptions& rOptions = static_cast<HTMLParser*>(pInfo->pParser)->GetOptions();
-            for (size_t i = 0, n = rOptions.size(); i < n; ++i)
+            for (const auto & rOption : rOptions)
             {
-                const HTMLOption& rOption = rOptions[i];
                 switch( rOption.GetToken() )
                 {
                     case HTML_O_WIDTH:
@@ -1143,9 +1139,8 @@ void ScHTMLLayoutParser::TableOn( ImportInfo* pInfo )
         {
             // It can still be TD or TH, if we didn't have a TABLE earlier
             const HTMLOptions& rOptions = static_cast<HTMLParser*>(pInfo->pParser)->GetOptions();
-            for (size_t i = 0, n = rOptions.size(); i < n; ++i)
+            for (const auto & rOption : rOptions)
             {
-                const HTMLOption& rOption = rOptions[i];
                 switch( rOption.GetToken() )
                 {
                     case HTML_O_WIDTH:
@@ -1335,9 +1330,8 @@ void ScHTMLLayoutParser::Image( ImportInfo* pInfo )
     pActEntry->maImageList.push_back( o3tl::make_unique<ScHTMLImage>() );
     ScHTMLImage* pImage = pActEntry->maImageList.back().get();
     const HTMLOptions& rOptions = static_cast<HTMLParser*>(pInfo->pParser)->GetOptions();
-    for (size_t i = 0, n = rOptions.size(); i < n; ++i)
+    for (const auto & rOption : rOptions)
     {
-        const HTMLOption& rOption = rOptions[i];
         switch( rOption.GetToken() )
         {
             case HTML_O_SRC:
@@ -1409,9 +1403,8 @@ void ScHTMLLayoutParser::Image( ImportInfo* pInfo )
     if ( pActEntry->maImageList.size() > 0 )
     {
         long nWidth = 0;
-        for ( size_t i=0; i < pActEntry->maImageList.size(); ++i )
+        for (std::unique_ptr<ScHTMLImage> & pI : pActEntry->maImageList)
         {
-            ScHTMLImage* pI = pActEntry->maImageList[ i ].get();
             if ( pI->nDir & nHorizontal )
                 nWidth += pI->aSize.Width() + 2 * pI->aSpace.X();
             else
@@ -1427,9 +1420,8 @@ void ScHTMLLayoutParser::Image( ImportInfo* pInfo )
 void ScHTMLLayoutParser::ColOn( ImportInfo* pInfo )
 {
     const HTMLOptions& rOptions = static_cast<HTMLParser*>(pInfo->pParser)->GetOptions();
-    for (size_t i = 0, n = rOptions.size(); i < n; ++i)
+    for (const auto & rOption : rOptions)
     {
-        const HTMLOption& rOption = rOptions[i];
         switch( rOption.GetToken() )
         {
             case HTML_O_WIDTH:
@@ -1466,9 +1458,8 @@ sal_uInt16 ScHTMLLayoutParser::GetWidthPixel( const HTMLOption& rOption )
 void ScHTMLLayoutParser::AnchorOn( ImportInfo* pInfo )
 {
     const HTMLOptions& rOptions = static_cast<HTMLParser*>(pInfo->pParser)->GetOptions();
-    for (size_t i = 0, n = rOptions.size(); i < n; ++i)
+    for (const auto & rOption : rOptions)
     {
-        const HTMLOption& rOption = rOptions[i];
         switch( rOption.GetToken() )
         {
             case HTML_O_NAME:
@@ -1493,9 +1484,8 @@ void ScHTMLLayoutParser::FontOn( ImportInfo* pInfo )
     if ( IsAtBeginningOfText( pInfo ) )
     {   // Only at the start of the text; applies to whole line
         const HTMLOptions& rOptions = static_cast<HTMLParser*>(pInfo->pParser)->GetOptions();
-        for (size_t i = 0, n = rOptions.size(); i < n; ++i)
+        for (const auto & rOption : rOptions)
         {
-            const HTMLOption& rOption = rOptions[i];
             switch( rOption.GetToken() )
             {
                 case HTML_O_FACE :
@@ -1594,7 +1584,8 @@ void ScHTMLLayoutParser::ProcToken( ImportInfo* pInfo )
             // Do not set bInCell to true, TableDataOn does that
             pActEntry->aItemSet.Put(
                 SvxWeightItem( WEIGHT_BOLD, ATTR_FONT_WEIGHT) );
-        }   // fall through
+            SAL_FALLTHROUGH;
+        }
         case HTML_TABLEDATA_ON:         // Opens cell
         {
             TableDataOn( pInfo );
@@ -1693,7 +1684,7 @@ void ScHTMLLayoutParser::ProcToken( ImportInfo* pInfo )
         case HTML_UNDERLINE_ON :
         {
             if ( IsAtBeginningOfText( pInfo ) )
-                pActEntry->aItemSet.Put( SvxUnderlineItem( UNDERLINE_SINGLE,
+                pActEntry->aItemSet.Put( SvxUnderlineItem( LINESTYLE_SINGLE,
                     ATTR_FONT_UNDERLINE ) );
         }
         break;
@@ -2435,16 +2426,14 @@ bool ScHTMLTable::PushEntry( const ImportInfo& rInfo, bool bLastInCell )
     return bPushed;
 }
 
-bool ScHTMLTable::PushTableEntry( ScHTMLTableId nTableId )
+void ScHTMLTable::PushTableEntry( ScHTMLTableId nTableId )
 {
     OSL_ENSURE( nTableId != SC_HTML_GLOBAL_TABLE, "ScHTMLTable::PushTableEntry - cannot push global table" );
-    bool bPushed = false;
     if( nTableId != SC_HTML_GLOBAL_TABLE )
     {
         ScHTMLEntryPtr xEntry( new ScHTMLEntry( maTableItemSet, nTableId ) );
-        bPushed = PushEntry( xEntry );
+        PushEntry( xEntry );
     }
-    return bPushed;
 }
 
 ScHTMLTable* ScHTMLTable::GetExistingTable( ScHTMLTableId nTableId ) const
@@ -2974,7 +2963,7 @@ void ScHTMLQueryParser::ProcessToken( const ImportInfo& rInfo )
         break;
 
         case HTML_UNDERLINE_ON:     // <u>
-            mpCurrTable->PutItem( SvxUnderlineItem( UNDERLINE_SINGLE, ATTR_FONT_UNDERLINE ) );
+            mpCurrTable->PutItem( SvxUnderlineItem( LINESTYLE_SINGLE, ATTR_FONT_UNDERLINE ) );
         break;
     }
 }

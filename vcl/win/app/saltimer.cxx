@@ -34,12 +34,22 @@ void CALLBACK SalTimerProc(PVOID pParameter, BOOLEAN bTimerOrWaitFired);
 // See http://msdn.microsoft.com/en-us/library/windows/desktop/ms687003%28v=vs.85%29.aspx
 // (and related pages) for details about the Timer Queues.
 
-void ImplSalStopTimer(SalData* pSalData)
+// in order to prevent concurrent execution of ImplSalStartTimer and double
+// deletion of timer (which is extremely likely, given that
+// INVALID_HANDLE_VALUE waits for the callback to run on the main thread),
+// this must run on the main thread too
+void ImplSalStopTimer()
 {
+    SalData *const pSalData = GetSalData();
     HANDLE hTimer = pSalData->mnTimerId;
-    pSalData->mnTimerId = 0;
-    DeleteTimerQueueTimer(NULL, hTimer, INVALID_HANDLE_VALUE);
+    if (hTimer)
+    {
+        pSalData->mnTimerId = 0; // reset so it doesn't restart
+        DeleteTimerQueueTimer(NULL, hTimer, INVALID_HANDLE_VALUE);
+        pSalData->mnNextTimerTime = 0;
+    }
     MSG aMsg;
+    // this needs to run on the main thread
     while (PeekMessageW(&aMsg, 0, SAL_MSG_TIMER_CALLBACK, SAL_MSG_TIMER_CALLBACK, PM_REMOVE))
     {
         // just remove all the SAL_MSG_TIMER_CALLBACKs
@@ -61,11 +71,13 @@ void ImplSalStartTimer( sal_uLong nMS, bool bMutex )
     if (nMS > MAX_SYSPERIOD)
         nMS = MAX_SYSPERIOD;
 
-    // change if it exists, create if not
+    // cannot change a one-shot timer, so delete it and create new one
     if (pSalData->mnTimerId)
-        ChangeTimerQueueTimer(NULL, pSalData->mnTimerId, nMS, nMS);
-    else
-        CreateTimerQueueTimer(&pSalData->mnTimerId, NULL, SalTimerProc, NULL, nMS, nMS, WT_EXECUTEINTIMERTHREAD);
+    {
+        DeleteTimerQueueTimer(NULL, pSalData->mnTimerId, INVALID_HANDLE_VALUE);
+        pSalData->mnTimerId = 0;
+    }
+    CreateTimerQueueTimer(&pSalData->mnTimerId, NULL, SalTimerProc, NULL, nMS, 0, WT_EXECUTEINTIMERTHREAD);
 
     pSalData->mnNextTimerTime = pSalData->mnLastEventTime + nMS;
 }
@@ -81,7 +93,10 @@ void WinSalTimer::Start( sal_uLong nMS )
     if ( pSalData->mpFirstInstance )
     {
         if ( pSalData->mnAppThreadId != GetCurrentThreadId() )
-            PostMessageW( pSalData->mpFirstInstance->mhComWnd, SAL_MSG_STARTTIMER, 0, (LPARAM)nMS );
+        {
+            BOOL const ret = PostMessageW(pSalData->mpFirstInstance->mhComWnd, SAL_MSG_STARTTIMER, 0, (LPARAM)nMS);
+            SAL_WARN_IF(0 == ret, "vcl", "ERROR: PostMessage() failed!");
+        }
         else
             SendMessageW( pSalData->mpFirstInstance->mhComWnd, SAL_MSG_STARTTIMER, 0, (LPARAM)nMS );
     }
@@ -93,12 +108,8 @@ void WinSalTimer::Stop()
 {
     SalData* pSalData = GetSalData();
 
-    // If we have a timer, than
-    if ( pSalData->mnTimerId )
-    {
-        ImplSalStopTimer(pSalData);
-        pSalData->mnNextTimerTime = 0;
-    }
+    assert(pSalData->mpFirstInstance);
+    SendMessageW(pSalData->mpFirstInstance->mhComWnd, SAL_MSG_STOPTIMER, 0, 0);
 }
 
 /** This gets invoked from a Timer Queue thread.
@@ -124,7 +135,11 @@ void CALLBACK SalTimerProc(PVOID, BOOLEAN)
         // always post message when the timer fires, we will remove the ones
         // that happened during execution of the callback later directly from
         // the message queue
-        PostMessageW(pSalData->mpFirstInstance->mhComWnd, SAL_MSG_TIMER_CALLBACK, 0, 0);
+        BOOL const ret = PostMessageW(pSalData->mpFirstInstance->mhComWnd, SAL_MSG_TIMER_CALLBACK, 0, 0);
+#if OSL_DEBUG_LEVEL > 0
+        if (0 == ret) // SEH prevents using SAL_WARN here?
+            fputs("ERROR: PostMessage() failed!", stderr);
+#endif
 
 #if defined ( __MINGW32__ ) && !defined ( _WIN64 )
     }
@@ -158,9 +173,11 @@ void EmitTimerCallback()
         pSVData->mpSalTimer->CallCallback( idle );
         ImplSalYieldMutexRelease();
 
+        // Run the timer again if it was started before, and also
         // Run the timer in the correct time, if we started this
         // with a small timeout, because we didn't get the mutex
-        if (pSalData->mnTimerId && (pSalData->mnTimerMS != pSalData->mnTimerOrgMS))
+        // - but not if mnTimerId is 0, which is set by ImplSalStopTimer()
+        if (pSalData->mnTimerId)
             ImplSalStartTimer(pSalData->mnTimerOrgMS, false);
     }
     else

@@ -17,18 +17,18 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include "internal/global.hxx"
-#include "internal/infotips.hxx"
-#include "internal/shlxthdl.hxx"
-#include "internal/metainforeader.hxx"
-#include "internal/contentreader.hxx"
-#include "internal/utilities.hxx"
-#include "internal/registry.hxx"
-#include "internal/fileextensions.hxx"
-#include "internal/iso8601_converter.hxx"
-#include "internal/config.hxx"
+#include "global.hxx"
+#include "infotips.hxx"
+#include "shlxthdl.hxx"
+#include "metainforeader.hxx"
+#include "contentreader.hxx"
+#include "utilities.hxx"
+#include "registry.hxx"
+#include "fileextensions.hxx"
+#include "iso8601_converter.hxx"
+#include "config.hxx"
 
-#include "internal/resource.h"
+#include "resource.h"
 #include <stdio.h>
 #include <utility>
 #include <stdlib.h>
@@ -39,14 +39,12 @@
 const std::wstring WSPACE = std::wstring(SPACE);
 
 
-
 CInfoTip::CInfoTip(long RefCnt) :
     m_RefCnt(RefCnt)
 {
     ZeroMemory(m_szFileName, sizeof(m_szFileName));
     InterlockedIncrement(&g_DllRefCnt);
 }
-
 
 
 CInfoTip::~CInfoTip()
@@ -83,12 +81,10 @@ HRESULT STDMETHODCALLTYPE CInfoTip::QueryInterface(REFIID riid, void __RPC_FAR *
 }
 
 
-
 ULONG STDMETHODCALLTYPE CInfoTip::AddRef()
 {
     return InterlockedIncrement(&m_RefCnt);
 }
-
 
 
 ULONG STDMETHODCALLTYPE CInfoTip::Release()
@@ -301,7 +297,6 @@ HRESULT STDMETHODCALLTYPE CInfoTip::GetInfoTip(DWORD /*dwFlags*/, wchar_t** ppws
 }
 
 
-
 HRESULT STDMETHODCALLTYPE CInfoTip::GetInfoFlags(DWORD * /*pdwFlags*/ )
 {
     return E_NOTIMPL;
@@ -346,12 +341,10 @@ HRESULT STDMETHODCALLTYPE CInfoTip::Load(LPCOLESTR pszFileName, DWORD /*dwMode*/
 }
 
 
-
 HRESULT STDMETHODCALLTYPE CInfoTip::IsDirty()
 {
     return E_NOTIMPL;
 }
-
 
 
 HRESULT STDMETHODCALLTYPE CInfoTip::Save(LPCOLESTR /*pszFileName*/, BOOL /*fRemember*/)
@@ -360,12 +353,10 @@ HRESULT STDMETHODCALLTYPE CInfoTip::Save(LPCOLESTR /*pszFileName*/, BOOL /*fReme
 }
 
 
-
 HRESULT STDMETHODCALLTYPE CInfoTip::SaveCompleted(LPCOLESTR /*pszFileName*/)
 {
     return E_NOTIMPL;
 }
-
 
 
 HRESULT STDMETHODCALLTYPE CInfoTip::GetCurFile(LPOLESTR __RPC_FAR * /*ppszFileName*/)

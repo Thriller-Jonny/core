@@ -18,10 +18,7 @@
  */
 
 
-
-
 // Global header
-
 
 
 #include <limits.h>
@@ -31,9 +28,6 @@
 #include <osl/mutex.hxx>
 #include <vcl/window.hxx>
 #include <vcl/svapp.hxx>
-#include <com/sun/star/uno/Any.hxx>
-#include <com/sun/star/uno/Reference.hxx>
-
 
 
 // Project-local header
@@ -103,13 +97,13 @@ public:
     void SetFieldOffset( sal_Int32 nOffset, sal_Int32 nLen ) { mnFieldOffset = nOffset; mnFieldLen = nLen; }
     sal_Int32 GetFieldOffset() const { return mnFieldOffset; }
     sal_Int32 GetFieldLen() const { return mnFieldLen; }
-    void AreInField( bool bInField = true ) { mbInField = bInField; }
+    void AreInField() { mbInField = true; }
     bool InField() const { return mbInField; }
 
     void SetBulletOffset( sal_Int32 nOffset, sal_Int32 nLen ) { mnBulletOffset = nOffset; mnBulletLen = nLen; }
     sal_Int32 GetBulletOffset() const { return mnBulletOffset; }
     sal_Int32 GetBulletLen() const { return mnBulletLen; }
-    void AreInBullet( bool bInBullet = true ) { mbInBullet = bInBullet; }
+    void AreInBullet() { mbInBullet = true; }
     bool InBullet() const { return mbInBullet; }
 
     /// returns false if the given range is non-editable (e.g. contains bullets or _parts_ of fields)
@@ -298,7 +292,6 @@ bool SvxAccessibleTextIndex::IsEditableRange( const SvxAccessibleTextIndex& rEnd
 
     return true;
 }
-
 
 
 SvxEditSourceAdapter::SvxEditSourceAdapter() : mbEditSourceValid( false )
@@ -533,7 +526,7 @@ void SvxAccessibleTextAdapter::SetParaAttribs( sal_Int32 nPara, const SfxItemSet
     mpTextForwarder->SetParaAttribs( nPara, rSet );
 }
 
-void SvxAccessibleTextAdapter::RemoveAttribs( const ESelection& , bool , sal_uInt16 )
+void SvxAccessibleTextAdapter::RemoveAttribs( const ESelection& )
 {
 }
 

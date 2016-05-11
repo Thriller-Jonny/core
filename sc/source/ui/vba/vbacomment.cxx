@@ -83,9 +83,9 @@ ScVbaComment::getAnnotationIndex() throw (uno::RuntimeException)
     for ( ; aIndex < aCount ; aIndex++ )
     {
         uno::Reference< sheet::XSheetAnnotation > xAnno( xAnnos->getByIndex( aIndex ), uno::UNO_QUERY_THROW );
-        table::CellAddress xAddress = xAnno->getPosition();
+        table::CellAddress aAnnoAddress = xAnno->getPosition();
 
-        if ( xAddress.Column == aAddress.Column && xAddress.Row == aAddress.Row && xAddress.Sheet == aAddress.Sheet )
+        if ( aAnnoAddress.Column == aAddress.Column && aAnnoAddress.Row == aAddress.Row && aAnnoAddress.Sheet == aAddress.Sheet )
         {
             SAL_INFO("sc.ui", "terminating search, index is " << aIndex);
             break;
@@ -187,13 +187,13 @@ ScVbaComment::Text( const uno::Any& aText, const uno::Any& aStart, const uno::An
                 xTextCursor->collapseToStart();
                 xTextCursor->gotoStart( false );
                 xTextCursor->goRight( nStart - 1, false );
-                xTextCursor->gotoEnd( sal_True );
+                xTextCursor->gotoEnd( true );
             }
             else
             {
                 xTextCursor->collapseToStart();
                 xTextCursor->gotoStart( false );
-                xTextCursor->goRight( nStart - 1 , sal_True );
+                xTextCursor->goRight( nStart - 1 , true );
             }
 
             uno::Reference< text::XTextRange > xRange( xTextCursor, uno::UNO_QUERY_THROW );

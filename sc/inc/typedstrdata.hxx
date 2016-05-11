@@ -57,7 +57,6 @@ public:
         bool operator() (const ScTypedStrData& left, const ScTypedStrData& right) const;
     };
 
-    bool operator== (const ScTypedStrData& r) const;
     bool operator< (const ScTypedStrData& r) const;
 
 private:
@@ -67,7 +66,7 @@ private:
     bool   mbIsDate;
 };
 
-class FindTypedStrData : std::unary_function<ScTypedStrData, bool>
+class FindTypedStrData : public std::unary_function<ScTypedStrData, bool>
 {
     ScTypedStrData maVal;
     bool mbCaseSens;

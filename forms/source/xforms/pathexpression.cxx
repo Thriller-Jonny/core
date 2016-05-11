@@ -25,12 +25,7 @@
 
 #include <com/sun/star/xml/dom/XNode.hpp>
 #include <com/sun/star/xml/dom/XNodeList.hpp>
-#include <com/sun/star/xml/dom/NodeType.hpp>
-#include <com/sun/star/xml/dom/events/XEventListener.hpp>
-#include <com/sun/star/xml/dom/events/XEventTarget.hpp>
 #include <com/sun/star/xml/xpath/XXPathObject.hpp>
-#include <com/sun/star/container/XNameContainer.hpp>
-#include <com/sun/star/uno/Sequence.hxx>
 #include <rtl/ustrbuf.hxx>
 
 #include <unotools/textsearch.hxx>
@@ -40,21 +35,9 @@
 
 
 using com::sun::star::uno::Reference;
-using com::sun::star::uno::Sequence;
 using com::sun::star::xml::dom::XNode;
 using com::sun::star::xml::dom::XNodeList;
-using com::sun::star::xml::dom::events::XEventListener;
-using com::sun::star::xml::dom::events::XEventTarget;
-using com::sun::star::container::XNameContainer;
-using com::sun::star::xml::xpath::XXPathObject;
-using com::sun::star::uno::RuntimeException;
-using com::sun::star::uno::UNO_QUERY;
-using com::sun::star::uno::UNO_QUERY_THROW;
-using com::sun::star::xml::dom::NodeType_TEXT_NODE;
-using com::sun::star::xml::xpath::XPathObjectType_XPATH_UNDEFINED;
 using namespace std;
-
-
 
 
 namespace xforms
@@ -69,7 +52,6 @@ PathExpression::PathExpression()
 PathExpression::~PathExpression()
 {
 }
-
 
 
 void PathExpression::setExpression( const OUString& rExpression )
@@ -95,14 +77,14 @@ const OUString PathExpression::_getExpressionForEvaluation() const
     return sExpr;
 }
 
-bool PathExpression::evaluate( const EvaluationContext& rContext )
+void PathExpression::evaluate( const EvaluationContext& rContext )
 {
     // for simple expression we don't need to re-bind (if we were bound before)
     // (we will evaluate empty expressions, since they are interpreted as ".")
     if( mxResult.is() && isSimpleExpression() )
-        return true;
+        return;
 
-    bool bResult = _evaluate( rContext, _getExpressionForEvaluation() );
+    _evaluate( rContext, _getExpressionForEvaluation() );
 
     // clear old result, and copy new
     maNodes.clear();
@@ -115,8 +97,6 @@ bool PathExpression::evaluate( const EvaluationContext& rContext )
         for( sal_Int32 n = 0; n < nLength; n++ )
             maNodes.push_back( xNodeList->item( n ) );
     }
-
-    return bResult;
 }
 
 

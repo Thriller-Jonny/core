@@ -29,7 +29,6 @@ namespace svt
 {
 
 
-
     //= TemplateFolderCache
 
     class TemplateFolderCacheImpl;
@@ -68,7 +67,7 @@ namespace svt
         @param _bAutoStoreState
             Set this to <TRUE/> if you want the instance to automatically store the state of the template folders upon
             destruction.<br/>
-            If set to <FALSE/>, you would epplicitly need to call <method>storeState</method> to do this.<br/>
+            If set to <FALSE/>, you would explicitly need to call <method>storeState</method> to do this.<br/>
             If the current state is not known (e.g. because you did not call needsUpdate, which retrieves it),
             it is not retrieved in the dtor, regardless of the <arg>_bAutoStoreState</arg> flag.
         */
@@ -76,22 +75,13 @@ namespace svt
         ~TemplateFolderCache( );
 
         /** determines whether or not the template configuration needs to be updated
-        @param _bForceCheck
-            set this to <TRUE/> if you want the object to rescan the template folders in every case. The default (<FALSE/>)
-            means that once the information has been retrieved in a first call, every second call returns the same result
-            as the first one, even if in the meantime the template folders changed.
         @return
             <TRUE/> if the template configuration needs to be updated
         */
-        bool    needsUpdate( bool _bForceCheck = false );
+        bool    needsUpdate();
 
-        /** stores the current state of the template folders in the cache
-        @param _bForceRetrieval
-            if set to <TRUE/>, the current state of the template folders is retrieved again, even if it is already known.
-            Usually, you set this to <FALSE/>: After calling <method>needsUpdate</method>, the state is know and does not
-            need to be read again.
-        */
-        void        storeState( bool _bForceRetrieval = false );
+        /** stores the current state of the template folders in the cache  */
+        void        storeState();
     };
 
 

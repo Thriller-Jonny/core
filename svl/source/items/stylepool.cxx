@@ -129,7 +129,7 @@ namespace {
                                const bool bIsItemIgnorable )
     {
         Node* pNextNode = this;
-        std::vector<Node*>::iterator aIter = mChildren.begin();
+        std::vector<Node*>::const_iterator aIter = mChildren.begin();
         while( aIter != mChildren.end() )
         {
             if( rItem.Which() == (*aIter)->getPoolItem().Which() &&
@@ -165,7 +165,7 @@ namespace {
                              const bool bSkipIgnorable )
     {
         // Searching downstairs
-        std::vector<Node*>::iterator aIter = mChildren.begin();
+        std::vector<Node*>::const_iterator aIter = mChildren.begin();
         // For pLast == 0 and pLast == this all children are of interest
         // for another pLast the search starts behind pLast...
         if( pLast && pLast != this )
@@ -264,7 +264,7 @@ namespace {
 
     Node::~Node()
     {
-        std::vector<Node*>::iterator aIter = mChildren.begin();
+        std::vector<Node*>::const_iterator aIter = mChildren.begin();
         while( aIter != mChildren.end() )
         {
             delete *aIter;
@@ -332,7 +332,7 @@ namespace {
  * This static method creates a unique name from a shared pointer to a SfxItemSet
  * The name is the memory address of the SfxItemSet itself.
  */
-OUString StylePool::nameOf( SfxItemSet_Pointer_t pSet )
+OUString StylePool::nameOf( const SfxItemSet_Pointer_t& pSet )
 {
     return OUString::number( reinterpret_cast<sal_IntPtr>( pSet.get() ), 16 );
 }
@@ -347,14 +347,12 @@ class StylePoolImpl
 {
 private:
     std::map< const SfxItemSet*, Node > maRoot;
-    sal_Int32 mnCount;
     // #i86923#
     SfxItemSet* mpIgnorableItems;
 public:
     // #i86923#
     explicit StylePoolImpl( SfxItemSet* pIgnorableItems = nullptr )
         : maRoot(),
-          mnCount(0),
           mpIgnorableItems( pIgnorableItems != nullptr
                             ? pIgnorableItems->Clone( false )
                             : nullptr )
@@ -393,7 +391,7 @@ StylePool::SfxItemSet_Pointer_t StylePoolImpl::insertItemSet( const SfxItemSet& 
     }
     while( pItem )
     {
-        if( !rSet.GetPool()->IsItemFlag(pItem->Which(), SfxItemPoolFlags::POOLABLE ) )
+        if( !rSet.GetPool()->IsItemPoolable(pItem->Which() ) )
             bNonPoolable = true;
         if ( !xFoundIgnorableItems.get() ||
              (xFoundIgnorableItems->Put( *pItem ) == nullptr ) )
@@ -409,7 +407,7 @@ StylePool::SfxItemSet_Pointer_t StylePoolImpl::insertItemSet( const SfxItemSet& 
         pItem = aIgnorableItemsIter.GetCurItem();
         while( pItem )
         {
-            if( !rSet.GetPool()->IsItemFlag(pItem->Which(), SfxItemPoolFlags::POOLABLE ) )
+            if( !rSet.GetPool()->IsItemPoolable(pItem->Which() ) )
                 bNonPoolable = true;
             pCurNode = pCurNode->findChildNode( *pItem, true );
             pItem = aIgnorableItemsIter.NextItem();
@@ -422,7 +420,6 @@ StylePool::SfxItemSet_Pointer_t StylePoolImpl::insertItemSet( const SfxItemSet& 
     {
         pCurNode->setItemSet( rSet );
         bNonPoolable = false; // to avoid a double insertion
-        ++mnCount;
     }
     // If rSet contains at least one non poolable item, a new itemset has to be inserted
     if( bNonPoolable )

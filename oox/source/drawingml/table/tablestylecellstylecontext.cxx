@@ -23,6 +23,8 @@
 #include "drawingml/fillpropertiesgroupcontext.hxx"
 #include "drawingml/linepropertiescontext.hxx"
 #include "oox/helper/attributelist.hxx"
+#include <oox/token/namespaces.hxx>
+#include <oox/token/tokens.hxx>
 
 using namespace ::oox::core;
 using namespace ::com::sun::star;
@@ -66,9 +68,9 @@ TableStyleCellStyleContext::onCreateContext( ::sal_Int32 aElementToken, const At
                 if ( mnLineType != XML_none )
                 {
                     std::map < sal_Int32, ::oox::drawingml::LinePropertiesPtr >& rLineBorders = mrTableStylePart.getLineBorders();
-                    ::oox::drawingml::LinePropertiesPtr mpLineProperties( new oox::drawingml::LineProperties );
-                    rLineBorders[ mnLineType ] = mpLineProperties;
-                    return new LinePropertiesContext( *this, rAttribs, *mpLineProperties );
+                    ::oox::drawingml::LinePropertiesPtr pLineProperties( new oox::drawingml::LineProperties );
+                    rLineBorders[ mnLineType ] = pLineProperties;
+                    return new LinePropertiesContext( *this, rAttribs, *pLineProperties );
                 }
             }
             break;

@@ -45,7 +45,6 @@ public:
                            const OUString& rQName );
     XMLFormPropValueTContext_Impl( XMLTransformerBase& rTransformer,
                            const OUString& rQName,
-                              sal_uInt16 nAttrPrefix,
                            XMLTokenEnum eAttrToken );
 
     virtual ~XMLFormPropValueTContext_Impl();
@@ -74,11 +73,10 @@ XMLFormPropValueTContext_Impl::XMLFormPropValueTContext_Impl(
 XMLFormPropValueTContext_Impl::XMLFormPropValueTContext_Impl(
         XMLTransformerBase& rTransformer,
         const OUString& rQName,
-        sal_uInt16 nAttrPrefix,
         XMLTokenEnum eAttrToken ) :
     XMLTransformerContext( rTransformer, rQName ),
     m_aAttrQName( rTransformer.GetNamespaceMap().GetQNameByKey(
-                    nAttrPrefix, GetXMLToken(eAttrToken) ) ),
+                    XML_NAMESPACE_OFFICE, GetXMLToken(eAttrToken) ) ),
     m_bPersistent( true ),
     m_bIsVoid( false )
 {
@@ -150,36 +148,35 @@ XMLFormPropOOoTransformerContext::~XMLFormPropOOoTransformerContext()
 {
 }
 
-XMLTransformerContext *XMLFormPropOOoTransformerContext::CreateChildContext(
+rtl::Reference<XMLTransformerContext> XMLFormPropOOoTransformerContext::CreateChildContext(
         sal_uInt16 nPrefix,
         const OUString& rLocalName,
         const OUString& rQName,
         const Reference< XAttributeList >& )
 {
-    XMLTransformerContext *pContext = nullptr;
+    rtl::Reference<XMLTransformerContext> pContext;
 
     if( XML_NAMESPACE_FORM == nPrefix &&
         IsXMLToken( rLocalName, XML_PROPERTY_VALUE ) )
     {
         if( m_bIsList )
         {
-            pContext = new XMLFormPropValueTContext_Impl( GetTransformer(),
+            pContext.set(new XMLFormPropValueTContext_Impl( GetTransformer(),
                                                           rQName,
-                                                          XML_NAMESPACE_OFFICE,
-                                                          m_eValueToken );
+                                                          m_eValueToken ));
         }
         else if( !m_xValueContext.is() )
         {
             m_xValueContext=
                 new XMLFormPropValueTContext_Impl( GetTransformer(), rQName );
-            pContext = m_xValueContext.get();
+            pContext.set(m_xValueContext.get());
         }
     }
 
     // default is ignore
-    if( !pContext )
-        pContext = new XMLIgnoreTransformerContext( GetTransformer(), rQName,
-                                             true, true );
+    if( !pContext.is() )
+        pContext.set(new XMLIgnoreTransformerContext( GetTransformer(), rQName,
+                                             true, true ));
     return pContext;
 }
 

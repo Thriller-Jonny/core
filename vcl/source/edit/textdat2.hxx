@@ -90,10 +90,10 @@ struct TEWritingDirectionInfo
     sal_uInt8    nType;
     sal_Int32    nStartPos;
     sal_Int32    nEndPos;
-    TEWritingDirectionInfo( sal_uInt8 _Type, sal_Int32 _Start, sal_Int32 _End )
-        : nType {_Type}
-        , nStartPos {_Start}
-        , nEndPos {_End}
+    TEWritingDirectionInfo( sal_uInt8 Type, sal_Int32 Start, sal_Int32 End )
+        : nType {Type}
+        , nStartPos {Start}
+        , nEndPos {End}
     {}
 };
 
@@ -149,7 +149,6 @@ public:
     void            SetStartX( short n )            { mnStartX = n; }
 
     inline bool operator == ( const TextLine& rLine ) const;
-    inline bool operator != ( const TextLine& rLine ) const;
 };
 
 inline bool TextLine::operator == ( const TextLine& rLine ) const
@@ -158,11 +157,6 @@ inline bool TextLine::operator == ( const TextLine& rLine ) const
            mnEnd == rLine.mnEnd &&
            mnStartPortion == rLine.mnStartPortion &&
            mnEndPortion == rLine.mnEndPortion;
-}
-
-inline bool TextLine::operator != ( const TextLine& rLine ) const
-{
-    return !( *this == rLine );
 }
 
 class TEParaPortion
@@ -180,11 +174,12 @@ private:
     bool                    mbInvalid;
     bool                    mbSimple;   // only type linearly
 
-                        TEParaPortion( const TEParaPortion& ) {;}
-
 public:
                         TEParaPortion( TextNode* pNode );
                         ~TEParaPortion();
+
+    TEParaPortion( const TEParaPortion& ) = delete;
+    void operator=( const TEParaPortion& ) = delete;
 
     bool                IsInvalid() const           { return mbInvalid; }
     bool                IsSimpleInvalid() const     { return mbSimple; }

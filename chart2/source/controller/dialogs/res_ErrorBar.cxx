@@ -563,7 +563,7 @@ void ErrorBarResources::Reset(const SfxItemSet& rInAttrs)
             case CHINDICATE_NONE :
                 // no longer used, use both as default
                 m_eIndicate = CHINDICATE_BOTH;
-                // fall-through intended to BOTH
+                SAL_FALLTHROUGH; // to BOTH
             case CHINDICATE_BOTH :
                 m_pRbBoth->Check(); break;
             case CHINDICATE_UP :
@@ -719,7 +719,7 @@ void ErrorBarResources::disposingRangeSelection()
         m_apRangeSelectionHelper->stopRangeListening( false );
 }
 
-bool ErrorBarResources::isRangeFieldContentValid( Edit & rEdit )
+void ErrorBarResources::isRangeFieldContentValid( Edit & rEdit )
 {
     OUString aRange( rEdit.GetText());
     bool bIsValid = ( aRange.isEmpty() ) ||
@@ -736,8 +736,6 @@ bool ErrorBarResources::isRangeFieldContentValid( Edit & rEdit )
         rEdit.SetControlBackground( RANGE_SELECTION_INVALID_RANGE_BACKGROUND_COLOR );
         rEdit.SetControlForeground( RANGE_SELECTION_INVALID_RANGE_FOREGROUND_COLOR );
     }
-
-    return bIsValid;
 }
 
 } //namespace chart

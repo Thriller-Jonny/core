@@ -17,8 +17,12 @@ $(eval $(call gb_Package_add_files,vcl_opengl_shader,$(LIBO_ETC_FOLDER)/opengl,\
 	blendedTextureVertexShader.glsl \
 	dumbVertexShader.glsl \
 	diffTextureFragmentShader.glsl \
+	greyscaleFragmentShader.glsl \
+    invert50FragmentShader.glsl \
 	convolutionFragmentShader.glsl \
 	linearGradientFragmentShader.glsl \
+	lineFragmentShader.glsl \
+	lineVertexShader.glsl \
 	maskFragmentShader.glsl \
 	maskedTextureVertexShader.glsl \
 	maskedTextureFragmentShader.glsl \

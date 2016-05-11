@@ -80,11 +80,7 @@ Important: HTTP headers will not be mapped to DAV properties; only to UCB
 */
 
 
-
-
 // ContentProperties Implementation.
-
-
 
 
 // static member!
@@ -218,8 +214,7 @@ const PropertyValue * ContentProperties::get(
 // static
 void ContentProperties::UCBNamesToDAVNames(
                             const uno::Sequence< beans::Property > & rProps,
-                            std::vector< OUString > & propertyNames,
-                            bool bIncludeUnmatched /* = true */ )
+                            std::vector< OUString > & propertyNames )
 {
 
     // Assemble list of DAV properties to obtain from server.
@@ -295,8 +290,7 @@ void ContentProperties::UCBNamesToDAVNames(
         }
         else
         {
-            if ( bIncludeUnmatched )
-                propertyNames.push_back( rProp.Name );
+            propertyNames.push_back( rProp.Name );
         }
     }
 }
@@ -305,8 +299,7 @@ void ContentProperties::UCBNamesToDAVNames(
 // static
 void ContentProperties::UCBNamesToHTTPNames(
                             const uno::Sequence< beans::Property > & rProps,
-                            std::vector< OUString > & propertyNames,
-                            bool bIncludeUnmatched /* = true */ )
+                            std::vector< OUString > & propertyNames )
 {
 
     // Assemble list of HTTP header names to obtain from server.
@@ -340,8 +333,7 @@ void ContentProperties::UCBNamesToHTTPNames(
         }
         else
         {
-            if ( bIncludeUnmatched )
-                propertyNames.push_back( rProp.Name );
+            propertyNames.push_back( rProp.Name );
         }
     }
 }
@@ -433,7 +425,7 @@ void ContentProperties::addProperty( const OUString & rName,
         (*m_xProps)[ OUString("Size") ]
             = PropertyValue( uno::makeAny( aValue.toInt64() ), true );
     }
-    else if ( rName == "Content-Length" )
+    else if ( rName.equalsIgnoreAsciiCase( "Content-Length" ) )
     {
         // Do NOT map Content-length entity header to DAV:getcontentlength!
         // Only DAV resources have this property.
@@ -451,7 +443,7 @@ void ContentProperties::addProperty( const OUString & rName,
         (*m_xProps)[ OUString("MediaType") ]
             = PropertyValue( rValue, true );
     }
-    else if ( rName == "Content-Type" )
+    else if ( rName.equalsIgnoreAsciiCase( "Content-Type" ) )
     {
         // Do NOT map Content-Type entity header to DAV:getcontenttype!
         // Only DAV resources have this property.
@@ -474,7 +466,7 @@ void ContentProperties::addProperty( const OUString & rName,
         (*m_xProps)[ OUString("DateModified") ]
             = PropertyValue( uno::makeAny( aDate ), true );
     }
-    else if ( rName == "Last-Modified" )
+    else if ( rName.equalsIgnoreAsciiCase( "Last-Modified" ) )
     {
         // Do not map Last-Modified entity header to DAV:getlastmodified!
         // Only DAV resources have this property.
@@ -520,11 +512,7 @@ void ContentProperties::addProperty( const OUString & rName,
 }
 
 
-
-
 // CachableContentProperties Implementation.
-
-
 
 
 namespace

@@ -22,7 +22,6 @@
 
 #include <sal/config.h>
 
-#include <com/sun/star/uno/Sequence.hxx>
 #include <sal/types.h>
 #include <unotools/unotoolsdllapi.h>
 
@@ -57,12 +56,12 @@ UNOTOOLS_DLLPUBLIC css::uno::Any GetProperty(
 
 UNOTOOLS_DLLPUBLIC bool MakeFolder(
     ucbhelper::Content & parent, OUString const & title,
-    ucbhelper::Content & result, bool exclusive = false);
+    ucbhelper::Content & result);
 
 /// like mkdir -p
 UNOTOOLS_DLLPUBLIC bool ensureFolder(
-    css::uno::Reference< css::uno::XComponentContext > xCtx,
-    css::uno::Reference< css::ucb::XCommandEnvironment > xEnv,
+    const css::uno::Reference< css::uno::XComponentContext >& xCtx,
+    const css::uno::Reference< css::ucb::XCommandEnvironment >& xEnv,
     const OUString& rFolder, ucbhelper::Content & result) throw();
 
 /// @return the value of the "Size" property of the given content, or zero if

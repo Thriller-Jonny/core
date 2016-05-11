@@ -84,6 +84,7 @@
 #include "externalrefmgr.hxx"
 #include "appoptio.hxx"
 #include "scmod.hxx"
+#include "../../ui/inc/viewdata.hxx"
 #include "../../ui/inc/viewutil.hxx"
 #include "tabprotection.hxx"
 #include "formulaparserpool.hxx"
@@ -99,6 +100,7 @@
 #include "interpre.hxx"
 #include <tokenstringcontext.hxx>
 #include "docsh.hxx"
+#include "clipoptions.hxx"
 #include <listenercontext.hxx>
 
 using namespace com::sun::star;
@@ -365,7 +367,8 @@ ScDocument::~ScDocument()
     {   // To be sure there isn't anything running do it with a protector,
         // this ensures also that nothing needs the control anymore.
         ScRefreshTimerProtector aProt( GetRefreshTimerControlAddress() );
-        delete pRefreshTimerControl, pRefreshTimerControl = nullptr;
+        delete pRefreshTimerControl;
+        pRefreshTimerControl = nullptr;
     }
 
     mxFormulaParserPool.reset();
@@ -420,7 +423,7 @@ ScDocument::~ScDocument()
     // delete the EditEngine before destroying the xPoolHelper
     delete pCacheFieldEditEngine;
 
-    if ( xPoolHelper.is() && !bIsClip )
+    if ( xPoolHelper.is() && !bIsClip && !bIsUndo)
         xPoolHelper->SourceDocumentGone();
     xPoolHelper.clear();
 
@@ -695,18 +698,35 @@ bool ScDocument::GetDataStart( SCTAB nTab, SCCOL& rStartCol, SCROW& rStartRow ) 
     return false;
 }
 
-bool ScDocument::GetTiledRenderingArea(SCTAB nTab, SCCOL& rEndCol, SCROW& rEndRow) const
+void ScDocument::GetTiledRenderingArea(SCTAB nTab, SCCOL& rEndCol, SCROW& rEndRow) const
 {
     bool bHasPrintArea = GetPrintArea(nTab, rEndCol, rEndRow, false);
 
     // we need some reasonable minimal document size
-    if (!bHasPrintArea || rEndCol < 20)
-        rEndCol = 20;
-
-    if (!bHasPrintArea || rEndRow < 50)
-        rEndRow = 50;
-
-    return true;
+    ScViewData* pViewData = ScDocShell::GetViewData();
+    if (!pViewData)
+    {
+        if (!bHasPrintArea)
+        {
+            rEndCol = 20;
+            rEndRow = 50;
+        }
+        else
+        {
+            rEndCol += 20;
+            rEndRow += 50;
+        }
+    }
+    else if (!bHasPrintArea)
+    {
+        rEndCol = pViewData->GetMaxTiledCol();
+        rEndRow = pViewData->GetMaxTiledRow();
+    }
+    else
+    {
+        rEndCol = std::max(rEndCol, pViewData->GetMaxTiledCol());
+        rEndRow = std::max(rEndRow, pViewData->GetMaxTiledRow());
+    }
 }
 
 bool ScDocument::MoveTab( SCTAB nOldPos, SCTAB nNewPos, ScProgress* pProgress )
@@ -871,9 +891,18 @@ bool ScDocument::CopyTab( SCTAB nOldPos, SCTAB nNewPos, const ScMarkData* pOnlyM
     if (bValid)
     {
         SetNoListening( true );     // noch nicht bei CopyToTable/Insert
+
+        const bool bGlobalNamesToLocal = true;
+        const SCTAB nRealOldPos = (nNewPos < nOldPos) ? nOldPos - 1 : nOldPos;
+        const ScRangeName* pNames = GetRangeName( nOldPos);
+        if (pNames)
+            pNames->CopyUsedNames( nOldPos, nRealOldPos, nNewPos, *this, *this, bGlobalNamesToLocal);
+        GetRangeName()->CopyUsedNames( -1, nRealOldPos, nNewPos, *this, *this, bGlobalNamesToLocal);
+
         sc::CopyToDocContext aCopyDocCxt(*this);
-        maTabs[nOldPos]->CopyToTable(aCopyDocCxt, 0, 0, MAXCOL, MAXROW, InsertDeleteFlags::ALL, (pOnlyMarked != nullptr),
-                                        maTabs[nNewPos], pOnlyMarked );
+        maTabs[nOldPos]->CopyToTable(aCopyDocCxt, 0, 0, MAXCOL, MAXROW, InsertDeleteFlags::ALL,
+                (pOnlyMarked != nullptr), maTabs[nNewPos], pOnlyMarked,
+                false /*bAsLink*/, true /*bColRowFlags*/, bGlobalNamesToLocal );
         maTabs[nNewPos]->SetTabBgColor(maTabs[nOldPos]->GetTabBgColor());
 
         SCTAB nDz = nNewPos - nOldPos;
@@ -895,7 +924,7 @@ bool ScDocument::CopyTab( SCTAB nOldPos, SCTAB nNewPos, const ScMarkData* pOnlyM
         sc::SetFormulaDirtyContext aFormulaDirtyCxt;
         SetAllFormulasDirty(aFormulaDirtyCxt);
 
-        if (pDrawLayer)
+        if (pDrawLayer) //  Skip cloning Note caption object
             DrawCopyPage( static_cast<sal_uInt16>(nOldPos), static_cast<sal_uInt16>(nNewPos) );
 
         if (pDPCollection)
@@ -976,6 +1005,14 @@ sal_uLong ScDocument::TransferTab( ScDocument* pSrcDoc, SCTAB nSrcPos,
             nDestPos = std::min(nDestPos, (SCTAB)(GetTableCount() - 1));
             {   // scope for bulk broadcast
                 ScBulkBroadcast aBulkBroadcast( pBASM);
+                if (!bResultsOnly)
+                {
+                    const bool bGlobalNamesToLocal = false;
+                    const ScRangeName* pNames = pSrcDoc->GetRangeName( nSrcPos);
+                    if (pNames)
+                        pNames->CopyUsedNames( nSrcPos, nSrcPos, nDestPos, *pSrcDoc, *this, bGlobalNamesToLocal);
+                    pSrcDoc->GetRangeName()->CopyUsedNames( -1, nSrcPos, nDestPos, *pSrcDoc, *this, bGlobalNamesToLocal);
+                }
                 pSrcDoc->maTabs[nSrcPos]->CopyToTable(aCxt, 0, 0, MAXCOL, MAXROW,
                         ( bResultsOnly ? InsertDeleteFlags::ALL & ~InsertDeleteFlags::FORMULA : InsertDeleteFlags::ALL),
                         false, maTabs[nDestPos] );
@@ -1065,12 +1102,12 @@ void ScDocument::SetError( SCCOL nCol, SCROW nRow, SCTAB nTab, const sal_uInt16 
 }
 
 void ScDocument::SetFormula(
-    const ScAddress& rPos, const ScTokenArray& rArray, formula::FormulaGrammar::Grammar eGram )
+    const ScAddress& rPos, const ScTokenArray& rArray )
 {
     if (!TableExists(rPos.Tab()))
         return;
 
-    maTabs[rPos.Tab()]->SetFormula(rPos.Col(), rPos.Row(), rArray, eGram);
+    maTabs[rPos.Tab()]->SetFormula(rPos.Col(), rPos.Row(), rArray, formula::FormulaGrammar::GRAM_DEFAULT);
 }
 
 void ScDocument::SetFormula(

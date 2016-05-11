@@ -25,6 +25,7 @@
 #include <tools/color.hxx>
 #include <rtl/ustrbuf.hxx>
 #include <rtl/strbuf.hxx>
+#include <rtl/character.hxx>
 
 #include <tools/tenccvt.hxx>
 #include <tools/datetime.hxx>
@@ -158,69 +159,33 @@ sal_Int32 HTMLOption::GetSNumber() const
     return aTmp.toInt32();
 }
 
-void HTMLOption::GetNumbers( std::vector<sal_uInt32> &rNumbers, bool bSpaceDelim ) const
+void HTMLOption::GetNumbers( std::vector<sal_uInt32> &rNumbers ) const
 {
     rNumbers.clear();
 
-    if( bSpaceDelim )
+    // This is a very simplified scanner: it only searches all
+    // numerals in the string.
+    bool bInNum = false;
+    sal_uLong nNum = 0;
+    for( sal_Int32 i=0; i<aValue.getLength(); i++ )
     {
-        // This is a very simplified scanner: it only searches all
-        // numerals in the string.
-        bool bInNum = false;
-        sal_uLong nNum = 0;
-        for( sal_Int32 i=0; i<aValue.getLength(); i++ )
+        sal_Unicode c = aValue[ i ];
+        if( c>='0' && c<='9' )
         {
-            sal_Unicode c = aValue[ i ];
-            if( c>='0' && c<='9' )
-            {
-                nNum *= 10;
-                nNum += (c - '0');
-                bInNum = true;
-            }
-            else if( bInNum )
-            {
-                rNumbers.push_back( nNum );
-                bInNum = false;
-                nNum = 0;
-            }
+            nNum *= 10;
+            nNum += (c - '0');
+            bInNum = true;
         }
-        if( bInNum )
+        else if( bInNum )
         {
             rNumbers.push_back( nNum );
+            bInNum = false;
+            nNum = 0;
         }
     }
-    else
+    if( bInNum )
     {
-        // Check whether numbers are separated by ',' and
-        // insert 0 if necessary
-        sal_Int32 nPos = 0;
-        while( nPos < aValue.getLength() )
-        {
-            sal_Unicode c;
-            while( nPos < aValue.getLength() &&
-                   ((c=aValue[nPos]) == ' ' || c == '\t' ||
-                   c == '\n' || c== '\r' ) )
-                nPos++;
-
-            if( nPos==aValue.getLength() )
-                rNumbers.push_back(0);
-            else
-            {
-                sal_Int32 nEnd = aValue.indexOf( (sal_Unicode)',', nPos );
-                if( -1 == nEnd )
-                {
-                    sal_Int32 nTmp = aValue.copy(nPos).toInt32();
-                    rNumbers.push_back( nTmp >= 0 ? (sal_uInt32)nTmp : 0 );
-                    nPos = aValue.getLength();
-                }
-                else
-                {
-                    sal_Int32 nTmp = aValue.copy(nPos,nEnd-nPos).toInt32();
-                    rNumbers.push_back( nTmp >= 0 ? (sal_uInt32)nTmp : 0 );
-                    nPos = nEnd+1;
-                }
-            }
-        }
+        rNumbers.push_back( nNum );
     }
 }
 
@@ -429,7 +394,7 @@ int HTMLParser::ScanText( const sal_Unicode cBreak )
     OUStringBuffer sTmpBuffer( MAX_LEN );
     bool bContinue = true;
     bool bEqSignFound = false;
-    sal_Unicode cQuote = 0U;
+    sal_uInt32  cQuote = 0U;
 
     while( bContinue && IsParserWorking() )
     {
@@ -445,7 +410,7 @@ int HTMLParser::ScanText( const sal_Unicode cBreak )
                 sal_uLong nStreamPos = rInput.Tell();
                 sal_uLong nLinePos = GetLinePos();
 
-                sal_Unicode cChar = 0U;
+                sal_uInt32 cChar = 0U;
                 if( '#' == (nNextCh = GetNextChar()) )
                 {
                     nNextCh = GetNextChar();
@@ -460,10 +425,10 @@ int HTMLParser::ScanText( const sal_Unicode cBreak )
                             {
                                 cChar = cChar * 16U +
                                         ( nNextCh <= '9'
-                                          ? sal_Unicode( nNextCh - '0' )
+                                          ? sal_uInt32( nNextCh - '0' )
                                           : ( nNextCh <= 'F'
-                                              ? sal_Unicode( nNextCh - 'A' + 10 )
-                                              : sal_Unicode( nNextCh - 'a' + 10 ) ) );
+                                              ? sal_uInt32( nNextCh - 'A' + 10 )
+                                              : sal_uInt32( nNextCh - 'a' + 10 ) ) );
                                 nNextCh = GetNextChar();
                             }
                         }
@@ -471,7 +436,7 @@ int HTMLParser::ScanText( const sal_Unicode cBreak )
                         {
                             do
                             {
-                                cChar = cChar * 10U + sal_Unicode( nNextCh - '0');
+                                cChar = cChar * 10U + sal_uInt32( nNextCh - '0');
                                 nNextCh = GetNextChar();
                             }
                             while( HTML_ISDIGIT(nNextCh) );
@@ -500,6 +465,9 @@ int HTMLParser::ScanText( const sal_Unicode cBreak )
                     }
                     else
                         nNextCh = 0U;
+
+                    if ( ! rtl::isUnicodeCodePoint( cChar ) )
+                        cChar = '?';
                 }
                 else if( HTML_ISALPHA( nNextCh ) )
                 {
@@ -507,7 +475,7 @@ int HTMLParser::ScanText( const sal_Unicode cBreak )
                     sal_Int32 nPos = 0L;
                     do
                     {
-                        sEntityBuffer.append( nNextCh );
+                        sEntityBuffer.appendUtf32( nNextCh );
                         nPos++;
                         nNextCh = GetNextChar();
                     }
@@ -637,7 +605,7 @@ int HTMLParser::ScanText( const sal_Unicode cBreak )
                 if( IsParserWorking() )
                 {
                     if( cChar )
-                        sTmpBuffer.append( cChar );
+                        sTmpBuffer.appendUtf32( cChar );
                 }
                 else if( SVPAR_PENDING==eState && '>'!=cBreak )
                 {
@@ -661,7 +629,7 @@ int HTMLParser::ScanText( const sal_Unicode cBreak )
         case '=':
             if( '>'==cBreak && !cQuote )
                 bEqSignFound = true;
-            sTmpBuffer.append( nNextCh );
+            sTmpBuffer.appendUtf32( nNextCh );
             break;
 
         case '\\':
@@ -684,7 +652,7 @@ int HTMLParser::ScanText( const sal_Unicode cBreak )
                 else if( cQuote && (cQuote==nNextCh ) )
                     cQuote = 0U;
             }
-            sTmpBuffer.append( nNextCh );
+            sTmpBuffer.appendUtf32( nNextCh );
             bEqSignFound = false;
             break;
 
@@ -695,14 +663,15 @@ int HTMLParser::ScanText( const sal_Unicode cBreak )
             }
             else
             {
-                sTmpBuffer.append( nNextCh );
+                sTmpBuffer.appendUtf32( nNextCh );
             }
+
             break;
 
         case '<':
             bEqSignFound = false;
             if( '>'==cBreak )
-                sTmpBuffer.append( nNextCh );
+                sTmpBuffer.appendUtf32( nNextCh );
             else
                 bContinue = false;      // break, String zusammen
             break;
@@ -724,8 +693,8 @@ int HTMLParser::ScanText( const sal_Unicode cBreak )
         case '\n':
             if( '>'==cBreak )
             {
-                // cr/lf in tag is handled in _GetNextToken()
-                sTmpBuffer.append( nNextCh );
+                // cr/lf in tag is handled in GetNextToken_()
+                sTmpBuffer.appendUtf32( nNextCh );
                 break;
             }
             else if( bReadListing || bReadXMP || bReadPRE || bReadTextArea )
@@ -734,7 +703,7 @@ int HTMLParser::ScanText( const sal_Unicode cBreak )
                 break;
             }
             // Reduce sequence of CR/LF/BLANK/TAB to a single blank
-            // no break!!
+            SAL_FALLTHROUGH;
         case '\t':
             if( '\t'==nNextCh && bReadPRE && '>'!=cBreak )
             {
@@ -742,7 +711,7 @@ int HTMLParser::ScanText( const sal_Unicode cBreak )
                 bContinue = false;
                 break;
             }
-            // no break
+            SAL_FALLTHROUGH;
         case '\x0b':
             if( '\x0b'==nNextCh && (bReadPRE || bReadXMP ||bReadListing) &&
                 '>'!=cBreak )
@@ -750,9 +719,9 @@ int HTMLParser::ScanText( const sal_Unicode cBreak )
                 break;
             }
             nNextCh = ' ';
-            // no break;
+            SAL_FALLTHROUGH;
         case ' ':
-            sTmpBuffer.append( nNextCh );
+            sTmpBuffer.appendUtf32( nNextCh );
             if( '>'!=cBreak && (!bReadListing && !bReadXMP &&
                                 !bReadPRE && !bReadTextArea) )
             {
@@ -769,7 +738,7 @@ int HTMLParser::ScanText( const sal_Unicode cBreak )
                         }
                         else
                             // Only read blanks: no text must be returned
-                            // and _GetNextToken has to read until EOF
+                            // and GetNextToken_ has to read until EOF
                             return 0;
                     }
                 } while ( ' ' == nNextCh || '\t' == nNextCh ||
@@ -787,7 +756,7 @@ int HTMLParser::ScanText( const sal_Unicode cBreak )
             {
                 do {
                     // All remaining characters make their way into the text.
-                    sTmpBuffer.append( nNextCh );
+                    sTmpBuffer.appendUtf32( nNextCh );
                     if( MAX_LEN == sTmpBuffer.getLength() )
                     {
                         aToken += sTmpBuffer.makeStringAndClear();
@@ -818,7 +787,7 @@ int HTMLParser::ScanText( const sal_Unicode cBreak )
     return HTML_TEXTTOKEN;
 }
 
-int HTMLParser::_GetNextRawToken()
+int HTMLParser::GetNextRawToken()
 {
     OUStringBuffer sTmpBuffer( MAX_LEN );
 
@@ -864,7 +833,7 @@ int HTMLParser::_GetNextRawToken()
                 }
                 else if( '!' == nNextCh )
                 {
-                    sTmpBuffer.append( nNextCh );
+                    sTmpBuffer.appendUtf32( nNextCh );
                     nNextCh = GetNextChar();
                 }
 
@@ -872,7 +841,7 @@ int HTMLParser::_GetNextRawToken()
                 while( (HTML_ISALPHA(nNextCh) || '-'==nNextCh) &&
                        IsParserWorking() && sTmpBuffer.getLength() < MAX_LEN )
                 {
-                    sTmpBuffer.append( nNextCh );
+                    sTmpBuffer.appendUtf32( nNextCh );
                     nNextCh = GetNextChar();
                 }
 
@@ -920,7 +889,7 @@ int HTMLParser::_GetNextRawToken()
 
                     bContinue = false;
 
-                    // nToken==0 means, _GetNextToken continues to read
+                    // nToken==0 means, GetNextToken_ continues to read
                     if( aToken.isEmpty() && (bReadStyle || bReadScript) )
                     {
                         // Immediately close environment (or context?)
@@ -959,7 +928,7 @@ int HTMLParser::_GetNextRawToken()
             }
             break;
         case '-':
-            sTmpBuffer.append( nNextCh );
+            sTmpBuffer.appendUtf32( nNextCh );
             if( bReadComment )
             {
                 bool bTwoMinus = false;
@@ -970,7 +939,7 @@ int HTMLParser::_GetNextRawToken()
 
                     if( MAX_LEN == sTmpBuffer.getLength() )
                         aToken += sTmpBuffer.makeStringAndClear();
-                    sTmpBuffer.append( nNextCh );
+                    sTmpBuffer.appendUtf32( nNextCh );
                     nNextCh = GetNextChar();
                 }
 
@@ -1012,10 +981,10 @@ int HTMLParser::_GetNextRawToken()
                 }
                 break;
             }
-            // no break
+            SAL_FALLTHROUGH;
         default:
             // all remaining characters are appended to the buffer
-            sTmpBuffer.append( nNextCh );
+            sTmpBuffer.appendUtf32( nNextCh );
             break;
         }
 
@@ -1036,7 +1005,7 @@ int HTMLParser::_GetNextRawToken()
 }
 
 // Scan next token
-int HTMLParser::_GetNextToken()
+int HTMLParser::GetNextToken_()
 {
     int nRet = 0;
     sSaveToken.clear();
@@ -1070,7 +1039,7 @@ int HTMLParser::_GetNextToken()
 
     if( bReadScript || bReadStyle || !aEndToken.isEmpty() )
     {
-        nRet = _GetNextRawToken();
+        nRet = GetNextRawToken();
         if( nRet || !IsParserWorking() )
             return nRet;
     }
@@ -1095,7 +1064,7 @@ int HTMLParser::_GetNextToken()
                 {
                     OUStringBuffer sTmpBuffer;
                     do {
-                        sTmpBuffer.append( nNextCh );
+                        sTmpBuffer.appendUtf32( nNextCh );
                         if( MAX_LEN == sTmpBuffer.getLength() )
                             aToken += sTmpBuffer.makeStringAndClear();
                         nNextCh = GetNextChar();
@@ -1166,10 +1135,10 @@ int HTMLParser::_GetNextToken()
                                 }
                                 bDone = aToken.endsWith( "--" );
                                 if( !bDone )
-                                aToken += OUString(nNextCh);
+                                aToken += OUString(&nNextCh,1);
                             }
                             else
-                                aToken += OUString(nNextCh);
+                                aToken += OUString(&nNextCh,1);
                             if( !bDone )
                                 nNextCh = GetNextChar();
                         }
@@ -1261,7 +1230,7 @@ int HTMLParser::_GetNextToken()
                             bDone = '>'==nNextCh && aToken.endsWith("%");
                             if( !bDone )
                             {
-                                aToken += OUString(nNextCh);
+                                aToken += OUString(&nNextCh,1);
                                 nNextCh = GetNextChar();
                             }
                         }
@@ -1359,16 +1328,16 @@ int HTMLParser::_GetNextToken()
                 nRet = HTML_NEWPARA;
                 break;
             }
-            // no break !
+            SAL_FALLTHROUGH;
         case '\t':
             if( bReadPRE )
             {
                 nRet = HTML_TABCHAR;
                 break;
             }
-            // no break !
+            SAL_FALLTHROUGH;
         case ' ':
-            // no break !
+            SAL_FALLTHROUGH;
         default:
 
 scan_text:
@@ -1445,7 +1414,7 @@ const HTMLOptions& HTMLParser::GetOptions( sal_uInt16 *pNoConvertToken )
 
             // Actually only certain characters allowed.
             // Netscape only looks for "=" and white space (c.f.
-            // Mozilla: PA_FetchRequestedNameValues in lipparse/pa_mdl.c)
+            // Mozilla: PA_FetchRequestedNameValues in libparse/pa_mdl.c)
             while( nPos < aToken.getLength() && '=' != (cChar=aToken[nPos]) &&
                    HTML_ISPRINTABLE(cChar) && !HTML_ISSPACE(cChar) )
                 nPos++;
@@ -1497,12 +1466,16 @@ const HTMLOptions& HTMLParser::GetOptions( sal_uInt16 *pNoConvertToken )
                                 if( bStripCRLF )
                                     aToken = aToken.replaceAt( nPos, 1, "" );
                                 else
-                                    nPos++, nLen++;
+                                {
+                                    nPos++;
+                                    nLen++;
+                                }
                                 break;
                             case '\\':
                                 if( bOldEscape )
                                 {
-                                    nPos++, nLen++;
+                                    nPos++;
+                                    nLen++;
                                 }
                                 else
                                 {
@@ -1514,10 +1487,14 @@ const HTMLOptions& HTMLParser::GetOptions( sal_uInt16 *pNoConvertToken )
                             case '\'':
                                 bDone = !bOldEscape && cChar==cEnd;
                                 if( !bDone )
-                                    nPos++, nLen++;
+                                {
+                                    nPos++;
+                                    nLen++;
+                                }
                                 break;
                             default:
-                                nPos++, nLen++;
+                                nPos++;
+                                nLen++;
                                 break;
                             }
                         }
@@ -1539,7 +1516,10 @@ const HTMLOptions& HTMLParser::GetOptions( sal_uInt16 *pNoConvertToken )
                             case ' ':
                                 bDone = !bOldEscape;
                                 if( !bDone )
-                                    nPos++, nLen++;
+                                {
+                                    nPos++;
+                                    nLen++;
+                                }
                                 break;
 
                             case '\t':
@@ -1551,7 +1531,8 @@ const HTMLOptions& HTMLParser::GetOptions( sal_uInt16 *pNoConvertToken )
                             case '\\':
                                 if( bOldEscape )
                                 {
-                                    nPos++, nLen++;
+                                    nPos++;
+                                    nLen++;
                                 }
                                 else
                                 {
@@ -1562,7 +1543,10 @@ const HTMLOptions& HTMLParser::GetOptions( sal_uInt16 *pNoConvertToken )
 
                             default:
                                 if( HTML_ISPRINTABLE( c ) )
-                                    nPos++, nLen++;
+                                {
+                                    nPos++;
+                                    nLen++;
+                                }
                                 else
                                     bDone = true;
                                 break;
@@ -1595,7 +1579,7 @@ int HTMLParser::FilterPRE( int nToken )
     // in Netscape they only have impact in not empty paragraphs
     case HTML_PARABREAK_ON:
         nToken = HTML_LINEBREAK;
-        //fall-through
+        SAL_FALLTHROUGH;
     case HTML_LINEBREAK:
     case HTML_NEWPARA:
         nPre_LinePos = 0;
@@ -1776,6 +1760,7 @@ int HTMLParser::FilterXMP( int nToken )
     case HTML_NEWPARA:
         if( bPre_IgnoreNewPara )
             nToken = 0;
+        SAL_FALLTHROUGH;
     case HTML_TEXTTOKEN:
     case HTML_NONBREAKSPACE:
     case HTML_SOFTHYPH:
@@ -1816,6 +1801,7 @@ int HTMLParser::FilterListing( int nToken )
     case HTML_NEWPARA:
         if( bPre_IgnoreNewPara )
             nToken = 0;
+        SAL_FALLTHROUGH;
     case HTML_TEXTTOKEN:
     case HTML_NONBREAKSPACE:
     case HTML_SOFTHYPH:

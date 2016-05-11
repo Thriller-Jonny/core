@@ -21,7 +21,6 @@
 
 #include <sal/config.h>
 
-#include <boost/noncopyable.hpp>
 #include <com/sun/star/embed/ElementModes.hpp>
 
 #include <i18nlangtag/languagetag.hxx>
@@ -279,10 +278,10 @@ void SwWW8ImplReader::ReadEmbeddedData( SvMemoryStream& rStrm, SwDocShell* pDocS
     //sal_uInt8 maGuidStdLink[ 16 ] ={
     //    0xD0, 0xC9, 0xEA, 0x79, 0xF9, 0xBA, 0xCE, 0x11, 0x8C, 0x82, 0x00, 0xAA, 0x00, 0x4B, 0xA9, 0x0B };
 
-    sal_uInt8 maGuidUrlMoniker[ 16 ] = {
+    sal_uInt8 aGuidUrlMoniker[ 16 ] = {
         0xE0, 0xC9, 0xEA, 0x79, 0xF9, 0xBA, 0xCE, 0x11, 0x8C, 0x82, 0x00, 0xAA, 0x00, 0x4B, 0xA9, 0x0B };
 
-    sal_uInt8 maGuidFileMoniker[ 16 ] = {
+    sal_uInt8 aGuidFileMoniker[ 16 ] = {
         0x03, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xC0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x46 };
 
     sal_uInt8 aGuid[16];
@@ -321,7 +320,7 @@ void SwWW8ImplReader::ReadEmbeddedData( SvMemoryStream& rStrm, SwDocShell* pDocS
     {
         rStrm.Read( aGuid, 16);
 
-        if( (memcmp(aGuid, maGuidFileMoniker, 16) == 0) )
+        if( (memcmp(aGuid, aGuidFileMoniker, 16) == 0) )
         {
             rStrm.ReadUInt16( nLevel );
             xShortName.reset( new OUString );
@@ -343,7 +342,7 @@ void SwWW8ImplReader::ReadEmbeddedData( SvMemoryStream& rStrm, SwDocShell* pDocS
             else
                 lclGetAbsPath( *xShortName, nLevel, pDocShell);
         }
-        else if( (memcmp(aGuid, maGuidUrlMoniker, 16) == 0) )
+        else if( (memcmp(aGuid, aGuidUrlMoniker, 16) == 0) )
         {
             sal_uInt32 nStrLen(0);
             rStrm.ReadUInt32( nStrLen );
@@ -439,7 +438,7 @@ OUString BasicProjImportHelper::getProjectName()
     return sProjName;
 }
 
-class Sttb : TBBase, private boost::noncopyable
+class Sttb : public TBBase
 {
 struct SBBItem
 {
@@ -452,6 +451,9 @@ struct SBBItem
     sal_uInt16 cbExtra;
 
     std::vector< SBBItem > dataItems;
+
+    Sttb(Sttb const&) = delete;
+    Sttb& operator=(Sttb const&) = delete;
 
 public:
     Sttb();
@@ -752,7 +754,7 @@ SdrObject* SwMSDffManager::ProcessObj(SvStream& rSt,
                 );
             }
 
-            // Distance of Textbox to it's surrounding Autoshape
+            // Distance of Textbox to its surrounding Autoshape
             sal_Int32 nTextLeft = GetPropertyValue( DFF_Prop_dxTextLeft, 91440L);
             sal_Int32 nTextRight = GetPropertyValue( DFF_Prop_dxTextRight, 91440L );
             sal_Int32 nTextTop = GetPropertyValue( DFF_Prop_dyTextTop, 45720L  );
@@ -784,6 +786,7 @@ SdrObject* SwMSDffManager::ProcessObj(SvStream& rSt,
                     case mso_txflHorzA:
                         bVerticalText = true;
                         nTextRotationAngle = 9000;
+                    break;
                     case mso_txflHorzN:
                     default :
                         break;
@@ -1147,22 +1150,22 @@ SdrObject* SwMSDffManager::ProcessObj(SvStream& rSt,
     {
         SvMemoryStream aMemStream;
         struct HyperLinksTable hlStr;
-        sal_uInt16 mnRawRecId,mnRawRecSize;
+        sal_uInt16 nRawRecId,nRawRecSize;
         aMemStream.WriteUInt16( 0 ).WriteUInt16( nBufferSize );
 
         // copy from DFF stream to memory stream
         ::std::vector< sal_uInt8 > aBuffer( nBufferSize );
         sal_uInt8* pnData = &aBuffer.front();
-        sal_uInt8 mnStreamSize;
+        sal_uInt8 nStreamSize;
         if( pnData && rSt.Read( pnData, nBufferSize ) == nBufferSize )
         {
             aMemStream.Write( pnData, nBufferSize );
             aMemStream.Seek( STREAM_SEEK_TO_END );
-            mnStreamSize = aMemStream.Tell();
+            nStreamSize = aMemStream.Tell();
             aMemStream.Seek( STREAM_SEEK_TO_BEGIN );
-            bool bRet =  4 <= mnStreamSize;
+            bool bRet =  4 <= nStreamSize;
             if( bRet )
-                aMemStream.ReadUInt16( mnRawRecId ).ReadUInt16( mnRawRecSize );
+                aMemStream.ReadUInt16( nRawRecId ).ReadUInt16( nRawRecSize );
             SwDocShell* pDocShell = rReader.m_pDocShell;
             if(pDocShell)
             {
@@ -2478,7 +2481,10 @@ void SwWW8ImplReader::AppendTextNode(SwPosition& rPos)
 
         // cache current paragraph
         if(m_pPreviousNumPaM)
-            delete m_pPreviousNumPaM, m_pPreviousNumPaM = nullptr;
+        {
+            delete m_pPreviousNumPaM;
+            m_pPreviousNumPaM = nullptr;
+        }
 
         m_pPreviousNumPaM = new SwPaM(*m_pPaM, m_pPaM);
         m_pPrevNumRule = pRule;
@@ -2488,14 +2494,18 @@ void SwWW8ImplReader::AppendTextNode(SwPosition& rPos)
         // If the previous paragraph has numbering but the current one does not
         // we need to add a space after the previous paragraph
         SetLowerSpacing(*m_pPreviousNumPaM, GetParagraphAutoSpace(m_pWDop->fDontUseHTMLAutoSpacing));
-        delete m_pPreviousNumPaM, m_pPreviousNumPaM = nullptr;
+        delete m_pPreviousNumPaM;
+        m_pPreviousNumPaM = nullptr;
         m_pPrevNumRule = nullptr;
     }
     else
     {
         // clear paragraph cache
         if(m_pPreviousNumPaM)
-            delete m_pPreviousNumPaM, m_pPreviousNumPaM = nullptr;
+        {
+            delete m_pPreviousNumPaM;
+            m_pPreviousNumPaM = nullptr;
+        }
         m_pPrevNumRule = pRule;
     }
 
@@ -4136,7 +4146,8 @@ bool SwWW8ImplReader::ReadText(WW8_CP nStartCp, WW8_CP nTextLen, ManTypes nType)
 
     CloseAttrEnds();
 
-    delete m_pPlcxMan, m_pPlcxMan = nullptr;
+    delete m_pPlcxMan;
+    m_pPlcxMan = nullptr;
     return bJoined;
 }
 
@@ -4528,7 +4539,8 @@ void wwSectionManager::InsertSegments()
                 if ( aIter->maSep.bkc == 4 ) // Odd ( right ) Section break
                     eUseOnPage = nsUseOnPage::PD_RIGHT;
 
-                aDesc.GetPageDesc()->WriteUseOn( eUseOnPage );
+                // Keep the share flags.
+                aDesc.GetPageDesc()->SetUseOn( eUseOnPage );
                 aDesc.GetPageDesc()->SetFollow( aFollow.GetPageDesc() );
             }
 
@@ -4814,17 +4826,17 @@ class WW8Customizations
     WW8Fib mWw8Fib;
 public:
     WW8Customizations( SvStream*, WW8Fib& );
-    bool  Import( SwDocShell* pShell );
+    void  Import( SwDocShell* pShell );
 };
 
 WW8Customizations::WW8Customizations( SvStream* pTableStream, WW8Fib& rFib ) : mpTableStream(pTableStream), mWw8Fib( rFib )
 {
 }
 
-bool WW8Customizations::Import( SwDocShell* pShell )
+void WW8Customizations::Import( SwDocShell* pShell )
 {
     if ( mWw8Fib.lcbCmds == 0 || !IsEightPlus(mWw8Fib.GetFIBVersion()) )
-        return false;
+        return;
     try
     {
         Tcg aTCG;
@@ -4835,24 +4847,23 @@ bool WW8Customizations::Import( SwDocShell* pShell )
         if ( !bReadResult )
         {
             SAL_WARN("sw.ww8", "** Read of Customization data failed!!!! ");
-            return false;
+            return;
         }
 #if OSL_DEBUG_LEVEL > 1
         aTCG.Print( stderr );
 #endif
-        return aTCG.ImportCustomToolBar( *pShell );
+        aTCG.ImportCustomToolBar( *pShell );
     }
     catch(...)
     {
         SAL_WARN("sw.ww8", "** Read of Customization data failed!!!! epically");
-        return false;
     }
 }
 
-bool SwWW8ImplReader::ReadGlobalTemplateSettings( const OUString& sCreatedFrom, const uno::Reference< container::XNameContainer >& xPrjNameCache )
+void SwWW8ImplReader::ReadGlobalTemplateSettings( const OUString& sCreatedFrom, const uno::Reference< container::XNameContainer >& xPrjNameCache )
 {
     if (utl::ConfigManager::IsAvoidConfig())
-        return true;
+        return;
 
     SvtPathOptions aPathOpt;
     OUString aAddinPath = aPathOpt.GetAddinPath();
@@ -4862,10 +4873,9 @@ bool SwWW8ImplReader::ReadGlobalTemplateSettings( const OUString& sCreatedFrom, 
     uno::Reference<ucb::XSimpleFileAccess3> xSFA(ucb::SimpleFileAccess::create(::comphelper::getProcessComponentContext()));
 
     if( xSFA->isFolder( aAddinPath ) )
-        sGlobalTemplates = xSFA->getFolderContents( aAddinPath, sal_False );
+        sGlobalTemplates = xSFA->getFolderContents( aAddinPath, false );
 
     sal_Int32 nEntries = sGlobalTemplates.getLength();
-    bool bRes = true;
     for ( sal_Int32 i=0; i<nEntries; ++i )
     {
         INetURLObject aObj;
@@ -4879,7 +4889,7 @@ bool SwWW8ImplReader::ReadGlobalTemplateSettings( const OUString& sCreatedFrom, 
         if ( !aURL.endsWithIgnoreAsciiCase( ".dot" ) || ( !sCreatedFrom.isEmpty() && sCreatedFrom.equals( aURL ) ) )
             continue; // don't try and read the same document as ourselves
 
-        tools::SvRef<SotStorage> rRoot = new SotStorage( aURL, STREAM_STD_READWRITE, true );
+        tools::SvRef<SotStorage> rRoot = new SotStorage( aURL, STREAM_STD_READWRITE );
 
         BasicProjImportHelper aBasicImporter( *m_pDocShell );
         // Import vba via oox filter
@@ -4898,7 +4908,6 @@ bool SwWW8ImplReader::ReadGlobalTemplateSettings( const OUString& sCreatedFrom, 
             aGblCustomisations.Import( m_pDocShell );
         }
     }
-    return bRes;
 }
 
 sal_uLong SwWW8ImplReader::CoreLoad(WW8Glossary *pGloss)
@@ -5358,8 +5367,8 @@ sal_uLong SwWW8ImplReader::CoreLoad(WW8Glossary *pGloss)
                             {
                                 Graphic aGraphic = vecBulletGrf[nGrfBulletCP]->GetGrf();
                                 SvxBrushItem aBrush(aGraphic, GPOS_AREA, SID_ATTR_BRUSH);
-                                vcl::Font aFont = numfunc::GetDefBulletFont();
-                                int nHeight = aFont.GetHeight() * 12;
+                                const vcl::Font& aFont = numfunc::GetDefBulletFont();
+                                int nHeight = aFont.GetFontHeight() * 12;
                                 Size aPrefSize( aGraphic.GetPrefSize());
                                 if (aPrefSize.Height() * aPrefSize.Width() != 0 )
                                 {
@@ -5525,7 +5534,7 @@ namespace
                 if( xHandler.is() )
                 {
                     ::comphelper::DocPasswordRequest* pRequest = new ::comphelper::DocPasswordRequest(
-                        ::comphelper::DocPasswordRequestType_MS, task::PasswordRequestMode_PASSWORD_ENTER,
+                        ::comphelper::DocPasswordRequestType::MS, task::PasswordRequestMode_PASSWORD_ENTER,
                         INetURLObject( rMedium.GetOrigURL() ).GetName( INetURLObject::DECODE_WITH_CHARSET ) );
                     uno::Reference< task::XInteractionRequest > xRequest( pRequest );
 
@@ -5933,7 +5942,7 @@ void SwWW8ImplReader::SetOutlineStyles()
             // WW8 Built-In Heading Style does not apply the chosen one.
             // --> delete assignment to OutlineStyle, but keep its current
             // outline level
-            pTextFormatColl->DeleteAssignmentToListLevelOfOutlineStyle(false);
+            pTextFormatColl->DeleteAssignmentToListLevelOfOutlineStyle();
             // Apply existing WW8 list style a normal list style at the
             // Paragraph Style
             if (pStyleInf->GetOutlineNumrule() != nullptr)
@@ -6293,7 +6302,7 @@ bool SwMSDffManager::GetOLEStorageName(long nOLEId, OUString& rStorageName,
     if (rReader.m_pStg)
     {
         // Via the TextBox-PLCF we get the right char Start-End positions
-        // We should then find the EmbedField and the corresponding Sprms
+        // We should then find the EmbeddedField and the corresponding Sprms
         // in that Area.
         // We only need the Sprm for the Picture Id.
         long nOldPos = rReader.m_pStrm->Tell();
@@ -6431,9 +6440,8 @@ namespace sw
 }
 
 SwMacroInfo::SwMacroInfo()
-    : SdrObjUserData( SW_DRAWLAYER, SW_UD_IMAPDATA, 0 )
+    : SdrObjUserData( SW_DRAWLAYER, SW_UD_IMAPDATA )
     , mnShapeId(-1)
-
 {
 }
 

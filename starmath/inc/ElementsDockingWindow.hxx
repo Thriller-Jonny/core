@@ -20,7 +20,6 @@
 #ifndef INCLUDED_STARMATH_INC_ELEMENTSDOCKINGWINDOW_HXX
 #define INCLUDED_STARMATH_INC_ELEMENTSDOCKINGWINDOW_HXX
 
-#include <boost/signals2/signal.hpp>
 #include <sfx2/dockwin.hxx>
 #include <svx/dlgctrl.hxx>
 #include <vcl/scrbar.hxx>
@@ -41,13 +40,13 @@ public:
     SmElement(SmNodePointer pNode, const OUString& aText, const OUString& aHelpText);
     virtual ~SmElement();
 
-    SmNodePointer getNode();
-    OUString      getText()
+    const SmNodePointer& getNode();
+    const OUString& getText()
     {
         return maText;
     }
 
-    OUString getHelpText()
+    const OUString& getHelpText()
     {
         return maHelpText;
     }
@@ -83,12 +82,14 @@ class SmElementsControl : public Control
 
     virtual void Paint(vcl::RenderContext& rRenderContext, const Rectangle&) override;
     virtual void MouseButtonDown(const MouseEvent& rMEvt) override;
-    virtual void MouseMove( const MouseEvent& rMEvt ) override;
+    virtual void MouseMove(const MouseEvent& rMEvt) override;
+    virtual void RequestHelp(const HelpEvent& rHEvt) override;
 
     SmDocShell*   mpDocShell;
     SmFormat      maFormat;
     sal_uInt16    maCurrentSetId;
     SmElement*    mpCurrentElement;
+    Link<SmElement&,void> maSelectHdlLink;
 
     std::vector< std::unique_ptr<SmElement> > maElementList;
     Size          maMaxElementDimensions;
@@ -121,7 +122,7 @@ public:
     DECL_LINK_TYPED( ScrollHdl, ScrollBar*, void );
     void DoScroll(long nDelta);
 
-    boost::signals2::signal< void ( SmElement* ) > selectedSignal;
+    void SetSelectHdl(const Link<SmElement&,void>& rLink) { maSelectHdlLink = rLink; }
 };
 
 class SmElementsDockingWindow : public SfxDockingWindow
@@ -134,7 +135,7 @@ class SmElementsDockingWindow : public SfxDockingWindow
     virtual void Resize() override;
     SmViewShell* GetView();
 
-    void SelectClickHandler(SmElement* pElement);
+    DECL_LINK_TYPED(SelectClickHandler, SmElement&, void);
     DECL_LINK_TYPED(ElementSelectedHandle, ListBox&, void);
 
 public:

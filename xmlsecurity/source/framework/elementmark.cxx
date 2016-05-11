@@ -47,13 +47,6 @@ ElementMark::ElementMark(sal_Int32 nSecurityId, sal_Int32 nBufferId)
  *          wrapper component. The document wrapper component
  *          uses this id to search the particular bufferred
  *          element.
- *
- *   RESULT
- *  empty
- *
- *   AUTHOR
- *  Michael Mi
- *  Email: michael.mi@sun.com
  ******************************************************************************/
 {
 }
@@ -69,9 +62,6 @@ void ElementMark::setSecurityId(sal_Int32 nSecurityId)
 {
     m_nSecurityId = nSecurityId;
 }
-
-
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

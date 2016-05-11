@@ -116,25 +116,22 @@ bool ScDBDocFunc::DoImportUno( const ScAddress& rPos,
 }
 
 bool ScDBDocFunc::DoImport( SCTAB nTab, const ScImportParam& rParam,
-        const svx::ODataAccessDescriptor* pDescriptor, bool bRecord, bool bAddrInsert )
+        const svx::ODataAccessDescriptor* pDescriptor )
 {
     ScDocument& rDoc = rDocShell.GetDocument();
     ScChangeTrack *pChangeTrack = nullptr;
     ScRange aChangedRange;
 
-    if (bRecord && !rDoc.IsUndoEnabled())
+    bool bRecord = true;
+    if (!rDoc.IsUndoEnabled())
         bRecord = false;
 
-    ScDBData* pDBData = nullptr;
-    if ( !bAddrInsert )
+    ScDBData* pDBData = rDoc.GetDBAtArea( nTab, rParam.nCol1, rParam.nRow1,
+                                          rParam.nCol2, rParam.nRow2 );
+    if (!pDBData)
     {
-        pDBData = rDoc.GetDBAtArea( nTab, rParam.nCol1, rParam.nRow1,
-                                            rParam.nCol2, rParam.nRow2 );
-        if (!pDBData)
-        {
-            OSL_FAIL( "DoImport: no DBData" );
-            return false;
-        }
+         OSL_FAIL( "DoImport: no DBData" );
+        return false;
     }
 
     vcl::Window* pWaitWin = ScDocShell::GetActiveDialogParent();
@@ -193,7 +190,7 @@ bool ScDBDocFunc::DoImport( SCTAB nTab, const ScImportParam& rParam,
     {
         //  progress bar
         //  only text (title is still needed, for the cancel button)
-        ScProgress aProgress( &rDocShell, ScGlobal::GetRscString(STR_UNDO_IMPORTDATA), 0 );
+        ScProgress aProgress( &rDocShell, ScGlobal::GetRscString(STR_UNDO_IMPORTDATA), 0, true );
 
         uno::Reference<sdbc::XRowSet> xRowSet( xResultSet, uno::UNO_QUERY );
         bool bDispose = false;
@@ -213,16 +210,12 @@ bool ScDBDocFunc::DoImport( SCTAB nTab, const ScImportParam& rParam,
                 sal_Int32 nType = rParam.bSql ? sdb::CommandType::COMMAND :
                             ( (rParam.nType == ScDbQuery) ? sdb::CommandType::QUERY :
                                                             sdb::CommandType::TABLE );
-                uno::Any aAny;
 
-                aAny <<= rParam.aDBName;
-                xRowProp->setPropertyValue( SC_DBPROP_DATASOURCENAME, aAny );
+                xRowProp->setPropertyValue( SC_DBPROP_DATASOURCENAME, uno::Any(rParam.aDBName) );
 
-                aAny <<= rParam.aStatement;
-                xRowProp->setPropertyValue( SC_DBPROP_COMMAND, aAny );
+                xRowProp->setPropertyValue( SC_DBPROP_COMMAND, uno::Any(rParam.aStatement) );
 
-                aAny <<= nType;
-                xRowProp->setPropertyValue( SC_DBPROP_COMMANDTYPE, aAny );
+                xRowProp->setPropertyValue( SC_DBPROP_COMMANDTYPE, uno::Any(nType) );
 
                 uno::Reference<sdb::XCompletedExecution> xExecute( xRowSet, uno::UNO_QUERY );
                 if ( xExecute.is() )
@@ -281,17 +274,15 @@ bool ScDBDocFunc::DoImport( SCTAB nTab, const ScImportParam& rParam,
                     pCurrArr[i] = xMeta->isCurrency( i+1 );
                 }
 
-                if ( !bAddrInsert )                 // read column names
+                // read column names
+                nCol = rParam.nCol1;
+                for (long i=0; i<nColCount; i++)
                 {
-                    nCol = rParam.nCol1;
-                    for (long i=0; i<nColCount; i++)
-                    {
-                        pImportDoc->SetString( nCol, nRow, nTab,
-                                                xMeta->getColumnLabel( i+1 ) );
-                        ++nCol;
-                    }
-                    ++nRow;
+                    pImportDoc->SetString( nCol, nRow, nTab,
+                                            xMeta->getColumnLabel( i+1 ) );
+                    ++nCol;
                 }
+                ++nRow;
 
                 bool bEnd = false;
                 if ( !bDoSelection )
@@ -389,8 +380,8 @@ bool ScDBDocFunc::DoImport( SCTAB nTab, const ScImportParam& rParam,
 
     //  test for cell protection
 
-    bool bKeepFormat = !bAddrInsert && pDBData->IsKeepFmt();
-    bool bMoveCells = !bAddrInsert && pDBData->IsDoSize();
+    bool bKeepFormat = pDBData->IsKeepFmt();
+    bool bMoveCells = pDBData->IsDoSize();
     SCCOL nFormulaCols = 0; // columns to be filled with formulas
     if (bMoveCells && nEndCol == rParam.nCol2)
     {
@@ -401,7 +392,10 @@ bool ScDBDocFunc::DoImport( SCTAB nTab, const ScImportParam& rParam,
         SCROW nTestRow = rParam.nRow1 + 1;      // below the title row
         while ( nTestCol <= MAXCOL &&
                 rDoc.GetCellType(ScAddress( nTestCol, nTestRow, nTab )) == CELLTYPE_FORMULA )
-            ++nTestCol, ++nFormulaCols;
+        {
+            ++nTestCol;
+            ++nFormulaCols;
+        }
     }
 
     if (bSuccess)
@@ -483,8 +477,7 @@ bool ScDBDocFunc::DoImport( SCTAB nTab, const ScImportParam& rParam,
             pUndoDoc = new ScDocument( SCDOCMODE_UNDO );
             pUndoDoc->InitUndo( &rDoc, nTab, nTab );
 
-            if ( !bAddrInsert )
-                pUndoDBData = new ScDBData( *pDBData );
+            pUndoDBData = new ScDBData( *pDBData );
         }
 
         ScMarkData aNewMark;
@@ -557,7 +550,7 @@ bool ScDBDocFunc::DoImport( SCTAB nTab, const ScImportParam& rParam,
             sal_uLong nProgCount = nFormulaCols;
             nProgCount *= nEndRow-rParam.nRow1-1;
             ScProgress aProgress( rDoc.GetDocumentShell(),
-                    ScGlobal::GetRscString(STR_FILL_SERIES_PROGRESS), nProgCount );
+                    ScGlobal::GetRscString(STR_FILL_SERIES_PROGRESS), nProgCount, true );
 
             rDoc.Fill( nEndCol+1, rParam.nRow1+1, nEndCol+nFormulaCols, rParam.nRow1+1,
                             &aProgress, aMark, nEndRow-rParam.nRow1-1, FILL_TO_BOTTOM, FILL_SIMPLE );
@@ -575,15 +568,13 @@ bool ScDBDocFunc::DoImport( SCTAB nTab, const ScImportParam& rParam,
                                     aNewMark, InsertDeleteFlags::CONTENTS );
         }
 
-        if( !bAddrInsert )      // update database range
-        {
-            pDBData->SetImportParam( rParam );
-            pDBData->SetHeader( true );
-            pDBData->SetByRow( true );
-            pDBData->SetArea( nTab, rParam.nCol1,rParam.nRow1, nEndCol,nEndRow );
-            pDBData->SetImportSelection( bRealSelection );
-            rDoc.CompileDBFormula();
-        }
+        // update database range
+        pDBData->SetImportParam( rParam );
+        pDBData->SetHeader( true );
+        pDBData->SetByRow( true );
+        pDBData->SetArea( nTab, rParam.nCol1,rParam.nRow1, nEndCol,nEndRow );
+        pDBData->SetImportSelection( bRealSelection );
+        rDoc.CompileDBFormula();
 
         if (bRecord)
         {

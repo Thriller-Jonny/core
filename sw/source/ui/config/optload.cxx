@@ -99,6 +99,7 @@ SwLoadOptPage::SwLoadOptPage(vcl::Window* pParent, const SfxItemSet& rSet)
                 // use only these metrics
                 sal_Int32 nPos = m_pMetricLB->InsertEntry( sMetric );
                 m_pMetricLB->SetEntryData( nPos, reinterpret_cast<void*>((sal_IntPtr)eFUnit) );
+                break;
             }
             default:; //prevent warning
         }
@@ -280,8 +281,8 @@ void SwLoadOptPage::Reset( const SfxItemSet* rSet)
     m_nOldLinkMode = GLOBALSETTING;
     if (m_pWrtShell)
     {
-        eFieldFlags = m_pWrtShell->GetFieldUpdateFlags(true);
-        m_nOldLinkMode = m_pWrtShell->GetLinkUpdMode(true);
+        eFieldFlags = m_pWrtShell->GetFieldUpdateFlags();
+        m_nOldLinkMode = m_pWrtShell->GetLinkUpdMode();
     }
     if(GLOBALSETTING == m_nOldLinkMode)
         m_nOldLinkMode = pUsrPref->GetUpdateLinkMode();
@@ -409,7 +410,7 @@ void SwCaptionPreview::ApplySettings(vcl::RenderContext& rRenderContext)
     if (!mbFontInitialized)
     {
         maFont = vcl::Font(rRenderContext.GetFont());
-        maFont.SetHeight(maFont.GetHeight() * 120 / 100);
+        maFont.SetFontHeight(maFont.GetFontHeight() * 120 / 100);
         mbFontInitialized = true;
     }
     rRenderContext.SetFont(maFont);

@@ -67,15 +67,12 @@ $(eval $(call gb_Library_add_exception_objects,fwk,\
     framework/source/accelerators/presethandler \
     framework/source/accelerators/storageholder \
     framework/source/classes/framecontainer \
-    framework/source/classes/fwktabwindow \
-    framework/source/classes/menumanager \
     framework/source/classes/taskcreator \
     framework/source/dispatch/closedispatcher \
     framework/source/dispatch/dispatchinformationprovider \
     framework/source/dispatch/dispatchprovider \
     framework/source/dispatch/interceptionhelper \
     framework/source/dispatch/loaddispatcher \
-    framework/source/dispatch/menudispatcher \
     framework/source/dispatch/startmoduledispatcher \
     framework/source/dispatch/windowcommanddispatch \
     framework/source/helper/dockingareadefaultacceptor \
@@ -112,7 +109,6 @@ $(eval $(call gb_Library_add_exception_objects,fwk,\
     framework/source/services/pathsettings \
     framework/source/services/sessionlistener \
     framework/source/services/substitutepathvars \
-    framework/source/services/tabwindowservice \
     framework/source/services/taskcreatorsrv \
     framework/source/services/urltransformer \
     framework/source/uiconfiguration/globalsettings \
@@ -156,7 +152,6 @@ $(eval $(call gb_Library_add_exception_objects,fwk,\
     framework/source/uielement/subtoolbarcontroller \
     framework/source/uielement/thesaurusmenucontroller \
     framework/source/uielement/togglebuttontoolbarcontroller \
-    framework/source/uielement/toolbarasmenucontroller \
     framework/source/uielement/toolbarmanager \
     framework/source/uielement/toolbarmerger \
     framework/source/uielement/toolbarwrapper \

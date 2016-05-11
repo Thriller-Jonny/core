@@ -33,14 +33,12 @@
 #include "rtl/instance.hxx"
 #include "salhelper/linkhelper.hxx"
 #include "salhelper/thread.hxx"
-#include "boost/noncopyable.hpp"
 #include <memory>
-#include "com/sun/star/uno/Sequence.hxx"
 #include <utility>
 #include <algorithm>
 #include <map>
 
-#if defined WNT
+#if defined(_WIN32)
 #if defined _MSC_VER
 #pragma warning(push, 1)
 #endif
@@ -63,13 +61,12 @@ using namespace std;
 
 using ::rtl::Reference;
 
-#ifdef WNT
+#ifdef _WIN32
 #define HKEY_SUN_JRE L"Software\\JavaSoft\\Java Runtime Environment"
 #define HKEY_SUN_SDK L"Software\\JavaSoft\\Java Development Kit"
 #endif
 
-#ifdef UNX
-#if !(defined MACOSX && defined X86_64)
+#if defined( UNX ) && !defined( MACOSX )
 namespace {
 char const *g_arJavaNames[] = {
     "",
@@ -78,10 +75,9 @@ char const *g_arJavaNames[] = {
     "j2sdk",
     "jdk",
     "jre",
-    "java",
-    "Home",
-    "IBMJava2-ppc-142"
+    "java"
 };
+
 /* These are directory names which could contain multiple java installations.
  */
 char const *g_arCollectDirs[] = {
@@ -101,17 +97,10 @@ char const *g_arCollectDirs[] = {
    looked for.
 */
 char const *g_arSearchPaths[] = {
-#ifdef MACOSX
-    "",
-    "Library/Internet Plug-Ins/JavaAppletPlugin.plugin/Contents/Home/bin",
-    "System/Library/Frameworks/JavaVM.framework/Versions/1.4.2/"
-#else
 #ifndef JVM_ONE_PATH_CHECK
     "",
     "usr/",
     "usr/local/",
-    "usr/local/IBMJava2-ppc-142",
-    "usr/local/j2sdk1.3.1",
 #ifdef X86_64
     "usr/lib64/",
 #endif
@@ -120,23 +109,20 @@ char const *g_arSearchPaths[] = {
 #else
     JVM_ONE_PATH_CHECK
 #endif
-#endif
 };
 }
-#endif
-#endif //  UNX
+#endif //  UNX && !MACOSX
 
 namespace jfw_plugin
 {
 extern VendorSupportMapEntry gVendorMap[];
 
-#if defined WNT
+#if defined(_WIN32)
 bool getSDKInfoFromRegistry(vector<OUString> & vecHome);
 bool getJREInfoFromRegistry(vector<OUString>& vecJavaHome);
 #endif
 
 bool decodeOutput(const OString& s, OUString* out);
-
 
 
 namespace
@@ -217,15 +203,16 @@ rtl::Bootstrap * getBootstrap()
 }
 
 
-
-
-class FileHandleGuard: private boost::noncopyable
+class FileHandleGuard
 {
 public:
     explicit FileHandleGuard(oslFileHandle & rHandle):
         m_rHandle(rHandle) {}
 
     inline ~FileHandleGuard();
+
+    FileHandleGuard(const FileHandleGuard&) = delete;
+    FileHandleGuard& operator=(const FileHandleGuard&) = delete;
 
     inline oslFileHandle & getHandle() { return m_rHandle; }
 
@@ -285,7 +272,7 @@ FileHandleReader::readLine(OString * pLine)
             {
             case osl_File_E_PIPE: //HACK! for windows
                 nRead = 0;
-                //fall-through
+                SAL_FALLTHROUGH;
             case osl_File_E_None:
                 if (nRead == 0)
                 {
@@ -313,6 +300,7 @@ FileHandleReader::readLine(OString * pLine)
             {
             case 0x0D:
                 m_bLf = true;
+                SAL_FALLTHROUGH;
             case 0x0A:
                 *pLine += OString(m_aBuffer + nStart,
                                        m_nIndex - 1 - nStart);
@@ -373,6 +361,7 @@ void AsynchReader::execute()
         {
         case osl_File_E_PIPE: //HACK! for windows
             nRead = 0;
+            SAL_FALLTHROUGH;
         case osl_File_E_None:
             break;
         default:
@@ -587,7 +576,7 @@ bool decodeOutput(const OString& s, OUString* out)
 }
 
 
-#if defined WNT
+#if defined(_WIN32)
 void addJavaInfoFromWinReg(
     std::vector<rtl::Reference<VendorBase> > & allInfos,
     std::vector<rtl::Reference<VendorBase> > & addedInfos)
@@ -688,7 +677,6 @@ bool getJavaInfoFromRegistry(const wchar_t* szRegKey,
 }
 
 
-
 bool getSDKInfoFromRegistry(vector<OUString> & vecHome)
 {
     return getJavaInfoFromRegistry(HKEY_SUN_SDK, vecHome);
@@ -743,9 +731,8 @@ void bubbleSortVersion(vector<rtl::Reference<VendorBase> >& vec)
             }
             if(nCmp == 1) // cur > next
             {
-                rtl::Reference<VendorBase> less = next;
                 vec.at(j-1)= cur;
-                vec.at(j)= less;
+                vec.at(j)= next;
             }
         }
         ++cIter;
@@ -815,7 +802,7 @@ vector<Reference<VendorBase> > addAllJREInfos(
 {
     vector<Reference<VendorBase> > addedInfos;
 
-#if defined WNT
+#if defined(_WIN32)
     // Get Javas from the registry
     addJavaInfoFromWinReg(allInfos, addedInfos);
 #endif // WNT
@@ -1080,7 +1067,7 @@ rtl::Reference<VendorBase> getJREInfoByPath(
 }
 
 Reference<VendorBase> createInstance(createInstance_func pFunc,
-                                     vector<pair<OUString, OUString> > properties)
+                                     const vector<pair<OUString, OUString> >& properties)
 {
 
     Reference<VendorBase> aBase = (*pFunc)();
@@ -1250,7 +1237,6 @@ void addJavaInfosDirScan(
     for(int d = 0; d < cCollectDirs; d++)
         arCollectDirs[d] = OUString(g_arCollectDirs[d], strlen(g_arCollectDirs[d]),
                                RTL_TEXTENCODING_UTF8);
-
 
 
     for( int ii = 0; ii < cSearchPaths; ii ++)

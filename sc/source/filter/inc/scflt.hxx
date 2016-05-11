@@ -480,7 +480,7 @@ struct Sc10GraphHeader
     sal_Int16       CarretX;        // Cell Position of Grafik
     sal_Int16       CarretY;
     sal_Int16       CarretZ;
-    sal_Int32       x;              // x,y distance to cell border in pixels (pixels, as Grafics are stored in window)
+    sal_Int32       x;              // x,y distance to cell border in pixels (pixels, as Graphics are stored in window)
     sal_Int32       y;
     sal_Int32       w;              // w,h width and height in pixels
     sal_Int32       h;
@@ -730,8 +730,6 @@ class Sc10PageData : public ScDataObject
 public:
     Sc10PageFormat      aPageFormat;
                         Sc10PageData( const Sc10PageFormat& rFormat ) : aPageFormat(rFormat) {}
-    bool                operator==( const Sc10PageData& rData ) const
-                            { return aPageFormat == rData.aPageFormat; }
     virtual ScDataObject*   Clone() const override;
 };
 

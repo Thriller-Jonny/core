@@ -20,13 +20,12 @@
 #ifndef INCLUDED_VCL_INC_OSX_SALOBJ_H
 #define INCLUDED_VCL_INC_OSX_SALOBJ_H
 
-#include "vcl/sysdata.hxx"
+#include <vcl/sysdata.hxx>
 #include "salobj.hxx"
 
 class AquaSalFrame;
 class AquaSalObject;
 
-// - SalObjectData -
 
 struct SalObjectData
 {
@@ -56,7 +55,6 @@ public:
     virtual ~AquaSalObject();
 
     virtual void                    ResetClipRegion() override;
-    virtual sal_uInt16              GetClipRegionType() override;
     virtual void                    BeginSetClipRegion( sal_uLong nRects ) override;
     virtual void                    UnionClipRegion( long nX, long nY, long nWidth, long nHeight ) override;
     virtual void                    EndSetClipRegion() override;

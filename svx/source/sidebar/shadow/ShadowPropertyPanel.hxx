@@ -26,7 +26,6 @@
 #include <svx/dlgctrl.hxx>
 
 
-
 namespace svx { namespace sidebar {
 
 class ShadowPropertyPanel
@@ -77,8 +76,6 @@ private:
     ::sfx2::sidebar::ControllerItem maShadowColorController;
     ::sfx2::sidebar::ControllerItem maShadowXDistanceController;
     ::sfx2::sidebar::ControllerItem maShadowYDistanceController;
-
-    css::uno::Reference<css::frame::XFrame> mxFrame;
 
     SfxBindings* mpBindings;
     long nX,nY,nXY;

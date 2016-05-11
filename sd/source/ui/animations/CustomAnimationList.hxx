@@ -58,10 +58,10 @@ public:
 
     /** selects or deselects the given effect.
         Selections of other effects are not changed */
-    void select( CustomAnimationEffectPtr pEffect, bool bSelect = true );
+    void select( const CustomAnimationEffectPtr& pEffect );
 
     /** populates the list with all effects from the given MainSequence */
-    void update( MainSequencePtr pMainSequence );
+    void update( const MainSequencePtr& pMainSequence );
 
     void update();
 
@@ -106,8 +106,6 @@ private:
     ICustomAnimationListController* mpController;
 
     MainSequencePtr mpMainSequence;
-
-    Image maImgEmpty;
 
     Image maImages[ IMG_CUSTOMANIMATION_MEDIA_STOP - IMG_CUSTOMANIMATION_ON_CLICK + 1];
 

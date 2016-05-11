@@ -49,9 +49,7 @@
 #include <utility>
 #include <vector>
 #include <boost/dynamic_bitset.hpp>
-#include <boost/functional/hash.hpp>
 #include <boost/intrusive_ptr.hpp>
-#include <boost/noncopyable.hpp>
 #include <boost/optional.hpp>
 #include <osl/conditn.hxx>
 #include <osl/diagnose.h>
@@ -103,7 +101,7 @@
 #include <vcl/builder.hxx>
 #include <vcl/builderfactory.hxx>
 #include <vcl/button.hxx>
-#include <vcl/cmdevt.hxx>
+#include <vcl/commandevent.hxx>
 #include <vcl/combobox.hxx>
 #include <vcl/ctrl.hxx>
 #include <vcl/decoview.hxx>
@@ -122,7 +120,6 @@
 #include <vcl/i18nhelp.hxx>
 #include <vcl/idle.hxx>
 #include <vcl/image.hxx>
-#include <vcl/impdel.hxx>
 #include <vcl/keycod.hxx>
 #include <vcl/keycodes.hxx>
 #include <vcl/layout.hxx>
@@ -433,7 +430,6 @@
 #include <svtools/svtdllapi.h>
 #include <svtools/svtresid.hxx>
 #include <svtools/table/tabletypes.hxx>
-#include <svtools/toolpanel/toolpaneldeck.hxx>
 #include <svtools/transfer.hxx>
 #include <svtools/treelistbox.hxx>
 #include <svtools/treelistentry.hxx>

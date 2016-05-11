@@ -599,7 +599,7 @@ void SvxRectCtlAccessibleContext::FireChildFocus( RECT_POINT eButton )
     else
         mnSelectedChild = NOCHILDSELECTED;
 }
-void SvxRectCtlAccessibleContext::selectChild( long nNew, bool bFireFocus )
+void SvxRectCtlAccessibleContext::selectChild( long nNew )
 {
     ::osl::MutexGuard   aGuard( m_aMutex );
     if( nNew != mnSelectedChild )
@@ -612,7 +612,7 @@ void SvxRectCtlAccessibleContext::selectChild( long nNew, bool bFireFocus )
             {   // deselect old selected child if one is selected
                 pChild = mpChildren[ mnSelectedChild ];
                 if( pChild )
-                    pChild->setStateChecked( false, bFireFocus );
+                    pChild->setStateChecked( false );
             }
 
             // select new child
@@ -622,7 +622,7 @@ void SvxRectCtlAccessibleContext::selectChild( long nNew, bool bFireFocus )
             {
                 pChild = mpChildren[ nNew ];
                 if( pChild )
-                    pChild->setStateChecked( true, bFireFocus );
+                    pChild->setStateChecked( true );
             }
         }
         else
@@ -630,10 +630,10 @@ void SvxRectCtlAccessibleContext::selectChild( long nNew, bool bFireFocus )
     }
 }
 
-void SvxRectCtlAccessibleContext::selectChild(RECT_POINT eButton, bool bFireFocus )
+void SvxRectCtlAccessibleContext::selectChild(RECT_POINT eButton )
 {
     // no guard -> is done in next selectChild
-    selectChild(PointToIndex( eButton, mbAngleMode ), bFireFocus);
+    selectChild(PointToIndex( eButton, mbAngleMode ));
 }
 
 void SvxRectCtlAccessibleContext::CommitChange( const AccessibleEventObject& rEvent )
@@ -706,10 +706,6 @@ void SvxRectCtlAccessibleContext::ThrowExceptionIfNotAlive() throw( lang::Dispos
     if( IsNotAlive() )
         throw lang::DisposedException();
 }
-
-
-
-
 
 
 SvxRectCtlChildAccessibleContext::SvxRectCtlChildAccessibleContext(
@@ -916,8 +912,6 @@ void SAL_CALL SvxRectCtlChildAccessibleContext::addAccessibleEventListener( cons
 }
 
 
-
-
 void SAL_CALL SvxRectCtlChildAccessibleContext::removeAccessibleEventListener( const Reference< XAccessibleEventListener >& xListener )
     throw( RuntimeException, std::exception )
 {
@@ -950,7 +944,7 @@ Any SAL_CALL SvxRectCtlChildAccessibleContext::getCurrentValue() throw( RuntimeE
 
 sal_Bool SAL_CALL SvxRectCtlChildAccessibleContext::setCurrentValue( const Any& /*aNumber*/ ) throw( RuntimeException, std::exception )
 {
-    return sal_False;
+    return false;
 }
 
 Any SAL_CALL SvxRectCtlChildAccessibleContext::getMaximumValue() throw( RuntimeException, std::exception )
@@ -979,7 +973,6 @@ sal_Int32 SvxRectCtlChildAccessibleContext::getAccessibleActionCount( ) throw (R
 }
 
 
-
 sal_Bool SvxRectCtlChildAccessibleContext::doAccessibleAction ( sal_Int32 nIndex ) throw (IndexOutOfBoundsException, RuntimeException, std::exception)
 {
     ::osl::MutexGuard   aGuard( maMutex );
@@ -991,9 +984,8 @@ sal_Bool SvxRectCtlChildAccessibleContext::doAccessibleAction ( sal_Int32 nIndex
 
     xSelection->selectAccessibleChild(mnIndexInParent);
 
-    return sal_True;
+    return true;
 }
-
 
 
 OUString SvxRectCtlChildAccessibleContext::getAccessibleActionDescription ( sal_Int32 nIndex ) throw (IndexOutOfBoundsException, RuntimeException, std::exception)
@@ -1005,7 +997,6 @@ OUString SvxRectCtlChildAccessibleContext::getAccessibleActionDescription ( sal_
 
     return OUString("select");
 }
-
 
 
 Reference< XAccessibleKeyBinding > SvxRectCtlChildAccessibleContext::getAccessibleActionKeyBinding( sal_Int32 nIndex ) throw (IndexOutOfBoundsException, RuntimeException, std::exception)
@@ -1090,7 +1081,7 @@ Rectangle SvxRectCtlChildAccessibleContext::GetBoundingBox() throw( RuntimeExcep
     return *mpBoundingBox;
 }
 
-void SvxRectCtlChildAccessibleContext::setStateChecked( bool bChecked, bool bFireFocus )
+void SvxRectCtlChildAccessibleContext::setStateChecked( bool bChecked )
 {
     if( mbIsChecked != bChecked )
     {
@@ -1102,12 +1093,10 @@ void SvxRectCtlChildAccessibleContext::setStateChecked( bool bChecked, bool bFir
         Any                             aNew;
         Any&                            rMod = bChecked? aNew : aOld;
 
-        if( bFireFocus )
-        {
-            //Send the STATE_CHANGED(Focused) event to accessible
-            rMod <<= AccessibleStateType::FOCUSED;
-            CommitChange( AccessibleEventObject( xSource, AccessibleEventId::STATE_CHANGED, aNew, aOld ) );
-        }
+        //Send the STATE_CHANGED(Focused) event to accessible
+        rMod <<= AccessibleStateType::FOCUSED;
+        CommitChange( AccessibleEventObject( xSource, AccessibleEventId::STATE_CHANGED, aNew, aOld ) );
+
         rMod <<= AccessibleStateType::CHECKED;
 
         CommitChange( AccessibleEventObject( xSource, AccessibleEventId::STATE_CHANGED, aNew, aOld ) );

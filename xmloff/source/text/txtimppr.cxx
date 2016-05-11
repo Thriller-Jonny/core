@@ -254,7 +254,7 @@ namespace {
 //crock.
 
 //On import clear 100% all-margins relative sizes.
-static bool
+bool
 isNotDefaultRelSize(const XMLPropertyState* pRelState, const rtl::Reference<XMLPropertySetMapper>& rPrMap)
 {
     if (rPrMap->GetEntryContextId(pRelState->mnIndex) == CTF_PARAMARGINALL_REL)
@@ -272,7 +272,7 @@ isNotDefaultRelSize(const XMLPropertyState* pRelState, const rtl::Reference<XMLP
  * Since Writer hasn't the same compressed attributes, but has distinct ones for all
  * four side, we have to duplicate the compressed attribute during import.
 **/
-static void lcl_SeparateBorder(
+void lcl_SeparateBorder(
     sal_uInt16 nIndex, XMLPropertyState* pAllBorderDistance,
     XMLPropertyState* pBorderDistances[4], XMLPropertyState* pNewBorderDistances[4],
     XMLPropertyState* pAllBorder, XMLPropertyState* pBorders[4],
@@ -481,7 +481,7 @@ void XMLTextImportPropertyMapper::finished(
         case CTF_FRAMEHEIGHT_MIN_REL:
 //      case CTF_SYNCHEIGHT_MIN:
                                         bHasAnyMinHeight = true;
-                                        // no break here!
+                                        SAL_FALLTHROUGH;
         case CTF_FRAMEHEIGHT_ABS:
         case CTF_FRAMEHEIGHT_REL:
 //      case CTF_SYNCHEIGHT:
@@ -489,7 +489,7 @@ void XMLTextImportPropertyMapper::finished(
         case CTF_FRAMEWIDTH_MIN_ABS:
         case CTF_FRAMEWIDTH_MIN_REL:
                                         bHasAnyMinWidth = true;
-                                        // no break here!
+                                        SAL_FALLTHROUGH;
         case CTF_FRAMEWIDTH_ABS:
         case CTF_FRAMEWIDTH_REL:
                                         bHasAnyWidth = true; break;

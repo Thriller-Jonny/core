@@ -22,7 +22,6 @@
 
 #include <uielement/generictoolbarcontroller.hxx>
 #include "services.h"
-#include <framework/imageproducer.hxx>
 #include <framework/sfxhelperfunctions.hxx>
 #include <classes/fwkresid.hxx>
 #include <classes/resource.hrc>
@@ -56,6 +55,7 @@
 #include <vcl/taskpanelist.hxx>
 #include <vcl/toolbox.hxx>
 #include <vcl/settings.hxx>
+#include <vcl/commandinfoprovider.hxx>
 
 //  namespaces
 
@@ -80,7 +80,7 @@ AddonsToolBarManager::AddonsToolBarManager( const Reference< XComponentContext >
                                 ToolBox* pToolBar ) :
     ToolBarManager( rxContext, rFrame, rResourceName, pToolBar )
 {
-    m_pToolBar->SetMenuType( TOOLBOX_MENUTYPE_CLIPPEDITEMS );
+    m_pToolBar->SetMenuType( ToolBoxMenuType::ClippedItems );
     m_pToolBar->SetSelectHdl( LINK( this, AddonsToolBarManager, Select) );
     m_pToolBar->SetClickHdl( LINK( this, AddonsToolBarManager, Click ) );
     m_pToolBar->SetDoubleClickHdl( LINK( this, AddonsToolBarManager, DoubleClick ) );
@@ -121,14 +121,14 @@ static Image RetrieveImage( Reference< css::frame::XFrame >& rFrame,
         if ( !!aImage )
             return aImage;
         else
-            aImage = GetImageFromURL( rFrame, aImageId, bBigImage );
+            aImage = vcl::CommandInfoProvider::Instance().GetImageForCommand(aImageId, bBigImage, rFrame );
         if ( !!aImage )
             return aImage;
     }
 
     aImage = framework::AddonsOptions().GetImageFromURL( aURL, bBigImage );
     if ( !aImage )
-        aImage = GetImageFromURL( rFrame, aImageId, bBigImage );
+        aImage = vcl::CommandInfoProvider::Instance().GetImageForCommand(aImageId, bBigImage, rFrame );
 
     return aImage;
 }
@@ -228,10 +228,11 @@ void AddonsToolBarManager::FillToolbar( const Sequence< Sequence< PropertyValue 
         OUString   aContext;
         OUString   aTarget;
         OUString   aControlType;
+        sal_uInt16 nWidth( 0 );
 
         const Sequence< PropertyValue >& rSeq = rAddonToolbar[n];
 
-        ToolBarMerger::ConvertSequenceToValues( rSeq, aURL, aTitle, aImageId, aTarget, aContext, aControlType );
+        ToolBarMerger::ConvertSequenceToValues( rSeq, aURL, aTitle, aImageId, aTarget, aContext, aControlType, nWidth );
 
         if ( IsCorrectContext( aModuleIdentifier, aContext ))
         {
@@ -254,7 +255,12 @@ void AddonsToolBarManager::FillToolbar( const Sequence< Sequence< PropertyValue 
                 }
                 bAppendSeparator = false;
 
+
                 m_pToolBar->InsertItem( nId, aTitle );
+
+                OUString aShortcut(vcl::CommandInfoProvider::Instance().GetCommandShortcut(aURL, m_xFrame));
+                if (!aShortcut.isEmpty())
+                    m_pToolBar->SetQuickHelpText(nId, aTitle + " (" + aShortcut + ")");
 
                 // don't setup images yet, AddonsToolbarWrapper::populateImages does that.
 
@@ -262,6 +268,7 @@ void AddonsToolBarManager::FillToolbar( const Sequence< Sequence< PropertyValue 
                 AddonsParams* pRuntimeItemData = new AddonsParams;
                 pRuntimeItemData->aImageId  = aImageId;
                 pRuntimeItemData->aTarget   = aTarget;
+                pRuntimeItemData->nWidth    = nWidth;
                 m_pToolBar->SetItemData( nId, pRuntimeItemData );
                 m_pToolBar->SetItemCommand( nId, aURL );
 
@@ -307,7 +314,7 @@ void AddonsToolBarManager::FillToolbar( const Sequence< Sequence< PropertyValue 
                 {
                     ::cppu::OWeakObject* pController = nullptr;
 
-                    pController = ToolBarMerger::CreateController( m_xContext, m_xFrame, m_pToolBar, aURL, nId, aControlType );
+                    pController = ToolBarMerger::CreateController( m_xContext, m_xFrame, m_pToolBar, aURL, nId, nWidth, aControlType );
                     xController.set( pController, UNO_QUERY );
                 }
 

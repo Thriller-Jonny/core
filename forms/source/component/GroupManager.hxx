@@ -137,7 +137,7 @@ class OGroup
     std::vector<OGroupCompAcc> m_aCompAccArray;
 
     OUString    m_aGroupName;
-    sal_uInt16  m_nInsertPos; // The insertion position of the GroupComps is determind by the Group
+    sal_uInt16  m_nInsertPos; // The insertion position of the GroupComps is determined by the Group
 
     friend class OGroupLess;
 
@@ -145,9 +145,7 @@ public:
     explicit OGroup(const OUString& rGroupName);
     virtual ~OGroup();
 
-    bool operator==( const OGroup& rGroup ) const;
-
-    OUString GetGroupName() const { return m_aGroupName; }
+    const OUString& GetGroupName() const { return m_aGroupName; }
     css::uno::Sequence< css::uno::Reference< css::awt::XControlModel>  > GetControlModels() const;
 
     void InsertComponent( const css::uno::Reference< css::beans::XPropertySet>& rxElement );
@@ -196,9 +194,8 @@ public:
     void getGroupByName(const OUString& Name, css::uno::Sequence< css::uno::Reference< css::awt::XControlModel> >& _rGroup);
     css::uno::Sequence< css::uno::Reference< css::awt::XControlModel> > getControlModels();
 
-    static OUString GetGroupName( css::uno::Reference< css::beans::XPropertySet> xComponent );
+    static OUString GetGroupName( const css::uno::Reference< css::beans::XPropertySet>& xComponent );
 };
-
 
 
 }   // namespace frm

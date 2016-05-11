@@ -19,7 +19,7 @@
 
 #include <config_version.h>
 
-#include "vcl/svapp.hxx"
+#include <vcl/svapp.hxx>
 
 #include "unx/gtk/gtkframe.hxx"
 #include "unx/gtk/gtkdata.hxx"
@@ -38,9 +38,9 @@
 
 #include <boost/optional.hpp>
 
-#include "vcl/vclenum.hxx"
+#include <vcl/vclenum.hxx>
 #include <vcl/settings.hxx>
-#include "fontmanager.hxx"
+#include "unx/fontmanager.hxx"
 #include <vcl/decoview.hxx>
 
 #include <vcl/opengl/OpenGLHelper.hxx>
@@ -2514,19 +2514,7 @@ bool GtkSalGraphics::NWPaintGTKSpinBox(ControlType nType, ControlPart nPart,
         downBtnState = pSpinVal->mnLowerState;
     }
 
-    // CTRL_SPINBUTTONS pass their area in pSpinVal, not in rControlRectangle
-    if ( nType == CTRL_SPINBUTTONS )
-    {
-        if ( !pSpinVal )
-        {
-            std::fprintf( stderr, "Tried to draw CTRL_SPINBUTTONS, but the SpinButtons data structure didn't exist!\n" );
-            return false;
-        }
-        pixmapRect = pSpinVal->maUpperRect;
-        pixmapRect.Union( pSpinVal->maLowerRect );
-    }
-    else
-        pixmapRect = rControlRectangle;
+    pixmapRect = rControlRectangle;
 
     BEGIN_PIXMAP_RENDER( pixmapRect, gdkPixmap )
     {

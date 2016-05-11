@@ -35,24 +35,20 @@ public:
     void    SetOutputDevice( OutputDevice* pOutputDevice );
 
     void    Draw( const Point&  rAt,
-                  const Size&   rSize,
-                  bool          bState,
-                  bool          bBtnIn = false );
-    void    Draw( bool          bState,
-                  bool          bBtnIn = false )
-                { Draw( aBtnPos, aBtnSize, bState, bBtnIn ); }
+                  const Size&   rSize );
+    void    Draw()
+                { Draw( aBtnPos, aBtnSize ); }
 
     void    SetOptSizePixel();
 
     void    SetPosPixel( const Point& rNewPos )  { aBtnPos = rNewPos; }
-    Point   GetPosPixel() const                  { return aBtnPos; }
+    const Point& GetPosPixel() const             { return aBtnPos; }
 
     void    SetSizePixel( const Size& rNewSize ) { aBtnSize = rNewSize; }
-    Size    GetSizePixel() const                 { return aBtnSize; }
+    const Size&  GetSizePixel() const            { return aBtnSize; }
 
 private:
-    void    ImpDrawArrow( const Rectangle&  rRect,
-                          bool              bState );
+    void    ImpDrawArrow( const Rectangle&  rRect );
 
 protected:
     VclPtr<OutputDevice> pOut;

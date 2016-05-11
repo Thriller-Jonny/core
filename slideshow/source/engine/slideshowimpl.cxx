@@ -422,7 +422,7 @@ private:
     UnoViewContainer                        maViewContainer;
 
     /// all registered slide show listeners
-    cppu::OInterfaceContainerHelper         maListenerContainer;
+    comphelper::OInterfaceContainerHelper2         maListenerContainer;
 
     /// map of vectors, containing all registered listeners for a shape
     ShapeEventListenerMap                   maShapeEventListeners;
@@ -451,12 +451,12 @@ private:
     UserEventQueue                          maUserEventQueue;
     SubsettableShapeManagerSharedPtr        mpDummyPtr;
 
-    boost::shared_ptr<SeparateListenerImpl> mpListener;
+    std::shared_ptr<SeparateListenerImpl> mpListener;
 
-    boost::shared_ptr<RehearseTimingsActivity> mpRehearseTimingsActivity;
-    boost::shared_ptr<WaitSymbol>           mpWaitSymbol;
+    std::shared_ptr<RehearseTimingsActivity> mpRehearseTimingsActivity;
+    std::shared_ptr<WaitSymbol>           mpWaitSymbol;
 
-    boost::shared_ptr<PointerSymbol>        mpPointerSymbol;
+    std::shared_ptr<PointerSymbol>        mpPointerSymbol;
 
     /// the current slide transition sound object:
     SoundPlayerSharedPtr                    mpCurrentSlideTransitionSound;
@@ -884,7 +884,7 @@ ActivitySharedPtr SlideShowImpl::createSlideTransition(
 
 PolygonMap::iterator SlideShowImpl::findPolygons( uno::Reference<drawing::XDrawPage> const& xDrawPage)
 {
-    // TODO(P2) : Optimze research in the map.
+    // TODO(P2): optimize research in the map.
     PolygonMap::iterator aEnd = maPolygons.end();
     for( PolygonMap::iterator aIter = maPolygons.begin();
          aIter != aEnd;
@@ -1240,7 +1240,7 @@ sal_Bool SlideShowImpl::previousEffect() throw (uno::RuntimeException, std::exce
     else
     {
         return maEffectRewinder.rewind(
-            maScreenUpdater.createLock(false),
+            maScreenUpdater.createLock(),
             [this]() { return this->redisplayCurrentSlide(); },
             [this]() { return this->rewindEffectToPreviousSlide(); } );
     }
@@ -1447,7 +1447,7 @@ void SlideShowImpl::registerUserPaintPolygons( const uno::Reference< lang::XMult
         //Get shapes for the slide
         css::uno::Reference< css::drawing::XShapes > Shapes(rPoly.first, css::uno::UNO_QUERY);
         //Retrieve polygons for one slide
-        for( const auto pPolyPoly : aPolygons )
+        for( const auto& pPolyPoly : aPolygons )
         {
             ::basegfx::B2DPolyPolygon b2DPolyPoly = ::basegfx::unotools::b2DPolyPolygonFromXPolyPolygon2D(pPolyPoly->getUNOPolyPolygon());
 
@@ -1494,24 +1494,20 @@ void SlideShowImpl::registerUserPaintPolygons( const uno::Reference< lang::XMult
                     aXPropSet->setPropertyValue("PolyPolygon", aParam );
 
                     //LineStyle : SOLID by default
-                    uno::Any            aAny;
                     drawing::LineStyle  eLS;
                     eLS = drawing::LineStyle_SOLID;
-                    aAny <<= eLS;
-                    aXPropSet->setPropertyValue("LineStyle", aAny );
+                    aXPropSet->setPropertyValue("LineStyle", uno::Any(eLS) );
 
                     //LineColor
                     sal_uInt32          nLineColor;
                     nLineColor = pPolyPoly->getRGBALineColor();
                     //Transform polygon color from RRGGBBAA to AARRGGBB
-                    aAny <<= RGBAColor2UnoColor(nLineColor);
-                    aXPropSet->setPropertyValue("LineColor", aAny );
+                    aXPropSet->setPropertyValue("LineColor", uno::Any(RGBAColor2UnoColor(nLineColor)) );
 
                     //LineWidth
                     double              fLineWidth;
                     fLineWidth = pPolyPoly->getStrokeWidth();
-                    aAny <<= (sal_Int32)fLineWidth;
-                    aXPropSet->setPropertyValue("LineWidth", aAny );
+                    aXPropSet->setPropertyValue("LineWidth", uno::Any((sal_Int32)fLineWidth) );
 
                     // make polygons special
                     xLayerManager->attachShapeToLayer(rPolyShape, xDrawnInSlideshow);
@@ -1855,8 +1851,8 @@ void SlideShowImpl::addShapeEventListener(
         aIter = maShapeEventListeners.insert(
             ShapeEventListenerMap::value_type(
                 xShape,
-                boost::shared_ptr<cppu::OInterfaceContainerHelper>(
-                    new cppu::OInterfaceContainerHelper(m_aMutex)))).first;
+                std::shared_ptr<comphelper::OInterfaceContainerHelper2>(
+                    new comphelper::OInterfaceContainerHelper2(m_aMutex)))).first;
     }
 
     // add new listener to broadcaster

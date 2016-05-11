@@ -14,6 +14,7 @@ $(eval $(call gb_CppunitTest_CppunitTest,sc_ucalc))
 $(eval $(call gb_CppunitTest_add_exception_objects,sc_ucalc, \
     sc/qa/unit/ucalc \
     sc/qa/unit/ucalc_column \
+    sc/qa/unit/ucalc_condformat \
     sc/qa/unit/ucalc_formula \
     sc/qa/unit/ucalc_pivottable \
     sc/qa/unit/ucalc_sharedformula \
@@ -31,6 +32,8 @@ endif
 
 $(eval $(call gb_CppunitTest_use_externals,sc_ucalc,\
 	boost_headers \
+    $(call gb_Helper_optional,OPENCL, \
+        clew) \
     icu_headers \
     icui18n \
     icuuc \
@@ -43,8 +46,6 @@ $(eval $(call gb_CppunitTest_use_externals,sc_ucalc,\
 $(eval $(call gb_CppunitTest_use_libraries,sc_ucalc, \
 	$(call gb_Helper_optional,AVMEDIA,avmedia) \
     basegfx \
-    $(call gb_Helper_optional,OPENCL, \
-        clew) \
     comphelper \
     cppu \
     cppuhelper \

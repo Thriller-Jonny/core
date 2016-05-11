@@ -139,7 +139,7 @@ void basctl_Shell::InitInterface_Impl()
     GetStaticInterface()->RegisterChildWindow(SID_SHOW_PROPERTYBROWSER, false, BASICIDE_UI_FEATURE_SHOW_BROWSER);
     GetStaticInterface()->RegisterChildWindow(SfxInfoBarContainerChild::GetChildWindowId());
 
-    GetStaticInterface()->RegisterPopupMenu(IDEResId(RID_POPUP_DLGED));
+    GetStaticInterface()->RegisterPopupMenu("dialog");
 }
 
 unsigned Shell::nShellCount = 0;
@@ -187,8 +187,6 @@ void Shell::Init()
     bCreatingWindow = false;
 
     pTabBar.reset(VclPtr<TabBar>::Create(&GetViewFrame()->GetWindow()));
-    pTabBar->SetSplitHdl( LINK( this, Shell, TabBarSplitHdl ) );
-    bTabBarSplitted = false;
 
     nCurKey = 100;
     InitScrollBars();
@@ -326,7 +324,7 @@ void Shell::onDocumentClosed( const ScriptDocument& _rDocument )
 
     // remove lib info
     if (ExtraData* pData = GetExtraData())
-        pData->GetLibInfos().RemoveInfoFor( _rDocument );
+        pData->GetLibInfo().RemoveInfoFor( _rDocument );
 
     if ( bSetCurLib )
         SetCurLib( ScriptDocument::getApplicationScriptDocument(), "Standard", true, false );
@@ -425,7 +423,6 @@ void Shell::InitScrollBars()
 }
 
 
-
 void Shell::InitTabBar()
 {
     pTabBar->Enable();
@@ -434,18 +431,11 @@ void Shell::InitTabBar()
 }
 
 
-
 void Shell::OuterResizePixel( const Point &rPos, const Size &rSize )
 {
     AdjustPosSizePixel( rPos, rSize );
 }
 
-
-IMPL_LINK_NOARG_TYPED( Shell, TabBarSplitHdl, ::TabBar *, void )
-{
-    bTabBarSplitted = true;
-    ArrangeTabBar();
-}
 
 IMPL_LINK_TYPED( Shell, TabBarHdl, ::TabBar *, pCurTabBar, void )
 {
@@ -454,7 +444,6 @@ IMPL_LINK_TYPED( Shell, TabBarHdl, ::TabBar *, pCurTabBar, void )
     DBG_ASSERT( pWin, "Eintrag in TabBar passt zu keinem Fenster!" );
     SetCurWindow( pWin );
 }
-
 
 
 bool Shell::NextPage( bool bPrev )
@@ -477,25 +466,6 @@ bool Shell::NextPage( bool bPrev )
     return bRet;
 }
 
-
-
-void Shell::ArrangeTabBar()
-{
-    long nBoxPos = aScrollBarBox->GetPosPixel().X() - 1;
-    long nPos = pTabBar->GetSplitSize();
-    if ( nPos <= nBoxPos )
-    {
-        Point aPnt( pTabBar->GetPosPixel() );
-        long nH = aHScrollBar->GetSizePixel().Height();
-        pTabBar->SetPosSizePixel( aPnt, Size( nPos, nH ) );
-        long nScrlStart = aPnt.X() + nPos;
-        aHScrollBar->SetPosSizePixel( Point( nScrlStart, aPnt.Y() ), Size( nBoxPos - nScrlStart + 2, nH ) );
-        aHScrollBar->Update();
-    }
-}
-
-
-
 ::svl::IUndoManager* Shell::GetUndoManager()
 {
     ::svl::IUndoManager* pMgr = nullptr;
@@ -504,7 +474,6 @@ void Shell::ArrangeTabBar()
 
     return pMgr;
 }
-
 
 
 void Shell::Notify( SfxBroadcaster& rBC, const SfxHint& rHint )
@@ -525,7 +494,7 @@ void Shell::Notify( SfxBroadcaster& rBC, const SfxHint& rHint )
 
             if (SbxHint const* pSbxHint = dynamic_cast<SbxHint const*>(&rHint))
             {
-                sal_uLong nHintId = pSbxHint->GetId();
+                const sal_uInt32 nHintId = pSbxHint->GetId();
                 if (    ( nHintId == SBX_HINT_BASICSTART ) ||
                         ( nHintId == SBX_HINT_BASICSTOP ) )
                 {
@@ -583,7 +552,6 @@ void Shell::Notify( SfxBroadcaster& rBC, const SfxHint& rHint )
 }
 
 
-
 void Shell::CheckWindows()
 {
     bool bSetCurWindow = false;
@@ -607,8 +575,7 @@ void Shell::CheckWindows()
 }
 
 
-
-void Shell::RemoveWindows( const ScriptDocument& rDocument, const OUString& rLibName, bool bDestroy )
+void Shell::RemoveWindows( const ScriptDocument& rDocument, const OUString& rLibName )
 {
     bool bChangeCurWindow = pCurWin;
     std::vector<VclPtr<BaseWindow> > aDeleteVec;
@@ -624,12 +591,11 @@ void Shell::RemoveWindows( const ScriptDocument& rDocument, const OUString& rLib
         if ( pWin == pCurWin )
             bChangeCurWindow = true;
         pWin->StoreData();
-        RemoveWindow( pWin, bDestroy, false );
+        RemoveWindow( pWin, true/*bDestroy*/, false );
     }
     if ( bChangeCurWindow )
         SetCurWindow( FindApplicationWindow(), true );
 }
-
 
 
 void Shell::UpdateWindows()
@@ -699,9 +665,9 @@ void Shell::UpdateWindows()
 
                 if ( !bProtected )
                 {
-                    LibInfos::Item const* pLibInfoItem = nullptr;
+                    LibInfo::Item const* pLibInfoItem = nullptr;
                     if (ExtraData* pData = GetExtraData())
-                        pLibInfoItem = pData->GetLibInfos().GetInfo(*doc, aLibName);
+                        pLibInfoItem = pData->GetLibInfo().GetInfo(*doc, aLibName);
 
                     // modules
                     if ( xModLibContainer.is() && xModLibContainer->hasByName( aLibName ) )
@@ -840,14 +806,12 @@ void Shell::RemoveWindow( BaseWindow* pWindow_, bool bDestroy, bool bAllowChange
 }
 
 
-
 sal_uInt16 Shell::InsertWindowInTable( BaseWindow* pNewWin )
 {
     nCurKey++;
     aWindowTable[ nCurKey ] = pNewWin;
     return nCurKey;
 }
-
 
 
 void Shell::InvalidateBasicIDESlots()

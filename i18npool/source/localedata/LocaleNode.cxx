@@ -452,11 +452,17 @@ void LCCTYPENode::generateCode (const OFileWriter &of) const
         ++nSavErr;  // format codes not affected
     }
     if (aTimeSep == aTime100Sep)
-        ++nWarn, fprintf( stderr, "Warning: %s\n",
+    {
+        ++nWarn;
+        fprintf( stderr, "Warning: %s\n",
                 "Time100SecSeparator equals TimeSeparator, this is probably an error.");
+    }
     if (aDecSep != aTime100Sep)
-        ++nWarn, fprintf( stderr, "Warning: %s\n",
+    {
+        ++nWarn;
+        fprintf( stderr, "Warning: %s\n",
                 "Time100SecSeparator is different from DecimalSeparator, this may be correct or not. Intended?");
+    }
     if (nSavErr != nError || nWarn)
         fprintf( stderr, "Warning: %s\n",
                 "Don't forget to adapt corresponding FormatCode elements when changing separators.");
@@ -778,7 +784,7 @@ void LCFormatNode::generateCode (const OFileWriter &of) const
                                 sTheCompatibleCurrency = aCode.copy( nStart + 2, nHyphen - nStart - 2);
                         }
                     }
-                    // fallthru
+                    SAL_FALLTHROUGH;
                 case cssi::NumberFormatIndex::CURRENCY_1000INT :
                 case cssi::NumberFormatIndex::CURRENCY_1000INT_RED :
                 case cssi::NumberFormatIndex::CURRENCY_1000DEC2_RED :
@@ -1111,7 +1117,7 @@ void LCFormatNode::generateCode (const OFileWriter &of) const
                     // separators and generate a second pattern with the
                     // format's separator at the current position.
                     cDateSep2 = cChar;
-                    // fallthru
+                    SAL_FALLTHROUGH;
                 default:
                 handleDefault:
                     if (!cDateSep)

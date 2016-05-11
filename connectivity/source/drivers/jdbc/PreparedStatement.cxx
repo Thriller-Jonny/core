@@ -201,7 +201,6 @@ void SAL_CALL java_sql_PreparedStatement::setDate( sal_Int32 parameterIndex, con
 }
 
 
-
 void SAL_CALL java_sql_PreparedStatement::setTime( sal_Int32 parameterIndex, const ::com::sun::star::util::Time& x ) throw(::com::sun::star::sdbc::SQLException, ::com::sun::star::uno::RuntimeException, std::exception)
 {
     m_aLogger.log( LogLevel::FINER, STR_LOG_TIME_PARAMETER, parameterIndex, x );
@@ -434,7 +433,7 @@ void SAL_CALL java_sql_PreparedStatement::setBytes( sal_Int32 parameterIndex, co
         static jmethodID mID(nullptr);
         obtainMethodId_throwSQL(t.pEnv, cMethodName,cSignature, mID);
         jbyteArray pByteArray = t.pEnv->NewByteArray(x.getLength());
-        jbyte * xData = reinterpret_cast<jbyte *>(
+        jbyte * pData = reinterpret_cast<jbyte *>(
             const_cast<sal_Int8 *>(x.getConstArray()));
             // 4th param of Set*ArrayRegion changed from pointer to non-const to
             // pointer to const between <http://docs.oracle.com/javase/6/docs/
@@ -442,7 +441,7 @@ void SAL_CALL java_sql_PreparedStatement::setBytes( sal_Int32 parameterIndex, co
             // <http://docs.oracle.com/javase/7/docs/technotes/guides/jni/spec/
             // functions.html#wp22933>; work around that difference in a way
             // that doesn't trigger loplugin:redundantcast
-        t.pEnv->SetByteArrayRegion(pByteArray,0,x.getLength(),xData);
+        t.pEnv->SetByteArrayRegion(pByteArray,0,x.getLength(),pData);
         t.pEnv->CallVoidMethod( object, mID, parameterIndex,pByteArray);
         t.pEnv->DeleteLocalRef(pByteArray);
         ThrowLoggedSQLException( m_aLogger, t.pEnv, *this );
@@ -620,7 +619,7 @@ void SAL_CALL java_sql_PreparedStatement::addBatch( ) throw(::com::sun::star::sd
     jintArray out = static_cast<jintArray>(callObjectMethod(t.pEnv,"executeBatch","()[I", mID));
     if(out)
     {
-        jboolean p = sal_False;
+        jboolean p = false;
         aSeq.realloc(t.pEnv->GetArrayLength(out));
         memcpy(aSeq.getArray(),t.pEnv->GetIntArrayElements(out,&p),aSeq.getLength());
         t.pEnv->DeleteLocalRef(out);
@@ -637,7 +636,7 @@ void SAL_CALL java_sql_PreparedStatement::addBatch( ) throw(::com::sun::star::sd
     static jmethodID mID(nullptr);
     jobject out = callObjectMethod(t.pEnv,"getMetaData","()Ljava/sql/ResultSetMetaData;", mID);
 
-    return out==nullptr ? nullptr : new java_sql_ResultSetMetaData( t.pEnv, out, m_aLogger,*m_pConnection );
+    return out==nullptr ? nullptr : new java_sql_ResultSetMetaData( t.pEnv, out, *m_pConnection );
 }
 
 void SAL_CALL java_sql_PreparedStatement::acquire() throw()
@@ -691,8 +690,6 @@ void java_sql_PreparedStatement::createStatement(JNIEnv* _pEnv)
             object = _pEnv->NewGlobalRef( out );
     } //t.pEnv
 }
-
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

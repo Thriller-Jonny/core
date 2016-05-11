@@ -55,7 +55,9 @@ ScTpCalcOptions::ScTpCalcOptions(vcl::Window* pParent, const SfxItemSet& rCoreAt
     get(m_pBtnCase, "case");
     get(m_pBtnCalc, "calc");
     get(m_pBtnMatch, "match");
-    get(m_pBtnRegex, "regex");
+    get(m_pBtnWildcards, "formulawildcards");
+    get(m_pBtnRegex, "formularegex");
+    get(m_pBtnLiteral, "formulaliteral");
     get(m_pBtnLookUp, "lookup");
     get(m_pBtnGeneralPrec, "generalprec");
     get(m_pFtPrec, "precft");
@@ -84,7 +86,9 @@ void ScTpCalcOptions::dispose()
     m_pBtnCase.clear();
     m_pBtnCalc.clear();
     m_pBtnMatch.clear();
+    m_pBtnWildcards.clear();
     m_pBtnRegex.clear();
+    m_pBtnLiteral.clear();
     m_pBtnLookUp.clear();
     m_pBtnGeneralPrec.clear();
     m_pFtPrec.clear();
@@ -115,7 +119,13 @@ void ScTpCalcOptions::Reset( const SfxItemSet* /* rCoreAttrs */ )
     m_pBtnCase->Check( !pLocalOptions->IsIgnoreCase() );
     m_pBtnCalc->Check( pLocalOptions->IsCalcAsShown() );
     m_pBtnMatch->Check( pLocalOptions->IsMatchWholeCell() );
-    m_pBtnRegex->Check( pLocalOptions->IsFormulaRegexEnabled() );
+    bool bWildcards = pLocalOptions->IsFormulaWildcardsEnabled();
+    bool bRegex = pLocalOptions->IsFormulaRegexEnabled();
+    if (bWildcards && bRegex)
+        bRegex = false;
+    m_pBtnWildcards->Check( bWildcards );
+    m_pBtnRegex->Check( bRegex );
+    m_pBtnLiteral->Check( !bWildcards && !bRegex );
     m_pBtnLookUp->Check( pLocalOptions->IsLookUpColRowNames() );
     m_pBtnIterate->Check( pLocalOptions->IsIter() );
     m_pEdSteps->SetValue( pLocalOptions->GetIterCount() );
@@ -161,6 +171,7 @@ bool ScTpCalcOptions::FillItemSet( SfxItemSet* rCoreAttrs )
     pLocalOptions->SetIgnoreCase( !m_pBtnCase->IsChecked() );
     pLocalOptions->SetCalcAsShown( m_pBtnCalc->IsChecked() );
     pLocalOptions->SetMatchWholeCell( m_pBtnMatch->IsChecked() );
+    pLocalOptions->SetFormulaWildcardsEnabled( m_pBtnWildcards->IsChecked() );
     pLocalOptions->SetFormulaRegexEnabled( m_pBtnRegex->IsChecked() );
     pLocalOptions->SetLookUpColRowNames( m_pBtnLookUp->IsChecked() );
 

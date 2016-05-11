@@ -30,6 +30,7 @@
 
 #include <osl/mutex.hxx>
 #include <cppuhelper/interfacecontainer.h>
+#include <comphelper/interfacecontainer2.hxx>
 #include <cppuhelper/supportsservice.hxx>
 #include <vcl/svapp.hxx>
 #include <editeng/unolingu.hxx>
@@ -318,7 +319,7 @@ class SwXDocumentIndex::Impl
     : public SwClient
 {
 private:
-    ::osl::Mutex m_Mutex; // just for OInterfaceContainerHelper
+    ::osl::Mutex m_Mutex; // just for OInterfaceContainerHelper2
 
 public:
     uno::WeakReference<uno::XInterface> m_wThis;
@@ -1536,7 +1537,7 @@ class SwXDocumentIndexMark::Impl
     : public SwClient
 {
 private:
-    ::osl::Mutex m_Mutex; // just for OInterfaceContainerHelper
+    ::osl::Mutex m_Mutex; // just for OInterfaceContainerHelper2
     SwXDocumentIndexMark & m_rThis;
     bool m_bInReplaceMark;
 
@@ -1545,7 +1546,7 @@ public:
     uno::WeakReference<uno::XInterface> m_wThis;
     SfxItemPropertySet const&   m_rPropSet;
     const TOXTypes              m_eTOXType;
-    ::cppu::OInterfaceContainerHelper m_EventListeners;
+    ::comphelper::OInterfaceContainerHelper2 m_EventListeners;
     bool                        m_bIsDescriptor;
     SwDepend                    m_TypeDepend;
     const SwTOXMark *           m_pTOXMark;
@@ -2604,11 +2605,11 @@ throw (uno::RuntimeException, std::exception)
             if (static_cast<SwTOXBaseSection const*>(pSect)->GetTOXName()
                     == rName)
             {
-                return sal_True;
+                return true;
             }
         }
     }
-    return sal_False;
+    return false;
 }
 
 uno::Type SAL_CALL
@@ -2749,7 +2750,7 @@ throw (uno::RuntimeException, std::exception)
 sal_Bool SAL_CALL
 SwXDocumentIndex::StyleAccess_Impl::hasElements() throw (uno::RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 SwXDocumentIndex::TokenAccess_Impl::TokenAccess_Impl(
@@ -3262,7 +3263,7 @@ sal_Bool SAL_CALL
 SwXDocumentIndex::TokenAccess_Impl::hasElements()
 throw (uno::RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

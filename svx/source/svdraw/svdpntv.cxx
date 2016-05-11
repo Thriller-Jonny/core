@@ -59,9 +59,9 @@
 #include <svx/sdr/contact/viewcontact.hxx>
 #include <drawinglayer/primitive2d/metafileprimitive2d.hxx>
 #include <basegfx/matrix/b2dhommatrixtools.hxx>
+#include <comphelper/lok.hxx>
 
 using namespace ::com::sun::star;
-
 
 // interface to SdrPaintWindow
 
@@ -119,14 +119,10 @@ OutputDevice* SdrPaintView::GetFirstOutputDevice() const
 }
 
 
-
 SvxViewHint::SvxViewHint (HintType eHintType)
     : meHintType(eHintType)
 {
 }
-
-
-
 
 
 BitmapEx convertMetafileToBitmapEx(
@@ -154,15 +150,13 @@ BitmapEx convertMetafileToBitmapEx(
 }
 
 
-
-
-
 void SdrPaintView::ImpClearVars()
 {
 #ifdef DBG_UTIL
     mpItemBrowser=nullptr;
 #endif
     mbPageVisible=true;
+    mbPageShadowVisible=true;
     mbPageBorderVisible=true;
     mbBordVisible=true;
     mbGridVisible=true;
@@ -244,7 +238,6 @@ SdrPaintView::~SdrPaintView()
         maPaintWindows.pop_back();
     }
 }
-
 
 
 void SdrPaintView::Notify(SfxBroadcaster& rBC, const SfxHint& rHint)
@@ -332,7 +325,6 @@ void SdrPaintView::ModelHasChanged()
 }
 
 
-
 bool SdrPaintView::IsAction() const
 {
     return false;
@@ -370,7 +362,6 @@ SdrPageView* SdrPaintView::GetTextEditPageView() const
 {
     return nullptr;
 }
-
 
 
 sal_uInt16 SdrPaintView::ImpGetMinMovLogic(short nMinMov, const OutputDevice* pOut) const
@@ -414,7 +405,6 @@ void SdrPaintView::SetActualWin(const OutputDevice* pWin)
     mpActualOutDev = const_cast<OutputDevice *>(pWin);
     TheresNewMapMode();
 }
-
 
 
 void SdrPaintView::ClearPageView()
@@ -730,7 +720,7 @@ void SdrPaintView::DoCompleteRedraw(SdrPaintWindow& rPaintWindow, const vcl::Reg
 void SdrPaintView::EndCompleteRedraw(SdrPaintWindow& rPaintWindow, bool bPaintFormLayer)
 {
     std::unique_ptr<SdrPaintWindow> pPaintWindow;
-    if (GetModel()->isTiledRendering() && rPaintWindow.getTemporaryTarget())
+    if (comphelper::LibreOfficeKit::isActive() && rPaintWindow.getTemporaryTarget())
     {
         // Tiled rendering, we must paint the TextEdit to the output device.
         pPaintWindow.reset(&rPaintWindow);
@@ -766,7 +756,6 @@ void SdrPaintView::EndCompleteRedraw(SdrPaintWindow& rPaintWindow, bool bPaintFo
         rPaintWindow.OutputPreRenderDevice(rPaintWindow.GetRedrawRegion());
     }
 }
-
 
 
 SdrPaintWindow* SdrPaintView::BeginDrawLayers(OutputDevice* pOut, const vcl::Region& rReg, bool bDisableIntersect)
@@ -806,7 +795,7 @@ void SdrPaintView::EndDrawLayers(SdrPaintWindow& rPaintWindow, bool bPaintFormLa
     }
 }
 
-void SdrPaintView::UpdateDrawLayersRegion(OutputDevice* pOut, const vcl::Region& rReg, bool bDisableIntersect)
+void SdrPaintView::UpdateDrawLayersRegion(OutputDevice* pOut, const vcl::Region& rReg)
 {
     SdrPaintWindow* pPaintWindow = FindPaintWindow(*pOut);
     OSL_ENSURE(pPaintWindow, "SdrPaintView::UpdateDrawLayersRegion: No SdrPaintWindow (!)");
@@ -817,7 +806,7 @@ void SdrPaintView::UpdateDrawLayersRegion(OutputDevice* pOut, const vcl::Region&
 
         if(pKnownTarget)
         {
-            vcl::Region aOptimizedRepaintRegion = OptimizeDrawLayersRegion( pOut, rReg, bDisableIntersect );
+            vcl::Region aOptimizedRepaintRegion = OptimizeDrawLayersRegion( pOut, rReg, false/*bDisableIntersect*/ );
             pKnownTarget->GetPaintWindow().SetRedrawRegion(aOptimizedRepaintRegion);
             mpPageView->setPreparedPageWindow(pKnownTarget); // already set actually
         }
@@ -852,7 +841,6 @@ vcl::Region SdrPaintView::OptimizeDrawLayersRegion(OutputDevice* pOut, const vcl
 }
 
 
-
 void SdrPaintView::ImpFormLayerDrawing( SdrPaintWindow& rPaintWindow )
 {
     if(mpPageView)
@@ -873,7 +861,6 @@ void SdrPaintView::ImpFormLayerDrawing( SdrPaintWindow& rPaintWindow )
         }
     }
 }
-
 
 
 bool SdrPaintView::KeyInput(const KeyEvent& /*rKEvt*/, vcl::Window* /*pWin*/)
@@ -924,7 +911,7 @@ void SdrPaintView::InvalidateAllWin()
     }
 }
 
-void SdrPaintView::InvalidateAllWin(const Rectangle& rRect, bool bPlus1Pix)
+void SdrPaintView::InvalidateAllWin(const Rectangle& rRect)
 {
     const sal_uInt32 nWindowCount(PaintWindowCount());
 
@@ -937,22 +924,12 @@ void SdrPaintView::InvalidateAllWin(const Rectangle& rRect, bool bPlus1Pix)
             OutputDevice& rOutDev = pPaintWindow->GetOutputDevice();
             Rectangle aRect(rRect);
 
-            if(bPlus1Pix)
-            {
-                Size aPixSiz(1,1);
-                Size aSiz(rOutDev.PixelToLogic(aPixSiz));
-                aRect.Left  ()-=aSiz.Width();
-                aRect.Top   ()-=aSiz.Height();
-                aRect.Right ()+=aSiz.Width();
-                aRect.Bottom()+=aSiz.Height();
-            }
-
             Point aOrg(rOutDev.GetMapMode().GetOrigin());
             aOrg.X()=-aOrg.X(); aOrg.Y()=-aOrg.Y();
             Rectangle aOutRect(aOrg, rOutDev.GetOutputSize());
 
             // In case of tiled rendering we want to get all invalidations, so visual area is not interesting.
-            if (aRect.IsOver(aOutRect) || GetModel()->isTiledRendering())
+            if (aRect.IsOver(aOutRect) || comphelper::LibreOfficeKit::isActive())
             {
                 InvalidateOneWin(static_cast<vcl::Window&>(rOutDev), aRect);
             }
@@ -1114,7 +1091,6 @@ bool SdrPaintView::SetStyleSheet(SfxStyleSheet* pStyleSheet, bool bDontRemoveHar
     SetDefaultStyleSheet(pStyleSheet,bDontRemoveHardAttr);
     return true;
 }
-
 
 
 #ifdef DBG_UTIL

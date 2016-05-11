@@ -28,7 +28,6 @@ using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::io;
 
 
-
 static MapMode aTWIPSMode( MAP_TWIP );
 static MapMode a100thmmMode( MAP_100TH_MM );
 
@@ -38,7 +37,6 @@ static sal_Int32 map100thmm( sal_Int32 n100thMM )
     sal_Int32 nX = OutputDevice::LogicToLogic( aPoint,  a100thmmMode, aTWIPSMode ).X();
     return nX;
 }
-
 
 
 Writer::Writer( sal_Int32 nTWIPWidthOutput, sal_Int32 nTWIPHeightOutput, sal_Int32 nDocWidthInput, sal_Int32 nDocHeightInput, sal_Int32 nJPEGcompressMode )
@@ -96,14 +94,12 @@ Writer::Writer( sal_Int32 nTWIPWidthOutput, sal_Int32 nTWIPHeightOutput, sal_Int
 }
 
 
-
 Writer::~Writer()
 {
     mpVDev.disposeAndClear();
     delete mpSprite;
     delete mpTag;
 }
-
 
 
 void ImplCopySvStreamToXOutputStream( SvStream& rIn, Reference< XOutputStream > &xOut )
@@ -134,7 +130,6 @@ void ImplCopySvStreamToXOutputStream( SvStream& rIn, Reference< XOutputStream > 
         nSize -= nRead;
     }
 }
-
 
 
 void Writer::storeTo( Reference< XOutputStream > &xOutStream )
@@ -168,7 +163,7 @@ void Writer::storeTo( Reference< XOutputStream > &xOutStream )
     aHeader.addUI8( 0 );
     aHeader.addUI8( 12 );
 
-    aHeader.addUI16( _uInt16(mnFrames) );
+    aHeader.addUI16( uInt16_(mnFrames) );
 
     const sal_uInt32 nSize = aHeader.Tell() + mpFontsStream->Tell() + mpMovieStream->Tell();
 
@@ -181,7 +176,6 @@ void Writer::storeTo( Reference< XOutputStream > &xOutStream )
 }
 
 
-
 sal_uInt16 Writer::startSprite()
 {
     sal_uInt16 nShapeId = createID();
@@ -189,7 +183,6 @@ sal_uInt16 Writer::startSprite()
     mpSprite = new Sprite( nShapeId );
     return nShapeId;
 }
-
 
 
 void Writer::endSprite()
@@ -213,16 +206,15 @@ void Writer::endSprite()
 }
 
 
-
-void Writer::placeShape( sal_uInt16 nID, sal_uInt16 nDepth, sal_Int32 x, sal_Int32 y, sal_uInt16 nClip, const char* pName )
+void Writer::placeShape( sal_uInt16 nID, sal_uInt16 nDepth, sal_Int32 x, sal_Int32 y )
 {
     startTag( TAG_PLACEOBJECT2 );
 
     BitStream aBits;
 
-    aBits.writeUB( sal_uInt32(nClip != 0), 1 ); // Has Clip Actions?
+    aBits.writeUB( sal_uInt32(0), 1 ); // Has Clip Actions?
     aBits.writeUB( 0, 1 );              // reserved
-    aBits.writeUB( sal_uInt32(pName != nullptr), 1 ); // has a name
+    aBits.writeUB( sal_uInt32(0), 1 );  // has a name
     aBits.writeUB( 0, 1 );              // no ratio
     aBits.writeUB( 0, 1 );              // no color transform
     aBits.writeUB( 1, 1 );              // has a matrix
@@ -235,19 +227,12 @@ void Writer::placeShape( sal_uInt16 nID, sal_uInt16 nDepth, sal_Int32 x, sal_Int
 
     // #i73264#
     const basegfx::B2DHomMatrix aMatrix(basegfx::tools::createTranslateB2DHomMatrix(
-        _Int16(static_cast<long>(map100thmm(x)*mnDocXScale)),
-        _Int16(static_cast<long>(map100thmm(y)*mnDocYScale))));
+        Int16_(static_cast<long>(map100thmm(x)*mnDocXScale)),
+        Int16_(static_cast<long>(map100thmm(y)*mnDocYScale))));
     mpTag->addMatrix( aMatrix );        // transformation matrix
-
-    if( pName )
-        mpTag->addString( pName );
-
-    if( nClip != 0 )
-        mpTag->addUI16( nClip );
 
     endTag();
 }
-
 
 
 void Writer::removeShape( sal_uInt16 nDepth )
@@ -258,14 +243,12 @@ void Writer::removeShape( sal_uInt16 nDepth )
 }
 
 
-
 void Writer::startTag( sal_uInt8 nTagId )
 {
     DBG_ASSERT( mpTag == nullptr, "Last tag was not ended");
 
     mpTag = new Tag( nTagId );
 }
-
 
 
 void Writer::endTag()
@@ -286,7 +269,6 @@ void Writer::endTag()
 }
 
 
-
 void Writer::showFrame()
 {
     startTag( TAG_SHOWFRAME );
@@ -297,8 +279,7 @@ void Writer::showFrame()
 }
 
 
-
-sal_uInt16 Writer::defineShape( const GDIMetaFile& rMtf, sal_Int16 x, sal_Int16 y )
+sal_uInt16 Writer::defineShape( const GDIMetaFile& rMtf )
 {
     mpVDev->SetMapMode( rMtf.GetPrefMapMode() );
     Impl_writeActions( rMtf );
@@ -317,7 +298,7 @@ sal_uInt16 Writer::defineShape( const GDIMetaFile& rMtf, sal_Int16 x, sal_Int16 
             sal_uInt16 iDepth = 1;
             for(; aIter != aEnd; ++aIter)
             {
-                placeShape( *aIter, iDepth++, x, y );
+                placeShape( *aIter, iDepth++, 0, 0 );
             }
 
             endSprite();
@@ -330,13 +311,11 @@ sal_uInt16 Writer::defineShape( const GDIMetaFile& rMtf, sal_Int16 x, sal_Int16 
 }
 
 
-
 sal_uInt16 Writer::defineShape( const tools::Polygon& rPoly, const FillStyle& rFillStyle )
 {
     const tools::PolyPolygon aPolyPoly( rPoly );
     return defineShape( aPolyPoly, rFillStyle );
 }
-
 
 
 sal_uInt16 Writer::defineShape( const tools::PolyPolygon& rPolyPoly, const FillStyle& rFillStyle )
@@ -380,7 +359,6 @@ sal_uInt16 Writer::defineShape( const tools::PolyPolygon& rPolyPoly, const FillS
 
     return nShapeId;
 }
-
 
 
 sal_uInt16 Writer::defineShape( const tools::PolyPolygon& rPolyPoly, sal_uInt16 nLineWidth, const Color& rLineColor )
@@ -427,8 +405,6 @@ sal_uInt16 Writer::defineShape( const tools::PolyPolygon& rPolyPoly, sal_uInt16 
 }
 
 
-
-
 void Writer::stop()
 {
     startTag( TAG_DOACTION );
@@ -438,15 +414,13 @@ void Writer::stop()
 }
 
 
-
 void Writer::waitOnClick( sal_uInt16 nDepth )
 {
-    placeShape( _uInt16( mnPageButtonId ), nDepth, 0, 0 );
+    placeShape( uInt16_( mnPageButtonId ), nDepth, 0, 0 );
     stop();
     showFrame();
     removeShape( nDepth );
 }
-
 
 
 /** inserts a doaction tag with an ActionGotoFrame */

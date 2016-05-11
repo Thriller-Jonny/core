@@ -106,16 +106,12 @@ public:
 
 class IFrameWindow_Impl : public vcl::Window
 {
-    uno::Reference < frame::XFrame2 > mxFrame;
-
 public:
-    IFrameWindow_Impl( vcl::Window *pParent,
-                       bool bHasBorder,
-                       WinBits nWinBits = 0 );
+    IFrameWindow_Impl( vcl::Window *pParent, bool bHasBorder );
 };
 
-IFrameWindow_Impl::IFrameWindow_Impl( vcl::Window *pParent, bool bHasBorder, WinBits nWinBits )
-    : Window( pParent, nWinBits | WB_CLIPCHILDREN | WB_NODIALOGCONTROL | WB_DOCKBORDER )
+IFrameWindow_Impl::IFrameWindow_Impl( vcl::Window *pParent, bool bHasBorder )
+    : Window( pParent, WB_CLIPCHILDREN | WB_NODIALOGCONTROL | WB_DOCKBORDER )
 {
     if ( !bHasBorder )
         SetBorderStyle( WindowBorderStyle::NOBORDER );
@@ -194,7 +190,7 @@ throw( uno::RuntimeException, std::exception )
             mxFrame->setCreator( xFramesSupplier );
 
         util::URL aTargetURL;
-        aTargetURL.Complete = OUString( maFrmDescr.GetURL().GetMainURL( INetURLObject::NO_DECODE ) );
+        aTargetURL.Complete = maFrmDescr.GetURL().GetMainURL( INetURLObject::NO_DECODE );
         uno::Reference < util::XURLTransformer > xTrans( util::URLTransformer::create( mxContext ) );
         xTrans->parseStrict( aTargetURL );
 
@@ -207,10 +203,10 @@ throw( uno::RuntimeException, std::exception )
         if ( xDisp.is() )
             xDisp->dispatch( aTargetURL, aProps );
 
-        return sal_True;
+        return true;
     }
 
-    return sal_False;
+    return false;
 }
 
 void SAL_CALL IFrameObject::cancel() throw( css::uno::RuntimeException, std::exception )
@@ -219,7 +215,7 @@ void SAL_CALL IFrameObject::cancel() throw( css::uno::RuntimeException, std::exc
     {
         uno::Reference < util::XCloseable > xClose( mxFrame, uno::UNO_QUERY );
         if ( xClose.is() )
-            xClose->close( sal_True );
+            xClose->close( true );
         mxFrame = nullptr;
     }
     catch (const uno::Exception&)
@@ -383,6 +379,7 @@ uno::Any SAL_CALL IFrameObject::getPropertyValue(const OUString& aPropertyName)
     {
         aAny <<= (sal_Int32 ) maFrmDescr.GetMargin().Height();
     }
+    break;
     default: ;
     }
     return aAny;
@@ -407,7 +404,7 @@ void SAL_CALL IFrameObject::removeVetoableChangeListener(const OUString&, const 
 ::sal_Int16 SAL_CALL IFrameObject::execute() throw (css::uno::RuntimeException, std::exception)
 {
     SfxAbstractDialogFactory* pFact = SfxAbstractDialogFactory::Create();
-    VclAbstractDialog* pDlg = pFact->CreateEditObjectDialog( nullptr, ".uno:InsertObjectFloatingFrame", mxObj );
+    VclAbstractDialog* pDlg = pFact->CreateEditObjectDialog( ".uno:InsertObjectFloatingFrame", mxObj );
     if ( pDlg )
         pDlg->Execute();
     return 0;

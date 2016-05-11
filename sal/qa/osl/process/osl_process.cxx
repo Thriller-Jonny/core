@@ -43,7 +43,7 @@
 #define RUNNING_ON_VALGRIND false
 #endif
 
-#if ( defined WNT )                     // Windows
+#if defined(_WIN32)                     // Windows
 #   include <windows.h>
 #   include <tchar.h>
 #else
@@ -66,7 +66,7 @@
 # endif
 #endif
 
-#if defined(WNT)
+#if defined(_WIN32)
     const rtl::OUString EXECUTABLE_NAME ("osl_process_child.exe");
 #else
     const rtl::OUString EXECUTABLE_NAME ("osl_process_child");
@@ -154,7 +154,7 @@ namespace
     }
 }
 
-#ifdef WNT
+#ifdef _WIN32
     void read_parent_environment(string_container_t* env_container)
     {
         LPTSTR env = reinterpret_cast<LPTSTR>(GetEnvironmentStrings());
@@ -276,10 +276,8 @@ public:
         string_container_t parent_env;
         read_parent_environment(&parent_env);
 
-#if OSL_DEBUG_LEVEL > 1
         for (string_container_t::const_iterator iter = parent_env.begin(), end = parent_env.end(); iter != end; ++iter)
-            std::cerr << "initially parent env: " << *iter << std::endl;
-#endif
+            std::cout << "initially parent env: " << *iter << "\n";
 
         //remove the environment variables that we have changed
         //in the child environment from the read parent environment
@@ -287,20 +285,16 @@ public:
             std::remove_if(parent_env.begin(), parent_env.end(), exclude(different_env_vars)),
             parent_env.end());
 
-#if OSL_DEBUG_LEVEL > 1
         for (string_container_t::const_iterator iter = parent_env.begin(), end = parent_env.end(); iter != end; ++iter)
-            std::cerr << "stripped parent env: " << *iter << std::endl;
-#endif
+            std::cout << "stripped parent env: " << *iter << "\n";
 
         //read the child environment and exclude the variables that
         //are different
         string_container_t child_env;
         read_child_environment(&child_env);
 
-#if OSL_DEBUG_LEVEL > 1
         for (string_container_t::const_iterator iter = child_env.begin(), end = child_env.end(); iter != end; ++iter)
-            std::cerr << "initial child env: " << *iter << std::endl;
-#endif
+            std::cout << "initial child env: " << *iter << "\n";
         //partition the child environment into the variables that
         //are different to the parent environment (they come first)
         //and the variables that should be equal between parent
@@ -311,23 +305,17 @@ public:
         string_container_t different_child_env_vars(child_env.begin(), iter_logical_end);
         child_env.erase(child_env.begin(), iter_logical_end);
 
-#if OSL_DEBUG_LEVEL > 1
         for (string_container_t::const_iterator iter = child_env.begin(), end = child_env.end(); iter != end; ++iter)
-            std::cerr << "stripped child env: " << *iter << std::endl;
-#endif
+            std::cout << "stripped child env: " << *iter << "\n";
 
         bool common_env_size_equals    = (parent_env.size() == child_env.size());
         bool common_env_content_equals = std::equal(child_env.begin(), child_env.end(), parent_env.begin());
 
-#if OSL_DEBUG_LEVEL > 1
         for (string_container_t::const_iterator iter = different_env_vars.begin(), end = different_env_vars.end(); iter != end; ++iter)
-            std::cerr << "different should be: " << *iter << std::endl;
-#endif
+            std::cout << "different should be: " << *iter << "\n";
 
-#if OSL_DEBUG_LEVEL > 1
         for (string_container_t::const_iterator iter = different_child_env_vars.begin(), end = different_child_env_vars.end(); iter != end; ++iter)
-            std::cerr << "different are: " << *iter << std::endl;
-#endif
+            std::cout << "different are: " << *iter << "\n";
 
         bool different_env_size_equals    = (different_child_env_vars.size() == different_env_vars.size());
         bool different_env_content_equals =
@@ -435,7 +423,7 @@ public:
     void osl_execProc_test_batch()
     {
         oslProcess process;
-#if defined(WNT)
+#if defined(_WIN32)
         rtl::OUString suBatch = suCWD + "/batch.bat";
 #else
         rtl::OUString suBatch = suCWD + "/batch.sh";
@@ -470,7 +458,7 @@ public:
 
     CPPUNIT_TEST_SUITE(Test_osl_executeProcess);
     //TODO: Repair these (at least under Windows)
-#if !defined(WNT)
+#if !defined(_WIN32)
     CPPUNIT_TEST(osl_execProc_parent_equals_child_environment);
     CPPUNIT_TEST(osl_execProc_merged_child_environment);
 #endif

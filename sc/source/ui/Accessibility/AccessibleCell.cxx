@@ -49,7 +49,7 @@
 #include <vcl/svapp.hxx>
 
 #include "AccessibleSpreadsheet.hxx"
-
+#include <o3tl/make_unique.hxx>
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::accessibility;
 
@@ -398,9 +398,7 @@ ScDocument* ScAccessibleCell::GetDocument(ScTabViewShell* pViewShell)
     {
         return ::std::unique_ptr< SvxEditSource >();
     }
-    ::std::unique_ptr < ScAccessibleTextData > pAccessibleCellTextData
-        ( new ScAccessibleCellTextData( pViewShell, aCell, eSplitPos, this ) );
-    ::std::unique_ptr< SvxEditSource > pEditSource (new ScAccessibilityEditSource(std::move(pAccessibleCellTextData)));
+    ::std::unique_ptr< SvxEditSource > pEditSource (new ScAccessibilityEditSource(o3tl::make_unique<ScAccessibleCellTextData>(pViewShell, aCell, eSplitPos, this)));
 
     return pEditSource;
 }
@@ -433,16 +431,18 @@ void ScAccessibleCell::FillDependends(utl::AccessibleRelationSetHelper* pRelatio
 
 void ScAccessibleCell::FillPrecedents(utl::AccessibleRelationSetHelper* pRelationSet)
 {
-    if (mpDoc && mpDoc->GetCellType(maCellAddress) == CELLTYPE_FORMULA)
+    if (mpDoc)
     {
-        ScFormulaCell* pCell = mpDoc->GetFormulaCell(maCellAddress);
-        if (!pCell)
-            return;
-        ScDetectiveRefIter aIter(pCell);
-        ScRange aRef;
-        while ( aIter.GetNextRef( aRef ) )
+        ScRefCellValue aCell(*mpDoc, maCellAddress);
+        if (aCell.meType == CELLTYPE_FORMULA)
         {
-            AddRelation( aRef, AccessibleRelationType::CONTROLLED_BY, pRelationSet);
+            ScFormulaCell* pCell = aCell.mpFormula;
+            ScDetectiveRefIter aIter(pCell);
+            ScRange aRef;
+            while ( aIter.GetNextRef( aRef ) )
+            {
+                AddRelation( aRef, AccessibleRelationType::CONTROLLED_BY, pRelationSet);
+            }
         }
     }
 }

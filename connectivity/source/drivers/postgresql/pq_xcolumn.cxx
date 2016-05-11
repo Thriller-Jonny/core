@@ -38,11 +38,8 @@
 
 #include "pq_xcolumn.hxx"
 
-using com::sun::star::uno::Any;
 using com::sun::star::uno::Reference;
 using com::sun::star::uno::RuntimeException;
-using com::sun::star::uno::Type;
-using com::sun::star::uno::Sequence;
 
 using com::sun::star::beans::XPropertySet;
 
@@ -89,9 +86,6 @@ Reference< XPropertySet > ColumnDescriptor::createDataDescriptor(  ) throw (Runt
 
     return Reference< XPropertySet > ( pColumn );
 }
-
-
-
 
 
 }

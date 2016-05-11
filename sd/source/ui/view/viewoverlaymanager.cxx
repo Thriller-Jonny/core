@@ -139,14 +139,13 @@ public:
 
     int getHighlightId() const { return mnHighlightId; }
 
-    void HideTip();
+    static void HideTip();
 
 private:
     rtl::Reference< ChangePlaceholderTag > mxTag;
 
     int mnHighlightId;
     Size maImageSize;
-    sal_uLong mnTip;
 };
 
 ImageButtonHdl::ImageButtonHdl( const SmartTagReference& xTag /*, sal_uInt16 nSID, const Image& rImage, const Image& rImageMO*/, const Point& rPnt )
@@ -154,7 +153,6 @@ ImageButtonHdl::ImageButtonHdl( const SmartTagReference& xTag /*, sal_uInt16 nSI
 , mxTag( dynamic_cast< ChangePlaceholderTag* >( xTag.get() ) )
 , mnHighlightId( -1 )
 , maImageSize( 42, 42 )
-, mnTip( 0 )
 {
 }
 
@@ -165,11 +163,7 @@ ImageButtonHdl::~ImageButtonHdl()
 
 void ImageButtonHdl::HideTip()
 {
-    if( mnTip )
-    {
-        Help::HideTip( mnTip );
-        mnTip = 0;
-    }
+    Help::HideBalloonAndQuickHelp();
 }
 
 void ImageButtonHdl::onMouseEnter(const MouseEvent& rMEvt)
@@ -201,7 +195,7 @@ void ImageButtonHdl::onMouseEnter(const MouseEvent& rMEvt)
 
                 OUString aHelpText( aResId );
                 Rectangle aScreenRect( pDev->LogicToPixel( GetPos() ), maImageSize );
-                mnTip = Help::ShowTip( static_cast< vcl::Window* >( pHdlList->GetView()->GetFirstOutputDevice() ), aScreenRect, aHelpText ) ;
+                Help::ShowQuickHelp(static_cast< vcl::Window* >( pHdlList->GetView()->GetFirstOutputDevice() ), aScreenRect, aHelpText);
             }
             Touch();
         }

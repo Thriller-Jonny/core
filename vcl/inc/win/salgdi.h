@@ -23,10 +23,12 @@
 #include "sallayout.hxx"
 #include "salgeom.hxx"
 #include "salgdi.hxx"
-#include "outfont.hxx"
+#include "fontinstance.hxx"
+#include "fontattributes.hxx"
 #include "PhysicalFontFace.hxx"
 #include "impfont.hxx"
 #include <vcl/fontcapabilities.hxx>
+#include <vcl/fontcharmap.hxx>
 
 #include <memory>
 #include <unordered_set>
@@ -38,12 +40,13 @@
 #endif
 
 class FontSelectPattern;
-class ImplWinFontEntry;
+class WinFontInstance;
 class ImplFontAttrCache;
 class OpenGLTexture;
 class PhysicalFontCollection;
 class SalGraphicsImpl;
 class WinOpenGLSalGraphicsImpl;
+class ImplFontMetricData;
 
 #define RGB_TO_PALRGB(nRGB)         ((nRGB)|0x02000000)
 #define PALRGB_TO_RGB(nPalRGB)      ((nPalRGB)&0x00ffffff)
@@ -69,16 +72,16 @@ private:
 #endif
 
 // win32 specific physically available font face
-class ImplWinFontData : public PhysicalFontFace
+class WinFontFace : public PhysicalFontFace
 {
 public:
-    explicit                ImplWinFontData( const ImplDevFontAttributes&,
+    explicit                WinFontFace( const FontAttributes&,
                                 int nFontHeight, BYTE eWinCharSet,
                                 BYTE nPitchAndFamily  );
-    virtual                 ~ImplWinFontData();
+    virtual                 ~WinFontFace();
 
-    virtual PhysicalFontFace*   Clone() const override;
-    virtual ImplFontEntry*  CreateFontInstance( FontSelectPattern& ) const override;
+    virtual PhysicalFontFace* Clone() const override;
+    virtual LogicalFontInstance* CreateFontInstance( FontSelectPattern& ) const override;
     virtual sal_IntPtr      GetFontId() const override;
     void                    SetFontId( sal_IntPtr nId ) { mnId = nId; }
     void                    UpdateFromHDC( HDC ) const;
@@ -87,11 +90,8 @@ public:
 
     BYTE                    GetCharSet() const          { return meWinCharSet; }
     BYTE                    GetPitchAndFamily() const   { return mnPitchAndFamily; }
-    bool                    SupportsKorean() const      { return mbHasKoreanRange; }
     bool                    SupportsCJK() const         { return mbHasCJKSupport; }
     bool                    SupportsArabic() const      { return mbHasArabicSupport; }
-    bool                    AliasSymbolsHigh() const    { return mbAliasSymbolsHigh; }
-    bool                    AliasSymbolsLow() const     { return mbAliasSymbolsLow; }
 #if ENABLE_GRAPHITE
     bool                    SupportsGraphite() const    { return mbHasGraphiteSupport; }
     const gr_face*          GraphiteFace() const;
@@ -110,7 +110,6 @@ private:
     sal_IntPtr              mnId;
 
     // some members that are initalized lazily when the font gets selected into a HDC
-    mutable bool                    mbHasKoreanRange;
     mutable bool                    mbHasCJKSupport;
 #if ENABLE_GRAPHITE
     mutable GrFontData*             mpGraphiteData;
@@ -118,7 +117,7 @@ private:
 #endif
     mutable bool                    mbHasArabicSupport;
     mutable bool                    mbFontCapabilitiesRead;
-    mutable FontCharMapPtr          mpUnicodeMap;
+    mutable FontCharMapPtr          mxUnicodeMap;
     mutable const Ucs2SIntMap*      mpEncodingVector;
     mutable vcl::FontCapabilities   maFontCapabilities;
 
@@ -173,11 +172,16 @@ public:
 
     SalTwoRect getTwoRect() { return maRects; }
 
+    Size getBitmapSize() { return Size(maRects.mnSrcWidth, maRects.mnSrcHeight); }
+
     /// Reset the DC with the defined color.
     void fill(sal_uInt32 color);
 
     /// Obtain the texture; the caller must delete it after use.
     OpenGLTexture* getTexture();
+
+    /// Copy bitmap data to the texture. Texutre must be initialized and the correct size to hold the bitmap.
+    bool copyToTexture(OpenGLTexture& aTexture);
 };
 
 class WinSalGraphics : public SalGraphics
@@ -187,6 +191,7 @@ class WinSalGraphics : public SalGraphics
     friend class ScopedFont;
     friend class OpenGLCompatibleDC;
     friend class WinLayout;
+    friend class SimpleWinLayout;
     friend class UniscribeLayout;
 
 protected:
@@ -201,8 +206,8 @@ private:
     HWND                    mhWnd;              // Window-Handle, when Window-Graphics
 
     HFONT                   mhFonts[ MAX_FALLBACK ];        // Font + Fallbacks
-    const ImplWinFontData*  mpWinFontData[ MAX_FALLBACK ];  // pointer to the most recent font face
-    ImplWinFontEntry*       mpWinFontEntry[ MAX_FALLBACK ]; // pointer to the most recent font instance
+    const WinFontFace*  mpWinFontData[ MAX_FALLBACK ];  // pointer to the most recent font face
+    WinFontInstance*       mpWinFontEntry[ MAX_FALLBACK ]; // pointer to the most recent font instance
     float                   mfFontScale[ MAX_FALLBACK ];        // allows metrics emulation of huge font sizes
     float                   mfCurrentFontScale;
     HRGN                    mhRegion;           // vcl::Region Handle
@@ -214,7 +219,12 @@ private:
     RGNDATA*                mpClipRgnData;      // ClipRegion-Data
     RGNDATA*                mpStdClipRgnData;   // Cache Standard-ClipRegion-Data
     ImplFontAttrCache*      mpFontAttrCache;    // Cache font attributes from files in so/share/fonts
+    bool                    mbFontKernInit;     // FALSE: FontKerns must be queried
+    KERNINGPAIR*            mpFontKernPairs;    // Kerning Pairs of the current Font
+    sal_uIntPtr             mnFontKernPairCount;// Number of Kerning Pairs of the current Font
     int                     mnPenWidth;         // Linienbreite
+
+    LogicalFontInstance* GetWinFontEntry(int nFallbackLevel);
 
 public:
     HDC getHDC() const { return mhLocalDC; }
@@ -271,7 +281,8 @@ protected:
         double fTransparency,
         const basegfx::B2DVector& rLineWidth,
         basegfx::B2DLineJoin,
-        css::drawing::LineCap) override;
+        css::drawing::LineCap,
+        double fMiterMinimumAngle) override;
     virtual bool        drawPolyLineBezier( sal_uInt32 nPoints, const SalPoint* pPtAry, const sal_uInt8* pFlgAry ) override;
     virtual bool        drawPolygonBezier( sal_uInt32 nPoints, const SalPoint* pPtAry, const sal_uInt8* pFlgAry ) override;
     virtual bool        drawPolyPolygonBezier( sal_uInt32 nPoly, const sal_uInt32* pPoints, const SalPoint* const* pPtAry, const BYTE* const* pFlgAry ) override;
@@ -330,6 +341,12 @@ protected:
                            const SalBitmap* pAlphaBitmap) override;
     virtual bool       drawAlphaRect( long nX, long nY, long nWidth, long nHeight, sal_uInt8 nTransparency ) override;
 
+private:
+    // local helpers
+
+    // get kernign pairs of the current font
+    sal_uLong               GetKernPairs();
+
 public:
     // public SalGraphics methods, the interface to the independent vcl part
 
@@ -363,7 +380,7 @@ public:
     // set the font
     virtual sal_uInt16      SetFont( FontSelectPattern*, int nFallbackLevel ) override;
     // get the current font's metrics
-    virtual void            GetFontMetric( ImplFontMetricData*, int nFallbackLevel ) override;
+    virtual void            GetFontMetric( ImplFontMetricDataPtr&, int nFallbackLevel ) override;
     // get the repertoire of the current font
     virtual const FontCharMapPtr GetFontCharMap() const override;
     // get the layout capabilities of the current font
@@ -436,8 +453,6 @@ public:
 
     virtual SystemGraphicsData GetGraphicsData() const override;
 
-    virtual OpenGLContext     *BeginPaint() override;
-
     /// Update settings based on the platform values
     static void updateSettingsNative( AllSettings& rSettings );
 };
@@ -451,7 +466,7 @@ void    ImplGetLogFontFromFontSelect( HDC, const FontSelectPattern*,
 #define MAX_64KSALPOINTS    ((((sal_uInt16)0xFFFF)-8)/sizeof(POINTS))
 
 // #102411# Win's GCP mishandles kerning => we need to do it ourselves
-// kerning pairs is sorted by
+// SalGraphicsData::mpFontKernPairs is sorted by
 inline bool ImplCmpKernData( const KERNINGPAIR& a, const KERNINGPAIR& b )
 {
     if( a.wFirst < b.wFirst )
@@ -462,9 +477,9 @@ inline bool ImplCmpKernData( const KERNINGPAIR& a, const KERNINGPAIR& b )
 }
 
 // called extremely often from just one spot => inline
-inline bool ImplWinFontData::HasChar( sal_uInt32 cChar ) const
+inline bool WinFontFace::HasChar( sal_uInt32 cChar ) const
 {
-    if( mpUnicodeMap->HasChar( cChar ) )
+    if( mxUnicodeMap->HasChar( cChar ) )
         return true;
     // second chance to allow symbol aliasing
     if( mbAliasSymbolsLow && ((cChar-0xF000) <= 0xFF) )
@@ -473,7 +488,7 @@ inline bool ImplWinFontData::HasChar( sal_uInt32 cChar ) const
         cChar += 0xF000;
     else
         return false;
-    return mpUnicodeMap->HasChar( cChar );
+    return mxUnicodeMap->HasChar( cChar );
 }
 
 #endif // INCLUDED_VCL_INC_WIN_SALGDI_H

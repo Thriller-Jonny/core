@@ -242,7 +242,7 @@ struct StaticDiagramInfoHelper_Initializer
 private:
     static Sequence< Property > lcl_GetPropertySequence()
     {
-        ::std::vector< ::com::sun::star::beans::Property > aProperties;
+        ::std::vector< css::beans::Property > aProperties;
         lcl_AddPropertiesToVector( aProperties );
         ::chart::SceneProperties::AddPropertiesToVector( aProperties );
         ::chart::UserDefinedProperties::AddPropertiesToVector( aProperties );
@@ -287,10 +287,9 @@ lcl_tCooSysMapping lcl_CloneCoordinateSystems(
          aIt != rSource.end(); ++aIt )
     {
         lcl_tCooSysRef xClone;
-        ::com::sun::star::uno::Reference< ::com::sun::star::util::XCloneable >
-              xCloneable( *aIt, ::com::sun::star::uno::UNO_QUERY );
+        css::uno::Reference< css::util::XCloneable > xCloneable( *aIt, css::uno::UNO_QUERY );
         if( xCloneable.is())
-            xClone.set( xCloneable->createClone(), ::com::sun::star::uno::UNO_QUERY );
+            xClone.set( xCloneable->createClone(), css::uno::UNO_QUERY );
 
         if( xClone.is())
         {
@@ -334,10 +333,10 @@ Diagram::Diagram( const Diagram & rOther ) :
         lcl_CloneCoordinateSystems( rOther.m_aCoordSystems, m_aCoordSystems );
     ModifyListenerHelper::addListenerToAllElements( m_aCoordSystems, m_xModifyEventForwarder );
 
-    m_xWall.set( CloneHelper::CreateRefClone< Reference< beans::XPropertySet > >()( rOther.m_xWall ));
-    m_xFloor.set( CloneHelper::CreateRefClone< Reference< beans::XPropertySet > >()( rOther.m_xFloor ));
-    m_xTitle.set( CloneHelper::CreateRefClone< Reference< chart2::XTitle > >()( rOther.m_xTitle ));
-    m_xLegend.set( CloneHelper::CreateRefClone< Reference< chart2::XLegend > >()( rOther.m_xLegend ));
+    m_xWall.set( CloneHelper::CreateRefClone< beans::XPropertySet >()( rOther.m_xWall ));
+    m_xFloor.set( CloneHelper::CreateRefClone< beans::XPropertySet >()( rOther.m_xFloor ));
+    m_xTitle.set( CloneHelper::CreateRefClone< chart2::XTitle >()( rOther.m_xTitle ));
+    m_xLegend.set( CloneHelper::CreateRefClone< chart2::XLegend >()( rOther.m_xLegend ));
 
     ModifyListenerHelper::addListener( m_xWall, m_xModifyEventForwarder );
     ModifyListenerHelper::addListener( m_xFloor, m_xModifyEventForwarder );

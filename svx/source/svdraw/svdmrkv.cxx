@@ -52,6 +52,7 @@
 
 #include <editeng/editdata.hxx>
 #include <LibreOfficeKit/LibreOfficeKitEnums.h>
+#include <comphelper/lok.hxx>
 
 using namespace com::sun::star;
 
@@ -120,9 +121,7 @@ void ImplMarkingOverlay::SetSecondPosition(const basegfx::B2DPoint& rNewPosition
 }
 
 
-
 // MarkView
-
 
 
 void SdrMarkView::ImpClearVars()
@@ -210,7 +209,6 @@ void SdrMarkView::ModelHasChanged()
 }
 
 
-
 bool SdrMarkView::IsAction() const
 {
     return SdrSnapView::IsAction() || IsMarkObj() || IsMarkPoints() || IsMarkGluePoints();
@@ -281,7 +279,6 @@ void SdrMarkView::TakeActionRect(Rectangle& rRect) const
 }
 
 
-
 void SdrMarkView::ClearPageView()
 {
     UnmarkAllObj();
@@ -310,7 +307,6 @@ void SdrMarkView::HideSdrPage()
         AdjustMarkHdl();
     }
 }
-
 
 
 bool SdrMarkView::BegMarkObj(const Point& rPnt, bool bUnmark)
@@ -369,7 +365,6 @@ void SdrMarkView::BrkMarkObj()
         mpMarkObjOverlay = nullptr;
     }
 }
-
 
 
 bool SdrMarkView::BegMarkPoints(const Point& rPnt, bool bUnmark)
@@ -437,7 +432,6 @@ void SdrMarkView::BrkMarkPoints()
 }
 
 
-
 bool SdrMarkView::BegMarkGluePoints(const Point& rPnt, bool bUnmark)
 {
     if(HasMarkableGluePoints())
@@ -470,10 +464,8 @@ void SdrMarkView::MovMarkGluePoints(const Point& rPnt)
     }
 }
 
-bool SdrMarkView::EndMarkGluePoints()
+void SdrMarkView::EndMarkGluePoints()
 {
-    bool bRetval(false);
-
     if(IsMarkGluePoints())
     {
         if(maDragStat.IsMinMoved())
@@ -481,15 +473,11 @@ bool SdrMarkView::EndMarkGluePoints()
             Rectangle aRect(maDragStat.GetStart(),maDragStat.GetNow());
             aRect.Justify();
             MarkGluePoints(&aRect, mpMarkGluePointsOverlay->IsUnmarking());
-
-            bRetval = true;
         }
 
         // cleanup
         BrkMarkGluePoints();
     }
-
-    return bRetval;
 }
 
 void SdrMarkView::BrkMarkGluePoints()
@@ -670,7 +658,7 @@ void SdrMarkView::SetMarkHandles()
         Point aGridOff = GetGridOffset();
 
         // There can be multiple mark views, but we're only interested in the one that has a window associated.
-        const bool bTiledRendering = GetModel()->isTiledRendering() && GetFirstOutputDevice() && GetFirstOutputDevice()->GetOutDevType() == OUTDEV_WINDOW;
+        const bool bTiledRendering = comphelper::LibreOfficeKit::isActive() && GetFirstOutputDevice() && GetFirstOutputDevice()->GetOutDevType() == OUTDEV_WINDOW;
 
         // check if text edit or ole is active and handles need to be suppressed. This may be the case
         // when a single object is selected
@@ -1323,7 +1311,6 @@ void SdrMarkView::SetEditMode(SdrViewEditMode eMode)
 }
 
 
-
 bool SdrMarkView::IsObjMarkable(SdrObject* pObj, SdrPageView* pPV) const
 {
     if (pObj)
@@ -1351,15 +1338,13 @@ bool SdrMarkView::IsMarkedObjHit(const Point& rPnt, short nTol) const
     return bRet;
 }
 
-SdrHdl* SdrMarkView::PickHandle(const Point& rPnt, SdrSearchOptions nOptions, SdrHdl* pHdl0) const
+SdrHdl* SdrMarkView::PickHandle(const Point& rPnt) const
 {
     if (mbSomeObjChgdFlag) { // recalculate handles, if necessary
         FlushComeBackTimer();
     }
-    bool bBack(nOptions & SdrSearchOptions::BACKWARD);
-    bool bNext(nOptions & SdrSearchOptions::NEXT);
     Point aPt(rPnt);
-    return maHdlList.IsHdlListHit(aPt,bBack,bNext,pHdl0);
+    return maHdlList.IsHdlListHit(aPt);
 }
 
 bool SdrMarkView::MarkObj(const Point& rPnt, short nTol, bool bToggle, bool bDeep)
@@ -1537,7 +1522,7 @@ bool SdrMarkView::MarkNextObj(const Point& rPnt, short nTol, bool bPrev)
     return pFndObj!=nullptr;
 }
 
-bool SdrMarkView::MarkObj(const Rectangle& rRect, bool bUnmark)
+void SdrMarkView::MarkObj(const Rectangle& rRect, bool bUnmark)
 {
     bool bFnd=false;
     Rectangle aR(rRect);
@@ -1576,7 +1561,6 @@ bool SdrMarkView::MarkObj(const Rectangle& rRect, bool bUnmark)
         MarkListHasChanged();
         AdjustMarkHdl();
     }
-    return bFnd;
 }
 
 void SdrMarkView::MarkObj(SdrObject* pObj, SdrPageView* pPV, bool bUnmark, bool bImpNoSetMarkHdl)
@@ -2026,8 +2010,7 @@ const Rectangle& SdrMarkView::GetMarkedObjRect() const
 }
 
 
-
-void SdrMarkView::ImpTakeDescriptionStr(sal_uInt16 nStrCacheID, OUString& rStr, sal_uInt16 nVal, ImpTakeDescriptionOptions nOpt) const
+void SdrMarkView::ImpTakeDescriptionStr(sal_uInt16 nStrCacheID, OUString& rStr, ImpTakeDescriptionOptions nOpt) const
 {
     rStr = ImpGetResStr(nStrCacheID);
     sal_Int32 nPos = rStr.indexOf("%1");
@@ -2048,14 +2031,12 @@ void SdrMarkView::ImpTakeDescriptionStr(sal_uInt16 nStrCacheID, OUString& rStr, 
         }
     }
 
-    rStr = rStr.replaceFirst("%2", OUString::number( nVal ));
+    rStr = rStr.replaceFirst("%2", "0");
 }
 
 
-
-bool SdrMarkView::EnterMarkedGroup()
+void SdrMarkView::EnterMarkedGroup()
 {
-    bool bRet=false;
     // We enter only the first group found (in only one PageView), because
     // PageView::EnterGroup calls an AdjustMarkHdl.
     // TODO: I'll have to prevent that via a flag.
@@ -2072,16 +2053,13 @@ bool SdrMarkView::EnterMarkedGroup()
                 SdrObject* pObj=pM->GetMarkedSdrObj();
                 if (pObj->IsGroupObject()) {
                     if (pPV->EnterGroup(pObj)) {
-                        bRet=true;
                         bEnter=true;
                     }
                 }
             }
         }
     }
-    return bRet;
 }
-
 
 
 void SdrMarkView::MarkListHasChanged()
@@ -2104,7 +2082,6 @@ void SdrMarkView::MarkListHasChanged()
     }
     ImpSetGlueVisible4(bOneEdgeMarked);
 }
-
 
 
 void SdrMarkView::SetMoveOutside(bool bOn)

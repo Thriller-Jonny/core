@@ -26,7 +26,6 @@
 #include <vcl/status.hxx>
 #include <toolkit/helper/convert.hxx>
 
-#include <boost/noncopyable.hpp>
 #include <cppuhelper/supportsservice.hxx>
 #include <toolkit/helper/vclunohelper.hxx>
 #include <com/sun/star/awt/PopupMenu.hpp>
@@ -75,10 +74,12 @@ using namespace framework;
 namespace {
 
 class LangSelectionStatusbarController:
-    public svt::StatusbarController, private boost::noncopyable
+    public svt::StatusbarController
 {
 public:
     explicit LangSelectionStatusbarController( const css::uno::Reference< css::uno::XComponentContext >& xContext );
+    LangSelectionStatusbarController(const LangSelectionStatusbarController&) = delete;
+    LangSelectionStatusbarController& operator=(const LangSelectionStatusbarController&) = delete;
 
     // XInitialization
     virtual void SAL_CALL initialize( const css::uno::Sequence< css::uno::Any >& aArguments ) throw (css::uno::Exception, css::uno::RuntimeException, std::exception) override;
@@ -158,13 +159,13 @@ throw (css::uno::RuntimeException, std::exception)
              rStr != sAsterisk &&
              !rStr.isEmpty()) // 'no language found' from language guessing
         {
-            DBG_ASSERT( MID_LANG_SEL_1 <= nItemId && nItemId <= MID_LANG_SEL_9,
-                    "nItemId outside of expected range!" );
+            SAL_WARN_IF( MID_LANG_SEL_1 > nItemId || nItemId > MID_LANG_SEL_9,
+                    "fwk.uielement", "nItemId outside of expected range!" );
             xPopupMenu->insertItem( nItemId, rStr, 0, nItemId );
             if ( rStr == m_aCurLang )
             {
                 //make a sign for the current language
-                xPopupMenu->checkItem( nItemId, sal_True );
+                xPopupMenu->checkItem( nItemId, true );
             }
             aLangMap[ nItemId ] = rStr;
             ++nItemId;
@@ -173,7 +174,7 @@ throw (css::uno::RuntimeException, std::exception)
 
     xPopupMenu->insertItem( MID_LANG_SEL_NONE,  FWK_RESSTR(STR_LANGSTATUS_NONE), 0, MID_LANG_SEL_NONE );
     if ( sNone == m_aCurLang )
-        xPopupMenu->checkItem( MID_LANG_SEL_NONE, sal_True );
+        xPopupMenu->checkItem( MID_LANG_SEL_NONE, true );
     xPopupMenu->insertItem( MID_LANG_SEL_RESET, FWK_RESSTR(STR_RESET_TO_DEFAULT_LANGUAGE), 0, MID_LANG_SEL_RESET );
     xPopupMenu->insertItem( MID_LANG_SEL_MORE,  FWK_RESSTR(STR_LANGSTATUS_MORE), 0, MID_LANG_SEL_MORE );
 
@@ -186,8 +187,8 @@ throw (css::uno::RuntimeException, std::exception)
             rStr != sAsterisk &&
             !rStr.isEmpty()) // 'no language found' from language guessing
         {
-            DBG_ASSERT( MID_LANG_PARA_1 <= nItemId && nItemId <= MID_LANG_PARA_9,
-                    "nItemId outside of expected range!" );
+            SAL_WARN_IF( MID_LANG_PARA_1 > nItemId || nItemId > MID_LANG_PARA_9,
+                    "fwk.uielement", "nItemId outside of expected range!" );
             subPopupMenu->insertItem( nItemId, rStr, 0, nItemId );
             aLangMap[nItemId] = rStr;
             ++nItemId;

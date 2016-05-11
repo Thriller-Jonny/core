@@ -50,8 +50,7 @@ using namespace ::ooo::vba;
 using namespace ::ooo::vba::excel::XlWindowState;
 
 typedef  std::unordered_map< OUString,
-SCTAB, OUStringHash,
-::std::equal_to< OUString > > NameIndexHash;
+SCTAB, OUStringHash > NameIndexHash;
 
 typedef std::vector< uno::Reference< sheet::XSpreadsheet > > Sheets;
 
@@ -203,7 +202,7 @@ ScVbaWindow::init()
         still zero. The implementation of ActivePane() uses a UNO reference of
         this (to set this window as parent of the pane object). This requires
         the own refcount to be non-zero, otherwise this instance will be
-        desctructed immediately! Guard the call to ActivePane() in try/catch to
+        destructed immediately! Guard the call to ActivePane() in try/catch to
         not miss the decrementation of the reference count on exception. */
     osl_atomic_increment( &m_refCount );
     try
@@ -741,7 +740,7 @@ ScVbaWindow::getZoom() throw (uno::RuntimeException, std::exception)
     xProps->getPropertyValue( sName ) >>= nZoomType;
     if( nZoomType == view::DocumentZoomType::PAGE_WIDTH )
     {
-        return uno::makeAny( sal_True );
+        return uno::makeAny( true );
     }
     else if( nZoomType == view::DocumentZoomType::BY_VALUE )
     {

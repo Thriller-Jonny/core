@@ -56,7 +56,6 @@ public:
 };
 
 
-
 //---------------------------- DXFVector ---------------------------------------
 
 // common 3D vector with doubles
@@ -73,7 +72,6 @@ public:
     // summation/subtraktion:
     DXFVector & operator += (const DXFVector & rV);
     DXFVector   operator +  (const DXFVector & rV) const;
-    DXFVector & operator -= (const DXFVector & rV);
     DXFVector   operator -  (const DXFVector & rV) const;
 
     // vector product
@@ -94,7 +92,6 @@ public:
 
     // equivalence or net:
     bool operator == (const DXFVector & rV) const;
-    bool operator != (const DXFVector & rV) const;
 };
 
 
@@ -171,7 +168,6 @@ private:
 //------------------------------- inlines --------------------------------------
 
 
-
 inline DXFVector::DXFVector(double fX, double fY, double fZ)
 {
     fx=fX; fy=fY; fz=fZ;
@@ -194,13 +190,6 @@ inline DXFVector & DXFVector::operator += (const DXFVector & rV)
 inline DXFVector DXFVector::operator + (const DXFVector & rV) const
 {
     return DXFVector(fx+rV.fx, fy+rV.fy, fz+rV.fz);
-}
-
-
-inline DXFVector & DXFVector::operator -= (const DXFVector & rV)
-{
-    fx-=rV.fx; fy-=rV.fy; fz-=rV.fz;
-    return *this;
 }
 
 
@@ -245,12 +234,6 @@ inline bool DXFVector::operator == (const DXFVector & rV) const
     else return false;
 }
 
-
-inline bool DXFVector::operator != (const DXFVector & rV) const
-{
-    if (fx!=rV.fx || fy!=rV.fy || fz!=rV.fz) return true;
-    else return false;
-}
 
 #endif
 

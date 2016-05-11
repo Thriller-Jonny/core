@@ -23,13 +23,13 @@
 #include "featuredispatcher.hxx"
 #include "frm_resource.hrc"
 #include "commandimageprovider.hxx"
-#include "commanddescriptionprovider.hxx"
 
 #include <com/sun/star/uno/Any.hxx>
 #include <com/sun/star/form/runtime/FormFeature.hpp>
 
 #include <sfx2/imgmgr.hxx>
 #include <vcl/fixed.hxx>
+#include <vcl/commandinfoprovider.hxx>
 
 #include <sal/macros.h>
 
@@ -45,16 +45,15 @@ namespace frm
     namespace FormFeature = ::com::sun::star::form::runtime::FormFeature;
 
 
-
     namespace
     {
-        static bool isArtificialItem( sal_Int16 _nFeatureId )
+        bool isArtificialItem( sal_Int16 _nFeatureId )
         {
             return ( _nFeatureId == LID_RECORD_LABEL )
                 || ( _nFeatureId == LID_RECORD_FILLER );
         }
 
-        static OUString getLabelString( sal_uInt16 _nResId )
+        OUString getLabelString( sal_uInt16 _nResId )
         {
             OUString sLabel( " " );
             sLabel += FRM_RES_STRING( _nResId );
@@ -132,14 +131,15 @@ namespace frm
         }
     }
 
-    NavigationToolBar::NavigationToolBar( vcl::Window* _pParent, WinBits _nStyle, const PCommandImageProvider& _pImageProvider,
-            const PCommandDescriptionProvider& _pDescriptionProvider )
+    NavigationToolBar::NavigationToolBar( vcl::Window* _pParent, WinBits _nStyle,
+                                          const PCommandImageProvider& _pImageProvider,
+                                          const OUString & sModuleId )
         :Window( _pParent, _nStyle )
         ,m_pDispatcher( nullptr )
         ,m_pImageProvider( _pImageProvider )
-        ,m_pDescriptionProvider( _pDescriptionProvider )
         ,m_eImageSize( eSmall )
         ,m_pToolbar( nullptr )
+        ,m_sModuleId( sModuleId )
     {
         implInit( );
     }
@@ -292,8 +292,8 @@ namespace frm
                 {
                     OUString sCommandURL( lcl_getCommandURL( pSupportedFeatures->nId ) );
                     m_pToolbar->SetItemCommand( pSupportedFeatures->nId, sCommandURL );
-                    if ( m_pDescriptionProvider )
-                        m_pToolbar->SetQuickHelpText( pSupportedFeatures->nId, m_pDescriptionProvider->getCommandDescription( sCommandURL ) );
+                    m_pToolbar->SetQuickHelpText( pSupportedFeatures->nId,
+                            vcl::CommandInfoProvider::Instance().GetCommandPropertyFromModule(sCommandURL, m_sModuleId) );
                 }
 
                 if ( pSupportedFeatures->bItemWindow )
@@ -705,7 +705,6 @@ namespace frm
         else
             NumericField::KeyInput( rKeyEvent );
     }
-
 
 
 }   // namespace frm

@@ -17,11 +17,9 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <boost/bind.hpp>
-
 #include "officecfg/Office/Common.hxx"
 
-#include "vcl/print.hxx"
+#include <vcl/print.hxx>
 #include <sal/macros.h>
 
 #include "osx/salinst.h"
@@ -78,12 +76,14 @@ AquaSalInfoPrinter::AquaSalInfoPrinter( const SalPrinterQueueInfo& i_rQueue ) :
     mpGraphics = new AquaSalGraphics();
 
     const int nWidth = 100, nHeight = 100;
-    maContextMemory.reset( static_cast<sal_uInt8*>( rtl_allocateMemory( nWidth * 4 * nHeight ) ),
-                           boost::bind( rtl_freeMemory, _1 ) );
+    mpContextMemory.reset(static_cast<sal_uInt8*>(rtl_allocateMemory(nWidth * 4 * nHeight)),
+                          &rtl_freeMemory);
 
-    if( maContextMemory )
+    if (mpContextMemory)
     {
-        mrContext = CGBitmapContextCreate( maContextMemory.get(), nWidth, nHeight, 8, nWidth * 4, GetSalData()->mxRGBSpace, kCGImageAlphaNoneSkipFirst );
+        mrContext = CGBitmapContextCreate(mpContextMemory.get(),
+                nWidth, nHeight, 8, nWidth * 4,
+                GetSalData()->mxRGBSpace, kCGImageAlphaNoneSkipFirst);
         if( mrContext )
             SetupPrinterGraphics( mrContext );
     }
@@ -162,7 +162,7 @@ bool AquaSalInfoPrinter::SetPrinterData( ImplJobSetup* io_pSetupData )
 {
     // FIXME: implement driver data
     if( io_pSetupData && io_pSetupData->mpDriverData )
-        return SetData( ~0, io_pSetupData );
+        return SetData( JobSetFlags::ALL, io_pSetupData );
 
     bool bSuccess = true;
 
@@ -222,17 +222,17 @@ void AquaSalInfoPrinter::setPaperSize( long i_nWidth, long i_nHeight, Orientatio
     mePageOrientation = i_eSetOrientation;
 }
 
-bool AquaSalInfoPrinter::SetData( sal_uLong i_nFlags, ImplJobSetup* io_pSetupData )
+bool AquaSalInfoPrinter::SetData( JobSetFlags i_nFlags, ImplJobSetup* io_pSetupData )
 {
     if( ! io_pSetupData || io_pSetupData->mnSystem != JOBSETUP_SYSTEM_MAC )
         return false;
 
     if( mpPrintInfo )
     {
-        if( (i_nFlags & SAL_JOBSET_ORIENTATION) != 0 )
+        if( i_nFlags & JobSetFlags::ORIENTATION )
             mePageOrientation = io_pSetupData->meOrientation;
 
-        if( (i_nFlags & SAL_JOBSET_PAPERSIZE) !=  0)
+        if( i_nFlags & JobSetFlags::PAPERSIZE )
         {
             // set paper format
             long width = 21000, height = 29700;
@@ -269,7 +269,7 @@ OUString AquaSalInfoPrinter::GetPaperBinName( const ImplJobSetup*, sal_uLong )
     return OUString();
 }
 
-sal_uLong AquaSalInfoPrinter::GetCapabilities( const ImplJobSetup*, PrinterCapType i_nType )
+sal_uInt32 AquaSalInfoPrinter::GetCapabilities( const ImplJobSetup*, PrinterCapType i_nType )
 {
     switch( i_nType )
     {
@@ -371,7 +371,7 @@ bool AquaSalInfoPrinter::StartJob( const OUString* i_pFileName,
 
     // update job data
     if( i_pSetupData )
-        SetData( ~0, i_pSetupData );
+        SetData( JobSetFlags::ALL, i_pSetupData );
 
     // do we want a progress panel ?
     bool bShowProgressPanel = true;
@@ -590,7 +590,7 @@ bool AquaSalPrinter::StartJob( const OUString* i_pFileName,
 bool AquaSalPrinter::StartJob( const OUString* /*i_pFileName*/,
                                const OUString& /*i_rJobName*/,
                                const OUString& /*i_rAppName*/,
-                               sal_uLong /*i_nCopies*/,
+                               sal_uInt32 /*i_nCopies*/,
                                bool /*i_bCollate*/,
                                bool /*i_bDirect*/,
                                ImplJobSetup* )
@@ -609,9 +609,9 @@ SalGraphics* AquaSalPrinter::StartPage( ImplJobSetup* i_pSetupData, bool i_bNewJ
     return mpInfoPrinter->StartPage( i_pSetupData, i_bNewJobData );
 }
 
-bool AquaSalPrinter::EndPage()
+void AquaSalPrinter::EndPage()
 {
-    return mpInfoPrinter->EndPage();
+    mpInfoPrinter->EndPage();
 }
 
 sal_uLong AquaSalPrinter::GetErrorCode()

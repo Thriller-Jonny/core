@@ -23,11 +23,13 @@ $(eval $(call gb_Module_add_targets,vcl,\
     CustomTarget_afm_hash \
     Library_vcl \
 	Package_opengl \
-	Package_opengl_blacklist \
+	$(if $(filter WNT,$(OS)), \
+		Package_opengl_blacklist ) \
     $(if $(filter DESKTOP,$(BUILD_TYPE)), \
         StaticLibrary_vclmain \
-		$(if $(ENABLE_HEADLESS),, \
-			Executable_ui-previewer) \
+		$(if $(ENABLE_MACOSX_SANDBOX),, \
+			$(if $(ENABLE_HEADLESS),, \
+				Executable_ui-previewer)) \
 		$(if $(filter LINUX MACOSX SOLARIS WNT %BSD,$(OS)), \
 			Executable_outdevgrind \
 			$(if $(ENABLE_HEADLESS),, \
@@ -97,8 +99,11 @@ $(eval $(call gb_Module_add_check_targets,vcl,\
 	CppunitTest_vcl_lifecycle \
 	CppunitTest_vcl_bitmap_test \
 	CppunitTest_vcl_fontcharmap \
+	CppunitTest_vcl_font \
+	CppunitTest_vcl_fontmetric \
 	CppunitTest_vcl_complextext \
 	CppunitTest_vcl_filters_test \
+	CppunitTest_vcl_mapmode \
 	CppunitTest_vcl_outdev \
 	CppunitTest_vcl_app_test \
 	CppunitTest_vcl_wmf_test \
@@ -121,6 +126,7 @@ endif
 ifeq ($(OS),WNT)
 $(eval $(call gb_Module_add_check_targets,vcl,\
 	CppunitTest_vcl_timer \
+	CppunitTest_vcl_blocklistparser_test \
 ))
 endif
 # vim: set noet sw=4 ts=4:

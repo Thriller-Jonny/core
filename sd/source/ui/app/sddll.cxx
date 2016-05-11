@@ -66,11 +66,11 @@
 #include <svx/clipboardctl.hxx>
 #include <svx/f3dchild.hxx>
 #include <svx/fillctrl.hxx>
-#include <svx/fntctl.hxx>
-#include <svx/fntszctl.hxx>
 #include <svx/fontwork.hxx>
 #include <svx/formatpaintbrushctrl.hxx>
 #include <svx/ParaLineSpacingPopup.hxx>
+#include <svx/TextCharacterSpacingPopup.hxx>
+#include <svx/TextUnderlinePopup.hxx>
 #include <svx/grafctrl.hxx>
 #include <svx/hyperdlg.hxx>
 #include <svx/imapdlg.hxx>
@@ -87,6 +87,7 @@
 #include <svx/xmlsecctrl.hxx>
 #include <svx/zoomctrl.hxx>
 #include <svx/zoomsliderctrl.hxx>
+#include <svx/tbxctl.hxx>
 #include <sfx2/docfilt.hxx>
 #include <sfx2/docfile.hxx>
 #include <sfx2/fcontnr.hxx>
@@ -217,14 +218,6 @@ void SdDLL::RegisterControllers()
     SvxModifyControl::RegisterControl( SID_DOC_MODIFIED, pMod );
     SvxZoomSliderControl::RegisterControl( SID_ATTR_ZOOMSLIDER, pMod );
 
-    // MenuControls for PopupMenu
-    SvxFontMenuControl::RegisterControl( SID_ATTR_CHAR_FONT, pMod );
-    SvxFontSizeMenuControl::RegisterControl( SID_ATTR_CHAR_FONTHEIGHT, pMod );
-
-    SfxMenuControl::RegisterControl( SID_SET_SNAPITEM, pMod );
-    SfxMenuControl::RegisterControl( SID_DELETE_SNAPITEM, pMod );
-    SfxMenuControl::RegisterControl( SID_BEZIER_CLOSE, pMod );
-
     // #UndoRedo#
     SvxUndoRedoControl::RegisterControl( SID_UNDO , pMod );
     SvxUndoRedoControl::RegisterControl( SID_REDO , pMod );
@@ -236,6 +229,8 @@ void SdDLL::RegisterControllers()
 
     SvxColorToolBoxControl::RegisterControl( SID_EXTRUSION_3D_COLOR, pMod );
     svx::ParaLineSpacingPopup::RegisterControl(SID_ATTR_PARA_LINESPACE, pMod);
+    svx::TextCharacterSpacingPopup::RegisterControl(SID_ATTR_CHAR_KERNING, pMod);
+    svx::TextUnderlinePopup::RegisterControl(SID_ATTR_CHAR_UNDERLINE, pMod);
 
     ::avmedia::MediaToolBoxControl::RegisterControl( SID_AVMEDIA_TOOLBOX, pMod );
     XmlSecStatusBarControl::RegisterControl( SID_SIGNATURE, pMod );
@@ -244,6 +239,7 @@ void SdDLL::RegisterControllers()
     SvxFrameLineStyleToolBoxControl::RegisterControl(SID_FRAME_LINESTYLE, pMod );
     SvxColorToolBoxControl::RegisterControl(SID_FRAME_LINECOLOR, pMod );
     SvxFrameToolBoxControl::RegisterControl(SID_ATTR_BORDER, pMod );
+    SvxTbxCtlDraw::RegisterControl(SID_INSERT_DRAW, pMod );
 }
 
 void SdDLL::Init()

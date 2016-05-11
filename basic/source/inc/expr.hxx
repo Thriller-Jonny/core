@@ -28,8 +28,6 @@
 class SbiExprNode;
 class SbiExpression;
 class SbiExprList;
-class SbiDimList;
-class SbiParameters;
 class SbiParser;
 class SbiCodeGen;
 class SbiSymDef;
@@ -37,7 +35,8 @@ class SbiProcDef;
 
 
 #include <vector>
-typedef ::std::vector<SbiExprList*> SbiExprListVector;
+typedef ::std::unique_ptr<SbiExprList> SbiExprListPtr;
+typedef ::std::vector<SbiExprListPtr> SbiExprListVector;
 
 struct SbVar {
     SbiExprNode*        pNext;      // next element (for structures)
@@ -105,6 +104,8 @@ class SbiExprNode {                  // operators (and operands)
     SbiToken     eTok;
     bool  bError;                   // true: error
     void  FoldConstants(SbiParser*);
+    void  FoldConstantsBinaryNode(SbiParser*);
+    void  FoldConstantsUnaryNode(SbiParser*);
     void  CollectBits();            // converting numbers to strings
     bool  IsOperand()
         { return eNodeType != SbxNODE && eNodeType != SbxTYPEOF && eNodeType != SbxNEW; }
@@ -120,7 +121,7 @@ public:
     SbiExprNode();
     SbiExprNode( double, SbxDataType );
     SbiExprNode( const OUString& );
-    SbiExprNode( const SbiSymDef&, SbxDataType, SbiExprList* = nullptr );
+    SbiExprNode( const SbiSymDef&, SbxDataType, SbiExprListPtr = nullptr );
     SbiExprNode( SbiExprNode*, SbiToken, SbiExprNode* );
     SbiExprNode( SbiExprNode*, sal_uInt16 );    // #120061 TypeOf
     SbiExprNode( sal_uInt16 );                  // new <type>
@@ -129,8 +130,12 @@ public:
     bool IsValid()                  { return !bError; }
     bool IsConstant()               // true: constant operand
         { return eNodeType == SbxSTRVAL || eNodeType == SbxNUMVAL; }
-    bool IsIntConst();
+    void ConvertToIntConstIfPossible();
     bool IsVariable();
+    bool  IsUnary()
+        { return pLeft && !pRight; }
+    bool  IsBinary()
+        { return pLeft && pRight; }
 
     SbiExprNode* GetWithParent()            { return pWithParent; }
     void SetWithParent( SbiExprNode* p )    { pWithParent = p; }
@@ -153,13 +158,10 @@ public:
 
 class SbiExpression {
     friend class SbiExprList;
-    friend class SbiParameters;
-    friend class SbiDimList;
 protected:
     OUString      aArgName;
     SbiParser*    pParser;
-    SbiExpression* pNext;            // link at parameter lists
-    SbiExprNode*   pExpr;            // expression tree
+    std::unique_ptr<SbiExprNode>   pExpr; // expression tree
     SbiExprType   eCurExpr;         // type of expression
     SbiExprMode   m_eMode;          // expression context
     bool          bBased;           // true: easy DIM-part (+BASE)
@@ -185,7 +187,7 @@ public:
     SbiExpression( SbiParser*, SbiExprType = SbSTDEXPR,
         SbiExprMode eMode = EXPRMODE_STANDARD, const KeywordSymbolInfo* pKeywordSymbolInfo = nullptr ); // parsing Ctor
     SbiExpression( SbiParser*, double, SbxDataType = SbxDOUBLE );
-    SbiExpression( SbiParser*, const SbiSymDef&, SbiExprList* = nullptr );
+    SbiExpression( SbiParser*, const SbiSymDef&, SbiExprListPtr = nullptr );
    ~SbiExpression();
     OUString& GetName()             { return aArgName;            }
     void SetBased()                 { bBased = true;              }
@@ -195,10 +197,10 @@ public:
     bool IsValid()                  { return pExpr->IsValid();    }
     bool IsVariable()               { return pExpr->IsVariable(); }
     bool IsLvalue()                 { return pExpr->IsLvalue();   }
-    bool IsIntConstant()            { return pExpr->IsIntConst(); }
+    void ConvertToIntConstIfPossible() { pExpr->ConvertToIntConstIfPossible();     }
     const OUString& GetString()     { return pExpr->GetString();  }
     SbiSymDef* GetRealVar()         { return pExpr->GetRealVar(); }
-    SbiExprNode* GetExprNode()      { return pExpr; }
+    SbiExprNode* GetExprNode()      { return pExpr.get();         }
     SbxDataType GetType()           { return pExpr->GetType();    }
     void Gen( RecursiveMode eRecMode = UNDEFINED );
 };
@@ -215,35 +217,23 @@ public:                             // numeric constant
     short GetShortValue();
 };
 
-class SbiExprList {                  // base class for parameters and dims
-protected:
-    SbiParser* pParser;
-    SbiExpression* pFirst;
-    short nExpr;
+class SbiExprList final {            // class for parameters and dims
+    std::vector<std::unique_ptr<SbiExpression>> aData;
     short nDim;
     bool  bError;
     bool  bBracket;
 public:
-    SbiExprList( SbiParser* );
-    virtual ~SbiExprList();
+    SbiExprList();
+    ~SbiExprList();
+    static SbiExprListPtr ParseParameters(SbiParser*, bool bStandaloneExpression = false, bool bPar = true);
+    static SbiExprListPtr ParseDimList( SbiParser* );
     bool  IsBracket()               { return bBracket;        }
     bool  IsValid()                 { return !bError; }
-    short GetSize()                 { return nExpr;           }
+    short GetSize()                 { return aData.size();    }
     short GetDims()                 { return nDim;            }
-    SbiExpression* Get( short );
-    void  Gen();                    // code generation
-    void addExpression( SbiExpression* pExpr );
-};
-
-class SbiParameters : public SbiExprList {
-public:
-    SbiParameters( SbiParser*, bool bStandaloneExpression = false, bool bPar = true);// parsing Ctor
-};
-
-class SbiDimList : public SbiExprList {
-    bool  bConst;                   // true: everything integer constants
-public:
-    SbiDimList( SbiParser* );         // parsing Ctor
+    SbiExpression* Get( size_t );
+    void  Gen( SbiCodeGen& rGen);                    // code generation
+    void addExpression( std::unique_ptr<SbiExpression>&& pExpr  );
 };
 
 #endif

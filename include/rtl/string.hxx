@@ -114,6 +114,23 @@ public:
         rtl_string_acquire( pData );
     }
 
+#ifndef _MSC_VER // TODO?
+#if defined LIBO_INTERNAL_ONLY
+    /**
+      Move constructor.
+
+      @param    str         a OString.
+      @since LibreOffice 5.2
+    */
+    OString( OString && str )
+    {
+        pData = str.pData;
+        str.pData = nullptr;
+        rtl_string_new( &str.pData );
+    }
+#endif
+#endif
+
     /**
       New string from OString data.
 
@@ -280,6 +297,25 @@ public:
         rtl_string_assign( &pData, str.pData );
         return *this;
     }
+
+#ifndef _MSC_VER // TODO?
+#if defined LIBO_INTERNAL_ONLY
+    /**
+      Move assign a new string.
+
+      @param    str         a OString.
+      @since LibreOffice 5.2
+    */
+    OString & operator=( OString && str )
+    {
+        rtl_string_release( pData );
+        pData = str.pData;
+        str.pData = nullptr;
+        rtl_string_new( &str.pData );
+        return *this;
+    }
+#endif
+#endif
 
     /**
      @overload

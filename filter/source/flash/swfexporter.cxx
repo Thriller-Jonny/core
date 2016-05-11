@@ -23,9 +23,6 @@
 #include <com/sun/star/drawing/XMasterPageTarget.hpp>
 #include <com/sun/star/drawing/XDrawPagesSupplier.hpp>
 #include <com/sun/star/container/XIndexAccess.hpp>
-#include <com/sun/star/document/XFilter.hpp>
-#include <com/sun/star/document/XExporter.hpp>
-#include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/task/XStatusIndicatorFactory.hpp>
 #include <com/sun/star/lang/XServiceInfo.hpp>
 #include <vcl/gdimtf.hxx>
@@ -53,12 +50,7 @@ using com::sun::star::beans::PropertyValue;
 using com::sun::star::container::XIndexAccess;
 using com::sun::star::beans::XPropertySet;
 using com::sun::star::lang::XComponent;
-using com::sun::star::lang::IllegalArgumentException;
-using com::sun::star::document::XExporter;
-using com::sun::star::document::XFilter;
-using com::sun::star::frame::XModel;
 using com::sun::star::lang::XServiceInfo;
-
 
 
 PageInfo::PageInfo()
@@ -67,7 +59,6 @@ PageInfo::PageInfo()
         , mnForegroundID( 0)
 {
 }
-
 
 
 PageInfo::~PageInfo()
@@ -112,7 +103,6 @@ FlashExporter::FlashExporter(
 }
 
 
-
 FlashExporter::~FlashExporter()
 {
     Flush();
@@ -127,13 +117,12 @@ void FlashExporter::Flush()
 }
 
 
-
 const sal_uInt16 cBackgroundDepth = 2;
 const sal_uInt16 cBackgroundObjectsDepth = 3;
 const sal_uInt16 cPageObjectsDepth = 4;
 const sal_uInt16 cWaitButtonDepth = 10;
 
-bool FlashExporter::exportAll( Reference< XComponent > xDoc, Reference< XOutputStream > &xOutputStream, Reference< XStatusIndicator> &xStatusIndicator )
+bool FlashExporter::exportAll( const Reference< XComponent >& xDoc, Reference< XOutputStream > &xOutputStream, Reference< XStatusIndicator> &xStatusIndicator )
 {
     Reference< XServiceInfo > xDocServInfo( xDoc, UNO_QUERY );
     if( xDocServInfo.is() )
@@ -276,7 +265,7 @@ bool FlashExporter::exportAll( Reference< XComponent > xDoc, Reference< XOutputS
 }
 
 
-bool FlashExporter::exportSlides( Reference< XDrawPage > xDrawPage, Reference< XOutputStream > &xOutputStream, sal_uInt16 /* nPage */ )
+bool FlashExporter::exportSlides( const Reference< XDrawPage >& xDrawPage, Reference< XOutputStream > &xOutputStream, sal_uInt16 /* nPage */ )
 {
     Reference< XPropertySet > xPropSet( xDrawPage, UNO_QUERY );
     if( !xDrawPage.is() || !xPropSet.is() )
@@ -312,7 +301,7 @@ bool FlashExporter::exportSlides( Reference< XDrawPage > xDrawPage, Reference< X
     return true;
 }
 
-sal_uInt16 FlashExporter::exportBackgrounds( Reference< XDrawPage > xDrawPage, Reference< XOutputStream > &xOutputStream, sal_uInt16 nPage, bool bExportObjects )
+sal_uInt16 FlashExporter::exportBackgrounds( const Reference< XDrawPage >& xDrawPage, Reference< XOutputStream > &xOutputStream, sal_uInt16 nPage, bool bExportObjects )
 {
     Reference< XPropertySet > xPropSet( xDrawPage, UNO_QUERY );
     if( !xDrawPage.is() || !xPropSet.is() )
@@ -332,9 +321,9 @@ sal_uInt16 FlashExporter::exportBackgrounds( Reference< XDrawPage > xDrawPage, R
         return ret;
 
     if (bExportObjects)
-        mpWriter->placeShape( maPagesMap[nPage].mnObjectsID, _uInt16(1), 0, 0 );
+        mpWriter->placeShape( maPagesMap[nPage].mnObjectsID, uInt16_(1), 0, 0 );
     else
-        mpWriter->placeShape( maPagesMap[nPage].mnBackgroundID, _uInt16(0), 0, 0 );
+        mpWriter->placeShape( maPagesMap[nPage].mnBackgroundID, uInt16_(0), 0, 0 );
 
     mpWriter->storeTo( xOutputStream );
 
@@ -396,7 +385,6 @@ sal_uInt16 FlashExporter::exportBackgrounds( Reference< XDrawPage > xDrawPage, s
 
     return nPage;
 }
-
 
 
 sal_Int32 nPlaceDepth;
@@ -502,7 +490,6 @@ sal_uInt16 FlashExporter::exportMasterPageObjects(sal_uInt16 nPage, Reference< X
 }
 
 
-
 /** export's the definition of the shapes inside this drawing page and adds the
     shape infos to the current PageInfo */
 void FlashExporter::exportDrawPageContents( const Reference< XDrawPage >& xPage, bool bStream, bool bMaster )
@@ -510,7 +497,6 @@ void FlashExporter::exportDrawPageContents( const Reference< XDrawPage >& xPage,
     Reference< XShapes > xShapes( xPage, UNO_QUERY );
     exportShapes(xShapes, bStream, bMaster);
 }
-
 
 
 /** export's the definition of the shapes inside this XShapes container and adds the
@@ -543,7 +529,6 @@ void FlashExporter::exportShapes( const Reference< XShapes >& xShapes, bool bStr
             mpWriter->showFrame();
     }
 }
-
 
 
 /** export this shape definition and adds it's info to the current PageInfo */
@@ -644,14 +629,13 @@ void FlashExporter::exportShape( const Reference< XShape >& xShape, bool bMaster
 
 //          pPageInfo->addShape( pShapeInfo );
 
-            mpWriter->placeShape( pShapeInfo->mnID, _uInt16(nPlaceDepth++), pShapeInfo->mnX, pShapeInfo->mnY );
+            mpWriter->placeShape( pShapeInfo->mnID, uInt16_(nPlaceDepth++), pShapeInfo->mnX, pShapeInfo->mnY );
     }
     catch( const Exception& )
     {
         OSL_ASSERT(false);
     }
 }
-
 
 
 bool FlashExporter::getMetaFile( Reference< XComponent >&xComponent, GDIMetaFile& rMtf, bool bOnlyBackground /* = false */, bool bExportAsJPEG /* = false */)
@@ -734,7 +718,7 @@ bool FlashExporter::getMetaFile( Reference< XComponent >&xComponent, GDIMetaFile
         {
             // #i121267# It is necessary to prepare the metafile since the export does *not* support
             // clip regions. This tooling method clips the geometry content of the metafile internally
-            // against it's own clip regions, so that the export is safe to ignore clip regions
+            // against its own clip regions, so that the export is safe to ignore clip regions
             clipMetafileContentAgainstOwnRegions(rMtf);
         }
     }

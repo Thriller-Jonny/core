@@ -275,11 +275,6 @@ void IdlCompFieldImpl::set( Any & rObj, const Any & rValue )
 }
 
 
-
-
-
-
-
 CompoundIdlClassImpl::~CompoundIdlClassImpl()
 {
     delete _pFields;
@@ -295,7 +290,7 @@ sal_Bool CompoundIdlClassImpl::isAssignableFrom( const Reference< XIdlClass > & 
         if (eTC == TypeClass_STRUCT || eTC == TypeClass_EXCEPTION)
         {
             if (equals( xType ))
-                return sal_True;
+                return true;
             else
             {
                 const Sequence< Reference< XIdlClass > > & rSeq = xType->getSuperclasses();
@@ -307,7 +302,7 @@ sal_Bool CompoundIdlClassImpl::isAssignableFrom( const Reference< XIdlClass > & 
             }
         }
     }
-    return sal_False;
+    return false;
 }
 
 Sequence< Reference< XIdlClass > > CompoundIdlClassImpl::getSuperclasses()

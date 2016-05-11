@@ -18,19 +18,18 @@
  */
 
 #include <sal/types.h>
-
 #include <tools/fontenum.hxx>
+#include <unotools/fontdefs.hxx>
 
-#include "outfont.hxx"
+#include "fontinstance.hxx"
+#include "fontattributes.hxx"
 
 #include "PhysicalFontFace.hxx"
 
-PhysicalFontFace::PhysicalFontFace( const ImplDevFontAttributes& rDFA, int nMagic )
-    : ImplDevFontAttributes( rDFA )
+PhysicalFontFace::PhysicalFontFace( const FontAttributes& rDFA )
+    : FontAttributes( rDFA )
     , mnWidth(0)
     , mnHeight(0)
-    , mnMagic( nMagic )
-    , mpNext( nullptr )
 {
     // StarSymbol is a unicode font, but it still deserves the symbol flag
     if( !IsSymbolFont() )
@@ -51,9 +50,9 @@ sal_Int32 PhysicalFontFace::CompareIgnoreSize( const PhysicalFontFace& rOther ) 
     else if( GetWeight() > rOther.GetWeight() )
         return 1;
 
-    if( GetSlant() < rOther.GetSlant() )
+    if( GetItalic() < rOther.GetItalic() )
         return -1;
-    else if( GetSlant() > rOther.GetSlant() )
+    else if( GetItalic() > rOther.GetItalic() )
         return 1;
 
     sal_Int32 nRet = GetFamilyName().compareTo( rOther.GetFamilyName() );
@@ -144,22 +143,22 @@ bool PhysicalFontFace::IsBetterMatch( const FontSelectPattern& rFSD, FontMatchSt
     }
 
     // if requiring custom matrix to fake italic, prefer upright font
-    FontItalic ePatternItalic = rFSD.maItalicMatrix != ItalicMatrix() ? ITALIC_NONE : rFSD.GetSlant();
+    FontItalic ePatternItalic = rFSD.maItalicMatrix != ItalicMatrix() ? ITALIC_NONE : rFSD.GetItalic();
 
     if ( ePatternItalic == ITALIC_NONE )
     {
-        if( GetSlant() == ITALIC_NONE )
+        if( GetItalic() == ITALIC_NONE )
             nMatch += 900;
     }
     else
     {
-        if( ePatternItalic == GetSlant() )
+        if( ePatternItalic == GetItalic() )
             nMatch += 900;
-        else if( GetSlant() != ITALIC_NONE )
+        else if( GetItalic() != ITALIC_NONE )
             nMatch += 600;
     }
 
-    if( mbDevice )
+    if( IsBuiltInFont() )
         nMatch += 1;
 
     int nHeightMatch = 0;

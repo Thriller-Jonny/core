@@ -41,6 +41,7 @@
 #include <connectivity/dbexception.hxx>
 #include <connectivity/dbtools.hxx>
 #include <cppuhelper/typeprovider.hxx>
+#include <comphelper/interfacecontainer2.hxx>
 #include <rtl/ustrbuf.hxx>
 #include <toolkit/helper/vclunohelper.hxx>
 #include <tools/debug.hxx>
@@ -53,7 +54,6 @@ namespace dbaui
     using ::com::sun::star::uno::Any;
     using ::com::sun::star::uno::Reference;
     using ::com::sun::star::beans::XPropertySet;
-    using ::com::sun::star::lang::XMultiServiceFactory;
     using ::com::sun::star::uno::RuntimeException;
     using ::com::sun::star::uno::Sequence;
     using ::com::sun::star::uno::Type;
@@ -101,7 +101,7 @@ namespace dbaui
 
         const Reference< XDataSource >&             getDataSource() const { return m_xDataSource; }
         const Reference< XPropertySet >&            getDataSourceProps() const { return m_xDataSourceProps; }
-        const Reference< XOfficeDatabaseDocument >  getDatabaseDocument() const { return m_xDocument; }
+        const Reference< XOfficeDatabaseDocument >&  getDatabaseDocument() const { return m_xDocument; }
 
         bool is() const { return m_xDataSource.is(); }
 
@@ -126,7 +126,7 @@ namespace dbaui
         OModuleClient                   m_aModuleClient;
         ::dbtools::SQLExceptionInfo     m_aCurrentError;
 
-        ::cppu::OInterfaceContainerHelper
+        ::comphelper::OInterfaceContainerHelper2
                                         m_aModifyListeners;
 
         // <properties>
@@ -135,7 +135,6 @@ namespace dbaui
         // </properties>
         OUString                        m_sDataSourceName;  // the data source we're working for
         DataSourceHolder                m_aDataSource;
-        Reference< XModel >             m_xDocument;
         Reference< XNumberFormatter >   m_xFormatter;   // a number formatter working with the connection's NumberFormatsSupplier
         sal_Int32                       m_nDocStartNumber;
         bool                            m_bSuspended;   // is true when the controller was already suspended
@@ -372,11 +371,11 @@ namespace dbaui
             DBSubComponentController_Base::disposing( _rSource );
     }
 
-    void DBSubComponentController::appendError( const OUString& _rErrorMessage, const ::dbtools::StandardSQLState _eSQLState,
-            const sal_Int32 _nErrorCode )
+    void DBSubComponentController::appendError( const OUString& _rErrorMessage )
     {
-        m_pImpl->m_aCurrentError.append( ::dbtools::SQLExceptionInfo::SQL_EXCEPTION, _rErrorMessage, getStandardSQLState( _eSQLState ),
-            _nErrorCode );
+        m_pImpl->m_aCurrentError.append( ::dbtools::SQLExceptionInfo::TYPE::SQLException, _rErrorMessage,
+                                        getStandardSQLState( ::dbtools::StandardSQLState::GENERAL_ERROR ),
+                                        1000 );
     }
     void DBSubComponentController::clearError()
     {
@@ -404,15 +403,15 @@ namespace dbaui
         if ( !bSuspend && !isConnected() )
             reconnect(true);
 
-        return sal_True;
+        return true;
     }
 
     sal_Bool SAL_CALL DBSubComponentController::attachModel( const Reference< XModel > & _rxModel) throw( RuntimeException, std::exception )
     {
         if ( !_rxModel.is() )
-            return sal_False;
+            return false;
         if ( !DBSubComponentController_Base::attachModel( _rxModel ) )
-            return sal_False;
+            return false;
 
         m_pImpl->m_bNotAttached = false;
         if ( m_pImpl->m_nDocStartNumber == 1 )
@@ -423,7 +422,7 @@ namespace dbaui
         if ( xUntitledProvider.is() )
             m_pImpl->m_nDocStartNumber = xUntitledProvider->leaseNumber( static_cast< XWeak* >( this ) );
 
-        return sal_True;
+        return true;
     }
 
     void DBSubComponentController::Execute(sal_uInt16 _nId, const Sequence< PropertyValue >& _rArgs)

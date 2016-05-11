@@ -21,7 +21,6 @@
 
 #include <memory>
 
-#include <com/sun/star/uno/XInterface.hpp>
 #include <vcl/svapp.hxx>
 
 #include <svx/unoshtxt.hxx>
@@ -54,7 +53,6 @@
 
 using namespace ::osl;
 
-using ::com::sun::star::uno::XInterface;
 
 
 // SvxTextEditSourceImpl
@@ -158,7 +156,6 @@ public:
 };
 
 
-
 SvxTextEditSourceImpl::SvxTextEditSourceImpl( SdrObject* pObject, SdrText* pText )
   : maRefCount      ( 0 ),
     mpObject        ( pObject ),
@@ -193,7 +190,6 @@ SvxTextEditSourceImpl::SvxTextEditSourceImpl( SdrObject* pObject, SdrText* pText
     if( mpObject )
         mpObject->AddObjectUser( *this );
 }
-
 
 
 SvxTextEditSourceImpl::SvxTextEditSourceImpl( SdrObject& rObject, SdrText* pText, SdrView& rView, const vcl::Window& rWindow )
@@ -234,7 +230,6 @@ SvxTextEditSourceImpl::SvxTextEditSourceImpl( SdrObject& rObject, SdrText* pText
 }
 
 
-
 SvxTextEditSourceImpl::~SvxTextEditSourceImpl()
 {
     DBG_ASSERT( !mbIsLocked, "text edit source was not unlocked before dispose!" );
@@ -245,14 +240,12 @@ SvxTextEditSourceImpl::~SvxTextEditSourceImpl()
 }
 
 
-
 void SvxTextEditSourceImpl::addRange( SvxUnoTextRangeBase* pNewRange )
 {
     if( pNewRange )
         if( std::find( maTextRanges.begin(), maTextRanges.end(), pNewRange ) == maTextRanges.end() )
             maTextRanges.push_back( pNewRange );
 }
-
 
 
 void SvxTextEditSourceImpl::removeRange( SvxUnoTextRangeBase* pOldRange )
@@ -262,15 +255,10 @@ void SvxTextEditSourceImpl::removeRange( SvxUnoTextRangeBase* pOldRange )
 }
 
 
-
-
-
-
 void SAL_CALL SvxTextEditSourceImpl::acquire()
 {
     osl_atomic_increment( &maRefCount );
 }
-
 
 
 void SAL_CALL SvxTextEditSourceImpl::release()
@@ -322,7 +310,6 @@ void SvxTextEditSourceImpl::ChangeModel( SdrModel* pNewModel )
             StartListening( *mpModel );
     }
 }
-
 
 
 void SvxTextEditSourceImpl::Notify(SfxBroadcaster& rBC, const SfxHint& rHint)
@@ -522,7 +509,6 @@ void SvxTextEditSourceImpl::dispose()
 }
 
 
-
 void SvxTextEditSourceImpl::SetupOutliner()
 {
     // only for UAA edit source: setup outliner equivalently as in
@@ -542,7 +528,6 @@ void SvxTextEditSourceImpl::SetupOutliner()
         }
     }
 }
-
 
 
 void SvxTextEditSourceImpl::UpdateOutliner()
@@ -566,9 +551,6 @@ void SvxTextEditSourceImpl::UpdateOutliner()
 }
 
 
-
-
-
 SvxTextForwarder* SvxTextEditSourceImpl::GetBackgroundTextForwarder()
 {
     bool bCreated = false;
@@ -581,9 +563,9 @@ SvxTextForwarder* SvxTextEditSourceImpl::GetBackgroundTextForwarder()
         if( mpOutliner == nullptr )
         {
             SdrTextObj* pTextObj = dynamic_cast<SdrTextObj*>( mpObject  );
-            sal_uInt16 nOutlMode = OUTLINERMODE_TEXTOBJECT;
+            OutlinerMode nOutlMode = OutlinerMode::TextObject;
             if( pTextObj && pTextObj->IsTextFrame() && pTextObj->GetTextKind() == OBJ_OUTLINETEXT )
-                nOutlMode = OUTLINERMODE_OUTLINEOBJECT;
+                nOutlMode = OutlinerMode::OutlineObject;
 
             mpOutliner = mpModel->createOutliner( nOutlMode );
 
@@ -704,7 +686,6 @@ SvxTextForwarder* SvxTextEditSourceImpl::GetBackgroundTextForwarder()
 }
 
 
-
 SvxTextForwarder* SvxTextEditSourceImpl::GetEditModeTextForwarder()
 {
     if( !mpTextForwarder && HasView() )
@@ -720,7 +701,6 @@ SvxTextForwarder* SvxTextEditSourceImpl::GetEditModeTextForwarder()
 
     return mpTextForwarder;
 }
-
 
 
 SvxTextForwarder* SvxTextEditSourceImpl::GetTextForwarder()
@@ -754,7 +734,6 @@ SvxTextForwarder* SvxTextEditSourceImpl::GetTextForwarder()
     else
         return GetBackgroundTextForwarder();
 }
-
 
 
 SvxDrawOutlinerViewForwarder* SvxTextEditSourceImpl::CreateViewForwarder()
@@ -838,7 +817,6 @@ SvxEditViewForwarder* SvxTextEditSourceImpl::GetEditViewForwarder( bool bCreate 
 
     return mpViewForwarder;
 }
-
 
 
 void SvxTextEditSourceImpl::UpdateData()
@@ -1037,7 +1015,6 @@ SvxTextEditSource::SvxTextEditSource( SdrObject& rObj, SdrText* pText, SdrView& 
     mpImpl = new SvxTextEditSourceImpl( rObj, pText, rView, rWindow );
     mpImpl->acquire();
 }
-
 
 
 SvxTextEditSource::SvxTextEditSource( SvxTextEditSourceImpl* pImpl )

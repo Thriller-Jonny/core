@@ -23,7 +23,6 @@
 #include <map>
 #include <set>
 
-#include <com/sun/star/uno/Reference.hxx>
 #include <com/sun/star/uno/RuntimeException.hpp>
 #include <com/sun/star/uno/XInterface.hpp>
 #include <rtl/ustring.h>
@@ -109,7 +108,7 @@ Partial::Partial(
 
 Partial::~Partial() {}
 
-Partial::Containment Partial::contains(Path const & path) const {
+Partial::Containment Partial::contains(std::vector<OUString> const & path) const {
     //TODO: For set elements, the segment names recorded in the node tree need
     // not match the corresponding path segments, so this function can fail.
 
@@ -121,7 +120,7 @@ Partial::Containment Partial::contains(Path const & path) const {
     // ** If there is no startInclude along its trace: => CONTAINS_SUBNODES
     Node const * p = &root_;
     bool bIncludes = false;
-    for (Path::const_iterator i(path.begin()); i != path.end(); ++i) {
+    for (auto i(path.begin()); i != path.end(); ++i) {
         Node::Children::const_iterator j(p->children.find(*i));
         if (j == p->children.end()) {
             return p->startInclude ? CONTAINS_NODE : CONTAINS_NOT;

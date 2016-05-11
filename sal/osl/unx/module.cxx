@@ -208,9 +208,9 @@ osl_getModuleHandle(rtl_uString *, oslModule *pResult)
 #if !defined(DISABLE_DYNLOADING) || defined(IOS)
     *pResult = static_cast<oslModule>(RTLD_DEFAULT);
 #else
-    *pResult = NULL;
+    *pResult = nullptr;
 #endif
-    return sal_True;
+    return true;
 }
 
 #ifndef DISABLE_DYNLOADING

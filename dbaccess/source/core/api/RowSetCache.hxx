@@ -97,9 +97,10 @@ namespace dbaccess
         bool fill(ORowSetMatrix::iterator& _aIter, const ORowSetMatrix::const_iterator& _aEnd, sal_Int32& _nPos, bool _bCheck);
         bool reFillMatrix(sal_Int32 _nNewStartPos,sal_Int32 nNewEndPos);
         bool fillMatrix(sal_Int32 &_nNewStartPos,sal_Int32 &_nNewEndPos);
-        bool moveWindow();
+        void moveWindow();
 
         void rotateCacheIterator(ORowSetMatrix::difference_type _nDist);
+        void rotateAllCacheIterators();
         void updateValue(sal_Int32 columnIndex
                         ,const connectivity::ORowSetValue& x
                         ,ORowSetValueVector::Vector& io_aRow
@@ -151,7 +152,7 @@ namespace dbaccess
         void deregisterOldRow(const TORowSetOldRowHelperRef& _rRow);
 
     // css::sdbc::XResultSetMetaDataSupplier
-        css::uno::Reference< css::sdbc::XResultSetMetaData > getMetaData(  ) { return m_xMetaData;}
+        const css::uno::Reference< css::sdbc::XResultSetMetaData >& getMetaData(  ) { return m_xMetaData;}
 
     // css::sdbcx::XRowLocate
         css::uno::Any getBookmark(  );
@@ -173,8 +174,8 @@ namespace dbaccess
 
     // css::sdbc::XResultSet
         bool next(  );
-        bool isBeforeFirst(  ) { return m_bBeforeFirst;}
-        bool isAfterLast(  ) { return m_bAfterLast;}
+        bool isBeforeFirst(  ) const { return m_bBeforeFirst;}
+        bool isAfterLast(  ) const { return m_bAfterLast;}
         bool isFirst(  );
         bool isLast(  );
         bool beforeFirst(  );

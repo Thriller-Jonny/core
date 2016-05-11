@@ -101,15 +101,14 @@ public:
     virtual Size            GetFirstPageSize() override;
     virtual void            FillClass(SvGlobalName* pClassName, SotClipboardFormatId* pFormat, OUString* pAppName, OUString* pFullTypeName, OUString* pShortTypeName, sal_Int32 nFileFormat, bool bTemplate = false ) const override;
     virtual void            SetModified( bool = true ) override;
-    virtual VclPtr<SfxDocumentInfoDialog> CreateDocumentInfoDialog( vcl::Window *pParent,
-                                                              const SfxItemSet &rSet ) override;
+    virtual VclPtr<SfxDocumentInfoDialog> CreateDocumentInfoDialog( const SfxItemSet &rSet ) override;
 
     using SfxObjectShell::GetVisArea;
     using SfxShell::GetViewShell;
 
     sd::ViewShell* GetViewShell() { return mpViewShell; }
     ::sd::FrameView* GetFrameView();
-    rtl::Reference<FuPoor> GetDocShellFunction() const { return mxDocShellFunction; }
+    const rtl::Reference<FuPoor>& GetDocShellFunction() const { return mxDocShellFunction; }
     void SetDocShellFunction( const rtl::Reference<FuPoor>& xFunction );
 
     SdDrawDocument*         GetDoc() { return mpDoc;}
@@ -132,10 +131,9 @@ public:
 
     bool                    GotoBookmark(const OUString& rBookmark);
 
-    //realize multi-selection of objects
-    bool                    GotoTreeBookmark(const OUString& rBookmark);
     bool                    IsMarked(  SdrObject* pObject  );
-    bool                    GetObjectIsmarked(const OUString& rBookmark);
+    // Optionally realize multi-selection of objects
+    bool                    GetObjectIsmarked(const OUString& rBookmark, bool bRealizeMultiSelectionOfObjects = false);
     Bitmap                  GetPagePreviewBitmap(SdPage* pPage, sal_uInt16 nMaxEdgePixel);
 
     /** checks, if the given name is a valid new name for a slide
@@ -158,8 +156,8 @@ public:
     void                    SetSlotFilter(bool bEnable = false, sal_uInt16 nCount = 0, const sal_uInt16* pSIDs = nullptr) { mbFilterEnable = bEnable; mnFilterCount = nCount; mpFilterSIDs = pSIDs; }
     void                    ApplySlotFilter() const;
 
-    sal_uInt16              GetStyleFamily() const { return mnStyleFamily; }
-    void                    SetStyleFamily( sal_uInt16 nSF ) { mnStyleFamily = nSF; }
+    SfxStyleFamily          GetStyleFamily() const { return mnStyleFamily; }
+    void                    SetStyleFamily( SfxStyleFamily nSF ) { mnStyleFamily = nSF; }
 
     /** executes the SID_OPENDOC slot to let the framework open a document
         with the given URL and this document as a referer */
@@ -204,7 +202,6 @@ public:
     void                    ClearUndoBuffer();
 
     virtual void libreOfficeKitCallback(int nType, const char* pPayload) const override;
-    virtual bool isTiledRendering() const override;
 
 protected:
 
@@ -215,7 +212,7 @@ protected:
     FontList*               mpFontList;
     rtl::Reference<FuPoor> mxDocShellFunction;
     DocumentType            meDocType;
-    sal_uInt16              mnStyleFamily;
+    SfxStyleFamily          mnStyleFamily;
     const sal_uInt16*       mpFilterSIDs;
     sal_uInt16              mnFilterCount;
     bool                    mbFilterEnable;

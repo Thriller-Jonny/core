@@ -106,10 +106,10 @@ class SgaIMapInfo : public SdrObjUserData, public SfxListener
     ImageMap                aImageMap;
 
 public:
-                            SgaIMapInfo() : SdrObjUserData( IV_IMAPINFO, ID_IMAPINFO, 0 ) {};
+                            SgaIMapInfo() : SdrObjUserData( IV_IMAPINFO, ID_IMAPINFO ) {};
 
                             SgaIMapInfo( const ImageMap& rImageMap) :
-                                SdrObjUserData( IV_IMAPINFO, ID_IMAPINFO, 0 ),
+                                SdrObjUserData( IV_IMAPINFO, ID_IMAPINFO ),
                                 aImageMap( rImageMap ) {};
 
     virtual                 ~SgaIMapInfo() {};
@@ -182,9 +182,7 @@ protected:
     virtual void                    ObjectReleased() override;
 
     void                            CopyToClipboard( vcl::Window* pWindow );
-    void                            StartDrag( vcl::Window* pWindow, sal_Int8 nDragSourceActions,
-                                               sal_Int32 nDragPointer = DND_POINTER_NONE,
-                                               sal_Int32 nDragImage = DND_IMAGE_NONE );
+    void                            StartDrag( vcl::Window* pWindow, sal_Int8 nDragSourceActions );
 };
 
 enum class GalleryHintType

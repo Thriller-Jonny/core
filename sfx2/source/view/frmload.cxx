@@ -41,7 +41,6 @@
 #include <com/sun/star/document/XTypeDetection.hpp>
 #include <com/sun/star/frame/XFrame.hpp>
 #include <com/sun/star/frame/XLoadable.hpp>
-#include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/task/XInteractionHandler.hpp>
 #include <com/sun/star/task/XInteractionHandler2.hpp>
 #include <com/sun/star/document/XViewDataSupplier.hpp>
@@ -79,12 +78,8 @@ using ::com::sun::star::container::XEnumeration;
 using ::com::sun::star::document::XTypeDetection;
 using ::com::sun::star::frame::XFrame;
 using ::com::sun::star::frame::XLoadable;
-using ::com::sun::star::frame::XModel;
-using ::com::sun::star::lang::XMultiServiceFactory;
 using ::com::sun::star::task::XInteractionHandler;
 using ::com::sun::star::task::XInteractionHandler2;
-using ::com::sun::star::task::XInteractionRequest;
-using ::com::sun::star::task::XStatusIndicator;
 using ::com::sun::star::uno::Any;
 using ::com::sun::star::uno::Exception;
 using ::com::sun::star::uno::Reference;
@@ -93,12 +88,10 @@ using ::com::sun::star::uno::Sequence;
 using ::com::sun::star::uno::UNO_QUERY;
 using ::com::sun::star::uno::UNO_QUERY_THROW;
 using ::com::sun::star::uno::UNO_SET_THROW;
-using ::com::sun::star::uno::makeAny;
 using ::com::sun::star::util::XCloseable;
 using ::com::sun::star::document::XViewDataSupplier;
 using ::com::sun::star::container::XIndexAccess;
 using ::com::sun::star::frame::XController2;
-using ::com::sun::star::frame::XController;
 using ::com::sun::star::frame::XModel2;
 
 namespace {
@@ -129,7 +122,7 @@ protected:
     virtual                 ~SfxFrameLoader_Impl();
 
 private:
-    const SfxFilter*    impl_getFilterFromServiceName_nothrow(
+    std::shared_ptr<const SfxFilter>    impl_getFilterFromServiceName_nothrow(
                             const OUString& i_rServiceName
                         ) const;
 
@@ -138,7 +131,7 @@ private:
                             const OUString& i_rDocumentURL
                         );
 
-    const SfxFilter*    impl_detectFilterForURL(
+    std::shared_ptr<const SfxFilter>    impl_detectFilterForURL(
                             const OUString& _rURL,
                             const ::comphelper::NamedValueCollection& i_rDescriptor,
                             const SfxFilterMatcher& rMatcher
@@ -204,7 +197,7 @@ SfxFrameLoader_Impl::~SfxFrameLoader_Impl()
 }
 
 
-const SfxFilter* SfxFrameLoader_Impl::impl_detectFilterForURL( const OUString& sURL,
+std::shared_ptr<const SfxFilter> SfxFrameLoader_Impl::impl_detectFilterForURL( const OUString& sURL,
         const ::comphelper::NamedValueCollection& i_rDescriptor, const SfxFilterMatcher& rMatcher ) const
 {
     OUString sFilter;
@@ -226,10 +219,10 @@ const SfxFilter* SfxFrameLoader_Impl::impl_detectFilterForURL( const OUString& s
             aNewArgs.put( "StatusIndicator", i_rDescriptor.get( "StatusIndicator" ) );
 
         Sequence< PropertyValue > aQueryArgs( aNewArgs.getPropertyValues() );
-        OUString sType = xDetect->queryTypeByDescriptor( aQueryArgs, sal_True );
+        OUString sType = xDetect->queryTypeByDescriptor( aQueryArgs, true );
         if ( !sType.isEmpty() )
         {
-            const SfxFilter* pFilter = rMatcher.GetFilter4EA( sType );
+            std::shared_ptr<const SfxFilter> pFilter = rMatcher.GetFilter4EA( sType );
             if ( pFilter )
                 sFilter = pFilter->GetName();
         }
@@ -244,14 +237,14 @@ const SfxFilter* SfxFrameLoader_Impl::impl_detectFilterForURL( const OUString& s
         sFilter.clear();
     }
 
-    const SfxFilter* pFilter = nullptr;
+    std::shared_ptr<const SfxFilter> pFilter;
     if (!sFilter.isEmpty())
         pFilter = rMatcher.GetFilter4FilterName(sFilter);
     return pFilter;
 }
 
 
-const SfxFilter* SfxFrameLoader_Impl::impl_getFilterFromServiceName_nothrow( const OUString& i_rServiceName ) const
+std::shared_ptr<const SfxFilter> SfxFrameLoader_Impl::impl_getFilterFromServiceName_nothrow( const OUString& i_rServiceName ) const
 {
     try
     {
@@ -275,7 +268,7 @@ const SfxFilter* SfxFrameLoader_Impl::impl_getFilterFromServiceName_nothrow( con
             if ( sFilterName.isEmpty() )
                 continue;
 
-            const SfxFilter* pFilter = rMatcher.GetFilter4FilterName( sFilterName );
+            std::shared_ptr<const SfxFilter> pFilter = rMatcher.GetFilter4FilterName( sFilterName );
             if ( !pFilter )
                 continue;
 
@@ -361,7 +354,7 @@ void SfxFrameLoader_Impl::impl_determineFilter( ::comphelper::NamedValueCollecti
                               xInteraction = io_rDescriptor.getOrDefault( "InteractionHandler", Reference< XInteractionHandler >() );
 
     const SfxFilterMatcher& rMatcher = SfxGetpApp()->GetFilterMatcher();
-    const SfxFilter* pFilter = nullptr;
+    std::shared_ptr<const SfxFilter> pFilter;
 
     // get filter by its name directly ...
     if ( !sFilterName.isEmpty() )
@@ -444,13 +437,13 @@ bool SfxFrameLoader_Impl::impl_determineTemplateDocument( ::comphelper::NamedVal
         {
             // detect the filter for the template. Might still be NULL (if the template is broken, or does not
             // exist, or some such), but this is handled by our caller the same way as if no template/URL was present.
-            const SfxFilter* pTemplateFilter = impl_detectFilterForURL( sTemplateURL, io_rDescriptor, SfxGetpApp()->GetFilterMatcher() );
+            std::shared_ptr<const SfxFilter> pTemplateFilter = impl_detectFilterForURL( sTemplateURL, io_rDescriptor, SfxGetpApp()->GetFilterMatcher() );
             if ( pTemplateFilter )
             {
                 // load the template document, but, well, "as template"
                 io_rDescriptor.put( "FilterName", OUString( pTemplateFilter->GetName() ) );
                 io_rDescriptor.put( "FileName", OUString( sTemplateURL ) );
-                io_rDescriptor.put( "AsTemplate", sal_True );
+                io_rDescriptor.put( "AsTemplate", true );
 
                 // #i21583#
                 // the DocumentService property will finally be used to create the document. Thus, override any possibly
@@ -528,18 +521,18 @@ void SfxFrameLoader_Impl::impl_removeLoaderArguments( ::comphelper::NamedValueCo
 
 ::comphelper::NamedValueCollection SfxFrameLoader_Impl::impl_extractViewCreationArgs( ::comphelper::NamedValueCollection& io_rDescriptor )
 {
-    const sal_Char* pKnownViewArgs[] = {
+    static const char* pKnownViewArgs[] = {
         "JumpMark",
         "PickListEntry"
     };
 
     ::comphelper::NamedValueCollection aViewArgs;
-    for ( size_t i=0; i < sizeof( pKnownViewArgs ) / sizeof( pKnownViewArgs[0] ); ++i )
+    for (const char* pKnownViewArg : pKnownViewArgs)
     {
-        if ( io_rDescriptor.has( pKnownViewArgs[i] ) )
+        if ( io_rDescriptor.has( pKnownViewArg ) )
         {
-            aViewArgs.put( pKnownViewArgs[i], io_rDescriptor.get( pKnownViewArgs[i] ) );
-            io_rDescriptor.remove( pKnownViewArgs[i] );
+            aViewArgs.put( pKnownViewArg, io_rDescriptor.get( pKnownViewArg ) );
+            io_rDescriptor.remove( pKnownViewArg );
         }
     }
     return aViewArgs;
@@ -739,7 +732,7 @@ sal_Bool SAL_CALL SfxFrameLoader_Impl::load( const Sequence< PropertyValue >& rA
     catch ( Exception& )
     {
         const Any aError( ::cppu::getCaughtException() );
-        if ( !aDescriptor.getOrDefault( "Silent", sal_False ) )
+        if ( !aDescriptor.getOrDefault( "Silent", false ) )
             impl_handleCaughtError_nothrow( aError, aDescriptor );
     }
 
@@ -749,7 +742,7 @@ sal_Bool SAL_CALL SfxFrameLoader_Impl::load( const Sequence< PropertyValue >& rA
         try
         {
             const Reference< XCloseable > xCloseable( xModel, UNO_QUERY_THROW );
-            xCloseable->close( sal_True );
+            xCloseable->close( true );
         }
         catch ( Exception& )
         {

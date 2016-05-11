@@ -60,16 +60,13 @@ protected:
     void                InsertHdl(void *);
 
     void                Init();
-    void                SavePos( const ListBox* pLst1,
-                                 const ListBox* pLst2 = nullptr,
-                                 const ListBox* pLst3 = nullptr);
-    void                RestorePos( ListBox* pLst1, ListBox* pLst2 = nullptr,
-                                    ListBox* pLst3 = nullptr );
+    void                SavePos( const ListBox* pLst1);
+    void                RestorePos( ListBox* pLst1 );
     void                EnableInsert(bool bEnable = true);
     inline bool         IsFieldEdit() const   { return m_bFieldEdit; }
 
     // insert field
-    bool                InsertField(  sal_uInt16 nTypeId,
+    void                InsertField(  sal_uInt16 nTypeId,
                                     sal_uInt16 nSubType,
                                     const OUString& rPar1,
                                     const OUString& rPar2,
@@ -81,7 +78,7 @@ protected:
 
 public:
     SwFieldPage(vcl::Window *pParent, const OString& rID,
-        const OUString& rUIXMLDescription, const SfxItemSet &rAttrSet);
+        const OUString& rUIXMLDescription, const SfxItemSet *pAttrSet);
 
     virtual ~SwFieldPage();
 

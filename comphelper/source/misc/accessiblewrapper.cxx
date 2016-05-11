@@ -88,7 +88,7 @@ namespace comphelper
 
 
     Reference< XAccessible > OWrappedAccessibleChildrenManager::getAccessibleWrapperFor(
-        const Reference< XAccessible >& _rxKey, bool _bCreate )
+        const Reference< XAccessible >& _rxKey )
     {
         Reference< XAccessible > xValue;
 
@@ -104,7 +104,7 @@ namespace comphelper
         {
             xValue = aPos->second;
         }
-        else if ( _bCreate )
+        else
         {   // not found in the cache, and allowed to create
             // -> new wrapper
             xValue = new OAccessibleWrapper( m_xContext, _rxKey, m_aOwningAccessible );
@@ -137,7 +137,7 @@ namespace comphelper
     void OWrappedAccessibleChildrenManager::dispose()
     {
         // dispose our children
-        for( const auto rChild : m_aChildrenMap )
+        for( const auto& rChild : m_aChildrenMap )
         {
             Reference< XComponent > xComp( rChild.first, UNO_QUERY );
             if( xComp.is() )
@@ -244,7 +244,7 @@ namespace comphelper
         if ( m_aChildrenMap.end() == aDisposedPos )
         {
                OSL_FAIL( "OWrappedAccessibleChildrenManager::disposing: where did this come from?" );
-            // helper for dignostics
+            // helper for diagnostics
             Reference< XAccessible > xOwningAccessible( m_aOwningAccessible );
             Reference< XAccessibleContext > xContext;
             try

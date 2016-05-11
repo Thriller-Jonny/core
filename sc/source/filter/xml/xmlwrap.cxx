@@ -209,12 +209,7 @@ sal_uInt32 ScXMLImportWrapper::ImportFromComponent(const uno::Reference<uno::XCo
             nReturn = ERRCODE_SFX_WRONGPASSWORD;
         else
         {
-
-#if OSL_DEBUG_LEVEL > 0
-            OStringBuffer aError("SAX parse exception caught while importing:\n");
-            aError.append(OUStringToOString(r.Message, RTL_TEXTENCODING_ASCII_US));
-            OSL_FAIL(aError.getStr());
-#endif
+            SAL_WARN("sc.filter", "SAX parse exception caught while importing: " << r.Message);
 
             OUString sErr = OUString::number( r.LineNumber ) +
                           "," +
@@ -245,51 +240,26 @@ sal_uInt32 ScXMLImportWrapper::ImportFromComponent(const uno::Reference<uno::XCo
             nReturn = ERRCODE_SFX_WRONGPASSWORD;
         else
         {
-
-#if OSL_DEBUG_LEVEL > 0
-            OStringBuffer aError("SAX exception caught while importing:\n");
-            aError.append(OUStringToOString(r.Message,
-                RTL_TEXTENCODING_ASCII_US));
-            OSL_FAIL(aError.getStr());
-#endif
-            (void)r;    // avoid warning in product version
+            SAL_WARN("sc.filter", "SAX exception caught while importing: " << r.Message);
 
             nReturn = SCERR_IMPORT_FORMAT;
         }
     }
     catch( const packages::zip::ZipIOException& r )
     {
-#if OSL_DEBUG_LEVEL > 0
-        OStringBuffer aError("Zip exception caught while importing:\n");
-        aError.append(OUStringToOString(r.Message,
-            RTL_TEXTENCODING_ASCII_US));
-        OSL_FAIL( aError.getStr() );
-#endif
-        (void)r;    // avoid warning in product version
+        SAL_WARN("sc.filter", "Zip exception caught while importing: " << r.Message);
 
         nReturn = ERRCODE_IO_BROKENPACKAGE;
     }
     catch( const io::IOException& r )
     {
-#if OSL_DEBUG_LEVEL > 0
-        OStringBuffer aError("IO exception caught while importing:\n");
-        aError.append(OUStringToOString(r.Message,
-            RTL_TEXTENCODING_ASCII_US));
-        OSL_FAIL(aError.getStr());
-#endif
-        (void)r;    // avoid warning in product version
+        SAL_WARN("sc.filter", "IO exception caught while importing: " << r.Message);
 
         nReturn = SCERR_IMPORT_OPEN;
     }
     catch( const uno::Exception& r )
     {
-#if OSL_DEBUG_LEVEL > 0
-        OStringBuffer aError("uno exception caught while importing:\n");
-        aError.append(OUStringToOString(r.Message,
-            RTL_TEXTENCODING_ASCII_US));
-        OSL_FAIL(aError.getStr());
-#endif
-        (void)r;    // avoid warning in product version
+        SAL_WARN("sc.filter", "uno exception caught while importing: " << r.Message);
 
         nReturn = SCERR_IMPORT_UNKNOWN;
     }
@@ -379,6 +349,8 @@ bool ScXMLImportWrapper::Import( sal_uInt8 nMode, ErrCode& rError )
     // Set base URI
     OSL_ENSURE( pMedium, "There is no medium to get MediaDescriptor from!\n" );
     OUString aBaseURL = pMedium ? pMedium->GetBaseURL() : OUString();
+    // needed for relative URLs, but in clipboard copy/paste there may be none
+    SAL_INFO_IF(aBaseURL.isEmpty(), "sc.filter", "ScXMLImportWrapper: no base URL");
     OUString sPropName("BaseURI");
     xInfoSet->setPropertyValue( sPropName, uno::makeAny( aBaseURL ) );
 
@@ -600,7 +572,7 @@ bool ScXMLImportWrapper::Import( sal_uInt8 nMode, ErrCode& rError )
             {
                 uno::Reference< script::vba::XVBACompatibility > xVBACompat( xModelSet->getPropertyValue(
                     "BasicLibraries" ), uno::UNO_QUERY_THROW );
-                xVBACompat->setVBACompatibilityMode( sal_True );
+                xVBACompat->setVBACompatibilityMode( true );
             }
             catch( const uno::Exception& )
             {
@@ -658,7 +630,7 @@ bool ScXMLImportWrapper::ExportToComponent(const uno::Reference<uno::XComponentC
             OUString aUseCommonPassPropName("UseCommonStoragePasswordEncryption");
 
             // advise storage impl to use common encryption
-            xSet->setPropertyValue( aUseCommonPassPropName, uno::makeAny(sal_True) );
+            xSet->setPropertyValue( aUseCommonPassPropName, uno::makeAny(true) );
         }
 
         xOut = xStream->getOutputStream();

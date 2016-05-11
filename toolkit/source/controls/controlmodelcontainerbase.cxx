@@ -83,7 +83,7 @@ struct LanguageDependentProp
 
 namespace
 {
-    static const Sequence< OUString >& lcl_getLanguageDependentProperties()
+    const Sequence< OUString >& lcl_getLanguageDependentProperties()
     {
         static Sequence< OUString > s_aLanguageDependentProperties;
         if ( s_aLanguageDependentProperties.getLength() == 0 )
@@ -566,7 +566,7 @@ void ControlModelContainerBase::insertByName( const OUString& aName, const Any& 
 
                 Reference< beans::XPropertySetInfo > xPropInfo = xProps.get()->getPropertySetInfo();
 
-                OUString sImageSourceProperty = GetPropertyName( BASEPROPERTY_IMAGEURL );
+                const OUString& sImageSourceProperty = GetPropertyName( BASEPROPERTY_IMAGEURL );
                 if ( xPropInfo.get()->hasPropertyByName(  sImageSourceProperty ) && ImplHasProperty(BASEPROPERTY_DIALOGSOURCEURL) )
                 {
                     Any aUrl = xProps.get()->getPropertyValue(  sImageSourceProperty );
@@ -580,7 +580,6 @@ void ControlModelContainerBase::insertByName( const OUString& aName, const Any& 
                 }
             }
     }
-
 
 
     if ( aName.isEmpty() || !xM.is() )
@@ -662,7 +661,7 @@ void ControlModelContainerBase::removeByName( const OUString& aName ) throw(NoSu
 
 sal_Bool SAL_CALL ControlModelContainerBase::getGroupControl(  ) throw (RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 
@@ -833,7 +832,7 @@ namespace
     };
 
 
-    static sal_Int32 lcl_getDialogStep( const Reference< XControlModel >& _rxModel )
+    sal_Int32 lcl_getDialogStep( const Reference< XControlModel >& _rxModel )
     {
         sal_Int32 nStep = 0;
         try
@@ -916,16 +915,13 @@ void ControlModelContainerBase::implNotifyTabModelChange( const OUString& _rAcce
     aEvent.Changes[ 0 ].Accessor <<= _rAccessor;
 
 
-    Sequence< Reference< XInterface > > aChangeListeners( maChangeListeners.getElements() );
-    const Reference< XInterface >* pListener = aChangeListeners.getConstArray();
-    const Reference< XInterface >* pListenerEnd = aChangeListeners.getConstArray() + aChangeListeners.getLength();
-    for ( ; pListener != pListenerEnd; ++pListener )
+    std::vector< Reference< XInterface > > aChangeListeners( maChangeListeners.getElements() );
+    for ( const auto& rListener : aChangeListeners )
     {
-        if ( pListener->is() )
-            static_cast< XChangesListener* >( pListener->get() )->changesOccurred( aEvent );
+        if ( rListener.is() )
+            static_cast< XChangesListener* >( rListener.get() )->changesOccurred( aEvent );
     }
 }
-
 
 
 void ControlModelContainerBase::implUpdateGroupStructure()
@@ -953,9 +949,6 @@ void ControlModelContainerBase::implUpdateGroupStructure()
     AllGroups::iterator aCurrentGroup = maGroups.end(); // the group which we're currently building
     sal_Int32   nCurrentGroupStep = -1;                 // the step which all controls of the current group belong to
 
-#if OSL_DEBUG_LEVEL > 1
-    ::std::vector< OUString > aCurrentGroupLabels;
-#endif
 
     for ( ; pControlModels != pControlModelsEnd; ++pControlModels )
     {
@@ -985,13 +978,6 @@ void ControlModelContainerBase::implUpdateGroupStructure()
                 // new state: looking for further members
                 eState = eExpandingGroup;
 
-#if OSL_DEBUG_LEVEL > 1
-                Reference< XPropertySet > xModelProps( *pControlModels, UNO_QUERY );
-                OUString sLabel;
-                if ( xModelProps.is() && xModelProps->getPropertySetInfo().is() && xModelProps->getPropertySetInfo()->hasPropertyByName("Label") )
-                    xModelProps->getPropertyValue("Label") >>= sLabel;
-                aCurrentGroupLabels.push_back( sLabel );
-#endif
             }
             break;
 
@@ -1001,9 +987,6 @@ void ControlModelContainerBase::implUpdateGroupStructure()
                 {   // no radio button -> the group is done
                     aCurrentGroup = maGroups.end();
                     eState = eLookingForGroup;
-#if OSL_DEBUG_LEVEL > 1
-                    aCurrentGroupLabels.clear();
-#endif
                     continue;
                 }
 
@@ -1018,22 +1001,12 @@ void ControlModelContainerBase::implUpdateGroupStructure()
                     // state still is eExpandingGroup - we're looking for further elements
                     eState = eExpandingGroup;
 
-#if OSL_DEBUG_LEVEL > 1
-                    Reference< XPropertySet > xModelProps( *pControlModels, UNO_QUERY );
-                    OUString sLabel;
-                    if ( xModelProps.is() && xModelProps->getPropertySetInfo().is() && xModelProps->getPropertySetInfo()->hasPropertyByName("Label") )
-                        xModelProps->getPropertyValue("Label") >>= sLabel;
-                    aCurrentGroupLabels.push_back( sLabel );
-#endif
                     continue;
                 }
 
                 // it's a radio button, but on a different page
                 // -> we open a new group for it
 
-#if OSL_DEBUG_LEVEL > 1
-                aCurrentGroupLabels.clear();
-#endif
 
                 // open a new group
                 size_t nGroups = maGroups.size();
@@ -1046,13 +1019,6 @@ void ControlModelContainerBase::implUpdateGroupStructure()
 
                 // state is the same: we still are looking for further elements of the current group
                 eState = eExpandingGroup;
-#if OSL_DEBUG_LEVEL > 1
-                Reference< XPropertySet > xModelProps( *pControlModels, UNO_QUERY );
-                OUString sLabel;
-                if ( xModelProps.is() && xModelProps->getPropertySetInfo().is() && xModelProps->getPropertySetInfo()->hasPropertyByName("Label") )
-                    xModelProps->getPropertyValue("Label") >>= sLabel;
-                aCurrentGroupLabels.push_back( sLabel );
-#endif
             }
             break;
         }
@@ -1344,7 +1310,6 @@ throw ( RuntimeException, std::exception )
 }
 
 
-
 //  class DialogContainerControl
 
 ControlContainerBase::ControlContainerBase( const Reference< XComponentContext >& rxContext )
@@ -1432,7 +1397,7 @@ void ControlContainerBase::ImplSetPosSize( Reference< XControl >& rxCtrl )
     }
     else
     {
-        Reference< XWindowPeer > xPeer = ImplGetCompatiblePeer( true );
+        Reference< XWindowPeer > xPeer = ImplGetCompatiblePeer();
         Reference< XDevice > xD( xPeer, UNO_QUERY );
 
         SimpleFontMetric aFM;
@@ -1761,7 +1726,8 @@ static void lcl_ApplyResolverToNestedContainees(  const Reference< resource::XSt
 {
     OUString aPropName( PROPERTY_RESOURCERESOLVER );
 
-    Any xNewStringResourceResolver; xNewStringResourceResolver <<= xStringResourceResolver;
+    Any aNewStringResourceResolver;
+    aNewStringResourceResolver <<= xStringResourceResolver;
 
     Sequence< OUString > aPropNames { aPropName };
 
@@ -1790,7 +1756,7 @@ static void lcl_ApplyResolverToNestedContainees(  const Reference< resource::XSt
                 xMultiPropSet->firePropertiesChangeEvent( aPropNames, xListener );
             }
             else
-                xPropertySet->setPropertyValue( aPropName, xNewStringResourceResolver );
+                xPropertySet->setPropertyValue( aPropName, aNewStringResourceResolver );
         }
         catch (const Exception&)
         {

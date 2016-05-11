@@ -70,7 +70,6 @@
 #include "res_bmp.hrc"
 #include "unokywds.hxx"
 #include "unopback.hxx"
-#include "unohelp.hxx"
 #include <vcl/dibtools.hxx>
 #include <svx/svdograf.hxx>
 #include <svx/svdoashp.hxx>
@@ -388,7 +387,7 @@ SdXImpressDocument* SdGenericDrawPage::GetModel() const
 }
 
 // this is called whenever a SdrObject must be created for a empty api shape wrapper
-SdrObject * SdGenericDrawPage::_CreateSdrObject( const Reference< drawing::XShape >& xShape )
+SdrObject * SdGenericDrawPage::CreateSdrObject_( const Reference< drawing::XShape >& xShape )
     throw (css::uno::RuntimeException, std::exception)
 {
     if( nullptr == SvxFmDrawPage::mpPage || !xShape.is() )
@@ -398,7 +397,7 @@ SdrObject * SdGenericDrawPage::_CreateSdrObject( const Reference< drawing::XShap
     const OUString aPrefix( "com.sun.star.presentation." );
     if( !aType.startsWith( aPrefix ) )
     {
-        SdrObject* pObj = SvxFmDrawPage::_CreateSdrObject( xShape );
+        SdrObject* pObj = SvxFmDrawPage::CreateSdrObject_( xShape );
         if( pObj && ( (pObj->GetObjInventor() != SdrInventor) || (pObj->GetObjIdentifier() != OBJ_PAGE) ) )
         {
             SdDrawDocument* pDoc = static_cast<SdDrawDocument*>(GetPage()->GetModel());
@@ -510,7 +509,7 @@ SdrObject * SdGenericDrawPage::_CreateSdrObject( const Reference< drawing::XShap
     SdrObject *pPresObj = nullptr;
     if( (eObjKind == PRESOBJ_TABLE) || (eObjKind == PRESOBJ_MEDIA) )
     {
-        pPresObj = SvxFmDrawPage::_CreateSdrObject( xShape );
+        pPresObj = SvxFmDrawPage::CreateSdrObject_( xShape );
         if( pPresObj )
         {
             SdDrawDocument* pDoc = static_cast<SdDrawDocument*>(GetPage()->GetModel());
@@ -605,32 +604,6 @@ void SAL_CALL SdGenericDrawPage::setPropertyValue( const OUString& aPropertyName
     ::SolarMutexGuard aGuard;
 
     throwIfDisposed();
-
-    // tdf#93994 Use a custom slot to have filter code flush the UNO
-    // API implementations of SdrObjCustomShape. Used e.g. by
-    // SdXMLDrawPageContext::EndElement(), see there for more
-    // information
-    if(SvxFmDrawPage::mpPage)
-    {
-        const OUString sFlushCustomShapeUnoApiObjects("FlushCustomShapeUnoApiObjects");
-
-        if(sFlushCustomShapeUnoApiObjects == aPropertyName)
-        {
-            SdrObjListIter aIter(static_cast< SdPage& >(*SvxFmDrawPage::mpPage), IM_DEEPWITHGROUPS);
-
-            while(aIter.IsMore())
-            {
-                SdrObjCustomShape* pCustomShape = dynamic_cast< SdrObjCustomShape* >(aIter.Next());
-
-                if(pCustomShape)
-                {
-                    pCustomShape->setUnoShape(nullptr);
-                }
-            }
-
-            return;
-        }
-    }
 
     const SfxItemPropertySimpleEntry* pEntry = mpPropSet->getPropertyMapEntry(aPropertyName);
 
@@ -1400,11 +1373,11 @@ void SAL_CALL SdGenericDrawPage::firePropertiesChangeEvent( const Sequence< OUSt
 {
 }
 
-Reference< drawing::XShape >  SdGenericDrawPage::_CreateShape(SdrObject *pObj) const
+Reference< drawing::XShape >  SdGenericDrawPage::CreateShape(SdrObject *pObj) const
     throw (RuntimeException, std::exception)
 {
-    DBG_ASSERT( GetPage(), "SdGenericDrawPage::_CreateShape(), can't create shape for disposed page!" );
-    DBG_ASSERT( pObj, "SdGenericDrawPage::_CreateShape(), invalid call with pObj == 0!" );
+    DBG_ASSERT( GetPage(), "SdGenericDrawPage::CreateShape(), can't create shape for disposed page!" );
+    DBG_ASSERT( pObj, "SdGenericDrawPage::CreateShape(), invalid call with pObj == 0!" );
 
     if (!pObj)
         return Reference< drawing::XShape >();
@@ -1444,7 +1417,7 @@ Reference< drawing::XShape >  SdGenericDrawPage::_CreateShape(SdrObject *pObj) c
         Reference< drawing::XShape >  xShape( pShape );
 
         if(!xShape.is())
-            xShape = SvxFmDrawPage::_CreateShape( pObj );
+            xShape = SvxFmDrawPage::CreateShape( pObj );
 
         if( eKind != PRESOBJ_NONE )
         {
@@ -1527,7 +1500,7 @@ Reference< drawing::XShape >  SdGenericDrawPage::_CreateShape(SdrObject *pObj) c
     }
     else
     {
-        return SvxFmDrawPage::_CreateShape( pObj );
+        return SvxFmDrawPage::CreateShape( pObj );
     }
 
 }
@@ -1537,9 +1510,9 @@ Sequence< OUString > SAL_CALL SdGenericDrawPage::getSupportedServiceNames()
     throw(uno::RuntimeException, std::exception)
 {
     Sequence< OUString > aSeq( SvxFmDrawPage::getSupportedServiceNames() );
-    comphelper::ServiceInfoHelper::addToSequence( aSeq, 3, "com.sun.star.drawing.GenericDrawPage",
+    comphelper::ServiceInfoHelper::addToSequence( aSeq, {"com.sun.star.drawing.GenericDrawPage",
                                                   "com.sun.star.document.LinkTarget",
-                                                  "com.sun.star.document.LinkTargetSupplier");
+                                                  "com.sun.star.document.LinkTargetSupplier"});
     return aSeq;
 }
 
@@ -1615,7 +1588,7 @@ Reference< drawing::XShape > SAL_CALL SdGenericDrawPage::combine( const Referenc
 
     SdrPageView* pPageView = mpView->ShowSdrPage( GetPage() );
 
-    _SelectObjectsInView( xShapes, pPageView );
+    SelectObjectsInView( xShapes, pPageView );
 
     mpView->CombineMarkedObjects( false );
 
@@ -1646,7 +1619,7 @@ void SAL_CALL SdGenericDrawPage::split( const Reference< drawing::XShape >& xGro
         return;
 
     SdrPageView* pPageView = mpView->ShowSdrPage( GetPage() );
-    _SelectObjectInView( xGroup, pPageView );
+    SelectObjectInView( xGroup, pPageView );
     mpView->DismantleMarkedObjects();
     mpView->HideSdrPage();
 
@@ -1666,7 +1639,7 @@ Reference< drawing::XShape > SAL_CALL SdGenericDrawPage::bind( const Reference< 
 
     SdrPageView* pPageView = mpView->ShowSdrPage( GetPage() );
 
-    _SelectObjectsInView( xShapes, pPageView );
+    SelectObjectsInView( xShapes, pPageView );
 
     mpView->CombineMarkedObjects();
 
@@ -1697,7 +1670,7 @@ void SAL_CALL SdGenericDrawPage::unbind( const Reference< drawing::XShape >& xSh
         return;
 
     SdrPageView* pPageView = mpView->ShowSdrPage( GetPage() );
-    _SelectObjectInView( xShape, pPageView );
+    SelectObjectInView( xShape, pPageView );
     mpView->DismantleMarkedObjects( true );
     mpView->HideSdrPage();
 
@@ -1947,11 +1920,11 @@ sal_Bool SAL_CALL SdPageLinkTargets::hasElements()
             if( aStr.isEmpty() && dynamic_cast< const SdrOle2Obj *>( pObj ) !=  nullptr )
                 aStr = static_cast< const SdrOle2Obj* >( pObj )->GetPersistName();
             if( !aStr.isEmpty() )
-                return sal_True;
+                return true;
         }
     }
 
-    return sal_False;
+    return false;
 }
 
 // container::XNameAccess
@@ -2270,10 +2243,10 @@ Sequence< OUString > SAL_CALL SdDrawPage::getSupportedServiceNames() throw(uno::
     throwIfDisposed();
 
     Sequence< OUString > aSeq( SdGenericDrawPage::getSupportedServiceNames() );
-    comphelper::ServiceInfoHelper::addToSequence( aSeq, 1, "com.sun.star.drawing.DrawPage" );
+    comphelper::ServiceInfoHelper::addToSequence( aSeq, {"com.sun.star.drawing.DrawPage"} );
 
     if( mbIsImpressDocument )
-        comphelper::ServiceInfoHelper::addToSequence( aSeq, 1, "com.sun.star.presentation.DrawPage" );
+        comphelper::ServiceInfoHelper::addToSequence( aSeq, {"com.sun.star.presentation.DrawPage"} );
 
     return aSeq;
 }
@@ -2820,10 +2793,10 @@ Sequence< OUString > SAL_CALL SdMasterPage::getSupportedServiceNames() throw(uno
     throwIfDisposed();
 
     Sequence< OUString > aSeq( SdGenericDrawPage::getSupportedServiceNames() );
-    comphelper::ServiceInfoHelper::addToSequence( aSeq, 1, "com.sun.star.drawing.MasterPage" );
+    comphelper::ServiceInfoHelper::addToSequence( aSeq, {"com.sun.star.drawing.MasterPage"} );
 
     if( SvxFmDrawPage::mpPage && static_cast<SdPage*>(SvxFmDrawPage::mpPage)->GetPageKind() == PK_HANDOUT )
-        comphelper::ServiceInfoHelper::addToSequence( aSeq, 1, "com.sun.star.presentation.HandoutMasterPage" );
+        comphelper::ServiceInfoHelper::addToSequence( aSeq, {"com.sun.star.presentation.HandoutMasterPage"} );
 
     return aSeq;
 }
@@ -2842,7 +2815,7 @@ sal_Bool SAL_CALL SdMasterPage::hasElements() throw(uno::RuntimeException, std::
     throwIfDisposed();
 
     if( SvxFmDrawPage::mpPage == nullptr )
-        return sal_False;
+        return false;
 
     return SvxFmDrawPage::mpPage->GetObjCount() > 0;
 }
@@ -3049,16 +3022,15 @@ void SAL_CALL SdMasterPage::setName( const OUString& rName )
     {
         SdDrawDocument* pDoc = GetModel()->GetDoc();
         bool bOutDummy;
-        OUString aNewName( rName );
 
         // Slide Name has to be unique
-        if( pDoc && pDoc->GetPageByName( aNewName, bOutDummy ) != SDRPAGE_NOTFOUND )
+        if( pDoc && pDoc->GetPageByName( rName, bOutDummy ) != SDRPAGE_NOTFOUND )
             return; // throw Exception ?
 
-        GetPage()->SetName( aNewName );
+        GetPage()->SetName( rName );
 
         if( pDoc )
-            pDoc->RenameLayoutTemplate( GetPage()->GetLayoutName(), aNewName );
+            pDoc->RenameLayoutTemplate( GetPage()->GetLayoutName(), rName );
 
         // fake a mode change to repaint the page tab bar
         ::sd::DrawDocShell* pDocSh = GetModel()->GetDocShell();

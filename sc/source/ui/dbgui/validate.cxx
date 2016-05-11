@@ -96,6 +96,11 @@ ScValidationDlg::ScValidationDlg(vcl::Window* pParent, const SfxItemSet* pArgSet
     get(m_pHBox, "refinputbox");
 }
 
+ScValidationDlg::~ScValidationDlg()
+{
+    disposeOnce();
+}
+
 void ScTPValidationValue::SetReferenceHdl( const ScRange&rRange , ScDocument* pDoc )
 {
     if ( rRange.aStart != rRange.aEnd )
@@ -105,7 +110,7 @@ void ScTPValidationValue::SetReferenceHdl( const ScRange&rRange , ScDocument* pD
 
     if ( m_pRefEdit )
     {
-        OUString aStr(rRange.Format(SCR_ABS_3D, pDoc, pDoc->GetAddressConvention()));
+        OUString aStr(rRange.Format(ScRefFlags::RANGE_ABS_3D, pDoc, pDoc->GetAddressConvention()));
         m_pRefEdit->SetRefString( aStr );
     }
 }
@@ -630,7 +635,8 @@ IMPL_LINK_NOARG_TYPED(ScTPValidationValue, SelectHdl, ListBox&, void)
             case SC_VALIDDLG_DATA_EQLESS:       m_pFtMin->SetText( maStrMax );    break;
 
             case SC_VALIDDLG_DATA_VALIDRANGE:
-            case SC_VALIDDLG_DATA_INVALIDRANGE:   bShowMax = true;    // fall through
+            case SC_VALIDDLG_DATA_INVALIDRANGE:   bShowMax = true;
+                SAL_FALLTHROUGH;
             case SC_VALIDDLG_DATA_GREATER:
             case SC_VALIDDLG_DATA_EQGREATER:    m_pFtMin->SetText( maStrMin );    break;
 

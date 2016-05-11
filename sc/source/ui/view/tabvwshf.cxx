@@ -48,7 +48,6 @@
 
 #include "tabbgcolor.hxx"
 #include "tabbgcolordlg.hxx"
-#include "sccommands.h"
 #include "markdata.hxx"
 
 #include <vector>
@@ -178,17 +177,25 @@ void ScTabViewShell::ExecuteTable( SfxRequest& rReq )
                     bool bOk = false;
                     const SfxPoolItem*  pTabItem;
                     const SfxPoolItem*  pNameItem;
-                    OUString            aName;
 
                     if ( pReqArgs->HasItem( FN_PARAM_1, &pTabItem ) &&
                          pReqArgs->HasItem( nSlot, &pNameItem ) )
                     {
-                        // sheet number from basic: 1-based
+                        OUString aName = static_cast<const SfxStringItem*>(pNameItem)->GetValue();
+                        pDoc->CreateValidTabName(aName);
 
-                        aName = static_cast<const SfxStringItem*>(pNameItem)->GetValue();
-                        nTabNr = static_cast<const SfxUInt16Item*>(pTabItem)->GetValue() - 1;
-                        if ( nTabNr < nTabCount )
-                            bOk = InsertTable( aName, nTabNr );
+                        // sheet number from basic: 1-based
+                        // 0 is special, means adding at the end
+                        nTabNr = static_cast<const SfxUInt16Item*>(pTabItem)->GetValue();
+                        if (nTabNr == 0)
+                            nTabNr = nTabCount;
+                        else
+                            --nTabNr;
+
+                        if (nTabNr > nTabCount)
+                            nTabNr = nTabCount;
+
+                        bOk = InsertTable(aName, nTabNr);
                     }
 
                     if (bOk)
@@ -325,7 +332,13 @@ void ScTabViewShell::ExecuteTable( SfxRequest& rReq )
                     OUString      aName;
 
                     if( pReqArgs->HasItem( FN_PARAM_1, &pItem ) )
+                    {
                         nTabNr = static_cast<const SfxUInt16Item*>(pItem)->GetValue();
+
+                        // inserting is 1-based, let's be consistent
+                        if (nTabNr > 0)
+                            --nTabNr;
+                    }
 
                     if( pReqArgs->HasItem( nSlot, &pItem ) )
                         aName = static_cast<const SfxStringItem*>(pItem)->GetValue();
@@ -560,37 +573,66 @@ void ScTabViewShell::ExecuteTable( SfxRequest& rReq )
 
         case FID_DELETE_TABLE:
             {
-                //  unnecessary parameter ->  method depends on table
+                bool bHasIndex = (pReqArgs != nullptr);
 
-                bool bDoIt = rReq.IsAPI();
-                if( !bDoIt )
+                // allow removing via the Index/FID_DELETE_TABLE parameter
+                SCTAB nTabNr = nCurrentTab;
+                if (bHasIndex)
                 {
-                    //  source isn't basic -> ask again
-
-                        bDoIt = ( RET_YES ==
-                                  ScopedVclPtr<QueryBox>::Create( GetDialogParent(),
-                                            WinBits( WB_YES_NO | WB_DEF_YES ),
-                                            ScGlobal::GetRscString(STR_QUERY_DELTAB)
-                                      )->Execute() );
-                }
-                if( bDoIt )
-                {
-                    SCTAB nNewTab   = nCurrentTab;
-                    SCTAB nFirstTab=0;
-                    bool   bTabFlag=false;
-                    ScMarkData& rMark = rViewData.GetMarkData();
-                    std::vector<SCTAB> TheTabs;
-                    for(SCTAB i=0;i<nTabCount;i++)
+                    const SfxPoolItem* pItem;
+                    if (pReqArgs->HasItem(FID_DELETE_TABLE, &pItem))
                     {
-                        if(rMark.GetTableSelect(i) &&!pDoc->IsTabProtected(i))
-                        {
-                            TheTabs.push_back(i);
-                            bTabFlag=true;
-                            if(nNewTab==i) nNewTab++;
-                        }
-                        if(!bTabFlag) nFirstTab=i;
+                        nTabNr = static_cast<const SfxUInt16Item*>(pItem)->GetValue();
+
+                        // inserting is 1-based, let's be consistent
+                        if (nTabNr > 0)
+                            --nTabNr;
                     }
-                    if(nNewTab>=nTabCount) nNewTab=nFirstTab;
+                }
+
+                bool bDoIt = bHasIndex;
+                if (!bDoIt)
+                {
+                    // no parameter given, ask for confirmation
+                    bDoIt = ( RET_YES ==
+                              ScopedVclPtr<QueryBox>::Create( GetDialogParent(),
+                                        WinBits( WB_YES_NO | WB_DEF_YES ),
+                                        ScGlobal::GetRscString(STR_QUERY_DELTAB)
+                                  )->Execute() );
+                }
+
+                if (bDoIt)
+                {
+                    SCTAB nNewTab = nCurrentTab;
+                    std::vector<SCTAB> TheTabs;
+
+                    if (bHasIndex)
+                    {
+                        // sheet no. provided by the parameter
+                        TheTabs.push_back(nTabNr);
+                        if (nNewTab > nTabNr && nNewTab > 0)
+                            --nNewTab;
+                    }
+                    else
+                    {
+                        SCTAB nFirstTab = 0;
+                        bool bTabFlag = false;
+                        ScMarkData& rMark = rViewData.GetMarkData();
+                        for (SCTAB i = 0; i < nTabCount; i++)
+                        {
+                            if (rMark.GetTableSelect(i) && !pDoc->IsTabProtected(i))
+                            {
+                                TheTabs.push_back(i);
+                                bTabFlag = true;
+                                if (nNewTab == i)
+                                    nNewTab++;
+                            }
+                            if (!bTabFlag)
+                                nFirstTab = i;
+                        }
+                        if (nNewTab >= nTabCount)
+                            nNewTab = nFirstTab;
+                    }
 
                     rViewData.SetTabNo(nNewTab);
                     DeleteTables(TheTabs);
@@ -656,8 +698,6 @@ void ScTabViewShell::ExecuteTable( SfxRequest& rReq )
                     bool                bDone = false;
                     const SfxPoolItem*  pItem;
                     Color               aColor;
-                    if( pReqArgs->HasItem( FN_PARAM_1, &pItem ) )
-                        nTabNr = static_cast<const SfxUInt16Item*>(pItem)->GetValue();
 
                     if( pReqArgs->HasItem( nSlot, &pItem ) )
                         aColor = static_cast<const SvxColorItem*>(pItem)->GetValue();
@@ -701,7 +741,7 @@ void ScTabViewShell::ExecuteTable( SfxRequest& rReq )
                                                                 OUString(ScResId(SCSTR_SET_TAB_BG_COLOR)),
                                                                 OUString(ScResId(SCSTR_NO_TAB_BG_COLOR)),
                                                                 aTabBgColor,
-                                                                CMD_FID_TAB_SET_TAB_BG_COLOR));
+                                                                ".uno:TabBgColor"));
                     while ( !bDone && nRet == RET_OK )
                     {
                         nRet = pDlg->Execute();

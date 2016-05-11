@@ -22,7 +22,6 @@
 #include <algorithm>
 #include <string.h>
 
-#include <boost/noncopyable.hpp>
 #include <rtl/instance.hxx>
 #include <rtl/crc.h>
 #include <osl/diagnose.h>
@@ -41,7 +40,7 @@
 #define INETHIST_SIZE_LIMIT   1024
 #define INETHIST_MAGIC_HEAD   0x484D4849UL
 
-class INetURLHistory_Impl: private boost::noncopyable
+class INetURLHistory_Impl
 {
     struct head_entry
     {
@@ -71,9 +70,9 @@ class INetURLHistory_Impl: private boost::noncopyable
 
         /** Initialization.
         */
-        void initialize (sal_uInt16 nLru, sal_uInt32 nHash = 0)
+        void initialize (sal_uInt16 nLru)
         {
-            m_nHash = nHash;
+            m_nHash = 0;
             m_nLru  = nLru;
             m_nMBZ  = 0;
         }
@@ -100,9 +99,9 @@ class INetURLHistory_Impl: private boost::noncopyable
 
         /** Initialization.
         */
-        void initialize (sal_uInt16 nThis, sal_uInt32 nHash = 0)
+        void initialize (sal_uInt16 nThis)
         {
-            m_nHash = nHash;
+            m_nHash = 0;
             m_nNext = nThis;
             m_nPrev = nThis;
         }
@@ -156,6 +155,8 @@ class INetURLHistory_Impl: private boost::noncopyable
 public:
     INetURLHistory_Impl();
     ~INetURLHistory_Impl();
+    INetURLHistory_Impl(const INetURLHistory_Impl&) = delete;
+    INetURLHistory_Impl& operator=(const INetURLHistory_Impl&) = delete;
 
     /** putUrl/queryUrl.
     */

@@ -22,7 +22,7 @@ namespace sc {
 
 namespace {
 
-class Notifier : std::unary_function<ScFormulaCell*, void>
+class Notifier : public std::unary_function<ScFormulaCell*, void>
 {
     const SfxHint& mrHint;
 public:
@@ -86,7 +86,7 @@ FormulaGroupAreaListener::FormulaGroupAreaListener( const ScRange& rRange, const
     assert(mpColumn);
     SAL_INFO( "sc.core.grouparealistener",
             "FormulaGroupAreaListener ctor this " << this <<
-            " range " << (maRange == BCA_LISTEN_ALWAYS ? "LISTEN-ALWAYS" : maRange.Format(SCA_VALID)) <<
+            " range " << (maRange == BCA_LISTEN_ALWAYS ? "LISTEN-ALWAYS" : maRange.Format(ScRefFlags::VALID)) <<
             " mnTopCellRow " << mnTopCellRow << " length " << mnGroupLen <<
             ", col/tab " << mpColumn->GetCol() << "/" << mpColumn->GetTab());
 }
@@ -94,10 +94,7 @@ FormulaGroupAreaListener::FormulaGroupAreaListener( const ScRange& rRange, const
 FormulaGroupAreaListener::~FormulaGroupAreaListener()
 {
     SAL_INFO( "sc.core.grouparealistener",
-            "FormulaGroupAreaListener dtor this " << this <<
-            " range " << (maRange == BCA_LISTEN_ALWAYS ? "LISTEN-ALWAYS" : maRange.Format(SCA_VALID)) <<
-            " mnTopCellRow " << mnTopCellRow << " length " << mnGroupLen <<
-            ", col/tab " << mpColumn->GetCol() << "/" << mpColumn->GetTab());
+            "FormulaGroupAreaListener dtor this " << this);
 }
 
 ScRange FormulaGroupAreaListener::getListeningRange() const
@@ -186,7 +183,7 @@ void FormulaGroupAreaListener::collectFormulaCells(
 {
     SAL_INFO( "sc.core.grouparealistener",
             "FormulaGroupAreaListener::collectFormulaCells() this " << this <<
-            " range " << (maRange == BCA_LISTEN_ALWAYS ? "LISTEN-ALWAYS" : maRange.Format(SCA_VALID)) <<
+            " range " << (maRange == BCA_LISTEN_ALWAYS ? "LISTEN-ALWAYS" : maRange.Format(ScRefFlags::VALID)) <<
             " mnTopCellRow " << mnTopCellRow << " length " << mnGroupLen <<
             ", col/tab " << mpColumn->GetCol() << "/" << mpColumn->GetTab());
 

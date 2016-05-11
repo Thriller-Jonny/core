@@ -105,7 +105,8 @@ public:
                 double fTransparency,
                 const basegfx::B2DVector& rLineWidths,
                 basegfx::B2DLineJoin,
-                css::drawing::LineCap) = 0;
+                css::drawing::LineCap,
+                double fMiterMinimumAngle) = 0;
 
     virtual bool drawPolyLineBezier(
                 sal_uInt32 nPoints,
@@ -174,18 +175,6 @@ public:
                 const SalBitmap& rMaskBitmap,
                 const SalBitmap& rAlphaBitmap ) = 0;
 
-    /** Render bitmap with alpha channel
-
-        @param rSourceBitmap
-        Source bitmap to blit
-
-        @param rAlphaBitmap
-        Alpha channel to use for blitting
-
-        @return true, if the operation succeeded, and false
-        otherwise. In this case, clients should try to emulate alpha
-        compositing themselves
-     */
     virtual bool drawAlphaBitmap(
                 const SalTwoRect&,
                 const SalBitmap& rSourceBitmap,
@@ -199,20 +188,12 @@ public:
                 const SalBitmap& rSourceBitmap,
                 const SalBitmap* pAlphaBitmap) = 0;
 
-    /** Render solid rectangle with given transparency
-
-        @param nTransparency
-        Transparency value (0-255) to use. 0 blits and opaque, 255 a
-        fully transparent rectangle
-     */
     virtual bool drawAlphaRect(
                     long nX, long nY,
                     long nWidth, long nHeight,
                     sal_uInt8 nTransparency ) = 0;
 
     virtual bool drawGradient(const tools::PolyPolygon& rPolygon, const Gradient& rGradient) = 0;
-
-    virtual OpenGLContext *beginPaint() { return nullptr; }
 };
 
 #endif

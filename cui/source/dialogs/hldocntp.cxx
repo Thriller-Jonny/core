@@ -105,7 +105,9 @@ SvxHyperlinkNewDocTp::SvxHyperlinkNewDocTp ( vcl::Window *pParent, IconChoiceDia
     get(m_pCbbPath, "path");
     m_pCbbPath->SetSmartProtocol(INetProtocol::File);
     get(m_pBtCreate, "create");
-    m_pBtCreate->SetModeImage(Image(CUI_RES(RID_SVXBMP_NEWDOC)));
+    BitmapEx aBitmap = Image(CUI_RES(RID_SVXBMP_NEWDOC)).GetBitmapEx();
+    aBitmap.Scale(GetDPIScaleFactor(),GetDPIScaleFactor(),BmpScaleFlag::BestQuality );
+    m_pBtCreate->SetModeImage(Image(aBitmap));
     get(m_pLbDocTypes, "types");
     m_pLbDocTypes->set_height_request(m_pLbDocTypes->GetTextHeight() * 5);
 
@@ -197,7 +199,7 @@ void SvxHyperlinkNewDocTp::FillDocumentList ()
                 aDocumentUrl = "private:factory/simpress"; // the AutoPilot for impress
 
             // insert private-url and default-extension as user-data
-            const SfxFilter* pFilter = SfxFilter::GetDefaultFilterFromFactory( aDocumentUrl );
+            std::shared_ptr<const SfxFilter> pFilter = SfxFilter::GetDefaultFilterFromFactory( aDocumentUrl );
             if ( pFilter )
             {
                 // insert doc-name and image
@@ -352,10 +354,9 @@ void SvxHyperlinkNewDocTp::DoApply ()
                     SfxStringItem aFlags (SID_OPTIONS, aStrFlags);
 
                     // open url
-                    const SfxPoolItem* pReturn = GetDispatcher()->Execute( SID_OPENDOC,
-                                                                           SfxCallMode::SYNCHRON,
-                                                                           &aName, &aFlags,
-                                                                           &aFrame, &aReferer, 0L );
+                    const SfxPoolItem* pReturn = GetDispatcher()->ExecuteList(
+                            SID_OPENDOC, SfxCallMode::SYNCHRON,
+                            { &aName, &aFlags, &aFrame, &aReferer });
 
                     // save new doc
                     const SfxViewFrameItem *pItem = dynamic_cast<const SfxViewFrameItem*>( pReturn  );  // SJ: pReturn is NULL if the Hyperlink
@@ -366,9 +367,9 @@ void SvxHyperlinkNewDocTp::DoApply ()
                         {
                             SfxStringItem aNewName( SID_FILE_NAME, aURL.GetMainURL( INetURLObject::NO_DECODE ) );
 
-                            pViewFrame->GetDispatcher()->Execute( SID_SAVEASDOC,
-                                                                  SfxCallMode::SYNCHRON,
-                                                                  &aNewName, 0L );
+                            pViewFrame->GetDispatcher()->ExecuteList(
+                                SID_SAVEASDOC, SfxCallMode::SYNCHRON,
+                                { &aNewName });
 
                         }
                     }

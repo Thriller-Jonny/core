@@ -59,7 +59,7 @@ public:
         const AccessibleShapeTreeInfo& rShapeTreeInfo);
     virtual ~AccessibleControlShape( );
 
-    css::uno::Reference< css::beans::XPropertySet > SAL_CALL  GetControlModel( ) { return m_xControlModel;} ;
+    const css::uno::Reference< css::beans::XPropertySet >& SAL_CALL  GetControlModel( ) { return m_xControlModel;} ;
     AccessibleControlShape* SAL_CALL GetLabeledByControlShape();
 protected:
     //---  XAccessible  ----------------------------------------
@@ -154,7 +154,7 @@ protected:
 
     /** adjusts our AccessibleRole, depending on the control type we're working for
 
-        <p>Only to be called during inituialization</p>
+        <p>Only to be called during initialization</p>
     */
     void        adjustAccessibleRole( );
 

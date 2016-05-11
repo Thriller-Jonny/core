@@ -186,7 +186,7 @@ bool VectorRef::NeedParallelReduction() const
 void Normal::GenSlidingWindowFunction(
     std::stringstream& ss, const std::string& sSymName, SubArguments& vSubArguments )
 {
-    ArgVector argVector;
+    std::vector<std::string> argVector;
     ss << "\ndouble " << sSymName;
     ss << "_" << BinFuncName() << "(";
     for (size_t i = 0; i < vSubArguments.size(); i++)
@@ -282,7 +282,7 @@ void CheckVariables::CheckSubArgumentIsNan( std::stringstream& ss,
 }
 
 void CheckVariables::CheckSubArgumentIsNan2( std::stringstream& ss,
-    SubArguments& vSubArguments,  int argumentNum, std::string p )
+    SubArguments& vSubArguments,  int argumentNum, const std::string& p )
 {
     int i = argumentNum;
     if (vSubArguments[i]->GetFormulaToken()->GetType() == formula::svDouble)

@@ -29,7 +29,6 @@ namespace xmloff
 {
 
 
-
     //= XMLExporter
 
     class SAL_NO_VTABLE XMLSettingsExportContext
@@ -40,8 +39,7 @@ namespace xmloff
         virtual void    AddAttribute( enum ::xmloff::token::XMLTokenEnum i_eName,
                                       enum ::xmloff::token::XMLTokenEnum i_eValue ) = 0;
 
-        virtual void    StartElement( enum ::xmloff::token::XMLTokenEnum i_eName,
-                                      const bool i_bIgnoreWhitespace ) = 0;
+        virtual void    StartElement( enum ::xmloff::token::XMLTokenEnum i_eName ) = 0;
         virtual void    EndElement(   const bool i_bIgnoreWhitespace ) = 0;
 
         virtual void    Characters( const OUString& i_rCharacters ) = 0;

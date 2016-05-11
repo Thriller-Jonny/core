@@ -18,7 +18,7 @@
  */
 
 #include <hintids.hxx>
-#include <com/sun/star/util/SearchOptions.hpp>
+#include <com/sun/star/util/SearchOptions2.hpp>
 #include <com/sun/star/util/SearchFlags.hpp>
 #include <com/sun/star/i18n/TransliterationModules.hpp>
 #include <com/sun/star/ui/dialogs/TemplateDescription.hpp>
@@ -96,7 +96,7 @@ using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::ui::dialogs;
 using namespace ::sfx2;
-using ::com::sun::star::util::SearchOptions;
+using ::com::sun::star::util::SearchOptions2;
 
 #define SWSRCVIEWFLAGS ( SfxViewShellFlags::CAN_PRINT | SfxViewShellFlags::NO_NEWWINDOW )
 
@@ -118,7 +118,7 @@ SFX_IMPL_SUPERCLASS_INTERFACE(SwSrcView, SfxViewShell)
 
 void SwSrcView::InitInterface_Impl()
 {
-    GetStaticInterface()->RegisterPopupMenu(SW_RES(MN_SRCVIEW_POPUPMENU));
+    GetStaticInterface()->RegisterPopupMenu("source");
 
     GetStaticInterface()->RegisterObjectBar(SFX_OBJECTBAR_TOOLS|SFX_VISIBILITY_STANDARD|SFX_VISIBILITY_SERVER,
                                             RID_WEBTOOLS_TOOLBOX);
@@ -140,7 +140,7 @@ static void lcl_PrintHeader( vcl::RenderContext &rOutDev, sal_Int32 nPages, sal_
 
     vcl::Font aFont( aOldFont );
     aFont.SetWeight( WEIGHT_BOLD );
-    aFont.SetAlign( ALIGN_BOTTOM );
+    aFont.SetAlignment( ALIGN_BOTTOM );
     rOutDev.SetFont( aFont );
 
     long nFontHeight = rOutDev.GetTextHeight();
@@ -304,7 +304,7 @@ void SwSrcView::Execute(SfxRequest& rReq)
 
             // search for an html filter for export
             SfxFilterContainer* pFilterCont = GetObjectShell()->GetFactory().GetFilterContainer();
-            const SfxFilter* pFilter =
+            std::shared_ptr<const SfxFilter> pFilter =
                 pFilterCont->GetFilter4Extension( "html", SfxFilterFlags::EXPORT );
             if ( pFilter )
             {
@@ -369,7 +369,7 @@ void SwSrcView::Execute(SfxRequest& rReq)
             OSL_ENSURE( nWhich, "Which for SearchItem ?" );
             const SfxPoolItem& rItem = pTmpArgs->Get( nWhich );
             SetSearchItem( static_cast<const SvxSearchItem&>(rItem));
-            StartSearchAndReplace( static_cast<const SvxSearchItem&>(rItem), false, rReq.IsAPI() );
+            StartSearchAndReplace( static_cast<const SvxSearchItem&>(rItem), rReq.IsAPI() );
             if(aEditWin->IsModified())
                 GetDocShell()->GetDoc()->getIDocumentState().SetModified();
         }
@@ -379,7 +379,7 @@ void SwSrcView::Execute(SfxRequest& rReq)
             SvxSearchItem* pSrchItem = GetSearchItem();
             if(pSrchItem)
             {
-                StartSearchAndReplace( *pSrchItem, false, rReq.IsAPI() );
+                StartSearchAndReplace( *pSrchItem, rReq.IsAPI() );
                 if(aEditWin->IsModified())
                     GetDocShell()->GetDoc()->getIDocumentState().SetModified();
             }
@@ -566,8 +566,7 @@ void SwSrcView::SetSearchItem( const SvxSearchItem& rItem )
     pSearchItem = static_cast<SvxSearchItem*>(rItem.Clone());
 }
 
-sal_uInt16 SwSrcView::StartSearchAndReplace(const SvxSearchItem& rSearchItem,
-                                                  bool bFromStart,
+void SwSrcView::StartSearchAndReplace(const SvxSearchItem& rSearchItem,
                                                   bool bApi,
                                                   bool bRecursive)
 {
@@ -581,13 +580,7 @@ sal_uInt16 SwSrcView::StartSearchAndReplace(const SvxSearchItem& rSearchItem,
     if( !bForward )
         aPaM = TextPaM( TEXT_PARA_ALL, TEXT_INDEX_ALL );
 
-    if( bFromStart )
-    {
-        aSel = pTextView->GetSelection();
-        pTextView->SetSelection( TextSelection( aPaM, aPaM ));
-    }
-
-    util::SearchOptions aSearchOpt( rSearchItem.GetSearchOptions() );
+    util::SearchOptions2 aSearchOpt( rSearchItem.GetSearchOptions() );
     aSearchOpt.Locale = GetAppLanguageTag().getLocale();
 
     sal_uInt16 nFound;
@@ -600,6 +593,7 @@ sal_uInt16 SwSrcView::StartSearchAndReplace(const SvxSearchItem& rSearchItem,
         break;
 
     case SvxSearchCmd::REPLACE_ALL: bAll = true;
+        SAL_FALLTHROUGH;
     case SvxSearchCmd::REPLACE:
         nFound = pTextView->Replace( aSearchOpt, bAll, bForward );
         break;
@@ -613,15 +607,7 @@ sal_uInt16 SwSrcView::StartSearchAndReplace(const SvxSearchItem& rSearchItem,
         bool bNotFoundMessage = false;
         if(!bRecursive)
         {
-            if(!bFromStart)
-            {
-                bNotFoundMessage = bAtStart;
-            }
-            else
-            {
-                bNotFoundMessage = true;
-                pTextView->SetSelection( aSel );
-            }
+            bNotFoundMessage = bAtStart;
         }
         else if(bAtStart)
         {
@@ -653,15 +639,14 @@ sal_uInt16 SwSrcView::StartSearchAndReplace(const SvxSearchItem& rSearchItem,
                 if (nRet == RET_YES)
                 {
                     pTextView->SetSelection( TextSelection( aPaM, aPaM ) );
-                    StartSearchAndReplace( rSearchItem, false, false, true );
+                    StartSearchAndReplace( rSearchItem, false, true );
                 }
             }
         }
     }
-    return nFound;
 }
 
-sal_uInt16 SwSrcView::SetPrinter(SfxPrinter* pNew, SfxPrinterChangeFlags nDiffFlags, bool )
+sal_uInt16 SwSrcView::SetPrinter(SfxPrinter* pNew, SfxPrinterChangeFlags nDiffFlags )
 {
     SwDocShell* pDocSh = GetDocShell();
     if ( (SfxPrinterChangeFlags::JOBSETUP | SfxPrinterChangeFlags::PRINTER) & nDiffFlags )
@@ -705,9 +690,9 @@ sal_Int32 SwSrcView::PrintSource(
     TextEngine* pTextEngine = aEditWin->GetTextEngine();
     pOutDev->SetMapMode( MAP_100TH_MM );
     vcl::Font aFont( aEditWin->GetOutWin()->GetFont() );
-    Size aSize( aFont.GetSize() );
+    Size aSize( aFont.GetFontSize() );
     aSize = aEditWin->GetOutWin()->PixelToLogic( aSize, MAP_100TH_MM );
-    aFont.SetSize( aSize );
+    aFont.SetFontSize( aSize );
     aFont.SetColor( COL_BLACK );
     pOutDev->SetFont( aFont );
 
@@ -797,7 +782,7 @@ void SwSrcView::Load(SwDocShell* pDocShell)
     aEditWin->SetTextEncoding(eDestEnc);
     SfxMedium* pMedium = pDocShell->GetMedium();
 
-    const SfxFilter* pFilter = pMedium->GetFilter();
+    std::shared_ptr<const SfxFilter> pFilter = pMedium->GetFilter();
     bool bHtml = pFilter && pFilter->GetUserData() == "HTML";
     bool bDocModified = pDocShell->IsModified();
     if(bHtml && !bDocModified && pDocShell->HasName())

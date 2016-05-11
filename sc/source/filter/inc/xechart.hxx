@@ -26,8 +26,9 @@
 #include "xlstyle.hxx"
 #include "xeroot.hxx"
 #include "xestring.hxx"
-#include <boost/ptr_container/ptr_map.hpp>
+
 #include <memory>
+#include <map>
 
 class Size;
 class Rectangle;
@@ -448,7 +449,7 @@ public:
 
     /** Converts separator and the passed data label flags. */
     void                Convert(
-                            const ScfPropertySet& rPropSet, bool bShowSeries,
+                            const ScfPropertySet& rPropSet,
                             bool bShowCateg, bool bShowValue,
                             bool bShowPercent, bool bShowBubble );
 
@@ -654,9 +655,9 @@ public:
                                  sal_uInt16 nSeriesIdx );
 
     /** Returns formatting information of the trend line, created in Convert(). */
-    inline XclExpChDataFormatRef GetDataFormat() const { return mxDataFmt; }
+    const XclExpChDataFormatRef& GetDataFormat() const { return mxDataFmt; }
     /** Returns formatting of the equation text box, created in Convert(). */
-    inline XclExpChTextRef GetDataLabel() const { return mxLabel; }
+    const XclExpChTextRef& GetDataLabel() const { return mxLabel; }
 
 private:
     virtual void        WriteBody( XclExpStream& rStrm ) override;
@@ -920,7 +921,7 @@ private:
 
 private:
     typedef XclExpRecordList< XclExpChSeries >          XclExpChSeriesList;
-    typedef ::boost::ptr_map<sal_uInt16, XclExpChLineFormat> XclExpChLineFormatMap;
+    typedef ::std::map<sal_uInt16, std::unique_ptr<XclExpChLineFormat>> XclExpChLineFormatMap;
 
     XclChTypeGroup      maData;             /// Contents of the CHTYPEGROUP record.
     XclExpChType        maType;             /// Chart type (e.g. CHBAR, CHLINE, ...).
@@ -930,7 +931,7 @@ private:
     XclExpChLegendRef   mxLegend;           /// Chart legend (CHLEGEND group).
     XclExpChDropBarRef  mxUpBar;            /// White dropbars (CHDROPBAR group).
     XclExpChDropBarRef  mxDownBar;          /// Black dropbars (CHDROPBAR group).
-    XclExpChLineFormatMap maChartLines;     /// Global line formats (CHCHARTLINE group).
+    XclExpChLineFormatMap m_ChartLines;     /// Global line formats (CHCHARTLINE group).
 };
 
 typedef std::shared_ptr< XclExpChTypeGroup > XclExpChTypeGroupRef;

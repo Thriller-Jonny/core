@@ -20,8 +20,6 @@
 #ifndef INCLUDED_VCL_INC_HEADLESS_SVPGDI_HXX
 #define INCLUDED_VCL_INC_HEADLESS_SVPGDI_HXX
 
-#include <basebmp/bitmapdevice.hxx>
-#include <basebmp/color.hxx>
 #include <vcl/sysdata.hxx>
 #include <vcl/metric.hxx>
 #include <config_cairo_canvas.h>
@@ -29,6 +27,7 @@
 #include "salgdi.hxx"
 #include "sallayout.hxx"
 #include "svpcairotextrender.hxx"
+#include "impfontmetricdata.hxx"
 
 #ifdef IOS
 #define SvpSalGraphics AquaSalGraphics
@@ -39,45 +38,48 @@
 //cairo then matches the OpenGL GL_RGBA format so we can use it there
 //where we don't have GL_BGRA support.
 #ifdef ANDROID
-#   define SVP_CAIRO_FORMAT basebmp::Format::ThirtyTwoBitTcMaskRGBA
+#   define SVP_CAIRO_FORMAT (BMP_FORMAT_32BIT_TC_RGBA | BMP_FORMAT_TOP_DOWN)
 #else
-#   define SVP_CAIRO_FORMAT basebmp::Format::ThirtyTwoBitTcMaskBGRA
+#   define SVP_CAIRO_FORMAT (BMP_FORMAT_32BIT_TC_BGRA | BMP_FORMAT_TOP_DOWN)
 #endif
 
+struct BitmapBuffer;
 class GlyphCache;
 class ServerFont;
 typedef struct _cairo cairo_t;
 typedef struct _cairo_surface cairo_surface_t;
+typedef struct _cairo_user_data_key cairo_user_data_key_t;
+
+enum PaintMode { OVERPAINT, XOR, INVERT };
+
+typedef void (*damageHandler)(void* handle,
+                              sal_Int32 nExtentsLeft, sal_Int32 nExtentsTop,
+                              sal_Int32 nExtentsRight, sal_Int32 nExtentsBottom);
+
+struct VCL_DLLPUBLIC DamageHandler
+{
+    void *handle;
+    damageHandler damaged;
+};
 
 class VCL_DLLPUBLIC SvpSalGraphics : public SalGraphics
 {
-    basebmp::BitmapDeviceSharedPtr       m_aDevice;
-    basebmp::BitmapDeviceSharedPtr       m_aOrigDevice;
-
-    basebmp::BitmapDeviceSharedPtr       m_aClipMap;
-
-    bool                                 m_bUseLineColor;
-    basebmp::Color                       m_aLineColor;
-    bool                                 m_bUseFillColor;
-    basebmp::Color                       m_aFillColor;
-
-    basebmp::DrawMode                    m_aDrawMode;
+    cairo_surface_t*               m_pSurface;
+    SalColor                       m_aLineColor;
+    SalColor                       m_aFillColor;
+    PaintMode                      m_ePaintMode;
 
 public:
     static GlyphCache& getPlatformGlyphCache();
-    void setDevice(basebmp::BitmapDeviceSharedPtr& rDevice);
+    void setSurface(cairo_surface_t* pSurface);
+    static cairo_user_data_key_t* getDamageKey();
 
 private:
-    bool                                 m_bClipSetup;
-    struct ClipUndoHandle {
-        SvpSalGraphics                &m_rGfx;
-        basebmp::BitmapDeviceSharedPtr m_aDevice;
-        ClipUndoHandle( SvpSalGraphics *pGfx ) : m_rGfx( *pGfx ) {}
-        ~ClipUndoHandle();
-    };
-    bool isClippedSetup( const basegfx::B2IBox &aRange, ClipUndoHandle &rUndo );
-    void ensureClip();
-
+    void invert(const basegfx::B2DPolygon &rPoly, SalInvert nFlags);
+    void copySource(const SalTwoRect& rTR, cairo_surface_t* source);
+    void setupPolyPolygon(cairo_t* cr, const basegfx::B2DPolyPolygon& rPolyPoly);
+    void applyColor(cairo_t *cr, SalColor rColor);
+    void drawPolyPolygon(const basegfx::B2DPolyPolygon& rPolyPoly);
 protected:
     vcl::Region                         m_aClipRegion;
     SvpCairoTextRender                  m_aTextRenderImpl;
@@ -121,7 +123,7 @@ public:
 
     virtual void            SetTextColor( SalColor nSalColor ) override;
     virtual sal_uInt16      SetFont( FontSelectPattern*, int nFallbackLevel ) override;
-    virtual void            GetFontMetric( ImplFontMetricData*, int nFallbackLevel ) override;
+    virtual void            GetFontMetric( ImplFontMetricDataPtr&, int nFallbackLevel ) override;
     virtual const FontCharMapPtr GetFontCharMap() const override;
     virtual bool GetFontCapabilities(vcl::FontCapabilities &rFontCapabilities) const override;
     virtual void            GetDevFontList( PhysicalFontCollection* ) override;
@@ -161,7 +163,8 @@ public:
                                           double fTransparency,
                                           const basegfx::B2DVector& rLineWidths,
                                           basegfx::B2DLineJoin,
-                                          css::drawing::LineCap) override;
+                                          css::drawing::LineCap,
+                                          double fMiterMinimumAngle) override;
     virtual void            drawPolyLine( sal_uInt32 nPoints, const SalPoint* pPtAry ) override;
     virtual void            drawPolygon( sal_uInt32 nPoints, const SalPoint* pPtAry ) override;
     virtual void            drawPolyPolygon( sal_uInt32 nPoly,
@@ -214,9 +217,9 @@ public:
     virtual SystemFontData  GetSysFontData( int nFallbacklevel ) const override;
 #endif // ENABLE_CAIRO_CANVAS
 
-    cairo_t*                getCairoContext() const;
-    static cairo_surface_t* createCairoSurface(const basebmp::BitmapDeviceSharedPtr& rBuffer);
-    static cairo_t*         createCairoContext(const basebmp::BitmapDeviceSharedPtr& rBuffer);
+    cairo_t*                getCairoContext(bool bXorModeAllowed) const;
+    void                    releaseCairoContext(cairo_t* cr, bool bXorModeAllowed, const basegfx::B2DRange& rExtents) const;
+    static cairo_surface_t* createCairoSurface(const BitmapBuffer *pBuffer);
     void                    clipRegion(cairo_t* cr);
 };
 

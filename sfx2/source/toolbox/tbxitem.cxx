@@ -66,11 +66,11 @@
 #include <framework/sfxhelperfunctions.hxx>
 #include <vcl/taskpanelist.hxx>
 #include <toolkit/helper/vclunohelper.hxx>
+#include <tools/globname.hxx>
 #include <svtools/menuoptions.hxx>
 #include <svtools/miscopt.hxx>
 
 #include <sfx2/tbxctrl.hxx>
-#include <sfx2/mnumgr.hxx>
 #include <sfx2/dispatch.hxx>
 #include <sfx2/msg.hxx>
 #include <sfx2/msgpool.hxx>
@@ -88,7 +88,6 @@
 #include "helpid.hrc"
 #include "workwin.hxx"
 #include <sfx2/imgmgr.hxx>
-#include "virtmenu.hxx"
 #include <sfx2/imagemgr.hxx>
 #include <ctrlfactoryimpl.hxx>
 
@@ -101,7 +100,6 @@ using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::util;
 using namespace ::com::sun::star::container;
 using namespace ::com::sun::star::ui;
-
 
 
 SFX_IMPL_TOOLBOX_CONTROL_ARG(SfxToolBoxControl, SfxStringItem, true);
@@ -209,7 +207,6 @@ IMPL_LINK_TYPED( SfxToolBoxControl_Impl, WindowEventListener, VclWindowEvent&, r
 }
 
 
-
 SfxToolBoxControl::SfxToolBoxControl(
     sal_uInt16      nSlotID,
     sal_uInt16      nID,
@@ -228,12 +225,10 @@ SfxToolBoxControl::SfxToolBoxControl(
 }
 
 
-
 SfxToolBoxControl::~SfxToolBoxControl()
 {
     delete pImpl;
 }
-
 
 
 ToolBox& SfxToolBoxControl::GetToolBox() const
@@ -248,7 +243,6 @@ unsigned short SfxToolBoxControl::GetSlotId() const
 {
     return pImpl->nSlotId;
 }
-
 
 
 void SAL_CALL SfxToolBoxControl::dispose() throw (css::uno::RuntimeException, std::exception)
@@ -483,38 +477,38 @@ throw ( css::uno::RuntimeException, std::exception )
             if ( rEvent.IsEnabled )
             {
                 eState = SfxItemState::DEFAULT;
-                css::uno::Type pType = rEvent.State.getValueType();
+                css::uno::Type aType = rEvent.State.getValueType();
 
-                if ( pType == cppu::UnoType<void>::get() )
+                if ( aType == cppu::UnoType<void>::get() )
                 {
                     pItem = new SfxVoidItem( nSlotId );
                     eState = SfxItemState::UNKNOWN;
                 }
-                else if ( pType == cppu::UnoType<bool>::get() )
+                else if ( aType == cppu::UnoType<bool>::get() )
                 {
                     bool bTemp = false;
                     rEvent.State >>= bTemp ;
                     pItem = new SfxBoolItem( nSlotId, bTemp );
                 }
-                else if ( pType == ::cppu::UnoType< ::cppu::UnoUnsignedShortType >::get())
+                else if ( aType == ::cppu::UnoType< ::cppu::UnoUnsignedShortType >::get())
                 {
                     sal_uInt16 nTemp = 0;
                     rEvent.State >>= nTemp ;
                     pItem = new SfxUInt16Item( nSlotId, nTemp );
                 }
-                else if ( pType == cppu::UnoType<sal_uInt32>::get() )
+                else if ( aType == cppu::UnoType<sal_uInt32>::get() )
                 {
                     sal_uInt32 nTemp = 0;
                     rEvent.State >>= nTemp ;
                     pItem = new SfxUInt32Item( nSlotId, nTemp );
                 }
-                else if ( pType == cppu::UnoType<OUString>::get() )
+                else if ( aType == cppu::UnoType<OUString>::get() )
                 {
                     OUString sTemp ;
                     rEvent.State >>= sTemp ;
                     pItem = new SfxStringItem( nSlotId, sTemp );
                 }
-                else if ( pType == cppu::UnoType< css::frame::status::ItemStatus>::get() )
+                else if ( aType == cppu::UnoType< css::frame::status::ItemStatus>::get() )
                 {
                     ItemStatus aItemStatus;
                     rEvent.State >>= aItemStatus;
@@ -527,7 +521,7 @@ throw ( css::uno::RuntimeException, std::exception )
                     eState = tmpState;
                     pItem = new SfxVoidItem( nSlotId );
                 }
-                else if ( pType == cppu::UnoType< css::frame::status::Visibility>::get() )
+                else if ( aType == cppu::UnoType< css::frame::status::Visibility>::get() )
                 {
                     Visibility aVisibilityStatus;
                     rEvent.State >>= aVisibilityStatus;
@@ -556,7 +550,7 @@ throw ( css::uno::RuntimeException, std::exception )
 // XSubToolbarController
 sal_Bool SAL_CALL SfxToolBoxControl::opensSubToolbar() throw (css::uno::RuntimeException, std::exception)
 {
-    return sal_False;
+    return false;
 }
 
 OUString SAL_CALL SfxToolBoxControl::getSubToolbarName() throw (css::uno::RuntimeException, std::exception)
@@ -622,7 +616,6 @@ void SfxToolBoxControl::SetPopupWindow( SfxPopupWindow* pWindow )
 }
 
 
-
 IMPL_LINK_NOARG_TYPED(SfxToolBoxControl, PopupModeEndHdl, FloatingWindow*, void)
 {
     if ( pImpl->mpPopupWindow->IsVisible() )
@@ -652,7 +645,6 @@ IMPL_LINK_TYPED( SfxToolBoxControl, ClosePopupWindow, SfxPopupWindow *, pWindow,
     else
         pImpl->mpPopupWindow = nullptr;
 }
-
 
 
 void SfxToolBoxControl::StateChanged
@@ -713,12 +705,10 @@ void SfxToolBoxControl::StateChanged
 }
 
 
-
 void SfxToolBoxControl::Select( sal_uInt16 nSelectModifier )
 {
     svt::ToolboxController::execute( nSelectModifier );
 }
-
 
 
 void SfxToolBoxControl::DoubleClick()
@@ -726,11 +716,9 @@ void SfxToolBoxControl::DoubleClick()
 }
 
 
-
 void SfxToolBoxControl::Click()
 {
 }
-
 
 
 VclPtr<SfxPopupWindow> SfxToolBoxControl::CreatePopupWindow()
@@ -768,11 +756,9 @@ SfxFrameStatusListener::SfxFrameStatusListener(
 }
 
 
-
 SfxFrameStatusListener::~SfxFrameStatusListener()
 {
 }
-
 
 
 // XStatusListener
@@ -825,38 +811,38 @@ throw ( css::uno::RuntimeException, std::exception )
             if ( rEvent.IsEnabled )
             {
                 eState = SfxItemState::DEFAULT;
-                css::uno::Type pType = rEvent.State.getValueType();
+                css::uno::Type aType = rEvent.State.getValueType();
 
-                if ( pType == cppu::UnoType<void>::get() )
+                if ( aType == cppu::UnoType<void>::get() )
                 {
                     pItem = new SfxVoidItem( nSlotId );
                     eState = SfxItemState::UNKNOWN;
                 }
-                else if ( pType == cppu::UnoType<bool>::get() )
+                else if ( aType == cppu::UnoType<bool>::get() )
                 {
                     bool bTemp = false;
                     rEvent.State >>= bTemp ;
                     pItem = new SfxBoolItem( nSlotId, bTemp );
                 }
-                else if ( pType == ::cppu::UnoType< ::cppu::UnoUnsignedShortType >::get())
+                else if ( aType == ::cppu::UnoType< ::cppu::UnoUnsignedShortType >::get())
                 {
                     sal_uInt16 nTemp = 0;
                     rEvent.State >>= nTemp ;
                     pItem = new SfxUInt16Item( nSlotId, nTemp );
                 }
-                else if ( pType == cppu::UnoType<sal_uInt32>::get() )
+                else if ( aType == cppu::UnoType<sal_uInt32>::get() )
                 {
                     sal_uInt32 nTemp = 0;
                     rEvent.State >>= nTemp ;
                     pItem = new SfxUInt32Item( nSlotId, nTemp );
                 }
-                else if ( pType == cppu::UnoType<OUString>::get() )
+                else if ( aType == cppu::UnoType<OUString>::get() )
                 {
                     OUString sTemp ;
                     rEvent.State >>= sTemp ;
                     pItem = new SfxStringItem( nSlotId, sTemp );
                 }
-                else if ( pType == cppu::UnoType< css::frame::status::ItemStatus>::get() )
+                else if ( aType == cppu::UnoType< css::frame::status::ItemStatus>::get() )
                 {
                     ItemStatus aItemStatus;
                     rEvent.State >>= aItemStatus;
@@ -869,7 +855,7 @@ throw ( css::uno::RuntimeException, std::exception )
                     eState = tmpState;
                     pItem = new SfxVoidItem( nSlotId );
                 }
-                else if ( pType == cppu::UnoType< css::frame::status::Visibility>::get() )
+                else if ( aType == cppu::UnoType< css::frame::status::Visibility>::get() )
                 {
                     Visibility aVisibilityStatus;
                     rEvent.State >>= aVisibilityStatus;
@@ -981,8 +967,7 @@ void SfxPopupWindow::dispose()
 }
 
 
-
-SfxFrameStatusListener* SfxPopupWindow::GetOrCreateStatusListener()
+void SfxPopupWindow::GetOrCreateStatusListener()
 {
     if ( !m_xStatusListener.is() )
     {
@@ -992,10 +977,7 @@ SfxFrameStatusListener* SfxPopupWindow::GetOrCreateStatusListener()
                                     this );
         m_xStatusListener.set( static_cast< cppu::OWeakObject* >( m_pStatusListener ), UNO_QUERY );
     }
-
-    return m_pStatusListener;
 }
-
 
 
 void SfxPopupWindow::BindListener()
@@ -1006,14 +988,12 @@ void SfxPopupWindow::BindListener()
 }
 
 
-
 void SfxPopupWindow::UnbindListener()
 {
     GetOrCreateStatusListener();
     if ( m_xStatusListener.is() )
         m_pStatusListener->unbindListener();
 }
-
 
 
 void SfxPopupWindow::AddStatusListener( const OUString& rCommandURL )
@@ -1024,7 +1004,6 @@ void SfxPopupWindow::AddStatusListener( const OUString& rCommandURL )
 }
 
 
-
 bool SfxPopupWindow::Close()
 {
     m_bFloating = false;
@@ -1033,7 +1012,6 @@ bool SfxPopupWindow::Close()
     Delete();
     return true;
 }
-
 
 
 void SfxPopupWindow::PopupModeEnd()
@@ -1052,7 +1030,6 @@ void SfxPopupWindow::PopupModeEnd()
 }
 
 
-
 void SfxPopupWindow::DeleteFloatingWindow()
 {
     if ( m_bFloating )
@@ -1061,7 +1038,6 @@ void SfxPopupWindow::DeleteFloatingWindow()
         Delete();
     }
 }
-
 
 
 void SfxPopupWindow::MouseMove( const ::MouseEvent& rMEvt )
@@ -1089,12 +1065,10 @@ void SfxPopupWindow::MouseMove( const ::MouseEvent& rMEvt )
 }
 
 
-
 void SfxPopupWindow::StartCascading()
 {
     m_bCascading = true;
 }
-
 
 
 void SfxPopupWindow::StateChanged(
@@ -1121,7 +1095,6 @@ void SfxPopupWindow::StateChanged(
         Show( true, ShowFlags::NoFocusChange | ShowFlags::NoActivate );
     }
 }
-
 
 
 void SfxPopupWindow::Delete()

@@ -17,16 +17,13 @@
  */
 
 interface StarImpress
-[
-    uuid ( "A1814AE0-07D4-11CF-89CA-008029E4B0B1" )
-]
 {
     SID_NEWDOC // ole : ?, status : ?
     [
         ExecMethod = Execute ;
         StateMethod = GetState ;
         GroupId = GID_APPLICATION ;
-        Cachable , Container ;
+        Container ;
     ]
 
     SID_ATTR_METRIC
@@ -97,6 +94,6 @@ interface StarImpress
 
 shell SdModule
 {
-    import StarImpress[Automation];
+    import StarImpress;
 }
 

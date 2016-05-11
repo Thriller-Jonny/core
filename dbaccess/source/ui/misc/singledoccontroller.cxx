@@ -26,26 +26,16 @@
 #include "moduledbu.hxx"
 
 #include <svl/undo.hxx>
-#include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <osl/diagnose.h>
 
 namespace dbaui
 {
 
     using ::com::sun::star::uno::Reference;
-    using ::com::sun::star::uno::XInterface;
-    using ::com::sun::star::uno::UNO_QUERY;
-    using ::com::sun::star::uno::UNO_QUERY_THROW;
-    using ::com::sun::star::uno::UNO_SET_THROW;
-    using ::com::sun::star::uno::Exception;
     using ::com::sun::star::uno::RuntimeException;
-    using ::com::sun::star::uno::Any;
-    using ::com::sun::star::uno::makeAny;
     using ::com::sun::star::uno::Sequence;
-    using ::com::sun::star::uno::Type;
     using ::com::sun::star::uno::XComponentContext;
     using ::com::sun::star::document::XUndoManager;
-    using ::com::sun::star::lang::XMultiServiceFactory;
     using ::com::sun::star::beans::PropertyValue;
     using ::com::sun::star::lang::EventObject;
 
@@ -100,7 +90,7 @@ namespace dbaui
         GetUndoManager().AddUndoAction( _pAction );
 
         // when we add an undo action the controller was modified
-        setModified( sal_True );
+        setModified( true );
 
         // now inform me that or states changed
         InvalidateFeature( ID_BROWSER_UNDO );

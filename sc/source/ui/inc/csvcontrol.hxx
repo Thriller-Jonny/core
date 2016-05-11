@@ -221,10 +221,6 @@ inline void ScCsvCmd::Set( ScCsvCmdType eType, sal_Int32 nParam1, sal_Int32 nPar
 /** Base class for the CSV ruler and the data grid control. Implements command handling. */
 class SC_DLLPUBLIC ScCsvControl : public Control
 {
-protected:
-    typedef ::std::vector< OUString >   StringVec;
-    typedef ::std::vector< StringVec >  StringVecVec;
-
 private:
     Link<ScCsvControl&,void>    maCmdHdl;           /// External command handler.
     ScCsvCmd                    maCmd;              /// Data of last command.
@@ -273,9 +269,8 @@ public:
     void                        Repaint( bool bInvalidate = false );
     /** Increases no-repaint counter (controls do not repaint until the last EnableRepaint()). */
     void                        DisableRepaint();
-    /** Decreases no-repaint counter and repaints if counter reaches 0.
-        @param bInvalidate  true = invalidates graphics of this control (not all). */
-    void                        EnableRepaint( bool bInvalidate = false );
+    /** Decreases no-repaint counter and repaints if counter reaches 0. */
+    void                        EnableRepaint();
     /** Returns true, if controls will not repaint. */
     inline bool                 IsNoRepaint() const { return mrData.mnNoRepaint > 0; }
 

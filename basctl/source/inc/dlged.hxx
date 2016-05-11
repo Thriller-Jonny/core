@@ -81,7 +81,6 @@ public:
 };
 
 
-
 // DlgEditor
 
 
@@ -160,9 +159,9 @@ public:
     void            DoScroll( ScrollBar* pActScroll );
     void            UpdateScrollBars();
 
-    void            SetDialog (css::uno::Reference<css::container::XNameContainer> xUnoControlDialogModel);
+    void            SetDialog (const css::uno::Reference<css::container::XNameContainer>& xUnoControlDialogModel);
     void            ResetDialog ();
-    css::uno::Reference< css::container::XNameContainer > GetDialog() const
+    const css::uno::Reference< css::container::XNameContainer >& GetDialog() const
                         {return m_xUnoControlDialogModel;}
 
     css::uno::Reference< css::util::XNumberFormatsSupplier > const & GetNumberFormatsSupplier();
@@ -176,7 +175,7 @@ public:
     bool            UnmarkDialog();
     bool            RemarkDialog();
 
-    void            SetDialogModelChanged (bool bChanged = true) { bDialogModelChanged = bChanged; }
+    void            SetDialogModelChanged() { bDialogModelChanged = true; }
 
     bool            IsModified () const;
     void            ClearModifyFlag();

@@ -46,7 +46,7 @@ public:
 
     CPPUNIT_TEST_SUITE(DialogSaveTest);
 // Should we disable this test on MOX and WNT?
-// #if !defined(MACOSX) && !defined(WNT)
+// #if !defined(MACOSX) && !defined(_WIN32)
     CPPUNIT_TEST(test);
 // #endif
     CPPUNIT_TEST_SUITE_END();
@@ -68,7 +68,7 @@ void DialogSaveTest::test()
     SolarMutexReleaser rel;
 
     const OUString sStandard("Standard");
-    const OUString aFileName(getURLFromWorkdir("CppunitTest/testNolibSave.odb"));
+    const OUString aFileName(m_directories.getURLFromWorkdir("CppunitTest/testNolibSave.odb"));
     {
         uno::Reference< lang::XComponent > xComponent = loadFromDesktop(aFileName);
         CPPUNIT_ASSERT(xComponent.is());

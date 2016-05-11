@@ -71,7 +71,6 @@ namespace sd {
 
 using namespace ::com::sun::star;
 
-// - SdNavigatorDropEvent -
 
 struct SdNavigatorDropEvent : public ExecuteDropEvent
 {
@@ -844,9 +843,9 @@ IMPL_LINK_TYPED( View, ExecuteNavigatorDrop, void*, p, void )
         if( bNameOK )
         {
             mrDoc.InsertBookmark( aBookmarkList, aExchangeList,
-                                  bLink, bReplace, nPgPos, false,
+                                  bLink, bReplace, nPgPos,
                                   &pPageObjsTransferable->GetDocShell(),
-                                  true, &aPos );
+                                  &aPos );
         }
     }
 
@@ -933,14 +932,13 @@ void ImplProcessObjectList(SdrObject* pObj, SdrObjectVector& rVector )
 
 SdrModel* View::GetMarkedObjModel() const
 {
-    return FmFormView::GetMarkedObjModel();;
+    return FmFormView::GetMarkedObjModel();
 }
 
 bool View::Paste(
-    const SdrModel& rMod, const Point& rPos, SdrObjList* pLst, SdrInsertFlags nOptions,
-    const OUString& rSrcShellID, const OUString& rDestShellID )
+    const SdrModel& rMod, const Point& rPos, SdrObjList* pLst, SdrInsertFlags nOptions)
 {
-    return FmFormView::Paste(rMod, rPos, pLst, nOptions, rSrcShellID, rDestShellID);
+    return FmFormView::Paste(rMod, rPos, pLst, nOptions);
 }
 
 } // end of namespace sd

@@ -19,6 +19,7 @@
 
 #include <tools/poly.hxx>
 #include <memory>
+#include <rtl/math.hxx>
 
 #include <sgvspln.hxx>
 #include <cmath>
@@ -123,7 +124,7 @@ short basis()              /* calculate BASE machine independence     */
 
 /*----------------------   MODULE tridiagonal  -----------------------*/
 
-sal_uInt16 TriDiagGS(bool rep, sal_uInt16 n, double* lower,
+sal_uInt16 TriDiagGS(sal_uInt16 n, double* lower,
                  double* diag, double* upper, double* b)
                                              /*************************/
                                              /* Gaussian methods for  */
@@ -211,11 +212,10 @@ sal_uInt16 TriDiagGS(bool rep, sal_uInt16 n, double* lower,
 
  if ( n < 2 ) return 1;                    /*  n at least 2          */
 
-                                            /*  if rep = false,       */
                                             /*  determine the         */
                                             /*  triangular            */
                                             /*  decomposition of      */
- if (!rep)                                  /*  matrix and determinant*/
+                                           /*  matrix and determinant*/
    {
      for (i = 1; i < n; i++)
        { if ( fabs(diag[i-1]) < MACH_EPS )  /*  do not decompose      */
@@ -247,7 +247,7 @@ sal_uInt16 TriDiagGS(bool rep, sal_uInt16 n, double* lower,
 
 /*----------------  Module cyclic tridiagonal  -----------------------*/
 
-sal_uInt16 ZyklTriDiagGS(bool rep, sal_uInt16 n, double* lower, double* diag,
+sal_uInt16 ZyklTriDiagGS(sal_uInt16 n, double* lower, double* diag,
                      double* upper, double* lowrow, double* ricol, double* b)
                                         /******************************/
                                         /* Systems with cyclic        */
@@ -272,7 +272,7 @@ sal_uInt16 ZyklTriDiagGS(bool rep, sal_uInt16 n, double* lower, double* diag,
 /*                                                                    */
 /*  Memory for lowrow[1],..,lowrow[n-3] und ricol[1],...,ricol[n-3]   */
 /*  should be provided separately, as this should be available to     */
-/*  store the decomposition matrix, which is overwritting             */
+/*  store the decomposition matrix, which is overwriting              */
 /*  the 5 vectors mentioned.                                          */
 /*                                                                    */
 /*====================================================================*/
@@ -334,7 +334,6 @@ sal_uInt16 ZyklTriDiagGS(bool rep, sal_uInt16 n, double* lower, double* diag,
 
  if ( n < 3 ) return 1;
 
- if (!rep)                               /*  If rep = false,          */
    {                                     /*  calculate decomposition  */
      lower[0] = upper[n-1] = 0.0;        /*  of the matrix.           */
 
@@ -427,16 +426,19 @@ sal_uInt16 NaturalSpline(sal_uInt16 n, double* x, double* y,
                 c[0]  =c[0]-h[0];
                 b[n-2]=b[n-2]-h[n-1];
             }
+            SAL_FALLTHROUGH;
         }
         case 1: {
             a[0]  =a[0]-1.5*((y[1]-y[0])/h[0]-Marg0);
             a[n-2]=a[n-2]-1.5*(MargN-(y[n]-y[n-1])/h[n-1]);
             d[0]  =d[0]-h[0]*0.5;
             d[n-2]=d[n-2]-h[n-1]*0.5;
+            SAL_FALLTHROUGH;
         }
         case 2: {
             a[0]  =a[0]-h[0]*Marg0*0.5;
             a[n-2]=a[n-2]-h[n-1]*MargN*0.5;
+            SAL_FALLTHROUGH;
         }
         case 3: {
             a[0]  =a[0]+Marg0*h[0]*h[0]*0.5;
@@ -448,7 +450,7 @@ sal_uInt16 NaturalSpline(sal_uInt16 n, double* x, double* y,
     if (n==2) {
         c[1]=a[0]/d[0];
     } else {
-        error=TriDiagGS(false,n-1,b,d,c,a.get());
+        error=TriDiagGS(n-1,b,d,c,a.get());
         if (error!=0) return error+2;
         for (i=0;i<n-1;i++) c[i+1]=a[i];
     }
@@ -461,16 +463,19 @@ sal_uInt16 NaturalSpline(sal_uInt16 n, double* x, double* y,
                 c[0]=c[1]+h[0]*(c[1]-c[2])/h[1];
                 c[n]=c[n-1]+h[n-1]*(c[n-1]-c[n-2])/h[n-2];
             }
+            SAL_FALLTHROUGH;
         }
         case 1: {
             c[0]=1.5*((y[1]-y[0])/h[0]-Marg0);
             c[0]=(c[0]-c[1]*h[0]*0.5)/h[0];
             c[n]=1.5*((y[n]-y[n-1])/h[n-1]-MargN);
             c[n]=(c[n]-c[n-1]*h[n-1]*0.5)/h[n-1];
+            SAL_FALLTHROUGH;
         }
         case 2: {
             c[0]=Marg0*0.5;
             c[n]=MargN*0.5;
+            SAL_FALLTHROUGH;
         }
         case 3: {
             c[0]=c[1]-Marg0*h[0]*0.5;
@@ -498,7 +503,7 @@ sal_uInt16 PeriodicSpline(sal_uInt16 n, double* x, double* y,
     if (n<2) return 4;
     nm1=n-1;
     for (i=0;i<=nm1;i++) if (x[i+1]<=x[i]) return 2; // should be strictly monotonically decreasing!
-    if (y[n]!=y[0]) return 3; // begin and end should be equal!
+    if (!rtl::math::approxEqual(y[n],y[0])) return 3; // begin and end should be equal!
 
     a.reset(new double[n+1]);
     lowrow.reset(new double[n+1]);
@@ -527,7 +532,7 @@ sal_uInt16 PeriodicSpline(sal_uInt16 n, double* x, double* y,
         lowrow[0]=hr;
         ricol[0]=hr;
         a[nm1]=3.0*((y[1]-y[0])/hr-(y[n]-y[nm1])/hl);
-        Error=ZyklTriDiagGS(false,n,b,d,c,lowrow.get(),ricol.get(),a.get());
+        Error=ZyklTriDiagGS(n,b,d,c,lowrow.get(),ricol.get(),a.get());
         if ( Error != 0 )
         {
             return Error+4;
@@ -577,8 +582,8 @@ sal_uInt16 ParaSpline(sal_uInt16 n, double* x, double* y, sal_uInt8 MargCond,
             alphY=Marg02; betY=MargN2;
         } break;
         case 3: {
-            if (x[n]!=x[0]) return 3;
-            if (y[n]!=y[0]) return 4;
+            if (!rtl::math::approxEqual(x[n],x[0])) return 3;
+            if (!rtl::math::approxEqual(y[n],y[0])) return 4;
         } break;
         case 4: {
             if (std::abs(Marg01)>=MAXROOT) {
@@ -717,8 +722,10 @@ bool Spline2Poly(tools::Polygon& rSpln, bool Periodic, tools::Polygon& rPoly)
                 dt1=t-tv[i]; dt2=dt1*dt1; dt3=dt2*dt1;
                 long x=long(ax[i]+bx[i]*dt1+cx[i]*dt2+dx[i]*dt3);
                 long y=long(ay[i]+by[i]*dt1+cy[i]*dt2+dy[i]*dt3);
-                if (x<MinKoord) x=MinKoord; if (x>MaxKoord) x=MaxKoord;
-                if (y<MinKoord) y=MinKoord; if (y>MaxKoord) y=MaxKoord;
+                if (x<MinKoord) x=MinKoord;
+                if (x>MaxKoord) x=MaxKoord;
+                if (y<MinKoord) y=MinKoord;
+                if (y>MaxKoord) y=MaxKoord;
                 if (rPoly.GetSize()<PolyMax) {
                     rPoly.SetSize(rPoly.GetSize()+1);
                     rPoly.SetPoint(Point(short(x),short(y)),rPoly.GetSize()-1);

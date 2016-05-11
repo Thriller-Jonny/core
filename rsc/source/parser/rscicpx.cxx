@@ -910,24 +910,6 @@ RscTop * RscTypCont::InitClassMenu( RscTop * pSuper,
     return pClassMenu;
 }
 
-RscTop * RscTypCont::InitClassSplitWindow( RscTop * pSuper )
-{
-    Atom        nId;
-    RscTop *    pClassSplitWindow;
-
-    // initialize class
-    nId = pHS->getID( "SplitWindow" );
-    pClassSplitWindow = new RscClass( nId, RSC_SPLITWINDOW, pSuper );
-    pClassSplitWindow->SetCallPar( *pWinPar1, *pWinPar2, *pWinParType );
-
-    aNmTb.Put( nId, CLASSNAME, pClassSplitWindow );
-
-    INS_WINBIT(pClassSplitWindow,Sizeable)
-    INS_WINBIT(pClassSplitWindow,NoSplitDraw)
-
-    return pClassSplitWindow;
-}
-
 RscTop * RscTypCont::InitClassNumericFormatter( RscTop * pSuper )
 {
     Atom        nId;
@@ -1315,35 +1297,35 @@ RscTop * RscTypCont::InitClassSfxStyleFamilyItem( RscTop * pSuper,
 
     nId = aNmTb.Put( "FilterList", VARNAME );
     pClassSfxFamilyStyleItem->SetVariable( nId, pStrLst, nullptr, 0,
-                                           RSC_SFX_STYLE_ITEM_LIST );
+                                           SfxStyleItem::List );
     nId = aNmTb.Put( "StyleBitmap", VARNAME );
     pClassSfxFamilyStyleItem->SetVariable( nId, pClassBitmap, nullptr, 0,
-                                           RSC_SFX_STYLE_ITEM_BITMAP );
+                                           SfxStyleItem::Bitmap );
     nId = aNmTb.Put( "Text", VARNAME );
     pClassSfxFamilyStyleItem->SetVariable( nId, &aLangString, nullptr, 0,
-                                           RSC_SFX_STYLE_ITEM_TEXT );
+                                           SfxStyleItem::Text );
     nId = aNmTb.Put( "HelpText", VARNAME );
     pClassSfxFamilyStyleItem->SetVariable( nId, &aLangString, nullptr, 0,
-                                           RSC_SFX_STYLE_ITEM_HELPTEXT );
+                                           SfxStyleItem::HelpText );
     {
         RscEnum * pSfxStyleFamily;
         pSfxStyleFamily = new RscEnum( pHS->getID( "StyleFamily" ),
                                     RSC_NOTYPE );
 
-        SETCONST( pSfxStyleFamily, "SFX_STYLE_FAMILY_PARA", SFX_STYLE_FAMILY_PARA );
-        SETCONST( pSfxStyleFamily, "SFX_STYLE_FAMILY_CHAR", SFX_STYLE_FAMILY_CHAR );
-        SETCONST( pSfxStyleFamily, "SFX_STYLE_FAMILY_FRAME",SFX_STYLE_FAMILY_FRAME);
-        SETCONST( pSfxStyleFamily, "SFX_STYLE_FAMILY_PAGE", SFX_STYLE_FAMILY_PAGE );
-        SETCONST( pSfxStyleFamily, "SFX_STYLE_FAMILY_PSEUDO", SFX_STYLE_FAMILY_PSEUDO );
+        SETCONST( pSfxStyleFamily, "SfxStyleFamily::Para", SfxStyleFamily::Para );
+        SETCONST( pSfxStyleFamily, "SfxStyleFamily::Char", SfxStyleFamily::Char );
+        SETCONST( pSfxStyleFamily, "SfxStyleFamily::Frame",SfxStyleFamily::Frame);
+        SETCONST( pSfxStyleFamily, "SfxStyleFamily::Page", SfxStyleFamily::Page );
+        SETCONST( pSfxStyleFamily, "SfxStyleFamily::Pseudo", SfxStyleFamily::Pseudo );
         aBaseLst.push_back( pSfxStyleFamily );
 
         nId = aNmTb.Put( "StyleFamily", VARNAME );
         pClassSfxFamilyStyleItem->SetVariable( nId, pSfxStyleFamily, nullptr, 0,
-                                           RSC_SFX_STYLE_ITEM_STYLEFAMILY );
+                                           SfxStyleItem::StyleFamily );
     }
     nId = aNmTb.Put( "StyleImage", VARNAME );
     pClassSfxFamilyStyleItem->SetVariable( nId, pClassImage, nullptr, 0,
-                                           RSC_SFX_STYLE_ITEM_IMAGE );
+                                           SfxStyleItem::Image );
     return pClassSfxFamilyStyleItem;
 }
 
@@ -1385,10 +1367,10 @@ RscTop * RscTypCont::InitClassSfxSlotInfo( RscTop * pSuper )
 
     nId = aNmTb.Put( "SlotName", VARNAME );
     pClassSfxSlotInfo->SetVariable( nId, &aLangString, nullptr, 0,
-                                    RSC_SFX_SLOT_INFO_SLOTNAME );
+                                    SfxSlotInfo::SlotName );
     nId = aNmTb.Put( "HelpText", VARNAME );
     pClassSfxSlotInfo->SetVariable( nId, &aLangString, nullptr, 0,
-                                    RSC_SFX_SLOT_INFO_HELPTEXT );
+                                    SfxSlotInfo::HelpText );
     return pClassSfxSlotInfo;
 }
 

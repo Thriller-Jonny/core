@@ -36,13 +36,12 @@
 #include <swundo.hxx>
 #include <swevent.hxx>
 #include <swdtflvr.hxx>
-#include <crsskip.hxx>
 #include <doc.hxx>
 #include <wordcountdialog.hxx>
 #include <memory>
 
 namespace com { namespace sun { namespace star { namespace util {
-    struct SearchOptions;
+    struct SearchOptions2;
 } } } }
 
 using namespace ::com::sun::star::util;
@@ -70,7 +69,7 @@ bool SwWrtShell::SelNearestWrd()
     return SelWrd();
 }
 
-bool SwWrtShell::SelWrd(const Point *pPt, bool )
+bool SwWrtShell::SelWrd(const Point *pPt )
 {
     bool bRet;
     {
@@ -88,7 +87,7 @@ bool SwWrtShell::SelWrd(const Point *pPt, bool )
     return bRet;
 }
 
-void SwWrtShell::SelSentence(const Point *pPt, bool )
+void SwWrtShell::SelSentence(const Point *pPt )
 {
     {
         SwMvContext aMvContext(this);
@@ -104,7 +103,7 @@ void SwWrtShell::SelSentence(const Point *pPt, bool )
     m_bSelWrd = false;  // disable SelWord, otherwise no SelLine goes on
 }
 
-void SwWrtShell::SelPara(const Point *pPt, bool )
+void SwWrtShell::SelPara(const Point *pPt )
 {
     {
         SwMvContext aMvContext(this);
@@ -210,7 +209,7 @@ long SwWrtShell::SelAll()
 
 // Description: Text search
 
-sal_uLong SwWrtShell::SearchPattern( const SearchOptions& rSearchOpt, bool bSearchInNotes,
+sal_uLong SwWrtShell::SearchPattern( const SearchOptions2& rSearchOpt, bool bSearchInNotes,
                                 SwDocPositions eStt, SwDocPositions eEnd,
                                 FindRanges eFlags, bool bReplace )
 {
@@ -256,7 +255,7 @@ sal_uLong SwWrtShell::SearchTempl( const OUString &rTempl,
 
 sal_uLong SwWrtShell::SearchAttr( const SfxItemSet& rFindSet, bool bNoColls,
                                 SwDocPositions eStart, SwDocPositions eEnd,
-                                FindRanges eFlags, const SearchOptions* pSearchOpt,
+                                FindRanges eFlags, const SearchOptions2* pSearchOpt,
                                 const SfxItemSet* pReplaceSet )
 {
     // no enhancement of existing selections
@@ -309,7 +308,7 @@ long SwWrtShell::SetCursor(const Point *pPt, bool bTextOnly)
         // Remove a possibly present selection at the position
         // of the mouseclick
 
-    if(!IsInSelect() && ChgCurrPam(*pPt)) {
+    if(!IsInSelect() && TestCurrPam(*pPt)) {
         ClearMark();
     }
 
@@ -400,11 +399,11 @@ void SwWrtShell::EndSelect()
         m_bInSelect = false;
         if (m_bAddMode)
         {
-            AddLeaveSelect(nullptr);
+            AddLeaveSelect();
         }
         else
         {
-            SttLeaveSelect(nullptr);
+            SttLeaveSelect();
             m_fnSetCursor = &SwWrtShell::SetCursorKillSel;
             m_fnKillSel = &SwWrtShell::ResetSelect;
         }
@@ -576,23 +575,21 @@ void SwWrtShell::LeaveExtMode()
 // End of a selection; if the selection is empty,
 // ClearMark().
 
-long SwWrtShell::SttLeaveSelect(const Point *, bool )
+void SwWrtShell::SttLeaveSelect()
 {
     if(SwCursorShell::HasSelection() && !IsSelTableCells() && m_bClearMark) {
-        return 0;
+        return;
     }
     ClearMark();
-    return 1;
 }
 
 // Leaving of the selection mode in additional mode
 
-long SwWrtShell::AddLeaveSelect(const Point *, bool )
+void SwWrtShell::AddLeaveSelect()
 {
     if(IsTableMode()) LeaveAddMode();
     else if(SwCursorShell::HasSelection())
         CreateCursor();
-    return 1;
 }
 
 // Additional Mode
@@ -724,18 +721,17 @@ IMPL_LINK_TYPED( SwWrtShell, ExecFlyMac, const SwFlyFrameFormat*, pFlyFormat, vo
 long SwWrtShell::UpdateLayoutFrame(const Point *pPt, bool )
 {
         // still a dummy
-    SwFEShell::EndDrag( pPt, false );
+    SwFEShell::EndDrag( pPt );
     m_fnDrag = &SwWrtShell::BeginFrameDrag;
     return 1;
 }
 
 // Handler for toggling the modes. Returns back the old mode.
 
-bool SwWrtShell::ToggleAddMode()
+void SwWrtShell::ToggleAddMode()
 {
     m_bAddMode ? LeaveAddMode(): EnterAddMode();
     Invalidate();
-    return !m_bAddMode;
 }
 
 bool SwWrtShell::ToggleBlockMode()
@@ -816,37 +812,31 @@ bool SwWrtShell::SelectTableRowCol( const Point& rPt, const Point* pEnd, bool bR
 
 // Description: Selection of a table line or column
 
-bool SwWrtShell::SelectTableRow()
+void SwWrtShell::SelectTableRow()
 {
     if ( SelTableRow() )
     {
         m_fnSetCursor = &SwWrtShell::SetCursorKillSel;
         m_fnKillSel = &SwWrtShell::ResetSelect;
-        return true;
     }
-    return false;
 }
 
-bool SwWrtShell::SelectTableCol()
+void SwWrtShell::SelectTableCol()
 {
     if ( SelTableCol() )
     {
         m_fnSetCursor = &SwWrtShell::SetCursorKillSel;
         m_fnKillSel = &SwWrtShell::ResetSelect;
-        return true;
     }
-    return false;
 }
 
-bool SwWrtShell::SelectTableCell()
+void SwWrtShell::SelectTableCell()
 {
     if ( SelTableBox() )
     {
         m_fnSetCursor = &SwWrtShell::SetCursorKillSel;
         m_fnKillSel = &SwWrtShell::ResetSelect;
-        return true;
     }
-    return false;
 }
 
 // Description: Check if a word selection is present.
@@ -921,7 +911,7 @@ int SwWrtShell::IntelligentCut(int nSelection, bool bCut)
 
     // jump to the next / previous hyperlink - inside text and also
     // on graphics
-bool SwWrtShell::SelectNextPrevHyperlink( bool bNext )
+void SwWrtShell::SelectNextPrevHyperlink( bool bNext )
 {
     StartAction();
     bool bRet = SwCursorShell::SelectNxtPrvHyperlink( bNext );
@@ -964,8 +954,6 @@ bool SwWrtShell::SelectNextPrevHyperlink( bool bNext )
 
     if( bCreateXSelection )
         SwTransferable::CreateSelection( *this );
-
-    return bRet;
 }
 
 // For the preservation of the selection the cursor will be moved left

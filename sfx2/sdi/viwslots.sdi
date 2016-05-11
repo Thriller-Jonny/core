@@ -17,9 +17,6 @@
  */
 
 interface View
-[
-    Automation = FALSE ;
-]
 {
 
     SID_MAIL_SENDDOC // ole(no) api(todo)
@@ -81,11 +78,6 @@ interface View
     [
         ExecMethod = ExecMisc_Impl ;
     ]
-    SID_PLUGINS_ACTIVE // ole(no) api(play/rec)
-    [
-        ExecMethod = ExecMisc_Impl ;
-        StateMethod = GetState_Impl ;
-    ]
     SID_STYLE_FAMILY
     [
         ExecMethod = ExecMisc_Impl ;
@@ -97,5 +89,5 @@ interface View
 
 shell SfxViewShell
 {
-    import View [Automation];
+    import View;
 }

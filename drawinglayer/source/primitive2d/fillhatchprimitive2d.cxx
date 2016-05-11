@@ -28,9 +28,7 @@
 #include <drawinglayer/geometry/viewinformation2d.hxx>
 
 
-
 using namespace com::sun::star;
-
 
 
 namespace drawinglayer
@@ -75,7 +73,7 @@ namespace drawinglayer
 
                         aHatch.appendTransformations(aMatrices);
 
-                        // fall-through by purpose
+                        SAL_FALLTHROUGH;
                     }
                     case attribute::HATCHSTYLE_DOUBLE:
                     {
@@ -88,7 +86,7 @@ namespace drawinglayer
 
                         aHatch.appendTransformations(aMatrices);
 
-                        // fall-through by purpose
+                        SAL_FALLTHROUGH;
                     }
                     case attribute::HATCHSTYLE_SINGLE:
                     {

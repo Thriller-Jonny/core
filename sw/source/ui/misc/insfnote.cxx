@@ -30,7 +30,6 @@
 #include <view.hxx>
 #include <basesh.hxx>
 #include <insfnote.hxx>
-#include <crsskip.hxx>
 #include <misc.hrc>
 #include <globals.hrc>
 #include <svx/svxdlg.hxx>
@@ -126,7 +125,7 @@ IMPL_LINK_NOARG_TYPED(SwInsFootNoteDlg, NumberExtCharHdl, Button*, void)
             {
                 m_aFontName = pFontItem->GetFamilyName();
                 eCharSet  = pFontItem->GetCharSet();
-                vcl::Font aFont( m_aFontName, pFontItem->GetStyleName(), m_pNumberCharEdit->GetFont().GetSize() );
+                vcl::Font aFont( m_aFontName, pFontItem->GetStyleName(), m_pNumberCharEdit->GetFont().GetFontSize() );
                 aFont.SetCharSet( pFontItem->GetCharSet() );
                 aFont.SetPitch( pFontItem->GetPitch() );
                 m_pNumberCharEdit->SetFont( aFont  );
@@ -239,7 +238,7 @@ void SwInsFootNoteDlg::Init()
             aFont = m_pNumberCharEdit->GetFont();
             m_aFontName = rFont.GetFamilyName();
             eCharSet = rFont.GetCharSet();
-            aFont.SetName(m_aFontName);
+            aFont.SetFamilyName(m_aFontName);
             aFont.SetCharSet(eCharSet);
             bExtCharAvailable = true;
             rSh.Left( CRSR_SKIP_CHARS, false, 1, false );

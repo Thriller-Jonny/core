@@ -379,7 +379,7 @@ drawinglayer::primitive2d::Primitive2DContainer ViewRedirector::createRedirected
                             static sal_uInt32 nTextSizeFactor(100);
 
                             // use a factor to get more linear text size calculations
-                            aScaledVclFont.SetHeight( 500 * nTextSizeFactor );
+                            aScaledVclFont.SetFontHeight( 500 * nTextSizeFactor );
 
                             // get basic geometry and get text size
                             drawinglayer::primitive2d::TextLayouterDevice aTextLayouter;
@@ -400,11 +400,10 @@ drawinglayer::primitive2d::Primitive2DContainer ViewRedirector::createRedirected
                                 : (aTranslate.getY() + aScale.getY()) - fVerDist);
 
                             // get font attributes; use normally scaled font
-                            const basegfx::BColor aFontColor(aRGBColor);
                             vcl::Font aVclFont;
                             basegfx::B2DVector aTextSizeAttribute;
 
-                            aVclFont.SetHeight( 500 );
+                            aVclFont.SetFontHeight( 500 );
 
                             const drawinglayer::attribute::FontAttribute aFontAttribute(
                                 drawinglayer::primitive2d::getFontAttributeFromVclFont(
@@ -436,7 +435,7 @@ drawinglayer::primitive2d::Primitive2DContainer ViewRedirector::createRedirected
                                     aDXArray,
                                     aFontAttribute,
                                     aLocale,
-                                    aFontColor));
+                                    aRGBColor));
                             xRetval.push_back(xRef);
                         }
                     }
@@ -518,9 +517,9 @@ bool View::SetAttributes(const SfxItemSet& rSet, bool bReplaceAll)
     return bOk;
 }
 
-bool View::GetAttributes( SfxItemSet& rTargetSet, bool bOnlyHardAttr ) const
+void View::GetAttributes( SfxItemSet& rTargetSet, bool bOnlyHardAttr ) const
 {
-    return FmFormView::GetAttributes( rTargetSet, bOnlyHardAttr );
+    FmFormView::GetAttributes( rTargetSet, bOnlyHardAttr );
 }
 
 /**
@@ -660,7 +659,7 @@ bool View::SdrBeginTextEdit(
         sd::tools::EventMultiplexerEvent::EID_BEGIN_TEXT_EDIT, static_cast<void*>(pObj) );
 
     if( pOutl==nullptr && pObj )
-        pOutl = SdrMakeOutliner(OUTLINERMODE_TEXTOBJECT, *pObj->GetModel());
+        pOutl = SdrMakeOutliner(OutlinerMode::TextObject, *pObj->GetModel());
 
     // make draw&impress specific initialisations
     if( pOutl )
@@ -1185,13 +1184,13 @@ void View::CheckPossibilities()
     maSmartTags.CheckPossibilities();
 }
 
-void View::OnBeginPasteOrDrop( PasteOrDropInfos* /*pInfos*/ )
+void View::OnBeginPasteOrDrop( PasteOrDropInfos* /*pInfo*/ )
 {
 }
 
 /** this is called after a paste or drop operation, make sure that the newly inserted paragraphs
     get the correct style sheet. */
-void View::OnEndPasteOrDrop( PasteOrDropInfos* pInfos )
+void View::OnEndPasteOrDrop( PasteOrDropInfos* pInfo )
 {
     /* Style Sheet handling */
     SdrTextObj* pTextObj = dynamic_cast< SdrTextObj* >( GetTextEditObject() );
@@ -1214,7 +1213,7 @@ void View::OnEndPasteOrDrop( PasteOrDropInfos* pInfos )
             // new paragraph, depending on the paragraph depth
             SfxStyleSheetBasePool* pStylePool = GetDoc().GetStyleSheetPool();
 
-            for ( sal_Int32 nPara = pInfos->nStartPara; nPara <= pInfos->nEndPara; nPara++ )
+            for ( sal_Int32 nPara = pInfo->nStartPara; nPara <= pInfo->nEndPara; nPara++ )
             {
                 sal_Int16 nDepth = pOutliner->GetDepth( nPara );
 
@@ -1238,7 +1237,7 @@ void View::OnEndPasteOrDrop( PasteOrDropInfos* pInfos )
         else
         {
             // just put the object style on each new paragraph
-            for ( sal_Int32 nPara = pInfos->nStartPara; nPara <= pInfos->nEndPara; nPara++ )
+            for ( sal_Int32 nPara = pInfo->nStartPara; nPara <= pInfo->nEndPara; nPara++ )
             {
                 pOutliner->SetStyleSheet( nPara, pStyleSheet );
             }
@@ -1258,7 +1257,7 @@ bool View::ShouldToggleOn(
         return false;
 
     bool bToggleOn = false;
-    std::unique_ptr<SdrOutliner> pOutliner(SdrMakeOutliner(OUTLINERMODE_TEXTOBJECT, *pSdrModel));
+    std::unique_ptr<SdrOutliner> pOutliner(SdrMakeOutliner(OutlinerMode::TextObject, *pSdrModel));
     const size_t nMarkCount = GetMarkedObjectCount();
     for (size_t nIndex = 0; nIndex < nMarkCount && !bToggleOn; ++nIndex)
     {
@@ -1326,7 +1325,7 @@ void View::ChangeMarkedObjectsBulletsNumbering(
 
     const bool bToggleOn = ShouldToggleOn( bToggle, bHandleBullets );
 
-    std::unique_ptr<SdrOutliner> pOutliner(SdrMakeOutliner(OUTLINERMODE_TEXTOBJECT, *pSdrModel));
+    std::unique_ptr<SdrOutliner> pOutliner(SdrMakeOutliner(OutlinerMode::TextObject, *pSdrModel));
     std::unique_ptr<OutlinerView> pOutlinerView(new OutlinerView(pOutliner.get(), pWindow));
 
     const size_t nMarkCount = GetMarkedObjectCount();

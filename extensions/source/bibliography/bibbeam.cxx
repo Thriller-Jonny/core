@@ -30,7 +30,6 @@
 #include <tools/debug.hxx>
 #include "bibbeam.hxx"
 #include "bibview.hxx"
-#include "toolbar.hrc"
 #include "bibresid.hxx"
 #include "datman.hxx"
 #include "bibtools.hxx"
@@ -155,8 +154,8 @@ namespace bib
                     m_xControlContainer->addControl("GridControl", m_xControl);
                     m_xGridWin.set(m_xControl, UNO_QUERY );
                     m_xDispatchProviderInterception.set(m_xControl, UNO_QUERY );
-                    m_xGridWin->setVisible( sal_True );
-                    m_xControl->setDesignMode( sal_True );
+                    m_xGridWin->setVisible( true );
+                    m_xControl->setDesignMode( true );
                     // initially switch on the design mode - switch it off _after_ loading the form
 
                     ::Size aSize = GetOutputSizePixel();
@@ -222,7 +221,7 @@ namespace bib
     void BibBeamer::createToolBar()
     {
         pToolBar= VclPtr<BibToolBar>::Create(this, LINK( this, BibBeamer, RecalcLayout_Impl ));
-        ::Size aSize=pToolBar->GetSizePixel();
+        ::Size aSize=pToolBar->get_preferred_size();
         InsertItem(ID_TOOLBAR, pToolBar, aSize.Height(), 0, 0, SplitWindowItemFlags::Fixed );
         if ( m_xController.is() )
             pToolBar->SetXController( m_xController );
@@ -270,7 +269,7 @@ namespace bib
 
     IMPL_LINK_NOARG_TYPED( BibBeamer, RecalcLayout_Impl, void*, void )
     {
-        long nHeight = pToolBar->GetSizePixel().Height();
+        long nHeight = pToolBar->get_preferred_size().Height();
         SetItemSize( ID_TOOLBAR, nHeight );
     }
 

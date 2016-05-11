@@ -19,6 +19,7 @@
 
 #include <config_folders.h>
 #include <config_features.h>
+#include <chrono>
 
 #include "dp_misc.h"
 #include "dp_version.hxx"
@@ -46,7 +47,7 @@
 #include <comphelper/processfactory.hxx>
 #include <salhelper/linkhelper.hxx>
 
-#ifdef WNT
+#ifdef _WIN32
 #define UNICODE
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -55,7 +56,7 @@
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
 
-#if defined WNT
+#if defined(_WIN32)
 #define SOFFICE1 "soffice.exe"
 #define SBASE "sbase.exe"
 #define SCALC "scalc.exe"
@@ -137,7 +138,7 @@ bool existsOfficePipe()
 }
 
 //get modification time
-static bool getModifyTimeTargetFile(const OUString &rFileURL, TimeValue &rTime)
+bool getModifyTimeTargetFile(const OUString &rFileURL, TimeValue &rTime)
 {
     salhelper::LinkResolver aResolver(osl_FileStatus_Mask_ModifyTime);
 
@@ -239,7 +240,6 @@ bool needToSyncRepository(OUString const & name)
 } // anon namespace
 
 
-
 namespace {
 inline OUString encodeForRcFile( OUString const & str )
 {
@@ -294,9 +294,8 @@ OUString makeURL( OUString const & baseURL, OUString const & relPath_ )
     return buf.makeStringAndClear();
 }
 
-OUString makeURLAppendSysPathSegment( OUString const & baseURL, OUString const & relPath_ )
+OUString makeURLAppendSysPathSegment( OUString const & baseURL, OUString const & segment )
 {
-    OUString segment = relPath_;
     OSL_ASSERT(segment.indexOf(static_cast<sal_Unicode>('/')) == -1);
 
     ::rtl::Uri::encode(
@@ -304,8 +303,6 @@ OUString makeURLAppendSysPathSegment( OUString const & baseURL, OUString const &
         RTL_TEXTENCODING_UTF8);
     return makeURL(baseURL, segment);
 }
-
-
 
 
 OUString expandUnoRcTerm( OUString const & term_ )
@@ -435,8 +432,8 @@ OUString generateRandomPipeId()
         throw RuntimeException( "random pool error!?", nullptr );
     }
     OUStringBuffer buf;
-    for ( sal_uInt32 i = 0; i < ARLEN(bytes); ++i ) {
-        buf.append( static_cast<sal_Int32>(bytes[ i ]), 0x10 );
+    for (unsigned char byte : bytes) {
+        buf.append( static_cast<sal_Int32>(byte), 0x10 );
     }
     return buf.makeStringAndClear();
 }
@@ -461,8 +458,7 @@ Reference<XInterface> resolveUnoURL(
         catch (const connection::NoConnectException &) {
             if (i < 20)
             {
-                TimeValue tv = { 0 /* secs */, 500000000 /* nanosecs */ };
-                ::osl::Thread::wait( tv );
+                ::osl::Thread::wait( std::chrono::milliseconds(500) );
             }
             else throw;
         }
@@ -470,7 +466,7 @@ Reference<XInterface> resolveUnoURL(
     return nullptr; // warning C4715
 }
 
-#ifdef WNT
+#ifdef _WIN32
 void writeConsoleWithStream(OUString const & sText, HANDLE stream)
 {
     DWORD nWrittenChars = 0;
@@ -488,7 +484,7 @@ void writeConsoleWithStream(OUString const & sText, FILE * stream)
 
 void writeConsole(OUString const & sText)
 {
-#ifdef WNT
+#ifdef _WIN32
     writeConsoleWithStream(sText, GetStdHandle(STD_OUTPUT_HANDLE));
 #else
     writeConsoleWithStream(sText, stdout);
@@ -497,7 +493,7 @@ void writeConsole(OUString const & sText)
 
 void writeConsoleError(OUString const & sText)
 {
-#ifdef WNT
+#ifdef _WIN32
     writeConsoleWithStream(sText, GetStdHandle(STD_ERROR_HANDLE));
 #else
     writeConsoleWithStream(sText, stderr);
@@ -506,7 +502,7 @@ void writeConsoleError(OUString const & sText)
 
 OUString readConsole()
 {
-#ifdef WNT
+#ifdef _WIN32
     sal_Unicode aBuffer[1024];
     DWORD   dwRead = 0;
     //unopkg.com feeds unopkg.exe with wchar_t|s

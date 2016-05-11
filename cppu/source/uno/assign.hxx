@@ -34,8 +34,6 @@ namespace cppu
 //#### assignment ##################################################################################
 
 
-
-
 inline void _assignInterface(
     void ** ppDest, void * pSource,
     uno_AcquireFunc acquire, uno_ReleaseFunc release )
@@ -140,7 +138,7 @@ inline bool _assignData(
         switch (pSourceType->eTypeClass)
         {
         case typelib_TypeClass_BOOLEAN:
-            *static_cast<sal_Bool *>(pDest) = (*static_cast<sal_Bool *>(pSource) != sal_False);
+            *static_cast<sal_Bool *>(pDest) = bool(*static_cast<sal_Bool *>(pSource));
             return true;
         default:
             return false;

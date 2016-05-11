@@ -33,7 +33,6 @@ using namespace ::com::sun::star::sdbc;
 using namespace ::com::sun::star::sdb;
 
 
-
 OCode::OCode()
 {
 }
@@ -103,7 +102,6 @@ OOperandParam::OOperandParam(OSQLParseNode* pNode, sal_Int32 _nPos)
 }
 
 
-
 const ORowSetValue& OOperandValue::getValue() const
 {
     return m_aValue;
@@ -114,13 +112,13 @@ OOperandConst::OOperandConst(const OSQLParseNode& rColumnRef, const OUString& aS
 {
     switch (rColumnRef.getNodeType())
     {
-    case SQL_NODE_STRING:
+    case SQLNodeType::String:
         m_aValue = aStrValue;
         m_eDBType = DataType::VARCHAR;
         m_aValue.setBound(true);
         return;
-    case SQL_NODE_INTNUM:
-    case SQL_NODE_APPROXNUM:
+    case SQLNodeType::IntNum:
+    case SQLNodeType::ApproxNum:
         m_aValue = aStrValue.toDouble();
         m_eDBType = DataType::DOUBLE;
         m_aValue.setBound(true);
@@ -150,12 +148,10 @@ OOperandConst::OOperandConst(const OSQLParseNode& rColumnRef, const OUString& aS
 // Implementation of the operators
 
 
-
 bool OBoolOperator::operate(const OOperand*, const OOperand*) const
 {
     return false;
 }
-
 
 
 void OBoolOperator::Exec(OCodeStack& rCodeStack)
@@ -367,10 +363,10 @@ void ONthOperator::Exec(OCodeStack& rCodeStack)
     rCodeStack.push(new OOperandResult(operate(aValues)));
 
     ::std::vector<OOperand*>::iterator aIter = aOperands.begin();
-    ::std::vector<OOperand*>::iterator aEnd = aOperands.end();
+    ::std::vector<OOperand*>::const_iterator aEnd = aOperands.end();
     for (; aIter != aEnd; ++aIter)
     {
-        if (typeid(OOperandResult) != typeid(*(*aIter)))
+        if (typeid(OOperandResult) == typeid(*(*aIter)))
             delete *aIter;
     }
 }
@@ -402,8 +398,6 @@ void OUnaryOperator::Exec(OCodeStack& rCodeStack)
     if (typeid(OOperandResult) == typeid(*pOperand))
         delete pOperand;
 }
-
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

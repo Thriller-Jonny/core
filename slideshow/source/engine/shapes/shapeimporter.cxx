@@ -51,7 +51,6 @@
 #include "tools.hxx"
 #include "slideshowcontext.hxx"
 
-#include <boost/shared_ptr.hpp>
 #include <memory>
 
 using namespace com::sun::star;
@@ -157,7 +156,7 @@ public:
     virtual void addViewLayer( ViewLayerSharedPtr const& pNewLayer,
                                bool                      bRedrawLayer ) override;
     virtual bool removeViewLayer( ViewLayerSharedPtr const& pNewLayer ) override;
-    virtual bool clearAllViewLayers() override;
+    virtual void clearAllViewLayers() override;
     virtual bool update() const override;
     virtual bool render() const override;
     virtual bool isContentChanged() const override;
@@ -210,9 +209,8 @@ bool ShapeOfGroup::removeViewLayer( ViewLayerSharedPtr const& /*pNewLayer*/ )
     return true;
 }
 
-bool ShapeOfGroup::clearAllViewLayers()
+void ShapeOfGroup::clearAllViewLayers()
 {
-    return true;
 }
 
 bool ShapeOfGroup::update() const
@@ -276,24 +274,6 @@ ShapeSharedPtr ShapeImporter::createShape(
         return createMediaShape(xCurrShape,
                                 mnAscendingPrio,
                                 mrContext);
-    }
-    else if( shapeType == "com.sun.star.drawing.PluginShape" )
-    {
-        // PropertyValues to copy from XShape to plugin
-        static const char* aPropertyValues[] =
-            {
-                "PluginURL",
-                "PluginMimeType",
-                "PluginCommands"
-            };
-
-        // (Netscape)Plugin shape. This is a special object
-        return createAppletShape( xCurrShape,
-                                  mnAscendingPrio,
-                                  "com.sun.star.comp.sfx2.PluginObject",
-                                  aPropertyValues,
-                                  SAL_N_ELEMENTS(aPropertyValues),
-                                  mrContext );
     }
     else if( shapeType == "com.sun.star.drawing.AppletShape" )
     {
@@ -600,7 +580,7 @@ bool ShapeImporter::isImportDone() const
     return maShapesStack.empty();
 }
 
-PolyPolygonVector ShapeImporter::getPolygons()
+const PolyPolygonVector& ShapeImporter::getPolygons()
 {
     return maPolygons;
 }

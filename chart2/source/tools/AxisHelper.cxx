@@ -359,7 +359,7 @@ Reference< XAxis > AxisHelper::createAxis(
 
         if( nAxisIndex>0 )//when inserting secondary axes copy some things from the main axis
         {
-            ::com::sun::star::chart::ChartAxisPosition eNewAxisPos( ::com::sun::star::chart::ChartAxisPosition_END );
+            css::chart::ChartAxisPosition eNewAxisPos( css::chart::ChartAxisPosition_END );
 
             Reference< XAxis > xMainAxis( xCooSys->getAxisByDimension( nDimensionIndex, 0 ) );
             if( xMainAxis.is() )
@@ -378,10 +378,10 @@ Reference< XAxis > AxisHelper::createAxis(
                 Reference< beans::XPropertySet > xMainProp( xMainAxis, uno::UNO_QUERY );
                 if( xMainProp.is() )
                 {
-                    ::com::sun::star::chart::ChartAxisPosition eMainAxisPos( ::com::sun::star::chart::ChartAxisPosition_ZERO );
+                    css::chart::ChartAxisPosition eMainAxisPos( css::chart::ChartAxisPosition_ZERO );
                     xMainProp->getPropertyValue("CrossoverPosition") >>= eMainAxisPos;
-                    if( ::com::sun::star::chart::ChartAxisPosition_END == eMainAxisPos )
-                        eNewAxisPos = ::com::sun::star::chart::ChartAxisPosition_START;
+                    if( css::chart::ChartAxisPosition_END == eMainAxisPos )
+                        eNewAxisPos = css::chart::ChartAxisPosition_START;
                 }
             }
 
@@ -479,9 +479,9 @@ void AxisHelper::makeAxisVisible( const Reference< XAxis >& xAxis )
     Reference< beans::XPropertySet > xProps( xAxis, uno::UNO_QUERY );
     if( xProps.is() )
     {
-        xProps->setPropertyValue( "Show", uno::makeAny( sal_True ) );
+        xProps->setPropertyValue( "Show", uno::makeAny( true ) );
         LinePropertiesHelper::SetLineVisible( xProps );
-        xProps->setPropertyValue( "DisplayLabels", uno::makeAny( sal_True ) );
+        xProps->setPropertyValue( "DisplayLabels", uno::makeAny( true ) );
     }
 }
 
@@ -489,7 +489,7 @@ void AxisHelper::makeGridVisible( const Reference< beans::XPropertySet >& xGridP
 {
     if( xGridProperties.is() )
     {
-        xGridProperties->setPropertyValue( "Show", uno::makeAny( sal_True ) );
+        xGridProperties->setPropertyValue( "Show", uno::makeAny( true ) );
         LinePropertiesHelper::SetLineVisible( xGridProperties );
     }
 }
@@ -505,7 +505,7 @@ void AxisHelper::makeAxisInvisible( const Reference< XAxis >& xAxis )
     Reference< beans::XPropertySet > xProps( xAxis, uno::UNO_QUERY );
     if( xProps.is() )
     {
-        xProps->setPropertyValue( "Show", uno::makeAny( sal_False ) );
+        xProps->setPropertyValue( "Show", uno::makeAny( false ) );
     }
 }
 
@@ -556,12 +556,12 @@ void AxisHelper::makeGridInvisible( const Reference< beans::XPropertySet >& xGri
 {
     if( xGridProperties.is() )
     {
-        xGridProperties->setPropertyValue( "Show", uno::makeAny( sal_False ) );
+        xGridProperties->setPropertyValue( "Show", uno::makeAny( false ) );
     }
 }
 
 bool AxisHelper::isGridShown( sal_Int32 nDimensionIndex, sal_Int32 nCooSysIndex, bool bMainGrid
-                , const Reference< ::com::sun::star::chart2::XDiagram >& xDiagram )
+                , const Reference< css::chart2::XDiagram >& xDiagram )
 {
     bool bRet = false;
 
@@ -889,7 +889,7 @@ Sequence< Reference< beans::XPropertySet > > AxisHelper::getAllGrids( const Refe
         if( xGridProperties.is() )
             aGridVector.push_back( xGridProperties );
 
-        Sequence< Reference< beans::XPropertySet > > aSubGrids( xAxis->getSubGridProperties() );;
+        Sequence< Reference< beans::XPropertySet > > aSubGrids( xAxis->getSubGridProperties() );
         sal_Int32 nSubGrid = 0;
         for( nSubGrid = 0; nSubGrid < aSubGrids.getLength(); ++nSubGrid )
         {

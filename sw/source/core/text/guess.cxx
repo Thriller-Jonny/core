@@ -63,7 +63,7 @@ bool SwTextGuess::Guess( const SwTextPortion& rPor, SwTextFormatInfo &rInf,
     const SwScriptInfo& rSI =
             static_cast<SwParaPortion*>(rInf.GetParaPortion())->GetScriptInfo();
 
-    sal_uInt16 nMaxComp = ( SW_CJK == rInf.GetFont()->GetActual() ) &&
+    sal_uInt16 nMaxComp = ( SwFontScript::CJK == rInf.GetFont()->GetActual() ) &&
                         rSI.CountCompChg() &&
                         ! rInf.IsMulti() &&
                         ! rPor.InFieldGrp() &&
@@ -335,7 +335,7 @@ bool SwTextGuess::Guess( const SwTextPortion& rPor, SwTextFormatInfo &rInf,
                 OSL_ENSURE( nScript, "Script is not between 1 and 4" );
 
                 // compare current script with script from last "real" character
-                if ( nScript - 1 != rInf.GetFont()->GetActual() )
+                if ( SwFontScript(nScript - 1) != rInf.GetFont()->GetActual() )
                     aLang = rInf.GetTextFrame()->GetTextNode()->GetLang(
                         CH_TXTATR_BREAKWORD == cFieldChr ?
                         nDoNotStepOver :
@@ -347,6 +347,7 @@ bool SwTextGuess::Guess( const SwTextPortion& rPor, SwTextFormatInfo &rInf,
                 *rInf.GetTextFrame()->GetNode()->getIDocumentSettingAccess()->getForbiddenCharacters( aLang, true ) );
 
         const bool bAllowHanging = rInf.IsHanging() && ! rInf.IsMulti() &&
+                                      ! rInf.GetTextFrame()->IsInTab() &&
                                       ! rPor.InFieldGrp();
 
         LineBreakUserOptions aUserOpt(
@@ -452,8 +453,7 @@ bool SwTextGuess::Guess( const SwTextPortion& rPor, SwTextFormatInfo &rInf,
         if( nBreakPos > nCutPos && nBreakPos != COMPLETE_STRING )
         {
             const sal_Int32 nHangingLen = nBreakPos - nCutPos;
-            SwPosSize aTmpSize = rInf.GetTextSize( &rSI, nCutPos,
-                                                  nHangingLen, 0 );
+            SwPosSize aTmpSize = rInf.GetTextSize( &rSI, nCutPos, nHangingLen );
             aTmpSize.Width(aTmpSize.Width() + nLeftRightBorderSpace);
             OSL_ENSURE( !pHanging, "A hanging portion is hanging around" );
             pHanging = new SwHangingPortion( aTmpSize );
@@ -513,7 +513,7 @@ bool SwTextGuess::Guess( const SwTextPortion& rPor, SwTextFormatInfo &rInf,
     return false;
 }
 
-// returns true if word at position nPos has a diffenrent spelling
+// returns true if word at position nPos has a different spelling
 // if hyphenated at this position (old german spelling)
 bool SwTextGuess::AlternativeSpelling( const SwTextFormatInfo &rInf,
     const sal_Int32 nPos )

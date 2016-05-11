@@ -25,6 +25,9 @@
 #include "oox/drawingml/graphicshapecontext.hxx"
 #include "oox/drawingml/lineproperties.hxx"
 #include "oox/drawingml/drawingmltypes.hxx"
+#include <oox/helper/attributelist.hxx>
+#include <oox/token/namespaces.hxx>
+#include <oox/token/tokens.hxx>
 #include "drawingml/customshapegeometry.hxx"
 #include "drawingml/textbodycontext.hxx"
 

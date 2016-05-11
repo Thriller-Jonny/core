@@ -43,7 +43,7 @@
 #include <svtools/imgdef.hxx>
 #include <unotools/pathoptions.hxx>
 #include <vcl/svapp.hxx>
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 #include <vcl/settings.hxx>
 
 #include <tools/diagnose_ex.h>
@@ -518,7 +518,7 @@ void Condition::updateToolbar(const uno::Reference< report::XReportControlFormat
         {
             vcl::Font aBaseFont( Application::GetDefaultDevice()->GetSettings().GetStyleSettings().GetAppFont() );
             SvxFont aFont( VCLUnoHelper::CreateFont( _xReportControlFormat->getFontDescriptor(), aBaseFont ) );
-            aFont.SetHeight( OutputDevice::LogicToLogic( Size( 0, (sal_Int32)aFont.GetHeight() ), MAP_POINT, MAP_TWIP ).Height());
+            aFont.SetFontHeight( OutputDevice::LogicToLogic( Size( 0, (sal_Int32)aFont.GetFontHeight() ), MAP_POINT, MAP_TWIP ).Height());
             aFont.SetEmphasisMark( static_cast< FontEmphasisMark >( _xReportControlFormat->getControlTextEmphasis() ) );
             aFont.SetRelief( static_cast< FontRelief >( _xReportControlFormat->getCharRelief() ) );
             aFont.SetColor( _xReportControlFormat->getCharColor() );

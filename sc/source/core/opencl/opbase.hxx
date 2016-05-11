@@ -16,7 +16,6 @@
 
 #include <formula/token.hxx>
 #include <formula/vectortoken.hxx>
-#include <boost/noncopyable.hpp>
 #include <memory>
 #include <set>
 
@@ -81,9 +80,15 @@ private:
 };
 
 /// (Partially) abstract base class for an operand
-class DynamicKernelArgument : boost::noncopyable
+class DynamicKernelArgument
 {
 public:
+    /// delete copy constructor
+    DynamicKernelArgument( const DynamicKernelArgument& ) = delete;
+
+    /// delete copy-assignment operator
+    const DynamicKernelArgument& operator=( const DynamicKernelArgument& ) = delete;
+
     DynamicKernelArgument( const ScCalcConfig& config, const std::string& s, FormulaTreeNodeRef ft );
     virtual ~DynamicKernelArgument() {}
 
@@ -171,12 +176,10 @@ protected:
 class OpBase
 {
 public:
-    typedef std::vector<std::string> ArgVector;
-    typedef std::vector<std::string>::iterator ArgVectorIter;
     virtual std::string GetBottom() { return "";};
     virtual std::string Gen2( const std::string&/*lhs*/,
         const std::string&/*rhs*/ ) const { return "";}
-    static std::string Gen( ArgVector& /*argVector*/ ) { return "";};
+    static std::string Gen( std::vector<std::string>& /*argVector*/ ) { return "";};
     virtual std::string BinFuncName() const { return "";};
     virtual void BinInlineFun( std::set<std::string>&,
         std::set<std::string>& ) { }
@@ -216,7 +219,7 @@ public:
         SubArguments& vSubArguments );
     // only check isNan
     static void CheckSubArgumentIsNan2( std::stringstream& ss,
-        SubArguments& vSubArguments, int argumentNum, std::string p );
+        SubArguments& vSubArguments, int argumentNum, const std::string& p );
     static void UnrollDoubleVector( std::stringstream& ss,
         std::stringstream& unrollstr, const formula::DoubleVectorRefToken* pCurDVR,
         int nCurWindowSize );

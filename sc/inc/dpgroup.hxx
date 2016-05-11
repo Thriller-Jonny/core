@@ -119,7 +119,7 @@ public:
 
 class ScDPGroupTableData : public ScDPTableData
 {
-    typedef std::unordered_set< OUString, OUStringHash, ::std::equal_to< OUString > > StringHashSet;
+    typedef std::unordered_set< OUString, OUStringHash > StringHashSet;
 
     std::shared_ptr<ScDPTableData> pSourceData;
     long                    nSourceCount;
@@ -141,7 +141,7 @@ public:
                 ScDPGroupTableData( const std::shared_ptr<ScDPTableData>& pSource, ScDocument* pDocument );
     virtual     ~ScDPGroupTableData();
 
-    std::shared_ptr<ScDPTableData> GetSourceTableData() { return pSourceData;}
+    const std::shared_ptr<ScDPTableData>& GetSourceTableData() const { return pSourceData;}
 
     void        AddGroupDimension( const ScDPGroupDimension& rGroup );
     void        SetNumGroupDimension( long nIndex, const ScDPNumGroupDimension& rGroup );

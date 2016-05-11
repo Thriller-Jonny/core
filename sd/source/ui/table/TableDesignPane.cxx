@@ -27,7 +27,7 @@
 
 #include <comphelper/processfactory.hxx>
 #include <sfx2/viewfrm.hxx>
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 #include <vcl/layout.hxx>
 #include <vcl/settings.hxx>
 #include <vcl/builderfactory.hxx>
@@ -208,7 +208,8 @@ void TableDesignWidget::ApplyStyle()
         {
             SfxDispatcher* pDispatcher = getDispatcher( mrBase );
             SfxStringItem aArg( SID_TABLE_STYLE, sStyleName );
-            pDispatcher->Execute(SID_INSERT_TABLE, SfxCallMode::ASYNCHRON, &aArg, 0 );
+            pDispatcher->ExecuteList(SID_INSERT_TABLE, SfxCallMode::ASYNCHRON,
+                    { &aArg });
         }
     }
     catch( Exception& )
@@ -375,7 +376,7 @@ VCL_BUILDER_DECL_FACTORY(TableValueSet)
 
 void TableDesignWidget::updateControls()
 {
-    static const sal_Bool gDefaults[CB_COUNT] = { sal_True, sal_False, sal_True, sal_False, sal_False, sal_False };
+    static const bool gDefaults[CB_COUNT] = { true, false, true, false, false, false };
 
     const bool bHasTable = mxSelectedTable.is();
     const OUString* pPropNames = getPropertyNames();
@@ -806,7 +807,15 @@ short TableDesignDialog::Execute()
 
 VclPtr<vcl::Window> createTableDesignPanel( vcl::Window* pParent, ViewShellBase& rBase )
 {
-    return VclPtr<TableDesignPane>::Create( pParent, rBase );
+    VclPtr<TableDesignPane> pRet = nullptr;
+    try
+    {
+        pRet = VclPtr<TableDesignPane>::Create( pParent, rBase );
+    }
+    catch (const uno::Exception&)
+    {
+    }
+    return pRet;
 }
 
 void showTableDesignDialog( vcl::Window* pParent, ViewShellBase& rBase )

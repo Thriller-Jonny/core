@@ -160,12 +160,11 @@ protected:
     void ForceRefToMarked();
     void ForceUndirtyMrkPnt() const                                       { if (mbMrkPntDirty) UndirtyMrkPnt(); }
 
-    //HMHvoid ImpShowMarkHdl(bool bNoRefHdl);
     virtual SdrObject* CheckSingleSdrObjectHit(const Point& rPnt, sal_uInt16 nTol, SdrObject* pObj, SdrPageView* pPV, SdrSearchOptions nOptions, const SetOfByte* pMVisLay) const;
     SdrObject* CheckSingleSdrObjectHit(const Point& rPnt, sal_uInt16 nTol, SdrObjList* pOL, SdrPageView* pPV, SdrSearchOptions nOptions, const SetOfByte* pMVisLay, SdrObject*& rpRootObj) const;
     SdrObject* CheckSingleSdrObjectHit(const Point& rPnt, sal_uInt16 nTol, SdrObjList* pOL, SdrPageView* pPV, SdrSearchOptions nOptions, const SetOfByte* pMVisLay, SdrObject*& rpRootObj,const SdrMarkList * pMarkList) const;
     bool ImpIsFrameHandles() const;
-    void ImpTakeDescriptionStr(sal_uInt16 nStrCacheID, OUString& rStr, sal_uInt16 nVal=0, ImpTakeDescriptionOptions nOpt=ImpTakeDescriptionOptions::NONE) const;
+    void ImpTakeDescriptionStr(sal_uInt16 nStrCacheID, OUString& rStr, ImpTakeDescriptionOptions nOpt=ImpTakeDescriptionOptions::NONE) const;
 
     // Generates a string including degrees symbol, from an angel specification in 1/100deg
     bool ImpMarkPoint(SdrHdl* pHdl, SdrMark* pMark, bool bUnmark);
@@ -252,7 +251,7 @@ public:
     OUString GetDescriptionOfMarkedObjects() const { return GetMarkedObjectList().GetMarkDescription(); }
     OUString GetDescriptionOfMarkedPoints() const { return GetMarkedObjectList().GetPointMarkDescription(); }
     OUString GetDescriptionOfMarkedGluePoints() const { return GetMarkedObjectList().GetGluePointMarkDescription(); }
-    bool GetBoundRectFromMarkedObjects(SdrPageView* pPageView, Rectangle& rRect) const { return GetMarkedObjectList().TakeBoundRect(pPageView, rRect); }
+    void GetBoundRectFromMarkedObjects(SdrPageView* pPageView, Rectangle& rRect) const { GetMarkedObjectList().TakeBoundRect(pPageView, rRect); }
     bool GetSnapRectFromMarkedObjects(SdrPageView* pPageView, Rectangle& rRect) const { return GetMarkedObjectList().TakeSnapRect(pPageView, rRect); }
 
     // Get a list of all those links which are connected to marked nodes,
@@ -260,7 +259,6 @@ public:
     const SdrMarkList& GetEdgesOfMarkedNodes() const { return mpSdrViewSelection->GetEdgesOfMarkedNodes(); }
     const SdrMarkList& GetMarkedEdgesOfMarkedNodes() const { return mpSdrViewSelection->GetMarkedEdgesOfMarkedNodes(); }
     const std::vector<SdrObject*>& GetTransitiveHullOfMarkedObjects() const { return mpSdrViewSelection->GetAllMarkedObjects(); }
-
 
 
     // mechanism to complete disable handles at the view. Handles will be hidden and deleted
@@ -273,8 +271,7 @@ public:
     bool IsMarkedHit(const Point& rPnt, short nTol=-2) const { return IsMarkedObjHit(rPnt,nTol); }
     bool IsMarkedObjHit(const Point& rPnt, short nTol=-2) const;
 
-    // Pick: Supported options for nOptions are SEARCH_NEXT, SEARCH_BACKWARD (ni)
-    SdrHdl* PickHandle(const Point& rPnt, SdrSearchOptions nOptions=SdrSearchOptions::NONE, SdrHdl* pHdl0=nullptr) const;
+    SdrHdl* PickHandle(const Point& rPnt) const;
 
     // Pick: Supported options for nOptions are:
     // SdrSearchOptions::DEEP SdrSearchOptions::ALSOONMASTER SdrSearchOptions::TESTMARKABLE SdrSearchOptions::TESTTEXTEDIT
@@ -303,7 +300,7 @@ public:
 
     // Mark all objects within a rectangular area
     // Just objects are marked which are inclosed completely
-    bool MarkObj(const Rectangle& rRect, bool bUnmark=false);
+    void MarkObj(const Rectangle& rRect, bool bUnmark=false);
     void MarkObj(SdrObject* pObj, SdrPageView* pPV, bool bUnmark=false, bool bImpNoSetMarkHdl=false);
     void MarkAllObj(SdrPageView* pPV=nullptr); // pPage=NULL => all displayed pages
     void UnmarkAllObj(SdrPageView* pPV=nullptr); // pPage=NULL => all displayed pages
@@ -333,7 +330,7 @@ public:
     bool MarkPointHelper(SdrHdl* pHdl, SdrMark* pMark, bool bUnmark);
 
     // Mark all points within this rectangular alle Punkte (View coordinates)
-    bool MarkPoints(const Rectangle& rRect, bool bUnmark=false) { return MarkPoints(&rRect,bUnmark); }
+    void MarkPoints(const Rectangle& rRect, bool bUnmark=false) { MarkPoints(&rRect,bUnmark); }
     bool UnmarkPoint(SdrHdl& rHdl) { return MarkPoint(rHdl,true); }
     bool IsPointMarked(const SdrHdl& rHdl) const { ForceUndirtyMrkPnt(); return rHdl.IsSelected(); }
     bool MarkAllPoints() { return MarkPoints(nullptr,false); }
@@ -377,14 +374,13 @@ public:
     // SdrPageView, which should be defined correctly always.
     // Alternatively a gluepoint may be characterized by a SdrHdl.
     // In this case the SdrHdl instance consists of all required information.
-    // And in this case, the glue point are always is marked by enforcment
+    // And in this case, the glue point are always is marked by enforcement
     // (Handlers are just situated at marked gluepoints )
     // Attention: With each change of the glue point status the handle list is re-calculated.
     // All previously saved SdrHdl* became invalid by this, the same with the point IDs!
-    // Pick: Supported options for nOptions are SEARCH_NEXT, SEARCH_BACKWARD
-    bool PickGluePoint(const Point& rPnt, SdrObject*& rpObj, sal_uInt16& rnId, SdrPageView*& rpPV, SdrSearchOptions nOptions=SdrSearchOptions::NONE) const;
+    bool PickGluePoint(const Point& rPnt, SdrObject*& rpObj, sal_uInt16& rnId, SdrPageView*& rpPV) const;
     bool MarkGluePoint(const SdrObject* pObj, sal_uInt16 nId, const SdrPageView* pPV, bool bUnmark=false);
-    bool UnmarkGluePoint(const SdrObject* pObj, sal_uInt16 nId, const SdrPageView* pPV) { return MarkGluePoint(pObj,nId,pPV,true); }
+    void UnmarkGluePoint(const SdrObject* pObj, sal_uInt16 nId, const SdrPageView* pPV) { MarkGluePoint(pObj,nId,pPV,true); }
     bool IsGluePointMarked(const SdrObject* pObj, sal_uInt16 nId) const;
 
     // Get the Hdl (handle) of a marked GluePoint. Non-marked
@@ -408,7 +404,7 @@ public:
     // bool BegMarkGluePoints(const Point& rPnt, OutputDevice* pOut);
     bool BegMarkGluePoints(const Point& rPnt, bool bUnmark = false);
     void MovMarkGluePoints(const Point& rPnt);
-    bool EndMarkGluePoints();
+    void EndMarkGluePoints();
     void BrkMarkGluePoints();
     bool IsMarkGluePoints() const { return (nullptr != mpMarkGluePointsOverlay); }
 
@@ -437,7 +433,7 @@ public:
     // objects may not be processed in the meantime (until the next
     // LeaveGroup()). With markings which overlaps pages, every page is processed
     // separately. The method returns sal_True, if at least one group was entered.
-    bool EnterMarkedGroup();
+    void EnterMarkedGroup();
 
     // Is set by DragView automatically when finishing a Crook-Drag.
     void SetLastCrookCenter(const Point& rPt) { maLastCrookCenter=rPt; }
@@ -450,7 +446,6 @@ public:
     const Point& GetRef2() const { return maRef1; }
     void SetRef2(const Point& rPt);
 };
-
 
 
 // - Hit tolarances:
@@ -466,7 +461,6 @@ public:
 //     2*Tol (200 units for this example) is created around the object.
 //     When an object is directly hit, the Edit method is called.
 //     In opposite, a hit in the surrounding sensitive area enables Dragging.
-
 
 
 #endif // INCLUDED_SVX_SVDMRKV_HXX

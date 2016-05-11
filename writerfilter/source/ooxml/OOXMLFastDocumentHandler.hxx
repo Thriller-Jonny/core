@@ -20,7 +20,6 @@
 #ifndef INCLUDED_WRITERFILTER_SOURCE_OOXML_OOXMLFASTDOCUMENTHANDLER_HXX
 #define INCLUDED_WRITERFILTER_SOURCE_OOXML_OOXMLFASTDOCUMENTHANDLER_HXX
 
-#include <sal/config.h>
 #include <com/sun/star/uno/XComponentContext.hpp>
 #include <cppuhelper/implbase.hxx>
 #include <com/sun/star/xml/sax/XFastDocumentHandler.hpp>
@@ -92,9 +91,6 @@ private:
     css::uno::Reference< css::uno::XComponentContext > m_xContext;
 
     Stream * mpStream;
-#ifdef DEBUG_WRITERFILTER
-    Stream::Pointer_t mpTmpStream;
-#endif
     OOXMLDocumentImpl* mpDocument;
     sal_Int32 mnXNoteId;
     mutable css::uno::Reference<OOXMLFastContextHandler> mxContextHandler;

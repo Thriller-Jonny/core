@@ -72,7 +72,7 @@ void ScTable::UpdatePageBreaks( const ScRange* pUserArea )
     }
 
     SfxStyleSheetBase* pStyle = pDocument->GetStyleSheetPool()->
-                                    Find( aPageStyle, SFX_STYLE_FAMILY_PAGE );
+                                    Find( aPageStyle, SfxStyleFamily::Page );
     if ( !pStyle )
     {
         OSL_FAIL("UpdatePageBreaks: Style not found");
@@ -600,7 +600,7 @@ bool ScTable::SetRowHidden(SCROW nStartRow, SCROW nEndRow, bool bHidden)
     return bChanged;
 }
 
-bool ScTable::SetColHidden(SCCOL nStartCol, SCCOL nEndCol, bool bHidden)
+void ScTable::SetColHidden(SCCOL nStartCol, SCCOL nEndCol, bool bHidden)
 {
     bool bChanged = false;
     if (bHidden)
@@ -613,8 +613,6 @@ bool ScTable::SetColHidden(SCCOL nStartCol, SCCOL nEndCol, bool bHidden)
         if (IsStreamValid())
             SetStreamValid(false);
     }
-
-    return bChanged;
 }
 
 void ScTable::CopyColHidden(ScTable& rTable, SCCOL nStartCol, SCCOL nEndCol)
@@ -622,7 +620,7 @@ void ScTable::CopyColHidden(ScTable& rTable, SCCOL nStartCol, SCCOL nEndCol)
     SCCOL nCol = nStartCol;
     while (nCol <= nEndCol)
     {
-        SCCOL nLastCol;
+        SCCOL nLastCol = -1;
         bool bHidden = rTable.ColHidden(nCol, nullptr, &nLastCol);
         if (nLastCol > nEndCol)
             nLastCol = nEndCol;
@@ -1123,17 +1121,17 @@ void ScTable::SetPageStyle( const OUString& rName )
     {
         OUString           aStrNew    = rName;
         SfxStyleSheetBasePool*  pStylePool = pDocument->GetStyleSheetPool();
-        SfxStyleSheetBase*      pNewStyle  = pStylePool->Find( aStrNew, SFX_STYLE_FAMILY_PAGE );
+        SfxStyleSheetBase*      pNewStyle  = pStylePool->Find( aStrNew, SfxStyleFamily::Page );
 
         if ( !pNewStyle )
         {
             aStrNew = ScGlobal::GetRscString(STR_STYLENAME_STANDARD);
-            pNewStyle = pStylePool->Find( aStrNew, SFX_STYLE_FAMILY_PAGE );
+            pNewStyle = pStylePool->Find( aStrNew, SfxStyleFamily::Page );
         }
 
         if ( aPageStyle != aStrNew )
         {
-            SfxStyleSheetBase* pOldStyle = pStylePool->Find( aPageStyle, SFX_STYLE_FAMILY_PAGE );
+            SfxStyleSheetBase* pOldStyle = pStylePool->Find( aPageStyle, SfxStyleFamily::Page );
 
             if ( pOldStyle && pNewStyle )
             {

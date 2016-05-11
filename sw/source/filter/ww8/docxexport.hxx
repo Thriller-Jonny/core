@@ -131,7 +131,7 @@ public:
 
     virtual void AppendBookmarks( const SwTextNode& rNode, sal_Int32 nAktPos, sal_Int32 nLen ) override;
 
-    virtual void AppendBookmark( const OUString& rName, bool bSkip = false ) override;
+    virtual void AppendBookmark( const OUString& rName ) override;
 
     virtual void AppendAnnotationMarks( const SwTextNode& rNode, sal_Int32 nAktPos, sal_Int32 nLen ) override;
 
@@ -171,7 +171,6 @@ public:
     /// Returns the relationd id
     OString OutputChart( css::uno::Reference< css::frame::XModel >& xModel, sal_Int32 nCount, ::sax_fastparser::FSHelperPtr m_pSerializer );
     OString WriteOLEObject(SwOLEObj& rObject, OUString & io_rProgID);
-    static bool lcl_CopyStream( css::uno::Reference< css::io::XInputStream> xIn, css::uno::Reference< css::io::XOutputStream > xOut );
 
     /// Writes the shape using drawingML syntax.
     void OutputDML( css::uno::Reference< css::drawing::XShape >& xShape );
@@ -242,9 +241,6 @@ private:
     /// Write word/embeddings/Worksheet[n].xlsx
     void WriteEmbeddings();
 
-    /// Get background color of the document, if there is one.
-    boost::optional<SvxBrushItem> getBackground();
-
     /// return true if Page Layout is set as Mirrored
     bool isMirroredMargin();
 
@@ -272,7 +268,7 @@ public:
     /// Set the document default tab stop.
     void setDefaultTabStop( int stop ) { m_aSettings.defaultTabStop = stop; }
 
-    ::sax_fastparser::FSHelperPtr GetFS() { return mpFS; }
+    const ::sax_fastparser::FSHelperPtr& GetFS() { return mpFS; }
 
     void SetFS(::sax_fastparser::FSHelperPtr mpFS);
 

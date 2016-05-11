@@ -24,7 +24,6 @@
 #include "XMLPropertyBackpatcher.hxx"
 #include <xmloff/txtimp.hxx>
 
-using ::std::vector;
 using ::std::map;
 using ::com::sun::star::uno::Reference;
 using ::com::sun::star::uno::Any;
@@ -118,9 +117,7 @@ void XMLPropertyBackpatcher<A>::SetProperty(
     if (aIDMap.count(sName))
     {
         // we know this ID -> set property
-        Any aAny;
-        aAny <<= aIDMap[sName];
-        xPropSet->setPropertyValue(sPropertyName, aAny);
+        xPropSet->setPropertyValue(sPropertyName, css::uno::Any(aIDMap[sName]));
     }
     else
     {

@@ -1232,7 +1232,7 @@ bool TYPEREG_CALLTYPE typereg_reader_create(
             *result = nullptr;
             return true;
         }
-        typereg_Version version = entry->getVersion();;
+        typereg_Version version = entry->getVersion();
         if (version < TYPEREG_VERSION_0 || version > maxVersion) {
             *result = nullptr;
             return true;
@@ -1723,11 +1723,10 @@ void TYPEREG_CALLTYPE typereg_reader_getSuperTypeName(
 }
 
 RegistryTypeReader::RegistryTypeReader(const sal_uInt8* buffer,
-                                              sal_uInt32 bufferLen,
-                                              bool copyData)
+                                              sal_uInt32 bufferLen)
     : m_hImpl(nullptr)
 {
-    m_hImpl = createEntry(buffer, bufferLen, copyData);
+    m_hImpl = createEntry(buffer, bufferLen, false/*copyData*/);
 }
 
 RegistryTypeReader::~RegistryTypeReader()

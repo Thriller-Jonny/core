@@ -340,16 +340,15 @@ EditView* EditEngine::RemoveView( EditView* pView )
     return pRemoved;
 }
 
-EditView* EditEngine::RemoveView(size_t nIndex)
+void EditEngine::RemoveView(size_t nIndex)
 {
     ImpEditEngine::ViewsType& rViews = pImpEditEngine->GetEditViews();
     if (nIndex >= rViews.size())
-        return nullptr;
+        return;
 
     EditView* pView = rViews[nIndex];
     if ( pView )
-        return RemoveView( pView );
-    return nullptr;
+        RemoveView( pView );
 }
 
 EditView* EditEngine::GetView(size_t nIndex) const
@@ -398,9 +397,8 @@ void EditEngine::SetPaperSize( const Size& rNewSize )
     bool bAutoPageSize = pImpEditEngine->GetStatus().AutoPageSize();
     if ( bAutoPageSize || ( aNewSize.Width() != aOldSize.Width() ) )
     {
-        for (size_t nView = 0; nView < pImpEditEngine->aEditViews.size(); ++nView)
+        for (EditView* pView : pImpEditEngine->aEditViews)
         {
-            EditView* pView = pImpEditEngine->aEditViews[nView];
             if ( bAutoPageSize )
                 pView->pImpEditView->RecalcOutputArea();
             else if ( pView->pImpEditView->DoAutoSize() )
@@ -552,10 +550,10 @@ OUString EditEngine::GetText( LineEnd eEnd ) const
     return pImpEditEngine->GetEditDoc().GetText( eEnd );
 }
 
-OUString EditEngine::GetText( const ESelection& rESelection, const LineEnd eEnd ) const
+OUString EditEngine::GetText( const ESelection& rESelection ) const
 {
     EditSelection aSel( pImpEditEngine->CreateSel( rESelection ) );
-    return pImpEditEngine->GetSelected( aSel, eEnd );
+    return pImpEditEngine->GetSelected( aSel );
 }
 
 sal_uInt32 EditEngine::GetTextLen() const
@@ -596,12 +594,12 @@ sal_Int32 EditEngine::GetLineNumberAtIndex( sal_Int32 nPara, sal_Int32 nIndex ) 
     return pImpEditEngine->GetLineNumberAtIndex( nPara, nIndex );
 }
 
-sal_uInt32 EditEngine::GetLineHeight( sal_Int32 nParagraph, sal_Int32 nLine )
+sal_uInt32 EditEngine::GetLineHeight( sal_Int32 nParagraph )
 {
     // If someone calls GetLineHeight() with an empty Engine.
     if ( !pImpEditEngine->IsFormatted() )
         pImpEditEngine->FormatDoc();
-    return pImpEditEngine->GetLineHeight( nParagraph, nLine );
+    return pImpEditEngine->GetLineHeight( nParagraph, 0 );
 }
 
 sal_uInt32 EditEngine::GetTextHeight( sal_Int32 nParagraph ) const
@@ -707,9 +705,9 @@ EditPaM EditEngine::ConnectContents(sal_Int32 nLeftNode, bool bBackward)
     return pImpEditEngine->ConnectContents(nLeftNode, bBackward);
 }
 
-EditPaM EditEngine::InsertFeature(const EditSelection& rEditSelection, const SfxPoolItem& rItem)
+void EditEngine::InsertFeature(const EditSelection& rEditSelection, const SfxPoolItem& rItem)
 {
-    return pImpEditEngine->ImpInsertFeature(rEditSelection, rItem);
+    pImpEditEngine->ImpInsertFeature(rEditSelection, rItem);
 }
 
 EditSelection EditEngine::MoveParagraphs(const Range& rParagraphs, sal_Int32 nNewPos, EditView* pCurView)
@@ -747,14 +745,14 @@ void EditEngine::FormatAndUpdate(EditView* pCurView)
     pImpEditEngine->FormatAndUpdate(pCurView);
 }
 
-bool EditEngine::Undo(EditView* pView)
+void EditEngine::Undo(EditView* pView)
 {
-    return pImpEditEngine->Undo(pView);
+    pImpEditEngine->Undo(pView);
 }
 
-bool EditEngine::Redo(EditView* pView)
+void EditEngine::Redo(EditView* pView)
 {
-    return pImpEditEngine->Redo(pView);
+    pImpEditEngine->Redo(pView);
 }
 
 uno::Reference<datatransfer::XTransferable> EditEngine::CreateTransferable(const EditSelection& rSelection)
@@ -800,9 +798,9 @@ EditSelection EditEngine::InsertText(
     return pImpEditEngine->InsertText(rxDataObj, rBaseURL, rPaM, bUseSpecial);
 }
 
-EditPaM EditEngine::EndOfWord(const EditPaM& rPaM, sal_Int16 nWordType)
+EditPaM EditEngine::EndOfWord(const EditPaM& rPaM)
 {
-    return pImpEditEngine->EndOfWord(rPaM, nWordType);
+    return pImpEditEngine->EndOfWord(rPaM);
 }
 
 EditPaM EditEngine::GetPaM(const Point& aDocPos, bool bSmart)
@@ -811,9 +809,9 @@ EditPaM EditEngine::GetPaM(const Point& aDocPos, bool bSmart)
 }
 
 EditSelection EditEngine::SelectWord(
-        const EditSelection& rCurSelection, sal_Int16 nWordType, bool bAcceptStartOfWord)
+        const EditSelection& rCurSelection, sal_Int16 nWordType)
 {
-    return pImpEditEngine->SelectWord(rCurSelection, nWordType, bAcceptStartOfWord);
+    return pImpEditEngine->SelectWord(rCurSelection, nWordType);
 }
 
 long EditEngine::GetXPos(
@@ -873,10 +871,9 @@ const ParaPortionList& EditEngine::GetParaPortions() const
     return pImpEditEngine->GetParaPortions();
 }
 
-void EditEngine::SeekCursor(
-        ContentNode* pNode, sal_Int32 nPos, SvxFont& rFont, OutputDevice* pOut, sal_uInt16 nIgnoreWhich)
+void EditEngine::SeekCursor(ContentNode* pNode, sal_Int32 nPos, SvxFont& rFont)
 {
-    pImpEditEngine->SeekCursor(pNode, nPos, rFont, pOut, nIgnoreWhich);
+    pImpEditEngine->SeekCursor(pNode, nPos, rFont);
 }
 
 EditPaM EditEngine::DeleteSelection(const EditSelection& rSel)
@@ -909,9 +906,9 @@ void EditEngine::SetAttribs(const EditSelection& rSel, const SfxItemSet& rSet, s
     pImpEditEngine->SetAttribs(rSel, rSet, nSpecial);
 }
 
-OUString EditEngine::GetSelected(const EditSelection& rSel, const LineEnd eParaSep) const
+OUString EditEngine::GetSelected(const EditSelection& rSel) const
 {
-    return pImpEditEngine->GetSelected(rSel, eParaSep);
+    return pImpEditEngine->GetSelected(rSel);
 }
 
 EditPaM EditEngine::DeleteSelected(const EditSelection& rSel)
@@ -1271,7 +1268,7 @@ bool EditEngine::PostKeyEvent( const KeyEvent& rKeyEvent, EditView* pEditView, v
                     }
                     else
                     {
-                        aCurSel = pImpEditEngine->InsertText( (const EditSelection&)aCurSel, nCharCode, !pEditView->IsInsertMode(), true );
+                        aCurSel = pImpEditEngine->InsertTextUserInput( (const EditSelection&)aCurSel, nCharCode, !pEditView->IsInsertMode() );
                     }
                     // AutoComplete ???
                     if ( pImpEditEngine->GetStatus().DoAutoComplete() && ( nCharCode != ' ' ) )
@@ -1466,12 +1463,11 @@ sal_uLong EditEngine::Read( SvStream& rInput, const OUString& rBaseURL, EETextFo
     return rInput.GetError();
 }
 
-sal_uLong EditEngine::Write( SvStream& rOutput, EETextFormat eFormat )
+void EditEngine::Write( SvStream& rOutput, EETextFormat eFormat )
 {
     EditPaM aStartPaM( pImpEditEngine->GetEditDoc().GetStartPaM() );
     EditPaM aEndPaM( pImpEditEngine->GetEditDoc().GetEndPaM() );
     pImpEditEngine->Write( rOutput, eFormat, EditSelection( aStartPaM, aEndPaM ) );
-    return rOutput.GetError();
 }
 
 EditTextObject* EditEngine::CreateTextObject()
@@ -1529,7 +1525,7 @@ void EditEngine::SetImportHdl( const Link<ImportInfo&,void>& rLink )
     pImpEditEngine->aImportHdl = rLink;
 }
 
-Link<ImportInfo&,void> EditEngine::GetImportHdl() const
+const Link<ImportInfo&,void>& EditEngine::GetImportHdl() const
 {
     return pImpEditEngine->aImportHdl;
 }
@@ -1653,7 +1649,7 @@ void EditEngine::InsertParagraph( sal_Int32 nPara, const EditTextObject& rTxtObj
 
     pImpEditEngine->UndoActionStart( EDITUNDO_INSERT );
 
-    // No Undo componding needed.
+    // No Undo compounding needed.
     EditPaM aPaM( pImpEditEngine->InsertParagraph( nPara ) );
     // When InsertParagraph from the outside, no hard attributes
     // should be taken over!
@@ -2104,7 +2100,7 @@ void EditEngine::SetWordDelimiters( const OUString& rDelimiters )
         pImpEditEngine->aWordDelimiters += OUStringLiteral1<CH_FEATURE>();
 }
 
-OUString EditEngine::GetWordDelimiters() const
+const OUString& EditEngine::GetWordDelimiters() const
 {
     return pImpEditEngine->aWordDelimiters;
 }
@@ -2139,7 +2135,7 @@ void EditEngine::SetAllMisspellRanges( const std::vector<editeng::MisspellRanges
     pImpEditEngine->SetAllMisspellRanges(rRanges);
 }
 
-void EditEngine::SetForbiddenCharsTable( rtl::Reference<SvxForbiddenCharactersTable> xForbiddenChars )
+void EditEngine::SetForbiddenCharsTable( const rtl::Reference<SvxForbiddenCharactersTable>& xForbiddenChars )
 {
     ImpEditEngine::SetForbiddenCharsTable( xForbiddenChars );
 }
@@ -2284,11 +2280,9 @@ bool EditEngine::UpdateFieldsOnly()
     return pImpEditEngine->UpdateFields();
 }
 
-void EditEngine::RemoveFields( bool bKeepFieldText, std::function<bool ( const SvxFieldData* )> isFieldData )
+void EditEngine::RemoveFields( const std::function<bool ( const SvxFieldData* )>& isFieldData )
 {
-
-    if ( bKeepFieldText )
-        pImpEditEngine->UpdateFields();
+    pImpEditEngine->UpdateFields();
 
     sal_Int32 nParas = pImpEditEngine->GetEditDoc().Count();
     for ( sal_Int32 nPara = 0; nPara < nParas; nPara++  )
@@ -2411,8 +2405,8 @@ css::uno::Reference< css::datatransfer::XTransferable >
 // ======================    Virtual Methods    ========================
 
 void EditEngine::DrawingText( const Point&, const OUString&, sal_Int32, sal_Int32,
-                              const long*, const SvxFont&, sal_Int32, sal_Int32, sal_uInt8,
-                              const EEngineData::WrongSpellVector*, const SvxFieldData*, bool, bool, bool,
+                              const long*, const SvxFont&, sal_Int32 /*nPara*/, sal_uInt8 /*nRightToLeft*/,
+                              const EEngineData::WrongSpellVector*, const SvxFieldData*, bool, bool,
                               const css::lang::Locale*, const Color&, const Color&)
 
 {
@@ -2420,8 +2414,7 @@ void EditEngine::DrawingText( const Point&, const OUString&, sal_Int32, sal_Int3
 
 void EditEngine::DrawingTab( const Point& /*rStartPos*/, long /*nWidth*/,
                              const OUString& /*rChar*/, const SvxFont& /*rFont*/,
-                             sal_Int32 /*nPara*/, sal_Int32 /*nIndex*/,
-                             sal_uInt8 /*nRightToLeft*/, bool /*bEndOfLine*/,
+                             sal_Int32 /*nPara*/, sal_uInt8 /*nRightToLeft*/, bool /*bEndOfLine*/,
                              bool /*bEndOfParagraph*/, const Color& /*rOverlineColor*/,
                              const Color& /*rTextLineColor*/)
 {
@@ -2567,8 +2560,8 @@ void EditEngine::SetFontInfoInItemSet( SfxItemSet& rSet, const vcl::Font& rFont 
 void EditEngine::SetFontInfoInItemSet( SfxItemSet& rSet, const SvxFont& rFont )
 {
     rSet.Put( SvxLanguageItem( rFont.GetLanguage(), EE_CHAR_LANGUAGE ) );
-    rSet.Put( SvxFontItem( rFont.GetFamily(), rFont.GetName(), OUString(), rFont.GetPitch(), rFont.GetCharSet(), EE_CHAR_FONTINFO ) );
-    rSet.Put( SvxFontHeightItem( rFont.GetSize().Height(), 100, EE_CHAR_FONTHEIGHT )  );
+    rSet.Put( SvxFontItem( rFont.GetFamilyType(), rFont.GetFamilyName(), OUString(), rFont.GetPitch(), rFont.GetCharSet(), EE_CHAR_FONTINFO ) );
+    rSet.Put( SvxFontHeightItem( rFont.GetFontSize().Height(), 100, EE_CHAR_FONTHEIGHT )  );
     rSet.Put( SvxCharScaleWidthItem( 100, EE_CHAR_FONTWIDTH ) );
     rSet.Put( SvxShadowedItem( rFont.IsShadow(), EE_CHAR_SHADOW )  );
     rSet.Put( SvxEscapementItem( rFont.GetEscapement(), rFont.GetPropr(), EE_CHAR_ESCAPEMENT )  );
@@ -2734,10 +2727,9 @@ void EditEngine::CallImportHandler(ImportInfo& rInfo)
     pImpEditEngine->aImportHdl.Call(rInfo);
 }
 
-EditPaM EditEngine::InsertParaBreak(
-        const EditSelection& rEditSelection, bool bKeepEndingAttribs)
+EditPaM EditEngine::InsertParaBreak(const EditSelection& rEditSelection)
 {
-    return pImpEditEngine->ImpInsertParaBreak(rEditSelection, bKeepEndingAttribs);
+    return pImpEditEngine->ImpInsertParaBreak(rEditSelection);
 }
 
 EditPaM EditEngine::InsertLineBreak(const EditSelection& rEditSelection)

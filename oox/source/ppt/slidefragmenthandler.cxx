@@ -24,6 +24,7 @@
 #include <com/sun/star/container/XNamed.hpp>
 #include <osl/diagnose.h>
 
+#include <oox/helper/attributelist.hxx>
 #include "oox/helper/propertyset.hxx"
 #include "oox/core/xmlfilterbase.hxx"
 #include "headerfootercontext.hxx"
@@ -39,6 +40,9 @@
 #include "drawingml/clrschemecontext.hxx"
 #include "drawingml/textliststyle.hxx"
 #include "oox/ppt/pptimport.hxx"
+#include <oox/token/namespaces.hxx>
+#include <oox/token/properties.hxx>
+#include <oox/token/tokens.hxx>
 
 using namespace ::com::sun::star;
 using namespace ::oox::core;
@@ -166,8 +170,8 @@ SlideFragmentHandler::~SlideFragmentHandler()
             if( mpSlidePersistPtr->getTheme() )
                 pFillProperties = mpSlidePersistPtr->getTheme()->getFillStyle( rAttribs.getInteger( XML_idx, -1 ) );
             FillPropertiesPtr pFillPropertiesPtr( pFillProperties ? new FillProperties( *pFillProperties ) : new FillProperties() );
-            ContextHandlerRef ret = new ColorContext( *this, mpSlidePersistPtr->getBackgroundColor() );
             mpSlidePersistPtr->setBackgroundProperties( pFillPropertiesPtr );
+            ContextHandlerRef ret = new ColorContext( *this, mpSlidePersistPtr->getBackgroundColor() );
             return ret;
         }
         break;

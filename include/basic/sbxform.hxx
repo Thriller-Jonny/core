@@ -73,7 +73,7 @@
         a) use sprintf()
         b) use log10() and pow() digit
 */
-#define _with_sprintf   // use a)
+#define with_sprintf_   // use a)
 
 #include <rtl/ustring.hxx>
 #include <rtl/ustrbuf.hxx>
@@ -115,7 +115,7 @@ class BASIC_DLLPUBLIC SbxBasicFormater {
     BASIC_DLLPRIVATE void   StrRoundDigit( OUStringBuffer& sStrg, short nPos );
     BASIC_DLLPRIVATE void   ParseBack( OUStringBuffer& sStrg, const OUString& sFormatStrg,
                                        short nFormatPos );
-#ifdef _with_sprintf
+#ifdef with_sprintf_
     // Methods for string conversion with sprintf():
     BASIC_DLLPRIVATE void   InitScan( double _dNum );
     BASIC_DLLPRIVATE void   InitExp( double _dNewExp );
@@ -133,7 +133,7 @@ class BASIC_DLLPUBLIC SbxBasicFormater {
     BASIC_DLLPRIVATE OUString GetNegFormatString( const OUString& sFormatStrg, bool & bFound );
     BASIC_DLLPRIVATE OUString Get0FormatString( const OUString& sFormatStrg, bool & bFound );
     BASIC_DLLPRIVATE OUString GetNullFormatString( const OUString& sFormatStrg, bool & bFound );
-    BASIC_DLLPRIVATE short  AnalyseFormatString( const OUString& sFormatStrg,
+    BASIC_DLLPRIVATE void     AnalyseFormatString( const OUString& sFormatStrg,
                                                  short& nNoOfDigitsLeft, short& nNoOfDigitsRight,
                                                  short& nNoOfOptionalDigitsLeft,
                                                  short& nNoOfExponentDigits,

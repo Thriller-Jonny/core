@@ -67,7 +67,6 @@ extern "C" SAL_DLLPUBLIC_EXPORT void * SAL_CALL ucpfile_component_getFactory(
     }
 
 
-
     if ( xFactory.is() )
     {
         xFactory->acquire();
@@ -162,10 +161,7 @@ FileProvider::CreateInstance(
 }
 
 
-
-
 // XContent
-
 
 
 Reference< XContent > SAL_CALL
@@ -184,7 +180,6 @@ FileProvider::queryContent(
 
     return Reference< XContent >( new BaseContent( m_pMyShell,xIdentifier,aUnc ) );
 }
-
 
 
 sal_Int32 SAL_CALL
@@ -227,7 +222,7 @@ FileProvider::compareContentIds(
             iComp = aStatus1.getFileURL().compareTo( aStatus2.getFileURL() );
 
 // Quick hack for Windows to threat all file systems as case insensitive
-#ifdef  WNT
+#ifdef _WIN32
             if ( 0 != iComp )
             {
                 error = osl::FileBase::getSystemPathFromFileURL( aStatus1.getFileURL(), aPath1 );
@@ -245,7 +240,6 @@ FileProvider::compareContentIds(
 }
 
 
-
 Reference< XContentIdentifier > SAL_CALL
 FileProvider::createContentIdentifier(
                       const OUString& ContentId )
@@ -255,7 +249,6 @@ FileProvider::createContentIdentifier(
     FileContentIdentifier* p = new FileContentIdentifier( ContentId,false );
     return Reference< XContentIdentifier >( p );
 }
-
 
 
 //XPropertySetInfoImpl
@@ -375,7 +368,6 @@ XPropertySetInfoImpl2::getPropertyByName(
 }
 
 
-
 Sequence< Property > SAL_CALL
 XPropertySetInfoImpl2::getProperties(
     void )
@@ -395,9 +387,6 @@ XPropertySetInfoImpl2::hasPropertyByName(
             return true;
     return false;
 }
-
-
-
 
 
 void SAL_CALL FileProvider::initProperties()
@@ -457,7 +446,6 @@ FileProvider::setPropertyValue( const OUString& aPropertyName,
 }
 
 
-
 Any SAL_CALL
 FileProvider::getPropertyValue(
     const OUString& aPropertyName )
@@ -468,21 +456,15 @@ FileProvider::getPropertyValue(
     initProperties();
     if( aPropertyName == "FileSystemNotation" )
     {
-        Any aAny;
-        aAny <<= m_FileSystemNotation;
-        return aAny;
+        return Any(m_FileSystemNotation);
     }
     else if( aPropertyName == "HomeDirectory" )
     {
-        Any aAny;
-        aAny <<= m_HomeDirectory;
-        return aAny;
+        return Any(m_HomeDirectory);
     }
     else if( aPropertyName == "HostName" )
     {
-        Any aAny;
-        aAny <<= m_HostName;
-        return aAny;
+        return Any(m_HostName);
     }
     else
         throw UnknownPropertyException( THROW_WHERE );
@@ -534,7 +516,6 @@ FileProvider::removeVetoableChangeListener(
 {
     return;
 }
-
 
 
 // XFileIdentifierConverter

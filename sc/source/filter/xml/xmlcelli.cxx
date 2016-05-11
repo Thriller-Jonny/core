@@ -23,6 +23,7 @@
 #include "xmlstyli.hxx"
 #include "xmlannoi.hxx"
 #include "global.hxx"
+#include "cellvalue.hxx"
 #include "document.hxx"
 #include "cellsuno.hxx"
 #include "docuno.hxx"
@@ -482,7 +483,7 @@ void ScXMLTableRowCellContext::PushFormat(sal_Int32 nBegin, sal_Int32 nEnd, cons
             case EE_CHAR_UNDERLINE:
             {
                 if (!pPoolItem)
-                    pPoolItem.reset(new SvxUnderlineItem(UNDERLINE_NONE, pEntry->mnItemID));
+                    pPoolItem.reset(new SvxUnderlineItem(LINESTYLE_NONE, pEntry->mnItemID));
 
                 pPoolItem->PutValue(it->maValue, pEntry->mnFlag);
             }
@@ -490,7 +491,7 @@ void ScXMLTableRowCellContext::PushFormat(sal_Int32 nBegin, sal_Int32 nEnd, cons
             case EE_CHAR_OVERLINE:
             {
                 if (!pPoolItem)
-                    pPoolItem.reset(new SvxOverlineItem(UNDERLINE_NONE, pEntry->mnItemID));
+                    pPoolItem.reset(new SvxOverlineItem(LINESTYLE_NONE, pEntry->mnItemID));
 
                 pPoolItem->PutValue(it->maValue, pEntry->mnFlag);
             }
@@ -578,7 +579,7 @@ void ScXMLTableRowCellContext::PushFormat(sal_Int32 nBegin, sal_Int32 nEnd, cons
             case EE_CHAR_EMPHASISMARK:
             {
                 if (!pPoolItem)
-                    pPoolItem.reset(new SvxEmphasisMarkItem(EMPHASISMARK_NONE, pEntry->mnItemID));
+                    pPoolItem.reset(new SvxEmphasisMarkItem(FontEmphasisMark::NONE, pEntry->mnItemID));
 
                 pPoolItem->PutValue(it->maValue, pEntry->mnFlag);
             }
@@ -738,7 +739,7 @@ SvXMLImportContext *ScXMLTableRowCellContext::CreateChildContext( sal_uInt16 nPr
             if (pContext)
             {
                 bIsEmpty = false;
-                rXMLImport.ProgressBarIncrement(false);
+                rXMLImport.ProgressBarIncrement();
             }
         }
     }
@@ -876,7 +877,7 @@ void ScXMLTableRowCellContext::SetAnnotation(const ScAddress& rPos)
         "ScXMLTableRowCellContext::SetAnnotation - shape without drawing page" );
     if( mxAnnotationData->mxShape.is() && mxAnnotationData->mxShapes.is() )
     {
-        OSL_ENSURE( mxAnnotationData->mxShapes.get() == xShapes.get(), "ScXMLTableRowCellContext::SetAnnotation - diffenet drawing pages" );
+        OSL_ENSURE( mxAnnotationData->mxShapes.get() == xShapes.get(), "ScXMLTableRowCellContext::SetAnnotation - different drawing pages" );
         SdrObject* pObject = ::GetSdrObjectFromXShape( mxAnnotationData->mxShape );
         OSL_ENSURE( pObject, "ScXMLTableRowCellContext::SetAnnotation - cannot get SdrObject from shape" );
 
@@ -1047,10 +1048,11 @@ void ScXMLTableRowCellContext::PutTextCell( const ScAddress& rCurrentPos,
     //cell was already put in document, just need to set text here.
     if( rXMLImport.GetTables().IsPartOfMatrix(rCurrentPos) )
     {
-        bDoIncrement = rXMLImport.GetDocument()->GetCellType(rCurrentPos) == CELLTYPE_FORMULA;
+        ScRefCellValue aCell(*rXMLImport.GetDocument(), rCurrentPos);
+        bDoIncrement = aCell.meType == CELLTYPE_FORMULA;
         if ( bDoIncrement )
         {
-            ScFormulaCell* pFCell = rXMLImport.GetDocument()->GetFormulaCell(rCurrentPos);
+            ScFormulaCell* pFCell = aCell.mpFormula;
             OUString aCellString;
             if (maStringValue)
                 aCellString = *maStringValue;
@@ -1138,7 +1140,7 @@ void ScXMLTableRowCellContext::PutTextCell( const ScAddress& rCurrentPos,
     // Formatted text that is put into the cell by the child context
     // is handled in AddCellsToTable() (bIsEmpty is true then).
     if (bDoIncrement)
-        rXMLImport.ProgressBarIncrement(false);
+        rXMLImport.ProgressBarIncrement();
 }
 
 void ScXMLTableRowCellContext::PutValueCell( const ScAddress& rCurrentPos )
@@ -1147,9 +1149,10 @@ void ScXMLTableRowCellContext::PutValueCell( const ScAddress& rCurrentPos )
     //cell was already put in document, just need to set value here.
     if( rXMLImport.GetTables().IsPartOfMatrix(rCurrentPos) )
     {
-        if (rXMLImport.GetDocument()->GetCellType(rCurrentPos) == CELLTYPE_FORMULA)
+        ScRefCellValue aCell(*rXMLImport.GetDocument(), rCurrentPos);
+        if (aCell.meType == CELLTYPE_FORMULA)
         {
-            ScFormulaCell* pFCell = rXMLImport.GetDocument()->GetFormulaCell(rCurrentPos);
+            ScFormulaCell* pFCell = aCell.mpFormula;;
             SetFormulaCell(pFCell);
             if (pFCell)
                 pFCell->SetNeedNumberFormat( true );
@@ -1169,7 +1172,7 @@ void ScXMLTableRowCellContext::PutValueCell( const ScAddress& rCurrentPos )
 
         rXMLImport.GetDoc().setNumericCell(rCurrentPos, fValue);
     }
-    rXMLImport.ProgressBarIncrement(false);
+    rXMLImport.ProgressBarIncrement();
 }
 
 namespace {
@@ -1291,8 +1294,8 @@ OUString getOutputString( ScDocument* pDoc, const ScAddress& aCellPos )
     if (!pDoc)
         return OUString();
 
-    CellType eType = pDoc->GetCellType(aCellPos);
-    switch (eType)
+    ScRefCellValue aCell(*pDoc, aCellPos);
+    switch (aCell.meType)
     {
         case CELLTYPE_NONE:
             return OUString();
@@ -1300,13 +1303,10 @@ OUString getOutputString( ScDocument* pDoc, const ScAddress& aCellPos )
         {
             //  GetString on EditCell replaces linebreaks with spaces;
             //  however here we need line breaks
-            const EditTextObject* pData = pDoc->GetEditText(aCellPos);
-            if (pData)
-            {
-                EditEngine& rEngine = pDoc->GetEditEngine();
-                rEngine.SetText(*pData);
-                return rEngine.GetText();
-            }
+            const EditTextObject* pData = aCell.mpEditText;
+            EditEngine& rEngine = pDoc->GetEditEngine();
+            rEngine.SetText(*pData);
+            return rEngine.GetText();
             //  also don't format EditCells per NumberFormatter
         }
         break;
@@ -1315,12 +1315,11 @@ OUString getOutputString( ScDocument* pDoc, const ScAddress& aCellPos )
             //  like in GetString for document (column)
             Color* pColor;
             sal_uLong nNumFmt = pDoc->GetNumberFormat(aCellPos);
-            return ScCellFormat::GetString(
-                *pDoc, aCellPos, nNumFmt, &pColor, *pDoc->GetFormatTable());
+            OUString aStr;
+            ScCellFormat::GetString(aCell, nNumFmt, aStr, &pColor, *pDoc->GetFormatTable(), pDoc);
+            return aStr;
         }
     }
-
-    return OUString();
 }
 
 }
@@ -1331,7 +1330,7 @@ void ScXMLTableRowCellContext::AddNonFormulaCell( const ScAddress& rCellPos )
 
     if( nCellType == util::NumberFormat::TEXT )
     {
-        if( cellExists(rCellPos) && CellsAreRepeated() )
+        if( !bIsEmpty && !maStringValue && !mbEditEngineHasText && cellExists(rCellPos) && CellsAreRepeated() )
             pOUText.reset( getOutputString(rXMLImport.GetDocument(), rCellPos) );
 
         if (!mbEditEngineHasText && !pOUText && !maStringValue)
@@ -1464,7 +1463,7 @@ void ScXMLTableRowCellContext::AddFormulaCell( const ScAddress& rCellPos )
         SetAnnotation( rCellPos );
         SetDetectiveObj( rCellPos );
         SetCellRangeSource( rCellPos );
-        rXMLImport.ProgressBarIncrement(false);
+        rXMLImport.ProgressBarIncrement();
     }
     else
     {

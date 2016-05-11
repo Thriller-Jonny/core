@@ -38,7 +38,6 @@ using ::com::sun::star::document::XEventsSupplier;
 using ::com::sun::star::lang::IllegalArgumentException;
 
 
-
 XMLEventsImportContext::XMLEventsImportContext(
     SvXMLImport& rImport,
     sal_uInt16 nPrfx,
@@ -157,7 +156,7 @@ void XMLEventsImportContext::SetEvents(
     }
 }
 
-bool XMLEventsImportContext::GetEventSequence(
+void XMLEventsImportContext::GetEventSequence(
     const OUString& rName,
     Sequence<PropertyValue> & rSequence )
 {
@@ -176,10 +175,7 @@ bool XMLEventsImportContext::GetEventSequence(
     if (aIter != aCollectEvents.end())
     {
         rSequence = aIter->second;
-        return true;
     }
-
-    return false;
 }
 
 void XMLEventsImportContext::AddEventValues(
@@ -192,12 +188,9 @@ void XMLEventsImportContext::AddEventValues(
         // set event (if name is known)
         if (xEvents->hasByName(rEventName))
         {
-            Any aAny;
-            aAny <<= rValues;
-
             try
             {
-                xEvents->replaceByName(rEventName, aAny);
+                xEvents->replaceByName(rEventName, Any(rValues));
             } catch ( const IllegalArgumentException & rException )
             {
                 Sequence<OUString> aMsgParams { rEventName };

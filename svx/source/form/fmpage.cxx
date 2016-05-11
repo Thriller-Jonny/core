@@ -21,8 +21,6 @@
 
 #include <svx/fmpage.hxx>
 #include <com/sun/star/beans/XPropertySet.hpp>
-#include <com/sun/star/container/XNameContainer.hpp>
-
 
 #include <svx/fmmodel.hxx>
 
@@ -49,9 +47,6 @@ using namespace ::svxform;
 
 using com::sun::star::uno::Reference;
 using com::sun::star::uno::UNO_QUERY;
-using com::sun::star::container::XChild;
-using com::sun::star::container::XNameContainer;
-
 
 
 FmFormPage::FmFormPage(FmFormModel& rModel, bool bMasterPage)
@@ -194,7 +189,7 @@ bool FmFormPage::RequestHelp( vcl::Window* pWindow, SdrView* pView,
                     INetProtocol::Https, INetProtocol::Javascript,
                     INetProtocol::Ldap
                 };
-            for (sal_uInt16 i=0; i<sizeof(s_aQuickHelpSupported)/sizeof(s_aQuickHelpSupported[0]); ++i)
+            for (sal_uInt16 i=0; i<SAL_N_ELEMENTS(s_aQuickHelpSupported); ++i)
                 if (s_aQuickHelpSupported[i] == aProtocol)
                 {
                     aHelpText = INetURLObject::decode(aUrl.GetURLNoPass(), INetURLObject::DECODE_UNAMBIGUOUS);

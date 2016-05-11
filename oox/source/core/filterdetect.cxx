@@ -29,6 +29,8 @@
 #include "oox/helper/attributelist.hxx"
 #include "oox/helper/zipstorage.hxx"
 #include "oox/ole/olestorage.hxx"
+#include <oox/token/namespaces.hxx>
+#include <oox/token/tokens.hxx>
 
 #include "oox/crypto/DocumentDecryption.hxx"
 
@@ -47,7 +49,6 @@ using namespace ::com::sun::star::xml::sax;
 using namespace ::com::sun::star::uri;
 
 using utl::MediaDescriptor;
-using comphelper::SequenceAsHashMap;
 using comphelper::IDocPasswordVerifier;
 using comphelper::DocPasswordVerifierResult;
 
@@ -157,7 +158,7 @@ void FilterDetectDocHandler::parseRelationship( const AttributeList& rAttribs )
              Reference< XUriReference > xBase = xFactory->parse( "file:///" );
 
              Reference< XUriReference > xPart = xFactory->parse(  rAttribs.getString( XML_Target, OUString() ) );
-             Reference< XUriReference > xAbs = xFactory->makeAbsolute(  xBase, xPart, sal_True, RelativeUriExcessParentSegments_RETAIN );
+             Reference< XUriReference > xAbs = xFactory->makeAbsolute(  xBase, xPart, true, RelativeUriExcessParentSegments_RETAIN );
 
              if ( xAbs.is() )
                  maTargetPath = xAbs->getPath();
@@ -283,12 +284,12 @@ comphelper::DocPasswordVerifierResult PasswordVerifier::verifyPassword( const OU
     if(mDecryptor.generateEncryptionKey(rPassword))
         rEncryptionData = mDecryptor.createEncryptionData(rPassword);
 
-    return rEncryptionData.hasElements() ? comphelper::DocPasswordVerifierResult_OK : comphelper::DocPasswordVerifierResult_WRONG_PASSWORD;
+    return rEncryptionData.hasElements() ? comphelper::DocPasswordVerifierResult::OK : comphelper::DocPasswordVerifierResult::WrongPassword;
 }
 
 comphelper::DocPasswordVerifierResult PasswordVerifier::verifyEncryptionData( const Sequence<NamedValue>&  )
 {
-    return comphelper::DocPasswordVerifierResult_WRONG_PASSWORD;
+    return comphelper::DocPasswordVerifierResult::WrongPassword;
 }
 
 } // namespace
@@ -334,7 +335,7 @@ Reference< XInputStream > FilterDetect::extractUnencryptedPackage( MediaDescript
                 Sequence<NamedValue> aEncryptionData;
                 aEncryptionData = rMediaDescriptor.requestAndVerifyDocPassword(
                                                 aVerifier,
-                                                comphelper::DocPasswordRequestType_MS,
+                                                comphelper::DocPasswordRequestType::MS,
                                                 &aDefaultPasswords );
 
                 if( aEncryptionData.getLength() == 0 )
@@ -387,11 +388,7 @@ OUString SAL_CALL FilterDetect::detect( Sequence< PropertyValue >& rMediaDescSeq
     OUString aFilterName;
     MediaDescriptor aMediaDescriptor( rMediaDescSeq );
 
-    /*  Check that the user has not chosen to abort detection, e.g. by hitting
-        'Cancel' in the password input dialog. This may happen because this
-        filter detection is used by different filters. */
-    bool bAborted = aMediaDescriptor.getUnpackedValueOrDefault( MediaDescriptor::PROP_ABORTED(), false );
-    if( !bAborted ) try
+    try
     {
         aMediaDescriptor.addInputStream();
 
@@ -420,6 +417,18 @@ OUString SAL_CALL FilterDetect::detect( Sequence< PropertyValue >& rMediaDescSeq
     }
     catch( const Exception& )
     {
+        if ( aMediaDescriptor.getUnpackedValueOrDefault( MediaDescriptor::PROP_ABORTED(), false ) )
+            /*  The user chose to abort detection, e.g. by hitting 'Cancel' in the password input dialog,
+                so we have to return non-empty type name to abort the detection loop. The loading code is
+                supposed to check whether the "Aborted" flag is present in the descriptor, and to not attempt
+                to actually load the file then.
+
+                The returned type name is the one we got as an input, which typically was detected by the flat
+                detection (i.e. by file extension), so normally that's the correct one. Also at this point we
+                already know that the file is OLE encrypted package, so trying with other type detectors doesn't
+                make much sense anyway.
+            */
+            aFilterName = aMediaDescriptor.getUnpackedValueOrDefault( MediaDescriptor::PROP_TYPENAME(), OUString() );
     }
 
     // write back changed media descriptor members

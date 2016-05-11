@@ -38,7 +38,7 @@ $(call gb_ExternalProject_get_state_target,xmlsec,build) :
 else
 $(call gb_ExternalProject_get_state_target,xmlsec,build) :
 	$(call gb_ExternalProject_run,build,\
-		cscript configure.js crypto=mscrypto xslt=no iconv=no static=no \
+		cscript /e:javascript configure.js crypto=mscrypto xslt=no iconv=no static=no \
 			lib=$(call gb_UnpackedTarball_get_dir,xml2)/win32/bin.msvc \
 			$(if $(filter TRUE,$(ENABLE_DBGUTIL)),debug=yes) \
 		&& unset MAKEFLAGS \
@@ -55,6 +55,7 @@ $(call gb_ExternalProject_get_state_target,xmlsec,build) :
 		autoreconf \
 		&& ./configure \
 			--with-pic --disable-shared --disable-crypto-dl --without-libxslt --without-gnutls \
+			CFLAGS="$(CFLAGS) $(if $(debug),$(gb_COMPILERNOOPTFLAGS) $(gb_DEBUG_CFLAGS),$(gb_COMPILEROPTFLAGS))" \
 			$(if $(or $(filter-out ANDROID,$(OS)),$(DISABLE_OPENSSL)),--without-openssl,--with-openssl=$(call gb_UnpackedTarball_get_dir,openssl)) \
 			$(if $(filter MACOSX,$(OS)),--prefix=/@.__________________________________________________OOO) \
 			$(if $(SYSTEM_NSS),,$(if $(filter MACOSX,$(OS)),--disable-pkgconfig)) \

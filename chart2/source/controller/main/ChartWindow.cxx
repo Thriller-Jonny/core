@@ -24,14 +24,14 @@
 #include <vcl/help.hxx>
 #include <vcl/openglwin.hxx>
 #include <vcl/settings.hxx>
-
+#include <config_features.h>
 #include <com/sun/star/chart2/X3DChartWindowProvider.hpp>
 
 using namespace ::com::sun::star;
 
 namespace
 {
-::Rectangle lcl_AWTRectToVCLRect( const ::com::sun::star::awt::Rectangle & rAWTRect )
+::Rectangle lcl_AWTRectToVCLRect( const css::awt::Rectangle & rAWTRect )
 {
     ::Rectangle aResult;
     aResult.setX( rAWTRect.X );
@@ -49,7 +49,11 @@ ChartWindow::ChartWindow( ChartController* pController, vcl::Window* pParent, Wi
         : Window(pParent, nStyle)
         , m_pWindowController( pController )
         , m_bInPaint(false)
+#if HAVE_FEATURE_OPENGL
         , m_pOpenGLWindow(VclPtr<OpenGLWindow>::Create(this))
+#else
+        , m_pOpenGLWindow(nullptr)
+#endif
 {
     this->SetHelpId( HID_SCH_WIN_DOCUMENT );
     this->SetMapMode( MapMode(MAP_100TH_MM) );

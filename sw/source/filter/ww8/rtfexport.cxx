@@ -25,7 +25,6 @@
 #include <docsh.hxx>
 #include <viewsh.hxx>
 #include <viewopt.hxx>
-#include <ndtxt.hxx>
 #include <fmtpdsc.hxx>
 #include <ftninfo.hxx>
 #include <fmthdft.hxx>
@@ -47,6 +46,7 @@
 #endif
 #include <svx/xflclit.hxx>
 #include <editeng/hyphenzoneitem.hxx>
+#include <fmtmeta.hxx>
 
 using namespace ::com::sun::star;
 
@@ -129,7 +129,7 @@ void RtfExport::AppendBookmarks(const SwTextNode& rNode, sal_Int32 nAktPos, sal_
     m_pAttrOutput->WriteBookmarks_Impl(aStarts, aEnds);
 }
 
-void RtfExport::AppendBookmark(const OUString& rName, bool /*bSkip*/)
+void RtfExport::AppendBookmark(const OUString& rName)
 {
     std::vector<OUString> aStarts;
     std::vector<OUString> aEnds;
@@ -177,7 +177,7 @@ void RtfExport::WriteChar(sal_Unicode)
     /* WriteChar() has nothing to do for rtf. */
 }
 
-static bool IsExportNumRule(const SwNumRule& rRule, sal_uInt8* pEnd = nullptr)
+static bool IsExportNumRule(const SwNumRule& rRule)
 {
     sal_uInt8 nEnd = MAXLEVEL;
     while (nEnd-- && !rRule.GetNumFormat(nEnd))
@@ -195,8 +195,6 @@ static bool IsExportNumRule(const SwNumRule& rRule, sal_uInt8* pEnd = nullptr)
             break;
     }
 
-    if (pEnd)
-        *pEnd = nEnd;
     return nLvl != nEnd;
 }
 
@@ -255,7 +253,7 @@ void RtfExport::WriteRevTab()
     // RTF always seems to use Unknown as the default first entry
     GetRedline(OUString("Unknown"));
 
-    for (size_t i = 0; i < m_pDoc->getIDocumentRedlineAccess().GetRedlineTable().size(); ++i)
+    for (std::size_t i = 0; i < m_pDoc->getIDocumentRedlineAccess().GetRedlineTable().size(); ++i)
     {
         const SwRangeRedline* pRedl = m_pDoc->getIDocumentRedlineAccess().GetRedlineTable()[ i ];
 
@@ -264,12 +262,12 @@ void RtfExport::WriteRevTab()
 
     // Now write the table
     Strm().WriteChar('{').WriteCharPtr(OOO_STRING_SVTOOLS_RTF_IGNORE).WriteCharPtr(OOO_STRING_SVTOOLS_RTF_REVTBL).WriteChar(' ');
-    for (size_t i = 0; i < m_aRedlineTable.size(); ++i)
+    for (std::size_t i = 0; i < m_aRedlineTable.size(); ++i)
     {
         const OUString* pAuthor = GetRedline(i);
         Strm().WriteChar('{');
         if (pAuthor)
-            Strm().WriteCharPtr(msfilter::rtfutil::OutString(*pAuthor, eDefaultEncoding).getStr());
+            Strm().WriteCharPtr(msfilter::rtfutil::OutString(*pAuthor, m_eDefaultEncoding).getStr());
         Strm().WriteCharPtr(";}");
     }
     Strm().WriteChar('}').WriteCharPtr(SAL_NEWLINE_STRING);
@@ -338,14 +336,14 @@ void RtfExport::DoFormText(const SwInputField* pField)
     m_pAttrOutput->RunText().append(OOO_STRING_SVTOOLS_RTF_FFTYPETXT  "0");
 
     if (!sName.isEmpty())
-        m_pAttrOutput->RunText().append("{" OOO_STRING_SVTOOLS_RTF_IGNORE OOO_STRING_SVTOOLS_RTF_FFNAME " ").append(msfilter::rtfutil::OutString(sName, eDefaultEncoding)).append("}");
+        m_pAttrOutput->RunText().append("{" OOO_STRING_SVTOOLS_RTF_IGNORE OOO_STRING_SVTOOLS_RTF_FFNAME " ").append(msfilter::rtfutil::OutString(sName, m_eDefaultEncoding)).append("}");
     if (!sHelp.isEmpty())
-        m_pAttrOutput->RunText().append("{" OOO_STRING_SVTOOLS_RTF_IGNORE OOO_STRING_SVTOOLS_RTF_FFHELPTEXT " ").append(msfilter::rtfutil::OutString(sHelp, eDefaultEncoding)).append("}");
-    m_pAttrOutput->RunText().append("{" OOO_STRING_SVTOOLS_RTF_IGNORE OOO_STRING_SVTOOLS_RTF_FFDEFTEXT " ").append(msfilter::rtfutil::OutString(sResult, eDefaultEncoding)).append("}");
+        m_pAttrOutput->RunText().append("{" OOO_STRING_SVTOOLS_RTF_IGNORE OOO_STRING_SVTOOLS_RTF_FFHELPTEXT " ").append(msfilter::rtfutil::OutString(sHelp, m_eDefaultEncoding)).append("}");
+    m_pAttrOutput->RunText().append("{" OOO_STRING_SVTOOLS_RTF_IGNORE OOO_STRING_SVTOOLS_RTF_FFDEFTEXT " ").append(msfilter::rtfutil::OutString(sResult, m_eDefaultEncoding)).append("}");
     if (!sStatus.isEmpty())
-        m_pAttrOutput->RunText().append("{" OOO_STRING_SVTOOLS_RTF_IGNORE OOO_STRING_SVTOOLS_RTF_FFSTATTEXT " ").append(msfilter::rtfutil::OutString(sStatus, eDefaultEncoding)).append("}");
+        m_pAttrOutput->RunText().append("{" OOO_STRING_SVTOOLS_RTF_IGNORE OOO_STRING_SVTOOLS_RTF_FFSTATTEXT " ").append(msfilter::rtfutil::OutString(sStatus, m_eDefaultEncoding)).append("}");
     m_pAttrOutput->RunText().append("}}}{" OOO_STRING_SVTOOLS_RTF_FLDRSLT " ");
-    m_pAttrOutput->RunText().append(msfilter::rtfutil::OutString(sResult, eDefaultEncoding)).append("}}");
+    m_pAttrOutput->RunText().append(msfilter::rtfutil::OutString(sResult, m_eDefaultEncoding)).append("}}");
 }
 
 sal_uLong RtfExport::ReplaceCr(sal_uInt8)
@@ -386,6 +384,30 @@ void RtfExport::WriteMainText()
 {
     SAL_INFO("sw.rtf", OSL_THIS_FUNC << " start");
 
+    if (boost::optional<SvxBrushItem> oBrush = getBackground())
+    {
+        Strm().WriteCharPtr(LO_STRING_SVTOOLS_RTF_VIEWBKSP).WriteChar('1');
+        Strm().WriteCharPtr("{" OOO_STRING_SVTOOLS_RTF_IGNORE OOO_STRING_SVTOOLS_RTF_BACKGROUND);
+        Strm().WriteCharPtr("{" OOO_STRING_SVTOOLS_RTF_SHP);
+        Strm().WriteCharPtr("{" OOO_STRING_SVTOOLS_RTF_IGNORE OOO_STRING_SVTOOLS_RTF_SHPINST);
+
+        std::vector< std::pair<OString, OString> > aProperties;
+        aProperties.push_back(std::make_pair<OString, OString>("shapeType", "1"));
+        aProperties.push_back(std::make_pair<OString, OString>("fillColor", OString::number(msfilter::util::BGRToRGB(oBrush->GetColor().GetColor()))));
+        for (std::size_t i = 0; i < aProperties.size(); ++i)
+        {
+            Strm().WriteCharPtr("{" OOO_STRING_SVTOOLS_RTF_SP "{");
+            Strm().WriteCharPtr(OOO_STRING_SVTOOLS_RTF_SN " ");
+            Strm().WriteCharPtr(aProperties[i].first.getStr());
+            Strm().WriteCharPtr("}{" OOO_STRING_SVTOOLS_RTF_SV " ");
+            Strm().WriteCharPtr(aProperties[i].second.getStr());
+            Strm().WriteCharPtr("}}");
+        }
+        Strm().WriteChar('}'); // shpinst
+        Strm().WriteChar('}'); // shp
+        Strm().WriteChar('}'); // background
+    }
+
     SwTableNode* pTableNode = m_pCurPam->GetNode().FindTableNode();
     if (m_pWriter && m_pWriter->bWriteOnlyFirstTable
             && pTableNode != nullptr)
@@ -419,6 +441,21 @@ void RtfExport::WriteInfo()
 
     if (xDocProps.is())
     {
+        // Handle user-defined properties.
+        uno::Reference<beans::XPropertyContainer> xUserDefinedProperties = xDocProps->getUserDefinedProperties();
+        if (xUserDefinedProperties.is())
+        {
+            uno::Reference<beans::XPropertySet> xPropertySet(xUserDefinedProperties, uno::UNO_QUERY);
+            uno::Reference<beans::XPropertySetInfo> xPropertySetInfo = xPropertySet->getPropertySetInfo();
+            // Do we have explicit markup in RTF for this property name?
+            if (xPropertySetInfo->hasPropertyByName("Company"))
+            {
+                OUString aValue;
+                xPropertySet->getPropertyValue("Company") >>= aValue;
+                OutUnicode(OOO_STRING_SVTOOLS_RTF_IGNORE OOO_STRING_SVTOOLS_RTF_COMPANY, aValue);
+            }
+        }
+
         OutUnicode(OOO_STRING_SVTOOLS_RTF_TITLE, xDocProps->getTitle(), true);
         OutUnicode(OOO_STRING_SVTOOLS_RTF_SUBJECT, xDocProps->getSubject());
 
@@ -438,17 +475,75 @@ void RtfExport::WriteInfo()
     Strm().WriteChar('}');
 }
 
+void RtfExport::WriteUserProps()
+{
+    Strm().WriteChar('{').WriteCharPtr(OOO_STRING_SVTOOLS_RTF_IGNORE OOO_STRING_SVTOOLS_RTF_USERPROPS);
+
+    SwDocShell* pDocShell(m_pDoc->GetDocShell());
+    uno::Reference<document::XDocumentProperties> xDocProps;
+    if (pDocShell)
+    {
+        uno::Reference<document::XDocumentPropertiesSupplier> xDPS(pDocShell->GetModel(), uno::UNO_QUERY);
+        xDocProps.set(xDPS->getDocumentProperties());
+    }
+    else
+    {
+        // Clipboard document, read metadata from the meta field manager.
+        sw::MetaFieldManager& rManager = m_pDoc->GetMetaFieldManager();
+        xDocProps.set(rManager.getDocumentProperties());
+    }
+
+    if (xDocProps.is())
+    {
+        // Handle user-defined properties.
+        uno::Reference<beans::XPropertyContainer> xUserDefinedProperties = xDocProps->getUserDefinedProperties();
+        if (xUserDefinedProperties.is())
+        {
+            uno::Reference<beans::XPropertySet> xPropertySet(xUserDefinedProperties, uno::UNO_QUERY);
+            uno::Sequence<beans::Property> aProperties = xPropertySet->getPropertySetInfo()->getProperties();
+
+            for (const beans::Property& rProperty : aProperties)
+            {
+                if (rProperty.Name.startsWith("Company"))
+                    // We have explicit markup in RTF for this property.
+                    continue;
+
+                // Property name.
+                Strm().WriteCharPtr("{" OOO_STRING_SVTOOLS_RTF_PROPNAME " ");
+                Strm().WriteCharPtr(msfilter::rtfutil::OutString(rProperty.Name, m_eDefaultEncoding).getStr());
+                Strm().WriteChar('}');
+
+                // Property value type.
+                OUString aValue;
+                if (xPropertySet->getPropertyValue(rProperty.Name) >>= aValue)
+                {
+                    Strm().WriteCharPtr(OOO_STRING_SVTOOLS_RTF_PROPTYPE);
+                    OutULong(30);
+                }
+
+                // Property value.
+                Strm().WriteCharPtr("{" OOO_STRING_SVTOOLS_RTF_STATICVAL " ");
+                Strm().WriteCharPtr(msfilter::rtfutil::OutString(aValue, m_eDefaultEncoding).getStr());
+                Strm().WriteChar('}');
+            }
+        }
+
+    }
+
+    Strm().WriteChar('}');
+}
+
 void RtfExport::WritePageDescTable()
 {
     // Write page descriptions (page styles)
-    size_t nSize = m_pDoc->GetPageDescCnt();
+    std::size_t nSize = m_pDoc->GetPageDescCnt();
     if (!nSize)
         return;
 
     Strm().WriteCharPtr(SAL_NEWLINE_STRING);
     m_bOutPageDescs = true;
     Strm().WriteChar('{').WriteCharPtr(OOO_STRING_SVTOOLS_RTF_IGNORE).WriteCharPtr(OOO_STRING_SVTOOLS_RTF_PGDSCTBL);
-    for (size_t n = 0; n < nSize; ++n)
+    for (std::size_t n = 0; n < nSize; ++n)
     {
         const SwPageDesc& rPageDesc = m_pDoc->GetPageDesc(n);
 
@@ -459,13 +554,13 @@ void RtfExport::WritePageDescTable()
         OutPageDescription(rPageDesc, false, false);
 
         // search for the next page description
-        size_t i = nSize;
+        std::size_t i = nSize;
         while (i)
             if (rPageDesc.GetFollow() == &m_pDoc->GetPageDesc(--i))
                 break;
         Strm().WriteCharPtr(OOO_STRING_SVTOOLS_RTF_PGDSCNXT);
         OutULong(i).WriteChar(' ');
-        Strm().WriteCharPtr(msfilter::rtfutil::OutString(rPageDesc.GetName(), eDefaultEncoding).getStr()).WriteCharPtr(";}");
+        Strm().WriteCharPtr(msfilter::rtfutil::OutString(rPageDesc.GetName(), m_eDefaultEncoding).getStr()).WriteCharPtr(";}");
     }
     Strm().WriteChar('}').WriteCharPtr(SAL_NEWLINE_STRING);
     m_bOutPageDescs = false;
@@ -499,6 +594,7 @@ void RtfExport::ExportDocument_Impl()
     WriteRevTab();
 
     WriteInfo();
+    WriteUserProps();
     // Default TabSize
     Strm().WriteCharPtr(m_pAttrOutput->m_aTabStop.makeStringAndClear().getStr()).WriteCharPtr(SAL_NEWLINE_STRING);
 
@@ -574,7 +670,7 @@ void RtfExport::ExportDocument_Impl()
 
             if (pSet)
             {
-                size_t nPosInDoc;
+                std::size_t nPosInDoc;
                 pSttPgDsc = static_cast<const SwFormatPageDesc*>(&pSet->Get(RES_PAGEDESC));
                 if (!pSttPgDsc->GetPageDesc())
                     pSttPgDsc = nullptr;
@@ -815,9 +911,9 @@ RtfExport::RtfExport(RtfExportFilter* pFilter, SwDoc* pDocument, SwPaM* pCurrent
       m_pSections(nullptr),
       m_pSdrExport(),
       m_bOutOutlineOnly(bOutOutlineOnly),
-      eDefaultEncoding(rtl_getTextEncodingFromWindowsCharset(sw::ms::rtl_TextEncodingToWinCharset(DEF_ENCODING))),
-      eCurrentEncoding(eDefaultEncoding),
-      bRTFFlySyntax(false),
+      m_eDefaultEncoding(rtl_getTextEncodingFromWindowsCharset(sw::ms::rtl_TextEncodingToWinCharset(DEF_ENCODING))),
+      m_eCurrentEncoding(m_eDefaultEncoding),
+      m_bRTFFlySyntax(false),
       m_nCurrentNodeIndex(0)
 {
     m_bExportModeRTF = true;
@@ -883,11 +979,11 @@ void RtfExport::OutUnicode(const sal_Char* pToken, const OUString& rContent, boo
         if (!bUpr)
         {
             Strm().WriteChar('{').WriteCharPtr(pToken).WriteChar(' ');
-            Strm().WriteCharPtr(msfilter::rtfutil::OutString(rContent, eCurrentEncoding).getStr());
+            Strm().WriteCharPtr(msfilter::rtfutil::OutString(rContent, m_eCurrentEncoding).getStr());
             Strm().WriteChar('}');
         }
         else
-            Strm().WriteCharPtr(msfilter::rtfutil::OutStringUpr(pToken, rContent, eCurrentEncoding).getStr());
+            Strm().WriteCharPtr(msfilter::rtfutil::OutStringUpr(pToken, rContent, m_eCurrentEncoding).getStr());
     }
 }
 
@@ -1087,7 +1183,7 @@ void RtfExport::OutColorTable()
             InsColor(pItem->GetColorValue());
     }
 
-    for (size_t n = 0; n < m_aColTable.size(); ++n)
+    for (std::size_t n = 0; n < m_aColTable.size(); ++n)
     {
         const Color& rCol = m_aColTable[ n ];
         if (n || COL_AUTO != rCol.GetColor())

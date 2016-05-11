@@ -67,7 +67,6 @@ FmFormObjFactory::FmFormObjFactory()
         SvxFmTbxCtlRecTotal::RegisterControl( SID_FM_RECORD_TOTAL );
         SvxFmTbxPrevRec::RegisterControl( SID_FM_RECORD_PREV );
         SvxFmTbxNextRec::RegisterControl( SID_FM_RECORD_NEXT );
-        ControlConversionMenuController::RegisterControl(SID_FM_CHANGECONTROLTYPE);
 
         // Registrieung von globalen fenstern
         FmFieldWinMgr::RegisterChildWindow();
@@ -233,7 +232,6 @@ IMPL_STATIC_LINK_TYPED(
         }
     }
 }
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

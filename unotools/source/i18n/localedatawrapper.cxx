@@ -63,6 +63,21 @@ namespace
     {};
 }
 
+bool LocaleDataWrapper::Locale_Compare::operator()(const css::lang::Locale& rLocale1, const css::lang::Locale& rLocale2) const
+{
+    if (rLocale1.Language < rLocale2.Language)
+        return true;
+    else if (rLocale1.Language > rLocale2.Language)
+        return false;
+
+    if (rLocale1.Country < rLocale2.Country)
+        return true;
+    else if (rLocale1.Country > rLocale2.Country)
+        return false;
+
+    return rLocale1.Variant < rLocale2.Variant;
+}
+
 sal_uInt8 LocaleDataWrapper::nLocaleDataChecking = 0;
 
 LocaleDataWrapper::LocaleDataWrapper(
@@ -157,17 +172,32 @@ css::i18n::LanguageCountryInfo LocaleDataWrapper::getLanguageCountryInfo() const
     return css::i18n::LanguageCountryInfo();
 }
 
-css::i18n::LocaleDataItem LocaleDataWrapper::getLocaleItem() const
+const css::i18n::LocaleDataItem& LocaleDataWrapper::getLocaleItem() const
 {
+    {
+        ::utl::ReadWriteGuard aGuard( aMutex );
+        const css::lang::Locale& rLocal = getMyLocale();
+        auto itr = maDataItemCache.find(rLocal);
+        if (itr != maDataItemCache.end())
+            return itr->second;
+    }
+
     try
     {
-        return xLD->getLocaleItem( getMyLocale() );
+        ::utl::ReadWriteGuard aGuard( aMutex );
+
+        const css::lang::Locale& rLocal = getMyLocale();
+        css::i18n::LocaleDataItem aItem = xLD->getLocaleItem( rLocal );
+        auto aRet = maDataItemCache.insert(std::make_pair(rLocal, aItem));
+        assert(aRet.second);
+        return aRet.first->second;
     }
     catch (const Exception& e)
     {
         SAL_WARN( "unotools.i18n", "getLocaleItem: Exception caught " << e.Message );
     }
-    return css::i18n::LocaleDataItem();
+    static css::i18n::LocaleDataItem aEmptyItem;
+    return aEmptyItem;
 }
 
 css::uno::Sequence< css::i18n::Currency2 > LocaleDataWrapper::getAllCurrencies() const
@@ -900,7 +930,7 @@ DateFormat LocaleDataWrapper::scanDateFormatImpl( const OUString& rCode )
     {
         if (areChecksEnabled())
         {
-            OUString aMsg( "LocaleDataWrapper::scanDateFormat: no magic applycable" );
+            OUString aMsg( "LocaleDataWrapper::scanDateFormat: no magic applicable" );
             outputCheckMessage( appendLocaleInfo( aMsg ) );
         }
         return DMY;
@@ -1361,8 +1391,7 @@ OUString LocaleDataWrapper::getTime( const tools::Time& rTime, bool bSec, bool b
 }
 
 OUString LocaleDataWrapper::getLongDate( const Date& rDate, CalendarWrapper& rCal,
-        sal_Int16 nDisplayDayOfWeek, bool bDayOfMonthWithLeadingZero,
-        sal_Int16 nDisplayMonth, bool bTwoDigitYear ) const
+        bool bTwoDigitYear ) const
 {
     ::utl::ReadWriteGuard aGuard( aMutex, ::utl::ReadWriteGuardMode::nBlockCritical );
     using namespace css::i18n;
@@ -1373,15 +1402,15 @@ OUString LocaleDataWrapper::getLongDate( const Date& rDate, CalendarWrapper& rCa
     rCal.setGregorianDateTime( rDate );
     // day of week
     nVal = rCal.getValue( CalendarFieldIndex::DAY_OF_WEEK );
-    aStr += rCal.getDisplayName( CalendarDisplayIndex::DAY, nVal, nDisplayDayOfWeek );
+    aStr += rCal.getDisplayName( CalendarDisplayIndex::DAY, nVal, 1 );
     aStr += getLongDateDayOfWeekSep();
     // day of month
     nVal = rCal.getValue( CalendarFieldIndex::DAY_OF_MONTH );
-    pBuf = ImplAdd2UNum( aBuf, nVal, bDayOfMonthWithLeadingZero );
+    pBuf = ImplAdd2UNum( aBuf, nVal, false/*bDayOfMonthWithLeadingZero*/ );
     OUString aDay(aBuf, pBuf-aBuf);
     // month of year
     nVal = rCal.getValue( CalendarFieldIndex::MONTH );
-    OUString aMonth( rCal.getDisplayName( CalendarDisplayIndex::MONTH, nVal, nDisplayMonth ) );
+    OUString aMonth( rCal.getDisplayName( CalendarDisplayIndex::MONTH, nVal, 1 ) );
     // year
     nVal = rCal.getValue( CalendarFieldIndex::YEAR );
     if ( bTwoDigitYear )

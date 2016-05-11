@@ -32,9 +32,9 @@ SvxSmartTagItem::SvxSmartTagItem( const sal_uInt16 nId,
                                   const css::uno::Sequence < css::uno::Sequence< css::uno::Reference< css::smarttags::XSmartTagAction > > >& rActionComponentsSequence,
                                   const css::uno::Sequence < css::uno::Sequence< sal_Int32 > >& rActionIndicesSequence,
                                   const css::uno::Sequence< css::uno::Reference< css::container::XStringKeyMap > >& rStringKeyMaps,
-                                  const css::uno::Reference<css::text::XTextRange> rRange,
-                                  const css::uno::Reference<css::frame::XController> rController,
-                                  const css::lang::Locale rLocale,
+                                  const css::uno::Reference<css::text::XTextRange>& rRange,
+                                  const css::uno::Reference<css::frame::XController>& rController,
+                                  const css::lang::Locale& rLocale,
                                   const OUString& rApplicationName,
                                   const OUString& rRangeText ) :
     SfxPoolItem( nId ),
@@ -48,9 +48,6 @@ SvxSmartTagItem::SvxSmartTagItem( const sal_uInt16 nId,
     maRangeText( rRangeText )
 {
 }
-
-
-
 
 
 bool SvxSmartTagItem::QueryValue( uno::Any& rVal, sal_uInt8 /*nMemberId*/ ) const
@@ -74,7 +71,6 @@ bool SvxSmartTagItem::PutValue( const uno::Any& /*rVal*/, sal_uInt8 /* nMemberId
 }
 
 
-
 bool SvxSmartTagItem::operator==( const SfxPoolItem& rAttr ) const
 {
     DBG_ASSERT( SfxPoolItem::operator==(rAttr), "unequal types" );
@@ -91,19 +87,16 @@ bool SvxSmartTagItem::operator==( const SfxPoolItem& rAttr ) const
 }
 
 
-
 SfxPoolItem* SvxSmartTagItem::Clone( SfxItemPool * ) const
 {
     return new SvxSmartTagItem( *this );
 }
 
 
-
 SvStream& SvxSmartTagItem::Store( SvStream& rStream, sal_uInt16 /*nItemVersion*/ ) const
 {
     return rStream;
 }
-
 
 
 SfxPoolItem* SvxSmartTagItem::Create(SvStream& , sal_uInt16) const

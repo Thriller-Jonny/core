@@ -60,7 +60,7 @@ css::uno::Sequence<OUString> SAL_CALL OCheckBoxControl::getSupportedServiceNames
 //= OCheckBoxModel
 
 OCheckBoxModel::OCheckBoxModel(const Reference<XComponentContext>& _rxFactory)
-    :OReferenceValueComponent( _rxFactory, VCL_CONTROLMODEL_CHECKBOX, FRM_SUN_CONTROL_CHECKBOX, true )
+    :OReferenceValueComponent( _rxFactory, VCL_CONTROLMODEL_CHECKBOX, FRM_SUN_CONTROL_CHECKBOX )
     // use the old control name for compytibility reasons
 {
 
@@ -246,13 +246,13 @@ bool OCheckBoxModel::commitControlValueToDbColumn( bool /*_bPostReset*/ )
                     break;
                 case TRISTATE_TRUE:
                     if (DbUseBool())
-                        m_xColumnUpdate->updateBoolean( sal_True );
+                        m_xColumnUpdate->updateBoolean( true );
                     else
                         m_xColumnUpdate->updateString( getReferenceValue() );
                     break;
                 case TRISTATE_FALSE:
                     if (DbUseBool())
-                        m_xColumnUpdate->updateBoolean( sal_False );
+                        m_xColumnUpdate->updateBoolean( false );
                     else
                         m_xColumnUpdate->updateString( getNoCheckReferenceValue() );
                     break;

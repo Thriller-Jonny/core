@@ -175,17 +175,9 @@ class ImplHeadItem;
 
 typedef ::std::vector< ImplHeadItem* > ImplHeadItemList;
 
-
-// - WinBits -
-
-
 #define WB_BOTTOMBORDER         ((WinBits)0x0400)
 #define WB_BUTTONSTYLE          ((WinBits)0x0800)
 #define WB_STDHEADERBAR         (WB_BUTTONSTYLE | WB_BOTTOMBORDER)
-
-
-// - HeaderBarItemBits -
-
 
 enum class HeaderBarItemBits
 {
@@ -207,14 +199,11 @@ enum class HeaderBarItemBits
     USERDRAW            = 0x4000,
     STDSTYLE            = LEFT | LEFTIMAGE | VCENTER | CLICKABLE,
 };
+
 namespace o3tl
 {
     template<> struct typed_flags<HeaderBarItemBits> : is_typed_flags<HeaderBarItemBits, 0x7fff> {};
 }
-
-
-// - HeaderBar-Types -
-
 
 #define HEADERBAR_APPEND            ((sal_uInt16)0xFFFF)
 #define HEADERBAR_ITEM_NOTFOUND     ((sal_uInt16)0xFFFF)
@@ -222,11 +211,8 @@ namespace o3tl
 
 #define HEADERBAR_TEXTOFF           2
 
-
-// - HeaderBar -
-
-
 class VCLXHeaderBar;
+
 
 class SVT_DLLPUBLIC HeaderBar : public vcl::Window
 {
@@ -270,12 +256,12 @@ private:
     using Window::ImplHitTest;
     SVT_DLLPRIVATE sal_uInt16               ImplHitTest( const Point& rPos, long& nMouseOff, sal_uInt16& nPos ) const;
     SVT_DLLPRIVATE void             ImplInvertDrag( sal_uInt16 nStartPos, sal_uInt16 nEndPos );
-    SVT_DLLPRIVATE void             ImplDrawItem(vcl::RenderContext& rRenderContext, sal_uInt16 nPos, bool bHigh, bool bDrag,
+    SVT_DLLPRIVATE void             ImplDrawItem(vcl::RenderContext& rRenderContext, sal_uInt16 nPos, bool bHigh,
                                                  const Rectangle& rItemRect, const Rectangle* pRect, DrawFlags nFlags);
-    SVT_DLLPRIVATE void             ImplDrawItem(vcl::RenderContext& rRenderContext, sal_uInt16 nPos, bool bHigh = false,
-                                                 bool bDrag = false, const Rectangle* pRect = nullptr);
+    SVT_DLLPRIVATE void             ImplDrawItem(vcl::RenderContext& rRenderContext, sal_uInt16 nPos, bool bHigh,
+                                                 const Rectangle* pRect);
     SVT_DLLPRIVATE void             ImplUpdate( sal_uInt16 nPos,
-                                       bool bEnd = false, bool bDirect = false );
+                                       bool bEnd = false );
     SVT_DLLPRIVATE void             ImplStartDrag( const Point& rPos, bool bCommand );
     SVT_DLLPRIVATE void             ImplDrag( const Point& rPos );
     SVT_DLLPRIVATE void             ImplEndDrag( bool bCancel );
@@ -349,7 +335,7 @@ public:
 
     /** Creates and returns the accessible object of the header bar. */
     virtual css::uno::Reference< css::accessibility::XAccessible >  CreateAccessible() override;
-    void SetAccessible( css::uno::Reference< css::accessibility::XAccessible > );
+    void SetAccessible( const css::uno::Reference< css::accessibility::XAccessible >& );
     virtual css::uno::Reference< css::awt::XWindowPeer > GetComponentInterface( bool bCreate ) override;
 
 };

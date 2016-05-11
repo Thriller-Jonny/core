@@ -141,24 +141,13 @@ Bitmap GenericPageCache::GetPreviewBitmap (
 }
 
 Bitmap GenericPageCache::GetMarkedPreviewBitmap (
-    const CacheKey aKey,
-    const bool bResize)
+    const CacheKey aKey)
 {
     OSL_ASSERT(aKey != nullptr);
 
     ProvideCacheAndProcessor();
     const SdrPage* pPage = mpCacheContext->GetPage(aKey);
     Bitmap aMarkedPreview (mpBitmapCache->GetMarkedBitmap(pPage));
-    const Size aBitmapSize (aMarkedPreview.GetSizePixel());
-    if (bResize && aBitmapSize != maPreviewSize)
-    {
-        // Scale the bitmap to the desired size when that is possible,
-        // i.e. the bitmap is not empty.
-        if (aBitmapSize.Width()>0 && aBitmapSize.Height()>0)
-        {
-            aMarkedPreview.Scale(maPreviewSize);
-        }
-    }
 
     return aMarkedPreview;
 }
@@ -226,7 +215,7 @@ bool GenericPageCache::InvalidatePreviewBitmap (const CacheKey aKey)
         return false;
 }
 
-void GenericPageCache::InvalidateCache (const bool bUpdateCache)
+void GenericPageCache::InvalidateCache ()
 {
     if (mpBitmapCache)
     {
@@ -240,8 +229,7 @@ void GenericPageCache::InvalidateCache (const bool bUpdateCache)
         // Depending on the given bUpdateCache flag we start to create new
         // preview bitmaps.
         mpBitmapCache->InvalidateCache();
-        if (bUpdateCache)
-            RequestFactory()(maRequestQueue, mpCacheContext);
+        RequestFactory()(maRequestQueue, mpCacheContext);
     }
 }
 

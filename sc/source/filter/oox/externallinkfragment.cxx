@@ -21,6 +21,8 @@
 
 #include <com/sun/star/sheet/XExternalSheetCache.hpp>
 #include <oox/helper/attributelist.hxx>
+#include <oox/token/namespaces.hxx>
+#include <oox/token/tokens.hxx>
 #include "biffinputstream.hxx"
 #include "defnamesbuffer.hxx"
 #include "sheetdatacontext.hxx"
@@ -86,7 +88,7 @@ ContextHandlerRef ExternalSheetDataContext::onCreateRecordContext( sal_Int32 nRe
     switch( getCurrentElement() )
     {
         case BIFF12_ID_EXTSHEETDATA:
-            if( nRecId == BIFF12_ID_EXTROW ) { maCurrPos.Row = rStrm.readInt32(); return this; }
+            if( nRecId == BIFF12_ID_EXTROW ) { maCurrPos.SetRow( rStrm.readInt32() ); return this; }
         break;
         case BIFF12_ID_EXTROW:
             switch( nRecId )
@@ -114,32 +116,32 @@ void ExternalSheetDataContext::importCell( const AttributeList& rAttribs )
 
 void ExternalSheetDataContext::importExtCellBlank( SequenceInputStream& rStrm )
 {
-    maCurrPos.Column = rStrm.readInt32();
+    maCurrPos.SetCol( rStrm.readInt32() );
     setCellValue( Any( OUString() ) );
 }
 
 void ExternalSheetDataContext::importExtCellBool( SequenceInputStream& rStrm )
 {
-    maCurrPos.Column = rStrm.readInt32();
+    maCurrPos.SetCol( rStrm.readInt32() );
     double fValue = (rStrm.readuInt8() == 0) ? 0.0 : 1.0;
     setCellValue( Any( fValue ) );
 }
 
 void ExternalSheetDataContext::importExtCellDouble( SequenceInputStream& rStrm )
 {
-    maCurrPos.Column = rStrm.readInt32();
+    maCurrPos.SetCol( rStrm.readInt32() );
     setCellValue( Any( rStrm.readDouble() ) );
 }
 
 void ExternalSheetDataContext::importExtCellError( SequenceInputStream& rStrm )
 {
-    maCurrPos.Column = rStrm.readInt32();
+    maCurrPos.SetCol( rStrm.readInt32() );
     setCellValue( Any( BiffHelper::calcDoubleFromError( rStrm.readuInt8() ) ) );
 }
 
 void ExternalSheetDataContext::importExtCellString( SequenceInputStream& rStrm )
 {
-    maCurrPos.Column = rStrm.readInt32();
+    maCurrPos.SetCol( rStrm.readInt32() );
     setCellValue( Any( BiffHelper::readString( rStrm ) ) );
 }
 
@@ -147,7 +149,7 @@ void ExternalSheetDataContext::setCellValue( const Any& rValue )
 {
     if( mxSheetCache.is() && getAddressConverter().checkCellAddress( maCurrPos, false ) ) try
     {
-        mxSheetCache->setCellValue( maCurrPos.Column, maCurrPos.Row, rValue );
+        mxSheetCache->setCellValue( maCurrPos.Col(), maCurrPos.Row(), rValue );
     }
     catch( Exception& )
     {

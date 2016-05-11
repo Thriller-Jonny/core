@@ -86,7 +86,7 @@ ScXMLFontAutoStylePool_Impl::ScXMLFontAutoStylePool_Impl(ScXMLExport& rExportP, 
     const SfxItemPool* pEditPool(rExportP.GetDocument()->GetEditPool());
     AddFontItems(aEditWhichIds, 3, pEditPool, false);
 
-    SfxStyleSheetIteratorPtr pItr = rExportP.GetDocument()->GetStyleSheetPool()->CreateIterator(SFX_STYLE_FAMILY_PAGE, 0xFFFF);
+    SfxStyleSheetIteratorPtr pItr = rExportP.GetDocument()->GetStyleSheetPool()->CreateIterator(SfxStyleFamily::Page, 0xFFFF);
 
     if(pItr)
     {
@@ -103,9 +103,8 @@ ScXMLFontAutoStylePool_Impl::ScXMLFontAutoStylePool_Impl(ScXMLExport& rExportP, 
             {
                 const SfxItemPool& rPagePool(pStyle->GetPool().GetPool());
 
-                for (sal_uInt8 j = 0; j < 4; ++j)
+                for (sal_uInt16 nPageWhichId : aPageWhichIds)
                 {
-                    sal_uInt16 nPageWhichId(aPageWhichIds[j]);
                     sal_uInt32 nPageHFItems(rPagePool.GetItemCount2(nPageWhichId));
                     for (sal_uInt32 k = 0; k < nPageHFItems; ++k)
                     {

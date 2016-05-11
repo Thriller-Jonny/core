@@ -13,7 +13,6 @@
 #include <cassert>
 #include <vector>
 
-#include <boost/noncopyable.hpp>
 #include <com/sun/star/beans/NamedValue.hpp>
 #include <com/sun/star/beans/PropertyAttribute.hpp>
 #include <com/sun/star/container/ElementExistException.hpp>
@@ -33,7 +32,10 @@
 #include <cppuhelper/implbase1.hxx>
 #include <cppuhelper/implbase3.hxx>
 #include <cppuhelper/supportsservice.hxx>
+#include <cppuhelper/factory.hxx>
+#include <cppuhelper/shlib.hxx>
 #include <osl/file.hxx>
+#include <osl/module.hxx>
 #include <rtl/ref.hxx>
 #include <rtl/uri.hxx>
 #include <rtl/ustring.hxx>
@@ -45,7 +47,6 @@
 
 using rtl::OUString;
 using rtl::OString;
-using rtl::OStringBuffer;
 
 #include <registry/registry.hxx>
 #include <xmlreader/xmlreader.hxx>
@@ -102,12 +103,15 @@ void removeFromImplementationMap(
 // For simplicity, this code keeps throwing
 // css::registry::InvalidRegistryException for invalid XML rdbs (even though
 // that does not fit the exception's name):
-class Parser: private boost::noncopyable {
+class Parser {
 public:
     Parser(
         rtl::OUString const & uri,
         css::uno::Reference< css::uno::XComponentContext > const & alienContext,
         cppuhelper::ServiceManager::Data * data);
+
+    Parser(const Parser&) = delete;
+    const Parser& operator=(const Parser&) = delete;
 
 private:
     void handleComponent();
@@ -185,7 +189,7 @@ Parser::Parser(
                 state = STATE_COMPONENTS;
                 break;
             }
-            // fall through
+            SAL_FALLTHROUGH;
         case STATE_COMPONENT_INITIAL:
             if (res == xmlreader::XmlReader::RESULT_BEGIN && nsId == ucNsId
                 && name.equals(RTL_CONSTASCII_STRINGPARAM("implementation")))
@@ -435,12 +439,14 @@ rtl::OUString Parser::getNameAttribute() {
 }
 
 class ContentEnumeration:
-    public cppu::WeakImplHelper1< css::container::XEnumeration >,
-    private boost::noncopyable
+    public cppu::WeakImplHelper1< css::container::XEnumeration >
 {
 public:
     explicit ContentEnumeration(std::vector< css::uno::Any > const & factories):
         factories_(factories), iterator_(factories_.begin()) {}
+
+    ContentEnumeration(const ContentEnumeration&) = delete;
+    const ContentEnumeration& operator=(const ContentEnumeration&) = delete;
 
 private:
     virtual ~ContentEnumeration() {}
@@ -487,8 +493,7 @@ css::beans::Property getDefaultContextProperty() {
 }
 
 class SingletonFactory:
-    public cppu::WeakImplHelper1<css::lang::XSingleComponentFactory>,
-    private boost::noncopyable
+    public cppu::WeakImplHelper1<css::lang::XSingleComponentFactory>
 {
 public:
     SingletonFactory(
@@ -498,6 +503,9 @@ public:
             implementation):
         manager_(manager), implementation_(implementation)
     { assert(manager.is()); assert(implementation.get() != nullptr); }
+
+    SingletonFactory(const SingletonFactory&) = delete;
+    const SingletonFactory& operator=(const SingletonFactory&) = delete;
 
 private:
     virtual ~SingletonFactory() {}
@@ -541,8 +549,7 @@ SingletonFactory::createInstanceWithArgumentsAndContext(
 class ImplementationWrapper:
     public cppu::WeakImplHelper3<
         css::lang::XSingleComponentFactory, css::lang::XSingleServiceFactory,
-        css::lang::XServiceInfo >,
-    private boost::noncopyable
+        css::lang::XServiceInfo >
 {
 public:
     ImplementationWrapper(
@@ -552,6 +559,9 @@ public:
             implementation):
         manager_(manager), implementation_(implementation)
     { assert(manager.is()); assert(implementation.get() != nullptr); }
+
+    ImplementationWrapper(const ImplementationWrapper&) = delete;
+    const ImplementationWrapper& operator=(const ImplementationWrapper&) = delete;
 
 private:
     virtual ~ImplementationWrapper() {}
@@ -933,6 +943,22 @@ void cppuhelper::ServiceManager::disposing() {
          i != comps.end(); ++i)
     {
         removeEventListenerFromComponent(*i);
+    }
+}
+
+void cppuhelper::ServiceManager::initialize(
+    css::uno::Sequence<css::uno::Any> const & aArguments)
+    throw (css::uno::Exception, css::uno::RuntimeException, std::exception)
+{
+    OUString arg;
+    if (aArguments.getLength() == 1 && (aArguments[0] >>= arg)
+        && arg == "preload")
+    {
+        preloadImplementations();
+    } else {
+        throw css::lang::IllegalArgumentException(
+            "invalid ServiceManager::initialize argument",
+            css::uno::Reference<css::uno::XInterface>(), 0);
     }
 }
 
@@ -1407,7 +1433,7 @@ void cppuhelper::ServiceManager::readRdbDirectory(
             SAL_INFO("cppuhelper", "Ignored optional " << uri);
             return;
         }
-        // fall through
+        SAL_FALLTHROUGH;
     default:
         throw css::uno::DeploymentException(
             "Cannot open directory " + uri,
@@ -1469,7 +1495,7 @@ bool cppuhelper::ServiceManager::readLegacyRdbFile(rtl::OUString const & uri) {
                 }
             }
         }
-        // fall through
+        SAL_FALLTHROUGH;
     default:
         return false;
     }
@@ -1757,7 +1783,7 @@ void cppuhelper::ServiceManager::removeRdbFiles(
                     removeFromImplementationMap(
                         &data_.singletons, j->second->info->singletons,
                         j->second);
-                    data_.namedImplementations.erase(j++);
+                    j = data_.namedImplementations.erase(j);
                 } else {
                     ++j;
                 }
@@ -1872,6 +1898,117 @@ cppuhelper::ServiceManager::findServiceImplementation(
         loadImplementation(context, impl);
     }
     return impl;
+}
+
+void cppuhelper::ServiceManager::preloadImplementations() {
+#ifdef DISABLE_DYNLOADING
+    abort();
+#else
+    rtl::OUString aUri;
+    osl::MutexGuard g(rBHelper.rMutex);
+    css::uno::Environment aSourceEnv(css::uno::Environment::getCurrent());
+
+    // loop all implementations
+    for (Data::NamedImplementations::const_iterator iterator(
+            data_.namedImplementations.begin());
+            iterator != data_.namedImplementations.end(); ++iterator)
+    {
+        try
+        {
+            // expand absolute URI implementation component library
+            aUri = cppu::bootstrap_expandUri(iterator->second->info->uri);
+        }
+        catch (css::lang::IllegalArgumentException& aError)
+        {
+            throw css::uno::DeploymentException(
+                "Cannot expand URI" + iterator->second->info->uri + ": " + aError.Message,
+                static_cast< cppu::OWeakObject * >(this));
+        }
+
+        if (iterator->second->info->loader == "com.sun.star.loader.SharedLibrary" &&
+            iterator->second->status != Data::Implementation::STATUS_LOADED)
+        {
+            // load component library
+            osl::Module aModule(aUri, SAL_LOADMODULE_NOW | SAL_LOADMODULE_GLOBAL);
+            SAL_INFO("lok", "loaded component library " << aUri << ( aModule.is() ? " ok" : " no"));
+
+            if (aModule.is() &&
+                !iterator->second->info->environment.isEmpty())
+            {
+                OUString aSymFactory;
+                oslGenericFunction fpFactory;
+                css::uno::Environment aTargetEnv;
+                css::uno::Reference<css::uno::XInterface> xFactory;
+
+                if(iterator->second->info->constructor.isEmpty())
+                {
+                    // expand full name component factory symbol
+                    if (iterator->second->info->prefix == "direct")
+                        aSymFactory = iterator->second->info->name.replace('.', '_') + "_" COMPONENT_GETFACTORY;
+                    else if (!iterator->second->info->prefix.isEmpty())
+                        aSymFactory = iterator->second->info->prefix + "_" COMPONENT_GETFACTORY;
+                    else
+                        aSymFactory = COMPONENT_GETFACTORY;
+
+                    // get function symbol component factory
+                    fpFactory = aModule.getFunctionSymbol(aSymFactory);
+                    if (fpFactory == nullptr)
+                    {
+                        throw css::loader::CannotActivateFactoryException(
+                            ("no factory symbol \"" + aSymFactory + "\" in component library :" + aUri),
+                            css::uno::Reference<css::uno::XInterface>());
+                    }
+
+                    aTargetEnv = cppuhelper::detail::getEnvironment(iterator->second->info->environment, iterator->second->info->name);
+                    component_getFactoryFunc fpComponentFactory = reinterpret_cast<component_getFactoryFunc>(fpFactory);
+
+                    if (aSourceEnv.get() == aTargetEnv.get())
+                    {
+                        // invoke function component factory
+                        OString aImpl(rtl::OUStringToOString(iterator->second->info->name, RTL_TEXTENCODING_ASCII_US));
+                        xFactory.set(css::uno::Reference<css::uno::XInterface>(static_cast<css::uno::XInterface *>(
+                            (*fpComponentFactory)(aImpl.getStr(), this, nullptr)), SAL_NO_ACQUIRE));
+                    }
+                }
+                else
+                {
+                    // get function symbol component factory
+                    fpFactory = aModule.getFunctionSymbol(iterator->second->info->constructor);
+                }
+
+                css::uno::Reference<css::lang::XSingleComponentFactory> xSCFactory;
+                css::uno::Reference<css::lang::XSingleServiceFactory> xSSFactory;
+
+                // query interface XSingleComponentFactory or XSingleServiceFactory
+                if (xFactory.is())
+                {
+                    xSCFactory.set(xFactory, css::uno::UNO_QUERY);
+                    if (!xSCFactory.is())
+                    {
+                        xSSFactory.set(xFactory, css::uno::UNO_QUERY);
+                        if (!xSSFactory.is())
+                        {
+                            throw css::uno::DeploymentException(
+                                ("Implementation " + iterator->second->info->name
+                                  + " does not provide a constructor or factory"),
+                                static_cast< cppu::OWeakObject * >(this));
+                        }
+                    }
+                }
+
+                if (!iterator->second->info->constructor.isEmpty() && fpFactory)
+                    iterator->second->constructor = reinterpret_cast<ImplementationConstructorFn *>(fpFactory);
+
+                iterator->second->factory1 = xSCFactory;
+                iterator->second->factory2 = xSSFactory;
+                iterator->second->status = Data::Implementation::STATUS_LOADED;
+
+            }
+            // leak aModule
+            aModule.release();
+        }
+    }
+#endif
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

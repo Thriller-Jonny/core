@@ -31,11 +31,15 @@ namespace slideshow
     namespace internal
     {
 #if defined(DBG_UTIL)
-        int& debugGetCurrentOffset()
-        {
-            static int lcl_nOffset = 0; // to make each tree output distinct
+        static sal_Int32 lcl_nOffset = 0;
 
-            return lcl_nOffset;
+        OUString debugGetNodeName( const BaseNode *pNode )
+        {
+            OUStringBuffer aBuf;
+            aBuf.append(lcl_nOffset);
+            aBuf.append(" - 0x");
+            aBuf.append(reinterpret_cast<sal_Int64>(pNode), 16);
+            return aBuf.makeStringAndClear();
         }
 
         void debugNodesShowTree( const BaseNode* pNode )
@@ -43,7 +47,7 @@ namespace slideshow
             if( pNode )
                 pNode->showState();
 
-            ++debugGetCurrentOffset();
+            ++lcl_nOffset;
         }
 #endif
 
@@ -59,7 +63,7 @@ namespace slideshow
                               "lookupAttributableShape(): no shape found for given XShape" );
 
             AttributableShapeSharedPtr pRes(
-                ::boost::dynamic_pointer_cast< AttributableShape >( pShape ) );
+                ::std::dynamic_pointer_cast< AttributableShape >( pShape ) );
 
             // TODO(E3): Cannot throw here, people might set animation info
             // for non-animatable shapes from the API. AnimationNodes must catch

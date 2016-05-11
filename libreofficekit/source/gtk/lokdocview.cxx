@@ -10,8 +10,10 @@
 #include <sal/types.h>
 #include <math.h>
 #include <string.h>
+#include <memory>
 #include <vector>
 #include <string>
+#include <sstream>
 #include <iostream>
 #include <boost/property_tree/json_parser.hpp>
 
@@ -33,15 +35,20 @@
 #define g_info(...) g_log(G_LOG_DOMAIN, G_LOG_LEVEL_INFO, __VA_ARGS__)
 #endif
 
-// Cursor bitmaps from the Android app.
-#define CURSOR_HANDLE_DIR "/android/source/res/drawable/"
+// Cursor bitmaps from the installation set.
+#define CURSOR_HANDLE_DIR "/../share/libreofficekit/"
 // Number of handles around a graphic selection.
 #define GRAPHIC_HANDLE_COUNT 8
+// Maximum Zoom allowed
+#define MAX_ZOOM 5.0f
+// Minimum Zoom allowed
+#define MIN_ZOOM 0.25f
 
 /// Private struct used by this GObject type
 struct LOKDocViewPrivateImpl
 {
     const gchar* m_aLOPath;
+    const gchar* m_pUserProfileURL;
     const gchar* m_aDocPath;
     std::string m_aRenderingArguments;
     gdouble m_nLoadProgress;
@@ -59,6 +66,10 @@ struct LOKDocViewPrivateImpl
     glong m_nDocumentHeightTwips;
     /// View or edit mode.
     gboolean m_bEdit;
+    /// LOK Features
+    guint64 m_nLOKFeatures;
+    /// Number of parts in currently loaded document
+    gint m_nParts;
     /// Position and size of the visible cursor.
     GdkRectangle m_aVisibleCursor;
     /// Cursor overlay is visible or hidden (for blinking).
@@ -118,13 +129,23 @@ struct LOKDocViewPrivateImpl
     /// View ID, returned by createView() or 0 by default.
     int m_nViewId;
 
+    /**
+     * Contains a freshly set zoom level: logic size of a tile.
+     * It gets reset back to 0 when LOK was informed about this zoom change.
+    */
+    int m_nTileSizeTwips;
+
+    GdkRectangle m_aVisibleArea;
+    bool m_bVisibleAreaSet;
+
     LOKDocViewPrivateImpl()
         : m_aLOPath(nullptr),
+        m_pUserProfileURL(nullptr),
         m_aDocPath(nullptr),
         m_nLoadProgress(0),
         m_bIsLoading(false),
-        m_bCanZoomIn(false),
-        m_bCanZoomOut(false),
+        m_bCanZoomIn(true),
+        m_bCanZoomOut(true),
         m_pOffice(nullptr),
         m_pDocument(nullptr),
         lokThreadPool(nullptr),
@@ -132,6 +153,8 @@ struct LOKDocViewPrivateImpl
         m_nDocumentWidthTwips(0),
         m_nDocumentHeightTwips(0),
         m_bEdit(FALSE),
+        m_nLOKFeatures(0),
+        m_nParts(0),
         m_aVisibleCursor({0, 0, 0, 0}),
         m_bCursorOverlayVisible(false),
         m_bCursorVisible(true),
@@ -154,7 +177,10 @@ struct LOKDocViewPrivateImpl
         m_aHandleEndRect({0, 0, 0, 0}),
         m_bInDragEndHandle(false),
         m_pGraphicHandle(nullptr),
-        m_nViewId(0)
+        m_nViewId(0),
+        m_nTileSizeTwips(0),
+        m_aVisibleArea({0, 0, 0, 0}),
+        m_bVisibleAreaSet(false)
     {
         memset(&m_aGraphicHandleRects, 0, sizeof(m_aGraphicHandleRects));
         memset(&m_bInDragGraphicHandles, 0, sizeof(m_bInDragGraphicHandles));
@@ -186,6 +212,7 @@ enum
     COMMAND_RESULT,
     FORMULA_CHANGED,
     TEXT_SELECTION,
+    PASSWORD_REQUIRED,
 
     LAST_SIGNAL
 };
@@ -196,6 +223,7 @@ enum
 
     PROP_LO_PATH,
     PROP_LO_POINTER,
+    PROP_USER_PROFILE_URL,
     PROP_DOC_PATH,
     PROP_DOC_POINTER,
     PROP_EDITABLE,
@@ -205,10 +233,15 @@ enum
     PROP_DOC_WIDTH,
     PROP_DOC_HEIGHT,
     PROP_CAN_ZOOM_IN,
-    PROP_CAN_ZOOM_OUT
+    PROP_CAN_ZOOM_OUT,
+    PROP_DOC_PASSWORD,
+    PROP_DOC_PASSWORD_TO_MODIFY,
+
+    PROP_LAST
 };
 
 static guint doc_view_signals[LAST_SIGNAL] = { 0 };
+static GParamSpec *properties[PROP_LAST] = { nullptr };
 
 static void lok_doc_view_initable_iface_init (GInitableIface *iface);
 static void callbackWorker (int nType, const char* pPayload, void* pData);
@@ -302,6 +335,12 @@ callbackTypeToString (int nType)
         return "LOK_CALLBACK_SET_PART";
     case LOK_CALLBACK_SEARCH_RESULT_SELECTION:
         return "LOK_CALLBACK_SEARCH_RESULT_SELECTION";
+    case LOK_CALLBACK_DOCUMENT_PASSWORD:
+        return "LOK_CALLBACK_DOCUMENT_PASSWORD";
+    case LOK_CALLBACK_DOCUMENT_PASSWORD_TO_MODIFY:
+        return "LOK_CALLBACK_DOCUMENT_PASSWORD_TO_MODIFY";
+    case LOK_CALLBACK_CONTEXT_MENU:
+        return "LOK_CALLBACK_CONTEXT_MENU";
     }
     return nullptr;
 }
@@ -334,16 +373,20 @@ static void
 doSearch(LOKDocView* pDocView, const char* pText, bool bBackwards, bool highlightAll)
 {
     LOKDocViewPrivate& priv = getPrivate(pDocView);
+    if (!priv->m_pDocument)
+        return;
+
     boost::property_tree::ptree aTree;
     GtkWidget* drawingWidget = GTK_WIDGET(pDocView);
     GdkWindow* drawingWindow = gtk_widget_get_window(drawingWidget);
-    cairo_region_t* cairoVisRegion = gdk_window_get_visible_region(drawingWindow);
+    if (!drawingWindow)
+        return;
+    std::shared_ptr<cairo_region_t> cairoVisRegion( gdk_window_get_visible_region(drawingWindow),
+                                                    cairo_region_destroy);
     cairo_rectangle_int_t cairoVisRect;
-    int x, y;
-
-    cairo_region_get_rectangle(cairoVisRegion, 0, &cairoVisRect);
-    x = pixelToTwip (cairoVisRect.x, priv->m_fZoom);
-    y = pixelToTwip (cairoVisRect.y, priv->m_fZoom);
+    cairo_region_get_rectangle(cairoVisRegion.get(), 0, &cairoVisRect);
+    int x = pixelToTwip (cairoVisRect.x, priv->m_fZoom);
+    int y = pixelToTwip (cairoVisRect.y, priv->m_fZoom);
 
     aTree.put(boost::property_tree::ptree::path_type("SearchItem.SearchString/type", '/'), "string");
     aTree.put(boost::property_tree::ptree::path_type("SearchItem.SearchString/value", '/'), pText);
@@ -529,6 +572,36 @@ postKeyEventInThread(gpointer data)
     LOEvent* pLOEvent = static_cast<LOEvent*>(g_task_get_task_data(task));
 
     priv->m_pDocument->pClass->setView(priv->m_pDocument, priv->m_nViewId);
+
+    if (priv->m_nTileSizeTwips)
+    {
+        std::stringstream ss;
+        ss << "lok::Document::setClientZoom(" << nTileSizePixels << ", " << nTileSizePixels << ", " << priv->m_nTileSizeTwips << ", " << priv->m_nTileSizeTwips << ")";
+        g_info("%s", ss.str().c_str());
+        priv->m_pDocument->pClass->setClientZoom(priv->m_pDocument,
+                                                 nTileSizePixels,
+                                                 nTileSizePixels,
+                                                 priv->m_nTileSizeTwips,
+                                                 priv->m_nTileSizeTwips);
+        priv->m_nTileSizeTwips = 0;
+    }
+    if (priv->m_bVisibleAreaSet)
+    {
+        std::stringstream ss;
+        ss << "lok::Document::setClientVisibleArea(" << priv->m_aVisibleArea.x << ", " << priv->m_aVisibleArea.y << ", ";
+        ss << priv->m_aVisibleArea.width << ", " << priv->m_aVisibleArea.height << ")";
+        g_info("%s", ss.str().c_str());
+        priv->m_pDocument->pClass->setClientVisibleArea(priv->m_pDocument,
+                                                        priv->m_aVisibleArea.x,
+                                                        priv->m_aVisibleArea.y,
+                                                        priv->m_aVisibleArea.width,
+                                                        priv->m_aVisibleArea.height);
+        priv->m_bVisibleAreaSet = false;
+    }
+
+    std::stringstream ss;
+    ss << "lok::Document::postKeyEvent(" << pLOEvent->m_nKeyEvent << ", " << pLOEvent->m_nCharCode << ", " << pLOEvent->m_nKeyCode << ")";
+    g_info("%s", ss.str().c_str());
     priv->m_pDocument->pClass->postKeyEvent(priv->m_pDocument,
                                             pLOEvent->m_nKeyEvent,
                                             pLOEvent->m_nCharCode,
@@ -579,6 +652,12 @@ signalKey (GtkWidget* pWidget, GdkEventKey* pEvent)
         break;
     case GDK_KEY_Right:
         nKeyCode = com::sun::star::awt::Key::RIGHT;
+        break;
+    case GDK_KEY_Page_Down:
+        nKeyCode = com::sun::star::awt::Key::PAGEDOWN;
+        break;
+    case GDK_KEY_Page_Up:
+        nKeyCode = com::sun::star::awt::Key::PAGEUP;
         break;
     case GDK_KEY_Shift_L:
     case GDK_KEY_Shift_R:
@@ -710,6 +789,18 @@ static void formulaChanged(LOKDocView* pDocView, const std::string& rString)
     g_signal_emit(pDocView, doc_view_signals[FORMULA_CHANGED], 0, rString.c_str());
 }
 
+static void reportError(LOKDocView* /*pDocView*/, const std::string& rString)
+{
+    GtkWidget *dialog = gtk_message_dialog_new(nullptr,
+            GTK_DIALOG_DESTROY_WITH_PARENT,
+            GTK_MESSAGE_ERROR,
+            GTK_BUTTONS_CLOSE,
+            "%s",
+            rString.c_str());
+    gtk_dialog_run(GTK_DIALOG(dialog));
+    gtk_widget_destroy(dialog);
+}
+
 static void
 setPart(LOKDocView* pDocView, const std::string& rString)
 {
@@ -742,6 +833,7 @@ static gboolean postDocumentLoad(gpointer pData)
     priv->m_pDocument->pClass->initializeForRendering(priv->m_pDocument, priv->m_aRenderingArguments.c_str());
     priv->m_pDocument->pClass->registerCallback(priv->m_pDocument, callbackWorker, pLOKDocView);
     priv->m_pDocument->pClass->getDocumentSize(priv->m_pDocument, &priv->m_nDocumentWidthTwips, &priv->m_nDocumentHeightTwips);
+    priv->m_nParts = priv->m_pDocument->pClass->getParts(priv->m_pDocument);
     g_timeout_add(600, handleTimeout, pLOKDocView);
 
     float zoom = priv->m_fZoom;
@@ -759,6 +851,7 @@ static gboolean postDocumentLoad(gpointer pData)
                                 nDocumentHeightPixels);
     gtk_widget_set_can_focus(GTK_WIDGET(pLOKDocView), TRUE);
     gtk_widget_grab_focus(GTK_WIDGET(pLOKDocView));
+    lok_doc_view_set_zoom(pLOKDocView, 1.0);
 
     return G_SOURCE_REMOVE;
 }
@@ -769,6 +862,7 @@ globalCallback (gpointer pData)
 {
     CallbackData* pCallback = static_cast<CallbackData*>(pData);
     LOKDocViewPrivate& priv = getPrivate(pCallback->m_pDocView);
+    gboolean bModify = false;
 
     switch (pCallback->m_nType)
     {
@@ -788,6 +882,15 @@ globalCallback (gpointer pData)
     {
         priv->m_nLoadProgress = 1.0;
         g_signal_emit (pCallback->m_pDocView, doc_view_signals[LOAD_CHANGED], 0, 1.0);
+    }
+    break;
+    case LOK_CALLBACK_DOCUMENT_PASSWORD_TO_MODIFY:
+        bModify = true;
+        SAL_FALLTHROUGH;
+    case LOK_CALLBACK_DOCUMENT_PASSWORD:
+    {
+        char const*const pURL(pCallback->m_aPayload.c_str());
+        g_signal_emit (pCallback->m_pDocView, doc_view_signals[PASSWORD_REQUIRED], 0, pURL, bModify);
     }
     break;
     default:
@@ -1038,6 +1141,16 @@ callback (gpointer pData)
         formulaChanged(pDocView, pCallback->m_aPayload);
     }
     break;
+    case LOK_CALLBACK_ERROR:
+    {
+        reportError(pDocView, pCallback->m_aPayload);
+    }
+    break;
+    case LOK_CALLBACK_CONTEXT_MENU:
+    {
+        // TODO: Implement me
+        break;
+    }
     default:
         g_assert(false);
         break;
@@ -1298,7 +1411,7 @@ renderOverlay(LOKDocView* pDocView, cairo_t* pCairo)
     if (priv->m_bEdit && priv->m_bCursorVisible && !isEmptyRectangle(priv->m_aVisibleCursor) && priv->m_aTextSelectionRectangles.empty())
     {
         // Have a cursor, but no selection: we need the middle handle.
-        gchar* handleMiddlePath = g_strconcat (priv->m_aLOPath, "/../..", CURSOR_HANDLE_DIR, "handle_image_middle.png", nullptr);
+        gchar* handleMiddlePath = g_strconcat (priv->m_aLOPath, CURSOR_HANDLE_DIR, "handle_image_middle.png", nullptr);
         if (!priv->m_pHandleMiddle)
         {
             priv->m_pHandleMiddle = cairo_image_surface_create_from_png(handleMiddlePath);
@@ -1326,7 +1439,7 @@ renderOverlay(LOKDocView* pDocView, cairo_t* pCairo)
         if (!isEmptyRectangle(priv->m_aTextSelectionStart))
         {
             // Have a start position: we need a start handle.
-            gchar* handleStartPath = g_strconcat (priv->m_aLOPath, "/../..", CURSOR_HANDLE_DIR, "handle_image_start.png", nullptr);
+            gchar* handleStartPath = g_strconcat (priv->m_aLOPath, CURSOR_HANDLE_DIR, "handle_image_start.png", nullptr);
             if (!priv->m_pHandleStart)
             {
                 priv->m_pHandleStart = cairo_image_surface_create_from_png(handleStartPath);
@@ -1338,7 +1451,7 @@ renderOverlay(LOKDocView* pDocView, cairo_t* pCairo)
         if (!isEmptyRectangle(priv->m_aTextSelectionEnd))
         {
             // Have a start position: we need an end handle.
-            gchar* handleEndPath = g_strconcat (priv->m_aLOPath, "/../..", CURSOR_HANDLE_DIR, "handle_image_end.png", nullptr);
+            gchar* handleEndPath = g_strconcat (priv->m_aLOPath, CURSOR_HANDLE_DIR, "handle_image_end.png", nullptr);
             if (!priv->m_pHandleEnd)
             {
                 priv->m_pHandleEnd = cairo_image_surface_create_from_png(handleEndPath);
@@ -1351,7 +1464,7 @@ renderOverlay(LOKDocView* pDocView, cairo_t* pCairo)
 
     if (!isEmptyRectangle(priv->m_aGraphicSelection))
     {
-        gchar* handleGraphicPath = g_strconcat (priv->m_aLOPath, "/../..", CURSOR_HANDLE_DIR, "handle_graphic.png", nullptr);
+        gchar* handleGraphicPath = g_strconcat (priv->m_aLOPath, CURSOR_HANDLE_DIR, "handle_graphic.png", nullptr);
         if (!priv->m_pGraphicHandle)
         {
             priv->m_pGraphicHandle = cairo_image_surface_create_from_png(handleGraphicPath);
@@ -1614,6 +1727,11 @@ setGraphicSelectionInThread(gpointer data)
     LOEvent* pLOEvent = static_cast<LOEvent*>(g_task_get_task_data(task));
 
     priv->m_pDocument->pClass->setView(priv->m_pDocument, priv->m_nViewId);
+    std::stringstream ss;
+    ss << "lok::Document::setGraphicSelection(" << pLOEvent->m_nSetGraphicSelectionType;
+    ss << ", " << pLOEvent->m_nSetGraphicSelectionX;
+    ss << ", " << pLOEvent->m_nSetGraphicSelectionY << ")";
+    g_info("%s", ss.str().c_str());
     priv->m_pDocument->pClass->setGraphicSelection(priv->m_pDocument,
                                                    pLOEvent->m_nSetGraphicSelectionType,
                                                    pLOEvent->m_nSetGraphicSelectionX,
@@ -1628,8 +1746,6 @@ setClientZoomInThread(gpointer data)
     LOKDocViewPrivate& priv = getPrivate(pDocView);
     LOEvent* pLOEvent = static_cast<LOEvent*>(g_task_get_task_data(task));
 
-    if (!priv->m_pDocument)
-        return;
     priv->m_pDocument->pClass->setClientZoom(priv->m_pDocument,
                                              pLOEvent->m_nTilePixelWidth,
                                              pLOEvent->m_nTilePixelHeight,
@@ -1646,6 +1762,14 @@ postMouseEventInThread(gpointer data)
     LOEvent* pLOEvent = static_cast<LOEvent*>(g_task_get_task_data(task));
 
     priv->m_pDocument->pClass->setView(priv->m_pDocument, priv->m_nViewId);
+    std::stringstream ss;
+    ss << "lok::Document::postMouseEvent(" << pLOEvent->m_nPostMouseEventType;
+    ss << ", " << pLOEvent->m_nPostMouseEventX;
+    ss << ", " << pLOEvent->m_nPostMouseEventY;
+    ss << ", " << pLOEvent->m_nPostMouseEventCount;
+    ss << ", " << pLOEvent->m_nPostMouseEventButton;
+    ss << ", " << pLOEvent->m_nPostMouseEventModifier << ")";
+    g_info("%s", ss.str().c_str());
     priv->m_pDocument->pClass->postMouseEvent(priv->m_pDocument,
                                               pLOEvent->m_nPostMouseEventType,
                                               pLOEvent->m_nPostMouseEventX,
@@ -1673,7 +1797,7 @@ openDocumentInThread (gpointer data)
     if ( !priv->m_pDocument )
     {
         char *pError = priv->m_pOffice->pClass->getError( priv->m_pOffice );
-        g_task_return_new_error(task, 0, 0, "%s", pError);
+        g_task_return_new_error(task, g_quark_from_static_string ("LOK error"), 0, "%s", pError);
     }
     else
     {
@@ -1693,6 +1817,8 @@ setPartInThread(gpointer data)
 
     priv->m_pDocument->pClass->setView(priv->m_pDocument, priv->m_nViewId);
     priv->m_pDocument->pClass->setPart( priv->m_pDocument, nPart );
+
+    lok_doc_view_reset_view(pDocView);
 }
 
 static void
@@ -1892,6 +2018,8 @@ static void lok_doc_view_set_property (GObject* object, guint propId, const GVal
 {
     LOKDocView* pDocView = LOK_DOC_VIEW (object);
     LOKDocViewPrivate& priv = getPrivate(pDocView);
+    gboolean bDocPasswordEnabled = priv->m_nLOKFeatures & LOK_FEATURE_DOCUMENT_PASSWORD;
+    gboolean bDocPasswordToModifyEnabled = priv->m_nLOKFeatures & LOK_FEATURE_DOCUMENT_PASSWORD_TO_MODIFY;
 
     switch (propId)
     {
@@ -1900,6 +2028,9 @@ static void lok_doc_view_set_property (GObject* object, guint propId, const GVal
         break;
     case PROP_LO_POINTER:
         priv->m_pOffice = static_cast<LibreOfficeKit*>(g_value_get_pointer(value));
+        break;
+    case PROP_USER_PROFILE_URL:
+        priv->m_pUserProfileURL = g_value_dup_string(value);
         break;
     case PROP_DOC_PATH:
         priv->m_aDocPath = g_value_dup_string (value);
@@ -1919,6 +2050,20 @@ static void lok_doc_view_set_property (GObject* object, guint propId, const GVal
     case PROP_DOC_HEIGHT:
         priv->m_nDocumentHeightTwips = g_value_get_long (value);
         break;
+    case PROP_DOC_PASSWORD:
+        if (g_value_get_boolean (value) != bDocPasswordEnabled)
+        {
+            priv->m_nLOKFeatures = priv->m_nLOKFeatures ^ LOK_FEATURE_DOCUMENT_PASSWORD;
+            priv->m_pOffice->pClass->setOptionalFeatures(priv->m_pOffice, priv->m_nLOKFeatures);
+        }
+        break;
+    case PROP_DOC_PASSWORD_TO_MODIFY:
+        if ( g_value_get_boolean (value) != bDocPasswordToModifyEnabled)
+        {
+            priv->m_nLOKFeatures = priv->m_nLOKFeatures ^ LOK_FEATURE_DOCUMENT_PASSWORD_TO_MODIFY;
+            priv->m_pOffice->pClass->setOptionalFeatures(priv->m_pOffice, priv->m_nLOKFeatures);
+        }
+        break;
     default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, propId, pspec);
     }
@@ -1936,6 +2081,9 @@ static void lok_doc_view_get_property (GObject* object, guint propId, GValue *va
         break;
     case PROP_LO_POINTER:
         g_value_set_pointer(value, priv->m_pOffice);
+        break;
+    case PROP_USER_PROFILE_URL:
+        g_value_set_string(value, priv->m_pUserProfileURL);
         break;
     case PROP_DOC_PATH:
         g_value_set_string (value, priv->m_aDocPath);
@@ -1966,6 +2114,12 @@ static void lok_doc_view_get_property (GObject* object, guint propId, GValue *va
         break;
     case PROP_CAN_ZOOM_OUT:
         g_value_set_boolean (value, priv->m_bCanZoomOut);
+        break;
+    case PROP_DOC_PASSWORD:
+        g_value_set_boolean (value, priv->m_nLOKFeatures & LOK_FEATURE_DOCUMENT_PASSWORD);
+        break;
+    case PROP_DOC_PASSWORD_TO_MODIFY:
+        g_value_set_boolean (value, priv->m_nLOKFeatures & LOK_FEATURE_DOCUMENT_PASSWORD_TO_MODIFY);
         break;
     default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, propId, pspec);
@@ -2005,7 +2159,7 @@ static gboolean lok_doc_view_initable_init (GInitable *initable, GCancellable* /
     if (priv->m_pOffice != nullptr)
         return TRUE;
 
-    priv->m_pOffice = lok_init (priv->m_aLOPath);
+    priv->m_pOffice = lok_init_2(priv->m_aLOPath, priv->m_pUserProfileURL);
 
     if (priv->m_pOffice == nullptr)
     {
@@ -2045,15 +2199,14 @@ static void lok_doc_view_class_init (LOKDocViewClass* pClass)
      *
      * The absolute path of the LibreOffice install.
      */
-    g_object_class_install_property (pGObjectClass,
-          PROP_LO_PATH,
-          g_param_spec_string("lopath",
-                              "LO Path",
-                              "LibreOffice Install Path",
-                              nullptr,
-                              static_cast<GParamFlags>(G_PARAM_READWRITE |
-                                                       G_PARAM_CONSTRUCT_ONLY |
-                                                       G_PARAM_STATIC_STRINGS)));
+    properties[PROP_LO_PATH] =
+        g_param_spec_string("lopath",
+                            "LO Path",
+                            "LibreOffice Install Path",
+                            nullptr,
+                            static_cast<GParamFlags>(G_PARAM_READWRITE |
+                                                     G_PARAM_CONSTRUCT_ONLY |
+                                                     G_PARAM_STATIC_STRINGS));
 
     /**
      * LOKDocView:lopointer:
@@ -2061,28 +2214,40 @@ static void lok_doc_view_class_init (LOKDocViewClass* pClass)
      * A LibreOfficeKit* in case lok_init() is already called
      * previously.
      */
-    g_object_class_install_property (pGObjectClass,
-          PROP_LO_POINTER,
-          g_param_spec_pointer("lopointer",
-                               "LO Pointer",
-                               "A LibreOfficeKit* from lok_init()",
-                               static_cast<GParamFlags>(G_PARAM_READWRITE |
-                                                        G_PARAM_CONSTRUCT_ONLY |
-                                                        G_PARAM_STATIC_STRINGS)));
+    properties[PROP_LO_POINTER] =
+        g_param_spec_pointer("lopointer",
+                             "LO Pointer",
+                             "A LibreOfficeKit* from lok_init()",
+                             static_cast<GParamFlags>(G_PARAM_READWRITE |
+                                                      G_PARAM_CONSTRUCT_ONLY |
+                                                      G_PARAM_STATIC_STRINGS));
+
+    /**
+     * LOKDocView:userprofileurl:
+     *
+     * The absolute path of the LibreOffice user profile.
+     */
+    properties[PROP_USER_PROFILE_URL] =
+        g_param_spec_string("userprofileurl",
+                            "User profile path",
+                            "LibreOffice user profile path",
+                            nullptr,
+                            static_cast<GParamFlags>(G_PARAM_READWRITE |
+                                                     G_PARAM_CONSTRUCT_ONLY |
+                                                     G_PARAM_STATIC_STRINGS));
 
     /**
      * LOKDocView:docpath:
      *
      * The path of the document that is currently being viewed.
      */
-    g_object_class_install_property (pGObjectClass,
-          PROP_DOC_PATH,
-          g_param_spec_string("docpath",
-                              "Document Path",
-                              "The URI of the document to open",
-                              nullptr,
-                              static_cast<GParamFlags>(G_PARAM_READWRITE |
-                                                       G_PARAM_STATIC_STRINGS)));
+    properties[PROP_DOC_PATH] =
+        g_param_spec_string("docpath",
+                            "Document Path",
+                            "The URI of the document to open",
+                            nullptr,
+                            static_cast<GParamFlags>(G_PARAM_READWRITE |
+                                                     G_PARAM_STATIC_STRINGS));
 
     /**
      * LOKDocView:docpointer:
@@ -2090,27 +2255,25 @@ static void lok_doc_view_class_init (LOKDocViewClass* pClass)
      * A LibreOfficeKitDocument* in case documentLoad() is already called
      * previously.
      */
-    g_object_class_install_property (pGObjectClass,
-          PROP_DOC_POINTER,
-          g_param_spec_pointer("docpointer",
-                               "Document Pointer",
-                               "A LibreOfficeKitDocument* from documentLoad()",
-                               static_cast<GParamFlags>(G_PARAM_READWRITE |
-                                                        G_PARAM_STATIC_STRINGS)));
+    properties[PROP_DOC_POINTER] =
+        g_param_spec_pointer("docpointer",
+                             "Document Pointer",
+                             "A LibreOfficeKitDocument* from documentLoad()",
+                             static_cast<GParamFlags>(G_PARAM_READWRITE |
+                                                      G_PARAM_STATIC_STRINGS));
 
     /**
      * LOKDocView:editable:
      *
      * Whether the document loaded inside of #LOKDocView is editable or not.
      */
-    g_object_class_install_property (pGObjectClass,
-          PROP_EDITABLE,
-          g_param_spec_boolean("editable",
-                               "Editable",
-                               "Whether the content is in edit mode or not",
-                               FALSE,
-                               static_cast<GParamFlags>(G_PARAM_READWRITE |
-                                                        G_PARAM_STATIC_STRINGS)));
+    properties[PROP_EDITABLE] =
+        g_param_spec_boolean("editable",
+                             "Editable",
+                             "Whether the content is in edit mode or not",
+                             FALSE,
+                             static_cast<GParamFlags>(G_PARAM_READWRITE |
+                                                      G_PARAM_STATIC_STRINGS));
 
     /**
      * LOKDocView:load-progress:
@@ -2120,14 +2283,13 @@ static void lok_doc_view_class_init (LOKDocViewClass* pClass)
      * very accurate progress indicator, and its value might reset it couple of
      * times to 0 and start again. You should not rely on its numbers.
      */
-    g_object_class_install_property (pGObjectClass,
-          PROP_LOAD_PROGRESS,
-          g_param_spec_double("load-progress",
-                              "Estimated Load Progress",
-                              "Shows the progress of the document load operation",
-                              0.0, 1.0, 0.0,
-                              static_cast<GParamFlags>(G_PARAM_READABLE |
-                                                       G_PARAM_STATIC_STRINGS)));
+    properties[PROP_LOAD_PROGRESS] =
+        g_param_spec_double("load-progress",
+                            "Estimated Load Progress",
+                            "Shows the progress of the document load operation",
+                            0.0, 1.0, 0.0,
+                            static_cast<GParamFlags>(G_PARAM_READABLE |
+                                                     G_PARAM_STATIC_STRINGS));
 
     /**
      * LOKDocView:zoom-level:
@@ -2135,15 +2297,13 @@ static void lok_doc_view_class_init (LOKDocViewClass* pClass)
      * The current zoom level of the document loaded inside #LOKDocView. The
      * default value is 1.0.
      */
-    g_object_class_install_property (pGObjectClass,
-          PROP_ZOOM,
-          g_param_spec_float("zoom-level",
-                             "Zoom Level",
-                             "The current zoom level of the content",
-                             0, 5.0, 1.0,
-                             static_cast<GParamFlags>(G_PARAM_READWRITE |
-                                                      G_PARAM_CONSTRUCT |
-                                                      G_PARAM_STATIC_STRINGS)));
+    properties[PROP_ZOOM] =
+        g_param_spec_float("zoom-level",
+                           "Zoom Level",
+                           "The current zoom level of the content",
+                           0, 5.0, 1.0,
+                           static_cast<GParamFlags>(G_PARAM_READWRITE |
+                                                    G_PARAM_STATIC_STRINGS));
 
     /**
      * LOKDocView:is-loading:
@@ -2151,70 +2311,94 @@ static void lok_doc_view_class_init (LOKDocViewClass* pClass)
      * Whether the requested document is being loaded or not. %TRUE if it is
      * being loaded, otherwise %FALSE.
      */
-    g_object_class_install_property (pGObjectClass,
-          PROP_IS_LOADING,
-          g_param_spec_boolean("is-loading",
-                               "Is Loading",
-                               "Whether the view is loading a document",
-                               FALSE,
-                               static_cast<GParamFlags>(G_PARAM_READABLE |
-                                                        G_PARAM_STATIC_STRINGS)));
+    properties[PROP_IS_LOADING] =
+        g_param_spec_boolean("is-loading",
+                             "Is Loading",
+                             "Whether the view is loading a document",
+                             FALSE,
+                             static_cast<GParamFlags>(G_PARAM_READABLE |
+                                                      G_PARAM_STATIC_STRINGS));
 
     /**
      * LOKDocView:doc-width:
      *
      * The width of the currently loaded document in #LOKDocView in twips.
      */
-    g_object_class_install_property (pGObjectClass,
-          PROP_DOC_WIDTH,
-          g_param_spec_long("doc-width",
-                            "Document Width",
-                            "Width of the document in twips",
-                            0, G_MAXLONG, 0,
-                            static_cast<GParamFlags>(G_PARAM_READWRITE |
-                                                     G_PARAM_STATIC_STRINGS)));
+    properties[PROP_DOC_WIDTH] =
+        g_param_spec_long("doc-width",
+                          "Document Width",
+                          "Width of the document in twips",
+                          0, G_MAXLONG, 0,
+                          static_cast<GParamFlags>(G_PARAM_READWRITE |
+                                                   G_PARAM_STATIC_STRINGS));
 
     /**
      * LOKDocView:doc-height:
      *
      * The height of the currently loaded document in #LOKDocView in twips.
      */
-    g_object_class_install_property (pGObjectClass,
-          PROP_DOC_HEIGHT,
-          g_param_spec_long("doc-height",
-                            "Document Height",
-                            "Height of the document in twips",
-                            0, G_MAXLONG, 0,
-                            static_cast<GParamFlags>(G_PARAM_READWRITE |
-                                                     G_PARAM_STATIC_STRINGS)));
+    properties[PROP_DOC_HEIGHT] =
+        g_param_spec_long("doc-height",
+                          "Document Height",
+                          "Height of the document in twips",
+                          0, G_MAXLONG, 0,
+                          static_cast<GParamFlags>(G_PARAM_READWRITE |
+                                                   G_PARAM_STATIC_STRINGS));
 
     /**
      * LOKDocView:can-zoom-in:
      *
      * It tells whether the view can further be zoomed in or not.
      */
-    g_object_class_install_property (pGObjectClass,
-          PROP_CAN_ZOOM_IN,
-          g_param_spec_boolean("can-zoom-in",
-                               "Can Zoom In",
-                               "Whether the view can be zoomed in further",
-                               TRUE,
-                               static_cast<GParamFlags>(G_PARAM_READABLE
-                                                       | G_PARAM_STATIC_STRINGS)));
+    properties[PROP_CAN_ZOOM_IN] =
+        g_param_spec_boolean("can-zoom-in",
+                             "Can Zoom In",
+                             "Whether the view can be zoomed in further",
+                             TRUE,
+                             static_cast<GParamFlags>(G_PARAM_READABLE
+                                                      | G_PARAM_STATIC_STRINGS));
 
     /**
      * LOKDocView:can-zoom-out:
      *
      * It tells whether the view can further be zoomed out or not.
      */
-    g_object_class_install_property (pGObjectClass,
-          PROP_CAN_ZOOM_OUT,
-          g_param_spec_boolean("can-zoom-out",
-                               "Can Zoom Out",
-                               "Whether the view can be zoomed out further",
-                               TRUE,
-                               static_cast<GParamFlags>(G_PARAM_READABLE
-                                                       | G_PARAM_STATIC_STRINGS)));
+    properties[PROP_CAN_ZOOM_OUT] =
+        g_param_spec_boolean("can-zoom-out",
+                             "Can Zoom Out",
+                             "Whether the view can be zoomed out further",
+                             TRUE,
+                             static_cast<GParamFlags>(G_PARAM_READABLE
+                                                      | G_PARAM_STATIC_STRINGS));
+
+    /**
+     * LOKDocView:doc-password:
+     *
+     * Set it to true if client supports providing password for viewing
+     * password protected documents
+     */
+    properties[PROP_DOC_PASSWORD] =
+        g_param_spec_boolean("doc-password",
+                             "Document password capability",
+                             "Whether client supports providing document passwords",
+                             FALSE,
+                             static_cast<GParamFlags>(G_PARAM_READWRITE
+                                                      | G_PARAM_STATIC_STRINGS));
+
+    /**
+     * LOKDocView:doc-password-to-modify:
+     *
+     * Set it to true if client supports providing password for edit-protected documents
+     */
+    properties[PROP_DOC_PASSWORD_TO_MODIFY] =
+        g_param_spec_boolean("doc-password-to-modify",
+                             "Edit document password capability",
+                             "Whether the client supports providing passwords to edit documents",
+                             FALSE,
+                             static_cast<GParamFlags>(G_PARAM_READWRITE
+                                                      | G_PARAM_STATIC_STRINGS));
+
+    g_object_class_install_properties(pGObjectClass, PROP_LAST, properties);
 
     /**
      * LOKDocView::load-changed:
@@ -2400,19 +2584,71 @@ static void lok_doc_view_class_init (LOKDocViewClass* pClass)
                      g_cclosure_marshal_VOID__BOOLEAN,
                      G_TYPE_NONE, 1,
                      G_TYPE_BOOLEAN);
+
+    /**
+     * LOKDocView::password-required:
+     * @pDocView: the #LOKDocView on which the signal is emitted
+     * @pUrl: URL of the document for which password is required
+     * @bModify: whether password id required to modify the document
+     * This is true when password is required to edit the document,
+     * while it can still be viewed without password. In such cases, provide a NULL
+     * password for read-only access to the document.
+     * If false, password is required for opening the document, and document
+     * cannot be opened without providing a valid password.
+     *
+     * Password must be provided by calling lok_doc_view_set_document_password
+     * function with pUrl as provided by the callback.
+     *
+     * Upon entering a invalid password, another `password-required` signal is
+     * emitted.
+     * Upon entering a valid password, document starts to load.
+     * Upon entering a NULL password: if bModify is %TRUE, document starts to
+     * open in view-only mode, else loading of document is aborted.
+     */
+    doc_view_signals[PASSWORD_REQUIRED] =
+        g_signal_new("password-required",
+                     G_TYPE_FROM_CLASS(pGObjectClass),
+                     G_SIGNAL_RUN_FIRST,
+                     0,
+                     nullptr, nullptr,
+                     g_cclosure_marshal_generic,
+                     G_TYPE_NONE, 2,
+                     G_TYPE_STRING,
+                     G_TYPE_BOOLEAN);
 }
 
 SAL_DLLPUBLIC_EXPORT GtkWidget*
 lok_doc_view_new (const gchar* pPath, GCancellable *cancellable, GError **error)
 {
-    return GTK_WIDGET (g_initable_new (LOK_TYPE_DOC_VIEW, cancellable, error, "lopath", pPath == nullptr ? LOK_PATH : pPath, nullptr));
+    return GTK_WIDGET (g_initable_new (LOK_TYPE_DOC_VIEW, cancellable, error,
+                                       "lopath", pPath == nullptr ? LOK_PATH : pPath,
+                                       "halign", GTK_ALIGN_CENTER,
+                                       "valign", GTK_ALIGN_CENTER,
+                                       nullptr));
+}
+
+SAL_DLLPUBLIC_EXPORT GtkWidget*
+lok_doc_view_new_from_user_profile (const gchar* pPath, const gchar* pUserProfile, GCancellable *cancellable, GError **error)
+{
+    return GTK_WIDGET(g_initable_new(LOK_TYPE_DOC_VIEW, cancellable, error,
+                                     "lopath", pPath == nullptr ? LOK_PATH : pPath,
+                                     "userprofileurl", pUserProfile,
+                                     "halign", GTK_ALIGN_CENTER,
+                                     "valign", GTK_ALIGN_CENTER,
+                                     nullptr));
 }
 
 SAL_DLLPUBLIC_EXPORT GtkWidget* lok_doc_view_new_from_widget(LOKDocView* pOldLOKDocView)
 {
     LOKDocViewPrivate& pOldPriv = getPrivate(pOldLOKDocView);
     GtkWidget* pNewDocView = GTK_WIDGET(g_initable_new(LOK_TYPE_DOC_VIEW, /*cancellable=*/nullptr, /*error=*/nullptr,
-                                                       "lopath", pOldPriv->m_aLOPath, "lopointer", pOldPriv->m_pOffice, "docpointer", pOldPriv->m_pDocument, nullptr));
+                                                       "lopath", pOldPriv->m_aLOPath,
+                                                       "userprofileurl", pOldPriv->m_pUserProfileURL,
+                                                       "lopointer", pOldPriv->m_pOffice,
+                                                       "docpointer", pOldPriv->m_pDocument,
+                                                       "halign", GTK_ALIGN_CENTER,
+                                                       "valign", GTK_ALIGN_CENTER,
+                                                       nullptr));
 
     // No documentLoad(), just a createView().
     LibreOfficeKitDocument* pDocument = lok_doc_view_get_document(LOK_DOC_VIEW(pNewDocView));
@@ -2430,8 +2666,7 @@ lok_doc_view_open_document_finish (LOKDocView* pDocView, GAsyncResult* res, GErr
     GTask* task = G_TASK(res);
 
     g_return_val_if_fail(g_task_is_valid(res, pDocView), false);
-    //FIXME: make source_tag work
-    //g_return_val_if_fail(g_task_get_source_tag(task) == lok_doc_view_open_document, NULL);
+    g_return_val_if_fail(g_task_get_source_tag(task) == lok_doc_view_open_document, false);
     g_return_val_if_fail(error == nullptr || *error == nullptr, false);
 
     return g_task_propagate_boolean(task, error);
@@ -2453,8 +2688,10 @@ lok_doc_view_open_document (LOKDocView* pDocView,
     pLOEvent->m_pPath = pPath;
 
     priv->m_aDocPath = pPath;
-    priv->m_aRenderingArguments = pRenderingArguments;
+    if (pRenderingArguments)
+        priv->m_aRenderingArguments = pRenderingArguments;
     g_task_set_task_data(task, pLOEvent, LOEvent::destroy);
+    g_task_set_source_tag(task, reinterpret_cast<gpointer>(lok_doc_view_open_document));
 
     g_thread_pool_push(priv->lokThreadPool, g_object_ref(task), &error);
     if (error != nullptr)
@@ -2473,10 +2710,31 @@ lok_doc_view_get_document (LOKDocView* pDocView)
 }
 
 SAL_DLLPUBLIC_EXPORT void
+lok_doc_view_set_visible_area (LOKDocView* pDocView, GdkRectangle* pVisibleArea)
+{
+    if (!pVisibleArea)
+        return;
+
+    LOKDocViewPrivate& priv = getPrivate(pDocView);
+    priv->m_aVisibleArea = *pVisibleArea;
+    priv->m_bVisibleAreaSet = true;
+}
+
+SAL_DLLPUBLIC_EXPORT void
 lok_doc_view_set_zoom (LOKDocView* pDocView, float fZoom)
 {
     LOKDocViewPrivate& priv = getPrivate(pDocView);
     GError* error = nullptr;
+
+    if (!priv->m_pDocument)
+        return;
+
+    // Clamp the input value in [MIN_ZOOM, MAX_ZOOM]
+    fZoom = fZoom < MIN_ZOOM ? MIN_ZOOM : fZoom;
+    fZoom = fZoom > MAX_ZOOM ? MAX_ZOOM : fZoom;
+
+    if (rtl::math::approxEqual(fZoom, priv->m_fZoom))
+        return;
 
     priv->m_fZoom = fZoom;
     long nDocumentWidthPixels = twipToPixel(priv->m_nDocumentWidthTwips, fZoom);
@@ -2489,6 +2747,22 @@ lok_doc_view_set_zoom (LOKDocView* pDocView, float fZoom)
     gtk_widget_set_size_request(GTK_WIDGET(pDocView),
                                 nDocumentWidthPixels,
                                 nDocumentHeightPixels);
+
+    g_object_notify_by_pspec(G_OBJECT(pDocView), properties[PROP_ZOOM]);
+
+    // set properties to indicate if view can be further zoomed in/out
+    bool bCanZoomIn  = priv->m_fZoom < MAX_ZOOM;
+    bool bCanZoomOut = priv->m_fZoom > MIN_ZOOM;
+    if (bCanZoomIn != bool(priv->m_bCanZoomIn))
+    {
+        priv->m_bCanZoomIn = bCanZoomIn;
+        g_object_notify_by_pspec(G_OBJECT(pDocView), properties[PROP_CAN_ZOOM_IN]);
+    }
+    if (bCanZoomOut != bool(priv->m_bCanZoomOut))
+    {
+        priv->m_bCanZoomOut = bCanZoomOut;
+        g_object_notify_by_pspec(G_OBJECT(pDocView), properties[PROP_CAN_ZOOM_OUT]);
+    }
 
     // Update the client's view size
     GTask* task = g_task_new(pDocView, nullptr, nullptr, nullptr);
@@ -2506,27 +2780,35 @@ lok_doc_view_set_zoom (LOKDocView* pDocView, float fZoom)
         g_clear_error(&error);
     }
     g_object_unref(task);
+
+    priv->m_nTileSizeTwips = pixelToTwip(nTileSizePixels, priv->m_fZoom);
 }
 
-SAL_DLLPUBLIC_EXPORT float
+SAL_DLLPUBLIC_EXPORT gfloat
 lok_doc_view_get_zoom (LOKDocView* pDocView)
 {
     LOKDocViewPrivate& priv = getPrivate(pDocView);
     return priv->m_fZoom;
 }
 
-SAL_DLLPUBLIC_EXPORT int
+SAL_DLLPUBLIC_EXPORT gint
 lok_doc_view_get_parts (LOKDocView* pDocView)
 {
     LOKDocViewPrivate& priv = getPrivate(pDocView);
+    if (!priv->m_pDocument)
+        return -1;
+
     priv->m_pDocument->pClass->setView(priv->m_pDocument, priv->m_nViewId);
     return priv->m_pDocument->pClass->getParts( priv->m_pDocument );
 }
 
-SAL_DLLPUBLIC_EXPORT int
+SAL_DLLPUBLIC_EXPORT gint
 lok_doc_view_get_part (LOKDocView* pDocView)
 {
     LOKDocViewPrivate& priv = getPrivate(pDocView);
+    if (!priv->m_pDocument)
+        return -1;
+
     priv->m_pDocument->pClass->setView(priv->m_pDocument, priv->m_nViewId);
     return priv->m_pDocument->pClass->getPart( priv->m_pDocument );
 }
@@ -2535,6 +2817,15 @@ SAL_DLLPUBLIC_EXPORT void
 lok_doc_view_set_part (LOKDocView* pDocView, int nPart)
 {
     LOKDocViewPrivate& priv = getPrivate(pDocView);
+    if (!priv->m_pDocument)
+        return;
+
+    if (nPart < 0 || nPart >= priv->m_nParts)
+    {
+        g_warning("Invalid part request : %d", nPart);
+        return;
+    }
+
     GTask* task = g_task_new(pDocView, nullptr, nullptr, nullptr);
     LOEvent* pLOEvent = new LOEvent(LOK_SET_PART);
     GError* error = nullptr;
@@ -2551,10 +2842,13 @@ lok_doc_view_set_part (LOKDocView* pDocView, int nPart)
     g_object_unref(task);
 }
 
-SAL_DLLPUBLIC_EXPORT char*
+SAL_DLLPUBLIC_EXPORT gchar*
 lok_doc_view_get_part_name (LOKDocView* pDocView, int nPart)
 {
     LOKDocViewPrivate& priv = getPrivate(pDocView);
+    if (!priv->m_pDocument)
+        return nullptr;
+
     priv->m_pDocument->pClass->setView(priv->m_pDocument, priv->m_nViewId);
     return priv->m_pDocument->pClass->getPartName( priv->m_pDocument, nPart );
 }
@@ -2564,9 +2858,13 @@ lok_doc_view_set_partmode(LOKDocView* pDocView,
                           int nPartMode)
 {
     LOKDocViewPrivate& priv = getPrivate(pDocView);
+    if (!priv->m_pDocument)
+        return;
+
     GTask* task = g_task_new(pDocView, nullptr, nullptr, nullptr);
     LOEvent* pLOEvent = new LOEvent(LOK_SET_PARTMODE);
     GError* error = nullptr;
+
     pLOEvent->m_nPartMode = nPartMode;
     g_task_set_task_data(task, pLOEvent, LOEvent::destroy);
 
@@ -2583,7 +2881,9 @@ SAL_DLLPUBLIC_EXPORT void
 lok_doc_view_reset_view(LOKDocView* pDocView)
 {
     LOKDocViewPrivate& priv = getPrivate(pDocView);
-    priv->m_pTileBuffer->resetAllTiles();
+
+    if (priv->m_pTileBuffer != nullptr)
+        priv->m_pTileBuffer->resetAllTiles();
     priv->m_nLoadProgress = 0.0;
 
     memset(&priv->m_aVisibleCursor, 0, sizeof(priv->m_aVisibleCursor));
@@ -2630,9 +2930,13 @@ lok_doc_view_set_edit(LOKDocView* pDocView,
                       gboolean bEdit)
 {
     LOKDocViewPrivate& priv = getPrivate(pDocView);
+    if (!priv->m_pDocument)
+        return;
+
     GTask* task = g_task_new(pDocView, nullptr, nullptr, nullptr);
     LOEvent* pLOEvent = new LOEvent(LOK_SET_EDIT);
     GError* error = nullptr;
+
     pLOEvent->m_bEdit = bEdit;
     g_task_set_task_data(task, pLOEvent, LOEvent::destroy);
 
@@ -2659,6 +2963,9 @@ lok_doc_view_post_command (LOKDocView* pDocView,
                            gboolean bNotifyWhenFinished)
 {
     LOKDocViewPrivate& priv = getPrivate(pDocView);
+    if (!priv->m_pDocument)
+        return;
+
     if (priv->m_bEdit)
         LOKPostCommand(pDocView, pCommand, pArguments, bNotifyWhenFinished);
     else
@@ -2694,6 +3001,12 @@ lok_doc_view_copy_selection (LOKDocView* pDocView,
                              gchar** pUsedMimeType)
 {
     LibreOfficeKitDocument* pDocument = lok_doc_view_get_document(pDocView);
+    if (!pDocument)
+        return nullptr;
+
+    std::stringstream ss;
+    ss << "lok::Document::getTextSelection('" << pMimeType << "')";
+    g_info("%s", ss.str().c_str());
     return pDocument->pClass->getTextSelection(pDocument, pMimeType, pUsedMimeType);
 }
 
@@ -2707,6 +3020,9 @@ lok_doc_view_paste (LOKDocView* pDocView,
     LibreOfficeKitDocument* pDocument = priv->m_pDocument;
     gboolean ret = 0;
 
+    if (!pDocument)
+        return false;
+
     if (!priv->m_bEdit)
     {
         g_info ("ignoring paste in view-only mode");
@@ -2714,19 +3030,34 @@ lok_doc_view_paste (LOKDocView* pDocView,
     }
 
     if (pData)
+    {
+        std::stringstream ss;
+        ss << "lok::Document::paste('" << pMimeType << "', '" << std::string(pData, nSize) << ", "<<nSize<<"')";
+        g_info("%s", ss.str().c_str());
         ret = pDocument->pClass->paste(pDocument, pMimeType, pData, nSize);
+    }
 
     return ret;
 }
 
-SAL_DLLPUBLIC_EXPORT float
+SAL_DLLPUBLIC_EXPORT void
+lok_doc_view_set_document_password (LOKDocView* pDocView,
+                                    const gchar* pURL,
+                                    const gchar* pPassword)
+{
+    LOKDocViewPrivate& priv = getPrivate(pDocView);
+
+    priv->m_pOffice->pClass->setDocumentPassword(priv->m_pOffice, pURL, pPassword);
+}
+
+SAL_DLLPUBLIC_EXPORT gfloat
 lok_doc_view_pixel_to_twip (LOKDocView* pDocView, float fInput)
 {
     LOKDocViewPrivate& priv = getPrivate(pDocView);
     return pixelToTwip(fInput, priv->m_fZoom);
 }
 
-SAL_DLLPUBLIC_EXPORT float
+SAL_DLLPUBLIC_EXPORT gfloat
 lok_doc_view_twip_to_pixel (LOKDocView* pDocView, float fInput)
 {
     LOKDocViewPrivate& priv = getPrivate(pDocView);

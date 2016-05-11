@@ -17,57 +17,17 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <tools/debug.hxx>
-#include <tools/poly.hxx>
-
-#include <vcl/svapp.hxx>
-#include <vcl/ctrl.hxx>
-#include <vcl/region.hxx>
 #include <vcl/virdev.hxx>
-#include <vcl/window.hxx>
-#include <vcl/metaact.hxx>
-#include <vcl/gdimtf.hxx>
-#include <vcl/print.hxx>
 #include <vcl/outdev.hxx>
 #include <vcl/unowrap.hxx>
-#include <vcl/settings.hxx>
 #include <vcl/sysdata.hxx>
 
-#include <vcl/outdevstate.hxx>
-
-#include <salgdi.hxx>
-#include <sallayout.hxx>
-#include <salframe.hxx>
-#include <salvd.hxx>
-#include <salprn.hxx>
-#include <svdata.hxx>
-#include <window.h>
-#include <outdev.h>
-#include <outdata.hxx>
-#include <outdevstatestack.hxx>
-
+#include "salgdi.hxx"
+#include "svdata.hxx"
+#include "window.h"
+#include "outdev.h"
+#include "outdevstatestack.hxx"
 #include "PhysicalFontCollection.hxx"
-
-#include <basegfx/point/b2dpoint.hxx>
-#include <basegfx/vector/b2dvector.hxx>
-#include <basegfx/polygon/b2dpolygon.hxx>
-#include <basegfx/polygon/b2dpolypolygon.hxx>
-#include <basegfx/matrix/b2dhommatrix.hxx>
-#include <basegfx/polygon/b2dpolygontools.hxx>
-#include <basegfx/polygon/b2dpolypolygontools.hxx>
-#include <basegfx/polygon/b2dlinegeometry.hxx>
-
-#include <com/sun/star/awt/XGraphics.hpp>
-#include <com/sun/star/uno/Sequence.hxx>
-#include <com/sun/star/rendering/XCanvas.hpp>
-#include <com/sun/star/rendering/CanvasFactory.hpp>
-#include <com/sun/star/lang/XMultiServiceFactory.hpp>
-#include <comphelper/processfactory.hxx>
-
-#include <config_cairo_canvas.h>
-
-#include <numeric>
-#include <stack>
 
 #ifdef DISABLE_DYNLOADING
 // Linking all needed LO code into one .so/executable, these already
@@ -93,11 +53,11 @@ OutputDevice::OutputDevice() :
     mpPrevGraphics                  = nullptr;
     mpNextGraphics                  = nullptr;
     mpMetaFile                      = nullptr;
-    mpFontEntry                     = nullptr;
+    mpFontInstance                     = nullptr;
     mpFontCache                     = nullptr;
     mpFontCollection                = nullptr;
-    mpGetDevFontList                = nullptr;
-    mpGetDevSizeList                = nullptr;
+    mpDeviceFontList                = nullptr;
+    mpDeviceFontSizeList            = nullptr;
     mpOutDevStateStack              = new OutDevStateStack;
     mpPDFWriter                     = nullptr;
     mpAlphaVDev                     = nullptr;
@@ -134,7 +94,7 @@ OutputDevice::OutputDevice() :
     mbOutputClipped                 = false;
     maTextColor                     = Color( COL_BLACK );
     maOverlineColor                 = Color( COL_TRANSPARENT );
-    meTextAlign                     = maFont.GetAlign();
+    meTextAlign                     = maFont.GetAlignment();
     meRasterOp                      = ROP_OVERPAINT;
     mnAntialiasing                  = AntialiasingFlags::NONE;
     meTextLanguage                  = 0;  // TODO: get default from configuration?
@@ -234,16 +194,16 @@ void OutputDevice::dispose()
     mpOutDevStateStack = nullptr;
 
     // release the active font instance
-    if( mpFontEntry )
-        mpFontCache->Release( mpFontEntry );
+    if( mpFontInstance )
+        mpFontCache->Release( mpFontInstance );
 
     // remove cached results of GetDevFontList/GetDevSizeList
     // TODO: use smart pointers for them
-    delete mpGetDevFontList;
-    mpGetDevFontList = nullptr;
+    delete mpDeviceFontList;
+    mpDeviceFontList = nullptr;
 
-    delete mpGetDevSizeList;
-    mpGetDevSizeList = nullptr;
+    delete mpDeviceFontSizeList;
+    mpDeviceFontSizeList = nullptr;
 
     // release ImplFontCache specific to this OutputDevice
     // TODO: refcount ImplFontCache

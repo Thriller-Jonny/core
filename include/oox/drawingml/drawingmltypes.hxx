@@ -21,20 +21,25 @@
 #define INCLUDED_OOX_DRAWINGML_DRAWINGMLTYPES_HXX
 
 #include <memory>
-#include <com/sun/star/style/TabAlign.hpp>
-#include <com/sun/star/drawing/TextVerticalAdjust.hpp>
-#include <com/sun/star/drawing/Hatch.hpp>
-#include <com/sun/star/geometry/IntegerRectangle2D.hpp>
+
 #include <com/sun/star/awt/Point.hpp>
 #include <com/sun/star/awt/Size.hpp>
-#include <com/sun/star/xml/sax/XFastAttributeList.hpp>
-
+#include <com/sun/star/drawing/TextVerticalAdjust.hpp>
+#include <com/sun/star/geometry/IntegerRectangle2D.hpp>
+#include <com/sun/star/style/TabAlign.hpp>
+#include <com/sun/star/uno/Reference.hxx>
 #include <oox/dllapi.h>
 #include <oox/helper/helper.hxx>
+#include <rtl/ustring.hxx>
+#include <sal/types.h>
+
+namespace com { namespace sun { namespace star {
+    namespace drawing { struct Hatch; }
+    namespace xml { namespace sax { class XFastAttributeList; } }
+} } }
 
 namespace oox {
 namespace drawingml {
-
 
 
 const sal_Int32 PER_PERCENT     = 1000;
@@ -42,7 +47,6 @@ const sal_Int32 MAX_PERCENT     = 100 * PER_PERCENT;
 
 const sal_Int32 PER_DEGREE      = 60000;
 const sal_Int32 MAX_DEGREE      = 360 * PER_DEGREE;
-
 
 
 struct LineProperties;
@@ -60,8 +64,6 @@ typedef std::shared_ptr< Shape3DProperties > Shape3DPropertiesPtr;
 struct TextCharacterProperties;
 typedef std::shared_ptr< TextCharacterProperties > TextCharacterPropertiesPtr;
 
-struct TextBodyProperties;
-
 struct EffectProperties;
 typedef std::shared_ptr< EffectProperties > EffectPropertiesPtr;
 
@@ -78,14 +80,12 @@ class Theme;
 typedef std::shared_ptr< Theme > ThemePtr;
 
 
-
 namespace table {
 
 class TableProperties;
 typedef std::shared_ptr< TableProperties > TablePropertiesPtr;
 
 } // namespace table
-
 
 
 /** converts the attributes from an CT_TLPoint into an awt Point with 1/1000% */
@@ -141,7 +141,6 @@ OOX_DLLPUBLIC const char* GetTextVerticalAdjust( css::drawing::TextVerticalAdjus
 const char* GetHatchPattern( const css::drawing::Hatch& rHatch );
 
 
-
 // CT_IndexRange
 struct IndexRange {
     sal_Int32 start;
@@ -150,7 +149,6 @@ struct IndexRange {
 
 /** retrieve the content of CT_IndexRange */
 IndexRange GetIndexRange( const css::uno::Reference< css::xml::sax::XFastAttributeList >& xAttributes );
-
 
 
 const sal_Int32 EMU_PER_HMM = 360;      /// 360 EMUs per 1/100 mm.
@@ -169,7 +167,6 @@ inline sal_Int32 convertEmuToHmm( sal_Int64 nValue )
 }
 
 
-
 /** A structure for a point with 64-bit integer components. */
 struct EmuPoint
 {
@@ -179,7 +176,6 @@ struct EmuPoint
                  EmuPoint() : X( 0 ), Y( 0 ) {}
     explicit     EmuPoint( sal_Int64 nX, sal_Int64 nY ) : X( nX ), Y( nY ) {}
 };
-
 
 
 /** A structure for a size with 64-bit integer components. */
@@ -193,7 +189,6 @@ struct EmuSize
 };
 
 
-
 /** A structure for a rectangle with 64-bit integer components. */
 struct EmuRectangle : public EmuPoint, public EmuSize
 {
@@ -204,7 +199,6 @@ struct EmuRectangle : public EmuPoint, public EmuSize
     void         setPos( const EmuPoint& rPos ) { static_cast< EmuPoint& >( *this ) = rPos; }
     void         setSize( const EmuSize& rSize ) { static_cast< EmuSize& >( *this ) = rSize; }
 };
-
 
 
 } // namespace drawingml

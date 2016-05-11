@@ -304,7 +304,7 @@ sal_uInt8 maWW8_FFN[6];
 public:
      wwFont( const OUString &rFamilyName, FontPitch ePitch, FontFamily eFamily,
         rtl_TextEncoding eChrSet);
-    bool Write( SvStream *pTableStram ) const;
+    void Write( SvStream *pTableStram ) const;
     void WriteDocx( DocxAttributeOutput* rAttrOutput ) const;
     void WriteRtf( const RtfAttributeOutput* rAttrOutput ) const;
     OUString GetFamilyName() const { return OUString( msFamilyNm ); }
@@ -580,7 +580,7 @@ public:
     /// Iterate through the nodes and call the appropriate OutputNode() on them.
     void WriteText();
 
-    /// Return whether cuurently exported node is in table.
+    /// Return whether currently exported node is in table.
     bool IsInTable() const;
 
     /// Set the pCurPam appropriately and call WriteText().
@@ -608,9 +608,9 @@ public:
         return m_aFontHelper.GetId(rFont);
     }
     /// @overload
-    sal_uInt16 GetId( const wwFont& rFont)
+    void GetId( const wwFont& rFont)
     {
-        return m_aFontHelper.GetId(rFont);
+        m_aFontHelper.GetId(rFont);
     }
 
     const SfxPoolItem& GetItem( sal_uInt16 nWhich ) const;
@@ -677,7 +677,7 @@ public:
 
     virtual void AppendBookmarks( const SwTextNode& rNd, sal_Int32 nAktPos, sal_Int32 nLen ) = 0;
 
-    virtual void AppendBookmark( const OUString& rName, bool bSkip = false ) = 0;
+    virtual void AppendBookmark( const OUString& rName ) = 0;
 
     virtual void AppendAnnotationMarks( const SwTextNode& rNd, sal_Int32 nAktPos, sal_Int32 nLen ) = 0;
 
@@ -853,8 +853,7 @@ protected:
 
     /// Find the nearest annotation mark from the current position.
     ///
-    /// Returns false when there is no annotation mark.
-    bool NearestAnnotationMark( sal_Int32& rNearest, const sal_Int32 nAktPos, bool bNextPositionOnly );
+    void NearestAnnotationMark( sal_Int32& rNearest, const sal_Int32 nAktPos, bool bNextPositionOnly );
 
     void GetSortedAnnotationMarks( const SwTextNode& rNd, sal_Int32 nAktPos, sal_Int32 nLen );
 
@@ -865,6 +864,8 @@ protected:
 
     void SetCurPam(sal_uLong nStt, sal_uLong nEnd);
 
+    /// Get background color of the document, if there is one.
+    boost::optional<SvxBrushItem> getBackground();
     /// Populates m_vecBulletPic with all the bullet graphics used by numberings.
     int CollectGrfsOfBullets();
     /// Write the numbering picture bullets.
@@ -1036,7 +1037,7 @@ public:
         tools::SvRef<SotStorage> xObjStg, OUString &rStorageName, SwOLENode *pOLENd);
 
     virtual void AppendBookmarks( const SwTextNode& rNd, sal_Int32 nAktPos, sal_Int32 nLen ) override;
-    virtual void AppendBookmark( const OUString& rName, bool bSkip = false ) override;
+    virtual void AppendBookmark( const OUString& rName ) override;
 
     virtual void AppendAnnotationMarks( const SwTextNode& rNd, sal_Int32 nAktPos, sal_Int32 nLen ) override;
 
@@ -1048,7 +1049,7 @@ public:
     void MoveFieldMarks(WW8_CP nFrom, WW8_CP nTo);
 
     void WriteAsStringTable(const ::std::vector<OUString>&, sal_Int32& rfcSttbf,
-        sal_Int32& rlcbSttbf, sal_uInt16 nExtraLen = 0);
+        sal_Int32& rlcbSttbf);
 
     virtual sal_uLong ReplaceCr( sal_uInt8 nChar ) override;
 
@@ -1101,12 +1102,12 @@ public:
     SwTwips CurrentPageWidth(SwTwips &rLeft, SwTwips &rRight) const;
 
     /// Nasty swap for bidi if necessary
-    bool MiserableRTLFrameFormatHack(SwTwips &rLeft, SwTwips &rRight,
+    void MiserableRTLFrameFormatHack(SwTwips &rLeft, SwTwips &rRight,
         const ww8::Frame &rFrameFormat);
 
     void InsUInt16( sal_uInt16 n )      { SwWW8Writer::InsUInt16( *pO, n ); }
     void InsUInt32( sal_uInt32 n )      { SwWW8Writer::InsUInt32( *pO, n ); }
-    void WriteStringAsPara( const OUString& rText, sal_uInt16 nStyleId = 0 );
+    void WriteStringAsPara( const OUString& rText );
 
     /// Setup the exporter.
     WW8Export( SwWW8Writer *pWriter,
@@ -1311,7 +1312,7 @@ public:
     WW8_WrPlcField( sal_uInt16 nStructSz, sal_uInt8 nTTyp )
         : WW8_WrPlc1( nStructSz ), nTextTyp( nTTyp ), nResults(0)
     {}
-    bool Write( WW8Export& rWrt );
+    void Write( WW8Export& rWrt );
     void ResultAdded() { ++nResults; }
     sal_uInt16 ResultCount() const { return nResults; }
 };
@@ -1324,7 +1325,7 @@ private:
 public:
     WW8_WrMagicTable() : WW8_WrPlc1( 4 ) {Append(0,0);}
     void Append( WW8_CP nCp, sal_uLong nData );
-    bool Write( WW8Export& rWrt );
+    void Write( WW8Export& rWrt );
 };
 
 class GraphicDetails
@@ -1514,6 +1515,7 @@ public:
 class MSWordStyles
 {
     MSWordExportBase& m_rExport;
+    sal_uInt16 m_aHeadingParagraphStyles[MAXLEVEL];
     SwFormat** m_pFormatA; ///< Slot <-> Character and paragraph style array (0 for list styles).
     sal_uInt16 m_nUsedSlots;
     bool m_bListStyles; ///< If list styles are requested to be exported as well.
@@ -1565,6 +1567,7 @@ public:
     const SwFormat* GetSwFormat(sal_uInt16 nId) const { return m_pFormatA[nId]; }
     /// Get numbering rule of the nId-th style
     const SwNumRule* GetSwNumRule(sal_uInt16 nId) const;
+    sal_uInt16 GetHeadingParagraphStyleId(sal_uInt16 nLevel) const { return m_aHeadingParagraphStyles[ nLevel ]; }
 };
 
 #define MSWORD_MAX_STYLES_LIMIT 4091

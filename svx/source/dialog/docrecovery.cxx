@@ -57,7 +57,7 @@
 #include <unotools/pathoptions.hxx>
 #include "svtools/treelistentry.hxx"
 #include <officecfg/Office/Recovery.hxx>
-
+#include <o3tl/make_unique.hxx>
 namespace svx{
     namespace DocRecovery{
 
@@ -79,7 +79,7 @@ RecoveryCore::~RecoveryCore()
 }
 
 
-css::uno::Reference< css::uno::XComponentContext > RecoveryCore::getComponentContext()
+const css::uno::Reference< css::uno::XComponentContext >& RecoveryCore::getComponentContext()
 {
     return m_xContext;
 }
@@ -120,13 +120,13 @@ void RecoveryCore::saveBrokenTempEntries(const OUString& rPath)
     css::util::URL aCopyURL = impl_getParsedURL(RECOVERY_CMD_DO_ENTRY_BACKUP);
     css::uno::Sequence< css::beans::PropertyValue > lCopyArgs(3);
     lCopyArgs[0].Name    = PROP_DISPATCHASYNCHRON;
-    lCopyArgs[0].Value <<= sal_False;
+    lCopyArgs[0].Value <<= false;
     lCopyArgs[1].Name    = PROP_SAVEPATH;
     lCopyArgs[1].Value <<= rPath;
     lCopyArgs[2].Name    = PROP_ENTRYID;
-    // lCopyArgs[2].Value will be changed during next loop ...
+    // lCopyArgs[2].Value will be changed during next loop...
 
-    // work on a copied list only ...
+    // work on a copied list only...
     // Reason: We will get notifications from the core for every
     // changed or removed element. And that will change our m_lURLs list.
     // That's not a good idea, if we use a stl iterator inbetween .-)
@@ -158,7 +158,7 @@ void RecoveryCore::saveAllTempEntries(const OUString& rPath)
     css::util::URL aCopyURL = impl_getParsedURL(RECOVERY_CMD_DO_ENTRY_BACKUP);
     css::uno::Sequence< css::beans::PropertyValue > lCopyArgs(3);
     lCopyArgs[0].Name    = PROP_DISPATCHASYNCHRON;
-    lCopyArgs[0].Value <<= sal_False;
+    lCopyArgs[0].Value <<= false;
     lCopyArgs[1].Name    = PROP_SAVEPATH;
     lCopyArgs[1].Value <<= rPath;
     lCopyArgs[2].Name    = PROP_ENTRYID;
@@ -192,7 +192,7 @@ void RecoveryCore::forgetBrokenTempEntries()
     css::util::URL aRemoveURL = impl_getParsedURL(RECOVERY_CMD_DO_ENTRY_CLEANUP);
     css::uno::Sequence< css::beans::PropertyValue > lRemoveArgs(2);
     lRemoveArgs[0].Name    = PROP_DISPATCHASYNCHRON;
-    lRemoveArgs[0].Value <<= sal_False;
+    lRemoveArgs[0].Value <<= false;
     lRemoveArgs[1].Name    = PROP_ENTRYID;
     // lRemoveArgs[1].Value will be changed during next loop ...
 
@@ -224,7 +224,7 @@ void RecoveryCore::forgetAllRecoveryEntries()
     css::util::URL aRemoveURL = impl_getParsedURL(RECOVERY_CMD_DO_ENTRY_CLEANUP);
     css::uno::Sequence< css::beans::PropertyValue > lRemoveArgs(2);
     lRemoveArgs[0].Name    = PROP_DISPATCHASYNCHRON;
-    lRemoveArgs[0].Value <<= sal_False;
+    lRemoveArgs[0].Value <<= false;
     lRemoveArgs[1].Name    = PROP_ENTRYID;
     // lRemoveArgs[1].Value will be changed during next loop ...
 
@@ -253,7 +253,7 @@ void RecoveryCore::forgetBrokenRecoveryEntries()
     css::util::URL aRemoveURL = impl_getParsedURL(RECOVERY_CMD_DO_ENTRY_CLEANUP);
     css::uno::Sequence< css::beans::PropertyValue > lRemoveArgs(2);
     lRemoveArgs[0].Name    = PROP_DISPATCHASYNCHRON;
-    lRemoveArgs[0].Value <<= sal_False;
+    lRemoveArgs[0].Value <<= false;
     lRemoveArgs[1].Name    = PROP_ENTRYID;
     // lRemoveArgs[1].Value will be changed during next loop ...
 
@@ -298,7 +298,7 @@ void RecoveryCore::doEmergencySavePrepare()
 
     css::uno::Sequence< css::beans::PropertyValue > lArgs(1);
     lArgs[0].Name    = PROP_DISPATCHASYNCHRON;
-    lArgs[0].Value <<= sal_False;
+    lArgs[0].Value <<= false;
 
     m_xRealCore->dispatch(aURL, lArgs);
 }
@@ -315,7 +315,7 @@ void RecoveryCore::doEmergencySave()
     lArgs[0].Name    = PROP_STATUSINDICATOR;
     lArgs[0].Value <<= m_xProgress;
     lArgs[1].Name    = PROP_DISPATCHASYNCHRON;
-    lArgs[1].Value <<= sal_True;
+    lArgs[1].Value <<= true;
 
     m_xRealCore->dispatch(aURL, lArgs);
 }
@@ -332,7 +332,7 @@ void RecoveryCore::doRecovery()
     lArgs[0].Name    = PROP_STATUSINDICATOR;
     lArgs[0].Value <<= m_xProgress;
     lArgs[1].Name    = PROP_DISPATCHASYNCHRON;
-    lArgs[1].Value <<= sal_True;
+    lArgs[1].Value <<= true;
 
     m_xRealCore->dispatch(aURL, lArgs);
 }
@@ -553,7 +553,7 @@ PluginProgress::PluginProgress(      vcl::Window*                               
 {
     m_pPlugProgressWindow = VclPtr<PluginProgressWindow>::Create(pParent, static_cast< css::lang::XComponent* >(this));
     css::uno::Reference< css::awt::XWindow > xProgressWindow = VCLUnoHelper::GetInterface(m_pPlugProgressWindow);
-    m_xProgressFactory = css::task::StatusIndicatorFactory::createWithWindow(xContext, xProgressWindow, sal_False/*DisableReschedule*/, sal_True/*AllowParentShow*/);
+    m_xProgressFactory = css::task::StatusIndicatorFactory::createWithWindow(xContext, xProgressWindow, false/*DisableReschedule*/, true/*AllowParentShow*/);
     m_xProgress = m_xProgressFactory->createStatusIndicator();
 }
 
@@ -652,11 +652,11 @@ SaveDialog::SaveDialog(vcl::Window* pParent, RecoveryCore* pCore)
     // fill listbox with current open documents
     m_pFileListLB->Clear();
 
-    TURLList&                pURLs = m_pCore->getURLListAccess();
+    TURLList&                rURLs = m_pCore->getURLListAccess();
     TURLList::const_iterator pIt;
 
-    for (  pIt  = pURLs.begin();
-           pIt != pURLs.end()  ;
+    for (  pIt  = rURLs.begin();
+           pIt != rURLs.end()  ;
          ++pIt                  )
     {
         const TURLInfo& rInfo = *pIt;
@@ -756,10 +756,8 @@ void SaveProgressDialog::end()
 }
 
 
-RecovDocListEntry::RecovDocListEntry(      SvTreeListEntry* pEntry,
-                                           sal_uInt16       nFlags,
-                                     const OUString&        sText )
-    : SvLBoxString( pEntry, nFlags, sText )
+RecovDocListEntry::RecovDocListEntry( const OUString&        sText )
+    : SvLBoxString( sText )
 {
 }
 
@@ -845,9 +843,7 @@ void RecovDocList::InitEntry(SvTreeListEntry* pEntry,
     DBG_ASSERT( TabCount() == 2, "*RecovDocList::InitEntry(): structure missmatch" );
 
     SvLBoxString&       rCol = static_cast<SvLBoxString&>(pEntry->GetItem(2));
-    std::unique_ptr<RecovDocListEntry> p(
-            new RecovDocListEntry(pEntry, 0, rCol.GetText()));
-    pEntry->ReplaceItem(std::move(p), 2);
+    pEntry->ReplaceItem(o3tl::make_unique<RecovDocListEntry>(rCol.GetText()), 2);
 }
 
 
@@ -902,10 +898,10 @@ RecoveryDialog::RecoveryDialog(vcl::Window* pParent, RecoveryCore* pCore)
     m_pCancelBtn->SetClickHdl( LINK( this, RecoveryDialog, CancelButtonHdl ) );
 
     // fill list box first time
-    TURLList&                pURLList = m_pCore->getURLListAccess();
+    TURLList&                rURLList = m_pCore->getURLListAccess();
     TURLList::const_iterator pIt;
-    for (  pIt  = pURLList.begin();
-           pIt != pURLList.end()  ;
+    for (  pIt  = rURLList.begin();
+           pIt != rURLList.end()  ;
          ++pIt                     )
     {
         const TURLInfo& rInfo = *pIt;
@@ -1279,10 +1275,10 @@ void BrokenRecoveryDialog::dispose()
 void BrokenRecoveryDialog::impl_refresh()
 {
                              m_bExecutionNeeded = false;
-    TURLList&                pURLList           = m_pCore->getURLListAccess();
+    TURLList&                rURLList           = m_pCore->getURLListAccess();
     TURLList::const_iterator pIt;
-    for (  pIt  = pURLList.begin();
-           pIt != pURLList.end()  ;
+    for (  pIt  = rURLList.begin();
+           pIt != rURLList.end()  ;
          ++pIt                     )
     {
         const TURLInfo& rInfo = *pIt;
@@ -1318,7 +1314,7 @@ bool BrokenRecoveryDialog::isExecutionNeeded()
 }
 
 
-OUString BrokenRecoveryDialog::getSaveDirURL()
+const OUString& BrokenRecoveryDialog::getSaveDirURL()
 {
     return m_sSavePath;
 }

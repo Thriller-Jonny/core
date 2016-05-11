@@ -28,27 +28,36 @@
 // Public       (RSC_NOTYPE + 0x300) bis (RSC_NOTYPE + 0x3FF)
 
 //========== S F X =======================================
-enum SfxStyleFamily { SFX_STYLE_FAMILY_CHAR    = 1,
-                      SFX_STYLE_FAMILY_PARA    = 2,
-                      SFX_STYLE_FAMILY_FRAME   = 4,
-                      SFX_STYLE_FAMILY_PAGE    = 8,
-                      SFX_STYLE_FAMILY_PSEUDO  = 16,
-                      SFX_STYLE_FAMILY_ALL   = 0x7fff
-                      };
+// This is used as a flags enum in sw/, but only there,
+// so I don't pull in o3tl::typed_flags here
+enum class SfxStyleFamily {
+    None    = 0x00,
+    Char    = 0x01,
+    Para    = 0x02,
+    Frame   = 0x04,
+    Page    = 0x08,
+    Pseudo  = 0x10,
+    All     = 0x7fff
+};
 
 
 // SfxTemplate
-#define RSC_SFX_STYLE_ITEM_LIST         0x1
-#define RSC_SFX_STYLE_ITEM_BITMAP       0x2
-#define RSC_SFX_STYLE_ITEM_TEXT         0x4
-#define RSC_SFX_STYLE_ITEM_HELPTEXT     0x8
-#define RSC_SFX_STYLE_ITEM_STYLEFAMILY  0x10
-#define RSC_SFX_STYLE_ITEM_IMAGE        0x20
+enum class SfxStyleItem {
+    None         = 0x00,
+    List         = 0x01,
+    Bitmap       = 0x02,
+    Text         = 0x04,
+    HelpText     = 0x08,
+    StyleFamily  = 0x10,
+    Image        = 0x20
+};
 
 
 // SfxSlotInfo
-#define RSC_SFX_SLOT_INFO_SLOTNAME      0x1
-#define RSC_SFX_SLOT_INFO_HELPTEXT      0x2
+enum class SfxSlotInfo {
+    SlotName  = 0x1,
+    HelpText  = 0x2
+};
 
 
 #endif

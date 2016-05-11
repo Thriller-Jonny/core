@@ -51,7 +51,6 @@
 #include "dp_extensionmanager.hxx"
 #include "dp_commandenvironments.hxx"
 #include "dp_properties.hxx"
-#include <boost/bind.hpp>
 
 #include <list>
 #include <algorithm>
@@ -110,9 +109,8 @@ void writeLastModified(OUString & url, Reference<ucb::XCommandEnvironment> const
         OString stamp("1" );
         Reference<css::io::XInputStream> xData(
             ::xmlscript::createInputStream(
-                ::rtl::ByteSequence(
                     reinterpret_cast<sal_Int8 const *>(stamp.getStr()),
-                    stamp.getLength() ) ) );
+                    stamp.getLength() ) );
         ucbStamp.writeStream( xData, true /* replace existing */ );
     }
     catch(...)
@@ -161,7 +159,6 @@ ExtensionRemoveGuard::~ExtensionRemoveGuard()
 namespace dp_manager {
 
 
-
 //ToDo: bundled extension
 ExtensionManager::ExtensionManager( Reference< uno::XComponentContext > const& xContext) :
     ::cppu::WeakComponentImplHelper< css::deployment::XExtensionManager >(getMutex()),
@@ -174,7 +171,6 @@ ExtensionManager::ExtensionManager( Reference< uno::XComponentContext > const& x
     m_repositoryNames.push_back("shared");
     m_repositoryNames.push_back("bundled");
 }
-
 
 
 ExtensionManager::~ExtensionManager()
@@ -1495,8 +1491,8 @@ void ExtensionManager::fireModified()
         cppu::UnoType<util::XModifyListener>::get() );
     if (pContainer != nullptr) {
         pContainer->forEach<util::XModifyListener>(
-            boost::bind(&util::XModifyListener::modified, _1,
-                        lang::EventObject(static_cast<OWeakObject *>(this))) );
+            [this] (uno::Reference<util::XModifyListener> const& xListener)
+                { return xListener->modified(lang::EventObject(static_cast<OWeakObject *>(this))); });
     }
 }
 

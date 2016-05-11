@@ -56,7 +56,6 @@
 #include <editeng/editeng.hxx>
 
 using namespace ::com::sun::star;
-using ::com::sun::star::uno::Reference;
 
 namespace sd {
 
@@ -820,11 +819,10 @@ bool FuPoor::KeyInput(const KeyEvent& rKEvt)
                         // try to activate textedit mode for the selected object
                         SfxStringItem aInputString(SID_ATTR_CHAR, OUString(rKEvt.GetCharCode()));
 
-                        mpViewShell->GetViewFrame()->GetDispatcher()->Execute(
+                        mpViewShell->GetViewFrame()->GetDispatcher()->ExecuteList(
                             SID_ATTR_CHAR,
                             SfxCallMode::ASYNCHRON,
-                            &aInputString,
-                            0L);
+                            { &aInputString });
 
                         // consumed
                         bReturn = true;
@@ -869,11 +867,10 @@ bool FuPoor::KeyInput(const KeyEvent& rKEvt)
                         mpView->MarkObj(pCandidate, mpView->GetSdrPageView());
                         SfxStringItem aInputString(SID_ATTR_CHAR, OUString(rKEvt.GetCharCode()));
 
-                        mpViewShell->GetViewFrame()->GetDispatcher()->Execute(
+                        mpViewShell->GetViewFrame()->GetDispatcher()->ExecuteList(
                             SID_ATTR_CHAR,
                             SfxCallMode::ASYNCHRON,
-                            &aInputString,
-                            0L);
+                            { &aInputString });
 
                         // consumed
                         bReturn = true;
@@ -1123,7 +1120,27 @@ bool FuPoor::cancel()
 // #i33136#
 bool FuPoor::doConstructOrthogonal() const
 {
+    // Check whether a media object is selected
+    bool bResizeKeepRatio = false;
+    // tdf#89758 Avoid interactive crop preview from being proportionally scaled by default.
+    if (mpView->AreObjectsMarked() && mpView->GetDragMode() != SDRDRAG_CROP)
+    {
+        const SdrMarkList& rMarkList = mpView->GetMarkedObjectList();
+        if (rMarkList.GetMarkCount() == 1)
+        {
+            sal_uInt16 aObjIdentifier = rMarkList.GetMark(0)->GetMarkedSdrObj()->GetObjIdentifier();
+            bResizeKeepRatio = aObjIdentifier == OBJ_GRAF ||
+                               aObjIdentifier == OBJ_MEDIA ||
+                               aObjIdentifier == OBJ_OLE2;
+        }
+    }
+    SdrHdl* pHdl = mpView->PickHandle(aMDPos);
+    // Resize proportionally when media is selected and the user drags on a corner
+    if (pHdl)
+        bResizeKeepRatio = bResizeKeepRatio && pHdl->IsCornerHdl();
+
     return (
+        bResizeKeepRatio ||
         SID_DRAW_XLINE == nSlotId ||
         SID_DRAW_CIRCLEARC == nSlotId ||
         SID_DRAW_SQUARE == nSlotId ||

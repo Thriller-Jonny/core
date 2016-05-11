@@ -109,14 +109,12 @@ struct SwDSParam : public SwDBData
     css::uno::Sequence<  css::uno::Any >               aSelection;
     bool bScrollable;
     bool bEndOfDB;
-    bool bAfterSelection;
     long nSelectionIndex;
 
     SwDSParam(const SwDBData& rData) :
         SwDBData(rData),
         bScrollable(false),
         bEndOfDB(false),
-        bAfterSelection(false),
         nSelectionIndex(0)
         {}
 
@@ -128,59 +126,94 @@ struct SwDSParam : public SwDBData
         aSelection(rSelection),
         bScrollable(true),
         bEndOfDB(false),
-        bAfterSelection(false),
         nSelectionIndex(0)
         {}
 
-        void CheckEndOfDB()
-        {
-            if(bEndOfDB)
-                bAfterSelection = true;
-        }
+    inline bool HasValidRecord() const
+        { return( !bEndOfDB && xResultSet.is() ); }
 };
+
 typedef std::vector<std::unique_ptr<SwDSParam>> SwDSParams_t;
 
 struct SwMergeDescriptor
 {
-    DBManagerOptions                                    nMergeType;
+    const DBManagerOptions                              nMergeType;
     SwWrtShell&                                         rSh;
-    const svx::ODataAccessDescriptor&                 rDescriptor;
-    OUString                                            sSaveToFilter; ///< export filter to save resulting files
+    const svx::ODataAccessDescriptor&                   rDescriptor;
+
+    /**
+     * Create a single or multiple results
+     *
+     * This currently just affects FILE and PRINTER, as EMAIL is always
+     * multiple and SHELL is always single.
+     */
+    bool                                                bCreateSingleFile;
+
+    /**
+     * @defgroup save Export filter settings
+     * @addtogroup save
+     * @{ */
+    OUString                                            sSaveToFilter;
     OUString                                            sSaveToFilterOptions;
     css::uno::Sequence< css::beans::PropertyValue >     aSaveToFilterData;
+    /** @} */
 
+    /**
+     * @defgroup file Mail merge as File settings
+     * @addtogroup file
+     * @{ */
+    OUString                                            sPath;
+    /** @} */
+
+    /**
+     * @defgroup email Mail merge as eMail settings
+     * @addtogroup email
+     * @{ */
     OUString                                            sSubject;
-    OUString                                            sAddressFromColumn;
     OUString                                            sMailBody;
     OUString                                            sAttachmentName;
     css::uno::Sequence< OUString >                      aCopiesTo;
     css::uno::Sequence< OUString >                      aBlindCopiesTo;
-
     css::uno::Reference< css::mail::XSmtpService >      xSmtpServer;
+    bool                                                bSendAsHTML;
+    bool                                                bSendAsAttachment;
+    /** @} */
 
-    bool                                            bSendAsHTML;
-    bool                                            bSendAsAttachment;
+    /**
+     * @addtogroup file email
+     * @{ */
 
-    bool                                            bPrintAsync;
-    bool                                            bCreateSingleFile;
-    bool                                            bSubjectIsFilename;
+    /** DB column to fetch EMail of Filename from
+     */
+    OUString                                            sDBcolumn;
+
+    /** @} */
+
+    /**
+     * @defgroup print Mail merge to Printer
+     * @addtogroup print
+     * @{ */
+    bool                                                bPrintAsync;
+    css::uno::Sequence<  css::beans::PropertyValue >    aPrintOptions;
+    /** @} */
 
     SwMailMergeConfigItem*                              pMailMergeConfigItem;
 
-    css::uno::Sequence<  css::beans::PropertyValue >  aPrintOptions;
-
-    SwMergeDescriptor( DBManagerOptions nType, SwWrtShell& rShell, svx::ODataAccessDescriptor& rDesc ) :
+    SwMergeDescriptor( const DBManagerOptions nType,
+                       SwWrtShell& rShell,
+                       const svx::ODataAccessDescriptor& rDesc ) :
         nMergeType(nType),
         rSh(rShell),
         rDescriptor(rDesc),
+        bCreateSingleFile( false ),
         bSendAsHTML( true ),
         bSendAsAttachment( false ),
         bPrintAsync( false ),
-        bCreateSingleFile( false ),
-        bSubjectIsFilename( false ),
-        pMailMergeConfigItem(nullptr)
-        {}
-
+        pMailMergeConfigItem( nullptr )
+    {
+        if( nType == DBMGR_MERGE_SHELL )
+            bCreateSingleFile = true;
+    }
 };
 
 struct SwDBManager_Impl;
@@ -192,9 +225,12 @@ class SW_DLLPUBLIC SwDBManager
 {
 friend class SwConnectionDisposedListener_Impl;
 
-    OUString            sEMailAddrField;      ///< Mailing: Column name of email address.
-    OUString            sSubject;           ///< Mailing: Subject
-    bool            bCancel;            ///< Mail merge canceled.
+    enum class MergeStatus
+    {
+        OK = 0, CANCEL, ERROR
+    };
+
+    MergeStatus     m_aMergeStatus;     ///< current / last merge status
     bool            bInitDBFields : 1;
     bool            bInMerge    : 1;    ///< merge process active
     bool            bMergeSilent : 1;   ///< suppress display of dialogs/boxes (used when called over API)
@@ -220,10 +256,13 @@ friend class SwConnectionDisposedListener_Impl;
     /// Insert a single data record as text into document.
     SAL_DLLPRIVATE void ImportDBEntry(SwWrtShell* pSh);
 
-    /// merge to file _and_ merge to e-Mail
-    SAL_DLLPRIVATE bool          MergeMailFiles(SwWrtShell* pSh,
-                                        const SwMergeDescriptor& rMergeDescriptor, vcl::Window* pParent );
-    SAL_DLLPRIVATE bool          ToNextRecord(SwDSParam* pParam);
+    /// Run the mail merge for defined modes, except DBMGR_MERGE
+    SAL_DLLPRIVATE bool MergeMailFiles( SwWrtShell* pSh,
+                                        const SwMergeDescriptor& rMergeDescriptor,
+                                        vcl::Window* pParent );
+
+    SAL_DLLPRIVATE bool ToNextMergeRecord();
+    SAL_DLLPRIVATE bool IsValidMergeRecord() const;
 
     SwDBManager(SwDBManager const&) = delete;
     SwDBManager& operator=(SwDBManager const&) = delete;
@@ -250,27 +289,26 @@ public:
     inline void     SetMergeSilent( bool bVal )     { bMergeSilent = bVal; }
 
     /// Merging of data records into fields.
-    bool            MergeNew( const SwMergeDescriptor& rMergeDesc, vcl::Window* pParent = nullptr );
-    static bool     Merge(SwWrtShell* pSh);
+    bool            Merge( const SwMergeDescriptor& rMergeDesc, vcl::Window* pParent = nullptr );
     void            MergeCancel();
+
+    inline bool     IsMergeOk()     { return MergeStatus::OK     == m_aMergeStatus; };
+    inline bool     IsMergeCancel() { return MergeStatus::CANCEL <= m_aMergeStatus; };
+    inline bool     IsMergeError()  { return MergeStatus::ERROR  <= m_aMergeStatus; };
 
     /// Initialize data fields that lack name of database.
     inline bool     IsInitDBFields() const  { return bInitDBFields; }
     inline void     SetInitDBFields(bool b) { bInitDBFields = b;    }
-
-    /// Mailing: Set email data.
-    inline void     SetEMailColumn(const OUString& sColName) { sEMailAddrField = sColName; }
-    inline void     SetSubject(const OUString& sSbj) { sSubject = sSbj; }
 
     /// Fill listbox with all table names of a database.
     bool            GetTableNames(ListBox* pListBox, const OUString& rDBName );
 
     /// Fill listbox with all column names of a database table.
     void            GetColumnNames(ListBox* pListBox,
-                            const OUString& rDBName, const OUString& rTableName, bool bAppend = false);
+                            const OUString& rDBName, const OUString& rTableName);
     static void GetColumnNames(ListBox* pListBox,
                             css::uno::Reference< css::sdbc::XConnection> xConnection,
-                            const OUString& rTableName, bool bAppend = false);
+                            const OUString& rTableName);
 
     static sal_uLong GetColumnFormat( css::uno::Reference< css::sdbc::XDataSource> xSource,
                             css::uno::Reference< css::sdbc::XConnection> xConnection,
@@ -290,8 +328,7 @@ public:
     inline bool     IsInMerge() const   { return bInMerge; }
 
     void            ExecuteFormLetter(SwWrtShell& rSh,
-                        const css::uno::Sequence< css::beans::PropertyValue>& rProperties,
-                        bool bWithDataSourceBrowser = false);
+                        const css::uno::Sequence< css::beans::PropertyValue>& rProperties);
 
     static void     InsertText(SwWrtShell& rSh,
                         const css::uno::Sequence< css::beans::PropertyValue>& rProperties);
@@ -301,8 +338,7 @@ public:
                                     const OUString& rTableOrQuery, bool bMergeShell);
 
     /// open the source while fields are updated - for the calculator only!
-    bool            OpenDataSource(const OUString& rDataSource, const OUString& rTableOrQuery,
-                        sal_Int32 nCommandType = -1, bool bCreate = false);
+    bool            OpenDataSource(const OUString& rDataSource, const OUString& rTableOrQuery);
     sal_uInt32      GetSelectedRecordId(const OUString& rDataSource, const OUString& rTableOrQuery, sal_Int32 nCommandType = -1);
     bool            GetColumnCnt(const OUString& rSourceName, const OUString& rTableName,
                             const OUString& rColumnName, sal_uInt32 nAbsRecordId, long nLanguage,
@@ -312,8 +348,8 @@ public:
     css::uno::Reference< css::sdbc::XConnection>
                     RegisterConnection(OUString const& rSource);
 
-    const SwDSParam* CreateDSData(const SwDBData& rData)
-                        {return FindDSData(rData, true);}
+    void            CreateDSData(const SwDBData& rData)
+                        { FindDSData(rData, true); }
     const SwDSParams_t& GetDSParamArray() const { return m_DataSourceParams; }
 
     /// close all data sources - after fields were updated
@@ -322,11 +358,9 @@ public:
     bool            GetMergeColumnCnt(const OUString& rColumnName, sal_uInt16 nLanguage,
                                       OUString &rResult, double *pNumber);
     bool            FillCalcWithMergeData(SvNumberFormatter *pDocFormatter,
-                                          sal_uInt16 nLanguage, bool asString, SwCalc &aCalc);
-    bool            ToNextMergeRecord();
-    bool            ToNextRecord(const OUString& rDataSource, const OUString& rTableOrQuery, sal_Int32 nCommandType = -1);
+                                          sal_uInt16 nLanguage, SwCalc &aCalc);
+    bool            ToNextRecord(const OUString& rDataSource, const OUString& rTableOrQuery);
 
-    bool            ExistsNextRecord()const;
     sal_uInt32      GetSelectedRecordId();
     bool            ToRecordId(sal_Int32 nSet);
 
@@ -417,7 +451,7 @@ public:
                             );
 
     void setEmbeddedName(const OUString& rEmbeddedName, SwDocShell& rDocShell);
-    OUString getEmbeddedName() const;
+    const OUString& getEmbeddedName() const;
 
     static void StoreEmbeddedDataSource(const css::uno::Reference<css::frame::XStorable>& xStorable,
                                         const css::uno::Reference<css::embed::XStorage>& xStorage,

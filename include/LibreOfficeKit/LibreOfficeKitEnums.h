@@ -40,6 +40,41 @@ typedef enum
 }
 LibreOfficeKitTileMode;
 
+/** Optional features of LibreOfficeKit, in particular callbacks that block
+ *  LibreOfficeKit until the corresponding reply is received, which would
+ *  deadlock if the client does not support the feature.
+ *
+ *  @see lok::Office::setOptionalFeatures().
+ */
+typedef enum
+{
+    /**
+     * Handle LOK_CALLBACK_DOCUMENT_PASSWORD by prompting the user
+     * for a password.
+     *
+     * @see lok::Office::setDocumentPassword().
+     */
+    LOK_FEATURE_DOCUMENT_PASSWORD = (1ULL << 0),
+
+    /**
+     * Handle LOK_CALLBACK_DOCUMENT_PASSWORD_TO_MODIFY by prompting the user
+     * for a password.
+     *
+     * @see lok::Office::setDocumentPassword().
+     */
+    LOK_FEATURE_DOCUMENT_PASSWORD_TO_MODIFY = (1ULL << 1),
+}
+LibreOfficeKitOptionalFeatures;
+
+// This enumerates the types of callbacks emitted to a LibreOfficeKit
+// object's callback function or to a LibreOfficeKitDocument object's
+// callback function. No callback type will be emitted to both. It is a
+// bit unfortunate that the same enum contains both kinds of
+// callbacks.
+
+// TODO: We should really add some indication at the documentation for
+// each enum value telling which type of callback it is.
+
 typedef enum
 {
     /**
@@ -171,6 +206,7 @@ typedef enum
      *
      * {
      *     "searchString": "...",
+     *     "highlightAll": true|false, // this is a result of 'search all'
      *     "searchResultSelection": [
      *         {
      *             "part": "...",
@@ -221,7 +257,61 @@ typedef enum
     /**
      * The text content of the formula bar in Calc.
      */
-    LOK_CALLBACK_CELL_FORMULA
+    LOK_CALLBACK_CELL_FORMULA,
+
+    /**
+     * Loading a document requires a password.
+     *
+     * Loading the document is blocked until the password is provided via
+     * lok::Office::setDocumentPassword().  The document cannot be loaded
+     * without the password.
+     */
+    LOK_CALLBACK_DOCUMENT_PASSWORD,
+
+    /**
+     * Editing a document requires a password.
+     *
+     * Loading the document is blocked until the password is provided via
+     * lok::Office::setDocumentPassword().
+     */
+    LOK_CALLBACK_DOCUMENT_PASSWORD_TO_MODIFY,
+
+    /**
+     * An error happened.
+     *
+     * The payload returns information further identifying the error, like:
+     *
+     * {
+     *     "classification": "error" | "warning" | "info"
+     *     "kind": "network" etc.
+     *     "code": 403 | 404 | ...
+     *     "message": freeform description
+     * }
+     */
+    LOK_CALLBACK_ERROR,
+
+    /**
+     * Context menu structure
+     *
+     * Returns the structure of context menu.  Contains all the separators &
+     * submenus, example of the returned structure:
+     *
+     * {
+     *     "menu": [
+     *         { "text": "label text1", "type": "command", "command": ".uno:Something1", "enabled": "true" },
+     *         { "text": "label text2", "type": "command", "command": ".uno:Something2", "enabled": "false" },
+     *         { "type": "separator" },
+     *         { "text": "label text2", "type": "menu", "menu": [ { ... }, { ... }, ... ] },
+     *         ...
+     *     ]
+     * }
+     *
+     * The 'command' can additionally have a checkable status, like:
+     *
+     *     {"text": "label text3", "type": "command", "command": ".uno:Something3", "checktype": "checkmark|radio|auto", "checked": "true|false"}
+     */
+    LOK_CALLBACK_CONTEXT_MENU,
+
 }
 LibreOfficeKitCallbackType;
 

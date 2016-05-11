@@ -44,7 +44,6 @@
 #define PERS_PROPSET_SERVICE_NAME   "com.sun.star.ucb.PersistentPropertySet"
 
 
-
 struct UcbStore_Impl;
 
 class UcbStore : public cppu::WeakImplHelper <
@@ -88,7 +87,6 @@ public:
     const css::uno::Sequence< css::uno::Any >&
     getInitArgs() const;
 };
-
 
 
 struct PropertySetRegistry_Impl;
@@ -169,7 +167,6 @@ public:
 };
 
 
-
 struct PersistentPropertySet_Impl;
 
 class PersistentPropertySet : public cppu::WeakImplHelper <
@@ -181,7 +178,6 @@ class PersistentPropertySet : public cppu::WeakImplHelper <
     css::beans::XPropertySetInfoChangeNotifier,
     css::beans::XPropertyAccess >
 {
-    css::uno::Reference< css::uno::XComponentContext > m_xContext;
     std::unique_ptr<PersistentPropertySet_Impl> m_pImpl;
 
 private:
@@ -192,7 +188,6 @@ private:
 
 public:
     PersistentPropertySet(
-        const css::uno::Reference< css::uno::XComponentContext >& xContext,
         PropertySetRegistry& rCreator,
         const OUString& rKey );
     virtual ~PersistentPropertySet();

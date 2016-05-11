@@ -146,13 +146,15 @@ struct SfxObjectShell_Impl : public ::sfx2::IMacroDocumentAccess
     sal_uInt32          m_nModifyPasswordHash;
     css::uno::Sequence< css::beans::PropertyValue > m_aModifyPasswordInfo;
     bool                m_bModifyPasswordEntered;
+    /// If true, then this is not a real save, just the signatures change.
+    bool m_bSavingForSigning;
 
     SfxObjectShell_Impl( SfxObjectShell& _rDocShell );
     virtual ~SfxObjectShell_Impl();
 
     // IMacroDocumentAccess overridables
     virtual sal_Int16 getCurrentMacroExecMode() const override;
-    virtual bool setCurrentMacroExecMode( sal_uInt16 nMacroMode ) override;
+    virtual void setCurrentMacroExecMode( sal_uInt16 nMacroMode ) override;
     virtual OUString getDocumentLocation() const override;
     virtual bool documentStorageHasMacros() const override;
     virtual css::uno::Reference< css::document::XEmbeddedScripts > getEmbeddedDocumentScripts() const override;

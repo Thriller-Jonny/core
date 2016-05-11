@@ -82,7 +82,7 @@ protected:
 
     SvTreeListEntry* FindEntry(const OUString& aStrName);
     void ClearTree();
-    int FillTree( css::uno::Reference< css::container::XNameAccess > xLinks, SvTreeListEntry* pParentEntry =nullptr );
+    int FillTree( const css::uno::Reference< css::container::XNameAccess >& xLinks, SvTreeListEntry* pParentEntry =nullptr );
 
     virtual void Move () override;
 
@@ -99,7 +99,7 @@ public:
     void RefreshTree(const OUString& aStrURL);
     bool SelectEntry(const OUString& aStrMark);
 
-    bool ConnectToDialog( bool bDoit = true );
+    bool ConnectToDialog();
 
     sal_uInt16 SetError( sal_uInt16 nError);
 };

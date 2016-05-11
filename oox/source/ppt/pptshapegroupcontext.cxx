@@ -22,6 +22,7 @@
 #include <com/sun/star/beans/XMultiPropertySet.hpp>
 #include <com/sun/star/container/XNamed.hpp>
 
+#include <oox/core/xmlfilterbase.hxx>
 #include "oox/helper/attributelist.hxx"
 #include "oox/ppt/pptshape.hxx"
 #include "oox/ppt/pptgraphicshapecontext.hxx"
@@ -36,6 +37,8 @@
 #include "oox/drawingml/connectorshapecontext.hxx"
 #include "oox/drawingml/fillproperties.hxx"
 #include "extdrawingfragmenthandler.hxx"
+#include <oox/token/namespaces.hxx>
+#include <oox/token/tokens.hxx>
 
 using namespace oox::core;
 using namespace ::com::sun::star;
@@ -98,11 +101,10 @@ ContextHandlerRef PPTShapeGroupContext::onCreateContext( sal_Int32 aElementToken
             std::shared_ptr<PPTShape> pShape( new PPTShape( meShapeLocation, "com.sun.star.drawing.CustomShape" ) );
             if( rAttribs.getBool( XML_useBgFill, false ) )
             {
-                ::oox::drawingml::FillProperties &aFill = pShape->getFillProperties();
-                aFill.moFillType = XML_solidFill;
-                // This is supposed to fill with slide (background) color, but
-                // TODO: We are using white here, because thats the closest we can assume (?)
-                aFill.maFillColor.setSrgbClr( API_RGB_WHITE );
+                const oox::drawingml::FillPropertiesPtr pBackgroundPropertiesPtr = mpSlidePersistPtr->getBackgroundProperties();
+                if ( pBackgroundPropertiesPtr ) {
+                    pShape->getFillProperties().assignUsed( *pBackgroundPropertiesPtr );
+                }
             }
             pShape->setModelId(rAttribs.getString( XML_modelId ).get());
             return new PPTShapeContext( *this, mpSlidePersistPtr, mpGroupShapePtr, pShape );
@@ -129,7 +131,6 @@ void PPTShapeGroupContext::importExtDrawings( )
                 getFilter().importFragment( new ExtDrawingFragmentHandler( getFilter(), getFragmentPathFromRelId( *aIt ),
                                                                            mpSlidePersistPtr,
                                                                            meShapeLocation,
-                                                                           mpMasterShapePtr,
                                                                            mpGroupShapePtr,
                                                                            pGraphicShape ) );
                 // Apply font color imported from color fragment
@@ -140,7 +141,7 @@ void PPTShapeGroupContext::importExtDrawings( )
     }
 }
 
-void PPTShapeGroupContext::applyFontRefColor(oox::drawingml::ShapePtr pShape, const oox::drawingml::Color& rFontRefColor)
+void PPTShapeGroupContext::applyFontRefColor(const oox::drawingml::ShapePtr& pShape, const oox::drawingml::Color& rFontRefColor)
 {
     pShape->getShapeStyleRefs()[XML_fontRef].maPhClr = rFontRefColor;
     std::vector< oox::drawingml::ShapePtr >& vChildren = pShape->getChildren();

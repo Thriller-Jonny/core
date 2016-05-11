@@ -228,8 +228,7 @@ void BibliographyLoader::load(const Reference< XFrame > & rFrame, const OUString
 
     m_pBibMod = OpenBibModul();
 
-    OUString aURLStr( rURL );
-    OUString aPartName = aURLStr.getToken( 1, '/' );
+    OUString aPartName = rURL.getToken( 1, '/' );
     Reference<XPropertySet> xPrSet(rFrame, UNO_QUERY);
     if(xPrSet.is())
     {
@@ -297,7 +296,7 @@ void BibliographyLoader::loadView(const Reference< XFrame > & rFrame, const OUSt
     if (pParentComponent)
     {
         // not earlier because SetFocus() is triggered in setVisible()
-        pParentComponent->setVisible(sal_True);
+        pParentComponent->setVisible(true);
     }
 
     m_xDatMan->load();
@@ -417,17 +416,17 @@ Reference< XResultSet >  BibliographyLoader::GetDataCursor() const
     return m_xCursor;
 }
 
-static OUString lcl_AddProperty(Reference< XNameAccess >  xColumns,
+static OUString lcl_AddProperty(const Reference< XNameAccess >&  xColumns,
         const Mapping* pMapping, const OUString& rColumnName)
 {
     OUString sColumnName(rColumnName);
     if(pMapping)
     {
-        for(sal_uInt16 nEntry = 0; nEntry < COLUMN_COUNT; nEntry++)
+        for(const auto & aColumnPair : pMapping->aColumnPairs)
         {
-            if(pMapping->aColumnPairs[nEntry].sLogicalColumnName == rColumnName)
+            if(aColumnPair.sLogicalColumnName == rColumnName)
             {
-                sColumnName = pMapping->aColumnPairs[nEntry].sRealColumnName;
+                sColumnName = aColumnPair.sRealColumnName;
                 break;
             }
         }
@@ -459,11 +458,10 @@ Any BibliographyLoader::getByName(const OUString& rName) throw
         if (!xColumns.is())
             return aRet;
 
-        OUString sIdentifierMapping = pDatMan->GetIdentifierMapping();
-        OUString sId = sIdentifierMapping;
+        const OUString sIdentifierMapping = pDatMan->GetIdentifierMapping();
         Reference< sdb::XColumn >  xColumn;
-        if (xColumns->hasByName(sId))
-            xColumn.set(*static_cast<Reference< XInterface > const *>(xColumns->getByName(sId).getValue()), UNO_QUERY);
+        if (xColumns->hasByName(sIdentifierMapping))
+            xColumn.set(*static_cast<Reference< XInterface > const *>(xColumns->getByName(sIdentifierMapping).getValue()), UNO_QUERY);
         if (xColumn.is())
         {
             do
@@ -677,7 +675,6 @@ void BibliographyLoader::removeVetoableChangeListener(
 {
     //no vetoable properties
 }
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

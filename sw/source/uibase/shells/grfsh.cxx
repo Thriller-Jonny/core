@@ -111,7 +111,7 @@ SFX_IMPL_INTERFACE(SwGrfShell, SwBaseShell)
 
 void SwGrfShell::InitInterface_Impl()
 {
-    GetStaticInterface()->RegisterPopupMenu(SW_RES(MN_GRF_POPUPMENU));
+    GetStaticInterface()->RegisterPopupMenu("graphic");
 
     GetStaticInterface()->RegisterObjectBar(SFX_OBJECTBAR_OBJECT, RID_GRAFIK_TOOLBOX);
 }
@@ -151,8 +151,9 @@ void SwGrfShell::Execute(SfxRequest &rReq)
                     convertTwipToMm100(rSh.GetAnyCurRect(RECT_FLY_EMBEDDED).Width()),
                     convertTwipToMm100(rSh.GetAnyCurRect(RECT_FLY_EMBEDDED).Height()));
 
-                SfxItemSet aSet( rSh.GetAttrPool(), RES_GRFATR_CROPGRF, RES_GRFATR_CROPGRF );
+                SfxItemSet aSet( rSh.GetAttrPool(), RES_GRFATR_MIRRORGRF, RES_GRFATR_CROPGRF );
                 rSh.GetCurAttr( aSet );
+                SwMirrorGrf aMirror( static_cast<const SwMirrorGrf&>( aSet.Get(RES_GRFATR_MIRRORGRF)) );
                 SwCropGrf aCrop( static_cast<const SwCropGrf&>( aSet.Get(RES_GRFATR_CROPGRF)) );
 
                 Rectangle aCropRectangle(
@@ -179,6 +180,7 @@ void SwGrfShell::Execute(SfxRequest &rReq)
                     rSh.ReRead(OUString(), OUString(), const_cast<const Graphic*>(&aCompressedGraphic));
 
                     rSh.SetAttrItem(aCrop);
+                    rSh.SetAttrItem(aMirror);
 
                     rSh.EndUndo(UNDO_END);
                     rSh.EndAllAction();
@@ -212,7 +214,7 @@ void SwGrfShell::Execute(SfxRequest &rReq)
         case FN_DRAW_WRAP_DLG:
         {
             SwFlyFrameAttrMgr aMgr( false, &rSh, rSh.IsFrameSelected() ?
-                                               FRMMGR_TYPE_NONE : FRMMGR_TYPE_GRF);
+                                               Frmmgr_Type::NONE : Frmmgr_Type::GRF);
             const SwViewOption* pVOpt = rSh.GetViewOptions();
             SwViewOption aUsrPref( *pVOpt );
 
@@ -353,7 +355,7 @@ void SwGrfShell::Execute(SfxRequest &rReq)
             if (nSlot == FN_DRAW_WRAP_DLG)
                 pDlg->SetCurPageId("wrap");
 
-            if( pDlg->Execute() )
+            if (pDlg->Execute() == RET_OK)
             {
                 rSh.StartAllAction();
                 rSh.StartUndo(UNDO_START);
@@ -797,7 +799,7 @@ void SwGrfShell::GetAttrState(SfxItemSet &rSet)
                     const sal_uInt16 eGraphicType( rSh.GetGraphicType() );
                     if ( ( eGraphicType == GRAPHIC_NONE ||
                            eGraphicType == GRAPHIC_DEFAULT ) &&
-                         rSh.IsGrfSwapOut( true ) )
+                         rSh.IsLinkedGrfSwapOut() )
                     {
                         rSet.DisableItem( nWhich );
                         if( AddGrfUpdateSlot( nWhich ))
@@ -857,7 +859,7 @@ void SwGrfShell::ExecuteRotation(SfxRequest &rReq)
     aTransform.rotate(aRotation);
     rShell.ReRead(OUString(), OUString(), const_cast<const Graphic*>(&aGraphic));
 
-    SwFlyFrameAttrMgr aManager(false, &rShell, rShell.IsFrameSelected() ? FRMMGR_TYPE_NONE : FRMMGR_TYPE_GRF);
+    SwFlyFrameAttrMgr aManager(false, &rShell, rShell.IsFrameSelected() ? Frmmgr_Type::NONE : Frmmgr_Type::GRF);
     const long nRotatedWidth = aManager.GetSize().Height();
     const long nRotatedHeight = aManager.GetSize().Width();
     Size aSize(nRotatedWidth, nRotatedHeight);

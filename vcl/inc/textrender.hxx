@@ -20,20 +20,12 @@
 #ifndef INCLUDED_VCL_INC_UNX_CAIROFONTIMPL_HXX
 #define INCLUDED_VCL_INC_UNX_CAIROFONTIMPL_HXX
 
-#include <sal/types.h>
-#include <vcl/salgtype.hxx>
-#include <vcl/vclenum.hxx>
-#include <vcl/metric.hxx>
-#include <basebmp/bitmapdevice.hxx>
 #include "salgdi.hxx"
-#include "salglyphid.hxx"
-#include "fontsubset.hxx"
+
 #include <config_cairo_canvas.h>
 
-class PspSalPrinter;
-class PspSalInfoPrinter;
-class ServerFont;
 class ImplLayoutArgs;
+class ImplFontMetricData;
 class ServerFontLayout;
 class PhysicalFontCollection;
 class PhysicalFontFace;
@@ -43,11 +35,9 @@ class TextRenderImpl
 public:
     virtual ~TextRenderImpl() {}
 
-    virtual void setDevice(basebmp::BitmapDeviceSharedPtr& /*rDevice*/) {}
-
     virtual void                    SetTextColor( SalColor nSalColor ) = 0;
     virtual sal_uInt16              SetFont( FontSelectPattern*, int nFallbackLevel ) = 0;
-    virtual void                    GetFontMetric( ImplFontMetricData*, int nFallbackLevel ) = 0;
+    virtual void                    GetFontMetric( ImplFontMetricDataPtr&, int nFallbackLevel ) = 0;
     virtual const FontCharMapPtr    GetFontCharMap() const = 0;
     virtual bool                    GetFontCapabilities(vcl::FontCapabilities &rFontCapabilities) const = 0;
     virtual void                    GetDevFontList( PhysicalFontCollection* ) = 0;

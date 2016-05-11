@@ -9,7 +9,6 @@
 
 $(eval $(call gb_Executable_Executable,updater))
 
-ifeq ($(OS),WNT)
 $(eval $(call gb_Executable_set_include,updater,\
 	-I$(SRCDIR)/onlineupdate/source/update/src \
 	-I$(SRCDIR)/onlineupdate/source/update/inc \
@@ -17,16 +16,6 @@ $(eval $(call gb_Executable_set_include,updater,\
 	-I$(SRCDIR)/onlineupdate/source/update/updater/xpcom/glue \
 	$$(INCLUDE) \
 ))
-else
-$(eval $(call gb_Executable_set_include,updater,\
-	-I$(SRCDIR)/onlineupdate/source/update/src \
-	-I$(SRCDIR)/onlineupdate/source/update/inc \
-	-I$(SRCDIR)/onlineupdate/source/update/common \
-	-I$(SRCDIR)/onlineupdate/source/update/updater/xpcom/glue \
-	-lpthread \
-	$$(INCLUDE) \
-))
-endif
 
 ifeq ($(OS),WNT)
 $(eval $(call gb_Executable_add_libs,updater,\
@@ -43,17 +32,7 @@ $(eval $(call gb_Executable_add_libs,updater,\
 	-lXrender \
 	-lSM \
 	-lICE \
-	$(GTK3_LIBS) \
-))
-endif
-
-ifeq ($(OS),WNT)
-$(eval $(call gb_Executable_add_cxxflags,updater,\
-	/Zc:wchar_t \
-))
-else
-$(eval $(call gb_Executable_add_cxxflags,updater,\
-	$$(GTK3_CFLAGS) \
+	-lpthread \
 ))
 endif
 

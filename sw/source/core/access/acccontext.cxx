@@ -240,6 +240,11 @@ void SwAccessibleContext::ChildrenScrolled( const SwFrame *pFrame,
                                 xAccImpl->ViewForwarderChanged(
                                     ::accessibility::IAccessibleViewForwarderListener::VISIBLE_AREA,
                                     GetMap() );
+                                // this DisposeShape call was removed by
+                                // IAccessibility2 implementation
+                                // without giving any reason why
+                                DisposeShape( rLower.GetDrawObject(),
+                                          xAccImpl.get() );
                             }
                             break;
                         // coverity[dead_error_begin] - following conditions exist to avoid compiler warning
@@ -347,6 +352,11 @@ void SwAccessibleContext::ScrolledOut( const SwRect& rOldVisArea )
     // It might be that the child is freshly created just to send
     // the child event. In this case no listener will exist.
     FireStateChangedEvent( AccessibleStateType::SHOWING, false );
+
+    // this Dispose call was removed by IAccessibility2 implementation
+    // without giving any reason why - without it we get stale
+    // entries in SwAccessibleMap::mpFrameMap.
+    Dispose(true);
 }
 
 // #i27301# - use new type definition for <_nStates>
@@ -418,15 +428,15 @@ void SwAccessibleContext::DisposeChildren( const SwFrame *pFrame,
     }
 }
 
-void SwAccessibleContext::_InvalidateContent( bool )
+void SwAccessibleContext::InvalidateContent_( bool )
 {
 }
 
-void SwAccessibleContext::_InvalidateCursorPos()
+void SwAccessibleContext::InvalidateCursorPos_()
 {
 }
 
-void SwAccessibleContext::_InvalidateFocus()
+void SwAccessibleContext::InvalidateFocus_()
 {
 }
 
@@ -1137,10 +1147,21 @@ void SwAccessibleContext::InvalidatePosOrSize( const SwRect& )
         FireVisibleDataEvent();
     }
 
-    // note: InvalidatePosOrSize must call _InvalidateContent so that
+    // note: InvalidatePosOrSize must call InvalidateContent_ so that
     // SwAccessibleParagraph updates its portions, or dispose it
     // (see accmap.cxx: INVALID_CONTENT is contained in POS_CHANGED)
-    _InvalidateContent( true );
+    if( !bIsNewShowingState &&
+        SwAccessibleChild( GetParent() ).IsVisibleChildrenOnly() )
+    {
+        // this Dispose call was removed by IAccessibility2 implementation
+        // without giving any reason why - without it we get stale
+        // entries in SwAccessibleMap::mpFrameMap.
+        Dispose(true);
+    }
+    else
+    {
+        InvalidateContent_( true );
+    }
 }
 
 void SwAccessibleContext::InvalidateChildPosOrSize(
@@ -1149,9 +1170,11 @@ void SwAccessibleContext::InvalidateChildPosOrSize(
 {
     SolarMutexGuard aGuard;
 
-    OSL_ENSURE( !rChildFrameOrObj.GetSwFrame() ||
-            !rChildFrameOrObj.GetSwFrame()->Frame().IsEmpty(),
-            "child context should have a size" );
+    // this happens during layout, e.g. when a page is deleted and next page's
+    // header/footer moves backward such an event is generated
+    SAL_INFO_IF(rChildFrameOrObj.GetSwFrame() &&
+            rChildFrameOrObj.GetSwFrame()->Frame().IsEmpty(),
+            "sw.a11y", "child context should have a size");
 
     if ( rChildFrameOrObj.AlwaysIncludeAsChild() )
     {
@@ -1237,21 +1260,21 @@ void SwAccessibleContext::InvalidateContent()
 {
     SolarMutexGuard aGuard;
 
-    _InvalidateContent( false );
+    InvalidateContent_( false );
 }
 
 void SwAccessibleContext::InvalidateCursorPos()
 {
     SolarMutexGuard aGuard;
 
-    _InvalidateCursorPos();
+    InvalidateCursorPos_();
 }
 
 void SwAccessibleContext::InvalidateFocus()
 {
     SolarMutexGuard aGuard;
 
-    _InvalidateFocus();
+    InvalidateFocus_();
 }
 
 // #i27301# - use new type definition for <_nStates>

@@ -87,7 +87,6 @@ namespace connectivity
             OKeySet::Vector::iterator               m_aFileSetIter;
 
 
-
             OSortIndex*                             m_pSortIndex;
             ::rtl::Reference<connectivity::OSQLColumns> m_xColumns; // this are the select columns
             ::rtl::Reference<connectivity::OSQLColumns> m_xParamColumns;
@@ -104,7 +103,6 @@ namespace connectivity
 
             ::com::sun::star::uno::Reference< ::com::sun::star::uno::XInterface>            m_xStatement;
             ::com::sun::star::uno::Reference< ::com::sun::star::sdbc::XResultSetMetaData>   m_xMetaData;
-            ::com::sun::star::uno::Reference< ::com::sun::star::sdbc::XDatabaseMetaData>    m_xDBMetaData;
             ::com::sun::star::uno::Reference< ::com::sun::star::container::XNameAccess>     m_xColNames; // table columns
             ::com::sun::star::uno::Reference< ::com::sun::star::container::XIndexAccess>    m_xColsIdx; // table columns
 
@@ -163,11 +161,6 @@ namespace connectivity
             DECLARE_SERVICE_INFO();
             // a Constructor, that is needed for when Returning the Object is needed:
             OResultSet( OStatement_Base* pStmt,connectivity::OSQLParseTreeIterator& _aSQLIterator);
-
-            ::com::sun::star::uno::Reference< ::com::sun::star::uno::XInterface > operator *()
-            {
-                return ::com::sun::star::uno::Reference< ::com::sun::star::uno::XInterface >(*static_cast<OResultSet_BASE*>(this));
-            }
 
             // ::cppu::OComponentHelper
             virtual void SAL_CALL disposing() override;

@@ -49,7 +49,7 @@ FormulaDialog::FormulaDialog(vcl::Window* pParent
                              , const OUString& _sFormula
                              , const css::uno::Reference < css::beans::XPropertySet >& _xRowSet
                              , svl::SharedStringPool& rStrPool )
-    : FormulaModalDialog( pParent, false,false,false,_pFunctionMgr.get(),this)
+    : FormulaModalDialog( pParent, _pFunctionMgr.get(),this)
     ,m_aFunctionManager(_pFunctionMgr)
     ,m_pFormulaData(new FormEditData())
     ,m_pAddField(nullptr)
@@ -95,7 +95,7 @@ void FormulaDialog::dispose()
     if ( m_pAddField )
     {
         SvtViewOptions aDlgOpt( E_WINDOW, OUString( HID_RPT_FIELD_SEL_WIN ) );
-        aDlgOpt.SetWindowState(OStringToOUString(m_pAddField->GetWindowState((WINDOWSTATE_MASK_X | WINDOWSTATE_MASK_Y | WINDOWSTATE_MASK_STATE | WINDOWSTATE_MASK_MINIMIZED)), RTL_TEXTENCODING_ASCII_US));
+        aDlgOpt.SetWindowState(OStringToOUString(m_pAddField->GetWindowState((WindowStateMask::X | WindowStateMask::Y | WindowStateMask::State | WindowStateMask::Minimized)), RTL_TEXTENCODING_ASCII_US));
     }
 
     StoreFormEditData( m_pFormulaData );
@@ -107,7 +107,7 @@ void FormulaDialog::dispose()
 
 //                          Funktionen fuer rechte Seite
 
-bool FormulaDialog::calculateValue( const OUString& rStrExp, OUString& rStrResult )
+bool FormulaDialog::calculateValue( const OUString& rStrExp, OUString& rStrResult, bool /*bMatrixFormula*/ )
 {
     rStrResult = rStrExp;
     return false;
@@ -189,7 +189,7 @@ void FormulaDialog::HideReference( bool /*bDoneRefMode*/)
 {
 }
 
-void FormulaDialog::ReleaseFocus( RefEdit* /*pEdit*/, RefButton* /*pButton*/)
+void FormulaDialog::ReleaseFocus( RefEdit* /*pEdit*/)
 {
 }
 
@@ -239,7 +239,7 @@ IMPL_LINK_TYPED( FormulaDialog, OnClickHdl, OAddFieldWindow& ,_rAddFieldDlg, voi
     }
     m_pEdit = nullptr;
     _rAddFieldDlg.Hide();
-    RefInputDoneAfter( true );
+    RefInputDoneAfter();
 }
 
 uno::Reference< sheet::XFormulaParser> FormulaDialog::getFormulaParser() const

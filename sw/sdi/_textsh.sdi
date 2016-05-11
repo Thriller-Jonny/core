@@ -16,9 +16,6 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 interface BaseText
-[
-    Automation = FALSE;
-]
 {
     FN_NEW_GLOSSARY // status(final|play)
     [
@@ -277,18 +274,6 @@ interface BaseText
         StateMethod = StateInsert ;
         DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
     ]
-    SID_INSERT_SOUND
-    [
-        ExecMethod = ExecInsert ;
-        StateMethod = StateInsert ;
-        DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
-    ]
-    SID_INSERT_VIDEO
-    [
-        ExecMethod = ExecInsert ;
-        StateMethod = StateInsert ;
-        DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
-    ]
     FN_INSERT_SMA // status(final|play)
     [
         ExecMethod = ExecInsert ;
@@ -302,12 +287,6 @@ interface BaseText
         DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
     ]
     SID_INSERT_OBJECT  // status(final|play)
-    [
-        ExecMethod = ExecInsert ;
-        StateMethod = StateInsert ;
-        DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
-    ]
-    SID_INSERT_PLUGIN  // status(final|play)
     [
         ExecMethod = ExecInsert ;
         StateMethod = StateInsert ;
@@ -1466,7 +1445,7 @@ interface BaseText
     ]
     SID_ATTR_CHAR_LANGUAGE // status(final|play)
     [
-        ExecMethod = ExecTextCtrl;;
+        ExecMethod = ExecTextCtrl;
         StateMethod = GetTextFontCtrlState;
         DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
     ]

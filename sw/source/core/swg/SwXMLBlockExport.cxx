@@ -34,7 +34,7 @@ SwXMLBlockListExport::SwXMLBlockListExport(
 :   SvXMLExport( rContext, "", rFileName, util::MeasureUnit::CM, rHandler ),
     rBlockList(rBlocks)
 {
-    _GetNamespaceMap().Add( GetXMLToken ( XML_NP_BLOCK_LIST ),
+    GetNamespaceMap_().Add( GetXMLToken ( XML_NP_BLOCK_LIST ),
                             GetXMLToken ( XML_N_BLOCK_LIST ),
                             XML_NAMESPACE_BLOCKLIST );
 }
@@ -46,13 +46,13 @@ sal_uInt32 SwXMLBlockListExport::exportDoc(enum XMLTokenEnum )
     addChaffWhenEncryptedStorage();
 
     AddAttribute ( XML_NAMESPACE_NONE,
-                   _GetNamespaceMap().GetAttrNameByKey ( XML_NAMESPACE_BLOCKLIST ),
-                   _GetNamespaceMap().GetNameByKey ( XML_NAMESPACE_BLOCKLIST ) );
+                   GetNamespaceMap_().GetAttrNameByKey ( XML_NAMESPACE_BLOCKLIST ),
+                   GetNamespaceMap_().GetNameByKey ( XML_NAMESPACE_BLOCKLIST ) );
     AddAttribute( XML_NAMESPACE_BLOCKLIST,
                   XML_LIST_NAME,
                   OUString (rBlockList.GetName()));
     {
-        SvXMLElementExport pRoot (*this, XML_NAMESPACE_BLOCKLIST, XML_BLOCK_LIST, true, true);
+        SvXMLElementExport aRoot (*this, XML_NAMESPACE_BLOCKLIST, XML_BLOCK_LIST, true, true);
         sal_uInt16 nBlocks= rBlockList.GetCount();
         for ( sal_uInt16 i = 0; i < nBlocks; i++)
         {
@@ -84,32 +84,32 @@ SwXMLTextBlockExport::SwXMLTextBlockExport(
 :   SvXMLExport( rContext, "", rFileName, util::MeasureUnit::CM, rHandler ),
     rBlockList(rBlocks)
 {
-    _GetNamespaceMap().Add( GetXMLToken ( XML_NP_BLOCK_LIST ),
+    GetNamespaceMap_().Add( GetXMLToken ( XML_NP_BLOCK_LIST ),
                             GetXMLToken ( XML_N_BLOCK_LIST ),
                             XML_NAMESPACE_BLOCKLIST );
-    _GetNamespaceMap().Add( GetXMLToken ( XML_NP_OFFICE ),
+    GetNamespaceMap_().Add( GetXMLToken ( XML_NP_OFFICE ),
                             GetXMLToken(XML_N_OFFICE_OOO),
                             XML_NAMESPACE_OFFICE );
-    _GetNamespaceMap().Add( GetXMLToken ( XML_NP_TEXT ),
+    GetNamespaceMap_().Add( GetXMLToken ( XML_NP_TEXT ),
                             GetXMLToken(XML_N_TEXT_OOO),
                             XML_NAMESPACE_TEXT );
 }
 
-sal_uInt32 SwXMLTextBlockExport::exportDoc(const OUString &rText)
+void SwXMLTextBlockExport::exportDoc(const OUString &rText)
 {
     GetDocHandler()->startDocument();
 
     addChaffWhenEncryptedStorage();
 
     AddAttribute ( XML_NAMESPACE_NONE,
-                   _GetNamespaceMap().GetAttrNameByKey ( XML_NAMESPACE_BLOCKLIST ),
-                   _GetNamespaceMap().GetNameByKey ( XML_NAMESPACE_BLOCKLIST ) );
+                   GetNamespaceMap_().GetAttrNameByKey ( XML_NAMESPACE_BLOCKLIST ),
+                   GetNamespaceMap_().GetNameByKey ( XML_NAMESPACE_BLOCKLIST ) );
     AddAttribute ( XML_NAMESPACE_NONE,
-                   _GetNamespaceMap().GetAttrNameByKey ( XML_NAMESPACE_TEXT ),
-                   _GetNamespaceMap().GetNameByKey ( XML_NAMESPACE_TEXT ) );
+                   GetNamespaceMap_().GetAttrNameByKey ( XML_NAMESPACE_TEXT ),
+                   GetNamespaceMap_().GetNameByKey ( XML_NAMESPACE_TEXT ) );
     AddAttribute ( XML_NAMESPACE_NONE,
-                   _GetNamespaceMap().GetAttrNameByKey ( XML_NAMESPACE_OFFICE ),
-                   _GetNamespaceMap().GetNameByKey ( XML_NAMESPACE_OFFICE ) );
+                   GetNamespaceMap_().GetAttrNameByKey ( XML_NAMESPACE_OFFICE ),
+                   GetNamespaceMap_().GetNameByKey ( XML_NAMESPACE_OFFICE ) );
     AddAttribute( XML_NAMESPACE_BLOCKLIST,
                   XML_LIST_NAME,
                   OUString (rBlockList.GetName()));
@@ -130,7 +130,6 @@ sal_uInt32 SwXMLTextBlockExport::exportDoc(const OUString &rText)
         }
     }
     GetDocHandler()->endDocument();
-    return 0;
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -39,9 +39,8 @@ using namespace com::sun::star;
 ImportInfo::ImportInfo( ImportState eSt, SvParser* pPrsrs, const ESelection& rSel )
     : aSelection( rSel )
 {
-    pParser     = pPrsrs,
+    pParser     = pPrsrs;
     eState      = eSt;
-
     nToken      = 0;
     nTokenValue = 0;
     pAttrs      = nullptr;
@@ -152,7 +151,7 @@ void EditRTFParser::AddRTFDefaultValues( const EditPaM& rStart, const EditPaM& r
     aSz = mpEditEngine->GetRefDevice()->LogicToLogic(aSz, &aPntMode, &_aEditMapMode);
     SvxFontHeightItem aFontHeightItem( aSz.Width(), 100, EE_CHAR_FONTHEIGHT );
     vcl::Font aDefFont( GetDefFont() );
-    SvxFontItem aFontItem( aDefFont.GetFamily(), aDefFont.GetName(),
+    SvxFontItem aFontItem( aDefFont.GetFamilyType(), aDefFont.GetFamilyName(),
                     aDefFont.GetStyleName(), aDefFont.GetPitch(), aDefFont.GetCharSet(), EE_CHAR_FONTINFO );
 
     sal_Int32 nStartPara = mpEditEngine->GetEditDoc().GetPos( rStart.GetNode() );
@@ -305,7 +304,7 @@ void EditRTFParser::SetAttrInDoc( SvxRTFItemStackType &rSet )
     EditPaM aStartPaM( pSttNode, rSet.GetSttCnt() );
     EditPaM aEndPaM( pEndNode, rSet.GetEndCnt() );
 
-    // If possible adjust the Escapemant-Item:
+    // If possible adjust the Escapement-Item:
     const SfxPoolItem* pItem;
 
     // #i66167# adapt font heights to destination MapUnit if necessary
@@ -314,15 +313,15 @@ void EditRTFParser::SetAttrInDoc( SvxRTFItemStackType &rSet )
     if (eDestUnit != eSrcUnit)
     {
         sal_uInt16 aFntHeightIems[3] = { EE_CHAR_FONTHEIGHT, EE_CHAR_FONTHEIGHT_CJK, EE_CHAR_FONTHEIGHT_CTL };
-        for (size_t i = 0; i < SAL_N_ELEMENTS(aFntHeightIems); ++i)
+        for (unsigned short aFntHeightIem : aFntHeightIems)
         {
-            if (SfxItemState::SET == rSet.GetAttrSet().GetItemState( aFntHeightIems[i], false, &pItem ))
+            if (SfxItemState::SET == rSet.GetAttrSet().GetItemState( aFntHeightIem, false, &pItem ))
             {
                 sal_uInt32 nHeight  = static_cast<const SvxFontHeightItem*>(pItem)->GetHeight();
                 long nNewHeight;
                 nNewHeight = OutputDevice::LogicToLogic( (long)nHeight, eSrcUnit, eDestUnit );
 
-                SvxFontHeightItem aFntHeightItem( nNewHeight, 100, aFntHeightIems[i] );
+                SvxFontHeightItem aFntHeightItem( nNewHeight, 100, aFntHeightIem );
                 aFntHeightItem.SetProp(
                     static_cast<const SvxFontHeightItem*>(pItem)->GetProp(),
                     static_cast<const SvxFontHeightItem*>(pItem)->GetPropUnit());
@@ -341,9 +340,9 @@ void EditRTFParser::SetAttrInDoc( SvxRTFItemStackType &rSet )
             nEsc *= 10; //HalPoints => Twips was embezzled in RTFITEM.CXX!
             SvxFont aFont;
             mpEditEngine->SeekCursor(aStartPaM.GetNode(), aStartPaM.GetIndex()+1, aFont);
-            nEsc = nEsc * 100 / aFont.GetSize().Height();
+            nEsc = nEsc * 100 / aFont.GetFontSize().Height();
 
-            SvxEscapementItem aEscItem( (short) nEsc, static_cast<const SvxEscapementItem*>(pItem)->GetProp(), EE_CHAR_ESCAPEMENT );
+            SvxEscapementItem aEscItem( (short) nEsc, static_cast<const SvxEscapementItem*>(pItem)->GetProportionalHeight(), EE_CHAR_ESCAPEMENT );
             rSet.GetAttrSet().Put( aEscItem );
         }
     }
@@ -371,7 +370,7 @@ void EditRTFParser::SetAttrInDoc( SvxRTFItemStackType &rSet )
             auto const& pS = it->second;
             mpEditEngine->SetStyleSheet(
                 EditSelection(aStartPaM, aEndPaM),
-                static_cast<SfxStyleSheet*>(mpEditEngine->GetStyleSheetPool()->Find(pS->sName, SFX_STYLE_FAMILY_ALL)));
+                static_cast<SfxStyleSheet*>(mpEditEngine->GetStyleSheetPool()->Find(pS->sName, SfxStyleFamily::All)));
             nOutlLevel = pS->nOutlineNo;
         }
     }
@@ -444,7 +443,7 @@ SvxRTFStyleType* EditRTFParser::FindStyleSheet( const OUString& rName )
 SfxStyleSheet* EditRTFParser::CreateStyleSheet( SvxRTFStyleType* pRTFStyle )
 {
     // Check if a template exists, then it will not be changed!
-    SfxStyleSheet* pStyle = static_cast<SfxStyleSheet*>(mpEditEngine->GetStyleSheetPool()->Find( pRTFStyle->sName, SFX_STYLE_FAMILY_ALL ));
+    SfxStyleSheet* pStyle = static_cast<SfxStyleSheet*>(mpEditEngine->GetStyleSheetPool()->Find( pRTFStyle->sName, SfxStyleFamily::All ));
     if ( pStyle )
         return pStyle;
 
@@ -461,7 +460,7 @@ SfxStyleSheet* EditRTFParser::CreateStyleSheet( SvxRTFStyleType* pRTFStyle )
         }
     }
 
-    pStyle = static_cast<SfxStyleSheet*>( &mpEditEngine->GetStyleSheetPool()->Make( aName, SFX_STYLE_FAMILY_PARA ) );
+    pStyle = static_cast<SfxStyleSheet*>( &mpEditEngine->GetStyleSheetPool()->Make( aName, SfxStyleFamily::Para ) );
 
     // 1) convert and take over Items ...
     ConvertAndPutItems( pStyle->GetItemSet(), pRTFStyle->aAttrSet );
@@ -469,7 +468,7 @@ SfxStyleSheet* EditRTFParser::CreateStyleSheet( SvxRTFStyleType* pRTFStyle )
     // 2) As long as Parent is not in the pool, also create this ...
     if ( !aParent.isEmpty() && ( aParent != aName ) )
     {
-        SfxStyleSheet* pS = static_cast<SfxStyleSheet*>(mpEditEngine->GetStyleSheetPool()->Find( aParent, SFX_STYLE_FAMILY_ALL ));
+        SfxStyleSheet* pS = static_cast<SfxStyleSheet*>(mpEditEngine->GetStyleSheetPool()->Find( aParent, SfxStyleFamily::All ));
         if ( !pS )
         {
             // If not found anywhere, create from RTF ...

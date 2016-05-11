@@ -109,7 +109,7 @@ uno::Sequence< OUString > lcl_getImageOptionals()
             , OUString(PROPERTY_CHARLOCALECOMPLEX)
 
     };
-    return uno::Sequence< OUString >(pProps,sizeof(pProps)/sizeof(pProps[0]));
+    return uno::Sequence< OUString >(pProps,SAL_N_ELEMENTS(pProps));
 }
 
 
@@ -332,7 +332,6 @@ void SAL_CALL OImageControl::setConditionalPrintExpression( const OUString& _con
 {
     set(PROPERTY_CONDITIONALPRINTEXPRESSION,_conditionalprintexpression,m_aProps.aConditionalPrintExpression);
 }
-
 
 
 // XCloneable

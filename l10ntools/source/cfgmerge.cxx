@@ -161,7 +161,7 @@ void CfgParser::AddText(
     pStackData->sText[ rIsoLang ] = rText;
 }
 
-int CfgParser::ExecuteAnalyzedToken( int nToken, char *pToken )
+void CfgParser::ExecuteAnalyzedToken( int nToken, char *pToken )
 {
     OString sToken( pToken );
 
@@ -295,35 +295,40 @@ int CfgParser::ExecuteAnalyzedToken( int nToken, char *pToken )
 
     if ( sToken != " " && sToken != "\t" )
         sLastWhitespace = "";
-
-    return 1;
 }
 
 void CfgExport::Output(const OString&)
 {
 }
 
-int CfgParser::Execute( int nToken, char * pToken )
+void CfgParser::Execute( int nToken, char * pToken )
 {
     OString sToken( pToken );
 
     switch ( nToken ) {
         case CFG_TAG:
-            if ( sToken.indexOf( "package-id=" ) != -1 )
-                return ExecuteAnalyzedToken( CFG_TOKEN_PACKAGE, pToken );
-            else if ( sToken.indexOf( "component-id=" ) != -1 )
-                return ExecuteAnalyzedToken( CFG_TOKEN_COMPONENT, pToken );
-            else if ( sToken.indexOf( "template-id=" ) != -1 )
-                return ExecuteAnalyzedToken( CFG_TOKEN_TEMPLATE, pToken );
-            else if ( sToken.indexOf( "cfg:name=" ) != -1 )
-                return ExecuteAnalyzedToken( CFG_TOKEN_OORNAME, pToken );
-            else if ( sToken.indexOf( "oor:name=" ) != -1 )
-                return ExecuteAnalyzedToken( CFG_TOKEN_OORNAME, pToken );
-            else if ( sToken.indexOf( "oor:value=" ) != -1 )
-                return ExecuteAnalyzedToken( CFG_TOKEN_OORVALUE, pToken );
+            if ( sToken.indexOf( "package-id=" ) != -1 ) {
+                ExecuteAnalyzedToken( CFG_TOKEN_PACKAGE, pToken );
+                return;
+            } else if ( sToken.indexOf( "component-id=" ) != -1 ) {
+                ExecuteAnalyzedToken( CFG_TOKEN_COMPONENT, pToken );
+                return;
+            } else if ( sToken.indexOf( "template-id=" ) != -1 ) {
+                ExecuteAnalyzedToken( CFG_TOKEN_TEMPLATE, pToken );
+                return;
+            } else if ( sToken.indexOf( "cfg:name=" ) != -1 ) {
+                ExecuteAnalyzedToken( CFG_TOKEN_OORNAME, pToken );
+                return;
+            } else if ( sToken.indexOf( "oor:name=" ) != -1 ) {
+                ExecuteAnalyzedToken( CFG_TOKEN_OORNAME, pToken );
+                return;
+            } else if ( sToken.indexOf( "oor:value=" ) != -1 ) {
+                ExecuteAnalyzedToken( CFG_TOKEN_OORVALUE, pToken );
+                return;
+            }
         break;
     }
-    return ExecuteAnalyzedToken( nToken, pToken );
+    ExecuteAnalyzedToken( nToken, pToken );
 }
 
 void CfgParser::Error(const OString& rError)
@@ -389,7 +394,6 @@ void CfgExport::WorkOnText(
 {
     if( !rIsoLang.isEmpty() ) rText = helper::UnQuotHTML( rText );
 }
-
 
 
 // class CfgMerge

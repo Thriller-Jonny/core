@@ -287,16 +287,6 @@ void Window::ImplToTop( ToTopFlags nFlags )
                 }
             }
 
-            // check TopLevel
-            sal_uInt8 nTopLevel = mpWindowImpl->mpOverlapData->mnTopLevel;
-            while ( pNextWin )
-            {
-                if ( (bOnTop != pNextWin->IsAlwaysOnTopEnabled()) ||
-                     (nTopLevel <= pNextWin->mpWindowImpl->mpOverlapData->mnTopLevel) )
-                    break;
-                pNextWin = pNextWin->mpWindowImpl->mpNext;
-            }
-
             // add the window to the list again
             mpWindowImpl->mpNext = pNextWin;
             if ( pNextWin )
@@ -317,9 +307,6 @@ void Window::ImplToTop( ToTopFlags nFlags )
             // recalculate ClipRegion of this and all overlapping windows
             if ( IsReallyVisible() )
             {
-                // reset background storage
-                if ( mpWindowImpl->mpFrameData->mpFirstBackWin )
-                    ImplInvalidateAllOverlapBackgrounds();
                 mpWindowImpl->mpOverlapWindow->ImplSetClipFlagOverlapWindows();
             }
         }
@@ -556,10 +543,6 @@ void Window::SetZOrder( vcl::Window* pRefWindow, ZOrderFlags nFlags )
 
     if ( IsReallyVisible() )
     {
-        // restore background storage
-        if ( mpWindowImpl->mpFrameData->mpFirstBackWin )
-            ImplInvalidateAllOverlapBackgrounds();
-
         if ( mpWindowImpl->mbInitWinClipRegion || !mpWindowImpl->maWinClipRegion.IsEmpty() )
         {
             bool bInitWinClipRegion = mpWindowImpl->mbInitWinClipRegion;

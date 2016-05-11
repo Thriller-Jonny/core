@@ -21,7 +21,7 @@
 #include <vcl/graph.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/msgbox.hxx>
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 #include <svl/solar.hrc>
 #include <vcl/fltcall.hxx>
 #include <vcl/FilterConfigItem.hxx>
@@ -43,9 +43,6 @@
 #define ColorMap                    320
 
 
-// - TIFFWriter -
-
-
 struct TIFFLZWCTreeNode
 {
 
@@ -55,6 +52,7 @@ struct TIFFLZWCTreeNode
     sal_uInt16              nValue;         // pixel value
 };
 
+
 class TIFFWriter
 {
 private:
@@ -62,7 +60,7 @@ private:
     SvStream& m_rOStm;
     sal_uInt32              mnStreamOfs;
 
-    bool                mbStatus;
+    bool                    mbStatus;
     BitmapReadAccess*       mpAcc;
 
     sal_uInt32              mnWidth, mnHeight, mnColors;
@@ -95,9 +93,9 @@ private:
     css::uno::Reference< css::task::XStatusIndicator > xStatusIndicator;
 
     void                ImplCallback( sal_uInt32 nPercent );
-    bool            ImplWriteHeader( bool bMultiPage );
+    bool                ImplWriteHeader( bool bMultiPage );
     void                ImplWritePalette();
-    bool            ImplWriteBody();
+    void                ImplWriteBody();
     void                ImplWriteTag( sal_uInt16 TagID, sal_uInt16 DataType, sal_uInt32 NumberOfItems, sal_uInt32 Value);
     void                ImplWriteResolution( sal_uLong nStreamPos, sal_uInt32 nResolutionUnit );
     void                StartCompression();
@@ -107,12 +105,11 @@ private:
 
 public:
 
-    explicit TIFFWriter(SvStream &rStream);
-    ~TIFFWriter();
+    explicit            TIFFWriter(SvStream &rStream);
+                        ~TIFFWriter();
 
     bool WriteTIFF( const Graphic& rGraphic, FilterConfigItem* pFilterConfigItem );
 };
-
 
 
 TIFFWriter::TIFFWriter(SvStream &rStream)
@@ -147,9 +144,11 @@ TIFFWriter::TIFFWriter(SvStream &rStream)
 {
 }
 
+
 TIFFWriter::~TIFFWriter()
 {
 }
+
 
 bool TIFFWriter::WriteTIFF( const Graphic& rGraphic, FilterConfigItem* pFilterConfigItem)
 {
@@ -239,7 +238,6 @@ bool TIFFWriter::WriteTIFF( const Graphic& rGraphic, FilterConfigItem* pFilterCo
 }
 
 
-
 void TIFFWriter::ImplCallback( sal_uInt32 nPercent )
 {
     if ( xStatusIndicator.is() )
@@ -252,8 +250,6 @@ void TIFFWriter::ImplCallback( sal_uInt32 nPercent )
         }
     }
 }
-
-
 
 
 bool TIFFWriter::ImplWriteHeader( bool bMultiPage )
@@ -302,7 +298,7 @@ bool TIFFWriter::ImplWriteHeader( bool bMultiPage )
         mnBitmapPos = m_rOStm.Tell();
         ImplWriteTag( StripOffsets, 4, 1, 0 );
         ImplWriteTag( SamplesPerPixel, 3, 1, ( mnBitsPerPixel == 24 ) ? 3 : 1 );
-        ImplWriteTag( RowsPerStrip, 4, 1, mnHeight );   //0xffffffff );
+        ImplWriteTag( RowsPerStrip, 4, 1, mnHeight );
         mnStripByteCountPos = m_rOStm.Tell();
         ImplWriteTag( StripByteCounts, 4, 1, ( ( mnWidth * mnBitsPerPixel * mnHeight ) + 7 ) >> 3 );
         mnXResPos = m_rOStm.Tell();
@@ -328,7 +324,6 @@ bool TIFFWriter::ImplWriteHeader( bool bMultiPage )
 
     return mbStatus;
 }
-
 
 
 void TIFFWriter::ImplWritePalette()
@@ -357,16 +352,15 @@ void TIFFWriter::ImplWritePalette()
 }
 
 
-
-bool TIFFWriter::ImplWriteBody()
+void TIFFWriter::ImplWriteBody()
 {
     sal_uInt8   nTemp = 0;
     sal_uInt8    nShift;
     sal_uLong   j, x, y;
 
     sal_uLong nGfxBegin = m_rOStm.Tell();
-    m_rOStm.Seek( mnBitmapPos + 8 );        // the strip offset tag entry needs the offset
-    m_rOStm.WriteUInt32( nGfxBegin - mnStreamOfs );        // to the bitmap data
+    m_rOStm.Seek( mnBitmapPos + 8 );                // the strip offset tag entry needs the offset
+    m_rOStm.WriteUInt32( nGfxBegin - mnStreamOfs ); // to the bitmap data
     m_rOStm.Seek( nGfxBegin );
 
     StartCompression();
@@ -461,9 +455,7 @@ bool TIFFWriter::ImplWriteBody()
         m_rOStm.WriteUInt32( nGfxEnd - nGfxBegin );      // mnStripByteCountPos needs the size of the compression data
         m_rOStm.Seek( nGfxEnd );
     }
-    return mbStatus;
 }
-
 
 
 void TIFFWriter::ImplWriteResolution( sal_uLong nStreamPos, sal_uInt32 nResolutionUnit )
@@ -477,7 +469,6 @@ void TIFFWriter::ImplWriteResolution( sal_uLong nStreamPos, sal_uInt32 nResoluti
 }
 
 
-
 void TIFFWriter::ImplWriteTag( sal_uInt16 nTagID, sal_uInt16 nDataType, sal_uInt32 nNumberOfItems, sal_uInt32 nValue)
 {
         mnTagCount++;
@@ -489,7 +480,6 @@ void TIFFWriter::ImplWriteTag( sal_uInt16 nTagID, sal_uInt16 nDataType, sal_uInt
             nValue <<=16;           // in Big Endian Mode WORDS needed to be shifted to a DWORD
         m_rOStm.WriteUInt32( nValue );
 }
-
 
 
 inline void TIFFWriter::WriteBits( sal_uInt16 nCode, sal_uInt16 nCodeLen )
@@ -507,7 +497,6 @@ inline void TIFFWriter::WriteBits( sal_uInt16 nCode, sal_uInt16 nCodeLen )
         m_rOStm.WriteUChar( dwShift >> 24 );
     }
 }
-
 
 
 void TIFFWriter::StartCompression()
@@ -534,7 +523,6 @@ void TIFFWriter::StartCompression()
     pPrefix = nullptr;
     WriteBits( nClearCode, nCodeSize );
 }
-
 
 
 void TIFFWriter::Compress( sal_uInt8 nCompThis )
@@ -590,7 +578,6 @@ void TIFFWriter::Compress( sal_uInt8 nCompThis )
 }
 
 
-
 void TIFFWriter::EndCompression()
 {
     if( pPrefix )
@@ -599,7 +586,6 @@ void TIFFWriter::EndCompression()
     WriteBits( nEOICode, nCodeSize );
     delete[] pTable;
 }
-
 
 
 extern "C" SAL_DLLPUBLIC_EXPORT bool SAL_CALL

@@ -25,9 +25,6 @@
 #include <vcl/salctype.hxx>
 
 
-// - GraphicConverter -
-
-
 struct  ConvertData;
 class   Graphic;
 

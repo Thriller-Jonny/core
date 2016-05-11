@@ -20,7 +20,6 @@
 #include <iostream>
 #include "OOXMLFastDocumentHandler.hxx"
 #include "OOXMLFastContextHandler.hxx"
-#include "oox/token/tokens.hxx"
 #include "OOXMLFactory.hxx"
 
 namespace writerfilter {
@@ -37,9 +36,6 @@ OOXMLFastDocumentHandler::OOXMLFastDocumentHandler(
     sal_Int32 nXNoteId )
     : m_xContext(context)
     , mpStream( pStream )
-#ifdef DEBUG_WRITERFILTER
-    , mpTmpStream()
-#endif
     , mpDocument( pDocument )
     , mnXNoteId( nXNoteId )
     , mxContextHandler()

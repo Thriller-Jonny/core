@@ -26,6 +26,10 @@
 
 #include <Python.h>
 
+#if PY_VERSION_HEX < 0x03020000
+typedef long Py_hash_t;
+#endif
+
 //Must define PyVarObject_HEAD_INIT for Python 2.5 or older
 #ifndef PyVarObject_HEAD_INIT
 #define PyVarObject_HEAD_INIT(type, size)  PyObject_HEAD_INIT(type) size,
@@ -180,8 +184,7 @@ typedef std::unordered_map
 <
     PyRef,
     css::uno::WeakReference< css::script::XInvocation >,
-    PyRef::Hash,
-    std::equal_to< PyRef >
+    PyRef::Hash
 > PyRef2Adapter;
 
 
@@ -189,19 +192,17 @@ typedef std::unordered_map
 <
 OUString,
 PyRef,
-OUStringHash,
-std::equal_to<OUString>
+OUStringHash
 > ExceptionClassMap;
 
 typedef std::unordered_map
 <
     OUString,
     css::uno::Sequence< sal_Int16 >,
-    OUStringHash,
-    std::equal_to< OUString >
+    OUStringHash
 > MethodOutIndexMap;
 
-typedef std::unordered_set< PyRef , PyRef::Hash , std::equal_to<PyRef> > ClassSet;
+typedef std::unordered_set< PyRef , PyRef::Hash > ClassSet;
 
 int PyUNO_initType();
 int PyUNOStruct_initType();
@@ -227,7 +228,7 @@ typedef struct
 } PyUNO;
 
 PyObject* PyUNO_iterator_new (
-    const css::uno::Reference<css::container::XEnumeration> xEnumeration);
+    const css::uno::Reference<css::container::XEnumeration>& xEnumeration);
 
 typedef struct
 {
@@ -350,8 +351,8 @@ public:
              const css::uno::Sequence< css::uno::Type > & types );
 
     static css::uno::Sequence< sal_Int8 > getUnoTunnelImplementationId();
-    PyRef getWrappedObject() { return mWrappedObject; }
-    css::uno::Sequence< css::uno::Type > getWrappedTypes() { return mTypes; }
+    const PyRef& getWrappedObject() const { return mWrappedObject; }
+    const css::uno::Sequence< css::uno::Type >& getWrappedTypes() const { return mTypes; }
     virtual ~Adapter();
 
     // XInvocation

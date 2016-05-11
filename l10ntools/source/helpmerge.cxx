@@ -35,7 +35,7 @@
 #include <iostream>
 #include <vector>
 #include <rtl/strbuf.hxx>
-#ifdef WNT
+#ifdef _WIN32
 #include <windows.h>
 #undef CopyFile
 #include <direct.h>
@@ -132,6 +132,8 @@ bool HelpParser::CreatePO(
         }
         else
         {
+            // If this is something totally unexpected, wouldn't an assert() be in order?
+            // On the other hand, if this is expected, why the printf?
             fprintf(stdout,"\nDBG: NullPointer in HelpParser::CreatePO, File %s\n", sHelpFile.getStr());
         }
     }
@@ -167,8 +169,8 @@ bool HelpParser::MergeSingleFile( XMLFile* file , MergeDataFile* pMergeDataFile 
     file->Extract();
 
     XMLHashMap* aXMLStrHM = file->GetStrings();
-    static  ResData pResData("","");
-    pResData.sResTyp   = "help";
+    static ResData s_ResData("","");
+    s_ResData.sResTyp   = "help";
 
     std::vector<OString> order = file->getOrder();
     std::vector<OString>::iterator pos;
@@ -184,10 +186,10 @@ bool HelpParser::MergeSingleFile( XMLFile* file , MergeDataFile* pMergeDataFile 
         printf("DBG: sHelpFile = %s\n",sHelpFile.getStr() );
 #endif
 
-        pResData.sGId      =  posm->first;
-        pResData.sFilename  =  sHelpFile;
+        s_ResData.sGId      =  posm->first;
+        s_ResData.sFilename  =  sHelpFile;
 
-        ProcessHelp( aLangHM , sLanguage, &pResData , pMergeDataFile );
+        ProcessHelp( aLangHM , sLanguage, &s_ResData , pMergeDataFile );
      }
 
     file->Write(sPath);

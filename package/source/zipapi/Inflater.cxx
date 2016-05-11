@@ -68,7 +68,6 @@ void SAL_CALL Inflater::setInput( const Sequence< sal_Int8 >& rBuffer )
 }
 
 
-
 sal_Int32 SAL_CALL Inflater::doInflateSegment( Sequence< sal_Int8 >& rBuffer, sal_Int32 nNewOffset, sal_Int32 nNewLength )
 {
     if (nNewOffset < 0 || nNewLength < 0 || nNewOffset + nNewLength > rBuffer.getLength())
@@ -117,6 +116,7 @@ sal_Int32 Inflater::doInflateBytes (Sequence < sal_Int8 >  &rBuffer, sal_Int32 n
     {
         case Z_STREAM_END:
             bFinished = true;
+            SAL_FALLTHROUGH;
         case Z_OK:
             nOffset += nLength - pStream->avail_in;
             nLength = pStream->avail_in;

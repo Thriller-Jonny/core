@@ -24,8 +24,6 @@
 #include "event.hxx"
 #include "activitiesqueue.hxx"
 
-#include <boost/noncopyable.hpp>
-
 namespace slideshow {
 namespace internal {
 
@@ -36,13 +34,14 @@ namespace internal {
     the EventQueue, to avoid busy-waiting for the next
     discrete time instant.
 */
-class WakeupEvent : public Event,
-                    private ::boost::noncopyable
+class WakeupEvent : public Event
 {
 public:
     WakeupEvent(
         std::shared_ptr< ::canvas::tools::ElapsedTime > const& pTimeBase,
         ActivitiesQueue & rActivityQueue );
+    WakeupEvent(const WakeupEvent&) = delete;
+    WakeupEvent& operator=(const WakeupEvent&) = delete;
 
     virtual void dispose() override;
     virtual bool fire() override;
@@ -76,7 +75,7 @@ private:
     ActivitiesQueue&                mrActivityQueue;
 };
 
-typedef ::boost::shared_ptr< WakeupEvent > WakeupEventSharedPtr;
+typedef ::std::shared_ptr< WakeupEvent > WakeupEventSharedPtr;
 
 } // namespace internal
 } // namespace presentation

@@ -53,7 +53,7 @@ namespace drawinglayer { namespace primitive3d {
     typedef css::uno::Reference< css::graphic::XPrimitive3D > Primitive3DReference;
     typedef css::uno::Sequence< Primitive3DReference > Primitive3DSequence;
 
-    class DRAWINGLAYER_DLLPUBLIC SAL_WARN_UNUSED Primitive3DContainer : public std::vector< Primitive3DReference >
+    class SAL_WARN_UNUSED DRAWINGLAYER_DLLPUBLIC Primitive3DContainer : public std::vector< Primitive3DReference >
     {
     public:
         explicit Primitive3DContainer() {}
@@ -64,8 +64,6 @@ namespace drawinglayer { namespace primitive3d {
         Primitive3DContainer( std::initializer_list<Primitive3DReference> init ) : vector(init) {}
 
         void append(const Primitive3DContainer& rSource);
-        void append(const Primitive3DSequence& rSource);
-        void append(Primitive3DContainer&& rSource);
         Primitive3DContainer& operator=(const Primitive3DContainer& r) { vector::operator=(r); return *this; }
         Primitive3DContainer& operator=(const Primitive3DContainer&& r) { vector::operator=(r); return *this; }
         bool operator==(const Primitive3DContainer& rB) const;
@@ -107,7 +105,7 @@ namespace drawinglayer
             virtual ~BasePrimitive3D();
 
             /** the ==operator is mainly needed to allow testing newly-created high level primitives against their last
-                incarnation which buffers/holds the decompositionsThe default implementation
+                incarnation which buffers/holds the decompositions. The default implementation
                 uses getPrimitive3DID()-calls to test if it's the same ID at last.
                 Overridden implementation are then based on this implementation.
              */
@@ -209,18 +207,8 @@ namespace drawinglayer
          */
         bool DRAWINGLAYER_DLLPUBLIC arePrimitive3DReferencesEqual(const Primitive3DReference& rA, const Primitive3DReference& rB);
 
-        /// compare two Primitive3DReferences for equality, uses arePrimitive3DReferencesEqual internally
-        bool DRAWINGLAYER_DLLPUBLIC arePrimitive3DSequencesEqual(const Primitive3DSequence& rA, const Primitive3DSequence& rB);
-
-        /// concatenate sequence
-        void DRAWINGLAYER_DLLPUBLIC appendPrimitive3DSequenceToPrimitive3DSequence(Primitive3DSequence& rDest, const Primitive3DContainer& rSource);
-
-        /// concatenate single Primitive3D
-        void DRAWINGLAYER_DLLPUBLIC appendPrimitive3DReferenceToPrimitive3DSequence(Primitive3DSequence& rDest, const Primitive3DReference& rSource);
-
     } // end of namespace primitive3d
 } // end of namespace drawinglayer
-
 
 
 #endif //INCLUDED_DRAWINGLAYER_PRIMITIVE3D_BASEPRIMITIVE3D_HXX

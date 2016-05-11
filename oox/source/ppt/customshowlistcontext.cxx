@@ -19,6 +19,10 @@
 
 #include "oox/ppt/customshowlistcontext.hxx"
 
+#include <oox/helper/attributelist.hxx>
+#include <oox/token/namespaces.hxx>
+#include <oox/token/tokens.hxx>
+
 using namespace ::oox::core;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::xml::sax;
@@ -43,7 +47,7 @@ CustomShowContext::CustomShowContext( FragmentHandler2& rParent,
 : FragmentHandler2( rParent )
 , mrCustomShow( rCustomShow )
 {
-    mrCustomShow.maName = rxAttribs->getOptionalValue( XML_name );
+    mrCustomShow.maCustomShowName = rxAttribs->getOptionalValue( XML_name );
     mrCustomShow.mnId = rxAttribs->getOptionalValue( XML_id );
 }
 

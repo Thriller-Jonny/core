@@ -69,11 +69,10 @@
 #include <svtools/miscopt.hxx>
 #include <comphelper/string.hxx>
 #include <com/sun/star/frame/XLayoutManager.hpp>
-#include <com/sun/star/frame/XModel.hpp>
-#include <com/sun/star/frame/XController.hpp>
 
 #define THESIZE             1000000 // Should be more than enough!
 #define TBX_WINDOW_HEIGHT   22 // in pixel - TODO: The same on all systems?
+#define MULTILINE_BUTTON_WIDTH 20 // Width of the button which opens the multiline dropdown
 #define LEFT_OFFSET         5
 #define INPUTWIN_MULTILINES 6
 const long BUTTON_OFFSET = 2; ///< space between input line and the button to expand / collapse
@@ -84,9 +83,6 @@ using com::sun::star::uno::Reference;
 using com::sun::star::uno::UNO_QUERY;
 
 using com::sun::star::frame::XLayoutManager;
-using com::sun::star::frame::XModel;
-using com::sun::star::frame::XFrame;
-using com::sun::star::frame::XController;
 using com::sun::star::beans::XPropertySet;
 
 enum ScNameInputType
@@ -236,7 +232,7 @@ ScInputWindow::ScInputWindow( vcl::Window* pParent, SfxBindings* pBind ) :
         // If the input row was hidden while editing (e.g. when editing a formula
         // and then switching to another document or the help), display the text
         // we just edited from the InputHandler
-        aTextWindow.SetTextString( pInputHdl->GetEditString() ); // Dispaly text
+        aTextWindow.SetTextString( pInputHdl->GetEditString() ); // Display text
         if ( pInputHdl->IsTopMode() )
             pInputHdl->SetMode( SC_INPUT_TABLE ); // Focus ends up at the bottom anyways
     }
@@ -887,7 +883,7 @@ ScInputBarGroup::ScInputBarGroup(vcl::Window* pParent, ScTabViewShell* pViewSh)
     maTextWnd->SetQuickHelpText(ScResId(SCSTR_QHELP_INPUTWND));
     maTextWnd->SetHelpId(HID_INSWIN_INPUT);
 
-    Size aSize(GetSettings().GetStyleSettings().GetScrollBarSize(), maTextWnd->GetPixelHeightForLines(1));
+    Size aSize(MULTILINE_BUTTON_WIDTH, maTextWnd->GetPixelHeightForLines(1));
 
     maButton->SetClickHdl(LINK(this, ScInputBarGroup, ClickHdl));
     maButton->SetSizePixel(aSize);
@@ -1384,7 +1380,7 @@ ScTextWnd::ScTextWnd(ScInputBarGroup* pParent, ScTabViewShell* pViewSh)
     //  always use application font, so a font with cjk chars can be installed
     vcl::Font aAppFont = GetFont();
     aTextFont = aAppFont;
-    aTextFont.SetSize(PixelToLogic(aAppFont.GetSize(), MAP_TWIP));  // AppFont is in pixels
+    aTextFont.SetFontSize(PixelToLogic(aAppFont.GetFontSize(), MAP_TWIP));  // AppFont is in pixels
 
     const StyleSettings& rStyleSettings = Application::GetSettings().GetStyleSettings();
 
@@ -1526,6 +1522,10 @@ void ScTextWnd::Command( const CommandEvent& rCEvt )
         {
             //don't call InputChanged for CommandEventId::Wheel
         }
+        else if ( nCommand == CommandEventId::Swipe )
+        {
+            //don't call InputChanged for CommandEventId::Swipe
+        }
         else
             SC_MOD()->InputChanged( pEditView );
     }
@@ -1635,8 +1635,10 @@ IMPL_LINK_NOARG_TYPED(ScTextWnd, ModifyHdl, LinkParamNone*, void)
 
 void ScTextWnd::StopEditEngine( bool bAll )
 {
-    if (pEditEngine)
-        pEditEngine->SetNotifyHdl(Link<EENotify&, void>());
+    if (!pEditEngine)
+        return;
+
+    pEditEngine->SetNotifyHdl(Link<EENotify&, void>());
 
     if (pEditView)
     {
@@ -1677,8 +1679,8 @@ static sal_Int32 findFirstNonMatchingChar(const OUString& rStr1, const OUString&
         // Abort on the first unmatching char
         if ( *pStr1 != *pStr2 )
             return i;
-        ++pStr1,
-        ++pStr2,
+        ++pStr1;
+        ++pStr2;
         ++i;
     }
 
@@ -1880,7 +1882,6 @@ void ScTextWnd::TextGrabFocus()
 
 ScPosWnd::ScPosWnd( vcl::Window* pParent ) :
     ComboBox    ( pParent, WinBits(WB_HIDE | WB_DROPDOWN) ),
-    pAccel      ( nullptr ),
     nTipVisible ( 0 ),
     bFormulaMode( false )
 {
@@ -1906,7 +1907,6 @@ void ScPosWnd::dispose()
 
     HideTip();
 
-    delete pAccel;
     ComboBox::dispose();
 }
 
@@ -2043,7 +2043,7 @@ void ScPosWnd::Notify( SfxBroadcaster&, const SfxHint& rHint )
         const SfxSimpleHint* pSimpleHint = dynamic_cast<const SfxSimpleHint*>(&rHint);
         if ( pSimpleHint )
         {
-            sal_uLong nHintId = pSimpleHint->GetId();
+            const sal_uInt32 nHintId = pSimpleHint->GetId();
             if ( nHintId == SC_HINT_AREAS_CHANGED || nHintId == SC_HINT_NAVIGATOR_UPDATEALL)
                 FillRangeNames();
         }
@@ -2060,7 +2060,10 @@ void ScPosWnd::HideTip()
 {
     if ( nTipVisible )
     {
-        Help::HideTip( nTipVisible );
+        vcl::Window* pWin = GetSubEdit();
+        if (!pWin)
+            pWin = this;
+        Help::HidePopover(pWin, nTipVisible);
         nTipVisible = 0;
     }
 }
@@ -2087,9 +2090,9 @@ static ScNameInputType lcl_GetInputType( const OUString& rText )
 
         if (rText == ScGlobal::GetRscString(STR_MANAGE_NAMES))
             eRet = SC_MANAGE_NAMES;
-        else if ( aRange.Parse( rText, pDoc, eConv ) & SCA_VALID )
+        else if ( aRange.Parse( rText, pDoc, eConv ) & ScRefFlags::VALID )
             eRet = SC_NAME_INPUT_RANGE;
-        else if ( aAddress.Parse( rText, pDoc, eConv ) & SCA_VALID )
+        else if ( aAddress.Parse( rText, pDoc, eConv ) & ScRefFlags::VALID )
             eRet = SC_NAME_INPUT_CELL;
         else if ( ScRangeUtil::MakeRangeFromName( rText, pDoc, nTab, aRange, RUTL_NAMES, eConv ) )
             eRet = SC_NAME_INPUT_NAMEDRANGE;
@@ -2168,7 +2171,7 @@ void ScPosWnd::Modify()
 
             OUString aText = ScGlobal::GetRscString( nStrId );
             QuickHelpFlags nAlign = QuickHelpFlags::Left|QuickHelpFlags::Bottom;
-            nTipVisible = Help::ShowTip(pWin, aRect, aText, nAlign);
+            nTipVisible = Help::ShowPopover(pWin, aRect, aText, nAlign);
         }
     }
 }
@@ -2236,7 +2239,7 @@ void ScPosWnd::DoEnter()
                     {
                         ScRangeName aNewRanges( *pNames );
                         ScAddress aCursor( rViewData.GetCurX(), rViewData.GetCurY(), rViewData.GetTabNo() );
-                        OUString aContent(aSelection.Format(SCR_ABS_3D, &rDoc, rDoc.GetAddressConvention()));
+                        OUString aContent(aSelection.Format(ScRefFlags::RANGE_ABS_3D, &rDoc, rDoc.GetAddressConvention()));
                         ScRangeData* pNew = new ScRangeData( &rDoc, aText, aContent, aCursor );
                         if ( aNewRanges.insert(pNew) )
                         {
@@ -2262,15 +2265,15 @@ void ScPosWnd::DoEnter()
                         // be in Calc A1 format.  Convert the text.
                         ScRange aRange(0,0, rViewData.GetTabNo());
                         aRange.ParseAny(aText, &rDoc, rDoc.GetAddressConvention());
-                        aText = aRange.Format(SCR_ABS_3D, &rDoc, ::formula::FormulaGrammar::CONV_OOO);
+                        aText = aRange.Format(ScRefFlags::RANGE_ABS_3D, &rDoc, ::formula::FormulaGrammar::CONV_OOO);
                     }
 
                     SfxStringItem aPosItem( SID_CURRENTCELL, aText );
                     SfxBoolItem aUnmarkItem( FN_PARAM_1, true );        // remove existing selection
 
-                    pViewSh->GetViewData().GetDispatcher().Execute( SID_CURRENTCELL,
+                    pViewSh->GetViewData().GetDispatcher().ExecuteList( SID_CURRENTCELL,
                                         SfxCallMode::SYNCHRON | SfxCallMode::RECORD,
-                                        &aPosItem, &aUnmarkItem, 0L );
+                                        { &aPosItem, &aUnmarkItem });
                 }
             }
         }

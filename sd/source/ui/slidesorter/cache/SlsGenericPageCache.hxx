@@ -81,8 +81,7 @@ public:
         const CacheKey aKey,
         const bool bResize);
     Bitmap GetMarkedPreviewBitmap (
-        const CacheKey aKey,
-        const bool bResize);
+        const CacheKey aKey);
     void SetMarkedPreviewBitmap (
         const CacheKey aKey,
         const Bitmap& rMarkedBitmap);
@@ -115,7 +114,7 @@ public:
         This is the case when the size of the page objects on the screen has
         changed or when the model has changed.
     */
-    void InvalidateCache (const bool bUpdateCache);
+    void InvalidateCache ();
 
     /** With the precious flag you can control whether a bitmap can be
         removed from the cache or reduced in size to make room for other

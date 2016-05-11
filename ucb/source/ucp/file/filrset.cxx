@@ -47,7 +47,6 @@ XResultSet_impl::XResultSet_impl( shell* pMyShell,
                                   const uno::Sequence< beans::Property >& seq,
                                   const uno::Sequence< ucb::NumberedSortingInfo >& seqSort )
     : m_pMyShell( pMyShell )
-    , m_xProvider( pMyShell->m_pProvider )
     , m_nRow( -1 )
     , m_nWasNull ( false )
     , m_nOpenMode( OpenMode )
@@ -92,12 +91,6 @@ XResultSet_impl::~XResultSet_impl()
 }
 
 
-
-
-
-
-
-
 void SAL_CALL
 XResultSet_impl::disposing( const lang::EventObject& )
     throw( uno::RuntimeException, std::exception )
@@ -115,7 +108,7 @@ XResultSet_impl::addEventListener(
 
     if ( ! m_pDisposeEventListeners )
         m_pDisposeEventListeners =
-            new cppu::OInterfaceContainerHelper( m_aEventListenerMutex );
+            new comphelper::OInterfaceContainerHelper2( m_aEventListenerMutex );
 
     m_pDisposeEventListeners->addInterface( Listener );
 }
@@ -131,7 +124,6 @@ XResultSet_impl::removeEventListener(
     if ( m_pDisposeEventListeners )
         m_pDisposeEventListeners->removeInterface( Listener );
 }
-
 
 
 void SAL_CALL
@@ -158,11 +150,10 @@ XResultSet_impl::dispose()
 }
 
 
-
 void XResultSet_impl::rowCountChanged()
 {
     sal_Int32 aOldValue,aNewValue;
-    uno::Sequence< uno::Reference< uno::XInterface > > seq;
+    std::vector< uno::Reference< uno::XInterface > > seq;
     {
         osl::MutexGuard aGuard( m_aMutex );
         if( m_pRowCountListeners )
@@ -176,10 +167,10 @@ void XResultSet_impl::rowCountChanged()
     aEv.PropertyHandle = -1;
     aEv.OldValue <<= aOldValue;
     aEv.NewValue <<= aNewValue;
-    for( sal_Int32 i = 0; i < seq.getLength(); ++i )
+    for( const auto& r : seq )
     {
         uno::Reference< beans::XPropertyChangeListener > listener(
-            seq[i], uno::UNO_QUERY );
+            r, uno::UNO_QUERY );
         if( listener.is() )
             listener->propertyChange( aEv );
     }
@@ -188,7 +179,7 @@ void XResultSet_impl::rowCountChanged()
 
 void XResultSet_impl::isFinalChanged()
 {
-    uno::Sequence< uno::Reference< XInterface > > seq;
+    std::vector< uno::Reference< XInterface > > seq;
     {
         osl::MutexGuard aGuard( m_aMutex );
         if( m_pIsFinalListeners )
@@ -203,10 +194,10 @@ void XResultSet_impl::isFinalChanged()
     bool tval = true;
     aEv.OldValue <<= fval;
     aEv.NewValue <<= tval;
-    for( sal_Int32 i = 0; i < seq.getLength(); ++i )
+    for( const auto& r : seq )
     {
         uno::Reference< beans::XPropertyChangeListener > listener(
-            seq[i], uno::UNO_QUERY );
+            r, uno::UNO_QUERY );
         if( listener.is() )
             listener->propertyChange( aEv );
     }
@@ -226,12 +217,12 @@ XResultSet_impl::OneMore(
     osl::FileBase::RC err;
     bool IsRegular;
     OUString aUnqPath;
-    osl::DirectoryItem  m_aDirIte;
+    osl::DirectoryItem  aDirIte;
     uno::Reference< sdbc::XRow > aRow;
 
     while( true )
     {
-        err = m_aFolder.getNextItem( m_aDirIte );
+        err = m_aFolder.getNextItem( aDirIte );
 
         if( err == osl::FileBase::E_NOENT || err == osl::FileBase::E_INVAL )
         {
@@ -242,7 +233,7 @@ XResultSet_impl::OneMore(
         else if( err == osl::FileBase::E_None )
         {
             aRow = m_pMyShell->getv(
-                this, m_sProperty, m_aDirIte, aUnqPath, IsRegular );
+                this, m_sProperty, aDirIte, aUnqPath, IsRegular );
 
             if( m_nOpenMode == ucb::OpenMode::DOCUMENTS && IsRegular )
             {
@@ -290,9 +281,6 @@ XResultSet_impl::OneMore(
         }
     }
 }
-
-
-
 
 
 sal_Bool SAL_CALL
@@ -412,7 +400,6 @@ XResultSet_impl::getRow(
 }
 
 
-
 sal_Bool SAL_CALL XResultSet_impl::absolute( sal_Int32 row )
     throw( sdbc::SQLException, uno::RuntimeException, std::exception)
 {
@@ -435,8 +422,6 @@ sal_Bool SAL_CALL XResultSet_impl::absolute( sal_Int32 row )
 }
 
 
-
-
 sal_Bool SAL_CALL
 XResultSet_impl::relative(
     sal_Int32 row )
@@ -452,7 +437,6 @@ XResultSet_impl::relative(
 
     return 0 <= m_nRow && m_nRow < sal::static_int_cast<sal_Int32>(m_aItems.size());
 }
-
 
 
 sal_Bool SAL_CALL
@@ -534,7 +518,6 @@ XResultSet_impl::close(
         m_nIsOpen = false;
     }
 }
-
 
 
 OUString SAL_CALL
@@ -722,7 +705,6 @@ XResultSet_impl::getMetaData(
 }
 
 
-
 // XPropertySet
 uno::Reference< beans::XPropertySetInfo > SAL_CALL
 XResultSet_impl::getPropertySetInfo()
@@ -744,7 +726,6 @@ XResultSet_impl::getPropertySetInfo()
                                                           seq );
     return uno::Reference< beans::XPropertySetInfo > ( p );
 }
-
 
 
 void SAL_CALL XResultSet_impl::setPropertyValue(
@@ -770,16 +751,12 @@ uno::Any SAL_CALL XResultSet_impl::getPropertyValue(
 {
     if( PropertyName == "IsRowCountFinal" )
     {
-        uno::Any aAny;
-        aAny <<= m_bRowCountFinal;
-        return aAny;
+        return uno::Any(m_bRowCountFinal);
     }
     else if ( PropertyName == "RowCount" )
     {
-        uno::Any aAny;
         sal_Int32 count = sal::static_int_cast<sal_Int32>(m_aItems.size());
-        aAny <<= count;
-        return aAny;
+        return uno::Any(count);
     }
     else
         throw beans::UnknownPropertyException( THROW_WHERE );
@@ -798,7 +775,7 @@ void SAL_CALL XResultSet_impl::addPropertyChangeListener(
         osl::MutexGuard aGuard( m_aMutex );
         if ( ! m_pIsFinalListeners )
             m_pIsFinalListeners =
-                new cppu::OInterfaceContainerHelper( m_aEventListenerMutex );
+                new comphelper::OInterfaceContainerHelper2( m_aEventListenerMutex );
 
         m_pIsFinalListeners->addInterface( xListener );
     }
@@ -807,7 +784,7 @@ void SAL_CALL XResultSet_impl::addPropertyChangeListener(
         osl::MutexGuard aGuard( m_aMutex );
         if ( ! m_pRowCountListeners )
             m_pRowCountListeners =
-                new cppu::OInterfaceContainerHelper( m_aEventListenerMutex );
+                new comphelper::OInterfaceContainerHelper2( m_aEventListenerMutex );
         m_pRowCountListeners->addInterface( xListener );
     }
     else

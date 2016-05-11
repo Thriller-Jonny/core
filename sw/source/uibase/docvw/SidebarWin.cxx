@@ -572,7 +572,7 @@ void SwSidebarWin::InitControls()
         AllSettings aSettings = mpMetadataAuthor->GetSettings();
         StyleSettings aStyleSettings = aSettings.GetStyleSettings();
         vcl::Font aFont = aStyleSettings.GetFieldFont();
-        aFont.SetHeight(8);
+        aFont.SetFontHeight(8);
         aStyleSettings.SetFieldFont(aFont);
         aSettings.SetStyleSettings(aStyleSettings);
         mpMetadataAuthor->SetSettings(aSettings);
@@ -591,14 +591,14 @@ void SwSidebarWin::InitControls()
         AllSettings aSettings = mpMetadataDate->GetSettings();
         StyleSettings aStyleSettings = aSettings.GetStyleSettings();
         vcl::Font aFont = aStyleSettings.GetFieldFont();
-        aFont.SetHeight(8);
+        aFont.SetFontHeight(8);
         aStyleSettings.SetFieldFont(aFont);
         aSettings.SetStyleSettings(aStyleSettings);
         mpMetadataDate->SetSettings(aSettings);
     }
 
     SwDocShell* aShell = mrView.GetDocShell();
-    mpOutliner = new Outliner(&aShell->GetPool(),OUTLINERMODE_TEXTOBJECT);
+    mpOutliner = new Outliner(&aShell->GetPool(),OutlinerMode::TextObject);
     aShell->GetDoc()->SetCalcFieldValueHdl( mpOutliner );
     mpOutliner->SetUpdateMode( true );
     Rescale();
@@ -615,11 +615,7 @@ void SwSidebarWin::InitControls()
     {
         // If there is a callback already registered, inform the new outliner view about it.
         SwDrawModel* pDrawModel = mrView.GetWrtShellPtr()->getIDocumentDrawModelAccess().GetDrawModel();
-        LibreOfficeKitCallback pCallback = nullptr;
-        void* pData = nullptr;
-        pDrawModel->getLibreOfficeKitCallback(pCallback, pData);
-        mpOutlinerView->setTiledRendering(comphelper::LibreOfficeKit::isActive());
-        mpOutlinerView->registerLibreOfficeKitCallback(pCallback, pData);
+        mpOutlinerView->registerLibreOfficeKitCallback(pDrawModel);
     }
 
     //create Scrollbars
@@ -721,17 +717,17 @@ void SwSidebarWin::Rescale()
     if ( mpMetadataAuthor )
     {
         vcl::Font aFont( mpMetadataAuthor->GetSettings().GetStyleSettings().GetFieldFont() );
-        sal_Int32 nHeight = aFont.GetHeight();
+        sal_Int32 nHeight = aFont.GetFontHeight();
         nHeight = nHeight * rFraction.GetNumerator() / rFraction.GetDenominator();
-        aFont.SetHeight( nHeight );
+        aFont.SetFontHeight( nHeight );
         mpMetadataAuthor->SetControlFont( aFont );
     }
     if ( mpMetadataDate )
     {
         vcl::Font aFont( mpMetadataDate->GetSettings().GetStyleSettings().GetFieldFont() );
-        sal_Int32 nHeight = aFont.GetHeight();
+        sal_Int32 nHeight = aFont.GetFontHeight();
         nHeight = nHeight * rFraction.GetNumerator() / rFraction.GetDenominator();
-        aFont.SetHeight( nHeight );
+        aFont.SetFontHeight( nHeight );
         mpMetadataDate->SetControlFont( aFont );
     }
 }
@@ -1160,7 +1156,7 @@ void SwSidebarWin::SetReadonly(bool bSet)
 
 void SwSidebarWin::SetLanguage(const SvxLanguageItem& rNewItem)
 {
-    Link<LinkParamNone*,void> pLink = Engine()->GetModifyHdl();
+    Link<LinkParamNone*,void> aLink = Engine()->GetModifyHdl();
     Engine()->SetModifyHdl( Link<LinkParamNone*,void>() );
     ESelection aOld = GetOutlinerView()->GetSelection();
 
@@ -1171,7 +1167,7 @@ void SwSidebarWin::SetLanguage(const SvxLanguageItem& rNewItem)
     GetOutlinerView()->SetAttribs( aEditAttr );
 
     GetOutlinerView()->SetSelection(aOld);
-    Engine()->SetModifyHdl( pLink );
+    Engine()->SetModifyHdl( aLink );
 
     const SwViewOption* pVOpt = mrView.GetWrtShellPtr()->GetViewOptions();
     EEControlBits nCntrl = Engine()->GetControlWord();
@@ -1320,7 +1316,7 @@ void SwSidebarWin::ExecuteCommand(sal_uInt16 nSlot)
         case FN_DELETE_ALL_NOTES:
         case FN_HIDE_ALL_NOTES:
             // not possible as slot as this would require that "this" is the active postit
-            mrView.GetViewFrame()->GetBindings().Execute( nSlot, nullptr, 0, SfxCallMode::ASYNCHRON );
+            mrView.GetViewFrame()->GetBindings().Execute( nSlot, nullptr, SfxCallMode::ASYNCHRON );
             break;
         case FN_DELETE_NOTE_AUTHOR:
         case FN_HIDE_NOTE_AUTHOR:
@@ -1330,7 +1326,7 @@ void SwSidebarWin::ExecuteCommand(sal_uInt16 nSlot)
             const SfxPoolItem* aItems[2];
             aItems[0] = &aItem;
             aItems[1] = nullptr;
-            mrView.GetViewFrame()->GetBindings().Execute( nSlot, aItems, 0, SfxCallMode::ASYNCHRON );
+            mrView.GetViewFrame()->GetBindings().Execute( nSlot, aItems, SfxCallMode::ASYNCHRON );
         }
             break;
         default:
@@ -1433,7 +1429,7 @@ IMPL_LINK_NOARG_TYPED(SwSidebarWin, DeleteHdl, void*, void)
 void SwSidebarWin::ResetAttributes()
 {
     mpOutlinerView->RemoveAttribsKeepLanguages(true);
-    mpOutliner->RemoveFields(true);
+    mpOutliner->RemoveFields();
     mpOutlinerView->SetAttribs(DefaultItem());
 }
 

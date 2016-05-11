@@ -26,6 +26,8 @@
 #include <osl/diagnose.h>
 #include <tools/debug.hxx>
 
+#include <iterator>
+
 ParagraphData::ParagraphData()
 : nDepth( -1 )
 , mnNumberingStartValue( -1 )
@@ -94,15 +96,11 @@ void Paragraph::SetParaIsNumberingRestart( bool bParaIsNumberingRestart )
         mnNumberingStartValue = -1;
 }
 
-void ParagraphList::Clear( bool bDestroyParagraphs )
+void ParagraphList::Clear()
 {
-    if ( bDestroyParagraphs )
-    {
-        std::vector<Paragraph*>::iterator iter;
-        for (iter = maEntries.begin(); iter != maEntries.end(); ++iter)
-            delete *iter;
-    }
-
+    std::vector<Paragraph*>::iterator iter;
+    for (iter = maEntries.begin(); iter != maEntries.end(); ++iter)
+        delete *iter;
     maEntries.clear();
 }
 

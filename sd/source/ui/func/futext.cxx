@@ -342,15 +342,17 @@ bool FuText::MouseButtonDown(const MouseEvent& rMEvt)
                         if (rMEvt.IsMod1())
                         {
                             // open in new frame
-                            pFrame->GetDispatcher()->Execute(SID_OPENDOC, SfxCallMode::ASYNCHRON | SfxCallMode::RECORD,
-                                        &aStrItem, &aBrowseItem, &aReferer, 0L);
+                            pFrame->GetDispatcher()->ExecuteList(SID_OPENDOC,
+                                SfxCallMode::ASYNCHRON | SfxCallMode::RECORD,
+                                { &aStrItem, &aBrowseItem, &aReferer });
                         }
                         else
                         {
                             // open in current frame
                             SfxFrameItem aFrameItem(SID_DOCFRAME, pFrame);
-                            pFrame->GetDispatcher()->Execute(SID_OPENDOC, SfxCallMode::ASYNCHRON | SfxCallMode::RECORD,
-                                        &aStrItem, &aFrameItem, &aBrowseItem, &aReferer, 0L);
+                            pFrame->GetDispatcher()->ExecuteList(SID_OPENDOC,
+                                SfxCallMode::ASYNCHRON | SfxCallMode::RECORD,
+                                { &aStrItem, &aFrameItem, &aBrowseItem, &aReferer });
                         }
                     }
                     else
@@ -1041,7 +1043,7 @@ void FuText::SetInEditMode(const MouseEvent& rMEvt, bool bQuickDrag)
                  nSdrObjKind == OBJ_OUTLINETEXT || !mxTextObj->IsEmptyPresObj() ) )
             {
                 // create new outliner (owned by SdrObjEditView)
-                SdrOutliner* pOutl = SdrMakeOutliner(OUTLINERMODE_OUTLINEOBJECT, *mpDoc);
+                SdrOutliner* pOutl = SdrMakeOutliner(OutlinerMode::OutlineObject, *mpDoc);
 
                 if (bEmptyOutliner)
                     mpView->SdrEndTextEdit(true);
@@ -1117,10 +1119,8 @@ void FuText::SetInEditMode(const MouseEvent& rMEvt, bool bQuickDrag)
 /**
  * Text entry is started, if necessary delete the default text.
  */
-bool FuText::DeleteDefaultText()
+void FuText::DeleteDefaultText()
 {
-    bool bDeleted = false;
-
     if ( mxTextObj.is() && mxTextObj->IsEmptyPresObj() )
     {
         SdPage* pPage = static_cast<SdPage*>( mxTextObj->GetPage() );
@@ -1151,12 +1151,9 @@ bool FuText::DeleteDefaultText()
                     pOutliner->SetStyleSheet(0, pSheet);
 
                 mxTextObj->SetEmptyPresObj(true);
-                bDeleted = true;
             }
         }
     }
-
-    return bDeleted;
 }
 
 bool FuText::Command(const CommandEvent& rCEvt)

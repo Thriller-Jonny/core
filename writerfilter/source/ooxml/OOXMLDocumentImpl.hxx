@@ -64,44 +64,45 @@ class OOXMLDocumentImpl : public OOXMLDocument
     /// End position, i.e. the estimated number of paragraphs.
     sal_Int32 mnProgressEndPos;
     /// DocumentBaseURL
-    OUString const m_rBaseURL;
+    OUString m_rBaseURL;
+    css::uno::Sequence<css::beans::PropertyValue> maMediaDescriptor;
 
 protected:
     void resolveFastSubStream(Stream & rStream,
                                       OOXMLStream::StreamType_t nType);
 
     static void resolveFastSubStreamWithId(Stream & rStream,
-                                           writerfilter::Reference<Stream>::Pointer_t pStream,
+                                           const writerfilter::Reference<Stream>::Pointer_t& pStream,
                                            sal_uInt32 nId);
 
     css::uno::Reference<css::xml::dom::XDocument> importSubStream(OOXMLStream::StreamType_t nType);
 
-    void importSubStreamRelations(OOXMLStream::Pointer_t pStream, OOXMLStream::StreamType_t nType);
+    void importSubStreamRelations(const OOXMLStream::Pointer_t& pStream, OOXMLStream::StreamType_t nType);
 
     writerfilter::Reference<Stream>::Pointer_t
     getSubStream(const OUString & rId);
 
     writerfilter::Reference<Stream>::Pointer_t
     getXNoteStream(OOXMLStream::StreamType_t nType,
-                   const Id & rType,
+                   Id aType,
                    const sal_Int32 nNoteId);
 
     void setIsSubstream( bool bSubstream ) { mbIsSubstream = bSubstream; };
     void resolveCustomXmlStream(Stream & rStream);
     void resolveActiveXStream(Stream & rStream);
     void resolveGlossaryStream(Stream & rStream);
-    void resolveEmbeddingsStream(OOXMLStream::Pointer_t pStream);
+    void resolveEmbeddingsStream(const OOXMLStream::Pointer_t& pStream);
 public:
-    OOXMLDocumentImpl(OOXMLStream::Pointer_t pStream, const css::uno::Reference<css::task::XStatusIndicator>& xStatusIndicator, bool bSkipImages, OUString const& rBaseURL);
+    OOXMLDocumentImpl(OOXMLStream::Pointer_t pStream, const css::uno::Reference<css::task::XStatusIndicator>& xStatusIndicator, bool bSkipImages, const css::uno::Sequence<css::beans::PropertyValue>& rDescriptor);
     virtual ~OOXMLDocumentImpl();
 
     virtual void resolve(Stream & rStream) override;
 
     virtual void resolveFootnote(Stream & rStream,
-                                 const Id & rType,
+                                 Id aType,
                                  const sal_Int32 nNoteId) override;
     virtual void resolveEndnote(Stream & rStream,
-                                const Id & rType,
+                                Id aType,
                                 const sal_Int32 nNoteId) override;
     virtual void resolveHeader(Stream & rStream,
                                const sal_Int32 type,
@@ -125,7 +126,7 @@ public:
     virtual css::uno::Reference<css::io::XInputStream> getInputStreamForId(const OUString & rId) override;
     virtual void setXNoteId(const sal_Int32 nId) override;
     virtual sal_Int32 getXNoteId() const override;
-    virtual void setXNoteType(const Id & rId) override;
+    virtual void setXNoteType(Id aId) override;
     virtual const OUString & getTarget() const override;
     virtual css::uno::Reference<css::xml::sax::XFastShapeContextHandler> getShapeContext( ) override;
     virtual void setShapeContext( css::uno::Reference<css::xml::sax::XFastShapeContextHandler> xContext ) override;
@@ -141,6 +142,7 @@ public:
     void incrementProgress();
     bool IsSkipImages() { return mbSkipImages; };
     OUString const& GetDocumentBaseURL() { return m_rBaseURL; };
+    const css::uno::Sequence<css::beans::PropertyValue>& getMediaDescriptor();
 };
 }}
 #endif // OOXML_DOCUMENT_IMPL_HXX

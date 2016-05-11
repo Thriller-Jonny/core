@@ -56,12 +56,7 @@ namespace framework
 // global function needed by both implementations
 static OUString getHashKeyFromStrings( const OUString& aType, const OUString& aName, const OUString& aModuleName )
 {
-    OUStringBuffer aKey( aType );
-    aKey.append( "^" );
-    aKey.append( aName );
-    aKey.append( "^" );
-    aKey.append( aModuleName );
-    return aKey.makeStringAndClear();
+    return aType + "^" + aName + "^" + aModuleName;
 }
 
 ConfigurationAccess_FactoryManager::ConfigurationAccess_FactoryManager( const Reference< XComponentContext >& rxContext, const OUString& _sRoot ) :
@@ -390,33 +385,24 @@ public:
 private:
     bool                                                  m_bConfigRead;
     css::uno::Reference< css::uno::XComponentContext >        m_xContext;
-    ConfigurationAccess_FactoryManager*                       m_pConfigAccess;
+    rtl::Reference<ConfigurationAccess_FactoryManager> m_pConfigAccess;
 };
 
 UIElementFactoryManager::UIElementFactoryManager( const Reference< XComponentContext >& rxContext ) :
     UIElementFactoryManager_BASE(m_aMutex),
     m_bConfigRead( false ),
-    m_xContext(rxContext)
-{
-    m_pConfigAccess = new ConfigurationAccess_FactoryManager(rxContext,
-            "/org.openoffice.Office.UI.Factories/Registered/UIElementFactories");
-    m_pConfigAccess->acquire();
-}
+    m_xContext(rxContext),
+    m_pConfigAccess(
+        new ConfigurationAccess_FactoryManager(
+            rxContext,
+            "/org.openoffice.Office.UI.Factories/Registered/UIElementFactories"))
+{}
 
-UIElementFactoryManager::~UIElementFactoryManager()
-{
-    disposing();
-}
+UIElementFactoryManager::~UIElementFactoryManager() {}
 
 void SAL_CALL UIElementFactoryManager::disposing()
 {
-    osl::MutexGuard g(rBHelper.rMutex);
-    if (m_pConfigAccess)
-    {
-        // reduce reference count
-        m_pConfigAccess->release();
-        m_pConfigAccess = nullptr;
-    }
+    m_pConfigAccess.clear();
 }
 
 // XUIElementFactory
@@ -429,6 +415,10 @@ throw ( css::container::NoSuchElementException, css::lang::IllegalArgumentExcept
     OUString aModuleId;
     { // SAFE
     osl::MutexGuard g(rBHelper.rMutex);
+    if (rBHelper.bDisposed) {
+        throw css::lang::DisposedException(
+            "disposed", static_cast<OWeakObject *>(this));
+    }
 
     if ( !m_bConfigRead )
     {
@@ -473,6 +463,10 @@ throw ( RuntimeException, std::exception )
 {
     // SAFE
     osl::MutexGuard g(rBHelper.rMutex);
+    if (rBHelper.bDisposed) {
+        throw css::lang::DisposedException(
+            "disposed", static_cast<OWeakObject *>(this));
+    }
 
     if ( !m_bConfigRead )
     {
@@ -489,6 +483,10 @@ throw ( RuntimeException, std::exception )
     OUString aServiceSpecifier;
     { // SAFE
     osl::MutexGuard g(rBHelper.rMutex);
+    if (rBHelper.bDisposed) {
+        throw css::lang::DisposedException(
+            "disposed", static_cast<OWeakObject *>(this));
+    }
 
     if ( !m_bConfigRead )
     {
@@ -524,6 +522,10 @@ throw ( ElementExistException, RuntimeException, std::exception )
 {
     // SAFE
     osl::MutexGuard g(rBHelper.rMutex);
+    if (rBHelper.bDisposed) {
+        throw css::lang::DisposedException(
+            "disposed", static_cast<OWeakObject *>(this));
+    }
 
     if ( !m_bConfigRead )
     {
@@ -540,6 +542,10 @@ throw ( NoSuchElementException, RuntimeException, std::exception )
 {
     // SAFE
     osl::MutexGuard g(rBHelper.rMutex);
+    if (rBHelper.bDisposed) {
+        throw css::lang::DisposedException(
+            "disposed", static_cast<OWeakObject *>(this));
+    }
 
     if ( !m_bConfigRead )
     {

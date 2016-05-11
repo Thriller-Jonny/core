@@ -20,9 +20,6 @@
 #ifndef INCLUDED_VCL_INC_TOOLBOX_H
 #define INCLUDED_VCL_INC_TOOLBOX_H
 
-#include <rtl/ustring.hxx>
-#include <tools/gen.hxx>
-#include <vcl/image.hxx>
 #include <vcl/toolbox.hxx>
 #include <vcl/controllayout.hxx>
 
@@ -136,8 +133,8 @@ struct ImplToolBoxPrivateData
     ToolBoxButtonSize   meButtonSize;
 
     // the optional custom menu
-    PopupMenu*  mpMenu;
-    sal_uInt16      maMenuType;
+    PopupMenu*      mpMenu;
+    ToolBoxMenuType maMenuType;
     ImplSVEvent *   mnEventId;
 
     // called when menu button is clicked and before the popup menu is executed

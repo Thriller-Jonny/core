@@ -34,8 +34,12 @@
 #include "svdata.hxx"
 #include "opengl/zone.hxx"
 #include "opengl/salbmp.hxx"
+#include "opengl/RenderState.hxx"
 
 #include <vector>
+
+#include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/norm.hpp>
 
 #include <stdlib.h>
 
@@ -43,11 +47,12 @@ class OpenGLFlushIdle : public Idle
 {
     OpenGLSalGraphicsImpl *m_pImpl;
 public:
-    OpenGLFlushIdle( OpenGLSalGraphicsImpl *pImpl )
+    explicit OpenGLFlushIdle( OpenGLSalGraphicsImpl *pImpl )
         : Idle( "gl idle swap" )
         , m_pImpl( pImpl )
     {
-        SetPriority( SchedulerPriority::HIGHEST );
+        // We don't want to be swapping before we've painted.
+        SetPriority( SchedulerPriority::POST_PAINT );
     }
     virtual ~OpenGLFlushIdle()
     {
@@ -55,6 +60,7 @@ public:
     virtual void Invoke() override
     {
         m_pImpl->doFlush();
+        SetPriority( SchedulerPriority::HIGHEST );
         Stop();
     }
 };
@@ -63,11 +69,11 @@ OpenGLSalGraphicsImpl::OpenGLSalGraphicsImpl(SalGraphics& rParent, SalGeometryPr
     : mpContext(nullptr)
     , mrParent(rParent)
     , mpProvider(pProvider)
-    , mpFramebuffer(nullptr)
     , mpProgram(nullptr)
     , mpFlush(new OpenGLFlushIdle(this))
     , mbUseScissor(false)
     , mbUseStencil(false)
+    , mbXORMode(false)
     , mnLineColor(SALCOLOR_NONE)
     , mnFillColor(SALCOLOR_NONE)
 #ifdef DBG_UTIL
@@ -77,6 +83,7 @@ OpenGLSalGraphicsImpl::OpenGLSalGraphicsImpl(SalGraphics& rParent, SalGeometryPr
     , mnDrawCountAtFlush(0)
     , mProgramSolidColor(SALCOLOR_NONE)
     , mProgramSolidTransparency(0.0)
+    , mpAccumulatedTextures(new AccumulatedTextures)
 {
 }
 
@@ -92,50 +99,27 @@ OpenGLSalGraphicsImpl::~OpenGLSalGraphicsImpl()
 
 rtl::Reference<OpenGLContext> OpenGLSalGraphicsImpl::GetOpenGLContext()
 {
-    if( !AcquireContext() )
+    if( !AcquireContext(true) )
         return nullptr;
     return mpContext;
 }
 
-rtl::Reference<OpenGLContext> OpenGLSalGraphicsImpl::GetDefaultContext()
+bool OpenGLSalGraphicsImpl::AcquireContext( bool bForceCreate )
 {
-    return ImplGetDefaultWindow()->GetGraphics()->GetOpenGLContext();
-}
+    mpContext = OpenGLContext::getVCLContext( false );
 
-bool OpenGLSalGraphicsImpl::AcquireContext( )
-{
-    ImplSVData* pSVData = ImplGetSVData();
-
-    // We always prefer to bind our VirtualDevice / offscreen graphics
-    // to the current OpenGLContext - to avoid switching contexts.
-    if (mpContext.is() && OpenGLContext::hasCurrent() && !mpContext->isCurrent())
+    if( !mpContext.is() && mpWindowContext.is() )
     {
-        mpContext.clear();
-    }
-
-    if( mpContext.is() )
-    {
-        // Check whether the context was reset underneath us.
-        if( mpContext->isInitialized() )
-            return true;
-        mpContext.clear();
-    }
-
-    OpenGLContext *pContext = pSVData->maGDIData.mpLastContext;
-    while( pContext )
-    {
-        // check if this context can be used by this SalGraphicsImpl instance
-        if( UseContext( pContext ) )
-            break;
-        pContext = pContext->mpPrevContext;
-    }
-
-    if( mpContext.is() )
-        mpContext = pContext;
-    else if( mpWindowContext.is() )
         mpContext = mpWindowContext;
-    else
-        mpContext = GetDefaultContext();
+    }
+    else if( bForceCreate && !IsOffscreen() )
+    {
+        mpWindowContext = CreateWinContext();
+        mpContext = mpWindowContext;
+    }
+
+    if( !mpContext.is() )
+        mpContext = OpenGLContext::getVCLContext();
 
     return mpContext.is();
 }
@@ -165,6 +149,9 @@ void OpenGLSalGraphicsImpl::Init()
     if( maOffscreenTex.GetWidth()  != GetWidth() ||
         maOffscreenTex.GetHeight() != GetHeight() )
     {
+        // We don't want to be swapping before we've painted.
+        mpFlush->SetPriority( SchedulerPriority::POST_PAINT );
+
         if( maOffscreenTex && // don't work to release empty textures
             mpContext.is() )  // valid context
         {
@@ -175,11 +162,10 @@ void OpenGLSalGraphicsImpl::Init()
         VCL_GL_INFO("::Init - re-size offscreen texture");
     }
 
-    if( !IsOffscreen() )
+    if( mpWindowContext.is() )
     {
-        if( mpWindowContext.is() )
-            mpWindowContext->reset();
-        mpWindowContext = CreateWinContext();
+        mpWindowContext->reset();
+        mpWindowContext.clear();
     }
 }
 
@@ -192,12 +178,22 @@ void OpenGLSalGraphicsImpl::DeInit()
     // let it know. Other eg. VirtualDevice contexts which have
     // references on and rely on this context continuing to work will
     // get a shiny new context in AcquireContext:: next PreDraw.
-    if( mpContext.is() && !IsOffscreen() )
-        mpContext->reset();
+    if( mpWindowContext.is() )
+    {
+        mpWindowContext->reset();
+        mpWindowContext.clear();
+    }
     mpContext.clear();
 }
 
-void OpenGLSalGraphicsImpl::PreDraw()
+void OpenGLSalGraphicsImpl::PreDraw(XOROption eOpt)
+{
+    FlushDeferredDrawing();
+
+    InitializePreDrawState(eOpt);
+}
+
+void OpenGLSalGraphicsImpl::InitializePreDrawState(XOROption eOpt)
 {
     OpenGLZone::enter();
 
@@ -215,25 +211,28 @@ void OpenGLSalGraphicsImpl::PreDraw()
     CheckOffscreenTexture();
     CHECK_GL_ERROR();
 
-    glViewport( 0, 0, GetWidth(), GetHeight() );
-    CHECK_GL_ERROR();
-    ImplInitClipRegion();
+    mpContext->state()->viewport(Rectangle(Point(0, 0), Size(GetWidth(), GetHeight())));
 
+    ImplInitClipRegion();
     CHECK_GL_ERROR();
+
+    if (eOpt == IMPLEMENT_XOR && mbXORMode)
+    {
+        glEnable(GL_COLOR_LOGIC_OP);
+        CHECK_GL_ERROR();
+
+        glLogicOp(GL_XOR);
+    }
 }
 
 void OpenGLSalGraphicsImpl::PostDraw()
 {
-    if( mbUseScissor )
+    if (mbXORMode)
     {
-        glDisable( GL_SCISSOR_TEST );
+        glDisable(GL_COLOR_LOGIC_OP);
         CHECK_GL_ERROR();
     }
-    if( mbUseStencil )
-    {
-        glDisable( GL_STENCIL_TEST );
-        CHECK_GL_ERROR();
-    }
+
     if( mpProgram )
     {
         mpProgram->Clean();
@@ -244,11 +243,6 @@ void OpenGLSalGraphicsImpl::PostDraw()
     }
 
     assert (maOffscreenTex);
-
-    if( IsOffscreen() )
-        assert( !mpWindowContext.is() );
-    else
-        assert( mpWindowContext.is() );
 
     // Always queue the flush.
     if( !IsOffscreen() )
@@ -269,6 +263,7 @@ void OpenGLSalGraphicsImpl::freeResources()
     {
         VCL_GL_INFO( "freeResources" );
         mpContext->makeCurrent();
+        FlushDeferredDrawing();
         mpContext->ReleaseFramebuffer( maOffscreenTex );
     }
     ReleaseContext();
@@ -276,7 +271,8 @@ void OpenGLSalGraphicsImpl::freeResources()
 
 void OpenGLSalGraphicsImpl::ImplSetClipBit( const vcl::Region& rClip, GLuint nMask )
 {
-    glEnable( GL_STENCIL_TEST );
+    mpContext->state()->scissor().disable();
+    mpContext->state()->stencil().enable();
 
     VCL_GL_INFO( "Adding complex clip / stencil" );
     GLuint nStencil = maOffscreenTex.StencilId();
@@ -315,39 +311,42 @@ void OpenGLSalGraphicsImpl::ImplSetClipBit( const vcl::Region& rClip, GLuint nMa
     CHECK_GL_ERROR();
     glStencilMask( 0x00 );
     CHECK_GL_ERROR();
-    glDisable( GL_STENCIL_TEST );
-    CHECK_GL_ERROR();
+
+    mpContext->state()->stencil().disable();
 }
 
 void OpenGLSalGraphicsImpl::ImplInitClipRegion()
 {
     // make sure the context has the right clipping set
-    if( maClipRegion != mpContext->maClipRegion )
+    if (maClipRegion != mpContext->maClipRegion)
     {
         mpContext->maClipRegion = maClipRegion;
-        if( mbUseScissor )
+        if (mbUseStencil)
         {
-            Rectangle aRect( maClipRegion.GetBoundRect() );
-            glScissor( aRect.Left(), GetHeight() - aRect.Bottom() - 1, aRect.GetWidth() + 1, aRect.GetHeight() + 1 );
-            CHECK_GL_ERROR();
-        }
-        else if( !maClipRegion.IsEmpty() )
-        {
-            ImplSetClipBit( maClipRegion, 0x01 );
+            ImplSetClipBit(maClipRegion, 0x01);
         }
     }
 
-    if( mbUseScissor )
+    if (mbUseScissor)
     {
-        glEnable( GL_SCISSOR_TEST );
-        CHECK_GL_ERROR();
+        Rectangle aRect(maClipRegion.GetBoundRect());
+        mpContext->state()->scissor().set(aRect.Left(), GetHeight() - aRect.Bottom() - 1, aRect.GetWidth(), aRect.GetHeight());
+        mpContext->state()->scissor().enable();
     }
-    if( mbUseStencil )
+    else
+    {
+        mpContext->state()->scissor().disable();
+    }
+
+    if (mbUseStencil)
     {
         glStencilFunc( GL_EQUAL, 1, 0x1 );
         CHECK_GL_ERROR();
-        glEnable( GL_STENCIL_TEST );
-        CHECK_GL_ERROR();
+        mpContext->state()->stencil().enable();
+    }
+    else
+    {
+        mpContext->state()->stencil().disable();
     }
 }
 
@@ -358,14 +357,23 @@ const vcl::Region& OpenGLSalGraphicsImpl::getClipRegion() const
 
 bool OpenGLSalGraphicsImpl::setClipRegion( const vcl::Region& rClip )
 {
-    VCL_GL_INFO( "::setClipRegion " << rClip );
+    if (maClipRegion == rClip)
+    {
+         VCL_GL_INFO("::setClipRegion (no change) " << rClip);
+         return true;
+    }
+
+    FlushDeferredDrawing();
+
+    VCL_GL_INFO("::setClipRegion " << rClip);
+
     maClipRegion = rClip;
 
     mbUseStencil = false;
     mbUseScissor = false;
-    if( maClipRegion.IsRectangle() )
+    if (maClipRegion.IsRectangle())
         mbUseScissor = true;
-    else if ( !maClipRegion.IsEmpty() )
+    else if (!maClipRegion.IsEmpty())
         mbUseStencil = true;
 
     return true;
@@ -374,7 +382,16 @@ bool OpenGLSalGraphicsImpl::setClipRegion( const vcl::Region& rClip )
 // set the clip region to empty
 void OpenGLSalGraphicsImpl::ResetClipRegion()
 {
-    VCL_GL_INFO( "::ResetClipRegion" );
+    if (maClipRegion.IsEmpty())
+    {
+        VCL_GL_INFO("::ResetClipRegion (no change) ");
+        return;
+    }
+
+    FlushDeferredDrawing();
+
+    VCL_GL_INFO("::ResetClipRegion");
+
     maClipRegion.SetEmpty();
     mbUseScissor = false;
     mbUseStencil = false;
@@ -430,8 +447,9 @@ void OpenGLSalGraphicsImpl::SetFillColor( SalColor nSalColor )
 }
 
 // enable/disable XOR drawing
-void OpenGLSalGraphicsImpl::SetXORMode( bool /*bSet*/, bool /*bInvertOnly*/ )
+void OpenGLSalGraphicsImpl::SetXORMode( bool bSet, bool )
 {
+    mbXORMode = bSet;
 }
 
 // set line color for raster operations
@@ -456,9 +474,10 @@ bool OpenGLSalGraphicsImpl::CheckOffscreenTexture()
         if( maOffscreenTex.GetWidth()  != GetWidth() ||
             maOffscreenTex.GetHeight() != GetHeight() )
         {
+            VCL_GL_INFO( "re-size offscreen texture " << maOffscreenTex.Id() );
+            mpFlush->SetPriority( SchedulerPriority::POST_PAINT );
             mpContext->ReleaseFramebuffer( maOffscreenTex );
             maOffscreenTex = OpenGLTexture();
-            VCL_GL_INFO( "re-size offscreen texture" );
         }
     }
 
@@ -478,13 +497,17 @@ bool OpenGLSalGraphicsImpl::CheckOffscreenTexture()
 
         // TODO: lfrb: User GL_ARB_copy_image?
         OpenGLTexture aNewTex = OpenGLTexture( GetWidth(), GetHeight() );
-        mpFramebuffer = mpContext->AcquireFramebuffer( aNewTex );
+
+        mpContext->state()->scissor().disable();
+        mpContext->state()->stencil().disable();
+
+        mpContext->AcquireFramebuffer( aNewTex );
         DrawTexture( maOffscreenTex, aPosAry );
         maOffscreenTex = aNewTex;
     }
     else
     {
-        mpFramebuffer = mpContext->AcquireFramebuffer( maOffscreenTex );
+        mpContext->AcquireFramebuffer( maOffscreenTex );
         CHECK_GL_ERROR();
 
         if( bClearTexture )
@@ -529,6 +552,7 @@ bool OpenGLSalGraphicsImpl::UseSolid( SalColor nColor, sal_uInt8 nTransparency )
 #endif
     mProgramSolidColor = nColor;
     mProgramSolidTransparency = nTransparency / 100.0;
+
     return true;
 }
 
@@ -544,6 +568,13 @@ bool OpenGLSalGraphicsImpl::UseSolid( SalColor nColor, double fTransparency )
 #endif
     mProgramSolidColor = nColor;
     mProgramSolidTransparency = fTransparency;
+    return true;
+}
+
+bool OpenGLSalGraphicsImpl::UseInvert50()
+{
+    if( !UseProgram( "dumbVertexShader", "invert50FragmentShader" ) )
+        return false;
     return true;
 }
 
@@ -571,13 +602,25 @@ bool OpenGLSalGraphicsImpl::UseSolidAA( SalColor nColor )
     return UseSolidAA( nColor, 0.0 );
 }
 
-bool OpenGLSalGraphicsImpl::UseInvert()
+bool OpenGLSalGraphicsImpl::UseInvert( SalInvert nFlags )
 {
     OpenGLZone aZone;
 
-    if( !UseSolid( MAKE_SALCOLOR( 255, 255, 255 ) ) )
-        return false;
-    mpProgram->SetBlendMode( GL_ONE_MINUS_DST_COLOR, GL_ZERO );
+    if( ( nFlags & SalInvert::N50 ) ||
+        ( nFlags & SalInvert::TrackFrame ) )
+    {
+        // FIXME: Trackframe really should be 2 pix. on/off stipple.
+        if( !UseInvert50() )
+            return false;
+        mpProgram->SetBlendMode( GL_ONE_MINUS_DST_COLOR,
+                                 GL_ONE_MINUS_SRC_COLOR );
+    }
+    else
+    {
+        if( !UseSolid( MAKE_SALCOLOR( 255, 255, 255 ) ) )
+            return false;
+        mpProgram->SetBlendMode( GL_ONE_MINUS_DST_COLOR, GL_ZERO );
+    }
     return true;
 }
 
@@ -611,6 +654,322 @@ void OpenGLSalGraphicsImpl::DrawLine( double nX1, double nY1, double nX2, double
     mpProgram->SetVertices( pPoints );
     glDrawArrays( GL_LINES, 0, 2 );
     CHECK_GL_ERROR();
+}
+
+namespace
+{
+
+inline void addVertex(std::vector<GLfloat>& rVertices, std::vector<GLfloat>& rExtrusionVectors, glm::vec2 point, glm::vec2 extrusionVector, float length)
+{
+    rVertices.push_back(point.x);
+    rVertices.push_back(point.y);
+
+    rExtrusionVectors.push_back(extrusionVector.x);
+    rExtrusionVectors.push_back(extrusionVector.y);
+    rExtrusionVectors.push_back(length);
+}
+
+inline void addVertexPair(std::vector<GLfloat>& rVertices, std::vector<GLfloat>& rExtrusionVectors, const glm::vec2& point, const glm::vec2& extrusionVector, float length)
+{
+    addVertex(rVertices, rExtrusionVectors, point, -extrusionVector, -length);
+    addVertex(rVertices, rExtrusionVectors, point,  extrusionVector,  length);
+}
+
+inline glm::vec2 normalize(const glm::vec2& vector)
+{
+    if (glm::length(vector) > 0.0)
+        return glm::normalize(vector);
+    return vector;
+}
+
+} // end anonymous namespace
+
+void OpenGLSalGraphicsImpl::DrawLineCap(float x1, float y1, float x2, float y2, css::drawing::LineCap eLineCap, float fLineWidth)
+{
+    if (eLineCap != css::drawing::LineCap_ROUND && eLineCap != css::drawing::LineCap_SQUARE)
+        return;
+
+    OpenGLZone aZone;
+
+    const int nRoundCapIteration = 12;
+
+    std::vector<GLfloat> aVertices;
+    std::vector<GLfloat> aExtrusionVectors;
+
+    glm::vec2 p1(x1, y1);
+    glm::vec2 p2(x2, y2);
+    glm::vec2 lineVector = normalize(p2 - p1);
+    glm::vec2 normal = glm::vec2(-lineVector.y, lineVector.x);
+
+    if (eLineCap == css::drawing::LineCap_ROUND)
+    {
+        for (int nFactor = 0; nFactor <= nRoundCapIteration; nFactor++)
+        {
+            float angle = float(nFactor) * (M_PI / float(nRoundCapIteration));
+            glm::vec2 roundNormal(normal.x * glm::cos(angle) - normal.y * glm::sin(angle),
+                                  normal.x * glm::sin(angle) + normal.y * glm::cos(angle));
+
+            addVertexPair(aVertices, aExtrusionVectors, p1, roundNormal, 1.0f);
+        }
+    }
+    else if (eLineCap == css::drawing::LineCap_SQUARE)
+    {
+        glm::vec2 extrudedPoint = p1 + -lineVector * (fLineWidth / 2.0f);
+
+        addVertexPair(aVertices, aExtrusionVectors, extrudedPoint, normal, 1.0f);
+        addVertexPair(aVertices, aExtrusionVectors, p1, normal, 1.0f);
+    }
+
+    ApplyProgramMatrices(0.0f);
+    mpProgram->SetExtrusionVectors(aExtrusionVectors.data());
+    mpProgram->SetVertices(aVertices.data());
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, aVertices.size() / 2);
+
+    CHECK_GL_ERROR();
+}
+
+void OpenGLSalGraphicsImpl::DrawLineSegment(float x1, float y1, float x2, float y2)
+{
+    glm::vec2 p1(x1, y1);
+    glm::vec2 p2(x2, y2);
+
+    if (p1.x == p2.x && p1.y == p2.y)
+        return;
+
+    std::vector<GLfloat> aPoints;
+    std::vector<GLfloat> aExtrusionVectors;
+
+    OpenGLZone aZone;
+
+    glm::vec2 lineVector = normalize(p2 - p1);
+    glm::vec2 normal = glm::vec2(-lineVector.y, lineVector.x);
+
+    addVertexPair(aPoints, aExtrusionVectors, p1, normal, 1.0f);
+    addVertexPair(aPoints, aExtrusionVectors, p2, normal, 1.0f);
+
+    ApplyProgramMatrices(0.0f);
+    mpProgram->SetExtrusionVectors(aExtrusionVectors.data());
+    mpProgram->SetVertices(aPoints.data());
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, aPoints.size() / 2);
+
+    CHECK_GL_ERROR();
+}
+
+/** Draw a simple (non bezier) polyline
+ *
+ * OpenGL polyline drawing algorithm inspired by:
+ * - http://mattdesl.svbtle.com/drawing-lines-is-hard
+ * - https://www.mapbox.com/blog/drawing-antialiased-lines/
+ * - https://cesiumjs.org/2013/04/22/Robust-Polyline-Rendering-with-WebGL/
+ * - http://artgrammer.blogspot.si/2011/05/drawing-nearly-perfect-2d-line-segments.html
+ * - http://artgrammer.blogspot.si/2011/07/drawing-polylines-by-tessellation.html
+ *
+ */
+void OpenGLSalGraphicsImpl::DrawPolyLine(const basegfx::B2DPolygon& rPolygon, float fLineWidth, basegfx::B2DLineJoin eLineJoin, css::drawing::LineCap eLineCap, float fMiterMinimumAngle)
+{
+    sal_uInt32 nPoints = rPolygon.count();
+    bool bClosed = rPolygon.isClosed();
+
+    if (!bClosed && nPoints >= 2)
+    {
+        // draw begin cap
+        {
+            glm::vec2 p1(rPolygon.getB2DPoint(0).getX(), rPolygon.getB2DPoint(0).getY());
+            glm::vec2 p2(rPolygon.getB2DPoint(1).getX(), rPolygon.getB2DPoint(1).getY());
+            DrawLineCap(p1.x, p1.y, p2.x, p2.y, eLineCap, fLineWidth);
+        }
+
+        // draw end cap
+        {
+            glm::vec2 p1(rPolygon.getB2DPoint(nPoints - 1).getX(), rPolygon.getB2DPoint(nPoints - 1).getY());
+            glm::vec2 p2(rPolygon.getB2DPoint(nPoints - 2).getX(), rPolygon.getB2DPoint(nPoints - 2).getY());
+            DrawLineCap(p1.x, p1.y, p2.x, p2.y, eLineCap, fLineWidth);
+        }
+    }
+
+    if (nPoints == 2 || eLineJoin == basegfx::B2DLineJoin::NONE)
+    {
+        // If line joint is NONE or a simple line with 2 points, draw the polyline
+        // each line segment separatly.
+        for (int i = 0; i < int(nPoints) - 1; ++i)
+        {
+            glm::vec2 p1(rPolygon.getB2DPoint(i+0).getX(), rPolygon.getB2DPoint(i+0).getY());
+            glm::vec2 p2(rPolygon.getB2DPoint(i+1).getX(), rPolygon.getB2DPoint(i+1).getY());
+            DrawLineSegment(p1.x, p1.y, p2.x, p2.y);
+        }
+        if (bClosed)
+        {
+            glm::vec2 p1(rPolygon.getB2DPoint(nPoints - 1).getX(), rPolygon.getB2DPoint(nPoints - 1).getY());
+            glm::vec2 p2(rPolygon.getB2DPoint(0).getX(), rPolygon.getB2DPoint(0).getY());
+            DrawLineSegment(p1.x, p1.y, p2.x, p2.y);
+        }
+    }
+    else if (nPoints > 2)
+    {
+        OpenGLZone aZone;
+
+        int i = 0;
+        int lastPoint = int(nPoints);
+
+        std::vector<GLfloat> aVertices;
+        std::vector<GLfloat> aExtrusionVectors;
+
+        // First guess on the size, but we could know relatively exactly
+        // how much vertices we need.
+        aVertices.reserve(nPoints * 4);
+        aExtrusionVectors.reserve(nPoints * 6);
+
+        // Handle first point
+
+        glm::vec2 nextLineVector;
+        glm::vec2 previousLineVector;
+        glm::vec2 normal; // perpendicular to the line vector
+
+        glm::vec2 p0(rPolygon.getB2DPoint(nPoints - 1).getX(), rPolygon.getB2DPoint(nPoints - 1).getY());
+        glm::vec2 p1(rPolygon.getB2DPoint(0).getX(), rPolygon.getB2DPoint(0).getY());
+        glm::vec2 p2(rPolygon.getB2DPoint(1).getX(), rPolygon.getB2DPoint(1).getY());
+
+        nextLineVector = normalize(p2 - p1);
+
+        if (!bClosed)
+        {
+            normal = glm::vec2(-nextLineVector.y, nextLineVector.x); // make perpendicular
+            addVertexPair(aVertices, aExtrusionVectors, p1, normal, 1.0f);
+
+            i++; // first point done already
+            lastPoint--; // last point will be calculated separatly from the loop
+
+            p0 = p1;
+            previousLineVector = nextLineVector;
+        }
+        else
+        {
+            lastPoint++; // we need to connect last point to first point so one more line segment to calculate
+
+            previousLineVector = normalize(p1 - p0);
+        }
+
+        for (; i < lastPoint; ++i)
+        {
+            int index1 = (i + 0) % nPoints; // loop indices - important when polyline is closed
+            int index2 = (i + 1) % nPoints;
+
+            p1 = glm::vec2(rPolygon.getB2DPoint(index1).getX(), rPolygon.getB2DPoint(index1).getY());
+            p2 = glm::vec2(rPolygon.getB2DPoint(index2).getX(), rPolygon.getB2DPoint(index2).getY());
+
+            if (p1 == p2) // skip equal points, normals could div-by-0
+                continue;
+
+            nextLineVector = normalize(p2 - p1);
+
+            if (eLineJoin == basegfx::B2DLineJoin::Miter)
+            {
+                float angle = std::atan2(previousLineVector.x * nextLineVector.y - previousLineVector.y * nextLineVector.x,
+                                         previousLineVector.x * nextLineVector.x + previousLineVector.y * nextLineVector.y);
+
+                angle = F_PI - std::fabs(angle);
+
+                if (angle < fMiterMinimumAngle)
+                    eLineJoin = basegfx::B2DLineJoin::Bevel;
+            }
+
+            if (eLineJoin == basegfx::B2DLineJoin::Miter)
+            {
+                // With miter join we calculate the extrusion vector by adding normals of
+                // previous and next line segment. The vector shows the way but we also
+                // need the length (otherwise the line will be deformed). Length factor is
+                // calculated as dot product of extrusion vector and one of the normals.
+                // The value we get is the inverse length (used in the shader):
+                // length = line_width / dot(extrusionVector, normal)
+
+                normal = glm::vec2(-previousLineVector.y, previousLineVector.x);
+
+                glm::vec2 tangent = normalize(nextLineVector + previousLineVector);
+                glm::vec2 extrusionVector(-tangent.y, tangent.x);
+                GLfloat length = glm::dot(extrusionVector, normal);
+
+                addVertexPair(aVertices, aExtrusionVectors, p1, extrusionVector, length);
+            }
+            else if (eLineJoin == basegfx::B2DLineJoin::Bevel)
+            {
+                // For bevel join we just add 2 additional vertices and use previous
+                // line segment normal and next line segment normal as extrusion vector.
+                // All the magic is done by the fact that we draw triangle strips, so we
+                // cover the joins correctly.
+
+                glm::vec2 previousNormal = glm::vec2(-previousLineVector.y, previousLineVector.x);
+                glm::vec2 nextNormal = glm::vec2(-nextLineVector.y, nextLineVector.x);
+
+                addVertexPair(aVertices, aExtrusionVectors, p1, previousNormal, 1.0f);
+                addVertexPair(aVertices, aExtrusionVectors, p1, nextNormal, 1.0f);
+            }
+            else if (eLineJoin == basegfx::B2DLineJoin::Round)
+            {
+                // For round join we do a similar thing as in bevel, we add more intermediate
+                // vertices and add normals to get extrusion vectors in the between the
+                // both normals.
+
+                // 3 additional extrusion vectors + normals are enough to make most
+                // line joins look round. Ideally the number of vectors could be
+                // calculated.
+
+                glm::vec2 previousNormal = glm::vec2(-previousLineVector.y, previousLineVector.x);
+                glm::vec2 nextNormal = glm::vec2(-nextLineVector.y, nextLineVector.x);
+
+                glm::vec2 middle = normalize(previousNormal + nextNormal);
+                glm::vec2 middleLeft  = normalize(previousNormal + middle);
+                glm::vec2 middleRight = normalize(middle + nextNormal);
+
+                addVertexPair(aVertices, aExtrusionVectors, p1, previousNormal, 1.0f);
+                addVertexPair(aVertices, aExtrusionVectors, p1, middleLeft, 1.0f);
+                addVertexPair(aVertices, aExtrusionVectors, p1, middle, 1.0f);
+                addVertexPair(aVertices, aExtrusionVectors, p1, middleRight, 1.0f);
+                addVertexPair(aVertices, aExtrusionVectors, p1, nextNormal, 1.0f);
+            }
+            p0 = p1;
+            previousLineVector = nextLineVector;
+        }
+
+        if (!bClosed)
+        {
+            // Create vertices for the last point. There is no line join so just
+            // use the last line segment normal as the extrusion vector.
+
+            p1 = glm::vec2(rPolygon.getB2DPoint(nPoints - 1).getX(), rPolygon.getB2DPoint(nPoints - 1).getY());
+
+            normal = glm::vec2(-previousLineVector.y, previousLineVector.x);
+
+            addVertexPair(aVertices, aExtrusionVectors, p1, normal, 1.0f);
+        }
+
+        ApplyProgramMatrices(0.0f);
+        mpProgram->SetExtrusionVectors(aExtrusionVectors.data());
+        mpProgram->SetVertices(aVertices.data());
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, aVertices.size() / 2);
+
+        CHECK_GL_ERROR();
+    }
+}
+
+bool OpenGLSalGraphicsImpl::UseLine(SalColor nColor, double fTransparency, GLfloat fLineWidth)
+{
+    if( nColor == SALCOLOR_NONE )
+        return false;
+    if( !UseProgram( "lineVertexShader", "lineFragmentShader" ) )
+        return false;
+    mpProgram->SetColorf("color", nColor, fTransparency);
+    mpProgram->SetUniform1f("line_width", fLineWidth);
+    // The width of the feather - area we make lineary transparent in VS.
+    // Good AA value is 0.5
+    mpProgram->SetUniform1f("feather", 0.5f);
+    // We need blending or AA won't work correctly
+    mpProgram->SetBlendMode( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+#ifdef DBG_UTIL
+    mProgramIsSolidColor = true;
+#endif
+    mProgramSolidColor = nColor;
+    mProgramSolidTransparency = fTransparency;
+    return true;
 }
 
 void OpenGLSalGraphicsImpl::DrawLineAA( double nX1, double nY1, double nX2, double nY2 )
@@ -1040,6 +1399,47 @@ void OpenGLSalGraphicsImpl::DrawTexture( OpenGLTexture& rTexture, const SalTwoRe
     mpProgram->Clean();
 }
 
+namespace {
+
+bool scaleTexture(const rtl::Reference< OpenGLContext > &xContext,
+    OpenGLTexture& rOutTexture, const double& ixscale, const double& iyscale, OpenGLTexture& rTexture)
+{
+    int nWidth = rTexture.GetWidth();
+    int nHeight = rTexture.GetHeight();
+    int nNewWidth = nWidth / ixscale;
+    int nNewHeight = nHeight / iyscale;
+
+    OpenGLProgram* pProgram = xContext->UseProgram("textureVertexShader", "areaScaleFragmentShader");
+    if (pProgram == nullptr)
+        return false;
+
+    OpenGLTexture aScratchTex(nNewWidth, nNewHeight);
+    OpenGLFramebuffer* pFramebuffer = xContext->AcquireFramebuffer(aScratchTex);
+
+    pProgram->SetUniform1f("xscale", ixscale);
+    pProgram->SetUniform1f("yscale", iyscale);
+    pProgram->SetUniform1i("swidth", nWidth);
+    pProgram->SetUniform1i("sheight", nHeight);
+    // For converting between <0,nWidth-1> and <0.0,1.0> coordinate systems.
+    pProgram->SetUniform1f("xsrcconvert", 1.0 / (nWidth - 1));
+    pProgram->SetUniform1f("ysrcconvert", 1.0 / (nHeight - 1));
+    pProgram->SetUniform1f("xdestconvert", 1.0 * (nNewWidth - 1));
+    pProgram->SetUniform1f("ydestconvert", 1.0 * (nNewHeight - 1));
+
+    pProgram->SetTexture("sampler", rTexture);
+    pProgram->DrawTexture(rTexture);
+    pProgram->Clean();
+
+    OpenGLContext::ReleaseFramebuffer(pFramebuffer);
+
+    CHECK_GL_ERROR();
+
+    rOutTexture = aScratchTex;
+    return true;
+}
+
+}
+
 void OpenGLSalGraphicsImpl::DrawTransformedTexture(
     OpenGLTexture& rTexture,
     OpenGLTexture& rMask,
@@ -1054,21 +1454,31 @@ void OpenGLSalGraphicsImpl::DrawTransformedTexture(
         (float) rTexture.GetWidth(), 0, (float) rTexture.GetWidth(), (float) rTexture.GetHeight() };
     GLfloat aTexCoord[8];
 
+    const long nDestWidth = basegfx::fround(basegfx::B2DVector(rX - rNull).getLength());
+    const long nDestHeight = basegfx::fround(basegfx::B2DVector(rY - rNull).getLength());
+
+    // Invisibly small images shouldn't divide by zero.
+    if( nDestHeight == 0 || nDestWidth == 0 )
+        return;
+
+    // inverted scale ratios
+    double ixscale = rTexture.GetWidth()  / double(nDestWidth);
+    double iyscale = rTexture.GetHeight() / double(nDestHeight);
+
     // If downscaling at a higher scale ratio, use the area scaling algorithm rather
-    // than plain OpenGL's scaling, for better results.
+    // than plain OpenGL's scaling (texture mapping), for better results.
     // See OpenGLSalBitmap::ImplScaleArea().
-    double ixscale = rTexture.GetWidth() / fabs( rX.getX() - rNull.getX());
-    double iyscale = rTexture.GetHeight() / fabs( rY.getY() - rNull.getY());
     bool areaScaling = false;
     bool fastAreaScaling = false;
     OUString textureFragmentShader;
-    if( ixscale >= 2 && iyscale >= 2 ) // Downscaling to 50% or less? (inverted scale ratios)
+    if( ixscale >= 2 && iyscale >= 2 )  // scale ratio less than 50%
     {
         areaScaling = true;
         fastAreaScaling = ( ixscale == int( ixscale ) && iyscale == int( iyscale ));
-        // The generic case has arrays only up to 100 ratio downscaling, which is hopefully enough
-        // in practice, but protect against buffer overflows in case such an extreme case happens
-        // (and in such case the precision of the generic algorithm probably doesn't matter anyway).
+        // The generic case has arrays only up to 16 ratio downscaling and is performed in 2 passes,
+        // when the ratio is in the 16-100 range, which is hopefully enough in practice, but protect
+        // against buffer overflows in case such an extreme case happens (and in such case the precision
+        // of the generic algorithm probably doesn't matter anyway).
         if( ixscale > 100 || iyscale > 100 )
             fastAreaScaling = true;
         if( fastAreaScaling )
@@ -1077,17 +1487,60 @@ void OpenGLSalGraphicsImpl::DrawTransformedTexture(
             textureFragmentShader = "areaScaleFragmentShader";
     }
 
-    if( rMask )
+    OpenGLTexture aInTexture = rTexture;
+    OpenGLTexture aInMask = rMask;
+
+    // When using the area scaling algorithm we need to reduce the texture size in 2 passes
+    // in order to not use a big array inside the fragment shader.
+    if (areaScaling && !fastAreaScaling)
+    {
+        // Perform a first texture downscaling by an inverted scale ratio equal to
+        // the square root of the whole inverted scale ratio.
+        if (ixscale > 16 || iyscale > 16)
+        {
+            // The scissor area is set to the current window size in PreDraw,
+            // so if we do not disable the scissor test, the texture produced
+            // by the first downscaling is clipped to the current window size.
+            mpContext->state()->scissor().disable();
+            mpContext->state()->stencil().disable();
+
+            // the square root of the whole inverted scale ratio
+            double ixscalesqrt = std::floor(std::sqrt(ixscale));
+            double iyscalesqrt = std::floor(std::sqrt(iyscale));
+            ixscale /= ixscalesqrt; // second pass inverted x-scale factor
+            iyscale /= iyscalesqrt; // second pass inverted y-scale factor
+
+            scaleTexture(mpContext, aInTexture, ixscalesqrt, iyscalesqrt, rTexture);
+
+            if (rMask) // we need to downscale the mask too
+            {
+                scaleTexture(mpContext, aInMask, ixscalesqrt, iyscalesqrt, rMask);
+            }
+
+            // We need to re-acquire the off-screen texture.
+            CheckOffscreenTexture();
+            CHECK_GL_ERROR();
+
+            // Re-enable scissor and stencil tests if needed.
+            if (mbUseScissor)
+                mpContext->state()->scissor().enable();
+
+            if (mbUseStencil)
+                mpContext->state()->stencil().enable();
+        }
+    }
+
+    if( aInMask  )
     {
         if( !UseProgram( "transformedTextureVertexShader",
                 textureFragmentShader.isEmpty() ? "maskedTextureFragmentShader" : textureFragmentShader,
                 "#define MASKED" ) )
             return;
-        mpProgram->SetTexture( "mask", rMask );
+        mpProgram->SetTexture( "mask", aInMask );
         GLfloat aMaskCoord[8];
-        rMask.GetWholeCoord(aMaskCoord);
+        aInMask.GetWholeCoord(aMaskCoord);
         mpProgram->SetMaskCoord(aMaskCoord);
-        rMask.SetFilter( GL_LINEAR );
+        aInMask.SetFilter( GL_LINEAR );
         mpProgram->SetBlendMode( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
     }
     else
@@ -1097,42 +1550,46 @@ void OpenGLSalGraphicsImpl::DrawTransformedTexture(
             return;
     }
 
-    int mnWidth = rTexture.GetWidth();
-    int mnHeight = rTexture.GetHeight();
-    if(areaScaling )
+    if(areaScaling)
     {
+        int nWidth = aInTexture.GetWidth();
+        int nHeight = aInTexture.GetHeight();
+
         // From OpenGLSalBitmap::ImplScaleArea().
-        if (fastAreaScaling && mnWidth && mnHeight)
+        if (fastAreaScaling && nWidth && nHeight)
         {
             mpProgram->SetUniform1i( "xscale", ixscale );
             mpProgram->SetUniform1i( "yscale", iyscale );
-            mpProgram->SetUniform1f( "xstep", 1.0 / mnWidth );
-            mpProgram->SetUniform1f( "ystep", 1.0 / mnHeight );
+            mpProgram->SetUniform1f( "xstep", 1.0 / nWidth );
+            mpProgram->SetUniform1f( "ystep", 1.0 / nHeight );
             mpProgram->SetUniform1f( "ratio", 1.0 / ( ixscale * iyscale ));
         }
-        else if (mnHeight > 1 && mnWidth > 1)
+        else if (nHeight > 1 && nWidth > 1)
         {
             mpProgram->SetUniform1f( "xscale", ixscale );
             mpProgram->SetUniform1f( "yscale", iyscale );
-            mpProgram->SetUniform1i( "swidth", mnWidth );
-            mpProgram->SetUniform1i( "sheight", mnHeight );
-            // For converting between <0,mnWidth-1> and <0.0,1.0> coordinate systems.
-            mpProgram->SetUniform1f( "xsrcconvert", 1.0 / ( mnWidth - 1 ));
-            mpProgram->SetUniform1f( "ysrcconvert", 1.0 / ( mnHeight - 1 ));
-            mpProgram->SetUniform1f( "xdestconvert", 1.0 * (( mnWidth / ixscale ) - 1 ));
-            mpProgram->SetUniform1f( "ydestconvert", 1.0 * (( mnHeight / iyscale ) - 1 ));
+            mpProgram->SetUniform1i( "swidth", nWidth );
+            mpProgram->SetUniform1i( "sheight", nHeight );
+            // For converting between <0,nWidth-1> and <0.0,1.0> coordinate systems.
+            mpProgram->SetUniform1f( "xsrcconvert", 1.0 / ( nWidth - 1 ));
+            mpProgram->SetUniform1f( "ysrcconvert", 1.0 / ( nHeight - 1 ));
+            mpProgram->SetUniform1f( "xdestconvert", 1.0 * (( nWidth / ixscale ) - 1 ));
+            mpProgram->SetUniform1f( "ydestconvert", 1.0 * (( nHeight / iyscale ) - 1 ));
         }
     }
 
     ApplyProgramMatrices();
     mpProgram->SetUniform2f( "viewport", GetWidth(), GetHeight() );
+    // Here, in order to get the correct transformation we need to pass the original texture,
+    // since it has been used for initializing the rectangle vertices.
     mpProgram->SetTransform( "transform", rTexture, rNull, rX, rY );
-    rTexture.GetWholeCoord( aTexCoord );
-    mpProgram->SetTexture( "sampler", rTexture );
-    rTexture.SetFilter( GL_LINEAR );
+    aInTexture.GetWholeCoord(aTexCoord);
+    mpProgram->SetTexture("sampler", aInTexture);
+    aInTexture.SetFilter(GL_LINEAR);
     mpProgram->SetTextureCoord( aTexCoord );
-    mpProgram->SetVertices( &aVertices[0] );
+    mpProgram->SetVertices( aVertices );
     glDrawArrays( GL_TRIANGLE_FAN, 0, 4 );
+
     CHECK_GL_ERROR();
     mpProgram->Clean();
 }
@@ -1224,6 +1681,84 @@ void OpenGLSalGraphicsImpl::DrawMask( OpenGLTexture& rMask, SalColor nMaskColor,
     mpProgram->SetBlendMode( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
     DrawTextureRect( rMask, pPosAry );
     mpProgram->Clean();
+}
+
+void OpenGLSalGraphicsImpl::DeferredTextDraw(OpenGLTexture& rTexture, SalColor aMaskColor, const SalTwoRect& rPosAry)
+{
+    mpAccumulatedTextures->insert(rTexture, aMaskColor, rPosAry);
+}
+
+void OpenGLSalGraphicsImpl::FlushDeferredDrawing()
+{
+    if (mpAccumulatedTextures->empty())
+        return;
+
+    InitializePreDrawState();
+
+    VCL_GL_INFO("FlushDeferredDrawing");
+
+    OpenGLZone aZone;
+
+#if 0 // Draw a background rect under text for debugging - same color shows text from the same texture
+    static sal_uInt8 r = 0xBE;
+    static sal_uInt8 g = 0xF0;
+    static sal_uInt8 b = 0xFF;
+    static std::unordered_map<GLuint, Color> aColorForTextureMap;
+
+
+    for (auto& rPair : mpAccumulatedTextures->getAccumulatedTexturesMap())
+    {
+        OpenGLTexture& rTexture = rPair.second->maTexture;
+        Color aUseColor;
+        if (aColorForTextureMap.find(rTexture.Id()) == aColorForTextureMap.end())
+        {
+            Color aColor(r, g, b);
+            sal_uInt16 h,s,br;
+            aColor.RGBtoHSB(h, s, br);
+            aColor = Color::HSBtoRGB((h + 40) % 360, s, br);
+            r = aColor.GetRed();
+            g = aColor.GetGreen();
+            b = aColor.GetBlue();
+            aColorForTextureMap[rTexture.Id()] = aColor;
+        }
+        aUseColor = aColorForTextureMap[rTexture.Id()];
+
+        if (!UseSolid(MAKE_SALCOLOR(aUseColor.GetRed(), aUseColor.GetGreen(), aUseColor.GetBlue())))
+            return;
+        for (auto rColorTwoRectPair: rPair.second->maColorTextureDrawParametersMap)
+        {
+            TextureDrawParameters& rParameters = rColorTwoRectPair.second;
+            ApplyProgramMatrices();
+            mpProgram->SetTextureCoord(rParameters.maTextureCoords.data());
+            mpProgram->SetVertices(rParameters.maVertices.data());
+            glDrawArrays(GL_TRIANGLES, 0, rParameters.getNumberOfVertices());
+        }
+    }
+#endif
+
+    if( !UseProgram( "textureVertexShader", "maskFragmentShader" ) )
+        return;
+
+    mpProgram->SetBlendMode(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    for (auto& rPair : mpAccumulatedTextures->getAccumulatedTexturesMap())
+    {
+        OpenGLTexture& rTexture = rPair.second->maTexture;
+        mpProgram->SetTexture("sampler", rTexture);
+        for (auto& rColorTwoRectPair: rPair.second->maColorTextureDrawParametersMap)
+        {
+            mpProgram->SetColor("color", rColorTwoRectPair.first, 0);
+            TextureDrawParameters& rParameters = rColorTwoRectPair.second;
+            ApplyProgramMatrices();
+            mpProgram->SetTextureCoord(rParameters.maTextureCoords.data());
+            mpProgram->SetVertices(rParameters.maVertices.data());
+            glDrawArrays(GL_TRIANGLES, 0, rParameters.getNumberOfVertices());
+        }
+    }
+    mpProgram->Clean();
+    mpAccumulatedTextures->clear();
+
+    PostDraw();
 }
 
 void OpenGLSalGraphicsImpl::DrawLinearGradient( const Gradient& rGradient, const Rectangle& rRect )
@@ -1339,7 +1874,7 @@ void OpenGLSalGraphicsImpl::drawPixel( long nX, long nY )
     VCL_GL_INFO( "::drawPixel" );
     if( mnLineColor != SALCOLOR_NONE )
     {
-        PreDraw();
+        PreDraw( XOROption::IMPLEMENT_XOR );
         if( UseSolid( mnLineColor ) )
             DrawPoint( nX, nY );
         PostDraw();
@@ -1351,7 +1886,7 @@ void OpenGLSalGraphicsImpl::drawPixel( long nX, long nY, SalColor nSalColor )
     VCL_GL_INFO( "::drawPixel" );
     if( nSalColor != SALCOLOR_NONE )
     {
-        PreDraw();
+        PreDraw( XOROption::IMPLEMENT_XOR );
         if( UseSolid( nSalColor ) )
             DrawPoint( nX, nY );
         PostDraw();
@@ -1363,7 +1898,7 @@ void OpenGLSalGraphicsImpl::drawLine( long nX1, long nY1, long nX2, long nY2 )
     VCL_GL_INFO( "::drawLine" );
     if( mnLineColor != SALCOLOR_NONE )
     {
-        PreDraw();
+        PreDraw( XOROption::IMPLEMENT_XOR );
         if( UseSolidAA( mnLineColor ) )
             DrawLineAA( nX1, nY1, nX2, nY2 );
         PostDraw();
@@ -1373,7 +1908,7 @@ void OpenGLSalGraphicsImpl::drawLine( long nX1, long nY1, long nX2, long nY2 )
 void OpenGLSalGraphicsImpl::drawRect( long nX, long nY, long nWidth, long nHeight )
 {
     VCL_GL_INFO( "::drawRect" );
-    PreDraw();
+    PreDraw( XOROption::IMPLEMENT_XOR );
 
     if( UseSolid( mnFillColor ) )
         DrawRect( nX, nY, nWidth, nHeight );
@@ -1411,7 +1946,7 @@ void OpenGLSalGraphicsImpl::drawPolyLine( sal_uInt32 nPoints, const SalPoint* pP
 
     if( mnLineColor != SALCOLOR_NONE && nPoints > 1 )
     {
-        PreDraw();
+        PreDraw( XOROption::IMPLEMENT_XOR );
         if( UseSolidAA( mnLineColor ) )
             DrawLinesAA( nPoints, pPtAry, false );
         PostDraw();
@@ -1435,7 +1970,7 @@ void OpenGLSalGraphicsImpl::drawPolygon( sal_uInt32 nPoints, const SalPoint* pPt
         return;
     }
 
-    PreDraw();
+    PreDraw( XOROption::IMPLEMENT_XOR );
 
     if( UseSolid( mnFillColor ) )
         DrawPolygon( nPoints, pPtAry );
@@ -1452,7 +1987,7 @@ void OpenGLSalGraphicsImpl::drawPolyPolygon( sal_uInt32 nPoly, const sal_uInt32*
     if( nPoly <= 0 )
         return;
 
-    PreDraw();
+    PreDraw( XOROption::IMPLEMENT_XOR );
 
     if( UseSolid( mnFillColor ) )
     {
@@ -1489,7 +2024,7 @@ bool OpenGLSalGraphicsImpl::drawPolyPolygon( const basegfx::B2DPolyPolygon& rPol
     if( rPolyPolygon.count() <= 0 )
         return true;
 
-    PreDraw();
+    PreDraw( XOROption::IMPLEMENT_XOR );
 
     if( UseSolid( mnFillColor, fTransparency ) )
         DrawPolyPolygon( rPolyPolygon );
@@ -1512,65 +2047,28 @@ bool OpenGLSalGraphicsImpl::drawPolyLine(
             double fTransparency,
             const basegfx::B2DVector& rLineWidth,
             basegfx::B2DLineJoin eLineJoin,
-            css::drawing::LineCap eLineCap)
+            css::drawing::LineCap eLineCap,
+            double fMiterMinimumAngle)
 {
     VCL_GL_INFO( "::drawPolyLine trans " << fTransparency );
     if( mnLineColor == SALCOLOR_NONE )
         return true;
 
     const bool bIsHairline = (rLineWidth.getX() == rLineWidth.getY()) && (rLineWidth.getX() <= 1.2);
+    const float fLineWidth = bIsHairline ? 1.0f : rLineWidth.getX();
 
-    // #i101491#
-    if( !bIsHairline && (rPolygon.count() > 1000) )
+    PreDraw(XOROption::IMPLEMENT_XOR);
+
+    if (UseLine(mnLineColor, 0.0f, fLineWidth))
     {
-        // the used basegfx::tools::createAreaGeometry is simply too
-        // expensive with very big polygons; fallback to caller (who
-        // should use ImplLineConverter normally)
-        // AW: ImplLineConverter had to be removed since it does not even
-        // know LineJoins, so the fallback will now prepare the line geometry
-        // the same way.
-        return false;
-    }
+        basegfx::B2DPolygon aPolygon(rPolygon);
 
-    // shortcut for hairline drawing to improve performance
-    if (bIsHairline)
-    {
-        // Let's just leave it to OutputDevice to do the bezier subdivision,
-        // drawPolyLine(sal_uInt32 nPoints, const SalPoint* pPtAry) will be
-        // called with the result.
-        return false;
-    }
+        if (aPolygon.areControlPointsUsed())
+            aPolygon = basegfx::tools::polygonSubdivide(aPolygon, 5 * F_PI180);
+        else
+            aPolygon.removeDoublePoints();
 
-    // #i11575#desc5#b adjust B2D tesselation result to raster positions
-    basegfx::B2DPolygon aPolygon = rPolygon;
-    const double fHalfWidth = 0.5 * rLineWidth.getX();
-
-    // get the area polygon for the line polygon
-    if( (rLineWidth.getX() != rLineWidth.getY())
-    && !basegfx::fTools::equalZero( rLineWidth.getY() ) )
-    {
-        // prepare for createAreaGeometry() with anisotropic linewidth
-        aPolygon.transform( basegfx::tools::createScaleB2DHomMatrix(1.0, rLineWidth.getX() / rLineWidth.getY()));
-    }
-
-    // create the area-polygon for the line
-    const basegfx::B2DPolyPolygon aAreaPolyPoly( basegfx::tools::createAreaGeometry(aPolygon, fHalfWidth, eLineJoin, eLineCap) );
-
-    if( (rLineWidth.getX() != rLineWidth.getY())
-    && !basegfx::fTools::equalZero( rLineWidth.getX() ) )
-    {
-        // postprocess createAreaGeometry() for anisotropic linewidth
-        aPolygon.transform(basegfx::tools::createScaleB2DHomMatrix(1.0, rLineWidth.getY() / rLineWidth.getX()));
-    }
-
-    PreDraw();
-    if( UseSolid( mnLineColor, fTransparency ) )
-    {
-        for( sal_uInt32 i = 0; i < aAreaPolyPoly.count(); i++ )
-        {
-            const basegfx::B2DPolyPolygon aOnePoly( aAreaPolyPoly.getB2DPolygon( i ) );
-            DrawPolyPolygon( aOnePoly );
-        }
+        DrawPolyLine(aPolygon, fLineWidth, eLineJoin, eLineCap, fMiterMinimumAngle);
     }
     PostDraw();
 
@@ -1627,6 +2125,15 @@ void OpenGLSalGraphicsImpl::DoCopyBits( const SalTwoRect& rPosAry, OpenGLSalGrap
 {
     VCL_GL_INFO( "::copyBits" );
 
+    rImpl.FlushDeferredDrawing();
+
+    if( !rImpl.maOffscreenTex )
+    {
+        VCL_GL_INFO( "::copyBits - skipping copy of un-initialized framebuffer contents of size "
+                     << rImpl.GetWidth() << "x" << rImpl.GetHeight() );
+        return;
+    }
+
     if( &rImpl == this &&
         (rPosAry.mnSrcWidth == rPosAry.mnDestWidth) &&
         (rPosAry.mnSrcHeight == rPosAry.mnDestHeight))
@@ -1651,6 +2158,8 @@ void OpenGLSalGraphicsImpl::drawBitmap( const SalTwoRect& rPosAry, const SalBitm
     // check that carefully only in the debug mode
     assert(dynamic_cast<const OpenGLSalBitmap*>(&rSalBitmap));
 
+    OpenGLZone aZone;
+
     const OpenGLSalBitmap& rBitmap = static_cast<const OpenGLSalBitmap&>(rSalBitmap);
     OpenGLTexture& rTexture = rBitmap.GetTexture();
 
@@ -1667,6 +2176,8 @@ void OpenGLSalGraphicsImpl::drawBitmap(
 {
     assert(dynamic_cast<const OpenGLSalBitmap*>(&rSalBitmap));
     assert(dynamic_cast<const OpenGLSalBitmap*>(&rMaskBitmap));
+
+    OpenGLZone aZone;
 
     const OpenGLSalBitmap& rBitmap = static_cast<const OpenGLSalBitmap&>(rSalBitmap);
     const OpenGLSalBitmap& rMask = static_cast<const OpenGLSalBitmap&>(rMaskBitmap);
@@ -1685,6 +2196,9 @@ void OpenGLSalGraphicsImpl::drawMask(
             SalColor nMaskColor )
 {
     assert(dynamic_cast<const OpenGLSalBitmap*>(&rSalBitmap));
+
+    OpenGLZone aZone;
+
     const OpenGLSalBitmap& rBitmap = static_cast<const OpenGLSalBitmap&>(rSalBitmap);
     OpenGLTexture& rTexture( rBitmap.GetTexture() );
 
@@ -1696,6 +2210,8 @@ void OpenGLSalGraphicsImpl::drawMask(
 
 SalBitmap* OpenGLSalGraphicsImpl::getBitmap( long nX, long nY, long nWidth, long nHeight )
 {
+    OpenGLZone aZone;
+
     OpenGLSalBitmap* pBitmap = new OpenGLSalBitmap;
     VCL_GL_INFO( "::getBitmap " << nX << "," << nY <<
               " " << nWidth << "x" << nHeight );
@@ -1712,9 +2228,11 @@ SalBitmap* OpenGLSalGraphicsImpl::getBitmap( long nX, long nY, long nWidth, long
 
 SalColor OpenGLSalGraphicsImpl::getPixel( long nX, long nY )
 {
+    FlushDeferredDrawing();
+
     char pixel[3] = { 0, 0, 0 };
 
-    PreDraw();
+    PreDraw( XOROption::IMPLEMENT_XOR );
     nY = GetHeight() - nY - 1;
     glReadPixels( nX, nY, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel);
     CHECK_GL_ERROR();
@@ -1729,23 +2247,18 @@ void OpenGLSalGraphicsImpl::invert(
             long nWidth, long nHeight,
             SalInvert nFlags)
 {
-    // TODO Figure out what are those:
-    //   * SAL_INVERT_50 (50/50 pattern?)
-    //   * SAL_INVERT_TRACKFRAME (dash-line rectangle?)
-
     PreDraw();
 
-    if( nFlags & SAL_INVERT_TRACKFRAME )
+    if( UseInvert( nFlags ) )
     {
-
-    }
-    else if( nFlags & SAL_INVERT_50 )
-    {
-
-    }
-    else // just invert
-    {
-        if( UseInvert() )
+        if( nFlags & SalInvert::TrackFrame )
+        { // FIXME: could be more efficient.
+            DrawRect( nX, nY, nWidth, 1 );
+            DrawRect( nX, nY + nHeight, nWidth, 1 );
+            DrawRect( nX, nY, 1, nHeight );
+            DrawRect( nX + nWidth, nY, 1, nHeight );
+        }
+        else
             DrawRect( nX, nY, nWidth, nHeight );
     }
 
@@ -1756,19 +2269,8 @@ void OpenGLSalGraphicsImpl::invert( sal_uInt32 nPoints, const SalPoint* pPtAry, 
 {
     PreDraw();
 
-    if( nFlags & SAL_INVERT_TRACKFRAME )
-    {
-
-    }
-    else if( nFlags & SAL_INVERT_50 )
-    {
-
-    }
-    else // just invert
-    {
-        if( UseInvert() )
-            DrawPolygon( nPoints, pPtAry );
-    }
+    if( UseInvert( nFlags ) )
+        DrawPolygon( nPoints, pPtAry );
 
     PostDraw();
 }
@@ -1787,6 +2289,8 @@ bool OpenGLSalGraphicsImpl::blendBitmap(
             const SalBitmap& rSalBitmap )
 {
     assert(dynamic_cast<const OpenGLSalBitmap*>(&rSalBitmap));
+
+    OpenGLZone aZone;
 
     const OpenGLSalBitmap& rBitmap = static_cast<const OpenGLSalBitmap&>(rSalBitmap);
     OpenGLTexture& rTexture( rBitmap.GetTexture() );
@@ -1813,6 +2317,8 @@ bool OpenGLSalGraphicsImpl::blendAlphaBitmap(
     assert(dynamic_cast<const OpenGLSalBitmap*>(&rSalSrcBitmap));
     assert(dynamic_cast<const OpenGLSalBitmap*>(&rSalMaskBitmap));
     assert(dynamic_cast<const OpenGLSalBitmap*>(&rSalAlphaBitmap));
+
+    OpenGLZone aZone;
 
     const OpenGLSalBitmap& rSrcBitmap = static_cast<const OpenGLSalBitmap&>(rSalSrcBitmap);
     const OpenGLSalBitmap& rMaskBitmap = static_cast<const OpenGLSalBitmap&>(rSalMaskBitmap);
@@ -1848,6 +2354,8 @@ bool OpenGLSalGraphicsImpl::drawAlphaBitmap(
     assert(dynamic_cast<const OpenGLSalBitmap*>(&rSalBitmap));
     assert(dynamic_cast<const OpenGLSalBitmap*>(&rAlphaBitmap));
 
+    OpenGLZone aZone;
+
     const OpenGLSalBitmap& rBitmap = static_cast<const OpenGLSalBitmap&>(rSalBitmap);
     const OpenGLSalBitmap& rAlpha = static_cast<const OpenGLSalBitmap&>(rAlphaBitmap);
     OpenGLTexture& rTexture( rBitmap.GetTexture() );
@@ -1869,7 +2377,9 @@ bool OpenGLSalGraphicsImpl::drawTransformedBitmap(
             const SalBitmap* pAlphaBitmap)
 {
     assert(dynamic_cast<const OpenGLSalBitmap*>(&rSrcBitmap));
-    assert(dynamic_cast<const OpenGLSalBitmap*>(pAlphaBitmap));
+    assert(!pAlphaBitmap || dynamic_cast<const OpenGLSalBitmap*>(pAlphaBitmap));
+
+    OpenGLZone aZone;
 
     const OpenGLSalBitmap& rBitmap = static_cast<const OpenGLSalBitmap&>(rSrcBitmap);
     const OpenGLSalBitmap* pMaskBitmap = static_cast<const OpenGLSalBitmap*>(pAlphaBitmap);
@@ -1930,7 +2440,7 @@ bool OpenGLSalGraphicsImpl::drawGradient(const tools::PolyPolygon& rPolyPoly,
     aBoundRect.Right()++;
     aBoundRect.Bottom()++;
 
-    PreDraw();
+    PreDraw( XOROption::IMPLEMENT_XOR );
 
 #define FIXME_BROKEN_STENCIL_FOR_GRADIENTS 0
 #if FIXME_BROKEN_STENCIL_FOR_GRADIENTS
@@ -1988,6 +2498,8 @@ bool OpenGLSalGraphicsImpl::drawGradient(const tools::PolyPolygon& rPolyPoly,
 
 void OpenGLSalGraphicsImpl::flush()
 {
+    FlushDeferredDrawing();
+
     if( IsOffscreen() )
         return;
 
@@ -2002,10 +2514,16 @@ void OpenGLSalGraphicsImpl::flush()
 
 void OpenGLSalGraphicsImpl::doFlush()
 {
+    FlushDeferredDrawing();
+
+    if (OpenGLContext::hasCurrent())
+    {
+        mpContext->state()->scissor().disable();
+        mpContext->state()->stencil().disable();
+    }
+
     if( IsOffscreen() )
         return;
-
-    assert( mpWindowContext.is() );
 
     if( !maOffscreenTex )
     {
@@ -2013,7 +2531,7 @@ void OpenGLSalGraphicsImpl::doFlush()
         return;
     }
 
-    if (mnDrawCountAtFlush == mnDrawCount)
+    if( mnDrawCountAtFlush == mnDrawCount )
     {
         VCL_GL_INFO( "eliding redundant flushAndSwap, no drawing since last!" );
         return;
@@ -2025,25 +2543,30 @@ void OpenGLSalGraphicsImpl::doFlush()
 
     VCL_GL_INFO( "flushAndSwap" );
 
+    if( !mpWindowContext.is() )
+    {
+        // ensure everything is released from the old context.
+        OpenGLContext::clearCurrent();
+        mpWindowContext = CreateWinContext();
+        VCL_GL_INFO( "late creation of window context" );
+    }
+
+    assert( mpWindowContext.is() );
+
     // Interesting ! -> this destroys a context [ somehow ] ...
     mpWindowContext->makeCurrent();
     CHECK_GL_ERROR();
 
-    VCL_GL_INFO( "flushAndSwap - acquire default frame buffer" );
+    VCL_GL_INFO( "flushAndSwap - acquire default framebuffer" );
+
+    mpWindowContext->state()->sync();
 
     mpWindowContext->AcquireDefaultFramebuffer();
-    glBindFramebuffer( GL_FRAMEBUFFER, 0 ); // FIXME: paranoid double check.
     CHECK_GL_ERROR();
 
-    VCL_GL_INFO( "flushAndSwap - acquired default frame buffer" );
-
-    glDisable( GL_SCISSOR_TEST ); // FIXME: paranoia ...
-    CHECK_GL_ERROR();
-    glDisable( GL_STENCIL_TEST ); // FIXME: paranoia ...
-    CHECK_GL_ERROR();
-
-    glViewport( 0, 0, GetWidth(), GetHeight() );
-    CHECK_GL_ERROR();
+    mpWindowContext->state()->viewport(Rectangle(Point(0, 0), Size(GetWidth(), GetHeight())));
+    mpWindowContext->state()->scissor().disable();
+    mpWindowContext->state()->stencil().disable();
 
 #if OSL_DEBUG_LEVEL > 0 // random background glClear
     glClearColor((float)rand()/RAND_MAX, (float)rand()/RAND_MAX,
@@ -2054,51 +2577,37 @@ void OpenGLSalGraphicsImpl::doFlush()
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT );
     CHECK_GL_ERROR();
 
-    SalTwoRect aPosAry( 0, 0, maOffscreenTex.GetWidth(), maOffscreenTex.GetHeight(),
-                        0, 0, maOffscreenTex.GetWidth(), maOffscreenTex.GetHeight() );
     VCL_GL_INFO( "Texture height " << maOffscreenTex.GetHeight() << " vs. window height " << GetHeight() );
 
     OpenGLProgram *pProgram =
-        mpWindowContext->UseProgram( "textureVertexShader", "textureFragmentShader", "" );
+        mpWindowContext->UseProgram( "textureVertexShader", "textureFragmentShader", "// flush shader\n" ); // flush helps profiling
     if( !pProgram )
         VCL_GL_INFO( "Can't compile simple copying shader !" );
     else
     {
-        pProgram->Use(); // FIXME: paranoia ...
-        VCL_GL_INFO( "done paranoid re-use." );
         pProgram->SetTexture( "sampler", maOffscreenTex );
-        maOffscreenTex.Bind(); // FIXME: paranoia ...
 
-        VCL_GL_INFO( "bound bits etc." );
+        SalTwoRect aPosAry( 0, 0, maOffscreenTex.GetWidth(), maOffscreenTex.GetHeight(),
+                            0, 0, maOffscreenTex.GetWidth(), maOffscreenTex.GetHeight() );
 
         GLfloat aTexCoord[8];
         maOffscreenTex.GetCoord( aTexCoord, aPosAry );
         pProgram->SetTextureCoord( aTexCoord );
 
-        long nX1( aPosAry.mnDestX );
-        long nY1( aPosAry.mnDestY );
-        long nX2( nX1 + aPosAry.mnDestWidth );
-        long nY2( nY1 + aPosAry.mnDestHeight );
-        const SalPoint aPoints[] = { { nX1, nY2 }, { nX1, nY1 },
-                                     { nX2, nY1 }, { nX2, nY2 }};
-
-        sal_uInt32 nPoints = 4;
-        std::vector<GLfloat> aVertices(nPoints * 2);
-        sal_uInt32 i, j;
-
-        for( i = 0, j = 0; i < nPoints; i++, j += 2 )
-        {
-            aVertices[j]   = GLfloat(aPoints[i].mnX);
-            aVertices[j+1] = GLfloat(aPoints[i].mnY);
-        }
+        GLfloat fWidth( maOffscreenTex.GetWidth() );
+        GLfloat fHeight( maOffscreenTex.GetHeight() );
+        const GLfloat aVertices[] = { 0, fHeight,
+                                      0, 0,
+                                      fWidth, 0,
+                                      fWidth, fHeight };
 
         pProgram->ApplyMatrix(GetWidth(), GetHeight(), 0.0);
         pProgram->SetVertices( &aVertices[0] );
-        glDrawArrays( GL_TRIANGLE_FAN, 0, nPoints );
+        glDrawArrays( GL_TRIANGLE_FAN, 0, 4 );
 
         pProgram->Clean();
 
-        glBindTexture( GL_TEXTURE_2D, 0 );
+        maOffscreenTex.Unbind();
 
         static bool bNoSwap = getenv("SAL_GL_NO_SWAP");
         if (!bNoSwap)

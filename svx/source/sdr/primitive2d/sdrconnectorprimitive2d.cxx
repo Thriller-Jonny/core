@@ -26,9 +26,7 @@
 #include <basegfx/polygon/b2dpolypolygon.hxx>
 
 
-
 using namespace com::sun::star;
-
 
 
 namespace drawinglayer
@@ -45,7 +43,6 @@ namespace drawinglayer
                 // create invisible line for HitTest/BoundRect
                 aRetval.push_back(
                     createHiddenGeometryPrimitives2D(
-                        false,
                         basegfx::B2DPolyPolygon(getUnitPolygon())));
             }
             else

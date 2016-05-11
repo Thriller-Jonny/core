@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#ifdef WNT
+#ifdef _WIN32
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
@@ -17,7 +17,7 @@
 #include "mar_cmdline.h"
 #include "mar.h"
 #include "cryptox.h"
-#ifndef WNT
+#ifndef _WIN32
 #include <unistd.h>
 #endif
 
@@ -149,7 +149,7 @@ WriteAndUpdateSignatures(FILE *fpDest, void *buffer,
 }
 
 /**
- * Adjusts each entry's content offset in the the passed in index by the
+ * Adjusts each entry's content offset in the passed in index by the
  * specified amount.
  *
  * @param indexBuf     A buffer containing the MAR index

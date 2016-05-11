@@ -166,20 +166,20 @@ SwFrame* SwFrame::GetLower()
     return IsLayoutFrame() ? static_cast<SwLayoutFrame*>(this)->Lower() : nullptr;
 }
 
-SwContentFrame* SwFrame::FindPrevCnt( const bool _bInSameFootnote )
+SwContentFrame* SwFrame::FindPrevCnt( )
 {
     if ( GetPrev() && GetPrev()->IsContentFrame() )
         return static_cast<SwContentFrame*>(GetPrev());
     else
-        return _FindPrevCnt( _bInSameFootnote );
+        return FindPrevCnt_();
 }
 
-const SwContentFrame* SwFrame::FindPrevCnt( const bool _bInSameFootnote ) const
+const SwContentFrame* SwFrame::FindPrevCnt() const
 {
     if ( GetPrev() && GetPrev()->IsContentFrame() )
         return static_cast<const SwContentFrame*>(GetPrev());
     else
-        return const_cast<SwFrame*>(this)->_FindPrevCnt( _bInSameFootnote );
+        return const_cast<SwFrame*>(this)->FindPrevCnt_();
 }
 
 SwContentFrame *SwFrame::FindNextCnt( const bool _bInSameFootnote )
@@ -187,7 +187,7 @@ SwContentFrame *SwFrame::FindNextCnt( const bool _bInSameFootnote )
     if ( mpNext && mpNext->IsContentFrame() )
         return static_cast<SwContentFrame*>(mpNext);
     else
-        return _FindNextCnt( _bInSameFootnote );
+        return FindNextCnt_( _bInSameFootnote );
 }
 
 const SwContentFrame *SwFrame::FindNextCnt( const bool _bInSameFootnote ) const
@@ -195,7 +195,7 @@ const SwContentFrame *SwFrame::FindNextCnt( const bool _bInSameFootnote ) const
     if ( mpNext && mpNext->IsContentFrame() )
         return static_cast<SwContentFrame*>(mpNext);
     else
-        return const_cast<SwFrame*>(this)->_FindNextCnt( _bInSameFootnote );
+        return const_cast<SwFrame*>(this)->FindNextCnt_( _bInSameFootnote );
 }
 
 bool SwLayoutFrame::IsAnLower( const SwFrame *pAssumed ) const
@@ -562,7 +562,7 @@ const SwPageFrame* SwRootFrame::GetPageAtPos( const Point& rPt, const Size* pSiz
             pPage = pPage->GetNext();
     }
 
-    OSL_ENSURE( GetPageNum() <= maPageRects.size(), "number of pages differes from page rect array size" );
+    OSL_ENSURE( GetPageNum() <= maPageRects.size(), "number of pages differs from page rect array size" );
     size_t nPageIdx = 0;
 
     while ( pPage && !pRet )
@@ -655,8 +655,8 @@ bool SwFrame::supportsFullDrawingLayerFillAttributeSet() const
 }
 
 /*
- *  SwFrame::_FindNext(), _FindPrev(), InvalidateNextPos()
- *         _FindNextCnt() visits tables and sections and only returns SwContentFrames.
+ *  SwFrame::FindNext_(), FindPrev_(), InvalidateNextPos()
+ *         FindNextCnt_() visits tables and sections and only returns SwContentFrames.
  *
  *  Description         Invalidates the position of the next frame.
  *      This is the direct successor or in case of ContentFrames the next
@@ -701,7 +701,7 @@ static SwFrame* lcl_NextFrame( SwFrame* pFrame )
     return pRet;
 }
 
-SwFrame *SwFrame::_FindNext()
+SwFrame *SwFrame::FindNext_()
 {
     bool bIgnoreTab = false;
     SwFrame *pThis = this;
@@ -832,7 +832,7 @@ SwFrame *SwFrame::_FindNext()
 }
 
 // #i27138# - add parameter <_bInSameFootnote>
-SwContentFrame *SwFrame::_FindNextCnt( const bool _bInSameFootnote )
+SwContentFrame *SwFrame::FindNextCnt_( const bool _bInSameFootnote )
 {
     SwFrame *pThis = this;
 
@@ -890,7 +890,7 @@ SwContentFrame *SwFrame::_FindNextCnt( const bool _bInSameFootnote )
                 const SwFootnoteFrame* pFootnoteFrameOfNext( pNxtCnt->FindFootnoteFrame() );
                 const SwFootnoteFrame* pFootnoteFrameOfCurr( pThis->FindFootnoteFrame() );
                 OSL_ENSURE( pFootnoteFrameOfCurr,
-                        "<SwFrame::_FindNextCnt() - unknown layout situation: current frame has to have an upper footnote frame." );
+                        "<SwFrame::FindNextCnt_() - unknown layout situation: current frame has to have an upper footnote frame." );
                 if ( pFootnoteFrameOfNext == pFootnoteFrameOfCurr )
                 {
                     return pNxtCnt;
@@ -943,7 +943,7 @@ SwContentFrame *SwFrame::_FindNextCnt( const bool _bInSameFootnote )
 
     OD 2005-11-30 #i27138#
 */
-SwContentFrame* SwFrame::_FindPrevCnt( const bool _bInSameFootnote )
+SwContentFrame* SwFrame::FindPrevCnt_()
 {
     if ( !IsFlowFrame() )
     {
@@ -1012,7 +1012,7 @@ SwContentFrame* SwFrame::_FindPrevCnt( const bool _bInSameFootnote )
             {
                 const bool bInDocBody = pCurrContentFrame->IsInDocBody();
                 const bool bInFootnote  = pCurrContentFrame->IsInFootnote();
-                if ( bInDocBody || ( bInFootnote && !_bInSameFootnote ) )
+                if ( bInDocBody )
                 {
                     // handling for environments 'footnotes' and 'document body frames':
                     // Assure that found previous frame is also in one of these
@@ -1027,7 +1027,7 @@ SwContentFrame* SwFrame::_FindPrevCnt( const bool _bInSameFootnote )
                         pPrevContentFrame = pPrevContentFrame->GetPrevContentFrame();
                     }
                 }
-                else if ( bInFootnote && _bInSameFootnote )
+                else if ( bInFootnote )
                 {
                     // handling for environments 'each footnote':
                     // Assure that found next content frame belongs to the same footnotes
@@ -1066,9 +1066,9 @@ SwContentFrame* SwFrame::_FindPrevCnt( const bool _bInSameFootnote )
                     //       inside a fly frame.
                     //       Thus, method <FindFooterOrHeader()> can be used.
                     OSL_ENSURE( pCurrContentFrame->FindFooterOrHeader(),
-                            "<SwFrame::_FindPrevCnt()> - unknown layout situation: current frame should be in page header or page footer" );
+                            "<SwFrame::FindPrevCnt_()> - unknown layout situation: current frame should be in page header or page footer" );
                     OSL_ENSURE( !pPrevContentFrame->IsInFly(),
-                            "<SwFrame::_FindPrevCnt()> - unknown layout situation: found previous frame should *not* be inside a fly frame." );
+                            "<SwFrame::FindPrevCnt_()> - unknown layout situation: found previous frame should *not* be inside a fly frame." );
                     if ( pPrevContentFrame->FindFooterOrHeader() !=
                                             pCurrContentFrame->FindFooterOrHeader() )
                     {
@@ -1082,7 +1082,7 @@ SwContentFrame* SwFrame::_FindPrevCnt( const bool _bInSameFootnote )
     return pPrevContentFrame;
 }
 
-SwFrame *SwFrame::_FindPrev()
+SwFrame *SwFrame::FindPrev_()
 {
     bool bIgnoreTab = false;
     SwFrame *pThis = this;
@@ -1162,7 +1162,7 @@ SwFrame *SwFrame::_FindPrev()
 void SwFrame::ImplInvalidateNextPos( bool bNoFootnote )
 {
     SwFrame *pFrame;
-    if ( nullptr != (pFrame = _FindNext()) )
+    if ( nullptr != (pFrame = FindNext_()) )
     {
         if( pFrame->IsSctFrame() )
         {
@@ -1529,7 +1529,7 @@ SwCellFrame* SwCellFrame::GetFollowCell() const
 
         if ( !pRow->GetNext() )
         {
-            pThisCell = &pThisCell->FindStartEndOfRowSpanCell( false, true );
+            pThisCell = &pThisCell->FindStartEndOfRowSpanCell( false );
             pRow = pThisCell->GetUpper();
         }
     }
@@ -1576,7 +1576,7 @@ SwCellFrame* SwCellFrame::GetPreviousCell() const
                 if ( pMasterRow )
                     pRet = lcl_FindCorrespondingCellFrame( *static_cast<const SwRowFrame*>(pRow), *this, *pMasterRow, false );
                 if ( pRet && pRet->GetTabBox()->getRowSpan() < 1 )
-                    pRet = &const_cast<SwCellFrame&>(pRet->FindStartEndOfRowSpanCell( true, true ));
+                    pRet = &const_cast<SwCellFrame&>(pRet->FindStartEndOfRowSpanCell( true ));
             }
         }
     }
@@ -1585,7 +1585,7 @@ SwCellFrame* SwCellFrame::GetPreviousCell() const
 }
 
 // --> NEW TABLES
-const SwCellFrame& SwCellFrame::FindStartEndOfRowSpanCell( bool bStart, bool bCurrentTableOnly ) const
+const SwCellFrame& SwCellFrame::FindStartEndOfRowSpanCell( bool bStart ) const
 {
     const SwCellFrame* pRet = nullptr;
 
@@ -1604,31 +1604,28 @@ const SwCellFrame& SwCellFrame::FindStartEndOfRowSpanCell( bool bStart, bool bCu
         const SwTable* pTable = pTableFrame->GetTable();
 
         sal_uInt16 nMax = USHRT_MAX;
-        if ( bCurrentTableOnly )
-        {
-            const SwFrame* pCurrentRow = GetUpper();
-            const bool bDoNotEnterHeadline = bStart && pTableFrame->IsFollow() &&
+        const SwFrame* pCurrentRow = GetUpper();
+        const bool bDoNotEnterHeadline = bStart && pTableFrame->IsFollow() &&
                                         !pTableFrame->IsInHeadline( *pCurrentRow );
 
-            // check how many rows we are allowed to go up or down until we reach the end of
-            // the current table frame:
-            nMax = 0;
-            while ( bStart ? pCurrentRow->GetPrev() : pCurrentRow->GetNext() )
+        // check how many rows we are allowed to go up or down until we reach the end of
+        // the current table frame:
+        nMax = 0;
+        while ( bStart ? pCurrentRow->GetPrev() : pCurrentRow->GetNext() )
+        {
+            if ( bStart )
             {
-                if ( bStart )
-                {
-                    // do not enter a repeated headline:
-                    if ( bDoNotEnterHeadline && pTableFrame->IsFollow() &&
-                         pTableFrame->IsInHeadline( *pCurrentRow->GetPrev() ) )
-                        break;
+                // do not enter a repeated headline:
+                if ( bDoNotEnterHeadline && pTableFrame->IsFollow() &&
+                     pTableFrame->IsInHeadline( *pCurrentRow->GetPrev() ) )
+                    break;
 
-                    pCurrentRow = pCurrentRow->GetPrev();
-                }
-                else
-                    pCurrentRow = pCurrentRow->GetNext();
-
-                ++nMax;
+                pCurrentRow = pCurrentRow->GetPrev();
             }
+            else
+               pCurrentRow = pCurrentRow->GetNext();
+
+            ++nMax;
         }
 
         // By passing the nMax value for Find*OfRowSpan (in case of bCurrentTableOnly
@@ -1646,23 +1643,10 @@ const SwCellFrame& SwCellFrame::FindStartEndOfRowSpanCell( bool bStart, bool bCu
             {
                 const SwTabFrame* pMasterTable = static_cast<const SwTabFrame*>(pMasterCell->GetUpper()->GetUpper());
 
-                if ( bCurrentTableOnly )
+                if ( pMasterTable == pTableFrame )
                 {
-                    if ( pMasterTable == pTableFrame )
-                    {
-                        pRet = pMasterCell;
-                        break;
-                    }
-                }
-                else
-                {
-                    if ( pMasterTable == pTableFrame ||
-                         (  (bStart && pMasterTable->IsAnFollow(pTableFrame)) ||
-                           (!bStart && pTableFrame->IsAnFollow(pMasterTable)) ) )
-                    {
-                        pRet = pMasterCell;
-                        break;
-                    }
+                    pRet = pMasterCell;
+                    break;
                 }
             }
         }

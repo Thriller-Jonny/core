@@ -22,7 +22,6 @@
 
 #include <salprn.hxx>
 
-// - SalDriverData -
 
 // WNT3
 #define SAL_DRIVERDATA_SYSSIGN              ((sal_uIntPtr)0x574E5433)
@@ -38,7 +37,6 @@ struct SalDriverData
 
 #pragma pack()
 
-// - WinSalInfoPrinter -
 
 class WinSalGraphics;
 
@@ -59,19 +57,18 @@ public:
     virtual void                    ReleaseGraphics( SalGraphics* pGraphics ) override;
     virtual bool                    Setup( SalFrame* pFrame, ImplJobSetup* pSetupData ) override;
     virtual bool                    SetPrinterData( ImplJobSetup* pSetupData ) override;
-    virtual bool                    SetData( sal_uIntPtr nFlags, ImplJobSetup* pSetupData ) override;
+    virtual bool                    SetData( JobSetFlags nFlags, ImplJobSetup* pSetupData ) override;
     virtual void                    GetPageInfo( const ImplJobSetup* pSetupData,
                                                  long& rOutWidth, long& rOutHeight,
                                                  long& rPageOffX, long& rPageOffY,
                                                  long& rPageWidth, long& rPageHeight ) override;
-    virtual sal_uIntPtr             GetCapabilities( const ImplJobSetup* pSetupData, PrinterCapType nType ) override;
+    virtual sal_uInt32              GetCapabilities( const ImplJobSetup* pSetupData, PrinterCapType nType ) override;
     virtual sal_uIntPtr             GetPaperBinCount( const ImplJobSetup* pSetupData ) override;
     virtual OUString                GetPaperBinName( const ImplJobSetup* pSetupData, sal_uIntPtr nPaperBin ) override;
     virtual void                    InitPaperFormats( const ImplJobSetup* pSetupData ) override;
     virtual int                     GetLandscapeAngle( const ImplJobSetup* pSetupData ) override;
 };
 
-// - WinSalPrinter -
 
 class WinSalPrinter : public SalPrinter
 {
@@ -95,13 +92,13 @@ public:
     virtual bool                    StartJob( const OUString* pFileName,
                                               const OUString& rJobName,
                                               const OUString& rAppName,
-                                              sal_uIntPtr nCopies,
+                                              sal_uInt32 nCopies,
                                               bool bCollate,
                                               bool bDirect,
                                               ImplJobSetup* pSetupData ) override;
     virtual bool                    EndJob() override;
     virtual SalGraphics*            StartPage( ImplJobSetup* pSetupData, bool bNewJobData ) override;
-    virtual bool                    EndPage() override;
+    virtual void                    EndPage() override;
     virtual sal_uIntPtr             GetErrorCode() override;
 
     void markInvalid();

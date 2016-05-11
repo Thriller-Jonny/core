@@ -22,7 +22,6 @@
 #include <vcl/outdev.hxx>
 #include <unotools/configmgr.hxx>
 #include <unotools/lingucfg.hxx>
-#include <com/sun/star/uno/Any.hxx>
 #include <com/sun/star/uno/Sequence.hxx>
 #include <com/sun/star/i18n/ScriptType.hpp>
 #include <swtypes.hxx>
@@ -257,7 +256,7 @@ OUString  SwStdFontConfig::GetDefaultFor(sal_uInt16 nFontType, LanguageType eLan
             nFontId = DefaultFontType::LATIN_TEXT;
     }
     vcl::Font aFont = OutputDevice::GetDefaultFont(nFontId, eLang, GetDefaultFontFlags::OnlyOne);
-    return  aFont.GetName();
+    return  aFont.GetFamilyName();
 }
 
 sal_Int32 SwStdFontConfig::GetDefaultHeightFor(sal_uInt16 nFontType, LanguageType eLang)

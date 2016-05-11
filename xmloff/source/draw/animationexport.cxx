@@ -694,8 +694,8 @@ void AnimationsExporterImpl::prepareNode( const Reference< XAnimationNode >& xNo
         {
             Reference< XIterateContainer > xIter( xNode, UNO_QUERY_THROW );
             prepareValue( xIter->getTarget() );
+            SAL_FALLTHROUGH;
         }
-        // its intended that here is no break!
         case AnimationNodeType::PAR:
         case AnimationNodeType::SEQ:
         {
@@ -1682,7 +1682,7 @@ AnimationsExporter::~AnimationsExporter()
 {
 }
 
-void AnimationsExporter::prepare( Reference< XAnimationNode > xRootNode )
+void AnimationsExporter::prepare( const Reference< XAnimationNode >& xRootNode )
 {
     try
     {
@@ -1698,7 +1698,7 @@ void AnimationsExporter::prepare( Reference< XAnimationNode > xRootNode )
     }
 }
 
-void AnimationsExporter::exportAnimations( Reference< XAnimationNode > xRootNode )
+void AnimationsExporter::exportAnimations( const Reference< XAnimationNode >& xRootNode )
 {
     try
     {

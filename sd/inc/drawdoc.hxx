@@ -126,7 +126,6 @@ namespace sd
         bool mbAnimationAllowed;
         sal_Int32 mnPauseTimeout;
         bool mbShowPauseLogo;
-        bool mbStartWithNavigator;
 
         PresentationSettings();
         PresentationSettings( const PresentationSettings& r );
@@ -140,7 +139,7 @@ private:
     OUString msDocAccTitle;
 public:
     SAL_DLLPRIVATE void setDocAccTitle( const OUString& rTitle ) { msDocAccTitle = rTitle; }
-    SAL_DLLPRIVATE const OUString getDocAccTitle() const { return msDocAccTitle; }
+    SAL_DLLPRIVATE const OUString& getDocAccTitle() const { return msDocAccTitle; }
 private:
     bool bReadOnly;
 public:
@@ -237,6 +236,7 @@ public:
     SAL_DLLPRIVATE void                SetAllocDocSh(bool bAlloc);
 
     SAL_DLLPRIVATE void                CreatingDataObj( SdTransferable* pTransferable ) { mpCreatingTransferable = pTransferable; }
+    SAL_DLLPRIVATE virtual bool        IsCreatingDataObj() const override { return mpCreatingTransferable != nullptr; }
 
     /** if the document does not contain at least one handout, one slide and one notes page with
         at least one master each this methods creates them.
@@ -259,12 +259,12 @@ public:
                                       SdDrawDocument* pSourceDoc, bool bMaster, bool bCheckMasters);
 
     SdDrawDocument* OpenBookmarkDoc(const OUString& rBookmarkFile);
-    SAL_DLLPRIVATE SdDrawDocument*     OpenBookmarkDoc(SfxMedium& rMedium);
+    SAL_DLLPRIVATE SdDrawDocument* OpenBookmarkDoc(SfxMedium* pMedium);
 
-    SAL_DLLPRIVATE bool InsertBookmark(const std::vector<OUString> &rBookmarkList,
+    SAL_DLLPRIVATE void InsertBookmark(const std::vector<OUString> &rBookmarkList,
                             std::vector<OUString> &rExchangeList, bool bLink,
-                            bool bReplace, sal_uInt16 nPgPos, bool bNoDialogs,
-                            ::sd::DrawDocShell* pBookmarkDocSh, bool bCopy,
+                            bool bReplace, sal_uInt16 nPgPos,
+                            ::sd::DrawDocShell* pBookmarkDocSh,
                             Point* pObjPos);
 
     SAL_DLLPRIVATE bool IsStartWithPresentation() const { return mbStartWithPresentation;}
@@ -570,7 +570,7 @@ public:
         languages set at this document */
     SAL_DLLPRIVATE void getDefaultFonts( vcl::Font& rLatinFont, vcl::Font& rCJKFont, vcl::Font& rCTLFont );
 
-    SAL_DLLPRIVATE sd::UndoManager* GetUndoManager() const;
+    sd::UndoManager* GetUndoManager() const;
 
     /** converts the given western font height to a corresponding ctl font height, depending on the system language */
     SAL_DLLPRIVATE static sal_uInt32 convertFontHeightToCTL( sal_uInt32 nWesternFontHeight );

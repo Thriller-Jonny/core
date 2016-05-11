@@ -22,6 +22,8 @@
 #include <oox/core/filterbase.hxx>
 #include <oox/core/relations.hxx>
 #include <oox/helper/attributelist.hxx>
+#include <oox/token/namespaces.hxx>
+#include <oox/token/tokens.hxx>
 #include "addressconverter.hxx"
 #include "autofilterbuffer.hxx"
 #include "autofiltercontext.hxx"
@@ -179,7 +181,7 @@ void DataValidationsContext::importDataValidation( SequenceInputStream& rStrm )
 
     // condition formula(s)
     FormulaParser& rParser = getFormulaParser();
-    CellAddress aBaseAddr = aModel.maRanges.getBaseAddress();
+    ScAddress aBaseAddr = aModel.maRanges.getBaseAddress();
     aModel.maTokens1 = rParser.importFormula( aBaseAddr, FORMULATYPE_VALIDATION, rStrm );
     aModel.maTokens2 = rParser.importFormula( aBaseAddr, FORMULATYPE_VALIDATION, rStrm );
     // process string list of a list validation (convert to list of string tokens)
@@ -316,7 +318,7 @@ ContextHandlerRef WorksheetFragment::onCreateContext( sal_Int32 nElement, const 
         // Only process an oleObject or control if outside a mc:AlternateContent
         // element OR if within a mc:Fallback. I suppose ideally we
         // should process the stuff within 'mc:Choice'
-	case XLS_TOKEN( controls ):
+    case XLS_TOKEN( controls ):
         case XLS_TOKEN( oleObjects ):
             if ( getCurrentElement() == XLS_TOKEN( controls ) )
             {

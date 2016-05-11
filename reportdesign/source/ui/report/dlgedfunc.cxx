@@ -60,13 +60,10 @@ namespace rptui
 using namespace ::com::sun::star;
 
 
-
-
 IMPL_LINK_NOARG_TYPED( DlgEdFunc, ScrollTimeout, Timer *, void )
 {
     ForceScroll( m_pParent->PixelToLogic( m_pParent->GetPointerPosPixel() ) );
 }
-
 
 
 void DlgEdFunc::ForceScroll( const Point& rPos )
@@ -134,7 +131,7 @@ void DlgEdFunc::setOverlappedControlColor(sal_Int32 _nColor)
     m_nOverlappedControlColor = _nColor;
 }
 
-sal_Int32 lcl_setColorOfObject(uno::Reference< uno::XInterface > _xObj, long _nColorTRGB)
+sal_Int32 lcl_setColorOfObject(const uno::Reference< uno::XInterface >& _xObj, long _nColorTRGB)
 {
     sal_Int32 nBackColor = 0;
     try
@@ -163,7 +160,6 @@ DlgEdFunc::~DlgEdFunc()
 }
 
 
-
 bool DlgEdFunc::MouseButtonDown( const MouseEvent& rMEvt )
 {
     m_aMDPos = m_pParent->PixelToLogic( rMEvt.GetPosPixel() );
@@ -178,7 +174,7 @@ bool DlgEdFunc::MouseButtonDown( const MouseEvent& rMEvt )
             {
                 uno::Sequence<beans::PropertyValue> aArgs(1);
                 aArgs[0].Name = "ShowProperties";
-                aArgs[0].Value <<= sal_True;
+                aArgs[0].Value <<= true;
                 m_pParent->getSectionWindow()->getViewsWindow()->getView()->getReportView()->getController().executeUnChecked(SID_SHOW_PROPERTYBROWSER,aArgs);
                 m_pParent->getSectionWindow()->getViewsWindow()->getView()->getReportView()->UpdatePropertyBrowserDelayed(m_rView);
                 // TODO character in shapes
@@ -221,7 +217,6 @@ bool DlgEdFunc::MouseButtonDown( const MouseEvent& rMEvt )
         m_pParent->CaptureMouse();
     return bHandled;
 }
-
 
 
 bool DlgEdFunc::MouseButtonUp( const MouseEvent& /*rMEvt*/ )
@@ -368,7 +363,7 @@ bool DlgEdFunc::handleKeyEvent(const KeyEvent& _rEvent)
                     bReturn = true;
                     break;
                 }
-                // run through
+                SAL_FALLTHROUGH;
             default:
             {
                 bReturn = m_rView.KeyInput(_rEvent, m_pParent);
@@ -393,32 +388,28 @@ void DlgEdFunc::activateOle(SdrObject* _pObj)
 
         if (nSdrObjKind == OBJ_OLE2)
         {
-            bool bIsInplaceOle = false;
-            if (!bIsInplaceOle)
+            SdrOle2Obj* pOleObj = dynamic_cast<SdrOle2Obj*>(_pObj);
+            if (pOleObj && pOleObj->GetObjRef().is())
             {
-                SdrOle2Obj* pOleObj = dynamic_cast<SdrOle2Obj*>(_pObj);
-                if (pOleObj && pOleObj->GetObjRef().is())
+                if (m_rView.IsTextEdit())
                 {
-                    if (m_rView.IsTextEdit())
-                    {
-                        m_rView.SdrEndTextEdit();
-                    }
+                    m_rView.SdrEndTextEdit();
+                }
 
-                    pOleObj->AddOwnLightClient();
-                    pOleObj->SetWindow(VCLUnoHelper::GetInterface(m_pParent));
-                    try
-                    {
-                        pOleObj->GetObjRef()->changeState( embed::EmbedStates::UI_ACTIVE );
-                        m_bUiActive = true;
-                        OReportController& rController = m_pParent->getSectionWindow()->getViewsWindow()->getView()->getReportView()->getController();
-                        m_bShowPropertyBrowser = rController.isCommandChecked(SID_SHOW_PROPERTYBROWSER);
-                        if ( m_bShowPropertyBrowser )
-                            rController.executeChecked(SID_SHOW_PROPERTYBROWSER,uno::Sequence< beans::PropertyValue >());
-                    }
-                    catch( uno::Exception& )
-                    {
-                        DBG_UNHANDLED_EXCEPTION();
-                    }
+                pOleObj->AddOwnLightClient();
+                pOleObj->SetWindow(VCLUnoHelper::GetInterface(m_pParent));
+                try
+                {
+                    pOleObj->GetObjRef()->changeState( embed::EmbedStates::UI_ACTIVE );
+                    m_bUiActive = true;
+                    OReportController& rController = m_pParent->getSectionWindow()->getViewsWindow()->getView()->getReportView()->getController();
+                    m_bShowPropertyBrowser = rController.isCommandChecked(SID_SHOW_PROPERTYBROWSER);
+                    if ( m_bShowPropertyBrowser )
+                        rController.executeChecked(SID_SHOW_PROPERTYBROWSER,uno::Sequence< beans::PropertyValue >());
+                }
+                catch( uno::Exception& )
+                {
+                    DBG_UNHANDLED_EXCEPTION();
                 }
             }
         }
@@ -653,12 +644,10 @@ DlgEdFuncInsert::DlgEdFuncInsert( OReportSection* _pParent ) :
 }
 
 
-
 DlgEdFuncInsert::~DlgEdFuncInsert()
 {
     m_rView.SetEditMode();
 }
-
 
 
 bool DlgEdFuncInsert::MouseButtonDown( const MouseEvent& rMEvt )
@@ -754,7 +743,6 @@ bool DlgEdFuncInsert::MouseButtonUp( const MouseEvent& rMEvt )
 }
 
 
-
 bool DlgEdFuncInsert::MouseMove( const MouseEvent& rMEvt )
 {
     if ( DlgEdFunc::MouseMove(rMEvt ) )
@@ -790,18 +778,15 @@ bool DlgEdFuncInsert::MouseMove( const MouseEvent& rMEvt )
 }
 
 
-
 DlgEdFuncSelect::DlgEdFuncSelect( OReportSection* _pParent ) :
     DlgEdFunc( _pParent )
 {
 }
 
 
-
 DlgEdFuncSelect::~DlgEdFuncSelect()
 {
 }
-
 
 
 bool DlgEdFuncSelect::MouseButtonDown( const MouseEvent& rMEvt )
@@ -849,7 +834,6 @@ bool DlgEdFuncSelect::MouseButtonDown( const MouseEvent& rMEvt )
 }
 
 
-
 bool DlgEdFuncSelect::MouseButtonUp( const MouseEvent& rMEvt )
 {
     if ( DlgEdFunc::MouseButtonUp( rMEvt ) )
@@ -871,7 +855,6 @@ bool DlgEdFuncSelect::MouseButtonUp( const MouseEvent& rMEvt )
     m_bSelectionMode = false;
     return true;
 }
-
 
 
 bool DlgEdFuncSelect::MouseMove( const MouseEvent& rMEvt )

@@ -19,11 +19,11 @@
 
 #include "framework/PresentationFactory.hxx"
 
-#include "framework/FrameworkHelper.hxx"
 #include "DrawController.hxx"
 #include "ViewShellBase.hxx"
 #include "facreg.hxx"
 #include <com/sun/star/drawing/framework/XControllerManager.hpp>
+#include <com/sun/star/drawing/framework/XView.hpp>
 #include <cppuhelper/compbase.hxx>
 #include <tools/diagnose_ex.h>
 #include "slideshow.hxx"
@@ -33,7 +33,6 @@ using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::drawing::framework;
 
-using ::sd::framework::FrameworkHelper;
 
 namespace sd { namespace framework {
 
@@ -237,7 +236,6 @@ com_sun_star_comp_Draw_framework_PresentationFactoryProvider_get_implementation(
 {
     return cppu::acquire(new sd::framework::PresentationFactoryProvider(context));
 }
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -228,14 +228,12 @@ sal_uLong wwZOrderer::GetDrawingObjectPos(short nWwHeight)
     return std::distance(maDrawHeight.begin(), aIter);
 }
 
-bool wwZOrderer::InsertObject(SdrObject* pObject, sal_uLong nPos)
+void wwZOrderer::InsertObject(SdrObject* pObject, sal_uLong nPos)
 {
     if (!pObject->IsInserted())
     {
         mpDrawPg->InsertObject(pObject, nPos);
-        return true;
     }
-    return false;
 }
 
 extern void WW8PicShadowToReal(  WW8_PIC_SHADOW*  pPicS,  WW8_PIC*  pPic );
@@ -336,7 +334,7 @@ void SwWW8ImplReader::ReplaceObj(const SdrObject &rReplaceObj,
         rSubObj.SetLayer(rReplaceObj.GetLayer());
 
         // remove old object from group-list and add new one
-        // (this also exchanges it in the drwaing page)
+        // (this also exchanges it in the drawing page)
         pObjectList->ReplaceObject(&rSubObj, rReplaceObj.GetOrdNum());
     }
     else

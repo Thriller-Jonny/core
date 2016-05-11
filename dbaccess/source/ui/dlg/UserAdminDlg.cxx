@@ -62,8 +62,8 @@ namespace dbaui
         m_pImpl->translateProperties(xDatasource, *_pItems);
         SetInputSet(_pItems);
         // propagate this set as our new input set and reset the example set
-        delete pExampleSet;
-        pExampleSet = new SfxItemSet(*GetInputSetImpl());
+        delete m_pExampleSet;
+        m_pExampleSet = new SfxItemSet(*GetInputSetImpl());
 
         AddTabPage("settings", OUserAdmin::Create, nullptr);
 
@@ -90,7 +90,7 @@ namespace dbaui
         }
 
         SetInputSet(nullptr);
-        DELETEZ(pExampleSet);
+        DELETEZ(m_pExampleSet);
         SfxTabDialog::dispose();
     }
 
@@ -146,7 +146,7 @@ namespace dbaui
             m_xConnection = m_pImpl->createConnection().first;
             m_bOwnConnection = m_xConnection.is();
         }
-        return ::std::pair< Reference<XConnection>,sal_Bool> (m_xConnection,sal_False);
+        return ::std::pair< Reference<XConnection>,sal_Bool> (m_xConnection,false);
     }
     Reference< XComponentContext > OUserAdminDlg::getORB() const
     {
@@ -172,9 +172,9 @@ namespace dbaui
     {
         (void)_bEnable;
     }
-    bool OUserAdminDlg::saveDatasource()
+    void OUserAdminDlg::saveDatasource()
     {
-        return PrepareLeaveCurrentPage();
+        PrepareLeaveCurrentPage();
     }
 }   // namespace dbaui
 

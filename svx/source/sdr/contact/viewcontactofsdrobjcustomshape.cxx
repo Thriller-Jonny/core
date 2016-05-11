@@ -30,7 +30,6 @@
 #include <drawinglayer/primitive2d/sdrdecompositiontools2d.hxx>
 
 
-
 namespace sdr
 {
     namespace contact
@@ -64,7 +63,7 @@ namespace sdr
                 {
                     // text range needs to be corrected by
                     // aObjectRange.getCenter() - aRotObjectRange.getCenter() since it's
-                    // defined differenly by using rotation around object center. Start
+                    // defined differently by using rotation around object center. Start
                     // with positive part
                     basegfx::B2DVector aTranslation(aObjectRange.getCenter());
 
@@ -226,8 +225,7 @@ namespace sdr
                         xGroup,
                         aTextBoxMatrix,
                         bWordWrap,
-                        b3DShape,
-                        false));        // #SJ# New parameter to force to clipped BlockText for SC
+                        b3DShape));
                 xRetval = drawinglayer::primitive2d::Primitive2DContainer { xReference };
             }
 

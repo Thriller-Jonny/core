@@ -88,7 +88,6 @@ using namespace ::com::sun::star;
 using ::com::sun::star::uno::Reference;
 using ::com::sun::star::uno::RuntimeException;
 using ::com::sun::star::uno::UNO_QUERY_THROW;
-using ::com::sun::star::uno::UNO_SET_THROW;
 using ::com::sun::star::lang::DisposedException;
 using ::com::sun::star::awt::XWindow;
 using ::com::sun::star::frame::XController;
@@ -149,14 +148,14 @@ typedef std::unordered_map< sal_Int16, sal_Int16 > GroupHashMap;
 
 sal_Int16 MapGroupIDToCommandGroup( sal_Int16 nGroupID )
 {
-    static GroupHashMap mHashMap;
+    static GroupHashMap s_aHashMap;
 
     if ( !bGroupIDMapInitialized )
     {
         sal_Int32 i = 0;
         while ( GroupIDCommandGroupMap[i].nGroupID != 0 )
         {
-            mHashMap.insert( GroupHashMap::value_type(
+            s_aHashMap.insert( GroupHashMap::value_type(
                 GroupIDCommandGroupMap[i].nGroupID,
                 GroupIDCommandGroupMap[i].nCommandGroup ));
             ++i;
@@ -164,8 +163,8 @@ sal_Int16 MapGroupIDToCommandGroup( sal_Int16 nGroupID )
         bGroupIDMapInitialized = true;
     }
 
-    GroupHashMap::const_iterator pIter = mHashMap.find( nGroupID );
-    if ( pIter != mHashMap.end() )
+    GroupHashMap::const_iterator pIter = s_aHashMap.find( nGroupID );
+    if ( pIter != s_aHashMap.end() )
         return pIter->second;
     else
         return frame::CommandGroup::INTERNAL;
@@ -400,7 +399,7 @@ struct IMPL_SfxBaseController_DataContainer
     Reference< XCloseListener >             m_xCloseListener        ;
     ::sfx2::UserInputInterception           m_aUserInputInterception;
     ::cppu::OMultiTypeInterfaceContainerHelper      m_aListenerContainer    ;
-    ::cppu::OInterfaceContainerHelper               m_aInterceptorContainer ;
+    ::comphelper::OInterfaceContainerHelper2               m_aInterceptorContainer ;
     Reference< XStatusIndicator >           m_xIndicator            ;
     SfxViewShell*                           m_pViewShell            ;
     SfxBaseController*                      m_pController           ;
@@ -601,13 +600,13 @@ sal_Bool SAL_CALL SfxBaseController::attachModel( const Reference< frame::XModel
     {
         // don't allow to reattach a model!
         OSL_FAIL("Can't reattach model!");
-        return sal_False;
+        return false;
     }
 
     Reference < util::XCloseBroadcaster > xCloseable( xModel, uno::UNO_QUERY );
     if ( xCloseable.is() )
         xCloseable->addCloseListener( m_pData->m_xCloseListener );
-    return sal_True;
+    return true;
 }
 
 
@@ -618,20 +617,20 @@ sal_Bool SAL_CALL SfxBaseController::suspend( sal_Bool bSuspend ) throw( Runtime
 {
     SolarMutexGuard aGuard;
 
-    // ignore dublicate calls, which doesn't change anything real
+    // ignore duplicate calls, which doesn't change anything real
     if (bool(bSuspend) == m_pData->m_bSuspendState)
-       return sal_True;
+       return true;
 
     if ( bSuspend )
     {
         if ( !m_pData->m_pViewShell )
         {
             m_pData->m_bSuspendState = true;
-            return sal_True;
+            return true;
         }
 
         if ( !m_pData->m_pViewShell->PrepareClose() )
-            return sal_False;
+            return false;
 
         if ( getFrame().is() )
             getFrame()->removeFrameActionListener( m_pData->m_xListener ) ;
@@ -664,7 +663,7 @@ sal_Bool SAL_CALL SfxBaseController::suspend( sal_Bool bSuspend ) throw( Runtime
         }
 
         m_pData->m_bSuspendState = false;
-        return sal_True ;
+        return true ;
     }
 }
 
@@ -1268,7 +1267,7 @@ void SfxBaseController::ConnectSfxFrame_Impl( const ConnectSfxFrame i_eConnect )
                         Reference< beans::XPropertySet > xFrameProps( m_pData->m_xFrame, uno::UNO_QUERY_THROW );
                         Reference< beans::XPropertySet > xLayouterProps(
                             xFrameProps->getPropertyValue("LayoutManager"), uno::UNO_QUERY_THROW );
-                        xLayouterProps->setPropertyValue("PreserveContentSize", uno::makeAny( sal_True ) );
+                        xLayouterProps->setPropertyValue("PreserveContentSize", uno::makeAny( true ) );
                     }
                     catch (const uno::Exception&)
                     {
@@ -1416,7 +1415,7 @@ void SfxBaseController::ConnectSfxFrame_Impl( const ConnectSfxFrame i_eConnect )
                         Sequence< PropertyValue > aViewData;
                         OSL_VERIFY( xViewData->getByIndex( nViewDataIndex ) >>= aViewData );
                         if ( aViewData.getLength() > 0 )
-                            m_pData->m_pViewShell->ReadUserDataSequence( aViewData, true );
+                            m_pData->m_pViewShell->ReadUserDataSequence( aViewData );
                     }
                 }
                 catch (const Exception&)
@@ -1485,7 +1484,6 @@ IMPL_LINK_NOARG_TYPED ( SfxBaseController, CheckOutHandler, Button*, void )
     if ( m_pData->m_pViewShell )
         m_pData->m_pViewShell->GetObjectShell()->CheckOut( );
 }
-
 
 
 Reference< frame::XTitle > SfxBaseController::impl_getTitleHelper ()

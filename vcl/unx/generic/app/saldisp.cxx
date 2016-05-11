@@ -27,11 +27,13 @@
 #include <ctype.h>
 
 #if defined(SOLARIS) || defined(AIX)
-#include <sal/alloca.h>
 #include <osl/module.h>
 #endif
 
-#include <prex.h>
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
+#include <X11/XKBlib.h>
+
 #include <X11/cursorfont.h>
 #include "unx/x11_cursors/salcursors.h"
 #include "unx/x11_cursors/invert50.h"
@@ -39,14 +41,11 @@
 #define XK_KOREAN
 #endif
 #include <X11/keysym.h>
-#include <X11/XKBlib.h>
 #include <X11/Xatom.h>
 
 #ifdef USE_XINERAMA_XORG
 #include <X11/extensions/Xinerama.h>
 #endif
-
-#include <postx.h>
 
 #include <vcl/svapp.hxx>
 #include <vcl/settings.hxx>
@@ -73,9 +72,13 @@
 #include <osl/socket.h>
 #include <poll.h>
 #include <memory>
+#include <vector>
 
 #include <com/sun/star/uno/DeploymentException.hpp>
 #include <officecfg/Office/Common.hxx>
+
+/* From <X11/Intrinsic.h> */
+typedef unsigned long Pixel;
 
 using namespace vcl_sal;
 
@@ -136,16 +139,16 @@ static bool sal_GetVisualInfo( Display *pDisplay, XID nVID, XVisualInfo &rVI )
 {
     int         nInfos;
     XVisualInfo aTemplate;
-    XVisualInfo*pInfos;
+    XVisualInfo*pInfo;
 
     aTemplate.visualid = nVID;
 
-    pInfos = XGetVisualInfo( pDisplay, VisualIDMask, &aTemplate, &nInfos );
-    if( !pInfos )
+    pInfo = XGetVisualInfo( pDisplay, VisualIDMask, &aTemplate, &nInfos );
+    if( !pInfo )
         return false;
 
-    rVI = *pInfos;
-    XFree( pInfos );
+    rVI = *pInfo;
+    XFree( pInfo );
 
     DBG_ASSERT( rVI.visualid == nVID,
                 "sal_GetVisualInfo: could not get correct visual by visualId" );
@@ -211,7 +214,7 @@ bool SalDisplay::BestVisual( Display     *pDisplay,
                                            &aVI, &nVisuals );
     // pVInfos should contain at least one visual, otherwise
     // we're in trouble
-    int* pWeight = static_cast<int*>(alloca( sizeof(int)*nVisuals ));
+    std::vector<int> aWeights(nVisuals);
     int i;
     for( i = 0; i < nVisuals; i++ )
     {
@@ -232,17 +235,17 @@ bool SalDisplay::BestVisual( Display     *pDisplay,
         {
             bUsable = true;
         }
-        pWeight[ i ] = bUsable ? nTrueColor*pVInfos[i].depth : -1024;
-        pWeight[ i ] -= pVInfos[ i ].visualid;
+        aWeights[i] = bUsable ? nTrueColor*pVInfos[i].depth : -1024;
+        aWeights[i] -= pVInfos[ i ].visualid;
     }
 
     int nBestVisual = 0;
     int nBestWeight = -1024;
     for( i = 0; i < nVisuals; i++ )
     {
-        if( pWeight[ i ] > nBestWeight )
+        if (aWeights[i] > nBestWeight)
         {
-            nBestWeight = pWeight[ i ];
+            nBestWeight = aWeights[i];
             nBestVisual = i;
         }
     }
@@ -313,8 +316,10 @@ void SalDisplay::doDestruct()
 
     if( IsDisplay() )
     {
-        delete mpInputMethod, mpInputMethod = nullptr;
-        delete mpKbdExtension, mpKbdExtension = nullptr;
+        delete mpInputMethod;
+        mpInputMethod = nullptr;
+        delete mpKbdExtension;
+        mpKbdExtension = nullptr;
 
         for( size_t i = 0; i < m_aScreens.size(); i++ )
         {
@@ -732,7 +737,8 @@ OUString SalDisplay::GetKeyNameFromKeySym( KeySym nKeySym ) const
     // return an empty string for keysyms that are not bound to
     // any key code
     KeyCode aKeyCode = XKeysymToKeycode( GetDisplay(), nKeySym );
-    if( aKeyCode != 0 && aKeyCode != NoSymbol )
+    static_assert(NoSymbol == 0, "X11 inconsistency");
+    if( aKeyCode != NoSymbol )
     {
         if( !nKeySym )
             aRet = "???";
@@ -1455,7 +1461,7 @@ KeySym SalDisplay::GetKeySym( XKeyEvent        *pEvent,
         // For some X-servers special care is needed for Keypad keys.
         // For example Solaris XServer:
         // 2, 4, 6, 8 are classified as Cursorkeys (Up, Down, Left, Right)
-        // 1, 3, 5, 9 are classified as Funtionkeys (F27,F29,F33,F35)
+        // 1, 3, 5, 9 are classified as Functionkeys (F27,F29,F33,F35)
         // 0 as Keypadkey, and the decimal point key not at all (KP_Insert)
         KeySym nNewKeySym = XLookupKeysym( pEvent, nNumLockIndex_ );
         if( nNewKeySym != NoSymbol )
@@ -1886,10 +1892,10 @@ bool SalX11Display::IsEvent()
     return false;
 }
 
-bool SalX11Display::Yield()
+void SalX11Display::Yield()
 {
     if( DispatchInternalEvent() )
-        return true;
+        return;
 
     XEvent aEvent;
     DBG_ASSERT( static_cast<SalYieldMutex*>(GetSalData()->m_pInstance->GetYieldMutex())->GetThreadId() ==
@@ -1899,7 +1905,7 @@ bool SalX11Display::Yield()
     XNextEvent( pDisp_, &aEvent );
 
     // FIXME: under-convinced by Dispatch boolean return value vs. salframe.
-    bool bProcessedEvent = Dispatch( &aEvent );
+    Dispatch( &aEvent );
 
 #ifdef DBG_UTIL
     if( GetX11SalData()->HasXErrorOccurred() )
@@ -1909,8 +1915,6 @@ bool SalX11Display::Yield()
     }
 #endif
     GetX11SalData()->ResetXErrorOccurred();
-
-    return bProcessedEvent;
 }
 
 bool SalX11Display::Dispatch( XEvent *pEvent )
@@ -1961,7 +1965,7 @@ bool SalX11Display::Dispatch( XEvent *pEvent )
                     {
                         std::list< SalFrame* >::const_iterator it;
                         for( it = m_aFrames.begin(); it != m_aFrames.end(); ++it )
-                            (*it)->CallCallback( SALEVENT_SETTINGSCHANGED, nullptr );
+                            (*it)->CallCallback( SalEvent::SettingsChanged, nullptr );
                         return false;
                     }
                 }
@@ -2335,8 +2339,9 @@ Time SalDisplay::GetLastUserEventTime( bool i_bAlwaysReget ) const
 }
 
 bool SalDisplay::XIfEventWithTimeout( XEvent* o_pEvent, XPointer i_pPredicateData,
-                                      X_if_predicate i_pPredicate, long i_nTimeout ) const
+                                      X_if_predicate i_pPredicate ) const
 {
+    long nTimeout = 1000;
     /* #i99360# ugly workaround an X11 library bug
        this replaces the following call:
        XIfEvent( GetDisplay(), o_pEvent, i_pPredicate, i_pPredicateData );
@@ -2350,10 +2355,10 @@ bool SalDisplay::XIfEventWithTimeout( XEvent* o_pEvent, XPointer i_pPredicateDat
         aFD.fd = ConnectionNumber(GetDisplay());
         aFD.events = POLLIN;
         aFD.revents = 0;
-        (void)poll(&aFD, 1, i_nTimeout);
+        (void)poll(&aFD, 1, nTimeout);
         if( ! XCheckIfEvent( GetDisplay(), o_pEvent, i_pPredicate, i_pPredicateData ) )
         {
-            (void)poll(&aFD, 1, i_nTimeout); // try once more for a packet of events from the Xserver
+            (void)poll(&aFD, 1, nTimeout); // try once more for a packet of events from the Xserver
             if( ! XCheckIfEvent( GetDisplay(), o_pEvent, i_pPredicate, i_pPredicateData ) )
             {
                 bRet = false;

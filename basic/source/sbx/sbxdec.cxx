@@ -34,7 +34,7 @@ SbxDecimal::SbxDecimal()
 
 SbxDecimal::SbxDecimal( const SbxDecimal& rDec )
 {
-#ifdef WIN32
+#ifdef _WIN32
     maDec = rDec.maDec;
 #else
     (void)rDec;
@@ -45,7 +45,7 @@ SbxDecimal::SbxDecimal( const SbxDecimal& rDec )
 SbxDecimal::SbxDecimal
     ( const css::bridge::oleautomation::Decimal& rAutomationDec )
 {
-#ifdef WIN32
+#ifdef _WIN32
     maDec.scale = rAutomationDec.Scale;
     maDec.sign  = rAutomationDec.Sign;
     maDec.Lo32 = rAutomationDec.LowValue;
@@ -60,7 +60,7 @@ SbxDecimal::SbxDecimal
 void SbxDecimal::fillAutomationDecimal
     ( css::bridge::oleautomation::Decimal& rAutomationDec )
 {
-#ifdef WIN32
+#ifdef _WIN32
     rAutomationDec.Scale = maDec.scale;
     rAutomationDec.Sign = maDec.sign;
     rAutomationDec.LowValue = maDec.Lo32;
@@ -88,7 +88,7 @@ void releaseDecimalPtr( SbxDecimal*& rpDecimal )
     }
 }
 
-#ifdef WIN32
+#ifdef _WIN32
 
 bool SbxDecimal::operator -= ( const SbxDecimal &r )
 {
@@ -349,20 +349,17 @@ bool SbxDecimal::getDouble( double& rVal )      { (void)rVal; return false; }
 
 #endif
 
-bool SbxDecimal::getString( OUString& rString )
+void SbxDecimal::getString( OUString& rString )
 {
-#ifdef WIN32
+#ifdef _WIN32
     static LCID nLANGID = MAKELANGID( LANG_ENGLISH, SUBLANG_ENGLISH_US );
-
-    bool bRet = false;
 
     OLECHAR sz[100];
     BSTR aBStr = SysAllocString( sz );
     if( aBStr != NULL )
     {
         HRESULT hResult = VarBstrFromDec( &maDec, nLANGID, 0, &aBStr );
-        bRet = ( hResult == S_OK );
-        if( bRet )
+        if( hResult == S_OK )
         {
             // Convert delimiter
             sal_Unicode cDecimalSep;
@@ -387,10 +384,8 @@ bool SbxDecimal::getString( OUString& rString )
 
         SysFreeString( aBStr );
     }
-    return bRet;
 #else
     (void)rString;
-    return false;
 #endif
 }
 
@@ -428,6 +423,7 @@ start:
     {
         case SbxNULL:
             SbxBase::SetError( ERRCODE_SBX_CONVERSION );
+            SAL_FALLTHROUGH;
         case SbxEMPTY:
             pnDecRes->setShort( 0 ); break;
         case SbxCHAR:

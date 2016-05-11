@@ -63,7 +63,7 @@ using namespace ::com::sun::star;
 SwBodyFrame::SwBodyFrame( SwFrameFormat *pFormat, SwFrame* pSib ):
     SwLayoutFrame( pFormat, pSib )
 {
-    mnFrameType = FRM_BODY;
+    mnFrameType = SwFrameType::Body;
 }
 
 void SwBodyFrame::Format( vcl::RenderContext* /*pRenderContext*/, const SwBorderAttrs * )
@@ -171,8 +171,8 @@ SwPageFrame::SwPageFrame( SwFrameFormat *pFormat, SwFrame* pSib, SwPageDesc *pPg
     else
         m_bHasGrid = false;
     SetMaxFootnoteHeight( pPgDsc->GetFootnoteInfo().GetHeight() ?
-                     pPgDsc->GetFootnoteInfo().GetHeight() : LONG_MAX ),
-    mnFrameType = FRM_PAGE;
+                     pPgDsc->GetFootnoteInfo().GetHeight() : LONG_MAX );
+    mnFrameType = SwFrameType::Page;
     m_bInvalidLayout = m_bInvalidContent = m_bInvalidSpelling = m_bInvalidSmartTags = m_bInvalidAutoCmplWrds = m_bInvalidWordCount = true;
     m_bInvalidFlyLayout = m_bInvalidFlyContent = m_bInvalidFlyInCnt = m_bFootnotePage = m_bEndNotePage = false;
 
@@ -203,7 +203,7 @@ SwPageFrame::SwPageFrame( SwFrameFormat *pFormat, SwFrame* pSib, SwPageDesc *pPg
         pBodyFrame->InvalidatePos();
 
         if ( bBrowseMode )
-            _InvalidateSize();
+            InvalidateSize_();
 
         // insert header/footer,, but only if active.
         if ( pFormat->GetHeader().IsActive() )
@@ -350,7 +350,10 @@ static void lcl_FormatLay( SwLayoutFrame *pLay )
     // first the low-level ones
     while ( pTmp )
     {
-        if ( pTmp->GetType() & 0x00FF )
+        const SwFrameType nTypes = SwFrameType::Root | SwFrameType::Page | SwFrameType::Column
+                           | SwFrameType::Header | SwFrameType::Footer | SwFrameType::FtnCont
+                           | SwFrameType::Ftn | SwFrameType::Body;
+        if ( pTmp->GetType() & nTypes )
             ::lcl_FormatLay( static_cast<SwLayoutFrame*>(pTmp) );
         pTmp = pTmp->GetNext();
     }
@@ -470,7 +473,7 @@ void SwPageFrame::PreparePage( bool bFootnote )
         SwLayoutFrame *pLow = static_cast<SwLayoutFrame*>(Lower());
         while ( pLow )
         {
-            if ( pLow->GetType() & (FRM_HEADER|FRM_FOOTER) )
+            if ( pLow->GetType() & (SwFrameType::Header|SwFrameType::Footer) )
             {
                 SwContentFrame *pContent = pLow->ContainsContent();
                 while ( pContent && pLow->IsAnLower( pContent ) )
@@ -499,7 +502,7 @@ void SwPageFrame::Modify( const SfxPoolItem* pOld, const SfxPoolItem * pNew )
         SwAttrSetChg aNewSet( *static_cast<const SwAttrSetChg*>(pNew) );
         while( true )
         {
-            _UpdateAttr( aOIter.GetCurItem(),
+            UpdateAttr_( aOIter.GetCurItem(),
                          aNIter.GetCurItem(), nInvFlags,
                          &aOldSet, &aNewSet );
             if( aNIter.IsAtEnd() )
@@ -511,13 +514,13 @@ void SwPageFrame::Modify( const SfxPoolItem* pOld, const SfxPoolItem * pNew )
             SwLayoutFrame::Modify( &aOldSet, &aNewSet );
     }
     else
-        _UpdateAttr( pOld, pNew, nInvFlags );
+        UpdateAttr_( pOld, pNew, nInvFlags );
 
     if ( nInvFlags != 0 )
     {
         InvalidatePage( this );
         if ( nInvFlags & 0x01 )
-            _InvalidatePrt();
+            InvalidatePrt_();
         if ( nInvFlags & 0x02 )
             SetCompletePaint();
         if ( nInvFlags & 0x04 && GetNext() )
@@ -549,7 +552,7 @@ void SwPageFrame::SwClientNotify(const SwModify& rModify, const SfxHint& rHint)
         SwClient::SwClientNotify(rModify, rHint);
 }
 
-void SwPageFrame::_UpdateAttr( const SfxPoolItem *pOld, const SfxPoolItem *pNew,
+void SwPageFrame::UpdateAttr_( const SfxPoolItem *pOld, const SfxPoolItem *pNew,
                              sal_uInt8 &rInvFlags,
                              SwAttrSetChg *pOldSet, SwAttrSetChg *pNewSet )
 {
@@ -586,8 +589,9 @@ void SwPageFrame::_UpdateAttr( const SfxPoolItem *pOld, const SfxPoolItem *pNew,
             if( rOldF != rNewF )
                 rInvFlags |= 0x10;
             CheckDirChange();
+
+            SAL_FALLTHROUGH;
         }
-        // no break
         case RES_FRM_SIZE:
         {
             const SwRect aOldPageFrameRect( Frame() );
@@ -821,7 +825,7 @@ void SwPageFrame::Cut()
                     {
                         MoveFly( pFly, pAnchPage );
                         pFly->InvalidateSize();
-                        pFly->_InvalidatePos();
+                        pFly->InvalidatePos_();
                         // Do not increment index, in this case
                         continue;
                     }
@@ -881,7 +885,7 @@ void SwPageFrame::Paste( SwFrame* pParent, SwFrame* pSibling )
         while ( pPg )
         {
             pPg->IncrPhyPageNum();  //inline ++nPhyPageNum
-            pPg->_InvalidatePos();
+            pPg->InvalidatePos_();
             pPg->InvalidateLayout();
             pPg = static_cast<SwPageFrame*>(pPg->GetNext());
         }
@@ -890,7 +894,7 @@ void SwPageFrame::Paste( SwFrame* pParent, SwFrame* pSibling )
         ::SetLastPage( this );
 
     if( Frame().Width() != pParent->Prt().Width() )
-        _InvalidateSize();
+        InvalidateSize_();
 
     InvalidatePos();
 
@@ -1071,7 +1075,7 @@ void SwFrame::CheckPageDescs( SwPageFrame *pStart, bool bNotifyFields, SwPageFra
                     // Let's hope that invalidation is enough.
                     SwFootnoteContFrame *pCont = pPage->FindFootnoteCont();
                     if ( pCont && !(pOld->GetFootnoteInfo() == pDesc->GetFootnoteInfo()) )
-                        pCont->_InvalidateAll();
+                        pCont->InvalidateAll_();
                 }
             }
             else if ( pFormatWish && pPage->GetFormat() != pFormatWish )         //5.
@@ -1511,7 +1515,7 @@ void SwRootFrame::AssertPageFlys( SwPageFrame *pPage )
 Size SwRootFrame::ChgSize( const Size& aNewSize )
 {
     Frame().SSize() = aNewSize;
-    _InvalidatePrt();
+    InvalidatePrt_();
     mbFixSize = false;
     return Frame().SSize();
 }
@@ -1761,8 +1765,11 @@ static void lcl_MoveAllLowerObjs( SwFrame* pFrame, const Point& rOffset )
     if (pSortedObj == nullptr)
         return;
 
-    for (SwAnchoredObject* pAnchoredObj : *pSortedObj)
+    // note: pSortedObj elements may be removed and inserted from
+    // MoveObjectIfActive(), invalidating iterators
+    for (size_t i = 0; i < pSortedObj->size(); ++i)
     {
+        SwAnchoredObject *const pAnchoredObj = (*pSortedObj)[i];
         const SwFrameFormat& rObjFormat = pAnchoredObj->GetFrameFormat();
         const SwFormatAnchor& rAnchor = rObjFormat.GetAnchor();
 
@@ -2195,7 +2202,7 @@ void SwRootFrame::CheckViewLayout( const SwViewOption* pViewOpt, const SwRect* p
     maPagesArea.Pos( Frame().Pos() );
     maPagesArea.SSize( aNewSize );
     if ( TWIPS_MAX != nMinPageLeft )
-        maPagesArea._Left( nMinPageLeft );
+        maPagesArea.Left_( nMinPageLeft );
 
     SetCallbackActionEnabled( bOldCallbackActionEnabled );
 }
@@ -2219,7 +2226,7 @@ const SwPageFrame& SwPageFrame::GetFormatPage() const
         // #i88035#
         // Typically a right empty page frame has a next non-empty page frame and
         // a left empty page frame has a previous non-empty page frame.
-        // But under certain cirsumstances this assumption is not true -
+        // But under certain circumstances this assumption is not true -
         // e.g. during insertion of a left page at the end of the document right
         // after a left page in an intermediate state a right empty page does not
         // have a next page frame.
@@ -2285,6 +2292,36 @@ bool SwPageFrame::IsOverHeaderFooterArea( const Point& rPt, FrameControlType &rC
     }
 
     return false;
+}
+
+bool SwPageFrame::CheckPageHeightValidForHideWhitespace(SwTwips nDiff)
+{
+    SwViewShell* pShell = getRootFrame()->GetCurrShell();
+    if (pShell && pShell->GetViewOptions()->IsWhitespaceHidden())
+    {
+        // When whitespace is hidden, the page frame has two heights: the
+        // nominal (defined by the frame format), and the actual (which is
+        // at most the nominal height, but can be smaller in case there is
+        // no content for the whole page).
+        // The layout size is the actual one, but we want to move the
+        // content frame to a new page only in case it doesn't fit the
+        // nominal size.
+        if (nDiff < 0)
+        {
+            // Content frame doesn't fit the actual size, check if it fits the nominal one.
+            const SwFrameFormat* pPageFormat = static_cast<const SwFrameFormat*>(GetRegisteredIn());
+            const Size& rPageSize = pPageFormat->GetFrameSize().GetSize();
+            long nWhitespace = rPageSize.getHeight() - Frame().Height();
+            if (nWhitespace > -nDiff)
+            {
+                // It does: don't move it and invalidate our page frame so
+                // that it gets a larger height.
+                return false;
+            }
+        }
+    }
+
+    return true;
 }
 
 SwTextGridItem const* GetGridItem(SwPageFrame const*const pPage)

@@ -25,6 +25,8 @@
 #include "AccessibleCell.hxx"
 #include "tabvwsh.hxx"
 #include "editutil.hxx"
+#include "cellvalue.hxx"
+#include "formulacell.hxx"
 #include "document.hxx"
 #include "scmod.hxx"
 #include "prevwsh.hxx"
@@ -244,7 +246,6 @@ class ScPreviewViewForwarder : public SvxViewForwarder
 {
 protected:
     ScPreviewShell*     mpViewShell;
-    mutable ScPreviewTableInfo* mpTableInfo;
 public:
     explicit            ScPreviewViewForwarder(ScPreviewShell* pViewShell);
     virtual             ~ScPreviewViewForwarder();
@@ -263,15 +264,12 @@ public:
 };
 
 ScPreviewViewForwarder::ScPreviewViewForwarder(ScPreviewShell* pViewShell)
-    :
-    mpViewShell(pViewShell),
-    mpTableInfo(nullptr)
+    : mpViewShell(pViewShell)
 {
 }
 
 ScPreviewViewForwarder::~ScPreviewViewForwarder()
 {
-    delete mpTableInfo;
 }
 
 bool ScPreviewViewForwarder::IsValid() const
@@ -723,17 +721,13 @@ ScAccessibleCellTextData::~ScAccessibleCellTextData()
 void ScAccessibleCellTextData::Notify( SfxBroadcaster& rBC, const SfxHint& rHint )
 {
     const SfxSimpleHint* pSimpleHint = dynamic_cast<const SfxSimpleHint*>(&rHint);
-    if ( pSimpleHint )
+    if ( pSimpleHint && pSimpleHint->GetId() == SFX_HINT_DYING )
     {
-        sal_uLong nId = pSimpleHint->GetId();
-        if ( nId == SFX_HINT_DYING )
-        {
-            mpViewShell = nullptr;                     // invalid now
-            if (mpViewForwarder)
-                mpViewForwarder->SetInvalid();
-            if (mpEditViewForwarder)
-                mpEditViewForwarder->SetInvalid();
-        }
+        mpViewShell = nullptr;                     // invalid now
+        if (mpViewForwarder)
+            mpViewForwarder->SetInvalid();
+        if (mpEditViewForwarder)
+            mpEditViewForwarder->SetInvalid();
     }
     ScAccessibleCellBaseTextData::Notify(rBC, rHint);
 }
@@ -753,15 +747,14 @@ void ScAccessibleCellTextData::GetCellText(const ScAddress& rCellPos, OUString& 
     if (mpViewShell)
     {
         const ScViewOptions& aOptions = mpViewShell->GetViewData().GetOptions();
-        CellType aCellType;
-        rDoc.GetCellType(rCellPos.Col(), rCellPos.Row(), rCellPos.Tab(), aCellType);
-        if (aCellType == CELLTYPE_FORMULA && aOptions.GetOption( VOPT_FORMULAS ))
+        ScRefCellValue aCell(rDoc, ScAddress(rCellPos.Col(), rCellPos.Row(), rCellPos.Tab()));
+        if (aCell.meType == CELLTYPE_FORMULA && aOptions.GetOption( VOPT_FORMULAS ))
         {
-            rDoc.GetFormula( rCellPos.Col(), rCellPos.Row(), rCellPos.Tab(), rText);
+            aCell.mpFormula->GetFormula(rText);
         }
         else if (!aOptions.GetOption( VOPT_NULLVALS ))
         {
-            if ((aCellType == CELLTYPE_VALUE || aCellType == CELLTYPE_FORMULA) && rDoc.GetValue(rCellPos) == 0.0)
+            if ((aCell.meType == CELLTYPE_VALUE || aCell.meType == CELLTYPE_FORMULA) && aCell.getValue() == 0.0)
                 rText.clear();
         }
     }
@@ -979,20 +972,16 @@ ScAccessibleEditObjectTextData::~ScAccessibleEditObjectTextData()
 void ScAccessibleEditObjectTextData::Notify( SfxBroadcaster& rBC, const SfxHint& rHint )
 {
     const SfxSimpleHint* pSimpleHint = dynamic_cast<const SfxSimpleHint*>(&rHint);
-    if ( pSimpleHint )
+    if ( pSimpleHint && pSimpleHint->GetId() == SFX_HINT_DYING )
     {
-        sal_uLong nId = pSimpleHint->GetId();
-        if ( nId == SFX_HINT_DYING )
-        {
-            mpWindow = nullptr;
-            mpEditView = nullptr;
-            mpEditEngine = nullptr;
-            DELETEZ(mpForwarder);
-            if (mpViewForwarder)
-                mpViewForwarder->SetInvalid();
-            if (mpEditViewForwarder)
-                mpEditViewForwarder->SetInvalid();
-        }
+        mpWindow = nullptr;
+        mpEditView = nullptr;
+        mpEditEngine = nullptr;
+        DELETEZ(mpForwarder);
+        if (mpViewForwarder)
+            mpViewForwarder->SetInvalid();
+        if (mpEditViewForwarder)
+            mpEditViewForwarder->SetInvalid();
     }
     ScAccessibleTextData::Notify(rBC, rHint);
 }
@@ -1240,15 +1229,11 @@ ScAccessiblePreviewCellTextData::~ScAccessiblePreviewCellTextData()
 void ScAccessiblePreviewCellTextData::Notify( SfxBroadcaster& rBC, const SfxHint& rHint )
 {
     const SfxSimpleHint* pSimpleHint = dynamic_cast<const SfxSimpleHint*>(&rHint);
-    if ( pSimpleHint )
+    if ( pSimpleHint && pSimpleHint->GetId() == SFX_HINT_DYING )
     {
-        sal_uLong nId = pSimpleHint->GetId();
-        if ( nId == SFX_HINT_DYING )
-        {
-            mpViewShell = nullptr;                     // invalid now
-            if (mpViewForwarder)
-                mpViewForwarder->SetInvalid();
-        }
+        mpViewShell = nullptr;                     // invalid now
+        if (mpViewForwarder)
+            mpViewForwarder->SetInvalid();
     }
     ScAccessibleCellBaseTextData::Notify(rBC, rHint);
 }
@@ -1318,15 +1303,11 @@ ScAccessiblePreviewHeaderCellTextData::~ScAccessiblePreviewHeaderCellTextData()
 void ScAccessiblePreviewHeaderCellTextData::Notify( SfxBroadcaster& rBC, const SfxHint& rHint )
 {
     const SfxSimpleHint* pSimpleHint = dynamic_cast<const SfxSimpleHint*>(&rHint);
-    if ( pSimpleHint )
+    if ( pSimpleHint && pSimpleHint->GetId() == SFX_HINT_DYING )
     {
-        sal_uLong nId = pSimpleHint->GetId();
-        if ( nId == SFX_HINT_DYING )
-        {
-            mpViewShell = nullptr;                     // invalid now
-            if (mpViewForwarder)
-                mpViewForwarder->SetInvalid();
-        }
+        mpViewShell = nullptr;                     // invalid now
+        if (mpViewForwarder)
+            mpViewForwarder->SetInvalid();
     }
     ScAccessibleCellBaseTextData::Notify(rBC, rHint);
 }
@@ -1441,16 +1422,12 @@ ScAccessibleTextData* ScAccessibleHeaderTextData::Clone() const
 void ScAccessibleHeaderTextData::Notify( SfxBroadcaster&, const SfxHint& rHint )
 {
     const SfxSimpleHint* pSimpleHint = dynamic_cast<const SfxSimpleHint*>(&rHint);
-    if ( pSimpleHint )
+    if ( pSimpleHint && pSimpleHint->GetId() == SFX_HINT_DYING )
     {
-        sal_uLong nId = pSimpleHint->GetId();
-        if ( nId == SFX_HINT_DYING )
-        {
-            mpViewShell = nullptr;// invalid now
-            mpDocSh = nullptr;
-            if (mpViewForwarder)
-                mpViewForwarder->SetInvalid();
-        }
+        mpViewShell = nullptr;// invalid now
+        mpDocSh = nullptr;
+        if (mpViewForwarder)
+            mpViewForwarder->SetInvalid();
     }
 }
 
@@ -1460,7 +1437,7 @@ SvxTextForwarder* ScAccessibleHeaderTextData::GetTextForwarder()
     {
         SfxItemPool* pEnginePool = EditEngine::CreatePool();
         pEnginePool->FreezeIdRanges();
-        ScHeaderEditEngine* pHdrEngine = new ScHeaderEditEngine( pEnginePool, true );
+        ScHeaderEditEngine* pHdrEngine = new ScHeaderEditEngine( pEnginePool );
 
         pHdrEngine->EnableUndo( false );
         pHdrEngine->SetRefMapMode( MAP_TWIP );
@@ -1556,16 +1533,12 @@ ScAccessibleTextData* ScAccessibleNoteTextData::Clone() const
 void ScAccessibleNoteTextData::Notify( SfxBroadcaster&, const SfxHint& rHint )
 {
     const SfxSimpleHint* pSimpleHint = dynamic_cast<const SfxSimpleHint*>(&rHint);
-    if ( pSimpleHint )
+    if ( pSimpleHint && pSimpleHint->GetId() == SFX_HINT_DYING )
     {
-        sal_uLong nId = pSimpleHint->GetId();
-        if ( nId == SFX_HINT_DYING )
-        {
-            mpViewShell = nullptr;// invalid now
-            mpDocSh = nullptr;
-            if (mpViewForwarder)
-                mpViewForwarder->SetInvalid();
-        }
+        mpViewShell = nullptr;// invalid now
+        mpDocSh = nullptr;
+        if (mpViewForwarder)
+            mpViewForwarder->SetInvalid();
     }
 }
 
@@ -1697,16 +1670,12 @@ ScAccessibleCsvTextData::~ScAccessibleCsvTextData()
 void ScAccessibleCsvTextData::Notify( SfxBroadcaster& rBC, const SfxHint& rHint )
 {
     const SfxSimpleHint* pSimpleHint = dynamic_cast<const SfxSimpleHint*>(&rHint);
-    if ( pSimpleHint )
+    if ( pSimpleHint && pSimpleHint->GetId() == SFX_HINT_DYING )
     {
-        sal_uLong nId = pSimpleHint->GetId();
-        if( nId == SFX_HINT_DYING )
-        {
-            mpWindow = nullptr;
-            mpEditEngine = nullptr;
-            if (mpViewForwarder.get())
-                mpViewForwarder->SetInvalid();
-        }
+        mpWindow = nullptr;
+        mpEditEngine = nullptr;
+        if (mpViewForwarder.get())
+            mpViewForwarder->SetInvalid();
     }
     ScAccessibleTextData::Notify( rBC, rHint );
 }

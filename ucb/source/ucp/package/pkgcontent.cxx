@@ -77,11 +77,7 @@ using namespace package_ucp;
 #define ENCRYPTIONKEY_MODIFIED  sal_uInt32( 0x08 )
 
 
-
-
 // ContentProperties Implementation.
-
-
 
 
 ContentProperties::ContentProperties( const OUString& rContentType )
@@ -97,7 +93,6 @@ ContentProperties::ContentProperties( const OUString& rContentType )
     OSL_ENSURE( bIsFolder || rContentType == PACKAGE_STREAM_CONTENT_TYPE || rContentType == PACKAGE_ZIP_STREAM_CONTENT_TYPE,
                 "ContentProperties::ContentProperties - Unknown type!" );
 }
-
 
 
 uno::Sequence< ucb::ContentInfo >
@@ -138,11 +133,7 @@ ContentProperties::getCreatableContentsInfo( PackageUri const & rUri ) const
 }
 
 
-
-
 // Content Implementation.
-
-
 
 
 // static ( "virtual" ctor )
@@ -279,9 +270,7 @@ Content::~Content()
 }
 
 
-
 // XInterface methods.
-
 
 
 // virtual
@@ -314,9 +303,7 @@ uno::Any SAL_CALL Content::queryInterface( const uno::Type & rType )
 }
 
 
-
 // XTypeProvider methods.
-
 
 
 XTYPEPROVIDER_COMMON_IMPL( Content );
@@ -398,9 +385,7 @@ uno::Sequence< uno::Type > SAL_CALL Content::getTypes()
 }
 
 
-
 // XServiceInfo methods.
-
 
 
 // virtual
@@ -425,9 +410,7 @@ uno::Sequence< OUString > SAL_CALL Content::getSupportedServiceNames()
 }
 
 
-
 // XContent methods.
-
 
 
 // virtual
@@ -438,9 +421,7 @@ OUString SAL_CALL Content::getContentType()
 }
 
 
-
 // XCommandProcessor methods.
-
 
 
 // virtual
@@ -597,7 +578,7 @@ uno::Any SAL_CALL Content::execute(
         }
 
         // Remove own and all children's Additional Core Properties.
-        removeAdditionalPropertySet( true );
+        removeAdditionalPropertySet();
     }
     else if ( aCommand.Name == "transfer" )
     {
@@ -695,9 +676,7 @@ void SAL_CALL Content::abort( sal_Int32 /*CommandId*/ )
 }
 
 
-
 // XContentCreator methods.
-
 
 
 // virtual
@@ -749,9 +728,7 @@ Content::createNewContent( const ucb::ContentInfo& Info )
 }
 
 
-
 // Non-interface methods.
-
 
 
 // virtual
@@ -1049,7 +1026,7 @@ uno::Sequence< uno::Any > Content::setPropertyValues(
 
     beans::PropertyChangeEvent aEvent;
     aEvent.Source         = static_cast< cppu::OWeakObject * >( this );
-    aEvent.Further        = sal_False;
+    aEvent.Further        = false;
 //    aEvent.PropertyName   =
     aEvent.PropertyHandle = -1;
 //    aEvent.OldValue       =
@@ -1382,8 +1359,7 @@ uno::Sequence< uno::Any > Content::setPropertyValues(
 
             // Adapt Additional Core Properties.
             renameAdditionalPropertySet( xOldId->getContentIdentifier(),
-                                         xNewId->getContentIdentifier(),
-                                         true );
+                                         xNewId->getContentIdentifier() );
         }
         else
         {
@@ -1513,14 +1489,13 @@ uno::Any Content::open(
             try
             {
                 uno::Sequence< sal_Int8 > aBuffer;
-                sal_Int32  nRead = xIn->readSomeBytes( aBuffer, 65536 );
-
-                while ( nRead > 0 )
+                while (true)
                 {
+                    sal_Int32 nRead = xIn->readSomeBytes( aBuffer, 65536 );
+                    if (!nRead)
+                        break;
                     aBuffer.realloc( nRead );
                     xOut->writeBytes( aBuffer );
-                    aBuffer.realloc( 0 );
-                    nRead = xIn->readSomeBytes( aBuffer, 65536 );
                 }
 
                 xOut->closeOutput();
@@ -2036,7 +2011,7 @@ void Content::transfer(
                     aChildId += ::ucb_impl::urihelper::encodeSegment( aName );
 
                     ucb::TransferInfo aInfo;
-                    aInfo.MoveData  = sal_False;
+                    aInfo.MoveData  = false;
                     aInfo.NewTitle.clear();
                     aInfo.SourceURL = aChildId;
                     aInfo.NameClash = rInfo.NameClash;
@@ -2084,7 +2059,7 @@ void Content::transfer(
         }
 
         // Remove own and all children's Additional Core Properties.
-        xSource->removeAdditionalPropertySet( true );
+        xSource->removeAdditionalPropertySet();
     }
 }
 
@@ -2439,7 +2414,7 @@ bool Content::loadData(
 }
 
 
-bool Content::renameData(
+void Content::renameData(
             const uno::Reference< ucb::XContentIdentifier >& xOldId,
             const uno::Reference< ucb::XContentIdentifier >& xNewId )
 {
@@ -2450,7 +2425,7 @@ bool Content::renameData(
                                                                         aURI );
 
     if ( !xNA->hasByHierarchicalName( aURI.getPath() ) )
-        return false;
+        return;
 
     try
     {
@@ -2461,22 +2436,18 @@ bool Content::renameData(
         if ( !xNamed.is() )
         {
             OSL_FAIL( "Content::renameData - Got no XNamed interface!" );
-            return false;
+            return;
         }
 
         PackageUri aNewURI( xNewId->getContentIdentifier() );
 
         // No success indicator!? No return value / exceptions specified.
         xNamed->setName( aNewURI.getName() );
-
-        return true;
     }
     catch ( container::NoSuchElementException const & )
     {
         // getByHierarchicalName
     }
-
-    return false;
 }
 
 

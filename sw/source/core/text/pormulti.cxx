@@ -59,7 +59,6 @@ using namespace ::com::sun::star;
 // and by another SwLineLayout via pNext to realize a doubleline portion.
 SwMultiPortion::~SwMultiPortion()
 {
-    delete pFieldRest;
 }
 
 void SwMultiPortion::Paint( const SwTextPaintInfo & ) const
@@ -256,7 +255,7 @@ SwDoubleLinePortion::SwDoubleLinePortion(SwDoubleLinePortion& rDouble, sal_Int32
 
 // This constructor uses the textattribute to get the right brackets.
 // The textattribute could be a 2-line-attribute or a character- or
-// internetstyle, which contains the 2-line-attribute.
+// internet style, which contains the 2-line-attribute.
 SwDoubleLinePortion::SwDoubleLinePortion(const SwMultiCreator& rCreate, sal_Int32 nEnd)
     : SwMultiPortion(nEnd)
     , pBracket(new SwBracket())
@@ -290,7 +289,7 @@ SwDoubleLinePortion::SwDoubleLinePortion(const SwMultiCreator& rCreate, sal_Int3
         pBracket->cPre = 0;
         pBracket->cPost = 0;
     }
-    sal_uInt8 nTmp = SW_SCRIPTS;
+    SwFontScript nTmp = SW_SCRIPTS;
     if( pBracket->cPre > 255 )
     {
         OUString aText = OUString(pBracket->cPre);
@@ -343,7 +342,7 @@ void SwDoubleLinePortion::PaintBracket( SwTextPaintInfo &rInf,
     aBlank.Height( pBracket->nHeight );
     {
         SwFont* pTmpFnt = new SwFont( *rInf.GetFont() );
-        sal_uInt8 nAct = bOpen ? pBracket->nPreScript : pBracket->nPostScript;
+        SwFontScript nAct = bOpen ? pBracket->nPreScript : pBracket->nPostScript;
         if( SW_SCRIPTS > nAct )
             pTmpFnt->SetActual( nAct );
         pTmpFnt->SetProportion( 100 );
@@ -383,7 +382,7 @@ void SwDoubleLinePortion::FormatBrackets( SwTextFormatInfo &rInf, SwTwips& nMaxW
     if( pBracket->cPre )
     {
         OUString aStr( pBracket->cPre );
-        sal_uInt8 nActualScr = pTmpFnt->GetActual();
+        SwFontScript nActualScr = pTmpFnt->GetActual();
         if( SW_SCRIPTS > pBracket->nPreScript )
             pTmpFnt->SetActual( pBracket->nPreScript );
         SwFontSave aSave( rInf, pTmpFnt );
@@ -538,7 +537,7 @@ SwRubyPortion::SwRubyPortion( const SwRubyPortion& rRuby, sal_Int32 nEnd ) :
     nRubyOffset( rRuby.GetRubyOffset() ),
     nAdjustment( rRuby.GetAdjustment() )
 {
-    SetDirection( rRuby.GetDirection() ),
+    SetDirection( rRuby.GetDirection() );
     SetTop( rRuby.OnTop() );
     SetRuby();
 }
@@ -552,7 +551,7 @@ SwRubyPortion::SwRubyPortion( const SwMultiCreator& rCreate, const SwFont& rFnt,
      : SwMultiPortion( nEnd )
 {
     SetRuby();
-    OSL_ENSURE( SW_MC_RUBY == rCreate.nId, "Ruby expected" );
+    OSL_ENSURE( SwMultiCreatorId::Ruby == rCreate.nId, "Ruby expected" );
     OSL_ENSURE( RES_TXTATR_CJK_RUBY == rCreate.pAttr->Which(), "Wrong attribute" );
     const SwFormatRuby& rRuby = rCreate.pAttr->GetRuby();
     nAdjustment = rRuby.GetAdjustment();
@@ -616,7 +615,7 @@ SwRubyPortion::SwRubyPortion( const SwMultiCreator& rCreate, const SwFont& rFnt,
 // Notice: the smaller line will be manipulated, normally it's the ruby line,
 // but it could be the main text, too.
 // If there is a tabulator in smaller line, no adjustment is possible.
-void SwRubyPortion::_Adjust( SwTextFormatInfo &rInf )
+void SwRubyPortion::Adjust_( SwTextFormatInfo &rInf )
 {
     SwTwips nLineDiff = GetRoot().Width() - GetRoot().GetNext()->Width();
     sal_Int32 nOldIdx = rInf.GetIdx();
@@ -642,9 +641,11 @@ void SwRubyPortion::_Adjust( SwTextFormatInfo &rInf )
     sal_Int32 nSub = 0;
     switch ( nAdjustment )
     {
-        case 1: nRight = static_cast<sal_uInt16>(nLineDiff / 2);    // no break
+        case 1: nRight = static_cast<sal_uInt16>(nLineDiff / 2);
+            SAL_FALLTHROUGH;
         case 2: nLeft  = static_cast<sal_uInt16>(nLineDiff - nRight); break;
-        case 3: nSub   = 1; // no break
+        case 3: nSub   = 1;
+            SAL_FALLTHROUGH;
         case 4:
         {
             sal_Int32 nCharCnt = 0;
@@ -824,7 +825,7 @@ SwMultiCreator* SwTextSizeInfo::GetMultiCreator( sal_Int32 &rPos,
         SwMultiCreator *pRet = new SwMultiCreator;
         pRet->pItem = nullptr;
         pRet->pAttr = nullptr;
-        pRet->nId = SW_MC_BIDI;
+        pRet->nId = SwMultiCreatorId::Bidi;
         pRet->nLevel = nCurrLevel + 1;
         return pRet;
     }
@@ -896,7 +897,7 @@ SwMultiCreator* SwTextSizeInfo::GetMultiCreator( sal_Int32 &rPos,
         SwMultiCreator *pRet = new SwMultiCreator;
         pRet->pItem = nullptr;
         pRet->pAttr = pRuby;
-        pRet->nId = SW_MC_RUBY;
+        pRet->nId = SwMultiCreatorId::Ruby;
         pRet->nLevel = GetTextFrame()->IsRightToLeft() ? 1 : 0;
         return pRet;
     }
@@ -934,7 +935,7 @@ SwMultiCreator* SwTextSizeInfo::GetMultiCreator( sal_Int32 &rPos,
             pRet->pAttr = nullptr;
             aEnd.push_front( GetText().getLength() );
         }
-        pRet->nId = SW_MC_DOUBLE;
+        pRet->nId = SwMultiCreatorId::Double;
         pRet->nLevel = GetTextFrame()->IsRightToLeft() ? 1 : 0;
 
         // n2Lines is the index of the last 2-line-attribute, which contains
@@ -1021,7 +1022,7 @@ SwMultiCreator* SwTextSizeInfo::GetMultiCreator( sal_Int32 &rPos,
     {   // The winner is a rotate-attribute,
         // the end of the multiportion depends on the following attributes...
         SwMultiCreator *pRet = new SwMultiCreator;
-        pRet->nId = SW_MC_ROTATE;
+        pRet->nId = SwMultiCreatorId::Rotate;
 
         // We note the endpositions of the 2-line attributes in aEnd as stack
         std::deque< sal_Int32 > aEnd;
@@ -1599,7 +1600,7 @@ static bool lcl_ExtractFieldFollow( SwLineLayout* pLine, SwLinePortion* &rpField
 }
 
 // If a multi portion completely has to go to the
-// next line, this function is called to trunctate
+// next line, this function is called to truncate
 // the rest of the remaining multi portion
 static void lcl_TruncateMultiPortion( SwMultiPortion& rMulti, SwTextFormatInfo& rInf,
                                sal_Int32 nStartIdx )
@@ -1621,7 +1622,7 @@ static void lcl_TruncateMultiPortion( SwMultiPortion& rMulti, SwTextFormatInfo& 
 
 // Manages the formatting of a SwMultiPortion. External, for the calling
 // function, it seems to be a normal Format-function, internal it is like a
-// SwTextFrame::_Format with multiple BuildPortions
+// SwTextFrame::Format_ with multiple BuildPortions
 bool SwTextFormatter::BuildMultiPortion( SwTextFormatInfo &rInf,
     SwMultiPortion& rMulti )
 {
@@ -1868,7 +1869,7 @@ bool SwTextFormatter::BuildMultiPortion( SwTextFormatInfo &rInf,
             nActWidth = ( 3 * nMaxWidth + nMinWidth + 3 ) / 4;
             if ( nActWidth == nMaxWidth && rInf.GetLineStart() == rInf.GetIdx() )
             // we have too less space, we must allow break cuts
-            // ( the first multi flag is considered during TextPortion::_Format() )
+            // ( the first multi flag is considered during TextPortion::Format_() )
                 bFirstMulti = false;
             if( nActWidth <= nMinWidth )
                 break;

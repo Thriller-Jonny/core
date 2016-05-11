@@ -37,8 +37,7 @@
 #include "resource/common_res.hrc"
 #include <connectivity/sqlparse.hxx>
 #include <memory>
-#include <boost/type_traits/remove_reference.hpp>
-#include <boost/type_traits/is_same.hpp>
+#include <type_traits>
 
 using namespace ::comphelper;
 using namespace connectivity;
@@ -299,7 +298,7 @@ template <typename T> void OPreparedStatement::setScalarParameter(const sal_Int3
     ::osl::MutexGuard aGuard( m_aMutex );
     setParameterPre(parameterIndex);
 
-    typedef typename boost::remove_reference< T >::type TnoRef;
+    typedef typename std::remove_reference<T>::type TnoRef;
 
     TnoRef *bindBuf = static_cast< TnoRef* >( allocBindBuf(parameterIndex, sizeof(i_Value)) );
     *bindBuf = i_Value;
@@ -492,7 +491,6 @@ void SAL_CALL OPreparedStatement::setDouble( sal_Int32 parameterIndex, double x 
 }
 
 
-
 void SAL_CALL OPreparedStatement::setFloat( sal_Int32 parameterIndex, float x ) throw(SQLException, RuntimeException, std::exception)
 {
     setScalarParameter(parameterIndex, DataType::FLOAT, 15, x);
@@ -645,7 +643,6 @@ void SAL_CALL OPreparedStatement::setBytes( sal_Int32 parameterIndex, const Sequ
 }
 
 
-
 void SAL_CALL OPreparedStatement::setCharacterStream( sal_Int32 parameterIndex, const Reference< ::com::sun::star::io::XInputStream >& x, sal_Int32 length ) throw(SQLException, RuntimeException, std::exception)
 {
     // LEM: It is quite unclear to me what the interface here is.
@@ -691,9 +688,7 @@ Sequence< sal_Int32 > SAL_CALL OPreparedStatement::executeBatch(  ) throw(SQLExc
 }
 
 
-
 // methods
-
 
 
 // initBoundParam
@@ -720,7 +715,6 @@ void OPreparedStatement::initBoundParam () throw(SQLException)
 }
 
 
-
 // allocBindBuf
 // Allocate storage for the permanent data buffer for the bound
 // parameter.
@@ -741,7 +735,6 @@ void* OPreparedStatement::allocBindBuf( sal_Int32 index,sal_Int32 bufLen)
 }
 
 
-
 // getLengthBuf
 // Gets the length buffer for the given parameter index
 
@@ -760,7 +753,6 @@ SQLLEN* OPreparedStatement::getLengthBuf (sal_Int32 index)
 
     return b;
 }
-
 
 
 // putParamData
@@ -877,8 +869,6 @@ void OPreparedStatement::setStream(
     // Save the input stream
     boundParams[ParameterIndex - 1].setInputStream (x, length);
 }
-
-
 
 
 void OPreparedStatement::FreeParams()

@@ -84,7 +84,7 @@ URLParameter::URLParameter( const OUString& aURL,
     : m_pDatabases( pDatabases ),
       m_aURL( aURL )
 {
-    init( false );
+    init();
     parse();
 }
 
@@ -196,10 +196,8 @@ OUString URLParameter::get_program()
 }
 
 
-void URLParameter::init( bool bDefaultLanguageIsInitialized )
+void URLParameter::init()
 {
-    (void)bDefaultLanguageIsInitialized;
-
     m_bHelpDataFileRead = false;
     m_bStart = false;
     m_bUseDB = true;
@@ -222,7 +220,6 @@ OUString URLParameter::get_the_tag()
 }
 
 
-
 OUString URLParameter::get_the_path()
 {
     if(m_bUseDB) {
@@ -235,7 +232,6 @@ OUString URLParameter::get_the_path()
     else
         return get_id();
 }
-
 
 
 OUString URLParameter::get_the_title()
@@ -314,7 +310,6 @@ void URLParameter::readHelpDataFile()
 }
 
 
-
 // Class encapsulating the transformation of the XInputStream to XHTML
 
 
@@ -383,7 +378,6 @@ private:
 };
 
 
-
 void URLParameter::open( const Command& aCommand,
                          sal_Int32 CommandId,
                          const Reference< XCommandEnvironment >& Environment,
@@ -408,7 +402,6 @@ void URLParameter::open( const Command& aCommand,
     delete p;
     xDataSink->closeOutput();
 }
-
 
 
 void URLParameter::open( const Command& aCommand,
@@ -490,7 +483,6 @@ bool URLParameter::module()
     else
         return false;
 }
-
 
 
 bool URLParameter::name( bool modulePresent )
@@ -954,19 +946,16 @@ Any SAL_CALL InputStreamTransformer::queryInterface( const Type& rType ) throw( 
 }
 
 
-
 void SAL_CALL InputStreamTransformer::acquire() throw()
 {
     OWeakObject::acquire();
 }
 
 
-
 void SAL_CALL InputStreamTransformer::release() throw()
 {
     OWeakObject::release();
 }
-
 
 
 sal_Int32 SAL_CALL InputStreamTransformer::readBytes( Sequence< sal_Int8 >& aData,sal_Int32 nBytesToRead )
@@ -1003,7 +992,6 @@ sal_Int32 SAL_CALL InputStreamTransformer::readSomeBytes( Sequence< sal_Int8 >& 
 }
 
 
-
 void SAL_CALL InputStreamTransformer::skipBytes( sal_Int32 nBytesToSkip ) throw( NotConnectedException,
                                                                                  BufferSizeExceededException,
                                                                                  IOException,
@@ -1012,7 +1000,6 @@ void SAL_CALL InputStreamTransformer::skipBytes( sal_Int32 nBytesToSkip ) throw(
     osl::MutexGuard aGuard( m_aMutex );
     while( nBytesToSkip-- ) ++pos;
 }
-
 
 
 sal_Int32 SAL_CALL InputStreamTransformer::available() throw( NotConnectedException,
@@ -1024,13 +1011,11 @@ sal_Int32 SAL_CALL InputStreamTransformer::available() throw( NotConnectedExcept
 }
 
 
-
 void SAL_CALL InputStreamTransformer::closeInput() throw( NotConnectedException,
                                                                 IOException,
                                                                 RuntimeException, std::exception )
 {
 }
-
 
 
 void SAL_CALL InputStreamTransformer::seek( sal_Int64 location ) throw( IllegalArgumentException,
@@ -1048,14 +1033,12 @@ void SAL_CALL InputStreamTransformer::seek( sal_Int64 location ) throw( IllegalA
 }
 
 
-
 sal_Int64 SAL_CALL InputStreamTransformer::getPosition() throw( IOException,
                                                                       RuntimeException, std::exception )
 {
     osl::MutexGuard aGuard( m_aMutex );
     return sal_Int64( pos );
 }
-
 
 
 sal_Int64 SAL_CALL InputStreamTransformer::getLength() throw( IOException,RuntimeException, std::exception )

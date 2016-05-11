@@ -35,10 +35,6 @@
 
 #include <algorithm>
 
-#if OSL_DEBUG_LEVEL > 1
-#include <stdio.h>
-#endif
-
 using namespace com::sun::star::uno;
 using namespace com::sun::star::lang;
 
@@ -344,7 +340,6 @@ TransliterationImpl::transliterate( const OUString& inStr, sal_Int32 startPos, s
 }
 
 
-
 OUString SAL_CALL
 TransliterationImpl::folding( const OUString& inStr, sal_Int32 startPos, sal_Int32 nCount,
         Sequence< sal_Int32 >& offset ) throw(RuntimeException, std::exception)
@@ -484,7 +479,7 @@ TransliterationImpl::equals(
             // return number of matched code points so far
             nMatch1 = (i < offset1.getLength()) ? offset1[i] : i;
             nMatch2 = (i < offset2.getLength()) ? offset2[i] : i;
-            return sal_False;
+            return false;
         }
     }
     // i==nLen
@@ -492,11 +487,11 @@ TransliterationImpl::equals(
         // return number of matched code points so far
         nMatch1 = (i <= offset1.getLength()) ? offset1[i-1] + 1 : i;
         nMatch2 = (i <= offset2.getLength()) ? offset2[i-1] + 1 : i;
-        return sal_False;
+        return false;
     } else {
         nMatch1 = nCount1;
         nMatch2 = nCount2;
-        return sal_True;
+        return true;
     }
 }
 
@@ -628,7 +623,7 @@ TransliterationImpl::loadModuleByName( const OUString& implName,
         for (sal_Int16 i = 0; i < 3; i++) {
             if (implName.equalsAscii(TMlist[i].implName)) {
                 if (i == 0) // current module is caseignore
-                    body->loadModule(TMlist[0].tm, rLocale); // caseingore need to setup module name
+                    body->loadModule(TMlist[0].tm, rLocale); // caseignore need to setup module name
                 if (! caseignore.is()) {
                     OUString bname = TRLT_IMPLNAME_PREFIX +
                                 OUString::createFromAscii(TMlist[0].implName);

@@ -37,7 +37,7 @@
 
 using namespace ::com::sun::star;
 
-class _PaMIntoCursorShellRing
+class PaMIntoCursorShellRing
 {
     SwCursorShell& rSh;
     SwPaM &rDelPam, &rCursor;
@@ -46,15 +46,15 @@ class _PaMIntoCursorShellRing
 
     static void RemoveFromRing( SwPaM& rPam, SwPaM* pPrev );
 public:
-    _PaMIntoCursorShellRing( SwCursorShell& rSh, SwPaM& rCursor, SwPaM& rPam );
-    ~_PaMIntoCursorShellRing();
+    PaMIntoCursorShellRing( SwCursorShell& rSh, SwPaM& rCursor, SwPaM& rPam );
+    ~PaMIntoCursorShellRing();
 };
 
-_PaMIntoCursorShellRing::_PaMIntoCursorShellRing( SwCursorShell& rCSh,
+PaMIntoCursorShellRing::PaMIntoCursorShellRing( SwCursorShell& rCSh,
                                             SwPaM& rShCursor, SwPaM& rPam )
     : rSh( rCSh ), rDelPam( rPam ), rCursor( rShCursor )
 {
-    SwPaM* pShCursor = rSh._GetCursor();
+    SwPaM* pShCursor = rSh.GetCursor_();
 
     pPrevDelPam = rDelPam.GetPrev();
     pPrevCursor = rCursor.GetPrev();
@@ -63,14 +63,14 @@ _PaMIntoCursorShellRing::_PaMIntoCursorShellRing( SwCursorShell& rCSh,
     rCursor.GetRingContainer().merge( pShCursor->GetRingContainer() );
 }
 
-_PaMIntoCursorShellRing::~_PaMIntoCursorShellRing()
+PaMIntoCursorShellRing::~PaMIntoCursorShellRing()
 {
     // and take out the Pam again:
     RemoveFromRing( rDelPam, pPrevDelPam );
     RemoveFromRing( rCursor, pPrevCursor );
 }
 
-void _PaMIntoCursorShellRing::RemoveFromRing( SwPaM& rPam, SwPaM* pPrev )
+void PaMIntoCursorShellRing::RemoveFromRing( SwPaM& rPam, SwPaM* pPrev )
 {
     SwPaM* p;
     SwPaM* pNext = &rPam;
@@ -105,7 +105,7 @@ void SwAutoCorrDoc::DeleteSel( SwPaM& rDelPam )
     {
         // so that also the DelPam be moved,  include it in the
         // Shell-Cursr-Ring !!
-        _PaMIntoCursorShellRing aTmp( rEditSh, rCursor, rDelPam );
+        PaMIntoCursorShellRing aTmp( rEditSh, rCursor, rDelPam );
         pDoc->getIDocumentContentOperations().DeleteAndJoin( rDelPam );
     }
     else
@@ -187,7 +187,7 @@ bool SwAutoCorrDoc::ReplaceRange( sal_Int32 nPos, sal_Int32 nSourceLength, const
             }
             else
             {
-                _PaMIntoCursorShellRing aTmp( rEditSh, rCursor, *pPam );
+                PaMIntoCursorShellRing aTmp( rEditSh, rCursor, *pPam );
 
                 pPam->SetMark();
                 pPam->GetPoint()->nContent = std::min<sal_Int32>(
@@ -229,7 +229,7 @@ bool SwAutoCorrDoc::ReplaceRange( sal_Int32 nPos, sal_Int32 nSourceLength, const
     return true;
 }
 
-bool SwAutoCorrDoc::SetAttr( sal_Int32 nStt, sal_Int32 nEnd, sal_uInt16 nSlotId,
+void SwAutoCorrDoc::SetAttr( sal_Int32 nStt, sal_Int32 nEnd, sal_uInt16 nSlotId,
                                         SfxPoolItem& rItem )
 {
     const SwNodeIndex& rNd = rCursor.GetPoint()->nNode;
@@ -249,7 +249,6 @@ bool SwAutoCorrDoc::SetAttr( sal_Int32 nStt, sal_Int32 nEnd, sal_uInt16 nSlotId,
         if( bUndoIdInitialized )
             bUndoIdInitialized = true;
     }
-    return 0 != nWhich;
 }
 
 bool SwAutoCorrDoc::SetINetAttr( sal_Int32 nStt, sal_Int32 nEnd, const OUString& rURL )
@@ -312,7 +311,7 @@ bool SwAutoCorrDoc::ChgAutoCorrWord( sal_Int32& rSttPos, sal_Int32 nEndPos,
     if( nEndPos == rSttPos )
         return bRet;
 
-    LanguageType eLang = GetLanguage(nEndPos, false);
+    LanguageType eLang = GetLanguage(nEndPos);
     if(LANGUAGE_SYSTEM == eLang)
         eLang = GetAppLanguage();
     LanguageTag aLanguageTag( eLang);
@@ -411,18 +410,16 @@ void SwAutoCorrDoc::SaveCpltSttWord( sal_uLong nFlag, sal_Int32 nPos,
                                             sal_Unicode cChar )
 {
     sal_uLong nNode = pIdx ? pIdx->GetIndex() : rCursor.GetPoint()->nNode.GetIndex();
-    LanguageType eLang = GetLanguage(nPos, false);
+    LanguageType eLang = GetLanguage(nPos);
     rEditSh.GetDoc()->SetAutoCorrExceptWord( new SwAutoCorrExceptWord( nFlag,
                                         nNode, nPos, rExceptWord, cChar, eLang ));
 }
 
-LanguageType SwAutoCorrDoc::GetLanguage( sal_Int32 nPos, bool bPrevPara ) const
+LanguageType SwAutoCorrDoc::GetLanguage( sal_Int32 nPos ) const
 {
     LanguageType eRet = LANGUAGE_SYSTEM;
 
-    SwTextNode* pNd = (( bPrevPara && pIdx )
-                            ? *pIdx
-                            : rCursor.GetPoint()->nNode ).GetNode().GetTextNode();
+    SwTextNode* pNd = rCursor.GetPoint()->nNode.GetNode().GetTextNode();
 
     if( pNd )
         eRet = pNd->GetLang( nPos );
@@ -471,7 +468,10 @@ void SwDontExpandItem::SaveDontExpandItems( const SwPosition& rPos )
         const sal_Int32 n = rPos.nContent.GetIndex();
         if( !pTextNd->GetAttr( *pDontExpItems, n, n,
                                 n != pTextNd->GetText().getLength() ))
-            delete pDontExpItems, pDontExpItems = nullptr;
+        {
+            delete pDontExpItems;
+            pDontExpItems = nullptr;
+        }
     }
 }
 

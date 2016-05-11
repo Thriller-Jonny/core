@@ -31,30 +31,30 @@
 
 struct ImplJobSetup
 {
-    sal_uInt16          mnRefCount;         // RefCount (only independ data)
-    sal_uInt16          mnSystem;           // System - JOBSETUP_SYSTEM_xxxx
-    OUString          maPrinterName;      // Printer-Name
-    OUString          maDriver;           // Driver-Name
-    Orientation     meOrientation;      // Orientation
-    DuplexMode      meDuplexMode;       // Duplex
-    sal_uInt16          mnPaperBin;         // paper bin / in tray
-    Paper           mePaperFormat;      // paper format
-    long            mnPaperWidth;       // paper width (100th mm)
-    long            mnPaperHeight;      // paper height (100th mm)
-    sal_uIntPtr         mnDriverDataLen;    // length of system specific data
-    sal_uInt8*          mpDriverData;       // system specific data (will be streamed a byte block)
-    bool            mbPapersizeFromSetup;
-    std::unordered_map< OUString, OUString, OUStringHash >         maValueMap;
-
                     ImplJobSetup();
                     ImplJobSetup( const ImplJobSetup& rJobSetup );
                     ~ImplJobSetup();
+
+    sal_uInt16      mnRefCount;         //< RefCount (only independent data)
+    sal_uInt16      mnSystem;           //< System - JOBSETUP_SYSTEM_xxxx
+    OUString        maPrinterName;      //< Printer-Name
+    OUString        maDriver;           //< Driver-Name
+    Orientation     meOrientation;      //< Orientation
+    DuplexMode      meDuplexMode;       //< Duplex
+    sal_uInt16      mnPaperBin;         //< paper bin / in tray
+    Paper           mePaperFormat;      //< paper format
+    long            mnPaperWidth;       //< paper width (100th mm)
+    long            mnPaperHeight;      //< paper height (100th mm)
+    sal_uInt32      mnDriverDataLen;    //< length of system specific data
+    sal_uInt8*      mpDriverData;       //< system specific data (will be streamed a byte block)
+    bool            mbPapersizeFromSetup;
+    std::unordered_map< OUString, OUString, OUStringHash > maValueMap;
 };
 
-// Papierformat wird wenn PAPER_USER im unabhaengigen Teil automatisch aus
-// Papierbreite/hoehe berechnet
-// Papierbreite/hoehe wird wenn 0 im unabhaengigen Teil automatisch aus
-// Papierformat berechnet, wenn dieses ungleich PAPER_USER ist
+// If paper format is PAPER_USER, in the system-independent part it will
+// automatically be computed from paper width/height.
+// If paper width/height is 0, in the system-independent part it will
+// automatically be computed from paper format, if the latter is not PAPER_USER.
 
 #endif // INCLUDED_VCL_INC_JOBSET_H
 

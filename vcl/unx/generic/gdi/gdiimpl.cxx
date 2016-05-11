@@ -17,13 +17,14 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <prex.h>
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
+#include <X11/extensions/Xrender.h>
 #include <X11/Xproto.h>
-#include <postx.h>
 
 #include "gdiimpl.hxx"
 
-#include "vcl/salbtype.hxx"
+#include <vcl/salbtype.hxx>
 #include <vcl/gradient.hxx>
 
 #include "unx/salunx.h"
@@ -64,6 +65,9 @@
 #endif // (OSL_DEBUG_LEVEL > 1) && defined SALGDI2_TESTTRANS
 
 #define STATIC_POINTS 64
+
+/* From <X11/Intrinsic.h> */
+typedef unsigned long Pixel;
 
 class SalPolyLine
 {
@@ -248,19 +252,28 @@ XID X11SalGraphicsImpl::GetXRenderPicture()
     return mrParent.m_aXRenderPicture;
 }
 
+static void freeGC(Display *pDisplay, GC& rGC)
+{
+    if( rGC )
+    {
+        XFreeGC( pDisplay, rGC );
+        rGC = None;
+    }
+}
+
 void X11SalGraphicsImpl::freeResources()
 {
     Display *pDisplay = mrParent.GetXDisplay();
 
-    if( mpPenGC ) XFreeGC( pDisplay, mpPenGC ), mpPenGC = None;
-    if( mpBrushGC ) XFreeGC( pDisplay, mpBrushGC ), mpBrushGC = None;
-    if( mpMonoGC ) XFreeGC( pDisplay, mpMonoGC ), mpMonoGC = None;
-    if( mpTrackingGC ) XFreeGC( pDisplay, mpTrackingGC ), mpTrackingGC = None;
-    if( mpCopyGC ) XFreeGC( pDisplay, mpCopyGC ), mpCopyGC = None;
-    if( mpMaskGC ) XFreeGC( pDisplay, mpMaskGC ), mpMaskGC = None;
-    if( mpInvertGC ) XFreeGC( pDisplay, mpInvertGC ), mpInvertGC = None;
-    if( mpInvert50GC ) XFreeGC( pDisplay, mpInvert50GC ), mpInvert50GC = None;
-    if( mpStippleGC ) XFreeGC( pDisplay, mpStippleGC ), mpStippleGC = None;
+    freeGC( pDisplay, mpPenGC );
+    freeGC( pDisplay, mpBrushGC );
+    freeGC( pDisplay, mpMonoGC );
+    freeGC( pDisplay, mpTrackingGC );
+    freeGC( pDisplay, mpCopyGC );
+    freeGC( pDisplay, mpMaskGC );
+    freeGC( pDisplay, mpInvertGC );
+    freeGC( pDisplay, mpInvert50GC );
+    freeGC( pDisplay, mpStippleGC );
     mbTrackingGC = mbPenGC = mbBrushGC = mbMonoGC = mbCopyGC = mbInvertGC = mbInvert50GC = mbStippleGC = false;
 }
 
@@ -603,17 +616,18 @@ void X11SalGraphicsImpl::copyBits( const SalTwoRect& rPosAry,
 
         if( !xDDB )
         {
-            stderr0( "SalGraphics::CopyBits !pSrcGraphics->GetBitmap()\n" );
+            SAL_WARN( "vcl", "SalGraphics::CopyBits !pSrcGraphics->GetBitmap()" );
             return;
         }
 
         SalTwoRect aPosAry( rPosAry );
 
-        aPosAry.mnSrcX = 0, aPosAry.mnSrcY = 0;
+        aPosAry.mnSrcX = 0;
+        aPosAry.mnSrcY = 0;
         drawBitmap( aPosAry, *xDDB );
     }
     else {
-        stderr0( "X11SalGraphicsImpl::CopyBits from Printer not yet implemented\n" );
+        SAL_WARN( "vcl", "X11SalGraphicsImpl::CopyBits from Printer not yet implemented" );
     }
 }
 
@@ -713,7 +727,9 @@ void X11SalGraphicsImpl::drawMaskedBitmap( const SalTwoRect& rPosAry,
         DBG_TESTTRANS( aBG );
 
         // mask out paint bitmap in pixmap #1 (transparent areas 0)
-        aValues.function = GXand, aValues.foreground = 0x00000000, aValues.background = 0xffffffff;
+        aValues.function = GXand;
+        aValues.foreground = 0x00000000;
+        aValues.background = 0xffffffff;
         XChangeGC( pXDisp, aTmpGC, nValues, &aValues );
         static_cast<const X11SalBitmap&>(rTransBitmap).ImplDraw( aFG, mrParent.m_nXScreen, 1, aTmpRect, aTmpGC );
 
@@ -723,7 +739,9 @@ void X11SalGraphicsImpl::drawMaskedBitmap( const SalTwoRect& rPosAry,
         if( !mbXORMode )
         {
             // mask out background in pixmap #2 (nontransparent areas 0)
-            aValues.function = GXand, aValues.foreground = 0xffffffff, aValues.background = 0x00000000;
+            aValues.function = GXand;
+            aValues.foreground = 0xffffffff;
+            aValues.background = 0x00000000;
             XChangeGC( pXDisp, aTmpGC, nValues, &aValues );
             static_cast<const X11SalBitmap&>(rTransBitmap).ImplDraw( aBG, mrParent.m_nXScreen, 1, aTmpRect, aTmpGC );
 
@@ -731,7 +749,9 @@ void X11SalGraphicsImpl::drawMaskedBitmap( const SalTwoRect& rPosAry,
         }
 
         // merge pixmap #1 and pixmap #2 in pixmap #2
-        aValues.function = GXxor, aValues.foreground = 0xffffffff, aValues.background = 0x00000000;
+        aValues.function = GXxor;
+        aValues.foreground = 0xffffffff;
+        aValues.background = 0x00000000;
         XChangeGC( pXDisp, aTmpGC, nValues, &aValues );
         XCopyArea( pXDisp, aFG, aBG, aTmpGC,
                    0, 0,
@@ -896,7 +916,7 @@ bool X11SalGraphicsImpl::drawAlphaBitmap( const SalTwoRect& rTR,
 
     // paint source * mask over destination picture
     rPeer.CompositePicture( PictOpOver, aSrcPic, aAlphaPic, aDstPic,
-        rTR.mnSrcX, rTR.mnSrcY, 0, 0,
+        rTR.mnSrcX, rTR.mnSrcY,
         rTR.mnDestX, rTR.mnDestY, rTR.mnDestWidth, rTR.mnDestHeight );
 
     rPeer.FreePicture( aAlphaPic );
@@ -965,7 +985,8 @@ void X11SalGraphicsImpl::drawMask( const SalTwoRect& rPosAry,
 
         // create a stipple bitmap first (set bits are changed to unset bits and vice versa)
         aValues.function = GXcopyInverted;
-        aValues.foreground = 1, aValues.background = 0;
+        aValues.foreground = 1;
+        aValues.background = 0;
         aTmpGC = XCreateGC( pXDisp, aStipple, GCFunction | GCForeground | GCBackground, &aValues );
         static_cast<const X11SalBitmap&>(rSalBitmap).ImplDraw( aStipple, mrParent.m_nXScreen, 1, aTwoRect, aTmpGC );
 
@@ -1137,13 +1158,13 @@ void X11SalGraphicsImpl::SetROPLineColor( SalROPColor nROPColor )
 {
     switch( nROPColor )
     {
-        case SAL_ROP_0 : // 0
+        case SalROPColor::N0 : // 0
             mnPenPixel = (Pixel)0;
             break;
-        case SAL_ROP_1 : // 1
+        case SalROPColor::N1 : // 1
             mnPenPixel = (Pixel)(1 << mrParent.GetVisual().GetDepth()) - 1;
             break;
-        case SAL_ROP_INVERT : // 2
+        case SalROPColor::Invert : // 2
             mnPenPixel = (Pixel)(1 << mrParent.GetVisual().GetDepth()) - 1;
             break;
     }
@@ -1155,13 +1176,13 @@ void X11SalGraphicsImpl::SetROPFillColor( SalROPColor nROPColor )
 {
     switch( nROPColor )
     {
-        case SAL_ROP_0 : // 0
+        case SalROPColor::N0 : // 0
             mnBrushPixel = (Pixel)0;
             break;
-        case SAL_ROP_1 : // 1
+        case SalROPColor::N1 : // 1
             mnBrushPixel = (Pixel)(1 << mrParent.GetVisual().GetDepth()) - 1;
             break;
-        case SAL_ROP_INVERT : // 2
+        case SalROPColor::Invert : // 2
             mnBrushPixel = (Pixel)(1 << mrParent.GetVisual().GetDepth()) - 1;
             break;
     }
@@ -1398,14 +1419,14 @@ void X11SalGraphicsImpl::invert( long       nX,
                                 SalInvert   nFlags )
 {
     GC pGC;
-    if( SAL_INVERT_50 & nFlags )
+    if( SalInvert::N50 & nFlags )
     {
         pGC = GetInvert50GC();
         XFillRectangle( mrParent.GetXDisplay(), mrParent.GetDrawable(), pGC, nX, nY, nDX, nDY );
     }
     else
     {
-        if ( SAL_INVERT_TRACKFRAME & nFlags )
+        if ( SalInvert::TrackFrame & nFlags )
         {
             pGC = GetTrackingGC();
             XDrawRectangle( mrParent.GetXDisplay(), mrParent.GetDrawable(),  pGC, nX, nY, nDX, nDY );
@@ -1425,15 +1446,15 @@ void X11SalGraphicsImpl::invert( sal_uInt32 nPoints,
     SalPolyLine Points ( nPoints, pPtAry );
 
     GC pGC;
-    if( SAL_INVERT_50 & nFlags )
+    if( SalInvert::N50 & nFlags )
         pGC = GetInvert50GC();
     else
-        if ( SAL_INVERT_TRACKFRAME & nFlags )
+        if ( SalInvert::TrackFrame & nFlags )
             pGC = GetTrackingGC();
         else
             pGC = GetInvertGC();
 
-    if( SAL_INVERT_TRACKFRAME & nFlags )
+    if( SalInvert::TrackFrame & nFlags )
         DrawLines ( nPoints, Points, pGC, true );
     else
         XFillPolygon( mrParent.GetXDisplay(),
@@ -1576,7 +1597,8 @@ bool X11SalGraphicsImpl::drawPolyLine(
     double fTransparency,
     const basegfx::B2DVector& rLineWidth,
     basegfx::B2DLineJoin eLineJoin,
-    css::drawing::LineCap eLineCap)
+    css::drawing::LineCap eLineCap,
+    double fMiterMinimumAngle)
 {
     const bool bIsHairline = (rLineWidth.getX() == rLineWidth.getY()) && (rLineWidth.getX() <= 1.2);
 
@@ -1633,7 +1655,7 @@ bool X11SalGraphicsImpl::drawPolyLine(
     }
 
     // create the area-polygon for the line
-    const basegfx::B2DPolyPolygon aAreaPolyPoly( basegfx::tools::createAreaGeometry(aPolygon, fHalfWidth, eLineJoin, eLineCap) );
+    const basegfx::B2DPolyPolygon aAreaPolyPoly( basegfx::tools::createAreaGeometry(aPolygon, fHalfWidth, eLineJoin, eLineCap, fMiterMinimumAngle) );
 
     if( (rLineWidth.getX() != rLineWidth.getY())
     && !basegfx::fTools::equalZero( rLineWidth.getX() ) )
@@ -1667,7 +1689,7 @@ SalColor X11SalGraphicsImpl::getPixel( long nX, long nY )
         XGetWindowAttributes( mrParent.GetXDisplay(), mrParent.GetDrawable(), &aAttrib );
         if( aAttrib.map_state != IsViewable )
         {
-            stderr0( "X11SalGraphics::GetPixel drawable not viewable\n" );
+            SAL_WARN( "vcl", "X11SalGraphics::GetPixel drawable not viewable" );
             return 0;
         }
     }
@@ -1680,7 +1702,7 @@ SalColor X11SalGraphicsImpl::getPixel( long nX, long nY )
                                  ZPixmap );
     if( !pXImage )
     {
-        stderr0( "X11SalGraphics::GetPixel !XGetImage()\n" );
+        SAL_WARN( "vcl", "X11SalGraphics::GetPixel !XGetImage()" );
         return 0;
     }
 

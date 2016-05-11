@@ -54,7 +54,7 @@ public:
         position of the wrapped stream at construction time). */
     void                align( size_t nSize );
 
-    void         pad( sal_Int32 nBytes, size_t nAtomSize = 1);
+    void         pad( sal_Int32 nBytes );
 
     /** Aligns the stream according to the passed type and reads a value. */
     template< typename Type >
@@ -84,23 +84,23 @@ public:
                             { if( startNextProperty() ) maOutStrm.writeAligned< StreamType >( ornValue ); }
     /** Write a boolean property value to the stream, the
         respective flag in the property mask is set. */
-    void                writeBoolProperty( bool orbValue, bool bReverse = false );
+    void                writeBoolProperty( bool orbValue );
     /** Write a pair property the stream, the respective flag in
         the property mask is set. */
     void                writePairProperty( AxPairData& orPairData );
     /** Write a string property to the stream, the respective flag
         in the property mask is set. */
-    void                writeStringProperty( OUString& orValue, bool bCompressed = true );
+    void                writeStringProperty( OUString& orValue );
 
     /** Skips the next property clears the respective
         flag in the property mask. */
     void                skipProperty() { startNextProperty( true ); }
 
     /** Final processing, write contents of all complex properties, writes record size */
-    bool                finalizeExport();
+    void                finalizeExport();
 
 private:
-    bool                ensureValid( bool bCondition = true );
+    bool                ensureValid();
     bool                startNextProperty( bool bSkip = false );
 
 private:
@@ -144,7 +144,6 @@ private:
     AxAlignedOutputStream maOutStrm;        ///< The input stream to read from.
     ComplexPropVector   maLargeProps;       ///< Stores info for all used large properties.
     ComplexPropVector   maStreamProps;      ///< Stores info for all used stream data properties.
-    AxPairData          maDummyPairData;    ///< Dummy pair for unsupported properties.
     sal_Int16           mnBlockSize;
     sal_Int64           mnPropFlagsStart;     ///< pos of Prop flags
     sal_Int64           mnPropFlags;        ///< Flags specifying existing properties.

@@ -53,7 +53,7 @@ namespace comphelper
         virtual void _elementInserted( const css::container::ContainerEvent& _rEvent )
             throw (css::uno::RuntimeException,
                    std::exception);
-        virtual void _elementRemoved( const css::container::ContainerEvent& _Event )
+        virtual void _elementRemoved( const css::container::ContainerEvent& _rEvent )
             throw (css::uno::RuntimeException,
                    std::exception);
         virtual void _elementReplaced( const css::container::ContainerEvent& _rEvent )
@@ -69,9 +69,11 @@ namespace comphelper
 
 
     //= OContainerListenerAdapter
+    class SAL_DLLPUBLIC_TEMPLATE OContainerListenerAdapter_BASE
+        : public cppu::WeakImplHelper<css::container::XContainerListener> {};
 
     class COMPHELPER_DLLPUBLIC OContainerListenerAdapter
-            :public cppu::WeakImplHelper< css::container::XContainerListener >
+        : public OContainerListenerAdapter_BASE
     {
         friend class OContainerListener;
 

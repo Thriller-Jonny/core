@@ -17,6 +17,8 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
+#include <o3tl/make_unique.hxx>
+
 #include <svl/itemset.hxx>
 #include <svl/style.hxx>
 #include <svl/smplhint.hxx>
@@ -39,18 +41,18 @@ StyleSheetUndoAction::StyleSheetUndoAction(SdDrawDocument* pTheDoc,
                       SdUndoAction(pTheDoc)
 {
     DBG_ASSERT(pTheStyleSheet, "Undo without StyleSheet ???");
-    pStyleSheet = pTheStyleSheet;
+    mpStyleSheet = pTheStyleSheet;
 
     // Create ItemSets; Attention, it is possible that the new one is from a,
     // different pool. Therefore we clone it with its items.
-    pNewSet = new SfxItemSet(static_cast<SfxItemPool&>(SdrObject::GetGlobalDrawObjectItemPool()), pTheNewItemSet->GetRanges());
-    SdrModel::MigrateItemSet( pTheNewItemSet, pNewSet, pTheDoc );
+    mpNewSet = o3tl::make_unique<SfxItemSet>(static_cast<SfxItemPool&>(SdrObject::GetGlobalDrawObjectItemPool()), pTheNewItemSet->GetRanges());
+    SdrModel::MigrateItemSet( pTheNewItemSet, mpNewSet.get(), pTheDoc );
 
-    pOldSet = new SfxItemSet(static_cast<SfxItemPool&>(SdrObject::GetGlobalDrawObjectItemPool()), pStyleSheet->GetItemSet().GetRanges());
-    SdrModel::MigrateItemSet( &pStyleSheet->GetItemSet(), pOldSet, pTheDoc );
+    mpOldSet = o3tl::make_unique<SfxItemSet>(static_cast<SfxItemPool&>(SdrObject::GetGlobalDrawObjectItemPool()), mpStyleSheet->GetItemSet().GetRanges());
+    SdrModel::MigrateItemSet( &mpStyleSheet->GetItemSet(), mpOldSet.get(), pTheDoc );
 
-    aComment = SD_RESSTR(STR_UNDO_CHANGE_PRES_OBJECT);
-    OUString aName(pStyleSheet->GetName());
+    maComment = SD_RESSTR(STR_UNDO_CHANGE_PRES_OBJECT);
+    OUString aName(mpStyleSheet->GetName());
 
     // delete layout name and separator
     sal_Int32 nPos = aName.indexOf(SD_LT_SEPARATOR);
@@ -89,42 +91,36 @@ StyleSheetUndoAction::StyleSheetUndoAction(SdDrawDocument* pTheDoc,
     }
 
     // replace placeholder with template name
-    aComment = aComment.replaceFirst("$", aName);
+    maComment = maComment.replaceFirst("$", aName);
 }
 
 void StyleSheetUndoAction::Undo()
 {
-    SfxItemSet aNewSet( mpDoc->GetItemPool(), pOldSet->GetRanges() );
-    SdrModel::MigrateItemSet( pOldSet, &aNewSet, mpDoc );
+    SfxItemSet aNewSet( mpDoc->GetItemPool(), mpOldSet->GetRanges() );
+    SdrModel::MigrateItemSet( mpOldSet.get(), &aNewSet, mpDoc );
 
-    pStyleSheet->GetItemSet().Set(aNewSet);
-    if( pStyleSheet->GetFamily() == SD_STYLE_FAMILY_PSEUDO )
-        static_cast<SdStyleSheet*>(pStyleSheet)->GetRealStyleSheet()->Broadcast(SfxSimpleHint(SFX_HINT_DATACHANGED));
+    mpStyleSheet->GetItemSet().Set(aNewSet);
+    if( mpStyleSheet->GetFamily() == SD_STYLE_FAMILY_PSEUDO )
+        static_cast<SdStyleSheet*>(mpStyleSheet)->GetRealStyleSheet()->Broadcast(SfxSimpleHint(SFX_HINT_DATACHANGED));
     else
-        pStyleSheet->Broadcast(SfxSimpleHint(SFX_HINT_DATACHANGED));
+        mpStyleSheet->Broadcast(SfxSimpleHint(SFX_HINT_DATACHANGED));
 }
 
 void StyleSheetUndoAction::Redo()
 {
-    SfxItemSet aNewSet( mpDoc->GetItemPool(), pOldSet->GetRanges() );
-    SdrModel::MigrateItemSet( pNewSet, &aNewSet, mpDoc );
+    SfxItemSet aNewSet( mpDoc->GetItemPool(), mpOldSet->GetRanges() );
+    SdrModel::MigrateItemSet( mpNewSet.get(), &aNewSet, mpDoc );
 
-    pStyleSheet->GetItemSet().Set(aNewSet);
-    if( pStyleSheet->GetFamily() == SD_STYLE_FAMILY_PSEUDO )
-        static_cast<SdStyleSheet*>(pStyleSheet)->GetRealStyleSheet()->Broadcast(SfxSimpleHint(SFX_HINT_DATACHANGED));
+    mpStyleSheet->GetItemSet().Set(aNewSet);
+    if( mpStyleSheet->GetFamily() == SD_STYLE_FAMILY_PSEUDO )
+        static_cast<SdStyleSheet*>(mpStyleSheet)->GetRealStyleSheet()->Broadcast(SfxSimpleHint(SFX_HINT_DATACHANGED));
     else
-        pStyleSheet->Broadcast(SfxSimpleHint(SFX_HINT_DATACHANGED));
-}
-
-StyleSheetUndoAction::~StyleSheetUndoAction()
-{
-    delete pNewSet;
-    delete pOldSet;
+        mpStyleSheet->Broadcast(SfxSimpleHint(SFX_HINT_DATACHANGED));
 }
 
 OUString StyleSheetUndoAction::GetComment() const
 {
-    return aComment;
+    return maComment;
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

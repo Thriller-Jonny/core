@@ -23,13 +23,11 @@
 #include <unotools/intlwrapper.hxx>
 #include <com/sun/star/chart/ChartAxisArrangeOrderType.hpp>
 
-#include <stdio.h>
 #include <float.h>
 
 #include "svx/chrtitem.hxx"
 
 using namespace ::com::sun::star;
-
 
 
 SfxPoolItem* SvxDoubleItem::CreateDefault() { return new  SvxDoubleItem(0.0, 0);}
@@ -40,19 +38,16 @@ SvxChartStyleItem::SvxChartStyleItem(SvxChartStyle eStyle, sal_uInt16 nId) :
 }
 
 
-
 SvxChartStyleItem::SvxChartStyleItem(SvStream& rIn, sal_uInt16 nId) :
     SfxEnumItem(nId, rIn)
 {
 }
 
 
-
 SfxPoolItem* SvxChartStyleItem::Clone(SfxItemPool* /*pPool*/) const
 {
     return new SvxChartStyleItem(*this);
 }
-
 
 
 SfxPoolItem* SvxChartStyleItem::Create(SvStream& rIn, sal_uInt16 /*nVer*/) const
@@ -66,12 +61,10 @@ SvxChartDataDescrItem::SvxChartDataDescrItem(SvStream& rIn, sal_uInt16 nId) :
 }
 
 
-
 SfxPoolItem* SvxChartDataDescrItem::Clone(SfxItemPool* /*pPool*/) const
 {
     return new SvxChartDataDescrItem(*this);
 }
-
 
 
 SfxPoolItem* SvxChartDataDescrItem::Create(SvStream& rIn, sal_uInt16 /*nVer*/) const
@@ -86,12 +79,10 @@ SvxChartTextOrderItem::SvxChartTextOrderItem(SvxChartTextOrder eOrder,
 }
 
 
-
 SvxChartTextOrderItem::SvxChartTextOrderItem(SvStream& rIn, sal_uInt16 nId) :
     SfxEnumItem(nId, rIn)
 {
 }
-
 
 
 SfxPoolItem* SvxChartTextOrderItem::Clone(SfxItemPool* /*pPool*/) const
@@ -100,12 +91,10 @@ SfxPoolItem* SvxChartTextOrderItem::Clone(SfxItemPool* /*pPool*/) const
 }
 
 
-
 SfxPoolItem* SvxChartTextOrderItem::Create(SvStream& rIn, sal_uInt16 /*nVer*/) const
 {
     return new SvxChartTextOrderItem(rIn, Which());
 }
-
 
 
 bool SvxChartTextOrderItem::QueryValue( css::uno::Any& rVal, sal_uInt8 /*nMemberId*/ ) const
@@ -130,7 +119,6 @@ bool SvxChartTextOrderItem::QueryValue( css::uno::Any& rVal, sal_uInt8 /*nMember
 
     return true;
 }
-
 
 
 bool SvxChartTextOrderItem::PutValue( const css::uno::Any& rVal, sal_uInt8 /*nMemberId*/ )
@@ -173,12 +161,10 @@ SvxChartTextOrientItem::SvxChartTextOrientItem(SvStream& rIn, sal_uInt16 nId) :
 }
 
 
-
 SfxPoolItem* SvxChartTextOrientItem::Clone(SfxItemPool* /*pPool*/) const
 {
     return new SvxChartTextOrientItem(*this);
 }
-
 
 
 SfxPoolItem* SvxChartTextOrientItem::Create(SvStream& rIn, sal_uInt16 /*nVer*/) const
@@ -193,7 +179,6 @@ SvxDoubleItem::SvxDoubleItem(double fValue, sal_uInt16 nId) :
 }
 
 
-
 SvxDoubleItem::SvxDoubleItem(const SvxDoubleItem& rItem) :
     SfxPoolItem(rItem),
     fVal(rItem.fVal)
@@ -201,12 +186,10 @@ SvxDoubleItem::SvxDoubleItem(const SvxDoubleItem& rItem) :
 }
 
 
-
 OUString SvxDoubleItem::GetValueText() const
 {
     return rtl::math::doubleToUString( fVal, rtl_math_StringFormat_E, 4, '.' );
 }
-
 
 
 bool SvxDoubleItem::GetPresentation
@@ -226,19 +209,16 @@ bool SvxDoubleItem::GetPresentation
 }
 
 
-
 bool SvxDoubleItem::operator == (const SfxPoolItem& rItem) const
 {
     return static_cast<const SvxDoubleItem&>(rItem).fVal == fVal;
 }
 
 
-
 SfxPoolItem* SvxDoubleItem::Clone(SfxItemPool* /*pPool*/) const
 {
     return new SvxDoubleItem(*this);
 }
-
 
 
 SfxPoolItem* SvxDoubleItem::Create(SvStream& rIn, sal_uInt16 /*nVersion*/) const
@@ -272,12 +252,10 @@ SvxChartKindErrorItem::SvxChartKindErrorItem(SvxChartKindError eOrient,
 }
 
 
-
 SvxChartKindErrorItem::SvxChartKindErrorItem(SvStream& rIn, sal_uInt16 nId) :
     SfxEnumItem(nId, rIn)
 {
 }
-
 
 
 SfxPoolItem* SvxChartKindErrorItem::Clone(SfxItemPool* /*pPool*/) const
@@ -286,12 +264,10 @@ SfxPoolItem* SvxChartKindErrorItem::Clone(SfxItemPool* /*pPool*/) const
 }
 
 
-
 SfxPoolItem* SvxChartKindErrorItem::Create(SvStream& rIn, sal_uInt16 /*nVer*/) const
 {
     return new SvxChartKindErrorItem(rIn, Which());
 }
-
 
 
 sal_uInt16 SvxChartKindErrorItem::GetVersion (sal_uInt16 nFileFormatVersion) const
@@ -308,12 +284,10 @@ SvxChartIndicateItem::SvxChartIndicateItem(SvxChartIndicate eOrient,
 }
 
 
-
 SvxChartIndicateItem::SvxChartIndicateItem(SvStream& rIn, sal_uInt16 nId) :
     SfxEnumItem(nId, rIn)
 {
 }
-
 
 
 SfxPoolItem* SvxChartIndicateItem::Clone(SfxItemPool* /*pPool*/) const
@@ -322,12 +296,10 @@ SfxPoolItem* SvxChartIndicateItem::Clone(SfxItemPool* /*pPool*/) const
 }
 
 
-
 SfxPoolItem* SvxChartIndicateItem::Create(SvStream& rIn, sal_uInt16 /*nVer*/) const
 {
     return new SvxChartIndicateItem(rIn, Which());
 }
-
 
 
 sal_uInt16 SvxChartIndicateItem::GetVersion (sal_uInt16 nFileFormatVersion) const
@@ -344,12 +316,10 @@ SvxChartRegressItem::SvxChartRegressItem(SvxChartRegress eOrient,
 }
 
 
-
 SvxChartRegressItem::SvxChartRegressItem(SvStream& rIn, sal_uInt16 nId) :
     SfxEnumItem(nId, rIn)
 {
 }
-
 
 
 SfxPoolItem* SvxChartRegressItem::Clone(SfxItemPool* /*pPool*/) const
@@ -358,12 +328,10 @@ SfxPoolItem* SvxChartRegressItem::Clone(SfxItemPool* /*pPool*/) const
 }
 
 
-
 SfxPoolItem* SvxChartRegressItem::Create(SvStream& rIn, sal_uInt16 /*nVer*/) const
 {
     return new SvxChartRegressItem(rIn, Which());
 }
-
 
 
 sal_uInt16 SvxChartRegressItem::GetVersion (sal_uInt16 nFileFormatVersion) const

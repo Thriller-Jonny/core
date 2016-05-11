@@ -161,14 +161,6 @@ public:
     */
     virtual void Init();
 
-    /** Compare two accessible shapes using object identity
-        @param rShape
-            This is the second operand.
-        @return
-            Returns true if both shapes are the same object.
-    */
-    bool operator== (const AccessibleShape& rShape);
-
     /** Set the specified state.  If the state is <const>FOCUSED</const>
         then, additionally to the inherited functionality, the focus
         listeners registered with the XAccessibleComponent
@@ -384,7 +376,7 @@ public:
 
     //===== Misc ========================================================
 
-    css::uno::Reference< css::drawing::XShape >
+    const css::uno::Reference< css::drawing::XShape >&
         GetXShape() { return mxShape; }
 
     /** set the index _nIndex at the accessible shape

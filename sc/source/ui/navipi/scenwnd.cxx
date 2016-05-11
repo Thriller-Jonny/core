@@ -121,7 +121,7 @@ bool ScScenarioListBox::Notify( NotifyEvent& rNEvt )
                 bHandled = true;
             break;
             case KEY_DELETE:
-                DeleteScenario( true );
+                DeleteScenario();
                 bHandled = true;
             break;
         }
@@ -142,7 +142,7 @@ bool ScScenarioListBox::Notify( NotifyEvent& rNEvt )
                         switch( aPopup.GetSelected() )
                         {
                             case RID_NAVIPI_SCENARIO_DELETE:
-                                DeleteScenario( true );
+                                DeleteScenario();
                             break;
                             case RID_NAVIPI_SCENARIO_EDIT:
                                 EditScenario();
@@ -169,7 +169,8 @@ void ScScenarioListBox::ExecuteScenarioSlot( sal_uInt16 nSlotId )
     if( SfxViewFrame* pViewFrm = SfxViewFrame::Current() )
     {
         SfxStringItem aStringItem( nSlotId, GetSelectEntry() );
-        pViewFrm->GetDispatcher()->Execute( nSlotId, SfxCallMode::SLOT | SfxCallMode::RECORD, &aStringItem, 0L, 0L );
+        pViewFrm->GetDispatcher()->ExecuteList(nSlotId,
+                SfxCallMode::SLOT | SfxCallMode::RECORD, { &aStringItem } );
     }
 }
 
@@ -185,10 +186,10 @@ void ScScenarioListBox::EditScenario()
         ExecuteScenarioSlot( SID_EDIT_SCENARIO );
 }
 
-void ScScenarioListBox::DeleteScenario( bool bQueryBox )
+void ScScenarioListBox::DeleteScenario()
 {
     if( GetSelectEntryCount() > 0 )
-        if( !bQueryBox || (ScopedVclPtr<QueryBox>::Create( nullptr, WinBits( WB_YES_NO | WB_DEF_YES ), ScGlobal::GetRscString( STR_QUERY_DELSCENARIO ) )->Execute() == RET_YES) )
+        if( ScopedVclPtr<QueryBox>::Create( nullptr, WinBits( WB_YES_NO | WB_DEF_YES ), ScGlobal::GetRscString( STR_QUERY_DELSCENARIO ) )->Execute() == RET_YES )
             ExecuteScenarioSlot( SID_DELETE_SCENARIO );
 }
 

@@ -143,7 +143,7 @@ public:
     bool            IsLevelFromChapter() const {return m_bLevelFromChapter;}
     void            SetLevelFromChapter(bool bSet) {m_bLevelFromChapter = bSet;}
 
-    OUString        GetAuthBrackets() const {return m_sAuthBrackets;}
+    const OUString& GetAuthBrackets() const {return m_sAuthBrackets;}
     void            SetAuthBrackets(const OUString& rSet) {m_sAuthBrackets = rSet;}
 
     bool            IsAuthSequence() const {return m_bIsAuthSequence;}
@@ -156,9 +156,9 @@ public:
                         SwTOXSortKey eKey2,
                             SwTOXSortKey eKey3);
 
-    SwTOXSortKey GetSortKey1() const {return m_eSortKey1;}
-    SwTOXSortKey GetSortKey2() const {return m_eSortKey2;}
-    SwTOXSortKey GetSortKey3() const {return m_eSortKey3;}
+    const SwTOXSortKey& GetSortKey1() const {return m_eSortKey1;}
+    const SwTOXSortKey& GetSortKey2() const {return m_eSortKey2;}
+    const SwTOXSortKey& GetSortKey3() const {return m_eSortKey3;}
 
     LanguageType    GetLanguage() const {return m_eLanguage;}
     void            SetLanguage(LanguageType nLang)  {m_eLanguage = nLang;}
@@ -274,7 +274,6 @@ public:
     void                PrevTOXMark(bool bSame=false);
 
     // get current TOXmarks
-    sal_uInt16              GetTOXMarks();
     sal_uInt16              GetTOXMarkCount();
     SwTOXMark*          GetTOXMark(sal_uInt16 nId);
     SwTOXMark*          GetCurTOXMark();
@@ -284,7 +283,7 @@ public:
 
     bool    UpdateOrInsertTOX(const SwTOXDescription& rDesc, SwTOXBase** ppBase = nullptr, const SfxItemSet* pSet = nullptr);
 
-    const SwTOXType*    GetTOXType(TOXTypes eTyp, sal_uInt16 nId) const;
+    const SwTOXType*    GetTOXType(TOXTypes eTyp) const;
     const SwTOXBase*    GetCurTOX();
 
 };

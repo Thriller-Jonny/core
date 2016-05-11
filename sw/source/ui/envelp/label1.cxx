@@ -24,7 +24,7 @@
 #include <swtypes.hxx>
 #include <wrtsh.hxx>
 #include <initui.hxx>
-#include <../../uibase/envelp/labimp.hxx>
+#include "labimp.hxx"
 #include <labfmt.hxx>
 #include <labprt.hxx>
 #include <unotools.hxx>
@@ -65,7 +65,7 @@ void SwLabRec::FillItem( SwLabItem& rItem ) const
     rItem.m_nRows   = nRows;
 }
 
-void SwLabDlg::_ReplaceGroup( const OUString &rMake )
+void SwLabDlg::ReplaceGroup_( const OUString &rMake )
 {
     // Remove old entries
     m_pRecs->erase(m_pRecs->begin() + 1, m_pRecs->end());
@@ -160,10 +160,10 @@ SwLabDlg::SwLabDlg(vcl::Window* pParent, const SfxItemSet& rSet,
     }
 
     if ( !aMakes.empty() )
-        _ReplaceGroup( aMakes[nLstGroup] );
+        ReplaceGroup_( aMakes[nLstGroup] );
 
-    if (pExampleSet)
-        pExampleSet->Put(aItem);
+    if (m_pExampleSet)
+        m_pExampleSet->Put(aItem);
 }
 
 SwLabDlg::~SwLabDlg()
@@ -725,7 +725,7 @@ void SwVisitingCardPage::Reset(const SfxItemSet* rSet)
             {
                 lcl_SelectBlock(*m_pAutoTextLB, aLabItem.m_sGlossaryBlockName);
                 if(m_xAutoText.is() && pExampleFrame->IsInitialized())
-                    pExampleFrame->ClearDocument( true );
+                    pExampleFrame->ClearDocument();
             }
         }
     }

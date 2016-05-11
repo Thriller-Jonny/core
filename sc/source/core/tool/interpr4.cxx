@@ -74,6 +74,7 @@
 #include <basic/basmgr.hxx>
 #include <vbahelper/vbaaccesshelper.hxx>
 #include <memory>
+#include <stack>
 
 using namespace com::sun::star;
 using namespace formula;
@@ -477,7 +478,10 @@ bool ScInterpreter::CreateStringArr(SCCOL nCol1, SCROW nRow1, SCTAB nTab1,
                         nPos += 10 + nStrLen + 1;
                         sal_uInt8* q = ( pCellArr + nPos );
                         if( (nStrLen & 1) == 0 )
-                            *q++ = 0, nPos++;
+                        {
+                            *q++ = 0;
+                            nPos++;
+                        }
                         p = reinterpret_cast<sal_uInt16*>( pCellArr + nPos );
                         nCount++;
                     }
@@ -593,7 +597,10 @@ bool ScInterpreter::CreateCellArr(SCCOL nCol1, SCROW nRow1, SCTAB nTab1,
                             nPos += 2 + nStrLen + 1;
                             sal_uInt8* q = ( pCellArr + nPos );
                             if( (nStrLen & 1) == 0 )
-                                *q++ = 0, nPos++;
+                            {
+                                *q++ = 0;
+                                nPos++;
+                            }
                         }
                         nCount++;
                         p = reinterpret_cast<sal_uInt16*>( pCellArr + nPos );
@@ -656,9 +663,8 @@ void ScInterpreter::PushTempToken( FormulaToken* p )
     if ( sp >= MAXSTACK )
     {
         SetError( errStackOverflow );
-        if (!p->GetRef())
-            // p is a dangling pointer hereafter!
-            p->Delete();
+        // p may be a dangling pointer hereafter!
+        p->DeleteIfZeroRef();
     }
     else
     {
@@ -671,9 +677,8 @@ void ScInterpreter::PushTempToken( FormulaToken* p )
             }
             else
             {
-                if (!p->GetRef())
-                    // p is a dangling pointer hereafter!
-                    p->Delete();
+                // p may be a dangling pointer hereafter!
+                p->DeleteIfZeroRef();
                 PushTempTokenWithoutError( new FormulaErrorToken( nGlobalError));
             }
         }
@@ -891,11 +896,20 @@ void ScInterpreter::SingleRefToVars( const ScSingleRefData & rRef,
         rTab = rRef.Tab();
 
     if( !ValidCol( rCol) || rRef.IsColDeleted() )
-        SetError( errNoRef ), rCol = 0;
+    {
+        SetError( errNoRef );
+        rCol = 0;
+    }
     if( !ValidRow( rRow) || rRef.IsRowDeleted() )
-        SetError( errNoRef ), rRow = 0;
+    {
+        SetError( errNoRef );
+        rRow = 0;
+    }
     if( !ValidTab( rTab, pDok->GetTableCount() - 1) || rRef.IsTabDeleted() )
-        SetError( errNoRef ), rTab = 0;
+    {
+        SetError( errNoRef );
+        rTab = 0;
+    }
 }
 
 void ScInterpreter::PopSingleRef(SCCOL& rCol, SCROW &rRow, SCTAB& rTab)
@@ -954,13 +968,12 @@ void ScInterpreter::PopSingleRef( ScAddress& rAdr )
 
 void ScInterpreter::DoubleRefToVars( const formula::FormulaToken* p,
         SCCOL& rCol1, SCROW &rRow1, SCTAB& rTab1,
-        SCCOL& rCol2, SCROW &rRow2, SCTAB& rTab2,
-        bool bDontCheckForTableOp )
+        SCCOL& rCol2, SCROW &rRow2, SCTAB& rTab2 )
 {
     const ScComplexRefData& rCRef = *p->GetDoubleRef();
     SingleRefToVars( rCRef.Ref1, rCol1, rRow1, rTab1);
     SingleRefToVars( rCRef.Ref2, rCol2, rRow2, rTab2);
-    if (!pDok->m_TableOpList.empty() && !bDontCheckForTableOp)
+    if (!pDok->m_TableOpList.empty())
     {
         ScRange aRange( rCol1, rRow1, rTab1, rCol2, rRow2, rTab2 );
         if ( IsTableOpInRange( aRange ) )
@@ -1010,8 +1023,7 @@ ScDBRangeBase* ScInterpreter::PopDBDoubleRef()
 }
 
 void ScInterpreter::PopDoubleRef(SCCOL& rCol1, SCROW &rRow1, SCTAB& rTab1,
-                                 SCCOL& rCol2, SCROW &rRow2, SCTAB& rTab2,
-                                 bool bDontCheckForTableOp )
+                                 SCCOL& rCol2, SCROW &rRow2, SCTAB& rTab2)
 {
     if( sp )
     {
@@ -1023,8 +1035,7 @@ void ScInterpreter::PopDoubleRef(SCCOL& rCol1, SCROW &rRow1, SCTAB& rTab1,
                 nGlobalError = p->GetError();
                 break;
             case svDoubleRef:
-                DoubleRefToVars( p, rCol1, rRow1, rTab1, rCol2, rRow2, rTab2,
-                        bDontCheckForTableOp);
+                DoubleRefToVars( p, rCol1, rRow1, rTab1, rCol2, rRow2, rTab2);
                 break;
             default:
                 SetError( errIllegalParameter);
@@ -1835,6 +1846,20 @@ StackVar ScInterpreter::GetStackType( sal_uInt8 nParam )
     else
         eRes = svUnknown;
     return eRes;
+}
+
+void ScInterpreter::ReverseStack( sal_uInt8 nParamCount )
+{
+    //reverse order of parameter stack
+    FormulaToken* p;
+    assert( sp >= nParamCount && " less stack elements than parameters");
+    short nStackParams = std::min<short>( sp, nParamCount);
+    for ( short i = 0; i < short( nStackParams / 2 ); i++ )
+    {
+        p = pStack[ sp - ( nStackParams - i ) ];
+        pStack[ sp - ( nStackParams - i ) ] = pStack[ sp - 1 - i ];
+        pStack[ sp - 1 - i ] = p;
+    }
 }
 
 bool ScInterpreter::DoubleRefToPosSingleRef( const ScRange& rRange, ScAddress& rAdr )
@@ -3198,7 +3223,10 @@ bool ScInterpreter::SetSbxVariable( SbxVariable* pVar, const ScAddress& rPos )
                         pVar->PutString(aCell.mpFormula->GetString().getString());
                 }
                 else
-                    SetError( nErr ), bOk = false;
+                {
+                    SetError( nErr );
+                    bOk = false;
+                }
                 break;
             default :
                 pVar->PutDouble( 0.0 );
@@ -3213,7 +3241,7 @@ bool ScInterpreter::SetSbxVariable( SbxVariable* pVar, const ScAddress& rPos )
 
 namespace {
 
-class FindByPointer : ::std::unary_function<ScInterpreterTableOpParams, bool>
+class FindByPointer : public ::std::unary_function<ScInterpreterTableOpParams, bool>
 {
     const ScInterpreterTableOpParams* mpTableOp;
 public:
@@ -3445,6 +3473,7 @@ ScInterpreter::ScInterpreter( ScFormulaCell* pCell, ScDocument* pDoc,
     , aPos(rPos)
     , rArr(r)
     , pDok(pDoc)
+    , mpLinkManager(pDok->GetLinkManager())
     , mrStrPool(pDoc->GetSharedStringPool())
     , pJumpMatrix(nullptr)
     , pTokenMatrixMap(nullptr)
@@ -3549,7 +3578,38 @@ double applyImplicitIntersection(const sc::RangeMatrix& rMat, const ScAddress& r
     return fVal;
 }
 
+// Test for Functions that evaluate an error code and directly set nGlobalError to 0
+bool IsErrFunc(OpCode oc)
+{
+    switch (oc)
+    {
+        case ocCount :
+        case ocCount2 :
+        case ocErrorType :
+        case ocIsEmpty :
+        case ocIsErr :
+        case ocIsError :
+        case ocIsFormula :
+        case ocIsLogical :
+        case ocIsNA :
+        case ocIsNonString :
+        case ocIsRef :
+        case ocIsString :
+        case ocIsValue :
+        case ocN :
+        case ocType :
+        case ocIfError :
+        case ocIfNA :
+        case ocErrorType_ODF :
+        case ocIfs_MS:
+        case ocSwitch_MS:
+            return true;
+        default:
+            return false;
+    }
 }
+
+} //namespace
 
 StackVar ScInterpreter::Interpret()
 {
@@ -3557,6 +3617,7 @@ StackVar ScInterpreter::Interpret()
     sal_uLong nRetIndexExpr = 0;
     sal_uInt16 nErrorFunction = 0;
     sal_uInt16 nErrorFunctionCount = 0;
+    std::stack<sal_uInt16> aErrorFunctionStack;
     sal_uInt16 nStackBase;
 
     nGlobalError = 0;
@@ -3701,6 +3762,7 @@ StackVar ScInterpreter::Interpret()
                 case ocGetDayOfWeek     : ScGetDayOfWeek();             break;
                 case ocWeek             : ScGetWeekOfYear();            break;
                 case ocIsoWeeknum       : ScGetIsoWeekOfYear();         break;
+                case ocWeeknumOOo       : ScWeeknumOOo();               break;
                 case ocEasterSunday     : ScEasterSunday();             break;
                 case ocNetWorkdays      : ScNetWorkdays( false);        break;
                 case ocNetWorkdays_MS   : ScNetWorkdays( true );        break;
@@ -3769,6 +3831,7 @@ StackVar ScInterpreter::Interpret()
                 case ocSumX2MY2         : ScSumX2MY2();                 break;
                 case ocSumX2DY2         : ScSumX2DY2();                 break;
                 case ocSumXMY2          : ScSumXMY2();                  break;
+                case ocRawSubtract      : ScRawSubtract();              break;
                 case ocLog              : ScLog();                      break;
                 case ocGCD              : ScGCD();                      break;
                 case ocLCM              : ScLCM();                      break;
@@ -3877,6 +3940,12 @@ StackVar ScInterpreter::Interpret()
                 case ocSubstitute       : ScSubstitute();               break;
                 case ocRept             : ScRept();                     break;
                 case ocConcat           : ScConcat();                   break;
+                case ocConcat_MS        : ScConcat_MS();                break;
+                case ocTextJoin_MS      : ScTextJoin_MS();              break;
+                case ocIfs_MS           : ScIfs_MS();                   break;
+                case ocSwitch_MS        : ScSwitch_MS();                break;
+                case ocMinIfs_MS        : ScMinIfs_MS();                break;
+                case ocMaxIfs_MS        : ScMaxIfs_MS();                break;
                 case ocMatValue         : ScMatValue();                 break;
                 case ocMatrixUnit       : ScEMat();                     break;
                 case ocMatDet           : ScMatDet();                   break;
@@ -3975,7 +4044,15 @@ StackVar ScInterpreter::Interpret()
                 case ocGrowth           : ScGrowth();                   break;
                 case ocLinest           : ScLinest();                   break;
                 case ocLogest           : ScLogest();                   break;
-                case ocForecast         : ScForecast();                 break;
+                case ocForecast_LIN     :
+                case ocForecast         : ScForecast();                   break;
+                case ocForecast_ETS_ADD : ScForecast_Ets( etsAdd );       break;
+                case ocForecast_ETS_SEA : ScForecast_Ets( etsSeason );    break;
+                case ocForecast_ETS_MUL : ScForecast_Ets( etsMult );      break;
+                case ocForecast_ETS_PIA : ScForecast_Ets( etsPIAdd );     break;
+                case ocForecast_ETS_PIM : ScForecast_Ets( etsPIMult );    break;
+                case ocForecast_ETS_STA : ScForecast_Ets( etsStatAdd );   break;
+                case ocForecast_ETS_STM : ScForecast_Ets( etsStatMult );  break;
                 case ocGammaLn          :
                 case ocGammaLn_MS       : ScLogGamma();                 break;
                 case ocGamma            : ScGamma();                    break;
@@ -4088,53 +4165,34 @@ StackVar ScInterpreter::Interpret()
             else
                 nLevel = 0;
             if ( nLevel == 1 || (nLevel == 2 && aCode.IsEndOfPath()) )
+            {
+                if (nLevel == 1)
+                    aErrorFunctionStack.push( nErrorFunction);
                 bGotResult = JumpMatrix( nLevel );
+                if (aErrorFunctionStack.empty())
+                    assert(!"ScInterpreter::Interpret - aErrorFunctionStack empty in JumpMatrix context");
+                else
+                {
+                    nErrorFunction = aErrorFunctionStack.top();
+                    if (bGotResult)
+                        aErrorFunctionStack.pop();
+                }
+            }
             else
                 pJumpMatrix = nullptr;
         } while ( bGotResult );
 
-// Functions that evaluate an error code and directly set nGlobalError to 0,
-// usage: switch( OpCode ) { CASE_OCERRFUNC statements; }
-#define CASE_OCERRFUNC \
-    case ocCount : \
-    case ocCount2 : \
-    case ocErrorType : \
-    case ocIsEmpty : \
-    case ocIsErr : \
-    case ocIsError : \
-    case ocIsFormula : \
-    case ocIsLogical : \
-    case ocIsNA : \
-    case ocIsNonString : \
-    case ocIsRef : \
-    case ocIsString : \
-    case ocIsValue : \
-    case ocN : \
-    case ocType : \
-    case ocIfError : \
-    case ocIfNA : \
-    case ocErrorType_ODF :
+        if( IsErrFunc(eOp) )
+            ++nErrorFunction;
 
-        switch ( eOp )
-        {
-            CASE_OCERRFUNC
-                 ++ nErrorFunction;
-            default:
-                ;   // nothing
-        }
         if ( nGlobalError )
         {
             if ( !nErrorFunctionCount )
             {   // count of errorcode functions in formula
                 for ( FormulaToken* t = rArr.FirstRPN(); t; t = rArr.NextRPN() )
                 {
-                    switch ( t->GetOpCode() )
-                    {
-                        CASE_OCERRFUNC
-                             ++nErrorFunctionCount;
-                        default:
-                            ;   // nothing
-                    }
+                    if ( IsErrFunc(t->GetOpCode()) )
+                        ++nErrorFunctionCount;
                 }
             }
             if ( nErrorFunction >= nErrorFunctionCount )

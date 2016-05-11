@@ -19,8 +19,9 @@ $(eval $(call gb_InstallModule_use_auto_install_libs,scp2/ooo,\
 
 $(eval $(call gb_InstallModule_define_if_set,scp2/ooo,\
 	ENABLE_GTK \
+	ENABLE_SYSTRAY_GTK \
+	ENABLE_GTK3 \
 	ENABLE_MACOSX_SANDBOX \
-	ENABLE_NPAPI_FROM_BROWSER \
 	ENABLE_ONLINE_UPDATE \
 	ENABLE_TDE \
 	SYSTEM_CURL \
@@ -62,16 +63,6 @@ $(eval $(call gb_InstallModule_add_defs,scp2/ooo,\
 ))
 endif
 
-ifeq ($(DISABLE_PYTHON),TRUE)
-$(eval $(call gb_InstallModule_add_defs,scp2/ooo,\
-	-DDISABLE_PYUNO \
-))
-else ifneq ($(SYSTEM_PYTHON),)
-$(eval $(call gb_InstallModule_add_defs,scp2/ooo,\
-	-DSYSTEM_PYTHON \
-))
-endif
-
 $(eval $(call gb_InstallModule_add_defs,scp2/ooo,\
 	-DICU_MAJOR=$(ICU_MAJOR) \
 ))
@@ -103,6 +94,9 @@ $(eval $(call gb_InstallModule_add_scpfiles,scp2/ooo,\
 		scp2/source/ooo/mingw_dlls \
 	) \
     scp2/source/ooo/module_filter \
+    $(if $(filter-out MACOSX WNT,$(OS)), \
+		scp2/source/ooo/module_libreofficekit \
+	) \
 ))
 
 $(eval $(call gb_InstallModule_add_localized_scpfiles,scp2/ooo,\

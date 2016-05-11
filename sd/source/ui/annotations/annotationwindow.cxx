@@ -56,7 +56,6 @@
 #include <sfx2/viewfrm.hxx>
 #include <sfx2/bindings.hxx>
 #include <sfx2/dispatch.hxx>
-#include <sfx2/mnumgr.hxx>
 
 #include <vcl/vclenum.hxx>
 #include <vcl/edit.hxx>
@@ -272,7 +271,7 @@ Selection AnnotationTextWindow::GetSurroundingTextSelection() const
 /************** AnnotationWindow***********************************++*/
 
 AnnotationWindow::AnnotationWindow( AnnotationManagerImpl& rManager, DrawDocShell* pDocShell, vcl::Window* pParent )
-: FloatingWindow(pParent, WB_SYSTEMWINDOW|WB_BORDER|WB_NEEDSFOCUS)
+: FloatingWindow(pParent, WB_BORDER)
 , mrManager( rManager )
 , mpDocShell( pDocShell )
 , mpDoc( pDocShell->GetDoc() )
@@ -282,9 +281,11 @@ AnnotationWindow::AnnotationWindow( AnnotationManagerImpl& rManager, DrawDocShel
 , mbReadonly(pDocShell->IsReadOnly())
 , mbProtected(false)
 , mbMouseOverButton(false)
+, mbPopupMenuActive(false)
 , mpTextWindow(nullptr)
 , mpMeta(nullptr)
 {
+    EnableAlwaysOnTop();
 }
 
 AnnotationWindow::~AnnotationWindow()
@@ -320,12 +321,12 @@ void AnnotationWindow::InitControls()
     AllSettings aSettings = mpMeta->GetSettings();
     StyleSettings aStyleSettings = aSettings.GetStyleSettings();
     vcl::Font aFont = aStyleSettings.GetFieldFont();
-    aFont.SetHeight(8);
+    aFont.SetFontHeight(8);
     aStyleSettings.SetFieldFont(aFont);
     aSettings.SetStyleSettings(aStyleSettings);
     mpMeta->SetSettings(aSettings);
 
-    mpOutliner = new ::Outliner(GetAnnotationPool(),OUTLINERMODE_TEXTOBJECT);
+    mpOutliner = new ::Outliner(GetAnnotationPool(),OutlinerMode::TextObject);
     Doc()->SetCalcFieldValueHdl( mpOutliner );
     mpOutliner->SetUpdateMode( true );
     Rescale();
@@ -385,9 +386,9 @@ void AnnotationWindow::Rescale()
     if ( mpMeta )
     {
         vcl::Font aFont( mpMeta->GetSettings().GetStyleSettings().GetFieldFont() );
-        sal_Int32 nHeight = aFont.GetHeight();
+        sal_Int32 nHeight = aFont.GetFontHeight();
         nHeight = nHeight * aMode.GetScaleY().GetNumerator() / aMode.GetScaleY().GetDenominator();
-        aFont.SetHeight( nHeight );
+        aFont.SetFontHeight( nHeight );
         mpMeta->SetControlFont( aFont );
     }
 }
@@ -523,7 +524,7 @@ TextApiObject* getTextApiObject( const Reference< XAnnotation >& xAnnotation )
     return nullptr;
 }
 
-void AnnotationWindow::setAnnotation( const Reference< XAnnotation >& xAnnotation, bool bGrabFocus )
+void AnnotationWindow::setAnnotation( const Reference< XAnnotation >& xAnnotation )
 {
     if( (xAnnotation != mxAnnotation) && xAnnotation.is() )
     {
@@ -559,9 +560,6 @@ void AnnotationWindow::setAnnotation( const Reference< XAnnotation >& xAnnotatio
            sMeta += sDateTime;
         }
         mpMeta->SetText(sMeta);
-
-        if( bGrabFocus )
-            GrabFocus();
     }
 }
 
@@ -779,8 +777,8 @@ void AnnotationWindow::ExecuteSlot( sal_uInt16 nSID )
         break;
         case SID_ATTR_CHAR_UNDERLINE:
         {
-            FontUnderline eFU = static_cast<const SvxUnderlineItem&>( aEditAttr. Get( EE_CHAR_UNDERLINE ) ).GetLineStyle();
-            aNewAttr.Put( SvxUnderlineItem( eFU == UNDERLINE_SINGLE ? UNDERLINE_NONE : UNDERLINE_SINGLE, EE_CHAR_UNDERLINE ) );
+            FontLineStyle eFU = static_cast<const SvxUnderlineItem&>( aEditAttr. Get( EE_CHAR_UNDERLINE ) ).GetLineStyle();
+            aNewAttr.Put( SvxUnderlineItem( eFU == LINESTYLE_SINGLE ? LINESTYLE_NONE : LINESTYLE_SINGLE, EE_CHAR_UNDERLINE ) );
         }
         break;
         case SID_ATTR_CHAR_STRIKEOUT:

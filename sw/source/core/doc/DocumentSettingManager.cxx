@@ -54,6 +54,7 @@ sw::DocumentSettingManager::DocumentSettingManager(SwDoc &rDoc)
     // COMPATIBILITY FLAGS START
 
     mbAddFlyOffsets(false),
+    mbAddVerticalFlyOffsets(false),
     mbUseHiResolutionVirtualDevice(true),
     mbMathBaselineAlignment(false), // default for *old* documents is 'off'
     mbStylesNoDefault(false),
@@ -143,6 +144,7 @@ bool sw::DocumentSettingManager::get(/*[in]*/ DocumentSettingId id) const
         case DocumentSettingId::PARA_SPACE_MAX_AT_PAGES: return mbParaSpaceMaxAtPages; //(n8Dummy1 & DUMMY_PARASPACEMAX_AT_PAGES);
         case DocumentSettingId::TAB_COMPAT: return mbTabCompat; //(n8Dummy1 & DUMMY_TAB_COMPAT);
         case DocumentSettingId::ADD_FLY_OFFSETS: return mbAddFlyOffsets; //(n8Dummy2 & DUMMY_ADD_FLY_OFFSETS);
+        case DocumentSettingId::ADD_VERTICAL_FLY_OFFSETS: return mbAddVerticalFlyOffsets;
         case DocumentSettingId::ADD_EXT_LEADING: return mbAddExternalLeading; //(n8Dummy2 & DUMMY_ADD_EXTERNAL_LEADING);
         case DocumentSettingId::USE_VIRTUAL_DEVICE: return mbUseVirtualDevice; //(n8Dummy1 & DUMMY_USE_VIRTUAL_DEVICE);
         case DocumentSettingId::USE_HIRES_VIRTUAL_DEVICE: return mbUseHiResolutionVirtualDevice; //(n8Dummy2 & DUMMY_USE_HIRES_VIR_DEV);
@@ -213,6 +215,9 @@ void sw::DocumentSettingManager::set(/*[in]*/ DocumentSettingId id, /*[in]*/ boo
             break;
         case DocumentSettingId::ADD_FLY_OFFSETS:
             mbAddFlyOffsets = value;
+            break;
+        case DocumentSettingId::ADD_VERTICAL_FLY_OFFSETS:
+            mbAddVerticalFlyOffsets = value;
             break;
         case DocumentSettingId::ADD_EXT_LEADING:
             mbAddExternalLeading = value;
@@ -435,7 +440,7 @@ void sw::DocumentSettingManager::setForbiddenCharacters(/*[in]*/ sal_uInt16 nLan
     {
         pTmpRoot->StartAllAction();
         for(SwRootFrame* aLayout : m_rDoc.GetAllLayouts())
-            aLayout->InvalidateAllContent(INV_SIZE);
+            aLayout->InvalidateAllContent(SwInvalidateFlags::Size);
         pTmpRoot->EndAllAction();
     }
     m_rDoc.getIDocumentState().SetModified();
@@ -505,7 +510,7 @@ void sw::DocumentSettingManager::setCharacterCompressionType( /*[in]*/SwCharComp
         {
             pTmpRoot->StartAllAction();
             for( auto aLayout : m_rDoc.GetAllLayouts() )
-                aLayout->InvalidateAllContent(INV_SIZE);
+                aLayout->InvalidateAllContent(SwInvalidateFlags::Size);
             pTmpRoot->EndAllAction();
         }
         m_rDoc.getIDocumentState().SetModified();

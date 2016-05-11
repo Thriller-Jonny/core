@@ -36,15 +36,6 @@ namespace com { namespace sun { namespace star { namespace awt {
 
 namespace comphelper
 {
-    /** compare two FontDescriptor's
-    */
-    COMPHELPER_DLLPUBLIC bool   operator ==(const css::awt::FontDescriptor& _rLeft, const css::awt::FontDescriptor& _rRight);
-    inline  bool    operator !=(const css::awt::FontDescriptor& _rLeft, const css::awt::FontDescriptor& _rRight)
-    {
-        return !(_rLeft == _rRight);
-    }
-
-
     /// returns sal_True if objects of the types given are "compatible"
     COMPHELPER_DLLPUBLIC bool isAssignableFrom(const css::uno::Type& _rAssignable, const css::uno::Type& _rFrom);
 
@@ -73,14 +64,13 @@ namespace comphelper
     }
 
 
-
     /** get a css::awt::FontDescriptor that is fully initialized with
         the XXX_DONTKNOW enum values (which isn't the case if you instantiate it
         via the default constructor)
     */
     COMPHELPER_DLLPUBLIC css::awt::FontDescriptor    getDefaultFont();
 
-    /** examine a sequence for the com.sun.star.uno::Type of it's elements.
+    /** examine a sequence for the com.sun.star.uno::Type of its elements.
     */
     COMPHELPER_DLLPUBLIC css::uno::Type getSequenceElementType(const css::uno::Type& _rSequenceType);
 
@@ -101,15 +91,6 @@ namespace comphelper
     COMPHELPER_DLLPUBLIC bool           getBOOL(const css::uno::Any& _rAny);
 
     COMPHELPER_DLLPUBLIC sal_Int32      getEnumAsINT32(const css::uno::Any& _rAny) throw(css::lang::IllegalArgumentException);
-
-//= replacement of some former UsrAny.setXXX methods - can be used with rvalues
-    inline void setBOOL(css::uno::Any& _rAny, bool _b)
-    { _rAny.setValue(&_b, cppu::UnoType<bool>::get()); }
-
-//= extension of ::cppu::makeAny()
-    inline css::uno::Any makeBoolAny(bool _b)
-    { return css::uno::Any(&_b, cppu::UnoType<bool>::get()); }
-
 
 }   // namespace comphelper
 

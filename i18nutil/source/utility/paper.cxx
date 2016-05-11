@@ -233,9 +233,9 @@ PaperInfo PaperInfo::getSystemDefaultPaper()
             char aBuffer[ 1024 ];
             aBuffer[0] = 0;
             char *pBuffer = fgets( aBuffer, sizeof(aBuffer), pPipe );
-            pclose( pPipe );
+            bool bOk = pclose(pPipe) == 0;
 
-            if (pBuffer && *pBuffer != 0)
+            if (bOk && pBuffer && *pBuffer != 0)
             {
                 OString aPaper(pBuffer);
                 aPaper = aPaper.trim();
@@ -347,7 +347,7 @@ PaperInfo PaperInfo::getSystemDefaultPaper()
 
 PaperInfo::PaperInfo(Paper eType) : m_eType(eType)
 {
-    OSL_ENSURE( sizeof(aDinTab) / sizeof(aDinTab[0]) == NUM_PAPER_ENTRIES,
+    OSL_ENSURE( SAL_N_ELEMENTS(aDinTab) == NUM_PAPER_ENTRIES,
             "mismatch between array entries and enum values" );
 
     m_nPaperWidth = aDinTab[m_eType].m_nWidth;

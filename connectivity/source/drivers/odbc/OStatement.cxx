@@ -44,7 +44,6 @@ using namespace ::comphelper;
     OTools::ThrowException(m_pConnection,x,m_aStatementHandle,SQL_HANDLE_STMT,*this)
 
 
-
 using namespace connectivity::odbc;
 
 using namespace com::sun::star::uno;
@@ -62,7 +61,6 @@ OStatement_Base::OStatement_Base(OConnection* _pConnection )
     ,m_pConnection(_pConnection)
     ,m_aStatementHandle(SQL_NULL_HANDLE)
     ,m_pRowStatusArray(nullptr)
-    ,rBHelper(OStatement_BASE::rBHelper)
 {
     osl_atomic_increment( &m_refCount );
     m_pConnection->acquire();
@@ -387,7 +385,7 @@ Reference< XResultSet > OStatement_Base::getResultSet(bool checkCount)
     if (m_xResultSet.get().is())  // if resultset already retrieved,
     {
         // throw exception to avoid sequence error
-        ::dbtools::throwFunctionSequenceException(*this,Any());
+        ::dbtools::throwFunctionSequenceException(*this);
     }
 
     OResultSet* pRs = nullptr;
@@ -422,9 +420,9 @@ Reference< XResultSet > OStatement_Base::getResultSet(bool checkCount)
 // Invoke SQLGetStmtOption with the given option.
 
 
-template < typename T, SQLINTEGER BufferLength > T OStatement_Base::getStmtOption (SQLINTEGER fOption, T dflt) const
+template < typename T, SQLINTEGER BufferLength > T OStatement_Base::getStmtOption (SQLINTEGER fOption) const
 {
-    T result (dflt);
+    T result (0);
     OSL_ENSURE(m_aStatementHandle,"StatementHandle is null!");
     N3SQLGetStmtAttr(m_aStatementHandle, fOption, &result, BufferLength, nullptr);
     return result;
@@ -518,7 +516,6 @@ Sequence< sal_Int32 > SAL_CALL OStatement::executeBatch(  ) throw(SQLException, 
     }
     return aRet;
 }
-
 
 
 sal_Int32 SAL_CALL OStatement_Base::executeUpdate( const OUString& sql ) throw(SQLException, RuntimeException, std::exception)
@@ -629,7 +626,6 @@ sal_Bool SAL_CALL OStatement_Base::getMoreResults(  ) throw(SQLException, Runtim
 }
 
 
-
 Any SAL_CALL OStatement_Base::getWarnings(  ) throw(SQLException, RuntimeException, std::exception)
 {
     ::osl::MutexGuard aGuard( m_aMutex );
@@ -638,7 +634,6 @@ Any SAL_CALL OStatement_Base::getWarnings(  ) throw(SQLException, RuntimeExcepti
 
     return makeAny(m_aLastWarning);
 }
-
 
 
 void SAL_CALL OStatement_Base::clearWarnings(  ) throw(SQLException, RuntimeException, std::exception)
@@ -675,7 +670,7 @@ sal_Int32 OStatement_Base::getResultSetConcurrency() const
 sal_Int32 OStatement_Base::getResultSetType() const
 {
     OSL_ENSURE(m_aStatementHandle,"StatementHandle is null!");
-    SQLULEN nValue (getStmtOption<SQLULEN, SQL_IS_UINTEGER>(SQL_ATTR_CURSOR_TYPE, SQL_CURSOR_FORWARD_ONLY));
+    SQLULEN nValue (getStmtOption<SQLULEN, SQL_IS_UINTEGER>(SQL_ATTR_CURSOR_TYPE));
     switch(nValue)
     {
         case SQL_CURSOR_FORWARD_ONLY:
@@ -864,13 +859,13 @@ void OStatement_Base::setCursorName(const OUString &_par0)
 bool OStatement_Base::isUsingBookmarks() const
 {
     OSL_ENSURE(m_aStatementHandle,"StatementHandle is null!");
-    return SQL_UB_OFF != getStmtOption<SQLULEN, SQL_IS_UINTEGER>(SQL_ATTR_USE_BOOKMARKS, SQL_UB_OFF);
+    return SQL_UB_OFF != getStmtOption<SQLULEN, SQL_IS_UINTEGER>(SQL_ATTR_USE_BOOKMARKS);
 }
 
 bool OStatement_Base::getEscapeProcessing() const
 {
     OSL_ENSURE( m_aStatementHandle, "StatementHandle is null!" );
-    return SQL_NOSCAN_OFF == getStmtOption<SQLULEN, SQL_IS_UINTEGER>(SQL_ATTR_USE_BOOKMARKS, SQL_NOSCAN_OFF);;
+    return SQL_NOSCAN_OFF == getStmtOption<SQLULEN, SQL_IS_UINTEGER>(SQL_ATTR_USE_BOOKMARKS);
 }
 
 void OStatement_Base::setUsingBookmarks(bool _bUseBookmark)

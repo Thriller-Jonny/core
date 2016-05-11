@@ -29,11 +29,12 @@
 #include <string.h>
 #include <sys/time.h>
 
-#include <prex.h>
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
+#include <X11/XKBlib.h>
 #include <X11/Xatom.h>
 #include <X11/keysym.h>
-#include <X11/Xutil.h>
-#include <postx.h>
+
 #if defined(LINUX) || defined(NETBSD) || defined (FREEBSD) || defined(OPENBSD)
 #include <sys/poll.h>
 #else
@@ -48,7 +49,7 @@
 #include <X11_dndcontext.hxx>
 #include <bmp.hxx>
 
-#include "vcl/svapp.hxx"
+#include <vcl/svapp.hxx>
 
 // pointer bitmaps
 #include <copydata_curs.h>
@@ -399,7 +400,7 @@ void SelectionManager::initialize( const Sequence< Any >& arguments ) throw (css
             m_aWindow = XCreateSimpleWindow( m_pDisplay, DefaultRootWindow( m_pDisplay ),
                                              10, 10, 10, 10, 0, 0, 1 );
 
-            // initialize threshold for incremetal transfers
+            // initialize threshold for incremental transfers
             // ICCCM says it should be smaller that the max request size
             // which in turn is guaranteed to be at least 16k bytes
             m_nIncrementalThreshold = XMaxRequestSize( m_pDisplay ) - 1024;

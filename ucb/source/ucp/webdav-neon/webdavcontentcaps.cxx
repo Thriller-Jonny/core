@@ -57,13 +57,11 @@ using namespace com::sun::star;
 using namespace webdav_ucp;
 
 
-
 // ContentProvider implementation.
 
 
-
 bool ContentProvider::getProperty(
-        const OUString & rPropName, beans::Property & rProp, bool bStrict )
+        const OUString & rPropName, beans::Property & rProp )
 {
     if ( !m_pProps )
     {
@@ -271,9 +269,6 @@ bool ContentProvider::getProperty(
     }
     else
     {
-        if ( bStrict )
-            return false;
-
         // All unknown props are treated as:
         rProp = beans::Property(
                     rPropName,
@@ -286,9 +281,7 @@ bool ContentProvider::getProperty(
 }
 
 
-
 // Content implementation.
-
 
 
 // virtual

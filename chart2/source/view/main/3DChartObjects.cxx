@@ -13,7 +13,7 @@
 
 #include <vcl/opengl/GLMHelper.hxx>
 #include <vcl/opengl/OpenGLHelper.hxx>
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 
 namespace chart {
 
@@ -83,12 +83,8 @@ const TextCacheItem& TextCache::getText(OUString const & rText, bool bIs3dText)
         aFont = vcl::Font("Brillante St",Size(0,0));
     else
         aFont = pDevice->GetFont();
-    aFont.SetSize(Size(0, 96));
-    static bool bOldRender = getenv("OLDRENDER");
-    if (bOldRender)
-        aFont.SetColor(COL_BLACK);
-    else
-        aFont.SetColor(COL_GREEN); // RGB_COLORDATA(0xf0, 0xf0, 0xf0));
+    aFont.SetFontSize(Size(0, 96));
+    aFont.SetColor(COL_GREEN); // RGB_COLORDATA(0xf0, 0xf0, 0xf0));
     pDevice->SetFont(aFont);
     pDevice->Erase();
 
@@ -97,7 +93,6 @@ const TextCacheItem& TextCache::getText(OUString const & rText, bool bIs3dText)
     pDevice->DrawText(Point(0,0), rText);
 
     BitmapEx aText(pDevice->GetBitmapEx(Point(0,0), pDevice->GetOutputSize()));
-//    TextCacheItem *pItem = new TextCacheItem(OpenGLHelper::ConvertBitmapExToRGBABuffer(aText), aText.GetSizePixel());
     Bitmap aBitmap (aText.GetBitmap());
     BitmapReadAccess *pAcc = aBitmap.AcquireReadAccess();
     sal_uInt8 *buf = reinterpret_cast<sal_uInt8 *>(pAcc->GetBuffer());

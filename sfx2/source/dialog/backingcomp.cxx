@@ -63,7 +63,6 @@ namespace {
 
 const char FRAME_PROPNAME_LAYOUTMANAGER[] = "LayoutManager";
 const char HID_BACKINGWINDOW[] = "FWK_HID_BACKINGWINDOW";
-const char SPECIALTARGET_MENUBAR[] = "_menubar";
 
 /**
     implements the backing component.
@@ -155,11 +154,9 @@ BackingComp::BackingComp( const css::uno::Reference< css::uno::XComponentContext
 }
 
 
-
 BackingComp::~BackingComp()
 {
 }
-
 
 
 /** return information about supported interfaces.
@@ -167,7 +164,7 @@ BackingComp::~BackingComp()
     Some interfaces are supported by his class directly, but some other ones are
     used by aggregation. An instance of this class must provide some window interfaces.
     But it must represent a VCL window behind such interfaces too! So we use an internal
-    saved window member to ask it for it's interfaces and return it. But we must be aware then,
+    saved window member to ask it for its interfaces and return it. But we must be aware then,
     that it can be destroyed from outside too ...
 
     @param  aType
@@ -215,7 +212,6 @@ css::uno::Any SAL_CALL BackingComp::queryInterface( /*IN*/ const css::uno::Type&
 }
 
 
-
 /** increase ref count of this instance.
  */
 
@@ -226,7 +222,6 @@ void SAL_CALL BackingComp::acquire()
 }
 
 
-
 /** decrease ref count of this instance.
  */
 
@@ -235,7 +230,6 @@ void SAL_CALL BackingComp::release()
 {
     OWeakObject::release();
 }
-
 
 
 /** return collection about all supported interfaces.
@@ -285,7 +279,6 @@ css::uno::Sequence< css::uno::Type > SAL_CALL BackingComp::getTypes()
     }
     return pTypeCollection->getTypes();
 }
-
 
 
 /** create one unique Id for all instances of this class.
@@ -348,7 +341,7 @@ css::uno::Sequence< OUString > SAL_CALL BackingComp::getSupportedServiceNames()
             xBackingComp);
 
         // attach controller to the frame
-        // We will use it's container window, to create
+        // We will use its container window, to create
         // the component window. From now we offer the window interfaces!
         xBackingComp.attachFrame(xFrame);
 
@@ -453,7 +446,6 @@ void SAL_CALL BackingComp::attachFrame( /*IN*/ const css::uno::Reference< css::f
 }
 
 
-
 /** not supported.
 
     This component does not know any model. It will be represented by a window and
@@ -465,9 +457,8 @@ void SAL_CALL BackingComp::attachFrame( /*IN*/ const css::uno::Reference< css::f
 sal_Bool SAL_CALL BackingComp::attachModel( /*IN*/ const css::uno::Reference< css::frame::XModel >& )
     throw (css::uno::RuntimeException, std::exception)
 {
-    return sal_False;
+    return false;
 }
-
 
 
 /** not supported.
@@ -485,7 +476,6 @@ css::uno::Reference< css::frame::XModel > SAL_CALL BackingComp::getModel()
 }
 
 
-
 /** not supported.
 
     return  An empty value.
@@ -498,7 +488,6 @@ css::uno::Any SAL_CALL BackingComp::getViewData()
 }
 
 
-
 /** not supported.
 
     @param  aData
@@ -509,7 +498,6 @@ void SAL_CALL BackingComp::restoreViewData( /*IN*/ const css::uno::Any& )
     throw (css::uno::RuntimeException, std::exception)
 {
 }
-
 
 
 /** returns the attached frame for this component.
@@ -530,7 +518,6 @@ css::uno::Reference< css::frame::XFrame > SAL_CALL BackingComp::getFrame()
 }
 
 
-
 /** ask controller for its current working state.
 
     If someone wishes to close this component, it must suspend the controller before.
@@ -548,9 +535,8 @@ sal_Bool SAL_CALL BackingComp::suspend( /*IN*/ sal_Bool )
     throw (css::uno::RuntimeException, std::exception)
 {
     /* FIXME ... implemented by using default :-( */
-    return sal_True;
+    return true;
 }
-
 
 
 /** callback from our window member.
@@ -588,7 +574,6 @@ void SAL_CALL BackingComp::disposing( /*IN*/ const css::lang::EventObject& aEven
 }
 
 
-
 /** kill this instance.
 
     It can be called from our owner frame only. But there is no possibility to check the calli.
@@ -602,21 +587,6 @@ void SAL_CALL BackingComp::dispose()
 {
     /* SAFE { */
     SolarMutexGuard aGuard;
-
-    // kill the menu
-    css::util::URL aURL;
-    aURL.Complete = ".uno:close";
-    css::uno::Reference< css::util::XURLTransformer > xParser = css::util::URLTransformer::create(m_xContext);
-    if (xParser.is())
-        xParser->parseStrict(aURL);
-
-    css::uno::Reference< css::frame::XDispatchProvider > xProvider(m_xFrame, css::uno::UNO_QUERY);
-    if (xProvider.is())
-    {
-        css::uno::Reference< css::frame::XDispatch > xDispatch = xProvider->queryDispatch(aURL, SPECIALTARGET_MENUBAR, 0);
-        if (xDispatch.is())
-            xDispatch->dispatch(aURL, css::uno::Sequence< css::beans::PropertyValue>());
-    }
 
     // stop listening at the window
     if (m_xWindow.is())
@@ -640,7 +610,6 @@ void SAL_CALL BackingComp::dispose()
 }
 
 
-
 /** not supported.
 
     @param  xListener
@@ -660,7 +629,6 @@ void SAL_CALL BackingComp::addEventListener( /*IN*/ const css::uno::Reference< c
 }
 
 
-
 /** not supported.
 
     Because registration is not supported too, we must do nothing here. Nobody can call this method really.
@@ -673,7 +641,6 @@ void SAL_CALL BackingComp::removeEventListener( /*IN*/ const css::uno::Reference
     throw(css::uno::RuntimeException, std::exception)
 {
 }
-
 
 
 /**
@@ -733,11 +700,10 @@ void SAL_CALL BackingComp::initialize( /*IN*/ const css::uno::Sequence< css::uno
     if (xBroadcaster.is())
         xBroadcaster->addEventListener(static_cast< css::lang::XEventListener* >(this));
 
-    m_xWindow->setVisible(sal_True);
+    m_xWindow->setVisible(true);
 
     /* } SAFE */
 }
-
 
 
 /**
@@ -747,7 +713,6 @@ void SAL_CALL BackingComp::keyPressed( /*IN*/ const css::awt::KeyEvent&  )
     throw(css::uno::RuntimeException, std::exception)
 {
 }
-
 
 
 /**

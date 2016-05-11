@@ -66,8 +66,6 @@
 
 #include <officecfg/Office/Common.hxx>
 
-#include <boost/signals2/signal.hpp>
-
 #include <memory>
 
 using namespace ::com::sun::star;
@@ -157,21 +155,14 @@ void Impl_IMEInfos::DestroyAttribs()
     nLen = 0;
 }
 
-struct Edit::Impl
-{
-    boost::signals2::signal< void (Edit *) > m_AutocompleteSignal;
-};
-
 Edit::Edit( WindowType nType )
     : Control( nType )
-    , m_pImpl(new Impl)
 {
     ImplInitEditData();
 }
 
 Edit::Edit( vcl::Window* pParent, WinBits nStyle )
     : Control( WINDOW_EDIT )
-    , m_pImpl(new Impl)
 {
     ImplInitEditData();
     ImplInit( pParent, nStyle );
@@ -179,7 +170,6 @@ Edit::Edit( vcl::Window* pParent, WinBits nStyle )
 
 Edit::Edit( vcl::Window* pParent, const ResId& rResId )
     : Control( WINDOW_EDIT )
-    , m_pImpl(new Impl)
 {
     rResId.SetRT( RSC_EDIT );
     WinBits nStyle = ImplInitRes( rResId );
@@ -412,7 +402,7 @@ void Edit::ApplySettings(vcl::RenderContext& rRenderContext)
 
     const StyleSettings& rStyleSettings = rRenderContext.GetSettings().GetStyleSettings();
 
-    vcl::Font aFont = rStyleSettings.GetFieldFont();
+    const vcl::Font& aFont = rStyleSettings.GetFieldFont();
     ApplyControlFont(rRenderContext, aFont);
 
     ImplClearLayoutData();
@@ -501,25 +491,25 @@ long Edit::ImplGetTextYPosition() const
     return ( GetOutputSizePixel().Height() - GetTextHeight() ) / 2;
 }
 
-void Edit::ImplRepaint(vcl::RenderContext& rRenderContext, const Rectangle& rRectangle, bool bLayout)
+void Edit::ImplRepaint(vcl::RenderContext& rRenderContext, const Rectangle& rRectangle)
 {
     if (!IsReallyVisible())
         return;
 
     ApplySettings(rRenderContext);
 
-    OUString aText = ImplGetText();
-    sal_Int32 nLen = aText.getLength();
+    const OUString aText = ImplGetText();
+    const sal_Int32 nLen = aText.getLength();
 
     long nDXBuffer[256];
     std::unique_ptr<long[]> pDXBuffer;
     long* pDX = nDXBuffer;
 
-    if (!aText.isEmpty())
+    if (nLen)
     {
-        if ((size_t) (2 * aText.getLength()) > SAL_N_ELEMENTS(nDXBuffer))
+        if ((size_t) (2 * nLen) > SAL_N_ELEMENTS(nDXBuffer))
         {
-            pDXBuffer.reset(new long[2 * (aText.getLength() + 1)]);
+            pDXBuffer.reset(new long[2 * (nLen + 1)]);
             pDX = pDXBuffer.get();
         }
 
@@ -528,17 +518,6 @@ void Edit::ImplRepaint(vcl::RenderContext& rRenderContext, const Rectangle& rRec
 
     long nTH = GetTextHeight();
     Point aPos(mnXOffset, ImplGetTextYPosition());
-
-    if (bLayout)
-    {
-        aPos.X() = mnXOffset + ImplGetExtraXOffset();
-
-        MetricVector* pVector = &mpControlData->mpLayoutData->m_aUnicodeBoundRects;
-        OUString* pDisplayText = &mpControlData->mpLayoutData->m_aDisplayText;
-
-        rRenderContext.DrawText(aPos, aText, 0, nLen, pVector, pDisplayText);
-        return;
-    }
 
     vcl::Cursor* pCursor = GetCursor();
     bool bVisCursor = pCursor && pCursor->IsVisible();
@@ -594,8 +573,7 @@ void Edit::ImplRepaint(vcl::RenderContext& rRenderContext, const Rectangle& rRec
         Selection aTmpSel(maSelection);
         aTmpSel.Justify();
         // selection is highlighted
-        int i;
-        for(i = 0; i < aText.getLength(); i++)
+        for(sal_Int32 i = 0; i < nLen; ++i)
         {
             Rectangle aRect(aPos, Size(10, nTH));
             aRect.Left() = pDX[2 * i] + mnXOffset + ImplGetExtraXOffset();
@@ -668,7 +646,7 @@ void Edit::ImplRepaint(vcl::RenderContext& rRenderContext, const Rectangle& rRec
                     aRegion = aHiglightClipRegion;
                 }
 
-                for(i = 0; i < mpIMEInfos->nLen; )
+                for(int i = 0; i < mpIMEInfos->nLen; )
                 {
                     sal_uInt16 nAttr = mpIMEInfos->pAttribs[i];
                     vcl::Region aClip;
@@ -688,16 +666,16 @@ void Edit::ImplRepaint(vcl::RenderContext& rRenderContext, const Rectangle& rRec
                     {
                         vcl::Font aFont = rRenderContext.GetFont();
                         if (nAttr & EXTTEXTINPUT_ATTR_UNDERLINE)
-                            aFont.SetUnderline(UNDERLINE_SINGLE);
+                            aFont.SetUnderline(LINESTYLE_SINGLE);
                         else if (nAttr & EXTTEXTINPUT_ATTR_BOLDUNDERLINE)
-                            aFont.SetUnderline( UNDERLINE_BOLD);
+                            aFont.SetUnderline( LINESTYLE_BOLD);
                         else if (nAttr & EXTTEXTINPUT_ATTR_DOTTEDUNDERLINE)
-                            aFont.SetUnderline( UNDERLINE_DOTTED);
+                            aFont.SetUnderline( LINESTYLE_DOTTED);
                         else if (nAttr & EXTTEXTINPUT_ATTR_DASHDOTUNDERLINE)
-                            aFont.SetUnderline( UNDERLINE_DASHDOT);
+                            aFont.SetUnderline( LINESTYLE_DASHDOT);
                         else if (nAttr & EXTTEXTINPUT_ATTR_GRAYWAVELINE)
                         {
-                            aFont.SetUnderline(UNDERLINE_WAVE);
+                            aFont.SetUnderline(LINESTYLE_WAVE);
                             rRenderContext.SetTextLineColor(Color(COL_LIGHTGRAY));
                         }
                         rRenderContext.SetFont(aFont);
@@ -724,12 +702,12 @@ void Edit::ImplRepaint(vcl::RenderContext& rRenderContext, const Rectangle& rRec
 
 void Edit::ImplDelete( const Selection& rSelection, sal_uInt8 nDirection, sal_uInt8 nMode )
 {
-    OUString aText = ImplGetText();
+    const sal_Int32 nTextLen = ImplGetText().getLength();
 
     // loeschen moeglich?
     if ( !rSelection.Len() &&
          (((rSelection.Min() == 0) && (nDirection == EDIT_DEL_LEFT)) ||
-          ((rSelection.Max() == aText.getLength()) && (nDirection == EDIT_DEL_RIGHT))) )
+          ((rSelection.Max() == nTextLen) && (nDirection == EDIT_DEL_RIGHT))) )
         return;
 
     ImplClearLayoutData();
@@ -772,7 +750,7 @@ void Edit::ImplDelete( const Selection& rSelection, sal_uInt8 nDirection, sal_uI
             }
             else if ( nMode == EDIT_DELMODE_RESTOFCONTENT )
             {
-                aSelection.Max() = aText.getLength();
+                aSelection.Max() = nTextLen;
             }
             else
             {
@@ -858,7 +836,7 @@ void Edit::ImplInsertText( const OUString& rStr, const Selection* pNewSel, bool 
     // take care of input-sequence-checking now
     if (bIsUserInput && !rStr.isEmpty())
     {
-        DBG_ASSERT( rStr.getLength() == 1, "unexpected string length. User input is expected to providse 1 char only!" );
+        DBG_ASSERT( rStr.getLength() == 1, "unexpected string length. User input is expected to provide 1 char only!" );
 
         // determine if input-sequence-checking should be applied or not
 
@@ -879,7 +857,7 @@ void Edit::ImplInsertText( const OUString& rStr, const Selection* pNewSel, bool 
 
             // the text that needs to be checked is only the one
             // before the current cursor position
-            OUString aOldText( maText.getStr(), nTmpPos);
+            const OUString aOldText( maText.getStr(), nTmpPos);
             OUString aTmpText( aOldText );
             if (officecfg::Office::Common::I18N::CTL::CTLSequenceCheckingTypeAndReplace::get())
             {
@@ -895,7 +873,7 @@ void Edit::ImplInsertText( const OUString& rStr, const Selection* pNewSel, bool 
                         pOldTxt[nChgPos] == pTmpTxt[nChgPos] )
                     ++nChgPos;
 
-                OUString aChgText( aTmpText.copy( nChgPos ) );
+                const OUString aChgText( aTmpText.copy( nChgPos ) );
 
                 // remove text from first pos to be changed to current pos
                 maText.remove( nChgPos, nTmpPos - nChgPos );
@@ -1589,7 +1567,7 @@ bool Edit::ImplHandleKeyEvent( const KeyEvent& rKEvt )
                     case css::awt::Key::SELECT_TO_BEGIN_OF_PARAGRAPH:
                     case css::awt::Key::SELECT_TO_BEGIN_OF_DOCUMENT:
                         bSelect = true;
-                        // fallthrough intended
+                        SAL_FALLTHROUGH;
                     case css::awt::Key::MOVE_TO_BEGIN_OF_LINE:
                     case css::awt::Key::MOVE_TO_BEGIN_OF_PARAGRAPH:
                     case css::awt::Key::MOVE_TO_BEGIN_OF_DOCUMENT:
@@ -1598,7 +1576,7 @@ bool Edit::ImplHandleKeyEvent( const KeyEvent& rKEvt )
                     case css::awt::Key::SELECT_TO_END_OF_PARAGRAPH:
                     case css::awt::Key::SELECT_TO_END_OF_DOCUMENT:
                         bSelect = true;
-                        // fallthrough intended
+                        SAL_FALLTHROUGH;
                     case css::awt::Key::MOVE_TO_END_OF_LINE:
                     case css::awt::Key::MOVE_TO_END_OF_PARAGRAPH:
                     case css::awt::Key::MOVE_TO_END_OF_DOCUMENT:
@@ -1659,12 +1637,12 @@ bool Edit::ImplHandleKeyEvent( const KeyEvent& rKEvt )
                         ImplCopyToSelectionClipboard();
                     }
 
-                    if (bGoEnd && !m_pImpl->m_AutocompleteSignal.empty() && !rKEvt.GetKeyCode().GetModifier())
+                    if (bGoEnd && maAutocompleteHdl.IsSet() && !rKEvt.GetKeyCode().GetModifier())
                     {
                         if ( (maSelection.Min() == maSelection.Max()) && (maSelection.Min() == maText.getLength()) )
                         {
                             meAutocompleteAction = AUTOCOMPLETE_KEYINPUT;
-                            m_pImpl->m_AutocompleteSignal( this );
+                            maAutocompleteHdl.Call(*this);
                         }
                     }
 
@@ -1759,12 +1737,12 @@ bool Edit::ImplHandleKeyEvent( const KeyEvent& rKEvt )
                     if ( !mbReadOnly )
                     {
                         ImplInsertText(OUString(rKEvt.GetCharCode()), nullptr, true);
-                        if (!m_pImpl->m_AutocompleteSignal.empty())
+                        if (maAutocompleteHdl.IsSet())
                         {
                             if ( (maSelection.Min() == maSelection.Max()) && (maSelection.Min() == maText.getLength()) )
                             {
                                 meAutocompleteAction = AUTOCOMPLETE_KEYINPUT;
-                                m_pImpl->m_AutocompleteSignal( this );
+                                maAutocompleteHdl.Call(*this);
                             }
                         }
                     }
@@ -1966,14 +1944,6 @@ void Edit::GetFocus()
     Control::GetFocus();
 }
 
-vcl::Window* Edit::GetPreferredKeyInputWindow()
-{
-    if ( mpSubEdit )
-        return mpSubEdit->GetPreferredKeyInputWindow();
-    else
-        return this;
-}
-
 void Edit::LoseFocus()
 {
     if ( mpUpdateDataTimer && !mbIsSubEdit && mpUpdateDataTimer->IsActive() )
@@ -2125,12 +2095,12 @@ void Edit::Command( const CommandEvent& rCEvt )
         Invalidate();
 
         // #i25161# call auto complete handler for ext text commit also
-        if (m_pImpl->m_AutocompleteSignal.empty())
+        if (maAutocompleteHdl.IsSet())
         {
             if ( (maSelection.Min() == maSelection.Max()) && (maSelection.Min() == maText.getLength()) )
             {
                 meAutocompleteAction = AUTOCOMPLETE_KEYINPUT;
-                m_pImpl->m_AutocompleteSignal( this );
+                maAutocompleteHdl.Call(*this);
             }
         }
     }
@@ -2391,8 +2361,8 @@ OUString TextFilter::filter(const OUString &rText)
 void Edit::filterText()
 {
     Selection aSel = GetSelection();
-    OUString sOrig = GetText();
-    OUString sNew = mpFilterText->filter(GetText());
+    const OUString sOrig = GetText();
+    const OUString sNew = mpFilterText->filter(GetText());
     if (sOrig != sNew)
     {
         sal_Int32 nDiff = sOrig.getLength() - sNew.getLength();
@@ -2455,7 +2425,7 @@ void Edit::EnableUpdateData( sal_uLong nTimeout )
     {
         if ( !mpUpdateDataTimer )
         {
-            mpUpdateDataTimer = new Timer;
+            mpUpdateDataTimer = new Timer("UpdateDataTimer");
             mpUpdateDataTimer->SetTimeoutHdl( LINK( this, Edit, ImplUpdateDataHdl ) );
         }
 
@@ -2654,7 +2624,7 @@ void Edit::Copy()
 
 void Edit::Paste()
 {
-        css::uno::Reference<css::datatransfer::clipboard::XClipboard> aClipboard(GetClipboard());
+    css::uno::Reference<css::datatransfer::clipboard::XClipboard> aClipboard(GetClipboard());
     ImplPaste( aClipboard );
 }
 
@@ -2664,7 +2634,7 @@ void Edit::Undo()
         mpSubEdit->Undo();
     else
     {
-        OUString aText( maText.toString() );
+        const OUString aText( maText.toString() );
         ImplDelete( Selection( 0, aText.getLength() ), EDIT_DEL_RIGHT, EDIT_DELMODE_SIMPLE );
         ImplInsertText( maUndoText );
         ImplSetSelection( Selection( 0, maUndoText.getLength() ) );
@@ -2697,6 +2667,10 @@ OUString Edit::GetText() const
         return mpSubEdit->GetText();
     else
         return maText.toString();
+}
+
+void Edit::SetCursorAtLast(){
+    ImplSetCursorPos( GetText().getLength(), false );
 }
 
 void Edit::SetPlaceholderText( const OUString& rStr )
@@ -2746,7 +2720,7 @@ void Edit::SetSubEdit(Edit* pEdit)
         mpSubEdit->mbIsSubEdit = true;
 
         mpSubEdit->SetReadOnly(mbReadOnly);
-        mpSubEdit->m_pImpl->m_AutocompleteSignal.connect(m_pImpl->m_AutocompleteSignal);
+        mpSubEdit->maAutocompleteHdl = maAutocompleteHdl;
     }
 }
 
@@ -2822,7 +2796,7 @@ Size Edit::CalcSize(sal_Int32 nChars) const
 {
     // width for N characters, independent from content.
     // works only correct for fixed fonts, average otherwise
-    Size aSz( GetTextWidth( OUString('x') ), GetTextHeight() );
+    Size aSz( GetTextWidth( "x" ), GetTextHeight() );
     aSz.Width() *= nChars;
     aSz.Width() += ImplGetExtraXOffset() * 2;
     aSz = CalcWindowSize( aSz );
@@ -2833,7 +2807,7 @@ sal_Int32 Edit::GetMaxVisChars() const
 {
     const vcl::Window* pW = mpSubEdit ? mpSubEdit : this;
     sal_Int32 nOutWidth = pW->GetOutputSizePixel().Width();
-    sal_Int32 nCharWidth = GetTextWidth( OUString('x') );
+    sal_Int32 nCharWidth = GetTextWidth( "x" );
     return nCharWidth ? nOutWidth/nCharWidth : 0;
 }
 
@@ -3006,7 +2980,7 @@ void Edit::dragEnter( const css::datatransfer::dnd::DropTargetDragEnterEvent& rD
     for( sal_Int32 i = 0; i < nEle; i++ )
     {
         sal_Int32 nIndex = 0;
-        OUString aMimetype = rFlavors[i].MimeType.getToken( 0, ';', nIndex );
+        const OUString aMimetype = rFlavors[i].MimeType.getToken( 0, ';', nIndex );
         if ( aMimetype == "text/plain" )
         {
             mpDDInfo->bIsStringSupported = true;
@@ -3071,16 +3045,6 @@ OUString Edit::GetSurroundingText() const
 Selection Edit::GetSurroundingTextSelection() const
 {
   return GetSelection();
-}
-
-void Edit::SignalConnectAutocomplete(
-        boost::signals2::connection *const pConnection,
-        std::function<void (Edit *)> slot)
-{
-    boost::signals2::connection const& rConnection(
-            m_pImpl->m_AutocompleteSignal.connect(slot));
-    if (pConnection)
-        *pConnection = rConnection;
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

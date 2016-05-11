@@ -64,25 +64,9 @@ struct DefColumnMetaData
     bool isCurrency;
     bool isNullable;
     bool isAutoIncrement;
-    bool isReadOnly;
-    bool isSigned;
 };
 
 struct BaseTypeDef { const char * typeName; sal_Int32 value; };
-
-static Sequence< OUString > createStringSequence( const char * names[] )
-{
-    int length = 0;
-    while (names[length])
-        ++length;
-
-    Sequence< OUString > seq( length );
-    for( int i = 0; i < length; i ++ )
-    {
-        seq[i] = OUString( names[i] , strlen( names[i] ), RTL_TEXTENCODING_ASCII_US );
-    }
-    return seq;
-}
 
 struct PropertyDef
 {
@@ -108,7 +92,7 @@ static cppu::IPropertyArrayHelper * createPropertyArrayHelper(
     {
         seq[i] = Property( props[i].name, i, props[i].type, attr );
     }
-    return new cppu::OPropertyArrayHelper( seq, sal_True );
+    return new cppu::OPropertyArrayHelper( seq, true );
 }
 
 static cppu::IPropertyArrayHelper * createPropertyArrayHelper(
@@ -119,7 +103,7 @@ static cppu::IPropertyArrayHelper * createPropertyArrayHelper(
     {
         seq[i] = Property( props[i].name, i, props[i].type, props[i].attribute );
     }
-    return new cppu::OPropertyArrayHelper( seq, sal_True );
+    return new cppu::OPropertyArrayHelper( seq, true );
 }
 
 Statics & getStatics()
@@ -233,7 +217,7 @@ Statics & getStatics()
                     PropertyDef( statics.SCHEMA_NAME , tString )
                 };
             statics.refl.tableDescriptor.pProps = createPropertyArrayHelper(
-                tableDescDef, sizeof(tableDescDef)/sizeof(PropertyDef), 0 );
+                tableDescDef, SAL_N_ELEMENTS(tableDescDef), 0 );
 
             // Column props set
             statics.refl.column.implName = "org.openoffice.comp.pq.sdbcx.Column";
@@ -281,7 +265,7 @@ Statics & getStatics()
                 };
 
             statics.refl.columnDescriptor.pProps = createPropertyArrayHelper(
-                columnDescDef, sizeof(columnDescDef)/sizeof(PropertyDef), 0 );
+                columnDescDef, SAL_N_ELEMENTS(columnDescDef), 0 );
 
             // Key properties
             statics.refl.key.implName = "org.openoffice.comp.pq.sdbcx.Key";
@@ -316,8 +300,7 @@ Statics & getStatics()
                     PropertyDef( statics.UPDATE_RULE, tInt )
                 };
             statics.refl.keyDescriptor.pProps = createPropertyArrayHelper(
-                keyDescDef, sizeof(keyDescDef)/sizeof(PropertyDef), 0 );
-
+                keyDescDef, SAL_N_ELEMENTS(keyDescDef), 0 );
 
 
             // KeyColumn props set
@@ -355,7 +338,7 @@ Statics & getStatics()
                     PropertyDef( statics.RELATED_COLUMN, tString )
                 };
             statics.refl.keycolumnDescriptor.pProps = createPropertyArrayHelper(
-                keycolumnDescDef, sizeof(keycolumnDescDef)/sizeof(PropertyDef), 0 );
+                keycolumnDescDef, SAL_N_ELEMENTS(keycolumnDescDef), 0 );
 
             // view props set
             statics.refl.view.implName = "org.openoffice.comp.pq.sdbcx.View";
@@ -377,7 +360,7 @@ Statics & getStatics()
             statics.refl.viewDescriptor.serviceNames = Sequence< OUString > ( 1 );
             statics.refl.viewDescriptor.serviceNames[0] = "com.sun.star.sdbcx.ViewDescriptor";
             statics.refl.viewDescriptor.pProps = createPropertyArrayHelper(
-                viewDef, sizeof(viewDef)/sizeof(PropertyDef), 0 ); // reuse view, as it is identical
+                viewDef, SAL_N_ELEMENTS(viewDef), 0 ); // reuse view, as it is identical
             // user props set
             statics.refl.user.implName = "org.openoffice.comp.pq.sdbcx.User";
             statics.refl.user.serviceNames = Sequence< OUString > ( 1 );
@@ -401,7 +384,7 @@ Statics & getStatics()
                     PropertyDef( statics.PASSWORD , tString )
                 };
             statics.refl.userDescriptor.pProps = createPropertyArrayHelper(
-                userDefWR, sizeof(userDefWR)/sizeof(PropertyDef), 0 );
+                userDefWR, SAL_N_ELEMENTS(userDefWR), 0 );
 
             // index props set
             statics.refl.index.implName = "org.openoffice.comp.pq.sdbcx.Index";
@@ -426,7 +409,7 @@ Statics & getStatics()
             statics.refl.indexDescriptor.serviceNames[0] =
                 "com.sun.star.sdbcx.IndexDescriptor";
             statics.refl.indexDescriptor.pProps = createPropertyArrayHelper(
-                indexDef, sizeof(indexDef)/sizeof(PropertyDef), 0 );
+                indexDef, SAL_N_ELEMENTS(indexDef), 0 );
 
             // indexColumn props set
             statics.refl.indexColumn.implName = "org.openoffice.comp.pq.sdbcx.IndexColumn";
@@ -463,7 +446,7 @@ Statics & getStatics()
                     PropertyDef( statics.NAME , tString )
                 };
             statics.refl.indexColumnDescriptor.pProps = createPropertyArrayHelper(
-                indexColumnDescDef, sizeof(indexColumnDescDef)/sizeof(PropertyDef), 0 );
+                indexColumnDescDef, SAL_N_ELEMENTS(indexColumnDescDef), 0 );
 
             // resultset
             statics.refl.resultSet.implName = "org.openoffice.comp.pq.ResultSet";
@@ -481,7 +464,7 @@ Statics & getStatics()
                     PropertyDef( statics.RESULT_SET_TYPE , tInt )
                 };
             statics.refl.resultSet.pProps = createPropertyArrayHelper(
-                resultSet, sizeof(resultSet)/sizeof(PropertyDef), 0 );
+                resultSet, SAL_N_ELEMENTS(resultSet), 0 );
 
             // updateableResultset
             statics.refl.updateableResultSet.implName = "org.openoffice.comp.pq.UpdateableResultSet";
@@ -489,17 +472,17 @@ Statics & getStatics()
             statics.refl.updateableResultSet.serviceNames[0] = "com.sun.star.sdbc.ResultSet";
             statics.refl.updateableResultSet.types = UpdateableResultSet::getStaticTypes( true /* updateable */ );
             statics.refl.updateableResultSet.pProps = createPropertyArrayHelper(
-                resultSet, sizeof(resultSet)/sizeof(PropertyDef), 0 );
+                resultSet, SAL_N_ELEMENTS(resultSet), 0 );
 
             // databasemetadata
-            statics.tablesRowNames = Sequence< OUString > ( 5 );
+            statics.tablesRowNames = std::vector< OUString > ( 5 );
             statics.tablesRowNames[TABLE_INDEX_CATALOG] = "TABLE_CAT";
             statics.tablesRowNames[TABLE_INDEX_SCHEMA] = "TABLE_SCHEM";
             statics.tablesRowNames[TABLE_INDEX_NAME] = "TABLE_NAME";
             statics.tablesRowNames[TABLE_INDEX_TYPE] = "TABLE_TYPE";
             statics.tablesRowNames[TABLE_INDEX_REMARKS] = "REMARKS";
 
-            statics.primaryKeyNames = Sequence< OUString > ( 6 );
+            statics.primaryKeyNames = std::vector< OUString > ( 6 );
             statics.primaryKeyNames[0] = "TABLE_CAT";
             statics.primaryKeyNames[1] = "TABLE_SCHEM";
             statics.primaryKeyNames[2] = "TABLE_NAME";
@@ -521,86 +504,51 @@ Statics & getStatics()
             statics.INDEX = "Index";
             statics.INDEX_COLUMN = "IndexColumn";
 
-            statics.schemaNames = Sequence< OUString > ( 1 );
+            statics.schemaNames = std::vector< OUString > ( 1 );
             statics.schemaNames[0] = "TABLE_SCHEM";
 
-            statics.tableTypeData = Sequence< Sequence< Any > >( 2 );
+            statics.tableTypeData = std::vector< std::vector< Any > >( 2 );
 
-            statics.tableTypeData[0] = Sequence< Any > ( 1 );
+            statics.tableTypeData[0] = std::vector< Any > ( 1 );
             statics.tableTypeData[0][0] <<= statics.TABLE;
 
 //             statics.tableTypeData[2] = Sequence< Any > ( 1 );
 //             statics.tableTypeData[2][0] <<= statics.VIEW;
 
-            statics.tableTypeData[1] = Sequence< Any > ( 1 );
+            statics.tableTypeData[1] = std::vector< Any > ( 1 );
             statics.tableTypeData[1][0] <<= statics.SYSTEM_TABLE;
 
-            statics.tableTypeNames = Sequence< OUString > ( 1 );
+            statics.tableTypeNames = std::vector< OUString > ( 1 );
             statics.tableTypeNames[0] = "TABLE_TYPE";
 
-            static const char *tablePrivilegesNames[] =
-                {
-                    "TABLE_CAT", "TABLE_SCHEM", "TABLE_NAME", "GRANTOR", "GRANTEE", "PRIVILEGE",
-                    "IS_GRANTABLE" , nullptr
-                };
-            statics.tablePrivilegesNames =
-                createStringSequence( tablePrivilegesNames );
-
-            static const char * columnNames[] =
+            statics.columnRowNames =
             {
                 "TABLE_CAT", "TABLE_SCHEM", "TABLE_NAME", "COLUMN_NAME",
                 "DATA_TYPE", "TYPE_NAME", "COLUMN_SIZE", "BUFFER_LENGTH",
                 "DECIMAL_DIGITS", "NUM_PREC_RADIX", "NULLABLE", "REMARKS",
                 "COLUMN_DEF", "SQL_DATA_TYPE", "SQL_DATETIME_SUB", "CHAR_OCTET_LENGTH",
-                "ORDINAL_POSITION", "IS_NULLABLE", nullptr
+                "ORDINAL_POSITION", "IS_NULLABLE"
             };
-            statics.columnRowNames =
-                createStringSequence( columnNames );
 
-            static const char * typeinfoColumnNames[] =
+            statics.typeinfoColumnNames =
                 {
                     "TYPE_NAME", "DATA_TYPE", "PRECISION", "LITERAL_PREFIX",
                     "LITERAL_SUFFIX",  "CREATE_PARAMS", "NULLABLE", "CASE_SENSITIVE",
                     "SEARCHABLE", "UNSIGNED_ATTRIBUTE", "FIXED_PREC_SCALE",
                     "AUTO_INCREMENT", "LOCAL_TYPE_NAME", "MINIMUM_SCALE",
                     "MAXIMUM_SCALE", "SQL_DATA_TYPE", "SQL_DATETIME_SUB",
-                    "NUM_PREC_RADIX", nullptr
+                    "NUM_PREC_RADIX"
                 };
-            statics.typeinfoColumnNames = createStringSequence( typeinfoColumnNames );
 
-            static const char * indexinfoColumnNames[] =
+            statics.indexinfoColumnNames =
                 {
                     "TABLE_CAT", "TABLE_SCHEM", "TABLE_NAME",
                     "NON_UNIQUE", "INDEX_QUALIFIER", "INDEX_NAME",
                     "TYPE", "ORDINAL_POSITION", "COLUMN_NAME",
-                    "ASC_OR_DESC", "CARDINALITY", "PAGES", "FILTER_CONDITION",nullptr
+                    "ASC_OR_DESC", "CARDINALITY", "PAGES", "FILTER_CONDITION"
                 };
-            statics.indexinfoColumnNames = createStringSequence( indexinfoColumnNames );
 
-            static const char * importedKeysColumnNames[] =
-                {
-                    "PKTABLE_CAT" ,
-                    "PKTABLE_SCHEM",
-                    "PKTABLE_NAME" ,
-                    "PKCOLUMN_NAME",
-                    "FKTABLE_CAT" ,
-                    "FKTABLE_SCHEM",
-                    "FKTABLE_NAME" ,
-                    "FKCOLUMN_NAME",
-                    "KEY_SEQ" ,
-                    "UPDATE_RULE",
-                    "DELETE_RULE",
-                    "FK_NAME" ,
-                    "PK_NAME" ,
-                    "DEFERRABILITY" ,
-                    nullptr
-                };
-            statics.importedKeysColumnNames =
-                createStringSequence( importedKeysColumnNames );
-
-            static const char * resultSetArrayColumnNames[] = { "INDEX" , "VALUE", nullptr  };
-            statics.resultSetArrayColumnNames =
-                createStringSequence( resultSetArrayColumnNames );
+            statics.resultSetArrayColumnNames = { "INDEX" , "VALUE"  };
 
             // LEM TODO see if a refresh is needed; obtain automatically from pg_catalog.pg_type?
             BaseTypeDef baseTypeDefs[] =
@@ -623,7 +571,7 @@ Statics & getStatics()
 //                 { "serial", com::sun::star::sdbc::DataType::INTEGER },
 //                 { "serial4", com::sun::star::sdbc::DataType::INTEGER },
 
-                { "text", com::sun::star::sdbc::DataType::VARCHAR },
+                { "text", com::sun::star::sdbc::DataType::LONGVARCHAR },
                 { "bpchar", com::sun::star::sdbc::DataType::CHAR },
                 { "varchar", com::sun::star::sdbc::DataType::VARCHAR },
 
@@ -681,25 +629,25 @@ Statics & getStatics()
             // that is what is returned by getTypeInfo().getMetaData()
             DefColumnMetaData defTypeInfoMetaData[] =
                 {
-                    { "TYPE_NAME", "TYPEINFO", "pg_catalog", "", com::sun::star::sdbc::DataType::VARCHAR, 0,50,false,false,false,false, false },  // 0
-                    { "DATA_TYPE", "TYPEINFO", "pg_catalog", "", com::sun::star::sdbc::DataType::SMALLINT, 0,50,false,false,false,false, true },  // 1
-                    { "PRECISION", "TYPEINFO", "pg_catalog", "", com::sun::star::sdbc::DataType::INTEGER, 0,50,false,false,false,false, true },  // 2
-                    { "LITERAL_PREFIX", "TYPEINFO", "pg_catalog", "", com::sun::star::sdbc::DataType::VARCHAR, 0,50,false,false,false,false, false },  // 3
-                    { "LITERAL_SUFFIX", "TYPEINFO", "pg_catalog", "", com::sun::star::sdbc::DataType::VARCHAR, 0,50,false,false,false,false, false },  // 4
-                    { "CREATE_PARAMS", "TYPEINFO", "pg_catalog", "", com::sun::star::sdbc::DataType::VARCHAR, 0,50,false,false,false,false, false },  // 5
-                    { "NULLABLE", "TYPEINFO", "pg_catalog", "", com::sun::star::sdbc::DataType::INTEGER, 0,50,false,false,false,false, true },  // 6
-                    { "CASE_SENSITIVE", "TYPEINFO", "pg_catalog", "", com::sun::star::sdbc::DataType::BOOLEAN, 0,50,false,false,false,false, false },  // 7
-                    { "SEARCHABLE", "TYPEINFO", "pg_catalog", "", com::sun::star::sdbc::DataType::SMALLINT, 0,50,false,false,false,false, true },  // 8
-                    { "UNSIGNED_ATTRIBUTE", "TYPEINFO", "pg_catalog", "", com::sun::star::sdbc::DataType::BOOLEAN, 0,50,false,false,false,false, false },  // 9
-                    { "FIXED_PREC_SCALE", "TYPEINFO", "pg_catalog", "", com::sun::star::sdbc::DataType::BOOLEAN, 0,50,false,false,false,false, false },  // 10
-                    { "AUTO_INCREMENT", "TYPEINFO", "pg_catalog", "", com::sun::star::sdbc::DataType::BOOLEAN, 0,50,false,false,false,false, false },  // 11
-                    { "LOCAL_TYPE_NAME", "TYPEINFO", "pg_catalog", "", com::sun::star::sdbc::DataType::VARCHAR, 0,50,false,false,false,false, false },  // 12
-                    { "MINIMUM_SCALE", "TYPEINFO", "pg_catalog", "", com::sun::star::sdbc::DataType::SMALLINT, 0,50,false,false,false,false,  true},  // 13
-                    { "MAXIMUM_SCALE", "TYPEINFO", "pg_catalog", "", com::sun::star::sdbc::DataType::SMALLINT, 0,50,false,false,false,false, true },  // 14
-                    { "SQL_DATA_TYPE", "TYPEINFO", "pg_catalog", "", com::sun::star::sdbc::DataType::INTEGER, 0,50,false,false,false,false, true },  // 15
-                    { "SQL_DATETIME_SUB", "TYPEINFO", "pg_catalog", "", com::sun::star::sdbc::DataType::INTEGER, 0,50,false,false,false,false , true},  // 16
-                    { "NUM_PREC_RADIX", "TYPEINFO", "pg_catalog", "", com::sun::star::sdbc::DataType::INTEGER, 0,50,false,false,false,false, true },  // 17
-                    {nullptr,nullptr,nullptr,nullptr,0,0,0,false,false,false,false, false}
+                    { "TYPE_NAME", "TYPEINFO", "pg_catalog", "", com::sun::star::sdbc::DataType::VARCHAR, 0,50,false,false,false },  // 0
+                    { "DATA_TYPE", "TYPEINFO", "pg_catalog", "", com::sun::star::sdbc::DataType::SMALLINT, 0,50,false,false,false },  // 1
+                    { "PRECISION", "TYPEINFO", "pg_catalog", "", com::sun::star::sdbc::DataType::INTEGER, 0,50,false,false,false },  // 2
+                    { "LITERAL_PREFIX", "TYPEINFO", "pg_catalog", "", com::sun::star::sdbc::DataType::VARCHAR, 0,50,false,false,false },  // 3
+                    { "LITERAL_SUFFIX", "TYPEINFO", "pg_catalog", "", com::sun::star::sdbc::DataType::VARCHAR, 0,50,false,false,false },  // 4
+                    { "CREATE_PARAMS", "TYPEINFO", "pg_catalog", "", com::sun::star::sdbc::DataType::VARCHAR, 0,50,false,false,false },  // 5
+                    { "NULLABLE", "TYPEINFO", "pg_catalog", "", com::sun::star::sdbc::DataType::INTEGER, 0,50,false,false,false },  // 6
+                    { "CASE_SENSITIVE", "TYPEINFO", "pg_catalog", "", com::sun::star::sdbc::DataType::BOOLEAN, 0,50,false,false,false },  // 7
+                    { "SEARCHABLE", "TYPEINFO", "pg_catalog", "", com::sun::star::sdbc::DataType::SMALLINT, 0,50,false,false,false },  // 8
+                    { "UNSIGNED_ATTRIBUTE", "TYPEINFO", "pg_catalog", "", com::sun::star::sdbc::DataType::BOOLEAN, 0,50,false,false,false },  // 9
+                    { "FIXED_PREC_SCALE", "TYPEINFO", "pg_catalog", "", com::sun::star::sdbc::DataType::BOOLEAN, 0,50,false,false,false },  // 10
+                    { "AUTO_INCREMENT", "TYPEINFO", "pg_catalog", "", com::sun::star::sdbc::DataType::BOOLEAN, 0,50,false,false,false },  // 11
+                    { "LOCAL_TYPE_NAME", "TYPEINFO", "pg_catalog", "", com::sun::star::sdbc::DataType::VARCHAR, 0,50,false,false,false },  // 12
+                    { "MINIMUM_SCALE", "TYPEINFO", "pg_catalog", "", com::sun::star::sdbc::DataType::SMALLINT, 0,50,false,false,false},  // 13
+                    { "MAXIMUM_SCALE", "TYPEINFO", "pg_catalog", "", com::sun::star::sdbc::DataType::SMALLINT, 0,50,false,false,false },  // 14
+                    { "SQL_DATA_TYPE", "TYPEINFO", "pg_catalog", "", com::sun::star::sdbc::DataType::INTEGER, 0,50,false,false,false },  // 15
+                    { "SQL_DATETIME_SUB", "TYPEINFO", "pg_catalog", "", com::sun::star::sdbc::DataType::INTEGER, 0,50,false,false,false},  // 16
+                    { "NUM_PREC_RADIX", "TYPEINFO", "pg_catalog", "", com::sun::star::sdbc::DataType::INTEGER, 0,50,false,false,false },  // 17
+                    {nullptr,nullptr,nullptr,nullptr,0,0,0,false,false,false}
                 };
 
             for( i = 0 ; defTypeInfoMetaData[i].columnName ; i++ )
@@ -723,7 +671,6 @@ Statics & getStatics()
     }
     return *p;
 }
-
 
 
 }

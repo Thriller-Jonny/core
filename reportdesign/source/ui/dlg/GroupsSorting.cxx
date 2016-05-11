@@ -393,12 +393,8 @@ void OFieldExpressionControl::lateInit()
         m_pComboCell->SetSelectHdl(LINK(this,OFieldExpressionControl,CBChangeHdl));
         m_pComboCell->SetHelpId(HID_RPT_FIELDEXPRESSION);
 
-        Control* pControls[] = {m_pComboCell};
-        for (size_t i = 0; i < sizeof(pControls)/sizeof(pControls[0]); ++i)
-        {
-            pControls[i]->SetGetFocusHdl(LINK(m_pParent, OGroupsSortingDialog, OnControlFocusGot));
-            pControls[i]->SetLoseFocusHdl(LINK(m_pParent, OGroupsSortingDialog, OnControlFocusLost));
-        }
+        m_pComboCell->SetGetFocusHdl(LINK(m_pParent, OGroupsSortingDialog, OnControlFocusGot));
+        m_pComboCell->SetLoseFocusHdl(LINK(m_pParent, OGroupsSortingDialog, OnControlFocusLost));
 
 
         // set browse mode
@@ -450,7 +446,7 @@ bool OFieldExpressionControl::SaveModified(bool _bAppendRow)
                 OUString sUndoAction(ModuleRes(RID_STR_UNDO_APPEND_GROUP));
                 m_pParent->m_pController->getUndoManager().EnterListAction( sUndoAction, OUString() );
                 xGroup = m_pParent->getGroups()->createGroup();
-                xGroup->setHeaderOn(sal_True);
+                xGroup->setHeaderOn(true);
 
                 uno::Sequence< beans::PropertyValue > aArgs(2);
                 aArgs[0].Name = PROPERTY_GROUP;
@@ -458,7 +454,7 @@ bool OFieldExpressionControl::SaveModified(bool _bAppendRow)
                 // find position where to insert the new group
                 sal_Int32 nGroupPos = 0;
                 ::std::vector<sal_Int32>::iterator aIter = m_aGroupPositions.begin();
-                ::std::vector<sal_Int32>::iterator aEnd  = m_aGroupPositions.begin() + nRow;
+                ::std::vector<sal_Int32>::const_iterator aEnd  = m_aGroupPositions.begin() + nRow;
                 for(;aIter != aEnd;++aIter)
                     if ( *aIter != NO_GROUP )
                         nGroupPos = *aIter + 1;
@@ -613,7 +609,7 @@ EditBrowseBox::RowStatus OFieldExpressionControl::GetRowStatus(long nRow) const
         }
         catch(uno::Exception&)
         {
-            OSL_FAIL("Exception cathced while try to get a group!");
+            OSL_FAIL("Exception catched while try to get a group!");
         }
     }
     return EditBrowseBox::CLEAN;
@@ -651,7 +647,7 @@ void SAL_CALL OFieldExpressionControl::elementInserted(const container::Containe
                 else
                     *aFind = nGroupPos;
 
-                ::std::vector<sal_Int32>::iterator aEnd  = m_aGroupPositions.end();
+                ::std::vector<sal_Int32>::const_iterator aEnd  = m_aGroupPositions.end();
                 for(++aFind;aFind != aEnd;++aFind)
                     if ( *aFind != NO_GROUP )
                         ++*aFind;
@@ -672,11 +668,11 @@ void SAL_CALL OFieldExpressionControl::elementRemoved(const container::Container
     sal_Int32 nGroupPos = 0;
     if ( evt.Accessor >>= nGroupPos )
     {
-        ::std::vector<sal_Int32>::iterator aFind = ::std::find(m_aGroupPositions.begin(),m_aGroupPositions.end(),nGroupPos);
-        if ( aFind != m_aGroupPositions.end() )
+        std::vector<sal_Int32>::iterator aEnd = m_aGroupPositions.end();
+        std::vector<sal_Int32>::iterator aFind = std::find(m_aGroupPositions.begin(), aEnd, nGroupPos);
+        if (aFind != aEnd)
         {
             *aFind = NO_GROUP;
-            ::std::vector<sal_Int32>::iterator aEnd  = m_aGroupPositions.end();
             for(++aFind;aFind != aEnd;++aFind)
                 if ( *aFind != NO_GROUP )
                     --*aFind;
@@ -752,7 +748,7 @@ void OFieldExpressionControl::Command(const CommandEvent& rEvt)
                         break;
                 }
             }
-            // run through
+            SAL_FALLTHROUGH;
         }
         default:
             EditBrowseBox::Command(rEvt);
@@ -796,11 +792,11 @@ void OFieldExpressionControl::DeleteRows()
             // we use this way to create undo actions
             m_pParent->m_pController->executeChecked(SID_GROUP_REMOVE,aArgs);
 
-            ::std::vector<sal_Int32>::iterator aFind = ::std::find(m_aGroupPositions.begin(),m_aGroupPositions.end(),nGroupPos);
-            if (aFind != m_aGroupPositions.end())
+            std::vector<sal_Int32>::iterator aEnd  = m_aGroupPositions.end();
+            std::vector<sal_Int32>::iterator aFind = std::find(m_aGroupPositions.begin(), aEnd, nGroupPos);
+            if (aFind != aEnd)
             {
                 *aFind = NO_GROUP;
-                ::std::vector<sal_Int32>::iterator aEnd  = m_aGroupPositions.end();
                 for(++aFind;aFind != aEnd;++aFind)
                     if ( *aFind != NO_GROUP )
                         --*aFind;
@@ -900,7 +896,7 @@ void OFieldExpressionControl::InsertRows( long nRow )
                 ::std::vector<sal_Int32>::size_type nRowPos = static_cast< ::std::vector<sal_Int32>::size_type >(nRow);
                 if ( nRowPos < m_aGroupPositions.size() )
                 {
-                    ::std::vector<sal_Int32>::iterator aEnd  = m_aGroupPositions.begin() + nRowPos;
+                    ::std::vector<sal_Int32>::const_iterator aEnd  = m_aGroupPositions.begin() + nRowPos;
                     for(;aIter != aEnd;++aIter)
                     {
                         if ( *aIter != NO_GROUP )
@@ -919,7 +915,7 @@ void OFieldExpressionControl::InsertRows( long nRow )
                     ::std::vector<sal_Int32>::iterator aInsertPos = m_aGroupPositions.insert(aIter,nGroupPos);
                     ++aInsertPos;
                     aIter = aInsertPos;
-                    ::std::vector<sal_Int32>::iterator aEnd  = m_aGroupPositions.end();
+                    ::std::vector<sal_Int32>::const_iterator aEnd  = m_aGroupPositions.end();
                     for(;aInsertPos != aEnd;++aInsertPos)
                         if ( *aInsertPos != NO_GROUP )
                             ++*aInsertPos;
@@ -965,14 +961,14 @@ OGroupsSortingDialog::OGroupsSortingDialog(vcl::Window* _pParent, bool _bReadOnl
     m_pFieldExpression->set_vexpand(true);
 
     Control* pControlsLst[] = { m_pHeaderLst, m_pFooterLst, m_pGroupOnLst, m_pKeepTogetherLst, m_pOrderLst, m_pGroupIntervalEd};
-    for (size_t i = 0; i < sizeof (pControlsLst) / sizeof (pControlsLst[0]); ++i)
+    for (Control* i : pControlsLst)
     {
-        pControlsLst[i]->SetGetFocusHdl(LINK(this, OGroupsSortingDialog, OnControlFocusGot));
-        pControlsLst[i]->SetLoseFocusHdl(LINK(this, OGroupsSortingDialog, OnControlFocusLost));
-        pControlsLst[i]->Show();
+        i->SetGetFocusHdl(LINK(this, OGroupsSortingDialog, OnControlFocusGot));
+        i->SetLoseFocusHdl(LINK(this, OGroupsSortingDialog, OnControlFocusLost));
+        i->Show();
     }
 
-    for (size_t i = 0; i < (sizeof (pControlsLst) / sizeof (pControlsLst[0])) - 1; ++i)
+    for (size_t i = 0; i < SAL_N_ELEMENTS(pControlsLst) - 1; ++i)
         static_cast<ListBox*>(pControlsLst[i])->SetSelectHdl(LINK(this,OGroupsSortingDialog,LBChangeHdl));
 
     m_pReportListener = new OPropertyChangeMultiplexer(this,m_pController->getReportDefinition().get());
@@ -1076,8 +1072,8 @@ void OGroupsSortingDialog::SaveData( sal_Int32 _nRow)
         xGroup->setSortAscending( m_pOrderLst->GetSelectEntryPos() == 0 );
 
     ListBox* pControls[] = { m_pHeaderLst, m_pFooterLst, m_pGroupOnLst, m_pKeepTogetherLst, m_pOrderLst};
-    for (size_t i = 0; i < sizeof(pControls)/sizeof(pControls[0]); ++i)
-        pControls[i]->SaveValue();
+    for (ListBox* pControl : pControls)
+        pControl->SaveValue();
 }
 
 
@@ -1108,7 +1104,7 @@ IMPL_LINK_TYPED(OGroupsSortingDialog, OnControlFocusGot, Control&, rControl, voi
     if ( m_pFieldExpression && m_pFieldExpression->getExpressionControl() )
     {
         Control* pControls[] = { m_pFieldExpression->getExpressionControl(), m_pHeaderLst, m_pFooterLst, m_pGroupOnLst, m_pGroupIntervalEd, m_pKeepTogetherLst, m_pOrderLst};
-        for (size_t i = 0; i < sizeof(pControls)/sizeof(pControls[0]); ++i)
+        for (size_t i = 0; i < SAL_N_ELEMENTS(pControls); ++i)
         {
             if ( &rControl == pControls[i] )
             {
@@ -1252,8 +1248,8 @@ void OGroupsSortingDialog::displayGroup(const uno::Reference<report::XGroup>& _x
         case sdbc::DataType::TIME:
         case sdbc::DataType::TIMESTAMP:
             {
-                sal_uInt16 nIds[] = { STR_RPT_YEAR, STR_RPT_QUARTER,STR_RPT_MONTH,STR_RPT_WEEK,STR_RPT_DAY,STR_RPT_HOUR,STR_RPT_MINUTE };
-                for (sal_uInt16 i = 0; i < sizeof (nIds) / sizeof (nIds[0]); ++i)
+                const sal_uInt16 nIds[] = { STR_RPT_YEAR, STR_RPT_QUARTER,STR_RPT_MONTH,STR_RPT_WEEK,STR_RPT_DAY,STR_RPT_HOUR,STR_RPT_MINUTE };
+                for (sal_uInt16 i = 0; i < SAL_N_ELEMENTS(nIds); ++i)
                 {
                     m_pGroupOnLst->InsertEntry(OUString(ModuleRes(nIds[i])));
                     m_pGroupOnLst->SetEntryData(i+1,reinterpret_cast<void*>(i+2));
@@ -1309,13 +1305,13 @@ void OGroupsSortingDialog::displayGroup(const uno::Reference<report::XGroup>& _x
     m_pOrderLst->SelectEntryPos(_xGroup->getSortAscending() ? 0 : 1);
 
     ListBox* pControls[] = { m_pHeaderLst, m_pFooterLst, m_pGroupOnLst, m_pKeepTogetherLst, m_pOrderLst};
-    for (size_t i = 0; i < sizeof(pControls)/sizeof(pControls[0]); ++i)
-        pControls[i]->SaveValue();
+    for (ListBox* pControl : pControls)
+        pControl->SaveValue();
 
     ListBox* pControlsLst2[] = { m_pHeaderLst, m_pFooterLst, m_pGroupOnLst, m_pKeepTogetherLst, m_pOrderLst};
     bool bReadOnly = !m_pController->isEditable();
-    for (size_t i = 0; i < sizeof(pControlsLst2)/sizeof(pControlsLst2[0]); ++i)
-        pControlsLst2[i]->SetReadOnly(bReadOnly);
+    for (ListBox* i : pControlsLst2)
+        i->SetReadOnly(bReadOnly);
     m_pGroupIntervalEd->SetReadOnly(bReadOnly);
 }
 

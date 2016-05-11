@@ -52,13 +52,13 @@
 
 #include "ownview.hxx"
 
-#if defined WNT
+#if defined(_WIN32)
 #include <olecomponent.hxx>
 #endif
 
 using namespace ::com::sun::star;
 
-#ifdef WNT
+#ifdef _WIN32
 
 void OleEmbeddedObject::SwitchComponentToRunningState_Impl()
 {
@@ -299,7 +299,7 @@ bool OleEmbeddedObject::TryToConvertToOOo()
                 uno::Reference< frame::XModel > xModel( xDocument, uno::UNO_QUERY_THROW );
                 uno::Sequence< beans::PropertyValue > aSeq( 1 );
                 aSeq[0].Name = "SetEmbedded";
-                aSeq[0].Value <<= sal_True;
+                aSeq[0].Value <<= true;
                 xModel->attachResource( OUString(), aSeq );
 
                 // load the model from the stream
@@ -307,7 +307,7 @@ bool OleEmbeddedObject::TryToConvertToOOo()
                 aArgs[0].Name = "HierarchicalDocumentName";
                 aArgs[0].Value <<= m_aEntryName;
                 aArgs[1].Name = "ReadOnly";
-                aArgs[1].Value <<= sal_True;
+                aArgs[1].Value <<= true;
                 aArgs[2].Name = "FilterName";
                 aArgs[2].Value <<= m_aFilterName;
                 aArgs[3].Name = "URL";
@@ -321,7 +321,7 @@ bool OleEmbeddedObject::TryToConvertToOOo()
                 // the model is successfully loaded, create a new storage and store the model to the storage
                 uno::Reference< embed::XStorage > xTmpStorage = CreateTemporarySubstorage( aStorageName );
                 xStorDoc->storeToStorage( xTmpStorage, uno::Sequence< beans::PropertyValue >() );
-                xDocument->close( sal_True );
+                xDocument->close( true );
                 uno::Reference< beans::XPropertySet > xStorProps( xTmpStorage, uno::UNO_QUERY_THROW );
                 OUString aMediaType;
                 xStorProps->getPropertyValue("MediaType") >>= aMediaType;
@@ -385,12 +385,13 @@ bool OleEmbeddedObject::TryToConvertToOOo()
                 catch ( const uno::Exception& )
                 {
                     try {
-                        close( sal_True );
+                        close( true );
                     } catch( const uno::Exception& ) {}
 
                     m_xParentStorage->dispose(); // ??? the storage has information loss, it should be closed without committing!
                     throw uno::RuntimeException(); // the repairing is not possible
                 }
+            SAL_FALLTHROUGH;
             case 2:
                 try
                 {
@@ -400,12 +401,12 @@ bool OleEmbeddedObject::TryToConvertToOOo()
                 catch( const uno::Exception& )
                 {
                     try {
-                        close( sal_True );
+                        close( true );
                     } catch( const uno::Exception& ) {}
 
                     throw uno::RuntimeException(); // the repairing is not possible
                 }
-                // no break as designed!
+                SAL_FALLTHROUGH;
 
             case 1:
             case 0:
@@ -465,7 +466,7 @@ void SAL_CALL OleEmbeddedObject::changeState( sal_Int32 nNewState )
     if ( m_nObjectState == nNewState )
         return;
 
-#ifdef WNT
+#ifdef _WIN32
     if ( m_pOleComponent )
     {
         if ( m_nTargetState != -1 )
@@ -587,17 +588,6 @@ void SAL_CALL OleEmbeddedObject::changeState( sal_Int32 nNewState )
         }
     }
     else
-#else
-    // if it is possible, the object will be converted to OOo format
-    if ( !m_bTriedConversion )
-    {
-        m_bTriedConversion = true;
-        if ( TryToConvertToOOo() )
-        {
-            changeState( nNewState );
-            return;
-        }
-    }
 #endif
     {
         throw embed::UnreachableStateException();
@@ -626,7 +616,7 @@ uno::Sequence< sal_Int32 > SAL_CALL OleEmbeddedObject::getReachableStates()
         throw embed::WrongStateException( "The object has no persistence!",
                                         static_cast< ::cppu::OWeakObject* >(this) );
 
-#ifdef WNT
+#ifdef _WIN32
     if ( m_pOleComponent )
     {
         if ( m_nObjectState == embed::EmbedStates::LOADED )
@@ -674,8 +664,8 @@ sal_Int32 SAL_CALL OleEmbeddedObject::getCurrentState()
 
 namespace
 {
-#ifndef WNT
-    bool lcl_CopyStream(uno::Reference<io::XInputStream> xIn, uno::Reference<io::XOutputStream> xOut)
+#ifndef _WIN32
+    bool lcl_CopyStream(const uno::Reference<io::XInputStream>& xIn, const uno::Reference<io::XOutputStream>& xOut)
     {
         const sal_Int32 nChunkSize = 4096;
         uno::Sequence< sal_Int8 > aData(nChunkSize);
@@ -694,13 +684,13 @@ namespace
     //Dump the objects content to a tempfile, just the "CONTENTS" stream if
     //there is one for non-compound documents, otherwise the whole content.
     //On success a file is returned which must be removed by the caller
-    OUString lcl_ExtractObject(css::uno::Reference< css::lang::XMultiServiceFactory > xFactory,
-        css::uno::Reference< css::io::XStream > xObjectStream)
+    OUString lcl_ExtractObject(const css::uno::Reference< css::lang::XMultiServiceFactory >& xFactory,
+        const css::uno::Reference< css::io::XStream >& xObjectStream)
     {
         OUString sUrl;
 
         // the solution is only active for Unix systems
-#ifndef WNT
+#ifndef _WIN32
         uno::Reference <beans::XPropertySet> xNativeTempFile(
             io::TempFile::create(comphelper::getComponentContext(xFactory)),
             uno::UNO_QUERY_THROW);
@@ -736,7 +726,7 @@ namespace
         if (bCopied)
         {
             xNativeTempFile->setPropertyValue("RemoveFile",
-                uno::makeAny(sal_False));
+                uno::makeAny(false));
             uno::Any aUrl = xNativeTempFile->getPropertyValue("Uri");
             aUrl >>= sUrl;
 
@@ -745,12 +735,12 @@ namespace
             uno::Reference < ucb::XSimpleFileAccess3 > xSimpleFileAccess(
                     ucb::SimpleFileAccess::create( comphelper::getComponentContext(xFactory) ) );
 
-            xSimpleFileAccess->setReadOnly(sUrl, sal_True);
+            xSimpleFileAccess->setReadOnly(sUrl, true);
         }
         else
         {
             xNativeTempFile->setPropertyValue("RemoveFile",
-                uno::makeAny(sal_True));
+                uno::makeAny(true));
         }
 #else
         (void) xFactory;
@@ -786,7 +776,7 @@ void SAL_CALL OleEmbeddedObject::doVerb( sal_Int32 nVerbID )
         throw embed::WrongStateException( "The object has no persistence!",
                                         static_cast< ::cppu::OWeakObject* >(this) );
 
-#ifdef WNT
+#ifdef _WIN32
     if ( m_pOleComponent )
     {
         sal_Int32 nOldState = m_nObjectState;
@@ -918,7 +908,7 @@ uno::Sequence< embed::VerbDescriptor > SAL_CALL OleEmbeddedObject::getSupportedV
     if ( m_nObjectState == -1 )
         throw embed::WrongStateException( "The object has no persistence!",
                                         static_cast< ::cppu::OWeakObject* >(this) );
-#ifdef WNT
+#ifdef _WIN32
     if ( m_pOleComponent )
     {
         // registry could be used in this case
@@ -1083,7 +1073,7 @@ sal_Int64 SAL_CALL OleEmbeddedObject::getStatus( sal_Int64
 
     sal_Int64 nResult = 0;
 
-#ifdef WNT
+#ifdef _WIN32
     if ( m_bGotStatus && m_nStatusAspect == nAspect )
         nResult = m_nStatus;
     else if ( m_pOleComponent )

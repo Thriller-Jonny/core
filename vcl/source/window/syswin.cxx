@@ -142,7 +142,7 @@ bool SystemWindow::Notify( NotifyEvent& rNEvt )
             if (rNEvt.GetType() == MouseNotifyEvent::COMMAND)
                 bDone = pMBar->ImplHandleCmdEvent(*rNEvt.GetCommandEvent());
             else
-                bDone = pMBar->ImplHandleKeyEvent(*rNEvt.GetKeyEvent(), false);
+                bDone = pMBar->ImplHandleKeyEvent(*rNEvt.GetKeyEvent());
         }
         if (bDone)
             return true;
@@ -217,12 +217,10 @@ TaskPaneList* SystemWindow::GetTaskPaneList()
 
 bool SystemWindow::Close()
 {
-    ImplDelData aDelData;
-    ImplAddDel( &aDelData );
+    VclPtr<vcl::Window> xWindow = this;
     CallEventListeners( VCLEVENT_WINDOW_CLOSE );
-    if ( aDelData.IsDead() )
+    if ( xWindow->IsDisposed() )
         return false;
-    ImplRemoveDel( &aDelData );
 
     if ( mpWindowImpl->mxWindowPeer.is() && IsCreatedWithToolkit() )
         return false;
@@ -289,33 +287,6 @@ void SystemWindow::SetIcon( sal_uInt16 nIcon )
         if ( pWindow->mpWindowImpl->mbFrame )
             pWindow->mpWindowImpl->mpFrame->SetIcon( nIcon );
     }
-}
-
-void SystemWindow::EnableSaveBackground(bool bSave)
-{
-    if( ImplGetSVData()->maWinData.mbNoSaveBackground )
-        bSave = false;
-
-    vcl::Window* pWindow = this;
-    while (pWindow->mpWindowImpl->mpBorderWindow)
-        pWindow = pWindow->mpWindowImpl->mpBorderWindow;
-    if (pWindow->mpWindowImpl->mbOverlapWin && !pWindow->mpWindowImpl->mbFrame)
-    {
-        pWindow->mpWindowImpl->mpOverlapData->mbSaveBack = bSave;
-        if (!bSave)
-            pWindow->ImplDeleteOverlapBackground();
-    }
-}
-
-bool SystemWindow::IsSaveBackgroundEnabled() const
-{
-    const vcl::Window* pWindow = this;
-    while ( pWindow->mpWindowImpl->mpBorderWindow )
-        pWindow = pWindow->mpWindowImpl->mpBorderWindow;
-    if ( pWindow->mpWindowImpl->mpOverlapData )
-        return pWindow->mpWindowImpl->mpOverlapData->mbSaveBack;
-    else
-        return false;
 }
 
 void SystemWindow::ShowTitleButton( TitleButton nButton, bool bVisible )
@@ -435,7 +406,7 @@ const Size& SystemWindow::GetMaxOutputSizePixel() const
 static void ImplWindowStateFromStr(WindowStateData& rData,
     const OString& rStr)
 {
-    sal_uInt32 nValidMask = 0;
+    WindowStateMask nValidMask = WindowStateMask::NONE;
     sal_Int32 nIndex      = 0;
     OString aTokenStr;
 
@@ -444,7 +415,7 @@ static void ImplWindowStateFromStr(WindowStateData& rData,
     {
         rData.SetX(aTokenStr.toInt32());
         if( rData.GetX() > -16384 && rData.GetX() < 16384 )
-            nValidMask |= WINDOWSTATE_MASK_X;
+            nValidMask |= WindowStateMask::X;
         else
             rData.SetX( 0 );
     }
@@ -455,7 +426,7 @@ static void ImplWindowStateFromStr(WindowStateData& rData,
     {
         rData.SetY(aTokenStr.toInt32());
         if( rData.GetY() > -16384 && rData.GetY() < 16384 )
-            nValidMask |= WINDOWSTATE_MASK_Y;
+            nValidMask |= WindowStateMask::Y;
         else
             rData.SetY( 0 );
     }
@@ -466,7 +437,7 @@ static void ImplWindowStateFromStr(WindowStateData& rData,
     {
         rData.SetWidth(aTokenStr.toInt32());
         if( rData.GetWidth() > 0 && rData.GetWidth() < 16384 )
-            nValidMask |= WINDOWSTATE_MASK_WIDTH;
+            nValidMask |= WindowStateMask::Width;
         else
             rData.SetWidth( 0 );
     }
@@ -477,7 +448,7 @@ static void ImplWindowStateFromStr(WindowStateData& rData,
     {
         rData.SetHeight(aTokenStr.toInt32());
         if( rData.GetHeight() > 0 && rData.GetHeight() < 16384 )
-            nValidMask |= WINDOWSTATE_MASK_HEIGHT;
+            nValidMask |= WindowStateMask::Height;
         else
             rData.SetHeight( 0 );
     }
@@ -488,13 +459,13 @@ static void ImplWindowStateFromStr(WindowStateData& rData,
     {
         // #94144# allow Minimize again, should be masked out when read from configuration
         // 91625 - ignore Minimize
-        sal_uInt32 nState = (sal_uInt32)aTokenStr.toInt32();
-        //nState &= ~(WINDOWSTATE_STATE_MINIMIZED);
+        WindowStateState nState = (WindowStateState)aTokenStr.toInt32();
+        //nState &= ~(WindowStateState::Minimized);
         rData.SetState( nState );
-        nValidMask |= WINDOWSTATE_MASK_STATE;
+        nValidMask |= WindowStateMask::State;
     }
     else
-        rData.SetState( 0 );
+        rData.SetState( WindowStateState::NONE );
 
     // read maximized pos/size
     aTokenStr = rStr.getToken(0, ',', nIndex);
@@ -502,7 +473,7 @@ static void ImplWindowStateFromStr(WindowStateData& rData,
     {
         rData.SetMaximizedX(aTokenStr.toInt32());
         if( rData.GetMaximizedX() > -16384 && rData.GetMaximizedX() < 16384 )
-            nValidMask |= WINDOWSTATE_MASK_MAXIMIZED_X;
+            nValidMask |= WindowStateMask::MaximizedX;
         else
             rData.SetMaximizedX( 0 );
     }
@@ -513,7 +484,7 @@ static void ImplWindowStateFromStr(WindowStateData& rData,
     {
         rData.SetMaximizedY(aTokenStr.toInt32());
         if( rData.GetMaximizedY() > -16384 && rData.GetMaximizedY() < 16384 )
-            nValidMask |= WINDOWSTATE_MASK_MAXIMIZED_Y;
+            nValidMask |= WindowStateMask::MaximizedY;
         else
             rData.SetMaximizedY( 0 );
     }
@@ -524,7 +495,7 @@ static void ImplWindowStateFromStr(WindowStateData& rData,
     {
         rData.SetMaximizedWidth(aTokenStr.toInt32());
         if( rData.GetMaximizedWidth() > 0 && rData.GetMaximizedWidth() < 16384 )
-            nValidMask |= WINDOWSTATE_MASK_MAXIMIZED_WIDTH;
+            nValidMask |= WindowStateMask::MaximizedWidth;
         else
             rData.SetMaximizedWidth( 0 );
     }
@@ -535,7 +506,7 @@ static void ImplWindowStateFromStr(WindowStateData& rData,
     {
         rData.SetMaximizedHeight(aTokenStr.toInt32());
         if( rData.GetMaximizedHeight() > 0 && rData.GetMaximizedHeight() < 16384 )
-            nValidMask |= WINDOWSTATE_MASK_MAXIMIZED_HEIGHT;
+            nValidMask |= WindowStateMask::MaximizedHeight;
         else
             rData.SetMaximizedHeight( 0 );
     }
@@ -548,42 +519,42 @@ static void ImplWindowStateFromStr(WindowStateData& rData,
 
 static OString ImplWindowStateToStr(const WindowStateData& rData)
 {
-    const sal_uInt32 nValidMask = rData.GetMask();
-    if ( !nValidMask )
+    const WindowStateMask nValidMask = rData.GetMask();
+    if ( nValidMask == WindowStateMask::NONE )
         return OString();
 
     OStringBuffer rStrBuf;
 
-    if ( nValidMask & WINDOWSTATE_MASK_X )
+    if ( nValidMask & WindowStateMask::X )
         rStrBuf.append(static_cast<sal_Int32>(rData.GetX()));
     rStrBuf.append(',');
-    if ( nValidMask & WINDOWSTATE_MASK_Y )
+    if ( nValidMask & WindowStateMask::Y )
         rStrBuf.append(static_cast<sal_Int32>(rData.GetY()));
     rStrBuf.append(',');
-    if ( nValidMask & WINDOWSTATE_MASK_WIDTH )
+    if ( nValidMask & WindowStateMask::Width )
         rStrBuf.append(static_cast<sal_Int32>(rData.GetWidth()));
     rStrBuf.append(',');
-    if ( nValidMask & WINDOWSTATE_MASK_HEIGHT )
+    if ( nValidMask & WindowStateMask::Height )
         rStrBuf.append(static_cast<sal_Int32>(rData.GetHeight()));
     rStrBuf.append( ';' );
-    if ( nValidMask & WINDOWSTATE_MASK_STATE )
+    if ( nValidMask & WindowStateMask::State )
     {
         // #94144# allow Minimize again, should be masked out when read from configuration
         // 91625 - ignore Minimize
-        sal_uInt32 nState = rData.GetState();
+        WindowStateState nState = rData.GetState();
         rStrBuf.append(static_cast<sal_Int32>(nState));
     }
     rStrBuf.append(';');
-    if ( nValidMask & WINDOWSTATE_MASK_MAXIMIZED_X )
+    if ( nValidMask & WindowStateMask::MaximizedX )
         rStrBuf.append(static_cast<sal_Int32>(rData.GetMaximizedX()));
     rStrBuf.append(',');
-    if ( nValidMask & WINDOWSTATE_MASK_MAXIMIZED_Y )
+    if ( nValidMask & WindowStateMask::MaximizedY )
         rStrBuf.append(static_cast<sal_Int32>(rData.GetMaximizedY()));
     rStrBuf.append( ',' );
-    if ( nValidMask & WINDOWSTATE_MASK_MAXIMIZED_WIDTH )
+    if ( nValidMask & WindowStateMask::MaximizedWidth )
         rStrBuf.append(static_cast<sal_Int32>(rData.GetMaximizedWidth()));
     rStrBuf.append(',');
-    if ( nValidMask & WINDOWSTATE_MASK_MAXIMIZED_HEIGHT )
+    if ( nValidMask & WindowStateMask::MaximizedHeight )
         rStrBuf.append(static_cast<sal_Int32>(rData.GetMaximizedHeight()));
     rStrBuf.append(';');
 
@@ -647,8 +618,8 @@ void SystemWindow::ImplMoveToScreen( long& io_rX, long& io_rY, long i_nWidth, lo
 
 void SystemWindow::SetWindowStateData( const WindowStateData& rData )
 {
-    const sal_uInt32 nValidMask = rData.GetMask();
-    if ( !nValidMask )
+    const WindowStateMask nValidMask = rData.GetMask();
+    if ( nValidMask == WindowStateMask::NONE )
         return;
 
     if ( mbSysChild )
@@ -660,7 +631,7 @@ void SystemWindow::SetWindowStateData( const WindowStateData& rData )
 
     if ( pWindow->mpWindowImpl->mbFrame )
     {
-        const sal_uInt32 nState     = rData.GetState();
+        const WindowStateState nState = rData.GetState();
         SalFrameState   aState;
         aState.mnMask               = rData.GetMask();
         aState.mnX                  = rData.GetX();
@@ -668,7 +639,7 @@ void SystemWindow::SetWindowStateData( const WindowStateData& rData )
         aState.mnWidth              = rData.GetWidth();
         aState.mnHeight             = rData.GetHeight();
 
-        if( rData.GetMask() & (WINDOWSTATE_MASK_WIDTH|WINDOWSTATE_MASK_HEIGHT) )
+        if( rData.GetMask() & (WindowStateMask::Width|WindowStateMask::Height) )
         {
             // #i43799# adjust window state sizes if a minimal output size was set
             // otherwise the frame and the client might get different sizes
@@ -684,8 +655,8 @@ void SystemWindow::SetWindowStateData( const WindowStateData& rData )
         aState.mnMaximizedHeight    = rData.GetMaximizedHeight();
         // #94144# allow Minimize again, should be masked out when read from configuration
         // 91625 - ignore Minimize
-        //nState &= ~(WINDOWSTATE_STATE_MINIMIZED);
-        aState.mnState  = nState & WINDOWSTATE_STATE_SYSTEMMASK;
+        //nState &= ~(WindowStateState::Minimized);
+        aState.mnState  = nState & WindowStateState::SystemMask;
 
         // normalize window positions onto screen
         ImplMoveToScreen( aState.mnX, aState.mnY, aState.mnWidth, aState.mnHeight, pWindow );
@@ -693,8 +664,8 @@ void SystemWindow::SetWindowStateData( const WindowStateData& rData )
 
         // #96568# avoid having multiple frames at the same screen location
         //  do the check only if not maximized
-        if( !((rData.GetMask() & WINDOWSTATE_MASK_STATE) && (nState & WINDOWSTATE_STATE_MAXIMIZED)) )
-            if( rData.GetMask() & (WINDOWSTATE_MASK_POS|WINDOWSTATE_MASK_WIDTH|WINDOWSTATE_MASK_HEIGHT) )
+        if( !((rData.GetMask() & WindowStateMask::State) && (nState & WindowStateState::Maximized)) )
+            if( rData.GetMask() & (WindowStateMask::Pos|WindowStateMask::Width|WindowStateMask::Height) )
             {
                 Rectangle aDesktop = GetDesktopRectPixel();
                 ImplSVData *pSVData = ImplGetSVData();
@@ -740,7 +711,7 @@ void SystemWindow::SetWindowStateData( const WindowStateData& rData )
         // do a synchronous resize for layout reasons
         //  but use rData only when the window is not to be maximized (#i38089#)
         //  otherwise we have no useful size information
-        if( (rData.GetMask() & WINDOWSTATE_MASK_STATE) && (nState & WINDOWSTATE_STATE_MAXIMIZED) )
+        if( (rData.GetMask() & WindowStateMask::State) && (nState & WindowStateState::Maximized) )
         {
             // query maximized size from frame
             SalFrameGeometry aGeometry = mpWindowImpl->mpFrame->GetGeometry();
@@ -752,19 +723,19 @@ void SystemWindow::SetWindowStateData( const WindowStateData& rData )
                 ImplHandleResize( pWindow, aGeometry.nWidth, aGeometry.nHeight );
         }
         else
-            if( rData.GetMask() & (WINDOWSTATE_MASK_WIDTH|WINDOWSTATE_MASK_HEIGHT) )
+            if( rData.GetMask() & (WindowStateMask::Width|WindowStateMask::Height) )
                 ImplHandleResize( pWindow, aState.mnWidth, aState.mnHeight );   // #i43799# use aState and not rData, see above
     }
     else
     {
         PosSizeFlags nPosSize = PosSizeFlags::NONE;
-        if ( nValidMask & WINDOWSTATE_MASK_X )
+        if ( nValidMask & WindowStateMask::X )
             nPosSize |= PosSizeFlags::X;
-        if ( nValidMask & WINDOWSTATE_MASK_Y )
+        if ( nValidMask & WindowStateMask::Y )
             nPosSize |= PosSizeFlags::Y;
-        if ( nValidMask & WINDOWSTATE_MASK_WIDTH )
+        if ( nValidMask & WindowStateMask::Width )
             nPosSize |= PosSizeFlags::Width;
-        if ( nValidMask & WINDOWSTATE_MASK_HEIGHT )
+        if ( nValidMask & WindowStateMask::Height )
             nPosSize |= PosSizeFlags::Height;
 
         if( IsRollUp() )
@@ -787,10 +758,10 @@ void SystemWindow::SetWindowStateData( const WindowStateData& rData )
         maOrgSize = Size( nWidth, nHeight );
 
         // 91625 - ignore Minimize
-        if ( nValidMask & WINDOWSTATE_MASK_STATE )
+        if ( nValidMask & WindowStateMask::State )
         {
-            const sal_uInt32 nState = rData.GetState();
-            if ( nState & WINDOWSTATE_STATE_ROLLUP )
+            const WindowStateState nState = rData.GetState();
+            if ( nState & WindowStateState::Rollup )
                 RollUp();
             else
                 RollDown();
@@ -800,8 +771,8 @@ void SystemWindow::SetWindowStateData( const WindowStateData& rData )
 
 void SystemWindow::GetWindowStateData( WindowStateData& rData ) const
 {
-    sal_uInt32 nValidMask = rData.GetMask();
-    if ( !nValidMask )
+    WindowStateMask nValidMask = rData.GetMask();
+    if ( nValidMask == WindowStateMask::NONE )
         return;
 
     if ( mbSysChild )
@@ -814,71 +785,71 @@ void SystemWindow::GetWindowStateData( WindowStateData& rData ) const
     if ( pWindow->mpWindowImpl->mbFrame )
     {
         SalFrameState aState;
-        aState.mnMask = 0xFFFFFFFF;
+        aState.mnMask = WindowStateMask::All;
         if ( mpWindowImpl->mpFrame->GetWindowState( &aState ) )
         {
-            if ( nValidMask & WINDOWSTATE_MASK_X )
+            if ( nValidMask & WindowStateMask::X )
                 rData.SetX( aState.mnX );
-            if ( nValidMask & WINDOWSTATE_MASK_Y )
+            if ( nValidMask & WindowStateMask::Y )
                 rData.SetY( aState.mnY );
-            if ( nValidMask & WINDOWSTATE_MASK_WIDTH )
+            if ( nValidMask & WindowStateMask::Width )
                 rData.SetWidth( aState.mnWidth );
-            if ( nValidMask & WINDOWSTATE_MASK_HEIGHT )
+            if ( nValidMask & WindowStateMask::Height )
                 rData.SetHeight( aState.mnHeight );
-            if ( aState.mnMask & WINDOWSTATE_MASK_MAXIMIZED_X )
+            if ( aState.mnMask & WindowStateMask::MaximizedX )
             {
                 rData.SetMaximizedX( aState.mnMaximizedX );
-                nValidMask |= WINDOWSTATE_MASK_MAXIMIZED_X;
+                nValidMask |= WindowStateMask::MaximizedX;
             }
-            if ( aState.mnMask & WINDOWSTATE_MASK_MAXIMIZED_Y )
+            if ( aState.mnMask & WindowStateMask::MaximizedY )
             {
                 rData.SetMaximizedY( aState.mnMaximizedY );
-                nValidMask |= WINDOWSTATE_MASK_MAXIMIZED_Y;
+                nValidMask |= WindowStateMask::MaximizedY;
             }
-            if ( aState.mnMask & WINDOWSTATE_MASK_MAXIMIZED_WIDTH )
+            if ( aState.mnMask & WindowStateMask::MaximizedWidth )
             {
                 rData.SetMaximizedWidth( aState.mnMaximizedWidth );
-                nValidMask |= WINDOWSTATE_MASK_MAXIMIZED_WIDTH;
+                nValidMask |= WindowStateMask::MaximizedWidth;
             }
-            if ( aState.mnMask & WINDOWSTATE_MASK_MAXIMIZED_HEIGHT )
+            if ( aState.mnMask & WindowStateMask::MaximizedHeight )
             {
                 rData.SetMaximizedHeight( aState.mnMaximizedHeight );
-                nValidMask |= WINDOWSTATE_MASK_MAXIMIZED_HEIGHT;
+                nValidMask |= WindowStateMask::MaximizedHeight;
             }
-            if ( nValidMask & WINDOWSTATE_MASK_STATE )
+            if ( nValidMask & WindowStateMask::State )
             {
                 // #94144# allow Minimize again, should be masked out when read from configuration
                 // 91625 - ignore Minimize
-                if ( !(nValidMask&WINDOWSTATE_MASK_MINIMIZED) )
-                    aState.mnState &= ~(WINDOWSTATE_STATE_MINIMIZED);
+                if ( !(nValidMask&WindowStateMask::Minimized) )
+                    aState.mnState &= ~(WindowStateState::Minimized);
                 rData.SetState( aState.mnState );
             }
             rData.SetMask( nValidMask );
         }
         else
-            rData.SetMask( 0 );
+            rData.SetMask( WindowStateMask::NONE );
     }
     else
     {
         Point   aPos = GetPosPixel();
         Size    aSize = GetSizePixel();
-        sal_uInt32 nState = 0;
+        WindowStateState nState = WindowStateState::NONE;
 
         if ( IsRollUp() )
         {
             aSize.Height() += maOrgSize.Height();
-            nState = WINDOWSTATE_STATE_ROLLUP;
+            nState = WindowStateState::Rollup;
         }
 
-        if ( nValidMask & WINDOWSTATE_MASK_X )
+        if ( nValidMask & WindowStateMask::X )
             rData.SetX( aPos.X() );
-        if ( nValidMask & WINDOWSTATE_MASK_Y )
+        if ( nValidMask & WindowStateMask::Y )
             rData.SetY( aPos.Y() );
-        if ( nValidMask & WINDOWSTATE_MASK_WIDTH )
+        if ( nValidMask & WindowStateMask::Width )
             rData.SetWidth( aSize.Width() );
-        if ( nValidMask & WINDOWSTATE_MASK_HEIGHT )
+        if ( nValidMask & WindowStateMask::Height )
             rData.SetHeight( aSize.Height() );
-        if ( nValidMask & WINDOWSTATE_MASK_STATE )
+        if ( nValidMask & WindowStateMask::State )
             rData.SetState( nState );
     }
 }
@@ -893,7 +864,7 @@ void SystemWindow::SetWindowState(const OString& rStr)
     SetWindowStateData( aData );
 }
 
-OString SystemWindow::GetWindowState( sal_uInt32 nMask ) const
+OString SystemWindow::GetWindowState( WindowStateMask nMask ) const
 {
     WindowStateData aData;
     aData.SetMask( nMask );
@@ -965,6 +936,20 @@ void SystemWindow::SetMenuBar(MenuBar* pMenuBar)
                 mpImplData->mpTaskPaneList->AddWindow( pNewWindow );
         }
     }
+}
+
+void SystemWindow::SetNotebookBar(const OUString& rUIXMLDescription, const css::uno::Reference<css::frame::XFrame>& rFrame)
+{
+    if (rUIXMLDescription != maNotebookBarUIFile)
+    {
+        static_cast<ImplBorderWindow*>(mpWindowImpl->mpBorderWindow.get())->SetNotebookBar(rUIXMLDescription, rFrame);
+        maNotebookBarUIFile = rUIXMLDescription;
+    }
+}
+
+VclPtr<NotebookBar> SystemWindow::GetNotebookBar() const
+{
+    return static_cast<ImplBorderWindow*>(mpWindowImpl->mpBorderWindow.get())->GetNotebookBar();
 }
 
 void SystemWindow::SetMenuBarMode( MenuBarMode nMode )
@@ -1127,6 +1112,10 @@ void SystemWindow::DoInitialLayout()
         setOptimalLayoutSize();
         mbIsCalculatingInitialLayoutSize = false;
         mbInitialLayoutDone = true;
+    }
+    else if (IsDialog() && !(GetStyle() & WB_SIZEABLE))
+    {
+        SetMinOutputSizePixel(GetSizePixel());
     }
 }
 

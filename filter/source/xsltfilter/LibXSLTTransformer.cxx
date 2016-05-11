@@ -58,9 +58,6 @@ using ::std::list;
 using ::std::map;
 using ::std::pair;
 
-#define _INPUT_BUFFER_SIZE 4096
-#define _OUTPUT_BUFFER_SIZE 4096
-
 namespace XSLT
 {
     const char* const LibXSLTTransformer::PARAM_SOURCE_URL = "sourceURL";
@@ -71,9 +68,9 @@ namespace XSLT
             "targetBaseURL";
     const char* const LibXSLTTransformer::PARAM_DOCTYPE_PUBLIC = "publicType";
 
-    const sal_Int32 Reader::OUTPUT_BUFFER_SIZE = _OUTPUT_BUFFER_SIZE;
+    const sal_Int32 Reader::OUTPUT_BUFFER_SIZE = 4096;
 
-    const sal_Int32 Reader::INPUT_BUFFER_SIZE = _INPUT_BUFFER_SIZE;
+    const sal_Int32 Reader::INPUT_BUFFER_SIZE = 4096;
 
     /**
      * ParserInputBufferCallback forwards IO call-backs to libxml stream IO.
@@ -294,7 +291,7 @@ namespace XSLT
         xsltTransformContextPtr tcontext = nullptr;
         exsltRegisterAll();
         registerExtensionModule();
-#if OSL_DEBUG_LEVEL > 1
+#ifdef DEBUG_FILTER_LIBXSLTTRANSFORMER
         xsltSetGenericDebugFunc(stderr, NULL);
         xsltDebugDumpExtensions(NULL);
 #endif

@@ -451,7 +451,6 @@ static SvxSwFramePosString::StringId lcl_ChangeResIdToVerticalOrRTL(
                 return eStringId;
             }
         }
-        nIndex = 0;
         for(nIndex = 0; nIndex < SAL_N_ELEMENTS(aVertIds); ++nIndex)
         {
             if(aVertIds[nIndex].eHori == eStringId)
@@ -469,11 +468,11 @@ static sal_uLong lcl_GetLBRelationsForRelations( const sal_uInt16 _nRel )
 {
     sal_uLong nLBRelations = 0L;
 
-    for ( sal_uInt16 nRelMapPos = 0; nRelMapPos < SAL_N_ELEMENTS(aRelationMap); ++nRelMapPos )
+    for (RelationMap & nRelMapPos : aRelationMap)
     {
-        if ( aRelationMap[nRelMapPos].nRelation == _nRel )
+        if ( nRelMapPos.nRelation == _nRel )
         {
-            nLBRelations |= aRelationMap[nRelMapPos].nLBRelation;
+            nLBRelations |= nRelMapPos.nLBRelation;
         }
     }
 
@@ -660,12 +659,12 @@ void SvxSwPosSizeTabPage::setOptimalFrmWidth()
     };
 
     std::vector<SvxSwFramePosString::StringId> aFrames;
-    for (size_t i = 0; i < SAL_N_ELEMENTS(aMaps); ++i)
+    for (const FrmMaps& aMap : aMaps)
     {
-        for (size_t j = 0; j < aMaps[i].nCount; ++j)
+        for (size_t j = 0; j < aMap.nCount; ++j)
         {
-            aFrames.push_back(aMaps[i].pMap[j].eStrId);
-            aFrames.push_back(aMaps[i].pMap[j].eMirrorStrId);
+            aFrames.push_back(aMap.pMap[j].eStrId);
+            aFrames.push_back(aMap.pMap[j].eMirrorStrId);
         }
     }
 
@@ -701,12 +700,12 @@ void SvxSwPosSizeTabPage::setOptimalRelWidth()
     };
 
     std::vector<SvxSwFramePosString::StringId> aRels;
-    for (size_t i = 0; i < SAL_N_ELEMENTS(aMaps); ++i)
+    for (const RelationMaps& aMap : aMaps)
     {
-        for (size_t j = 0; j < aMaps[i].nCount; ++j)
+        for (size_t j = 0; j < aMap.nCount; ++j)
         {
-            aRels.push_back(aMaps[i].pMap[j].eStrId);
-            aRels.push_back(aMaps[i].pMap[j].eMirrorStrId);
+            aRels.push_back(aMap.pMap[j].eStrId);
+            aRels.push_back(aMap.pMap[j].eMirrorStrId);
         }
     }
 
@@ -1194,9 +1193,6 @@ IMPL_LINK_NOARG_TYPED(SvxSwPosSizeTabPage, RangeModifyHdl, Control&, void)
 
     m_aValidateLink.Call(aVal);
 
-    nWidth = aVal.nWidth;
-    nHeight = aVal.nHeight;
-
     // minimum width also for style
     m_pHeightMF->SetMin(m_pHeightMF->Normalize(aVal.nMinHeight), FUNIT_TWIP);
     m_pWidthMF-> SetMin(m_pWidthMF->Normalize(aVal.nMinWidth), FUNIT_TWIP);
@@ -1668,7 +1664,7 @@ void SvxSwPosSizeTabPage::UpdateExample()
     m_pExampleWN->Invalidate();
 }
 
-sal_uLong SvxSwPosSizeTabPage::FillRelLB(FrmMap *pMap, sal_uInt16 nMapPos, sal_uInt16 nAlign,
+void SvxSwPosSizeTabPage::FillRelLB(FrmMap *pMap, sal_uInt16 nMapPos, sal_uInt16 nAlign,
         sal_uInt16 nRel, ListBox &rLB, FixedText &rFT)
 {
     OUString sSelEntry;
@@ -1810,8 +1806,6 @@ sal_uLong SvxSwPosSizeTabPage::FillRelLB(FrmMap *pMap, sal_uInt16 nMapPos, sal_u
     rFT.Enable(rLB.GetEntryCount() != 0);
 
     RelHdl(rLB);
-
-    return nLBRelations;
 }
 
 sal_uInt16 SvxSwPosSizeTabPage::FillPosLB(FrmMap *_pMap,

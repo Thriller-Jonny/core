@@ -202,7 +202,6 @@ class EDITENG_DLLPUBLIC SvxRTFParser : public SvRTFParser
     css::uno::Reference< css::document::XDocumentProperties> m_xDocProps;
     SfxItemSet *pRTFDefaults;
 
-    long    nVersionNo;
     int     nDfltFont;
 
     bool    bNewDoc : 1;            // sal_False - Reading in an existing
@@ -224,8 +223,8 @@ class EDITENG_DLLPUBLIC SvxRTFParser : public SvRTFParser
     void ClearStyleTbl();
     void ClearAttrStack();
 
-    SvxRTFItemStackType* _GetAttrSet(bool bCopyAttr = false);  // Create new ItemStackType:s
-    void _ClearStyleAttr( SvxRTFItemStackType& rStkType );
+    SvxRTFItemStackType* GetAttrSet_();  // Create new ItemStackType:s
+    void ClearStyleAttr_( SvxRTFItemStackType& rStkType );
 
     // Sets all the attributes that are different from the current
     void SetAttrSet( SvxRTFItemStackType &rSet );
@@ -268,7 +267,7 @@ protected:
     // Read Document-Info
     css::util::DateTime GetDateTimeStamp( );
     OUString& GetTextToEndGroup( OUString& rStr );
-    void ReadInfo( const sal_Char* pChkForVerNo = nullptr );
+    void ReadInfo();
 
     inline SfxItemSet& GetAttrSet();
     // no text yet inserted? (SttPos from the top stack entry!)
@@ -290,8 +289,7 @@ protected:
 
     SvxRTFParser( SfxItemPool& rAttrPool,
                     SvStream& rIn,
-                    css::uno::Reference< css::document::XDocumentProperties> i_xDocProps,
-                    bool bReadNewDoc = true );
+                    css::uno::Reference< css::document::XDocumentProperties> i_xDocProps );
     virtual ~SvxRTFParser();
 
     void SetNewDoc( bool bFlag )        { bNewDoc = bFlag; }
@@ -395,7 +393,7 @@ inline SfxItemSet& SvxRTFParser::GetAttrSet()
 {
     SvxRTFItemStackType* pTmp;
     if( bNewGroup || nullptr == ( pTmp = aAttrStack.empty() ? nullptr : aAttrStack.back()) )
-        pTmp = _GetAttrSet();
+        pTmp = GetAttrSet_();
     return pTmp->aAttrSet;
 }
 

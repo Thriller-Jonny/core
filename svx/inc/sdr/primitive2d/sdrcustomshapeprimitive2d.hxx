@@ -28,7 +28,6 @@
 // predefines
 
 
-
 namespace drawinglayer
 {
     namespace primitive2d
@@ -62,8 +61,7 @@ namespace drawinglayer
                 const Primitive2DContainer& rSubPrimitives,
                 const basegfx::B2DHomMatrix& rTextBox,
                 bool bWordWrap,
-                bool b3DShape,
-                bool bForceTextClipToTextRange);
+                bool b3DShape);
 
             // data access
             const attribute::SdrShadowTextAttribute& getSdrSTAttribute() const { return maSdrSTAttribute; }
@@ -81,7 +79,6 @@ namespace drawinglayer
         };
     } // end of namespace primitive2d
 } // end of namespace drawinglayer
-
 
 
 #endif // INCLUDED_SVX_INC_SDR_PRIMITIVE2D_SDRCUSTOMSHAPEPRIMITIVE2D_HXX

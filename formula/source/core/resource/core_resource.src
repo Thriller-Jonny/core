@@ -287,6 +287,12 @@ Resource RID_STRLIST_FUNCTION_NAMES_ENGLISH_ODFF
     String SC_OPCODE_SUBSTITUTE { Text = "SUBSTITUTE" ; };
     String SC_OPCODE_REPT { Text = "REPT" ; };
     String SC_OPCODE_CONCAT { Text = "CONCATENATE" ; };
+    String SC_OPCODE_CONCAT_MS { Text = "COM.MICROSOFT.CONCAT" ; };
+    String SC_OPCODE_TEXTJOIN_MS { Text = "COM.MICROSOFT.TEXTJOIN" ; };
+    String SC_OPCODE_IFS_MS { Text = "COM.MICROSOFT.IFS" ; };
+    String SC_OPCODE_SWITCH_MS { Text = "COM.MICROSOFT.SWITCH" ; };
+    String SC_OPCODE_MINIFS_MS { Text = "COM.MICROSOFT.MINIFS" ; };
+    String SC_OPCODE_MAXIFS_MS { Text = "COM.MICROSOFT.MAXIFS" ; };
     String SC_OPCODE_MAT_VALUE { Text = "MVALUE" ; };
     String SC_OPCODE_MAT_DET { Text = "MDETERM" ; };
     String SC_OPCODE_MAT_INV { Text = "MINVERSE" ; };
@@ -368,6 +374,14 @@ Resource RID_STRLIST_FUNCTION_NAMES_ENGLISH_ODFF
     String SC_OPCODE_LINEST { Text = "LINEST" ; };
     String SC_OPCODE_LOGEST { Text = "LOGEST" ; };
     String SC_OPCODE_FORECAST { Text = "FORECAST" ; };
+    String SC_OPCODE_FORECAST_ETS_ADD { Text = "COM.MICROSOFT.FORECAST.ETS" ; };
+    String SC_OPCODE_FORECAST_ETS_SEA { Text = "COM.MICROSOFT.FORECAST.ETS.SEASONALITY" ; };
+    String SC_OPCODE_FORECAST_ETS_MUL { Text = "ORG.LIBREOFFICE.FORECAST.ETS.MULT" ; };
+    String SC_OPCODE_FORECAST_ETS_PIA { Text = "COM.MICROSOFT.FORECAST.ETS.CONFINT" ; };
+    String SC_OPCODE_FORECAST_ETS_PIM { Text = "ORG.LIBREOFFICE.FORECAST.ETS.PI.MULT" ; };
+    String SC_OPCODE_FORECAST_ETS_STA { Text = "COM.MICROSOFT.FORECAST.ETS.STAT" ; };
+    String SC_OPCODE_FORECAST_ETS_STM { Text = "ORG.LIBREOFFICE.FORECAST.ETS.STAT.MULT" ; };
+    String SC_OPCODE_FORECAST_LIN { Text = "COM.MICROSOFT.FORECAST.LINEAR" ; };
     String SC_OPCODE_CHI_INV { Text = "LEGACY.CHIINV" ; };
     String SC_OPCODE_CHI_INV_MS { Text = "COM.MICROSOFT.CHISQ.INV.RT" ; };
     String SC_OPCODE_GAMMA_DIST { Text = "GAMMADIST" ; };
@@ -391,6 +405,9 @@ Resource RID_STRLIST_FUNCTION_NAMES_ENGLISH_ODFF
     String SC_OPCODE_BETA_INV_MS { Text = "COM.MICROSOFT.BETA.INV" ; };
     String SC_OPCODE_WEEK { Text = "WEEKNUM" ; };
     String SC_OPCODE_ISOWEEKNUM { Text = "ISOWEEKNUM" ; };
+    /* WEEKNUM_OOO currently (5.1) not written, see
+     * formula/source/core/api/token.cxx FormulaTokenArray::RewriteMissing() */
+    String SC_OPCODE_WEEKNUM_OOO { Text = "ORG.LIBREOFFICE.WEEKNUM_OOO" ; };
     String SC_OPCODE_EASTERSUNDAY { Text = "ORG.OPENOFFICE.EASTERSUNDAY" ; };
     String SC_OPCODE_GET_DAY_OF_WEEK { Text = "WEEKDAY" ; };
     String SC_OPCODE_NETWORKDAYS { Text = "NETWORKDAYS" ; };
@@ -435,6 +452,7 @@ Resource RID_STRLIST_FUNCTION_NAMES_ENGLISH_ODFF
     String SC_OPCODE_ERF_MS { Text = "COM.MICROSOFT.ERF.PRECISE" ; };
     String SC_OPCODE_ERFC_MS { Text = "COM.MICROSOFT.ERFC.PRECISE" ; };
     String SC_OPCODE_ENCODEURL     { Text = "COM.MICROSOFT.ENCODEURL"; };
+    String SC_OPCODE_RAWSUBTRACT    { Text = "ORG.LIBREOFFICE.RAWSUBTRACT"; };
 };
 
 /** These function names are used only in the XLSX import. */
@@ -474,7 +492,7 @@ Resource RID_STRLIST_FUNCTION_NAMES_ENGLISH_OOXML
     String SC_OPCODE_AND { Text = "AND" ; };
     String SC_OPCODE_OR { Text = "OR" ; };
     String SC_OPCODE_XOR { Text = "_xlfn.XOR" ; };
-    String SC_OPCODE_INTERSECT { Text = "!" ; };
+    String SC_OPCODE_INTERSECT { Text = " " ; };
     String SC_OPCODE_UNION { Text = "~" ; };
     String SC_OPCODE_RANGE { Text = ":" ; };
     String SC_OPCODE_NOT { Text = "NOT" ; };
@@ -709,6 +727,12 @@ Resource RID_STRLIST_FUNCTION_NAMES_ENGLISH_OOXML
     String SC_OPCODE_SUBSTITUTE { Text = "SUBSTITUTE" ; };
     String SC_OPCODE_REPT { Text = "REPT" ; };
     String SC_OPCODE_CONCAT { Text = "CONCATENATE" ; };
+    String SC_OPCODE_CONCAT_MS { Text = "_xlfn.CONCAT" ; };
+    String SC_OPCODE_TEXTJOIN_MS { Text = "_xlfn.TEXTJOIN" ; };
+    String SC_OPCODE_IFS_MS { Text = "_xlfn.IFS" ; };
+    String SC_OPCODE_SWITCH_MS { Text = "_xlfn.SWITCH" ; };
+    String SC_OPCODE_MINIFS_MS { Text = "_xlfn.MINIFS" ; };
+    String SC_OPCODE_MAXIFS_MS { Text = "_xlfn.MAXIFS" ; };
     String SC_OPCODE_MAT_VALUE { Text = "MVALUE" ; };
     String SC_OPCODE_MAT_DET { Text = "MDETERM" ; };
     String SC_OPCODE_MAT_INV { Text = "MINVERSE" ; };
@@ -790,6 +814,14 @@ Resource RID_STRLIST_FUNCTION_NAMES_ENGLISH_OOXML
     String SC_OPCODE_LINEST { Text = "LINEST" ; };
     String SC_OPCODE_LOGEST { Text = "LOGEST" ; };
     String SC_OPCODE_FORECAST { Text = "FORECAST" ; };
+    String SC_OPCODE_FORECAST_ETS_ADD { Text = "_xlfn.FORECAST.ETS" ; };
+    String SC_OPCODE_FORECAST_ETS_SEA { Text = "_xlfn.FORECAST.ETS.SEASONALITY" ; };
+    String SC_OPCODE_FORECAST_ETS_MUL { Text = "_xlfn.ORG.LIBREOFFICE.FORECAST.ETS.MULT" ; };
+    String SC_OPCODE_FORECAST_ETS_PIA { Text = "_xlfn.FORECAST.ETS.CONFINT" ; };
+    String SC_OPCODE_FORECAST_ETS_PIM { Text = "_xlfn.ORG.LIBREOFFICE.FORECAST.ETS.PI.MULT" ; };
+    String SC_OPCODE_FORECAST_ETS_STA { Text = "_xlfn.FORECAST.ETS.STAT" ; };
+    String SC_OPCODE_FORECAST_ETS_STM { Text = "_xlfn.ORG.LIBREOFFICE.FORECAST.ETS.STAT.MULT" ; };
+    String SC_OPCODE_FORECAST_LIN { Text = "_xlfn.FORECAST.LINEAR" ; };
     String SC_OPCODE_CHI_INV { Text = "CHIINV" ; };
     String SC_OPCODE_CHI_INV_MS { Text = "_xlfn.CHISQ.INV.RT" ; };
     String SC_OPCODE_GAMMA_DIST { Text = "GAMMADIST" ; };
@@ -813,6 +845,7 @@ Resource RID_STRLIST_FUNCTION_NAMES_ENGLISH_OOXML
     String SC_OPCODE_BETA_INV_MS { Text = "_xlfn.BETA.INV" ; };
     String SC_OPCODE_WEEK { Text = "WEEKNUM" ; };
     String SC_OPCODE_ISOWEEKNUM { Text = "_xlfn.ISOWEEKNUM" ; };
+    String SC_OPCODE_WEEKNUM_OOO { Text = "_xlfn.ORG.LIBREOFFICE.WEEKNUM_OOO" ; };
     String SC_OPCODE_EASTERSUNDAY { Text = "EASTERSUNDAY" ; };
     String SC_OPCODE_GET_DAY_OF_WEEK { Text = "WEEKDAY" ; };
     String SC_OPCODE_NETWORKDAYS { Text = "NETWORKDAYS" ; };
@@ -857,6 +890,7 @@ Resource RID_STRLIST_FUNCTION_NAMES_ENGLISH_OOXML
     String SC_OPCODE_ERF_MS { Text = "_xlfn.ERF.PRECISE" ; };
     String SC_OPCODE_ERFC_MS { Text = "_xlfn.ERFC.PRECISE" ; };
     String SC_OPCODE_ENCODEURL     { Text = "_xlfn.ENCODEURL"; };
+    String SC_OPCODE_RAWSUBTRACT    { Text = "_xlfn.ORG.LIBREOFFICE.RAWSUBTRACT"; };
 };
 
 // DO NOT CHANGE NAMES! Only add functions.
@@ -1133,6 +1167,12 @@ Resource RID_STRLIST_FUNCTION_NAMES_ENGLISH
     String SC_OPCODE_SUBSTITUTE { Text = "SUBSTITUTE" ; };
     String SC_OPCODE_REPT { Text = "REPT" ; };
     String SC_OPCODE_CONCAT { Text = "CONCATENATE" ; };
+    String SC_OPCODE_CONCAT_MS { Text = "CONCAT" ; };
+    String SC_OPCODE_TEXTJOIN_MS { Text = "TEXTJOIN" ; };
+    String SC_OPCODE_IFS_MS { Text = "IFS" ; };
+    String SC_OPCODE_SWITCH_MS { Text = "SWITCH" ; };
+    String SC_OPCODE_MINIFS_MS { Text = "MINIFS" ; };
+    String SC_OPCODE_MAXIFS_MS { Text = "MAXIFS" ; };
     String SC_OPCODE_MAT_VALUE { Text = "MVALUE" ; };
     String SC_OPCODE_MAT_DET { Text = "MDETERM" ; };
     String SC_OPCODE_MAT_INV { Text = "MINVERSE" ; };
@@ -1214,6 +1254,14 @@ Resource RID_STRLIST_FUNCTION_NAMES_ENGLISH
     String SC_OPCODE_LINEST { Text = "LINEST" ; };
     String SC_OPCODE_LOGEST { Text = "LOGEST" ; };
     String SC_OPCODE_FORECAST { Text = "FORECAST" ; };
+    String SC_OPCODE_FORECAST_ETS_ADD { Text = "FORECAST.ETS.ADD" ; };
+    String SC_OPCODE_FORECAST_ETS_SEA { Text = "FORECAST.ETS.SEASONALITY" ; };
+    String SC_OPCODE_FORECAST_ETS_MUL { Text = "FORECAST.ETS.MULT" ; };
+    String SC_OPCODE_FORECAST_ETS_PIA { Text = "FORECAST.ETS.PI.ADD" ; };
+    String SC_OPCODE_FORECAST_ETS_PIM { Text = "FORECAST.ETS.PI.MULT" ; };
+    String SC_OPCODE_FORECAST_ETS_STA { Text = "FORECAST.ETS.STAT.ADD" ; };
+    String SC_OPCODE_FORECAST_ETS_STM { Text = "FORECAST.ETS.STAT.MULT" ; };
+    String SC_OPCODE_FORECAST_LIN { Text = "FORECAST.LINEAR" ; };
     String SC_OPCODE_CHI_INV { Text = "CHIINV" ; };
     String SC_OPCODE_CHI_INV_MS { Text = "CHISQ.INV.RT" ; };
     String SC_OPCODE_GAMMA_DIST { Text = "GAMMADIST" ; };
@@ -1237,6 +1285,7 @@ Resource RID_STRLIST_FUNCTION_NAMES_ENGLISH
     String SC_OPCODE_BETA_INV_MS { Text = "BETA.INV" ; };
     String SC_OPCODE_WEEK { Text = "WEEKNUM" ; };
     String SC_OPCODE_ISOWEEKNUM { Text = "ISOWEEKNUM" ; };
+    String SC_OPCODE_WEEKNUM_OOO { Text = "WEEKNUM_OOO" ; };
     String SC_OPCODE_EASTERSUNDAY { Text = "EASTERSUNDAY" ; };
     String SC_OPCODE_GET_DAY_OF_WEEK { Text = "WEEKDAY" ; };
     String SC_OPCODE_NETWORKDAYS { Text = "NETWORKDAYS" ; };
@@ -1281,6 +1330,7 @@ Resource RID_STRLIST_FUNCTION_NAMES_ENGLISH
     String SC_OPCODE_ERF_MS { Text = "ERF.PRECISE" ; };
     String SC_OPCODE_ERFC_MS { Text = "ERFC.PRECISE" ; };
     String SC_OPCODE_ENCODEURL     { Text = "ENCODEURL"; };
+    String SC_OPCODE_RAWSUBTRACT    { Text = "RAWSUBTRACT"; };
 };
 
 Resource RID_STRLIST_FUNCTION_NAMES
@@ -2289,6 +2339,30 @@ Resource RID_STRLIST_FUNCTION_NAMES
     {
         Text [ en-US ] = "CONCATENATE" ;
     };
+    String SC_OPCODE_CONCAT_MS
+    {
+        Text [ en-US ] = "CONCAT" ;
+    };
+    String SC_OPCODE_TEXTJOIN_MS
+    {
+        Text [ en-US ] = "TEXTJOIN" ;
+    };
+    String SC_OPCODE_IFS_MS
+    {
+        Text [ en-US ] = "IFS" ;
+    };
+    String SC_OPCODE_SWITCH_MS
+    {
+        Text [ en-US ] = "SWITCH" ;
+    };
+    String SC_OPCODE_MINIFS_MS
+    {
+        Text [ en-US ] = "MINIFS" ;
+    };
+    String SC_OPCODE_MAXIFS_MS
+    {
+        Text [ en-US ] = "MAXIFS" ;
+    };
     String SC_OPCODE_MAT_VALUE
     {
         Text [ en-US ] = "MVALUE" ;
@@ -2613,6 +2687,38 @@ Resource RID_STRLIST_FUNCTION_NAMES
     {
         Text [ en-US ] = "FORECAST" ;
     };
+    String SC_OPCODE_FORECAST_ETS_ADD
+    {
+        Text [ en-US ] = "FORECAST.ETS.ADD" ;
+    };
+    String SC_OPCODE_FORECAST_ETS_SEA
+    {
+        Text [ en-US ] = "FORECAST.ETS.SEASONALITY" ;
+    };
+    String SC_OPCODE_FORECAST_ETS_MUL
+    {
+        Text [ en-US ] = "FORECAST.ETS.MULT" ;
+    };
+    String SC_OPCODE_FORECAST_ETS_PIA
+    {
+        Text [ en-US ] = "FORECAST.ETS.PI.ADD" ;
+    };
+    String SC_OPCODE_FORECAST_ETS_PIM
+    {
+        Text [ en-US ] = "FORECAST.ETS.PI.MULT" ;
+    };
+    String SC_OPCODE_FORECAST_ETS_STA
+    {
+        Text [ en-US ] = "FORECAST.ETS.STAT.ADD" ;
+    };
+    String SC_OPCODE_FORECAST_ETS_STM
+    {
+        Text [ en-US ] = "FORECAST.ETS.STAT.MULT" ;
+    };
+    String SC_OPCODE_FORECAST_LIN
+    {
+        Text [ en-US ] = "FORECAST.LINEAR" ;
+    };
     String SC_OPCODE_CHI_INV
     {
         Text [ en-US ] = "CHIINV" ;
@@ -2704,6 +2810,10 @@ Resource RID_STRLIST_FUNCTION_NAMES
     String SC_OPCODE_ISOWEEKNUM
     {
         Text [ en-US ] = "ISOWEEKNUM" ;
+    };
+    String SC_OPCODE_WEEKNUM_OOO
+    {
+        Text [ en-US ] = "WEEKNUM_OOO" ;
     };
     String SC_OPCODE_EASTERSUNDAY
     {
@@ -2878,6 +2988,10 @@ Resource RID_STRLIST_FUNCTION_NAMES
     String SC_OPCODE_ENCODEURL
     {
         Text [ en-US ] = "ENCODEURL";
+    };
+    String SC_OPCODE_RAWSUBTRACT
+    {
+        Text [ en-US ] = "RAWSUBTRACT";
     };
 };
 

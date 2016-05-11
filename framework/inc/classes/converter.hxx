@@ -24,7 +24,6 @@
 #include <stdtypes.h>
 
 #include <com/sun/star/uno/Sequence.hxx>
-#include <com/sun/star/uno/Any.hxx>
 #include <com/sun/star/beans/PropertyValue.hpp>
 #include <com/sun/star/beans/NamedValue.hpp>
 #include <tools/datetime.hxx>
@@ -39,7 +38,7 @@ class FWI_DLLPUBLIC Converter
         static css::uno::Sequence< css::beans::NamedValue >    convert_seqPropVal2seqNamedVal  ( const css::uno::Sequence< css::beans::PropertyValue >& lSource );
 
         // Seq<String> => Vector<String>
-        static OUStringList                                    convert_seqOUString2OUStringList( const css::uno::Sequence< OUString >&           lSource );
+        static std::vector<OUString> convert_seqOUString2OUStringList( const css::uno::Sequence< OUString >&           lSource );
 
         static OUString                                 convert_DateTime2ISO8601        ( const DateTime&                                        aSource );
 };

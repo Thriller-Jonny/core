@@ -21,13 +21,9 @@
 #include "PaneDockingWindow.hxx"
 #include "ViewShellBase.hxx"
 #include "framework/FrameworkHelper.hxx"
-#include "taskpane/ToolPanelViewShell.hxx"
 #include "app.hrc"
 #include "strings.hrc"
 #include "sdresid.hxx"
-
-#include <com/sun/star/drawing/framework/XConfigurationController.hpp>
-#include <com/sun/star/drawing/framework/ResourceActivationMode.hpp>
 
 #include <sfx2/app.hxx>
 #include <sfx2/dockwin.hxx>
@@ -37,11 +33,6 @@
 
 namespace sd {
 
-using ::com::sun::star::uno::Reference;
-using ::com::sun::star::drawing::framework::XResourceId;
-using ::com::sun::star::drawing::framework::XConfigurationController;
-using ::com::sun::star::drawing::framework::ResourceActivationMode_ADD;
-using ::com::sun::star::drawing::framework::ResourceActivationMode_REPLACE;
 
 SFX_IMPL_DOCKINGWINDOW_WITHID(LeftPaneImpressChildWindow, SID_LEFT_PANE_IMPRESS)
 SFX_IMPL_DOCKINGWINDOW_WITHID(LeftPaneDrawChildWindow, SID_LEFT_PANE_DRAW)

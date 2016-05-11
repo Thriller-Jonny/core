@@ -33,7 +33,7 @@
 #include <sstream>
 #include <stdexcept>
 
-#if OSL_DEBUG_LEVEL > 2
+#if OSL_DEBUG_LEVEL > 0
     void dumpParameter();
 #endif
 
@@ -183,7 +183,7 @@ const char* KnownParameter[] =
     "--mapi-logon-ui"
 };
 
-const size_t nKnownParameter = (sizeof(KnownParameter)/sizeof(KnownParameter[0]));
+const size_t nKnownParameter = SAL_N_ELEMENTS(KnownParameter);
 
 /** @internal */
 bool isKnownParameter(const char* aParameterName)
@@ -248,7 +248,7 @@ int main(int argc, char* argv[])
 
     initParameter(argc, argv);
 
-#if OSL_DEBUG_LEVEL > 2
+#if OSL_DEBUG_LEVEL > 0
     dumpParameter();
 #endif
 
@@ -300,7 +300,7 @@ int main(int argc, char* argv[])
     return ulRet;
 }
 
-#if OSL_DEBUG_LEVEL > 2
+#if OSL_DEBUG_LEVEL > 0
     void dumpParameter()
     {
         std::ostringstream oss;

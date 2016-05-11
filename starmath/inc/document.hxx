@@ -31,7 +31,9 @@
 #include <sax/fshelper.hxx>
 #include <oox/core/filterbase.hxx>
 #include <oox/mathml/import.hxx>
+#include <oox/export/utils.hxx>
 
+#include <memory>
 #include <set>
 
 #include "format.hxx"
@@ -40,7 +42,6 @@
 #include "smdllapi.hxx"
 
 class SmNode;
-class SfxMenuBarManager;
 class SfxPrinter;
 class Printer;
 class SmCursor;
@@ -66,7 +67,6 @@ class SmDocShell;
 class EditEngine;
 
 
-
 class SmPrinterAccess
 {
     VclPtr<Printer> pPrinter;
@@ -79,10 +79,7 @@ public:
 };
 
 
-
-
 void SetEditEngineDefaultFonts(SfxItemPool &rEditEngineItemPool);
-
 
 
 class SM_DLLPUBLIC SmDocShell : public SfxObjectShell, public SfxListener
@@ -102,9 +99,8 @@ class SM_DLLPUBLIC SmDocShell : public SfxObjectShell, public SfxListener
     VclPtr<Printer>     pTmpPrinter;    //ditto
     sal_uInt16          nModifyCount;
     bool                bIsFormulaArranged;
-    SmCursor           *pCursor;
+    std::unique_ptr<SmCursor> pCursor;
     std::set< OUString >    aUsedSymbols;   // to export used symbols only when saving
-
 
 
     virtual void Notify(SfxBroadcaster& rBC, const SfxHint& rHint) override;
@@ -145,7 +141,9 @@ class SM_DLLPUBLIC SmDocShell : public SfxObjectShell, public SfxListener
      */
     void                InvalidateCursor();
 
-    bool writeFormulaOoxml( ::sax_fastparser::FSHelperPtr pSerializer, oox::core::OoxmlVersion version );
+    bool writeFormulaOoxml(const ::sax_fastparser::FSHelperPtr& pSerializer,
+            oox::core::OoxmlVersion version,
+            oox::drawingml::DocumentType documentType);
     void writeFormulaRtf(OStringBuffer& rBuffer, rtl_TextEncoding nEncoding);
     void readFormulaOoxml( oox::formulaimport::XmlStream& stream );
 
@@ -177,11 +175,11 @@ public:
     const OUString GetComment() const;
 
     // to replace chars that can not be saved with the document...
-    bool    ReplaceBadChars();
+    void        ReplaceBadChars();
 
     void        UpdateText();
     void        SetText(const OUString& rBuffer);
-    OUString    GetText() { return aText; }
+    const OUString&  GetText() { return aText; }
     void        SetFormat(SmFormat& rFormat);
     const SmFormat&  GetFormat() { return aFormat; }
 
@@ -219,7 +217,7 @@ public:
     /** True, if cursor have previously been requested and thus
      * has some sort of position.
      */
-    bool        HasCursor() { return pCursor != nullptr; }
+    bool        HasCursor();
 };
 
 #endif

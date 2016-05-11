@@ -439,7 +439,6 @@ sal_Int32 WW8ReadFieldParams::FindNextStringPiece(const sal_Int32 nStart)
 }
 
 
-
 // read parameters "1-3" or 1-3 with both values between 1 and nMax
 bool WW8ReadFieldParams::GetTokenSttFromTo(sal_Int32* pFrom, sal_Int32* pTo, sal_Int32 nMax)
 {
@@ -480,7 +479,7 @@ EquationResult Read_SubF_Combined(WW8ReadFieldParams& rReadParam)
             break;
         }
         (void)rReadParam.SkipToNextToken();
-        // intentional fall-through
+        SAL_FALLTHROUGH;
     case -2:
         {
             if ( rReadParam.GetResult().startsWithIgnoreAsciiCase("(") )
@@ -550,6 +549,7 @@ EquationResult Read_SubF_Combined(WW8ReadFieldParams& rReadParam)
                     }
                 }
             }
+            break;
         }
     default:
         break;
@@ -1185,9 +1185,9 @@ const char* GetOOXMLPresetGeometry( const char* sShapeType )
     if( pCustomShapeTypeTranslationHashMap == nullptr )
     {
         pCustomShapeTypeTranslationHashMap = new CustomShapeTypeTranslationHashMap ();
-        for( unsigned int i = 0; i < SAL_N_ELEMENTS(pCustomShapeTypeTranslationTable); ++i )
+        for(const msfilter::util::CustomShapeTypeTranslationTable& i : pCustomShapeTypeTranslationTable)
         {
-            (*pCustomShapeTypeTranslationHashMap)[ pCustomShapeTypeTranslationTable[ i ].sOOo ] = pCustomShapeTypeTranslationTable[ i ].sMSO;
+            (*pCustomShapeTypeTranslationHashMap)[ i.sOOo ] = i.sMSO;
         }
     }
     CustomShapeTypeTranslationHashMap::iterator i(
@@ -1205,8 +1205,8 @@ MSO_SPT GETVMLShapeType(const OString& aType)
     if (!pDMLToVMLMap)
     {
         pDMLToVMLMap = new DMLToVMLTranslationHashMap();
-        for (size_t i = 0; i < SAL_N_ELEMENTS(pDMLToVMLTable); ++i)
-            (*pDMLToVMLMap)[pDMLToVMLTable[i].sDML] = pDMLToVMLTable[i].nVML;
+        for (auto& i : pDMLToVMLTable)
+            (*pDMLToVMLMap)[i.sDML] = i.nVML;
     }
 
     DMLToVMLTranslationHashMap::iterator i(pDMLToVMLMap->find(pDML));
@@ -1232,7 +1232,7 @@ namespace
 // Scheme means pattern of chromatic values.
 // [2,2,1] -> red and green are approximately equal and blue is the dominant color (e.g. blue)
 // [1,1,1] -> all chromatic values are approximately equal (e.g. white, gray, black)
-static void CalculateScheme(const BitmapColor& rBitmapColor, std::vector<int> &vScheme, sal_uInt16 nVariance)
+void CalculateScheme(const BitmapColor& rBitmapColor, std::vector<int> &vScheme, sal_uInt16 nVariance)
 {
     vScheme.resize(3,1);
     if( rBitmapColor.GetRed() < rBitmapColor.GetGreen() + nVariance )
@@ -1249,7 +1249,7 @@ static void CalculateScheme(const BitmapColor& rBitmapColor, std::vector<int> &v
         ++vScheme[2];
 }
 
-static bool HasSimilarScheme(const BitmapColor& rBitmapColor1, const BitmapColor& rBitmapColor2, sal_uInt16 nVariance)
+bool HasSimilarScheme(const BitmapColor& rBitmapColor1, const BitmapColor& rBitmapColor2, sal_uInt16 nVariance)
 {
     std::vector<int> vScheme1, vScheme2;
     CalculateScheme(rBitmapColor1, vScheme1, nVariance);
@@ -1263,7 +1263,7 @@ static bool HasSimilarScheme(const BitmapColor& rBitmapColor1, const BitmapColor
 }
 
 // Find the best match in the color palette using scheme of the input color
-static sal_uInt16 GetBestIndex(const BitmapPalette& rPalette, const BitmapColor& rBitmapColor)
+sal_uInt16 GetBestIndex(const BitmapPalette& rPalette, const BitmapColor& rBitmapColor)
 {
     sal_uInt16 nReturn = 0;
     sal_uInt16 nLastErr = SAL_MAX_UINT16;

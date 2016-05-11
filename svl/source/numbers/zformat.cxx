@@ -62,12 +62,12 @@ const double EXP_ABS_UPPER_BOUND = 1.0E15;  // use exponential notation above th
 
 } // namespace
 
-const double _D_MAX_U_LONG_ = (double) 0xffffffff;      // 4294967295.0
-const sal_uInt16 _MAX_FRACTION_PREC = 3;
+const double D_MAX_U_LONG = (double) 0xffffffff;      // 4294967295.0
+const sal_uInt16 MAX_FRACTION_PREC = 3;
 const double D_EPS = 1.0E-2;
 
-const double _D_MAX_D_BY_100  = 1.7E306;
-const double _D_MIN_M_BY_1000 = 2.3E-305;
+const double D_MAX_D_BY_100  = 1.7E306;
+const double D_MIN_M_BY_1000 = 2.3E-305;
 
 static const sal_uInt8 cCharWidths[ 128-32 ] = {
     1,1,1,2,2,3,2,1,1,1,1,2,1,1,1,1,
@@ -591,8 +591,7 @@ SvNumberformat::SvNumberformat(OUString& rString,
                                ImpSvNumberformatScan* pSc,
                                ImpSvNumberInputScan* pISc,
                                sal_Int32& nCheckPos,
-                               LanguageType& eLan,
-                               bool bStan)
+                               LanguageType& eLan)
         : rScan(*pSc)
         , bAdditionalBuiltin( false )
         , bStarFlag( false )
@@ -623,7 +622,7 @@ SvNumberformat::SvNumberformat(OUString& rString,
     {
         maLocale.meLanguage = eLan;
     }
-    bStandard = bStan;
+    bStandard = false;
     bIsUsed = false;
     fLimit1 = 0.0;
     fLimit2 = 0.0;
@@ -1110,13 +1109,18 @@ SvNumberformat::~SvNumberformat()
  * ---------------+-------------------+----------------------------+---------------
  *  Old State     | Symbol read       | Event                      | New state
  * ---------------+-------------------+----------------------------+---------------
- *  SsStart       | ;                 | Pos--                      | SsGetString
+ *  SsStart       | "                 | Symbol += Character        | SsGetQuoted
+ *                | ;                 | Pos--                      | SsGetString
  *                | [                 | Symbol += Character        | SsGetBracketed
  *                | ]                 | Error                      | SsStop
  *                | BLANK             |                            |
  *                | Else              | Symbol += Character        | SsGetString
  * ---------------+-------------------+----------------------------+---------------
- *  SsGetString   | ;                 |                            | SsStop
+ *  SsGetString   | "                 | Symbol += Character        | SsGetQuoted
+ *                | ;                 |                            | SsStop
+ *                | Else              | Symbol += Character        |
+ * ---------------+-------------------+----------------------------+---------------
+ *  SsGetQuoted   | "                 | Symbol += Character        | SsGetString
  *                | Else              | Symbol += Character        |
  * ---------------+-------------------+----------------------------+---------------
  * SsGetBracketed | <, > =            | del [                      |
@@ -1147,7 +1151,8 @@ enum ScanState
     SsGetString,        // format string
     SsGetPrefix,        // color or NatNumN
     SsGetTime,          // [HH] for time
-    SsGetBracketed      // any [...] not decided yet
+    SsGetBracketed,     // any [...] not decided yet
+    SsGetQuoted         // quoted text
 };
 
 // read a string until ']' and delete spaces in input
@@ -1351,7 +1356,12 @@ short SvNumberformat::ImpNextSymbol(OUStringBuffer& rString,
         switch (eState)
         {
         case SsStart:
-            if (cToken == '[')
+            if (cToken == '\"')
+            {
+                eState = SsGetQuoted;
+                sBuffSymbol.append(cToken);
+            }
+            else if (cToken == '[')
             {
                 eState = SsGetBracketed;
                 sBuffSymbol.append(cToken);
@@ -1479,9 +1489,25 @@ short SvNumberformat::ImpNextSymbol(OUStringBuffer& rString,
             }
             break;
         case SsGetString:
-            if (cToken == ';' && (nPos < 2 || !IsCombiningSymbol( rString, nPos-2)))
+            if (cToken == '\"')
+            {
+                eState = SsGetQuoted;
+                sBuffSymbol.append(cToken);
+            }
+            else if (cToken == ';' && (nPos < 2 || !IsCombiningSymbol( rString, nPos-2)))
             {
                 eState = SsStop;
+            }
+            else
+            {
+                sBuffSymbol.append(cToken);
+            }
+            break;
+        case SsGetQuoted:
+            if (cToken == '\"')
+            {
+                eState = SsGetString;
+                sBuffSymbol.append(cToken);
             }
             else
             {
@@ -1594,32 +1620,20 @@ short SvNumberformat::ImpNextSymbol(OUStringBuffer& rString,
 
 void SvNumberformat::ConvertLanguage( SvNumberFormatter& rConverter,
                                       LanguageType eConvertFrom,
-                                      LanguageType eConvertTo, bool bSystem )
+                                      LanguageType eConvertTo )
 {
     sal_Int32 nCheckPos;
     sal_uInt32 nKey;
     short nType = eType;
     OUString aFormatString( sFormatstring );
-    if ( bSystem )
-    {
-        rConverter.PutandConvertEntrySystem( aFormatString, nCheckPos, nType,
-                                             nKey, eConvertFrom, eConvertTo );
-    }
-    else
-    {
-        rConverter.PutandConvertEntry( aFormatString, nCheckPos, nType,
-                                       nKey, eConvertFrom, eConvertTo );
-    }
+    rConverter.PutandConvertEntry( aFormatString, nCheckPos, nType,
+                                   nKey, eConvertFrom, eConvertTo );
     const SvNumberformat* pFormat = rConverter.GetEntry( nKey );
     DBG_ASSERT( pFormat, "SvNumberformat::ConvertLanguage: Conversion ohne Format" );
     if ( pFormat )
     {
         ImpCopyNumberformat( *pFormat );
         // Reset values taken over from Formatter/Scanner
-        if ( bSystem )
-        {
-            maLocale.meLanguage = LANGUAGE_SYSTEM;
-        }
         // pColor still points to table in temporary Formatter/Scanner
         for ( sal_uInt16 i = 0; i < 4; i++ )
         {
@@ -1662,36 +1676,35 @@ OUString SvNumberformat::StripNewCurrencyDelimiters( const OUString& rStr,
                                                      bool bQuoteSymbol )
 {
     OUString aTmp;
-    OUString aSource(rStr);
     sal_Int32 nStartPos, nPos, nLen;
-    nLen = aSource.getLength();
+    nLen = rStr.getLength();
     nStartPos = 0;
-    while ( (nPos = aSource.indexOf( "[$", nStartPos )) >= 0 )
+    while ( (nPos = rStr.indexOf( "[$", nStartPos )) >= 0 )
     {
         sal_Int32 nEnd;
-        if ( (nEnd = GetQuoteEnd( aSource, nPos )) >= 0 )
+        if ( (nEnd = GetQuoteEnd( rStr, nPos )) >= 0 )
         {
-            aTmp += aSource.copy( nStartPos, ++nEnd - nStartPos );
+            aTmp += rStr.copy( nStartPos, ++nEnd - nStartPos );
             nStartPos = nEnd;
         }
         else
         {
-            aTmp += aSource.copy( nStartPos, nPos - nStartPos );
+            aTmp += rStr.copy( nStartPos, nPos - nStartPos );
             nStartPos = nPos + 2;
             sal_Int32 nDash;
             nEnd = nStartPos - 1;
             do
             {
-                nDash = aSource.indexOf( '-', ++nEnd );
+                nDash = rStr.indexOf( '-', ++nEnd );
             }
-            while ( (nEnd = GetQuoteEnd( aSource, nDash )) >= 0 );
+            while ( (nEnd = GetQuoteEnd( rStr, nDash )) >= 0 );
             sal_Int32 nClose;
             nEnd = nStartPos - 1;
             do
             {
-                nClose = aSource.indexOf( ']', ++nEnd );
+                nClose = rStr.indexOf( ']', ++nEnd );
             }
-            while ( (nEnd = GetQuoteEnd( aSource, nClose )) >= 0 );
+            while ( (nEnd = GetQuoteEnd( rStr, nClose )) >= 0 );
 
             if(nClose < 0)
             {
@@ -1707,14 +1720,14 @@ OUString SvNumberformat::StripNewCurrencyDelimiters( const OUString& rStr,
             {
                 nPos = nDash;
             }
-            if ( !bQuoteSymbol || aSource[ nStartPos ] == '"' )
+            if ( !bQuoteSymbol || rStr[ nStartPos ] == '"' )
             {
-                aTmp += aSource.copy( nStartPos, nPos - nStartPos );
+                aTmp += rStr.copy( nStartPos, nPos - nStartPos );
             }
             else
             {
                 aTmp += "\"";
-                aTmp += aSource.copy( nStartPos, nPos - nStartPos );
+                aTmp += rStr.copy( nStartPos, nPos - nStartPos );
                 aTmp += "\"";
             }
             nStartPos = nClose + 1;
@@ -1722,7 +1735,7 @@ OUString SvNumberformat::StripNewCurrencyDelimiters( const OUString& rStr,
     }
     if ( nLen > nStartPos )
     {
-        aTmp += aSource.copy( nStartPos, nLen - nStartPos );
+        aTmp += rStr.copy( nStartPos, nLen - nStartPos );
     }
     return aTmp;
 }
@@ -1800,7 +1813,7 @@ void SvNumberformat::ImpGetOutputStdToPrecision(double& rNumber, OUString& rOutS
 void SvNumberformat::ImpGetOutputInputLine(double fNumber, OUString& OutString)
 {
     bool bModified = false;
-    if ( (eType & css::util::NumberFormat::PERCENT) && (fabs(fNumber) < _D_MAX_D_BY_100))
+    if ( (eType & css::util::NumberFormat::PERCENT) && (fabs(fNumber) < D_MAX_D_BY_100))
     {
         if (fNumber == 0.0)
         {
@@ -1878,7 +1891,7 @@ static bool lcl_insertStarFillChar( OUStringBuffer& rBuf, sal_Int32 nPos, const 
     return false;
 }
 
-bool SvNumberformat::GetOutputString(const OUString& sString,
+void SvNumberformat::GetOutputString(const OUString& sString,
                                      OUString& OutString,
                                      Color** ppColor)
 {
@@ -1895,11 +1908,10 @@ bool SvNumberformat::GetOutputString(const OUString& sString,
     else
     {
         *ppColor = nullptr; // no change of color
-        return false;
+        return;
     }
     *ppColor = NumFor[nIx].GetColor();
     const ImpSvNumberformatInfo& rInfo = NumFor[nIx].Info();
-    bool bRes = false;
     if (rInfo.eScannedType == css::util::NumberFormat::TEXT)
     {
         const sal_uInt16 nAnz = NumFor[nIx].GetCount();
@@ -1910,7 +1922,7 @@ bool SvNumberformat::GetOutputString(const OUString& sString,
             case NF_SYMBOLTYPE_STAR:
                 if( bStarFlag )
                 {
-                    bRes = lcl_appendStarFillChar( sOutBuff, rInfo.sStrArray[i]);
+                    lcl_appendStarFillChar( sOutBuff, rInfo.sStrArray[i]);
                 }
                 break;
             case NF_SYMBOLTYPE_BLANK:
@@ -1927,7 +1939,6 @@ bool SvNumberformat::GetOutputString(const OUString& sString,
         }
     }
     OutString = sOutBuff.makeStringAndClear();
-    return bRes;
 }
 
 sal_uLong SvNumberformat::ImpGGT(sal_uLong x, sal_uLong y)
@@ -1993,18 +2004,25 @@ void lcl_GetOutputStringScientific(double fNumber, sal_uInt16 nCharCount,
                                               nPrec, rFormatter.GetNumDecimalSep()[0], true );
 }
 
-sal_Int32 lcl_GetForcedDenominator(const ImpSvNumberformatInfo &rInfo, sal_uInt16 nAnz)
+
+OUString lcl_GetDenominatorString(const ImpSvNumberformatInfo &rInfo, sal_uInt16 nAnz)
 {
     sal_uInt16 i;
-    OUString aDiv;
+    OUStringBuffer aDenominatorString;
     for( i = 0; i < nAnz; i++ )
     {
-        if( rInfo.nTypeArray[i] == NF_SYMBOLTYPE_FRAC_FDIV )
+        if( rInfo.nTypeArray[i] == NF_SYMBOLTYPE_FRAC )
         {
-            aDiv += rInfo.sStrArray[i];
+            for( i++; i < nAnz; i++ )
+            {
+                if( rInfo.nTypeArray[i] == NF_SYMBOLTYPE_FRAC_FDIV || rInfo.nTypeArray[i] == NF_SYMBOLTYPE_DIGIT )
+                    aDenominatorString.append( rInfo.sStrArray[i] );
+                else
+                    i = nAnz;
+            }
         }
     }
-    return aDiv.toInt32();
+    return aDenominatorString.makeStringAndClear();
 }
 
 // TODO: More optimizations?
@@ -2026,11 +2044,11 @@ void lcl_ForcedDenominator(sal_uLong &nFrac, sal_uLong &nDiv, sal_uLong nForcedD
 
 }
 
-sal_Int32 SvNumberformat::GetForcedDenominatorForType( sal_uInt16 nNumFor ) const
+OUString SvNumberformat::GetDenominatorString( sal_uInt16 nNumFor ) const
 {
     const ImpSvNumberformatInfo& rInfo = NumFor[nNumFor].Info();
     sal_uInt16 nAnz = NumFor[nNumFor].GetCount();
-    return lcl_GetForcedDenominator( rInfo, nAnz );
+    return lcl_GetDenominatorString( rInfo, nAnz );
 }
 
 bool SvNumberformat::GetOutputString(double fNumber, sal_uInt16 nCharCount, OUString& rOutString) const
@@ -2122,56 +2140,36 @@ bool SvNumberformat::GetOutputString(double fNumber,
         case css::util::NumberFormat::NUMBER: // Standard number format
             if (rScan.GetStandardPrec() == SvNumberFormatter::UNLIMITED_PRECISION)
             {
-                bool bSign = ::rtl::math::isSignBitSet(fNumber);
-                if (bSign)
+                if (::rtl::math::isSignBitSet(fNumber))
                 {
                     if (!(fNumber < 0.0))
-                    {
-                        bSign = false;
-                    }
-                    fNumber = -fNumber;
+                        fNumber = -fNumber;     // do not display -0.0
                 }
-                /* TODO: why did we insist on 10 decimals for the non-exponent
-                 * case? doubleToUString() handles rtl_math_DecimalPlaces_Max
-                 * gracefully when used with rtl_math_StringFormat_Automatic,
-                 * so all that special casing and mumbo-jumbo in the else
-                 * branch below might not be needed at all. */
-                if (fNumber > EXP_ABS_UPPER_BOUND)
+                if (fNumber == 0.0)
                 {
-                    sBuff.append( ::rtl::math::doubleToUString( fNumber,
+                    OutString = "0";
+                }
+                else if (fNumber < EXP_LOWER_BOUND && fNumber > -EXP_LOWER_BOUND)
+                {
+                    OutString = ::rtl::math::doubleToUString( fNumber,
+                                rtl_math_StringFormat_E2,
+                                15,
+                                GetFormatter().GetNumDecimalSep()[0], true);
+                }
+                else if (fNumber < 1.0 && fNumber > -1.0)
+                {
+                    OutString = ::rtl::math::doubleToUString( fNumber,
                                 rtl_math_StringFormat_Automatic,
-                                rtl_math_DecimalPlaces_Max,
-                                GetFormatter().GetNumDecimalSep()[0], true));
+                                15,
+                                GetFormatter().GetNumDecimalSep()[0], true);
                 }
                 else
                 {
-                    OUString sTemp;
-                    ImpGetOutputStdToPrecision(fNumber, sTemp, 10); // Use 10 decimals for general 'unlimited' format.
-                    sBuff.append(sTemp);
-                    if (fNumber < EXP_LOWER_BOUND)
-                    {
-                        sal_Int32 nLen = sBuff.getLength();
-                        if (!nLen)
-                        {
-                            return false;
-                        }
-                        // #i112250# With the 10-decimal limit, small numbers are formatted as "0".
-                        // Switch to scientific in that case, too:
-                        if (nLen > 11 || ((nLen == 1 && sBuff[0] == '0') && fNumber != 0.0))
-                        {
-                            sal_uInt16 nStandardPrec = rScan.GetStandardPrec();
-                            nStandardPrec = ::std::min(nStandardPrec, static_cast<sal_uInt16>(14)); // limits to 14 decimals
-                            sBuff = ::rtl::math::doubleToUString( fNumber,
-                                    rtl_math_StringFormat_E2, nStandardPrec /*2*/,
-                                    GetFormatter().GetNumDecimalSep()[0], true);
-                        }
-                    }
+                    OutString = ::rtl::math::doubleToUString( fNumber,
+                                rtl_math_StringFormat_Automatic,
+                                rtl_math_DecimalPlaces_Max,
+                                GetFormatter().GetNumDecimalSep()[0], true);
                 }
-                if (bSign)
-                {
-                    sBuff.insert(0, '-');
-                }
-                OutString = sBuff.makeStringAndClear();
                 return false;
             }
             ImpGetOutputStandard(fNumber, sBuff);
@@ -2324,7 +2322,7 @@ bool SvNumberformat::ImpGetScientificOutput(double fNumber,
         {
         case '-' :
             nExpSign = -1;
-            // fall through
+            SAL_FALLTHROUGH;
         case '+' :
             ++nExpStart;
             break;
@@ -2403,7 +2401,7 @@ bool SvNumberformat::ImpGetScientificOutput(double fNumber,
             bCont = false;
         }
     }
-    // Continure main number:
+    // Continue main number:
     if ( !bCont )
     {
         sStr.truncate();
@@ -2443,7 +2441,7 @@ bool SvNumberformat::ImpGetFractionOutput(double fNumber,
     double fNum = floor(fNumber); // Integral part
 
     fNumber -= fNum; // Fractional part
-    if (fNum > _D_MAX_U_LONG_ || rInfo.nCntExp > 9) // Too large
+    if (fNum > D_MAX_U_LONG || rInfo.nCntExp > 9) // Too large
     {
         sBuff = rScan.GetErrorString();
         return false;
@@ -2458,7 +2456,7 @@ bool SvNumberformat::ImpGetFractionOutput(double fNumber,
     sal_uLong nBasis = ((sal_uLong)floor( pow(10.0,rInfo.nCntExp))) - 1; // 9, 99, 999 ,...
     sal_uLong x0, y0, x1, y1;
 
-    if (rInfo.nCntExp <= _MAX_FRACTION_PREC)
+    if (rInfo.nCntExp <= MAX_FRACTION_PREC)
     {
         bool bUpperHalf;
 
@@ -2622,7 +2620,7 @@ bool SvNumberformat::ImpGetFractionOutput(double fNumber,
         }
     }
 
-    if( sal_Int32 nForcedDiv = lcl_GetForcedDenominator(NumFor[nIx].Info(), nAnz) )
+    if( sal_Int32 nForcedDiv = lcl_GetDenominatorString(NumFor[nIx].Info(), nAnz).toInt32() )
     {
         lcl_ForcedDenominator(nFrac, nDiv, nForcedDiv);
         if( nFrac >= nDiv )
@@ -2636,7 +2634,7 @@ bool SvNumberformat::ImpGetFractionOutput(double fNumber,
     {
         double fNum1 = fNum * (double)nDiv + (double)nFrac;
 
-        if (fNum1 > _D_MAX_U_LONG_)
+        if (fNum1 > D_MAX_U_LONG)
         {
             sBuff = rScan.GetErrorString();
             return false;
@@ -2783,7 +2781,7 @@ bool SvNumberformat::ImpGetTimeOutput(double fNumber,
     {
         bSign = false; // Not -00:00:00
     }
-    if( floor( fTime ) > _D_MAX_U_LONG_ )
+    if( floor( fTime ) > D_MAX_U_LONG )
     {
         sBuff = rScan.GetErrorString();
         return false;
@@ -3038,6 +3036,7 @@ sal_Int32 SvNumberformat::ImpUseMonthCase( int & io_nState, const ImpSvNumFor& r
         default:
             ;   // nothing
         }
+        break;
     case 2:
         // Day of month follows month (the month's 17th)
         switch (eCodeType)
@@ -3051,6 +3050,7 @@ sal_Int32 SvNumberformat::ImpUseMonthCase( int & io_nState, const ImpSvNumFor& r
         default:
             ;   // Nothing
         }
+        break;
     case 3:
         // Day of month precedes month (17 of month)
         switch (eCodeType)
@@ -3064,6 +3064,7 @@ sal_Int32 SvNumberformat::ImpUseMonthCase( int & io_nState, const ImpSvNumFor& r
         default:
             ;   // nothing
         }
+        break;
     }
     SAL_WARN( "svl.numbers", "ImpUseMonthCase: unhandled keyword index eCodeType");
     return CalendarDisplayCode::LONG_MONTH_NAME;
@@ -3891,7 +3892,7 @@ bool SvNumberformat::ImpGetNumberOutput(double fNumber,
     const ImpSvNumberformatInfo& rInfo = NumFor[nIx].Info();
     if (rInfo.eScannedType == css::util::NumberFormat::PERCENT)
     {
-        if (fNumber < _D_MAX_D_BY_100)
+        if (fNumber < D_MAX_D_BY_100)
         {
             fNumber *= 100.0;
         }
@@ -3910,7 +3911,7 @@ bool SvNumberformat::ImpGetNumberOutput(double fNumber,
         long nPrecExp;
         for (i = 0; i < nThousand; i++)
         {
-           if (fNumber > _D_MIN_M_BY_1000)
+           if (fNumber > D_MIN_M_BY_1000)
            {
                fNumber /= 1000.0;
            }
@@ -3991,13 +3992,13 @@ bool SvNumberformat::ImpDecimalFill( OUStringBuffer& sStr,  // number string
                                    bool bInteger)         // is integer
 {
     bool bRes = false;
+    bool bFilled = false;               // Was filled?
     const ImpSvNumberformatInfo& rInfo = NumFor[nIx].Info();
     sal_Int32 k = sStr.getLength();     // After last figure
                                         // Decimal places:
     if (rInfo.nCntPost > 0)
     {
         bool bTrailing = true;          // Trailing zeros?
-        bool bFilled = false;           // Was filled?
         short nType;
         while (j > 0 &&                 // Backwards
                (nType = rInfo.nTypeArray[j]) != NF_SYMBOLTYPE_DECSEP)
@@ -4037,6 +4038,7 @@ bool SvNumberformat::ImpDecimalFill( OUStringBuffer& sStr,  // number string
                     if ( sStr[k] != '0' )
                     {
                         bTrailing = false;
+                        bFilled = true;
                     }
                     if (bTrailing)
                     {
@@ -4084,16 +4086,7 @@ bool SvNumberformat::ImpDecimalFill( OUStringBuffer& sStr,  // number string
     } // of decimal places
 
     bRes |= ImpNumberFillWithThousands(sStr, rNumber, k, j, nIx, // Fill with . if needed
-                                       rInfo.nCntPre);
-    if ( rInfo.nCntPost > 0 )
-    {
-        const OUString& rDecSep = GetFormatter().GetNumDecimalSep();
-        sal_Int32 nLen = rDecSep.getLength();
-        if ( sStr.getLength() > nLen && ( sStr.indexOf( rDecSep, sStr.getLength() - nLen) == sStr.getLength() - nLen) )
-        {
-            sStr.truncate( sStr.getLength() - nLen ); // no decimals => strip DecSep
-        }
-    }
+                                       rInfo.nCntPre, bFilled );
 
     return bRes;
 }
@@ -4103,7 +4096,8 @@ bool SvNumberformat::ImpNumberFillWithThousands( OUStringBuffer& sBuff,  // numb
                                                  sal_Int32 k,           // position within string
                                                  sal_uInt16 j,          // symbol index within format code
                                                  sal_uInt16 nIx,        // subformat index
-                                                 sal_Int32 nDigCnt)     // count of integer digits in format
+                                                 sal_Int32 nDigCnt,     // count of integer digits in format
+                                                 bool bAddDecSep)       // add decimal separator if necessary
 {
     bool bRes = false;
     sal_Int32 nLeadingStringChars = 0; // inserted StringChars before number
@@ -4124,11 +4118,12 @@ bool SvNumberformat::ImpNumberFillWithThousands( OUStringBuffer& sBuff,  // numb
         {
         case NF_SYMBOLTYPE_DECSEP:
             aGrouping.reset();
-            // fall through
+            SAL_FALLTHROUGH;
         case NF_SYMBOLTYPE_STRING:
         case NF_SYMBOLTYPE_CURRENCY:
         case NF_SYMBOLTYPE_PERCENT:
-            sBuff.insert(k, rInfo.sStrArray[j]);
+            if ( rInfo.nTypeArray[j] != NF_SYMBOLTYPE_DECSEP || bAddDecSep )
+                sBuff.insert(k, rInfo.sStrArray[j]);
             if ( k == 0 )
             {
                 nLeadingStringChars = nLeadingStringChars + rInfo.sStrArray[j].getLength();
@@ -4510,8 +4505,7 @@ const OUString* SvNumberformat::GetNumForString( sal_uInt16 nNumFor, sal_uInt16 
     return &NumFor[nNumFor].Info().sStrArray[nPos];
 }
 
-short SvNumberformat::GetNumForType( sal_uInt16 nNumFor, sal_uInt16 nPos,
-                                     bool bString /* = false */ ) const
+short SvNumberformat::GetNumForType( sal_uInt16 nNumFor, sal_uInt16 nPos ) const
 {
     if ( nNumFor > 3 )
     {
@@ -4525,40 +4519,10 @@ short SvNumberformat::GetNumForType( sal_uInt16 nNumFor, sal_uInt16 nPos,
     if ( nPos == 0xFFFF )
     {
         nPos = nAnz - 1;
-        if ( bString )
-        {
-            // Backwards
-            short* pType = NumFor[nNumFor].Info().nTypeArray + nPos;
-            while ( nPos > 0 && (*pType != NF_SYMBOLTYPE_STRING) &&
-                    (*pType != NF_SYMBOLTYPE_CURRENCY) )
-            {
-                pType--;
-                nPos--;
-            }
-            if ( (*pType != NF_SYMBOLTYPE_STRING) && (*pType != NF_SYMBOLTYPE_CURRENCY) )
-            {
-                return 0;
-            }
-        }
     }
     else if ( nPos > nAnz - 1 )
     {
         return 0;
-    }
-    else if ( bString )
-    {
-        // Forwards
-        short* pType = NumFor[nNumFor].Info().nTypeArray + nPos;
-        while ( nPos < nAnz && (*pType != NF_SYMBOLTYPE_STRING) &&
-                (*pType != NF_SYMBOLTYPE_CURRENCY) )
-        {
-            pType++;
-            nPos++;
-        }
-        if ( (*pType != NF_SYMBOLTYPE_STRING) && (*pType != NF_SYMBOLTYPE_CURRENCY) )
-        {
-            return 0;
-        }
     }
     return NumFor[nNumFor].Info().nTypeArray[nPos];
 }
@@ -4728,8 +4692,7 @@ static void lcl_SvNumberformat_AddLimitStringImpl( OUString& rStr,
 }
 
 OUString SvNumberformat::GetMappedFormatstring( const NfKeywordTable& rKeywords,
-                                                const LocaleDataWrapper& rLocWrp,
-                                                bool bDontQuote ) const
+                                                const LocaleDataWrapper& rLocWrp ) const
 {
     OUStringBuffer aStr;
     bool bDefault[4];
@@ -4876,11 +4839,7 @@ OUString SvNumberformat::GetMappedFormatstring( const NfKeywordTable& rKeywords,
                         aStr.append( rLocWrp.getTime100SecSep() );
                         break;
                     case NF_SYMBOLTYPE_STRING :
-                        if( bDontQuote )
-                        {
-                            aStr.append( pStr[j] );
-                        }
-                        else if ( pStr[j].getLength() == 1 )
+                        if ( pStr[j].getLength() == 1 )
                         {
                             aStr.append( '\\' );
                             aStr.append( pStr[j] );
@@ -5098,8 +5057,7 @@ bool SvNumberformat::IsInQuote( const OUString& rStr, sal_Int32 nPos,
 
 // static
 sal_Int32 SvNumberformat::GetQuoteEnd( const OUString& rStr, sal_Int32 nPos,
-                                       sal_Unicode cQuote, sal_Unicode cEscIn,
-                                       sal_Unicode cEscOut )
+                                       sal_Unicode cQuote, sal_Unicode cEscIn )
 {
     if ( nPos < 0 )
     {
@@ -5110,7 +5068,7 @@ sal_Int32 SvNumberformat::GetQuoteEnd( const OUString& rStr, sal_Int32 nPos,
     {
         return -1;
     }
-    if ( !IsInQuote( rStr, nPos, cQuote, cEscIn, cEscOut ) )
+    if ( !IsInQuote( rStr, nPos, cQuote, cEscIn ) )
     {
         if ( rStr[ nPos ] == cQuote )
         {
@@ -5130,6 +5088,16 @@ sal_Int32 SvNumberformat::GetQuoteEnd( const OUString& rStr, sal_Int32 nPos,
         p++;
     }
     return nLen; // End of String
+}
+
+sal_uInt16 SvNumberformat::GetNumForNumberElementCount( sal_uInt16 nNumFor ) const
+{
+    if ( nNumFor < 4 )
+    {
+        sal_uInt16 nAnz = NumFor[nNumFor].GetCount();
+        return nAnz - ImpGetNumForStringElementCount( nNumFor );
+    }
+    return 0;
 }
 
 sal_uInt16 SvNumberformat::ImpGetNumForStringElementCount( sal_uInt16 nNumFor ) const

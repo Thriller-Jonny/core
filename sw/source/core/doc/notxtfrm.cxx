@@ -103,13 +103,13 @@ static void lcl_PaintReplacement( const SwRect &rRect, const OUString &rText,
         pFont = new vcl::Font();
         pFont->SetWeight( WEIGHT_BOLD );
         pFont->SetStyleName( OUString() );
-        pFont->SetName("Arial Unicode");
+        pFont->SetFamilyName("Arial Unicode");
         pFont->SetFamily( FAMILY_SWISS );
         pFont->SetTransparent( true );
     }
 
     Color aCol( COL_RED );
-    FontUnderline eUnderline = UNDERLINE_NONE;
+    FontLineStyle eUnderline = LINESTYLE_NONE;
     const SwFormatURL &rURL = pFrame->FindFlyFrame()->GetFormat()->GetURL();
     if( !rURL.GetURL().isEmpty() || rURL.GetMap() )
     {
@@ -152,7 +152,7 @@ SwNoTextFrame::SwNoTextFrame(SwNoTextNode * const pNode, SwFrame* pSib )
 /// Initialization: Currently add the Frame to the Cache
 void SwNoTextFrame::InitCtor()
 {
-    mnFrameType = FRM_NOTXT;
+    mnFrameType = SwFrameType::NoTxt;
 }
 
 SwContentFrame *SwNoTextNode::MakeFrame( SwFrame* pSib )
@@ -284,7 +284,7 @@ void SwNoTextFrame::Paint(vcl::RenderContext& rRenderContext, SwRect const& rRec
             aGrfArea = SwRect( Frame().Pos( ), pFly->GetUnclippedFrame( ).SSize( ) );
     }
 
-    aPaintArea._Intersection( aOrigPaint );
+    aPaintArea.Intersection_( aOrigPaint );
 
     SwRect aNormal( Frame().Pos() + Prt().Pos(), Prt().SSize() );
     aNormal.Justify(); // Normalized rectangle for the comparisons
@@ -296,7 +296,7 @@ void SwNoTextFrame::Paint(vcl::RenderContext& rRenderContext, SwRect const& rRec
             ::lcl_ClearArea( *this, rRenderContext, aPaintArea, aNormal );
 
         // The intersection of the PaintArea and the Bitmap contains the absolutely visible area of the Frame
-        aPaintArea._Intersection( aNormal );
+        aPaintArea.Intersection_( aNormal );
 
         if ( bClip )
             rRenderContext.IntersectClipRegion( aPaintArea.SVRect() );
@@ -336,8 +336,7 @@ static void lcl_CalcRect( Point& rPt, Size& rDim, sal_uInt16 nMirror )
 }
 
 /** Calculate the Bitmap's position and the size within the passed rectangle */
-void SwNoTextFrame::GetGrfArea( SwRect &rRect, SwRect* pOrigRect,
-                             bool ) const
+void SwNoTextFrame::GetGrfArea( SwRect &rRect, SwRect* pOrigRect ) const
 {
     // Currently only used for scaling, cropping and mirroring the contour of graphics!
     // Everything else is handled by GraphicObject
@@ -522,7 +521,7 @@ bool SwNoTextFrame::GetCharRect( SwRect &rRect, const SwPosition& rPos,
         rRect.Width( 1 );
     }
     else
-        rRect._Intersection( aFrameRect );
+        rRect.Intersection_( aFrameRect );
 
     if ( pCMS )
     {
@@ -588,7 +587,7 @@ void SwNoTextFrame::Modify( const SfxPoolItem* pOld, const SfxPoolItem* pNew )
                 if( pNd->GetGrfObj().IsCached( pVSh->GetOut(), Point(),
                             Prt().SSize(), &pNd->GetGraphicAttr( aAttr, this ) ))
                 {
-                    for(SwViewShell rShell : pVSh->GetRingContainer())
+                    for(SwViewShell& rShell : pVSh->GetRingContainer())
                     {
                         SET_CURR_SHELL( &rShell );
                         if( rShell.GetWin() )
@@ -608,7 +607,7 @@ void SwNoTextFrame::Modify( const SfxPoolItem* pOld, const SfxPoolItem* pNew )
         if (GetNode()->GetNodeType() != ND_GRFNODE) {
             break;
         }
-        // fall through
+        SAL_FALLTHROUGH;
     case RES_FMT_CHG:
         CLEARCACHE
         break;
@@ -927,10 +926,16 @@ void SwNoTextFrame::PaintPicture( vcl::RenderContext* pOut, const SwRect &rGrfAr
                 {
                     OutputDevice* pVout;
                     if( pOut == pShell->GetOut() && SwRootFrame::FlushVout() )
-                        pVout = pOut, pOut = pShell->GetOut();
+                    {
+                        pVout = pOut;
+                        pOut = pShell->GetOut();
+                    }
                     else if( pShell->GetWin() &&
                              OUTDEV_VIRDEV == pOut->GetOutDevType() )
-                        pVout = pOut, pOut = pShell->GetWin();
+                    {
+                        pVout = pOut;
+                        pOut = pShell->GetWin();
+                    }
                     else
                         pVout = nullptr;
 

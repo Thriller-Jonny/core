@@ -143,14 +143,13 @@ public:
         void            SetArgument(sal_uInt16 no, const OUString& aString);
         void            SetArgumentFonts(const vcl::Font& aBoldFont,const vcl::Font& aLightFont);
 
-        void            SetEdFocus(sal_uInt16 nEditLine); //Sichtbare Editzeilen
+        void            SetEdFocus(); //Sichtbare Editzeilen
         sal_uInt16      GetSliderPos();
         void            SetSliderPos(sal_uInt16 nSliderPos);
 
         void            SetArgModifiedHdl( const Link<ParaWin&,void>& rLink ) { aArgModifiedLink = rLink; }
         void            SetFxHdl( const Link<ParaWin&,void>& rLink ) { aFxLink = rLink; }
 };
-
 
 
 } // formula

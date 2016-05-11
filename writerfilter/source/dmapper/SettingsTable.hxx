@@ -45,7 +45,7 @@ class SettingsTable : public LoggedProperties, public LoggedTable
     std::unique_ptr<SettingsTable_Impl> m_pImpl;
 
  public:
-    SettingsTable(const css::uno::Reference<css::lang::XMultiServiceFactory>& xTextFactory);
+    SettingsTable();
     virtual ~SettingsTable();
 
     //returns default TabStop in 1/100th mm
@@ -71,6 +71,7 @@ class SettingsTable : public LoggedProperties, public LoggedTable
     bool GetSplitPgBreakAndParaMark() const;
     bool GetMirrorMarginSettings() const;
     bool GetNoColumnBalance() const;
+    bool GetProtectForm() const;
 
     css::uno::Sequence<css::beans::PropertyValue> GetThemeFontLangProperties() const;
 

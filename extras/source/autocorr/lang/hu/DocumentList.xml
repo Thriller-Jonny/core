@@ -20,12 +20,6 @@
   <block-list:block block-list:abbreviated-name="&lt;--&gt;" block-list:name="↔"/>
   <block-list:block block-list:abbreviated-name="&lt;-&gt;" block-list:name="↔"/>
   <block-list:block block-list:abbreviated-name="0-ás" block-list:name="0-s"/>
-  <block-list:block block-list:abbreviated-name="1-e" block-list:name="1-je"/>
-  <block-list:block block-list:abbreviated-name="1-éig" block-list:name="1-jéig"/>
-  <block-list:block block-list:abbreviated-name="1-én" block-list:name="1-jén"/>
-  <block-list:block block-list:abbreviated-name="1-ére" block-list:name="1-jére"/>
-  <block-list:block block-list:abbreviated-name="1-étől" block-list:name="1-jétől"/>
-  <block-list:block block-list:abbreviated-name="1-vel" block-list:name="1-jével"/>
   <block-list:block block-list:abbreviated-name="1/2" block-list:name="½"/>
   <block-list:block block-list:abbreviated-name="1/4" block-list:name="¼"/>
   <block-list:block block-list:abbreviated-name="3/4" block-list:name="¾"/>
@@ -95,9 +89,9 @@
   <block-list:block block-list:abbreviated-name="Dvorak.*" block-list:name="Dvořák"/>
   <block-list:block block-list:abbreviated-name="Dvorák.*" block-list:name="Dvořák"/>
   <block-list:block block-list:abbreviated-name="E vitamin.*" block-list:name="E-vitamin"/>
-  <block-list:block block-list:abbreviated-name="e-mail-ben" block-list:name="e-mailben"/>
-  <block-list:block block-list:abbreviated-name="e-mail-en" block-list:name="e-mailen"/>
-  <block-list:block block-list:abbreviated-name="e-mail-t" block-list:name="e-mailt"/>
+  <block-list:block block-list:abbreviated-name="e-mail-ben" block-list:name="ímélben"/>
+  <block-list:block block-list:abbreviated-name="e-mail-en" block-list:name="ímélen"/>
+  <block-list:block block-list:abbreviated-name="e-mail-t" block-list:name="ímélt"/>
   <block-list:block block-list:abbreviated-name="eccer csak" block-list:name="egyszer csak"/>
   <block-list:block block-list:abbreviated-name="eFt" block-list:name="E Ft"/>
   <block-list:block block-list:abbreviated-name="eFt-.*" block-list:name="E Ft-"/>
@@ -127,16 +121,14 @@
   <block-list:block block-list:abbreviated-name="előrelátható" block-list:name="előre látható"/>
   <block-list:block block-list:abbreviated-name="előszőr" block-list:name="először"/>
   <block-list:block block-list:abbreviated-name="elött" block-list:name="előtt"/>
-  <block-list:block block-list:abbreviated-name="elsőfokon" block-list:name="első fokon"/>
   <block-list:block block-list:abbreviated-name="elsőszámú.*" block-list:name="első számú"/>
   <block-list:block block-list:abbreviated-name="ELTÉ-.*" block-list:name="ELTE-"/>
-  <block-list:block block-list:abbreviated-name="email-ben" block-list:name="e-mailben"/>
-  <block-list:block block-list:abbreviated-name="emailben" block-list:name="e-mailben"/>
-  <block-list:block block-list:abbreviated-name="emailen" block-list:name="e-mailen"/>
+  <block-list:block block-list:abbreviated-name="email-ben" block-list:name="ímélben"/>
+  <block-list:block block-list:abbreviated-name="emailben" block-list:name="ímélben"/>
+  <block-list:block block-list:abbreviated-name="emailen" block-list:name="ímélen"/>
   <block-list:block block-list:abbreviated-name="emeltszintű.*" block-list:name="emelt szintű"/>
   <block-list:block block-list:abbreviated-name="éppenhogy" block-list:name="éppen hogy"/>
   <block-list:block block-list:abbreviated-name="érdekképviseleti.*" block-list:name="érdek-képviseleti"/>
-  <block-list:block block-list:abbreviated-name="észszerű.*" block-list:name="ésszerű"/>
   <block-list:block block-list:abbreviated-name="eufórikus.*" block-list:name="euforikus"/>
   <block-list:block block-list:abbreviated-name="euro" block-list:name="euró"/>
   <block-list:block block-list:abbreviated-name="évközben" block-list:name="év közben"/>
@@ -382,8 +374,6 @@
   <block-list:block block-list:abbreviated-name="mostmár" block-list:name="most már"/>
   <block-list:block block-list:abbreviated-name="MrdFt" block-list:name="Mrd Ft"/>
   <block-list:block block-list:abbreviated-name="MrdFt-.*" block-list:name="Mrd Ft-"/>
-  <block-list:block block-list:abbreviated-name="munkaegészségügyi.*" block-list:name="munka-egészségügyi"/>
-  <block-list:block block-list:abbreviated-name="munkaerőpiaci.*" block-list:name="munkaerő-piaci"/>
   <block-list:block block-list:abbreviated-name="munkaközben" block-list:name="munka közben"/>
   <block-list:block block-list:abbreviated-name="munkaközbeni.*" block-list:name="munka közbeni"/>
   <block-list:block block-list:abbreviated-name="muszály" block-list:name="muszáj"/>
@@ -434,9 +424,6 @@
   <block-list:block block-list:abbreviated-name="nyílat" block-list:name="nyilat"/>
   <block-list:block block-list:abbreviated-name="nyílt szívű.*" block-list:name="nyíltszívű"/>
   <block-list:block block-list:abbreviated-name="nyir" block-list:name="nyír"/>
-  <block-list:block block-list:abbreviated-name="nyitvatartás" block-list:name="nyitva tartás"/>
-  <block-list:block block-list:abbreviated-name="nyitvatartása" block-list:name="nyitva tartása"/>
-  <block-list:block block-list:abbreviated-name="nyitvatartásá.*" block-list:name="nyitva tartásá"/>
   <block-list:block block-list:abbreviated-name="nyolchónapos.*" block-list:name="nyolc hónapos"/>
   <block-list:block block-list:abbreviated-name="nyomonkövet" block-list:name="nyomon követ"/>
   <block-list:block block-list:abbreviated-name="nyomonkövetése" block-list:name="nyomon követése"/>
@@ -543,8 +530,6 @@
   <block-list:block block-list:abbreviated-name="sunday" block-list:name="Sunday"/>
   <block-list:block block-list:abbreviated-name="szabaddemokrat.*" block-list:name="szabad demokrat"/>
   <block-list:block block-list:abbreviated-name="számit" block-list:name="számít"/>
-  <block-list:block block-list:abbreviated-name="számonkérhető.*" block-list:name="számon kérhető"/>
-  <block-list:block block-list:abbreviated-name="számontartott.*" block-list:name="számon tartott"/>
   <block-list:block block-list:abbreviated-name="számottartó.*" block-list:name="számot tartó"/>
   <block-list:block block-list:abbreviated-name="szeint" block-list:name="szerint"/>
   <block-list:block block-list:abbreviated-name="szembenálló.*" block-list:name="szemben álló"/>
@@ -575,8 +560,8 @@
   <block-list:block block-list:abbreviated-name="tanu" block-list:name="tanú"/>
   <block-list:block block-list:abbreviated-name="teakfa" block-list:name="tíkfa"/>
   <block-list:block block-list:abbreviated-name="teakfá.*" block-list:name="tíkfá"/>
-  <block-list:block block-list:abbreviated-name="teljes-körű.*" block-list:name="teljes körű"/>
-  <block-list:block block-list:abbreviated-name="teljeskörű.*" block-list:name="teljes körű"/>
+  <block-list:block block-list:abbreviated-name="teljes-körű" block-list:name="teljes körű"/>
+  <block-list:block block-list:abbreviated-name="teljes-körűen" block-list:name="teljeskörűen"/>
   <block-list:block block-list:abbreviated-name="teltház" block-list:name="telt ház"/>
   <block-list:block block-list:abbreviated-name="télvégi.*" block-list:name="tél végi"/>
   <block-list:block block-list:abbreviated-name="tennisz" block-list:name="tenisz"/>
@@ -588,7 +573,6 @@
   <block-list:block block-list:abbreviated-name="tizes" block-list:name="tízes"/>
   <block-list:block block-list:abbreviated-name="tizet" block-list:name="tízet"/>
   <block-list:block block-list:abbreviated-name="tízhónapos.*" block-list:name="tíz hónapos"/>
-  <block-list:block block-list:abbreviated-name="továbbtanul" block-list:name="tovább tanul"/>
   <block-list:block block-list:abbreviated-name="továbbtart" block-list:name="tovább tart"/>
   <block-list:block block-list:abbreviated-name="többezer.*" block-list:name="több ezer"/>
   <block-list:block block-list:abbreviated-name="többezren" block-list:name="több ezren"/>
@@ -679,6 +663,7 @@
   <block-list:block block-list:abbreviated-name=":bőrszín4:" block-list:name="🏽"/>
   <block-list:block block-list:abbreviated-name=":bőrszín5:" block-list:name="🏾"/>
   <block-list:block block-list:abbreviated-name=":bőrszín6:" block-list:name="🏿"/>
+  <block-list:block block-list:abbreviated-name=":^C:" block-list:name="ᴰ"/>
   <block-list:block block-list:abbreviated-name=":_0:" block-list:name="₀"/>
   <block-list:block block-list:abbreviated-name=":^0:" block-list:name="⁰"/>
   <block-list:block block-list:abbreviated-name=":100:" block-list:name="💯"/>
@@ -848,7 +833,6 @@
   <block-list:block block-list:abbreviated-name=":buszmegálló:" block-list:name="🚏"/>
   <block-list:block block-list:abbreviated-name=":caduceus:" block-list:name="☤"/>
   <block-list:block block-list:abbreviated-name=":^c:" block-list:name="ᶜ"/>
-  <block-list:block block-list:abbreviated-name=":^C:" block-list:name="ᴰ"/>
   <block-list:block block-list:abbreviated-name=":CD:" block-list:name="💿"/>
   <block-list:block block-list:abbreviated-name=":cent:" block-list:name="¢"/>
   <block-list:block block-list:abbreviated-name=":ceruza2:" block-list:name="✏"/>

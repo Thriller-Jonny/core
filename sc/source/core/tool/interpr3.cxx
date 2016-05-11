@@ -154,7 +154,7 @@ static double lcl_IterateInverse( const ScDistFunc& rFunction, double fAx, doubl
         {
             fAx = fRx; fAy = fRy;
         }
-        // if last interration brought to small advance, then do bisection next
+        // if last interation brought to small advance, then do bisection next
         // time, for safety
         bHasToInterpolate = bHasToInterpolate && (fabs(fRy) * 2.0 <= fabs(fQy));
         ++nCount;
@@ -943,7 +943,7 @@ static double lcl_GetBetaHelperContFrac(double fX, double fA, double fB)
 
     const double fMaxIter = 50000.0;
     // loop security, normal cases converge in less than 100 iterations.
-    // FIXME: You will get so much iteratons for fX near mean,
+    // FIXME: You will get so much iterations for fX near mean,
     // I do not know a better algorithm.
     bool bfinished = false;
     do
@@ -2879,8 +2879,8 @@ void ScInterpreter::ScKurt()
 
     double fMean = fSum / fCount;
 
-    for (size_t i = 0; i < values.size(); i++)
-        vSum += (values[i] - fMean) * (values[i] - fMean);
+    for (double v : values)
+        vSum += (v - fMean) * (v - fMean);
 
     double fStdDev = sqrt(vSum / (fCount - 1.0));
     double xpower4 = 0.0;
@@ -2891,9 +2891,9 @@ void ScInterpreter::ScKurt()
         return;
     }
 
-    for (size_t i = 0; i < values.size(); i++)
+    for (double v : values)
     {
-        double dx = (values[i] - fMean) / fStdDev;
+        double dx = (v - fMean) / fStdDev;
         xpower4 = xpower4 + (dx * dx * dx * dx);
     }
 
@@ -3277,8 +3277,8 @@ void ScInterpreter::CalculateSkewOrSkewp( bool bSkewp )
 
     double fMean = fSum / fCount;
 
-    for (size_t i = 0; i < values.size(); ++i)
-        vSum += (values[i] - fMean) * (values[i] - fMean);
+    for (double v : values)
+        vSum += (v - fMean) * (v - fMean);
 
     double fStdDev = sqrt( vSum / (bSkewp ? fCount : (fCount - 1.0)));
     double xcube = 0.0;
@@ -3289,9 +3289,9 @@ void ScInterpreter::CalculateSkewOrSkewp( bool bSkewp )
         return;
     }
 
-    for (size_t i = 0; i < values.size(); ++i)
+    for (double v : values)
     {
-        double dx = (values[i] - fMean) / fStdDev;
+        double dx = (v - fMean) / fStdDev;
         xcube = xcube + (dx * dx * dx);
     }
 
@@ -3349,12 +3349,6 @@ void ScInterpreter::ScMedian()
 double ScInterpreter::GetPercentile( vector<double> & rArray, double fPercentile )
 {
     size_t nSize = rArray.size();
-    if (rArray.empty() || nSize == 0 || nGlobalError)
-    {
-        SetError( errNoValue);
-        return 0.0;
-    }
-
     if (nSize == 1)
         return rArray[0];
     else
@@ -3420,6 +3414,11 @@ void ScInterpreter::ScPercentile( bool bInclusive )
     }
     vector<double> aArray;
     GetNumberSequenceArray( 1, aArray, false );
+    if ( aArray.empty() || aArray.size() == 0 || nGlobalError )
+    {
+        SetError( errNoValue );
+        return;
+    }
     if ( bInclusive )
         PushDouble( GetPercentile( aArray, alpha ));
     else
@@ -3438,6 +3437,11 @@ void ScInterpreter::ScQuartile( bool bInclusive )
     }
     vector<double> aArray;
     GetNumberSequenceArray( 1, aArray, false );
+    if ( aArray.empty() || aArray.size() == 0 || nGlobalError )
+    {
+        SetError( errNoValue );
+        return;
+    }
     if ( bInclusive )
         PushDouble( fFlag == 2.0 ? GetMedian( aArray ) : GetPercentile( aArray, 0.25 * fFlag ) );
     else
@@ -3771,7 +3775,7 @@ void ScInterpreter::GetSortArray( sal_uInt8 nParamCount, vector<double>& rSortAr
 {
     GetNumberSequenceArray( nParamCount, rSortArray, bConvertTextInArray );
     if (rSortArray.size() > MAX_ANZ_DOUBLE_FOR_SORT)
-        SetError( errStackOverflow);
+        SetError( errMatrixSize);
     else if ( rSortArray.empty() )
     {
         if ( bAllowEmptyArray )

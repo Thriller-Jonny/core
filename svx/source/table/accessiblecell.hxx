@@ -38,8 +38,6 @@
 
 #include "cell.hxx"
 
-#include <boost/noncopyable.hpp>
-
 
 namespace accessibility
 {
@@ -48,15 +46,17 @@ class AccessibleShapeTreeInfo;
 
 typedef ::cppu::ImplInheritanceHelper< AccessibleContextBase, css::accessibility::XAccessibleExtendedComponent > AccessibleCellBase;
 
-class AccessibleCell : boost::noncopyable, public AccessibleCellBase, public AccessibleComponentBase, public IAccessibleViewForwarderListener
+class AccessibleCell : public AccessibleCellBase
+                     , public AccessibleComponentBase
+                     , public IAccessibleViewForwarderListener
 {
 public:
     AccessibleCell( const css::uno::Reference< css::accessibility::XAccessible>& rxParent, const sdr::table::CellRef& rCell, sal_Int32 nIndex, const AccessibleShapeTreeInfo& rShapeTreeInfo);
     virtual ~AccessibleCell();
+    AccessibleCell(const AccessibleCell&) = delete;
+    AccessibleCell& operator=(const AccessibleCell&) = delete;
 
     void Init();
-
-    bool operator== (const AccessibleCell& rAccessibleCell);
 
     virtual bool SetState (sal_Int16 aState) override;
     virtual bool ResetState (sal_Int16 aState) override;
@@ -72,7 +72,7 @@ public:
     virtual css::uno::Reference< css::accessibility::XAccessibleStateSet> SAL_CALL getAccessibleStateSet() throw(css::uno::RuntimeException, std::exception) override;
     virtual sal_Int32 SAL_CALL getAccessibleIndexInParent() throw(css::uno::RuntimeException, std::exception) override;
     virtual OUString SAL_CALL getAccessibleName() throw (css::uno::RuntimeException, std::exception) override;
-    sdr::table::CellRef getCellRef() { return mxCell;}
+    const sdr::table::CellRef& getCellRef() { return mxCell;}
     void UpdateChildren();
     static OUString getCellName( sal_Int32 nCol, sal_Int32 nRow );
 
@@ -129,10 +129,6 @@ protected:
     virtual void SAL_CALL disposing() override;
 
     AccessibleTableShape *pAccTable;
-
-private:
-    AccessibleCell(const AccessibleCell&) = delete;
-    AccessibleCell& operator=(const AccessibleCell&) = delete;
 };
 
 } // end of namespace accessibility

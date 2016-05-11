@@ -34,7 +34,7 @@
 #include <vcl/svapp.hxx>
 #include <tools/urlobj.hxx>
 
-#include "vcl/window.hxx"
+#include <vcl/window.hxx>
 #include "unx/gtk/gtkframe.hxx"
 #include "gtk/fpicker/SalGtkPicker.hxx"
 
@@ -120,10 +120,9 @@ GtkWindow* RunDialog::GetTransientFor()
     return pParent;
 }
 
-RunDialog::RunDialog( GtkWidget *pDialog, uno::Reference< awt::XExtendedToolkit >& rToolkit,
-    uno::Reference< frame::XDesktop >& rDesktop ) :
+RunDialog::RunDialog( GtkWidget *pDialog, uno::Reference< awt::XExtendedToolkit >& rToolkit ) :
     cppu::WeakComponentImplHelper< awt::XTopWindowListener, frame::XTerminateListener >( maLock ),
-    mpDialog(pDialog), mxToolkit(rToolkit), mxDesktop(rDesktop)
+    mpDialog(pDialog), mxToolkit(rToolkit)
 {
 }
 

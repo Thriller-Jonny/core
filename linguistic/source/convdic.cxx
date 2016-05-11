@@ -161,7 +161,6 @@ bool IsConvDic( const OUString &rFileURL, sal_Int16 &nLang, sal_Int16 &nConvType
 }
 
 
-
 ConvDic::ConvDic(
         const OUString &rName,
         sal_Int16 nLang,
@@ -618,13 +617,7 @@ void SAL_CALL ConvDic::flush(  )
     // notify listeners
     EventObject aEvtObj;
     aEvtObj.Source = uno::Reference< XFlushable >( this );
-    cppu::OInterfaceIteratorHelper aIt( aFlushListeners );
-    while (aIt.hasMoreElements())
-    {
-        uno::Reference< util::XFlushListener > xRef( aIt.next(), UNO_QUERY );
-        if (xRef.is())
-            xRef->flushed( aEvtObj );
-    }
+    aFlushListeners.notifyEach( &util::XFlushListener::flushed, aEvtObj );
 }
 
 
@@ -673,7 +666,6 @@ uno::Sequence< OUString > ConvDic::getSupportedServiceNames_Static()
     uno::Sequence<OUString> aSNS { SN_CONV_DICTIONARY };
     return aSNS;
 }
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -27,14 +27,9 @@
 class AutoTimer;
 
 
-// - ScrollBar-Types -
-
-
 enum ScrollType { SCROLL_DONTKNOW, SCROLL_LINEUP, SCROLL_LINEDOWN,
                   SCROLL_PAGEUP, SCROLL_PAGEDOWN, SCROLL_DRAG, SCROLL_SET };
 
-
-// - ScrollBar -
 
 struct ImplScrollBarData;
 
@@ -112,8 +107,7 @@ public:
     long            DoScroll( long nNewPos );
     long            DoScrollAction( ScrollType eScrollType );
 
-    void            EnableDrag( bool bEnable = true )
-                        { mbFullDrag = bEnable; }
+    void            EnableDrag() { mbFullDrag = true; }
 
     void            SetRangeMin( long nNewRange );
     long            GetRangeMin() const { return mnMinRange; }
@@ -139,9 +133,6 @@ public:
 
     virtual Size    GetOptimalSize() const override;
 };
-
-
-// - ScrollBarBox -
 
 
 class VCL_DLLPUBLIC ScrollBarBox : public vcl::Window

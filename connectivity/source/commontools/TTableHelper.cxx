@@ -19,7 +19,6 @@
 
 #include <sal/config.h>
 
-#include <boost/noncopyable.hpp>
 #include <connectivity/TTableHelper.hxx>
 #include <com/sun/star/sdbc/XRow.hpp>
 #include <com/sun/star/sdbc/XResultSet.hpp>
@@ -55,8 +54,7 @@ namespace
 {
     /// helper class for column property change events which holds the OComponentDefinition weak
 class OTableContainerListener:
-    public ::cppu::WeakImplHelper< XContainerListener >,
-    private boost::noncopyable
+    public ::cppu::WeakImplHelper< XContainerListener >
 {
     OTableHelper* m_pComponent;
     ::std::map< OUString,bool> m_aRefNames;
@@ -65,6 +63,9 @@ protected:
     virtual ~OTableContainerListener(){}
 public:
     explicit OTableContainerListener(OTableHelper* _pComponent) : m_pComponent(_pComponent){}
+    // noncopyable
+    OTableContainerListener(const OTableContainerListener&) = delete;
+    const OTableContainerListener& operator=(const OTableContainerListener&) = delete;
     virtual void SAL_CALL elementInserted( const ::com::sun::star::container::ContainerEvent& /*Event*/ ) throw (RuntimeException, std::exception) override
     {
     }
@@ -149,18 +150,18 @@ OTableHelper::OTableHelper( sdbcx::OCollection* _pTables,
 OTableHelper::OTableHelper( sdbcx::OCollection* _pTables,
                             const Reference< XConnection >& _xConnection,
                             bool _bCase,
-                            const OUString& _Name,
-                            const OUString& _Type,
-                            const OUString& _Description ,
-                            const OUString& _SchemaName,
-                            const OUString& _CatalogName
+                            const OUString& Name,
+                            const OUString& Type,
+                            const OUString& Description ,
+                            const OUString& SchemaName,
+                            const OUString& CatalogName
                         ) : OTable_TYPEDEF(_pTables,
                                             _bCase,
-                                            _Name,
-                                          _Type,
-                                          _Description,
-                                          _SchemaName,
-                                          _CatalogName)
+                                            Name,
+                                          Type,
+                                          Description,
+                                          SchemaName,
+                                          CatalogName)
                         ,m_pImpl(new OTableHelperImpl(_xConnection))
 {
 }
@@ -220,7 +221,7 @@ namespace
 
         // collect all used ordinals
         ::std::set< OrdinalPosition > aUsedOrdinals;
-        for (   ::std::vector< ColumnDesc >::iterator collect = _rColumns.begin();
+        for (   ::std::vector< ColumnDesc >::const_iterator collect = _rColumns.begin();
                 collect != _rColumns.end();
                 ++collect
             )
@@ -393,7 +394,7 @@ void OTableHelper::refreshForeignKeys(TStringVector& _rNames)
                     if ( pKeyProps.get() )
                         m_pImpl->m_aKeys.insert(TKeyMap::value_type(sOldFKName,pKeyProps));
 
-                    const OUString sReferencedName = ::dbtools::composeTableName(getMetaData(),sCatalog,aSchema,aName,false,::dbtools::eInDataManipulation);
+                    const OUString sReferencedName = ::dbtools::composeTableName(getMetaData(),sCatalog,aSchema,aName,false,::dbtools::EComposeRule::InDataManipulation);
                     pKeyProps.reset(new sdbcx::KeyProperties(sReferencedName,KeyType::FOREIGN,nUpdateRule,nDeleteRule));
                     pKeyProps->m_aKeyColumnNames.push_back(sForeignKeyColumn);
                     _rNames.push_back(sFkName);
@@ -447,7 +448,7 @@ void OTableHelper::refreshIndexes()
         Any aCatalog;
         if ( !m_CatalogName.isEmpty() )
             aCatalog <<= m_CatalogName;
-        Reference< XResultSet > xResult = getMetaData()->getIndexInfo(aCatalog,m_SchemaName,m_Name,sal_False,sal_False);
+        Reference< XResultSet > xResult = getMetaData()->getIndexInfo(aCatalog,m_SchemaName,m_Name,false,false);
 
         if(xResult.is())
         {
@@ -513,13 +514,13 @@ void SAL_CALL OTableHelper::rename( const OUString& newName ) throw(SQLException
             OUString sSql = getRenameStart();
 
             OUString sCatalog,sSchema,sTable;
-            ::dbtools::qualifiedNameComponents(getMetaData(),newName,sCatalog,sSchema,sTable,::dbtools::eInDataManipulation);
+            ::dbtools::qualifiedNameComponents(getMetaData(),newName,sCatalog,sSchema,sTable,::dbtools::EComposeRule::InDataManipulation);
 
             OUString sComposedName;
-            sComposedName = ::dbtools::composeTableName(getMetaData(),m_CatalogName,m_SchemaName,m_Name,true,::dbtools::eInDataManipulation);
+            sComposedName = ::dbtools::composeTableName(getMetaData(),m_CatalogName,m_SchemaName,m_Name,true,::dbtools::EComposeRule::InDataManipulation);
             sSql += sComposedName
                  + " TO ";
-            sComposedName = ::dbtools::composeTableName(getMetaData(),sCatalog,sSchema,sTable,true,::dbtools::eInDataManipulation);
+            sComposedName = ::dbtools::composeTableName(getMetaData(),sCatalog,sSchema,sTable,true,::dbtools::EComposeRule::InDataManipulation);
             sSql += sComposedName;
 
             Reference< XStatement > xStmt = m_pImpl->m_xConnection->createStatement(  );
@@ -533,7 +534,7 @@ void SAL_CALL OTableHelper::rename( const OUString& newName ) throw(SQLException
         OTable_TYPEDEF::rename(newName);
     }
     else
-        ::dbtools::qualifiedNameComponents(getMetaData(),newName,m_CatalogName,m_SchemaName,m_Name,::dbtools::eInTableDefinitions);
+        ::dbtools::qualifiedNameComponents(getMetaData(),newName,m_CatalogName,m_SchemaName,m_Name,::dbtools::EComposeRule::InTableDefinitions);
 }
 
 Reference< XDatabaseMetaData> OTableHelper::getMetaData() const
@@ -562,7 +563,7 @@ void SAL_CALL OTableHelper::alterColumnByIndex( sal_Int32 index, const Reference
 OUString SAL_CALL OTableHelper::getName() throw(RuntimeException, std::exception)
 {
     OUString sComposedName;
-    sComposedName = ::dbtools::composeTableName(getMetaData(),m_CatalogName,m_SchemaName,m_Name,false,::dbtools::eInDataManipulation);
+    sComposedName = ::dbtools::composeTableName(getMetaData(),m_CatalogName,m_SchemaName,m_Name,false,::dbtools::EComposeRule::InDataManipulation);
     return sComposedName;
 }
 

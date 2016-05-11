@@ -22,7 +22,6 @@
 
 #include <string.h>
 
-// - Strict -
 
 // Anpassungen fuer TypeChecking
 
@@ -171,9 +170,6 @@ inline HINSTANCE GetWindowInstance( HWND hWnd )
     return (HINSTANCE)GetWindowLongPtr( hWnd, GWLP_HINSTANCE );
 }
 
-// - ZMouse Erweiterungen -
-
-#define MSH_MOUSEWHEEL "MSWHEEL_ROLLMSG"
 
 #define MOUSEZ_CLASSNAME  "MouseZ"            // wheel window class
 #define MOUSEZ_TITLE      "Magellan MSWHEEL"  // wheel window title
@@ -199,12 +195,6 @@ inline HINSTANCE GetWindowInstance( HWND hWnd )
 #define WHEEL_PAGESCROLL            (UINT_MAX)
 #endif
 
-// - SystemAgent Erweiterungen -
-
-#define ENABLE_AGENT            1
-#define DISABLE_AGENT           2
-#define GET_AGENT_STATUS        3
-typedef int (APIENTRY* SysAgt_Enable_PROC)( int );
 
 // - 5.0-Erweiterungen -
 

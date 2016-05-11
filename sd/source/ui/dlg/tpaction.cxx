@@ -267,9 +267,9 @@ void SdTPAction::Construct()
     maCurrentActions.push_back( presentation::ClickAction_STOPPRESENTATION );
 
     // fill Action-Listbox
-    for (size_t nAction = 0, n = maCurrentActions.size(); nAction < n; nAction++)
+    for (presentation::ClickAction & rAction : maCurrentActions)
     {
-        sal_uInt16 nRId = GetClickActionSdResId( maCurrentActions[ nAction ] );
+        sal_uInt16 nRId = GetClickActionSdResId( rAction );
         m_pLbAction->InsertEntry( SD_RESSTR( nRId ) );
     }
 
@@ -730,7 +730,7 @@ void SdTPAction::SetEditText( OUString const & rStr )
             if( comphelper::string::getTokenCount(rStr, DOCUMENT_TOKEN) == 2 )
                 aText = rStr.getToken( 0, DOCUMENT_TOKEN );
 
-            // fallthrough intended
+            SAL_FALLTHROUGH;
         case presentation::ClickAction_SOUND:
         case presentation::ClickAction_PROGRAM:
             {

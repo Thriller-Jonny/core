@@ -112,9 +112,6 @@ void SwAnchoredObject::SetDrawObj( SdrObject& _rDrawObj )
 }
 
 
-
-
-
 void SwAnchoredObject::ChgAnchorFrame( SwFrame* _pNewAnchorFrame )
 {
     mpAnchorFrame = _pNewAnchorFrame;
@@ -143,7 +140,6 @@ SwFrame* SwAnchoredObject::GetAnchorFrameContainingAnchPos()
 
     return pAnchorFrameContainingAnchPos;
 }
-
 
 
 void SwAnchoredObject::SetPageFrame( SwPageFrame* _pNewPageFrame )
@@ -235,8 +231,8 @@ void SwAnchoredObject::CheckCharRectAndTopOfLine(
             const SwTextFrame& aAnchorCharFrame = *(FindAnchorCharFrame());
             if ( !_bCheckForParaPorInf || aAnchorCharFrame.HasPara() )
             {
-                _CheckCharRect( rAnch, aAnchorCharFrame );
-                _CheckTopOfLine( rAnch, aAnchorCharFrame );
+                CheckCharRect( rAnch, aAnchorCharFrame );
+                CheckTopOfLine( rAnch, aAnchorCharFrame );
             }
         }
     }
@@ -252,7 +248,7 @@ void SwAnchoredObject::CheckCharRectAndTopOfLine(
 
     improvement - add second parameter <_rAnchorCharFrame>
 */
-void SwAnchoredObject::_CheckCharRect( const SwFormatAnchor& _rAnch,
+void SwAnchoredObject::CheckCharRect( const SwFormatAnchor& _rAnch,
                                        const SwTextFrame& _rAnchorCharFrame )
 {
     // determine rectangle of anchor character. If not exist, abort operation
@@ -316,7 +312,7 @@ void SwAnchoredObject::_CheckCharRect( const SwFormatAnchor& _rAnch,
 
     improvement - add second parameter <_rAnchorCharFrame>
 */
-void SwAnchoredObject::_CheckTopOfLine( const SwFormatAnchor& _rAnch,
+void SwAnchoredObject::CheckTopOfLine( const SwFormatAnchor& _rAnch,
                                         const SwTextFrame& _rAnchorCharFrame )
 {
     SwTwips nTopOfLine = 0L;
@@ -393,8 +389,7 @@ void SwAnchoredObject::UpdateLayoutDir()
 
     #i28701#
 */
-void SwAnchoredObject::InvalidateObjPosForConsiderWrapInfluence(
-                                                    const bool _bNotifyBackgrd )
+void SwAnchoredObject::InvalidateObjPosForConsiderWrapInfluence()
 {
     if ( ConsiderObjWrapInfluenceOnObjPos() )
     {
@@ -404,11 +399,8 @@ void SwAnchoredObject::InvalidateObjPosForConsiderWrapInfluence(
         UnlockPosition();
         // invalidate position
         InvalidateObjPos();
-        // invalidate 'background', if requested
-        if ( _bNotifyBackgrd )
-        {
-            NotifyBackground( GetPageFrame(), GetObjRectWithSpaces(), PREP_FLY_LEAVE );
-        }
+        // invalidate 'background'
+        NotifyBackground( GetPageFrame(), GetObjRectWithSpaces(), PREP_FLY_LEAVE );
     }
 }
 
@@ -603,7 +595,7 @@ const SwRect& SwAnchoredObject::GetObjRectWithSpaces() const
 // --> #i68520#
 void SwAnchoredObject::SetObjTop( const SwTwips _nTop)
 {
-    const bool bTopChanged( _SetObjTop( _nTop ) );
+    const bool bTopChanged( SetObjTop_( _nTop ) );
     if ( bTopChanged )
     {
         mbObjRectWithSpacesValid = false;
@@ -612,7 +604,7 @@ void SwAnchoredObject::SetObjTop( const SwTwips _nTop)
 
 void SwAnchoredObject::SetObjLeft( const SwTwips _nLeft)
 {
-    const bool bLeftChanged( _SetObjLeft( _nLeft ) );
+    const bool bLeftChanged( SetObjLeft_( _nLeft ) );
     if ( bLeftChanged )
     {
         mbObjRectWithSpacesValid = false;
@@ -642,7 +634,7 @@ void SwAnchoredObject::UpdateObjInSortedList()
                 {
                     SwAnchoredObject* pAnchoredObj = (*pObjs)[i];
                     if ( pAnchoredObj->ConsiderObjWrapInfluenceOnObjPos() )
-                        pAnchoredObj->InvalidateObjPosForConsiderWrapInfluence( true );
+                        pAnchoredObj->InvalidateObjPosForConsiderWrapInfluence();
                     else
                         pAnchoredObj->InvalidateObjPos();
                 }
@@ -656,7 +648,7 @@ void SwAnchoredObject::UpdateObjInSortedList()
                 {
                     SwAnchoredObject* pAnchoredObj = (*pObjs)[i];
                     if ( pAnchoredObj->ConsiderObjWrapInfluenceOnObjPos() )
-                        pAnchoredObj->InvalidateObjPosForConsiderWrapInfluence( true );
+                        pAnchoredObj->InvalidateObjPosForConsiderWrapInfluence();
                     else
                         pAnchoredObj->InvalidateObjPos();
                 }
@@ -760,7 +752,7 @@ void SwAnchoredObject::SetTmpConsiderWrapInfluence( const bool _bTmpConsiderWrap
 }
 
 
-void SwAnchoredObject::SetTmpConsiderWrapInfluenceOfOtherObjs( const bool bTmpConsiderWrapInfluence )
+void SwAnchoredObject::SetTmpConsiderWrapInfluenceOfOtherObjs()
 {
     const SwSortedObjs* pObjs = GetAnchorFrame()->GetDrawObjs();
     if ( pObjs->size() > 1 )
@@ -770,7 +762,7 @@ void SwAnchoredObject::SetTmpConsiderWrapInfluenceOfOtherObjs( const bool bTmpCo
             SwAnchoredObject* pAnchoredObj = (*pObjs)[i];
             if ( pAnchoredObj != this )
             {
-                pAnchoredObj->SetTmpConsiderWrapInfluence( bTmpConsiderWrapInfluence );
+                pAnchoredObj->SetTmpConsiderWrapInfluence( true/*bTmpConsiderWrapInfluence*/ );
             }
         }
     }

@@ -32,8 +32,8 @@ public:
     virtual sal_Bool SAL_CALL hasMoreElements() throw ( uno::RuntimeException, std::exception ) override
     {
         if( m_nCurrentPosition < m_pCommandBarControls->getCount() )
-            return sal_True;
-        return sal_False;
+            return true;
+        return false;
     }
     virtual uno::Any SAL_CALL nextElement() throw ( container::NoSuchElementException, lang::WrappedTargetException, uno::RuntimeException, std::exception ) override
     {
@@ -222,7 +222,7 @@ ScVbaCommandBarControls::Add( const uno::Any& Type, const uno::Any& Id, const un
     uno::Reference< container::XIndexContainer > xIndexContainer( m_xIndexAccess, uno::UNO_QUERY_THROW );
     xIndexContainer->insertByIndex( nPosition, uno::makeAny( aProps ) );
 
-    pCBarHelper->ApplyChange( m_sResourceUrl, m_xBarSettings );
+    pCBarHelper->ApplyTempChange( m_sResourceUrl, m_xBarSettings );
 
     ScVbaCommandBarControl* pNewCommandBarControl = nullptr;
     if( nType == office::MsoControlType::msoControlPopup )
@@ -253,7 +253,6 @@ ScVbaCommandBarControls::getServiceNames()
 }
 
 
-
 class VbaDummyIndexAccess : public ::cppu::WeakImplHelper< container::XIndexAccess >
 {
 public:
@@ -269,7 +268,6 @@ public:
     virtual sal_Bool SAL_CALL hasElements(  ) throw (css::uno::RuntimeException, std::exception) override
         { return false; }
 };
-
 
 
 VbaDummyCommandBarControls::VbaDummyCommandBarControls(

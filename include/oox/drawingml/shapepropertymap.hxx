@@ -20,10 +20,14 @@
 #ifndef INCLUDED_OOX_DRAWINGML_SHAPEPROPERTYMAP_HXX
 #define INCLUDED_OOX_DRAWINGML_SHAPEPROPERTYMAP_HXX
 
-#include <oox/helper/propertymap.hxx>
-#include <oox/dllapi.h>
-
+#include <cstddef>
 #include <vector>
+
+#include <com/sun/star/uno/Any.hxx>
+#include <oox/dllapi.h>
+#include <oox/helper/propertymap.hxx>
+#include <rtl/ustring.hxx>
+#include <sal/types.h>
 
 namespace oox { class ModelObjectHelper; }
 
@@ -93,7 +97,6 @@ struct OOX_DLLPUBLIC ShapePropertyInfo
 };
 
 
-
 class OOX_DLLPUBLIC ShapePropertyMap : public PropertyMap
 {
 public:
@@ -134,14 +137,13 @@ private:
     bool                setFillBitmapNameFromUrl( sal_Int32 nPropId, const css::uno::Any& rValue );
 
     // not implemented, to prevent implicit conversion from enum to int
-    css::uno::Any& operator[]( ShapePropertyId ePropId );
-    const css::uno::Any& operator[]( ShapePropertyId ePropId ) const;
+    css::uno::Any& operator[]( ShapePropertyId ePropId ) = delete;
+    const css::uno::Any& operator[]( ShapePropertyId ePropId ) const = delete;
 
 private:
     ModelObjectHelper&  mrModelObjHelper;
     ShapePropertyInfo   maShapePropInfo;
 };
-
 
 
 } // namespace drawingml

@@ -572,16 +572,16 @@ void SvXMLExportPropertyMapper::ChainExportMapper(
 std::vector<XMLPropertyState> SvXMLExportPropertyMapper::Filter(
     const uno::Reference<beans::XPropertySet>& rPropSet, bool bEnableFoFontFamily ) const
 {
-    return _Filter(rPropSet, false, bEnableFoFontFamily);
+    return Filter_(rPropSet, false, bEnableFoFontFamily);
 }
 
 std::vector<XMLPropertyState> SvXMLExportPropertyMapper::FilterDefaults(
-    const uno::Reference<beans::XPropertySet>& rPropSet, bool bEnableFoFontFamily ) const
+    const uno::Reference<beans::XPropertySet>& rPropSet ) const
 {
-    return _Filter(rPropSet, true, bEnableFoFontFamily);
+    return Filter_(rPropSet, true, false/*bEnableFoFontFamily*/);
 }
 
-vector<XMLPropertyState> SvXMLExportPropertyMapper::_Filter(
+vector<XMLPropertyState> SvXMLExportPropertyMapper::Filter_(
     const Reference<XPropertySet>& xPropSet, bool bDefault, bool bEnableFoFontFamily ) const
 {
     vector< XMLPropertyState > aPropStateArray;
@@ -667,7 +667,7 @@ vector<XMLPropertyState> SvXMLExportPropertyMapper::_Filter(
 void SvXMLExportPropertyMapper::ContextFilter(
         bool bEnableFoFontFamily,
         vector< XMLPropertyState >& rProperties,
-        Reference< XPropertySet > rPropSet ) const
+        const Reference< XPropertySet >& rPropSet ) const
 {
     // Derived class could implement this.
     if (mpImpl->mxNextMapper.is())

@@ -28,10 +28,12 @@
 #if defined __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wall"
+#pragma clang diagnostic ignored "-Wextra"
 #pragma clang diagnostic ignored "-Wint-to-pointer-cast"
 #pragma clang diagnostic ignored "-Winvalid-noreturn"
 #pragma clang diagnostic ignored "-Wmicrosoft"
 #pragma clang diagnostic ignored "-Wnon-pod-varargs"
+#pragma clang diagnostic ignored "-Wnon-virtual-dtor"
 #endif
 
 #include <atlbase.h>
@@ -56,7 +58,7 @@ public:
     CComPtr< ITypeInfo > m_pTypeInfo;
     VARDESC* m_pVarDesc;
 
-    VarDesc(ITypeInfo* pTypeInfo) :
+    explicit VarDesc(ITypeInfo* pTypeInfo) :
       m_pTypeInfo(pTypeInfo),
       m_pVarDesc(NULL)
    {
@@ -96,7 +98,7 @@ class FuncDesc
 
 public:
 
-    FuncDesc(ITypeInfo * pTypeInfo) :
+    explicit FuncDesc(ITypeInfo * pTypeInfo) :
         m_pTypeInfo(pTypeInfo),
         m_pFuncDesc(NULL)
         {
@@ -174,7 +176,7 @@ public:
     CComPtr< ITypeInfo > m_pTypeInfo;
     TYPEATTR* m_pTypeAttr;
 
-    TypeAttr(ITypeInfo* pTypeInfo) :
+    explicit TypeAttr(ITypeInfo* pTypeInfo) :
       m_pTypeInfo( pTypeInfo ),
       m_pTypeAttr( NULL )
    {
@@ -198,7 +200,6 @@ public:
       return m_pTypeAttr;
    }
 };
-
 
 
 }

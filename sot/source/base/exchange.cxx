@@ -17,21 +17,21 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
+#include <sal/config.h>
+
 #include <tools/debug.hxx>
 #include <tools/solar.h>
 #include <tools/globname.hxx>
-#include <sot/sotdata.hxx>
 #include <sot/exchange.hxx>
 #include <sot/formats.hxx>
 #include <sysformats.hxx>
 #include <comphelper/classids.hxx>
 #include <rtl/instance.hxx>
+#include <com/sun/star/datatransfer/DataFlavor.hpp>
 #include <com/sun/star/uno/Sequence.hxx>
 #include <comphelper/documentconstants.hxx>
 
-#ifdef GetObject
-#undef GetObject
-#endif
+#include <vector>
 
 using namespace::com::sun::star::uno;
 using namespace::com::sun::star::datatransfer;
@@ -68,7 +68,7 @@ namespace
             /*  7 EMPTY*/                                   { "", "", &cppu::UnoType<Sequence<sal_Int8>>::get() },
             /*  8 EMPTY*/                                   { "", "", &cppu::UnoType<Sequence<sal_Int8>>::get() },
             /*  9 EMPTY*/                                   { "", "", &cppu::UnoType<Sequence<sal_Int8>>::get() },
-            /* 10 SotClipboardFormatId::RTF*/                          { "text/richtext", "Rich Text Format", &cppu::UnoType<Sequence<sal_Int8>>::get() },
+            /* 10 SotClipboardFormatId::RTF*/                          { "text/rtf", "Rich Text Format", &cppu::UnoType<Sequence<sal_Int8>>::get() },
             /* 11 SotClipboardFormatId::DRAWING*/                { "application/x-openoffice-drawing;windows_formatname=\"Drawing Format\"", "Drawing Format", &cppu::UnoType<Sequence<sal_Int8>>::get() },
             /* 12 SotClipboardFormatId::SVXB*/                   { "application/x-openoffice-svxb;windows_formatname=\"SVXB (StarView Bitmap/Animation)\"", "SVXB (StarView Bitmap/Animation)", &cppu::UnoType<Sequence<sal_Int8>>::get() },
             /* 13 SotClipboardFormatId::SVIM*/                   { "application/x-openoffice-svim;windows_formatname=\"SVIM (StarView ImageMap)\"", "SVIM (StarView ImageMap)", &cppu::UnoType<Sequence<sal_Int8>>::get() },
@@ -202,6 +202,7 @@ namespace
             /*141 SotClipboardFormatId::PNG*/                    { "image/png", "PNG Bitmap", &cppu::UnoType<Sequence<sal_Int8>>::get() },
             /*142 SotClipboardFormatId::STARWRITERGLOB_8_TEMPLATE*/      { MIMETYPE_OASIS_OPENDOCUMENT_TEXT_GLOBAL_TEMPLATE_ASCII, "Writer/Global 8 Template", &cppu::UnoType<Sequence<sal_Int8>>::get() },
             /*143 SotClipboardFormatId::MATHML*/   { "application/mathml+xml", "MathML", &::cppu::UnoType<const Sequence< sal_Int8 >>::get() },
+            /*144 SotClipboardFormatId::JPEG*/ { "image/jpeg", "JPEG Bitmap", &cppu::UnoType<Sequence<sal_Int8>>::get() },
             };
         return &aInstance[0];
         }
@@ -210,11 +211,35 @@ namespace
     struct FormatArray_Impl
         : public rtl::StaticAggregate<
             const DataFlavorRepresentation, ImplFormatArray_Impl > {};
+
+
+    typedef std::vector<css::datatransfer::DataFlavor*> tDataFlavorList;
+
+    struct SotData_Impl
+    {
+        tDataFlavorList* pDataFlavorList;
+
+        SotData_Impl(): pDataFlavorList(nullptr) {}
+        ~SotData_Impl()
+        {
+            if (pDataFlavorList)
+            {
+                for( tDataFlavorList::iterator aI = pDataFlavorList->begin(),
+                     aEnd = pDataFlavorList->end(); aI != aEnd; ++aI)
+                {
+                    delete *aI;
+                }
+                delete pDataFlavorList;
+            }
+        }
+    };
+
+    struct ImplData : public rtl::Static<SotData_Impl, ImplData> {};
 }
 
 static tDataFlavorList& InitFormats_Impl()
 {
-    SotData_Impl * pSotData = SOTDATA();
+    SotData_Impl *pSotData = &ImplData::get();
     if( !pSotData->pDataFlavorList )
         pSotData->pDataFlavorList = new tDataFlavorList();
     return *pSotData->pDataFlavorList;

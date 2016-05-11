@@ -27,11 +27,10 @@
 #endif
 #include <poll.h>
 
-#include <prex.h>
-#include <X11/Xlocale.h>
 #include <X11/Xlib.h>
+#include <X11/Xutil.h>
+#include <X11/Xlocale.h>
 #include <unx/XIM.h>
-#include <postx.h>
 
 #include "unx/salunx.h"
 #include "unx/saldisp.hxx"
@@ -48,7 +47,7 @@ using namespace vcl;
 // kinput2 IME needs special key handling since key release events are filtered in
 // preeditmode and XmbResetIC does not work
 
-class XKeyEventOp : XKeyEvent
+class XKeyEventOp : public XKeyEvent
 {
     private:
         void            init();
@@ -195,14 +194,14 @@ IsXWindowCompatibleLocale( const char* p_locale )
 // see i8988, i9188, i8930, i16318
 // on Solaris the environment needs to be set equivalent to the locale (#i37047#)
 
-bool
-SalI18N_InputMethod::SetLocale( const char* pLocale )
+void
+SalI18N_InputMethod::SetLocale()
 {
     // check whether we want an Input Method engine, if we don't we
     // do not need to set the locale
     if ( mbUseable )
     {
-        char *locale = SetSystemLocale( pLocale );
+        char *locale = SetSystemLocale( "" );
         if ( (!IsXWindowCompatibleLocale(locale)) || IsPosixLocale(locale) )
         {
             osl_setThreadTextEncoding (RTL_TEXTENCODING_ISO_8859_1);
@@ -229,8 +228,6 @@ SalI18N_InputMethod::SetLocale( const char* pLocale )
             mbUseable = False;
         }
     }
-
-    return mbUseable;
 }
 
 Bool
@@ -331,7 +328,7 @@ PrintInputStyle( XIMStyles *pStyle )
 // this is the real constructing routine, since locale setting has to be done
 // prior to xopendisplay, the xopenim call has to be delayed
 
-bool
+void
 SalI18N_InputMethod::CreateMethod ( Display *pDisplay )
 {
     if ( mbUseable )
@@ -371,8 +368,6 @@ SalI18N_InputMethod::CreateMethod ( Display *pDisplay )
     maDestroyCallback.client_data = reinterpret_cast<XPointer>(this);
     if (mbUseable && maMethod != nullptr)
         XSetIMValues(maMethod, XNDestroyCallback, &maDestroyCallback, nullptr);
-
-    return mbUseable;
 }
 
 // give IM the opportunity to look at the event, and possibly hide it
@@ -392,20 +387,20 @@ SalI18N_InputMethod::FilterEvent( XEvent *pEvent, ::Window window    )
      * fix broken key release handling of some IMs
      */
     XKeyEvent*         pKeyEvent = &(pEvent->xkey);
-    static XKeyEventOp maLastKeyPress;
+    static XKeyEventOp s_aLastKeyPress;
 
     if (bFilterEvent)
     {
         if (pKeyEvent->type == KeyRelease)
-            bFilterEvent = !maLastKeyPress.match (*pKeyEvent);
-        maLastKeyPress.erase();
+            bFilterEvent = !s_aLastKeyPress.match (*pKeyEvent);
+        s_aLastKeyPress.erase();
     }
     else /* (!bFilterEvent) */
     {
         if (pKeyEvent->type == KeyPress)
-            maLastKeyPress = *pKeyEvent;
+            s_aLastKeyPress = *pKeyEvent;
         else
-            maLastKeyPress.erase();
+            s_aLastKeyPress.erase();
     }
 
     return bFilterEvent;

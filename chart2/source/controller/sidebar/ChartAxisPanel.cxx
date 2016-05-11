@@ -18,7 +18,6 @@
  */
 
 #include <sfx2/sidebar/ResourceDefinitions.hrc>
-#include <sfx2/sidebar/Theme.hxx>
 #include <sfx2/sidebar/ControlFactory.hxx>
 
 #include <com/sun/star/chart/ChartAxisLabelPosition.hpp>
@@ -38,13 +37,12 @@
 
 using namespace css;
 using namespace css::uno;
-using ::sfx2::sidebar::Theme;
 
 namespace chart { namespace sidebar {
 
 namespace {
 
-bool isLabelShown(css::uno::Reference<css::frame::XModel> xModel,
+bool isLabelShown(const css::uno::Reference<css::frame::XModel>& xModel,
         const OUString& rCID)
 {
     css::uno::Reference< css::beans::XPropertySet > xAxis(
@@ -62,7 +60,7 @@ bool isLabelShown(css::uno::Reference<css::frame::XModel> xModel,
     return bVisible;
 }
 
-void setLabelShown(css::uno::Reference<css::frame::XModel> xModel,
+void setLabelShown(const css::uno::Reference<css::frame::XModel>& xModel,
         const OUString& rCID, bool bVisible)
 {
     css::uno::Reference< css::beans::XPropertySet > xAxis(
@@ -87,7 +85,7 @@ AxisLabelPosMap aLabelPosMap[] = {
     { 3, css::chart::ChartAxisLabelPosition_OUTSIDE_END }
 };
 
-sal_Int32 getLabelPosition(css::uno::Reference<css::frame::XModel> xModel,
+sal_Int32 getLabelPosition(const css::uno::Reference<css::frame::XModel>& xModel,
         const OUString& rCID)
 {
     css::uno::Reference< css::beans::XPropertySet > xAxis(
@@ -102,16 +100,16 @@ sal_Int32 getLabelPosition(css::uno::Reference<css::frame::XModel> xModel,
 
     css::chart::ChartAxisLabelPosition ePos;
     aAny >>= ePos;
-    for (size_t i = 0; i < SAL_N_ELEMENTS(aLabelPosMap); ++i)
+    for (AxisLabelPosMap & i : aLabelPosMap)
     {
-        if (aLabelPosMap[i].ePos == ePos)
-            return aLabelPosMap[i].nPos;
+        if (i.ePos == ePos)
+            return i.nPos;
     }
 
     return 0;
 }
 
-void setLabelPosition(css::uno::Reference<css::frame::XModel> xModel,
+void setLabelPosition(const css::uno::Reference<css::frame::XModel>& xModel,
         const OUString& rCID, sal_Int32 nPos)
 {
     css::uno::Reference< css::beans::XPropertySet > xAxis(
@@ -121,16 +119,16 @@ void setLabelPosition(css::uno::Reference<css::frame::XModel> xModel,
         return;
 
     css::chart::ChartAxisLabelPosition ePos;
-    for (size_t i = 0; i < SAL_N_ELEMENTS(aLabelPosMap); ++i)
+    for (AxisLabelPosMap & i : aLabelPosMap)
     {
-        if (aLabelPosMap[i].nPos == nPos)
-            ePos = aLabelPosMap[i].ePos;
+        if (i.nPos == nPos)
+            ePos = i.ePos;
     }
 
     xAxis->setPropertyValue("LabelPosition", css::uno::makeAny(ePos));
 }
 
-bool isReverse(css::uno::Reference<css::frame::XModel> xModel,
+bool isReverse(const css::uno::Reference<css::frame::XModel>& xModel,
         const OUString& rCID)
 {
     css::uno::Reference< css::chart2::XAxis > xAxis(
@@ -144,7 +142,7 @@ bool isReverse(css::uno::Reference<css::frame::XModel> xModel,
     return aData.Orientation == css::chart2::AxisOrientation_REVERSE;
 }
 
-void setReverse(css::uno::Reference<css::frame::XModel> xModel,
+void setReverse(const css::uno::Reference<css::frame::XModel>& xModel,
         const OUString& rCID, bool bReverse)
 {
     css::uno::Reference< css::chart2::XAxis > xAxis(
@@ -162,7 +160,7 @@ void setReverse(css::uno::Reference<css::frame::XModel> xModel,
     xAxis->setScaleData(aData);
 }
 
-OUString getCID(css::uno::Reference<css::frame::XModel> xModel)
+OUString getCID(const css::uno::Reference<css::frame::XModel>& xModel)
 {
     css::uno::Reference<css::frame::XController> xController(xModel->getCurrentController());
     css::uno::Reference<css::view::XSelectionSupplier> xSelectionSupplier(xController, css::uno::UNO_QUERY);
@@ -181,7 +179,7 @@ OUString getCID(css::uno::Reference<css::frame::XModel> xModel)
     return aCID;
 }
 
-void setAxisRotation(css::uno::Reference<css::frame::XModel> xModel,
+void setAxisRotation(const css::uno::Reference<css::frame::XModel>& xModel,
         const OUString& rCID, double nVal)
 {
     css::uno::Reference< css::beans::XPropertySet > xAxis(
@@ -193,7 +191,7 @@ void setAxisRotation(css::uno::Reference<css::frame::XModel> xModel,
     xAxis->setPropertyValue("TextRotation", css::uno::makeAny(nVal));
 }
 
-double getAxisRotation(css::uno::Reference<css::frame::XModel> xModel,
+double getAxisRotation(const css::uno::Reference<css::frame::XModel>& xModel,
         const OUString& rCID)
 {
     css::uno::Reference< css::beans::XPropertySet > xAxis(
@@ -215,7 +213,6 @@ ChartAxisPanel::ChartAxisPanel(
     const css::uno::Reference<css::frame::XFrame>& rxFrame,
     ChartController* pController)
   : PanelLayout(pParent, "ChartAxisPanel", "modules/schart/ui/sidebaraxis.ui", rxFrame),
-    mxFrame(rxFrame),
     mxModel(pController->getModel()),
     mxModifyListener(new ChartSidebarModifyListener(this)),
     mxSelectionListener(new ChartSidebarSelectionListener(this, OBJECTTYPE_AXIS)),

@@ -282,12 +282,12 @@ void PackageRegistryBackend::deleteUnusedFolders(
                     makeURLAppendSysPathSegment(sDataFolder, title));
         }
 
-        for ( ::std::size_t pos = 0; pos < tempEntries.size(); ++pos )
+        for (OUString & tempEntrie : tempEntries)
         {
-            if (::std::find( usedFolders.begin(), usedFolders.end(), tempEntries[pos] ) ==
+            if (::std::find( usedFolders.begin(), usedFolders.end(), tempEntrie ) ==
                 usedFolders.end())
             {
-                deleteTempFolder(tempEntries[pos]);
+                deleteTempFolder(tempEntrie);
             }
         }
     }
@@ -300,7 +300,6 @@ void PackageRegistryBackend::deleteUnusedFolders(
     }
 
 }
-
 
 
 Package::~Package()
@@ -454,7 +453,6 @@ sal_Bool Package::checkDependencies(
         throw deployment::ExtensionRemovedException();
     return true;
 }
-
 
 
 Sequence< Reference<deployment::XPackage> > Package::getBundle(

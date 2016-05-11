@@ -23,7 +23,7 @@
 #undef _LINUX_SOURCE_COMPAT
 #endif
 
-#include <config_vclplug.h>
+#include <config_gio.h>
 
 #include <com/sun/star/awt/Toolkit.hpp>
 #include <com/sun/star/frame/Desktop.hpp>
@@ -33,7 +33,6 @@
 #include <com/sun/star/ui/dialogs/ExtendedFilePickerElementIds.hpp>
 #include <osl/diagnose.h>
 #include <com/sun/star/ui/dialogs/TemplateDescription.hpp>
-#include <com/sun/star/uno/Any.hxx>
 #include <osl/mutex.hxx>
 #include <vcl/svapp.hxx>
 #include "unx/gtk/gtkinst.hxx"
@@ -148,7 +147,7 @@ sal_Int16 SAL_CALL SalGtkFolderPicker::execute() throw( uno::RuntimeException, s
     GtkWindow *pParent = RunDialog::GetTransientFor();
     if (pParent)
         gtk_window_set_transient_for(GTK_WINDOW(m_pDialog), pParent);
-    RunDialog* pRunDialog = new RunDialog(m_pDialog, xToolkit, xDesktop);
+    RunDialog* pRunDialog = new RunDialog(m_pDialog, xToolkit);
     uno::Reference < awt::XTopWindowListener > xLifeCycle(pRunDialog);
     gint nStatus = pRunDialog->run();
     switch( nStatus )

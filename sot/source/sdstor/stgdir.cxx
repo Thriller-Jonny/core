@@ -200,7 +200,8 @@ bool StgDirEntry::StoreStream( StgIo& rIo )
             if( !m_pStgStrm )
             {
                 OpenStream( rIo );
-                delete m_pStgStrm, m_pStgStrm = nullptr;
+                delete m_pStgStrm;
+                m_pStgStrm = nullptr;
             }
             else
                 m_pStgStrm->SetSize( 0 );
@@ -260,11 +261,11 @@ bool StgDirEntry::IsDirty()
 
 // Set up a stream.
 
-void StgDirEntry::OpenStream( StgIo& rIo, bool bForceBig )
+void StgDirEntry::OpenStream( StgIo& rIo )
 {
     sal_Int32 nThreshold = (sal_uInt16) rIo.m_aHdr.GetThreshold();
     delete m_pStgStrm;
-    if( !bForceBig && m_aEntry.GetSize() < nThreshold )
+    if( m_aEntry.GetSize() < nThreshold )
         m_pStgStrm = new StgSmallStrm( rIo, *this );
     else
         m_pStgStrm = new StgDataStrm( rIo, *this );
@@ -345,7 +346,7 @@ bool StgDirEntry::SetSize( sal_Int32 nNewSize )
         {
             pOld = m_pStgStrm;
             nOldSize = (sal_uInt16) nNewSize;
-            m_pStgStrm = new StgSmallStrm( rIo, STG_EOF, 0 );
+            m_pStgStrm = new StgSmallStrm( rIo, STG_EOF );
         }
         // now set the new size
         if( m_pStgStrm->SetSize( nNewSize ) )
@@ -532,7 +533,11 @@ bool StgDirEntry::Commit()
     if( m_aEntry.GetType() == STG_STREAM )
     {
         if( m_pTmpStrm )
-            delete m_pCurStrm, m_pCurStrm = m_pTmpStrm, m_pTmpStrm = nullptr;
+        {
+            delete m_pCurStrm;
+            m_pCurStrm = m_pTmpStrm;
+            m_pTmpStrm = nullptr;
+        }
         if( m_bRemoved )
             // Delete the stream if needed
             if( m_pStgStrm )
@@ -616,7 +621,10 @@ bool StgDirEntry::Tmp2Strm()
 {
     // We did commit once, but have not written since then
     if( !m_pTmpStrm )
-        m_pTmpStrm = m_pCurStrm, m_pCurStrm = nullptr;
+    {
+        m_pTmpStrm = m_pCurStrm;
+        m_pCurStrm = nullptr;
+    }
     if( m_pTmpStrm )
     {
         OSL_ENSURE( m_pStgStrm, "The pointer may not be NULL!" );
@@ -627,9 +635,9 @@ bool StgDirEntry::Tmp2Strm()
         StgIo& rIo = m_pStgStrm->GetIo();
         sal_uLong nThreshold = (sal_uLong) rIo.m_aHdr.GetThreshold();
         if( n < nThreshold )
-            pNewStrm = new StgSmallStrm( rIo, STG_EOF, 0 );
+            pNewStrm = new StgSmallStrm( rIo, STG_EOF );
         else
-            pNewStrm = new StgDataStrm( rIo, STG_EOF, 0 );
+            pNewStrm = new StgDataStrm( rIo, STG_EOF );
         if( pNewStrm->SetSize( n ) )
         {
             sal_uInt8 p[ 4096 ];
@@ -916,7 +924,7 @@ bool StgDirStrm::Store()
 void* StgDirStrm::GetEntry( sal_Int32 n, bool bDirty )
 {
     return n < 0 || n >= m_nSize / STGENTRY_SIZE
-        ? nullptr : GetPtr( n * STGENTRY_SIZE, true, bDirty );
+        ? nullptr : GetPtr( n * STGENTRY_SIZE, bDirty );
 }
 
 // Find a dir entry.

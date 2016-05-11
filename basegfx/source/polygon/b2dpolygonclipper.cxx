@@ -97,7 +97,7 @@ namespace basegfx
                     B2DCubicBezier aEdge;
                     B2DPolygon aRun;
 
-                    for(sal_uInt32 a(0L); a < nEdgeCount; a++)
+                    for(sal_uInt32 a(0); a < nEdgeCount; a++)
                     {
                         aCandidate.getBezierSegment(a, aEdge);
                         const B2DPoint aTestPoint(aEdge.interpolatePoint(0.5));
@@ -169,7 +169,7 @@ namespace basegfx
             const sal_uInt32 nPolygonCount(rCandidate.count());
             B2DPolyPolygon aRetval;
 
-            for(sal_uInt32 a(0L); a < nPolygonCount; a++)
+            for(sal_uInt32 a(0); a < nPolygonCount; a++)
             {
                 const B2DPolyPolygon aClippedPolyPolygon(clipPolygonOnParallelAxis(rCandidate.getB2DPolygon(a), bParallelToXAxis, bAboveAxis, fValueOnOtherAxis, bStroke));
 
@@ -226,14 +226,14 @@ namespace basegfx
 
             if(!bInside)
             {
-                // cutting off the outer parts of filled polygons at parallell
+                // cutting off the outer parts of filled polygons at parallel
                 // lines to the axes is only possible for the inner part, not for
                 // the outer part which means cutting a hole into the original polygon.
                 // This is because the inner part is a logical AND-operation of
                 // the four implied half-planes, but the outer part is not.
                 // It is possible for strokes, but with creating unnecessary extra
                 // cuts, so using clipPolygonOnPolyPolygon is better there, too.
-                // This needs to be done with the topology knowlegde and is unfurtunately
+                // This needs to be done with the topology knowlegde and is unfortunately
                 // more expensive, too.
                 const B2DPolygon aClip(createPolygonFromRect(rRange));
 
@@ -249,7 +249,7 @@ namespace basegfx
                 // against Y-Axis, lower value
                 if(1L == aRetval.count())
                 {
-                    aRetval = clipPolygonOnParallelAxis(aRetval.getB2DPolygon(0L), false, bInside, rRange.getMinX(), bStroke);
+                    aRetval = clipPolygonOnParallelAxis(aRetval.getB2DPolygon(0), false, bInside, rRange.getMinX(), bStroke);
                 }
                 else
                 {
@@ -261,7 +261,7 @@ namespace basegfx
                     // against X-Axis, higher value
                     if(1L == aRetval.count())
                     {
-                        aRetval = clipPolygonOnParallelAxis(aRetval.getB2DPolygon(0L), true, !bInside, rRange.getMaxY(), bStroke);
+                        aRetval = clipPolygonOnParallelAxis(aRetval.getB2DPolygon(0), true, !bInside, rRange.getMaxY(), bStroke);
                     }
                     else
                     {
@@ -273,7 +273,7 @@ namespace basegfx
                         // against Y-Axis, higher value
                         if(1L == aRetval.count())
                         {
-                            aRetval = clipPolygonOnParallelAxis(aRetval.getB2DPolygon(0L), false, !bInside, rRange.getMaxX(), bStroke);
+                            aRetval = clipPolygonOnParallelAxis(aRetval.getB2DPolygon(0), false, !bInside, rRange.getMaxX(), bStroke);
                         }
                         else
                         {
@@ -313,7 +313,7 @@ namespace basegfx
 
             if(bInside)
             {
-                for(sal_uInt32 a(0L); a < nPolygonCount; a++)
+                for(sal_uInt32 a(0); a < nPolygonCount; a++)
                 {
                     const B2DPolyPolygon aClippedPolyPolygon(clipPolygonOnRange(rCandidate.getB2DPolygon(a), rRange, bInside, bStroke));
 
@@ -326,7 +326,7 @@ namespace basegfx
             else
             {
                 // for details, see comment in clipPolygonOnRange for the "cutting off
-                // the outer parts of filled polygons at parallell lines" explanations
+                // the outer parts of filled polygons at parallel lines" explanations
                 const B2DPolygon aClip(createPolygonFromRect(rRange));
 
                 return clipPolyPolygonOnPolyPolygon(rCandidate, B2DPolyPolygon(aClip), bInside, bStroke);
@@ -773,7 +773,7 @@ namespace basegfx
 
                     // we need to clip this triangle against the output rectangle
                     // to ensure that the resulting texture coordinates are in
-                    // the valid range from [0<=st<=1]. under normal circustances
+                    // the valid range from [0<=st<=1]. under normal circumstances
                     // we could use the BORDERCOLOR renderstate but some cards
                     // seem to ignore this feature.
                     ::basegfx::B2DPoint stack[3];
@@ -828,8 +828,8 @@ namespace basegfx
                                 else
                                 {
                                     // the last triangle has not been altered, simply copy to result
-                                    for(sal_uInt32 i=0; i<3; ++i)
-                                        aResult.append(stack[i]);
+                                    for(basegfx::B2DPoint & i : stack)
+                                        aResult.append(i);
                                 }
                             }
                         }

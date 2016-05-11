@@ -33,8 +33,8 @@ CellType adjustCellType( CellType eOrig )
     return eOrig;
 }
 
-template<typename _T>
-OUString getString( const _T& rVal )
+template<typename T>
+OUString getString( const T& rVal )
 {
     if (rVal.meType == CELLTYPE_STRING)
         return rVal.mpString->getString();
@@ -75,8 +75,8 @@ bool equalsFormulaCells( const ScFormulaCell* p1, const ScFormulaCell* p2 )
     return true;
 }
 
-template<typename _T>
-bool equalsWithoutFormatImpl( const _T& left, const _T& right )
+template<typename T>
+bool equalsWithoutFormatImpl( const T& left, const T& right )
 {
     CellType eType1 = adjustCellType(left.meType);
     CellType eType2 = adjustCellType(right.meType);
@@ -103,7 +103,7 @@ bool equalsWithoutFormatImpl( const _T& left, const _T& right )
     return false;
 }
 
-static void commitToColumn( const ScCellValue& rCell, ScColumn& rColumn, SCROW nRow )
+void commitToColumn( const ScCellValue& rCell, ScColumn& rColumn, SCROW nRow )
 {
     switch (rCell.meType)
     {
@@ -154,8 +154,8 @@ bool hasNumericImpl( CellType eType, ScFormulaCell* pFormula )
     }
 }
 
-template<typename _CellT>
-OUString getStringImpl( const _CellT& rCell, const ScDocument* pDoc )
+template<typename CellT>
+OUString getStringImpl( const CellT& rCell, const ScDocument* pDoc )
 {
     switch (rCell.meType)
     {
@@ -599,15 +599,6 @@ ScRefCellValue& ScRefCellValue::operator= ( const ScRefCellValue& r )
     meType = r.meType;
     mfValue = r.mfValue;    // largest member of union
     return *this;
-}
-
-void ScRefCellValue::swap( ScRefCellValue& r )
-{
-    std::swap(meType, r.meType);
-
-    // double is 8 bytes, whereas a pointer may be 4 or 8 bytes depending on
-    // the platform. Swap by double values.
-    std::swap(mfValue, r.mfValue);
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

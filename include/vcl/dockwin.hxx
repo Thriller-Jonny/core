@@ -117,8 +117,8 @@ private:
                     mbLocked:1;
 
                     DECL_LINK_TYPED( PopupModeEnd, FloatingWindow*, void );
-    void            ImplEnableStartDocking( bool bEnable = true )  { mbStartDockingEnabled = bEnable; }
-    bool            ImplStartDockingEnabled()               { return mbStartDockingEnabled; }
+    void            ImplEnableStartDocking()  { mbStartDockingEnabled = true; }
+    bool            ImplStartDockingEnabled() { return mbStartDockingEnabled; }
 
 public:
     ImplDockingWindowWrapper( const vcl::Window *pWindow );
@@ -135,7 +135,7 @@ public:
     void            ToggleFloatingMode();
 
     void            SetDragArea( const Rectangle& rRect );
-    Rectangle       GetDragArea() const { return maDragArea;}
+    const Rectangle& GetDragArea() const { return maDragArea;}
 
     void            Lock();
     void            Unlock();
@@ -209,9 +209,6 @@ public:
 };
 
 
-// - DockingWindow -
-
-
 class VCL_DLLPUBLIC DockingWindow
     : public vcl::Window
     , public VclBuilderContainer
@@ -250,11 +247,13 @@ private:
                     mbRollUp:1,
                     mbDockBtn:1,
                     mbHideBtn:1,
-                    mbIsDefferedInit:1,
                     mbIsCalculatingInitialLayoutSize:1,
                     mbInitialLayoutDone:1;
 
+protected:
+    bool mbIsDefferedInit;
     VclPtr<vcl::Window>  mpDialogParent;
+private:
 
     SAL_DLLPRIVATE void    ImplInitDockingWindowData();
     SAL_DLLPRIVATE void setPosSizeOnContainee(Size aSize, Window &rBox);
@@ -282,13 +281,13 @@ public:
     SAL_DLLPRIVATE bool    ImplStartDocking( const Point& rPos );
     SAL_DLLPRIVATE bool    isDeferredInit() const { return mbIsDefferedInit; }
     SAL_DLLPRIVATE bool    hasPendingLayout() const { return maLayoutIdle.IsActive(); }
-    void                   doDeferredInit(WinBits nBits);
+    virtual        void    doDeferredInit(WinBits nBits);
 protected:
                     DockingWindow( WindowType nType );
+    DockingWindow(vcl::Window* pParent, const ResId& rResId);
 
 public:
     DockingWindow(vcl::Window* pParent, WinBits nStyle = WB_STDDOCKWIN);
-    DockingWindow(vcl::Window* pParent, const ResId& rResId);
     DockingWindow(vcl::Window* pParent, const OString& rID, const OUString& rUIXMLDescription,
         const css::uno::Reference<css::frame::XFrame> &rFrame = css::uno::Reference<css::frame::XFrame>());
     virtual ~DockingWindow();
@@ -346,7 +345,6 @@ public:
     virtual Size GetOptimalSize() const override;
     virtual void queue_resize(StateChangedType eReason = StateChangedType::Layout) override;
 };
-
 
 
 inline void DockingWindow::RollDown()

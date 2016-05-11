@@ -32,8 +32,6 @@
 #include <pam.hxx>
 #include <IDocumentRedlineAccess.hxx>
 
-#include <boost/noncopyable.hpp>
-
 #include <memory>
 #include <deque>
 
@@ -92,8 +90,12 @@ public:
 };
 
 // Stack-Eintrag fuer die Attribute Es werden immer Pointer auf neue Attribute uebergeben.
-class SwFltStackEntry : private ::boost::noncopyable
+class SwFltStackEntry
 {
+private:
+    SwFltStackEntry(SwFltStackEntry const&) = delete;
+    SwFltStackEntry& operator=(SwFltStackEntry const&) = delete;
+
 public:
     SwFltPosition m_aMkPos;
     SwFltPosition m_aPtPos;
@@ -125,15 +127,18 @@ public:
     void SetIsParaEnd(bool bArg){ bIsParaEnd = bArg;}
 };
 
-class SW_DLLPUBLIC SwFltControlStack : private ::boost::noncopyable
+class SW_DLLPUBLIC SwFltControlStack
 {
+private:
+    SwFltControlStack(SwFltControlStack const&) = delete;
+    SwFltControlStack& operator=(SwFltControlStack const&) = delete;
+
     typedef std::deque<std::unique_ptr<SwFltStackEntry>> Entries;
     typedef Entries::iterator myEIter;
     Entries m_Entries;
 
     sal_uLong nFieldFlags;
 
-private:
     bool bHasSdOD;
     bool bSdODChecked;
 
@@ -174,7 +179,7 @@ public:
 
     virtual SwFltStackEntry* SetAttr(const SwPosition& rPos, sal_uInt16 nAttrId=0, bool bTstEnde=true, long nHand = LONG_MAX, bool consumedByField=false);
 
-    void StealAttr(const SwNodeIndex& rNode, sal_uInt16 nAttrId = 0);
+    void StealAttr(const SwNodeIndex& rNode);
     void MarkAllAttrsOld();
     void KillUnlockedAttrs(const SwPosition& pPos);
     SfxPoolItem* GetFormatStackAttr(sal_uInt16 nWhich, sal_uInt16 * pPos = nullptr);
@@ -308,11 +313,10 @@ public:
 class SW_DLLPUBLIC SwFltTOX : public SfxPoolItem
 {
     SwTOXBase* pTOXBase;
-    sal_uInt16 nCols;
     bool bHadBreakItem; // there was a break item BEFORE insertion of the TOX
     bool bHadPageDescItem;
 public:
-    SwFltTOX(SwTOXBase* pBase, sal_uInt16 _nCols = 0);
+    SwFltTOX(SwTOXBase* pBase);
     SwFltTOX(const SwFltTOX&);
     // "pure virtual Methoden" vom SfxPoolItem
     virtual bool operator==(const SfxPoolItem&) const override;

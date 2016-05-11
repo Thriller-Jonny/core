@@ -64,8 +64,8 @@ private:
                                 DECL_LINK_TYPED( IsMusicStoppedHdl, Idle *, void );
 
 public:
-                                SdFileDialog_Imp( const short nDialogType, bool bUsableSelection );
-                                   virtual ~SdFileDialog_Imp();
+                       explicit SdFileDialog_Imp( const short nDialogType );
+                       virtual ~SdFileDialog_Imp();
 
     ErrCode                     Execute();
 
@@ -200,9 +200,9 @@ void SdFileDialog_Imp::CheckSelectionState()
         try
         {
             if( aCurrFilter.isEmpty() || ( aCurrFilter == SD_RESSTR( STR_EXPORT_HTML_NAME ) ) )
-                mxControlAccess->enableControl( css::ui::dialogs::ExtendedFilePickerElementIds::CHECKBOX_SELECTION, sal_False );
+                mxControlAccess->enableControl( css::ui::dialogs::ExtendedFilePickerElementIds::CHECKBOX_SELECTION, false );
             else
-                mxControlAccess->enableControl( css::ui::dialogs::ExtendedFilePickerElementIds::CHECKBOX_SELECTION, sal_True );
+                mxControlAccess->enableControl( css::ui::dialogs::ExtendedFilePickerElementIds::CHECKBOX_SELECTION, true );
         }
         catch (const css::lang::IllegalArgumentException&)
         {
@@ -213,11 +213,10 @@ void SdFileDialog_Imp::CheckSelectionState()
     }
 }
 
-SdFileDialog_Imp::SdFileDialog_Imp( const short     nDialogType,
-                                    bool        bUsableSelection    ) :
+SdFileDialog_Imp::SdFileDialog_Imp( const short     nDialogType    ) :
     FileDialogHelper( nDialogType, 0 ),
     mnPlaySoundEvent( nullptr ),
-    mbUsableSelection( bUsableSelection ),
+    mbUsableSelection( false ),
     mbLabelPlaying(false)
 {
     maUpdateIdle.SetIdleHdl(LINK(this, SdFileDialog_Imp, IsMusicStoppedHdl));
@@ -248,7 +247,7 @@ SdFileDialog_Imp::SdFileDialog_Imp( const short     nDialogType,
         {
             try
             {
-                mxControlAccess->enableControl( css::ui::dialogs::ExtendedFilePickerElementIds::CHECKBOX_SELECTION, sal_False );
+                mxControlAccess->enableControl( css::ui::dialogs::ExtendedFilePickerElementIds::CHECKBOX_SELECTION, false );
             }
             catch (const css::lang::IllegalArgumentException&)
             {
@@ -278,9 +277,7 @@ ErrCode SdFileDialog_Imp::Execute()
 
 // these are simple forwarders
 SdOpenSoundFileDialog::SdOpenSoundFileDialog() :
-    mpImpl(
-        new SdFileDialog_Imp(
-            css::ui::dialogs::TemplateDescription::FILEOPEN_PLAY, false ) )
+    mpImpl( new SdFileDialog_Imp( css::ui::dialogs::TemplateDescription::FILEOPEN_PLAY ) )
 {
     OUString aDescr;
     aDescr = SD_RESSTR(STR_ALL_FILES);

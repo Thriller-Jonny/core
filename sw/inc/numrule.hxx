@@ -58,7 +58,7 @@ class SW_DLLPUBLIC SwNumFormat : public SvxNumberFormat, public SwClient
     using SvxNumberFormat::operator !=;
 
 protected:
-   virtual void Modify( const SfxPoolItem* pOld, const SfxPoolItem* pNew ) override;
+    virtual void Modify( const SfxPoolItem* pOld, const SfxPoolItem* pNew ) override;
 
 public:
     SwNumFormat();
@@ -108,7 +108,7 @@ public:
     };
 
 private:
-    friend void _FinitCore();
+    friend void FinitCore();
 
     static SwNumFormat* maBaseFormats [ RULE_END ][ MAXLEVEL ];
     static const sal_uInt16 maDefNumIndents[ MAXLEVEL ];
@@ -147,8 +147,7 @@ public:
     /// add parameter <eDefaultNumberFormatPositionAndSpaceMode>
     SwNumRule( const OUString& rNm,
                const SvxNumberFormat::SvxNumPositionAndSpaceMode eDefaultNumberFormatPositionAndSpaceMode,
-               SwNumRuleType = NUM_RULE,
-               bool bAutoFlg = true );
+               SwNumRuleType = NUM_RULE );
 
     SwNumRule( const SwNumRule& );
     ~SwNumRule();
@@ -165,8 +164,7 @@ public:
 
     void Set( sal_uInt16 i, const SwNumFormat* );
     void Set( sal_uInt16 i, const SwNumFormat& );
-    OUString MakeNumString( const SwNodeNum&, bool bInclStrings = true,
-                            bool bOnlyArabic = false ) const;
+    OUString MakeNumString( const SwNodeNum&, bool bInclStrings = true ) const;
     /** - add optional parameter <_nRestrictToThisLevel> in order to
          restrict returned string to this level. */
     OUString MakeNumString( const SwNumberTree::tNumberVector & rNumVector,
@@ -196,7 +194,7 @@ public:
     {
         msDefaultListId = sDefaultListId;
     }
-    inline OUString GetDefaultListId() const
+    const OUString& GetDefaultListId() const
     {
         return msDefaultListId;
     }
@@ -226,7 +224,7 @@ public:
        and copies them if appropriate. */
     void CheckCharFormats( SwDoc* pDoc );
 
-    OUString GetName() const { return msName; }
+    const OUString& GetName() const { return msName; }
 
     void SetName( const OUString& rNm,
                   IDocumentListsAccess& rDocListAccess );

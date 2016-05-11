@@ -7,20 +7,12 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
+#include "MConnection.hxx"
 #include "MDatabaseMetaDataHelper.hxx"
-#include "FDatabaseMetaDataResultSet.hxx"
-#include <connectivity/dbexception.hxx>
-#include <comphelper/uno3.hxx>
-#include <comphelper/sequence.hxx>
-#include <osl/mutex.hxx>
-#include <osl/conditn.hxx>
 
 // do we need it?
 static ::osl::Mutex m_aMetaMutex;
 
-#include <osl/diagnose.h>
-#include <com/sun/star/uno/Reference.hxx>
-#include <com/sun/star/uno/Sequence.hxx>
 #include <com/sun/star/uno/XInterface.hpp>
 #include <com/sun/star/uno/Exception.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
@@ -29,7 +21,6 @@ static ::osl::Mutex m_aMetaMutex;
 #include <com/sun/star/beans/XPropertySetInfo.hpp>
 #include <com/sun/star/beans/PropertyAttribute.hpp>
 #include <com/sun/star/sdb/ErrorCondition.hpp>
-#include <comphelper/processfactory.hxx>
 
 #include "MorkParser.hxx"
 
@@ -60,7 +51,7 @@ bool MDatabaseMetaDataHelper::getTableStrings( OConnection* _pCon,
     std::set<std::string> lists;
     MorkParser* pMork = _pCon->getMorkParser("AddressBook");
     pMork->retrieveLists(lists);
-    for (::std::set<std::string>::iterator iter = lists.begin(); iter != lists.end(); ++iter) {
+    for (::std::set<std::string>::const_iterator iter = lists.begin(); iter != lists.end(); ++iter) {
         OUString groupTableName = OStringToOUString((*iter).c_str(), RTL_TEXTENCODING_UTF8);
         SAL_INFO("connectivity.mork", "add Table " << groupTableName);
 
@@ -72,7 +63,7 @@ bool MDatabaseMetaDataHelper::getTableStrings( OConnection* _pCon,
     std::set<std::string> lists_history;
     pMork = _pCon->getMorkParser("CollectedAddressBook");
     pMork->retrieveLists(lists_history);
-    for (::std::set<std::string>::iterator iter = lists_history.begin(); iter != lists_history.end(); ++iter) {
+    for (::std::set<std::string>::const_iterator iter = lists_history.begin(); iter != lists_history.end(); ++iter) {
         OUString groupTableName = OStringToOUString((*iter).c_str(), RTL_TEXTENCODING_UTF8);
         SAL_INFO("connectivity.mork", "add Table " << groupTableName);
 
@@ -105,10 +96,9 @@ bool MDatabaseMetaDataHelper::getTables( OConnection* _pCon,
     if ( !getTableStrings( _pCon, tables ) )
         return false;
 
-    for ( size_t i = 0; i < tables.size(); i++ ) {
+    for (OUString& aTableName : tables) {
         ODatabaseMetaDataResultSet::ORow aRow { nullptr, nullptr, nullptr };
 
-        OUString aTableName  = tables[i];
         SAL_INFO("connectivity.mork", "TableName: " << aTableName );
 
 

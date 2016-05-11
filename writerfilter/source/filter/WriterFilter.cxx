@@ -31,7 +31,6 @@
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/xml/sax/SAXParseException.hpp>
 #include <cppuhelper/exc_hlp.hxx>
-#include <cppuhelper/implbase.hxx>
 #include <cppuhelper/supportsservice.hxx>
 #include <dmapper/DomainMapperFactory.hxx>
 #include <oox/core/filterdetect.hxx>
@@ -145,7 +144,7 @@ sal_Bool WriterFilter::filter(const uno::Sequence< beans::PropertyValue >& aDesc
         uno::Reference< document::XExporter > xExprtr(xIfc, uno::UNO_QUERY_THROW);
         uno::Reference< document::XFilter > xFltr(xIfc, uno::UNO_QUERY_THROW);
         if (!xExprtr.is() || !xFltr.is())
-            return sal_False;
+            return false;
         xExprtr->setSourceDocument(m_xSrcDoc);
         return xFltr->filter(aDescriptor);
     }
@@ -154,7 +153,6 @@ sal_Bool WriterFilter::filter(const uno::Sequence< beans::PropertyValue >& aDesc
         utl::MediaDescriptor aMediaDesc(aDescriptor);
         bool bRepairStorage = aMediaDesc.getUnpackedValueOrDefault("RepairPackage", false);
         bool bSkipImages = aMediaDesc.getUnpackedValueOrDefault("FilterOptions", OUString("")) == "SkipImages";
-        OUString const baseURI = aMediaDesc.getUnpackedValueOrDefault("DocumentBaseURL", OUString(""));
 
         uno::Reference< io::XInputStream > xInputStream;
         try
@@ -168,14 +166,14 @@ sal_Bool WriterFilter::filter(const uno::Sequence< beans::PropertyValue >& aDesc
         }
 
         if (!xInputStream.is())
-            return sal_False;
+            return false;
 
         writerfilter::dmapper::SourceDocumentType eType = writerfilter::dmapper::SourceDocumentType::OOXML;
         writerfilter::Stream::Pointer_t pStream(writerfilter::dmapper::DomainMapperFactory::createMapper(m_xContext, xInputStream, m_xDstDoc, bRepairStorage, eType, aMediaDesc));
         //create the tokenizer and domain mapper
         writerfilter::ooxml::OOXMLStream::Pointer_t pDocStream = writerfilter::ooxml::OOXMLDocumentFactory::createStream(m_xContext, xInputStream, bRepairStorage);
         uno::Reference<task::XStatusIndicator> xStatusIndicator = aMediaDesc.getUnpackedValueOrDefault(utl::MediaDescriptor::PROP_STATUSINDICATOR(), uno::Reference<task::XStatusIndicator>());
-        writerfilter::ooxml::OOXMLDocument::Pointer_t pDocument(writerfilter::ooxml::OOXMLDocumentFactory::createDocument(pDocStream, xStatusIndicator, bSkipImages, baseURI));
+        writerfilter::ooxml::OOXMLDocument::Pointer_t pDocument(writerfilter::ooxml::OOXMLDocumentFactory::createDocument(pDocStream, xStatusIndicator, bSkipImages, aDescriptor));
 
         uno::Reference<frame::XModel> xModel(m_xDstDoc, uno::UNO_QUERY_THROW);
         pDocument->setModel(xModel);
@@ -257,19 +255,11 @@ sal_Bool WriterFilter::filter(const uno::Sequence< beans::PropertyValue >& aDesc
             aVbaProject.importVbaProject(*xVbaPrjStrg, gHelper);
         }
 
-        // Document signature.
-        writerfilter::ooxml::OOXMLStream::Pointer_t pSignatureStream;
-        pSignatureStream = writerfilter::ooxml::OOXMLDocumentFactory::createStream(m_xContext, xInputStream, bRepairStorage, writerfilter::ooxml::OOXMLStream::SIGNATURE);
-        if (pSignatureStream->getDocumentStream().is())
-        {
-            // TODO found, handle it.
-        }
-
         pStream.reset();
 
-        return sal_True;
+        return true;
     }
-    return sal_False;
+    return false;
 }
 
 
@@ -285,27 +275,28 @@ void WriterFilter::setTargetDocument(const uno::Reference< lang::XComponent >& x
     uno::Reference< lang::XMultiServiceFactory > xFactory(xDoc, uno::UNO_QUERY);
     uno::Reference< beans::XPropertySet > xSettings(xFactory->createInstance("com.sun.star.document.Settings"), uno::UNO_QUERY);
 
-    xSettings->setPropertyValue("AddFrameOffsets", uno::makeAny(sal_True));
-    xSettings->setPropertyValue("UseOldNumbering", uno::makeAny(sal_False));
-    xSettings->setPropertyValue("IgnoreFirstLineIndentInNumbering", uno::makeAny(sal_False));
-    xSettings->setPropertyValue("DoNotResetParaAttrsForNumFont", uno::makeAny(sal_False));
-    xSettings->setPropertyValue("UseFormerLineSpacing", uno::makeAny(sal_False));
-    xSettings->setPropertyValue("AddParaSpacingToTableCells", uno::makeAny(sal_True));
-    xSettings->setPropertyValue("UseFormerObjectPositioning", uno::makeAny(sal_False));
-    xSettings->setPropertyValue("ConsiderTextWrapOnObjPos", uno::makeAny(sal_True));
-    xSettings->setPropertyValue("UseFormerTextWrapping", uno::makeAny(sal_False));
-    xSettings->setPropertyValue("TableRowKeep", uno::makeAny(sal_True));
-    xSettings->setPropertyValue("IgnoreTabsAndBlanksForLineCalculation", uno::makeAny(sal_True));
-    xSettings->setPropertyValue("InvertBorderSpacing", uno::makeAny(sal_True));
-    xSettings->setPropertyValue("CollapseEmptyCellPara", uno::makeAny(sal_True));
-    xSettings->setPropertyValue("TabOverflow", uno::makeAny(sal_True));
-    xSettings->setPropertyValue("UnbreakableNumberings", uno::makeAny(sal_True));
+    xSettings->setPropertyValue("AddFrameOffsets", uno::makeAny(true));
+    xSettings->setPropertyValue("AddVerticalFrameOffsets", uno::makeAny(true));
+    xSettings->setPropertyValue("UseOldNumbering", uno::makeAny(false));
+    xSettings->setPropertyValue("IgnoreFirstLineIndentInNumbering", uno::makeAny(false));
+    xSettings->setPropertyValue("DoNotResetParaAttrsForNumFont", uno::makeAny(false));
+    xSettings->setPropertyValue("UseFormerLineSpacing", uno::makeAny(false));
+    xSettings->setPropertyValue("AddParaSpacingToTableCells", uno::makeAny(true));
+    xSettings->setPropertyValue("UseFormerObjectPositioning", uno::makeAny(false));
+    xSettings->setPropertyValue("ConsiderTextWrapOnObjPos", uno::makeAny(true));
+    xSettings->setPropertyValue("UseFormerTextWrapping", uno::makeAny(false));
+    xSettings->setPropertyValue("TableRowKeep", uno::makeAny(true));
+    xSettings->setPropertyValue("IgnoreTabsAndBlanksForLineCalculation", uno::makeAny(true));
+    xSettings->setPropertyValue("InvertBorderSpacing", uno::makeAny(true));
+    xSettings->setPropertyValue("CollapseEmptyCellPara", uno::makeAny(true));
+    xSettings->setPropertyValue("TabOverflow", uno::makeAny(true));
+    xSettings->setPropertyValue("UnbreakableNumberings", uno::makeAny(true));
 
-    xSettings->setPropertyValue("FloattableNomargins", uno::makeAny(sal_True));
-    xSettings->setPropertyValue("ClippedPictures", uno::makeAny(sal_True));
-    xSettings->setPropertyValue("BackgroundParaOverDrawings", uno::makeAny(sal_True));
-    xSettings->setPropertyValue("TabOverMargin", uno::makeAny(sal_True));
-    xSettings->setPropertyValue("PropLineSpacingShrinksFirstLine", uno::makeAny(sal_True));
+    xSettings->setPropertyValue("FloattableNomargins", uno::makeAny(true));
+    xSettings->setPropertyValue("ClippedPictures", uno::makeAny(true));
+    xSettings->setPropertyValue("BackgroundParaOverDrawings", uno::makeAny(true));
+    xSettings->setPropertyValue("TabOverMargin", uno::makeAny(true));
+    xSettings->setPropertyValue("PropLineSpacingShrinksFirstLine", uno::makeAny(true));
 }
 
 void WriterFilter::setSourceDocument(const uno::Reference< lang::XComponent >& xDoc) throw (lang::IllegalArgumentException, uno::RuntimeException, std::exception)

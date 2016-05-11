@@ -20,17 +20,23 @@
 #ifndef INCLUDED_OOX_CORE_FASTTOKENHANDLER_HXX
 #define INCLUDED_OOX_CORE_FASTTOKENHANDLER_HXX
 
-#include <oox/dllapi.h>
+#include <exception>
+
 #include <com/sun/star/lang/XServiceInfo.hpp>
+#include <com/sun/star/uno/Any.hxx>
+#include <com/sun/star/uno/Sequence.hxx>
+#include <com/sun/star/uno/RuntimeException.hpp>
 #include <com/sun/star/xml/sax/XFastTokenHandler.hpp>
 #include <cppuhelper/implbase.hxx>
+#include <oox/dllapi.h>
+#include <rtl/ustring.hxx>
+#include <sal/types.h>
 #include <sax/fastattribs.hxx>
 
 namespace oox { class TokenMap; }
 
 namespace oox {
 namespace core {
-
 
 
 /** Wrapper implementing the com.sun.star.xml.sax.XFastTokenHandler API interface
@@ -60,7 +66,6 @@ public:
 private:
     const TokenMap&     mrTokenMap;     ///< Reference to global token map singleton.
 };
-
 
 
 } // namespace core

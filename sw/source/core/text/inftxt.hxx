@@ -254,21 +254,23 @@ public:
 
     inline const  SwViewOption &GetOpt() const { return *m_pOpt; }
     inline const OUString &GetText() const { return *m_pText; }
-    inline sal_Unicode GetChar( const sal_Int32 nPos ) const
-    { if (m_pText && nPos < m_pText->getLength()) return (*m_pText)[ nPos ]; return 0; }
+    inline sal_Unicode GetChar( const sal_Int32 nPos ) const {
+        if (m_pText && nPos < m_pText->getLength()) return (*m_pText)[ nPos ];
+        return 0;
+    }
 
     sal_uInt16      GetTextHeight() const;
 
     SwPosSize GetTextSize( OutputDevice* pOut, const SwScriptInfo* pSI,
                           const OUString& rText, const sal_Int32 nIdx,
-                          const sal_Int32 nLen, const sal_uInt16 nComp ) const;
+                          const sal_Int32 nLen ) const;
     SwPosSize GetTextSize() const;
     void GetTextSize( const SwScriptInfo* pSI, const sal_Int32 nIdx,
                       const sal_Int32 nLen, const sal_uInt16 nComp,
                       sal_uInt16& nMinSize, sal_uInt16& nMaxSizeDiff,
                       vcl::TextLayoutCache const* = nullptr) const;
     inline SwPosSize GetTextSize( const SwScriptInfo* pSI, const sal_Int32 nIdx,
-                                 const sal_Int32 nLen, const sal_uInt16 nComp ) const;
+                                 const sal_Int32 nLen ) const;
     inline SwPosSize GetTextSize( const OUString &rText ) const;
 
     sal_Int32 GetTextBreak( const long nLineWidth,
@@ -300,8 +302,8 @@ public:
     inline const SwTextFrame *GetTextFrame() const { return m_pFrame; }
 
     inline bool HasHint( sal_Int32 nPos ) const
-        { return _HasHint( m_pFrame->GetTextNode(), nPos ); }
-    static bool _HasHint( const SwTextNode* pTextNode, sal_Int32 nPos );
+        { return HasHint_( m_pFrame->GetTextNode(), nPos ); }
+    static bool HasHint_( const SwTextNode* pTextNode, sal_Int32 nPos );
 
     // If Kana Compression is enabled, a minimum and maximum portion width
     // is calculated. We format lines with minimal size and share remaining
@@ -342,7 +344,7 @@ public:
         { return ( m_pKanaComp && m_nKanaIdx < m_pKanaComp->size() )
                    ? (*m_pKanaComp)[m_nKanaIdx] : 0; }
 
-    std::shared_ptr<vcl::TextLayoutCache> GetCachedVclData() const
+    const std::shared_ptr<vcl::TextLayoutCache>& GetCachedVclData() const
     {
         return m_pCachedVclData;
     }
@@ -365,14 +367,14 @@ class SwTextPaintInfo : public SwTextSizeInfo
     SwRect      aPaintRect; // Original paint rect (from Layout paint)
 
     sal_uInt16 nSpaceIdx;
-    void _DrawText( const OUString &rText, const SwLinePortion &rPor,
+    void DrawText_( const OUString &rText, const SwLinePortion &rPor,
                    const sal_Int32 nIdx, const sal_Int32 nLen,
                    const bool bKern, const bool bWrong = false,
                    const bool bSmartTag = false,
                    const bool bGrammarCheck = false );
 
     SwTextPaintInfo &operator=(const SwTextPaintInfo&) = delete;
-    void _NotifyURL( const SwLinePortion &rPor ) const;
+    void NotifyURL_( const SwLinePortion &rPor ) const;
 
 protected:
     SwTextPaintInfo()
@@ -383,7 +385,7 @@ protected:
 #ifdef DBG_UTIL
         , pBrushItem(reinterpret_cast<SvxBrushItem*>(-1))
 #else
-        , pBrushItem(0)
+        , pBrushItem(nullptr)
 #endif
         , nSpaceIdx(0)
         {}
@@ -413,13 +415,11 @@ public:
     inline void DrawText( const SwLinePortion &rPor, const sal_Int32 nLen,
                           const bool bKern = false ) const;
     inline void DrawMarkedText( const SwLinePortion &rPor, const sal_Int32 nLen,
-                                const bool bKern,
                                 const bool bWrong,
                                 const bool bSmartTags,
                                 const bool bGrammarCheck ) const;
 
-    void DrawRect( const SwRect &rRect, bool bNoGraphic = false,
-                   bool bRetouche = true ) const;
+    void DrawRect( const SwRect &rRect, bool bRetouche ) const;
 
     void DrawTab( const SwLinePortion &rPor ) const;
     void DrawLineBreak( const SwLinePortion &rPor ) const;
@@ -439,7 +439,7 @@ public:
     void DrawCheckBox(const SwFieldFormCheckboxPortion &rPor, bool bChecked) const;
 
     inline void NotifyURL( const SwLinePortion &rPor ) const
-        { if( URLNotify() ) _NotifyURL( rPor ); }
+        { if( URLNotify() ) NotifyURL_( rPor ); }
 
     /**
      * Calculate the rectangular area where the portion takes place.
@@ -542,7 +542,7 @@ class SwTextFormatInfo : public SwTextPaintInfo
 
     // Hyphenating ...
     bool InitHyph( const bool bAuto = false );
-    bool _CheckFootnotePortion( SwLineLayout* pCurr );
+    bool CheckFootnotePortion_( SwLineLayout* pCurr );
 
 public:
     void CtorInitTextFormatInfo( OutputDevice* pRenderContext, SwTextFrame *pFrame, const bool bInterHyph = false,
@@ -668,7 +668,7 @@ public:
     const css::beans::PropertyValues & GetHyphValues() const;
 
     bool CheckFootnotePortion( SwLineLayout* pCurr )
-        { return IsFootnoteInside() && _CheckFootnotePortion( pCurr ); }
+        { return IsFootnoteInside() && CheckFootnotePortion_( pCurr ); }
 
     // Dropcaps called by SwTextFormatter::CTOR
     const SwFormatDrop *GetDropFormat() const;
@@ -689,7 +689,7 @@ public:
  * For the text replacement and restoration of SwTextSizeInfo.
  * The way this is done is a bit of a hack: Although rInf is const we change it
  * anyway.
- * Because rInf is restorated again in the DTOR, we can do this.
+ * Because rInf is restored again in the DTOR, we can do this.
  * You could call it a "logical const", if you wish.
  */
 class SwTextSlot
@@ -721,7 +721,7 @@ class SwFontSave
 public:
     SwFontSave( const SwTextSizeInfo &rInf, SwFont *pFnt,
                 SwAttrIter* pItr = nullptr );
-   ~SwFontSave();
+    ~SwFontSave();
 };
 
 inline sal_uInt16 SwTextSizeInfo::GetAscent() const
@@ -740,15 +740,14 @@ inline sal_uInt16 SwTextSizeInfo::GetTextHeight() const
 
 inline SwPosSize SwTextSizeInfo::GetTextSize( const OUString &rText ) const
 {
-    return GetTextSize( m_pOut, nullptr, rText, 0, rText.getLength(), 0 );
+    return GetTextSize( m_pOut, nullptr, rText, 0, rText.getLength() );
 }
 
 inline SwPosSize SwTextSizeInfo::GetTextSize( const SwScriptInfo* pSI,
                                             const sal_Int32 nNewIdx,
-                                            const sal_Int32 nNewLen,
-                                            const sal_uInt16 nCompress ) const
+                                            const sal_Int32 nNewLen ) const
 {
-    return GetTextSize( m_pOut, pSI, *m_pText, nNewIdx, nNewLen, nCompress );
+    return GetTextSize( m_pOut, pSI, *m_pText, nNewIdx, nNewLen );
 }
 
 inline SwTwips SwTextPaintInfo::GetPaintOfst() const
@@ -766,23 +765,22 @@ inline void SwTextPaintInfo::DrawText( const OUString &rText,
                             const sal_Int32 nStart, const sal_Int32 nLength,
                             const bool bKern ) const
 {
-    const_cast<SwTextPaintInfo*>(this)->_DrawText( rText, rPor, nStart, nLength, bKern );
+    const_cast<SwTextPaintInfo*>(this)->DrawText_( rText, rPor, nStart, nLength, bKern );
 }
 
 inline void SwTextPaintInfo::DrawText( const SwLinePortion &rPor,
         const sal_Int32 nLength, const bool bKern ) const
 {
-    const_cast<SwTextPaintInfo*>(this)->_DrawText( *m_pText, rPor, m_nIdx, nLength, bKern );
+    const_cast<SwTextPaintInfo*>(this)->DrawText_( *m_pText, rPor, m_nIdx, nLength, bKern );
 }
 
 inline void SwTextPaintInfo::DrawMarkedText( const SwLinePortion &rPor,
                                             const sal_Int32 nLength,
-                                            const bool bKern,
                                             const bool bWrong,
                                             const bool bSmartTags,
                                             const bool bGrammarCheck ) const
 {
-    const_cast<SwTextPaintInfo*>(this)->_DrawText( *m_pText, rPor, m_nIdx, nLength, bKern, bWrong, bSmartTags, bGrammarCheck );
+    const_cast<SwTextPaintInfo*>(this)->DrawText_( *m_pText, rPor, m_nIdx, nLength, false/*bKern*/, bWrong, bSmartTags, bGrammarCheck );
 }
 
 inline sal_Int32 SwTextFormatInfo::GetReformatStart() const

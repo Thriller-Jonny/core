@@ -82,8 +82,8 @@ namespace
 {
     void clearColumns(ODatabaseExport::TColumns& _rColumns, ODatabaseExport::TColumnVector& _rColumnsVec)
     {
-        ODatabaseExport::TColumns::iterator aIter = _rColumns.begin();
-        ODatabaseExport::TColumns::iterator aEnd  = _rColumns.end();
+        ODatabaseExport::TColumns::const_iterator aIter = _rColumns.begin();
+        ODatabaseExport::TColumns::const_iterator aEnd  = _rColumns.end();
 
         for(;aIter != aEnd;++aIter)
             delete aIter->second;
@@ -113,7 +113,7 @@ OUString ObjectCopySource::getQualifiedObjectName() const
     OUString sName;
 
     if ( !m_xObjectPSI->hasPropertyByName( PROPERTY_COMMAND ) )
-        sName = ::dbtools::composeTableName( m_xMetaData, m_xObject, ::dbtools::eInDataManipulation, false, false, false );
+        sName = ::dbtools::composeTableName( m_xMetaData, m_xObject, ::dbtools::EComposeRule::InDataManipulation, false, false, false );
     else
         m_xObject->getPropertyValue( PROPERTY_NAME ) >>= sName;
     return sName;
@@ -143,10 +143,10 @@ void ObjectCopySource::copyUISettingsTo( const Reference< XPropertySet >& _rxObj
     const OUString aCopyProperties[] = {
         OUString(PROPERTY_FONT), OUString(PROPERTY_ROW_HEIGHT), OUString(PROPERTY_TEXTCOLOR),OUString(PROPERTY_TEXTLINECOLOR),OUString(PROPERTY_TEXTEMPHASIS),OUString(PROPERTY_TEXTRELIEF)
     };
-    for ( size_t i=0; i < sizeof( aCopyProperties ) / sizeof( aCopyProperties[0] ); ++i )
+    for (const auto & aCopyPropertie : aCopyProperties)
     {
-        if ( m_xObjectPSI->hasPropertyByName( aCopyProperties[i] ) )
-            _rxObject->setPropertyValue( aCopyProperties[i], m_xObject->getPropertyValue( aCopyProperties[i] ) );
+        if ( m_xObjectPSI->hasPropertyByName( aCopyPropertie ) )
+            _rxObject->setPropertyValue( aCopyPropertie, m_xObject->getPropertyValue( aCopyPropertie ) );
     }
 }
 
@@ -165,19 +165,19 @@ void ObjectCopySource::copyFilterAndSortingTo( const Reference< XConnection >& _
 
         OUString sStatement = "SELECT * FROM " + sTargetName + " WHERE 0=1";
 
-        for ( size_t i=0; i < SAL_N_ELEMENTS(aProperties); ++i )
+        for (const std::pair<OUString,OUString> & aPropertie : aProperties)
         {
-            if ( m_xObjectPSI->hasPropertyByName( aProperties[i].first ) )
+            if ( m_xObjectPSI->hasPropertyByName( aPropertie.first ) )
             {
                 OUString sFilter;
-                m_xObject->getPropertyValue( aProperties[i].first ) >>= sFilter;
+                m_xObject->getPropertyValue( aPropertie.first ) >>= sFilter;
                 if ( !sFilter.isEmpty() )
                 {
-                    sStatement += aProperties[i].second;
+                    sStatement += aPropertie.second;
                     OUString sReplace = sFilter;
                     sReplace = sReplace.replaceFirst(sSourceName,sTargetNameTemp);
                     sFilter = sReplace;
-                    _rxObject->setPropertyValue( aProperties[i].first, makeAny(sFilter) );
+                    _rxObject->setPropertyValue( aPropertie.first, makeAny(sFilter) );
                     sStatement += sFilter;
                 }
             }
@@ -266,7 +266,7 @@ NamedTableCopySource::NamedTableCopySource( const Reference< XConnection >& _rxC
     ,m_sTableName( _rTableName )
     ,m_aColumnInfo()
 {
-    ::dbtools::qualifiedNameComponents( m_xMetaData, m_sTableName, m_sTableCatalog, m_sTableSchema, m_sTableBareName, ::dbtools::eComplete );
+    ::dbtools::qualifiedNameComponents( m_xMetaData, m_sTableName, m_sTableCatalog, m_sTableSchema, m_sTableBareName, ::dbtools::EComposeRule::Complete );
     impl_ensureColumnInfo_throw();
 }
 
@@ -572,9 +572,9 @@ OCopyTableWizard::OCopyTableWizard( vcl::Window * pParent, const OUString& _rDef
                                             sCatalog,
                                             sSchema,
                                             sTable,
-                                            ::dbtools::eInDataManipulation);
+                                            ::dbtools::EComposeRule::InDataManipulation);
 
-        m_sName = ::dbtools::composeTableName(m_xDestConnection->getMetaData(),sCatalog,sSchema,sTable,false,::dbtools::eInTableDefinitions);
+        m_sName = ::dbtools::composeTableName(m_xDestConnection->getMetaData(),sCatalog,sSchema,sTable,false,::dbtools::EComposeRule::InTableDefinitions);
     }
 
     VclPtrInstance<OCopyTable> pPage1( this );
@@ -791,7 +791,7 @@ bool OCopyTableWizard::CheckColumns(sal_Int32& _rnBreakPos)
             ODatabaseExport::TColumnVector::const_iterator aSrcEnd = m_vSourceVec.end();
             for(;aSrcIter != aSrcEnd;++aSrcIter)
             {
-                ODatabaseExport::TColumns::iterator aDestIter = m_vDestColumns.find(m_mNameMapping[(*aSrcIter)->first]);
+                ODatabaseExport::TColumns::const_iterator aDestIter = m_vDestColumns.find(m_mNameMapping[(*aSrcIter)->first]);
 
                 if ( aDestIter != m_vDestColumns.end() )
                 {
@@ -873,7 +873,7 @@ IMPL_LINK_NOARG_TYPED(OCopyTableWizard, ImplOKHdl, Button*, void)
                 {
                     if ( supportsPrimaryKey() )
                     {
-                        ODatabaseExport::TColumns::iterator aFind = ::std::find_if(m_vDestColumns.begin(),m_vDestColumns.end(),
+                        ODatabaseExport::TColumns::const_iterator aFind = ::std::find_if(m_vDestColumns.begin(),m_vDestColumns.end(),
                             [] (const ODatabaseExport::TColumns::value_type& tCol) { return tCol.second->IsPrimaryKey(); });
                         if ( aFind == m_vDestColumns.end() && m_xInteractionHandler.is() )
                         {
@@ -977,17 +977,9 @@ void OCopyTableWizard::CheckButtons()
     }
 }
 
-void OCopyTableWizard::EnableButton(Wizard_Button_Style eStyle, bool bEnable)
+void OCopyTableWizard::EnableNextButton(bool bEnable)
 {
-    Button* pButton;
-    if(eStyle == WIZARD_NEXT)
-        pButton = m_pbNext;
-    else if(eStyle == WIZARD_PREV)
-        pButton = m_pbPrev;
-    else
-        pButton = m_pbFinish;
-    pButton->Enable(bEnable);
-
+    m_pbNext->Enable(bEnable);
 }
 
 bool OCopyTableWizard::DeactivatePage()
@@ -1007,7 +999,7 @@ void OCopyTableWizard::insertColumn(sal_Int32 _nPos,OFieldDescription* _pField)
     OSL_ENSURE(_pField,"FieldDescrioption is null!");
     if ( _pField )
     {
-        ODatabaseExport::TColumns::iterator aFind = m_vDestColumns.find(_pField->GetName());
+        ODatabaseExport::TColumns::const_iterator aFind = m_vDestColumns.find(_pField->GetName());
         if ( aFind != m_vDestColumns.end() )
         {
             delete aFind->second;
@@ -1040,8 +1032,8 @@ void OCopyTableWizard::impl_loadSourceData()
 
 void OCopyTableWizard::loadData(  const ICopyTableSourceObject& _rSourceObject, ODatabaseExport::TColumns& _rColumns, ODatabaseExport::TColumnVector& _rColVector )
 {
-    ODatabaseExport::TColumns::iterator colEnd = _rColumns.end();
-    for ( ODatabaseExport::TColumns::iterator col = _rColumns.begin(); col != colEnd; ++col )
+    ODatabaseExport::TColumns::const_iterator colEnd = _rColumns.end();
+    for ( ODatabaseExport::TColumns::const_iterator col = _rColumns.begin(); col != colEnd; ++col )
         delete col->second;
 
     _rColVector.clear();
@@ -1088,7 +1080,7 @@ void OCopyTableWizard::loadData(  const ICopyTableSourceObject& _rSourceObject, 
 
     for( ; pKeyColName != pKeyColEnd; ++pKeyColName )
     {
-        ODatabaseExport::TColumns::iterator keyPos = _rColumns.find( *pKeyColName );
+        ODatabaseExport::TColumns::const_iterator keyPos = _rColumns.find( *pKeyColName );
         if ( keyPos != _rColumns.end() )
         {
             keyPos->second->SetPrimaryKey( true );
@@ -1217,7 +1209,7 @@ Reference< XPropertySet > OCopyTableWizard::createTable()
                                             sCatalog,
                                             sSchema,
                                             sTable,
-                                            ::dbtools::eInDataManipulation);
+                                            ::dbtools::EComposeRule::InDataManipulation);
 
         if ( sCatalog.isEmpty() && xMetaData->supportsCatalogsInTableDefinitions() )
         {
@@ -1252,7 +1244,7 @@ Reference< XPropertySet > OCopyTableWizard::createTable()
         else
         {
             OUString sComposedName(
-                ::dbtools::composeTableName( m_xDestConnection->getMetaData(), xTable, ::dbtools::eInDataManipulation, false, false, false ) );
+                ::dbtools::composeTableName( m_xDestConnection->getMetaData(), xTable, ::dbtools::EComposeRule::InDataManipulation, false, false, false ) );
             if(xTables->hasByName(sComposedName))
             {
                 xTables->getByName(sComposedName) >>= xTable;
@@ -1451,19 +1443,19 @@ TOTypeInfoSP OCopyTableWizard::convertType(const TOTypeInfoSP& _pType, bool& _bN
             case DataType::TINYINT:
                 if(supportsType(DataType::SMALLINT,nDefaultType))
                     break;
-                // run through
+                SAL_FALLTHROUGH;
             case DataType::SMALLINT:
                 if(supportsType(DataType::INTEGER,nDefaultType))
                     break;
-                // run through
+                SAL_FALLTHROUGH;
             case DataType::INTEGER:
                 if(supportsType(DataType::FLOAT,nDefaultType))
                     break;
-                // run through
+                SAL_FALLTHROUGH;
             case DataType::FLOAT:
                 if(supportsType(DataType::REAL,nDefaultType))
                     break;
-                // run through
+                SAL_FALLTHROUGH;
             case DataType::DATE:
             case DataType::TIME:
                 if( DataType::DATE == _pType->nType || DataType::TIME == _pType->nType )
@@ -1471,17 +1463,17 @@ TOTypeInfoSP OCopyTableWizard::convertType(const TOTypeInfoSP& _pType, bool& _bN
                     if(supportsType(DataType::TIMESTAMP,nDefaultType))
                         break;
                 }
-                // run through
+                SAL_FALLTHROUGH;
             case DataType::TIMESTAMP:
             case DataType::REAL:
             case DataType::BIGINT:
                 if ( supportsType(DataType::DOUBLE,nDefaultType) )
                     break;
-                // run through
+                SAL_FALLTHROUGH;
             case DataType::DOUBLE:
                 if ( supportsType(DataType::NUMERIC,nDefaultType) )
                     break;
-                // run through
+                SAL_FALLTHROUGH;
             case DataType::NUMERIC:
                 supportsType(DataType::DECIMAL,nDefaultType);
                 break;

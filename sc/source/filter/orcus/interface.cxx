@@ -55,7 +55,7 @@ void ScOrcusGlobalSettings::set_default_formula_grammar(orcus::spreadsheet::form
 
 orcus::spreadsheet::formula_grammar_t ScOrcusGlobalSettings::get_default_formula_grammar() const
 {
-    return orcus::spreadsheet::formula_grammar_unknown;
+    return orcus::spreadsheet::formula_grammar_t::unknown;
 }
 
 ScOrcusFactory::StringCellCache::StringCellCache(const ScAddress& rPos, size_t nIndex) :
@@ -79,7 +79,7 @@ orcus::spreadsheet::iface::import_sheet* ScOrcusFactory::append_sheet(const char
     return maSheets.back().get();
 }
 
-class FindSheetByIndex : std::unary_function< std::unique_ptr<ScOrcusSheet>, bool>
+class FindSheetByIndex : public std::unary_function< std::unique_ptr<ScOrcusSheet>, bool>
 {
     SCTAB mnTab;
 public:
@@ -231,19 +231,19 @@ double translateToInternal(double nVal, orcus::length_unit_t unit)
 {
     switch(unit)
     {
-        case orcus::length_unit_inch:
+        case orcus::length_unit_t::inch:
             return nVal * 72.0 * 20.0;
             break;
-        case orcus::length_unit_twip:
+        case orcus::length_unit_t::twip:
             return nVal;
             break;
-        case orcus::length_unit_point:
+        case orcus::length_unit_t::point:
             return nVal * 20.0;
             break;
-        case orcus::length_unit_centimeter:
+        case orcus::length_unit_t::centimeter:
             return nVal * 20.0 * 72.0 / 2.54;
             break;
-        case orcus::length_unit_unknown:
+        case orcus::length_unit_t::unknown:
             SAL_WARN("sc.orcus", "unknown unit");
             break;
         default:
@@ -393,18 +393,18 @@ void ScOrcusConditionalFormat::set_type(os::conditional_format_t type)
 {
     switch (type)
     {
-        case os::conditional_format_condition:
-        case os::conditional_format_formula:
+        case os::conditional_format_t::condition:
+        case os::conditional_format_t::formula:
             meEntryType = condformat::CONDITION;
             // mpCurrentEntry.reset(new ScCondFormatEntry());
         break;
-        case os::conditional_format_date:
+        case os::conditional_format_t::date:
         break;
-        case os::conditional_format_colorscale:
+        case os::conditional_format_t::colorscale:
         break;
-        case os::conditional_format_databar:
+        case os::conditional_format_t::databar:
         break;
-        case os::conditional_format_iconset:
+        case os::conditional_format_t::iconset:
         break;
         default:
             SAL_INFO("sc.orcus.condformat", "unknown conditional_format_t value");
@@ -549,17 +549,17 @@ formula::FormulaGrammar::Grammar getCalcGrammarFromOrcus( os::formula_grammar_t 
     formula::FormulaGrammar::Grammar eGrammar = formula::FormulaGrammar::GRAM_ODFF;
     switch(grammar)
     {
-        case orcus::spreadsheet::formula_grammar_ods:
+        case orcus::spreadsheet::formula_grammar_t::ods:
             eGrammar = formula::FormulaGrammar::GRAM_ODFF;
             break;
-        case orcus::spreadsheet::formula_grammar_xlsx_2007:
-        case orcus::spreadsheet::formula_grammar_xlsx_2010:
+        case orcus::spreadsheet::formula_grammar_t::xlsx_2007:
+        case orcus::spreadsheet::formula_grammar_t::xlsx_2010:
             eGrammar = formula::FormulaGrammar::GRAM_OOXML;
             break;
-        case orcus::spreadsheet::formula_grammar_gnumeric:
+        case orcus::spreadsheet::formula_grammar_t::gnumeric:
             eGrammar = formula::FormulaGrammar::GRAM_ENGLISH_XL_A1;
             break;
-        case orcus::spreadsheet::formula_grammar_unknown:
+        case orcus::spreadsheet::formula_grammar_t::unknown:
             break;
     }
 
@@ -739,7 +739,7 @@ ScOrcusStyles::font::font():
     mbBold(false),
     mbItalic(false),
     mnSize(10),
-    meUnderline(UNDERLINE_NONE)
+    meUnderline(LINESTYLE_NONE)
 {
 }
 
@@ -799,16 +799,16 @@ SvxBoxItemLine getDirection(os::border_direction_t dir)
 {
     switch (dir)
     {
-        case os::border_right:
+        case os::border_direction_t::right:
             return SvxBoxItemLine::RIGHT;
         break;
-        case os::border_left:
+        case os::border_direction_t::left:
             return SvxBoxItemLine::RIGHT;
         break;
-        case os::border_top:
+        case os::border_direction_t::top:
             return SvxBoxItemLine::RIGHT;
         break;
-        case os::border_bottom:
+        case os::border_direction_t::bottom:
             return SvxBoxItemLine::RIGHT;
         break;
         default:
@@ -904,18 +904,17 @@ void ScOrcusStyles::applyXfToItemSet(SfxItemSet& rSet, const xf& rXf)
     rFormat.applyToItemSet(rSet);
 }
 
-bool ScOrcusStyles::applyXfToItemSet(SfxItemSet& rSet, size_t xfId)
+void ScOrcusStyles::applyXfToItemSet(SfxItemSet& rSet, size_t xfId)
 {
     SAL_INFO("sc.orcus.style", "applyXfToitemSet: " << xfId);
     if (maCellXfs.size() <= xfId)
     {
         SAL_WARN("sc.orcus.style", "invalid xf id");
-        return false;
+        return;
     }
 
     const xf& rXf = maCellXfs[xfId];
     applyXfToItemSet(rSet, rXf);
-    return true;
 }
 
 void ScOrcusStyles::set_font_count(size_t /*n*/)
@@ -948,16 +947,16 @@ void ScOrcusStyles::set_font_underline(orcus::spreadsheet::underline_t e)
 {
     switch(e)
     {
-        case orcus::spreadsheet::underline_single:
-        case orcus::spreadsheet::underline_single_accounting:
-            maCurrentFont.meUnderline = UNDERLINE_SINGLE;
+        case orcus::spreadsheet::underline_t::single_line:
+        case orcus::spreadsheet::underline_t::single_accounting:
+            maCurrentFont.meUnderline = LINESTYLE_SINGLE;
             break;
-        case orcus::spreadsheet::underline_double:
-        case orcus::spreadsheet::underline_double_accounting:
-            maCurrentFont.meUnderline = UNDERLINE_DOUBLE;
+        case orcus::spreadsheet::underline_t::double_line:
+        case orcus::spreadsheet::underline_t::double_accounting:
+            maCurrentFont.meUnderline = LINESTYLE_DOUBLE;
             break;
-        case orcus::spreadsheet::underline_none:
-            maCurrentFont.meUnderline = UNDERLINE_NONE;
+        case orcus::spreadsheet::underline_t::none:
+            maCurrentFont.meUnderline = LINESTYLE_NONE;
             break;
     }
 }
@@ -1016,6 +1015,12 @@ void ScOrcusStyles::set_border_count(size_t /*n*/)
 }
 
 void ScOrcusStyles::set_border_style(orcus::spreadsheet::border_direction_t /*dir*/, const char* /*s*/, size_t /*n*/)
+{
+    // implement later
+}
+
+void ScOrcusStyles::set_border_style(
+    orcus::spreadsheet::border_direction_t /*dir*/, orcus::spreadsheet::border_style_t /*style*/)
 {
     // implement later
 }
@@ -1187,6 +1192,11 @@ void ScOrcusStyles::set_cell_style_builtin(size_t index)
     maCurrentCellStyle.mnBuiltInId = index;
 }
 
+void ScOrcusStyles::set_cell_style_parent_name(const char* /*s*/, size_t /*n*/)
+{
+    // place holder
+}
+
 size_t ScOrcusStyles::commit_cell_style()
 {
     SAL_INFO("sc.orcus.style", "commit cell style: " << maCurrentCellStyle.maName);
@@ -1197,7 +1207,7 @@ size_t ScOrcusStyles::commit_cell_style()
     }
 
     ScStyleSheetPool* pPool = mrDoc.GetStyleSheetPool();
-    SfxStyleSheetBase& rBase = pPool->Make(maCurrentCellStyle.maName, SFX_STYLE_FAMILY_PARA);
+    SfxStyleSheetBase& rBase = pPool->Make(maCurrentCellStyle.maName, SfxStyleFamily::Para);
     SfxItemSet& rSet = rBase.GetItemSet();
 
     xf& rXf = maCellStyleXfs[maCurrentCellStyle.mnXFId];
@@ -1208,10 +1218,8 @@ size_t ScOrcusStyles::commit_cell_style()
 
 // auto filter import
 
-ScOrcusAutoFilter::ScOrcusAutoFilter(ScDocument& rDoc):
-    mrDoc(rDoc)
+ScOrcusAutoFilter::ScOrcusAutoFilter(ScDocument&)
 {
-    (void)mrDoc;
 }
 
 ScOrcusAutoFilter::~ScOrcusAutoFilter()

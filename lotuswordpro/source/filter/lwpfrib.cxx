@@ -239,25 +239,27 @@ void LwpFrib::RegisterStyle(LwpFoundry* pFoundry)
         return;
     }
     //we only read four modifiers, in these modifiers,CodePage and LangOverride are not styles,
-    //so we can only handle fontid and characstyle, if others ,we should not reg style
+    //so we can only handle fontid and charstyle, if others, we should not reg style
     //note by ,1-27
     rtl::Reference<XFFont> pFont;
     XFTextStyle* pStyle = nullptr;
     m_StyleName.clear();
     XFStyleManager* pXFStyleManager = LwpGlobalMgr::GetInstance()->GetXFStyleManager();
     XFTextStyle* pNamedStyle = nullptr;
-    if (m_pModifiers->HasCharStyle)
+    if (m_pModifiers->HasCharStyle && pFoundry)
     {
         pNamedStyle = static_cast<XFTextStyle*>
                                 (pFoundry->GetStyleManager()->GetStyle(m_pModifiers->CharStyleID));
     }
     if (pNamedStyle)
     {
-        if (m_pModifiers->FontID)
+        LwpCharacterStyle* pCharStyle = nullptr;
+        if (m_pModifiers->FontID && pFoundry)
+            pCharStyle = dynamic_cast<LwpCharacterStyle*>(m_pModifiers->CharStyleID.obj().get());
+        if (pCharStyle)
         {
             pStyle = new XFTextStyle();
             *pStyle = *pNamedStyle;
-            LwpCharacterStyle* pCharStyle = dynamic_cast<LwpCharacterStyle*>(m_pModifiers->CharStyleID.obj().get());
 
             pStyle->SetStyleName("");
             pFont = pFoundry->GetFontManger().CreateOverrideFont(pCharStyle->GetFinalFontID(),m_pModifiers->FontID);
@@ -273,7 +275,7 @@ void LwpFrib::RegisterStyle(LwpFoundry* pFoundry)
     }
     else
     {
-        if (m_pModifiers->FontID)
+        if (m_pModifiers->FontID && pFoundry)
         {
             pStyle = new XFTextStyle();
             pFont = pFoundry->GetFontManger().CreateFont(m_pModifiers->FontID);
@@ -423,7 +425,8 @@ rtl::Reference<XFFont> LwpFrib::GetFont()
     if(m_pModifiers&&m_pModifiers->FontID)
     {
         LwpFoundry* pFoundry = m_pPara->GetFoundry();
-        pFont = pFoundry->GetFontManger().CreateFont(m_pModifiers->FontID);
+        if (pFoundry)
+            pFont = pFoundry->GetFontManger().CreateFont(m_pModifiers->FontID);
     }
     else
     {

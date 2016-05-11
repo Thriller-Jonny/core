@@ -34,6 +34,7 @@ private:
     std::shared_ptr< DetailsContainer > m_xCurrentDetails;
 
     VclPtr<Edit>         m_pEDUsername;
+    VclPtr<FixedText>    m_pFTUsernameLabel;
     VclPtr<CheckBox>     m_pCBPassword;
     VclPtr<Edit>         m_pEDPassword;
     VclPtr<FixedText>    m_pFTPasswordLabel;
@@ -75,7 +76,7 @@ public :
      OUString GetUser() { return m_pEDUsername->GetText(); };
      bool     IsRememberChecked() { return m_pCBPassword->IsChecked(); }
 
-     void ShowPasswordControl( bool bShow = true ) { m_bShowPassword = bShow; }
+     void ShowPasswordControl() { m_bShowPassword = true; }
 
 private:
 

@@ -118,7 +118,7 @@ static  bool lcl_HasStrongLTR ( const OUString& rText, sal_Int32 nStart, sal_Int
  }
 
 // class SwLineLayout: This is the layout of a single line, which is made
-// up of it's dimension, the character count and the word spacing in the line.
+// up of its dimension, the character count and the word spacing in the line.
 // Line objects are managed in an own pool, in order to store them continuously
 // in memory so that they are paged out together and don't fragment memory.
 SwLineLayout::~SwLineLayout()
@@ -133,8 +133,8 @@ SwLineLayout::~SwLineLayout()
 
 SwLinePortion *SwLineLayout::Insert( SwLinePortion *pIns )
 {
-   // First attribute change: copy mass and length from *pIns into the first
-   // text portion
+    // First attribute change: copy mass and length from *pIns into the first
+    // text portion
     if( !pPortion )
     {
         if( GetLen() )
@@ -598,8 +598,8 @@ SwScriptInfo::~SwScriptInfo()
 }
 
 // Converts i18n Script Type (LATIN, ASIAN, COMPLEX, WEAK) to
-// Sw Script Types (SW_LATIN, SW_CJK, SW_CTL), used to identify the font
-sal_uInt8 SwScriptInfo::WhichFont( sal_Int32 nIdx, const OUString* pText, const SwScriptInfo* pSI )
+// Sw Script Types (SwFontScript::Latin, SwFontScript::CJK, SwFontScript::CTL), used to identify the font
+SwFontScript SwScriptInfo::WhichFont( sal_Int32 nIdx, const OUString* pText, const SwScriptInfo* pSI )
 {
     assert((pSI || pText) && "How should I determine the script type?");
     const sal_uInt16 nScript = pSI
@@ -607,13 +607,13 @@ sal_uInt8 SwScriptInfo::WhichFont( sal_Int32 nIdx, const OUString* pText, const 
         : g_pBreakIt->GetRealScriptOfText( *pText, nIdx ); // else  ask the break iterator
 
     switch ( nScript ) {
-        case i18n::ScriptType::LATIN : return SW_LATIN;
-        case i18n::ScriptType::ASIAN : return SW_CJK;
-        case i18n::ScriptType::COMPLEX : return SW_CTL;
+        case i18n::ScriptType::LATIN : return SwFontScript::Latin;
+        case i18n::ScriptType::ASIAN : return SwFontScript::CJK;
+        case i18n::ScriptType::COMPLEX : return SwFontScript::CTL;
     }
 
     OSL_FAIL( "Somebody tells lies about the script type!" );
-    return SW_LATIN;
+    return SwFontScript::Latin;
 }
 
 // searches for script changes in rText and stores them
@@ -1815,7 +1815,7 @@ void SwScriptInfo::MarkKashidaInvalid(sal_Int32 nKashPos)
 }
 
 // retrieve the kashida positions in the given text range
-sal_Int32 SwScriptInfo::GetKashidaPositions(sal_Int32 nStt, sal_Int32 nLen,
+void SwScriptInfo::GetKashidaPositions(sal_Int32 nStt, sal_Int32 nLen,
     sal_Int32* pKashidaPosition)
 {
     size_t nCntKash = 0;
@@ -1836,7 +1836,6 @@ sal_Int32 SwScriptInfo::GetKashidaPositions(sal_Int32 nStt, sal_Int32 nLen,
         pKashidaPosition [ nCntKashEnd - nCntKash ] = GetKashida ( nCntKashEnd );
         nCntKashEnd++;
     }
-    return nCntKashEnd - nCntKash;
 }
 
 void SwScriptInfo::SetNoKashidaLine(sal_Int32 nStt, sal_Int32 nLen)
@@ -2007,7 +2006,7 @@ void SwLineLayout::Init( SwLinePortion* pNextPortion )
 // looks for hanging punctuation portions in the paragraph
 // and return the maximum right offset of them.
 // If no such portion is found, the Margin/Hanging-flags will be updated.
-SwTwips SwLineLayout::_GetHangingMargin() const
+SwTwips SwLineLayout::GetHangingMargin_() const
 {
     SwLinePortion* pPor = GetPortion();
     bool bFound = false;

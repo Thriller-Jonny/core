@@ -63,6 +63,7 @@ struct Writer_Impl
 {
     SvStream * m_pStream;
 
+    std::unique_ptr< std::map<OUString, OUString> > pFileNameMap;
     std::vector<const SvxFontItem*> aFontRemoveLst;
     SwBookmarkNodeTable aBkmkNodePos;
 
@@ -301,6 +302,59 @@ sal_uLong Writer::Write( SwPaM&, const uno::Reference < embed::XStorage >&, cons
     return ERR_SWG_WRITE_ERROR;
 }
 
+bool Writer::CopyLocalFileToINet( OUString& rFileNm )
+{
+    if( !pOrigFileName )                // can be happen, by example if we
+        return false;                   // write into the clipboard
+
+    bool bRet = false;
+    INetURLObject aFileUrl( rFileNm ), aTargetUrl( *pOrigFileName );
+
+// this is our old without the Mail-Export
+    if( ! ( INetProtocol::File == aFileUrl.GetProtocol() &&
+            INetProtocol::File != aTargetUrl.GetProtocol() &&
+            INetProtocol::Ftp <= aTargetUrl.GetProtocol() &&
+            INetProtocol::VndSunStarWebdav >= aTargetUrl.GetProtocol() ) )
+        return bRet;
+
+    if (m_pImpl->pFileNameMap.get())
+    {
+        // has the file been moved?
+        std::map<OUString, OUString>::iterator it = m_pImpl->pFileNameMap->find( rFileNm );
+        if ( it != m_pImpl->pFileNameMap->end() )
+        {
+            rFileNm = it->second;
+            return true;
+        }
+    }
+    else
+    {
+        m_pImpl->pFileNameMap.reset( new std::map<OUString, OUString>() );
+    }
+
+    OUString aSrc  = rFileNm;
+    OUString aDest = aTargetUrl.GetPartBeforeLastName();
+    aDest += OUString(aFileUrl.GetName());
+
+    SfxMedium aSrcFile( aSrc, StreamMode::READ );
+    SfxMedium aDstFile( aDest, StreamMode::WRITE | StreamMode::SHARE_DENYNONE );
+
+    aDstFile.GetOutStream()->WriteStream( *aSrcFile.GetInStream() );
+
+    aSrcFile.Close();
+    aDstFile.Commit();
+
+    bRet = 0 == aDstFile.GetError();
+
+    if( bRet )
+    {
+        m_pImpl->pFileNameMap->insert( std::make_pair( aSrc, aDest ) );
+        rFileNm = aDest;
+    }
+
+    return bRet;
+}
+
 void Writer::PutNumFormatFontsInAttrPool()
 {
     // then there are a few fonts in the NumRules
@@ -331,8 +385,8 @@ void Writer::PutNumFormatFontsInAttrPool()
                     else if( *pFont == *pDefFont )
                         bCheck = true;
 
-                    _AddFontItem( rPool, SvxFontItem( pFont->GetFamily(),
-                                pFont->GetName(), pFont->GetStyleName(),
+                    AddFontItem( rPool, SvxFontItem( pFont->GetFamilyType(),
+                                pFont->GetFamilyName(), pFont->GetStyleName(),
                                 pFont->GetPitch(), pFont->GetCharSet(), RES_CHRATR_FONT ));
                 }
 }
@@ -342,30 +396,30 @@ void Writer::PutEditEngFontsInAttrPool( bool bIncl_CJK_CTL )
     SfxItemPool& rPool = pDoc->GetAttrPool();
     if( rPool.GetSecondaryPool() )
     {
-        _AddFontItems( rPool, EE_CHAR_FONTINFO );
+        AddFontItems_( rPool, EE_CHAR_FONTINFO );
         if( bIncl_CJK_CTL )
         {
-            _AddFontItems( rPool, EE_CHAR_FONTINFO_CJK );
-            _AddFontItems( rPool, EE_CHAR_FONTINFO_CTL );
+            AddFontItems_( rPool, EE_CHAR_FONTINFO_CJK );
+            AddFontItems_( rPool, EE_CHAR_FONTINFO_CTL );
         }
     }
 }
 
-void Writer::_AddFontItems( SfxItemPool& rPool, sal_uInt16 nW )
+void Writer::AddFontItems_( SfxItemPool& rPool, sal_uInt16 nW )
 {
     const SvxFontItem* pFont = static_cast<const SvxFontItem*>(&rPool.GetDefaultItem( nW ));
-    _AddFontItem( rPool, *pFont );
+    AddFontItem( rPool, *pFont );
 
     if( nullptr != ( pFont = static_cast<const SvxFontItem*>(rPool.GetPoolDefaultItem( nW ))) )
-        _AddFontItem( rPool, *pFont );
+        AddFontItem( rPool, *pFont );
 
     sal_uInt32 nMaxItem = rPool.GetItemCount2( nW );
     for( sal_uInt32 nGet = 0; nGet < nMaxItem; ++nGet )
         if( nullptr != (pFont = static_cast<const SvxFontItem*>(rPool.GetItem2( nW, nGet ))) )
-            _AddFontItem( rPool, *pFont );
+            AddFontItem( rPool, *pFont );
 }
 
-void Writer::_AddFontItem( SfxItemPool& rPool, const SvxFontItem& rFont )
+void Writer::AddFontItem( SfxItemPool& rPool, const SvxFontItem& rFont )
 {
     const SvxFontItem* pItem;
     if( RES_CHRATR_FONT != rFont.Which() )

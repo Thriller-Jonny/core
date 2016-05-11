@@ -75,7 +75,7 @@ bool SvxRotateModeItem::GetPresentation(
     {
         case SFX_ITEM_PRESENTATION_COMPLETE:
             rText += "...: ";
-//          break; // FALL THROUGH!!!
+            SAL_FALLTHROUGH; // break; // FALL THROUGH!!!
 
         case SFX_ITEM_PRESENTATION_NAMELESS:
             rText += OUString( sal_Unicode(GetValue()) );
@@ -136,7 +136,6 @@ bool SvxRotateModeItem::PutValue( const uno::Any& rVal, sal_uInt8 /*nMemberId*/ 
     SetValue( (sal_uInt16)eSvx );
     return true;
 }
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

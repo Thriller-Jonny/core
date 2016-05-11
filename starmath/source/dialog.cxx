@@ -36,6 +36,7 @@
 #include <vcl/waitobj.hxx>
 #include <vcl/settings.hxx>
 #include <vcl/wall.hxx>
+#include <vcl/fontcharmap.hxx>
 #include <sfx2/dispatch.hxx>
 #include <sfx2/sfx.hrc>
 #include <osl/diagnose.h>
@@ -50,6 +51,7 @@
 #include "document.hxx"
 #include "unomodel.hxx"
 
+#include <algorithm>
 
 namespace
 {
@@ -149,9 +151,7 @@ void SetFontStyle(const OUString &rStyleName, vcl::Font &rFont)
         for (i = 0;  i < SmFontStyles::GetCount(); ++i)
             if (rStyleName == rStyles.GetStyleName(i))
                 break;
-#if OSL_DEBUG_LEVEL > 1
-        OSL_ENSURE(i < rStyles.GetCount(), "style-name unknown");
-#endif
+        assert(i < SmFontStyles::GetCount() && "style-name unknown");
         nIndex = i;
     }
 
@@ -217,7 +217,7 @@ bool SmPrintOptionsTabPage::FillItemSet(SfxItemSet* rSet)
         nPrintSize = PRINT_SIZE_ZOOMED;
 
     rSet->Put(SfxUInt16Item(GetWhich(SID_PRINTSIZE), nPrintSize));
-    rSet->Put(SfxUInt16Item(GetWhich(SID_PRINTZOOM), (sal_uInt16) m_pZoom->GetValue()));
+    rSet->Put(SfxUInt16Item(GetWhich(SID_PRINTZOOM), sal::static_int_cast<sal_uInt16>(m_pZoom->GetValue())));
     rSet->Put(SfxBoolItem(GetWhich(SID_PRINTTITLE), m_pTitle->IsChecked()));
     rSet->Put(SfxBoolItem(GetWhich(SID_PRINTTEXT), m_pText->IsChecked()));
     rSet->Put(SfxBoolItem(GetWhich(SID_PRINTFRAME), m_pFrame->IsChecked()));
@@ -265,12 +265,12 @@ void SmShowFont::Paint(vcl::RenderContext& rRenderContext, const Rectangle& rRec
     rRenderContext.SetBackground(Wallpaper(aBackColor));
 
     vcl::Font aFont(maFont);
-    aFont.SetSize(Size(0, 24 * rRenderContext.GetDPIScaleFactor()));
-    aFont.SetAlign(ALIGN_TOP);
+    aFont.SetFontSize(Size(0, 24 * rRenderContext.GetDPIScaleFactor()));
+    aFont.SetAlignment(ALIGN_TOP);
     rRenderContext.SetFont(aFont);
     rRenderContext.SetTextColor(aTextColor);
 
-    OUString sText(rRenderContext.GetFont().GetName());
+    OUString sText(rRenderContext.GetFont().GetFamilyName());
     Size aTextSize(rRenderContext.GetTextWidth(sText), rRenderContext.GetTextHeight());
 
     rRenderContext.DrawText(Point((rRenderContext.GetOutputSize().Width()  - aTextSize.Width())  / 2,
@@ -301,7 +301,7 @@ void SmShowFont::SetFont(const vcl::Font& rFont)
 
 IMPL_LINK_TYPED( SmFontDialog, FontSelectHdl, ComboBox&, rComboBox, void )
 {
-    maFont.SetName(rComboBox.GetText());
+    maFont.SetFamilyName(rComboBox.GetText());
     m_pShowFont->SetFont(maFont);
 }
 
@@ -335,7 +335,7 @@ void SmFontDialog::SetFont(const vcl::Font &rFont)
 {
     maFont = rFont;
 
-    m_pFontBox->SetText(maFont.GetName());
+    m_pFontBox->SetText(maFont.GetFamilyName());
     m_pBoldCheckBox->Check(IsBold(maFont));
     m_pItalicCheckBox->Check(IsItalic(maFont));
     m_pShowFont->SetFont(maFont);
@@ -359,9 +359,9 @@ SmFontDialog::SmFontDialog(vcl::Window * pParent, OutputDevice *pFntListDevice, 
         sal_uInt16  nCount = aFontList.GetFontNameCount();
         for (sal_uInt16 i = 0;  i < nCount; ++i)
         {
-            m_pFontBox->InsertEntry( aFontList.GetFontName(i).GetName() );
+            m_pFontBox->InsertEntry( aFontList.GetFontName(i).GetFamilyName() );
         }
-        maFont.SetSize(Size(0, 24));
+        maFont.SetFontSize(Size(0, 24));
         maFont.SetWeight(WEIGHT_NORMAL);
         maFont.SetItalic(ITALIC_NONE);
         maFont.SetFamily(FAMILY_DONTKNOW);
@@ -482,11 +482,11 @@ void SmFontSizeDialog::WriteTo(SmFormat &rFormat) const
 {
     rFormat.SetBaseSize( Size(0, SmPtsTo100th_mm( static_cast< long >(m_pBaseSize->GetValue()))) );
 
-    rFormat.SetRelSize(SIZ_TEXT,     (sal_uInt16) m_pTextSize->GetValue());
-    rFormat.SetRelSize(SIZ_INDEX,    (sal_uInt16) m_pIndexSize->GetValue());
-    rFormat.SetRelSize(SIZ_FUNCTION, (sal_uInt16) m_pFunctionSize->GetValue());
-    rFormat.SetRelSize(SIZ_OPERATOR, (sal_uInt16) m_pOperatorSize->GetValue());
-    rFormat.SetRelSize(SIZ_LIMITS,   (sal_uInt16) m_pBorderSize->GetValue());
+    rFormat.SetRelSize(SIZ_TEXT,     sal::static_int_cast<sal_uInt16>(m_pTextSize->GetValue()));
+    rFormat.SetRelSize(SIZ_INDEX,    sal::static_int_cast<sal_uInt16>(m_pIndexSize->GetValue()));
+    rFormat.SetRelSize(SIZ_FUNCTION, sal::static_int_cast<sal_uInt16>(m_pFunctionSize->GetValue()));
+    rFormat.SetRelSize(SIZ_OPERATOR, sal::static_int_cast<sal_uInt16>(m_pOperatorSize->GetValue()));
+    rFormat.SetRelSize(SIZ_LIMITS,   sal::static_int_cast<sal_uInt16>(m_pBorderSize->GetValue()));
 
     const Size aTmp (rFormat.GetBaseSize());
     for (sal_uInt16  i = FNT_BEGIN;  i <= FNT_END;  i++)
@@ -764,16 +764,11 @@ void SmDistanceDialog::SetHelpId(MetricField &rField, const OString& sHelpId)
 
 void SmDistanceDialog::SetCategory(sal_uInt16 nCategory)
 {
-#if OSL_DEBUG_LEVEL > 1
-    OSL_ENSURE(/*0 <= nCategory  &&*/  nCategory < NOCATEGORIES,
-        "Sm: wrong category number in SmDistanceDialog");
-#endif
+    assert(nCategory < NOCATEGORIES && "Sm: wrong category number in SmDistanceDialog");
 
     // array to convert category- and metricfield-number in help ids.
     // 0 is used in case of unused combinations.
-#if OSL_DEBUG_LEVEL > 1
-    OSL_ENSURE(NOCATEGORIES == 10, "Sm : array doesn't fit into the number of categories");
-#endif
+    assert(NOCATEGORIES == 10 && "Sm : array doesn't fit into the number of categories");
     static const char * aCatMf2Hid[10][4] =
     {
         { HID_SMA_DEFAULT_DIST,         HID_SMA_LINE_DIST,          HID_SMA_ROOT_DIST, nullptr },
@@ -804,10 +799,10 @@ void SmDistanceDialog::SetCategory(sal_uInt16 nCategory)
     if (nActiveCategory != CATEGORY_NONE)
     {
         pCat = Categories[nActiveCategory];
-        pCat->SetValue(0, (sal_uInt16) m_pMetricField1->GetValue());
-        pCat->SetValue(1, (sal_uInt16) m_pMetricField2->GetValue());
-        pCat->SetValue(2, (sal_uInt16) m_pMetricField3->GetValue());
-        pCat->SetValue(3, (sal_uInt16) m_pMetricField4->GetValue());
+        pCat->SetValue(0, sal::static_int_cast<sal_uInt16>(m_pMetricField1->GetValue()));
+        pCat->SetValue(1, sal::static_int_cast<sal_uInt16>(m_pMetricField2->GetValue()));
+        pCat->SetValue(2, sal::static_int_cast<sal_uInt16>(m_pMetricField3->GetValue()));
+        pCat->SetValue(3, sal::static_int_cast<sal_uInt16>(m_pMetricField4->GetValue()));
 
         if (nActiveCategory == 5)
             bScaleAllBrackets = m_pCheckBox1->IsChecked();
@@ -1147,11 +1142,11 @@ void SmShowSymbolSetWindow::Paint(vcl::RenderContext& rRenderContext, const Rect
     {
         SmSym aSymbol(*aSymbolSet[i]);
         vcl::Font aFont(aSymbol.GetFace());
-        aFont.SetAlign(ALIGN_TOP);
+        aFont.SetAlignment(ALIGN_TOP);
 
         // taking a FontSize which is a bit smaller (compared to nLen) in order to have a buffer
         // (hopefully enough for left and right, too)
-        aFont.SetSize(Size(0, nLen - (nLen / 3)));
+        aFont.SetFontSize(Size(0, nLen - (nLen / 3)));
         rRenderContext.SetFont(aFont);
         // keep text color
         rRenderContext.SetTextColor(aTxtColor);
@@ -1185,6 +1180,8 @@ void SmShowSymbolSetWindow::MouseButtonDown(const MouseEvent& rMEvt)
     GrabFocus();
 
     Size aOutputSize(nColumns * nLen, nRows * nLen);
+    aOutputSize.Width() += nXOffset;
+    aOutputSize.Height() += nYOffset;
     Point aPoint(rMEvt.GetPosPixel());
     aPoint.X() -= nXOffset;
     aPoint.Y() -= nYOffset;
@@ -1232,8 +1229,8 @@ void SmShowSymbolSetWindow::KeyInput(const KeyEvent& rKEvt)
         n = nSelectSymbol;
 
     // adjust scrollbar
-    if ((n < (sal_uInt16) (m_pVScrollBar->GetThumbPos() * nColumns)) ||
-        (n >= (sal_uInt16) ((m_pVScrollBar->GetThumbPos() + nRows) * nColumns)))
+    if ((n < sal::static_int_cast<sal_uInt16>(m_pVScrollBar->GetThumbPos() * nColumns)) ||
+        (n >= sal::static_int_cast<sal_uInt16>((m_pVScrollBar->GetThumbPos() + nRows) * nColumns)))
     {
         m_pVScrollBar->SetThumbPos(n / nColumns);
         Invalidate();
@@ -1286,8 +1283,6 @@ void SmShowSymbolSetWindow::calccols()
     Size aOutputSize = GetOutputSizePixel();
 
     nColumns = aOutputSize.Width() / nLen;
-    if (nColumns > 2  && nColumns % 2 != 0)
-        --nColumns;
     nRows = aOutputSize.Height() / nLen;
     nColumns = std::max<long>(1, nColumns);
     nRows = std::max<long>(1, nRows);
@@ -1329,7 +1324,7 @@ void SmShowSymbolSetWindow::SetScrollBarRange()
 
 void SmShowSymbolSetWindow::SelectSymbol(sal_uInt16 nSymbol)
 {
-    int v = (int) (m_pVScrollBar->GetThumbPos() * nColumns);
+    int v = static_cast<int>(m_pVScrollBar->GetThumbPos() * nColumns);
 
     if (nSelectSymbol != SYMBOL_NONE)
         Invalidate(Rectangle(OffsetPoint(Point(((nSelectSymbol - v) % nColumns) * nLen,
@@ -1384,7 +1379,7 @@ void SmShowSymbol::ApplySettings(vcl::RenderContext& /*rRenderContext*/ )
 
 void SmShowSymbol::setFontSize(vcl::Font &rFont) const
 {
-    rFont.SetSize(Size(0, GetOutputSize().Height() - GetOutputSize().Height() / 3));
+    rFont.SetFontSize(Size(0, GetOutputSize().Height() - GetOutputSize().Height() / 3));
 }
 
 void SmShowSymbol::Paint(vcl::RenderContext& rRenderContext, const Rectangle &rRect)
@@ -1422,7 +1417,7 @@ void SmShowSymbol::SetSymbol(const SmSym *pSymbol)
     {
         vcl::Font aFont (pSymbol->GetFace());
         setFontSize(aFont);
-        aFont.SetAlign(ALIGN_BASELINE);
+        aFont.SetAlignment(ALIGN_BASELINE);
         SetFont(aFont);
 
         sal_UCS4 cChar = pSymbol->GetCharacter();
@@ -1436,15 +1431,12 @@ void SmShowSymbol::SetSymbol(const SmSym *pSymbol)
 }
 
 
-
-
-void SmSymbolDialog::FillSymbolSets(bool bDeleteText)
+void SmSymbolDialog::FillSymbolSets()
     // populate the entries of possible SymbolsSets in the dialog with
     // current values of the SymbolSet manager but selects none of those
 {
     m_pSymbolSets->Clear();
-    if (bDeleteText)
-        m_pSymbolSets->SetNoSelection();
+    m_pSymbolSets->SetNoSelection();
 
     std::set< OUString >  aSybolSetNames( rSymbolMgr.GetSymbolSetNames() );
     std::set< OUString >::const_iterator aIt( aSybolSetNames.begin() );
@@ -1528,9 +1520,9 @@ IMPL_LINK_NOARG_TYPED( SmSymbolDialog, GetClickHdl, Button*, void )
         OUStringBuffer aText;
         aText.append('%').append(pSym->GetName()).append(' ');
 
-        rViewSh.GetViewFrame()->GetDispatcher()->Execute(
+        rViewSh.GetViewFrame()->GetDispatcher()->ExecuteList(
                 SID_INSERTSYMBOL, SfxCallMode::RECORD,
-                new SfxStringItem(SID_INSERTSYMBOL, aText.makeStringAndClear()), 0L);
+                { new SfxStringItem(SID_INSERTSYMBOL, aText.makeStringAndClear()) });
     }
 }
 
@@ -1613,7 +1605,11 @@ bool SmSymbolDialog::SelectSymbolSet(const OUString &rSymbolSetName)
         aSymbolSet      = rSymbolMgr.GetSymbolSet( aSymbolSetName );
 
         // sort symbols by Unicode position (useful for displaying Greek characters alphabetically)
-        std::sort( aSymbolSet.begin(), aSymbolSet.end(), lt_SmSymPtr() );
+        std::sort( aSymbolSet.begin(), aSymbolSet.end(),
+                   [](const SmSym *pSym1, const SmSym *pSym2)
+                   {
+                       return pSym1->GetCharacter() < pSym2->GetCharacter();
+                   } );
 
         m_pSymbolSetDisplay->SetSymbolSet( aSymbolSet );
         if (aSymbolSet.size() > 0)
@@ -1663,11 +1659,6 @@ void SmShowChar::Paint(vcl::RenderContext& rRenderContext, const Rectangle &rRec
     OUString aText( GetText() );
     if (!aText.isEmpty())
     {
-#if OSL_DEBUG_LEVEL > 1
-        sal_Int32 nPos = 0;
-        sal_UCS4 cChar = aText.iterateCodePoints( &nPos );
-        (void) cChar;
-#endif
         Size aTextSize(rRenderContext.GetTextWidth(aText), rRenderContext.GetTextHeight());
 
         rRenderContext.DrawText(Point((GetOutputSize().Width()  - aTextSize.Width())  / 2,
@@ -1686,8 +1677,8 @@ void SmShowChar::SetSymbol( const SmSym *pSym )
 void SmShowChar::SetSymbol( sal_UCS4 cChar, const vcl::Font &rFont )
 {
     vcl::Font aFont( rFont );
-    aFont.SetSize( Size(0, GetOutputSize().Height() - GetOutputSize().Height() / 3) );
-    aFont.SetAlign(ALIGN_BASELINE);
+    aFont.SetFontSize( Size(0, GetOutputSize().Height() - GetOutputSize().Height() / 3) );
+    aFont.SetAlignment(ALIGN_BASELINE);
     SetFont(aFont);
     aFont.SetTransparent(true);
 
@@ -1710,10 +1701,7 @@ void SmShowChar::Resize()
 
 void SmSymDefineDialog::FillSymbols(ComboBox &rComboBox, bool bDeleteText)
 {
-#if OSL_DEBUG_LEVEL > 1
-    OSL_ENSURE(&rComboBox == pOldSymbols  ||  &rComboBox == pSymbols,
-        "Sm : wrong ComboBox");
-#endif
+    assert((&rComboBox == pOldSymbols || &rComboBox == pSymbols) && "Sm : wrong ComboBox");
 
     rComboBox.Clear();
     if (bDeleteText)
@@ -1728,10 +1716,7 @@ void SmSymDefineDialog::FillSymbols(ComboBox &rComboBox, bool bDeleteText)
 
 void SmSymDefineDialog::FillSymbolSets(ComboBox &rComboBox, bool bDeleteText)
 {
-#if OSL_DEBUG_LEVEL > 1
-    OSL_ENSURE(&rComboBox == pOldSymbolSets  ||  &rComboBox == pSymbolSets,
-        "Sm : falsche ComboBox");
-#endif
+    assert((&rComboBox == pOldSymbolSets || &rComboBox == pSymbolSets) && "Sm : falsche ComboBox");
 
     rComboBox.Clear();
     if (bDeleteText)
@@ -1744,11 +1729,10 @@ void SmSymDefineDialog::FillSymbolSets(ComboBox &rComboBox, bool bDeleteText)
 }
 
 
-void SmSymDefineDialog::FillFonts(bool bDelete)
+void SmSymDefineDialog::FillFonts()
 {
     pFonts->Clear();
-    if (bDelete)
-        pFonts->SetNoSelection();
+    pFonts->SetNoSelection();
 
     // Include all fonts of FontList into the font list.
     // If there are duplicates, only include one entry of each font since the style will be
@@ -1757,16 +1741,15 @@ void SmSymDefineDialog::FillFonts(bool bDelete)
     {
         sal_uInt16  nCount = pFontList->GetFontNameCount();
         for (sal_uInt16 i = 0;  i < nCount;  i++)
-            pFonts->InsertEntry( pFontList->GetFontName(i).GetName() );
+            pFonts->InsertEntry( pFontList->GetFontName(i).GetFamilyName() );
     }
 }
 
 
-void SmSymDefineDialog::FillStyles(bool bDeleteText)
+void SmSymDefineDialog::FillStyles()
 {
     pStyles->Clear();
-    if (bDeleteText)
-        pStyles->SetText(OUString());
+    pStyles->SetText(OUString());
 
     OUString aText (pFonts->GetSelectEntry());
     if (!aText.isEmpty())
@@ -1776,9 +1759,7 @@ void SmSymDefineDialog::FillStyles(bool bDeleteText)
         for (sal_uInt16 i = 0;  i < SmFontStyles::GetCount();  i++)
             pStyles->InsertEntry( rStyles.GetStyleName(i) );
 
-#if OSL_DEBUG_LEVEL > 1
-        OSL_ENSURE(pStyles->GetEntryCount() > 0, "Sm : no styles available");
-#endif
+        assert(pStyles->GetEntryCount() > 0 && "Sm : no styles available");
         pStyles->SetText( pStyles->GetEntry(0) );
     }
 }
@@ -1786,10 +1767,7 @@ void SmSymDefineDialog::FillStyles(bool bDeleteText)
 
 SmSym * SmSymDefineDialog::GetSymbol(const ComboBox &rComboBox)
 {
-#if OSL_DEBUG_LEVEL > 1
-    OSL_ENSURE(&rComboBox == pOldSymbols  ||  &rComboBox == pSymbols,
-        "Sm : wrong combobox");
-#endif
+    assert((&rComboBox == pOldSymbols || &rComboBox == pSymbols) && "Sm : wrong combobox");
     return aSymbolMgrCopy.GetSymbolByName(rComboBox.GetText());
 }
 
@@ -1797,9 +1775,7 @@ SmSym * SmSymDefineDialog::GetSymbol(const ComboBox &rComboBox)
 IMPL_LINK_TYPED( SmSymDefineDialog, OldSymbolChangeHdl, ComboBox&, rComboBox, void )
 {
     (void) rComboBox;
-#if OSL_DEBUG_LEVEL > 1
-    OSL_ENSURE(&rComboBox == pOldSymbols, "Sm : wrong argument");
-#endif
+    assert(&rComboBox == pOldSymbols && "Sm : wrong argument");
     SelectSymbol(*pOldSymbols, pOldSymbols->GetText(), false);
 }
 
@@ -1807,9 +1783,7 @@ IMPL_LINK_TYPED( SmSymDefineDialog, OldSymbolChangeHdl, ComboBox&, rComboBox, vo
 IMPL_LINK_TYPED( SmSymDefineDialog, OldSymbolSetChangeHdl, ComboBox&, rComboBox, void )
 {
     (void) rComboBox;
-#if OSL_DEBUG_LEVEL > 1
-    OSL_ENSURE(&rComboBox == pOldSymbolSets, "Sm : wrong argument");
-#endif
+    assert(&rComboBox == pOldSymbolSets && "Sm : wrong argument");
     SelectSymbolSet(*pOldSymbolSets, pOldSymbolSets->GetText(), false);
 }
 
@@ -1844,9 +1818,7 @@ IMPL_LINK_TYPED( SmSymDefineDialog, ModifyHdl, Edit&, rEdit, void )
 IMPL_LINK_TYPED( SmSymDefineDialog, FontChangeHdl, ListBox&, rListBox, void )
 {
     (void) rListBox;
-#if OSL_DEBUG_LEVEL > 1
-    OSL_ENSURE(&rListBox == pFonts, "Sm : wrong argument");
-#endif
+    assert(&rListBox == pFonts && "Sm : wrong argument");
 
     SelectFont(pFonts->GetSelectEntry());
 }
@@ -1869,9 +1841,7 @@ IMPL_LINK_NOARG_TYPED( SmSymDefineDialog, SubsetChangeHdl, ListBox&, void )
 IMPL_LINK_TYPED( SmSymDefineDialog, StyleChangeHdl, ComboBox&, rComboBox, void )
 {
     (void) rComboBox;
-#if OSL_DEBUG_LEVEL > 1
-    OSL_ENSURE(&rComboBox == pStyles, "Sm : falsches Argument");
-#endif
+    assert(&rComboBox == pStyles && "Sm : falsches Argument");
 
     SelectStyle(pStyles->GetText());
 }
@@ -1881,9 +1851,7 @@ IMPL_LINK_NOARG_TYPED(SmSymDefineDialog, CharHighlightHdl, SvxShowCharSet*, void
 {
    sal_UCS4 cChar = pCharsetDisplay->GetSelectCharacter();
 
-#if OSL_DEBUG_LEVEL > 1
-    OSL_ENSURE( pSubsetMap, "SubsetMap missing" );
-#endif
+    assert(pSubsetMap && "SubsetMap missing");
     if (pSubsetMap)
     {
         const Subset* pSubset = pSubsetMap->GetSubsetByUnicode( cChar );
@@ -1910,10 +1878,8 @@ IMPL_LINK_NOARG_TYPED(SmSymDefineDialog, CharHighlightHdl, SvxShowCharSet*, void
 IMPL_LINK_TYPED( SmSymDefineDialog, AddClickHdl, Button *, pButton, void )
 {
     (void) pButton;
-#if OSL_DEBUG_LEVEL > 1
-    OSL_ENSURE(pButton == pAddBtn, "Sm : wrong argument");
-    OSL_ENSURE(pAddBtn->IsEnabled(), "Sm : requirements met ??");
-#endif
+    assert(pButton == pAddBtn && "Sm : wrong argument");
+    assert(pButton->IsEnabled() && "Sm : requirements met ??");
 
     // add symbol
     const SmSym aNewSymbol( pSymbols->GetText(), pCharsetDisplay->GetFont(),
@@ -1939,10 +1905,8 @@ IMPL_LINK_TYPED( SmSymDefineDialog, AddClickHdl, Button *, pButton, void )
 IMPL_LINK_TYPED( SmSymDefineDialog, ChangeClickHdl, Button *, pButton, void )
 {
     (void) pButton;
-#if OSL_DEBUG_LEVEL > 1
-    OSL_ENSURE(pButton == pChangeBtn, "Sm : wrong argument");
-    OSL_ENSURE(pChangeBtn->IsEnabled(), "Sm : requirements met ??");
-#endif
+    assert(pButton == pChangeBtn && "Sm : wrong argument");
+    assert(pChangeBtn->IsEnabled() && "Sm : requirements met ??");
 
     // get new Sybol to use
     //! get font from symbol-disp lay since charset-display does not keep
@@ -1978,10 +1942,8 @@ IMPL_LINK_TYPED( SmSymDefineDialog, ChangeClickHdl, Button *, pButton, void )
 IMPL_LINK_TYPED( SmSymDefineDialog, DeleteClickHdl, Button *, pButton, void )
 {
     (void) pButton;
-#if OSL_DEBUG_LEVEL > 1
-    OSL_ENSURE(pButton == pDeleteBtn, "Sm : wrong argument");
-    OSL_ENSURE(pDeleteBtn->IsEnabled(), "Sm : requirements met ??");
-#endif
+    assert(pButton == pDeleteBtn && "Sm : wrong argument");
+    assert(pDeleteBtn->IsEnabled() && "Sm : requirements met ??");
 
     if (pOrigSymbol)
     {
@@ -2017,7 +1979,7 @@ void SmSymDefineDialog::UpdateButtons()
                     && aTmpSymbolSetName.equalsIgnoreAsciiCase(pOldSymbolSetName->GetText())
                     && aTmpSymbolName.equals(pOrigSymbol->GetName())
                     && pFonts->GetSelectEntry().equalsIgnoreAsciiCase(
-                            pOrigSymbol->GetFace().GetName())
+                            pOrigSymbol->GetFace().GetFamilyName())
                     && pStyles->GetText().equalsIgnoreAsciiCase(
                             GetFontStyles().GetStyleName(pOrigSymbol->GetFace()))
                     && pCharsetDisplay->GetSelectCharacter() == pOrigSymbol->GetCharacter();
@@ -2176,10 +2138,7 @@ void SmSymDefineDialog::SetSymbolSetManager(const SmSymbolManager &rMgr)
 bool SmSymDefineDialog::SelectSymbolSet(ComboBox &rComboBox,
         const OUString &rSymbolSetName, bool bDeleteText)
 {
-#if OSL_DEBUG_LEVEL > 1
-    OSL_ENSURE(&rComboBox == pOldSymbolSets  ||  &rComboBox == pSymbolSets,
-        "Sm : wrong ComboBox");
-#endif
+    assert((&rComboBox == pOldSymbolSets || &rComboBox == pSymbolSets) && "Sm : wrong ComboBox");
 
     // trim SymbolName (no leading and trailing blanks)
     OUString  aNormName (rSymbolSetName);
@@ -2254,10 +2213,7 @@ void SmSymDefineDialog::SetOrigSymbol(const SmSym *pSymbol,
 bool SmSymDefineDialog::SelectSymbol(ComboBox &rComboBox,
         const OUString &rSymbolName, bool bDeleteText)
 {
-#if OSL_DEBUG_LEVEL > 1
-    OSL_ENSURE(&rComboBox == pOldSymbols  ||  &rComboBox == pSymbols,
-        "Sm : wrong ComboBox");
-#endif
+    assert((&rComboBox == pOldSymbols || &rComboBox == pSymbols) && "Sm : wrong ComboBox");
 
     // trim SymbolName (no blanks)
     OUString  aNormName(comphelper::string::remove(rSymbolName, ' '));
@@ -2280,7 +2236,7 @@ bool SmSymDefineDialog::SelectSymbol(ComboBox &rComboBox,
             {
                 // choose font and style accordingly
                 const vcl::Font &rFont = pSymbol->GetFace();
-                SelectFont(rFont.GetName(), false);
+                SelectFont(rFont.GetFamilyName(), false);
                 SelectStyle(GetFontStyles().GetStyleName(rFont), false);
 
                 // Since setting the Font via the Style name of the SymbolFonts doesn't
@@ -2327,18 +2283,18 @@ bool SmSymDefineDialog::SelectSymbol(ComboBox &rComboBox,
 void SmSymDefineDialog::SetFont(const OUString &rFontName, const OUString &rStyleName)
 {
     // get Font (FontInfo) matching name and style
-    vcl::FontInfo aFI;
+    FontMetric aFontMetric;
     if (pFontList)
-        aFI = pFontList->Get(rFontName, WEIGHT_NORMAL, ITALIC_NONE);
-    SetFontStyle(rStyleName, aFI);
+        aFontMetric = pFontList->Get(rFontName, WEIGHT_NORMAL, ITALIC_NONE);
+    SetFontStyle(rStyleName, aFontMetric);
 
-    pCharsetDisplay->SetFont(aFI);
-    pSymbolDisplay->SetFont(aFI);
+    pCharsetDisplay->SetFont(aFontMetric);
+    pSymbolDisplay->SetFont(aFontMetric);
 
     // update subset listbox for new font's unicode subsets
-    FontCharMapPtr pFontCharMap;
-    pCharsetDisplay->GetFontCharMap( pFontCharMap );
-    pSubsetMap.reset(new SubsetMap( pFontCharMap ));
+    FontCharMapPtr xFontCharMap;
+    pCharsetDisplay->GetFontCharMap( xFontCharMap );
+    pSubsetMap.reset(new SubsetMap( xFontCharMap ));
 
     pFontsSubsetLB->Clear();
     bool bFirst = true;
@@ -2355,8 +2311,6 @@ void SmSymDefineDialog::SetFont(const OUString &rFontName, const OUString &rStyl
     if( bFirst )
         pFontsSubsetLB->SetNoSelection();
     pFontsSubsetLB->Enable( !bFirst );
-
-    pFontCharMap = nullptr;
 }
 
 

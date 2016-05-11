@@ -42,9 +42,7 @@ namespace slideshow
     {
 
 
-
         // Private methods
-
 
 
         void DrawShapeSubsetting::ensureInitializedNodeTree() const
@@ -154,7 +152,7 @@ namespace slideshow
                         SAL_INFO("slideshow.verbose", "Shape text \"" <<
                                  (static_cast<MetaTextAction*>(pCurrAct))->GetText() <<
                                  "\" at action #" << nActionIndex );
-                        // fallthrough intended
+                        SAL_FALLTHROUGH;
                     default:
                         // comment action and all actions not
                         // explicitly handled here:
@@ -218,9 +216,7 @@ namespace slideshow
         }
 
 
-
         // Public methods
-
 
 
         DrawShapeSubsetting::DrawShapeSubsetting() :
@@ -264,7 +260,7 @@ namespace slideshow
             mbNodeTreeInitialized = false;
         }
 
-        void DrawShapeSubsetting::reset( const ::boost::shared_ptr< GDIMetaFile >& rMtf )
+        void DrawShapeSubsetting::reset( const ::std::shared_ptr< GDIMetaFile >& rMtf )
         {
             reset();
             mpMtf = rMtf;
@@ -281,7 +277,7 @@ namespace slideshow
                 maCurrentSubsets.push_back( maSubset );
         }
 
-        DocTreeNode DrawShapeSubsetting::getSubsetNode() const
+        const DocTreeNode& DrawShapeSubsetting::getSubsetNode() const
         {
             return maSubset;
         }
@@ -398,8 +394,8 @@ namespace slideshow
             // the whole shape set
 
             // determine new subset range
-            for( const auto& pShape : maSubsetShapes )
-                updateSubsetBounds( pShape );
+            for( const auto& rSubsetShape : maSubsetShapes )
+                updateSubsetBounds( rSubsetShape );
 
             updateSubsets();
 
@@ -508,8 +504,7 @@ namespace slideshow
                             }
 
                             ++nCurrShapeCount;
-                            // FALLTHROUGH intended: shape end also
-                            // ends lines
+                            SAL_FALLTHROUGH; // shape end also ends lines
                         case DrawShapeSubsetting::CLASS_PARAGRAPH_END:
                             if( !io_rFunctor( DrawShapeSubsetting::CLASS_PARAGRAPH_END,
                                               nCurrParaCount,
@@ -521,8 +516,7 @@ namespace slideshow
 
                             ++nCurrParaCount;
                             aLastParaStart = aNext;
-                            // FALLTHROUGH intended: para end also
-                            // ends line
+                            SAL_FALLTHROUGH; // para end also ends line
                         case DrawShapeSubsetting::CLASS_LINE_END:
                             if( !io_rFunctor( DrawShapeSubsetting::CLASS_LINE_END,
                                               nCurrLineCount,
@@ -549,7 +543,7 @@ namespace slideshow
                                 // character cell, OTOH?
                                 break;
                             }
-                            // FALLTHROUGH intended
+                            SAL_FALLTHROUGH;
                         case DrawShapeSubsetting::CLASS_SENTENCE_END:
                             if( !io_rFunctor( DrawShapeSubsetting::CLASS_SENTENCE_END,
                                               nCurrSentenceCount,
@@ -561,7 +555,7 @@ namespace slideshow
 
                             ++nCurrSentenceCount;
                             aLastSentenceStart = aNext;
-                            // FALLTHROUGH intended
+                            SAL_FALLTHROUGH;
                         case DrawShapeSubsetting::CLASS_WORD_END:
                             if( !io_rFunctor( DrawShapeSubsetting::CLASS_WORD_END,
                                               nCurrWordCount,
@@ -573,7 +567,7 @@ namespace slideshow
 
                             ++nCurrWordCount;
                             aLastWordStart = aNext;
-                            // FALLTHROUGH intended
+                            SAL_FALLTHROUGH;
                         case DrawShapeSubsetting::CLASS_CHARACTER_CELL_END:
                             if( !io_rFunctor( DrawShapeSubsetting::CLASS_CHARACTER_CELL_END,
                                               nCurrCharCount,

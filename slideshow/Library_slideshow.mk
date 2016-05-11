@@ -28,8 +28,12 @@ $(eval $(call gb_Library_set_precompiled_header,slideshow,$(SRCDIR)/slideshow/in
 
 $(eval $(call gb_Library_use_externals,slideshow,\
 	boost_headers \
-	glew \
 ))
+ifeq ($(ENABLE_OPENGL),TRUE)
+$(eval $(call gb_Library_use_externals,slideshow,\
+     glew \
+ ))
+endif
 
 $(eval $(call gb_Library_use_sdk_api,slideshow))
 
@@ -149,11 +153,5 @@ $(eval $(call gb_Library_add_exception_objects,slideshow,\
     slideshow/source/engine/pointersymbol \
     slideshow/source/engine/wakeupevent \
 ))
-
-ifneq ($(strip $(debug)$(DEBUG)),)
-$(eval $(call gb_Library_add_exception_objects,slideshow,\
-    slideshow/source/engine/sp_debug \
-))
-endif
 
 # vim: set noet sw=4 ts=4:

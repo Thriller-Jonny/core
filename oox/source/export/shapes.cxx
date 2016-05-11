@@ -40,8 +40,10 @@
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/beans/XPropertySetInfo.hpp>
 #include <com/sun/star/beans/XPropertyState.hpp>
+#include <com/sun/star/container/XChild.hpp>
 #include <com/sun/star/container/XEnumerationAccess.hpp>
 #include <com/sun/star/document/XExporter.hpp>
+#include <com/sun/star/document/XStorageBasedDocument.hpp>
 #include <com/sun/star/drawing/FillStyle.hpp>
 #include <com/sun/star/drawing/BitmapMode.hpp>
 #include <com/sun/star/drawing/ConnectorType.hpp>
@@ -50,10 +52,12 @@
 #include <com/sun/star/drawing/LineStyle.hpp>
 #include <com/sun/star/drawing/TextHorizontalAdjust.hpp>
 #include <com/sun/star/drawing/TextVerticalAdjust.hpp>
-#include <com/sun/star/graphic/XGraphic.hpp>
+#include <com/sun/star/embed/EmbedStates.hpp>
+#include <com/sun/star/embed/XEmbeddedObject.hpp>
+#include <com/sun/star/embed/XEmbedPersist.hpp>
+#include <com/sun/star/frame/XStorable.hpp>
 #include <com/sun/star/i18n/ScriptType.hpp>
 #include <com/sun/star/io/XOutputStream.hpp>
-#include <com/sun/star/sheet/XSpreadsheetDocument.hpp>
 #include <com/sun/star/style/ParagraphAdjust.hpp>
 #include <com/sun/star/text/XSimpleText.hpp>
 #include <com/sun/star/text/XText.hpp>
@@ -69,6 +73,10 @@
 #include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/table/BorderLine2.hpp>
 #include <tools/stream.hxx>
+#include <tools/globname.hxx>
+#include <comphelper/classids.hxx>
+#include <comphelper/storagehelper.hxx>
+#include <sot/exchange.hxx>
 #include <vcl/cvtgrf.hxx>
 #include <unotools/fontcvt.hxx>
 #include <vcl/graph.hxx>
@@ -83,6 +91,7 @@
 #include <editeng/svxenum.hxx>
 #include <svx/unoapi.hxx>
 #include <oox/export/chartexport.hxx>
+#include <oox/mathml/export.hxx>
 
 using namespace ::css;
 using namespace ::css::beans;
@@ -94,17 +103,231 @@ using namespace ::css::container;
 using namespace ::css::document;
 using namespace ::css::text;
 
-using ::css::graphic::XGraphic;
 using ::css::io::XOutputStream;
-using ::css::lang::XComponent;
 using ::css::chart2::XChartDocument;
 using ::css::frame::XModel;
-using ::css::sheet::XSpreadsheetDocument;
 
 using ::oox::core::XmlFilterBase;
 using ::sax_fastparser::FSHelperPtr;
 
 #define IDS(x) OString(OStringLiteral(#x " ") + OString::number( mnShapeIdMax++ )).getStr()
+
+namespace oox {
+
+static void lcl_ConvertProgID(OUString const& rProgID,
+    OUString & o_rMediaType, OUString & o_rRelationType, OUString & o_rFileExtension)
+{
+    if (rProgID == "Excel.Sheet.12")
+    {
+        o_rMediaType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+        o_rRelationType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/package";
+        o_rFileExtension = "xlsx";
+    }
+    else if (rProgID.startsWith("Excel.SheetBinaryMacroEnabled.12") )
+    {
+        o_rMediaType = "application/vnd.ms-excel.sheet.binary.macroEnabled.12";
+        o_rRelationType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/package";
+        o_rFileExtension = "xlsb";
+    }
+    else if (rProgID.startsWith("Excel.SheetMacroEnabled.12"))
+    {
+        o_rMediaType = "application/vnd.ms-excel.sheet.macroEnabled.12";
+        o_rRelationType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/package";
+        o_rFileExtension = "xlsm";
+    }
+    else if (rProgID.startsWith("Excel.Sheet"))
+    {
+        o_rMediaType = "application/vnd.ms-excel";
+        o_rRelationType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/oleObject";
+        o_rFileExtension = "xls";
+    }
+    else if (rProgID == "PowerPoint.Show.12")
+    {
+        o_rMediaType = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+        o_rRelationType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/package";
+        o_rFileExtension = "pptx";
+    }
+    else if (rProgID == "PowerPoint.ShowMacroEnabled.12")
+    {
+        o_rMediaType = "application/vnd.ms-powerpoint.presentation.macroEnabled.12";
+        o_rRelationType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/package";
+        o_rFileExtension = "pptm";
+    }
+    else if (rProgID.startsWith("PowerPoint.Show"))
+    {
+        o_rMediaType = "application/vnd.ms-powerpoint";
+        o_rRelationType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/oleObject";
+        o_rFileExtension = "ppt";
+    }
+    else if (rProgID.startsWith("PowerPoint.Slide.12"))
+    {
+        o_rMediaType = "application/vnd.openxmlformats-officedocument.presentationml.slide";
+       o_rRelationType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/package";
+       o_rFileExtension = "sldx";
+    }
+    else if (rProgID == "PowerPoint.SlideMacroEnabled.12")
+    {
+       o_rMediaType = "application/vnd.ms-powerpoint.slide.macroEnabled.12";
+       o_rRelationType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/package";
+       o_rFileExtension = "sldm";
+    }
+    else if (rProgID == "Word.DocumentMacroEnabled.12")
+    {
+        o_rMediaType = "application/vnd.ms-word.document.macroEnabled.12";
+        o_rRelationType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/package";
+        o_rFileExtension = "docm";
+    }
+    else if (rProgID == "Word.Document.12")
+    {
+        o_rMediaType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+        o_rRelationType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/package";
+        o_rFileExtension = "docx";
+    }
+    else if (rProgID == "Word.Document.8")
+    {
+        o_rMediaType = "application/msword";
+        o_rRelationType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/oleObject";
+        o_rFileExtension = "doc";
+    }
+    else if (rProgID == "Excel.Chart.8")
+    {
+        o_rMediaType = "application/vnd.ms-excel";
+        o_rRelationType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/oleObject";
+        o_rFileExtension = "xls";
+    }
+    else if (rProgID == "AcroExch.Document.11")
+    {
+        o_rMediaType = "application/pdf";
+        o_rRelationType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/oleObject";
+        o_rFileExtension = "pdf";
+    }
+    else
+    {
+        o_rMediaType = "application/vnd.openxmlformats-officedocument.oleObject";
+        o_rRelationType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/oleObject";
+        o_rFileExtension = "bin";
+    }
+}
+
+static uno::Reference<io::XInputStream> lcl_StoreOwnAsOOXML(
+    uno::Reference<uno::XComponentContext> const& xContext,
+    uno::Reference<embed::XEmbeddedObject> const& xObj,
+    char const*& o_rpProgID,
+    OUString & o_rMediaType, OUString & o_rRelationType, OUString & o_rSuffix)
+{
+    static struct {
+        struct {
+            sal_uInt32 n1;
+            sal_uInt16 n2, n3;
+            sal_uInt8 b8, b9, b10, b11, b12, b13, b14, b15;
+        } ClassId;
+        char const* pFilterName;
+        char const* pMediaType;
+        char const* pProgID;
+        char const* pSuffix;
+    } s_Mapping[] = {
+        { {SO3_SW_CLASSID_60}, "MS Word 2007 XML", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "Word.Document.12", "docx" },
+        { {SO3_SC_CLASSID_60}, "Calc MS Excel 2007 XML", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Excel.Sheet.12", "xlsx" },
+        { {SO3_SIMPRESS_CLASSID_60}, "Impress MS PowerPoint 2007 XML", "application/vnd.openxmlformats-officedocument.presentationml.presentation", "PowerPoint.Show.12", "pptx" },
+        // FIXME: Draw does not appear to have a MSO format export filter?
+//            { {SO3_SDRAW_CLASSID}, "", "", "", "" },
+        { {SO3_SCH_CLASSID_60}, "unused", "", "", "" },
+        { {SO3_SM_CLASSID_60}, "unused", "", "", "" },
+    };
+
+    const char * pFilterName(nullptr);
+    SvGlobalName const classId(xObj->getClassID());
+    for (auto & i : s_Mapping)
+    {
+        auto const& rId(i.ClassId);
+        SvGlobalName const temp(rId.n1, rId.n2, rId.n3, rId.b8, rId.b9, rId.b10, rId.b11, rId.b12, rId.b13, rId.b14, rId.b15);
+        if (temp == classId)
+        {
+            assert(SvGlobalName(SO3_SCH_CLASSID_60) != classId); // chart should be written elsewhere!
+            assert(SvGlobalName(SO3_SM_CLASSID_60) != classId); // formula should be written elsewhere!
+            pFilterName = i.pFilterName;
+            o_rMediaType = OUString::createFromAscii(i.pMediaType);
+            o_rpProgID = i.pProgID;
+            o_rSuffix = OUString::createFromAscii(i.pSuffix);
+            o_rRelationType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/package";
+            break;
+        }
+    }
+
+    if (!pFilterName)
+    {
+        SAL_WARN("oox", "oox::GetOLEObjectStream: unknown ClassId " << classId.GetHexName());
+        return nullptr;
+    }
+
+    if (embed::EmbedStates::LOADED == xObj->getCurrentState())
+    {
+        xObj->changeState(embed::EmbedStates::RUNNING);
+    }
+    // use a temp stream - while it would work to store directly to a
+    // fragment stream, an error during export means we'd have to delete it
+    uno::Reference<io::XStream> const xTempStream(
+        xContext->getServiceManager()->createInstanceWithContext(
+            "com.sun.star.comp.MemoryStream", xContext),
+        uno::UNO_QUERY_THROW);
+    uno::Sequence<beans::PropertyValue> args(2);
+    args[0].Name = "OutputStream";
+    args[0].Value <<= xTempStream->getOutputStream();
+    args[1].Name = "FilterName";
+    args[1].Value <<= OUString::createFromAscii(pFilterName);
+    uno::Reference<frame::XStorable> xStorable(xObj->getComponent(), uno::UNO_QUERY);
+    try
+    {
+        xStorable->storeToURL("private:stream", args);
+    }
+    catch (uno::Exception const& e)
+    {
+        SAL_WARN("oox", "oox::GetOLEObjectStream: exception: \"" << e.Message << "\"");
+        return nullptr;
+    }
+    xTempStream->getOutputStream()->closeOutput();
+    return xTempStream->getInputStream();
+}
+
+uno::Reference<io::XInputStream> GetOLEObjectStream(
+        uno::Reference<uno::XComponentContext> const& xContext,
+        uno::Reference<embed::XEmbeddedObject> const& xObj,
+        OUString const& i_rProgID,
+        OUString & o_rMediaType,
+        OUString & o_rRelationType,
+        OUString & o_rSuffix,
+        const char *& o_rpProgID)
+{
+    uno::Reference<io::XInputStream> xInStream;
+    try
+    {
+        uno::Reference<document::XStorageBasedDocument> const xParent(
+            uno::Reference<container::XChild>(xObj, uno::UNO_QUERY_THROW)->getParent(),
+            uno::UNO_QUERY_THROW);
+        uno::Reference<embed::XStorage> const xParentStorage(xParent->getDocumentStorage());
+        OUString const entryName(
+            uno::Reference<embed::XEmbedPersist>(xObj, uno::UNO_QUERY_THROW)->getEntryName());
+
+        if (xParentStorage->isStreamElement(entryName))
+        {
+            lcl_ConvertProgID(i_rProgID, o_rMediaType, o_rRelationType, o_rSuffix);
+            xInStream = xParentStorage->cloneStreamElement(entryName)->getInputStream();
+            // TODO: make it possible to take the sMediaType from the stream
+        }
+        else // the object is ODF - either the whole document is
+        {    // ODF, or the OLE was edited so it was converted to ODF
+            xInStream = lcl_StoreOwnAsOOXML(xContext, xObj,
+                    o_rpProgID, o_rMediaType, o_rRelationType, o_rSuffix);
+        }
+    }
+    catch (uno::Exception const& e)
+    {
+        SAL_WARN("oox", "oox::GetOLEObjectStream: exception: " << e.Message);
+    }
+    return xInStream;
+}
+
+} // namespace oox
 
 namespace oox { namespace drawingml {
 
@@ -132,11 +355,9 @@ bool URLTransformer::isExternalURL(const OUString& /*rURL*/) const
     if ( GETA(propName) ) \
         mAny >>= variable;
 
-// not thread safe
-int ShapeExport::mnEmbeddeDocumentCounter = 1;
-
 ShapeExport::ShapeExport( sal_Int32 nXmlNamespace, FSHelperPtr pFS, ShapeHashMap* pShapeMap, XmlFilterBase* pFB, DocumentType eDocumentType, DMLTextExport* pTextExport )
     : DrawingML( pFS, pFB, eDocumentType, pTextExport )
+    , m_nEmbeddedObjects(0)
     , mnShapeIdMax( 1 )
     , mnPictureIdMax( 1 )
     , mnXmlNamespace( nXmlNamespace )
@@ -148,7 +369,7 @@ ShapeExport::ShapeExport( sal_Int32 nXmlNamespace, FSHelperPtr pFS, ShapeHashMap
     mpURLTransformer.reset(new URLTransformer);
 }
 
-void ShapeExport::SetURLTranslator(std::shared_ptr<URLTransformer> pTransformer)
+void ShapeExport::SetURLTranslator(const std::shared_ptr<URLTransformer>& pTransformer)
 {
     mpURLTransformer = pTransformer;
 }
@@ -164,7 +385,7 @@ awt::Size ShapeExport::MapSize( const awt::Size& rSize ) const
     return awt::Size( aRetSize.Width(), aRetSize.Height() );
 }
 
-bool ShapeExport::NonEmptyText( Reference< XInterface > xIface )
+bool ShapeExport::NonEmptyText( const Reference< XInterface >& xIface )
 {
     Reference< XPropertySet > xPropSet( xIface, UNO_QUERY );
 
@@ -205,7 +426,7 @@ bool ShapeExport::NonEmptyText( Reference< XInterface > xIface )
     return false;
 }
 
-ShapeExport& ShapeExport::WriteBezierShape( Reference< XShape > xShape, bool bClosed )
+ShapeExport& ShapeExport::WriteBezierShape( const Reference< XShape >& xShape, bool bClosed )
 {
     SAL_INFO("oox.shape", "write open bezier shape");
 
@@ -258,17 +479,17 @@ ShapeExport& ShapeExport::WriteBezierShape( Reference< XShape > xShape, bool bCl
     return *this;
 }
 
-ShapeExport& ShapeExport::WriteClosedBezierShape( Reference< XShape > xShape )
+ShapeExport& ShapeExport::WriteClosedBezierShape( const Reference< XShape >& xShape )
 {
     return WriteBezierShape( xShape, true );
 }
 
-ShapeExport& ShapeExport::WriteOpenBezierShape( Reference< XShape > xShape )
+ShapeExport& ShapeExport::WriteOpenBezierShape( const Reference< XShape >& xShape )
 {
     return WriteBezierShape( xShape, false );
 }
 
-ShapeExport& ShapeExport::WriteGroupShape(uno::Reference<drawing::XShape> xShape)
+ShapeExport& ShapeExport::WriteGroupShape(const uno::Reference<drawing::XShape>& xShape)
 {
     FSHelperPtr pFS = GetFS();
     bool bToplevel = !m_xParent.is();
@@ -309,7 +530,7 @@ ShapeExport& ShapeExport::WriteGroupShape(uno::Reference<drawing::XShape> xShape
 
 static bool lcl_IsOnBlacklist(OUString& rShapeType)
 {
-#if !HAVE_BROKEN_STATIC_INITILIZER_LIST
+#if !HAVE_BROKEN_STATIC_INITIALIZER_LIST
     static
 #endif
     const std::initializer_list<OUStringLiteral> vBlacklist = {
@@ -375,7 +596,7 @@ static bool lcl_IsOnBlacklist(OUString& rShapeType)
 
 static bool lcl_IsOnWhitelist(OUString& rShapeType)
 {
-#if !HAVE_BROKEN_STATIC_INITILIZER_LIST
+#if !HAVE_BROKEN_STATIC_INITIALIZER_LIST
     static
 #endif
     const std::initializer_list<OUStringLiteral> vWhitelist = {
@@ -387,7 +608,7 @@ static bool lcl_IsOnWhitelist(OUString& rShapeType)
 }
 
 
-ShapeExport& ShapeExport::WriteCustomShape( Reference< XShape > xShape )
+ShapeExport& ShapeExport::WriteCustomShape( const Reference< XShape >& xShape )
 {
     SAL_INFO("oox.shape", "write custom shape");
 
@@ -487,9 +708,7 @@ ShapeExport& ShapeExport::WriteCustomShape( Reference< XShape > xShape )
     pFS->startElementNS( mnXmlNamespace, XML_spPr, FSEND );
     // moon is flipped in MSO, and mso-spt89 (right up arrow) is mapped to leftUpArrow
     if ( sShapeType == "moon" || sShapeType == "mso-spt89" )
-        WriteShapeTransformation( xShape, XML_a, !bFlipH, bFlipV );
-    else
-        WriteShapeTransformation( xShape, XML_a, bFlipH, bFlipV );
+        bFlipH = !bFlipH;
 
     // we export non-primitive shapes to custom geometry
     // we also export non-ooxml shapes which have handles/equations to custom geometry, because
@@ -510,14 +729,26 @@ ShapeExport& ShapeExport::WriteCustomShape( Reference< XShape > xShape )
 
     if (bHasHandles && bCustGeom && pShape)
     {
-        WritePolyPolygon( tools::PolyPolygon( pShape->GetLineGeometry(true) ) );
+        WriteShapeTransformation( xShape, XML_a ); // do not flip, polypolygon coordinates are flipped already
+        tools::PolyPolygon aPolyPolygon( pShape->GetLineGeometry(true) );
+        sal_Int32 nRotation = 0;
+        // The RotateAngle property's value is independent from any flipping, and that's exactly what we need here.
+        uno::Reference<beans::XPropertySet> xPropertySet(xShape, uno::UNO_QUERY);
+        uno::Reference<beans::XPropertySetInfo> xPropertySetInfo = xPropertySet->getPropertySetInfo();
+        if (xPropertySetInfo->hasPropertyByName("RotateAngle"))
+            xPropertySet->getPropertyValue("RotateAngle") >>= nRotation;
+        if (nRotation != 0)
+            aPolyPolygon.Rotate(Point(0,0), static_cast<sal_uInt16>(3600-nRotation/10));
+        WritePolyPolygon( aPolyPolygon );
     }
     else if (bCustGeom)
     {
+        WriteShapeTransformation( xShape, XML_a, bFlipH, bFlipV );
         WriteCustomGeometry( xShape );
     }
     else // preset geometry
     {
+        WriteShapeTransformation( xShape, XML_a, bFlipH, bFlipV );
         if( nAdjustmentValuesIndex != -1 )
         {
             sal_Int32 nAdjustmentsWhichNeedsToBeConverted = 0;
@@ -549,7 +780,7 @@ ShapeExport& ShapeExport::WriteCustomShape( Reference< XShape > xShape )
     return *this;
 }
 
-ShapeExport& ShapeExport::WriteEllipseShape( Reference< XShape > xShape )
+ShapeExport& ShapeExport::WriteEllipseShape( const Reference< XShape >& xShape )
 {
     SAL_INFO("oox.shape", "write ellipse shape");
 
@@ -594,14 +825,14 @@ ShapeExport& ShapeExport::WriteEllipseShape( Reference< XShape > xShape )
     return *this;
 }
 
-ShapeExport& ShapeExport::WriteGraphicObjectShape( Reference< XShape > xShape )
+ShapeExport& ShapeExport::WriteGraphicObjectShape( const Reference< XShape >& xShape )
 {
     WriteGraphicObjectShapePart( xShape );
 
     return *this;
 }
 
-void ShapeExport::WriteGraphicObjectShapePart( Reference< XShape > xShape, const Graphic* pGraphic )
+void ShapeExport::WriteGraphicObjectShapePart( const Reference< XShape >& xShape, const Graphic* pGraphic )
 {
     SAL_INFO("oox.shape", "write graphic object shape");
 
@@ -616,7 +847,6 @@ void ShapeExport::WriteGraphicObjectShapePart( Reference< XShape > xShape, const
 
             WriteTextShape( xShape );
 
-            //DBG(dump_pset(mXPropSet));
             return;
         }
     }
@@ -697,7 +927,7 @@ void ShapeExport::WriteGraphicObjectShapePart( Reference< XShape > xShape, const
     pFS->endElementNS( mnXmlNamespace, XML_pic );
 }
 
-ShapeExport& ShapeExport::WriteConnectorShape( Reference< XShape > xShape )
+ShapeExport& ShapeExport::WriteConnectorShape( const Reference< XShape >& xShape )
 {
     bool bFlipH = false;
     bool bFlipV = false;
@@ -788,7 +1018,7 @@ ShapeExport& ShapeExport::WriteConnectorShape( Reference< XShape > xShape )
     return *this;
 }
 
-ShapeExport& ShapeExport::WriteLineShape( Reference< XShape > xShape )
+ShapeExport& ShapeExport::WriteLineShape( const Reference< XShape >& xShape )
 {
     bool bFlipH = false;
     bool bFlipV = false;
@@ -846,7 +1076,7 @@ ShapeExport& ShapeExport::WriteLineShape( Reference< XShape > xShape )
     return *this;
 }
 
-ShapeExport& ShapeExport::WriteNonVisualDrawingProperties( Reference< XShape > xShape, const char* pName )
+ShapeExport& ShapeExport::WriteNonVisualDrawingProperties( const Reference< XShape >& xShape, const char* pName )
 {
     GetFS()->singleElementNS( mnXmlNamespace, XML_cNvPr,
                               XML_id, I32S( GetNewShapeID( xShape ) ),
@@ -856,13 +1086,13 @@ ShapeExport& ShapeExport::WriteNonVisualDrawingProperties( Reference< XShape > x
     return *this;
 }
 
-ShapeExport& ShapeExport::WriteNonVisualProperties( Reference< XShape > )
+ShapeExport& ShapeExport::WriteNonVisualProperties( const Reference< XShape >& )
 {
     // Override to generate //nvPr elements.
     return *this;
 }
 
-ShapeExport& ShapeExport::WriteRectangleShape( Reference< XShape > xShape )
+ShapeExport& ShapeExport::WriteRectangleShape( const Reference< XShape >& xShape )
 {
     SAL_INFO("oox.shape", "write rectangle shape");
 
@@ -917,10 +1147,10 @@ ShapeExport& ShapeExport::WriteRectangleShape( Reference< XShape > xShape )
     return *this;
 }
 
-typedef ShapeExport& (ShapeExport::*ShapeConverter)( Reference< XShape > );
+typedef ShapeExport& (ShapeExport::*ShapeConverter)( const Reference< XShape >& );
 typedef std::unordered_map< const char*, ShapeConverter, rtl::CStringHash, rtl::CStringEqual> NameToConvertMapType;
 
-static const NameToConvertMapType& lcl_GetConverters(DrawingML::DocumentType eDocumentType)
+static const NameToConvertMapType& lcl_GetConverters(DocumentType eDocumentType)
 {
     static bool shape_map_inited = false;
     static NameToConvertMapType shape_converters;
@@ -953,14 +1183,14 @@ static const NameToConvertMapType& lcl_GetConverters(DrawingML::DocumentType eDo
     shape_converters[ "com.sun.star.presentation.OutlinerShape" ]       = &ShapeExport::WriteTextShape;
     shape_converters[ "com.sun.star.presentation.SlideNumberShape" ]    = &ShapeExport::WriteTextShape;
     shape_converters[ "com.sun.star.presentation.TitleTextShape" ]      = &ShapeExport::WriteTextShape;
-    if (eDocumentType == DrawingML::DOCUMENT_DOCX)
+    if (eDocumentType == DOCUMENT_DOCX)
         shape_converters[ "com.sun.star.drawing.GroupShape" ] = &ShapeExport::WriteGroupShape;
     shape_map_inited = true;
 
     return shape_converters;
 }
 
-ShapeExport& ShapeExport::WriteShape( Reference< XShape > xShape )
+ShapeExport& ShapeExport::WriteShape( const Reference< XShape >& xShape )
 {
     OUString sShapeType = xShape->getShapeType();
     SAL_INFO("oox.shape", "write shape: " << sShapeType);
@@ -975,7 +1205,7 @@ ShapeExport& ShapeExport::WriteShape( Reference< XShape > xShape )
     return *this;
 }
 
-ShapeExport& ShapeExport::WriteTextBox( Reference< XInterface > xIface, sal_Int32 nXmlNamespace )
+ShapeExport& ShapeExport::WriteTextBox( const Reference< XInterface >& xIface, sal_Int32 nXmlNamespace )
 {
     // In case this shape has an associated textbox, then export that, and we're done.
     if (GetDocumentType() == DOCUMENT_DOCX && GetTextExport())
@@ -1009,7 +1239,7 @@ ShapeExport& ShapeExport::WriteTextBox( Reference< XInterface > xIface, sal_Int3
     return *this;
 }
 
-void ShapeExport::WriteTable( Reference< XShape > rXShape  )
+void ShapeExport::WriteTable( const Reference< XShape >& rXShape  )
 {
     OSL_TRACE("write table");
 
@@ -1201,7 +1431,7 @@ void ShapeExport::WriteTable( Reference< XShape > rXShape  )
     mpFS->endElementNS( XML_a, XML_graphic );
 }
 
-void ShapeExport::WriteTableCellProperties(Reference< XPropertySet> xCellPropSet)
+void ShapeExport::WriteTableCellProperties(const Reference< XPropertySet>& xCellPropSet)
 {
     sal_Int32 nLeftMargin(0), nRightMargin(0);
 
@@ -1224,7 +1454,7 @@ void ShapeExport::WriteTableCellProperties(Reference< XPropertySet> xCellPropSet
     mpFS->endElementNS( XML_a, XML_tcPr );
 }
 
-void ShapeExport::WriteTableCellBorders(Reference< XPropertySet> xCellPropSet)
+void ShapeExport::WriteTableCellBorders(const Reference< XPropertySet>& xCellPropSet)
 {
     BorderLine2 aBorderLine;
 
@@ -1288,7 +1518,7 @@ void ShapeExport::WriteTableCellBorders(Reference< XPropertySet> xCellPropSet)
     }
 }
 
-ShapeExport& ShapeExport::WriteTableShape( Reference< XShape > xShape )
+ShapeExport& ShapeExport::WriteTableShape( const Reference< XShape >& xShape )
 {
     FSHelperPtr pFS = GetFS();
 
@@ -1319,7 +1549,7 @@ ShapeExport& ShapeExport::WriteTableShape( Reference< XShape > xShape )
     return *this;
 }
 
-ShapeExport& ShapeExport::WriteTextShape( Reference< XShape > xShape )
+ShapeExport& ShapeExport::WriteTextShape( const Reference< XShape >& xShape )
 {
     FSHelperPtr pFS = GetFS();
 
@@ -1354,193 +1584,276 @@ ShapeExport& ShapeExport::WriteTextShape( Reference< XShape > xShape )
     return *this;
 }
 
-ShapeExport& ShapeExport::WriteOLE2Shape( Reference< XShape > xShape )
+void ShapeExport::WriteMathShape(Reference<XShape> const& xShape)
+{
+    Reference<XPropertySet> const xPropSet(xShape, UNO_QUERY);
+    assert(xPropSet.is());
+    Reference<XModel> xMathModel;
+    xPropSet->getPropertyValue("Model") >>= xMathModel;
+    assert(xMathModel.is());
+    assert(GetDocumentType() != DOCUMENT_DOCX); // should be written in DocxAttributeOutput
+    SAL_WARN_IF(GetDocumentType() == DOCUMENT_XLSX, "oox", "Math export to XLSX isn't tested, should it happen here?");
+
+    // ECMA standard does not actually allow oMath outside of
+    // WordProcessingML so write a MCE like PPT 2010 does
+    mpFS->startElementNS(XML_mc, XML_AlternateContent, FSEND);
+    mpFS->startElementNS(XML_mc, XML_Choice,
+        FSNS(XML_xmlns, XML_a14), "http://schemas.microsoft.com/office/drawing/2010/main",
+        XML_Requires, "a14",
+        FSEND);
+    mpFS->startElementNS(mnXmlNamespace, XML_sp, FSEND);
+    mpFS->startElementNS(mnXmlNamespace, XML_nvSpPr, FSEND);
+    mpFS->singleElementNS(mnXmlNamespace, XML_cNvPr,
+         XML_id, OString::number(GetNewShapeID(xShape)).getStr(),
+         XML_name, OString("Formula " + OString::number(mnShapeIdMax++)).getStr(),
+         FSEND);
+    mpFS->singleElementNS(mnXmlNamespace, XML_cNvSpPr, XML_txBox, "1", FSEND);
+    mpFS->singleElementNS(mnXmlNamespace, XML_nvPr, FSEND);
+    mpFS->endElementNS(mnXmlNamespace, XML_nvSpPr);
+    mpFS->startElementNS(mnXmlNamespace, XML_spPr, FSEND);
+    WriteShapeTransformation(xShape, XML_a);
+    WritePresetShape("rect");
+    mpFS->endElementNS(mnXmlNamespace, XML_spPr);
+    mpFS->startElementNS(mnXmlNamespace, XML_txBody, FSEND);
+    mpFS->startElementNS(XML_a, XML_bodyPr, FSEND);
+    mpFS->endElementNS(XML_a, XML_bodyPr);
+    mpFS->startElementNS(XML_a, XML_p, FSEND);
+    mpFS->startElementNS(XML_a14, XML_m, FSEND);
+
+    oox::FormulaExportBase *const pMagic(dynamic_cast<oox::FormulaExportBase*>(xMathModel.get()));
+    assert(pMagic);
+    pMagic->writeFormulaOoxml(GetFS(), GetFB()->getVersion(), GetDocumentType());
+
+    mpFS->endElementNS(XML_a14, XML_m);
+    mpFS->endElementNS(XML_a, XML_p);
+    mpFS->endElementNS(mnXmlNamespace, XML_txBody);
+    mpFS->endElementNS(mnXmlNamespace, XML_sp);
+    mpFS->endElementNS(XML_mc, XML_Choice);
+    mpFS->startElementNS(XML_mc, XML_Fallback, FSEND);
+    // TODO: export bitmap shape as fallback
+    mpFS->endElementNS(XML_mc, XML_Fallback);
+    mpFS->endElementNS(XML_mc, XML_AlternateContent);
+}
+
+ShapeExport& ShapeExport::WriteOLE2Shape( const Reference< XShape >& xShape )
 {
     Reference< XPropertySet > xPropSet( xShape, UNO_QUERY );
-    if( xPropSet.is() ) {
-        if( GetProperty( xPropSet, "Model" ) )
+    if (!xPropSet.is())
+        return *this;
+
+    enum { CHART, MATH, OTHER } eType(OTHER);
+    OUString clsid;
+    xPropSet->getPropertyValue("CLSID") >>= clsid;
+    if (!clsid.isEmpty())
+    {
+        SvGlobalName aClassID;
+        bool const isValid = aClassID.MakeId(clsid);
+        assert(isValid); (void)isValid;
+        if (SotExchange::IsChart(aClassID))
+            eType = CHART;
+        else if (SotExchange::IsMath(aClassID))
+            eType = MATH;
+    }
+
+    if (CHART == eType)
+    {
+        Reference< XChartDocument > xChartDoc;
+        xPropSet->getPropertyValue("Model") >>= xChartDoc;
+        assert(xChartDoc.is());
+        //export the chart
+        Reference< XModel > xModel( xChartDoc, UNO_QUERY );
+        ChartExport aChartExport( mnXmlNamespace, GetFS(), xModel, GetFB(), GetDocumentType() );
+        static sal_Int32 nChartCount = 0;
+        aChartExport.WriteChartObj( xShape, ++nChartCount );
+        return *this;
+    }
+
+    if (MATH == eType)
+    {
+        WriteMathShape(xShape);
+        return *this;
+    }
+
+    uno::Reference<embed::XEmbeddedObject> const xObj(
+        xPropSet->getPropertyValue("EmbeddedObject"), uno::UNO_QUERY);
+
+    if (!xObj.is())
+    {
+        SAL_WARN("oox", "ShapeExport::WriteOLE2Shape: no object");
+        return *this;
+    }
+
+    uno::Sequence<beans::PropertyValue> grabBag;
+    OUString entryName;
+    try
+    {
+        uno::Reference<beans::XPropertySet> const xParent(
+            uno::Reference<container::XChild>(xObj, uno::UNO_QUERY_THROW)->getParent(),
+            uno::UNO_QUERY_THROW);
+
+        xParent->getPropertyValue("InteropGrabBag") >>= grabBag;
+
+        entryName = uno::Reference<embed::XEmbedPersist>(xObj, uno::UNO_QUERY)->getEntryName();
+    }
+    catch (uno::Exception const& e)
+    {
+        SAL_WARN("oox", "ShapeExport::WriteOLE2Shape: exception: " << e.Message);
+        return *this;
+    }
+
+    OUString progID;
+
+    for (auto const& it : grabBag)
+    {
+        if (it.Name == "EmbeddedObjects")
         {
-            Reference< XChartDocument > xChartDoc;
-            mAny >>= xChartDoc;
-            if( xChartDoc.is() )
+            uno::Sequence<beans::PropertyValue> objects;
+            it.Value >>= objects;
+            for (auto const& object : objects)
             {
-                //export the chart
-                Reference< XModel > xModel( xChartDoc, UNO_QUERY );
-                ChartExport aChartExport( mnXmlNamespace, GetFS(), xModel, GetFB(), GetDocumentType() );
-                static sal_Int32 nChartCount = 0;
-                aChartExport.WriteChartObj( xShape, ++nChartCount );
-            }
-            else
-            {
-                const bool bSpreadSheet = Reference< XSpreadsheetDocument >( mAny, UNO_QUERY ).is();
-                const bool bTextDocument = Reference< css::text::XTextDocument >( mAny, UNO_QUERY ).is();
-                if( ( bSpreadSheet || bTextDocument ) && mpFB)
+                if (object.Name == entryName)
                 {
-                    Reference< XComponent > xDocument( mAny, UNO_QUERY );
-                    if( xDocument.is() )
+                    uno::Sequence<beans::PropertyValue> props;
+                    object.Value >>= props;
+                    for (auto const& prop : props)
                     {
-                        Reference< XOutputStream > xOutStream;
-                        if( bSpreadSheet )
+                        if (prop.Name == "ProgID")
                         {
-                            xOutStream = mpFB->openFragmentStream( OUStringBuffer()
-                                                                   .appendAscii( GetComponentDir() )
-                                                                   .append( "/embeddings/spreadsheet" )
-                                                                   .append( static_cast<sal_Int32>(mnEmbeddeDocumentCounter) )
-                                                                   .append( ".xlsx" )
-                                                                   .makeStringAndClear(),
-                                                                   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" );
+                            prop.Value >>= progID;
+                            break;
                         }
-                        else
-                        {
-                            xOutStream = mpFB->openFragmentStream( OUStringBuffer()
-                                                                   .appendAscii( GetComponentDir() )
-                                                                   .append( "/embeddings/textdocument" )
-                                                                   .append( static_cast<sal_Int32>(mnEmbeddeDocumentCounter) )
-                                                                   .append( ".docx" )
-                                                                   .makeStringAndClear(),
-                                                                   "application/vnd.openxmlformats-officedocument.wordprocessingml.document" );
-                        }
-
-                        // export the embedded document
-                        Sequence< PropertyValue > rMedia(1);
-
-                        rMedia[0].Name = utl::MediaDescriptor::PROP_STREAMFOROUTPUT();
-                        rMedia[0].Value <<= xOutStream;
-
-                        Reference< XExporter > xExporter;
-                        if( bSpreadSheet )
-                        {
-                            xExporter.set(
-                                mpFB->getComponentContext()->getServiceManager()->
-                                    createInstanceWithContext(
-                                        "com.sun.star.comp.oox.xls.ExcelFilter",
-                                        mpFB->getComponentContext() ),
-                                UNO_QUERY_THROW );
-                        }
-                        else
-                        {
-                            xExporter.set(
-                                mpFB->getComponentContext()->getServiceManager()->
-                                    createInstanceWithContext(
-                                        "com.sun.star.comp.Writer.WriterFilter",
-                                        mpFB->getComponentContext() ),
-                                UNO_QUERY_THROW );
-
-                        }
-                        xExporter->setSourceDocument( xDocument );
-                        Reference< XFilter >( xExporter, UNO_QUERY_THROW )->
-                            filter( rMedia );
-
-                        xOutStream->closeOutput();
-
-                        OUString sRelId;
-                        if( bSpreadSheet )
-                        {
-                            sRelId = mpFB->addRelation( mpFS->getOutputStream(),
-                                                        "http://schemas.openxmlformats.org/officeDocument/2006/relationships/package",
-                                                        OUStringBuffer()
-                                                        .appendAscii( GetRelationCompPrefix() )
-                                                        .append( "embeddings/spreadsheet" )
-                                                        .append( static_cast<sal_Int32>(mnEmbeddeDocumentCounter++) )
-                                                        .append( ".xlsx" )
-                                                        .makeStringAndClear() );
-                        }
-                        else
-                        {
-                            sRelId = mpFB->addRelation( mpFS->getOutputStream(),
-                                                        "http://schemas.openxmlformats.org/officeDocument/2006/relationships/package",
-                                                        OUStringBuffer()
-                                                        .appendAscii( GetRelationCompPrefix() )
-                                                        .append( "embeddings/textdocument" )
-                                                        .append( static_cast<sal_Int32>(mnEmbeddeDocumentCounter++) )
-                                                        .append( ".docx" )
-                                                        .makeStringAndClear() );
-                        }
-
-                        mpFS->startElementNS( mnXmlNamespace, XML_graphicFrame, FSEND );
-
-                        mpFS->startElementNS( mnXmlNamespace, XML_nvGraphicFramePr, FSEND );
-
-                        mpFS->singleElementNS( mnXmlNamespace, XML_cNvPr,
-                                               XML_id,     I32S( GetNewShapeID( xShape ) ),
-                                               XML_name,   IDS(Object),
-                                               FSEND );
-
-                        mpFS->singleElementNS( mnXmlNamespace, XML_cNvGraphicFramePr,
-                                               FSEND );
-
-                        if( GetDocumentType() == DOCUMENT_PPTX )
-                            mpFS->singleElementNS( mnXmlNamespace, XML_nvPr,
-                                                   FSEND );
-                        mpFS->endElementNS( mnXmlNamespace, XML_nvGraphicFramePr );
-
-                        WriteShapeTransformation( xShape, mnXmlNamespace );
-
-                        mpFS->startElementNS( XML_a, XML_graphic, FSEND );
-                        mpFS->startElementNS( XML_a, XML_graphicData,
-                                              XML_uri, "http://schemas.openxmlformats.org/presentationml/2006/ole",
-                                              FSEND );
-                        if( bSpreadSheet )
-                        {
-                            mpFS->startElementNS( mnXmlNamespace, XML_oleObj,
-                                              XML_name, "Spreadsheet",
-                                              FSNS(XML_r, XML_id), USS( sRelId ),
-                                              FSEND );
-                        }
-                        else
-                        {
-                            mpFS->startElementNS( mnXmlNamespace, XML_oleObj,
-                                              XML_name, "Document",
-                                              FSNS(XML_r, XML_id), USS( sRelId ),
-                                              // The spec says that this is a required attribute, but PowerPoint can only handle an empty value.
-                                              XML_spid, "",
-                                              FSEND );
-                        }
-
-                        mpFS->singleElementNS( mnXmlNamespace, XML_embed, FSEND );
-
-                        // pic element
-                        SdrObject* pSdrOLE2( GetSdrObjectFromXShape( xShape ) );
-                        // The spec doesn't allow <p:pic> here, but PowerPoint requires it.
-                        bool bEcma = mpFB->getVersion() == oox::core::ECMA_DIALECT;
-                        if ( pSdrOLE2 && dynamic_cast<const SdrOle2Obj*>( pSdrOLE2) != nullptr && bEcma)
-                        {
-                            const Graphic* pGraphic = static_cast<SdrOle2Obj*>(pSdrOLE2)->GetGraphic();
-                            if ( pGraphic )
-                                WriteGraphicObjectShapePart( xShape, pGraphic );
-                        }
-
-                        mpFS->endElementNS( mnXmlNamespace, XML_oleObj );
-
-                        mpFS->endElementNS( XML_a, XML_graphicData );
-                        mpFS->endElementNS( XML_a, XML_graphic );
-
-                        mpFS->endElementNS( mnXmlNamespace, XML_graphicFrame );
                     }
+                    break;
                 }
             }
+            break;
         }
     }
+
+    OUString sMediaType;
+    OUString sRelationType;
+    OUString sSuffix;
+    const char * pProgID(nullptr);
+
+    uno::Reference<io::XInputStream> const xInStream =
+        oox::GetOLEObjectStream(
+            mpFB->getComponentContext(), xObj, progID,
+            sMediaType, sRelationType, sSuffix, pProgID);
+
+    if (!xInStream.is())
+    {
+        return *this;
+    }
+
+    OString anotherProgID;
+    if (!pProgID && !progID.isEmpty())
+    {
+        anotherProgID = OUStringToOString(progID, RTL_TEXTENCODING_UTF8);
+        pProgID = anotherProgID.getStr();
+    }
+
+    assert(!sMediaType.isEmpty());
+    assert(!sRelationType.isEmpty());
+    assert(!sSuffix.isEmpty());
+
+    OUString sFileName = "embeddings/oleObject" + OUString::number(++m_nEmbeddedObjects) + "." + sSuffix;
+    uno::Reference<io::XOutputStream> const xOutStream(
+        mpFB->openFragmentStream(
+            OUString::createFromAscii(GetComponentDir()) + "/" + sFileName,
+            sMediaType));
+    assert(xOutStream.is()); // no reason why that could fail
+
+    try {
+        ::comphelper::OStorageHelper::CopyInputToOutput(xInStream, xOutStream);
+    } catch (uno::Exception const& e) {
+        SAL_WARN("oox", "ShapeExport::WriteOLEObject: exception: " << e.Message);
+    }
+
+    OUString const sRelId = mpFB->addRelation(
+        mpFS->getOutputStream(), sRelationType,
+        OUString::createFromAscii(GetRelationCompPrefix()) + sFileName);
+
+    mpFS->startElementNS( mnXmlNamespace, XML_graphicFrame, FSEND );
+
+    mpFS->startElementNS( mnXmlNamespace, XML_nvGraphicFramePr, FSEND );
+
+    mpFS->singleElementNS( mnXmlNamespace, XML_cNvPr,
+                           XML_id,     I32S( GetNewShapeID( xShape ) ),
+                           XML_name,   IDS(Object),
+                           FSEND );
+
+    mpFS->singleElementNS( mnXmlNamespace, XML_cNvGraphicFramePr,
+                           FSEND );
+
+    if (GetDocumentType() == DOCUMENT_PPTX)
+        mpFS->singleElementNS( mnXmlNamespace, XML_nvPr,
+                               FSEND );
+    mpFS->endElementNS( mnXmlNamespace, XML_nvGraphicFramePr );
+
+    WriteShapeTransformation( xShape, mnXmlNamespace );
+
+    mpFS->startElementNS( XML_a, XML_graphic, FSEND );
+    mpFS->startElementNS( XML_a, XML_graphicData,
+                          XML_uri, "http://schemas.openxmlformats.org/presentationml/2006/ole",
+                          FSEND );
+    if (pProgID)
+    {
+        mpFS->startElementNS( mnXmlNamespace, XML_oleObj,
+                          XML_progId, pProgID,
+                          FSNS(XML_r, XML_id), USS( sRelId ),
+                          XML_spid, "",
+                          FSEND );
+    }
+    else
+    {
+        mpFS->startElementNS( mnXmlNamespace, XML_oleObj,
+//?                                              XML_name, "Document",
+                          FSNS(XML_r, XML_id), USS( sRelId ),
+                          // The spec says that this is a required attribute, but PowerPoint can only handle an empty value.
+                          XML_spid, "",
+                          FSEND );
+    }
+
+    mpFS->singleElementNS( mnXmlNamespace, XML_embed, FSEND );
+
+    // pic element
+    SdrObject* pSdrOLE2( GetSdrObjectFromXShape( xShape ) );
+    // The spec doesn't allow <p:pic> here, but PowerPoint requires it.
+    bool bEcma = mpFB->getVersion() == oox::core::ECMA_DIALECT;
+    if (pSdrOLE2 && dynamic_cast<const SdrOle2Obj*>( pSdrOLE2) != nullptr && bEcma)
+    {
+        const Graphic* pGraphic = static_cast<SdrOle2Obj*>(pSdrOLE2)->GetGraphic();
+        if (pGraphic)
+            WriteGraphicObjectShapePart( xShape, pGraphic );
+    }
+
+    mpFS->endElementNS( mnXmlNamespace, XML_oleObj );
+
+    mpFS->endElementNS( XML_a, XML_graphicData );
+    mpFS->endElementNS( XML_a, XML_graphic );
+
+    mpFS->endElementNS( mnXmlNamespace, XML_graphicFrame );
+
     return *this;
 }
 
-ShapeExport& ShapeExport::WriteUnknownShape( Reference< XShape > )
+ShapeExport& ShapeExport::WriteUnknownShape( const Reference< XShape >& )
 {
     // Override this method to do something useful.
     return *this;
 }
 
-size_t ShapeExport::ShapeHash::operator()( const Reference < XShape > rXShape ) const
+size_t ShapeExport::ShapeHash::operator()( const Reference < XShape >& rXShape ) const
 {
     return rXShape->getShapeType().hashCode();
 }
 
-sal_Int32 ShapeExport::GetNewShapeID( const Reference< XShape > rXShape )
+sal_Int32 ShapeExport::GetNewShapeID( const Reference< XShape >& rXShape )
 {
     return GetNewShapeID( rXShape, GetFB() );
 }
 
-sal_Int32 ShapeExport::GetNewShapeID( const Reference< XShape > rXShape, XmlFilterBase* pFB )
+sal_Int32 ShapeExport::GetNewShapeID( const Reference< XShape >& rXShape, XmlFilterBase* pFB )
 {
     if( !rXShape.is() )
         return -1;
@@ -1552,12 +1865,12 @@ sal_Int32 ShapeExport::GetNewShapeID( const Reference< XShape > rXShape, XmlFilt
     return nID;
 }
 
-sal_Int32 ShapeExport::GetShapeID( const Reference< XShape > rXShape )
+sal_Int32 ShapeExport::GetShapeID( const Reference< XShape >& rXShape )
 {
     return GetShapeID( rXShape, mpShapeMap );
 }
 
-sal_Int32 ShapeExport::GetShapeID( const Reference< XShape > rXShape, ShapeHashMap* pShapeMap )
+sal_Int32 ShapeExport::GetShapeID( const Reference< XShape >& rXShape, ShapeHashMap* pShapeMap )
 {
     if( !rXShape.is() )
         return -1;

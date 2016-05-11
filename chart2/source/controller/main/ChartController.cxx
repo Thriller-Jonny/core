@@ -17,6 +17,10 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
+#include <sal/config.h>
+
+#include <set>
+
 #include "ChartController.hxx"
 #include "servicenames.hxx"
 #include "ResId.hxx"
@@ -45,7 +49,6 @@
 #include "UndoActions.hxx"
 #include "ViewElementListProvider.hxx"
 
-#include <comphelper/InlineContainer.hxx>
 #include <cppuhelper/supportsservice.hxx>
 
 #include <com/sun/star/awt/PosSize.hpp>
@@ -92,7 +95,6 @@ namespace chart
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::accessibility;
 using namespace ::com::sun::star::chart2;
-using ::com::sun::star::uno::Any;
 using ::com::sun::star::uno::Reference;
 using ::com::sun::star::uno::Sequence;
 
@@ -194,7 +196,7 @@ void ChartController::TheModel::tryTermination()
                 //I think yes, because there might be other closelistners later in the list which might be interested still
                 //but make sure that we do not throw the CloseVetoException here ourselves
                 //so stop listening before trying to terminate or check the source of queryclosing event
-                m_xCloseable->close(sal_True);
+                m_xCloseable->close(true);
 
                 m_bOwnership                = false;
             }
@@ -203,11 +205,7 @@ void ChartController::TheModel::tryTermination()
                 //since we have indicated to give up the ownership with parameter true in close call
                 //the one who has thrown the CloseVetoException is the new owner
 
-#if OSL_DEBUG_LEVEL > 1
-                OSL_ENSURE( !m_bOwnership,
-                    "INFO: a well known owner has caught a CloseVetoException after calling close(true)" );
-#endif
-
+                SAL_WARN_IF( m_bOwnership, "chart2.main", "a well known owner has caught a CloseVetoException after calling close(true)");
                 m_bOwnership                = false;
                 return;
             }
@@ -283,7 +281,7 @@ bool ChartController::TheModelRef::is() const
 namespace {
 
 css::uno::Reference<css::chart2::XChartType> getChartType(
-        css::uno::Reference<css::chart2::XChartDocument> xChartDoc)
+        const css::uno::Reference<css::chart2::XChartDocument>& xChartDoc)
 {
     Reference <chart2::XDiagram > xDiagram = xChartDoc->getFirstDiagram();
 
@@ -334,6 +332,7 @@ OUString ChartController::GetContextName()
         case OBJECTTYPE_DIAGRAM:
             if (xChartType->getChartType() == "com.sun.star.chart2.PieChartType")
                 return OUString("ChartElements");
+            break;
         case OBJECTTYPE_DATA_CURVE:
         case OBJECTTYPE_DATA_AVERAGE_LINE:
             return OUString("Trendline");
@@ -395,7 +394,7 @@ uno::Sequence< OUString > ChartController::getSupportedServiceNames_Static()
 
 namespace {
 
-uno::Reference<ui::XSidebar> getSidebarFromModel(uno::Reference<frame::XModel> xModel)
+uno::Reference<ui::XSidebar> getSidebarFromModel(const uno::Reference<frame::XModel>& xModel)
 {
     uno::Reference<container::XChild> xChild(xModel, uno::UNO_QUERY);
     if (!xChild.is())
@@ -471,7 +470,7 @@ void SAL_CALL ChartController::attachFrame(
         VCLXWindow* pParentComponent = VCLXWindow::GetImplementation(xContainerWindow);
         assert(pParentComponent);
         if (pParentComponent)
-            pParentComponent->setVisible(sal_True);
+            pParentComponent->setVisible(true);
 
         pParent = VCLUnoHelper::GetWindow( xContainerWindow );
     }
@@ -503,7 +502,7 @@ void SAL_CALL ChartController::attachFrame(
         {
             try
             {
-                uno::Reference< ::com::sun::star::frame::XLayoutManager > xLayoutManager;
+                uno::Reference< css::frame::XLayoutManager > xLayoutManager;
                 xPropSet->getPropertyValue( "LayoutManager" ) >>= xLayoutManager;
                 if ( xLayoutManager.is() )
                 {
@@ -612,7 +611,7 @@ sal_Bool SAL_CALL ChartController::attachModel( const uno::Reference< frame::XMo
 
     SolarMutexResettableGuard aGuard;
     if( impl_isDisposedOrSuspended() ) //@todo? allow attaching a new model while suspended?
-        return sal_False; //behave passive if already disposed or suspended
+        return false; //behave passive if already disposed or suspended
     aGuard.clear();
 
     TheModelRef aNewModelRef( new TheModel( xModel), m_aModelMutex);
@@ -688,7 +687,7 @@ sal_Bool SAL_CALL ChartController::attachModel( const uno::Reference< frame::XMo
     uno::Reference< document::XUndoManagerSupplier > xSuppUndo( getModel(), uno::UNO_QUERY_THROW );
     m_xUndoManager.set( xSuppUndo->getUndoManager(), uno::UNO_QUERY_THROW );
 
-    return sal_True;
+    return true;
 }
 
 uno::Reference< frame::XFrame > SAL_CALL ChartController::getFrame()
@@ -757,25 +756,25 @@ sal_Bool SAL_CALL ChartController::suspend( sal_Bool bSuspend )
 
     SolarMutexGuard aGuard;
     if( m_aLifeTimeManager.impl_isDisposed() )
-        return sal_False; //behave passive if already disposed, return false because request was not accepted //@todo? correct
+        return false; //behave passive if already disposed, return false because request was not accepted //@todo? correct
 
     if(bool(bSuspend) == m_bSuspended)
     {
         OSL_FAIL( "new suspend mode equals old suspend mode" );
-        return sal_True;
+        return true;
     }
 
     //change suspend mode
     if(bSuspend)
     {
         m_bSuspended = bSuspend;
-        return sal_True;
+        return true;
     }
     else
     {
         m_bSuspended = bSuspend;
     }
-    return sal_True;
+    return true;
 }
 
 void ChartController::impl_createDrawViewController()
@@ -785,7 +784,7 @@ void ChartController::impl_createDrawViewController()
     {
         if( m_pDrawModelWrapper )
         {
-            m_pDrawViewWrapper = new DrawViewWrapper(&m_pDrawModelWrapper->getSdrModel(),m_pChartWindow,true);
+            m_pDrawViewWrapper = new DrawViewWrapper(&m_pDrawModelWrapper->getSdrModel(),m_pChartWindow);
             m_pDrawViewWrapper->attachParentReferenceDevice( getModel() );
         }
     }
@@ -869,7 +868,7 @@ void SAL_CALL ChartController::dispose()
 
             //the accessible view is disposed within window destructor of m_pChartWindow
             m_pChartWindow->clear();
-            m_pChartWindow = nullptr;//m_pChartWindow is deleted via UNO due to dispose of m_xViewWindow (trigerred by Framework (Controller pretends to be XWindow also))
+            m_pChartWindow = nullptr;//m_pChartWindow is deleted via UNO due to dispose of m_xViewWindow (triggered by Framework (Controller pretends to be XWindow also))
             m_xViewWindow->dispose();
             m_xChartView.clear();
         }
@@ -964,7 +963,7 @@ void SAL_CALL ChartController::queryClosing(
         return;
     }
 
-    if( !m_bCanClose )//@todo tryaqcuire mutex
+    if( !m_bCanClose )//@todo try acquire mutex
     {
         if( bGetsOwnership )
         {
@@ -998,7 +997,7 @@ void SAL_CALL ChartController::notifyClosing(
         {
             try
             {
-                xFrameCloseable->close( sal_False /* DeliverOwnership */ );
+                xFrameCloseable->close( false /* DeliverOwnership */ );
                 m_xFrame.clear();
             }
             catch( const util::CloseVetoException & )
@@ -1318,7 +1317,7 @@ void SAL_CALL ChartController::dispatch(
         uno::Reference< beans::XPropertySet > xPropSet( m_xFrame, uno::UNO_QUERY );
         if( xPropSet.is() )
         {
-            uno::Reference< ::com::sun::star::frame::XLayoutManager > xLayoutManager;
+            uno::Reference< css::frame::XLayoutManager > xLayoutManager;
             xPropSet->getPropertyValue( "LayoutManager" ) >>= xLayoutManager;
             if ( xLayoutManager.is() )
             {
@@ -1380,7 +1379,7 @@ void ChartController::executeDispatch_ChartType()
 
     SolarMutexGuard aSolarGuard;
     //prepare and open dialog
-    ScopedVclPtrInstance< ChartTypeDialog > aDlg( m_pChartWindow, getModel(), m_xCC );
+    ScopedVclPtrInstance< ChartTypeDialog > aDlg( m_pChartWindow, getModel() );
     if( aDlg->Execute() == RET_OK )
     {
         impl_adaptDataSeriesAutoResize();
@@ -1416,7 +1415,7 @@ void ChartController::executeDispatch_MoveSeries( bool bForward )
 
     //get selected series
     OUString aObjectCID(m_aSelection.getSelectedCID());
-    uno::Reference< XDataSeries > xGivenDataSeries( ObjectIdentifier::getDataSeriesForCID( //yyy todo also legendentries and labels?
+    uno::Reference< XDataSeries > xGivenDataSeries( ObjectIdentifier::getDataSeriesForCID( //yyy todo also legend entries and labels?
             aObjectCID, getModel() ) );
 
     UndoGuardWithSelection aUndoGuard(
@@ -1521,7 +1520,7 @@ DrawViewWrapper* ChartController::GetDrawViewWrapper()
 
 uno::Reference< XAccessible > ChartController::CreateAccessible()
 {
-    uno::Reference< XAccessible > xResult = new AccessibleChartView( m_xCC, GetDrawViewWrapper() );
+    uno::Reference< XAccessible > xResult = new AccessibleChartView( GetDrawViewWrapper() );
     impl_initializeAccessible( uno::Reference< lang::XInitialization >( xResult, uno::UNO_QUERY ) );
     return xResult;
 }
@@ -1572,72 +1571,72 @@ void ChartController::impl_initializeAccessible( const uno::Reference< lang::XIn
     }
 }
 
-::std::set< OUString > ChartController::impl_getAvailableCommands()
+const ::std::set< OUString >& ChartController::impl_getAvailableCommands()
 {
-    return ::comphelper::MakeSet< OUString >
+    static ::std::set< OUString > s_AvailableCommands {
         // commands for container forward
-        ( "AddDirect" )           ( "NewDoc" )                ( "Open" )
-        ( "Save" )                ( "SaveAs" )                ( "SendMail" )
-        ( "EditDoc" )             ( "ExportDirectToPDF" )     ( "PrintDefault" )
+        "AddDirect",           "NewDoc",                "Open",
+        "Save",                "SaveAs",                "SendMail",
+        "EditDoc",             "ExportDirectToPDF",     "PrintDefault",
 
         // own commands
-        ( "Cut" )                ( "Copy" )                 ( "Paste" )
-        ( "DataRanges" )         ( "DiagramData" )
+        "Cut",                "Copy",                 "Paste",
+        "DataRanges",         "DiagramData",
         // insert objects
-        ( "InsertMenuTitles" )   ( "InsertTitles" )
-        ( "InsertMenuLegend" )   ( "InsertLegend" )         ( "DeleteLegend" )
-        ( "InsertMenuDataLabels" )
-        ( "InsertMenuAxes" )     ( "InsertRemoveAxes" )         ( "InsertMenuGrids" )
-        ( "InsertSymbol" )
-        ( "InsertTrendlineEquation" )  ( "InsertTrendlineEquationAndR2" )
-        ( "InsertR2Value" )      ( "DeleteR2Value" )
-        ( "InsertMenuTrendlines" )  ( "InsertTrendline" )
-        ( "InsertMenuMeanValues" ) ( "InsertMeanValue" )
-        ( "InsertMenuXErrorBars" )  ( "InsertXErrorBars" )
-        ( "InsertMenuYErrorBars" )   ( "InsertYErrorBars" )
-        ( "InsertDataLabels" )   ( "InsertDataLabel" )
-        ( "DeleteTrendline" )    ( "DeleteMeanValue" )      ( "DeleteTrendlineEquation" )
-        ( "DeleteXErrorBars" )   ( "DeleteYErrorBars" )
-        ( "DeleteDataLabels" )   ( "DeleteDataLabel" )
+        "InsertMenuTitles",   "InsertTitles",
+        "InsertMenuLegend",   "InsertLegend",         "DeleteLegend",
+        "InsertMenuDataLabels",
+        "InsertMenuAxes",     "InsertRemoveAxes",         "InsertMenuGrids",
+        "InsertSymbol",
+        "InsertTrendlineEquation",  "InsertTrendlineEquationAndR2",
+        "InsertR2Value",      "DeleteR2Value",
+        "InsertMenuTrendlines",  "InsertTrendline",
+        "InsertMenuMeanValues", "InsertMeanValue",
+        "InsertMenuXErrorBars",  "InsertXErrorBars",
+        "InsertMenuYErrorBars",   "InsertYErrorBars",
+        "InsertDataLabels",   "InsertDataLabel",
+        "DeleteTrendline",    "DeleteMeanValue",      "DeleteTrendlineEquation",
+        "DeleteXErrorBars",   "DeleteYErrorBars",
+        "DeleteDataLabels",   "DeleteDataLabel",
         //format objects
-        ( "FormatSelection" )     ( "TransformDialog" )
-        ( "DiagramType" )        ( "View3D" )
-        ( "Forward" )            ( "Backward" )
-        ( "MainTitle" )          ( "SubTitle" )
-        ( "XTitle" )             ( "YTitle" )               ( "ZTitle" )
-        ( "SecondaryXTitle" )    ( "SecondaryYTitle" )
-        ( "AllTitles" )          ( "Legend" )
-        ( "DiagramAxisX" )       ( "DiagramAxisY" )         ( "DiagramAxisZ" )
-        ( "DiagramAxisA" )       ( "DiagramAxisB" )         ( "DiagramAxisAll" )
-        ( "DiagramGridXMain" )   ( "DiagramGridYMain" )     ( "DiagramGridZMain" )
-        ( "DiagramGridXHelp" )   ( "DiagramGridYHelp" )     ( "DiagramGridZHelp" )
-        ( "DiagramGridAll" )
-        ( "DiagramWall" )        ( "DiagramFloor" )         ( "DiagramArea" )
+        "FormatSelection",     "TransformDialog",
+        "DiagramType",        "View3D",
+        "Forward",            "Backward",
+        "MainTitle",          "SubTitle",
+        "XTitle",             "YTitle",               "ZTitle",
+        "SecondaryXTitle",    "SecondaryYTitle",
+        "AllTitles",          "Legend",
+        "DiagramAxisX",       "DiagramAxisY",         "DiagramAxisZ",
+        "DiagramAxisA",       "DiagramAxisB",         "DiagramAxisAll",
+        "DiagramGridXMain",   "DiagramGridYMain",     "DiagramGridZMain",
+        "DiagramGridXHelp",   "DiagramGridYHelp",     "DiagramGridZHelp",
+        "DiagramGridAll",
+        "DiagramWall",        "DiagramFloor",         "DiagramArea",
 
         //context menu - format objects entries
-        ( "FormatWall" )        ( "FormatFloor" )         ( "FormatChartArea" )
-        ( "FormatLegend" )
+        "FormatWall",        "FormatFloor",         "FormatChartArea",
+        "FormatLegend",
 
-        ( "FormatAxis" )           ( "FormatTitle" )
-        ( "FormatDataSeries" )     ( "FormatDataPoint" )
-        ( "ResetAllDataPoints" )   ( "ResetDataPoint" )
-        ( "FormatDataLabels" )     ( "FormatDataLabel" )
-        ( "FormatMeanValue" )      ( "FormatTrendline" )      ( "FormatTrendlineEquation" )
-        ( "FormatXErrorBars" )     ( "FormatYErrorBars" )
-        ( "FormatStockLoss" )      ( "FormatStockGain" )
+        "FormatAxis",           "FormatTitle",
+        "FormatDataSeries",     "FormatDataPoint",
+        "ResetAllDataPoints",   "ResetDataPoint",
+        "FormatDataLabels",     "FormatDataLabel",
+        "FormatMeanValue",      "FormatTrendline",      "FormatTrendlineEquation",
+        "FormatXErrorBars",     "FormatYErrorBars",
+        "FormatStockLoss",      "FormatStockGain",
 
-        ( "FormatMajorGrid" )      ( "InsertMajorGrid" )      ( "DeleteMajorGrid" )
-        ( "FormatMinorGrid" )      ( "InsertMinorGrid" )      ( "DeleteMinorGrid" )
-        ( "InsertAxis" )           ( "DeleteAxis" )           ( "InsertAxisTitle" )
+        "FormatMajorGrid",      "InsertMajorGrid",      "DeleteMajorGrid",
+        "FormatMinorGrid",      "InsertMinorGrid",      "DeleteMinorGrid",
+        "InsertAxis",           "DeleteAxis",           "InsertAxisTitle",
 
         // toolbar commands
-        ( "ToggleGridHorizontal" ) ( "ToggleGridVertical" ) ( "ToggleLegend" )         ( "ScaleText" )
-        ( "NewArrangement" )     ( "Update" )
-        ( "DefaultColors" )      ( "BarWidth" )             ( "NumberOfLines" )
-        ( "ArrangeRow" )
-        ( "StatusBarVisible" )
-        ( "ChartElementSelector" )
-        ;
+        "ToggleGridHorizontal", "ToggleGridVertical", "ToggleLegend",         "ScaleText",
+        "NewArrangement",     "Update",
+        "DefaultColors",      "BarWidth",             "NumberOfLines",
+        "ArrangeRow",
+        "StatusBarVisible",
+        "ChartElementSelector"};
+    return s_AvailableCommands;
 }
 
 ViewElementListProvider ChartController::getViewElementListProvider()

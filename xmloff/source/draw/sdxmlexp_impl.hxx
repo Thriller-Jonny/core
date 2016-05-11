@@ -117,14 +117,14 @@ class SdXMLExport : public SvXMLExport
 
     const OUString         msPageLayoutNames;
 
-    virtual void _ExportStyles(bool bUsed) override;
-    virtual void _ExportAutoStyles() override;
-    virtual void _ExportFontDecls() override;
-    virtual void _ExportMasterStyles() override;
-    virtual void _ExportContent() override;
-    virtual void _ExportMeta() override;
+    virtual void ExportStyles_(bool bUsed) override;
+    virtual void ExportAutoStyles_() override;
+    virtual void ExportFontDecls_() override;
+    virtual void ExportMasterStyles_() override;
+    virtual void ExportContent_() override;
+    virtual void ExportMeta_() override;
 
-    ImpXMLEXPPageMasterInfo* ImpGetOrCreatePageMasterInfo( css::uno::Reference< css::drawing::XDrawPage > xMasterPage );
+    ImpXMLEXPPageMasterInfo* ImpGetOrCreatePageMasterInfo( const css::uno::Reference< css::drawing::XDrawPage >& xMasterPage );
     void ImpPrepPageMasterInfos();
     void ImpWritePageMasterInfos();
     void ImpPrepAutoLayoutInfos();
@@ -134,7 +134,7 @@ class SdXMLExport : public SvXMLExport
     void ImpPrepDrawPageInfos();
     void ImpPrepMasterPageInfos();
     void ImpWritePresentationStyles();
-    OUString ImpCreatePresPageStyleName( css::uno::Reference<css::drawing::XDrawPage> xDrawPage, bool bExportBackground = true );
+    OUString ImpCreatePresPageStyleName( const css::uno::Reference<css::drawing::XDrawPage>& xDrawPage, bool bExportBackground = true );
 
     bool ImpPrepAutoLayoutInfo(const css::uno::Reference< css::drawing::XDrawPage >& xPage, OUString& rName);
     void ImpWriteAutoLayoutInfos();
@@ -142,11 +142,11 @@ class SdXMLExport : public SvXMLExport
     void ImpWriteHeaderFooterDecls();
     void ImplExportHeaderFooterDeclAttributes( const HeaderFooterPageSettingsImpl& aSettings );
 
-    void exportFormsElement( css::uno::Reference< css::drawing::XDrawPage > xDrawPage );
+    void exportFormsElement( const css::uno::Reference< css::drawing::XDrawPage >& xDrawPage );
     void exportPresentationSettings();
 
     // #82003# helper function for recursive object count
-    sal_uInt32 ImpRecursiveObjectCount( css::uno::Reference< css::drawing::XShapes > xShapes);
+    sal_uInt32 ImpRecursiveObjectCount( const css::uno::Reference< css::drawing::XShapes >& xShapes);
 
     OUString getNavigationOrder( const css::uno::Reference< css::drawing::XDrawPage >& xDrawPage );
 

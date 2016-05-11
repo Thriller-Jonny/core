@@ -19,7 +19,6 @@
 
 #include <sal/config.h>
 
-#include <boost/noncopyable.hpp>
 #include <com/sun/star/util/MeasureUnit.hpp>
 #include <com/sun/star/packages/zip/ZipIOException.hpp>
 #include <com/sun/star/embed/ElementModes.hpp>
@@ -69,11 +68,9 @@ extern "C" void SAL_CALL createRegistryInfo_ODBFilter( )
     static ::dbaxml::OMultiInstanceAutoRegistration< ::dbaxml::ODBFilter > aAutoRegistration;
 }
 
+
 namespace dbaxml
 {
-    sal_Char const sXML_np__db[] = "_db";
-    sal_Char const sXML_np___db[] = "__db";
-
     using namespace ::com::sun::star::util;
     /// read a component (file + filter version)
 sal_Int32 ReadThroughComponent(
@@ -113,7 +110,7 @@ sal_Int32 ReadThroughComponent(
     }
     catch (const SAXParseException& r)
     {
-#if OSL_DEBUG_LEVEL > 1
+#if OSL_DEBUG_LEVEL > 0
         SAL_WARN("dbaccess", "SAX parse exception catched while importing:\n" << r.Message << r.LineNumber << "," << r.ColumnNumber);
 #else
         (void)r;
@@ -137,9 +134,10 @@ sal_Int32 ReadThroughComponent(
     return 0;
 }
 
+
 /// read a component (storage version)
 sal_Int32 ReadThroughComponent(
-    uno::Reference< embed::XStorage > xStorage,
+    const uno::Reference< embed::XStorage >& xStorage,
     const uno::Reference<XComponent>& xModelComponent,
     const sal_Char* pStreamName,
     const sal_Char* pCompatibilityStreamName,
@@ -201,7 +199,6 @@ sal_Int32 ReadThroughComponent(
     return 1;
 }
 
-// - ODBFilter -
 
 ODBFilter::ODBFilter( const uno::Reference< XComponentContext >& _rxContext )
     : SvXMLImport(_rxContext, getImplementationName_Static())
@@ -210,25 +207,28 @@ ODBFilter::ODBFilter( const uno::Reference< XComponentContext >& _rxContext )
 
     GetMM100UnitConverter().SetCoreMeasureUnit(util::MeasureUnit::MM_10TH);
     GetMM100UnitConverter().SetXMLMeasureUnit(util::MeasureUnit::CM);
-    GetNamespaceMap().Add( sXML_np__db,
+    GetNamespaceMap().Add( "_db",
                         GetXMLToken(XML_N_DB),
                         XML_NAMESPACE_DB );
 
-    GetNamespaceMap().Add( sXML_np___db,
+    GetNamespaceMap().Add( "__db",
                         GetXMLToken(XML_N_DB_OASIS),
                         XML_NAMESPACE_DB );
 }
+
 
 ODBFilter::~ODBFilter() throw()
 {
 
 }
 
+
 OUString ODBFilter::getImplementationName_Static()
     throw (css::uno::RuntimeException)
 {
     return OUString("com.sun.star.comp.sdb.DBFilter");
 }
+
 
 css::uno::Sequence<OUString> ODBFilter::getSupportedServiceNames_Static()
     throw (css::uno::RuntimeException)
@@ -237,11 +237,13 @@ css::uno::Sequence<OUString> ODBFilter::getSupportedServiceNames_Static()
     return s;
 }
 
+
 css::uno::Reference< css::uno::XInterface >
     SAL_CALL ODBFilter::Create(const css::uno::Reference< css::lang::XMultiServiceFactory >& _rxORB)
 {
     return static_cast< XServiceInfo* >(new ODBFilter( comphelper::getComponentContext(_rxORB)));
 }
+
 
 sal_Bool SAL_CALL ODBFilter::filter( const Sequence< PropertyValue >& rDescriptor )
     throw (RuntimeException, std::exception)
@@ -269,6 +271,7 @@ sal_Bool SAL_CALL ODBFilter::filter( const Sequence< PropertyValue >& rDescripto
 
     return bRet;
 }
+
 
 bool ODBFilter::implImport( const Sequence< PropertyValue >& rDescriptor )
     throw (RuntimeException, std::exception)
@@ -354,7 +357,7 @@ bool ODBFilter::implImport( const Sequence< PropertyValue >& rDescriptor )
         {
             uno::Reference< XModifiable > xModi(GetModel(),UNO_QUERY);
             if ( xModi.is() )
-                xModi->setModified(sal_False);
+                xModi->setModified(false);
         }
         else
         {
@@ -376,6 +379,7 @@ bool ODBFilter::implImport( const Sequence< PropertyValue >& rDescriptor )
 
     return bRet;
 }
+
 
 SvXMLImportContext* ODBFilter::CreateContext( sal_uInt16 nPrefix,
                                       const OUString& rLocalName,
@@ -413,6 +417,7 @@ SvXMLImportContext* ODBFilter::CreateContext( sal_uInt16 nPrefix,
     return pContext;
 }
 
+
 void ODBFilter::SetViewSettings(const Sequence<PropertyValue>& aViewProps)
 {
     const PropertyValue *pIter = aViewProps.getConstArray();
@@ -429,6 +434,7 @@ void ODBFilter::SetViewSettings(const Sequence<PropertyValue>& aViewProps)
         }
     }
 }
+
 
 void ODBFilter::SetConfigurationSettings(const Sequence<PropertyValue>& aConfigProps)
 {
@@ -447,6 +453,7 @@ void ODBFilter::SetConfigurationSettings(const Sequence<PropertyValue>& aConfigP
     }
 }
 
+
 void ODBFilter::fillPropertyMap(const Any& _rValue,TPropertyNameMap& _rMap)
 {
     Sequence<PropertyValue> aWindows;
@@ -461,6 +468,7 @@ void ODBFilter::fillPropertyMap(const Any& _rValue,TPropertyNameMap& _rMap)
     }
 
 }
+
 
 const SvXMLTokenMap& ODBFilter::GetDocElemTokenMap() const
 {
@@ -484,6 +492,7 @@ const SvXMLTokenMap& ODBFilter::GetDocElemTokenMap() const
     return *m_pDocElemTokenMap;
 }
 
+
 const SvXMLTokenMap& ODBFilter::GetDatabaseElemTokenMap() const
 {
     if ( !m_pDatabaseElemTokenMap.get() )
@@ -503,6 +512,7 @@ const SvXMLTokenMap& ODBFilter::GetDatabaseElemTokenMap() const
     }
     return *m_pDatabaseElemTokenMap;
 }
+
 
 const SvXMLTokenMap& ODBFilter::GetDataSourceElemTokenMap() const
 {
@@ -555,6 +565,7 @@ const SvXMLTokenMap& ODBFilter::GetDataSourceElemTokenMap() const
     return *m_pDataSourceElemTokenMap;
 }
 
+
 const SvXMLTokenMap& ODBFilter::GetLoginElemTokenMap() const
 {
     if ( !m_pLoginElemTokenMap.get() )
@@ -572,6 +583,7 @@ const SvXMLTokenMap& ODBFilter::GetLoginElemTokenMap() const
     return *m_pLoginElemTokenMap;
 }
 
+
 const SvXMLTokenMap& ODBFilter::GetDatabaseDescriptionElemTokenMap() const
 {
     if ( !m_pDatabaseDescriptionElemTokenMap.get() )
@@ -586,6 +598,7 @@ const SvXMLTokenMap& ODBFilter::GetDatabaseDescriptionElemTokenMap() const
     }
     return *m_pDatabaseDescriptionElemTokenMap;
 }
+
 
 const SvXMLTokenMap& ODBFilter::GetDataSourceInfoElemTokenMap() const
 {
@@ -613,6 +626,7 @@ const SvXMLTokenMap& ODBFilter::GetDataSourceInfoElemTokenMap() const
     return *m_pDataSourceInfoElemTokenMap;
 }
 
+
 const SvXMLTokenMap& ODBFilter::GetDocumentsElemTokenMap() const
 {
     if ( !m_pDocumentsElemTokenMap.get() )
@@ -633,6 +647,7 @@ const SvXMLTokenMap& ODBFilter::GetDocumentsElemTokenMap() const
     return *m_pDocumentsElemTokenMap;
 }
 
+
 const SvXMLTokenMap& ODBFilter::GetComponentElemTokenMap() const
 {
     if ( !m_pComponentElemTokenMap.get() )
@@ -651,6 +666,7 @@ const SvXMLTokenMap& ODBFilter::GetComponentElemTokenMap() const
     }
     return *m_pComponentElemTokenMap;
 }
+
 
 const SvXMLTokenMap& ODBFilter::GetQueryElemTokenMap() const
 {
@@ -676,6 +692,7 @@ const SvXMLTokenMap& ODBFilter::GetQueryElemTokenMap() const
     return *m_pQueryElemTokenMap;
 }
 
+
 const SvXMLTokenMap& ODBFilter::GetColumnElemTokenMap() const
 {
     if ( !m_pColumnElemTokenMap.get() )
@@ -697,25 +714,25 @@ const SvXMLTokenMap& ODBFilter::GetColumnElemTokenMap() const
     return *m_pColumnElemTokenMap;
 }
 
+
 SvXMLImportContext* ODBFilter::CreateStylesContext(sal_uInt16 _nPrefix,const OUString& rLocalName,
                                      const uno::Reference< XAttributeList>& xAttrList, bool bIsAutoStyle )
 {
-    SvXMLImportContext *pContext = nullptr;
-    if (!pContext)
-    {
-        pContext = new OTableStylesContext(*this, _nPrefix, rLocalName, xAttrList, bIsAutoStyle);
-        if (bIsAutoStyle)
-            SetAutoStyles(static_cast<SvXMLStylesContext*>(pContext));
-        else
-            SetStyles(static_cast<SvXMLStylesContext*>(pContext));
-    }
+    SvXMLImportContext *pContext = new OTableStylesContext(*this, _nPrefix, rLocalName, xAttrList, bIsAutoStyle);
+    if (bIsAutoStyle)
+        SetAutoStyles(static_cast<SvXMLStylesContext*>(pContext));
+    else
+        SetStyles(static_cast<SvXMLStylesContext*>(pContext));
+
     return pContext;
 }
 
+
 SvXMLImportContext* ODBFilter::CreateScriptContext( const OUString& _rLocalName )
 {
-    return new XMLScriptContext( *this, XML_NAMESPACE_OFFICE, _rLocalName, GetModel() );
+    return new XMLScriptContext( *this, _rLocalName, GetModel() );
 }
+
 
 rtl::Reference < XMLPropertySetMapper > ODBFilter::GetTableStylesPropertySetMapper() const
 {
@@ -726,6 +743,7 @@ rtl::Reference < XMLPropertySetMapper > ODBFilter::GetTableStylesPropertySetMapp
     return m_xTableStylesPropertySetMapper;
 }
 
+
 rtl::Reference < XMLPropertySetMapper > ODBFilter::GetColumnStylesPropertySetMapper() const
 {
     if ( !m_xColumnStylesPropertySetMapper.is() )
@@ -735,6 +753,7 @@ rtl::Reference < XMLPropertySetMapper > ODBFilter::GetColumnStylesPropertySetMap
     return m_xColumnStylesPropertySetMapper;
 }
 
+
 rtl::Reference < XMLPropertySetMapper > ODBFilter::GetCellStylesPropertySetMapper() const
 {
     if ( !m_xCellStylesPropertySetMapper.is() )
@@ -743,6 +762,7 @@ rtl::Reference < XMLPropertySetMapper > ODBFilter::GetCellStylesPropertySetMappe
     }
     return m_xCellStylesPropertySetMapper;
 }
+
 
 void ODBFilter::setPropertyInfo()
 {
@@ -773,6 +793,6 @@ void ODBFilter::setPropertyInfo()
     }
 }
 
-}// dbaxml
+} // namespace dbaxml
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

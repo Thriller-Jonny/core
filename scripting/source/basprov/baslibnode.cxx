@@ -20,6 +20,7 @@
 #include "baslibnode.hxx"
 #include "basmodnode.hxx"
 #include <com/sun/star/script/browse/BrowseNodeTypes.hpp>
+#include <comphelper/sequence.hxx>
 #include <osl/mutex.hxx>
 #include <vcl/svapp.hxx>
 #include <basic/basmgr.hxx>
@@ -32,10 +33,8 @@ using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::script;
 
 
-
 namespace basprov
 {
-
 
 
     // BasicLibraryNodeImpl
@@ -59,7 +58,6 @@ namespace basprov
     }
 
 
-
     BasicLibraryNodeImpl::~BasicLibraryNodeImpl()
     {
     }
@@ -76,12 +74,11 @@ namespace basprov
     }
 
 
-
     Sequence< Reference< browse::XBrowseNode > > BasicLibraryNodeImpl::getChildNodes(  ) throw (RuntimeException, std::exception)
     {
         SolarMutexGuard aGuard;
 
-        Sequence< Reference< browse::XBrowseNode > > aChildNodes;
+        std::vector< Reference< browse::XBrowseNode > > aChildNodes;
 
         if ( m_xLibContainer.is() && m_xLibContainer->hasByName( m_sLibName ) && !m_xLibContainer->isLibraryLoaded( m_sLibName ) )
             m_xLibContainer->loadLibrary( m_sLibName );
@@ -94,21 +91,19 @@ namespace basprov
                 Sequence< OUString > aNames = m_xLibrary->getElementNames();
                 sal_Int32 nCount = aNames.getLength();
                 const OUString* pNames = aNames.getConstArray();
-                aChildNodes.realloc( nCount );
-                Reference< browse::XBrowseNode >* pChildNodes = aChildNodes.getArray();
+                aChildNodes.resize( nCount );
 
                 for ( sal_Int32 i = 0 ; i < nCount ; ++i )
                 {
                     SbModule* pModule = pBasic->FindModule( pNames[i] );
                     if ( pModule )
-                        pChildNodes[i] = static_cast< browse::XBrowseNode* >( new BasicModuleNodeImpl( m_xContext, m_sScriptingContext, pModule, m_bIsAppScript ) );
+                        aChildNodes[i] = static_cast< browse::XBrowseNode* >( new BasicModuleNodeImpl( m_xContext, m_sScriptingContext, pModule, m_bIsAppScript ) );
                 }
             }
         }
 
-        return aChildNodes;
+        return comphelper::containerToSequence(aChildNodes);
     }
-
 
 
     sal_Bool BasicLibraryNodeImpl::hasChildNodes(  ) throw (RuntimeException, std::exception)
@@ -123,15 +118,12 @@ namespace basprov
     }
 
 
-
     sal_Int16 BasicLibraryNodeImpl::getType(  ) throw (RuntimeException, std::exception)
     {
         SolarMutexGuard aGuard;
 
         return browse::BrowseNodeTypes::CONTAINER;
     }
-
-
 
 
 }   // namespace basprov

@@ -22,7 +22,6 @@
 #include "ContainerHelper.hxx"
 #include "Chart2ModelContact.hxx"
 #include "WrappedDirectStateProperty.hxx"
-#include <comphelper/InlineContainer.hxx>
 #include <com/sun/star/drawing/FillStyle.hpp>
 #include <cppuhelper/supportsservice.hxx>
 
@@ -35,7 +34,6 @@
 using namespace ::com::sun::star;
 using ::com::sun::star::beans::Property;
 using ::osl::MutexGuard;
-using ::com::sun::star::uno::Any;
 using ::com::sun::star::uno::Reference;
 using ::com::sun::star::uno::Sequence;
 
@@ -54,7 +52,7 @@ struct StaticAreaWrapperPropertyArray_Initializer
 private:
     static Sequence< Property > lcl_GetPropertySequence()
     {
-        ::std::vector< ::com::sun::star::beans::Property > aProperties;
+        ::std::vector< css::beans::Property > aProperties;
         ::chart::LinePropertiesHelper::AddPropertiesToVector( aProperties );
         ::chart::FillProperties::AddPropertiesToVector( aProperties );
         ::chart::UserDefinedProperties::AddPropertiesToVector( aProperties );

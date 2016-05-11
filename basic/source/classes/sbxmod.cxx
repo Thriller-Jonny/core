@@ -71,7 +71,6 @@
 #include <ooo/vba/VbQueryClose.hpp>
 #include <list>
 #include <memory>
-#include <boost/noncopyable.hpp>
 #include "sbxmod.hxx"
 #include "parser.hxx"
 
@@ -358,7 +357,7 @@ sal_Bool SAL_CALL
 DocObjectWrapper::hasMethod( const OUString& aName ) throw (RuntimeException, std::exception)
 {
     if ( m_xAggInv.is() && m_xAggInv->hasMethod( aName ) )
-        return sal_True;
+        return true;
     return getMethod( aName ).Is();
 }
 
@@ -446,11 +445,13 @@ bool getDefaultVBAMode( StarBASIC* pb )
     return xVBACompat.is() && xVBACompat->getVBACompatibilityMode();
 }
 
-class AsyncQuitHandler: private boost::noncopyable
+class AsyncQuitHandler
 {
     AsyncQuitHandler() {}
 
 public:
+    AsyncQuitHandler(const AsyncQuitHandler&) = delete;
+    const AsyncQuitHandler& operator=(const AsyncQuitHandler&) = delete;
     static AsyncQuitHandler& instance()
     {
         static AsyncQuitHandler dInst;
@@ -599,7 +600,7 @@ SbProperty* SbModule::GetProperty( const OUString& rName, SbxDataType t )
     return pProp;
 }
 
-SbProcedureProperty* SbModule::GetProcedureProperty( const OUString& rName, SbxDataType t )
+void SbModule::GetProcedureProperty( const OUString& rName, SbxDataType t )
 {
     SbxVariable* p = pProps->Find( rName, SbxCLASS_PROPERTY );
     SbProcedureProperty* pProp = p ? dynamic_cast<SbProcedureProperty*>( p ) : nullptr;
@@ -615,10 +616,9 @@ SbProcedureProperty* SbModule::GetProcedureProperty( const OUString& rName, SbxD
         pProps->Put( pProp, pProps->Count() );
         StartListening( pProp->GetBroadcaster(), true );
     }
-    return pProp;
 }
 
-SbIfaceMapperMethod* SbModule::GetIfaceMapperMethod( const OUString& rName, SbMethod* pImplMeth )
+void SbModule::GetIfaceMapperMethod( const OUString& rName, SbMethod* pImplMeth )
 {
     SbxVariable* p = pMethods->Find( rName, SbxCLASS_METHOD );
     SbIfaceMapperMethod* pMapperMethod = p ? dynamic_cast<SbIfaceMapperMethod*>( p ) : nullptr;
@@ -634,13 +634,11 @@ SbIfaceMapperMethod* SbModule::GetIfaceMapperMethod( const OUString& rName, SbMe
         pMethods->Put( pMapperMethod, pMethods->Count() );
     }
     pMapperMethod->bInvalid = false;
-    return pMapperMethod;
 }
 
 SbIfaceMapperMethod::~SbIfaceMapperMethod()
 {
 }
-
 
 
 // From the code generator: remove invalid entries
@@ -758,7 +756,7 @@ void SbModule::Notify( SfxBroadcaster& rBC, const SfxHint& rHint )
                     sal_uInt16 nVarParCount = (pArg != nullptr) ? pArg->Count() : 0;
                     if( nVarParCount > 1 )
                     {
-                        SbxArrayRef xMethParameters = new SbxArray;
+                        auto xMethParameters = tools::make_ref<SbxArray>();
                         xMethParameters->Put( pMethVar, 0 );    // Method as parameter 0
                         for( sal_uInt16 i = 1 ; i < nVarParCount ; ++i )
                         {
@@ -842,7 +840,7 @@ void SbModule::Notify( SfxBroadcaster& rBC, const SfxHint& rHint )
             // side effects when using name as variable implicitly
             bool bForwardToSbxObject = true;
 
-            sal_uIntPtr nId = pHint->GetId();
+            const sal_uInt32 nId = pHint->GetId();
             if( (nId == SBX_HINT_DATAWANTED || nId == SBX_HINT_DATACHANGED) &&
                 pVar->GetName().equalsIgnoreAsciiCase( "name" ) )
             {
@@ -954,7 +952,7 @@ void SbModule::SetSource32( const OUString& r )
 
 // Broadcast of a hint to all Basics
 
-static void _SendHint( SbxObject* pObj, sal_uIntPtr nId, SbMethod* p )
+static void SendHint_( SbxObject* pObj, sal_uInt32 nId, SbMethod* p )
 {
     // Self a BASIC?
     if( dynamic_cast<const StarBASIC *>(pObj) != nullptr && pObj->IsBroadcaster() )
@@ -965,15 +963,15 @@ static void _SendHint( SbxObject* pObj, sal_uIntPtr nId, SbMethod* p )
     {
         SbxVariable* pVar = pObjs->Get( i );
         if( dynamic_cast<const SbxObject *>(pVar) != nullptr )
-            _SendHint( dynamic_cast<SbxObject*>( pVar), nId, p  );
+            SendHint_( dynamic_cast<SbxObject*>( pVar), nId, p  );
     }
 }
 
-static void SendHint( SbxObject* pObj, sal_uIntPtr nId, SbMethod* p )
+static void SendHint( SbxObject* pObj, sal_uInt32 nId, SbMethod* p )
 {
     while( pObj->GetParent() )
         pObj = pObj->GetParent();
-    _SendHint( pObj, nId, p );
+    SendHint_( pObj, nId, p );
 }
 
 // #57841 Clear Uno-Objects, which were helt in RTL functions,
@@ -1205,7 +1203,9 @@ void SbModule::Run( SbMethod* pMeth )
                 clearNativeObjectWrapperVector();
 
                 SAL_WARN_IF(GetSbData()->pInst->nCallLvl != 0,"basic","BASIC-Call-Level > 0");
-                delete GetSbData()->pInst, GetSbData()->pInst = nullptr, bDelInst = false;
+                delete GetSbData()->pInst;
+                GetSbData()->pInst = nullptr;
+                bDelInst = false;
 
                 // #i30690
                 SolarMutexGuard aSolarGuard;
@@ -1400,12 +1400,11 @@ void SbModule::ClearVarsDependingOnDeletedBasic( StarBASIC* pDeletedBasic )
 void StarBASIC::ClearAllModuleVars()
 {
     // Initialise the own module
-    for ( sal_uInt16 nMod = 0; nMod < pModules->Count(); nMod++ )
+    for (const auto& rModule: pModules)
     {
-        SbModule* pModule = static_cast<SbModule*>(pModules->Get( nMod ));
         // Initialise only, if the startcode was already executed
-        if( pModule->pImage && pModule->pImage->bInit && !pModule->isProxyModule() && nullptr == dynamic_cast<const SbObjModule*>( pModule) )
-            pModule->ClearPrivateVars();
+        if( rModule->pImage && rModule->pImage->bInit && !rModule->isProxyModule() && nullptr == dynamic_cast<const SbObjModule*>( rModule.get()) )
+            rModule->ClearPrivateVars();
     }
 
 }
@@ -1420,7 +1419,7 @@ void SbModule::GlobalRunInit( bool bBasicStart )
 
     // Initialise GlobalInitErr-Flag for Compiler-Error
     // With the help of this flags could be located in SbModule::Run() after the call of
-    // GlobalRunInit, if at the intialising of the module
+    // GlobalRunInit, if at the initialising of the module
     // an error occurred. Then it will not be launched.
     GetSbData()->bGlobalInitErr = false;
 
@@ -1482,16 +1481,19 @@ const sal_uInt8* SbModule::FindNextStmnt( const sal_uInt8* p, sal_uInt16& nLine,
     {
         SbiOpcode eOp = (SbiOpcode ) ( *p++ );
         nPC++;
-        if( bFollowJumps && eOp == _JUMP && pImg )
+        if( bFollowJumps && eOp == SbiOpcode::JUMP_ && pImg )
         {
             SAL_WARN_IF( !pImg, "basic", "FindNextStmnt: pImg==NULL with FollowJumps option" );
             sal_uInt32 nOp1 = *p++; nOp1 |= *p++ << 8;
             nOp1 |= *p++ << 16; nOp1 |= *p++ << 24;
             p = reinterpret_cast<const sal_uInt8*>(pImg->GetCode()) + nOp1;
         }
-        else if( eOp >= SbOP1_START && eOp <= SbOP1_END )
-            p += 4, nPC += 4;
-        else if( eOp == _STMNT )
+        else if( eOp >= SbiOpcode::SbOP1_START && eOp <= SbiOpcode::SbOP1_END )
+        {
+            p += 4;
+            nPC += 4;
+        }
+        else if( eOp == SbiOpcode::STMNT_ )
         {
             sal_uInt32 nl, nc;
             nl = *p++; nl |= *p++ << 8;
@@ -1501,9 +1503,12 @@ const sal_uInt8* SbModule::FindNextStmnt( const sal_uInt8* p, sal_uInt16& nLine,
             nLine = (sal_uInt16)nl; nCol = (sal_uInt16)nc;
             return p;
         }
-        else if( eOp >= SbOP2_START && eOp <= SbOP2_END )
-            p += 8, nPC += 8;
-        else if( !( eOp >= SbOP0_START && eOp <= SbOP0_END ) )
+        else if( eOp >= SbiOpcode::SbOP2_START && eOp <= SbiOpcode::SbOP2_END )
+        {
+            p += 8;
+            nPC += 8;
+        }
+        else if( !( eOp >= SbiOpcode::SbOP0_START && eOp <= SbiOpcode::SbOP0_END ) )
         {
             StarBASIC::FatalError( ERRCODE_BASIC_INTERNAL_ERROR );
             break;
@@ -1584,7 +1589,10 @@ bool SbModule::ClearBP( sal_uInt16 nLine )
                 break;
         }
         if( pBreaks->empty() )
-            delete pBreaks, pBreaks = nullptr;
+        {
+            delete pBreaks;
+            pBreaks = nullptr;
+        }
     }
     return bRes;
 }
@@ -1753,10 +1761,10 @@ void SbModule::GetCodeCompleteDataFromParse(CodeCompleteDataCache& aCache)
         if( (pSymDef->GetType() != SbxEMPTY) && (pSymDef->GetType() != SbxNULL) )
             aCache.InsertGlobalVar( pSymDef->GetName(), pParser->aGblStrings.Find(pSymDef->GetTypeId()) );
 
-        SbiSymPool& pChildPool = pSymDef->GetPool();
-        for(sal_uInt16 j = 0; j < pChildPool.GetSize(); ++j )
+        SbiSymPool& rChildPool = pSymDef->GetPool();
+        for(sal_uInt16 j = 0; j < rChildPool.GetSize(); ++j )
         {
-            SbiSymDef* pChildSymDef = pChildPool.Get(j);
+            SbiSymDef* pChildSymDef = rChildPool.Get(j);
             //std::cerr << "j: " << j << ", type: " << pChildSymDef->GetType() << "; name:" << pChildSymDef->GetName() << std::endl;
             if( (pChildSymDef->GetType() != SbxEMPTY) && (pChildSymDef->GetType() != SbxNULL) )
                 aCache.InsertLocalVar( pSymDef->GetName(), pChildSymDef->GetName(), pParser->aGblStrings.Find(pChildSymDef->GetTypeId()) );
@@ -1792,45 +1800,41 @@ bool SbModule::HasExeCode()
 }
 
 // Store only image, no source
-bool SbModule::StoreBinaryData( SvStream& rStrm, sal_uInt16 nVer )
+void SbModule::StoreBinaryData( SvStream& rStrm, sal_uInt16 nVer )
 {
-    bool bRet = Compile();
-    if( bRet )
-    {
-        bool bFixup = ( !nVer && !pImage->ExceedsLegacyLimits() );// save in old image format, fix up method starts
+    if (!Compile())
+        return;
+    bool bFixup = ( !nVer && !pImage->ExceedsLegacyLimits() );// save in old image format, fix up method starts
 
-        if ( bFixup ) // save in old image format, fix up method starts
-            fixUpMethodStart( true );
-         bRet = SbxObject::StoreData( rStrm );
-        if( bRet )
-        {
-            (pImage->aOUSource).clear();
-            pImage->aComment = aComment;
-            pImage->aName = GetName();
+    if ( bFixup ) // save in old image format, fix up method starts
+        fixUpMethodStart( true );
 
-            rStrm.WriteUChar( 1 );
-                    if ( nVer )
-                        bRet = pImage->Save( rStrm );
-                    else
-                        bRet = pImage->Save( rStrm, B_LEGACYVERSION );
-                    if ( bFixup )
-                        fixUpMethodStart( false ); // restore method starts
+    if (!SbxObject::StoreData(rStrm))
+        return;
 
-            pImage->aOUSource = aOUSource;
-        }
-    }
-    return bRet;
+    pImage->aOUSource.clear();
+    pImage->aComment = aComment;
+    pImage->aName = GetName();
+
+    rStrm.WriteUChar(1);
+    if (nVer)
+        pImage->Save(rStrm);
+    else
+        pImage->Save(rStrm, B_LEGACYVERSION);
+    if (bFixup)
+        fixUpMethodStart(false); // restore method starts
+
+    pImage->aOUSource = aOUSource;
 }
 
 // Called for >= OO 1.0 passwd protected libraries only
 
-bool SbModule::LoadBinaryData( SvStream& rStrm )
+void SbModule::LoadBinaryData( SvStream& rStrm )
 {
     OUString aKeepSource = aOUSource;
-    bool bRet = LoadData( rStrm, 2 );
+    LoadData( rStrm, 2 );
     LoadCompleted();
     aOUSource = aKeepSource;
-    return bRet;
 }
 
 bool SbModule::LoadCompleted()
@@ -1973,8 +1977,6 @@ bool SbJScriptModule::StoreData( SvStream& rStrm ) const
 }
 
 
-
-
 SbMethod::SbMethod( const OUString& r, SbxDataType t, SbModule* p )
         : SbxMethod( r, t ), pMod( p )
 {
@@ -2096,12 +2098,9 @@ ErrCode SbMethod::Call( SbxValue* pRet, SbxVariable* pCaller )
         mCaller = pCaller;
     }
     // RefCount vom Modul hochzaehlen
-    SbModule* pMod_ = static_cast<SbModule*>(GetParent());
-    pMod_->AddFirstRef();
+    tools::SvRef<SbModule> pMod_ = static_cast<SbModule*>(GetParent());
 
-    // Increment the RefCount of the Basic
-    StarBASIC* pBasic = static_cast<StarBASIC*>(pMod_->GetParent());
-    pBasic->AddFirstRef();
+    tools::SvRef<StarBASIC> pBasic = static_cast<StarBASIC*>(pMod_->GetParent());
 
     // Establish the values to get the return value
     SbxValues aVals;
@@ -2119,9 +2118,6 @@ ErrCode SbMethod::Call( SbxValue* pRet, SbxVariable* pCaller )
     ErrCode nErr = SbxBase::GetError();
     SbxBase::ResetError();
 
-    // Release objects
-    pMod_->ReleaseRef();
-    pBasic->ReleaseRef();
     mCaller = nullptr;
     return nErr;
 }
@@ -2247,7 +2243,7 @@ typedef ::cppu::WeakImplHelper<
     document::XDocumentEventListener > FormObjEventListener_BASE;
 
 class FormObjEventListenerImpl:
-    public FormObjEventListener_BASE, private boost::noncopyable
+    public FormObjEventListener_BASE
 {
     SbUserFormModule* mpUserForm;
     uno::Reference< lang::XComponent > mxComponent;
@@ -2258,6 +2254,8 @@ class FormObjEventListenerImpl:
     bool mbShowing;
 
 public:
+    FormObjEventListenerImpl(const FormObjEventListenerImpl&) = delete;
+    const FormObjEventListenerImpl& operator=(const FormObjEventListenerImpl&) = delete;
     FormObjEventListenerImpl( SbUserFormModule* pUserForm, const uno::Reference< lang::XComponent >& xComponent, const uno::Reference< frame::XModel >& xModel ) :
         mpUserForm( pUserForm ), mxComponent( xComponent), mxModel( xModel ),
         mbDisposed( false ), mbOpened( false ), mbActivated( false ), mbShowing( false )
@@ -2428,7 +2426,7 @@ public:
 
     virtual void SAL_CALL documentEventOccured( const document::DocumentEvent& rEvent ) throw (uno::RuntimeException, std::exception) override
     {
-        // early dosposing on document event "OnUnload", to be sure Basic still exists when calling VBA "UserForm_Terminate"
+        // early disposing on document event "OnUnload", to be sure Basic still exists when calling VBA "UserForm_Terminate"
         if( rEvent.EventName == GlobalEventConfig::GetEventName( GlobalEventId::CLOSEDOC ) )
         {
             removeListener();
@@ -2486,12 +2484,12 @@ void SbUserFormModule::triggerMethod( const OUString& aMethodToRun, Sequence< An
     {
         if ( aArguments.getLength() > 0 )   // Setup parameters
         {
-            SbxArrayRef xArray = new SbxArray;
+            auto xArray = tools::make_ref<SbxArray>();
             xArray->Put( pMeth, 0 );    // Method as parameter 0
 
             for ( sal_Int32 i = 0; i < aArguments.getLength(); ++i )
             {
-                SbxVariableRef xSbxVar = new SbxVariable( SbxVARIANT );
+                auto xSbxVar = tools::make_ref<SbxVariable>( SbxVARIANT );
                 unoToSbxValue( static_cast< SbxVariable* >( xSbxVar ), aArguments[i] );
                 xArray->Put( xSbxVar, static_cast< sal_uInt16 >( i ) + 1 );
 

@@ -33,7 +33,6 @@
 #include <vcl/svapp.hxx>
 #include <osl/mutex.hxx>
 #include <cppuhelper/implbase.hxx>
-#include <boost/noncopyable.hpp>
 
 
 namespace svt { namespace table
@@ -42,16 +41,12 @@ namespace svt { namespace table
 
     using css::uno::Reference;
     using css::uno::RuntimeException;
-    using css::uno::Sequence;
     using css::uno::UNO_QUERY_THROW;
-    using css::uno::UNO_QUERY;
     using css::awt::grid::XGridColumn;
-    using css::uno::XInterface;
     using css::uno::Exception;
     using css::awt::grid::XGridColumnListener;
     using css::lang::EventObject;
     using css::awt::grid::GridColumnEvent;
-    using css::uno::Any;
     using css::style::HorizontalAlignment_LEFT;
     using css::style::HorizontalAlignment;
 
@@ -94,10 +89,11 @@ namespace svt { namespace table
     typedef ::cppu::WeakImplHelper <   XGridColumnListener
                                     >   ColumnChangeMultiplexer_Base;
     class ColumnChangeMultiplexer   :public ColumnChangeMultiplexer_Base
-                                    ,public ::boost::noncopyable
     {
     public:
         explicit ColumnChangeMultiplexer( UnoGridColumnFacade& i_colImpl );
+        ColumnChangeMultiplexer(const ColumnChangeMultiplexer&) = delete;
+        ColumnChangeMultiplexer& operator=(const ColumnChangeMultiplexer&) = delete;
 
         void dispose();
 

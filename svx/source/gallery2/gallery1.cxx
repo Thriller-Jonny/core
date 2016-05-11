@@ -45,11 +45,9 @@
 #include <com/sun/star/ucb/XContentAccess.hpp>
 #include <memory>
 
-// - Namespaces -
 
 using namespace ::com::sun::star;
 
-// - GalleryThemeEntry -
 
 static bool FileExists( const INetURLObject &rURL, const rtl::OUString &rExt )
 {
@@ -144,7 +142,6 @@ void GalleryThemeEntry::SetId( sal_uInt32 nNewId, bool bResetThemeName )
     bThemeNameFromResource = ( nId && bResetThemeName );
 }
 
-// - GalleryThemeCacheEntry -
 
 class GalleryThemeCacheEntry
 {
@@ -163,7 +160,6 @@ public:
     GalleryTheme*                           GetTheme() const { return mpTheme; }
 };
 
-// - Gallery -
 
 Gallery::Gallery( const OUString& rMultiPath )
 :       bMultiPath          ( false )
@@ -455,37 +451,37 @@ OUString Gallery::GetThemeName( sal_uIntPtr nThemeId ) const
 
         switch( nThemeId )
         {
-            case( GALLERY_THEME_3D ):
+            case GALLERY_THEME_3D:
                 aFallback = GAL_RESSTR(RID_GALLERYSTR_THEME_3D);
                 break;
-            case( GALLERY_THEME_BULLETS ):
+            case GALLERY_THEME_BULLETS:
                 aFallback = GAL_RESSTR(RID_GALLERYSTR_THEME_BULLETS);
                 break;
-            case( GALLERY_THEME_HOMEPAGE ):
+            case GALLERY_THEME_HOMEPAGE:
                 aFallback = GAL_RESSTR(RID_GALLERYSTR_THEME_HOMEPAGE);
                 break;
-            case( GALLERY_THEME_POWERPOINT ):
+            case GALLERY_THEME_POWERPOINT:
                 aFallback = GAL_RESSTR(RID_GALLERYSTR_THEME_POWERPOINT);
                 break;
-            case( GALLERY_THEME_FONTWORK ):
+            case GALLERY_THEME_FONTWORK:
                 aFallback = GAL_RESSTR(RID_GALLERYSTR_THEME_FONTWORK);
                 break;
-            case( GALLERY_THEME_FONTWORK_VERTICAL ):
+            case GALLERY_THEME_FONTWORK_VERTICAL:
                 aFallback = GAL_RESSTR(RID_GALLERYSTR_THEME_FONTWORK_VERTICAL);
                 break;
-            case( GALLERY_THEME_SOUNDS ):
+            case GALLERY_THEME_SOUNDS:
                 aFallback = GAL_RESSTR(RID_GALLERYSTR_THEME_SOUNDS);
                 break;
-            case( RID_GALLERYSTR_THEME_ARROWS ):
-            case( RID_GALLERYSTR_THEME_COMPUTERS ):
-            case( RID_GALLERYSTR_THEME_DIAGRAMS ):
-            case( RID_GALLERYSTR_THEME_EDUCATION ):
-            case( RID_GALLERYSTR_THEME_ENVIRONMENT ):
-            case( RID_GALLERYSTR_THEME_FINANCE ):
-            case( RID_GALLERYSTR_THEME_PEOPLE ):
-            case( RID_GALLERYSTR_THEME_SYMBOLS ):
-            case( RID_GALLERYSTR_THEME_TRANSPORT ):
-            case( RID_GALLERYSTR_THEME_TXTSHAPES ):
+            case RID_GALLERYSTR_THEME_ARROWS:
+            case RID_GALLERYSTR_THEME_COMPUTERS:
+            case RID_GALLERYSTR_THEME_DIAGRAMS:
+            case RID_GALLERYSTR_THEME_EDUCATION:
+            case RID_GALLERYSTR_THEME_ENVIRONMENT:
+            case RID_GALLERYSTR_THEME_FINANCE:
+            case RID_GALLERYSTR_THEME_PEOPLE:
+            case RID_GALLERYSTR_THEME_SYMBOLS:
+            case RID_GALLERYSTR_THEME_TRANSPORT:
+            case RID_GALLERYSTR_THEME_TXTSHAPES:
                 aFallback = GAL_RESSTR(static_cast<sal_uInt32>(nThemeId));
                 break;
             default:
@@ -524,10 +520,9 @@ bool Gallery::CreateTheme( const OUString& rThemeName )
     return bRet;
 }
 
-bool Gallery::RenameTheme( const OUString& rOldName, const OUString& rNewName )
+void Gallery::RenameTheme( const OUString& rOldName, const OUString& rNewName )
 {
     GalleryThemeEntry*      pThemeEntry = ImplGetThemeEntry( rOldName );
-    bool                    bRet = false;
 
     // check if the new theme name is already present
     if( pThemeEntry && !HasTheme( rNewName ) && !pThemeEntry->IsReadOnly() )
@@ -537,18 +532,13 @@ bool Gallery::RenameTheme( const OUString& rOldName, const OUString& rNewName )
 
         if( pThm )
         {
-            const OUString aOldName( rOldName );
-
             pThemeEntry->SetName( rNewName );
             pThm->ImplWrite();
 
-            Broadcast( GalleryHint( GalleryHintType::THEME_RENAMED, aOldName, pThm->GetName() ) );
+            Broadcast( GalleryHint( GalleryHintType::THEME_RENAMED, rOldName, pThm->GetName() ) );
             ReleaseTheme( pThm, aListener );
-            bRet = true;
         }
     }
-
-    return bRet;
 }
 
 bool Gallery::RemoveTheme( const OUString& rThemeName )
@@ -578,7 +568,8 @@ bool Gallery::RemoveTheme( const OUString& rThemeName )
             KillFile( aStrURL );
         }
 
-        for ( GalleryThemeList::iterator it = aThemeList.begin(); it != aThemeList.end(); ++it )
+        GalleryThemeList::const_iterator aEnd = aThemeList.end();
+        for ( GalleryThemeList::iterator it = aThemeList.begin(); it != aEnd; ++it )
         {
             if ( pThemeEntry == *it ) {
                 delete pThemeEntry;
@@ -629,7 +620,8 @@ GalleryTheme* Gallery::ImplGetCachedTheme(const GalleryThemeEntry* pThemeEntry)
 
                         if( pIStm->GetError() )
                         {
-                            delete pTheme, pTheme = nullptr;
+                            delete pTheme;
+                            pTheme = nullptr;
                         }
                     }
                     catch (const css::ucb::ContentCreationException&)
@@ -648,7 +640,8 @@ GalleryTheme* Gallery::ImplGetCachedTheme(const GalleryThemeEntry* pThemeEntry)
 
 void Gallery::ImplDeleteCachedTheme( GalleryTheme* pTheme )
 {
-    for (GalleryCacheThemeList::iterator it = aThemeCache.begin(); it != aThemeCache.end(); ++it)
+    GalleryCacheThemeList::const_iterator aEnd = aThemeCache.end();
+    for (GalleryCacheThemeList::iterator it = aThemeCache.begin(); it != aEnd; ++it)
     {
         if (pTheme == (*it)->GetTheme())
         {

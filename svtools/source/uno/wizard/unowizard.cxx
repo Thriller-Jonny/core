@@ -45,14 +45,10 @@ namespace {
     using css::uno::Reference;
     using css::uno::XInterface;
     using css::uno::UNO_QUERY;
-    using css::uno::UNO_QUERY_THROW;
-    using css::uno::UNO_SET_THROW;
     using css::uno::Exception;
     using css::uno::RuntimeException;
     using css::uno::Any;
-    using css::uno::makeAny;
     using css::uno::Sequence;
-    using css::uno::Type;
     using css::lang::XServiceInfo;
     using css::ui::dialogs::XWizard;
     using css::lang::XInitialization;
@@ -153,8 +149,8 @@ namespace {
 
     Wizard::~Wizard()
     {
-        // we do this here cause the base class' call to destroyDialog won't reach us anymore : we're within an dtor,
-        // so this virtual-method-call the base class does does not work, we're already dead then ...
+        // we do this here cause the base class' call to destroyDialog won't reach us anymore: we're within an dtor,
+        // so this virtual-method-call the base class does not work, we're already dead then...
         if ( m_pDialog )
         {
             ::osl::MutexGuard aGuard( m_aMutex );
@@ -166,7 +162,7 @@ namespace {
 
     namespace
     {
-        static void lcl_checkPaths( const Sequence< Sequence< sal_Int16 > >& i_rPaths, const Reference< XInterface >& i_rContext )
+        void lcl_checkPaths( const Sequence< Sequence< sal_Int16 > >& i_rPaths, const Reference< XInterface >& i_rContext )
         {
             // need at least one path
             if ( i_rPaths.getLength() == 0 )
@@ -245,7 +241,7 @@ namespace {
         m_bInitialized = true;
     }
 
-    static OString lcl_getHelpId( const OUString& _rHelpURL )
+    OString lcl_getHelpId( const OUString& _rHelpURL )
     {
         INetURLObject aHID( _rHelpURL );
         if ( aHID.GetProtocol() == INetProtocol::Hid )
@@ -255,7 +251,7 @@ namespace {
     }
 
 
-    static OUString lcl_getHelpURL( const OString& sHelpId )
+    OUString lcl_getHelpURL( const OString& sHelpId )
     {
         OUStringBuffer aBuffer;
         OUString aTmp(

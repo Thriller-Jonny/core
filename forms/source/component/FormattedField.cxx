@@ -758,7 +758,7 @@ void OFormattedModel::read(const Reference<XObjectInputStream>& _rxInStream) thr
                 if (xFormats.is())
                 {
                     Locale aDescriptionLanguage( LanguageTag::convertToLocale(eDescriptionLanguage));
-                    nKey = xFormats->queryKey(sFormatDescription, aDescriptionLanguage, sal_False);
+                    nKey = xFormats->queryKey(sFormatDescription, aDescriptionLanguage, false);
                     if (nKey == (sal_Int32)-1)
                     {   // does not yet exist in my formatter...
                         nKey = xFormats->addNew(sFormatDescription, aDescriptionLanguage);
@@ -853,7 +853,7 @@ bool OFormattedModel::commitControlValueToDbColumn( bool /*_bPostReset*/ )
                 }
                 else
                 {
-                    DBG_ASSERT( aControlValue.getValueType().getTypeClass() == TypeClass_STRING, "OFormattedModel::commitControlValueToDbColumn: invalud value type !" );
+                    DBG_ASSERT( aControlValue.getValueType().getTypeClass() == TypeClass_STRING, "OFormattedModel::commitControlValueToDbColumn: invalid value type!" );
                     m_xColumnUpdate->updateString( getString( aControlValue ) );
                 }
             }
@@ -943,8 +943,8 @@ Any OFormattedModel::translateControlValueToExternalValue( ) const
             aExternalValue <<= sString;
             break;
         }
+        SAL_FALLTHROUGH;
     }
-    // NO break here!
     case TypeClass_BOOLEAN:
     {
         double fValue = 0;

@@ -172,9 +172,7 @@ void lcl_SeparateNameAndIndex( const OUString& rVName, OUString& rVar, OUString&
 } // namespace
 
 
-
 // EditorWindow
-
 
 
 class EditorWindow::ChangesListener:
@@ -223,7 +221,7 @@ EditorWindow::EditorWindow (vcl::Window* pParent, ModulWindow* pModulWindow) :
     Window(pParent, WB_BORDER),
     rModulWindow(*pModulWindow),
     nCurTextWidth(0),
-    aHighlighter(HIGHLIGHT_BASIC),
+    aHighlighter(HighlighterLanguage::Basic),
     bHighlightning(false),
     bDoSyntaxHighlight(true),
     bDelayHighlight(true),
@@ -499,13 +497,6 @@ void EditorWindow::KeyInput( const KeyEvent& rKEvt )
     if ( !pEditView )   // Happens in Win95
         return;
 
-#if OSL_DEBUG_LEVEL > 1
-    Range aRange = rModulWindow.GetHScrollBar()->GetRange(); (void)aRange;
-    long nVisSz = rModulWindow.GetHScrollBar()->GetVisibleSize(); (void)nVisSz;
-    long nPapSz = rModulWindow.GetHScrollBar()->GetPageSize(); (void)nPapSz;
-    long nLinSz = rModulWindow.GetHScrollBar()->GetLineSize(); (void)nLinSz;
-    long nThumb = rModulWindow.GetHScrollBar()->GetThumbPos(); (void)nThumb;
-#endif
     bool const bWasModified = pEditEngine->IsModified();
     // see if there is an accelerator to be processed first
     SfxViewShell *pVS( SfxViewShell::Current());
@@ -624,7 +615,7 @@ void EditorWindow::HandleAutoCorrect()
 
     OUString sStr = aLine.copy( r.nBegin, r.nEnd - r.nBegin );
     //if WS or empty string: stop, nothing to do
-    if( ( r.tokenType == TT_WHITESPACE ) || sStr.isEmpty() )
+    if( ( r.tokenType == TokenType::Whitespace ) || sStr.isEmpty() )
         return;
     //create the appropriate TextSelection, and update the cache
     TextPaM aStart( nLine, r.nBegin );
@@ -633,7 +624,7 @@ void EditorWindow::HandleAutoCorrect()
     rModulWindow.UpdateModule();
     rModulWindow.GetSbModule()->GetCodeCompleteDataFromParse( aCodeCompleteCache );
     // correct the last entered keyword
-    if( r.tokenType == TT_KEYWORDS )
+    if( r.tokenType == TokenType::Keywords )
     {
         sStr = sStr.toAsciiLowerCase();
         if( !SbModule::GetKeywordCase(sStr).isEmpty() )
@@ -646,7 +637,7 @@ void EditorWindow::HandleAutoCorrect()
         pEditEngine->ReplaceText( sTextSelection, sStr );
         pEditView->SetSelection( aSel );
     }
-    if( r.tokenType == TT_IDENTIFIER )
+    if( r.tokenType == TokenType::Identifier )
     {// correct variables
         if( !aCodeCompleteCache.GetCorrectCaseVarName( sStr, sActSubName ).isEmpty() )
         {
@@ -713,7 +704,7 @@ void EditorWindow::HandleAutoCloseParen()
     if( aLine.getLength() > 0 && aLine[aSel.GetEnd().GetIndex()-1] != '(' )
     {
         GetEditView()->InsertText(")");
-        //leave the cursor on it's place: inside the parenthesis
+        //leave the cursor on its place: inside the parenthesis
         TextPaM aEnd(nLine, aSel.GetEnd().GetIndex());
         GetEditView()->SetSelection( TextSelection( aEnd, aEnd ) );
     }
@@ -731,10 +722,10 @@ void EditorWindow::HandleAutoCloseDoubleQuotes()
     if( aPortions.empty() )
         return;
 
-    if( aLine.getLength() > 0 && !aLine.endsWith("\"") && (aPortions.back().tokenType != TT_STRING) )
+    if( aLine.getLength() > 0 && !aLine.endsWith("\"") && (aPortions.back().tokenType != TokenType::String) )
     {
         GetEditView()->InsertText("\"");
-        //leave the cursor on it's place: inside the two double quotes
+        //leave the cursor on its place: inside the two double quotes
         TextPaM aEnd(nLine, aSel.GetEnd().GetIndex());
         GetEditView()->SetSelection( TextSelection( aEnd, aEnd ) );
     }
@@ -778,7 +769,7 @@ void EditorWindow::HandleProcedureCompletion()
                 HighlightPortion& r = aCurrPortions.front();
                 OUString sStr = aCurrLine.copy(r.nBegin, r.nEnd - r.nBegin);
 
-                if( r.tokenType == 9 )
+                if( r.tokenType == TokenType::Keywords )
                 {
                     if( sStr.equalsIgnoreAsciiCase("sub") || sStr.equalsIgnoreAsciiCase("function") )
                     {
@@ -810,13 +801,13 @@ bool EditorWindow::GetProcedureName(OUString& rLine, OUString& rProcType, OUStri
     {
         OUString sTokStr = rLine.copy(i->nBegin, i->nEnd - i->nBegin);
 
-        if( i->tokenType == 9 && ( sTokStr.equalsIgnoreAsciiCase("sub")
+        if( i->tokenType == TokenType::Keywords && ( sTokStr.equalsIgnoreAsciiCase("sub")
             || sTokStr.equalsIgnoreAsciiCase("function")) )
         {
             rProcType = sTokStr;
             bFoundType = true;
         }
-        if( i->tokenType == 1 && bFoundType )
+        if( i->tokenType == TokenType::Identifier && bFoundType )
         {
             rProcName = sTokStr;
             bFoundName = true;
@@ -849,9 +840,9 @@ void EditorWindow::HandleCodeCompletion()
                  aPortions.rbegin());
              i != aPortions.rend(); ++i)
         {
-            if( i->tokenType == TT_WHITESPACE ) // a whitespace: stop; if there is no ws, it goes to the beginning of the line
+            if( i->tokenType == TokenType::Whitespace ) // a whitespace: stop; if there is no ws, it goes to the beginning of the line
                 break;
-            if( i->tokenType == TT_IDENTIFIER || i->tokenType == TT_KEYWORDS ) // extract the identifiers(methods, base variable)
+            if( i->tokenType == TokenType::Identifier || i->tokenType == TokenType::Keywords ) // extract the identifiers(methods, base variable)
             /* an example: Dim aLocVar2 as com.sun.star.beans.PropertyValue
              * here, aLocVar2.Name, and PropertyValue's Name field is treated as a keyword(?!)
              * */
@@ -899,9 +890,9 @@ void EditorWindow::SetupAndShowCodeCompleteWnd( const std::vector< OUString >& a
     // clear the listbox
     pCodeCompleteWnd->ClearListBox();
     // fill the listbox
-    for(size_t l = 0; l < aEntryVect.size(); ++l)
+    for(const auto & l : aEntryVect)
     {
-        pCodeCompleteWnd->InsertEntry( aEntryVect[l] );
+        pCodeCompleteWnd->InsertEntry( l );
     }
     // show it
     pCodeCompleteWnd->Show();
@@ -929,9 +920,8 @@ void EditorWindow::LoseFocus()
     Window::LoseFocus();
 }
 
-bool EditorWindow::SetSourceInBasic()
+void EditorWindow::SetSourceInBasic()
 {
-    bool bChanged = false;
     if ( pEditEngine && pEditEngine->IsModified()
         && !GetEditView()->IsReadOnly() )   // Added for #i60626, otherwise
             // any read only bug in the text engine could lead to a crash later
@@ -939,10 +929,8 @@ bool EditorWindow::SetSourceInBasic()
         if ( !StarBASIC::IsRunning() ) // Not at runtime!
         {
             rModulWindow.UpdateModule();
-            bChanged = true;
         }
     }
-    return bChanged;
 }
 
 // Returns the position of the last character of any of the following
@@ -1087,9 +1075,9 @@ void EditorWindow::Notify( SfxBroadcaster& /*rBC*/, const SfxHint& rHint )
                 rModulWindow.GetHScrollBar()->SetThumbPos( pEditView->GetStartDocPos().X() );
             rModulWindow.GetEditVScrollBar().SetThumbPos( pEditView->GetStartDocPos().Y() );
             rModulWindow.GetBreakPointWindow().DoScroll
-                ( 0, rModulWindow.GetBreakPointWindow().GetCurYOffset() - pEditView->GetStartDocPos().Y() );
+                ( rModulWindow.GetBreakPointWindow().GetCurYOffset() - pEditView->GetStartDocPos().Y() );
             rModulWindow.GetLineNumberWindow().DoScroll
-                ( 0, rModulWindow.GetLineNumberWindow().GetCurYOffset() - pEditView->GetStartDocPos().Y() );
+                ( rModulWindow.GetLineNumberWindow().GetCurYOffset() - pEditView->GetStartDocPos().Y() );
         }
         else if( rTextHint.GetId() == TEXT_HINT_TEXTHEIGHTCHANGED )
         {
@@ -1237,7 +1225,7 @@ void EditorWindow::ImplSetFont()
         vcl::Font aTmpFont(OutputDevice::GetDefaultFont(DefaultFontType::FIXED,
                                                         Application::GetSettings().GetUILanguageTag().getLanguageType(),
                                                         GetDefaultFontFlags::NONE, this));
-        sFontName = aTmpFont.GetName();
+        sFontName = aTmpFont.GetFamilyName();
     }
     Size aFontSize(0, officecfg::Office::Common::Font::SourceViewFont::FontHeight::get());
     vcl::Font aFont(sFontName, aFontSize);
@@ -1296,7 +1284,7 @@ IMPL_LINK_NOARG_TYPED(EditorWindow, SyntaxTimerHdl, Idle *, void)
     //pEditEngine->SetUpdateMode(false);
 
     bHighlightning = true;
-    for ( SyntaxLineSet::const_iterator it = aSyntaxLineTable.begin();
+    for ( std::set<sal_uInt16>::const_iterator it = aSyntaxLineTable.begin();
           it != aSyntaxLineTable.end(); ++it )
     {
         sal_uInt16 nLine = *it;
@@ -1428,10 +1416,10 @@ void BreakPointWindow::ShowMarker(vcl::RenderContext& rRenderContext)
     rRenderContext.DrawImage(aPos, aMarker);
 }
 
-void BreakPointWindow::DoScroll( long nHorzScroll, long nVertScroll )
+void BreakPointWindow::DoScroll( long nVertScroll )
 {
     nCurYOffset -= nVertScroll;
-    Window::Scroll( nHorzScroll, nVertScroll );
+    Window::Scroll( 0, nVertScroll );
 }
 
 void BreakPointWindow::SetMarkerPos( sal_uInt16 nLine, bool bError )
@@ -1651,7 +1639,6 @@ WatchWindow::WatchWindow (Layout* pParent) :
 }
 
 
-
 WatchWindow::~WatchWindow()
 {
     disposeOnce();
@@ -1763,7 +1750,7 @@ void WatchWindow::AddWatch( const OUString& rVName )
     UpdateWatches();
 }
 
-bool WatchWindow::RemoveSelectedWatch()
+void WatchWindow::RemoveSelectedWatch()
 {
     SvTreeListEntry* pEntry = aTreeListBox->GetCurEntry();
     if ( pEntry )
@@ -1776,10 +1763,7 @@ bool WatchWindow::RemoveSelectedWatch()
             aXEdit->SetText( OUString() );
         if ( !aTreeListBox->GetEntryCount() )
             aRemoveWatchButton->Disable();
-        return true;
     }
-    else
-        return false;
 }
 
 
@@ -1855,9 +1839,7 @@ void WatchWindow::UpdateWatches( bool bBasicStopped )
 }
 
 
-
 // StackWindow
-
 
 
 StackWindow::StackWindow (Layout* pParent) :
@@ -1880,7 +1862,6 @@ StackWindow::StackWindow (Layout* pParent) :
     // make stack window keyboard accessible
     GetSystemWindow()->GetTaskPaneList()->AddWindow( this );
 }
-
 
 
 StackWindow::~StackWindow()
@@ -2059,8 +2040,8 @@ IMPL_LINK_TYPED(ComplexEditorWindow, ScrollHdl, ScrollBar *, pCurScrollBar, void
         DBG_ASSERT( pCurScrollBar == aEWVScrollBar.get(), "Wer scrollt hier ?" );
         long nDiff = aEdtWindow->GetEditView()->GetStartDocPos().Y() - pCurScrollBar->GetThumbPos();
         aEdtWindow->GetEditView()->Scroll( 0, nDiff );
-        aBrkWindow->DoScroll( 0, nDiff );
-        aLineNumberWindow->DoScroll(0, nDiff);
+        aBrkWindow->DoScroll( nDiff );
+        aLineNumberWindow->DoScroll( nDiff );
         aEdtWindow->GetEditView()->ShowCursor(false);
         pCurScrollBar->SetThumbPos( aEdtWindow->GetEditView()->GetStartDocPos().Y() );
     }
@@ -2106,9 +2087,7 @@ EditorWindow::GetComponentInterface(bool bCreate)
 }
 
 
-
 // WatchTreeListBox
-
 
 
 WatchTreeListBox::WatchTreeListBox( vcl::Window* pParent, WinBits nWinBits )
@@ -2876,12 +2855,12 @@ void CodeCompleteWindow::ResizeAndPositionListBox()
         pListBox->SetSizePixel( aSize );
 
         //calculate position
-        const Rectangle aVisArea( pParent->GetEditView()->GetStartDocPos(), pParent->GetOutputSizePixel() );//the visible area
+        const Rectangle aVisArea( pParent->GetEditView()->GetStartDocPos(), pParent->GetOutputSizePixel() ); //the visible area
         const Point& aBottomPoint = aVisArea.BottomRight();
 
         if( aVisArea.TopRight().getY() + aPos.getY() + aSize.getHeight() > aBottomPoint.getY() )
         {//clipped at the bottom: move it up
-            const long& nParentFontHeight = pParent->GetEditEngine()->GetFont().GetHeight();//parent's font (in the IDE): needed for height
+            const long& nParentFontHeight = pParent->GetEditEngine()->GetFont().GetFontHeight(); //parent's font (in the IDE): needed for height
             aPos.Y() -= aSize.getHeight() + nParentFontHeight + nCursorPad;
         }
 

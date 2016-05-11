@@ -23,18 +23,17 @@
 #include <sal/alloca.h>
 #include <osl/thread.h>
 
-#include <prex.h>
-#include <X11/Xlocale.h>
 #include <X11/Xlib.h>
-#include <postx.h>
+#include <X11/Xutil.h>
+#include <X11/Xlocale.h>
 
-#include "vcl/cmdevt.hxx"
-#include "unx/salunx.h"
-#include "unx/XIM.h"
-#include "unx/i18n_cb.hxx"
-#include "unx/i18n_status.hxx"
-#include "unx/i18n_ic.hxx"
-#include "unx/i18n_im.hxx"
+#include <vcl/commandevent.hxx>
+#include <unx/salunx.h>
+#include <unx/XIM.h>
+#include <unx/i18n_cb.hxx>
+#include <unx/i18n_status.hxx>
+#include <unx/i18n_ic.hxx>
+#include <unx/i18n_im.hxx>
 #include "salframe.hxx"
 
 // i. preedit start callback
@@ -62,7 +61,7 @@ PreeditDoneCallback ( XIC, XPointer client_data, XPointer )
      if (pPreeditData->eState == ePreeditStatusActive )
     {
         if( pPreeditData->pFrame )
-            pPreeditData->pFrame->CallCallback( SALEVENT_ENDEXTTEXTINPUT, nullptr );
+            pPreeditData->pFrame->CallCallback( SalEvent::EndExtTextInput, nullptr );
     }
     pPreeditData->eState = ePreeditStatusStartPending;
 }
@@ -370,9 +369,9 @@ PreeditDrawCallback(XIC ic, XPointer client_data,
     pPreeditData->aInputEv.mbOnlyCursor = False;
 
     if ( pPreeditData->eState == ePreeditStatusActive && pPreeditData->pFrame )
-        pPreeditData->pFrame->CallCallback(SALEVENT_EXTTEXTINPUT, static_cast<void*>(&pPreeditData->aInputEv));
+        pPreeditData->pFrame->CallCallback(SalEvent::ExtTextInput, static_cast<void*>(&pPreeditData->aInputEv));
     if (pPreeditData->aText.nLength == 0 && pPreeditData->pFrame )
-        pPreeditData->pFrame->CallCallback( SALEVENT_ENDEXTTEXTINPUT, nullptr );
+        pPreeditData->pFrame->CallCallback( SalEvent::EndExtTextInput, nullptr );
 
     if (pPreeditData->aText.nLength == 0)
         pPreeditData->eState = ePreeditStatusStartPending;
@@ -386,15 +385,15 @@ GetPreeditSpotLocation(XIC ic, XPointer client_data)
 
     // Send SalEventExtTextInputPos event to get spotlocation
 
-    SalExtTextInputPosEvent mPosEvent;
+    SalExtTextInputPosEvent aPosEvent;
     preedit_data_t* pPreeditData = reinterpret_cast<preedit_data_t*>(client_data);
 
     if( pPreeditData->pFrame )
-        pPreeditData->pFrame->CallCallback(SALEVENT_EXTTEXTINPUTPOS, static_cast<void*>(&mPosEvent));
+        pPreeditData->pFrame->CallCallback(SalEvent::ExtTextInputPos, static_cast<void*>(&aPosEvent));
 
     XPoint point;
-    point.x = mPosEvent.mnX + mPosEvent.mnWidth;
-    point.y = mPosEvent.mnY + mPosEvent.mnHeight;
+    point.x = aPosEvent.mnX + aPosEvent.mnWidth;
+    point.y = aPosEvent.mnY + aPosEvent.mnHeight;
 
     XVaNestedList preedit_attr;
     preedit_attr = XVaCreateNestedList(0, XNSpotLocation, &point, nullptr);
@@ -439,7 +438,7 @@ PreeditCaretCallback ( XIC, XPointer,XIMPreeditCaretCallbackStruct* )
         case XIMLineStart:    direction = "Line start";    break;
         case XIMLineEnd:      direction = "Line end";      break;
         case XIMAbsolutePosition: direction = "Absolute";  break;
-        case XIMDontChange:   direction = "Dont change";   break;
+        case XIMDontChange:   direction = "Don't change";  break;
     }
 
     fprintf (stderr, "PreeditCaretCallback( ic=%p, client=%p,\n",

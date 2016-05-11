@@ -25,12 +25,9 @@
 #include <comphelper/propertybag.hxx>
 #include <comphelper/propagg.hxx>
 
-#include <boost/noncopyable.hpp>
-
 
 namespace frm
 {
-
 
 
     //= class IPropertyBagHelperContext
@@ -52,7 +49,7 @@ namespace frm
         ~IPropertyBagHelperContext() {}
     };
 
-    class PropertyBagHelper : public ::boost::noncopyable
+    class PropertyBagHelper
     {
     private:
         IPropertyBagHelperContext&                      m_rContext;
@@ -63,6 +60,8 @@ namespace frm
     public:
         PropertyBagHelper( IPropertyBagHelperContext& _rContext );
         ~PropertyBagHelper();
+        PropertyBagHelper(const PropertyBagHelper&) = delete;
+        PropertyBagHelper& operator=(const PropertyBagHelper&) = delete;
 
         // XComponent equivalent
         void    dispose();

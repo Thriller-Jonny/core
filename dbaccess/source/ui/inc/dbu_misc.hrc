@@ -16,8 +16,8 @@
  *   except in compliance with the License. You may obtain a copy of
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
-#ifndef _DBU_MISC_HRC_
-#define _DBU_MISC_HRC_
+#ifndef INCLUDED_DBACCESS_SOURCE_UI_INC_DBU_MISC_HRC
+#define INCLUDED_DBACCESS_SOURCE_UI_INC_DBU_MISC_HRC
 
 #include "dbu_resource.hrc"
 
@@ -25,7 +25,7 @@
 #define IMG_DOWN                            RID_STR_MISC_START +  1
 #define STR_WIZ_COLUMN_SELECT_TITEL         RID_STR_MISC_START +  2
 #define STR_WIZ_TYPE_SELECT_TITEL           RID_STR_MISC_START +  3
-#define STR_WIZ_PKEY_ALREADY_DEFINED        RID_STR_MISC_START +  4
+#define STR_WIZ_NAME_ALREADY_DEFINED        RID_STR_MISC_START +  4
 #define STR_WIZ_NAME_MATCHING_TITEL         RID_STR_MISC_START +  5
 #define STR_WIZ_TABLE_COPY                  RID_STR_MISC_START +  6
 #define STR_COPYTABLE_TITLE_COPY            RID_STR_MISC_START +  7
@@ -50,6 +50,6 @@
 #error Resource-Id Ueberlauf in #file, #line
 #endif
 
-#endif // _DBU_MISC_HRC_
+#endif
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -155,7 +155,7 @@ class OFormSubmitResetThread: public OComponentEventThread
 {
 protected:
 
-    // duplicate an event with respect to it's type
+    // duplicate an event with respect to its type
     virtual EventObject *cloneEvent( const EventObject *pEvt ) const override;
 
     // process an event. while processing the mutex isn't locked, and pCompImpl
@@ -185,7 +185,7 @@ void OFormSubmitResetThread::processEvent(
         bool _bSubmit)
 {
     if (_bSubmit)
-        static_cast<ODatabaseForm *>(pCompImpl)->submit_impl(_rControl, *static_cast<const css::awt::MouseEvent*>(_pEvt), true);
+        static_cast<ODatabaseForm *>(pCompImpl)->submit_impl(_rControl, *static_cast<const css::awt::MouseEvent*>(_pEvt));
     else
         static_cast<ODatabaseForm *>(pCompImpl)->reset_impl(true);
 }
@@ -256,7 +256,6 @@ ODatabaseForm::ODatabaseForm(const Reference<XComponentContext>& _rxContext)
     ,OPropertyChangeListener(m_aMutex)
     ,m_aLoadListeners(m_aMutex)
     ,m_aRowSetApproveListeners(m_aMutex)
-    ,m_aRowSetListeners(m_aMutex)
     ,m_aSubmitListeners(m_aMutex)
     ,m_aErrorListeners(m_aMutex)
     ,m_aResetListeners( *this, m_aMutex )
@@ -295,7 +294,6 @@ ODatabaseForm::ODatabaseForm( const ODatabaseForm& _cloneSource )
     ,IPropertyBagHelperContext()
     ,m_aLoadListeners( m_aMutex )
     ,m_aRowSetApproveListeners( m_aMutex )
-    ,m_aRowSetListeners( m_aMutex )
     ,m_aSubmitListeners( m_aMutex )
     ,m_aErrorListeners( m_aMutex )
     ,m_aResetListeners( *this, m_aMutex )
@@ -567,7 +565,7 @@ Sequence<sal_Int8> ODatabaseForm::GetDataMultiPartEncoded(const Reference<XContr
 
 namespace
 {
-    static void appendDigits( sal_Int32 _nNumber, sal_Int8 nDigits, OUStringBuffer& _rOut )
+    void appendDigits( sal_Int32 _nNumber, sal_Int8 nDigits, OUStringBuffer& _rOut )
     {
         sal_Int32 nCurLen = _rOut.getLength();
         _rOut.append( _nNumber );
@@ -1193,7 +1191,7 @@ bool ODatabaseForm::executeRowSet(::osl::ResettableMutexGuard& _rClearForNotifie
 
         // switch to "insert only" mode
         saveInsertOnlyState( );
-        m_xAggregateSet->setPropertyValue( PROPERTY_INSERTONLY, makeAny( sal_True ) );
+        m_xAggregateSet->setPropertyValue( PROPERTY_INSERTONLY, makeAny( true ) );
     }
     else if (m_bAllowInsert || m_bAllowUpdate || m_bAllowDelete)
         nConcurrency = ResultSetConcurrency::UPDATABLE;
@@ -1334,48 +1332,54 @@ void ODatabaseForm::describeFixedAndAggregateProperties(
         Sequence< Property >& _rProps,
         Sequence< Property >& _rAggregateProps ) const
 {
-    BEGIN_DESCRIBE_AGGREGATION_PROPERTIES(22, m_xAggregateSet)
-        // we want to "override" the privileges, since we have additional "AllowInsert" etc. properties
-        RemoveProperty( _rAggregateProps, PROPERTY_PRIVILEGES );
+    _rProps.realloc( 22 );
+    css::beans::Property* pProperties = _rProps.getArray();
 
-        // InsertOnly is also to be overridden, since we sometimes change it ourself
-        RemoveProperty( _rAggregateProps, PROPERTY_INSERTONLY );
+    if (m_xAggregateSet.is())
+        _rAggregateProps = m_xAggregateSet->getPropertySetInfo()->getProperties();
 
-        // we remove and re-declare the DataSourceName property, 'cause we want it to be constrained, and the
-        // original property of our aggregate isn't
-        RemoveProperty( _rAggregateProps, PROPERTY_DATASOURCE );
 
-        // for connection sharing, we need to override the ActiveConnection property, too
-        RemoveProperty( _rAggregateProps, PROPERTY_ACTIVE_CONNECTION );
+    // we want to "override" the privileges, since we have additional "AllowInsert" etc. properties
+    RemoveProperty( _rAggregateProps, PROPERTY_PRIVILEGES );
 
-        // the Filter property is also overwritten, since we have some implicit filters
-        // (e.g. the ones which result from linking master fields to detail fields
-        // via column names instead of parameters)
-        RemoveProperty( _rAggregateProps, PROPERTY_FILTER );
-        RemoveProperty( _rAggregateProps, PROPERTY_APPLYFILTER );
+    // InsertOnly is also to be overridden, since we sometimes change it ourself
+    RemoveProperty( _rAggregateProps, PROPERTY_INSERTONLY );
 
-        DECL_IFACE_PROP4(ACTIVE_CONNECTION, XConnection,                    BOUND, TRANSIENT, MAYBEVOID, CONSTRAINED);
-        DECL_BOOL_PROP2 ( APPLYFILTER,                                      BOUND, MAYBEDEFAULT            );
-        DECL_PROP1      ( NAME,             OUString,                BOUND                          );
-        DECL_PROP1      ( MASTERFIELDS,     Sequence< OUString >,    BOUND                          );
-        DECL_PROP1      ( DETAILFIELDS,     Sequence< OUString >,    BOUND                          );
-        DECL_PROP2      ( DATASOURCE,       OUString,                BOUND, CONSTRAINED             );
-        DECL_PROP3      ( CYCLE,            TabulatorCycle,                 BOUND, MAYBEVOID, MAYBEDEFAULT );
-        DECL_PROP2      ( FILTER,           OUString,                BOUND, MAYBEDEFAULT            );
-        DECL_BOOL_PROP2 ( INSERTONLY,                                       BOUND, MAYBEDEFAULT            );
-        DECL_PROP1      ( NAVIGATION,       NavigationBarMode,              BOUND                          );
-        DECL_BOOL_PROP1 ( ALLOWADDITIONS,                                   BOUND                          );
-        DECL_BOOL_PROP1 ( ALLOWEDITS,                                       BOUND                          );
-        DECL_BOOL_PROP1 ( ALLOWDELETIONS,                                   BOUND                          );
-        DECL_PROP2      ( PRIVILEGES,       sal_Int32,                      TRANSIENT, READONLY            );
-        DECL_PROP1      ( TARGET_URL,       OUString,                BOUND                          );
-        DECL_PROP1      ( TARGET_FRAME,     OUString,                BOUND                          );
-        DECL_PROP1      ( SUBMIT_METHOD,    FormSubmitMethod,               BOUND                          );
-        DECL_PROP1      ( SUBMIT_ENCODING,  FormSubmitEncoding,             BOUND                          );
-        DECL_BOOL_PROP3 ( DYNAMIC_CONTROL_BORDER,                           BOUND, MAYBEVOID, MAYBEDEFAULT );
-        DECL_PROP3      ( CONTROL_BORDER_COLOR_FOCUS,   sal_Int32,          BOUND, MAYBEVOID, MAYBEDEFAULT );
-        DECL_PROP3      ( CONTROL_BORDER_COLOR_MOUSE,   sal_Int32,          BOUND, MAYBEVOID, MAYBEDEFAULT );
-        DECL_PROP3      ( CONTROL_BORDER_COLOR_INVALID, sal_Int32,          BOUND, MAYBEVOID, MAYBEDEFAULT );
+    // we remove and re-declare the DataSourceName property, 'cause we want it to be constrained, and the
+    // original property of our aggregate isn't
+    RemoveProperty( _rAggregateProps, PROPERTY_DATASOURCE );
+
+    // for connection sharing, we need to override the ActiveConnection property, too
+    RemoveProperty( _rAggregateProps, PROPERTY_ACTIVE_CONNECTION );
+
+    // the Filter property is also overwritten, since we have some implicit filters
+    // (e.g. the ones which result from linking master fields to detail fields
+    // via column names instead of parameters)
+    RemoveProperty( _rAggregateProps, PROPERTY_FILTER );
+    RemoveProperty( _rAggregateProps, PROPERTY_APPLYFILTER );
+
+    DECL_IFACE_PROP4( ACTIVE_CONNECTION,XConnection,             BOUND, TRANSIENT, MAYBEVOID, CONSTRAINED);
+    DECL_BOOL_PROP2 ( APPLYFILTER,                               BOUND, MAYBEDEFAULT            );
+    DECL_PROP1      ( NAME,             OUString,                BOUND                          );
+    DECL_PROP1      ( MASTERFIELDS,     Sequence< OUString >,    BOUND                          );
+    DECL_PROP1      ( DETAILFIELDS,     Sequence< OUString >,    BOUND                          );
+    DECL_PROP2      ( DATASOURCE,       OUString,                BOUND, CONSTRAINED             );
+    DECL_PROP3      ( CYCLE,            TabulatorCycle,          BOUND, MAYBEVOID, MAYBEDEFAULT );
+    DECL_PROP2      ( FILTER,           OUString,                BOUND, MAYBEDEFAULT            );
+    DECL_BOOL_PROP2 ( INSERTONLY,                                BOUND, MAYBEDEFAULT            );
+    DECL_PROP1      ( NAVIGATION,       NavigationBarMode,       BOUND                          );
+    DECL_BOOL_PROP1 ( ALLOWADDITIONS,                            BOUND                          );
+    DECL_BOOL_PROP1 ( ALLOWEDITS,                                BOUND                          );
+    DECL_BOOL_PROP1 ( ALLOWDELETIONS,                            BOUND                          );
+    DECL_PROP2      ( PRIVILEGES,       sal_Int32,               TRANSIENT, READONLY            );
+    DECL_PROP1      ( TARGET_URL,       OUString,                BOUND                          );
+    DECL_PROP1      ( TARGET_FRAME,     OUString,                BOUND                          );
+    DECL_PROP1      ( SUBMIT_METHOD,    FormSubmitMethod,        BOUND                          );
+    DECL_PROP1      ( SUBMIT_ENCODING,  FormSubmitEncoding,      BOUND                          );
+    DECL_BOOL_PROP3 ( DYNAMIC_CONTROL_BORDER,                    BOUND, MAYBEVOID, MAYBEDEFAULT );
+    DECL_PROP3      ( CONTROL_BORDER_COLOR_FOCUS,   sal_Int32,   BOUND, MAYBEVOID, MAYBEDEFAULT );
+    DECL_PROP3      ( CONTROL_BORDER_COLOR_MOUSE,   sal_Int32,   BOUND, MAYBEVOID, MAYBEDEFAULT );
+    DECL_PROP3      ( CONTROL_BORDER_COLOR_INVALID, sal_Int32,   BOUND, MAYBEVOID, MAYBEDEFAULT );
     END_DESCRIBE_PROPERTIES();
 }
 
@@ -1444,7 +1448,7 @@ Reference< XCloneable > SAL_CALL ODatabaseForm::createClone(  ) throw (RuntimeEx
 }
 
 
-void ODatabaseForm::fire( sal_Int32* pnHandles, const Any* pNewValues, const Any* pOldValues, sal_Int32 nCount, bool bVetoable )
+void ODatabaseForm::fire( sal_Int32* pnHandles, const Any* pNewValues, const Any* pOldValues, sal_Int32 nCount )
 {
     // same as in getFastPropertyValue(sal_Int32) : if we're resetting currently don't fire any changes of the
     // IsModified property from sal_False to sal_True, as this is only temporary 'til the reset is done
@@ -1470,15 +1474,15 @@ void ODatabaseForm::fire( sal_Int32* pnHandles, const Any* pNewValues, const Any
                 --nCount;
             else
             {   // split into two base class calls
-                OPropertySetAggregationHelper::fire(pnHandles, pNewValues, pOldValues, nPos, bVetoable);
+                OPropertySetAggregationHelper::fire(pnHandles, pNewValues, pOldValues, nPos, false/*bVetoable*/);
                 ++nPos;
-                OPropertySetAggregationHelper::fire(pnHandles + nPos, pNewValues + nPos, pOldValues + nPos, nCount - nPos, bVetoable);
+                OPropertySetAggregationHelper::fire(pnHandles + nPos, pNewValues + nPos, pOldValues + nPos, nCount - nPos, false/*bVetoable*/);
                 return;
             }
         }
     }
 
-    OPropertySetAggregationHelper::fire(pnHandles, pNewValues, pOldValues, nCount, bVetoable);
+    OPropertySetAggregationHelper::fire(pnHandles, pNewValues, pOldValues, nCount, false/*bVetoable*/);
 }
 
 
@@ -1502,7 +1506,7 @@ void ODatabaseForm::getFastPropertyValue( Any& rValue, sal_Int32 nHandle ) const
             break;
 
         case PROPERTY_ID_FILTER:
-            rValue <<= m_aFilterManager.getFilterComponent( FilterManager::fcPublicFilter );
+            rValue <<= m_aFilterManager.getFilterComponent( FilterManager::FilterComponent::PublicFilter );
             break;
 
         case PROPERTY_ID_APPLYFILTER:
@@ -1585,7 +1589,7 @@ sal_Bool ODatabaseForm::convertFastPropertyValue( Any& rConvertedValue, Any& rOl
             break;
 
         case PROPERTY_ID_FILTER:
-            bModified = tryPropertyValue( rConvertedValue, rOldValue, rValue, m_aFilterManager.getFilterComponent( FilterManager::fcPublicFilter ) );
+            bModified = tryPropertyValue( rConvertedValue, rOldValue, rValue, m_aFilterManager.getFilterComponent( FilterManager::FilterComponent::PublicFilter ) );
             break;
 
         case PROPERTY_ID_APPLYFILTER:
@@ -1674,7 +1678,7 @@ void ODatabaseForm::setFastPropertyValue_NoBroadcast( sal_Int32 nHandle, const A
         {
             OUString sNewFilter;
             rValue >>= sNewFilter;
-            m_aFilterManager.setFilterComponent( FilterManager::fcPublicFilter, sNewFilter );
+            m_aFilterManager.setFilterComponent( FilterManager::FilterComponent::PublicFilter, sNewFilter );
         }
         break;
 
@@ -1817,7 +1821,7 @@ PropertyState ODatabaseForm::getPropertyStateByHandle(sal_Int32 nHandle)
             break;
 
         case PROPERTY_ID_FILTER:
-            if ( m_aFilterManager.getFilterComponent( FilterManager::fcPublicFilter ).isEmpty() )
+            if ( m_aFilterManager.getFilterComponent( FilterManager::FilterComponent::PublicFilter ).isEmpty() )
                 eState = PropertyState_DEFAULT_VALUE;
             else
                 eState = PropertyState_DIRECT_VALUE;
@@ -1879,7 +1883,7 @@ Any ODatabaseForm::getPropertyDefaultByHandle( sal_Int32 nHandle ) const
     {
         case PROPERTY_ID_INSERTONLY:
         case PROPERTY_ID_DYNAMIC_CONTROL_BORDER:
-            aReturn <<= sal_False;
+            aReturn <<= false;
             break;
 
         case PROPERTY_ID_FILTER:
@@ -1887,7 +1891,7 @@ Any ODatabaseForm::getPropertyDefaultByHandle( sal_Int32 nHandle ) const
             break;
 
         case PROPERTY_ID_APPLYFILTER:
-            aReturn <<= sal_True;
+            aReturn <<= true;
             break;
 
         case PROPERTY_ID_NAVIGATION:
@@ -2114,7 +2118,7 @@ void SAL_CALL ODatabaseForm::submit( const Reference<XControl>& Control,
     {
         // direct call without any approving by the listeners
         aGuard.clear();
-        submit_impl( Control, MouseEvt, true );
+        submit_impl( Control, MouseEvt );
     }
 }
 
@@ -2148,23 +2152,20 @@ void lcl_dispatch(const Reference< XFrame >& xFrame,const Reference<XURLTransfor
     } // if (xDisp.is())
 }
 
-void ODatabaseForm::submit_impl(const Reference<XControl>& Control, const css::awt::MouseEvent& MouseEvt, bool _bAproveByListeners)
+void ODatabaseForm::submit_impl(const Reference<XControl>& Control, const css::awt::MouseEvent& MouseEvt)
 {
 
-    if (_bAproveByListeners)
+    ::comphelper::OInterfaceIteratorHelper2 aIter(m_aSubmitListeners);
+    EventObject aEvt(static_cast<XWeak*>(this));
+    bool bCanceled = false;
+    while (aIter.hasMoreElements() && !bCanceled)
     {
-        ::cppu::OInterfaceIteratorHelper aIter(m_aSubmitListeners);
-        EventObject aEvt(static_cast<XWeak*>(this));
-        bool bCanceled = false;
-        while (aIter.hasMoreElements() && !bCanceled)
-        {
-            if (!static_cast<XSubmitListener*>(aIter.next())->approveSubmit(aEvt))
-                bCanceled = true;
-        }
-
-        if (bCanceled)
-            return;
+        if (!static_cast<XSubmitListener*>(aIter.next())->approveSubmit(aEvt))
+            bCanceled = true;
     }
+
+    if (bCanceled)
+        return;
 
     FormSubmitEncoding eSubmitEncoding;
     FormSubmitMethod eSubmitMethod;
@@ -2333,7 +2334,7 @@ void ODatabaseForm::_propertyChanged(const PropertyChangeEvent& evt) throw( Runt
         // the rowset changed its active connection itself (without interaction from our side), so
         // we need to fire this event, too
         sal_Int32 nHandle = PROPERTY_ID_ACTIVE_CONNECTION;
-        fire(&nHandle, &evt.NewValue, &evt.OldValue, 1, false);
+        fire(&nHandle, &evt.NewValue, &evt.OldValue, 1);
     }
     else // it was one of the statement relevant props
     {
@@ -2419,9 +2420,9 @@ sal_Bool SAL_CALL ODatabaseForm::getGroupControl() throw(css::uno::RuntimeExcept
     }
 
     if (isLoaded() && getConnection().is())
-        return sal_True;
+        return true;
 
-    return sal_False;
+    return false;
 }
 
 
@@ -2560,7 +2561,7 @@ void SAL_CALL ODatabaseForm::disposing(const EventObject& Source) throw( Runtime
 void ODatabaseForm::impl_createLoadTimer()
 {
     OSL_PRECOND( m_pLoadTimer == nullptr, "ODatabaseForm::impl_createLoadTimer: timer already exists!" );
-    m_pLoadTimer = new Timer();
+    m_pLoadTimer = new Timer("DatabaseFormLoadTimer");
     m_pLoadTimer->SetTimeout(100);
     m_pLoadTimer->SetTimeoutHdl(LINK(this,ODatabaseForm,OnTimeout));
 }
@@ -2702,7 +2703,7 @@ bool ODatabaseForm::canShareConnection( const Reference< XPropertySet >& _rxPare
 
 void ODatabaseForm::doShareConnection( const Reference< XPropertySet >& _rxParentProps )
 {
-    // get the conneciton of the parent
+    // get the connection of the parent
     Reference< XConnection > xParentConn;
     _rxParentProps->getPropertyValue( PROPERTY_ACTIVE_CONNECTION ) >>= xParentConn;
     OSL_ENSURE( xParentConn.is(), "ODatabaseForm::doShareConnection: we're a valid sub-form, but the parent has no connection?!" );
@@ -2946,7 +2947,7 @@ void ODatabaseForm::reload_impl(bool bMoveToFirst, const Reference< XInteraction
         // the approvement is done by the aggregate
         if (!m_aRowSetApproveListeners.getLength())
         {
-            ::cppu::OInterfaceIteratorHelper aIter(m_aLoadListeners);
+            ::comphelper::OInterfaceIteratorHelper2 aIter(m_aLoadListeners);
             aGuard.clear();
 
             while (aIter.hasMoreElements())
@@ -2969,7 +2970,7 @@ void ODatabaseForm::reload_impl(bool bMoveToFirst, const Reference< XInteraction
 
     if (bSuccess)
     {
-        ::cppu::OInterfaceIteratorHelper aIter(m_aLoadListeners);
+        ::comphelper::OInterfaceIteratorHelper2 aIter(m_aLoadListeners);
         aGuard.clear();
         while (aIter.hasMoreElements())
             static_cast<XLoadListener*>(aIter.next())->reloaded(aEvent);
@@ -3049,7 +3050,7 @@ void SAL_CALL ODatabaseForm::rowSetChanged(const EventObject& /*event*/) throw( 
 bool ODatabaseForm::impl_approveRowChange_throw( const EventObject& _rEvent, const bool _bAllowSQLException,
     ::osl::ClearableMutexGuard& _rGuard )
 {
-    ::cppu::OInterfaceIteratorHelper aIter( m_aRowSetApproveListeners );
+    ::comphelper::OInterfaceIteratorHelper2 aIter( m_aRowSetApproveListeners );
     _rGuard.clear();
     while ( aIter.hasMoreElements() )
     {
@@ -3094,7 +3095,7 @@ sal_Bool SAL_CALL ODatabaseForm::approveCursorMove(const EventObject& event) thr
         // Our aggregate doesn't have any ApproveRowSetListeners (expect ourself), as we re-routed the queryInterface
         // for XRowSetApproveBroadcaster-interface.
         // So we have to multiplex this approve request.
-        ::cppu::OInterfaceIteratorHelper aIter( m_aRowSetApproveListeners );
+        ::comphelper::OInterfaceIteratorHelper2 aIter( m_aRowSetApproveListeners );
         while ( aIter.hasMoreElements() )
         {
             Reference< XRowSetApproveListener > xListener( static_cast< XRowSetApproveListener* >( aIter.next() ) );
@@ -3104,7 +3105,7 @@ sal_Bool SAL_CALL ODatabaseForm::approveCursorMove(const EventObject& event) thr
             try
             {
                 if ( !xListener->approveCursorMove( event ) )
-                    return sal_False;
+                    return false;
             }
             catch (const DisposedException& e)
             {
@@ -3129,9 +3130,9 @@ sal_Bool SAL_CALL ODatabaseForm::approveCursorMove(const EventObject& event) thr
         // ask our own RowSetChangesListeners, too
         ::osl::ClearableMutexGuard aGuard( m_aMutex );
         if ( !impl_approveRowChange_throw( event, false, aGuard ) )
-            return sal_False;
+            return false;
     }
-    return sal_True;
+    return true;
 }
 
 
@@ -3143,7 +3144,7 @@ sal_Bool SAL_CALL ODatabaseForm::approveRowChange(const RowChangeEvent& event) t
         // Our aggregate doesn't have any ApproveRowSetListeners (expect ourself), as we re-routed the queryInterface
         // for XRowSetApproveBroadcaster-interface.
         // So we have to multiplex this approve request.
-        ::cppu::OInterfaceIteratorHelper aIter( m_aRowSetApproveListeners );
+        ::comphelper::OInterfaceIteratorHelper2 aIter( m_aRowSetApproveListeners );
         while ( aIter.hasMoreElements() )
         {
             Reference< XRowSetApproveListener > xListener( static_cast< XRowSetApproveListener* >( aIter.next() ) );
@@ -3171,7 +3172,7 @@ sal_Bool SAL_CALL ODatabaseForm::approveRowChange(const RowChangeEvent& event) t
         }
         return true;
     }
-    return sal_True;
+    return true;
 }
 
 
@@ -3182,7 +3183,7 @@ sal_Bool SAL_CALL ODatabaseForm::approveRowSetChange(const EventObject& event) t
         ::osl::ClearableMutexGuard aGuard( m_aMutex );
         bool bWasLoaded = isLoaded();
         if ( !impl_approveRowChange_throw( event, false, aGuard ) )
-            return sal_False;
+            return false;
 
         if ( bWasLoaded )
         {
@@ -3196,9 +3197,9 @@ sal_Bool SAL_CALL ODatabaseForm::approveRowSetChange(const EventObject& event) t
         // ask our own RowSetChangesListeners, too
         ::osl::ClearableMutexGuard aGuard( m_aMutex );
         if ( !impl_approveRowChange_throw( event, false, aGuard ) )
-            return sal_False;
+            return false;
     }
-    return sal_True;
+    return true;
 }
 
 
@@ -3530,7 +3531,7 @@ void SAL_CALL ODatabaseForm::moveToInsertRow() throw( SQLException, RuntimeExcep
         // Formerly, the following line was conditioned with a "not is new", means we did not move the aggregate
         // to the insert row if it was already positioned there.
         //
-        // This prevented the RowSet implementation from resetting it's column values. We, ourself, formerly
+        // This prevented the RowSet implementation from resetting its column values. We, ourself, formerly
         // did this reset of columns in reset_impl, where we set every column to the ControlDefault, or, if this
         // was not present, to NULL. However, the problem with setting to NULL was #88888#, the problem with
         // _not_ setting to NULL (which was the original fix for #88888#) was #97955#.
@@ -3851,7 +3852,7 @@ void SAL_CALL ODatabaseForm::write(const Reference<XObjectOutputStream>& _rxOutS
     if (m_xAggregateSet.is())
         _rxOutStream->writeBoolean(getBOOL(m_xAggregateSet->getPropertyValue(PROPERTY_INSERTONLY)));
     else
-        _rxOutStream->writeBoolean(sal_False);
+        _rxOutStream->writeBoolean(false);
 
     _rxOutStream->writeBoolean(m_bAllowInsert);
     _rxOutStream->writeBoolean(m_bAllowUpdate);

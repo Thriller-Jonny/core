@@ -82,10 +82,8 @@ public:
 
     /** Place and size the scroll bars and the browser window so that the
         given rectangle is filled.
-        @return
-            The space occupied by the browser window is returned.
     */
-    Rectangle Resize (const Rectangle& rAvailableSpace);
+    void Resize (const Rectangle& rAvailableSpace);
 
     /** Determine which of the UI elements--the scroll bars, the scroll bar
         filler, the actual slide sorter view--are visible and place them in
@@ -95,10 +93,8 @@ public:
             window and with it the SlideSorterView is resized event when its
             size does not change (the size does change when the visibility
             of scroll bars changes.)
-        @return
-            Returns the space occupied by the browser window.
     */
-    Rectangle Rearrange (bool bForce = false);
+    void Rearrange (bool bForce = false);
 
     /** Return the descriptor of the page that is rendered under the
         given position.  This takes the IsOnlyPreviewTriggersMouseOver
@@ -110,7 +106,8 @@ public:
     */
     model::SharedPageDescriptor GetPageAt (const Point& rPixelPosition);
 
-    PageSelector& GetPageSelector();
+    // Exported for unit test
+    SD_DLLPUBLIC PageSelector& GetPageSelector();
     FocusManager& GetFocusManager();
     // Exported for unit test
     SD_DLLPUBLIC controller::Clipboard& GetClipboard();
@@ -191,11 +188,8 @@ public:
         has been changed.  For proper saving and restoring of the selection
         this method should be called between calls to
         PrepareEditModeChange() and FinishEditModeChange().
-        @return
-            A return value of <TRUE/> indicates that the edit mode has
-            changed.
     */
-    bool ChangeEditMode (EditMode eEditMode);
+    void ChangeEditMode (EditMode eEditMode);
 
     /** Finish the change of the edit mode.  Here we may select a page or
         restore a previously saved selection.
@@ -219,7 +213,7 @@ public:
 
     /** Return an Animator object.
     */
-    std::shared_ptr<Animator> GetAnimator() const { return mpAnimator;}
+    const std::shared_ptr<Animator>& GetAnimator() const { return mpAnimator;}
 
     VisibleAreaManager& GetVisibleAreaManager() const;
 

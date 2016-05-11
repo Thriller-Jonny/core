@@ -44,8 +44,6 @@ using namespace css::uno;
 
 namespace sc_apitest {
 
-#define NUMBER_OF_TESTS 3
-
 class ScPerfObj : public CalcUnoApiTest
 {
 public:
@@ -72,12 +70,15 @@ public:
     CPPUNIT_TEST(testSubTotalWithFormulas);
     CPPUNIT_TEST(testSubTotalWithoutFormulas);
     CPPUNIT_TEST(testLoadingFileWithSingleBigSheet);
+    CPPUNIT_TEST(testFixedSum);
+    CPPUNIT_TEST(testVariableSum);
+    CPPUNIT_TEST(testMatConcatSmall);
+    CPPUNIT_TEST(testMatConcatLarge);
     CPPUNIT_TEST_SUITE_END();
 
 private:
 
-    static sal_Int32 nTest;
-    static uno::Reference< lang::XComponent > mxComponent;
+    uno::Reference< lang::XComponent > mxComponent;
 
     // tests
     void testSheetFindAll();
@@ -94,10 +95,11 @@ private:
     void testSubTotalWithFormulas();
     void testSubTotalWithoutFormulas();
     void testLoadingFileWithSingleBigSheet();
+    void testFixedSum();
+    void testVariableSum();
+    void testMatConcatSmall();
+    void testMatConcatLarge();
 };
-
-sal_Int32 ScPerfObj::nTest = 0;
-uno::Reference< lang::XComponent > ScPerfObj::mxComponent;
 
 ScPerfObj::ScPerfObj()
     : CalcUnoApiTest("sc/qa/perf/testdocuments/")
@@ -106,9 +108,6 @@ ScPerfObj::ScPerfObj()
 
 uno::Reference< uno::XInterface > ScPerfObj::init(const OUString& aFileName)
 {
-    if (mxComponent.is())
-        closeDocument(mxComponent);
-
     OUString aFileURL;
     createFileURL(aFileName, aFileURL);
 
@@ -121,19 +120,15 @@ uno::Reference< uno::XInterface > ScPerfObj::init(const OUString& aFileName)
 
 void ScPerfObj::setUp()
 {
-    nTest++;
     CalcUnoApiTest::setUp();
 }
 
 void ScPerfObj::tearDown()
 {
-    if (nTest == NUMBER_OF_TESTS)
+    if (mxComponent.is())
     {
-        if (mxComponent.is())
-        {
-            closeDocument(mxComponent);
-            mxComponent.clear();
-        }
+        closeDocument(mxComponent);
+        mxComponent.clear();
     }
     CalcUnoApiTest::tearDown();
 }
@@ -560,6 +555,124 @@ void ScPerfObj::testLoadingFileWithSingleBigSheet()
     CPPUNIT_ASSERT_MESSAGE("Problem in document loading" , xDoc1.is());
     uno::Reference< sheet::XCalculatable > xCalculatable1(xDoc1, UNO_QUERY_THROW);
     callgrindDump("sc:loadingFileWithSingleBigSheetdoSubTotal_2000lines");
+}
+
+void ScPerfObj::testFixedSum()
+{
+    uno::Reference< sheet::XSpreadsheetDocument > xDoc(init("scMathFunctions3.ods"), UNO_QUERY_THROW);
+
+    CPPUNIT_ASSERT_MESSAGE("Problem in document loading" , xDoc.is());
+    uno::Reference< sheet::XCalculatable > xCalculatable(xDoc, UNO_QUERY_THROW);
+
+    // get getSheets
+    uno::Reference< sheet::XSpreadsheets > xSheets (xDoc->getSheets(), UNO_QUERY_THROW);
+
+    uno::Any rSheet = xSheets->getByName("FixedSumSheet");
+
+    // query for the XSpreadsheet interface
+    uno::Reference< sheet::XSpreadsheet > xSheet (rSheet, UNO_QUERY);
+
+    // query for the XCellRange interface
+    uno::Reference< table::XCellRange > rCellRange(rSheet, UNO_QUERY);
+    // query the cell range
+    uno::Reference< table::XCellRange > xCellRange = rCellRange->getCellRangeByName("B1:B1000");
+
+    uno::Reference< sheet::XArrayFormulaRange > xArrayFormulaRange(xCellRange, UNO_QUERY_THROW);
+
+    callgrindStart();
+    xArrayFormulaRange->setArrayFormula("=SUM(A$1:A$1000)");
+    xCalculatable->calculate();
+    callgrindDump("sc:sum_with_fixed_array_formula");
+
+    for( sal_Int32 i = 0; i < 1000; ++i )
+    {
+        uno::Reference< table::XCell > xCell = xSheet->getCellByPosition(1, i);
+        CPPUNIT_ASSERT_DOUBLES_EQUAL(50206.0, xCell->getValue(), 1e-12);
+    }
+}
+
+void ScPerfObj::testVariableSum()
+{
+    uno::Reference< sheet::XSpreadsheetDocument > xDoc(init("scMathFunctions3.ods"), UNO_QUERY_THROW);
+
+    CPPUNIT_ASSERT_MESSAGE("Problem in document loading" , xDoc.is());
+    uno::Reference< sheet::XCalculatable > xCalculatable(xDoc, UNO_QUERY_THROW);
+
+    // get getSheets
+    uno::Reference< sheet::XSpreadsheets > xSheets (xDoc->getSheets(), UNO_QUERY_THROW);
+
+    uno::Any rSheet = xSheets->getByName("VariableSumSheet");
+
+    // query for the XSpreadsheet interface
+    uno::Reference< sheet::XSpreadsheet > xSheet (rSheet, UNO_QUERY);
+
+    // query for the XCellRange interface
+    uno::Reference< table::XCellRange > rCellRange(rSheet, UNO_QUERY);
+    // query the cell range
+    uno::Reference< table::XCellRange > xCellRange = rCellRange->getCellRangeByName("B1:B9000");
+
+    uno::Reference< sheet::XArrayFormulaRange > xArrayFormulaRange(xCellRange, UNO_QUERY_THROW);
+
+    callgrindStart();
+    xArrayFormulaRange->setArrayFormula("=SUM(A1:A1000)");
+    xCalculatable->calculate();
+    callgrindDump("sc:sum_with_variable_array_formula");
+}
+
+void ScPerfObj::testMatConcatSmall()
+{
+    uno::Reference< sheet::XSpreadsheetDocument > xDoc(init("empty.ods"), UNO_QUERY_THROW);
+
+    CPPUNIT_ASSERT(xDoc.is());
+    uno::Reference< sheet::XCalculatable > xCalculatable(xDoc, UNO_QUERY_THROW);
+
+    // get getSheets
+    uno::Reference< sheet::XSpreadsheets > xSheets (xDoc->getSheets(), UNO_QUERY_THROW);
+
+    uno::Any rSheet = xSheets->getByName("Sheet1");
+
+    // query for the XSpreadsheet interface
+    uno::Reference< sheet::XSpreadsheet > xSheet (rSheet, UNO_QUERY);
+
+    // query for the XCellRange interface
+    uno::Reference< table::XCellRange > rCellRange(rSheet, UNO_QUERY);
+    // query the cell range
+    uno::Reference< table::XCellRange > xCellRange = rCellRange->getCellRangeByName("C1");
+
+    uno::Reference< sheet::XArrayFormulaRange > xArrayFormulaRange(xCellRange, UNO_QUERY_THROW);
+
+    callgrindStart();
+    xArrayFormulaRange->setArrayFormula("=A1:A20&B1:B20");
+    xCalculatable->calculate();
+    callgrindDump("sc:mat_concat_small");
+}
+
+void ScPerfObj::testMatConcatLarge()
+{
+    uno::Reference< sheet::XSpreadsheetDocument > xDoc(init("empty.ods"), UNO_QUERY_THROW);
+
+    CPPUNIT_ASSERT(xDoc.is());
+    uno::Reference< sheet::XCalculatable > xCalculatable(xDoc, UNO_QUERY_THROW);
+
+    // get getSheets
+    uno::Reference< sheet::XSpreadsheets > xSheets (xDoc->getSheets(), UNO_QUERY_THROW);
+
+    uno::Any rSheet = xSheets->getByName("Sheet1");
+
+    // query for the XSpreadsheet interface
+    uno::Reference< sheet::XSpreadsheet > xSheet (rSheet, UNO_QUERY);
+
+    // query for the XCellRange interface
+    uno::Reference< table::XCellRange > rCellRange(rSheet, UNO_QUERY);
+    // query the cell range
+    uno::Reference< table::XCellRange > xCellRange = rCellRange->getCellRangeByName("C1");
+
+    uno::Reference< sheet::XArrayFormulaRange > xArrayFormulaRange(xCellRange, UNO_QUERY_THROW);
+
+    callgrindStart();
+    xArrayFormulaRange->setArrayFormula("=A1:A30000&B1:B30000");
+    xCalculatable->calculate();
+    callgrindDump("sc:mat_concat");
 }
 
 CPPUNIT_TEST_SUITE_REGISTRATION(ScPerfObj);

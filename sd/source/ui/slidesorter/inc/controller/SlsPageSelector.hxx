@@ -25,7 +25,8 @@
 #include <com/sun/star/drawing/XDrawPage.hpp>
 #include <vector>
 #include <memory>
-#include <boost/noncopyable.hpp>
+
+#include "sddllapi.h"
 
 class SdPage;
 
@@ -50,12 +51,15 @@ class SlideSorterController;
     Indices of pages relate always to the number of all pages in the model
     (as returned by GetPageCount()) not just the selected pages.
 */
-class PageSelector : private ::boost::noncopyable
+class PageSelector
 {
 public:
-    PageSelector (SlideSorter& rSlideSorter);
+    explicit PageSelector(SlideSorter& rSlideSorter);
+    PageSelector(const PageSelector&) = delete;
+    PageSelector& operator=(const PageSelector&) = delete;
 
-    void SelectAllPages();
+    // Exported for unit test
+    SD_DLLPUBLIC void SelectAllPages();
     void DeselectAllPages();
 
     /** Update the selection state of all page descriptors to be the same as
@@ -65,7 +69,7 @@ public:
     void GetCoreSelection();
 
     /** Update the selection state of the SdPage objects to be the same as
-        that of the correspinding page descriptors.
+        that of the corresponding page descriptors.
     */
     void SetCoreSelection();
 
@@ -90,13 +94,10 @@ public:
     bool IsPageSelected (int nPageIndex);
 
     /** Deselect the descriptor that is associated with the given page.
-        @param bUpdateCurrentPage
-            When <TRUE/> then the current page is updated to the first slide
-            of the remaining selection.
+        The current page is updated to the first slide
+        of the remaining selection.
     */
-    void DeselectPage (
-        int nPageIndex,
-        const bool bUpdateCurrentPage = true);
+    void DeselectPage (int nPageIndex);
     void DeselectPage (
         const model::SharedPageDescriptor& rpDescriptor,
         const bool bUpdateCurrentPage = true);
@@ -114,7 +115,7 @@ public:
         @return
             The returned anchor may be NULL.
     */
-    model::SharedPageDescriptor GetSelectionAnchor() const { return mpSelectionAnchor;}
+    const model::SharedPageDescriptor& GetSelectionAnchor() const { return mpSelectionAnchor;}
 
     typedef ::std::vector<SdPage*> PageSelection;
 
@@ -185,7 +186,6 @@ private:
     model::SharedPageDescriptor mpMostRecentlySelectedPage;
     /// Anchor for a range selection.
     model::SharedPageDescriptor mpSelectionAnchor;
-    model::SharedPageDescriptor mpCurrentPage;
     sal_Int32 mnUpdateLockCount;
     bool mbIsUpdateCurrentPagePending;
 

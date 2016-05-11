@@ -35,9 +35,6 @@
 #include <cppuhelper/implbase.hxx>
 
 
-// - PPPOptimizerDialog -
-
-
 class OptimizerDialog;
 class PPPOptimizerDialog : public   ::cppu::WeakImplHelper<
                                     css::lang::XInitialization,
@@ -95,7 +92,6 @@ OUString PPPOptimizerDialog_getImplementationName();
 css::uno::Sequence< OUString > PPPOptimizerDialog_getSupportedServiceNames();
 css::uno::Reference< css::uno::XInterface > PPPOptimizerDialog_createInstance( const css::uno::Reference< css::uno::XComponentContext > & rSMgr )
     throw( css::uno::Exception );
-
 
 
 #endif // INCLUDED_SDEXT_SOURCE_MINIMIZER_PPPOPTIMIZERDIALOG_HXX

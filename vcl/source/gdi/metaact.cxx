@@ -1233,7 +1233,8 @@ void MetaTextArrayAction::Read( SvStream& rIStm, ImplMetaReadData* pData )
         if ( mnIndex + mnLen > maStr.getLength() )
         {
             mnIndex = 0;
-            delete[] mpDXAry, mpDXAry = nullptr;
+            delete[] mpDXAry;
+            mpDXAry = nullptr;
         }
     }
 }
@@ -1378,8 +1379,8 @@ MetaTextLineAction::MetaTextLineAction() :
     MetaAction  ( MetaActionType::TEXTLINE ),
     mnWidth     ( 0 ),
     meStrikeout ( STRIKEOUT_NONE ),
-    meUnderline ( UNDERLINE_NONE ),
-    meOverline  ( UNDERLINE_NONE )
+    meUnderline ( LINESTYLE_NONE ),
+    meOverline  ( LINESTYLE_NONE )
 {}
 
 MetaTextLineAction::~MetaTextLineAction()
@@ -1387,8 +1388,8 @@ MetaTextLineAction::~MetaTextLineAction()
 
 MetaTextLineAction::MetaTextLineAction( const Point& rPos, long nWidth,
                                         FontStrikeout eStrikeout,
-                                        FontUnderline eUnderline,
-                                        FontUnderline eOverline ) :
+                                        FontLineStyle eUnderline,
+                                        FontLineStyle eOverline ) :
     MetaAction  ( MetaActionType::TEXTLINE ),
     maPos       ( rPos ),
     mnWidth     ( nWidth ),
@@ -1446,11 +1447,11 @@ void MetaTextLineAction::Read( SvStream& rIStm, ImplMetaReadData* )
     meStrikeout = (FontStrikeout)nTempStrikeout;
     sal_uInt32 nTempUnderline(0);
     rIStm.ReadUInt32( nTempUnderline );
-    meUnderline = (FontUnderline)nTempUnderline;
+    meUnderline = (FontLineStyle)nTempUnderline;
     if ( aCompat.GetVersion() >= 2 ) {
         sal_uInt32 nTempUnderline2(0);
         rIStm.ReadUInt32(nTempUnderline2);
-        meUnderline = (FontUnderline)nTempUnderline2;
+        meUnderline = (FontLineStyle)nTempUnderline2;
     }
 }
 
@@ -2775,7 +2776,7 @@ MetaFontAction::MetaFontAction( const vcl::Font& rFont ) :
     // we change the textencoding to RTL_TEXTENCODING_UNICODE here, which seems
     // to be the right way; changing the textencoding at other sources
     // is too dangerous at the moment
-    if ( IsStarSymbol( maFont.GetName() )
+    if ( IsStarSymbol( maFont.GetFamilyName() )
         && ( maFont.GetCharSet() != RTL_TEXTENCODING_UNICODE ) )
     {
         maFont.SetCharSet( RTL_TEXTENCODING_UNICODE );
@@ -2797,9 +2798,9 @@ MetaAction* MetaFontAction::Clone()
 void MetaFontAction::Scale( double fScaleX, double fScaleY )
 {
     const Size aSize(
-        FRound(maFont.GetSize().Width() * fabs(fScaleX)),
-        FRound(maFont.GetSize().Height() * fabs(fScaleY)));
-    maFont.SetSize( aSize );
+        FRound(maFont.GetFontSize().Width() * fabs(fScaleX)),
+        FRound(maFont.GetFontSize().Height() * fabs(fScaleY)));
+    maFont.SetFontSize( aSize );
 }
 
 void MetaFontAction::Write( SvStream& rOStm, ImplMetaWriteData* pData )
@@ -3163,9 +3164,9 @@ void MetaRefPointAction::Read( SvStream& rIStm, ImplMetaReadData* )
     ReadPair( rIStm, maRefPoint ).ReadCharAsBool( mbSet );
 }
 
-MetaCommentAction::MetaCommentAction( sal_Int32 nValue ) :
+MetaCommentAction::MetaCommentAction() :
     MetaAction  ( MetaActionType::COMMENT ),
-    mnValue     ( nValue )
+    mnValue     ( 0 )
 {
     ImplInitDynamicData( nullptr, 0UL );
 }
@@ -3196,7 +3197,8 @@ void MetaCommentAction::ImplInitDynamicData( const sal_uInt8* pData, sal_uInt32 
 {
     if ( nDataSize && pData )
     {
-        mnDataSize = nDataSize, mpData = new sal_uInt8[ mnDataSize ];
+        mnDataSize = nDataSize;
+        mpData = new sal_uInt8[ mnDataSize ];
         memcpy( mpData, pData, mnDataSize );
     }
     else
@@ -3274,7 +3276,7 @@ void MetaCommentAction::Move( long nXMove, long nYMove )
     }
 }
 
-// SJ: 25.07.06 #i56656# we are not able to mirrorcertain kind of
+// SJ: 25.07.06 #i56656# we are not able to mirror certain kind of
 // comments properly, especially the XPATHSTROKE and XPATHFILL lead to
 // problems, so it is better to remove these comments when mirroring
 // FIXME: fake comment to apply the next hunk in the right location

@@ -29,6 +29,7 @@
 #include <osl/diagnose.h>
 #include <rtl/ustrbuf.hxx>
 #include <cppuhelper/interfacecontainer.hxx>
+#include <comphelper/interfacecontainer2.hxx>
 #include <com/sun/star/beans/PropertyAttribute.hpp>
 #include <com/sun/star/beans/PropertySetInfoChange.hpp>
 #include <com/sun/star/configuration/theDefaultProvider.hpp>
@@ -47,8 +48,8 @@ using namespace com::sun::star::lang;
 using namespace com::sun::star::ucb;
 using namespace com::sun::star::uno;
 using namespace com::sun::star::util;
+using namespace comphelper;
 using namespace cppu;
-
 
 
 OUString makeHierarchalNameSegment( const OUString & rIn  )
@@ -111,13 +112,11 @@ PropertySetMap_Impl;
 // class PropertySetInfo_Impl
 class PropertySetInfo_Impl : public cppu::WeakImplHelper < XPropertySetInfo >
 {
-    Reference< XComponentContext >    m_xContext;
     Sequence< Property >*             m_pProps;
     PersistentPropertySet*            m_pOwner;
 
 public:
-    PropertySetInfo_Impl( const Reference< XComponentContext >& xContext,
-                          PersistentPropertySet* pOwner );
+    explicit PropertySetInfo_Impl(PersistentPropertySet* pOwner);
     virtual ~PropertySetInfo_Impl();
 
     // XPropertySetInfo
@@ -133,9 +132,7 @@ public:
 };
 
 
-
 // UcbStore_Impl.
-
 
 
 struct UcbStore_Impl
@@ -146,13 +143,7 @@ struct UcbStore_Impl
 };
 
 
-
-
-
 // UcbStore Implementation.
-
-
-
 
 
 UcbStore::UcbStore( const Reference< XComponentContext >& xContext )
@@ -173,17 +164,13 @@ XSERVICEINFO_IMPL_1_CTX( UcbStore,
                      STORE_SERVICE_NAME );
 
 
-
 // Service factory implementation.
-
 
 
 ONE_INSTANCE_SERVICE_FACTORY_IMPL( UcbStore );
 
 
-
 // XPropertySetRegistryFactory methods.
-
 
 
 // virtual
@@ -205,9 +192,7 @@ UcbStore::createPropertySetRegistry( const OUString& )
 }
 
 
-
 // XInitialization methods.
-
 
 
 // virtual
@@ -225,9 +210,7 @@ const Sequence< Any >& UcbStore::getInitArgs() const
 }
 
 
-
 // PropertySetRegistry_Impl.
-
 
 
 struct PropertySetRegistry_Impl
@@ -252,9 +235,6 @@ struct PropertySetRegistry_Impl
 // PropertySetRegistry Implementation.
 
 
-
-
-
 PropertySetRegistry::PropertySetRegistry(
                         const Reference< XComponentContext >& xContext,
                         const Sequence< Any > &rInitArgs )
@@ -270,9 +250,7 @@ PropertySetRegistry::~PropertySetRegistry()
 }
 
 
-
 // XServiceInfo methods.
-
 
 
 XSERVICEINFO_NOFACTORY_IMPL_1( PropertySetRegistry,
@@ -280,9 +258,7 @@ XSERVICEINFO_NOFACTORY_IMPL_1( PropertySetRegistry,
                                 PROPSET_REG_SERVICE_NAME );
 
 
-
 // XPropertySetRegistry methods.
-
 
 
 // virtual
@@ -315,7 +291,7 @@ PropertySetRegistry::openPropertySet( const OUString& key, sal_Bool create )
                     // Yep!
                     return Reference< XPersistentPropertySet >(
                                             new PersistentPropertySet(
-                                                    m_xContext, *this, key ) );
+                                                    *this, key ) );
                 }
                 else if ( create )
                 {
@@ -350,11 +326,6 @@ PropertySetRegistry::openPropertySet( const OUString& key, sal_Bool create )
                             {
                                 // Fill new item...
 
-//                              // Set Values
-//                              xNameReplace->replaceByName(
-//                                      OUString("Values"),
-//                                      makeAny( ... ) );
-
                                 // Insert new item.
                                 xContainer->insertByName(
                                         key, makeAny( xNameReplace ) );
@@ -363,7 +334,7 @@ PropertySetRegistry::openPropertySet( const OUString& key, sal_Bool create )
 
                                 return Reference< XPersistentPropertySet >(
                                             new PersistentPropertySet(
-                                                    m_xContext, *this, key ) );
+                                                    *this, key ) );
                             }
                         }
                         catch (const IllegalArgumentException&)
@@ -473,9 +444,7 @@ void SAL_CALL PropertySetRegistry::removePropertySet( const OUString& key )
 }
 
 
-
 // XElementAccess methods.
-
 
 
 // virtual
@@ -497,13 +466,11 @@ sal_Bool SAL_CALL PropertySetRegistry::hasElements()
     if ( xElemAccess.is() )
         return xElemAccess->hasElements();
 
-    return sal_False;
+    return false;
 }
 
 
-
 // XNameAccess methods.
-
 
 
 // virtual
@@ -564,7 +531,7 @@ sal_Bool SAL_CALL PropertySetRegistry::hasByName( const OUString& aName )
         return xNameAccess->hasByName( aName );
     }
 
-    return sal_False;
+    return false;
 }
 
 
@@ -1032,7 +999,7 @@ Reference< XInterface > PropertySetRegistry::getConfigWriteAccess(
                 aArguments[ 0 ] <<= aProperty;
 
                 aProperty.Name = CFGPROPERTY_LAZYWRITE;
-                aProperty.Value <<= sal_True;
+                aProperty.Value <<= true;
                 aArguments[ 1 ] <<= aProperty;
 
                 m_pImpl->m_bTriedToGetRootWriteAccess = true;
@@ -1101,8 +1068,8 @@ struct PersistentPropertySet_Impl
     OUString                    m_aKey;
     OUString                    m_aFullKey;
     osl::Mutex                  m_aMutex;
-    OInterfaceContainerHelper*  m_pDisposeEventListeners;
-    OInterfaceContainerHelper*  m_pPropSetChangeListeners;
+    OInterfaceContainerHelper2*  m_pDisposeEventListeners;
+    OInterfaceContainerHelper2*  m_pPropSetChangeListeners;
     PropertyListeners_Impl*     m_pPropertyChangeListeners;
 
     PersistentPropertySet_Impl( PropertySetRegistry& rCreator,
@@ -1128,21 +1095,13 @@ struct PersistentPropertySet_Impl
 };
 
 
-
-
-
 // PersistentPropertySet Implementation.
 
 
-
-
-
 PersistentPropertySet::PersistentPropertySet(
-                        const Reference< XComponentContext >& xContext,
                         PropertySetRegistry& rCreator,
                         const OUString& rKey )
-: m_xContext( xContext ),
-  m_pImpl( new PersistentPropertySet_Impl( rCreator, rKey ) )
+: m_pImpl( new PersistentPropertySet_Impl( rCreator, rKey ) )
 {
     // register at creator.
     rCreator.add( this );
@@ -1159,15 +1118,12 @@ PersistentPropertySet::~PersistentPropertySet()
 // XServiceInfo methods.
 
 
-
 XSERVICEINFO_NOFACTORY_IMPL_1( PersistentPropertySet,
                                 OUString( "com.sun.star.comp.ucb.PersistentPropertySet" ),
                                 PERS_PROPSET_SERVICE_NAME );
 
 
-
 // XComponent methods.
-
 
 
 // virtual
@@ -1206,7 +1162,7 @@ void SAL_CALL PersistentPropertySet::addEventListener(
 {
     if ( !m_pImpl->m_pDisposeEventListeners )
         m_pImpl->m_pDisposeEventListeners =
-                    new OInterfaceContainerHelper( m_pImpl->m_aMutex );
+                    new OInterfaceContainerHelper2( m_pImpl->m_aMutex );
 
     m_pImpl->m_pDisposeEventListeners->addInterface( Listener );
 }
@@ -1224,9 +1180,7 @@ void SAL_CALL PersistentPropertySet::removeEventListener(
 }
 
 
-
 // XPropertySet methods.
-
 
 
 // virtual
@@ -1238,7 +1192,7 @@ Reference< XPropertySetInfo > SAL_CALL PersistentPropertySet::getPropertySetInfo
     PropertySetInfo_Impl*& rpInfo = m_pImpl->m_pInfo;
     if ( !rpInfo )
     {
-        rpInfo = new PropertySetInfo_Impl( m_xContext, this );
+        rpInfo = new PropertySetInfo_Impl( this );
         rpInfo->acquire();
     }
     return Reference< XPropertySetInfo >( rpInfo );
@@ -1321,7 +1275,7 @@ void SAL_CALL PersistentPropertySet::setPropertyValue( const OUString& aProperty
                         aEvt.Source         = static_cast<OWeakObject*>(this);
                         aEvt.PropertyName   = aPropertyName;
                         aEvt.PropertyHandle = nHandle;
-                        aEvt.Further        = sal_False;
+                        aEvt.Further        = false;
                         aEvt.OldValue       = aOldValue;
                         aEvt.NewValue       = aValue;
 
@@ -1449,9 +1403,7 @@ void SAL_CALL PersistentPropertySet::removeVetoableChangeListener(
 }
 
 
-
 // XPersistentPropertySet methods.
-
 
 
 // virtual
@@ -1470,9 +1422,7 @@ OUString SAL_CALL PersistentPropertySet::getKey()
 }
 
 
-
 // XNamed methods.
-
 
 
 // virtual
@@ -1493,9 +1443,7 @@ void SAL_CALL PersistentPropertySet::setName( const OUString& aName )
 }
 
 
-
 // XPropertyContainer methods.
-
 
 
 // virtual
@@ -1810,9 +1758,7 @@ void SAL_CALL PersistentPropertySet::removeProperty( const OUString& Name )
 }
 
 
-
 // XPropertySetInfoChangeNotifier methods.
-
 
 
 // virtual
@@ -1822,7 +1768,7 @@ void SAL_CALL PersistentPropertySet::addPropertySetInfoChangeListener(
 {
     if ( !m_pImpl->m_pPropSetChangeListeners )
         m_pImpl->m_pPropSetChangeListeners =
-                    new OInterfaceContainerHelper( m_pImpl->m_aMutex );
+                    new OInterfaceContainerHelper2( m_pImpl->m_aMutex );
 
     m_pImpl->m_pPropSetChangeListeners->addInterface( Listener );
 }
@@ -1838,9 +1784,7 @@ void SAL_CALL PersistentPropertySet::removePropertySetInfoChangeListener(
 }
 
 
-
 // XPropertyAccess methods.
-
 
 
 // virtual
@@ -2057,7 +2001,7 @@ void SAL_CALL PersistentPropertySet::setPropertyValues(
                             aEvt.Source         = static_cast<OWeakObject*>(this);
                             aEvt.PropertyName   = rNewValue.Name;
                             aEvt.PropertyHandle = rNewValue.Handle;
-                            aEvt.Further        = sal_False;
+                            aEvt.Further        = false;
                             aEvt.OldValue       = aOldValue;
                             aEvt.NewValue       = rNewValue.Value;
 
@@ -2103,9 +2047,7 @@ void SAL_CALL PersistentPropertySet::setPropertyValues(
 }
 
 
-
 // Non-interface methods
-
 
 
 void PersistentPropertySet::notifyPropertyChangeEvent(
@@ -2153,7 +2095,7 @@ void PersistentPropertySet::notifyPropertySetInfoChange(
         return;
 
     // Notify event listeners.
-    OInterfaceIteratorHelper aIter( *( m_pImpl->m_pPropSetChangeListeners ) );
+    OInterfaceIteratorHelper2 aIter( *( m_pImpl->m_pPropSetChangeListeners ) );
     while ( aIter.hasMoreElements() )
     {
         // Propagate event.
@@ -2189,18 +2131,12 @@ PropertySetRegistry& PersistentPropertySet::getPropertySetRegistry()
 }
 
 
-
-
 // PropertySetInfo_Impl Implementation.
 
 
-
-
 PropertySetInfo_Impl::PropertySetInfo_Impl(
-                        const Reference< XComponentContext >& xContext,
                         PersistentPropertySet* pOwner )
-: m_xContext( xContext ),
-  m_pProps( nullptr ),
+: m_pProps( nullptr ),
   m_pOwner( pOwner )
 {
 }
@@ -2215,7 +2151,6 @@ PropertySetInfo_Impl::~PropertySetInfo_Impl()
 }
 
 // XPropertySetInfo methods.
-
 
 
 // virtual
@@ -2466,7 +2401,7 @@ sal_Bool SAL_CALL PropertySetInfo_Impl::hasPropertyByName(
         return xRootHierNameAccess->hasByHierarchicalName( aFullPropName );
     }
 
-    return sal_False;
+    return false;
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

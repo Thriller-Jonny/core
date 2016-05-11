@@ -42,7 +42,7 @@
 #include <cppuhelper/supportsservice.hxx>
 #include <cppuhelper/typeprovider.hxx>
 #include "osl/mutex.hxx"
-#include "vcl/svapp.hxx"
+#include <vcl/svapp.hxx>
 
 using namespace     ::com::sun::star::container;
 using namespace     ::com::sun::star::lang;
@@ -51,7 +51,6 @@ using namespace     ::com::sun::star::uno;
 using namespace     ::com::sun::star::beans;
 using namespace     ::com::sun::star::awt;
 using namespace     ::utl;
-
 
 
 struct FilterEntry
@@ -71,24 +70,20 @@ public:
 
     FilterEntry( const OUString& _rTitle, const UnoFilterList& _rSubFilters );
 
-    OUString     getTitle() const { return m_sTitle; }
-    OUString     getFilter() const { return m_sFilter; }
+    const OUString& getTitle() const { return m_sTitle; }
+    const OUString& getFilter() const { return m_sFilter; }
 
     /// determines if the filter has sub filter (i.e., the filter is a filter group in real)
     bool            hasSubFilters( ) const;
 
     /** retrieves the filters belonging to the entry
-    @return
-        the number of sub filters
     */
-    sal_Int32           getSubFilters( UnoFilterList& _rSubFilterList );
+    void            getSubFilters( UnoFilterList& _rSubFilterList );
 
     // helpers for iterating the sub filters
     const UnoFilterEntry*   beginSubFilters() const { return m_aSubFilters.getConstArray(); }
     const UnoFilterEntry*   endSubFilters() const { return m_aSubFilters.getConstArray() + m_aSubFilters.getLength(); }
 };
-
-
 
 
 FilterEntry::FilterEntry( const OUString& _rTitle, const UnoFilterList& _rSubFilters )
@@ -104,10 +99,9 @@ bool FilterEntry::hasSubFilters( ) const
 }
 
 
-sal_Int32 FilterEntry::getSubFilters( UnoFilterList& _rSubFilterList )
+void FilterEntry::getSubFilters( UnoFilterList& _rSubFilterList )
 {
     _rSubFilterList = m_aSubFilters;
-    return m_aSubFilters.getLength();
 }
 
 struct ElementEntry_Impl
@@ -122,7 +116,7 @@ struct ElementEntry_Impl
     bool        m_bHasLabel     : 1;
     bool        m_bHasEnabled   : 1;
 
-                    ElementEntry_Impl( sal_Int16 nId );
+    explicit        ElementEntry_Impl( sal_Int16 nId );
 
     void            setValue( const Any& rVal ) { m_aValue = rVal; m_bHasValue = true; }
     void            setAction( sal_Int16 nAction ) { m_nControlAction = nAction; }
@@ -232,7 +226,6 @@ IMPL_LINK_TYPED( SvtFilePicker, DialogClosedHdl, Dialog&, rDlg, void )
 // SvtFilePicker
 
 
-
 WinBits SvtFilePicker::getWinBits( WinBits& rExtraBits )
 {
     // set the winbits for creating the filedialog
@@ -337,7 +330,7 @@ namespace {
         const OUString& rTitle;
 
     public:
-        FilterTitleMatch( const OUString& _rTitle ) : rTitle( _rTitle ) { }
+        explicit FilterTitleMatch( const OUString& _rTitle ) : rTitle( _rTitle ) { }
 
 
         bool operator () ( const FilterEntry& _rEntry )
@@ -415,9 +408,8 @@ void SvtFilePicker::ensureFilterList( const OUString& _rInitialCurrentFilter )
 
 // class SvtFilePicker
 
-SvtFilePicker::SvtFilePicker( const Reference < XMultiServiceFactory >& xFactory )
-    :OCommonPicker( xFactory )
-    ,m_pFilterList      ( nullptr )
+SvtFilePicker::SvtFilePicker()
+    :m_pFilterList      ( nullptr )
     ,m_pElemList        ( nullptr )
     ,m_bMultiSelection  ( false )
     ,m_nServiceType     ( TemplateDescription::FILEOPEN_SIMPLE )
@@ -493,7 +485,6 @@ IMPLEMENT_FORWARD_XTYPEPROVIDER3( SvtRemoteFilePicker, SvtFilePicker, OCommonPic
 // XExecutableDialog functions
 
 
-
 void SAL_CALL SvtFilePicker::setTitle( const OUString& _rTitle ) throw (RuntimeException, std::exception)
 {
     OCommonPicker::setTitle( _rTitle );
@@ -507,7 +498,6 @@ sal_Int16 SAL_CALL SvtFilePicker::execute(  ) throw (RuntimeException, std::exce
 
 
 // XAsynchronousExecutableDialog functions
-
 
 
 void SAL_CALL SvtFilePicker::setDialogTitle( const OUString& _rTitle ) throw (RuntimeException, std::exception)
@@ -663,7 +653,6 @@ void SAL_CALL SvtFilePicker::setValue( sal_Int16 nElementID,
 }
 
 
-
 Any SAL_CALL SvtFilePicker::getValue( sal_Int16 nElementID, sal_Int16 nControlAction )
     throw( RuntimeException, std::exception )
 {
@@ -697,7 +686,6 @@ Any SAL_CALL SvtFilePicker::getValue( sal_Int16 nElementID, sal_Int16 nControlAc
 
     return aAny;
 }
-
 
 
 void SAL_CALL SvtFilePicker::setLabel( sal_Int16 nLabelID, const OUString& rValue )
@@ -1026,7 +1014,6 @@ OUString SAL_CALL SvtFilePicker::getCurrentFilter()
 }
 
 
-
 // XInitialization functions
 
 
@@ -1106,7 +1093,6 @@ bool SvtFilePicker::implHandleInitializationArgument( const OUString& _rName, co
     }
 
 
-
     return OCommonPicker::implHandleInitializationArgument( _rName, _rValue );
 }
 
@@ -1147,16 +1133,14 @@ OUString SvtFilePicker::impl_getStaticImplementationName()
 
 /* Helper for registry */
 Reference< XInterface > SAL_CALL SvtFilePicker::impl_createInstance(
-    const Reference< XComponentContext >& rxContext) throw( Exception )
+    const Reference< XComponentContext >& ) throw( Exception )
 {
-    Reference< XMultiServiceFactory > xServiceManager (rxContext->getServiceManager(), UNO_QUERY_THROW);
-    return Reference< XInterface >( *new SvtFilePicker( xServiceManager ) );
+    return Reference< XInterface >( *new SvtFilePicker );
 }
 
 // SvtRemoteFilePicker
 
-SvtRemoteFilePicker::SvtRemoteFilePicker( const Reference < XMultiServiceFactory >& xFactory )
-    :SvtFilePicker( xFactory )
+SvtRemoteFilePicker::SvtRemoteFilePicker()
 {
 }
 
@@ -1214,10 +1198,9 @@ OUString SvtRemoteFilePicker::impl_getStaticImplementationName()
 
 /* Helper for registry */
 Reference< XInterface > SAL_CALL SvtRemoteFilePicker::impl_createInstance(
-    const Reference< XComponentContext >& rxContext) throw( Exception )
+    const Reference< XComponentContext >& ) throw( Exception )
 {
-    Reference< XMultiServiceFactory > xServiceManager (rxContext->getServiceManager(), UNO_QUERY_THROW);
-    return Reference< XInterface >( *new SvtRemoteFilePicker( xServiceManager ) );
+    return Reference< XInterface >( *new SvtRemoteFilePicker );
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

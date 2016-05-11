@@ -27,7 +27,7 @@
 #include "fldbas.hxx"
 #include "numrule.hxx"
 
-class _SetGetExpFields;
+class SetGetExpFields;
 class SwTextField;
 class SwFrame;
 class OutlinerParaObject;
@@ -173,7 +173,7 @@ public:
     virtual bool        QueryValue( css::uno::Any& rVal, sal_uInt16 nWhich ) const override;
     virtual bool        PutValue( const css::uno::Any& rVal, sal_uInt16 nWhich ) override;
 
-    OUString GetUserString() const            { return sUserStr; }
+    const OUString& GetUserString() const            { return sUserStr; }
     void SetUserString( const OUString& rS )  { sUserStr = rS; }
 };
 
@@ -197,7 +197,7 @@ public:
     virtual SwField*    Copy() const override;
 
     inline void         SetExpansion(const OUString& rStr) { aContent = rStr; }
-    inline OUString     GetContent() const { return aContent; }
+    const OUString&     GetContent() const { return aContent; }
 
     virtual bool        QueryValue( css::uno::Any& rVal, sal_uInt16 nWhich ) const override;
     virtual bool        PutValue( const css::uno::Any& rVal, sal_uInt16 nWhich ) override;
@@ -224,7 +224,7 @@ public:
     virtual SwField*    Copy() const override;
 
     inline void         SetExpansion(const OUString& rStr) { aContent = rStr; }
-    inline OUString     GetContent() const { return aContent; }
+    const OUString&     GetContent() const { return aContent; }
 
     virtual bool        QueryValue( css::uno::Any& rVal, sal_uInt16 nWhich ) const override;
     virtual bool        PutValue( const css::uno::Any& rVal, sal_uInt16 nWhich ) override;
@@ -402,7 +402,7 @@ public:
     SwMacroField( SwMacroFieldType*, const OUString& rLibAndName,
                   const OUString& rText);
 
-    inline OUString  GetMacro() const { return aMacro; }
+    const OUString&  GetMacro() const { return aMacro; }
     OUString         GetLibName() const;
     OUString         GetMacroName() const;
     SvxMacro         GetSvxMacro() const;
@@ -463,7 +463,7 @@ public:
     virtual OUString        Expand() const override;
     virtual SwField*        Copy() const override;
 
-    inline const DateTime   GetDateTime() const             { return aDateTime; }
+    const DateTime&         GetDateTime() const             { return aDateTime; }
     inline const Date       GetDate() const                 { return aDateTime.GetDate(); }
     inline const tools::Time GetTime() const                 { return aDateTime.GetTime(); }
 
@@ -513,10 +513,10 @@ public:
     SwDocInfoField(SwDocInfoFieldType*, sal_uInt16 nSub, const OUString& rName, const OUString& rValue, sal_uInt32 nFormat=0);
 
     virtual void            SetSubType(sal_uInt16) override;
-    virtual sal_uInt16          GetSubType() const override;
+    virtual sal_uInt16      GetSubType() const override;
     virtual void            SetLanguage(sal_uInt16 nLng) override;
     virtual OUString        GetFieldName() const override;
-    OUString                GetName() const { return aName; }
+    const OUString&         GetName() const { return aName; }
     void                    SetName( const OUString& rName ) { aName = rName; }
     inline void             SetExpansion(const OUString& rStr) { aContent = rStr; }
     virtual bool        QueryValue( css::uno::Any& rVal, sal_uInt16 nWhich ) const override;
@@ -562,8 +562,8 @@ public:
     virtual SwFieldType*    Copy() const override;
 
 protected:
-   /// Overlay, because there is nothing to update!
-   virtual void Modify( const SfxPoolItem*, const SfxPoolItem * ) override;
+    /// Overlay, because there is nothing to update!
+    virtual void Modify( const SfxPoolItem*, const SfxPoolItem * ) override;
 };
 
 // Relative page numbering.
@@ -596,14 +596,14 @@ class SwRefPageGetFieldType : public SwFieldType
     SwDoc*          pDoc;
     sal_Int16       nNumberingType;
 
-    void UpdateField( SwTextField* pTextField, _SetGetExpFields& rSetList );
+    void UpdateField( SwTextField* pTextField, SetGetExpFields& rSetList );
 protected:
     /// overwritten to update all RefPageGet fields
-   virtual void Modify( const SfxPoolItem*, const SfxPoolItem * ) override;
+    virtual void Modify( const SfxPoolItem*, const SfxPoolItem * ) override;
 public:
     SwRefPageGetFieldType( SwDoc* pDoc );
     virtual SwFieldType*    Copy() const override;
-    bool MakeSetList( _SetGetExpFields& rTmpLst );
+    bool MakeSetList( SetGetExpFields& rTmpLst );
     SwDoc*  GetDoc() const                  { return pDoc; }
 };
 

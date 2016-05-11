@@ -121,7 +121,6 @@ using ::com::sun::star::uno::Sequence;
 using ::com::sun::star::uno::UNO_QUERY;
 using ::com::sun::star::uno::UNO_QUERY_THROW;
 using ::com::sun::star::uno::UNO_SET_THROW;
-using ::com::sun::star::uno::XComponentContext;
 using ::com::sun::star::beans::NamedValue;
 using ::com::sun::star::lang::XMultiServiceFactory;
 using ::com::sun::star::container::XIndexContainer;
@@ -132,7 +131,6 @@ using ::com::sun::star::embed::XEmbeddedObject;
 using ::com::sun::star::embed::XEmbedPersist;
 using ::com::sun::star::drawing::XControlShape;
 using ::com::sun::star::drawing::XShape;
-using ::com::sun::star::form::XForm;
 using ::com::sun::star::form::XFormComponent;
 using ::com::sun::star::form::XFormsSupplier;
 using ::com::sun::star::form::binding::XBindableValue;
@@ -463,11 +461,9 @@ SdrObjectPtr XclImpDrawObjBase::CreateSdrObject( XclImpDffConverter& rDffConv, c
                 {
                     //Need summary type for export. Detail type(checkbox, button ...) has been contained by mnObjType
                     const sal_Int16 nTBXControlType = eCreateFromMSTBXControl ;
-                    Any aAny;
-                    aAny <<= nTBXControlType;
                     try
                     {
-                        xPropSet->setPropertyValue(sPropertyName, aAny);
+                        xPropSet->setPropertyValue(sPropertyName, Any(nTBXControlType));
                     }
                     catch(const Exception&)
                     {
@@ -482,14 +478,11 @@ SdrObjectPtr XclImpDrawObjBase::CreateSdrObject( XclImpDffConverter& rDffConv, c
                     if( pObj != nullptr && pObj->IsOcxControl() )
                     {
                         const sal_Int16 nOCXControlType =  eCreateFromMSOCXControl;
-                        Any aAny;
                         try
                         {
-                            aAny <<= nOCXControlType;
-                            xPropSet->setPropertyValue(sPropertyName, aAny);
+                            xPropSet->setPropertyValue(sPropertyName, Any(nOCXControlType));
                             //Detail type(checkbox, button ...)
-                            aAny<<= mnObjId;
-                            xPropSet->setPropertyValue(sObjIdPropertyName, aAny);
+                            xPropSet->setPropertyValue(sObjIdPropertyName, makeAny<sal_uInt16>(mnObjId));
                         }
                         catch(const Exception&)
                         {
@@ -1454,7 +1447,7 @@ void XclImpTextObj::DoPreProcessSdrObj( XclImpDffConverter& rDffConv, SdrObject&
                 std::unique_ptr< EditTextObject > xEditObj(
                     XclImpStringHelper::CreateTextObject( GetRoot(), *maTextData.mxString ) );
                 OutlinerParaObject* pOutlineObj = new OutlinerParaObject( *xEditObj );
-                pOutlineObj->SetOutlinerMode( OUTLINERMODE_TEXTOBJECT );
+                pOutlineObj->SetOutlinerMode( OutlinerMode::TextObject );
                 // text object takes ownership of the outliner object
                 pTextObj->NbcSetOutlinerParaObject( pOutlineObj );
             }
@@ -1545,9 +1538,10 @@ void XclImpTextObj::DoPreProcessSdrObj( XclImpDffConverter& rDffConv, SdrObject&
                 }
                 break;
 
-                case EXC_OBJ_ORIENT_STACKED:    // PASSTHROUGH INTENDED
+                case EXC_OBJ_ORIENT_STACKED:
                 {
                     // sj: STACKED is not supported, maybe it can be optimized here a bit
+                    SAL_FALLTHROUGH;
                 }
                 case EXC_OBJ_ORIENT_90CW:
                 {
@@ -1700,8 +1694,9 @@ SdrObjectPtr XclImpChartObj::DoCreateSdrObj( XclImpDffConverter& rDffConv, const
     {
         // create embedded chart object
         OUString aEmbObjName;
+        OUString sBaseURL(GetRoot().GetMedium().GetBaseURL());
         Reference< XEmbeddedObject > xEmbObj = pDocShell->GetEmbeddedObjectContainer().
-                CreateEmbeddedObject( SvGlobalName( SO3_SCH_CLASSID ).GetByteSequence(), aEmbObjName );
+                CreateEmbeddedObject( SvGlobalName( SO3_SCH_CLASSID ).GetByteSequence(), aEmbObjName, &sBaseURL );
 
         /*  Set the size to the embedded object, this prevents that font sizes
             of text objects are changed in the chart when the object is
@@ -3184,9 +3179,8 @@ void XclImpSolverContainer::RemoveSdrObjectInfo( SdrObject& rSdrObj )
 
 void XclImpSolverContainer::UpdateConnectorRules()
 {
-    for ( size_t i = 0, n = aCList.size(); i < n; ++i )
+    for (SvxMSDffConnectorRule* pRule : aCList)
     {
-        SvxMSDffConnectorRule* pRule = aCList[ i ];
         UpdateConnection( pRule->nShapeA, pRule->pAObj, &pRule->nSpFlagsA );
         UpdateConnection( pRule->nShapeB, pRule->pBObj, &pRule->nSpFlagsB );
         UpdateConnection( pRule->nShapeC, pRule->pCObj );
@@ -3196,8 +3190,8 @@ void XclImpSolverContainer::UpdateConnectorRules()
 void XclImpSolverContainer::RemoveConnectorRules()
 {
     // base class from SVX uses plain untyped tools/List
-    for ( size_t i = 0, n = aCList.size(); i < n; ++i ) {
-        delete aCList[ i ];
+    for (SvxMSDffConnectorRule* p : aCList) {
+        delete p;
     }
     aCList.clear();
     maSdrInfoMap.clear();
@@ -3558,10 +3552,6 @@ SdrObject* XclImpDffConverter::ProcessObj( SvStream& rDffStrm, DffObjData& rDffO
     // process the SdrObject
     if( xSdrObj )
     {
-        // cell anchoring
-        if ( !rDffObjData.bPageAnchor )
-            ScDrawLayer::SetCellAnchoredFromPosition( *xSdrObj,  GetDoc(), xDrawObj->GetTab() );
-
         // filled without color -> set system window color
         if( GetPropertyBool( DFF_Prop_fFilled ) && !IsProperty( DFF_Prop_fillColor ) )
             xSdrObj->SetMergedItem( XFillColorItem( EMPTY_OUSTRING, GetPalette().GetColor( EXC_COLOR_WINDOWBACK ) ) );
@@ -3594,6 +3584,28 @@ SdrObject* XclImpDffConverter::ProcessObj( SvStream& rDffStrm, DffObjData& rDffO
         if( !bIsTopLevel )
             xDrawObj->PostProcessSdrObject( *this, *xSdrObj );
      }
+
+    return xSdrObj.release();
+}
+
+SdrObject* XclImpDffConverter::FinalizeObj(DffObjData& rDffObjData, SdrObject* pOldSdrObj )
+{
+    XclImpDffConvData& rConvData = GetConvData();
+
+    /*  pOldSdrObj passes a generated SdrObject. This function owns this object
+        and can modify it. The function has either to return it back to caller
+        or to delete it by itself. */
+    SdrObjectPtr xSdrObj( pOldSdrObj );
+
+    // find the OBJ record data related to the processed shape
+    XclImpDrawObjRef xDrawObj = rConvData.mrDrawing.FindDrawObj( rDffObjData.rSpHd );
+
+    if( xSdrObj && xDrawObj )
+    {
+        // cell anchoring
+        if ( !rDffObjData.bPageAnchor )
+            ScDrawLayer::SetCellAnchoredFromPosition( *xSdrObj,  GetDoc(), xDrawObj->GetTab() );
+    }
 
     return xSdrObj.release();
 }
@@ -4296,9 +4308,9 @@ void XclImpDffPropSet::Read( XclImpStream& rStrm )
     maDffConv.ReadPropSet( *mxMemStrm, nullptr );
 }
 
-sal_uInt32 XclImpDffPropSet::GetPropertyValue( sal_uInt16 nPropId, sal_uInt32 nDefault ) const
+sal_uInt32 XclImpDffPropSet::GetPropertyValue( sal_uInt16 nPropId ) const
 {
-    return maDffConv.GetPropertyValue( nPropId, nDefault );
+    return maDffConv.GetPropertyValue( nPropId, 0 );
 }
 
 void XclImpDffPropSet::FillToItemSet( SfxItemSet& rItemSet ) const

@@ -25,7 +25,6 @@
 #include <basegfx/polygon/b2dpolygon.hxx>
 
 
-
 namespace sdr
 {
     namespace overlay
@@ -45,14 +44,13 @@ namespace sdr
             virtual ~OverlayPolyPolygonStripedAndFilled();
 
             // change geometry
-            basegfx::B2DPolyPolygon getLinePolyPolygon() const { return maLinePolyPolygon; }
+            const basegfx::B2DPolyPolygon& getLinePolyPolygon() const { return maLinePolyPolygon; }
 
             // react on stripe definition change
             virtual void stripeDefinitionHasChanged() override;
         };
     } // end of namespace overlay
 } // end of namespace sdr
-
 
 
 #endif // INCLUDED_SVX_SDR_OVERLAY_OVERLAYPOLYPOLYGON_HXX

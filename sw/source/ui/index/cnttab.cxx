@@ -506,7 +506,7 @@ IMPL_LINK_NOARG_TYPED( SwMultiTOXTabDialog, ShowPreviewHdl, Button*, void )
 
                 if(!pExampleFrame->IsServiceAvailable())
                 {
-                    SwOneExampleFrame::CreateErrorMessage(nullptr);
+                    SwOneExampleFrame::CreateErrorMessage();
                 }
             }
             m_pShowExampleCB->Show(pExampleFrame && pExampleFrame->IsServiceAvailable());
@@ -539,15 +539,15 @@ bool SwMultiTOXTabDialog::IsNoNum(SwWrtShell& rSh, const OUString& rName)
 class SwIndexTreeLB : public SvSimpleTable
 {
 public:
-    SwIndexTreeLB(SvSimpleTableContainer& rParent, WinBits nBits = 0);
+    explicit SwIndexTreeLB(SvSimpleTableContainer& rParent);
     virtual void KeyInput( const KeyEvent& rKEvt ) override;
     virtual void Resize() override;
     virtual sal_IntPtr GetTabPos( SvTreeListEntry*, SvLBoxTab* ) override;
     void setColSizes();
 };
 
-SwIndexTreeLB::SwIndexTreeLB(SvSimpleTableContainer& rParent, WinBits nBits)
-    : SvSimpleTable(rParent, nBits)
+SwIndexTreeLB::SwIndexTreeLB(SvSimpleTableContainer& rParent)
+    : SvSimpleTable(rParent, 0)
 {
     HeaderBar& rStylesHB = GetTheHeaderBar();
     rStylesHB.SetStyle(rStylesHB.GetStyle()|WB_BUTTONSTYLE);
@@ -1000,7 +1000,7 @@ static long lcl_TOXTypesToUserData(CurTOXType eType)
 
 void SwTOXSelectTabPage::SelectType(TOXTypes eSet)
 {
-    CurTOXType eCurType (eSet, 0);
+    CurTOXType eCurType (eSet);
 
     sal_IntPtr nData = lcl_TOXTypesToUserData(eCurType);
     m_pTypeLB->SelectEntryPos(m_pTypeLB->GetEntryPos(reinterpret_cast<void*>(nData)));
@@ -2229,13 +2229,13 @@ IMPL_LINK_TYPED(SwTOXEntryTabPage, EditStyleHdl, Button*, pBtn, void)
     if( LISTBOX_ENTRY_NOTFOUND != m_pCharStyleLB->GetSelectEntryPos())
     {
         SfxStringItem aStyle(SID_STYLE_EDIT, m_pCharStyleLB->GetSelectEntry());
-        SfxUInt16Item aFamily(SID_STYLE_FAMILY, SFX_STYLE_FAMILY_CHAR);
+        SfxUInt16Item aFamily(SID_STYLE_FAMILY, (sal_uInt16)SfxStyleFamily::Char);
         vcl::Window* pDefDlgParent = Application::GetDefDialogParent();
         Application::SetDefDialogParent( pBtn );
         static_cast<SwMultiTOXTabDialog*>(GetTabDialog())->GetWrtShell().
-        GetView().GetViewFrame()->GetDispatcher()->Execute(
-        SID_STYLE_EDIT, SfxCallMode::SYNCHRON|SfxCallMode::MODAL,
-            &aStyle, &aFamily, 0L);
+        GetView().GetViewFrame()->GetDispatcher()->ExecuteList(SID_STYLE_EDIT,
+                SfxCallMode::SYNCHRON|SfxCallMode::MODAL,
+                { &aStyle, &aFamily });
         Application::SetDefDialogParent( pDefDlgParent );
     }
 }
@@ -3742,13 +3742,13 @@ IMPL_LINK_TYPED( SwTOXStylesTabPage, EditStyleHdl, Button *, pBtn, void )
     if( LISTBOX_ENTRY_NOTFOUND != m_pParaLayLB->GetSelectEntryPos())
     {
         SfxStringItem aStyle(SID_STYLE_EDIT, m_pParaLayLB->GetSelectEntry());
-        SfxUInt16Item aFamily(SID_STYLE_FAMILY, SFX_STYLE_FAMILY_PARA);
+        SfxUInt16Item aFamily(SID_STYLE_FAMILY, (sal_uInt16)SfxStyleFamily::Para);
         vcl::Window* pDefDlgParent = Application::GetDefDialogParent();
         Application::SetDefDialogParent( pBtn );
         SwWrtShell& rSh = static_cast<SwMultiTOXTabDialog*>(GetTabDialog())->GetWrtShell();
-        rSh.GetView().GetViewFrame()->GetDispatcher()->Execute(
-        SID_STYLE_EDIT, SfxCallMode::SYNCHRON|SfxCallMode::MODAL,
-            &aStyle, &aFamily, 0L);
+        rSh.GetView().GetViewFrame()->GetDispatcher()->ExecuteList(SID_STYLE_EDIT,
+                SfxCallMode::SYNCHRON|SfxCallMode::MODAL,
+                { &aStyle, &aFamily });
         Application::SetDefDialogParent( pDefDlgParent );
     }
 }

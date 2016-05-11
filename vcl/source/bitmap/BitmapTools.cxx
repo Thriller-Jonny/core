@@ -29,17 +29,17 @@ using drawinglayer::primitive2d::Primitive2DReference;
 namespace vcl
 {
 
-void BitmapTools::loadFromSvg(SvStream& rStream, const OUString& sPath, BitmapEx& rBitmapEx, double fScalingFactor, const Size& aSize)
+void BitmapTools::loadFromSvg(SvStream& rStream, const OUString& sPath, BitmapEx& rBitmapEx, double fScalingFactor)
 {
     uno::Reference<uno::XComponentContext> xContext(comphelper::getProcessComponentContext());
     const uno::Reference<graphic::XSvgParser> xSvgParser = graphic::SvgTools::create(xContext);
 
     sal_Size nSize = rStream.remainingSize();
-    std::vector<sal_Int8> pBuffer(nSize + 1);
-    rStream.Read(pBuffer.data(), nSize);
-    pBuffer[nSize] = 0;
+    std::vector<sal_Int8> aBuffer(nSize + 1);
+    rStream.Read(aBuffer.data(), nSize);
+    aBuffer[nSize] = 0;
 
-    uno::Sequence<sal_Int8> aData(pBuffer.data(), nSize + 1);
+    uno::Sequence<sal_Int8> aData(aBuffer.data(), nSize + 1);
     uno::Reference<io::XInputStream> aInputStream(new comphelper::SequenceInputStream(aData));
 
     Primitive2DSequence aPrimitiveSequence = xSvgParser->getDecomposition(aInputStream, sPath);
@@ -62,12 +62,10 @@ void BitmapTools::loadFromSvg(SvStream& rStream, const OUString& sPath, BitmapEx
             }
         }
 
-        bool bIsSizeEmpty = (aSize.Width() == 0 && aSize.Height() == 0);
-
         aRealRect.X1 = 0;
         aRealRect.Y1 = 0;
-        aRealRect.X2 = bIsSizeEmpty ? (aSize.Width() * 2540 / 90)  : aRange.getMaxX() - aRange.getMinX();
-        aRealRect.Y2 = bIsSizeEmpty ? (aSize.Height() * 2540 / 90) : aRange.getMaxY() - aRange.getMinY();
+        aRealRect.X2 = aRange.getMaxX() - aRange.getMinX();
+        aRealRect.Y2 = aRange.getMaxY() - aRange.getMinY();
 
         double nDPI = 90 * fScalingFactor;
 

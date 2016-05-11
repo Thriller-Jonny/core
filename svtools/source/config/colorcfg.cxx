@@ -47,6 +47,8 @@
 using namespace utl;
 using namespace com::sun::star;
 
+static const char g_sIsVisible[] = "/IsVisible";
+
 
 namespace svtools
 {
@@ -66,16 +68,13 @@ class ColorConfig_Impl : public utl::ConfigItem
 {
     ColorConfigValue m_aConfigValues[ColorConfigEntryCount];
     bool             m_bEditMode;
-    OUString         m_sIsVisible;
     OUString         m_sLoadedScheme;
     bool             m_bAutoDetectSystemHC;
-
-    uno::Sequence< OUString> GetPropertyNames(const OUString& rScheme);
 
     virtual void                    ImplCommit() override;
 
 public:
-    explicit ColorConfig_Impl(bool bEditMode = false);
+    explicit ColorConfig_Impl();
     virtual ~ColorConfig_Impl();
 
     void                            Load(const OUString& rScheme);
@@ -93,8 +92,8 @@ public:
 
     uno::Sequence< OUString> GetSchemeNames();
 
-    bool                            AddScheme(const OUString& rNode);
-    bool                            RemoveScheme(const OUString& rNode);
+    void                            AddScheme(const OUString& rNode);
+    void                            RemoveScheme(const OUString& rNode);
     void                            SetModified(){ConfigItem::SetModified();}
     void                            ClearModified(){ConfigItem::ClearModified();}
     void                            SettingsChanged();
@@ -105,7 +104,9 @@ public:
     void ImplUpdateApplicationSettings();
 };
 
-uno::Sequence< OUString> ColorConfig_Impl::GetPropertyNames(const OUString& rScheme)
+namespace {
+
+uno::Sequence< OUString> GetPropertyNames(const OUString& rScheme)
 {
     uno::Sequence<OUString> aNames(2 * ColorConfigEntryCount);
     OUString* pNames = aNames.getArray();
@@ -180,17 +181,18 @@ uno::Sequence< OUString> ColorConfig_Impl::GetPropertyNames(const OUString& rSch
         if(cNames[nPos].bCanBeVisible)
         {
             pNames[nIndex] += sBaseName;
-            pNames[nIndex++] += m_sIsVisible;
+            pNames[nIndex++] += g_sIsVisible;
         }
     }
     aNames.realloc(nIndex);
     return aNames;
 }
 
-ColorConfig_Impl::ColorConfig_Impl(bool bEditMode) :
+}
+
+ColorConfig_Impl::ColorConfig_Impl() :
     ConfigItem("Office.UI/ColorScheme"),
-    m_bEditMode(bEditMode),
-    m_sIsVisible("/IsVisible"),
+    m_bEditMode(false),
     m_bAutoDetectSystemHC(true)
 {
     if(!m_bEditMode)
@@ -241,7 +243,7 @@ void ColorConfig_Impl::Load(const OUString& rScheme)
         if(nIndex >= aColors.getLength())
             break;
         //test for visibility property
-        if(pColorNames[nIndex].endsWith(m_sIsVisible))
+        if(pColorNames[nIndex].endsWith(g_sIsVisible))
              m_aConfigValues[i / 2].bIsVisible = Any2Bool(pColors[nIndex++]);
     }
     // fdo#71511: check if we are running in a11y autodetect
@@ -269,7 +271,6 @@ void ColorConfig_Impl::ImplCommit()
     beans::PropertyValue* pPropValues = aPropValues.getArray();
     const OUString* pColorNames = aColorNames.getConstArray();
     sal_Int32 nIndex = 0;
-    const uno::Type& rBoolType = cppu::UnoType<bool>::get();
     for(int i = 0; i < 2 * ColorConfigEntryCount && aColorNames.getLength() > nIndex; i+= 2)
     {
         pPropValues[nIndex].Name = pColorNames[nIndex];
@@ -281,10 +282,10 @@ void ColorConfig_Impl::ImplCommit()
         if(nIndex >= aColorNames.getLength())
             break;
         //test for visibility property
-        if(pColorNames[nIndex].endsWith(m_sIsVisible))
+        if(pColorNames[nIndex].endsWith(g_sIsVisible))
         {
              pPropValues[nIndex].Name = pColorNames[nIndex];
-             pPropValues[nIndex].Value.setValue(&m_aConfigValues[i/2].bIsVisible, rBoolType);
+             pPropValues[nIndex].Value <<= m_aConfigValues[i/2].bIsVisible;
              nIndex++;
         }
     }
@@ -317,21 +318,19 @@ uno::Sequence< OUString> ColorConfig_Impl::GetSchemeNames()
     return GetNodeNames("ColorSchemes");
 }
 
-bool ColorConfig_Impl::AddScheme(const OUString& rScheme)
+void ColorConfig_Impl::AddScheme(const OUString& rScheme)
 {
     if(ConfigItem::AddNode("ColorSchemes", rScheme))
     {
         m_sLoadedScheme = rScheme;
         Commit();
-        return true;
     }
-    return false;
 }
 
-bool ColorConfig_Impl::RemoveScheme(const OUString& rScheme)
+void ColorConfig_Impl::RemoveScheme(const OUString& rScheme)
 {
     uno::Sequence< OUString > aElements { rScheme };
-    return ClearNodeElements("ColorSchemes", aElements);
+    ClearNodeElements("ColorSchemes", aElements);
 }
 
 void ColorConfig_Impl::SettingsChanged()
@@ -355,7 +354,6 @@ IMPL_LINK_TYPED( ColorConfig_Impl, DataChangedEventListener, VclSimpleEvent&, rE
         }
     }
 }
-
 
 
 /** updates the font color in the vcl window settings */
@@ -437,10 +435,10 @@ Color ColorConfig::GetDefaultColor(ColorConfigEntry eEntry)
         COL_LIGHTGREEN, // HTMLCOMMENT
         COL_LIGHTRED, // HTMLKEYWORD
         COL_GRAY, // HTMLUNKNOWN
-        0xcccccc, // CALCGRID
+        COL_GRAY3, // CALCGRID
         COL_BLUE, //CALCPAGEBREAK
         0x2300dc, //CALCPAGEBREAKMANUAL
-        0x666666, //CALCPAGEBREAKAUTOMATIC
+        COL_GRAY7, //CALCPAGEBREAKAUTOMATIC
         COL_LIGHTBLUE, // CALCDETECTIVE
         COL_LIGHTRED, // CALCDETECTIVEERROR
         0xef0fff, // CALCREFERENCE

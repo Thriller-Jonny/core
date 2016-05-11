@@ -30,9 +30,10 @@ class SwAttrSetChg;
 class SwFootnoteContFrame;
 class SwLayouter;
 
-#define FINDMODE_ENDNOTE 1
-#define FINDMODE_LASTCNT 2
-#define FINDMODE_MYLAST  4
+enum class SwFindMode
+{
+    None = 0, EndNote = 1, LastCnt = 2, MyLast = 4
+};
 
 class SwSectionFrame: public SwLayoutFrame, public SwFlowFrame
 {
@@ -43,15 +44,15 @@ class SwSectionFrame: public SwLayoutFrame, public SwFlowFrame
     bool m_bOwnFootnoteNum; // special numbering of footnotes
     bool m_bFootnoteLock; // ftn, don't leave this section bwd
 
-    void _UpdateAttr( const SfxPoolItem*, const SfxPoolItem*, sal_uInt8 &,
+    void UpdateAttr_( const SfxPoolItem*, const SfxPoolItem*, sal_uInt8 &,
                       SwAttrSetChg *pa = nullptr, SwAttrSetChg *pb = nullptr );
-    void _Cut( bool bRemove );
+    void Cut_( bool bRemove );
     // Is there a FootnoteContainer?
     // An empty sectionfrm without FootnoteCont is superfluous
     bool IsSuperfluous() const { return !ContainsAny() && !ContainsFootnoteCont(); }
     void CalcFootnoteAtEndFlag();
     void CalcEndAtEndFlag();
-    const SwSectionFormat* _GetEndSectFormat() const;
+    const SwSectionFormat* GetEndSectFormat_() const;
     bool IsEndnoteAtMyEnd() const;
 
     virtual void DestroyImpl() override;
@@ -80,8 +81,8 @@ public:
     inline       SwSectionFrame *GetFollow();
     SwSectionFrame* FindMaster() const;
 
-                 SwContentFrame *FindLastContent( sal_uInt8 nMode = 0 );
-    inline const SwContentFrame *FindLastContent( sal_uInt8 nMode = 0 ) const;
+                 SwContentFrame *FindLastContent( SwFindMode nMode = SwFindMode::None );
+    inline const SwContentFrame *FindLastContent() const;
     inline SwSection* GetSection() { return m_pSection; }
     inline const SwSection* GetSection() const { return m_pSection; }
     inline void ColLock()       { mbColLocked = true; }
@@ -101,8 +102,8 @@ public:
     void DelEmpty( bool bRemove ); // Like Cut(), except for that Follow chaining is maintained
     SwFootnoteContFrame* ContainsFootnoteCont( const SwFootnoteContFrame* pCont = nullptr ) const;
     bool Growable() const;
-    SwTwips _Shrink( SwTwips, bool bTst );
-    SwTwips _Grow  ( SwTwips, bool bTst );
+    SwTwips Shrink_( SwTwips, bool bTst );
+    SwTwips Grow_  ( SwTwips, bool bTst );
 
     /**
      * A sectionfrm has to maximize, if he has a follow or a ftncontainer at
@@ -110,8 +111,10 @@ public:
      * if bCheckFollow is set.
      */
     bool ToMaximize( bool bCheckFollow ) const;
-    inline bool _ToMaximize() const
-        { if( !m_pSection ) return false; return ToMaximize( false ); }
+    inline bool ToMaximize_() const {
+        if( !m_pSection ) return false;
+        return ToMaximize( false );
+    }
     bool MoveAllowed( const SwFrame* ) const;
     bool CalcMinDiff( SwTwips& rMinDiff ) const;
 
@@ -119,25 +122,23 @@ public:
      * Returns the size delta that the section would like to be
      * greater if it has undersized TextFrames in it.
      *
-     * If we don't pass a @param bOverSize or false, the return value
-     * is > 0 for undersized Frames, or 0 otherwise.
-     * If @param bOverSize == true, we can also get a negative return value,
-     * if the SectionFrame is not completely filled, which happens often for
-     * e.g. SectionFrames with Follows.
+     * The return value is > 0 for undersized Frames, or 0 otherwise.
      *
      * If necessary the undersized-flag is corrected.
      * We need this in the FormatWidthCols to "deflate" columns there.
      */
-    SwTwips Undersize(bool bOverSize = false);
+    SwTwips Undersize();
     SwTwips CalcUndersize() const;
 
     /// Adapt size to surroundings
-    void _CheckClipping( bool bGrow, bool bMaximize );
+    void CheckClipping( bool bGrow, bool bMaximize );
 
     void InvalidateFootnotePos();
     void CollectEndnotes( SwLayouter* pLayouter );
-    const SwSectionFormat* GetEndSectFormat() const
-        { if( IsEndnAtEnd() ) return _GetEndSectFormat(); return nullptr; }
+    const SwSectionFormat* GetEndSectFormat() const {
+        if( IsEndnAtEnd() ) return GetEndSectFormat_();
+        return nullptr;
+    }
 
     static void MoveContentAndDelete( SwSectionFrame* pDel, bool bSave );
 
@@ -170,9 +171,9 @@ inline SwSectionFrame *SwSectionFrame::GetFollow()
 {
     return static_cast<SwSectionFrame*>(SwFlowFrame::GetFollow());
 }
-inline const SwContentFrame *SwSectionFrame::FindLastContent( sal_uInt8 nMode ) const
+inline const SwContentFrame *SwSectionFrame::FindLastContent() const
 {
-    return const_cast<SwSectionFrame*>(this)->FindLastContent( nMode );
+    return const_cast<SwSectionFrame*>(this)->FindLastContent();
 }
 
 #endif // INCLUDED_SW_SOURCE_CORE_INC_SECTFRM_HXX

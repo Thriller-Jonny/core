@@ -71,7 +71,7 @@ public:
 
                             ScProgress( SfxObjectShell* pObjSh,
                                          const OUString& rText,
-                                         sal_uLong nRange, bool bAllDocs = false,
+                                         sal_uLong nRange,
                                          bool bWait = true );
                             ~ScProgress();
 
@@ -80,14 +80,12 @@ public:
                             ScProgress();
 #endif
 
-            bool            SetStateText( sal_uLong nVal, const OUString &rVal, sal_uLong nNewRange = 0 )
+            bool            SetStateText( sal_uLong nVal, const OUString &rVal )
                                 {
                                     if ( pProgress )
                                     {
-                                        if ( nNewRange )
-                                            nGlobalRange = nNewRange;
                                         CalcGlobalPercent( nVal );
-                                        if ( !pProgress->SetStateText( nVal, rVal, nNewRange ) )
+                                        if ( !pProgress->SetStateText( nVal, rVal ) )
                                             bGlobalNoUserBreak = false;
                                         return bGlobalNoUserBreak;
                                     }
@@ -124,13 +122,12 @@ public:
                                         return SetState( nVal );
                                     return true;
                                 }
-            bool            SetStateCountDownOnPercent( sal_uLong nVal )
+            void            SetStateCountDownOnPercent( sal_uLong nVal )
                                 {   /// only if percentage increased
                                     if ( nGlobalRange &&
                                             ((nGlobalRange - nVal) * 100 /
                                             nGlobalRange) > nGlobalPercent )
-                                        return SetStateCountDown( nVal );
-                                    return true;
+                                        SetStateCountDown( nVal );
                                 }
             sal_uLong           GetState()
                                 {

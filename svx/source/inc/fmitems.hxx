@@ -44,7 +44,7 @@ public:
     virtual SfxPoolItem*    Create(SvStream &, sal_uInt16) const override;
     virtual SvStream&       Store(SvStream &, sal_uInt16 nItemVersion ) const override;
 
-    const css::uno::Reference< css::uno::XInterface >         GetInterface() const { return xInterface; }
+    const css::uno::Reference< css::uno::XInterface >&  GetInterface() const { return xInterface; }
 };
 
 inline FmInterfaceItem& FmInterfaceItem::operator=( const FmInterfaceItem &rCpy )
@@ -53,7 +53,6 @@ inline FmInterfaceItem& FmInterfaceItem::operator=( const FmInterfaceItem &rCpy 
 
     return *this;
 }
-
 
 
 #endif // INCLUDED_SVX_SOURCE_INC_FMITEMS_HXX

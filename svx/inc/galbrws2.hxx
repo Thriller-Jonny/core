@@ -35,9 +35,6 @@
 #include <com/sun/star/util/XURLTransformer.hpp>
 
 
-// - GalleryBrowserMode -
-
-
 enum GalleryBrowserMode
 {
     GALLERYBROWSERMODE_NONE = 0,
@@ -45,9 +42,6 @@ enum GalleryBrowserMode
     GALLERYBROWSERMODE_LIST = 2,
     GALLERYBROWSERMODE_PREVIEW = 3
 };
-
-
-// - GalleryTravel -
 
 
 enum GalleryBrowserTravel
@@ -60,15 +54,9 @@ enum GalleryBrowserTravel
 };
 
 
-// - GalleryItemTextFlags -
-
-
 #define GALLERY_ITEM_THEMENAME  0x00000001
 #define GALLERY_ITEM_TITLE      0x00000002
 #define GALLERY_ITEM_PATH       0x00000004
-
-
-// - GalleryToolBox -
 
 
 class GalleryToolBox : public ToolBox
@@ -81,9 +69,6 @@ public:
 
                     GalleryToolBox( GalleryBrowser2* pParent );
 };
-
-
-// - GalleryBrowser2 -
 
 
 class Gallery;
@@ -175,7 +160,7 @@ public:
     bool                KeyInput( const KeyEvent& rEvt, vcl::Window* pWindow );
 
     static css::uno::Reference< css::frame::XFrame > GetFrame();
-    css::uno::Reference< css::util::XURLTransformer > GetURLTransformer() const { return m_xTransformer; }
+    const css::uno::Reference< css::util::XURLTransformer >& GetURLTransformer() const { return m_xTransformer; }
 
     void Execute( sal_uInt16 nId );
     void Dispatch( sal_uInt16 nId,

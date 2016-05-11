@@ -89,7 +89,6 @@ namespace o3tl
 #define DEFAULT_MARGIN_HEIGHT 12
 
 
-
 //  @[SfxViewShell-Flags]
 
 enum class SfxViewShellFlags
@@ -111,7 +110,6 @@ namespace o3tl
     duration of its lifetime. They are defined in the constructor of
     <SfxViewShell>.
 */
-
 
 
 #define SFX_DECL_VIEWFACTORY(Class) \
@@ -171,10 +169,10 @@ protected:
 
 public:
     // Iteration
-    static SfxViewShell*        GetFirst( bool bOnlyVisible = true, std::function<bool ( const SfxViewShell* )> isViewShell = nullptr );
+    static SfxViewShell*        GetFirst( bool bOnlyVisible = true, const std::function<bool ( const SfxViewShell* )>& isViewShell = nullptr );
     static SfxViewShell*        GetNext( const SfxViewShell& rPrev,
                                          bool bOnlyVisible = true,
-                                         std::function<bool ( const SfxViewShell* )> isViewShell = nullptr );
+                                         const std::function<bool ( const SfxViewShell* )>& isViewShell = nullptr );
     static SfxViewShell*        Current();
 
     static SfxViewShell*        Get( const css::uno::Reference< css::frame::XController>& i_rController );
@@ -240,7 +238,7 @@ public:
 
     // Printing Interface
     virtual SfxPrinter*         GetPrinter( bool bCreate = false );
-    virtual sal_uInt16          SetPrinter( SfxPrinter *pNewPrinter, SfxPrinterChangeFlags nDiffFlags = SFX_PRINTER_ALL, bool bIsAPI=false );
+    virtual sal_uInt16          SetPrinter( SfxPrinter *pNewPrinter, SfxPrinterChangeFlags nDiffFlags = SFX_PRINTER_ALL );
     virtual bool                HasPrintOptionsPage() const;
     virtual VclPtr<SfxTabPage>  CreatePrintOptionsPage( vcl::Window *pParent, const SfxItemSet &rOptions );
     static JobSetup             GetJobSetup();
@@ -249,8 +247,8 @@ public:
     // Working set
     virtual void                WriteUserData( OUString&, bool bBrowse = false );
     virtual void                ReadUserData( const OUString&, bool bBrowse = false );
-    virtual void                WriteUserDataSequence ( css::uno::Sequence < css::beans::PropertyValue >&, bool bBrowse = false );
-    virtual void                ReadUserDataSequence ( const css::uno::Sequence < css::beans::PropertyValue >&, bool bBrowse = false );
+    virtual void                WriteUserDataSequence ( css::uno::Sequence < css::beans::PropertyValue >& );
+    virtual void                ReadUserDataSequence ( const css::uno::Sequence < css::beans::PropertyValue >& );
     virtual void                QueryObjAreaPixel( Rectangle& rRect ) const;
 
     virtual SfxObjectShell*     GetObjectShell() override;
@@ -289,7 +287,7 @@ public:
     void                        ExecPrint( const css::uno::Sequence < css::beans::PropertyValue >&, bool, bool );
     // Like ExecPrint(), but only sets up for printing. Use Printer::ExecutePrintJob() and Printer::FinishPrintJob() afterwards.
     void                        StartPrint( const css::uno::Sequence < css::beans::PropertyValue >&, bool, bool );
-    std::shared_ptr< vcl::PrinterController > GetPrinterController() const;
+    const std::shared_ptr< vcl::PrinterController >& GetPrinterController() const;
 
     void                        AddRemoveClipboardListener( const css::uno::Reference < css::datatransfer::clipboard::XClipboardListener>&, bool );
     css::uno::Reference< css::datatransfer::clipboard::XClipboardNotifier > GetClipboardNotifier();
@@ -304,7 +302,7 @@ public:
     SAL_DLLPRIVATE void ResetAllClients_Impl( SfxInPlaceClient *pIP );
     SAL_DLLPRIVATE void DiscardClients_Impl();
 
-    SAL_DLLPRIVATE SfxPrinter* SetPrinter_Impl( VclPtr<SfxPrinter>& pNewPrinter );
+    SAL_DLLPRIVATE void SetPrinter_Impl( VclPtr<SfxPrinter>& pNewPrinter );
     SAL_DLLPRIVATE bool IsShowView_Impl() const;
 
     SAL_DLLPRIVATE bool HandleNotifyEvent_Impl( NotifyEvent& rEvent );
@@ -317,7 +315,7 @@ public:
     SAL_DLLPRIVATE void ExecPrint_Impl(SfxRequest &);
     SAL_DLLPRIVATE void ExecMisc_Impl(SfxRequest &);
     SAL_DLLPRIVATE void GetState_Impl(SfxItemSet&);
-    SAL_DLLPRIVATE void CheckIPClient_Impl( SfxInPlaceClient*, const Rectangle& );
+    SAL_DLLPRIVATE void CheckIPClient_Impl(SfxInPlaceClient*, const Rectangle&);
     SAL_DLLPRIVATE void PushSubShells_Impl( bool bPush=true );
     SAL_DLLPRIVATE void PopSubShells_Impl() { PushSubShells_Impl( false ); }
     SAL_DLLPRIVATE void TakeOwnership_Impl();
@@ -329,7 +327,6 @@ public:
     /// Invokes the registered callback, if there are any.
     void libreOfficeKitViewCallback(int nType, const char* pPayload) const;
 };
-
 
 
 inline SfxViewFrame* SfxViewShell::GetViewFrame() const

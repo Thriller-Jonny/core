@@ -55,7 +55,7 @@ bool fillContinuation(
         // Wants client that we use it?
         if ( xSupplyAuthentication2.is() && bCanUseSystemCredentials )
         {
-            xSupplyAuthentication2->setUseSystemCredentials( sal_True );
+            xSupplyAuthentication2->setUseSystemCredentials( true );
             return true;
         }
         return false;
@@ -98,7 +98,7 @@ bool fillContinuation(
             }
 
             if ( xSupplyAuthentication2.is() && bCanUseSystemCredentials )
-                xSupplyAuthentication2->setUseSystemCredentials( sal_False );
+                xSupplyAuthentication2->setUseSystemCredentials( false );
 
             return true;
         }
@@ -245,7 +245,7 @@ bool PasswordContainerHelper::addRecord(
                 // If persistent storing of passwords is not yet
                 // allowed, enable it.
                 if ( !m_xPasswordContainer->isPersistentStoringAllowed() )
-                    m_xPasswordContainer->allowPersistentStoring( sal_True );
+                    m_xPasswordContainer->allowPersistentStoring( true );
 
                 m_xPasswordContainer->addPersistent( rURL,
                                                      rUsername,
@@ -272,9 +272,6 @@ bool PasswordContainerHelper::addRecord(
 }
 
 
-
-
-
 PasswordContainerInteractionHandler::PasswordContainerInteractionHandler(
     const uno::Reference< uno::XComponentContext >& xContext )
 : m_aPwContainerHelper( xContext )
@@ -288,9 +285,7 @@ PasswordContainerInteractionHandler::~PasswordContainerInteractionHandler()
 }
 
 
-
 // XServiceInfo methods.
-
 
 
 // virtual
@@ -338,9 +333,7 @@ PasswordContainerInteractionHandler::getSupportedServiceNames_Static()
 }
 
 
-
 // XInteractionHandler2 methods.
-
 
 
 // virtual
@@ -407,9 +400,7 @@ PasswordContainerInteractionHandler::handleInteractionRequest(
 }
 
 
-
 // Service factory implementation.
-
 
 
 static uno::Reference< uno::XInterface > SAL_CALL

@@ -469,11 +469,11 @@ void ScColumn::SwapNonEmpty(
     CellStorageModified();
 }
 
-void ScColumn::DeleteRanges( const std::vector<sc::RowSpan>& rRanges, InsertDeleteFlags nDelFlag, bool bBroadcast )
+void ScColumn::DeleteRanges( const std::vector<sc::RowSpan>& rRanges, InsertDeleteFlags nDelFlag )
 {
     std::vector<sc::RowSpan>::const_iterator itSpan = rRanges.begin(), itSpanEnd = rRanges.end();
     for (; itSpan != itSpanEnd; ++itSpan)
-        DeleteArea(itSpan->mnRow1, itSpan->mnRow2, nDelFlag, bBroadcast);
+        DeleteArea(itSpan->mnRow1, itSpan->mnRow2, nDelFlag, false/*bBroadcast*/);
 }
 
 void ScColumn::CloneFormulaCell(
@@ -903,7 +903,7 @@ private:
 
         sc::CellTextAttr& rAttr = sc::celltextattr_block::at(*aAttrPos.first->data, aAttrPos.second);
         if (rAttr.mnScriptType != SvtScriptType::UNKNOWN)
-            // Script type already deteremined.  Skip it.
+            // Script type already determined.  Skip it.
             return;
 
         const ScPatternAttr* pPat = mrCol.GetPattern(nRow);
@@ -996,8 +996,8 @@ void ScColumn::Swap( ScColumn& rOther, SCROW nRow1, SCROW nRow2, bool bPattern )
             const ScPatternAttr* pPat2 = rOther.GetPattern(nRow);
             if (pPat1 != pPat2)
             {
-                SetPattern(nRow, *pPat2, true);
-                rOther.SetPattern(nRow, *pPat1, true);
+                SetPattern(nRow, *pPat2);
+                rOther.SetPattern(nRow, *pPat1);
             }
         }
     }
@@ -1255,15 +1255,6 @@ public:
         }
     }
 
-    SCROW getStartRow() const
-    {
-        return mnStartRow;
-    }
-
-    SCROW getEndRow() const
-    {
-        return mnEndRow;
-    }
 };
 
 class EndListeningFormulaCellsHandler
@@ -1351,20 +1342,10 @@ public:
 
 void ScColumn::StartListeningFormulaCells(
     sc::StartListeningContext& rStartCxt, sc::EndListeningContext& rEndCxt,
-    SCROW nRow1, SCROW nRow2, SCROW* pStartRow, SCROW* pEndRow )
+    SCROW nRow1, SCROW nRow2 )
 {
     StartListeningFormulaCellsHandler aFunc(rStartCxt, rEndCxt);
     sc::ProcessBlock(maCells.begin(), maCells, aFunc, nRow1, nRow2);
-
-    if (pStartRow)
-        // start row position may be smaller than nRow1 in case the formula
-        // group starts before nRow1 position.
-        *pStartRow = aFunc.getStartRow();
-
-    if (pEndRow)
-        // row position of the last cell that started listening, which may be
-        // greater than nRow2 in case the formula group extends beyond nRow2.
-        *pEndRow = aFunc.getEndRow();
 }
 
 void ScColumn::EndListeningFormulaCells(

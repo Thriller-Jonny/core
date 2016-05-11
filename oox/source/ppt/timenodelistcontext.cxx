@@ -43,6 +43,8 @@
 #include "oox/drawingml/drawingmltypes.hxx"
 #include "drawingml/colorchoicecontext.hxx"
 #include "oox/ppt/slidetransition.hxx"
+#include <oox/token/namespaces.hxx>
+#include <oox/token/tokens.hxx>
 
 #include "animvariantcontext.hxx"
 #include "commonbehaviorcontext.hxx"
@@ -433,9 +435,9 @@ namespace oox { namespace ppt {
                 //xParentNode
                 if( isCurrentElement( mnElement ) )
                 {
-                    NodePropertyMap & pProps(mpNode->getNodeProperties());
-                    pProps[ NP_DIRECTION ] = makeAny( mnDir == XML_cw );
-                    pProps[ NP_COLORINTERPOLATION ] = makeAny( mnColorSpace == XML_hsl ? AnimationColorSpace::HSL : AnimationColorSpace::RGB );
+                    NodePropertyMap & rProps(mpNode->getNodeProperties());
+                    rProps[ NP_DIRECTION ] = makeAny( mnDir == XML_cw );
+                    rProps[ NP_COLORINTERPOLATION ] = makeAny( mnColorSpace == XML_hsl ? AnimationColorSpace::HSL : AnimationColorSpace::RGB );
                     const GraphicHelper& rGraphicHelper = getFilter().getGraphicHelper();
                     if( maToClr.isUsed() )
                         mpNode->setTo( Any( maToClr.getColor( rGraphicHelper ) ) );

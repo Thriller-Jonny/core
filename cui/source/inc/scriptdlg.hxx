@@ -39,7 +39,7 @@
 #define OBJTYPE_SFROOT          4L
 
 typedef std::unordered_map < OUString, OUString,
-                             OUStringHash, std::equal_to< OUString > > Selection_hash;
+                             OUStringHash > Selection_hash;
 
 class SFEntry;
 
@@ -125,8 +125,8 @@ public:
                             const css::uno::Reference< css::frame::XModel >& entryModel) { nType = nT; nodes = entryNodes; loaded=false; model = entryModel; }
                     SFEntry( const SFEntry& r ) { nType = r.nType; nodes = r.nodes; loaded = r.loaded; }
     virtual         ~SFEntry() {}
-    css::uno::Reference< css::script::browse::XBrowseNode > GetNode() { return nodes ;}
-    css::uno::Reference< css::frame::XModel > GetModel() { return model ;};
+    const css::uno::Reference< css::script::browse::XBrowseNode >& GetNode() { return nodes ;}
+    const css::uno::Reference< css::frame::XModel >& GetModel() { return model ;};
     bool            isLoaded() const                    { return loaded; }
     void            setLoaded()                         { loaded=true; }
 };
@@ -167,7 +167,7 @@ protected:
     static css::uno::Reference< css::script::browse::XBrowseNode >
                 getBrowseNode( SvTreeListEntry* pEntry );
     static css::uno::Reference< css::frame::XModel > getModel( SvTreeListEntry* pEntry );
-    OUString    getListOfChildren( css::uno::Reference< css::script::browse::XBrowseNode > node, int depth );
+    OUString    getListOfChildren( const css::uno::Reference< css::script::browse::XBrowseNode >& node, int depth );
     void        StoreCurrentSelection();
     void        RestorePreviousSelection();
 

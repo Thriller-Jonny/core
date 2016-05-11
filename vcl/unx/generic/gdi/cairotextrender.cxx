@@ -17,19 +17,22 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include "cairotextrender.hxx"
+#include "unx/cairotextrender.hxx"
 
 #include <basegfx/polygon/b2dpolypolygon.hxx>
 #include <vcl/settings.hxx>
 #include <vcl/sysdata.hxx>
 #include <vcl/svapp.hxx>
+#include <vcl/fontcharmap.hxx>
 
-#include "generic/printergfx.hxx"
-#include "generic/genpspgraphics.h"
-#include "generic/geninst.h"
-#include "generic/glyphcache.hxx"
+#include "unx/printergfx.hxx"
+#include "unx/genpspgraphics.h"
+#include "unx/geninst.h"
+#include "unx/glyphcache.hxx"
+#include "unx/fc_fontoptions.hxx"
 #include "PhysicalFontFace.hxx"
 #include "impfont.hxx"
+#include "impfontmetricdata.hxx"
 
 #include <config_graphite.h>
 #if ENABLE_GRAPHITE
@@ -89,7 +92,7 @@ bool CairoTextRender::setFont( const FontSelectPattern *pEntry, int nFallbackLev
         mpServerFont[ nFallbackLevel ] = pServerFont;
 
         // apply font specific-hint settings
-        ImplServerFontEntry* pSFE = static_cast<ImplServerFontEntry*>( pEntry->mpFontEntry );
+        ServerFontInstance* pSFE = static_cast<ServerFontInstance*>( pEntry->mpFontInstance );
         pSFE->HandleFontOptions();
 
         return true;
@@ -98,9 +101,9 @@ bool CairoTextRender::setFont( const FontSelectPattern *pEntry, int nFallbackLev
     return false;
 }
 
-FontConfigFontOptions* GetFCFontOptions( const ImplFontAttributes& rFontAttributes, int nSize);
+FontConfigFontOptions* GetFCFontOptions( const FontAttributes& rFontAttributes, int nSize);
 
-void ImplServerFontEntry::HandleFontOptions()
+void ServerFontInstance::HandleFontOptions()
 {
     if( !mpServerFont )
         return;
@@ -199,6 +202,13 @@ void CairoTextRender::DrawServerFontLayout( const ServerFontLayout& rLayout )
     if (cairo_glyphs.empty())
         return;
 
+    ServerFont& rFont = rLayout.GetServerFont();
+    const FontSelectPattern& rFSD = rFont.GetFontSelData();
+    int nHeight = rFSD.mnHeight;
+    int nWidth = rFSD.mnWidth ? rFSD.mnWidth : nHeight;
+    if (nWidth == 0 || nHeight == 0)
+        return;
+
     /*
      * It might be ideal to cache surface and cairo context between calls and
      * only destroy it when the drawable changes, but to do that we need to at
@@ -227,8 +237,6 @@ void CairoTextRender::DrawServerFontLayout( const ServerFontLayout& rLayout )
         SALCOLOR_GREEN(mnTextColor)/255.0,
         SALCOLOR_BLUE(mnTextColor)/255.0);
 
-    ServerFont& rFont = rLayout.GetServerFont();
-
     FT_Face aFace = rFont.GetFtFace();
     CairoFontsCache::CacheId aId;
     aId.maFace = aFace;
@@ -236,9 +244,6 @@ void CairoTextRender::DrawServerFontLayout( const ServerFontLayout& rLayout )
     aId.mbEmbolden = rFont.NeedsArtificialBold();
 
     cairo_matrix_t m;
-    const FontSelectPattern& rFSD = rFont.GetFontSelData();
-    int nHeight = rFSD.mnHeight;
-    int nWidth = rFSD.mnWidth ? rFSD.mnWidth : nHeight;
 
     std::vector<int>::const_iterator aEnd = glyph_extrarotation.end();
     std::vector<int>::const_iterator aStart = glyph_extrarotation.begin();
@@ -339,9 +344,7 @@ void CairoTextRender::DrawServerFontLayout( const ServerFontLayout& rLayout )
         aI = aNext;
     }
 
-    cairo_surface_flush(cairo_get_target(cr));
-    drawSurface(cr);
-    cairo_destroy(cr);
+    releaseCairoContext(cr);
 }
 
 const FontCharMapPtr CairoTextRender::GetFontCharMap() const
@@ -349,8 +352,8 @@ const FontCharMapPtr CairoTextRender::GetFontCharMap() const
     if( !mpServerFont[0] )
         return nullptr;
 
-    const FontCharMapPtr pFCMap = mpServerFont[0]->GetFontCharMap();
-    return pFCMap;
+    const FontCharMapPtr xFCMap = mpServerFont[0]->GetFontCharMap();
+    return xFCMap;
 }
 
 bool CairoTextRender::GetFontCapabilities(vcl::FontCapabilities &rGetImplFontCapabilities) const
@@ -413,8 +416,8 @@ void CairoTextRender::GetDevFontList( PhysicalFontCollection* pFontCollection )
         int nFaceNum = rMgr.getFontFaceNumber( aInfo.m_nID );
 
         // inform GlyphCache about this font provided by the PsPrint subsystem
-        ImplDevFontAttributes aDFA = GenPspGraphics::Info2DevFontAttributes( aInfo );
-        aDFA.mnQuality += 4096;
+        FontAttributes aDFA = GenPspGraphics::Info2FontAttributes( aInfo );
+        aDFA.IncreaseQualityBy( 4096 );
         const OString& rFileName = rMgr.getFontFileSysPath( aInfo.m_nID );
         rGC.AddFontFile( rFileName, nFaceNum, aInfo.m_nID, aDFA );
    }
@@ -437,12 +440,12 @@ void cairosubcallback(void* pPattern)
     cairo_ft_font_options_substitute(pFontOptions, static_cast<FcPattern*>(pPattern));
 }
 
-FontConfigFontOptions* GetFCFontOptions( const ImplFontAttributes& rFontAttributes, int nSize)
+FontConfigFontOptions* GetFCFontOptions( const FontAttributes& rFontAttributes, int nSize)
 {
     psp::FastPrintFontInfo aInfo;
 
     aInfo.m_aFamilyName = rFontAttributes.GetFamilyName();
-    aInfo.m_eItalic = rFontAttributes.GetSlant();
+    aInfo.m_eItalic = rFontAttributes.GetItalic();
     aInfo.m_eWeight = rFontAttributes.GetWeight();
     aInfo.m_eWidth = rFontAttributes.GetWidthType();
 
@@ -450,7 +453,7 @@ FontConfigFontOptions* GetFCFontOptions( const ImplFontAttributes& rFontAttribut
 }
 
 void
-CairoTextRender::GetFontMetric( ImplFontMetricData *pMetric, int nFallbackLevel )
+CairoTextRender::GetFontMetric( ImplFontMetricDataPtr& rxFontMetric, int nFallbackLevel )
 {
     if( nFallbackLevel >= MAX_FALLBACK )
         return;
@@ -458,7 +461,7 @@ CairoTextRender::GetFontMetric( ImplFontMetricData *pMetric, int nFallbackLevel 
     if( mpServerFont[nFallbackLevel] != nullptr )
     {
         long rDummyFactor;
-        mpServerFont[nFallbackLevel]->FetchFontMetric( *pMetric, rDummyFactor );
+        mpServerFont[nFallbackLevel]->GetFontMetric( rxFontMetric, rDummyFactor );
     }
 }
 

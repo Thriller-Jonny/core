@@ -33,13 +33,11 @@ using namespace com::sun::star::sdbc;
 using namespace com::sun::star::ucb;
 using namespace com::sun::star::uno;
 using namespace com::sun::star::util;
+using namespace comphelper;
 using namespace cppu;
 
 
-
-
 // class ContentResultSetWrapper
-
 
 
 ContentResultSetWrapper::ContentResultSetWrapper(
@@ -178,22 +176,20 @@ void SAL_CALL ContentResultSetWrapper::impl_EnsureNotDisposed()
         throw DisposedException();
 }
 
-ContentResultSetWrapper::PropertyChangeListenerContainer_Impl* SAL_CALL ContentResultSetWrapper::impl_getPropertyChangeListenerContainer()
+void SAL_CALL ContentResultSetWrapper::impl_getPropertyChangeListenerContainer()
 {
     osl::Guard< osl::Mutex > aGuard( m_aMutex );
     if ( !m_pPropertyChangeListeners )
         m_pPropertyChangeListeners =
             new PropertyChangeListenerContainer_Impl( m_aContainerMutex );
-    return m_pPropertyChangeListeners;
 }
 
-ContentResultSetWrapper::PropertyChangeListenerContainer_Impl* SAL_CALL ContentResultSetWrapper::impl_getVetoableChangeListenerContainer()
+void SAL_CALL ContentResultSetWrapper::impl_getVetoableChangeListenerContainer()
 {
     osl::Guard< osl::Mutex > aGuard( m_aMutex );
     if ( !m_pVetoableChangeListeners )
         m_pVetoableChangeListeners =
             new PropertyChangeListenerContainer_Impl( m_aContainerMutex );
-    return m_pVetoableChangeListeners;
 }
 
 void SAL_CALL ContentResultSetWrapper::impl_notifyPropertyChangeListeners( const PropertyChangeEvent& rEvt )
@@ -429,7 +425,7 @@ void SAL_CALL ContentResultSetWrapper::addEventListener( const Reference< XEvent
 
     if ( !m_pDisposeEventListeners )
         m_pDisposeEventListeners =
-                    new OInterfaceContainerHelper( m_aContainerMutex );
+                    new OInterfaceContainerHelper2( m_aContainerMutex );
 
     m_pDisposeEventListeners->addInterface( Listener );
 }
@@ -487,7 +483,6 @@ Reference< XResultSetMetaData > SAL_CALL ContentResultSetWrapper::getMetaData()
     }
     return m_xMetaDataFromOrigin;
 }
-
 
 
 // XPropertySet methods.
@@ -786,7 +781,7 @@ void SAL_CALL ContentResultSetWrapper::impl_propertyChange( const PropertyChange
 
     PropertyChangeEvent aEvt( rEvt );
     aEvt.Source = static_cast< XPropertySet * >( this );
-    aEvt.Further = sal_False;
+    aEvt.Further = false;
     impl_notifyPropertyChangeListeners( aEvt );
 }
 
@@ -799,7 +794,7 @@ void SAL_CALL ContentResultSetWrapper::impl_vetoableChange( const PropertyChange
 
     PropertyChangeEvent aEvt( rEvt );
     aEvt.Source = static_cast< XPropertySet * >( this );
-    aEvt.Further = sal_False;
+    aEvt.Further = false;
 
     impl_notifyVetoableChangeListeners( aEvt );
 }
@@ -1315,9 +1310,7 @@ Reference< XArray > SAL_CALL ContentResultSetWrapper::getArray( sal_Int32 column
 }
 
 
-
 // class ContentResultSetWrapperListener
-
 
 
 ContentResultSetWrapperListener::ContentResultSetWrapperListener(

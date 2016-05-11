@@ -31,8 +31,6 @@
 #include <com/sun/star/util/Date.hpp>
 
 
-
-
 //namespace {
 
 
@@ -94,7 +92,6 @@ const sal_Int32 CLIPFMT_WIN             = -1;
 const sal_Int32 CLIPDATAFMT_DIB         = 8;
 
 
-
 /** Helper for classes that need text encoding settings.
 
     Classes derived from this class will include functions to store and use
@@ -131,7 +128,6 @@ private:
 };
 
 
-
 /** Helper for classes that need to load or save string values.
 
     Classes derived from this class contain functions to load and save string
@@ -163,7 +159,6 @@ private:
     void                ImplSaveString8( SvStream& rStrm, const OUString& rValue ) const;
     static void         ImplSaveString16( SvStream& rStrm, const OUString& rValue );
 };
-
 
 
 /** Base class for all classes related to OLE property sets.
@@ -207,7 +202,6 @@ private:
 };
 
 
-
 /** Base class for all OLE property objects. */
 class SfxOlePropertyBase : public SfxOleObjectBase
 {
@@ -241,7 +235,6 @@ private:
 };
 
 
-
 /** Property containing custom names for other properties in the property set. */
 class SfxOleDictionaryProperty : public SfxOlePropertyBase, public SfxOleStringHelper
 {
@@ -266,7 +259,6 @@ private:
     typedef ::std::map< sal_Int32, OUString > SfxOlePropNameMap;
     SfxOlePropNameMap   maPropNameMap;
 };
-
 
 
 /** A section in a property set. Contains properties with unique identifiers. */
@@ -300,7 +292,7 @@ public:
     bool                GetDateValue( css::util::Date& rValue, sal_Int32 nPropId ) const;
 
     /** Adds the passed property to the property set. Drops an existing old property. */
-    void                SetProperty( SfxOlePropertyRef xProp );
+    void                SetProperty( const SfxOlePropertyRef& xProp );
     /** Inserts a signed int32 property with the passed value. */
     void                SetInt32Value( sal_Int32 nPropId, sal_Int32 nValue );
     /** Inserts a floating-point property with the passed value. */
@@ -309,17 +301,17 @@ public:
     void                SetBoolValue( sal_Int32 nPropId, bool bValue );
     /** Inserts a string property with the passed value.
         @return  true = Property inserted; false = String was empty, property not inserted. */
-    bool                SetStringValue( sal_Int32 nPropId, const OUString& rValue, bool bSkipEmpty = false );
+    bool                SetStringValue( sal_Int32 nPropId, const OUString& rValue );
     /** Inserts a time stamp property with the passed value. */
     void                SetFileTimeValue( sal_Int32 nPropId, const css::util::DateTime& rValue );
     /** Inserts a date property with the passed value. */
     void                SetDateValue( sal_Int32 nPropId, const css::util::Date& rValue );
     /** Inserts a thumbnail property from the passed meta file. */
     void                SetThumbnailValue( sal_Int32 nPropId,
-                            const css::uno::Sequence<sal_uInt8> & i_rData);
+                            const css::uno::Sequence<sal_Int8> & i_rData);
     /** Inserts a BLOB property with the passed data. */
     void                SetBlobValue( sal_Int32 nPropId,
-                            const css::uno::Sequence<sal_uInt8> & i_rData);
+                            const css::uno::Sequence<sal_Int8> & i_rData);
 
     /** Returns the value of the property with the passed ID in a UNO any. */
     css::uno::Any GetAnyValue( sal_Int32 nPropId ) const;
@@ -356,7 +348,6 @@ private:
 typedef std::shared_ptr< SfxOleSection > SfxOleSectionRef;
 
 
-
 /** Enumerates different section types in OLE property sets. */
 enum SfxOleSectionType
 {
@@ -364,7 +355,6 @@ enum SfxOleSectionType
     SECTION_BUILTIN,        /// Properties built into MS Office.
     SECTION_CUSTOM          /// Custom properties.
 };
-
 
 
 /** Represents a complete property set, may consist of several property sections. */

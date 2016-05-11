@@ -30,7 +30,6 @@
 #include <unonames.hxx>
 
 #include <cppuhelper/supportsservice.hxx>
-#include <comphelper/InlineContainer.hxx>
 #include <com/sun/star/beans/PropertyAttribute.hpp>
 #include <com/sun/star/chart/ChartAxisArrangeOrderType.hpp>
 #include <com/sun/star/chart/ChartAxisPosition.hpp>
@@ -57,7 +56,6 @@ using namespace ::com::sun::star::chart2;
 using namespace ::chart::ContainerHelper;
 
 using ::com::sun::star::beans::Property;
-using ::osl::MutexGuard;
 using ::com::sun::star::uno::Reference;
 using ::com::sun::star::uno::Sequence;
 using ::com::sun::star::uno::Any;
@@ -177,21 +175,21 @@ void lcl_AddPropertiesToVector(
     rOutProperties.push_back(
         Property( "AxisType",
                   PROP_AXIS_TYPE,
-                  cppu::UnoType<sal_Int32>::get(), //type com::sun::star::chart::ChartAxisType
+                  cppu::UnoType<sal_Int32>::get(), //type css::chart::ChartAxisType
                   //#i111967# no PropertyChangeEvent is fired on change so far
                   beans::PropertyAttribute::MAYBEDEFAULT ));
 
     rOutProperties.push_back(
         Property( "TimeIncrement",
                   PROP_AXIS_TIME_INCREMENT,
-                  cppu::UnoType<com::sun::star::chart::TimeIncrement>::get(),
+                  cppu::UnoType<css::chart::TimeIncrement>::get(),
                   //#i111967# no PropertyChangeEvent is fired on change so far
                   beans::PropertyAttribute::MAYBEVOID ));
 
     rOutProperties.push_back(
         Property( "ExplicitTimeIncrement",
                   PROP_AXIS_EXPLICIT_TIME_INCREMENT,
-                  cppu::UnoType<com::sun::star::chart::TimeIncrement>::get(),
+                  cppu::UnoType<css::chart::TimeIncrement>::get(),
                   beans::PropertyAttribute::READONLY |
                   beans::PropertyAttribute::MAYBEVOID ));
 
@@ -220,7 +218,7 @@ void lcl_AddPropertiesToVector(
     rOutProperties.push_back(
         Property( "CrossoverPosition",
                   PROP_AXIS_CROSSOVER_POSITION,
-                  cppu::UnoType<com::sun::star::chart::ChartAxisPosition>::get(),
+                  cppu::UnoType<css::chart::ChartAxisPosition>::get(),
                   beans::PropertyAttribute::MAYBEDEFAULT ));
 
     rOutProperties.push_back(
@@ -261,7 +259,7 @@ void lcl_AddPropertiesToVector(
     rOutProperties.push_back(
         Property( "MarkPosition",
                   PROP_AXIS_MARK_POSITION,
-                  cppu::UnoType<com::sun::star::chart::ChartAxisMarkPosition>::get(),
+                  cppu::UnoType<css::chart::ChartAxisMarkPosition>::get(),
                   beans::PropertyAttribute::MAYBEDEFAULT ));
 
     //Properties for labels:
@@ -289,7 +287,7 @@ void lcl_AddPropertiesToVector(
     rOutProperties.push_back(
         Property( "LabelPosition",
                   PROP_AXIS_LABEL_POSITION,
-                  cppu::UnoType<com::sun::star::chart::ChartAxisLabelPosition>::get(),
+                  cppu::UnoType<css::chart::ChartAxisLabelPosition>::get(),
                   beans::PropertyAttribute::MAYBEDEFAULT ));
 
     rOutProperties.push_back(
@@ -302,7 +300,7 @@ void lcl_AddPropertiesToVector(
     rOutProperties.push_back(
         Property( "ArrangeOrder",
                   PROP_AXIS_ARRANGE_ORDER,
-                  cppu::UnoType<com::sun::star::chart::ChartAxisArrangeOrderType>::get(),
+                  cppu::UnoType<css::chart::ChartAxisArrangeOrderType>::get(),
                   beans::PropertyAttribute::BOUND
                   | beans::PropertyAttribute::MAYBEDEFAULT ));
 
@@ -379,7 +377,7 @@ struct StaticAxisWrapperPropertyArray_Initializer
 private:
     static Sequence< Property > lcl_GetPropertySequence()
     {
-        ::std::vector< ::com::sun::star::beans::Property > aProperties;
+        ::std::vector< css::beans::Property > aProperties;
         lcl_AddPropertiesToVector( aProperties );
         ::chart::CharacterProperties::AddPropertiesToVector( aProperties );
         ::chart::LinePropertiesHelper::AddPropertiesToVector( aProperties );
@@ -634,7 +632,7 @@ Reference< chart2::XAxis > AxisWrapper::getAxis()
             xAxis = AxisHelper::createAxis( nDimensionIndex, bMainAxis, xDiagram, m_spChart2ModelContact->m_xContext );
             Reference< beans::XPropertySet > xProp( xAxis, uno::UNO_QUERY );
             if( xProp.is() )
-                xProp->setPropertyValue("Show", uno::makeAny( sal_False ) );
+                xProp->setPropertyValue("Show", uno::makeAny( false ) );
         }
     }
     catch( const uno::Exception & ex )
@@ -669,7 +667,7 @@ const std::vector< WrappedProperty* > AxisWrapper::createWrappedProperties()
     aWrappedProperties.push_back( new WrappedDirectStateProperty("TryStaggeringFirst","TryStaggeringFirst") );
     aWrappedProperties.push_back( new WrappedDirectStateProperty("TextBreak","TextBreak") );
     aWrappedProperties.push_back( new WrappedNumberFormatProperty(m_spChart2ModelContact) );
-    aWrappedProperties.push_back( new WrappedLinkNumberFormatProperty(m_spChart2ModelContact) );
+    aWrappedProperties.push_back( new WrappedLinkNumberFormatProperty );
     aWrappedProperties.push_back( new WrappedProperty("StackedText","StackCharacters") );
     aWrappedProperties.push_back( new WrappedDirectStateProperty("CrossoverPosition","CrossoverPosition") );
     {

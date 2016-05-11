@@ -76,7 +76,7 @@ private:
 
 public:
 
-             JobDispatch( const css::uno::Reference< css::uno::XComponentContext >& xContext );
+    explicit JobDispatch(const css::uno::Reference< css::uno::XComponentContext >& xContext);
     virtual ~JobDispatch();
 
     void impl_dispatchEvent  ( const OUString&                                            sEvent    ,
@@ -157,7 +157,7 @@ JobDispatch::~JobDispatch()
 }
 
 /**
-    @short  implementation of XInitalization
+    @short  implementation of XInitialization
     @descr  A protocol handler can provide this functionality, if it wish to get additional information
             about the context it runs. In this case the frame reference would be given by the outside code.
 
@@ -247,7 +247,7 @@ css::uno::Sequence< css::uno::Reference< css::frame::XDispatch > > SAL_CALL JobD
     @short  implementation of XNotifyingDispatch::dispatchWithNotification()
     @descr  It creates the job service implementation and call execute on it.
             Further it starts the life time control of it. (important for async job)
-            For synchonrous job we react for the returned result directly ... for asynchronous
+            For synchronous job we react for the returned result directly ... for asynchronous
             ones we do it later inside our callback method. But we use the same impl method
             doing that to share the code. (see impl_finishJob())
 
@@ -311,7 +311,7 @@ void JobDispatch::impl_dispatchEvent( /*IN*/ const OUString&                    
     // filter disabled jobs using it's time stamp values.
     /* SAFE { */
     SolarMutexResettableGuard aReadLock;
-    css::uno::Sequence< OUString > lJobs = JobData::getEnabledJobsForEvent(m_xContext, sEvent);
+    std::vector< OUString > lJobs = JobData::getEnabledJobsForEvent(m_xContext, sEvent);
     aReadLock.clear();
     /* } SAFE */
 
@@ -323,13 +323,13 @@ void JobDispatch::impl_dispatchEvent( /*IN*/ const OUString&                    
     // It's not really an error, if no registered jobs could be located.
     // Step over all found jobs and execute it
     int nExecutedJobs=0;
-    for (int j=0; j<lJobs.getLength(); ++j)
+    for (OUString & lJob : lJobs)
     {
         /* SAFE { */
         aReadLock.reset();
 
         JobData aCfg(m_xContext);
-        aCfg.setEvent(sEvent, lJobs[j]);
+        aCfg.setEvent(sEvent, lJob);
         aCfg.setEnvironment(JobData::E_DISPATCH);
         const bool bIsEnabled=aCfg.hasCorrectContext(m_sModuleIdentifier);
 

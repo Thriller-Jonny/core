@@ -24,11 +24,11 @@
 #include "rtl/process.h"
 
 #include "salinst.hxx"
-#include "generic/gensys.h"
-#include "generic/gendata.hxx"
+#include "unx/gensys.h"
+#include "unx/gendata.hxx"
 #include "headless/svpinst.hxx"
 #include "unx/desktops.hxx"
-#include "vcl/printerinfomanager.hxx"
+#include <vcl/printerinfomanager.hxx>
 #include <config_vclplug.h>
 
 #include <cstdio>

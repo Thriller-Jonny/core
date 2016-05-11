@@ -172,16 +172,16 @@ struct LinesAndTable
           m_rLines(rL), m_rTable(rTable), m_bInsertLines(true) {}
 };
 
-bool _FindLine( _FndLine & rLine, LinesAndTable* pPara );
+bool FindLine_( FndLine_ & rLine, LinesAndTable* pPara );
 
-bool _FindBox( _FndBox & rBox, LinesAndTable* pPara )
+bool FindBox_( FndBox_ & rBox, LinesAndTable* pPara )
 {
     if (!rBox.GetLines().empty())
     {
         pPara->m_bInsertLines = true;
         for (auto const& rpFndLine : rBox.GetLines())
         {
-            _FindLine(*rpFndLine, pPara);
+            FindLine_(*rpFndLine, pPara);
         }
 
         if (pPara->m_bInsertLines)
@@ -205,11 +205,11 @@ bool _FindBox( _FndBox & rBox, LinesAndTable* pPara )
     return true;
 }
 
-bool _FindLine( _FndLine& rLine, LinesAndTable* pPara )
+bool FindLine_( FndLine_& rLine, LinesAndTable* pPara )
 {
     for (auto const& it : rLine.GetBoxes())
     {
-        _FindBox(*it, pPara);
+        FindBox_(*it, pPara);
     }
     return true;
 }
@@ -224,14 +224,14 @@ static void lcl_CollectLines( std::vector<SwTableLine*> &rArr, const SwCursor& r
     // Copy the selected structure
     const SwTable &rTable = aBoxes[0]->GetSttNd()->FindTableNode()->GetTable();
     LinesAndTable aPara( rArr, rTable );
-    _FndBox aFndBox( nullptr, nullptr );
+    FndBox_ aFndBox( nullptr, nullptr );
     {
-        _FndPara aTmpPara( aBoxes, &aFndBox );
+        FndPara aTmpPara( aBoxes, &aFndBox );
         ForEach_FndLineCopyCol( (SwTableLines&)rTable.GetTabLines(), &aTmpPara );
     }
 
     // Collect the Lines which only contain selected Boxes
-    ::_FindBox(aFndBox, &aPara);
+    ::FindBox_(aFndBox, &aPara);
 
     // Remove lines, that have a common superordinate row.
     // (Not for row split)
@@ -804,7 +804,7 @@ void SwDoc::SetTabBorders( const SwCursor& rCursor, const SfxItemSet& rSet )
             SwTabFrame* pTabFrame = pFrame->ImplFindTabFrame();
 
             pTableLayout->BordersChanged(
-                pTableLayout->GetBrowseWidthByTabFrame( *pTabFrame ), true );
+                pTableLayout->GetBrowseWidthByTabFrame( *pTabFrame ) );
         }
         SwTableFormatCmp::Delete( aFormatCmp );
         ::ClearFEShellTabCols();
@@ -899,7 +899,7 @@ void SwDoc::SetTabLineStyle( const SwCursor& rCursor,
             SwTabFrame* pTabFrame = pFrame->ImplFindTabFrame();
 
             pTableLayout->BordersChanged(
-                pTableLayout->GetBrowseWidthByTabFrame( *pTabFrame ), true );
+                pTableLayout->GetBrowseWidthByTabFrame( *pTabFrame ) );
         }
         ::ClearFEShellTabCols();
         getIDocumentState().SetModified();
@@ -1213,6 +1213,20 @@ bool SwDoc::GetBoxAttr( const SwCursor& rCursor, SfxPoolItem& rToFill )
                     else if( rToFill != rDir )
                         bRet = false;
                 }
+                break;
+                case RES_VERT_ORIENT:
+                {
+                    const SwFormatVertOrient& rOrient =
+                                    aBoxes[i]->GetFrameFormat()->GetVertOrient();
+                    if( !bOneFound )
+                    {
+                        static_cast<SwFormatVertOrient&>(rToFill) = rOrient;
+                        bOneFound = true;
+                    }
+                    else if( rToFill != rOrient )
+                        bRet = false;
+                }
+                break;
             }
 
             if ( !bRet )

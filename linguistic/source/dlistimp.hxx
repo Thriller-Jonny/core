@@ -54,7 +54,7 @@ class DicList :
 
     LinguOptions    aOpt;
 
-    ::cppu::OInterfaceContainerHelper       aEvtListeners;
+    ::comphelper::OInterfaceContainerHelper2       aEvtListeners;
 
     typedef std::vector< css::uno::Reference< css::linguistic2::XDictionary > >   DictionaryVec_t;
     DictionaryVec_t                          aDicList;
@@ -73,11 +73,11 @@ class DicList :
     DicList( const DicList & ) = delete;
     DicList & operator = (const DicList &) = delete;
 
-    void                _CreateDicList();
+    void                CreateDicList();
     DictionaryVec_t &   GetOrCreateDicList()
                         {
                             if ( !bInCreation && aDicList.empty() )
-                                _CreateDicList();
+                                CreateDicList();
                             return aDicList;
                         }
 

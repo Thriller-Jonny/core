@@ -45,7 +45,6 @@ namespace dbtools
     using ::com::sun::star::uno::UNO_QUERY_THROW;
     using ::com::sun::star::sdb::XQueriesSupplier;
     using ::com::sun::star::container::XNameAccess;
-    using ::com::sun::star::uno::UNO_QUERY;
     using ::com::sun::star::beans::XPropertySet;
     using ::com::sun::star::lang::XMultiServiceFactory;
     using ::com::sun::star::sdbc::SQLException;
@@ -126,7 +125,7 @@ namespace dbtools
                         sStatement = "SELECT * FROM ";
 
                         OUString sCatalog, sSchema, sTable;
-                        qualifiedNameComponents( _rData.xConnection->getMetaData(), _rData.sCommand, sCatalog, sSchema, sTable, eInDataManipulation );
+                        qualifiedNameComponents( _rData.xConnection->getMetaData(), _rData.sCommand, sCatalog, sSchema, sTable, EComposeRule::InDataManipulation );
 
                         sStatement += composeTableNameForSelect( _rData.xConnection, sCatalog, sSchema, sTable );
                     }

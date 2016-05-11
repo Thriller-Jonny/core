@@ -130,11 +130,11 @@ namespace dbaui
             if (pDescrWin && pActRow)
                 pDescrWin->DisplayData(pActRow->GetActFieldDescr());
         }
-        bool SaveCurRow();
+        void SaveCurRow();
         void SwitchType( const TOTypeInfoSP& _pType );
 
         /// force displaying of the given row
-        void DisplayData( long nRow, bool bGrabFocus = true );
+        void DisplayData( long nRow );
 
         virtual void SetCellData( long nRow, sal_uInt16 nColId, const TOTypeInfoSP& _pTypeInfo ) override;
         virtual void SetCellData( long nRow, sal_uInt16 nColId, const css::uno::Any& _rSaveData ) override;
@@ -145,7 +145,7 @@ namespace dbaui
 
         ::std::vector< ::std::shared_ptr<OTableRow> >* GetRowList(){ return m_pRowList; }
 
-        ::std::shared_ptr<OTableRow>         GetActRow(){ return pActRow; }
+        const ::std::shared_ptr<OTableRow>& GetActRow(){ return pActRow; }
         void CellModified( long nRow, sal_uInt16 nColId );
         void SetReadOnly( bool bRead=true );
 
@@ -182,7 +182,7 @@ namespace dbaui
         OUString GenerateName( const OUString& rName );
         bool SetDataPtr( long nRow );
 
-        bool SaveData(long nRow, sal_uInt16 nColumnId);
+        void SaveData(long nRow, sal_uInt16 nColumnId);
         /** AdjustFieldDescription set the needed values for the description
             @param  _pFieldDesc     the field description where to set the values
             @param  _rMultiSel      contains the positions which changed for undo/redo

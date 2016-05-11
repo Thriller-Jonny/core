@@ -123,8 +123,6 @@
 
 #include <functional>
 
-#include <boost/noncopyable.hpp>
-
 extern "C" void SAL_CALL createRegistryInfo_ODBApplication()
 {
     static ::dbaui::OMultiInstanceAutoRegistration< ::dbaui::OApplicationController > aAutoRegistration;
@@ -151,7 +149,6 @@ using namespace ::com::sun::star::ui::dialogs;
 using namespace ::com::sun::star::task;
 using ::com::sun::star::document::XEmbeddedScripts;
 using ::com::sun::star::document::XDocumentEventBroadcaster;
-using ::com::sun::star::document::DocumentEvent;
 using ::com::sun::star::sdb::application::NamedDatabaseObject;
 
 namespace DatabaseObject = ::com::sun::star::sdb::application::DatabaseObject;
@@ -184,10 +181,10 @@ Reference< XInterface > SAL_CALL OApplicationController::Create(const Reference<
 }
 
 // OApplicationController
-class SelectionNotifier : public ::boost::noncopyable
+class SelectionNotifier
 {
 private:
-    ::cppu::OInterfaceContainerHelper   m_aSelectionListeners;
+    ::comphelper::OInterfaceContainerHelper2   m_aSelectionListeners;
     ::cppu::OWeakObject&                m_rContext;
     sal_Int32                           m_nSelectionNestingLevel;
 
@@ -199,14 +196,17 @@ public:
     {
     }
 
-    void addListener( const Reference< XSelectionChangeListener >& _Listener )
+    SelectionNotifier(const SelectionNotifier&) = delete;
+    const SelectionNotifier& operator=(const SelectionNotifier&) = delete;
+
+    void addListener( const Reference< XSelectionChangeListener >& Listener )
     {
-        m_aSelectionListeners.addInterface( _Listener );
+        m_aSelectionListeners.addInterface( Listener );
     }
 
-    void removeListener( const Reference< XSelectionChangeListener >& _Listener )
+    void removeListener( const Reference< XSelectionChangeListener >& Listener )
     {
-        m_aSelectionListeners.removeInterface( _Listener );
+        m_aSelectionListeners.removeInterface( Listener );
     }
 
     void disposing()
@@ -248,7 +248,7 @@ public:
     }
 };
 
-class SelectionGuard : public ::boost::noncopyable
+class SelectionGuard
 {
 public:
     explicit SelectionGuard( SelectionNotifier& _rNotifier )
@@ -261,6 +261,9 @@ public:
     {
         m_rNotifier.leaveSelection( SelectionNotifier::SelectionGuardAccess() );
     }
+
+    SelectionGuard(const SelectionGuard&) = delete;
+    const SelectionGuard& operator=(const SelectionGuard&) = delete;
 
 private:
     SelectionNotifier&  m_rNotifier;
@@ -380,7 +383,7 @@ void SAL_CALL OApplicationController::disposing()
                 {
                     OUString     aFilter;
                     INetURLObject       aURL( m_xModel->getURL() );
-                    const SfxFilter* pFilter = getStandardDatabaseFilter();
+                    std::shared_ptr<const SfxFilter> pFilter = getStandardDatabaseFilter();
                     if ( pFilter )
                         aFilter = pFilter->GetFilterName();
 
@@ -509,14 +512,14 @@ sal_Bool SAL_CALL OApplicationController::suspend(sal_Bool bSuspend) throw( Runt
     ::osl::MutexGuard aGuard( getMutex() );
 
     if ( getView() && getView()->IsInModalMode() )
-        return sal_False;
+        return false;
 
     bool bCanSuspend = true;
 
     if ( m_bSuspended != bool(bSuspend) )
     {
         if ( bSuspend && !closeSubComponents() )
-            return sal_False;
+            return false;
 
         Reference<XModifiable> xModi(m_xModel,UNO_QUERY);
         Reference<XStorable> xStor(getModel(),UNO_QUERY);
@@ -538,6 +541,7 @@ sal_Bool SAL_CALL OApplicationController::suspend(sal_Bool bSuspend) throw( Runt
                     break;
                 case RET_CANCEL:
                     bCanSuspend = false;
+                    break;
                 default:
                     break;
             }
@@ -599,7 +603,7 @@ FeatureState OApplicationController::GetState(sal_uInt16 _nId) const
                 aReturn.bEnabled = true;
                 break;
             case ID_BROWSER_SAVEDOC:
-                aReturn.bEnabled = !isDataSourceReadOnly() && m_xDocumentModify.is() && m_xDocumentModify->isModified();
+                aReturn.bEnabled = !isDataSourceReadOnly();
                 break;
             case ID_BROWSER_SAVEASDOC:
                 aReturn.bEnabled = true;
@@ -1054,8 +1058,8 @@ void OApplicationController::Execute(sal_uInt16 _nId, const Sequence< PropertyVa
                         ::std::unique_ptr<SfxAbstractPasteDialog> pDlg(pFact->CreatePasteDialog( getView() ));
                         ::std::vector<SotClipboardFormatId> aFormatIds;
                         getSupportedFormats(getContainer()->getElementType(),aFormatIds);
-                        const ::std::vector<SotClipboardFormatId>::iterator aEnd = aFormatIds.end();
-                        for (::std::vector<SotClipboardFormatId>::iterator aIter = aFormatIds.begin();aIter != aEnd; ++aIter)
+                        const ::std::vector<SotClipboardFormatId>::const_iterator aEnd = aFormatIds.end();
+                        for (::std::vector<SotClipboardFormatId>::const_iterator aIter = aFormatIds.begin();aIter != aEnd; ++aIter)
                             pDlg->Insert(*aIter,"");
 
                         const TransferableDataHelper& rClipboard = getViewClipboard();
@@ -1126,7 +1130,7 @@ void OApplicationController::Execute(sal_uInt16 _nId, const Sequence< PropertyVa
                         0, getView());
                     aFileDlg.SetDisplayDirectory( sUrl );
 
-                    const SfxFilter* pFilter = getStandardDatabaseFilter();
+                    std::shared_ptr<const SfxFilter> pFilter = getStandardDatabaseFilter();
                     if ( pFilter )
                     {
                         aFileDlg.AddFilter(pFilter->GetUIName(),pFilter->GetDefaultExtension());
@@ -1193,14 +1197,14 @@ void OApplicationController::Execute(sal_uInt16 _nId, const Sequence< PropertyVa
                         case SID_DB_FORM_NEW_PILOT:
                         case SID_FORM_CREATE_REPWIZ_PRE_SEL:
                             bAutoPilot = true;
-                            // run through
+                            SAL_FALLTHROUGH;
                         case SID_APP_NEW_FORM:
                             eType = E_FORM;
                             break;
                         case ID_DOCUMENT_CREATE_REPWIZ:
                         case SID_REPORT_CREATE_REPWIZ_PRE_SEL:
                             bAutoPilot = true;
-                            // run through
+                            SAL_FALLTHROUGH;
                         case SID_APP_NEW_REPORT:
                         case SID_APP_NEW_REPORT_PRE_SEL:
                             eType = E_REPORT;
@@ -1210,14 +1214,14 @@ void OApplicationController::Execute(sal_uInt16 _nId, const Sequence< PropertyVa
                             eType = E_QUERY;
                             break;
                         case ID_NEW_QUERY_DESIGN:
-                            aCreationArgs.put( OUString(PROPERTY_GRAPHICAL_DESIGN), sal_True );
-                            // run through
+                            aCreationArgs.put( OUString(PROPERTY_GRAPHICAL_DESIGN), true );
+                            SAL_FALLTHROUGH;
                         case ID_NEW_QUERY_SQL:
                             eType = E_QUERY;
                             break;
                          case ID_NEW_TABLE_DESIGN_AUTO_PILOT:
                              bAutoPilot = true;
-                             // run through
+                             SAL_FALLTHROUGH;
                         case ID_NEW_TABLE_DESIGN:
                             break;
                         default:
@@ -1595,7 +1599,7 @@ void SAL_CALL OApplicationController::elementReplaced( const ContainerEvent& _rE
                 {
                     ensureConnection();
                     if ( xProp.is() && m_xMetaData.is() )
-                        sNewName = ::dbaui::composeTableName( m_xMetaData, xProp, ::dbtools::eInDataManipulation, false, false, false );
+                        sNewName = ::dbaui::composeTableName( m_xMetaData, xProp, ::dbtools::EComposeRule::InDataManipulation, false, false, false );
                 }
                 break;
                 case E_FORM:
@@ -1703,7 +1707,7 @@ bool OApplicationController::onContainerSelect(ElementType _eType)
             getContainer()->getDetailView()->createPage(_eType,xContainer);
         }
 
-        SelectionByElementType::iterator pendingSelection = m_aPendingSelection.find( _eType );
+        SelectionByElementType::const_iterator pendingSelection = m_aPendingSelection.find( _eType );
         if ( pendingSelection != m_aPendingSelection.end() )
         {
             getContainer()->selectElements( comphelper::containerToSequence(pendingSelection->second) );
@@ -1765,9 +1769,9 @@ bool OApplicationController::impl_isAlterableView_nothrow( const OUString& _rTab
 }
 
 Reference< XComponent > OApplicationController::openElement(const OUString& _sName, ElementType _eType,
-    ElementOpenMode _eOpenMode, sal_uInt16 _nInstigatorCommand )
+    ElementOpenMode _eOpenMode )
 {
-    return openElementWithArguments( _sName, _eType, _eOpenMode, _nInstigatorCommand, ::comphelper::NamedValueCollection() );
+    return openElementWithArguments( _sName, _eType, _eOpenMode, 0, ::comphelper::NamedValueCollection() );
 }
 
 Reference< XComponent > OApplicationController::openElementWithArguments( const OUString& _sName, ElementType _eType,
@@ -1794,7 +1798,7 @@ Reference< XComponent > OApplicationController::openElementWithArguments( const 
             // component, but standalone documents.
             isStandaloneDocument = true;
         }
-        // NO break!
+        SAL_FALLTHROUGH;
     case E_FORM:
     {
         if ( isStandaloneDocument || !m_pSubComponentManager->activateSubFrame( _sName, _eType, _eOpenMode, xRet ) )
@@ -1998,7 +2002,7 @@ void OApplicationController::addContainerListener(const Reference<XNameAccess>& 
         if ( xCont.is() )
         {
             // add as listener to get notified if elements are inserted or removed
-            TContainerVector::iterator aFind = ::std::find(m_aCurrentContainers.begin(),m_aCurrentContainers.end(),xCont);
+            TContainerVector::const_iterator aFind = ::std::find(m_aCurrentContainers.begin(),m_aCurrentContainers.end(),xCont);
             if ( aFind == m_aCurrentContainers.end() )
             {
                 xCont->addContainerListener(this);
@@ -2075,7 +2079,7 @@ void OApplicationController::renameEntry()
                     ensureConnection();
                     if ( !getConnection().is() )
                         break;
-                    // NO break
+                    SAL_FALLTHROUGH;
                 case E_QUERY:
                     if ( xContainer->hasByName(*aList.begin()) )
                     {
@@ -2111,7 +2115,7 @@ void OApplicationController::renameEntry()
                                 OUString sCatalog = aDialog->getCatalog();
                                 OUString sSchema  = aDialog->getSchema();
 
-                                sNewName = ::dbtools::composeTableName( m_xMetaData, sCatalog, sSchema, sName, false, ::dbtools::eInDataManipulation );
+                                sNewName = ::dbtools::composeTableName( m_xMetaData, sCatalog, sSchema, sName, false, ::dbtools::EComposeRule::InDataManipulation );
                             }
                             else
                                 sNewName = aDialog->getName();
@@ -2131,7 +2135,7 @@ void OApplicationController::renameEntry()
                             if ( eType == E_TABLE )
                             {
                                 Reference<XPropertySet> xProp(xRename,UNO_QUERY);
-                                sNewName = ::dbaui::composeTableName( m_xMetaData, xProp, ::dbtools::eInDataManipulation, false, false, false );
+                                sNewName = ::dbaui::composeTableName( m_xMetaData, xProp, ::dbtools::EComposeRule::InDataManipulation, false, false, false );
                             }
                             getContainer()->elementReplaced( eType , sOldName, sNewName );
 
@@ -2340,7 +2344,7 @@ IController& OApplicationController::getCommandController()
     return *this;
 }
 
-::cppu::OInterfaceContainerHelper* OApplicationController::getContextMenuInterceptors()
+::comphelper::OInterfaceContainerHelper2* OApplicationController::getContextMenuInterceptors()
 {
     return &m_aContextMenuInterceptors;
 }
@@ -2393,7 +2397,7 @@ sal_Int8 OApplicationController::queryDrop( const AcceptDropEvent& _rEvt, const 
         if ( eType != E_NONE && (eType != E_TABLE || !isConnectionReadOnly()) )
         {
             // check for the concrete type
-            if(::std::any_of(_rFlavors.begin(),_rFlavors.end(),TAppSupportedSotFunctor(eType,true)))
+            if(::std::any_of(_rFlavors.begin(),_rFlavors.end(),TAppSupportedSotFunctor(eType)))
                 return DND_ACTION_COPY;
             if ( eType == E_FORM || eType == E_REPORT )
             {
@@ -2581,7 +2585,7 @@ void OApplicationController::OnFirstControllerConnected()
         // If the migration just happened, but was not successful, the document is reloaded.
         // In this case, we should not show the warning, again.
         ::comphelper::NamedValueCollection aModelArgs( m_xModel->getArgs() );
-        if ( aModelArgs.getOrDefault( "SuppressMigrationWarning", sal_False ) )
+        if ( aModelArgs.getOrDefault( "SuppressMigrationWarning", false ) )
             return;
 
         // also, if the document is read-only, then no migration is possible, and the
@@ -2623,14 +2627,14 @@ sal_Bool SAL_CALL OApplicationController::attachModel(const Reference< XModel > 
     if ( ( !xOfficeDoc.is() || !xDocModify.is() ) && _rxModel.is() )
     {
         OSL_FAIL( "OApplicationController::attachModel: invalid model!" );
-        return sal_False;
+        return false;
     }
 
     if ( m_xModel.is() && ( m_xModel != _rxModel ) && ( _rxModel.is() ) )
     {
         OSL_ENSURE( false, "OApplicationController::attachModel: missing implementation: setting a new model while we have another one!" );
         // we'd need to completely update our view here, close sub components, and the like
-        return sal_False;
+        return false;
     }
 
     const OUString aPropertyNames[] =
@@ -2643,9 +2647,9 @@ sal_Bool SAL_CALL OApplicationController::attachModel(const Reference< XModel > 
     {
         if ( m_xDataSource.is() )
         {
-            for ( size_t i=0; i < sizeof( aPropertyNames ) / sizeof( aPropertyNames[0] ); ++i )
+            for (const auto & aPropertyName : aPropertyNames)
             {
-                m_xDataSource->removePropertyChangeListener( aPropertyNames[i], this );
+                m_xDataSource->removePropertyChangeListener( aPropertyName, this );
             }
         }
 
@@ -2659,7 +2663,6 @@ sal_Bool SAL_CALL OApplicationController::attachModel(const Reference< XModel > 
     }
 
     m_xModel = _rxModel;
-    m_xDocumentModify = xDocModify;
     m_xDataSource.set( xOfficeDoc.is() ? xOfficeDoc->getDataSource() : Reference< XDataSource >(), UNO_QUERY );
 
     // connect to new model
@@ -2667,9 +2670,9 @@ sal_Bool SAL_CALL OApplicationController::attachModel(const Reference< XModel > 
     {
         if ( m_xDataSource.is() )
         {
-            for ( size_t i=0; i < sizeof( aPropertyNames ) / sizeof( aPropertyNames[0] ); ++i )
+            for (const auto & aPropertyName : aPropertyNames)
             {
-                m_xDataSource->addPropertyChangeListener( aPropertyNames[i], this );
+                m_xDataSource->addPropertyChangeListener( aPropertyName, this );
             }
         }
 
@@ -2703,7 +2706,7 @@ sal_Bool SAL_CALL OApplicationController::attachModel(const Reference< XModel > 
         }
     }
 
-    return sal_True;
+    return true;
 }
 
 void OApplicationController::containerFound( const Reference< XContainer >& _xContainer)
@@ -2743,14 +2746,14 @@ OUString OApplicationController::getCurrentlySelectedName(sal_Int32& _rnCommandT
     return sName;
 }
 
-void SAL_CALL OApplicationController::addSelectionChangeListener( const Reference< view::XSelectionChangeListener >& _Listener ) throw (RuntimeException, std::exception)
+void SAL_CALL OApplicationController::addSelectionChangeListener( const Reference< view::XSelectionChangeListener >& Listener ) throw (RuntimeException, std::exception)
 {
-    m_pSelectionNotifier->addListener( _Listener );
+    m_pSelectionNotifier->addListener( Listener );
 }
 
-void SAL_CALL OApplicationController::removeSelectionChangeListener( const Reference< view::XSelectionChangeListener >& _Listener ) throw (RuntimeException, std::exception)
+void SAL_CALL OApplicationController::removeSelectionChangeListener( const Reference< view::XSelectionChangeListener >& Listener ) throw (RuntimeException, std::exception)
 {
-    m_pSelectionNotifier->removeListener( _Listener );
+    m_pSelectionNotifier->removeListener( Listener );
 }
 
 sal_Bool SAL_CALL OApplicationController::select( const Any& _aSelection ) throw (IllegalArgumentException, RuntimeException, std::exception)
@@ -2761,7 +2764,7 @@ sal_Bool SAL_CALL OApplicationController::select( const Any& _aSelection ) throw
     if ( !_aSelection.hasValue() || !getView() )
     {
         getContainer()->selectElements(aSelection);
-        return sal_True;
+        return true;
     }
 
     // BEGIN compatibility
@@ -2788,7 +2791,7 @@ sal_Bool SAL_CALL OApplicationController::select( const Any& _aSelection ) throw
         m_aSelectContainerEvent.CancelCall();   // just in case the async select request was running
         getContainer()->selectContainer(eType);
         getContainer()->selectElements(aSelection);
-        return sal_True;
+        return true;
     }
     // END compatibility
 
@@ -2851,7 +2854,6 @@ sal_Bool SAL_CALL OApplicationController::select( const Any& _aSelection ) throw
             }
         }
     }
-
     for (   SelectionByElementType::const_iterator sel = aSelectedElements.begin();
             sel != aSelectedElements.end();
             ++sel
@@ -2870,7 +2872,7 @@ sal_Bool SAL_CALL OApplicationController::select( const Any& _aSelection ) throw
     m_aSelectContainerEvent.CancelCall();   // just in case the async select request was running
     getContainer()->selectContainer( eSelectedCategory );
 
-    return sal_True;
+    return true;
 }
 
 Any SAL_CALL OApplicationController::getSelection(  ) throw (RuntimeException, std::exception)

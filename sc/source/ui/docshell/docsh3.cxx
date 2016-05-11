@@ -63,6 +63,9 @@
 #include "markdata.hxx"
 #include <memory>
 
+#include <comphelper/lok.hxx>
+#include <LibreOfficeKit/LibreOfficeKitEnums.h>
+
 //          Redraw - Benachrichtigungen
 
 void ScDocShell::PostEditView( ScEditEngineDefaulter* pEditEngine, const ScAddress& rCursorPos )
@@ -159,6 +162,11 @@ void ScDocShell::PostPaint( const ScRangeList& rRanges, sal_uInt16 nPart, sal_uI
     }
 
     Broadcast(ScPaintHint(aPaintRanges.Combine(), nPart));
+
+    // LOK: we are supposed to update the row / columns headers (and actually
+    // the document size too - cell size affects that, obviously)
+    if ((nPart & (PAINT_TOP | PAINT_LEFT)) && comphelper::LibreOfficeKit::isActive() && aDocument.GetDrawLayer())
+        aDocument.GetDrawLayer()->libreOfficeKitCallback(LOK_CALLBACK_DOCUMENT_SIZE_CHANGED, "");
 }
 
 void ScDocShell::PostPaintGridAll()
@@ -285,12 +293,12 @@ void ScDocShell::SetLockCount(sal_uInt16 nNew)
     {
         if ( !pPaintLockData )
             pPaintLockData = new ScPaintLockData;
-        pPaintLockData->SetLevel(nNew-1, true);
+        pPaintLockData->SetDocLevel(nNew-1);
         LockDocument_Impl(nNew);
     }
     else if (pPaintLockData)    // loeschen
     {
-        pPaintLockData->SetLevel(0, true);  // bei Unlock sofort ausfuehren
+        pPaintLockData->SetDocLevel(0);  // bei Unlock sofort ausfuehren
         UnlockPaint_Impl(true);                 // jetzt
         UnlockDocument_Impl(0);
     }
@@ -514,7 +522,7 @@ sal_uInt16 ScDocShell::SetPrinter( SfxPrinter* pNewPrinter, SfxPrinterChangeFlag
     {
         OUString aStyle = aDocument.GetPageStyle( GetCurTab() );
         ScStyleSheetPool* pStPl = aDocument.GetStyleSheetPool();
-        SfxStyleSheet* pStyleSheet = static_cast<SfxStyleSheet*>(pStPl->Find(aStyle, SFX_STYLE_FAMILY_PAGE));
+        SfxStyleSheet* pStyleSheet = static_cast<SfxStyleSheet*>(pStPl->Find(aStyle, SfxStyleFamily::Page));
         if (pStyleSheet)
         {
             SfxItemSet& rSet = pStyleSheet->GetItemSet();
@@ -820,7 +828,7 @@ void ScDocShell::MergeDocument( ScDocument& rOtherDoc, bool bShared, bool bCheck
                             //  ab hier kein return mehr
 
     ScProgress aProgress( this, OUString("..."),
-                    nNewActionCount );
+                    nNewActionCount, true );
 
     sal_uLong nLastMergeAction = pSourceTrack->GetLast()->GetActionNumber();
     // UpdateReference-Undo, gueltige Referenzen fuer den letzten gemeinsamen Zustand
@@ -1027,7 +1035,7 @@ void ScDocShell::MergeDocument( ScDocument& rOtherDoc, bool bShared, bool bCheck
                             if ( pDel->IsTopDelete() )
                             {
                                 aSourceRange = pDel->GetOverAllRange().MakeRange();
-                                GetDocFunc().DeleteCells( aSourceRange, nullptr, DEL_DELROWS, true, false );
+                                GetDocFunc().DeleteCells( aSourceRange, nullptr, DEL_DELROWS, false );
 
                                 // #i101099# [Collaboration] Changes are not correctly shown
                                 if ( bShared )
@@ -1047,7 +1055,7 @@ void ScDocShell::MergeDocument( ScDocument& rOtherDoc, bool bShared, bool bCheck
                             if ( pDel->IsTopDelete() && !pDel->IsTabDeleteCol() )
                             {   // deleted Table enthaelt deleted Cols, die nicht
                                 aSourceRange = pDel->GetOverAllRange().MakeRange();
-                                GetDocFunc().DeleteCells( aSourceRange, nullptr, DEL_DELCOLS, true, false );
+                                GetDocFunc().DeleteCells( aSourceRange, nullptr, DEL_DELCOLS, false );
                             }
                         }
                         break;
@@ -1292,7 +1300,6 @@ bool ScDocShell::MergeSharedDocument( ScDocShell* pSharedDocShell )
                     pAction = pAction->GetPrev();
                 }
             }
-            nEndOwn = pThisTrack->GetActionMax();
         }
         else
         {

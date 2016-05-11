@@ -41,13 +41,13 @@ OIndexHelper::OIndexHelper( OTableHelper* _pTable) : connectivity::sdbcx::OIndex
 }
 
 OIndexHelper::OIndexHelper( OTableHelper* _pTable,
-                const OUString& _Name,
-                const OUString& _Catalog,
+                const OUString& Name,
+                const OUString& Catalog,
                 bool _isUnique,
                 bool _isPrimaryKeyIndex,
                 bool _isClustered
-                ) : connectivity::sdbcx::OIndex(_Name,
-                                  _Catalog,
+                ) : connectivity::sdbcx::OIndex(Name,
+                                  Catalog,
                                   _isUnique,
                                   _isPrimaryKeyIndex,
                                   _isClustered,true)
@@ -73,7 +73,7 @@ void OIndexHelper::refreshColumns()
 
         Reference< XResultSet > xResult = m_pTable->getMetaData()->getIndexInfo(
             m_pTable->getPropertyValue(rPropMap.getNameByIndex(PROPERTY_ID_CATALOGNAME)),
-            aSchema,aTable,sal_False,sal_False);
+            aSchema,aTable,false,false);
 
         if ( xResult.is() )
         {

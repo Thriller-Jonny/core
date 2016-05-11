@@ -48,7 +48,6 @@
 #include <svx/svdmodel.hxx>
 
 
-
 class ImpRemap3DDepth
 {
     sal_uInt32                  mnOrdNum;
@@ -145,7 +144,7 @@ Imp3DDepthRemapper::Imp3DDepthRemapper(E3dScene& rScene)
         }
     }
 
-    // now, we need to sort the maVector by it's members minimal depth. The
+    // now, we need to sort the maVector by its members minimal depth. The
     // smaller, the nearer to the viewer.
     ::std::sort(maVector.begin(), maVector.end());
 }
@@ -181,8 +180,6 @@ sdr::contact::ViewContact* E3dScene::CreateObjectSpecificViewContact()
 }
 
 
-
-
 E3dScene::E3dScene()
 :   E3dObject(),
     aCamera(basegfx::B3DPoint(0.0, 0.0, 4.0), basegfx::B3DPoint()),
@@ -207,7 +204,7 @@ E3dScene::E3dScene(E3dDefaultAttributes& rDefault)
 void E3dScene::SetDefaultAttributes(E3dDefaultAttributes& /*rDefault*/)
 {
     // For WIN95/NT turn off the FP-Exceptions
-#if defined(WNT)
+#if defined(_WIN32)
     _control87( _MCW_EM, _MCW_EM );
 #endif
 
@@ -240,7 +237,7 @@ E3dScene::~E3dScene()
 basegfx::B2DPolyPolygon E3dScene::TakeXorPoly() const
 {
     const sdr::contact::ViewContactOfE3dScene& rVCScene = static_cast< sdr::contact::ViewContactOfE3dScene& >(GetViewContact());
-    const drawinglayer::geometry::ViewInformation3D aViewInfo3D(rVCScene.getViewInformation3D());
+    const drawinglayer::geometry::ViewInformation3D& aViewInfo3D(rVCScene.getViewInformation3D());
     const basegfx::B3DPolyPolygon aCubePolyPolygon(CreateWireframe());
 
     basegfx::B2DPolyPolygon aRetval(basegfx::tools::createB2DPolyPolygonFromB3DPolyPolygon(aCubePolyPolygon,
@@ -330,31 +327,27 @@ void E3dScene::NbcResize(const Point& rRef, const Fraction& rXFact,
 
 void E3dScene::SetCamera(const Camera3D& rNewCamera)
 {
-    // Set old camera
     aCamera = rNewCamera;
     static_cast<sdr::properties::E3dSceneProperties&>(GetProperties()).SetSceneItemsFromCamera();
 
     SetRectsDirty();
 
-    // Fill new camera from old
-    Camera3D& rCam = (Camera3D&)GetCamera();
-
     // Turn off ratio
-    if(rCam.GetAspectMapping() == AS_NO_MAPPING)
+    if(aCamera.GetAspectMapping() == AS_NO_MAPPING)
         GetCameraSet().SetRatio(0.0);
 
     // Set Imaging geometry
-    basegfx::B3DPoint aVRP(rCam.GetViewPoint());
-    basegfx::B3DVector aVPN(aVRP - rCam.GetVRP());
-    basegfx::B3DVector aVUV(rCam.GetVUV());
+    basegfx::B3DPoint aVRP(aCamera.GetViewPoint());
+    basegfx::B3DVector aVPN(aVRP - aCamera.GetVRP());
+    basegfx::B3DVector aVUV(aCamera.GetVUV());
 
     // use SetViewportValues() to set VRP, VPN and VUV as vectors, too.
     // Else these values would not be exported/imported correctly.
     GetCameraSet().SetViewportValues(aVRP, aVPN, aVUV);
 
     // Set perspective
-    GetCameraSet().SetPerspective(rCam.GetProjection() == PR_PERSPECTIVE);
-    GetCameraSet().SetViewportRectangle((Rectangle&)rCam.GetDeviceWindow());
+    GetCameraSet().SetPerspective(aCamera.GetProjection() == PR_PERSPECTIVE);
+    GetCameraSet().SetViewportRectangle((Rectangle&)aCamera.GetDeviceWindow());
 
     ImpCleanup3DDepthMapper();
 }
@@ -470,7 +463,7 @@ E3dScene& E3dScene::operator=(const E3dScene& rObj)
     // and would create a lot of short living data structures.
     // It is currently better to flush that data, e.g. by using
     // ActionChanged at the VC which will for this class
-    // flush that cached data and initalize it's valid reconstruction
+    // flush that cached data and initialize its valid reconstruction
     GetViewContact().ActionChanged();
     return *this;
 }
@@ -646,8 +639,7 @@ void E3dScene::RecalcSnapRect()
     {
         // The Scene is used as a 2D-Objekt, take the SnapRect from the
         // 2D Display settings
-        Camera3D& rCam = (Camera3D&)pScene->GetCamera();
-        maSnapRect = rCam.GetDeviceWindow();
+        maSnapRect = pScene->aCamera.GetDeviceWindow();
     }
     else
     {
@@ -707,7 +699,7 @@ bool E3dScene::EndCreate(SdrDragStat& rStat, SdrCreateCmd eCmd)
     aRect1.Justify();
     NbcSetSnapRect(aRect1);
     SetRectsDirty();
-    return (eCmd==SDRCREATE_FORCEEND || rStat.GetPointAnz()>=2);
+    return (eCmd==SDRCREATE_FORCEEND || rStat.GetPointCount()>=2);
 }
 
 bool E3dScene::BckCreate(SdrDragStat& /*rStat*/)

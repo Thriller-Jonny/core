@@ -16,7 +16,7 @@ public:
     : FixedHyperlink( pParent, nWinStyle )
     {
         vcl::Font aFont = GetControlFont( );
-        aFont.SetUnderline( UNDERLINE_NONE );
+        aFont.SetUnderline( LINESTYLE_NONE );
         SetControlFont( aFont );
     }
 
@@ -27,13 +27,13 @@ protected:
         if ( !rMEvt.IsLeaveWindow() && IsEnabled() )
         {
             vcl::Font aFont = GetControlFont( );
-            aFont.SetUnderline( UNDERLINE_SINGLE );
+            aFont.SetUnderline( LINESTYLE_SINGLE );
             SetControlFont( aFont );
         }
         else
         {
             vcl::Font aFont = GetControlFont( );
-            aFont.SetUnderline( UNDERLINE_NONE );
+            aFont.SetUnderline( LINESTYLE_NONE );
             SetControlFont( aFont );
         }
 
@@ -41,7 +41,7 @@ protected:
     }
 };
 
-Breadcrumb::Breadcrumb( vcl::Window* pParent, WinBits nWinStyle ) : VclHBox( pParent, nWinStyle )
+Breadcrumb::Breadcrumb( vcl::Window* pParent ) : VclHBox( pParent )
 {
     m_eMode = SvtBreadcrumbMode::ONLY_CURRENT_PATH;
     set_spacing( SPACING );
@@ -80,7 +80,7 @@ void Breadcrumb::SetClickHdl( const Link<Breadcrumb*,void>& rLink )
     m_aClickHdl = rLink;
 }
 
-OUString Breadcrumb::GetHdlURL()
+const OUString& Breadcrumb::GetHdlURL()
 {
     return m_sClickedURL;
 }
@@ -105,13 +105,22 @@ void Breadcrumb::SetURL( const OUString& rURL )
     m_aCurrentURL = rURL;
     INetURLObject aURL( rURL );
     aURL.setFinalSlash();
+    //prepare the Host port
+    OUString sHostPort;
+
+    if( aURL.HasPort() )
+    {
+        sHostPort += ":";
+        sHostPort += OUString::number( aURL.GetPort() );
+    }
 
     OUString sUser = aURL.GetUser( INetURLObject::NO_DECODE );
     OUString sPath = aURL.GetURLPath(INetURLObject::DECODE_WITH_CHARSET);
     OUString sRootPath = INetURLObject::GetScheme( aURL.GetProtocol() )
                         + sUser
                         + ( sUser.isEmpty() ? OUString() : "@" )
-                        + aURL.GetHost();
+                        + aURL.GetHost()
+                        + sHostPort;
 
     int nSegments = aURL.getSegmentCount();
     unsigned int nPos = 0;

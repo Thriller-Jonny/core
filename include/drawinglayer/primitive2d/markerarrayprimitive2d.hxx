@@ -52,7 +52,7 @@ namespace drawinglayer
             /// the positions for the marker
             std::vector< basegfx::B2DPoint >                maPositions;
 
-            /// the marker definintion to visualize
+            /// the marker definition to visualize
             BitmapEx                                        maMarker;
 
         protected:
@@ -80,7 +80,6 @@ namespace drawinglayer
         };
     } // end of namespace primitive2d
 } // end of namespace drawinglayer
-
 
 
 #endif //INCLUDED_DRAWINGLAYER_PRIMITIVE2D_MARKERARRAYPRIMITIVE2D_HXX

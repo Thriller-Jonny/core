@@ -35,12 +35,13 @@
 #include <com/sun/star/lang/XComponent.hpp>
 #include <com/sun/star/container/XEnumeration.hpp>
 #include <unotools/localedatawrapper.hxx>
+#include <o3tl/typed_flags_set.hxx>
 
 class SbiInstance;                  // active StarBASIC process
 class SbiRuntime;                   // active StarBASIC procedure instance
 
-struct SbiArgvStack;                // Argv stack element
-struct SbiGosubStack;               // GOSUB stack element
+struct SbiArgv;                     // Argv stack element
+struct SbiGosub;                    // GOSUB stack element
 class  SbiImage;                    // Code-Image
 class  SbiIoSystem;
 class  SbiDdeControl;
@@ -48,12 +49,11 @@ class  SbiDllMgr;
 class  SvNumberFormatter;           // time/date functions
 enum class SbiImageFlags;
 
-enum ForType
-{
-    FOR_TO,
-    FOR_EACH_ARRAY,
-    FOR_EACH_COLLECTION,
-    FOR_EACH_XENUMERATION
+enum class ForType {
+    To,
+    EachArray,
+    EachCollection,
+    EachXEnumeration
 };
 
 struct SbiForStack {                // for/next stack:
@@ -63,7 +63,7 @@ struct SbiForStack {                // for/next stack:
     SbxVariableRef  refInc;         // increment expression
 
     // For each support
-    ForType         eForType;
+    ForType             eForType;
     sal_Int32           nCurCollectionIndex;
     sal_Int32*          pArrayCurIndices;
     sal_Int32*          pArrayLowerBounds;
@@ -72,12 +72,13 @@ struct SbiForStack {                // for/next stack:
 
     SbiForStack()
         : pNext(nullptr)
-        , eForType(FOR_TO)
+        , eForType(ForType::To)
         , nCurCollectionIndex(0)
         , pArrayCurIndices(nullptr)
         , pArrayLowerBounds(nullptr)
         , pArrayUpperBounds(nullptr)
     {}
+
     ~SbiForStack()
     {
         delete[] pArrayCurIndices;
@@ -86,18 +87,19 @@ struct SbiForStack {                // for/next stack:
     }
 };
 
-struct SbiGosubStack {              // GOSUB-Stack:
-    SbiGosubStack* pNext;           // Chain
-    const sal_uInt8* pCode;             // Return-Pointer
-    sal_uInt16 nStartForLvl;            // #118235: For Level in moment of gosub
-};
-
 #define MAXRECURSION 500
 
-#define Sb_ATTR_READONLY    0x0001
-#define Sb_ATTR_HIDDEN      0x0002
-#define Sb_ATTR_DIRECTORY   0x0010
+enum class SbAttributes {
+    NONE          = 0x0000,
+    READONLY      = 0x0001,
+    HIDDEN        = 0x0002,
+    DIRECTORY     = 0x0010
+};
 
+namespace o3tl
+{
+    template<> struct typed_flags<SbAttributes> : is_typed_flags<SbAttributes, 0x13> {};
+}
 
 class WildCard;
 
@@ -106,7 +108,7 @@ class SbiRTLData
 public:
 
     ::osl::Directory* pDir;
-    sal_Int16   nDirFlags;
+    SbAttributes nDirFlags;
     short   nCurDirPos;
 
     OUString sFullNameToBeChecked;
@@ -173,7 +175,7 @@ public:
 
     void    Stop();
     SbError GetErr()                { return nErr; }
-    OUString  GetErrorMsg()           { return aErrorMsg; }
+    const OUString& GetErrorMsg()           { return aErrorMsg; }
     sal_Int32 GetErl()             { return nErl; }
     void    EnableReschedule( bool bEnable ) { bReschedule = bEnable; }
     bool    IsReschedule() { return bReschedule; }
@@ -202,16 +204,6 @@ public:
         LanguageType* peFormatterLangType=nullptr, DateFormat* peFormatterDateFormat=nullptr );
 };
 
-// chainable items to keep references temporary
-struct RefSaveItem
-{
-    SbxVariableRef xRef;
-    RefSaveItem* pNext;
-
-    RefSaveItem() { pNext = nullptr; }
-};
-
-
 // There's one instance of this class for every executed sub-program.
 // This instance is the heart of the BASIC-machine and contains only local data.
 
@@ -238,11 +230,8 @@ class SbiRuntime
     SbxVariableRef   refRedim;   // Array saved to use for REDIM
     SbxVariableRef xDummyVar;       // substitute for variables that weren't found
     SbxVariable* mpExtCaller;       // Caller ( external - e.g. button name, shape, range object etc. - only in vba mode )
-    SbiArgvStack*  pArgvStk;        // ARGV-Stack
-    SbiGosubStack* pGosubStk;       // GOSUB stack
     SbiForStack*   pForStk;         // FOR/NEXT-Stack
     sal_uInt16        nExprLvl;         // depth of the expr-stack
-    sal_uInt16        nGosubLvl;        // to prevent dead-recursions
     sal_uInt16        nForLvl;          // #118235: Maintain for level
     const sal_uInt8*   pCode;            // current Code-Pointer
     const sal_uInt8*   pStmnt;           // beginning of the last statement
@@ -266,30 +255,10 @@ class SbiRuntime
     sal_uInt16        nOps;             // opcode counter
     sal_uInt32    m_nLastTime;
 
-    RefSaveItem*  pRefSaveList;     // #74254 save temporary references
-    RefSaveItem*  pItemStoreList;   // keep unused items
-    void SaveRef( SbxVariable* pVar )
-    {
-        RefSaveItem* pItem = pItemStoreList;
-        if( pItem )
-            pItemStoreList = pItem->pNext;
-        else
-            pItem = new RefSaveItem();
-        pItem->pNext = pRefSaveList;
-        pItem->xRef = pVar;
-        pRefSaveList = pItem;
-    }
-    void ClearRefs()
-    {
-        while( pRefSaveList )
-        {
-            RefSaveItem* pToClearItem = pRefSaveList;
-            pRefSaveList = pToClearItem->pNext;
-            pToClearItem->xRef = nullptr;
-            pToClearItem->pNext = pItemStoreList;
-            pItemStoreList = pToClearItem;
-        }
-    }
+    std::vector<SbxVariableRef>  aRefSaved; // #74254 save temporary references
+    std::vector<SbiGosub>   pGosubStk; // GOSUB stack
+    std::vector<SbiArgv>    pArgvStk;  // ARGV-Stack
+
 
     SbxVariable* FindElement
     ( SbxObject* pObj, sal_uInt32 nOp1, sal_uInt32 nOp2, SbError, bool bLocal, bool bStatic = false );
@@ -298,13 +267,12 @@ class SbiRuntime
 
     void PushVar( SbxVariable* );
     SbxVariableRef PopVar();
-    SbxVariable* GetTOS( short=0 );
+    SbxVariable* GetTOS();
     void TOSMakeTemp();
     void ClearExprStack();
 
     void PushGosub( const sal_uInt8* );
     void PopGosub();
-    void ClearGosubStack();
 
     void PushArgv();
     void PopArgv();
@@ -364,7 +332,7 @@ class SbiRuntime
     // all opcodes with two operands
     void StepRTL( sal_uInt32, sal_uInt32 ),     StepPUBLIC( sal_uInt32, sal_uInt32 ),   StepPUBLIC_P( sal_uInt32, sal_uInt32 );
     void StepPUBLIC_Impl( sal_uInt32, sal_uInt32, bool bUsedForClassModule );
-    void StepFIND_Impl( SbxObject* pObj, sal_uInt32 nOp1, sal_uInt32 nOp2, SbError, bool bLocal, bool bStatic = false );
+    void StepFIND_Impl( SbxObject* pObj, sal_uInt32 nOp1, sal_uInt32 nOp2, SbError, bool bStatic = false );
     void StepFIND( sal_uInt32, sal_uInt32 ),    StepELEM( sal_uInt32, sal_uInt32 );
     void StepGLOBAL( sal_uInt32, sal_uInt32 ),  StepLOCAL( sal_uInt32, sal_uInt32 );
     void StepPARAM( sal_uInt32, sal_uInt32),    StepCREATE( sal_uInt32, sal_uInt32 );
@@ -426,13 +394,6 @@ inline void checkArithmeticOverflow( SbxVariable* pVar )
 
 
 StarBASIC* GetCurrentBasic( StarBASIC* pRTBasic );
-
-// Get information if security restrictions should be
-// used (File IO based on UCB, no RTL function SHELL
-// no DDE functionality, no DLLCALL) in basic because
-// of portal "virtual" users (portal user != UNIX user)
-// (Implemented in iosys.cxx)
-bool needSecurityRestrictions();
 
 // Returns true if UNO is available, otherwise the old
 // file system implementation has to be used

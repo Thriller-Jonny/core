@@ -78,7 +78,6 @@ using namespace ::com::sun::star;
 using namespace ::com::sun::star::system;
 
 
-
 namespace dp_gui {
 
 #define TOP_OFFSET           5
@@ -235,7 +234,6 @@ void ExtBoxWithBtns_Impl::RecalcAll()
     if ( nActive != svt::IExtensionListBox::ENTRY_NOTFOUND )
         SetButtonPos( GetEntryRect( nActive ) );
 }
-
 
 
 //This function may be called with nPos < 0
@@ -652,12 +650,12 @@ bool DialogHelper::installForAllUsers( bool &bInstallForAll ) const
     return true;
 }
 
-void DialogHelper::PostUserEvent( const Link<void*,void>& rLink, void* pCaller, bool bReferenceLink )
+void DialogHelper::PostUserEvent( const Link<void*,void>& rLink, void* pCaller )
 {
     if ( m_nEventID )
         Application::RemoveUserEvent( m_nEventID );
 
-    m_nEventID = Application::PostUserEvent( rLink, pCaller, bReferenceLink );
+    m_nEventID = Application::PostUserEvent( rLink, pCaller, true/*bReferenceLink*/ );
 }
 
 //                             ExtMgrDialog
@@ -747,7 +745,7 @@ void ExtMgrDialog::setGetExtensionsURL( const OUString &rURL )
 }
 
 
-long ExtMgrDialog::addPackageToList( const uno::Reference< deployment::XPackage > &xPackage,
+void ExtMgrDialog::addPackageToList( const uno::Reference< deployment::XPackage > &xPackage,
                                      bool bLicenseMissing )
 {
 
@@ -758,20 +756,19 @@ long ExtMgrDialog::addPackageToList( const uno::Reference< deployment::XPackage 
 
     if (m_pBundledCbx->IsChecked() && (xPackage->getRepositoryName() == BUNDLED_PACKAGE_MANAGER) )
     {
-       return m_pExtensionBox->addEntry( xPackage, bLicenseMissing );
+        m_pExtensionBox->addEntry( xPackage, bLicenseMissing );
     }
     else if (m_pSharedCbx->IsChecked() && (xPackage->getRepositoryName() == SHARED_PACKAGE_MANAGER) )
     {
-        return m_pExtensionBox->addEntry( xPackage, bLicenseMissing );
+        m_pExtensionBox->addEntry( xPackage, bLicenseMissing );
     }
     else if (m_pUserCbx->IsChecked() && (xPackage->getRepositoryName() == USER_PACKAGE_MANAGER ))
     {
-        return m_pExtensionBox->addEntry( xPackage, bLicenseMissing );
+        m_pExtensionBox->addEntry( xPackage, bLicenseMissing );
     }
     else
     {
     //OSL_FAIL("Package will not be displayed");
-        return 0;
     }
 }
 
@@ -963,7 +960,6 @@ IMPL_LINK_NOARG_TYPED(ExtMgrDialog, HandleCloseBtn, Button*, void)
 }
 
 
-
 IMPL_LINK_TYPED( ExtMgrDialog, startProgress, void*, _bLockInterface, void )
 {
     ::osl::MutexGuard aGuard( m_aMutex );
@@ -1013,7 +1009,7 @@ void ExtMgrDialog::showProgress( bool _bStart )
         OSL_TRACE( "showProgress stop!" );
     }
 
-    DialogHelper::PostUserEvent( LINK( this, ExtMgrDialog, startProgress ), reinterpret_cast<void*>(bStart), true );
+    DialogHelper::PostUserEvent( LINK( this, ExtMgrDialog, startProgress ), reinterpret_cast<void*>(bStart) );
 }
 
 
@@ -1199,7 +1195,7 @@ UpdateRequiredDialog::UpdateRequiredDialog(vcl::Window *pParent, TheExtensionMan
     m_pUpdateBtn->Enable( false );
     m_pCloseBtn->GrabFocus();
 
-    m_aIdle.SetPriority( SchedulerPriority::MEDIUM );
+    m_aIdle.SetPriority( SchedulerPriority::LOWEST );
     m_aIdle.SetIdleHdl( LINK( this, UpdateRequiredDialog, TimeOutHdl ) );
 }
 
@@ -1221,7 +1217,7 @@ void UpdateRequiredDialog::dispose()
     ModalDialog::dispose();
 }
 
-long UpdateRequiredDialog::addPackageToList( const uno::Reference< deployment::XPackage > &xPackage,
+void UpdateRequiredDialog::addPackageToList( const uno::Reference< deployment::XPackage > &xPackage,
                                              bool bLicenseMissing )
 {
     // We will only add entries to the list with unsatisfied dependencies
@@ -1230,9 +1226,8 @@ long UpdateRequiredDialog::addPackageToList( const uno::Reference< deployment::X
         m_bHasLockedEntries |= m_pManager->isReadOnly( xPackage );
         const SolarMutexGuard aGuard;
         m_pUpdateBtn->Enable();
-        return m_pExtensionBox->addEntry( xPackage );
+        m_pExtensionBox->addEntry( xPackage );
     }
-    return 0;
 }
 
 
@@ -1255,12 +1250,10 @@ void UpdateRequiredDialog::checkEntries()
 }
 
 
-bool UpdateRequiredDialog::enablePackage( const uno::Reference< deployment::XPackage > &xPackage,
+void UpdateRequiredDialog::enablePackage( const uno::Reference< deployment::XPackage > &xPackage,
                                           bool bEnable )
 {
     m_pManager->getCmdQueue()->enableExtension( xPackage, bEnable );
-
-    return true;
 }
 
 
@@ -1325,7 +1318,7 @@ void UpdateRequiredDialog::showProgress( bool _bStart )
         OSL_TRACE( "showProgress stop!" );
     }
 
-    DialogHelper::PostUserEvent( LINK( this, UpdateRequiredDialog, startProgress ), reinterpret_cast<void*>(bStart), true );
+    DialogHelper::PostUserEvent( LINK( this, UpdateRequiredDialog, startProgress ), reinterpret_cast<void*>(bStart) );
 }
 
 
@@ -1610,17 +1603,13 @@ void UpdateRequiredDialogService::setTitle( OUString const & ) throw ( uno::Runt
 sal_Int16 UpdateRequiredDialogService::execute() throw ( uno::RuntimeException, std::exception )
 {
     ::rtl::Reference< ::dp_gui::TheExtensionManager > xManager( TheExtensionManager::get(
-                                                              m_xComponentContext,
-                                                              uno::Reference< awt::XWindow >(),
-                                                              OUString() ) );
+                                                              m_xComponentContext) );
     xManager->createDialog( true );
     sal_Int16 nRet = xManager->execute();
 
     return nRet;
 }
 
-
-SelectedPackage::~SelectedPackage() {}
 
 } //namespace dp_gui
 

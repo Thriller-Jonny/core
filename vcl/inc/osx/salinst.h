@@ -1,3 +1,4 @@
+
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /*
  * This file is part of the LibreOffice project.
@@ -34,6 +35,7 @@
 class AquaSalFrame;
 class ApplicationEvent;
 class Image;
+enum class SalEvent;
 
 class SalYieldMutex : public comphelper::SolarMutex
 {
@@ -56,9 +58,9 @@ class AquaSalInstance : public SalInstance
     {
         AquaSalFrame*   mpFrame;
         void*           mpData;
-        sal_uInt16          mnType;
+        SalEvent        mnType;
 
-        SalUserEvent( AquaSalFrame* pFrame, void* pData, sal_uInt16 nType ) :
+        SalUserEvent( AquaSalFrame* pFrame, void* pData, SalEvent nType ) :
             mpFrame( pFrame ), mpData( pData ), mnType( nType )
         {}
     };
@@ -70,7 +72,7 @@ public:
     bool                                    mbWaitingYield;
     int                                     mnActivePrintJobs;
     std::list< SalUserEvent >               maUserEvents;
-    oslMutex                                maUserEventListMutex;
+    osl::Mutex                              maUserEventListMutex;
     oslCondition                            maWaitingYieldCond;
 
     typedef std::list<const ApplicationEvent*> AppEventList;
@@ -120,6 +122,8 @@ public:
     virtual void            AddToRecentDocumentList(const OUString& rFileUrl, const OUString& rMimeType,
                                                     const OUString& rDocumentService) override;
 
+    virtual OUString        getOSVersion() override;
+
     // dtrans implementation
     virtual css::uno::Reference< css::uno::XInterface > CreateClipboard(
             const css::uno::Sequence< css::uno::Any >& i_rArguments ) override;
@@ -137,7 +141,7 @@ public:
  public:
     friend class AquaSalFrame;
 
-    void PostUserEvent( AquaSalFrame* pFrame, sal_uInt16 nType, void* pData );
+    void PostUserEvent( AquaSalFrame* pFrame, SalEvent nType, void* pData );
     void delayedSettingsChanged( bool bInvalidate );
 
     bool isNSAppThread() const;

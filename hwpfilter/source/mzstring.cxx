@@ -23,22 +23,14 @@
 
 #include "mzstring.h"
 
-#ifndef WIN32
-#else
-
-    #if defined _MSC_VER
-        #pragma warning(push, 1)
-    #endif
+#ifdef _WIN32
 # include <windows.h>
-    #if defined _MSC_VER
-        #pragma warning(pop)
-    #endif
-#endif                                            /* WIN32 */
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#ifndef WIN32
+#ifndef _WIN32
 # define wsprintf sprintf
 #endif
 
@@ -167,29 +159,6 @@ int MzString::rfind(char ch, int pos)
 }
 
 
-// += operator
-
-MzString &MzString::operator += (char ch)
-{
-    append(&ch, 1);
-    return *this;
-}
-
-
-MzString &MzString::operator += (const char *str)
-{
-    append(str);
-    return *this;
-}
-
-
-MzString &MzString::operator += (MzString const &s)
-{
-    append(s);
-    return *this;
-}
-
-
 // << operator
 MzString &MzString::operator << (const char *str)
 {
@@ -246,7 +215,6 @@ void MzString::replace(int pos, char ch)
     if (Data && 0 <= pos && pos < Length)
         Data[pos] = ch;
 }
-
 
 
 // Private Methods.

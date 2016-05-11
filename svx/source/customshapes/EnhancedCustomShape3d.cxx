@@ -305,7 +305,7 @@ SdrObject* EnhancedCustomShape3d::Create3DObject( const SdrObject* pShape2d, con
         // created visualisation helper model shape individually. The shadow itself
         // will then be rendered from the 3D renderer correctly for the whole 3D scene
         // (and thus behind all objects of which the visualisation may be built). So,
-        // dio NOT remove it from the ItemSet here.
+        // do NOT remove it from the ItemSet here.
         // aSet.ClearItem(SDRATTR_SHADOW);
 
         std::vector< E3dCompoundObject* > aPlaceholderObjectList;
@@ -574,7 +574,7 @@ SdrObject* EnhancedCustomShape3d::Create3DObject( const SdrObject* pShape2d, con
             pRet = pScene;
 
             // Camera settings, Perspective ...
-            Camera3D& rCamera = (Camera3D&)pScene->GetCamera();
+            Camera3D rCamera = pScene->GetCamera();
             const basegfx::B3DRange& rVolume = pScene->GetBoundVolume();
             pScene->NbcSetSnapRect( aSnapRect );
 
@@ -724,8 +724,7 @@ SdrObject* EnhancedCustomShape3d::Create3DObject( const SdrObject* pShape2d, con
             pScene->SetLogicRect( CalculateNewSnapRect( pCustomShape, aSnapRect, aBoundRect2d, pMap ) );
 
             // removing placeholder objects
-            std::vector< E3dCompoundObject* >::iterator aObjectListIter( aPlaceholderObjectList.begin() );
-            while ( aObjectListIter != aPlaceholderObjectList.end() )
+            for (std::vector< E3dCompoundObject* >::iterator aObjectListIter( aPlaceholderObjectList.begin() ); aObjectListIter != aPlaceholderObjectList.end(); )
             {
                 pScene->Remove3DObj( *aObjectListIter );
                 delete *aObjectListIter++;

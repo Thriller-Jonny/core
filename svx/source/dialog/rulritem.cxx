@@ -149,7 +149,6 @@ SvxLongLRSpaceItem::SvxLongLRSpaceItem(const SvxLongLRSpaceItem &rCpy) :
 {}
 
 
-
 void SvxLongLRSpaceItem::SetLeft(long lArgLeft)
 {
     mlLeft = lArgLeft;
@@ -274,7 +273,6 @@ SvxLongULSpaceItem::SvxLongULSpaceItem() :
     mlLeft      (0),
     mlRight     (0)
 {}
-
 
 
 void SvxLongULSpaceItem::SetUpper(long lArgLeft)
@@ -522,6 +520,7 @@ bool SvxColumnItem::QueryValue( css::uno::Any& rVal, sal_uInt8 nMemberId ) const
             rVal <<= bTable;
             break;
         default:
+            // SfxDispatchController_Impl::StateChanged calls this with hardcoded 0 triggering this;
             OSL_FAIL("Wrong MemberId!");
             return false;
     }
@@ -710,13 +709,13 @@ SfxPoolItem* SvxObjectItem::Clone(SfxItemPool *) const
 }
 
 SvxObjectItem::SvxObjectItem( long nSX, long nEX,
-                              long nSY, long nEY, bool limits ) :
+                              long nSY, long nEY ) :
     SfxPoolItem (SID_RULER_OBJECT),
     nStartX     (nSX),
     nEndX       (nEX),
     nStartY     (nSY),
     nEndY       (nEY),
-    bLimits     (limits)
+    bLimits     (false)
 {}
 
 SvxObjectItem::SvxObjectItem( const SvxObjectItem& rCopy ) :
@@ -782,10 +781,6 @@ bool SvxObjectItem::PutValue( const css::uno::Any& rVal, sal_uInt8 nMemberId )
 
     return bRet;
 }
-
-
-
-
 
 
 void SvxObjectItem::SetStartX(long lValue)

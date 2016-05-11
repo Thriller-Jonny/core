@@ -37,7 +37,6 @@ using ::xmloff::token::XML_GRAPHIC_PROPERTIES;
 using ::xmloff::token::XML_CHART_PROPERTIES;
 
 
-
 void XMLChartStyleContext::SetAttribute(
     sal_uInt16 nPrefixKey,
     const OUString& rLocalName,
@@ -83,10 +82,8 @@ void lcl_NumberFormatStyleToProperty( const OUString& rStyleName, const OUString
             XML_STYLE_FAMILY_DATA_STYLE, rStyleName, true ));
         if( pStyle )
         {
-            uno::Any aNumberFormat;
             sal_Int32 nNumberFormat = const_cast<SvXMLNumFormatContext*>(pStyle)->GetKey();
-            aNumberFormat <<= nNumberFormat;
-            rPropSet->setPropertyValue( rPropertyName, aNumberFormat );
+            rPropSet->setPropertyValue( rPropertyName, uno::Any(nNumberFormat) );
         }
     }
 }

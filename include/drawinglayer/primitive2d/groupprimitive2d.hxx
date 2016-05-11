@@ -35,7 +35,7 @@ namespace drawinglayer
 
             Baseclass for all grouping 2D primitives
 
-            The grouping primitive in it's basic form is capable of holding
+            The grouping primitive in its basic form is capable of holding
             a child primitive content and returns it on decomposition on default.
             It is used for two main purposes, but more may apply:
 
@@ -87,7 +87,6 @@ namespace drawinglayer
         };
     } // end of namespace primitive2d
 } // end of namespace drawinglayer
-
 
 
 #endif //INCLUDED_DRAWINGLAYER_PRIMITIVE2D_GROUPPRIMITIVE2D_HXX

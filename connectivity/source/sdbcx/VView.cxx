@@ -35,20 +35,20 @@ using namespace ::com::sun::star::lang;
 IMPLEMENT_SERVICE_INFO(OView,"com.sun.star.sdbcx.VView","com.sun.star.sdbcx.View");
 
 OView::OView(bool _bCase,
-            const OUString& _Name,
+            const OUString& Name,
             const ::com::sun::star::uno::Reference< ::com::sun::star::sdbc::XDatabaseMetaData >& _xMetaData,
-            sal_Int32 _CheckOption,
-            const OUString& _Command,
-            const OUString& _SchemaName,
-            const OUString& _CatalogName) : ODescriptor(::comphelper::OMutexAndBroadcastHelper::m_aBHelper,_bCase)
-            ,m_CatalogName(_CatalogName)
-            ,m_SchemaName(_SchemaName)
-            ,m_Command(_Command)
-            ,m_CheckOption(_CheckOption)
+            sal_Int32 CheckOption,
+            const OUString& Command,
+            const OUString& SchemaName,
+            const OUString& CatalogName) : ODescriptor(::comphelper::OMutexAndBroadcastHelper::m_aBHelper,_bCase)
+            ,m_CatalogName(CatalogName)
+            ,m_SchemaName(SchemaName)
+            ,m_Command(Command)
+            ,m_CheckOption(CheckOption)
             ,m_xMetaData(_xMetaData)
 
 {
-    m_Name = _Name;
+    m_Name = Name;
     construct();
 }
 
@@ -100,7 +100,7 @@ OUString SAL_CALL OView::getName() throw(::com::sun::star::uno::RuntimeException
 {
     OUString sComposedName;
     if(m_xMetaData.is())
-        sComposedName = ::dbtools::composeTableName( m_xMetaData, m_CatalogName, m_SchemaName, m_Name, false, ::dbtools::eInDataManipulation );
+        sComposedName = ::dbtools::composeTableName( m_xMetaData, m_CatalogName, m_SchemaName, m_Name, false, ::dbtools::EComposeRule::InDataManipulation );
     else
     {
         Any aValue;
@@ -128,7 +128,6 @@ void SAL_CALL OView::release() throw()
 {
     OView_BASE::release();
 }
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

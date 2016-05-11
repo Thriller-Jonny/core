@@ -88,7 +88,8 @@ Sequence< ::rtl::OUString > SkeletonDriver::getSupportedServiceNames_Static(  ) 
 {
     /// which service is supported
     /// for more information @see com.sun.star.sdbc.Driver
-    Sequence<OUString> aSNS { ::rtl::OUString("com.sun.star.sdbc.Driver") };
+    Sequence< ::rtl::OUString > aSNS( 1 );
+    aSNS[0] = ::rtl::OUString("com.sun.star.sdbc.Driver");
     return aSNS;
 }
 
@@ -141,7 +142,6 @@ sal_Int32 SAL_CALL SkeletonDriver::getMinorVersion(  ) throw(RuntimeException)
 {
     return 1; // depends on you
 }
-
 
 
 namespace connectivity

@@ -422,7 +422,7 @@ Reference< XResultSet > SAL_CALL java_sql_DatabaseMetaData::getTablePrivileges(
 
     if ( xReturn.is() )
     {
-        // we have to check the result columns for the tables privleges
+        // we have to check the result columns for the tables privileges
         Reference< XResultSetMetaDataSupplier > xMetaSup(xReturn,UNO_QUERY);
         if ( xMetaSup.is() )
         {
@@ -446,7 +446,7 @@ Reference< XResultSet > SAL_CALL java_sql_DatabaseMetaData::getTablePrivileges(
                 for (sal_Int32 i = 1 ; i <= nCount ; ++i)
                 {
                     sColumnName = xMeta->getColumnName(i);
-                    for (sal_uInt32 j = 0 ; j < sizeof(sPrivs)/sizeof(sPrivs[0]); ++j)
+                    for (sal_uInt32 j = 0 ; j < SAL_N_ELEMENTS(sPrivs); ++j)
                     {
                         if ( sPrivs[j] == sColumnName )
                         {
@@ -467,8 +467,8 @@ Reference< XResultSet > SAL_CALL java_sql_DatabaseMetaData::getTablePrivileges(
                 ODatabaseMetaDataResultSet::ORow aRow(8);
                 while ( xRow.is() && xTemp->next() )
                 {
-                    ::std::map<sal_Int32,sal_Int32>::iterator aIter = aColumnMatching.begin();
-                    ::std::map<sal_Int32,sal_Int32>::iterator aEnd  = aColumnMatching.end();
+                    ::std::map<sal_Int32,sal_Int32>::const_iterator aIter = aColumnMatching.begin();
+                    ::std::map<sal_Int32,sal_Int32>::const_iterator aEnd  = aColumnMatching.end();
                     for (;aIter != aEnd ; ++aIter)
                     {
                         sValue = xRow->getString(aIter->first);
@@ -993,7 +993,7 @@ sal_Bool SAL_CALL java_sql_DatabaseMetaData::supportsConvert( sal_Int32 fromType
     static const char* pMethodName = "supportsConvert";
     m_aLogger.log( LogLevel::FINEST, STR_LOG_META_DATA_METHOD_ARG2, pMethodName, fromType, toType );
 
-    jboolean out( sal_False );
+    jboolean out( false );
     SDBThreadAttach t;
 
     {
@@ -1335,7 +1335,7 @@ sal_Bool SAL_CALL java_sql_DatabaseMetaData::supportsResultSetConcurrency( sal_I
     static const char* pMethodName = "supportsResultSetConcurrency";
     m_aLogger.log( LogLevel::FINEST, STR_LOG_META_DATA_METHOD_ARG2, pMethodName, setType, concurrency );
 
-    jboolean out( sal_False );
+    jboolean out( false );
     SDBThreadAttach t;
 
     {

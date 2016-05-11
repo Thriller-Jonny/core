@@ -28,7 +28,6 @@
 #include <sfx2/docfile.hxx>
 #include <svl/stritem.hxx>
 #include <svx/svdoole2.hxx>
-#include <svx/pfiledlg.hxx>
 #include <tools/urlobj.hxx>
 #include <vcl/msgbox.hxx>
 #include <vcl/syschild.hxx>
@@ -50,6 +49,7 @@
 #include <cppuhelper/component_context.hxx>
 #include <comphelper/processfactory.hxx>
 #include <comphelper/storagehelper.hxx>
+#include <com/sun/star/embed/EmbedVerbs.hpp>
 #include <com/sun/star/frame/XSynchronousFrameLoader.hpp>
 #include <com/sun/star/frame/XComponentLoader.hpp>
 #include <com/sun/star/beans/PropertyValue.hpp>
@@ -114,7 +114,7 @@ void lcl_ChartInit( const uno::Reference < embed::XEmbeddedObject >& xObj, ScVie
                 pDoc->LimitChartArea( nTab1, nCol1,nRow1, nCol2,nRow2 );
 
                 ScRange aRange( nCol1, nRow1, nTab1, nCol2, nRow2, nTab2 );
-                aRangeString = aRange.Format(SCR_ABS_3D, &rScDoc);
+                aRangeString = aRange.Format(ScRefFlags::RANGE_ABS_3D, &rScDoc);
             }
         }
     }
@@ -143,14 +143,14 @@ void lcl_ChartInit( const uno::Reference < embed::XEmbeddedObject >& xObj, ScVie
 
             // use ScChartPositioner to auto-detect column/row headers (like ScChartArray in old version)
             ScRangeListRef aRangeListRef( new ScRangeList );
-            aRangeListRef->Parse( aRangeString, &rScDoc, SCA_VALID, rScDoc.GetAddressConvention() );
+            aRangeListRef->Parse( aRangeString, &rScDoc, ScRefFlags::VALID, rScDoc.GetAddressConvention() );
             if ( !aRangeListRef->empty() )
             {
                 rScDoc.LimitChartIfAll( aRangeListRef );               // limit whole columns/rows to used area
 
                 // update string from modified ranges.  The ranges must be in the current formula syntax.
                 OUString aTmpStr;
-                aRangeListRef->Format( aTmpStr, SCR_ABS_3D, &rScDoc, rScDoc.GetAddressConvention() );
+                aRangeListRef->Format( aTmpStr, ScRefFlags::RANGE_ABS_3D, &rScDoc, rScDoc.GetAddressConvention() );
                 aRangeString = aTmpStr;
 
                 ScChartPositioner aChartPositioner( &rScDoc, aRangeListRef );
@@ -213,7 +213,7 @@ FuInsertOLE::FuInsertOLE(ScTabViewShell* pViewSh, vcl::Window* pWin, ScDrawView*
     OUString aIconMediaType;
     uno::Reference< io::XInputStream > xIconMetaFile;
 
-    sal_uInt16 nSlot = rReq.GetSlot();
+    const sal_uInt16 nSlot = rReq.GetSlot();
     const SfxGlobalNameItem* pNameItem = rReq.GetArg<SfxGlobalNameItem>(SID_INSERT_OBJECT);
     if ( nSlot == SID_INSERT_OBJECT && pNameItem )
     {
@@ -224,7 +224,6 @@ FuInsertOLE::FuInsertOLE(ScTabViewShell* pViewSh, vcl::Window* pWin, ScDrawView*
     {
         if ( SvtModuleOptions().IsMath() )
         {
-            nSlot = SID_INSERT_OBJECT;
             xObj = pViewShell->GetViewFrame()->GetObjectShell()->GetEmbeddedObjectContainer().CreateEmbeddedObject( SvGlobalName( SO3_SM_CLASSID_60 ).GetByteSequence(), aName );
             rReq.AppendItem( SfxGlobalNameItem( SID_INSERT_OBJECT, SvGlobalName( SO3_SM_CLASSID_60 ) ) );
         }
@@ -238,7 +237,6 @@ FuInsertOLE::FuInsertOLE(ScTabViewShell* pViewSh, vcl::Window* pWin, ScDrawView*
                 aServerLst.FillInsertObjects();
                 aServerLst.Remove( ScDocShell::Factory().GetClassId() );   // Starcalc nicht anzeigen
                 //TODO/LATER: currently no inserting of ClassId into SfxRequest!
-            case SID_INSERT_PLUGIN :
             case SID_INSERT_FLOATINGFRAME :
             {
                 SvxAbstractDialogFactory* pFact = SvxAbstractDialogFactory::Create();
@@ -261,44 +259,6 @@ FuInsertOLE::FuInsertOLE(ScTabViewShell* pViewSh, vcl::Window* pWin, ScDrawView*
                 }
 
                 break;
-            }
-            case SID_INSERT_SOUND :
-            case SID_INSERT_VIDEO :
-            {
-                // create special filedialog for plugins
-                SvxPluginFileDlg aPluginFileDialog(pWin, nSlot);
-
-                // open filedlg
-                if ( ERRCODE_NONE == aPluginFileDialog.Execute() )
-                {
-                    // get URL
-                    INetURLObject aURL;
-                    aURL.SetSmartProtocol( INetProtocol::File );
-                    if ( aURL.SetURL( aPluginFileDialog.GetPath() ) )
-                    {
-                        // create a plugin object
-                        OUString aObjName;
-                        SvGlobalName aClassId( SO3_PLUGIN_CLASSID );
-                        comphelper::EmbeddedObjectContainer aCnt( xStorage );
-                        xObj = aCnt.CreateEmbeddedObject( aClassId.GetByteSequence(), aObjName );
-                        if ( xObj.is() && svt::EmbeddedObjectRef::TryRunningState( xObj ) )
-                        {
-                            // set properties from dialog
-                            uno::Reference < beans::XPropertySet > xSet( xObj->getComponent(), uno::UNO_QUERY );
-                            if ( xSet.is() )
-                            {
-                                xSet->setPropertyValue("PluginURL",
-                                        uno::makeAny( OUString( aURL.GetMainURL( INetURLObject::NO_DECODE ) ) ) );
-                            }
-                        }
-                    }
-                    else
-                    {
-                        OSL_FAIL("Invalid URL!");
-                        //! error message
-                        //! can this happen???
-                    }
-                }
             }
         }
     }
@@ -401,7 +361,7 @@ FuInsertOLE::FuInsertOLE(ScTabViewShell* pViewSh, vcl::Window* pWin, ScDrawView*
                 }
                 else
                 {
-                    pViewShell->ActivateObject( pObj, SVVERB_SHOW );
+                    pViewShell->ActivateObject(pObj, embed::EmbedVerbs::MS_OLEVERB_SHOW);
                 }
             }
 
@@ -468,7 +428,7 @@ FuInsertChart::FuInsertChart(ScTabViewShell* pViewSh, vcl::Window* pWin, ScDrawV
         aMultiMark.FillRangeListWithMarks( &aRanges, false );
         OUString aStr;
         ScDocument* pDocument = pViewSh->GetViewData().GetDocument();
-        aRanges.Format( aStr, SCR_ABS_3D, pDocument, pDocument->GetAddressConvention() );
+        aRanges.Format( aStr, ScRefFlags::RANGE_ABS_3D, pDocument, pDocument->GetAddressConvention() );
         aRangeString = aStr;
 
         // get "total" range for positioning
@@ -645,7 +605,7 @@ FuInsertChart::FuInsertChart(ScTabViewShell* pViewSh, vcl::Window* pWin, ScDrawV
         //the controller will be unlocked by the dialog when the dialog is told to do so
 
         // only activate object if not called via API (e.g. macro)
-        pViewShell->ActivateObject( pObj, SVVERB_SHOW );
+        pViewShell->ActivateObject(pObj, embed::EmbedVerbs::MS_OLEVERB_SHOW);
 
         //open wizard
         //@todo get context from calc if that has one
@@ -699,7 +659,7 @@ FuInsertChart::FuInsertChart(ScTabViewShell* pViewSh, vcl::Window* pWin, ScDrawV
                             }
                             //tell the dialog to unlock controller
                             xDialogProps->setPropertyValue("UnlockControllersOnExecute",
-                                        uno::makeAny( sal_True ) );
+                                        uno::makeAny( true ) );
 
                         }
                         catch( uno::Exception& )
@@ -805,7 +765,7 @@ FuInsertChartFromFile::FuInsertChartFromFile( ScTabViewShell* pViewSh, vcl::Wind
     pView->UnmarkAllObj();
     pView->MarkObj( pObj, pPV );
 
-    pViewShell->ActivateObject( pObj, SVVERB_SHOW );
+    pViewShell->ActivateObject(pObj, embed::EmbedVerbs::MS_OLEVERB_SHOW);
 }
 
 void FuInsertChartFromFile::Activate()

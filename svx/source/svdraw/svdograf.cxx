@@ -71,10 +71,10 @@ const Graphic ImpLoadLinkedGraphic( const OUString& aFileName, const OUString& a
 {
     Graphic aGraphic;
 
-    SfxMedium xMed( aFileName, aReferer, STREAM_STD_READ );
-    xMed.Download();
+    SfxMedium aMed( aFileName, aReferer, STREAM_STD_READ );
+    aMed.Download();
 
-    SvStream* pInStrm = xMed.GetInStream();
+    SvStream* pInStrm = aMed.GetInStream();
     if ( pInStrm )
     {
         pInStrm->Seek( STREAM_SEEK_TO_BEGIN );
@@ -91,7 +91,7 @@ const Graphic ImpLoadLinkedGraphic( const OUString& aFileName, const OUString& a
         // But this link is required by some filters to access the native graphic (PDF export/MS export),
         // there we should create a new service to provide this data if needed
         aFilterData[ 0 ].Name = "CreateNativeLink";
-        aFilterData[ 0 ].Value = Any( sal_True );
+        aFilterData[ 0 ].Value = Any( true );
 
         // #i123042# for e.g SVG the path is needed, so hand it over here. I have no real idea
         // what consequences this may have; maybe this is not handed over by purpose here. Not
@@ -120,11 +120,11 @@ public:
         const OUString& rMimeType, const css::uno::Any & rValue ) override;
     void                DataChanged( const Graphic& rGraphic );
 
-    bool                Connect() { return nullptr != GetRealObject(); }
+    void                Connect() { GetRealObject(); }
     void                UpdateAsynchron();
     void                RemoveGraphicUpdater();
 
-    OUString getReferer() const { return rGrafObj.aReferer; }
+    const OUString& getReferer() const { return rGrafObj.aReferer; }
 };
 
 class SdrGraphicUpdater : public ::osl::Thread
@@ -640,7 +640,6 @@ bool SdrGrafObj::IsLinkedGraphic() const
 }
 
 
-
 void SdrGrafObj::TakeObjInfo(SdrObjTransformInfoRec& rInfo) const
 {
     bool bNoPresGrf = ( pGraphic->GetType() != GRAPHIC_NONE ) && !bEmptyPresObj;
@@ -1004,7 +1003,7 @@ void SdrGrafObj::SetModel( SdrModel* pNewModel )
         ImpLinkAnmeldung();
 }
 
-void SdrGrafObj::StartAnimation( OutputDevice* /*pOutDev*/, const Point& /*rPoint*/, const Size& /*rSize*/, long /*nExtraData*/)
+void SdrGrafObj::StartAnimation( OutputDevice* /*pOutDev*/, const Point& /*rPoint*/, const Size& /*rSize*/)
 {
     SetGrafAnimationAllowed(true);
 }
@@ -1277,7 +1276,7 @@ IMPL_LINK_TYPED( SdrGrafObj, ImpSwapHdl, const GraphicObject*, pO, SvStream* )
         {
             // test if this object is visualized from someone
             // ## test only if there are VOCs other than the preview renderer
-            if(!GetViewContact().HasViewObjectContacts(true))
+            if(!GetViewContact().HasViewObjectContacts())
             {
                 const SdrSwapGraphicsMode nSwapMode = pModel->GetSwapGraphicsMode();
 
@@ -1324,7 +1323,7 @@ IMPL_LINK_TYPED( SdrGrafObj, ImpSwapHdl, const GraphicObject*, pO, SvStream* )
 
                     std::unique_ptr<css::uno::Sequence< css::beans::PropertyValue > > pFilterData;
 
-                    if(mbInsidePaint && !GetViewContact().HasViewObjectContacts(true))
+                    if(mbInsidePaint && !GetViewContact().HasViewObjectContacts())
                     {
                         pFilterData.reset(new css::uno::Sequence< css::beans::PropertyValue >( 3 ));
 

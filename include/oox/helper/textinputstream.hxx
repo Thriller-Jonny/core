@@ -21,7 +21,9 @@
 #define INCLUDED_OOX_HELPER_TEXTINPUTSTREAM_HXX
 
 #include <com/sun/star/uno/Reference.hxx>
+#include <rtl/textenc.h>
 #include <rtl/ustring.hxx>
+#include <sal/types.h>
 
 namespace com { namespace sun { namespace star {
     namespace io { class XInputStream; }
@@ -32,7 +34,6 @@ namespace com { namespace sun { namespace star {
 namespace oox {
 
 class BinaryInputStream;
-
 
 
 class TextInputStream
@@ -88,7 +89,6 @@ public:
     OUString     readToChar( sal_Unicode cChar, bool bIncludeChar );
 
 
-
     /** Creates a UNO text input stream object from the passed UNO input stream.
      */
     static css::uno::Reference< css::io::XTextInputStream2 >
@@ -112,7 +112,6 @@ private:
                         mxTextStrm;
     sal_Unicode         mcPendingChar;
 };
-
 
 
 } // namespace oox

@@ -20,24 +20,14 @@
 #ifndef INCLUDED_VCL_INC_SALFRAME_HXX
 #define INCLUDED_VCL_INC_SALFRAME_HXX
 
-#include <tools/solar.h>
-#include <vcl/dllapi.h>
+#include "impdel.hxx"
+#include "salwtype.hxx"
+#include "salgeom.hxx"
 
-#include <vcl/ptrstyle.hxx>
-
-#include <salwtype.hxx>
-#include <salgeom.hxx>
-#include <tools/gen.hxx>
-#include <vcl/region.hxx>
-
-#include <vcl/impdel.hxx>
-#include <rtl/ustring.hxx>
-#include <vcl/keycod.hxx>
+#include <vcl/help.hxx>
 #include <vcl/window.hxx>
-#include <vcl/vclptr.hxx>
-#include <o3tl/typed_flags_set.hxx>
 
-    // complete vcl::Window for SalFrame::CallCallback under -fsanitize=function
+// complete vcl::Window for SalFrame::CallCallback under -fsanitize=function
 
 class AllSettings;
 class SalGraphics;
@@ -74,8 +64,6 @@ enum class SalFrameStyleFlags
     INTRO               = 0x00000100,
     // partial fullscreen: fullscreen on one monitor of a multimonitor display
     PARTIAL_FULLSCREEN  = 0x00800000,
-    // floating window that needs to be focusable
-    FLOAT_FOCUSABLE     = 0x04000000,
     // system child window inside another SalFrame
     SYSTEMCHILD         = 0x08000000,
     // plugged system child window
@@ -100,7 +88,6 @@ typedef sal_uInt64 SalExtStyle;
 #define SAL_FRAME_POSSIZE_Y                 ((sal_uInt16)0x0002)
 #define SAL_FRAME_POSSIZE_WIDTH             ((sal_uInt16)0x0004)
 #define SAL_FRAME_POSSIZE_HEIGHT            ((sal_uInt16)0x0008)
-#define SAL_FRAME_POSSIZE_BYDRAG            ((sal_uInt16)0x0010)
 
 struct SystemParentData;
 struct ImplSVEvent;
@@ -162,6 +149,8 @@ public:
     const SalFrameGeometry& GetUnmirroredGeometry() const { return maGeometry; }
 
     virtual void            SetWindowState( const SalFrameState* pState ) = 0;
+    // if this returns false the structure is uninitialised
+    SAL_WARN_UNUSED_RESULT
     virtual bool            GetWindowState( SalFrameState* pState ) = 0;
     virtual void            ShowFullScreen( bool bFullScreen, sal_Int32 nDisplay ) = 0;
 
@@ -245,11 +234,32 @@ public:
     }
 
     // return true to indicate tooltips are shown natively, false otherwise
-    virtual bool            ShowTooltip(const OUString& /*rHelpText*/, const Rectangle& /*rHelpArea*/ )
+    virtual bool            ShowTooltip(const OUString& /*rHelpText*/, const Rectangle& /*rHelpArea*/)
     {
         return false;
     }
 
+    // return !0 to indicate popovers are shown natively, 0 otherwise
+    virtual sal_uIntPtr     ShowPopover(const OUString& /*rHelpText*/, const Rectangle& /*rHelpArea*/, QuickHelpFlags /*nFlags*/)
+    {
+        return 0;
+    }
+
+    // return true to indicate popovers are shown natively, false otherwise
+    virtual bool            UpdatePopover(sal_uIntPtr /*nId*/, const OUString& /*rHelpText*/, const Rectangle& /*rHelpArea*/)
+    {
+        return false;
+    }
+
+    // return true to indicate popovers are shown natively, false otherwise
+    virtual bool            HidePopover(sal_uIntPtr /*nId*/)
+    {
+        return false;
+    }
+
+    virtual void            StartToolKitMoveBy()
+    {
+    }
 
     // Callbacks (indepent part in vcl/source/window/winproc.cxx)
     // for default message handling return 0
@@ -261,8 +271,8 @@ public:
     // Call the callback set; this sometimes necessary for implementation classes
     // that should not know more than necessary about the SalFrame implementation
     // (e.g. input methods, printer update handlers).
-    long                    CallCallback( sal_uInt16 nEvent, const void* pEvent ) const
-        { return m_pProc ? long(m_pProc( m_pWindow, const_cast<SalFrame*>(this), nEvent, pEvent )) : 0; }
+    long                    CallCallback( SalEvent nEvent, const void* pEvent ) const
+        { return m_pProc ? long(m_pProc( m_pWindow, nEvent, pEvent )) : 0; }
 
     bool PaintsBlocked() const { return m_bPaintsBlocked; }
 };

@@ -14,6 +14,7 @@
 
 #include <osl/thread.hxx>
 #include <salhelper/thread.hxx>
+#include <chrono>
 
 #include <vcl/timer.hxx>
 #include <vcl/idle.hxx>
@@ -39,10 +40,7 @@ public:
     }
     virtual void SAL_CALL run() override
     {
-        TimeValue aWait;
-        aWait.Seconds = mnSeconds;
-        aWait.Nanosec = 1000000; // +1ms
-        osl::Thread::wait( aWait );
+        osl::Thread::wait( std::chrono::seconds(mnSeconds) );
         fprintf(stderr, "ERROR: WatchDog timer thread expired, failing the test!\n");
         fflush(stderr);
         CPPUNIT_ASSERT_MESSAGE("watchdog triggered", false);
@@ -90,14 +88,10 @@ public:
 void TimerTest::testWatchdog()
 {
     // out-wait the watchdog.
-    TimeValue aWait;
-    aWait.Seconds = 12;
-    aWait.Nanosec = 0;
-    osl::Thread::wait( aWait );
+    osl::Thread::wait( std::chrono::seconds(12) );
 }
 #endif
 
-// --------------------------------------------------------------------
 
 class IdleBool : public Idle
 {
@@ -128,7 +122,7 @@ void TimerTest::testIdle()
 // tdf#91727
 void TimerTest::testIdleMainloop()
 {
-#ifndef WNT
+#ifndef _WIN32
     bool bTriggered = false;
     IdleBool aTest( bTriggered );
     // coverity[loop_top] - Application::Yield allows the timer to fire and toggle bDone
@@ -146,7 +140,6 @@ void TimerTest::testIdleMainloop()
 #endif
 }
 
-// --------------------------------------------------------------------
 
 class TimerBool : public Timer
 {
@@ -181,7 +174,6 @@ void TimerTest::testDurations()
     }
 }
 
-// --------------------------------------------------------------------
 
 class AutoTimerCount : public AutoTimer
 {
@@ -302,7 +294,6 @@ void TimerTest::testMultiAutoTimers()
 }
 #endif // TEST_TIMERPRECISION
 
-// --------------------------------------------------------------------
 
 class YieldTimer : public Timer
 {
@@ -329,7 +320,6 @@ void TimerTest::testRecursiveTimer()
         Application::Yield();
 }
 
-// --------------------------------------------------------------------
 
 class SlowCallbackTimer : public Timer
 {
@@ -344,10 +334,7 @@ public:
     }
     virtual void Invoke() override
     {
-        TimeValue aWait;
-        aWait.Seconds = 1;
-        aWait.Nanosec = 0;
-        osl::Thread::wait( aWait );
+        osl::Thread::wait( std::chrono::seconds(1) );
         mbSlow = true;
     }
 };

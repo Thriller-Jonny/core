@@ -60,7 +60,6 @@ void lclCreateTextFields( std::list< Reference< XTextField > > & aFields,
 {
     Reference< XInterface > xIface;
     Reference< XMultiServiceFactory > xFactory( xModel, UNO_QUERY_THROW );
-
     if( sType.startsWith("datetime"))
     {
         OString s = OUStringToOString( sType, RTL_TEXTENCODING_UTF8);
@@ -69,6 +68,7 @@ void lclCreateTextFields( std::list< Reference< XTextField > > & aFields,
         {
             bool bIsDate = true;
             int idx = p.toInt32();
+            sal_uInt16 nNumFmt;
 //              OSL_TRACE( "OOX: p = %s, %d", p.pData->buffer, idx );
             xIface = xFactory->createInstance( "com.sun.star.text.TextField.DateTime" );
             aFields.push_back( Reference< XTextField > ( xIface, UNO_QUERY ) );
@@ -79,10 +79,14 @@ void lclCreateTextFields( std::list< Reference< XTextField > > & aFields,
             {
             case 1: // Date dd/mm/yyyy
                 // this is the default format...
+                nNumFmt = 5;
+                xProps->setPropertyValue("NumberFormat", makeAny(nNumFmt));
                 break;
             case 2: // Date Day, Month dd, yyyy
                 break;
             case 3: // Date dd Month yyyy
+                nNumFmt = 3;
+                xProps->setPropertyValue("NumberFormat", makeAny(nNumFmt));
                 break;
             case 4: // Date Month dd, yyyy
                 break;
@@ -100,17 +104,28 @@ void lclCreateTextFields( std::list< Reference< XTextField > > & aFields,
                 break;
             case 10: // Time H:MM
                 bIsDate = false;
+                nNumFmt = 3;
+                xProps->setPropertyValue("NumberFormat", makeAny(nNumFmt));
                 break;
             case 11: // Time H:MM:SS
                 bIsDate = false;
                 // this is the default format
+                nNumFmt = 2;
+                xProps->setPropertyValue("NumberFormat", makeAny(nNumFmt));
                 break;
             case 12: // Time H:MM PM
                 bIsDate = false;
+                nNumFmt = 6;
+                xProps->setPropertyValue("NumberFormat", makeAny(nNumFmt));
                 break;
             case 13: // Time H:MM:SS PM
                 bIsDate = false;
+                nNumFmt = 7;
+                xProps->setPropertyValue("NumberFormat", makeAny(nNumFmt));
                 break;
+            default:
+                nNumFmt = 2;
+                xProps->setPropertyValue("NumberFormat", makeAny(nNumFmt));
             }
             xProps->setPropertyValue( "IsDate", makeAny( bIsDate ) );
             xProps->setPropertyValue( "IsFixed", makeAny( false ) );
@@ -123,6 +138,45 @@ void lclCreateTextFields( std::list< Reference< XTextField > > & aFields,
     else if ( sType == "slidenum" )
     {
         xIface = xFactory->createInstance( "com.sun.star.text.TextField.PageNumber" );
+        aFields.push_back( Reference< XTextField > ( xIface, UNO_QUERY ) );
+    }
+    else if ( sType == "slidecount" )
+    {
+        xIface = xFactory->createInstance( "com.sun.star.text.TextField.PageCount" );
+        aFields.push_back( Reference< XTextField > ( xIface, UNO_QUERY ) );
+    }
+    else if ( sType == "slidename" )
+    {
+        xIface = xFactory->createInstance( "com.sun.star.text.TextField.PageName" );
+        aFields.push_back( Reference< XTextField > ( xIface, uno::UNO_QUERY ) );
+    }
+    else if ( sType.startsWith("file") )
+    {
+        OString s = OUStringToOString( sType, RTL_TEXTENCODING_UTF8);
+        OString p( s.pData->buffer + 4 );
+        int idx = p.toInt32();
+        xIface = xFactory->createInstance( "com.sun.star.text.TextField.FileName" );
+        aFields.push_back( Reference< XTextField > ( xIface, UNO_QUERY ) );
+        Reference< XPropertySet > xProps( xIface, UNO_QUERY_THROW );
+
+        switch( idx )
+        {
+            case 1: // Path
+                xProps->setPropertyValue("FileFormat", makeAny<sal_Int16>(1));
+                break;
+            case 2: // File name without extension
+                xProps->setPropertyValue("FileFormat", makeAny<sal_Int16>(2));
+                break;
+            case 3: // File name with extension
+                xProps->setPropertyValue("FileFormat", makeAny<sal_Int16>(3));
+                break;
+            default: // Path/File name
+                xProps->setPropertyValue("FileFormat", makeAny<sal_Int16>(0));
+        }
+    }
+    else if( sType == "author" )
+    {
+        xIface = xFactory->createInstance( "com.sun.star.text.TextField.Author" );
         aFields.push_back( Reference< XTextField > ( xIface, UNO_QUERY ) );
     }
 }
@@ -169,15 +223,15 @@ sal_Int32 TextField::insertAt(
                     }
                     else
                     {
-                        xText->insertString( xAt, " ", sal_False );
+                        xText->insertString( xAt, " ", false );
                     }
-                    xText->insertTextContent( xAt, xContent, sal_False );
+                    xText->insertTextContent( xAt, xContent, false );
                 }
             }
         }
         else
         {
-            xText->insertString( xAt, getText(), sal_False );
+            xText->insertString( xAt, getText(), false );
         }
     }
     catch( const Exception&  )

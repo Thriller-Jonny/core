@@ -75,7 +75,6 @@ PresenterScrollBar::PresenterScrollBar (
     const ::std::function<void (double)>& rThumbMotionListener)
     : PresenterScrollBarInterfaceBase(m_aMutex),
       mxComponentContext(rxComponentContext),
-      mxParentWindow(rxParentWindow),
       mxWindow(),
       mxCanvas(),
       mxPresenterHelper(),
@@ -116,10 +115,10 @@ PresenterScrollBar::PresenterScrollBar (
 
         if (mxPresenterHelper.is())
             mxWindow = mxPresenterHelper->createWindow(rxParentWindow,
-                sal_False,
-                sal_False,
-                sal_False,
-                sal_False);
+                false,
+                false,
+                false,
+                false);
 
         // Make the background transparent.  The slide show paints its own background.
         Reference<awt::XWindowPeer> xPeer (mxWindow, UNO_QUERY_THROW);
@@ -128,7 +127,7 @@ PresenterScrollBar::PresenterScrollBar (
             xPeer->setBackground(0xff000000);
         }
 
-        mxWindow->setVisible(sal_True);
+        mxWindow->setVisible(true);
         mxWindow->addWindowListener(this);
         mxWindow->addPaintListener(this);
         mxWindow->addMouseListener(this);
@@ -187,17 +186,7 @@ void PresenterScrollBar::SetThumbPosition (
     double nPosition,
     const bool bAsynchronousUpdate)
 {
-    SetThumbPosition(nPosition, bAsynchronousUpdate, true, true);
-}
-
-void PresenterScrollBar::SetThumbPosition (
-    double nPosition,
-    const bool bAsynchronousUpdate,
-    const bool bValidate,
-    const bool bNotify)
-{
-    if (bValidate)
-        nPosition = ValidateThumbPosition(nPosition);
+    nPosition = ValidateThumbPosition(nPosition);
 
     if (nPosition != mnThumbPosition && ! mbIsNotificationActive)
     {
@@ -205,8 +194,7 @@ void PresenterScrollBar::SetThumbPosition (
 
         UpdateBorders();
         Repaint(GetRectangle(Total), bAsynchronousUpdate);
-        if (bNotify)
-            NotifyThumbPositionChange();
+        NotifyThumbPositionChange();
     }
 }
 
@@ -295,8 +283,7 @@ double PresenterScrollBar::ValidateThumbPosition (double nPosition)
 }
 
 void PresenterScrollBar::Paint (
-    const awt::Rectangle& rUpdateBox,
-    const bool bNoClip)
+    const awt::Rectangle& rUpdateBox)
 {
     if ( ! mxCanvas.is() || ! mxWindow.is())
     {
@@ -305,11 +292,8 @@ void PresenterScrollBar::Paint (
         return;
     }
 
-    if ( ! bNoClip)
-    {
-        if (PresenterGeometryHelper::AreRectanglesDisjoint (rUpdateBox, mxWindow->getPosSize()))
-            return;
-    }
+    if (PresenterGeometryHelper::AreRectanglesDisjoint (rUpdateBox, mxWindow->getPosSize()))
+        return;
 
     PaintBackground(rUpdateBox);
     PaintComposite(rUpdateBox, PagerUp,
@@ -323,7 +307,7 @@ void PresenterScrollBar::Paint (
 
     Reference<rendering::XSpriteCanvas> xSpriteCanvas (mxCanvas, UNO_QUERY);
     if (xSpriteCanvas.is())
-        xSpriteCanvas->updateScreen(sal_False);
+        xSpriteCanvas->updateScreen(false);
 }
 
 //----- XWindowListener -------------------------------------------------------
@@ -367,7 +351,7 @@ void SAL_CALL PresenterScrollBar::windowPaint (const css::awt::PaintEvent& rEven
 
         Reference<rendering::XSpriteCanvas> xSpriteCanvas (mxCanvas, UNO_QUERY);
         if (xSpriteCanvas.is())
-            xSpriteCanvas->updateScreen(sal_False);
+            xSpriteCanvas->updateScreen(false);
     }
 }
 
@@ -449,7 +433,7 @@ void SAL_CALL PresenterScrollBar::mouseDragged (const css::awt::MouseEvent& rEve
     UpdateDragAnchor(nDragDistance);
     if (nDragDistance != 0)
     {
-        SetThumbPosition(mnThumbPosition + nDragDistance, false, true, true);
+        SetThumbPosition(mnThumbPosition + nDragDistance, false);
     }
 }
 
@@ -463,10 +447,9 @@ void SAL_CALL PresenterScrollBar::disposing (const css::lang::EventObject& rEven
 }
 
 
-
 geometry::RealRectangle2D PresenterScrollBar::GetRectangle (const Area eArea) const
 {
-    OSL_ASSERT(eArea>=0 && eArea<__AreaCount__);
+    OSL_ASSERT(eArea>=0 && eArea<AreaCount);
 
     return maBox[eArea];
 }
@@ -619,7 +602,7 @@ PresenterBitmapContainer::BitmapDescriptor::Mode PresenterScrollBar::GetBitmapMo
 
 bool PresenterScrollBar::IsDisabled (const Area eArea) const
 {
-    OSL_ASSERT(eArea>=0 && eArea<__AreaCount__);
+    OSL_ASSERT(eArea>=0 && eArea<AreaCount);
 
     return ! maEnabledState[eArea];
 }

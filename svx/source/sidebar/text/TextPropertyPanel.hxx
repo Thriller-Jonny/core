@@ -29,8 +29,6 @@
 #include <com/sun/star/ui/XSidebar.hpp>
 #include <com/sun/star/frame/XToolbarController.hpp>
 
-#include "TextCharacterSpacingPopup.hxx"
-#include "TextUnderlinePopup.hxx"
 #include <svx/sidebar/PanelLayout.hxx>
 
 class ToolBox;
@@ -54,14 +52,6 @@ public:
         const css::uno::Reference<css::frame::XFrame>& rxFrame,
         SfxBindings* pBindings,
         const ::sfx2::sidebar::EnumContext& rContext);
-
-    virtual void DataChanged (const DataChangedEvent& rEvent) override;
-
-    ::sfx2::sidebar::ControllerItem& GetSpaceController() { return maSpacingControl;}
-    long GetSelFontSize();
-    void EndSpacingPopupMode();
-    void EndUnderlinePopupMode();
-    Color& GetUnderlineColor() { return meUnderlineColor;}
 
 
     virtual void HandleContextChange (
@@ -91,30 +81,10 @@ private:
 
     //control items
     ::sfx2::sidebar::ControllerItem maFontSizeControl;
-    ::sfx2::sidebar::ControllerItem maUnderlineControl;
-    ::sfx2::sidebar::ControllerItem maSpacingControl;
 
-    FontUnderline               meUnderline;
-    Color                       meUnderlineColor;
-    bool                        mbKernAvailable;
-    bool                        mbKernLBAvailable;
-    long                        mlKerning;
     SvxFontHeightItem*          mpHeightItem;
 
-    TextCharacterSpacingPopup maCharSpacePopup;
-    TextUnderlinePopup maUnderlinePopup;
-
     ::sfx2::sidebar::EnumContext maContext;
-    SfxBindings* mpBindings;
-
-    VclPtr<PopupControl> CreateCharacterSpacingControl (PopupContainer* pParent);
-    VclPtr<PopupControl> CreateUnderlinePopupControl (PopupContainer* pParent);
-    DECL_LINK_TYPED(SpacingClickHdl, ToolBox*, void);
-    DECL_LINK_TYPED(UnderlineClickHdl, ToolBox*, void);
-
-    void SetupToolboxItems();
-    void InitToolBoxFont();
-    void InitToolBoxSpacing();
 };
 
 } } // end of namespace svx::sidebar

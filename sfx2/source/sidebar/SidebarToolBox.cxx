@@ -54,7 +54,6 @@ namespace sfx2 { namespace sidebar {
 
 SidebarToolBox::SidebarToolBox (vcl::Window* pParentWindow)
     : ToolBox(pParentWindow, 0),
-      maItemSeparator(Theme::GetImage(Theme::Image_ToolBoxItemSeparator)),
       maControllers(),
       mbAreHandlersRegistered(false)
 {
@@ -82,7 +81,7 @@ void SidebarToolBox::dispose()
          iController!=iEnd;
          ++iController)
     {
-        Reference<lang::XComponent> xComponent (iController->second.mxController, UNO_QUERY);
+        Reference<lang::XComponent> xComponent(iController->second, UNO_QUERY);
         if (xComponent.is())
             xComponent->dispose();
     }
@@ -118,28 +117,6 @@ void SidebarToolBox::InsertItem(const OUString& rCommand,
     RegisterHandlers();
 }
 
-void SidebarToolBox::Paint(vcl::RenderContext& rRenderContext, const Rectangle& rRect)
-{
-    ToolBox::Paint(rRenderContext, rRect);
-
-    if (Theme::GetBoolean(Theme::Bool_UseToolBoxItemSeparator))
-    {
-        const sal_Int32 nSeparatorY((GetSizePixel().Height() - maItemSeparator.GetSizePixel().Height()) / 2);
-        const sal_uInt16 nItemCount(GetItemCount());
-        int nLastRight(-1);
-        for (sal_uInt16 nIndex = 0; nIndex < nItemCount; ++nIndex)
-        {
-            const Rectangle aItemBoundingBox (GetItemPosRect(nIndex));
-            if (nLastRight >= 0)
-            {
-                const int nSeparatorX((nLastRight + aItemBoundingBox.Left() - 1) / 2);
-                rRenderContext.DrawImage(Point(nSeparatorX, nSeparatorY), maItemSeparator);
-            }
-            nLastRight = aItemBoundingBox.Right();
-        }
-    }
-}
-
 bool SidebarToolBox::Notify (NotifyEvent& rEvent)
 {
     if (rEvent.GetType() == MouseNotifyEvent::KEYINPUT)
@@ -160,74 +137,44 @@ void SidebarToolBox::CreateController (
     const css::uno::Reference<css::frame::XFrame>& rxFrame,
     const sal_Int32 nItemWidth)
 {
-    ItemDescriptor aDescriptor;
-
     const OUString sCommandName (GetItemCommand(nItemId));
 
-    aDescriptor.mxController = sfx2::sidebar::ControllerFactory::CreateToolBoxController(
-                                                this, nItemId, sCommandName, rxFrame, rxFrame->getController(),
-                                                VCLUnoHelper::GetInterface(this), nItemWidth);
-    if (aDescriptor.mxController.is())
-    {
-        aDescriptor.maURL = sfx2::sidebar::Tools::GetURL(sCommandName);
-        aDescriptor.msCurrentCommand = sCommandName;
+    uno::Reference<frame::XToolbarController> xController(sfx2::sidebar::ControllerFactory::CreateToolBoxController(
+            this, nItemId, sCommandName, rxFrame, rxFrame->getController(),
+            VCLUnoHelper::GetInterface(this), nItemWidth));
 
-        maControllers.insert(std::make_pair(nItemId, aDescriptor));
-    }
+    if (xController.is())
+        maControllers.insert(std::make_pair(nItemId, xController));
 }
 
 Reference<frame::XToolbarController> SidebarToolBox::GetControllerForItemId (const sal_uInt16 nItemId) const
 {
     ControllerContainer::const_iterator iController (maControllers.find(nItemId));
     if (iController != maControllers.end())
-        return iController->second.mxController;
-    else
-        return nullptr;
+        return iController->second;
+
+    return Reference<frame::XToolbarController>();
 }
 
 void SidebarToolBox::SetController(const sal_uInt16 nItemId,
-                                   const css::uno::Reference<css::frame::XToolbarController>& rxController,
-                                   const OUString& rsCommandName)
+                                   const css::uno::Reference<css::frame::XToolbarController>& rxController)
 {
-    ItemDescriptor aDescriptor;
-    aDescriptor.mxController = rxController;
-    aDescriptor.maURL = sfx2::sidebar::Tools::GetURL(rsCommandName);
-    aDescriptor.msCurrentCommand = rsCommandName;
-
     ControllerContainer::iterator iController (maControllers.find(nItemId));
     if (iController != maControllers.end())
     {
-        Reference<lang::XComponent> xComponent (iController->second.mxController, UNO_QUERY);
+        Reference<lang::XComponent> xComponent(rxController, UNO_QUERY);
         if (xComponent.is())
             xComponent->dispose();
 
-        iController->second = aDescriptor;
+        iController->second = rxController;
     }
     else
     {
-        maControllers[nItemId] = aDescriptor;
+        maControllers[nItemId] = rxController;
     }
 
     if (rxController.is())
         RegisterHandlers();
-}
-
-sal_uInt16 SidebarToolBox::GetItemIdForSubToolbarName (const OUString& rsSubToolbarName) const
-{
-    for (ControllerContainer::const_iterator iController(maControllers.begin()), iEnd(maControllers.end());
-         iController!=iEnd;
-         ++iController)
-    {
-        Reference<frame::XToolbarController> xController (iController->second.mxController);
-        Reference<frame::XSubToolbarController> xSubToolbarController (xController, UNO_QUERY);
-        if (xSubToolbarController.is())
-        {
-            const OUString sName (xSubToolbarController->getSubToolbarName());
-            if (sName.equals(rsSubToolbarName))
-                return iController->first;
-        }
-    }
-    return 0;
 }
 
 css::uno::Reference<css::frame::XToolbarController> SidebarToolBox::GetFirstController()
@@ -235,7 +182,7 @@ css::uno::Reference<css::frame::XToolbarController> SidebarToolBox::GetFirstCont
     if (maControllers.empty())
         return css::uno::Reference<css::frame::XToolbarController>();
 
-    return maControllers.begin()->second.mxController;
+    return maControllers.begin()->second;
 }
 
 void SidebarToolBox::RegisterHandlers()

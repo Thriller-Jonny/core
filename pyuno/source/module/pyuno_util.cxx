@@ -29,23 +29,9 @@
 #include <rtl/ustrbuf.hxx>
 #include <osl/time.h>
 
-#include <com/sun/star/beans/XMaterialHolder.hpp>
-
-
-
-using com::sun::star::uno::TypeDescription;
 using com::sun::star::uno::Sequence;
-using com::sun::star::uno::Reference;
-using com::sun::star::uno::XInterface;
 using com::sun::star::uno::Any;
-using com::sun::star::uno::Type;
-using com::sun::star::uno::UNO_QUERY;
-using com::sun::star::uno::TypeClass;
 using com::sun::star::uno::RuntimeException;
-using com::sun::star::uno::XComponentContext;
-using com::sun::star::lang::XSingleServiceFactory;
-using com::sun::star::script::XTypeConverter;
-using com::sun::star::beans::XMaterialHolder;
 
 namespace pyuno
 {
@@ -112,7 +98,6 @@ PyRef getObjectFromUnoModule( const Runtime &runtime, const char * func )
     }
     return object;
 }
-
 
 
 // Logging

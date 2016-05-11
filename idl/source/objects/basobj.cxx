@@ -19,7 +19,6 @@
 
 
 #include <ctype.h>
-#include <stdio.h>
 
 #include <tools/debug.hxx>
 
@@ -42,7 +41,7 @@ void SvMetaObject::WriteStars( SvStream & rOutStm )
     rOutStm.WriteChar( '/' ) << endl;
 }
 
-void SvMetaObject::Back2Delemitter( SvStream & rOutStm )
+void SvMetaObject::Back2Delimiter( SvStream & rOutStm )
 {
     // write no empty brackets
     sal_uLong nPos = rOutStm.Tell();
@@ -66,55 +65,41 @@ SvMetaObject::SvMetaObject()
 {
 }
 
-bool SvMetaObject::SetName( const OString& rName, SvIdlDataBase * )
+void SvMetaObject::SetName( const OString& rName )
 {
-    aName.setString(rName);
-    return true;
+    aName = rName;
 }
 
-bool SvMetaObject::ReadNameSvIdl( SvIdlDataBase & rBase,
-                                SvTokenStream & rInStm )
+bool SvMetaObject::ReadNameSvIdl( SvTokenStream & rInStm )
 {
     sal_uInt32 nTokPos = rInStm.Tell();
-    SvToken * pTok = rInStm.GetToken_Next();
+    SvToken& rTok = rInStm.GetToken_Next();
 
     // read module name
-    if( pTok->IsIdentifier() )
-        if( SetName( pTok->GetString(), &rBase ) )
-            return true;
+    if( rTok.IsIdentifier() )
+    {
+        SetName( rTok.GetString() );
+        return true;
+    }
 
     rInStm.Seek( nTokPos );
     return false;
 }
 
-void SvMetaObject::ReadAttributesSvIdl( SvIdlDataBase & rBase,
-                                      SvTokenStream & rInStm )
+void SvMetaObject::ReadAttributesSvIdl( SvIdlDataBase & ,
+                                      SvTokenStream & )
 {
-    sal_uInt32 nTokPos = rInStm.Tell();
-    if( aName.ReadSvIdl( SvHash_Name(), rInStm ) )
-    {
-        if( !SetName( aName.getString(), &rBase ) )
-            rInStm.Seek( nTokPos );
-    }
-
-    aHelpContext.ReadSvIdl( rBase, SvHash_HelpContext(), rInStm );
-    aHelpText.ReadSvIdl( rBase, rInStm );
-    aConfigName.ReadSvIdl( SvHash_ConfigName(), rInStm );
-    aDescription.ReadSvIdl( SvHash_Description(), rInStm );
 }
 
 void SvMetaObject::DoReadContextSvIdl( SvIdlDataBase & rBase,
-                                   SvTokenStream & rInStm, char cDel )
+                                   SvTokenStream & rInStm )
 {
     sal_uInt32 nBeginPos = 0; // can not happen with Tell
     while( nBeginPos != rInStm.Tell() )
     {
         nBeginPos = rInStm.Tell();
         ReadContextSvIdl( rBase, rInStm );
-        if( cDel == '\0' )
-            rInStm.ReadDelemiter();
-        else
-            (void)rInStm.Read( cDel );
+        rInStm.ReadIfDelimiter();
     }
 }
 
@@ -122,7 +107,7 @@ void SvMetaObject::ReadContextSvIdl( SvIdlDataBase &, SvTokenStream & )
 {
 }
 
-bool SvMetaObject::Test( SvIdlDataBase &, SvTokenStream & )
+bool SvMetaObject::Test( SvTokenStream & )
 {
     return true;
 }
@@ -131,24 +116,24 @@ bool SvMetaObject::ReadSvIdl( SvIdlDataBase & rBase, SvTokenStream & rInStm )
 {
     sal_uInt32 nTokPos = rInStm.Tell();
     bool bOk = true;
-    if( rInStm.Read( '[' ) )
+    if( rInStm.ReadIf( '[' ) )
     {
         sal_uInt32 nBeginPos = 0; // can not happen with Tell
         while( nBeginPos != rInStm.Tell() )
         {
             nBeginPos = rInStm.Tell();
             ReadAttributesSvIdl( rBase, rInStm );
-            rInStm.ReadDelemiter();
+            rInStm.ReadIfDelimiter();
         }
-        bOk = rInStm.Read( ']' );
+        bOk = rInStm.ReadIf( ']' );
     }
 
     if( bOk )
     {
-        if( rInStm.Read( '{' ) )
+        if( rInStm.ReadIf( '{' ) )
         {
             DoReadContextSvIdl( rBase, rInStm );
-            bOk = rInStm.Read( '}' );
+            bOk = rInStm.ReadIf( '}' );
         }
     }
 
@@ -162,47 +147,5 @@ SvMetaReference::SvMetaReference()
 {
 }
 
-
-SvMetaExtern::SvMetaExtern()
-    : pModule( nullptr )
-    , bReadUUId( false )
-    , bReadVersion( false )
-{
-}
-
-SvMetaModule * SvMetaExtern::GetModule() const
-{
-    DBG_ASSERT( pModule != nullptr, "module not set" );
-    return pModule;
-}
-
-const SvGlobalName & SvMetaExtern::GetUUId() const
-{
-    if( aUUId == SvGlobalName() )
-        GetModule()->FillNextName( &const_cast<SvMetaExtern *>(this)->aUUId );
-    return aUUId;
-}
-
-void SvMetaExtern::SetModule( SvIdlDataBase & rBase )
-{
-    pModule = static_cast<SvMetaModule *>(rBase.GetStack().Get( checkSvMetaObject<SvMetaModule> ));
-}
-
-void SvMetaExtern::ReadAttributesSvIdl( SvIdlDataBase & rBase,
-                                        SvTokenStream & rInStm )
-{
-    SvMetaReference::ReadAttributesSvIdl( rBase, rInStm );
-    if( aUUId.ReadSvIdl( rBase, rInStm ) )
-        bReadUUId = true;
-    if( aVersion.ReadSvIdl( rInStm ) )
-        bReadVersion = true;
-}
-
-bool SvMetaExtern::ReadSvIdl( SvIdlDataBase & rBase, SvTokenStream & rInStm )
-{
-    SetModule( rBase );
-    GetUUId(); // id gets created
-    return SvMetaReference::ReadSvIdl( rBase, rInStm );
-}
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

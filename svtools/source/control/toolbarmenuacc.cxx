@@ -40,9 +40,6 @@ using namespace ::com::sun::star::accessibility;
 namespace svtools {
 
 
-// - ToolbarMenuAcc -
-
-
 ToolbarMenuAcc::ToolbarMenuAcc( ToolbarMenu_Impl& rParent )
 : ToolbarMenuAccComponentBase(m_aMutex)
 , mpParent( &rParent )
@@ -52,13 +49,11 @@ ToolbarMenuAcc::ToolbarMenuAcc( ToolbarMenu_Impl& rParent )
 }
 
 
-
 ToolbarMenuAcc::~ToolbarMenuAcc()
 {
     if( mpParent )
         mpParent->mrMenu.RemoveEventListener( LINK( this, ToolbarMenuAcc, WindowEventListener ) );
 }
-
 
 
 IMPL_LINK_TYPED( ToolbarMenuAcc, WindowEventListener, VclWindowEvent&, rEvent, void )
@@ -76,7 +71,6 @@ IMPL_LINK_TYPED( ToolbarMenuAcc, WindowEventListener, VclWindowEvent&, rEvent, v
         }
     }
 }
-
 
 
 void ToolbarMenuAcc::ProcessWindowEvent( const VclWindowEvent& rVclWindowEvent )
@@ -115,7 +109,6 @@ void ToolbarMenuAcc::ProcessWindowEvent( const VclWindowEvent& rVclWindowEvent )
 }
 
 
-
 void ToolbarMenuAcc::FireAccessibleEvent( short nEventId, const Any& rOldValue, const Any& rNewValue )
 {
     if( nEventId )
@@ -143,13 +136,11 @@ void ToolbarMenuAcc::FireAccessibleEvent( short nEventId, const Any& rOldValue, 
 }
 
 
-
 Reference< XAccessibleContext > SAL_CALL ToolbarMenuAcc::getAccessibleContext() throw (RuntimeException, std::exception)
 {
     ThrowIfDisposed();
     return this;
 }
-
 
 
 sal_Int32 SAL_CALL ToolbarMenuAcc::getAccessibleChildCount() throw (RuntimeException, std::exception)
@@ -161,7 +152,6 @@ sal_Int32 SAL_CALL ToolbarMenuAcc::getAccessibleChildCount() throw (RuntimeExcep
 }
 
 
-
 Reference< XAccessible > SAL_CALL ToolbarMenuAcc::getAccessibleChild( sal_Int32 i ) throw (IndexOutOfBoundsException, RuntimeException, std::exception)
 {
     const SolarMutexGuard aSolarGuard;
@@ -169,7 +159,6 @@ Reference< XAccessible > SAL_CALL ToolbarMenuAcc::getAccessibleChild( sal_Int32 
 
     return mpParent->getAccessibleChild(i);
 }
-
 
 
 Reference< XAccessible > SAL_CALL ToolbarMenuAcc::getAccessibleParent() throw (RuntimeException, std::exception)
@@ -185,7 +174,6 @@ Reference< XAccessible > SAL_CALL ToolbarMenuAcc::getAccessibleParent() throw (R
 
     return xRet;
 }
-
 
 
 sal_Int32 SAL_CALL ToolbarMenuAcc::getAccessibleIndexInParent() throw (RuntimeException, std::exception)
@@ -207,7 +195,6 @@ sal_Int32 SAL_CALL ToolbarMenuAcc::getAccessibleIndexInParent() throw (RuntimeEx
 }
 
 
-
 sal_Int16 SAL_CALL ToolbarMenuAcc::getAccessibleRole() throw (RuntimeException, std::exception)
 {
     ThrowIfDisposed();
@@ -215,13 +202,11 @@ sal_Int16 SAL_CALL ToolbarMenuAcc::getAccessibleRole() throw (RuntimeException, 
 }
 
 
-
 OUString SAL_CALL ToolbarMenuAcc::getAccessibleDescription() throw (RuntimeException, std::exception)
 {
     ThrowIfDisposed();
     return OUString( "ToolbarMenu" );
 }
-
 
 
 OUString SAL_CALL ToolbarMenuAcc::getAccessibleName() throw (RuntimeException, std::exception)
@@ -244,13 +229,11 @@ OUString SAL_CALL ToolbarMenuAcc::getAccessibleName() throw (RuntimeException, s
 }
 
 
-
 Reference< XAccessibleRelationSet > SAL_CALL ToolbarMenuAcc::getAccessibleRelationSet() throw (RuntimeException, std::exception)
 {
     ThrowIfDisposed();
     return Reference< XAccessibleRelationSet >();
 }
-
 
 
 Reference< XAccessibleStateSet > SAL_CALL ToolbarMenuAcc::getAccessibleStateSet() throw (RuntimeException, std::exception)
@@ -272,7 +255,6 @@ Reference< XAccessibleStateSet > SAL_CALL ToolbarMenuAcc::getAccessibleStateSet(
 }
 
 
-
 Locale SAL_CALL ToolbarMenuAcc::getLocale() throw (IllegalAccessibleComponentStateException, RuntimeException, std::exception)
 {
     ThrowIfDisposed();
@@ -290,7 +272,6 @@ Locale SAL_CALL ToolbarMenuAcc::getLocale() throw (IllegalAccessibleComponentSta
 
     return aRet;
 }
-
 
 
 void SAL_CALL ToolbarMenuAcc::addAccessibleEventListener( const Reference< XAccessibleEventListener >& rxListener ) throw (RuntimeException, std::exception)
@@ -317,7 +298,6 @@ void SAL_CALL ToolbarMenuAcc::addAccessibleEventListener( const Reference< XAcce
 }
 
 
-
 void SAL_CALL ToolbarMenuAcc::removeAccessibleEventListener( const Reference< XAccessibleEventListener >& rxListener ) throw (RuntimeException, std::exception)
 {
     ThrowIfDisposed();
@@ -332,7 +312,6 @@ void SAL_CALL ToolbarMenuAcc::removeAccessibleEventListener( const Reference< XA
 }
 
 
-
 sal_Bool SAL_CALL ToolbarMenuAcc::containsPoint( const awt::Point& aPoint ) throw (RuntimeException, std::exception)
 {
     ThrowIfDisposed();
@@ -342,7 +321,6 @@ sal_Bool SAL_CALL ToolbarMenuAcc::containsPoint( const awt::Point& aPoint ) thro
 
     return Rectangle( aNullPoint, aSize ).IsInside( aTestPoint );
 }
-
 
 
 Reference< XAccessible > SAL_CALL ToolbarMenuAcc::getAccessibleAtPoint( const awt::Point& aPoint ) throw (RuntimeException, std::exception)
@@ -363,18 +341,17 @@ Reference< XAccessible > SAL_CALL ToolbarMenuAcc::getAccessibleAtPoint( const aw
             if( pEntry->mpControl )
             {
                 awt::Point aChildPoint( aPoint.X - pEntry->maRect.Left(), aPoint.Y - pEntry->maRect.Top() );
-                Reference< XAccessibleComponent > xComp( pEntry->GetAccessible(true), UNO_QUERY_THROW );
+                Reference< XAccessibleComponent > xComp( pEntry->GetAccessible(), UNO_QUERY_THROW );
                 xRet = xComp->getAccessibleAtPoint(aChildPoint);
             }
             else
             {
-                xRet.set( pEntry->GetAccessible(true), UNO_QUERY );
+                xRet.set( pEntry->GetAccessible(), UNO_QUERY );
             }
         }
     }
     return xRet;
 }
-
 
 
 awt::Rectangle SAL_CALL ToolbarMenuAcc::getBounds() throw (RuntimeException, std::exception)
@@ -394,7 +371,6 @@ awt::Rectangle SAL_CALL ToolbarMenuAcc::getBounds() throw (RuntimeException, std
 }
 
 
-
 awt::Point SAL_CALL ToolbarMenuAcc::getLocation() throw (RuntimeException, std::exception)
 {
     ThrowIfDisposed();
@@ -404,7 +380,6 @@ awt::Point SAL_CALL ToolbarMenuAcc::getLocation() throw (RuntimeException, std::
 }
 
 
-
 awt::Point SAL_CALL ToolbarMenuAcc::getLocationOnScreen()  throw (RuntimeException, std::exception)
 {
     ThrowIfDisposed();
@@ -412,7 +387,6 @@ awt::Point SAL_CALL ToolbarMenuAcc::getLocationOnScreen()  throw (RuntimeExcepti
     const Point aScreenPos( mpParent->mrMenu.OutputToAbsoluteScreenPixel( Point() ) );
     return awt::Point( aScreenPos.X(), aScreenPos.Y() );
 }
-
 
 
 awt::Size SAL_CALL ToolbarMenuAcc::getSize() throw (RuntimeException, std::exception)
@@ -460,14 +434,12 @@ sal_Bool SAL_CALL ToolbarMenuAcc::isAccessibleChildSelected( sal_Int32 nChildInd
 }
 
 
-
 void SAL_CALL ToolbarMenuAcc::clearAccessibleSelection() throw (RuntimeException, std::exception)
 {
     const SolarMutexGuard aSolarGuard;
     ThrowIfDisposed();
     mpParent->clearAccessibleSelection();
 }
-
 
 
 void SAL_CALL ToolbarMenuAcc::selectAllAccessibleChildren() throw (RuntimeException, std::exception)
@@ -477,7 +449,6 @@ void SAL_CALL ToolbarMenuAcc::selectAllAccessibleChildren() throw (RuntimeExcept
 }
 
 
-
 sal_Int32 SAL_CALL ToolbarMenuAcc::getSelectedAccessibleChildCount() throw (RuntimeException, std::exception)
 {
     const SolarMutexGuard aSolarGuard;
@@ -485,7 +456,6 @@ sal_Int32 SAL_CALL ToolbarMenuAcc::getSelectedAccessibleChildCount() throw (Runt
 
     return mpParent->mnHighlightedEntry != -1 ? 1 : 0;
 }
-
 
 
 Reference< XAccessible > SAL_CALL ToolbarMenuAcc::getSelectedAccessibleChild( sal_Int32 nSelectedChildIndex ) throw (IndexOutOfBoundsException, RuntimeException, std::exception)
@@ -500,17 +470,16 @@ Reference< XAccessible > SAL_CALL ToolbarMenuAcc::getSelectedAccessibleChild( sa
         {
             if( pEntry->mpControl )
             {
-                Reference< XAccessibleSelection > xSel( pEntry->GetAccessible(true), UNO_QUERY_THROW );
+                Reference< XAccessibleSelection > xSel( pEntry->GetAccessible(), UNO_QUERY_THROW );
                 return xSel->getSelectedAccessibleChild(0);
             }
             else
-                return Reference< XAccessible >( pEntry->GetAccessible(true), UNO_QUERY );
+                return Reference< XAccessible >( pEntry->GetAccessible(), UNO_QUERY );
         }
     }
 
     throw IndexOutOfBoundsException();
 }
-
 
 
 void SAL_CALL ToolbarMenuAcc::deselectAccessibleChild( sal_Int32 nChildIndex ) throw (IndexOutOfBoundsException, RuntimeException, std::exception)
@@ -522,7 +491,6 @@ void SAL_CALL ToolbarMenuAcc::deselectAccessibleChild( sal_Int32 nChildIndex ) t
     if (isAccessibleChildSelected(nChildIndex))
         mpParent->clearAccessibleSelection();
 }
-
 
 
 void SAL_CALL ToolbarMenuAcc::disposing()
@@ -568,9 +536,6 @@ void ToolbarMenuAcc::ThrowIfDisposed() throw (DisposedException)
 }
 
 
-// - ToolbarMenuEntryAcc -
-
-
 ToolbarMenuEntryAcc::ToolbarMenuEntryAcc( ToolbarMenuEntry* pParent )
 : ToolbarMenuEntryAccBase( m_aMutex )
 , mpParent( pParent )
@@ -578,11 +543,9 @@ ToolbarMenuEntryAcc::ToolbarMenuEntryAcc( ToolbarMenuEntry* pParent )
 }
 
 
-
 ToolbarMenuEntryAcc::~ToolbarMenuEntryAcc()
 {
 }
-
 
 
 void SAL_CALL ToolbarMenuEntryAcc::disposing()
@@ -626,19 +589,16 @@ Reference< XAccessibleContext > SAL_CALL ToolbarMenuEntryAcc::getAccessibleConte
 }
 
 
-
 sal_Int32 SAL_CALL ToolbarMenuEntryAcc::getAccessibleChildCount() throw (RuntimeException, std::exception)
 {
     return 0;
 }
 
 
-
 Reference< XAccessible > SAL_CALL ToolbarMenuEntryAcc::getAccessibleChild( sal_Int32 ) throw (IndexOutOfBoundsException, RuntimeException, std::exception)
 {
     throw IndexOutOfBoundsException();
 }
-
 
 
 Reference< XAccessible > SAL_CALL ToolbarMenuEntryAcc::getAccessibleParent() throw (RuntimeException, std::exception)
@@ -651,7 +611,6 @@ Reference< XAccessible > SAL_CALL ToolbarMenuEntryAcc::getAccessibleParent() thr
 
     return xRet;
 }
-
 
 
 sal_Int32 SAL_CALL ToolbarMenuEntryAcc::getAccessibleIndexInParent() throw (RuntimeException, std::exception)
@@ -685,19 +644,16 @@ sal_Int32 SAL_CALL ToolbarMenuEntryAcc::getAccessibleIndexInParent() throw (Runt
 }
 
 
-
 sal_Int16 SAL_CALL ToolbarMenuEntryAcc::getAccessibleRole() throw (RuntimeException, std::exception)
 {
     return AccessibleRole::LIST_ITEM;
 }
 
 
-
 OUString SAL_CALL ToolbarMenuEntryAcc::getAccessibleDescription() throw (RuntimeException, std::exception)
 {
     return OUString();
 }
-
 
 
 OUString SAL_CALL ToolbarMenuEntryAcc::getAccessibleName() throw (RuntimeException, std::exception)
@@ -720,12 +676,10 @@ OUString SAL_CALL ToolbarMenuEntryAcc::getAccessibleName() throw (RuntimeExcepti
 }
 
 
-
 Reference< XAccessibleRelationSet > SAL_CALL ToolbarMenuEntryAcc::getAccessibleRelationSet() throw (RuntimeException, std::exception)
 {
     return Reference< XAccessibleRelationSet >();
 }
-
 
 
 Reference< XAccessibleStateSet > SAL_CALL ToolbarMenuEntryAcc::getAccessibleStateSet() throw (RuntimeException, std::exception)
@@ -754,7 +708,6 @@ Reference< XAccessibleStateSet > SAL_CALL ToolbarMenuEntryAcc::getAccessibleStat
 }
 
 
-
 Locale SAL_CALL ToolbarMenuEntryAcc::getLocale() throw (IllegalAccessibleComponentStateException, RuntimeException, std::exception)
 {
     Locale aRet( "", "", "" );
@@ -770,7 +723,6 @@ Locale SAL_CALL ToolbarMenuEntryAcc::getLocale() throw (IllegalAccessibleCompone
 
     return aRet;
 }
-
 
 
 void SAL_CALL ToolbarMenuEntryAcc::addAccessibleEventListener( const Reference< XAccessibleEventListener >& rxListener ) throw (RuntimeException, std::exception)
@@ -791,7 +743,6 @@ void SAL_CALL ToolbarMenuEntryAcc::addAccessibleEventListener( const Reference< 
 }
 
 
-
 void SAL_CALL ToolbarMenuEntryAcc::removeAccessibleEventListener( const Reference< XAccessibleEventListener >& rxListener ) throw (RuntimeException, std::exception)
 {
     const ::osl::MutexGuard aGuard( maMutex );
@@ -805,7 +756,6 @@ void SAL_CALL ToolbarMenuEntryAcc::removeAccessibleEventListener( const Referenc
 }
 
 
-
 sal_Bool SAL_CALL ToolbarMenuEntryAcc::containsPoint( const awt::Point& aPoint ) throw (RuntimeException, std::exception)
 {
     const awt::Rectangle    aRect( getBounds() );
@@ -816,13 +766,11 @@ sal_Bool SAL_CALL ToolbarMenuEntryAcc::containsPoint( const awt::Point& aPoint )
 }
 
 
-
 Reference< XAccessible > SAL_CALL ToolbarMenuEntryAcc::getAccessibleAtPoint( const awt::Point& ) throw (RuntimeException, std::exception)
 {
     Reference< XAccessible > xRet;
     return xRet;
 }
-
 
 
 awt::Rectangle SAL_CALL ToolbarMenuEntryAcc::getBounds() throw (RuntimeException, std::exception)
@@ -848,13 +796,11 @@ awt::Rectangle SAL_CALL ToolbarMenuEntryAcc::getBounds() throw (RuntimeException
 }
 
 
-
 awt::Point SAL_CALL ToolbarMenuEntryAcc::getLocation() throw (RuntimeException, std::exception)
 {
     const awt::Rectangle aRect( getBounds() );
     return awt::Point( aRect.X, aRect.Y );
 }
-
 
 
 awt::Point SAL_CALL ToolbarMenuEntryAcc::getLocationOnScreen() throw (RuntimeException, std::exception)
@@ -872,7 +818,6 @@ awt::Point SAL_CALL ToolbarMenuEntryAcc::getLocationOnScreen() throw (RuntimeExc
 
     return aRet;
 }
-
 
 
 awt::Size SAL_CALL ToolbarMenuEntryAcc::getSize() throw (RuntimeException, std::exception)

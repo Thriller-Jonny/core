@@ -8,14 +8,20 @@
  */
 
 #include "WpsContext.hxx"
+#include <basegfx/matrix/b2dhommatrix.hxx>
+#include <comphelper/sequenceashashmap.hxx>
 #include <drawingml/customshapeproperties.hxx>
 #include <drawingml/shapepropertiescontext.hxx>
 #include <drawingml/shapestylecontext.hxx>
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/beans/XPropertyState.hpp>
 #include <com/sun/star/drawing/HomogenMatrix3.hpp>
-#include <basegfx/tuple/b2dtuple.hxx>
+#include <com/sun/star/text/XText.hpp>
+#include <com/sun/star/text/XTextCursor.hpp>
 #include <svx/svdtrans.hxx>
+#include <oox/helper/attributelist.hxx>
+#include <oox/token/namespaces.hxx>
+#include <oox/token/tokens.hxx>
 
 #include <boost/optional.hpp>
 
@@ -115,7 +121,7 @@ oox::core::ContextHandlerRef WpsContext::onCreateContext(sal_Int32 nElementToken
                 // Handle inset attributes for Writer textframes.
                 sal_Int32 aInsets[] = { XML_lIns, XML_tIns, XML_rIns, XML_bIns };
                 boost::optional<sal_Int32> oInsets[4];
-                for (size_t i = 0; i < SAL_N_ELEMENTS(aInsets); ++i)
+                for (std::size_t i = 0; i < SAL_N_ELEMENTS(aInsets); ++i)
                 {
                     OptValue<OUString> oValue = rAttribs.getString(aInsets[i]);
                     if (oValue.has())
@@ -126,7 +132,7 @@ oox::core::ContextHandlerRef WpsContext::onCreateContext(sal_Int32 nElementToken
                 }
                 OUString aProps[] = { OUString("LeftBorderDistance"), OUString("TopBorderDistance"), OUString("RightBorderDistance"), OUString("BottomBorderDistance") };
                 OUString aShapeProps[] = { OUString("TextLeftDistance"), OUString("TextUpperDistance"), OUString("TextRightDistance"), OUString("TextLowerDistance") };
-                for (size_t i = 0; i < SAL_N_ELEMENTS(bTextFrame ? aProps : aShapeProps); ++i)
+                for (std::size_t i = 0; i < SAL_N_ELEMENTS(bTextFrame ? aProps : aShapeProps); ++i)
                     if (oInsets[i])
                         xPropertySet->setPropertyValue((bTextFrame ? aProps : aShapeProps)[i], uno::makeAny(*oInsets[i]));
             }

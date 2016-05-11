@@ -259,8 +259,7 @@ void ScDocument::InsertMatrixFormula(SCCOL nCol1, SCROW nRow1,
                                      const ScMarkData& rMark,
                                      const OUString& rFormula,
                                      const ScTokenArray* pArr,
-                                     const formula::FormulaGrammar::Grammar eGram,
-                                     bool bDirtyFlag )
+                                     const formula::FormulaGrammar::Grammar eGram )
 {
     PutInOrder(nCol1, nCol2);
     PutInOrder(nRow1, nRow2);
@@ -280,7 +279,7 @@ void ScDocument::InsertMatrixFormula(SCCOL nCol1, SCROW nRow1,
         pCell = new ScFormulaCell(this, aPos, *pArr, eGram, MM_FORMULA);
     else
         pCell = new ScFormulaCell( this, aPos, rFormula, eGram, MM_FORMULA );
-    pCell->SetMatColsRows( nCol2 - nCol1 + 1, nRow2 - nRow1 + 1, bDirtyFlag );
+    pCell->SetMatColsRows( nCol2 - nCol1 + 1, nRow2 - nRow1 + 1 );
     ScMarkData::const_iterator itr = rMark.begin(), itrEnd = rMark.end();
     SCTAB nMax = static_cast<SCTAB>(maTabs.size());
     for (; itr != itrEnd && *itr < nMax; ++itr)
@@ -462,8 +461,9 @@ bool setCacheTableReferenced(formula::FormulaToken& rToken, ScExternalRefManager
              * have to be marked as well, if so. Mechanism would be
              * different. */
             OSL_FAIL("ScDocument::MarkUsedExternalReferences: implement the svExternalName case!");
+            break;
         default:
-            ;
+            break;
     }
     return false;
 }
@@ -530,15 +530,12 @@ bool ScDocument::GetNextMarkedCell( SCCOL& rCol, SCROW& rRow, SCTAB nTab,
         return false;
 }
 
-bool ScDocument::ReplaceStyle(const SvxSearchItem& rSearchItem,
+void ScDocument::ReplaceStyle(const SvxSearchItem& rSearchItem,
                               SCCOL nCol, SCROW nRow, SCTAB nTab,
-                              ScMarkData& rMark,
-                              bool bIsUndoP)
+                              ScMarkData& rMark)
 {
     if (nTab < static_cast<SCTAB>(maTabs.size()) && maTabs[nTab])
-        return maTabs[nTab]->ReplaceStyle(rSearchItem, nCol, nRow, rMark, bIsUndoP);
-    else
-        return false;
+        maTabs[nTab]->ReplaceStyle(rSearchItem, nCol, nRow, rMark, true/*bIsUndoP*/);
 }
 
 void ScDocument::CompileDBFormula()
@@ -761,7 +758,7 @@ const SfxPoolItem* ScDocument::GetEffItem(
                         if (!aStyle.isEmpty())
                         {
                             SfxStyleSheetBase* pStyleSheet = xPoolHelper->GetStylePool()->Find(
-                                    aStyle, SFX_STYLE_FAMILY_PARA );
+                                    aStyle, SfxStyleFamily::Para );
                             if ( pStyleSheet && pStyleSheet->GetItemSet().GetItemState(
                                         nWhich, true, &pItem ) == SfxItemState::SET )
                                 return pItem;
@@ -806,7 +803,7 @@ const SfxItemSet* ScDocument::GetCondResult(
         if (!aStyle.isEmpty())
         {
             SfxStyleSheetBase* pStyleSheet =
-                xPoolHelper->GetStylePool()->Find(aStyle, SFX_STYLE_FAMILY_PARA);
+                xPoolHelper->GetStylePool()->Find(aStyle, SfxStyleFamily::Para);
 
             if (pStyleSheet)
                 return &pStyleSheet->GetItemSet();
@@ -936,7 +933,7 @@ sal_uInt16 ScDocument::RowDifferences( SCROW nThisRow, SCTAB nThisTab,
     if (nUsed > 0)
         return static_cast<sal_uInt16>((nDif*64)/nUsed);            // max.256 (SC_DOCCOMP_MAXDIFF)
 
-    OSL_ENSURE(!nDif,"Diff withoud Used");
+    OSL_ENSURE(!nDif,"Diff without Used");
     return 0;
 }
 
@@ -1168,7 +1165,7 @@ void ScDocument::CompareDocument( ScDocument& rOtherDoc )
             nIndex = 0;
             aProText.append(aTemplate.getToken( 1, '#', nIndex ));
             ScProgress aProgress( GetDocumentShell(),
-                                        aProText.makeStringAndClear(), 3*nThisEndRow );  // 2x FindOrder, 1x here
+                                        aProText.makeStringAndClear(), 3*nThisEndRow, true );  // 2x FindOrder, 1x here
             long nProgressStart = 2*nThisEndRow;                    // start for here
 
             std::unique_ptr<SCCOLROW[]> pTempRows(new SCCOLROW[nThisEndRow+1]);

@@ -20,11 +20,20 @@
 #ifndef INCLUDED_DESKTOP_SOURCE_LIB_LOKINTERACTIONHANDLER_HXX
 #define INCLUDED_DESKTOP_SOURCE_LIB_LOKINTERACTIONHANDLER_HXX
 
+#include <osl/conditn.hxx>
 #include <cppuhelper/implbase.hxx>
+#include <tools/errcode.hxx>
 
 #include <com/sun/star/lang/XInitialization.hpp>
 #include <com/sun/star/lang/XServiceInfo.hpp>
+#include <com/sun/star/task/DocumentPasswordRequest2.hpp>
 #include <com/sun/star/task/InteractionHandler.hpp>
+#include <com/sun/star/ucb/InteractiveNetworkException.hpp>
+
+namespace desktop {
+    struct LibLibreOffice_Impl;
+    struct LibLODocument_Impl;
+}
 
 /** InteractionHandler is an interface that provides the user with various dialogs / error messages.
 
@@ -38,11 +47,44 @@ class LOKInteractionHandler: public cppu::WeakImplHelper<com::sun::star::lang::X
                                                          com::sun::star::lang::XInitialization,
                                                          com::sun::star::task::XInteractionHandler2>
 {
+private:
+    desktop::LibLibreOffice_Impl * m_pLOKit;
+    desktop::LibLODocument_Impl * m_pLOKDocument;
+
+    /// Command for which we use this interaction handler (like "load", "save", "saveas", ...)
+    OString m_command;
+
+    OUString m_Password;
+    bool m_usePassword;
+    osl::Condition m_havePassword;
+
     LOKInteractionHandler(const LOKInteractionHandler&) = delete;
     LOKInteractionHandler& operator=(const LOKInteractionHandler&) = delete;
 
+    /** Call the LOK_CALLBACK_ERROR on the LOK document (if available) or LOK lib.
+
+        The error itself is a JSON message, like:
+        {
+            "classification": "error" | "warning" | "info"
+            "kind": "network" etc.
+            "code": 403 | 404 | ...
+            "message": freeform description
+        }
+    */
+    void postError(css::task::InteractionClassification classif, const char* kind, ErrCode code, const OUString &message);
+
+    bool handleIOException(const css::uno::Sequence<css::uno::Reference<css::task::XInteractionContinuation>> &rContinuations, const css::uno::Any& rRequest);
+    bool handleNetworkException(const css::uno::Sequence<css::uno::Reference<css::task::XInteractionContinuation>> &rContinuations, const css::uno::Any& rRequest);
+    bool handlePasswordRequest(const css::uno::Sequence<css::uno::Reference<css::task::XInteractionContinuation>> &rContinuations, const css::uno::Any& rRequest);
+
 public:
-    explicit LOKInteractionHandler(com::sun::star::uno::Reference<com::sun::star::uno::XComponentContext> const & rxContext);
+    void SetPassword(char const* pPassword);
+
+    explicit LOKInteractionHandler(
+            com::sun::star::uno::Reference<com::sun::star::uno::XComponentContext> const & rxContext,
+            const OString& rCommand,
+            desktop::LibLibreOffice_Impl *,
+            desktop::LibLODocument_Impl *pLOKDocumt = nullptr);
 
     virtual ~LOKInteractionHandler();
 
@@ -61,7 +103,7 @@ public:
     virtual void SAL_CALL handle(com::sun::star::uno::Reference<com::sun::star::task::XInteractionRequest> const & rRequest)
         throw (com::sun::star::uno::RuntimeException, std::exception) override;
 
-    virtual sal_Bool SAL_CALL handleInteractionRequest(const ::com::sun::star::uno::Reference<::com::sun::star::task::XInteractionRequest>& _Request)
+    virtual sal_Bool SAL_CALL handleInteractionRequest(const ::com::sun::star::uno::Reference<::com::sun::star::task::XInteractionRequest>& Request)
         throw (com::sun::star::uno::RuntimeException, std::exception) override;
 };
 

@@ -108,8 +108,6 @@ using namespace com::sun::star;
 using namespace sw::util;
 using namespace sw::types;
 using namespace nsFieldFlags;
-using ::com::sun::star::uno::Reference;
-using ::com::sun::star::uno::UNO_QUERY;
 using ::com::sun::star::beans::XPropertySet;
 using ::com::sun::star::drawing::XShape;
 
@@ -180,14 +178,14 @@ void SwBasicEscherEx::WriteHyperlinkWithinFly( SvMemoryStream& rStrm, const SwFo
 {
     if ( !pINetFormatArg ) return;
 
-    sal_uInt8 maGuidStdLink[ 16 ] ={
+    sal_uInt8 aGuidStdLink[ 16 ] ={
         0xD0, 0xC9, 0xEA, 0x79, 0xF9, 0xBA, 0xCE, 0x11, 0x8C, 0x82, 0x00, 0xAA, 0x00, 0x4B, 0xA9, 0x0B };
-    sal_uInt8 maGuidUrlMoniker[ 16 ] = {
+    sal_uInt8 aGuidUrlMoniker[ 16 ] = {
         0xE0, 0xC9, 0xEA, 0x79, 0xF9, 0xBA, 0xCE, 0x11, 0x8C, 0x82, 0x00, 0xAA, 0x00, 0x4B, 0xA9, 0x0B };
 
-    sal_uInt8 maGuidFileMoniker[ 16 ] = {
+    sal_uInt8 aGuidFileMoniker[ 16 ] = {
         0x03, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xC0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x46 };
-    sal_uInt8 maGuidFileTail[] = {
+    sal_uInt8 aGuidFileTail[] = {
             0xFF, 0xFF, 0xAD, 0xDE, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
@@ -204,7 +202,7 @@ void SwBasicEscherEx::WriteHyperlinkWithinFly( SvMemoryStream& rStrm, const SwFo
 
     OUString rUrl = pINetFormatArg->GetURL();
     OUString rTarFrame = pINetFormatArg->GetTargetFrameName();
-    sal_uInt32          mnFlags = 0;
+    sal_uInt32 nFlags = 0;
 
     INetURLObject aUrlObj( rUrl );
     const INetProtocol eProtocol = aUrlObj.GetProtocol();
@@ -217,7 +215,7 @@ void SwBasicEscherEx::WriteHyperlinkWithinFly( SvMemoryStream& rStrm, const SwFo
 
         tmpStrm.WriteUInt16( 0 );
 
-        mnFlags |= WW8_HLINK_FRAME;
+        nFlags |= WW8_HLINK_FRAME;
     }
 
     // file link or URL
@@ -228,15 +226,15 @@ void SwBasicEscherEx::WriteHyperlinkWithinFly( SvMemoryStream& rStrm, const SwFo
         OUString aFileName( BuildFileName( nLevel, bRel, rUrl ));
 
         if( !bRel )
-            mnFlags |= WW8_HLINK_ABS;
+            nFlags |= WW8_HLINK_ABS;
 
-        mnFlags |= WW8_HLINK_BODY;
+        nFlags |= WW8_HLINK_BODY;
 
-        tmpStrm.Write( maGuidFileMoniker,sizeof(maGuidFileMoniker) );
+        tmpStrm.Write( aGuidFileMoniker,sizeof(aGuidFileMoniker) );
         tmpStrm.WriteUInt16( nLevel );
         SwWW8Writer::WriteLong(tmpStrm, aFileName.getLength()+1);
         SwWW8Writer::WriteString8( tmpStrm, aFileName, true, RTL_TEXTENCODING_MS_1252 );
-        tmpStrm.Write( maGuidFileTail,sizeof(maGuidFileTail) );
+        tmpStrm.Write( aGuidFileTail,sizeof(aGuidFileTail) );
 
         //For UNICODE
         SwWW8Writer::WriteLong(tmpStrm, 2*aFileName.getLength()+6);
@@ -246,11 +244,11 @@ void SwBasicEscherEx::WriteHyperlinkWithinFly( SvMemoryStream& rStrm, const SwFo
     }
     else if( eProtocol != INetProtocol::NotValid )
     {
-        tmpStrm.Write( maGuidUrlMoniker,sizeof(maGuidUrlMoniker) );
+        tmpStrm.Write( aGuidUrlMoniker,sizeof(aGuidUrlMoniker) );
             SwWW8Writer::WriteLong(tmpStrm, 2*(rUrl.getLength()+1));
 
-            SwWW8Writer::WriteString16(tmpStrm, rUrl, true);
-            mnFlags |= WW8_HLINK_BODY | WW8_HLINK_ABS;
+        SwWW8Writer::WriteString16(tmpStrm, rUrl, true);
+            nFlags |= WW8_HLINK_BODY | WW8_HLINK_ABS;
     }
     else if (rUrl[0] == '#' )
     {
@@ -269,12 +267,12 @@ void SwBasicEscherEx::WriteHyperlinkWithinFly( SvMemoryStream& rStrm, const SwFo
         SwWW8Writer::WriteLong(tmpStrm, tmpTextMark.getLength()+1);
             SwWW8Writer::WriteString16(tmpStrm, tmpTextMark, true);
 
-        mnFlags |= WW8_HLINK_MARK;
+        nFlags |= WW8_HLINK_MARK;
     }
 
-    rStrm.Write( maGuidStdLink,16 );
+    rStrm.Write( aGuidStdLink,16 );
     rStrm .WriteUInt32( 2 )
-          .WriteUInt32( mnFlags );
+          .WriteUInt32( nFlags );
     tmpStrm.Seek( STREAM_SEEK_TO_BEGIN );
     sal_uInt32 const nLen = tmpStrm.remainingSize();
     if(nLen >0)
@@ -322,7 +320,7 @@ namespace
     /// @param rWrt The containing WW8Export.
     /// @param pObj pointer to the drawing object.
     /// @returns The ordering number.
-    static sal_uLong lcl_getSdrOrderNumber(const WW8Export& rWrt, DrawObj *pObj)
+    sal_uLong lcl_getSdrOrderNumber(const WW8Export& rWrt, DrawObj *pObj)
     {
         return rWrt.GetSdrOrdNum(pObj->maContent.GetFrameFormat());
     };
@@ -348,7 +346,7 @@ namespace
     /// @param rWrt    The containing WW8Export.
     /// @param rSrcArr The source array.
     /// @param rDstArr The destination array.
-    static void lcl_makeZOrderArray(const WW8Export& rWrt,
+    void lcl_makeZOrderArray(const WW8Export& rWrt,
                                     std::vector<DrawObj> &rSrcArr,
                                     std::vector<DrawObj*> &rDstArr)
     {
@@ -663,12 +661,12 @@ bool RTLDrawingsHack(long &rLeft, long /*nWidth*/,
     return bRet;
 }
 
-bool WW8Export::MiserableRTLFrameFormatHack(SwTwips &rLeft, SwTwips &rRight,
+void WW8Export::MiserableRTLFrameFormatHack(SwTwips &rLeft, SwTwips &rRight,
     const ww8::Frame &rFrameFormat)
 {
     //Require nasty bidi swap
     if (FRMDIR_HORI_RIGHT_TOP != m_pDoc->GetTextDirection(rFrameFormat.GetPosition()))
-        return false;
+        return;
 
     SwTwips nWidth = rRight - rLeft;
     SwTwips nPageLeft, nPageRight;
@@ -696,7 +694,6 @@ bool WW8Export::MiserableRTLFrameFormatHack(SwTwips &rLeft, SwTwips &rRight,
     }
     if (bRet)
         rRight = rLeft + nWidth;
-    return bRet;
 }
 
 void PlcDrawObj::WritePlc( WW8Export& rWrt ) const
@@ -1526,7 +1523,8 @@ void WW8Export::WriteEscher()
 
         pFib->fcDggInfo = nStart;
         pFib->lcbDggInfo = pTableStrm->Tell() - nStart;
-        delete m_pEscher, m_pEscher = nullptr;
+        delete m_pEscher;
+        m_pEscher = nullptr;
     }
 }
 
@@ -1613,7 +1611,7 @@ sal_uInt32 AddMirrorFlags(sal_uInt32 nFlags, const SwMirrorGrf &rMirror)
     return nFlags;
 }
 //For i120928,this function is added to export graphic of bullet
-sal_Int32 SwBasicEscherEx::WriteGrfBullet(const Graphic& rGrf)
+void SwBasicEscherEx::WriteGrfBullet(const Graphic& rGrf)
 {
     OpenContainer( ESCHER_SpContainer );
     AddShape(ESCHER_ShpInst_PictureFrame, 0xa00,0x401);
@@ -1660,8 +1658,6 @@ sal_Int32 SwBasicEscherEx::WriteGrfBullet(const Graphic& rGrf)
     AddAtom(4, ESCHER_ClientAnchor);
     GetStream().WriteUInt32( 0x80000000 );
     CloseContainer();
-
-    return 0;
 }
 
 sal_Int32 SwBasicEscherEx::WriteGrfFlyFrame(const SwFrameFormat& rFormat, sal_uInt32 nShapeId)
@@ -2424,7 +2420,8 @@ void SwEscherEx::FinishEscher()
 {
     pEscherStrm->Seek(0);
     rWrt.pTableStrm->WriteStream( *pEscherStrm );
-    delete pEscherStrm, pEscherStrm = nullptr;
+    delete pEscherStrm;
+    pEscherStrm = nullptr;
 }
 
 /** method to perform conversion of positioning attributes with the help
@@ -3016,7 +3013,7 @@ sal_Int32 SwEscherEx::WriteTextFlyFrame(const DrawObj &rObj, sal_uInt32 nShapeId
     {
         default:
             OSL_ENSURE(false, "unknown direction type");
-            //fall-through
+            SAL_FALLTHROUGH;
         case FRMDIR_HORI_LEFT_TOP:
             nFlow=mso_txflHorzN;
         break;
@@ -3175,9 +3172,9 @@ bool  SwMSConvertControls::ReadOCXStream( tools::SvRef<SotStorage>& rSrc1,
     return bRes;
 }
 
-bool SwMSConvertControls::ExportControl(WW8Export &rWW8Wrt, const SdrUnoObj& rFormObj)
+void SwMSConvertControls::ExportControl(WW8Export &rWW8Wrt, const SdrUnoObj& rFormObj)
 {
-    uno::Reference< awt::XControlModel > xControlModel =
+    const uno::Reference< awt::XControlModel >& xControlModel =
         rFormObj.GetUnoControlModel();
 
     //Why oh lord do we use so many different units ?
@@ -3201,11 +3198,11 @@ bool SwMSConvertControls::ExportControl(WW8Export &rWW8Wrt, const SdrUnoObj& rFo
     tools::SvRef<SotStorage> xOleStg = xObjPool->OpenSotStorage(sStorageName.makeStringAndClear());
 
     if (!xOleStg.Is())
-        return false;
+        return;
 
     OUString sUName;
     if (!WriteOCXStream( mxModel, xOleStg,xControlModel,aSize,sUName))
-        return false;
+        return;
 
     sal_uInt8 aSpecOLE[] =
     {
@@ -3227,7 +3224,6 @@ bool SwMSConvertControls::ExportControl(WW8Export &rWW8Wrt, const SdrUnoObj& rFo
         aSpecOLE);
     rWW8Wrt.WriteChar( 0x1 );
     rWW8Wrt.OutputField(nullptr, ww::eCONTROL, OUString(), WRITEFIELD_END | WRITEFIELD_CLOSE);
-    return true;
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -72,13 +72,13 @@ namespace dbaui
         void        Deselect();
         bool        IsSelected() const { return m_bSelected; }
         bool        CheckHit( const Point& rMousePos ) const;
-        bool        InvalidateConnection();
+        void        InvalidateConnection();
         void        UpdateLineList();
 
         OTableWindow* GetSourceWin() const;
         OTableWindow* GetDestWin() const;
 
-        bool RecalcLines();
+        void RecalcLines();
         /** isTableConnection
 
             @param  _pTable the table where we should check if we belongs to it
@@ -91,7 +91,7 @@ namespace dbaui
 
         Rectangle   GetBoundingRect() const;
 
-        inline TTableConnectionData::value_type GetData() const { return m_pData; }
+        const TTableConnectionData::value_type& GetData() const { return m_pData; }
         const ::std::vector<OConnectionLine*>&  GetConnLineList() const { return m_vConnLine; }
         inline OJoinTableView*                  GetParent() const { return m_pParent; }
         virtual void Draw(vcl::RenderContext& rRenderContext, const Rectangle& rRect);

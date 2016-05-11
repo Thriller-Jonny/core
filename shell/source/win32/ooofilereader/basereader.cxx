@@ -17,9 +17,9 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include "internal/basereader.hxx"
+#include "basereader.hxx"
 
-#include "internal/xml_parser.hxx"
+#include "xml_parser.hxx"
 
 #include "assert.h"
 #include <memory>
@@ -32,12 +32,10 @@ m_ZipFile( DocumentName )
 }
 
 
-
 CBaseReader::CBaseReader(StreamInterface * sw):
 m_ZipFile( sw )
 {
 }
-
 
 
 CBaseReader::~CBaseReader()
@@ -45,11 +43,9 @@ CBaseReader::~CBaseReader()
 }
 
 
-
 void CBaseReader::start_document()
 {
 }
-
 
 
 void CBaseReader::end_document()

@@ -20,8 +20,16 @@
 #include "stdafx.h"
 #include "resource.h"
 #include <initguid.h>
-#include "UAccCOM.h"
 #include <accHelper.hxx>
+
+#if defined __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnon-virtual-dtor"
+#endif
+#include  "UAccCOM.h"
+#if defined __clang__
+#pragma clang diagnostic pop
+#endif
 
 #if defined __clang__
 #pragma clang diagnostic push
@@ -64,8 +72,14 @@ OBJECT_ENTRY(CLSID_AccValue, CAccValue)
 OBJECT_ENTRY(CLSID_AccTable, CAccTable)
 OBJECT_ENTRY(CLSID_AccHyperLink, CAccHyperLink)
 OBJECT_ENTRY(CLSID_AccHypertext, CAccHypertext)
+#if defined __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wmissing-field-initializers"
+#endif
 END_OBJECT_MAP()
-
+#if defined __clang__
+#pragma clang diagnostic pop
+#endif
 
 // DLL Entry Point
 

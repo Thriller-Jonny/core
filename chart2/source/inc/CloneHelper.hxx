@@ -35,42 +35,23 @@ namespace CloneHelper
 template< class Interface >
     struct CreateRefClone : public ::std::unary_function< Interface, Interface >
 {
-    Interface operator() ( const Interface & xOther )
+    css::uno::Reference<Interface> operator() ( const css::uno::Reference<Interface> & xOther )
     {
-        Interface xResult;
-        ::com::sun::star::uno::Reference< ::com::sun::star::util::XCloneable >
-              xCloneable( xOther, ::com::sun::star::uno::UNO_QUERY );
+        css::uno::Reference<Interface> xResult;
+        css::uno::Reference< css::util::XCloneable >
+              xCloneable( xOther, css::uno::UNO_QUERY );
         if( xCloneable.is())
-            xResult.set( xCloneable->createClone(), ::com::sun::star::uno::UNO_QUERY );
+            xResult.set( xCloneable->createClone(), css::uno::UNO_QUERY );
 
         return xResult;
-    }
-};
-
-/// functor that clones a map element with a UNO-Reference as value
-template< typename Key, class Interface >
-    struct CreateRefWithKeyClone : public ::std::unary_function<
-        ::std::pair<  Key, Interface >,
-        ::std::pair<  Key, Interface > >
-{
-    ::std::pair< Key, Interface > operator() (
-        const ::std::pair< Key, Interface > & rOther )
-    {
-        Interface xResult;
-        ::com::sun::star::uno::Reference< ::com::sun::star::util::XCloneable >
-              xCloneable( rOther.second, ::com::sun::star::uno::UNO_QUERY );
-        if( xCloneable.is())
-            xResult.set( xCloneable->createClone(), ::com::sun::star::uno::UNO_QUERY );
-
-        return ::std::make_pair< Key, Interface >( rOther.first, xResult );
     }
 };
 
 /// clones a vector of UNO-References
 template< class Interface >
     void CloneRefVector(
-        const ::std::vector< Interface > & rSource,
-        ::std::vector< Interface > & rDestination )
+        const ::std::vector< css::uno::Reference< Interface > > & rSource,
+        ::std::vector< css::uno::Reference< Interface > > & rDestination )
 {
     ::std::transform( rSource.begin(), rSource.end(),
                       ::std::back_inserter( rDestination ),
@@ -80,8 +61,8 @@ template< class Interface >
 /// clones a UNO-sequence of UNO-References
 template< class Interface >
     void CloneRefSequence(
-        const ::com::sun::star::uno::Sequence< Interface > & rSource,
-        ::com::sun::star::uno::Sequence< Interface > & rDestination )
+        const css::uno::Sequence< css::uno::Reference<Interface> > & rSource,
+        css::uno::Sequence< css::uno::Reference<Interface> > & rDestination )
 {
     rDestination.realloc( rSource.getLength());
     ::std::transform( rSource.getConstArray(), rSource.getConstArray() + rSource.getLength(),

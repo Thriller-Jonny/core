@@ -24,7 +24,7 @@
 
 namespace {
 // Don't bother with buffer overhead for less than y rows.
-const SCSIZE kBufferThreshhold = 128;
+const SCSIZE kBufferThreshold = 128;
 }
 
 ScJumpMatrix::ScJumpMatrix(SCSIZE nColsP, SCSIZE nRowsP)
@@ -46,7 +46,7 @@ ScJumpMatrix::ScJumpMatrix(SCSIZE nColsP, SCSIZE nRowsP)
     // Initialize result matrix in case of
     // a premature end of the interpreter
     // due to errors.
-    pMat->FillDouble(CreateDoubleError(NOTAVAILABLE), 0, 0, nCols - 1, nRows - 1);
+    pMat->FillDouble(formula::CreateDoubleError(formula::NOTAVAILABLE), 0, 0, nCols - 1, nRows - 1);
     /*! pJump not initialized */
 }
 
@@ -72,9 +72,9 @@ void ScJumpMatrix::GetDimensions(SCSIZE& rCols, SCSIZE& rRows) const
 }
 
 void ScJumpMatrix::SetJump(SCSIZE nCol, SCSIZE nRow, double fBool,
-                           short nStart, short nNext, short nStop)
+                           short nStart, short nNext)
 {
-    pJump[(sal_uLong)nCol * nRows + nRow].SetJump(fBool, nStart, nNext, nStop);
+    pJump[(sal_uLong)nCol * nRows + nRow].SetJump(fBool, nStart, nNext, SHRT_MAX);
 }
 
 void ScJumpMatrix::GetJump(
@@ -151,15 +151,15 @@ void ScJumpMatrix::SetNewResMat(SCSIZE nNewCols, SCSIZE nNewRows)
         pMat = pMat->CloneAndExtend(nNewCols, nNewRows);
         if (nResMatCols < nNewCols)
         {
-            pMat->FillDouble(CreateDoubleError(
-                                 NOTAVAILABLE), nResMatCols, 0, nNewCols - 1,
-                             nResMatRows - 1);
+            pMat->FillDouble(
+                formula::CreateDoubleError(formula::NOTAVAILABLE),
+                nResMatCols, 0, nNewCols - 1, nResMatRows - 1);
         }
         if (nResMatRows < nNewRows)
         {
-            pMat->FillDouble(CreateDoubleError(
-                                 NOTAVAILABLE), 0, nResMatRows, nNewCols - 1,
-                             nNewRows - 1);
+            pMat->FillDouble(
+                formula::CreateDoubleError(formula::NOTAVAILABLE),
+                0, nResMatRows, nNewCols - 1, nNewRows - 1);
         }
         if (nRows == 1 && nCurCol != 0)
         {
@@ -207,14 +207,14 @@ void ScJumpMatrix::FlushBufferOtherThan( ScJumpMatrix::BufferType eType, SCSIZE 
 
 ScMatrix* ScJumpMatrix::GetResultMatrix()
 {
-    if (nResMatRows >= kBufferThreshhold)
+    if (nResMatRows >= kBufferThreshold)
         FlushBufferOtherThan( BUFFER_NONE, 0, 0);
     return pMat.get();
 }
 
 void ScJumpMatrix::PutResultDouble( double fVal, SCSIZE nC, SCSIZE nR )
 {
-    if (nResMatRows < kBufferThreshhold)
+    if (nResMatRows < kBufferThreshold)
         pMat->PutDouble( fVal, nC, nR);
     else
     {
@@ -230,7 +230,7 @@ void ScJumpMatrix::PutResultDouble( double fVal, SCSIZE nC, SCSIZE nR )
 
 void ScJumpMatrix::PutResultString( const svl::SharedString& rStr, SCSIZE nC, SCSIZE nR )
 {
-    if (nResMatRows < kBufferThreshhold)
+    if (nResMatRows < kBufferThreshold)
         pMat->PutString( rStr, nC, nR);
     else
     {
@@ -246,7 +246,7 @@ void ScJumpMatrix::PutResultString( const svl::SharedString& rStr, SCSIZE nC, SC
 
 void ScJumpMatrix::PutResultEmpty( SCSIZE nC, SCSIZE nR )
 {
-    if (nResMatRows < kBufferThreshhold)
+    if (nResMatRows < kBufferThreshold)
         pMat->PutEmpty( nC, nR);
     else
     {
@@ -262,7 +262,7 @@ void ScJumpMatrix::PutResultEmpty( SCSIZE nC, SCSIZE nR )
 
 void ScJumpMatrix::PutResultEmptyPath( SCSIZE nC, SCSIZE nR )
 {
-    if (nResMatRows < kBufferThreshhold)
+    if (nResMatRows < kBufferThreshold)
         pMat->PutEmptyPath( nC, nR);
     else
     {

@@ -66,13 +66,13 @@ void SdBulletMapper::MapFontsInNumRule( SvxNumRule& aNumRule, const SfxItemSet& 
             const SvxFontItem& rFItem =
                 static_cast<const SvxFontItem&>(rSet.Get(GetWhich( (sal_uInt16)nFontID )));
             aMyFont.SetFamily(rFItem.GetFamily());
-            aMyFont.SetName(rFItem.GetFamilyName());
+            aMyFont.SetFamilyName(rFItem.GetFamilyName());
             aMyFont.SetCharSet(rFItem.GetCharSet());
             aMyFont.SetPitch(rFItem.GetPitch());
 
             const SvxFontHeightItem& rFHItem =
                 static_cast<const SvxFontHeightItem&>(rSet.Get(GetWhich( (sal_uInt16)nFontHeightID )));
-            aMyFont.SetSize(Size(0, rFHItem.GetHeight()));
+            aMyFont.SetFontSize(Size(0, rFHItem.GetHeight()));
 
             const SvxWeightItem& rWItem =
                 static_cast<const SvxWeightItem&>(rSet.Get(GetWhich( (sal_uInt16)nWeightID )));

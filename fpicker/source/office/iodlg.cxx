@@ -87,11 +87,6 @@
 #include <functional>
 #include <vector>
 
-//#define AUTOSELECT_USERFILTER
-    // define this for the experimental feature of user-filter auto selection
-    // means if the user enters e.g. *.doc<enter>, and there is a filter which is responsible for *.doc files (only),
-    // then this filter is selected automatically
-
 using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::frame;
 using namespace ::com::sun::star::ui::dialogs;
@@ -121,7 +116,7 @@ namespace
 
     OUString getMostCurrentFilter( SvtExpFileDlg_Impl* pImpl )
     {
-        DBG_ASSERT( pImpl, "invalid impl pointer" );
+        assert( pImpl && "invalid impl pointer" );
         const SvtFileDialogFilter_Impl* pFilter = pImpl->_pUserFilter;
 
         if ( !pFilter )
@@ -136,8 +131,8 @@ namespace
 
     bool restoreCurrentFilter( SvtExpFileDlg_Impl* _pImpl )
     {
-        DBG_ASSERT( _pImpl->GetCurFilter(), "restoreCurrentFilter: no current filter!" );
-        DBG_ASSERT( !_pImpl->GetCurFilterDisplayName().isEmpty(), "restoreCurrentFilter: no current filter (no display name)!" );
+        SAL_WARN_IF( !_pImpl->GetCurFilter(), "fpicker.office", "restoreCurrentFilter: no current filter!" );
+        SAL_WARN_IF( _pImpl->GetCurFilterDisplayName().isEmpty(), "fpicker.office", "restoreCurrentFilter: no current filter (no display name)!" );
 
         _pImpl->SelectFilterListEntry( _pImpl->GetCurFilterDisplayName() );
 
@@ -253,7 +248,7 @@ namespace
                     comphelper::getProcessComponentContext() )->
                 queryContentProvider( _rForURL ) );
 
-            DBG_ASSERT( xProvider.is(), "lcl_getHomeDirectory: could not find a (valid) content provider for the current URL!" );
+            SAL_WARN_IF( !xProvider.is(), "fpicker.office", "lcl_getHomeDirectory: could not find a (valid) content provider for the current URL!" );
             Reference< XPropertySet > xProviderProps( xProvider, UNO_QUERY );
             if ( xProviderProps.is() )
             {
@@ -275,7 +270,7 @@ namespace
     }
 #endif
 
-    static OUString lcl_ensureFinalSlash( const OUString& _rDir )
+    OUString lcl_ensureFinalSlash( const OUString& _rDir )
     {
         INetURLObject aWorkPathObj( _rDir, INetProtocol::File );
         aWorkPathObj.setFinalSlash();
@@ -325,7 +320,6 @@ SvtFileDialog::SvtFileDialog
 }
 
 
-
 SvtFileDialog::SvtFileDialog ( vcl::Window* _pParent, WinBits nBits )
     :SvtFileDialog_Base( _pParent, "ExplorerFileDialog", "fps/ui/explorerfiledialog.ui" )
     ,_pCbReadOnly( nullptr )
@@ -366,7 +360,7 @@ class CustomContainer : public vcl::Window
     VclPtr<vcl::Window> m_pFocusWidgets[FocusState::FocusCount];
 
 public:
-    CustomContainer(vcl::Window *pParent)
+    explicit CustomContainer(vcl::Window *pParent)
         : Window(pParent)
         , _pImp(nullptr)
         , _pFileView(nullptr)
@@ -769,7 +763,7 @@ void SvtFileDialog::Init_Impl
 
 IMPL_LINK_NOARG_TYPED( SvtFileDialog, NewFolderHdl_Impl, Button*, void)
 {
-    _pFileView->EndInplaceEditing( false );
+    _pFileView->EndInplaceEditing();
 
     SmartContent aContent( _pFileView->GetViewURL( ) );
     OUString aTitle;
@@ -793,7 +787,7 @@ IMPL_LINK_NOARG_TYPED( SvtFileDialog, NewFolderHdl_Impl, Button*, void)
     }
 }
 
-bool SvtFileDialog::createNewUserFilter( const OUString& _rNewFilter, bool _bAllowUserDefExt )
+bool SvtFileDialog::createNewUserFilter( const OUString& _rNewFilter )
 {
     // delete the old user filter and create a new one
     DELETEZ( _pImp->_pUserFilter );
@@ -809,27 +803,10 @@ bool SvtFileDialog::createNewUserFilter( const OUString& _rNewFilter, bool _bAll
         // is always "*.<something>". But changing this would take some more time than I have now...
 
     // now, the default extension is set to the one of the user filter (or empty)
-    // if the former is not allowed (_bAllowUserDefExt = <FALSE/>), we have to use the ext of the current filter
-    // (if possible)
-    bool bUseCurFilterExt = true;
-    OUString sUserFilter = _pImp->_pUserFilter->GetType();
-    sal_Int32 nSepPos = sUserFilter.lastIndexOf( '.' );
-    if ( nSepPos != -1 )
-    {
-        OUString sUserExt = sUserFilter.copy( nSepPos + 1 );
-        if  (   ( -1 == sUserExt.indexOf( '*' ) )
-            &&  ( -1 == sUserExt.indexOf( '?' ) )
-            )
-            bUseCurFilterExt = false;
-    }
-
-    if ( !_bAllowUserDefExt || bUseCurFilterExt )
-    {
-        if ( _pImp->GetCurFilter( ) )
-            SetDefaultExt( _pImp->GetCurFilter( )->GetExtension() );
-        else
-            EraseDefaultExt();
-    }
+    if ( _pImp->GetCurFilter( ) )
+        SetDefaultExt( _pImp->GetCurFilter( )->GetExtension() );
+    else
+        EraseDefaultExt();
 
     // outta here
     return bIsAllFiles;
@@ -856,15 +833,6 @@ sal_uInt16 SvtFileDialog::adjustFilter( const OUString& _rFilter )
         // search for a corresponding filter
         SvtFileDialogFilter_Impl* pFilter = FindFilter_Impl( _rFilter, false, bFilterChanged );
 
-#ifdef AUTOSELECT_USERFILTER
-        // if we found a filter which without allowing multi-extensions -> select it
-        if ( pFilter )
-        {
-            _pImp->SelectFilterListEntry( pFilter->GetName() );
-            _pImp->SetCurFilter( pFilter );
-        }
-#endif // AUTOSELECT_USERFILTER
-
         // look for multi-ext filters if necessary
         if ( !pFilter )
             pFilter = FindFilter_Impl( _rFilter, true, bFilterChanged );
@@ -876,30 +844,11 @@ sal_uInt16 SvtFileDialog::adjustFilter( const OUString& _rFilter )
         {
             nReturn |= FLT_USERFILTER;
             // no filter found : use it as user defined filter
-#ifdef AUTOSELECT_USERFILTER
-            if ( createNewUserFilter( _rFilter, sal_True ) )
-#else
-            if ( createNewUserFilter( _rFilter, false ) )
-#endif
+            if ( createNewUserFilter( _rFilter ) )
             {   // it's the "all files" filter
                 nReturn |= FLT_ALLFILESFILTER;
 
-#ifdef AUTOSELECT_USERFILTER
-                // select the "all files" entry
-                OUString sAllFilesFilter( SvtResId( STR_FILTERNAME_ALL ) );
-                if ( _pImp->HasFilterListEntry( sAllFilesFilter ) )
-                {
-                    _pImp->SelectFilterListEntry( sAllFilesFilter );
-                    _pImp->SetCurFilter( _pImp->GetSelectedFilterEntry( sAllFilesFilter ) );
-                }
-                else
-                    _pImp->SetNoFilterListSelection( ); // there is no "all files" entry
-#endif // AUTOSELECT_USERFILTER
             }
-#ifdef AUTOSELECT_USERFILTER
-            else
-                _pImp->SetNoFilterListSelection( );
-#endif // AUTOSELECT_USERFILTER
         }
     }
 
@@ -1224,12 +1173,10 @@ void SvtFileDialog::OpenHdl_Impl(void* pVoid)
 }
 
 
-
 void SvtFileDialog::EnableAutocompletion( bool _bEnable )
 {
     _pImp->_pEdFileName->EnableAutocompletion( _bEnable );
 }
-
 
 
 IMPL_LINK_NOARG_TYPED( SvtFileDialog, FilterSelectHdl_Impl, ListBox&, void )
@@ -1317,12 +1264,10 @@ IMPL_LINK_NOARG_TYPED( SvtFileDialog, FileNameGetFocusHdl_Impl, Control&, void )
 }
 
 
-
 IMPL_LINK_NOARG_TYPED( SvtFileDialog, FileNameModifiedHdl_Impl, Edit&, void )
 {
     FileNameGetFocusHdl_Impl( *_pImp->_pEdFileName );
 }
-
 
 
 IMPL_LINK_NOARG_TYPED( SvtFileDialog, URLBoxModifiedHdl_Impl, SvtURLBox*, void )
@@ -1332,10 +1277,9 @@ IMPL_LINK_NOARG_TYPED( SvtFileDialog, URLBoxModifiedHdl_Impl, SvtURLBox*, void )
 }
 
 
-
 IMPL_LINK_NOARG_TYPED( SvtFileDialog, ConnectToServerPressed_Hdl, Button*, void )
 {
-    _pFileView->EndInplaceEditing( false );
+    _pFileView->EndInplaceEditing();
 
     ScopedVclPtrInstance< PlaceEditDialog > aDlg(this);
     short aRetCode = aDlg->Execute();
@@ -1356,7 +1300,6 @@ IMPL_LINK_NOARG_TYPED( SvtFileDialog, ConnectToServerPressed_Hdl, Button*, void 
 }
 
 
-
 IMPL_LINK_NOARG_TYPED ( SvtFileDialog, AddPlacePressed_Hdl, Button*, void )
 {
     // Maybe open the PlacesDialog would have been a better idea
@@ -1369,12 +1312,10 @@ IMPL_LINK_NOARG_TYPED ( SvtFileDialog, AddPlacePressed_Hdl, Button*, void )
 }
 
 
-
 IMPL_LINK_NOARG_TYPED ( SvtFileDialog, RemovePlacePressed_Hdl, Button*, void )
 {
     _pImp->_pPlaces->RemoveSelectedPlace();
 }
-
 
 
 SvtFileDialogFilter_Impl* SvtFileDialog::FindFilter_Impl
@@ -1428,7 +1369,7 @@ SvtFileDialogFilter_Impl* SvtFileDialog::FindFilter_Impl
             // activate filter
             _rFilterChanged = _pImp->_pUserFilter || ( _pImp->GetCurFilter() != pFilter );
 
-            createNewUserFilter( _rFilter, false );
+            createNewUserFilter( _rFilter );
 
             break;
         }
@@ -1437,13 +1378,11 @@ SvtFileDialogFilter_Impl* SvtFileDialog::FindFilter_Impl
 }
 
 
-
 void SvtFileDialog::ExecuteFilter()
 {
     _pImp->m_bNeedDelayedFilterExecute = false;
     executeAsync( AsyncPickerAction::eExecuteFilter, OUString(), getMostCurrentFilter( _pImp ) );
 }
-
 
 
 void SvtFileDialog::OpenMultiSelection_Impl()
@@ -1464,7 +1403,6 @@ void SvtFileDialog::OpenMultiSelection_Impl()
 }
 
 
-
 void SvtFileDialog::UpdateControls( const OUString& rURL )
 {
        _pImp->_pEdFileName->SetBaseURL( rURL );
@@ -1474,7 +1412,7 @@ void SvtFileDialog::UpdateControls( const OUString& rURL )
 
     {
         OUString sText;
-        DBG_ASSERT( INetProtocol::NotValid != aObj.GetProtocol(), "SvtFileDialog::UpdateControls: Invalid URL!" );
+        SAL_WARN_IF( INetProtocol::NotValid == aObj.GetProtocol(), "fpicker.office", "SvtFileDialog::UpdateControls: Invalid URL!" );
 
         if ( aObj.getSegmentCount() )
         {
@@ -1517,11 +1455,10 @@ void SvtFileDialog::UpdateControls( const OUString& rURL )
 }
 
 
-
 IMPL_LINK_TYPED( SvtFileDialog, SelectHdl_Impl, SvTreeListBox*, pBox, void )
 {
     SvTreeListEntry* pEntry = pBox->FirstSelected();
-    DBG_ASSERT( pEntry, "SelectHandler without selected entry" );
+    assert( pEntry && "SelectHandler without selected entry" );
     SvtContentEntry* pUserData = static_cast<SvtContentEntry*>(pEntry->GetUserData());
 
     if ( pUserData )
@@ -1569,7 +1506,6 @@ IMPL_LINK_TYPED( SvtFileDialog, SelectHdl_Impl, SvTreeListBox*, pBox, void )
 }
 
 
-
 IMPL_LINK_NOARG_TYPED(SvtFileDialog, DblClickHdl_Impl, SvTreeListBox*, bool)
 {
     _pImp->_bDoubleClick = true;
@@ -1580,12 +1516,10 @@ IMPL_LINK_NOARG_TYPED(SvtFileDialog, DblClickHdl_Impl, SvTreeListBox*, bool)
 }
 
 
-
 IMPL_LINK_NOARG_TYPED(SvtFileDialog, EntrySelectHdl_Impl, ComboBox&, void)
 {
     FileSelect();
 }
-
 
 
 IMPL_LINK_TYPED( SvtFileDialog, OpenDoneHdl_Impl, SvtFileView*, pView, void )
@@ -1600,14 +1534,13 @@ IMPL_LINK_TYPED( SvtFileDialog, OpenDoneHdl_Impl, SvtFileView*, pView, void )
     {
         // additional check: the parent folder should not be prohibited
         INetURLObject aCurrentFolder( sCurrentFolder );
-        DBG_ASSERT( INetProtocol::NotValid != aCurrentFolder.GetProtocol(),
-            "SvtFileDialog::OpenDoneHdl_Impl: invalid current URL!" );
+        SAL_WARN_IF( INetProtocol::NotValid == aCurrentFolder.GetProtocol(),
+            "fpicker.office", "SvtFileDialog::OpenDoneHdl_Impl: invalid current URL!" );
 
         aCurrentFolder.removeSegment();
     }
     EnableControl( _pImp->_pBtnUp, bCanTravelUp );
 }
-
 
 
 IMPL_LINK_NOARG_TYPED(SvtFileDialog, AutoExtensionHdl_Impl, Button*, void)
@@ -1619,7 +1552,6 @@ IMPL_LINK_NOARG_TYPED(SvtFileDialog, AutoExtensionHdl_Impl, Button*, void)
     // update the extension of the current file if necessary
     lcl_autoUpdateFileExtension( this, _pImp->GetCurFilter()->GetExtension() );
 }
-
 
 
 IMPL_LINK_TYPED( SvtFileDialog, ClickHdl_Impl, Button*, pCheckBox, void )
@@ -1647,14 +1579,12 @@ IMPL_LINK_TYPED( SvtFileDialog, ClickHdl_Impl, Button*, pCheckBox, void )
 }
 
 
-
 IMPL_LINK_NOARG_TYPED(SvtFileDialog, PlayButtonHdl_Impl, Button*, void)
 {
     if ( _pFileNotifier )
         _pFileNotifier->notify( CTRL_STATE_CHANGED,
                                 PUSHBUTTON_PLAY );
 }
-
 
 
 bool SvtFileDialog::Notify( NotifyEvent& rNEvt )
@@ -1689,14 +1619,13 @@ bool SvtFileDialog::Notify( NotifyEvent& rNEvt )
 }
 
 
-
 class SvtDefModalDialogParent_Impl
 {
 private:
     VclPtr<vcl::Window> _pOld;
 
 public:
-    SvtDefModalDialogParent_Impl( vcl::Window *pNew ) :
+    explicit SvtDefModalDialogParent_Impl( vcl::Window *pNew ) :
         _pOld( Application::GetDefDialogParent() )
         { Application::SetDefDialogParent( pNew ); }
 
@@ -1779,7 +1708,7 @@ short SvtFileDialog::Execute()
     short nResult = ModalDialog::Execute();
     _bIsInExecute = false;
 
-    DBG_ASSERT( !m_pCurrentAsyncAction.is(), "SvtFilePicker::Execute: still running an async action!" );
+    SAL_WARN_IF( m_pCurrentAsyncAction.is(), "fpicker.office", "SvtFilePicker::Execute: still running an async action!" );
         // the dialog should not be cancellable while an async action is running - first, the action
         // needs to be cancelled
 
@@ -1916,7 +1845,6 @@ void SvtFileDialog::EnableControl( Control* _pControl, bool _bEnable )
 }
 
 
-
 short SvtFileDialog::PrepareExecute()
 {
     OUString aEnvValue;
@@ -2027,7 +1955,7 @@ short SvtFileDialog::PrepareExecute()
                 }
             }
             SvtFileDialogFilter_Impl* pNewCurFilter = _pImp->m_aFilter[ nPos ].get();
-            DBG_ASSERT( pNewCurFilter, "SvtFileDialog::Execute: invalid filter pos!" );
+            assert( pNewCurFilter && "SvtFileDialog::Execute: invalid filter pos!" );
             _pImp->SetCurFilter( pNewCurFilter, pNewCurFilter->GetName() );
         }
 
@@ -2104,7 +2032,7 @@ short SvtFileDialog::PrepareExecute()
 void SvtFileDialog::executeAsync( ::svt::AsyncPickerAction::Action _eAction,
                                     const OUString& _rURL, const OUString& _rFilter )
 {
-    DBG_ASSERT( !m_pCurrentAsyncAction.is(), "SvtFileDialog::executeAsync: previous async action not yet finished!" );
+    SAL_WARN_IF( m_pCurrentAsyncAction.is(), "fpicker.office", "SvtFileDialog::executeAsync: previous async action not yet finished!" );
 
     m_pCurrentAsyncAction = new AsyncPickerAction( this, _pFileView, _eAction );
 
@@ -2122,13 +2050,11 @@ void SvtFileDialog::executeAsync( ::svt::AsyncPickerAction::Action _eAction,
 }
 
 
-
 void SvtFileDialog::FileSelect()
 {
     if ( _pFileNotifier )
         _pFileNotifier->notify( FILE_SELECTION_CHANGED, 0 );
 }
-
 
 
 void SvtFileDialog::FilterSelect()
@@ -2137,7 +2063,6 @@ void SvtFileDialog::FilterSelect()
         _pFileNotifier->notify( CTRL_STATE_CHANGED,
                                 LISTBOX_FILTER );
 }
-
 
 
 void SvtFileDialog::SetStandardDir( const OUString& rStdDir )
@@ -2149,7 +2074,7 @@ void SvtFileDialog::SetStandardDir( const OUString& rStdDir )
 
 {
     INetURLObject aObj( rStdDir );
-    DBG_ASSERT( aObj.GetProtocol() != INetProtocol::NotValid, "Invalid protocol!" );
+    SAL_WARN_IF( aObj.GetProtocol() == INetProtocol::NotValid, "fpicker.office", "Invalid protocol!" );
     aObj.setFinalSlash();
     _pImp->SetStandardDir( aObj.GetMainURL( INetURLObject::NO_DECODE ) );
 }
@@ -2158,7 +2083,6 @@ void SvtFileDialog::SetBlackList( const css::uno::Sequence< OUString >& rBlackLi
 {
     _pImp->SetBlackList( rBlackList );
 }
-
 
 
 const css::uno::Sequence< OUString >& SvtFileDialog::GetBlackList() const
@@ -2179,20 +2103,18 @@ const OUString& SvtFileDialog::GetStandardDir() const
 }
 
 
-
 void SvtFileDialog::PrevLevel_Impl()
 {
-    _pFileView->EndInplaceEditing( false );
+    _pFileView->EndInplaceEditing();
 
     OUString sDummy;
     executeAsync( AsyncPickerAction::ePrevLevel, sDummy, sDummy );
 }
 
 
-
 void SvtFileDialog::OpenURL_Impl( const OUString& _rURL )
 {
-    _pFileView->EndInplaceEditing( false );
+    _pFileView->EndInplaceEditing();
 
     executeAsync( AsyncPickerAction::eOpenURL, _rURL, getMostCurrentFilter( _pImp ) );
 }
@@ -2210,17 +2132,16 @@ SvtFileDialogFilter_Impl* SvtFileDialog::implAddFilter( const OUString& _rFilter
 }
 
 
-
 void SvtFileDialog::AddFilter( const OUString& _rFilter, const OUString& _rType )
 {
-    DBG_ASSERT( !IsInExecute(), "SvtFileDialog::AddFilter: currently executing!" );
+    SAL_WARN_IF( IsInExecute(), "fpicker.office", "SvtFileDialog::AddFilter: currently executing!" );
     implAddFilter ( _rFilter, _rType );
 }
 
 
 void SvtFileDialog::AddFilterGroup( const OUString& _rFilter, const Sequence< StringPair >& _rFilters )
 {
-    DBG_ASSERT( !IsInExecute(), "SvtFileDialog::AddFilter: currently executing!" );
+    SAL_WARN_IF( IsInExecute(), "fpicker.office", "SvtFileDialog::AddFilter: currently executing!" );
 
     implAddFilter( _rFilter, OUString() );
     const StringPair* pSubFilters       =               _rFilters.getConstArray();
@@ -2232,7 +2153,7 @@ void SvtFileDialog::AddFilterGroup( const OUString& _rFilter, const Sequence< St
 
 void SvtFileDialog::SetCurFilter( const OUString& rFilter )
 {
-    DBG_ASSERT( !IsInExecute(), "SvtFileDialog::SetCurFilter: currently executing!" );
+    SAL_WARN_IF( IsInExecute(), "fpicker.office", "SvtFileDialog::SetCurFilter: currently executing!" );
 
     // look for corresponding filter
     sal_uInt16 nPos = _pImp->m_aFilter.size();
@@ -2247,7 +2168,6 @@ void SvtFileDialog::SetCurFilter( const OUString& rFilter )
         }
     }
 }
-
 
 
 OUString SvtFileDialog::GetCurFilter() const
@@ -2267,20 +2187,17 @@ OUString SvtFileDialog::getCurFilter( ) const
 }
 
 
-
 sal_uInt16 SvtFileDialog::GetFilterCount() const
 {
     return _pImp->m_aFilter.size();
 }
 
 
-
 const OUString& SvtFileDialog::GetFilterName( sal_uInt16 nPos ) const
 {
-    DBG_ASSERT( nPos < GetFilterCount(), "invalid index" );
+    assert( nPos < GetFilterCount() && "invalid index" );
     return _pImp->m_aFilter[ nPos ]->GetName();
 }
-
 
 
 void SvtFileDialog::InitSize()
@@ -2301,7 +2218,6 @@ void SvtFileDialog::InitSize()
             _pFileView->SetConfigString( sCfgStr );
     }
 }
-
 
 
 std::vector<OUString> SvtFileDialog::GetPathList() const
@@ -2356,7 +2272,7 @@ bool SvtFileDialog::IsolateFilterFromPath_Impl( OUString& rPath, OUString& rFilt
         if ( nPathTokenPos == -1 )
         {
             OUString aDelim(
-#if defined(WNT)
+#if defined(_WIN32)
                     '\\'
 #else
                     '/'

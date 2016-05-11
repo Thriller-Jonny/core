@@ -558,7 +558,7 @@ void ToolboxController::bindListener()
                         // UI disables the button. Catch exception as we release our mutex, it is possible
                         // that someone else already disposed this instance!
                         FeatureStateEvent aFeatureStateEvent;
-                        aFeatureStateEvent.IsEnabled = sal_False;
+                        aFeatureStateEvent.IsEnabled = false;
                         aFeatureStateEvent.FeatureURL = rListener.aURL;
                         aFeatureStateEvent.State = Any();
                         xStatusListener->statusChanged( aFeatureStateEvent );
@@ -675,7 +675,6 @@ void ToolboxController::updateStatus( const OUString& aCommandURL )
 }
 
 
-
 void ToolboxController::dispatchCommand( const OUString& sCommandURL, const Sequence< PropertyValue >& rArgs, const OUString &sTarget )
 {
     try
@@ -697,7 +696,6 @@ void ToolboxController::dispatchCommand( const OUString& sCommandURL, const Sequ
     {
     }
 }
-
 
 
 css::uno::Reference< css::beans::XPropertySetInfo >  SAL_CALL ToolboxController::getPropertySetInfo() throw(css::uno::RuntimeException, std::exception)
@@ -739,9 +737,9 @@ sal_Bool SAL_CALL ToolboxController::convertFastPropertyValue( css::uno::Any&   
             {
                 aConvertedValue <<= aNewValue;
                 aOldValue <<= m_bSupportVisible;
-                return sal_True;
+                return true;
             }
-            return sal_False;
+            return false;
         }
     }
     return OPropertyContainer::convertFastPropertyValue(aConvertedValue, aOldValue, nHandle, aValue);
@@ -760,7 +758,6 @@ throw( css::uno::Exception, std::exception)
             this->setSupportVisibleProperty( rValue );
     }
 }
-
 
 
 IMPL_STATIC_LINK_TYPED( ToolboxController, ExecuteHdl_Impl, void*, p, void )

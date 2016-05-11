@@ -322,7 +322,6 @@ public:
 };
 
 
-
 class SmShowSymbol : public Control
 {
     Link<SmShowSymbol&,void> aDblClickHdlLink;
@@ -344,9 +343,6 @@ public:
     void    SetDblClickHdl(const Link<SmShowSymbol&,void> &rLink) { aDblClickHdlLink = rLink; }
 };
 
-
-
-class SmSymDefineDialog;
 
 class SmSymbolDialog : public ModalDialog
 {
@@ -373,7 +369,7 @@ class SmSymbolDialog : public ModalDialog
     DECL_LINK_TYPED(GetClickHdl, Button*, void);
     void SymbolDblClickHdl();
 
-    void            FillSymbolSets(bool bDeleteText = true);
+    void            FillSymbolSets();
     const SmSym    *GetSymbol() const;
 
     virtual void    DataChanged( const DataChangedEvent& rDCEvt ) override;
@@ -390,7 +386,6 @@ public:
 };
 
 
-
 class SmShowChar : public Control
 {
     virtual void    Paint(vcl::RenderContext& rRenderContext, const Rectangle&) override;
@@ -405,7 +400,6 @@ public:
     void    SetSymbol( const SmSym *pSym );
     void    SetSymbol( sal_UCS4 cChar, const vcl::Font &rFont );
 };
-
 
 
 class SmSymDefineDialog : public ModalDialog
@@ -448,8 +442,8 @@ class SmSymDefineDialog : public ModalDialog
 
     void    FillSymbols(ComboBox &rComboBox, bool bDeleteText = true);
     void    FillSymbolSets(ComboBox &rComboBox, bool bDeleteText = true);
-    void    FillFonts(bool bDeleteText = true);
-    void    FillStyles(bool bDeleteText = true);
+    void    FillFonts();
+    void    FillStyles();
 
     void    SetSymbolSetManager(const SmSymbolManager &rMgr);
     void    SetFont(const OUString &rFontName, const OUString &rStyleName);
@@ -481,14 +475,14 @@ public:
     // Dialog
     virtual short   Execute() override;
 
-    bool SelectOldSymbolSet(const OUString &rSymbolSetName)
+    void SelectOldSymbolSet(const OUString &rSymbolSetName)
     {
-        return SelectSymbolSet(*pOldSymbolSets, rSymbolSetName, false);
+        SelectSymbolSet(*pOldSymbolSets, rSymbolSetName, false);
     }
 
-    bool SelectOldSymbol(const OUString &rSymbolName)
+    void SelectOldSymbol(const OUString &rSymbolName)
     {
-        return SelectSymbol(*pOldSymbols, rSymbolName, false);
+        SelectSymbol(*pOldSymbols, rSymbolName, false);
     }
 
     bool SelectSymbolSet(const OUString &rSymbolSetName)
@@ -505,7 +499,6 @@ public:
     bool        SelectStyle(const OUString &rStyleName) { return SelectStyle(rStyleName, true); };
     void        SelectChar(sal_Unicode cChar);
 };
-
 
 
 #endif

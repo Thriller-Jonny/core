@@ -45,7 +45,6 @@ LibBoxControl::LibBoxControl( sal_uInt16 nSlotId, sal_uInt16 nId, ToolBox& rTbx 
 }
 
 
-
 void LibBoxControl::StateChanged( sal_uInt16, SfxItemState eState, const SfxPoolItem* pState )
 {
     LibBox* pBox = static_cast<LibBox*>(GetToolBox().GetItemWindow(GetId()));
@@ -64,10 +63,9 @@ void LibBoxControl::StateChanged( sal_uInt16, SfxItemState eState, const SfxPool
 }
 
 
-
 VclPtr<vcl::Window> LibBoxControl::CreateItemWindow( vcl::Window *pParent )
 {
-    return VclPtr<LibBox>::Create( pParent, m_xFrame );
+    return VclPtr<LibBox>::Create( pParent );
 }
 
 
@@ -133,9 +131,8 @@ void DocListenerBox::onDocumentModeChanged( const ScriptDocument& /*_rDocument*/
     // not interested in
 }
 
-LibBox::LibBox( vcl::Window* pParent, const uno::Reference< frame::XFrame >& rFrame ) :
-    DocListenerBox( pParent ),
-    m_xFrame( rFrame )
+LibBox::LibBox( vcl::Window* pParent ) :
+    DocListenerBox( pParent )
 {
     FillBox();
     bIgnoreSelect = true;   // do not yet transfer select of 0
@@ -145,7 +142,6 @@ LibBox::LibBox( vcl::Window* pParent, const uno::Reference< frame::XFrame >& rFr
     SetSizePixel( Size( 250, 200 ) );
     bIgnoreSelect = false;
 }
-
 
 
 LibBox::~LibBox()
@@ -313,9 +309,9 @@ void LibBox::NotifyIDE()
         OUString aLibName = pEntry->GetLibName();
         SfxStringItem aLibNameItem( SID_BASICIDE_ARG_LIBNAME, aLibName );
         if (SfxDispatcher* pDispatcher = GetDispatcher())
-            pDispatcher->Execute(
-                SID_BASICIDE_LIBSELECTED,
-                SfxCallMode::SYNCHRON, &aDocumentItem, &aLibNameItem, 0L
+            pDispatcher->ExecuteList(
+                SID_BASICIDE_LIBSELECTED, SfxCallMode::SYNCHRON,
+                { &aDocumentItem, &aLibNameItem }
             );
     }
     ReleaseFocus();

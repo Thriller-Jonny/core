@@ -178,10 +178,10 @@ sal_Int32 getDefaultNumberFormat(sal_Int32 _nDataType,
                 {
                     // generate a new format if necessary
                     Reference< XNumberFormats > xFormats(_xTypes, UNO_QUERY);
-                    OUString sNewFormat = xFormats->generateFormat( 0L, _rLocale, sal_False, sal_False, (sal_Int16)_nScale, 1);
+                    OUString sNewFormat = xFormats->generateFormat( 0L, _rLocale, false, false, (sal_Int16)_nScale, 1);
 
                     // and add it to the formatter if necessary
-                    nFormat = xFormats->queryKey(sNewFormat, _rLocale, sal_False);
+                    nFormat = xFormats->queryKey(sNewFormat, _rLocale, false);
                     if (nFormat == (sal_Int32)-1)
                         nFormat = xFormats->addNew(sNewFormat, _rLocale);
                 }
@@ -734,11 +734,11 @@ Sequence< OUString > getFieldNamesByCommandDescriptor( const Reference< XConnect
 }
 
 SQLException prependErrorInfo( const SQLException& _rChainedException, const Reference< XInterface >& _rxContext,
-    const OUString& _rAdditionalError, const StandardSQLState _eSQLState, const sal_Int32 _nErrorCode )
+    const OUString& _rAdditionalError, const StandardSQLState _eSQLState )
 {
     return SQLException( _rAdditionalError, _rxContext,
-        _eSQLState == SQL_ERROR_UNSPECIFIED ? OUString() : getStandardSQLState( _eSQLState ),
-        _nErrorCode, makeAny( _rChainedException ) );
+        _eSQLState == StandardSQLState::ERROR_UNSPECIFIED ? OUString() : getStandardSQLState( _eSQLState ),
+        0, makeAny( _rChainedException ) );
 }
 
 namespace
@@ -765,26 +765,26 @@ namespace
 
         switch ( _eComposeRule )
         {
-            case eInTableDefinitions:
+            case EComposeRule::InTableDefinitions:
                 pCatalogCall = &XDatabaseMetaData::supportsCatalogsInTableDefinitions;
                 pSchemaCall = &XDatabaseMetaData::supportsSchemasInTableDefinitions;
                 break;
-            case eInIndexDefinitions:
+            case EComposeRule::InIndexDefinitions:
                 pCatalogCall = &XDatabaseMetaData::supportsCatalogsInIndexDefinitions;
                 pSchemaCall = &XDatabaseMetaData::supportsSchemasInIndexDefinitions;
                 break;
-            case eInProcedureCalls:
+            case EComposeRule::InProcedureCalls:
                 pCatalogCall = &XDatabaseMetaData::supportsCatalogsInProcedureCalls;
                 pSchemaCall = &XDatabaseMetaData::supportsSchemasInProcedureCalls;
                 break;
-            case eInPrivilegeDefinitions:
+            case EComposeRule::InPrivilegeDefinitions:
                 pCatalogCall = &XDatabaseMetaData::supportsCatalogsInPrivilegeDefinitions;
                 pSchemaCall = &XDatabaseMetaData::supportsSchemasInPrivilegeDefinitions;
                 break;
-            case eComplete:
+            case EComposeRule::Complete:
                 bIgnoreMetaData = true;
                 break;
-            case eInDataManipulation:
+            case EComposeRule::InDataManipulation:
                 // already properly set above
                 break;
         }
@@ -1127,11 +1127,11 @@ try
             }
 
             // With this we can generate a new format ...
-            OUString sNewFormat = xFormats->generateFormat(nBaseKey, _rLocale, sal_False, sal_False, nDecimals, 0);
+            OUString sNewFormat = xFormats->generateFormat(nBaseKey, _rLocale, false, false, nDecimals, 0);
             // No thousands separator, negative numbers are not in red, no leading zeros
 
             // ... and add at FormatsSupplier (if needed)
-            sal_Int32 nKey = xFormats->queryKey(sNewFormat, _rLocale, sal_False);
+            sal_Int32 nKey = xFormats->queryKey(sNewFormat, _rLocale, false);
             if (nKey == (sal_Int32)-1)
             {   // not added yet in my formatter ...
                 nKey = xFormats->addNew(sNewFormat, _rLocale);
@@ -1303,13 +1303,13 @@ OUString composeTableNameForSelect( const Reference< XConnection >& _rxConnectio
         bUseSchemaInSelect ? _rSchema : OUString(),
         _rName,
         true,
-        eInDataManipulation
+        EComposeRule::InDataManipulation
     );
 }
 
 namespace
 {
-    static void lcl_getTableNameComponents( const Reference<XPropertySet>& _xTable,
+    void lcl_getTableNameComponents( const Reference<XPropertySet>& _xTable,
         OUString& _out_rCatalog, OUString& _out_rSchema, OUString& _out_rName )
     {
         ::dbtools::OPropertyMap& rPropMap = OMetaConnection::getPropMap();
@@ -1515,7 +1515,7 @@ bool implUpdateObject(const Reference< XRowUpdate >& _rxUpdatedObject,
                 _rxUpdatedObject->updateBinaryStream(_nColumnIndex, xStream, xStream->available());
                 break;
             }
-            // run through
+            SAL_FALLTHROUGH;
         default:
             bSuccessfullyReRouted = false;
     }
@@ -1622,7 +1622,7 @@ bool implSetObject( const Reference< XParameters >& _rxParameters,
                 _rxParameters->setBinaryStream(_nColumnIndex, xStream, xStream->available());
                 break;
             }
-            // run through
+            SAL_FALLTHROUGH;
         default:
             bSuccessfullyReRouted = false;
 
@@ -1665,8 +1665,8 @@ namespace
             if ( m_aSet.size() < (size_t)Index )
                 throw IndexOutOfBoundsException();
 
-            ::std::vector<bool, std::allocator<bool> >::iterator aIter = m_aSet.begin();
-            ::std::vector<bool, std::allocator<bool> >::iterator aEnd = m_aSet.end();
+            ::std::vector<bool, std::allocator<bool> >::const_iterator aIter = m_aSet.begin();
+            ::std::vector<bool, std::allocator<bool> >::const_iterator aEnd = m_aSet.end();
             sal_Int32 i = 0;
             sal_Int32 nParamPos = -1;
             for(; aIter != aEnd && i <= Index; ++aIter)
@@ -1711,7 +1711,7 @@ void askForParameters(const Reference< XSingleSelectQueryComposer >& _xComposer,
             OUString sName;
             xParam->getPropertyValue(PROPERTY_NAME) >>= sName;
 
-            TParameterPositions::iterator aFind = aParameterNames.find(sName);
+            TParameterPositions::const_iterator aFind = aParameterNames.find(sName);
             if ( aFind != aParameterNames.end() )
                 aNewParameterSet[i] = true;
             aParameterNames[sName].push_back(i+1);
@@ -1762,9 +1762,9 @@ void askForParameters(const Reference< XSingleSelectQueryComposer >& _xComposer,
                 if (hasProperty(OMetaConnection::getPropMap().getNameByIndex(PROPERTY_ID_SCALE), xParamColumn))
                     xParamColumn->getPropertyValue(OMetaConnection::getPropMap().getNameByIndex(PROPERTY_ID_SCALE)) >>= nScale;
                     // (the index of the parameters is one-based)
-                TParameterPositions::iterator aFind = aParameterNames.find(pFinalValues->Name);
-                ::std::vector<sal_Int32>::iterator aIterPos = aFind->second.begin();
-                ::std::vector<sal_Int32>::iterator aEndPos = aFind->second.end();
+                TParameterPositions::const_iterator aFind = aParameterNames.find(pFinalValues->Name);
+                ::std::vector<sal_Int32>::const_iterator aIterPos = aFind->second.begin();
+                ::std::vector<sal_Int32>::const_iterator aEndPos = aFind->second.end();
                 for(;aIterPos != aEndPos;++aIterPos)
                 {
                     if ( _aParametersSet.empty() || !_aParametersSet[(*aIterPos)-1] )
@@ -2007,33 +2007,33 @@ void checkDisposed(bool _bThrow) throw ( DisposedException )
 
 }
 
-OSQLColumns::Vector::const_iterator find(OSQLColumns::Vector::const_iterator __first,
-                                        OSQLColumns::Vector::const_iterator __last,
+OSQLColumns::Vector::const_iterator find(const OSQLColumns::Vector::const_iterator& first,
+                                        const OSQLColumns::Vector::const_iterator& last,
                                         const OUString& _rVal,
                                         const ::comphelper::UStringMixEqual& _rCase)
 {
     OUString sName = OMetaConnection::getPropMap().getNameByIndex(PROPERTY_ID_NAME);
-    return find(__first,__last,sName,_rVal,_rCase);
+    return find(first,last,sName,_rVal,_rCase);
 }
 
-OSQLColumns::Vector::const_iterator findRealName(OSQLColumns::Vector::const_iterator __first,
-                                        OSQLColumns::Vector::const_iterator __last,
+OSQLColumns::Vector::const_iterator findRealName(const OSQLColumns::Vector::const_iterator& first,
+                                        const OSQLColumns::Vector::const_iterator& last,
                                         const OUString& _rVal,
                                         const ::comphelper::UStringMixEqual& _rCase)
 {
     OUString sRealName = OMetaConnection::getPropMap().getNameByIndex(PROPERTY_ID_REALNAME);
-    return find(__first,__last,sRealName,_rVal,_rCase);
+    return find(first,last,sRealName,_rVal,_rCase);
 }
 
-OSQLColumns::Vector::const_iterator find(OSQLColumns::Vector::const_iterator __first,
-                                        OSQLColumns::Vector::const_iterator __last,
+OSQLColumns::Vector::const_iterator find(OSQLColumns::Vector::const_iterator first,
+                                        const OSQLColumns::Vector::const_iterator& last,
                                         const OUString& _rProp,
                                         const OUString& _rVal,
                                         const ::comphelper::UStringMixEqual& _rCase)
 {
-    while (__first != __last && !_rCase(getString((*__first)->getPropertyValue(_rProp)),_rVal))
-        ++__first;
-    return __first;
+    while (first != last && !_rCase(getString((*first)->getPropertyValue(_rProp)),_rVal))
+        ++first;
+    return first;
 }
 } //namespace connectivity
 

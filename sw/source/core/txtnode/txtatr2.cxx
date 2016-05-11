@@ -36,7 +36,6 @@
 #include <IDocumentStylePoolAccess.hxx>
 
 
-
 SwTextCharFormat::SwTextCharFormat( SwFormatCharFormat& rAttr,
                     sal_Int32 nStt, sal_Int32 nEnde )
     : SwTextAttr( rAttr, nStt )
@@ -254,7 +253,7 @@ SwCharFormat* SwTextRuby::GetCharFormat()
     if( !rFormat.GetText().isEmpty() )
     {
         const SwDoc* pDoc = GetTextNode().GetDoc();
-        const OUString rStr = rFormat.GetCharFormatName();
+        const OUString& rStr = rFormat.GetCharFormatName();
         const sal_uInt16 nId = rStr.isEmpty()
                              ? static_cast<sal_uInt16>(RES_POOLCHR_RUBYTEXT)
                              : rFormat.GetCharFormatId();

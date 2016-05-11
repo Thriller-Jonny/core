@@ -13,23 +13,23 @@
  manual changes will be rewritten by the next run of update_pch.sh (which presumably
  also fixes all possible problems, so it's usually better to use it).
 
- Generated on 2015-11-14 14:16:41 using:
+ Generated on 2016-02-06 12:33:34 using:
  ./bin/update_pch vbahelper msforms --cutoff=3 --exclude:system --include:module --include:local
 
  If after updating build fails, use the following command to locate conflicting headers:
- ./bin/update_pch_bisect ./vbahelper/inc/pch/precompiled_msforms.hxx "/opt/lo/bin/make vbahelper.build" --find-conflicts
+ ./bin/update_pch_bisect ./vbahelper/inc/pch/precompiled_msforms.hxx "make vbahelper.build" --find-conflicts
 */
 
 #include <algorithm>
 #include <cassert>
 #include <climits>
-#include <config_features.h>
 #include <config_global.h>
 #include <config_typesizes.h>
 #include <config_vcl.h>
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>
+#include <deque>
 #include <float.h>
 #include <functional>
 #include <iomanip>
@@ -53,7 +53,6 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
-#include <boost/functional/hash.hpp>
 #include <boost/intrusive_ptr.hpp>
 #include <osl/diagnose.h>
 #include <osl/endian.h>
@@ -99,18 +98,18 @@
 #include <vcl/accel.hxx>
 #include <vcl/alpha.hxx>
 #include <vcl/animate.hxx>
-#include <vcl/apptypes.hxx>
 #include <vcl/bitmap.hxx>
 #include <vcl/bitmapex.hxx>
 #include <vcl/button.hxx>
 #include <vcl/cairo.hxx>
 #include <vcl/checksum.hxx>
-#include <vcl/cmdevt.hxx>
+#include <vcl/commandevent.hxx>
 #include <vcl/ctrl.hxx>
 #include <vcl/cursor.hxx>
 #include <vcl/devicecoordinate.hxx>
 #include <vcl/dllapi.h>
 #include <vcl/event.hxx>
+#include <vcl/exceptiontypes.hxx>
 #include <vcl/fntstyle.hxx>
 #include <vcl/font.hxx>
 #include <vcl/gdimtf.hxx>
@@ -119,8 +118,8 @@
 #include <vcl/graph.hxx>
 #include <vcl/hatch.hxx>
 #include <vcl/image.hxx>
-#include <vcl/impdel.hxx>
 #include <vcl/inputctx.hxx>
+#include <vcl/inputtypes.hxx>
 #include <vcl/keycod.hxx>
 #include <vcl/keycodes.hxx>
 #include <vcl/lineinfo.hxx>
@@ -164,8 +163,10 @@
 #include <basegfx/vector/b2ivector.hxx>
 #include <basic/basicdllapi.h>
 #include <basic/basmgr.hxx>
+#include <basic/codecompletecache.hxx>
 #include <basic/sbdef.hxx>
 #include <basic/sberrors.hxx>
+#include <basic/sbmod.hxx>
 #include <basic/sbstar.hxx>
 #include <basic/sbx.hxx>
 #include <basic/sbxcore.hxx>
@@ -189,7 +190,6 @@
 #include <com/sun/star/bridge/oleautomation/Decimal.hpp>
 #include <com/sun/star/connection/XConnection.hpp>
 #include <com/sun/star/container/XNameContainer.hpp>
-#include <com/sun/star/datatransfer/DataFlavor.hpp>
 #include <com/sun/star/document/CmisVersion.hpp>
 #include <com/sun/star/drawing/LineCap.hpp>
 #include <com/sun/star/drawing/XShape.hpp>
@@ -225,10 +225,10 @@
 #include <com/sun/star/lang/XSingleComponentFactory.hpp>
 #include <com/sun/star/lang/XSingleServiceFactory.hpp>
 #include <com/sun/star/lang/XTypeProvider.hpp>
-#include <com/sun/star/plugin/PluginDescription.hpp>
 #include <com/sun/star/registry/XRegistryKey.hpp>
 #include <com/sun/star/script/BasicErrorException.hpp>
 #include <com/sun/star/script/ModuleInfo.hpp>
+#include <com/sun/star/script/XInvocation.hpp>
 #include <com/sun/star/script/XLibraryContainer.hpp>
 #include <com/sun/star/script/XStarBasicAccess.hpp>
 #include <com/sun/star/script/XStorageBasedLibraryContainer.hpp>
@@ -301,7 +301,6 @@
 #include <sfx2/viewfrm.hxx>
 #include <sot/formats.hxx>
 #include <sot/object.hxx>
-#include <sot/sotdata.hxx>
 #include <sot/sotdllapi.h>
 #include <svl/SfxBroadcaster.hxx>
 #include <svl/hint.hxx>
@@ -320,7 +319,6 @@
 #include <tools/fldunit.hxx>
 #include <tools/fontenum.hxx>
 #include <tools/gen.hxx>
-#include <tools/globname.hxx>
 #include <tools/lineend.hxx>
 #include <tools/link.hxx>
 #include <tools/mapunit.hxx>

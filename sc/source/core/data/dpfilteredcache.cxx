@@ -29,28 +29,10 @@
 #include "dpitemdata.hxx"
 
 #include <osl/diagnose.h>
-#include <com/sun/star/i18n/LocaleDataItem.hpp>
-#include <com/sun/star/sdbc/DataType.hpp>
-#include <com/sun/star/sdbc/XRow.hpp>
-#include <com/sun/star/sdbc/XRowSet.hpp>
-#include <com/sun/star/sdbc/XResultSetMetaData.hpp>
-#include <com/sun/star/sdbc/XResultSetMetaDataSupplier.hpp>
-#include <com/sun/star/util/Date.hpp>
-#include <com/sun/star/sheet/DataPilotFieldFilter.hpp>
-#include <com/sun/star/sheet/DataPilotFieldGroupBy.hpp>
-
-using namespace ::com::sun::star;
 
 using ::std::vector;
-using ::std::pair;
-using ::com::sun::star::i18n::LocaleDataItem;
-using ::com::sun::star::uno::Exception;
-using ::com::sun::star::uno::Reference;
 using ::com::sun::star::uno::Sequence;
 using ::com::sun::star::uno::Any;
-using ::com::sun::star::uno::UNO_QUERY;
-using ::com::sun::star::uno::UNO_QUERY_THROW;
-using ::com::sun::star::sheet::DataPilotFieldFilter;
 
 ScDPFilteredCache::SingleFilter::SingleFilter(const ScDPItemData& rItem) :
     maItem(rItem) {}
@@ -190,6 +172,11 @@ void ScDPFilteredCache::fillTable(
             SCROW nIndex = getCache().GetItemDataId(nCol, nRow, bRepeatIfEmpty);
             SCROW nOrder = getOrder(nCol, nIndex);
             aAdded[nOrder] = nIndex;
+
+            // tdf#96588 - large numbers of trailing identical empty
+            // rows generate the same nIndex & nOrder.
+            if (nRow == nDataSize)
+                break;
         }
         for (SCROW nRow = 0; nRow < nMemCount; ++nRow)
         {
@@ -260,13 +247,21 @@ bool ScDPFilteredCache::isRowActive(sal_Int32 nRow, sal_Int32* pLastRow) const
 void ScDPFilteredCache::filterByPageDimension(const vector<Criterion>& rCriteria, const std::unordered_set<sal_Int32>& rRepeatIfEmptyDims)
 {
     SCROW nRowSize = getRowSize();
+    SCROW nDataSize = mrCache.GetDataSize();
 
     maShowByPage.clear();
 
-    for (SCROW nRow = 0; nRow < nRowSize; ++nRow)
+    for (SCROW nRow = 0; nRow < nDataSize; ++nRow)
     {
         bool bShow = isRowQualified(nRow, rCriteria, rRepeatIfEmptyDims);
         maShowByPage.insert_back(nRow, nRow+1, bShow);
+    }
+
+    // tdf#96588 - rapidly extend for blank rows with identical data
+    if (nDataSize < nRowSize)
+    {
+        bool bBlankShow = isRowQualified(nDataSize, rCriteria, rRepeatIfEmptyDims);
+        maShowByPage.insert_back(nDataSize, nRowSize, bBlankShow);
     }
 
     maShowByPage.build_tree();
@@ -278,9 +273,9 @@ const ScDPItemData* ScDPFilteredCache::getCell(SCCOL nCol, SCROW nRow, bool bRep
    return mrCache.GetItemDataById( nCol, nId );
 }
 
-void  ScDPFilteredCache::getValue( ScDPValue& rVal, SCCOL nCol, SCROW nRow, bool bRepeatIfEmpty) const
+void  ScDPFilteredCache::getValue( ScDPValue& rVal, SCCOL nCol, SCROW nRow) const
 {
-    const ScDPItemData* pData = getCell( nCol, nRow, bRepeatIfEmpty );
+    const ScDPItemData* pData = getCell( nCol, nRow, false/*bRepeatIfEmpty*/ );
 
     if (pData)
     {

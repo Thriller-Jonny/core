@@ -35,17 +35,13 @@
 #include <tools/debug.hxx>
 #include <osl/diagnose.h>
 
-using com::sun::star::beans::XPropertySet;
 using com::sun::star::uno::Reference;
 using com::sun::star::uno::makeAny;
 using com::sun::star::uno::UNO_QUERY;
-using com::sun::star::uno::UNO_QUERY_THROW;
 using com::sun::star::container::XNameContainer;
 using com::sun::star::xml::sax::XAttributeList;
 using com::sun::star::xforms::XModel2;
 using namespace xmloff::token;
-
-
 
 
 static const struct SvXMLTokenMapEntry aAttributeMap[] =

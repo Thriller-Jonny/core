@@ -7,54 +7,31 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include <cppuhelper/supportsservice.hxx>
 #include "MDriver.hxx"
 #include "MConnection.hxx"
 
 #include <com/sun/star/mozilla/XMozillaBootstrap.hpp>
-#include <com/sun/star/mozilla/MozillaProductType.hpp>
-
-#include "resource/mork_res.hrc"
-#include "resource/common_res.hrc"
 
 using namespace connectivity::mork;
 
-namespace connectivity
+extern "C" SAL_DLLPUBLIC_EXPORT css::uno::XInterface * SAL_CALL com_sun_star_comp_sdbc_MorkDriver_get_implementation(
+    css::uno::XComponentContext* context,
+    css::uno::Sequence<css::uno::Any> const &)
 {
-    namespace mork
-    {
-        css::uno::Reference< css::uno::XInterface > create(css::uno::Reference< css::uno::XComponentContext > const & context)
-        {
-            return static_cast< cppu::OWeakObject * >(new MorkDriver(context));
-        }
-    }
+    return cppu::acquire(new MorkDriver(context));
 }
 
-MorkDriver::MorkDriver(css::uno::Reference< css::uno::XComponentContext > const context):
+MorkDriver::MorkDriver(const css::uno::Reference< css::uno::XComponentContext >& context):
     context_(context),
     m_xFactory(context_->getServiceManager(), css::uno::UNO_QUERY)
 {
     SAL_INFO("connectivity.mork", "=> MorkDriver::MorkDriver()" );
 }
 
-// static ServiceInfo
-
-OUString MorkDriver::getImplementationName_Static(  ) throw(css::uno::RuntimeException)
-{
-    return OUString(MORK_DRIVER_IMPL_NAME);
-}
-
-
-css::uno::Sequence< OUString > MorkDriver::getSupportedServiceNames_Static(  ) throw (css::uno::RuntimeException)
-{
-    css::uno::Sequence< OUString > aSNS { "com.sun.star.sdbc.Driver" };
-    return aSNS;
-}
-
 OUString SAL_CALL MorkDriver::getImplementationName()
     throw (css::uno::RuntimeException, std::exception)
 {
-    return getImplementationName_Static();
+    return OUString(MORK_DRIVER_IMPL_NAME);
 }
 
 sal_Bool SAL_CALL MorkDriver::supportsService(const OUString& serviceName)
@@ -66,7 +43,7 @@ sal_Bool SAL_CALL MorkDriver::supportsService(const OUString& serviceName)
 css::uno::Sequence< OUString > MorkDriver::getSupportedServiceNames()
     throw (css::uno::RuntimeException, std::exception)
 {
-    return getSupportedServiceNames_Static();
+    return { "com.sun.star.sdbc.Driver" };
 }
 
 css::uno::Reference< css::sdbc::XConnection > MorkDriver::connect(

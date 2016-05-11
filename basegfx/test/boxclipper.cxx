@@ -52,7 +52,7 @@ double getRandomOrdinal( const ::std::size_t n )
 inline bool compare(const B2DPoint& left, const B2DPoint& right)
 {
     return left.getX()<right.getX()
-        || (left.getX()==right.getX() && left.getY()<right.getY());
+        || (rtl::math::approxEqual(left.getX(),right.getX()) && left.getY()<right.getY());
 }
 
 class boxclipper : public CppUnit::TestFixture
@@ -167,10 +167,6 @@ public:
         for (auto const& aPolygon : randomPoly)
             aRandomIntersections.appendElement(aPolygon.getB2DRange(), B2VectorOrientation::Negative);
 #endif
-    }
-
-    void tearDown() override
-    {
     }
 
     B2DPolyPolygon normalizePoly( const B2DPolyPolygon& rPoly )

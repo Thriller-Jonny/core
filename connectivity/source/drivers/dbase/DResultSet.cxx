@@ -102,7 +102,7 @@ sal_Bool SAL_CALL ODbaseResultSet::moveRelativeToBookmark( const  Any& bookmark,
     ::osl::MutexGuard aGuard( m_aMutex );
     checkDisposed(OResultSet_BASE::rBHelper.bDisposed);
     if(!m_pTable)
-        return sal_False;
+        return false;
 
 
     Move(IResultSetHelper::BOOKMARK,comphelper::getINT32(bookmark),false);
@@ -133,7 +133,7 @@ sal_Int32 SAL_CALL ODbaseResultSet::compareBookmarks( const Any& lhs, const Any&
 
 sal_Bool SAL_CALL ODbaseResultSet::hasOrderedBookmarks(  ) throw( SQLException,  RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 sal_Int32 SAL_CALL ODbaseResultSet::hashBookmark( const  Any& bookmark ) throw( SQLException,  RuntimeException, std::exception)
@@ -163,11 +163,11 @@ bool ODbaseResultSet::fillIndexValues(const Reference< XColumnsSupplier> &_xInde
         dbase::ODbaseIndex* pIndex = reinterpret_cast< dbase::ODbaseIndex* >( xTunnel->getSomething(dbase::ODbaseIndex::getUnoTunnelImplementationId()) );
         if(pIndex)
         {
-            dbase::OIndexIterator* pIter = pIndex->createIterator(nullptr);
+            dbase::OIndexIterator* pIter = pIndex->createIterator();
 
             if (pIter)
             {
-                sal_uIntPtr nRec = pIter->First();
+                sal_uInt32 nRec = pIter->First();
                 while (nRec != NODE_NOTFOUND)
                 {
                     if (m_aOrderbyAscending[0])
@@ -216,7 +216,6 @@ sal_Int32 ODbaseResultSet::getCurrentFilePos() const
 {
     return m_pTable->getFilePos();
 }
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

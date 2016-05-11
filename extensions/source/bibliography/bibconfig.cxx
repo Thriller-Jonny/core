@@ -20,7 +20,6 @@
 
 #include <bibconfig.hxx>
 #include <com/sun/star/uno/Sequence.hxx>
-#include <com/sun/star/uno/Any.hxx>
 #include <com/sun/star/beans/PropertyValue.hpp>
 #include <com/sun/star/container/XNameAccess.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
@@ -235,9 +234,7 @@ void    BibConfig::ImplCommit()
             case  4: pValues[nProp] <<= nViewSize;  break;
             case  5: pValues[nProp] <<= sQueryText;  break;
             case  6: pValues[nProp] <<= sQueryField;  break;
-            case  7:
-                pValues[nProp].setValue(&bShowColumnAssignmentWarning, cppu::UnoType<bool>::get());
-            break;
+            case  7: pValues[nProp] <<= bShowColumnAssignmentWarning; break;
         }
     }
     PutProperties(aPropertyNames, aValues);
@@ -295,9 +292,9 @@ void    BibConfig::ImplCommit()
 
 const Mapping*  BibConfig::GetMapping(const BibDBDescriptor& rDesc) const
 {
-    for(size_t i = 0; i < pMappingsArr->size(); i++)
+    for(std::unique_ptr<Mapping> & i : *pMappingsArr)
     {
-        Mapping& rMapping = *(*pMappingsArr)[i].get();
+        Mapping& rMapping = *i.get();
         bool bURLEqual = rDesc.sDataSource.equals(rMapping.sURL);
         if(rDesc.sTableOrQuery == rMapping.sTableName && bURLEqual)
             return &rMapping;

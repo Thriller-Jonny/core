@@ -63,7 +63,7 @@
 #include <vcl/unohelp.hxx>
 #include <vcl/configsettings.hxx>
 
-#include "vcl/lazydelete.hxx"
+#include <vcl/lazydelete.hxx>
 
 #include <sfx2/sfxsids.hrc>
 
@@ -82,7 +82,6 @@ struct MenuLayoutData : public ControlLayoutData
 
 }
 
-using namespace ::com::sun::star;
 using namespace vcl;
 
 #define EXTRAITEMHEIGHT     4
@@ -396,7 +395,8 @@ void Menu::InsertItem(sal_uInt16 nItemId, const OUString& rStr, MenuItemBits nIt
     NbcInsertItem(nItemId, nItemBits, rStr, this, nPos, rIdent);
 
     vcl::Window* pWin = ImplGetWindow();
-    delete mpLayoutData, mpLayoutData = nullptr;
+    delete mpLayoutData;
+    mpLayoutData = nullptr;
     if ( pWin )
     {
         ImplCalcSize( pWin );
@@ -421,7 +421,7 @@ void Menu::InsertItem(sal_uInt16 nItemId, const OUString& rStr,
     SetItemImage( nItemId, rImage );
 }
 
-void Menu::InsertItem( const ResId& rResId, sal_uInt16 nPos )
+void Menu::InsertItem( const ResId& rResId )
 {
     ResMgr* pMgr = rResId.GetResMgr();
     if( ! pMgr )
@@ -456,16 +456,16 @@ void Menu::InsertItem( const ResId& rResId, sal_uInt16 nPos )
             Bitmap aBmp( ResId( static_cast<RSHEADER_TYPE*>(GetClassRes()), *pMgr ) );
             Image const aImg(aBmp);
             if ( !aText.isEmpty() )
-                InsertItem( nItemId, aText, aImg, nStatus, OString(), nPos );
+                InsertItem( nItemId, aText, aImg, nStatus );
             else
-                InsertItem( nItemId, aImg, nStatus, OString(), nPos );
+                InsertItem( nItemId, aImg, nStatus );
         }
         IncrementRes( GetObjSizeRes( static_cast<RSHEADER_TYPE*>(GetClassRes()) ) );
     }
     else if ( !bSep )
-        InsertItem(nItemId, aText, nStatus, OString(), nPos);
+        InsertItem(nItemId, aText, nStatus);
     if ( bSep )
-        InsertSeparator(OString(), nPos);
+        InsertSeparator();
 
     OUString aHelpText;
     if ( nObjMask & RSC_MENUITEM_HELPTEXT )
@@ -523,11 +523,11 @@ void Menu::InsertItem( const ResId& rResId, sal_uInt16 nPos )
         }
         IncrementRes( GetObjSizeRes( static_cast<RSHEADER_TYPE*>(GetClassRes()) ) );
     }
-    delete mpLayoutData, mpLayoutData = nullptr;
+    delete mpLayoutData;
+    mpLayoutData = nullptr;
 }
 
-void Menu::InsertItem(const OUString& rCommand, const uno::Reference<frame::XFrame>& rFrame,
-                      MenuItemBits nBits, const OString &rIdent, sal_uInt16 nPos)
+void Menu::InsertItem(const OUString& rCommand, const css::uno::Reference<css::frame::XFrame>& rFrame)
 {
     OUString aLabel(CommandInfoProvider::Instance().GetPopupLabelForCommand(rCommand, rFrame));
     OUString aTooltip(CommandInfoProvider::Instance().GetTooltipForCommand(rCommand, rFrame));
@@ -535,7 +535,7 @@ void Menu::InsertItem(const OUString& rCommand, const uno::Reference<frame::XFra
 
     sal_uInt16 nItemId = GetItemCount() + 1;
 
-    InsertItem(nItemId, aLabel, aImage, nBits, rIdent, nPos);
+    InsertItem(nItemId, aLabel, aImage);
     SetItemCommand(nItemId, rCommand);
     SetHelpText(nItemId, aTooltip);
 }
@@ -560,7 +560,8 @@ void Menu::InsertSeparator(const OString &rIdent, sal_uInt16 nPos)
     if( ImplGetSalMenu() && pData && pData->pSalMenuItem )
         ImplGetSalMenu()->InsertItem( pData->pSalMenuItem, nPos );
 
-    delete mpLayoutData, mpLayoutData = nullptr;
+    delete mpLayoutData;
+    mpLayoutData = nullptr;
 
     ImplCallEventListeners( VCLEVENT_MENU_INSERTITEM, nPos );
 }
@@ -586,7 +587,8 @@ void Menu::RemoveItem( sal_uInt16 nPos )
         if ( pWin->IsVisible() )
             pWin->Invalidate();
     }
-    delete mpLayoutData, mpLayoutData = nullptr;
+    delete mpLayoutData;
+    mpLayoutData = nullptr;
 
     if ( bRemove )
         ImplCallEventListeners( VCLEVENT_MENU_REMOVEITEM, nPos );
@@ -646,9 +648,9 @@ void ImplCopyItem( Menu* pThis, const Menu& rMenu, sal_uInt16 nPos, sal_uInt16 n
     }
 }
 
-void Menu::CopyItem( const Menu& rMenu, sal_uInt16 nPos, sal_uInt16 nNewPos )
+void Menu::CopyItem( const Menu& rMenu, sal_uInt16 nPos )
 {
-    ImplCopyItem( this, rMenu, nPos, nNewPos );
+    ImplCopyItem( this, rMenu, nPos, MENU_APPEND );
 }
 
 void Menu::Clear()
@@ -1046,7 +1048,8 @@ void Menu::SetItemText( sal_uInt16 nItemId, const OUString& rStr )
             ImplGetSalMenu()->SetItemText( nPos, pData->pSalMenuItem, rStr );
 
         vcl::Window* pWin = ImplGetWindow();
-        delete mpLayoutData, mpLayoutData = nullptr;
+        delete mpLayoutData;
+        mpLayoutData = nullptr;
         if (pWin && IsMenuBar())
         {
             ImplCalcSize( pWin );
@@ -2289,10 +2292,11 @@ void Menu::RemoveDisabledEntries( bool bCheckPopups, bool bRemoveEmptyPopups )
         if ( pItem->eType == MenuItemType::SEPARATOR )
             RemoveItem( nLast );
     }
-    delete mpLayoutData, mpLayoutData = nullptr;
+    delete mpLayoutData;
+    mpLayoutData = nullptr;
 }
 
-bool Menu::HasValidEntries( bool bCheckPopups )
+bool Menu::HasValidEntries()
 {
     bool bValidEntries = false;
     sal_uInt16 nCount = GetItemCount();
@@ -2301,7 +2305,7 @@ bool Menu::HasValidEntries( bool bCheckPopups )
         MenuItemData* pItem = pItemList->GetDataFromPos( n );
         if ( pItem->bEnabled && ( pItem->eType != MenuItemType::SEPARATOR ) )
         {
-            if ( bCheckPopups && pItem->pSubMenu )
+            if ( pItem->pSubMenu )
                 bValidEntries = pItem->pSubMenu->HasValidEntries();
             else
                 bValidEntries = true;
@@ -2310,9 +2314,10 @@ bool Menu::HasValidEntries( bool bCheckPopups )
     return bValidEntries;
 }
 
-sal_uLong Menu::DeactivateMenuBar(sal_uLong nFocusId)
+void Menu::UpdateNativeMenu()
 {
-    return nFocusId;
+    if ( ImplGetSalMenu() )
+        ImplGetSalMenu()->Update();
 }
 
 void Menu::MenuBarKeyInput(const KeyEvent&)
@@ -2321,7 +2326,8 @@ void Menu::MenuBarKeyInput(const KeyEvent&)
 
 void Menu::ImplKillLayoutData() const
 {
-    delete mpLayoutData, mpLayoutData = nullptr;
+    delete mpLayoutData;
+    mpLayoutData = nullptr;
 }
 
 void Menu::ImplFillLayoutData() const
@@ -2472,7 +2478,6 @@ void Menu::HighlightItem( sal_uInt16 nItemPos )
     }
 }
 
-// - MenuBar -
 MenuBarWindow* MenuBar::getMenuBarWindow()
 {
     // so far just a dynamic_cast, hopefully to be turned into something saner
@@ -2515,19 +2520,6 @@ void MenuBar::ClosePopup(Menu *pMenu)
     if (!pMenuWin)
         return;
     pMenuWin->PopupClosed(pMenu);
-}
-
-sal_uLong MenuBar::DeactivateMenuBar(sal_uLong nFocusId)
-{
-    MenuBarWindow* pMenuWin = getMenuBarWindow();
-    nFocusId = pMenuWin ? pMenuWin->GetFocusId() : 0;
-    if (nFocusId)
-    {
-        pMenuWin->SetFocusId(0);
-        ImplGetSVData()->maWinData.mbNoDeactivate = false;
-    }
-
-    return nFocusId;
 }
 
 void MenuBar::MenuBarKeyInput(const KeyEvent& rEvent)
@@ -2603,7 +2595,7 @@ void MenuBar::ImplDestroy( MenuBar* pMenu, bool bDelete )
     pMenu->pWindow = nullptr;
 }
 
-bool MenuBar::ImplHandleKeyEvent( const KeyEvent& rKEvent, bool bFromMenu )
+bool MenuBar::ImplHandleKeyEvent( const KeyEvent& rKEvent )
 {
     bool bDone = false;
 
@@ -2617,7 +2609,7 @@ bool MenuBar::ImplHandleKeyEvent( const KeyEvent& rKEvent, bool bFromMenu )
     if (pWin && pWin->IsEnabled() && pWin->IsInputEnabled()  && !pWin->IsInModalMode())
     {
         MenuBarWindow* pMenuWin = getMenuBarWindow();
-        bDone = pMenuWin && pMenuWin->HandleKeyEvent(rKEvent, bFromMenu);
+        bDone = pMenuWin && pMenuWin->HandleKeyEvent(rKEvent, false/*bFromMenu*/);
     }
     return bDone;
 }
@@ -2674,14 +2666,13 @@ void MenuBar::SelectItem(sal_uInt16 nId)
 }
 
 // handler for native menu selection and command events
-
-bool MenuBar::HandleMenuActivateEvent( Menu *pMenu ) const
+bool Menu::HandleMenuActivateEvent( Menu *pMenu ) const
 {
     if( pMenu )
     {
         ImplMenuDelData aDelData( this );
 
-        pMenu->pStartedFrom = const_cast<MenuBar*>(this);
+        pMenu->pStartedFrom = const_cast<Menu*>(this);
         pMenu->bInCallback = true;
         pMenu->Activate();
 
@@ -2691,13 +2682,13 @@ bool MenuBar::HandleMenuActivateEvent( Menu *pMenu ) const
     return true;
 }
 
-bool MenuBar::HandleMenuDeActivateEvent( Menu *pMenu ) const
+bool Menu::HandleMenuDeActivateEvent( Menu *pMenu ) const
 {
     if( pMenu )
     {
         ImplMenuDelData aDelData( this );
 
-        pMenu->pStartedFrom = const_cast<MenuBar*>(this);
+        pMenu->pStartedFrom = const_cast<Menu*>(this);
         pMenu->bInCallback = true;
         pMenu->Deactivate();
         if( !aDelData.isDeleted() )
@@ -2730,14 +2721,14 @@ bool MenuBar::HandleMenuHighlightEvent( Menu *pMenu, sal_uInt16 nHighlightEventI
         return false;
 }
 
-bool MenuBar::HandleMenuCommandEvent( Menu *pMenu, sal_uInt16 nCommandEventId ) const
+bool Menu::HandleMenuCommandEvent( Menu *pMenu, sal_uInt16 nCommandEventId ) const
 {
     if( !pMenu )
-        pMenu = const_cast<MenuBar*>(this)->ImplFindMenu(nCommandEventId);
+        pMenu = const_cast<Menu*>(this)->ImplFindMenu(nCommandEventId);
     if( pMenu )
     {
         pMenu->nSelectedId = nCommandEventId;
-        pMenu->pStartedFrom = const_cast<MenuBar*>(this);
+        pMenu->pStartedFrom = const_cast<Menu*>(this);
         pMenu->ImplSelect();
         return true;
     }
@@ -2857,10 +2848,10 @@ PopupMenu* PopupMenu::GetActivePopupMenu()
     return pSVData->maAppData.mpActivePopupMenu;
 }
 
-void PopupMenu::EndExecute( sal_uInt16 nSelectId )
+void PopupMenu::EndExecute()
 {
     if ( ImplGetWindow() )
-        ImplGetFloatingWindow()->EndExecute( nSelectId );
+        ImplGetFloatingWindow()->EndExecute( 0 );
 }
 
 void PopupMenu::SelectItem(sal_uInt16 nId)
@@ -2929,7 +2920,20 @@ sal_uInt16 PopupMenu::Execute( vcl::Window* pExecWindow, const Rectangle& rRect,
     return ImplExecute( pExecWindow, rRect, nPopupModeFlags, nullptr, false );
 }
 
-sal_uInt16 PopupMenu::ImplExecute( vcl::Window* pW, const Rectangle& rRect, FloatWinPopupFlags nPopupModeFlags, Menu* pSFrom, bool bPreSelectFirst )
+void PopupMenu::ImplFlushPendingSelect()
+{
+    // is there still Select?
+    Menu* pSelect = ImplFindSelectMenu();
+    if (pSelect)
+    {
+        // Select should be called prior to leaving execute in a popup menu!
+        Application::RemoveUserEvent( pSelect->nEventId );
+        pSelect->nEventId = nullptr;
+        pSelect->Select();
+    }
+}
+
+sal_uInt16 PopupMenu::ImplExecute( const VclPtr<vcl::Window>& pW, const Rectangle& rRect, FloatWinPopupFlags nPopupModeFlags, Menu* pSFrom, bool bPreSelectFirst )
 {
     if ( !pSFrom && ( PopupMenu::IsInExecute() || !GetItemCount() ) )
         return 0;
@@ -2938,7 +2942,8 @@ sal_uInt16 PopupMenu::ImplExecute( vcl::Window* pW, const Rectangle& rRect, Floa
     if( pSFrom && pSFrom->IsMenuBar())
         ((static_cast<MenuBarWindow*>(pSFrom->pWindow.get())))->SetMBWHideAccel(!(static_cast<MenuBarWindow*>(pSFrom->pWindow.get())->GetMBWMenuKey()));
 
-    delete mpLayoutData, mpLayoutData = nullptr;
+    delete mpLayoutData;
+    mpLayoutData = nullptr;
 
     ImplSVData* pSVData = ImplGetSVData();
 
@@ -2946,12 +2951,12 @@ sal_uInt16 PopupMenu::ImplExecute( vcl::Window* pW, const Rectangle& rRect, Floa
     nSelectedId = 0;
     bCanceled = false;
 
-    sal_uLong nFocusId = 0;
+    VclPtr<vcl::Window> xFocusId;
     bool bRealExecute = false;
     if ( !pStartedFrom )
     {
         pSVData->maWinData.mbNoDeactivate = true;
-        nFocusId = Window::SaveFocus();
+        xFocusId = Window::SaveFocus();
         bRealExecute = true;
     }
     else
@@ -2973,17 +2978,12 @@ sal_uInt16 PopupMenu::ImplExecute( vcl::Window* pW, const Rectangle& rRect, Floa
     // could be useful during debugging.
     // nPopupModeFlags |= FloatWinPopupFlags::NoFocusClose;
 
-    ImplDelData aDelData;
-    pW->ImplAddDel( &aDelData );
-
     bInCallback = true; // set it here, if Activate overridden
     Activate();
     bInCallback = false;
 
-    if ( aDelData.IsDead() )
+    if ( pW->IsDisposed() )
         return 0;   // Error
-
-    pW->ImplRemoveDel( &aDelData );
 
     if ( bCanceled || bKilled )
         return 0;
@@ -3080,7 +3080,7 @@ sal_uInt16 PopupMenu::ImplExecute( vcl::Window* pW, const Rectangle& rRect, Floa
         aSz.Height() = ImplCalcHeight( nEntries );
     }
 
-    pWin->SetFocusId( nFocusId );
+    pWin->SetFocusId( xFocusId );
     pWin->SetOutputSizePixel( aSz );
     // #102158# menus must never grab the focus, otherwise
     // they will be closed immediately
@@ -3093,6 +3093,7 @@ sal_uInt16 PopupMenu::ImplExecute( vcl::Window* pW, const Rectangle& rRect, Floa
         SalMenu* pMenu = ImplGetSalMenu();
         if( pMenu && bRealExecute && pMenu->ShowNativePopupMenu( pWin, aRect, nPopupModeFlags | FloatWinPopupFlags::GrabFocus ) )
         {
+            ImplFlushPendingSelect();
             pWin->StopExecute();
             pWin->doShutdown();
             pWindow->doLazyDelete();
@@ -3136,32 +3137,26 @@ sal_uInt16 PopupMenu::ImplExecute( vcl::Window* pW, const Rectangle& rRect, Floa
     }
     if ( bRealExecute )
     {
-        pWin->ImplAddDel( &aDelData );
-
-        ImplDelData aModalWinDel;
-        pW->ImplAddDel( &aModalWinDel );
         pW->ImplIncModalCount();
 
         pWin->Execute();
 
-        DBG_ASSERT( ! aModalWinDel.IsDead(), "window for popup died, modal count incorrect !" );
-        if( ! aModalWinDel.IsDead() )
+        DBG_ASSERT( ! pW->IsDisposed(), "window for popup died, modal count incorrect !" );
+        if( ! pW->IsDisposed() )
             pW->ImplDecModalCount();
 
-        if ( !aDelData.IsDead() )
-            pWin->ImplRemoveDel( &aDelData );
-        else
+        if ( pWin->IsDisposed() )
             return 0;
 
         // Restore focus (could already have been
         // restored in Select)
-        nFocusId = pWin->GetFocusId();
-        if ( nFocusId )
+        xFocusId = pWin->GetFocusId();
+        if ( xFocusId != nullptr )
         {
-            pWin->SetFocusId( 0 );
+            pWin->SetFocusId( nullptr );
             pSVData->maWinData.mbNoDeactivate = false;
         }
-        pWin->ImplEndPopupMode( FloatWinPopupEndFlags::NONE, nFocusId );
+        pWin->ImplEndPopupMode( FloatWinPopupEndFlags::NONE, xFocusId );
 
         if ( nSelectedId )  // then clean up .. ( otherwise done by TH )
         {
@@ -3176,15 +3171,7 @@ sal_uInt16 PopupMenu::ImplExecute( vcl::Window* pW, const Rectangle& rRect, Floa
         pWindow->doLazyDelete();
         pWindow = nullptr;
 
-        // is there still Select?
-        Menu* pSelect = ImplFindSelectMenu();
-        if ( pSelect )
-        {
-            // Select should be called prior to leaving execute in a popup menu!
-            Application::RemoveUserEvent( pSelect->nEventId );
-            pSelect->nEventId = nullptr;
-            pSelect->Select();
-        }
+        ImplFlushPendingSelect();
     }
 
     return bRealExecute ? nSelectedId : 0;
@@ -3251,45 +3238,5 @@ ImplMenuDelData::~ImplMenuDelData()
     if( mpMenu )
         const_cast< Menu* >( mpMenu )->ImplRemoveDel( *this );
 }
-
-namespace vcl { namespace MenuInvalidator {
-
-struct MenuInvalidateListeners : public vcl::DeletionNotifier
-{
-    std::vector<Link<LinkParamNone*,void>>   m_aListeners;
-};
-
-static MenuInvalidateListeners* pMenuInvalidateListeners = nullptr;
-
-void AddMenuInvalidateListener(const Link<LinkParamNone*,void>& rLink)
-{
-    if(!pMenuInvalidateListeners)
-        pMenuInvalidateListeners = new MenuInvalidateListeners();
-    // ensure uniqueness
-    auto& rListeners = pMenuInvalidateListeners->m_aListeners;
-    if (std::find(rListeners.begin(), rListeners.end(), rLink) == rListeners.end())
-       rListeners.push_back( rLink );
-}
-
-void Invalidated()
-{
-    if(!pMenuInvalidateListeners)
-        return;
-
-    vcl::DeletionListener aDel( pMenuInvalidateListeners );
-
-    auto& rYieldListeners = pMenuInvalidateListeners->m_aListeners;
-    // Copy the list, because this can be destroyed when calling a Link...
-    std::vector<Link<LinkParamNone*,void>> aCopy( rYieldListeners );
-    for( Link<LinkParamNone*,void>& rLink : aCopy )
-    {
-        if (aDel.isDeleted()) break;
-        // check this hasn't been removed in some re-enterancy scenario fdo#47368
-        if( std::find(rYieldListeners.begin(), rYieldListeners.end(), rLink) != rYieldListeners.end() )
-            rLink.Call( nullptr );
-    }
-};
-
-} } // namespace vcl::MenuInvalidator
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

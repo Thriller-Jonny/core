@@ -18,9 +18,9 @@
 #include <rtl/ustring.hxx>
 
 #if defined UNX && !defined MACOSX && !defined IOS && !defined ANDROID && !defined(LIBO_HEADLESS)
-#  include <prex.h>
+#  include <X11/Xlib.h>
+#  include <X11/Xutil.h>
 #  include "GL/glxew.h"
-#  include <postx.h>
 #endif
 
 /// Helper to do a SAL_INFO as well as a GL log.
@@ -41,10 +41,10 @@ struct VCL_DLLPUBLIC OpenGLHelper
 
 public:
 
-    static rtl::OString GetDigest(const OUString& rVertexShaderName, const OUString& rFragmentShaderName, const rtl::OString& preamble = "" );
+    static OString GetDigest(const OUString& rVertexShaderName, const OUString& rFragmentShaderName, const OString& preamble = "" );
 
-    static GLint LoadShaders(const OUString& rVertexShaderName, const OUString& rFragmentShaderName, const OUString& rGeometryShaderName, const rtl::OString& preamble, const rtl::OString& rDigest );
-    static GLint LoadShaders(const OUString& rVertexShaderName, const OUString& rFragmentShaderName, const rtl::OString& preamble, const rtl::OString& rDigest );
+    static GLint LoadShaders(const OUString& rVertexShaderName, const OUString& rFragmentShaderName, const OUString& rGeometryShaderName, const OString& preamble, const OString& rDigest );
+    static GLint LoadShaders(const OUString& rVertexShaderName, const OUString& rFragmentShaderName, const OString& preamble, const OString& rDigest );
     static GLint LoadShaders(const OUString& rVertexShaderName, const OUString& rFragmentShaderName, const OUString& rGeometryShaderName);
     static GLint LoadShaders(const OUString& rVertexShaderName, const OUString& rFragmentShaderName);
 
@@ -63,7 +63,12 @@ public:
     /**
      * The caller is responsible for deleting the buffer objects identified by
      * nFramebufferId, nRenderbufferDepthId and nRenderbufferColorId
-     * @param bRenderbuffer true => off-screen rendering, false => rendering to texture
+     * @param nWidth                Width of frame
+     * @param nHeight               Height of frame
+     * @param nFramebufferId        FrameBuffer ID
+     * @param nRenderbufferDepthId  RenderBuffer's depth ID
+     * @param nRenderbufferColorId  RenderBuffer's color ID
+     * @param bRenderbuffer         true => off-screen rendering, false => rendering to texture
      *          This also affects whether to free with glDeleteRenderbuffers or glDeleteTextures
      */
     static void createFramebuffer(long nWidth, long nHeight, GLuint& nFramebufferId,

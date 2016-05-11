@@ -2054,10 +2054,18 @@ void getFormatString(SvNumberFormatter* pFormatter, sal_uLong nFormat, OUString&
 
     switch( pFormatter->GetType( nFormat ) )
     {
-        case css::util::NumberFormat::NUMBER:       if(bThousand) rFmtStr = ","; else rFmtStr = "F"; break;
-        case css::util::NumberFormat::CURRENCY:     rFmtStr = "C";                                   break;
-        case css::util::NumberFormat::SCIENTIFIC:   rFmtStr = "S";                                   break;
-        case css::util::NumberFormat::PERCENT:      rFmtStr = "P";                                   break;
+        case css::util::NumberFormat::NUMBER:
+            if(bThousand) rFmtStr = ","; else rFmtStr = "F";
+            break;
+        case css::util::NumberFormat::CURRENCY:
+            rFmtStr = "C";
+            break;
+        case css::util::NumberFormat::SCIENTIFIC:
+            rFmtStr = "S";
+            break;
+        case css::util::NumberFormat::PERCENT:
+            rFmtStr = "P";
+            break;
         default:
         {
             bAppendPrec = false;
@@ -2143,7 +2151,7 @@ void ScInterpreter::ScCell()
             }
             else if( aInfoType == "ADDRESS" )
             {   // address formatted as [['FILENAME'#]$TABLE.]$COL$ROW
-                sal_uInt16 nFlags = (aCellPos.Tab() == aPos.Tab()) ? (SCA_ABS) : (SCA_ABS_3D);
+                ScRefFlags nFlags = (aCellPos.Tab() == aPos.Tab()) ? (ScRefFlags::ADDR_ABS) : (ScRefFlags::ADDR_ABS_3D);
                 OUString aStr(aCellPos.Format(nFlags, pDok, pDok->GetAddressConvention()));
                 PushString(aStr);
             }
@@ -2180,10 +2188,10 @@ void ScInterpreter::ScCell()
                 OUStringBuffer aFuncResult;
                 OUString aCellStr =
                 ScAddress( static_cast<SCCOL>(aCellPos.Tab()), 0, 0 ).Format(
-                    (SCA_COL_ABSOLUTE|SCA_VALID_COL), nullptr, pDok->GetAddressConvention() );
+                    (ScRefFlags::COL_ABS|ScRefFlags::COL_VALID), nullptr, pDok->GetAddressConvention() );
                 aFuncResult.append(aCellStr);
                 aFuncResult.append(':');
-                aCellStr = aCellPos.Format((SCA_COL_ABSOLUTE|SCA_VALID_COL|SCA_ROW_ABSOLUTE|SCA_VALID_ROW),
+                aCellStr = aCellPos.Format((ScRefFlags::COL_ABS|ScRefFlags::COL_VALID|ScRefFlags::ROW_ABS|ScRefFlags::ROW_VALID),
                                  nullptr, pDok->GetAddressConvention());
                 aFuncResult.append(aCellStr);
                 PushString( aFuncResult.makeStringAndClear() );
@@ -2597,7 +2605,7 @@ void ScInterpreter::ScFormula()
                 PushMatrix( pResMat);
                 return;
             }
-            // fallthru
+            SAL_FALLTHROUGH;
         case svSingleRef :
         {
             ScAddress aAdr;
@@ -3058,7 +3066,7 @@ void ScInterpreter::ScValue()
                 {
                     case SC_MATVAL_EMPTY:
                         fVal = 0.0;
-                        // fallthru
+                        SAL_FALLTHROUGH;
                     case SC_MATVAL_VALUE:
                     case SC_MATVAL_BOOLEAN:
                         PushDouble( fVal);
@@ -3316,7 +3324,7 @@ void ScInterpreter::ScUnichar()
     if ( MustHaveParamCount( GetByte(), 1 ) )
     {
         double dVal = ::rtl::math::approxFloor( GetDouble() );
-        if ((dVal < 0x000000) || (dVal > 0x10FFFF))
+        if (dVal < 0 || !rtl::isUnicodeCodePoint(dVal))
             PushIllegalArgument();
         else
         {
@@ -4127,7 +4135,7 @@ private:
 /** returns -1 when the matrix value is smaller than the query value, 0 when
     they are equal, and 1 when the matrix value is larger than the query
     value. */
-static sal_Int32 lcl_CompareMatrix2Query(
+sal_Int32 lcl_CompareMatrix2Query(
     SCSIZE i, const VectorMatrixAccessor& rMat, const ScQueryEntry& rEntry)
 {
     if (rMat.IsEmpty(i))
@@ -4165,7 +4173,7 @@ static sal_Int32 lcl_CompareMatrix2Query(
 
 /** returns the last item with the identical value as the original item
     value. */
-static void lcl_GetLastMatch( SCSIZE& rIndex, const VectorMatrixAccessor& rMat,
+void lcl_GetLastMatch( SCSIZE& rIndex, const VectorMatrixAccessor& rMat,
         SCSIZE nMatCount, bool bReverse)
 {
     if (rMat.IsValue(rIndex))
@@ -4376,11 +4384,10 @@ void ScInterpreter::ScMatch()
             {
                 bool bIsVBAMode = pDok->IsInVBAMode();
 
-                // #TODO handle MSO wildcards
                 if ( bIsVBAMode )
-                    rParam.bRegExp = false;
+                    rParam.eSearchType = utl::SearchParam::SRCH_WILDCARD;
                 else
-                    rParam.bRegExp = MayBeRegExp(rEntry.GetQueryItem().maString.getString(), pDok);
+                    rParam.eSearchType = DetectSearchType(rEntry.GetQueryItem().maString.getString(), pDok);
             }
 
             if (pMatSrc) // The source data is matrix array.
@@ -4877,7 +4884,7 @@ double ScInterpreter::IterateParametersIf( ScIterFuncIf eFunc )
             {
                 rParam.FillInExcelSyntax(pDok->GetSharedStringPool(), aString.getString(), 0, pFormatter);
                 if (rItem.meType == ScQueryEntry::ByString)
-                    rParam.bRegExp = MayBeRegExp(rItem.maString.getString(), pDok);
+                    rParam.eSearchType = DetectSearchType(rItem.maString.getString(), pDok);
             }
             ScAddress aAdr;
             aAdr.SetTab( nTab3 );
@@ -4889,7 +4896,7 @@ double ScInterpreter::IterateParametersIf( ScIterFuncIf eFunc )
             if (pQueryMatrix)
             {
                 // Never case-sensitive.
-                sc::CompareOptions aOptions( pDok, rEntry, rParam.bRegExp);
+                sc::CompareOptions aOptions( pDok, rEntry, rParam.eSearchType);
                 ScMatrixRef pResultMatrix = QueryMat( pQueryMatrix, aOptions);
                 if (nGlobalError || !pResultMatrix)
                 {
@@ -5169,7 +5176,7 @@ void ScInterpreter::ScCountIf()
                 {
                     rParam.FillInExcelSyntax(pDok->GetSharedStringPool(), aString.getString(), 0, pFormatter);
                     if (rItem.meType == ScQueryEntry::ByString)
-                        rParam.bRegExp = MayBeRegExp(rItem.maString.getString(), pDok);
+                        rParam.eSearchType = DetectSearchType(rItem.maString.getString(), pDok);
                 }
                 rParam.nCol1  = nCol1;
                 rParam.nCol2  = nCol2;
@@ -5177,7 +5184,7 @@ void ScInterpreter::ScCountIf()
                 if (pQueryMatrix)
                 {
                     // Never case-sensitive.
-                    sc::CompareOptions aOptions( pDok, rEntry, rParam.bRegExp);
+                    sc::CompareOptions aOptions( pDok, rEntry, rParam.eSearchType);
                     ScMatrixRef pResultMatrix = QueryMat( pQueryMatrix, aOptions);
                     if (nGlobalError || !pResultMatrix)
                     {
@@ -5242,6 +5249,8 @@ double ScInterpreter::IterateParametersIfs( ScIterFuncIfs eFunc )
         double fMem = 0.0;
         double fRes = 0.0;
         double fCount = 0.0;
+        double fMin = std::numeric_limits<double>::max();
+        double fMax = std::numeric_limits<double>::min();
         short nParam = 1;
         size_t nRefInList = 0;
         SCCOL nDimensionCols = 0;
@@ -5422,7 +5431,7 @@ double ScInterpreter::IterateParametersIfs( ScIterFuncIfs eFunc )
             {
                 rParam.FillInExcelSyntax(pDok->GetSharedStringPool(), aString.getString(), 0, pFormatter);
                 if (rItem.meType == ScQueryEntry::ByString)
-                    rParam.bRegExp = MayBeRegExp(rItem.maString.getString(), pDok);
+                    rParam.eSearchType = DetectSearchType(rItem.maString.getString(), pDok);
             }
             ScAddress aAdr;
             aAdr.SetTab( nTab1 );
@@ -5434,7 +5443,7 @@ double ScInterpreter::IterateParametersIfs( ScIterFuncIfs eFunc )
             if (pQueryMatrix)
             {
                 // Never case-sensitive.
-                sc::CompareOptions aOptions( pDok, rEntry, rParam.bRegExp);
+                sc::CompareOptions aOptions( pDok, rEntry, rParam.eSearchType);
                 ScMatrixRef pResultMatrix = QueryMat( pQueryMatrix, aOptions);
                 if (nGlobalError || !pResultMatrix)
                 {
@@ -5477,7 +5486,7 @@ double ScInterpreter::IterateParametersIfs( ScIterFuncIfs eFunc )
         if (nGlobalError)
             return 0;   // bail out
 
-        // main range - only for AVERAGEIFS and SUMIFS
+        // main range - only for AVERAGEIFS, SUMIFS, MINIFS and MAXIFS
         if (nParamCount == 1)
         {
             nParam = 1;
@@ -5580,6 +5589,10 @@ double ScInterpreter::IterateParametersIfs( ScIterFuncIfs eFunc )
                     }
                     else
                         fSum += fVal;
+                    if ( fMin > fVal )
+                        fMin = fVal;
+                    if ( fMax < fVal )
+                        fMax = fVal;
                 }
             }
             else
@@ -5605,6 +5618,10 @@ double ScInterpreter::IterateParametersIfs( ScIterFuncIfs eFunc )
                                 }
                                 else
                                     fSum += fVal;
+                                if ( fMin > fVal )
+                                    fMin = fVal;
+                                if ( fMax < fVal )
+                                    fMax = fVal;
                             }
                         }
                     }
@@ -5624,6 +5641,8 @@ double ScInterpreter::IterateParametersIfs( ScIterFuncIfs eFunc )
             case ifSUMIFS:     fRes = ::rtl::math::approxAdd( fSum, fMem ); break;
             case ifAVERAGEIFS: fRes = div( ::rtl::math::approxAdd( fSum, fMem ), fCount); break;
             case ifCOUNTIFS:   fRes = fCount; break;
+            case ifMINIFS:     fRes = ( fMin < std::numeric_limits<double>::max() ? fMin : 0 ); break;
+            case ifMAXIFS:     fRes = ( fMax > std::numeric_limits<double>::min() ? fMax : 0 ); break;
             default: ; // nothing
         }
         return fRes;
@@ -5644,6 +5663,17 @@ void ScInterpreter::ScAverageIfs()
 void ScInterpreter::ScCountIfs()
 {
     PushDouble( IterateParametersIfs( ifCOUNTIFS));
+}
+
+void ScInterpreter::ScMinIfs_MS()
+{
+    PushDouble( IterateParametersIfs( ifMINIFS ) );
+}
+
+
+void ScInterpreter::ScMaxIfs_MS()
+{
+    PushDouble( IterateParametersIfs( ifMAXIFS ) );
 }
 
 void ScInterpreter::ScLookup()
@@ -5859,7 +5889,7 @@ void ScInterpreter::ScLookup()
                     break;
                 case svDoubleRef:
                     aResAdr.Set( nResCol1, nResRow1, nResTab);
-                    // fallthru
+                    SAL_FALLTHROUGH;
                 case svSingleRef:
                     PushCellResultToken( true, aResAdr, nullptr, nullptr);
                     break;
@@ -6077,7 +6107,7 @@ void ScInterpreter::ScLookup()
     rEntry.nField = nCol1;
     ScQueryEntry::Item& rItem = rEntry.GetQueryItem();
     if (rItem.meType == ScQueryEntry::ByString)
-        aParam.bRegExp = MayBeRegExp(rItem.maString.getString(), pDok);
+        aParam.eSearchType = DetectSearchType(rItem.maString.getString(), pDok);
 
     ScQueryCellIterator aCellIter(pDok, nTab1, aParam, false);
     SCCOL nC;
@@ -6109,7 +6139,7 @@ void ScInterpreter::ScLookup()
             case svDoubleRef:
             {
                 // Use the result array vector.  Note that the result array is assumed
-                // to be a vector (i.e. 1-dimensinoal array).
+                // to be a vector (i.e. 1-dimensional array).
 
                 ScAddress aAdr;
                 aAdr.SetTab(nResTab);
@@ -6308,7 +6338,7 @@ void ScInterpreter::CalculateLookup(bool bHLookup)
 
     ScQueryEntry::Item& rItem = rEntry.GetQueryItem();
     if (rItem.meType == ScQueryEntry::ByString)
-        aParam.bRegExp = MayBeRegExp(rItem.maString.getString(), pDok);
+        aParam.eSearchType = DetectSearchType(rItem.maString.getString(), pDok);
     if (pMat)
     {
         SCSIZE nMatCount = bHLookup ? nC : nR;
@@ -6778,8 +6808,8 @@ std::unique_ptr<ScDBQueryParamBase> ScInterpreter::GetDBParams( bool& rMissingFi
                     aQueryStr, nIndex, rItem.mfVal);
                 rItem.meType = bNumber ? ScQueryEntry::ByValue : ScQueryEntry::ByString;
 
-                if (!bNumber && !pParam->bRegExp)
-                    pParam->bRegExp = MayBeRegExp(aQueryStr, pDok);
+                if (!bNumber && pParam->eSearchType == utl::SearchParam::SRCH_NORMAL)
+                    pParam->eSearchType = DetectSearchType(aQueryStr, pDok);
             }
             return pParam;
         }
@@ -6829,10 +6859,18 @@ void ScInterpreter::DBIterator( ScIterFunc eFunc )
                         else
                             nErg += aValue.mfValue;
                         break;
-                    case ifSUMSQ:   nErg += aValue.mfValue * aValue.mfValue; break;
-                    case ifPRODUCT: nErg *= aValue.mfValue; break;
-                    case ifMAX:     if( aValue.mfValue > nErg ) nErg = aValue.mfValue; break;
-                    case ifMIN:     if( aValue.mfValue < nErg ) nErg = aValue.mfValue; break;
+                    case ifSUMSQ:
+                        nErg += aValue.mfValue * aValue.mfValue;
+                        break;
+                    case ifPRODUCT:
+                        nErg *= aValue.mfValue;
+                        break;
+                    case ifMAX:
+                        if( aValue.mfValue > nErg ) nErg = aValue.mfValue;
+                        break;
+                    case ifMIN:
+                        if( aValue.mfValue < nErg ) nErg = aValue.mfValue;
+                        break;
                     default: ; // nothing
                 }
             }
@@ -7001,8 +7039,8 @@ void ScInterpreter::GetDBStVarParams( double& rVal, double& rValCount )
 
     vMean = fSum / values.size();
 
-    for (size_t i = 0; i < values.size(); i++)
-        vSum += (values[i] - vMean) * (values[i] - vMean);
+    for (double v : values)
+        vSum += (v - vMean) * (v - vMean);
 
     rVal = vSum;
 }
@@ -7221,7 +7259,7 @@ void ScInterpreter::ScAddressFunc()
     if( nParamCount >= 4 && 0.0 == ::rtl::math::approxFloor( GetDoubleWithDefault( 1.0)))
         eConv = FormulaGrammar::CONV_XL_R1C1;
 
-    sal_uInt16  nFlags = SCA_COL_ABSOLUTE | SCA_ROW_ABSOLUTE;   // default
+    ScRefFlags  nFlags = ScRefFlags::COL_ABS | ScRefFlags::ROW_ABS;   // default
     if( nParamCount >= 3 )
     {
         sal_uInt16 n = (sal_uInt16) ::rtl::math::approxFloor( GetDoubleWithDefault( 1.0));
@@ -7234,14 +7272,14 @@ void ScInterpreter::ScAddressFunc()
             case 5:
             case 1 : break; // default
             case 6:
-            case 2 : nFlags = SCA_ROW_ABSOLUTE; break;
+            case 2 : nFlags = ScRefFlags::ROW_ABS; break;
             case 7:
-            case 3 : nFlags = SCA_COL_ABSOLUTE; break;
+            case 3 : nFlags = ScRefFlags::COL_ABS; break;
             case 8:
-            case 4 : nFlags = 0; break; // both relative
+            case 4 : nFlags = ScRefFlags::ZERO; break; // both relative
         }
     }
-    nFlags |= SCA_VALID | SCA_VALID_ROW | SCA_VALID_COL;
+    nFlags |= ScRefFlags::VALID | ScRefFlags::ROW_VALID | ScRefFlags::COL_VALID;
 
     SCCOL nCol = (SCCOL) ::rtl::math::approxFloor(GetDouble());
     SCROW nRow = (SCROW) ::rtl::math::approxFloor(GetDouble());
@@ -7249,9 +7287,9 @@ void ScInterpreter::ScAddressFunc()
     {
         // YUCK!  The XL interface actually treats rel R1C1 refs differently
         // than A1
-        if( !(nFlags & SCA_COL_ABSOLUTE) )
+        if( !(nFlags & ScRefFlags::COL_ABS) )
             nCol += aPos.Col() + 1;
-        if( !(nFlags & SCA_ROW_ABSOLUTE) )
+        if( !(nFlags & ScRefFlags::ROW_ABS) )
             nRow += aPos.Row() + 1;
     }
 
@@ -8132,10 +8170,8 @@ void ScInterpreter::ScSearch()
             PushNoValue();
         else
         {
-            utl::SearchParam::SearchType eSearchType =
-                (MayBeRegExp( SearchStr, pDok ) ?
-                utl::SearchParam::SRCH_REGEXP : utl::SearchParam::SRCH_NORMAL);
-            utl::SearchParam sPar(SearchStr, eSearchType, false, false, false);
+            utl::SearchParam::SearchType eSearchType = DetectSearchType( SearchStr, pDok );
+            utl::SearchParam sPar(SearchStr, eSearchType, false, '~', false);
             utl::TextSearch sT( sPar, *ScGlobal::pCharClass );
             bool bBool = sT.SearchForward(sStr, &nPos, &nEndPos);
             if (!bBool)
@@ -8472,18 +8508,20 @@ void ScInterpreter::ScErrorType_ODF()
         PushNA();
 }
 
-bool ScInterpreter::MayBeRegExp( const OUString& rStr, const ScDocument* pDoc  )
+bool ScInterpreter::MayBeRegExp( const OUString& rStr, const ScDocument* pDoc, bool bIgnoreWildcards )
 {
     if ( pDoc && !pDoc->GetDocOptions().IsFormulaRegexEnabled() )
         return false;
     if ( rStr.isEmpty() || (rStr.getLength() == 1 && !rStr.startsWith(".")) )
         return false;   // single meta characters can not be a regexp
-    static const sal_Unicode cre[] = { '.','*','+','?','[',']','^','$','\\','<','>','(',')','|', 0 };
+    // First two characters are wildcard '?' and '*' characters.
+    static const sal_Unicode cre[] = { '?','*','+','.','[',']','^','$','\\','<','>','(',')','|', 0 };
+    const sal_Unicode* const pre = bIgnoreWildcards ? cre + 2 : cre;
     const sal_Unicode* p1 = rStr.getStr();
     sal_Unicode c1;
     while ( ( c1 = *p1++ ) != 0 )
     {
-        const sal_Unicode* p2 = cre;
+        const sal_Unicode* p2 = pre;
         while ( *p2 )
         {
             if ( c1 == *p2++ )
@@ -8491,6 +8529,49 @@ bool ScInterpreter::MayBeRegExp( const OUString& rStr, const ScDocument* pDoc  )
         }
     }
     return false;
+}
+
+bool ScInterpreter::MayBeWildcard( const OUString& rStr, const ScDocument* pDoc )
+{
+    if ( pDoc && !pDoc->GetDocOptions().IsFormulaWildcardsEnabled() )
+        return false;
+
+    // Wildcards with '~' escape, if there are no wildcards then an escaped
+    // character does not make sense, but it modifies the search pattern in an
+    // Excel compatible wildcard search..
+    static const sal_Unicode cw[] = { '*','?','~', 0 };
+    const sal_Unicode* p1 = rStr.getStr();
+    sal_Unicode c1;
+    while ( ( c1 = *p1++ ) != 0 )
+    {
+        const sal_Unicode* p2 = cw;
+        while ( *p2 )
+        {
+            if ( c1 == *p2++ )
+                return true;
+        }
+    }
+    return false;
+}
+
+utl::SearchParam::SearchType ScInterpreter::DetectSearchType( const OUString& rStr, const ScDocument* pDoc )
+{
+    if (pDoc)
+    {
+        if (pDoc->GetDocOptions().IsFormulaWildcardsEnabled())
+            return MayBeWildcard( rStr, nullptr) ? utl::SearchParam::SRCH_WILDCARD : utl::SearchParam::SRCH_NORMAL;
+        if (pDoc->GetDocOptions().IsFormulaRegexEnabled())
+            return MayBeRegExp( rStr, nullptr) ? utl::SearchParam::SRCH_REGEXP : utl::SearchParam::SRCH_NORMAL;
+    }
+    else
+    {
+        /* TODO: obtain the global config for this rare case? */
+        if (MayBeRegExp( rStr, nullptr, true))
+            return utl::SearchParam::SRCH_REGEXP;
+        if (MayBeWildcard( rStr, nullptr))
+            return utl::SearchParam::SRCH_WILDCARD;
+    }
+    return utl::SearchParam::SRCH_NORMAL;
 }
 
 static bool lcl_LookupQuery( ScAddress & o_rResultPos, ScDocument * pDoc,

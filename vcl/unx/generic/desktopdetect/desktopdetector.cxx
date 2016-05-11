@@ -17,9 +17,9 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <prex.h>
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
 #include <X11/Xatom.h>
-#include <postx.h>
 
 #include <unx/desktops.hxx>
 
@@ -234,9 +234,9 @@ static bool is_tde_desktop( Display* pDisplay )
 static bool is_kde3_desktop( Display* pDisplay )
 {
     static const char * pFullVersion = getenv( "KDE_FULL_SESSION" );
-    static const char * pSessionVersion = getenv( "KDE_SESSION_VERSION" );
     if ( pFullVersion )
     {
+        static const char * pSessionVersion = getenv( "KDE_SESSION_VERSION" );
         if ( !pSessionVersion || pSessionVersion[0] == '0' )
         {
             return true; // does not exist => KDE3

@@ -193,39 +193,27 @@ SvxFontWorkDialog::SvxFontWorkDialog(SfxBindings *pBindinx,
 
     get(m_pTbxStyle, "style");
     nStyleOffId = m_pTbxStyle->GetItemId(0);
-    m_pTbxStyle->SetItemBits(nStyleOffId, ToolBoxItemBits::AUTOCHECK);
-    nStyleRotateId = m_pTbxStyle->GetItemId(1);
-    m_pTbxStyle->SetItemBits(nStyleRotateId, ToolBoxItemBits::AUTOCHECK|ToolBoxItemBits::RADIOCHECK);
-    nStyleUprightId = m_pTbxStyle->GetItemId(2);
-    m_pTbxStyle->SetItemBits(nStyleUprightId, ToolBoxItemBits::AUTOCHECK|ToolBoxItemBits::RADIOCHECK);
-    nStyleSlantXId = m_pTbxStyle->GetItemId(3);
-    m_pTbxStyle->SetItemBits(nStyleSlantXId, ToolBoxItemBits::AUTOCHECK|ToolBoxItemBits::RADIOCHECK);
-    nStyleSlantYId = m_pTbxStyle->GetItemId(4);
-    m_pTbxStyle->SetItemBits(nStyleSlantYId, ToolBoxItemBits::AUTOCHECK|ToolBoxItemBits::RADIOCHECK);
+    // separator is item "1"
+    nStyleRotateId = m_pTbxStyle->GetItemId(2);
+    nStyleUprightId = m_pTbxStyle->GetItemId(3);
+    nStyleSlantXId = m_pTbxStyle->GetItemId(4);
+    nStyleSlantYId = m_pTbxStyle->GetItemId(5);
 
     get(m_pTbxShadow, "shadow");
     nShowFormId = m_pTbxShadow->GetItemId(0);
-    m_pTbxShadow->SetItemBits(nShowFormId, ToolBoxItemBits::AUTOCHECK|ToolBoxItemBits::CHECKABLE);
     nOutlineId = m_pTbxShadow->GetItemId(1);
-    m_pTbxShadow->SetItemBits(nOutlineId, ToolBoxItemBits::AUTOCHECK|ToolBoxItemBits::RADIOCHECK);
-    nShadowOffId = m_pTbxShadow->GetItemId(2);
-    m_pTbxShadow->SetItemBits(nShadowOffId, ToolBoxItemBits::AUTOCHECK|ToolBoxItemBits::RADIOCHECK);
-    nShadowNormalId = m_pTbxShadow->GetItemId(3);
-    m_pTbxShadow->SetItemBits(nShadowNormalId, ToolBoxItemBits::AUTOCHECK|ToolBoxItemBits::RADIOCHECK);
-    nShadowSlantId = m_pTbxShadow->GetItemId(4);
-    m_pTbxShadow->SetItemBits(nShadowSlantId, ToolBoxItemBits::AUTOCHECK|ToolBoxItemBits::RADIOCHECK);
+    // separator is item "2"
+    nShadowOffId = m_pTbxShadow->GetItemId(3);
+    nShadowNormalId = m_pTbxShadow->GetItemId(4);
+    nShadowSlantId = m_pTbxShadow->GetItemId(5);
 
     get(m_pTbxAdjust, "adjust");
     nAdjustMirrorId = m_pTbxAdjust->GetItemId(0);
-    m_pTbxAdjust->SetItemBits(nAdjustMirrorId, ToolBoxItemBits::AUTOCHECK|ToolBoxItemBits::CHECKABLE);
-    nAdjustLeftId = m_pTbxAdjust->GetItemId(1);
-    m_pTbxAdjust->SetItemBits(nAdjustLeftId, ToolBoxItemBits::AUTOCHECK|ToolBoxItemBits::CHECKABLE);
-    nAdjustCenterId = m_pTbxAdjust->GetItemId(2);
-    m_pTbxAdjust->SetItemBits(nAdjustCenterId, ToolBoxItemBits::AUTOCHECK|ToolBoxItemBits::RADIOCHECK);
-    nAdjustRightId = m_pTbxAdjust->GetItemId(3);
-    m_pTbxAdjust->SetItemBits(nAdjustRightId, ToolBoxItemBits::AUTOCHECK|ToolBoxItemBits::RADIOCHECK);
-    nAdjustAutoSizeId = m_pTbxAdjust->GetItemId(4);
-    m_pTbxAdjust->SetItemBits(nAdjustAutoSizeId, ToolBoxItemBits::AUTOCHECK|ToolBoxItemBits::RADIOCHECK);
+    // separator is item "1"
+    nAdjustLeftId = m_pTbxAdjust->GetItemId(2);
+    nAdjustCenterId = m_pTbxAdjust->GetItemId(3);
+    nAdjustRightId = m_pTbxAdjust->GetItemId(4);
+    nAdjustAutoSizeId = m_pTbxAdjust->GetItemId(5);
 
     ApplyImageList();
 
@@ -530,8 +518,9 @@ void SvxFontWorkDialog::SetShadow_Impl(const XFormTextShadowItem* pItem,
                     XFormTextShadowXValItem aXItem( nSaveShadowX );
                     XFormTextShadowYValItem aYItem( nSaveShadowY );
 
-                    GetBindings().GetDispatcher()->Execute(
-                        SID_FORMTEXT_SHDWXVAL, SfxCallMode::RECORD, &aXItem, &aYItem, 0L );
+                    GetBindings().GetDispatcher()->ExecuteList(
+                        SID_FORMTEXT_SHDWXVAL, SfxCallMode::RECORD,
+                        { &aXItem, &aYItem });
                 }
             }
             else
@@ -556,8 +545,9 @@ void SvxFontWorkDialog::SetShadow_Impl(const XFormTextShadowItem* pItem,
                     m_pMtrFldShadowY->SetValue(nSaveShadowSize);
                     XFormTextShadowXValItem aXItem(nSaveShadowAngle);
                     XFormTextShadowYValItem aYItem(nSaveShadowSize);
-                    GetBindings().GetDispatcher()->Execute(
-                        SID_FORMTEXT_SHDWXVAL, SfxCallMode::RECORD, &aXItem, &aYItem, 0L );
+                    GetBindings().GetDispatcher()->ExecuteList(
+                        SID_FORMTEXT_SHDWXVAL, SfxCallMode::RECORD,
+                        { &aXItem, &aYItem });
                 }
             }
         }
@@ -663,7 +653,8 @@ IMPL_LINK_NOARG_TYPED(SvxFontWorkDialog, SelectStyleHdl_Impl, ToolBox *, void)
             eStyle = XFT_SLANTY;
 
         XFormTextStyleItem aItem( eStyle );
-        GetBindings().GetDispatcher()->Execute( SID_FORMTEXT_STYLE, SfxCallMode::RECORD, &aItem, 0L );
+        GetBindings().GetDispatcher()->ExecuteList(SID_FORMTEXT_STYLE,
+                SfxCallMode::RECORD, { &aItem });
         SetStyle_Impl( &aItem );
         nLastStyleTbxId = nId;
     }
@@ -676,7 +667,8 @@ IMPL_LINK_NOARG_TYPED(SvxFontWorkDialog, SelectAdjustHdl_Impl, ToolBox *, void)
     if (nId == nAdjustMirrorId)
     {
         XFormTextMirrorItem aItem(m_pTbxAdjust->IsItemChecked(nId));
-        GetBindings().GetDispatcher()->Execute( SID_FORMTEXT_MIRROR, SfxCallMode::SLOT, &aItem, 0L );
+        GetBindings().GetDispatcher()->ExecuteList(SID_FORMTEXT_MIRROR,
+                SfxCallMode::SLOT, { &aItem });
     }
     else if ( nId != nLastAdjustTbxId )
     {
@@ -690,7 +682,8 @@ IMPL_LINK_NOARG_TYPED(SvxFontWorkDialog, SelectAdjustHdl_Impl, ToolBox *, void)
             eAdjust = XFT_RIGHT;
 
         XFormTextAdjustItem aItem(eAdjust);
-        GetBindings().GetDispatcher()->Execute( SID_FORMTEXT_ADJUST, SfxCallMode::RECORD, &aItem, 0L );
+        GetBindings().GetDispatcher()->ExecuteList(SID_FORMTEXT_ADJUST,
+                SfxCallMode::RECORD, { &aItem });
         SetAdjust_Impl(&aItem);
         nLastAdjustTbxId = nId;
     }
@@ -703,12 +696,14 @@ IMPL_LINK_NOARG_TYPED(SvxFontWorkDialog, SelectShadowHdl_Impl, ToolBox *, void)
     if (nId == nShowFormId)
     {
         XFormTextHideFormItem aItem(!m_pTbxShadow->IsItemChecked(nId));
-        GetBindings().GetDispatcher()->Execute( SID_FORMTEXT_HIDEFORM, SfxCallMode::RECORD, &aItem, 0L );
+        GetBindings().GetDispatcher()->ExecuteList(SID_FORMTEXT_HIDEFORM,
+                SfxCallMode::RECORD, { &aItem });
     }
     else if (nId == nOutlineId)
     {
         XFormTextOutlineItem aItem(m_pTbxShadow->IsItemChecked(nId));
-        GetBindings().GetDispatcher()->Execute( SID_FORMTEXT_OUTLINE, SfxCallMode::RECORD, &aItem, 0L );
+        GetBindings().GetDispatcher()->ExecuteList(SID_FORMTEXT_OUTLINE,
+                SfxCallMode::RECORD, { &aItem });
     }
     else if (nId != nLastShadowTbxId)
     {
@@ -730,7 +725,8 @@ IMPL_LINK_NOARG_TYPED(SvxFontWorkDialog, SelectShadowHdl_Impl, ToolBox *, void)
         else if (nId == nShadowSlantId) eShadow = XFTSHADOW_SLANT;
 
         XFormTextShadowItem aItem(eShadow);
-        GetBindings().GetDispatcher()->Execute( SID_FORMTEXT_SHADOW, SfxCallMode::RECORD, &aItem, 0L );
+        GetBindings().GetDispatcher()->ExecuteList(SID_FORMTEXT_SHADOW,
+                SfxCallMode::RECORD, { &aItem });
         SetShadow_Impl(&aItem, true);
     }
 }
@@ -789,14 +785,16 @@ IMPL_LINK_NOARG_TYPED(SvxFontWorkDialog, InputTimoutHdl_Impl, Idle *, void)
     XFormTextShadowYValItem aShadowYItem( nValueY );
 
     // Slot-ID does not matter, the Exec method evaluates the entire item set
-    GetBindings().GetDispatcher()->Execute( SID_FORMTEXT_DISTANCE, SfxCallMode::RECORD, &aDistItem,
-                                            &aStartItem, &aShadowXItem, &aShadowYItem, 0L );
+    GetBindings().GetDispatcher()->ExecuteList(SID_FORMTEXT_DISTANCE,
+            SfxCallMode::RECORD,
+            { &aDistItem, &aStartItem, &aShadowXItem, &aShadowYItem });
 }
 
 IMPL_LINK_NOARG_TYPED(SvxFontWorkDialog, ColorSelectHdl_Impl, ListBox&, void)
 {
     XFormTextShadowColorItem aItem( "", m_pShadowColorLB->GetSelectEntryColor() );
-    GetBindings().GetDispatcher()->Execute( SID_FORMTEXT_SHDWCOLOR, SfxCallMode::RECORD, &aItem, 0L );
+    GetBindings().GetDispatcher()->ExecuteList(SID_FORMTEXT_SHDWCOLOR,
+            SfxCallMode::RECORD, { &aItem });
 }
 
 void SvxFontWorkDialog::SetColorList(const XColorListRef &pList)

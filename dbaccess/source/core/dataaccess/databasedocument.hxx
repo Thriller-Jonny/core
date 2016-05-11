@@ -59,8 +59,6 @@
 #include <cppuhelper/implbase3.hxx>
 #include <rtl/ref.hxx>
 
-#include <boost/noncopyable.hpp>
-
 namespace comphelper {
     class NamedValueCollection;
 }
@@ -78,7 +76,7 @@ typedef ::std::vector< css::uno::Reference< css::frame::XController > >   Contro
 /** helper class monitoring the views of a document, and firing appropriate events
     when views are attached / detached
 */
-class ViewMonitor : public boost::noncopyable
+class ViewMonitor
 {
 public:
     explicit ViewMonitor( DocumentEventNotifier& _rEventNotifier )
@@ -89,6 +87,9 @@ public:
         ,m_xLastConnectedController()
     {
     }
+
+    ViewMonitor(const ViewMonitor&) = delete;
+    const ViewMonitor& operator=(const ViewMonitor&) = delete;
 
     void    reset()
     {
@@ -165,9 +166,9 @@ class ODatabaseDocument :public ModelDependentComponent             // ModelDepe
     typedef std::map< OUString, css::uno::Reference< css::frame::XUntitledNumbers > > TNumberedController;
     css::uno::Reference< css::ui::XUIConfigurationManager2>                                     m_xUIConfigurationManager;
 
-    ::cppu::OInterfaceContainerHelper                                                           m_aModifyListeners;
-    ::cppu::OInterfaceContainerHelper                                                           m_aCloseListener;
-    ::cppu::OInterfaceContainerHelper                                                           m_aStorageListeners;
+    ::comphelper::OInterfaceContainerHelper2                                                           m_aModifyListeners;
+    ::comphelper::OInterfaceContainerHelper2                                                           m_aCloseListener;
+    ::comphelper::OInterfaceContainerHelper2                                                           m_aStorageListeners;
 
     DocumentEvents*                                                                             m_pEventContainer;
     ::rtl::Reference< DocumentEventExecutor >                                                   m_pEventExecutor;
@@ -348,9 +349,9 @@ public:
     virtual void SAL_CALL removeEventListener( const css::uno::Reference< css::document::XEventListener >& aListener ) throw (css::uno::RuntimeException, std::exception) override;
 
     // XDocumentEventBroadcaster
-    virtual void SAL_CALL addDocumentEventListener( const css::uno::Reference< css::document::XDocumentEventListener >& _Listener ) throw (css::uno::RuntimeException, std::exception) override;
-    virtual void SAL_CALL removeDocumentEventListener( const css::uno::Reference< css::document::XDocumentEventListener >& _Listener ) throw (css::uno::RuntimeException, std::exception) override;
-    virtual void SAL_CALL notifyDocumentEvent( const OUString& _EventName, const css::uno::Reference< css::frame::XController2 >& _ViewController, const css::uno::Any& _Supplement ) throw (css::lang::IllegalArgumentException, css::lang::NoSupportException, css::uno::RuntimeException, std::exception) override;
+    virtual void SAL_CALL addDocumentEventListener( const css::uno::Reference< css::document::XDocumentEventListener >& Listener ) throw (css::uno::RuntimeException, std::exception) override;
+    virtual void SAL_CALL removeDocumentEventListener( const css::uno::Reference< css::document::XDocumentEventListener >& Listener ) throw (css::uno::RuntimeException, std::exception) override;
+    virtual void SAL_CALL notifyDocumentEvent( const OUString& EventName, const css::uno::Reference< css::frame::XController2 >& ViewController, const css::uno::Any& Supplement ) throw (css::lang::IllegalArgumentException, css::lang::NoSupportException, css::uno::RuntimeException, std::exception) override;
 
     // XPrintable
     virtual css::uno::Sequence< css::beans::PropertyValue > SAL_CALL getPrinter(  ) throw (css::uno::RuntimeException, std::exception) override ;
@@ -618,25 +619,25 @@ private:
 class DocumentGuard : private ModelMethodGuard
 {
 public:
-    enum __InitMethod
+    enum InitMethod_
     {
         // a method which is to initialize the document
         InitMethod,
     };
 
-    enum __DefaultMethod
+    enum DefaultMethod_
     {
         // a default method
         DefaultMethod
     };
 
-    enum __MethodUsedDuringInit
+    enum MethodUsedDuringInit_
     {
         // a method which is used (externally) during the initialization phase
         MethodUsedDuringInit
     };
 
-    enum __MethodWithoutInit
+    enum MethodWithoutInit_
     {
         // a method which does not need initialization - use with care!
         MethodWithoutInit
@@ -654,7 +655,7 @@ public:
         @throws css::lang::NotInitializedException
             if the given component is not yet initialized
     */
-    DocumentGuard(const ODatabaseDocument& _document, __DefaultMethod)
+    DocumentGuard(const ODatabaseDocument& _document, DefaultMethod_)
         : ModelMethodGuard(_document)
         , m_document(_document )
     {
@@ -672,7 +673,7 @@ public:
         @throws css::frame::DoubleInitializationException
             if the given component is already initialized, or currently being initialized.
     */
-    DocumentGuard(const ODatabaseDocument& _document, __InitMethod)
+    DocumentGuard(const ODatabaseDocument& _document, InitMethod_)
         : ModelMethodGuard(_document)
         , m_document(_document)
     {
@@ -691,7 +692,7 @@ public:
             if the component is still uninitialized, and not in the initialization
             phase currently.
     */
-    DocumentGuard(const ODatabaseDocument& _document, __MethodUsedDuringInit)
+    DocumentGuard(const ODatabaseDocument& _document, MethodUsedDuringInit_)
         : ModelMethodGuard(_document)
         , m_document(_document)
     {
@@ -706,7 +707,7 @@ public:
         @throws css::lang::DisposedException
             If the given component is already disposed
     */
-    DocumentGuard(const ODatabaseDocument& _document, __MethodWithoutInit)
+    DocumentGuard(const ODatabaseDocument& _document, MethodWithoutInit_)
         : ModelMethodGuard( _document )
         , m_document( _document )
     {

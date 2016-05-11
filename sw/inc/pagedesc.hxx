@@ -158,7 +158,7 @@ class SW_DLLPUBLIC SwPageDesc : public SwModify
        No adjustment at any other place. */
     SAL_DLLPRIVATE void Mirror();
 
-    SAL_DLLPRIVATE void ResetAllAttr( bool bLeft );
+    SAL_DLLPRIVATE void ResetAllAttr();
 
     SAL_DLLPRIVATE SwPageDesc(const OUString&, SwFrameFormat*, SwDoc *pDc );
 
@@ -166,7 +166,7 @@ protected:
    virtual void Modify( const SfxPoolItem* pOld, const SfxPoolItem *pNewValue ) override;
 
 public:
-    OUString GetName() const { return m_StyleName; }
+    const OUString& GetName() const { return m_StyleName; }
     void SetName(const OUString& rNewName) { m_StyleName = rNewName; }
 
     bool GetLandscape() const { return m_IsLandscape; }
@@ -189,6 +189,7 @@ public:
     bool IsHidden() const { return m_IsHidden; }
     void SetHidden(bool const bValue) { m_IsHidden = bValue; }
 
+    /// Same as WriteUseOn(), but the >= PD_HEADERSHARE part of the bitfield is not modified.
     inline void      SetUseOn( UseOnPage eNew );
     inline UseOnPage GetUseOn() const;
 
@@ -307,7 +308,7 @@ inline UseOnPage SwPageDesc::GetUseOn() const
 
 inline void SwPageDesc::ResetAllMasterAttr()
 {
-    ResetAllAttr( false );
+    ResetAllAttr();
 }
 
 inline const SwFrameFormat *SwPageDesc::GetRightFormat(bool const bFirst) const

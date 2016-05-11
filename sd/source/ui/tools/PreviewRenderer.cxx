@@ -92,9 +92,7 @@ PreviewRenderer::~PreviewRenderer()
 Image PreviewRenderer::RenderPage (
     const SdPage* pPage,
     const sal_Int32 nWidth,
-    const OUString& rSubstitutionText,
-    const bool bObeyHighContrastMode,
-    const bool bDisplayPresentationObjects)
+    const OUString& rSubstitutionText)
 {
     if (pPage != nullptr)
     {
@@ -108,8 +106,7 @@ Image PreviewRenderer::RenderPage (
             pPage,
             Size(nWidth,nHeight),
             rSubstitutionText,
-            bObeyHighContrastMode,
-            bDisplayPresentationObjects);
+            false/*bObeyHighContrastMode*/);
     }
     else
         return Image();
@@ -334,7 +331,7 @@ void PreviewRenderer::PaintSubstitutionText (const OUString& rSubstitutionText)
         const vcl::Font& rOriginalFont (mpPreviewDevice->GetFont());
         vcl::Font aFont (mpPreviewDevice->GetSettings().GetStyleSettings().GetAppFont());
         sal_Int32 nHeight (mpPreviewDevice->PixelToLogic(Size(0,snSubstitutionTextSize)).Height());
-        aFont.SetHeight(nHeight);
+        aFont.SetFontHeight(nHeight);
         mpPreviewDevice->SetFont (aFont);
 
         // Paint the substitution text.
@@ -491,8 +488,11 @@ Image PreviewRenderer::ScaleBitmap (
 
 void PreviewRenderer::Notify(SfxBroadcaster&, const SfxHint& rHint)
 {
+    if (!mpDocShellOfView)
+        return;
+
     const SfxSimpleHint* pSimpleHint = dynamic_cast<const SfxSimpleHint*>(&rHint);
-    if (pSimpleHint && mpDocShellOfView && pSimpleHint->GetId() == SFX_HINT_DYING)
+    if (pSimpleHint && pSimpleHint->GetId() == SFX_HINT_DYING)
     {
         // The doc shell is dying.  Our view uses its item pool and
         // has to be destroyed as well.  The next call to

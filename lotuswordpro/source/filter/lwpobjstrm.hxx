@@ -88,17 +88,17 @@ public:
     sal_uInt16 QuickRead(void* buf, sal_uInt16 len);
     sal_uInt16 GetPos() { return m_nReadPos; }
     void SeekRel(sal_uInt16 pos);
-    bool Seek( sal_uInt16 pos);
+    void Seek( sal_uInt16 pos);
     void SkipExtra();
     sal_uInt16 CheckExtra();
 
-    bool QuickReadBool(bool *pFailure=nullptr);
+    bool QuickReadBool();
     sal_uInt32 QuickReaduInt32(bool *pFailure=nullptr);
     sal_uInt16 QuickReaduInt16(bool *pFailure=nullptr);
     sal_uInt8 QuickReaduInt8(bool *pFailure=nullptr);
-    sal_Int32 QuickReadInt32(bool *pFailure=nullptr);
-    sal_Int16 QuickReadInt16(bool *pFailure=nullptr);
-    double QuickReadDouble(bool *pFailure=nullptr);
+    sal_Int32 QuickReadInt32();
+    sal_Int16 QuickReadInt16();
+    double QuickReadDouble();
 
     OUString QuickReadStringPtr();
 

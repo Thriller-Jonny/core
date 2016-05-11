@@ -384,7 +384,7 @@ IMPL_LINK_TYPED( SwGlossaryDlg, NameModify, Edit&, rEdit, void )
     const bool bNotFound = !DoesBlockExist(aName, bNameED ? OUString() : rEdit.GetText());
     if(bNameED)
     {
-            // did the text get in to the Listbbox in the Edit with a click?
+            // did the text get in to the Listbox in the Edit with a click?
         if(bNotFound)
         {
             m_pShortNameEdit->SetText( lcl_GetValidShortCut( aName ) );
@@ -580,7 +580,7 @@ IMPL_LINK_TYPED( SwGlossaryDlg, MenuHdl, Menu *, pMn, bool )
         uno::Reference<XFilterManager> xFltMgr(xFP, UNO_QUERY);
         SfxFilterMatcher aMatcher( OUString::createFromAscii(SwDocShell::Factory().GetShortName()) );
         SfxFilterMatcherIter aIter( aMatcher );
-        const SfxFilter* pFilter = aIter.First();
+        std::shared_ptr<const SfxFilter> pFilter = aIter.First();
         while ( pFilter )
         {
             if( pFilter->GetUserData() == FILTER_WW8 )
@@ -1079,7 +1079,7 @@ void SwGlossaryDlg::ShowAutoText(const OUString& rGroup, const OUString& rShortN
     {
         SetResumeData(rGroup, rShortName);
         //try to make an Undo()
-        pExampleFrame->ClearDocument( true );
+        pExampleFrame->ClearDocument();
     }
 }
 
@@ -1102,10 +1102,9 @@ void SwGlossaryDlg::ResumeShowAutoText()
             {
                 uno::Any aGroup = m_xAutoText->getByName(sGroup);
                 uno::Reference< XAutoTextGroup >  xGroup;
-                OUString uShortName(sShortName);
-                if((aGroup >>= xGroup) && xGroup->hasByName(uShortName))
+                if((aGroup >>= xGroup) && xGroup->hasByName(sShortName))
                 {
-                    uno::Any aEntry(xGroup->getByName(uShortName));
+                    uno::Any aEntry(xGroup->getByName(sShortName));
                     uno::Reference< XAutoTextEntry >  xEntry;
                     aEntry >>= xEntry;
                     uno::Reference< XTextRange >  xRange(xCursor, uno::UNO_QUERY);

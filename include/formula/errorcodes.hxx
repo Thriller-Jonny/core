@@ -22,8 +22,7 @@
 
 #include <rtl/math.hxx>
 
-namespace ScErrorCodes
-{
+namespace formula {
 
 const sal_uInt16 errIllegalChar          = 501;
 const sal_uInt16 errIllegalArgument      = 502;
@@ -51,7 +50,6 @@ const sal_uInt16 errNoConvergence        = 523;
 const sal_uInt16 errNoRef                = 524; // #REF!
 const sal_uInt16 errNoName               = 525; // #NAME?
 const sal_uInt16 errDoubleRef            = 526;
-const sal_uInt16 errInterpOverflow       = 527;
 // Not displayed, temporary for TrackFormulas,
 // Cell depends on another cell that has errCircularReference
 const sal_uInt16 errTrackFromCircRef     = 528;
@@ -78,6 +76,11 @@ const sal_uInt16 errJumpMatHasResult     = 535;
 // string or empty, to be distinguished from the general errNoValue NAN and not
 // to be used as result.
 const sal_uInt16 errElementNaN           = 536;
+// ScInterpreter/ScFormulaCell internal:  keep dirty, retry interpreting next
+// round.
+const sal_uInt16 errRetryCircular        = 537;
+// If matrix could not be allocated.
+const sal_uInt16 errMatrixSize           = 538;
 
 // Interpreter: NA() not available condition, not a real error
 const sal_uInt16 NOTAVAILABLE            = 0x7fff;
@@ -87,14 +90,10 @@ const sal_uInt16 NOTAVAILABLE            = 0x7fff;
     represent an interpreter error code. */
 inline double CreateDoubleError( sal_uInt16 nErr )
 {
-    union
-    {
-        double fVal;
-        sal_math_Double smVal;
-    };
-    ::rtl::math::setNan( &fVal );
+    sal_math_Double smVal;
+    ::rtl::math::setNan( &smVal.value );
     smVal.nan_parts.fraction_lo = nErr;
-    return fVal;
+    return smVal.value;
 }
 
 /** Recreate the error code of a coded double error, if any. */
@@ -111,10 +110,7 @@ inline sal_uInt16 GetDoubleErrorValue( double fVal )
     return (sal_uInt16)(nErr & 0x0000ffff);     // any other error
 }
 
-} // namespace ScErrorCodes
-
-// yes, exceptionally we put a "using namespace" in a header file..
-using namespace ScErrorCodes;
+} // namespace formula
 
 #endif // INCLUDED_FORMULA_ERRORCODES_HXX
 

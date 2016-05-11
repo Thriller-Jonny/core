@@ -49,7 +49,7 @@
 #include <com/sun/star/sheet/opencl/OpenCLPlatform.hpp>
 #include <com/sun/star/util/XChangesNotifier.hpp>
 #include <cppuhelper/implbase.hxx>
-#include <cppuhelper/interfacecontainer.h>
+#include <comphelper/interfacecontainer2.hxx>
 #include <svl/itemprop.hxx>
 #include <vcl/event.hxx>
 #include <vcl/ITiledRenderable.hxx>
@@ -101,7 +101,7 @@ private:
     css::uno::Reference<css::uno::XInterface> xChartDataProv;
     css::uno::Reference<css::uno::XInterface> xObjProvider;
 
-    ::cppu::OInterfaceContainerHelper maChangesListeners;
+    ::comphelper::OInterfaceContainerHelper2 maChangesListeners;
 
     bool                    FillRenderMarkData( const css::uno::Any& aSelection,
                                                 const css::uno::Sequence< css::beans::PropertyValue >& rOptions,
@@ -130,7 +130,7 @@ public:
     void UpdateAllRowHeights();
 
     void                    BeforeXMLLoading();
-    void                    AfterXMLLoading(bool bRet);
+    void                    AfterXMLLoading();
     ScSheetSaveData*        GetSheetSaveData();
 
     void                    RepaintRange( const ScRange& rRange );
@@ -374,6 +374,9 @@ public:
 
     /// @see vcl::ITiledRenderable::getPartName().
     virtual OUString getPartName(int nPart) override;
+
+    /// @see vcl::ITiledRenderable::getPartHash().
+    virtual OUString getPartHash( int nPart ) override;
 
     /// @see vcl::ITiledRenderable::initializeForTiledRendering().
     virtual void initializeForTiledRendering(const css::uno::Sequence<css::beans::PropertyValue>& rArguments) override;

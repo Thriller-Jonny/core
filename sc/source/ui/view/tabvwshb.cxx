@@ -26,7 +26,6 @@
 #include <toolkit/helper/vclunohelper.hxx>
 #include <svx/svxdlg.hxx>
 #include <svx/dataaccessdescriptor.hxx>
-#include <svx/pfiledlg.hxx>
 #include <svx/svditer.hxx>
 #include <svx/svdmark.hxx>
 #include <svx/svdograf.hxx>
@@ -39,6 +38,7 @@
 #include <sfx2/bindings.hxx>
 #include <sfx2/dispatch.hxx>
 #include <sfx2/viewfrm.hxx>
+#include <sfx2/filedlghelper.hxx>
 #include <svtools/soerr.hxx>
 #include <svl/rectitem.hxx>
 #include <svl/slstitm.hxx>
@@ -98,7 +98,7 @@ void ScTabViewShell::ConnectObject( SdrOle2Obj* pObj )
     }
 }
 
-bool ScTabViewShell::ActivateObject( SdrOle2Obj* pObj, long nVerb )
+void ScTabViewShell::ActivateObject( SdrOle2Obj* pObj, long nVerb )
 {
     // Do not leave the hint message box on top of the object
     RemoveHintWindow();
@@ -209,8 +209,6 @@ bool ScTabViewShell::ActivateObject( SdrOle2Obj* pObj, long nVerb )
     //! SetDocumentName should already happen in Sfx ???
     //TODO/LATER: how "SetDocumentName"?
     //xIPObj->SetDocumentName( GetViewData().GetDocShell()->GetTitle() );
-
-    return ( !(nErr & ERRCODE_ERROR_MASK) );
 }
 
 ErrCode ScTabViewShell::DoVerb(long nVerb)
@@ -295,9 +293,6 @@ void ScTabViewShell::ExecDrawIns(SfxRequest& rReq)
             break;
 
         case SID_INSERT_OBJECT:
-        case SID_INSERT_PLUGIN:
-        case SID_INSERT_SOUND:
-        case SID_INSERT_VIDEO:
         case SID_INSERT_SMATH:
         case SID_INSERT_FLOATINGFRAME:
             FuInsertOLE(this, pWin, pView, pDrModel, rReq);
@@ -456,17 +451,7 @@ void ScTabViewShell::GetDrawInsState(SfxItemSet &rSet)
                 break;
 
             case SID_INSERT_OBJECT:
-            case SID_INSERT_PLUGIN:
             case SID_INSERT_FLOATINGFRAME:
-                if ( bOle || bTabProt || bShared )
-                    rSet.DisableItem( nWhich );
-                break;
-
-            case SID_INSERT_SOUND:
-            case SID_INSERT_VIDEO:
-                 /* #i102735# discussed with NN: removed for performance reasons
-                 || !SvxPluginFileDlg::IsAvailable(nWhich)
-                 */
                 if ( bOle || bTabProt || bShared )
                     rSet.DisableItem( nWhich );
                 break;

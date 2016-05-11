@@ -44,7 +44,7 @@ private:
 
     TOOLS_DLLPRIVATE void           ImplClear();
     TOOLS_DLLPRIVATE size_t         ImplFindSubSelection( long nIndex ) const;
-    TOOLS_DLLPRIVATE bool           ImplMergeSubSelections( size_t nPos1, size_t nPos2 );
+    TOOLS_DLLPRIVATE void           ImplMergeSubSelections( size_t nPos1, size_t nPos2 );
     TOOLS_DLLPRIVATE long           ImplFwdUnselected();
 
 public:
@@ -54,11 +54,6 @@ public:
                     ~MultiSelection();
 
     MultiSelection& operator= ( const MultiSelection& rOrig );
-    bool            operator== ( MultiSelection& rOrig );
-    bool            operator!= ( MultiSelection& rOrig )
-                        { return !operator==( rOrig ); }
-    bool            operator !() const
-                        { return nSelCount == 0; }
 
     void            SelectAll( bool bSelect = true );
     bool            Select( long nIndex, bool bSelect = true );
@@ -73,7 +68,7 @@ public:
     void            Remove( long nIndex );
 
     const Range&    GetTotalRange() const { return aTotRange; }
-    long            FirstSelected( bool bInverse = false );
+    long            FirstSelected();
     long            LastSelected();
     long            NextSelected();
 
@@ -98,9 +93,9 @@ class TOOLS_DLLPUBLIC StringRangeEnumerator
     sal_Int32                                              mnOffset;
     bool                                                   mbValidInput;
 
-    bool setRange( const OUString& i_rNewRange, bool i_bStrict = false );
-    bool insertRange( sal_Int32 nFirst, sal_Int32 nLast, bool bSequence, bool bMayAdjust );
-    bool insertJoinedRanges( const std::vector< sal_Int32 >& rNumbers, bool i_bStrict );
+    bool setRange( const OUString& i_rNewRange );
+    bool insertRange( sal_Int32 nFirst, sal_Int32 nLast, bool bSequence );
+    bool insertJoinedRanges( const std::vector< sal_Int32 >& rNumbers );
     bool checkValue( sal_Int32, const std::set< sal_Int32 >* i_pPossibleValues = nullptr ) const;
 public:
     class TOOLS_DLLPUBLIC Iterator

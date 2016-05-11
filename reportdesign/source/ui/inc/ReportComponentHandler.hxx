@@ -87,7 +87,6 @@ namespace rptui
         void operator =(ReportComponentHandler &) = delete;
 
 
-
         // override WeakComponentImplHelperBase::disposing()
         // This function is called upon disposing the component,
         // if your component needs special work when it becomes
@@ -96,9 +95,7 @@ namespace rptui
 
         css::uno::Reference< css::uno::XComponentContext >        m_xContext;
         css::uno::Reference< css::inspection::XPropertyHandler >  m_xFormComponentHandler; /// delegatee
-        css::uno::Reference< css::uno::XInterface >               m_xReportComponent; /// inspectee
         css::uno::Reference< css::uno::XInterface >               m_xFormComponent; /// inspectee
-        ::std::unique_ptr< OPropertyInfoService >                 m_pInfoService;
     };
 
 } // namespace rptui

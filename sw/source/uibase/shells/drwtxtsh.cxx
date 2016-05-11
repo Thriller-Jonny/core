@@ -85,7 +85,7 @@ SFX_IMPL_INTERFACE(SwDrawTextShell, SfxShell)
 
 void SwDrawTextShell::InitInterface_Impl()
 {
-    GetStaticInterface()->RegisterPopupMenu(SW_RES(MN_DRWTXT_POPUPMENU));
+    GetStaticInterface()->RegisterPopupMenu("drawtext");
 
     GetStaticInterface()->RegisterObjectBar(SFX_OBJECTBAR_OBJECT, RID_DRAW_TEXT_TOOLBOX);
 
@@ -439,7 +439,7 @@ void SwDrawTextShell::ExecDraw(SfxRequest &rReq)
         case FN_FORMAT_RESET:   // delete hard text attributes
         {
             pOLV->RemoveAttribsKeepLanguages( true );
-            pOLV->GetEditView().GetEditEngine()->RemoveFields(true);
+            pOLV->GetEditView().GetEditEngine()->RemoveFields();
             rReq.Done();
         }
         break;
@@ -751,7 +751,7 @@ void SwDrawTextShell::InsertSymbol(SfxRequest& rReq)
             const SvxFontItem* pFontItem = SfxItemSet::GetItem<SvxFontItem>(pDlg->GetOutputItemSet(), SID_ATTR_CHAR_FONT, false);
             if ( pFontItem )
             {
-                aFont.SetName( pFontItem->GetFamilyName() );
+                aFont.SetFamilyName( pFontItem->GetFamilyName() );
                 aFont.SetStyleName( pFontItem->GetStyleName() );
                 aFont.SetCharSet( pFontItem->GetCharSet() );
                 aFont.SetPitch( pFontItem->GetPitch() );
@@ -760,7 +760,7 @@ void SwDrawTextShell::InsertSymbol(SfxRequest& rReq)
             if ( pCItem )
             {
                 sSym  = pCItem->GetValue();
-                aOpt.SetSymbolFont(aFont.GetName());
+                aOpt.SetSymbolFont(aFont.GetFamilyName());
                 SW_MOD()->ApplyUsrPref(aOpt, &rView);
             }
         }
@@ -786,7 +786,7 @@ void SwDrawTextShell::InsertSymbol(SfxRequest& rReq)
 
         // assign attributes (Set font)
         SfxItemSet aFontAttribSet( *aFontSet.GetPool(), aFontSet.GetRanges() );
-        SvxFontItem aFontItem (aFont.GetFamily(),    aFont.GetName(),
+        SvxFontItem aFontItem (aFont.GetFamilyType(), aFont.GetFamilyName(),
                                 aFont.GetStyleName(), aFont.GetPitch(),
                                 aFont.GetCharSet(),
                                 EE_CHAR_FONTINFO );
@@ -813,8 +813,8 @@ void SwDrawTextShell::InsertSymbol(SfxRequest& rReq)
         pOLV->ShowCursor();
 
         rReq.AppendItem( SfxStringItem( GetPool().GetWhich(SID_CHARMAP), sSym ) );
-        if(!aFont.GetName().isEmpty())
-            rReq.AppendItem( SfxStringItem( SID_ATTR_SPECIALCHAR, aFont.GetName() ) );
+        if(!aFont.GetFamilyName().isEmpty())
+            rReq.AppendItem( SfxStringItem( SID_ATTR_SPECIALCHAR, aFont.GetFamilyName() ) );
         rReq.Done();
     }
 }

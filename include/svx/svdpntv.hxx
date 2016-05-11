@@ -79,7 +79,6 @@ typedef unsigned char SDR_TRISTATE;
 #define SDRVIEWWIN_NOTFOUND     (0xFFFF)
 
 
-
 class SdrPaintView;
 
 namespace sdr
@@ -89,8 +88,6 @@ namespace sdr
         class ViewObjectContactRedirector;
     }
 }
-
-
 
 
 class SVX_DLLPUBLIC SvxViewHint : public SfxHint
@@ -117,7 +114,6 @@ BitmapEx SVX_DLLPUBLIC convertMetafileToBitmapEx(
     const GDIMetaFile& rMtf,
     const basegfx::B2DRange& rTargetRange,
     const sal_uInt32 nMaximumQuadraticPixels = 500000);
-
 
 
 class SVX_DLLPUBLIC SdrPaintView : public SfxListener, public SfxRepeatTarget, public SfxBroadcaster, public ::utl::ConfigurationListener
@@ -162,6 +158,7 @@ protected:
     SvtOptionsDrawinglayer      maDrawinglayerOpt;
 
     bool                        mbPageVisible : 1;
+    bool                        mbPageShadowVisible : 1;
     bool                        mbPageBorderVisible : 1;
     bool                        mbBordVisible : 1;
     bool                        mbGridVisible : 1;
@@ -340,7 +337,7 @@ public:
     // #i72889# used from CompleteRedraw() implementation internally, added to be able to do a complete redraw in single steps
 
     // BeginCompleteRedraw returns (or even creates) a SdrPaintWindow which will then be used as the
-    // target for paints. Since paints may be buffered, use it's GetTargetOutputDevice() method which will
+    // target for paints. Since paints may be buffered, use its GetTargetOutputDevice() method which will
     // return the buffer in case it's buffered.
     //
     // DoCompleteRedraw then draws the DrawingLayer hierarchy
@@ -358,7 +355,7 @@ public:
     SdrPaintWindow* BeginDrawLayers(OutputDevice* pOut, const vcl::Region& rReg, bool bDisableIntersect = false);
 
     // Used when the region passed to BeginDrawLayers needs to be changed
-    void UpdateDrawLayersRegion(OutputDevice* pOut, const vcl::Region& rReg, bool bDisableIntersect = false);
+    void UpdateDrawLayersRegion(OutputDevice* pOut, const vcl::Region& rReg);
     void EndDrawLayers(SdrPaintWindow& rPaintWindow, bool bPaintFormLayer);
 
 protected:
@@ -371,6 +368,9 @@ protected:
 public:
     /// Draw Page as a white area or not
     bool IsPageVisible() const { return mbPageVisible; }
+
+    /// Draw Page shadow or not
+    bool IsPageShadowVisible() const { return mbPageShadowVisible; }
 
     /// Draw Page as a white area or not
     bool IsPageBorderVisible() const { return mbPageBorderVisible; }
@@ -390,8 +390,9 @@ public:
     /// Draw Help line in fron of the objects or beging them
     bool IsHlplFront() const { return mbHlplFront  ; }
 
-    Color GetGridColor() const { return maGridColor;}
+    const Color& GetGridColor() const { return maGridColor;}
     void SetPageVisible(bool bOn = true) { mbPageVisible=bOn; InvalidateAllWin(); }
+    void SetPageShadowVisible(bool bOn = true) { mbPageShadowVisible=bOn; InvalidateAllWin(); }
     void SetPageBorderVisible(bool bOn = true) { mbPageBorderVisible=bOn; InvalidateAllWin(); }
     void SetBordVisible(bool bOn = true) { mbBordVisible=bOn; InvalidateAllWin(); }
     void SetGridVisible(bool bOn = true) { mbGridVisible=bOn; InvalidateAllWin(); }
@@ -415,12 +416,16 @@ public:
     void setHideFormControl(bool bNew) { if(bNew != (bool)mbHideFormControl) mbHideFormControl = bNew; }
 
     void SetGridCoarse(const Size& rSiz) { maGridBig=rSiz; }
-    void SetGridFine(const Size& rSiz) { maGridFin=rSiz; if (maGridFin.Height()==0) maGridFin.Height()=maGridFin.Width(); if (mbGridVisible) InvalidateAllWin(); }
+    void SetGridFine(const Size& rSiz) {
+        maGridFin=rSiz;
+        if (maGridFin.Height()==0) maGridFin.Height()=maGridFin.Width();
+        if (mbGridVisible) InvalidateAllWin();
+    }
     const Size& GetGridCoarse() const { return maGridBig; }
     const Size& GetGridFine() const { return maGridFin; }
 
     void InvalidateAllWin();
-    void InvalidateAllWin(const Rectangle& rRect, bool bPlus1Pix=false);
+    void InvalidateAllWin(const Rectangle& rRect);
 
     /// If the View should not call Invalidate() on the windows, override
     /// the following 2 methods and do something else.

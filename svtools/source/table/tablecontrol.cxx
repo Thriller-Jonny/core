@@ -120,7 +120,6 @@ namespace svt { namespace table
     }
 
 
-
     void TableControl::StateChanged( StateChangedType i_nStateChange )
     {
         Control::StateChanged( i_nStateChange );
@@ -164,7 +163,7 @@ namespace svt { namespace table
     }
 
 
-    void TableControl::SetModel( PTableModel _pModel )
+    void TableControl::SetModel( const PTableModel& _pModel )
     {
         m_pImpl->setModel( _pModel );
     }
@@ -188,15 +187,15 @@ namespace svt { namespace table
     }
 
 
-    bool TableControl::GoTo( ColPos _nColumn, RowPos _nRow )
+    void TableControl::GoTo( ColPos _nColumn, RowPos _nRow )
     {
-        return m_pImpl->goTo( _nColumn, _nRow );
+        m_pImpl->goTo( _nColumn, _nRow );
     }
 
 
-    bool TableControl::GoToCell(sal_Int32 _nColPos, sal_Int32 _nRowPos)
+    void TableControl::GoToCell(sal_Int32 _nColPos, sal_Int32 _nRowPos)
     {
-        return m_pImpl->goTo( _nColPos, _nRowPos );
+        m_pImpl->goTo( _nColPos, _nRowPos );
     }
 
 
@@ -315,7 +314,7 @@ namespace svt { namespace table
                 aRetText = "ColumnHeaderBar";
                 break;
             case TCTYPE_TABLECELL:
-                //the name of the cell constists of column name and row name if defined
+                //the name of the cell consists of column name and row name if defined
                 //if the name is equal to cell content, it'll be read twice
                 if(GetModel()->hasColumnHeaders())
                 {
@@ -340,7 +339,7 @@ namespace svt { namespace table
     }
 
 
-    OUString TableControl::GetAccessibleObjectDescription( AccessibleTableControlObjType eObjType, sal_Int32 ) const
+    OUString TableControl::GetAccessibleObjectDescription( AccessibleTableControlObjType eObjType ) const
     {
         OUString aRetText;
         switch( eObjType )
@@ -511,9 +510,9 @@ namespace svt { namespace table
     }
 
 
-    Reference< XAccessible > TableControl::GetAccessible( bool bCreate )
+    Reference< XAccessible > TableControl::GetAccessible()
     {
-        return Control::GetAccessible( bCreate );
+        return Control::GetAccessible();
     }
 
 
@@ -617,9 +616,8 @@ namespace svt { namespace table
     }
 
 
-    Rectangle TableControl::calcHeaderRect(bool _bIsColumnBar, bool _bOnScreen)
+    Rectangle TableControl::calcHeaderRect(bool _bIsColumnBar )
     {
-        (void)_bOnScreen;
         return m_pImpl->calcHeaderRect( !_bIsColumnBar );
     }
 
@@ -630,9 +628,8 @@ namespace svt { namespace table
     }
 
 
-    Rectangle TableControl::calcTableRect(bool _bOnScreen)
+    Rectangle TableControl::calcTableRect()
     {
-        (void)_bOnScreen;
         return m_pImpl->calcTableRect();
     }
 

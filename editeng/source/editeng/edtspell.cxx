@@ -41,9 +41,8 @@ using namespace com::sun::star::linguistic2;
 
 
 EditSpellWrapper::EditSpellWrapper( vcl::Window* _pWin,
-        Reference< XSpellChecker1 >  &xChecker,
-        bool bIsStart, bool bIsAllRight, EditView* pView ) :
-    SvxSpellWrapper( _pWin, xChecker, bIsStart, bIsAllRight )
+        bool bIsStart, EditView* pView ) :
+    SvxSpellWrapper( _pWin, bIsStart, false/*bIsAllRight*/ )
 {
     SAL_WARN_IF( !pView, "editeng", "One view has to be abandoned!" );
     // Keep IgnoreList, delete ReplaceList...
@@ -106,10 +105,9 @@ void EditSpellWrapper::SpellStart( SvxSpellArea eArea )
     }
 }
 
-bool EditSpellWrapper::SpellContinue()
+void EditSpellWrapper::SpellContinue()
 {
     SetLast( pEditView->GetImpEditEngine()->ImpSpell( pEditView ) );
-    return GetLast().is();
 }
 
 void EditSpellWrapper::SpellEnd()
@@ -544,7 +542,6 @@ bool WrongList::DbgIsBuggy() const
 }
 
 
-
 EdtAutoCorrDoc::EdtAutoCorrDoc(
     EditEngine* pE, ContentNode* pN, sal_Int32 nCrsr, sal_Unicode cIns) :
     mpEditEngine(pE),
@@ -613,7 +610,7 @@ bool EdtAutoCorrDoc::ReplaceRange(sal_Int32 nPos, sal_Int32 nSourceLength, const
     return true;
 }
 
-bool EdtAutoCorrDoc::SetAttr(sal_Int32 nStt, sal_Int32 nEnd,
+void EdtAutoCorrDoc::SetAttr(sal_Int32 nStt, sal_Int32 nEnd,
             sal_uInt16 nSlotId, SfxPoolItem& rItem)
 {
     SfxItemPool* pPool = &mpEditEngine->GetEditDoc().GetItemPool();
@@ -636,7 +633,6 @@ bool EdtAutoCorrDoc::SetAttr(sal_Int32 nStt, sal_Int32 nEnd,
         mpEditEngine->SetAttribs( aSel, aSet, ATTRSPECIAL_EDGE );
         bAllowUndoAction = false;
     }
-    return true;
 }
 
 bool EdtAutoCorrDoc::SetINetAttr(sal_Int32 nStt, sal_Int32 nEnd,
@@ -734,7 +730,7 @@ bool EdtAutoCorrDoc::ChgAutoCorrWord( sal_Int32& rSttPos,
     return bRet;
 }
 
-LanguageType EdtAutoCorrDoc::GetLanguage( sal_Int32 nPos, bool ) const
+LanguageType EdtAutoCorrDoc::GetLanguage( sal_Int32 nPos ) const
 {
     return mpEditEngine->GetLanguage( EditPaM( pCurNode, nPos+1 ) );
 }

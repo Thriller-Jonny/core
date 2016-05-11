@@ -126,7 +126,7 @@ void ScModule::InitInterface_Impl()
     GetStaticInterface()->RegisterObjectBar(SFX_OBJECTBAR_APPLICATION | SFX_VISIBILITY_DESKTOP | SFX_VISIBILITY_STANDARD | SFX_VISIBILITY_CLIENT | SFX_VISIBILITY_VIEWER,
                                             RID_OBJECTBAR_APP);
 
-    GetStaticInterface()->RegisterStatusBar(ScResId(SCCFG_STATUSBAR));
+    GetStaticInterface()->RegisterStatusBar(SCCFG_STATUSBAR);
 }
 
 ScModule::ScModule( SfxObjectFactory* pFact ) :
@@ -318,14 +318,10 @@ void ScModule::ConfigurationChanged( utl::ConfigurationBroadcaster* p, sal_uInt3
 void ScModule::Notify( SfxBroadcaster&, const SfxHint& rHint )
 {
     const SfxSimpleHint* pSimpleHint = dynamic_cast<const SfxSimpleHint*>(&rHint);
-    if ( pSimpleHint )
+    if ( pSimpleHint && pSimpleHint->GetId() == SFX_HINT_DEINITIALIZING )
     {
-        sal_uLong nHintId = pSimpleHint->GetId();
-        if ( nHintId == SFX_HINT_DEINITIALIZING )
-        {
-            // ConfigItems must be removed before ConfigManager
-            DeleteCfg();
-        }
+        // ConfigItems must be removed before ConfigManager
+        DeleteCfg();
     }
 }
 
@@ -471,8 +467,9 @@ void ScModule::Execute( SfxRequest& rReq )
         case SID_PSZ_FUNCTION:
             if (pReqArgs)
             {
-                const SfxUInt16Item& rItem = static_cast<const SfxUInt16Item&>(pReqArgs->Get(SID_PSZ_FUNCTION));
-                OSL_ENSURE(dynamic_cast<const SfxUInt16Item*>( &rItem) !=  nullptr,"wrong Parameter");
+                auto const & p = pReqArgs->Get(SID_PSZ_FUNCTION);
+                OSL_ENSURE(dynamic_cast<const SfxUInt32Item*>(&p) !=  nullptr,"wrong Parameter");
+                const SfxUInt32Item& rItem = static_cast<const SfxUInt32Item&>(p);
 
                 ScAppOptions aNewOpts( GetAppOptions() );
                 aNewOpts.SetStatusFunc( rItem.GetValue() );
@@ -588,7 +585,7 @@ void ScModule::GetState( SfxItemSet& rSet )
                 rSet.Put( SfxBoolItem( nWhich, GetAppOptions().GetDetectiveAuto() ) );
                 break;
             case SID_PSZ_FUNCTION:
-                rSet.Put( SfxUInt16Item( nWhich, GetAppOptions().GetStatusFunc() ) );
+                rSet.Put( SfxUInt32Item( nWhich, GetAppOptions().GetStatusFunc() ) );
                 break;
             case SID_ATTR_METRIC:
                 rSet.Put( SfxUInt16Item( nWhich, sal::static_int_cast<sal_uInt16>(GetAppOptions().GetAppMetric()) ) );
@@ -762,25 +759,6 @@ void ScModule::InsertEntryToLRUList(sal_uInt16 nFIndex)
         ScAppOptions aNewOpts(rAppOpt);                                 // Let App know
         aNewOpts.SetLRUFuncList(aIdxList, n);
         SetAppOptions(aNewOpts);
-
-        RecentFunctionsChanged();
-    }
-}
-
-void ScModule::RecentFunctionsChanged()
-{
-    // update function list window
-    sal_uInt16 nFuncListID = ScFunctionChildWindow::GetChildWindowId();
-
-    //! notify all views
-    SfxViewFrame* pViewFrm = SfxViewFrame::Current();
-    if (pViewFrm && pViewFrm->HasChildWindow(nFuncListID))
-    {
-        ScFunctionChildWindow* pWnd = static_cast<ScFunctionChildWindow*>(pViewFrm->GetChildWindow(nFuncListID));
-        if (!pWnd)
-            return;
-        ScFunctionDockWin* pFuncList = static_cast<ScFunctionDockWin*>(pWnd->GetWindow());
-        pFuncList->InitLRUList();
     }
 }
 
@@ -1137,6 +1115,7 @@ void ScModule::ModifyOptions( const SfxItemSet& rOptSet )
                          || rOldOpt.IsMatchWholeCell() != rNewOpt.IsMatchWholeCell()
                          || rOldOpt.GetYear2000()   != rNewOpt.GetYear2000()
                          || rOldOpt.IsFormulaRegexEnabled() != rNewOpt.IsFormulaRegexEnabled()
+                         || rOldOpt.IsFormulaWildcardsEnabled() != rNewOpt.IsFormulaWildcardsEnabled()
                          );
             pDoc->SetDocOptions( rNewOpt );
             pDocSh->SetDocumentModified();
@@ -1285,7 +1264,7 @@ void ScModule::ModifyOptions( const SfxItemSet& rOptSet )
         // Re-compile cells with name error, and recalc if at least one cell
         // has been re-compiled.  In the future we may want to find a way to
         // recalc only those that are affected.
-        if (pDoc->CompileErrorCells(ScErrorCodes::errNoName))
+        if (pDoc->CompileErrorCells(formula::errNoName))
             bCalcAll = true;
     }
 
@@ -1850,7 +1829,7 @@ static void lcl_CheckNeedsRepaint( ScDocShell* pDocShell )
 
 IMPL_LINK_NOARG_TYPED(ScModule, IdleHandler, Timer *, void)
 {
-    if ( Application::AnyInput( VCL_INPUT_MOUSEANDKEYBOARD ) )
+    if ( Application::AnyInput( VclInputFlags::MOUSE | VclInputFlags::KEYBOARD ) )
     {
         aIdleTimer.Start(); // Timeout unchanged
         return;
@@ -2186,39 +2165,35 @@ IMPL_LINK_TYPED( ScModule, CalcFieldValueHdl, EditFieldInfo*, pInfo, void )
     }
 }
 
-bool ScModule::RegisterRefWindow( sal_uInt16 nSlotId, vcl::Window *pWnd )
+void ScModule::RegisterRefWindow( sal_uInt16 nSlotId, vcl::Window *pWnd )
 {
     std::list<VclPtr<vcl::Window> > & rlRefWindow = m_mapRefWindow[nSlotId];
 
     if( std::find( rlRefWindow.begin(), rlRefWindow.end(), pWnd ) == rlRefWindow.end() )
     {
         rlRefWindow.push_back( pWnd );
-        return true;
     }
 
-    return false;
 }
 
-bool  ScModule::UnregisterRefWindow( sal_uInt16 nSlotId, vcl::Window *pWnd )
+void  ScModule::UnregisterRefWindow( sal_uInt16 nSlotId, vcl::Window *pWnd )
 {
     auto iSlot = m_mapRefWindow.find( nSlotId );
 
     if( iSlot == m_mapRefWindow.end() )
-        return false;
+        return;
 
     std::list<VclPtr<vcl::Window> > & rlRefWindow = iSlot->second;
 
     auto i = std::find( rlRefWindow.begin(), rlRefWindow.end(), pWnd );
 
     if( i == rlRefWindow.end() )
-        return false;
+        return;
 
     rlRefWindow.erase( i );
 
     if( rlRefWindow.empty() )
         m_mapRefWindow.erase( nSlotId );
-
-    return true;
 }
 
 vcl::Window *  ScModule::Find1RefWindow( sal_uInt16 nSlotId, vcl::Window *pWndAncestor )
@@ -2268,9 +2243,7 @@ void ScModule::SetAutoSpellProperty( bool bSet )
     // loading the linguistic component
     SvtLinguConfig aConfig;
 
-    uno::Any aAny;
-    aAny <<= bSet;
-    aConfig.SetProperty( OUString( LINGUPROP_AUTOSPELL ), aAny );
+    aConfig.SetProperty( OUString( LINGUPROP_AUTOSPELL ), uno::Any(bSet) );
 }
 
 bool ScModule::HasThesaurusLanguage( sal_uInt16 nLang )

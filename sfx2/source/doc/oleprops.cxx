@@ -27,15 +27,10 @@
 #include <rtl/strbuf.hxx>
 
 
-
-
-
-
 #define STREAM_BUFFER_SIZE 2048
 
 // usings
 using ::com::sun::star::uno::Any;
-using ::com::sun::star::uno::makeAny;
 
 using namespace ::com::sun::star;
 
@@ -44,29 +39,6 @@ using namespace ::com::sun::star;
 #define TIMESTAMP_INVALID_UTILDATETIME  (util::DateTime(0, 0, 0, 0, 1, 1, 1601, false))
 /// Invalid value for date to create invalid instance of TimeStamp.
 #define TIMESTAMP_INVALID_UTILDATE  (util::Date(1, 1, 1601))
-
-static
-bool operator==(const util::DateTime &i_rLeft, const util::DateTime &i_rRight)
-{
-    return i_rLeft.Year             == i_rRight.Year
-        && i_rLeft.Month            == i_rRight.Month
-        && i_rLeft.Day              == i_rRight.Day
-        && i_rLeft.Hours            == i_rRight.Hours
-        && i_rLeft.Minutes          == i_rRight.Minutes
-        && i_rLeft.Seconds          == i_rRight.Seconds
-        && i_rLeft.NanoSeconds      == i_rRight.NanoSeconds
-        && i_rLeft.IsUTC            == i_rRight.IsUTC;
-}
-
-static
-bool operator==(const util::Date &i_rLeft, const util::Date &i_rRight)
-{
-    return i_rLeft.Year             == i_rRight.Year
-        && i_rLeft.Month            == i_rRight.Month
-        && i_rLeft.Day              == i_rRight.Day;
-}
-
-
 
 /** Property representing a signed 32-bit integer value. */
 class SfxOleInt32Property : public SfxOlePropertyBase
@@ -83,7 +55,6 @@ private:
 private:
     sal_Int32           mnValue;
 };
-
 
 
 /** Property representing a floating-point value. */
@@ -103,7 +74,6 @@ private:
 };
 
 
-
 /** Property representing a boolean value. */
 class SfxOleBoolProperty : public SfxOlePropertyBase
 {
@@ -119,7 +89,6 @@ private:
 private:
     bool                mbValue;
 };
-
 
 
 /** Base class for properties that contain a single string value. */
@@ -144,7 +113,6 @@ private:
 };
 
 
-
 /** Property representing a bytestring value. */
 class SfxOleString8Property : public SfxOleStringPropertyBase
 {
@@ -161,7 +129,6 @@ private:
 };
 
 
-
 /** Property representing a Unicode string value. */
 class SfxOleString16Property : public SfxOleStringPropertyBase
 {
@@ -172,7 +139,6 @@ private:
     virtual void        ImplLoad( SvStream& rStrm ) override;
     virtual void        ImplSave( SvStream& rStrm ) override;
 };
-
 
 
 /** Property representing a filetime value as defined by the Windows API. */
@@ -212,7 +178,6 @@ private:
 };
 
 
-
 /** Property representing a thumbnail picture.
 
     Currently, only saving this property is implemented.
@@ -221,7 +186,7 @@ class SfxOleThumbnailProperty : public SfxOlePropertyBase
 {
 public:
     explicit            SfxOleThumbnailProperty( sal_Int32 nPropId,
-                            const uno::Sequence<sal_uInt8> & i_rData);
+                            const uno::Sequence<sal_Int8> & i_rData);
 
     inline bool         IsValid() const { return mData.getLength() > 0; }
 
@@ -230,9 +195,8 @@ private:
     virtual void        ImplSave( SvStream& rStrm ) override;
 
 private:
-    uno::Sequence<sal_uInt8>    mData;
+    uno::Sequence<sal_Int8>    mData;
 };
-
 
 
 /** Property representing a BLOB (which presumably stands for binary large
@@ -244,7 +208,7 @@ class SfxOleBlobProperty : public SfxOlePropertyBase
 {
 public:
     explicit            SfxOleBlobProperty( sal_Int32 nPropId,
-                            const uno::Sequence<sal_uInt8> & i_rData);
+                            const uno::Sequence<sal_Int8> & i_rData);
     inline bool         IsValid() const { return mData.getLength() > 0; }
 
 private:
@@ -252,9 +216,8 @@ private:
     virtual void        ImplSave( SvStream& rStrm ) override;
 
 private:
-    uno::Sequence<sal_uInt8>    mData;
+    uno::Sequence<sal_Int8>    mData;
 };
-
 
 
 sal_uInt16 SfxOleTextEncoding::GetCodePage() const
@@ -275,7 +238,6 @@ void SfxOleTextEncoding::SetCodePage( sal_uInt16 nCodePage )
             *mxTextEnc = eTextEnc;
     }
 }
-
 
 
 OUString SfxOleStringHelper::LoadString8( SvStream& rStrm ) const
@@ -378,7 +340,6 @@ void SfxOleStringHelper::ImplSaveString16( SvStream& rStrm, const OUString& rVal
 }
 
 
-
 SfxOleObjectBase::~SfxOleObjectBase()
 {
 }
@@ -410,7 +371,6 @@ void SfxOleObjectBase::SaveObject( SvStream& rStrm, SfxOleObjectBase& rObj )
 }
 
 
-
 SfxOleCodePageProperty::SfxOleCodePageProperty() :
     SfxOlePropertyBase( PROPID_CODEPAGE, PROPTYPE_INT16 )
 {
@@ -431,7 +391,6 @@ void SfxOleCodePageProperty::ImplSave( SvStream& rStrm )
 }
 
 
-
 SfxOleInt32Property::SfxOleInt32Property( sal_Int32 nPropId, sal_Int32 nValue ) :
     SfxOlePropertyBase( nPropId, PROPTYPE_INT32 ),
     mnValue( nValue )
@@ -447,7 +406,6 @@ void SfxOleInt32Property::ImplSave( SvStream& rStrm )
 {
     rStrm.WriteInt32( mnValue );
 }
-
 
 
 SfxOleDoubleProperty::SfxOleDoubleProperty( sal_Int32 nPropId, double fValue ) :
@@ -467,7 +425,6 @@ void SfxOleDoubleProperty::ImplSave( SvStream& rStrm )
 }
 
 
-
 SfxOleBoolProperty::SfxOleBoolProperty( sal_Int32 nPropId, bool bValue ) :
     SfxOlePropertyBase( nPropId, PROPTYPE_BOOL ),
     mbValue( bValue )
@@ -485,7 +442,6 @@ void SfxOleBoolProperty::ImplSave( SvStream& rStrm )
 {
     rStrm.WriteInt16( mbValue ? -1 : 0 );
 }
-
 
 
 SfxOleStringPropertyBase::SfxOleStringPropertyBase(
@@ -511,7 +467,6 @@ SfxOleStringPropertyBase::SfxOleStringPropertyBase(
 }
 
 
-
 SfxOleString8Property::SfxOleString8Property(
         sal_Int32 nPropId, const SfxOleTextEncoding& rTextEnc ) :
     SfxOleStringPropertyBase( nPropId, PROPTYPE_STRING8, rTextEnc )
@@ -535,7 +490,6 @@ void SfxOleString8Property::ImplSave( SvStream& rStrm )
 }
 
 
-
 SfxOleString16Property::SfxOleString16Property( sal_Int32 nPropId ) :
     SfxOleStringPropertyBase( nPropId, PROPTYPE_STRING16, RTL_TEXTENCODING_UCS2 )
 {
@@ -550,7 +504,6 @@ void SfxOleString16Property::ImplSave( SvStream& rStrm )
 {
     SaveString16( rStrm, GetValue() );
 }
-
 
 
 SfxOleFileTimeProperty::SfxOleFileTimeProperty( sal_Int32 nPropId ) :
@@ -637,9 +590,8 @@ void SfxOleDateProperty::ImplSave( SvStream& rStrm )
 }
 
 
-
 SfxOleThumbnailProperty::SfxOleThumbnailProperty(
-        sal_Int32 nPropId, const uno::Sequence<sal_uInt8> & i_rData) :
+        sal_Int32 nPropId, const uno::Sequence<sal_Int8> & i_rData) :
     SfxOlePropertyBase( nPropId, PROPTYPE_CLIPFMT ),
     mData(i_rData)
 {
@@ -687,9 +639,8 @@ void SfxOleThumbnailProperty::ImplSave( SvStream& rStrm )
 }
 
 
-
 SfxOleBlobProperty::SfxOleBlobProperty( sal_Int32 nPropId,
-        const uno::Sequence<sal_uInt8> & i_rData) :
+        const uno::Sequence<sal_Int8> & i_rData) :
     SfxOlePropertyBase( nPropId, PROPTYPE_BLOB ),
     mData(i_rData)
 {
@@ -710,7 +661,6 @@ void SfxOleBlobProperty::ImplSave( SvStream& rStrm )
         SetError( SVSTREAM_INVALID_ACCESS );
     }
 }
-
 
 
 SfxOleDictionaryProperty::SfxOleDictionaryProperty( const SfxOleTextEncoding& rTextEnc ) :
@@ -757,7 +707,6 @@ void SfxOleDictionaryProperty::ImplSave( SvStream& rStrm )
         SaveString8( rStrm, aIt->second );
     }
 }
-
 
 
 SfxOleSection::SfxOleSection( bool bSupportsDict ) :
@@ -846,7 +795,7 @@ bool SfxOleSection::GetDateValue( util::Date& rValue, sal_Int32 nPropId ) const
     return pProp != nullptr;
 }
 
-void SfxOleSection::SetProperty( SfxOlePropertyRef xProp )
+void SfxOleSection::SetProperty( const SfxOlePropertyRef& xProp )
 {
     if( xProp.get() )
         maPropMap[ xProp->GetPropId() ] = xProp;
@@ -867,9 +816,9 @@ void SfxOleSection::SetBoolValue( sal_Int32 nPropId, bool bValue )
     SetProperty( SfxOlePropertyRef( new SfxOleBoolProperty( nPropId, bValue ) ) );
 }
 
-bool SfxOleSection::SetStringValue( sal_Int32 nPropId, const OUString& rValue, bool bSkipEmpty )
+bool SfxOleSection::SetStringValue( sal_Int32 nPropId, const OUString& rValue )
 {
-    bool bInserted = !bSkipEmpty || !rValue.isEmpty();
+    bool bInserted = !rValue.isEmpty();
     if( bInserted )
         SetProperty( SfxOlePropertyRef( new SfxOleString8Property( nPropId, maCodePageProp, rValue ) ) );
     return bInserted;
@@ -898,7 +847,7 @@ void SfxOleSection::SetDateValue( sal_Int32 nPropId, const util::Date& rValue )
 }
 
 void SfxOleSection::SetThumbnailValue( sal_Int32 nPropId,
-    const uno::Sequence<sal_uInt8> & i_rData)
+    const uno::Sequence<sal_Int8> & i_rData)
 {
     SfxOleThumbnailProperty* pThumbnail = new SfxOleThumbnailProperty( nPropId, i_rData );
     SfxOlePropertyRef xProp( pThumbnail );  // take ownership
@@ -907,7 +856,7 @@ void SfxOleSection::SetThumbnailValue( sal_Int32 nPropId,
 }
 
 void SfxOleSection::SetBlobValue( sal_Int32 nPropId,
-    const uno::Sequence<sal_uInt8> & i_rData)
+    const uno::Sequence<sal_Int8> & i_rData)
 {
     SfxOleBlobProperty* pBlob( new SfxOleBlobProperty( nPropId, i_rData ) );
     SfxOlePropertyRef xProp( pBlob );
@@ -931,7 +880,7 @@ Any SfxOleSection::GetAnyValue( sal_Int32 nPropId ) const
     else if( GetDoubleValue( fDouble, nPropId ) )
         aValue <<= fDouble;
     else if( GetBoolValue( bBool, nPropId ) )
-        ::comphelper::setBOOL( aValue, bBool );
+        aValue <<= bBool;
     else if( GetStringValue( aString, nPropId ) )
         aValue <<= aString;
     else if( GetFileTimeValue( aApiDateTime, nPropId ) )
@@ -1145,7 +1094,6 @@ void SfxOleSection::SaveProperty( SvStream& rStrm, SfxOlePropertyBase& rProp, sa
 }
 
 
-
 ErrCode SfxOlePropertySet::LoadPropertySet( SotStorage* pStrg, const OUString& rStrmName )
 {
     if( pStrg )
@@ -1292,7 +1240,6 @@ const SvGlobalName& SfxOlePropertySet::GetSectionGuid( SfxOleSectionType eSectio
     }
     return saEmptyGuid;
 }
-
 
 
 //} // namespace

@@ -66,14 +66,10 @@
 #define SAL_POLYPOLYPOINTS_STACKBUF         64
 
 #define DITHER_PAL_DELTA                51
-#define DITHER_PAL_STEPS                6
-#define DITHER_PAL_COUNT                (DITHER_PAL_STEPS*DITHER_PAL_STEPS*DITHER_PAL_STEPS)
 #define DITHER_MAX_SYSCOLOR             16
-#define DITHER_EXTRA_COLORS             1
 #define DMAP( _def_nVal, _def_nThres )  ((pDitherDiff[_def_nVal]>(_def_nThres))?pDitherHigh[_def_nVal]:pDitherLow[_def_nVal])
 
 #define SAL_POLY_STACKBUF       32
-#define USE_GDI_BEZIERS
 
 namespace {
 
@@ -229,7 +225,7 @@ static BYTE aOrdDither16Bit[8][8] =
 SalColor ImplGetROPSalColor( SalROPColor nROPColor )
 {
     SalColor nSalColor;
-    if ( nROPColor == SAL_ROP_0 )
+    if ( nROPColor == SalROPColor::N0 )
         nSalColor = MAKE_SALCOLOR( 0, 0, 0 );
     else
         nSalColor = MAKE_SALCOLOR( 255, 255, 255 );
@@ -520,7 +516,7 @@ void WinSalGraphicsImpl::copyArea( long nDestX, long nDestY,
 
                     // by excluding hInvalidateRgn from the system's clip region
                     // we will prevent bitblt from copying useless data
-                    // epsecially now shadows from overlapping windows will appear (#i36344)
+                    // especially now shadows from overlapping windows will appear (#i36344)
                     hOldClipRgn = CreateRectRgn( 0, 0, 0, 0 );
                     nOldClipRgnType = GetClipRgn( mrParent.getHDC(), hOldClipRgn );
 
@@ -910,7 +906,7 @@ SalColor WinSalGraphicsImpl::getPixel( long nX, long nY )
 
 void WinSalGraphicsImpl::invert( long nX, long nY, long nWidth, long nHeight, SalInvert nFlags )
 {
-    if ( nFlags & SAL_INVERT_TRACKFRAME )
+    if ( nFlags & SalInvert::TrackFrame )
     {
         HPEN    hDotPen = CreatePen( PS_DOT, 0, 0 );
         HPEN    hOldPen = SelectPen( mrParent.getHDC(), hDotPen );
@@ -924,7 +920,7 @@ void WinSalGraphicsImpl::invert( long nX, long nY, long nWidth, long nHeight, Sa
         SelectBrush( mrParent.getHDC(), hOldBrush );
         DeletePen( hDotPen );
     }
-    else if ( nFlags & SAL_INVERT_50 )
+    else if ( nFlags & SalInvert::N50 )
     {
         SalData* pSalData = GetSalData();
         if ( !pSalData->mh50Brush )
@@ -960,12 +956,12 @@ void WinSalGraphicsImpl::invert( sal_uInt32 nPoints, const SalPoint* pPtAry, Sal
     COLORREF    nOldTextColor RGB(0,0,0);
     int         nOldROP = SetROP2( mrParent.getHDC(), R2_NOT );
 
-    if ( nSalFlags & SAL_INVERT_TRACKFRAME )
+    if ( nSalFlags & SalInvert::TrackFrame )
         hPen = CreatePen( PS_DOT, 0, 0 );
     else
     {
 
-        if ( nSalFlags & SAL_INVERT_50 )
+        if ( nSalFlags & SalInvert::N50 )
         {
             SalData* pSalData = GetSalData();
             if ( !pSalData->mh50Brush )
@@ -992,7 +988,7 @@ void WinSalGraphicsImpl::invert( sal_uInt32 nPoints, const SalPoint* pPtAry, Sal
 
     pWinPtAry = (POINT*)pPtAry;
     // for Windows 95 and its maximum number of points
-    if ( nSalFlags & SAL_INVERT_TRACKFRAME )
+    if ( nSalFlags & SalInvert::TrackFrame )
     {
         if ( !Polyline( mrParent.getHDC(), pWinPtAry, (int)nPoints ) && (nPoints > MAX_64KSALPOINTS) )
             Polyline( mrParent.getHDC(), pWinPtAry, MAX_64KSALPOINTS );
@@ -1006,7 +1002,7 @@ void WinSalGraphicsImpl::invert( sal_uInt32 nPoints, const SalPoint* pPtAry, Sal
     SetROP2( mrParent.getHDC(), nOldROP );
     SelectPen( mrParent.getHDC(), hOldPen );
 
-    if ( nSalFlags & SAL_INVERT_TRACKFRAME )
+    if ( nSalFlags & SalInvert::TrackFrame )
         DeletePen( hPen );
     else
     {
@@ -1155,6 +1151,7 @@ bool WinSalGraphicsImpl::setClipRegion( const vcl::Region& i_rClip )
             aPolyPoints.reserve( 1024 );
             std::vector< INT > aPolyCounts( nCount, 0 );
             basegfx::B2DHomMatrix aExpand;
+            sal_uInt32 nTargetCount(0);
             static bool bExpandByOneInXandY(true);
 
             if(bExpandByOneInXandY)
@@ -1171,26 +1168,45 @@ bool WinSalGraphicsImpl::setClipRegion( const vcl::Region& i_rClip )
                         aPolyPolygon.getB2DPolygon(a),
                         1));
                 const sal_uInt32 nPoints(aPoly.count());
-                aPolyCounts[a] = nPoints;
 
-                for( sal_uInt32 b = 0; b < nPoints; b++ )
+                // tdf#40863 For CustomShapes there is a hack (see
+                // f64ef72743e55389e446e0d4bc6febd475011023) that adds polygons
+                // with a single point in top-left and bottom-right corner
+                // of the BoundRect to be able to determine the correct BoundRect
+                // in the slideshow. Unfortunately, CreatePolyPolygonRgn below
+                // fails with polygons containing a single pixel, so clipping is
+                // lost. For now, use only polygons with more than two points - the
+                // ones that may have an area.
+                // Note: polygons with one point which are curves may have an area,
+                // but the polygon is already subdivided here, so no need to test
+                // this.
+                if(nPoints > 2)
                 {
-                    basegfx::B2DPoint aPt(aPoly.getB2DPoint(b));
+                    aPolyCounts[nTargetCount] = nPoints;
+                    nTargetCount++;
 
-                    if(bExpandByOneInXandY)
+                    for( sal_uInt32 b = 0; b < nPoints; b++ )
                     {
-                        aPt = aExpand * aPt;
-                    }
+                        basegfx::B2DPoint aPt(aPoly.getB2DPoint(b));
 
-                    POINT aPOINT;
-                    // #i122149# do correct rounding
-                    aPOINT.x = basegfx::fround(aPt.getX());
-                    aPOINT.y = basegfx::fround(aPt.getY());
-                    aPolyPoints.push_back( aPOINT );
+                        if(bExpandByOneInXandY)
+                        {
+                            aPt = aExpand * aPt;
+                        }
+
+                        POINT aPOINT;
+                        // #i122149# do correct rounding
+                        aPOINT.x = basegfx::fround(aPt.getX());
+                        aPOINT.y = basegfx::fround(aPt.getY());
+                        aPolyPoints.push_back( aPOINT );
+                    }
                 }
             }
 
-            mrParent.mhRegion = CreatePolyPolygonRgn( &aPolyPoints[0], &aPolyCounts[0], nCount, ALTERNATE );
+            if(nTargetCount)
+            {
+                mrParent.mhRegion = CreatePolyPolygonRgn( &aPolyPoints[0], &aPolyCounts[0], nTargetCount, ALTERNATE );
+            }
         }
     }
     else
@@ -1775,22 +1791,15 @@ void WinSalGraphicsImpl::drawPolyPolygon( sal_uInt32 nPoly, const sal_uInt32* pP
 
 bool WinSalGraphicsImpl::drawPolyLineBezier( sal_uInt32 nPoints, const SalPoint* pPtAry, const BYTE* pFlgAry )
 {
-#ifdef USE_GDI_BEZIERS
-    // for NT, we can handover the array directly
     static_assert( sizeof( POINT ) == sizeof( SalPoint ), "must be the same size" );
 
     ImplRenderPath( mrParent.getHDC(), nPoints, pPtAry, pFlgAry );
 
     return true;
-#else
-    return false;
-#endif
 }
 
 bool WinSalGraphicsImpl::drawPolygonBezier( sal_uInt32 nPoints, const SalPoint* pPtAry, const BYTE* pFlgAry )
 {
-#ifdef USE_GDI_BEZIERS
-    // for NT, we can handover the array directly
     static_assert( sizeof( POINT ) == sizeof( SalPoint ), "must be the same size" );
 
     POINT   aStackAry1[SAL_POLY_STACKBUF];
@@ -1831,16 +1840,11 @@ bool WinSalGraphicsImpl::drawPolygonBezier( sal_uInt32 nPoints, const SalPoint* 
     }
 
     return bRet;
-#else
-    return false;
-#endif
 }
 
 bool WinSalGraphicsImpl::drawPolyPolygonBezier( sal_uInt32 nPoly, const sal_uInt32* pPoints,
                                              const SalPoint* const* pPtAry, const BYTE* const* pFlgAry )
 {
-#ifdef USE_GDI_BEZIERS
-    // for NT, we can handover the array directly
     static_assert( sizeof( POINT ) == sizeof( SalPoint ), "must be the same size" );
 
     sal_uLong nCurrPoly, nTotalPoints;
@@ -1885,12 +1889,12 @@ bool WinSalGraphicsImpl::drawPolyPolygonBezier( sal_uInt32 nPoly, const sal_uInt
     }
 
     return bRet;
-#else
-    return false;
-#endif
 }
 
-void impAddB2DPolygonToGDIPlusGraphicsPathReal(Gdiplus::GpPath *pPath, const basegfx::B2DPolygon& rPolygon, bool bNoLineJoin)
+void impAddB2DPolygonToGDIPlusGraphicsPathReal(
+    Gdiplus::GraphicsPath& rGraphicsPath,
+    const basegfx::B2DPolygon& rPolygon,
+    bool bNoLineJoin)
 {
     sal_uInt32 nCount(rPolygon.count());
 
@@ -1904,66 +1908,43 @@ void impAddB2DPolygonToGDIPlusGraphicsPathReal(Gdiplus::GpPath *pPath, const bas
         {
             const sal_uInt32 nNextIndex((a + 1) % nCount);
             const basegfx::B2DPoint aNext(rPolygon.getB2DPoint(nNextIndex));
+            const bool b1stControlPointUsed(bControls && rPolygon.isNextControlPointUsed(a));
+            const bool b2ndControlPointUsed(bControls && rPolygon.isPrevControlPointUsed(nNextIndex));
 
-            if(bControls && (rPolygon.isNextControlPointUsed(a) || rPolygon.isPrevControlPointUsed(nNextIndex)))
+            if(b1stControlPointUsed || b2ndControlPointUsed)
             {
-                const basegfx::B2DPoint aCa(rPolygon.getNextControlPoint(a));
-                const basegfx::B2DPoint aCb(rPolygon.getPrevControlPoint(nNextIndex));
+                basegfx::B2DPoint aCa(rPolygon.getNextControlPoint(a));
+                basegfx::B2DPoint aCb(rPolygon.getPrevControlPoint(nNextIndex));
 
-                Gdiplus::DllExports::GdipAddPathBezier(pPath,
-                    aCurr.getX(), aCurr.getY(),
-                    aCa.getX(), aCa.getY(),
-                    aCb.getX(), aCb.getY(),
-                    aNext.getX(), aNext.getY());
-            }
-            else
-            {
-                Gdiplus::DllExports::GdipAddPathLine(pPath, aCurr.getX(), aCurr.getY(), aNext.getX(), aNext.getY());
-            }
-
-            if(a + 1 < nEdgeCount)
-            {
-                aCurr = aNext;
-
-                if(bNoLineJoin)
+                // tdf#99165 MS Gdiplus cannot handle creating correct extra geometry for fat lines
+                // with LineCap or LineJoin when a bezier segment starts or ends trivial, e.g. has
+                // no 1st or 2nd control point, despite that these are mathematicaly correct definitions
+                // (basegfx can handle that). To solve, create replacement vectors to thre resp. next
+                // control point with 1/3rd of length (the default control vector for these cases).
+                // Only one of this can happen here, else the is(Next|Prev)ControlPointUsed wopuld have
+                // both been false.
+                // Caution: This error (and it's correction) might be necessary for other graphical
+                // sub-systems in a similar way
+                if(!b1stControlPointUsed)
                 {
-                    Gdiplus::DllExports::GdipStartPathFigure(pPath);
+                    aCa = aCurr + ((aCb - aCurr) * 0.3);
                 }
-            }
-        }
-    }
-}
+                else if(!b2ndControlPointUsed)
+                {
+                    aCb = aNext + ((aCa - aNext) * 0.3);
+                }
 
-void impAddB2DPolygonToGDIPlusGraphicsPathInteger(Gdiplus::GpPath *pPath, const basegfx::B2DPolygon& rPolygon, bool bNoLineJoin)
-{
-    sal_uInt32 nCount(rPolygon.count());
-
-    if(nCount)
-    {
-        const sal_uInt32 nEdgeCount(rPolygon.isClosed() ? nCount : nCount - 1);
-        const bool bControls(rPolygon.areControlPointsUsed());
-        basegfx::B2DPoint aCurr(rPolygon.getB2DPoint(0));
-
-        for(sal_uInt32 a(0); a < nEdgeCount; a++)
-        {
-            const sal_uInt32 nNextIndex((a + 1) % nCount);
-            const basegfx::B2DPoint aNext(rPolygon.getB2DPoint(nNextIndex));
-
-            if(bControls && (rPolygon.isNextControlPointUsed(a) || rPolygon.isPrevControlPointUsed(nNextIndex)))
-            {
-                const basegfx::B2DPoint aCa(rPolygon.getNextControlPoint(a));
-                const basegfx::B2DPoint aCb(rPolygon.getPrevControlPoint(nNextIndex));
-
-                Gdiplus::DllExports::GdipAddPathBezier(
-                    pPath,
-                    aCurr.getX(), aCurr.getY(),
-                    aCa.getX(), aCa.getY(),
-                    aCb.getX(), aCb.getY(),
-                    aNext.getX(), aNext.getY());
+                rGraphicsPath.AddBezier(
+                    static_cast< Gdiplus::REAL >(aCurr.getX()), static_cast< Gdiplus::REAL >(aCurr.getY()),
+                    static_cast< Gdiplus::REAL >(aCa.getX()), static_cast< Gdiplus::REAL >(aCa.getY()),
+                    static_cast< Gdiplus::REAL >(aCb.getX()), static_cast< Gdiplus::REAL >(aCb.getY()),
+                    static_cast< Gdiplus::REAL >(aNext.getX()), static_cast< Gdiplus::REAL >(aNext.getY()));
             }
             else
             {
-                Gdiplus::DllExports::GdipAddPathLine(pPath, aCurr.getX(), aCurr.getY(), aNext.getX(), aNext.getY());
+                rGraphicsPath.AddLine(
+                    static_cast< Gdiplus::REAL >(aCurr.getX()), static_cast< Gdiplus::REAL >(aCurr.getY()),
+                    static_cast< Gdiplus::REAL >(aNext.getX()), static_cast< Gdiplus::REAL >(aNext.getY()));
             }
 
             if(a + 1 < nEdgeCount)
@@ -1972,7 +1953,7 @@ void impAddB2DPolygonToGDIPlusGraphicsPathInteger(Gdiplus::GpPath *pPath, const 
 
                 if(bNoLineJoin)
                 {
-                    Gdiplus::DllExports::GdipStartPathFigure(pPath);
+                    rGraphicsPath.StartFigure();
                 }
             }
         }
@@ -1985,33 +1966,32 @@ bool WinSalGraphicsImpl::drawPolyPolygon( const basegfx::B2DPolyPolygon& rPolyPo
 
     if(mbBrush && nCount && (fTransparency >= 0.0 && fTransparency < 1.0))
     {
-        Gdiplus::GpGraphics *pGraphics = NULL;
-        Gdiplus::DllExports::GdipCreateFromHDC(mrParent.getHDC(), &pGraphics);
+        Gdiplus::Graphics aGraphics(mrParent.getHDC());
         const sal_uInt8 aTrans((sal_uInt8)255 - (sal_uInt8)basegfx::fround(fTransparency * 255.0));
-        Gdiplus::Color aTestColor(aTrans, SALCOLOR_RED(maFillColor), SALCOLOR_GREEN(maFillColor), SALCOLOR_BLUE(maFillColor));
-        Gdiplus::GpSolidFill *pTestBrush;
-        Gdiplus::DllExports::GdipCreateSolidFill(aTestColor.GetValue(), &pTestBrush);
-        Gdiplus::GpPath *pPath = NULL;
-        Gdiplus::DllExports::GdipCreatePath(Gdiplus::FillModeAlternate, &pPath);
+        const Gdiplus::Color aTestColor(aTrans, SALCOLOR_RED(maFillColor), SALCOLOR_GREEN(maFillColor), SALCOLOR_BLUE(maFillColor));
+        const Gdiplus::SolidBrush aSolidBrush(aTestColor.GetValue());
+        Gdiplus::GraphicsPath aGraphicsPath(Gdiplus::FillModeAlternate);
 
         for(sal_uInt32 a(0); a < nCount; a++)
         {
             if(0 != a)
             {
-                Gdiplus::DllExports::GdipStartPathFigure(pPath); // #i101491# not needed for first run
+                // #i101491# not needed for first run
+                aGraphicsPath.StartFigure();
             }
 
-            impAddB2DPolygonToGDIPlusGraphicsPathReal(pPath, rPolyPolygon.getB2DPolygon(a), false);
-            Gdiplus::DllExports::GdipClosePathFigure(pPath);
+            impAddB2DPolygonToGDIPlusGraphicsPathReal(aGraphicsPath, rPolyPolygon.getB2DPolygon(a), false);
+
+            aGraphicsPath.CloseFigure();
         }
 
         if(mrParent.getAntiAliasB2DDraw())
         {
-            Gdiplus::DllExports::GdipSetSmoothingMode(pGraphics, Gdiplus::SmoothingModeAntiAlias);
+            aGraphics.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
         }
         else
         {
-            Gdiplus::DllExports::GdipSetSmoothingMode(pGraphics, Gdiplus::SmoothingModeNone);
+            aGraphics.SetSmoothingMode(Gdiplus::SmoothingModeNone);
         }
 
         if(mrParent.isPrinter())
@@ -2027,19 +2007,14 @@ bool WinSalGraphicsImpl::drawPolyPolygon( const basegfx::B2DPolyPolygon& rPolyPo
             // checked that there is *no* transformation set and estimated that a stable factor
             // dependent of the printer's DPI is used. Create and set a transformation here to
             // correct this.
-            Gdiplus::REAL aDpiX;
-            Gdiplus::DllExports::GdipGetDpiX(pGraphics, &aDpiX);
-            Gdiplus::REAL aDpiY;
-            Gdiplus::DllExports::GdipGetDpiY(pGraphics, &aDpiY);
+            const Gdiplus::REAL aDpiX(aGraphics.GetDpiX());
+            const Gdiplus::REAL aDpiY(aGraphics.GetDpiY());
 
-            Gdiplus::DllExports::GdipResetWorldTransform(pGraphics);
-            Gdiplus::DllExports::GdipScaleWorldTransform(pGraphics, Gdiplus::REAL(100.0) / aDpiX, Gdiplus::REAL(100.0) / aDpiY, Gdiplus::MatrixOrderAppend);
+            aGraphics.ResetTransform();
+            aGraphics.ScaleTransform(Gdiplus::REAL(100.0) / aDpiX, Gdiplus::REAL(100.0) / aDpiY, Gdiplus::MatrixOrderAppend);
         }
 
-        Gdiplus::DllExports::GdipFillPath(pGraphics, pTestBrush, pPath);
-
-        Gdiplus::DllExports::GdipDeletePath(pPath);
-        Gdiplus::DllExports::GdipDeleteGraphics(pGraphics);
+        aGraphics.FillPath(&aSolidBrush, &aGraphicsPath);
     }
 
      return true;
@@ -2050,25 +2025,23 @@ bool WinSalGraphicsImpl::drawPolyLine(
     double fTransparency,
     const basegfx::B2DVector& rLineWidths,
     basegfx::B2DLineJoin eLineJoin,
-    css::drawing::LineCap eLineCap)
+    css::drawing::LineCap eLineCap,
+    double fMiterMinimumAngle)
 {
     const sal_uInt32 nCount(rPolygon.count());
 
     if(mbPen && nCount)
     {
-        Gdiplus::GpGraphics *pGraphics = NULL;
-        Gdiplus::DllExports::GdipCreateFromHDC(mrParent.getHDC(), &pGraphics);
+        Gdiplus::Graphics aGraphics(mrParent.getHDC());
         const sal_uInt8 aTrans = (sal_uInt8)basegfx::fround( 255 * (1.0 - fTransparency) );
-        Gdiplus::Color aTestColor(aTrans, SALCOLOR_RED(maLineColor), SALCOLOR_GREEN(maLineColor), SALCOLOR_BLUE(maLineColor));
-        Gdiplus::GpPen *pTestPen = NULL;
-        Gdiplus::DllExports::GdipCreatePen1(aTestColor.GetValue(), Gdiplus::REAL(rLineWidths.getX()), Gdiplus::UnitWorld, &pTestPen);
-        Gdiplus::GpPath *pPath;
-        Gdiplus::DllExports::GdipCreatePath(Gdiplus::FillModeAlternate, &pPath);
+        const Gdiplus::Color aTestColor(aTrans, SALCOLOR_RED(maLineColor), SALCOLOR_GREEN(maLineColor), SALCOLOR_BLUE(maLineColor));
+        Gdiplus::Pen aPen(aTestColor.GetValue(), Gdiplus::REAL(rLineWidths.getX()));
+        Gdiplus::GraphicsPath aGraphicsPath(Gdiplus::FillModeAlternate);
         bool bNoLineJoin(false);
 
         switch(eLineJoin)
         {
-            default : // basegfx::B2DLineJoin::NONE :
+            case basegfx::B2DLineJoin::NONE :
             {
                 if(basegfx::fTools::more(rLineWidths.getX(), 0.0))
                 {
@@ -2078,20 +2051,24 @@ bool WinSalGraphicsImpl::drawPolyLine(
             }
             case basegfx::B2DLineJoin::Bevel :
             {
-                Gdiplus::DllExports::GdipSetPenLineJoin(pTestPen, Gdiplus::LineJoinBevel);
+                aPen.SetLineJoin(Gdiplus::LineJoinBevel);
                 break;
             }
-            case basegfx::B2DLineJoin::Middle :
             case basegfx::B2DLineJoin::Miter :
             {
-                const Gdiplus::REAL aMiterLimit(15.0);
-                Gdiplus::DllExports::GdipSetPenMiterLimit(pTestPen, aMiterLimit);
-                Gdiplus::DllExports::GdipSetPenLineJoin(pTestPen, Gdiplus::LineJoinMiter);
+                const Gdiplus::REAL aMiterLimit(1.0/sin(fMiterMinimumAngle/2.0));
+
+                aPen.SetMiterLimit(aMiterLimit);
+                // tdf#99165 MS's LineJoinMiter creates non standard conform miter additional
+                // graphics, somewhere clipped in some distance from the edge point, dependent
+                // of MiterLimit. The more default-like option is LineJoinMiterClipped, so use
+                // that instead
+                aPen.SetLineJoin(Gdiplus::LineJoinMiterClipped);
                 break;
             }
             case basegfx::B2DLineJoin::Round :
             {
-                Gdiplus::DllExports::GdipSetPenLineJoin(pTestPen, Gdiplus::LineJoinRound);
+                aPen.SetLineJoin(Gdiplus::LineJoinRound);
                 break;
             }
         }
@@ -2105,47 +2082,36 @@ bool WinSalGraphicsImpl::drawPolyLine(
             }
             case css::drawing::LineCap_ROUND:
             {
-                Gdiplus::DllExports::GdipSetPenStartCap(pTestPen, Gdiplus::LineCapRound);
-                Gdiplus::DllExports::GdipSetPenEndCap(pTestPen, Gdiplus::LineCapRound);
+                aPen.SetStartCap(Gdiplus::LineCapRound);
+                aPen.SetEndCap(Gdiplus::LineCapRound);
                 break;
             }
             case css::drawing::LineCap_SQUARE:
             {
-                Gdiplus::DllExports::GdipSetPenStartCap(pTestPen, Gdiplus::LineCapSquare);
-                Gdiplus::DllExports::GdipSetPenEndCap(pTestPen, Gdiplus::LineCapSquare);
+                aPen.SetStartCap(Gdiplus::LineCapSquare);
+                aPen.SetEndCap(Gdiplus::LineCapSquare);
                 break;
             }
         }
 
-        if(nCount > 250 && basegfx::fTools::more(rLineWidths.getX(), 1.5))
-        {
-            impAddB2DPolygonToGDIPlusGraphicsPathInteger(pPath, rPolygon, bNoLineJoin);
-        }
-        else
-        {
-            impAddB2DPolygonToGDIPlusGraphicsPathReal(pPath, rPolygon, bNoLineJoin);
-        }
+        impAddB2DPolygonToGDIPlusGraphicsPathReal(aGraphicsPath, rPolygon, bNoLineJoin);
 
         if(rPolygon.isClosed() && !bNoLineJoin)
         {
             // #i101491# needed to create the correct line joins
-            Gdiplus::DllExports::GdipClosePathFigure(pPath);
+            aGraphicsPath.CloseFigure();
         }
 
         if(mrParent.getAntiAliasB2DDraw())
         {
-            Gdiplus::DllExports::GdipSetSmoothingMode(pGraphics, Gdiplus::SmoothingModeAntiAlias);
+            aGraphics.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
         }
         else
         {
-            Gdiplus::DllExports::GdipSetSmoothingMode(pGraphics, Gdiplus::SmoothingModeNone);
+            aGraphics.SetSmoothingMode(Gdiplus::SmoothingModeNone);
         }
 
-        Gdiplus::DllExports::GdipDrawPath(pGraphics, pTestPen, pPath);
-
-        Gdiplus::DllExports::GdipDeletePath(pPath);
-        Gdiplus::DllExports::GdipDeletePen(pTestPen);
-        Gdiplus::DllExports::GdipDeleteGraphics(pGraphics);
+        aGraphics.DrawPath(&aPen, &aGraphicsPath);
     }
 
     return true;

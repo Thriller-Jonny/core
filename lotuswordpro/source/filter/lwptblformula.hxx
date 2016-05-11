@@ -200,16 +200,16 @@ public:
 protected:
     void Read() override;
     bool ReadCellID();
-    bool ReadText();
-    bool ReadCellRange();
-    bool ReadExpression();
-    bool ReadArguments(LwpFormulaFunc& aFunc);
+    void ReadText();
+    void ReadCellRange();
+    void ReadExpression();
+    void ReadArguments(LwpFormulaFunc& aFunc);
     bool m_bSupported;
 private:
     virtual ~LwpFormulaInfo();
 
     std::vector<LwpFormulaArg*> m_aStack;
-    bool ReadConst();
+    void ReadConst();
     void MarkUnsupported(sal_uInt16 TokenType);
 
     sal_uInt16 m_nFormulaRow;

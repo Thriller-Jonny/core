@@ -108,7 +108,7 @@ sal_uLong ScEEImport::Read( SvStream& rStream, const OUString& rBaseURL )
 void ScEEImport::WriteToDocument( bool bSizeColsRows, double nOutputFactor, SvNumberFormatter* pFormatter, bool bConvertDate )
 {
     ScProgress* pProgress = new ScProgress( mpDoc->GetDocumentShell(),
-        ScGlobal::GetRscString( STR_LOAD_DOC ), mpParser->ListSize() );
+        ScGlobal::GetRscString( STR_LOAD_DOC ), mpParser->ListSize(), true );
     sal_uLong nProgress = 0;
 
     SCCOL nStartCol, nEndCol;
@@ -262,22 +262,22 @@ void ScEEImport::WriteToDocument( bool bSizeColsRows, double nOutputFactor, SvNu
                     SvtScriptType nScriptType = mpDoc->GetStringScriptType( aStr );
                     const SvtScriptType nScripts[3] = { SvtScriptType::LATIN,
                         SvtScriptType::ASIAN, SvtScriptType::COMPLEX };
-                    for ( sal_uInt8 j=0; j<3; ++j )
+                    for (SvtScriptType nScript : nScripts)
                     {
-                        if ( nScriptType & nScripts[j] )
+                        if ( nScriptType & nScript )
                         {
                             if ( pFont )
                                 rSet.Put( *pFont, ScGlobal::GetScriptedWhichID(
-                                            nScripts[j], ATTR_FONT ));
+                                            nScript, ATTR_FONT ));
                             if ( pHeight )
                                 rSet.Put( *pHeight, ScGlobal::GetScriptedWhichID(
-                                            nScripts[j], ATTR_FONT_HEIGHT ));
+                                            nScript, ATTR_FONT_HEIGHT ));
                             if ( pWeight )
                                 rSet.Put( *pWeight, ScGlobal::GetScriptedWhichID(
-                                            nScripts[j], ATTR_FONT_WEIGHT ));
+                                            nScript, ATTR_FONT_WEIGHT ));
                             if ( pPosture )
                                 rSet.Put( *pPosture, ScGlobal::GetScriptedWhichID(
-                                            nScripts[j], ATTR_FONT_POSTURE ));
+                                            nScript, ATTR_FONT_POSTURE ));
                         }
                     }
                 }
@@ -309,7 +309,7 @@ void ScEEImport::WriteToDocument( bool bSizeColsRows, double nOutputFactor, SvNu
             const ScStyleSheet* pStyleSheet =
                 mpDoc->GetPattern( nCol, nRow, nTab )->GetStyleSheet();
             aAttr.SetStyleSheet( const_cast<ScStyleSheet*>(pStyleSheet) );
-            mpDoc->SetPattern( nCol, nRow, nTab, aAttr, true );
+            mpDoc->SetPattern( nCol, nRow, nTab, aAttr );
 
             // Add data
             if (bSimple)
@@ -476,9 +476,9 @@ bool ScEEImport::GraphicSize( SCCOL nCol, SCROW nRow, SCTAB /*nTab*/, ScEEParseE
     long nWidth, nHeight;
     nWidth = nHeight = 0;
     sal_Char nDir = nHorizontal;
-    for ( size_t i = 0; i < pE->maImageList.size() ; ++i )
+    for (std::unique_ptr<ScHTMLImage> & pImage : pE->maImageList)
     {
-        ScHTMLImage* pI = pE->maImageList[ i ].get();
+        ScHTMLImage* pI = pImage.get();
         if ( pI->pGraphic )
             bHasGraphics = true;
         Size aSizePix = pI->aSize;
@@ -552,9 +552,9 @@ void ScEEImport::InsertGraphic( SCCOL nCol, SCROW nRow, SCTAB nTab,
     Point aSpace;
     Size aLogicSize;
     sal_Char nDir = nHorizontal;
-    for ( size_t i = 0; i < pE->maImageList.size(); ++i )
+    for (std::unique_ptr<ScHTMLImage> & pImage : pE->maImageList)
     {
-        ScHTMLImage* pI = pE->maImageList[ i ].get();
+        ScHTMLImage* pI = pImage.get();
         if ( nDir & nHorizontal )
         {   // Horizontal
             aInsertPos.X() += aLogicSize.Width();

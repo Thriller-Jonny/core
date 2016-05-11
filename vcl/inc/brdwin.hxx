@@ -20,7 +20,10 @@
 #ifndef INCLUDED_VCL_INC_BRDWIN_HXX
 #define INCLUDED_VCL_INC_BRDWIN_HXX
 
+#include <vcl/notebookbar.hxx>
 #include <vcl/window.hxx>
+
+#include <com/sun/star/frame/XFrame.hpp>
 
 class ImplBorderWindowView;
 enum class DrawButtonFlags;
@@ -85,6 +88,7 @@ class ImplBorderWindow : public vcl::Window
 private:
     ImplBorderWindowView*   mpBorderView;
     VclPtr<vcl::Window>     mpMenuBarWindow;
+    VclPtr<NotebookBar>     mpNotebookBar;
     long                    mnMinWidth;
     long                    mnMinHeight;
     long                    mnMaxWidth;
@@ -158,6 +162,9 @@ public:
     void                    SetMenuBarWindow( vcl::Window* pWindow );
     void                    SetMenuBarMode( bool bHide );
 
+    void                    SetNotebookBar(const OUString& rUIXMLDescription, const css::uno::Reference<css::frame::XFrame>& rFrame);
+    const VclPtr<NotebookBar>& GetNotebookBar() const { return mpNotebookBar; }
+
     void                    SetMinOutputSize( long nWidth, long nHeight )
                                 { mnMinWidth = nWidth; mnMinHeight = nHeight; }
     void                    SetMaxOutputSize( long nWidth, long nHeight )
@@ -168,8 +175,6 @@ public:
     long                    CalcTitleWidth() const;
 
     Rectangle               GetMenuRect() const;
-
-    void                    MoveToByDrag(const Point& rNewPos);
 
     virtual Size            GetOptimalSize() const override;
 };

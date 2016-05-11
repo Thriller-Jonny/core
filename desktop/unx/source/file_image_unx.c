@@ -42,7 +42,8 @@ int file_image_open (file_image * image, const char * filename)
     if (image == NULL)
         return EINVAL;
 
-    image->m_base = MAP_FAILED, image->m_size = 0;
+    image->m_base = MAP_FAILED;
+    image->m_size = 0;
 
     if ((fd = open (filename, O_RDONLY)) == -1)
         return errno;
@@ -60,7 +61,8 @@ int file_image_open (file_image * image, const char * filename)
         goto cleanup_and_leave;
     }
 
-    image->m_base = p, image->m_size = st.st_size;
+    image->m_base = p;
+    image->m_size = st.st_size;
 
 cleanup_and_leave:
     close (fd);
@@ -72,37 +74,29 @@ cleanup_and_leave:
  */
 int file_image_pagein (file_image * image)
 {
-    file_image    w;
-    long          s;
-    size_t        k;
-    // force touching of each page despite the optimizer
+    long s = -1;
     volatile char c =0;
+    size_t idx;
 
     if (image == NULL)
         return EINVAL;
-
-    if ((w.m_base = image->m_base) == NULL)
+    if (image->m_base == NULL)
         return EINVAL;
-    if ((w.m_size = image->m_size) == 0)
+    if (image->m_size == 0)
         return 0;
 
-    if (madvise (w.m_base, w.m_size, MADV_WILLNEED) == -1)
+    if (madvise (image->m_base, image->m_size, MADV_WILLNEED) == -1)
         return errno;
 
-    if ((s = sysconf (_SC_PAGESIZE)) == -1)
+    s = sysconf (_SC_PAGESIZE);
+    if (s == -1)
         s = 0x1000;
-
-    k = (size_t)(s);
-    while (w.m_size > k)
+    // force touching of each page despite the optimizer
+    for(idx = 0; idx < image->m_size; idx += (size_t)s)
     {
-        c ^= ((char*)(w.m_base))[0];
-        w.m_base  = (char*)(w.m_base) + k;
-        w.m_size -= k;
+        c ^= ((volatile const char*)(image->m_base))[idx];
     }
-    if (w.m_size > 0)
-    {
-        c ^= ((char*)(w.m_base))[0];
-    }
+    c ^= ((volatile const char*)(image->m_base))[image->m_size-1];
 
     return 0;
 }
@@ -118,7 +112,8 @@ int file_image_close (file_image * image)
     if (munmap (image->m_base, image->m_size) == -1)
         return errno;
 
-    image->m_base = NULL, image->m_size = 0;
+    image->m_base = NULL;
+    image->m_size = 0;
     return 0;
 }
 

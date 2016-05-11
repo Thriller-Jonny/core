@@ -27,9 +27,6 @@
 class LocaleDataWrapper;
 
 
-// - LongCurrencyFormatter -
-
-
 class VCL_DLLPUBLIC LongCurrencyFormatter : public FormatterBase
 {
 private:
@@ -61,19 +58,16 @@ public:
     OUString                GetCurrencySymbol() const;
 
     void                    SetMin(const BigInt& rNewMin);
-    BigInt                  GetMin() const { return mnMin; }
+    const BigInt&           GetMin() const { return mnMin; }
     void                    SetMax(const BigInt& rNewMax);
-    BigInt                  GetMax() const { return mnMax; }
+    const BigInt&           GetMax() const { return mnMax; }
 
     void                    SetDecimalDigits( sal_uInt16 nDigits );
-    sal_uInt16                  GetDecimalDigits() const { return mnDecimalDigits;}
+    sal_uInt16              GetDecimalDigits() const { return mnDecimalDigits;}
     void                    SetValue(const BigInt& rNewValue);
     void                    SetUserValue( BigInt nNewValue );
     BigInt                  GetValue() const;
 };
-
-
-// - LongCurrencyField -
 
 
 class VCL_DLLPUBLIC LongCurrencyField : public SpinField, public LongCurrencyFormatter
@@ -98,15 +92,12 @@ public:
     void            Last() override;
 
     void            SetFirst(const BigInt& rNewFirst ) { mnFirst = rNewFirst; }
-    BigInt          GetFirst() const { return mnFirst; }
+    const BigInt&   GetFirst() const { return mnFirst; }
     void            SetLast(const BigInt& rNewLast ) { mnLast = rNewLast; }
-    BigInt          GetLast() const { return mnLast; }
+    const BigInt&   GetLast() const { return mnLast; }
     void            SetSpinSize(const BigInt& rNewSize) { mnSpinSize = rNewSize; }
-    BigInt          GetSpinSize() const { return mnSpinSize; }
+    const BigInt&   GetSpinSize() const { return mnSpinSize; }
 };
-
-
-// - LongCurrencyBox -
 
 
 class VCL_DLLPUBLIC LongCurrencyBox : public ComboBox, public LongCurrencyFormatter

@@ -17,19 +17,19 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include "internal/global.hxx"
-#include "internal/columninfo.hxx"
-#include "internal/fileextensions.hxx"
-#include "internal/metainforeader.hxx"
-#include "internal/utilities.hxx"
-#include "internal/config.hxx"
+#include "global.hxx"
+#include "columninfo.hxx"
+#include "fileextensions.hxx"
+#include "metainforeader.hxx"
+#include "utilities.hxx"
+#include "config.hxx"
 
 #include <sal/macros.h>
 #include <malloc.h>
 
 namespace /* private */
 {
-    SHCOLUMNINFO ColumnInfoTable[] =
+    const SHCOLUMNINFO ColumnInfoTable[] =
     {
         {{PSGUID_SUMMARYINFORMATION, PIDSI_TITLE},    VT_BSTR, LVCFMT_LEFT, 30, SHCOLSTATE_TYPE_STR, L"Title",    L"Title"},
         {{PSGUID_SUMMARYINFORMATION, PIDSI_AUTHOR},   VT_BSTR, LVCFMT_LEFT, 30, SHCOLSTATE_TYPE_STR, L"Author",   L"Author"},
@@ -39,9 +39,8 @@ namespace /* private */
         {{PSGUID_SUMMARYINFORMATION, PIDSI_PAGECOUNT},VT_BSTR, LVCFMT_LEFT, 30, SHCOLSTATE_TYPE_STR, L"Pagecount", L"Pagecount"}
     };
 
-    size_t ColumnInfoTableSize = sizeof(ColumnInfoTable)/sizeof(ColumnInfoTable[0]);
+    size_t ColumnInfoTableSize = SAL_N_ELEMENTS(ColumnInfoTable);
 }
-
 
 
 CColumnInfo::CColumnInfo(long RefCnt) :
@@ -49,7 +48,6 @@ CColumnInfo::CColumnInfo(long RefCnt) :
 {
     InterlockedIncrement(&g_DllRefCnt);
 }
-
 
 
 CColumnInfo::~CColumnInfo()
@@ -77,12 +75,10 @@ HRESULT STDMETHODCALLTYPE CColumnInfo::QueryInterface(REFIID riid, void __RPC_FA
 }
 
 
-
 ULONG STDMETHODCALLTYPE CColumnInfo::AddRef()
 {
     return InterlockedIncrement(&m_RefCnt);
 }
-
 
 
 ULONG STDMETHODCALLTYPE CColumnInfo::Release()
@@ -118,7 +114,7 @@ HRESULT STDMETHODCALLTYPE CColumnInfo::GetColumnInfo(DWORD dwIndex, SHCOLUMNINFO
     psci->scid.pid   = ColumnInfoTable[dwIndex].scid.pid;
     ZeroMemory(psci->wszTitle, sizeof(psci->wszTitle));
     wcsncpy(psci->wszTitle, ColumnInfoTable[dwIndex].wszTitle,
-            (sizeof(psci->wszTitle) / sizeof(psci->wszTitle[0]) - 1));
+            SAL_N_ELEMENTS(psci->wszTitle) - 1);
 
     return S_OK;
 }
@@ -186,7 +182,6 @@ HRESULT STDMETHODCALLTYPE CColumnInfo::GetItemData(LPCSHCOLUMNID pscid, LPCSHCOL
 
     return S_FALSE;
 }
-
 
 
 bool CColumnInfo::IsOOFileExtension(wchar_t* Extension) const

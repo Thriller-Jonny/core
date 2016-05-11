@@ -138,7 +138,7 @@ class ToolBarManager : public ToolbarManager_Base
         void CreateControllers();
         void UpdateControllers();
         //for update controller via Support Visiable
-        void UpdateController( css::uno::Reference< css::frame::XToolbarController > xController);
+        void UpdateController( const css::uno::Reference< css::frame::XToolbarController >& xController);
         //end
         void AddFrameActionListener();
         void ImplClearPopupMenu( ToolBox *pToolBar );
@@ -146,14 +146,14 @@ class ToolBarManager : public ToolbarManager_Base
         ToolBoxItemBits ConvertStyleToToolboxItemBits( sal_Int32 nStyle );
         css::uno::Reference< css::frame::XModel > GetModelFromFrame() const;
         bool IsPluginMode() const;
-        long HandleClick(void ( SAL_CALL css::frame::XToolbarController::*_pClick )(  ));
+        void HandleClick(void ( SAL_CALL css::frame::XToolbarController::*_pClick )(  ));
         void setToolBarImage(const Image& _aImage,const CommandToInfoMap::const_iterator& _pIter);
         void impl_elementChanged(bool _bRemove,const css::ui::ConfigurationEvent& Event );
 
     protected:
         typedef std::unordered_map< sal_uInt16, css::uno::Reference< css::frame::XStatusListener > >  ToolBarControllerMap;
         typedef ::std::vector< css::uno::Reference< css::frame::XSubToolbarController > >             SubToolBarControllerVector;
-        typedef BaseHash< SubToolBarControllerVector >                                                SubToolBarToSubToolBarControllerMap;
+        typedef std::unordered_map<OUString, SubToolBarControllerVector, OUStringHash>                                                SubToolBarToSubToolBarControllerMap;
 
         typedef std::unordered_map< sal_uInt16, css::uno::Reference< css::container::XIndexAccess > > MenuDescriptionMap;
 
@@ -170,7 +170,6 @@ class ToolBarManager : public ToolbarManager_Base
 
         css::uno::Reference< css::util::XURLTransformer >            m_xURLTransformer;
         css::uno::Reference< css::frame::XFrame >                    m_xFrame;
-        css::uno::Reference< css::container::XNameAccess >           m_xUICommandLabels;
         ToolBarControllerMap                                         m_aControllerMap;
         osl::Mutex                                                   m_mutex;
         ::cppu::OMultiTypeInterfaceContainerHelper                   m_aListenerContainer;   /// container for ALL Listener

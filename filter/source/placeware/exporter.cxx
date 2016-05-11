@@ -55,12 +55,10 @@ using com::sun::star::presentation::XPresentationPage;
 using com::sun::star::task::XStatusIndicator;
 
 
-
 PlaceWareExporter::PlaceWareExporter(const Reference< XComponentContext > & rxContext)
 :   mxContext( rxContext )
 {
 }
-
 
 
 PlaceWareExporter::~PlaceWareExporter()
@@ -181,7 +179,7 @@ static OString convertString( const OUString& aInput )
     return aRet;
 }
 
-static void createSlideFile( Reference< XComponent > xDoc, PlacewareZipFile& rZipFile, const OUString& rURL, vector< PageEntry* >& rPageEntries  ) throw( css::uno::Exception, std::exception )
+static void createSlideFile( const Reference< XComponent >& xDoc, PlacewareZipFile& rZipFile, const OUString& rURL, vector< PageEntry* >& rPageEntries  ) throw( css::uno::Exception, std::exception )
 {
     OString aInfo;
 
@@ -284,8 +282,8 @@ static void createSlideFile( Reference< XComponent > xDoc, PlacewareZipFile& rZi
 
 //#define PLACEWARE_DEBUG 1
 
-bool PlaceWareExporter::doExport( Reference< XComponent > xDoc, Reference < XOutputStream > xOutputStream,
-                                        const OUString& rURL, Reference < XInterface > /* xHandler */, Reference < XStatusIndicator >& xStatusIndicator )
+bool PlaceWareExporter::doExport( const Reference< XComponent >& xDoc, Reference < XOutputStream > xOutputStream,
+                                  const OUString& rURL, const Reference < XInterface >& /* xHandler */, Reference < XStatusIndicator >& xStatusIndicator )
 {
     bool bRet = false;
 
@@ -398,7 +396,6 @@ bool PlaceWareExporter::doExport( Reference< XComponent > xDoc, Reference < XOut
 
     return bRet;
 }
-
 
 
 PageEntry* PlaceWareExporter::exportPage( Reference< XDrawPage >&xDrawPage )

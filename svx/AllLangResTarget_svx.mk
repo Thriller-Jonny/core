@@ -29,7 +29,6 @@ $(eval $(call gb_SrsTarget_SrsTarget,svx/res))
 
 $(eval $(call gb_SrsTarget_set_include,svx/res,\
     $$(INCLUDE) \
-    -I$(call gb_SrsTemplateTarget_get_include_dir,svx) \
     -I$(SRCDIR)/svx/source/inc \
     -I$(SRCDIR)/svx/source/dialog \
     -I$(SRCDIR)/svx/inc/ \
@@ -61,13 +60,11 @@ $(eval $(call gb_SrsTarget_add_files,svx/res,\
     svx/source/form/filtnav.src \
     svx/source/form/fmexpl.src \
     svx/source/form/fmstring.src \
-    svx/source/form/formshell.src \
     svx/source/items/svxerr.src \
     svx/source/items/svxitems.src \
     svx/source/sidebar/EmptyPanel.src \
     svx/source/sidebar/area/AreaPropertyPanel.src \
     svx/source/sidebar/line/LinePropertyPanel.src \
-    svx/source/sidebar/text/TextPropertyPanel.src \
     svx/source/sidebar/paragraph/ParaPropertyPanel.src \
     svx/source/stbctrls/stbctrls.src \
     svx/source/svdraw/svdstr.src \
@@ -86,10 +83,6 @@ $(eval $(call gb_SrsTarget_add_files,svx/res,\
 $(eval $(call gb_SrsTarget_add_nonlocalizable_files,svx/res,\
     svx/source/dialog/langbox.src \
     svx/source/unodraw/unodraw.src \
-))
-
-$(eval $(call gb_SrsTarget_add_templates,svx/res,\
-	svx/inc/globlmn_tmpl.hrc \
 ))
 
 # vim: set noet sw=4 ts=4:

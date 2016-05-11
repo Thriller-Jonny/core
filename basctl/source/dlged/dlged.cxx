@@ -62,7 +62,6 @@ static const char aDecorationPropName[] = "Decoration";
 static const char aTitlePropName[] = "Title";
 
 
-
 // DlgEdHint
 
 
@@ -346,7 +345,7 @@ void DlgEditor::UpdateScrollBars()
 }
 
 
-void DlgEditor::SetDialog( uno::Reference< container::XNameContainer > xUnoControlDialogModel )
+void DlgEditor::SetDialog( const uno::Reference< container::XNameContainer >& xUnoControlDialogModel )
 {
     // set dialog model
     m_xUnoControlDialogModel = xUnoControlDialogModel;
@@ -646,7 +645,7 @@ void DlgEditor::Cut()
 }
 
 
-void implCopyStreamToByteSequence( Reference< XInputStream > xStream,
+void implCopyStreamToByteSequence( const Reference< XInputStream >& xStream,
     Sequence< sal_Int8 >& bytes )
 {
     xStream->readBytes( bytes, xStream->available() );
@@ -795,9 +794,7 @@ void DlgEditor::Copy()
             memcpy( pCombinedData + 4, DialogModelBytes.getConstArray(), nDialogDataLen );
             memcpy( pCombinedData + nResOffset, aResData.getConstArray(), nResDataLen );
 
-            Any aCombinedDataAny;
-            aCombinedDataAny <<= aCombinedData;
-            aSeqData[1] = aCombinedDataAny;
+            aSeqData[1] = Any(aCombinedData);
 
             pTrans = new DlgEdTransferableImpl( m_ClipboardDataFlavorsResource, aSeqData );
         }
@@ -901,7 +898,8 @@ void DlgEditor::Paste()
 
                 if ( xClipDialogModel.is() )
                 {
-                    ::xmlscript::importDialogModel( ::xmlscript::createInputStream( rtl::ByteSequence(DialogModelBytes.getArray(), DialogModelBytes.getLength()) ) , xClipDialogModel, xContext, m_xDocument );
+                    Reference<XInputStream> xIn = ::xmlscript::createInputStream( DialogModelBytes.getConstArray(), DialogModelBytes.getLength() );
+                    ::xmlscript::importDialogModel( xIn , xClipDialogModel, xContext, m_xDocument );
                 }
 
                 // get control models from clipboard dialog model
@@ -936,16 +934,12 @@ void DlgEditor::Paste()
                         // set new name
                         OUString aOUniqueName( pCtrlObj->GetUniqueName() );
                         Reference< beans::XPropertySet > xPSet( xCtrlModel , UNO_QUERY );
-                        Any aUniqueName;
-                        aUniqueName <<= aOUniqueName;
-                        xPSet->setPropertyValue( DLGED_PROP_NAME, aUniqueName );
+                        xPSet->setPropertyValue( DLGED_PROP_NAME, Any(aOUniqueName) );
 
                         // set tabindex
                         Reference< container::XNameAccess > xNA( m_xUnoControlDialogModel , UNO_QUERY );
                            Sequence< OUString > aNames_ = xNA->getElementNames();
-                        Any aTabIndex;
-                        aTabIndex <<= (sal_Int16) aNames_.getLength();
-                        xPSet->setPropertyValue( DLGED_PROP_TABINDEX, aTabIndex );
+                        xPSet->setPropertyValue( DLGED_PROP_TABINDEX, Any((sal_Int16) aNames_.getLength()) );
 
                         if( bLocalized )
                         {
@@ -1117,7 +1111,7 @@ void lcl_PrintHeader( Printer* pPrinter, const OUString& rTitle ) // not working
 
     vcl::Font aFont( pPrinter->GetFont() );
     aFont.SetWeight( WEIGHT_BOLD );
-    aFont.SetAlign( ALIGN_BOTTOM );
+    aFont.SetAlignment( ALIGN_BOTTOM );
     pPrinter->SetFont( aFont );
 
     long const nFontHeight = pPrinter->GetTextHeight();
@@ -1160,8 +1154,8 @@ void DlgEditor::Print( Printer* pPrinter, const OUString& rTitle )    // not wor
         MapMode aMap( MAP_100TH_MM );
         pPrinter->SetMapMode( aMap );
         vcl::Font aFont;
-        aFont.SetAlign( ALIGN_BOTTOM );
-        aFont.SetSize( Size( 0, 360 ));
+        aFont.SetAlignment( ALIGN_BOTTOM );
+        aFont.SetFontSize( Size( 0, 360 ));
         pPrinter->SetFont( aFont );
 
         Size aPaperSz = pPrinter->GetOutputSize();

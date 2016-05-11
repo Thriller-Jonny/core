@@ -143,8 +143,6 @@ double              GetCoupdays( sal_Int32 nNullDate, sal_Int32 nSettle, sal_Int
                                 sal_Int32 nBase ) throw( css::uno::RuntimeException, css::lang::IllegalArgumentException );
 
 
-
-
 enum FDCategory
 {
     FDCat_AddIn,
@@ -239,7 +237,6 @@ public:
 };
 
 
-
 /// sorted list with unique sal_Int32 values
 class SortedIndividualInt32List
 {
@@ -274,13 +271,12 @@ public:
     bool                        Find( sal_Int32 nVal ) const;
 
                                 /** @param rAnyConv  is an initialized or uninitialized ScaAnyConverter
-                                    @param bInsertOnWeekend  insertion mode: false = holidays on weekend are omitted */
+                                    holidays on weekend are omitted */
     void                        InsertHolidayList(
                                     ScaAnyConverter& rAnyConv,
                                     const css::uno::Reference< css::beans::XPropertySet >& xOptions,
                                     const css::uno::Any& rHolAny,
-                                    sal_Int32 nNullDate,
-                                    bool bInsertOnWeekend ) throw( css::uno::RuntimeException, css::lang::IllegalArgumentException );
+                                    sal_Int32 nNullDate) throw( css::uno::RuntimeException, css::lang::IllegalArgumentException );
 };
 
 
@@ -333,8 +329,7 @@ public:
     void                        Append(
                                     ScaAnyConverter& rAnyConv,
                                     const css::uno::Reference< css::beans::XPropertySet >& xOpt,
-                                    const css::uno::Sequence< css::uno::Any >& rAnySeq,
-                                    bool bIgnoreEmpty = true ) throw( css::uno::RuntimeException, css::lang::IllegalArgumentException );
+                                    const css::uno::Sequence< css::uno::Any >& rAnySeq ) throw( css::uno::RuntimeException, css::lang::IllegalArgumentException );
 
     virtual bool                CheckInsert( double fValue ) const
                                     throw( css::uno::RuntimeException, css::lang::IllegalArgumentException );
@@ -675,8 +670,6 @@ inline ConvertDataLinear::ConvertDataLinear( const sal_Char* p, double fC, doubl
     fOffs( fO )
 {
 }
-
-
 
 
 /// Helper class for date calculation for various financial functions

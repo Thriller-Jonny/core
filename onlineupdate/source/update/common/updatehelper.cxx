@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#ifdef WNT
+#ifdef _WIN32
 #include <windows.h>
 
 // Needed for CreateToolhelp32Snapshot
@@ -591,7 +591,7 @@ WaitForServiceStop(LPCWSTR serviceName, DWORD maxWaitSeconds)
  * Determines if there is at least one process running for the specified
  * application. A match will be found across any session for any user.
  *
- * @param process The process to check for existance
+ * @param process The process to check for existence
  * @return ERROR_NOT_FOUND if the process was not found
  *         ERROR_SUCCESS if the process was found and there were no errors
  *         Other Win32 system error code for other errors
@@ -714,8 +714,8 @@ GetDWORDValue(HKEY key, LPCWSTR valueName, DWORD &retValue)
 }
 
 /**
- * Determines if the the system's elevation type allows
- * unprmopted elevation.
+ * Determines if the system's elevation type allows
+ * unprompted elevation.
  *
  * @param isUnpromptedElevation Out parameter which specifies if unprompted
  *                              elevation is allowed.

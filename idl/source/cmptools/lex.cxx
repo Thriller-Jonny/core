@@ -18,7 +18,6 @@
  */
 
 #include <ctype.h>
-#include <stdio.h>
 
 #include <hash.hxx>
 #include <lex.hxx>
@@ -30,44 +29,32 @@ OString SvToken::GetTokenAsString() const
     OString aStr;
     switch( nType )
     {
-        case SVTOKEN_EMPTY:
+        case SVTOKENTYPE::Empty:
             break;
-        case SVTOKEN_COMMENT:
+        case SVTOKENTYPE::Comment:
             aStr = aString;
             break;
-        case SVTOKEN_INTEGER:
+        case SVTOKENTYPE::Integer:
             aStr = OString::number(nLong);
             break;
-        case SVTOKEN_STRING:
+        case SVTOKENTYPE::String:
             aStr = aString;
             break;
-        case SVTOKEN_BOOL:
+        case SVTOKENTYPE::Bool:
             aStr = bBool ? "TRUE" : "FALSE";
             break;
-        case SVTOKEN_IDENTIFIER:
+        case SVTOKENTYPE::Identifier:
             aStr = aString;
             break;
-        case SVTOKEN_CHAR:
+        case SVTOKENTYPE::Char:
             aStr = OString(cChar);
             break;
-        case SVTOKEN_RTTIBASE:
-            aStr = "RTTIBASE";
-            break;
-        case SVTOKEN_EOF:
-        case SVTOKEN_HASHID:
+        case SVTOKENTYPE::EndOfFile:
+        case SVTOKENTYPE::HashId:
             break;
     }
 
     return aStr;
-}
-
-SvToken::SvToken( const SvToken & rObj )
-{
-    nLine = rObj.nLine;
-    nColumn = rObj.nColumn;
-    nType = rObj.nType;
-    aString = rObj.aString;
-    nLong = rObj.nLong;
 }
 
 SvToken & SvToken::operator = ( const SvToken & rObj )
@@ -97,15 +84,6 @@ void SvTokenStream::InitCtor()
 
 SvTokenStream::SvTokenStream( const OUString & rFileName )
     : pInStream( new SvFileStream( rFileName, STREAM_STD_READ | StreamMode::NOCREATE ) )
-    , rInStream( *pInStream )
-    , aFileName( rFileName )
-{
-    InitCtor();
-}
-
-SvTokenStream::SvTokenStream( SvStream & rStream, const OUString & rFileName )
-    : pInStream( nullptr )
-    , rInStream( rStream )
     , aFileName( rFileName )
 {
     InitCtor();
@@ -153,7 +131,7 @@ int SvTokenStream::GetNextChar()
     int nChar;
     while (aBufStr.getLength() <= nBufPos)
     {
-        if (rInStream.ReadLine(aBufStr))
+        if (pInStream->ReadLine(aBufStr))
         {
             nLine++;
             nColumn = 0;
@@ -223,7 +201,7 @@ bool SvTokenStream::MakeToken( SvToken & rToken )
             nColumn += c == '\t' ? nTabSize : 1;
         }
     }
-    while( 0 == c && !IsEof() && ( SVSTREAM_OK == rInStream.GetError() ) );
+    while( 0 == c && !IsEof() && ( SVSTREAM_OK == pInStream->GetError() ) );
 
     sal_uLong nLastLine     = nLine;
     sal_uLong nLastColumn   = nColumn;
@@ -240,7 +218,7 @@ bool SvTokenStream::MakeToken( SvToken & rToken )
                 c = GetFastNextChar();
             }
             c = GetNextChar();
-            rToken.nType    = SVTOKEN_COMMENT;
+            rToken.nType    = SVTOKENTYPE::Comment;
         }
         else if( '*' == c )
         {
@@ -260,16 +238,16 @@ bool SvTokenStream::MakeToken( SvToken & rToken )
                 }
                 c = GetFastNextChar();
             }
-            while( '/' != c && !IsEof() && ( SVSTREAM_OK == rInStream.GetError() ) );
-            if( IsEof() || ( SVSTREAM_OK != rInStream.GetError() ) )
+            while( '/' != c && !IsEof() && ( SVSTREAM_OK == pInStream->GetError() ) );
+            if( IsEof() || ( SVSTREAM_OK != pInStream->GetError() ) )
                 return false;
             c = GetNextChar();
-            rToken.nType = SVTOKEN_COMMENT;
+            rToken.nType = SVTOKENTYPE::Comment;
             CalcColumn();
         }
         else
         {
-            rToken.nType = SVTOKEN_CHAR;
+            rToken.nType = SVTOKENTYPE::Char;
             rToken.cChar = (char)c1;
         }
     }
@@ -291,32 +269,19 @@ bool SvTokenStream::MakeToken( SvToken & rToken )
             if( c == '"' )
             {
                 c = GetFastNextChar();
-                if( c == '"' )
-                {
-                    aStr.append('"');
-                    aStr.append('"');
-                }
-                else
-                    bDone = true;
-            }
-            else if( c == '\\' )
-            {
-                aStr.append('\\');
-                c = GetFastNextChar();
-                if( c )
-                    aStr.append(static_cast<char>(c));
+                bDone = true;
             }
             else
                 aStr.append(static_cast<char>(c));
         }
-        if( IsEof() || ( SVSTREAM_OK != rInStream.GetError() ) )
+        if( IsEof() || ( SVSTREAM_OK != pInStream->GetError() ) )
             return false;
-        rToken.nType   = SVTOKEN_STRING;
+        rToken.nType   = SVTOKENTYPE::String;
         rToken.aString = aStr.makeStringAndClear();
     }
     else if( isdigit( c ) )
     {
-        rToken.nType = SVTOKEN_INTEGER;
+        rToken.nType = SVTOKENTYPE::Integer;
         rToken.nLong = GetNumber();
 
     }
@@ -331,12 +296,12 @@ bool SvTokenStream::MakeToken( SvToken & rToken )
         OString aStr = aBuf.makeStringAndClear();
         if( aStr.equalsIgnoreAsciiCase( aStrTrue ) )
         {
-            rToken.nType = SVTOKEN_BOOL;
+            rToken.nType = SVTOKENTYPE::Bool;
             rToken.bBool = true;
         }
         else if( aStr.equalsIgnoreAsciiCase( aStrFalse ) )
         {
-            rToken.nType = SVTOKEN_BOOL;
+            rToken.nType = SVTOKENTYPE::Bool;
             rToken.bBool = false;
         }
         else
@@ -346,24 +311,24 @@ bool SvTokenStream::MakeToken( SvToken & rToken )
                 rToken.SetHash( GetIdlApp().pHashTable->Get( nHashId ) );
             else
             {
-                rToken.nType   = SVTOKEN_IDENTIFIER;
+                rToken.nType   = SVTOKENTYPE::Identifier;
                 rToken.aString = aStr;
             }
         }
     }
     else if( IsEof() )
     {
-        rToken.nType = SVTOKEN_EOF;
+        rToken.nType = SVTOKENTYPE::EndOfFile;
     }
     else
     {
-        rToken.nType = SVTOKEN_CHAR;
+        rToken.nType = SVTOKENTYPE::Char;
         rToken.cChar = (char)c;
         c = GetFastNextChar();
     }
     rToken.SetLine( nLastLine );
     rToken.SetColumn( nLastColumn );
-    return rInStream.GetError() == SVSTREAM_OK;
+    return pInStream->GetError() == SVSTREAM_OK;
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

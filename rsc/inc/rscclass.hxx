@@ -64,6 +64,14 @@ public:
     void            Pre_dtor() override;
     ERRTYPE         SetVariable( Atom nVarName, RscTop * pClass,
                                  RSCINST * pDflt,
+                                 RSCVAR nVarType, SfxStyleItem nMask,
+                                 Atom nDataBaseName ) override;
+    ERRTYPE         SetVariable( Atom nVarName, RscTop * pClass,
+                                 RSCINST * pDflt,
+                                 RSCVAR nVarType, SfxSlotInfo nMask,
+                                 Atom nDataBaseName ) override;
+    ERRTYPE         SetVariable( Atom nVarName, RscTop * pClass,
+                                 RSCINST * pDflt,
                                  RSCVAR nVarType, sal_uInt32 nMask,
                                  Atom nDataBaseName ) override;
     virtual void    EnumVariables( void * pData, VarEnumCallbackProc ) override;
@@ -99,8 +107,7 @@ class RscSysDepend : public RscClass
 public:
                     RscSysDepend( Atom nId, sal_uInt32 nTypId, RscTop * pSuper );
     ERRTYPE         WriteSysDependRc( const RSCINST &, RscWriteRc & aMem,
-                                      RscTypCont * pTC, sal_uInt32, bool bExtra,
-                                      bool bFirst = false );
+                                      RscTypCont * pTC, sal_uInt32, bool bExtra );
     ERRTYPE         WriteRc( const RSCINST &, RscWriteRc & aMem,
                              RscTypCont * pTC, sal_uInt32, bool bExtra ) override;
 };

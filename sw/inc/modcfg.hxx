@@ -92,12 +92,12 @@ class SwCompareConfig : public utl::ConfigItem
 {
     friend class SwModuleOptions;
 
-    sal_uInt16      eCmpMode;		//Compare/CompareDocuments;
+    sal_uInt16      eCmpMode;       //Compare/CompareDocuments;
     bool            bUseRsid;       //Compare/Settings/Use RSID
     /// Compare/Settings/Store RSID
     bool            m_bStoreRsid;
     bool            bIgnorePieces;  //Compare/Settings/Ignore pieces of length
-    sal_uInt16      nPieceLen;		//Compare/Settings/Ignore pieces of length
+    sal_uInt16      nPieceLen;      //Compare/Settings/Ignore pieces of length
 
     static const css::uno::Sequence<OUString>& GetPropertyNames();
 
@@ -291,7 +291,7 @@ public:
                     { bHTML ? (aWebTableConfig.bInsTableAlignNum = b) : (aTableConfig.bInsTableAlignNum = b);
                         bHTML ? aWebTableConfig.SetModified() : aTableConfig.SetModified();}
 
-    SwInsertTableOptions GetInsTableFlags(bool bHTML) const
+    const SwInsertTableOptions& GetInsTableFlags(bool bHTML) const
                     { return bHTML ? aWebInsertConfig.aInsTableOpts : aInsertConfig.aInsTableOpts;}
     void        SetInsTableFlags( bool bHTML, const SwInsertTableOptions& rOpts ) {
                     bHTML ? (aWebInsertConfig.aInsTableOpts = rOpts) : (aInsertConfig.aInsTableOpts = rOpts);
@@ -320,15 +320,15 @@ public:
 
     bool        IsAskForMailMerge() const       { return aMiscConfig.bAskForMailMergeInPrint;}
 
-    OUString    GetNameFromColumn() const       { return aMiscConfig.sNameFromColumn; }
+    const OUString& GetNameFromColumn() const       { return aMiscConfig.sNameFromColumn; }
     void        SetNameFromColumn( const OUString& rSet )       { aMiscConfig.sNameFromColumn = rSet;
                                                                   aMiscConfig.SetModified();}
 
-    OUString    GetMailingPath() const          { return aMiscConfig.sMailingPath; }
+    const OUString& GetMailingPath() const          { return aMiscConfig.sMailingPath; }
     void        SetMailingPath(const OUString& sPath) { aMiscConfig.sMailingPath = sPath;
                                                       aMiscConfig.SetModified();}
 
-    OUString    GetWordDelimiter() const        { return aMiscConfig.sWordDelimiter; }
+    const OUString& GetWordDelimiter() const        { return aMiscConfig.sWordDelimiter; }
     void        SetWordDelimiter(const OUString& sDelim)  { aMiscConfig.sWordDelimiter = sDelim;
                                                           aMiscConfig.SetModified();}
 

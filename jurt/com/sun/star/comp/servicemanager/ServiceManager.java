@@ -1,3 +1,4 @@
+/* -*- Mode: Java; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /*
  * This file is part of the LibreOffice project.
  *
@@ -505,7 +506,7 @@ public class ServiceManager implements XMultiServiceFactory,
     }
 
     /**
-     * Checks if the any componets are registered.
+     * Checks if the any components are registered.
      *
      * @return  true - if the list of the registred components is not empty - otherwise false.
      * @see     com.sun.star.container.XElementAccess
@@ -657,3 +658,5 @@ public class ServiceManager implements XMultiServiceFactory,
         }
     }
 }
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

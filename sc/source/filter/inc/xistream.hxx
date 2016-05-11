@@ -240,12 +240,10 @@ public:
 
     /** Constructs the Excel record import stream using a TOOLS stream object.
         @param rInStrm  The system input stream. Will be set to its start position.
-        Must exist as long as this object exists.
-        @param bContLookup  Automatic CONTINUE lookup on/off. */
+        Must exist as long as this object exists */
     explicit            XclImpStream(
                             SvStream& rInStrm,
-                            const XclImpRoot& rRoot,
-                            bool bContLookup = true );
+                            const XclImpRoot& rRoot );
 
                         ~XclImpStream();
 
@@ -344,9 +342,8 @@ public:
         @return  Count of bytes really written. */
     sal_Size            CopyToStream( SvStream& rOutStrm, sal_Size nBytes );
 
-    /** Copies the entire record to rOutStrm. The current record position keeps unchanged.
-        @return  Count of bytes really written. */
-    sal_Size            CopyRecordToStream( SvStream& rOutStrm );
+    /** Copies the entire record to rOutStrm. The current record position keeps unchanged. */
+    void            CopyRecordToStream( SvStream& rOutStrm );
 
     /** Seeks absolute in record content to the specified position.
         @descr  The value 0 means start of record, independent from physical stream position. */

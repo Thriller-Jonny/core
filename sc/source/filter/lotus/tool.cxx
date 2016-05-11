@@ -152,31 +152,27 @@ FormCache::FormCache( ScDocument* pDoc1, sal_uInt8 nNewDefaultFormat )
 {   // Default format is 'Default'
     nDefaultFormat = nNewDefaultFormat;
     pFormTable = pDoc1->GetFormatTable();
-    for( sal_uInt16 nC = 0 ; nC < __nSize ; nC++ )
-        bValid[ nC ] = false;
+    for(bool & rb : bValid)
+        rb = false;
     eLanguage = ScGlobal::eLnge;
 }
 
 FormCache::~FormCache()
 {
-    for( sal_uInt16 nC = 0 ; nC < __nSize ; nC++ )
-        delete aIdents[ nC ].GetAttr();
+    for(FormIdent & rIdent : aIdents)
+        delete rIdent.GetAttr();
 }
 
 SfxUInt32Item* FormCache::NewAttr( sal_uInt8 nFormat, sal_uInt8 nSt )
 {
     // setup new Format
     sal_uInt8       nL, nH; // Low-/High-Nibble
-    sal_uInt8       nForm = nFormat;
-    OUString          aFormString;
+    OUString        aFormString;
     sal_Int16       eType = css::util::NumberFormat::ALL;
     sal_uInt32      nIndex1;
     sal_uInt32      nHandle;
     NfIndexTableOffset eIndexTableOffset = NF_NUMERIC_START;
-    bool        bDefault = false;
-
-    if( nForm == 0xFF ) // Default-Format?
-        nForm = nDefaultFormat;
+    bool            bDefault = false;
 
     // split into Low and High byte
     nL = nFormat & 0x0F;
@@ -233,7 +229,6 @@ SfxUInt32Item* FormCache::NewAttr( sal_uInt8 nFormat, sal_uInt8 nSt )
                 css::util::NumberFormat::NUMBER, eLanguage );
             aFormString = pFormTable->GenerateFormat(nIndex1,
                 eLanguage, false, false, nL);
-            nIndex1 = 0;
             break;
         case 0x07:  // Special format
             switch( nL )
@@ -334,7 +329,7 @@ SfxUInt32Item* FormCache::NewAttr( sal_uInt8 nFormat, sal_uInt8 nSt )
         pFormTable->PutEntry( aFormString, nDummy, eType, nHandle, eLanguage );
     }
 
-    return new SfxUInt32Item( ATTR_VALUE_FORMAT, ( sal_uInt32 ) nHandle );
+    return new SfxUInt32Item( ATTR_VALUE_FORMAT, nHandle );
 }
 
 void LotusRange::MakeHash()

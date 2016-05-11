@@ -34,7 +34,6 @@
 #include "xlstyle.hxx"
 #include "xiescher.hxx"
 #include "xistring.hxx"
-#include <boost/ptr_container/ptr_map.hpp>
 
 namespace com { namespace sun { namespace star {
     namespace awt
@@ -395,7 +394,10 @@ public:
     /** Returns true, if the source link contains explicit string data. */
     inline bool         HasString() const { return mxString && !mxString->IsEmpty(); }
     /** Returns explicit string data or an empty string. */
-    OUString            GetString() const { if (mxString) return mxString->GetText(); return OUString(); }
+    OUString            GetString() const {
+        if (mxString) return mxString->GetText();
+        return OUString();
+    }
     /** Returns the number of data points of this source link. */
     sal_uInt16          GetCellCount() const;
 
@@ -667,7 +669,7 @@ public:
     /** Writes the line format only, e.g. for trend lines or error bars. */
     void                ConvertLine( ScfPropertySet& rPropSet, XclChObjectType eObjType ) const;
     /** Writes the area format only for the series or a data point. */
-    void                ConvertArea( ScfPropertySet& rPropSet, sal_uInt16 nFormatIdx, bool bUsePicFmt ) const;
+    void                ConvertArea( ScfPropertySet& rPropSet, sal_uInt16 nFormatIdx ) const;
 
 private:
     /** Removes unused formatting (e.g. pie distance in a bar chart). */
@@ -776,7 +778,7 @@ public:
     /** Returns true, if the series is child of another series (e.g. trend line). */
     inline bool         HasParentSeries() const { return mnParentIdx != EXC_CHSERIES_INVALID; }
     /** Returns true, if the series contains child series (e.g. trend lines). */
-    inline bool         HasChildSeries() const { return !maTrendLines.empty() || !maErrorBars.empty(); }
+    inline bool         HasChildSeries() const { return !maTrendLines.empty() || !m_ErrorBars.empty(); }
     /** Returns series title or an empty string, if the series does not contain a title. */
     OUString            GetTitle() const { return mxTitleLink ? mxTitleLink->GetString() : OUString(); }
 
@@ -820,7 +822,7 @@ private:
     typedef ::std::map<sal_uInt16, XclImpChDataFormatRef> XclImpChDataFormatMap;
     typedef ::std::map<sal_uInt16, XclImpChTextRef>       XclImpChTextMap;
     typedef ::std::list< XclImpChSerTrendLineRef >        XclImpChSerTrendLineList;
-    typedef ::boost::ptr_map<sal_uInt8, XclImpChSerErrorBar> XclImpChSerErrorBarMap;
+    typedef ::std::map<sal_uInt8, std::unique_ptr<XclImpChSerErrorBar>> XclImpChSerErrorBarMap;
 
     XclChSeries         maData;             /// Contents of the CHSERIES record.
     XclImpChSourceLinkRef mxValueLink;      /// Link data for series values.
@@ -831,7 +833,7 @@ private:
     XclImpChDataFormatMap maPointFmts;      /// CHDATAFORMAT groups for data point formats.
     XclImpChTextMap     maLabels;           /// Data point labels (CHTEXT groups).
     XclImpChSerTrendLineList maTrendLines;  /// Trend line settings (CHSERTRENDLINE records).
-    XclImpChSerErrorBarMap maErrorBars;     /// Error bar settings (CHSERERRORBAR records).
+    XclImpChSerErrorBarMap m_ErrorBars;     /// Error bar settings (CHSERERRORBAR records).
     sal_uInt16          mnGroupIdx;         /// Chart type group (CHTYPEGROUP group) this series is assigned to.
     sal_uInt16          mnSeriesIdx;        /// 0-based series index.
     sal_uInt16          mnParentIdx;        /// 0-based index of parent series (trend lines and error bars).
@@ -993,9 +995,9 @@ public:
     bool                HasConnectorLines() const;
 
     /** Returns the legend object. */
-    inline XclImpChLegendRef GetLegend() const { return mxLegend; }
+    const XclImpChLegendRef& GetLegend() const { return mxLegend; }
     /** Returns the default series data format. */
-    inline XclImpChDataFormatRef GetGroupFormat() const { return mxGroupFmt; }
+    const XclImpChDataFormatRef& GetGroupFormat() const { return mxGroupFmt; }
     /** Returns series title, if the chart type group contains only one single series. */
     OUString            GetSingleSeriesTitle() const;
 
@@ -1020,9 +1022,9 @@ private:
     void                ReadChDataFormat( XclImpStream& rStrm );
 
     /** Returns true, if the chart type group contains a hi-lo line format. */
-    inline bool         HasHiLoLine() const { return maChartLines.find( EXC_CHCHARTLINE_HILO ) != maChartLines.end(); }
+    inline bool         HasHiLoLine() const { return m_ChartLines.find(EXC_CHCHARTLINE_HILO) != m_ChartLines.end(); }
     /** Returns true, if the chart type group contains drop bar formats. */
-    inline bool         HasDropBars() const { return !maDropBars.empty(); }
+    inline bool         HasDropBars() const { return !m_DropBars.empty(); }
 
     /** Inserts the passed series into the chart type. Adds additional properties to the series. */
     void                InsertDataSeries( css::uno::Reference< css::chart2::XChartType > xChartType,
@@ -1037,8 +1039,8 @@ private:
 
 private:
     typedef ::std::vector< XclImpChSeriesRef >               XclImpChSeriesVec;
-    typedef boost::ptr_map<sal_uInt16, XclImpChDropBar>      XclImpChDropBarMap;
-    typedef boost::ptr_map<sal_uInt16, XclImpChLineFormat>   XclImpChLineFormatMap;
+    typedef ::std::map<sal_uInt16, std::unique_ptr<XclImpChDropBar>> XclImpChDropBarMap;
+    typedef ::std::map<sal_uInt16, XclImpChLineFormat> XclImpChLineFormatMap;
     typedef ::std::set< sal_uInt16 >                         UInt16Set;
 
     XclChTypeGroup      maData;             /// Contents of the CHTYPEGROUP record.
@@ -1048,8 +1050,8 @@ private:
     XclImpChSeriesRef   mxFirstSeries;      /// First series in this chart type group (CHSERIES groups).
     XclImpChChart3dRef  mxChart3d;          /// 3D settings (CHCHART3D record).
     XclImpChLegendRef   mxLegend;           /// Chart legend (CHLEGEND group).
-    XclImpChDropBarMap  maDropBars;         /// Dropbars (CHDROPBAR group).
-    XclImpChLineFormatMap maChartLines;     /// Global line formats (CHCHARTLINE group).
+    XclImpChDropBarMap  m_DropBars;         /// Dropbars (CHDROPBAR group).
+    XclImpChLineFormatMap m_ChartLines;     /// Global line formats (CHCHARTLINE group).
     XclImpChDataFormatRef mxGroupFmt;       /// Default format for all series (CHDATAFORMAT group).
     UInt16Set           maUnusedFormats;    /// Contains unused format indexes for automatic colors.
 };
@@ -1211,7 +1213,7 @@ public:
     inline sal_Int32    GetApiAxesSetIndex() const { return maData.GetApiAxesSetIndex(); }
 
     /** Returns the outer plot area position, if existing. */
-    inline XclImpChFramePosRef GetPlotAreaFramePos() const { return mxFramePos; }
+    const XclImpChFramePosRef& GetPlotAreaFramePos() const { return mxFramePos; }
     /** Returns the specified chart type group. */
     XclImpChTypeGroupRef GetTypeGroup( sal_uInt16 nGroupIdx ) const;
     /** Returns the first chart type group. */
@@ -1334,14 +1336,14 @@ private:
 private:
     typedef ::std::vector< XclImpChSeriesRef >                   XclImpChSeriesVec;
     typedef ::std::map<XclChDataPointPos, XclImpChDataFormatRef> XclImpChDataFormatMap;
-    typedef ::boost::ptr_map<sal_uInt16, XclImpChText>           XclImpChTextMap;
+    typedef ::std::map<sal_uInt16, std::unique_ptr<XclImpChText>> XclImpChTextMap;
 
     XclChRectangle      maRect;             /// Position of the chart on the sheet (CHCHART record).
     XclImpChSeriesVec   maSeries;           /// List of series data (CHSERIES groups).
     XclImpChDataFormatMap maDataFmts;       /// All series and point formats (CHDATAFORMAT groups).
     XclImpChFrameRef    mxFrame;            /// Chart frame format (CHFRAME group).
     XclChProperties     maProps;            /// Chart properties (CHPROPERTIES record).
-    XclImpChTextMap     maDefTexts;         /// Default text objects (CHDEFAULTTEXT groups).
+    XclImpChTextMap     m_DefTexts;         /// Default text objects (CHDEFAULTTEXT groups).
     XclImpChAxesSetRef  mxPrimAxesSet;      /// Primary axes set (CHAXESSET group).
     XclImpChAxesSetRef  mxSecnAxesSet;      /// Secondary axes set (CHAXESSET group).
     XclImpChTextRef     mxTitle;            /// Chart title (CHTEXT group).

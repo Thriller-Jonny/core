@@ -19,7 +19,6 @@
 
 #include "lockbyte.hxx"
 
-#include "boost/noncopyable.hpp"
 #include "sal/types.h"
 #include "osl/diagnose.h"
 #include "osl/file.h"
@@ -201,10 +200,10 @@ struct FileHandle
         case store_AccessCreate:
         case store_AccessReadCreate:
             nFlags |= osl_File_OpenFlag_Create;
-            // fall through
+            SAL_FALLTHROUGH;
         case store_AccessReadWrite:
             nFlags |= osl_File_OpenFlag_Write;
-            // fall through
+            SAL_FALLTHROUGH;
         case store_AccessReadOnly:
             nFlags |= osl_File_OpenFlag_Read;
             break;
@@ -278,8 +277,7 @@ struct FileHandle
 
 class FileLockBytes :
     public store::OStoreObject,
-    public store::ILockBytes,
-    private boost::noncopyable
+    public store::ILockBytes
 {
     /** Representation.
      */
@@ -308,6 +306,9 @@ public:
     /** Construction.
      */
     explicit FileLockBytes (FileHandle & rFile);
+
+    FileLockBytes(const FileLockBytes&) = delete;
+    FileLockBytes& operator=(const FileLockBytes&) = delete;
 
 protected:
     /** Destruction.
@@ -490,7 +491,8 @@ struct FileMapping
         {
             // Release mapping.
             unmapFile (rMapping.m_hFile, rMapping.m_pAddr, rMapping.m_nSize);
-            rMapping.m_pAddr = nullptr, rMapping.m_nSize = 0;
+            rMapping.m_pAddr = nullptr;
+            rMapping.m_nSize = 0;
         }
     };
     typedef UnmapFile destructor_type;
@@ -499,8 +501,7 @@ struct FileMapping
 class MappedLockBytes :
     public store::OStoreObject,
     public store::PageData::Allocator,
-    public store::ILockBytes,
-    private boost::noncopyable
+    public store::ILockBytes
 {
     /** Representation.
      */
@@ -534,6 +535,9 @@ public:
      */
     explicit MappedLockBytes (FileMapping & rMapping);
 
+    MappedLockBytes(const MappedLockBytes&) = delete;
+    MappedLockBytes& operator=(const MappedLockBytes&) = delete;
+
 protected:
     /* Destruction.
      */
@@ -556,7 +560,10 @@ void MappedLockBytes::allocate_Impl (void ** ppPage, sal_uInt16 * pnSize)
 {
     OSL_PRECOND((ppPage != nullptr) && (pnSize != nullptr), "contract violation");
     if ((ppPage != nullptr) && (pnSize != nullptr))
-        *ppPage = nullptr, *pnSize = m_nPageSize;
+    {
+        *ppPage = nullptr;
+        *pnSize = m_nPageSize;
+    }
 }
 
 void MappedLockBytes::deallocate_Impl (void * pPage)
@@ -638,8 +645,7 @@ namespace store
 
 class MemoryLockBytes :
     public store::OStoreObject,
-    public store::ILockBytes,
-    private boost::noncopyable
+    public store::ILockBytes
 {
     /** Representation.
      */
@@ -666,6 +672,9 @@ public:
     /** Construction.
      */
     MemoryLockBytes();
+
+    MemoryLockBytes(const MemoryLockBytes&) = delete;
+    MemoryLockBytes& operator=(const MemoryLockBytes&) = delete;
 
 protected:
     /** Destruction.
@@ -778,7 +787,8 @@ storeError MemoryLockBytes::setSize_Impl (sal_uInt32 nSize)
             if (nSize != 0)
                 return store_E_OutOfMemory;
         }
-        m_pData = pData, m_nSize = nSize;
+        m_pData = pData;
+        m_nSize = nSize;
     }
     return store_E_None;
 }

@@ -134,9 +134,9 @@ OpenGL3DRenderer::~OpenGL3DRenderer()
     glDeleteRenderbuffers(1, &mnPickingRboDepth);
     glDeleteRenderbuffers(1, &mnPickingRboColor);
 
-    for (size_t i = 0; i < m_TextInfoBatch.texture.size(); i++)
+    for (TextureArrayInfo & i : m_TextInfoBatch.texture)
     {
-        glDeleteTextures(1, &m_TextInfoBatch.texture[i].textureID);
+        glDeleteTextures(1, &i.textureID);
     }
     m_TextInfoBatch.texture.clear();
 
@@ -568,9 +568,9 @@ void OpenGL3DRenderer::CreateActualRoundedCube(float fRadius, int iSubDivY, int 
     {
         m_RoundBarMesh.iElementSizes[k] = indices[k].size() - m_RoundBarMesh.iElementStartIndices[k];
         m_RoundBarMesh.iElementStartIndices[k] = m_Indices.size() * sizeof(unsigned short);
-        for (size_t IdxCnt = 0; IdxCnt < indices[k].size(); IdxCnt++)
+        for (unsigned short & IdxCnt : indices[k])
         {
-            m_Indices.push_back(indices[k][IdxCnt]);
+            m_Indices.push_back(IdxCnt);
         }
         indices[k].clear();
     }
@@ -680,9 +680,8 @@ int OpenGL3DRenderer::GenerateRoundCornerBar(std::vector<glm::vec3> &vertices, s
                 glm::normalize(vQuadPoints[2]),
                 glm::normalize(vQuadPoints[3])
             };
-            for (int i = 0; i < 6; i++)
+            for (int index : iIndices)
             {
-                int index = iIndices[i];
                 vertices.push_back(vActualQuadPoints[index]);
                 normals.push_back(vNormals[index]);
             }
@@ -706,9 +705,8 @@ int OpenGL3DRenderer::GenerateRoundCornerBar(std::vector<glm::vec3> &vertices, s
                     glm::normalize(vQuadPoints[2]),
                     glm::normalize(vQuadPoints[3])
                 };
-                for (int i = 0; i < 6; i++)
+                for (int index : iIndices)
                 {
-                    int index = iIndices[i];
                     vertices.push_back(vXZQuadNextPoints[index]);
                     normals.push_back(vXZNextNormals[index]);
                 }
@@ -730,9 +728,8 @@ int OpenGL3DRenderer::GenerateRoundCornerBar(std::vector<glm::vec3> &vertices, s
                     glm::normalize(vQuadPoints[2]),
                     glm::normalize(vQuadPoints[2])
                 };
-                for (int i = 0; i < 6; i++)
+                for (int index : iIndices)
                 {
-                    int index = iIndices[i];
                     vertices.push_back(vYQuadNextPoints[index]);
                     normals.push_back(vYNextNormals[index]);
                 }
@@ -762,9 +759,8 @@ int OpenGL3DRenderer::GenerateRoundCornerBar(std::vector<glm::vec3> &vertices, s
         glm::vec3(xOffset[3], height / 2, zOffset[3])
     };
     glm::vec3 vTopNormal = glm::vec3(0.0f, 1.0f, 0.0f);
-    for (int i = 0; i < 6; i++)
+    for (int index : iIndices)
     {
-        int index = iIndices[i];
         vertices.push_back(vTopPoints[index]);
         normals.push_back(vTopNormal);
     }
@@ -778,9 +774,8 @@ int OpenGL3DRenderer::GenerateRoundCornerBar(std::vector<glm::vec3> &vertices, s
         glm::vec3(xOffset[0], -height / 2, zOffset[0])
     };
     glm::vec3 vBottomNormal = glm::vec3(0.0f, -1.0f, 0.0f);
-    for (int i = 0; i < 6; i++)
+    for (int index : iIndices)
     {
-        int index = iIndices[i];
         vertices.push_back(vBottomPoints[index]);
         normals.push_back(vBottomNormal);
     }
@@ -794,9 +789,8 @@ int OpenGL3DRenderer::GenerateRoundCornerBar(std::vector<glm::vec3> &vertices, s
         glm::vec3(-width / 2, yOffset[0], zOffset[3])
     };
     glm::vec3 vLeftNormal = glm::vec3(-1.0f, 0.0f, 0.0f);
-    for (int i = 0; i < 6; i++)
+    for (int index : iIndices)
     {
-        int index = iIndices[i];
         vertices.push_back(vLeftPoints[index]);
         normals.push_back(vLeftNormal);
     }
@@ -809,9 +803,8 @@ int OpenGL3DRenderer::GenerateRoundCornerBar(std::vector<glm::vec3> &vertices, s
         glm::vec3(width / 2, yOffset[0], zOffset[0])
     };
     glm::vec3 vRightNormal = glm::vec3(1.0f, 0.0f, 0.0f);
-    for (int i = 0; i < 6; i++)
+    for (int index : iIndices)
     {
-        int index = iIndices[i];
         vertices.push_back(vRightPoints[index]);
         normals.push_back(vRightNormal);
     }
@@ -825,9 +818,8 @@ int OpenGL3DRenderer::GenerateRoundCornerBar(std::vector<glm::vec3> &vertices, s
         glm::vec3(xOffset[3], yOffset[1], depth / 2)
     };
     glm::vec3 vFrontNormal = glm::vec3(0.0f, 0.0f, 1.0f);
-    for (int i = 0; i < 6; i++)
+    for (int index : iIndices)
     {
-        int index = iIndices[i];
         vertices.push_back(vFrontPoints[index]);
         normals.push_back(vFrontNormal);
     }
@@ -840,9 +832,8 @@ int OpenGL3DRenderer::GenerateRoundCornerBar(std::vector<glm::vec3> &vertices, s
         glm::vec3(xOffset[3], yOffset[0], -depth / 2)
     };
     glm::vec3 vBackNormal = glm::vec3(0.0f, 0.0f, -1.0f);
-    for (int i = 0; i < 6; i++)
+    for (int index : iIndices)
     {
-        int index = iIndices[i];
         vertices.push_back(vBackPoints[index]);
         normals.push_back(vBackNormal);
     }
@@ -1006,13 +997,13 @@ void OpenGL3DRenderer::RenderPolygon3D(const Polygon3DInfo& polygon)
             glUniform4fv(maPickingResources.m_2DColorID, 1, &polygon.id[0]);
         }
         CHECK_GL_ERROR();
-        GLint maVertexID = mbPickingMode ? maPickingResources.m_2DVertexID : maResources.m_3DVertexID;
+        GLint aVertexID = mbPickingMode ? maPickingResources.m_2DVertexID : maResources.m_3DVertexID;
         // 1rst attribute buffer : vertices
-        glEnableVertexAttribArray(maVertexID);
+        glEnableVertexAttribArray(aVertexID);
         CHECK_GL_ERROR();
         glBindBuffer(GL_ARRAY_BUFFER, m_VertexBuffer);
         CHECK_GL_ERROR();
-        glVertexAttribPointer(maVertexID, // attribute
+        glVertexAttribPointer(aVertexID, // attribute
                                 3,                  // size
                                 GL_FLOAT,           // type
                                 GL_FALSE,           // normalized?
@@ -1038,7 +1029,7 @@ void OpenGL3DRenderer::RenderPolygon3D(const Polygon3DInfo& polygon)
         CHECK_GL_ERROR();
         glDrawArrays(GL_POLYGON, 0, pointList->size());
         CHECK_GL_ERROR();
-        glDisableVertexAttribArray(maVertexID);
+        glDisableVertexAttribArray(aVertexID);
         CHECK_GL_ERROR();
         if(!mbPickingMode)
             glDisableVertexAttribArray(maResources.m_3DNormalID);
@@ -1066,9 +1057,8 @@ struct DeletePointer
 
 void OpenGL3DRenderer::ReleasePolygonShapes()
 {
-    for (size_t i = 0; i < m_Polygon3DInfoList.size(); i++)
+    for (Polygon3DInfo & polygon : m_Polygon3DInfoList)
     {
-        Polygon3DInfo &polygon = m_Polygon3DInfoList[i];
         std::for_each(polygon.verticesList.begin(),
                 polygon.verticesList.end(), DeletePointer<Vertices3D>());
         std::for_each(polygon.normalsList.begin(),
@@ -1083,9 +1073,8 @@ void OpenGL3DRenderer::RenderPolygon3DObject()
 {
     glDepthMask(GL_FALSE);
     CHECK_GL_ERROR();
-    for (size_t i = 0; i < m_Polygon3DInfoList.size(); i++)
+    for (Polygon3DInfo & polygon : m_Polygon3DInfoList)
     {
-        Polygon3DInfo &polygon = m_Polygon3DInfoList[i];
         if (polygon.lineOnly || (!polygon.fillStyle))
         {
             //just use the common shader is ok for lines
@@ -1112,7 +1101,7 @@ void OpenGL3DRenderer::Set3DSenceInfo(sal_uInt32 nColor, bool twoSidesLighting)
     else
     {
         m_iLightNum = 0;
-        m_Ambient = getColorAsVector(nColor);;
+        m_Ambient = getColorAsVector(nColor);
     }
     SetLightInfo(true, 0xFFFFFF, glm::vec4(-1.0, -1.0, 1.0, 0.0));
     SetLightInfo(true, 0xFFFFFF, glm::vec4(-1.0, 1.0, 1.0, 0.0));
@@ -1908,9 +1897,9 @@ void OpenGL3DRenderer::ReleaseTextShapes()
 
 void OpenGL3DRenderer::ReleaseTextTexture()
 {
-    for (size_t i = 0; i < m_Texturelist.size(); i++)
+    for (unsigned int & i : m_Texturelist)
     {
-        glDeleteTextures(1, &m_Texturelist[i]);
+        glDeleteTextures(1, &i);
     }
     m_Texturelist.clear();
 }
@@ -1922,9 +1911,9 @@ void OpenGL3DRenderer::ReleaseScreenTextShapes()
 
 void OpenGL3DRenderer::ReleaseScreenTextTexture()
 {
-    for (size_t i = 0; i < m_ScreenTexturelist.size(); i++)
+    for (unsigned int & i : m_ScreenTexturelist)
     {
-        glDeleteTextures(1, &m_ScreenTexturelist[i]);
+        glDeleteTextures(1, &i);
     }
     m_ScreenTexturelist.clear();
 }
@@ -1936,9 +1925,8 @@ void OpenGL3DRenderer::RenderScreenTextShape()
         return;
     glUseProgram(maResources.m_ScreenTextProID);
     CHECK_GL_ERROR();
-    for (size_t i = 0; i < m_ScreenTextInfoList.size(); i++)
+    for (TextInfo & textInfo : m_ScreenTextInfoList)
     {
-        TextInfo textInfo = m_ScreenTextInfoList[i];
         //calc the position and check whether it can be displayed
         if (textInfo.uniqueId)
         {
@@ -2009,9 +1997,9 @@ void OpenGL3DRenderer::RenderScreenTextShape()
 }
 void OpenGL3DRenderer::ReleaseTextShapesBatch()
 {
-    for (size_t i = 0; i < m_TextInfoBatch.texture.size(); i++)
+    for (TextureArrayInfo & i : m_TextInfoBatch.texture)
     {
-        m_TextInfoBatch.texture[i].subTextureNum = 0;
+        i.subTextureNum = 0;
     }
     m_TextInfoBatch.vertexList.clear();
     m_TextInfoBatch.textureCoordList.clear();
@@ -2075,9 +2063,8 @@ void OpenGL3DRenderer::RenderTextShapeBatch()
 void OpenGL3DRenderer::RenderTextShape()
 {
     CHECK_GL_ERROR();
-    for (size_t i = 0; i < m_TextInfoList.size(); i++)
+    for (TextInfo & textInfo : m_TextInfoList)
     {
-        TextInfo &textInfo = m_TextInfoList[i];
         PosVecf3 trans = {0, 0, 0};
         PosVecf3 angle = {0.0f, 0.0f, 0.0f};
         PosVecf3 scale = {1.0, 1.0, 1.0f};
@@ -2265,12 +2252,12 @@ sal_uInt32 OpenGL3DRenderer::GetPixelColorFromPoint(long nX, long nY)
 
 void OpenGL3DRenderer::ReleaseBatchBarInfo()
 {
-    for (int i = 0; i < 3; i++)
+    for (BatchBarInfo & i : m_BarSurface)
     {
-        m_BarSurface[i].modelMatrixList.clear();
-        m_BarSurface[i].normalMatrixList.clear();
-        m_BarSurface[i].colorList.clear();
-        m_BarSurface[i].mapId2Color.clear();
+        i.modelMatrixList.clear();
+        i.normalMatrixList.clear();
+        i.colorList.clear();
+        i.mapId2Color.clear();
     }
 }
 
@@ -2363,9 +2350,8 @@ void OpenGL3DRenderer::GetBatchTopAndFlatInfo(const Extrude3DInfo &extrude3D)
 
 void OpenGL3DRenderer::GetBatchBarsInfo()
 {
-    for (size_t i = 0; i < m_Extrude3DList.size(); i++)
+    for (Extrude3DInfo & extrude3DInfo : m_Extrude3DList)
     {
-        Extrude3DInfo &extrude3DInfo = m_Extrude3DList[i];
         if (m_Extrude3DInfo.rounded)
         {
             GetBatchTopAndFlatInfo(extrude3DInfo);
@@ -2412,18 +2398,18 @@ void OpenGL3DRenderer::StartClick(sal_uInt32 &selectID)
 {
     m_bHighLighting = true;
     m_uiSelectID = selectID;
-    for (unsigned int i = 0; i < 3; i++)
+    for (BatchBarInfo & i : m_BarSurface)
     {
-        SetHighLightBar(m_BarSurface[i]);
+        SetHighLightBar(i);
     }
 }
 
 void OpenGL3DRenderer::EndClick()
 {
     m_bHighLighting = false;
-    for (unsigned int i = 0; i < 3; i++)
+    for (BatchBarInfo & i : m_BarSurface)
     {
-        DisableHighLightBar(m_BarSurface[i]);
+        DisableHighLightBar(i);
     }
 }
 
@@ -2476,17 +2462,17 @@ glm::mat4 OpenGL3DRenderer::GetDiffOfTwoCameras(const glm::vec3& rEndPos, const 
     return aEnd - m_3DView;
 }
 
-glm::mat4 OpenGL3DRenderer::GetProjectionMatrix()
+const glm::mat4& OpenGL3DRenderer::GetProjectionMatrix()
 {
     return m_3DProjection;
 }
 
-glm::mat4 OpenGL3DRenderer::GetViewMatrix()
+const glm::mat4& OpenGL3DRenderer::GetViewMatrix()
 {
     return m_3DView;
 }
 
-glm::mat4 OpenGL3DRenderer::GetGlobalScaleMatrix()
+const glm::mat4& OpenGL3DRenderer::GetGlobalScaleMatrix()
 {
     return m_GlobalScaleMatrix;
 }
@@ -2501,9 +2487,9 @@ void OpenGL3DRenderer::RenderBatchBars(bool bNewScene)
         GetBatchBarsInfo();
         if (m_bHighLighting)
         {
-            for (unsigned int i = 0; i < 3; i++)
+            for (BatchBarInfo & i : m_BarSurface)
             {
-                SetHighLightBar(m_BarSurface[i]);
+                SetHighLightBar(i);
             }
         }
     }

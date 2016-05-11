@@ -25,7 +25,6 @@
 #include <comphelper/sequence.hxx>
 #include <comphelper/seqstream.hxx>
 #include <comphelper/processfactory.hxx>
-#include <boost/noncopyable.hpp>
 #include <boost/optional.hpp>
 #include <com/sun/star/configuration/theDefaultProvider.hpp>
 #include <com/sun/star/container/XNameAccess.hpp>
@@ -58,13 +57,15 @@ namespace {
 using css::uno::Reference;
 
 class EmptyNodeList:
-    public cppu::WeakImplHelper<css::xml::dom::XNodeList>,
-    private boost::noncopyable
+    public cppu::WeakImplHelper<css::xml::dom::XNodeList>
 {
 public:
     EmptyNodeList();
 
     virtual ~EmptyNodeList();
+
+    EmptyNodeList(const EmptyNodeList&) = delete;
+    const EmptyNodeList& operator=(const EmptyNodeList&) = delete;
 
     virtual ::sal_Int32 SAL_CALL getLength() throw (css::uno::RuntimeException, std::exception) override;
 
@@ -123,7 +124,7 @@ public:
 
     ~ExtensionDescription();
 
-    css::uno::Reference<css::xml::dom::XNode> getRootElement() const
+    const css::uno::Reference<css::xml::dom::XNode>& getRootElement() const
     {
         return m_xRoot;
     }
@@ -462,7 +463,7 @@ OUString DescriptionInfoset::getVersion() const
     return getNodeValueFromExpression( "desc:version/@value" );
 }
 
-css::uno::Sequence< OUString > DescriptionInfoset::getSupportedPlaforms() const
+css::uno::Sequence< OUString > DescriptionInfoset::getSupportedPlatforms() const
 {
     //When there is no description.xml then we assume that we support all platforms
     if (! m_element.is())

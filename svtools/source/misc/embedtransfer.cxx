@@ -55,7 +55,6 @@ SvEmbedTransferHelper::SvEmbedTransferHelper( const uno::Reference< embed::XEmbe
 }
 
 
-
 SvEmbedTransferHelper::~SvEmbedTransferHelper()
 {
     if ( m_pGraphic )
@@ -78,7 +77,6 @@ void SvEmbedTransferHelper::AddSupportedFormats()
     AddFormat( SotClipboardFormatId::GDIMETAFILE );
     AddFormat( SotClipboardFormatId::BITMAP );
 }
-
 
 
 bool SvEmbedTransferHelper::GetData( const css::datatransfer::DataFlavor& rFlavor, const OUString& rDestDoc )
@@ -133,7 +131,6 @@ bool SvEmbedTransferHelper::GetData( const css::datatransfer::DataFlavor& rFlavo
                                 xStg->openStorageElement( aName, embed::ElementModes::READ )->copyToStorage( xStor );
                             }
 
-                            css::uno::Any                  aAny;
                             const sal_uInt32               nLen = pStream->Seek( STREAM_SEEK_TO_END );
                             css::uno::Sequence< sal_Int8 > aSeq( nLen );
 
@@ -144,8 +141,7 @@ bool SvEmbedTransferHelper::GetData( const css::datatransfer::DataFlavor& rFlavo
 
                             if( ( bRet = ( aSeq.getLength() > 0 ) ) )
                             {
-                                aAny <<= aSeq;
-                                SetAny( aAny, rFlavor );
+                                SetAny( uno::Any(aSeq), rFlavor );
                             }
                         }
                         else
@@ -194,7 +190,6 @@ bool SvEmbedTransferHelper::GetData( const css::datatransfer::DataFlavor& rFlavo
 
     return bRet;
 }
-
 
 
 void SvEmbedTransferHelper::ObjectReleased()

@@ -27,7 +27,7 @@
 #include <vcl/vclenum.hxx>
 #include <drawinglayer/attribute/fillgraphicattribute.hxx>
 #include <drawinglayer/attribute/sdrfillgraphicattribute.hxx>
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 #include <basegfx/polygon/b3dpolypolygontools.hxx>
 #include <drawinglayer/primitive3d/textureprimitive3d.hxx>
 #include <drawinglayer/primitive3d/modifiedcolorprimitive3d.hxx>
@@ -41,7 +41,6 @@
 #include <drawinglayer/primitive3d/hiddengeometryprimitive3d.hxx>
 
 
-
 namespace drawinglayer
 {
     namespace primitive3d
@@ -50,9 +49,9 @@ namespace drawinglayer
         {
             basegfx::B3DRange aRetval;
 
-            for(size_t a(0); a < rFill.size(); a++)
+            for(basegfx::B3DPolyPolygon & a : rFill)
             {
-                aRetval.expand(basegfx::tools::getRange(rFill[a]));
+                aRetval.expand(basegfx::tools::getRange(a));
             }
 
             return aRetval;
@@ -63,26 +62,26 @@ namespace drawinglayer
             // create sphere normals
             const basegfx::B3DPoint aCenter(rRange.getCenter());
 
-            for(size_t a(0); a < rFill.size(); a++)
+            for(basegfx::B3DPolyPolygon & a : rFill)
             {
-                rFill[a] = basegfx::tools::applyDefaultNormalsSphere(rFill[a], aCenter);
+                a = basegfx::tools::applyDefaultNormalsSphere(a, aCenter);
             }
         }
 
         void applyNormalsKindFlatTo3DGeometry(::std::vector< basegfx::B3DPolyPolygon >& rFill)
         {
-            for(size_t a(0); a < rFill.size(); a++)
+            for(basegfx::B3DPolyPolygon & a : rFill)
             {
-                rFill[a].clearNormals();
+                a.clearNormals();
             }
         }
 
         void applyNormalsInvertTo3DGeometry(::std::vector< basegfx::B3DPolyPolygon >& rFill)
         {
             // invert normals
-            for(size_t a(0); a < rFill.size(); a++)
+            for(basegfx::B3DPolyPolygon & a : rFill)
             {
-                rFill[a] = basegfx::tools::invertNormals(rFill[a]);
+                a = basegfx::tools::invertNormals(a);
             }
         }
 

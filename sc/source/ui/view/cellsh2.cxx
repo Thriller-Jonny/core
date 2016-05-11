@@ -20,6 +20,7 @@
 #include <config_features.h>
 
 #include "scitems.hxx"
+#include <comphelper/lok.hxx>
 #include <sfx2/viewfrm.hxx>
 #include <sfx2/app.hxx>
 #include <sfx2/request.hxx>
@@ -52,6 +53,7 @@
 #include "dbnamdlg.hxx"
 #include "reffact.hxx"
 #include "validat.hxx"
+#include "validate.hxx"
 #include "scresid.hxx"
 
 #include "scui_def.hxx"
@@ -164,17 +166,17 @@ static bool lcl_GetSortParam( const ScViewData* pData, ScSortParam& rSortParam )
     aExternalRange.aEnd.SetRow( nEndRow );
     aExternalRange.aEnd.SetCol( nEndCol );
 
-    if(( rSortParam.nCol1 == rSortParam.nCol2 && aExternalRange.aStart.Col() != aExternalRange.aEnd.Col() ) ||
-        ( rSortParam.nRow1 == rSortParam.nRow2 && aExternalRange.aStart.Row() != aExternalRange.aEnd.Row() ) )
+    // with LibreOfficeKit, don't try to interact with the user
+    if (!comphelper::LibreOfficeKit::isActive() &&
+        ((rSortParam.nCol1 == rSortParam.nCol2 && aExternalRange.aStart.Col() != aExternalRange.aEnd.Col()) ||
+         (rSortParam.nRow1 == rSortParam.nRow2 && aExternalRange.aStart.Row() != aExternalRange.aEnd.Row())))
     {
-        sal_uInt16 nFmt = SCA_VALID;
-
         pTabViewShell->AddHighlightRange( aExternalRange,Color( COL_LIGHTBLUE ) );
         ScRange rExtendRange( aExternalRange.aStart.Col(), aExternalRange.aStart.Row(), nTab, aExternalRange.aEnd.Col(), aExternalRange.aEnd.Row(), nTab );
-        OUString aExtendStr(rExtendRange.Format(nFmt, pDoc));
+        OUString aExtendStr(rExtendRange.Format(ScRefFlags::VALID, pDoc));
 
         ScRange rCurrentRange( rSortParam.nCol1, rSortParam.nRow1, nTab, rSortParam.nCol2, rSortParam.nRow2, nTab );
-        OUString aCurrentStr(rCurrentRange.Format(nFmt, pDoc));
+        OUString aCurrentStr(rCurrentRange.Format(ScRefFlags::VALID, pDoc));
 
         ScAbstractDialogFactory* pFact = ScAbstractDialogFactory::Create();
         OSL_ENSURE(pFact, "ScAbstractFactory create fail!");
@@ -199,15 +201,6 @@ static bool lcl_GetSortParam( const ScViewData* pData, ScSortParam& rSortParam )
         pTabViewShell->ClearHighlightRanges();
     }
     return bSort;
-}
-
-//after end execute from !IsModalInputMode, it is safer to delay deleting
-namespace
-{
-    void DelayDeleteAbstractDialog( void *pAbstractDialog, void * /*pArg*/ )
-    {
-        delete static_cast<SfxAbstractTabDialog*>( pAbstractDialog );
-    }
 }
 
 void ScCellShell::ExecuteDB( SfxRequest& rReq )
@@ -798,11 +791,7 @@ void ScCellShell::ExecuteDB( SfxRequest& rReq )
                 }
                 else
                 {
-                    ScAbstractDialogFactory* pFact = ScAbstractDialogFactory::Create();
-                    OSL_ENSURE(pFact, "ScAbstractFactory create fail!");
-                    ::GetTabPageRanges ScTPValidationValueGetRanges = pFact->GetTabPageRangesFunc();
-                    OSL_ENSURE(ScTPValidationValueGetRanges, "TabPage create fail!");
-                    SfxItemSet aArgSet( GetPool(), (*ScTPValidationValueGetRanges)() );
+                    SfxItemSet aArgSet( GetPool(), ScTPValidationValue::GetRanges() );
                     ScValidationMode eMode = SC_VALID_ANY;
                     ScConditionMode eOper = SC_COND_EQUAL;
                     OUString aExpr1, aExpr2;
@@ -861,8 +850,7 @@ void ScCellShell::ExecuteDB( SfxRequest& rReq )
                     }
 
                     // cell range picker
-                    SfxAbstractTabDialog* pDlg = pFact->CreateScValidationDlg(nullptr, &aArgSet, pTabViewShell);
-                    assert(pDlg); //Dialog create fail!
+                    ScopedVclPtr<ScValidationDlg> pDlg(VclPtr<ScValidationDlg>::Create(nullptr, &aArgSet, pTabViewShell));
 
                     short nResult = pDlg->Execute();
                     if ( nResult == RET_OK )
@@ -881,9 +869,9 @@ void ScCellShell::ExecuteDB( SfxRequest& rReq )
                                 sal_uInt32 nNumIndex = 0;
                                 double nVal;
                                 if (pDoc->GetFormatTable()->IsNumberFormat(aTemp1, nNumIndex, nVal))
-                                    aExpr1 = OUString( ::rtl::math::doubleToUString( nVal,
+                                    aExpr1 = ::rtl::math::doubleToUString( nVal,
                                             rtl_math_StringFormat_Automatic, rtl_math_DecimalPlaces_Max,
-                                            ScGlobal::pLocaleData->getNumDecimalSep()[0], true));
+                                            ScGlobal::pLocaleData->getNumDecimalSep()[0], true);
                                 else
                                     aExpr1 = aTemp1;
                             }
@@ -898,9 +886,9 @@ void ScCellShell::ExecuteDB( SfxRequest& rReq )
                                 sal_uInt32 nNumIndex = 0;
                                 double nVal;
                                 if (pDoc->GetFormatTable()->IsNumberFormat(aTemp2, nNumIndex, nVal))
-                                    aExpr2 = OUString( ::rtl::math::doubleToUString( nVal,
+                                    aExpr2 = ::rtl::math::doubleToUString( nVal,
                                             rtl_math_StringFormat_Automatic, rtl_math_DecimalPlaces_Max,
-                                            ScGlobal::pLocaleData->getNumDecimalSep()[0], true));
+                                            ScGlobal::pLocaleData->getNumDecimalSep()[0], true);
                                 else
                                     aExpr2 = aTemp2;
                                 if ( eMode == SC_VALID_TIME ) {
@@ -961,9 +949,6 @@ void ScCellShell::ExecuteDB( SfxRequest& rReq )
                         pTabViewShell->TestHintWindow();
                         rReq.Done( *pOutSet );
                     }
-                    //after end execute from !IsModalInputMode, it is safer to delay deleting
-                    //delete pDlg;
-                    Application::PostUserEvent( Link<void*,void>( pDlg, &DelayDeleteAbstractDialog ) );
                 }
             }
             break;
@@ -993,7 +978,7 @@ void ScCellShell::ExecuteDB( SfxRequest& rReq )
                     ScAbstractDialogFactory* pFact = ScAbstractDialogFactory::Create();
                     OSL_ENSURE( pFact, "ScCellShell::ExecuteDB: SID_TEXT_TO_COLUMNS - pFact is null!" );
                     std::unique_ptr<AbstractScImportAsciiDlg> pDlg(pFact->CreateScImportAsciiDlg(
-                        nullptr, OUString(), &aStream, SC_TEXTTOCOLUMNS));
+                        OUString(), &aStream, SC_TEXTTOCOLUMNS));
                     OSL_ENSURE( pDlg, "ScCellShell::ExecuteDB: SID_TEXT_TO_COLUMNS - pDlg is null!" );
 
                     if ( pDlg->Execute() == RET_OK )

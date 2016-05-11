@@ -71,18 +71,9 @@ namespace rtl_Process
 class getAppCommandArg : public CppUnit::TestFixture
 {
 public:
-    // initialise your test code values here.
-    void setUp() override
-    {
-    }
-
-    void tearDown() override
-    {
-    }
-
     void getAppCommandArg_001()
     {
-#if defined(WNT)
+#if defined(_WIN32)
     const rtl::OUString EXECUTABLE_NAME("child_process.exe");
 #else
     const rtl::OUString EXECUTABLE_NAME("child_process");
@@ -196,14 +187,6 @@ void printUuidtoBuffer( sal_uInt8 *pNode, sal_Char * pBuffer )
 class getGlobalProcessId : public CppUnit::TestFixture
 {
 public:
-    // initialise your test code values here.
-    void setUp() override
-    {
-    }
-
-    void tearDown() override
-    {
-    }
     //gets a 16-byte fixed size identifier which is guaranteed not to change    during the current process.
     void getGlobalProcessId_001()
     {
@@ -216,7 +199,7 @@ public:
     //different processes different pids
     void getGlobalProcessId_002()
     {
-#if defined(WNT)
+#if defined(_WIN32)
     const rtl::OUString EXEC_NAME("child_process_id.exe");
 #else
     const rtl::OUString EXEC_NAME("child_process_id");

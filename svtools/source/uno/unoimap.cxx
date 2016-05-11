@@ -518,7 +518,6 @@ Reference< XNameReplace > SAL_CALL SvUnoImageMapObject::getEvents()
 }
 
 
-
 class SvUnoImageMap : public WeakImplHelper< XIndexContainer, XServiceInfo, XUnoTunnel >
 {
 public:
@@ -761,7 +760,7 @@ Reference< XInterface > SvUnoImageMap_createInstance( const ImageMap& rMap, cons
     return static_cast<XWeak*>(new SvUnoImageMap( rMap, pSupportedMacroItems ));
 }
 
-bool SvUnoImageMap_fillImageMap( Reference< XInterface > xImageMap, ImageMap& rMap )
+bool SvUnoImageMap_fillImageMap( const Reference< XInterface >& xImageMap, ImageMap& rMap )
 {
     SvUnoImageMap* pUnoImageMap = SvUnoImageMap::getImplementation( xImageMap );
     if( nullptr == pUnoImageMap )

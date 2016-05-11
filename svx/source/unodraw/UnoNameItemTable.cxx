@@ -19,6 +19,9 @@
 
 
 #include <set>
+
+#include <o3tl/make_unique.hxx>
+
 #include <svl/itempool.hxx>
 #include <svl/itemset.hxx>
 #include <svl/style.hxx>
@@ -59,14 +62,6 @@ bool SvxUnoNameItemTable::isValid( const NameOrIndex* pItem ) const
 
 void SvxUnoNameItemTable::dispose()
 {
-    ItemPoolVector::iterator aIter = maItemSetVector.begin();
-    const ItemPoolVector::iterator aEnd = maItemSetVector.end();
-
-    while( aIter != aEnd )
-    {
-        delete (*aIter++);
-    }
-
     maItemSetVector.clear();
 }
 
@@ -85,13 +80,12 @@ sal_Bool SAL_CALL SvxUnoNameItemTable::supportsService( const  OUString& Service
 
 void SAL_CALL SvxUnoNameItemTable::ImplInsertByName( const OUString& aName, const uno::Any& aElement )
 {
-    SfxItemSet* mpInSet = new SfxItemSet( *mpModelPool, mnWhich, mnWhich );
-    maItemSetVector.push_back( mpInSet );
+    maItemSetVector.push_back( o3tl::make_unique< SfxItemSet >( *mpModelPool, mnWhich, mnWhich ) );
 
     std::unique_ptr<NameOrIndex> pNewItem(createItem());
     pNewItem->SetName( aName );
     pNewItem->PutValue( aElement, mnMemberId );
-    mpInSet->Put( *pNewItem, mnWhich );
+    maItemSetVector.back()->Put( *pNewItem, mnWhich );
 }
 
 // XNameContainer
@@ -107,7 +101,6 @@ void SAL_CALL SvxUnoNameItemTable::insertByName( const OUString& aApiName, const
 
     ImplInsertByName( aName, aElement );
 }
-
 
 
 void SAL_CALL SvxUnoNameItemTable::removeByName( const OUString& aApiName )
@@ -134,7 +127,6 @@ void SAL_CALL SvxUnoNameItemTable::removeByName( const OUString& aApiName )
         const NameOrIndex *pItem = static_cast<const NameOrIndex *>(&((*aIter)->Get( mnWhich ) ));
         if (sName.equals(pItem->GetName()))
         {
-            delete (*aIter);
             maItemSetVector.erase( aIter );
             return;
         }
@@ -259,7 +251,7 @@ sal_Bool SAL_CALL SvxUnoNameItemTable::hasByName( const OUString& aApiName )
     OUString aName = SvxUnogetInternalNameForItem(mnWhich, aApiName);
 
     if (aName.isEmpty())
-        return sal_False;
+        return false;
 
     sal_uInt32 nSurrogate;
 
@@ -269,10 +261,10 @@ sal_Bool SAL_CALL SvxUnoNameItemTable::hasByName( const OUString& aApiName )
     {
         const NameOrIndex *pItem = static_cast<const NameOrIndex*>(mpModelPool->GetItem2( mnWhich, nSurrogate ));
         if (isValid(pItem) && aName.equals(pItem->GetName()))
-            return sal_True;
+            return true;
     }
 
-    return sal_False;
+    return false;
 }
 
 sal_Bool SAL_CALL SvxUnoNameItemTable::hasElements(  )
@@ -288,10 +280,10 @@ sal_Bool SAL_CALL SvxUnoNameItemTable::hasElements(  )
         const NameOrIndex *pItem = static_cast<const NameOrIndex*>(mpModelPool->GetItem2( mnWhich, nSurrogate ));
 
         if( isValid( pItem ) )
-            return sal_True;
+            return true;
     }
 
-    return sal_False;
+    return false;
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -46,7 +46,9 @@
 #include <avmedia/mediawindow.hxx>
 #include <avmedia/modeltools.hxx>
 
+#if HAVE_FEATURE_OPENGL
 #include <vcl/opengl/OpenGLContext.hxx>
+#endif
 
 #include <com/sun/star/media/XManager.hpp>
 #include <com/sun/star/media/XPlayer.hpp>
@@ -95,7 +97,6 @@ namespace slideshow
         }
 
 
-
         ViewMediaShape::~ViewMediaShape()
         {
             try
@@ -112,25 +113,20 @@ namespace slideshow
         }
 
 
-
-        ViewLayerSharedPtr ViewMediaShape::getViewLayer() const
+        const ViewLayerSharedPtr& ViewMediaShape::getViewLayer() const
         {
             return mpViewLayer;
         }
 
 
-
-        bool ViewMediaShape::startMedia()
+        void ViewMediaShape::startMedia()
         {
             if( !mxPlayer.is() )
                 implInitialize( maBounds );
 
             if (mxPlayer.is())
                 mxPlayer->start();
-
-            return true;
         }
-
 
 
         void ViewMediaShape::endMedia()
@@ -164,7 +160,6 @@ namespace slideshow
         }
 
 
-
         void ViewMediaShape::pauseMedia()
         {
             if (mxPlayer.is())
@@ -172,13 +167,11 @@ namespace slideshow
         }
 
 
-
         void ViewMediaShape::setMediaTime(double fTime)
         {
             if (mxPlayer.is())
                 mxPlayer->setMediaTime(fTime);
         }
-
 
 
         bool ViewMediaShape::render( const ::basegfx::B2DRectangle& rBounds ) const
@@ -298,7 +291,6 @@ namespace slideshow
         }
 
 
-
         bool ViewMediaShape::implInitialize( const ::basegfx::B2DRectangle& rBounds )
         {
             if( !mxPlayer.is() && mxShape.is() )
@@ -360,7 +352,6 @@ namespace slideshow
         }
 
 
-
         void ViewMediaShape::implSetMediaProperties( const uno::Reference< beans::XPropertySet >& rxProps )
         {
             if( mxPlayer.is() )
@@ -400,7 +391,6 @@ namespace slideshow
         }
 
 
-
         void ViewMediaShape::implInitializeMediaPlayer( const OUString& rMediaURL, const OUString& rMimeType )
         {
 #if !HAVE_FEATURE_AVMEDIA
@@ -430,8 +420,7 @@ namespace slideshow
         }
 
 
-
-        bool ViewMediaShape::implInitializePlayerWindow( const ::basegfx::B2DRectangle&   rBounds,
+        void ViewMediaShape::implInitializePlayerWindow( const ::basegfx::B2DRectangle&   rBounds,
                                                                  const uno::Sequence< uno::Any >& rVCLDeviceParams,
                                                                  const OUString& rMimeType )
         {
@@ -462,7 +451,7 @@ namespace slideshow
                                                                   rRangePix.getMinY(),
                                                                     rRangePix.getMaxX() - rRangePix.getMinX(),
                                                                     rRangePix.getMaxY() - rRangePix.getMinY() );
-#if !HAVE_FEATURE_GLTF
+#if !HAVE_FEATURE_GLTF || !HAVE_FEATURE_OPENGL
                             (void)rMimeType;
 #else
                             if( avmedia::IsModel(rMimeType) )
@@ -534,8 +523,6 @@ namespace slideshow
                                     RTL_TEXTENCODING_UTF8 ).getStr() );
                 }
             }
-
-            return mxPlayerWindow.is();
         }
     }
 }

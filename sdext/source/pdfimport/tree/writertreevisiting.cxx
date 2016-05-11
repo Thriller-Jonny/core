@@ -164,6 +164,15 @@ void WriterXmlEmitter::fillFrameProps( DrawElement&       rElem,
         // that ODF rotation is oriented the other way
 
         // build transformation string
+        if (rElem.MirrorVertical)
+        {
+            // At some point, rElem.h may start arriving positive,
+            // so use robust adjusting math
+            rel_y -= std::abs(rElem.h);
+            if (!aBuf.isEmpty())
+                aBuf.append(' ');
+            aBuf.append("scale( 1.0 -1.0 )");
+        }
         if( fShearX != 0.0 )
         {
             aBuf.append( "skewX( " );
@@ -339,7 +348,6 @@ void WriterXmlEmitter::visit( DocumentElement& elem, const std::list< Element* >
     m_rEmitContext.rEmitter.endTag( "office:text" );
     m_rEmitContext.rEmitter.endTag( "office:body" );
 }
-
 
 
 void WriterXmlOptimizer::visit( HyperlinkElement&, const std::list< Element* >::const_iterator& )
@@ -837,8 +845,6 @@ void WriterXmlOptimizer::visit( DocumentElement& elem, const std::list< Element*
 }
 
 
-
-
 void WriterXmlFinalizer::visit( PolyPolyElement& elem, const std::list< Element* >::const_iterator& )
 {
     // xxx TODO copied from DrawElement
@@ -1089,7 +1095,10 @@ void WriterXmlFinalizer::visit( PageElement& elem, const std::list< Element* >::
     double page_width = convPx2mm( elem.w ), page_height = convPx2mm( elem.h );
 
     // calculate page margins out of the relevant children (paragraphs)
-    elem.TopMargin = elem.h, elem.BottomMargin = 0, elem.LeftMargin = elem.w, elem.RightMargin = 0;
+    elem.TopMargin = elem.h;
+    elem.BottomMargin = 0;
+    elem.LeftMargin = elem.w;
+    elem.RightMargin = 0;
     // first element should be a paragraphy
     ParagraphElement* pFirstPara = nullptr;
     for( std::list< Element* >::const_iterator it = elem.Children.begin(); it != elem.Children.end(); ++it )

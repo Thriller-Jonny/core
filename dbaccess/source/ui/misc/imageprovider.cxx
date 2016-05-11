@@ -22,7 +22,6 @@
 #include "moduledbu.hxx"
 #include "dbustrings.hrc"
 
-#include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/graphic/XGraphic.hpp>
 #include <com/sun/star/graphic/GraphicColorMode.hpp>
 #include <com/sun/star/sdb/application/XTableUIProvider.hpp>
@@ -36,9 +35,7 @@ namespace dbaui
     using ::com::sun::star::uno::Reference;
     using ::com::sun::star::sdbc::XConnection;
     using ::com::sun::star::uno::Exception;
-    using ::com::sun::star::uno::UNO_QUERY_THROW;
     using ::com::sun::star::container::XNameAccess;
-    using ::com::sun::star::beans::XPropertySet;
     using ::com::sun::star::graphic::XGraphic;
     using ::com::sun::star::sdb::application::XTableUIProvider;
     using ::com::sun::star::uno::UNO_QUERY;
@@ -61,7 +58,7 @@ namespace dbaui
 
     namespace
     {
-        static void lcl_getConnectionProvidedTableIcon_nothrow(  const ImageProvider_Data& _rData,
+        void lcl_getConnectionProvidedTableIcon_nothrow(  const ImageProvider_Data& _rData,
             const OUString& _rName, Reference< XGraphic >& _out_rxGraphic )
         {
             try
@@ -75,7 +72,7 @@ namespace dbaui
             }
         }
 
-        static void lcl_getTableImageResourceID_nothrow( const ImageProvider_Data& _rData, const OUString& _rName,
+        void lcl_getTableImageResourceID_nothrow( const ImageProvider_Data& _rData, const OUString& _rName,
             sal_uInt16& _out_rResourceID)
         {
             _out_rResourceID = 0;

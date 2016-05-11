@@ -10,7 +10,6 @@
 #include <sfx2/lokhelper.hxx>
 #include <sfx2/viewsh.hxx>
 #include <sfx2/request.hxx>
-#include <sfx2/sfxsids.hrc>
 #include <sfx2/viewfrm.hxx>
 
 #include <shellimpl.hxx>
@@ -26,7 +25,7 @@ int SfxLokHelper::createView()
     return rViewArr.size() - 1;
 }
 
-void SfxLokHelper::destroyView(size_t nId)
+void SfxLokHelper::destroyView(std::size_t nId)
 {
     SfxViewShellArr_Impl& rViewArr = SfxGetpApp()->GetViewShells_Impl();
     if (nId > rViewArr.size() - 1)
@@ -38,7 +37,7 @@ void SfxLokHelper::destroyView(size_t nId)
     pViewFrame->Exec_Impl(aRequest);
 }
 
-void SfxLokHelper::setView(size_t nId)
+void SfxLokHelper::setView(std::size_t nId)
 {
     SfxViewShellArr_Impl& rViewArr = SfxGetpApp()->GetViewShells_Impl();
     if (nId > rViewArr.size() - 1)
@@ -52,11 +51,11 @@ void SfxLokHelper::setView(size_t nId)
         pViewFrame->MakeActive_Impl(false);
 }
 
-size_t SfxLokHelper::getView()
+std::size_t SfxLokHelper::getView()
 {
     SfxViewShellArr_Impl& rViewArr = SfxGetpApp()->GetViewShells_Impl();
     SfxViewFrame* pViewFrame = SfxViewFrame::Current();
-    for (size_t i = 0; i < rViewArr.size(); ++i)
+    for (std::size_t i = 0; i < rViewArr.size(); ++i)
     {
         if (rViewArr[i]->GetViewFrame() == pViewFrame)
             return i;
@@ -65,15 +64,15 @@ size_t SfxLokHelper::getView()
     return 0;
 }
 
-size_t SfxLokHelper::getViews()
+std::size_t SfxLokHelper::getViews()
 {
-    size_t nRet = 0;
+    std::size_t nRet = 0;
 
     SfxObjectShell* pObjectShell = SfxViewFrame::Current()->GetObjectShell();
     SfxViewShellArr_Impl& rViewArr = SfxGetpApp()->GetViewShells_Impl();
-    for (size_t i = 0; i < rViewArr.size(); ++i)
+    for (SfxViewShell* i : rViewArr)
     {
-        if (rViewArr[i]->GetObjectShell() == pObjectShell)
+        if (i->GetObjectShell() == pObjectShell)
             ++nRet;
     }
 

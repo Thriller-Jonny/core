@@ -80,8 +80,6 @@ struct TypeGroupInfo
     const sal_Char*     mpcServiceName;         /// Service name of the type.
     VarPointMode        meVarPointMode;         /// Mode for varying point colors.
     sal_Int32           mnDefLabelPos;          /// Default data label position (API constant).
-    bool                mbCombinable2d;         /// True = types can be combined in one axes set.
-    bool                mbSupports3d;           /// True = 3D type allowed, false = only 2D type.
     bool                mbPolarCoordSystem;     /// True = polar, false = cartesian.
     bool                mbSeriesIsFrame2d;      /// True = 2D type series with area formatting.
     bool                mbSingleSeriesVis;      /// True = only first series visible (e.g. pie charts).
@@ -89,7 +87,6 @@ struct TypeGroupInfo
     bool                mbSwappedAxesSet;       /// True = X axis and Y axis are swapped.
     bool                mbSupportsStacking;     /// True = data points can be stacked on each other.
     bool                mbReverseSeries;        /// True = insert unstacked series in reverse order.
-    bool                mbTicksBetweenCateg;    /// True = X axis ticks between categories.
     bool                mbPictureOptions;       /// True = bitmaps support options from c:pictureOptions.
 };
 
@@ -156,7 +153,7 @@ public:
 
     /** Sets the passed OOXML marker style at the passed property set. */
     void                convertMarker( PropertySet& rPropSet, sal_Int32 nOoxSymbol, sal_Int32 nOoxSize,
-            ModelRef< Shape > xShapeProps ) const;
+                                       const ModelRef< Shape >& xShapeProps ) const;
     /** Sets the passed OOXML line smoothing at the passed property set. */
     void                convertLineSmooth( PropertySet& rPropSet, bool bOoxSmooth ) const;
     /** Sets the passed OOXML bar 3D geometry at the passed property set. */

@@ -73,8 +73,8 @@ namespace dbaui
     public:
         CharsetDisplayDerefHelper(const CharsetDisplayDerefHelper& _rSource);
 
-        OUString     getIanaName() const         { return CharsetDisplayDerefHelper_Base::getIanaName(); }
-        OUString     getDisplayName() const      { return m_sDisplayName; }
+        OUString        getIanaName() const         { return CharsetDisplayDerefHelper_Base::getIanaName(); }
+        const OUString& getDisplayName() const      { return m_sDisplayName; }
 
     protected:
         CharsetDisplayDerefHelper(const ::dbtools::CharsetIteratorDerefHelper& _rBase, const OUString& _rDisplayName);
@@ -102,13 +102,6 @@ namespace dbaui
 
         /// prefix increment
         const ExtendedCharsetIterator&  operator++();
-        /// postfix increment
-        const ExtendedCharsetIterator   operator++(int) { ExtendedCharsetIterator hold(*this); ++*this; return hold; }
-
-        /// prefix decrement
-        const ExtendedCharsetIterator&  operator--();
-        /// postfix decrement
-        const ExtendedCharsetIterator   operator--(int) { ExtendedCharsetIterator hold(*this); --*this; return hold; }
 
     protected:
         ExtendedCharsetIterator( const OCharsetDisplay* _pContainer, const base_iterator& _rPosition );

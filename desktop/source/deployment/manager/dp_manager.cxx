@@ -54,14 +54,14 @@
 #include <com/sun/star/deployment/Prerequisites.hpp>
 #include <com/sun/star/task/XInteractionApprove.hpp>
 #include <com/sun/star/ucb/UnsupportedCommandException.hpp>
-#include <boost/bind.hpp>
 #include <unotools/tempfile.hxx>
 
-#include <vector>
-#include <list>
 #include "dp_descriptioninfoset.hxx"
 #include "dp_commandenvironments.hxx"
 #include "dp_properties.hxx"
+
+#include <vector>
+#include <list>
 #include <algorithm>
 
 using namespace ::dp_misc;
@@ -172,7 +172,7 @@ void PackageManagerImpl::initActivationLayer(
             dbName = m_registrationData_expanded + "/extensions.pmap";
         }
         // The data base can always be written because it is always in the user installation
-        m_activePackagesDB.reset( new ActivePackages( dbName, false ) );
+        m_activePackagesDB.reset( new ActivePackages( dbName ) );
 
         if (! m_readOnly && ! (m_context == "bundled"))
         {
@@ -211,9 +211,8 @@ void PackageManagerImpl::initActivationLayer(
             }
 
             bool bShared = (m_context == "shared");
-            for ( ::std::size_t pos = 0; pos < tempEntries.size(); ++pos )
+            for (OUString & tempEntry : tempEntries)
             {
-                OUString const & tempEntry = tempEntries[ pos ];
                 const MatchTempDir match( tempEntry );
                 if (::std::none_of( id2temp.begin(), id2temp.end(), match ))
                 {
@@ -245,9 +244,9 @@ void PackageManagerImpl::initActivationLayer(
                             aSecurity.getUserName( aUserName );
                             ucbhelper::Content remFileContent(
                                 url + "removed", Reference<XCommandEnvironment>(), m_xComponentContext);
-                            ::rtl::ByteSequence data = dp_misc::readFile(remFileContent);
-                            OString osData(reinterpret_cast<const sal_Char*>(data.getConstArray()),
-                                                  data.getLength());
+                            std::vector<sal_Int8> data = dp_misc::readFile(remFileContent);
+                            OString osData(reinterpret_cast<const sal_Char*>(data.data()),
+                                                  data.size());
                             OUString sData = OStringToOUString(
                                 osData, RTL_TEXTENCODING_UTF8);
                             if (!sData.equals(aUserName))
@@ -431,8 +430,8 @@ void PackageManagerImpl::fireModified()
         cppu::UnoType<util::XModifyListener>::get() );
     if (pContainer != nullptr) {
         pContainer->forEach<util::XModifyListener>(
-            boost::bind(&util::XModifyListener::modified, _1,
-                        lang::EventObject(static_cast<OWeakObject *>(this))) );
+            [this] (uno::Reference<util::XModifyListener> const& xListener)
+                { return xListener->modified(lang::EventObject(static_cast<OWeakObject *>(this))); });
     }
 }
 
@@ -890,9 +889,8 @@ void PackageManagerImpl::removePackage(
                 OString stamp = OUStringToOString(aUserName, RTL_TEXTENCODING_UTF8);
                 Reference<css::io::XInputStream> xData(
                     ::xmlscript::createInputStream(
-                        ::rtl::ByteSequence(
                             reinterpret_cast<sal_Int8 const *>(stamp.getStr()),
-                            stamp.getLength() ) ) );
+                            stamp.getLength() ) );
                 contentRemoved.writeStream( xData, true /* replace existing */ );
             }
             m_activePackagesDB->erase( id, fileName ); // to be removed upon next start
@@ -1120,8 +1118,6 @@ PackageManagerImpl::getDeployedPackages(
             static_cast<OWeakObject *>(this), exc );
     }
 }
-
-
 
 
 //ToDo: the function must not call registerPackage, do this in
@@ -1558,7 +1554,6 @@ sal_Int32 PackageManagerImpl::checkPrerequisites(
         throw exc;
     }
 }
-
 
 
 PackageManagerImpl::CmdEnvWrapperImpl::~CmdEnvWrapperImpl()

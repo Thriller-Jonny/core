@@ -342,7 +342,7 @@ public:
         return bYSizeValid;
     }
 
-    void applyMargins(uno::Reference< beans::XPropertySet > xGraphicObjectProperties) const
+    void applyMargins(const uno::Reference< beans::XPropertySet >& xGraphicObjectProperties) const
     {
         xGraphicObjectProperties->setPropertyValue(getPropertyName( PROP_LEFT_MARGIN ), uno::makeAny(nLeftMargin));
         xGraphicObjectProperties->setPropertyValue(getPropertyName( PROP_RIGHT_MARGIN ), uno::makeAny(nRightMargin));
@@ -350,7 +350,7 @@ public:
         xGraphicObjectProperties->setPropertyValue(getPropertyName( PROP_BOTTOM_MARGIN ), uno::makeAny(nBottomMargin));
     }
 
-    void applyPosition(uno::Reference< beans::XPropertySet > xGraphicObjectProperties) const
+    void applyPosition(const uno::Reference< beans::XPropertySet >& xGraphicObjectProperties) const
     {
         xGraphicObjectProperties->setPropertyValue(getPropertyName( PROP_HORI_ORIENT          ),
                 uno::makeAny(nHoriOrient));
@@ -358,7 +358,7 @@ public:
                 uno::makeAny(nVertOrient));
     }
 
-    void applyRelativePosition(uno::Reference< beans::XPropertySet > xGraphicObjectProperties, bool bRelativeOnly = false) const
+    void applyRelativePosition(const uno::Reference< beans::XPropertySet >& xGraphicObjectProperties, bool bRelativeOnly = false) const
     {
         if (!bRelativeOnly)
             xGraphicObjectProperties->setPropertyValue(getPropertyName( PROP_HORI_ORIENT_POSITION),
@@ -464,9 +464,9 @@ void GraphicImport::handleWrapTextValue(sal_uInt32 nVal)
 
 void GraphicImport::putPropertyToFrameGrabBag( const OUString& sPropertyName, const uno::Any& aPropertyValue )
 {
-    beans::PropertyValue pProperty;
-    pProperty.Name = sPropertyName;
-    pProperty.Value = aPropertyValue;
+    beans::PropertyValue aProperty;
+    aProperty.Name = sPropertyName;
+    aProperty.Value = aPropertyValue;
 
     if (!m_xShape.is())
         return;
@@ -492,7 +492,7 @@ void GraphicImport::putPropertyToFrameGrabBag( const OUString& sPropertyName, co
         uno::Sequence<beans::PropertyValue> aTmp;
         xSet->getPropertyValue(aGrabBagPropName) >>= aTmp;
         std::vector<beans::PropertyValue> aGrabBag(comphelper::sequenceToContainer<std::vector<beans::PropertyValue> >(aTmp));
-        aGrabBag.push_back(pProperty);
+        aGrabBag.push_back(aProperty);
 
         xSet->setPropertyValue(aGrabBagPropName, uno::makeAny(comphelper::containerToSequence(aGrabBag)));
     }
@@ -805,8 +805,13 @@ void GraphicImport::lcl_attribute(Id nName, Value& rValue)
 
                         // This needs to be AT_PARAGRAPH by default and not AT_CHARACTER, otherwise shape will move when the user inserts a new paragraph.
                         text::TextContentAnchorType eAnchorType = text::TextContentAnchorType_AT_PARAGRAPH;
-                        if (m_pImpl->nVertRelation == text::RelOrientation::TEXT_LINE)
+
+                        // Avoid setting AnchorType for TextBoxes till SwTextBoxHelper::syncProperty() doesn't handle transition.
+                        bool bTextBox = false;
+                        xShapeProps->getPropertyValue("TextBox") >>= bTextBox;
+                        if (m_pImpl->nVertRelation == text::RelOrientation::TEXT_LINE && !bTextBox)
                             eAnchorType = text::TextContentAnchorType_AT_CHARACTER;
+
                         xShapeProps->setPropertyValue("AnchorType", uno::makeAny(eAnchorType));
 
                         //only the position orientation is handled in applyPosition()
@@ -1354,7 +1359,6 @@ uno::Reference< text::XTextContent > GraphicImport::createGraphicObject( const b
     }
     return xGraphicObject;
 }
-
 
 
 void GraphicImport::data(const sal_uInt8* buf, size_t len, writerfilter::Reference<Properties>::Pointer_t /*ref*/)

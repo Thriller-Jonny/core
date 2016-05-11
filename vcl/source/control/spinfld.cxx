@@ -19,10 +19,10 @@
 
 #include "tools/rc.h"
 
-#include "vcl/event.hxx"
-#include "vcl/decoview.hxx"
-#include "vcl/spinfld.hxx"
-#include "vcl/settings.hxx"
+#include <vcl/event.hxx>
+#include <vcl/decoview.hxx>
+#include <vcl/spinfld.hxx>
+#include <vcl/settings.hxx>
 
 #include "controldata.hxx"
 #include "spin.hxx"
@@ -81,7 +81,8 @@ bool ImplDrawNativeSpinfield(vcl::RenderContext& rRenderContext, vcl::Window* pW
             rRenderContext.IsNativeControlSupported(CTRL_SPINBOX, rSpinbuttonValue.mnLowerPart))
         {
             // only paint the embedded spin buttons, all buttons are painted at once
-            bNativeOK = rRenderContext.DrawNativeControl(CTRL_SPINBOX, PART_ALL_BUTTONS, Rectangle(),
+            Rectangle aUpperAndLowerButtons( rSpinbuttonValue.maUpperRect.GetUnion( rSpinbuttonValue.maLowerRect ) );
+            bNativeOK = rRenderContext.DrawNativeControl(CTRL_SPINBOX, PART_ALL_BUTTONS, aUpperAndLowerButtons,
                                                          ControlState::ENABLED, rSpinbuttonValue, OUString());
         }
         else
@@ -142,8 +143,9 @@ bool ImplDrawNativeSpinbuttons(vcl::RenderContext& rRenderContext, const Spinbut
 
     if (rRenderContext.IsNativeControlSupported(CTRL_SPINBUTTONS, PART_ENTIRE_CONTROL))
     {
+        Rectangle aArea = rSpinbuttonValue.maUpperRect.GetUnion(rSpinbuttonValue.maLowerRect);
         // only paint the standalone spin buttons, all buttons are painted at once
-        bNativeOK = rRenderContext.DrawNativeControl(CTRL_SPINBUTTONS, PART_ALL_BUTTONS, Rectangle(),
+        bNativeOK = rRenderContext.DrawNativeControl(CTRL_SPINBUTTONS, PART_ALL_BUTTONS, aArea,
                                                      ControlState::ENABLED, rSpinbuttonValue, OUString());
     }
     return bNativeOK;
@@ -156,49 +158,7 @@ void ImplDrawSpinButton(vcl::RenderContext& rRenderContext, vcl::Window* pWindow
                         bool bUpperIn, bool bLowerIn, bool bUpperEnabled, bool bLowerEnabled,
                         bool bHorz, bool bMirrorHorz)
 {
-    DecorationView aDecoView(&rRenderContext);
-
-    DrawButtonFlags nStyle = DrawButtonFlags::NoLeftLightBorder;
-    DrawSymbolFlags nSymStyle = DrawSymbolFlags::NONE;
-
-    SymbolType eType1, eType2;
-
-    const StyleSettings& rStyleSettings = rRenderContext.GetSettings().GetStyleSettings();
-    if ( rStyleSettings.GetOptions() & StyleSettingsOptions::SpinArrow )
-    {
-        // arrows are only use in OS/2 look
-        if ( bHorz )
-        {
-            eType1 = bMirrorHorz ? SymbolType::ARROW_RIGHT : SymbolType::ARROW_LEFT;
-            eType2 = bMirrorHorz ? SymbolType::ARROW_LEFT : SymbolType::ARROW_RIGHT;
-        }
-        else
-        {
-            eType1 = SymbolType::ARROW_UP;
-            eType2 = SymbolType::ARROW_DOWN;
-        }
-    }
-    else
-    {
-        if ( bHorz )
-        {
-            eType1 = bMirrorHorz ? SymbolType::SPIN_RIGHT : SymbolType::SPIN_LEFT;
-            eType2 = bMirrorHorz ? SymbolType::SPIN_LEFT : SymbolType::SPIN_RIGHT;
-        }
-        else
-        {
-            eType1 = SymbolType::SPIN_UP;
-            eType2 = SymbolType::SPIN_DOWN;
-        }
-    }
-
-    // draw upper/left Button
-    DrawButtonFlags nTempStyle = nStyle;
-    if (bUpperIn)
-        nTempStyle |= DrawButtonFlags::Pressed;
-
     bool bNativeOK = false;
-    Rectangle aUpRect;
 
     if (pWindow)
     {
@@ -234,15 +194,48 @@ void ImplDrawSpinButton(vcl::RenderContext& rRenderContext, vcl::Window* pWindow
             bNativeOK = ImplDrawNativeSpinbuttons(rRenderContext, aValue);
     }
 
-    if (!bNativeOK)
-        aUpRect = aDecoView.DrawButton(rUpperRect, nTempStyle);
+    if (bNativeOK)
+        return;
 
+    ImplDrawUpDownButtons(rRenderContext,
+                          rUpperRect, rLowerRect,
+                          bUpperIn, bLowerIn, bUpperEnabled, bLowerEnabled,
+                          bHorz, bMirrorHorz);
+}
+
+void ImplDrawUpDownButtons(vcl::RenderContext& rRenderContext,
+                           const Rectangle& rUpperRect, const Rectangle& rLowerRect,
+                           bool bUpperIn, bool bLowerIn, bool bUpperEnabled, bool bLowerEnabled,
+                           bool bHorz, bool bMirrorHorz)
+{
+    DecorationView aDecoView(&rRenderContext);
+
+    SymbolType eType1, eType2;
+
+    if ( bHorz )
+    {
+        eType1 = bMirrorHorz ? SymbolType::SPIN_RIGHT : SymbolType::SPIN_LEFT;
+        eType2 = bMirrorHorz ? SymbolType::SPIN_LEFT : SymbolType::SPIN_RIGHT;
+    }
+    else
+    {
+        eType1 = SymbolType::SPIN_UP;
+        eType2 = SymbolType::SPIN_DOWN;
+    }
+
+    DrawButtonFlags nStyle = DrawButtonFlags::NoLeftLightBorder;
+    // draw upper/left Button
+    if (bUpperIn)
+        nStyle |= DrawButtonFlags::Pressed;
+
+    Rectangle aUpRect = aDecoView.DrawButton(rUpperRect, nStyle);
+
+    nStyle = DrawButtonFlags::NoLeftLightBorder;
     // draw lower/right Button
     if (bLowerIn)
         nStyle |= DrawButtonFlags::Pressed;
-    Rectangle aLowRect;
-    if(!bNativeOK)
-        aLowRect = aDecoView.DrawButton(rLowerRect, nStyle);
+
+    Rectangle aLowRect = aDecoView.DrawButton(rLowerRect, nStyle);
 
      // make use of additional default edge
     aUpRect.Left()--;
@@ -283,16 +276,17 @@ void ImplDrawSpinButton(vcl::RenderContext& rRenderContext, vcl::Window* pWindow
             aLowRect.Top()++;
     }
 
-    DrawSymbolFlags nTempSymStyle = nSymStyle;
-    if (!bUpperEnabled)
-        nTempSymStyle |= DrawSymbolFlags::Disable;
-    if (!bNativeOK)
-        aDecoView.DrawSymbol(aUpRect, eType1, rStyleSettings.GetButtonTextColor(), nTempSymStyle);
+    const StyleSettings& rStyleSettings = rRenderContext.GetSettings().GetStyleSettings();
 
+    DrawSymbolFlags nSymStyle = DrawSymbolFlags::NONE;
+    if (!bUpperEnabled)
+        nSymStyle |= DrawSymbolFlags::Disable;
+    aDecoView.DrawSymbol(aUpRect, eType1, rStyleSettings.GetButtonTextColor(), nSymStyle);
+
+    nSymStyle = DrawSymbolFlags::NONE;
     if (!bLowerEnabled)
         nSymStyle |= DrawSymbolFlags::Disable;
-    if (!bNativeOK)
-        aDecoView.DrawSymbol(aLowRect, eType2, rStyleSettings.GetButtonTextColor(), nSymStyle);
+    aDecoView.DrawSymbol(aLowRect, eType2, rStyleSettings.GetButtonTextColor(), nSymStyle);
 }
 
 void SpinField::ImplInitSpinFieldData()
@@ -632,9 +626,6 @@ void SpinField::Paint(vcl::RenderContext& rRenderContext, const Rectangle& rRect
         Rectangle aInnerRect = aView.DrawButton(maDropDownRect, nStyle);
 
         SymbolType eSymbol = SymbolType::SPIN_DOWN;
-        if (rRenderContext.GetSettings().GetStyleSettings().GetOptions() & StyleSettingsOptions::SpinUpDown)
-            eSymbol = SymbolType::SPIN_UPDOWN;
-
         DrawSymbolFlags nSymbolStyle = IsEnabled() ? DrawSymbolFlags::NONE : DrawSymbolFlags::Disable;
         aView.DrawSymbol(aInnerRect, eSymbol, rRenderContext.GetSettings().GetStyleSettings().GetButtonTextColor(), nSymbolStyle);
     }
@@ -1035,9 +1026,6 @@ void SpinField::Draw(OutputDevice* pDev, const Point& rPos, const Size& rSize, D
             DrawButtonFlags nStyle = DrawButtonFlags::NoLightBorder;
             Rectangle aInnerRect = aView.DrawButton( aDD, nStyle );
             SymbolType eSymbol = SymbolType::SPIN_DOWN;
-            if (GetSettings().GetStyleSettings().GetOptions() & StyleSettingsOptions::SpinUpDown)
-                eSymbol = SymbolType::SPIN_UPDOWN;
-
             DrawSymbolFlags nSymbolStyle = (IsEnabled() || (nFlags & DrawFlags::NoDisable)) ? DrawSymbolFlags::NONE : DrawSymbolFlags::Disable;
             aView.DrawSymbol(aInnerRect, eSymbol, aButtonTextColor, nSymbolStyle);
         }

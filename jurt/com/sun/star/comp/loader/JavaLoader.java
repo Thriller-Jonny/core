@@ -1,3 +1,4 @@
+/* -*- Mode: Java; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /*
  * This file is part of the LibreOffice project.
  *
@@ -226,14 +227,11 @@ public class JavaLoader implements XImplementationLoader,
      * Provides a components factory.
      *
      * <p>The <code>JavaLoader</code> tries to load the class first. If a
-     * loacation URL is given the RegistrationClassFinder is used to load the
+     * location URL is given the RegistrationClassFinder is used to load the
      * class. Otherwise the class is loaded through the Class.forName method.</p>
      *
      * <p>To get the factory the inspects the class for the optional static member
      * functions __getServiceFactory resp. getServiceFactory (DEPRECATED).</p>
-     *
-     * <p>If the function can not be found a default factory @see ComponentFactoryWrapper
-     * will be created.</p>
      *
      * @param       implementationName          the implementation (class) name of the component.
      * @param       implementationLoaderUrl     the URL of the implementation loader. Not used.
@@ -362,8 +360,6 @@ public class JavaLoader implements XImplementationLoader,
      * @param       implementationLoaderUrl specifies the loader, the component is loaded by.
      * @param       locationUrl             points to an archive (JAR file) which contains a component.
      * @return      true if registration is successfully - otherwise false.
-     *
-     * @see         ComponentFactoryWrapper
      */
     public boolean writeRegistryInfo( XRegistryKey regKey,
                                       String implementationLoaderUrl,
@@ -418,7 +414,7 @@ public class JavaLoader implements XImplementationLoader,
     /**
      * Registers the <code>JavaLoader</code> at the registry.
      *
-     * @param      regKey   root key under which the <code>JavaLoader</code> should be regidstered.
+     * @param      regKey   root key under which the <code>JavaLoader</code> should be registered.
      * @return     true if registration succseeded - otherwise false.
      */
     public static boolean writeRegistryServiceInfo(XRegistryKey regKey) {
@@ -440,3 +436,4 @@ public class JavaLoader implements XImplementationLoader,
     }
 }
 
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -159,7 +159,7 @@ class ScCaptionCreator
 {
 public:
     /** Create a new caption. The caption will not be inserted into the document. */
-    explicit            ScCaptionCreator( ScDocument& rDoc, const ScAddress& rPos, bool bShown, bool bTailFront );
+    explicit            ScCaptionCreator( ScDocument& rDoc, const ScAddress& rPos, bool bTailFront );
     /** Manipulate an existing caption. */
     explicit            ScCaptionCreator( ScDocument& rDoc, const ScAddress& rPos, SdrCaptionObj& rCaption );
 
@@ -173,7 +173,7 @@ public:
     /** Places the caption inside the passed rectangle, tries to keep the cell rectangle uncovered. Uses page area if 0 is passed. */
     void                AutoPlaceCaption( const Rectangle* pVisRect = nullptr );
     /** Updates caption tail and textbox according to current cell position. Uses page area if 0 is passed. */
-    void                UpdateCaptionPos( const Rectangle* pVisRect = nullptr );
+    void                UpdateCaptionPos();
 
 protected:
     /** Helper constructor for derived classes. */
@@ -199,13 +199,13 @@ private:
     bool                mbNegPage;
 };
 
-ScCaptionCreator::ScCaptionCreator( ScDocument& rDoc, const ScAddress& rPos, bool bShown, bool bTailFront ) :
+ScCaptionCreator::ScCaptionCreator( ScDocument& rDoc, const ScAddress& rPos, bool bTailFront ) :
     mrDoc( rDoc ),
     maPos( rPos ),
     mpCaption( nullptr )
 {
     Initialize();
-    CreateCaption( bShown, bTailFront );
+    CreateCaption( true/*bShown*/, bTailFront );
 }
 
 ScCaptionCreator::ScCaptionCreator( ScDocument& rDoc, const ScAddress& rPos, SdrCaptionObj& rCaption ) :
@@ -323,7 +323,7 @@ void ScCaptionCreator::AutoPlaceCaption( const Rectangle* pVisRect )
     FitCaptionToRect( pVisRect );
 }
 
-void ScCaptionCreator::UpdateCaptionPos( const Rectangle* pVisRect )
+void ScCaptionCreator::UpdateCaptionPos()
 {
     ScDrawLayer* pDrawLayer = mrDoc.GetDrawLayer();
 
@@ -345,7 +345,7 @@ void ScCaptionCreator::UpdateCaptionPos( const Rectangle* pVisRect )
         mpCaption->SetTailPos( aTailPos );
         mpCaption->SetLogicRect( aCaptRect );
         // fit caption into draw page
-        FitCaptionToRect( pVisRect );
+        FitCaptionToRect();
     }
 
     // update cell position in caption user data
@@ -475,9 +475,9 @@ ScNoteData::~ScNoteData()
 {
 }
 
-ScPostIt::ScPostIt( ScDocument& rDoc, const ScAddress& rPos, bool bShown ) :
+ScPostIt::ScPostIt( ScDocument& rDoc, const ScAddress& rPos ) :
     mrDoc( rDoc ),
-    maNoteData( bShown )
+    maNoteData( false )
 {
     AutoStamp();
     CreateCaption( rPos );
@@ -775,7 +775,7 @@ SdrCaptionObj* ScNoteUtil::CreateTempCaption(
         rVisRect.Bottom() - SC_NOTECAPTION_BORDERDIST_TEMP );
 
     // create the caption object
-    ScCaptionCreator aCreator( rDoc, rPos, true, bTailFront );
+    ScCaptionCreator aCreator( rDoc, rPos, bTailFront );
     SdrCaptionObj* pCaption = aCreator.GetCaption();
 
     // insert caption into page (needed to set caption text)

@@ -40,7 +40,6 @@ using namespace com::sun::star::beans;
 using namespace com::sun::star::linguistic2;
 
 
-
 TextConvWrapper::TextConvWrapper( vcl::Window* pWindow,
         const Reference< XComponentContext >& rxContext,
         const lang::Locale& rSourceLocale,
@@ -116,29 +115,18 @@ bool TextConvWrapper::ConvNext_impl()
 }
 
 
-bool TextConvWrapper::FindConvText_impl()
+void TextConvWrapper::FindConvText_impl()
 {
     // modified version of SvxSpellWrapper::FindSpellError
 
-    bool bFound = false;
-
     m_pWin->EnterWait();
-    bool bConvert = true;
 
-    while ( bConvert )
+    while ( true )
     {
-        bFound = ConvContinue_impl();
-        if (bFound)
-        {
-            bConvert = false;
-        }
-        else
-        {
-            bConvert = ConvNext_impl();
-        }
+        if (ConvContinue_impl() || !ConvNext_impl())
+            break;
     }
     m_pWin->LeaveWait();
-    return bFound;
 }
 
 
@@ -253,8 +241,8 @@ void TextConvWrapper::SetLanguageAndFont( const ESelection &rESel,
     {
         // set new font attribute
         SvxFontItem aFontItem = static_cast<const SvxFontItem&>( aNewSet.Get( nFontWhichId ) );
-        aFontItem.SetFamilyName( pFont->GetName());
-        aFontItem.SetFamily( pFont->GetFamily());
+        aFontItem.SetFamilyName( pFont->GetFamilyName());
+        aFontItem.SetFamily( pFont->GetFamilyType());
         aFontItem.SetStyleName( pFont->GetStyleName());
         aFontItem.SetPitch( pFont->GetPitch());
         aFontItem.SetCharSet(pFont->GetCharSet());
@@ -563,7 +551,6 @@ bool TextConvWrapper::HasRubySupport() const
 {
     return false;
 }
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

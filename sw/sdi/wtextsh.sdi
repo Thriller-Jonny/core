@@ -17,16 +17,12 @@
  */
 
 interface WebText : BaseText
-[
-    uuid = "B47F0DE5-1E1F-11d1-89CA-008029E4B0B1";
-]
 {
     FN_INSERT_FRAME_INTERACT_NOCOL
     [
         ExecMethod = ExecInsert ;
         StateMethod = StateInsert ;
         DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
-        Cachable ;
     ]
     // Here should the slots are be inserted, but O N L Y those that are supported
     // by StarWriter/WEB
@@ -35,6 +31,6 @@ interface WebText : BaseText
 
 shell SwWebTextShell : SwBaseShell
 {
-    import WebText[Automation];
+    import WebText;
 }
 

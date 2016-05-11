@@ -74,7 +74,7 @@ public:
 
         utl::TempFile aTempDir(nullptr, true);
         const OUString aWorkDir = aTempDir.GetURL();
-        const OUString aURI( getURLFromSrc(mpTestDocumentPath) + OUString::createFromAscii(datasource) );
+        const OUString aURI( m_directories.getURLFromSrc(mpTestDocumentPath) + OUString::createFromAscii(datasource) );
         OUString aDBName = registerDBsource( aURI, aWorkDir );
         initMailMergeJobAndArgs( filename, tablename, aDBName, "LOMM_", aWorkDir, file );
 
@@ -118,7 +118,7 @@ public:
         seq_id = 0;
         mSeqMailMergeArgs[ seq_id++ ] = beans::NamedValue( OUString( UNO_NAME_OUTPUT_TYPE ), uno::Any( file ? text::MailMergeType::FILE : text::MailMergeType::SHELL ) );
         mSeqMailMergeArgs[ seq_id++ ] = beans::NamedValue( OUString( UNO_NAME_DOCUMENT_URL ), uno::Any(
-                                        ( OUString(getURLFromSrc(mpTestDocumentPath) + OUString::createFromAscii(filename)) ) ) );
+                                        ( OUString(m_directories.getURLFromSrc(mpTestDocumentPath) + OUString::createFromAscii(filename)) ) ) );
         mSeqMailMergeArgs[ seq_id++ ] = beans::NamedValue( OUString( UNO_NAME_DATA_SOURCE_NAME ), uno::Any( aDBName ) );
         mSeqMailMergeArgs[ seq_id++ ] = beans::NamedValue( OUString( UNO_NAME_OUTPUT_URL ), uno::Any( aWorkDir ) );
         mSeqMailMergeArgs[ seq_id++ ] = beans::NamedValue( OUString( UNO_NAME_FILE_NAME_PREFIX ), uno::Any( aPrefix ));
@@ -167,12 +167,12 @@ public:
     /**
      * Like parseExport(), but for given mail merge document.
      */
-    xmlDocPtr parseMailMergeExport(int number, const OUString& rStreamName = OUString("word/document.xml"))
+    xmlDocPtr parseMailMergeExport(const OUString& rStreamName)
     {
         if (mnCurOutputType != text::MailMergeType::FILE)
             return nullptr;
 
-        OUString name = mailMergeOutputPrefix + OUString::number( number ) + ".odt";
+        OUString name = mailMergeOutputPrefix + OUString::number( 0 ) + ".odt";
         return parseExportInternal( mailMergeOutputURL + "/" + name, rStreamName );
     }
 
@@ -234,7 +234,7 @@ protected:
     DECLARE_MAILMERGE_TEST(TestName, filename, datasource, tablename, true, MMTest)
 
 int MMTest::documentStartPageNumber( int document ) const
-{   // See SwMailMergeOutputPage::documentStartPageNumber() .
+{   // See documentStartPageNumber() .
     SwXTextDocument* pTextDoc = dynamic_cast<SwXTextDocument *>(mxMMComponent.get());
     CPPUNIT_ASSERT(pTextDoc);
     SwWrtShell* shell = pTextDoc->GetDocShell()->GetWrtShell();
@@ -280,14 +280,14 @@ DECLARE_SHELL_MAILMERGE_TEST(testMultiPageAnchoredDraws, "multiple-page-anchored
 
     for (sal_Int32 i = 0; i < xDraws->getCount(); i++)
     {
-        text::TextContentAnchorType nAnchorType;
-        sal_uInt16 nAnchorPageNo;
         xPropertySet.set(xDraws->getByIndex(i), uno::UNO_QUERY);
 
-        xPropertySet->getPropertyValue( UNO_NAME_ANCHOR_TYPE ) >>= nAnchorType;
+        text::TextContentAnchorType nAnchorType;
+        CPPUNIT_ASSERT(xPropertySet->getPropertyValue( UNO_NAME_ANCHOR_TYPE ) >>= nAnchorType);
         CPPUNIT_ASSERT_EQUAL( text::TextContentAnchorType_AT_PAGE, nAnchorType );
 
-        xPropertySet->getPropertyValue( UNO_NAME_ANCHOR_PAGE_NO ) >>= nAnchorPageNo;
+        sal_uInt16 nAnchorPageNo = {};
+        CPPUNIT_ASSERT(xPropertySet->getPropertyValue( UNO_NAME_ANCHOR_PAGE_NO ) >>= nAnchorPageNo);
         // are all shapes are on different page numbers?
         CPPUNIT_ASSERT(pages.insert(nAnchorPageNo).second);
     }
@@ -315,7 +315,7 @@ DECLARE_FILE_MAILMERGE_TEST(testMissingDefaultLineColor, "missing-default-line-c
     // And the default value is black (wasn't copied properly by mailmerge).
     CPPUNIT_ASSERT_EQUAL( COL_BLACK, lineColor );
     // And check that the resulting file has the proper default.
-    xmlDocPtr pXmlDoc = parseMailMergeExport( 0, "styles.xml" );
+    xmlDocPtr pXmlDoc = parseMailMergeExport( "styles.xml" );
     CPPUNIT_ASSERT_EQUAL( OUString( "graphic" ), getXPath(pXmlDoc, "/office:document-styles/office:styles/style:default-style[1]", "family"));
     CPPUNIT_ASSERT_EQUAL( OUString( "#000000" ), getXPath(pXmlDoc, "/office:document-styles/office:styles/style:default-style[1]/style:graphic-properties", "stroke-color"));
 }
@@ -365,8 +365,8 @@ DECLARE_SHELL_MAILMERGE_TEST(testPageBoundariesSimpleMailMerge, "simple-mail-mer
 {
     // This is like the test above, but this one uses the create-single-document-containing-everything-generated approach,
     // and verifies that boundaries of the generated sub-documents are correct inside that document.
-    // These boundaries are done using "SwMailMergeOutputPage::documentStartPageNumber<number>" UNO bookmarks (see also
-    // SwMailMergeOutputPage::documentStartPageNumber() ).
+    // These boundaries are done using "documentStartPageNumber<number>" UNO bookmarks (see also
+    // documentStartPageNumber() ).
     executeMailMerge();
     // Here getPages() works on the source document, so get pages of the resulting one.
     SwXTextDocument* pTextDoc = dynamic_cast<SwXTextDocument *>(mxMMComponent.get());
@@ -410,6 +410,57 @@ DECLARE_SHELL_MAILMERGE_TEST(testTdf90230, "empty.odt", "10-testing-addresses.od
 {
     // MM of an empty document caused an assertion in the SwIndexReg dtor.
     executeMailMerge();
+}
+
+DECLARE_SHELL_MAILMERGE_TEST(testTdf92623, "tdf92623.odt", "10-testing-addresses.ods", "testing-addresses")
+{
+    // Copying bookmarks for MM was broken because of the StartOfContent node copy
+    // copied marks were off by one
+    executeMailMerge();
+
+    SwXTextDocument* pTextDoc = dynamic_cast<SwXTextDocument *>(mxComponent.get());
+    CPPUNIT_ASSERT(pTextDoc);
+    IDocumentMarkAccess const *pIDMA = pTextDoc->GetDocShell()->GetDoc()->getIDocumentMarkAccess();
+    // There is just one mark...
+    CPPUNIT_ASSERT_EQUAL(sal_Int32(1), pIDMA->getAllMarksCount());
+    CPPUNIT_ASSERT_EQUAL(sal_Int32(0), pIDMA->getBookmarksCount());
+    IDocumentMarkAccess::const_iterator_t mark = pIDMA->getAllMarksBegin();
+    // and it's a TEXT_FIELDMARK
+    CPPUNIT_ASSERT_EQUAL( sal_Int32(IDocumentMarkAccess::GetType( **mark )),
+                          sal_Int32(IDocumentMarkAccess::MarkType::TEXT_FIELDMARK ) );
+    sal_uLong src_pos = (*mark)->GetMarkPos().nNode.GetIndex();
+
+    // Get the size of the document in nodes
+    SwDoc *doc = pTextDoc->GetDocShell()->GetDoc();
+    sal_uLong size = doc->GetNodes().GetEndOfContent().GetIndex() - doc->GetNodes().GetEndOfExtras().GetIndex();
+    CPPUNIT_ASSERT_EQUAL( sal_uLong(13), size );
+    size -= 2; // For common start and end nodes
+
+    // Iterate over all field marks in the target document and check that they
+    // are positioned at a multitude of the document size
+    SwXTextDocument* pMMTextDoc = dynamic_cast<SwXTextDocument *>(mxMMComponent.get());
+    CPPUNIT_ASSERT(pMMTextDoc);
+    pIDMA = pMMTextDoc->GetDocShell()->GetDoc()->getIDocumentMarkAccess();
+    // The target document has the duplicated amount of bookmarks
+    // as the helping uno bookmark from the mail merge is left in the doc
+    // TODO should be fixed!
+    CPPUNIT_ASSERT_EQUAL(sal_Int32(20), pIDMA->getAllMarksCount());
+    std::set<sal_uLong> pages;
+    sal_Int32 countFieldMarks = 0;
+    for( mark = pIDMA->getAllMarksBegin(); mark != pIDMA->getAllMarksEnd(); ++mark )
+    {
+        IDocumentMarkAccess::MarkType markType = IDocumentMarkAccess::GetType( **mark );
+        if( markType == IDocumentMarkAccess::MarkType::TEXT_FIELDMARK )
+        {
+            sal_uLong pos = (*mark)->GetMarkPos().nNode.GetIndex() - src_pos;
+            CPPUNIT_ASSERT_EQUAL(sal_uLong(0), pos % size);
+            CPPUNIT_ASSERT(pages.insert(pos).second);
+            countFieldMarks++;
+        }
+        else // see previous TODO
+            CPPUNIT_ASSERT_EQUAL( sal_Int32(markType), sal_Int32(IDocumentMarkAccess::MarkType::UNO_BOOKMARK) );
+    }
+    CPPUNIT_ASSERT_EQUAL(sal_Int32(10), countFieldMarks);
 }
 
 CPPUNIT_PLUGIN_IMPLEMENT();

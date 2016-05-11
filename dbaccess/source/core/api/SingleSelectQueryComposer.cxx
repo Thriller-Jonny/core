@@ -107,10 +107,10 @@ namespace
         const OSQLParseNode* pNewSqlParseNode = _rParser.parseTree( aErrorMsg, _rStatement );
         if ( !pNewSqlParseNode )
         {
-            OUString sSQLStateGeneralError( getStandardSQLState( SQL_GENERAL_ERROR ) );
+            OUString sSQLStateGeneralError( getStandardSQLState( StandardSQLState::GENERAL_ERROR ) );
             SQLException aError2( aErrorMsg, _rxContext, sSQLStateGeneralError, 1000, Any() );
             SQLException aError1( _rStatement, _rxContext, sSQLStateGeneralError, 1000, makeAny( aError2 ) );
-            throw SQLException(_rParser.getContext().getErrorMessage(OParseContext::ERROR_GENERAL),_rxContext,sSQLStateGeneralError,1000,makeAny(aError1));
+            throw SQLException(_rParser.getContext().getErrorMessage(OParseContext::ErrorCode::General),_rxContext,sSQLStateGeneralError,1000,makeAny(aError1));
         }
         return pNewSqlParseNode;
     }
@@ -126,7 +126,7 @@ namespace
         // determine the statement type
         _rIterator.setParseTree( pStatementNode );
         _rIterator.traverseAll();
-        bool bIsSingleSelect = ( _rIterator.getStatementType() == SQL_STATEMENT_SELECT );
+        bool bIsSingleSelect = ( _rIterator.getStatementType() == OSQLStatementType::Select );
 
         // throw the error, if necessary
         if ( !bIsSingleSelect || SQL_ISRULE( pStatementNode, union_statement ) ) // #i4229# OJ
@@ -134,9 +134,9 @@ namespace
             // restore the old node before throwing the exception
             _rIterator.setParseTree( pOldNode );
             // and now really ...
-            SQLException aError1( _rOriginatingCommand, _rxContext, getStandardSQLState( SQL_GENERAL_ERROR ), 1000, Any() );
+            SQLException aError1( _rOriginatingCommand, _rxContext, getStandardSQLState( StandardSQLState::GENERAL_ERROR ), 1000, Any() );
             throw SQLException( DBACORE_RESSTRING( RID_STR_ONLY_QUERY ), _rxContext,
-                getStandardSQLState( SQL_GENERAL_ERROR ), 1000, makeAny( aError1 ) );
+                getStandardSQLState( StandardSQLState::GENERAL_ERROR ), 1000, makeAny( aError1 ) );
         }
 
         delete pOldNode;
@@ -154,7 +154,7 @@ namespace
     /** transforms a parse node describing a complete statement into a pure select
         statement, without any filter/order/groupby/having clauses
     */
-    OUString getPureSelectStatement( const OSQLParseNode* _pRootNode, Reference< XConnection > _rxConnection )
+    OUString getPureSelectStatement( const OSQLParseNode* _pRootNode, const Reference< XConnection >& _rxConnection )
     {
         OUString sSQL = STR_SELECT;
         _pRootNode->getChild(1)->parseNodeToStr( sSQL, _rxConnection );
@@ -265,13 +265,13 @@ OSingleSelectQueryComposer::OSingleSelectQueryComposer(const Reference< XNameAcc
 
 OSingleSelectQueryComposer::~OSingleSelectQueryComposer()
 {
-    ::std::vector<OPrivateColumns*>::iterator aColIter = m_aColumnsCollection.begin();
-    ::std::vector<OPrivateColumns*>::iterator aEnd = m_aColumnsCollection.end();
+    ::std::vector<OPrivateColumns*>::const_iterator aColIter = m_aColumnsCollection.begin();
+    ::std::vector<OPrivateColumns*>::const_iterator aEnd = m_aColumnsCollection.end();
     for(;aColIter != aEnd;++aColIter)
         delete *aColIter;
 
-    ::std::vector<OPrivateTables*>::iterator aTabIter = m_aTablesCollection.begin();
-    ::std::vector<OPrivateTables*>::iterator aTabEnd = m_aTablesCollection.end();
+    ::std::vector<OPrivateTables*>::const_iterator aTabIter = m_aTablesCollection.begin();
+    ::std::vector<OPrivateTables*>::const_iterator aTabEnd = m_aTablesCollection.end();
     for(;aTabIter != aTabEnd;++aTabIter)
         delete *aTabIter;
 }
@@ -488,8 +488,8 @@ OUString OSingleSelectQueryComposer::impl_getColumnRealName_throw(const Referenc
                 if(sTableName.indexOf('.') != -1)
                 {
                     OUString aCatlog,aSchema,aTable;
-                    ::dbtools::qualifiedNameComponents(m_xMetaData,sTableName,aCatlog,aSchema,aTable,::dbtools::eInDataManipulation);
-                    sTableName = ::dbtools::composeTableName( m_xMetaData, aCatlog, aSchema, aTable, true, ::dbtools::eInDataManipulation );
+                    ::dbtools::qualifiedNameComponents(m_xMetaData,sTableName,aCatlog,aSchema,aTable,::dbtools::EComposeRule::InDataManipulation);
+                    sTableName = ::dbtools::composeTableName( m_xMetaData, aCatlog, aSchema, aTable, true, ::dbtools::EComposeRule::InDataManipulation );
                 }
                 else if (!sTableName.isEmpty())
                     sTableName = ::dbtools::quoteName(aQuote,sTableName);
@@ -508,7 +508,7 @@ OUString OSingleSelectQueryComposer::impl_getColumnRealName_throw(const Referenc
     return aNewName;
 }
 
-OUString OSingleSelectQueryComposer::impl_getColumnName_throw(const Reference< XPropertySet >& column, bool bOrderBy)
+OUString OSingleSelectQueryComposer::impl_getColumnNameOrderBy_throw(const Reference< XPropertySet >& column)
 {
     ::connectivity::checkDisposed(OSubComponent::rBHelper.bDisposed);
 
@@ -537,8 +537,7 @@ OUString OSingleSelectQueryComposer::impl_getColumnName_throw(const Reference< X
 
     // Nope, it is an unrelated column.
     // Is that supported?
-    if ( bOrderBy &&
-         !m_xMetaData->supportsOrderByUnrelated() )
+    if ( !m_xMetaData->supportsOrderByUnrelated() )
     {
         OUString sError(DBACORE_RESSTRING(RID_STR_COLUMN_MUST_VISIBLE));
         throw SQLException(sError.replaceAll("%name", aName),*this,SQLSTATE_GENERAL,1000,Any() );
@@ -551,7 +550,7 @@ OUString OSingleSelectQueryComposer::impl_getColumnName_throw(const Reference< X
 void SAL_CALL OSingleSelectQueryComposer::appendOrderByColumn( const Reference< XPropertySet >& column, sal_Bool ascending ) throw(SQLException, RuntimeException, std::exception)
 {
     ::osl::MutexGuard aGuard( m_aMutex );
-    OUString sColumnName( impl_getColumnName_throw(column, true) );
+    OUString sColumnName( impl_getColumnNameOrderBy_throw(column) );
     OUString sOrder = getOrder();
     if ( !(sOrder.isEmpty() || sColumnName.isEmpty()) )
         sOrder += COMMA;
@@ -811,7 +810,7 @@ Reference< XNameAccess > SAL_CALL OSingleSelectQueryComposer::getColumns(  ) thr
             {
                 xStatement.reset( Reference< XStatement >( m_xConnection->createStatement(), UNO_QUERY_THROW ) );
                 Reference< XPropertySet > xStatementProps( xStatement, UNO_QUERY_THROW );
-                try { xStatementProps->setPropertyValue( PROPERTY_ESCAPE_PROCESSING, makeAny( sal_False ) ); }
+                try { xStatementProps->setPropertyValue( PROPERTY_ESCAPE_PROCESSING, makeAny( false ) ); }
                 catch ( const Exception& ) { DBG_UNHANDLED_EXCEPTION(); }
                 xResMetaDataSup.set( xStatement->executeQuery( sSQL ), UNO_QUERY_THROW );
                 xResultSetMeta.set( xResMetaDataSup->getMetaData(), UNO_QUERY_THROW );
@@ -897,9 +896,9 @@ Reference< XNameAccess > SAL_CALL OSingleSelectQueryComposer::getColumns(  ) thr
             }
             else if ( aRealFind == aSelectColumns->get().end() )
             {
-                // we can now only look if we found it under the realname propertery
+                // we can now only look if we found it under the realname property
                 // here we have to make the assumption that the position is correct
-                OSQLColumns::Vector::iterator aFind2 = aSelectColumns->get().begin() + i-1;
+                OSQLColumns::Vector::const_iterator aFind2 = aSelectColumns->get().begin() + i-1;
                 Reference<XPropertySet> xProp(*aFind2,UNO_QUERY);
                 if ( !xProp.is() || !xProp->getPropertySetInfo()->hasPropertyByName( PROPERTY_REALNAME ) )
                     continue;
@@ -910,7 +909,7 @@ Reference< XNameAccess > SAL_CALL OSingleSelectQueryComposer::getColumns(  ) thr
 
                 OUString sRealName;
                 xProp->getPropertyValue(PROPERTY_REALNAME) >>= sRealName;
-                ::std::vector< OUString>::iterator aFindName;
+                ::std::vector< OUString>::const_iterator aFindName;
                 if ( sColumnName.isEmpty() )
                     xProp->getPropertyValue(PROPERTY_NAME) >>= sColumnName;
 
@@ -1089,22 +1088,22 @@ sal_Int32 OSingleSelectQueryComposer::getPredicateType(OSQLParseNode * _pPredica
     sal_Int32 nPredicate = SQLFilterOperator::EQUAL;
     switch (_pPredicate->getNodeType())
     {
-        case SQL_NODE_EQUAL:
+        case SQLNodeType::Equal:
             nPredicate = SQLFilterOperator::EQUAL;
             break;
-        case SQL_NODE_NOTEQUAL:
+        case SQLNodeType::NotEqual:
             nPredicate = SQLFilterOperator::NOT_EQUAL;
             break;
-        case SQL_NODE_LESS:
+        case SQLNodeType::Less:
             nPredicate = SQLFilterOperator::LESS;
             break;
-        case SQL_NODE_LESSEQ:
+        case SQLNodeType::LessEq:
             nPredicate = SQLFilterOperator::LESS_EQUAL;
             break;
-        case SQL_NODE_GREAT:
+        case SQLNodeType::Great:
             nPredicate = SQLFilterOperator::GREATER;
             break;
-        case SQL_NODE_GREATEQ:
+        case SQLNodeType::GreatEq:
             nPredicate = SQLFilterOperator::GREATER_EQUAL;
             break;
         default:
@@ -1130,7 +1129,7 @@ bool OSingleSelectQueryComposer::setComparsionPredicate(OSQLParseNode * pConditi
 
             aItem.Handle = getPredicateType(pCondition->getChild(i));
             // don't display the equal
-            if (pCondition->getChild(i)->getNodeType() == SQL_NODE_EQUAL)
+            if (pCondition->getChild(i)->getNodeType() == SQLNodeType::Equal)
                 i++;
 
             // go forward
@@ -1145,34 +1144,34 @@ bool OSingleSelectQueryComposer::setComparsionPredicate(OSQLParseNode * pConditi
             sal_Int32 i = pCondition->count() - 2;
             switch (pCondition->getChild(i)->getNodeType())
             {
-                case SQL_NODE_EQUAL:
+                case SQLNodeType::Equal:
                     // don't display the equal
                     i--;
                     aItem.Handle = SQLFilterOperator::EQUAL;
                     break;
-                case SQL_NODE_NOTEQUAL:
+                case SQLNodeType::NotEqual:
                     i--;
                     aItem.Handle = SQLFilterOperator::NOT_EQUAL;
                     break;
-                case SQL_NODE_LESS:
+                case SQLNodeType::Less:
                     // take the opposite as we change the order
                     i--;
                     aValue = ">=";
                     aItem.Handle = SQLFilterOperator::GREATER_EQUAL;
                     break;
-                case SQL_NODE_LESSEQ:
+                case SQLNodeType::LessEq:
                     // take the opposite as we change the order
                     i--;
                     aValue = ">";
                     aItem.Handle = SQLFilterOperator::GREATER;
                     break;
-                case SQL_NODE_GREAT:
+                case SQLNodeType::Great:
                     // take the opposite as we change the order
                     i--;
                     aValue = "<=";
                     aItem.Handle = SQLFilterOperator::LESS_EQUAL;
                     break;
-                case SQL_NODE_GREATEQ:
+                case SQLNodeType::GreatEq:
                     // take the opposite as we change the order
                     i--;
                     aValue = "<";
@@ -1305,7 +1304,7 @@ OUString OSingleSelectQueryComposer::getTableAlias(const Reference< XPropertySet
         }
         else
         {
-            aComposedName = ::dbtools::composeTableName( m_xMetaData, aCatalog, aSchema, aTable, false, ::dbtools::eInDataManipulation );
+            aComposedName = ::dbtools::composeTableName( m_xMetaData, aCatalog, aSchema, aTable, false, ::dbtools::EComposeRule::InDataManipulation );
 
             // Is this the right case for the table name?
             // Else, look for it with different case, if applicable.
@@ -1338,7 +1337,7 @@ OUString OSingleSelectQueryComposer::getTableAlias(const Reference< XPropertySet
         }
         if(pBegin != pEnd)
         {
-            sReturn = ::dbtools::composeTableName( m_xMetaData, aCatalog, aSchema, aTable, true, ::dbtools::eInDataManipulation ) + ".";
+            sReturn = ::dbtools::composeTableName( m_xMetaData, aCatalog, aSchema, aTable, true, ::dbtools::EComposeRule::InDataManipulation ) + ".";
         }
     }
     return sReturn;
@@ -1374,7 +1373,7 @@ void OSingleSelectQueryComposer::clearColumns( const EColumnType _eType )
 void OSingleSelectQueryComposer::clearCurrentCollections()
 {
     ::std::vector<OPrivateColumns*>::iterator aIter = m_aCurrentColumns.begin();
-    ::std::vector<OPrivateColumns*>::iterator aEnd = m_aCurrentColumns.end();
+    ::std::vector<OPrivateColumns*>::const_iterator aEnd = m_aCurrentColumns.end();
     for (;aIter != aEnd;++aIter)
     {
         if ( *aIter )
@@ -1591,8 +1590,8 @@ void OSingleSelectQueryComposer::setConditionByColumn( const Reference< XPropert
             if(sTableName.indexOf('.') != -1)
             {
                 OUString aCatlog,aSchema,aTable;
-                ::dbtools::qualifiedNameComponents(m_xMetaData,sTableName,aCatlog,aSchema,aTable,::dbtools::eInDataManipulation);
-                sTableName = ::dbtools::composeTableName( m_xMetaData, aCatlog, aSchema, aTable, true, ::dbtools::eInDataManipulation );
+                ::dbtools::qualifiedNameComponents(m_xMetaData,sTableName,aCatlog,aSchema,aTable,::dbtools::EComposeRule::InDataManipulation);
+                sTableName = ::dbtools::composeTableName( m_xMetaData, aCatlog, aSchema, aTable, true, ::dbtools::EComposeRule::InDataManipulation );
             }
             else
                 sTableName = ::dbtools::quoteName(aQuote,sTableName);
@@ -1812,7 +1811,7 @@ OUString OSingleSelectQueryComposer::getKeyword( SQLPart _ePart )
     {
         default:
             SAL_WARN("dbaccess", "OSingleSelectQueryComposer::getKeyWord: Invalid enum value!" );
-            // no break, fallback to WHERE
+            SAL_FALLTHROUGH; // fallback to WHERE
         case Where:
             sKeyword = STR_WHERE;
             break;

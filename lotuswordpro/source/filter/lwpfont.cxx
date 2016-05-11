@@ -236,7 +236,7 @@ void LwpFontTableEntry::RegisterFontDecl()
 {
     if(m_FaceName.str().isEmpty()) return;
     XFStyleManager* pXFStyleManager = LwpGlobalMgr::GetInstance()->GetXFStyleManager();
-    XFFontDecl aFontDecl1( m_FaceName.str(), m_FaceName.str(), false );
+    XFFontDecl aFontDecl1( m_FaceName.str(), m_FaceName.str() );
     pXFStyleManager->AddFontDecl(aFontDecl1);
 }
 
@@ -262,7 +262,7 @@ void LwpFontTable::Read(LwpObjectStream *pStrm)
 
 OUString LwpFontTable::GetFaceName(sal_uInt16 index) //index: start from 1
 {
-    assert(index <= m_nCount && index > 0);
+    SAL_WARN_IF(index > m_nCount || index <= 0, "lwp", "bad font index");
     return (index <= m_nCount && index > 0) ? m_pFontEntries[index-1].GetFaceName() : OUString();
 }
 

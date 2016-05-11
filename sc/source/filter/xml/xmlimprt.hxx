@@ -42,8 +42,6 @@
 #include <com/sun/star/util/XNumberFormatTypes.hpp>
 #include <com/sun/star/sheet/XSheetCellRangeContainer.hpp>
 
-#include <boost/noncopyable.hpp>
-
 #include <memory>
 #include <unordered_map>
 #include <map>
@@ -820,8 +818,11 @@ typedef std::vector<ScMyImportValidation>           ScMyImportValidations;
 class ScMyStylesImportHelper;
 class ScXMLEditAttributeMap;
 
-class ScXMLImport: public SvXMLImport, boost::noncopyable
+class ScXMLImport: public SvXMLImport
 {
+    ScXMLImport(const ScXMLImport&) = delete;
+    const ScXMLImport& operator=(const ScXMLImport&) = delete;
+
     typedef std::unordered_map< OUString, sal_Int16, OUStringHash >   CellTypeMap;
     typedef ::std::map<SCTAB, std::unique_ptr<ScMyNamedExpressions>> SheetNamedExpMap;
 
@@ -847,9 +848,6 @@ class ScXMLImport: public SvXMLImport, boost::noncopyable
     rtl::Reference < XMLPropertySetMapper >       xTableStylesPropertySetMapper;
 
     SvXMLTokenMap           *pDocElemTokenMap;
-    SvXMLTokenMap           *pStylesElemTokenMap;
-    SvXMLTokenMap           *pStylesAttrTokenMap;
-    SvXMLTokenMap           *pStyleElemTokenMap;
     SvXMLTokenMap           *pBodyElemTokenMap;
     SvXMLTokenMap           *pContentValidationsElemTokenMap;
     SvXMLTokenMap           *pContentValidationElemTokenMap;
@@ -1015,10 +1013,10 @@ public:
 
     sal_Int16 GetCellType(const OUString& rStrValue) const;
 
-    rtl::Reference < XMLPropertySetMapper > GetCellStylesPropertySetMapper() const { return xCellStylesPropertySetMapper; }
-    rtl::Reference < XMLPropertySetMapper > GetColumnStylesPropertySetMapper() const { return xColumnStylesPropertySetMapper; }
-    rtl::Reference < XMLPropertySetMapper > GetRowStylesPropertySetMapper() const { return xRowStylesPropertySetMapper; }
-    rtl::Reference < XMLPropertySetMapper > GetTableStylesPropertySetMapper() const { return xTableStylesPropertySetMapper; }
+    const rtl::Reference < XMLPropertySetMapper >& GetCellStylesPropertySetMapper() const { return xCellStylesPropertySetMapper; }
+    const rtl::Reference < XMLPropertySetMapper >& GetColumnStylesPropertySetMapper() const { return xColumnStylesPropertySetMapper; }
+    const rtl::Reference < XMLPropertySetMapper >& GetRowStylesPropertySetMapper() const { return xRowStylesPropertySetMapper; }
+    const rtl::Reference < XMLPropertySetMapper >& GetTableStylesPropertySetMapper() const { return xTableStylesPropertySetMapper; }
 
     const SvXMLTokenMap& GetDocElemTokenMap();
     const SvXMLTokenMap& GetBodyElemTokenMap();
@@ -1152,7 +1150,7 @@ public:
         const sal_Int16 nCellType,
         const OUString& rCurrency);
 
-    void ProgressBarIncrement(bool bEditCell, sal_Int32 nInc = 1);
+    void ProgressBarIncrement();
 
     void SetNewCondFormatData() { mbHasNewCondFormatData = true; }
     bool HasNewCondFormatData() { return mbHasNewCondFormatData; }

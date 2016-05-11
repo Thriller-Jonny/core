@@ -21,7 +21,6 @@
 #define INCLUDED_SW_SOURCE_CORE_INC_DOCUMENTCONTENTOPERATIONSMANAGER_HXX
 
 #include <IDocumentContentOperations.hxx>
-#include <boost/noncopyable.hpp>
 #include <ndarr.hxx> //Only for lcl_RstTxtAttr
 
 class SwDoc;
@@ -32,8 +31,7 @@ class SwHistory;
 namespace sw
 {
 
-class DocumentContentOperationsManager : public IDocumentContentOperations,
-                                         public ::boost::noncopyable
+class DocumentContentOperationsManager : public IDocumentContentOperations
 {
 public:
     DocumentContentOperationsManager( SwDoc& i_rSwdoc );
@@ -129,13 +127,13 @@ public:
         bool bExactRange;
 
         ParaRstFormat(const SwPosition* pStt, const SwPosition* pEnd,
-                   SwHistory* pHst, sal_uInt16 nWhch = 0, const SfxItemSet* pSet = nullptr)
+                   SwHistory* pHst, const SfxItemSet* pSet = nullptr)
             : pFormatColl(nullptr)
             , pHistory(pHst)
             , pSttNd(pStt)
             , pEndNd(pEnd)
             , pDelSet(pSet)
-            , nWhich(nWhch)
+            , nWhich(0)
             , bReset(false) // #i62675#
             , bResetListAttrs(false)
             , bResetAll(true)
@@ -157,7 +155,7 @@ private:
     bool DeleteRangeImpl(SwPaM&, const bool unused = false);
     bool DeleteRangeImplImpl(SwPaM &);
     bool ReplaceRangeImpl(SwPaM&, OUString const&, const bool);
-    SwFlyFrameFormat* _InsNoTextNode( const SwPosition&rPos, SwNoTextNode*,
+    SwFlyFrameFormat* InsNoTextNode( const SwPosition&rPos, SwNoTextNode*,
                                 const SfxItemSet* pFlyAttrSet,
                                 const SfxItemSet* pGrfAttrSet,
                                 SwFrameFormat* = nullptr );
@@ -165,6 +163,9 @@ private:
      Position may not lie within range! */
     bool CopyImpl( SwPaM&, SwPosition&, const bool MakeNewFrames /*= true */,
             const bool bCopyAll, SwPaM *const pCpyRng /*= 0*/ ) const;
+
+    DocumentContentOperationsManager(DocumentContentOperationsManager const&) = delete;
+    DocumentContentOperationsManager& operator=(DocumentContentOperationsManager const&) = delete;
 };
 
 }

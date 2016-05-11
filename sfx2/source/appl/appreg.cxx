@@ -28,7 +28,6 @@
 #include <sfx2/stbitem.hxx>
 #include <sfx2/infobar.hxx>
 #include <sfx2/navigat.hxx>
-#include <sfx2/taskpane.hxx>
 #include <sfx2/module.hxx>
 #include <sfx2/viewfrm.hxx>
 #include "partwnd.hxx"
@@ -38,8 +37,6 @@
 #include <sfx2/objsh.hxx>
 #include <sfx2/viewsh.hxx>
 #include <sfx2/objface.hxx>
-#include <sfx2/mnuitem.hxx>
-
 
 
 void SfxApplication::Registrations_Impl()
@@ -62,7 +59,6 @@ void SfxApplication::Registrations_Impl()
     SfxToolBoxControl::RegisterControl(SID_REPEAT);
     SfxURLToolBoxControl_Impl::RegisterControl(SID_OPENURL);
 }
-
 
 
 void SfxApplication::RegisterToolBoxControl_Impl( SfxModule *pMod, const SfxTbxCtrlFactory& rFact )
@@ -89,7 +85,6 @@ void SfxApplication::RegisterToolBoxControl_Impl( SfxModule *pMod, const SfxTbxC
 }
 
 
-
 void SfxApplication::RegisterStatusBarControl_Impl( SfxModule *pMod, const SfxStbCtrlFactory& rFact )
 {
     if ( pMod )
@@ -111,31 +106,6 @@ void SfxApplication::RegisterStatusBarControl_Impl( SfxModule *pMod, const SfxSt
 #endif
 
     pAppData_Impl->pStbCtrlFac->push_back( rFact );
-}
-
-
-
-void SfxApplication::RegisterMenuControl_Impl( SfxModule *pMod, const SfxMenuCtrlFactory& rFact )
-{
-    if ( pMod )
-    {
-        pMod->RegisterMenuControl( rFact );
-        return;
-    }
-
-#ifdef DBG_UTIL
-    for ( size_t n=0; n<pAppData_Impl->pMenuCtrlFac->size(); n++ )
-    {
-        SfxMenuCtrlFactory *pF = &(*pAppData_Impl->pMenuCtrlFac)[n];
-        if ( pF->nTypeId == rFact.nTypeId &&
-            (pF->nSlotId == rFact.nSlotId || pF->nSlotId == 0) )
-        {
-            SAL_INFO("sfx", "MenuController register is not clearly defined!");
-        }
-    }
-#endif
-
-    pAppData_Impl->pMenuCtrlFac->push_back( rFact );
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

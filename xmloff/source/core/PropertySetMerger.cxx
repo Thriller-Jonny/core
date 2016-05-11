@@ -238,12 +238,12 @@ Property SAL_CALL PropertySetMergerImpl::getPropertyByName( const OUString& aNam
 sal_Bool SAL_CALL PropertySetMergerImpl::hasPropertyByName( const OUString& Name ) throw(RuntimeException, std::exception)
 {
     if(mxPropSet1Info->hasPropertyByName( Name ) )
-        return sal_True;
+        return true;
 
     return mxPropSet2Info->hasPropertyByName( Name );
 }
 
-Reference< XPropertySet > PropertySetMerger_CreateInstance( Reference< XPropertySet > rPropSet1, Reference< XPropertySet > rPropSet2 ) throw()
+Reference< XPropertySet > PropertySetMerger_CreateInstance( const Reference< XPropertySet >& rPropSet1, const Reference< XPropertySet >& rPropSet2 ) throw()
 {
     return new PropertySetMergerImpl( rPropSet1, rPropSet2 );
 }

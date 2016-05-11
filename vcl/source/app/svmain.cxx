@@ -24,27 +24,27 @@
 #include <osl/file.hxx>
 #include <osl/signal.h>
 
-#include "tools/debug.hxx"
-#include "tools/resmgr.hxx"
+#include <tools/debug.hxx>
+#include <tools/resmgr.hxx>
 
-#include "comphelper/processfactory.hxx"
+#include <comphelper/processfactory.hxx>
 
-#include "unotools/syslocaleoptions.hxx"
-#include "vcl/svapp.hxx"
-#include "vcl/wrkwin.hxx"
-#include "vcl/cvtgrf.hxx"
-#include "vcl/scheduler.hxx"
-#include "vcl/image.hxx"
-#include "vcl/implimagetree.hxx"
-#include "vcl/settings.hxx"
-#include "vcl/unowrap.hxx"
-#include "vcl/commandinfoprovider.hxx"
-#include "vcl/configsettings.hxx"
-#include "vcl/lazydelete.hxx"
-#include "vcl/embeddedfontshelper.hxx"
-#include "vcl/debugevent.hxx"
+#include <unotools/syslocaleoptions.hxx>
+#include <vcl/svapp.hxx>
+#include <vcl/wrkwin.hxx>
+#include <vcl/cvtgrf.hxx>
+#include <vcl/scheduler.hxx>
+#include <vcl/image.hxx>
+#include <vcl/implimagetree.hxx>
+#include <vcl/settings.hxx>
+#include <vcl/unowrap.hxx>
+#include <vcl/commandinfoprovider.hxx>
+#include <vcl/configsettings.hxx>
+#include <vcl/lazydelete.hxx>
+#include <vcl/embeddedfontshelper.hxx>
+#include <vcl/debugevent.hxx>
 
-#ifdef WNT
+#ifdef _WIN32
 #include <svsys.h>
 #include <process.h>
 #include <ole2.h>
@@ -58,12 +58,12 @@
 #include "salinst.hxx"
 #include "salwtype.hxx"
 #include "svdata.hxx"
-#include "vcl/svmain.hxx"
+#include <vcl/svmain.hxx>
 #include "dbggui.hxx"
 #include "accmgr.hxx"
 #include "idlemgr.hxx"
 #include "outdev.h"
-#include "outfont.hxx"
+#include "fontinstance.hxx"
 #include "PhysicalFontCollection.hxx"
 #include "print.h"
 #include "salgdi.hxx"
@@ -72,29 +72,34 @@
 #include "salimestatus.hxx"
 #include "xconnection.hxx"
 
-#include "vcl/opengl/OpenGLContext.hxx"
+#include <config_features.h>
+#if HAVE_FEATURE_OPENGL
+#include <vcl/opengl/OpenGLContext.hxx>
+#endif
 
-#include "osl/process.h"
-#include "com/sun/star/lang/XMultiServiceFactory.hpp"
-#include "com/sun/star/lang/XComponent.hpp"
-#include "com/sun/star/frame/Desktop.hpp"
+#include <osl/process.h>
+#include <com/sun/star/lang/XMultiServiceFactory.hpp>
+#include <com/sun/star/lang/XComponent.hpp>
+#include <com/sun/star/frame/Desktop.hpp>
 
 #include <cppuhelper/implbase.hxx>
-#include "uno/current_context.hxx"
+#include <uno/current_context.hxx>
 
-#include "opengl/zone.hxx"
-#include "opengl/watchdog.hxx"
+#include <opengl/zone.hxx>
+#include <opengl/watchdog.hxx>
 
 #if OSL_DEBUG_LEVEL > 0
 #include <typeinfo>
-#include "rtl/strbuf.hxx"
+#include <rtl/strbuf.hxx>
 #endif
 
 using namespace ::com::sun::star;
 
+static bool isInitVCL();
+
 oslSignalAction SAL_CALL VCLExceptionSignal_impl( void* /*pData*/, oslSignalInfo* pInfo)
 {
-    static bool bIn = false;
+    static volatile bool bIn = false;
 
     // if we crash again, bail out immediately
     if ( !bIn )
@@ -107,25 +112,22 @@ oslSignalAction SAL_CALL VCLExceptionSignal_impl( void* /*pData*/, oslSignalInfo
              (pInfo->Signal == osl_Signal_FloatDivideByZero)   ||
              (pInfo->Signal == osl_Signal_DebugBreak) )
         {
-            nVCLException = EXC_SYSTEM;
+            nVCLException = EXCEPTION_SYSTEM;
+#if HAVE_FEATURE_OPENGL
             if (OpenGLZone::isInZone())
                 OpenGLZone::hardDisable();
+#endif
         }
 
         // RC
         if ((pInfo->Signal == osl_Signal_User) &&
             (pInfo->UserSignal == OSL_SIGNAL_USER_RESOURCEFAILURE) )
-            nVCLException = EXC_RSCNOTLOADED;
+            nVCLException = EXCEPTION_RESOURCENOTLOADED;
 
         // DISPLAY-Unix
         if ((pInfo->Signal == osl_Signal_User) &&
             (pInfo->UserSignal == OSL_SIGNAL_USER_X11SUBSYSTEMERROR) )
-            nVCLException = EXC_DISPLAY;
-
-        // Remote-Client
-        if ((pInfo->Signal == osl_Signal_User) &&
-            (pInfo->UserSignal == OSL_SIGNAL_USER_RVPCONNECTIONERROR) )
-            nVCLException = EXC_REMOTE;
+            nVCLException = EXCEPTION_DISPLAY;
 
         if ( nVCLException )
         {
@@ -161,7 +163,7 @@ int ImplSVMain()
 
     int nReturn = EXIT_FAILURE;
 
-    bool bInit = InitVCL();
+    bool bInit = isInitVCL() || InitVCL();
 
     if( bInit )
     {
@@ -191,8 +193,9 @@ int ImplSVMain()
       pSVData->mxAccessBridge.clear();
     }
 
+#if HAVE_FEATURE_OPENGL
     OpenGLWatchdogThread::stop();
-
+#endif
     DeInitVCL();
 
     return nReturn;
@@ -242,6 +245,14 @@ uno::Any SAL_CALL DesktopEnvironmentContext::getValueByName( const OUString& Nam
         retVal = m_xNextContext->getValueByName( Name );
     }
     return retVal;
+}
+
+static bool isInitVCL()
+{
+    ImplSVData* pSVData = ImplGetSVData();
+    return  pExceptionHandler != nullptr &&
+            pSVData->mpApp != nullptr &&
+            pSVData->mpDefInst != nullptr;
 }
 
 bool InitVCL()
@@ -296,7 +307,9 @@ bool InitVCL()
     // Set exception handler
     pExceptionHandler = osl_addSignalHandler(VCLExceptionSignal_impl, nullptr);
 
-    DBGGUI_INIT_SOLARMUTEXCHECK();
+#ifdef DBG_UTIL
+    DbgGUIInitSolarMutexCheck();
+#endif
 
 #if OSL_DEBUG_LEVEL > 0
     DebugEventInjector::getCreate();
@@ -335,6 +348,9 @@ VCLUnoWrapperDeleter::disposing(lang::EventObject const& /* rSource */)
 void DeInitVCL()
 {
     ImplSVData* pSVData = ImplGetSVData();
+    // lp#1560328: clear cache before disposing rest of VCL
+    if(pSVData->mpBlendFrameCache)
+        pSVData->mpBlendFrameCache->m_aLastResult.Clear();
     pSVData->mbDeInit = true;
 
     vcl::DeleteOnDeinitBase::ImplDeleteOnDeInit();
@@ -378,10 +394,16 @@ void DeInitVCL()
     delete pSVData->maGDIData.mpGrfConverter;
 
     if( pSVData->mpSettingsConfigItem )
-        delete pSVData->mpSettingsConfigItem, pSVData->mpSettingsConfigItem = nullptr;
+    {
+        delete pSVData->mpSettingsConfigItem;
+        pSVData->mpSettingsConfigItem = nullptr;
+    }
 
     if ( pSVData->maAppData.mpIdleMgr )
+    {
         delete pSVData->maAppData.mpIdleMgr;
+        pSVData->maAppData.mpIdleMgr = nullptr;
+    }
     Scheduler::ImplDeInitScheduler();
 
     if ( pSVData->maWinData.mpMsgBoxImgList )
@@ -436,7 +458,9 @@ void DeInitVCL()
     }
     pSVData->mpDefaultWin.disposeAndClear();
 
-    DBGGUI_DEINIT_SOLARMUTEXCHECK();
+#ifdef DBG_UTIL
+    DbgGUIDeInitSolarMutexCheck();
+#endif
 
     if ( pSVData->mpUnoWrapper )
     {
@@ -499,6 +523,11 @@ void DeInitVCL()
         delete pSVData->maAppData.mpDisplayName;
         pSVData->maAppData.mpDisplayName = nullptr;
     }
+    if ( pSVData->maAppData.mpToolkitName )
+    {
+        delete pSVData->maAppData.mpToolkitName;
+        pSVData->maAppData.mpToolkitName = nullptr;
+    }
     if ( pSVData->maAppData.mpEventListeners )
     {
         delete pSVData->maAppData.mpEventListeners;
@@ -516,7 +545,10 @@ void DeInitVCL()
         ImplFreeEventHookData();
 
     if (pSVData->mpBlendFrameCache)
-        delete pSVData->mpBlendFrameCache, pSVData->mpBlendFrameCache = nullptr;
+    {
+        delete pSVData->mpBlendFrameCache;
+        pSVData->mpBlendFrameCache = nullptr;
+    }
 
     if (pSVData->mpCommandInfoProvider)
     {
@@ -538,7 +570,7 @@ void DeInitVCL()
 
     ResMgr::DestroyAllResMgr();
 
-    // destroy all Sal interfaces before destorying the instance
+    // destroy all Sal interfaces before destroying the instance
     // and thereby unloading the plugin
     delete pSVData->mpSalSystem;
     pSVData->mpSalSystem = nullptr;
@@ -546,7 +578,11 @@ void DeInitVCL()
     pSVData->mpSalTimer = nullptr;
 
     // Deinit Sal
-    DestroySalInstance( pSVData->mpDefInst );
+    if (pSVData->mpDefInst)
+    {
+        DestroySalInstance( pSVData->mpDefInst );
+        pSVData->mpDefInst = nullptr;
+    }
 
     if( pOwnSvApp )
     {
@@ -569,13 +605,13 @@ struct WorkerThreadData
     }
 };
 
-#ifdef WNT
+#ifdef _WIN32
 static HANDLE hThreadID = 0;
 static unsigned __stdcall _threadmain( void *pArgs )
 {
-    OleInitialize( NULL );
-    ((WorkerThreadData*)pArgs)->pWorker( ((WorkerThreadData*)pArgs)->pThreadData );
-    delete (WorkerThreadData*)pArgs;
+    OleInitialize( nullptr );
+    static_cast<WorkerThreadData*>(pArgs)->pWorker( static_cast<WorkerThreadData*>(pArgs)->pThreadData );
+    delete static_cast<WorkerThreadData*>(pArgs);
     OleUninitialize();
     hThreadID = 0;
     return 0;
@@ -595,7 +631,7 @@ static void SAL_CALL MainWorkerFunction( void* pArgs )
 
 void CreateMainLoopThread( oslWorkerFunction pWorker, void * pThreadData )
 {
-#ifdef WNT
+#ifdef _WIN32
     // sal thread always call CoInitializeEx, so a system dependent implementation is necessary
 
     unsigned uThreadID;
@@ -615,7 +651,7 @@ void JoinMainLoopThread()
 {
     if( hThreadID )
     {
-#ifdef WNT
+#ifdef _WIN32
         WaitForSingleObject(hThreadID, INFINITE);
 #else
         osl_joinWithThread(hThreadID);

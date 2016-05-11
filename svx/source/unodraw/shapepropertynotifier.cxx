@@ -33,9 +33,9 @@ namespace
 
     struct ShapePropertyHash
     {
-        size_t operator()( svx::ShapeProperty __x ) const
+        size_t operator()( svx::ShapeProperty x ) const
         {
-            return size_t( __x );
+            return size_t( x );
         }
     };
 }
@@ -46,16 +46,9 @@ namespace svx
 
 
     using ::com::sun::star::uno::Reference;
-    using ::com::sun::star::uno::XInterface;
-    using ::com::sun::star::uno::UNO_QUERY;
     using ::com::sun::star::uno::UNO_QUERY_THROW;
-    using ::com::sun::star::uno::UNO_SET_THROW;
     using ::com::sun::star::uno::Exception;
-    using ::com::sun::star::uno::RuntimeException;
     using ::com::sun::star::uno::Any;
-    using ::com::sun::star::uno::makeAny;
-    using ::com::sun::star::uno::Sequence;
-    using ::com::sun::star::uno::Type;
     using ::com::sun::star::beans::PropertyChangeEvent;
     using ::com::sun::star::beans::XPropertyChangeListener;
     using ::com::sun::star::lang::EventObject;

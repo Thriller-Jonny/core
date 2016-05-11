@@ -113,9 +113,7 @@ namespace basegfx
             aNewConnectedComponent.maTotalBounds = rRange;
 
 
-
             //  STAGE 1: Search for intersecting maDisjunctAggregatesList entries
-
 
 
             // if rRange is empty, it will intersect with no
@@ -192,7 +190,6 @@ namespace basegfx
             //  STAGE 2: Add newly generated connected component list element
 
 
-
             // add new component to the end of the component list
             aNewConnectedComponent.maComponentList.push_back(
                 ComponentType( rRange, rUserData ) );
@@ -201,8 +198,7 @@ namespace basegfx
             OSL_ENSURE( !aNewConnectedComponent.maComponentList.empty(),
                         "B2DConnectedRanges::addRange(): empty aggregate list" );
             OSL_ENSURE( !aNewConnectedComponent.maTotalBounds.isEmpty() ||
-                        (aNewConnectedComponent.maTotalBounds.isEmpty() &&
-                         aNewConnectedComponent.maComponentList.size() == 1),
+                         aNewConnectedComponent.maComponentList.size() == 1,
                         "B2DConnectedRanges::addRange(): empty ranges must be solitary");
 
             // add aNewConnectedComponent as a new entry to

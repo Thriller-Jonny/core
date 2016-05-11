@@ -51,7 +51,6 @@
 #include <drawinglayer/processor2d/contourextractor2d.hxx>
 
 
-
 SdrViewEvent::SdrViewEvent()
 :     pHdl(nullptr),
       pObj(nullptr),
@@ -152,7 +151,6 @@ SdrDropMarkerOverlay::~SdrDropMarkerOverlay()
 }
 
 
-
 SdrView::SdrView(SdrModel* pModel1, OutputDevice* pOut)
 :   SdrCreateView(pModel1,pOut),
     bNoExtendedMouseDispatcher(false),
@@ -179,9 +177,6 @@ bool SdrView::KeyInput(const KeyEvent& rKEvt, vcl::Window* pWin)
     if (!bRet && !IsExtendedKeyInputDispatcherEnabled()) {
         bRet = true;
         switch (rKEvt.GetKeyCode().GetFullFunction()) {
-            case KeyFuncType::CUT   : Cut(); break;
-            case KeyFuncType::COPY  : Yank(); break;
-            case KeyFuncType::PASTE : Paste(pWin); break;
             case KeyFuncType::DELETE: DeleteMarked(); break;
             case KeyFuncType::UNDO: mpModel->Undo(); break;
             case KeyFuncType::REDO: mpModel->Redo(); break;
@@ -194,9 +189,6 @@ bool SdrView::KeyInput(const KeyEvent& rKEvt, vcl::Window* pWin)
                         if (pWin!=nullptr) pWin->ReleaseMouse();
                     } break;
                     case KEY_DELETE: DeleteMarked(); break;
-                    case KEY_CUT: case KEY_DELETE+KEY_SHIFT: Cut(); break;
-                    case KEY_COPY: case KEY_INSERT+KEY_MOD1: Yank(); break;
-                    case KEY_PASTE: case KEY_INSERT+KEY_SHIFT: Paste(pWin); break;
                     case KEY_UNDO: case KEY_BACKSPACE+KEY_MOD2: mpModel->Undo(); break;
                     case KEY_BACKSPACE+KEY_MOD2+KEY_SHIFT: mpModel->Redo(); break;
                     case KEY_REPEAT: case KEY_BACKSPACE+KEY_MOD2+KEY_MOD1: mpModel->Repeat(*this); break;
@@ -368,7 +360,7 @@ SdrHitKind SdrView::PickAnything(const Point& rLogicPos, SdrViewEvent& rVEvt) co
         if( pTableObj )
         {
             sal_Int32 nX = 0, nY = 0;
-            switch( pTableObj->CheckTableHit( aLocalLogicPosition, nX, nY, 0 ) )
+            switch( pTableObj->CheckTableHit( aLocalLogicPosition, nX, nY ) )
             {
                 case sdr::table::SDRTABLEHIT_CELL:
                     eHit = SDRHIT_CELL;
@@ -389,7 +381,7 @@ SdrHitKind SdrView::PickAnything(const Point& rLogicPos, SdrViewEvent& rVEvt) co
         if( pTableObj )
         {
             sal_Int32 nX = 0, nY = 0;
-            switch( pTableObj->CheckTableHit( aLocalLogicPosition, nX, nY, 0 ) )
+            switch( pTableObj->CheckTableHit( aLocalLogicPosition, nX, nY ) )
             {
                 case sdr::table::SDRTABLEHIT_CELL:
                     eHit = SDRHIT_CELL;
@@ -1143,6 +1135,7 @@ Pointer SdrView::GetPreferredPointer(const Point& rMousePos, const OutputDevice*
                     if (!IsCrookAllowed(true) && !IsCrookAllowed()) return Pointer(PointerStyle::NotAllowed);
                     return Pointer(PointerStyle::Crook);
                 }
+                break;
             }
 
             case SDRDRAG_CROP:
@@ -1279,11 +1272,11 @@ OUString SdrView::GetStatusText()
             ImpTakeDescriptionStr(STR_ViewMarked,aStr);
             if (IsGluePointEditMode()) {
                 if (HasMarkedGluePoints()) {
-                    ImpTakeDescriptionStr(STR_ViewMarked,aStr,0,ImpTakeDescriptionOptions::GLUEPOINTS);
+                    ImpTakeDescriptionStr(STR_ViewMarked,aStr,ImpTakeDescriptionOptions::GLUEPOINTS);
                 }
             } else {
                 if (HasMarkedPoints()) {
-                    ImpTakeDescriptionStr(STR_ViewMarked,aStr,0,ImpTakeDescriptionOptions::POINTS);
+                    ImpTakeDescriptionStr(STR_ViewMarked,aStr,ImpTakeDescriptionOptions::POINTS);
                 }
             }
         } else {

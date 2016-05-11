@@ -49,7 +49,6 @@ using namespace cppu;
 using namespace osl;
 
 
-
 #define SERVICENAME "com.sun.star.script.EventAttacher"
 #define IMPLNAME    "com.sun.star.comp.EventAttacher"
 
@@ -76,7 +75,6 @@ public:
     virtual sal_Bool SAL_CALL hasProperty(const OUString& Name) throw( RuntimeException, std::exception ) override;
 
 private:
-    Reference< XIdlReflection >  m_xCoreReflection;
     Reference< XAllListener >    m_xAllListener;
     Reference< XIdlClass >       m_xListenerType;
     Any                          m_Helper;
@@ -104,7 +102,6 @@ Reference< XInterface > createAllListenerAdapter
     }
     return xAdapter;
 }
-
 
 
 // InvocationToAllListenerMapper
@@ -149,10 +146,10 @@ Any SAL_CALL InvocationToAllListenerMapper::invoke(const OUString& FunctionName,
         sal_uInt32 nParamCount = aParamSeq.getLength();
         if( nParamCount > 1 )
         {
-            const ParamInfo* pInfos = aParamSeq.getConstArray();
+            const ParamInfo* pInfo = aParamSeq.getConstArray();
             for( sal_uInt32 i = 0 ; i < nParamCount ; i++ )
             {
-                if( pInfos[ i ].aMode != ParamMode_IN )
+                if( pInfo[ i ].aMode != ParamMode_IN )
                 {
                     bApproveFiring = true;
                     break;
@@ -279,7 +276,6 @@ private:
     Reference< XIdlReflection >             getReflection() throw( Exception );
     Reference< XInvocationAdapterFactory2 >  getInvocationAdapterService() throw( Exception );
 };
-
 
 
 EventAttacherImpl::EventAttacherImpl( const Reference< XComponentContext >& rxContext )
@@ -413,7 +409,6 @@ Reference< XInvocationAdapterFactory2 > EventAttacherImpl::getInvocationAdapterS
 }
 
 
-
 //*** Private helper methods ***
 Reference< XTypeConverter > EventAttacherImpl::getConverter() throw( Exception )
 {
@@ -424,8 +419,6 @@ Reference< XTypeConverter > EventAttacherImpl::getConverter() throw( Exception )
     }
     return m_xConverter;
 }
-
-
 
 
 // Implementation of an EventAttacher-related AllListeners, which brings
@@ -449,7 +442,6 @@ private:
             throw (CannotConvertException, RuntimeException);
 
     EventAttacherImpl *         m_pEA;
-    Reference< XInterface >     m_xEAHold;
     OUString                    m_EventMethod;
     Reference< XAllListener >   m_AllListener;
 };
@@ -458,7 +450,6 @@ private:
 FilterAllListenerImpl::FilterAllListenerImpl( EventAttacherImpl * pEA_, const OUString& EventMethod_,
                                               const Reference< XAllListener >& AllListener_ )
         : m_pEA( pEA_ )
-        , m_xEAHold( *pEA_ )
         , m_EventMethod( EventMethod_ )
         , m_AllListener( AllListener_ )
 {
@@ -488,7 +479,7 @@ void FilterAllListenerImpl::convertToEventReturn( Any & rRet, const Type & rRetT
                 break;
 
             case TypeClass_BOOLEAN:
-                rRet <<= sal_True;
+                rRet <<= true;
                 break;
 
             case TypeClass_STRING:
@@ -553,7 +544,6 @@ void FilterAllListenerImpl::disposing(const EventObject& )
 {
     // TODO: ???
 }
-
 
 
 Reference< XEventListener > EventAttacherImpl::attachListener
@@ -913,7 +903,6 @@ SAL_DLLPUBLIC_EXPORT void * SAL_CALL evtatt_component_getFactory(
     return pRet;
 }
 }
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

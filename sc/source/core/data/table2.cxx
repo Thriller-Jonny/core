@@ -53,6 +53,7 @@
 #include "columnspanset.hxx"
 #include <rowheightcontext.hxx>
 #include <refhint.hxx>
+#include "listenercontext.hxx"
 
 #include "scitems.hxx"
 #include <editeng/boxitem.hxx>
@@ -67,16 +68,16 @@ namespace {
 
 class ColumnRegroupFormulaCells
 {
-    ScColumn* mpCols;
+    ScColContainer& mrCols;
     std::vector<ScAddress>* mpGroupPos;
 
 public:
-    ColumnRegroupFormulaCells( ScColumn* pCols, std::vector<ScAddress>* pGroupPos ) :
-        mpCols(pCols), mpGroupPos(pGroupPos) {}
+    ColumnRegroupFormulaCells( ScColContainer& rCols, std::vector<ScAddress>* pGroupPos ) :
+        mrCols(rCols), mpGroupPos(pGroupPos) {}
 
     void operator() (SCCOL nCol)
     {
-        mpCols[nCol].RegroupFormulaCells(mpGroupPos);
+        mrCols[nCol].RegroupFormulaCells(mpGroupPos);
     }
 };
 
@@ -157,7 +158,7 @@ void ScTable::InsertRow( SCCOL nStartCol, SCCOL nEndCol, SCROW nStartRow, SCSIZE
     {
         if (mpRowHeights && pRowFlags)
         {
-            mpRowHeights->insertSegment(nStartRow, nSize, false);
+            mpRowHeights->insertSegment(nStartRow, nSize);
             sal_uInt8 nNewFlags = pRowFlags->Insert( nStartRow, nSize);
             // only copy manual size flag, clear all others
             if (nNewFlags && (nNewFlags != CR_MANUALSIZE))
@@ -168,8 +169,8 @@ void ScTable::InsertRow( SCCOL nStartCol, SCCOL nEndCol, SCROW nStartRow, SCSIZE
         if (pOutlineTable)
             pOutlineTable->InsertRow( nStartRow, nSize );
 
-        mpFilteredRows->insertSegment(nStartRow, nSize, true);
-        mpHiddenRows->insertSegment(nStartRow, nSize, true);
+        mpFilteredRows->insertSegment(nStartRow, nSize);
+        mpHiddenRows->insertSegment(nStartRow, nSize);
 
         if (!maRowManualBreaks.empty())
         {
@@ -290,8 +291,8 @@ void ScTable::InsertCol(
         if (pOutlineTable)
             pOutlineTable->InsertCol( nStartCol, nSize );
 
-        mpHiddenCols->insertSegment(nStartCol, static_cast<SCCOL>(nSize), true);
-        mpFilteredCols->insertSegment(nStartCol, static_cast<SCCOL>(nSize), true);
+        mpHiddenCols->insertSegment(nStartCol, static_cast<SCCOL>(nSize));
+        mpFilteredCols->insertSegment(nStartCol, static_cast<SCCOL>(nSize));
 
         if (!maColManualBreaks.empty())
         {
@@ -623,11 +624,11 @@ void ScTable::CopyConditionalFormat( SCCOL nCol1, SCROW nRow1, SCCOL nCol2, SCRO
 
                 if(!aStyleName.isEmpty())
                 {
-                    if(pDocument->GetStyleSheetPool()->Find(aStyleName, SFX_STYLE_FAMILY_PARA))
+                    if(pDocument->GetStyleSheetPool()->Find(aStyleName, SfxStyleFamily::Para))
                         continue;
 
                     pDocument->GetStyleSheetPool()->CopyStyleFrom(
-                            pTable->pDocument->GetStyleSheetPool(), aStyleName, SFX_STYLE_FAMILY_PARA );
+                            pTable->pDocument->GetStyleSheetPool(), aStyleName, SfxStyleFamily::Para );
                 }
             }
         }
@@ -875,7 +876,7 @@ void ScTable::TransposeClip( SCCOL nCol1, SCROW nRow1, SCCOL nCol2, SCROW nRow2,
                 {
                     // no borders or merge items involved - use pattern as-is
                     for (nRow = nAttrRow1; nRow<=nAttrRow2; nRow++)
-                        pTransClip->SetPattern( static_cast<SCCOL>(nRow-nRow1), static_cast<SCROW>(nCol-nCol1), *pPattern, true );
+                        pTransClip->SetPattern( static_cast<SCCOL>(nRow-nRow1), static_cast<SCROW>(nCol-nCol1), *pPattern );
                 }
                 else
                 {
@@ -918,7 +919,7 @@ void ScTable::TransposeClip( SCCOL nCol1, SCROW nRow1, SCCOL nCol2, SCROW nRow2,
 
                     for (nRow = nAttrRow1; nRow<=nAttrRow2; nRow++)
                         pTransClip->SetPattern( static_cast<SCCOL>(nRow-nRow1),
-                                static_cast<SCROW>(nCol-nCol1), aNewPattern, true);
+                                static_cast<SCROW>(nCol-nCol1), aNewPattern);
                 }
             }
         }
@@ -1033,8 +1034,22 @@ const ScColumn* ScTable::FetchColumn( SCCOL nCol ) const
 
 void ScTable::StartListeners( sc::StartListeningContext& rCxt, bool bAll )
 {
-    for (SCCOL i=0; i<=MAXCOL; i++)
-        aCol[i].StartListeners(rCxt, bAll);
+    std::shared_ptr<const sc::ColumnSet> pColSet = rCxt.getColumnSet();
+    if (!pColSet)
+    {
+        for (SCCOL i=0; i<=MAXCOL; i++)
+            aCol[i].StartListeners(rCxt, bAll);
+    }
+    else if (pColSet->hasTab( nTab))
+    {
+        std::vector<SCCOL> aColumns;
+        pColSet->getColumns( nTab, aColumns);
+        for (auto i : aColumns)
+        {
+            if (0 <= i && i <= MAXCOL)
+                aCol[i].StartListeners(rCxt, bAll);
+        }
+    }
 }
 
 void ScTable::AttachFormulaCells(
@@ -1075,15 +1090,19 @@ void ScTable::StartListeningFormulaCells(
 void ScTable::CopyToTable(
     sc::CopyToDocContext& rCxt, SCCOL nCol1, SCROW nRow1, SCCOL nCol2, SCROW nRow2,
     InsertDeleteFlags nFlags, bool bMarked, ScTable* pDestTab, const ScMarkData* pMarkData,
-    bool bAsLink, bool bColRowFlags )
+    bool bAsLink, bool bColRowFlags, bool bGlobalNamesToLocal )
 {
     if (!ValidColRow(nCol1, nRow1) || !ValidColRow(nCol2, nRow2))
         return;
 
     if (nFlags != InsertDeleteFlags::NONE)
+    {
+        InsertDeleteFlags nTempFlags( nFlags &
+                ~InsertDeleteFlags( InsertDeleteFlags::NOTE | InsertDeleteFlags::ADDNOTES));
         for (SCCOL i = nCol1; i <= nCol2; i++)
-            aCol[i].CopyToColumn(rCxt, nRow1, nRow2, nFlags, bMarked,
-                                pDestTab->aCol[i], pMarkData, bAsLink);
+            aCol[i].CopyToColumn(rCxt, nRow1, nRow2, nTempFlags, bMarked,
+                                pDestTab->aCol[i], pMarkData, bAsLink, bGlobalNamesToLocal);
+    }
 
     if (!bColRowFlags)      // Column widths/Row heights/Flags
         return;
@@ -1190,11 +1209,21 @@ void ScTable::CopyToTable(
 
     if(nFlags & InsertDeleteFlags::OUTLINE) // also only when bColRowFlags
         pDestTab->SetOutlineTable( pOutlineTable );
+
+    if (nFlags & (InsertDeleteFlags::NOTE|InsertDeleteFlags::ADDNOTES))
+    {
+        bool bCloneCaption = (nFlags & InsertDeleteFlags::NOCAPTIONS) == InsertDeleteFlags::NONE;
+        for (SCCOL i = nCol1; i <= nCol2; i++)
+        {
+            aCol[i].CopyCellNotesToDocument(nRow1, nRow2, pDestTab->aCol[i], bCloneCaption);
+            pDestTab->aCol[i].UpdateNoteCaptions(nRow1, nRow2);
+        }
+    }
 }
 
 void ScTable::UndoToTable(
     sc::CopyToDocContext& rCxt, SCCOL nCol1, SCROW nRow1, SCCOL nCol2, SCROW nRow2,
-    InsertDeleteFlags nFlags, bool bMarked, ScTable* pDestTab, const ScMarkData* pMarkData )
+    InsertDeleteFlags nFlags, bool bMarked, ScTable* pDestTab )
 {
     if (ValidColRow(nCol1, nRow1) && ValidColRow(nCol2, nRow2))
     {
@@ -1204,7 +1233,7 @@ void ScTable::UndoToTable(
         for ( SCCOL i = 0; i <= MAXCOL; i++)
         {
             if ( i >= nCol1 && i <= nCol2 )
-                aCol[i].UndoToColumn(rCxt, nRow1, nRow2, nFlags, bMarked, pDestTab->aCol[i], pMarkData);
+                aCol[i].UndoToColumn(rCxt, nRow1, nRow2, nFlags, bMarked, pDestTab->aCol[i]);
             else
                 aCol[i].CopyToColumn(rCxt, 0, MAXROW, InsertDeleteFlags::FORMULA, false, pDestTab->aCol[i]);
         }
@@ -1880,9 +1909,9 @@ bool ScTable::HasAttribSelection( const ScMarkData& rMark, sal_uInt16 nMask ) co
 {
     std::vector<sc::ColRowSpan> aSpans = rMark.GetMarkedColSpans();
 
-    for (size_t i = 0; i < aSpans.size(); ++i)
+    for (sc::ColRowSpan & aSpan : aSpans)
     {
-        for (SCCOLROW j = aSpans[i].mnStart; j < aSpans[i].mnEnd; ++j)
+        for (SCCOLROW j = aSpan.mnStart; j < aSpan.mnEnd; ++j)
         {
             if (aCol[j].HasAttribSelection(rMark, nMask))
               return true;
@@ -1967,7 +1996,7 @@ SCSIZE ScTable::FillMaxRot( RowInfo* pRowInfo, SCSIZE nArrCount, SCCOL nX1, SCCO
                     bool bHitOne = true;
                     if ( nCol > nX2+1 )
                     {
-                        // Does the rotated cell extend into the visable range?
+                        // Does the rotated cell extend into the visible range?
 
                         SCCOL nTouchedCol = nCol;
                         long nWidth = static_cast<long>(mpRowHeights->getValue(nRow) * nFactor);
@@ -2048,7 +2077,7 @@ void ScTable::FindMaxRotCol( RowInfo* pRowInfo, SCSIZE nArrCount, SCCOL nX1, SCC
                                     if (!aStyleName.isEmpty())
                                     {
                                         SfxStyleSheetBase* pStyleSheet =
-                                            pStylePool->Find( aStyleName, SFX_STYLE_FAMILY_PARA );
+                                            pStylePool->Find( aStyleName, SfxStyleFamily::Para );
                                         if ( pStyleSheet )
                                         {
                                             FillMaxRot( pRowInfo, nArrCount, nX1, nX2,
@@ -2158,9 +2187,9 @@ bool ScTable::HasSelectionMatrixFragment( const ScMarkData& rMark ) const
 {
     std::vector<sc::ColRowSpan> aSpans = rMark.GetMarkedColSpans();
 
-    for ( size_t i=0; i<aSpans.size(); i++ )
+    for (sc::ColRowSpan & aSpan : aSpans)
     {
-        for ( SCCOLROW j=aSpans[i].mnStart; j<aSpans[i].mnEnd; j++ )
+        for ( SCCOLROW j=aSpan.mnStart; j<aSpan.mnEnd; j++ )
         {
             if ( aCol[j].HasSelectionMatrixFragment(rMark) )
                 return true;
@@ -2543,16 +2572,14 @@ const ScStyleSheet* ScTable::GetAreaStyle( bool& rFound, SCCOL nCol1, SCROW nRow
     return bEqual ? pStyle : nullptr;
 }
 
-bool ScTable::IsStyleSheetUsed( const ScStyleSheet& rStyle, bool bGatherAllStyles ) const
+bool ScTable::IsStyleSheetUsed( const ScStyleSheet& rStyle ) const
 {
     bool bIsUsed = false;
 
     for ( SCCOL i=0; i<=MAXCOL; i++ )
     {
-        if ( aCol[i].IsStyleSheetUsed( rStyle, bGatherAllStyles ) )
+        if ( aCol[i].IsStyleSheetUsed( rStyle ) )
         {
-            if ( !bGatherAllStyles )
-                return true;
             bIsUsed = true;
         }
     }
@@ -2606,10 +2633,10 @@ bool ScTable::RemoveFlags( SCCOL nStartCol, SCROW nStartRow, SCCOL nEndCol, SCRO
     return bChanged;
 }
 
-void ScTable::SetPattern( SCCOL nCol, SCROW nRow, const ScPatternAttr& rAttr, bool bPutToPool )
+void ScTable::SetPattern( SCCOL nCol, SCROW nRow, const ScPatternAttr& rAttr )
 {
     if (ValidColRow(nCol,nRow))
-        aCol[nCol].SetPattern( nRow, rAttr, bPutToPool );
+        aCol[nCol].SetPattern( nRow, rAttr );
 }
 
 void ScTable::ApplyAttr( SCCOL nCol, SCROW nRow, const SfxPoolItem& rAttr )
@@ -2834,7 +2861,7 @@ sal_uInt16 ScTable::GetColWidth( SCCOL nCol, bool bHiddenAsZero ) const
         return (sal_uInt16) STD_COL_WIDTH;
 }
 
-sal_uLong ScTable::GetColWidth( SCCOL nStartCol, SCCOL nEndCol, bool bHiddenAsZero ) const
+sal_uLong ScTable::GetColWidth( SCCOL nStartCol, SCCOL nEndCol ) const
 {
     if (!ValidCol(nStartCol) || !ValidCol(nEndCol) || nStartCol > nEndCol)
         return 0;
@@ -2844,7 +2871,7 @@ sal_uLong ScTable::GetColWidth( SCCOL nStartCol, SCCOL nEndCol, bool bHiddenAsZe
     SCCOL nLastHiddenCol = -1;
     for (SCCOL nCol = nStartCol; nCol <= nEndCol; ++nCol)
     {
-        if (bHiddenAsZero && nCol > nLastHiddenCol)
+        if (nCol > nLastHiddenCol)
             bHidden = ColHidden(nCol, nullptr, &nLastHiddenCol);
 
         if (bHidden)
@@ -3249,7 +3276,7 @@ SCROW ScTable::GetLastFlaggedRow() const
     SCROW nLastFound = 0;
     if (pRowFlags)
     {
-        SCROW nRow = pRowFlags->GetLastAnyBitAccess( 0, sal::static_int_cast<sal_uInt8>(CR_ALL) );
+        SCROW nRow = pRowFlags->GetLastAnyBitAccess( sal::static_int_cast<sal_uInt8>(CR_ALL) );
         if (ValidRow(nRow))
             nLastFound = nRow;
     }
@@ -3259,14 +3286,14 @@ SCROW ScTable::GetLastFlaggedRow() const
 
     if (mpHiddenRows)
     {
-        SCROW nRow = mpHiddenRows->findLastNotOf(false);
+        SCROW nRow = mpHiddenRows->findLastTrue();
         if (ValidRow(nRow))
             nLastFound = ::std::max(nLastFound, nRow);
     }
 
     if (mpFilteredRows)
     {
-        SCROW nRow = mpFilteredRows->findLastNotOf(false);
+        SCROW nRow = mpFilteredRows->findLastTrue();
         if (ValidRow(nRow))
             nLastFound = ::std::max(nLastFound, nRow);
     }
@@ -3297,7 +3324,7 @@ SCROW ScTable::GetLastChangedRow() const
     // Find the last row position where the height is NOT the standard row
     // height.
     // KOHEI: Test this to make sure it does what it's supposed to.
-    SCROW nLastHeight = mpRowHeights->findLastNotOf(ScGlobal::nStdRowHeight);
+    SCROW nLastHeight = mpRowHeights->findLastTrue(ScGlobal::nStdRowHeight);
     if (!ValidRow(nLastHeight))
         nLastHeight = 0;
 
@@ -3530,12 +3557,12 @@ void ScTable::CopyData( SCCOL nStartCol, SCROW nStartRow, SCCOL nEndCol, SCROW n
             if (bThisTab)
             {
                 aCell.release(aCol[nDestX], nDestY);
-                SetPattern( nDestX, nDestY, *GetPattern( nCol, nRow ), true );
+                SetPattern( nDestX, nDestY, *GetPattern( nCol, nRow ) );
             }
             else
             {
                 aCell.release(*pDocument, aDest);
-                pDocument->SetPattern( aDest, *GetPattern( nCol, nRow ), true );
+                pDocument->SetPattern( aDest, *GetPattern( nCol, nRow ) );
             }
 
             ++nDestX;

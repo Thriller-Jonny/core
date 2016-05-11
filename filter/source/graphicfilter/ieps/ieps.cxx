@@ -29,7 +29,7 @@
 #include <vcl/metaact.hxx>
 #include <vcl/virdev.hxx>
 #include <vcl/cvtgrf.hxx>
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 #include <unotools/configmgr.hxx>
 #include <unotools/tempfile.hxx>
 #include <osl/process.h>
@@ -107,7 +107,6 @@ static long ImplGetNumber( sal_uInt8 **pBuf, sal_uInt32& nSecurityCount )
 }
 
 
-
 static int ImplGetLen( sal_uInt8* pBuf, int nMax )
 {
     int nLen = 0;
@@ -151,7 +150,7 @@ static oslProcessError runProcessWithPathSearch(const OUString &rProgName,
 {
     oslProcessError result;
     oslSecurity pSecurity = osl_getCurrentSecurity();
-#ifdef WNT
+#ifdef _WIN32
     /*
      * ooo#72096
      * On Window the underlying SearchPath searches in order of...
@@ -186,7 +185,7 @@ static oslProcessError runProcessWithPathSearch(const OUString &rProgName,
     return result;
 }
 
-#if defined(WNT)
+#if defined(_WIN32)
 #    define EXESUFFIX ".exe"
 #else
 #    define EXESUFFIX ""
@@ -383,7 +382,7 @@ static bool RenderAsBMPThroughGS(const sal_uInt8* pBuf, sal_uInt32 nBytesRead,
         arg11.pData
     };
     return RenderAsBMPThroughHelper(pBuf, nBytesRead, rGraphic,
-#ifdef WNT
+#ifdef _WIN32
         "gswin32c" EXESUFFIX,
 #else
         "gs" EXESUFFIX,
@@ -633,6 +632,7 @@ ipsGraphicImport( SvStream & rStream, Graphic & rGraphic, FilterConfigItem* )
                                                 case 0x0a :
                                                     if ( --nScanLines < 0 )
                                                         bIsValid = false;
+                                                    break;
                                                 case 0x09 :
                                                 case 0x0d :
                                                 case 0x20 :
@@ -730,7 +730,7 @@ ipsGraphicImport( SvStream & rStream, Graphic & rGraphic, FilterConfigItem* )
                             aGraphic);
                     }
 
-                    GfxLink     aGfxLink( pBuf.get(), nPSSize, GFX_LINK_TYPE_EPS_BUFFER, true ) ;
+                    GfxLink     aGfxLink( pBuf.get(), nPSSize, GFX_LINK_TYPE_EPS_BUFFER ) ;
                     pBuf.release();
                     aMtf.AddAction( static_cast<MetaAction*>( new MetaEPSAction( Point(), Size( nWidth, nHeight ),
                                                                       aGfxLink, aGraphic.GetGDIMetaFile() ) ) );

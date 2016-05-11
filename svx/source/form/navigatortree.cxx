@@ -801,7 +801,7 @@ namespace svxform
         // 0) the root entry is part of the list (can't DnD the root!)
         // 1) one of the draged entries is to be dropped onto it's own parent
         // 2) -               "       - is to be dropped onto itself
-        // 3) -               "       - is a Form and to be dropped onto one of it's descendants
+        // 3) -               "       - is a Form and to be dropped onto one of its descendants
         // 4) one of the entries is a control and to be dropped onto the root
         // 5) a control or form will be dropped onto a control which is _not_ a sibling (dropping onto a sibling
         //      means moving the control)
@@ -960,7 +960,7 @@ namespace svxform
             // because i want to select all targets (and only them)
             SelectAll(false);
 
-            Sequence< Reference< XInterface > > aControls = _rData.hiddenControls();
+            const Sequence< Reference< XInterface > >& aControls = _rData.hiddenControls();
             sal_Int32 nCount = aControls.getLength();
             const Reference< XInterface >* pControls = aControls.getConstArray();
 
@@ -985,13 +985,13 @@ namespace svxform
 
                 // copy properties form old control to new one
                 Reference< XPropertySet >  xCurrent(pControls[i], UNO_QUERY);
-#if (OSL_DEBUG_LEVEL > 1)
+#if (OSL_DEBUG_LEVEL > 0)
                 // check whether it is a hidden control
                 sal_Int16 nClassId = ::comphelper::getINT16(xCurrent->getPropertyValue(FM_PROP_CLASSID));
                 OSL_ENSURE(nClassId == FormComponentType::HIDDENCONTROL, "NavigatorTree::implExecuteDataTransfer: invalid control in drop list !");
                     // if SVX_FM_HIDDEN_CONTROLS-format exists, the sequence
                     // should only contain hidden controls
-#endif // (OSL_DEBUG_LEVEL > 1)
+#endif // (OSL_DEBUG_LEVEL > 0)
                 Reference< XPropertySetInfo >  xPropInfo( xCurrent->getPropertySetInfo());
                 Sequence< Property> seqAllCurrentProps = xPropInfo->getProperties();
                 Property* pAllCurrentProps = seqAllCurrentProps.getArray();
@@ -1358,9 +1358,8 @@ namespace svxform
         }
         catch ( const Exception& )
         {
-            OSL_FAIL("NavigatorTree::NewForm : could not set esssential properties !");
+            OSL_FAIL("NavigatorTree::NewForm : could not set essential properties!");
         }
-
 
 
         // insert form
@@ -1548,7 +1547,6 @@ namespace svxform
     }
 
 
-
     IMPL_LINK_NOARG_TYPED(NavigatorTree, OnClipboardAction, OLocalExchange&, void)
     {
         if ( !m_aControlExchange.isClipboardOwner() )
@@ -1721,7 +1719,7 @@ namespace svxform
             // but normally only direct controls, no indirect ones, are marked in a marked form,
             // I have to do it later
             if (bIsForm)
-                MarkViewObj(static_cast<FmFormData*>(pCurrent), true, true);     // second sal_True means "deep"
+                MarkViewObj(static_cast<FmFormData*>(pCurrent), true/*deep*/);
 
             // a hidden control ?
             bool bIsHidden = IsHiddenControl(pCurrent);
@@ -1844,7 +1842,7 @@ namespace svxform
                     {
                         // actually i would have to test, if parent is part of m_arr_CurrentSelection ...
                         // but if it's selected, than it's in m_arrCurrentSelection
-                        // or one of it's ancestors, which was selected earlier.
+                        // or one of its ancestors, which was selected earlier.
                         // In both cases IsSelected is enough
                         if (IsSelected(pParentLoop))
                             break;
@@ -1915,26 +1913,27 @@ namespace svxform
             }
 
             // now SelectList contains only entries, which have to be selected
-            // two possabilities : 1) run through SelectList, get SvTreeListEntry for every entry and select it (is more intuitive)
+            // two possibilities : 1) run through SelectList, get SvTreeListEntry for every entry and select it (is more intuitive)
             // 2) run through my SvLBoxEntries and select those, i can find in the SelectList
             // 1) needs =(k*n) (k=length of SelectList, n=number of entries),
             // plus the fact, that FindEntry uses extensive IsEqualWithoutChilden instead of comparing pointer to UserData
-            // 2) needs =(n*log k), dublicates some code from FindEntry
+            // 2) needs =(n*log k), duplicates some code from FindEntry
             // This may be a frequently used code ( at every change in mark of the view!),
             // so i use latter one
             SvTreeListEntry* pLoop = First();
-            while( pLoop )
+            FmEntryDataArray::const_iterator aEnd = arredToSelect.end();
+            while(pLoop)
             {
                 FmEntryData* pCurEntryData = static_cast<FmEntryData*>(pLoop->GetUserData());
                 FmEntryDataArray::iterator it = arredToSelect.find(pCurEntryData);
-                if ( it != arredToSelect.end() )
+                if (it != aEnd)
                 {
                     Select(pLoop);
                     MakeVisible(pLoop);
                     SetCursor(pLoop, true);
                 }
 
-                pLoop = Next( pLoop );
+                pLoop = Next(pLoop);
             }
         }
         UnlockSelectionHandling();
@@ -1973,7 +1972,7 @@ namespace svxform
             SvTreeListEntry* pSelectionLoop = *it;
             // When form selection, mark all controls of form
             if (IsFormEntry(pSelectionLoop) && (pSelectionLoop != m_pRootEntry))
-                MarkViewObj(static_cast<FmFormData*>(pSelectionLoop->GetUserData()), true);
+                MarkViewObj(static_cast<FmFormData*>(pSelectionLoop->GetUserData()), false/*deep*/);
 
             // When control selection, mark Control-SdrObjects
             else if (IsFormComponentEntry(pSelectionLoop))
@@ -1992,7 +1991,7 @@ namespace svxform
 
                     sal_uInt16 nClassId = ::comphelper::getINT16(xSet->getPropertyValue(FM_PROP_CLASSID));
                     if (nClassId != FormComponentType::HIDDENCONTROL)
-                        MarkViewObj(pControlData, true, true);
+                        MarkViewObj(pControlData);
                 }
             }
         }
@@ -2054,7 +2053,7 @@ namespace svxform
         pFormView->UnMarkAll();
     }
 
-    void NavigatorTree::MarkViewObj(FmFormData* pFormData, bool bMark, bool bDeep )
+    void NavigatorTree::MarkViewObj(FmFormData* pFormData, bool bDeep )
     {
         FmFormShell* pFormShell = GetNavModel()->GetFormShell();
         if( !pFormShell )
@@ -2080,26 +2079,23 @@ namespace svxform
                 continue;
 
             Reference< XFormComponent > xControlModel( pFormObject->GetUnoControlModel(),UNO_QUERY );
-            if ( xControlModel.is() && aObjects.find(xControlModel) != aObjects.end() && bMark != pFormView->IsObjMarked( pSdrObject ) )
+            if ( xControlModel.is() && aObjects.find(xControlModel) != aObjects.end() && !pFormView->IsObjMarked( pSdrObject ) )
             {
                 // unfortunately, the writer doesn't like marking an already-marked object, again, so reset the mark first
-                pFormView->MarkObj( pSdrObject, pPageView, !bMark );
+                pFormView->MarkObj( pSdrObject, pPageView );
             }
         } // while ( aIter.IsMore() )
-        if ( bMark )
+        // make the mark visible
+        ::Rectangle aMarkRect( pFormView->GetAllMarkedRect());
+        for ( sal_uInt32 i = 0; i < pFormView->PaintWindowCount(); ++i )
         {
-            // make the mark visible
-            ::Rectangle aMarkRect( pFormView->GetAllMarkedRect());
-            for ( sal_uInt32 i = 0; i < pFormView->PaintWindowCount(); ++i )
+            SdrPaintWindow* pPaintWindow = pFormView->GetPaintWindow( i );
+            OutputDevice& rOutDev = pPaintWindow->GetOutputDevice();
+            if ( ( OUTDEV_WINDOW == rOutDev.GetOutDevType() ) && !aMarkRect.IsEmpty() )
             {
-                SdrPaintWindow* pPaintWindow = pFormView->GetPaintWindow( i );
-                OutputDevice& rOutDev = pPaintWindow->GetOutputDevice();
-                if ( ( OUTDEV_WINDOW == rOutDev.GetOutDevType() ) && !aMarkRect.IsEmpty() )
-                {
-                    pFormView->MakeVisible( aMarkRect, static_cast<vcl::Window&>(rOutDev) );
-                }
-            } // for ( sal_uInt32 i = 0; i < pFormView->PaintWindowCount(); ++i )
-        }
+                pFormView->MakeVisible( aMarkRect, static_cast<vcl::Window&>(rOutDev) );
+            }
+        } // for ( sal_uInt32 i = 0; i < pFormView->PaintWindowCount(); ++i )
     }
 
     void NavigatorTree::CollectObjects(FmFormData* pFormData, bool bDeep, ::std::set< Reference< XFormComponent > >& _rObjects)
@@ -2119,7 +2115,7 @@ namespace svxform
         } // for( sal_uInt32 i=0; i<pChildList->Count(); i++ )
     }
 
-    void NavigatorTree::MarkViewObj( FmControlData* pControlData, bool bMarkHandles, bool bMark)
+    void NavigatorTree::MarkViewObj( FmControlData* pControlData)
     {
         if( !pControlData )
             return;
@@ -2148,12 +2144,9 @@ namespace svxform
                 continue;
 
             // mark the object
-            if ( bMark != pFormView->IsObjMarked( pSdrObject ) )
+            if ( !pFormView->IsObjMarked( pSdrObject ) )
                 // unfortunately, the writer doesn't like marking an already-marked object, again, so reset the mark first
-                pFormView->MarkObj( pSdrObject, pPageView, !bMark );
-
-            if ( !bMarkHandles || !bMark )
-                continue;
+                pFormView->MarkObj( pSdrObject, pPageView );
 
             bPaint = true;
 
@@ -2176,7 +2169,6 @@ namespace svxform
 
 
 }
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -74,7 +74,6 @@
 #include "cfgitem.hxx"
 
 using namespace ::com::sun::star::beans;
-using namespace ::com::sun::star::container;
 using namespace ::com::sun::star::document;
 using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::uno;
@@ -87,7 +86,7 @@ sal_Unicode ConvertMathToMathML( sal_Unicode cChar )
     if (IsInPrivateUseArea( cChar ))
     {
         SAL_WARN("starmath", "Error: private use area characters should no longer be in use!" );
-        cRes = (sal_Unicode) '@'; // just some character that should easily be notice as odd in the context
+        cRes = sal_Unicode('@'); // just some character that should easily be notice as odd in the context
     }
     return cRes;
 }
@@ -162,10 +161,8 @@ bool SmXMLExportWrapper::Export(SfxMedium &rMedium)
 
     SvtSaveOptions aSaveOpt;
     OUString sUsePrettyPrinting("UsePrettyPrinting");
-    sal_Bool bUsePrettyPrinting( bFlat || aSaveOpt.IsPrettyPrinting() );
-    Any aAny;
-    aAny.setValue( &bUsePrettyPrinting, cppu::UnoType<bool>::get() );
-    xInfoSet->setPropertyValue( sUsePrettyPrinting, aAny );
+    bool bUsePrettyPrinting( bFlat || aSaveOpt.IsPrettyPrinting() );
+    xInfoSet->setPropertyValue( sUsePrettyPrinting, Any(bUsePrettyPrinting) );
 
     // Set base URI
     OUString sPropName( "BaseURI" );
@@ -252,8 +249,8 @@ bool SmXMLExportWrapper::Export(SfxMedium &rMedium)
 
 /// export through an XML exporter component (output stream version)
 bool SmXMLExportWrapper::WriteThroughComponent(
-    Reference<io::XOutputStream> xOutputStream,
-    Reference<XComponent> xComponent,
+    const Reference<io::XOutputStream>& xOutputStream,
+    const Reference<XComponent>& xComponent,
     Reference<uno::XComponentContext> & rxContext,
     Reference<beans::XPropertySet> & rPropSet,
     const sal_Char* pComponentName )
@@ -304,7 +301,7 @@ bool SmXMLExportWrapper::WriteThroughComponent(
 /// export through an XML exporter component (storage version)
 bool SmXMLExportWrapper::WriteThroughComponent(
     const Reference < embed::XStorage >& xStorage,
-    Reference<XComponent> xComponent,
+    const Reference<XComponent>& xComponent,
     const sal_Char* pStreamName,
     Reference<uno::XComponentContext> & rxContext,
     Reference<beans::XPropertySet> & rPropSet,
@@ -322,7 +319,7 @@ bool SmXMLExportWrapper::WriteThroughComponent(
         xStream = xStorage->openStreamElement( sStreamName,
             embed::ElementModes::READWRITE | embed::ElementModes::TRUNCATE );
     }
-    catch ( uno::Exception& rEx )
+    catch ( const uno::Exception& rEx )
     {
         SAL_WARN("starmath", "Can't create output stream in package: " << rEx.Message );
         return false;
@@ -330,17 +327,13 @@ bool SmXMLExportWrapper::WriteThroughComponent(
 
     OUString aPropName( "MediaType" );
     OUString aMime( "text/xml" );
-    uno::Any aAny;
-    aAny <<= aMime;
 
     uno::Reference < beans::XPropertySet > xSet( xStream, uno::UNO_QUERY );
-    xSet->setPropertyValue( aPropName, aAny );
+    xSet->setPropertyValue( aPropName, Any(aMime) );
 
     // all streams must be encrypted in encrypted document
     OUString aTmpPropName( "UseCommonStoragePasswordEncryption" );
-    sal_Bool bTrue = sal_True;
-    aAny.setValue( &bTrue, cppu::UnoType<bool>::get() );
-    xSet->setPropertyValue( aTmpPropName, aAny );
+    xSet->setPropertyValue( aTmpPropName, Any(true) );
 
     // set Base URL
     if ( rPropSet.is() )
@@ -454,13 +447,13 @@ sal_uInt32 SmXMLExport::exportDoc(enum XMLTokenEnum eClass)
 
         // make use of a default namespace
         ResetNamespaceMap();    // Math doesn't need namespaces from xmloff, since it now uses default namespaces (because that is common with current MathML usage in the web)
-        _GetNamespaceMap().Add( OUString(), GetXMLToken(XML_N_MATH), XML_NAMESPACE_MATH );
+        GetNamespaceMap_().Add( OUString(), GetXMLToken(XML_N_MATH), XML_NAMESPACE_MATH );
 
         rList.AddAttribute(GetNamespaceMap().GetAttrNameByKey(XML_NAMESPACE_MATH_IDX),
                 GetNamespaceMap().GetNameByKey( XML_NAMESPACE_MATH_IDX));
 
         //I think we need something like ImplExportEntities();
-        _ExportContent();
+        ExportContent_();
         GetDocHandler()->endDocument();
     }
 
@@ -468,7 +461,7 @@ sal_uInt32 SmXMLExport::exportDoc(enum XMLTokenEnum eClass)
     return 0;
 }
 
-void SmXMLExport::_ExportContent()
+void SmXMLExport::ExportContent_()
 {
     uno::Reference <frame::XModel> xModel = GetModel();
     uno::Reference <lang::XUnoTunnel> xTunnel(xModel,uno::UNO_QUERY);
@@ -734,7 +727,7 @@ void SmXMLExport::ExportTable(const SmNode *pNode, int nLevel)
     sal_uInt16 nSize = pNode->GetNumSubNodes();
 
     //If the list ends in newline then the last entry has
-    //no subnodes, the newline is superfulous so we just drop
+    //no subnodes, the newline is superfluous so we just drop
     //the last node, inclusion would create a bad MathML
     //table
     if (nSize >= 1)
@@ -1308,8 +1301,7 @@ void SmXMLExport::ExportFont(const SmNode *pNode, int nLevel)
                             //value specified in points.
 
                             //Must fix StarMath to retain the original pt values
-                            Fraction aTemp = Sm100th_mmToPts(pFontNode->GetFont().
-                                GetSize().Height());
+                            Fraction aTemp = Sm100th_mmToPts(pFontNode->GetFont().GetFontSize().Height());
 
                             if (pFontNode->GetSizeType() == FontSizeType::MINUS)
                                 aTemp-=aFrac;

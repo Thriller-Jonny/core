@@ -97,7 +97,6 @@ OResultSet::OResultSet(SQLHANDLE _pStatementHandle ,OStatement_Base* pStmt) :   
                         ,m_nCurrentFetchState(0)
                         ,m_bWasNull(true)
                         ,m_bEOF(true)
-                        ,m_bLastRecord(false)
                         ,m_bFreeHandle(false)
                         ,m_bInserting(false)
                         ,m_bRowInserted(false)
@@ -201,7 +200,7 @@ SQLRETURN OResultSet::unbind(bool _bUnbindHandle)
     if ( m_aBindVector.size() > 0 )
     {
         TVoidVector::iterator pValue = m_aBindVector.begin();
-        TVoidVector::iterator pEnd = m_aBindVector.end();
+        TVoidVector::const_iterator pEnd = m_aBindVector.end();
         for(; pValue != pEnd; ++pValue)
         {
             switch (pValue->second)
@@ -593,7 +592,6 @@ Reference< XArray > SAL_CALL OResultSet::getArray( sal_Int32 /*columnIndex*/ ) t
 }
 
 
-
 Reference< XClob > SAL_CALL OResultSet::getClob( sal_Int32 /*columnIndex*/ ) throw(SQLException, RuntimeException, std::exception)
 {
     ::dbtools::throwFunctionNotSupportedSQLException( "XRow::getClob", *this );
@@ -728,28 +726,28 @@ void SAL_CALL OResultSet::close(  ) throw(SQLException, RuntimeException, std::e
 
 sal_Bool SAL_CALL OResultSet::first(  ) throw(SQLException, RuntimeException, std::exception)
 {
-    return moveImpl(IResultSetHelper::FIRST,0,true);
+    return moveImpl(IResultSetHelper::FIRST,0);
 }
 
 
 sal_Bool SAL_CALL OResultSet::last(  ) throw(SQLException, RuntimeException, std::exception)
 {
-    return moveImpl(IResultSetHelper::LAST,0,true);
+    return moveImpl(IResultSetHelper::LAST,0);
 }
 
 sal_Bool SAL_CALL OResultSet::absolute( sal_Int32 row ) throw(SQLException, RuntimeException, std::exception)
 {
-    return moveImpl(IResultSetHelper::ABSOLUTE1,row,true);
+    return moveImpl(IResultSetHelper::ABSOLUTE1,row);
 }
 
 sal_Bool SAL_CALL OResultSet::relative( sal_Int32 row ) throw(SQLException, RuntimeException, std::exception)
 {
-    return moveImpl(IResultSetHelper::RELATIVE1,row,true);
+    return moveImpl(IResultSetHelper::RELATIVE1,row);
 }
 
 sal_Bool SAL_CALL OResultSet::previous(  ) throw(SQLException, RuntimeException, std::exception)
 {
-    return moveImpl(IResultSetHelper::PRIOR,0,true);
+    return moveImpl(IResultSetHelper::PRIOR,0);
 }
 
 Reference< XInterface > SAL_CALL OResultSet::getStatement(  ) throw(SQLException, RuntimeException, std::exception)
@@ -794,7 +792,7 @@ sal_Bool SAL_CALL OResultSet::rowUpdated(  ) throw(SQLException, RuntimeExceptio
 
 sal_Bool SAL_CALL OResultSet::next(  ) throw(SQLException, RuntimeException, std::exception)
 {
-    return moveImpl(IResultSetHelper::NEXT,1,true);
+    return moveImpl(IResultSetHelper::NEXT,1);
 }
 
 
@@ -962,7 +960,7 @@ void SAL_CALL OResultSet::deleteRow(  ) throw(SQLException, RuntimeException, st
     if ( m_bRowDeleted )
     {
         TBookmarkPosMap::iterator aIter = m_aPosToBookmarks.begin();
-        TBookmarkPosMap::iterator aEnd = m_aPosToBookmarks.end();
+        TBookmarkPosMap::const_iterator aEnd = m_aPosToBookmarks.end();
         for (; aIter != aEnd; ++aIter)
         {
             if ( aIter->second == nPos )
@@ -1162,7 +1160,7 @@ Sequence<sal_Int8> OResultSet::impl_getBookmark(  ) throw( SQLException,  Runtim
 {
     checkDisposed(OResultSet_BASE::rBHelper.bDisposed);
 
-    TBookmarkPosMap::iterator aFind = ::std::find_if(m_aPosToBookmarks.begin(),m_aPosToBookmarks.end(),
+    TBookmarkPosMap::const_iterator aFind = ::std::find_if(m_aPosToBookmarks.begin(),m_aPosToBookmarks.end(),
         [this] (const TBookmarkPosMap::value_type& bookmarkPos) {
             return bookmarkPos.second == m_nRowPos;
         });
@@ -1171,7 +1169,7 @@ Sequence<sal_Int8> OResultSet::impl_getBookmark(  ) throw( SQLException,  Runtim
     {
         if ( m_nUseBookmarks == ODBC_SQL_NOT_DEFINED )
         {
-            m_nUseBookmarks = getStmtOption<SQLULEN, SQL_IS_UINTEGER>(SQL_ATTR_USE_BOOKMARKS, SQL_UB_OFF);
+            m_nUseBookmarks = getStmtOption<SQLULEN, SQL_IS_UINTEGER>(SQL_ATTR_USE_BOOKMARKS);
         }
         if(m_nUseBookmarks == SQL_UB_OFF)
             throw SQLException();
@@ -1204,7 +1202,7 @@ sal_Bool SAL_CALL OResultSet::moveToBookmark( const  Any& bookmark ) throw( SQLE
         {
             m_nCurrentFetchState = N3SQLFetchScroll(m_aStatementHandle,SQL_FETCH_BOOKMARK,0);
             OTools::ThrowException(m_pStatement->getOwnConnection(),m_nCurrentFetchState,m_aStatementHandle,SQL_HANDLE_STMT,*this);
-            TBookmarkPosMap::iterator aFind = m_aPosToBookmarks.find(aBookmark);
+            TBookmarkPosMap::const_iterator aFind = m_aPosToBookmarks.find(aBookmark);
             if(aFind != m_aPosToBookmarks.end())
                 m_nRowPos = aFind->second;
             else
@@ -1212,7 +1210,7 @@ sal_Bool SAL_CALL OResultSet::moveToBookmark( const  Any& bookmark ) throw( SQLE
             return m_nCurrentFetchState == SQL_SUCCESS || m_nCurrentFetchState == SQL_SUCCESS_WITH_INFO;
         }
     }
-    return sal_False;
+    return false;
 }
 
 sal_Bool SAL_CALL OResultSet::moveRelativeToBookmark( const  Any& bookmark, sal_Int32 rows ) throw( SQLException,  RuntimeException, std::exception)
@@ -1241,7 +1239,7 @@ sal_Int32 SAL_CALL OResultSet::compareBookmarks( const Any& lhs, const  Any& rhs
 
 sal_Bool SAL_CALL OResultSet::hasOrderedBookmarks(  ) throw( SQLException,  RuntimeException, std::exception)
 {
-    return sal_False;
+    return false;
 }
 
 sal_Int32 SAL_CALL OResultSet::hashBookmark( const  Any& /*bookmark*/ ) throw( SQLException,  RuntimeException, std::exception)
@@ -1277,9 +1275,9 @@ Sequence< sal_Int32 > SAL_CALL OResultSet::deleteRows( const  Sequence<  Any >& 
     return aRet;
 }
 
-template < typename T, SQLINTEGER BufferLength > T OResultSet::getStmtOption (SQLINTEGER fOption, T dflt) const
+template < typename T, SQLINTEGER BufferLength > T OResultSet::getStmtOption (SQLINTEGER fOption) const
 {
-    T result (dflt);
+    T result (0);
     OSL_ENSURE(m_aStatementHandle,"StatementHandle is null!");
     N3SQLGetStmtAttr(m_aStatementHandle, fOption, &result, BufferLength, nullptr);
     return result;
@@ -1369,7 +1367,7 @@ bool  OResultSet::isBookmarkable() const
 
     if ( m_nUseBookmarks == ODBC_SQL_NOT_DEFINED )
     {
-        m_nUseBookmarks = getStmtOption<SQLULEN, SQL_IS_UINTEGER>(SQL_ATTR_USE_BOOKMARKS, SQL_UB_OFF);
+        m_nUseBookmarks = getStmtOption<SQLULEN, SQL_IS_UINTEGER>(SQL_ATTR_USE_BOOKMARKS);
     }
 
     return (m_nUseBookmarks != SQL_UB_OFF) && (nAttr & SQL_CA1_BOOKMARK) == SQL_CA1_BOOKMARK;
@@ -1455,7 +1453,7 @@ sal_Bool OResultSet::convertFastPropertyValue(
         default:
             ;
     }
-    return sal_False;
+    return false;
 }
 
 void OResultSet::setFastPropertyValue_NoBroadcast(
@@ -1668,8 +1666,8 @@ bool OResultSet::move(IResultSetHelper::Movement _eCursorPosition, sal_Int32 _nO
             break;
         case IResultSetHelper::BOOKMARK: // special case here because we are only called with position numbers
         {
-            TBookmarkPosMap::iterator aIter = m_aPosToBookmarks.begin();
-            TBookmarkPosMap::iterator aEnd = m_aPosToBookmarks.end();
+            TBookmarkPosMap::const_iterator aIter = m_aPosToBookmarks.begin();
+            TBookmarkPosMap::const_iterator aEnd = m_aPosToBookmarks.end();
             for (; aIter != aEnd; ++aIter)
             {
                 if ( aIter->second == _nOffset )
@@ -1725,7 +1723,7 @@ bool OResultSet::move(IResultSetHelper::Movement _eCursorPosition, sal_Int32 _nO
         } // switch(_eCursorPosition)
         if ( m_nUseBookmarks == ODBC_SQL_NOT_DEFINED )
         {
-            m_nUseBookmarks = getStmtOption<SQLULEN, SQL_IS_UINTEGER>(SQL_ATTR_USE_BOOKMARKS, SQL_UB_OFF);
+            m_nUseBookmarks = getStmtOption<SQLULEN, SQL_IS_UINTEGER>(SQL_ATTR_USE_BOOKMARKS);
         }
         if ( m_nUseBookmarks == SQL_UB_OFF )
         {
@@ -1765,13 +1763,13 @@ bool OResultSet::isRowDeleted() const
     return m_pRowStatusArray[0] == SQL_ROW_DELETED;
 }
 
-bool OResultSet::moveImpl(IResultSetHelper::Movement _eCursorPosition, sal_Int32 _nOffset, bool _bRetrieveData)
+bool OResultSet::moveImpl(IResultSetHelper::Movement _eCursorPosition, sal_Int32 _nOffset)
 {
     ::osl::MutexGuard aGuard( m_aMutex );
     checkDisposed(OResultSet_BASE::rBHelper.bDisposed);
     return (m_pSkipDeletedSet != nullptr)
-                ?   m_pSkipDeletedSet->skipDeleted(_eCursorPosition,_nOffset,_bRetrieveData)
-                :   move(_eCursorPosition,_nOffset,_bRetrieveData);
+                ?   m_pSkipDeletedSet->skipDeleted(_eCursorPosition,_nOffset,true/*_bRetrieveData*/)
+                :   move(_eCursorPosition,_nOffset,true/*_bRetrieveData*/);
 }
 
 void OResultSet::fillNeededData(SQLRETURN _nRet)
@@ -1825,7 +1823,7 @@ void OResultSet::fillNeededData(SQLRETURN _nRet)
 
 SWORD OResultSet::impl_getColumnType_nothrow(sal_Int32 columnIndex)
 {
-    ::std::map<sal_Int32,SWORD>::iterator aFind = m_aODBCColumnTypes.find(columnIndex);
+    ::std::map<sal_Int32,SWORD>::const_iterator aFind = m_aODBCColumnTypes.find(columnIndex);
     if ( aFind == m_aODBCColumnTypes.end() )
         aFind = m_aODBCColumnTypes.insert(::std::map<sal_Int32,SWORD>::value_type(columnIndex,OResultSetMetaData::getColumnODBCType(m_pStatement->getOwnConnection(),m_aStatementHandle,*this,columnIndex))).first;
     return aFind->second;

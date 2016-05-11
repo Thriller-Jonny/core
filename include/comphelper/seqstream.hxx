@@ -20,7 +20,6 @@
 #define INCLUDED_COMPHELPER_SEQSTREAM_HXX
 
 #include <com/sun/star/uno/Sequence.hxx>
-#include <com/sun/star/uno/Reference.hxx>
 #include <com/sun/star/io/XInputStream.hpp>
 #include <com/sun/star/io/XOutputStream.hpp>
 #include <com/sun/star/io/XSeekable.hpp>
@@ -34,7 +33,6 @@ namespace comphelper
 
 // SequenceInputStream
 // stream for reading data from a sequence of bytes
-
 
 
 class COMPHELPER_DLLPUBLIC SequenceInputStream
@@ -85,7 +83,6 @@ protected:
     css::uno::Sequence< sal_Int8 >&                 m_rSequence;
     double                                          m_nResizeFactor;
     sal_Int32                                       m_nMinimumResize;
-    sal_Int32                                       m_nMaximumResize;
     sal_Int32                                       m_nSize;
         // the size of the virtual stream. This is not the size of the sequence, but the number of bytes written
         // into the stream at a given moment.
@@ -109,16 +106,12 @@ public:
                                         resize step, the new sequence size will be calculated by multiplying the current
                                         size with this factor, rounded off to the next multiple of 4.
         @param      _nMinimumResize     the minmal number of bytes which is additionally allocated on resizing
-        @param      _nMaximumResize     as the growth of the stream size is exponential, you may want to specify a
-                                        maxmimum amount of memory which the sequence will grow by. If -1 is used,
-                                        no limit is applied
         @see        closeOutput
     */
     OSequenceOutputStream(
         css::uno::Sequence< sal_Int8 >& _rSeq,
         double _nResizeFactor = 1.3,
-        sal_Int32 _nMinimumResize = 128,
-        sal_Int32 _nMaximumResize = -1
+        sal_Int32 _nMinimumResize = 128
         );
 
     /// same as XOutputStream::writeBytes (as expected :)

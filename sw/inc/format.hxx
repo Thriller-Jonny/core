@@ -81,7 +81,7 @@ public:
     virtual bool GetInfo( SfxPoolItem& ) const override;
 
     /// Copy attributes even among documents.
-    void CopyAttrs( const SwFormat&, bool bReplace=true );
+    void CopyAttrs( const SwFormat& );
 
     /// Delete all attributes that are not in rFormat.
     void DelDiffs( const SfxItemSet& rSet );
@@ -97,8 +97,7 @@ public:
     //UUUUinline
     SfxItemState GetItemState( sal_uInt16 nWhich, bool bSrchInParent = true,
                                     const SfxPoolItem **ppItem = nullptr ) const;
-    SfxItemState GetBackgroundState(SvxBrushItem &rItem,
-                                    bool bSrchInParent = true) const;
+    SfxItemState GetBackgroundState(SvxBrushItem &rItem) const;
     virtual bool SetFormatAttr( const SfxPoolItem& rAttr );
     virtual bool SetFormatAttr( const SfxItemSet& rSet );
     virtual bool ResetFormatAttr( sal_uInt16 nWhich1, sal_uInt16 nWhich2 = 0 );
@@ -110,7 +109,7 @@ public:
     inline SwFormat* DerivedFrom() const { return const_cast<SwFormat*>(static_cast<const SwFormat*>(GetRegisteredIn())); }
     inline bool IsDefault() const { return DerivedFrom() == nullptr; }
 
-    inline OUString GetName() const                  { return m_aFormatName; }
+    const OUString& GetName() const                  { return m_aFormatName; }
     inline bool HasName(const OUString &rName) const { return m_aFormatName == rName; }
     void SetName( const OUString& rNewName, bool bBroadcast=false );
 

@@ -38,7 +38,8 @@
 #include <vcl/fontcapabilities.hxx>
 #include <vcl/metric.hxx>
 
-#include "outfont.hxx"
+#include "fontinstance.hxx"
+#include "impfontmetricdata.hxx"
 #include "PhysicalFontFace.hxx"
 #include "salgdi.hxx"
 
@@ -46,7 +47,7 @@
 #include <unordered_map>
 
 class AquaSalFrame;
-class ImplDevFontAttributes;
+class FontAttributes;
 class CoreTextStyle;
 class XorEmulation;
 
@@ -54,14 +55,14 @@ typedef sal_uInt32 sal_GlyphId;
 typedef std::vector<unsigned char> ByteVector;
 
 // CoreText-specific physically available font face
-class CoreTextFontData : public PhysicalFontFace
+class CoreTextFontFace : public PhysicalFontFace
 {
 public:
-                                    CoreTextFontData( const ImplDevFontAttributes&, sal_IntPtr nFontID );
-    virtual                         ~CoreTextFontData();
+                                    CoreTextFontFace( const FontAttributes&, sal_IntPtr nFontID );
+    virtual                         ~CoreTextFontFace();
 
     PhysicalFontFace*               Clone() const override;
-    ImplFontEntry*                  CreateFontInstance( FontSelectPattern& ) const override;
+    LogicalFontInstance*            CreateFontInstance( FontSelectPattern& ) const override;
     sal_IntPtr                      GetFontId() const override;
 
     int                             GetFontTable( const char pTagName[5], unsigned char* ) const;
@@ -74,11 +75,11 @@ public:
     void                            ReadMacCmapEncoding() const;
 
 protected:
-                                    CoreTextFontData( const CoreTextFontData& );
+                                    CoreTextFontFace( const CoreTextFontFace& );
 
 private:
     const sal_IntPtr                mnFontId;
-    mutable FontCharMapPtr          mpCharMap;
+    mutable FontCharMapPtr          mxCharMap;
     mutable vcl::FontCapabilities   maFontCapabilities;
     mutable bool                    mbOs2Read;       // true if OS2-table related info is valid
     mutable bool                    mbHasOs2Table;
@@ -94,11 +95,11 @@ public:
 
     SalLayout* GetTextLayout( void ) const;
 
-    void       GetFontMetric( ImplFontMetricData& ) const;
+    void       GetFontMetric( ImplFontMetricDataPtr& ) const;
     bool       GetGlyphBoundRect( sal_GlyphId, Rectangle& ) const;
     bool       GetGlyphOutline( sal_GlyphId, basegfx::B2DPolyPolygon& ) const;
 
-    const CoreTextFontData*  mpFontData;
+    const CoreTextFontFace*  mpFontData;
     /// <1.0: font is squeezed, >1.0 font is stretched, else 1.0
     float               mfFontStretch;
     /// text rotation in radian
@@ -112,7 +113,6 @@ private:
     CFMutableDictionaryRef  GetStyleDict( void ) const { return mpStyleDict; }
 };
 
-// - SystemFontList -
 // TODO: move into cross-platform headers
 
 class SystemFontList
@@ -122,20 +122,19 @@ public:
     ~SystemFontList( void );
 
     bool        Init( void );
-    void        AddFont( CoreTextFontData* );
+    void        AddFont( CoreTextFontFace* );
 
     void    AnnounceFonts( PhysicalFontCollection& ) const;
-    CoreTextFontData* GetFontDataFromId( sal_IntPtr nFontId ) const;
+    CoreTextFontFace* GetFontDataFromId( sal_IntPtr nFontId ) const;
 
 private:
     CTFontCollectionRef mpCTFontCollection;
     CFArrayRef mpCTFontArray;
 
-    typedef std::unordered_map<sal_IntPtr,CoreTextFontData*> CTFontContainer;
+    typedef std::unordered_map<sal_IntPtr,CoreTextFontFace*> CTFontContainer;
     CTFontContainer maFontContainer;
 };
 
-// - AquaSalGraphics -
 
 class AquaSalGraphics : public SalGraphics
 {
@@ -166,7 +165,7 @@ protected:
     RGBAColor                               maFillColor;
 
     // Device Font settings
-    const CoreTextFontData*                 mpFontData;
+    const CoreTextFontFace*                 mpFontData;
     CoreTextStyle*                          mpTextStyle;
     RGBAColor                               maTextColor;
     /// allows text to be rendered without antialiasing
@@ -247,7 +246,8 @@ public:
                                 double fTransparency,
                                 const basegfx::B2DVector& rLineWidths,
                                 basegfx::B2DLineJoin,
-                                css::drawing::LineCap eLineCap) override;
+                                css::drawing::LineCap eLineCap,
+                                double fMiterMinimumAngle) override;
     virtual bool            drawGradient( const tools::PolyPolygon&, const Gradient& ) override { return false; };
 
     // CopyArea --> No RasterOp, but ClipRegion
@@ -338,7 +338,7 @@ public:
     // set the font
     virtual sal_uInt16      SetFont( FontSelectPattern*, int nFallbackLevel ) override;
     // get the current font's metrics
-    virtual void            GetFontMetric( ImplFontMetricData*, int nFallbackLevel ) override;
+    virtual void            GetFontMetric( ImplFontMetricDataPtr&, int nFallbackLevel ) override;
     // get the repertoire of the current font
     virtual const FontCharMapPtr GetFontCharMap() const override;
     virtual bool            GetFontCapabilities(vcl::FontCapabilities &rFontCapabilities) const override;

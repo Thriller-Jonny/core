@@ -55,7 +55,7 @@ class ScStyleFamiliesObj : public ::cppu::WeakImplHelper<
 private:
     ScDocShell*             pDocShell;
 
-    ScStyleFamilyObj*       GetObjectByType_Impl(sal_uInt16 Type) const;
+    ScStyleFamilyObj*       GetObjectByType_Impl(SfxStyleFamily nType) const;
     ScStyleFamilyObj*       GetObjectByIndex_Impl(sal_uInt32 nIndex) const;
     ScStyleFamilyObj*       GetObjectByName_Impl(const OUString& aName) const;
 
@@ -231,8 +231,8 @@ private:
                                                   css::uno::RuntimeException,
                                                   std::exception);
 
-    ScStyleObj(); // disabled
 public:
+                            ScStyleObj() = delete;
                             ScStyleObj(ScDocShell* pDocSh, SfxStyleFamily eFam, const OUString& rName);
     virtual                 ~ScStyleObj();
 

@@ -161,7 +161,7 @@ SdrObject* SwDoc::CloneSdrObj( const SdrObject& rObj, bool bMoveWithinDoc,
     return pObj;
 }
 
-SwFlyFrameFormat* SwDoc::_MakeFlySection( const SwPosition& rAnchPos,
+SwFlyFrameFormat* SwDoc::MakeFlySection_( const SwPosition& rAnchPos,
                                     const SwContentNode& rNode,
                                     RndStdIds eRequestId,
                                     const SfxItemSet* pFlySet,
@@ -341,7 +341,7 @@ SwFlyFrameFormat* SwDoc::MakeFlySection( RndStdIds eAnchorType,
             static_cast<SwContentNode *>(pNewTextNd)->SetAttr(*pItem);
         }
 
-         pFormat = _MakeFlySection( *pAnchorPos, *pNewTextNd,
+         pFormat = MakeFlySection_( *pAnchorPos, *pNewTextNd,
                                 eAnchorType, pFlySet, pFrameFormat );
     }
     return pFormat;
@@ -675,9 +675,9 @@ lcl_InsertLabel(SwDoc & rDoc, SwTextFormatColls *const pTextFormatCollTable,
     {
         case LTYPE_TABLE:
             bTable = true;
-            // no break here
+            SAL_FALLTHROUGH;
         case LTYPE_FLY:
-            // At the FlySection's Beginning/End insert the corresponding Node with it's Field.
+            // At the FlySection's Beginning/End insert the corresponding Node with its Field.
             // The Frame is created automatically.
             {
                 SwStartNode *pSttNd = rDoc.GetNodes()[nNdIdx]->GetStartNode();
@@ -1328,7 +1328,10 @@ static OUString lcl_GetUniqueFlyName(const SwDoc* pDoc, sal_uInt16 nDefStrId, RE
             // so determine the number
             nNum = n * 8;
             while( nTmp & 1 )
-                ++nNum, nTmp >>= 1;
+            {
+                ++nNum;
+                nTmp >>= 1;
+            }
             break;
         }
     }
@@ -1616,7 +1619,7 @@ short SwDoc::GetTextDirection( const SwPosition& rPos,
 
             if( !pItem )
             {
-                const SwPageDesc* pPgDsc = pNd->FindPageDesc( false );
+                const SwPageDesc* pPgDsc = pNd->FindPageDesc();
                 if( pPgDsc )
                     pItem = &pPgDsc->GetMaster().GetFrameDir();
             }
@@ -1629,9 +1632,9 @@ short SwDoc::GetTextDirection( const SwPosition& rPos,
     return nRet;
 }
 
-bool SwDoc::IsInVerticalText( const SwPosition& rPos, const Point* pPt ) const
+bool SwDoc::IsInVerticalText( const SwPosition& rPos ) const
 {
-    const short nDir = GetTextDirection( rPos, pPt );
+    const short nDir = GetTextDirection( rPos );
     return FRMDIR_VERT_TOP_RIGHT == nDir || FRMDIR_VERT_TOP_LEFT == nDir;
 }
 

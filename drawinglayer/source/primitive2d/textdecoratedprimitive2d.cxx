@@ -30,7 +30,6 @@
 #include <drawinglayer/primitive2d/textbreakuphelper.hxx>
 
 
-
 namespace drawinglayer
 {
     namespace primitive2d
@@ -162,7 +161,7 @@ namespace drawinglayer
                 // support for single word mode; split to single word primitives
                 // using TextBreakupHelper
                 const TextBreakupHelper aTextBreakupHelper(*this);
-                const Primitive2DContainer aBroken(aTextBreakupHelper.getResult(BreakupUnit_word));
+                const Primitive2DContainer& aBroken(aTextBreakupHelper.getResult(BreakupUnit_word));
 
                 if(!aBroken.empty())
                 {
@@ -353,7 +352,7 @@ namespace drawinglayer
             return (TEXT_LINE_NONE != getFontOverline()
                  || TEXT_LINE_NONE != getFontUnderline()
                  || TEXT_STRIKEOUT_NONE != getTextStrikeout()
-                 || TEXT_EMPHASISMARK_NONE != getTextEmphasisMark()
+                 || TEXT_FONT_EMPHASIS_MARK_NONE != getTextEmphasisMark()
                  || TEXT_RELIEF_NONE != getTextRelief()
                  || getShadow());
         }

@@ -31,6 +31,7 @@
 #include <vcl/msgbox.hxx>
 #include <vcl/settings.hxx>
 #include <vcl/builderfactory.hxx>
+#include <vcl/fontcharmap.hxx>
 #include <svl/stritem.hxx>
 
 #include <cuires.hrc>
@@ -87,7 +88,7 @@ SvxCharacterMap::SvxCharacterMap( vcl::Window* pParent, bool bOne_, const SfxIte
     const SfxStringItem* pFontNameItem = SfxItemSet::GetItem<SfxStringItem>(pSet, SID_FONT_NAME, false);
     if ( pFontItem )
     {
-        vcl::Font aTmpFont( pFontItem->GetFamilyName(), pFontItem->GetStyleName(), GetCharFont().GetSize() );
+        vcl::Font aTmpFont( pFontItem->GetFamilyName(), pFontItem->GetStyleName(), GetCharFont().GetFontSize() );
         aTmpFont.SetCharSet( pFontItem->GetCharSet() );
         aTmpFont.SetPitch( pFontItem->GetPitch() );
         SetCharFont( aTmpFont );
@@ -95,7 +96,7 @@ SvxCharacterMap::SvxCharacterMap( vcl::Window* pParent, bool bOne_, const SfxIte
     else if ( pFontNameItem )
     {
         vcl::Font aTmpFont( GetCharFont() );
-        aTmpFont.SetName( pFontNameItem->GetValue() );
+        aTmpFont.SetFamilyName( pFontNameItem->GetValue() );
         SetCharFont( aTmpFont );
     }
 
@@ -130,20 +131,16 @@ void SvxCharacterMap::SetChar( sal_UCS4 c )
 }
 
 
-
 sal_UCS4 SvxCharacterMap::GetChar() const
 {
     return m_pShowSet->GetSelectCharacter();
 }
 
 
-
 OUString SvxCharacterMap::GetCharacters() const
 {
     return m_pShowText->GetText();
 }
-
-
 
 
 void SvxCharacterMap::DisableFontSelection()
@@ -163,9 +160,9 @@ short SvxCharacterMap::Execute()
             const SfxItemPool* pPool = pSet->GetPool();
             const vcl::Font& rFont( GetCharFont() );
             pSet->Put( SfxStringItem( pPool->GetWhich(SID_CHARMAP), GetCharacters() ) );
-            pSet->Put( SvxFontItem( rFont.GetFamily(), rFont.GetName(),
+            pSet->Put( SvxFontItem( rFont.GetFamilyType(), rFont.GetFamilyName(),
                 rFont.GetStyleName(), rFont.GetPitch(), rFont.GetCharSet(), pPool->GetWhich(SID_ATTR_CHAR_FONT) ) );
-            pSet->Put( SfxStringItem( pPool->GetWhich(SID_FONT_NAME), rFont.GetName() ) );
+            pSet->Put( SfxStringItem( pPool->GetWhich(SID_FONT_NAME), rFont.GetFamilyName() ) );
             pSet->Put( SfxInt32Item( pPool->GetWhich(SID_ATTR_CHAR), GetChar() ) );
         }
     }
@@ -176,10 +173,10 @@ short SvxCharacterMap::Execute()
 
 // class SvxShowText =====================================================
 
-SvxShowText::SvxShowText(vcl::Window* pParent, bool bCenter)
+SvxShowText::SvxShowText(vcl::Window* pParent)
     : Control(pParent)
     , mnY(0)
-    , mbCenter(bCenter)
+    , mbCenter(false)
 {}
 
 VCL_BUILDER_FACTORY(SvxShowText)
@@ -203,7 +200,7 @@ void SvxShowText::Paint(vcl::RenderContext& rRenderContext, const Rectangle&)
     bool bGotBoundary = true;
     bool bShrankFont = false;
     vcl::Font aOrigFont(rRenderContext.GetFont());
-    Size aFontSize(aOrigFont.GetSize());
+    Size aFontSize(aOrigFont.GetFontSize());
     Rectangle aBoundRect;
 
     for (long nFontHeight = aFontSize.Height(); nFontHeight > 0; nFontHeight -= 5)
@@ -221,7 +218,7 @@ void SvxShowText::Paint(vcl::RenderContext& rRenderContext, const Rectangle&)
             break;
         vcl::Font aFont(aOrigFont);
         aFontSize.Height() = nFontHeight;
-        aFont.SetSize(aFontSize);
+        aFont.SetFontSize(aFontSize);
         rRenderContext.SetFont(aFont);
         mnY = (nWinHeight - GetTextHeight()) / 2;
         bShrankFont = true;
@@ -268,14 +265,13 @@ void SvxShowText::Paint(vcl::RenderContext& rRenderContext, const Rectangle&)
 }
 
 
-
 void SvxShowText::SetFont( const vcl::Font& rFont )
 {
     long nWinHeight = GetOutputSizePixel().Height();
     maFont = vcl::Font(rFont);
     maFont.SetWeight(WEIGHT_NORMAL);
-    maFont.SetAlign(ALIGN_TOP);
-    maFont.SetSize(PixelToLogic(Size(0, nWinHeight / 2)));
+    maFont.SetAlignment(ALIGN_TOP);
+    maFont.SetFontSize(PixelToLogic(Size(0, nWinHeight / 2)));
     maFont.SetTransparent(true);
     Control::SetFont(maFont);
 
@@ -287,7 +283,7 @@ void SvxShowText::SetFont( const vcl::Font& rFont )
 Size SvxShowText::GetOptimalSize() const
 {
     const vcl::Font &rFont = GetFont();
-    const Size rFontSize = rFont.GetSize();
+    const Size rFontSize = rFont.GetFontSize();
     long nWinHeight = LogicToPixel(rFontSize).Height() * 2;
     return Size( GetTextWidth( GetText() ) + 2 * 12, nWinHeight );
 }
@@ -299,13 +295,11 @@ void SvxShowText::Resize()
 }
 
 
-
 void SvxShowText::SetText( const OUString& rText )
 {
     Control::SetText( rText );
     Invalidate();
 }
-
 
 
 // class SvxCharacterMap =================================================
@@ -324,12 +318,12 @@ void SvxCharacterMap::init()
         m_pShowText->Hide();
     }
 
-    OUString aDefStr( aFont.GetName() );
+    OUString aDefStr( aFont.GetFamilyName() );
     OUString aLastName;
     int nCount = GetDevFontCount();
     for ( int i = 0; i < nCount; i++ )
     {
-        OUString aFontName( GetDevFont( i ).GetName() );
+        OUString aFontName( GetDevFont( i ).GetFamilyName() );
         if ( aFontName != aLastName )
         {
             aLastName = aFontName;
@@ -380,24 +374,22 @@ void SvxCharacterMap::init()
 }
 
 
-
 void SvxCharacterMap::SetCharFont( const vcl::Font& rFont )
 {
     // first get the underlying info in order to get font names
     // like "Times New Roman;Times" resolved
     vcl::Font aTmp( GetFontMetric( rFont ) );
 
-    if ( m_pFontLB->GetEntryPos( aTmp.GetName() ) == LISTBOX_ENTRY_NOTFOUND )
+    if ( m_pFontLB->GetEntryPos( aTmp.GetFamilyName() ) == LISTBOX_ENTRY_NOTFOUND )
         return;
 
-    m_pFontLB->SelectEntry( aTmp.GetName() );
+    m_pFontLB->SelectEntry( aTmp.GetFamilyName() );
     aFont = aTmp;
     FontSelectHdl(*m_pFontLB);
 
     // for compatibility reasons
     ModalDialog::SetFont( aFont );
 }
-
 
 
 IMPL_LINK_NOARG_TYPED(SvxCharacterMap, OKHdl, Button*, void)
@@ -427,7 +419,6 @@ void SvxCharacterMap::fillAllSubsets(ListBox &rListBox)
 }
 
 
-
 IMPL_LINK_NOARG_TYPED(SvxCharacterMap, FontSelectHdl, ListBox&, void)
 {
     const sal_Int32 nPos = m_pFontLB->GetSelectEntryPos();
@@ -454,9 +445,9 @@ IMPL_LINK_NOARG_TYPED(SvxCharacterMap, FontSelectHdl, ListBox&, void)
     bool bNeedSubset = (aFont.GetCharSet() != RTL_TEXTENCODING_SYMBOL);
     if( bNeedSubset )
     {
-        FontCharMapPtr pFontCharMap( new FontCharMap() );
-        m_pShowSet->GetFontCharMap( pFontCharMap );
-        pSubsetMap = new SubsetMap( pFontCharMap );
+        FontCharMapPtr xFontCharMap( new FontCharMap() );
+        m_pShowSet->GetFontCharMap( xFontCharMap );
+        pSubsetMap = new SubsetMap( xFontCharMap );
 
         // update subset listbox for new font's unicode subsets
         // TODO: is it worth to improve the stupid linear search?
@@ -480,7 +471,6 @@ IMPL_LINK_NOARG_TYPED(SvxCharacterMap, FontSelectHdl, ListBox&, void)
 }
 
 
-
 IMPL_LINK_NOARG_TYPED(SvxCharacterMap, SubsetSelectHdl, ListBox&, void)
 {
     const sal_Int32 nPos = m_pSubsetLB->GetSelectEntryPos();
@@ -494,7 +484,6 @@ IMPL_LINK_NOARG_TYPED(SvxCharacterMap, SubsetSelectHdl, ListBox&, void)
 }
 
 
-
 IMPL_LINK_NOARG_TYPED(SvxCharacterMap, CharDoubleClickHdl, SvxShowCharSet*, void)
 {
     if (bOne)
@@ -504,7 +493,6 @@ IMPL_LINK_NOARG_TYPED(SvxCharacterMap, CharDoubleClickHdl, SvxShowCharSet*, void
     }
     EndDialog( RET_OK );
 }
-
 
 
 IMPL_LINK_NOARG_TYPED(SvxCharacterMap, CharSelectHdl, SvxShowCharSet*, void)
@@ -536,7 +524,6 @@ IMPL_LINK_NOARG_TYPED(SvxCharacterMap, CharSelectHdl, SvxShowCharSet*, void)
     }
     m_pOKBtn->Enable();
 }
-
 
 
 IMPL_LINK_NOARG_TYPED(SvxCharacterMap, CharHighlightHdl, SvxShowCharSet*, void)
@@ -599,9 +586,9 @@ void SvxCharacterMap::selectCharByCode(Radix radix)
     // Convert the code back to a character using the appropriate radix
     sal_UCS4 cChar = aCodeString.toUInt32(static_cast<sal_Int16> (radix));
     // Use FontCharMap::HasChar(sal_UCS4 cChar) to see if the desired character is in the font
-    FontCharMapPtr pFontCharMap(new FontCharMap());
-    m_pShowSet->GetFontCharMap(pFontCharMap);
-    if (pFontCharMap->HasChar(cChar))
+    FontCharMapPtr xFontCharMap(new FontCharMap());
+    m_pShowSet->GetFontCharMap(xFontCharMap);
+    if (xFontCharMap->HasChar(cChar))
         // Select the corresponding character
         SetChar(cChar);
 }

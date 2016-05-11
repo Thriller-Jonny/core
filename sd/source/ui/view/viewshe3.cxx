@@ -103,9 +103,7 @@ void  ViewShell::GetMenuState( SfxItemSet &rSet )
 
                 if( pStyleSheet )
                 {
-                    SfxStyleFamily eFamily = pStyleSheet->GetFamily();
-                    nFamily = SfxTemplate::SfxFamilyIdToNId(eFamily);
-                    GetDocSh()->SetStyleFamily(nFamily);
+                    GetDocSh()->SetStyleFamily(pStyleSheet->GetFamily());
                 }
             }
         }
@@ -258,7 +256,7 @@ SdPage* ViewShell::CreateOrDuplicatePage (
         const SfxBoolItem* pIsPageBack = rRequest.GetArg<SfxBoolItem>(ID_VAL_ISPAGEBACK);
         const SfxBoolItem* pIsPageObj = rRequest.GetArg<SfxBoolItem>(ID_VAL_ISPAGEOBJ);
 
-        if (CHECK_RANGE (AUTOLAYOUT__START, (AutoLayout) pLayout->GetValue (), AUTOLAYOUT__END))
+        if (CHECK_RANGE (AUTOLAYOUT_START, (AutoLayout) pLayout->GetValue (), AUTOLAYOUT_END))
         {
             if (ePageKind == PK_NOTES)
             {

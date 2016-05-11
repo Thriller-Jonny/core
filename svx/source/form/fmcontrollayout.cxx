@@ -55,8 +55,6 @@ namespace svxform
     using ::com::sun::star::uno::RuntimeException;
     using ::com::sun::star::uno::Any;
     using ::com::sun::star::uno::makeAny;
-    using ::com::sun::star::uno::Sequence;
-    using ::com::sun::star::uno::Type;
     using ::com::sun::star::beans::XPropertySet;
     using ::com::sun::star::beans::XPropertySetInfo;
     using ::com::sun::star::lang::Locale;
@@ -99,7 +97,7 @@ namespace svxform
         }
 
 
-        static bool lcl_getDocumentDefaultStyleAndFamily( const Reference< XInterface >& _rxDocument, OUString& _rFamilyName, OUString& _rStyleName )
+        bool lcl_getDocumentDefaultStyleAndFamily( const Reference< XInterface >& _rxDocument, OUString& _rFamilyName, OUString& _rStyleName )
         {
             bool bSuccess = true;
             Reference< XServiceInfo > xDocumentSI( _rxDocument, UNO_QUERY );
@@ -131,7 +129,7 @@ namespace svxform
         }
 
 
-        static void lcl_initializeControlFont( const Reference< XPropertySet >& _rxModel )
+        void lcl_initializeControlFont( const Reference< XPropertySet >& _rxModel )
         {
             try
             {

@@ -181,7 +181,7 @@ void ScAnnotationEditSource::UpdateData()
             EditTextObject* pEditObj = pEditEngine->CreateTextObject();
             OutlinerParaObject* pOPO = new OutlinerParaObject( *pEditObj );
             delete pEditObj;
-            pOPO->SetOutlinerMode( OUTLINERMODE_TEXTOBJECT );
+            pOPO->SetOutlinerMode( OutlinerMode::TextObject );
             pObj->NbcSetOutlinerParaObject( pOPO );
             pObj->ActionChanged();
         }
@@ -202,7 +202,7 @@ void ScAnnotationEditSource::Notify( SfxBroadcaster&, const SfxHint& rHint )
     }
     else if ( dynamic_cast<const SfxSimpleHint*>(&rHint) )
     {
-        sal_uLong nId = static_cast<const SfxSimpleHint&>(rHint).GetId();
+        const sal_uInt32 nId = static_cast<const SfxSimpleHint&>(rHint).GetId();
         if ( nId == SFX_HINT_DYING )
         {
             pDocShell = nullptr;                       // ungueltig geworden

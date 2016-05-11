@@ -20,7 +20,7 @@
 
 #include "rtl/alloc.h"
 #include <vcl/graph.hxx>
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/fltcall.hxx>
 #include <svl/solar.hrc>
@@ -50,7 +50,7 @@ private:
     SvStream &m_rPCD;
     BitmapWriteAccess*  mpAcc;
 
-    sal_uInt8               nOrientation;   // orientation of the picture withinthe PCD file:
+    sal_uInt8               nOrientation;   // orientation of the picture within the PCD file:
                                         // 0 - spire point up
                                         // 1 - spire points to the right
                                         // 2 - spire points down
@@ -161,12 +161,12 @@ bool PCDReader::ReadPCD( Graphic & rGraphic, FilterConfigItem* pConfigItem )
 
         ReadImage();
 
-        Bitmap::ReleaseAccess( mpAcc ), mpAcc = nullptr;
+        Bitmap::ReleaseAccess( mpAcc );
+        mpAcc = nullptr;
         rGraphic = aBmp;
     }
     return bStatus;
 }
-
 
 
 void PCDReader::CheckPCDImagePacFile()
@@ -181,7 +181,6 @@ void PCDReader::CheckPCDImagePacFile()
 }
 
 
-
 void PCDReader::ReadOrientation()
 {
     if ( !bStatus )
@@ -190,7 +189,6 @@ void PCDReader::ReadOrientation()
     m_rPCD.ReadUChar( nOrientation );
     nOrientation &= 0x03;
 }
-
 
 
 void PCDReader::ReadImage()

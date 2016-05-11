@@ -334,7 +334,8 @@ oslFileError SAL_CALL osl_getNextDirectoryItem(oslDirectory Directory, oslDirect
     DirectoryItem_Impl * pImpl = static_cast< DirectoryItem_Impl* >(*pItem);
     if (nullptr != pImpl)
     {
-        pImpl->release(), pImpl = nullptr;
+        pImpl->release();
+        pImpl = nullptr;
     }
 #ifdef _DIRENT_HAVE_D_TYPE
     pImpl = new DirectoryItem_Impl(ustrFilePath, pEntry->d_type);
@@ -802,7 +803,8 @@ static oslFileError oslDoCopy(const sal_Char* pszSourceFileName, const sal_Char*
     if ( DestFileExists )
     {
         //TODO: better pick a temp file name instead of adding .osl-tmp:
-        tmpDestFile = rtl::OString(pszSourceFileName) + ".osl-tmp";
+        // use the destination file to avoid EXDEV /* Cross-device link */
+        tmpDestFile = rtl::OString(pszDestFileName) + ".osl-tmp";
         if (rename(pszDestFileName, tmpDestFile.getStr()) != 0)
         {
             if (errno == ENOENT)

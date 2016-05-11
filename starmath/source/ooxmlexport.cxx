@@ -16,13 +16,15 @@
 using namespace oox;
 using namespace oox::core;
 
-SmOoxmlExport::SmOoxmlExport( const SmNode* pIn, OoxmlVersion v )
+SmOoxmlExport::SmOoxmlExport(const SmNode *const pIn, OoxmlVersion const v,
+        drawingml::DocumentType const documentType)
 : SmWordExportBase( pIn )
 , version( v )
+, m_DocumentType(documentType)
 {
 }
 
-bool SmOoxmlExport::ConvertFromStarMath( ::sax_fastparser::FSHelperPtr serializer )
+bool SmOoxmlExport::ConvertFromStarMath( const ::sax_fastparser::FSHelperPtr& serializer )
 {
     if( m_pTree == nullptr )
         return false;
@@ -63,7 +65,7 @@ void SmOoxmlExport::HandleText( const SmNode* pNode, int /*nLevel*/)
         m_pSerializer->singleElementNS( XML_m, XML_nor, FSEND );
         m_pSerializer->endElementNS( XML_m, XML_rPr );
     }
-    if( version == ECMA_DIALECT )
+    if (drawingml::DOCUMENT_DOCX == m_DocumentType && ECMA_DIALECT == version)
     { // HACK: MSOffice2007 does not import characters properly unless this font is explicitly given
         m_pSerializer->startElementNS( XML_w, XML_rPr, FSEND );
         m_pSerializer->singleElementNS( XML_w, XML_rFonts, FSNS( XML_w, XML_ascii ), "Cambria Math",
@@ -73,6 +75,7 @@ void SmOoxmlExport::HandleText( const SmNode* pNode, int /*nLevel*/)
     m_pSerializer->startElementNS( XML_m, XML_t, FSNS( XML_xml, XML_space ), "preserve", FSEND );
     const SmTextNode* pTemp = static_cast<const SmTextNode* >(pNode);
     SAL_INFO( "starmath.ooxml", "Text:" << OUStringToOString( pTemp->GetText(), RTL_TEXTENCODING_UTF8 ).getStr());
+    OUStringBuffer buf(pTemp->GetText());
     for(sal_Int32 i=0;i<pTemp->GetText().getLength();i++)
     {
 #if 0
@@ -92,9 +95,7 @@ void SmOoxmlExport::HandleText( const SmNode* pNode, int /*nLevel*/)
             nFace = 0x7;
         *pS << sal_uInt8(nFace+128); //typeface
 #endif
-        sal_uInt16 nChar = pTemp->GetText()[i];
-        m_pSerializer->writeEscaped( OUString( SmTextNode::ConvertSymbolToUnicode(nChar)));
-
+        buf[i] = SmTextNode::ConvertSymbolToUnicode(buf[i]);
 #if 0
         //Mathtype can only have these sort of character
         //attributes on a single character, starmath can put them
@@ -125,6 +126,7 @@ void SmOoxmlExport::HandleText( const SmNode* pNode, int /*nLevel*/)
         }
 #endif
     }
+    m_pSerializer->writeEscaped(buf.makeStringAndClear());
     m_pSerializer->endElementNS( XML_m, XML_t );
     m_pSerializer->endElementNS( XML_m, XML_r );
 }

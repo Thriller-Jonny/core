@@ -30,20 +30,11 @@ namespace svt
 {
 
 
-
     //= WizardPageImplData
-
-    struct WizardPageImplData
-    {
-        WizardPageImplData()
-        {
-        }
-    };
 
     OWizardPage::OWizardPage(vcl::Window *pParent, const OString& rID,
         const OUString& rUIXMLDescription)
         : TabPage(pParent, rID, rUIXMLDescription)
-        , m_pImpl(new WizardPageImplData)
     {
     }
 
@@ -54,7 +45,6 @@ namespace svt
 
     void OWizardPage::dispose()
     {
-        delete m_pImpl;
         TabPage::dispose();
     }
 
@@ -357,7 +347,7 @@ namespace svt
         // reset the WB_DEFBUTTON for every window which is a button
         implResetDefault(this);
 
-        // set it's new style
+        // set its new style
         if (_pNewDefButton)
             _pNewDefButton->SetStyle(_pNewDefButton->GetStyle() | WB_DEFBUTTON);
     }
@@ -506,28 +496,23 @@ namespace svt
     }
 
 
-    bool OWizardMachine::skip(sal_Int32 _nSteps)
+    void OWizardMachine::skip()
     {
-        DBG_ASSERT(_nSteps > 0, "OWizardMachine::skip: invalid number of steps!");
         // allowed to leave the current page?
         if ( !prepareLeaveCurrentState( eTravelForward ) )
-            return false;
+            return;
 
         WizardState nCurrentState = getCurrentState();
         WizardState nNextState = determineNextState(nCurrentState);
-        // loop _nSteps steps
-        while (_nSteps-- > 0)
-        {
-            if (WZS_INVALID_STATE == nNextState)
-                return false;
 
-            // remember the skipped state in the history
-            m_pImpl->aStateHistory.push(nCurrentState);
+        if (WZS_INVALID_STATE == nNextState)
+            return;
 
-            // get the next state
-            nCurrentState = nNextState;
-            nNextState = determineNextState(nCurrentState);
-        }
+        // remember the skipped state in the history
+        m_pImpl->aStateHistory.push(nCurrentState);
+
+        // get the next state
+        nCurrentState = nNextState;
 
         // show the (n+1)th page
         if (!ShowPage(nCurrentState))
@@ -538,11 +523,10 @@ namespace svt
                 // if somebody does a skip and then does not allow to leave ...
                 // (can't be a commit error, as we've already committed the current page. So if ShowPage fails here,
                 // somebody behaves really strange ...)
-            return false;
+            return;
         }
 
         // all fine
-        return true;
     }
 
 
@@ -617,9 +601,9 @@ namespace svt
     }
 
 
-    void OWizardMachine::enableAutomaticNextButtonState( bool _bEnable )
+    void OWizardMachine::enableAutomaticNextButtonState()
     {
-        m_pImpl->m_bAutoNextButtonState = _bEnable;
+        m_pImpl->m_bAutoNextButtonState = true;
     }
 
 

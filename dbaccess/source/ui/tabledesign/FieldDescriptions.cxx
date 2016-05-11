@@ -326,7 +326,7 @@ void OFieldDescription::SetAutoIncrementValue(const OUString& _sAutoIncValue)
     }
 }
 
-void OFieldDescription::SetType(TOTypeInfoSP _pType)
+void OFieldDescription::SetType(const TOTypeInfoSP& _pType)
 {
     m_pType = _pType;
     if ( m_pType.get() )
@@ -363,7 +363,7 @@ void OFieldDescription::SetTypeValue(sal_Int32 _nType)
     }
 }
 
-void OFieldDescription::SetPrecision(const sal_Int32& _rPrecision)
+void OFieldDescription::SetPrecision(sal_Int32 _rPrecision)
 {
     try
     {
@@ -378,7 +378,7 @@ void OFieldDescription::SetPrecision(const sal_Int32& _rPrecision)
     }
 }
 
-void OFieldDescription::SetScale(const sal_Int32& _rScale)
+void OFieldDescription::SetScale(sal_Int32 _rScale)
 {
     try
     {
@@ -393,7 +393,7 @@ void OFieldDescription::SetScale(const sal_Int32& _rScale)
     }
 }
 
-void OFieldDescription::SetIsNullable(const sal_Int32& _rIsNullable)
+void OFieldDescription::SetIsNullable(sal_Int32 _rIsNullable)
 {
     try
     {
@@ -408,7 +408,7 @@ void OFieldDescription::SetIsNullable(const sal_Int32& _rIsNullable)
     }
 }
 
-void OFieldDescription::SetFormatKey(const sal_Int32& _rFormatKey)
+void OFieldDescription::SetFormatKey(sal_Int32 _rFormatKey)
 {
     try
     {
@@ -595,7 +595,6 @@ bool                    OFieldDescription::IsAutoIncrement()        const
     else
         return m_bIsAutoIncrement;
 }
-
 
 
 bool                    OFieldDescription::IsNullable()             const

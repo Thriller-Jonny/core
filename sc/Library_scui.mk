@@ -24,12 +24,12 @@ $(eval $(call gb_Library_use_sdk_api,scui))
 
 $(eval $(call gb_Library_use_externals,scui,\
 	boost_headers \
+	$(call gb_Helper_optional,OPENCL, \
+		clew) \
 	mdds_headers \
 ))
 
 $(eval $(call gb_Library_use_libraries,scui,\
-	$(call gb_Helper_optional,OPENCL, \
-		clew) \
 	comphelper \
 	cppu \
 	cppuhelper \
@@ -74,7 +74,6 @@ $(eval $(call gb_Library_add_exception_objects,scui,\
     sc/source/ui/dbgui/textimportoptions \
     sc/source/ui/dbgui/tpsort \
     sc/source/ui/dbgui/tpsubt \
-    sc/source/ui/dbgui/validate \
     sc/source/ui/docshell/tpstat \
     sc/source/ui/miscdlgs/crdlg \
     sc/source/ui/miscdlgs/datafdlg \

@@ -22,7 +22,7 @@
 #include <utility>
 
 #include <osl/mutex.hxx>
-#include <cppuhelper/interfacecontainer.h>
+#include <comphelper/interfacecontainer2.hxx>
 #include <cppuhelper/supportsservice.hxx>
 #include <vcl/svapp.hxx>
 #include <comphelper/sequence.hxx>
@@ -49,15 +49,15 @@ class SwXFootnote::Impl
     : public SwClient
 {
 private:
-    ::osl::Mutex m_Mutex; // just for OInterfaceContainerHelper
+    ::osl::Mutex m_Mutex; // just for OInterfaceContainerHelper2
 
 public:
 
     SwXFootnote &               m_rThis;
     uno::WeakReference<uno::XInterface> m_wThis;
     const bool                  m_bIsEndnote;
-    ::cppu::OInterfaceContainerHelper m_EventListeners;
-    bool                        m_bIsDescriptor;
+    ::comphelper::OInterfaceContainerHelper2  m_EventListeners;
+    bool                                m_bIsDescriptor;
     const SwFormatFootnote *            m_pFormatFootnote;
     OUString             m_sLabel;
 
@@ -194,7 +194,7 @@ static char const*const g_ServicesFootnote[] =
     "com.sun.star.text.Endnote", // NB: only supported for endnotes!
 };
 
-static const size_t g_nServicesEndnote( sizeof (g_ServicesFootnote) / sizeof (g_ServicesFootnote[0]) );
+static const size_t g_nServicesEndnote( SAL_N_ELEMENTS(g_ServicesFootnote) );
 
 static const size_t g_nServicesFootnote( g_nServicesEndnote - 1 ); // NB: omit!
 
@@ -495,7 +495,7 @@ uno::Type SAL_CALL SwXFootnote::getElementType() throw (uno::RuntimeException, s
 
 sal_Bool SAL_CALL SwXFootnote::hasElements() throw (uno::RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 uno::Reference< beans::XPropertySetInfo > SAL_CALL

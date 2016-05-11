@@ -44,8 +44,6 @@ using namespace formula;
 using ::com::sun::star::uno::Any;
 using ::com::sun::star::uno::Reference;
 using ::com::sun::star::uno::Sequence;
-using ::com::sun::star::uno::UNO_QUERY;
-using ::com::sun::star::uno::UNO_QUERY_THROW;
 using ::com::sun::star::lang::IllegalArgumentException;
 using ::com::sun::star::uno::RuntimeException;
 using ::std::vector;
@@ -187,8 +185,8 @@ void ScSheetLinkObj::Refreshed_Impl()
 {
     lang::EventObject aEvent;
     aEvent.Source.set(static_cast<cppu::OWeakObject*>(this));
-    for ( size_t n=0; n<aRefreshListeners.size(); n++ )
-        aRefreshListeners[n]->refreshed( aEvent );
+    for (uno::Reference<util::XRefreshListener> & xRefreshListener : aRefreshListeners)
+        xRefreshListener->refreshed( aEvent );
 }
 
 void ScSheetLinkObj::ModifyRefreshDelay_Impl( sal_Int32 nRefresh )
@@ -216,30 +214,29 @@ void SAL_CALL ScSheetLinkObj::setPropertyValue(
                         uno::RuntimeException, std::exception)
 {
     SolarMutexGuard aGuard;
-    OUString aNameString(aPropertyName);
     OUString aValStr;
-    if ( aNameString == SC_UNONAME_LINKURL )
+    if ( aPropertyName == SC_UNONAME_LINKURL )
     {
         if ( aValue >>= aValStr )
             setFileName( aValStr );
     }
-    else if ( aNameString == SC_UNONAME_FILTER )
+    else if ( aPropertyName == SC_UNONAME_FILTER )
     {
         if ( aValue >>= aValStr )
             setFilter( aValStr );
     }
-    else if ( aNameString == SC_UNONAME_FILTOPT )
+    else if ( aPropertyName == SC_UNONAME_FILTOPT )
     {
         if ( aValue >>= aValStr )
             setFilterOptions( aValStr );
     }
-    else if ( aNameString == SC_UNONAME_REFPERIOD )
+    else if ( aPropertyName == SC_UNONAME_REFPERIOD )
     {
         sal_Int32 nRefresh = 0;
         if ( aValue >>= nRefresh )
             setRefreshDelay( nRefresh );
     }
-    else if ( aNameString == SC_UNONAME_REFDELAY )
+    else if ( aPropertyName == SC_UNONAME_REFDELAY )
     {
         sal_Int32 nRefresh = 0;
         if ( aValue >>= nRefresh )
@@ -252,17 +249,16 @@ uno::Any SAL_CALL ScSheetLinkObj::getPropertyValue( const OUString& aPropertyNam
                         uno::RuntimeException, std::exception)
 {
     SolarMutexGuard aGuard;
-    OUString aNameString(aPropertyName);
     uno::Any aRet;
-    if ( aNameString == SC_UNONAME_LINKURL )
+    if ( aPropertyName == SC_UNONAME_LINKURL )
         aRet <<= getFileName();
-    else if ( aNameString == SC_UNONAME_FILTER )
+    else if ( aPropertyName == SC_UNONAME_FILTER )
         aRet <<= getFilter();
-    else if ( aNameString == SC_UNONAME_FILTOPT )
+    else if ( aPropertyName == SC_UNONAME_FILTOPT )
         aRet <<= getFilterOptions();
-    else if ( aNameString == SC_UNONAME_REFPERIOD )
+    else if ( aPropertyName == SC_UNONAME_REFPERIOD )
         aRet <<= getRefreshDelay();
-    else if ( aNameString == SC_UNONAME_REFDELAY )
+    else if ( aPropertyName == SC_UNONAME_REFDELAY )
         aRet <<= getRefreshDelay();
     return aRet;
 }
@@ -323,14 +319,13 @@ OUString ScSheetLinkObj::getFilter() const
     return aRet;
 }
 
-void ScSheetLinkObj::setFilter(const OUString& Filter)
+void ScSheetLinkObj::setFilter(const OUString& rFilter)
 {
     SolarMutexGuard aGuard;
     ScTableLink* pLink = GetLink_Impl();
     if (pLink)
     {
-        OUString aFilterStr(Filter);
-        pLink->Refresh( aFileName, aFilterStr, nullptr, pLink->GetRefreshDelay() );
+        pLink->Refresh( aFileName, rFilter, nullptr, pLink->GetRefreshDelay() );
     }
 }
 
@@ -432,8 +427,6 @@ ScSheetLinkObj* ScSheetLinksObj::GetObjectByName_Impl(const OUString& aName)
 
     if (pDocShell)
     {
-        OUString aNameStr(aName);
-
         ScDocument& rDoc = pDocShell->GetDocument();
         SCTAB nTabCount = rDoc.GetTableCount();
         for (SCTAB nTab=0; nTab<nTabCount; nTab++)
@@ -441,8 +434,8 @@ ScSheetLinkObj* ScSheetLinksObj::GetObjectByName_Impl(const OUString& aName)
             {
                 //! case-insensitive ???
                 OUString aLinkDoc = rDoc.GetLinkDoc( nTab );
-                if ( aLinkDoc == aNameStr )
-                    return new ScSheetLinkObj( pDocShell, aNameStr );
+                if ( aLinkDoc == aName )
+                    return new ScSheetLinkObj( pDocShell, aName );
             }
     }
 
@@ -528,8 +521,6 @@ sal_Bool SAL_CALL ScSheetLinksObj::hasByName( const OUString& aName )
 
     if (pDocShell)
     {
-        OUString aNameStr(aName);
-
         ScDocument& rDoc = pDocShell->GetDocument();
         SCTAB nTabCount = rDoc.GetTableCount();
         for (SCTAB nTab=0; nTab<nTabCount; nTab++)
@@ -537,8 +528,8 @@ sal_Bool SAL_CALL ScSheetLinksObj::hasByName( const OUString& aName )
             {
                 //! case-insensitiv ???
                 OUString aLinkDoc(rDoc.GetLinkDoc( nTab ));
-                if ( aLinkDoc == aNameStr )
-                    return sal_True;
+                if ( aLinkDoc == aName )
+                    return true;
             }
     }
     return false;
@@ -737,8 +728,8 @@ void ScAreaLinkObj::Refreshed_Impl()
 {
     lang::EventObject aEvent;
     aEvent.Source.set(static_cast<cppu::OWeakObject*>(this));
-    for ( size_t n=0; n<aRefreshListeners.size(); n++ )
-        aRefreshListeners[n]->refreshed( aEvent );
+    for (uno::Reference<util::XRefreshListener> & xRefreshListener : aRefreshListeners)
+        xRefreshListener->refreshed( aEvent );
 }
 
 // XPropertySet
@@ -759,30 +750,29 @@ void SAL_CALL ScAreaLinkObj::setPropertyValue(
                         uno::RuntimeException, std::exception)
 {
     SolarMutexGuard aGuard;
-    OUString aNameString(aPropertyName);
     OUString aValStr;
-    if ( aNameString == SC_UNONAME_LINKURL )
+    if ( aPropertyName == SC_UNONAME_LINKURL )
     {
         if ( aValue >>= aValStr )
             setFileName( aValStr );
     }
-    else if ( aNameString == SC_UNONAME_FILTER )
+    else if ( aPropertyName == SC_UNONAME_FILTER )
     {
         if ( aValue >>= aValStr )
             setFilter( aValStr );
     }
-    else if ( aNameString == SC_UNONAME_FILTOPT )
+    else if ( aPropertyName == SC_UNONAME_FILTOPT )
     {
         if ( aValue >>= aValStr )
             setFilterOptions( aValStr );
     }
-    else if ( aNameString == SC_UNONAME_REFPERIOD )
+    else if ( aPropertyName == SC_UNONAME_REFPERIOD )
     {
         sal_Int32 nRefresh = 0;
         if ( aValue >>= nRefresh )
             setRefreshDelay( nRefresh );
     }
-    else if ( aNameString == SC_UNONAME_REFDELAY )
+    else if ( aPropertyName == SC_UNONAME_REFDELAY )
     {
         sal_Int32 nRefresh = 0;
         if ( aValue >>= nRefresh )
@@ -795,17 +785,16 @@ uno::Any SAL_CALL ScAreaLinkObj::getPropertyValue( const OUString& aPropertyName
                         uno::RuntimeException, std::exception)
 {
     SolarMutexGuard aGuard;
-    OUString aNameString(aPropertyName);
     uno::Any aRet;
-    if ( aNameString == SC_UNONAME_LINKURL )
+    if ( aPropertyName == SC_UNONAME_LINKURL )
         aRet <<= getFileName();
-    else if ( aNameString == SC_UNONAME_FILTER )
+    else if ( aPropertyName == SC_UNONAME_FILTER )
         aRet <<= getFilter();
-    else if ( aNameString == SC_UNONAME_FILTOPT )
+    else if ( aPropertyName == SC_UNONAME_FILTOPT )
         aRet <<= getFilterOptions();
-    else if ( aNameString == SC_UNONAME_REFPERIOD )
+    else if ( aPropertyName == SC_UNONAME_REFPERIOD )
         aRet <<= getRefreshDelay();
-    else if ( aNameString == SC_UNONAME_REFDELAY )
+    else if ( aPropertyName == SC_UNONAME_REFDELAY )
         aRet <<= getRefreshDelay();
     return aRet;
 }
@@ -960,14 +949,11 @@ void SAL_CALL ScAreaLinksObj::insertAtPosition( const table::CellAddress& aDestP
     if (pDocShell)
     {
         OUString aFileStr   (aFileName);
-        OUString aFilterStr (aFilter);
-        OUString aOptionStr (aFilterOptions);
-        OUString aSourceStr (aSourceArea);
         ScAddress aDestAddr( (SCCOL)aDestPos.Column, (SCROW)aDestPos.Row, aDestPos.Sheet );
 
         aFileStr = ScGlobal::GetAbsDocName( aFileStr, pDocShell );  //! in InsertAreaLink ???
-        pDocShell->GetDocFunc().InsertAreaLink( aFileStr, aFilterStr, aOptionStr,
-                                                aSourceStr, ScRange(aDestAddr),
+        pDocShell->GetDocFunc().InsertAreaLink( aFileStr, aFilter, aFilterOptions,
+                                                aSourceArea, ScRange(aDestAddr),
                                                 0, false, true ); // don't move contents
     }
 }
@@ -1217,9 +1203,7 @@ void ScDDELinkObj::setResults( const uno::Sequence< uno::Sequence< uno::Any > >&
         size_t nPos = 0;
         if ( rDoc.FindDdeLink( aAppl, aTopic, aItem, SC_DDE_IGNOREMODE, nPos ) )
         {
-            uno::Any aAny;
-            aAny <<= aResults;
-            ScMatrixRef xMatrix = ScSequenceToMatrix::CreateMixedMatrix( aAny );
+            ScMatrixRef xMatrix = ScSequenceToMatrix::CreateMixedMatrix( Any(aResults) );
             bSuccess = rDoc.SetDdeLinkResultMatrix( nPos, xMatrix );
         }
     }
@@ -1235,8 +1219,8 @@ void ScDDELinkObj::Refreshed_Impl()
 {
     lang::EventObject aEvent;
     aEvent.Source.set(static_cast<cppu::OWeakObject*>(this));
-    for ( size_t n=0; n<aRefreshListeners.size(); n++ )
-        aRefreshListeners[n]->refreshed( aEvent );
+    for (uno::Reference<util::XRefreshListener> & xRefreshListener : aRefreshListeners)
+        xRefreshListener->refreshed( aEvent );
 }
 
 ScDDELinksObj::ScDDELinksObj(ScDocShell* pDocSh) :
@@ -1281,7 +1265,6 @@ ScDDELinkObj* ScDDELinksObj::GetObjectByName_Impl(const OUString& aName)
 {
     if (pDocShell)
     {
-        OUString aNamStr(aName);
         OUString aAppl, aTopic, aItem;
 
         ScDocument& rDoc = pDocShell->GetDocument();
@@ -1289,7 +1272,7 @@ ScDDELinkObj* ScDDELinksObj::GetObjectByName_Impl(const OUString& aName)
         for (size_t i=0; i<nCount; i++)
         {
             rDoc.GetDdeLinkData( i, aAppl, aTopic, aItem );
-            if ( lcl_BuildDDEName(aAppl, aTopic, aItem) == aNamStr )
+            if ( lcl_BuildDDEName(aAppl, aTopic, aItem) == aName )
                 return new ScDDELinkObj( pDocShell, aAppl, aTopic, aItem );
         }
     }
@@ -1380,7 +1363,6 @@ sal_Bool SAL_CALL ScDDELinksObj::hasByName( const OUString& aName )
     SolarMutexGuard aGuard;
     if (pDocShell)
     {
-        OUString aNamStr(aName);
         OUString aAppl, aTopic, aItem;
 
         ScDocument& rDoc = pDocShell->GetDocument();
@@ -1388,8 +1370,8 @@ sal_Bool SAL_CALL ScDDELinksObj::hasByName( const OUString& aName )
         for (size_t i=0; i<nCount; i++)
         {
             rDoc.GetDdeLinkData( i, aAppl, aTopic, aItem );
-            if ( lcl_BuildDDEName(aAppl, aTopic, aItem) == aNamStr )
-                return sal_True;
+            if ( lcl_BuildDDEName(aAppl, aTopic, aItem) == aName )
+                return true;
         }
     }
     return false;
@@ -1588,9 +1570,7 @@ Any SAL_CALL ScExternalDocLinkObj::getByName(const OUString &aName)
 
     Reference< sheet::XExternalSheetCache > aSheetCache(new ScExternalSheetCacheObj(mpDocShell, pTable, nIndex));
 
-    Any aAny;
-    aAny <<= aSheetCache;
-    return aAny;
+    return Any(aSheetCache);
 }
 
 Sequence< OUString > SAL_CALL ScExternalDocLinkObj::getElementNames()
@@ -1650,9 +1630,7 @@ Any SAL_CALL ScExternalDocLinkObj::getByIndex(sal_Int32 nApiIndex)
 
     Reference< sheet::XExternalSheetCache > aSheetCache(new ScExternalSheetCacheObj(mpDocShell, pTable, nIndex));
 
-    Any aAny;
-    aAny <<= aSheetCache;
-    return aAny;
+    return Any(aSheetCache);
 }
 
 Reference< container::XEnumeration > SAL_CALL ScExternalDocLinkObj::createEnumeration()
@@ -1719,9 +1697,7 @@ Any SAL_CALL ScExternalDocLinksObj::getByName(const OUString &aName)
     sal_uInt16 nFileId = mpRefMgr->getExternalFileId(aDocUrl);
     Reference< sheet::XExternalDocLink > aDocLink(new ScExternalDocLinkObj(mpDocShell, mpRefMgr, nFileId));
 
-    Any aAny;
-    aAny <<= aDocLink;
-    return aAny;
+    return Any(aDocLink);
 }
 
 Sequence< OUString > SAL_CALL ScExternalDocLinksObj::getElementNames()
@@ -1766,9 +1742,7 @@ Any SAL_CALL ScExternalDocLinksObj::getByIndex(sal_Int32 nIndex)
         throw lang::IndexOutOfBoundsException();
 
     Reference< sheet::XExternalDocLink > aDocLink(new ScExternalDocLinkObj(mpDocShell, mpRefMgr, nFileId));
-    Any aAny;
-    aAny <<= aDocLink;
-    return aAny;
+    return Any(aDocLink);
 }
 
 Reference< container::XEnumeration > SAL_CALL ScExternalDocLinksObj::createEnumeration()

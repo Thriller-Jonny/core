@@ -85,9 +85,6 @@ namespace frm
         :UnoControl()
         ,m_aTextListeners( *this )
         ,m_xContext( _rxORB )
-#if HAVE_FEATURE_DBCONNECTIVITY
-        ,m_aParser( _rxORB )
-#endif
         ,m_nControlClass( FormComponentType::TEXTFIELD )
         ,m_bFilterList( false )
         ,m_bMultiLine( false )
@@ -214,14 +211,14 @@ namespace frm
                 {
                     Reference< XListBox >  xListBox( getPeer(), UNO_QUERY_THROW );
                     xListBox->addItemListener( this );
+                    SAL_FALLTHROUGH;
                 }
-                // no break
 
                 case FormComponentType::COMBOBOX:
                 {
                     xVclWindow->setProperty(PROPERTY_AUTOCOMPLETE, makeAny( true ) );
+                    SAL_FALLTHROUGH;
                 }
-                // no break
 
                 default:
                 {
@@ -364,7 +361,7 @@ namespace frm
             m_aText = sText;
             TextEvent aEvt;
             aEvt.Source = *this;
-            ::cppu::OInterfaceIteratorHelper aIt( m_aTextListeners );
+            ::comphelper::OInterfaceIteratorHelper2 aIt( m_aTextListeners );
             while( aIt.hasMoreElements() )
                 static_cast<XTextListener *>(aIt.next())->textChanged( aEvt );
         }
@@ -440,7 +437,7 @@ namespace frm
             aStatement.append( " FROM " );
 
             OUString sCatalog, sSchema, sTable;
-            ::dbtools::qualifiedNameComponents( xMeta, sTableName, sCatalog, sSchema, sTable, ::dbtools::eInDataManipulation );
+            ::dbtools::qualifiedNameComponents( xMeta, sTableName, sCatalog, sSchema, sTable, ::dbtools::EComposeRule::InDataManipulation );
             aStatement.append( ::dbtools::composeTableNameForSelect( xConnection, sCatalog, sSchema, sTable ) );
 
             // execute the statement
@@ -502,7 +499,7 @@ namespace frm
 #if HAVE_FEATURE_DBCONNECTIVITY
         if ( !ensureInitialized( ) )
             // already asserted in ensureInitialized
-            return sal_True;
+            return true;
 
         OUString aText;
         switch (m_nControlClass)
@@ -515,7 +512,7 @@ namespace frm
                     aText = xText->getText();
             }   break;
             default:
-                return sal_True;
+                return true;
         }
         if (m_aText.compareTo(aText))
         {
@@ -533,19 +530,19 @@ namespace frm
                     aError.Message = FRM_RES_STRING( RID_STR_SYNTAXERROR );
                     aError.Details = sErrorMessage;
                     displayException( aError );
-                    return sal_False;
+                    return false;
                 }
             }
 
             setText(aNewText);
             TextEvent aEvt;
             aEvt.Source = *this;
-            ::cppu::OInterfaceIteratorHelper aIt( m_aTextListeners );
+            ::comphelper::OInterfaceIteratorHelper2 aIt( m_aTextListeners );
             while( aIt.hasMoreElements() )
                 static_cast< XTextListener* >( aIt.next() )->textChanged( aEvt );
         }
 #endif
-        return sal_True;
+        return true;
     }
 
     // XTextComponent
@@ -637,12 +634,12 @@ namespace frm
                     {
                         while ( xListBox->getSelectedItemPos() >= 0 )
                         {
-                            xListBox->selectItemPos( xListBox->getSelectedItemPos(), sal_False );
+                            xListBox->selectItemPos( xListBox->getSelectedItemPos(), false );
                         }
                     }
                     else
                     {
-                        xListBox->selectItem( m_aText, sal_True );
+                        xListBox->selectItem( m_aText, true );
                     }
                 }
             }

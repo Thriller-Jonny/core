@@ -34,13 +34,11 @@
 
 #include <rtl/ref.hxx>
 
-#include <boost/noncopyable.hpp>
 #include <memory>
 
 
 namespace svt { namespace table
 {
-
 
 
     //= UnoControlTableModel

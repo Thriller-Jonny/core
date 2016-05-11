@@ -358,7 +358,7 @@ sal_uLong SwXMLTextBlocks::PutBlock( SwPaM& , const OUString& )
                 pTmpMedium = new SfxMedium( xTempStorage, GetBaseURL() );
                 bool bTmpOK = pDocSh->SaveAsChildren( *pTmpMedium );
                 if( bTmpOK )
-                    bTmpOK = pDocSh->SaveCompletedChildren( false );
+                    bTmpOK = pDocSh->SaveCompletedChildren();
 
                 xTempStorage->copyToStorage( xRoot );
                 bOK = bTmpOK;
@@ -528,9 +528,9 @@ bool SwXMLTextBlocks::IsFileUCBStorage( const OUString & rFileName)
     return bRet;
 }
 
-short SwXMLTextBlocks::GetFileType() const
+SwImpBlocks::FileType SwXMLTextBlocks::GetFileType() const
 {
-    return SWBLK_XML;
+    return FileType::XML;
 }
 
 OUString SwXMLTextBlocks::GeneratePackageName ( const OUString& rShort )

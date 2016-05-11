@@ -34,8 +34,8 @@
 // document closing button
 #define IID_DOCUMENTCLOSE 1
 
-DecoToolBox::DecoToolBox( vcl::Window* pParent, WinBits nStyle ) :
-    ToolBox( pParent, nStyle )
+DecoToolBox::DecoToolBox( vcl::Window* pParent ) :
+    ToolBox( pParent, 0 )
 {
     ImplInit();
 }
@@ -126,11 +126,9 @@ MenuBarWindow::MenuBarWindow( vcl::Window* pParent ) :
     SetType(WINDOW_MENUBARWINDOW);
     pMenu = nullptr;
     pActivePopup = nullptr;
-    nSaveFocusId = 0;
     nHighlightedItem = ITEMPOS_INVALID;
     nRolloveredItem = ITEMPOS_INVALID;
     mbAutoPopup = true;
-    nSaveFocusId = 0;
     bIgnoreFirstMove = true;
     bStayActive = false;
     SetMBWHideAccel(true);
@@ -215,6 +213,8 @@ void MenuBarWindow::ShowButtons( bool bClose, bool bFloat, bool bHide )
 {
     aCloseBtn->ShowItem(IID_DOCUMENTCLOSE, bClose);
     aCloseBtn->Show(bClose || !m_aAddButtons.empty());
+    if (pMenu->mpSalMenu)
+        pMenu->mpSalMenu->ShowCloseButton(bClose);
     aFloatBtn->Show( bFloat );
     aHideBtn->Show( bHide );
     Resize();
@@ -235,7 +235,7 @@ IMPL_LINK_NOARG_TYPED(MenuBarWindow, CloseHdl, ToolBox *, void)
         // #i106052# call close hdl asynchronously to ease handler implementation
         // this avoids still being in the handler while the DecoToolBox already
         // gets destroyed
-        Application::PostUserEvent(static_cast<MenuBar*>(pMenu)->GetCloseButtonClickHdl(), pMenu);
+        Application::PostUserEvent(static_cast<MenuBar*>(pMenu)->GetCloseButtonClickHdl());
     }
     else
     {
@@ -462,15 +462,15 @@ void MenuBarWindow::ChangeHighlightItem( sal_uInt16 n, bool bSelectEntry, bool b
             // #105406# avoid saving the focus when we already have the focus
             bool bNoSaveFocus = (this == ImplGetSVData()->maWinData.mpFocusWin.get() );
 
-            if( nSaveFocusId )
+            if( xSaveFocusId != nullptr )
             {
                 if( !ImplGetSVData()->maWinData.mbNoSaveFocus )
                 {
                     // we didn't clean up last time
-                    Window::EndSaveFocus( nSaveFocusId, false );    // clean up
-                    nSaveFocusId = 0;
+                    Window::EndSaveFocus( xSaveFocusId, false );    // clean up
+                    xSaveFocusId = nullptr;
                     if( !bNoSaveFocus )
-                        nSaveFocusId = Window::SaveFocus(); // only save focus when initially activated
+                        xSaveFocusId = Window::SaveFocus(); // only save focus when initially activated
                 }
                 else {
                     ; // do nothing: we 're activated again from taskpanelist, focus was already saved
@@ -479,7 +479,7 @@ void MenuBarWindow::ChangeHighlightItem( sal_uInt16 n, bool bSelectEntry, bool b
             else
             {
                 if( !bNoSaveFocus )
-                    nSaveFocusId = Window::SaveFocus(); // only save focus when initially activated
+                    xSaveFocusId = Window::SaveFocus(); // only save focus when initially activated
             }
         }
         else
@@ -497,11 +497,11 @@ void MenuBarWindow::ChangeHighlightItem( sal_uInt16 n, bool bSelectEntry, bool b
         ImplGetSVData()->maWinData.mbNoDeactivate = false;
         if( !ImplGetSVData()->maWinData.mbNoSaveFocus )
         {
-            sal_uLong nTempFocusId = nSaveFocusId;
-            nSaveFocusId = 0;
-            Window::EndSaveFocus( nTempFocusId, bAllowRestoreFocus );
+            VclPtr<vcl::Window> xTempFocusId = xSaveFocusId;
+            xSaveFocusId = nullptr;
+            Window::EndSaveFocus( xTempFocusId, bAllowRestoreFocus );
             // #105406# restore focus to document if we could not save focus before
-            if( bDefaultToDocument && !nTempFocusId && bAllowRestoreFocus )
+            if( bDefaultToDocument && xTempFocusId == nullptr && bAllowRestoreFocus )
                 GrabFocusToDocument();
         }
     }
@@ -583,7 +583,7 @@ static void ImplAddNWFSeparator(vcl::RenderContext& rRenderContext, const Size& 
     }
 }
 
-void MenuBarWindow::HighlightItem(vcl::RenderContext& rRenderContext, sal_uInt16 nPos, bool bHighlight)
+void MenuBarWindow::HighlightItem(vcl::RenderContext& rRenderContext, sal_uInt16 nPos)
 {
     if (!pMenu)
         return;
@@ -601,73 +601,45 @@ void MenuBarWindow::HighlightItem(vcl::RenderContext& rRenderContext, sal_uInt16
                 Rectangle aRect = Rectangle(Point(nX, 1), Size(pData->aSz.Width(), GetOutputSizePixel().Height() - 2));
                 rRenderContext.Push(PushFlags::CLIPREGION);
                 rRenderContext.IntersectClipRegion(aRect);
-                bool bRollover = bHighlight && nPos != nHighlightedItem;
-                if (bHighlight)
+                bool bRollover = nPos != nHighlightedItem;
+                if (rRenderContext.IsNativeControlSupported(CTRL_MENUBAR, PART_MENU_ITEM) &&
+                    rRenderContext.IsNativeControlSupported(CTRL_MENUBAR, PART_ENTIRE_CONTROL))
                 {
-                    if (rRenderContext.IsNativeControlSupported(CTRL_MENUBAR, PART_MENU_ITEM) &&
-                        rRenderContext.IsNativeControlSupported(CTRL_MENUBAR, PART_ENTIRE_CONTROL))
-                    {
-                        // draw background (transparency)
-                        MenubarValue aControlValue;
-                        aControlValue.maTopDockingAreaHeight = ImplGetTopDockingAreaHeight( this );
+                    // draw background (transparency)
+                    MenubarValue aControlValue;
+                    aControlValue.maTopDockingAreaHeight = ImplGetTopDockingAreaHeight( this );
 
-                        if (!Application::GetSettings().GetStyleSettings().GetPersonaHeader().IsEmpty() )
-                            Erase(rRenderContext);
-                        else
-                        {
-                            Rectangle aBgRegion(Point(), GetOutputSizePixel());
-                            rRenderContext.DrawNativeControl(CTRL_MENUBAR, PART_ENTIRE_CONTROL, aBgRegion,
-                                                             ControlState::ENABLED, aControlValue, OUString());
-                        }
-
-                        ImplAddNWFSeparator(rRenderContext, GetOutputSizePixel(), aControlValue);
-
-                        // draw selected item
-                        ControlState nState = ControlState::ENABLED;
-                        if (bRollover)
-                            nState |= ControlState::ROLLOVER;
-                        else
-                            nState |= ControlState::SELECTED;
-                        rRenderContext.DrawNativeControl(CTRL_MENUBAR, PART_MENU_ITEM,
-                                                         aRect, nState, aControlValue, OUString() );
-                    }
+                    if (!Application::GetSettings().GetStyleSettings().GetPersonaHeader().IsEmpty() )
+                         Erase(rRenderContext);
                     else
                     {
-                        if (bRollover)
-                            rRenderContext.SetFillColor(rRenderContext.GetSettings().GetStyleSettings().GetMenuBarRolloverColor());
-                        else
-                            rRenderContext.SetFillColor(rRenderContext.GetSettings().GetStyleSettings().GetMenuHighlightColor());
-                        rRenderContext.SetLineColor();
-                        rRenderContext.DrawRect(aRect);
+                        Rectangle aBgRegion(Point(), GetOutputSizePixel());
+                        rRenderContext.DrawNativeControl(CTRL_MENUBAR, PART_ENTIRE_CONTROL, aBgRegion,
+                                                         ControlState::ENABLED, aControlValue, OUString());
                     }
+
+                    ImplAddNWFSeparator(rRenderContext, GetOutputSizePixel(), aControlValue);
+
+                    // draw selected item
+                    ControlState nState = ControlState::ENABLED;
+                    if (bRollover)
+                        nState |= ControlState::ROLLOVER;
+                    else
+                        nState |= ControlState::SELECTED;
+                    rRenderContext.DrawNativeControl(CTRL_MENUBAR, PART_MENU_ITEM,
+                                                     aRect, nState, aControlValue, OUString() );
                 }
                 else
                 {
-                    if (rRenderContext.IsNativeControlSupported(CTRL_MENUBAR, PART_ENTIRE_CONTROL))
-                    {
-                        MenubarValue aMenubarValue;
-                        aMenubarValue.maTopDockingAreaHeight = ImplGetTopDockingAreaHeight( this );
-
-                        if (!Application::GetSettings().GetStyleSettings().GetPersonaHeader().IsEmpty())
-                            rRenderContext.Erase(aRect);
-                        else
-                        {
-                            // use full window size to get proper gradient
-                            // but clip accordingly
-                            Point aPt;
-                            Rectangle aCtrlRect(aPt, GetOutputSizePixel());
-
-                            rRenderContext.DrawNativeControl(CTRL_MENUBAR, PART_ENTIRE_CONTROL,
-                                                             aCtrlRect, ControlState::ENABLED, aMenubarValue, OUString());
-                        }
-
-                        ImplAddNWFSeparator(rRenderContext, GetOutputSizePixel(), aMenubarValue);
-                    }
+                    if (bRollover)
+                        rRenderContext.SetFillColor(rRenderContext.GetSettings().GetStyleSettings().GetMenuBarRolloverColor());
                     else
-                        rRenderContext.Erase(aRect);
+                        rRenderContext.SetFillColor(rRenderContext.GetSettings().GetStyleSettings().GetMenuHighlightColor());
+                    rRenderContext.SetLineColor();
+                    rRenderContext.DrawRect(aRect);
                 }
                 rRenderContext.Pop();
-                pMenu->ImplPaint(rRenderContext, 0, 0, pData, bHighlight, false, bRollover);
+                pMenu->ImplPaint(rRenderContext, 0, 0, pData, true/*bHighlight*/, false, bRollover);
             }
             return;
         }
@@ -739,7 +711,7 @@ bool MenuBarWindow::HandleKeyEvent( const KeyEvent& rKEvent, bool bFromMenu )
         else
         {
             ChangeHighlightItem( ITEMPOS_INVALID, false );
-            nSaveFocusId = 0;
+            xSaveFocusId = nullptr;
         }
         bDone = true;
     }
@@ -902,7 +874,7 @@ void MenuBarWindow::Paint(vcl::RenderContext& rRenderContext, const Rectangle&)
 
     pMenu->ImplPaint(rRenderContext, 0);
     if (nHighlightedItem != ITEMPOS_INVALID)
-        HighlightItem(rRenderContext, nHighlightedItem, true);
+        HighlightItem(rRenderContext, nHighlightedItem);
 
     // in high contrast mode draw a separating line on the lower edge
     if (!rRenderContext.IsNativeControlSupported( CTRL_MENUBAR, PART_ENTIRE_CONTROL) &&
@@ -1204,6 +1176,15 @@ bool MenuBarWindow::HandleMenuButtonEvent( sal_uInt16 i_nButtonId )
         return it->second.m_aSelectLink.Call( aArg );
     }
     return false;
+}
+
+bool MenuBarWindow::CanGetFocus() const
+{
+    /* #i83908# do not use the menubar if it is native and invisible
+       this relies on MenuBar::ImplCreate setting the height of the menubar
+       to 0 in this case
+    */
+    return GetSizePixel().Height() > 0;
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

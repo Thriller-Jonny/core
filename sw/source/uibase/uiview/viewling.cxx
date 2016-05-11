@@ -54,7 +54,6 @@
 #include <olmenu.hxx>
 #include <pam.hxx>
 #include <edtwin.hxx>
-#include <crsskip.hxx>
 #include <ndtxt.hxx>
 #include <txtfrm.hxx>
 #include <vcl/lstbox.hxx>
@@ -468,7 +467,7 @@ void SwView::HyphenateDocument()
                 bOther = true;
                 if (xProp.is())
                 {
-                    xProp->setIsHyphSpecial( sal_True );
+                    xProp->setIsHyphSpecial( true );
                 }
             }
             else
@@ -661,7 +660,7 @@ bool SwView::ExecSpellPopup(const Point& rPt)
                                         &rPt, &aPoint, false);
                 if (pContentFrame)
                 {
-                    SwRect aRepaint(static_cast<SwTextFrame*>(pContentFrame)->_AutoSpell(nullptr, 0));
+                    SwRect aRepaint(static_cast<SwTextFrame*>(pContentFrame)->AutoSpell_(nullptr, 0));
                     if (aRepaint.HasArea())
                         m_pWrtShell->InvalidateWindows(aRepaint);
                 }
@@ -819,6 +818,10 @@ void SwView::ExecSmartTagPopup( const Point& rPt )
         if ( aToFill.HasArea() )
             xPopupMenu->execute( m_pEditWin->GetComponentInterface(),
                                  VCLUnoHelper::ConvertToAWTRect( m_pEditWin->LogicToPixel( aToFill.SVRect() ) ), css::awt::PopupMenuDirection::EXECUTE_DOWN );
+
+        css::uno::Reference< css::lang::XComponent > xComponent( xPopupController, css::uno::UNO_QUERY );
+        if ( xComponent.is() )
+            xComponent->dispose();
     }
 
     m_pWrtShell->Pop( false );
@@ -848,7 +851,7 @@ SwFieldDialog::SwFieldDialog( SwEditWin* parent, IFieldmark *fieldBM ) :
     {
         const IFieldmark::parameter_map_t* const pParameters = fieldBM->GetParameters();
 
-        OUString sListKey = OUString(  ODF_FORMDROPDOWN_LISTENTRY  );
+        OUString sListKey = ODF_FORMDROPDOWN_LISTENTRY;
         IFieldmark::parameter_map_t::const_iterator pListEntries = pParameters->find( sListKey );
         if(pListEntries != pParameters->end())
         {
@@ -863,7 +866,7 @@ SwFieldDialog::SwFieldDialog( SwEditWin* parent, IFieldmark *fieldBM ) :
         }
 
         // Select the current one
-        OUString sResultKey = OUString( ODF_FORMDROPDOWN_RESULT  );
+        OUString sResultKey = ODF_FORMDROPDOWN_RESULT;
         IFieldmark::parameter_map_t::const_iterator pResult = pParameters->find( sResultKey );
         if ( pResult != pParameters->end() )
         {
@@ -901,7 +904,7 @@ IMPL_LINK_TYPED( SwFieldDialog, MyListBoxHandler, ListBox&, rBox, void )
         sal_Int32 selection = rBox.GetSelectEntryPos();
         if ( selection >= 0 )
         {
-            OUString sKey = OUString(  ODF_FORMDROPDOWN_RESULT  );
+            OUString sKey = ODF_FORMDROPDOWN_RESULT;
             (*pFieldmark->GetParameters())[ sKey ] = makeAny(selection);
             pFieldmark->Invalidate();
             SwView& rView = static_cast<SwEditWin*>( GetParent() )->GetView();

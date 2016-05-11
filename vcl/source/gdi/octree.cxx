@@ -19,17 +19,13 @@
 
 #include <limits.h>
 
-#include <vcl/bmpacc.hxx>
-
-#include <impoct.hxx>
+#include <rtl/alloc.h>
+#include <vcl/bitmapaccess.hxx>
 
 #include "octree.hxx"
-
-// - pMask -
+#include "impoctree.hxx"
 
 static const sal_uInt8 pImplMask[8] = { 0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01 };
-
-// - NodeCache -
 
 ImpNodeCache::ImpNodeCache( const sal_uLong nInitSize ) :
             pActNode( nullptr )
@@ -55,8 +51,6 @@ ImpNodeCache::~ImpNodeCache()
         delete pNode;
     }
 }
-
-// - Octree -
 
 Octree::Octree( const BitmapReadAccess& rReadAcc, sal_uLong nColors ) :
             nMax        ( nColors ),
@@ -133,7 +127,7 @@ void Octree::ImplDeleteOctree( NODE** ppNode )
 
 void Octree::ImplAdd( NODE** ppNode )
 {
-    // ggf. neuen Knoten erzeugen
+    // possibly generate new nodes
     if( !*ppNode )
     {
         *ppNode = pNodeCache->ImplGetFreeNode();
@@ -237,15 +231,13 @@ void Octree::GetPalIndex( NODE* pNode )
     }
 }
 
-// - InverseColorMap -
-
 InverseColorMap::InverseColorMap( const BitmapPalette& rPal ) :
             nBits( 8 - OCTREE_BITS )
 {
-    const sal_uLong     nColorMax = 1 << OCTREE_BITS;
-    const sal_uLong     xsqr = 1 << ( nBits << 1 );
-    const sal_uLong     xsqr2 = xsqr << 1;
-    const sal_uLong     nColors = rPal.GetEntryCount();
+    const int     nColorMax = 1 << OCTREE_BITS;
+    const unsigned long xsqr = 1L << ( nBits << 1 );
+    const unsigned long xsqr2 = xsqr << 1;
+    const int     nColors = rPal.GetEntryCount();
     const long      x = 1L << nBits;
     const long      x2 = x >> 1L;
     sal_uLong           r, g, b;
@@ -253,7 +245,7 @@ InverseColorMap::InverseColorMap( const BitmapPalette& rPal ) :
 
     ImplCreateBuffers( nColorMax );
 
-    for( sal_uLong nIndex = 0; nIndex < nColors; nIndex++ )
+    for( int nIndex = 0; nIndex < nColors; nIndex++ )
     {
         const BitmapColor&  rColor = rPal[ (sal_uInt16) nIndex ];
         const long          cRed = rColor.GetRed();

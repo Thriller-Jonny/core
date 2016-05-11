@@ -239,7 +239,7 @@ namespace
         aFontItem.PutValue( uno::makeAny( aControlFont ), 0 );
         _rItemSet.Put(aFontItem);
 
-        _rItemSet.Put(SvxFontHeightItem(OutputDevice::LogicToLogic(Size(0, (sal_Int32)aFont.GetHeight()), MAP_POINT, MAP_TWIP).Height(),100,_nFontHeight));
+        _rItemSet.Put(SvxFontHeightItem(OutputDevice::LogicToLogic(Size(0, (sal_Int32)aFont.GetFontHeight()), MAP_POINT, MAP_TWIP).Height(),100,_nFontHeight));
         lang::Locale aLocale;
         switch(_nWhich)
         {
@@ -380,7 +380,7 @@ namespace
         if ( SfxItemState::SET == _rItemSet.GetItemState( _nFont,true,&pItem) && dynamic_cast< const SvxFontItem *>( pItem ) !=  nullptr)
         {
             const SvxFontItem* pFontItem = static_cast<const SvxFontItem*>(pItem);
-            aNewFont.SetName( pFontItem->GetFamilyName());
+            aNewFont.SetFamilyName(pFontItem->GetFamilyName());
             aNewFont.SetStyleName(pFontItem->GetStyleName());
             aNewFont.SetFamily(pFontItem->GetFamily());
             aNewFont.SetPitch(pFontItem->GetPitch());
@@ -389,7 +389,7 @@ namespace
         if ( SfxItemState::SET == _rItemSet.GetItemState( _nFontHeight,true,&pItem) && dynamic_cast< const SvxFontHeightItem *>( pItem ) !=  nullptr)
         {
             const SvxFontHeightItem* pFontItem = static_cast<const SvxFontHeightItem*>(pItem);
-            aNewFont.SetHeight(OutputDevice::LogicToLogic(Size(0, pFontItem->GetHeight()), MAP_TWIP, MAP_POINT).Height());
+            aNewFont.SetFontHeight(OutputDevice::LogicToLogic(Size(0, pFontItem->GetHeight()), MAP_TWIP, MAP_POINT).Height());
         }
         if ( SfxItemState::SET == _rItemSet.GetItemState( _nPosture,true,&pItem) && dynamic_cast< const SvxPostureItem *>( pItem ) !=  nullptr)
         {
@@ -540,20 +540,20 @@ namespace
                                 ,{ITEMID_LANGUAGE_ASIAN,OUString(PROPERTY_CHARLOCALEASIAN)}
                                 ,{ITEMID_LANGUAGE_COMPLEX,OUString(PROPERTY_CHARLOCALECOMPLEX)}
         };
-        for(size_t k = 0; k < sizeof(pItems)/sizeof(pItems[0]);++k)
+        for(const auto & k : pItems)
         {
-            if ( SfxItemState::SET == _rItemSet.GetItemState( pItems[k].nWhich,true,&pItem) && dynamic_cast< const SvxLanguageItem *>( pItem ) !=  nullptr)
+            if ( SfxItemState::SET == _rItemSet.GetItemState( k.nWhich,true,&pItem) && dynamic_cast< const SvxLanguageItem *>( pItem ) !=  nullptr)
             {
                 const SvxLanguageItem* pFontItem = static_cast<const SvxLanguageItem*>(pItem);
                 lang::Locale aCharLocale( LanguageTag( pFontItem->GetLanguage()).getLocale());
-                lcl_pushBack( _out_rProperties, pItems[k].sPropertyName, uno::makeAny( aCharLocale ) );
+                lcl_pushBack( _out_rProperties, k.sPropertyName, uno::makeAny( aCharLocale ) );
             }
         }
         if ( SfxItemState::SET == _rItemSet.GetItemState( ITEMID_ESCAPEMENT,true,&pItem) && dynamic_cast< const SvxEscapementItem *>( pItem ) !=  nullptr)
         {
             const SvxEscapementItem* pFontItem = static_cast<const SvxEscapementItem*>(pItem);
             lcl_pushBack( _out_rProperties, PROPERTY_CHARESCAPEMENT, uno::makeAny( pFontItem->GetEsc() ) );
-            lcl_pushBack( _out_rProperties, PROPERTY_CHARESCAPEMENTHEIGHT, uno::makeAny( (sal_Int8)pFontItem->GetProp() ) );
+            lcl_pushBack( _out_rProperties, PROPERTY_CHARESCAPEMENTHEIGHT, uno::makeAny(static_cast<sal_Int8>(pFontItem->GetProportionalHeight())) );
         }
     }
 
@@ -603,46 +603,46 @@ bool openCharDialog( const uno::Reference<report::XReportControlFormat >& _rxRep
     // UNO->ItemSet
     static SfxItemInfo aItemInfos[] =
     {
-        { SID_ATTR_CHAR_FONT, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_FONTHEIGHT, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_LANGUAGE, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_POSTURE, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_WEIGHT, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_SHADOWED, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_WORDLINEMODE, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_CONTOUR, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_STRIKEOUT, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_UNDERLINE, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_COLOR, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_KERNING, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_CASEMAP, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_ESCAPEMENT, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_FONTLIST, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_AUTOKERN, SfxItemPoolFlags::POOLABLE },
-        { SID_COLOR_TABLE, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_FLASH, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_EMPHASISMARK, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_TWO_LINES, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_ROTATED, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_SCALEWIDTH, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_RELIEF, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_HIDDEN, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_BRUSH, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_ALIGN_HOR_JUSTIFY, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_ALIGN_VER_JUSTIFY, SfxItemPoolFlags::POOLABLE },
+        { SID_ATTR_CHAR_FONT, true },
+        { SID_ATTR_CHAR_FONTHEIGHT, true },
+        { SID_ATTR_CHAR_LANGUAGE, true },
+        { SID_ATTR_CHAR_POSTURE, true },
+        { SID_ATTR_CHAR_WEIGHT, true },
+        { SID_ATTR_CHAR_SHADOWED, true },
+        { SID_ATTR_CHAR_WORDLINEMODE, true },
+        { SID_ATTR_CHAR_CONTOUR, true },
+        { SID_ATTR_CHAR_STRIKEOUT, true },
+        { SID_ATTR_CHAR_UNDERLINE, true },
+        { SID_ATTR_CHAR_COLOR, true },
+        { SID_ATTR_CHAR_KERNING, true },
+        { SID_ATTR_CHAR_CASEMAP, true },
+        { SID_ATTR_CHAR_ESCAPEMENT, true },
+        { SID_ATTR_CHAR_FONTLIST, true },
+        { SID_ATTR_CHAR_AUTOKERN, true },
+        { SID_COLOR_TABLE, true },
+        { SID_ATTR_FLASH, true },
+        { SID_ATTR_CHAR_EMPHASISMARK, true },
+        { SID_ATTR_CHAR_TWO_LINES, true },
+        { SID_ATTR_CHAR_ROTATED, true },
+        { SID_ATTR_CHAR_SCALEWIDTH, true },
+        { SID_ATTR_CHAR_RELIEF, true },
+        { SID_ATTR_CHAR_HIDDEN, true },
+        { SID_ATTR_BRUSH, true },
+        { SID_ATTR_ALIGN_HOR_JUSTIFY, true },
+        { SID_ATTR_ALIGN_VER_JUSTIFY, true },
 
         // Asian
-        { SID_ATTR_CHAR_CJK_FONT, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_CJK_FONTHEIGHT, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_CJK_LANGUAGE, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_CJK_POSTURE, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_CJK_WEIGHT, SfxItemPoolFlags::POOLABLE },
+        { SID_ATTR_CHAR_CJK_FONT, true },
+        { SID_ATTR_CHAR_CJK_FONTHEIGHT, true },
+        { SID_ATTR_CHAR_CJK_LANGUAGE, true },
+        { SID_ATTR_CHAR_CJK_POSTURE, true },
+        { SID_ATTR_CHAR_CJK_WEIGHT, true },
         // Complex
-        { SID_ATTR_CHAR_CTL_FONT, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_CTL_FONTHEIGHT, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_CTL_LANGUAGE, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_CTL_POSTURE, SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_CHAR_CTL_WEIGHT, SfxItemPoolFlags::POOLABLE }
+        { SID_ATTR_CHAR_CTL_FONT, true },
+        { SID_ATTR_CHAR_CTL_FONTHEIGHT, true },
+        { SID_ATTR_CHAR_CTL_LANGUAGE, true },
+        { SID_ATTR_CHAR_CTL_POSTURE, true },
+        { SID_ATTR_CHAR_CTL_WEIGHT, true }
     };
     vcl::Window* pParent = VCLUnoHelper::GetWindow( _rxParentWindow );
     ::std::unique_ptr<FontList> pFontList(new FontList( pParent ));
@@ -659,7 +659,7 @@ bool openCharDialog( const uno::Reference<report::XReportControlFormat >& _rxRep
         new SvxWordLineModeItem(false,ITEMID_WORDLINEMODE),
         new SvxContourItem(false,ITEMID_CONTOUR),
         new SvxCrossedOutItem(STRIKEOUT_NONE,ITEMID_CROSSEDOUT),
-        new SvxUnderlineItem(UNDERLINE_NONE,ITEMID_UNDERLINE),
+        new SvxUnderlineItem(LINESTYLE_NONE,ITEMID_UNDERLINE),
 
         new SvxColorItem(ITEMID_COLOR),
         new SvxKerningItem(0,ITEMID_KERNING),
@@ -669,7 +669,7 @@ bool openCharDialog( const uno::Reference<report::XReportControlFormat >& _rxRep
         new SvxAutoKernItem(false,ITEMID_AUTOKERN),
         new SvxColorListItem(pColorList.get(),ITEMID_COLOR_TABLE),
         new SvxBlinkItem(false,ITEMID_BLINK),
-        new SvxEmphasisMarkItem(EMPHASISMARK_NONE,ITEMID_EMPHASISMARK),
+        new SvxEmphasisMarkItem(FontEmphasisMark::NONE,ITEMID_EMPHASISMARK),
         new SvxTwoLinesItem(true,0,0,ITEMID_TWOLINES),
         new SvxCharRotateItem(0,false,ITEMID_CHARROTATE),
         new SvxCharScaleWidthItem(100,ITEMID_CHARSCALE_W),
@@ -693,7 +693,7 @@ bool openCharDialog( const uno::Reference<report::XReportControlFormat >& _rxRep
 
     };
 
-    OSL_ASSERT((sizeof(pDefaults)/sizeof(pDefaults[0])) == (sizeof(aItemInfos)/sizeof(aItemInfos[0])));
+    OSL_ASSERT( SAL_N_ELEMENTS(pDefaults) == SAL_N_ELEMENTS(aItemInfos) );
 
     static const sal_uInt16 pRanges[] =
     {
@@ -730,8 +730,8 @@ bool openCharDialog( const uno::Reference<report::XReportControlFormat >& _rxRep
     }
 
     SfxItemPool::Free(pPool);
-    for (sal_uInt16 i=0; i<sizeof(pDefaults)/sizeof(pDefaults[0]); ++i)
-        delete pDefaults[i];
+    for (SfxPoolItem* pDefault : pDefaults)
+        delete pDefault;
 
     return bSuccess;
 }
@@ -906,13 +906,13 @@ SdrObject* isOver(const Rectangle& _rRect,SdrPage& _rPage,SdrView& _rView,bool _
 }
 
 
-SdrObject* isOver(SdrObject* _pObj,SdrPage& _rPage,SdrView& _rView,bool _bUnMarkedObjects)
+SdrObject* isOver(SdrObject* _pObj,SdrPage& _rPage,SdrView& _rView)
 {
     SdrObject* pOverlappedObj = nullptr;
     if (dynamic_cast<OUnoObject*>(_pObj) != nullptr || dynamic_cast<OOle2Obj*>(_pObj) != nullptr) // this doesn't need to be done for shapes
     {
         Rectangle aRect = _pObj->GetCurrentBoundRect();
-        pOverlappedObj = isOver(aRect,_rPage,_rView,_bUnMarkedObjects,_pObj);
+        pOverlappedObj = isOver(aRect,_rPage,_rView,false/*_bUnMarkedObjects*/,_pObj);
     }
     return pOverlappedObj;
 }

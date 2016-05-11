@@ -73,7 +73,6 @@ using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::sdbcx;
 using namespace ::com::sun::star::awt;
 using namespace ::com::sun::star::util;
-using ::com::sun::star::frame::XModel;
 
 const static char sMyBegComment[]   = "<!-- ";
 const static char sMyEndComment[]   = " -->";
@@ -262,7 +261,7 @@ void ODatabaseImportExport::initialize()
         SQLExceptionInfo aInfo = ::dbaui::createConnection( m_sDataSourceName, xDatabaseContext, m_xContext, xEvt, xConnection );
         m_xConnection.reset( xConnection );
 
-        if(aInfo.isValid() && aInfo.getType() == SQLExceptionInfo::SQL_EXCEPTION)
+        if(aInfo.isValid() && aInfo.getType() == SQLExceptionInfo::TYPE::SQLException)
             throw *static_cast<const SQLException*>(aInfo);
     }
 
@@ -384,7 +383,7 @@ bool ORTFImportExport::Write()
     OString aFonts(OUStringToOString(m_aFont.Name, eDestEnc));
     if (aFonts.isEmpty())
     {
-        OUString aName = Application::GetSettings().GetStyleSettings().GetAppFont().GetName();
+        OUString aName = Application::GetSettings().GetStyleSettings().GetAppFont().GetFamilyName();
         aFonts = OUStringToOString(aName, eDestEnc);
     }
 

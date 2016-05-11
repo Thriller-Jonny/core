@@ -20,20 +20,33 @@
 #ifndef INCLUDED_OOX_CORE_FRAGMENTHANDLER_HXX
 #define INCLUDED_OOX_CORE_FRAGMENTHANDLER_HXX
 
+#include <exception>
+
+#include <com/sun/star/uno/Any.hxx>
+#include <com/sun/star/uno/Reference.hxx>
+#include <com/sun/star/uno/RuntimeException.hpp>
+#include <com/sun/star/uno/Sequence.hxx>
+#include <com/sun/star/xml/sax/SAXException.hpp>
 #include <com/sun/star/xml/sax/XFastDocumentHandler.hpp>
 #include <cppuhelper/implbase.hxx>
 #include <oox/core/contexthandler.hxx>
 #include <oox/core/relations.hxx>
 #include <oox/dllapi.h>
+#include <rtl/ref.hxx>
+#include <rtl/ustring.hxx>
+#include <sal/types.h>
 
 namespace com { namespace sun { namespace star {
     namespace io { class XInputStream; }
+    namespace xml { namespace sax { class XFastAttributeList; } }
+    namespace xml { namespace sax { class XFastContextHandler; } }
+    namespace xml { namespace sax { class XLocator; } }
 } } }
 
 namespace oox {
 namespace core {
 
-
+class XmlFilterBase;
 
 /** Base data of a fragment.
 
@@ -55,7 +68,6 @@ struct FragmentBaseData
 };
 
 
-
 /** Describes record identifiers used to create contexts in a binary stream.
 
     If a record is used to start a new context, usually the record identifier
@@ -71,7 +83,6 @@ struct RecordInfo
     sal_Int32           mnStartRecId;       ///< Record identifier for context start.
     sal_Int32           mnEndRecId;         ///< Record identifier for context end, -1 = no record.
 };
-
 
 
 typedef ::cppu::ImplInheritanceHelper< ContextHandler, css::xml::sax::XFastDocumentHandler > FragmentHandler_BASE;
@@ -118,7 +129,6 @@ protected:
 };
 
 typedef ::rtl::Reference< FragmentHandler > FragmentHandlerRef;
-
 
 
 } // namespace core

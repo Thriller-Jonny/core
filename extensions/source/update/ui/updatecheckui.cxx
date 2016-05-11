@@ -66,7 +66,6 @@
 using namespace ::com::sun::star;
 
 
-
 static uno::Sequence< OUString > getServiceNames()
 {
     uno::Sequence< OUString > aServiceList { "com.sun.star.setup.UpdateCheckUI" };
@@ -74,12 +73,10 @@ static uno::Sequence< OUString > getServiceNames()
 }
 
 
-
 static OUString getImplementationName()
 {
     return OUString("vnd.sun.UpdateCheckUI");
 }
-
 
 
 namespace
@@ -157,7 +154,7 @@ private:
     Image           GetBubbleImage( OUString &rURL );
 
 public:
-                    UpdateCheckUI(const uno::Reference<uno::XComponentContext>&);
+    explicit        UpdateCheckUI(const uno::Reference<uno::XComponentContext>&);
     virtual        ~UpdateCheckUI();
 
     // XServiceInfo
@@ -512,9 +509,6 @@ void UpdateCheckUI::removeVetoableChangeListener( const OUString& /*aPropertyNam
 }
 
 
-
-
-
 BubbleWindow * UpdateCheckUI::GetBubbleWindow()
 {
     if ( !mpIconSysWin )
@@ -736,8 +730,6 @@ IMPL_LINK_TYPED( UpdateCheckUI, ApplicationEventHdl, VclSimpleEvent&, rEvent, vo
 }
 
 
-
-
 #define TIP_HEIGHT             15
 #define TIP_WIDTH               7
 #define TIP_RIGHT_OFFSET       18
@@ -931,7 +923,7 @@ void BubbleWindow::RecalcTextRects()
             maTextRect.setHeight( 10 );
 
         aTotalSize.setHeight( maTitleRect.GetHeight() +
-                              aBoldFont.GetHeight() * 3 / 4 +
+                              aBoldFont.GetFontHeight() * 3 / 4 +
                               maTextRect.GetHeight() +
                               3 * BUBBLE_BORDER + TIP_HEIGHT );
         if ( aTotalSize.Height() > maMaxTextSize.Height() )
@@ -943,14 +935,11 @@ void BubbleWindow::RecalcTextRects()
             bFinished = true;
     }
     maTitleRect.Move( 2*BUBBLE_BORDER, BUBBLE_BORDER + TIP_HEIGHT );
-    maTextRect.Move( 2*BUBBLE_BORDER, BUBBLE_BORDER + TIP_HEIGHT + maTitleRect.GetHeight() + aBoldFont.GetHeight() * 3 / 4 );
+    maTextRect.Move( 2*BUBBLE_BORDER, BUBBLE_BORDER + TIP_HEIGHT + maTitleRect.GetHeight() + aBoldFont.GetFontHeight() * 3 / 4 );
 }
 
 
-
-
 } // anonymous namespace
-
 
 
 static uno::Reference<uno::XInterface> SAL_CALL
@@ -958,7 +947,6 @@ createInstance(const uno::Reference<uno::XComponentContext>& xContext)
 {
     return  *new UpdateCheckUI(xContext);
 }
-
 
 
 static const cppu::ImplementationEntry kImplementations_entries[] =
@@ -973,7 +961,6 @@ static const cppu::ImplementationEntry kImplementations_entries[] =
     },
     { nullptr, nullptr, nullptr, nullptr, nullptr, 0 }
 } ;
-
 
 
 extern "C" SAL_DLLPUBLIC_EXPORT void * SAL_CALL updchkui_component_getFactory(const sal_Char *pszImplementationName, void *pServiceManager, void *pRegistryKey)

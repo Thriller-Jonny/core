@@ -24,8 +24,6 @@
 #include <com/sun/star/rendering/XGraphicDevice.hpp>
 #include <com/sun/star/rendering/XBufferController.hpp>
 
-#include <boost/noncopyable.hpp>
-
 #include <vcl/window.hxx>
 #include <vcl/bitmap.hxx>
 
@@ -35,9 +33,13 @@
 
 namespace cairocanvas
 {
-    class DeviceHelper : private ::boost::noncopyable
+    class DeviceHelper
     {
     public:
+        /// make noncopyable
+        DeviceHelper(const DeviceHelper&) = delete;
+        const DeviceHelper& operator=(const DeviceHelper&) = delete;
+
         DeviceHelper();
 
         /** init helper
@@ -89,7 +91,7 @@ namespace cairocanvas
         void dumpScreenContent() const;
 
         OutputDevice* getOutputDevice() const { return mpRefDevice; }
-        ::cairo::SurfaceSharedPtr getSurface() { return mpSurface; }
+        const ::cairo::SurfaceSharedPtr& getSurface() { return mpSurface; }
         ::cairo::SurfaceSharedPtr createSurface( const ::basegfx::B2ISize& rSize, int aContent = CAIRO_CONTENT_COLOR_ALPHA );
         ::cairo::SurfaceSharedPtr createSurface( BitmapSystemData& rData, const Size& rSize );
 

@@ -19,7 +19,6 @@
 
 #include <sal/config.h>
 
-#include <boost/noncopyable.hpp>
 #include <com/sun/star/awt/XControlContainer.hpp>
 #include <com/sun/star/awt/WindowAttribute.hpp>
 #include <com/sun/star/awt/VclWindowPeerAttribute.hpp>
@@ -95,7 +94,7 @@ static Sequence< OUString> lcl_ImplGetPropertyNames( const Reference< XMultiProp
 }
 
 
-class VclListenerLock: private boost::noncopyable
+class VclListenerLock
 {
 private:
     VCLXWindow*  m_pLockWindow;
@@ -112,6 +111,8 @@ public:
         if ( m_pLockWindow )
             m_pLockWindow->resumeVclEventListening( );
     }
+    VclListenerLock(const VclListenerLock&) = delete;
+    VclListenerLock& operator=(const VclListenerLock&) = delete;
 };
 
 typedef ::std::map< OUString, sal_Int32 >    MapString2Int;
@@ -156,16 +157,13 @@ OUString UnoControl::GetComponentServiceName()
     return OUString();
 }
 
-Reference< XWindowPeer >    UnoControl::ImplGetCompatiblePeer( bool bAcceptExistingPeer )
+Reference< XWindowPeer >    UnoControl::ImplGetCompatiblePeer()
 {
     DBG_ASSERT( !mbCreatingCompatiblePeer, "ImplGetCompatiblePeer - rekursive?" );
 
     mbCreatingCompatiblePeer = true;
 
-    Reference< XWindowPeer > xCompatiblePeer;
-
-    if ( bAcceptExistingPeer )
-        xCompatiblePeer = getPeer();
+    Reference< XWindowPeer > xCompatiblePeer = getPeer();
 
     if ( !xCompatiblePeer.is() )
     {
@@ -620,8 +618,8 @@ void UnoControl::ImplModelPropertiesChanged( const Sequence< PropertyChangeEvent
         {
             SolarMutexGuard aVclGuard;
                 // and now this is the final withdrawal:
-                // I have no other idea than locking the SolarMutex here ....
-                // I really hate the fact that VCL is not theadsafe ....
+                // I have no other idea than locking the SolarMutex here....
+                // I really hate the fact that VCL is not threadsafe....
 
             // Doesn't work for Container!
             getPeer()->dispose();
@@ -665,7 +663,7 @@ void UnoControl::ImplModelPropertiesChanged( const Sequence< PropertyChangeEvent
 void UnoControl::disposing( const EventObject& rEvt ) throw(RuntimeException, std::exception)
 {
     ::osl::ClearableMutexGuard aGuard( GetMutex() );
-    // do not compare differing types in case of multible inheritance
+    // do not compare differing types in case of multiple inheritance
 
     if ( maAccessibleContext.get() == rEvt.Source )
     {
@@ -725,7 +723,7 @@ sal_Bool SAL_CALL UnoControl::isVisible(  ) throw (RuntimeException, std::except
 
 sal_Bool SAL_CALL UnoControl::isActive(  ) throw (RuntimeException, std::exception)
 {
-    return lcl_askPeer( getPeer(), &XWindow2::isActive, sal_False );
+    return lcl_askPeer( getPeer(), &XWindow2::isActive, false );
 }
 
 sal_Bool SAL_CALL UnoControl::isEnabled(  ) throw (RuntimeException, std::exception)
@@ -735,7 +733,7 @@ sal_Bool SAL_CALL UnoControl::isEnabled(  ) throw (RuntimeException, std::except
 
 sal_Bool SAL_CALL UnoControl::hasFocus(  ) throw (RuntimeException, std::exception)
 {
-    return lcl_askPeer( getPeer(), &XWindow2::hasFocus, sal_False );
+    return lcl_askPeer( getPeer(), &XWindow2::hasFocus, false );
 }
 
 // XWindow
@@ -1005,7 +1003,7 @@ void UnoControl::draw( sal_Int32 x, sal_Int32 y ) throw(RuntimeException, std::e
     {
         ::osl::MutexGuard aGuard( GetMutex() );
 
-        xDrawPeer = ImplGetCompatiblePeer( true );
+        xDrawPeer = ImplGetCompatiblePeer();
         bDisposeDrawPeer = xDrawPeer.is() && ( xDrawPeer != getPeer() );
 
         xDrawPeerView.set( xDrawPeer, UNO_QUERY );
@@ -1418,7 +1416,7 @@ sal_Bool UnoControl::isDesignMode(  ) throw(RuntimeException, std::exception)
 
 sal_Bool UnoControl::isTransparent(  ) throw(RuntimeException, std::exception)
 {
-    return sal_False;
+    return false;
 }
 
 // XServiceInfo

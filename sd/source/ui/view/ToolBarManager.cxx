@@ -477,12 +477,12 @@ void ToolBarManager::UnlockUpdate()
         mpImpl->UnlockUpdate();
 }
 
-void ToolBarManager::MainViewShellChanged (ViewShell::ShellType nShellType)
+void ToolBarManager::MainViewShellChanged ()
 {
     if (mpImpl.get() != nullptr)
     {
         mpImpl->ReleaseAllToolBarShells();
-        mpImpl->GetToolBarRules().MainViewShellChanged(nShellType);
+        mpImpl->GetToolBarRules().MainViewShellChanged(ViewShell::ST_NONE);
     }
 }
 
@@ -612,7 +612,7 @@ void ToolBarManager::Implementation::ResetToolBars (ToolBarGroup eGroup)
 void ToolBarManager::Implementation::ResetAllToolBars()
 {
     SAL_INFO("sd.view", OSL_THIS_FUNC << ": resetting all tool bars");
-    for (int i=TBG__FIRST; i<=TBG__LAST; ++i)
+    for (int i=TBG_FIRST; i<=TBG_LAST; ++i)
         ResetToolBars((ToolBarGroup)i);
 }
 
@@ -864,6 +864,7 @@ IMPL_LINK_NOARG_TYPED(ToolBarManager::Implementation, UpdateCallback, void*, voi
 IMPL_LINK_TYPED(ToolBarManager::Implementation,EventMultiplexerCallback,
     sd::tools::EventMultiplexerEvent&, rEvent, void)
 {
+    SolarMutexGuard g;
     switch (rEvent.meEventId)
     {
         case tools::EventMultiplexerEvent::EID_CONTROLLER_ATTACHED:
@@ -1257,7 +1258,7 @@ bool ToolBarList::RemoveToolBar (
 
 void ToolBarList::MakeRequestedToolBarList (NameList& rRequestedToolBars) const
 {
-    for (int i=sd::ToolBarManager::TBG__FIRST; i<=sd::ToolBarManager::TBG__LAST; ++i)
+    for (int i=sd::ToolBarManager::TBG_FIRST; i<=sd::ToolBarManager::TBG_LAST; ++i)
     {
         ::sd::ToolBarManager::ToolBarGroup eGroup = (::sd::ToolBarManager::ToolBarGroup)i;
         Groups::const_iterator iGroup (maGroups.find(eGroup));
@@ -1427,7 +1428,7 @@ void ToolBarShellList::UpdateShells (
             rpManager->ActivateSubShell(*rpMainViewShell, iShell->mnId);
         }
 
-        // The maNewList now refelects the current state and thus is made
+        // The maNewList now reflects the current state and thus is made
         // maCurrentList.
         maCurrentList = maNewList;
     }

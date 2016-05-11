@@ -17,7 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifdef WNT
+#ifdef _WIN32
 #include <prewin.h>
 #include <postwin.h>
 #include <shlobj.h>
@@ -60,9 +60,8 @@
 #include <vcl/dibtools.hxx>
 #include <vcl/pngread.hxx>
 #include <vcl/pngwrite.hxx>
+#include <vcl/graphicfilter.hxx>
 #include <memory>
-
-// - Namespaces -
 
 
 using namespace ::com::sun::star::uno;
@@ -72,9 +71,6 @@ using namespace ::com::sun::star::io;
 using namespace ::com::sun::star::datatransfer;
 using namespace ::com::sun::star::datatransfer::clipboard;
 using namespace ::com::sun::star::datatransfer::dnd;
-
-
-// - TransferableObjectDescriptor -
 
 
 #define TOD_SIG1 0x01234567
@@ -131,7 +127,7 @@ static OUString ImplGetParameterString( const TransferableObjectDescriptor& rObj
         // this seems to be the only parameter currently that might contain such characters
         sal_Bool pToAccept[128];
         for ( sal_Int32 nBInd = 0; nBInd < 128; nBInd++ )
-            pToAccept[nBInd] = sal_False;
+            pToAccept[nBInd] = false;
 
         const char aQuotedParamChars[] =
             "()<>@,;:/[]?=!#$&'*+-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ^_`abcdefghijklmnopqrstuvwxyz{|}~. ";
@@ -140,7 +136,7 @@ static OUString ImplGetParameterString( const TransferableObjectDescriptor& rObj
         {
             sal_Unicode nChar = aQuotedParamChars[nInd];
             if ( nChar < 128 )
-                pToAccept[nChar] = sal_True;
+                pToAccept[nChar] = true;
         }
 
         aParams += ";displayname=\""
@@ -158,7 +154,6 @@ static OUString ImplGetParameterString( const TransferableObjectDescriptor& rObj
 
     return aParams;
 }
-
 
 
 static void ImplSetParameterString( TransferableObjectDescriptor& rObjDesc, const DataFlavorEx& rFlavorEx )
@@ -231,14 +226,10 @@ static void ImplSetParameterString( TransferableObjectDescriptor& rObjDesc, cons
 }
 
 
-// - TransferableHelper::TerminateListener -
-
-
 TransferableHelper::TerminateListener::TerminateListener( TransferableHelper& rTransferableHelper ) :
     mrParent( rTransferableHelper )
 {
 }
-
 
 
 TransferableHelper::TerminateListener::~TerminateListener()
@@ -246,17 +237,14 @@ TransferableHelper::TerminateListener::~TerminateListener()
 }
 
 
-
 void SAL_CALL TransferableHelper::TerminateListener::disposing( const EventObject& ) throw( RuntimeException, std::exception )
 {
 }
 
 
-
 void SAL_CALL TransferableHelper::TerminateListener::queryTermination( const EventObject& ) throw( TerminationVetoException, RuntimeException, std::exception )
 {
 }
-
 
 
 void SAL_CALL TransferableHelper::TerminateListener::notifyTermination( const EventObject& ) throw( RuntimeException, std::exception )
@@ -265,15 +253,11 @@ void SAL_CALL TransferableHelper::TerminateListener::notifyTermination( const Ev
 }
 
 
-// - TransferableHelper -
-
-
 TransferableHelper::TransferableHelper() :
     mpFormats( new DataFlavorExVector ),
     mpObjDesc( nullptr )
 {
 }
-
 
 
 TransferableHelper::~TransferableHelper()
@@ -408,7 +392,6 @@ Any SAL_CALL TransferableHelper::getTransferData2( const DataFlavor& rFlavor, co
 }
 
 
-
 Sequence< DataFlavor > SAL_CALL TransferableHelper::getTransferDataFlavors() throw( RuntimeException, std::exception )
 {
     const SolarMutexGuard aGuard;
@@ -424,7 +407,6 @@ Sequence< DataFlavor > SAL_CALL TransferableHelper::getTransferDataFlavors() thr
 
     return comphelper::containerToSequence<DataFlavor>(*mpFormats);
 }
-
 
 
 sal_Bool SAL_CALL TransferableHelper::isDataFlavorSupported( const DataFlavor& rFlavor ) throw( RuntimeException, std::exception )
@@ -454,7 +436,6 @@ sal_Bool SAL_CALL TransferableHelper::isDataFlavorSupported( const DataFlavor& r
 }
 
 
-
 void SAL_CALL TransferableHelper::lostOwnership( const Reference< XClipboard >&, const Reference< XTransferable >& ) throw( RuntimeException, std::exception )
 {
     const SolarMutexGuard aGuard;
@@ -477,11 +458,9 @@ void SAL_CALL TransferableHelper::lostOwnership( const Reference< XClipboard >&,
 }
 
 
-
 void SAL_CALL TransferableHelper::disposing( const EventObject& ) throw( RuntimeException, std::exception )
 {
 }
-
 
 
 void SAL_CALL TransferableHelper::dragDropEnd( const DragSourceDropEvent& rDSDE ) throw( RuntimeException, std::exception )
@@ -499,11 +478,9 @@ void SAL_CALL TransferableHelper::dragDropEnd( const DragSourceDropEvent& rDSDE 
 }
 
 
-
 void SAL_CALL TransferableHelper::dragEnter( const DragSourceDragEvent& ) throw( RuntimeException, std::exception )
 {
 }
-
 
 
 void SAL_CALL TransferableHelper::dragExit( const DragSourceEvent& ) throw( RuntimeException, std::exception )
@@ -511,17 +488,14 @@ void SAL_CALL TransferableHelper::dragExit( const DragSourceEvent& ) throw( Runt
 }
 
 
-
 void SAL_CALL TransferableHelper::dragOver( const DragSourceDragEvent& ) throw( RuntimeException, std::exception )
 {
 }
 
 
-
 void SAL_CALL TransferableHelper::dropActionChanged( const DragSourceDragEvent& ) throw( RuntimeException, std::exception )
 {
 }
-
 
 
 sal_Int64 SAL_CALL TransferableHelper::getSomething( const Sequence< sal_Int8 >& rId ) throw( RuntimeException, std::exception )
@@ -538,7 +512,6 @@ sal_Int64 SAL_CALL TransferableHelper::getSomething( const Sequence< sal_Int8 >&
 
     return nRet;
 }
-
 
 
 void TransferableHelper::ImplFlush()
@@ -561,7 +534,6 @@ void TransferableHelper::ImplFlush()
 }
 
 
-
 void TransferableHelper::AddFormat( SotClipboardFormatId nFormat )
 {
     DataFlavor aFlavor;
@@ -569,7 +541,6 @@ void TransferableHelper::AddFormat( SotClipboardFormatId nFormat )
     if( SotExchange::GetFormatDataFlavor( nFormat, aFlavor ) )
         AddFormat( aFlavor );
 }
-
 
 
 void TransferableHelper::AddFormat( const DataFlavor& rFlavor )
@@ -628,7 +599,6 @@ void TransferableHelper::AddFormat( const DataFlavor& rFlavor )
 }
 
 
-
 void TransferableHelper::RemoveFormat( SotClipboardFormatId nFormat )
 {
     DataFlavor aFlavor;
@@ -636,7 +606,6 @@ void TransferableHelper::RemoveFormat( SotClipboardFormatId nFormat )
     if( SotExchange::GetFormatDataFlavor( nFormat, aFlavor ) )
         RemoveFormat( aFlavor );
 }
-
 
 
 void TransferableHelper::RemoveFormat( const DataFlavor& rFlavor )
@@ -651,7 +620,6 @@ void TransferableHelper::RemoveFormat( const DataFlavor& rFlavor )
             ++aIter;
     }
 }
-
 
 
 bool TransferableHelper::HasFormat( SotClipboardFormatId nFormat )
@@ -671,7 +639,6 @@ bool TransferableHelper::HasFormat( SotClipboardFormatId nFormat )
 }
 
 
-
 void TransferableHelper::ClearFormats()
 {
     mpFormats->clear();
@@ -679,13 +646,11 @@ void TransferableHelper::ClearFormats()
 }
 
 
-
 bool TransferableHelper::SetAny( const Any& rAny, const DataFlavor& )
 {
     maAny = rAny;
     return( maAny.hasValue() );
 }
-
 
 
 bool TransferableHelper::SetString( const OUString& rString, const DataFlavor& rFlavor )
@@ -708,7 +673,6 @@ bool TransferableHelper::SetString( const OUString& rString, const DataFlavor& r
 
     return( maAny.hasValue() );
 }
-
 
 
 bool TransferableHelper::SetBitmapEx( const BitmapEx& rBitmapEx, const DataFlavor& rFlavor )
@@ -739,7 +703,6 @@ bool TransferableHelper::SetBitmapEx( const BitmapEx& rBitmapEx, const DataFlavo
 }
 
 
-
 bool TransferableHelper::SetGDIMetaFile( const GDIMetaFile& rMtf, const DataFlavor& )
 {
     if( rMtf.GetActionSize() )
@@ -752,7 +715,6 @@ bool TransferableHelper::SetGDIMetaFile( const GDIMetaFile& rMtf, const DataFlav
 
     return( maAny.hasValue() );
 }
-
 
 
 bool TransferableHelper::SetGraphic( const Graphic& rGraphic, const DataFlavor& )
@@ -771,7 +733,6 @@ bool TransferableHelper::SetGraphic( const Graphic& rGraphic, const DataFlavor& 
 }
 
 
-
 bool TransferableHelper::SetImageMap( const ImageMap& rIMap, const css::datatransfer::DataFlavor& )
 {
     SvMemoryStream aMemStm( 8192, 8192 );
@@ -782,7 +743,6 @@ bool TransferableHelper::SetImageMap( const ImageMap& rIMap, const css::datatran
 
     return( maAny.hasValue() );
 }
-
 
 
 bool TransferableHelper::SetTransferableObjectDescriptor( const TransferableObjectDescriptor& rDesc,
@@ -797,7 +757,6 @@ bool TransferableHelper::SetTransferableObjectDescriptor( const TransferableObje
 
     return( maAny.hasValue() );
  }
-
 
 
 bool TransferableHelper::SetINetBookmark( const INetBookmark& rBmk,
@@ -848,7 +807,7 @@ bool TransferableHelper::SetINetBookmark( const INetBookmark& rBmk,
         }
         break;
 
-#ifdef WNT
+#ifdef _WIN32
         case SotClipboardFormatId::FILEGRPDESCRIPTOR:
         {
             Sequence< sal_Int8 >    aSeq( sizeof( FILEGROUPDESCRIPTOR ) );
@@ -889,7 +848,6 @@ bool TransferableHelper::SetINetBookmark( const INetBookmark& rBmk,
 }
 
 
-
 bool TransferableHelper::SetINetImage( const INetImage& rINtImg,
                                        const css::datatransfer::DataFlavor& rFlavor )
 {
@@ -902,7 +860,6 @@ bool TransferableHelper::SetINetImage( const INetImage& rINtImg,
 
     return( maAny.hasValue() );
 }
-
 
 
 bool TransferableHelper::SetObject( void* pUserObject, SotClipboardFormatId nUserObjectId, const DataFlavor& rFlavor )
@@ -935,7 +892,6 @@ bool TransferableHelper::SetObject( void* pUserObject, SotClipboardFormatId nUse
 }
 
 
-
 bool TransferableHelper::WriteObject( tools::SvRef<SotStorageStream>&, void*, SotClipboardFormatId, const DataFlavor& )
 {
     OSL_FAIL( "TransferableHelper::WriteObject( ... ) not implemented" );
@@ -943,17 +899,14 @@ bool TransferableHelper::WriteObject( tools::SvRef<SotStorageStream>&, void*, So
 }
 
 
-
 void TransferableHelper::DragFinished( sal_Int8 )
 {
 }
 
 
-
 void TransferableHelper::ObjectReleased()
 {
 }
-
 
 
 void TransferableHelper::PrepareOLE( const TransferableObjectDescriptor& rObjDesc )
@@ -964,7 +917,6 @@ void TransferableHelper::PrepareOLE( const TransferableObjectDescriptor& rObjDes
     if( HasFormat( SotClipboardFormatId::OBJECTDESCRIPTOR ) )
         AddFormat( SotClipboardFormatId::OBJECTDESCRIPTOR );
 }
-
 
 
 void TransferableHelper::CopyToClipboard( vcl::Window *pWindow ) const
@@ -997,7 +949,6 @@ void TransferableHelper::CopyToClipboard( vcl::Window *pWindow ) const
 }
 
 
-
 void TransferableHelper::CopyToSelection( vcl::Window *pWindow ) const
 {
     DBG_ASSERT( pWindow, "Window pointer is NULL" );
@@ -1025,9 +976,8 @@ void TransferableHelper::CopyToSelection( vcl::Window *pWindow ) const
 }
 
 
-
 void TransferableHelper::StartDrag( vcl::Window* pWindow, sal_Int8 nDnDSourceActions,
-                                    sal_Int32 nDnDPointer, sal_Int32 nDnDImage )
+                                    sal_Int32 nDnDPointer )
 
 {
     DBG_ASSERT( pWindow, "Window pointer is NULL" );
@@ -1060,14 +1010,13 @@ void TransferableHelper::StartDrag( vcl::Window* pWindow, sal_Int8 nDnDSourceAct
             aEvt.DragOriginY = aPt.Y();
             aEvt.DragSource = xDragSource;
 
-            xDragSource->startDrag( aEvt, nDnDSourceActions, nDnDPointer, nDnDImage, this, this );
+            xDragSource->startDrag( aEvt, nDnDSourceActions, nDnDPointer, DND_IMAGE_NONE, this, this );
         }
         catch( const css::uno::Exception& )
         {
         }
     }
 }
-
 
 
 void TransferableHelper::ClearSelection( vcl::Window *pWindow )
@@ -1078,7 +1027,6 @@ void TransferableHelper::ClearSelection( vcl::Window *pWindow )
     if( xSelection.is() )
         xSelection->setContents( nullptr, nullptr );
 }
-
 
 
 Reference< XClipboard> TransferableHelper::GetSystemClipboard()
@@ -1100,9 +1048,6 @@ const Sequence< sal_Int8 >& TransferableHelper::getUnoTunnelId()
 {
     return theTransferableHelperUnoTunnelId::get().getSeq();
 }
-
-
-// - TransferableClipboardNotifier -
 
 
 class TransferableClipboardNotifier : public ::cppu::WeakImplHelper< XClipboardListener >
@@ -1133,7 +1078,6 @@ public:
 };
 
 
-
 TransferableClipboardNotifier::TransferableClipboardNotifier( const Reference< XClipboard >& _rxClipboard, TransferableDataHelper& _rListener, ::osl::Mutex& _rMutex )
     :mrMutex( _rMutex )
     ,mxNotifier( _rxClipboard, UNO_QUERY )
@@ -1151,7 +1095,6 @@ TransferableClipboardNotifier::TransferableClipboardNotifier( const Reference< X
 }
 
 
-
 void SAL_CALL TransferableClipboardNotifier::changedContents( const clipboard::ClipboardEvent& event ) throw (RuntimeException, std::exception)
 {
     SolarMutexGuard aSolarGuard;
@@ -1165,13 +1108,11 @@ void SAL_CALL TransferableClipboardNotifier::changedContents( const clipboard::C
 }
 
 
-
 void SAL_CALL TransferableClipboardNotifier::disposing( const EventObject& ) throw (RuntimeException, std::exception)
 {
     // clipboard is being disposed. Hmm. Okay, become disfunctional myself.
     dispose();
 }
-
 
 
 void TransferableClipboardNotifier::dispose()
@@ -1188,9 +1129,6 @@ void TransferableClipboardNotifier::dispose()
 }
 
 
-// - TransferableDataHelper_Impl -
-
-
 struct TransferableDataHelper_Impl
 {
     ::osl::Mutex                    maMutex;
@@ -1203,16 +1141,12 @@ struct TransferableDataHelper_Impl
 };
 
 
-// - TransferableDataHelper -
-
-
 TransferableDataHelper::TransferableDataHelper() :
     mpFormats( new DataFlavorExVector ),
     mpObjDesc( new TransferableObjectDescriptor ),
     mpImpl( new TransferableDataHelper_Impl )
 {
 }
-
 
 
 TransferableDataHelper::TransferableDataHelper( const Reference< css::datatransfer::XTransferable >& rxTransferable ) :
@@ -1225,7 +1159,6 @@ TransferableDataHelper::TransferableDataHelper( const Reference< css::datatransf
 }
 
 
-
 TransferableDataHelper::TransferableDataHelper( const TransferableDataHelper& rDataHelper ) :
     mxTransfer( rDataHelper.mxTransfer ),
     mxClipboard( rDataHelper.mxClipboard ),
@@ -1234,7 +1167,6 @@ TransferableDataHelper::TransferableDataHelper( const TransferableDataHelper& rD
     mpImpl( new TransferableDataHelper_Impl )
 {
 }
-
 
 
 TransferableDataHelper& TransferableDataHelper::operator=( const TransferableDataHelper& rDataHelper )
@@ -1249,8 +1181,10 @@ TransferableDataHelper& TransferableDataHelper::operator=( const TransferableDat
             StopClipboardListening();
 
         mxTransfer = rDataHelper.mxTransfer;
-        delete mpFormats, mpFormats = new DataFlavorExVector( *rDataHelper.mpFormats );
-        delete mpObjDesc, mpObjDesc = new TransferableObjectDescriptor( *rDataHelper.mpObjDesc );
+        delete mpFormats;
+        mpFormats = new DataFlavorExVector( *rDataHelper.mpFormats );
+        delete mpObjDesc;
+        mpObjDesc = new TransferableObjectDescriptor( *rDataHelper.mpObjDesc );
         mxClipboard = rDataHelper.mxClipboard;
 
         if ( bWasClipboardListening )
@@ -1261,17 +1195,17 @@ TransferableDataHelper& TransferableDataHelper::operator=( const TransferableDat
 }
 
 
-
 TransferableDataHelper::~TransferableDataHelper()
 {
     StopClipboardListening( );
     {
         ::osl::MutexGuard aGuard( mpImpl->maMutex );
-        delete mpFormats, mpFormats = nullptr;
-        delete mpObjDesc, mpObjDesc = nullptr;
+        delete mpFormats;
+        mpFormats = nullptr;
+        delete mpObjDesc;
+        mpObjDesc = nullptr;
     }
 }
-
 
 
 void TransferableDataHelper::FillDataFlavorExVector( const Sequence< DataFlavor >& rDataFlavorSeq,
@@ -1367,14 +1301,14 @@ void TransferableDataHelper::FillDataFlavorExVector( const Sequence< DataFlavor 
 }
 
 
-
 void TransferableDataHelper::InitFormats()
 {
     SolarMutexGuard aSolarGuard;
     ::osl::MutexGuard aGuard( mpImpl->maMutex );
 
     mpFormats->clear();
-    delete mpObjDesc, mpObjDesc = new TransferableObjectDescriptor;
+    delete mpObjDesc;
+    mpObjDesc = new TransferableObjectDescriptor;
 
     if( mxTransfer.is() )
     {
@@ -1390,7 +1324,6 @@ void TransferableDataHelper::InitFormats()
         }
     }
 }
-
 
 
 bool TransferableDataHelper::HasFormat( SotClipboardFormatId nFormat ) const
@@ -1413,7 +1346,6 @@ bool TransferableDataHelper::HasFormat( SotClipboardFormatId nFormat ) const
 }
 
 
-
 bool TransferableDataHelper::HasFormat( const DataFlavor& rFlavor ) const
 {
     ::osl::MutexGuard aGuard( mpImpl->maMutex );
@@ -1434,14 +1366,11 @@ bool TransferableDataHelper::HasFormat( const DataFlavor& rFlavor ) const
 }
 
 
-
 sal_uInt32 TransferableDataHelper::GetFormatCount() const
 {
     ::osl::MutexGuard aGuard( mpImpl->maMutex );
     return mpFormats->size();
 }
-
-
 
 
 SotClipboardFormatId TransferableDataHelper::GetFormat( sal_uInt32 nFormat ) const
@@ -1450,7 +1379,6 @@ SotClipboardFormatId TransferableDataHelper::GetFormat( sal_uInt32 nFormat ) con
     DBG_ASSERT( nFormat < mpFormats->size(), "TransferableDataHelper::GetFormat: invalid format index" );
     return( ( nFormat < mpFormats->size() ) ? (*mpFormats)[ nFormat ].mnSotId : SotClipboardFormatId::NONE );
 }
-
 
 
 DataFlavor TransferableDataHelper::GetFormatDataFlavor( sal_uInt32 nFormat ) const
@@ -1465,7 +1393,6 @@ DataFlavor TransferableDataHelper::GetFormatDataFlavor( sal_uInt32 nFormat ) con
 
     return aRet;
 }
-
 
 
 Reference< XTransferable > TransferableDataHelper::GetXTransferable() const
@@ -1492,7 +1419,6 @@ Reference< XTransferable > TransferableDataHelper::GetXTransferable() const
 }
 
 
-
 Any TransferableDataHelper::GetAny( SotClipboardFormatId nFormat, const OUString& rDestDoc ) const
 {
     Any aReturn;
@@ -1503,8 +1429,6 @@ Any TransferableDataHelper::GetAny( SotClipboardFormatId nFormat, const OUString
 
     return aReturn;
 }
-
-
 
 
 Any TransferableDataHelper::GetAny( const DataFlavor& rFlavor, const OUString& rDestDoc ) const
@@ -1555,13 +1479,11 @@ Any TransferableDataHelper::GetAny( const DataFlavor& rFlavor, const OUString& r
 }
 
 
-
 bool TransferableDataHelper::GetString( SotClipboardFormatId nFormat, OUString& rStr )
 {
     DataFlavor aFlavor;
     return( SotExchange::GetFormatDataFlavor( nFormat, aFlavor ) && GetString( aFlavor, rStr ) );
 }
-
 
 
 bool TransferableDataHelper::GetString( const DataFlavor& rFlavor, OUString& rStr )
@@ -1585,7 +1507,7 @@ bool TransferableDataHelper::GetString( const DataFlavor& rFlavor, OUString& rSt
             const sal_Char* pChars = reinterpret_cast< const sal_Char* >( aSeq.getConstArray() );
             sal_Int32       nLen = aSeq.getLength();
 
-            //JP 10.10.2001: 92930 - don't copy the last zero characterinto the string.
+            //JP 10.10.2001: 92930 - don't copy the last zero character into the string.
             //DVO 2002-05-27: strip _all_ trailing zeros
             while( nLen && ( 0 == *( pChars + nLen - 1 ) ) )
                 --nLen;
@@ -1597,7 +1519,6 @@ bool TransferableDataHelper::GetString( const DataFlavor& rFlavor, OUString& rSt
 
     return bRet;
 }
-
 
 
 bool TransferableDataHelper::GetBitmapEx( SotClipboardFormatId nFormat, BitmapEx& rBmpEx )
@@ -1621,18 +1542,25 @@ bool TransferableDataHelper::GetBitmapEx( SotClipboardFormatId nFormat, BitmapEx
 }
 
 
-
 bool TransferableDataHelper::GetBitmapEx( const DataFlavor& rFlavor, BitmapEx& rBmpEx )
 {
     tools::SvRef<SotStorageStream> xStm;
     DataFlavor aSubstFlavor;
     bool bRet(GetSotStorageStream(rFlavor, xStm));
     bool bSuppressPNG(false); // #122982# If PNG stream not accessed, but BMP one, suppress trying to load PNG
+    bool bSuppressJPEG(false);
 
     if(!bRet && HasFormat(SotClipboardFormatId::PNG) && SotExchange::GetFormatDataFlavor(SotClipboardFormatId::PNG, aSubstFlavor))
     {
         // when no direct success, try if PNG is available
         bRet = GetSotStorageStream(aSubstFlavor, xStm);
+        bSuppressJPEG = bRet;
+    }
+
+    if(!bRet && HasFormat(SotClipboardFormatId::JPEG) && SotExchange::GetFormatDataFlavor(SotClipboardFormatId::JPEG, aSubstFlavor))
+    {
+        bRet = GetSotStorageStream(aSubstFlavor, xStm);
+        bSuppressPNG = bRet;
     }
 
     if(!bRet && HasFormat(SotClipboardFormatId::BMP) && SotExchange::GetFormatDataFlavor(SotClipboardFormatId::BMP, aSubstFlavor))
@@ -1640,6 +1568,7 @@ bool TransferableDataHelper::GetBitmapEx( const DataFlavor& rFlavor, BitmapEx& r
         // when no direct success, try if BMP is available
         bRet = GetSotStorageStream(aSubstFlavor, xStm);
         bSuppressPNG = bRet;
+        bSuppressJPEG = bRet;
     }
 
     if(bRet)
@@ -1651,17 +1580,25 @@ bool TransferableDataHelper::GetBitmapEx( const DataFlavor& rFlavor, BitmapEx& r
 
             rBmpEx = aPNGReader.Read();
         }
+        else if(!bSuppressJPEG && rFlavor.MimeType.equalsIgnoreAsciiCase("image/jpeg"))
+        {
+            // it's a JPEG, import to BitmapEx
+            GraphicFilter& rFilter = GraphicFilter::GetGraphicFilter();
+            Graphic aGraphic;
+            if (rFilter.ImportGraphic(aGraphic, "", *xStm) == GRFILTER_OK)
+                rBmpEx = aGraphic.GetBitmapEx();
+        }
 
         if(rBmpEx.IsEmpty())
         {
             Bitmap aBitmap;
-            Bitmap aMask;
+            AlphaMask aMask;
 
             // explicitely use Bitmap::Read with bFileHeader = sal_True
             // #i124085# keep DIBV5 for read from clipboard, but should not happen
             ReadDIBV5(aBitmap, aMask, *xStm);
 
-            if(aMask.IsEmpty())
+            if(aMask.GetBitmap().IsEmpty())
             {
                 rBmpEx = aBitmap;
             }
@@ -1708,7 +1645,6 @@ bool TransferableDataHelper::GetBitmapEx( const DataFlavor& rFlavor, BitmapEx& r
 }
 
 
-
 bool TransferableDataHelper::GetGDIMetaFile(SotClipboardFormatId nFormat, GDIMetaFile& rMtf, size_t nMaxActions)
 {
     DataFlavor aFlavor;
@@ -1716,7 +1652,6 @@ bool TransferableDataHelper::GetGDIMetaFile(SotClipboardFormatId nFormat, GDIMet
         GetGDIMetaFile(aFlavor, rMtf) &&
         (nMaxActions == 0 || rMtf.GetActionSize() < nMaxActions);
 }
-
 
 
 bool TransferableDataHelper::GetGDIMetaFile( const DataFlavor& rFlavor, GDIMetaFile& rMtf )
@@ -1763,7 +1698,6 @@ bool TransferableDataHelper::GetGDIMetaFile( const DataFlavor& rFlavor, GDIMetaF
 }
 
 
-
 bool TransferableDataHelper::GetGraphic( SotClipboardFormatId nFormat, Graphic& rGraphic )
 {
     if(SotClipboardFormatId::BITMAP == nFormat)
@@ -1785,7 +1719,6 @@ bool TransferableDataHelper::GetGraphic( SotClipboardFormatId nFormat, Graphic& 
 }
 
 
-
 bool TransferableDataHelper::GetGraphic( const css::datatransfer::DataFlavor& rFlavor, Graphic& rGraphic )
 {
     DataFlavor  aFlavor;
@@ -1799,6 +1732,13 @@ bool TransferableDataHelper::GetGraphic( const css::datatransfer::DataFlavor& rF
 
         if( ( bRet = GetBitmapEx( aFlavor, aBmpEx ) ) )
             rGraphic = aBmpEx;
+    }
+    else if (SotExchange::GetFormatDataFlavor(SotClipboardFormatId::JPEG, aFlavor) && TransferableDataHelper::IsEqual(aFlavor, rFlavor))
+    {
+        BitmapEx aBitmapEx;
+
+        if ((bRet = GetBitmapEx(aFlavor, aBitmapEx)))
+            rGraphic = aBitmapEx;
     }
     else if(SotExchange::GetFormatDataFlavor( SotClipboardFormatId::BITMAP, aFlavor ) &&
         TransferableDataHelper::IsEqual( aFlavor, rFlavor ) )
@@ -1831,13 +1771,11 @@ bool TransferableDataHelper::GetGraphic( const css::datatransfer::DataFlavor& rF
 }
 
 
-
 bool TransferableDataHelper::GetImageMap( SotClipboardFormatId nFormat, ImageMap& rIMap )
 {
     DataFlavor aFlavor;
     return( SotExchange::GetFormatDataFlavor( nFormat, aFlavor ) && GetImageMap( aFlavor, rIMap ) );
 }
-
 
 
 bool TransferableDataHelper::GetImageMap( const css::datatransfer::DataFlavor& rFlavor, ImageMap& rIMap )
@@ -1855,13 +1793,11 @@ bool TransferableDataHelper::GetImageMap( const css::datatransfer::DataFlavor& r
 }
 
 
-
 bool TransferableDataHelper::GetTransferableObjectDescriptor( SotClipboardFormatId nFormat, TransferableObjectDescriptor& rDesc )
 {
     DataFlavor aFlavor;
     return( SotExchange::GetFormatDataFlavor( nFormat, aFlavor ) && GetTransferableObjectDescriptor( aFlavor, rDesc ) );
 }
-
 
 
 bool TransferableDataHelper::GetTransferableObjectDescriptor( const css::datatransfer::DataFlavor&, TransferableObjectDescriptor& rDesc )
@@ -1871,13 +1807,11 @@ bool TransferableDataHelper::GetTransferableObjectDescriptor( const css::datatra
 }
 
 
-
 bool TransferableDataHelper::GetINetBookmark( SotClipboardFormatId nFormat, INetBookmark& rBmk )
 {
     DataFlavor aFlavor;
     return( SotExchange::GetFormatDataFlavor( nFormat, aFlavor ) && GetINetBookmark( aFlavor, rBmk ) );
 }
-
 
 
 bool TransferableDataHelper::GetINetBookmark( const css::datatransfer::DataFlavor& rFlavor, INetBookmark& rBmk )
@@ -1950,7 +1884,7 @@ bool TransferableDataHelper::GetINetBookmark( const css::datatransfer::DataFlavo
         }
         break;
 
-#ifdef WNT
+#ifdef _WIN32
         case SotClipboardFormatId::FILEGRPDESCRIPTOR:
         {
             Sequence<sal_Int8> aSeq = GetSequence(rFlavor, OUString());
@@ -2015,14 +1949,12 @@ bool TransferableDataHelper::GetINetBookmark( const css::datatransfer::DataFlavo
 }
 
 
-
 bool TransferableDataHelper::GetINetImage( SotClipboardFormatId nFormat,
                                                 INetImage& rINtImg )
 {
     DataFlavor aFlavor;
     return( SotExchange::GetFormatDataFlavor( nFormat, aFlavor ) && GetINetImage( aFlavor, rINtImg ) );
 }
-
 
 
 bool TransferableDataHelper::GetINetImage(
@@ -2038,14 +1970,12 @@ bool TransferableDataHelper::GetINetImage(
 }
 
 
-
 bool TransferableDataHelper::GetFileList( SotClipboardFormatId nFormat,
                                                 FileList& rFileList )
 {
     DataFlavor aFlavor;
     return( SotExchange::GetFormatDataFlavor( nFormat, aFlavor ) && GetFileList( aFlavor, rFileList ) );
 }
-
 
 
 bool TransferableDataHelper::GetFileList(
@@ -2083,7 +2013,6 @@ bool TransferableDataHelper::GetFileList(
 }
 
 
-
 Sequence<sal_Int8> TransferableDataHelper::GetSequence( SotClipboardFormatId nFormat, const OUString& rDestDoc )
 {
     DataFlavor aFlavor;
@@ -2108,13 +2037,11 @@ Sequence<sal_Int8> TransferableDataHelper::GetSequence( const DataFlavor& rFlavo
 }
 
 
-
 bool TransferableDataHelper::GetSotStorageStream( SotClipboardFormatId nFormat, tools::SvRef<SotStorageStream>& rxStream )
 {
     DataFlavor aFlavor;
     return( SotExchange::GetFormatDataFlavor( nFormat, aFlavor ) && GetSotStorageStream( aFlavor, rxStream ) );
 }
-
 
 
 bool TransferableDataHelper::GetSotStorageStream( const DataFlavor& rFlavor, tools::SvRef<SotStorageStream>& rxStream )
@@ -2158,7 +2085,6 @@ void TransferableDataHelper::Rebind( const Reference< XTransferable >& _rxNewCon
 }
 
 
-
 bool TransferableDataHelper::StartClipboardListening( )
 {
     ::osl::MutexGuard aGuard( mpImpl->maMutex );
@@ -2172,7 +2098,6 @@ bool TransferableDataHelper::StartClipboardListening( )
 }
 
 
-
 void TransferableDataHelper::StopClipboardListening( )
 {
     ::osl::MutexGuard aGuard( mpImpl->maMutex );
@@ -2184,7 +2109,6 @@ void TransferableDataHelper::StopClipboardListening( )
         mpImpl->mpClipboardListener = nullptr;
     }
 }
-
 
 
 TransferableDataHelper TransferableDataHelper::CreateFromSystemClipboard( vcl::Window * pWindow )
@@ -2217,8 +2141,6 @@ TransferableDataHelper TransferableDataHelper::CreateFromSystemClipboard( vcl::W
 
     return aRet;
 }
-
-
 
 
 TransferableDataHelper TransferableDataHelper::CreateFromSelection( vcl::Window* pWindow )
@@ -2255,8 +2177,7 @@ TransferableDataHelper TransferableDataHelper::CreateFromSelection( vcl::Window*
 
 
 bool TransferableDataHelper::IsEqual( const css::datatransfer::DataFlavor& rInternalFlavor,
-                                      const css::datatransfer::DataFlavor& rRequestFlavor,
-                                      bool )
+                                      const css::datatransfer::DataFlavor& rRequestFlavor )
 {
     Reference< XComponentContext >          xContext( ::comphelper::getProcessComponentContext() );
     bool                                    bRet = false;

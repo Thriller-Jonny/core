@@ -28,6 +28,7 @@
 #include <basslots.hxx>
 #include <sfx2/sfxmodelfactory.hxx>
 #include <svx/svxids.hrc>
+#include <tools/globname.hxx>
 
 namespace basctl
 {
@@ -39,7 +40,7 @@ SFX_IMPL_SUPERCLASS_INTERFACE(basctl_DocShell, SfxObjectShell)
 
 void basctl_DocShell::InitInterface_Impl()
 {
-    GetStaticInterface()->RegisterStatusBar(IDEResId(SID_BASICIDE_STATUSBAR));
+    GetStaticInterface()->RegisterStatusBar(SID_BASICIDE_STATUSBAR);
 }
 
 DocShell::DocShell()

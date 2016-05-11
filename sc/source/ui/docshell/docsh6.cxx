@@ -38,21 +38,8 @@
 
 #include <vcl/msgbox.hxx>
 
-#include <com/sun/star/beans/XPropertySet.hpp>
-#include <com/sun/star/container/XNameAccess.hpp>
-#include <com/sun/star/lang/XMultiServiceFactory.hpp>
-#include <com/sun/star/util/XChangesBatch.hpp>
 #include <memory>
 
-using ::com::sun::star::beans::XPropertySet;
-using ::com::sun::star::lang::XMultiServiceFactory;
-using ::com::sun::star::container::XNameAccess;
-using ::com::sun::star::util::XChangesBatch;
-using ::com::sun::star::uno::Any;
-using ::com::sun::star::uno::Exception;
-using ::com::sun::star::uno::Reference;
-using ::com::sun::star::uno::Sequence;
-using ::com::sun::star::uno::UNO_QUERY_THROW;
 
 namespace {
 
@@ -70,7 +57,7 @@ void ScDocShell::SetVisArea( const Rectangle & rVisArea )
 {
     //  with the SnapVisArea call in SetVisAreaOrSize, it's safe to always
     //  use both the size and position of the VisArea
-    SetVisAreaOrSize( rVisArea, true );
+    SetVisAreaOrSize( rVisArea );
 }
 
 static void lcl_SetTopRight( Rectangle& rRect, const Point& rPos )
@@ -82,44 +69,33 @@ static void lcl_SetTopRight( Rectangle& rRect, const Point& rPos )
     rRect.Bottom() = rPos.Y() + aSize.Height() - 1;
 }
 
-void ScDocShell::SetVisAreaOrSize( const Rectangle& rVisArea, bool bModifyStart )
+void ScDocShell::SetVisAreaOrSize( const Rectangle& rVisArea )
 {
     bool bNegativePage = aDocument.IsNegativePage( aDocument.GetVisibleTab() );
 
     Rectangle aArea = rVisArea;
-    if (bModifyStart)
+    // when loading, don't check for negative values, because the sheet orientation
+    // might be set later
+    if ( !aDocument.IsImportingXML() )
     {
-        // when loading, don't check for negative values, because the sheet orientation
-        // might be set later
-        if ( !aDocument.IsImportingXML() )
+        if ( ( bNegativePage ? (aArea.Right() > 0) : (aArea.Left() < 0) ) || aArea.Top() < 0 )
         {
-            if ( ( bNegativePage ? (aArea.Right() > 0) : (aArea.Left() < 0) ) || aArea.Top() < 0 )
-            {
-                //  VisArea start position can't be negative.
-                //  Move the VisArea, otherwise only the upper left position would
-                //  be changed in SnapVisArea, and the size would be wrong.
+            //  VisArea start position can't be negative.
+            //  Move the VisArea, otherwise only the upper left position would
+            //  be changed in SnapVisArea, and the size would be wrong.
 
-                Point aNewPos( 0, std::max( aArea.Top(), (long) 0 ) );
-                if ( bNegativePage )
-                {
-                    aNewPos.X() = std::min( aArea.Right(), (long) 0 );
-                    lcl_SetTopRight( aArea, aNewPos );
-                }
-                else
-                {
-                    aNewPos.X() = std::max( aArea.Left(), (long) 0 );
-                    aArea.SetPos( aNewPos );
-                }
+            Point aNewPos( 0, std::max( aArea.Top(), (long) 0 ) );
+            if ( bNegativePage )
+            {
+                aNewPos.X() = std::min( aArea.Right(), (long) 0 );
+                lcl_SetTopRight( aArea, aNewPos );
+            }
+            else
+            {
+                aNewPos.X() = std::max( aArea.Left(), (long) 0 );
+                aArea.SetPos( aNewPos );
             }
         }
-    }
-    else
-    {
-        Rectangle aOldVisArea = SfxObjectShell::GetVisArea();
-        if ( bNegativePage )
-            lcl_SetTopRight( aArea, aOldVisArea.TopRight() );
-        else
-            aArea.SetPos( aOldVisArea.TopLeft() );
     }
 
     //      hier Position anpassen!
@@ -207,7 +183,7 @@ void ScDocShell::UpdateOle( const ScViewData* pViewData, bool bSnapSize )
     }
 
     if (aNewArea != aOldArea)
-        SetVisAreaOrSize( aNewArea, true ); // hier muss auch der Start angepasst werden
+        SetVisAreaOrSize( aNewArea ); // hier muss auch der Start angepasst werden
 }
 
 //  Style-Krempel fuer Organizer etc.
@@ -223,7 +199,7 @@ SfxStyleSheetBasePool* ScDocShell::GetStyleSheetPool()
 
 static void lcl_AdjustPool( SfxStyleSheetBasePool* pStylePool )
 {
-    pStylePool->SetSearchMask(SFX_STYLE_FAMILY_PAGE);
+    pStylePool->SetSearchMask(SfxStyleFamily::Page);
     SfxStyleSheetBase *pStyle = pStylePool->First();
     while ( pStyle )
     {
@@ -276,8 +252,8 @@ void ScDocShell::LoadStylesArgs( ScDocShell& rSource, bool bReplace, bool bCellS
     ScStyleSheetPool* pDestPool = aDocument.GetStyleSheetPool();
 
     SfxStyleFamily eFamily = bCellStyles ?
-            ( bPageStyles ? SFX_STYLE_FAMILY_ALL : SFX_STYLE_FAMILY_PARA ) :
-            SFX_STYLE_FAMILY_PAGE;
+            ( bPageStyles ? SfxStyleFamily::All : SfxStyleFamily::Para ) :
+            SfxStyleFamily::Page;
     SfxStyleSheetIterator aIter( pSourcePool, eFamily );
     sal_uInt16 nSourceCount = aIter.Count();
     if ( nSourceCount == 0 )
@@ -406,7 +382,7 @@ void ScDocShell::UpdateLinks()
     }
 }
 
-bool ScDocShell::ReloadTabLinks()
+void ScDocShell::ReloadTabLinks()
 {
     sfx2::LinkManager* pLinkManager = aDocument.GetLinkManager();
 
@@ -417,14 +393,14 @@ bool ScDocShell::ReloadTabLinks()
         ::sfx2::SvBaseLink* pBase = pLinkManager->GetLinks()[i].get();
         if (ScTableLink* pTabLink = dynamic_cast<ScTableLink*>(pBase))
         {
-//			pTabLink->SetAddUndo(sal_False);		//! Undo's zusammenfassen
+//          pTabLink->SetAddUndo(sal_False);        //! Undo's zusammenfassen
 
-			// Painting only after Update() makes no sense:
-			// ScTableLink::Refresh() will post a Paint only is bDoPaint is true
+            // Painting only after Update() makes no sense:
+            // ScTableLink::Refresh() will post a Paint only is bDoPaint is true
             // pTabLink->SetPaint(false);          //  Paint nur einmal am Ende
             pTabLink->Update();
             //pTabLink->SetPaint(true);
-//			pTabLink->SetAddUndo(sal_True);
+//          pTabLink->SetAddUndo(sal_True);
             bAny = true;
         }
     }
@@ -437,8 +413,6 @@ bool ScDocShell::ReloadTabLinks()
 
         SetDocumentModified();
     }
-
-    return true;        //! Fehler erkennen
 }
 
 void ScDocShell::SetFormulaOptions( const ScFormulaOptions& rOpt, bool bForLoading )
@@ -509,9 +483,9 @@ void ScDocShell::CheckConfigOptions()
 
     ScModule* pScMod = SC_MOD();
     const ScFormulaOptions& rOpt=pScMod->GetFormulaOptions();
-    OUString aSepArg = rOpt.GetFormulaSepArg();
-    OUString aSepArrRow = rOpt.GetFormulaSepArrayRow();
-    OUString aSepArrCol = rOpt.GetFormulaSepArrayCol();
+    const OUString& aSepArg = rOpt.GetFormulaSepArg();
+    const OUString& aSepArrRow = rOpt.GetFormulaSepArrayRow();
+    const OUString& aSepArrCol = rOpt.GetFormulaSepArrayCol();
 
     if (aDecSep == aSepArg || aDecSep == aSepArrRow || aDecSep == aSepArrCol)
     {

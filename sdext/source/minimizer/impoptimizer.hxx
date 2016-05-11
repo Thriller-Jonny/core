@@ -31,9 +31,6 @@
 #include <com/sun/star/uno/XComponentContext.hpp>
 
 
-// - PDFExport -
-
-
 class ImpOptimizer : public OptimizationStats
 {
 private:
@@ -67,7 +64,7 @@ public:
             const css::uno::Reference< css::frame::XModel >& rxModel );
         ~ImpOptimizer();
 
-        bool     Optimize( const css::uno::Sequence< css::beans::PropertyValue >& rArguments );
+        void     Optimize( const css::uno::Sequence< css::beans::PropertyValue >& rArguments );
         void     DispatchStatus();
 };
 

@@ -86,14 +86,13 @@ ZipFile::ZipFile( uno::Reference < XInputStream > &xInput, const uno::Reference 
     }
 }
 
-ZipFile::ZipFile( uno::Reference < XInputStream > &xInput, const uno::Reference < XComponentContext > & rxContext, bool bInitialise, bool bForceRecovery, uno::Reference < XProgressHandler > xProgress )
+ZipFile::ZipFile( uno::Reference < XInputStream > &xInput, const uno::Reference < XComponentContext > & rxContext, bool bInitialise, bool bForceRecovery)
     throw(IOException, ZipException, RuntimeException)
 : aGrabber(xInput)
 , aInflater( true )
 , xStream(xInput)
 , xSeek(xInput, UNO_QUERY)
 , m_xContext ( rxContext )
-, xProgressHandler( xProgress )
 , bRecoveryMode( bForceRecovery )
 {
     if (bInitialise)
@@ -115,7 +114,7 @@ ZipFile::~ZipFile()
     aEntries.clear();
 }
 
-void ZipFile::setInputStream ( uno::Reference < XInputStream > xNewStream )
+void ZipFile::setInputStream ( const uno::Reference < XInputStream >& xNewStream )
 {
     ::osl::MutexGuard aGuard( m_aMutex );
 
@@ -861,7 +860,7 @@ sal_Int32 ZipFile::readCEN()
     return nCenPos;
 }
 
-sal_Int32 ZipFile::recover()
+void ZipFile::recover()
     throw(IOException, ZipException, RuntimeException)
 {
     ::osl::MutexGuard aGuard( m_aMutex );
@@ -873,7 +872,7 @@ sal_Int32 ZipFile::recover()
     {
         nLength = aGrabber.getLength();
         if (nLength == 0 || nLength < ENDHDR)
-            return -1;
+            return;
 
         aGrabber.seek( 0 );
 
@@ -1022,8 +1021,6 @@ sal_Int32 ZipFile::recover()
             nGenPos += nPos;
             aGrabber.seek( nGenPos );
         }
-
-        return 0;
     }
     catch ( IllegalArgumentException& )
     {

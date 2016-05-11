@@ -21,8 +21,6 @@
 
 #include "event.hxx"
 
-#include <boost/noncopyable.hpp>
-
 #include <functional>
 
 namespace slideshow {
@@ -30,7 +28,7 @@ namespace internal {
 
 /** Event, which delays the functor call the given amount of time
  */
-class Delay : public Event, private ::boost::noncopyable
+class Delay : public Event
 {
 public:
     typedef ::std::function<void ()> FunctorT;
@@ -49,6 +47,8 @@ public:
         mnTimeout(nTimeout),
         maFunc(func),
         mbWasFired(false) {}
+    Delay(const Delay&) = delete;
+    Delay& operator=(const Delay&) = delete;
 
     // Event:
     virtual bool fire() override;
@@ -98,7 +98,7 @@ inline EventSharedPtr makeEvent_( FuncT const& func, OUString const& rsDescripti
 #define makeDelay(f, t, d) makeDelay_(f, t, d)
 #define makeEvent(f, d) makeEvent_(f, d)
 
-#else // OSL_DEBUG_LEVEL > 1
+#else // OSL_DEBUG_LEVEL > 0
 
 class Delay_ : public Delay {
 public:
@@ -126,10 +126,10 @@ inline EventSharedPtr makeDelay_(
 }
 
 #define makeDelay(f, t, d) makeDelay_(f, t,                   \
-        BOOST_CURRENT_FUNCTION, __FILE__, __LINE__,           \
+        OSL_THIS_FUNC, __FILE__, __LINE__,           \
         d)
 #define makeEvent(f, d) makeDelay_(f, 0.0,                  \
-        BOOST_CURRENT_FUNCTION, __FILE__, __LINE__,         \
+        OSL_THIS_FUNC, __FILE__, __LINE__,         \
         d)
 
 #endif // OSL_DEBUG_LEVEL <= 1

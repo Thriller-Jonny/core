@@ -20,8 +20,7 @@
 #include <sal/config.h>
 
 #include <algorithm>
-
-#include <boost/tuple/tuple.hpp>
+#include <tuple>
 
 #include <basegfx/matrix/b2dhommatrix.hxx>
 #include <basegfx/point/b2dpoint.hxx>
@@ -48,7 +47,7 @@
 #include <rtl/math.hxx>
 #include <tools/diagnose_ex.h>
 #include <vcl/bitmapex.hxx>
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 #include <vcl/canvastools.hxx>
 #include <vcl/virdev.hxx>
 
@@ -277,6 +276,8 @@ namespace cairocanvas
             useStates( viewState, renderState, true );
 
             cairo_move_to( mpCairo.get(), aBezierSegment.Px + 0.5, aBezierSegment.Py + 0.5 );
+            // tdf#99165 correction of control poinits not needed here, only hairlines drawn
+            // (see cairo_set_line_width above)
             cairo_curve_to( mpCairo.get(),
                             aBezierSegment.C1x + 0.5, aBezierSegment.C1y + 0.5,
                             aBezierSegment.C2x + 0.5, aBezierSegment.C2y + 0.5,
@@ -710,7 +711,7 @@ namespace cairocanvas
 
         switch( aValues.meType )
         {
-            case ::canvas::ParametricPolyPolygon::GRADIENT_LINEAR:
+            case ::canvas::ParametricPolyPolygon::GradientType::Linear:
                 x0 = 0;
                 y0 = 0;
                 x1 = 1;
@@ -719,7 +720,7 @@ namespace cairocanvas
                 addColorStops( pPattern, aValues.maColors, aValues.maStops );
                 break;
 
-            case ::canvas::ParametricPolyPolygon::GRADIENT_ELLIPTICAL:
+            case ::canvas::ParametricPolyPolygon::GradientType::Elliptical:
                 cx = 0;
                 cy = 0;
                 r0 = 0;
@@ -829,7 +830,7 @@ namespace cairocanvas
                             cairo_matrix_init( &aTextureMatrix,
                                                aTransform.m00, aTransform.m10, aTransform.m01,
                                                aTransform.m11, aTransform.m02, aTransform.m12);
-                            if( pPolyImpl->getValues().meType == canvas::ParametricPolyPolygon::GRADIENT_RECTANGULAR )
+                            if( pPolyImpl->getValues().meType == canvas::ParametricPolyPolygon::GradientType::Rectangular )
                             {
                                 // no general path gradient yet in cairo; emulate then
                                 cairo_save( pCairo );
@@ -868,7 +869,7 @@ namespace cairocanvas
 
                                     std::ptrdiff_t nIndex;
                                     double fAlpha;
-                                    boost::tuples::tie(nIndex,fAlpha)=aLerper.lerp(fT);
+                                    std::tie(nIndex,fAlpha)=aLerper.lerp(fT);
 
                                     setColor(pCairo, lerp(pColors[nIndex], pColors[nIndex+1], fAlpha));
                                     cairo_rectangle( pCairo, -1+fT, -1+fT, 2-2*fT, 2-2*fT );
@@ -937,7 +938,7 @@ namespace cairocanvas
         cairo_set_matrix( pCairo, &aOrigMatrix );
     }
 
-    void doPolyPolygonImplementation( ::basegfx::B2DPolyPolygon aPolyPolygon,
+    void doPolyPolygonImplementation( const ::basegfx::B2DPolyPolygon& aPolyPolygon,
                                       Operation aOperation,
                                       cairo_t* pCairo,
                                       const uno::Sequence< rendering::Texture >* pTextures,
@@ -950,7 +951,7 @@ namespace cairocanvas
 
         bool bOpToDo = false;
         cairo_matrix_t aOrigMatrix, aIdentityMatrix;
-        double nX, nY, nBX, nBY, nAX, nAY;
+        double nX, nY, nBX, nBY, nAX, nAY, nLastX(0.0), nLastY(0.0);
 
         cairo_get_matrix( pCairo, &aOrigMatrix );
         cairo_matrix_init_identity( &aIdentityMatrix );
@@ -1023,6 +1024,20 @@ namespace cairocanvas
                                 nBY += 0.5;
                             }
 
+                            // tdf#99165 if the control points are 'empty', create the mathematical
+                            // correct replacement ones to avoid problems with the graphical sub-system
+                            if(basegfx::fTools::equal(nAX, nLastX) && basegfx::fTools::equal(nAY, nLastY))
+                            {
+                                nAX = nLastX + ((nBX - nLastX) * 0.3);
+                                nAY = nLastY + ((nBY - nLastY) * 0.3);
+                            }
+
+                            if(basegfx::fTools::equal(nBX, nX) && basegfx::fTools::equal(nBY, nY))
+                            {
+                                nBX = nX + ((nAX - nX) * 0.3);
+                                nBY = nY + ((nAY - nY) * 0.3);
+                            }
+
                             cairo_curve_to( pCairo, nAX, nAY, nBX, nBY, nX, nY );
                         }
                         else
@@ -1032,6 +1047,9 @@ namespace cairocanvas
                         }
                         bOpToDo = true;
                     }
+
+                    nLastX = nX;
+                    nLastY = nY;
                 }
 
                 if( aPolygon.isClosed() )
@@ -1197,7 +1215,7 @@ namespace cairocanvas
             {
                 case rendering::PathJoinType::NONE:
                     bNoLineJoin = true;
-                    // cairo doesn't have join type NONE so we use MITER as it's pretty close
+                    SAL_FALLTHROUGH; // cairo doesn't have join type NONE so we use MITER as it's pretty close
                 case rendering::PathJoinType::MITER:
                     cairo_set_line_join( mpCairo.get(), CAIRO_LINE_JOIN_MITER );
                     break;
@@ -2270,7 +2288,7 @@ namespace cairocanvas
         aLayout.PlaneStride = 0;
         aLayout.ColorSpace = mbHaveAlpha ? CairoColorSpaceHolder::get() : CairoNoAlphaColorSpaceHolder::get();
         aLayout.Palette.clear();
-        aLayout.IsMsbFirst = sal_False;
+        aLayout.IsMsbFirst = false;
 
         return aLayout;
     }

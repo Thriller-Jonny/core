@@ -309,7 +309,7 @@ public:
                 SwFEShell* pFEShell = mpDocShell->GetFEShell();
                 if(pFEShell)
                 {
-                    aReturn <<= pFEShell->GetLineCount(false);
+                    aReturn <<= pFEShell->GetLineCount();
                 }
             }
         }
@@ -491,7 +491,7 @@ sal_Bool
 SwVbaCustomDocumentProperty::getLinkToContent(  ) throw (script::BasicErrorException, uno::RuntimeException, std::exception)
 {
     // #FIXME we need to store the link content somewhere
-    return sal_False;
+    return false;
 }
 
 void
@@ -575,7 +575,7 @@ SwVbaBuiltInDocumentProperty::setType( ::sal_Int8 /*Type*/ ) throw (script::Basi
 sal_Bool SAL_CALL
 SwVbaBuiltInDocumentProperty::getLinkToContent(  ) throw (script::BasicErrorException, uno::RuntimeException, std::exception)
 {
-    return sal_False; // built-in always false
+    return false; // built-in always false
 }
 
 void SAL_CALL
@@ -657,21 +657,19 @@ public:
     }
 };
 
-typedef std::unordered_map< OUString, uno::Reference< XDocumentProperty >, OUStringHash, ::std::equal_to< OUString > > DocPropsByName;
+typedef std::unordered_map< OUString, uno::Reference< XDocumentProperty >, OUStringHash > DocPropsByName;
 
 class BuiltInPropertiesImpl : public PropertiesImpl_BASE
 {
 protected:
 
-    uno::Reference< XHelperInterface > m_xParent;
-    uno::Reference< uno::XComponentContext > m_xContext;
     uno::Reference< frame::XModel > m_xModel;
 
     DocProps mDocProps;
     DocPropsByName mNamedDocProps;
 
     public:
-    BuiltInPropertiesImpl( const uno::Reference< XHelperInterface >& xParent, const uno::Reference< uno::XComponentContext >& xContext, const uno::Reference< frame::XModel >& xModel ) : m_xParent( xParent ), m_xContext( xContext ), m_xModel( xModel )
+    BuiltInPropertiesImpl( const uno::Reference< XHelperInterface >& xParent, const uno::Reference< uno::XComponentContext >& xContext, const uno::Reference< frame::XModel >& xModel ) : m_xModel( xModel )
     {
         BuiltInIndexHelper builtIns( m_xModel );
         for ( sal_Int32 index = word::WdBuiltInProperty::wdPropertyTitle; index <= word::WdBuiltInProperty::wdPropertyCharsWSpaces; ++index )
@@ -715,8 +713,8 @@ protected:
     {
         DocPropsByName::iterator it = mNamedDocProps.find( aName );
         if ( it == mNamedDocProps.end() )
-            return sal_False;
-        return sal_True;
+            return false;
+        return true;
     }
 // XElementAccess
     virtual uno::Type SAL_CALL getElementType(  ) throw (uno::RuntimeException, std::exception) override
@@ -733,7 +731,7 @@ protected:
     }
 };
 
-SwVbaBuiltinDocumentProperties::SwVbaBuiltinDocumentProperties( const uno::Reference< XHelperInterface >& xParent, const uno::Reference< uno::XComponentContext >& xContext, const uno::Reference< frame::XModel >& xModel ) : SwVbaDocumentproperties_BASE( xParent, xContext,  uno::Reference< container::XIndexAccess >( new BuiltInPropertiesImpl( xParent, xContext, xModel ) ) ), m_xModel( xModel )
+SwVbaBuiltinDocumentProperties::SwVbaBuiltinDocumentProperties( const uno::Reference< XHelperInterface >& xParent, const uno::Reference< uno::XComponentContext >& xContext, const uno::Reference< frame::XModel >& xModel ) : SwVbaDocumentproperties_BASE( xParent, xContext,  uno::Reference< container::XIndexAccess >( new BuiltInPropertiesImpl( xParent, xContext, xModel ) ) )
 {
 }
 

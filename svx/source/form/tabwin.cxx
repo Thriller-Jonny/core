@@ -76,7 +76,7 @@ namespace {
 struct ColumnInfo
 {
     OUString sColumnName;
-    ColumnInfo(const OUString& i_sColumnName)
+    explicit ColumnInfo(const OUString& i_sColumnName)
         : sColumnName(i_sColumnName)
     {
     }
@@ -167,20 +167,10 @@ void FmFieldWinListBox::StartDrag( sal_Int8 /*_nAction*/, const Point& /*_rPosPi
     pTransferColumn->StartDrag( this, DND_ACTION_COPY );
 }
 
-FmFieldWinData::FmFieldWinData()
-{
-}
-
-
-FmFieldWinData::~FmFieldWinData()
-{
-}
-
 FmFieldWin::FmFieldWin(SfxBindings* _pBindings, SfxChildWindow* _pMgr, vcl::Window* _pParent)
             :SfxFloatingWindow(_pBindings, _pMgr, _pParent, WinBits(WB_STDMODELESS|WB_SIZEABLE))
             ,SfxControllerItem(SID_FM_FIELDS_CONTROL, *_pBindings)
             ,::comphelper::OPropertyChangeListener(m_aMutex)
-            ,pData(new FmFieldWinData)
             ,m_nObjectType(0)
             ,m_pChangeListener(nullptr)
 {
@@ -208,7 +198,6 @@ void FmFieldWin::dispose()
         //  delete m_pChangeListener;
     }
     pListBox.disposeAndClear();
-    delete pData;
     ::SfxControllerItem::dispose();
     SfxFloatingWindow::dispose();
 }
@@ -396,7 +385,6 @@ void FmFieldWin::Resize()
     SfxFloatingWindow::Resize();
 
     Size aOutputSize( GetOutputSizePixel() );
-
 
 
     // adapt size of css::form::ListBox

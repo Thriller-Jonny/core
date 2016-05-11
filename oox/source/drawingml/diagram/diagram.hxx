@@ -262,7 +262,7 @@ class Diagram
 {
 public:
     void setData( const DiagramDataPtr & );
-    DiagramDataPtr getData() const
+    const DiagramDataPtr& getData() const
         {
             return mpData;
         }
@@ -283,7 +283,6 @@ private:
     DiagramLayoutPtr               mpLayout;
     DiagramQStyleMap               maStyles;
     DiagramColorMap                maColors;
-    std::map< OUString, ShapePtr > maShapeMap;
     DiagramDomMap                  maMainDomMap;
     css::uno::Sequence< css::uno::Sequence< css::uno::Any > > maDataRelsMap;
 };

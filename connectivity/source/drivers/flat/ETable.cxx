@@ -128,8 +128,8 @@ void OFlatTable::fillColumns(const ::com::sun::star::lang::Locale& _aLocale)
     const sal_Unicode cThousandDelimiter = pConnection->getThousandDelimiter();
     ::comphelper::UStringMixEqual aCase(bCase);
     vector<OUString> aColumnNames;
-    vector<OUString> m_aTypeNames;
-    m_aTypeNames.resize(nFieldCount);
+    vector<OUString> aTypeNames;
+    aTypeNames.resize(nFieldCount);
     const sal_Int32 nMaxRowsToScan = pConnection->getMaxRowsToScan();
     sal_Int32 nRowCount = 0;
 
@@ -156,7 +156,7 @@ void OFlatTable::fillColumns(const ::com::sun::star::lang::Locale& _aLocale)
             if(bRead)
             {
                 impl_fillColumnInfo_nothrow(m_aCurrentLine, nStartPosFirstLine, nStartPosFirstLine2,
-                                            m_aTypes[i], m_aPrecisions[i], m_aScales[i], m_aTypeNames[i],
+                                            m_aTypes[i], m_aPrecisions[i], m_aScales[i], aTypeNames[i],
                                             cDecimalDelimiter, cThousandDelimiter, aCharClass);
             }
         }
@@ -179,7 +179,7 @@ void OFlatTable::fillColumns(const ::com::sun::star::lang::Locale& _aLocale)
             aFind = connectivity::find(m_aColumns->get().begin(),m_aColumns->get().end(),aAlias,aCase);
         }
 
-        sdbcx::OColumn* pColumn = new sdbcx::OColumn(aAlias,m_aTypeNames[i],OUString(),OUString(),
+        sdbcx::OColumn* pColumn = new sdbcx::OColumn(aAlias,aTypeNames[i],OUString(),OUString(),
                                                 ColumnValue::NULLABLE,
                                                 m_aPrecisions[i],
                                                 m_aScales[i],
@@ -390,16 +390,16 @@ void OFlatTable::impl_fillColumnInfo_nothrow(QuotedTokenizedString& aFirstLine, 
 }
 
 OFlatTable::OFlatTable(sdbcx::OCollection* _pTables,OFlatConnection* _pConnection,
-                    const OUString& _Name,
-                    const OUString& _Type,
-                    const OUString& _Description ,
-                    const OUString& _SchemaName,
-                    const OUString& _CatalogName
-                ) : OFlatTable_BASE(_pTables,_pConnection,_Name,
-                                  _Type,
-                                  _Description,
-                                  _SchemaName,
-                                  _CatalogName)
+                    const OUString& Name,
+                    const OUString& Type,
+                    const OUString& Description ,
+                    const OUString& SchemaName,
+                    const OUString& CatalogName
+                ) : OFlatTable_BASE(_pTables,_pConnection,Name,
+                                  Type,
+                                  Description,
+                                  SchemaName,
+                                  CatalogName)
     ,m_nRowPos(0)
     ,m_nMaxRowCount(0)
     ,m_cStringDelimiter(_pConnection->getStringDelimiter())
@@ -423,7 +423,7 @@ void OFlatTable::construct()
     INetURLObject aURL;
     aURL.SetURL(getEntry());
 
-    if(aURL.getExtension() != OUString(m_pConnection->getExtension()))
+    if(aURL.getExtension() != m_pConnection->getExtension())
         aURL.setExtension(m_pConnection->getExtension());
 
     OUString aFileName = aURL.GetMainURL(INetURLObject::NO_DECODE);
@@ -577,7 +577,7 @@ sal_Int64 OFlatTable::getSomething( const Sequence< sal_Int8 > & rId ) throw (Ru
                 : OFlatTable_BASE::getSomething(rId);
 }
 
-bool OFlatTable::fetchRow(OValueRefRow& _rRow, const OSQLColumns & _rCols, bool bIsTable, bool bRetrieveData)
+bool OFlatTable::fetchRow(OValueRefRow& _rRow, const OSQLColumns & _rCols, bool bRetrieveData)
 {
     *(_rRow->get())[0] = m_nFilePos;
 
@@ -618,16 +618,7 @@ bool OFlatTable::fetchRow(OValueRefRow& _rRow, const OSQLColumns & _rCols, bool 
         }
         else
         {
-            sal_Int32 nType = 0;
-            if(bIsTable)
-            {
-                nType   = m_aTypes[i-1];
-            }
-            else
-            {
-                Reference< XPropertySet> xColumn = *aIter;
-                xColumn->getPropertyValue(OMetaConnection::getPropMap().getNameByIndex(PROPERTY_ID_TYPE))       >>= nType;
-            }
+            sal_Int32 nType   = m_aTypes[i-1];
             switch(nType)
             {
                 case DataType::TIMESTAMP:
@@ -743,7 +734,7 @@ bool OFlatTable::seekRow(IResultSetHelper::Movement eCursorPosition, sal_Int32 n
     {
         case IResultSetHelper::FIRST:
             m_nRowPos = 0;
-            // run through
+            SAL_FALLTHROUGH;
         case IResultSetHelper::NEXT:
             {
                 assert(m_nRowPos >= 0);

@@ -37,32 +37,6 @@ endif
 
 # External headers
 
-ifneq ($(SYSTEM_NPAPI_HEADERS),)
-
-# yes this uses internal headers too...
-# they are split across 2 dirs for this reason
-define gb_LinkTarget__use_npapi_headers
-$(call gb_LinkTarget_set_include,$(1),\
-	$(NPAPI_HEADERS_CFLAGS) \
-	-I$(SRCDIR)/external/np_sdk \
-	$$(INCLUDE) \
-)
-
-endef
-
-else #!SYSTEM_NPAPI_HEADERS
-
-define gb_LinkTarget__use_npapi_headers
-$(call gb_LinkTarget_set_include,$(1),\
-	-I$(SRCDIR)/external/np_sdk/inc \
-	-I$(SRCDIR)/external/np_sdk \
-	$$(INCLUDE) \
-)
-
-endef
-
-endif #SYSTEM_NPAPI_HEADERS
-
 ifneq ($(SYSTEM_ODBC_HEADERS),)
 
 define gb_LinkTarget__use_odbc_headers
@@ -83,23 +57,6 @@ $(call gb_LinkTarget_set_include,$(1),\
 endef
 
 endif # SYSTEM_ODBC_HEADERS
-
-ifneq ($(SYSTEM_VIGRA),)
-
-gb_LinkTarget__use_vigra_headers :=
-
-else
-
-define gb_LinkTarget__use_vigra_headers
-$(call gb_LinkTarget_use_unpacked,$(1),vigra)
-$(call gb_LinkTarget_set_include,$(1),\
-	-I$(call gb_UnpackedTarball_get_dir,vigra/include) \
-	$$(INCLUDE) \
-)
-
-endef
-
-endif
 
 ifneq ($(SYSTEM_MDDS),)
 
@@ -205,7 +162,7 @@ endef
 else # !SYSTEM_CPPUNIT
 
 define gb_LinkTarget__use_cppunit
-$(call gb_LinkTarget_use_external_project,$(1),cppunit)
+$(call gb_LinkTarget_use_external_project,$(1),cppunit, full)
 
 $(call gb_LinkTarget_set_include,$(1),\
 	-I$(call gb_UnpackedTarball_get_dir,cppunit/include)\
@@ -226,6 +183,7 @@ endef
 
 endif # SYSTEM_CPPUNIT
 
+ifneq ($(ENABLE_OPENGL)$(if $(filter ANDROID,$(OS)),TRUE),)
 ifneq ($(SYSTEM_GLEW),)
 
 define gb_LinkTarget__use_glew
@@ -271,6 +229,7 @@ $(call gb_ExternalProject_use_external_project,$(1),glew)
 endef
 
 endif # SYSTEM_GLEW
+endif # ENABLE_OPENGL
 
 ifneq ($(SYSTEM_GLYPHY),)
 
@@ -484,7 +443,7 @@ $(call gb_LinkTarget_set_include,$(1),\
 $(call gb_LinkTarget_add_libs,$(1),\
 	$(call gb_UnpackedTarball_get_dir,jpeg-turbo)/.libs/libjpeg$(gb_StaticLibrary_PLAINEXT) \
 )
-$(call gb_LinkTarget_use_external_project,$(1),jpeg-turbo)
+$(call gb_LinkTarget_use_external_project,$(1),jpeg-turbo,full)
 
 endef
 
@@ -660,7 +619,7 @@ endif # SYSTEM_HUNSPELL
 
 ifneq ($(SYSTEM_BOOST),)
 
-define gb_LinkTarget__use_boostdatetime
+define gb_LinkTarget__use_boost_lib
 $(call gb_LinkTarget_set_include,$(1),\
 	$$(INCLUDE) \
 	$(BOOST_CPPFLAGS) \
@@ -670,43 +629,31 @@ $(call gb_LinkTarget_add_ldflags,$(1),\
 	$(BOOST_LDFLAGS) \
 )
 
-$(call gb_LinkTarget_add_libs,$(1),\
-	$(BOOST_DATE_TIME_LIB) \
-)
+$(call gb_LinkTarget_add_libs,$(1),$(2))
 
 endef
 
+define gb_LinkTarget__use_boost_date_time
+$(call gb_LinkTarget__use_boost_lib,$(1),$(BOOST_DATE_TIME_LIB))
+
+endef
+
+define gb_LinkTarget__use_boost_filesystem
+$(call gb_LinkTarget__use_boost_lib,$(1),$(BOOST_FILESYSTEM_LIB))
+
+endef
+
+gb_ExternalProject__use_boost_filesystem :=
+
 define gb_LinkTarget__use_boost_iostreams
-$(call gb_LinkTarget_set_include,$(1),\
-	$$(INCLUDE) \
-	$(BOOST_CPPFLAGS) \
-)
-
-$(call gb_LinkTarget_add_ldflags,$(1),\
-	$(BOOST_LDFLAGS) \
-)
-
-$(call gb_LinkTarget_add_libs,$(1),\
-	$(BOOST_IOSTREAMS_LIB) \
-)
+$(call gb_LinkTarget__use_boost_lib,$(1),$(BOOST_IOSTREAMS_LIB))
 
 endef
 
 gb_ExternalProject__use_boost_iostreams :=
 
 define gb_LinkTarget__use_boost_system
-$(call gb_LinkTarget_set_include,$(1),\
-	$$(INCLUDE) \
-	$(BOOST_CPPFLAGS) \
-)
-
-$(call gb_LinkTarget_add_ldflags,$(1),\
-	$(BOOST_LDFLAGS) \
-)
-
-$(call gb_LinkTarget_add_libs,$(1),\
-	$(BOOST_SYSTEM_LIB) \
-)
+$(call gb_LinkTarget__use_boost_lib,$(1),$(BOOST_SYSTEM_LIB))
 
 endef
 
@@ -724,37 +671,31 @@ gb_ExternalProject__use_boost_headers:=
 
 else # !SYSTEM_BOOST
 
-ifeq ($(OS),WNT)
-define gb_LinkTarget__use_boostthread
+define gb_LinkTarget__use_boost_lib
 $(call gb_LinkTarget_add_defs,$(1),\
 	-DBOOST_ALL_NO_LIB \
 )
 
-$(call gb_LinkTarget_use_static_libraries,$(1),\
-	boostthread \
-)
+$(call gb_LinkTarget_use_static_libraries,$(1),$(2))
+
 endef
-endif
 
-define gb_LinkTarget__use_boostdatetime
-$(call gb_LinkTarget_add_defs,$(1),\
-	-DBOOST_ALL_NO_LIB \
-)
+define gb_LinkTarget__use_boost_date_time
+$(call gb_LinkTarget__use_boost_lib,$(1),boost_date_time)
 
-$(call gb_LinkTarget_use_static_libraries,$(1),\
-	boostdatetime \
-)
+endef
 
+define gb_LinkTarget__use_boost_filesystem
+$(call gb_LinkTarget__use_boost_lib,$(1),boost_filesystem)
+
+endef
+
+define gb_ExternalProject__use_boost_filesystem
+$(call gb_ExternalProject_use_static_libraries,$(1),boost_filesystem)
 endef
 
 define gb_LinkTarget__use_boost_iostreams
-$(call gb_LinkTarget_add_defs,$(1),\
-	-DBOOST_ALL_NO_LIB \
-)
-
-$(call gb_LinkTarget_use_static_libraries,$(1),\
-	boost_iostreams \
-)
+$(call gb_LinkTarget__use_boost_lib,$(1),boost_iostreams)
 
 endef
 
@@ -763,13 +704,7 @@ $(call gb_ExternalProject_use_static_libraries,$(1),boost_iostreams)
 endef
 
 define gb_LinkTarget__use_boost_system
-$(call gb_LinkTarget_add_defs,$(1),\
-	-DBOOST_ALL_NO_LIB \
-)
-
-$(call gb_LinkTarget_use_static_libraries,$(1),\
-	boost_system \
-)
+$(call gb_LinkTarget__use_boost_lib,$(1),boost_system)
 
 endef
 
@@ -790,6 +725,7 @@ define gb_ExternalProject__use_boost_headers
 $(call gb_ExternalProject_use_unpacked,$(1),boost)
 
 endef
+
 endif # SYSTEM_BOOST
 
 
@@ -1060,20 +996,46 @@ $(call gb_LinkTarget_add_libs,$(1),$(LIBLANGTAG_LIBS))
 
 endef
 
+gb_ExternalProject__use_liblangtag :=
+
 else # !SYSTEM_LIBLANGTAG
 
 $(eval $(call gb_Helper_register_packages_for_install,ooo,\
 	liblangtag_data \
 ))
 
+ifeq ($(COM),MSC)
+
 define gb_LinkTarget__use_liblangtag
-$(call gb_LinkTarget_use_unpacked,$(1),langtag)
 $(call gb_LinkTarget_set_include,$(1),\
-	-I$(call gb_UnpackedTarball_get_dir,langtag) \
+	$(LIBLANGTAG_CFLAGS) \
 	$$(INCLUDE) \
 )
 $(call gb_LinkTarget_add_libs,$(1),$(LIBLANGTAG_LIBS))
 $(call gb_LinkTarget_use_external_project,$(1),langtag)
+
+endef
+
+else
+
+$(eval $(call gb_Helper_register_packages_for_install,ooo,\
+	liblangtag \
+))
+
+define gb_LinkTarget__use_liblangtag
+$(call gb_LinkTarget_set_include,$(1),\
+	$(LIBLANGTAG_CFLAGS) \
+	$$(INCLUDE) \
+)
+$(call gb_LinkTarget_add_libs,$(1),$(LIBLANGTAG_LIBS))
+$(call gb_LinkTarget_use_package,$(1),liblangtag)
+
+endef
+
+endif # MSC
+
+define gb_ExternalProject__use_liblangtag
+$(call gb_ExternalProject_use_external_project,$(1),langtag)
 
 endef
 
@@ -1082,6 +1044,7 @@ endif # SYSTEM_LIBLANGTAG
 else
 
 gb_LinkTarget__use_liblangtag :=
+gb_ExternalProject__use_liblangtag :=
 
 endif # ENABLE_LIBLANGTAG
 
@@ -1268,7 +1231,7 @@ endif # ANDROID
 endif # SYSTEM_REDLAND
 
 
-ifneq ($(USING_X11)$(ENABLE_CAIRO_CANVAS),) # or
+ifneq ($(USING_X11)$(ENABLE_CAIRO_CANVAS)$(ENABLE_HEADLESS),) # or
 
 ifneq ($(SYSTEM_CAIRO),)
 
@@ -1594,6 +1557,7 @@ $(call gb_ExternalProject_use_package,$(1),openssl)
 endef
 
 define gb_LinkTarget__use_openssl_headers
+$(call gb_LinkTarget_use_external_project,$(1),openssl)
 $(call gb_LinkTarget_set_include,$(1),\
 	-I$(call gb_UnpackedTarball_get_dir,openssl)/include \
 	$$(INCLUDE) \
@@ -2462,10 +2426,6 @@ $(call gb_LinkTarget_set_include,$(1),\
 	$(GIO_CFLAGS) \
 )
 
-$(call gb_LinkTarget_add_defs,$(1),\
-	-DENABLE_GIO \
-)
-
 $(call gb_LinkTarget_add_libs,$(1),$(GIO_LIBS))
 
 endef
@@ -2556,16 +2516,6 @@ $(call gb_LinkTarget_set_include,$(1),\
 	$$(INCLUDE) \
 	$(DBUS_CFLAGS) \
 )
-
-$(call gb_LinkTarget_add_defs,$(1),\
-    -DENABLE_DBUS \
-)
-
-ifeq ($(ENABLE_PACKAGEKIT),TRUE)
-$(call gb_LinkTarget_add_defs,$(1),\
-    -DENABLE_PACKAGEKIT \
-)
-endif # ENABLE_PACKAGEKIT
 
 $(call gb_LinkTarget_add_libs,$(1),\
 	$(DBUS_LIBS) \
@@ -2991,12 +2941,6 @@ $(call gb_LinkTarget_add_libs,$(1),\
 	$(KDE4_LIBS) \
 )
 
-ifeq ($(COM),GCC)
-$(call gb_LinkTarget_add_cxxflags,$(1),\
-	-Wno-shadow \
-)
-endif
-
 endef
 
 else # !ENABLE_KDE4
@@ -3082,7 +3026,7 @@ endif
 
 ifeq ($(OS),WNT)
 $(call gb_LinkTarget_add_libs,$(1),\
-	$(call gb_UnpackedTarball_get_dir,python3)/PCbuild$(if $(filter X86_64,$(CPUNAME)),/amd64)/python$(PYTHON_VERSION_MAJOR)$(PYTHON_VERSION_MINOR)$(if $(MSVC_USE_DEBUG_RUNTIME),_d).lib \
+	$(call gb_UnpackedTarball_get_dir,python3)/PCbuild$(if $(filter X86_64,$(CPUNAME)),/amd64)$(if $(filter 140-INTEL,$(VCVER)-$(CPUNAME)),/win32)/python$(PYTHON_VERSION_MAJOR)$(PYTHON_VERSION_MINOR)$(if $(MSVC_USE_DEBUG_RUNTIME),_d).lib \
 )
 else ifeq ($(OS),MACOSX)
 $(call gb_LinkTarget_add_libs,$(1),\
@@ -3164,7 +3108,7 @@ $(call gb_LinkTarget_set_include,$(1),\
 )
 
 $(call gb_LinkTarget_add_libs,$(1),\
-	-L$(call gb_UnpackedTarball_get_dir,liborcus)/src/liborcus/.libs -lorcus-0.10 \
+       -L$(call gb_UnpackedTarball_get_dir,liborcus)/src/liborcus/.libs -lorcus-0.11 \
 )
 
 $(if $(SYSTEM_BOOST), \
@@ -3183,7 +3127,7 @@ $(call gb_LinkTarget_set_include,$(1),\
 )
 
 $(call gb_LinkTarget_add_libs,$(1),\
-	-L$(call gb_UnpackedTarball_get_dir,liborcus)/src/parser/.libs -lorcus-parser-0.10 \
+	-L$(call gb_UnpackedTarball_get_dir,liborcus)/src/parser/.libs -lorcus-parser-0.11 \
 )
 
 endef
@@ -3246,8 +3190,6 @@ endif # ENABLE_EOT
 
 ifeq ($(USING_X11), TRUE)
 
-ifeq ($(XRANDR_DLOPEN),FALSE)
-
 define gb_LinkTarget__use_Xrandr
 $(call gb_LinkTarget_set_include,$(1),\
 	$$(INCLUDE) \
@@ -3258,16 +3200,6 @@ $(call gb_LinkTarget_add_libs,$(1),\
 	$(XRANDR_LIBS) \
 )
 endef
-
-else # XRANDR_DLOPEN
-
-define gb_LinkTarget__use_Xrandr
-$(call gb_LinkTarget_add_defs,$(1),\
-	-DXRANDR_DLOPEN \
-)
-endef
-
-endif # XRANDR_DLOPEN
 
 define gb_LinkTarget__use_Xrender
 $(call gb_LinkTarget_set_include,$(1),\
@@ -3388,6 +3320,34 @@ endif # SYSTEM_NSS
 
 endif # DESKTOP
 
+ifeq ($(ENABLE_BREAKPAD),TRUE)
+
+define gb_LinkTarget__use_breakpad
+$(call gb_LinkTarget_set_include,$(1),\
+    -I$(call gb_UnpackedTarball_get_dir,breakpad)/src \
+    $$(INCLUDE) \
+)
+
+ifeq ($(COM),MSC)
+$(call gb_LinkTarget_use_static_libraries,$(1),\
+    breakpad \
+)
+else
+$(call gb_LinkTarget_add_libs,$(1),\
+	$(call gb_UnpackedTarball_get_dir,breakpad)/src/client/linux/libbreakpad_client.a \
+)
+endif
+
+$(call gb_LinkTarget_use_external_project,$(1),breakpad)
+
+endef
+
+$(eval $(call gb_Helper_register_packages_for_install,ooo,\
+	breakpad \
+))
+
+endif # ENABLE_BREAKPAD
+
 ifeq ($(ENABLE_GLTF),TRUE)
 
 ifneq ($(SYSTEM_LIBGLTF),TRUE)
@@ -3423,7 +3383,7 @@ $(call gb_LinkTarget_add_libs,$(1),$(LIBGLTF_LIBS))
 
 endef
 
-endif # SYSTEN_LIBGLTF
+endif # SYSTEM_LIBGLTF
 
 ifeq ($(ENABLE_COLLADA),TRUE)
 
@@ -3747,8 +3707,9 @@ $(call gb_Executable_add_runtime_dependencies,gengal,\
 	$(call gb_Library_get_target,$(gb_CPPU_ENV)_uno) \
 	$(call gb_Package_get_target_for_build,postprocess_images) \
 	$(call gb_Package_get_target_for_build,postprocess_registry) \
-	$(call gb_Package_get_target_for_build,instsetoo_native_setup_ure) \
-	$(call gb_Package_get_target_for_build,instsetoo_native_setup) \
+	$(INSTROOT_FOR_BUILD)/$(LIBO_URE_ETC_FOLDER)/$(call gb_Helper_get_rcfile,uno) \
+	$(INSTROOT_FOR_BUILD)/$(LIBO_ETC_FOLDER)/$(call gb_Helper_get_rcfile,fundamental) \
+	$(INSTROOT_FOR_BUILD)/$(LIBO_ETC_FOLDER)/$(call gb_Helper_get_rcfile,louno) \
 	$(INSTROOT_FOR_BUILD)/$(LIBO_URE_MISC_FOLDER)/services.rdb \
 	$(INSTROOT_FOR_BUILD)/$(LIBO_ETC_FOLDER)/services/services.rdb \
 	$(call gb_UnoApi_get_target,offapi) \
@@ -4006,5 +3967,13 @@ endef
 
 endif
 endif
+
+define gb_LinkTarget__use_clew
+$(call gb_LinkTarget_set_include,$(1), \
+    -I$(SRCDIR)/external/clew/source/include \
+    $$(INCLUDE) \
+)
+$(call gb_LinkTarget_use_libraries,$(1),clew)
+endef
 
 # vim: set noet sw=4 ts=4:

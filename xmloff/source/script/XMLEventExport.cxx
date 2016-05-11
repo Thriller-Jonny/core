@@ -38,7 +38,6 @@ using ::com::sun::star::beans::PropertyValue;
 using ::com::sun::star::document::XEventsSupplier;
 using ::com::sun::star::container::XNameReplace;
 using ::com::sun::star::container::XNameAccess;
-using ::xmloff::token::GetXMLToken;
 using ::xmloff::token::XML_EVENT_LISTENERS;
 
 
@@ -159,13 +158,12 @@ void XMLEventExport::Export( Reference<XNameAccess> & rAccess,
     }
 }
 
-void XMLEventExport::ExportExt( Reference<XNameAccess> & rAccess,
-                                bool bWhitespace )
+void XMLEventExport::ExportExt( Reference<XNameAccess> & rAccess )
 {
     // set bExtNamespace flag to use XML_NAMESPACE_OFFICE_EXT namespace
     // for events element (not for child elements)
     bExtNamespace = true;
-    Export(rAccess, bWhitespace);
+    Export(rAccess);
     bExtNamespace = false;          // reset for future Export calls
 }
 

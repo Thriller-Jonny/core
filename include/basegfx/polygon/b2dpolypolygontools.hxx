@@ -31,8 +31,6 @@
 #include <basegfx/basegfxdllapi.h>
 
 
-
-
 namespace basegfx
 {
     // predefinitions
@@ -59,10 +57,6 @@ namespace basegfx
         // Subdivide all contained curves. Use distanceBound value if given. Else, a convenient one
         // is created.
         BASEGFX_DLLPUBLIC B2DPolyPolygon adaptiveSubdivideByAngle(const B2DPolyPolygon& rCandidate, double fAngleBound = 0.0);
-
-        // Subdivide all contained curves. Use nCount divisions if given. Else, a convenient one
-        // is created.
-        BASEGFX_DLLPUBLIC B2DPolyPolygon adaptiveSubdivideByCount(const B2DPolyPolygon& rCandidate, sal_uInt32 nCount = 0L);
 
         // isInside test for B2dPoint. On border is not inside as long as not true is given
         // in bWithBorder flag. It is assumed that the orientations of the given polygon are correct.

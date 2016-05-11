@@ -20,8 +20,10 @@
 #ifndef INCLUDED_VCL_INC_UNX_SALGDI_H
 #define INCLUDED_VCL_INC_UNX_SALGDI_H
 
-#include <prex.h>
-#include <postx.h>
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
+#include <X11/extensions/Xrender.h>
+
 #include <tools/fract.hxx>
 
 #include <vcl/salgtype.hxx>
@@ -36,7 +38,10 @@
 #include <deque>
 #include <memory>
 
-class ImplFontMetricData;
+/* From <X11/Intrinsic.h> */
+typedef unsigned long Pixel;
+
+class FontAttributes;
 class FontSelectPattern;
 class SalBitmap;
 class SalColormap;
@@ -47,8 +52,6 @@ class X11SalVirtualDevice;
 class X11SalGraphicsImpl;
 class X11OpenGLSalGraphicsImpl;
 class X11OpenGLSalVirtualDevice;
-class PspSalPrinter;
-class PspSalInfoPrinter;
 class ServerFont;
 class ImplLayoutArgs;
 class ServerFontLayout;
@@ -91,7 +94,7 @@ public:
     using SalGraphics::GetPixel;
     inline  Pixel                   GetPixel( SalColor nSalColor ) const;
 
-    SalX11Screen                    GetScreenNumber() const { return m_nXScreen; }
+    const SalX11Screen&             GetScreenNumber() const { return m_nXScreen; }
 
     // override all pure virtual methods
     virtual void                    GetResolution( sal_Int32& rDPIX, sal_Int32& rDPIY ) override;
@@ -114,7 +117,7 @@ public:
 
     virtual void                    SetTextColor( SalColor nSalColor ) override;
     virtual sal_uInt16              SetFont( FontSelectPattern*, int nFallbackLevel ) override;
-    virtual void                    GetFontMetric( ImplFontMetricData*, int nFallbackLevel ) override;
+    virtual void                    GetFontMetric( ImplFontMetricDataPtr&, int nFallbackLevel ) override;
     virtual const FontCharMapPtr    GetFontCharMap() const override;
     virtual bool                    GetFontCapabilities(vcl::FontCapabilities &rFontCapabilities) const override;
     virtual void                    GetDevFontList( PhysicalFontCollection* ) override;
@@ -173,7 +176,8 @@ public:
                                         double fTransparency,
                                         const basegfx::B2DVector& rLineWidth,
                                         basegfx::B2DLineJoin,
-                                        css::drawing::LineCap ) override;
+                                        css::drawing::LineCap,
+                                        double fMiterMinimumAngle) override;
 
     virtual bool                    drawGradient( const tools::PolyPolygon&, const Gradient& ) override;
 
@@ -263,8 +267,6 @@ public:
     virtual css::uno::Any           GetNativeSurfaceHandle(cairo::SurfaceSharedPtr& rSurface, const basegfx::B2ISize& rSize) const override;
     virtual SystemFontData          GetSysFontData( int nFallbackLevel ) const override;
 
-    virtual OpenGLContext          *BeginPaint() override;
-
     bool TryRenderCachedNativeControl(ControlCacheKey& aControlCacheKey,
                                       int nX, int nY);
 
@@ -272,7 +274,7 @@ public:
                                      ControlCacheKey& aControlCacheKey);
 
     // fill a pixmap from a screen region
-    bool                            FillPixmapFromScreen( X11Pixmap* pPixmap, int nX, int nY );
+    void                            FillPixmapFromScreen( X11Pixmap* pPixmap, int nX, int nY );
 
     // render a pixmap to the screen
     bool                            RenderPixmapToScreen( X11Pixmap* pPixmap, X11Pixmap* pMask, int nX, int nY );
@@ -286,6 +288,10 @@ public:
      *  them because the next one using XCopyArea can depend on them
      */
     void                            YieldGraphicsExpose();
+
+    cairo_t* getCairoContext();
+    static void releaseCairoContext(cairo_t* cr);
+
 
     // do XCopyArea or XGet/PutImage depending on screen numbers
     // signature is like XCopyArea with screen numbers added
@@ -352,12 +358,6 @@ inline Display *X11SalGraphics::GetXDisplay() const
 
 inline Pixel X11SalGraphics::GetPixel( SalColor nSalColor ) const
 { return GetColormap().GetPixel( nSalColor ); }
-
-#ifdef DBG_UTIL
-#define stderr0( s )            fprintf( stderr, s )
-#else
-#define stderr0( s )            ;
-#endif
 
 #endif // INCLUDED_VCL_INC_UNX_SALGDI_H
 

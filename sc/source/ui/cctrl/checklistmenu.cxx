@@ -89,7 +89,7 @@ ScMenuFloatingWindow::ScMenuFloatingWindow(vcl::Window* pParent, ScDocument* pDo
     sal_Int32 nScaleFactor = GetDPIScaleFactor();
     const sal_uInt16 nPopupFontHeight = 12 * nScaleFactor;
     maLabelFont = rStyle.GetLabelFont();
-    maLabelFont.SetHeight(nPopupFontHeight);
+    maLabelFont.SetFontHeight(nPopupFontHeight);
 }
 
 ScMenuFloatingWindow::~ScMenuFloatingWindow()
@@ -294,11 +294,11 @@ Reference<XAccessible> ScMenuFloatingWindow::CreateAccessible()
     return mxAccessible;
 }
 
-void ScMenuFloatingWindow::addMenuItem(const OUString& rText, bool bEnabled, Action* pAction)
+void ScMenuFloatingWindow::addMenuItem(const OUString& rText, Action* pAction)
 {
     MenuItemData aItem;
     aItem.maText = rText;
-    aItem.mbEnabled = bEnabled;
+    aItem.mbEnabled = true;
     aItem.mpAction.reset(pAction);
     maMenuItems.push_back(aItem);
 }
@@ -361,14 +361,14 @@ void ScMenuFloatingWindow::drawMenuItem(vcl::RenderContext& rRenderContext, size
 
     DecorationView aDecoView(&rRenderContext);
     long nXOffset = 5;
-    long nYOffset = (aSize.Height() - maLabelFont.GetHeight())/2;
+    long nYOffset = (aSize.Height() - maLabelFont.GetFontHeight())/2;
     rRenderContext. DrawCtrlText(Point(aPos.X()+nXOffset, aPos.Y() + nYOffset), maMenuItems[nPos].maText, 0,
                                  maMenuItems[nPos].maText.getLength(),
                                  maMenuItems[nPos].mbEnabled ? DrawTextFlags::Mnemonic : DrawTextFlags::Disable);
 
     if (maMenuItems[nPos].mpSubMenuWin)
     {
-        long nFontHeight = maLabelFont.GetHeight();
+        long nFontHeight = maLabelFont.GetFontHeight();
         Point aMarkerPos = aPos;
         aMarkerPos.Y() += aSize.Height() / 2 - nFontHeight / 4 + 1;
         aMarkerPos.X() += aSize.Width() - nFontHeight + nFontHeight / 4;
@@ -723,8 +723,8 @@ void ScMenuFloatingWindow::getMenuItemPosSize(size_t nPos, Point& rPos, Size& rS
 
     const sal_uInt16 nLeftMargin = 5;
     const sal_uInt16 nTopMargin = 5;
-    const sal_uInt16 nMenuItemHeight = static_cast<sal_uInt16>(maLabelFont.GetHeight()*1.8);
-    const sal_uInt16 nSepHeight = static_cast<sal_uInt16>(maLabelFont.GetHeight()*0.8);
+    const sal_uInt16 nMenuItemHeight = static_cast<sal_uInt16>(maLabelFont.GetFontHeight()*1.8);
+    const sal_uInt16 nSepHeight = static_cast<sal_uInt16>(maLabelFont.GetFontHeight()*0.8);
 
     Point aPos1(nLeftMargin, nTopMargin);
     rPos = aPos1;
@@ -875,33 +875,35 @@ void ScCheckListMenuWindow::CancelButton::Click()
 
 ScCheckListMenuWindow::ScCheckListMenuWindow(vcl::Window* pParent, ScDocument* pDoc) :
     ScMenuFloatingWindow(pParent, pDoc),
-    maEdSearch(VclPtr<Edit>::Create(this)),
+    maEdSearch(VclPtr<ScSearchEdit>::Create(this)),
     maChecks(VclPtr<ScCheckListBox>::Create(this,  WB_HASBUTTONS | WB_HASLINES | WB_HASLINESATROOT | WB_HASBUTTONSATROOT) ),
     maChkToggleAll(VclPtr<TriStateBox>::Create(this, 0)),
     maBtnSelectSingle(VclPtr<ImageButton>::Create(this, 0)),
     maBtnUnselectSingle(VclPtr<ImageButton>::Create(this, 0)),
     maBtnOk(VclPtr<OKButton>::Create(this)),
     maBtnCancel(VclPtr<CancelButton>::Create(this)),
-    mnCurTabStop(0),
     mpExtendedData(nullptr),
     mpOKAction(nullptr),
     mpPopupEndAction(nullptr),
     maWndSize(),
-    mePrevToggleAllState(TRISTATE_INDET)
+    mePrevToggleAllState(TRISTATE_INDET),
+    maTabStops(this)
 {
     sal_Int32 nScaleFactor = GetDPIScaleFactor();
 
     maWndSize = Size(200 * nScaleFactor, 330 * nScaleFactor);
 
-    maTabStopCtrls.reserve(8);
-    maTabStopCtrls.push_back(this);
-    maTabStopCtrls.push_back(maEdSearch.get());
-    maTabStopCtrls.push_back(maChecks.get());
-    maTabStopCtrls.push_back(maChkToggleAll.get());
-    maTabStopCtrls.push_back(maBtnSelectSingle.get());
-    maTabStopCtrls.push_back(maBtnUnselectSingle.get());
-    maTabStopCtrls.push_back(maBtnOk.get());
-    maTabStopCtrls.push_back(maBtnCancel.get());
+    maTabStops.AddTabStop( this );
+    maTabStops.AddTabStop( maEdSearch.get() );
+    maTabStops.AddTabStop( maChecks.get() );
+    maTabStops.AddTabStop( maChkToggleAll.get() );
+    maTabStops.AddTabStop( maBtnSelectSingle.get() );
+    maTabStops.AddTabStop( maBtnUnselectSingle.get() );
+    maTabStops.AddTabStop( maBtnOk.get() );
+    maTabStops.AddTabStop( maBtnCancel.get() );
+
+    maEdSearch->SetTabStopsContainer( &maTabStops );
+    maChecks->SetTabStopsContainer( &maTabStops );
 
     // Enable type-ahead search in the check list box.
     maChecks->SetStyle(maChecks->GetStyle() | WB_QUICK_SEARCH);
@@ -914,6 +916,7 @@ ScCheckListMenuWindow::~ScCheckListMenuWindow()
 
 void ScCheckListMenuWindow::dispose()
 {
+    maTabStops.clear();
     maEdSearch.disposeAndClear();
     maChecks.disposeAndClear();
     maChkToggleAll.disposeAndClear();
@@ -921,7 +924,6 @@ void ScCheckListMenuWindow::dispose()
     maBtnUnselectSingle.disposeAndClear();
     maBtnOk.disposeAndClear();
     maBtnCancel.disposeAndClear();
-    maTabStopCtrls.clear();
     ScMenuFloatingWindow::dispose();
 }
 
@@ -939,7 +941,7 @@ void ScCheckListMenuWindow::getSectionPosSize(
     const long nSingleItemBtnAreaHeight = 32 * nScaleFactor; // height of the middle area below the list box where the single-action buttons are.
     const long nBottomBtnAreaHeight = 50 * nScaleFactor;     // height of the bottom area where the OK and Cancel buttons are.
     const long nBtnWidth = 90 * nScaleFactor;
-    const long nLabelHeight = getLabelFont().GetHeight();
+    const long nLabelHeight = getLabelFont().GetFontHeight();
     const long nBtnHeight = nLabelHeight * 2;
     const long nBottomMargin = 10 * nScaleFactor;
     const long nMenuListMargin = 5 * nScaleFactor;
@@ -1131,12 +1133,34 @@ void ScCheckListMenuWindow::packWindow()
 void ScCheckListMenuWindow::setAllMemberState(bool bSet)
 {
     size_t n = maMembers.size();
-    OUString aLabel;
-    for (size_t i = 0; i < n; ++i) {
-        aLabel = maMembers[i].maName;
-        if (aLabel.isEmpty())
-            aLabel = ScGlobal::GetRscString(STR_EMPTYDATA);
-        maChecks->ShowCheckEntry( aLabel, maMembers[i].mpParent, true, bSet);
+    std::set<SvTreeListEntry*> aParents;
+    for (size_t i = 0; i < n; ++i)
+    {
+        aParents.insert(maMembers[i].mpParent);
+    }
+
+    for (auto itr = aParents.begin(), itrEnd = aParents.end(); itr != itrEnd; ++itr)
+    {
+        if (!(*itr))
+        {
+            sal_uInt16 nCount = maChecks->GetEntryCount();
+            for( sal_uInt16 i = 0; i < nCount; ++i)
+            {
+                SvTreeListEntry* pEntry = maChecks->GetEntry(i);
+                if (!pEntry)
+                    continue;
+
+                maChecks->CheckEntry(pEntry, bSet);
+            }
+        }
+        else
+        {
+            SvTreeListEntries& rEntries = (*itr)->GetChildEntries();
+            for (auto it = rEntries.begin(), itEnd = rEntries.end(); it != itEnd; ++ it)
+            {
+                maChecks->CheckEntry(*itr, bSet);
+            }
+        }
     }
 
     if (!maConfig.mbAllowEmptySet)
@@ -1151,30 +1175,6 @@ void ScCheckListMenuWindow::selectCurrentMemberOnly(bool bSet)
     if (!pEntry)
         return;
     maChecks->CheckEntry(pEntry, bSet );
-}
-
-void ScCheckListMenuWindow::cycleFocus(bool bReverse)
-{
-    maTabStopCtrls[mnCurTabStop]->SetFakeFocus(false);
-    maTabStopCtrls[mnCurTabStop]->LoseFocus();
-    if (mnCurTabStop == 0)
-        clearSelectedMenuItem();
-
-    if (bReverse)
-    {
-        if (mnCurTabStop > 0)
-            --mnCurTabStop;
-        else
-            mnCurTabStop = maTabStopCtrls.size() - 1;
-    }
-    else
-    {
-        ++mnCurTabStop;
-        if (mnCurTabStop >= maTabStopCtrls.size())
-            mnCurTabStop = 0;
-    }
-    maTabStopCtrls[mnCurTabStop]->SetFakeFocus(true);
-    maTabStopCtrls[mnCurTabStop]->GrabFocus();
 }
 
 IMPL_LINK_TYPED( ScCheckListMenuWindow, ButtonHdl, Button*, pBtn, void )
@@ -1265,7 +1265,7 @@ IMPL_LINK_TYPED( ScCheckListMenuWindow, CheckHdl, SvTreeListBox*, pChecks, void 
         return;
     SvTreeListEntry* pEntry = pChecks->GetHdlEntry();
     if ( pEntry )
-        maChecks->CheckEntry( pEntry,  ( pChecks->GetCheckButtonState( pEntry ) == SV_BUTTON_CHECKED ) );
+        maChecks->CheckEntry( pEntry,  ( pChecks->GetCheckButtonState( pEntry ) == SvButtonState::Checked ) );
     size_t nNumChecked = maChecks->GetCheckedEntryCount();
     if (nNumChecked == maMembers.size())
         // all members visible
@@ -1301,7 +1301,7 @@ bool ScCheckListMenuWindow::Notify(NotifyEvent& rNEvt)
         bool bShift = rCode.IsShift();
         if (rCode.GetCode() == KEY_TAB)
         {
-            cycleFocus(bShift);
+            maTabStops.CycleFocus(bShift);
             return true;
         }
     }
@@ -1329,11 +1329,6 @@ void ScCheckListMenuWindow::Paint(vcl::RenderContext& rRenderContext, const Rect
     getSectionPosSize(aPos, aSize, SINGLE_BTN_AREA);
     rRenderContext.SetFillColor(rStyle.GetMenuColor());
     rRenderContext.DrawRect(Rectangle(aPos,aSize));
-}
-
-vcl::Window* ScCheckListMenuWindow::GetPreferredKeyInputWindow()
-{
-    return maTabStopCtrls[mnCurTabStop];
 }
 
 Reference<XAccessible> ScCheckListMenuWindow::CreateAccessible()
@@ -1450,8 +1445,105 @@ void ScCheckListMenuWindow::addMember(const OUString& rName, bool bVisible)
     maMembers.push_back(aMember);
 }
 
+ScTabStops::ScTabStops( ScCheckListMenuWindow* pMenuWin ) :
+    mpMenuWindow( pMenuWin ),
+    maControlToPos( ControlToPosMap() ),
+    mnCurTabStop(0)
+{
+    maControls.reserve( 8 );
+}
+
+ScTabStops::~ScTabStops()
+{}
+
+void ScTabStops::AddTabStop( vcl::Window* pWin )
+{
+    maControls.push_back( pWin );
+    maControlToPos[pWin] = maControls.size() - 1;
+}
+
+void ScTabStops::SetTabStop( vcl::Window* pWin )
+{
+    if ( !maControls.size() )
+        return;
+    ControlToPosMap::const_iterator aIter = maControlToPos.find( pWin );
+    if ( aIter == maControlToPos.end() )
+        return;
+    if ( aIter->second == mnCurTabStop )
+        return;
+    if ( mnCurTabStop < maControls.size() )
+    {
+        maControls[mnCurTabStop]->SetFakeFocus( false );
+        maControls[mnCurTabStop]->LoseFocus();
+    }
+    mnCurTabStop = aIter->second;
+    maControls[mnCurTabStop]->SetFakeFocus( true );
+    maControls[mnCurTabStop]->GrabFocus();
+}
+
+void ScTabStops::CycleFocus( bool bReverse )
+{
+    if (!maControls.size())
+        return;
+    if ( mnCurTabStop < maControls.size() )
+    {
+        maControls[mnCurTabStop]->SetFakeFocus( false );
+        maControls[mnCurTabStop]->LoseFocus();
+    }
+    else
+        mnCurTabStop = 0;
+
+    if ( mpMenuWindow && mnCurTabStop == 0 )
+        mpMenuWindow->clearSelectedMenuItem();
+
+    size_t nIterCount = 0;
+
+    if ( bReverse )
+    {
+        do
+        {
+            if ( mnCurTabStop > 0 )
+                --mnCurTabStop;
+            else
+                mnCurTabStop = maControls.size() - 1;
+            ++nIterCount;
+        } while ( nIterCount <= maControls.size() && !maControls[mnCurTabStop]->IsEnabled() );
+    }
+    else
+    {
+        do
+        {
+            ++mnCurTabStop;
+            if ( mnCurTabStop >= maControls.size() )
+                mnCurTabStop = 0;
+            ++nIterCount;
+        } while ( nIterCount <= maControls.size() && !maControls[mnCurTabStop]->IsEnabled() );
+    }
+
+    if ( nIterCount <= maControls.size() )
+    {
+        maControls[mnCurTabStop]->SetFakeFocus( true );
+        maControls[mnCurTabStop]->GrabFocus();
+    }
+    // else : all controls are disabled, so can't do anything
+}
+
+vcl::Window* ScTabStops::GetCurrentControl()
+{
+    if ( mnCurTabStop >= maControls.size() )
+        return nullptr;
+    return maControls[mnCurTabStop];
+}
+
+void ScTabStops::clear()
+{
+    mnCurTabStop = 0;
+    maControlToPos.clear();
+    maControls.clear();
+}
+
 ScCheckListBox::ScCheckListBox( vcl::Window* pParent, WinBits nWinStyle )
-   :  SvTreeListBox( pParent, nWinStyle ), mpCheckButton( nullptr )
+    :  SvTreeListBox( pParent, nWinStyle ), mpCheckButton( nullptr ), mbSeenMouseButtonDown( false )
 {
     Init();
 }
@@ -1480,7 +1572,7 @@ void ScCheckListBox::Init()
 bool ScCheckListBox::IsChecked( const OUString& sName, SvTreeListEntry* pParent )
 {
     SvTreeListEntry* pEntry = FindEntry( pParent, sName );
-    if ( pEntry && GetCheckButtonState( pEntry ) == SV_BUTTON_CHECKED)
+    if ( pEntry && GetCheckButtonState( pEntry ) == SvButtonState::Checked)
         return true;
     return false;
 }
@@ -1498,8 +1590,7 @@ void ScCheckListBox::CheckAllChildren( SvTreeListEntry* pParent, bool bCheck )
     if ( pParent )
     {
         SetCheckButtonState(
-            pParent, bCheck ? SvButtonState( SV_BUTTON_CHECKED ) :
-                                           SvButtonState( SV_BUTTON_UNCHECKED ) );
+            pParent, bCheck ? SvButtonState::Checked : SvButtonState::Unchecked );
     }
     SvTreeListEntry* pEntry = pParent ? FirstChild( pParent ) : First();
     while ( pEntry )
@@ -1528,16 +1619,14 @@ void ScCheckListBox::CheckEntry( SvTreeListEntry* pParent, bool bCheck )
 
             while ( pChild )
             {
-                if ( GetCheckButtonState( pChild ) == SV_BUTTON_CHECKED )
+                if ( GetCheckButtonState( pChild ) == SvButtonState::Checked )
                 {
                     bChildChecked = true;
                     break;
                 }
                 pChild = NextSibling( pChild );
             }
-            SetCheckButtonState(
-                pAncestor, bChildChecked ? SvButtonState( SV_BUTTON_CHECKED ) :
-                                           SvButtonState( SV_BUTTON_UNCHECKED ) );
+            SetCheckButtonState( pAncestor, bChildChecked ? SvButtonState::Checked : SvButtonState::Unchecked );
             pAncestor = GetParent(pAncestor);
         }
     }
@@ -1554,7 +1643,7 @@ void ScCheckListBox::ShowCheckEntry( const OUString& sName, SvTreeListEntry* pPa
                 sName);
 
             SetCheckButtonState(
-                pEntry, bCheck ? SV_BUTTON_CHECKED : SV_BUTTON_UNCHECKED);
+                pEntry, bCheck ? SvButtonState::Checked : SvButtonState::Unchecked);
         }
         else
             CheckEntry( pEntry, bCheck );
@@ -1563,9 +1652,9 @@ void ScCheckListBox::ShowCheckEntry( const OUString& sName, SvTreeListEntry* pPa
         RemoveParentKeepChildren( pEntry );
 }
 
-SvTreeListEntry* ScCheckListBox::CountCheckedEntries( SvTreeListEntry* pParent, sal_uLong& nCount ) const
+void ScCheckListBox::CountCheckedEntries( SvTreeListEntry* pParent, sal_uLong& nCount ) const
 {
-    if ( pParent && GetCheckButtonState( pParent ) == SV_BUTTON_CHECKED  )
+    if ( pParent && GetCheckButtonState( pParent ) == SvButtonState::Checked  )
         nCount++;
     // Iterate over the children
     SvTreeListEntry* pEntry = pParent ? FirstChild( pParent ) : First();
@@ -1574,7 +1663,6 @@ SvTreeListEntry* ScCheckListBox::CountCheckedEntries( SvTreeListEntry* pParent, 
         CountCheckedEntries( pEntry, nCount );
         pEntry = NextSibling( pEntry );
     }
-    return nullptr;
 }
 
 sal_uInt16 ScCheckListBox::GetCheckedEntryCount() const
@@ -1606,14 +1694,38 @@ void ScCheckListBox::KeyInput( const KeyEvent& rKEvt )
         SvTreeListEntry* pEntry = GetCurEntry();
         if ( pEntry )
         {
-            bool bCheck = ( GetCheckButtonState( pEntry ) == SV_BUTTON_CHECKED );
+            bool bCheck = ( GetCheckButtonState( pEntry ) == SvButtonState::Checked );
             CheckEntry( pEntry, !bCheck );
-            if ( bCheck != ( GetCheckButtonState( pEntry ) == SV_BUTTON_CHECKED ) )
+            if ( bCheck != ( GetCheckButtonState( pEntry ) == SvButtonState::Checked ) )
                 CheckButtonHdl();
         }
     }
     else if ( GetEntryCount() )
         SvTreeListBox::KeyInput( rKEvt );
+}
+
+void ScCheckListBox::MouseButtonDown(const MouseEvent& rMEvt)
+{
+    SvTreeListBox::MouseButtonDown( rMEvt );
+    if ( rMEvt.IsLeft() )
+        mbSeenMouseButtonDown = true;
+}
+
+void ScCheckListBox::MouseButtonUp(const MouseEvent& rMEvt)
+{
+    SvTreeListBox::MouseButtonUp( rMEvt );
+    if ( mpTabStops && mbSeenMouseButtonDown && rMEvt.IsLeft() )
+    {
+        mpTabStops->SetTabStop( this );
+        mbSeenMouseButtonDown = false;
+    }
+}
+
+void ScSearchEdit::MouseButtonDown(const MouseEvent& rMEvt)
+{
+    Edit::MouseButtonDown( rMEvt );
+    if ( mpTabStops && rMEvt.IsLeft() && rMEvt.GetClicks() >= 1 )
+        mpTabStops->SetTabStop( this );
 }
 
 void ScCheckListMenuWindow::initMembers()
@@ -1646,7 +1758,7 @@ void ScCheckListMenuWindow::initMembers()
                 aLabel);
 
             maChecks->SetCheckButtonState(
-                pEntry, maMembers[i].mbVisible ? SV_BUTTON_CHECKED : SV_BUTTON_UNCHECKED);
+                pEntry, maMembers[i].mbVisible ? SvButtonState::Checked : SvButtonState::Unchecked);
         }
 
         if (maMembers[i].mbVisible)
@@ -1731,7 +1843,7 @@ void ScCheckListMenuWindow::launch(const Rectangle& rRect)
     }
 
     StartPopupMode(aRect, (FloatWinPopupFlags::Down | FloatWinPopupFlags::GrabFocus));
-    cycleFocus(); // Set initial focus to the check list box.
+    maTabStops.CycleFocus(); // Set initial focus to the search box ( index = 1 )
 }
 
 void ScCheckListMenuWindow::close(bool bOK)

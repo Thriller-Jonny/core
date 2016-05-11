@@ -73,6 +73,11 @@ inline Any::Any( bool value )
         cpp_acquire );
 }
 
+#if defined LIBO_INTERNAL_ONLY
+template<typename T1, typename T2>
+Any::Any(rtl::OUStringConcat<T1, T2> const & value): Any(rtl::OUString(value))
+{}
+#endif
 
 inline Any::Any( const Any & rAny )
 {
@@ -183,26 +188,12 @@ inline bool Any::operator != ( const Any & rAny ) const
 template< class C >
 inline Any SAL_CALL makeAny( const C & value )
 {
-    return Any( &value, ::cppu::getTypeFavourUnsigned(&value) );
+    return Any(value);
 }
 
-// additionally specialized for C++ bool
-
-template<>
-inline Any SAL_CALL makeAny( bool const & value )
-{
-    const sal_Bool b = value;
-    return Any( &b, cppu::UnoType<bool>::get() );
-}
-
-
-#ifdef LIBO_INTERNAL_ONLY // "RTL_FAST_STRING"
-template< class C1, class C2 >
-inline Any SAL_CALL makeAny( const rtl::OUStringConcat< C1, C2 >& value )
-{
-    const rtl::OUString str( value );
-    return Any( &str, ::cppu::getTypeFavourUnsigned(&str) );
-}
+#if !defined LIBO_INTERNAL_ONLY
+template<> Any makeAny(sal_uInt16 const & value)
+{ return Any(&value, cppu::UnoType<cppu::UnoUnsignedShortType>::get()); }
 #endif
 
 template<typename T> Any toAny(T const & value) { return makeAny(value); }
@@ -260,7 +251,7 @@ inline bool SAL_CALL operator >>= ( const ::com::sun::star::uno::Any & rAny, sal
 {
     if (typelib_TypeClass_BOOLEAN == rAny.pType->eTypeClass)
     {
-        value = (* static_cast< const sal_Bool * >( rAny.pData ) != sal_False);
+        value = bool(* static_cast< const sal_Bool * >( rAny.pData ));
         return true;
     }
     return false;
@@ -270,7 +261,7 @@ template<>
 inline bool SAL_CALL operator == ( const Any & rAny, const sal_Bool & value )
 {
     return (typelib_TypeClass_BOOLEAN == rAny.pType->eTypeClass &&
-            (value != sal_False) == (* static_cast< const sal_Bool * >( rAny.pData ) != sal_False));
+            bool(value) == bool(* static_cast< const sal_Bool * >( rAny.pData )));
 }
 
 
@@ -279,8 +270,7 @@ inline bool SAL_CALL operator >>= ( Any const & rAny, bool & value )
 {
     if (rAny.pType->eTypeClass == typelib_TypeClass_BOOLEAN)
     {
-        value = *static_cast< sal_Bool const * >(
-            rAny.pData ) != sal_False;
+        value = *static_cast< sal_Bool const * >( rAny.pData );
         return true;
     }
     return false;
@@ -292,8 +282,7 @@ inline bool SAL_CALL operator == ( Any const & rAny, bool const & value )
 {
     return (rAny.pType->eTypeClass == typelib_TypeClass_BOOLEAN &&
             (value ==
-             (*static_cast< sal_Bool const * >( rAny.pData )
-              != sal_False)));
+             bool(*static_cast< sal_Bool const * >( rAny.pData ))));
 }
 
 // byte

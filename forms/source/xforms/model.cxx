@@ -42,9 +42,7 @@
 #include <algorithm>
 
 // UNO classes
-#include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/lang/IndexOutOfBoundsException.hpp>
-#include <com/sun/star/lang/IllegalArgumentException.hpp>
 #include <com/sun/star/xml/dom/XDocument.hpp>
 #include <com/sun/star/xml/dom/XCharacterData.hpp>
 #include <com/sun/star/xml/dom/NodeType.hpp>
@@ -55,15 +53,11 @@
 #include <com/sun/star/io/XInputStream.hpp>
 
 
-using com::sun::star::lang::XMultiServiceFactory;
 using com::sun::star::lang::XUnoTunnel;
 using com::sun::star::beans::XPropertySet;
 using com::sun::star::beans::PropertyValue;
-using com::sun::star::beans::PropertyVetoException;
-using com::sun::star::beans::UnknownPropertyException;
 using com::sun::star::util::VetoException;
 using com::sun::star::lang::WrappedTargetException;
-using com::sun::star::lang::IllegalArgumentException;
 using com::sun::star::ucb::XSimpleFileAccess3;
 using com::sun::star::ucb::SimpleFileAccess;
 using com::sun::star::io::XInputStream;
@@ -73,15 +67,13 @@ using namespace com::sun::star::xml::dom;
 using namespace xforms;
 
 
-#if OSL_DEBUG_LEVEL > 1
+#if OSL_DEBUG_LEVEL > 0
 #define DBG_INVARIANT_TYPE(TYPE) class DBG_##TYPE { const TYPE* mpT; void check() { mpT->dbg_assertInvariant(); } public: DBG_##TYPE(const TYPE* pT) : mpT(pT) { check(); } ~DBG_##TYPE() { check(); } } _DBG_##TYPE(this);
 
 #define DBG_INVARIANT() DBG_INVARIANT_TYPE(Model)
 #else
 #define DBG_INVARIANT()
 #endif
-
-
 
 
 // The Model
@@ -95,7 +87,6 @@ void Model::ensureAtLeastOneInstance()
         newInstance( OUString(), OUString(), true );
     }
 }
-
 
 
 /** Model default constructor; create empty model */
@@ -165,7 +156,7 @@ EvaluationContext Model::getEvaluationContext()
                 xElement->getNodeType() == NodeType_ELEMENT_NODE,
                 "no element in evaluation context" );
 
-    return EvaluationContext( xElement, this, mxNamespaces, 0, 1 );
+    return EvaluationContext( xElement, this, mxNamespaces );
 }
 
 
@@ -200,20 +191,19 @@ void Model::setExternalData( bool _bData )
     mbExternalData = _bData;
 }
 
-#if OSL_DEBUG_LEVEL > 1
+#if OSL_DEBUG_LEVEL > 0
 void Model::dbg_assertInvariant() const
 {
-    OSL_ENSURE( mpInstances != NULL, "no instances found" );
-    OSL_ENSURE( mxInstances.is(), "No instance container!" );
+    assert(mpInstances && "no instances found");
+    assert(mxInstances.is() && "No instance container!");
 
-    OSL_ENSURE( mpBindings != NULL, "no bindings element" );
-    OSL_ENSURE( mxBindings.is(), "No Bindings container" );
+    assert(mpBindings && "no bindings element");
+    assert(mxBindings.is() && "No Bindings container");
 
-    OSL_ENSURE( mpSubmissions != NULL, "no submissions element" );
-    OSL_ENSURE( mxSubmissions.is(), "No Submission container" );
+    assert(mpSubmissions && "no submissions element");
+    assert(mxSubmissions.is() && "No Submission container");
 }
 #endif
-
 
 
 // MIP management
@@ -270,7 +260,6 @@ MIP Model::queryMIP( const XNode_t& xNode ) const
 }
 
 
-
 void Model::rebind()
 {
     OSL_ENSURE( mpBindings != nullptr, "bindings?" );
@@ -284,7 +273,6 @@ void Model::rebind()
         pBind->update();
     }
 }
-
 
 
 void Model::deferNotifications( bool bDefer )
@@ -335,8 +323,8 @@ bool Model::setSimpleContent( const XNode_t& xConstNode,
             OSL_ENSURE( xNode.is() &&
                         xNode->getNodeType() == NodeType_TEXT_NODE,
                         "text node creation failed?" );
+            SAL_FALLTHROUGH; // continue as with text node:
         }
-        // no break; continue as with text node:
 
         case NodeType_TEXT_NODE:
         case NodeType_ATTRIBUTE_NODE:
@@ -422,8 +410,6 @@ bool Model::isValid() const
     }
     return bValid;
 }
-
-
 
 
 // implement xforms::XModel
@@ -554,8 +540,6 @@ css::uno::Reference<css::xml::dom::XDocument> SAL_CALL Model::getDefaultInstance
 }
 
 
-
-
 // bindings management
 
 
@@ -588,8 +572,6 @@ css::uno::Reference<css::container::XSet> Model::getBindings()
     DBG_INVARIANT();
     return mxBindings;
 }
-
-
 
 
 // submission management

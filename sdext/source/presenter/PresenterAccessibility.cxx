@@ -532,7 +532,6 @@ PresenterAccessible::PresenterAccessible (
     : PresenterAccessibleInterfaceBase(m_aMutex),
       mxComponentContext(rxContext),
       mpPresenterController(rpPresenterController),
-      mxMainPaneId(rxMainPane.is() ? rxMainPane->getResourceId() : Reference<XResourceId>()),
       mxMainPane(rxMainPane, UNO_QUERY),
       mxMainWindow(),
       mxPreviewContentWindow(),
@@ -1394,9 +1393,9 @@ sal_Bool SAL_CALL AccessibleStateSet::containsAll (const css::uno::Sequence<sal_
     for (sal_Int32 nIndex=0,nCount=rStateSet.getLength(); nIndex<nCount; ++nIndex)
     {
         if ((mnStateSet & GetStateMask(rStateSet[nIndex])) == 0)
-            return sal_False;
+            return false;
     }
-    return sal_True;
+    return true;
 }
 
 css::uno::Sequence<sal_Int16> SAL_CALL AccessibleStateSet::getStates()
@@ -1457,9 +1456,9 @@ sal_Bool SAL_CALL AccessibleRelationSet::containsRelation (sal_Int16 nRelationTy
          ++iRelation)
     {
         if (iRelation->RelationType == nRelationType)
-            return sal_True;
+            return true;
     }
-    return sal_False;
+    return false;
 }
 
 AccessibleRelation SAL_CALL AccessibleRelationSet::getRelationByType (sal_Int16 nRelationType)
@@ -1545,10 +1544,10 @@ sal_Bool SAL_CALL PresenterAccessible::AccessibleParagraph::setCaretPosition (sa
     if (mpParagraph)
     {
         mpParagraph->SetCaretPosition(nIndex);
-        return sal_True;
+        return true;
     }
     else
-        return sal_False;
+        return false;
 }
 
 sal_Unicode SAL_CALL PresenterAccessible::AccessibleParagraph::getCharacter (sal_Int32 nIndex)
@@ -1569,16 +1568,14 @@ Sequence<css::beans::PropertyValue> SAL_CALL
 {
     ThrowIfDisposed();
 
-#if OSL_DEBUG_LEVEL > 1
-    OSL_TRACE("PresenterAccessible::AccessibleParagraph::getCharacterAttributes at %p,%d returns empty set\r",
-        this,nIndex);
-    for (sal_Int32 nAttributeIndex(0),nAttributeCount(rRequestedAttributes.getLength());
-         nAttributeIndex<nAttributeCount;
+#if OSL_DEBUG_LEVEL > 0
+    SAL_INFO( "sdext.presenter", OSL_THIS_FUNC << " at " << this << ", " << nIndex << " returns empty set" );
+    for (sal_Int32 nAttributeIndex(0), nAttributeCount(rRequestedAttributes.getLength());
+         nAttributeIndex < nAttributeCount;
          ++nAttributeIndex)
     {
-        OSL_TRACE("    requested attribute %d is %s\r",
-            nAttributeIndex,
-            OUStringToOString(rRequestedAttributes[nAttributeIndex], RTL_TEXTENCODING_UTF8).getStr());
+        SAL_INFO( "sdext.presenter",
+                  "    requested attribute " << nAttributeIndex << " is " << rRequestedAttributes[nAttributeIndex] );
     }
 #endif
 
@@ -1762,7 +1759,7 @@ sal_Bool SAL_CALL PresenterAccessible::AccessibleParagraph::copyText (
     // this here.
     (void)nStartIndex;
     (void)nEndIndex;
-    return sal_False;
+    return false;
 }
 
 //----- protected -------------------------------------------------------------

@@ -683,11 +683,8 @@ The following structure describes the permissions used in PDF security
         resets the graphics state: MapMode, Font
         Colors and other state information MUST
         be set again or are undefined.
-
-        @returns
-        returns the page id of the new page
     */
-    sal_Int32 NewPage( sal_Int32 nPageWidth = 0, sal_Int32 nPageHeight = 0, Orientation eOrientation = Inherit );
+    void NewPage( sal_Int32 nPageWidth = 0, sal_Int32 nPageHeight = 0, Orientation eOrientation = Inherit );
     /** Play a metafile like an outputdevice would do
     */
     struct PlayMetafileContext
@@ -767,9 +764,8 @@ The following structure describes the permissions used in PDF security
 
     void                DrawTextLine( const Point& rPos, long nWidth,
                                       FontStrikeout eStrikeout,
-                                      FontUnderline eUnderline,
-                                      FontUnderline eOverline,
-                                      bool bUnderlineAbove = false );
+                                      FontLineStyle eUnderline,
+                                      FontLineStyle eOverline );
     void                DrawTextArray( const Point& rStartPt, const OUString& rStr,
                                        const long* pDXAry,
                                        sal_Int32 nIndex,
@@ -959,12 +955,8 @@ The following structure describes the permissions used in PDF security
 
         @param nDestId
         the dest the link shall point to
-        @returns
-        0 for success
-        -1 in case the link id does not exist
-        -2 in case the dest id does not exist
     */
-    sal_Int32           SetLinkDest( sal_Int32 nLinkId, sal_Int32 nDestId );
+    void           SetLinkDest( sal_Int32 nLinkId, sal_Int32 nDestId );
     /** Set the URL for a link
         will change a dest type link to an URL type link if necessary
         @param nLinkId
@@ -974,12 +966,8 @@ The following structure describes the permissions used in PDF security
         the URL the link shall point to.
         The URL will be parsed (and corrected) by the com.sun.star.util.URLTransformer
         service; the result will then appear literally in the PDF file produced
-
-        @returns
-        0 for success
-        -1 in case the link id does not exist
     */
-    sal_Int32           SetLinkURL( sal_Int32 nLinkId, const OUString& rURL );
+    void           SetLinkURL( sal_Int32 nLinkId, const OUString& rURL );
     /** Resolve link in logical structure
 
         If a link is created after the corresponding visual appearance was drawn
@@ -1033,12 +1021,8 @@ The following structure describes the permissions used in PDF security
     @param nNewParent
     specifies which outline item will be the item's new parent.
     Use 0 for reparenting to top level.
-
-    @returns
-    -1 if the item does not exist
-    -2 if the new parent does not exist, item will be reparented to top level.
     */
-    sal_Int32 SetOutlineItemParent( sal_Int32 nItem, sal_Int32 nNewParent );
+    void SetOutlineItemParent( sal_Int32 nItem, sal_Int32 nNewParent );
 
     /** Set an outline item's title text
 
@@ -1047,12 +1031,8 @@ The following structure describes the permissions used in PDF security
 
     @param rText
     sets the title text of the item
-
-    @returns
-    0 if the item exists and the text was changed
-    -1 if the item does not exist
     */
-    sal_Int32 SetOutlineItemText( sal_Int32 nItem, const OUString& rText );
+    void SetOutlineItemText( sal_Int32 nItem, const OUString& rText );
 
     /** Set an outline item's destination
 
@@ -1061,12 +1041,8 @@ The following structure describes the permissions used in PDF security
 
     @param nDestID
     specifies the item's new destination
-
-    @returns
-    -1 if the item does not exist
-    -2 if the new dest does not exist, dest will remain unchanged
     */
-    sal_Int32 SetOutlineItemDest( sal_Int32 nItem, sal_Int32 nDestID );
+    void SetOutlineItemDest( sal_Int32 nItem, sal_Int32 nDestID );
 
     /** Create a new note on a page
 
@@ -1259,13 +1235,10 @@ The following structure describes the permissions used in PDF security
     @param rControlType
     a descendant of AnyWidget determining the control's properties
 
-    @param nPageNr
-    the page number to apply the effect to; -1 denotes the current page
-
     @returns
     the new control's id for reference purposes
      */
-    sal_Int32 CreateControl( const AnyWidget& rControlType, sal_Int32 nPageNr = -1 );
+    sal_Int32 CreateControl( const AnyWidget& rControlType );
 
     /** Inserts an additional stream to the PDF file
 
@@ -1283,10 +1256,8 @@ The following structure describes the permissions used in PDF security
     @param pStream
     the interface to the additional stream
 
-    @param bCompress
-    specifies whether the stream should be flat encoded by PDFWriter or not
     */
-    void AddStream( const OUString& rMimeType, PDFOutputStream* pStream, bool bCompress );
+    void AddStream( const OUString& rMimeType, PDFOutputStream* pStream );
 
 };
 

@@ -305,7 +305,7 @@ void ShowWindow::Move()
     ::sd::Window::Move();
 }
 
-bool ShowWindow::SetEndMode()
+void ShowWindow::SetEndMode()
 {
     if( ( SHOWWINDOWMODE_NORMAL == meShowWindowMode ) && mpViewShell && mpViewShell->GetView() )
     {
@@ -322,11 +322,9 @@ bool ShowWindow::SetEndMode()
 
         Invalidate();
     }
-
-    return( SHOWWINDOWMODE_END == meShowWindowMode );
 }
 
-bool ShowWindow::SetPauseMode( sal_Int32 nPageIndexToRestart, sal_Int32 nTimeout, Graphic* pLogo )
+bool ShowWindow::SetPauseMode( sal_Int32 nTimeout, Graphic* pLogo )
 {
     rtl::Reference< SlideShow > xSlideShow;
 
@@ -335,13 +333,13 @@ bool ShowWindow::SetPauseMode( sal_Int32 nPageIndexToRestart, sal_Int32 nTimeout
 
     if( xSlideShow.is() && !nTimeout )
     {
-        xSlideShow->jumpToPageIndex( nPageIndexToRestart );
+        xSlideShow->jumpToPageIndex( 0 );
     }
     else if( ( SHOWWINDOWMODE_NORMAL == meShowWindowMode ) && mpViewShell && mpViewShell->GetView() )
     {
         DeleteWindowFromPaintView();
         mnPauseTimeout = nTimeout;
-        mnRestartPageIndex = nPageIndexToRestart;
+        mnRestartPageIndex = 0;
         meShowWindowMode = SHOWWINDOWMODE_PAUSE;
         maShowBackground = Wallpaper( Color( COL_BLACK ) );
 
@@ -478,7 +476,7 @@ void ShowWindow::DrawPauseScene( bool bTimeoutOnly )
     vcl::Font       aFont( GetSettings().GetStyleSettings().GetMenuFont() );
     const vcl::Font aOldFont( GetFont() );
 
-    aFont.SetSize( aTextSize );
+    aFont.SetFontSize( aTextSize );
     aFont.SetColor( COL_WHITE );
     aFont.SetCharSet( aOldFont.GetCharSet() );
     aFont.SetLanguage( aOldFont.GetLanguage() );
@@ -547,7 +545,7 @@ void ShowWindow::DrawEndScene()
     const Size      aTextSize( LogicToLogic( Size( 0, 14 ), MAP_POINT, GetMapMode() ) );
     const OUString  aText( SdResId( STR_PRES_SOFTEND ) );
 
-    aFont.SetSize( aTextSize );
+    aFont.SetFontSize( aTextSize );
     aFont.SetColor( COL_WHITE );
     aFont.SetCharSet( aOldFont.GetCharSet() );
     aFont.SetLanguage( aOldFont.GetLanguage() );

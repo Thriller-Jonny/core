@@ -32,7 +32,7 @@
 #include <com/sun/star/embed/ElementModes.hpp>
 #include "TConnection.hxx"
 #include "hsqldb/HStorageMap.hxx"
-#include <jvmfwk/framework.h>
+#include <jvmfwk/framework.hxx>
 #include <com/sun/star/reflection/XProxyFactory.hpp>
 #include <com/sun/star/embed/XStorage.hpp>
 #include <com/sun/star/frame/Desktop.hpp>
@@ -387,7 +387,7 @@ namespace connectivity
 
     sal_Bool SAL_CALL ODriverDelegator::acceptsURL( const OUString& url ) throw (SQLException, RuntimeException, std::exception)
     {
-        sal_Bool bEnabled = sal_False;
+        sal_Bool bEnabled = false;
         javaFrameworkError e = jfw_getEnabled(&bEnabled);
         switch (e) {
         case JFW_E_NONE:
@@ -415,21 +415,21 @@ namespace connectivity
         aDriverInfo.push_back(DriverPropertyInfo(
                 OUString("Storage")
                 ,OUString("Defines the storage where the database will be stored.")
-                ,sal_True
+                ,true
                 ,OUString()
                 ,Sequence< OUString >())
                 );
         aDriverInfo.push_back(DriverPropertyInfo(
                 OUString("URL")
                 ,OUString("Defines the url of the data source.")
-                ,sal_True
+                ,true
                 ,OUString()
                 ,Sequence< OUString >())
                 );
         aDriverInfo.push_back(DriverPropertyInfo(
                 OUString("AutoRetrievingStatement")
                 ,OUString("Defines the statement which will be executed to retrieve auto increment values.")
-                ,sal_False
+                ,false
                 ,OUString("CALL IDENTITY()")
                 ,Sequence< OUString >())
                 );
@@ -456,7 +456,7 @@ namespace connectivity
 
         Reference< XTablesSupplier > xTab;
 
-        TWeakPairVector::iterator aEnd = m_aConnections.end();
+        TWeakPairVector::const_iterator aEnd = m_aConnections.end();
         for (TWeakPairVector::iterator i = m_aConnections.begin(); aEnd != i; ++i)
         {
             if ( i->second.second.first.get() == connection.get() )
@@ -594,7 +594,7 @@ namespace connectivity
     void ODriverDelegator::shutdownConnections()
     {
         m_bInShutDownConnections = true;
-        TWeakPairVector::iterator aEnd = m_aConnections.end();
+        TWeakPairVector::const_iterator aEnd = m_aConnections.end();
         for (TWeakPairVector::iterator i = m_aConnections.begin(); aEnd != i; ++i)
         {
             try
@@ -612,7 +612,7 @@ namespace connectivity
 
     void ODriverDelegator::flushConnections()
     {
-        TWeakPairVector::iterator aEnd = m_aConnections.end();
+        TWeakPairVector::const_iterator aEnd = m_aConnections.end();
         for (TWeakPairVector::iterator i = m_aConnections.begin(); aEnd != i; ++i)
         {
             try
@@ -636,7 +636,7 @@ namespace connectivity
         OUString sKey = StorageContainer::getRegisteredKey(xStorage);
         if ( !sKey.isEmpty() )
         {
-            TWeakPairVector::iterator i = ::std::find_if(m_aConnections.begin(), m_aConnections.end(),
+            TWeakPairVector::const_iterator i = ::std::find_if(m_aConnections.begin(), m_aConnections.end(),
                 [&sKey] (const TWeakPairVector::value_type& conn) {
                     return conn.second.first == sKey;
                 });
@@ -655,7 +655,7 @@ namespace connectivity
                             xStmt->execute( "SET WRITE_DELAY 0" );
 
                         bool bPreviousAutoCommit = xConnection->getAutoCommit();
-                        xConnection->setAutoCommit( sal_False );
+                        xConnection->setAutoCommit( false );
                         xConnection->commit();
                         xConnection->setAutoCommit( bPreviousAutoCommit );
 
@@ -894,8 +894,6 @@ namespace connectivity
             OSL_FAIL( "ODriverDelegator::onConnectedNewDatabase: caught an exception!" );
         }
     }
-
-
 
 
 }   // namespace connectivity

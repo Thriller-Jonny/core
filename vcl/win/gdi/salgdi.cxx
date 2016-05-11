@@ -44,7 +44,6 @@
 #define DITHER_PAL_COUNT                (DITHER_PAL_STEPS*DITHER_PAL_STEPS*DITHER_PAL_STEPS)
 #define DITHER_MAX_SYSCOLOR             16
 #define DITHER_EXTRA_COLORS             1
-#define DMAP( _def_nVal, _def_nThres )  ((pDitherDiff[_def_nVal]>(_def_nThres))?pDitherHigh[_def_nVal]:pDitherLow[_def_nVal])
 
 struct SysColorEntry
 {
@@ -592,6 +591,14 @@ OpenGLTexture* OpenGLCompatibleDC::getTexture()
     return new OpenGLTexture(maRects.mnSrcWidth, maRects.mnSrcHeight, GL_BGRA, GL_UNSIGNED_BYTE, reinterpret_cast<sal_uInt8*>(mpData));
 }
 
+bool OpenGLCompatibleDC::copyToTexture(OpenGLTexture& aTexture)
+{
+    if (!mpImpl)
+        return false;
+
+    return aTexture.CopyData(maRects.mnSrcWidth, maRects.mnSrcHeight, GL_BGRA, GL_UNSIGNED_BYTE, reinterpret_cast<sal_uInt8*>(mpData));
+}
+
 WinSalGraphics::WinSalGraphics(WinSalGraphics::Type eType, bool bScreen, HWND hWnd, SalGeometryProvider *pProvider):
     mhLocalDC(0),
     mbPrinter(eType == WinSalGraphics::PRINTER),
@@ -607,6 +614,9 @@ WinSalGraphics::WinSalGraphics(WinSalGraphics::Type eType, bool bScreen, HWND hW
     mhDefPal(0),
     mpStdClipRgnData(NULL),
     mpFontAttrCache(NULL),
+    mbFontKernInit(false),
+    mpFontKernPairs(NULL),
+    mnFontKernPairCount(0),
     mnPenWidth(GSL_PEN_WIDTH)
 {
     if (OpenGLHelper::isVCLOpenGLEnabled() && !mbPrinter)
@@ -636,6 +646,8 @@ WinSalGraphics::~WinSalGraphics()
 
     // delete cache data
     delete [] (BYTE*)mpStdClipRgnData;
+
+    delete [] mpFontKernPairs;
 }
 
 SalGraphicsImpl* WinSalGraphics::GetImpl() const
@@ -1044,11 +1056,6 @@ SystemGraphicsData WinSalGraphics::GetGraphicsData() const
     aRes.nSize = sizeof(aRes);
     aRes.hDC = const_cast< WinSalGraphics* >(this)->getHDC();
     return aRes;
-}
-
-OpenGLContext *WinSalGraphics::BeginPaint()
-{
-    return mpImpl->beginPaint();
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

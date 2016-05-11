@@ -36,7 +36,7 @@
 
 void SwEditShell::DeleteSel( SwPaM& rPam, bool* pUndo )
 {
-    bool bSelectAll = StartsWithTable() && ExtendedSelectedAll(/*bFootnotes =*/ false);
+    bool bSelectAll = StartsWithTable() && ExtendedSelectedAll();
     // only for selections
     if( !rPam.HasMark() || *rPam.GetPoint() == *rPam.GetMark())
         return;
@@ -178,7 +178,7 @@ bool SwEditShell::Copy( SwEditShell* pDestShell )
                 // by simulated cursor movements from the given first insert position
                 if( nMove )
                 {
-                    SwCursor aCursor( *pPos, nullptr, false);
+                    SwCursor aCursor( *pPos, nullptr);
                     if( aCursor.UpDown( false, nMove, nullptr, 0 ) )
                     {
                         pInsertPos.reset( new SwPosition( *aCursor.GetPoint() ) );

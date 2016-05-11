@@ -73,20 +73,20 @@ OHSQLTable::OHSQLTable( sdbcx::OCollection* _pTables,
 
 OHSQLTable::OHSQLTable( sdbcx::OCollection* _pTables,
                            const Reference< XConnection >& _xConnection,
-                    const OUString& _Name,
-                    const OUString& _Type,
-                    const OUString& _Description ,
-                    const OUString& _SchemaName,
-                    const OUString& _CatalogName,
+                    const OUString& Name,
+                    const OUString& Type,
+                    const OUString& Description ,
+                    const OUString& SchemaName,
+                    const OUString& CatalogName,
                     sal_Int32 _nPrivileges
                 ) : OTableHelper(   _pTables,
                                     _xConnection,
                                     true,
-                                    _Name,
-                                    _Type,
-                                    _Description,
-                                    _SchemaName,
-                                    _CatalogName)
+                                    Name,
+                                    Type,
+                                    Description,
+                                    SchemaName,
+                                    CatalogName)
  , m_nPrivileges(_nPrivileges)
 {
     construct();
@@ -111,7 +111,7 @@ void OHSQLTable::construct()
 
 sdbcx::OCollection* OHSQLTable::createColumns(const TStringVector& _rNames)
 {
-    OHSQLColumns* pColumns = new OHSQLColumns(*this,true,m_aMutex,_rNames);
+    OHSQLColumns* pColumns = new OHSQLColumns(*this,m_aMutex,_rNames);
     pColumns->setParent(this);
     return pColumns;
 }
@@ -280,7 +280,7 @@ void OHSQLTable::alterColumnType(sal_Int32 nNewType,const OUString& _rColName, c
     (void)_rColName;
 #endif
 
-    OHSQLColumn* pColumn = new OHSQLColumn(true);
+    OHSQLColumn* pColumn = new OHSQLColumn;
     Reference<XPropertySet> xProp = pColumn;
     ::comphelper::copyProperties(_xDescriptor,xProp);
     xProp->setPropertyValue(OMetaConnection::getPropMap().getNameByIndex(PROPERTY_ID_TYPE),makeAny(nNewType));
@@ -315,7 +315,7 @@ OUString OHSQLTable::getAlterTableColumnPart()
 {
     OUString sSql(  "ALTER TABLE " );
 
-    OUString sComposedName( ::dbtools::composeTableName( getMetaData(), m_CatalogName, m_SchemaName, m_Name, true, ::dbtools::eInTableDefinitions ) );
+    OUString sComposedName( ::dbtools::composeTableName( getMetaData(), m_CatalogName, m_SchemaName, m_Name, true, ::dbtools::EComposeRule::InTableDefinitions ) );
     sSql += sComposedName;
 
     return sSql;
@@ -382,19 +382,19 @@ void SAL_CALL OHSQLTable::rename( const OUString& newName ) throw(SQLException, 
             sSql += " TABLE ";
 
         OUString sCatalog,sSchema,sTable;
-        ::dbtools::qualifiedNameComponents(getMetaData(),newName,sCatalog,sSchema,sTable,::dbtools::eInDataManipulation);
+        ::dbtools::qualifiedNameComponents(getMetaData(),newName,sCatalog,sSchema,sTable,::dbtools::EComposeRule::InDataManipulation);
 
         sSql +=
-            ::dbtools::composeTableName( getMetaData(), m_CatalogName, m_SchemaName, m_Name, true, ::dbtools::eInDataManipulation )
+            ::dbtools::composeTableName( getMetaData(), m_CatalogName, m_SchemaName, m_Name, true, ::dbtools::EComposeRule::InDataManipulation )
             + " RENAME TO "
-            + ::dbtools::composeTableName( getMetaData(), sCatalog, sSchema, sTable, true, ::dbtools::eInDataManipulation );
+            + ::dbtools::composeTableName( getMetaData(), sCatalog, sSchema, sTable, true, ::dbtools::EComposeRule::InDataManipulation );
 
         executeStatement(sSql);
 
         ::connectivity::OTable_TYPEDEF::rename(newName);
     }
     else
-        ::dbtools::qualifiedNameComponents(getMetaData(),newName,m_CatalogName,m_SchemaName,m_Name,::dbtools::eInTableDefinitions);
+        ::dbtools::qualifiedNameComponents(getMetaData(),newName,m_CatalogName,m_SchemaName,m_Name,::dbtools::EComposeRule::InTableDefinitions);
 }
 
 

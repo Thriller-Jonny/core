@@ -37,9 +37,9 @@
 #include <com/sun/star/util/DateTime.hpp>
 #include <cppuhelper/component.hxx>
 #include <cppuhelper/implbase.hxx>
+#include <comphelper/interfacecontainer2.hxx>
 #include <osl/mutex.hxx>
 
-#include <boost/noncopyable.hpp>
 #include <memory>
 
 class ScEditSource;
@@ -63,7 +63,7 @@ private:
     ScAddress               aCellPos;
     ScEditSource* mpEditSource;
     /// List of refresh listeners.
-    cppu::OInterfaceContainerHelper* mpRefreshListeners;
+    comphelper::OInterfaceContainerHelper2* mpRefreshListeners;
     /// mutex to lock the InterfaceContainerHelper
     osl::Mutex              aMutex;
 
@@ -129,7 +129,7 @@ private:
     ScEditSource* mpEditSource;
 
     /// List of refresh listeners.
-    cppu::OInterfaceContainerHelper* mpRefreshListeners;
+    comphelper::OInterfaceContainerHelper2* mpRefreshListeners;
     /// mutex to lock the InterfaceContainerHelper
     osl::Mutex                  aMutex;
 
@@ -189,9 +189,12 @@ class ScEditFieldObj : public cppu::WeakImplHelper<
                             css::lang::XUnoTunnel,
                             css::lang::XServiceInfo>,
                         public ScMutexHelper,
-                        public ::cppu::OComponentHelper,
-                        private boost::noncopyable
+                        public ::cppu::OComponentHelper
 {
+    ScEditFieldObj() = delete;
+    ScEditFieldObj(const ScEditFieldObj&) = delete;
+    const ScEditFieldObj& operator=(const ScEditFieldObj&) = delete;
+
     const SfxItemPropertySet* pPropSet;
     ScEditSource* mpEditSource;
     ESelection aSelection;
@@ -206,8 +209,6 @@ class ScEditFieldObj : public cppu::WeakImplHelper<
     bool mbIsFixed:1;
 
 private:
-    ScEditFieldObj(); // disabled
-
     SvxFieldData* getData();
 
     void setPropertyValueURL(const OUString& rName, const css::uno::Any& rVal);

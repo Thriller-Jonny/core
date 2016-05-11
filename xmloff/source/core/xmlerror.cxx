@@ -35,7 +35,6 @@ using ::com::sun::star::xml::sax::XLocator;
 using ::com::sun::star::xml::sax::SAXParseException;
 
 
-
 /// ErrorRecord: contains all information for one error
 
 
@@ -83,8 +82,6 @@ ErrorRecord::ErrorRecord( sal_Int32 nID, const Sequence<OUString>& rParams,
 ErrorRecord::~ErrorRecord()
 {
 }
-
-
 
 
 XMLErrors::XMLErrors()
@@ -213,10 +210,8 @@ void XMLErrors::ThrowErrorAsSAXException(sal_Int32 nIdMask)
         {
             // we throw the error
             ErrorRecord& rErr = aErrors[0];
-            Any aAny;
-            aAny <<= rErr.aParams;
             throw SAXParseException(
-                rErr.sExceptionMessage, nullptr, aAny,
+                rErr.sExceptionMessage, nullptr, Any(rErr.aParams),
                 rErr.sPublicId, rErr.sSystemId, rErr.nRow, rErr.nColumn );
         }
     }

@@ -115,7 +115,6 @@ public:
     SwBoxAutoFormat( const SwBoxAutoFormat& rNew );
     ~SwBoxAutoFormat();
 
-    int operator==( const SwBoxAutoFormat& rCmp ) const;
     SwBoxAutoFormat& operator=( const SwBoxAutoFormat& rNew );
 
     // The get-methods.
@@ -199,7 +198,7 @@ For example, in a 2x3 table, the 4 lines will be [0, 1, 1, 1]. In each line, the
 [0, 1, 2, 5].
 
 As you can see, property extraction/application is lossless for tables that are 4x4 or smaller
-(and in fact has a bit of redundnacy). For larger tables, we lose any individual cell formatting
+(and in fact has a bit of redundancy). For larger tables, we lose any individual cell formatting
 for the range [(3,rows - 1) -> (3, cols - 1)]. That formatting is replaced by formatting from
 the saved cells:
 
@@ -228,7 +227,7 @@ properties are stored per-table, and are lossless.
 */
 class SW_DLLPUBLIC SwTableAutoFormat
 {
-    friend void _FinitCore();       // To destroy default pointer.
+    friend void FinitCore();       // To destroy default pointer.
     static SwBoxAutoFormat* pDfltBoxAutoFormat;
 
     OUString m_aName;
@@ -267,7 +266,7 @@ public:
     const SwBoxAutoFormat& GetBoxFormat( sal_uInt8 nPos ) const;
 
     void SetName( const OUString& rNew ) { m_aName = rNew; nStrResId = USHRT_MAX; }
-    OUString GetName() const { return m_aName; }
+    const OUString& GetName() const { return m_aName; }
 
     enum UpdateFlags { UPDATE_CHAR = 1, UPDATE_BOX = 2, UPDATE_ALL = 3 };
     void UpdateFromSet( sal_uInt8 nPos, const SfxItemSet& rSet,

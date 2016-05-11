@@ -21,11 +21,13 @@
 
 #include <com/sun/star/lang/NullPointerException.hpp>
 #include <com/sun/star/lang/IllegalArgumentException.hpp>
+#include <comphelper/sequence.hxx>
 #include <osl/diagnose.h>
 #include <tools/diagnose_ex.h>
 
 #include <functional>
 #include <algorithm>
+#include <iterator>
 #include <map>
 
 
@@ -253,8 +255,7 @@ namespace pcr
             m_bSupportedPropertiesAreKnown = true;
         }
 
-        Sequence< Property > aSurvived;
-        copyBagToArray( m_aSupportedProperties, aSurvived );
+        Sequence< Property > aSurvived = comphelper::containerToSequence<Property>( m_aSupportedProperties );
         return aSurvived;
     }
 
@@ -396,12 +397,9 @@ namespace pcr
         {
             // TODO: make this cheaper (cache it?)
             const StlSyntaxSequence< OUString > aThisHandlersActuatingProps( (*loop)->getActuatingProperties() );
-            for (   StlSyntaxSequence< OUString >::const_iterator loopProps = aThisHandlersActuatingProps.begin();
-                    loopProps != aThisHandlersActuatingProps.end();
-                    ++loopProps
-                )
+            for (const auto & aThisHandlersActuatingProp : aThisHandlersActuatingProps)
             {
-                if ( *loopProps == _rActuatingPropertyName )
+                if ( aThisHandlersActuatingProp == _rActuatingPropertyName )
                 {
                     (*loop)->actuatingPropertyChanged( _rActuatingPropertyName, _rNewValue, _rOldValue,
                         m_pUIRequestComposer->getUIForPropertyHandler( *loop ),
@@ -482,7 +480,7 @@ namespace pcr
                     do
                     {
                         --loop;
-                        (*loop)->suspend( sal_False );
+                        (*loop)->suspend( false );
                     }
                     while ( loop != m_aSlaveHandlers.begin() );
                 }

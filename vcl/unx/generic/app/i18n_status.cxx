@@ -22,10 +22,9 @@
 #endif
 #include <sal/alloca.h>
 
-#include <prex.h>
 #include <X11/Xlib.h>
+#include <X11/Xutil.h>
 #include <unx/XIM.h>
-#include <postx.h>
 
 #include <unx/salunx.h>
 #include <unx/i18n_status.hxx>
@@ -145,7 +144,7 @@ void XIMStatusWindow::layout()
 {
     m_aWindowSize.Width() = m_aStatusText->GetTextWidth( m_aStatusText->GetText() )+8;
     Font aFont( m_aStatusText->GetFont() );
-    m_aWindowSize.Height() = aFont.GetHeight()+10;
+    m_aWindowSize.Height() = aFont.GetFontHeight()+10;
     m_aWindowSize = LogicToPixel( m_aWindowSize );
 
     Size aControlSize( m_aWindowSize );
@@ -198,7 +197,7 @@ Point XIMStatusWindow::updatePosition()
         const SystemEnvData* pParentEnvData = m_pLastParent->GetSystemData();
 
         SalExtTextInputPosEvent aPosEvent;
-        m_pLastParent->CallCallback( SALEVENT_EXTTEXTINPUTPOS, static_cast<void*>(&aPosEvent) );
+        m_pLastParent->CallCallback( SalEvent::ExtTextInputPos, static_cast<void*>(&aPosEvent) );
         int x, y;
         ::Window aChild;
         XTranslateCoordinates( static_cast<Display*>(pParentEnvData->pDisplay),
@@ -371,7 +370,7 @@ IIIMPStatusWindow::IIIMPStatusWindow( SalFrame* pParent, bool bOn ) :
 void IIIMPStatusWindow::layout()
 {
     Font aFont( m_aStatusBtn->GetFont() );
-    Size aSize( 15*aFont.GetHeight(), aFont.GetHeight()+14 );
+    Size aSize( 15*aFont.GetFontHeight(), aFont.GetFontHeight()+14 );
     aSize = m_aStatusBtn->LogicToPixel( aSize );
 
     m_aStatusBtn->SetPosSizePixel( Point( 0, 0 ), aSize );
@@ -510,7 +509,10 @@ bool I18NStatus::exists()
 void I18NStatus::free()
 {
     if (g_pI18NStatusInstance)
-        delete g_pI18NStatusInstance, g_pI18NStatusInstance = nullptr;
+    {
+        delete g_pI18NStatusInstance;
+        g_pI18NStatusInstance = nullptr;
+    }
 }
 
 I18NStatus::I18NStatus() :

@@ -177,7 +177,7 @@ void LwpRowLayout::Read()
  * @short   Parse rows with connect cell
  * @param  pXFTable - pointer to created XFTable
  */
-void LwpRowLayout::ConvertRow(XFTable* pXFTable,sal_uInt8 nStartCol,sal_uInt8 nEndCol)
+void LwpRowLayout::ConvertRow(rtl::Reference<XFTable> const & pXFTable,sal_uInt8 nStartCol,sal_uInt8 nEndCol)
 {
     LwpTableLayout* pTableLayout = GetParentTableLayout();
     LwpTable* pTable = pTableLayout->GetTable();
@@ -361,7 +361,7 @@ sal_uInt16 LwpRowLayout::GetCurMaxSpannedRows(sal_uInt8 nStartCol,sal_uInt8 nEnd
  * @param   nStartCol - start column ID
  * @param   nEndCol - end column ID
  */
-void LwpRowLayout::ConvertCommonRow(XFTable* pXFTable,sal_uInt8 nStartCol,sal_uInt8 nEndCol)
+void LwpRowLayout::ConvertCommonRow(rtl::Reference<XFTable> const & pXFTable, sal_uInt8 nStartCol, sal_uInt8 nEndCol)
 {
     LwpTableLayout* pTableLayout = GetParentTableLayout();
     if (!pTableLayout)
@@ -445,10 +445,8 @@ void LwpRowLayout::CollectMergeInfo()
  */
 void LwpRowLayout::SetCellSplit(sal_uInt16 nEffectRows)
 {
-    LwpConnectedCellLayout* pConnCell;
-    for (size_t i=0; i<m_ConnCellList.size(); i++)
+    for (LwpConnectedCellLayout* pConnCell : m_ConnCellList)
     {
-        pConnCell = m_ConnCellList[i];
         sal_uInt16 nRowSpan = pConnCell->GetRowID()+pConnCell->GetNumrows();
         if ( nRowSpan > nEffectRows )
         {

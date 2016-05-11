@@ -95,8 +95,8 @@ sal_uInt16 ScaFuncData::GetStrIndex( sal_uInt16 nParam ) const
 
 void InitScaFuncDataList( ScaFuncDataList& rList, ResMgr& rResMgr )
 {
-    for( sal_uInt16 nIndex = 0; nIndex < SAL_N_ELEMENTS(pFuncDataArr); nIndex++ )
-        rList.push_back( ScaFuncData( pFuncDataArr[ nIndex ], rResMgr ) );
+    for(const auto & nIndex : pFuncDataArr)
+        rList.push_back( ScaFuncData( nIndex, rResMgr ) );
 }
 
 ScaFuncRes::ScaFuncRes( ResId& rResId, ResMgr& rResMgr, sal_uInt16 nIndex, OUString& rRet ) :
@@ -547,7 +547,7 @@ sal_Int32 GetNullDate( const uno::Reference< beans::XPropertySet >& xOptions )
  * The International Standard IS-8601 has decreed that Monday
  * shall be the first day of the week.
  *
- * A week that lies partly in one year and partly in annother
+ * A week that lies partly in one year and partly in another
  * is assigned a number in the year in which most of its days lie.
  *
  * That means that week 1 of any year is the week that contains the 4. January

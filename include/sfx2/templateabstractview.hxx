@@ -61,21 +61,6 @@ protected:
     FILTER_APPLICATION mApp;
 };
 
-class ViewFilter_Keyword
-{
-public:
-
-    ViewFilter_Keyword (const OUString &rKeyword)
-        : maKeyword(rKeyword)
-    {}
-
-    bool operator () (const ThumbnailViewItem *pItem);
-
-private:
-
-    OUString maKeyword;
-};
-
 class SFX2_DLLPUBLIC TemplateAbstractView : public ThumbnailView
 {
 public:
@@ -119,6 +104,11 @@ public:
 
     void setOpenTemplateHdl(const Link<ThumbnailViewItem*,void> &rLink);
 
+    void updateThumbnailDimensions(long itemMaxSize);
+
+    long getThumbnailWidth() const  { return mnThumbnailWidth;}
+    long getThumbnailHeight() const {return mnThumbnailHeight;}
+
     static BitmapEx scaleImg (const BitmapEx &rImg, long width, long height);
 
     static BitmapEx getDefaultThumbnail( const OUString& rPath );
@@ -137,6 +127,9 @@ protected:
 
     sal_uInt16 mnCurRegionId;
     OUString maCurRegionName;
+
+    long mnThumbnailWidth;
+    long mnThumbnailHeight;
 
     VclPtr<PushButton> maAllButton;
     VclPtr<FixedText>  maFTName;

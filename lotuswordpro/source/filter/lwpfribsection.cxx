@@ -190,7 +190,7 @@ void LwpFribSection::SetDefaultAlphaIndex(XFIndex * pXFIndex)
 
     LwpIndexSection* pIndexSection = dynamic_cast<LwpIndexSection*>(m_Section.obj().get());
     XFIndexTemplate * pTemplateSep = new XFIndexTemplate();
-    if (pIndexSection->IsFormatSeparator())
+    if (pIndexSection && pIndexSection->IsFormatSeparator())
     {
         pXFIndex->SetSeparator(true);
         pTemplateSep->AddEntry(enumXFIndexTemplateText,"");
@@ -216,7 +216,7 @@ void LwpFribSection::SetDefaultAlphaIndex(XFIndex * pXFIndex)
     pTemplate3->AddEntry(enumXFIndexTemplateTab,"");
     pTemplate3->AddEntry(enumXFIndexTemplatePage,"");
 
-    if (pIndexSection->IsFormatRunin())
+    if (pIndexSection && pIndexSection->IsFormatRunin())
     {
         //pXFIndex->AddTemplate(OUString::number(2),"Primary",pTemplate2);
         //pXFIndex->AddTemplate(OUString::number(3),"Primary",pTemplate3);
@@ -242,15 +242,18 @@ LwpMasterPage::LwpMasterPage(LwpPara* pPara, LwpPageLayout* pLayout)
  * @descr:  Register master page style for para style and register section style if necessary
  *
  */
-bool LwpMasterPage::RegisterMasterPage(LwpFrib* pFrib)
+void LwpMasterPage::RegisterMasterPage(LwpFrib* pFrib)
 {
     //if there is no other frib after current frib, register master page in starting para of next page
-    if(IsNextPageType()&&(!pFrib->HasNextFrib()))
+    LwpStory* pStory = nullptr;
+    if (IsNextPageType()&&(!pFrib->HasNextFrib()))
+        pStory = dynamic_cast<LwpStory*>(m_pPara->GetStoryID().obj().get());
+
+    if (pStory)
     {
-        LwpStory* pStory = dynamic_cast<LwpStory*>(m_pPara->GetStoryID().obj().get());
         pStory->SetCurrentLayout(m_pLayout);
         RegisterFillerPageStyle();
-        return false;
+        return;
     }
 
     m_bNewSection = false;
@@ -278,14 +281,17 @@ bool LwpMasterPage::RegisterMasterPage(LwpFrib* pFrib)
         case LwpLayout::StartOnOddPage: //fall through
         case LwpLayout::StartOnEvenPage:
         {
-            LwpStory* pStory = dynamic_cast<LwpStory*>(m_pPara->GetStoryID().obj().get());
-            pStory->SetCurrentLayout(m_pLayout);
-            //get odd page layout when the current pagelayout is mirror
-            m_pLayout = pStory->GetCurrentLayout();
-            m_bNewSection = IsNeedSection();
-            //bSectionColumns = m_bNewSection;
-            pOverStyle->SetMasterPage( m_pLayout->GetStyleName());
-            RegisterFillerPageStyle();
+            pStory = dynamic_cast<LwpStory*>(m_pPara->GetStoryID().obj().get());
+            if (pStory)
+            {
+                pStory->SetCurrentLayout(m_pLayout);
+                //get odd page layout when the current pagelayout is mirror
+                m_pLayout = pStory->GetCurrentLayout();
+                m_bNewSection = IsNeedSection();
+                //bSectionColumns = m_bNewSection;
+                pOverStyle->SetMasterPage( m_pLayout->GetStyleName());
+                RegisterFillerPageStyle();
+            }
             break;
         }
         default:
@@ -293,7 +299,10 @@ bool LwpMasterPage::RegisterMasterPage(LwpFrib* pFrib)
     }
 
     //register tab style;
-    LwpStory* pStory = dynamic_cast<LwpStory*>(m_pPara->GetStoryID().obj().get());
+    pStory = dynamic_cast<LwpStory*>(m_pPara->GetStoryID().obj().get());
+    if (!pStory)
+        return;
+
     pStory->SetTabLayout(m_pLayout);
     m_pPara->RegisterTabStyle(pOverStyle);
 
@@ -305,11 +314,11 @@ bool LwpMasterPage::RegisterMasterPage(LwpFrib* pFrib)
         XFSectionStyle* pSectStyle= new XFSectionStyle();
         //set margin
         pStory = dynamic_cast<LwpStory*>(m_pPara->GetStoryID().obj().get());
-        if(pStory)
+        LwpPageLayout* pCurrentLayout = pStory ? pStory->GetCurrentLayout() : nullptr;
+        if (pCurrentLayout)
         {
-            LwpPageLayout* pCurrentLayout = pStory->GetCurrentLayout();
-            double fLeft = m_pLayout->GetMarginsValue(MARGIN_LEFT)- pCurrentLayout->GetMarginsValue(MARGIN_LEFT);
-            double fRight = m_pLayout->GetMarginsValue(MARGIN_RIGHT)- pCurrentLayout->GetMarginsValue(MARGIN_RIGHT);
+            double fLeft = m_pLayout->GetMarginsValue(MARGIN_LEFT) - pCurrentLayout->GetMarginsValue(MARGIN_LEFT);
+            double fRight = m_pLayout->GetMarginsValue(MARGIN_RIGHT) - pCurrentLayout->GetMarginsValue(MARGIN_RIGHT);
             pSectStyle->SetMarginLeft(fLeft);
             pSectStyle->SetMarginRight(fRight);
         }
@@ -325,7 +334,6 @@ bool LwpMasterPage::RegisterMasterPage(LwpFrib* pFrib)
         //}
         m_SectionStyleName = pXFStyleManager->AddStyle(pSectStyle).m_pStyle->GetStyleName();
     }
-    return false;
 }
 
 /**
@@ -338,7 +346,7 @@ bool LwpMasterPage::IsNeedSection()
     //get story
     LwpStory* pStory = dynamic_cast<LwpStory*>(m_pPara->GetStoryID().obj().get());
     //if pagelayout is modified, register the pagelayout
-    if(pStory->IsPMModified())
+    if (pStory && pStory->IsPMModified())
     {
         bNewSection = pStory->IsNeedSection();
     }
@@ -395,12 +403,13 @@ void LwpMasterPage::ParseSection(LwpFrib* pFrib)
                 pCurrContainer->RemoveLastContent();
             }
         }
-        pStory->AddXFContent( pContent );
+        if (pStory)
+            pStory->AddXFContent( pContent );
     }
     else
     {
         LwpStory* pStory = dynamic_cast<LwpStory*> ( m_pPara->GetStoryID().obj().get() );
-        pContent = pStory->GetXFContent();
+        pContent = pStory ? pStory->GetXFContent() : nullptr;
     }
     if(pContent)
     {

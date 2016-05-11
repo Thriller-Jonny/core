@@ -20,7 +20,7 @@
 #ifndef INCLUDED_VCL_UNX_GENERIC_GDI_X11CAIROTEXTRENDER_HXX
 #define INCLUDED_VCL_UNX_GENERIC_GDI_X11CAIROTEXTRENDER_HXX
 
-#include "cairotextrender.hxx"
+#include "unx/cairotextrender.hxx"
 
 #include "unx/saldata.hxx"
 #include "unx/saldisp.hxx"
@@ -43,7 +43,7 @@ public:
     virtual cairo_t* getCairoContext() override;
     virtual void getSurfaceOffset(double& nDX, double& nDY) override;
     virtual void clipRegion(cairo_t* cr) override;
-    virtual void drawSurface(cairo_t* cr) override;
+    virtual void releaseCairoContext(cairo_t* cr) override;
 };
 
 #endif

@@ -61,11 +61,9 @@ FilterFactory::FilterFactory(const css::uno::Reference< css::uno::XComponentCont
 }
 
 
-
 FilterFactory::~FilterFactory()
 {
 }
-
 
 
 css::uno::Reference< css::uno::XInterface > SAL_CALL FilterFactory::createInstance(const OUString& sFilter)
@@ -74,7 +72,6 @@ css::uno::Reference< css::uno::XInterface > SAL_CALL FilterFactory::createInstan
 {
     return createInstanceWithArguments(sFilter, css::uno::Sequence< css::uno::Any >());
 }
-
 
 
 css::uno::Reference< css::uno::XInterface > SAL_CALL FilterFactory::createInstanceWithArguments(const OUString&                     sFilter   ,
@@ -87,7 +84,7 @@ css::uno::Reference< css::uno::XInterface > SAL_CALL FilterFactory::createInstan
 
     OUString sRealFilter = sFilter;
 
-    #ifdef _FILTER_CONFIG_MIGRATION_Q_
+    #ifdef FILTER_CONFIG_MIGRATION_Q_
 
         /* -> TODO - HACK
             check if the given filter name really exist ...
@@ -95,10 +92,12 @@ css::uno::Reference< css::uno::XInterface > SAL_CALL FilterFactory::createInstan
             type name instead of a filter name. For a small migration time
             we must simulate this old feature :-( */
 
-        if (!m_rCache->hasItem(FilterCache::E_FILTER, sFilter) && m_rCache->hasItem(FilterCache::E_TYPE, sFilter))
+        auto & cache = TheFilterCache::get();
+
+        if (!cache.hasItem(FilterCache::E_FILTER, sFilter) && cache.hasItem(FilterCache::E_TYPE, sFilter))
         {
             OSL_FAIL("Who use this deprecated functionality?");
-            _FILTER_CONFIG_LOG_("FilterFactory::createInstanceWithArguments() ... simulate old type search functionality!\n");
+            FILTER_CONFIG_LOG_("FilterFactory::createInstanceWithArguments() ... simulate old type search functionality!\n");
 
             css::uno::Sequence< css::beans::NamedValue > lQuery { { PROPNAME_TYPE, css::uno::makeAny(sFilter) } };
 
@@ -112,16 +111,16 @@ css::uno::Reference< css::uno::XInterface > SAL_CALL FilterFactory::createInstan
 
             // prevent outside code against NoSuchElementException!
             // But don't implement such defensive strategy for our new create handling :-)
-            if (!m_rCache->hasItem(FilterCache::E_FILTER, sRealFilter))
+            if (!cache.hasItem(FilterCache::E_FILTER, sRealFilter))
                 return css::uno::Reference< css::uno::XInterface>();
         }
 
         /* <- HACK */
 
-    #endif // _FILTER_CONFIG_MIGRATION_Q_
+    #endif // FILTER_CONFIG_MIGRATION_Q_
 
     // search filter on cache
-    CacheItem aFilter = m_rCache->getItem(FilterCache::E_FILTER, sRealFilter);
+    CacheItem aFilter = cache.getItem(FilterCache::E_FILTER, sRealFilter);
     OUString sFilterService;
     aFilter[PROPNAME_FILTERSERVICE] >>= sFilterService;
 
@@ -152,7 +151,6 @@ css::uno::Reference< css::uno::XInterface > SAL_CALL FilterFactory::createInstan
 }
 
 
-
 css::uno::Sequence< OUString > SAL_CALL FilterFactory::getAvailableServiceNames()
     throw(css::uno::RuntimeException, std::exception)
 {
@@ -169,7 +167,7 @@ css::uno::Sequence< OUString > SAL_CALL FilterFactory::getAvailableServiceNames(
     OUStringList lUNOFilters;
     try
     {
-        lUNOFilters = m_rCache->getMatchingItemsByProps(FilterCache::E_FILTER, lIProps, lEProps);
+        lUNOFilters = TheFilterCache::get().getMatchingItemsByProps(FilterCache::E_FILTER, lIProps, lEProps);
     }
     catch(const css::uno::RuntimeException&)
         { throw; }
@@ -178,7 +176,6 @@ css::uno::Sequence< OUString > SAL_CALL FilterFactory::getAvailableServiceNames(
 
     return comphelper::containerToSequence(lUNOFilters);
 }
-
 
 
 css::uno::Reference< css::container::XEnumeration > SAL_CALL FilterFactory::createSubSetEnumerationByQuery(const OUString& sQuery)
@@ -236,7 +233,6 @@ css::uno::Reference< css::container::XEnumeration > SAL_CALL FilterFactory::crea
 }
 
 
-
 OUStringList FilterFactory::impl_queryMatchByDocumentService(const QueryTokenizer& lTokens) const
 {
     // analyze query
@@ -291,11 +287,11 @@ OUStringList FilterFactory::impl_queryMatchByDocumentService(const QueryTokenize
 
     pIt = lTokens.find(QUERY_PARAM_IFLAGS);
     if (pIt != lTokens.end())
-        nIFlags = OUString(pIt->second).toInt32();
+        nIFlags = pIt->second.toInt32();
 
     pIt = lTokens.find(QUERY_PARAM_EFLAGS);
     if (pIt != lTokens.end())
-        nEFlags = OUString(pIt->second).toInt32();
+        nEFlags = pIt->second.toInt32();
 
     // SAFE -> ----------------------
     ::osl::ResettableMutexGuard aLock(m_aLock);
@@ -370,7 +366,6 @@ OUStringList FilterFactory::impl_queryMatchByDocumentService(const QueryTokenize
 }
 
 
-
 class stlcomp_removeIfMatchFlags
 {
     private:
@@ -412,7 +407,6 @@ class stlcomp_removeIfMatchFlags
 };
 
 
-
 OUStringList FilterFactory::impl_getSortedFilterList(const QueryTokenizer& lTokens) const
 {
     // analyze the given query parameter
@@ -427,10 +421,10 @@ OUStringList FilterFactory::impl_getSortedFilterList(const QueryTokenizer& lToke
         sModule = pIt1->second;
     pIt1 = lTokens.find(QUERY_PARAM_IFLAGS);
     if (pIt1 != lTokens.end())
-        nIFlags = OUString(pIt1->second).toInt32();
+        nIFlags = pIt1->second.toInt32();
     pIt1 = lTokens.find(QUERY_PARAM_EFLAGS);
     if (pIt1 != lTokens.end())
-        nEFlags = OUString(pIt1->second).toInt32();
+        nEFlags = pIt1->second.toInt32();
 
     // simple search for filters of one specific module.
     OUStringList lFilterList;
@@ -463,7 +457,6 @@ OUStringList FilterFactory::impl_getSortedFilterList(const QueryTokenizer& lToke
 }
 
 
-
 OUStringList FilterFactory::impl_getListOfInstalledModules() const
 {
     // SAFE -> ----------------------
@@ -476,7 +469,6 @@ OUStringList FilterFactory::impl_getListOfInstalledModules() const
     OUStringList lModules(comphelper::sequenceToContainer<OUStringList>(xModuleConfig->getElementNames()));
     return lModules;
 }
-
 
 
 OUStringList FilterFactory::impl_getSortedFilterListForModule(const OUString& sModule,
@@ -496,7 +488,7 @@ OUStringList FilterFactory::impl_getSortedFilterListForModule(const OUString& sM
     aLock.clear();
     // <- SAFE ----------------------
 
-    // bring "other" filters in an alphabeticly order
+    // bring "other" filters in an alphabetical order
     // It's needed below.
     ::std::sort(lOtherFilters.begin(), lOtherFilters.end());
 
@@ -533,7 +525,6 @@ OUStringList FilterFactory::impl_getSortedFilterListForModule(const OUString& sM
 }
 
 
-
 OUStringList FilterFactory::impl_readSortedFilterListFromConfig(const OUString& sModule) const
 {
     // SAFE -> ----------------------
@@ -568,20 +559,16 @@ OUStringList FilterFactory::impl_readSortedFilterListFromConfig(const OUString& 
 }
 
 
-
 OUString FilterFactory::impl_getImplementationName()
 {
     return OUString( "com.sun.star.comp.filter.config.FilterFactory" );
 }
 
 
-
 css::uno::Sequence< OUString > FilterFactory::impl_getSupportedServiceNames()
 {
-    css::uno::Sequence< OUString > lServiceNames { "com.sun.star.document.FilterFactory" };
-    return lServiceNames;
+    return { "com.sun.star.document.FilterFactory" };
 }
-
 
 
 css::uno::Reference< css::uno::XInterface > SAL_CALL FilterFactory::impl_createInstance(const css::uno::Reference< css::lang::XMultiServiceFactory >& xSMGR)

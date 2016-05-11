@@ -17,8 +17,6 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-
-#include <sot/object.hxx>
 #include <tools/stream.hxx>
 #include <vcl/splitwin.hxx>
 #include <svl/itemset.hxx>
@@ -97,7 +95,7 @@ bool SfxFrameDescriptor::IsEditable() const
     return pImp->bEditable;
 }
 
-SfxFrameDescriptor* SfxFrameDescriptor::Clone( bool bWithIds ) const
+SfxFrameDescriptor* SfxFrameDescriptor::Clone() const
 {
     SfxFrameDescriptor *pFrame = new SfxFrameDescriptor;
 
@@ -124,10 +122,7 @@ SfxFrameDescriptor* SfxFrameDescriptor::Clone( bool bWithIds ) const
         pFrame->pImp->pArgs->Put(*pImp->pArgs);
     }
 
-    if ( bWithIds )
-        pFrame->nItemId = nItemId;
-    else
-        pFrame->nItemId = 0;
+    pFrame->nItemId = nItemId;
 
     return pFrame;
 }
@@ -186,12 +181,10 @@ bool SfxFrameDescriptorItem::operator==( const SfxPoolItem& rAttr ) const
 }
 
 
-
 SfxPoolItem* SfxFrameDescriptorItem::Clone( SfxItemPool* ) const
 {
     return new SfxFrameDescriptorItem( *this );
 }
-
 
 
 bool SfxFrameDescriptorItem::GetPresentation

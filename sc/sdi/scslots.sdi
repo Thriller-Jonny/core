@@ -16,14 +16,9 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-module
-"ADC7D7A1-2341-101C-A55A-04021C007002"
-"82528B40-234D-101C-A55A-04021C007002"
-StarCalc
+module StarCalc
 [
-HelpText( "StarDivision StarCalc" ),
-SlotIdFile( "scslots.hrc" )
-ModulePrefix( "Sc" )
+    SlotIdFile( "scslots.hrc" )
 ]
 {
     struct ScProtection

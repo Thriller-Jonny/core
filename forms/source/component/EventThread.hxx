@@ -67,7 +67,7 @@ protected:
 
     virtual void SAL_CALL onTerminated() override;
 
-    // The following method is called to duplicate the Event while respecting it's type.
+    // The following method is called to duplicate the Event while respecting its type.
     virtual css::lang::EventObject* cloneEvent(const css::lang::EventObject* _pEvt) const = 0;
 
     // Edit an Event:
@@ -89,7 +89,7 @@ public:
     explicit OComponentEventThread(::cppu::OComponentHelper* pCompImpl);
     virtual ~OComponentEventThread();
 
-    void addEvent( const css::lang::EventObject* _pEvt, bool bFlag = false );
+    void addEvent( const css::lang::EventObject* _pEvt );
     void addEvent( const css::lang::EventObject* _pEvt, const css::uno::Reference< css::awt::XControl>& rControl,
                    bool bFlag = false );
 

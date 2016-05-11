@@ -19,7 +19,6 @@
 
 #include <sal/config.h>
 
-#include <boost/noncopyable.hpp>
 #include <cppuhelper/compbase.hxx>
 #include <com/sun/star/lang/XServiceInfo.hpp>
 #include <com/sun/star/document/XDocumentProperties.hpp>
@@ -63,7 +62,7 @@
 #include <tools/datetime.hxx>
 #include <osl/mutex.hxx>
 #include <cppuhelper/basemutex.hxx>
-#include <cppuhelper/interfacecontainer.hxx>
+#include <comphelper/interfacecontainer2.hxx>
 #include <comphelper/storagehelper.hxx>
 #include <unotools/mediadescriptor.hxx>
 #include <comphelper/sequence.hxx>
@@ -126,12 +125,13 @@ typedef ::cppu::WeakComponentImplHelper<
 
 class SfxDocumentMetaData:
     private ::cppu::BaseMutex,
-    public SfxDocumentMetaData_Base,
-    private boost::noncopyable
+    public SfxDocumentMetaData_Base
 {
 public:
     explicit SfxDocumentMetaData(
         css::uno::Reference< css::uno::XComponentContext > const & context);
+    SfxDocumentMetaData(const SfxDocumentMetaData&) = delete;
+    SfxDocumentMetaData& operator=(const SfxDocumentMetaData&) = delete;
 
     // css::lang::XServiceInfo:
     virtual OUString SAL_CALL getImplementationName()
@@ -292,7 +292,7 @@ protected:
     const css::uno::Reference< css::uno::XComponentContext > m_xContext;
 
     /// for notification
-    ::cppu::OInterfaceContainerHelper m_NotifyListeners;
+    ::comphelper::OInterfaceContainerHelper2 m_NotifyListeners;
     /// flag: false means not initialized yet, or disposed
     bool m_isInitialized;
     /// flag
@@ -321,7 +321,7 @@ protected:
     /// check if we are initialized properly
     void SAL_CALL checkInit() const;
     /// initialize state from given DOM tree
-    void SAL_CALL init(css::uno::Reference<css::xml::dom::XDocument> i_xDom);
+    void SAL_CALL init(const css::uno::Reference<css::xml::dom::XDocument>& i_xDom);
     /// update element in DOM tree
     void SAL_CALL updateElement(const char *i_name,
         std::vector<std::pair<const char *, OUString> >* i_pAttrs = nullptr);
@@ -390,19 +390,6 @@ public:
         return aServiceNames;
     }
 };
-
-bool operator== (const css::util::DateTime &i_rLeft,
-                 const css::util::DateTime &i_rRight)
-{
-    return i_rLeft.Year             == i_rRight.Year
-        && i_rLeft.Month            == i_rRight.Month
-        && i_rLeft.Day              == i_rRight.Day
-        && i_rLeft.Hours            == i_rRight.Hours
-        && i_rLeft.Minutes          == i_rRight.Minutes
-        && i_rLeft.Seconds          == i_rRight.Seconds
-        && i_rLeft.NanoSeconds      == i_rRight.NanoSeconds
-        && i_rLeft.IsUTC            == i_rRight.IsUTC;
-}
 
 // NB: keep these two arrays in sync!
 const char* s_stdStatAttrs[] = {
@@ -666,7 +653,7 @@ SfxDocumentMetaData::getURLProperties(
 // return the text of the (hopefully unique, i.e., normalize first!) text
 // node _below_ the given node
 OUString SAL_CALL
-getNodeText(css::uno::Reference<css::xml::dom::XNode> i_xNode)
+getNodeText(const css::uno::Reference<css::xml::dom::XNode>& i_xNode)
         throw (css::uno::RuntimeException)
 {
     if (!i_xNode.is()) throw css::uno::RuntimeException(
@@ -1132,7 +1119,7 @@ SfxDocumentMetaData::checkInit() const // throw (css::uno::RuntimeException)
 
 // initialize state from DOM tree
 void SAL_CALL SfxDocumentMetaData::init(
-        css::uno::Reference<css::xml::dom::XDocument> i_xDoc)
+        const css::uno::Reference<css::xml::dom::XDocument>& i_xDoc)
 {
     if (!i_xDoc.is()) throw css::uno::RuntimeException(
         OUString("SfxDocumentMetaData::init: no DOM tree given"), *this);
@@ -1345,7 +1332,6 @@ void SAL_CALL SfxDocumentMetaData::init(
     m_isModified = false;
     m_isInitialized = true;
 }
-
 
 
 SfxDocumentMetaData::SfxDocumentMetaData(
@@ -1746,7 +1732,7 @@ SfxDocumentMetaData::setDocumentStatistics(
     std::vector<std::pair<const char *, OUString> > attributes;
     for (sal_Int32 i = 0; i < the_value.getLength(); ++i) {
         const OUString name = the_value[i].Name;
-        // inefficently search for matching attribute
+        // inefficiently search for matching attribute
         for (size_t j = 0; s_stdStats[j] != nullptr; ++j) {
             if (name.equalsAscii(s_stdStats[j])) {
                 const css::uno::Any any = the_value[i].Value;
@@ -2267,19 +2253,18 @@ void SfxDocumentMetaData::createUserDefined()
         types[12] = ::cppu::UnoType<css::util::Time>::get();
         // #i94175#:  ODF allows empty user-defined property names!
         m_xUserDefined.set(
-            css::beans::PropertyBag::createWithTypes( m_xContext, types, sal_True/*AllowEmptyPropertyName*/, sal_False/*AutomaticAddition*/ ),
+            css::beans::PropertyBag::createWithTypes( m_xContext, types, true/*AllowEmptyPropertyName*/, false/*AutomaticAddition*/ ),
             css::uno::UNO_QUERY_THROW);
 
         const css::uno::Reference<css::util::XModifyBroadcaster> xMB(
             m_xUserDefined, css::uno::UNO_QUERY);
         if (xMB.is())
         {
-            const css::uno::Sequence<css::uno::Reference<css::uno::XInterface> >
+            const std::vector<css::uno::Reference<css::uno::XInterface> >
                 listeners(m_NotifyListeners.getElements());
-            for (css::uno::Reference< css::uno::XInterface > const * iter = listeners.begin(); iter != listeners.end(); ++iter) {
+            for (const auto& l : listeners) {
                 xMB->addModifyListener(
-                    css::uno::Reference< css::util::XModifyListener >(*iter,
-                        css::uno::UNO_QUERY));
+                    css::uno::Reference< css::util::XModifyListener >(l, css::uno::UNO_QUERY) );
             }
         }
     }

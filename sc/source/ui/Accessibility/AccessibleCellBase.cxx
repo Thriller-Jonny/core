@@ -49,6 +49,8 @@
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::accessibility;
 
+#define DEFAULT_LINE_WIDTH 2
+
 //=====  internal  ============================================================
 
 ScAccessibleCellBase::ScAccessibleCellBase(
@@ -219,7 +221,7 @@ OUString SAL_CALL
 {
     // Document not needed, because only the cell address, but not the tablename is needed
     // always us OOO notation
-    return maCellAddress.Format(SCA_VALID);
+    return maCellAddress.Format(ScRefFlags::VALID);
 }
 
     //=====  XAccessibleValue  ================================================
@@ -267,20 +269,14 @@ uno::Any SAL_CALL
     ScAccessibleCellBase::getMaximumValue(  )
     throw (uno::RuntimeException, std::exception)
 {
-    uno::Any aAny;
-    aAny <<= DBL_MAX;
-
-    return aAny;
+    return uno::Any(DBL_MAX);
 }
 
 uno::Any SAL_CALL
     ScAccessibleCellBase::getMinimumValue(  )
     throw (uno::RuntimeException, std::exception)
 {
-    uno::Any aAny;
-    aAny <<= -DBL_MAX;
-
-    return aAny;
+    return uno::Any(-DBL_MAX);
 }
 
     //=====  XServiceInfo  ====================================================
@@ -320,7 +316,7 @@ OUString SAL_CALL ScAccessibleCellBase::GetNote()
 {
     SolarMutexGuard aGuard;
     IsObjectValid();
-    OUString msNote;
+    OUString sNote;
     if (mpDoc)
     {
         SfxObjectShell* pObjSh = mpDoc->GetDocumentShell();
@@ -349,7 +345,7 @@ OUString SAL_CALL ScAccessibleCellBase::GetNote()
                                     uno::Reference <text::XSimpleText> xText (xSheetAnnotation, uno::UNO_QUERY);
                                     if (xText.is())
                                     {
-                                        msNote = xText->getString();
+                                        sNote = xText->getString();
                                     }
                                 }
                             }
@@ -359,7 +355,7 @@ OUString SAL_CALL ScAccessibleCellBase::GetNote()
             }
         }
     }
-    return msNote;
+    return sNote;
 }
 
 #include <com/sun/star/table/ShadowFormat.hpp>
@@ -502,10 +498,10 @@ OUString SAL_CALL ScAccessibleCellBase::getBorderAttrs()
         aBottomBorder.Color = aColor.GetColor();
         aLeftBorder.Color = aColor.GetColor();
         aRightBorder.Color = aColor.GetColor();
-        aTopBorder.OuterLineWidth =2;
-        aBottomBorder.OuterLineWidth =2;
-        aLeftBorder.OuterLineWidth =2;
-        aRightBorder.OuterLineWidth =2;
+        aTopBorder.OuterLineWidth = DEFAULT_LINE_WIDTH;
+        aBottomBorder.OuterLineWidth = DEFAULT_LINE_WIDTH;
+        aLeftBorder.OuterLineWidth = DEFAULT_LINE_WIDTH;
+        aRightBorder.OuterLineWidth = DEFAULT_LINE_WIDTH;
     }
 
     //construct border attributes string

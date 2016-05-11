@@ -63,19 +63,18 @@
 #include "lwpobjfactory.hxx"
 #include "lwpglobalmgr.hxx"
 
-LwpObjectID::LwpObjectID(sal_uInt32 low, sal_uInt16 high)
-    :m_nLow(low), m_nHigh(high), m_nIndex(0), m_bIsCompressed(false)
+LwpObjectID::LwpObjectID()
+    :m_nLow(0), m_nHigh(0), m_nIndex(0), m_bIsCompressed(false)
 {
 }
 /**
  * @descr       Read object id with format: low(4bytes)+high(2bytes) from stream
  *          for LWP7 record
 */
-sal_uInt32 LwpObjectID::Read(LwpSvStream *pStrm)
+void LwpObjectID::Read(LwpSvStream *pStrm)
 {
     pStrm->ReadUInt32( m_nLow );
     pStrm->ReadUInt16( m_nHigh );
-    return DiskSize();
 }
 /**
  * @descr       Read object id with format: low(4bytes)+high(2bytes) from object stream
@@ -91,13 +90,14 @@ sal_uInt32 LwpObjectID::Read(LwpObjectStream *pObj)
  *          if index>0, lowid is get from time table per the index
 *           else    index+lowid+highid
 */
-sal_uInt32 LwpObjectID::ReadIndexed(LwpSvStream *pStrm)
+void LwpObjectID::ReadIndexed(LwpSvStream *pStrm)
 {
 //note the m_nLow store the index instead of time from the timetable as in LWP
     m_bIsCompressed = false;
     if( LwpFileHeader::m_nFileRevision < 0x000B)
     {
-        return Read(pStrm);
+        Read(pStrm);
+        return;
     }
 
     pStrm->ReadUInt8( m_nIndex );
@@ -116,7 +116,7 @@ sal_uInt32 LwpObjectID::ReadIndexed(LwpSvStream *pStrm)
         pStrm->ReadUInt32( m_nLow );
     }
     pStrm->ReadUInt16( m_nHigh );
-    return DiskSizeIndexed();
+    DiskSizeIndexed();
 }
 
 /**
@@ -153,21 +153,19 @@ sal_uInt32 LwpObjectID::ReadIndexed(LwpObjectStream *pStrm)
  *          else    lowid equals to the lowid of previous low id
  *              and high id = the high id of previous id + diff +1
 */
-sal_uInt32 LwpObjectID::ReadCompressed( LwpObjectStream* pObj, LwpObjectID &prev )
+void LwpObjectID::ReadCompressed( LwpObjectStream* pObj, LwpObjectID &prev )
 {
     sal_uInt8 diff = pObj->QuickReaduInt8();
-    sal_uInt32 len=1;
 
     if (diff == 255)
     {
-        len += Read(pObj);
+        Read(pObj);
     }
     else
     {
         m_nLow = prev.GetLow();
         m_nHigh = prev.GetHigh() + diff +1;
     }
-    return len;
 }
 /**
  * @descr       return the size of indexed object id

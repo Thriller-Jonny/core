@@ -29,6 +29,8 @@
 
 # default location for external downloads
 /external/tarballs
+/external/android-ndk
+/external/android-sdk-linux
 
 # autoconf generated stuff
 /aclocal.m4
@@ -137,6 +139,9 @@ DerivedData
 
 # doxygen output
 /docs
+
+# make dump-deps output
+/lo.png
 
 # gdb config
 /.gdbinit

@@ -22,13 +22,9 @@
 #include "oox/drawingml/shape.hxx"
 #include "drawingml/customshapeproperties.hxx"
 #include "drawingml/textbody.hxx"
+#include <oox/token/namespaces.hxx>
 
 using namespace ::com::sun::star;
-using ::com::sun::star::uno::Reference;
-using ::com::sun::star::uno::RuntimeException;
-using ::com::sun::star::xml::sax::SAXException;
-using ::com::sun::star::xml::sax::XFastAttributeList;
-using ::com::sun::star::xml::sax::XFastContextHandler;
 using ::oox::core::ContextHandlerRef;
 
 namespace oox {

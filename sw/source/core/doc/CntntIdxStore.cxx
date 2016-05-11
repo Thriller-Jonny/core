@@ -53,7 +53,7 @@ namespace
     static const int BEHIND_SAME_NODE = 3;     // Same node index but content index behind given content index
     static const int BEHIND_NODE = 4;          // Position behind the given node index
 
-    static int lcl_RelativePosition( const SwPosition& rPos, sal_uLong nNode, sal_Int32 nContent )
+    int lcl_RelativePosition( const SwPosition& rPos, sal_uLong nNode, sal_Int32 nContent )
     {
         sal_uLong nIndex = rPos.nNode.GetIndex();
         int nReturn = BEFORE_NODE;
@@ -187,7 +187,7 @@ namespace
             static inline void SetRightMarkPos(MarkBase* pMark, bool bOther, const SwPosition* const pPos)
                 { bOther ? pMark->SetOtherMarkPos(*pPos) : pMark->SetMarkPos(*pPos); };
     };
-    static inline void lcl_ChkPaM( std::vector<PaMEntry>& rPaMEntries, const sal_uLong nNode, const sal_Int32 nContent, SwPaM& rPaM, const bool bPoint)
+    inline void lcl_ChkPaM( std::vector<PaMEntry>& rPaMEntries, const sal_uLong nNode, const sal_Int32 nContent, SwPaM& rPaM, const bool bPoint)
     {
         const SwPosition* pPos = &rPaM.GetBound( bPoint );
         if( pPos->nNode.GetIndex() == nNode && pPos->nContent.GetIndex() < nContent )
@@ -196,7 +196,7 @@ namespace
             rPaMEntries.push_back(aEntry);
         }
     }
-    static inline void lcl_ChkPaMBoth( std::vector<PaMEntry>& rPaMEntries, const sal_uLong nNode, const sal_Int32 nContent, SwPaM& rPaM)
+    inline void lcl_ChkPaMBoth( std::vector<PaMEntry>& rPaMEntries, const sal_uLong nNode, const sal_Int32 nContent, SwPaM& rPaM)
     {
         lcl_ChkPaM(rPaMEntries, nNode, nContent, rPaM, true);
         lcl_ChkPaM(rPaMEntries, nNode, nContent, rPaM, false);
@@ -264,9 +264,9 @@ void ContentIdxStoreImpl::RestoreBkmks(SwDoc* pDoc, updater_t& rUpdater)
 
 void ContentIdxStoreImpl::SaveRedlines(SwDoc* pDoc, sal_uLong nNode, sal_Int32 nContent)
 {
-    SwRedlineTable const & pRedlineTable = pDoc->getIDocumentRedlineAccess().GetRedlineTable();
+    SwRedlineTable const & rRedlineTable = pDoc->getIDocumentRedlineAccess().GetRedlineTable();
     long int nIdx = 0;
-    for (const SwRangeRedline* pRdl : pRedlineTable)
+    for (const SwRangeRedline* pRdl : rRedlineTable)
     {
         int nPointPos = lcl_RelativePosition( *pRdl->GetPoint(), nNode, nContent );
         int nMarkPos = pRdl->HasMark() ? lcl_RelativePosition( *pRdl->GetMark(), nNode, nContent ) :
@@ -423,7 +423,7 @@ void ContentIdxStoreImpl::SaveShellCursors(SwDoc* pDoc, sal_uLong nNode, sal_Int
                 } while ( (_pStackCursor != nullptr ) &&
                     ((_pStackCursor = _pStackCursor->GetNext()) != static_cast<SwCursorShell*>(&rCurShell)->GetStackCursor()) );
 
-            for(SwPaM& rPaM : (static_cast<SwCursorShell*>(&rCurShell)->_GetCursor())->GetRingContainer())
+            for(SwPaM& rPaM : (static_cast<SwCursorShell*>(&rCurShell)->GetCursor_())->GetRingContainer())
             {
                 lcl_ChkPaMBoth( m_aShellCursorEntries, nNode, nContent, rPaM);
             }

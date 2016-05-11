@@ -30,9 +30,7 @@
 #include <drawinglayer/attribute/sdrshadowattribute.hxx>
 
 
-
 using namespace com::sun::star;
-
 
 
 namespace drawinglayer
@@ -377,6 +375,8 @@ namespace drawinglayer
             // again when no longer geometry is needed for non-visible 3D objects as it is now for chart
             if(getPolyPolygon().count() && !maSlices.size())
             {
+                ::osl::MutexGuard aGuard( m_aMutex );
+
                 const_cast< SdrExtrudePrimitive3D& >(*this).impCreateSlices();
             }
 
@@ -490,6 +490,8 @@ namespace drawinglayer
                     (!getBuffered3DDecomposition().empty()
                         && *mpLastRLGViewInformation != rViewInformation))
                 {
+                    ::osl::MutexGuard aGuard( m_aMutex );
+
                     // conditions of last local decomposition with reduced lines have changed. Remember
                     // new one and clear current decompositiopn
                     SdrExtrudePrimitive3D* pThat = const_cast< SdrExtrudePrimitive3D* >(this);

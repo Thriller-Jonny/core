@@ -144,7 +144,7 @@ class SwTextFormatColls;
 class SwURLStateChanged;
 class SwUnoCursor;
 class SwViewShell;
-class _SetGetExpField;
+class SetGetExpField;
 class SwDrawContact;
 class SwLayouter;
 class SdrView;
@@ -188,7 +188,7 @@ class IDocumentState;
 class IDocumentLayoutAccess;
 class IDocumentStylePoolAccess;
 class IDocumentExternalData;
-class _SetGetExpFields;
+class SetGetExpFields;
 
 namespace sw { namespace mark {
     class MarkManager;
@@ -247,8 +247,8 @@ class SW_DLLPUBLIC SwDoc :
 {
     friend class ::sw::DocumentContentOperationsManager;
 
-    friend void _InitCore();
-    friend void _FinitCore();
+    friend void InitCore();
+    friend void FinitCore();
 
     // private Member
     std::unique_ptr<SwNodes> m_pNodes;    //< document content (Nodes Array)
@@ -388,7 +388,7 @@ private:
     static SwAutoCompleteWord *mpACmpltWords;  //< List of all words for AutoComplete
 
     // private methods
-    SwFlyFrameFormat* _MakeFlySection( const SwPosition& rAnchPos,
+    SwFlyFrameFormat* MakeFlySection_( const SwPosition& rAnchPos,
                                 const SwContentNode& rNode, RndStdIds eRequestId,
                                 const SfxItemSet* pFlyAttrSet,
                                 SwFrameFormat* = nullptr );
@@ -417,9 +417,9 @@ private:
                                 const OUString& rFormula,
                                 std::vector<OUString>& rUsedDBNames );
 
-    void _CreateNumberFormatter();
+    void CreateNumberFormatter();
 
-    bool _UnProtectTableCells( SwTable& rTable );
+    bool UnProtectTableCells( SwTable& rTable );
 
     /** Create sub-documents according to the given collection.
      If no collection is given, take chapter style of the 1st level. */
@@ -427,9 +427,9 @@ private:
                         const SwTextFormatColl* pSplitColl, int nOutlineLevel = 0 );
 
     // Update charts of given table.
-    void _UpdateCharts( const SwTable& rTable, SwViewShell const & rVSh ) const;
+    void UpdateCharts_( const SwTable& rTable, SwViewShell const & rVSh ) const;
 
-    static bool _SelectNextRubyChars( SwPaM& rPam, SwRubyListEntry& rRubyEntry,
+    static bool SelectNextRubyChars( SwPaM& rPam, SwRubyListEntry& rRubyEntry,
                                 sal_uInt16 nMode );
 
     // CharTimer calls this method.
@@ -437,11 +437,11 @@ private:
     DECL_LINK_TYPED( DoUpdateModifiedOLE, Idle *, void );
 
 public:
-    SwFormat *_MakeCharFormat(const OUString &, SwFormat *, bool, bool );
-    SwFormat *_MakeFrameFormat(const OUString &, SwFormat *, bool, bool );
+    SwFormat *MakeCharFormat_(const OUString &, SwFormat *, bool, bool );
+    SwFormat *MakeFrameFormat_(const OUString &, SwFormat *, bool, bool );
 
 private:
-    SwFormat *_MakeTextFormatColl(const OUString &, SwFormat *, bool, bool );
+    SwFormat *MakeTextFormatColl_(const OUString &, SwFormat *, bool, bool );
 
 private:
     bool mbReadOnly;
@@ -589,7 +589,7 @@ public:
 
     bool getDocReadOnly() const { return mbReadOnly; }
     void setDocAccTitle( const OUString& rTitle ) { msDocAccTitle = rTitle; }
-    const OUString getDocAccTitle() const { return msDocAccTitle; }
+    const OUString& getDocAccTitle() const { return msDocAccTitle; }
 
     // INextInterface here
     DECL_LINK_TYPED(CalcFieldValueHdl, EditFieldInfo*, void);
@@ -702,8 +702,7 @@ public:
     bool IsInHeaderFooter( const SwNodeIndex& rIdx ) const;
     short GetTextDirection( const SwPosition& rPos,
                             const Point* pPt = nullptr ) const;
-    bool IsInVerticalText( const SwPosition& rPos,
-                               const Point* pPt = nullptr ) const;
+    bool IsInVerticalText( const SwPosition& rPos ) const;
 
     // Database  and DB-Manager
     void SetDBManager( SwDBManager* pNewMgr )     { mpDBManager = pNewMgr; }
@@ -878,7 +877,7 @@ public:
 
         Convenince function used by ReplaceDocumentProperties to skip some UNO calls.
      */
-    void ReplaceUserDefinedDocumentProperties( const css::uno::Reference< css::document::XDocumentProperties > xSourceDocProps );
+    void ReplaceUserDefinedDocumentProperties( const css::uno::Reference< css::document::XDocumentProperties >& xSourceDocProps );
 
     /** Replace document properties with those from rSource.
 
@@ -960,7 +959,7 @@ public:
                                             const SwTOXBase& rTOX,
                                             const SfxItemSet* pSet = nullptr,
                                             bool bExpand = false );
-    const SwTOXBaseSection* InsertTableOf( sal_uLong nSttNd, sal_uLong nEndNd,
+    void              InsertTableOf( sal_uLong nSttNd, sal_uLong nEndNd,
                                             const SwTOXBase& rTOX,
                                             const SfxItemSet* pSet = nullptr );
     static SwTOXBase* GetCurTOX( const SwPosition& rPos );
@@ -976,7 +975,7 @@ public:
     void SetUpdateTOX( bool bFlag = true )     { mbUpdateTOX = bFlag; }
     bool IsUpdateTOX() const                   { return mbUpdateTOX; }
 
-    OUString        GetTOIAutoMarkURL() const {return msTOIAutoMarkURL;}
+    const OUString& GetTOIAutoMarkURL() const {return msTOIAutoMarkURL;}
     void            SetTOIAutoMarkURL(const OUString& rSet) {msTOIAutoMarkURL = rSet;}
 
     bool IsInReading() const                    { return mbInReading; }
@@ -1339,7 +1338,7 @@ public:
     static SwSection* GetCurrSection( const SwPosition& rPos );
     SwSectionFormats& GetSections() { return *mpSectionFormatTable; }
     const SwSectionFormats& GetSections() const { return *mpSectionFormatTable; }
-    SwSectionFormat *MakeSectionFormat( SwSectionFormat *pDerivedFrom );
+    SwSectionFormat *MakeSectionFormat();
     void DelSectionFormat( SwSectionFormat *pFormat, bool bDelNodes = false );
     void UpdateSection(size_t const nSect, SwSectionData &,
             SfxItemSet const*const = nullptr, bool const bPreventLinkUpdate = false);
@@ -1358,7 +1357,7 @@ public:
     /** in case during copying of embedded object a new shell is created,
      it should be set here and cleaned later */
     void SetTmpDocShell( SfxObjectShellLock rLock )    { mxTmpDocShell = rLock; }
-    SfxObjectShellLock GetTmpDocShell()    { return mxTmpDocShell; }
+    const SfxObjectShellLock& GetTmpDocShell()    { return mxTmpDocShell; }
 
     // For Autotexts? (text modules) They have only one SVPersist at their disposal.
     SfxObjectShell* GetPersist() const;
@@ -1523,7 +1522,7 @@ public:
     // Interface for the list of Ruby - texts/attributes
     static sal_uInt16 FillRubyList( const SwPaM& rPam, SwRubyList& rList,
                         sal_uInt16 nMode );
-    sal_uInt16 SetRubyList( const SwPaM& rPam, const SwRubyList& rList,
+    void SetRubyList( const SwPaM& rPam, const SwRubyList& rList,
                         sal_uInt16 nMode );
 
     void ReadLayoutCache( SvStream& rStream );
@@ -1597,7 +1596,7 @@ public:
     // access methods for XForms model(s)
 
     // access container for XForms model; will be NULL if !isXForms()
-    css::uno::Reference<css::container::XNameContainer>
+    const css::uno::Reference<css::container::XNameContainer>&
         getXForms() const { return mxXForms;}
 
     css::uno::Reference< css::linguistic2::XProofreadingIterator > GetGCIterator() const;
@@ -1617,15 +1616,16 @@ public:
 
     css::uno::Reference< css::script::vba::XVBAEventProcessor > GetVbaEventProcessor();
     void SetVBATemplateToProjectCache( css::uno::Reference< css::container::XNameContainer >& xCache ) { m_xTemplateToProjectCache = xCache; };
-    css::uno::Reference< css::container::XNameContainer > GetVBATemplateToProjectCache() { return m_xTemplateToProjectCache; };
+    const css::uno::Reference< css::container::XNameContainer >& GetVBATemplateToProjectCache() { return m_xTemplateToProjectCache; };
     ::sfx2::IXmlIdRegistry& GetXmlIdRegistry();
     ::sw::MetaFieldManager & GetMetaFieldManager();
     ::sw::UndoManager      & GetUndoManager();
     ::sw::UndoManager const& GetUndoManager() const;
 
-    SfxObjectShell* CreateCopy(bool bCallInitNew) const;
+    SfxObjectShell* CreateCopy(bool bCallInitNew, bool bEmpty) const;
     SwNodeIndex AppendDoc(const SwDoc& rSource, sal_uInt16 nStartPageNumber,
-                 SwPageDesc* pTargetPageDesc, bool bDeletePrevious = false, int physicalPageOffset = 0 );
+                 bool bDeletePrevious = false, int physicalPageOffset = 0,
+                 const sal_uLong nDocNo = 1);
 
     /**
      * Dumps the entire nodes structure to the given destination (file nodes.xml in the current directory by default)
@@ -1666,7 +1666,7 @@ inline const SwTableNode* SwDoc::IsIdxInTable( const SwNodeIndex& rIdx ) const
 inline SvNumberFormatter* SwDoc::GetNumberFormatter( bool bCreate )
 {
     if( bCreate && !mpNumberFormatter )
-        _CreateNumberFormatter();
+        CreateNumberFormatter();
     return mpNumberFormatter;
 }
 
@@ -1682,7 +1682,7 @@ inline void SwDoc::SetOLEPrtNotifyPending( bool bSet )
         mbAllOLENotify = false;
 }
 
-bool sw_GetPostIts( IDocumentFieldsAccess* pIDFA, _SetGetExpFields * pSrtLst );
+bool sw_GetPostIts( IDocumentFieldsAccess* pIDFA, SetGetExpFields * pSrtLst );
 
 #endif  //_DOC_HXX
 

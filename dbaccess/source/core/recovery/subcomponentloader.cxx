@@ -28,16 +28,10 @@ namespace dbaccess
 {
 
     using ::com::sun::star::uno::Reference;
-    using ::com::sun::star::uno::XInterface;
-    using ::com::sun::star::uno::UNO_QUERY;
     using ::com::sun::star::uno::UNO_QUERY_THROW;
     using ::com::sun::star::uno::UNO_SET_THROW;
     using ::com::sun::star::uno::Exception;
     using ::com::sun::star::uno::RuntimeException;
-    using ::com::sun::star::uno::Any;
-    using ::com::sun::star::uno::makeAny;
-    using ::com::sun::star::uno::Sequence;
-    using ::com::sun::star::uno::Type;
     using ::com::sun::star::frame::XController;
     using ::com::sun::star::frame::XFrame;
     using ::com::sun::star::awt::XWindow;
@@ -88,7 +82,7 @@ namespace dbaccess
                     const Reference< XController > xController( i_rData.xNonDocComponent, UNO_QUERY_THROW );
                     const Reference< XFrame > xFrame( xController->getFrame(), UNO_SET_THROW );
                     const Reference< XWindow > xWindow( xFrame->getContainerWindow(), UNO_SET_THROW );
-                    xWindow->setVisible( sal_True );
+                    xWindow->setVisible( true );
                 }
             }
             catch( const Exception& )
@@ -131,7 +125,8 @@ namespace dbaccess
 
     SubComponentLoader::~SubComponentLoader()
     {
-        delete m_pData, m_pData = nullptr;
+        delete m_pData;
+        m_pData = nullptr;
     }
 
     void SAL_CALL SubComponentLoader::windowResized( const WindowEvent& i_rEvent ) throw (RuntimeException, std::exception)

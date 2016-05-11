@@ -134,8 +134,8 @@ void SwAccessibleNoTextFrame::Modify( const SfxPoolItem* pOld, const SfxPoolItem
             {
                 break;
             }
+            SAL_FALLTHROUGH;
         }
-        // intentional no break here
         case RES_DESCRIPTION_CHANGED:
         {
             if ( pNd && GetFrame() )
@@ -209,16 +209,12 @@ uno::Any SAL_CALL SwAccessibleNoTextFrame::queryInterface( const uno::Type& aTyp
         ::cppu::UnoType<XAccessibleImage>::get() )
     {
         uno::Reference<XAccessibleImage> xImage = this;
-        uno::Any aAny;
-        aAny <<= xImage;
-        return aAny;
+        return uno::Any(xImage);
     }
     else if ( aType == cppu::UnoType<XAccessibleHypertext>::get())
     {
         uno::Reference<XAccessibleHypertext> aAccHypertext = this;
-        uno::Any aAny;
-        aAny <<= aAccHypertext;
-        return aAny;
+        return uno::Any( aAccHypertext );
     }
     else
         return SwAccessibleContext::queryInterface( aType );
@@ -280,7 +276,7 @@ sal_Int32 SAL_CALL SwAccessibleNoTextFrame::getIndexAtPoint( const css::awt::Poi
 OUString SAL_CALL SwAccessibleNoTextFrame::getSelectedText(  ) throw (css::uno::RuntimeException, std::exception){return OUString();}
 sal_Int32 SAL_CALL SwAccessibleNoTextFrame::getSelectionStart(  ) throw (css::uno::RuntimeException, std::exception){return 0;}
 sal_Int32 SAL_CALL SwAccessibleNoTextFrame::getSelectionEnd(  ) throw (css::uno::RuntimeException, std::exception){return 0;}
-sal_Bool SAL_CALL SwAccessibleNoTextFrame::setSelection( sal_Int32 , sal_Int32 ) throw (css::lang::IndexOutOfBoundsException, css::uno::RuntimeException, std::exception){return sal_True;}
+sal_Bool SAL_CALL SwAccessibleNoTextFrame::setSelection( sal_Int32 , sal_Int32 ) throw (css::lang::IndexOutOfBoundsException, css::uno::RuntimeException, std::exception){return true;}
 OUString SAL_CALL SwAccessibleNoTextFrame::getText(  ) throw (css::uno::RuntimeException, std::exception){return OUString();}
 OUString SAL_CALL SwAccessibleNoTextFrame::getTextRange( sal_Int32 , sal_Int32 ) throw (css::lang::IndexOutOfBoundsException, css::uno::RuntimeException, std::exception){return OUString();}
 css::accessibility::TextSegment SAL_CALL SwAccessibleNoTextFrame::getTextAtIndex( sal_Int32 , sal_Int16 ) throw (css::lang::IndexOutOfBoundsException, css::lang::IllegalArgumentException, css::uno::RuntimeException, std::exception)
@@ -299,7 +295,7 @@ css::accessibility::TextSegment SAL_CALL SwAccessibleNoTextFrame::getTextBehindI
     return aResult;
 }
 
-sal_Bool SAL_CALL SwAccessibleNoTextFrame::copyText( sal_Int32, sal_Int32 ) throw (css::lang::IndexOutOfBoundsException, css::uno::RuntimeException, std::exception){return sal_True;}
+sal_Bool SAL_CALL SwAccessibleNoTextFrame::copyText( sal_Int32, sal_Int32 ) throw (css::lang::IndexOutOfBoundsException, css::uno::RuntimeException, std::exception){return true;}
 
 //  XAccessibleHyperText
 

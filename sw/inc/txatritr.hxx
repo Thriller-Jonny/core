@@ -57,14 +57,13 @@ class SwTextAttrIterator
     size_t nAttrPos;
     sal_Int32 nChgPos;
     sal_uInt16 nWhichId;
-    bool bIsUseGetWhichOfScript;
 
     void AddToStack( const SwTextAttr& rAttr );
     void SearchNextChg();
 
 public:
     SwTextAttrIterator( const SwTextNode& rTextNd, sal_uInt16 nWhichId,
-                        sal_Int32 nStart = 0, bool bUseGetWhichOfScript = true );
+                        sal_Int32 nStart = 0 );
 
     bool Next();
 
@@ -76,9 +75,8 @@ class SwLanguageIterator : public SwTextAttrIterator
 {
 public:
     SwLanguageIterator( const SwTextNode& rTextNode, sal_Int32 nStart = 0,
-                        sal_uInt16 nWhich = RES_CHRATR_LANGUAGE,
-                        bool bUseGetWhichOfScript = true )
-        : SwTextAttrIterator( rTextNode, nWhich, nStart, bUseGetWhichOfScript )
+                        sal_uInt16 nWhich = RES_CHRATR_LANGUAGE )
+        : SwTextAttrIterator( rTextNode, nWhich, nStart )
     {}
 
     sal_uInt16 GetLanguage() const

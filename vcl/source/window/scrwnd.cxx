@@ -74,7 +74,7 @@ ImplWheelWindow::ImplWheelWindow( vcl::Window* pParent ) :
         ImplSetWheelMode( WHEELMODE_V );
 
     // init timer
-    mpTimer = new Timer;
+    mpTimer = new Timer("WheelWindowTimer");
     mpTimer->SetTimeoutHdl( LINK( this, ImplWheelWindow, ImplScrollHdl ) );
     mpTimer->SetTimeout( mnTimeout );
     mpTimer->Start();
@@ -325,14 +325,14 @@ void ImplWheelWindow::MouseMove( const MouseEvent& rMEvt )
     {
         switch( eActStyle )
         {
-            case( PointerStyle::AutoScrollN ):   mnActDeltaX = +0L, mnActDeltaY = +1L; break;
-            case( PointerStyle::AutoScrollS ):   mnActDeltaX = +0L, mnActDeltaY = -1L; break;
-            case( PointerStyle::AutoScrollW ):   mnActDeltaX = +1L, mnActDeltaY = +0L; break;
-            case( PointerStyle::AutoScrollE ):   mnActDeltaX = -1L, mnActDeltaY = +0L; break;
-            case( PointerStyle::AutoScrollNW ):  mnActDeltaX = +1L, mnActDeltaY = +1L; break;
-            case( PointerStyle::AutoScrollNE ):  mnActDeltaX = -1L, mnActDeltaY = +1L; break;
-            case( PointerStyle::AutoScrollSW ):  mnActDeltaX = +1L, mnActDeltaY = -1L; break;
-            case( PointerStyle::AutoScrollSE ):  mnActDeltaX = -1L, mnActDeltaY = -1L; break;
+            case( PointerStyle::AutoScrollN ):   mnActDeltaX = +0L; mnActDeltaY = +1L; break;
+            case( PointerStyle::AutoScrollS ):   mnActDeltaX = +0L; mnActDeltaY = -1L; break;
+            case( PointerStyle::AutoScrollW ):   mnActDeltaX = +1L; mnActDeltaY = +0L; break;
+            case( PointerStyle::AutoScrollE ):   mnActDeltaX = -1L; mnActDeltaY = +0L; break;
+            case( PointerStyle::AutoScrollNW ):  mnActDeltaX = +1L; mnActDeltaY = +1L; break;
+            case( PointerStyle::AutoScrollNE ):  mnActDeltaX = -1L; mnActDeltaY = +1L; break;
+            case( PointerStyle::AutoScrollSW ):  mnActDeltaX = +1L; mnActDeltaY = -1L; break;
+            case( PointerStyle::AutoScrollSE ):  mnActDeltaX = -1L; mnActDeltaY = -1L; break;
 
             default:
             break;
@@ -373,9 +373,9 @@ IMPL_LINK_NOARG_TYPED(ImplWheelWindow, ImplScrollHdl, Timer *, void)
         if ( !ImplCallPreNotify( aNCmdEvt ) )
         {
             const sal_uInt64 nTime = tools::Time::GetSystemTicks();
-            ImplDelData aDel( this );
+            VclPtr<ImplWheelWindow> xWin(this);
             pWindow->Command( aCEvt );
-            if( aDel.IsDead() )
+            if( xWin->IsDisposed() )
                 return;
             mnRepaintTime = std::max( tools::Time::GetSystemTicks() - nTime, (sal_uInt64)1 );
             ImplRecalcScrollValues();

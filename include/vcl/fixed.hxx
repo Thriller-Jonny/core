@@ -30,9 +30,6 @@
 class UserDrawEvent;
 
 
-// - FixedText -
-
-
 class VCL_DLLPUBLIC FixedText : public Control
 {
 private:
@@ -92,9 +89,6 @@ public:
 };
 
 
-// - FixedLine -
-
-
 class VCL_DLLPUBLIC FixedLine : public Control
 {
 private:
@@ -102,7 +96,7 @@ private:
     using Window::ImplInit;
     SAL_DLLPRIVATE void    ImplInit( vcl::Window* pParent, WinBits nStyle );
     SAL_DLLPRIVATE WinBits ImplInitStyle( WinBits nStyle );
-    SAL_DLLPRIVATE void    ImplDraw(vcl::RenderContext& rRenderContext, bool bLayout = false);
+    SAL_DLLPRIVATE void    ImplDraw(vcl::RenderContext& rRenderContext);
 
 protected:
     virtual void    FillLayoutData() const override;
@@ -126,7 +120,6 @@ public:
     virtual Size    GetOptimalSize() const override;
 };
 
-// - FixedBitmap -
 class VCL_DLLPUBLIC FixedBitmap : public Control
 {
 private:
@@ -153,9 +146,6 @@ public:
     void            SetBitmap( const Bitmap& rBitmap );
     using OutputDevice::GetBitmap;
 };
-
-
-// - FixedImage -
 
 
 class VCL_DLLPUBLIC FixedImage : public Control

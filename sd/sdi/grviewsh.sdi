@@ -17,16 +17,12 @@
  */
 
 interface GraphicEditView : DrawView
-[
-    uuid ( "95F11180-ACE0-11D0-89CA-008029E4B0B1" ) ;
-]
 {
     SID_SEARCH_OPTIONS // ole : ?, status : ?
     [
         ExecMethod = Execute ;
         StateMethod = GetState ;
         GroupId = GID_DOCUMENT ;
-        Cachable ;
     ]
     SID_SEARCH_ITEM // ole : ?, status : ?
     [
@@ -37,7 +33,7 @@ interface GraphicEditView : DrawView
 
 shell GraphicViewShell
 {
-    import GraphicEditView[Automation];
+    import GraphicEditView;
     SID_INSERT_POSTIT
     [
         ExecMethod = ExecuteAnnotation;

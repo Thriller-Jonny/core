@@ -20,10 +20,10 @@
 #ifndef INCLUDED_VCL_VIRDEV_HXX
 #define INCLUDED_VCL_VIRDEV_HXX
 
-#include <basebmp/bitmapdevice.hxx>
 #include <vcl/dllapi.h>
 #include <vcl/salgtype.hxx>
 #include <vcl/outdev.hxx>
+
 
 class SalVirtualDevice;
 struct SystemGraphicsData;
@@ -46,9 +46,9 @@ private:
 
     SAL_DLLPRIVATE void ImplInitVirDev( const OutputDevice* pOutDev, long nDX, long nDY, DeviceFormat eFormat, const SystemGraphicsData *pData = nullptr );
     SAL_DLLPRIVATE bool InnerImplSetOutputSizePixel( const Size& rNewSize, bool bErase,
-                                                     const basebmp::RawMemorySharedArray &pBuffer );
+                                                     sal_uInt8* pBuffer );
     SAL_DLLPRIVATE bool ImplSetOutputSizePixel( const Size& rNewSize, bool bErase,
-                                                const basebmp::RawMemorySharedArray &pBuffer );
+                                                sal_uInt8* pBuffer );
 
     VirtualDevice (const VirtualDevice &) = delete;
     VirtualDevice & operator= (const VirtualDevice &) = delete;
@@ -72,7 +72,7 @@ public:
 
     /** Create a virtual device of size 1x1
 
-        @param nBitCount
+        @param eFormat
         Device format of the generated virtual device. Use DeviceFormat::DEFAULT here, to
         indicate: take default screen depth. Only DeviceFormat::BITMASK
         is the other possibility to denote a binary mask.
@@ -126,10 +126,10 @@ public:
     bool                SetOutputSizePixelScaleOffsetAndBuffer( const Size& rNewSize,
                                                                 const Fraction& rScale,
                                                                 const Point& rNewOffset,
-                                                                const basebmp::RawMemorySharedArray &pBuffer );
+                                                                sal_uInt8* pBuffer);
 
-    bool                SetOutputSize( const Size& rNewSize, bool bErase = true )
-                            { return SetOutputSizePixel( LogicToPixel( rNewSize ), bErase ); }
+    bool                SetOutputSize( const Size& rNewSize )
+                            { return SetOutputSizePixel( LogicToPixel( rNewSize ) ); }
 
     // reference device modes for different compatibility levels
     enum RefDevMode {   REFDEV_NONE = 0,

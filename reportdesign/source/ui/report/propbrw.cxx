@@ -68,10 +68,9 @@ using namespace container;
 using namespace ::comphelper;
 
 
-
 namespace
 {
-    static bool lcl_shouldEnableHelpSection( const Reference< XComponentContext >& _rxContext )
+    bool lcl_shouldEnableHelpSection( const Reference< XComponentContext >& _rxContext )
     {
         ::utl::OConfigurationTreeRoot aConfiguration(
             ::utl::OConfigurationTreeRoot::createWithComponentContext(
@@ -85,9 +84,6 @@ namespace
 
 
 // PropBrw
-
-
-
 
 
 PropBrw::PropBrw(const Reference< XComponentContext >& _xORB, vcl::Window* pParent, ODesignView*  _pDesignView)
@@ -126,7 +122,7 @@ PropBrw::PropBrw(const Reference< XComponentContext >& _xORB, vcl::Window* pPare
                 ::cppu::ContextEntry_Init( OUString( "ActiveConnection" ), makeAny( m_pDesignView->getController().getConnection() ) ),
             };
             m_xInspectorContext.set(
-                ::cppu::createComponentContext( aHandlerContextInfo, sizeof( aHandlerContextInfo ) / sizeof( aHandlerContextInfo[0] ),
+                ::cppu::createComponentContext( aHandlerContextInfo, SAL_N_ELEMENTS( aHandlerContextInfo ),
                 m_xORB ) );
             // create a property browser controller
             bool bEnableHelpSection = lcl_shouldEnableHelpSection( m_xORB );
@@ -174,11 +170,10 @@ PropBrw::PropBrw(const Reference< XComponentContext >& _xORB, vcl::Window* pPare
         m_xBrowserComponentWindow->setPosSize(0, 0, aPropWinSize.Width(), aPropWinSize.Height(),
             awt::PosSize::WIDTH | awt::PosSize::HEIGHT | awt::PosSize::X | awt::PosSize::Y);
         Resize();
-        m_xBrowserComponentWindow->setVisible(sal_True);
+        m_xBrowserComponentWindow->setVisible(true);
     }
     ::rptui::notifySystemWindow(pParent,this,::comphelper::mem_fun(&TaskPaneList::AddWindow));
 }
-
 
 
 PropBrw::~PropBrw()
@@ -199,8 +194,8 @@ void PropBrw::dispose()
             const OUString pProps[] = { OUString( "ContextDocument" )
                                             ,  OUString( "DialogParentWindow" )
                                             , OUString( "ActiveConnection" )};
-            for (size_t i = 0; i < sizeof(pProps)/sizeof(pProps[0]); ++i)
-                xName->removeByName(pProps[i]);
+            for (const auto & i : pProps)
+                xName->removeByName(i);
         }
     }
     catch(Exception&)
@@ -263,7 +258,7 @@ bool PropBrw::Close()
         try
         {
             Reference< XController > xController( m_xMeAsFrame->getController() );
-            if ( xController.is() && !xController->suspend( sal_True ) )
+            if ( xController.is() && !xController->suspend( true ) )
                 return false;
         }
         catch( const Exception& )
@@ -280,7 +275,6 @@ bool PropBrw::Close()
 
     return true;
 }
-
 
 
 uno::Sequence< Reference<uno::XInterface> > PropBrw::CreateCompPropSet(const SdrMarkList& _rMarkList)
@@ -329,7 +323,6 @@ void PropBrw::implSetNewObject( const uno::Sequence< Reference<uno::XInterface> 
     }
     SetText( GetHeadlineName(_aObjects) );
 }
-
 
 
 OUString PropBrw::GetHeadlineName( const uno::Sequence< Reference<uno::XInterface> >& _aObjects )

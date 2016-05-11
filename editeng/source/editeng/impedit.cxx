@@ -26,6 +26,7 @@
 #include <impedit.hxx>
 #include <editeng/editeng.hxx>
 #include <editeng/editview.hxx>
+#include <editeng/outliner.hxx>
 #include <tools/poly.hxx>
 #include <editeng/unolingu.hxx>
 #include <com/sun/star/linguistic2/XDictionaryEntry.hpp>
@@ -78,9 +79,7 @@ ImpEditView::ImpEditView( EditView* pView, EditEngine* pEng, vcl::Window* pWindo
     pOutWin             = pWindow;
     pPointer            = nullptr;
     pBackgroundColor    = nullptr;
-    mbTiledRendering    = false;
-    mpLibreOfficeKitCallback = nullptr;
-    mpLibreOfficeKitData = nullptr;
+    mpLibreOfficeKitSearchable = nullptr;
     nScrollDiffX        = 0;
     nExtraCursorFlags   = 0;
     nCursorBidiLevel    = CURSOR_BIDILEVEL_DONTKNOW;
@@ -118,26 +117,15 @@ void ImpEditView::SetBackgroundColor( const Color& rColor )
     pBackgroundColor = new Color( rColor );
 }
 
-void ImpEditView::setTiledRendering(bool bTiledRendering)
+void ImpEditView::registerLibreOfficeKitCallback(OutlinerSearchable* pSearchable)
 {
-    mbTiledRendering = bTiledRendering;
-}
-
-bool ImpEditView::isTiledRendering() const
-{
-    return mbTiledRendering;
-}
-
-void ImpEditView::registerLibreOfficeKitCallback(LibreOfficeKitCallback pCallback, void* pData)
-{
-    mpLibreOfficeKitCallback = pCallback;
-    mpLibreOfficeKitData = pData;
+    mpLibreOfficeKitSearchable = pSearchable;
 }
 
 void ImpEditView::libreOfficeKitCallback(int nType, const char* pPayload) const
 {
-    if (mpLibreOfficeKitCallback)
-        mpLibreOfficeKitCallback(nType, pPayload, mpLibreOfficeKitData);
+    if (mpLibreOfficeKitSearchable)
+        mpLibreOfficeKitSearchable->libreOfficeKitCallback(nType, pPayload);
 }
 
 void ImpEditView::SetEditSelection( const EditSelection& rEditSelection )
@@ -145,7 +133,7 @@ void ImpEditView::SetEditSelection( const EditSelection& rEditSelection )
     // set state before notification
     aEditSelection = rEditSelection;
 
-    if (isTiledRendering())
+    if (comphelper::LibreOfficeKit::isActive())
         // Tiled rendering: selections are only painted when we are in selection mode.
         pEditEngine->SetInSelectionMode(aEditSelection.HasRange());
 
@@ -188,16 +176,14 @@ void ImpEditView::DrawSelection( EditSelection aTmpSel, vcl::Region* pRegion, Ou
 
     vcl::Region* pOldRegion = pRegion;
     vcl::Region aRegion;
-    if (isTiledRendering() && !pRegion)
+    if (comphelper::LibreOfficeKit::isActive() && !pRegion)
         pRegion = &aRegion;
-
-    tools::PolyPolygon* pPolyPoly = nullptr;
-    if ( pRegion )
-        pPolyPoly = new tools::PolyPolygon;
 
     OutputDevice* pTarget = pTargetDevice ? pTargetDevice : pOutWin;
     bool bClipRegion = pTarget->IsClipRegion();
     vcl::Region aOldRegion = pTarget->GetClipRegion();
+
+    tools::PolyPolygon* pPolyPoly = nullptr;
 
     if ( !pRegion )
     {
@@ -218,6 +204,10 @@ void ImpEditView::DrawSelection( EditSelection aTmpSel, vcl::Region* pRegion, Ou
 
         if ( pOutWin->GetCursor() )
             pOutWin->GetCursor()->Hide();
+    }
+    else
+    {
+        pPolyPoly = new tools::PolyPolygon;
     }
 
     DBG_ASSERT( !pEditEngine->IsIdleFormatterActive(), "DrawSelection: Not formatted!" );
@@ -325,7 +315,7 @@ void ImpEditView::DrawSelection( EditSelection aTmpSel, vcl::Region* pRegion, Ou
     {
         *pRegion = vcl::Region( *pPolyPoly );
 
-        if (isTiledRendering() && !pOldRegion)
+        if (comphelper::LibreOfficeKit::isActive() && !pOldRegion)
         {
             bool bMm100ToTwip = pOutWin->GetMapMode().GetMapUnit() == MAP_100TH_MM;
 
@@ -359,9 +349,8 @@ void ImpEditView::DrawSelection( EditSelection aTmpSel, vcl::Region* pRegion, Ou
                 }
 
                 std::vector<OString> v;
-                for (size_t i = 0; i < aRectangles.size(); ++i)
+                for (Rectangle & rRectangle : aRectangles)
                 {
-                    Rectangle& rRectangle = aRectangles[i];
                     if (bMm100ToTwip)
                         rRectangle = OutputDevice::LogicToLogic(rRectangle, MAP_100TH_MM, MAP_TWIP);
                     rRectangle.Move(aOrigin.getX(), aOrigin.getY());
@@ -729,7 +718,7 @@ void ImpEditView::CalcAnchorPoint()
     }
 }
 
-void ImpEditView::ShowCursor( bool bGotoCursor, bool bForceVisCursor, sal_uInt16 nShowCursorFlags )
+void ImpEditView::ShowCursor( bool bGotoCursor, bool bForceVisCursor )
 {
     // No ShowCursor in an empty View ...
     if ( ( aOutArea.Left() >= aOutArea.Right() ) && ( aOutArea.Top() >= aOutArea.Bottom() ) )
@@ -760,9 +749,7 @@ void ImpEditView::ShowCursor( bool bGotoCursor, bool bForceVisCursor, sal_uInt16
 
     const ParaPortion* pParaPortion = pEditEngine->GetParaPortions()[nPara];
 
-    nShowCursorFlags |= nExtraCursorFlags;
-
-    nShowCursorFlags |= GETCRSR_TXTONLY;
+    sal_uInt16 nShowCursorFlags = nExtraCursorFlags | GETCRSR_TXTONLY;
 
     // Use CursorBidiLevel 0/1 in meaning of
     // 0: prefer portion end, normal mode
@@ -947,7 +934,7 @@ void ImpEditView::ShowCursor( bool bGotoCursor, bool bForceVisCursor, sal_uInt16
 
         GetCursor()->SetSize( aCursorSz );
 
-        if (isTiledRendering())
+        if (comphelper::LibreOfficeKit::isActive())
         {
             const Point& rPos = GetCursor()->GetPos();
             Rectangle aRect(rPos.getX(), rPos.getY(), rPos.getX() + GetCursor()->GetWidth(), rPos.getY() + GetCursor()->GetHeight());
@@ -974,8 +961,7 @@ void ImpEditView::ShowCursor( bool bGotoCursor, bool bForceVisCursor, sal_uInt16
         {
             sal_uInt16 nTextPortion = pParaPortion->GetTextPortions().FindPortion( aPaM.GetIndex(), nTextPortionStart, (nShowCursorFlags & GETCRSR_PREFERPORTIONSTART) != 0 );
             const TextPortion& rTextPortion = pParaPortion->GetTextPortions()[nTextPortion];
-            sal_uInt16 nRTLLevel = rTextPortion.GetRightToLeft();
-            if ( nRTLLevel%2 )
+            if (rTextPortion.IsRightToLeft())
                 nCursorDir = CursorDirection::RTL;
             else
                 nCursorDir = CursorDirection::LTR;
@@ -1245,7 +1231,7 @@ bool ImpEditView::IsWrongSpelledWord( const EditPaM& rPaM, bool bMarkIfWrong )
     return bIsWrong;
 }
 
-OUString ImpEditView::SpellIgnoreOrAddWord( bool bAdd )
+OUString ImpEditView::SpellIgnoreWord()
 {
     OUString aWord;
     if ( pEditEngine->pImpEditEngine->GetSpeller().is() )
@@ -1267,16 +1253,9 @@ OUString ImpEditView::SpellIgnoreOrAddWord( bool bAdd )
 
         if ( !aWord.isEmpty() )
         {
-            if ( bAdd )
-            {
-                OSL_FAIL( "Sorry, AddWord not implemented" );
-            }
-            else // Ignore
-            {
-                Reference< XDictionary >  xDic( SvxGetIgnoreAllList(), UNO_QUERY );
-                if (xDic.is())
-                    xDic->add( aWord, sal_False, OUString() );
-            }
+            Reference< XDictionary >  xDic( SvxGetIgnoreAllList(), UNO_QUERY );
+            if (xDic.is())
+                xDic->add( aWord, false, OUString() );
             EditDoc& rDoc = pEditEngine->GetEditDoc();
             sal_Int32 nNodes = rDoc.Count();
             for ( sal_Int32 n = 0; n < nNodes; n++ )
@@ -1397,12 +1376,13 @@ void ImpEditView::CutCopy( css::uno::Reference< css::datatransfer::clipboard::XC
 
         }
 
-        if ( bCut )
+        if (bCut)
         {
-            pEditEngine->pImpEditEngine->UndoActionStart( EDITUNDO_CUT );
+            pEditEngine->pImpEditEngine->EnterBlockNotifications();
+            pEditEngine->pImpEditEngine->UndoActionStart(EDITUNDO_CUT);
             DeleteSelected();
-            pEditEngine->pImpEditEngine->UndoActionEnd( EDITUNDO_CUT );
-
+            pEditEngine->pImpEditEngine->UndoActionEnd(EDITUNDO_CUT);
+            pEditEngine->pImpEditEngine->LeaveBlockNotifications();
         }
     }
 }
@@ -1562,8 +1542,8 @@ bool ImpEditView::SetCursorAtPoint( const Point& rPointPixel )
     EditPaM aPaM = pEditEngine->GetPaM(aDocPos);
     bool bGotoCursor = DoAutoScroll();
 
-    // aTmpNewSel: Diff between old and new, not the new selection, unless tiled rendering
-    EditSelection aTmpNewSel( isTiledRendering() ? GetEditSelection().Min() : GetEditSelection().Max(), aPaM );
+    // aTmpNewSel: Diff between old and new, not the new selection, unless for tiled rendering
+    EditSelection aTmpNewSel( comphelper::LibreOfficeKit::isActive() ? GetEditSelection().Min() : GetEditSelection().Max(), aPaM );
 
     // #i27299#
     // work on copy of current selection and set new selection, if it has changed.
@@ -2101,7 +2081,7 @@ void ImpEditView::AddDragAndDropListeners()
         pWindow->GetDragGestureRecognizer()->addDragGestureListener( xDGL );
         uno::Reference< datatransfer::dnd::XDropTargetListener> xDTL( xDGL, uno::UNO_QUERY );
         pWindow->GetDropTarget()->addDropTargetListener( xDTL );
-        pWindow->GetDropTarget()->setActive( sal_True );
+        pWindow->GetDropTarget()->setActive( true );
         pWindow->GetDropTarget()->setDefaultActions( datatransfer::dnd::DNDConstants::ACTION_COPY_OR_MOVE );
 
         bActiveDragAndDropListener = true;

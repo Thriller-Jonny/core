@@ -875,7 +875,7 @@ FltError ImportExcel8::Read()
                     if( maStrm.GetRecId() != EXC_ID_EOF )
                         XclTools::SkipSubStream( maStrm );
                     // #i29930# show warning box
-                    GetAddressConverter().CheckScTab( nScTab, true );
+                    GetAddressConverter().CheckScTab( nScTab );
                     eAkt = EXC_STATE_END;
                 }
                 else
@@ -904,7 +904,7 @@ FltError ImportExcel8::Read()
                         break;
                     case Biff8W:    // workbook
                         OSL_FAIL( "ImportExcel8::Read - double workbook globals" );
-                        // run through
+                        SAL_FALLTHROUGH;
                     case Biff8V:    // VB module
                     default:
                         // TODO: do not create a sheet in the Calc document

@@ -29,7 +29,6 @@ namespace pcr
 {
 
 
-
     //= OTabOrderDialog
 
     class OTabOrderDialog;
@@ -50,7 +49,7 @@ namespace pcr
         // </properties>
 
     public:
-        OTabOrderDialog( const css::uno::Reference< css::uno::XComponentContext >& _rxContext );
+        explicit OTabOrderDialog( const css::uno::Reference< css::uno::XComponentContext >& _rxContext );
         virtual ~OTabOrderDialog();
 
         // XTypeProvider

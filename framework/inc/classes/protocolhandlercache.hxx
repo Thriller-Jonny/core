@@ -52,7 +52,7 @@ struct FWI_DLLPUBLIC ProtocolHandler
         /// the uno implementation name of this handler
         OUString m_sUNOName;
         /// list of URL pattern which defines the protocols which this handler is registered for
-        OUStringList m_lProtocols;
+        std::vector<OUString> m_lProtocols;
 };
 
 /**
@@ -60,18 +60,12 @@ struct FWI_DLLPUBLIC ProtocolHandler
     uno implementation names as value. Overloading of the index operator makes it possible
     to search for a key by using a full qualified URL on list of all possible pattern keys.
 */
-class FWI_DLLPUBLIC PatternHash : public BaseHash< OUString >
-{
-    /* interface */
-    public:
-
-        PatternHash::iterator findPatternKey( const OUString& sURL );
-};
+typedef std::unordered_map<OUString, OUString, OUStringHash> PatternHash;
 
 /**
     This hash holds protocol handler structs by her names.
 */
-typedef BaseHash< ProtocolHandler > HandlerHash;
+typedef std::unordered_map<OUString, ProtocolHandler, OUStringHash> HandlerHash;
 
 /**
     @short          this hash makes it easy to find a protocol handler by using his uno implementation name.

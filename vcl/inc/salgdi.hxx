@@ -20,28 +20,22 @@
 #ifndef INCLUDED_VCL_INC_SALGDI_HXX
 #define INCLUDED_VCL_INC_SALGDI_HXX
 
-#include <tools/solar.h>
-#include <osl/thread.hxx>
-
-#include <vcl/dllapi.h>
-#include <vcl/salgtype.hxx>
-#include <vcl/outdev.hxx>
-#include <vcl/salnativewidgets.hxx>
 #include <vcl/metric.hxx>
 
+#include "impfontmetricdata.hxx"
 #include "salgdiimpl.hxx"
-#include "salglyphid.hxx"
 #include "sallayout.hxx"
+
+#include <config_cairo_canvas.h>
 
 #include <map>
 #include <set>
-
-#include <config_cairo_canvas.h>
+#include <vector>
 
 class PhysicalFontCollection;
 class SalBitmap;
 class FontSelectPattern;
-class ImplFontMetricData;
+class FontAttributes;
 class PhysicalFontFace;
 class SalLayout;
 class ImplLayoutArgs;
@@ -61,8 +55,6 @@ namespace basegfx {
     class B2DPolygon;
     class B2DPolyPolygon;
 }
-
-// - SalGraphics-Codes -
 
 #define SAL_SETFONT_USEDRAWTEXTARRAY        ((sal_uInt16)0x0004)
 #define SAL_SETFONT_BADFONT                 ((sal_uInt16)0x1000)
@@ -145,7 +137,7 @@ public:
     void                        ReleaseFonts() { SetFont( nullptr, 0 ); }
 
     // get the current font's metrics
-    virtual void                GetFontMetric( ImplFontMetricData*, int nFallbackLevel = 0 ) = 0;
+    virtual void                GetFontMetric( ImplFontMetricDataPtr&, int nFallbackLevel = 0 ) = 0;
 
     // get the repertoire of the current font
     virtual const FontCharMapPtr GetFontCharMap() const = 0;
@@ -238,15 +230,15 @@ public:
     SalLayoutFlags              GetLayout() { return m_nLayout; }
     void                        SetLayout( SalLayoutFlags aLayout ) { m_nLayout = aLayout;}
 
-    void                        mirror( long& nX, const OutputDevice *pOutDev, bool bBack = false ) const;
+    void                        mirror( long& nX, const OutputDevice *pOutDev ) const;
     void                        mirror( long& nX, long& nWidth, const OutputDevice *pOutDev, bool bBack = false ) const;
-    bool                        mirror( sal_uInt32 nPoints, const SalPoint *pPtAry, SalPoint *pPtAry2, const OutputDevice *pOutDev, bool bBack = false ) const;
+    bool                        mirror( sal_uInt32 nPoints, const SalPoint *pPtAry, SalPoint *pPtAry2, const OutputDevice *pOutDev ) const;
     void                        mirror( Rectangle& rRect, const OutputDevice*, bool bBack = false ) const;
-    void                        mirror( vcl::Region& rRgn, const OutputDevice *pOutDev, bool bBack = false ) const;
-    void                        mirror( ImplControlValue&, const OutputDevice*, bool bBack = false ) const;
-    basegfx::B2DPoint           mirror( const basegfx::B2DPoint& i_rPoint, const OutputDevice *pOutDev, bool bBack = false ) const;
-    basegfx::B2DPolygon         mirror( const basegfx::B2DPolygon& i_rPoly, const OutputDevice *pOutDev, bool bBack = false ) const;
-    basegfx::B2DPolyPolygon     mirror( const basegfx::B2DPolyPolygon& i_rPoly, const OutputDevice *pOutDev, bool bBack = false ) const;
+    void                        mirror( vcl::Region& rRgn, const OutputDevice *pOutDev ) const;
+    void                        mirror( ImplControlValue&, const OutputDevice* ) const;
+    basegfx::B2DPoint           mirror( const basegfx::B2DPoint& i_rPoint, const OutputDevice *pOutDev ) const;
+    basegfx::B2DPolygon         mirror( const basegfx::B2DPolygon& i_rPoly, const OutputDevice *pOutDev ) const;
+    basegfx::B2DPolyPolygon     mirror( const basegfx::B2DPolyPolygon& i_rPoly, const OutputDevice *pOutDev ) const;
 
     // non virtual methods; these do possible coordinate mirroring and
     // then delegate to protected virtual methods
@@ -281,6 +273,7 @@ public:
                                     const basegfx::B2DVector& i_rLineWidth,
                                     basegfx::B2DLineJoin i_eLineJoin,
                                     css::drawing::LineCap i_eLineCap,
+                                    double i_fMiterMinimumAngle,
                                     const OutputDevice* i_pOutDev);
 
     bool                        DrawPolyLineBezier(
@@ -313,7 +306,6 @@ public:
                                     long nDestX, long nDestY,
                                     long nSrcX, long nSrcY,
                                     long nSrcWidth, long nSrcHeight,
-                                    sal_uInt16 nFlags,
                                     const OutputDevice *pOutDev );
 
     // CopyBits and DrawBitmap --> RasterOp and ClipRegion
@@ -438,8 +430,6 @@ public:
                                     sal_uInt8 nTransparency,
                                     const OutputDevice *pOutDev );
 
-    virtual OpenGLContext      *BeginPaint() { return nullptr; }
-
     virtual SystemGraphicsData  GetGraphicsData() const = 0;
 
 #if ENABLE_CAIRO_CANVAS
@@ -481,7 +471,8 @@ protected:
                                     double fTransparency,
                                     const basegfx::B2DVector& rLineWidths,
                                     basegfx::B2DLineJoin,
-                                    css::drawing::LineCap) = 0;
+                                    css::drawing::LineCap,
+                                    double fMiterMinimumAngle) = 0;
 
     virtual bool                drawPolyLineBezier(
                                     sal_uInt32 nPoints,
@@ -607,9 +598,18 @@ protected:
 
     /** Render solid rectangle with given transparency
 
-        @param nTransparency
-        Transparency value (0-255) to use. 0 blits and opaque, 255 a
-        fully transparent rectangle
+      @param nX             Top left coordinate of rectangle
+
+      @param nY             Bottom right coordinate of rectangle
+
+      @param nWidth         Width of rectangle
+
+      @param nHeight        Height of rectangle
+
+      @param nTransparency  Transparency value (0-255) to use. 0 blits and opaque, 255 a
+                            fully transparent rectangle
+
+      @returns true if successfully drawn, false if not able to draw rectangle
      */
     virtual bool                drawAlphaRect(
                                     long nX, long nY,

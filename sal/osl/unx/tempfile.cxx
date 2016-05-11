@@ -144,7 +144,7 @@ static oslFileError osl_setup_base_directory_impl_(
     oslFileHandle* pHandle,
     rtl_uString**  ppustrTempFileURL,
     rtl_uString**  ppustr_base_dir,
-    sal_Bool*      b_delete_on_close)
+    bool*      b_delete_on_close)
  {
      oslFileError osl_error;
 
@@ -270,9 +270,8 @@ oslFileError SAL_CALL osl_createTempFile(
     rtl_uString**  ppustrTempFileURL)
 {
     rtl_uString*  base_directory     = nullptr;
-    rtl_uString*  temp_file_name     = nullptr;
     oslFileHandle temp_file_handle;
-    sal_Bool      b_delete_on_close;
+    bool      b_delete_on_close;
     oslFileError  osl_error;
 
     osl_error = osl_setup_createTempFile_impl_(
@@ -285,16 +284,19 @@ oslFileError SAL_CALL osl_createTempFile(
     if (osl_File_E_None != osl_error)
         return osl_error;
 
+    rtl_uString*  temp_file_name = nullptr;
     osl_error = osl_create_temp_file_impl_(
         base_directory, &temp_file_handle, &temp_file_name);
 
+    rtl_uString* temp_file_url = nullptr;
     if (osl_File_E_None == osl_error)
     {
-        rtl_uString* temp_file_url = nullptr;
+        osl_error = osl_getFileURLFromSystemPath(temp_file_name, &temp_file_url);
+        rtl_uString_release(temp_file_name);
+    }
 
-        /* assuming this works */
-        osl_getFileURLFromSystemPath(temp_file_name, &temp_file_url);
-
+    if (osl_File_E_None == osl_error)
+    {
         if (b_delete_on_close)
         {
             osl_error = osl_removeFile(temp_file_url);
@@ -315,8 +317,6 @@ oslFileError SAL_CALL osl_createTempFile(
         }
 
         rtl_uString_release(temp_file_url);
-
-        rtl_uString_release(temp_file_name);
     }
 
     rtl_uString_release(base_directory);

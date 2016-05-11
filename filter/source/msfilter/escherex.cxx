@@ -1062,6 +1062,8 @@ void EscherPropertyContainer::CreateLineProperties(
                         AddOpt( ESCHER_Prop_lineDashing, eDash );
                     }
                 }
+                break;
+
                 case css::drawing::LineStyle_SOLID :
                 default:
                 {
@@ -1092,11 +1094,11 @@ void EscherPropertyContainer::CreateLineProperties(
             switch ( eLJ )
             {
                 case css::drawing::LineJoint_NONE :
-                case css::drawing::LineJoint_MIDDLE :
                 case css::drawing::LineJoint_BEVEL :
                     eLineJoin = ESCHER_LineJoinBevel;
                 break;
                 default:
+                case css::drawing::LineJoint_MIDDLE :
                 case css::drawing::LineJoint_MITER :
                     eLineJoin = ESCHER_LineJoinMiter;
                 break;
@@ -1124,7 +1126,7 @@ void EscherPropertyContainer::CreateLineProperties(
     }
 }
 
-static Size lcl_SizeToEmu(Size aPrefSize, MapMode aPrefMapMode)
+static Size lcl_SizeToEmu(Size aPrefSize, const MapMode& aPrefMapMode)
 {
     Size aRetSize;
     if (aPrefMapMode == MAP_PIXEL)
@@ -1232,7 +1234,7 @@ void EscherPropertyContainer::ImplCreateGraphicAttributes( const css::uno::Refer
     }
 }
 
-bool EscherPropertyContainer::CreateShapeProperties( const css::uno::Reference< css::drawing::XShape > & rXShape )
+void EscherPropertyContainer::CreateShapeProperties( const css::uno::Reference< css::drawing::XShape > & rXShape )
 {
     uno::Reference< beans::XPropertySet > aXPropSet( rXShape, uno::UNO_QUERY );
     if ( aXPropSet.is() )
@@ -1253,7 +1255,6 @@ bool EscherPropertyContainer::CreateShapeProperties( const css::uno::Reference< 
         if ( nShapeAttr )
             AddOpt( ESCHER_Prop_fPrint, nShapeAttr );
     }
-    return true;
 }
 
 bool EscherPropertyContainer::CreateOLEGraphicProperties(
@@ -1345,20 +1346,18 @@ bool EscherPropertyContainer::ImplCreateEmbeddedBmp( const OString& rUniqueId )
     return false;
 }
 
-bool EscherPropertyContainer::CreateEmbeddedBitmapProperties(
+void EscherPropertyContainer::CreateEmbeddedBitmapProperties(
     const OUString& rBitmapUrl, css::drawing::BitmapMode eBitmapMode )
 {
-    bool bRetValue = false;
     OUString aVndUrl( "vnd.sun.star.GraphicObject:" );
-    OUString aBmpUrl( rBitmapUrl );
-    sal_Int32 nIndex = aBmpUrl.indexOf( aVndUrl );
+    sal_Int32 nIndex = rBitmapUrl.indexOf( aVndUrl );
     if( nIndex != -1 )
     {
         nIndex += aVndUrl.getLength();
-        if( aBmpUrl.getLength() > nIndex )
+        if( rBitmapUrl.getLength() > nIndex )
         {
-            OString aUniqueId(OUStringToOString(aBmpUrl.copy(nIndex, aBmpUrl.getLength() - nIndex), RTL_TEXTENCODING_UTF8));
-            bRetValue = ImplCreateEmbeddedBmp( aUniqueId );
+            OString aUniqueId(OUStringToOString(rBitmapUrl.copy(nIndex, rBitmapUrl.getLength() - nIndex), RTL_TEXTENCODING_UTF8));
+            bool bRetValue = ImplCreateEmbeddedBmp( aUniqueId );
             if( bRetValue )
             {
                 // bitmap mode property
@@ -1367,7 +1366,6 @@ bool EscherPropertyContainer::CreateEmbeddedBitmapProperties(
             }
         }
     }
-    return bRetValue;
 }
 
 
@@ -1402,7 +1400,7 @@ GraphicObject lclDrawHatch( const css::drawing::Hatch& rHatch, const Color& rBac
 } // namespace
 
 
-bool EscherPropertyContainer::CreateEmbeddedHatchProperties( const css::drawing::Hatch& rHatch, const Color& rBackColor, bool bFillBackground )
+void EscherPropertyContainer::CreateEmbeddedHatchProperties( const css::drawing::Hatch& rHatch, const Color& rBackColor, bool bFillBackground )
 {
     const Rectangle aRect(pShapeBoundRect ? *pShapeBoundRect : Rectangle(Point(0,0), Size(28000, 21000)));
     GraphicObject aGraphicObject = lclDrawHatch( rHatch, rBackColor, bFillBackground, aRect );
@@ -1410,7 +1408,6 @@ bool EscherPropertyContainer::CreateEmbeddedHatchProperties( const css::drawing:
     bool bRetValue = ImplCreateEmbeddedBmp( aUniqueId );
     if ( bRetValue )
         AddOpt( ESCHER_Prop_fillType, ESCHER_FillTexture );
-    return bRetValue;
 }
 
 
@@ -2325,7 +2322,7 @@ bool EscherPropertyContainer::CreateConnectorProperties(
     return bRetValue;
 }
 
-bool EscherPropertyContainer::CreateShadowProperties(
+void EscherPropertyContainer::CreateShadowProperties(
     const css::uno::Reference< css::beans::XPropertySet > & rXPropSet )
 {
     css::uno::Any aAny;
@@ -2363,7 +2360,6 @@ bool EscherPropertyContainer::CreateShadowProperties(
         }
     }
     AddOpt( ESCHER_Prop_fshadowObscured, nShadowFlags );
-    return bHasShadow;
 }
 
 sal_Int32 EscherPropertyContainer::GetValueForEnhancedCustomShapeParameter( const css::drawing::EnhancedCustomShapeParameter& rParameter,
@@ -3860,15 +3856,14 @@ EscherPersistTable::EscherPersistTable()
 
 EscherPersistTable::~EscherPersistTable()
 {
-    for( size_t i = 0, n = maPersistTable.size(); i < n; ++i ) {
-        delete maPersistTable[ i ];
+    for(EscherPersistEntry* i : maPersistTable) {
+        delete i;
     }
 }
 
 bool EscherPersistTable::PtIsID( sal_uInt32 nID )
 {
-    for( size_t i = 0, n = maPersistTable.size(); i < n; ++i ) {
-        EscherPersistEntry* pPtr = maPersistTable[ i ];
+    for(EscherPersistEntry* pPtr : maPersistTable) {
         if ( pPtr->mnID == nID ) {
             return true;
         }
@@ -3881,7 +3876,7 @@ void EscherPersistTable::PtInsert( sal_uInt32 nID, sal_uInt32 nOfs )
     maPersistTable.push_back( new EscherPersistEntry( nID, nOfs ) );
 }
 
-sal_uInt32 EscherPersistTable::PtDelete( sal_uInt32 nID )
+void EscherPersistTable::PtDelete( sal_uInt32 nID )
 {
     ::std::vector< EscherPersistEntry* >::iterator it = maPersistTable.begin();
     for( ; it != maPersistTable.end() ; ++it )
@@ -3892,13 +3887,11 @@ sal_uInt32 EscherPersistTable::PtDelete( sal_uInt32 nID )
             break;
         }
     }
-    return 0;
 }
 
 sal_uInt32 EscherPersistTable::PtGetOffsetByID( sal_uInt32 nID )
 {
-    for( size_t i = 0, n = maPersistTable.size(); i < n; ++i ) {
-        EscherPersistEntry* pPtr = maPersistTable[ i ];
+    for(EscherPersistEntry* pPtr : maPersistTable) {
         if ( pPtr->mnID == nID ) {
             return pPtr->mnOffset;
         }
@@ -3906,31 +3899,25 @@ sal_uInt32 EscherPersistTable::PtGetOffsetByID( sal_uInt32 nID )
     return 0;
 };
 
-sal_uInt32 EscherPersistTable::PtReplace( sal_uInt32 nID, sal_uInt32 nOfs )
+void EscherPersistTable::PtReplace( sal_uInt32 nID, sal_uInt32 nOfs )
 {
-    for( size_t i = 0, n = maPersistTable.size(); i < n; ++i ) {
-        EscherPersistEntry* pPtr = maPersistTable[ i ];
+    for(EscherPersistEntry* pPtr : maPersistTable) {
         if ( pPtr->mnID == nID ) {
-            sal_uInt32 nRetValue = pPtr->mnOffset;
             pPtr->mnOffset = nOfs;
-            return nRetValue;
+            return;
         }
     }
-    return 0;
 }
 
-sal_uInt32 EscherPersistTable::PtReplaceOrInsert( sal_uInt32 nID, sal_uInt32 nOfs )
+void EscherPersistTable::PtReplaceOrInsert( sal_uInt32 nID, sal_uInt32 nOfs )
 {
-    for( size_t i = 0, n = maPersistTable.size(); i < n; ++i ) {
-        EscherPersistEntry* pPtr = maPersistTable[ i ];
+    for(EscherPersistEntry* pPtr : maPersistTable) {
         if ( pPtr->mnID == nID ) {
-            sal_uInt32 nRetValue = pPtr->mnOffset;
             pPtr->mnOffset = nOfs;
-            return nRetValue;
+            return;
         }
     }
     PtInsert( nID, nOfs );
-    return 0;
 }
 
 bool EscherPropertyValueHelper::GetPropertyValue(
@@ -4148,13 +4135,12 @@ sal_uInt32 EscherGraphicProvider::GetBlibStoreContainerSize( SvStream* pMergePic
     return nSize;
 }
 
-bool EscherGraphicProvider::WriteBlibStoreEntry(SvStream& rSt,
+void EscherGraphicProvider::WriteBlibStoreEntry(SvStream& rSt,
     sal_uInt32 nBlipId, bool bWritePictureOffSet, sal_uInt32 nResize)
 {
     if (nBlipId > mnBlibEntrys || nBlipId == 0)
-        return false;
+        return;
     mpBlibEntrys[nBlipId-1]->WriteBlibEntry(rSt, bWritePictureOffSet, nResize);
-    return true;
 }
 
 void EscherGraphicProvider::WriteBlibStoreContainer( SvStream& rSt, SvStream* pMergePicStreamBSE )
@@ -4353,7 +4339,7 @@ sal_uInt32 EscherGraphicProvider::GetBlibID( SvStream& rPicOutStrm, const OStrin
             sal_uInt32 nExtra, nAtomSize = 0;
             sal_uInt32 nInstance, nUncompressedSize = p_EscherBlibEntry->mnSize;
 
-            if ( mnFlags & _E_GRAPH_PROV_USE_INSTANCES )
+            if ( mnFlags & E_GRAPH_PROV_USE_INSTANCES )
             {
                 rPicOutStrm.WriteUInt32( 0x7f90000 | (sal_uInt16)( mnBlibEntrys << 4 ) )
                            .WriteUInt32( 0 );
@@ -4464,7 +4450,8 @@ sal_uInt32 EscherGraphicProvider::GetBlibID( SvStream& rPicOutStrm, const OStrin
                 rPicOutStrm.WriteUInt32( nPos - nAtomSize );
                 rPicOutStrm.Seek( nPos );
             }
-            nBlibId = ImplInsertBlib( p_EscherBlibEntry ), p_EscherBlibEntry = nullptr;
+            nBlibId = ImplInsertBlib( p_EscherBlibEntry );
+            p_EscherBlibEntry = nullptr;
         }
     }
     delete p_EscherBlibEntry;
@@ -4742,11 +4729,11 @@ sal_uInt32 EscherConnectorListEntry::GetConnectorRule( bool bFirst )
 
 EscherSolverContainer::~EscherSolverContainer()
 {
-    for( size_t i = 0, n = maShapeList.size(); i < n; ++i ) {
-        delete maShapeList[ i ];
+    for(EscherShapeListEntry* i : maShapeList) {
+        delete i;
     }
-    for( size_t i = 0, n = maConnectorList.size(); i < n; ++i ) {
-        delete maConnectorList[ i ];
+    for(EscherConnectorListEntry* i : maConnectorList) {
+        delete i;
     }
 }
 
@@ -4768,11 +4755,10 @@ void EscherSolverContainer::AddConnector(
 
 sal_uInt32 EscherSolverContainer::GetShapeId( const css::uno::Reference< css::drawing::XShape > & rXShape ) const
 {
-    for ( size_t i = 0, n = maShapeList.size(); i < n; ++i )
+    for (EscherShapeListEntry* pPtr : maShapeList)
     {
-        EscherShapeListEntry* pPtr = maShapeList[ i ];
         if ( rXShape == pPtr->aXShape )
-            return ( pPtr->n_EscherId );
+            return pPtr->n_EscherId;
     }
     return 0;
 }
@@ -4791,9 +4777,8 @@ void EscherSolverContainer::WriteSolver( SvStream& rStrm )
 
         EscherConnectorRule aConnectorRule;
         aConnectorRule.nRuleId = 2;
-        for ( size_t i = 0, n = maConnectorList.size(); i < n; ++i )
+        for (EscherConnectorListEntry* pPtr : maConnectorList)
         {
-            EscherConnectorListEntry* pPtr = maConnectorList[ i ];
             aConnectorRule.ncptiA  = aConnectorRule.ncptiB = 0xffffffff;
             aConnectorRule.nShapeC = GetShapeId( pPtr->mXConnector );
             aConnectorRule.nShapeA = GetShapeId( pPtr->mXConnectToA );
@@ -4917,7 +4902,7 @@ void EscherExGlobal::WriteDggAtom( SvStream& rStrm ) const
     // write the DGG record header (do not include the 8 bytes of the header in the data size)
     rStrm.WriteUInt32( ESCHER_Dgg << 16 ).WriteUInt32( nDggSize - 8 );
 
-    // claculate and write the fixed DGG data
+    // calculate and write the fixed DGG data
     sal_uInt32 nShapeCount = 0;
     sal_uInt32 nLastShapeId = 0;
     for( DrawingInfoVector::const_iterator aIt = maDrawingInfos.begin(), aEnd = maDrawingInfos.end(); aIt != aEnd; ++aIt )
@@ -5036,8 +5021,7 @@ void EscherEx::InsertAtCurrentPos( sal_uInt32 nBytes, bool bExpandEndOfAtom )
     sal_uInt32  nSize, nType, nSource, nBufSize, nToCopy, nCurPos = mpOutStrm->Tell();
 
     // adjust persist table
-    for( size_t i = 0, n = maPersistTable.size(); i < n; ++i ) {
-        EscherPersistEntry* pPtr = maPersistTable[ i ];
+    for(EscherPersistEntry* pPtr : maPersistTable) {
         sal_uInt32 nOfs = pPtr->mnOffset;
         if ( nOfs >= nCurPos ) {
             pPtr->mnOffset += nBytes;
@@ -5125,7 +5109,7 @@ bool EscherEx::SeekToPersistOffset( sal_uInt32 nKey )
     return DoSeek( ESCHER_Persist_PrivateEntry | nKey );
 }
 
-bool EscherEx::InsertAtPersistOffset( sal_uInt32 nKey, sal_uInt32 nValue )
+void EscherEx::InsertAtPersistOffset( sal_uInt32 nKey, sal_uInt32 nValue )
 {
     sal_uInt32  nOldPos = mpOutStrm->Tell();
     bool        bRetValue = SeekToPersistOffset( nKey );
@@ -5134,7 +5118,6 @@ bool EscherEx::InsertAtPersistOffset( sal_uInt32 nKey, sal_uInt32 nValue )
         mpOutStrm->WriteUInt32( nValue );
         mpOutStrm->Seek( nOldPos );
     }
-    return bRetValue;
 }
 
 void EscherEx::OpenContainer( sal_uInt16 nEscherContainer, int nRecInstance )
@@ -5327,9 +5310,8 @@ sal_uInt32 EscherEx::EnterGroup( const Rectangle* pBoundRect )
     return EnterGroup( OUString(), pBoundRect );
 }
 
-bool EscherEx::SetGroupSnapRect( sal_uInt32 nGroupLevel, const Rectangle& rRect )
+void EscherEx::SetGroupSnapRect( sal_uInt32 nGroupLevel, const Rectangle& rRect )
 {
-    bool bRetValue = false;
     if ( nGroupLevel )
     {
         sal_uInt32 nCurrentPos = mpOutStrm->Tell();
@@ -5342,12 +5324,10 @@ bool EscherEx::SetGroupSnapRect( sal_uInt32 nGroupLevel, const Rectangle& rRect 
             mpOutStrm->Seek( nCurrentPos );
         }
     }
-    return bRetValue;
 }
 
-bool EscherEx::SetGroupLogicRect( sal_uInt32 nGroupLevel, const Rectangle& rRect )
+void EscherEx::SetGroupLogicRect( sal_uInt32 nGroupLevel, const Rectangle& rRect )
 {
-    bool bRetValue = false;
     if ( nGroupLevel )
     {
         sal_uInt32 nCurrentPos = mpOutStrm->Tell();
@@ -5357,7 +5337,6 @@ bool EscherEx::SetGroupLogicRect( sal_uInt32 nGroupLevel, const Rectangle& rRect
             mpOutStrm->Seek( nCurrentPos );
         }
     }
-    return bRetValue;
 }
 
 void EscherEx::LeaveGroup()
@@ -5388,17 +5367,12 @@ void EscherEx::Commit( EscherPropertyContainer& rProps, const Rectangle& )
     rProps.Commit( GetStream() );
 }
 
-sal_uInt32 EscherEx::GetColor( const sal_uInt32 nSOColor, bool bSwap )
+sal_uInt32 EscherEx::GetColor( const sal_uInt32 nSOColor )
 {
-    if ( bSwap )
-    {
-        sal_uInt32 nColor = nSOColor & 0xff00;          // Green
-        nColor |= (sal_uInt8)( nSOColor ) << 16;        // Red
-        nColor |= (sal_uInt8)( nSOColor >> 16 );        // Blue
-        return nColor;
-    }
-    else
-        return nSOColor & 0xffffff;
+    sal_uInt32 nColor = nSOColor & 0xff00;          // Green
+    nColor |= (sal_uInt8)( nSOColor ) << 16;        // Red
+    nColor |= (sal_uInt8)( nSOColor >> 16 );        // Blue
+    return nColor;
 }
 
 sal_uInt32 EscherEx::GetColor( const Color& rSOColor, bool bSwap )

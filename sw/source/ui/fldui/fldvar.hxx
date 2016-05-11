@@ -85,13 +85,13 @@ class SwFieldVarPage : public SwFieldPage
     void SubTypeHdl(ListBox*);
 
     void                UpdateSubType();
-    sal_Int32           FillFormatLB(sal_uInt16 nTypeId);
+    void                FillFormatLB(sal_uInt16 nTypeId);
 
 protected:
     virtual sal_uInt16      GetGroup() override;
 
 public:
-                        SwFieldVarPage(vcl::Window* pParent, const SfxItemSet& rSet);
+                        SwFieldVarPage(vcl::Window* pParent, const SfxItemSet* pSet);
 
                         virtual ~SwFieldVarPage();
     virtual void        dispose() override;

@@ -17,7 +17,7 @@
 #include <rtl/ustring.hxx>
 #include <config_folders.h>
 #include <vcl/salbtype.hxx>
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 #include <memory>
 #include <vcl/pngwrite.hxx>
 #include <vcl/graph.hxx>
@@ -39,6 +39,7 @@
 #include <osl/conditn.h>
 #include <vcl/opengl/OpenGLWrapper.hxx>
 #include <vcl/opengl/OpenGLContext.hxx>
+#include <desktop/crashreport.hxx>
 
 #if defined UNX && !defined MACOSX && !defined IOS && !defined ANDROID
 #include "opengl/x11/X11DeviceInfo.hxx"
@@ -156,8 +157,8 @@ static void addPreamble(OString& rShaderSource, const OString& rPreamble)
         if (nVersionStrEndPos == -1)
             nVersionStrEndPos = nVersionStrStartPos + 8;
 
-        OString aVersionLine = rShaderSource.copy(0, nVersionStrEndPos - nVersionStrStartPos);
-        OString aShaderBody = rShaderSource.copy(nVersionStrEndPos - nVersionStrStartPos);
+        OString aVersionLine = rShaderSource.copy(0, nVersionStrEndPos);
+        OString aShaderBody = rShaderSource.copy(nVersionStrEndPos + 1);
 
         rShaderSource = aVersionLine + "\n" + rPreamble + "\n" + aShaderBody;
     }
@@ -943,6 +944,11 @@ void OpenGLZone::hardDisable()
     }
 }
 
+OpenGLVCLContextZone::OpenGLVCLContextZone()
+{
+    OpenGLContext::makeVCLCurrent();
+}
+
 bool OpenGLHelper::isVCLOpenGLEnabled()
 {
     /**
@@ -995,12 +1001,13 @@ bool OpenGLHelper::isVCLOpenGLEnabled()
 
         bRet = bEnable;
     }
+
     if (bRet)
     {
         if (!getenv("SAL_DISABLE_GL_WATCHDOG"))
             OpenGLWatchdogThread::start();
-        ImplGetSVData()->maWinData.mbNoSaveBackground = true;
     }
+    CrashReporter::AddKeyValue("UseOpenGL", OUString::boolean(bRet));
 
     return bRet;
 }
@@ -1012,7 +1019,8 @@ bool OpenGLWrapper::isVCLOpenGLEnabled()
 
 void OpenGLHelper::debugMsgStream(std::ostringstream const &pStream)
 {
-    debugMsgPrint("%s", pStream.str().c_str());
+    debugMsgPrint ("%x: %s", osl_getThreadIdentifier(nullptr),
+                   pStream.str().c_str());
 }
 
 void OpenGLHelper::debugMsgPrint(const char *pFormat, ...)
@@ -1144,14 +1152,6 @@ OutputDevice::PaintScope::PaintScope(OutputDevice *pDev)
 {
     if( pDev->mpGraphics || pDev->AcquireGraphics() )
     {
-        OpenGLContext *pContext = pDev->mpGraphics->BeginPaint();
-        if( pContext )
-        {
-            assert( pContext->mnPainting >= 0 );
-            pContext->mnPainting++;
-            pContext->acquire();
-            pHandle = static_cast<void *>( pContext );
-        }
     }
 }
 

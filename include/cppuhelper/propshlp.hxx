@@ -124,7 +124,7 @@ public:
     OPropertyArrayHelper(
         css::beans::Property *pProps,
         sal_Int32 nElements ,
-        sal_Bool bSorted = sal_True );
+        sal_Bool bSorted = true );
 
      /**
        Create an object which supports the common property interfaces.
@@ -134,7 +134,7 @@ public:
      */
     OPropertyArrayHelper(
         const css::uno::Sequence< css::beans::Property > & aProps,
-        sal_Bool bSorted = sal_True );
+        sal_Bool bSorted = true );
 
     /**
        Return the number of properties.
@@ -202,7 +202,6 @@ private:
      */
     sal_Bool                    bRightOrdered;
 };
-
 
 
 // helper defines needed for an interface container with a 32 bit key values
@@ -336,11 +335,16 @@ public:
 
 #if !defined _MSC_VER // public -> protected changes mangled names there
 protected:
+#elif defined __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnon-virtual-dtor"
 #endif
     ~IEventNotificationHook() {}
         // avoid warnings about virtual members and non-virtual dtor
+#if defined _MSC_VER && defined __clang__
+#pragma clang diagnostic pop
+#endif
 };
-
 
 
 /**
@@ -429,7 +433,7 @@ public:
         throw(css::uno::RuntimeException);
 
     /**
-       Send a disposing notification to the listeners in the conatiners aBoundLC
+       Send a disposing notification to the listeners in the containers aBoundLC
        and aVetoableLC.
 
        @see OComponentHelper
@@ -674,6 +678,10 @@ protected:
 #if defined _MSC_VER
 #pragma warning(push)
 #pragma warning(disable: 4265)
+#if defined __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnon-virtual-dtor"
+#endif
 #endif
     /**
        You must call disposing before destruction.
@@ -681,6 +689,9 @@ protected:
     ~OPropertySetHelper();
 };
 #if defined _MSC_VER
+#if defined __clang__
+#pragma clang diagnostic pop
+#endif
 #pragma warning(pop)
 #endif
 
@@ -713,7 +724,6 @@ public:
         throw(css::uno::RuntimeException, std::exception) SAL_OVERRIDE;
 
 
-
 private:
     OPropertySetHelper2( const OPropertySetHelper2 & ) SAL_DELETED_FUNCTION;
     OPropertySetHelper2 &    operator = ( const OPropertySetHelper2 & )
@@ -733,7 +743,6 @@ protected:
 
 } // end namespace cppuhelper
 #endif
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

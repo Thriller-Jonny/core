@@ -18,6 +18,7 @@
  */
 
 #include "comphelper/anytostring.hxx"
+#include <comphelper/sequenceashashmap.hxx>
 #include "cppuhelper/exc_hlp.hxx"
 #include <osl/diagnose.h>
 #include <tools/multisel.hxx>
@@ -37,11 +38,14 @@
 #include "oox/drawingml/drawingmltypes.hxx"
 #include "oox/drawingml/themefragmenthandler.hxx"
 #include "drawingml/textliststylecontext.hxx"
+#include <oox/helper/attributelist.hxx>
 #include "oox/ppt/pptshape.hxx"
 #include "oox/ppt/presentationfragmenthandler.hxx"
 #include "oox/ppt/slidefragmenthandler.hxx"
 #include "oox/ppt/layoutfragmenthandler.hxx"
 #include "oox/ppt/pptimport.hxx"
+#include <oox/token/namespaces.hxx>
+#include <oox/token/tokens.hxx>
 
 #include <com/sun/star/office/XAnnotation.hpp>
 #include <com/sun/star/office/XAnnotationAccess.hpp>
@@ -124,7 +128,7 @@ void ResolveTextFields( XmlFilterBase& rFilter )
                             xPropSet->setPropertyValue( sURL, Any( aURL ) );
                             Reference< text::XTextContent > xContent( rTextField.xTextField, UNO_QUERY);
                             Reference< text::XTextRange > xTextRange( rTextField.xTextCursor, UNO_QUERY );
-                            rTextField.xText->insertTextContent( xTextRange, xContent, sal_True );
+                            rTextField.xText->insertTextContent( xTextRange, xContent, true );
                         }
                         catch( uno::Exception& )
                         {
@@ -459,7 +463,7 @@ void PresentationFragmentHandler::finalizeImport()
     return this;
 }
 
-bool PresentationFragmentHandler::importSlide( const FragmentHandlerRef& rxSlideFragmentHandler,
+void PresentationFragmentHandler::importSlide( const FragmentHandlerRef& rxSlideFragmentHandler,
         const SlidePersistPtr& rSlidePersistPtr )
 {
     Reference< drawing::XDrawPage > xSlide( rSlidePersistPtr->getPage() );
@@ -511,7 +515,7 @@ bool PresentationFragmentHandler::importSlide( const FragmentHandlerRef& rxSlide
         }
     }
     rSlidePersistPtr->setPath( rxSlideFragmentHandler->getFragmentPath() );
-    return getFilter().importFragment( rxSlideFragmentHandler );
+    getFilter().importFragment( rxSlideFragmentHandler );
 }
 
 } }

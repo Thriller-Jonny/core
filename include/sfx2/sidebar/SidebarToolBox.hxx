@@ -50,31 +50,15 @@ public:
             const Size& rRequestedSize = Size(),
             sal_uInt16 nPos = TOOLBOX_APPEND) override;
 
-    virtual void Paint (vcl::RenderContext& rRenderContext, const Rectangle& rRect) override;
-
     virtual bool Notify (NotifyEvent& rEvent) override;
 
-    css::uno::Reference<css::frame::XToolbarController> GetControllerForItemId(const sal_uInt16 nItemId) const;
-    sal_uInt16 GetItemIdForSubToolbarName (const OUString& rsCOmmandName) const;
-
     void SetController(const sal_uInt16 nItemId,
-                       const css::uno::Reference<css::frame::XToolbarController>& rxController,
-                       const OUString& rsCommandName);
+                       const css::uno::Reference<css::frame::XToolbarController>& rxController);
 
     css::uno::Reference<css::frame::XToolbarController> GetFirstController();
 
 private:
-    Image maItemSeparator;
-
-    class ItemDescriptor
-    {
-    public:
-        css::uno::Reference<css::frame::XToolbarController> mxController;
-        css::util::URL maURL;
-        rtl::OUString msCurrentCommand;
-    };
-
-    typedef std::map<sal_uInt16, ItemDescriptor> ControllerContainer;
+    typedef std::map<sal_uInt16, css::uno::Reference<css::frame::XToolbarController>> ControllerContainer;
     ControllerContainer maControllers;
     bool mbAreHandlersRegistered;
 
@@ -82,6 +66,8 @@ private:
     DECL_LINK_TYPED(ClickHandler, ToolBox*, void);
     DECL_LINK_TYPED(DoubleClickHandler, ToolBox*, void);
     DECL_LINK_TYPED(SelectHandler, ToolBox*, void);
+
+    css::uno::Reference<css::frame::XToolbarController> GetControllerForItemId(const sal_uInt16 nItemId) const;
 
     void CreateController(const sal_uInt16 nItemId,
                           const css::uno::Reference<css::frame::XFrame>& rxFrame,

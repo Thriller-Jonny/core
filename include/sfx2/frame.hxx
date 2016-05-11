@@ -24,7 +24,6 @@
 #include <sal/types.h>
 #include <com/sun/star/uno/Reference.h>
 #include <com/sun/star/uno/Any.hxx>
-#include <com/sun/star/uno/Sequence.hxx>
 #include <vcl/vclptr.hxx>
 
 namespace com
@@ -108,8 +107,7 @@ protected:
 
     SAL_DLLPRIVATE void RemoveChildFrame_Impl( SfxFrame* );
 
-                        SfxFrame( );    // not implemented
-    SAL_DLLPRIVATE      SfxFrame( vcl::Window& i_rContainerWindow, bool bHidden );
+    SAL_DLLPRIVATE      SfxFrame( vcl::Window& i_rContainerWindow );
 
 public:
     static SfxFrame*    Create( const css::uno::Reference< css::frame::XFrame >& xFrame );
@@ -117,8 +115,8 @@ public:
                         CreateBlankFrame();
     static SfxFrame*    Create( SfxObjectShell& rDoc, vcl::Window& rWindow, sal_uInt16 nViewId, bool bHidden );
 
-    vcl::Window&             GetWindow() const { return *pWindow;}
-    void                CancelTransfers( bool bCancelLoadEnv = true );
+    vcl::Window&        GetWindow() const { return *pWindow;}
+    void                CancelTransfers();
     bool                DoClose();
     sal_uInt16          GetChildFrameCount() const;
     SfxFrame*           GetChildFrame( sal_uInt16 nPos ) const;
@@ -144,7 +142,7 @@ public:
     void                GetTargetList( TargetList& ) const;
     void                UpdateDescriptor( SfxObjectShell *pDoc );
     void                Resize();
-    css::uno::Reference< css::frame::XFrame >
+    const css::uno::Reference< css::frame::XFrame >&
                         GetFrameInterface() const;
     void                Appear();
     void                AppearWithUpdate();
@@ -155,7 +153,7 @@ public:
 
     SAL_DLLPRIVATE bool DoClose_Impl();
     SAL_DLLPRIVATE void SetFrameInterface_Impl( const css::uno::Reference< css::frame::XFrame >& rFrame );
-    SAL_DLLPRIVATE void ReleasingComponent_Impl( bool bSet );
+    SAL_DLLPRIVATE void ReleasingComponent_Impl();
     SAL_DLLPRIVATE void GetViewData_Impl();
     SAL_DLLPRIVATE void SetFrameType_Impl( sal_uInt32 );
     SAL_DLLPRIVATE bool PrepareClose_Impl( bool bUI );
@@ -207,7 +205,6 @@ public:
 };
 
 
-
 class SFX2_DLLPUBLIC SfxFrameItem: public SfxPoolItem
 {
     SfxFrame*               pFrame;
@@ -236,7 +233,7 @@ class SFX2_DLLPUBLIC SfxUsrAnyItem : public SfxPoolItem
 public:
                                 static SfxPoolItem* CreateDefault();
                                 SfxUsrAnyItem( sal_uInt16 nWhich, const css::uno::Any& rAny );
-    css::uno::Any  GetValue() const
+    const css::uno::Any&        GetValue() const
                                 { return aValue; }
     virtual bool                operator==( const SfxPoolItem& ) const override;
     virtual SfxPoolItem*        Clone( SfxItemPool *pPool = nullptr ) const override;

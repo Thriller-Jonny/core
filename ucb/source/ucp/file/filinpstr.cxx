@@ -32,9 +32,8 @@ using namespace com::sun::star::ucb;
 #define THROW_WHERE ""
 #endif
 
-XInputStream_impl::XInputStream_impl( shell* pMyShell,const OUString& aUncPath, bool bLock )
-    : m_xProvider( pMyShell->m_pProvider ),
-      m_aFile( aUncPath ),
+XInputStream_impl::XInputStream_impl( const OUString& aUncPath, bool bLock )
+    : m_aFile( aUncPath ),
       m_nErrorCode( TASKHANDLER_NO_ERROR ),
       m_nMinorErrorCode( TASKHANDLER_NO_ERROR )
 {
@@ -76,12 +75,10 @@ XInputStream_impl::~XInputStream_impl()
 //  XTypeProvider
 
 
-
 XTYPEPROVIDER_IMPL_3( XInputStream_impl,
                       lang::XTypeProvider,
                       io::XSeekable,
                       io::XInputStream )
-
 
 
 uno::Any SAL_CALL
@@ -113,7 +110,6 @@ XInputStream_impl::release(
 {
     OWeakObject::release();
 }
-
 
 
 sal_Int32 SAL_CALL

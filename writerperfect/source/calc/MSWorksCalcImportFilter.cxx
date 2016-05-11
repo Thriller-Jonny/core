@@ -9,17 +9,16 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include <com/sun/star/uno/Reference.h>
 #include <cppuhelper/supportsservice.hxx>
 
 #include <libwps/libwps.h>
 
 #include "WPFTEncodingDialog.hxx"
+#include "WPFTResMgr.hxx"
 #include "MSWorksCalcImportFilter.hxx"
+#include "strings.hrc"
 
 using com::sun::star::uno::Sequence;
-using com::sun::star::uno::Reference;
-using com::sun::star::uno::Any;
 using com::sun::star::uno::XInterface;
 using com::sun::star::uno::Exception;
 using com::sun::star::uno::RuntimeException;
@@ -38,22 +37,22 @@ bool MSWorksCalcImportFilter::doImportDocument(librevenge::RVNGInputStream &rInp
         OUString title, encoding;
         if (creator == libwps::WPS_MSWORKS)
         {
-            title="Import MsWorks files(libwps)";
+            title=WPFT_RESSTR(STR_ENCODING_DIALOG_TITLE_MSWORKS);
             encoding="CP850";
         }
         else if (creator == libwps::WPS_LOTUS)
         {
-            title="Import Lotus files(libwps)";
+            title=WPFT_RESSTR(STR_ENCODING_DIALOG_TITLE_LOTUS);
             encoding="CP437";
         }
         else if (creator == libwps::WPS_SYMPHONY)
         {
-            title="Import Symphony files(libwps)";
+            title=WPFT_RESSTR(STR_ENCODING_DIALOG_TITLE_SYMPHONY);
             encoding="CP437";
         }
         else
         {
-            title="Import Quattro Pro files(libwps)";
+            title=WPFT_RESSTR(STR_ENCODING_DIALOG_TITLE_QUATTROPRO);
             encoding="CP437";
         }
         try
@@ -109,14 +108,21 @@ void MSWorksCalcImportFilter::doRegisterHandlers(OdsGenerator &)
 {
 }
 
-OUString MSWorksCalcImportFilter_getImplementationName()
-throw (RuntimeException)
+// XServiceInfo
+OUString SAL_CALL MSWorksCalcImportFilter::getImplementationName()
+throw (RuntimeException, std::exception)
 {
     return OUString("com.sun.star.comp.Calc.MSWorksCalcImportFilter");
 }
 
-Sequence< OUString > SAL_CALL MSWorksCalcImportFilter_getSupportedServiceNames()
-throw (RuntimeException)
+sal_Bool SAL_CALL MSWorksCalcImportFilter::supportsService(const OUString &rServiceName)
+throw (RuntimeException, std::exception)
+{
+    return cppu::supportsService(this, rServiceName);
+}
+
+Sequence< OUString > SAL_CALL MSWorksCalcImportFilter::getSupportedServiceNames()
+throw (RuntimeException, std::exception)
 {
     Sequence < OUString > aRet(2);
     OUString *pArray = aRet.getArray();
@@ -124,30 +130,14 @@ throw (RuntimeException)
     pArray[1] =  "com.sun.star.document.ExtendedTypeDetection";
     return aRet;
 }
-#undef SERVICE_NAME2
-#undef SERVICE_NAME1
 
-Reference< XInterface > SAL_CALL MSWorksCalcImportFilter_createInstance(const Reference< XComponentContext > &rContext)
-throw(Exception)
+extern "C"
+SAL_DLLPUBLIC_EXPORT css::uno::XInterface *SAL_CALL
+com_sun_star_comp_Calc_MSWorksCalcImportFilter_get_implementation(
+    css::uno::XComponentContext *const context,
+    const css::uno::Sequence<css::uno::Any> &)
 {
-    return static_cast<cppu::OWeakObject *>(new MSWorksCalcImportFilter(rContext));
-}
-
-// XServiceInfo
-OUString SAL_CALL MSWorksCalcImportFilter::getImplementationName()
-throw (RuntimeException, std::exception)
-{
-    return MSWorksCalcImportFilter_getImplementationName();
-}
-sal_Bool SAL_CALL MSWorksCalcImportFilter::supportsService(const OUString &rServiceName)
-throw (RuntimeException, std::exception)
-{
-    return cppu::supportsService(this, rServiceName);
-}
-Sequence< OUString > SAL_CALL MSWorksCalcImportFilter::getSupportedServiceNames()
-throw (RuntimeException, std::exception)
-{
-    return MSWorksCalcImportFilter_getSupportedServiceNames();
+    return cppu::acquire(new MSWorksCalcImportFilter(context));
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -20,19 +20,26 @@ $(eval $(call gb_UIConfig_add_menubarfiles,modules/scalc,\
 endif
 
 $(eval $(call gb_UIConfig_add_popupmenufiles,modules/scalc,\
+	sc/uiconfig/scalc/popupmenu/anchor \
 	sc/uiconfig/scalc/popupmenu/audit \
 	sc/uiconfig/scalc/popupmenu/cell \
 	sc/uiconfig/scalc/popupmenu/celledit \
 	sc/uiconfig/scalc/popupmenu/chart \
+	sc/uiconfig/scalc/popupmenu/colheader \
+	sc/uiconfig/scalc/popupmenu/conditional \
 	sc/uiconfig/scalc/popupmenu/draw \
 	sc/uiconfig/scalc/popupmenu/drawtext \
 	sc/uiconfig/scalc/popupmenu/form \
+	sc/uiconfig/scalc/popupmenu/formrichtext \
+	sc/uiconfig/scalc/popupmenu/freezepanes \
 	sc/uiconfig/scalc/popupmenu/graphic \
 	sc/uiconfig/scalc/popupmenu/media \
 	sc/uiconfig/scalc/popupmenu/oleobject \
 	sc/uiconfig/scalc/popupmenu/pagebreak \
 	sc/uiconfig/scalc/popupmenu/pivot \
 	sc/uiconfig/scalc/popupmenu/preview \
+	sc/uiconfig/scalc/popupmenu/rowheader \
+	sc/uiconfig/scalc/popupmenu/sheettab \
 ))
 
 $(eval $(call gb_UIConfig_add_statusbarfiles,modules/scalc,\
@@ -44,6 +51,7 @@ $(eval $(call gb_UIConfig_add_toolbarfiles,modules/scalc,\
 	sc/uiconfig/scalc/toolbar/arrowshapes \
 	sc/uiconfig/scalc/toolbar/basicshapes \
 	sc/uiconfig/scalc/toolbar/calloutshapes \
+	sc/uiconfig/scalc/toolbar/classificationbar \
 	sc/uiconfig/scalc/toolbar/colorbar \
 	sc/uiconfig/scalc/toolbar/datastreams \
 	sc/uiconfig/scalc/toolbar/drawbar \
@@ -64,6 +72,7 @@ $(eval $(call gb_UIConfig_add_toolbarfiles,modules/scalc,\
 	sc/uiconfig/scalc/toolbar/graphicobjectbar \
 	sc/uiconfig/scalc/toolbar/insertbar \
 	sc/uiconfig/scalc/toolbar/insertcellsbar \
+	sc/uiconfig/scalc/toolbar/linesbar \
 	sc/uiconfig/scalc/toolbar/mediaobjectbar \
 	sc/uiconfig/scalc/toolbar/moreformcontrols \
 	sc/uiconfig/scalc/toolbar/previewbar \

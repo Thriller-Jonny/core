@@ -38,7 +38,6 @@ using namespace ::com::sun::star;
 namespace msfilter {
 
 
-
 namespace {
 
 /** Rotates rnValue left by nBits bits. */
@@ -114,7 +113,6 @@ sal_uInt16 lclGetHash( const sal_uInt8* pnPassData, sal_Size nBufferSize )
 
 
 } // namespace
-
 
 
 MSCodec_Xor95::MSCodec_Xor95(int nRotateDistance) :
@@ -246,7 +244,6 @@ void MSCodec_Xor95::Skip( sal_Size nBytes )
 {
     mnOffset = (mnOffset + nBytes) & 0x0F;
 }
-
 
 
 MSCodec_Std97::MSCodec_Std97 ()
@@ -417,13 +414,11 @@ bool MSCodec_Std97::InitCipher (sal_uInt32 nCounter)
     return (result == rtl_Cipher_E_None);
 }
 
-bool MSCodec_Std97::CreateSaltDigest( const sal_uInt8 nSaltData[16], sal_uInt8 nSaltDigest[16] )
+void MSCodec_Std97::CreateSaltDigest( const sal_uInt8 nSaltData[16], sal_uInt8 nSaltDigest[16] )
 {
 #if DEBUG_MSO_ENCRYPTION_STD97
     lcl_PrintDigest(nSaltData, "salt data");
 #endif
-    bool result = false;
-
     if (InitCipher(0))
     {
         sal_uInt8 pDigest[RTL_DIGEST_LENGTH_MD5];
@@ -434,8 +429,6 @@ bool MSCodec_Std97::CreateSaltDigest( const sal_uInt8 nSaltData[16], sal_uInt8 n
 
         (void)memcpy(nSaltDigest, pDigest, 16);
     }
-
-    return result;
 }
 
 bool MSCodec_Std97::Encode (
@@ -542,7 +535,6 @@ void MSCodec_Std97::GetDocId( sal_uInt8 pDocId[16] )
     if ( sizeof( m_pDocId ) == 16 )
         (void)memcpy( pDocId, m_pDocId, 16 );
 }
-
 
 
 }

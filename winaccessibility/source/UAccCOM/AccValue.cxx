@@ -18,9 +18,17 @@
  */
 
 #include "stdafx.h"
-#include "UAccCOM.h"
 #include "AccValue.h"
 #include "MAccessible.h"
+
+#if defined __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnon-virtual-dtor"
+#endif
+#include  "UAccCOM.h"
+#if defined __clang__
+#pragma clang diagnostic pop
+#endif
 
 #include <vcl/svapp.hxx>
 
@@ -80,8 +88,7 @@ STDMETHODIMP CAccValue::setCurrentValue(VARIANT value)
     {
     case VT_UI1:
         {
-            css::uno::Type     typeInfo(TypeClass_CHAR, (sal_Char *)"char");
-            anyVal.setValue(&value.bVal, typeInfo);
+            anyVal <<= sal_Unicode(value.bVal);
         }
         break;
 
@@ -122,7 +129,7 @@ STDMETHODIMP CAccValue::setCurrentValue(VARIANT value)
 
     default:
         {
-            // Unsupport type conversion.
+            // Unsupported type conversion.
             hRet = E_FAIL;
         }
         break;

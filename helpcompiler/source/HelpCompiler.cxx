@@ -28,14 +28,12 @@
 #include <libxslt/transform.h>
 #include <libxslt/xsltutils.h>
 #include <osl/thread.hxx>
+#include <chrono>
+#include<rtl/character.hxx>
 
 static void impl_sleep( sal_uInt32 nSec )
 {
-    TimeValue aTime;
-    aTime.Seconds = nSec;
-    aTime.Nanosec = 0;
-
-    osl::Thread::wait( aTime );
+    osl::Thread::wait( std::chrono::seconds(nSec) );
 }
 HelpCompiler::HelpCompiler(StreamTable &in_streamTable, const fs::path &in_inputFile,
     const fs::path &in_src, const fs::path &in_zipdir, const fs::path &in_resCompactStylesheet,
@@ -87,7 +85,7 @@ xmlDocPtr HelpCompiler::compactXhpForJar( xmlDocPtr doc )
 void HelpCompiler::saveXhpForJar( xmlDocPtr doc, const fs::path &filePath )
 {
     //save processed xhp document in ziptmp<module>_<lang>/text directory
-#ifdef WNT
+#ifdef _WIN32
     std::string pathSep = "\\";
 #else
     std::string pathSep = "/";
@@ -463,9 +461,9 @@ bool HelpCompiler::compile()
     std::string title;
     // returns a clone of the document with switch-cases resolved
     std::string appl = module.substr(1);
-    for (size_t i = 0; i < appl.length(); ++i)
+    for (char & i : appl)
     {
-        appl[i]=toupper(appl[i]);
+        i=rtl::toAsciiUpperCase(i);
     }
     xmlNodePtr docResolved = clone(xmlDocGetRootElement(docResolvedOrg), appl);
     myparser aparser(documentId, fileName, title);

@@ -95,7 +95,7 @@ public class ScModelObj extends TestCase {
     /**
     * Creating a TestEnvironment for the interfaces to be tested.
     * Disposes the spreadsheet documents if they was created already.
-    * Creates two spreadsheet documents. Rertieves the current controller for
+    * Creates two spreadsheet documents. Retrieves the current controller for
     * each of them. Obtains the collection of spreadsheets, takes one of them
     * and takes some cell from the spreadsheet. The created documents are the instances
     * of the service <code>com.sun.star.sheet.SpreadsheetDocument</code>.
@@ -195,7 +195,10 @@ public class ScModelObj extends TestCase {
         String fileName = utils.getOfficeTempDirSys(Param.getMSF())+"printfile.prt" ;
         File f = new File(fileName);
         if (f.exists()) {
-            f.delete();
+            boolean bDeleteOk = f.delete();
+            if (!bDeleteOk) {
+                System.out.println("delete failed");
+            }
         }
         _XPrintJobBroadcaster.MyPrintJobListener listener = new _XPrintJobBroadcaster.MyPrintJobListener(oObj, fileName);
         tEnv.addObjRelation("XPrintJobBroadcaster.XPrintJobListener", listener);

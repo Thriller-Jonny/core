@@ -38,11 +38,11 @@ STLPropertySet::~STLPropertySet()
 
 void STLPropertySet::setPropertyDefaultValue( sal_Int32 nHandle, const Any& rValue )
 {
-    STLPropertyMapEntry aEntry( rValue, STLPropertyState_DEFAULT );
+    STLPropertyMapEntry aEntry( rValue );
     maPropertyMap[ nHandle ] = aEntry;
 }
 
-void STLPropertySet::setPropertyValue( sal_Int32 nHandle, const Any& rValue, sal_Int32 /* nState = STLPropertyState_DIRECT */ )
+void STLPropertySet::setPropertyValue( sal_Int32 nHandle, const Any& rValue )
 {
     PropertyMapIter aIter;
     if( findProperty( nHandle, aIter ) )

@@ -23,6 +23,7 @@
 #include <comphelper/processfactory.hxx>
 #include <toolkit/helper/vclunohelper.hxx>
 #include <svx/svxdlg.hxx>
+#include <com/sun/star/embed/EmbedVerbs.hpp>
 #include <com/sun/star/embed/NoVisualAreaSizeException.hpp>
 #include <com/sun/star/embed/XComponentSupplier.hpp>
 #include <com/sun/star/embed/Aspects.hpp>
@@ -35,6 +36,7 @@
 #include <svl/urihelper.hxx>
 #include <sfx2/docfile.hxx>
 #include <sfx2/msgpool.hxx>
+#include <sfx2/filedlghelper.hxx>
 #include <svtools/sores.hxx>
 #include <svtools/insdlg.hxx>
 #include <sfx2/request.hxx>
@@ -42,7 +44,6 @@
 #include <unotools/pathoptions.hxx>
 #include <svtools/miscopt.hxx>
 #include <svtools/embedhlp.hxx>
-#include <svx/pfiledlg.hxx>
 #include <svx/dialogs.hrc>
 #include <sfx2/linkmgr.hxx>
 #include <svx/linkwarn.hxx>
@@ -109,69 +110,100 @@ rtl::Reference<FuPoor> FuInsertGraphic::Create( ViewShell* pViewSh, ::sd::Window
     return xFunc;
 }
 
-void FuInsertGraphic::DoExecute( SfxRequest&  )
+void FuInsertGraphic::DoExecute( SfxRequest& rReq )
 {
-    SvxOpenGraphicDialog    aDlg(SdResId(STR_INSERTGRAPHIC));
+    OUString aFileName;
+    OUString aFilterName;
+    Graphic aGraphic;
 
-    if( aDlg.Execute() == GRFILTER_OK )
+    bool bAsLink = false;
+    int nError = GRFILTER_OPENERROR;
+
+    const SfxItemSet* pArgs = rReq.GetArgs();
+    const SfxPoolItem* pItem;
+
+    if ( pArgs &&
+         pArgs->GetItemState( SID_INSERT_GRAPHIC, true, &pItem ) == SfxItemState::SET )
     {
-        Graphic     aGraphic;
-        int nError = aDlg.GetGraphic(aGraphic);
-        if( nError == GRFILTER_OK )
+        aFileName = static_cast<const SfxStringItem*>(pItem)->GetValue();
+
+        if ( pArgs->GetItemState( FN_PARAM_FILTER, true, &pItem ) == SfxItemState::SET )
+            aFilterName = static_cast<const SfxStringItem*>(pItem)->GetValue();
+
+        if ( pArgs->GetItemState( FN_PARAM_1, true, &pItem ) == SfxItemState::SET )
+            bAsLink = static_cast<const SfxBoolItem*>(pItem)->GetValue();
+
+        nError = GraphicFilter::LoadGraphic( aFileName, aFilterName, aGraphic, &GraphicFilter::GetGraphicFilter() );
+    }
+    else
+    {
+        SvxOpenGraphicDialog    aDlg(SdResId(STR_INSERTGRAPHIC));
+
+        if( aDlg.Execute() != GRFILTER_OK )
+            return; // cancel dialog
+
+        nError = aDlg.GetGraphic(aGraphic);
+        bAsLink = aDlg.IsAsLink();
+        aFileName = aDlg.GetPath();
+        aFilterName = aDlg.GetCurrentFilter();
+    }
+
+    if( nError == GRFILTER_OK )
+    {
+        if( mpViewShell && dynamic_cast< DrawViewShell *>( mpViewShell ) !=  nullptr)
         {
-            if( mpViewShell && dynamic_cast< DrawViewShell *>( mpViewShell ) !=  nullptr)
+            sal_Int8    nAction = DND_ACTION_COPY;
+            SdrObject* pPickObj;
+            bool bSelectionReplaced(false);
+
+            if( ( pPickObj = mpView->GetSelectedSingleObject( mpView->GetPage() ) ) || ( pPickObj = mpView->GetEmptyPresentationObject( PRESOBJ_GRAPHIC ) ) )
             {
-                sal_Int8    nAction = DND_ACTION_COPY;
-                SdrObject* pPickObj;
-                bool bSelectionReplaced(false);
+                nAction = DND_ACTION_LINK;
+            }
+            else if(1 == mpView->GetMarkedObjectCount())
+            {
+                pPickObj = mpView->GetMarkedObjectByIndex(0);
+                nAction = DND_ACTION_MOVE;
+                bSelectionReplaced = true;
+            }
 
-                if( ( pPickObj = mpView->GetSelectedSingleObject( mpView->GetPage() ) ) || ( pPickObj = mpView->GetEmptyPresentationObject( PRESOBJ_GRAPHIC ) ) )
+            Point aPos;
+            Rectangle aRect(aPos, mpWindow->GetOutputSizePixel() );
+            aPos = aRect.Center();
+            bool bMapModeWasEnabled(mpWindow->IsMapModeEnabled());
+            mpWindow->EnableMapMode(/*true*/);
+            aPos = mpWindow->PixelToLogic(aPos);
+            mpWindow->EnableMapMode(bMapModeWasEnabled);
+
+            SdrGrafObj* pGrafObj = mpView->InsertGraphic(aGraphic, nAction, aPos, pPickObj, nullptr);
+
+            if(pGrafObj && bAsLink )
+            {
+                // really store as link only?
+                if( SvtMiscOptions().ShowLinkWarningDialog() )
                 {
-                    nAction = DND_ACTION_LINK;
-                }
-                else if(1 == mpView->GetMarkedObjectCount())
-                {
-                    pPickObj = mpView->GetMarkedObjectByIndex(0);
-                    nAction = DND_ACTION_MOVE;
-                    bSelectionReplaced = true;
-                }
-
-                Point aPos;
-                Rectangle aRect(aPos, mpWindow->GetOutputSizePixel() );
-                aPos = aRect.Center();
-                aPos = mpWindow->PixelToLogic(aPos);
-                SdrGrafObj* pGrafObj = mpView->InsertGraphic(aGraphic, nAction, aPos, pPickObj, nullptr);
-
-                if(pGrafObj && aDlg.IsAsLink())
-                {
-                    // really store as link only?
-                    if( SvtMiscOptions().ShowLinkWarningDialog() )
-                    {
-                        ScopedVclPtrInstance< SvxLinkWarningDialog > aWarnDlg(mpWindow,aDlg.GetPath());
-                        if( aWarnDlg->Execute() != RET_OK )
-                            return; // don't store as link
-                    }
-
-                    // store as link
-                    OUString aFltName(aDlg.GetCurrentFilter());
-                    OUString aPath(aDlg.GetPath());
-                    OUString aReferer;
-                    if (mpDocSh->HasName()) {
-                        aReferer = mpDocSh->GetMedium()->GetName();
-                    }
-                    pGrafObj->SetGraphicLink(aPath, aReferer, aFltName);
+                    ScopedVclPtrInstance< SvxLinkWarningDialog > aWarnDlg(mpWindow, aFileName);
+                    if( aWarnDlg->Execute() != RET_OK )
+                        return; // don't store as link
                 }
 
-                if(bSelectionReplaced && pGrafObj)
-                {
-                    mpView->MarkObj(pGrafObj, mpView->GetSdrPageView());
+                // store as link
+                OUString aReferer;
+                if (mpDocSh->HasName()) {
+                    aReferer = mpDocSh->GetMedium()->GetName();
                 }
+                pGrafObj->SetGraphicLink(aFileName, aReferer, aFilterName);
+            }
+
+            if(bSelectionReplaced && pGrafObj)
+            {
+                mpView->MarkObj(pGrafObj, mpView->GetSdrPageView());
             }
         }
-        else
-        {
-            SdGRFFilter::HandleGraphicFilterError( (sal_uInt16)nError, GraphicFilter::GetGraphicFilter().GetLastError().nStreamError );
-        }
+    }
+    else
+    {
+        SdGRFFilter::HandleGraphicFilterError( (sal_uInt16)nError, GraphicFilter::GetGraphicFilter().GetLastError().nStreamError );
     }
 }
 
@@ -396,7 +428,7 @@ void FuInsertOLE::DoExecute( SfxRequest& rReq )
                 aVisualSize.Width = aTmp.Width();
                 aVisualSize.Height = aTmp.Height();
                 xObj->setVisualAreaSize( nAspect, aVisualSize );
-                mpViewShell->ActivateObject(pOleObj, SVVERB_SHOW);
+                mpViewShell->ActivateObject(pOleObj, embed::EmbedVerbs::MS_OLEVERB_SHOW);
 
                 if (nSlotId == SID_INSERT_DIAGRAM)
                 {
@@ -449,9 +481,8 @@ void FuInsertOLE::DoExecute( SfxRequest& rReq )
                         aServerLst.Remove( DrawDocShell::Factory().GetClassId() );
                     }
 
-                    // intentionally no break!
+                    SAL_FALLTHROUGH;
                 }
-                case SID_INSERT_PLUGIN :
                 case SID_INSERT_FLOATINGFRAME :
                 {
                     SvxAbstractDialogFactory* pFact = SvxAbstractDialogFactory::Create();
@@ -473,45 +504,6 @@ void FuInsertOLE::DoExecute( SfxRequest& rReq )
                     }
 
                     break;
-                }
-                case SID_INSERT_SOUND :
-                case SID_INSERT_VIDEO :
-                {
-                    // create special filedialog for plugins
-                    SvxPluginFileDlg aPluginFileDialog (mpWindow, nSlotId);
-                    if( ERRCODE_NONE == aPluginFileDialog.Execute () )
-                    {
-                        // get URL
-                        OUString aStrURL(aPluginFileDialog.GetPath());
-                        INetURLObject aURL( aStrURL, INetProtocol::File );
-                        if( aURL.GetProtocol() != INetProtocol::NotValid )
-                        {
-                            // create a plugin object
-                            xObj = mpViewShell->GetObjectShell()->GetEmbeddedObjectContainer().CreateEmbeddedObject( SvGlobalName( SO3_PLUGIN_CLASSID ).GetByteSequence(), aName );
-                        }
-
-                        if ( xObj.is() && svt::EmbeddedObjectRef::TryRunningState( xObj ) )
-                        {
-                            // set properties from dialog
-                            uno::Reference < embed::XComponentSupplier > xSup( xObj, uno::UNO_QUERY );
-                            if ( xSup.is() )
-                            {
-                                uno::Reference < beans::XPropertySet > xSet( xSup->getComponent(), uno::UNO_QUERY );
-                                if ( xSet.is() )
-                                {
-                                    xSet->setPropertyValue("PluginURL",
-                                            uno::makeAny( OUString( aURL.GetMainURL( INetURLObject::NO_DECODE ) ) ) );
-                                }
-                            }
-                        }
-                        else
-                        {
-                            // unable to create PlugIn
-                            OUString aStrErr( SdResId( STR_ERROR_OBJNOCREATE_PLUGIN ) );
-                            aStrErr = aStrErr.replaceFirst( "%", aStrURL );
-                            ScopedVclPtrInstance<MessageDialog>::Create(mpWindow, aStrErr)->Execute();
-                        }
-                    }
                 }
             }
         }
@@ -656,7 +648,7 @@ void FuInsertOLE::DoExecute( SfxRequest& rReq )
                                 xObj->setVisualAreaSize( nAspect, aSz );
                             }
 
-                            mpViewShell->ActivateObject(pObj, SVVERB_SHOW);
+                            mpViewShell->ActivateObject(pObj, embed::EmbedVerbs::MS_OLEVERB_SHOW);
                         }
 
                         Size aVisSizePixel = mpWindow->GetOutputSizePixel();
@@ -780,12 +772,12 @@ void FuInsert3DModel::DoExecute( SfxRequest& )
 {
     sfx2::FileDialogHelper aDlg( ui::dialogs::TemplateDescription::FILEOPEN_SIMPLE, 0 );
 
-    aDlg.SetTitle( "Insert 3D Model" );
+    aDlg.SetTitle( SD_RESSTR( STR_INSERT_3D_MODEL_TITLE ) );
 
 #if HAVE_FEATURE_COLLADA
-    aDlg.AddFilter( "All supported formats", "*.json;*.dae;*.kmz"  );
+    aDlg.AddFilter( SD_RESSTR( STR_INSERT_3D_MODEL_ALL_SUPPORTED_FORMATS ), "*.json;*.dae;*.kmz"  );
 #else
-    aDlg.AddFilter( "All supported formats", "*.json"  );
+    aDlg.AddFilter( SD_RESSTR( STR_INSERT_3D_MODEL_ALL_SUPPORTED_FORMATS ), "*.json"  );
 #endif
 
     aDlg.AddFilter( "JSON - GL Transmission Format", "*.json" );
@@ -824,8 +816,9 @@ void FuInsert3DModel::DoExecute( SfxRequest& )
             aPos.X() -= aSize.Width() >> 1;
             aPos.Y() -= aSize.Height() >> 1;
         }
-
-        mpView->Insert3DModelURL( sURL, nAction, aPos, aSize, false ) ;
+#if HAVE_FEATURE_OPENGL
+        mpView->Insert3DModelURL( sURL, nAction, aPos, aSize ) ;
+#endif
 
         if( mpWindow )
             mpWindow->LeaveWait();

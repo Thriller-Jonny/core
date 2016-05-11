@@ -155,7 +155,7 @@ private:
                         void updateControls();
 
                         void GetGraphicSource();
-                        bool GetGraphicStream();
+                        void GetGraphicStream();
                         static Bitmap GetGraphicBitmap( SvStream& rStream );
                         css::uno::Sequence< css::beans::PropertyValue >
                             GetFilterData( bool bUpdateConfig );
@@ -176,7 +176,6 @@ public:
                         virtual ~ExportDialog();
                         virtual void dispose() override;
 };
-
 
 
 #endif // INCLUDED_SVTOOLS_SOURCE_FILTER_EXPORTDIALOG_HXX

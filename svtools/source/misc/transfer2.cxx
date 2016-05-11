@@ -34,9 +34,6 @@
 #include <svtools/transfer.hxx>
 
 
-// - Namespaces -
-
-
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::io;
@@ -45,14 +42,10 @@ using namespace ::com::sun::star::datatransfer::clipboard;
 using namespace ::com::sun::star::datatransfer::dnd;
 
 
-// - DragSourceHelper::DragGestureListener -
-
-
 DragSourceHelper::DragGestureListener::DragGestureListener( DragSourceHelper& rDragSourceHelper ) :
     mrParent( rDragSourceHelper )
 {
 }
-
 
 
 DragSourceHelper::DragGestureListener::~DragGestureListener()
@@ -60,11 +53,9 @@ DragSourceHelper::DragGestureListener::~DragGestureListener()
 }
 
 
-
 void SAL_CALL DragSourceHelper::DragGestureListener::disposing( const EventObject& ) throw( RuntimeException, std::exception )
 {
 }
-
 
 
 void SAL_CALL DragSourceHelper::DragGestureListener::dragGestureRecognized( const DragGestureEvent& rDGE ) throw( RuntimeException, std::exception )
@@ -74,9 +65,6 @@ void SAL_CALL DragSourceHelper::DragGestureListener::dragGestureRecognized( cons
     const Point aPtPixel( rDGE.DragOriginX, rDGE.DragOriginY );
     mrParent.StartDrag( rDGE.DragAction, aPtPixel );
 }
-
-
-// - DragSourceHelper -
 
 
 DragSourceHelper::DragSourceHelper( vcl::Window* pWindow ) :
@@ -90,7 +78,6 @@ DragSourceHelper::DragSourceHelper( vcl::Window* pWindow ) :
 }
 
 
-
 DragSourceHelper::~DragSourceHelper()
 {
     if( mxDragGestureRecognizer.is()  )
@@ -98,13 +85,9 @@ DragSourceHelper::~DragSourceHelper()
 }
 
 
-
 void DragSourceHelper::StartDrag( sal_Int8, const Point& )
 {
 }
-
-
-// - DropTargetHelper::DropTargetListener -
 
 
 DropTargetHelper::DropTargetListener::DropTargetListener( DropTargetHelper& rDropTargetHelper ) :
@@ -114,18 +97,15 @@ DropTargetHelper::DropTargetListener::DropTargetListener( DropTargetHelper& rDro
 }
 
 
-
 DropTargetHelper::DropTargetListener::~DropTargetListener()
 {
     delete mpLastDragOverEvent;
 }
 
 
-
 void SAL_CALL DropTargetHelper::DropTargetListener::disposing( const EventObject& ) throw( RuntimeException, std::exception )
 {
 }
-
 
 
 void SAL_CALL DropTargetHelper::DropTargetListener::drop( const DropTargetDropEvent& rDTDE ) throw( RuntimeException, std::exception )
@@ -177,7 +157,6 @@ void SAL_CALL DropTargetHelper::DropTargetListener::drop( const DropTargetDropEv
 }
 
 
-
 void SAL_CALL DropTargetHelper::DropTargetListener::dragEnter( const DropTargetDragEnterEvent& rDTDEE ) throw( RuntimeException, std::exception )
 {
     const SolarMutexGuard aGuard;
@@ -192,7 +171,6 @@ void SAL_CALL DropTargetHelper::DropTargetListener::dragEnter( const DropTargetD
 
     dragOver( rDTDEE );
 }
-
 
 
 void SAL_CALL DropTargetHelper::DropTargetListener::dragOver( const DropTargetDragEvent& rDTDE ) throw( RuntimeException, std::exception )
@@ -219,7 +197,6 @@ void SAL_CALL DropTargetHelper::DropTargetListener::dragOver( const DropTargetDr
 }
 
 
-
 void SAL_CALL DropTargetHelper::DropTargetListener::dragExit( const DropTargetEvent& ) throw( RuntimeException, std::exception )
 {
     const SolarMutexGuard aGuard;
@@ -242,14 +219,9 @@ void SAL_CALL DropTargetHelper::DropTargetListener::dragExit( const DropTargetEv
 }
 
 
-
-
 void SAL_CALL DropTargetHelper::DropTargetListener::dropActionChanged( const DropTargetDragEvent& ) throw( RuntimeException, std::exception )
 {
 }
-
-
-// - DropTargetHelper -
 
 
 DropTargetHelper::DropTargetHelper( vcl::Window* pWindow ) :
@@ -260,14 +232,12 @@ DropTargetHelper::DropTargetHelper( vcl::Window* pWindow ) :
 }
 
 
-
 DropTargetHelper::DropTargetHelper( const Reference< XDropTarget >& rxDropTarget ) :
     mxDropTarget( rxDropTarget ),
     mpFormats( new DataFlavorExVector )
 {
     ImplConstruct();
 }
-
 
 
 DropTargetHelper::~DropTargetHelper()
@@ -279,17 +249,15 @@ DropTargetHelper::~DropTargetHelper()
 }
 
 
-
 void DropTargetHelper::ImplConstruct()
 {
     if( mxDropTarget.is() )
     {
         mxDropTargetListener = new DropTargetHelper::DropTargetListener( *this );
         mxDropTarget->addDropTargetListener( mxDropTargetListener );
-        mxDropTarget->setActive( sal_True );
+        mxDropTarget->setActive( true );
     }
 }
-
 
 
 void DropTargetHelper::ImplBeginDrag( const Sequence< DataFlavor >& rSupportedDataFlavors )
@@ -299,12 +267,10 @@ void DropTargetHelper::ImplBeginDrag( const Sequence< DataFlavor >& rSupportedDa
 }
 
 
-
 void DropTargetHelper::ImplEndDrag()
 {
     mpFormats->clear();
 }
-
 
 
 sal_Int8 DropTargetHelper::AcceptDrop( const AcceptDropEvent& )
@@ -313,12 +279,10 @@ sal_Int8 DropTargetHelper::AcceptDrop( const AcceptDropEvent& )
 }
 
 
-
 sal_Int8 DropTargetHelper::ExecuteDrop( const ExecuteDropEvent& )
 {
     return( DNDConstants::ACTION_NONE );
 }
-
 
 
 bool DropTargetHelper::IsDropFormatSupported( SotClipboardFormatId nFormat )
@@ -339,7 +303,6 @@ bool DropTargetHelper::IsDropFormatSupported( SotClipboardFormatId nFormat )
 }
 
 
-
 // TransferDataContainer
 
 
@@ -350,9 +313,7 @@ struct TDataCntnrEntry_Impl
 };
 
 
-
 typedef ::std::list< TDataCntnrEntry_Impl > TDataCntnrEntryList;
-
 
 
 struct TransferDataContainer_Impl
@@ -375,12 +336,10 @@ struct TransferDataContainer_Impl
 };
 
 
-
 TransferDataContainer::TransferDataContainer()
     : pImpl( new TransferDataContainer_Impl )
 {
 }
-
 
 
 TransferDataContainer::~TransferDataContainer()
@@ -389,11 +348,9 @@ TransferDataContainer::~TransferDataContainer()
 }
 
 
-
 void TransferDataContainer::AddSupportedFormats()
 {
 }
-
 
 
 bool TransferDataContainer::GetData(
@@ -443,7 +400,6 @@ bool TransferDataContainer::GetData(
 }
 
 
-
 void TransferDataContainer::CopyINetBookmark( const INetBookmark& rBkmk )
 {
     if( !pImpl->pBookmk )
@@ -458,7 +414,6 @@ void TransferDataContainer::CopyINetBookmark( const INetBookmark& rBkmk )
      AddFormat( SotClipboardFormatId::FILEGRPDESCRIPTOR );
      AddFormat( SotClipboardFormatId::UNIFORMRESOURCELOCATOR );
 }
-
 
 
 void TransferDataContainer::CopyAnyData( SotClipboardFormatId nFormatId,
@@ -478,13 +433,11 @@ void TransferDataContainer::CopyAnyData( SotClipboardFormatId nFormatId,
 }
 
 
-
 void TransferDataContainer::CopyByteString( SotClipboardFormatId nFormatId,
                                             const OString& rStr )
 {
     CopyAnyData( nFormatId, rStr.getStr(), rStr.getLength() );
 }
-
 
 
 void TransferDataContainer::CopyINetImage( const INetImage& rINtImg )
@@ -497,7 +450,6 @@ void TransferDataContainer::CopyINetImage( const INetImage& rINtImg )
 }
 
 
-
 void TransferDataContainer::CopyImageMap( const ImageMap& rImgMap )
 {
     SvMemoryStream aMemStm( 8192, 8192 );
@@ -506,7 +458,6 @@ void TransferDataContainer::CopyImageMap( const ImageMap& rImgMap )
     CopyAnyData( SotClipboardFormatId::SVIM, static_cast<sal_Char const *>(aMemStm.GetData()),
                     aMemStm.Seek( STREAM_SEEK_TO_END ) );
 }
-
 
 
 void TransferDataContainer::CopyGraphic( const Graphic& rGrf )
@@ -534,27 +485,23 @@ void TransferDataContainer::CopyGraphic( const Graphic& rGrf )
 }
 
 
-
 void TransferDataContainer::CopyString( SotClipboardFormatId nFmt, const OUString& rStr )
 {
     if( !rStr.isEmpty() )
     {
         TDataCntnrEntry_Impl aEntry;
         aEntry.nId = nFmt;
-        OUString aStr( rStr );
-        aEntry.aAny <<= aStr;
+        aEntry.aAny <<= rStr;
         pImpl->aFmtList.push_back( aEntry );
          AddFormat( aEntry.nId );
     }
 }
 
 
-
 void TransferDataContainer::CopyString( const OUString& rStr )
 {
     CopyString( SotClipboardFormatId::STRING, rStr );
 }
-
 
 
 void TransferDataContainer::CopyAny( SotClipboardFormatId nFmt,
@@ -568,7 +515,6 @@ void TransferDataContainer::CopyAny( SotClipboardFormatId nFmt,
 }
 
 
-
 bool TransferDataContainer::HasAnyData() const
 {
     return pImpl->aFmtList.begin() != pImpl->aFmtList.end() ||
@@ -576,16 +522,13 @@ bool TransferDataContainer::HasAnyData() const
 }
 
 
-
 void TransferDataContainer::StartDrag(
         vcl::Window* pWindow, sal_Int8 nDragSourceActions,
-        const Link<sal_Int8,void>& rLnk, sal_Int32 nDragPointer, sal_Int32 nDragImage )
+        const Link<sal_Int8,void>& rLnk )
 {
     pImpl->aFinshedLnk = rLnk;
-    TransferableHelper::StartDrag( pWindow, nDragSourceActions,
-                                    nDragPointer, nDragImage );
+    TransferableHelper::StartDrag( pWindow, nDragSourceActions );
 }
-
 
 
 void TransferDataContainer::DragFinished( sal_Int8 nDropAction )

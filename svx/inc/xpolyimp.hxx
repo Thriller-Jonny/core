@@ -42,7 +42,6 @@ public:
     ~ImpXPolygon();
 
     bool operator==(const ImpXPolygon& rImpXPoly) const;
-    bool operator!=(const ImpXPolygon& rImpXPoly) const { return !operator==(rImpXPoly); }
 
     void CheckPointDelete()
     {
@@ -69,11 +68,7 @@ public:
                 ImpXPolyPolygon() { nRefCount = 1; }
                 ImpXPolyPolygon( const ImpXPolyPolygon& rImpXPolyPoly );
                 ~ImpXPolyPolygon();
-
-    bool operator==(const ImpXPolyPolygon& rImpXPolyPoly) const;
-    bool operator!=(const ImpXPolyPolygon& rImpXPolyPoly) const { return !operator==(rImpXPolyPoly); }
 };
-
 
 
 #endif // INCLUDED_SVX_INC_XPOLYIMP_HXX

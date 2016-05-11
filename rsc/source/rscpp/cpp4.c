@@ -277,7 +277,14 @@ void stparmscan(int delim)
         {
 #ifdef SOLAR
             *wp++ = DEL;
+#if defined __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wconstant-conversion"
+#endif
             *wp++ = MAC_PARM + PAR_MAC;     /* Stuff a magic marker */
+#if defined __clang__
+#pragma clang diagnostic pop
+#endif
             *wp++ = (char)(i + MAC_PARM);   /* Make a formal marker */
             *wp = wp[-4];                   /* Add on closing quote */
             workp = wp + 1;                 /* Reset string end     */
@@ -458,7 +465,7 @@ void expand(DEFBUF* tokenp)
 /*
  * Collect the actual parameters for this macro.  TRUE if ok.
  */
-FILE_LOCAL int expcollect()
+int expcollect()
 {
     int c;
     int paren;                  /* For embedded ()'s    */
@@ -526,7 +533,7 @@ FILE_LOCAL int expcollect()
 /*
  * Stuff the macro body, replacing formal parameters by actual parameters.
  */
-FILE_LOCAL void expstuff(DEFBUF* tokenp)
+void expstuff(DEFBUF* tokenp)
 {
     int c;                      /* Current character    */
     char* inp;                  /* -> repl string       */

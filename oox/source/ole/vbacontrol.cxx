@@ -22,6 +22,7 @@
 #include <algorithm>
 #include <set>
 #include <com/sun/star/awt/XControlModel.hpp>
+#include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/container/XNameContainer.hpp>
 #include <com/sun/star/io/XInputStreamProvider.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
@@ -37,6 +38,8 @@
 #include "oox/helper/storagebase.hxx"
 #include "oox/helper/textinputstream.hxx"
 #include "oox/ole/vbahelper.hxx"
+#include <oox/token/properties.hxx>
+#include <oox/token/tokens.hxx>
 #include <unordered_map>
 
 namespace oox {
@@ -407,7 +410,7 @@ void VbaFormControl::importStorage( StorageBase& rStrg, const AxClassTable& rCla
                 stream (for embedded simple controls) or from the substorage
                 (for embedded container controls). */
             maControls.forEachMem( &VbaFormControl::importModelOrStorage,
-                ::boost::ref( aOStrm ), ::boost::ref( rStrg ), ::boost::cref( maClassTable ) );
+                ::std::ref( aOStrm ), ::std::ref( rStrg ), ::std::cref( maClassTable ) );
 
             // Special handling for multi-page which has non-standard
             // containment and additionally needs to re-order Page children
@@ -495,7 +498,7 @@ bool VbaFormControl::convertProperties( const Reference< XControlModel >& rxCtrl
                 /*  Call conversion for all controls. Pass vector index as new
                     tab order to make option button groups work correctly. */
                 maControls.forEachMemWithIndex( &VbaFormControl::createAndConvert,
-                    ::boost::cref( xCtrlModelNC ), ::boost::cref( rConv ) );
+                    ::std::cref( xCtrlModelNC ), ::std::cref( rConv ) );
             }
             catch(const Exception& )
             {
@@ -523,7 +526,7 @@ bool VbaFormControl::importSiteModel( BinaryInputStream& rInStrm )
     return mxSiteModel->importBinaryModel( rInStrm );
 }
 
-bool VbaFormControl::importEmbeddedSiteModels( BinaryInputStream& rInStrm )
+void VbaFormControl::importEmbeddedSiteModels( BinaryInputStream& rInStrm )
 {
     sal_uInt64 nAnchorPos = rInStrm.tell();
     sal_uInt32 nSiteCount, nSiteDataSize;
@@ -568,7 +571,6 @@ bool VbaFormControl::importEmbeddedSiteModels( BinaryInputStream& rInStrm )
     }
 
     rInStrm.seek( nSiteEndPos );
-    return bValid;
 }
 
 void VbaFormControl::finalizeEmbeddedControls()
@@ -702,7 +704,7 @@ void VbaFormControl::moveEmbeddedToAbsoluteParent()
         }
 
         // move the embedded controls
-        maControls.forEachMem( &VbaFormControl::moveRelative, ::boost::cref( aDistance ) );
+        maControls.forEachMem( &VbaFormControl::moveRelative, ::std::cref( aDistance ) );
     }
 }
 

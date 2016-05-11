@@ -41,8 +41,8 @@ ExceptionTreeNode * ExceptionTreeNode::add(rtl::OString const & theName) {
 }
 
 void ExceptionTreeNode::clearChildren() {
-    for (Children::iterator i(children.begin()); i != children.end(); ++i) {
-        delete *i;
+    for (ExceptionTreeNode* child : children) {
+        delete child;
     }
     children.clear();
 }
@@ -61,7 +61,7 @@ void ExceptionTree::add(
         rtl::Reference< unoidl::Entity > ent;
         codemaker::UnoType::Sort s = manager->getSort(b2u(n), &ent);
         (void) s; // WaE: unused variable
-        assert(s == codemaker::UnoType::SORT_EXCEPTION_TYPE);
+        assert(s == codemaker::UnoType::Sort::Exception);
         n = u2b(
             static_cast< unoidl::ExceptionTypeEntity * >(ent.get())->
             getDirectBase());

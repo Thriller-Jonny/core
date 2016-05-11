@@ -23,7 +23,6 @@
 #include "ViewShellBase.hxx"
 #include "DrawViewShell.hxx"
 #include "FrameView.hxx"
-#include "EventMultiplexer.hxx"
 #include "framework/FrameworkHelper.hxx"
 #include "framework/Pane.hxx"
 #include "DrawController.hxx"
@@ -50,7 +49,6 @@ using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::drawing::framework;
 using ::sd::framework::FrameworkHelper;
-using ::sd::tools::EventMultiplexerEvent;
 
 namespace sd {
 
@@ -483,9 +481,9 @@ bool ViewTabBar::HasTabBarButton (
 {
     bool bResult (false);
 
-    for (size_t nIndex=0; nIndex<maTabBarButtons.size(); ++nIndex)
+    for (css::drawing::framework::TabBarButton & r : maTabBarButtons)
     {
-        if (IsEqual(maTabBarButtons[nIndex], rButton))
+        if (IsEqual(r, rButton))
         {
             bResult = true;
             break;

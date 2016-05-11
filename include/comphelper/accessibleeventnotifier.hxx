@@ -30,7 +30,6 @@ namespace comphelper
 {
 
 
-
     //= AccessibleEventNotifier
 
     class COMPHELPER_DLLPUBLIC AccessibleEventNotifier
@@ -39,15 +38,12 @@ namespace comphelper
     public:
         typedef sal_uInt32  TClientId;
 
-    protected:
-        AccessibleEventNotifier( );     // never implemented
-        ~AccessibleEventNotifier( );    // never implemented
-
-    private:
+    public:
+        AccessibleEventNotifier() = delete;
+        ~AccessibleEventNotifier() = delete;
         AccessibleEventNotifier( const AccessibleEventNotifier& ) = delete;
         AccessibleEventNotifier& operator=( const AccessibleEventNotifier& ) = delete;
 
-    public:
         /** registers a client of this class, means a broadcaster of AccessibleEvents
 
             <p>No precaution is taken to care for disposal of this component. When the component
@@ -109,7 +105,7 @@ namespace comphelper
                         const css::uno::Reference< css::accessibility::XAccessibleEventListener >& _rxListener
                     );
 
-        /** adds an event, which is to be braodcasted, to the queue
+        /** adds an event, which is to be broadcasted, to the queue
 
             @param _nClient
                 the id of the client which needs to broadcast the event

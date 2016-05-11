@@ -49,9 +49,7 @@ void ScDDComboBoxButton::SetOptSizePixel()
 }
 
 void ScDDComboBoxButton::Draw( const Point& rAt,
-                               const Size&  rSize,
-                               bool         bState,
-                               bool         bBtnIn  /* = false */ )
+                               const Size&  rSize )
 {
     if ( rSize.Width() == 0 || rSize.Height() == 0 )
         return;
@@ -64,19 +62,12 @@ void ScDDComboBoxButton::Draw( const Point& rAt,
     bool        bOldEnable = pOut->IsMapModeEnabled();
 
     Rectangle   aBtnRect( rAt, rSize );
-    Rectangle   aInnerRect = aBtnRect;
 
     pOut->EnableMapMode( false );
 
     DecorationView aDecoView( pOut);
 
-    DrawButtonFlags nButtonStyle = DrawButtonFlags::Default;
-    if( bBtnIn )    // gedrueckt?
-    {
-        nButtonStyle = DrawButtonFlags::Pressed;
-    }
-
-    aInnerRect=aDecoView.DrawButton( aBtnRect, nButtonStyle );
+    Rectangle aInnerRect=aDecoView.DrawButton( aBtnRect, DrawButtonFlags::Default );
 
     aInnerRect.Left()   += 1;
     aInnerRect.Top()    += 1;
@@ -89,7 +80,7 @@ void ScDDComboBoxButton::Draw( const Point& rAt,
     aInnerRect.Top()   = aInnerCenter.Y() - (aInnerSize.Width()>>1);
     aInnerRect.Bottom()= aInnerCenter.Y() + (aInnerSize.Width()>>1);
 
-    ImpDrawArrow( aInnerRect, bState );
+    ImpDrawArrow( aInnerRect );
 
     // restore old state
     pOut->EnableMapMode( bOldEnable );
@@ -103,8 +94,7 @@ void ScDDComboBoxButton::Draw( const Point& rAt,
         pOut->SetFillColor();
 }
 
-void ScDDComboBoxButton::ImpDrawArrow( const Rectangle& rRect,
-                                       bool             bState )
+void ScDDComboBoxButton::ImpDrawArrow( const Rectangle& rRect )
 {
     // no need to save old line and fill color here (is restored after the call)
 
@@ -123,7 +113,7 @@ void ScDDComboBoxButton::ImpDrawArrow( const Rectangle& rRect,
     Rectangle aTempRect = aPixRect;
 
     const StyleSettings& rSett = Application::GetSettings().GetStyleSettings();
-    Color aColor( bState ? COL_LIGHTBLUE : rSett.GetButtonTextColor().GetColor() );
+    Color aColor( rSett.GetButtonTextColor().GetColor() );
     pOut->SetFillColor( aColor );
     pOut->SetLineColor( aColor );
 

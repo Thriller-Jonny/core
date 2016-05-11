@@ -80,8 +80,6 @@ static const char ITEM_DESCRIPTOR_TYPE[]        = "Type";
 static const char ITEM_DESCRIPTOR_STYLE[]       = "Style";
 
 // special popup menus (filled during runtime) must be saved as an empty popup menu or menuitem!!!
-static const sal_Int32 CMD_PROTOCOL_SIZE        = 5;
-static const char CMD_PROTOCOL[]                = ".uno:";
 static const char ADDDIRECT_CMD[]               = ".uno:AddDirect";
 static const char AUTOPILOTMENU_CMD[]           = ".uno:AutoPilotMenu";
 
@@ -103,13 +101,13 @@ struct MenuStyleItem
     const char* attrName;
 };
 
-MenuStyleItem MenuItemStyles[ ] = {
+const MenuStyleItem MenuItemStyles[ ] = {
     { css::ui::ItemStyle::ICON, ATTRIBUTE_ITEMSTYLE_IMAGE },
     { css::ui::ItemStyle::TEXT, ATTRIBUTE_ITEMSTYLE_TEXT },
     { css::ui::ItemStyle::RADIO_CHECK, ATTRIBUTE_ITEMSTYLE_RADIO }
 };
 
-sal_Int32 nMenuStyleItemEntries = (sizeof (MenuItemStyles) / sizeof (MenuItemStyles[0]));
+sal_Int32 nMenuStyleItemEntries = SAL_N_ELEMENTS(MenuItemStyles);
 
 static void ExtractMenuParameters( const Sequence< PropertyValue >& rProp,
                                    OUString&                       rCommandURL,
@@ -364,7 +362,7 @@ throw( SAXException, RuntimeException, std::exception )
             for ( sal_Int16 i=0; i< xAttrList->getLength(); i++ )
             {
                 OUString aName = xAttrList->getNameByIndex( i );
-                OUString aValue = xAttrList->getValueByIndex( i );
+                const OUString aValue = xAttrList->getValueByIndex( i );
                 if ( aName == ATTRIBUTE_ID )
                     aCommandId = aValue;
                 else if ( aName == ATTRIBUTE_LABEL )
@@ -373,11 +371,10 @@ throw( SAXException, RuntimeException, std::exception )
                     aHelpId = aValue;
                 else if ( aName == ATTRIBUTE_STYLE )
                 {
-                    OUString aTemp( aValue );
                     sal_Int32 nIndex = 0;
                     do
                     {
-                        OUString aToken = aTemp.getToken( 0, '+', nIndex );
+                        OUString aToken = aValue.getToken( 0, '+', nIndex );
                         if ( !aToken.isEmpty() )
                         {
                             if ( aToken == ATTRIBUTE_ITEMSTYLE_TEXT )
@@ -575,7 +572,7 @@ throw( SAXException, RuntimeException, std::exception )
         for ( sal_Int16 i=0; i< xAttrList->getLength(); i++ )
         {
             OUString aName = xAttrList->getNameByIndex( i );
-            OUString aValue = xAttrList->getValueByIndex( i );
+            const OUString aValue = xAttrList->getValueByIndex( i );
             if ( aName == ATTRIBUTE_ID )
                 aCommandId = aValue;
             else if ( aName == ATTRIBUTE_LABEL )
@@ -584,11 +581,10 @@ throw( SAXException, RuntimeException, std::exception )
                 aHelpId = aValue;
             else if ( aName == ATTRIBUTE_STYLE )
             {
-                OUString aTemp( aValue );
                 sal_Int32 nIndex = 0;
                 do
                 {
-                    OUString aToken = aTemp.getToken( 0, '+', nIndex );
+                    OUString aToken = aValue.getToken( 0, '+', nIndex );
                     if ( !aToken.isEmpty() )
                     {
                         if ( aToken == ATTRIBUTE_ITEMSTYLE_TEXT )
@@ -632,7 +628,7 @@ throw( SAXException, RuntimeException, std::exception )
         for ( sal_Int16 i=0; i< xAttrList->getLength(); i++ )
         {
             OUString aName = xAttrList->getNameByIndex( i );
-            OUString aValue = xAttrList->getValueByIndex( i );
+            const OUString aValue = xAttrList->getValueByIndex( i );
             if ( aName == ATTRIBUTE_ID )
                 aCommandId = aValue;
             else if ( aName == ATTRIBUTE_LABEL )
@@ -641,11 +637,10 @@ throw( SAXException, RuntimeException, std::exception )
                 aHelpId = aValue;
             else if ( aName == ATTRIBUTE_STYLE )
             {
-                OUString aTemp( aValue );
                 sal_Int32 nIndex = 0;
                 do
                 {
-                    OUString aToken = aTemp.getToken( 0, '+', nIndex );
+                    OUString aToken = aValue.getToken( 0, '+', nIndex );
                     if ( !aToken.isEmpty() )
                     {
                         if ( aToken == ATTRIBUTE_ITEMSTYLE_TEXT )
@@ -839,7 +834,7 @@ throw ( SAXException, RuntimeException )
                                             m_aAttributeType,
                                             aCommandURL );
 
-                    if ( aCommandURL.copy( CMD_PROTOCOL_SIZE ) != CMD_PROTOCOL )
+                    if ( !aLabel.isEmpty() )
                         pListMenu->AddAttribute( ATTRIBUTE_NS_LABEL,
                                                  m_aAttributeType,
                                                  aLabel );
@@ -897,16 +892,16 @@ void OWriteMenuDocumentHandler::WriteMenuItem( const OUString& aCommandURL, cons
                              aHelpURL );
     }
 
-    if ( !aLabel.isEmpty() && aCommandURL.copy( CMD_PROTOCOL_SIZE ) != CMD_PROTOCOL )
+    if ( !aLabel.isEmpty() )
     {
         pList->AddAttribute( ATTRIBUTE_NS_LABEL,
                                 m_aAttributeType,
                                 aLabel );
     }
-    if (( nStyle > 0 ) && aCommandURL.copy( CMD_PROTOCOL_SIZE ) != CMD_PROTOCOL )
+    if ( nStyle > 0 )
     {
         OUString aValue;
-        MenuStyleItem* pStyle = MenuItemStyles;
+        const MenuStyleItem* pStyle = MenuItemStyles;
 
         for ( sal_Int32 nIndex = 0; nIndex < nMenuStyleItemEntries; ++nIndex, ++pStyle )
         {

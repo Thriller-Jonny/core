@@ -109,36 +109,35 @@ class SW_DLLPUBLIC SwDocShell
         override;
 
     /// Make DocInfo known to the Doc.
-    SAL_DLLPRIVATE virtual VclPtr<SfxDocumentInfoDialog> CreateDocumentInfoDialog(
-                                    vcl::Window *pParent, const SfxItemSet &) override;
+    SAL_DLLPRIVATE virtual VclPtr<SfxDocumentInfoDialog> CreateDocumentInfoDialog(const SfxItemSet &) override;
     /// OLE-stuff
     SAL_DLLPRIVATE virtual void          Draw( OutputDevice*, const JobSetup&, sal_uInt16) override;
 
     /// Methods for StyleSheets
 
     /// @param nSlot
-    /// Only used for nFamily == SFX_STYLE_FAMILY_PAGE. Identifies optional Slot by which the edit is triggered.
+    /// Only used for nFamily == SfxStyleFamily::Page. Identifies optional Slot by which the edit is triggered.
     /// Used to activate certain dialog pane
     SAL_DLLPRIVATE sal_uInt16 Edit(
         const OUString &rName,
         const OUString& rParent,
-        const sal_uInt16 nFamily,
+        const SfxStyleFamily nFamily,
         sal_uInt16 nMask,
         const bool bNew,
         const OString& sPageId = OString(),
         SwWrtShell* pActShell = nullptr,
         const bool bBasic = false );
 
-    SAL_DLLPRIVATE bool                  Delete(const OUString &rName, sal_uInt16 nFamily);
-    SAL_DLLPRIVATE bool                  Hide(const OUString &rName, sal_uInt16 nFamily, bool bHidden);
-    SAL_DLLPRIVATE sal_uInt16            ApplyStyles(const OUString &rName,
-        const sal_uInt16 nFamily,
+    SAL_DLLPRIVATE bool                  Delete(const OUString &rName, SfxStyleFamily nFamily);
+    SAL_DLLPRIVATE bool                  Hide(const OUString &rName, SfxStyleFamily nFamily, bool bHidden);
+    SAL_DLLPRIVATE SfxStyleFamily        ApplyStyles(const OUString &rName,
+        const SfxStyleFamily nFamily,
         SwWrtShell* pShell = nullptr,
         sal_uInt16 nMode = 0);
-    SAL_DLLPRIVATE sal_uInt16            DoWaterCan( const OUString &rName, sal_uInt16 nFamily);
-    SAL_DLLPRIVATE sal_uInt16            UpdateStyle(const OUString &rName, sal_uInt16 nFamily, SwWrtShell* pShell = nullptr);
-    SAL_DLLPRIVATE sal_uInt16            MakeByExample(const OUString &rName,
-                                        sal_uInt16 nFamily, sal_uInt16 nMask, SwWrtShell* pShell = nullptr);
+    SAL_DLLPRIVATE SfxStyleFamily        DoWaterCan( const OUString &rName, SfxStyleFamily nFamily);
+    SAL_DLLPRIVATE SfxStyleFamily        UpdateStyle(const OUString &rName, SfxStyleFamily nFamily, SwWrtShell* pShell = nullptr);
+    SAL_DLLPRIVATE SfxStyleFamily        MakeByExample(const OUString &rName,
+                                               SfxStyleFamily nFamily, sal_uInt16 nMask, SwWrtShell* pShell = nullptr);
 
     SAL_DLLPRIVATE void                  SubInitNew();   ///< for InitNew and HtmlSourceMode.
 
@@ -229,7 +228,7 @@ public:
     Reader* StartConvertFrom(SfxMedium& rMedium, SwReader** ppRdr,
                             SwCursorShell* pCursorSh = nullptr, SwPaM* pPaM = nullptr);
 
-#if defined WNT
+#if defined(_WIN32)
     virtual bool DdeGetData( const OUString& rItem, const OUString& rMimeType,
                              css::uno::Any & rValue ) override;
     virtual bool DdeSetData( const OUString& rItem, const OUString& rMimeType,
@@ -250,7 +249,7 @@ public:
 
     virtual void LoadStyles( SfxObjectShell& rSource ) override;
 
-    void _LoadStyles( SfxObjectShell& rSource, bool bPreserveCurrentDocument );
+    void LoadStyles_( SfxObjectShell& rSource, bool bPreserveCurrentDocument );
 
     /// Show page style format dialog
     /// @param nSlot
@@ -306,11 +305,10 @@ public:
     virtual bool    IsChangeRecording() const override;
     virtual bool    HasChangeRecordProtection() const override;
     virtual void    SetChangeRecording( bool bActivate ) override;
-    virtual bool    SetProtectionPassword( const OUString &rPassword ) override;
+    virtual void    SetProtectionPassword( const OUString &rPassword ) override;
     virtual bool    GetProtectionHash( /*out*/ css::uno::Sequence< sal_Int8 > &rPasswordHash ) override;
 
     virtual void libreOfficeKitCallback(int nType, const char* pPayload) const override;
-    virtual bool isTiledRendering() const override;
 };
 
 /** Find the right DocShell and create a new one:

@@ -22,7 +22,7 @@
 #include <osl/conditn.hxx>
 #include <osl/file.hxx>
 #include <vcl/graph.hxx>
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 #include <vcl/pngread.hxx>
 #include <avmedia/mediawindow.hxx>
 #include <unotools/tempfile.hxx>
@@ -59,7 +59,7 @@ namespace
 
 VLCFrameGrabber::VLCFrameGrabber( wrapper::EventHandler& eh, const rtl::OUString& url )
     : FrameGrabber_BASE()
-    , mInstance( sizeof( VLC_ARGS ) / sizeof( VLC_ARGS[0] ), VLC_ARGS )
+    , mInstance( SAL_N_ELEMENTS(VLC_ARGS), VLC_ARGS )
     , mMedia( url, mInstance )
     , mPlayer( mMedia )
     , mEventHandler( eh )

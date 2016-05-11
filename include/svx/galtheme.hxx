@@ -35,8 +35,6 @@
 class SotStorage;
 class SotStorageStream;
 
-// - SgaObjKind -
-
 
 struct GalleryObject
 {
@@ -52,6 +50,7 @@ struct GalleryObject
     OUString        maPath;
 };
 
+
 typedef ::std::vector< GalleryObject* > GalleryObjectList;
 
 class GalleryThemeEntry;
@@ -59,16 +58,15 @@ class SgaObject;
 class FmFormModel;
 class ListBox;
 
-// - GalleryTheme -
-
-
 class Gallery;
 class GalleryProgress;
+
 namespace unogallery
 {
     class GalleryTheme;
     class GalleryItem;
 }
+
 
 class SVX_DLLPUBLIC GalleryTheme : public SfxBroadcaster
 {
@@ -82,7 +80,7 @@ private:
     GalleryObjectList           aObjectList;
     OUString                    m_aDestDir;
     bool                        m_bDestDirRelative;
-    tools::SvRef<SotStorage>               aSvDrawStorageRef;
+    tools::SvRef<SotStorage>    aSvDrawStorageRef;
     Gallery*                    pParent;
     GalleryThemeEntry*          pThm;
     sal_uIntPtr                 mnThemeLockCount;
@@ -152,7 +150,7 @@ public:
     SAL_DLLPRIVATE bool         UnlockTheme();
 
     SAL_DLLPRIVATE void         LockBroadcaster() { mnBroadcasterLockCount++; }
-    void                        UnlockBroadcaster( sal_uIntPtr nUpdatePos = 0 );
+    void                        UnlockBroadcaster();
     SAL_DLLPRIVATE bool         IsBroadcasterLocked() const { return mnBroadcasterLockCount > 0; }
 
     SAL_DLLPRIVATE void         SetDragPos( sal_uIntPtr nPos ) { nDragPos = nPos; }
@@ -168,7 +166,7 @@ public:
     SAL_DLLPRIVATE void         AbortActualize() { bAbortActualize = true; }
 
     SAL_DLLPRIVATE Gallery*     GetParent() const { return pParent; }
-    SAL_DLLPRIVATE tools::SvRef<SotStorage> GetSvDrawStorage() const;
+    SAL_DLLPRIVATE const tools::SvRef<SotStorage>& GetSvDrawStorage() const;
 
 public:
 
@@ -193,10 +191,10 @@ public:
     bool                        GetModel( sal_uIntPtr nPos, SdrModel& rModel, bool bProgress = false );
     bool                        InsertModel( const FmFormModel& rModel, sal_uIntPtr nInsertPos = CONTAINER_APPEND );
 
-    SAL_DLLPRIVATE bool         GetModelStream( sal_uIntPtr nPos, tools::SvRef<SotStorageStream>& rModelStreamRef, bool bProgress = false );
+    SAL_DLLPRIVATE bool         GetModelStream( sal_uIntPtr nPos, tools::SvRef<SotStorageStream>& rModelStreamRef );
     SAL_DLLPRIVATE bool         InsertModelStream( const tools::SvRef<SotStorageStream>& rModelStream, sal_uIntPtr nInsertPos = CONTAINER_APPEND );
 
-    SAL_DLLPRIVATE bool         GetURL( sal_uIntPtr nPos, INetURLObject& rURL, bool bProgress = false );
+    SAL_DLLPRIVATE bool         GetURL( sal_uIntPtr nPos, INetURLObject& rURL );
     bool                        InsertURL( const INetURLObject& rURL, sal_uIntPtr nInsertPos = CONTAINER_APPEND );
     SAL_DLLPRIVATE bool         InsertFileOrDirURL( const INetURLObject& rFileOrDirURL, sal_uIntPtr nInsertPos = CONTAINER_APPEND );
 
@@ -219,6 +217,6 @@ public:
 SvStream& WriteGalleryTheme( SvStream& rOut, const GalleryTheme& rTheme );
 SvStream& ReadGalleryTheme( SvStream& rIn, GalleryTheme& rTheme );
 
-#endif
+#endif // INCLUDED_SVX_GALTHEME_HXX
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -118,7 +118,6 @@ Any SAL_CALL OComboBoxModel::queryAggregation(const Type& _rType) throw (Runtime
 }
 
 
-
 OComboBoxModel::OComboBoxModel(const Reference<XComponentContext>& _rxFactory)
     :OBoundControlModel( _rxFactory, VCL_CONTROLMODEL_COMBOBOX, FRM_SUN_CONTROL_COMBOBOX, true, true, true )
      // use the old control name for compatibility reasons
@@ -191,7 +190,7 @@ void OComboBoxModel::getFastPropertyValue(Any& _rValue, sal_Int32 _nHandle) cons
             break;
 
         case PROPERTY_ID_STRINGITEMLIST:
-            _rValue <<= getStringItemList();
+            _rValue <<= comphelper::containerToSequence(getStringItemList());
             break;
 
         default:
@@ -536,7 +535,7 @@ void OComboBoxModel::loadData( bool _bForce )
                     OUString aQuote = xMeta->getIdentifierQuoteString();
 
                     OUString sCatalog, sSchema, sTable;
-                    qualifiedNameComponents( xMeta, m_aListSource, sCatalog, sSchema, sTable, eInDataManipulation );
+                    qualifiedNameComponents( xMeta, m_aListSource, sCatalog, sSchema, sTable, EComposeRule::InDataManipulation );
 
                     OUStringBuffer aStatement;
                     aStatement.append( "SELECT DISTINCT " );
@@ -816,7 +815,7 @@ Any OComboBoxModel::getDefaultForReset() const
 void OComboBoxModel::stringItemListChanged( ControlModelLock& /*_rInstanceLock*/ )
 {
     if ( m_xAggregateSet.is() )
-        m_xAggregateSet->setPropertyValue( PROPERTY_STRINGITEMLIST, makeAny( getStringItemList() ) );
+        m_xAggregateSet->setPropertyValue( PROPERTY_STRINGITEMLIST, makeAny( comphelper::containerToSequence(getStringItemList()) ) );
 }
 
 

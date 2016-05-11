@@ -32,6 +32,7 @@
 #include <com/sun/star/frame/XFrame.hpp>
 #include <com/sun/star/uno/Reference.hxx>
 #include <o3tl/typed_flags_set.hxx>
+#include <list>
 
 struct ImplSVEvent;
 struct MenuItemData;
@@ -207,9 +208,6 @@ protected:
     /// Close the 'pStartedFrom' menu window.
     virtual void ClosePopup(Menu* pMenu) = 0;
 
-    /// Deactivate the MenuBarWindow.
-    virtual sal_uLong DeactivateMenuBar(sal_uLong nFocusId);
-
     /// Forward the KeyInput call to the MenuBar.
     virtual void MenuBarKeyInput(const KeyEvent& rEvent);
 
@@ -251,15 +249,12 @@ public:
                     MenuItemBits nItemBits = MenuItemBits::NONE,
                     const OString &rIdent = OString(),
                     sal_uInt16 nPos = MENU_APPEND);
-    void InsertItem(const ResId& rResId, sal_uInt16 nPos = MENU_APPEND );
+    void InsertItem(const ResId& rResId);
     void InsertItem(const OUString& rCommand,
-                    const css::uno::Reference<css::frame::XFrame>& rFrame,
-                    MenuItemBits nBits = MenuItemBits::NONE,
-                    const OString &rIdent = OString(),
-                    sal_uInt16 nPos = MENU_APPEND);
+                    const css::uno::Reference<css::frame::XFrame>& rFrame);
     void InsertSeparator(const OString &rIdent = OString(), sal_uInt16 nPos = MENU_APPEND);
     void RemoveItem( sal_uInt16 nPos );
-    void CopyItem(const Menu& rMenu, sal_uInt16 nPos, sal_uInt16 nNewPos = MENU_APPEND );
+    void CopyItem(const Menu& rMenu, sal_uInt16 nPos );
     void Clear();
 
     void CreateAutoMnemonics();
@@ -311,7 +306,9 @@ public:
     virtual bool IsMenuBar() const = 0;
 
     void RemoveDisabledEntries( bool bCheckPopups = true, bool bRemoveEmptyPopups = false );
-    bool HasValidEntries( bool bCheckPopups = true );
+    bool HasValidEntries();
+
+    void UpdateNativeMenu();
 
     void SetItemText( sal_uInt16 nItemId, const OUString& rStr );
     OUString GetItemText( sal_uInt16 nItemId ) const;
@@ -404,15 +401,11 @@ public:
 
     void HighlightItem( sal_uInt16 nItemPos );
     void DeHighlight() { HighlightItem( 0xFFFF ); } // MENUITEMPOS_INVALID
+
+    bool HandleMenuCommandEvent(Menu *pMenu, sal_uInt16 nEventId) const;
+    bool HandleMenuActivateEvent(Menu *pMenu) const;
+    bool HandleMenuDeActivateEvent(Menu *pMenu) const;
 };
-
-
-namespace vcl { namespace MenuInvalidator {
-
-VCL_DLLPUBLIC void AddMenuInvalidateListener(const Link<LinkParamNone*,void>&);
-VCL_DLLPUBLIC void Invalidated();
-
-}}
 
 class VCL_DLLPUBLIC MenuBar : public Menu
 {
@@ -430,7 +423,7 @@ class VCL_DLLPUBLIC MenuBar : public Menu
 
     SAL_DLLPRIVATE static vcl::Window* ImplCreate(vcl::Window* pParent, vcl::Window* pWindow, MenuBar* pMenu);
     SAL_DLLPRIVATE static void ImplDestroy(MenuBar* pMenu, bool bDelete);
-    SAL_DLLPRIVATE bool ImplHandleKeyEvent(const KeyEvent& rKEvent, bool bFromMenu = true);
+    SAL_DLLPRIVATE bool ImplHandleKeyEvent(const KeyEvent& rKEvent);
     SAL_DLLPRIVATE bool ImplHandleCmdEvent(const CommandEvent& rCEvent);
 
 protected:
@@ -450,9 +443,6 @@ public:
     /// Close the 'pStartedFrom' menu window.
     virtual void ClosePopup(Menu* pMenu) override;
 
-    /// Deactivate the MenuBarWindow.
-    virtual sal_uLong DeactivateMenuBar(sal_uLong nFocusId) override;
-
     /// Forward the KeyInput call to the MenuBar.
     virtual void MenuBarKeyInput(const KeyEvent& rEvent) override;
 
@@ -463,10 +453,7 @@ public:
     void ShowButtons( bool bClose, bool bFloat, bool bHide );
 
     virtual void SelectItem(sal_uInt16 nId) override;
-    bool HandleMenuActivateEvent(Menu *pMenu) const;
-    bool HandleMenuDeActivateEvent(Menu *pMenu) const;
     bool HandleMenuHighlightEvent(Menu *pMenu, sal_uInt16 nEventId) const;
-    bool HandleMenuCommandEvent(Menu *pMenu, sal_uInt16 nEventId) const;
     bool HandleMenuButtonEvent(Menu *pMenu, sal_uInt16 nEventId);
 
     void SetCloseButtonClickHdl( const Link<void*,void>& rLink ) { maCloseHdl = rLink; }
@@ -519,7 +506,8 @@ private:
     SAL_DLLPRIVATE MenuFloatingWindow * ImplGetFloatingWindow() const;
 
 protected:
-    SAL_DLLPRIVATE sal_uInt16 ImplExecute( vcl::Window* pWindow, const Rectangle& rRect, FloatWinPopupFlags nPopupFlags, Menu* pStaredFrom, bool bPreSelectFirst );
+    SAL_DLLPRIVATE sal_uInt16 ImplExecute( const VclPtr<vcl::Window>& xWindow, const Rectangle& rRect, FloatWinPopupFlags nPopupFlags, Menu* pStaredFrom, bool bPreSelectFirst );
+    SAL_DLLPRIVATE void ImplFlushPendingSelect();
     SAL_DLLPRIVATE long ImplCalcHeight( sal_uInt16 nEntries ) const;
     SAL_DLLPRIVATE sal_uInt16 ImplCalcVisEntries( long nMaxHeight, sal_uInt16 nStartEntry = 0, sal_uInt16* pLastVisible = nullptr ) const;
 
@@ -543,7 +531,7 @@ public:
     sal_uInt16 Execute( vcl::Window* pWindow, const Rectangle& rRect, PopupMenuFlags nFlags = PopupMenuFlags::NONE );
 
     // Fuer das TestTool
-    void EndExecute( sal_uInt16 nSelect = 0 );
+    void EndExecute();
     virtual void SelectItem(sal_uInt16 nId) override;
     void SetSelectedEntry( sal_uInt16 nId ); // for use by native submenu only
 

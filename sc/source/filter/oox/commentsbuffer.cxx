@@ -22,6 +22,7 @@
 
 #include "commentsbuffer.hxx"
 
+#include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/sheet/XSheetAnnotationAnchor.hpp>
 #include <com/sun/star/sheet/XSheetAnnotationShapeSupplier.hpp>
 #include <com/sun/star/sheet/XSheetAnnotations.hpp>
@@ -37,10 +38,8 @@
 #include "drawingmanager.hxx"
 
 #include <com/sun/star/text/XText.hpp>
-#include <com/sun/star/text/XTextRange.hpp>
 
 using ::com::sun::star::text::XText;
-using ::com::sun::star::text::XTextRange;
 
 namespace oox {
 namespace xls {

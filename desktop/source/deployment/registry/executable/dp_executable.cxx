@@ -98,7 +98,6 @@ public:
         throw (deployment::DeploymentException,
                uno::RuntimeException, std::exception) override;
 
-    using PackageRegistryBackend::disposing;
 };
 
 
@@ -191,7 +190,6 @@ Reference<deployment::XPackage> BackendImpl::bindPackage_(
 }
 
 
-
 // Package
 BackendImpl * BackendImpl::ExecutablePackageImpl::getMyBackend() const
 {
@@ -215,9 +213,9 @@ BackendImpl::ExecutablePackageImpl::isRegistered_(
 {
     bool registered = getMyBackend()->hasActiveEntry(getURL());
     return beans::Optional< beans::Ambiguous<sal_Bool> >(
-            sal_True /* IsPresent */,
+            true /* IsPresent */,
                 beans::Ambiguous<sal_Bool>(
-                    registered, sal_False /* IsAmbiguous */ ) );
+                    registered, false /* IsAmbiguous */ ) );
 }
 
 void BackendImpl::ExecutablePackageImpl::processPackage_(
@@ -307,7 +305,6 @@ bool BackendImpl::ExecutablePackageImpl::getFileAttributes(sal_uInt64& out_Attri
     }
     return bSuccess;
 }
-
 
 
 } // anon namespace

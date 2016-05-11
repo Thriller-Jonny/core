@@ -93,9 +93,9 @@ class SwNavigationPI : public vcl::Window,
     bool    m_bPageCtrlsVisible : 1;
     bool    m_bGlobalMode : 1;
 
-    bool _IsZoomedIn() const {return m_bIsZoomedIn;}
-    void _ZoomOut();
-    void _ZoomIn();
+    bool IsZoomedIn() const {return m_bIsZoomedIn;}
+    void ZoomOut();
+    void ZoomIn();
 
     void FillBox();
     void MakeMark();
@@ -112,7 +112,7 @@ class SwNavigationPI : public vcl::Window,
     DECL_LINK_TYPED( PageEditModifyHdl, SpinField&, void );
     DECL_LINK_TYPED( PopupModeEndHdl, FloatingWindow*, void );
     DECL_LINK_TYPED( ClosePopupWindow, SfxPopupWindow *, void );
-    void UsePage(SwWrtShell *);
+    void UsePage();
 
     void InitImageList();
     void SetPopupWindow( SfxPopupWindow* );
@@ -170,7 +170,10 @@ public:
                         SfxBindings*,
                         SfxChildWinInfo*  );
 
-    SFX_DECL_CHILDWINDOW_CONTEXT( SwNavigationChild )
+    //! soon obsolete !
+    static  SfxChildWindowContext* CreateImpl(vcl::Window *pParent,
+                SfxBindings *pBindings, SfxChildWinInfo* pInfo );
+    static  void RegisterChildWindowContext(SfxModule *pMod=nullptr);
 };
 
 #endif

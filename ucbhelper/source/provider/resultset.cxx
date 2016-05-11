@@ -32,7 +32,6 @@
 using namespace com::sun::star;
 
 
-
 namespace ucbhelper_impl
 {
 
@@ -76,9 +75,7 @@ static const PropertyInfo aPropertyTable[] =
 #define RESULTSET_PROPERTY_COUNT 2
 
 
-
 // class PropertySetInfo
-
 
 
 class PropertySetInfo :
@@ -140,9 +137,7 @@ namespace ucbhelper
 {
 
 
-
 // struct ResultSet_Impl.
-
 
 
 struct ResultSet_Impl
@@ -193,11 +188,7 @@ inline ResultSet_Impl::~ResultSet_Impl()
 }
 
 
-
-
 // ResultSet Implementation.
-
-
 
 
 ResultSet::ResultSet(
@@ -229,7 +220,6 @@ ResultSet::ResultSet(
 ResultSet::~ResultSet()
 {
 }
-
 
 
 // XInterface methods.
@@ -266,7 +256,6 @@ css::uno::Any SAL_CALL ResultSet::queryInterface( const css::uno::Type & rType )
 // XTypeProvider methods.
 
 
-
 XTYPEPROVIDER_IMPL_9( ResultSet,
                       lang::XTypeProvider,
                       lang::XServiceInfo,
@@ -279,9 +268,7 @@ XTYPEPROVIDER_IMPL_9( ResultSet,
                       beans::XPropertySet );
 
 
-
 // XServiceInfo methods.
-
 
 
 XSERVICEINFO_NOFACTORY_IMPL_1( ResultSet,
@@ -289,9 +276,7 @@ XSERVICEINFO_NOFACTORY_IMPL_1( ResultSet,
                     RESULTSET_SERVICE_NAME );
 
 
-
 // XComponent methods.
-
 
 
 // virtual
@@ -346,9 +331,7 @@ void SAL_CALL ResultSet::removeEventListener(
 }
 
 
-
 // XResultSetMetaDataSupplier methods.
-
 
 
 // virtual
@@ -365,9 +348,7 @@ uno::Reference< sdbc::XResultSetMetaData > SAL_CALL ResultSet::getMetaData()
 }
 
 
-
 // XResultSet methods.
-
 
 
 // virtual
@@ -382,7 +363,7 @@ sal_Bool SAL_CALL ResultSet::next()
     if ( m_pImpl->m_bAfterLast )
     {
         m_pImpl->m_xDataSupplier->validate();
-        return sal_False;
+        return false;
     }
 
     // getResult works zero-based!
@@ -390,12 +371,12 @@ sal_Bool SAL_CALL ResultSet::next()
     {
         m_pImpl->m_bAfterLast = true;
         m_pImpl->m_xDataSupplier->validate();
-        return sal_False;
+        return false;
     }
 
     m_pImpl->m_nPos++;
     m_pImpl->m_xDataSupplier->validate();
-    return sal_True;
+    return true;
 }
 
 
@@ -406,14 +387,14 @@ sal_Bool SAL_CALL ResultSet::isBeforeFirst()
     if ( m_pImpl->m_bAfterLast )
     {
         m_pImpl->m_xDataSupplier->validate();
-        return sal_False;
+        return false;
     }
 
     // getResult works zero-based!
     if ( !m_pImpl->m_xDataSupplier->getResult( 0 ) )
     {
         m_pImpl->m_xDataSupplier->validate();
-        return sal_False;
+        return false;
     }
 
     m_pImpl->m_xDataSupplier->validate();
@@ -437,7 +418,7 @@ sal_Bool SAL_CALL ResultSet::isFirst()
     if ( m_pImpl->m_bAfterLast )
     {
         m_pImpl->m_xDataSupplier->validate();
-        return sal_False;
+        return false;
     }
 
     m_pImpl->m_xDataSupplier->validate();
@@ -452,14 +433,14 @@ sal_Bool SAL_CALL ResultSet::isLast()
     if ( m_pImpl->m_bAfterLast )
     {
         m_pImpl->m_xDataSupplier->validate();
-        return sal_False;
+        return false;
     }
 
     sal_Int32 nCount = m_pImpl->m_xDataSupplier->totalCount();
     if ( !nCount )
     {
         m_pImpl->m_xDataSupplier->validate();
-        return sal_False;
+        return false;
     }
 
     m_pImpl->m_xDataSupplier->validate();
@@ -499,11 +480,11 @@ sal_Bool SAL_CALL ResultSet::first()
         m_pImpl->m_bAfterLast = false;
         m_pImpl->m_nPos = 1;
         m_pImpl->m_xDataSupplier->validate();
-        return sal_True;
+        return true;
     }
 
     m_pImpl->m_xDataSupplier->validate();
-    return sal_False;
+    return false;
 }
 
 
@@ -518,11 +499,11 @@ sal_Bool SAL_CALL ResultSet::last()
         m_pImpl->m_bAfterLast = false;
         m_pImpl->m_nPos = nCount;
         m_pImpl->m_xDataSupplier->validate();
-        return sal_True;
+        return true;
     }
 
     m_pImpl->m_xDataSupplier->validate();
-    return sal_False;
+    return false;
 }
 
 
@@ -572,7 +553,7 @@ sal_Bool SAL_CALL ResultSet::absolute( sal_Int32 row )
             m_pImpl->m_bAfterLast = false;
             m_pImpl->m_nPos = 0;
             m_pImpl->m_xDataSupplier->validate();
-            return sal_False;
+            return false;
         }
         else // |row| <= nCount
         {
@@ -580,7 +561,7 @@ sal_Bool SAL_CALL ResultSet::absolute( sal_Int32 row )
             m_pImpl->m_bAfterLast = false;
             m_pImpl->m_nPos = ( nCount + row + 1 );
             m_pImpl->m_xDataSupplier->validate();
-            return sal_True;
+            return true;
         }
     }
     else if ( row == 0 )
@@ -599,14 +580,14 @@ sal_Bool SAL_CALL ResultSet::absolute( sal_Int32 row )
             m_pImpl->m_bAfterLast = false;
             m_pImpl->m_nPos = row;
             m_pImpl->m_xDataSupplier->validate();
-            return sal_True;
+            return true;
         }
         else // row > nCount
         {
             osl::MutexGuard aGuard( m_pImpl->m_aMutex );
             m_pImpl->m_bAfterLast = true;
             m_pImpl->m_xDataSupplier->validate();
-            return sal_False;
+            return false;
         }
     }
 
@@ -643,7 +624,7 @@ sal_Bool SAL_CALL ResultSet::relative( sal_Int32 rows )
             m_pImpl->m_bAfterLast = false;
             m_pImpl->m_nPos = ( m_pImpl->m_nPos + rows );
             m_pImpl->m_xDataSupplier->validate();
-            return sal_True;
+            return true;
         }
         else
         {
@@ -651,14 +632,14 @@ sal_Bool SAL_CALL ResultSet::relative( sal_Int32 rows )
             m_pImpl->m_bAfterLast = false;
             m_pImpl->m_nPos = 0;
             m_pImpl->m_xDataSupplier->validate();
-            return sal_False;
+            return false;
         }
     }
     else if ( rows == 0 )
     {
         // nop.
         m_pImpl->m_xDataSupplier->validate();
-        return sal_True;
+        return true;
     }
     else // rows > 0
     {
@@ -669,14 +650,14 @@ sal_Bool SAL_CALL ResultSet::relative( sal_Int32 rows )
             m_pImpl->m_bAfterLast = false;
             m_pImpl->m_nPos = ( m_pImpl->m_nPos + rows );
             m_pImpl->m_xDataSupplier->validate();
-            return sal_True;
+            return true;
         }
         else
         {
             osl::MutexGuard aGuard( m_pImpl->m_aMutex );
             m_pImpl->m_bAfterLast = true;
             m_pImpl->m_xDataSupplier->validate();
-            return sal_False;
+            return false;
         }
     }
 
@@ -706,11 +687,11 @@ sal_Bool SAL_CALL ResultSet::previous()
     if ( m_pImpl->m_nPos )
     {
         m_pImpl->m_xDataSupplier->validate();
-        return sal_True;
+        return true;
     }
 
     m_pImpl->m_xDataSupplier->validate();
-    return sal_False;
+    return false;
 }
 
 
@@ -732,7 +713,7 @@ sal_Bool SAL_CALL ResultSet::rowUpdated()
     throw( sdbc::SQLException, uno::RuntimeException, std::exception )
 {
     m_pImpl->m_xDataSupplier->validate();
-    return sal_False;
+    return false;
 }
 
 
@@ -741,7 +722,7 @@ sal_Bool SAL_CALL ResultSet::rowInserted()
     throw( sdbc::SQLException, uno::RuntimeException, std::exception )
 {
     m_pImpl->m_xDataSupplier->validate();
-    return sal_False;
+    return false;
 }
 
 
@@ -750,7 +731,7 @@ sal_Bool SAL_CALL ResultSet::rowDeleted()
     throw( sdbc::SQLException, uno::RuntimeException, std::exception )
 {
     m_pImpl->m_xDataSupplier->validate();
-    return sal_False;
+    return false;
 }
 
 
@@ -767,9 +748,7 @@ uno::Reference< uno::XInterface > SAL_CALL ResultSet::getStatement()
 }
 
 
-
 // XRow methods.
-
 
 
 // virtual
@@ -839,7 +818,7 @@ sal_Bool SAL_CALL ResultSet::getBoolean( sal_Int32 columnIndex )
 
     m_pImpl->m_bWasNull = true;
     m_pImpl->m_xDataSupplier->validate();
-    return sal_False;
+    return false;
 }
 
 
@@ -1244,9 +1223,7 @@ ResultSet::getArray( sal_Int32 columnIndex )
 }
 
 
-
 // XCloseable methods.
-
 
 
 // virtual
@@ -1258,9 +1235,7 @@ void SAL_CALL ResultSet::close()
 }
 
 
-
 // XContentAccess methods.
-
 
 
 // virtual
@@ -1300,9 +1275,7 @@ ResultSet::queryContent()
 }
 
 
-
 // XPropertySet methods.
-
 
 
 // virtual
@@ -1450,9 +1423,7 @@ void SAL_CALL ResultSet::removeVetoableChangeListener(
 }
 
 
-
 // Non-interface methods.
-
 
 
 void ResultSet::propertyChanged( const beans::PropertyChangeEvent& rEvt )
@@ -1466,14 +1437,7 @@ void ResultSet::propertyChanged( const beans::PropertyChangeEvent& rEvt )
                                                         rEvt.PropertyName );
     if ( pPropsContainer )
     {
-        cppu::OInterfaceIteratorHelper aIter( *pPropsContainer );
-        while ( aIter.hasMoreElements() )
-        {
-            uno::Reference< beans::XPropertyChangeListener > xListener(
-                aIter.next(), uno::UNO_QUERY );
-            if ( xListener.is() )
-                xListener->propertyChange( rEvt );
-        }
+        pPropsContainer->notifyEach(&beans::XPropertyChangeListener::propertyChange, rEvt);
     }
 
     // Notify listeners interested in all properties.
@@ -1504,7 +1468,7 @@ void ResultSet::rowCountChanged( sal_uInt32 nOld, sal_uInt32 nNew )
         beans::PropertyChangeEvent(
             static_cast< cppu::OWeakObject * >( this ),
             OUString("RowCount"),
-            sal_False,
+            false,
             1001,
             uno::makeAny( nOld ),     // old value
             uno::makeAny( nNew ) ) ); // new value
@@ -1520,10 +1484,10 @@ void ResultSet::rowCountFinal()
         beans::PropertyChangeEvent(
             static_cast< cppu::OWeakObject * >( this ),
             OUString("IsRowCountFinal"),
-            sal_False,
+            false,
             1000,
-            uno:: makeAny( sal_False ),   // old value
-            uno::makeAny( sal_True ) ) ); // new value
+            uno:: makeAny( false ),   // old value
+            uno::makeAny( true ) ) ); // new value
 }
 
 
@@ -1544,11 +1508,7 @@ ResultSet::getEnvironment()
 namespace ucbhelper_impl {
 
 
-
-
 // PropertySetInfo Implementation.
-
-
 
 
 PropertySetInfo::PropertySetInfo(
@@ -1584,7 +1544,6 @@ PropertySetInfo::~PropertySetInfo()
 }
 
 
-
 // XInterface methods.
 void SAL_CALL PropertySetInfo::acquire()
     throw()
@@ -1612,15 +1571,12 @@ css::uno::Any SAL_CALL PropertySetInfo::queryInterface(
 // XTypeProvider methods.
 
 
-
 XTYPEPROVIDER_IMPL_2( PropertySetInfo,
                          lang::XTypeProvider,
                          beans::XPropertySetInfo );
 
 
-
 // XPropertySetInfo methods.
-
 
 
 // virtual

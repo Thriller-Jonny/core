@@ -63,7 +63,7 @@ ScAttrArray::ScAttrArray( SCCOL nNewCol, SCTAB nNewTab, ScDocument* pDoc ) :
 
 ScAttrArray::~ScAttrArray()
 {
-#if OSL_DEBUG_LEVEL > 1
+#if DEBUG_SC_TESTATTRARRAY
     TestData();
 #endif
 
@@ -74,7 +74,7 @@ ScAttrArray::~ScAttrArray()
     delete[] pData;
 }
 
-#if OSL_DEBUG_LEVEL > 1
+#if DEBUG_SC_TESTATTRARRAY
 void ScAttrArray::TestData() const
 {
 
@@ -555,7 +555,7 @@ void ScAttrArray::SetPatternArea(SCROW nStartRow, SCROW nEndRow, const ScPattern
         }
     }
 
-#if OSL_DEBUG_LEVEL > 1
+#if DEBUG_SC_TESTATTRARRAY
     TestData();
 #endif
 }
@@ -628,7 +628,7 @@ void ScAttrArray::ApplyStyleArea( SCROW nStartRow, SCROW nEndRow, ScStyleSheet* 
             pDocument->SetStreamValid(nTab, false);
     }
 
-#if OSL_DEBUG_LEVEL > 1
+#if DEBUG_SC_TESTATTRARRAY
     TestData();
 #endif
 }
@@ -778,7 +778,7 @@ void ScAttrArray::ApplyLineStyleArea( SCROW nStartRow, SCROW nEndRow,
 
 void ScAttrArray::ApplyCacheArea( SCROW nStartRow, SCROW nEndRow, SfxItemPoolCache* pCache, ScEditDataArray* pDataArray )
 {
-#if OSL_DEBUG_LEVEL > 1
+#if DEBUG_SC_TESTATTRARRAY
     TestData();
 #endif
 
@@ -798,7 +798,7 @@ void ScAttrArray::ApplyCacheArea( SCROW nStartRow, SCROW nEndRow, SfxItemPoolCac
         do
         {
             const ScPatternAttr* pOldPattern = pData[nPos].pPattern;
-            const ScPatternAttr* pNewPattern = static_cast<const ScPatternAttr*>( &pCache->ApplyTo( *pOldPattern, true ) );
+            const ScPatternAttr* pNewPattern = static_cast<const ScPatternAttr*>( &pCache->ApplyTo( *pOldPattern ) );
             ScDocumentPool::CheckRef( *pOldPattern );
             ScDocumentPool::CheckRef( *pNewPattern );
             if (pNewPattern != pOldPattern)
@@ -850,12 +850,12 @@ void ScAttrArray::ApplyCacheArea( SCROW nStartRow, SCROW nEndRow, SfxItemPoolCac
             pDocument->SetStreamValid(nTab, false);
     }
 
-#if OSL_DEBUG_LEVEL > 1
+#if DEBUG_SC_TESTATTRARRAY
     TestData();
 #endif
 }
 
-bool ScAttrArray::SetAttrEntries(ScAttrEntry* pNewData, SCSIZE nSize)
+void ScAttrArray::SetAttrEntries(ScAttrEntry* pNewData, SCSIZE nSize)
 {
     ScDocumentPool* pDocPool = pDocument->GetPool();
     for (SCSIZE i=0; i<nCount; i++)
@@ -865,7 +865,6 @@ bool ScAttrArray::SetAttrEntries(ScAttrEntry* pNewData, SCSIZE nSize)
 
     pData = pNewData;
     nCount = nLimit = nSize;
-    return true;
 }
 
 static void lcl_MergeDeep( SfxItemSet& rMergeSet, const SfxItemSet& rSource )
@@ -1407,9 +1406,8 @@ bool ScAttrArray::ExtendMerge( SCCOL nThisCol, SCROW nStartRow, SCROW nEndRow,
     return bFound;
 }
 
-bool ScAttrArray::RemoveAreaMerge(SCROW nStartRow, SCROW nEndRow)
+void ScAttrArray::RemoveAreaMerge(SCROW nStartRow, SCROW nEndRow)
 {
-    bool bFound = false;
     const ScPatternAttr* pPattern;
     const ScMergeAttr* pItem;
     SCSIZE nIndex;
@@ -1462,8 +1460,6 @@ bool ScAttrArray::RemoveAreaMerge(SCROW nStartRow, SCROW nEndRow)
         else
             nThisStart = MAXROW+1;   // End
     }
-
-    return bFound;
 }
 
 /**
@@ -1738,7 +1734,7 @@ void ScAttrArray::FindStyleSheet( const SfxStyleSheetBase* pStyleSheet, ScFlatBo
                 pNewPattern->SetStyleSheet( static_cast<ScStyleSheet*>(
                     pDocument->GetStyleSheetPool()->
                         Find( ScGlobal::GetRscString(STR_STYLENAME_STANDARD),
-                              SFX_STYLE_FAMILY_PARA,
+                              SfxStyleFamily::Para,
                               SFXSTYLEBIT_AUTO | SCSTYLEBIT_STANDARD ) ) );
                 pData[nPos].pPattern = static_cast<const ScPatternAttr*>(
                                             &pDocument->GetPool()->Put(*pNewPattern));
@@ -1829,7 +1825,7 @@ bool ScAttrArray::GetFirstVisibleAttr( SCROW& rFirstRow ) const
 
 const SCROW SC_VISATTR_STOP = 84;
 
-bool ScAttrArray::GetLastVisibleAttr( SCROW& rLastRow, SCROW nLastData, bool bFullFormattedArea ) const
+bool ScAttrArray::GetLastVisibleAttr( SCROW& rLastRow, SCROW nLastData ) const
 {
     OSL_ENSURE( nCount, "nCount == 0" );
 
@@ -1849,18 +1845,10 @@ bool ScAttrArray::GetLastVisibleAttr( SCROW& rLastRow, SCROW nLastData, bool bFu
     SCROW nStartRow = (nPos ? pData[nPos-1].nRow + 1 : 0);
     if (nStartRow <= nLastData + 1)
     {
-        if (bFullFormattedArea && pData[nPos].pPattern->IsVisible())
-        {
-            rLastRow = pData[nPos].nRow;
-            return true;
-        }
-        else
-        {
-            // Ignore here a few rows if data happens to end within
-            // SC_VISATTR_STOP rows before MAXROW.
-            rLastRow = nLastData;
-            return false;
-        }
+        // Ignore here a few rows if data happens to end within
+        // SC_VISATTR_STOP rows before MAXROW.
+        rLastRow = nLastData;
+        return false;
     }
 
     // Find a run below last data row.
@@ -1877,7 +1865,7 @@ bool ScAttrArray::GetLastVisibleAttr( SCROW& rLastRow, SCROW nLastData, bool bFu
         if ( nAttrStartRow <= nLastData )
             nAttrStartRow = nLastData + 1;
         SCROW nAttrSize = pData[nEndPos].nRow + 1 - nAttrStartRow;
-        if ( nAttrSize >= SC_VISATTR_STOP && !bFullFormattedArea )
+        if ( nAttrSize >= SC_VISATTR_STOP )
             break;  // while, ignore this range and below
         else if ( pData[nEndPos].pPattern->IsVisible() )
         {

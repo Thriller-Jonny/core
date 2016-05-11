@@ -31,13 +31,10 @@ Bundle& Bundle::operator=( Bundle& rSource )
 };
 
 
-
 void Bundle::SetColor( sal_uInt32 nColor )
 {
     mnColor = nColor;
 }
-
-
 
 
 LineBundle& LineBundle::operator=( LineBundle& rSource )
@@ -111,16 +108,14 @@ CGMFList::~CGMFList()
 }
 
 
-
 CGMFList& CGMFList::operator=( CGMFList& rSource )
 {
     ImplDeleteList();
     nFontsAvailable = rSource.nFontsAvailable;
     nFontNameCount  = rSource.nFontNameCount;
     nCharSetCount   = rSource.nCharSetCount;
-    for ( size_t i = 0, n = rSource.aFontEntryList.size(); i < n; ++i )
+    for (FontEntry* pPtr : rSource.aFontEntryList)
     {
-        FontEntry* pPtr = rSource.aFontEntryList[ i ];
         FontEntry* pCFontEntry = new FontEntry;
         if ( pPtr->pFontName )
         {
@@ -142,7 +137,6 @@ CGMFList& CGMFList::operator=( CGMFList& rSource )
 }
 
 
-
 FontEntry* CGMFList::GetFontEntry( sal_uInt32 nIndex )
 {
     sal_uInt32 nInd = nIndex;
@@ -150,7 +144,6 @@ FontEntry* CGMFList::GetFontEntry( sal_uInt32 nIndex )
         nInd--;
     return ( nInd < aFontEntryList.size() ) ? aFontEntryList[ nInd ] : nullptr;
 }
-
 
 
 static sal_Int8* ImplSearchEntry( sal_Int8* pSource, sal_Int8 const * pDest, sal_uInt32 nComp, sal_uInt32 nSize )
@@ -231,7 +224,6 @@ void CGMFList::InsertName( sal_uInt8* pSource, sal_uInt32 nSize )
 }
 
 
-
 void CGMFList::InsertCharSet( CharSetType eCharSetType, sal_uInt8* pSource, sal_uInt32 nSize )
 {
     FontEntry* pFontEntry;
@@ -253,11 +245,10 @@ void CGMFList::InsertCharSet( CharSetType eCharSetType, sal_uInt8* pSource, sal_
 }
 
 
-
 void CGMFList::ImplDeleteList()
 {
-    for ( size_t i = 0, n = aFontEntryList.size(); i < n; ++i )
-        delete aFontEntryList[ i ];
+    for (FontEntry* i : aFontEntryList)
+        delete i;
     aFontEntryList.clear();
 }
 

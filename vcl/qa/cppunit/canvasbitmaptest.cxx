@@ -32,13 +32,13 @@
 #include <tools/diagnose_ex.h>
 #include <rtl/ref.hxx>
 
-#include "vcl/svapp.hxx"
-#include "vcl/canvastools.hxx"
-#include "vcl/dialog.hxx"
-#include "vcl/outdev.hxx"
-#include "vcl/bmpacc.hxx"
-#include "vcl/virdev.hxx"
-#include "vcl/bitmapex.hxx"
+#include <vcl/svapp.hxx>
+#include <vcl/canvastools.hxx>
+#include <vcl/dialog.hxx>
+#include <vcl/outdev.hxx>
+#include <vcl/bitmapaccess.hxx>
+#include <vcl/virdev.hxx>
+#include <vcl/bitmapex.hxx>
 
 #include "canvasbitmap.hxx"
 #include <algorithm>
@@ -155,10 +155,14 @@ void checkCanvasBitmap( const rtl::Reference<VclCanvasBitmap>& xBmp,
     CPPUNIT_ASSERT_MESSAGE( "rgb colors are not within [0,1] range",
                             std::none_of(pRGBStart,pRGBEnd,&rangeCheck));
 
-    CPPUNIT_ASSERT_MESSAGE( "First pixel is not white",
-                            pRGBStart[0].Red == 1.0 && pRGBStart[0].Green == 1.0 && pRGBStart[0].Blue == 1.0);
-    CPPUNIT_ASSERT_MESSAGE( "Second pixel is not opaque",
-                            pARGBStart[1].Alpha == 1.0);
+    CPPUNIT_ASSERT_DOUBLES_EQUAL_MESSAGE(
+        "First pixel is not white", 1.0, pRGBStart[0].Red, 1E-12);
+    CPPUNIT_ASSERT_DOUBLES_EQUAL_MESSAGE(
+        "First pixel is not white", 1.0, pRGBStart[0].Green, 1E-12);
+    CPPUNIT_ASSERT_DOUBLES_EQUAL_MESSAGE(
+        "First pixel is not white", 1.0, pRGBStart[0].Blue, 1E-12);
+    CPPUNIT_ASSERT_DOUBLES_EQUAL_MESSAGE(
+        "Second pixel is not opaque", 1.0, pARGBStart[1].Alpha, 1E-12);
     if( aContainedBmpEx.IsTransparent() )
     {
         CPPUNIT_ASSERT_MESSAGE( "First pixel is not fully transparent",
@@ -197,10 +201,12 @@ void checkCanvasBitmap( const rtl::Reference<VclCanvasBitmap>& xBmp,
                                 xPal->getColorSpace().is());
     }
 
-    CPPUNIT_ASSERT_MESSAGE( "150th pixel is not white",
-                            pRGBStart[150].Red == 1.0 &&
-                            pRGBStart[150].Green == 1.0 &&
-                            pRGBStart[150].Blue == 1.0);
+    CPPUNIT_ASSERT_DOUBLES_EQUAL_MESSAGE(
+        "150th pixel is not white", 1.0, pRGBStart[150].Red, 1E-12);
+    CPPUNIT_ASSERT_DOUBLES_EQUAL_MESSAGE(
+        "150th pixel is not white", 1.0, pRGBStart[150].Green, 1E-12);
+    CPPUNIT_ASSERT_DOUBLES_EQUAL_MESSAGE(
+        "150th pixel is not white", 1.0, pRGBStart[150].Blue, 1E-12);
 
     if( nOriginalDepth > 8 )
     {

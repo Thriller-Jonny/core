@@ -26,7 +26,7 @@
 #include <com/sun/star/lang/IllegalArgumentException.hpp>
 
 #include <cppuhelper/implbase3.hxx>
-#include <cppuhelper/interfacecontainer.hxx>
+#include <comphelper/interfacecontainer2.hxx>
 
 
 namespace frm
@@ -51,9 +51,9 @@ namespace frm
 
         css::uno::Reference< css::form::binding::XListEntrySource >
                         m_xListSource;      /// our external list source
-        css::uno::Sequence< OUString >
+        std::vector< OUString >
                         m_aStringItems;     /// "overridden" StringItemList property value
-        ::cppu::OInterfaceContainerHelper
+        ::comphelper::OInterfaceContainerHelper2
                         m_aRefreshListeners;
 
 
@@ -63,7 +63,7 @@ namespace frm
         virtual ~OEntryListHelper( );
 
         /// returns the current string item list
-        inline const css::uno::Sequence< OUString >&
+        inline const std::vector< OUString >&
                     getStringItemList() const { return m_aStringItems; }
 
         /// determines whether we actually have an external list source
@@ -178,7 +178,6 @@ namespace frm
 
 
 }   // namespace frm
-
 
 
 #endif // INCLUDED_FORMS_SOURCE_COMPONENT_ENTRYLISTHELPER_HXX

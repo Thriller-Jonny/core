@@ -124,7 +124,7 @@ namespace canvas
             const Sprite::Reference&    getSprite() const { return mpSprite; }
 
             // #i61843# need to return by value here, to be used safely from bind
-            ::basegfx::B2DRange         getUpdateArea() const { return maTrueUpdateArea; }
+            const ::basegfx::B2DRange&  getUpdateArea() const { return maTrueUpdateArea; }
             bool                        needsUpdate() const { return mbNeedsUpdate; }
             bool                        isPureMove() const { return mbIsPureMove; }
 
@@ -143,10 +143,10 @@ namespace canvas
          */
         struct SpriteChangeRecord
         {
-            typedef enum{ none=0, move, update } ChangeType;
+            enum class ChangeType { none=0, move, update };
 
             SpriteChangeRecord() :
-                meChangeType( none ),
+                meChangeType( ChangeType::none ),
                 mpAffectedSprite(),
                 maOldPos(),
                 maUpdateArea()
@@ -157,7 +157,7 @@ namespace canvas
                                 const ::basegfx::B2DPoint&  rOldPos,
                                 const ::basegfx::B2DPoint&  rNewPos,
                                 const ::basegfx::B2DVector& rSpriteSize ) :
-                meChangeType( move ),
+                meChangeType( ChangeType::move ),
                 mpAffectedSprite( rSprite ),
                 maOldPos( rOldPos ),
                 maUpdateArea( rNewPos.getX(),
@@ -170,14 +170,14 @@ namespace canvas
             SpriteChangeRecord( const Sprite::Reference&    rSprite,
                                 const ::basegfx::B2DPoint&  rPos,
                                 const ::basegfx::B2DRange&  rUpdateArea ) :
-                meChangeType( update ),
+                meChangeType( ChangeType::update ),
                 mpAffectedSprite( rSprite ),
                 maOldPos( rPos ),
                 maUpdateArea( rUpdateArea )
             {
             }
 
-            Sprite::Reference getSprite() const { return mpAffectedSprite; }
+            const Sprite::Reference& getSprite() const { return mpAffectedSprite; }
 
             ChangeType          meChangeType;
             Sprite::Reference   mpAffectedSprite;

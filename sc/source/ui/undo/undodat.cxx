@@ -1303,7 +1303,10 @@ void ScUndoRepeatDB::Undo()
             SCROW nRow = aOldQuery.aStart.Row() + 1;        // test the header
             while ( nCol <= MAXCOL &&
                     rDoc.GetCellType(ScAddress( nCol, nRow, nTab )) == CELLTYPE_FORMULA )
-                ++nCol, ++nFormulaCols;
+            {
+                ++nCol;
+                ++nFormulaCols;
+            }
 
             if ( nFormulaCols > 0 )
             {
@@ -1788,8 +1791,7 @@ ScUndoDataForm::ScUndoDataForm( ScDocShell* pNewDocShell,
                                 ScDocument* pNewUndoDoc, ScDocument* pNewRedoDoc,
                                 InsertDeleteFlags nNewFlags,
                                 ScRefUndoData* pRefData,
-                                void* /*pFill1*/, void* /*pFill2*/, void* /*pFill3*/,
-                                bool bRedoIsFilled ) :
+                                void* /*pFill1*/, void* /*pFill2*/, void* /*pFill3*/ ) :
         ScBlockUndo( pNewDocShell, ScRange( nStartX, nStartY, nStartZ, nEndX, nEndY, nEndZ ), SC_UNDO_SIMPLE ),
         mpMarkData(new ScMarkData(rMark)),
         pUndoDoc( pNewUndoDoc ),
@@ -1797,7 +1799,7 @@ ScUndoDataForm::ScUndoDataForm( ScDocShell* pNewDocShell,
         nFlags( nNewFlags ),
         pRefUndoData( pRefData ),
         pRefRedoData( nullptr ),
-        bRedoFilled( bRedoIsFilled )
+        bRedoFilled( false )
 {
         //      pFill1,pFill2,pFill3 are there so the ctor calls for simple paste (without cutting)
         //      don't have to be changed and branched for 641.

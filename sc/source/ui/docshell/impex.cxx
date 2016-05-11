@@ -35,6 +35,7 @@
 #include "filter.hxx"
 #include "asciiopt.hxx"
 #include "formulacell.hxx"
+#include "cellform.hxx"
 #include "docoptio.hxx"
 #include "progress.hxx"
 #include "scitems.hxx"
@@ -149,9 +150,9 @@ ScImportExport::ScImportExport( ScDocument* p, const OUString& rPos )
         const ScRangeData* pData = pRange->findByUpperName(ScGlobal::pCharClass->uppercase(aPos));
         if (pData)
         {
-            if( pData->HasType( RT_REFAREA )
-                || pData->HasType( RT_ABSAREA )
-                || pData->HasType( RT_ABSPOS ) )
+            if( pData->HasType( ScRangeData::Type::RefArea )
+                || pData->HasType( ScRangeData::Type::AbsArea )
+                || pData->HasType( ScRangeData::Type::AbsPos ) )
             {
                 pData->GetSymbol(aPos);
             }
@@ -159,10 +160,10 @@ ScImportExport::ScImportExport( ScDocument* p, const OUString& rPos )
     }
     formula::FormulaGrammar::AddressConvention eConv = pDoc->GetAddressConvention();
     // Range?
-    if (aRange.Parse(aPos, pDoc, eConv) & SCA_VALID)
+    if (aRange.Parse(aPos, pDoc, eConv) & ScRefFlags::VALID)
         bSingle = false;
     // Cell?
-    else if (aRange.aStart.Parse(aPos, pDoc, eConv) & SCA_VALID)
+    else if (aRange.aStart.Parse(aPos, pDoc, eConv) & ScRefFlags::VALID)
         aRange.aEnd = aRange.aStart;
     else
         bAll = true;
@@ -433,13 +434,13 @@ bool ScImportExport::ExportStream( SvStream& rStrm, const OUString& rBaseURL, So
         {
             // Always use Calc A1 syntax for paste link.
             OUString aRefName;
-            sal_uInt16 nFlags = SCA_VALID | SCA_TAB_3D;
+            ScRefFlags nFlags = ScRefFlags::VALID | ScRefFlags::TAB_3D;
             if( bSingle )
                 aRefName = aRange.aStart.Format(nFlags, pDoc, formula::FormulaGrammar::CONV_OOO);
             else
             {
                 if( aRange.aStart.Tab() != aRange.aEnd.Tab() )
-                    nFlags |= SCA_TAB2_3D;
+                    nFlags |= ScRefFlags::TAB2_3D;
                 aRefName = aRange.Format(nFlags, pDoc, formula::FormulaGrammar::CONV_OOO);
             }
             OUString aAppName = Application::GetAppName();
@@ -1267,7 +1268,7 @@ bool ScImportExport::ExtText2Doc( SvStream& rStrm )
     sal_uInt64 const nOldPos = rStrm.Tell();
     sal_uInt64 const nRemaining = rStrm.remainingSize();
     std::unique_ptr<ScProgress> xProgress( new ScProgress( pDocSh,
-            ScGlobal::GetRscString( STR_LOAD_DOC ), nRemaining ));
+            ScGlobal::GetRscString( STR_LOAD_DOC ), nRemaining, true ));
     rStrm.StartReadingUnicodeText( rStrm.GetStreamCharSet() );
 
     SCCOL nStartCol = aRange.aStart.Col();
@@ -1601,7 +1602,7 @@ bool ScImportExport::Doc2Text( SvStream& rStrm )
     if (!pDoc->GetClipParam().isMultiRange() && nStartTab == nEndTab)
         pDoc->ShrinkToDataArea( nStartTab, nStartCol, nStartRow, nEndCol, nEndRow );
 
-    OUString aCell;
+    OUString aCellStr;
 
     bool bConvertLF = (GetSystemLineEnd() != LINEEND_LF);
 
@@ -1611,71 +1612,77 @@ bool ScImportExport::Doc2Text( SvStream& rStrm )
         {
             for (nCol = nStartCol; nCol <= nEndCol; nCol++)
             {
-                CellType eType;
-                pDoc->GetCellType( nCol, nRow, nStartTab, eType );
-                switch (eType)
+                ScAddress aPos(nCol, nRow, nStartTab);
+                sal_uLong nNumFmt = pDoc->GetNumberFormat(aPos);
+                SvNumberFormatter* pFormatter = pDoc->GetFormatTable();
+
+                ScRefCellValue aCell(*pDoc, aPos);
+                switch (aCell.meType)
                 {
                     case CELLTYPE_FORMULA:
                     {
                         if (bFormulas)
                         {
-                            pDoc->GetFormula( nCol, nRow, nStartTab, aCell );
-                            if( aCell.indexOf( cSep ) != -1 )
-                                lcl_WriteString( rStrm, aCell, cStr, cStr );
+                            aCell.mpFormula->GetFormula( aCellStr );
+                            if( aCellStr.indexOf( cSep ) != -1 )
+                                lcl_WriteString( rStrm, aCellStr, cStr, cStr );
                             else
-                                lcl_WriteSimpleString( rStrm, aCell );
+                                lcl_WriteSimpleString( rStrm, aCellStr );
                         }
                         else
                         {
-                            aCell = pDoc->GetString(nCol, nRow, nStartTab);
+                            Color* pColor;
+                            ScCellFormat::GetString(aCell, nNumFmt, aCellStr, &pColor, *pFormatter, pDoc);
 
-                            bool bMultiLineText = ( aCell.indexOf( '\n' ) != -1 );
+                            bool bMultiLineText = ( aCellStr.indexOf( '\n' ) != -1 );
                             if( bMultiLineText )
                             {
                                 if( mExportTextOptions.meNewlineConversion == ScExportTextOptions::ToSpace )
-                                    aCell = aCell.replaceAll( "\n", " " );
+                                    aCellStr = aCellStr.replaceAll( "\n", " " );
                                 else if ( mExportTextOptions.meNewlineConversion == ScExportTextOptions::ToSystem && bConvertLF )
-                                    aCell = convertLineEnd(aCell, GetSystemLineEnd());
+                                    aCellStr = convertLineEnd(aCellStr, GetSystemLineEnd());
                             }
 
                             if( mExportTextOptions.mcSeparatorConvertTo && cSep )
-                                aCell = aCell.replaceAll( OUString(cSep), OUString(mExportTextOptions.mcSeparatorConvertTo) );
+                                aCellStr = aCellStr.replaceAll( OUString(cSep), OUString(mExportTextOptions.mcSeparatorConvertTo) );
 
-                            if( mExportTextOptions.mbAddQuotes && ( aCell.indexOf( cSep ) != -1 ) )
-                                lcl_WriteString( rStrm, aCell, cStr, cStr );
+                            if( mExportTextOptions.mbAddQuotes && ( aCellStr.indexOf( cSep ) != -1 ) )
+                                lcl_WriteString( rStrm, aCellStr, cStr, cStr );
                             else
-                                lcl_WriteSimpleString( rStrm, aCell );
+                                lcl_WriteSimpleString( rStrm, aCellStr );
                         }
                     }
                     break;
                     case CELLTYPE_VALUE:
                     {
-                        aCell = pDoc->GetString(nCol, nRow, nStartTab);
-                        lcl_WriteSimpleString( rStrm, aCell );
+                        Color* pColor;
+                        ScCellFormat::GetString(aCell, nNumFmt, aCellStr, &pColor, *pFormatter, pDoc);
+                        lcl_WriteSimpleString( rStrm, aCellStr );
                     }
                     break;
                     case CELLTYPE_NONE:
                     break;
                     default:
                     {
-                        aCell = pDoc->GetString(nCol, nRow, nStartTab);
+                        Color* pColor;
+                        ScCellFormat::GetString(aCell, nNumFmt, aCellStr, &pColor, *pFormatter, pDoc);
 
-                        bool bMultiLineText = ( aCell.indexOf( '\n' ) != -1 );
+                        bool bMultiLineText = ( aCellStr.indexOf( '\n' ) != -1 );
                         if( bMultiLineText )
                         {
                             if( mExportTextOptions.meNewlineConversion == ScExportTextOptions::ToSpace )
-                                aCell = aCell.replaceAll( "\n", " " );
+                                aCellStr = aCellStr.replaceAll( "\n", " " );
                             else if ( mExportTextOptions.meNewlineConversion == ScExportTextOptions::ToSystem && bConvertLF )
-                                aCell = convertLineEnd(aCell, GetSystemLineEnd());
+                                aCellStr = convertLineEnd(aCellStr, GetSystemLineEnd());
                         }
 
                         if( mExportTextOptions.mcSeparatorConvertTo && cSep )
-                            aCell = aCell.replaceAll( OUString(cSep), OUString(mExportTextOptions.mcSeparatorConvertTo) );
+                            aCellStr = aCellStr.replaceAll( OUString(cSep), OUString(mExportTextOptions.mcSeparatorConvertTo) );
 
-                        if( mExportTextOptions.mbAddQuotes && hasLineBreaksOrSeps(aCell, cSep) )
-                            lcl_WriteString( rStrm, aCell, cStr, cStr );
+                        if( mExportTextOptions.mbAddQuotes && hasLineBreaksOrSeps(aCellStr, cSep) )
+                            lcl_WriteString( rStrm, aCellStr, cStr, cStr );
                         else
-                            lcl_WriteSimpleString( rStrm, aCell );
+                            lcl_WriteSimpleString( rStrm, aCellStr );
                     }
                 }
                 if( nCol < nEndCol )
@@ -2057,7 +2064,7 @@ bool ScImportExport::Doc2Sylk( SvStream& rStrm )
                             case MM_REFERENCE :
                             {   // diff expression with 'I' M$-extension
                                 ScAddress aPos;
-                                pFCell->GetMatrixOrigin( aPos );
+                                (void)pFCell->GetMatrixOrigin( aPos );
                                 aPrefix = ";I;R";
                                 aPrefix += OUString::number( aPos.Row() - nStartRow + 1 );
                                 aPrefix += ";C";
@@ -2164,7 +2171,7 @@ bool ScImportExport::RTF2Doc( SvStream& rStrm, const OUString& rBaseURL )
 
 bool ScImportExport::HTML2Doc( SvStream& rStrm, const OUString& rBaseURL )
 {
-    ScEEAbsImport *pImp = ScFormatFilter::Get().CreateHTMLImport( pDoc, rBaseURL, aRange, true);
+    ScEEAbsImport *pImp = ScFormatFilter::Get().CreateHTMLImport( pDoc, rBaseURL, aRange);
     if (!pImp)
         return false;
     pImp->Read( rStrm, rBaseURL );
@@ -2218,15 +2225,15 @@ class ScFormatFilterMissing : public ScFormatFilterPlugin {
     virtual FltError ScImportHTML( SvStream&, const OUString&, ScDocument*, ScRange&, double, bool, SvNumberFormatter*, bool ) override { return eERR_INTERN; }
 
     virtual ScEEAbsImport *CreateRTFImport( ScDocument*, const ScRange& ) override { return nullptr; }
-    virtual ScEEAbsImport *CreateHTMLImport( ScDocument*, const OUString&, const ScRange&, bool ) override { return nullptr; }
+    virtual ScEEAbsImport *CreateHTMLImport( ScDocument*, const OUString&, const ScRange& ) override { return nullptr; }
     virtual OUString       GetHTMLRangeNameList( ScDocument*, const OUString& ) override { return OUString(); }
 
     virtual FltError ScExportExcel5( SfxMedium&, ScDocument*, ExportFormatExcel, rtl_TextEncoding ) override { return eERR_INTERN; }
-    virtual FltError ScExportDif( SvStream&, ScDocument*, const ScAddress&, const rtl_TextEncoding, sal_uInt32 ) override { return eERR_INTERN; }
-    virtual FltError ScExportDif( SvStream&, ScDocument*, const ScRange&, const rtl_TextEncoding, sal_uInt32 ) override { return eERR_INTERN; }
-    virtual FltError ScExportHTML( SvStream&, const OUString&, ScDocument*, const ScRange&, const rtl_TextEncoding, bool,
-                  const OUString&, OUString&, const OUString& ) override { return eERR_INTERN; }
-    virtual FltError ScExportRTF( SvStream&, ScDocument*, const ScRange&, const rtl_TextEncoding ) override { return eERR_INTERN; }
+    virtual void ScExportDif( SvStream&, ScDocument*, const ScAddress&, const rtl_TextEncoding ) override {}
+    virtual FltError ScExportDif( SvStream&, ScDocument*, const ScRange&, const rtl_TextEncoding ) override { return eERR_INTERN; }
+    virtual void ScExportHTML( SvStream&, const OUString&, ScDocument*, const ScRange&, const rtl_TextEncoding, bool,
+                  const OUString&, OUString&, const OUString& ) override {}
+    virtual void ScExportRTF( SvStream&, ScDocument*, const ScRange&, const rtl_TextEncoding ) override {}
 
     virtual ScOrcusFilters* GetOrcusFilters() override { return nullptr; }
 };

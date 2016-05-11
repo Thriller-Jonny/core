@@ -77,7 +77,7 @@ XMLGradientStyleImport::~XMLGradientStyleImport()
 {
 }
 
-bool XMLGradientStyleImport::importXML(
+void XMLGradientStyleImport::importXML(
     const uno::Reference< xml::sax::XAttributeList >& xAttrList,
     uno::Any& rValue,
     OUString& rStrName )
@@ -98,10 +98,6 @@ bool XMLGradientStyleImport::importXML(
         XML_TOKEN_MAP_END
     };
 
-    bool bHasName       = false;
-    bool bHasStyle      = false;
-    bool bHasStartColor = false;
-    bool bHasEndColor   = false;
     OUString aDisplayName;
 
     awt::Gradient aGradient;
@@ -128,15 +124,10 @@ bool XMLGradientStyleImport::importXML(
         switch( aTokenMap.Get( nPrefix, aStrAttrName ) )
         {
         case XML_TOK_GRADIENT_NAME:
-            {
-                rStrName = rStrValue;
-                bHasName = true;
-            }
+            rStrName = rStrValue;
             break;
         case XML_TOK_GRADIENT_DISPLAY_NAME:
-            {
-                aDisplayName = rStrValue;
-            }
+            aDisplayName = rStrValue;
             break;
         case XML_TOK_GRADIENT_STYLE:
             {
@@ -144,7 +135,6 @@ bool XMLGradientStyleImport::importXML(
                 if( SvXMLUnitConverter::convertEnum( eValue, rStrValue, pXML_GradientStyle_Enum ) )
                 {
                     aGradient.Style = (awt::GradientStyle) eValue;
-                    bHasStyle = true;
                 }
             }
             break;
@@ -157,16 +147,10 @@ bool XMLGradientStyleImport::importXML(
             aGradient.YOffset = static_cast< sal_Int16 >( nTmpValue );
             break;
         case XML_TOK_GRADIENT_STARTCOLOR:
-            {
-                bHasStartColor = ::sax::Converter::convertColor(
-                        aGradient.StartColor, rStrValue);
-            }
+            ::sax::Converter::convertColor(aGradient.StartColor, rStrValue);
             break;
         case XML_TOK_GRADIENT_ENDCOLOR:
-            {
-                bHasStartColor = ::sax::Converter::convertColor(
-                        aGradient.EndColor, rStrValue);
-            }
+            ::sax::Converter::convertColor(aGradient.EndColor, rStrValue);
             break;
         case XML_TOK_GRADIENT_STARTINT:
             ::sax::Converter::convertPercent( nTmpValue, rStrValue );
@@ -201,10 +185,6 @@ bool XMLGradientStyleImport::importXML(
                                      aDisplayName );
         rStrName = aDisplayName;
     }
-
-    bool bRet = bHasName && bHasStyle && bHasStartColor && bHasEndColor;
-
-    return bRet;
 }
 
 // Export
@@ -219,11 +199,10 @@ XMLGradientStyleExport::~XMLGradientStyleExport()
 {
 }
 
-bool XMLGradientStyleExport::exportXML(
+void XMLGradientStyleExport::exportXML(
     const OUString& rStrName,
     const uno::Any& rValue )
 {
-    bool bRet = false;
     awt::Gradient aGradient;
 
     if( !rStrName.isEmpty() )
@@ -234,21 +213,16 @@ bool XMLGradientStyleExport::exportXML(
             OUStringBuffer aOut;
 
             // Style
-            if( !SvXMLUnitConverter::convertEnum( aOut, aGradient.Style, pXML_GradientStyle_Enum ) )
-            {
-                bRet = false;
-            }
-            else
+            if( SvXMLUnitConverter::convertEnum( aOut, aGradient.Style, pXML_GradientStyle_Enum ) )
             {
                 // Name
                 bool bEncoded = false;
-                OUString aStrName( rStrName );
                 rExport.AddAttribute( XML_NAMESPACE_DRAW, XML_NAME,
-                                      rExport.EncodeStyleName( aStrName,
+                                      rExport.EncodeStyleName( rStrName,
                                                                 &bEncoded ) );
                 if( bEncoded )
                     rExport.AddAttribute( XML_NAMESPACE_DRAW, XML_DISPLAY_NAME,
-                                            aStrName );
+                                            rStrName );
 
                 aStrValue = aOut.makeStringAndClear();
                 rExport.AddAttribute( XML_NAMESPACE_DRAW, XML_STYLE, aStrValue );
@@ -304,8 +278,6 @@ bool XMLGradientStyleExport::exportXML(
             }
         }
     }
-
-    return bRet;
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -66,21 +66,20 @@ typedef ::cppu::WeakImplHelper<
     css::util::XChangesNotifier > NameContainer_BASE;
 
 
-
 class NameContainer : public ::cppu::BaseMutex, public NameContainer_BASE
 {
     typedef std::unordered_map < OUString, sal_Int32, OUStringHash > NameContainerNameMap;
 
     NameContainerNameMap mHashMap;
-    css::uno::Sequence< OUString > mNames;
-    css::uno::Sequence< css::uno::Any > mValues;
+    std::vector< OUString > mNames;
+    std::vector< css::uno::Any > mValues;
     sal_Int32 mnElementCount;
 
     css::uno::Type mType;
     css::uno::XInterface* mpxEventSource;
 
-    ::cppu::OInterfaceContainerHelper maContainerListeners;
-    ::cppu::OInterfaceContainerHelper maChangesListeners;
+    ::comphelper::OInterfaceContainerHelper2 maContainerListeners;
+    ::comphelper::OInterfaceContainerHelper2 maChangesListeners;
 
 public:
     NameContainer( const css::uno::Type& rType )
@@ -153,11 +152,10 @@ public:
 };
 
 
-
 class ModifiableHelper
 {
 private:
-    ::cppu::OInterfaceContainerHelper   m_aModifyListeners;
+    ::comphelper::OInterfaceContainerHelper2   m_aModifyListeners;
     ::cppu::OWeakObject&                m_rEventSource;
     bool                                mbModified;
 
@@ -184,7 +182,6 @@ public:
 };
 
 
-
 typedef ::comphelper::OListenerContainerBase<
     css::script::vba::XVBAScriptListener,
     css::script::vba::VBAScriptEvent > VBAScriptListenerContainer_BASE;
@@ -200,7 +197,6 @@ private:
         const css::script::vba::VBAScriptEvent& rEvent )
         throw (css::uno::Exception) override;
 };
-
 
 
 class SfxLibrary;
@@ -532,7 +528,6 @@ public:
 };
 
 
-
 class LibraryContainerMethodGuard
 {
 public:
@@ -548,7 +543,6 @@ public:
 };
 
 
-
 class SfxLibrary
     : public css::container::XNameContainer
     , public css::container::XContainer
@@ -560,7 +554,6 @@ class SfxLibrary
     friend class SfxDialogLibraryContainer;
     friend class SfxScriptLibraryContainer;
 
-    css::uno::Reference< css::uno::XComponentContext >    mxContext;
     css::uno::Reference< css::ucb::XSimpleFileAccess3 >   mxSFI;
 
     ModifiableHelper&                                     mrModifiable;
@@ -622,13 +615,11 @@ public:
     SfxLibrary(
         ModifiableHelper& _rModifiable,
         const css::uno::Type& aType,
-        const css::uno::Reference< css::uno::XComponentContext >& xContext,
         const css::uno::Reference< css::ucb::XSimpleFileAccess3 >& xSFI
     );
     SfxLibrary(
         ModifiableHelper& _rModifiable,
         const css::uno::Type& aType,
-        const css::uno::Reference< css::uno::XComponentContext >& xContext,
         const css::uno::Reference< css::ucb::XSimpleFileAccess3 >& xSFI,
         const OUString& aLibInfoFileURL,
         const OUString& aStorageURL,
@@ -710,7 +701,6 @@ protected:
 };
 
 
-
 class ScriptSubPackageIterator
 {
     css::uno::Reference< css::deployment::XPackage > m_xMainPackage;
@@ -731,7 +721,6 @@ public:
 
     css::uno::Reference< css::deployment::XPackage > getNextScriptSubPackage( bool& rbPureDialogLib );
 };
-
 
 
 class ScriptExtensionIterator
@@ -774,7 +763,6 @@ protected:
     ScriptSubPackageIterator* m_pScriptSubPackageIterator;
 
 }; // end class ScriptExtensionIterator
-
 
 
 }   // namespace basic

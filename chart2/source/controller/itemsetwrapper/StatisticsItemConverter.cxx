@@ -174,7 +174,7 @@ uno::Reference< beans::XPropertySet > lcl_getCurveProperties(
 }
 
 template <class T, class D>
-bool lclConvertToPropertySet(const SfxItemSet& rItemSet, sal_uInt16 nWhichId, uno::Reference<beans::XPropertySet> xProperties, const OUString& aPropertyID)
+bool lclConvertToPropertySet(const SfxItemSet& rItemSet, sal_uInt16 nWhichId, const uno::Reference<beans::XPropertySet>& xProperties, const OUString& aPropertyID)
 {
     OSL_ASSERT(xProperties.is());
     if( xProperties.is() )
@@ -192,7 +192,7 @@ bool lclConvertToPropertySet(const SfxItemSet& rItemSet, sal_uInt16 nWhichId, un
 }
 
 template <class T, class D>
-void lclConvertToItemSet(SfxItemSet& rItemSet, sal_uInt16 nWhichId, uno::Reference<beans::XPropertySet> xProperties, const OUString& aPropertyID)
+void lclConvertToItemSet(SfxItemSet& rItemSet, sal_uInt16 nWhichId, const uno::Reference<beans::XPropertySet>& xProperties, const OUString& aPropertyID)
 {
     OSL_ASSERT(xProperties.is());
     if( xProperties.is() )
@@ -205,7 +205,7 @@ void lclConvertToItemSet(SfxItemSet& rItemSet, sal_uInt16 nWhichId, uno::Referen
     }
 }
 
-void lclConvertToItemSetDouble(SfxItemSet& rItemSet, sal_uInt16 nWhichId, uno::Reference<beans::XPropertySet> xProperties, const OUString& aPropertyID)
+void lclConvertToItemSetDouble(SfxItemSet& rItemSet, sal_uInt16 nWhichId, const uno::Reference<beans::XPropertySet>& xProperties, const OUString& aPropertyID)
 {
     OSL_ASSERT(xProperties.is());
     if( xProperties.is() )
@@ -301,26 +301,26 @@ bool StatisticsItemConverter::ApplySpecialItem(
             }
             else
             {
-                sal_Int32 nStyle = ::com::sun::star::chart::ErrorBarStyle::NONE;
+                sal_Int32 nStyle = css::chart::ErrorBarStyle::NONE;
 
                 switch( eErrorKind )
                 {
                     case CHERROR_NONE:
-                        nStyle = ::com::sun::star::chart::ErrorBarStyle::NONE; break;
+                        nStyle = css::chart::ErrorBarStyle::NONE; break;
                     case CHERROR_VARIANT:
-                        nStyle = ::com::sun::star::chart::ErrorBarStyle::VARIANCE; break;
+                        nStyle = css::chart::ErrorBarStyle::VARIANCE; break;
                     case CHERROR_SIGMA:
-                        nStyle = ::com::sun::star::chart::ErrorBarStyle::STANDARD_DEVIATION; break;
+                        nStyle = css::chart::ErrorBarStyle::STANDARD_DEVIATION; break;
                     case CHERROR_PERCENT:
-                        nStyle = ::com::sun::star::chart::ErrorBarStyle::RELATIVE; break;
+                        nStyle = css::chart::ErrorBarStyle::RELATIVE; break;
                     case CHERROR_BIGERROR:
-                        nStyle = ::com::sun::star::chart::ErrorBarStyle::ERROR_MARGIN; break;
+                        nStyle = css::chart::ErrorBarStyle::ERROR_MARGIN; break;
                     case CHERROR_CONST:
-                        nStyle = ::com::sun::star::chart::ErrorBarStyle::ABSOLUTE; break;
+                        nStyle = css::chart::ErrorBarStyle::ABSOLUTE; break;
                     case CHERROR_STDERROR:
-                        nStyle = ::com::sun::star::chart::ErrorBarStyle::STANDARD_ERROR; break;
+                        nStyle = css::chart::ErrorBarStyle::STANDARD_ERROR; break;
                     case CHERROR_RANGE:
-                        nStyle = ::com::sun::star::chart::ErrorBarStyle::FROM_DATA; break;
+                        nStyle = css::chart::ErrorBarStyle::FROM_DATA; break;
                 }
 
                 if( !xErrorBarProp.is() )
@@ -482,7 +482,7 @@ bool StatisticsItemConverter::ApplySpecialItem(
         case SCHATTR_REGRESSION_SET_INTERCEPT:
         {
             uno::Reference< beans::XPropertySet > xProperties( lcl_getCurveProperties( GetPropertySet(), &rItemSet ));
-            bChanged = lclConvertToPropertySet<sal_Bool, SfxBoolItem>(rItemSet, nWhichId, xProperties, "ForceIntercept");
+            bChanged = lclConvertToPropertySet<bool, SfxBoolItem>(rItemSet, nWhichId, xProperties, "ForceIntercept");
         }
         break;
 
@@ -503,14 +503,14 @@ bool StatisticsItemConverter::ApplySpecialItem(
         case SCHATTR_REGRESSION_SHOW_EQUATION:
         {
             uno::Reference< beans::XPropertySet > xEqProp( lcl_getEquationProperties( GetPropertySet(), &rItemSet ));
-            bChanged = lclConvertToPropertySet<sal_Bool, SfxBoolItem>(rItemSet, nWhichId, xEqProp, "ShowEquation");
+            bChanged = lclConvertToPropertySet<bool, SfxBoolItem>(rItemSet, nWhichId, xEqProp, "ShowEquation");
         }
         break;
 
         case SCHATTR_REGRESSION_SHOW_COEFF:
         {
             uno::Reference< beans::XPropertySet > xEqProp( lcl_getEquationProperties( GetPropertySet(), &rItemSet ));
-            bChanged = lclConvertToPropertySet<sal_Bool, SfxBoolItem>(rItemSet, nWhichId, xEqProp, "ShowCorrelationCoefficient");
+            bChanged = lclConvertToPropertySet<bool, SfxBoolItem>(rItemSet, nWhichId, xEqProp, "ShowCorrelationCoefficient");
         }
         break;
 
@@ -630,21 +630,21 @@ void StatisticsItemConverter::FillSpecialItem(
                 {
                     switch( nStyle )
                     {
-                        case ::com::sun::star::chart::ErrorBarStyle::NONE:
+                        case css::chart::ErrorBarStyle::NONE:
                             break;
-                        case ::com::sun::star::chart::ErrorBarStyle::VARIANCE:
+                        case css::chart::ErrorBarStyle::VARIANCE:
                             eErrorKind = CHERROR_VARIANT; break;
-                        case ::com::sun::star::chart::ErrorBarStyle::STANDARD_DEVIATION:
+                        case css::chart::ErrorBarStyle::STANDARD_DEVIATION:
                             eErrorKind = CHERROR_SIGMA; break;
-                        case ::com::sun::star::chart::ErrorBarStyle::ABSOLUTE:
+                        case css::chart::ErrorBarStyle::ABSOLUTE:
                             eErrorKind = CHERROR_CONST; break;
-                        case ::com::sun::star::chart::ErrorBarStyle::RELATIVE:
+                        case css::chart::ErrorBarStyle::RELATIVE:
                             eErrorKind = CHERROR_PERCENT; break;
-                        case ::com::sun::star::chart::ErrorBarStyle::ERROR_MARGIN:
+                        case css::chart::ErrorBarStyle::ERROR_MARGIN:
                             eErrorKind = CHERROR_BIGERROR; break;
-                        case ::com::sun::star::chart::ErrorBarStyle::STANDARD_ERROR:
+                        case css::chart::ErrorBarStyle::STANDARD_ERROR:
                             eErrorKind = CHERROR_STDERROR; break;
-                        case ::com::sun::star::chart::ErrorBarStyle::FROM_DATA:
+                        case css::chart::ErrorBarStyle::FROM_DATA:
                             eErrorKind = CHERROR_RANGE; break;
                     }
                 }
@@ -751,7 +751,7 @@ void StatisticsItemConverter::FillSpecialItem(
         case SCHATTR_REGRESSION_SET_INTERCEPT:
         {
             uno::Reference< beans::XPropertySet > xProperties( lcl_getCurveProperties( GetPropertySet(), nullptr ));
-            lclConvertToItemSet<sal_Bool, SfxBoolItem>(rOutItemSet, nWhichId, xProperties, "ForceIntercept");
+            lclConvertToItemSet<bool, SfxBoolItem>(rOutItemSet, nWhichId, xProperties, "ForceIntercept");
         }
         break;
 
@@ -772,14 +772,14 @@ void StatisticsItemConverter::FillSpecialItem(
         case SCHATTR_REGRESSION_SHOW_EQUATION:
         {
             uno::Reference< beans::XPropertySet > xEqProp( lcl_getEquationProperties( GetPropertySet(), nullptr ));
-            lclConvertToItemSet<sal_Bool, SfxBoolItem>(rOutItemSet, nWhichId, xEqProp, "ShowEquation");
+            lclConvertToItemSet<bool, SfxBoolItem>(rOutItemSet, nWhichId, xEqProp, "ShowEquation");
         }
         break;
 
         case SCHATTR_REGRESSION_SHOW_COEFF:
         {
             uno::Reference< beans::XPropertySet > xEqProp( lcl_getEquationProperties( GetPropertySet(), nullptr ));
-            lclConvertToItemSet<sal_Bool, SfxBoolItem>(rOutItemSet, nWhichId, xEqProp, "ShowCorrelationCoefficient");
+            lclConvertToItemSet<bool, SfxBoolItem>(rOutItemSet, nWhichId, xEqProp, "ShowCorrelationCoefficient");
         }
         break;
 

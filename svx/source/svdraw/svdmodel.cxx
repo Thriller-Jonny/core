@@ -90,11 +90,11 @@
 #include <vcl/svapp.hxx>
 #include <memory>
 #include <libxml/xmlwriter.h>
+#include <LibreOfficeKit/LibreOfficeKitEnums.h>
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::lang;
-
 
 
 struct SdrModelImpl
@@ -104,9 +104,8 @@ struct SdrModelImpl
 };
 
 
-
 void SdrModel::ImpCtor(SfxItemPool* pPool, ::comphelper::IEmbeddedHelper* _pEmbeddedHelper,
-    bool bUseExtColorTable, bool bLoadRefCounts)
+    bool bUseExtColorTable)
 {
     mpImpl = new SdrModelImpl;
     mpImpl->mpUndoManager=nullptr;
@@ -125,9 +124,9 @@ void SdrModel::ImpCtor(SfxItemPool* pPool, ::comphelper::IEmbeddedHelper* _pEmbe
     pDrawOutliner=nullptr;
     pHitTestOutliner=nullptr;
     pRefOutDev=nullptr;
-    mbTiledRendering = false;
     mpLibreOfficeKitCallback = nullptr;
     mpLibreOfficeKitData = nullptr;
+    mbTiledSearching = false;
     nProgressAkt=0;
     nProgressMax=0;
     nProgressOfs=0;
@@ -148,7 +147,7 @@ void SdrModel::ImpCtor(SfxItemPool* pPool, ::comphelper::IEmbeddedHelper* _pEmbe
     bInfoChanged=false;
     bPagNumsDirty=false;
     bMPgNumsDirty=false;
-    bPageNotValid=false;
+    bTransportContainer = false;
     bSavePortable=false;
     bSaveCompressed=false;
     bSaveNative=false;
@@ -189,9 +188,9 @@ void SdrModel::ImpCtor(SfxItemPool* pPool, ::comphelper::IEmbeddedHelper* _pEmbe
 
     if ( pPool == nullptr )
     {
-        pItemPool=new SdrItemPool(nullptr, bLoadRefCounts);
+        pItemPool=new SdrItemPool(nullptr, false/*bLoadRefCounts*/);
         // Outliner doesn't have its own Pool, so use the EditEngine's
-        SfxItemPool* pOutlPool=EditEngine::CreatePool( bLoadRefCounts );
+        SfxItemPool* pOutlPool=EditEngine::CreatePool( false/*bLoadRefCounts*/ );
         // OutlinerPool as SecondaryPool of SdrPool
         pItemPool->SetSecondaryPool(pOutlPool);
         // remember that I created both pools myself
@@ -215,15 +214,15 @@ void SdrModel::ImpCtor(SfxItemPool* pPool, ::comphelper::IEmbeddedHelper* _pEmbe
 
     // can't create DrawOutliner OnDemand, because I can't get the Pool,
     // then (only from 302 onwards!)
-    pDrawOutliner = SdrMakeOutliner(OUTLINERMODE_TEXTOBJECT, *this);
+    pDrawOutliner = SdrMakeOutliner(OutlinerMode::TextObject, *this);
     ImpSetOutlinerDefaults(pDrawOutliner, true);
 
-    pHitTestOutliner = SdrMakeOutliner(OUTLINERMODE_TEXTOBJECT, *this);
+    pHitTestOutliner = SdrMakeOutliner(OutlinerMode::TextObject, *this);
     ImpSetOutlinerDefaults(pHitTestOutliner, true);
 
     /* Start Text Chaining related code */
     // Initialize Chaining Outliner
-    pChainingOutliner = SdrMakeOutliner( OUTLINERMODE_TEXTOBJECT, *this );
+    pChainingOutliner = SdrMakeOutliner( OutlinerMode::TextObject, *this );
     ImpSetOutlinerDefaults(pChainingOutliner, true);
 
     // Make a TextChain
@@ -237,22 +236,22 @@ SdrModel::SdrModel():
     maMaPag(),
     maPages()
 {
-    ImpCtor(nullptr, nullptr, false, LOADREFCOUNTS);
+    ImpCtor(nullptr, nullptr, false);
 }
 
-SdrModel::SdrModel(SfxItemPool* pPool, ::comphelper::IEmbeddedHelper* pPers, bool bUseExtColorTable, bool bLoadRefCounts):
+SdrModel::SdrModel(SfxItemPool* pPool, ::comphelper::IEmbeddedHelper* pPers, bool bUseExtColorTable):
     maMaPag(),
     maPages()
 {
-    ImpCtor(pPool,pPers,bUseExtColorTable, bLoadRefCounts);
+    ImpCtor(pPool,pPers,bUseExtColorTable);
 }
 
-SdrModel::SdrModel(const OUString& rPath, SfxItemPool* pPool, ::comphelper::IEmbeddedHelper* pPers, bool bUseExtColorTable, bool bLoadRefCounts):
+SdrModel::SdrModel(const OUString& rPath, SfxItemPool* pPool, ::comphelper::IEmbeddedHelper* pPers, bool bUseExtColorTable):
     maMaPag(),
     maPages(),
     aTablePath(rPath)
 {
-    ImpCtor(pPool,pPers,bUseExtColorTable, bLoadRefCounts);
+    ImpCtor(pPool,pPers,bUseExtColorTable);
 }
 
 SdrModel::~SdrModel()
@@ -321,9 +320,9 @@ SdrModel::~SdrModel()
     delete mpImpl;
 }
 
-void SdrModel::SetSwapGraphics( bool bSwap )
+void SdrModel::SetSwapGraphics()
 {
-    bSwapGraphics = bSwap;
+    bSwapGraphics = true;
 }
 
 bool SdrModel::IsReadOnly() const
@@ -335,7 +334,6 @@ void SdrModel::SetReadOnly(bool bYes)
 {
     bReadOnly=bYes;
 }
-
 
 
 void SdrModel::SetMaxUndoActionCount(sal_uIntPtr nCount)
@@ -380,9 +378,8 @@ bool SdrModel::HasRedoActions() const
     return pRedoStack && !pRedoStack->empty();
 }
 
-bool SdrModel::Undo()
+void SdrModel::Undo()
 {
-    bool bRet = false;
     if( mpImpl->mpUndoManager )
     {
         OSL_FAIL("svx::SdrModel::Undo(), method not supported with application undo manager!");
@@ -403,12 +400,10 @@ bool SdrModel::Undo()
             mbUndoEnabled = bWasUndoEnabled;
         }
     }
-    return bRet;
 }
 
-bool SdrModel::Redo()
+void SdrModel::Redo()
 {
-    bool bRet = false;
     if( mpImpl->mpUndoManager )
     {
         OSL_FAIL("svx::SdrModel::Redo(), method not supported with application undo manager!");
@@ -429,12 +424,10 @@ bool SdrModel::Redo()
             mbUndoEnabled = bWasUndoEnabled;
         }
     }
-    return bRet;
 }
 
-bool SdrModel::Repeat(SfxRepeatTarget& rView)
+void SdrModel::Repeat(SfxRepeatTarget& rView)
 {
-    bool bRet = false;
     if( mpImpl->mpUndoManager )
     {
         OSL_FAIL("svx::SdrModel::Redo(), method not supported with application undo manager!");
@@ -447,11 +440,9 @@ bool SdrModel::Repeat(SfxRepeatTarget& rView)
             if(pDo->CanRepeat(rView))
             {
                 pDo->Repeat(rView);
-                bRet = true;
             }
         }
     }
-    return bRet;
 }
 
 void SdrModel::ImpPostUndoAction(SdrUndoAction* pUndo)
@@ -731,8 +722,8 @@ void SdrModel::SetTextDefaults( SfxItemPool* pItemPool, sal_uIntPtr nDefTextHgt 
 
     // get DEFAULTFONT_LATIN_TEXT and set at pool as dynamic default
     vcl::Font aFont(OutputDevice::GetDefaultFont(DefaultFontType::LATIN_TEXT, nLanguage, GetDefaultFontFlags::OnlyOne));
-    aSvxFontItem.SetFamily(aFont.GetFamily());
-    aSvxFontItem.SetFamilyName(aFont.GetName());
+    aSvxFontItem.SetFamily(aFont.GetFamilyType());
+    aSvxFontItem.SetFamilyName(aFont.GetFamilyName());
     aSvxFontItem.SetStyleName(OUString());
     aSvxFontItem.SetPitch( aFont.GetPitch());
     aSvxFontItem.SetCharSet( aFont.GetCharSet() );
@@ -740,8 +731,8 @@ void SdrModel::SetTextDefaults( SfxItemPool* pItemPool, sal_uIntPtr nDefTextHgt 
 
     // get DEFAULTFONT_CJK_TEXT and set at pool as dynamic default
     vcl::Font aFontCJK(OutputDevice::GetDefaultFont(DefaultFontType::CJK_TEXT, nLanguage, GetDefaultFontFlags::OnlyOne));
-    aSvxFontItemCJK.SetFamily( aFontCJK.GetFamily());
-    aSvxFontItemCJK.SetFamilyName(aFontCJK.GetName());
+    aSvxFontItemCJK.SetFamily( aFontCJK.GetFamilyType());
+    aSvxFontItemCJK.SetFamilyName(aFontCJK.GetFamilyName());
     aSvxFontItemCJK.SetStyleName(OUString());
     aSvxFontItemCJK.SetPitch( aFontCJK.GetPitch());
     aSvxFontItemCJK.SetCharSet( aFontCJK.GetCharSet());
@@ -749,8 +740,8 @@ void SdrModel::SetTextDefaults( SfxItemPool* pItemPool, sal_uIntPtr nDefTextHgt 
 
     // get DEFAULTFONT_CTL_TEXT and set at pool as dynamic default
     vcl::Font aFontCTL(OutputDevice::GetDefaultFont(DefaultFontType::CTL_TEXT, nLanguage, GetDefaultFontFlags::OnlyOne));
-    aSvxFontItemCTL.SetFamily(aFontCTL.GetFamily());
-    aSvxFontItemCTL.SetFamilyName(aFontCTL.GetName());
+    aSvxFontItemCTL.SetFamily(aFontCTL.GetFamilyType());
+    aSvxFontItemCTL.SetFamilyName(aFontCTL.GetFamilyName());
     aSvxFontItemCTL.SetStyleName(OUString());
     aSvxFontItemCTL.SetPitch( aFontCTL.GetPitch() );
     aSvxFontItemCTL.SetCharSet( aFontCTL.GetCharSet());
@@ -817,16 +808,6 @@ void SdrModel::SetRefDevice(OutputDevice* pDev)
     RefDeviceChanged();
 }
 
-void SdrModel::setTiledRendering(bool bTiledRendering)
-{
-    mbTiledRendering = bTiledRendering;
-}
-
-bool SdrModel::isTiledRendering() const
-{
-    return mbTiledRendering;
-}
-
 void SdrModel::registerLibreOfficeKitCallback(LibreOfficeKitCallback pCallback, void* pData)
 {
     mpLibreOfficeKitCallback = pCallback;
@@ -835,13 +816,30 @@ void SdrModel::registerLibreOfficeKitCallback(LibreOfficeKitCallback pCallback, 
 
 void SdrModel::libreOfficeKitCallback(int nType, const char* pPayload) const
 {
+    if (mbTiledSearching)
+    {
+        switch (nType)
+        {
+        case LOK_CALLBACK_TEXT_SELECTION:
+        case LOK_CALLBACK_TEXT_SELECTION_START:
+        case LOK_CALLBACK_TEXT_SELECTION_END:
+        case LOK_CALLBACK_GRAPHIC_SELECTION:
+            return;
+        }
+    }
+
     if (mpLibreOfficeKitCallback)
         mpLibreOfficeKitCallback(nType, pPayload, mpLibreOfficeKitData);
 }
 
-LibreOfficeKitCallback SdrModel::getLibreOfficeKitCallback() const
+void SdrModel::setTiledSearching(bool bTiledSearching)
 {
-    return mpLibreOfficeKitCallback;
+    mbTiledSearching = bTiledSearching;
+}
+
+bool SdrModel::isTiledSearching() const
+{
+    return mbTiledSearching;
 }
 
 void* SdrModel::getLibreOfficeKitData() const
@@ -1315,7 +1313,7 @@ void SdrModel::TakeMetricStr(long nVal, OUString& rStr, bool bNoUnitChars, sal_I
     // if necessary, add separators before every third digit
     if( nVorKomma > 3 )
     {
-        OUString aThoSep( rLoc.getNumThousandSep() );
+        const OUString& aThoSep( rLoc.getNumThousandSep() );
         if ( !aThoSep.isEmpty() )
         {
             sal_Unicode cTho( aThoSep[0] );
@@ -1374,7 +1372,7 @@ void SdrModel::TakeAngleStr(long nAngle, OUString& rStr, bool bNoDegChar)
     rStr = aBuf.makeStringAndClear();
 }
 
-void SdrModel::TakePercentStr(const Fraction& rVal, OUString& rStr, bool bNoPercentChar)
+void SdrModel::TakePercentStr(const Fraction& rVal, OUString& rStr)
 {
     sal_Int32 nMul(rVal.GetNumerator());
     sal_Int32 nDiv(rVal.GetDenominator());
@@ -1398,8 +1396,7 @@ void SdrModel::TakePercentStr(const Fraction& rVal, OUString& rStr, bool bNoPerc
     if(bNeg)
         rStr = "-" + rStr;
 
-    if(!bNoPercentChar)
-        rStr += "%";
+    rStr += "%";
 }
 
 void SdrModel::SetChanged(bool bFlg)
@@ -1549,7 +1546,6 @@ void SdrModel::MoveMasterPage(sal_uInt16 nPgNum, sal_uInt16 nNewPos)
     aHint.SetPage(pPg);
     Broadcast(aHint);
 }
-
 
 
 void SdrModel::CopyPages(sal_uInt16 nFirstPageNum, sal_uInt16 nLastPageNum,
@@ -1824,7 +1820,7 @@ uno::Reference< uno::XInterface > SdrModel::getUnoModel()
     return mxUnoModel;
 }
 
-void SdrModel::setUnoModel( css::uno::Reference< css::uno::XInterface > xModel )
+void SdrModel::setUnoModel( const css::uno::Reference< css::uno::XInterface >& xModel )
 {
     mxUnoModel = xModel;
 }
@@ -1849,7 +1845,6 @@ void SdrModel::setLock( bool bLock )
         }
     }
 }
-
 
 
 void SdrModel::MigrateItemSet( const SfxItemSet* pSourceSet, SfxItemSet* pDestSet, SdrModel* pNewModel )
@@ -1908,8 +1903,7 @@ void SdrModel::MigrateItemSet( const SfxItemSet* pSourceSet, SfxItemSet* pDestSe
 }
 
 
-
-void SdrModel::SetForbiddenCharsTable( rtl::Reference<SvxForbiddenCharactersTable> xForbiddenChars )
+void SdrModel::SetForbiddenCharsTable( const rtl::Reference<SvxForbiddenCharactersTable>& xForbiddenChars )
 {
     if( mpForbiddenCharactersTable )
         mpForbiddenCharactersTable->release();
@@ -1959,7 +1953,7 @@ void SdrModel::ReformatAllTextObjects()
     ImpReformatAllTextObjects();
 }
 
-SdrOutliner* SdrModel::createOutliner( sal_uInt16 nOutlinerMode )
+SdrOutliner* SdrModel::createOutliner( OutlinerMode nOutlinerMode )
 {
     if( nullptr == mpOutlinerCache )
         mpOutlinerCache = new SdrOutlinerCache(this);
@@ -1969,9 +1963,7 @@ SdrOutliner* SdrModel::createOutliner( sal_uInt16 nOutlinerMode )
 
 std::vector<SdrOutliner*> SdrModel::GetActiveOutliners() const
 {
-    std::vector<SdrOutliner*> aRet(mpOutlinerCache ?
-        mpOutlinerCache->GetActiveOutliners() : std::vector<SdrOutliner*>());
-
+    std::vector< SdrOutliner* > aRet(mpOutlinerCache ? mpOutlinerCache->GetActiveOutliners() : std::vector< SdrOutliner* >());
     aRet.push_back(pDrawOutliner);
     aRet.push_back(pHitTestOutliner);
 
@@ -2094,7 +2086,6 @@ const css::uno::Sequence< sal_Int8 >& SdrModel::getUnoTunnelImplementationId()
 }
 
 
-
 SdrHint::SdrHint(SdrHintKind eNewHint)
 :   mpPage(nullptr),
     mpObj(nullptr),
@@ -2124,8 +2115,6 @@ void SdrHint::SetKind(SdrHintKind eNewKind)
 {
     meHint = eNewKind;
 }
-
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

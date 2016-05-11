@@ -24,9 +24,7 @@
 #include <xmloff/xmlexp.hxx>
 #include <xmloff/xmlerror.hxx>
 
-#include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/uno/Reference.hxx>
-#include <com/sun/star/uno/Sequence.hxx>
 #include <com/sun/star/xml/dom/XAttr.hpp>
 #include <com/sun/star/xml/dom/XDocumentBuilder.hpp>
 #include <com/sun/star/xml/dom/XNode.hpp>
@@ -45,15 +43,11 @@
 #include <vector>
 
 
-using com::sun::star::lang::XMultiServiceFactory;
 using com::sun::star::uno::Reference;
-using com::sun::star::uno::Sequence;
-using com::sun::star::uno::UNO_QUERY;
 using com::sun::star::uno::UNO_QUERY_THROW;
 using std::vector;
 
 using namespace com::sun::star::xml::dom;
-
 
 
 class DomVisitor
@@ -68,7 +62,6 @@ public:
 
 void visit( DomVisitor&, const Reference<XDocument>& );
 void visit( DomVisitor&, const Reference<XNode>& );
-
 
 
 void visitNode( DomVisitor& rVisitor, const Reference<XNode>& xNode )
@@ -124,7 +117,6 @@ void visit( DomVisitor& rVisitor, const Reference<XNode>& xNode )
     if( xNode->getNodeType() == NodeType_ELEMENT_NODE )
         rVisitor.endElement( Reference<XElement>( xNode, UNO_QUERY_THROW ) );
 }
-
 
 
 class DomExport: public DomVisitor

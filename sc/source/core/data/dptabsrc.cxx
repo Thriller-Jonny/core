@@ -63,7 +63,6 @@
 using namespace com::sun::star;
 using ::std::vector;
 using ::std::set;
-using ::com::sun::star::uno::Reference;
 using ::com::sun::star::uno::Sequence;
 using ::com::sun::star::uno::Any;
 using ::com::sun::star::sheet::DataPilotFieldAutoShowInfo;
@@ -89,11 +88,6 @@ static bool lcl_GetBoolFromAny( const uno::Any& aAny )
     if ( aAny.getValueTypeClass() == uno::TypeClass_BOOLEAN )
         return *static_cast<sal_Bool const *>(aAny.getValue());
     return false;
-}
-
-static void lcl_SetBoolInAny( uno::Any& rAny, bool bValue )
-{
-    rAny.setValue( &bValue, cppu::UnoType<bool>::get() );
 }
 
 ScDPSource::ScDPSource( ScDPTableData* pD ) :
@@ -683,7 +677,7 @@ void ScDPSource::FillCalcInfo(bool bIsRow, ScDPTableData::CalcInfo& rInfo, bool 
 
 namespace {
 
-class CategoryDimInserter : std::unary_function<long, void>
+class CategoryDimInserter : public std::unary_function<long, void>
 {
     ScDPSource& mrSource;
     std::unordered_set<sal_Int32>& mrCatDims;
@@ -1169,13 +1163,13 @@ uno::Any SAL_CALL ScDPSource::getPropertyValue( const OUString& aPropertyName )
 {
     uno::Any aRet;
     if ( aPropertyName == SC_UNO_DP_COLGRAND )
-        lcl_SetBoolInAny(aRet, bColumnGrand);
+        aRet <<= bColumnGrand;
     else if ( aPropertyName == SC_UNO_DP_ROWGRAND )
-        lcl_SetBoolInAny(aRet, bRowGrand);
+        aRet <<= bRowGrand;
     else if ( aPropertyName == SC_UNO_DP_IGNOREEMPTY )
-        lcl_SetBoolInAny(aRet, bIgnoreEmptyRows);
+        aRet <<= bIgnoreEmptyRows;
     else if ( aPropertyName == SC_UNO_DP_REPEATEMPTY )
-        lcl_SetBoolInAny(aRet, bRepeatIfEmpty);
+        aRet <<= bRepeatIfEmpty;
     else if ( aPropertyName == SC_UNO_DP_DATADESC )             // read-only
         aRet <<= getDataDescription();
     else if ( aPropertyName == SC_UNO_DP_ROWFIELDCOUNT )        // read-only
@@ -1291,7 +1285,7 @@ sal_Bool SAL_CALL ScDPDimensions::hasByName( const OUString& aName ) throw(uno::
     long nCount = getCount();
     for (long i=0; i<nCount; i++)
         if ( getByIndex(i)->getName() == aName )
-            return sal_True;
+            return true;
     return false;
 }
 
@@ -1615,7 +1609,7 @@ uno::Any SAL_CALL ScDPDimension::getPropertyValue( const OUString& aPropertyName
     else if ( aPropertyName == SC_UNO_DP_REFVALUE )
         aRet <<= aReferenceValue;
     else if ( aPropertyName == SC_UNO_DP_ISDATALAYOUT )                 // read-only properties
-        lcl_SetBoolInAny( aRet, getIsDataLayoutDimension() );
+        aRet <<= getIsDataLayoutDimension();
     else if ( aPropertyName == SC_UNO_DP_NUMBERFO )
     {
         sal_Int32 nFormat = 0;
@@ -1747,7 +1741,7 @@ sal_Bool SAL_CALL ScDPHierarchies::hasByName( const OUString& aName ) throw(uno:
     long nCount = getCount();
     for (long i=0; i<nCount; i++)
         if ( getByIndex(i)->getName() == aName )
-            return sal_True;
+            return true;
     return false;
 }
 
@@ -1926,7 +1920,7 @@ sal_Bool SAL_CALL ScDPLevels::hasByName( const OUString& aName ) throw(uno::Runt
     long nCount = getCount();
     for (long i=0; i<nCount; i++)
         if ( getByIndex(i)->getName() == aName )
-            return sal_True;
+            return true;
     return false;
 }
 
@@ -2004,7 +1998,7 @@ ScDPLevel::ScDPLevel( ScDPSource* pSrc, long nD, long nH, long nL ) :
     nHier( nH ),
     nLev( nL ),
     pMembers( nullptr ),
-    aSortInfo( EMPTY_OUSTRING, sal_True, sheet::DataPilotFieldSortMode::NAME ),   // default: sort by name
+    aSortInfo( EMPTY_OUSTRING, true, sheet::DataPilotFieldSortMode::NAME ),   // default: sort by name
     nSortMeasure( 0 ),
     nAutoMeasure( 0 ),
     bShowEmpty( false ),
@@ -2234,9 +2228,9 @@ uno::Any SAL_CALL ScDPLevel::getPropertyValue( const OUString& aPropertyName )
 {
     uno::Any aRet;
     if ( aPropertyName == SC_UNO_DP_SHOWEMPTY )
-        lcl_SetBoolInAny(aRet, bShowEmpty);
+        aRet <<= bShowEmpty;
     else if ( aPropertyName == SC_UNO_DP_REPEATITEMLABELS )
-        lcl_SetBoolInAny(aRet, bRepeatItemLabels);
+        aRet <<= bRepeatItemLabels;
     else if ( aPropertyName == SC_UNO_DP_SUBTOTAL )
     {
         uno::Sequence<sheet::GeneralFunction> aSeq = getSubTotals();        //TODO: avoid extra copy?
@@ -2682,9 +2676,9 @@ uno::Any SAL_CALL ScDPMember::getPropertyValue( const OUString& aPropertyName )
 {
     uno::Any aRet;
     if ( aPropertyName == SC_UNO_DP_ISVISIBLE )
-        lcl_SetBoolInAny(aRet, bVisible);
+        aRet <<= bVisible;
     else if ( aPropertyName == SC_UNO_DP_SHOWDETAILS )
-        lcl_SetBoolInAny(aRet, bShowDet);
+        aRet <<= bShowDet;
     else if ( aPropertyName == SC_UNO_DP_POSITION )
         aRet <<= nPosition;
     else if (aPropertyName == SC_UNO_DP_LAYOUTNAME)

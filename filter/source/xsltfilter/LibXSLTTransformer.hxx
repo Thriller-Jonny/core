@@ -26,8 +26,6 @@
 
 #include <salhelper/thread.hxx>
 
-#include <com/sun/star/uno/Any.hxx>
-
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/io/XInputStream.hpp>
 #include <com/sun/star/io/XOutputStream.hpp>
@@ -134,13 +132,13 @@ namespace XSLT
         void SAL_CALL
         error(const OUString& msg);
 
-        const OString SAL_CALL
+        const OString& SAL_CALL
         getStyleSheetURL() { return m_styleSheetURL; }
 
-        ::std::map<const char*, OString> SAL_CALL
+        const ::std::map<const char*, OString>& SAL_CALL
         getParameters() { return m_parameters; }
 
-        css::uno::Reference<css::uno::XComponentContext> SAL_CALL
+        const css::uno::Reference<css::uno::XComponentContext>& SAL_CALL
         getComponentContext() {
             return m_xContext;
         }

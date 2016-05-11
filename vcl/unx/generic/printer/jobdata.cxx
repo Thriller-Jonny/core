@@ -18,8 +18,8 @@
  */
 
 #include <officecfg/Office/Common.hxx>
-#include "vcl/jobdata.hxx"
-#include "vcl/printerinfomanager.hxx"
+#include <vcl/jobdata.hxx>
+#include <vcl/printerinfomanager.hxx>
 #include "tools/stream.hxx"
 
 #include <rtl/strbuf.hxx>
@@ -50,24 +50,6 @@ JobData& JobData::operator=(const JobData& rRight)
         rMgr.setupJobContextData( *this );
     }
     return *this;
-}
-
-bool psp::operator==(const psp::JobData& rLeft, const psp::JobData& rRight)
-{
-    return rLeft.m_nCopies == rRight.m_nCopies
-//        && rLeft.m_bCollate == rRight.m_bCollate
-        && rLeft.m_nLeftMarginAdjust == rRight.m_nLeftMarginAdjust
-        && rLeft.m_nRightMarginAdjust == rRight.m_nRightMarginAdjust
-        && rLeft.m_nTopMarginAdjust == rRight.m_nTopMarginAdjust
-        && rLeft.m_nBottomMarginAdjust == rRight.m_nBottomMarginAdjust
-        && rLeft.m_nColorDepth == rRight.m_nColorDepth
-        && rLeft.m_eOrientation == rRight.m_eOrientation
-        && rLeft.m_aPrinterName == rRight.m_aPrinterName
-        && rLeft.m_pParser == rRight.m_pParser
-//        && rLeft.m_aContext == rRight.m_aContext
-        && rLeft.m_nPSLevel == rRight.m_nPSLevel
-        && rLeft.m_nPDFDevice == rRight.m_nPDFDevice
-        && rLeft.m_nColorDevice == rRight.m_nColorDevice;
 }
 
 void JobData::setCollate( bool bCollate )
@@ -125,7 +107,7 @@ bool JobData::setPaperBin( int i_nPaperBin )
     return bSuccess;
 }
 
-bool JobData::getStreamBuffer( void*& pData, int& bytes )
+bool JobData::getStreamBuffer( void*& pData, sal_uInt32& bytes )
 {
     // consistency checks
     if( ! m_pParser )
@@ -198,12 +180,13 @@ bool JobData::getStreamBuffer( void*& pData, int& bytes )
     pContextBuffer.reset();
 
     // success
-    pData = rtl_allocateMemory( bytes = aStream.Tell() );
+    bytes = static_cast<sal_uInt32>(aStream.Tell());
+    pData = rtl_allocateMemory( bytes );
     memcpy( pData, aStream.GetData(), bytes );
     return true;
 }
 
-bool JobData::constructFromStreamBuffer( void* pData, int bytes, JobData& rJobData )
+bool JobData::constructFromStreamBuffer( void* pData, sal_uInt32 bytes, JobData& rJobData )
 {
     SvMemoryStream aStream( pData, bytes, StreamMode::READ );
     OString aLine;
@@ -250,7 +233,7 @@ bool JobData::constructFromStreamBuffer( void* pData, int bytes, JobData& rJobDa
         }
         else if (aLine.startsWith(collateEquals))
         {
-            rJobData.m_bCollate = aLine.copy(RTL_CONSTASCII_LENGTH(collateEquals)).toInt32();
+            rJobData.m_bCollate = aLine.copy(RTL_CONSTASCII_LENGTH(collateEquals)).toBoolean();
         }
         else if (aLine.startsWith(margindajustmentEquals))
         {
@@ -291,7 +274,7 @@ bool JobData::constructFromStreamBuffer( void* pData, int bytes, JobData& rJobDa
                 if( rJobData.m_pParser )
                 {
                     rJobData.m_aContext.setParser( rJobData.m_pParser );
-                    int nBytes = bytes - aStream.Tell();
+                    const sal_uInt64 nBytes = bytes - aStream.Tell();
                     std::unique_ptr<char[]> pRemain(new char[bytes - aStream.Tell()]);
                     aStream.Read( pRemain.get(), nBytes );
                     rJobData.m_aContext.rebuildFromStreamBuffer( pRemain.get(), nBytes );

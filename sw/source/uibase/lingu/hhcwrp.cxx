@@ -36,7 +36,6 @@
 #include <docsh.hxx>
 #include <mdiexp.hxx>
 #include <edtwin.hxx>
-#include <crsskip.hxx>
 #include <index.hxx>
 #include <pam.hxx>
 #include <swcrsr.hxx>
@@ -151,7 +150,7 @@ SwHHCWrapper::~SwHHCWrapper()
         const vcl::Font *pFont = GetTargetFont();
         if (pFont)
         {
-            SvxFontItem aFontItem( pFont->GetFamily(), pFont->GetName(),
+            SvxFontItem aFontItem( pFont->GetFamilyType(), pFont->GetFamilyName(),
                     pFont->GetStyleName(), pFont->GetPitch(),
                     pFont->GetCharSet(), RES_CHRATR_CJK_FONT );
             pDoc->SetDefault( aFontItem );
@@ -436,7 +435,7 @@ void SwHHCWrapper::ReplaceUnit(
             //!! back to false we do it now manually in order for the selection
             //!! to be done properly in the following call to Left.
             // We didn't fix it in Delete and Insert since it is currently
-            // unclear if someone depends on this incorrect behvaiour
+            // unclear if someone depends on this incorrect behaviour
             // of the flag.
             m_rWrtShell.EndSelect();
 
@@ -492,8 +491,8 @@ void SwHHCWrapper::ReplaceUnit(
             if (pTargetFont && pNewUnitLanguage)
             {
                 SvxFontItem aFontItem(static_cast<const SvxFontItem&>( aSet.Get( RES_CHRATR_CJK_FONT ) ));
-                aFontItem.SetFamilyName(    pTargetFont->GetName());
-                aFontItem.SetFamily(        pTargetFont->GetFamily());
+                aFontItem.SetFamilyName(    pTargetFont->GetFamilyName());
+                aFontItem.SetFamily(        pTargetFont->GetFamilyType());
                 aFontItem.SetStyleName(     pTargetFont->GetStyleName());
                 aFontItem.SetPitch(         pTargetFont->GetPitch());
                 aFontItem.SetCharSet( pTargetFont->GetCharSet() );

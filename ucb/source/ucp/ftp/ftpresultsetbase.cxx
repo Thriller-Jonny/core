@@ -74,7 +74,6 @@ ResultSetBase::release(
 }
 
 
-
 uno::Any SAL_CALL
 ResultSetBase::queryInterface(
     const uno::Type& rType )
@@ -92,7 +91,6 @@ ResultSetBase::queryInterface(
 }
 
 
-
 // XComponent
 
 
@@ -105,7 +103,7 @@ ResultSetBase::addEventListener(
 
     if ( ! m_pDisposeEventListeners )
         m_pDisposeEventListeners =
-            new cppu::OInterfaceContainerHelper( m_aMutex );
+            new comphelper::OInterfaceContainerHelper2( m_aMutex );
 
     m_pDisposeEventListeners->addInterface( Listener );
 }
@@ -121,7 +119,6 @@ ResultSetBase::removeEventListener(
     if ( m_pDisposeEventListeners )
         m_pDisposeEventListeners->removeInterface( Listener );
 }
-
 
 
 void SAL_CALL
@@ -146,7 +143,6 @@ ResultSetBase::dispose()
         m_pIsFinalListeners->disposeAndClear( aEvt );
     }
 }
-
 
 
 //  XResultSet
@@ -282,8 +278,6 @@ sal_Bool SAL_CALL ResultSetBase::absolute( sal_Int32 row )
 }
 
 
-
-
 sal_Bool SAL_CALL
 ResultSetBase::relative(
     sal_Int32 row )
@@ -302,7 +296,6 @@ ResultSetBase::relative(
 
     return 0 <= m_nRow && m_nRow < sal::static_int_cast<sal_Int32>(m_aItems.size());
 }
-
 
 
 sal_Bool SAL_CALL
@@ -426,7 +419,6 @@ ResultSetBase::queryContent(
 }
 
 
-
 class XPropertySetInfoImpl
     : public cppu::OWeakObject,
       public beans::XPropertySetInfo
@@ -491,7 +483,6 @@ private:
 };
 
 
-
 // XPropertySet
 uno::Reference< beans::XPropertySetInfo > SAL_CALL
 ResultSetBase::getPropertySetInfo()
@@ -512,7 +503,6 @@ ResultSetBase::getPropertySetInfo()
     return uno::Reference< beans::XPropertySetInfo > (
         new XPropertySetInfoImpl( seq ) );
 }
-
 
 
 void SAL_CALL ResultSetBase::setPropertyValue(
@@ -539,16 +529,12 @@ uno::Any SAL_CALL ResultSetBase::getPropertyValue(
 {
     if( PropertyName == "IsRowCountFinal" )
     {
-        uno::Any aAny;
-        aAny <<= m_bRowCountFinal;
-        return aAny;
+        return uno::Any(m_bRowCountFinal);
     }
     else if ( PropertyName == "RowCount" )
     {
-        uno::Any aAny;
         sal_Int32 count = m_aItems.size();
-        aAny <<= count;
-        return aAny;
+        return uno::Any(count);
     }
     else
         throw beans::UnknownPropertyException();
@@ -567,7 +553,7 @@ void SAL_CALL ResultSetBase::addPropertyChangeListener(
         osl::MutexGuard aGuard( m_aMutex );
         if ( ! m_pIsFinalListeners )
             m_pIsFinalListeners =
-                new cppu::OInterfaceContainerHelper( m_aMutex );
+                new comphelper::OInterfaceContainerHelper2( m_aMutex );
 
         m_pIsFinalListeners->addInterface( xListener );
     }
@@ -576,7 +562,7 @@ void SAL_CALL ResultSetBase::addPropertyChangeListener(
         osl::MutexGuard aGuard( m_aMutex );
         if ( ! m_pRowCountListeners )
             m_pRowCountListeners =
-                new cppu::OInterfaceContainerHelper( m_aMutex );
+                new comphelper::OInterfaceContainerHelper2( m_aMutex );
         m_pRowCountListeners->addInterface( xListener );
     }
     else
@@ -628,7 +614,6 @@ void SAL_CALL ResultSetBase::removeVetoableChangeListener(
 }
 
 
-
 // XResultSetMetaDataSupplier
 uno::Reference< sdbc::XResultSetMetaData > SAL_CALL
 ResultSetBase::getMetaData(
@@ -640,8 +625,6 @@ ResultSetBase::getMetaData(
           new ::ucbhelper::ResultSetMetaData( m_xContext, m_sProperty );
     return uno::Reference< sdbc::XResultSetMetaData >( p );
 }
-
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

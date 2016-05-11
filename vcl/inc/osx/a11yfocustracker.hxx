@@ -34,7 +34,6 @@ namespace vcl { class Window; }
 class ToolBox;
 class DocumentFocusListener;
 
-// - AquaA11yFocusTracker -
 
 class AquaA11yFocusTracker : public rtl::Static< AquaA11yFocusTracker, AquaA11yFocusTracker>
 {
@@ -42,7 +41,7 @@ class AquaA11yFocusTracker : public rtl::Static< AquaA11yFocusTracker, AquaA11yF
 public:
     AquaA11yFocusTracker();
 
-    css::uno::Reference< css::accessibility::XAccessible > getFocusedObject() { return m_xFocusedObject; };
+    css::uno::Reference< css::accessibility::XAccessible > const & getFocusedObject() { return m_xFocusedObject; };
 
     // sets the currently focus object and notifies the FocusEventListener (if any)
     void setFocusedObject(const css::uno::Reference< css::accessibility::XAccessible >& xAccessible);

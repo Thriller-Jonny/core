@@ -24,7 +24,6 @@
 #include <svx/tbxcolor.hxx>
 
 #include <comphelper/classids.hxx>
-#include <sfx2/taskpane.hxx>
 #include <sfx2/sidebar/SidebarChildWindow.hxx>
 #include <sfx2/docfilt.hxx>
 #include <sfx2/fcontnr.hxx>
@@ -34,6 +33,8 @@
 #include <avmedia/mediatoolbox.hxx>
 #include <comphelper/types.hxx>
 #include <svx/ParaLineSpacingPopup.hxx>
+#include <svx/TextCharacterSpacingPopup.hxx>
+#include <svx/TextUnderlinePopup.hxx>
 
 #include <svtools/parhtml.hxx>
 #include <sot/formats.hxx>
@@ -76,8 +77,6 @@
 #include <editeng/flditem.hxx>
 #include <svx/modctrl.hxx>
 #include <svx/pszctrl.hxx>
-#include <svx/fntctl.hxx>
-#include <svx/fntszctl.hxx>
 #include <svx/grafctrl.hxx>
 #include <svx/clipboardctl.hxx>
 #include <svx/lboxctrl.hxx>
@@ -149,7 +148,8 @@ void ScDLL::Init()
     ScPageBreakShell    ::RegisterInterface(pMod);
 
     // Own Controller
-    ScZoomSliderControl ::RegisterControl(SID_PREVIEW_SCALINGFACTOR, pMod);
+    ScZoomSliderControl             ::RegisterControl(SID_PREVIEW_SCALINGFACTOR, pMod);
+    SvxCurrencyToolBoxControl       ::RegisterControl(SID_NUMBER_CURRENCY, pMod);
 
     // SvxToolboxController
     SvxTbxCtlDraw                   ::RegisterControl(SID_INSERT_DRAW,          pMod);
@@ -171,6 +171,8 @@ void ScDLL::Init()
     SvxUndoRedoControl              ::RegisterControl(SID_UNDO,                 pMod );
     SvxUndoRedoControl              ::RegisterControl(SID_REDO,                 pMod );
     svx::ParaLineSpacingPopup       ::RegisterControl(SID_ATTR_PARA_LINESPACE,  pMod );
+    svx::TextCharacterSpacingPopup  ::RegisterControl(SID_ATTR_CHAR_KERNING,    pMod );
+    svx::TextUnderlinePopup         ::RegisterControl(SID_ATTR_CHAR_UNDERLINE,  pMod );
     svx::FormatPaintBrushToolBoxControl::RegisterControl(SID_FORMATPAINTBRUSH,  pMod );
 
     SvxGrafModeToolBoxControl       ::RegisterControl(SID_ATTR_GRAF_MODE,       pMod);
@@ -193,7 +195,6 @@ void ScDLL::Init()
     ::avmedia::MediaToolBoxControl::RegisterControl( SID_AVMEDIA_TOOLBOX, pMod );
 
     // Common SFX Controller
-    ::sfx2::TaskPaneWrapper::RegisterChildWindow( false, pMod );
     ::sfx2::sidebar::SidebarChildWindow::RegisterChildWindow(false, pMod);
 
     // SvxStatusBar Controller
@@ -205,10 +206,6 @@ void ScDLL::Init()
     XmlSecStatusBarControl          ::RegisterControl( SID_SIGNATURE,       pMod );
 
     SvxPosSizeStatusBarControl      ::RegisterControl(SID_ATTR_SIZE,        pMod);
-
-    // SvxMenu Controller
-    SvxFontMenuControl              ::RegisterControl(SID_ATTR_CHAR_FONT,       pMod);
-    SvxFontSizeMenuControl          ::RegisterControl(SID_ATTR_CHAR_FONTHEIGHT, pMod);
 
     // CustomShape extrusion controller
     SvxColorToolBoxControl::RegisterControl( SID_EXTRUSION_3D_COLOR, pMod );
@@ -245,9 +242,6 @@ void ScDLL::Init()
     ScFTestDialogWrapper                ::RegisterChildWindow(false, pMod);
     ScZTestDialogWrapper                ::RegisterChildWindow(false, pMod);
     ScChiSquareTestDialogWrapper        ::RegisterChildWindow(false, pMod);
-
-    // First docking Window for Calc
-    ScFunctionChildWindow       ::RegisterChildWindow(false, pMod);
 
     // Redlining Window
     ScAcceptChgDlgWrapper       ::RegisterChildWindow(false, pMod);

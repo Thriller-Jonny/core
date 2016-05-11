@@ -20,8 +20,8 @@
 #include "biffcodec.hxx"
 
 #include <osl/thread.h>
+#include <oox/helper/attributelist.hxx>
 #include <string.h>
-#include <oox/core/filterbase.hxx>
 #include "biffinputstream.hxx"
 
 namespace oox {
@@ -30,7 +30,6 @@ namespace xls {
 using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::uno;
 
-using ::oox::core::FilterBase;
 
 BiffDecoderBase::BiffDecoderBase() :
     mbValid( false )
@@ -45,13 +44,13 @@ BiffDecoderBase::~BiffDecoderBase()
 {
     o_rEncryptionData = implVerifyPassword( rPassword );
     mbValid = o_rEncryptionData.hasElements();
-    return mbValid ? ::comphelper::DocPasswordVerifierResult_OK : ::comphelper::DocPasswordVerifierResult_WRONG_PASSWORD;
+    return mbValid ? ::comphelper::DocPasswordVerifierResult::OK : ::comphelper::DocPasswordVerifierResult::WrongPassword;
 }
 
 ::comphelper::DocPasswordVerifierResult BiffDecoderBase::verifyEncryptionData( const Sequence< NamedValue >& rEncryptionData )
 {
     mbValid = implVerifyEncryptionData( rEncryptionData );
-    return mbValid ? ::comphelper::DocPasswordVerifierResult_OK : ::comphelper::DocPasswordVerifierResult_WRONG_PASSWORD;
+    return mbValid ? ::comphelper::DocPasswordVerifierResult::OK : ::comphelper::DocPasswordVerifierResult::WrongPassword;
 }
 
 void BiffDecoderBase::decode( sal_uInt8* pnDestData, const sal_uInt8* pnSrcData, sal_Int64 nStreamPos, sal_uInt16 nBytes )

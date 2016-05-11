@@ -346,13 +346,13 @@ void ScOptSolverDlg::dispose()
     m_pBtnCancel.clear();
     m_pBtnSolve.clear();
     mpEdActive.clear();
-    for (auto p : mpLeftButton)
+    for (auto& p : mpLeftButton)
         p.clear();
-    for (auto p : mpRightButton)
+    for (auto& p : mpRightButton)
         p.clear();
-    for (auto p : mpOperator)
+    for (auto& p : mpOperator)
         p.clear();
-    for (auto p : mpDelButton)
+    for (auto& p : mpDelButton)
         p.clear();
     ScAnyRefDlg::dispose();
 }
@@ -367,9 +367,9 @@ void ScOptSolverDlg::Init(const ScAddress& rCursorPos)
     uno::Reference<frame::XFrame> xFrame = GetBindings().GetActiveFrame();
     Image aDelNm = ::GetImage( xFrame, aSlotURL, false );
 
-    for ( sal_uInt16 nRow = 0; nRow < EDIT_ROW_COUNT; ++nRow )
+    for (VclPtr<PushButton> & pButton : mpDelButton)
     {
-        mpDelButton[nRow]->SetModeImage( aDelNm );
+        pButton->SetModeImage( aDelNm );
     }
 
     m_pBtnOpt->SetClickHdl( LINK( this, ScOptSolverDlg, BtnHdl ) );
@@ -453,7 +453,7 @@ void ScOptSolverDlg::Init(const ScAddress& rCursorPos)
         m_pRbMax->Check();
         OUString aCursorStr;
         if ( !mrDoc.GetRangeAtBlock( ScRange(rCursorPos), &aCursorStr ) )
-            aCursorStr = rCursorPos.Format(SCA_ABS, nullptr, mrDoc.GetAddressConvention());
+            aCursorStr = rCursorPos.Format(ScRefFlags::ADDR_ABS, nullptr, mrDoc.GetAddressConvention());
         m_pEdObjectiveCell->SetRefString( aCursorStr );
         if ( nImplCount > 0 )
             maEngine = maImplNames[0];  // use first implementation
@@ -562,11 +562,11 @@ void ScOptSolverDlg::SetReference( const ScRange& rRef, ScDocument* pDocP )
             aStr = aName;
         else                                                        // format cell/range reference
         {
-            sal_uInt16 nFmt = ( aAdr.Tab() == mnCurTab ) ? SCA_ABS : SCA_ABS_3D;
+            ScRefFlags nFmt = ( aAdr.Tab() == mnCurTab ) ? ScRefFlags::ADDR_ABS : ScRefFlags::ADDR_ABS_3D;
             if ( bSingle )
                 aStr = aAdr.Format(nFmt, pDocP, pDocP->GetAddressConvention());
             else
-                aStr = rRef.Format(nFmt | SCR_ABS, pDocP, pDocP->GetAddressConvention());
+                aStr = rRef.Format(nFmt | ScRefFlags::RANGE_ABS, pDocP, pDocP->GetAddressConvention());
         }
 
         // variable cells can be several ranges, so only the selection is replaced
@@ -805,12 +805,12 @@ bool ScOptSolverDlg::ParseRef( ScRange& rRange, const OUString& rInput, bool bAl
 {
     ScRangeUtil aRangeUtil;
     ScAddress::Details aDetails(mrDoc.GetAddressConvention(), 0, 0);
-    sal_uInt16 nFlags = rRange.ParseAny( rInput, &mrDoc, aDetails );
-    if ( nFlags & SCA_VALID )
+    ScRefFlags nFlags = rRange.ParseAny( rInput, &mrDoc, aDetails );
+    if ( nFlags & ScRefFlags::VALID )
     {
-        if ( (nFlags & SCA_TAB_3D) == 0 )
+        if ( (nFlags & ScRefFlags::TAB_3D) == ScRefFlags::ZERO)
             rRange.aStart.SetTab( mnCurTab );
-        if ( (nFlags & SCA_TAB2_3D) == 0 )
+        if ( (nFlags & ScRefFlags::TAB2_3D) == ScRefFlags::ZERO)
             rRange.aEnd.SetTab( rRange.aStart.Tab() );
         return ( bAllowRange || rRange.aStart == rRange.aEnd );
     }

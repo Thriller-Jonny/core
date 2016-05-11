@@ -189,28 +189,23 @@ void ScDrawShell::ExecuteHLink( SfxRequest& rReq )
                                     OUString sPropTargetFrame( "TargetFrame" );
                                     OUString sPropLabel( "Label" );
 
-                                    uno::Any aAny;
                                     if ( xInfo->hasPropertyByName( sPropLabel ) )
                                     {
-                                        aAny <<= OUString(rName);
-                                        xPropSet->setPropertyValue( sPropLabel, aAny );
+                                        xPropSet->setPropertyValue( sPropLabel, uno::Any(rName) );
                                     }
 
                                     OUString aTmp = INetURLObject::GetAbsURL( pViewData->GetDocShell()->GetMedium()->GetBaseURL(), rURL );
-                                    aAny <<= aTmp;
-                                    xPropSet->setPropertyValue( sPropTargetURL, aAny );
+                                    xPropSet->setPropertyValue( sPropTargetURL, uno::Any(aTmp) );
 
                                     if( !rTarget.isEmpty() && xInfo->hasPropertyByName( sPropTargetFrame ) )
                                     {
-                                        aAny <<= OUString(rTarget);
-                                        xPropSet->setPropertyValue( sPropTargetFrame, aAny );
+                                        xPropSet->setPropertyValue( sPropTargetFrame, uno::Any(rTarget) );
                                     }
 
                                     if ( xInfo->hasPropertyByName( sPropButtonType ) )
                                     {
                                         form::FormButtonType eButtonType = form::FormButtonType_URL;
-                                        aAny <<= eButtonType;
-                                        xPropSet->setPropertyValue( sPropButtonType, aAny );
+                                        xPropSet->setPropertyValue( sPropButtonType, uno::Any(eButtonType) );
                                     }
 
                                     //! Undo ???
@@ -487,7 +482,7 @@ void ScDrawShell::ExecDrawFunc( SfxRequest& rReq )
 
                         SvxAbstractDialogFactory* pFact = SvxAbstractDialogFactory::Create();
                         OSL_ENSURE(pFact, "Dialog creation failed!");
-                        std::unique_ptr<AbstractSvxObjectNameDialog> pDlg(pFact->CreateSvxObjectNameDialog(nullptr, aName));
+                        std::unique_ptr<AbstractSvxObjectNameDialog> pDlg(pFact->CreateSvxObjectNameDialog(aName));
                         OSL_ENSURE(pDlg, "Dialog creation failed!");
 
                         pDlg->SetCheckNameHdl(LINK(this, ScDrawShell, NameObjectHdl));
@@ -556,7 +551,7 @@ void ScDrawShell::ExecDrawFunc( SfxRequest& rReq )
 
                         SvxAbstractDialogFactory* pFact = SvxAbstractDialogFactory::Create();
                         OSL_ENSURE(pFact, "Dialog creation failed!");
-                        std::unique_ptr<AbstractSvxObjectTitleDescDialog> pDlg(pFact->CreateSvxObjectTitleDescDialog(nullptr, aTitle, aDescription));
+                        std::unique_ptr<AbstractSvxObjectTitleDescDialog> pDlg(pFact->CreateSvxObjectTitleDescDialog(aTitle, aDescription));
                         OSL_ENSURE(pDlg, "Dialog creation failed!");
 
                         if(RET_OK == pDlg->Execute())

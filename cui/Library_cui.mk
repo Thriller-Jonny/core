@@ -33,8 +33,6 @@ $(eval $(call gb_Library_use_sdk_api,cui))
 $(eval $(call gb_Library_use_libraries,cui,\
 	$(call gb_Helper_optional,AVMEDIA,avmedia) \
     basegfx \
-	$(call gb_Helper_optional,OPENCL,\
-		clew) \
     comphelper \
     cppu \
     cppuhelper \
@@ -67,10 +65,16 @@ $(eval $(call gb_Library_use_libraries,cui,\
 
 $(eval $(call gb_Library_use_externals,cui,\
 	boost_headers \
+	$(call gb_Helper_optional,OPENCL,\
+		clew) \
     icuuc \
     icu_headers \
-    glew \
 ))
+ifeq ($(ENABLE_OPENGL),TRUE)
+$(eval $(call gb_Library_use_externals,cui,\
+     glew \
+ ))
+endif
 
 ifeq ($(OS),WNT)
 $(eval $(call gb_Library_use_system_win32_libs,cui,\
@@ -112,7 +116,6 @@ $(eval $(call gb_Library_add_exception_objects,cui,\
     cui/source/dialogs/newtabledlg \
     cui/source/dialogs/passwdomdlg \
     cui/source/dialogs/pastedlg \
-    cui/source/dialogs/plfilter \
     cui/source/dialogs/postdlg \
     cui/source/dialogs/scriptdlg \
     cui/source/dialogs/sdrcelldlg \
@@ -202,6 +205,7 @@ $(eval $(call gb_Library_add_exception_objects,cui,\
     cui/source/tabpages/tplnedef \
     cui/source/tabpages/tplneend \
     cui/source/tabpages/tpshadow \
+    cui/source/tabpages/tptrans \
     cui/source/tabpages/transfrm \
     cui/source/uno/services \
 ))

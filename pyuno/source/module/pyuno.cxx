@@ -32,8 +32,6 @@
 #include <com/sun/star/lang/XServiceInfo.hpp>
 #include <com/sun/star/lang/XTypeProvider.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
-#include <com/sun/star/beans/XMaterialHolder.hpp>
-#include <com/sun/star/container/XElementAccess.hpp>
 #include <com/sun/star/container/XEnumeration.hpp>
 #include <com/sun/star/container/XEnumerationAccess.hpp>
 #include <com/sun/star/container/XIndexAccess.hpp>
@@ -56,15 +54,11 @@ using com::sun::star::uno::TypeClass;
 using com::sun::star::uno::TypeDescription;
 using com::sun::star::uno::RuntimeException;
 using com::sun::star::uno::Exception;
-using com::sun::star::uno::XComponentContext;
 using com::sun::star::lang::XSingleServiceFactory;
 using com::sun::star::lang::XServiceInfo;
 using com::sun::star::lang::XTypeProvider;
 using com::sun::star::lang::XUnoTunnel;
-using com::sun::star::script::XTypeConverter;
 using com::sun::star::script::XInvocation2;
-using com::sun::star::beans::XMaterialHolder;
-using com::sun::star::container::XElementAccess;
 using com::sun::star::container::XEnumeration;
 using com::sun::star::container::XEnumerationAccess;
 using com::sun::star::container::XIndexAccess;
@@ -88,7 +82,6 @@ void PyUNO_del (PyObject* self)
     }
     PyObject_Del (self);
 }
-
 
 
 OUString val2str( const void * pVal, typelib_TypeDescriptionReference * pTypeRef , sal_Int32 mode )
@@ -325,9 +318,14 @@ sal_Int32 lcl_PyNumber_AsSal_Int32( PyObject *pObj )
 
     // Convert Python number to platform long, then check actual value against
     // bounds of sal_Int32
+#if PY_VERSION_HEX >= 0x03020000
     int nOverflow;
     long nResult = PyLong_AsLongAndOverflow( pObj, &nOverflow );
     if ( nOverflow || nResult > SAL_MAX_INT32 || nResult < SAL_MIN_INT32) {
+#else
+    long nResult = PyLong_AsLong( pObj );
+    if ( nResult > SAL_MAX_INT32 || nResult < SAL_MIN_INT32) {
+#endif
         PyErr_SetString( PyExc_IndexError, "Python int too large to convert to UNO long" );
         return -1;
     }
@@ -589,7 +587,7 @@ void lcl_getRowsColumns( PyUNO* me, sal_Int32& nRows, sal_Int32& nColumns )
     nColumns = xIndexAccessCols->getCount();
 }
 
-PyRef lcl_indexToSlice( PyRef rIndex )
+PyRef lcl_indexToSlice( const PyRef& rIndex )
 {
     Py_ssize_t nIndex = PyNumber_AsSsize_t( rIndex.get(), PyExc_IndexError );
     if (nIndex == -1 && PyErr_Occurred())

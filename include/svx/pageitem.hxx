@@ -32,7 +32,9 @@ enum SvxNumType
     SVX_ARABIC,
     SVX_NUMBER_NONE,
     SVX_CHAR_SPECIAL,
-    SVX_PAGEDESC
+    SVX_PAGEDESC,
+    SVX_BITMAP,
+    SVX_CHARS_UPPER_LETTER_N
 };
 
 /*--------------------------------------------------------------------
@@ -103,7 +105,6 @@ public:
 };
 
 
-
 /*--------------------------------------------------------------------
   container for header/footer attributes
  --------------------------------------------------------------------*/
@@ -125,8 +126,6 @@ public:
     virtual SfxPoolItem*    Create( SvStream&, sal_uInt16 nVersion ) const override;
     virtual SvStream&       Store( SvStream&, sal_uInt16 nItemVersion ) const override;
 };
-
-
 
 
 #endif

@@ -19,7 +19,6 @@
 
 #include <comphelper/accimplaccess.hxx>
 #include <com/sun/star/accessibility/XAccessible.hpp>
-#include <com/sun/star/accessibility/XAccessibleContext.hpp>
 #include <cppuhelper/typeprovider.hxx>
 #include <osl/diagnose.h>
 
@@ -33,12 +32,8 @@ namespace comphelper
 
     using ::com::sun::star::uno::Reference;
     using ::com::sun::star::uno::Sequence;
-    using ::com::sun::star::uno::Exception;
-    using ::com::sun::star::uno::UNO_QUERY;
     using ::com::sun::star::uno::RuntimeException;
-    using ::com::sun::star::lang::XUnoTunnel;
     using ::com::sun::star::accessibility::XAccessible;
-    using ::com::sun::star::accessibility::XAccessibleContext;
 
     struct OAccImpl_Impl
     {
@@ -59,15 +54,9 @@ namespace comphelper
     }
 
 
-    Reference< XAccessible > OAccessibleImplementationAccess::implGetForeignControlledParent( ) const
+    const Reference< XAccessible >& OAccessibleImplementationAccess::implGetForeignControlledParent( ) const
     {
         return m_pImpl->m_xAccParent;
-    }
-
-
-    void OAccessibleImplementationAccess::setAccessibleParent( const Reference< XAccessible >& _rxAccParent )
-    {
-        m_pImpl->m_xAccParent = _rxAccParent;
     }
 
 
@@ -98,41 +87,7 @@ namespace comphelper
         return nReturn;
     }
 
-
-    OAccessibleImplementationAccess* OAccessibleImplementationAccess::getImplementation( const Reference< XAccessibleContext >& _rxComponent )
-    {
-        OAccessibleImplementationAccess* pImplementation = nullptr;
-        try
-        {
-            Reference< XUnoTunnel > xTunnel( _rxComponent, UNO_QUERY );
-            if ( xTunnel.is() )
-            {
-                pImplementation = reinterpret_cast< OAccessibleImplementationAccess* >(
-                        xTunnel->getSomething( getUnoTunnelImplementationId() ) );
-            }
-        }
-        catch( const Exception& )
-        {
-            OSL_FAIL( "OAccessibleImplementationAccess::setAccessibleParent: caught an exception while retrieving the implementation!" );
-        }
-        return pImplementation;
-    }
-
-
-    bool OAccessibleImplementationAccess::setAccessibleParent(
-            const Reference< XAccessibleContext >& _rxComponent, const Reference< XAccessible >& _rxNewParent )
-    {
-        OAccessibleImplementationAccess* pImplementation = getImplementation( _rxComponent );
-
-        if ( pImplementation )
-            pImplementation->setAccessibleParent( _rxNewParent );
-
-        return ( nullptr != pImplementation );
-    }
-
-
 }   // namespace comphelper
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

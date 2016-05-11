@@ -48,7 +48,7 @@ SwRenderData::~SwRenderData()
 void SwRenderData::CreatePostItData( SwDoc *pDoc, const SwViewOption *pViewOpt, OutputDevice *pOutDev )
 {
     DeletePostItData();
-    m_pPostItFields.reset(new _SetGetExpFields);
+    m_pPostItFields.reset(new SetGetExpFields);
     sw_GetPostIts( &pDoc->getIDocumentFieldsAccess(), m_pPostItFields.get() );
 
     //!! Disable spell and grammar checking in the temporary document.
@@ -163,7 +163,7 @@ SwPrintUIOptions::SwPrintUIOptions(
     // Its just the source code that gets printed ...
     if (bSwSrcView)
     {
-        m_aUIProperties.realloc( 0 );
+        m_aUIProperties.clear();
         return;
     }
 
@@ -175,7 +175,7 @@ SwPrintUIOptions::SwPrintUIOptions(
     // (5 options are not available for Writer-Web)
     const int nCTLOpts = bCTL ? 1 : 0;
     const int nNumProps = nCTLOpts + (bWeb ? 15 : 21);
-    m_aUIProperties.realloc( nNumProps );
+    m_aUIProperties.resize( nNumProps );
     int nIdx = 0;
 
     // load the writer PrinterOptions into the custom tab
@@ -276,11 +276,11 @@ SwPrintUIOptions::SwPrintUIOptions(
     uno::Sequence< OUString > aHelpIds( 3 );
     uno::Sequence< OUString > aWidgetIds( 3 );
     aChoices[0] = SW_RES( STR_PRINTOPTUI_ALLPAGES);
-    aChoicesDisabled[0] = sal_False;
+    aChoicesDisabled[0] = false;
     aHelpIds[0] = ".HelpID:vcl:PrintDialog:PrintContent:RadioButton:0";
     aWidgetIds[0] = "printallpages";
     aChoices[1] = SW_RES( STR_PRINTOPTUI_SOMEPAGES);
-    aChoicesDisabled[1] = sal_False;
+    aChoicesDisabled[1] = false;
     aHelpIds[1] = ".HelpID:vcl:PrintDialog:PrintContent:RadioButton:1";
     aWidgetIds[1] = "printpages";
     aChoices[2] = SW_RES( STR_PRINTOPTUI_SELECTION);

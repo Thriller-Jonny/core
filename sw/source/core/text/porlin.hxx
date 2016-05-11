@@ -71,7 +71,7 @@ private:
     bool m_bJoinBorderWithPrev;
     bool m_bJoinBorderWithNext;
 
-    void _Truncate();
+    void Truncate_();
 
 public:
     explicit inline SwLinePortion(const SwLinePortion &rPortion);
@@ -80,7 +80,6 @@ public:
     // Access methods
     inline SwLinePortion *GetPortion() const { return pPortion; }
     inline SwLinePortion &operator=(const SwLinePortion &rPortion);
-    inline bool operator==( const SwLinePortion &rPortion ) const;
     inline sal_Int32 GetLen() const { return nLineLength; }
     inline void SetLen( const sal_Int32 nLen ) { nLineLength = nLen; }
     inline void SetPortion( SwLinePortion *pNew ){ pPortion = pNew; }
@@ -125,6 +124,7 @@ public:
     inline bool IsErgoSumPortion() const { return nWhichPor == POR_ERGOSUM; }
     inline bool IsQuoVadisPortion() const { return nWhichPor == POR_QUOVADIS; }
     inline bool IsTabLeftPortion() const { return nWhichPor == POR_TABLEFT; }
+    inline bool IsTabRightPortion() const { return nWhichPor == POR_TABRIGHT; }
     inline bool IsFootnoteNumPortion() const { return nWhichPor == POR_FTNNUM; }
     inline bool IsFootnotePortion() const { return nWhichPor == POR_FTN; }
     inline bool IsDropPortion() const { return nWhichPor == POR_DROP; }
@@ -192,14 +192,6 @@ inline SwLinePortion &SwLinePortion::operator=(const SwLinePortion &rPortion)
     return *this;
 }
 
-inline bool SwLinePortion::operator==(const SwLinePortion &rPortion ) const
-{
-    return( Height() == rPortion.Height() &&
-            Width() == rPortion.Width() &&
-            nLineLength == rPortion.GetLen() &&
-            nAscent == rPortion.GetAscent() );
-}
-
 inline SwLinePortion::SwLinePortion(const SwLinePortion &rPortion) :
     SwPosSize( rPortion ),
     pPortion( nullptr ),
@@ -214,7 +206,7 @@ inline SwLinePortion::SwLinePortion(const SwLinePortion &rPortion) :
 inline void SwLinePortion::Truncate()
 {
     if ( pPortion )
-        _Truncate();
+        Truncate_();
 }
 
 #endif

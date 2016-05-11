@@ -56,12 +56,10 @@ SVX_DLLPUBLIC SdrObject* SdrObjListPrimitiveHit(
 // the pure HitTest based on a VOC
 
 SVX_DLLPUBLIC bool ViewObjectContactPrimitiveHit(
-    const SdrObject& rObject,
     const sdr::contact::ViewObjectContact& rVOC,
     const basegfx::B2DPoint& rHitPosition,
     double fLogicHitTolerance,
     bool bTextOnly);
-
 
 
 #endif // INCLUDED_SVX_SDRHITTESTHELPER_HXX

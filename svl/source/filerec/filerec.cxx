@@ -97,7 +97,7 @@ sal_uInt32 SfxMiniRecordWriter::Close(bool bSeekToEndOfRec)
 }
 
 /**
-    Internal method for belatedly processsing a header read externally.
+    Internal method for belatedly processing a header read externally.
     If the header corresponds to an End-Of-Record tag, an error
     code is set on the stream and sal_False is returned.
     But the stream will not be reset to the record start in case of an error.
@@ -307,21 +307,20 @@ SfxMultiFixRecordWriter::SfxMultiFixRecordWriter(sal_uInt8  nRecordType,
 /**
  * @see SfxMiniRecordWriter
  */
-sal_uInt32 SfxMultiFixRecordWriter::Close( bool bSeekToEndOfRec )
+sal_uInt32 SfxMultiFixRecordWriter::Close()
 {
     // Header not written yet?
     if ( !_bHeaderOk )
     {
         // remember position after header, to be able to seek back to it
-        sal_uInt32 nEndPos = SfxSingleRecordWriter::Close( false );
+        sal_uInt32 nEndPos = SfxSingleRecordWriter::Close();
 
         // write extended header after SfxSingleRecord
         _pStream->WriteUInt16( _nContentCount );
         _pStream->WriteUInt32( _nContentSize );
 
         // seek to end of record or stay after the header
-        if ( bSeekToEndOfRec )
-            _pStream->Seek(nEndPos);
+        _pStream->Seek(nEndPos);
         return nEndPos;
     }
 
@@ -340,9 +339,8 @@ sal_uInt32 SfxMultiFixRecordWriter::Close( bool bSeekToEndOfRec )
  */
 SfxMultiVarRecordWriter::SfxMultiVarRecordWriter(sal_uInt8  nRecordType,
                                                  SvStream*  pStream,
-                                                 sal_uInt16 nRecordTag,
-                                                 sal_uInt8  nRecordVer)
-:   SfxMultiFixRecordWriter( nRecordType, pStream, nRecordTag, nRecordVer ),
+                                                 sal_uInt16 nRecordTag)
+:   SfxMultiFixRecordWriter( nRecordType, pStream, nRecordTag, 0 ),
     _nContentVer( 0 )
 {
 }
@@ -363,10 +361,9 @@ SfxMultiVarRecordWriter::SfxMultiVarRecordWriter(sal_uInt8  nRecordType,
  * for initializing the <SvULong> members.
  */
 SfxMultiVarRecordWriter::SfxMultiVarRecordWriter(SvStream*  pStream,
-                                                 sal_uInt16 nRecordTag,
-                                                 sal_uInt8  nRecordVer)
+                                                 sal_uInt16 nRecordTag)
 :   SfxMultiFixRecordWriter( SFX_REC_TYPE_VARSIZE,
-                             pStream, nRecordTag, nRecordVer ),
+                             pStream, nRecordTag, 0 ),
     _nContentVer( 0 )
 {
 }
@@ -417,7 +414,7 @@ void SfxMultiVarRecordWriter::NewContent()
 /**
  * @see SfxMiniRecordWriter
  */
-sal_uInt32 SfxMultiVarRecordWriter::Close( bool bSeekToEndOfRec )
+sal_uInt32 SfxMultiVarRecordWriter::Close()
 {
     // Header not written yet?
     if ( !_bHeaderOk )
@@ -433,7 +430,7 @@ sal_uInt32 SfxMultiVarRecordWriter::Close( bool bSeekToEndOfRec )
             _pStream->WriteUInt32( _aContentOfs[n] );
 
         // skip SfxMultiFixRecordWriter::Close()!
-        sal_uInt32 nEndPos = SfxSingleRecordWriter::Close( false );
+        sal_uInt32 nEndPos = SfxSingleRecordWriter::Close();
 
         // write own header
         _pStream->WriteUInt16( _nContentCount );
@@ -444,8 +441,7 @@ sal_uInt32 SfxMultiVarRecordWriter::Close( bool bSeekToEndOfRec )
             _pStream->WriteUInt32( nContentOfsPos );
 
         // seek to the end of the record or stay where we are
-        if ( bSeekToEndOfRec )
-             _pStream->Seek(nEndPos);
+        _pStream->Seek(nEndPos);
         return nEndPos;
     }
 

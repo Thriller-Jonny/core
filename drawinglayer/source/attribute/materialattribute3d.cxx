@@ -22,7 +22,6 @@
 #include <rtl/instance.hxx>
 
 
-
 namespace drawinglayer
 {
     namespace attribute
@@ -109,6 +108,11 @@ namespace drawinglayer
 
         MaterialAttribute3D::~MaterialAttribute3D()
         {
+        }
+
+        bool MaterialAttribute3D::isDefault() const
+        {
+            return mpMaterialAttribute3D.same_object(theGlobalDefault::get());
         }
 
         MaterialAttribute3D& MaterialAttribute3D::operator=(const MaterialAttribute3D& rCandidate)

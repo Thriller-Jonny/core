@@ -201,7 +201,6 @@ namespace rptui
     }
 
 
-
     const OPropertyInfoImpl* OPropertyInfoService::getPropertyInfo(sal_Int32 _nId)
     {
         // intialisierung
@@ -295,13 +294,12 @@ namespace rptui
         for (; pPropsIter != pPropsEnd; ++pPropsIter)
         {
             size_t nPos = 0;
-            for (; nPos < sizeof(pExcludeProperties)/sizeof(pExcludeProperties[0]) && pExcludeProperties[nPos] != pPropsIter->Name;++nPos )
+            for (; nPos < SAL_N_ELEMENTS(pExcludeProperties) && pExcludeProperties[nPos] != pPropsIter->Name; ++nPos )
                 ;
-            if ( nPos == sizeof(pExcludeProperties)/sizeof(pExcludeProperties[0]) )
+            if ( nPos == SAL_N_ELEMENTS(pExcludeProperties) )
                 _rExcludeProperties.push_back(*pPropsIter);
         }
     }
-
 
 
 } // namespace pcr

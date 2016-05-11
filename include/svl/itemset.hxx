@@ -118,9 +118,8 @@ public:
     void                        DisableItem(sal_uInt16 nWhich);
     void                        InvalidateItem( sal_uInt16 nWhich );
     sal_uInt16                  ClearItem( sal_uInt16 nWhich = 0);
-    void                        ClearInvalidItems( bool bHardDefault = false );
+    void                        ClearInvalidItems();
     void                        InvalidateAllItems(); // HACK(via nWhich = 0) ???
-    void                        InvalidateDefaultItems();
 
     inline void                 SetParent( const SfxItemSet* pNew );
 
@@ -137,7 +136,7 @@ public:
     bool                        Set( const SfxItemSet&, bool bDeep = true );
 
     void                        Intersect( const SfxItemSet& rSet );
-    void                        MergeValues( const SfxItemSet& rSet, bool bOverwriteDefaults = false );
+    void                        MergeValues( const SfxItemSet& rSet );
     void                        Differentiate( const SfxItemSet& rSet );
     void                        MergeValue( const SfxPoolItem& rItem, bool bOverwriteDefaults = false  );
 
@@ -147,9 +146,8 @@ public:
     void                        MergeRange( sal_uInt16 nFrom, sal_uInt16 nTo );
     const SfxItemSet*           GetParent() const { return m_pParent; }
 
-    SvStream &                  Load( SvStream &, bool bDirect = false,
-                                      const SfxItemPool *pRefPool = nullptr );
-    SvStream &                  Store( SvStream &, bool bDirect = false ) const;
+    void                        Load( SvStream & );
+    void                        Store( SvStream &, bool bDirect = false ) const;
 
     bool                        operator==(const SfxItemSet &) const;
     sal_Int32                   getHash() const;

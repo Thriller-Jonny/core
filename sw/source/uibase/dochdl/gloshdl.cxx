@@ -45,7 +45,6 @@
 #include <gloslst.hxx>
 #include <swdtflvr.hxx>
 #include <docsh.hxx>
-#include <crsskip.hxx>
 
 #include <dochdl.hrc>
 #include <swerror.h>
@@ -178,16 +177,15 @@ OUString SwGlossaryHdl::GetGroupName( size_t nId, OUString* pTitle )
     return sRet;
 }
 
-bool SwGlossaryHdl::NewGroup(OUString &rGrpName, const OUString& rTitle)
+void SwGlossaryHdl::NewGroup(OUString &rGrpName, const OUString& rTitle)
 {
     if (rGrpName.indexOf(GLOS_DELIM)<0)
         FindGroupName(rGrpName);
-    return rStatGlossaries.NewGroupDoc(rGrpName, rTitle);
+    rStatGlossaries.NewGroupDoc(rGrpName, rTitle);
 }
 
-bool SwGlossaryHdl::RenameGroup(const OUString& rOld, OUString& rNew, const OUString& rNewTitle)
+void SwGlossaryHdl::RenameGroup(const OUString& rOld, OUString& rNew, const OUString& rNewTitle)
 {
-    bool bRet = false;
     OUString sOldGroup(rOld);
     if (rOld.indexOf(GLOS_DELIM)<0)
         FindGroupName(sOldGroup);
@@ -198,7 +196,6 @@ bool SwGlossaryHdl::RenameGroup(const OUString& rOld, OUString& rNew, const OUSt
         {
             pGroup->SetName(rNewTitle);
             delete pGroup;
-            bRet = true;
         }
     }
     else
@@ -208,10 +205,9 @@ bool SwGlossaryHdl::RenameGroup(const OUString& rOld, OUString& rNew, const OUSt
         {
             sNewGroup += OUStringLiteral1<GLOS_DELIM>() + "0";
         }
-        bRet = rStatGlossaries.RenameGroupDoc(sOldGroup, sNewGroup, rNewTitle);
+        rStatGlossaries.RenameGroupDoc(sOldGroup, sNewGroup, rNewTitle);
         rNew = sNewGroup;
     }
-    return bRet;
 }
 
 bool SwGlossaryHdl::CopyOrMove( const OUString& rSourceGroupName, OUString& rSourceShortName,
@@ -411,7 +407,7 @@ bool SwGlossaryHdl::Expand( const OUString& rShortName,
         for(size_t i = 0; i < nGroupCount; ++i)
         {
             // get group name with path-extension
-            const OUString sGroupName = pGlossaryList->GetGroupName(i, false);
+            const OUString sGroupName = pGlossaryList->GetGroupName(i);
             if(sGroupName == pGlossary->GetName())
                 continue;
             const sal_uInt16 nBlockCount = pGlossaryList->GetBlockCount(i);
@@ -443,7 +439,7 @@ bool SwGlossaryHdl::Expand( const OUString& rShortName,
                 SwAbstractDialogFactory* pFact = SwAbstractDialogFactory::Create();
                 assert(pFact && "SwAbstractDialogFactory fail!");
 
-                std::unique_ptr<AbstractSwSelGlossaryDlg> pDlg(pFact->CreateSwSelGlossaryDlg(nullptr, aShortName));
+                std::unique_ptr<AbstractSwSelGlossaryDlg> pDlg(pFact->CreateSwSelGlossaryDlg(aShortName));
                 assert(pDlg && "Dialog creation failed!");
                 for(size_t i = 0; i < aFoundArr.size(); ++i)
                 {
@@ -713,11 +709,11 @@ bool SwGlossaryHdl::ImportGlossaries( const OUString& rName )
     bool bRet = false;
     if( !rName.isEmpty() )
     {
-        const SfxFilter* pFilter = nullptr;
+        std::shared_ptr<const SfxFilter> pFilter;
         std::unique_ptr<SfxMedium> pMed(new SfxMedium( rName, StreamMode::READ, nullptr, nullptr ));
         SfxFilterMatcher aMatcher( OUString("swriter") );
         pMed->UseInteractionHandler( true );
-        if (!aMatcher.GuessFilter(*pMed, &pFilter, SfxFilterFlags::NONE))
+        if (!aMatcher.GuessFilter(*pMed, pFilter, SfxFilterFlags::NONE))
         {
             SwTextBlocks *pGlossary = nullptr;
             pMed->SetFilter( pFilter );

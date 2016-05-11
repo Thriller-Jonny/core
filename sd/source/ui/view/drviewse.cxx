@@ -618,8 +618,8 @@ void DrawViewShell::FuPermanent(SfxRequest& rReq)
                         // Make FuText the current function.
                         SfxUInt16Item aItem (SID_TEXTEDIT, 1);
                         GetViewFrame()->GetDispatcher()->
-                            Execute(SID_TEXTEDIT, SfxCallMode::SYNCHRON |
-                                SfxCallMode::RECORD, &aItem, 0L);
+                            ExecuteList(SID_TEXTEDIT, SfxCallMode::SYNCHRON |
+                                SfxCallMode::RECORD, { &aItem });
                         // Put text object into edit mode.
                         GetView()->SdrBeginTextEdit(static_cast<SdrTextObj*>(pObj), pPageView);
                         break;
@@ -694,7 +694,7 @@ void DrawViewShell::FuDeleteSelectedObjects()
 void DrawViewShell::FuSupport(SfxRequest& rReq)
 {
     if( rReq.GetSlot() == SID_STYLE_FAMILY && rReq.GetArgs())
-        GetDocSh()->SetStyleFamily(static_cast<const SfxUInt16Item&>(rReq.GetArgs()->Get( SID_STYLE_FAMILY )).GetValue());
+        GetDocSh()->SetStyleFamily((SfxStyleFamily) static_cast<const SfxUInt16Item&>(rReq.GetArgs()->Get( SID_STYLE_FAMILY )).GetValue());
 
     // We do not execute a thing during a native slide show
     if(SlideShow::IsRunning(GetViewShellBase()) &&
@@ -971,7 +971,7 @@ void DrawViewShell::FuSupport(SfxRequest& rReq)
 
             // AutoLayouts have to be ready.
             GetDoc()->StopWorkStartupDelay();
-            // Fall through to following case statements.
+            SAL_FALLTHROUGH;
 
         case SID_DRAWINGMODE:
         case SID_SLIDE_SORTER_MODE:
@@ -1436,8 +1436,8 @@ void DrawViewShell::InsertURLField(const OUString& rURL, const OUString& rText,
     else
     {
         Outliner* pOutl = GetDoc()->GetInternalOutliner();
-        pOutl->Init( OUTLINERMODE_TEXTOBJECT );
-        sal_uInt16 nOutlMode = pOutl->GetMode();
+        pOutl->Init( OutlinerMode::TextObject );
+        OutlinerMode nOutlMode = pOutl->GetMode();
 
         SvxURLField aURLField(rURL, rText, SVXURLFORMAT_REPR);
         aURLField.SetTargetFrame(rTarget);
@@ -1507,7 +1507,7 @@ void DrawViewShell::InsertURLButton(const OUString& rURL, const OUString& rText,
                 xPropSet->setPropertyValue( "ButtonType" , Any( form::FormButtonType_URL ) );
                 if ( ::avmedia::MediaWindow::isMediaURL( rURL, ""/*TODO?*/ ) )
                 {
-                    xPropSet->setPropertyValue( "DispatchURLInternal" , Any( sal_True ) );
+                    xPropSet->setPropertyValue( "DispatchURLInternal" , Any( true ) );
                 }
             }
             else
@@ -1541,7 +1541,7 @@ void DrawViewShell::InsertURLButton(const OUString& rURL, const OUString& rText,
 
         xPropSet->setPropertyValue( "ButtonType" , Any(  form::FormButtonType_URL ) );
         if ( ::avmedia::MediaWindow::isMediaURL( rURL, ""/*TODO?*/ ) )
-            xPropSet->setPropertyValue( "DispatchURLInternal" , Any( sal_True ) );
+            xPropSet->setPropertyValue( "DispatchURLInternal" , Any( true ) );
 
         Point aPos;
 

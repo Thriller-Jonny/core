@@ -24,14 +24,6 @@
 #include "tokenarray.hxx"
 #include "sc.hrc"
 
-// defines -------------------------------------------------------------------
-
-#define ABS_SREF          SCA_VALID \
-    | SCA_COL_ABSOLUTE | SCA_ROW_ABSOLUTE | SCA_TAB_ABSOLUTE
-#define ABS_DREF          ABS_SREF \
-    | SCA_COL2_ABSOLUTE | SCA_ROW2_ABSOLUTE | SCA_TAB2_ABSOLUTE
-#define ABS_DREF3D      ABS_DREF | SCA_TAB_3D
-
 ScNameDefDlg::ScNameDefDlg( SfxBindings* pB, SfxChildWindow* pCW, vcl::Window* pParent,
         ScViewData* pViewData, const std::map<OUString, ScRangeName*>& aRangeMap,
         const ScAddress& aCursorPos, const bool bUndo )
@@ -83,7 +75,7 @@ ScNameDefDlg::ScNameDefDlg( SfxBindings* pB, SfxChildWindow* pCW, vcl::Window* p
     ScRange aRange;
 
     pViewData->GetSimpleArea( aRange );
-    OUString aAreaStr(aRange.Format(ABS_DREF3D, mpDoc,
+    OUString aAreaStr(aRange.Format(ScRefFlags::RANGE_ABS_3D, mpDoc,
             ScAddress::Details(mpDoc->GetAddressConvention(), 0, 0)));
 
     m_pEdRange->SetText( aAreaStr );
@@ -225,7 +217,7 @@ void ScNameDefDlg::AddPushed()
     {
         if ( mpDoc )
         {
-            RangeType       nType       = RT_NAME;
+            ScRangeData::Type nType = ScRangeData::Type::Name;
 
             ScRangeData* pNewEntry = new ScRangeData( mpDoc,
                     aName,
@@ -233,11 +225,11 @@ void ScNameDefDlg::AddPushed()
                     maCursorPos,
                     nType );
 
-            nType = nType
-                | (m_pBtnRowHeader->IsChecked() ? RT_ROWHEADER  : RangeType(0))
-                | (m_pBtnColHeader->IsChecked() ? RT_COLHEADER  : RangeType(0))
-                | (m_pBtnPrintArea->IsChecked() ? RT_PRINTAREA  : RangeType(0))
-                | (m_pBtnCriteria->IsChecked() ? RT_CRITERIA   : RangeType(0));
+            if ( m_pBtnRowHeader->IsChecked() ) nType |= ScRangeData::Type::RowHeader;
+            if ( m_pBtnColHeader->IsChecked() ) nType |= ScRangeData::Type::ColHeader;
+            if ( m_pBtnPrintArea->IsChecked() ) nType |= ScRangeData::Type::PrintArea;
+            if ( m_pBtnCriteria->IsChecked()  ) nType |= ScRangeData::Type::Criteria;
+
             pNewEntry->AddType(nType);
 
             // aExpression valid?
@@ -310,7 +302,7 @@ void ScNameDefDlg::SetReference( const ScRange& rRef, ScDocument* pDocP )
     {
         if ( rRef.aStart != rRef.aEnd )
             RefInputStart(m_pEdRange);
-        OUString aRefStr(rRef.Format(ABS_DREF3D, pDocP,
+        OUString aRefStr(rRef.Format(ScRefFlags::RANGE_ABS_3D, pDocP,
                 ScAddress::Details(pDocP->GetAddressConvention(), 0, 0)));
         m_pEdRange->SetRefString( aRefStr );
     }

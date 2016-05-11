@@ -19,7 +19,6 @@
 
 #include <sal/config.h>
 
-#include <com/sun/star/uno/Any.hxx>
 #include <rtl/ref.hxx>
 #include <rtl/ustring.h>
 #include <rtl/ustring.hxx>
@@ -43,7 +42,6 @@ rtl::Reference< Node > LocalizedPropertyNode::clone(bool) const {
 NodeMap & LocalizedPropertyNode::getMembers() {
     return members_;
 }
-
 
 
 LocalizedPropertyNode::LocalizedPropertyNode(

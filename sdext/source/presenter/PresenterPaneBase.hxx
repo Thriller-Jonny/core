@@ -36,7 +36,6 @@
 #include <com/sun/star/util/Color.hpp>
 #include <com/sun/star/rendering/XCanvas.hpp>
 #include <rtl/ref.hxx>
-#include <boost/noncopyable.hpp>
 
 
 namespace sdext { namespace presenter {
@@ -60,7 +59,6 @@ namespace {
 */
 class PresenterPaneBase
     : protected ::cppu::BaseMutex,
-      private ::boost::noncopyable,
       public PresenterPaneBaseInterfaceBase
 {
 public:
@@ -68,16 +66,18 @@ public:
         const css::uno::Reference<css::uno::XComponentContext>& rxContext,
         const ::rtl::Reference<PresenterController>& rpPresenterController);
     virtual ~PresenterPaneBase();
+    PresenterPaneBase(const PresenterPaneBase&) = delete;
+    PresenterPaneBase& operator=(const PresenterPaneBase&) = delete;
 
     virtual void SAL_CALL disposing() override;
 
-    css::uno::Reference<css::awt::XWindow> GetBorderWindow() const;
+    const css::uno::Reference<css::awt::XWindow>& GetBorderWindow() const;
     void SetBackground (const SharedBitmapDescriptor& rpBackground);
     void SetTitle (const OUString& rsTitle);
-    OUString GetTitle() const;
-    css::uno::Reference<css::drawing::framework::XPaneBorderPainter> GetPaneBorderPainter() const;
+    const OUString& GetTitle() const;
+    const css::uno::Reference<css::drawing::framework::XPaneBorderPainter>& GetPaneBorderPainter() const;
     void SetCalloutAnchor (const css::awt::Point& rAnchorPosition);
-    css::awt::Point GetCalloutAnchor() const;
+    const css::awt::Point& GetCalloutAnchor() const;
 
     // XInitialization
 

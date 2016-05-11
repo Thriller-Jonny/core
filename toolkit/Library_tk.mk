@@ -21,8 +21,15 @@ $(eval $(call gb_Library_Library,tk))
 
 $(eval $(call gb_Library_set_componentfile,tk,toolkit/util/tk))
 
-$(eval $(call gb_Library_use_external,tk,boost_headers))
+$(eval $(call gb_Library_use_externals,tk,\
+    boost_headers \
+))
 
+ifeq ($(ENABLE_OPENGL),TRUE)
+$(eval $(call gb_Library_use_externals,tk,\
+    glew \
+))
+endif
 $(eval $(call gb_Library_set_include,tk,\
     $$(INCLUDE) \
     -I$(SRCDIR)/toolkit/inc \

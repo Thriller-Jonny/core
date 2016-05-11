@@ -19,7 +19,7 @@
 
 #include <svsys.h>
 #include "rtl/tencinfo.h"
-#include "vcl/svapp.hxx"
+#include <vcl/svapp.hxx>
 
 #include "win/saldata.hxx"
 
@@ -73,7 +73,6 @@ int ImplSalWICompareAscii( const wchar_t* pStr1, const char* pStr2 )
 
     return nRet;
 }
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

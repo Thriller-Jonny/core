@@ -17,7 +17,6 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <com/sun/star/uno/Reference.hxx>
 #include <com/sun/star/frame/XDesktop.hpp>
 #include <com/sun/star/util/XURLTransformer.hpp>
 #include <com/sun/star/beans/PropertyValue.hpp>
@@ -80,7 +79,6 @@ using namespace ::com::sun::star::frame;
 using namespace ::com::sun::star::beans;
 
 
-
 class SfxEventAsyncer_Impl : public SfxListener
 {
     SfxEventHint        aHint;
@@ -95,7 +93,6 @@ public:
 };
 
 
-
 void SfxEventAsyncer_Impl::Notify( SfxBroadcaster&, const SfxHint& rHint )
 {
     const SfxSimpleHint* pHint = dynamic_cast<const SfxSimpleHint*>(&rHint);
@@ -105,7 +102,6 @@ void SfxEventAsyncer_Impl::Notify( SfxBroadcaster&, const SfxHint& rHint )
         delete this;
     }
 }
-
 
 
 SfxEventAsyncer_Impl::SfxEventAsyncer_Impl( const SfxEventHint& rHint )
@@ -120,12 +116,10 @@ SfxEventAsyncer_Impl::SfxEventAsyncer_Impl( const SfxEventHint& rHint )
 }
 
 
-
 SfxEventAsyncer_Impl::~SfxEventAsyncer_Impl()
 {
     delete pIdle;
 }
-
 
 
 IMPL_LINK_TYPED(SfxEventAsyncer_Impl, IdleHdl, Idle*, pAsyncIdle, void)
@@ -147,9 +141,7 @@ IMPL_LINK_TYPED(SfxEventAsyncer_Impl, IdleHdl, Idle*, pAsyncIdle, void)
 }
 
 
-
-
-bool SfxApplication::GetOptions( SfxItemSet& rSet )
+void SfxApplication::GetOptions( SfxItemSet& rSet )
 {
     bool bRet = false;
     SfxItemPool &rPool = GetPool();
@@ -483,15 +475,10 @@ bool SfxApplication::GetOptions( SfxItemSet& rSet )
                     SAL_INFO( "sfx", "W1:Wrong ID while getting Options!" );
                     break;
             }
-#ifdef DBG_UTIL
-            if ( !bRet )
-                OSL_FAIL( "Putting options failed!" );
-#endif
+            SAL_WARN_IF(!bRet, "sfx.appl", "Putting options failed!");
         }
         pRanges++;
     }
-
-    return bRet;
 }
 
 // TODO/CLEANUP: Why two SetOptions Methods?

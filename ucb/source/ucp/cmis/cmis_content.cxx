@@ -88,7 +88,7 @@ namespace
         return unoTime;
     }
 
-    uno::Any lcl_cmisPropertyToUno( libcmis::PropertyPtr pProperty )
+    uno::Any lcl_cmisPropertyToUno( const libcmis::PropertyPtr& pProperty )
     {
         uno::Any aValue;
         switch ( pProperty->getPropertyType( )->getType( ) )
@@ -187,8 +187,8 @@ namespace
         {
             uno::Sequence< OUString > seqValue;
             value >>= seqValue;
-            sal_Int32 m_nNumValue = seqValue.getLength( );
-            for ( sal_Int32 i = 0; i < m_nNumValue; ++i )
+            sal_Int32 nNumValue = seqValue.getLength( );
+            for ( sal_Int32 i = 0; i < nNumValue; ++i )
             {
                 values.push_back( OUSTR_TO_STDSTR( seqValue[i] ) );
             }
@@ -198,8 +198,8 @@ namespace
         {
             uno::Sequence< sal_Bool > seqValue;
             value >>= seqValue;
-            sal_Int32 m_nNumValue = seqValue.getLength( );
-            for ( sal_Int32 i = 0; i < m_nNumValue; ++i )
+            sal_Int32 nNumValue = seqValue.getLength( );
+            for ( sal_Int32 i = 0; i < nNumValue; ++i )
             {
                 values.push_back( OUSTR_TO_STDSTR( OUString::boolean( seqValue[i] ) ) );
             }
@@ -209,8 +209,8 @@ namespace
         {
             uno::Sequence< sal_Int64 > seqValue;
             value >>= seqValue;
-            sal_Int32 m_nNumValue = seqValue.getLength( );
-            for ( sal_Int32 i = 0; i < m_nNumValue; ++i )
+            sal_Int32 nNumValue = seqValue.getLength( );
+            for ( sal_Int32 i = 0; i < nNumValue; ++i )
             {
                 values.push_back( OUSTR_TO_STDSTR( OUString::number( seqValue[i] ) ) );
             }
@@ -220,8 +220,8 @@ namespace
         {
             uno::Sequence< double > seqValue;
             value >>= seqValue;
-            sal_Int32 m_nNumValue = seqValue.getLength( );
-            for ( sal_Int32 i = 0; i < m_nNumValue; ++i )
+            sal_Int32 nNumValue = seqValue.getLength( );
+            for ( sal_Int32 i = 0; i < nNumValue; ++i )
             {
                 values.push_back( OUSTR_TO_STDSTR( OUString::number( seqValue[i] ) ) );
             }
@@ -231,8 +231,8 @@ namespace
         {
             uno::Sequence< util::DateTime > seqValue;
             value >>= seqValue;
-            sal_Int32 m_nNumValue = seqValue.getLength( );
-            for ( sal_Int32 i = 0; i < m_nNumValue; ++i )
+            sal_Int32 nNumValue = seqValue.getLength( );
+            for ( sal_Int32 i = 0; i < nNumValue; ++i )
             {
                 OUStringBuffer aBuffer;
                 ::sax::Converter::convertDateTime( aBuffer, seqValue[i], nullptr );
@@ -366,63 +366,78 @@ namespace cmis
 
             string rUsername = OUSTR_TO_STDSTR( m_aURL.getUsername( ) );
             string rPassword = OUSTR_TO_STDSTR( m_aURL.getPassword( ) );
-            if ( authProvider.authenticationQuery( rUsername, rPassword ) )
+
+            bool bIsDone = false;
+
+            while ( !bIsDone )
             {
-                // Initiate a CMIS session and register it as we found nothing
-                libcmis::OAuth2DataPtr oauth2Data;
-                if ( m_aURL.getBindingUrl( ) == GDRIVE_BASE_URL )
-                    oauth2Data.reset( new libcmis::OAuth2Data(
-                        GDRIVE_AUTH_URL, GDRIVE_TOKEN_URL,
-                        GDRIVE_SCOPE, GDRIVE_REDIRECT_URI,
-                        GDRIVE_CLIENT_ID, GDRIVE_CLIENT_SECRET ) );
-                if ( m_aURL.getBindingUrl().startsWith( ALFRESCO_CLOUD_BASE_URL ) )
-                    oauth2Data.reset( new libcmis::OAuth2Data(
-                        ALFRESCO_CLOUD_AUTH_URL, ALFRESCO_CLOUD_TOKEN_URL,
-                        ALFRESCO_CLOUD_SCOPE, ALFRESCO_CLOUD_REDIRECT_URI,
-                        ALFRESCO_CLOUD_CLIENT_ID, ALFRESCO_CLOUD_CLIENT_SECRET ) );
-                if ( m_aURL.getBindingUrl( ) == ONEDRIVE_BASE_URL )
+                if ( authProvider.authenticationQuery( rUsername, rPassword ) )
                 {
-                    libcmis::SessionFactory::setOAuth2AuthCodeProvider( authProvider.onedriveAuthCodeFallback );
-                    oauth2Data.reset( new libcmis::OAuth2Data(
-                        ONEDRIVE_AUTH_URL, ONEDRIVE_TOKEN_URL,
-                        ONEDRIVE_SCOPE, ONEDRIVE_REDIRECT_URI,
-                        ONEDRIVE_CLIENT_ID, ONEDRIVE_CLIENT_SECRET ) );
-                }
-                m_pSession = libcmis::SessionFactory::createSession(
-                        OUSTR_TO_STDSTR( m_aURL.getBindingUrl( ) ),
-                        rUsername, rPassword, OUSTR_TO_STDSTR( m_aURL.getRepositoryId( ) ), false, oauth2Data );
-                if ( m_pSession == nullptr )
-                {
-                    // Fail: session was not created
-                    ucbhelper::cancelCommandExecution(
-                        ucb::IOErrorCode_INVALID_DEVICE,
-                        generateErrorArguments(m_aURL),
-                        xEnv,
-                        OUString());
-                }
-                else if ( m_pSession->getRepository() == nullptr )
-                {
-                    // Fail: no repository or repository is invalid
-                    ucbhelper::cancelCommandExecution(
-                        ucb::IOErrorCode_INVALID_DEVICE,
-                        generateErrorArguments(m_aURL),
-                        xEnv,
-                        "error accessing a repository");
+                    // Initiate a CMIS session and register it as we found nothing
+                    libcmis::OAuth2DataPtr oauth2Data;
+                    if ( m_aURL.getBindingUrl( ) == GDRIVE_BASE_URL )
+                        oauth2Data.reset( new libcmis::OAuth2Data(
+                            GDRIVE_AUTH_URL, GDRIVE_TOKEN_URL,
+                            GDRIVE_SCOPE, GDRIVE_REDIRECT_URI,
+                            GDRIVE_CLIENT_ID, GDRIVE_CLIENT_SECRET ) );
+                    if ( m_aURL.getBindingUrl().startsWith( ALFRESCO_CLOUD_BASE_URL ) )
+                        oauth2Data.reset( new libcmis::OAuth2Data(
+                            ALFRESCO_CLOUD_AUTH_URL, ALFRESCO_CLOUD_TOKEN_URL,
+                            ALFRESCO_CLOUD_SCOPE, ALFRESCO_CLOUD_REDIRECT_URI,
+                            ALFRESCO_CLOUD_CLIENT_ID, ALFRESCO_CLOUD_CLIENT_SECRET ) );
+                    if ( m_aURL.getBindingUrl( ) == ONEDRIVE_BASE_URL )
+                    {
+                        libcmis::SessionFactory::setOAuth2AuthCodeProvider( authProvider.onedriveAuthCodeFallback );
+                        oauth2Data.reset( new libcmis::OAuth2Data(
+                            ONEDRIVE_AUTH_URL, ONEDRIVE_TOKEN_URL,
+                            ONEDRIVE_SCOPE, ONEDRIVE_REDIRECT_URI,
+                            ONEDRIVE_CLIENT_ID, ONEDRIVE_CLIENT_SECRET ) );
+                    }
+                    try
+                    {
+                        m_pSession = libcmis::SessionFactory::createSession(
+                            OUSTR_TO_STDSTR( m_aURL.getBindingUrl( ) ),
+                            rUsername, rPassword, OUSTR_TO_STDSTR( m_aURL.getRepositoryId( ) ), false, oauth2Data );
+
+                        if ( m_pSession == nullptr )
+                        {
+                            // Fail: session was not created
+                            ucbhelper::cancelCommandExecution(
+                                ucb::IOErrorCode_INVALID_DEVICE,
+                                generateErrorArguments(m_aURL),
+                                xEnv);
+                        }
+                        else if ( m_pSession->getRepository() == nullptr )
+                        {
+                            // Fail: no repository or repository is invalid
+                            ucbhelper::cancelCommandExecution(
+                                ucb::IOErrorCode_INVALID_DEVICE,
+                                generateErrorArguments(m_aURL),
+                                xEnv,
+                                "error accessing a repository");
+                        }
+                        else
+                        {
+                            m_pProvider->registerSession(sSessionId, m_aURL.getUsername( ), m_pSession);
+                        }
+
+                        bIsDone = true;
+                    }
+                    catch( const libcmis::Exception & e )
+                    {
+                        if ( e.getType().compare( "permissionDenied" ) != 0 )
+                            throw;
+                    }
                 }
                 else
                 {
-                    m_pProvider->registerSession(sSessionId, m_aURL.getUsername( ), m_pSession);
+                    // Silently fail as the user cancelled the authentication
+                    ucbhelper::cancelCommandExecution(
+                                        ucb::IOErrorCode_ABORT,
+                                        uno::Sequence< uno::Any >( 0 ),
+                                        xEnv );
+                    throw uno::RuntimeException( );
                 }
-            }
-            else
-            {
-                // Silently fail as the user cancelled the authentication
-                ucbhelper::cancelCommandExecution(
-                                    ucb::IOErrorCode_ABORT,
-                                    uno::Sequence< uno::Any >( 0 ),
-                                    xEnv,
-                                    OUString( ) );
-                throw uno::RuntimeException( );
             }
         }
         return m_pSession;
@@ -561,11 +576,13 @@ namespace cmis
         catch ( const libcmis::Exception& e )
         {
             SAL_INFO( "ucb.ucp.cmis", "Unexpected libcmis exception: " << e.what( ) );
+
             ucbhelper::cancelCommandExecution(
-                                ucb::IOErrorCode_GENERAL,
-                                uno::Sequence< uno::Any >( 0 ),
-                                xEnv,
-                                OUString::createFromAscii( e.what( ) ) );
+                            ucb::IOErrorCode_GENERAL,
+                            uno::Sequence< uno::Any >( 0 ),
+                            xEnv,
+                            OUString::createFromAscii( e.what( ) ) );
+
         }
         return bIsFolder;
     }
@@ -1395,8 +1412,8 @@ namespace cmis
     const int TRANSFER_BUFFER_SIZE = 65536;
 
     void Content::copyData(
-        uno::Reference< io::XInputStream > xIn,
-        uno::Reference< io::XOutputStream > xOut )
+        const uno::Reference< io::XInputStream >& xIn,
+        const uno::Reference< io::XOutputStream >& xOut )
     {
         uno::Sequence< sal_Int8 > theData( TRANSFER_BUFFER_SIZE );
 
@@ -1500,7 +1517,7 @@ namespace cmis
         return aRet;
     }
 
-    bool Content::feedSink( uno::Reference< uno::XInterface> xSink,
+    bool Content::feedSink( const uno::Reference< uno::XInterface>& xSink,
         const uno::Reference< ucb::XCommandEnvironment >& xEnv )
     {
         if ( !xSink.is() )
@@ -2019,7 +2036,7 @@ namespace cmis
                     // TODO Cache the objects
 
                     INetURLObject aURL( m_sURL );
-                    OUString sUser = aURL.GetUser( INetURLObject::NO_DECODE );
+                    OUString sUser = aURL.GetUser( INetURLObject::DECODE_WITH_CHARSET );
 
                     URL aUrl( m_sURL );
                     OUString sPath( m_sObjectPath );

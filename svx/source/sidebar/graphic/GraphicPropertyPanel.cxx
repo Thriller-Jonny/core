@@ -17,7 +17,6 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 #include <sfx2/sidebar/ResourceDefinitions.hrc>
-#include <sfx2/sidebar/Theme.hxx>
 #include <sfx2/sidebar/ControlFactory.hxx>
 #include <GraphicPropertyPanel.hxx>
 #include <svx/dialogs.hrc>
@@ -30,13 +29,11 @@
 
 using namespace css;
 using namespace css::uno;
-using ::sfx2::sidebar::Theme;
 
 
 // namespace open
 
 namespace svx { namespace sidebar {
-
 
 
 GraphicPropertyPanel::GraphicPropertyPanel(
@@ -52,7 +49,6 @@ GraphicPropertyPanel::GraphicPropertyPanel(
     maBlueControl(SID_ATTR_GRAF_BLUE, *pBindings, *this),
     maGammaControl(SID_ATTR_GRAF_GAMMA, *pBindings, *this),
     maModeControl(SID_ATTR_GRAF_MODE, *pBindings, *this),
-    mxFrame(rxFrame),
     mpBindings(pBindings)
 {
     get(mpMtrBrightness, "setbrightness");
@@ -99,18 +95,14 @@ void GraphicPropertyPanel::dispose()
 void GraphicPropertyPanel::Initialize()
 {
     mpMtrBrightness->SetModifyHdl( LINK( this, GraphicPropertyPanel, ModifyBrightnessHdl ) );
-    mpMtrBrightness->SetAccessibleName("Brightness");
     mpMtrContrast->SetModifyHdl( LINK( this, GraphicPropertyPanel, ModifyContrastHdl ) );
-    mpMtrContrast->SetAccessibleName("Contrast");
     mpMtrTrans->SetModifyHdl( LINK( this, GraphicPropertyPanel, ModifyTransHdl ) );
-    mpMtrTrans->SetAccessibleName("Transparency");
 
     mpLBColorMode->InsertEntry(SVX_RESSTR(RID_SVXSTR_GRAFMODE_STANDARD));
     mpLBColorMode->InsertEntry(SVX_RESSTR(RID_SVXSTR_GRAFMODE_GREYS));
     mpLBColorMode->InsertEntry(SVX_RESSTR(RID_SVXSTR_GRAFMODE_MONO));
     mpLBColorMode->InsertEntry(SVX_RESSTR(RID_SVXSTR_GRAFMODE_WATERMARK));
     mpLBColorMode->SetSelectHdl( LINK( this, GraphicPropertyPanel, ClickColorModeHdl ));
-    mpLBColorMode->SetAccessibleName("Color mode");
 
     mpMtrRed->SetModifyHdl( LINK( this, GraphicPropertyPanel, RedHdl ) );
     mpMtrGreen->SetModifyHdl( LINK( this, GraphicPropertyPanel, GreenHdl ) );
@@ -119,12 +111,6 @@ void GraphicPropertyPanel::Initialize()
     mpMtrRed->SetAccessibleName(mpMtrRed->GetQuickHelpText());
     mpMtrGreen->SetAccessibleName(mpMtrGreen->GetQuickHelpText());
     mpMtrBlue->SetAccessibleName(mpMtrBlue->GetQuickHelpText());
-    mpMtrGamma->SetAccessibleName("Gamma value");
-
-    mpMtrRed->SetAccessibleRelationLabeledBy(mpMtrRed);
-    mpMtrGreen->SetAccessibleRelationLabeledBy(mpMtrGreen);
-    mpMtrBlue->SetAccessibleRelationLabeledBy(mpMtrBlue);
-    mpMtrGamma->SetAccessibleRelationLabeledBy(mpMtrGamma);
 
     // Fix left position of some controls that may be wrong due to
     // rounding errors.
@@ -145,80 +131,76 @@ void GraphicPropertyPanel::Initialize()
 }
 
 
-
-
-
-
 IMPL_LINK_NOARG_TYPED( GraphicPropertyPanel, ModifyBrightnessHdl, Edit&, void )
 {
     const sal_Int16 nBright = mpMtrBrightness->GetValue();
     const SfxInt16Item aBrightItem( SID_ATTR_GRAF_LUMINANCE, nBright );
-    GetBindings()->GetDispatcher()->Execute(SID_ATTR_GRAF_LUMINANCE, SfxCallMode::RECORD, &aBrightItem, 0L);
+    GetBindings()->GetDispatcher()->ExecuteList(SID_ATTR_GRAF_LUMINANCE,
+            SfxCallMode::RECORD, { &aBrightItem });
 }
-
 
 
 IMPL_LINK_NOARG_TYPED( GraphicPropertyPanel, ModifyContrastHdl, Edit&, void )
 {
     const sal_Int16 nContrast = mpMtrContrast->GetValue();
     const SfxInt16Item aContrastItem( SID_ATTR_GRAF_CONTRAST, nContrast );
-    GetBindings()->GetDispatcher()->Execute(SID_ATTR_GRAF_CONTRAST, SfxCallMode::RECORD, &aContrastItem, 0L);
+    GetBindings()->GetDispatcher()->ExecuteList(SID_ATTR_GRAF_CONTRAST,
+            SfxCallMode::RECORD, { &aContrastItem });
 }
-
 
 
 IMPL_LINK_NOARG_TYPED( GraphicPropertyPanel, ModifyTransHdl, Edit&, void )
 {
     const sal_Int16 nTrans = mpMtrTrans->GetValue();
     const SfxInt16Item aTransItem( SID_ATTR_GRAF_TRANSPARENCE, nTrans );
-    GetBindings()->GetDispatcher()->Execute(SID_ATTR_GRAF_TRANSPARENCE, SfxCallMode::RECORD, &aTransItem, 0L);
+    GetBindings()->GetDispatcher()->ExecuteList(SID_ATTR_GRAF_TRANSPARENCE,
+            SfxCallMode::RECORD, { &aTransItem });
 }
-
 
 
 IMPL_LINK_NOARG_TYPED( GraphicPropertyPanel, ClickColorModeHdl, ListBox&, void )
 {
     const sal_Int16 nTrans = mpLBColorMode->GetSelectEntryPos();
     const SfxInt16Item aTransItem( SID_ATTR_GRAF_MODE, nTrans );
-    GetBindings()->GetDispatcher()->Execute(SID_ATTR_GRAF_MODE, SfxCallMode::RECORD, &aTransItem, 0L);
+    GetBindings()->GetDispatcher()->ExecuteList(SID_ATTR_GRAF_MODE,
+            SfxCallMode::RECORD, { &aTransItem });
 }
-
 
 
 IMPL_LINK_NOARG_TYPED( GraphicPropertyPanel, RedHdl, Edit&, void )
 {
     const sal_Int16 nRed = mpMtrRed->GetValue();
     const SfxInt16Item aRedItem( SID_ATTR_GRAF_RED, nRed );
-    GetBindings()->GetDispatcher()->Execute(SID_ATTR_GRAF_RED, SfxCallMode::RECORD, &aRedItem, 0L);
+    GetBindings()->GetDispatcher()->ExecuteList(SID_ATTR_GRAF_RED,
+            SfxCallMode::RECORD, { &aRedItem });
 }
-
 
 
 IMPL_LINK_NOARG_TYPED( GraphicPropertyPanel, GreenHdl, Edit&, void )
 {
     const sal_Int16 nGreen = mpMtrGreen->GetValue();
     const SfxInt16Item aGreenItem( SID_ATTR_GRAF_GREEN, nGreen );
-    GetBindings()->GetDispatcher()->Execute(SID_ATTR_GRAF_GREEN, SfxCallMode::RECORD, &aGreenItem, 0L);
+    GetBindings()->GetDispatcher()->ExecuteList(SID_ATTR_GRAF_GREEN,
+            SfxCallMode::RECORD, { &aGreenItem });
 }
-
 
 
 IMPL_LINK_NOARG_TYPED(GraphicPropertyPanel, BlueHdl, Edit&, void)
 {
     const sal_Int16 nBlue = mpMtrBlue->GetValue();
     const SfxInt16Item aBlueItem( SID_ATTR_GRAF_BLUE, nBlue );
-    GetBindings()->GetDispatcher()->Execute(SID_ATTR_GRAF_BLUE, SfxCallMode::RECORD, &aBlueItem, 0L);
+    GetBindings()->GetDispatcher()->ExecuteList(SID_ATTR_GRAF_BLUE,
+            SfxCallMode::RECORD, { &aBlueItem });
 }
-
 
 
 IMPL_LINK_NOARG_TYPED(GraphicPropertyPanel, GammaHdl, Edit&, void)
 {
     const sal_Int32 nGamma = mpMtrGamma->GetValue();
     const SfxInt32Item nGammaItem( SID_ATTR_GRAF_GAMMA, nGamma );
-    GetBindings()->GetDispatcher()->Execute(SID_ATTR_GRAF_GAMMA, SfxCallMode::RECORD, &nGammaItem, 0L);
+    GetBindings()->GetDispatcher()->ExecuteList(SID_ATTR_GRAF_GAMMA,
+            SfxCallMode::RECORD, { &nGammaItem });
 }
-
 
 
 VclPtr<vcl::Window> GraphicPropertyPanel::Create (
@@ -240,12 +222,10 @@ VclPtr<vcl::Window> GraphicPropertyPanel::Create (
 }
 
 
-
 void GraphicPropertyPanel::DataChanged(
     const DataChangedEvent& /*rEvent*/)
 {
 }
-
 
 
 void GraphicPropertyPanel::NotifyItemUpdate(
@@ -452,12 +432,6 @@ void GraphicPropertyPanel::NotifyItemUpdate(
         }
     }
 }
-
-
-
-
-
-
 
 
 // namespace close

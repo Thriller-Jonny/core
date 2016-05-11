@@ -30,16 +30,10 @@ namespace pcr
 
 
     using ::com::sun::star::uno::Reference;
-    using ::com::sun::star::uno::XInterface;
-    using ::com::sun::star::uno::UNO_QUERY;
-    using ::com::sun::star::uno::UNO_QUERY_THROW;
     using ::com::sun::star::uno::UNO_SET_THROW;
     using ::com::sun::star::uno::Exception;
     using ::com::sun::star::uno::RuntimeException;
     using ::com::sun::star::uno::Any;
-    using ::com::sun::star::uno::makeAny;
-    using ::com::sun::star::uno::Sequence;
-    using ::com::sun::star::uno::Type;
     using ::com::sun::star::awt::XWindow;
     using ::com::sun::star::awt::KeyEvent;
     using ::com::sun::star::inspection::XPropertyControl;
@@ -124,7 +118,6 @@ namespace pcr
         m_pData->xControlWindow.clear();
         m_pData->xControl.clear();
     }
-
 
 
 } // namespace pcr

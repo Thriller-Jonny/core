@@ -47,7 +47,6 @@ using namespace ::com::sun::star::chart2;
 
 using ::com::sun::star::uno::Sequence;
 using ::com::sun::star::uno::Reference;
-using ::com::sun::star::uno::Any;
 
 namespace
 {
@@ -182,7 +181,7 @@ uno::Reference< XDiagram > SAL_CALL ChartTypeTemplate::createDiagramByDataSource
 sal_Bool SAL_CALL ChartTypeTemplate::supportsCategories()
     throw (css::uno::RuntimeException, ::std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 void SAL_CALL ChartTypeTemplate::changeDiagram( const uno::Reference< XDiagram >& xDiagram )
@@ -776,7 +775,7 @@ sal_Int32 ChartTypeTemplate::getAxisCountByDimension( sal_Int32 nDimension )
 void ChartTypeTemplate::FillDiagram(
     const Reference< XDiagram >& xDiagram,
     const Sequence< Sequence< Reference< XDataSeries > > >& aSeriesSeq,
-    Reference< data::XLabeledDataSequence > xCategories,
+    const Reference< data::XLabeledDataSequence >& xCategories,
     const Sequence< Reference< XChartType > >& aOldChartTypesSeq,
     bool /* bCreate */ )
 {

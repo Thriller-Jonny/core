@@ -45,7 +45,7 @@
 #include <svx/svdopath.hxx>
 #include <svx/sdr/contact/objectcontactofobjlistpainter.hxx>
 #include <svx/sdr/contact/displayinfo.hxx>
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 #include <svx/xbtmpit.hxx>
 
 #define OUTPUT_DRAWMODE_COLOR       (DrawModeFlags::Default)
@@ -68,13 +68,13 @@ Bitmap& SvxRectCtl::GetRectBitmap()
 }
 
 SvxRectCtl::SvxRectCtl(vcl::Window* pParent, RECT_POINT eRpt,
-    sal_uInt16 nBorder, sal_uInt16 nCircle, CTL_STYLE eStyle)
+    sal_uInt16 nBorder, sal_uInt16 nCircle)
     : Control(pParent, WB_BORDER | WB_TABSTOP)
     , pAccContext(nullptr)
     , nBorderWidth(nBorder)
     , nRadius(nCircle)
     , eDefRP(eRpt)
-    , eCS(eStyle)
+    , eCS(CS_RECT)
     , pBitmap(nullptr)
     , m_nState(CTL_STATE::NONE)
     , mbCompleteDisable(false)
@@ -85,12 +85,12 @@ SvxRectCtl::SvxRectCtl(vcl::Window* pParent, RECT_POINT eRpt,
     Resize_Impl();
 }
 
-void SvxRectCtl::SetControlSettings(RECT_POINT eRpt, sal_uInt16 nBorder, sal_uInt16 nCircle, CTL_STYLE eStyle)
+void SvxRectCtl::SetControlSettings(RECT_POINT eRpt, sal_uInt16 nBorder, sal_uInt16 nCircle)
 {
     nBorderWidth = nBorder;
     nRadius = nCircle;
     eDefRP = eRpt;
-    eCS = eStyle;
+    eCS = CS_RECT;
     Resize_Impl();
 }
 
@@ -121,7 +121,6 @@ void SvxRectCtl::Resize()
     Resize_Impl();
     Control::Resize();
 }
-
 
 
 void SvxRectCtl::Resize_Impl()
@@ -367,7 +366,6 @@ void SvxRectCtl::KeyInput( const KeyEvent& rKeyEvt )
 }
 
 
-
 void SvxRectCtl::StateChanged( StateChangedType nType )
 {
     if ( nType == StateChangedType::ControlForeground )
@@ -377,7 +375,6 @@ void SvxRectCtl::StateChanged( StateChangedType nType )
 
     Window::StateChanged( nType );
 }
-
 
 
 void SvxRectCtl::DataChanged( const DataChangedEvent& rDCEvt )
@@ -518,7 +515,7 @@ void SvxRectCtl::Paint(vcl::RenderContext& rRenderContext, const Rectangle&)
 
 // Convert RECT_POINT Point
 
-Point SvxRectCtl::GetPointFromRP( RECT_POINT _eRP) const
+const Point& SvxRectCtl::GetPointFromRP( RECT_POINT _eRP) const
 {
     switch( _eRP )
     {
@@ -536,14 +533,11 @@ Point SvxRectCtl::GetPointFromRP( RECT_POINT _eRP) const
 }
 
 
-void SvxRectCtl::SetFocusRect( const Rectangle* pRect )
+void SvxRectCtl::SetFocusRect()
 {
     HideFocus();
 
-    if( pRect )
-        ShowFocus( *pRect );
-    else
-        ShowFocus( CalculateFocusRectangle() );
+    ShowFocus( CalculateFocusRectangle() );
 }
 
 Point SvxRectCtl::SetActualRPWithoutInvalidate( RECT_POINT eNewRP )
@@ -970,11 +964,11 @@ void SvxPixelCtl::KeyInput( const KeyEvent& rKEvt )
 
     if( !bIsMod )
     {
-        Point pRepaintPoint( aRectSize.Width() *( aFocusPosition.getX() - 1)/ nLines - 1,
+        Point aRepaintPoint( aRectSize.Width() *( aFocusPosition.getX() - 1)/ nLines - 1,
                              aRectSize.Height() *( aFocusPosition.getY() - 1)/ nLines -1
                             );
-        Size  mRepaintSize( aRectSize.Width() *3/ nLines + 2,aRectSize.Height() *3/ nLines + 2);
-        Rectangle mRepaintRect( pRepaintPoint, mRepaintSize );
+        Size  aRepaintSize( aRectSize.Width() *3/ nLines + 2,aRectSize.Height() *3/ nLines + 2);
+        Rectangle aRepaintRect( aRepaintPoint, aRepaintSize );
         bool bFocusPosChanged=false;
         switch(nCode)
         {
@@ -982,7 +976,7 @@ void SvxPixelCtl::KeyInput( const KeyEvent& rKEvt )
                 if((aFocusPosition.getX() >= 1))
                 {
                     aFocusPosition.setX( aFocusPosition.getX() - 1 );
-                    Invalidate(mRepaintRect);
+                    Invalidate(aRepaintRect);
                     bFocusPosChanged=true;
                 }
                 break;
@@ -990,7 +984,7 @@ void SvxPixelCtl::KeyInput( const KeyEvent& rKEvt )
                 if( aFocusPosition.getX() < (nLines - 1) )
                 {
                     aFocusPosition.setX( aFocusPosition.getX() + 1 );
-                    Invalidate(mRepaintRect);
+                    Invalidate(aRepaintRect);
                     bFocusPosChanged=true;
                 }
                 break;
@@ -998,7 +992,7 @@ void SvxPixelCtl::KeyInput( const KeyEvent& rKEvt )
                 if((aFocusPosition.getY() >= 1))
                 {
                     aFocusPosition.setY( aFocusPosition.getY() - 1 );
-                    Invalidate(mRepaintRect);
+                    Invalidate(aRepaintRect);
                     bFocusPosChanged=true;
                 }
                 break;
@@ -1006,7 +1000,7 @@ void SvxPixelCtl::KeyInput( const KeyEvent& rKEvt )
                 if( aFocusPosition.getY() < ( nLines - 1 ) )
                 {
                     aFocusPosition.setY( aFocusPosition.getY() + 1 );
-                    Invalidate(mRepaintRect);
+                    Invalidate(aRepaintRect);
                     bFocusPosChanged=true;
                 }
                 break;
@@ -1350,7 +1344,7 @@ void GradientLB::Modify( const XGradientEntry& rEntry, sal_Int32 nPos, const Bit
 }
 
 void GradientLB::SelectEntryByList( const XGradientListRef &pList, const OUString& rStr,
-                                    const XGradient& rGradient, sal_uInt16 nDist )
+                                    const XGradient& rGradient )
 {
     long nCount = pList.get() ? pList->Count() : 0;
     XGradientEntry* pEntry;
@@ -1368,7 +1362,7 @@ void GradientLB::SelectEntryByList( const XGradientListRef &pList, const OUStrin
             bFound = true;
     }
     if( bFound )
-        SelectEntryPos( (sal_uInt16) ( i - 1 + nDist ) );
+        SelectEntryPos( (sal_uInt16) ( i - 1 ) );
 }
 
 // Fills the listbox (provisional) with strings
@@ -1715,7 +1709,7 @@ void LineEndLB::Fill( const XLineEndListRef &pList, bool bStart )
     SetUpdateMode( true );
 }
 
-void LineEndLB::Append( const XLineEndEntry& rEntry, const Bitmap& rBitmap, bool bStart )
+void LineEndLB::Append( const XLineEndEntry& rEntry, const Bitmap& rBitmap )
 {
     if(!rBitmap.IsEmpty())
     {
@@ -1727,7 +1721,7 @@ void LineEndLB::Append( const XLineEndEntry& rEntry, const Bitmap& rBitmap, bool
         InsertEntry(
             rEntry.GetName(),
             Image(pVD->GetBitmap(
-                (bStart) ? Point() : Point(aBmpSize.Width() / 2, 0),
+                Point(),
                 Size(aBmpSize.Width() / 2, aBmpSize.Height()))));
     }
     else
@@ -1738,7 +1732,7 @@ void LineEndLB::Append( const XLineEndEntry& rEntry, const Bitmap& rBitmap, bool
     AdaptDropDownLineCountToMaximum();
 }
 
-void LineEndLB::Modify( const XLineEndEntry& rEntry, sal_Int32 nPos, const Bitmap& rBitmap, bool bStart )
+void LineEndLB::Modify( const XLineEndEntry& rEntry, sal_Int32 nPos, const Bitmap& rBitmap )
 {
     RemoveEntry( nPos );
 
@@ -1752,7 +1746,7 @@ void LineEndLB::Modify( const XLineEndEntry& rEntry, sal_Int32 nPos, const Bitma
         InsertEntry(
             rEntry.GetName(),
             Image(pVD->GetBitmap(
-                    (bStart) ? Point() : Point(aBmpSize.Width() / 2, 0),
+                    Point(),
                     Size(aBmpSize.Width() / 2, aBmpSize.Height()))),
             nPos);
     }
@@ -1761,7 +1755,6 @@ void LineEndLB::Modify( const XLineEndEntry& rEntry, sal_Int32 nPos, const Bitma
         InsertEntry(rEntry.GetName(), nPos);
     }
 }
-
 
 
 void SvxPreviewBase::InitSettings(bool bForeground, bool bBackground)
@@ -1988,13 +1981,11 @@ void SvxXLinePreview::dispose()
 }
 
 
-
 void SvxXLinePreview::SetSymbol(Graphic* p,const Size& s)
 {
     mpGraphic = p;
     maSymbolSize = s;
 }
-
 
 
 void SvxXLinePreview::ResizeSymbol(const Size& s)
@@ -2005,7 +1996,6 @@ void SvxXLinePreview::ResizeSymbol(const Size& s)
         Invalidate();
     }
 }
-
 
 
 void SvxXLinePreview::SetLineAttributes(const SfxItemSet& rItemSet)
@@ -2021,7 +2011,6 @@ void SvxXLinePreview::SetLineAttributes(const SfxItemSet& rItemSet)
     mpLineObjB->SetMergedItemSet(aTempSet);
     mpLineObjC->SetMergedItemSet(aTempSet);
 }
-
 
 
 void SvxXLinePreview::Paint(vcl::RenderContext& rRenderContext, const Rectangle&)

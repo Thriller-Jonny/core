@@ -19,7 +19,6 @@
 
 #include <svtools/fontsubstconfig.hxx>
 #include <com/sun/star/beans/PropertyValue.hpp>
-#include <com/sun/star/uno/Any.hxx>
 #include <com/sun/star/uno/Sequence.hxx>
 #include <tools/debug.hxx>
 #include <vcl/outdev.hxx>
@@ -98,10 +97,7 @@ void SvtFontSubstConfig::Notify( const css::uno::Sequence< OUString >& )
 
 void SvtFontSubstConfig::ImplCommit()
 {
-    Sequence<OUString> aNames { cReplacement };
-    Sequence<Any> aValues(1);
-    aValues.getArray()[0].setValue(&bIsEnabled, cppu::UnoType<bool>::get());
-    PutProperties(aNames, aValues);
+    PutProperties({cReplacement}, {css::uno::Any(bIsEnabled)});
 
     OUString sNode(cFontPairs);
     if(pImpl->aSubstArr.empty())
@@ -117,20 +113,19 @@ void SvtFontSubstConfig::ImplCommit()
         const OUString sAlways(cAlways);
         const OUString sOnScreenOnly(cOnScreenOnly);
 
-        const uno::Type& rBoolType = cppu::UnoType<bool>::get();
         for(size_t i = 0; i < pImpl->aSubstArr.size(); i++)
         {
             OUString sPrefix = sNode + "/_" + OUString::number(i) + "/";
 
-            SubstitutionStruct& pSubst = pImpl->aSubstArr[i];
+            SubstitutionStruct& rSubst = pImpl->aSubstArr[i];
             pSetValues[nSetValue].Name = sPrefix; pSetValues[nSetValue].Name += sReplaceFont;
-            pSetValues[nSetValue++].Value <<= pSubst.sFont;
+            pSetValues[nSetValue++].Value <<= rSubst.sFont;
             pSetValues[nSetValue].Name = sPrefix; pSetValues[nSetValue].Name += sSubstituteFont;
-            pSetValues[nSetValue++].Value <<= pSubst.sReplaceBy;
+            pSetValues[nSetValue++].Value <<= rSubst.sReplaceBy;
             pSetValues[nSetValue].Name = sPrefix; pSetValues[nSetValue].Name += sAlways;
-            pSetValues[nSetValue++].Value.setValue(&pSubst.bReplaceAlways, rBoolType);
+            pSetValues[nSetValue++].Value <<= rSubst.bReplaceAlways;
             pSetValues[nSetValue].Name = sPrefix; pSetValues[nSetValue].Name += sOnScreenOnly;
-            pSetValues[nSetValue++].Value.setValue(&pSubst.bReplaceOnScreenOnly, rBoolType);
+            pSetValues[nSetValue++].Value <<= rSubst.bReplaceOnScreenOnly;
         }
         ReplaceSetProperties(sNode, aSetValues);
     }
@@ -164,7 +159,7 @@ void SvtFontSubstConfig::Apply()
 {
     OutputDevice::BeginFontSubstitution();
 
-    // remove old substitions
+    // remove old substitutions
     sal_uInt16 nOldCount = OutputDevice::GetFontSubstituteCount();
 
     while (nOldCount)

@@ -19,7 +19,6 @@
 
 #include <sal/config.h>
 
-#include <boost/noncopyable.hpp>
 #include <com/sun/star/awt/XWindow.hpp>
 #include <com/sun/star/lang/XInitialization.hpp>
 #include <com/sun/star/lang/XServiceInfo.hpp>
@@ -37,8 +36,7 @@ namespace {
 class UUIInteractionHandler:
     public cppu::WeakImplHelper< css::lang::XServiceInfo,
                                   css::lang::XInitialization,
-                                  css::task::XInteractionHandler2 >,
-    private boost::noncopyable
+                                  css::task::XInteractionHandler2 >
 {
 private:
     UUIInteractionHelper * m_pImpl;
@@ -47,6 +45,9 @@ public:
     explicit UUIInteractionHandler(css::uno::Reference< css::uno::XComponentContext > const & rxContext);
 
     virtual ~UUIInteractionHandler();
+
+    UUIInteractionHandler(const UUIInteractionHandler&) = delete;
+    UUIInteractionHandler& operator=(const UUIInteractionHandler&) = delete;
 
     virtual OUString SAL_CALL getImplementationName()
         throw (css::uno::RuntimeException, std::exception) override;
@@ -69,7 +70,7 @@ public:
 
     virtual sal_Bool SAL_CALL
         handleInteractionRequest(
-            const css::uno::Reference< css::task::XInteractionRequest >& _Request
+            const css::uno::Reference< css::task::XInteractionRequest >& Request
         )   throw ( css::uno::RuntimeException, std::exception ) override;
 };
 
@@ -158,11 +159,11 @@ UUIInteractionHandler::handle(
 }
 
 sal_Bool SAL_CALL UUIInteractionHandler::handleInteractionRequest(
-    const uno::Reference< task::XInteractionRequest >& _Request ) throw ( uno::RuntimeException, std::exception )
+    const uno::Reference< task::XInteractionRequest >& Request ) throw ( uno::RuntimeException, std::exception )
 {
     try
     {
-        return m_pImpl->handleRequest( _Request );
+        return m_pImpl->handleRequest( Request );
     }
     catch (uno::RuntimeException const & ex)
     {

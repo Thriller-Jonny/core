@@ -62,6 +62,7 @@
 #include <com/sun/star/form/XForm.hpp>
 #include <doc.hxx>
 #include <IDocumentLayoutAccess.hxx>
+#include <IDocumentUndoRedo.hxx>
 #include <pam.hxx>
 #include <swtable.hxx>
 #include <fmtanchr.hxx>
@@ -206,7 +207,7 @@ public:
     }
 
     const uno::Reference< XMultiServiceFactory >& GetServiceFactory();
-    const uno::Reference< drawing::XDrawPage >& GetDrawPage();
+    void GetDrawPage();
     const uno::Reference< drawing::XShapes >& GetShapes();
     const uno::Reference< script::XEventAttacherManager >& GetControlEventManager();
     const uno::Reference< script::XEventAttacherManager >& GetFormEventManager();
@@ -276,7 +277,7 @@ const uno::Reference< XMultiServiceFactory >& SwHTMLForm_Impl::GetServiceFactory
     return xServiceFactory;
 }
 
-const uno::Reference< drawing::XDrawPage >& SwHTMLForm_Impl::GetDrawPage()
+void SwHTMLForm_Impl::GetDrawPage()
 {
     if( !xDrawPage.is() && pDocSh )
     {
@@ -287,7 +288,6 @@ const uno::Reference< drawing::XDrawPage >& SwHTMLForm_Impl::GetDrawPage()
         xDrawPage = xTextDoc->getDrawPage();
         OSL_ENSURE( xDrawPage.is(), "drawing::XDrawPage nicht erhalten" );
     }
-    return xDrawPage;
 }
 
 const uno::Reference< container::XIndexContainer >& SwHTMLForm_Impl::GetForms()
@@ -612,14 +612,14 @@ static void lcl_html_setFixedFontProperty(
                                     DefaultFontType::FIXED, LANGUAGE_ENGLISH_US,
                                     GetDefaultFontFlags::OnlyOne )  );
     Any aTmp;
-    aTmp <<= OUString( aFixedFont.GetName() );
+    aTmp <<= OUString( aFixedFont.GetFamilyName() );
     rPropSet->setPropertyValue("FontName", aTmp );
 
     aTmp <<= OUString( aFixedFont.GetStyleName() );
     rPropSet->setPropertyValue("FontStyleName",
                                 aTmp );
 
-    aTmp <<= (sal_Int16) aFixedFont.GetFamily();
+    aTmp <<= (sal_Int16) aFixedFont.GetFamilyType();
     rPropSet->setPropertyValue("FontFamily", aTmp );
 
     aTmp <<= (sal_Int16) aFixedFont.GetCharSet();
@@ -665,6 +665,8 @@ void SwHTMLParser::SetControlSize( const uno::Reference< drawing::XShape >& rSha
             m_pTempViewFrame = SfxViewFrame::LoadHiddenDocument( *pDocSh, 0 );
             CallStartAction();
             pVSh = m_pDoc->getIDocumentLayoutAccess().GetCurrentViewShell();
+            // this ridiculous hack also enables Undo, so turn it off again
+            m_pDoc->GetIDocumentUndoRedo().DoUndo(false);
         }
     }
 
@@ -1282,7 +1284,7 @@ void SwHTMLParser::NewForm( bool bAppend )
 
         case HTML_O_SDONSUBMIT:
             eScriptType2 = STARBASIC;
-            //fallthrough
+            SAL_FALLTHROUGH;
         case HTML_O_ONSUBMIT:
             nEvent = HTML_ET_ONSUBMITFORM;
             bSetEvent = true;
@@ -1290,7 +1292,7 @@ void SwHTMLParser::NewForm( bool bAppend )
 
         case HTML_O_SDONRESET:
             eScriptType2 = STARBASIC;
-            //fallthrough
+            SAL_FALLTHROUGH;
         case HTML_O_ONRESET:
             nEvent = HTML_ET_ONRESETFORM;
             bSetEvent = true;
@@ -1488,7 +1490,7 @@ void SwHTMLParser::InsertInput()
 
         case HTML_O_SDONFOCUS:
             eScriptType2 = STARBASIC;
-            //fallthrough
+            SAL_FALLTHROUGH;
         case HTML_O_ONFOCUS:
             nEvent = HTML_ET_ONGETFOCUS;
             bSetEvent = true;
@@ -1496,7 +1498,7 @@ void SwHTMLParser::InsertInput()
 
         case HTML_O_SDONBLUR:               // eigtl. nur EDIT
             eScriptType2 = STARBASIC;
-            //fallthrough
+            SAL_FALLTHROUGH;
         case HTML_O_ONBLUR:
             nEvent = HTML_ET_ONLOSEFOCUS;
             bSetEvent = true;
@@ -1504,7 +1506,7 @@ void SwHTMLParser::InsertInput()
 
         case HTML_O_SDONCLICK:
             eScriptType2 = STARBASIC;
-            //fallthrough
+            SAL_FALLTHROUGH;
         case HTML_O_ONCLICK:
             nEvent = HTML_ET_ONCLICK;
             bSetEvent = true;
@@ -1512,7 +1514,7 @@ void SwHTMLParser::InsertInput()
 
         case HTML_O_SDONCHANGE:             // eigtl. nur EDIT
             eScriptType2 = STARBASIC;
-            //fallthrough
+            SAL_FALLTHROUGH;
         case HTML_O_ONCHANGE:
             nEvent = HTML_ET_ONCHANGE;
             bSetEvent = true;
@@ -1520,7 +1522,7 @@ void SwHTMLParser::InsertInput()
 
         case HTML_O_SDONSELECT:             // eigtl. nur EDIT
             eScriptType2 = STARBASIC;
-            //fallthrough
+            SAL_FALLTHROUGH;
         case HTML_O_ONSELECT:
             nEvent = HTML_ET_ONSELECT;
             bSetEvent = true;
@@ -1583,6 +1585,7 @@ void SwHTMLParser::InsertInput()
 
     case HTML_IT_BUTTON:
         bKeepCRLFInValue = true;
+        SAL_FALLTHROUGH;
     case HTML_IT_SUBMIT:
     case HTML_IT_RESET:
         pType = "CommandButton";
@@ -1945,7 +1948,7 @@ void SwHTMLParser::NewTextArea()
 
         case HTML_O_SDONFOCUS:
             eScriptType2 = STARBASIC;
-            //fallthrough
+            SAL_FALLTHROUGH;
         case HTML_O_ONFOCUS:
             nEvent = HTML_ET_ONGETFOCUS;
             bSetEvent = true;
@@ -1953,7 +1956,7 @@ void SwHTMLParser::NewTextArea()
 
         case HTML_O_SDONBLUR:
             eScriptType2 = STARBASIC;
-            //fallthrough
+            SAL_FALLTHROUGH;
         case HTML_O_ONBLUR:
             nEvent = HTML_ET_ONLOSEFOCUS;
             bSetEvent = true;
@@ -1961,7 +1964,7 @@ void SwHTMLParser::NewTextArea()
 
         case HTML_O_SDONCLICK:
             eScriptType2 = STARBASIC;
-            //fallthrough
+            SAL_FALLTHROUGH;
         case HTML_O_ONCLICK:
             nEvent = HTML_ET_ONCLICK;
             bSetEvent = true;
@@ -1969,7 +1972,7 @@ void SwHTMLParser::NewTextArea()
 
         case HTML_O_SDONCHANGE:
             eScriptType2 = STARBASIC;
-            //fallthrough
+            SAL_FALLTHROUGH;
         case HTML_O_ONCHANGE:
             nEvent = HTML_ET_ONCHANGE;
             bSetEvent = true;
@@ -1977,7 +1980,7 @@ void SwHTMLParser::NewTextArea()
 
         case HTML_O_SDONSELECT:
             eScriptType2 = STARBASIC;
-            //fallthrough
+            SAL_FALLTHROUGH;
         case HTML_O_ONSELECT:
             nEvent = HTML_ET_ONSELECT;
             bSetEvent = true;
@@ -2091,7 +2094,7 @@ void SwHTMLParser::NewTextArea()
         SetControlSize( xShape, aTextSz, false, false );
 
     // einen neuen Kontext anlegen
-    _HTMLAttrContext *pCntxt = new _HTMLAttrContext( HTML_TEXTAREA_ON );
+    HTMLAttrContext *pCntxt = new HTMLAttrContext( HTML_TEXTAREA_ON );
 
     // und PRE/Listing/XMP voruebergehend aussetzen
     SplitPREListingXMP( pCntxt );
@@ -2118,7 +2121,7 @@ void SwHTMLParser::EndTextArea()
     m_pFormImpl->ReleaseFCompPropSet();
 
     // den Kontext holen
-    _HTMLAttrContext *pCntxt = PopContext( HTML_TEXTAREA_ON );
+    HTMLAttrContext *pCntxt = PopContext( HTML_TEXTAREA_ON );
     if( pCntxt )
     {
         // und ggf. die Attribute beenden
@@ -2221,7 +2224,7 @@ void SwHTMLParser::NewSelect()
 
         case HTML_O_SDONFOCUS:
             eScriptType2 = STARBASIC;
-            //fall-through
+            SAL_FALLTHROUGH;
         case HTML_O_ONFOCUS:
             nEvent = HTML_ET_ONGETFOCUS;
             bSetEvent = true;
@@ -2229,7 +2232,7 @@ void SwHTMLParser::NewSelect()
 
         case HTML_O_SDONBLUR:
             eScriptType2 = STARBASIC;
-            //fall-through
+            SAL_FALLTHROUGH;
         case HTML_O_ONBLUR:
             nEvent = HTML_ET_ONLOSEFOCUS;
             bSetEvent = true;
@@ -2237,7 +2240,7 @@ void SwHTMLParser::NewSelect()
 
         case HTML_O_SDONCLICK:
             eScriptType2 = STARBASIC;
-            //fall-through
+            SAL_FALLTHROUGH;
         case HTML_O_ONCLICK:
             nEvent = HTML_ET_ONCLICK;
             bSetEvent = true;
@@ -2245,7 +2248,7 @@ void SwHTMLParser::NewSelect()
 
         case HTML_O_SDONCHANGE:
             eScriptType2 = STARBASIC;
-            //fall-through
+            SAL_FALLTHROUGH;
         case HTML_O_ONCHANGE:
             nEvent = HTML_ET_ONCHANGE;
             bSetEvent = true;
@@ -2364,7 +2367,7 @@ void SwHTMLParser::NewSelect()
         SetControlSize( xShape, aTextSz, bMinWidth, bMinHeight );
 
     // einen neuen Kontext anlegen
-    _HTMLAttrContext *pCntxt = new _HTMLAttrContext( HTML_SELECT_ON );
+    HTMLAttrContext *pCntxt = new HTMLAttrContext( HTML_SELECT_ON );
 
     // und PRE/Listing/XMP voruebergehend aussetzen
     SplitPREListingXMP( pCntxt );
@@ -2402,16 +2405,11 @@ void SwHTMLParser::EndSelect()
             pValues[i] = sText;
         }
 
-        Any aAny( &aList, cppu::UnoType<uno::Sequence<OUString>>::get() );
+        rPropSet->setPropertyValue("StringItemList", Any(aList) );
 
-        rPropSet->setPropertyValue("StringItemList", aAny );
+        rPropSet->setPropertyValue("ListSourceType", Any(ListSourceType_VALUELIST) );
 
-        aAny <<= ListSourceType_VALUELIST;
-        rPropSet->setPropertyValue("ListSourceType", aAny );
-
-        aAny.setValue( &aValueList, cppu::UnoType<uno::Sequence<OUString>>::get() );
-
-        rPropSet->setPropertyValue("ListSource", aAny );
+        rPropSet->setPropertyValue("ListSource", Any(aValueList) );
 
         size_t nSelCnt = m_pFormImpl->GetSelectedList().size();
         if( !nSelCnt && 1 == m_nSelectEntryCnt && nEntryCnt )
@@ -2427,10 +2425,7 @@ void SwHTMLParser::EndSelect()
         {
             pSels[i] = (sal_Int16)m_pFormImpl->GetSelectedList()[i];
         }
-        aAny.setValue( &aSelList,
-                       cppu::UnoType<uno::Sequence<sal_Int16>>::get() );
-
-        rPropSet->setPropertyValue("DefaultSelection", aAny );
+        rPropSet->setPropertyValue("DefaultSelection", Any(aSelList) );
 
         m_pFormImpl->EraseStringList();
         m_pFormImpl->EraseValueList();
@@ -2448,7 +2443,7 @@ void SwHTMLParser::EndSelect()
     m_pFormImpl->ReleaseFCompPropSet();
 
     // den Kontext holen
-    _HTMLAttrContext *pCntxt = PopContext( HTML_SELECT_ON );
+    HTMLAttrContext *pCntxt = PopContext( HTML_SELECT_ON );
     if( pCntxt )
     {
         // und ggf. die Attribute beenden

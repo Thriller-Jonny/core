@@ -31,7 +31,7 @@
 #include <cppuhelper/weakref.hxx>
 #include <osl/mutex.hxx>
 #include <cppuhelper/implbase.hxx>
-#include <cppuhelper/interfacecontainer.h>
+#include <comphelper/interfacecontainer2.hxx>
 
 
 class OLockListener;
@@ -43,27 +43,18 @@ class OInstanceLocker : public ::cppu::WeakImplHelper< css::lang::XComponent,
                                                        css::lang::XServiceInfo >
 {
     ::osl::Mutex m_aMutex;
-    css::uno::Reference< css::uno::XComponentContext > m_xContext;
 
     css::uno::Reference< css::uno::XInterface > m_xLockListener;
     OLockListener* m_pLockListener;
 
-    ::cppu::OInterfaceContainerHelper* m_pListenersContainer; // list of listeners
+    ::comphelper::OInterfaceContainerHelper2* m_pListenersContainer; // list of listeners
 
     bool m_bDisposed;
     bool m_bInitialized;
 
 public:
-    explicit OInstanceLocker( const css::uno::Reference< css::uno::XComponentContext >& xContext );
+    explicit OInstanceLocker();
     virtual ~OInstanceLocker();
-
-    static css::uno::Sequence< OUString > SAL_CALL
-            getSupportedServiceNames_static();
-
-    static OUString SAL_CALL getImplementationName_static();
-
-    static css::uno::Reference< css::uno::XInterface > SAL_CALL
-        Create(const css::uno::Reference< css::uno::XComponentContext >& rxContext );
 
 // XComponent
     virtual void SAL_CALL dispose() throw (css::uno::RuntimeException, std::exception) override;
@@ -103,7 +94,7 @@ public:
 
     virtual ~OLockListener();
 
-    bool Init();
+    void Init();
     void Dispose();
 
 // XEventListener

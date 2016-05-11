@@ -20,7 +20,6 @@
 #define INCLUDED_SW_SOURCE_CORE_INC_DOCUMENTFIELDSMANAGER_HXX
 
 #include <IDocumentFieldsAccess.hxx>
-#include <boost/noncopyable.hpp>
 #include <sal/types.h>
 
 class SwDoc;
@@ -28,8 +27,7 @@ class SwDBNameInfField;
 
 namespace sw {
 
-class DocumentFieldsManager : public IDocumentFieldsAccess,
-                              public ::boost::noncopyable
+class DocumentFieldsManager : public IDocumentFieldsAccess
 {
 
 public:
@@ -41,7 +39,7 @@ public:
     virtual SwFieldType *GetSysFieldType( const sal_uInt16 eWhich ) const override;
     virtual SwFieldType* GetFieldType(sal_uInt16 nResId, const OUString& rName, bool bDbFieldMatching) const override;
     virtual void RemoveFieldType(size_t nField) override;
-    virtual void UpdateFields( SfxPoolItem* pNewHt, bool bCloseDB) override;
+    virtual void UpdateFields(bool bCloseDB) override;
     virtual void InsDeletedFieldType(SwFieldType &) override;
     virtual bool PutValueToField(const SwPosition & rPos, const css::uno::Any& rVal, sal_uInt16 nWhich) override;
     virtual bool UpdateField(SwTextField * rDstFormatField, SwField & rSrcField, SwMsgPoolItem * pMsgHint, bool bUpdateTableFields) override;
@@ -55,10 +53,10 @@ public:
     virtual bool IsExpFieldsLocked() const override;
     virtual SwDocUpdateField& GetUpdateFields() const override;
     virtual bool SetFieldsDirty(bool b, const SwNode* pChk, sal_uLong nLen) override;
-    virtual void SetFixFields(bool bOnlyTimeDate, const DateTime* pNewDateTime) override;
+    virtual void SetFixFields(const DateTime* pNewDateTime) override;
     virtual void FieldsToCalc(SwCalc& rCalc, sal_uLong nLastNd, sal_uInt16 nLastCnt) override;
-    virtual void FieldsToCalc(SwCalc& rCalc, const _SetGetExpField& rToThisField) override;
-    virtual void FieldsToExpand(SwHash**& ppTable, sal_uInt16& rTableSize, const _SetGetExpField& rToThisField) override;
+    virtual void FieldsToCalc(SwCalc& rCalc, const SetGetExpField& rToThisField) override;
+    virtual void FieldsToExpand(SwHash**& ppTable, sal_uInt16& rTableSize, const SetGetExpField& rToThisField) override;
     virtual bool IsNewFieldLst() const override;
     virtual void SetNewFieldLst( bool bFlag) override;
     virtual void InsDelFieldInFieldLst(bool bIns, const SwTextField& rField) override;
@@ -82,7 +80,7 @@ public:
     // Delete all unreferenced field types.
     void GCFieldTypes();
 
-    void _InitFieldTypes();
+    void InitFieldTypes();
 
     void ClearFieldTypes();
 
@@ -91,6 +89,9 @@ public:
     virtual ~DocumentFieldsManager();
 
 private:
+
+    DocumentFieldsManager(DocumentFieldsManager const&) = delete;
+    DocumentFieldsManager& operator=(DocumentFieldsManager const&) = delete;
 
     SwDoc& m_rDoc;
 

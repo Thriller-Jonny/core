@@ -562,7 +562,6 @@ static typelib_TypeDescription * createCTD(
 }
 
 
-
 extern "C"
 {
 static void SAL_CALL typelib_callback(
@@ -659,9 +658,9 @@ sal_Bool SAL_CALL installTypeDescriptionManager(
         xComp->addEventListener( new EventListenerImpl( xTDMgr ) );
         // register c typelib callback
         ::typelib_typedescription_registerCallback( xTDMgr.get(), typelib_callback );
-        return sal_True;
+        return true;
     }
-    return sal_False;
+    return false;
 }
 
 } // end namespace cppu

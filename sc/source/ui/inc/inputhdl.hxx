@@ -33,8 +33,6 @@
 
 #include <set>
 
-#include <boost/noncopyable.hpp>
-
 class ScDocument;
 class ScTabViewShell;
 class ScInputWindow;
@@ -52,7 +50,7 @@ struct ESelection;
 
 //  ScInputHandler
 
-class ScInputHandler : boost::noncopyable
+class ScInputHandler
 {
 private:
     VclPtr<ScInputWindow>          pInputWin;
@@ -163,6 +161,9 @@ private:
     DECL_LINK_TYPED( ShowHideTipVisibleSecParentListener, VclWindowEvent&, void );
 
 public:
+    ScInputHandler(const ScInputHandler&) = delete;
+    const ScInputHandler& operator=(const ScInputHandler&) = delete;
+
                     ScInputHandler();
     virtual         ~ScInputHandler();
 
@@ -185,7 +186,7 @@ public:
     void            SetReference( const ScRange& rRef, ScDocument* pDoc );
     void            AddRefEntry();
 
-    bool            InputCommand( const CommandEvent& rCEvt, bool bForce );
+    void            InputCommand( const CommandEvent& rCEvt );
 
     void            InsertFunction( const OUString& rFuncName, bool bAddPar = true );
     void            ClearText();
@@ -208,6 +209,7 @@ public:
     void            ShowTipCursor();
     void            ShowTip( const OUString& rText );     // at Cursor
     void            ShowTipBelow( const OUString& rText );
+    void            ShowFuncList( const ::std::vector< OUString > & rFuncStrVec );
 
     void            SetRefScale( const Fraction& rX, const Fraction& rY );
     void            UpdateRefDevice();
@@ -281,8 +283,6 @@ public:
 
     ScInputHdlState&    operator= ( const ScInputHdlState& r );
     bool                operator==( const ScInputHdlState& r ) const;
-    bool                operator!=( const ScInputHdlState& r ) const
-                            { return !operator==( r ); }
 
     const ScAddress&        GetPos() const          { return aCursorPos; }
     const ScAddress&        GetStartPos() const     { return aStartPos; }

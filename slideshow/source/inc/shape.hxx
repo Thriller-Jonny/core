@@ -28,8 +28,7 @@
 
 #include "viewlayer.hxx"
 
-#include <boost/shared_ptr.hpp>
-#include <boost/noncopyable.hpp>
+#include <memory>
 #include <set>
 #include <vector>
 
@@ -44,7 +43,7 @@ namespace slideshow
         // forward declaration necessary, because methods use ShapeSharedPtr
         class Shape;
 
-        typedef ::boost::shared_ptr< Shape > ShapeSharedPtr;
+        typedef ::std::shared_ptr< Shape > ShapeSharedPtr;
 
         /** Represents a slide's shape object.
 
@@ -52,10 +51,13 @@ namespace slideshow
             slide's shape, providing bound rect, underlying XShape and
             basic paint methods.
          */
-        class Shape : private boost::noncopyable
+        class Shape
         {
         public:
+            Shape() = default;
             virtual ~Shape() {}
+            Shape(const Shape&) = delete;
+            Shape& operator=(const Shape&) = delete;
 
             /** Get the associated XShape of this shape.
 
@@ -99,7 +101,7 @@ namespace slideshow
                 This method will be faster than repeated
                 removeViewLayer() calls.
              */
-            virtual bool clearAllViewLayers() = 0;
+            virtual void clearAllViewLayers() = 0;
 
             // render methods
 
@@ -246,14 +248,10 @@ namespace slideshow
                     return compare(rLHS.get(),rRHS.get());
                 }
 
-                bool operator()(const Shape* pLHS, const Shape* pRHS) const
-                {
-                    return compare(pLHS, pRHS);
-                }
             };
         };
 
-        typedef ::boost::shared_ptr< Shape > ShapeSharedPtr;
+        typedef ::std::shared_ptr< Shape > ShapeSharedPtr;
 
         /** A set which contains all shapes in an ordered fashion.
          */

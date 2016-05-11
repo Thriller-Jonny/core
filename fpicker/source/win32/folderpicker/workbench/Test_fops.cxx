@@ -40,7 +40,7 @@
 #include <windows.h>
 
 
-//  namesapces
+//  namespaces
 
 
 using namespace ::cppu                  ;
@@ -61,7 +61,6 @@ Reference< XMultiServiceFactory >   g_xFactory;
 //  main
 
 
-
 int SAL_CALL main(int /*nArgc*/, char* /*Argv[]*/, char* /*Env[]*/  )
 {
     CoInitializeEx( NULL, COINIT_MULTITHREADED );
@@ -75,8 +74,7 @@ int SAL_CALL main(int /*nArgc*/, char* /*Argv[]*/, char* /*Env[]*/  )
 
 
     // Get global factory for uno services.
-    OUString rdbName = OUString( RDB_SYSPATH );
-    Reference< XMultiServiceFactory > g_xFactory( createRegistryServiceFactory( rdbName ) );
+    Reference< XMultiServiceFactory > g_xFactory( createRegistryServiceFactory( RDB_SYSPATH ) );
 
     // Print a message if an error occurred.
     if ( g_xFactory.is() == sal_False )

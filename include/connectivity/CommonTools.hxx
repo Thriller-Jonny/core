@@ -27,7 +27,6 @@
 #include <rtl/ref.hxx>
 #include <rtl/ustring.hxx>
 #include <com/sun/star/lang/DisposedException.hpp>
-#include <com/sun/star/uno/Any.hxx>
 #include <vector>
 #include <cppuhelper/weakref.hxx>
 #include <comphelper/stl_types.hxx>
@@ -107,28 +106,28 @@ namespace connectivity
 
     typedef ORefVector< css::uno::Reference< css::beans::XPropertySet> > OSQLColumns;
 
-    // search from __first to __last the column with the name _rVal
-    // when no such column exist __last is returned
+    // search from first to last the column with the name _rVal
+    // when no such column exist last is returned
     OOO_DLLPUBLIC_DBTOOLS
-    OSQLColumns::Vector::const_iterator find(   OSQLColumns::Vector::const_iterator __first,
-                                        OSQLColumns::Vector::const_iterator __last,
+    OSQLColumns::Vector::const_iterator find(   const OSQLColumns::Vector::const_iterator& first,
+                                        const OSQLColumns::Vector::const_iterator& last,
                                         const OUString& _rVal,
                                         const ::comphelper::UStringMixEqual& _rCase);
 
-    // search from __first to __last the column with the realname _rVal
-    // when no such column exist __last is returned
+    // search from first to last the column with the realname _rVal
+    // when no such column exist last is returned
     OOO_DLLPUBLIC_DBTOOLS
-    OSQLColumns::Vector::const_iterator findRealName(   OSQLColumns::Vector::const_iterator __first,
-                                                OSQLColumns::Vector::const_iterator __last,
+    OSQLColumns::Vector::const_iterator findRealName(   const OSQLColumns::Vector::const_iterator& first,
+                                                const OSQLColumns::Vector::const_iterator& last,
                                                 const OUString& _rVal,
                                                 const ::comphelper::UStringMixEqual& _rCase);
 
     // the first two find methods are much faster than the one below
-    // search from __first to __last the column with the property _rProp equals the value _rVal
-    // when no such column exist __last is returned
+    // search from first to last the column with the property _rProp equals the value _rVal
+    // when no such column exist last is returned
     OOO_DLLPUBLIC_DBTOOLS
-    OSQLColumns::Vector::const_iterator find(   OSQLColumns::Vector::const_iterator __first,
-                                        OSQLColumns::Vector::const_iterator __last,
+    OSQLColumns::Vector::const_iterator find(   OSQLColumns::Vector::const_iterator first,
+                                        const OSQLColumns::Vector::const_iterator& last,
                                         const OUString& _rProp,
                                         const OUString& _rVal,
                                         const ::comphelper::UStringMixEqual& _rCase);

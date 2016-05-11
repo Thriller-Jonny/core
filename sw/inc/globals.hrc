@@ -17,8 +17,8 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef _GLOBALS_HRC
-#define _GLOBALS_HRC
+#ifndef INCLUDED_SW_INC_GLOBALS_HRC
+#define INCLUDED_SW_INC_GLOBALS_HRC
 
 #include "rcid.hrc"
 
@@ -94,6 +94,9 @@
 #define STR_CENTER_BASE             (RC_GLOBALS_BEGIN + 33)
 
 // free
+
+#define STR_BOOKMARK_NAME           (RC_GLOBALS_BEGIN + 36)
+#define STR_BOOKMARK_TEXT           (RC_GLOBALS_BEGIN + 37)
 
 #define STR_LOAD_HTML_DOC           (RC_GLOBALS_BEGIN + 38)
 
@@ -208,6 +211,6 @@
 #define SID_WRT_SHELL               (RC_GLOBALS_BEGIN +  117)
 
 
-#endif // _GLOBALS_HRC
+#endif
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

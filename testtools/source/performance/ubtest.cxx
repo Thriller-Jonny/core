@@ -422,8 +422,6 @@ public:
 };
 
 
-
-
 TestImpl::TestImpl( const Reference< XMultiServiceFactory > & xSMgr )
     : _xSMgr( xSMgr )
 {
@@ -1026,7 +1024,6 @@ sal_Int32 TestImpl::run( const Sequence< OUString > & rArgs )
         TimingSheet aDirect;
 
 
-
         if (aArg.indexOf( 'd' ) >= 0)
         {
             // in process direct test
@@ -1035,7 +1032,6 @@ sal_Int32 TestImpl::run( const Sequence< OUString > & rArgs )
             sal_uInt32 nEnd = getSystemTicks();
             fprintf( stderr, "Duration (direct in process): %g s\n", (nEnd - nStart)/1000.  );
         }
-
 
 
         if (aArg.indexOf( 'm' ) >= 0)
@@ -1066,7 +1062,6 @@ sal_Int32 TestImpl::run( const Sequence< OUString > & rArgs )
             sal_uInt32 nEnd = getSystemTicks();
             fprintf( stderr, "Duration (mapped in process): %g s\n", (nStart - nEnd)/1000. );
         }
-
 
 
         if (aArg.indexOf( 's' ) >= 0)
@@ -1136,7 +1131,6 @@ sal_Int32 TestImpl::run( const Sequence< OUString > & rArgs )
         }
 
 
-
         if (aArg.indexOf( 'r' ) >= 0)
         {
             // remote
@@ -1155,7 +1149,6 @@ sal_Int32 TestImpl::run( const Sequence< OUString > & rArgs )
         }
 
 
-
         if (aArg.indexOf( 'j' ) >= 0)
         {
             // java
@@ -1168,9 +1161,6 @@ sal_Int32 TestImpl::run( const Sequence< OUString > & rArgs )
         // dump out tables
 
         out( "\nTimes( ratio to direct in process )", stream );
-#if OSL_DEBUG_LEVEL > 1
-        out ("; compiled with OSL_DEBUG_LEVEL > 1", stream );
-#endif
         out( ":", stream );
 
         sal_Int32 nPos = 60;
@@ -1254,11 +1244,6 @@ sal_Int32 TestImpl::run( const Sequence< OUString > & rArgs )
 }
 
 }
-
-
-
-
-
 
 
 extern "C"

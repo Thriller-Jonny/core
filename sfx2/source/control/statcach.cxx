@@ -60,7 +60,7 @@ BindDispatch_Impl::BindDispatch_Impl( const css::uno::Reference< css::frame::XDi
     , pSlot( pS )
 {
     DBG_ASSERT( pCache && pSlot, "Invalid BindDispatch!");
-    aStatus.IsEnabled = sal_True;
+    aStatus.IsEnabled = true;
 }
 
 void SAL_CALL BindDispatch_Impl::disposing( const css::lang::EventObject& ) throw( css::uno::RuntimeException, std::exception )
@@ -95,26 +95,26 @@ void SAL_CALL  BindDispatch_Impl::statusChanged( const css::frame::FeatureStateE
             eState = SfxItemState::DEFAULT;
             css::uno::Any aAny = aStatus.State;
 
-            css::uno::Type pType = aAny.getValueType();
-            if ( pType == cppu::UnoType< bool >::get() )
+            css::uno::Type aType = aAny.getValueType();
+            if ( aType == cppu::UnoType< bool >::get() )
             {
                 bool bTemp = false;
                 aAny >>= bTemp ;
                 pItem = new SfxBoolItem( nId, bTemp );
             }
-            else if ( pType == ::cppu::UnoType< ::cppu::UnoUnsignedShortType >::get() )
+            else if ( aType == ::cppu::UnoType< ::cppu::UnoUnsignedShortType >::get() )
             {
                 sal_uInt16 nTemp = 0;
                 aAny >>= nTemp ;
                 pItem = new SfxUInt16Item( nId, nTemp );
             }
-            else if ( pType == cppu::UnoType<sal_uInt32>::get() )
+            else if ( aType == cppu::UnoType<sal_uInt32>::get() )
             {
                 sal_uInt32 nTemp = 0;
                 aAny >>= nTemp ;
                 pItem = new SfxUInt32Item( nId, nTemp );
             }
-            else if ( pType == cppu::UnoType<OUString>::get() )
+            else if ( aType == cppu::UnoType<OUString>::get() )
             {
                 OUString sTemp ;
                 aAny >>= sTemp ;
@@ -233,7 +233,7 @@ const SfxSlotServer* SfxStateCache::GetSlotServer( SfxDispatcher &rDispat , cons
     if ( bSlotDirty )
     {
         // get the SlotServer; we need it for internal controllers anyway, but also in most cases
-        rDispat._FindServer( nId, aSlotServ, false );
+        rDispat.FindServer_( nId, aSlotServ, false );
 
         DBG_ASSERT( !pDispatch, "Old Dispatch not removed!" );
 
@@ -317,8 +317,6 @@ const SfxSlotServer* SfxStateCache::GetSlotServer( SfxDispatcher &rDispat , cons
 }
 
 
-
-
 // Set Status in all Controllers
 
 void SfxStateCache::SetState
@@ -338,7 +336,6 @@ void SfxStateCache::SetState
 {
     SetState_Impl( eState, pState, bMaybeDirty );
 }
-
 
 
 void SfxStateCache::SetVisibleState( bool bShow )
@@ -384,7 +381,6 @@ void SfxStateCache::SetVisibleState( bool bShow )
             delete pState;
     }
 }
-
 
 
 void SfxStateCache::SetState_Impl
@@ -447,7 +443,6 @@ void SfxStateCache::SetState_Impl
 }
 
 
-
 // Set old status again in all the controllers
 
 void SfxStateCache::SetCachedState( bool bAlways )
@@ -475,7 +470,6 @@ void SfxStateCache::SetCachedState( bool bAlways )
         bCtrlDirty = true;
     }
 }
-
 
 
 css::uno::Reference< css::frame::XDispatch >  SfxStateCache::GetDispatch() const

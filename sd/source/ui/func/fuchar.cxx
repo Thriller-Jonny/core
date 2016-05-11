@@ -95,7 +95,7 @@ void FuChar::DoExecute( SfxRequest& rReq )
         }
 
         SdAbstractDialogFactory* pFact = SdAbstractDialogFactory::Create();
-        std::unique_ptr<SfxAbstractTabDialog> pDlg(pFact ? pFact->CreateSdTabCharDialog( nullptr, &aNewAttr, mpDoc->GetDocSh() ) : nullptr);
+        std::unique_ptr<SfxAbstractTabDialog> pDlg(pFact ? pFact->CreateSdTabCharDialog( &aNewAttr, mpDoc->GetDocSh() ) : nullptr);
         sal_uInt16 nResult = RET_CANCEL;
         if( pDlg )
         {
@@ -109,19 +109,19 @@ void FuChar::DoExecute( SfxRequest& rReq )
             if( nResult == RET_OK )
             {
                 const SfxItemSet* pOutputSet = pDlg->GetOutputItemSet();
-                SfxItemSet pOtherSet( *pOutputSet );
+                SfxItemSet aOtherSet( *pOutputSet );
 
                 // and now the reverse process
-                const SvxBrushItem* pBrushItem= static_cast<const SvxBrushItem*>(pOtherSet.GetItem( SID_ATTR_BRUSH_CHAR ));
+                const SvxBrushItem* pBrushItem= static_cast<const SvxBrushItem*>(aOtherSet.GetItem( SID_ATTR_BRUSH_CHAR ));
 
                 if ( pBrushItem )
                 {
                     SvxBackgroundColorItem aBackColorItem( pBrushItem->GetColor(), EE_CHAR_BKGCOLOR );
-                    pOtherSet.ClearItem( SID_ATTR_BRUSH_CHAR );
-                    pOtherSet.Put( aBackColorItem );
+                    aOtherSet.ClearItem( SID_ATTR_BRUSH_CHAR );
+                    aOtherSet.Put( aBackColorItem );
                 }
 
-                rReq.Done( pOtherSet );
+                rReq.Done( aOtherSet );
                 pArgs = rReq.GetArgs();
             }
         }

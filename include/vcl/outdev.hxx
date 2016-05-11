@@ -20,6 +20,7 @@
 #ifndef INCLUDED_VCL_OUTDEV_HXX
 #define INCLUDED_VCL_OUTDEV_HXX
 
+#include <config_features.h>
 #include <tools/gen.hxx>
 #include <tools/solar.h>
 #include <tools/rc.hxx>
@@ -40,6 +41,7 @@
 #include <vcl/outdevstate.hxx>
 #include <vcl/outdevmap.hxx>
 
+#include <basegfx/numeric/ftools.hxx>
 #include <basegfx/vector/b2enums.hxx>
 #include <basegfx/polygon/b2dpolypolygon.hxx>
 
@@ -58,15 +60,15 @@
 #include <vector>
 
 struct ImplOutDevData;
-class ImplFontEntry;
+class LogicalFontInstance;
 class OutDevState;
 struct SystemGraphicsData;
 struct SystemFontData;
 struct SystemTextLayoutData;
 class ImplFontCache;
 class PhysicalFontCollection;
-class ImplGetDevFontList;
-class ImplGetDevSizeList;
+class ImplDeviceFontList;
+class ImplDeviceFontSizeList;
 class ImplMultiTextLineInfo;
 class SalGraphics;
 class Gradient;
@@ -88,13 +90,11 @@ class AlphaMask;
 class FontCharMap;
 class SalLayout;
 class ImplLayoutArgs;
-class ImplFontAttributes;
 class VirtualDevice;
 struct SalTwoRect;
 class VirtualDevice;
 class Printer;
 class FontSelectPattern;
-class ImplFontMetricData;
 class VCLXGraphics;
 class OutDevStateStack;
 struct BitmapSystemData;
@@ -358,11 +358,11 @@ private:
     mutable VclPtr<OutputDevice>    mpPrevGraphics;     ///< Previous output device in list
     mutable VclPtr<OutputDevice>    mpNextGraphics;     ///< Next output device in list
     GDIMetaFile*                    mpMetaFile;
-    mutable ImplFontEntry*          mpFontEntry;
+    mutable LogicalFontInstance*    mpFontInstance;
     mutable ImplFontCache*          mpFontCache;
     mutable PhysicalFontCollection* mpFontCollection;
-    mutable ImplGetDevFontList*     mpGetDevFontList;
-    mutable ImplGetDevSizeList*     mpGetDevSizeList;
+    mutable ImplDeviceFontList*     mpDeviceFontList;
+    mutable ImplDeviceFontSizeList* mpDeviceFontSizeList;
     OutDevStateStack*               mpOutDevStateStack;
     ImplOutDevData*                 mpOutDevData;
     std::vector< VCLXGraphics* >*   mpUnoGraphicsList;
@@ -586,7 +586,7 @@ public:
     ///@}
 
 
-    /** @Name Direct OutputDevice drawing functions
+    /** @name Direct OutputDevice drawing functions
      */
     ///@{
 
@@ -614,6 +614,7 @@ public:
      * the underlying SalGraphics and it's implementation
      * changing.
      */
+#if HAVE_FEATURE_OPENGL || defined(ANDROID)
     class PaintScope {
         void *pHandle;
     public:
@@ -621,7 +622,7 @@ public:
         ~PaintScope();
         void flush();
     };
-
+#endif
 protected:
 
     virtual void                CopyDeviceArea( SalTwoRect& aPosAry, bool bWindowInvalidate = false);
@@ -826,7 +827,8 @@ public:
                                     const basegfx::B2DPolygon&,
                                     double fLineWidth = 0.0,
                                     basegfx::B2DLineJoin eLineJoin = basegfx::B2DLineJoin::Round,
-                                    css::drawing::LineCap eLineCap = css::drawing::LineCap_BUTT);
+                                    css::drawing::LineCap eLineCap = css::drawing::LineCap_BUTT,
+                                    double fMiterMinimumAngle = 15.0 * F_PI180);
 
     /** Render the given polygon as a line stroke
 
@@ -849,7 +851,9 @@ public:
                                     double fTransparency = 0.0,
                                     basegfx::B2DLineJoin eLineJoin = basegfx::B2DLineJoin::NONE,
                                     css::drawing::LineCap eLineCap = css::drawing::LineCap_BUTT,
-                                    bool bBypassAACheck = false );
+                                    double fMiterMinimumAngle = 15.0 * F_PI180,
+                                    bool bBypassAACheck = false);
+
 private:
 
     // #i101491#
@@ -1038,16 +1042,16 @@ public:
 
     void                        DrawTextLine( const Point& rPos, long nWidth,
                                               FontStrikeout eStrikeout,
-                                              FontUnderline eUnderline,
-                                              FontUnderline eOverline,
+                                              FontLineStyle eUnderline,
+                                              FontLineStyle eOverline,
                                               bool bUnderlineAbove = false );
 
     void                        ImplDrawTextLine( long nBaseX, long nX, long nY, DeviceCoordinate nWidth,
-                                                  FontStrikeout eStrikeout, FontUnderline eUnderline,
-                                                  FontUnderline eOverline, bool bUnderlineAbove );
+                                                  FontStrikeout eStrikeout, FontLineStyle eUnderline,
+                                                  FontLineStyle eOverline, bool bUnderlineAbove );
 
-    void                        ImplDrawTextLines( SalLayout&, FontStrikeout eStrikeout, FontUnderline eUnderline,
-                                                   FontUnderline eOverline, bool bWordLine, bool bUnderlineAbove );
+    void                        ImplDrawTextLines( SalLayout&, FontStrikeout eStrikeout, FontLineStyle eUnderline,
+                                                   FontLineStyle eOverline, bool bWordLine, bool bUnderlineAbove );
 
     void                        DrawWaveLine( const Point& rStartPos, const Point& rEndPos );
 
@@ -1079,7 +1083,7 @@ public:
         aDevice.SetFont(aFont);
         aDevice.Erase();
 
-        ::Rectangle aRect;
+        tools::Rectangle aRect;
         aDevice.GetTextBoundRect(aRect, aText);
         aDevice.SetOutputSize(Size(aRect.BottomRight().X() + 1, aRect.BottomRight().Y() + 1));
         aDevice.SetBackground(Wallpaper(COL_TRANSPARENT));
@@ -1114,13 +1118,13 @@ public:
     Rectangle                   ImplGetTextBoundRect( const SalLayout& );
 
     bool                        GetTextOutline( tools::PolyPolygon&,
-                                                const OUString& rStr, sal_Int32 nBase = 0, sal_Int32 nIndex = 0,
-                                                sal_Int32 nLen = -1, bool bOptimize = true,
+                                                const OUString& rStr,
+                                                sal_Int32 nLen = -1,
                                                 sal_uLong nLayoutWidth = 0, const long* pDXArray = nullptr ) const;
 
     bool                        GetTextOutlines( PolyPolyVector&,
                                                  const OUString& rStr, sal_Int32 nBase = 0, sal_Int32 nIndex = 0,
-                                                 sal_Int32 nLen = -1, bool bOptimize = true,
+                                                 sal_Int32 nLen = -1,
                                                  sal_uLong nLayoutWidth = 0, const long* pDXArray = nullptr ) const;
 
     bool                        GetTextOutlines( basegfx::B2DPolyPolygonVector &rVector,
@@ -1132,9 +1136,7 @@ public:
     OUString                    GetEllipsisString( const OUString& rStr, long nMaxWidth,
                                                    DrawTextFlags nStyle = DrawTextFlags::EndEllipsis ) const;
 
-    long                        GetCtrlTextWidth( const OUString& rStr, sal_Int32 nIndex = 0,
-                                                  sal_Int32 nLen = -1,
-                                                  DrawTextFlags nStyle = DrawTextFlags::Mnemonic ) const;
+    long                        GetCtrlTextWidth( const OUString& rStr ) const;
 
     static OUString             GetNonMnemonicString( const OUString& rStr, sal_Int32& rMnemonicPos );
 
@@ -1173,7 +1175,7 @@ public:
     bool                        IsOverlineColor() const { return (maOverlineColor.GetTransparency() == 0); }
 
     void                        SetTextAlign( TextAlign eAlign );
-    TextAlign                   GetTextAlign() const { return maFont.GetAlign(); }
+    TextAlign                   GetTextAlign() const { return maFont.GetAlignment(); }
 
     /** Width of the text.
 
@@ -1199,9 +1201,7 @@ public:
                                               vcl::TextLayoutCache const* = nullptr) const;
 
     bool                        GetCaretPositions( const OUString&, long* pCaretXArray,
-                                              sal_Int32 nIndex, sal_Int32 nLen,
-                                              long* pDXAry = nullptr, long nWidth = 0,
-                                              bool bCellBreaking = true ) const;
+                                              sal_Int32 nIndex, sal_Int32 nLen ) const;
     void                        DrawStretchText( const Point& rStartPt, sal_uLong nWidth,
                                                  const OUString& rStr,
                                                  sal_Int32 nIndex = 0, sal_Int32 nLen = -1);
@@ -1230,8 +1230,8 @@ private:
     SAL_DLLPRIVATE void         ImplDrawWavePixel( long nOriginX, long nOriginY, long nCurX, long nCurY, short nOrientation, SalGraphics* pGraphics, OutputDevice* pOutDev,
                                                    bool bDrawPixAsRect, long nPixWidth, long nPixHeight );
     SAL_DLLPRIVATE void         ImplDrawWaveLine( long nBaseX, long nBaseY, long nStartX, long nStartY, long nWidth, long nHeight, long nLineWidth, short nOrientation, const Color& rColor );
-    SAL_DLLPRIVATE void         ImplDrawWaveTextLine( long nBaseX, long nBaseY, long nX, long nY, long nWidth, FontUnderline eTextLine, Color aColor, bool bIsAbove );
-    SAL_DLLPRIVATE void         ImplDrawStraightTextLine( long nBaseX, long nBaseY, long nX, long nY, long nWidth, FontUnderline eTextLine, Color aColor, bool bIsAbove );
+    SAL_DLLPRIVATE void         ImplDrawWaveTextLine( long nBaseX, long nBaseY, long nX, long nY, long nWidth, FontLineStyle eTextLine, Color aColor, bool bIsAbove );
+    SAL_DLLPRIVATE void         ImplDrawStraightTextLine( long nBaseX, long nBaseY, long nX, long nY, long nWidth, FontLineStyle eTextLine, Color aColor, bool bIsAbove );
     SAL_DLLPRIVATE void         ImplDrawStrikeoutLine( long nBaseX, long nBaseY, long nX, long nY, long nWidth, FontStrikeout eStrikeout, Color aColor );
     SAL_DLLPRIVATE void         ImplDrawStrikeoutChar( long nBaseX, long nBaseY, long nX, long nY, long nWidth, FontStrikeout eStrikeout, Color aColor );
     SAL_DLLPRIVATE void         ImplDrawMnemonicLine( long nX, long nY, long nWidth );
@@ -1249,7 +1249,7 @@ private:
 
 public:
 
-    vcl::FontInfo               GetDevFont( int nDevFontIndex ) const;
+    FontMetric                  GetDevFont( int nDevFontIndex ) const;
     int                         GetDevFontCount() const;
 
     bool                        IsFontAvailable( const OUString& rFontName ) const;
@@ -1262,7 +1262,7 @@ public:
     FontMetric                  GetFontMetric() const;
     FontMetric                  GetFontMetric( const vcl::Font& rFont ) const;
 
-    bool                        GetFontCharMap( FontCharMapPtr& rFontCharMap ) const;
+    bool                        GetFontCharMap( FontCharMapPtr& rxFontCharMap ) const;
     bool                        GetFontCapabilities( vcl::FontCapabilities& rFontCapabilities ) const;
 
     /** Retrieve detailed font information in platform independent structure
@@ -1309,7 +1309,7 @@ public:
                                                 const OutputDevice* pOutDev = nullptr );
 
     SAL_DLLPRIVATE void         ImplInitFontList() const;
-    SAL_DLLPRIVATE void         ImplUpdateFontData( bool bNewFontLists );
+    SAL_DLLPRIVATE void         ImplUpdateFontData();
 
     //drop font data for all outputdevices.
     //If bNewFontLists is true then empty lists of system fonts
@@ -1324,7 +1324,7 @@ public:
 protected:
 
     virtual void                InitFont() const;
-    virtual void                SetFontOrientation( ImplFontEntry* const pFontEntry ) const;
+    virtual void                SetFontOrientation( LogicalFontInstance* const pFontInstance ) const;
     virtual long                GetFontExtLeading() const;
 
 
@@ -1373,7 +1373,7 @@ public:
                                                          vcl::TextLayoutCache const* = nullptr) const;
     SAL_DLLPRIVATE SalLayout*   ImplGlyphFallbackLayout( SalLayout*, ImplLayoutArgs& ) const;
     // tells whether this output device is RTL in an LTR UI or LTR in a RTL UI
-    SAL_DLLPRIVATE SalLayout*   getFallbackFont(ImplFontEntry &rFallbackFont,
+    SAL_DLLPRIVATE SalLayout*   getFallbackFont(LogicalFontInstance &rFallbackFont,
                                     FontSelectPattern &rFontSelData, int nFallbackLevel,
                                     ImplLayoutArgs& rLayoutArgs) const;
 
@@ -1805,7 +1805,7 @@ public:
 
     /** Convert a logical rectangle to a rectangle in physical device pixel units.
 
-     @param         rLogicSize  Const reference to a rectangle in logical units
+     @param         rLogicRect  Const reference to a rectangle in logical units
 
      @returns Rectangle based on physical device pixel coordinates and units.
      */
@@ -1839,7 +1839,7 @@ protected:
      *
      * @param pRectangle If 0, that means the whole area, otherwise the area in logic coordinates.
      */
-    virtual void LogicInvalidate(const Rectangle* /*pRectangle*/) { }
+    virtual void LogicInvalidate(const Rectangle* pRectangle) { (void)pRectangle; }
 
 private:
 
@@ -1908,11 +1908,11 @@ private:
      To get the \em exact pixel height, it must calculate the Y-DPI of the device and the
      map scaling factor.
 
-     @param         nHeight     Exact height in logical units.
+     @param         fLogicHeight     Exact height in logical units.
 
      @returns Exact height in pixels - returns as a float to provide for subpixel value.
      */
-    SAL_DLLPRIVATE float        ImplFloatLogicHeightToDevicePixel( float ) const;
+    SAL_DLLPRIVATE float        ImplFloatLogicHeightToDevicePixel( float fLogicHeight ) const;
 
     /** Convert a logical size to the size on the physical device.
 
@@ -1956,7 +1956,7 @@ private:
 
     /** Convert a region in pixel units to a region in device pixel units and coords.
 
-     @param         rPixelRect  Const reference to region.
+     @param         rRegion  Const reference to region.
 
      @returns vcl::Region based on device pixel coordinates and units.
      */

@@ -17,8 +17,10 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include "VCLKDEApplication.hxx"
+#include "config_kde4.h"
 
+#include "KDEXLib.hxx"
+#include "VCLKDEApplication.hxx"
 #include "KDESalInstance.hxx"
 
 #include <kapplication.h>
@@ -26,21 +28,17 @@
 #include <kaboutdata.h>
 #include <kcmdlineargs.h>
 #include <kstartupinfo.h>
-#include <qabstracteventdispatcher.h>
-#include <qclipboard.h>
-#include <qthread.h>
 
-#include "KDEXLib.hxx"
+#include <QtCore/QAbstractEventDispatcher>
+#include <QtGui/QClipboard>
+#include <QtCore/QThread>
 
-#include <unx/i18n_im.hxx>
-#include <unx/i18n_xkb.hxx>
-
-#include <unx/saldata.hxx>
-#include <osl/process.h>
+#include "unx/i18n_im.hxx"
+#include "unx/i18n_xkb.hxx"
+#include "unx/saldata.hxx"
+#include "osl/process.h"
 
 #include "KDESalDisplay.hxx"
-
-#include <config_kde4.h>
 
 #if KDE_HAVE_GLIB
 #include "KDE4FilePicker.hxx"
@@ -208,7 +206,7 @@ void KDEXLib::Init()
 // and $QT_NO_GLIB is not set). We mostly do not care which one it is, as QSocketNotifier's
 // and QTimer's can handle it transparently, but it matters for the SolarMutex, which
 // needs to be unlocked shortly before entering the main sleep (e.g. select()) and locked
-// immediatelly after. So we need to know which event loop implementation is used and
+// immediately after. So we need to know which event loop implementation is used and
 // hook accordingly.
 #if KDE_HAVE_GLIB
 #include <glib.h>
@@ -369,7 +367,7 @@ void KDEXLib::timeoutActivated()
     // doesn't check X11, so explicitly check XPending() here.
     bool idle = QApplication::hasPendingEvents() && !blockIdleTimeout && !XPending( QX11Info::display());
     X11SalData::Timeout( idle );
-    // QTimer is not single shot, so will be restarted immediatelly
+    // QTimer is not single shot, so will be restarted immediately
 }
 
 void KDEXLib::Wakeup()
@@ -399,7 +397,7 @@ void KDEXLib::userEventActivated()
     if( ! SalKDEDisplay::self()->HasUserEvents() )
         userEventTimer.stop();
     SalKDEDisplay::self()->DispatchInternalEvent();
-    // QTimer is not single shot, so will be restarted immediatelly
+    // QTimer is not single shot, so will be restarted immediately
 }
 
 void KDEXLib::doStartup()
@@ -428,7 +426,7 @@ uno::Reference< ui::dialogs::XFilePicker2 > KDEXLib::createFilePicker(
 #endif
 }
 
-#include <qframe.h>
+#include <QtGui/QFrame>
 
 int KDEXLib::getFrameWidth()
 {

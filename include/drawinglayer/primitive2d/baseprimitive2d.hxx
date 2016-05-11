@@ -54,7 +54,7 @@ namespace drawinglayer { namespace primitive2d {
     typedef css::uno::Sequence< Primitive2DReference > Primitive2DSequence;
 
 
-    class DRAWINGLAYER_DLLPUBLIC SAL_WARN_UNUSED Primitive2DContainer : public std::vector< Primitive2DReference >
+    class SAL_WARN_UNUSED DRAWINGLAYER_DLLPUBLIC Primitive2DContainer : public std::vector< Primitive2DReference >
     {
     public:
         explicit Primitive2DContainer() {}
@@ -104,7 +104,7 @@ namespace drawinglayer
             default implementation returns an empty sequence. The idea is that processors
             using this primitive and do not know it, may get the decomposition and process
             these instead. An example is e.g. a fat line, who's decomposition may contain
-            the geometric representation of that line using filled polygon prmimitives. When
+            the geometric representation of that line using filled polygon primitives. When
             the renderer knows how to handle fat lines, he may process this primitive directly;
             if not he can use the decomposition. With this functionality, renderers may operate by
             knowing only a small set of primitives.
@@ -148,7 +148,7 @@ namespace drawinglayer
             (get2DDecomposition/getB2DRange). The PropertyValue ViewParameters is converted to
             the appropriate C++ implementation class ViewInformation2D.
 
-            This base class does not implement any buffering; e.g. buffering the decompositon
+            This base class does not implement any buffering; e.g. buffering the decomposition
             and/or the range. These may be buffered anytime since the definition is that the primitive
             is read-only and thus unchangeable. This implies that the decomposition and/or getting
             the range will lead to the same result as last time, under the precondition that
@@ -228,7 +228,7 @@ namespace drawinglayer
             to be done when the decomposition depends on parts of the parameter ViewInformation2D.
             This defines a standard method for processing these:
 
-            Implement a view-dependent get2DDecomposition doing te following steps:
+            Implement a view-dependent get2DDecomposition doing the following steps:
             (a) Locally extract needed parameters from ViewInformation2D to new, local parameters
                 (this may be a complete local copy of ViewInformation2D)
             (b) If a buffered decomposition exists, ckeck if one of the new local parameters
@@ -282,9 +282,6 @@ namespace drawinglayer
 {
     namespace primitive2d
     {
-        /// support to handle a sequence of primitives as stl vector and convert it during creation
-        Primitive2DSequence DRAWINGLAYER_DLLPUBLIC Primitive2DVectorToPrimitive2DSequence(const Primitive2DContainer& rSource, bool bInvert = false);
-
         /// get B2DRange from a given Primitive2DReference
         basegfx::B2DRange DRAWINGLAYER_DLLPUBLIC getB2DRangeFromPrimitive2DReference(const Primitive2DReference& rCandidate, const geometry::ViewInformation2D& aViewInformation);
 
@@ -293,21 +290,10 @@ namespace drawinglayer
          */
         bool DRAWINGLAYER_DLLPUBLIC arePrimitive2DReferencesEqual(const Primitive2DReference& rA, const Primitive2DReference& rB);
 
-        /// compare two Primitive2DReferences for equality, uses arePrimitive2DReferencesEqual internally
-        bool DRAWINGLAYER_DLLPUBLIC arePrimitive2DSequencesEqual(const Primitive2DSequence& rA, const Primitive2DSequence& rB);
-
-        /// concatenate sequence
-        void DRAWINGLAYER_DLLPUBLIC appendPrimitive2DSequenceToPrimitive2DSequence(Primitive2DSequence& rDest, const Primitive2DSequence& rSource);
-        void DRAWINGLAYER_DLLPUBLIC appendPrimitive2DSequenceToPrimitive2DSequence(Primitive2DSequence& rDest, const Primitive2DContainer& rSource);
-
-        /// concatenate single Primitive2D
-        void DRAWINGLAYER_DLLPUBLIC appendPrimitive2DReferenceToPrimitive2DSequence(Primitive2DSequence& rDest, const Primitive2DReference& rSource);
-
         OUString DRAWINGLAYER_DLLPUBLIC idToString(sal_uInt32 nId);
 
     } // end of namespace primitive2d
 } // end of namespace drawinglayer
-
 
 
 #endif //INCLUDED_DRAWINGLAYER_PRIMITIVE2D_BASEPRIMITIVE2D_HXX

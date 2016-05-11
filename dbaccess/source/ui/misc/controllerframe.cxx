@@ -20,7 +20,6 @@
 #include <dbaccess/controllerframe.hxx>
 #include <dbaccess/IController.hxx>
 
-#include <com/sun/star/sdb/XOfficeDatabaseDocument.hpp>
 #include <com/sun/star/awt/XTopWindow.hpp>
 #include <com/sun/star/awt/XWindow2.hpp>
 #include <com/sun/star/lang/DisposedException.hpp>
@@ -45,7 +44,6 @@ namespace dbaui
     using ::com::sun::star::uno::Exception;
     using ::com::sun::star::uno::RuntimeException;
     using ::com::sun::star::uno::Any;
-    using ::com::sun::star::uno::makeAny;
     using ::com::sun::star::frame::XFrame;
     using ::com::sun::star::frame::FrameAction;
     using ::com::sun::star::frame::FrameAction_FRAME_ACTIVATED;
@@ -55,8 +53,6 @@ namespace dbaui
     using ::com::sun::star::frame::XModel;
     using ::com::sun::star::frame::XController;
     using ::com::sun::star::frame::XController2;
-    using ::com::sun::star::frame::XFramesSupplier;
-    using ::com::sun::star::sdb::XOfficeDatabaseDocument;
     using ::com::sun::star::awt::XTopWindow;
     using ::com::sun::star::awt::XTopWindowListener;
     using ::com::sun::star::awt::XWindow2;

@@ -36,7 +36,7 @@ namespace svgio
 #endif
 
 // recommended value for this device dependent unit, see CSS2 section 4.3.2 Lengths
-#define F_SVG_PIXEL_PER_INCH  90.0
+#define F_SVG_PIXEL_PER_INCH  96.0
 
         // common non-token strings
         struct commonStrings
@@ -83,7 +83,8 @@ namespace svgio
             Unit_mm,        // 3.543307 px
             Unit_in,        // 90 px
 
-            Unit_percent    // relative to range
+            Unit_percent,   // relative to range
+            Unit_none       // for stroke-miterlimit, which has no unit
         };
 
         class SvgNumber
@@ -157,22 +158,19 @@ namespace svgio
             SvgAlign    maSvgAlign;
 
             /// bitfield
-            bool        mbDefer : 1; // default is false
             bool        mbMeetOrSlice : 1; // true = meet (default), false = slice
             bool        mbSet : 1;
 
         public:
             SvgAspectRatio()
             :   maSvgAlign(Align_xMidYMid),
-                mbDefer(false),
                 mbMeetOrSlice(true),
                 mbSet(false)
             {
             }
 
-            SvgAspectRatio(SvgAlign aSvgAlign, bool bDefer, bool bMeetOrSlice)
+            SvgAspectRatio(SvgAlign aSvgAlign, bool bMeetOrSlice)
             :   maSvgAlign(aSvgAlign),
-                mbDefer(bDefer),
                 mbMeetOrSlice(bMeetOrSlice),
                 mbSet(true)
             {
@@ -188,28 +186,28 @@ namespace svgio
             basegfx::B2DHomMatrix createMapping(const basegfx::B2DRange& rTarget, const basegfx::B2DRange& rSource) const;
         };
 
-        void skip_char(const OUString& rCandidate, const sal_Unicode& rChar, sal_Int32& nPos, const sal_Int32 nLen);
-        void skip_char(const OUString& rCandidate, const sal_Unicode& rCharA, const sal_Unicode& rCharB, sal_Int32& nPos, const sal_Int32 nLen);
+        void skip_char(const OUString& rCandidate, sal_Unicode aChar, sal_Int32& nPos, const sal_Int32 nLen);
+        void skip_char(const OUString& rCandidate, sal_Unicode aCharA, sal_Unicode nCharB, sal_Int32& nPos, const sal_Int32 nLen);
         void copySign(const OUString& rCandidate, sal_Int32& nPos, OUStringBuffer& rTarget, const sal_Int32 nLen);
         void copyNumber(const OUString& rCandidate, sal_Int32& nPos, OUStringBuffer& rTarget, const sal_Int32 nLen);
         void copyHex(const OUString& rCandidate, sal_Int32& nPos, OUStringBuffer& rTarget, const sal_Int32 nLen);
         void copyString(const OUString& rCandidate, sal_Int32& nPos, OUStringBuffer& rTarget, const sal_Int32 nLen);
-        void copyToLimiter(const OUString& rCandidate, const sal_Unicode& rLimiter, sal_Int32& nPos, OUStringBuffer& rTarget, const sal_Int32 nLen);
+        void copyToLimiter(const OUString& rCandidate, sal_Unicode aLimiter, sal_Int32& nPos, OUStringBuffer& rTarget, const sal_Int32 nLen);
         bool readNumber(const OUString& rCandidate, sal_Int32& nPos, double& fNum, const sal_Int32 nLen);
         SvgUnit readUnit(const OUString& rCandidate, sal_Int32& nPos, const sal_Int32 nLen);
         bool readNumberAndUnit(const OUString& rCandidate, sal_Int32& nPos, SvgNumber& aNum, const sal_Int32 nLen);
         bool readAngle(const OUString& rCandidate, sal_Int32& nPos, double& fAngle, const sal_Int32 nLen);
-        sal_Int32 read_hex(const sal_Unicode& rChar);
+        sal_Int32 read_hex(sal_Unicode aChar);
         bool match_colorKeyword(basegfx::BColor& rColor, const OUString& rName, bool bCaseIndependent);
-        bool read_color(const OUString& rCandidate, basegfx::BColor& rColor, bool bCaseIndependent);
+        bool read_color(const OUString& rCandidate, basegfx::BColor& rColor, bool bCaseIndependent, SvgNumber& rOpacity);
         basegfx::B2DRange readViewBox(const OUString& rCandidate, InfoProvider& rInfoProvider);
         basegfx::B2DHomMatrix readTransform(const OUString& rCandidate, InfoProvider& rInfoProvider);
         bool readSingleNumber(const OUString& rCandidate, SvgNumber& aNum);
         bool readLocalUrl(const OUString& rCandidate, OUString& rURL);
-        bool readSvgPaint(const OUString& rCandidate, SvgPaint& rSvgPaint, OUString& rURL, bool bCaseIndependent);
+        bool readSvgPaint(const OUString& rCandidate, SvgPaint& rSvgPaint, OUString& rURL, bool bCaseIndependent, SvgNumber& rOpacity);
 
         bool readSvgNumberVector(const OUString& rCandidate, SvgNumberVector& rSvgNumberVector);
-        ::std::vector< double > solveSvgNumberVector(const SvgNumberVector& rInput, const InfoProvider& rInfoProvider, NumberType aNumberType = length);
+        ::std::vector< double > solveSvgNumberVector(const SvgNumberVector& rInput, const InfoProvider& rInfoProvider);
 
         SvgAspectRatio readSvgAspectRatio(const OUString& rCandidate);
 
@@ -218,7 +216,7 @@ namespace svgio
 
         void readImageLink(const OUString& rCandidate, OUString& rXLink, OUString& rUrl, OUString& rMimeType, OUString& rData);
 
-        OUString convert(const OUString& rCandidate, const sal_Unicode& rPattern, const sal_Unicode& rNew, bool bRemove);
+        OUString convert(const OUString& rCandidate, sal_Unicode nPattern, sal_Unicode nNew, bool bRemove);
         OUString consolidateContiguousSpace(const OUString& rCandidate);
         OUString whiteSpaceHandlingDefault(const OUString& rCandidate);
         OUString whiteSpaceHandlingPreserve(const OUString& rCandidate);

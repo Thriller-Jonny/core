@@ -22,7 +22,6 @@
 
 #include "viewupdate.hxx"
 #include "unoviewcontainer.hxx"
-#include <boost/noncopyable.hpp>
 #include <memory>
 
 /* Definition of ScreenUpdater class */
@@ -42,11 +41,13 @@ namespace slideshow
             objects report any pending update, commitUpdates() does
             nothing.
          */
-        class ScreenUpdater : boost::noncopyable
+        class ScreenUpdater
         {
         public:
             explicit ScreenUpdater( UnoViewContainer const& rViewContainer );
             ~ScreenUpdater();
+            ScreenUpdater(const ScreenUpdater&) = delete;
+            ScreenUpdater& operator=(const ScreenUpdater&) = delete;
 
             /** Notify screen update
 
@@ -110,12 +111,8 @@ namespace slideshow
 
             /** Call this method to create a lock instead of calling
                 lockUpdates() and unlockUpdates() directly.
-                @param bStartLocked
-                    When <TRUE/> then the UpdateLock is created already
-                    locked. When <FALSE/> then Activate() has to be called in order
-                    to lock the lock.
             */
-            ::boost::shared_ptr<UpdateLock> createLock (const bool bStartLocked);
+            ::std::shared_ptr<UpdateLock> createLock();
 
             /** Lock updates to prevent intermediate repaints.
             */

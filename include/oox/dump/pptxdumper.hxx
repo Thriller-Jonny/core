@@ -20,14 +20,22 @@
 #ifndef INCLUDED_OOX_DUMP_PPTXDUMPER_HXX
 #define INCLUDED_OOX_DUMP_PPTXDUMPER_HXX
 
+#include <com/sun/star/uno/Reference.hxx>
 #include <oox/dump/dumperbase.hxx>
+#include <rtl/ustring.hxx>
 
 #if OOX_INCLUDE_DUMPER
+
+namespace com { namespace sun { namespace star {
+    namespace io { class XInputStream; }
+    namespace uno { class XComponentContext; }
+} } }
+
+namespace oox { namespace core { class FilterBase; } }
 
 namespace oox {
 namespace dump {
 namespace pptx {
-
 
 
 class RootStorageObject : public StorageObjectBase
@@ -44,7 +52,6 @@ protected:
 };
 
 
-
 class Dumper : public DumperBase
 {
 public:
@@ -58,7 +65,6 @@ public:
 protected:
     virtual void        implDump() override;
 };
-
 
 
 } // namespace pptx

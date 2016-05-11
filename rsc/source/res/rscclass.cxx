@@ -278,6 +278,26 @@ ERRTYPE RscClass::SetVariable( Atom nVarName,
     return ERR_OK;
 }
 
+ERRTYPE RscClass::SetVariable( Atom nVarName,
+                               RscTop * pClass,
+                               RSCINST * pDflt,
+                               RSCVAR nVarType,
+                               SfxStyleItem nMask,
+                               Atom nDataBaseName)
+{
+    return SetVariable(nVarName, pClass, pDflt, nVarType, (sal_uInt32)nMask, nDataBaseName);
+}
+
+ERRTYPE RscClass::SetVariable( Atom nVarName,
+                               RscTop * pClass,
+                               RSCINST * pDflt,
+                               RSCVAR nVarType,
+                               SfxSlotInfo nMask,
+                               Atom nDataBaseName)
+{
+    return SetVariable(nVarName, pClass, pDflt, nVarType, (sal_uInt32)nMask, nDataBaseName);
+}
+
 void RscClass::EnumVariables( void * pData, VarEnumCallbackProc pProc )
 {
     sal_uInt32 i;
@@ -768,7 +788,7 @@ RscSysDepend::RscSysDepend( Atom nId, sal_uInt32 nTypeId, RscTop * pSuper )
 }
 
 ERRTYPE RscSysDepend::WriteSysDependRc( const RSCINST & rInst, RscWriteRc & rMem,
-                                        RscTypCont * pTC, sal_uInt32 nDeep, bool bExtra, bool bFirst )
+                                        RscTypCont * pTC, sal_uInt32 nDeep, bool bExtra )
 {
     ERRTYPE     aError;
     RSCINST     aFileName;
@@ -788,8 +808,7 @@ ERRTYPE RscSysDepend::WriteSysDependRc( const RSCINST & rInst, RscWriteRc & rMem
         if( aTmpMem.Size() && pTC && (*aTmpMem.GetUTF8( 0 ) != '\0') )
         {
             nId = pTC->PutSysName( rInst.pClass->GetTypId(),
-                                   aTmpMem.GetUTF8( 0 ),
-                                   0, 0, bFirst );
+                                   aTmpMem.GetUTF8( 0 ) );
         }
         rMem.Put( nId );
         aError = aFileName.pClass->WriteRcHeader( aFileName, rMem, pTC,

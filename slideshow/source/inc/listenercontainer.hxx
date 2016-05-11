@@ -20,9 +20,9 @@
 #define INCLUDED_SLIDESHOW_SOURCE_INC_LISTENERCONTAINER_HXX
 
 #include <osl/mutex.hxx>
-#include <boost/next_prior.hpp>
 #include <algorithm>
 #include <vector>
+#include <iterator>
 
 namespace slideshow {
 namespace internal {
@@ -126,7 +126,7 @@ template< typename ListenerT > struct ListenerOperations
 };
 
 template< typename ListenerTargetT >
-struct ListenerOperations< boost::weak_ptr<ListenerTargetT> >
+struct ListenerOperations< std::weak_ptr<ListenerTargetT> >
 {
     template< typename ContainerT,
               typename FuncT >
@@ -135,7 +135,7 @@ struct ListenerOperations< boost::weak_ptr<ListenerTargetT> >
     {
         for( const auto& rCurr : rContainer )
         {
-            boost::shared_ptr<ListenerTargetT> pListener( rCurr.lock() );
+            std::shared_ptr<ListenerTargetT> pListener( rCurr.lock() );
 
             if( pListener && func(pListener) )
                 return true;
@@ -152,11 +152,11 @@ struct ListenerOperations< boost::weak_ptr<ListenerTargetT> >
         bool bRet(false);
         for( const auto& rCurr : rContainer )
         {
-            boost::shared_ptr<ListenerTargetT> pListener( rCurr.lock() );
+            std::shared_ptr<ListenerTargetT> pListener( rCurr.lock() );
 
             if( pListener.get() &&
                 FunctionApply< typename ::std::result_of< FuncT( const typename ContainerT::value_type& ) >::type,
-                               boost::shared_ptr<ListenerTargetT> >::apply(func,pListener) )
+                               std::shared_ptr<ListenerTargetT> >::apply(func,pListener) )
             {
                 bRet = true;
             }
@@ -252,25 +252,20 @@ public:
 
         @param rListener
         Listener to add
-
-        @return false, if the listener is already added, true
-        otherwise
      */
-    bool add( listener_type const& rListener )
+    void add( listener_type const& rListener )
     {
         Guard aGuard(*this);
 
         // ensure uniqueness
         if( isAdded(rListener) )
-            return false; // already added
+            return; // already added
 
         maListeners.push_back( rListener );
 
         ListenerOperations<ListenerT>::pruneListeners(
             maListeners,
             MaxDeceasedListenerUllage);
-
-        return true;
     }
 
     /** Add new listener into sorted container
@@ -302,7 +297,7 @@ public:
         {
             std::inplace_merge(
                 maListeners.begin(),
-                boost::prior(maListeners.end()),
+                std::prev(maListeners.end()),
                 maListeners.end() );
         }
 
@@ -424,7 +419,6 @@ private:
 };
 
 
-
 /** ListenerContainer variant that serialized access
 
     This ListenerContainer is safe to use in a multi-threaded
@@ -439,7 +433,6 @@ class ThreadSafeListenerContainer : public ListenerContainerBase<ListenerT,
                                                                  ContainerT>
 {
 };
-
 
 
 /** ListenerContainer variant that does not serialize access

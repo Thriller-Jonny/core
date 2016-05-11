@@ -47,7 +47,7 @@ namespace vclcanvas
         mpRefDevice( &rDevice ),
         mpOutDevProvider( rOutDevProvider )
     {
-        maFont->SetAlign( ALIGN_BASELINE );
+        maFont->SetAlignment( ALIGN_BASELINE );
         maFont->SetCharSet( (rFontRequest.FontDescription.IsSymbolFont==css::util::TriState_YES) ? RTL_TEXTENCODING_SYMBOL : RTL_TEXTENCODING_UNICODE );
         maFont->SetVertical( rFontRequest.FontDescription.IsVertical==css::util::TriState_YES );
 
@@ -68,7 +68,7 @@ namespace vclcanvas
             const bool bOldMapState( rOutDev.IsMapModeEnabled() );
             rOutDev.EnableMapMode(false);
 
-            const Size aSize = rOutDev.GetFontMetric( *maFont ).GetSize();
+            const Size aSize = rOutDev.GetFontMetric( *maFont ).GetFontSize();
 
             const double fDividend( rFontMatrix.m10 + rFontMatrix.m11 );
             double fStretch = (rFontMatrix.m00 + rFontMatrix.m01);
@@ -78,7 +78,7 @@ namespace vclcanvas
 
             const long nNewWidth = ::basegfx::fround( aSize.Width() * fStretch );
 
-            maFont->SetWidth( nNewWidth );
+            maFont->SetAverageFontWidth( nNewWidth );
 
             rOutDev.EnableMapMode(bOldMapState);
         }
@@ -126,8 +126,8 @@ namespace vclcanvas
         return rendering::FontMetrics(
             aMetric.GetAscent(),
             aMetric.GetDescent(),
-            aMetric.GetIntLeading(),
-            aMetric.GetExtLeading(),
+            aMetric.GetInternalLeading(),
+            aMetric.GetExternalLeading(),
             0,
             aMetric.GetDescent() / 2.0,
             aMetric.GetAscent() / 2.0);

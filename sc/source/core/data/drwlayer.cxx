@@ -37,6 +37,7 @@
 #include <svx/xtable.hxx>
 #include <svx/svdoutl.hxx>
 #include <svx/svditer.hxx>
+#include <svx/svdlayer.hxx>
 #include <svx/svdocapt.hxx>
 #include <svx/svdocirc.hxx>
 #include <svx/svdoedge.hxx>
@@ -342,8 +343,10 @@ ScDrawLayer::~ScDrawLayer()
     delete pUndoGroup;
     if( !--nInst )
     {
-        delete pFac, pFac = nullptr;
-        delete pF3d, pF3d = nullptr;
+        delete pFac;
+        pFac = nullptr;
+        delete pF3d;
+        pF3d = nullptr;
     }
 }
 
@@ -432,7 +435,7 @@ void ScDrawLayer::ScMovePage( sal_uInt16 nOldPos, sal_uInt16 nNewPos )
     ResetTab(nMinPos, pDoc->GetTableCount()-1);
 }
 
-void ScDrawLayer::ScCopyPage( sal_uInt16 nOldPos, sal_uInt16 nNewPos)
+void ScDrawLayer::ScCopyPage( sal_uInt16 nOldPos, sal_uInt16 nNewPos )
 {
     if (bDrawIsInUndo)
         return;
@@ -451,6 +454,11 @@ void ScDrawLayer::ScCopyPage( sal_uInt16 nOldPos, sal_uInt16 nNewPos)
         SdrObject* pOldObject = aIter.Next();
         while (pOldObject)
         {
+            if ( IsNoteCaption( pOldObject ) )
+            {
+                pOldObject = aIter.Next();
+                continue;
+            }
             ScDrawObjData* pOldData = GetObjData(pOldObject);
             if (pOldData)
             {

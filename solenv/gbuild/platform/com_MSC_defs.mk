@@ -75,6 +75,8 @@ gb_AFLAGS := $(AFLAGS)
 # cleaning away from the code, to avoid warnings when building with
 # gcc or Clang and -Wall -Werror.
 
+# C4091: 'typedef ': ignored on left of '' when no variable is declared
+
 # C4100: 'identifier' : unreferenced formal parameter
 
 # C4127: conditional expression is constant
@@ -149,6 +151,7 @@ gb_CFLAGS := \
 	$(if $(MSVC_USE_DEBUG_RUNTIME),-MDd,-MD) \
 	-nologo \
 	-W4 \
+	-wd4091 \
 	$(if $(filter 0,$(gb_DEBUGLEVEL)),-wd4100) \
 	-wd4127 \
 	$(if $(filter 0,$(gb_DEBUGLEVEL)),-wd4189) \
@@ -163,7 +166,22 @@ gb_CFLAGS := \
 	-wd4626 \
 	-wd4706 \
 	-wd4800 \
-	-Zc:wchar_t- \
+
+ifeq ($(COM_IS_CLANG),TRUE)
+gb_CFLAGS += \
+	-Wdeclaration-after-statement \
+	-Wendif-labels \
+	-Wshadow \
+	-Wstrict-prototypes \
+	-Wundef \
+	-Wunused-macros \
+
+else
+
+gb_CFLAGS += \
+	$(if $(filter-out 120,$(VCVER)), -Wv:18 -wd4267) \
+
+endif
 
 gb_CXXFLAGS := \
 	-Gd \
@@ -174,6 +192,7 @@ gb_CXXFLAGS := \
 	$(if $(MSVC_USE_DEBUG_RUNTIME),-MDd,-MD) \
 	-nologo \
 	-W4 \
+	-wd4091 \
 	$(if $(filter 0,$(gb_DEBUGLEVEL)),-wd4100) \
 	-wd4127 \
 	$(if $(filter 0,$(gb_DEBUGLEVEL)),-wd4189) \
@@ -194,28 +213,6 @@ gb_CXXFLAGS := \
 	-wd4706 \
 	-wd4800 \
 	-wd4913 \
-	-Zc:wchar_t- \
-
-
-ifneq ($(ENABLE_LTO),)
-
-# Sigh, but there are cases of C4702 when using link-time code
-# generation and optimization where I couldn't get
-# __pragma(warning(disable:4702)) to help. Especially, the
-# ImplInheritanceHelper2() {} in <cppuhelper/implbase2.hxx>
-# was reported as containing "unreachable code" when linking
-# the dbaccess dbu library. Let's try globally disabling C4702.
-
-# Might be fixed in VS2013 though?
-# VCVER=110 for VS2012
-
-ifneq ($(filter 110,$(VCVER)),)
-gb_CXXFLAGS += \
-	-wd4702 \
-
-endif
-
-endif
 
 ifeq ($(CPUNAME),X86_64)
 
@@ -234,7 +231,19 @@ endif
 
 ifeq ($(COM_IS_CLANG),TRUE)
 gb_CXXFLAGS += \
+	-Wendif-labels \
 	-Wno-missing-braces \
+	-Wno-missing-braces \
+	-Wnon-virtual-dtor \
+	-Woverloaded-virtual \
+	-Wshadow \
+	-Wundef \
+	-Wunused-macros \
+
+else
+
+gb_CXXFLAGS += \
+	$(if $(filter-out 120,$(VCVER)), -Wv:18 -wd4267) \
 
 endif
 
@@ -274,14 +283,9 @@ gb_LinkTarget_LDFLAGS += \
 	/ignore:4217
 
 
-gb_DEBUGINFO_FLAGS := -Zi
-
-ifeq ($(VCVER),120)
-# Use -FS with VS2013: "Force Synchronous PDB Writes. Forces writes to
-# the program database (PDB) file--created by /Zi or /ZI--to be
-# serialized through MSPDBSRV.EXE"
-gb_DEBUGINFO_FLAGS+=-FS
-endif
+gb_DEBUGINFO_FLAGS := \
+	-FS \
+	-Zi \
 
 gb_DEBUG_CFLAGS := $(gb_DEBUGINFO_FLAGS)
 

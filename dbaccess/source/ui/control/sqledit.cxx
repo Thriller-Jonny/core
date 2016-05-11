@@ -186,7 +186,7 @@ IMPL_LINK_NOARG_TYPED(OSqlEdit, ModifyHdl, Edit&, void)
 
     OJoinController& rController = m_pView->getContainerWindow()->getDesignView()->getController();
     if (!rController.isModified())
-        rController.setModified( sal_True );
+        rController.setModified( true );
 
     rController.InvalidateFeature(SID_SBA_QRY_EXECUTE);
     rController.InvalidateFeature(SID_CUT);
@@ -236,7 +236,7 @@ void OSqlEdit::ImplSetFont()
     if ( sFontName.isEmpty() )
     {
         vcl::Font aTmpFont( OutputDevice::GetDefaultFont( DefaultFontType::FIXED, Application::GetSettings().GetUILanguageTag().getLanguageType(), GetDefaultFontFlags::NONE, this ) );
-        sFontName = aTmpFont.GetName();
+        sFontName = aTmpFont.GetFamilyName();
     }
     Size aFontSize(
         0, officecfg::Office::Common::Font::SourceViewFont::FontHeight::get() );

@@ -79,7 +79,7 @@ struct ScClipData;
 #define SC_DROP_NAVIGATOR       1
 #define SC_DROP_TABLE           2
 
-class ScModule: public SfxModule, public SfxListener, utl::ConfigurationListener
+class ScModule: public SfxModule, public SfxListener, public utl::ConfigurationListener
 {
     Timer               aIdleTimer;
     Idle                aSpellIdle;
@@ -182,7 +182,6 @@ public:
     SC_DLLPUBLIC void   SetInputOptions ( const ScInputOptions& rOpt );
     void                SetPrintOptions ( const ScPrintOptions& rOpt );
     void                InsertEntryToLRUList(sal_uInt16 nFIndex);
-    static void         RecentFunctionsChanged();
 
     static void         GetSpellSettings( sal_uInt16& rDefLang, sal_uInt16& rCjkLang, sal_uInt16& rCtlLang,
                                           bool& rAutoSpell );
@@ -251,8 +250,8 @@ public:
     void                SetInSharedDocSaving( bool bNew )   { mbIsInSharedDocSaving = bNew; }
     bool                IsInSharedDocSaving() const         { return mbIsInSharedDocSaving; }
 
-    SC_DLLPUBLIC bool   RegisterRefWindow( sal_uInt16 nSlotId, vcl::Window *pWnd );
-    SC_DLLPUBLIC bool   UnregisterRefWindow( sal_uInt16 nSlotId, vcl::Window *pWnd );
+    SC_DLLPUBLIC void   RegisterRefWindow( sal_uInt16 nSlotId, vcl::Window *pWnd );
+    SC_DLLPUBLIC void   UnregisterRefWindow( sal_uInt16 nSlotId, vcl::Window *pWnd );
     SC_DLLPUBLIC vcl::Window * Find1RefWindow( sal_uInt16 nSlotId, vcl::Window *pWndAncestor );
 };
 

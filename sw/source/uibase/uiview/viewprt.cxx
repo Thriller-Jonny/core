@@ -104,7 +104,7 @@ void SetPrinter( IDocumentDeviceAccess* pIDDA, SfxPrinter* pNew, bool bWeb )
     }
 }
 
-sal_uInt16 SwView::SetPrinter(SfxPrinter* pNew, SfxPrinterChangeFlags nDiffFlags, bool  )
+sal_uInt16 SwView::SetPrinter(SfxPrinter* pNew, SfxPrinterChangeFlags nDiffFlags  )
 {
     SwWrtShell &rSh = GetWrtShell();
     SfxPrinter* pOld = rSh.getIDocumentDeviceAccess().getPrinter( false );
@@ -169,9 +169,9 @@ void SwView::ExecutePrint(SfxRequest& rReq)
             {
                 SfxStringItem aPrinterName(SID_PRINTER_NAME, sFaxName);
                 SfxBoolItem aSilent( SID_SILENT, true );
-                GetViewFrame()->GetDispatcher()->Execute( SID_PRINTDOC,
+                GetViewFrame()->GetDispatcher()->ExecuteList(SID_PRINTDOC,
                             SfxCallMode::SYNCHRON|SfxCallMode::RECORD,
-                            &aPrinterName, &aSilent, 0L );
+                            { &aPrinterName, &aSilent });
             }
             else
             {
@@ -180,9 +180,9 @@ void SwView::ExecutePrint(SfxRequest& rReq)
                 aInfoBox->set_primary_text(aInfoBox->get_primary_text().replaceFirst("%1", OUString(SW_RES(nResNo))));
                 aInfoBox->Execute();
                 SfxUInt16Item aDefPage(SID_SW_EDITOPTIONS, TP_OPTPRINT_PAGE);
-                GetViewFrame()->GetDispatcher()->Execute(SID_SW_EDITOPTIONS,
+                GetViewFrame()->GetDispatcher()->ExecuteList(SID_SW_EDITOPTIONS,
                             SfxCallMode::SYNCHRON|SfxCallMode::RECORD,
-                            &aDefPage, 0L );
+                            { &aDefPage });
             }
         }
         break;
@@ -209,8 +209,9 @@ void SwView::ExecutePrint(SfxRequest& rReq)
                     if(RET_YES == nRet)
                     {
                         SfxBoolItem aBool(FN_QRY_MERGE, true);
-                        GetViewFrame()->GetDispatcher()->Execute(
-                                    FN_QRY_MERGE, SfxCallMode::ASYNCHRON, &aBool, 0L);
+                        GetViewFrame()->GetDispatcher()->ExecuteList(
+                                    FN_QRY_MERGE, SfxCallMode::ASYNCHRON,
+                                    { &aBool });
                         rReq.Ignore();
                     }
                     return;
@@ -229,7 +230,7 @@ void SwView::ExecutePrint(SfxRequest& rReq)
                 }
             }
 
-            //#i61455# if master documentes are printed silently without loaded links then update the links now
+            //#i61455# if master documents are printed silently without loaded links then update the links now
             if( bSilent && pSh->IsGlobalDoc() && !pSh->IsGlblDocSaveLinks() )
             {
                 pSh->GetLinkManager().UpdateAllLinks( false, false );
@@ -277,7 +278,7 @@ VclPtr<SfxTabPage> CreatePrintOptionsPage( vcl::Window *pParent,
 void SetAppPrintOptions( SwViewShell* pSh, bool bWeb )
 {
     const IDocumentDeviceAccess& rIDDA = pSh->getIDocumentDeviceAccess();
-    SwPrintData aPrtData = rIDDA.getPrintData();
+    const SwPrintData& aPrtData = rIDDA.getPrintData();
 
     if( rIDDA.getPrinter( false ) )
     {

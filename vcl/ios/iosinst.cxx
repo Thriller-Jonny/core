@@ -21,8 +21,6 @@
 #include <UIKit/UIKit.h>
 #include <postmac.h>
 
-#include <basebmp/scanlineformats.hxx>
-
 #include "ios/iosinst.hxx"
 #include "headless/svpdummies.hxx"
 #include "generic/gendata.hxx"
@@ -36,7 +34,10 @@ static int viewWidth = 1, viewHeight = 1;
 class IosSalData : public SalGenericData
 {
 public:
-    IosSalData( SalInstance *pInstance ) : SalGenericData( SAL_DATA_IOS, pInstance ) {}
+    explicit IosSalData(SalInstance *pInstance)
+        : SalGenericData(SAL_DATA_IOS, pInstance)
+    {
+    }
     virtual void ErrorTrapPush() {}
     virtual bool ErrorTrapPop( bool ) { return false; }
 };
@@ -89,7 +90,6 @@ public:
                      SalFrameStyleFlags  nSalFrameStyle,
                      SystemParentData   *pSysParent )
         : SvpSalFrame( pInstance, pParent, nSalFrameStyle,
-                       true, basebmp::Format::ThirtyTwoBitTcMaskRGBA,
                        pSysParent )
     {
         if (pParent == NULL && viewWidth > 1 && viewHeight > 1)
@@ -176,7 +176,6 @@ SalInstance *CreateSalInstance()
     IosSalInstance* pInstance = new IosSalInstance( new SalYieldMutex() );
     new IosSalData( pInstance );
     pInstance->AcquireYieldMutex(1);
-    ImplGetSVData()->maWinData.mbNoSaveBackground = true;
     return pInstance;
 }
 

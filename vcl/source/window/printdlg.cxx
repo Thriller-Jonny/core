@@ -22,19 +22,19 @@
 #include "svids.hrc"
 #include "jobset.h"
 
-#include "vcl/print.hxx"
-#include "vcl/dialog.hxx"
-#include "vcl/button.hxx"
-#include "vcl/wall.hxx"
-#include "vcl/status.hxx"
-#include "vcl/decoview.hxx"
-#include "vcl/configsettings.hxx"
-#include "vcl/help.hxx"
-#include "vcl/layout.hxx"
-#include "vcl/svapp.hxx"
-#include "vcl/unohelp.hxx"
-#include "vcl/settings.hxx"
-#include "vcl/builderfactory.hxx"
+#include <vcl/print.hxx>
+#include <vcl/dialog.hxx>
+#include <vcl/button.hxx>
+#include <vcl/wall.hxx>
+#include <vcl/status.hxx>
+#include <vcl/decoview.hxx>
+#include <vcl/configsettings.hxx>
+#include <vcl/help.hxx>
+#include <vcl/layout.hxx>
+#include <vcl/svapp.hxx>
+#include <vcl/unohelp.hxx>
+#include <vcl/settings.hxx>
+#include <vcl/builderfactory.hxx>
 
 #include "unotools/localedatawrapper.hxx"
 
@@ -332,7 +332,7 @@ void PrintDialog::ShowNupOrderWindow::Paint(vcl::RenderContext& rRenderContext, 
 
     int nPages = mnRows * mnColumns;
     Font aFont(rRenderContext.GetSettings().GetStyleSettings().GetFieldFont());
-    aFont.SetSize(Size(0, 24));
+    aFont.SetFontSize(Size(0, 24));
     rRenderContext.SetFont(aFont);
     Size aSampleTextSize(rRenderContext.GetTextWidth(OUString::number(nPages + 1)), rRenderContext.GetTextHeight());
     Size aOutSize(GetOutputSizePixel());
@@ -344,7 +344,7 @@ void PrintDialog::ShowNupOrderWindow::Paint(vcl::RenderContext& rRenderContext, 
     long nFontHeight = long(24.0 * fScale) - 3;
     if (nFontHeight < 5)
         nFontHeight = 5;
-    aFont.SetSize(Size( 0, nFontHeight));
+    aFont.SetFontSize(Size( 0, nFontHeight));
     rRenderContext.SetFont(aFont);
     long nTextHeight = rRenderContext.GetTextHeight();
     for (int i = 0; i < nPages; i++)
@@ -484,12 +484,10 @@ PrintDialog::JobTabPage::JobTabPage( VclBuilder* pUIBuilder )
     , mnCollateUIMode( 0 )
 {
     pUIBuilder->get(mpPrinters, "printers");
-    mpPrinters->SetStyle(mpPrinters->GetStyle() | WB_SORT);
     pUIBuilder->get(mpStatusTxt, "status");
     pUIBuilder->get(mpLocationTxt, "location");
     pUIBuilder->get(mpCommentTxt, "comment");
     pUIBuilder->get(mpSetupButton, "setup");
-    pUIBuilder->get(mpCopySpacer, "copyspacer");
     pUIBuilder->get(mpCopyCountField, "copycount");
     pUIBuilder->get(mpCollateBox, "collate");
     pUIBuilder->get(mpCollateImage, "collateimage");
@@ -535,7 +533,6 @@ void PrintDialog::JobTabPage::storeToSettings()
 
 PrintDialog::OutputOptPage::OutputOptPage( VclBuilder *pUIBuilder )
 {
-    pUIBuilder->get(mpToFileBox, "printtofile");
     pUIBuilder->get(mpCollateSingleJobsBox, "singleprintjob");
     pUIBuilder->get(mpPapersizeFromSetup, "papersizefromsetup");
 }
@@ -560,13 +557,16 @@ void PrintDialog::OutputOptPage::storeToSettings()
 {
     SettingsConfigItem* pItem = SettingsConfigItem::get();
     pItem->setValue( "PrintDialog",
-                     "ToFile",
-                     mpToFileBox->IsChecked() ? OUString("true")
-                                             : OUString("false") );
-    pItem->setValue( "PrintDialog",
                      "CollateSingleJobs",
                      mpCollateSingleJobsBox->IsChecked() ? OUString("true") :
                                                 OUString("false") );
+}
+
+namespace {
+   bool lcl_ListBoxCompare( const OUString& rStr1, const OUString& rStr2 )
+   {
+       return ListBox::NaturalSortCompare( rStr1, rStr2 ) < 0;
+   }
 }
 
 PrintDialog::PrintDialog( vcl::Window* i_pParent, const std::shared_ptr<PrinterController>& i_rController )
@@ -607,8 +607,10 @@ PrintDialog::PrintDialog( vcl::Window* i_pParent, const std::shared_ptr<PrinterC
 
     Printer::updatePrinters();
 
+    maJobPage.mpPrinters->InsertEntry( maPrintToFileText );
     // fill printer listbox
-    const std::vector< OUString >& rQueues( Printer::GetPrinterQueues() );
+    std::vector< OUString > rQueues( Printer::GetPrinterQueues() );
+    std::sort( rQueues.begin(), rQueues.end(), lcl_ListBoxCompare );
     for( std::vector< OUString >::const_iterator it = rQueues.begin();
          it != rQueues.end(); ++it )
     {
@@ -676,7 +678,6 @@ PrintDialog::PrintDialog( vcl::Window* i_pParent, const std::shared_ptr<PrinterC
     maJobPage.mpCollateBox->SetToggleHdl( LINK( this, PrintDialog, ToggleHdl ) );
     maJobPage.mpSetupButton->SetClickHdl( LINK( this, PrintDialog, ClickHdl ) );
     maNUpPage.mpBorderCB->SetClickHdl( LINK( this, PrintDialog, ClickHdl ) );
-    maOptionsPage.mpToFileBox->SetToggleHdl( LINK( this, PrintDialog, ToggleHdl ) );
     maOptionsPage.mpPapersizeFromSetup->SetToggleHdl( LINK( this, PrintDialog, ToggleHdl ) );
     maJobPage.mpReverseOrderBox->SetToggleHdl( LINK( this, PrintDialog, ToggleHdl ) );
     maOptionsPage.mpCollateSingleJobsBox->SetToggleHdl( LINK( this, PrintDialog, ToggleHdl ) );
@@ -756,19 +757,12 @@ void PrintDialog::readFromSettings()
             break;
         }
     }
-    mpOKButton->SetText( maOptionsPage.mpToFileBox->IsChecked() ? maPrintToFileText : maPrintText );
 
     // persistent window state
     OUString aWinState( pItem->getValue( "PrintDialog",
                                               "WindowState" ) );
     if( !aWinState.isEmpty() )
         SetWindowState( OUStringToOString( aWinState, RTL_TEXTENCODING_UTF8 ) );
-
-    if( maOptionsPage.mpToFileBox->IsChecked() )
-    {
-        maPController->resetPrinterOptions( true );
-        preparePreview( true, true );
-    }
 }
 
 void PrintDialog::storeToSettings()
@@ -779,8 +773,13 @@ void PrintDialog::storeToSettings()
     // store last selected printer
     SettingsConfigItem* pItem = SettingsConfigItem::get();
     pItem->setValue( "PrintDialog",
+                     "ToFile",
+                      isPrintToFile() ? OUString("true")
+                                             : OUString("false") );
+    pItem->setValue( "PrintDialog",
                      "LastPrinter",
-                     maJobPage.mpPrinters->GetSelectEntry() );
+                      isPrintToFile() ? Printer::GetDefaultPrinterName()
+                                      : maJobPage.mpPrinters->GetSelectEntry() );
 
     pItem->setValue( "PrintDialog",
                      "LastPage",
@@ -794,7 +793,7 @@ void PrintDialog::storeToSettings()
 
 bool PrintDialog::isPrintToFile()
 {
-    return maOptionsPage.mpToFileBox->IsChecked();
+    return ( maJobPage.mpPrinters->GetSelectEntryPos() == 0 );
 }
 
 bool PrintDialog::isCollate()
@@ -1191,7 +1190,6 @@ void PrintDialog::setupOptionalUI()
     // print range not shown (currently math only) -> hide spacer line and reverse order
     if (!pPageRange || !pPageRange->IsVisible())
     {
-        maJobPage.mpCopySpacer->Show( false );
         maJobPage.mpReverseOrderBox->Show( false );
     }
 
@@ -1344,7 +1342,7 @@ void PrintDialog::preparePreview( bool i_bNewPage, bool i_bMayUseCache )
 
         Size aCurPageSize = aPrt->PixelToLogic( aPrt->GetPaperSizePixel(), MapMode( MAP_100TH_MM ) );
         mpPreviewWindow->setPreview( aMtf, aCurPageSize,
-                                    aPrt->GetPaperName( false ),
+                                    aPrt->GetPaperName(),
                                     nPages > 0 ? OUString() : maNoPageStr,
                                     aPrt->GetDPIX(), aPrt->GetDPIY(),
                                     aPrt->GetPrinterOptions().IsConvertToGreyscales()
@@ -1393,18 +1391,30 @@ void PrintDialog::updateNupFromPages()
         if( nPages == 2 )
         {
             if( bPortrait )
-                nRows = 1, nCols = 2;
+            {
+                nRows = 1;
+                nCols = 2;
+            }
             else
-                nRows = 2, nCols = 1;
+            {
+                nRows = 2;
+                nCols = 1;
+            }
         }
         else if( nPages == 4 )
             nRows = nCols = 2;
         else if( nPages == 6 )
         {
             if( bPortrait )
-                nRows = 2, nCols = 3;
+            {
+                nRows = 2;
+                nCols = 3;
+            }
             else
-                nRows = 3, nCols = 2;
+            {
+                nRows = 3;
+                nCols = 2;
+            }
         }
         else if( nPages == 9 )
             nRows = nCols = 3;
@@ -1521,13 +1531,26 @@ IMPL_LINK_TYPED( PrintDialog, SelectHdl, ListBox&, rBox, void )
 {
     if(  &rBox == maJobPage.mpPrinters )
     {
-        OUString aNewPrinter( rBox.GetSelectEntry() );
-        // set new printer
-        maPController->setPrinter( VclPtrInstance<Printer>( aNewPrinter ) );
-        maPController->resetPrinterOptions( maOptionsPage.mpToFileBox->IsChecked() );
-        // update text fields
-        updatePrinterText();
-        preparePreview();
+
+        if ( rBox.GetSelectEntryPos() != 0)
+        {
+            OUString aNewPrinter( rBox.GetSelectEntry() );
+            // set new printer
+            maPController->setPrinter( VclPtrInstance<Printer>( aNewPrinter ) );
+            maPController->resetPrinterOptions( false  );
+            // update text fields
+            mpOKButton->SetText( maPrintText );
+            updatePrinterText();
+            preparePreview();
+        }
+        else // print to file
+        {
+            // use the default printer or FIXME: the last used one?
+            maPController->setPrinter( VclPtrInstance<Printer>( Printer::GetDefaultPrinterName() ) );
+            mpOKButton->SetText( maPrintToFileText );
+            maPController->resetPrinterOptions( true );
+            preparePreview( true, true );
+        }
     }
     else if( &rBox == maNUpPage.mpNupOrientationBox || &rBox == maNUpPage.mpNupOrderBox )
     {
@@ -1574,12 +1597,6 @@ IMPL_LINK_TYPED( PrintDialog, ClickHdl, Button*, pButton, void )
     else if( pButton == mpBackwardBtn )
     {
         previewBackward();
-    }
-    else if( pButton == maOptionsPage.mpToFileBox )
-    {
-        mpOKButton->SetText( maOptionsPage.mpToFileBox->IsChecked() ? maPrintToFileText : maPrintText );
-        maPController->resetPrinterOptions( maOptionsPage.mpToFileBox->IsChecked() );
-        preparePreview( true, true );
     }
     else if( pButton == maOptionsPage.mpPapersizeFromSetup )
     {
@@ -1931,11 +1948,9 @@ IMPL_LINK_TYPED( PrintProgressDialog, ClickHdl, Button*, pButton, void )
         mbCanceled = true;
 }
 
-void PrintProgressDialog::setProgress( int i_nCurrent, int i_nMax )
+void PrintProgressDialog::setProgress( int i_nCurrent )
 {
     mnCur = i_nCurrent;
-    if( i_nMax != -1 )
-        mnMax = i_nMax;
 
     if( mnMax < 1 )
         mnMax = 1;

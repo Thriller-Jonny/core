@@ -35,7 +35,7 @@ endif
 
 $(eval $(call gb_Library_set_precompiled_header,vcl,$(SRCDIR)/vcl/inc/pch/precompiled_vcl))
 
-$(eval $(call gb_Library_use_custom_headers,vcl,officecfg/registry vcl/generic/fontmanager))
+$(eval $(call gb_Library_use_custom_headers,vcl,officecfg/registry vcl/unx/generic/fontmanager))
 
 $(eval $(call gb_Library_set_include,vcl,\
     $$(INCLUDE) \
@@ -43,12 +43,6 @@ $(eval $(call gb_Library_set_include,vcl,\
 	$(if $(filter WNTGCC,$(OS)$(COM)),-I$(MINGW_SYSROOT)/include/gdiplus) \
 	$(if $(filter WNT,$(OS)),-I$(SRCDIR)/vcl/inc/glyphy/demo) \
 ))
-
-ifeq ($(ENABLE_DBUS),TRUE)
-$(eval $(call gb_Library_add_defs,vclplug_gen,\
-	-DENABLE_DBUS \
-))
-endif
 
 $(eval $(call gb_Library_add_defs,vcl,\
     -DVCL_DLLIMPLEMENTATION \
@@ -75,6 +69,8 @@ $(eval $(call gb_Library_use_externals,vcl,\
 ))
 
 $(eval $(call gb_Library_use_libraries,vcl,\
+    $(call gb_Helper_optional,BREAKPAD, \
+		crashreport) \
     svl \
     tl \
     utl \
@@ -117,7 +113,6 @@ endif
 $(eval $(call gb_Library_use_externals,vcl,\
 	boost_headers \
 	gio \
-	glew \
 	glm_headers \
 	harfbuzz \
 	icu_headers \
@@ -125,20 +120,14 @@ $(eval $(call gb_Library_use_externals,vcl,\
 	lcms2 \
 	mdds_headers \
 ))
+ifneq ($(ENABLE_OPENGL)$(if $(filter ANDROID,$(OS)),TRUE),)
+$(eval $(call gb_Library_use_externals,vcl,\
+     glew \
+ ))
+endif
 
 $(eval $(call gb_Library_add_exception_objects,vcl,\
-	vcl/opengl/DeviceInfo \
-	vcl/opengl/gdiimpl \
-	vcl/opengl/salbmp \
-	vcl/opengl/scale \
-	vcl/opengl/framebuffer \
-	vcl/opengl/program \
-	vcl/opengl/texture \
-	vcl/opengl/FixedTextureAtlas \
-    vcl/source/opengl/OpenGLContext \
-    vcl/source/opengl/OpenGLHelper \
     vcl/source/window/cairo_cairo \
-    vcl/source/window/openglwin \
     vcl/source/window/settings \
     vcl/source/window/paint \
     vcl/source/window/resource \
@@ -154,14 +143,14 @@ $(eval $(call gb_Library_add_exception_objects,vcl,\
     vcl/source/window/globalization \
     vcl/source/window/btndlg \
     vcl/source/window/builder \
-    vcl/source/window/cmdevt \
+    vcl/source/window/commandevent \
     vcl/source/window/cursor \
     vcl/source/window/debugevent \
     vcl/source/window/decoview \
     vcl/source/window/dialog \
     vcl/source/window/dlgctrl \
-    vcl/source/window/dndevdis \
-    vcl/source/window/dndlcon \
+    vcl/source/window/dndeventdispatcher \
+    vcl/source/window/dndlistenercontainer \
     vcl/source/window/dockingarea \
     vcl/source/window/dockmgr \
     vcl/source/window/dockwin \
@@ -209,12 +198,13 @@ $(eval $(call gb_Library_add_exception_objects,vcl,\
     vcl/source/control/fixed \
     vcl/source/control/fixedhyper \
     vcl/source/control/group \
-    vcl/source/control/ilstbox \
     vcl/source/control/imgctrl \
     vcl/source/control/longcurr \
-    vcl/source/control/lstbox \
+    vcl/source/control/imp_listbox \
+    vcl/source/control/listbox \
     vcl/source/control/menubtn \
     vcl/source/control/morebtn \
+    vcl/source/control/notebookbar \
     vcl/source/control/quickselectionengine \
     vcl/source/control/prgsbar \
     vcl/source/control/scrbar \
@@ -266,11 +256,10 @@ $(eval $(call gb_Library_add_exception_objects,vcl,\
     vcl/source/gdi/bmpfast \
     vcl/source/gdi/configsettings \
     vcl/source/gdi/cvtgrf \
-    vcl/source/gdi/cvtsvm \
+    vcl/source/gdi/svmconverter \
     vcl/source/gdi/dibtools \
     vcl/source/gdi/embeddedfontshelper \
     vcl/source/gdi/extoutdevdata \
-    vcl/source/gdi/font \
     vcl/source/gdi/gdimtf \
     vcl/source/gdi/gdimetafiletools \
     vcl/source/gdi/gfxlink \
@@ -280,14 +269,12 @@ $(eval $(call gb_Library_add_exception_objects,vcl,\
     vcl/source/gdi/hatch \
     vcl/source/gdi/impanmvw \
     vcl/source/gdi/impbmp \
-    vcl/source/gdi/impfont \
     vcl/source/gdi/impgraph \
     vcl/source/gdi/impvect \
     vcl/source/gdi/jobset \
     vcl/source/gdi/lineinfo \
     vcl/source/gdi/mapmod \
     vcl/source/gdi/metaact \
-    vcl/source/gdi/metric \
     vcl/source/gdi/octree \
     vcl/source/gdi/oldprintadaptor \
     vcl/source/gdi/pdfextoutdevdata \
@@ -316,7 +303,6 @@ $(eval $(call gb_Library_add_exception_objects,vcl,\
     vcl/source/bitmap/bitmapscalesuper \
     vcl/source/bitmap/BitmapScaleConvolution \
     vcl/source/bitmap/BitmapSymmetryCheck \
-    vcl/source/bitmap/BitmapFilterStackBlur \
     vcl/source/bitmap/BitmapProcessor \
     vcl/source/bitmap/BitmapTools \
     vcl/source/bitmap/checksum \
@@ -392,6 +378,13 @@ $(eval $(call gb_Library_add_exception_objects,vcl,\
     vcl/source/font/PhysicalFontCollection \
     vcl/source/font/PhysicalFontFace \
     vcl/source/font/PhysicalFontFamily \
+    vcl/source/font/fontattributes \
+    vcl/source/font/fontselect \
+    vcl/source/font/fontinstance \
+    vcl/source/font/fontcache \
+    vcl/source/font/fontcharmap \
+    vcl/source/font/fontmetric \
+    vcl/source/font/font \
     vcl/source/fontsubset/cff \
     vcl/source/fontsubset/fontsubset \
     vcl/source/fontsubset/gsub \
@@ -418,7 +411,7 @@ $(eval $(call gb_Library_add_exception_objects,vcl,\
 # handle X11 platforms, which have additional files and possibly system graphite
 ifneq (,$(or $(USING_X11),$(ENABLE_HEADLESS)))
 $(eval $(call gb_Library_add_exception_objects,vcl,\
-    vcl/generic/glyphs/graphite_serverfont \
+    vcl/unx/generic/glyphs/graphite_serverfont \
 ))
 endif
 
@@ -533,33 +526,6 @@ endif
 
 endif
 
-vcl_really_generic_code= \
-    vcl/generic/app/gensys \
-    vcl/generic/app/geninst \
-
-vcl_generic_code= \
-	$(vcl_really_generic_code) \
-    vcl/generic/app/gendisp \
-    vcl/generic/print/bitmap_gfx \
-    vcl/generic/print/common_gfx \
-    vcl/generic/print/glyphset \
-    vcl/generic/print/printerjob \
-    vcl/generic/print/psputil \
-    vcl/generic/print/genpspgraphics \
-    vcl/generic/print/genprnpsp \
-    vcl/generic/print/prtsetup \
-    vcl/generic/print/text_gfx \
-    vcl/generic/fontmanager/fontsubst \
-    vcl/generic/glyphs/gcach_ftyp \
-    vcl/generic/glyphs/gcach_layout \
-    vcl/generic/glyphs/glyphcache \
-    vcl/generic/glyphs/scrptrun \
-    vcl/generic/fontmanager/fontcache \
-    vcl/generic/fontmanager/fontconfig \
-    vcl/generic/fontmanager/fontmanager \
-    vcl/generic/fontmanager/helper \
-    vcl/generic/fontmanager/parseAFM \
-
 vcl_headless_code= \
     vcl/headless/svpbmp \
     vcl/headless/svpdummies \
@@ -568,21 +534,42 @@ vcl_headless_code= \
     vcl/headless/svpinst \
     vcl/headless/svpdata \
     vcl/headless/svpvd \
+    vcl/unx/generic/app/gendisp \
 
 vcl_headless_freetype_code=\
     vcl/headless/svpprn \
     vcl/headless/svptext \
     vcl/headless/svpglyphcache \
     vcl/unx/generic/gdi/cairotextrender \
+    vcl/unx/generic/glyphs/freetype_glyphcache \
+    vcl/unx/generic/glyphs/gcach_layout \
+    vcl/unx/generic/glyphs/glyphcache \
+    vcl/unx/generic/glyphs/scrptrun \
+    vcl/unx/generic/fontmanager/fontsubst \
+    vcl/unx/generic/fontmanager/fontcache \
+    vcl/unx/generic/fontmanager/fontconfig \
+    vcl/unx/generic/fontmanager/fontmanager \
+    vcl/unx/generic/fontmanager/helper \
+    vcl/unx/generic/fontmanager/parseAFM \
     vcl/headless/svpcairotextrender \
+    vcl/unx/generic/print/bitmap_gfx \
+    vcl/unx/generic/print/common_gfx \
+    vcl/unx/generic/print/glyphset \
+    vcl/unx/generic/print/printerjob \
+    vcl/unx/generic/print/psputil \
+    vcl/unx/generic/print/genpspgraphics \
+    vcl/unx/generic/print/genprnpsp \
+    vcl/unx/generic/print/prtsetup \
+    vcl/unx/generic/print/text_gfx \
+    vcl/unx/generic/app/gensys \
+    vcl/unx/generic/app/geninst \
 
 ifeq ($(USING_X11),TRUE)
 $(eval $(call gb_Library_add_exception_objects,vcl,\
-	$(vcl_generic_code) \
     vcl/unx/generic/plugadapt/salplug \
     vcl/unx/generic/printer/jobdata \
     vcl/unx/generic/printer/ppdparser \
-    vcl/unx/generic/gdi/x11windowprovider \
+    vcl/unx/generic/gdi/nativewindowhandleprovider \
     vcl/unx/generic/window/screensaverinhibitor \
     $(if $(filter TRUE,$(ENABLE_CUPS)),\
         vcl/unx/generic/printer/cupsmgr \
@@ -592,10 +579,6 @@ $(eval $(call gb_Library_add_exception_objects,vcl,\
     ) \
     $(vcl_headless_code) \
     $(vcl_headless_freetype_code) \
-))
-
-$(eval $(call gb_Library_use_libraries,vcl,\
-	basebmp \
 ))
 
 $(eval $(call gb_Library_use_externals,vcl,\
@@ -610,7 +593,6 @@ endif
 
 ifeq ($(ENABLE_HEADLESS),TRUE)
 $(eval $(call gb_Library_add_exception_objects,vcl,\
-	$(vcl_generic_code) \
     vcl/unx/generic/printer/jobdata \
     vcl/unx/generic/printer/ppdparser \
     vcl/null/printerinfomanager \
@@ -619,18 +601,38 @@ $(eval $(call gb_Library_add_exception_objects,vcl,\
     $(vcl_headless_freetype_code) \
 ))
 
-$(eval $(call gb_Library_use_libraries,vcl,\
-	basebmp \
-))
-
 $(eval $(call gb_Library_use_externals,vcl,\
 	cairo \
 	freetype \
 ))
 ifneq ($(OS),EMSCRIPTEN)
-	$(eval $(call gb_Library_use_externals,vcl,\
-		fontconfig \
-	))
+$(eval $(call gb_Library_use_externals,vcl,\
+	fontconfig \
+))
+endif
+else
+ $(eval $(call gb_Library_add_exception_objects,vcl,\
+	vcl/opengl/DeviceInfo \
+	vcl/opengl/gdiimpl \
+	vcl/opengl/salbmp \
+	vcl/opengl/scale \
+	vcl/opengl/framebuffer \
+	vcl/opengl/program \
+	vcl/opengl/texture \
+	vcl/opengl/FixedTextureAtlas \
+	vcl/opengl/PackedTextureAtlas \
+    vcl/source/opengl/OpenGLContext \
+    vcl/source/opengl/OpenGLHelper \
+    vcl/source/window/openglwin \
+ ))
+ifeq ($(OS),LINUX)
+$(eval $(call gb_Library_add_libs,vcl,\
+	-lm \
+	-ldl \
+	-lpthread \
+    -lGL \
+    -lX11 \
+))
 endif
 endif
 
@@ -641,17 +643,12 @@ $(eval $(call gb_Library_add_libs,vcl,\
 	-llo-bootstrap \
 ))
 $(eval $(call gb_Library_add_exception_objects,vcl,\
-	$(vcl_generic_code) \
     vcl/unx/generic/printer/jobdata \
     vcl/unx/generic/printer/ppdparser \
     vcl/null/printerinfomanager \
     vcl/android/androidinst \
     $(vcl_headless_code) \
     $(vcl_headless_freetype_code) \
-))
-
-$(eval $(call gb_Library_use_static_libraries,vcl,\
-	basebmp \
 ))
 
 $(eval $(call gb_Library_use_externals,vcl,\
@@ -697,7 +694,7 @@ $(eval $(call gb_Library_add_exception_objects,vcl,\
     vcl/win/gdi/salbmp \
     vcl/win/gdi/salgdi \
     vcl/win/gdi/salgdi2 \
-    vcl/win/gdi/salgdi3 \
+    vcl/win/gdi/salfont \
     vcl/win/gdi/salgdi_gdiplus \
     vcl/win/gdi/salnativewidgets-luna \
     vcl/win/gdi/salprn \
@@ -747,10 +744,11 @@ $(eval $(call gb_Library_add_libs,vcl,\
     -lX11 \
 	-lXext \
 ))
-
+ifneq ($(ENABLE_HEADLESS),TRUE)
 $(eval $(call gb_Library_add_exception_objects,vcl,\
 	vcl/opengl/x11/X11DeviceInfo \
 ))
+endif
 endif
 
 # Runtime dependency for unit-tests

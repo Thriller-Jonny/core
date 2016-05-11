@@ -59,7 +59,6 @@
 #include <svx/svdogrp.hxx>
 
 #include "anminfo.hxx"
-#include "unohelp.hxx"
 #include "unoobj.hxx"
 #include "unoprnms.hxx"
 #include "unomodel.hxx"
@@ -83,7 +82,6 @@ using namespace ::com::sun::star::animations;
 
 using ::com::sun::star::uno::makeAny;
 using ::com::sun::star::uno::Any;
-using ::com::sun::star::uno::Reference;
 using ::com::sun::star::drawing::XShape;
 
 #define WID_EFFECT          1
@@ -863,8 +861,8 @@ uno::Sequence< OUString > SAL_CALL SdXShape::getSupportedServiceNames() throw(cs
 {
     uno::Sequence< OUString > aSeq( mpShape->_getSupportedServiceNames() );
 
-    comphelper::ServiceInfoHelper::addToSequence( aSeq, 2, "com.sun.star.presentation.Shape",
-                                                  "com.sun.star.document.LinkTarget" );
+    comphelper::ServiceInfoHelper::addToSequence( aSeq, {"com.sun.star.presentation.Shape",
+                                                  "com.sun.star.document.LinkTarget"} );
 
     SdrObject* pObj = mpShape->GetSdrObject();
     if(pObj && pObj->GetObjInventor() == SdrInventor )
@@ -873,10 +871,10 @@ uno::Sequence< OUString > SAL_CALL SdXShape::getSupportedServiceNames() throw(cs
         switch( nInventor )
         {
         case OBJ_TITLETEXT:
-            comphelper::ServiceInfoHelper::addToSequence( aSeq, 1, "com.sun.star.presentation.TitleTextShape" );
+            comphelper::ServiceInfoHelper::addToSequence( aSeq, {"com.sun.star.presentation.TitleTextShape"} );
             break;
         case OBJ_OUTLINETEXT:
-            comphelper::ServiceInfoHelper::addToSequence( aSeq, 1, "com.sun.star.presentation.OutlinerShape" );
+            comphelper::ServiceInfoHelper::addToSequence( aSeq, {"com.sun.star.presentation.OutlinerShape"} );
             break;
         }
     }
@@ -1113,7 +1111,6 @@ private:
     const OUString      maStrScript;
 
     SdXShape*   mpShape;
-    uno::Reference< document::XEventsSupplier > mxShape;
 
 public:
     SdUnoEventsAccess( SdXShape* pShape ) throw();
@@ -1158,7 +1155,7 @@ SdUnoEventsAccess::SdUnoEventsAccess( SdXShape* pShape ) throw()
   maStrSpeed( "Speed" ),
   maStrStarBasic( "StarBasic" ),
   maStrScript( "Script" ),
-  mpShape( pShape ), mxShape( pShape )
+  mpShape( pShape )
 {
 }
 
@@ -1389,7 +1386,7 @@ void SAL_CALL SdUnoEventsAccess::replaceByName( const OUString& aName, const uno
 
                 bOk = true;
 
-                // NOTE: No break here!!!
+                SAL_FALLTHROUGH;
 
             case presentation::ClickAction_SOUND:
                 if( nFound & FOUND_SOUNDURL )
@@ -1423,11 +1420,9 @@ void SAL_CALL SdUnoEventsAccess::replaceByName( const OUString& aName, const uno
             }
             else
             {
-                OUString aMacro = aStrMacro;
-
-                OUString aLibName   = aMacro.getToken(0, '.');
-                OUString aModulName = aMacro.getToken(1, '.');
-                OUString aMacroName = aMacro.getToken(2, '.');
+                OUString aLibName   = aStrMacro.getToken(0, '.');
+                OUString aModulName = aStrMacro.getToken(1, '.');
+                OUString aMacroName = aStrMacro.getToken(2, '.');
 
                 OUStringBuffer sBuffer;
                 sBuffer.append( aMacroName );
@@ -1511,7 +1506,7 @@ uno::Any SAL_CALL SdUnoEventsAccess::getByName( const OUString& aName )
         if ( SfxApplication::IsXScriptURL( pInfo->GetBookmark() ) )
         {
             // Scripting Framework URL
-            aAny <<= maStrScript;;
+            aAny <<= maStrScript;
             pProperties->Name = maStrEventType;
             pProperties->Handle = -1;
             pProperties->Value = aAny;
@@ -1528,7 +1523,7 @@ uno::Any SAL_CALL SdUnoEventsAccess::getByName( const OUString& aName )
         else
         {
             // Old Basic macro URL
-            aAny <<= maStrStarBasic;;
+            aAny <<= maStrStarBasic;
             pProperties->Name = maStrEventType;
             pProperties->Handle = -1;
             pProperties->Value = aAny;
@@ -1634,7 +1629,7 @@ uno::Any SAL_CALL SdUnoEventsAccess::getByName( const OUString& aName )
             pProperties->State = beans::PropertyState_DIRECT_VALUE;
             pProperties++;
 
-            // NOTE: no break here!!!
+            SAL_FALLTHROUGH;
 
         case presentation::ClickAction_SOUND:
             if( eClickAction == presentation::ClickAction_SOUND || pInfo->mbSecondSoundOn )
@@ -1691,7 +1686,7 @@ uno::Type SAL_CALL SdUnoEventsAccess::getElementType(  )
 
 sal_Bool SAL_CALL SdUnoEventsAccess::hasElements(  ) throw(uno::RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 // XServiceInfo

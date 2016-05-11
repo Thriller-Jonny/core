@@ -17,6 +17,7 @@
 #include "rangeutl.hxx"
 #include "uiitems.hxx"
 #include "dputil.hxx"
+#include "dbdocfun.hxx"
 
 #include <vector>
 
@@ -240,7 +241,7 @@ void ScPivotLayoutDialog::SetupSource()
         }
         else
         {
-            OUString aSourceRangeName = aSourceRange.Format(SCR_ABS_3D, mpDocument, maAddressDetails);
+            OUString aSourceRangeName = aSourceRange.Format(ScRefFlags::RANGE_ABS_3D, mpDocument, maAddressDetails);
             mpSourceEdit->SetText(aSourceRangeName);
         }
     }
@@ -323,7 +324,7 @@ void ScPivotLayoutDialog::SetupDestination()
         if (maPivotParameters.nTab != MAXTAB + 1)
         {
             ScAddress aAddress(maPivotParameters.nCol, maPivotParameters.nRow, maPivotParameters.nTab);
-            OUString aAddressString = aAddress.Format(SCA_VALID | SCA_TAB_3D | SCA_COL_ABSOLUTE | SCA_ROW_ABSOLUTE | SCA_TAB_ABSOLUTE, mpDocument, maAddressDetails);
+            OUString aAddressString = aAddress.Format(ScRefFlags::ADDR_ABS_3D, mpDocument, maAddressDetails);
             mpDestinationEdit->SetText(aAddressString);
             mpDestinationRadioSelection->Check();
         }
@@ -372,7 +373,7 @@ void ScPivotLayoutDialog::SetReference(const ScRange& rReferenceRange, ScDocumen
     if (rReferenceRange.aStart != rReferenceRange.aEnd)
         RefInputStart(mpActiveEdit);
 
-    OUString aReferenceString = rReferenceRange.Format(SCR_ABS_3D, pDocument, maAddressDetails);
+    OUString aReferenceString = rReferenceRange.Format(ScRefFlags::RANGE_ABS_3D, pDocument, maAddressDetails);
 
     if (mpActiveEdit == mpSourceEdit)
     {
@@ -404,6 +405,7 @@ void ScPivotLayoutDialog::ItemInserted(ScItemValue* pItemValue, ScPivotLayoutTre
             mpListBoxColumn->RemoveEntryForItem(pItemValue);
             mpListBoxPage->RemoveEntryForItem(pItemValue);
         }
+        break;
         case ScPivotLayoutTreeList::LABEL_LIST:
         {
             mpListBoxRow->RemoveEntryForItem(pItemValue);
@@ -436,9 +438,9 @@ void ScPivotLayoutDialog::UpdateSourceRange()
     {
         OUString aSourceString = mpSourceEdit->GetText();
         ScRange aSourceRange;
-        sal_uInt16 nResult = aSourceRange.Parse(aSourceString, mpDocument, maAddressDetails);
+        ScRefFlags nResult = aSourceRange.Parse(aSourceString, mpDocument, maAddressDetails);
 
-        bool bIsValid = (nResult & SCA_VALID) == SCA_VALID; // aSourceString is valid
+        bool bIsValid = (nResult & ScRefFlags::VALID) == ScRefFlags::VALID; // aSourceString is valid
 
         mpSourceEdit->SetRefValid(true);
 
@@ -484,17 +486,18 @@ void ScPivotLayoutDialog::UpdateSourceRange()
     FillValuesToListBoxes();
 }
 
-bool ScPivotLayoutDialog::ApplyChanges()
+void ScPivotLayoutDialog::ApplyChanges()
 {
     ScDPSaveData aSaveData;
     ApplySaveData(aSaveData);
     ApplyLabelData(aSaveData);
 
+    ScDPObject *pOldDPObj = mpDocument->GetDPAtCursor( maPivotParameters.nCol, maPivotParameters.nRow, maPivotParameters.nTab);
     ScRange aDestinationRange;
     bool bToNewSheet = false;
 
     if (!GetDestination(aDestinationRange, bToNewSheet))
-        return false;
+        return;
 
     SetDispatcherLock(false);
     SwitchToDocument();
@@ -503,21 +506,38 @@ bool ScPivotLayoutDialog::ApplyChanges()
     ScPivotItem aPivotItem(nWhichPivot, &aSaveData, &aDestinationRange, bToNewSheet);
     mpViewData->GetViewShell()->SetDialogDPObject(&maPivotTableObject);
 
+
     SfxDispatcher* pDispatcher = GetBindings().GetDispatcher();
     SfxCallMode nCallMode = SfxCallMode::SLOT | SfxCallMode::RECORD;
-    const SfxPoolItem* pResult = pDispatcher->Execute(SID_PIVOT_TABLE, nCallMode, &aPivotItem, nullptr, 0);
+    const SfxPoolItem* pResult = pDispatcher->ExecuteList(SID_PIVOT_TABLE,
+            nCallMode, { &aPivotItem });
 
     if (pResult != nullptr)
     {
-        const SfxBoolItem* pItem = reinterpret_cast<const SfxBoolItem*>(pResult);
-        if (pItem)
+        // existing pivot table might have moved to a new range or a new sheet
+        if ( pOldDPObj != nullptr  )
         {
-            return pItem->GetValue();
+            const ScRange& rOldRange = pOldDPObj->GetOutRange();
+
+            ScDPObject *pDPObj = nullptr;
+            // FIXME: if the new range overlaps with the old one, the table actually doesn't move
+            // and shouldn't therefore be deleted
+            if ( ( ( rOldRange != aDestinationRange ) && !rOldRange.In( aDestinationRange ) )
+                 || bToNewSheet )
+            {
+                pDPObj = mpDocument->GetDPAtCursor( maPivotParameters.nCol, maPivotParameters.nRow, maPivotParameters.nTab);
+            }
+            if (pDPObj)
+            {
+                ScDBDocFunc aFunc( *(mpViewData->GetDocShell() ));
+                aFunc.RemovePivotTable( *pDPObj, true, false);
+                mpViewData->GetView()->CursorPosChanged();
+            }
         }
+        return;
     }
 
     SetDispatcherLock(true);
-    return true;
 }
 
 void ScPivotLayoutDialog::ApplySaveData(ScDPSaveData& rSaveData)
@@ -560,25 +580,25 @@ void ScPivotLayoutDialog::ApplyLabelData(ScDPSaveData& rSaveData)
 
     for (it = rLabelDataVector.begin(); it != rLabelDataVector.end(); ++it)
     {
-        const ScDPLabelData& pLabelData = *it->get();
+        const ScDPLabelData& rLabelData = *it->get();
 
-        OUString aUnoName = ScDPUtil::createDuplicateDimensionName(pLabelData.maName, pLabelData.mnDupCount);
+        OUString aUnoName = ScDPUtil::createDuplicateDimensionName(rLabelData.maName, rLabelData.mnDupCount);
         ScDPSaveDimension* pSaveDimensions = rSaveData.GetExistingDimensionByName(aUnoName);
 
         if (pSaveDimensions == nullptr)
             continue;
 
-        pSaveDimensions->SetUsedHierarchy(pLabelData.mnUsedHier);
-        pSaveDimensions->SetShowEmpty(pLabelData.mbShowAll);
-        pSaveDimensions->SetRepeatItemLabels(pLabelData.mbRepeatItemLabels);
-        pSaveDimensions->SetSortInfo(&pLabelData.maSortInfo);
-        pSaveDimensions->SetLayoutInfo(&pLabelData.maLayoutInfo);
-        pSaveDimensions->SetAutoShowInfo(&pLabelData.maShowInfo);
+        pSaveDimensions->SetUsedHierarchy(rLabelData.mnUsedHier);
+        pSaveDimensions->SetShowEmpty(rLabelData.mbShowAll);
+        pSaveDimensions->SetRepeatItemLabels(rLabelData.mbRepeatItemLabels);
+        pSaveDimensions->SetSortInfo(&rLabelData.maSortInfo);
+        pSaveDimensions->SetLayoutInfo(&rLabelData.maLayoutInfo);
+        pSaveDimensions->SetAutoShowInfo(&rLabelData.maShowInfo);
 
-        bool bManualSort = (pLabelData.maSortInfo.Mode == DataPilotFieldSortMode::MANUAL);
+        bool bManualSort = (rLabelData.maSortInfo.Mode == DataPilotFieldSortMode::MANUAL);
 
         std::vector<ScDPLabelData::Member>::const_iterator itMember;
-        for (itMember = pLabelData.maMembers.begin(); itMember != pLabelData.maMembers.end(); ++itMember)
+        for (itMember = rLabelData.maMembers.begin(); itMember != rLabelData.maMembers.end(); ++itMember)
         {
             const ScDPLabelData::Member& rLabelMember = *itMember;
             ScDPSaveMember* pMember = pSaveDimensions->GetMemberByName(rLabelMember.maName);

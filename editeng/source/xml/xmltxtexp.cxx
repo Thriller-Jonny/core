@@ -138,7 +138,6 @@ SvxTextForwarder* SvxEditEngineSource::GetTextForwarder()
 }
 
 
-
 void SvxEditEngineSource::UpdateData()
 {
 }
@@ -245,7 +244,7 @@ sal_Bool SAL_CALL SvxSimpleUnoModel::attachResource( const OUString& aURL, const
 {
     (void)aURL;
     (void)aArgs;
-    return sal_False;
+    return false;
 }
 
 OUString SAL_CALL SvxSimpleUnoModel::getURL(  ) throw (css::uno::RuntimeException, std::exception)
@@ -278,7 +277,7 @@ void SAL_CALL SvxSimpleUnoModel::unlockControllers(  ) throw (css::uno::RuntimeE
 
 sal_Bool SAL_CALL SvxSimpleUnoModel::hasControllersLocked(  ) throw (css::uno::RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 css::uno::Reference< css::frame::XController > SAL_CALL SvxSimpleUnoModel::getCurrentController(  ) throw (css::uno::RuntimeException, std::exception)
@@ -312,7 +311,6 @@ void SAL_CALL SvxSimpleUnoModel::removeEventListener( const css::uno::Reference<
 }
 
 
-
 class SvxXMLTextExportComponent : public SvXMLExport
 {
 public:
@@ -326,14 +324,13 @@ public:
     virtual ~SvxXMLTextExportComponent();
 
     // methods without content:
-    virtual void _ExportAutoStyles() override;
-    virtual void _ExportMasterStyles() override;
-    virtual void _ExportContent() override;
+    virtual void ExportAutoStyles_() override;
+    virtual void ExportMasterStyles_() override;
+    virtual void ExportContent_() override;
 
 private:
     css::uno::Reference< css::text::XText > mxText;
 };
-
 
 
 SvxXMLTextExportComponent::SvxXMLTextExportComponent(
@@ -416,7 +413,7 @@ void SvxWriteXML( EditEngine& rEditEngine, SvStream& rStream, const ESelection& 
 }
 
 // methods without content:
-void SvxXMLTextExportComponent::_ExportAutoStyles()
+void SvxXMLTextExportComponent::ExportAutoStyles_()
 {
     rtl::Reference< XMLTextParagraphExport > xTextExport( GetTextParagraphExport() );
 
@@ -424,13 +421,13 @@ void SvxXMLTextExportComponent::_ExportAutoStyles()
     xTextExport->exportTextAutoStyles();
 }
 
-void SvxXMLTextExportComponent::_ExportContent()
+void SvxXMLTextExportComponent::ExportContent_()
 {
     rtl::Reference< XMLTextParagraphExport > xTextExport( GetTextParagraphExport() );
 
     xTextExport->exportText( mxText );
 }
 
-void SvxXMLTextExportComponent::_ExportMasterStyles() {}
+void SvxXMLTextExportComponent::ExportMasterStyles_() {}
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

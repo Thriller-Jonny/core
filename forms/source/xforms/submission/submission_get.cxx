@@ -41,7 +41,6 @@ using namespace ucbhelper;
 using namespace std;
 
 
-
 CSubmissionGet::CSubmissionGet(const OUString& aURL, const css::uno::Reference< css::xml::dom::XDocumentFragment >& aFragment)
     : CSubmission(aURL, aFragment)
 {
@@ -88,7 +87,8 @@ CSubmission::SubmissionResult CSubmissionGet::submit(const css::uno::Reference< 
         OUString aQueryURL = OStringToOUString(aUTF8QueryURL.makeStringAndClear(), RTL_TEXTENCODING_UTF8);
         ucbhelper::Content aContent(aQueryURL, aEnvironment, m_xContext);
         css::uno::Reference< XOutputStream > aPipe( css::io::Pipe::create(m_xContext), UNO_QUERY_THROW );
-        aContent.openStream(aPipe);
+        if (!aContent.openStream(aPipe))
+            return UNKNOWN_ERROR;
         // get reply
         try {
             m_aResultStream = aContent.openStream();

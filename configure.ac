@@ -9,7 +9,7 @@ dnl in order to create a configure script.
 # several non-alphanumeric characters, those are split off and used only for the
 # ABOUTBOXPRODUCTVERSIONSUFFIX in openoffice.lst. Why that is necessary, no idea.
 
-AC_INIT([LibreOffice],[5.2.0.0.alpha0+],[],[],[http://documentfoundation.org/])
+AC_INIT([LibreOffice],[5.2.0.0.alpha1+],[],[],[http://documentfoundation.org/])
 
 AC_PREREQ([2.59])
 
@@ -340,7 +340,7 @@ AC_ARG_WITH(android-sdk,
 ,)
 
 ANDROID_NDK_HOME=
-if test -z "$with_android_ndk" -a -e "$SRC_ROOT/external/android-ndk"; then
+if test -z "$with_android_ndk" -a -e "$SRC_ROOT/external/android-ndk" -a "$build" != "$host"; then
     with_android_ndk="$SRC_ROOT/external/android-ndk"
 fi
 if test -n "$with_android_ndk"; then
@@ -490,6 +490,7 @@ if test -n "$with_android_ndk"; then
     ANDROIDCFLAGS="$ANDROIDCFLAGS -ffunction-sections -fdata-sections"
     ANDROIDCFLAGS="$ANDROIDCFLAGS -L$ANDROID_NDK_HOME/sources/cxx-stl/gnu-libstdc++/${ANDROID_NDK_TOOLCHAIN_VERSION_SUBDIR}libs/$ANDROID_APP_ABI"
     ANDROIDCFLAGS="$ANDROIDCFLAGS --sysroot=$ANDROID_NDK_HOME/platforms/android-${ANDROID_API_LEVEL}/arch-${ANDROID_ARCH}"
+    export PKG_CONFIG_LIBDIR="$ANDROID_BINUTILS_PREBUILT_ROOT/lib/pkgconfig"
 
     if test -n "$ANDROID_USING_CLANG"; then
         ANDROIDCFLAGS="$ANDROIDCFLAGS -Qunused-arguments"
@@ -514,9 +515,13 @@ if test -n "$with_android_ndk"; then
     esac
 
     if test "$ENABLE_LTO" = TRUE; then
-        # -flto comes from com_GCC_degs.mk, too, but we need to make sure it gets passed as part of
+        # -flto comes from com_GCC_defs.mk, too, but we need to make sure it gets passed as part of
         # $CC and $CXX when building external libraries
-        ANDROIDCFLAGS="$ANDROIDCFLAGS -flto"
+         if test "$COM_IS_CLANG" = TRUE; then
+            ANDROIDCFLAGS="$ANDROIDCFLAGS -flto"
+        else
+            ANDROIDCFLAGS="$ANDROIDCFLAGS -flto -fuse-linker-plugin -O2"
+        fi
     fi
 
     # gdbserver can be in different locations
@@ -568,7 +573,7 @@ dnl ===================================================================
 dnl --with-android-sdk
 dnl ===================================================================
 ANDROID_SDK_HOME=
-if test -z "$with_android_sdk" -a -e "$SRC_ROOT/external/android-sdk-linux"; then
+if test -z "$with_android_sdk" -a -e "$SRC_ROOT/external/android-sdk-linux" -a "$build" != "$host"; then
     with_android_sdk="$SRC_ROOT/external/android-sdk-linux"
 fi
 if test -n "$with_android_sdk"; then
@@ -806,6 +811,9 @@ linux-android*)
     enable_coinmp=yes
     enable_lpsolve=no
     enable_report_builder=no
+    enable_odk=no
+    enable_postgresql_sdbc=no
+    enable_python=no
     with_theme="tango"
     test_cups=no
     test_dbus=no
@@ -901,6 +909,16 @@ AC_SUBST(SDKDIRNAME)
 AC_SUBST(WITH_MINGW)
 AC_SUBST(PTHREAD_CFLAGS)
 AC_SUBST(PTHREAD_LIBS)
+
+dnl The following checks for gcc, cc and then cl (if it weren't guarded for win32)
+dnl Needs to precede the AC_SEARCH_LIBS call below, which apparently calls
+dnl AC_PROG_CC internally.
+if test "$_os" != "WINNT" -o "$WITH_MINGW" = "yes"; then
+    # AC_PROG_CC sets CFLAGS to -g -O2 if not set, avoid that
+    save_CFLAGS=$CFLAGS
+    AC_PROG_CC
+    CFLAGS=$save_CFLAGS
+fi
 
 if test $_os != "WINNT"; then
     save_LIBS="$LIBS"
@@ -1018,6 +1036,11 @@ AC_ARG_ENABLE(mergelibs,
 AC_ARG_ENABLE(graphite,
     AS_HELP_STRING([--disable-graphite],
         [Disables the compilation of Graphite smart font rendering.])
+)
+
+AC_ARG_ENABLE(breakpad,
+    AS_HELP_STRING([--enable-breakpad],
+        [Enables breakpad for crash reporting.])
 )
 
 AC_ARG_ENABLE(orcus,
@@ -1168,7 +1191,7 @@ AC_ARG_ENABLE(gtk,
 ,enable_gtk=yes)
 
 AC_ARG_ENABLE(gtk3,
-    AS_HELP_STRING([--enable-gtk3],
+    AS_HELP_STRING([--disable-gtk3],
         [Determines whether to use Gtk+ 3.0 vclplug on platforms where Gtk+ 3.0 is available.
          This is experimental and may not work.]),
 ,enable_gtk3=yes)
@@ -1186,26 +1209,20 @@ AC_ARG_ENABLE(split-app-modules,
 
 AC_ARG_ENABLE(split-opt-features,
     AS_HELP_STRING([--enable-split-opt-features],
-        [Split file lists for some optional features, .e.g. pyuno, testtool.
+        [Split file lists for some optional features, e.g. pyuno, testtool.
          Has effect only with make distro-pack-install]),
 ,)
 
 AC_ARG_ENABLE(cairo-canvas,
-[  --disable-cairo-canvas  Determines whether to build the Cairo canvas on
-                          platforms where Cairo is available.
-])
+    AS_HELP_STRING([--disable-cairo-canvas],
+        [Determines whether to build the Cairo canvas on platforms where Cairo is available.]),
+,)
 
 AC_ARG_ENABLE(dbus,
     AS_HELP_STRING([--disable-dbus],
         [Determines whether to enable features that depend on dbus.
-         e.g. Presentation mode screensaver control, bluetooth presentation control]),
+         e.g. Presentation mode screensaver control, bluetooth presentation control, automatic font install]),
 ,enable_dbus=yes)
-
-AC_ARG_ENABLE(packagekit,
-    AS_HELP_STRING([--enable-packagekit],
-        [Determines whether to enable features using packagekit.
-         Right now that is auto font install]),
-,)
 
 AC_ARG_ENABLE(sdremote,
     AS_HELP_STRING([--disable-sdremote],
@@ -1248,15 +1265,17 @@ AC_ARG_ENABLE(kde4,
          KDE4 are available.]),
 ,)
 
+AC_ARG_ENABLE(gui,
+    AS_HELP_STRING([--disable-gui],
+        [Disable X11/Wayland support to reduce dependencies. Maybe useful for
+         headless servers, but soffice --headless works just fine without it.
+         Work in progress, use only if you are hacking on it.]),
+,enable_gui=yes)
+
 AC_ARG_ENABLE(randr,
     AS_HELP_STRING([--disable-randr],
         [Disable RandR support in the vcl project.]),
 ,enable_randr=yes)
-
-AC_ARG_ENABLE(randr-link,
-    AS_HELP_STRING([--disable-randr-link],
-        [Disable linking with libXrandr, instead dynamically open it at runtime.]),
-,enable_randr_link=yes)
 
 AC_ARG_ENABLE(gstreamer-1-0,
     AS_HELP_STRING([--disable-gstreamer-1-0],
@@ -1299,10 +1318,7 @@ AC_ARG_ENABLE(chart-tests,
 AC_ARG_ENABLE(build-unowinreg,
     AS_HELP_STRING([--enable-build-unowinreg],
         [Do not use the prebuilt unowinreg.dll. Build it instead. The MinGW C++
-         compiler is needed on Linux.])
-    [
-                          Usage:     --enable-build-unowinreg
-    ],
+         compiler is needed on Linux.]),
 ,)
 
 AC_ARG_ENABLE(dependency-tracking,
@@ -1447,7 +1463,7 @@ AC_ARG_ENABLE(lotuswordpro,
 AC_ARG_ENABLE(firebird-sdbc,
     AS_HELP_STRING([--disable-firebird-sdbc],
         [Disable the build of the Firebird-SDBC driver if it doesn't compile for you.]),
-)
+,enable_firebird_sdbc=yes)
 
 AC_ARG_ENABLE(winegcc,
     AS_HELP_STRING([--enable-winegcc],
@@ -1472,11 +1488,6 @@ AC_ARG_ENABLE(openssl,
          components will either use GNUTLS or NSS. Work in progress,
          use only if you are hacking on it.]),
 ,enable_openssl=yes)
-
-AC_ARG_WITH(prebuilt-openssl,
-    AS_HELP_STRING([--with-prebuilt-openssl],
-        [Don't build OpenSSL but use prebuilt binaries. Only for use on Windows, when you can't build it,
-         thanks to the Cygwin fork() problem when running the Perl disaster in OpenSSL's build system.]))
 
 AC_ARG_ENABLE(library-bin-tar,
     AS_HELP_STRING([--enable-library-bin-tar],
@@ -1510,6 +1521,13 @@ AC_ARG_ENABLE(dconf,
 dnl ===================================================================
 dnl Optional Packages (--with/without-)
 dnl ===================================================================
+
+AC_ARG_WITH(gcc-home,
+    AS_HELP_STRING([--with-gcc-home],
+        [Specify the location of gcc/g++ manually. This can be used in conjunction
+         with --enable-icecream when icecream gcc/g++ wrappers are installed in a
+         non-default path.]),
+,)
 
 AC_ARG_WITH(gnu-patch,
     AS_HELP_STRING([--with-gnu-patch],
@@ -1557,14 +1575,14 @@ AC_ARG_WITH(galleries,
 AC_ARG_WITH(theme,
     AS_HELP_STRING([--with-theme="theme1 theme2..."],
         [Choose which themes to include. By default those themes with an '*' are included.
-         Possible choices: *breeze, crystal, *galaxy, *hicontrast, human, industrial, *oxygen, *sifr, *tango, *tango_testing.]),
+         Possible choices: *breeze, crystal, *galaxy, *hicontrast, human, *oxygen, *sifr, *tango, *tango_testing.]),
 ,)
 
 AC_ARG_WITH(helppack-integration,
-[
-  --without-helppack-integration      It will not integrate the helppacks to the installer
-                          of the product.
-                          Please use this switch to use the online help or separate help packages.],
+    AS_HELP_STRING([--without-helppack-integration],
+        [It will not integrate the helppacks to the installer
+         of the product. Please use this switch to use the online help
+         or separate help packages.]),
 ,)
 
 AC_ARG_WITH(fonts,
@@ -1615,7 +1633,7 @@ AC_ARG_WITH(system-headers,
     AS_HELP_STRING([--with-system-headers],
         [Use headers already on system -- enables all --with-system-* flags for
          external packages whose headers are the only entities used i.e.
-         boost/vigra/odbc/sane-header(s).]),,
+         boost/odbc/sane-header(s).]),,
     [with_system_headers="$with_system_libs"])
 
 AC_ARG_WITH(system-jars,
@@ -1742,13 +1760,9 @@ AC_ARG_WITH(system-postgresql,
     [with_system_postgresql="$with_system_libs"])
 
 AC_ARG_WITH(libpq-path,
-    AS_HELP_STRING([--with-libpq-path],
+    AS_HELP_STRING([--with-libpq-path=<absolute path to your libpq installation>],
         [Use this PostgreSQL C interface (libpq) installation for building
-         the PostgreSQL-SDBC extension.])
-    [
-                          Usage:     --with-libpq-path=<absolute path to
-                                                  your libpq installation>
-    ],
+         the PostgreSQL-SDBC extension.]),
 ,)
 
 AC_ARG_WITH(system-firebird,
@@ -1916,11 +1930,6 @@ AC_ARG_WITH(system-glm,
         [Use glm already on system.]),,
     [with_system_glm="$with_system_headers"])
 
-AC_ARG_WITH(system-vigra,
-    AS_HELP_STRING([--with-system-vigra],
-        [Use vigra already on system.]),,
-    [with_system_vigra="$with_system_headers"])
-
 AC_ARG_WITH(system-hunspell,
     AS_HELP_STRING([--with-system-hunspell],
         [Use libhunspell already on system.]),,
@@ -1951,13 +1960,6 @@ AC_ARG_WITH(system-liblangtag,
         [Use liblangtag library already on system.]),,
     [with_system_liblangtag="$with_system_libs"])
 
-AC_ARG_WITH(system-npapi-headers,
-    AS_HELP_STRING([--with-system-npapi-headers],
-        [Use NPAPI headers provided by system instead of bundled ones. Used in
-         extensions/source/plugin (ENABLE_NPAPI_FROM_BROWSER=TRUE)]),,
-    [with_system_npapi_headers="$with_system_headers"]
-)
-
 AC_ARG_WITH(jpeg-turbo,
     AS_HELP_STRING([--with-jpeg-turbo],
         [Use internal libjpeg-turbo library.]),,
@@ -1978,13 +1980,10 @@ AC_ARG_WITH(linker-hash-style,
          if supported on the build system, and "sysv" otherwise.]))
 
 AC_ARG_WITH(jdk-home,
-    AS_HELP_STRING([--with-jdk-home],
+    AS_HELP_STRING([--with-jdk-home=<absolute path to JDK home>],
         [If you have installed JDK 1.3 or later on your system please supply the
          path here. Note that this is not the location of the java command but the
-         location of the entire distribution.])
-    [
-                          Usage:     --with-jdk-home=<absolute path to JDK home>
-    ],
+         location of the entire distribution.]),
 ,)
 
 AC_ARG_WITH(help,
@@ -2001,98 +2000,68 @@ AC_ARG_WITH(help,
 ,)
 
 AC_ARG_WITH(java,
-    AS_HELP_STRING([--with-java],
+    AS_HELP_STRING([--with-java=<java command>],
         [Specify the name of the Java interpreter command. Typically "java"
          which is the default.
 
          To build without support for Java components, applets, accessibility
-         or the XML filters written in Java, use --without-java or --with-java=no.])
-    [
-                          Usage:     --with-java==<java command>
-                                     --without-java
-    ],
+         or the XML filters written in Java, use --without-java or --with-java=no.]),
     [ test -z "$with_java" -o "$with_java" = "yes" && with_java=java ],
     [ with_java=java ]
 )
 
 AC_ARG_WITH(jvm-path,
-    AS_HELP_STRING([--with-jvm-path],
-        [Use a specific JVM search path at runtime.])
-    [
-                          Usage:     --with-jvm-path=<absolute path to parent of jvm home>
-
-                          e. g.: --with-jvm-path=/usr/lib/
-                                 to find JRE/JDK in /usr/lib/jvm/
-    ],
+    AS_HELP_STRING([--with-jvm-path=<absolute path to parent of jvm home>],
+        [Use a specific JVM search path at runtime.
+         e.g. use --with-jvm-path=/usr/lib/ to find JRE/JDK in /usr/lib/jvm/]),
 ,)
 
 AC_ARG_WITH(ant-home,
-    AS_HELP_STRING([--with-ant-home],
+    AS_HELP_STRING([--with-ant-home=<absolute path to Ant home>],
         [If you have installed Jakarta Ant on your system, please supply the path here.
          Note that this is not the location of the Ant binary but the location
-         of the entire distribution.])
-    [
-                          Usage:     --with-ant-home=<absolute path to Ant home>
-    ],
+         of the entire distribution.]),
 ,)
 
 AC_ARG_WITH(export-validation,
     AS_HELP_STRING([--with-export-validation],
-        [If you want the exported files to be validated. Right now limited to OOXML files in calc export tests.
-         Note: You need an executable script officeotron that takes the path to the file.])
-    [
-                            Usage: --with-export-validation
-    ],
+        [If you want the exported files to be validated. Right now limited to OOXML and ODF files.
+         Note: You need executable scripts officeotron and odfvalidator that take the path to the file.
+         See https://cgit.freedesktop.org/libreoffice/contrib/dev-tools/tree/export-validation]),
 ,)
 
 AC_ARG_WITH(junit,
-    AS_HELP_STRING([--with-junit],
+    AS_HELP_STRING([--with-junit=<absolute path to JUnit 4 jar>],
         [Specifies the JUnit 4 jar file to use for JUnit-based tests.
-         --without-junit disables those tests. Not relevant in the --without-java case.])
-    [
-                          Usage:     --with-junit=<absolute path to JUnit 4 jar>
-    ],
+         --without-junit disables those tests. Not relevant in the --without-java case.]),
 ,with_junit=yes)
 
 AC_ARG_WITH(hamcrest,
-    AS_HELP_STRING([--with-hamcrest],
+    AS_HELP_STRING([--with-hamcrest=<absolute path to hamcrest jar>],
         [Specifies the hamcrest jar file to use for JUnit-based tests.
-         --without-junit disables those tests. Not relevant in the --without-java case.])
-    [
-                          Usage:     --with-hamcrest=<absolute path to hamcrest jar>
-    ],
+         --without-junit disables those tests. Not relevant in the --without-java case.]),
 ,with_hamcrest=yes)
 
 AC_ARG_WITH(perl-home,
-    AS_HELP_STRING([--with-perl-home],
+    AS_HELP_STRING([--with-perl-home=<abs. path to Perl 5 home>],
         [If you have installed Perl 5 Distribution, on your system, please
          supply the path here. Note that this is not the location of the Perl
-         binary but the location of the entire distribution.])
-    [
-                          Usage:     --with-perl-home=<abs. path to Perl 5 home>
-    ],
+         binary but the location of the entire distribution.]),
 ,)
 
-AC_ARG_WITH(
-    [doxygen],
+AC_ARG_WITH(doxygen,
     AS_HELP_STRING(
-        [--with-doxygen],
+        [--with-doxygen=<absolute path to doxygen executable>],
         [Specifies the doxygen executable to use when generating ODK C/C++
          documentation. --without-doxygen disables generation of ODK C/C++
-         documentation. Not relevant in the --disable-odk case.])
-    [
-                          Usage:     --with-doxygen=<absolute path to doxygen executable>
-    ],,
-    [with_doxygen=yes])
+         documentation. Not relevant in the --disable-odk case.]),
+,with_doxygen=yes)
 
 AC_ARG_WITH(visual-studio,
     AS_HELP_STRING([--with-visual-studio=<2013/2015>],
         [Specify which Visual Studio version to use in case several are
          installed. If not specified, only 2013 is detected automatically
-         because 2015 support is currently experimental.])
-    [
-                          Usage:     --with-visual-studio=<2013/2015>
-    ],
+         because 2015 support is currently experimental.]),
 ,)
 
 AC_ARG_WITH(windows-sdk,
@@ -2101,25 +2070,19 @@ AC_ARG_WITH(windows-sdk,
          in case the one that came with the selected Visual Studio
          is not what you want for some reason. Note that not all compiler/SDK
          combinations are supported. The intent is that this option should not
-         be needed.])
-    [
-                          Usage:     --with-windows-sdk=<7.1(A)/8.0(A)/8.1(A)/10>
-    ],
+         be needed.]),
 ,)
 
 AC_ARG_WITH(lang,
-    AS_HELP_STRING([--with-lang],
+    AS_HELP_STRING([--with-lang="es sw tu cs sk"],
         [Use this option to build LibreOffice with additional UI language support.
          English (US) is always included by default.
          Separate multiple languages with space.
-         For all languages, use --with-lang=ALL.])
-    [
-                          Usage:     --with-lang="es sw tu cs sk"
-    ],
+         For all languages, use --with-lang=ALL.]),
 ,)
 
 AC_ARG_WITH(locales,
-    AS_HELP_STRING([--with-locales],
+    AS_HELP_STRING([--with-locales="en es pt fr zh kr ja"],
         [Use this option to limit the locale information built in.
          Separate multiple locales with space.
          Very experimental and might well break stuff.
@@ -2138,8 +2101,6 @@ AC_ARG_WITH(locales,
                           For the default, all locales, don't use this switch at all.
                           Specifying just the language part of a locale means all matching
                           locales will be included.
-
-                          Usage:     --with-locales="en es pt fr zh kr ja"
     ],
 ,)
 
@@ -2169,7 +2130,7 @@ dnl Branding
 dnl ===================================================================
 
 AC_ARG_WITH(branding,
-    AS_HELP_STRING([--with-branding],
+    AS_HELP_STRING([--with-branding=/path/to/images],
         [Use given path to retrieve branding images set.])
     [
                           Search for intro.png about.svg and flat_logo.svg.
@@ -2192,35 +2153,24 @@ AC_ARG_WITH(branding,
                           progress bar text from top. Decimal value.
 
                           Default values will be used if not found.
-
-                          Usage:     --with-branding=/path/to/images
     ],
 ,)
 
 
 AC_ARG_WITH(extra-buildid,
-    AS_HELP_STRING([--with-extra-buildid],
-        [Show addition build identification in about dialog.])
-    [
-                          Usage:     --with-extra-buildid="Tinderbox: Win-x86@6, Branch:master, Date:2012-11-26_00.29.34"
-    ],
+    AS_HELP_STRING([--with-extra-buildid="Tinderbox: Win-x86@6, Branch:master, Date:2012-11-26_00.29.34"],
+        [Show addition build identification in about dialog.]),
 ,)
 
 
 AC_ARG_WITH(vendor,
-    AS_HELP_STRING([--with-vendor],
-        [Set vendor of the build.])
-    [
-                          Usage:     --with-vendor="John the Builder"
-    ],
+    AS_HELP_STRING([--with-vendor="John the Builder"],
+        [Set vendor of the build.]),
 ,)
 
 AC_ARG_WITH(android-package-name,
-    AS_HELP_STRING([--with-android-package-name],
-        [Set Android package name of the build.])
-    [
-                          Usage:     --with-android-package-name="org.libreoffice"
-    ],
+    AS_HELP_STRING([--with-android-package-name="org.libreoffice"],
+        [Set Android package name of the build.]),
 ,)
 
 AC_ARG_WITH(compat-oowrappers,
@@ -2231,42 +2181,27 @@ AC_ARG_WITH(compat-oowrappers,
 ,)
 
 AC_ARG_WITH(os-version,
-    AS_HELP_STRING([--with-os-version],
-        [For FreeBSD users, use this option option to override the detected OSVERSION.])
-    [
-                          Usage:     --with-os-version=<OSVERSION>
-    ],
+    AS_HELP_STRING([--with-os-version=<OSVERSION>],
+        [For FreeBSD users, use this option option to override the detected OSVERSION.]),
 ,)
 
 AC_ARG_WITH(mingw-cross-compiler,
-    AS_HELP_STRING([--with-mingw-cross-compiler],
-        [Specify the MinGW cross-compiler to use.])
-    [
-                          Usage:     --with-mingw-cross-compiler=<mingw32-g++ command>
-
-                          When building on the ODK on Unix and building unowinreg.dll,
-                          specify the MinGW C++ cross-compiler.
-    ],
+    AS_HELP_STRING([--with-mingw-cross-compiler=<mingw32-g++ command>],
+        [Specify the MinGW cross-compiler to use.
+         When building on the ODK on Unix and building unowinreg.dll,
+         specify the MinGW C++ cross-compiler.]),
 ,)
 
 AC_ARG_WITH(idlc-cpp,
-    AS_HELP_STRING([--with-idlc-cpp],
-        [Specify the C Preprocessor to use for idlc.])
-    [
-                          Usage:     --with-idlc-cpp=cpp
-
-                          Default is ucpp.
-    ]
+    AS_HELP_STRING([--with-idlc-cpp=<cpp/ucpp>],
+        [Specify the C Preprocessor to use for idlc. Default is ucpp.]),
 ,)
 
 AC_ARG_WITH(build-version,
-    AS_HELP_STRING([--with-build-version],
+    AS_HELP_STRING([--with-build-version="Built by Jim"],
         [Allows the builder to add a custom version tag that will appear in the
-         Help/About box for QA purposes.])
-    [
-                          Usage:     --with-build-version="Built by Jim"
-    ],
-    with_build_version=$withval ,
+         Help/About box for QA purposes.]),
+with_build_version=$withval,
 )
 
 AC_ARG_WITH(alloc,
@@ -2375,11 +2310,9 @@ dnl MacOSX build and runtime environment options
 dnl ===================================================================
 
 AC_ARG_WITH(macosx-sdk,
-    AS_HELP_STRING([--with-macosx-sdk],
+    AS_HELP_STRING([--with-macosx-sdk=<version>],
         [Use a specific SDK for building.])
     [
-                          Usage:     --with-macosx-sdk=<version>
-
                           e. g.: --with-macosx-sdk=10.8
 
                           there are 3 options to control the MacOSX build:
@@ -2413,22 +2346,18 @@ AC_ARG_WITH(macosx-sdk,
 ,)
 
 AC_ARG_WITH(macosx-version-min-required,
-    AS_HELP_STRING([--with-macosx-version-min-required],
+    AS_HELP_STRING([--with-macosx-version-min-required=<version>],
         [set the minimum OS version needed to run the built LibreOffice])
     [
-                          Usage:     --with-macosx-version-min-required=<version>
-
                           e. g.: --with-macos-version-min-required=10.8
                           see --with-macosx-sdk for more info
     ],
 ,)
 
 AC_ARG_WITH(macosx-version-max-allowed,
-    AS_HELP_STRING([--with-macosx-version-max-allowed],
+    AS_HELP_STRING([--with-macosx-version-max-allowed=<version>],
         [set the maximum allowed OS version the LibreOffice compilation can use APIs from])
     [
-                          Usage:     --with-macosx-version-max-allowed=<version>
-
                           e. g.: --with-macos-version-max-allowed=10.8
                           see --with-macosx-sdk for more info
     ],
@@ -2747,14 +2676,6 @@ if test "$_os" != "WINNT" -a "$WITH_MINGW" != "yes"; then
     fi
 fi
 
-dnl The following checks for gcc, cc and then cl (if it weren't guarded for win32)
-if test "$_os" != "WINNT" -o "$WITH_MINGW" = "yes"; then
-    # AC_PROG_CC sets CFLAGS to -g -O2 if not set, avoid that
-    save_CFLAGS=$CFLAGS
-    AC_PROG_CC
-    CFLAGS=$save_CFLAGS
-fi
-
 COMPATH=`dirname "$CC"`
 if test "$COMPATH" = "."; then
     AC_PATH_PROGS(COMPATH, $CC)
@@ -2804,6 +2725,10 @@ if test "$with_export_validation" = yes; then
     AC_CHECK_PROGS(OFFICEOTRON, officeotron)
     if test -z "$OFFICEOTRON"; then
         AC_MSG_ERROR([officeotron not found, but required by --with-export-validation])
+    fi
+    OFFICEOTRON_VER=`$OFFICEOTRON --version | $AWK -F. '{ print \$1*10000+\$2*100+\$3 }'`
+    if test 0"$OFFICEOTRON_VER" -lt 704; then
+        AC_MSG_ERROR([officeotron too old])
     fi
     AC_SUBST(OFFICEOTRON)
 else
@@ -3062,8 +2987,8 @@ if test $_os = iOS; then
 
     xcode_developer=`xcode-select -print-path`
 
-    current_sdk_ver=8.3
-    for sdkver in 9.1 9.0 8.4 8.3 8.2 8.1 8.0; do
+    current_sdk_ver=9.3
+    for sdkver in 9.3 9.2; do
         t=$xcode_developer/Platforms/$platform.platform/Developer/SDKs/$platform$sdkver.sdk
         if test -d $t; then
             ios_sdk=$sdkver
@@ -3073,7 +2998,7 @@ if test $_os = iOS; then
     done
 
     if test -z "$sysroot"; then
-        AC_MSG_ERROR([Could not find iOS SDK, expected something like $xcode_developer/Platforms/$platform.platform/Developer/SDKs/${platform}${current_sdk_ver}])
+        AC_MSG_ERROR([Could not find iOS SDK, expected something like $xcode_developer/Platforms/$platform.platform/Developer/SDKs/${platform}${current_sdk_ver}.sdk])
     fi
 
     AC_MSG_RESULT($sysroot)
@@ -3147,11 +3072,12 @@ if test $_os = Darwin; then
     LIBO_ETC_FOLDER=Resources
     LIBO_LIBEXEC_FOLDER=MacOS
     LIBO_LIB_FOLDER=Frameworks
+    LIBO_LIB_PYUNO_FOLDER=Resources
     LIBO_SHARE_FOLDER=Resources
     LIBO_SHARE_HELP_FOLDER=Resources/help
     LIBO_SHARE_JAVA_FOLDER=Resources/java
     LIBO_SHARE_PRESETS_FOLDER=Resources/presets
-    LIBO_LIB_PYUNO_FOLDER=Resources
+    LIBO_SHARE_READMES_FOLDER=Resources/readmes
     LIBO_SHARE_RESOURCE_FOLDER=Resources/resource
     LIBO_SHARE_SHELL_FOLDER=Resources/shell
     LIBO_URE_BIN_FOLDER=MacOS
@@ -3169,6 +3095,7 @@ elif test $_os = WINNT; then
     LIBO_SHARE_HELP_FOLDER=help
     LIBO_SHARE_JAVA_FOLDER=program/classes
     LIBO_SHARE_PRESETS_FOLDER=presets
+    LIBO_SHARE_READMES_FOLDER=readmes
     LIBO_SHARE_RESOURCE_FOLDER=program/resource
     LIBO_SHARE_SHELL_FOLDER=program/shell
     LIBO_URE_BIN_FOLDER=program
@@ -3186,6 +3113,7 @@ else
     LIBO_SHARE_HELP_FOLDER=help
     LIBO_SHARE_JAVA_FOLDER=program/classes
     LIBO_SHARE_PRESETS_FOLDER=presets
+    LIBO_SHARE_READMES_FOLDER=readmes
     LIBO_SHARE_RESOURCE_FOLDER=program/resource
     LIBO_SHARE_SHELL_FOLDER=program/shell
     LIBO_URE_BIN_FOLDER=program
@@ -3220,6 +3148,7 @@ AC_SUBST(LIBO_SHARE_FOLDER)
 AC_SUBST(LIBO_SHARE_HELP_FOLDER)
 AC_SUBST(LIBO_SHARE_JAVA_FOLDER)
 AC_SUBST(LIBO_SHARE_PRESETS_FOLDER)
+AC_SUBST(LIBO_SHARE_READMES_FOLDER)
 AC_SUBST(LIBO_SHARE_RESOURCE_FOLDER)
 AC_SUBST(LIBO_URE_BIN_FOLDER)
 AC_SUBST(LIBO_URE_ETC_FOLDER)
@@ -3347,8 +3276,8 @@ vs_versions_to_check()
         map_vs_year_to_version "$1"
         vsversions=$vsversion
     else
-        # By default we prefer 2013
-        vsversions=12.0
+        # By default we prefer 2013/2015, in this order
+        vsversions="12.0 14.0"
     fi
 }
 
@@ -3376,12 +3305,34 @@ find_msvs()
     done
 }
 
+win_get_env_from_vsvars32bat()
+{
+    WRAPPERBATCHFILEPATH="`mktemp -t wrpXXXXXX.bat`"
+    echo -e "@setlocal\r\n" >> $WRAPPERBATCHFILEPATH
+    echo -e "@call \"`cygpath -w $VC_PRODUCT_DIR`/../Common7/Tools/vsvars32.bat\"\r\n" >> $WRAPPERBATCHFILEPATH
+    echo -e "@echo %$1%\r\n" >> $WRAPPERBATCHFILEPATH
+    echo -e "@endlocal\r\n" >> $WRAPPERBATCHFILEPATH
+    chmod +x $WRAPPERBATCHFILEPATH
+    _win_get_env_from_vsvars32bat="`$WRAPPERBATCHFILEPATH | $SED -e s/^M^J//`"
+    rm -f $WRAPPERBATCHFILEPATH
+    echo $_win_get_env_from_vsvars32bat
+}
+
 find_ucrt()
 {
-    reg_get_value_32 "HKEY_LOCAL_MACHINE/SOFTWARE/Microsoft/Windows Kits/Installed Roots/KitsRoot10"
+    reg_get_value_32 "HKEY_LOCAL_MACHINE/SOFTWARE/Microsoft/Microsoft SDKs/Windows/v10.0/InstallationFolder"
     if test -n "$regvalue"; then
-        ucrttest=$regvalue
-        ucrtdir=10.0.10240.0
+        PathFormat "$regvalue"
+        UCRTSDKDIR=$formatted_path
+        reg_get_value_32 "HKEY_LOCAL_MACHINE/SOFTWARE/Microsoft/Microsoft SDKs/Windows/v10.0/ProductVersion"
+        UCRTVERSION=$regvalue
+    fi
+    if test -z "$UCRTSDKDIR"; then
+        if test -f "$VC_PRODUCT_DIR/../Common7/Tools/vsvars32.bat"; then
+            PathFormat "`win_get_env_from_vsvars32bat "UniversalCRTSdkDir"`"
+            UCRTSDKDIR=$formatted_path
+            UCRTVERSION=`win_get_env_from_vsvars32bat "UCRTVersion"`
+        fi
     fi
 }
 
@@ -3435,7 +3386,6 @@ if test "$_os" = "WINNT"; then
         AC_MSG_CHECKING([Visual C++])
 
         find_msvc "$with_visual_studio"
-
         if test -z "$vctest"; then
             if test -n "$with_visual_studio"; then
                 AC_MSG_ERROR([No Visual Studio $with_visual_studio installation found])
@@ -3472,6 +3422,9 @@ if test "$_os" = "WINNT"; then
             AC_MSG_RESULT([No])
         fi
 
+        UCRTSDKDIR=
+        UCRTVERSION=
+
         AC_MSG_CHECKING([whether UCRT is needed for this compiler version])
         if test "$vcnum" = "120"; then
             AC_MSG_RESULT([No])
@@ -3479,20 +3432,23 @@ if test "$_os" = "WINNT"; then
             AC_MSG_RESULT([Yes])
             AC_MSG_CHECKING([for UCRT location])
             find_ucrt
-            if test -n "$ucrttest"; then
+            if test -n "$UCRTSDKDIR"; then
                 AC_MSG_RESULT([found])
-                PathFormat "$ucrttest"
-                ucrtincpath_formatted="$formatted_path/Include/$ucrtdir/ucrt"
+                PathFormat "${UCRTSDKDIR}Include/$UCRTVERSION/ucrt"
+                ucrtincpath_formatted=$formatted_path
                 # SOLARINC is used for external modules and must be set too.
                 # And no, it's not sufficient to set SOLARINC only, as configure
                 # itself doesn't honour it.
                 SOLARINC="$SOLARINC -I$ucrtincpath_formatted"
                 CFLAGS="$CFLAGS -I$ucrtincpath_formatted"
-                CXXFLAGS="$CPPFLAGS -I$ucrtincpath_formatted"
+                CXXFLAGS="$CXXFLAGS -I$ucrtincpath_formatted"
+                CPPFLAGS="$CPPFLAGS -I$ucrtincpath_formatted"
             else
                 AC_MSG_ERROR([not found])
             fi
         fi
+        AC_SUBST(UCRTSDKDIR)
+        AC_SUBST(UCRTVERSION)
 
         # Find the proper version of MSBuild.exe to use based on the VS version
         reg_get_value_32 HKEY_LOCAL_MACHINE/SOFTWARE/Microsoft/MSBuild/$vcnumwithdot/MSBuildOverrideTasksPath
@@ -3602,7 +3558,7 @@ if test "$_os" = "WINNT"; then
                 ;;
             140)
                 COMEX=19
-                WINDOWS_SDK_ACCEPTABLE_VERSIONS="10.0A 8.1A 8.1 8.0 7.1A"
+                WINDOWS_SDK_ACCEPTABLE_VERSIONS="10.0A 10.0 8.1A 8.1 8.0 7.1A"
                 ;;
             esac
 
@@ -3729,6 +3685,7 @@ if test "$_os" = "WINNT" -a "$WITH_MINGW" != yes; then
     AC_MSG_CHECKING([whether to use ATL])
     if test "$enable_atl" = "yes" -o "$enable_atl" = "" -a "$vcexpress" != Express; then
         DISABLE_ATL=""
+        AC_DEFINE(HAVE_FEATURE_ATL, 1)
         AC_MSG_RESULT([yes])
     else
         DISABLE_ATL="TRUE"
@@ -3775,14 +3732,20 @@ if test "$COM_IS_CLANG" = TRUE; then
     CLANG_FULL_VERSION=`echo __clang_version__ | ${CC%-cl.exe*} -E -P -`
     CLANGVER=`echo $clang_version | $AWK -F. '{ print \$1*10000+\$2*100+\$3 }'`
     AC_MSG_RESULT([Clang $CLANG_FULL_VERSION, $CLANGVER])
+    AC_DEFINE_UNQUOTED(CLANG_VERSION,$CLANGVER)
     AC_DEFINE_UNQUOTED(CLANG_FULL_VERSION,$CLANG_FULL_VERSION)
 fi
 AC_SUBST(COM_IS_CLANG)
 
 if test "$CCACHE" != "" -a "$COM_IS_CLANG" = TRUE; then
     if test -z "$CCACHE_CPP2"; then
-        AC_MSG_WARN([Using ccache with Clang without CCACHE_CPP2 set causes spurious warnings.])
-        add_warning "Using ccache with Clang without CCACHE_CPP2 set causes spurious warnings."
+        if test "$enable_ccache" = "" ; then
+            AC_MSG_WARN([Using ccache with Clang without CCACHE_CPP2 set causes spurious warnings/errors.])
+            add_warning "Using ccache with Clang without CCACHE_CPP2 set causes spurious warnings/errors. Disabling it."
+            CCACHE=
+        else
+            AC_MSG_ERROR([Using --enable-ccache with Clang without CCACHE_CPP2 set causes spurious warnings/errors.])
+        fi
     fi
 fi
 
@@ -4531,11 +4494,20 @@ solaris*)
 esac
 
 if test "$with_x" = "no"; then
+    AC_MSG_ERROR([Use --disable-gui instead. How can we get rid of this option? No idea where it comes from.])
+fi
+
+ENABLE_HEADLESS=""
+if test "$enable_gui" = "no"; then
     if test "$USING_X11" != TRUE; then
-        AC_MSG_ERROR([$host_os operating system is not suitable to build LibreOffice with --without-x])
+        AC_MSG_ERROR([$host_os operating system is not suitable to build LibreOffice with --disable-gui.])
     fi
     USING_X11=
+    ENABLE_HEADLESS=TRUE
+    AC_DEFINE(HAVE_FEATURE_UI,0)
+    test_cairo=yes
 fi
+AC_SUBST(ENABLE_HEADLESS)
 
 WORKDIR="${BUILDDIR}/workdir"
 INSTDIR="${BUILDDIR}/instdir"
@@ -4596,6 +4568,7 @@ dnl machine when doing cross-compilation
 dnl ===================================================================
 
 m4_pattern_allow([PKG_CONFIG_FOR_BUILD])
+m4_pattern_allow([PKG_CONFIG_LIBDIR])
 if test "$cross_compiling" = "yes"; then
     AC_MSG_CHECKING([for BUILD platform configuration])
     echo
@@ -4625,7 +4598,7 @@ if test "$cross_compiling" = "yes"; then
     unset CC CXX SYSBASE CFLAGS
     unset AR NM OBJDUMP PKG_CONFIG RANLIB READELF STRIP
     unset CPPUNIT_CFLAGS CPPUNIT_LIBS
-    unset LIBXML_CFLAGS LIBXML_LIBS LIBXSLT_CFLAGS LIBXSLT_LIBS XSLTPROC
+    unset LIBXML_CFLAGS LIBXML_LIBS LIBXSLT_CFLAGS LIBXSLT_LIBS XSLTPROC PKG_CONFIG_LIBDIR
     test -n "$CC_FOR_BUILD" && export CC="$CC_FOR_BUILD"
     test -n "$CXX_FOR_BUILD" && export CXX="$CXX_FOR_BUILD"
     test -n "$PKG_CONFIG_FOR_BUILD" && export PKG_CONFIG="$PKG_CONFIG_FOR_BUILD"
@@ -4807,7 +4780,7 @@ if test "$test_cups" = "yes"; then
     if test "$ac_cv_lib_cups_cupsPrintFiles" != "yes" -o "$ac_cv_header_cups_cups_h" != "yes"; then
         AC_MSG_ERROR([Could not find CUPS. Install libcups2-dev or cups-devel.])
     fi
-    AC_DEFINE(ENABLE_CUPS)
+
 else
     AC_MSG_RESULT([no])
 fi
@@ -5166,10 +5139,17 @@ if test "$_os" != "WINNT" -o "$WITH_MINGW" = "yes"; then
     # /path/to/compiler/foo-gcc" you need to set the AR etc env vars
     # explicitly. Or put /path/to/compiler in PATH yourself.
 
-    AC_CHECK_TOOL(AR,ar)
-    AC_CHECK_TOOL(NM,nm)
+    # Use wrappers for LTO
+    if test "$ENABLE_LTO" = "TRUE" -a "$COM_IS_CLANG" != "TRUE"; then
+        AC_CHECK_TOOL(AR,gcc-ar)
+        AC_CHECK_TOOL(NM,gcc-nm)
+        AC_CHECK_TOOL(RANLIB,gcc-ranlib)
+    else
+        AC_CHECK_TOOL(AR,ar)
+        AC_CHECK_TOOL(NM,nm)
+        AC_CHECK_TOOL(RANLIB,ranlib)
+    fi
     AC_CHECK_TOOL(OBJDUMP,objdump)
-    AC_CHECK_TOOL(RANLIB,ranlib)
     AC_CHECK_TOOL(READELF,readelf)
     AC_CHECK_TOOL(STRIP,strip)
     if test "$_os" = "WINNT"; then
@@ -5255,9 +5235,13 @@ find_dotnetsdk46()
 {
     unset frametest
 
-    for ver in 4.6; do
-        # TODO(davido): Do we need to take care about 32bit?
+    for ver in 4.6.1 4.6; do
         reg_get_value_64 "HKEY_LOCAL_MACHINE/SOFTWARE/Wow6432Node/Microsoft/Microsoft SDKs/NETFXSDK/$ver/KitsInstallationFolder"
+        if test -n "$regvalue"; then
+            frametest=$regvalue
+            return
+        fi
+        reg_get_value_32 "HKEY_LOCAL_MACHINE/SOFTWARE/Microsoft/Microsoft SDKs/NETFXSDK/$ver/KitsInstallationFolder"
         if test -n "$regvalue"; then
             frametest=$regvalue
             return
@@ -5298,11 +5282,12 @@ find_winsdk_version()
             return
         fi
         ;;
-    10)
-        reg_get_value_32 "HKEY_LOCAL_MACHINE/SOFTWARE/Microsoft/Windows Kits/Installed Roots/KitsRoot10"
+    10.0)
+        reg_get_value_32 "HKEY_LOCAL_MACHINE/SOFTWARE/Microsoft/Microsoft SDKs/Windows/v${1}/InstallationFolder"
         if test -n "$regvalue"; then
             winsdktest=$regvalue
-            winsdklibsubdir=10.0.10056.0
+            reg_get_value_32 "HKEY_LOCAL_MACHINE/SOFTWARE/Microsoft/Microsoft SDKs/Windows/v${1}/ProductVersion"
+            winsdklibsubdir=$regvalue
             return
         fi
         ;;
@@ -5928,8 +5913,10 @@ if test "$GCC" = "yes"; then
             AC_LANG_PUSH([C++])
             AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
 #include <list>
-#if !defined __GLIBCXX__ ||(__GLIBCXX__ < 20080606 && __GLIBCXX__ != 20080306)
+#if defined __GLIBCXX__
+#if __GLIBCXX__ < 20080606 && __GLIBCXX__ != 20080306
 #error
+#endif
 #endif
                 ]])],[HAVE_THREADSAFE_STATICS=TRUE],[])
             AC_LANG_POP([C++])
@@ -5958,7 +5945,7 @@ AC_SUBST(HAVE_THREADSAFE_STATICS)
 dnl ===================================================================
 dnl visibility and other gcc features
 dnl ===================================================================
-if test "$GCC" = "yes"; then
+if test "$GCC" = "yes" -o "$COM_IS_CLANG" = TRUE; then
     AC_MSG_CHECKING([whether $CC supports -fvisibility=hidden])
     save_CFLAGS=$CFLAGS
     CFLAGS="$CFLAGS -Werror -fvisibility=hidden"
@@ -6023,13 +6010,61 @@ if test "$GCC" = "yes"; then
         ], [AC_MSG_RESULT([no])])
     CFLAGS=$save_CFLAGS
 
+    AC_MSG_CHECKING([whether $CXX defines __base_class_type_info in cxxabi.h])
+    AC_LANG_PUSH([C++])
+    AC_COMPILE_IFELSE([AC_LANG_SOURCE([
+            #include <cstddef>
+            #include <cxxabi.h>
+            std::size_t f() { return sizeof(__cxxabiv1::__base_class_type_info); }
+        ])], [
+            AC_DEFINE([HAVE_CXXABI_H_BASE_CLASS_TYPE_INFO],[1])
+            AC_MSG_RESULT([yes])
+        ], [AC_MSG_RESULT([no])])
+    AC_LANG_POP([C++])
+
+    AC_MSG_CHECKING([whether $CXX defines __class_type_info in cxxabi.h])
+    AC_LANG_PUSH([C++])
+    AC_COMPILE_IFELSE([AC_LANG_SOURCE([
+            #include <cstddef>
+            #include <cxxabi.h>
+            std::size_t f() { return sizeof(__cxxabiv1::__class_type_info); }
+        ])], [
+            AC_DEFINE([HAVE_CXXABI_H_CLASS_TYPE_INFO],[1])
+            AC_MSG_RESULT([yes])
+        ], [AC_MSG_RESULT([no])])
+    AC_LANG_POP([C++])
+
     AC_MSG_CHECKING([whether $CXX declares __cxa_allocate_exception in cxxabi.h])
     AC_LANG_PUSH([C++])
     AC_COMPILE_IFELSE([AC_LANG_SOURCE([
             #include <cxxabi.h>
             void * f() { return __cxxabiv1::__cxa_allocate_exception(0); }
         ])], [
-            AC_DEFINE([HAVE_GCC_CXXABI_H_CXA_ALLOCATE_EXCEPTION],[1])
+            AC_DEFINE([HAVE_CXXABI_H_CXA_ALLOCATE_EXCEPTION],[1])
+            AC_MSG_RESULT([yes])
+        ], [AC_MSG_RESULT([no])])
+    AC_LANG_POP([C++])
+
+    AC_MSG_CHECKING([whether $CXX defines __cxa_eh_globals in cxxabi.h])
+    AC_LANG_PUSH([C++])
+    AC_COMPILE_IFELSE([AC_LANG_SOURCE([
+            #include <cstddef>
+            #include <cxxabi.h>
+            std::size_t f() { return sizeof(__cxxabiv1::__cxa_eh_globals); }
+        ])], [
+            AC_DEFINE([HAVE_CXXABI_H_CXA_EH_GLOBALS],[1])
+            AC_MSG_RESULT([yes])
+        ], [AC_MSG_RESULT([no])])
+    AC_LANG_POP([C++])
+
+    AC_MSG_CHECKING([whether $CXX defines __cxa_exceptions in cxxabi.h])
+    AC_LANG_PUSH([C++])
+    AC_COMPILE_IFELSE([AC_LANG_SOURCE([
+            #include <cstddef>
+            #include <cxxabi.h>
+            std::size_t f() { return sizeof(__cxxabiv1::__cxa_exceptions); }
+        ])], [
+            AC_DEFINE([HAVE_CXXABI_H_CXA_EXCEPTIONS],[1])
             AC_MSG_RESULT([yes])
         ], [AC_MSG_RESULT([no])])
     AC_LANG_POP([C++])
@@ -6040,7 +6075,7 @@ if test "$GCC" = "yes"; then
             #include <cxxabi.h>
             void * f() { return __cxxabiv1::__cxa_get_globals(); }
         ])], [
-            AC_DEFINE([HAVE_GCC_CXXABI_H_CXA_GET_GLOBALS],[1])
+            AC_DEFINE([HAVE_CXXABI_H_CXA_GET_GLOBALS],[1])
             AC_MSG_RESULT([yes])
         ], [AC_MSG_RESULT([no])])
     AC_LANG_POP([C++])
@@ -6051,7 +6086,31 @@ if test "$GCC" = "yes"; then
             #include <cxxabi.h>
             void f() { __cxxabiv1::__cxa_throw(0, 0, 0); }
         ])], [
-            AC_DEFINE([HAVE_GCC_CXXABI_H_CXA_THROW],[1])
+            AC_DEFINE([HAVE_CXXABI_H_CXA_THROW],[1])
+            AC_MSG_RESULT([yes])
+        ], [AC_MSG_RESULT([no])])
+    AC_LANG_POP([C++])
+
+    AC_MSG_CHECKING([whether $CXX defines __si_class_type_info in cxxabi.h])
+    AC_LANG_PUSH([C++])
+    AC_COMPILE_IFELSE([AC_LANG_SOURCE([
+            #include <cstddef>
+            #include <cxxabi.h>
+            std::size_t f() { return sizeof(__cxxabiv1::__si_class_type_info); }
+        ])], [
+            AC_DEFINE([HAVE_CXXABI_H_SI_CLASS_TYPE_INFO],[1])
+            AC_MSG_RESULT([yes])
+        ], [AC_MSG_RESULT([no])])
+    AC_LANG_POP([C++])
+
+    AC_MSG_CHECKING([whether $CXX defines __vmi_class_type_info in cxxabi.h])
+    AC_LANG_PUSH([C++])
+    AC_COMPILE_IFELSE([AC_LANG_SOURCE([
+            #include <cstddef>
+            #include <cxxabi.h>
+            std::size_t f() { return sizeof(__cxxabiv1::__vmi_class_type_info); }
+        ])], [
+            AC_DEFINE([HAVE_CXXABI_H_VMI_CLASS_TYPE_INFO],[1])
             AC_MSG_RESULT([yes])
         ], [AC_MSG_RESULT([no])])
     AC_LANG_POP([C++])
@@ -6286,11 +6345,6 @@ fi
 AC_MSG_CHECKING([whether $CXX supports C++14 constexpr])
 save_CXXFLAGS=$CXXFLAGS
 CXXFLAGS="$CXXFLAGS $CXXFLAGS_CXX11"
-if test "$ENABLE_DEBUG" != TRUE -a "$ENABLE_DBGUTIL" != TRUE \
-    -a "$ASSERT_ALWAYS_ABORT" != TRUE
-then
-    CXXFLAGS="$CXXFLAGS -DNDEBUG"
-fi
 AC_LANG_PUSH([C++])
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
     // A somewhat over-complicated way of checking for
@@ -6340,45 +6394,40 @@ if test "$cxx11_ref_qualifier" = yes; then
 fi
 
 AC_MSG_CHECKING([whether $CXX supports C++14 sized deallocation])
-if test "$CROSS_COMPILING" = TRUE; then
-    cxx14_sized_deallocation=no
-    AC_MSG_RESULT([$cxx14_sized_deallocation (assumed; cross compiling)])
-else
-    dnl At least Clang -fsanitize=address causes "multiple definition of
-    dnl `operator delete(void*, unsigned long)'" also defined in
-    dnl projects/compiler-rt/lib/asan/asan_new_delete.cc:
-    save_CXX=$CXX
-    if test "$COM_IS_CLANG" = TRUE; then
-        my_CXX=
-        for i in $CXX; do
-            case $i in
-            -fsanitize=address)
-                ;;
-            *)
-                my_CXX="$my_CXX $i"
-                ;;
-            esac
-        done
-        CXX=$my_CXX
-    fi
-    save_CXXFLAGS=$CXXFLAGS
-    CXXFLAGS="$CXXFLAGS $CXXFLAGS_CXX11"
-    AC_LANG_PUSH([C++])
-    AC_RUN_IFELSE([AC_LANG_PROGRAM([[
-        #include <cstddef>
-        #include <cstdlib>
-        void operator delete(void *) throw () { std::exit(1); }
-        void operator delete(void *, std::size_t) throw () { std::exit(0); }
-        struct S { S() { throw 0; } };
-        ]],[[
-        try { new S; } catch (...) {}
-        return 1;
-        ]])], [cxx14_sized_deallocation=yes], [cxx14_sized_deallocation=no])
-    AC_LANG_POP([C++])
-    CXX=$save_CXX
-    CXXFLAGS=$save_CXXFLAGS
-    AC_MSG_RESULT([$cxx14_sized_deallocation])
+dnl At least Clang -fsanitize=address causes "multiple definition of
+dnl `operator delete(void*, unsigned long)'" also defined in
+dnl projects/compiler-rt/lib/asan/asan_new_delete.cc:
+save_CXX=$CXX
+if test "$COM_IS_CLANG" = TRUE; then
+    my_CXX=
+    for i in $CXX; do
+        case $i in
+        -fsanitize=address)
+            ;;
+        *)
+            my_CXX="$my_CXX $i"
+            ;;
+        esac
+    done
+    CXX=$my_CXX
 fi
+save_CXXFLAGS=$CXXFLAGS
+CXXFLAGS="$CXXFLAGS $CXXFLAGS_CXX11"
+AC_LANG_PUSH([C++])
+AC_RUN_IFELSE([AC_LANG_PROGRAM([[
+    #include <cstddef>
+    #include <cstdlib>
+    void operator delete(void *) throw () { std::exit(1); }
+    void operator delete(void *, std::size_t) throw () { std::exit(0); }
+    struct S { S() { throw 0; } };
+    ]],[[
+    try { new S; } catch (...) {}
+    return 1;
+    ]])], [cxx14_sized_deallocation=yes], [cxx14_sized_deallocation=no], [cxx14_sized_deallocation=no])
+AC_LANG_POP([C++])
+CXX=$save_CXX
+CXXFLAGS=$save_CXXFLAGS
+AC_MSG_RESULT([$cxx14_sized_deallocation])
 if test "$cxx14_sized_deallocation" = yes; then
     AC_DEFINE([HAVE_CXX14_SIZED_DEALLOCATION])
 fi
@@ -6515,7 +6564,7 @@ __attribute__ ((visibility ("default"))) void TestFunc() {
   TestStruct::Init();
 }
 _ACEOF
-        if ! $CXX $CXXFLAGS $CPPFLAGS -fpic -S visibility.cxx 2>/dev/null > /dev/null; then
+        if ! $CXX $CXXFLAGS $CPPFLAGS -fpic -S visibility.cxx; then
             gccvisbroken=yes
         else
             case "$host_cpu" in
@@ -6523,7 +6572,7 @@ _ACEOF
                 if test "$_os" = "Darwin" -o "$WITH_MINGW" = "yes"; then
                     gccvisbroken=no
                 else
-                    if $EGREP -q '@PLT|@GOT' visibility.s; then
+                    if $EGREP -q '@PLT|@GOT' visibility.s || test "$ENABLE_LTO" = "TRUE"; then
                         gccvisbroken=no
                     else
                         gccvisbroken=yes
@@ -6625,7 +6674,7 @@ if test "$COM_IS_CLANG" = "TRUE"; then
         save_CXX=$CXX
         # compiler plugins must be built with "native" bitness of clang
         # because they link against clang libraries
-        CXX=`echo $CXX | sed -e s/-m64// -e s/-m32//`
+        CXX=${COMPILER_PLUGINS_CXX-$(echo $CXX | sed -e s/-m64// -e s/-m32//)}
         CPPFLAGS="$CPPFLAGS $CXXFLAGS_CXX11 -I$CLANGDIR/include -I$CLANGDIR/tools/clang/include -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS"
         AC_CHECK_HEADER(clang/AST/RecursiveASTVisitor.h,
             [COMPILER_PLUGINS=TRUE],
@@ -6647,6 +6696,7 @@ else
     fi
 fi
 AC_SUBST(COMPILER_PLUGINS)
+AC_SUBST(COMPILER_PLUGINS_CXX)
 AC_SUBST(CLANGDIR)
 
 # Plugin to help linker.
@@ -6907,7 +6957,7 @@ dnl ===================================================================
 dnl Set target Java bytecode version
 dnl ===================================================================
 if test "$ENABLE_JAVA" != ""; then
-    if test "$HAVE_JAVA9" == "TRUE"; then
+    if test "$HAVE_JAVA9" = "TRUE"; then
         _java_target_ver="1.6"
     else
         _java_target_ver="1.5"
@@ -7017,7 +7067,7 @@ if test "$ENABLE_JAVA" != ""; then
             add_warning "JAVA_HOME is set to /usr - this is very likely to be incorrect"
             add_warning "if this is the case, please inform the correct JAVA_HOME with --with-jdk-home"
         fi
-        dnl now that we have the path to the real javac, make a JAVA_HOME out of it..
+        dnl now that we probably have the path to the real javac, make a JAVA_HOME out of it..
         if test "$JAVA_HOME" != "/usr"; then
             if test "$_os" = "Darwin" -o "$OS_FOR_BUILD" = MACOSX; then
                 dnl Leopard returns a non-suitable path with readlink - points to "Current" only
@@ -7026,6 +7076,11 @@ if test "$ENABLE_JAVA" != ""; then
                 JAVA_HOME=$(echo $JAVA_HOME | $SED -e s,/CurrentJDK/Commands/javac$,/CurrentJDK/Home,)
             else
                 JAVA_HOME=$(echo $JAVA_HOME | $SED -e s,/bin/javac$,,)
+                dnl check that we have a directory as certain distros eg gentoo substitute javac for a script
+                dnl that checks which version to run
+                if test -f "$JAVA_HOME"; then
+                    JAVA_HOME=""; # set JAVA_HOME to null if it's a file
+                fi
             fi
         fi
     fi
@@ -7181,6 +7236,7 @@ if test -n "$ENABLE_JAVA" -a -z "$JAVAINC"; then
 
     k*bsd*-gnu*)
         JAVAINC="-I$JAVA_HOME/include"
+        JAVAINC="$JAVAINC -I$JAVA_HOME/include/linux"
         test -d "$JAVA_HOME/include/native_thread" && JAVAINC="$JAVAINC -I$JAVA_HOME/include/native_thread"
         ;;
 
@@ -7533,7 +7589,7 @@ if test "$with_system_zlib" = "yes"; then
         # Emscripten provides its own zlib, don't check for that
         AC_CHECK_HEADER(zlib.h, [],
             [AC_MSG_ERROR(zlib.h not found. install zlib)], [])
-        AC_CHECK_LIB(z, deflate, [ ZLIB=-lz ],
+        AC_CHECK_LIB(z, deflate, [ ZLIB_LIBS=-lz ],
             [AC_MSG_ERROR(zlib not found or functional)], [])
     fi
 else
@@ -7709,12 +7765,14 @@ libo_CHECK_SYSTEM_MODULE([librevenge],[REVENGE],[librevenge-0.0 >= 0.0.1],["-I${
 dnl ===================================================================
 dnl Check for system libe-book
 dnl ===================================================================
-libo_CHECK_SYSTEM_MODULE([libebook],[EBOOK],[libe-book-0.1 >= 0.1.1])
+libo_CHECK_SYSTEM_MODULE([libebook],[EBOOK],[libe-book-0.1])
+libo_PKG_VERSION([EBOOK], [libe-book-0.1], [0.1.2])
 
 dnl ===================================================================
 dnl Check for system libetonyek
 dnl ===================================================================
-libo_CHECK_SYSTEM_MODULE([libetonyek],[ETONYEK],[libetonyek-0.1 >= 0.1.4])
+libo_CHECK_SYSTEM_MODULE([libetonyek],[ETONYEK],[libetonyek-0.1])
+libo_PKG_VERSION([ETONYEK], [libetonyek-0.1], [0.1.5])
 
 dnl ===================================================================
 dnl Check for system libfreehand
@@ -7739,7 +7797,8 @@ libo_CHECK_SYSTEM_MODULE([libmspub],[MSPUB],[libmspub-0.1])
 dnl ===================================================================
 dnl Check for system libmwaw
 dnl ===================================================================
-libo_CHECK_SYSTEM_MODULE([libmwaw],[MWAW],[libmwaw-0.3 >= 0.3.6])
+libo_CHECK_SYSTEM_MODULE([libmwaw],[MWAW],[libmwaw-0.3 >= 0.3.1])
+libo_PKG_VERSION([MWAW], [libmwaw-0.3], [0.3.7])
 
 dnl ===================================================================
 dnl Check for system libpagemaker
@@ -7832,7 +7891,8 @@ libo_CHECK_SYSTEM_MODULE([libabw],[ABW],[libabw-0.1])
 dnl ===================================================================
 dnl Check for system libwps
 dnl ===================================================================
-libo_CHECK_SYSTEM_MODULE([libwps],[WPS],[libwps-0.4 >= 0.4.2])
+libo_CHECK_SYSTEM_MODULE([libwps],[WPS],[libwps-0.4])
+libo_PKG_VERSION([WPS], [libwps-0.4], [0.4.3])
 
 dnl ===================================================================
 dnl Check for system libwpg
@@ -8125,32 +8185,30 @@ case $enable_python in
 system)
     SYSTEM_PYTHON=TRUE
 
-    if test "$CROSS_COMPILING" != TRUE; then
-        dnl Check if the headers really work
-        save_CPPFLAGS="$CPPFLAGS"
-        CPPFLAGS="$CPPFLAGS $PYTHON_CFLAGS"
-        AC_CHECK_HEADER(Python.h, [],
-           [AC_MSG_ERROR([Python headers not found. You probably want to set both the PYTHON_CFLAGS and PYTHON_LIBS environment variables.])],
-           [])
-        CPPFLAGS="$save_CPPFLAGS"
+    dnl Check if the headers really work
+    save_CPPFLAGS="$CPPFLAGS"
+    CPPFLAGS="$CPPFLAGS $PYTHON_CFLAGS"
+    AC_CHECK_HEADER(Python.h, [],
+       [AC_MSG_ERROR([Python headers not found. You probably want to set both the PYTHON_CFLAGS and PYTHON_LIBS environment variables.])],
+       [])
+    CPPFLAGS="$save_CPPFLAGS"
 
-        AC_LANG_PUSH(C)
-        CFLAGS="$CFLAGS $PYTHON_CFLAGS"
-        AC_MSG_CHECKING([for correct python library version])
-           AC_RUN_IFELSE([AC_LANG_SOURCE([[
+    AC_LANG_PUSH(C)
+    CFLAGS="$CFLAGS $PYTHON_CFLAGS"
+    AC_MSG_CHECKING([for correct python library version])
+       AC_RUN_IFELSE([AC_LANG_SOURCE([[
 #include <Python.h>
 
 int main(int argc, char **argv) {
-       if ((PY_MAJOR_VERSION == 2 && PY_MINOR_VERSION >= 6) ||
-           (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 3)) return 0;
-       else return 1;
+   if ((PY_MAJOR_VERSION == 2 && PY_MINOR_VERSION >= 6) ||
+       (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 3)) return 0;
+   else return 1;
 }
-           ]])],[AC_MSG_RESULT([ok])],[AC_MSG_ERROR([Python >= 3.3 is needed when building with Python 3, or Python >= 2.6 when building with Python 2])],[])
-        CFLAGS=$save_CFLAGS
-        AC_LANG_POP(C)
+       ]])],[AC_MSG_RESULT([ok])],[AC_MSG_ERROR([Python >= 3.3 is needed when building with Python 3, or Python >= 2.6 when building with Python 2])],[AC_MSG_RESULT([skipped; cross-compiling])])
+    CFLAGS=$save_CFLAGS
+    AC_LANG_POP(C)
 
-        dnl FIXME Check if the Python library can be linked with, too?
-    fi
+    dnl FIXME Check if the Python library can be linked with, too?
     ;;
 
 internal)
@@ -8332,7 +8390,7 @@ int main(int argc, char **argv) {
       else
         return 1;
 }
-      ]])],[AC_MSG_RESULT(OK)],[AC_MSG_ERROR([not suitable, we need >= 1.0.6])],[])
+      ]])],[AC_MSG_RESULT(OK)],[AC_MSG_ERROR([not suitable, we need >= 1.0.6])],[AC_MSG_ERROR([MySQL C++ Connecter not tested with cross-compilation])])
 
         AC_LANG_POP([C++])
         LIBS=$save_LIBS
@@ -8357,8 +8415,9 @@ if test "$with_java" != "no"; then
         if test -z $HSQLDB_JAR; then
             HSQLDB_JAR=/usr/share/java/hsqldb.jar
         fi
-        AC_CHECK_FILE($HSQLDB_JAR, [],
-               [AC_MSG_ERROR(hsqldb.jar not found.)], [])
+        if ! test -f $HSQLDB_JAR; then
+               AC_MSG_ERROR(hsqldb.jar not found.)
+        fi
         AC_MSG_CHECKING([whether hsqldb is 1.8.0.x])
         export HSQLDB_JAR
         if $PERL -e \
@@ -8569,14 +8628,6 @@ dnl ===================================================================
 dnl Check for Firebird stuff
 dnl ===================================================================
 ENABLE_FIREBIRD_SDBC=""
-if test -z "$enable_firebird_sdbc" ; then
-    if test "$_os" = "Darwin" -a ${MACOSX_SDK_VERSION:-0} -ge 101100 ; then
-        AC_MSG_NOTICE([firebird does not build on 10.11.. default to --disable-firebird-sdbc ])
-        enable_firebird_sdbc="no"
-    else
-        enable_firebird_sdbc="yes"
-    fi
-fi
 if test "$enable_firebird_sdbc" = "yes" ; then
     SCPDEFS="$SCPDEFS -DWITH_FIREBIRD_SDBC"
 
@@ -8740,6 +8791,7 @@ if test "$with_system_boost" = "yes"; then
     SYSTEM_BOOST=TRUE
     AX_BOOST_BASE(1.47)
     AX_BOOST_DATE_TIME
+    AX_BOOST_FILESYSTEM
     AX_BOOST_IOSTREAMS
     mingw_boost_date_time_dll=`echo $BOOST_DATE_TIME_LIB | sed -e 's/^-l//' -e 's/\.dll$//'`
     libo_MINGW_TRY_DLL([$mingw_boost_date_time_dll])
@@ -8756,11 +8808,6 @@ if test "$with_system_boost" = "yes"; then
        [AC_MSG_ERROR(boost/spirit/include/classic_core.hpp not found. install boost >= 1.36)], [])
     AC_CHECK_HEADER(boost/function.hpp, [],
        [AC_MSG_ERROR(boost/function.hpp not found. install boost)], [])
-    AC_MSG_CHECKING([whether boost signals2 works])
-    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <boost/signals2/signal.hpp>]],
-        [[ boost::signals2::signal<void()> s; s(); ]])],
-        [AC_MSG_RESULT([yes])],
-        [AC_MSG_ERROR([no, install boost >= 1.55 or use --without-system-boost])])
     CXXFLAGS="$CXXFLAGS -fno-exceptions"
     AC_MSG_CHECKING([whether boost/function.hpp compiles with -fno-exceptions])
     AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <boost/function.hpp>
@@ -8785,7 +8832,7 @@ AC_SUBST(SYSTEM_BOOST)
 dnl ===================================================================
 dnl Check for system mdds
 dnl ===================================================================
-libo_CHECK_SYSTEM_MODULE([mdds], [MDDS], [mdds-1.0 >= 1.0.0], ["-I${WORKDIR}/UnpackedTarball/mdds/include"])
+libo_CHECK_SYSTEM_MODULE([mdds], [MDDS], [mdds-1.0 >= 1.1.0], ["-I${WORKDIR}/UnpackedTarball/mdds/include"])
 
 dnl ===================================================================
 dnl Check for system glm
@@ -8824,24 +8871,6 @@ if test $_os = WINNT; then
 fi
 
 dnl ===================================================================
-dnl Check for system vigra
-dnl ===================================================================
-AC_MSG_CHECKING([which vigra to use])
-if test "$with_system_vigra" = "yes"; then
-    AC_MSG_RESULT([external])
-    SYSTEM_VIGRA=TRUE
-    AC_LANG_PUSH([C++])
-    AC_CHECK_HEADER(vigra/copyimage.hxx, [],
-       [AC_MSG_ERROR(vigra/copyimage.hxx not found. install vigra)], [])
-    AC_LANG_POP([C++])
-else
-    AC_MSG_RESULT([internal])
-    BUILD_TYPE="$BUILD_TYPE VIGRA"
-    SYSTEM_VIGRA=
-fi
-AC_SUBST(SYSTEM_VIGRA)
-
-dnl ===================================================================
 dnl Check for system odbc
 dnl ===================================================================
 AC_MSG_CHECKING([which odbc headers to use])
@@ -8853,7 +8882,7 @@ if test "$with_system_odbc" = "yes" -o '(' "$with_system_headers" = "yes" -a "$w
         save_CPPFLAGS=$CPPFLAGS
         find_winsdk
         PathFormat "$winsdktest"
-        CPPFLAGS="$CPPFLAGS -I$formatted_path/include/um -I$formatted_path/Include/$winsdklibsubdir/um -I$formatted_path/include -I$formatted_path/include/shared"
+        CPPFLAGS="$CPPFLAGS -I$formatted_path/include/um -I$formatted_path/Include/$winsdklibsubdir/um -I$formatted_path/include -I$formatted_path/include/shared -I$formatted_path/include/$winsdklibsubdir/shared"
         AC_CHECK_HEADER(sqlext.h, [],
             [AC_MSG_ERROR(odbc not found. install odbc)],
             [#include <windows.h>])
@@ -8948,60 +8977,6 @@ if test "$with_system_nss" = "yes"; then
     libo_MINGW_CHECK_DLL([ssl3])
 fi
 
-if test $_os = WINNT -a -z "$ENABLE_RELEASE_BUILD" -a "$with_prebuilt_openssl" = yes; then
-    BUILD_TYPE="$BUILD_TYPE PREBUILT_OPENSSL"
-fi
-
-dnl ===================================================================
-dnl Check for system mozilla headers
-dnl ===================================================================
-HAVE_NON_CONST_NPP_GETMIMEDESCRIPTION=
-AC_MSG_CHECKING([which NPAPI headers to use])
-
-if test "$with_system_npapi_headers" = "yes"; then
-    AC_MSG_RESULT([external])
-    SYSTEM_NPAPI_HEADERS=TRUE
-    # First try npapi-sdk:
-    PKG_CHECK_MODULES(NPAPI_HEADERS, npapi-sdk, [LOCATED=yes], [LOCATED=no])
-    # Then go with libxul:
-    if test "x$LOCATED" != "xyes"; then
-        PKG_CHECK_MODULES(NPAPI_HEADERS, libxul, [LOCATED=yes], [LOCATED=no])
-    fi
-    if test "x$LOCATED" != "xyes"; then
-        PKG_CHECK_MODULES(NPAPI_HEADERS, mozilla-plugin, [LOCATED=yes], [LOCATED=no])
-    fi
-    # if still not found bail out
-    if test "x$LOCATED" != "xyes"; then
-        AC_MSG_ERROR([npapi.h header file not found])
-    fi
-
-    AC_LANG_PUSH([C])
-    save_CFLAGS=$CFLAGS
-    CFLAGS="$CFLAGS $NPAPI_HEADERS_CFLAGS"
-    AC_MSG_CHECKING([for NPP_GetMIMEDescription return type])
-    AC_COMPILE_IFELSE(
-        [AC_LANG_SOURCE([[
-            #define XP_UNIX
-            #include <npapi.h>
-            const char* NPP_GetMIMEDescription(void) { return "foo"; }
-            ]])],
-        [AC_MSG_RESULT([const char*])],
-        [
-        AC_MSG_RESULT([char*])
-        HAVE_NON_CONST_NPP_GETMIMEDESCRIPTION=TRUE
-        ])
-    CFLAGS=$save_CFLAGS
-    AC_LANG_POP([C])
-    NPAPI_HEADERS_CFLAGS=$(printf '%s' "$NPAPI_HEADERS_CFLAGS" | sed -e "s/-I/${ISYSTEM?}/g")
-else
-    AC_MSG_RESULT([internal])
-        dnl ...but will not be built/used unless ENABLE_NPAPI_FROM_BROWSER
-    SYSTEM_NPAPI_HEADERS=
-fi
-AC_SUBST(NPAPI_HEADERS_CFLAGS)
-AC_SUBST(SYSTEM_NPAPI_HEADERS)
-AC_SUBST(HAVE_NON_CONST_NPP_GETMIMEDESCRIPTION)
-
 dnl ===================================================================
 dnl Check for system sane
 dnl ===================================================================
@@ -9022,7 +8997,7 @@ SYSTEM_GENBRK=
 SYSTEM_GENCCODE=
 SYSTEM_GENCMN=
 
-ICU_MAJOR=56
+ICU_MAJOR=57
 ICU_MINOR=1
 ICU_RECLASSIFIED_PREPEND_SET_EMPTY="TRUE"
 ICU_RECLASSIFIED_CONDITIONAL_JAPANESE_STARTER="TRUE"
@@ -9148,6 +9123,21 @@ else
 fi
 AC_SUBST(ENABLE_GRAPHITE)
 
+dnl ==================================================================
+dnl Breakpad
+dnl ==================================================================
+AC_MSG_CHECKING([whether to enable breakpad])
+if test "$enable_breakpad" != yes; then
+    AC_MSG_RESULT([no])
+else
+    AC_MSG_RESULT([yes])
+    ENABLE_BREAKPAD="TRUE"
+    AC_DEFINE(ENABLE_BREAKPAD)
+    AC_DEFINE(HAVE_FEATURE_BREAKPAD, 1)
+    BUILD_TYPE="$BUILD_TYPE BREAKPAD"
+fi
+AC_SUBST(ENABLE_BREAKPAD)
+
 dnl ===================================================================
 dnl Orcus
 dnl ===================================================================
@@ -9158,7 +9148,7 @@ if test -z "$enable_orcus" -o "$enable_orcus" != no; then
     ENABLE_ORCUS="TRUE"
     AC_DEFINE(ENABLE_ORCUS)
 
-    libo_CHECK_SYSTEM_MODULE([orcus],[ORCUS],[liborcus-0.10 >= 0.9.0])
+    libo_CHECK_SYSTEM_MODULE([orcus],[ORCUS],[liborcus-0.11 >= 0.11.0])
     if test "$with_system_orcus" != "yes"; then
         if test "$SYSTEM_BOOST" = "TRUE"; then
             # ===========================================================
@@ -9211,23 +9201,6 @@ else
 fi
 AC_SUBST(ENABLE_HARFBUZZ)
 
-dnl ===================================================================
-dnl Check for NPAPI interface to plug browser plugins into LibreOffice documents
-dnl ===================================================================
-AC_MSG_CHECKING([whether to plug browser plugins into LibreOffice documents])
-# Obviously no such thing on iOS or Android. Also not possible when building
-# 64-bit OS X code as the plugin code uses QuickTime and Carbon.
-if test "$_os" != Android -a "$_os" != iOS -a $_os != Darwin -a \
-        "$with_x" != "no" -a "$enable_mpl_subset" != yes
-then
-    AC_MSG_RESULT([yes])
-    ENABLE_NPAPI_FROM_BROWSER=TRUE
-else
-    AC_MSG_RESULT([no])
-    ENABLE_NPAPI_FROM_BROWSER=
-fi
-AC_SUBST(ENABLE_NPAPI_FROM_BROWSER)
-
 AC_MSG_CHECKING([whether to use X11])
 dnl ***************************************
 dnl testing for X libraries and includes...
@@ -9262,10 +9235,6 @@ if test "$USING_X11" = TRUE; then
     dnl ===================================================================
     AC_CHECK_HEADERS(X11/Composite.h,[],[AC_MSG_ERROR([Xt headers not found])],
      [#include <X11/Intrinsic.h>])
-
-    # ENABLE_NPAPI_FROM_BROWSER requires Xt library
-    AC_CHECK_LIB([Xt], [XtToolkitInitialize], [:],
-        [AC_MSG_ERROR(Xt library not found)])
 
     dnl ===================================================================
     dnl Check for extension headers
@@ -9307,31 +9276,24 @@ dnl Check for XRandr
 dnl ===================================================================
 AC_MSG_CHECKING([whether to enable RandR support])
 if test "$USING_X11" = TRUE -a "$test_randr" = "yes" -a \( "$enable_randr" = "yes" -o "$enable_randr" = "TRUE" \); then
-    if test -z "$enable_randr_link" -o "$enable_randr_link" = "no"; then
-        XRANDR_DLOPEN="TRUE"
-        AC_MSG_RESULT([configured to dlopen libXrandr at runtime])
-    else
-        AC_MSG_RESULT([yes])
-        XRANDR_DLOPEN="FALSE"
-        PKG_CHECK_MODULES(XRANDR, xrandr >= 1.2, ENABLE_RANDR="TRUE", ENABLE_RANDR="")
-        if test "$ENABLE_RANDR" != "TRUE"; then
-            AC_CHECK_HEADER(X11/extensions/Xrandr.h, [],
-                        [AC_MSG_ERROR([X11/extensions/Xrandr.h could not be found. X11 dev missing?])], [])
-            XRANDR_CFLAGS=" "
-            AC_CHECK_LIB([Xrandr], [XRRQueryExtension], [:],
-              [ AC_MSG_ERROR(libXrandr not found or functional) ], [])
-            XRANDR_LIBS="-lXrandr "
-            ENABLE_RANDR="TRUE"
-        fi
-        XRANDR_CFLAGS=$(printf '%s' "$XRANDR_CFLAGS" | sed -e "s/-I/${ISYSTEM?}/g")
-        FilterLibs "${XRANDR_LIBS}"
-        XRANDR_LIBS="${filteredlibs}"
+    AC_MSG_RESULT([yes])
+    PKG_CHECK_MODULES(XRANDR, xrandr >= 1.2, ENABLE_RANDR="TRUE", ENABLE_RANDR="")
+    if test "$ENABLE_RANDR" != "TRUE"; then
+        AC_CHECK_HEADER(X11/extensions/Xrandr.h, [],
+                    [AC_MSG_ERROR([X11/extensions/Xrandr.h could not be found. X11 dev missing?])], [])
+        XRANDR_CFLAGS=" "
+        AC_CHECK_LIB([Xrandr], [XRRQueryExtension], [:],
+          [ AC_MSG_ERROR(libXrandr not found or functional) ], [])
+        XRANDR_LIBS="-lXrandr "
+        ENABLE_RANDR="TRUE"
     fi
+    XRANDR_CFLAGS=$(printf '%s' "$XRANDR_CFLAGS" | sed -e "s/-I/${ISYSTEM?}/g")
+    FilterLibs "${XRANDR_LIBS}"
+    XRANDR_LIBS="${filteredlibs}"
 else
     ENABLE_RANDR=""
     AC_MSG_RESULT([no])
 fi
-AC_SUBST(XRANDR_DLOPEN)
 AC_SUBST(XRANDR_CFLAGS)
 AC_SUBST(XRANDR_LIBS)
 AC_SUBST(ENABLE_RANDR)
@@ -9530,7 +9492,7 @@ if test "$with_system_hunspell" = "yes"; then
         HUNSPELL_LIBS=-lhunspell
     fi
     AC_LANG_POP([C++])
-    libo_MINGW_CHECK_DLL([libhunspell-1.3])
+    libo_MINGW_CHECK_DLL([libhunspell-1.4])
     HUNSPELL_CFLAGS=$(printf '%s' "$HUNSPELL_CFLAGS" | sed -e "s/-I/${ISYSTEM?}/g")
     FilterLibs "${HUNSPELL_LIBS}"
     HUNSPELL_LIBS="${filteredlibs}"
@@ -9541,7 +9503,7 @@ else
     if test "$COM" = "MSC"; then
         HUNSPELL_LIBS="${WORKDIR}/LinkTarget/StaticLibrary/hunspell.lib"
     else
-        HUNSPELL_LIBS="-L${WORKDIR}/UnpackedTarball/hunspell/src/hunspell/.libs -lhunspell-1.3"
+        HUNSPELL_LIBS="-L${WORKDIR}/UnpackedTarball/hunspell/src/hunspell/.libs -lhunspell-1.4"
     fi
     BUILD_TYPE="$BUILD_TYPE HUNSPELL"
 fi
@@ -10106,13 +10068,6 @@ if test "x$enable_kde4" = "xyes"; then
 fi
 AC_SUBST(ENABLE_KDE4)
 
-ENABLE_HEADLESS=""
-if test "x$with_x" = "xno" -o "$CXX" = "emcc"; then
-    ENABLE_HEADLESS="TRUE"
-    SCPDEFS="$SCPDEFS -DLIBO_HEADLESS"
-    R="headless"
-fi
-AC_SUBST(ENABLE_HEADLESS)
 
 build_vcl_plugins="$R"
 if test -z "$build_vcl_plugins"; then
@@ -10136,6 +10091,7 @@ if test "$test_dbus" = "yes"; then
     ENABLE_DBUS="TRUE"
     AC_MSG_RESULT([yes])
     PKG_CHECK_MODULES(DBUS, dbus-glib-1 >= 0.70)
+    AC_DEFINE(ENABLE_DBUS)
     DBUS_CFLAGS=$(printf '%s' "$DBUS_CFLAGS" | sed -e "s/-I/${ISYSTEM?}/g")
     FilterLibs "${DBUS_LIBS}"
     DBUS_LIBS="${filteredlibs}"
@@ -10146,20 +10102,6 @@ fi
 AC_SUBST(ENABLE_DBUS)
 AC_SUBST(DBUS_CFLAGS)
 AC_SUBST(DBUS_LIBS)
-
-AC_MSG_CHECKING([whether to enable font install via packagekit])
-if test "$ENABLE_DBUS" = "TRUE"; then
-    if test -n "$enable_packagekit" -a "$enable_packagekit" != "no"; then
-        ENABLE_PACKAGEKIT=TRUE
-        AC_MSG_RESULT([yes])
-    else
-        ENABLE_PACKAGEKIT=
-        AC_MSG_RESULT([no])
-    fi
-else
-    AC_MSG_RESULT([no, dbus disabled.])
-fi
-AC_SUBST(ENABLE_PACKAGEKIT)
 
 AC_MSG_CHECKING([whether to enable Impress remote control])
 if test -n "$enable_sdremote" -a "$enable_sdremote" != "no"; then
@@ -10412,15 +10354,19 @@ if test $_os = iOS -o $_os = Android; then
 elif test "$_os" = "Darwin"; then
     # We use frameworks on Mac OS X, no need for detail checks
     ENABLE_OPENGL=TRUE
+    AC_DEFINE(HAVE_FEATURE_OPENGL,1)
     ENABLE_OPENGL_CANVAS=TRUE
 elif test $_os = WINNT; then
     ENABLE_OPENGL=TRUE
+    AC_DEFINE(HAVE_FEATURE_OPENGL,1)
     ENABLE_OPENGL_CANVAS=TRUE
 else
     if test "$USING_X11" = TRUE; then
+        AC_CHECK_LIB(GL, glBegin, [:], AC_MSG_ERROR([libGL required.]))
         ENABLE_OPENGL=TRUE
+        AC_DEFINE(HAVE_FEATURE_OPENGL,1)
+        ENABLE_OPENGL_CANVAS=TRUE
     fi
-    ENABLE_OPENGL_CANVAS=TRUE
 fi
 
 AC_SUBST(ENABLE_OPENGL)
@@ -10442,7 +10388,7 @@ dnl Check whether to enable glTF support
 dnl ===================================================================
 AC_MSG_CHECKING([whether to enable glTF support])
 ENABLE_GLTF=
-if test "x$enable_gltf" != "xno" -a $_os != iOS -a $_os != Android; then
+if test "x$enable_gltf" != "xno" -a $_os != iOS -a $_os != Android -a "$ENABLE_HEADLESS" = ""; then
     ENABLE_GLTF=TRUE
     AC_MSG_RESULT([yes])
     AC_DEFINE(HAVE_FEATURE_GLTF,1)
@@ -10639,157 +10585,128 @@ if test "$enable_report_builder" != "no" -a "$with_java" != "no"; then
         if test -z $SAC_JAR; then
             SAC_JAR=/usr/share/java/sac.jar
         fi
-        AC_CHECK_FILE($SAC_JAR, [],
-             [AC_MSG_ERROR(sac.jar not found.)], [])
+        if ! test -f $SAC_JAR; then
+             AC_MSG_ERROR(sac.jar not found.)
+        fi
 
         if test -z $LIBXML_JAR; then
-            AC_CHECK_FILE(/usr/share/java/libxml-1.0.0.jar,
-                [ LIBXML_JAR=/usr/share/java/libxml-1.0.0.jar ],
-                [
-                    AC_CHECK_FILE(/usr/share/java/libxml.jar,
-                       [ LIBXML_JAR=/usr/share/java/libxml.jar ],
-                       [AC_MSG_ERROR(libxml.jar replacement not found.)]
-                    )
-                ]
-            )
-        else
-            AC_CHECK_FILE($LIBXML_JAR, [],
-                 [AC_MSG_ERROR(libxml.jar not found.)], [])
+            if test -f /usr/share/java/libxml-1.0.0.jar; then
+                LIBXML_JAR=/usr/share/java/libxml-1.0.0.jar
+            elif test -f /usr/share/java/libxml.jar; then
+                LIBXML_JAR=/usr/share/java/libxml.jar
+            else
+                AC_MSG_ERROR(libxml.jar replacement not found.)
+            fi
+        elif ! test -f $LIBXML_JAR; then
+            AC_MSG_ERROR(libxml.jar not found.)
         fi
 
         if test -z $FLUTE_JAR; then
-            AC_CHECK_FILE(/usr/share/java/flute-1.3.0.jar,
-                [ FLUTE_JAR=/usr/share/java/flute-1.3.0.jar ],
-                [
-                    AC_CHECK_FILE(/usr/share/java/flute.jar,
-                        [ FLUTE_JAR=/usr/share/java/flute.jar ],
-                        [ AC_MSG_ERROR(flute-1.3.0.jar replacement not found.)]
-                    )
-                ]
-            )
-        else
-            AC_CHECK_FILE($FLUTE_JAR, [],
-                 [AC_MSG_ERROR(flute-1.3.0.jar not found.)], [])
+            if test -f/usr/share/java/flute-1.3.0.jar; then
+                FLUTE_JAR=/usr/share/java/flute-1.3.0.jar
+            elif test -f /usr/share/java/flute.jar; then
+                FLUTE_JAR=/usr/share/java/flute.jar
+            else
+                AC_MSG_ERROR(flute-1.3.0.jar replacement not found.)
+            fi
+        elif ! test -f $FLUTE_JAR; then
+            AC_MSG_ERROR(flute-1.3.0.jar not found.)
         fi
 
         if test -z $JFREEREPORT_JAR; then
-            AC_CHECK_FILE(/usr/share/java/flow-engine-0.9.2.jar,
-                [ JFREEREPORT_JAR=/usr/share/java/flow-engine-0.9.2.jar ],
-                [
-                    AC_CHECK_FILE(/usr/share/java/flow-engine.jar,
-                        [ JFREEREPORT_JAR=/usr/share/java/flow-engine.jar ],
-                        [AC_MSG_ERROR(jfreereport.jar replacement not found.)]
-                    )
-                ]
-            )
-        else
-            AC_CHECK_FILE($JFREEREPORT_JAR, [],
-                 [AC_MSG_ERROR(jfreereport.jar not found.)], [])
+            if test -f /usr/share/java/flow-engine-0.9.2.jar; then
+                JFREEREPORT_JAR=/usr/share/java/flow-engine-0.9.2.jar
+            elif test -f /usr/share/java/flow-engine.jar; then
+                JFREEREPORT_JAR=/usr/share/java/flow-engine.jar
+            else
+                AC_MSG_ERROR(jfreereport.jar replacement not found.)
+            fi
+        elif ! test -f  $JFREEREPORT_JAR; then
+                AC_MSG_ERROR(jfreereport.jar not found.)
         fi
 
         if test -z $LIBLAYOUT_JAR; then
-            AC_CHECK_FILE(/usr/share/java/liblayout-0.2.9.jar,
-                [ LIBLAYOUT_JAR=/usr/share/java/liblayout-0.2.9.jar ],
-                [
-                    AC_CHECK_FILE(/usr/share/java/liblayout.jar,
-                        [ LIBLAYOUT_JAR=/usr/share/java/liblayout.jar ],
-                        [AC_MSG_ERROR(liblayout.jar replacement not found.)]
-                    )
-                ]
-            )
-        else
-            AC_CHECK_FILE($LIBLAYOUT_JAR, [],
-                 [AC_MSG_ERROR(liblayout.jar not found.)], [])
+            if test -f /usr/share/java/liblayout-0.2.9.jar; then
+                LIBLAYOUT_JAR=/usr/share/java/liblayout-0.2.9.jar
+            elif test -f /usr/share/java/liblayout.jar; then
+                LIBLAYOUT_JAR=/usr/share/java/liblayout.jar
+            else
+                AC_MSG_ERROR(liblayout.jar replacement not found.)
+            fi
+        elif ! test -f $LIBLAYOUT_JAR; then
+                AC_MSG_ERROR(liblayout.jar not found.)
         fi
 
         if test -z $LIBLOADER_JAR; then
-            AC_CHECK_FILE(/usr/share/java/libloader-1.0.0.jar,
-                [ LIBLOADER_JAR=/usr/share/java/libloader-1.0.0.jar ],
-                [
-                    AC_CHECK_FILE(/usr/share/java/libloader.jar,
-                       [ LIBLOADER_JAR=/usr/share/java/libloader.jar ],
-                       [AC_MSG_ERROR(libloader.jar replacement not found.)]
-                    )
-                ]
-            )
-        else
-            AC_CHECK_FILE($LIBLOADER_JAR, [],
-                [AC_MSG_ERROR(libloader.jar not found.)], [])
+            if test -f /usr/share/java/libloader-1.0.0.jar; then
+                LIBLOADER_JAR=/usr/share/java/libloader-1.0.0.jar
+            elif test -f /usr/share/java/libloader.jar; then
+                LIBLOADER_JAR=/usr/share/java/libloader.jar
+            else
+                AC_MSG_ERROR(libloader.jar replacement not found.)
+            fi
+        elif ! test -f  $LIBLOADER_JAR; then
+            AC_MSG_ERROR(libloader.jar not found.)
         fi
 
         if test -z $LIBFORMULA_JAR; then
-            AC_CHECK_FILE(/usr/share/java/libformula-0.2.0.jar,
-                 [ LIBFORMULA_JAR=/usr/share/java/libformula-0.2.0.jar ],
-                 [
-                     AC_CHECK_FILE(/usr/share/java/libformula.jar,
-                         [ LIBFORMULA_JAR=/usr/share/java/libformula.jar ],
-                         [AC_MSG_ERROR(libformula.jar replacement not found.)]
-                     )
-                 ]
-            )
-        else
-            AC_CHECK_FILE($LIBFORMULA_JAR, [],
-                [AC_MSG_ERROR(libformula.jar not found.)], [])
+            if test -f /usr/share/java/libformula-0.2.0.jar; then
+                LIBFORMULA_JAR=/usr/share/java/libformula-0.2.0.jar
+            elif test -f /usr/share/java/libformula.jar; then
+                LIBFORMULA_JAR=/usr/share/java/libformula.jar
+            else
+                AC_MSG_ERROR(libformula.jar replacement not found.)
+            fi
+        elif ! test -f $LIBFORMULA_JAR; then
+                AC_MSG_ERROR(libformula.jar not found.)
         fi
 
         if test -z $LIBREPOSITORY_JAR; then
-            AC_CHECK_FILE(/usr/share/java/librepository-1.0.0.jar,
-                [ LIBREPOSITORY_JAR=/usr/share/java/librepository-1.0.0.jar ],
-                [
-                    AC_CHECK_FILE(/usr/share/java/librepository.jar,
-                        [ LIBREPOSITORY_JAR=/usr/share/java/librepository.jar ],
-                        [AC_MSG_ERROR(librepository.jar replacement not found.)]
-                    )
-                ]
-            )
-        else
-            AC_CHECK_FILE($LIBREPOSITORY_JAR, [],
-                [AC_MSG_ERROR(librepository.jar not found.)], [])
+            if test -f /usr/share/java/librepository-1.0.0.jar; then
+                LIBREPOSITORY_JAR=/usr/share/java/librepository-1.0.0.jar
+            elif test -f /usr/share/java/librepository.jar; then
+                LIBREPOSITORY_JAR=/usr/share/java/librepository.jar
+            else
+                AC_MSG_ERROR(librepository.jar replacement not found.)
+            fi
+        elif ! test -f $LIBREPOSITORY_JAR; then
+            AC_MSG_ERROR(librepository.jar not found.)
         fi
 
         if test -z $LIBFONTS_JAR; then
-            AC_CHECK_FILE(/usr/share/java/libfonts-1.0.0.jar,
-                [ LIBFONTS_JAR=/usr/share/java/libfonts-1.0.0.jar ],
-                [
-                    AC_CHECK_FILE(/usr/share/java/libfonts.jar,
-                        [ LIBFONTS_JAR=/usr/share/java/libfonts.jar ],
-                        [AC_MSG_ERROR(libfonts.jar replacement not found.)]
-                    )
-                ]
-            )
-        else
-            AC_CHECK_FILE($LIBFONTS_JAR, [],
-                [AC_MSG_ERROR(libfonts.jar not found.)], [])
+            if test -f /usr/share/java/libfonts-1.0.0.jar; then
+                LIBFONTS_JAR=/usr/share/java/libfonts-1.0.0.jar
+            elif test -f /usr/share/java/libfonts.jar; then
+                LIBFONTS_JAR=/usr/share/java/libfonts.jar
+            else
+                AC_MSG_ERROR(libfonts.jar replacement not found.)
+            fi
+        elif ! test -f $LIBFONTS_JAR; then
+                AC_MSG_ERROR(libfonts.jar not found.)
         fi
 
         if test -z $LIBSERIALIZER_JAR; then
-            AC_CHECK_FILE(/usr/share/java/libserializer-1.0.0.jar,
-                [ LIBSERIALIZER_JAR=/usr/share/java/libserializer-1.0.0.jar ],
-                [
-                    AC_CHECK_FILE(/usr/share/java/libserializer.jar,
-                        [ LIBSERIALIZER_JAR=/usr/share/java/libserializer.jar ],
-                        [AC_MSG_ERROR(libserializer.jar replacement not found.)]
-                    )
-                ]
-            )
-        else
-            AC_CHECK_FILE($LIBSERIALIZER_JAR, [],
-                [AC_MSG_ERROR(libserializer.jar not found.)], [])
+            if test -f /usr/share/java/libserializer-1.0.0.jar; then
+                LIBSERIALIZER_JAR=/usr/share/java/libserializer-1.0.0.jar
+            elif test -f /usr/share/java/libserializer.jar; then
+                LIBSERIALIZER_JAR=/usr/share/java/libserializer.jar
+            else
+                AC_MSG_ERROR(libserializer.jar replacement not found.)
+            fi
+        elif ! test -f $LIBSERIALIZER_JAR; then
+                AC_MSG_ERROR(libserializer.jar not found.)
         fi
 
         if test -z $LIBBASE_JAR; then
-            AC_CHECK_FILE(/usr/share/java/libbase-1.0.0.jar,
-                [ LIBBASE_JAR=/usr/share/java/libbase-1.0.0.jar ],
-                [
-                    AC_CHECK_FILE(/usr/share/java/libbase.jar,
-                        [ LIBBASE_JAR=/usr/share/java/libbase.jar ],
-                        [AC_MSG_ERROR(libbase.jar replacement not found.)]
-                    )
-                ]
-            )
-        else
-            AC_CHECK_FILE($LIBBASE_JAR, [],
-                [AC_MSG_ERROR(libbase.jar not found.)], [])
+            if test -f /usr/share/java/libbase-1.0.0.jar; then
+                LIBBASE_JAR=/usr/share/java/libbase-1.0.0.jar
+            elif test -f /usr/share/java/libbase.jar; then
+                LIBBASE_JAR=/usr/share/java/libbase.jar
+            else
+                AC_MSG_ERROR(libbase.jar replacement not found.)
+            fi
+        elif ! test -f $LIBBASE_JAR; then
+            AC_MSG_ERROR(libbase.jar not found.)
         fi
 
     else
@@ -10825,18 +10742,15 @@ if test "$ENABLE_REPORTBUILDER" = "TRUE"; then
         SYSTEM_APACHE_COMMONS=TRUE
         AC_MSG_RESULT([external])
         if test -z $COMMONS_LOGGING_JAR; then
-            AC_CHECK_FILE(/usr/share/java/commons-logging-${COMMONS_LOGGING_VERSION}.jar,
-               [ COMMONS_LOGGING_JAR=/usr/share/java/commons-logging-${COMMONS_LOGGING_VERSION}.jar ],
-               [
-                    AC_CHECK_FILE(/usr/share/java/commons-logging.jar,
-                        [ COMMONS_LOGGING_JAR=/usr/share/java/commons-logging.jar ],
-                        [AC_MSG_ERROR(commons-logging.jar replacement not found.)]
-                    )
-                ]
-            )
-        else
-            AC_CHECK_FILE($COMMONS_LOGGING_JAR, [],
-                [AC_MSG_ERROR(commons-logging.jar not found.)], [])
+            if test -f /usr/share/java/commons-logging-${COMMONS_LOGGING_VERSION}.jar; then
+               COMMONS_LOGGING_JAR=/usr/share/java/commons-logging-${COMMONS_LOGGING_VERSION}.jar
+           elif test -f /usr/share/java/commons-logging.jar; then
+                COMMONS_LOGGING_JAR=/usr/share/java/commons-logging.jar
+            else
+                AC_MSG_ERROR(commons-logging.jar replacement not found.)
+            fi
+        elif ! test -f $COMMONS_LOGGING_JAR; then
+            AC_MSG_ERROR(commons-logging.jar not found.)
         fi
     else
         AC_MSG_RESULT([internal])
@@ -10864,8 +10778,9 @@ if test "${enable_scripting_beanshell}" != "no" -a "x$with_java" != "xno"; then
         if test -z $BSH_JAR; then
             BSH_JAR=/usr/share/java/bsh.jar
         fi
-        AC_CHECK_FILE($BSH_JAR, [],
-                   [AC_MSG_ERROR(bsh.jar not found.)], [])
+        if ! test -f $BSH_JAR; then
+            AC_MSG_ERROR(bsh.jar not found.)
+        fi
     else
         AC_MSG_RESULT([internal])
         SYSTEM_BSH=
@@ -10896,8 +10811,9 @@ if test "${enable_scripting_javascript}" != "no" -a "x$with_java" != "xno"; then
         if test -z $RHINO_JAR; then
             RHINO_JAR=/usr/share/java/js.jar
         fi
-        AC_CHECK_FILE($RHINO_JAR, [],
-                   [AC_MSG_ERROR(js.jar not found.)], [])
+        if ! test -f $RHINO_JAR; then
+            AC_MSG_ERROR(js.jar not found.)
+        fi
     else
         AC_MSG_RESULT([internal])
         SYSTEM_RHINO=
@@ -11218,7 +11134,7 @@ int main(int argc, char **argv) {
        if (KDE_VERSION_MAJOR == 4 && KDE_VERSION_MINOR >= 2) return 0;
        else return 1;
 }
-       ]])],[AC_MSG_RESULT([yes])],[AC_MSG_ERROR([KDE version too old])],[])
+]])],[AC_MSG_RESULT([yes])],[AC_MSG_ERROR([KDE version too old])],[AC_MSG_ERROR([KDE support not tested with cross-compilation])])
     CXXFLAGS=$save_CXXFLAGS
     AC_LANG_POP([C++])
 
@@ -11275,7 +11191,7 @@ int main(int argc, char *argv[])
                 fi
                 qt4_fix_warning=1
                 add_warning "  https://bugreports.qt-project.org/browse/QTBUG-37380 (needed)"
-            ])
+                ],[AC_MSG_ERROR([KDE4 file pickers not tested with cross-compilation])])
 
             # Remove meta object data
             rm -f "${TSTBASE}."*
@@ -11308,7 +11224,7 @@ int main(int argc, char *argv[])
                 fi
                 qt4_fix_warning=1
                 add_warning "  https://bugreports.qt-project.org/browse/QTBUG-34614 (needed)"
-            ])
+            ],[AC_MSG_ERROR([KDE4 file pickers not tested with cross-compilation])])
 
             # Remove meta object data
             rm -f "${TSTBASE}."*
@@ -11367,7 +11283,8 @@ int main(int argc, char **argv) {
        if (TDE_VERSION_MAJOR >= 14) return 0;
        else return 1;
 }
-       ]])],[AC_MSG_RESULT([yes])],[AC_MSG_ERROR([TDE version too old or too recent, please use another version of TDE or disable TDE address book support])],[])
+       ]])],[AC_MSG_RESULT([yes])],[AC_MSG_ERROR([TDE version too old or too recent, please use another version of TDE or disable TDE address book support])],
+       [AC_MSG_ERROR([TDE support not tested with cross compilation])])
     CXXFLAGS=$save_CXXFLAGS
     AC_LANG_POP([C++])
     ENABLE_TDEAB=TRUE
@@ -11391,7 +11308,7 @@ WITH_THEMES=""
 if test "x$with_theme" != "xno"; then
     for theme in $with_theme; do
         case $theme in
-        breeze|crystal|elementary|galaxy|hicontrast|human|industrial|oxygen|sifr|tango|tango_testing) real_theme="$theme" ;;
+        breeze|crystal|elementary|galaxy|hicontrast|human|oxygen|sifr|tango|tango_testing) real_theme="$theme" ;;
         default) real_theme=galaxy ;;
         *) AC_MSG_ERROR([Unknown value for --with-theme: $theme]) ;;
         esac
@@ -11855,7 +11772,7 @@ ENABLE_LIBLANGTAG=
 SYSTEM_LIBLANGTAG=
 AC_MSG_CHECKING([whether to use liblangtag])
 if test "$enable_liblangtag" = "yes" -o \
-        \( "$enable_liblangtag" = "" -a $_os != Android -a $_os != iOS -a $_os != Emscripten \); then
+        \( "$enable_liblangtag" = "" -a $_os != iOS -a $_os != Emscripten \); then
     ENABLE_LIBLANGTAG=TRUE
     AC_MSG_RESULT([yes])
     AC_MSG_CHECKING([whether to use system liblangtag])
@@ -11873,6 +11790,7 @@ if test "$enable_liblangtag" = "yes" -o \
         SYSTEM_LIBLANGTAG=
         AC_MSG_RESULT([no])
         BUILD_TYPE="$BUILD_TYPE LIBLANGTAG"
+        LIBLANGTAG_CFLAGS="-I${WORKDIR}/UnpackedTarball/langtag"
         if test "$COM" = "MSC"; then
             LIBLANGTAG_LIBS="${WORKDIR}/UnpackedTarball/langtag/liblangtag/.libs/liblangtag.lib"
         else
@@ -12153,9 +12071,9 @@ if test "$enable_fetch_external" != "no"; then
 CURL=`which curl 2>/dev/null`
 
 for i in wget /usr/bin/wget /usr/local/bin/wget /usr/sfw/bin/wget /opt/sfw/bin/wget /opt/local/bin/wget; do
-    eval "$i --version" > /dev/null 2>&1
-    ret=$?
-    if test $ret -eq 0; then
+    # wget new enough?
+    $i --help 2> /dev/null | $GREP no-use-server-timestamps 2>&1 > /dev/null
+    if test $? -eq 0; then
         WGET=$i
         break
     fi
@@ -12620,8 +12538,8 @@ if test "$build_os" = "cygwin"; then
             ILIB1="$ILIB1 -LIBPATH:$WINDOWS_SDK_HOME/lib/$winsdklibsubdir/um/x64"
         fi
         if test $VCVER = 140; then
-            PathFormat "$ucrttest"
-            ucrtlibpath_formatted="$formatted_path/lib/$ucrtdir/ucrt/x64"
+            PathFormat "${UCRTSDKDIR}lib/$UCRTVERSION/ucrt/x64"
+            ucrtlibpath_formatted=$formatted_path
             ILIB="$ILIB;$ucrtlibpath_formatted"
         fi
     else
@@ -12634,8 +12552,8 @@ if test "$build_os" = "cygwin"; then
             ILIB1="$ILIB1 -LIBPATH:$WINDOWS_SDK_HOME/lib/$winsdklibsubdir/um/x86"
         fi
         if test $VCVER = 140; then
-            PathFormat "$ucrttest"
-            ucrtlibpath_formatted="$formatted_path/lib/$ucrtdir/ucrt/x86"
+            PathFormat "${UCRTSDKDIR}lib/$UCRTVERSION/ucrt/x86"
+            ucrtlibpath_formatted=$formatted_path
             ILIB="$ILIB;$ucrtlibpath_formatted"
         fi
     fi
@@ -12670,40 +12588,36 @@ fi
 
 
 AC_MSG_CHECKING([whether $CXX has broken static initializer_list support])
-if test "$CROSS_COMPILING" = "TRUE"; then
-    broken='assuming not (cross-compiling)'
-else
-    save_CXXFLAGS=$CXXFLAGS
-    CXXFLAGS="$CXXFLAGS $CXXFLAGS_CXX11"
-    save_LIBS=$LIBS
-    if test -n "$ILIB1"; then
-        LIBS="$LIBS $ILIB1"
-    fi
-    AC_LANG_PUSH([C++])
-    AC_RUN_IFELSE([AC_LANG_PROGRAM([[
-        // Exit with failure if the static initializer_list is stored on the
-        // stack (as done by Clang < 3.4):
-        #include <initializer_list>
-        struct S {};
-        bool g(void const * p1, void const * p2) {
-            int n;
-            return !((p1 > p2 && p2 > &n) || (p1 < p2 && p2 < &n));
-        }
-        bool f(void const * p1) {
-            static std::initializer_list<S> s { S() };
-            return g(p1, s.begin());
-        }
-        ]],[[
-            int n;
-            return f(&n) ? 0 : 1;
-        ]])], [broken=no], [broken=yes])
-    AC_LANG_POP([C++])
-    LIBS=$save_LIBS
-    CXXFLAGS=$save_CXXFLAGS
+save_CXXFLAGS=$CXXFLAGS
+CXXFLAGS="$CXXFLAGS $CXXFLAGS_CXX11"
+save_LIBS=$LIBS
+if test -n "$ILIB1"; then
+    LIBS="$LIBS $ILIB1"
 fi
+AC_LANG_PUSH([C++])
+AC_RUN_IFELSE([AC_LANG_PROGRAM([[
+    // Exit with failure if the static initializer_list is stored on the
+    // stack (as done by Clang < 3.4):
+    #include <initializer_list>
+    struct S {};
+    bool g(void const * p1, void const * p2) {
+        int n;
+        return !((p1 > p2 && p2 > &n) || (p1 < p2 && p2 < &n));
+    }
+    bool f(void const * p1) {
+        static std::initializer_list<S> s { S() };
+        return g(p1, s.begin());
+    }
+    ]],[[
+        int n;
+        return f(&n) ? 0 : 1;
+    ]])], [broken=no], [broken=yes],[broken='assuming not (cross-compiling)'])
+AC_LANG_POP([C++])
+LIBS=$save_LIBS
+CXXFLAGS=$save_CXXFLAGS
 AC_MSG_RESULT([$broken])
 if test "$broken" = yes; then
-    AC_DEFINE([HAVE_BROKEN_STATIC_INITILIZER_LIST])
+    AC_DEFINE([HAVE_BROKEN_STATIC_INITIALIZER_LIST])
 fi
 
 
@@ -12846,19 +12760,26 @@ if test "$build_os" = "cygwin"; then
     if test "$BITNESS_OVERRIDE" = 64; then
         ATL_LIB="$ATL_LIB/amd64"
     fi
+    # sort.exe and find.exe also exist in C:/Windows/system32 so need /usr/bin/
+    PathFormat "/usr/bin/find.exe"
+    FIND="$formatted_path"
+    PathFormat "/usr/bin/sort.exe"
+    SORT="$formatted_path"
     PathFormat "/usr/bin/grep.exe"
     WIN_GREP="$formatted_path"
-    PathFormat "/usr/bin/find.exe"
-    WIN_FIND="$formatted_path"
     PathFormat "/usr/bin/ls.exe"
     WIN_LS="$formatted_path"
     PathFormat "/usr/bin/touch.exe"
     WIN_TOUCH="$formatted_path"
+else
+    FIND=find
+    SORT=sort
 fi
 
 AC_SUBST(ATL_INCLUDE)
 AC_SUBST(ATL_LIB)
-AC_SUBST(WIN_FIND)
+AC_SUBST(FIND)
+AC_SUBST(SORT)
 AC_SUBST(WIN_GREP)
 AC_SUBST(WIN_LS)
 AC_SUBST(WIN_TOUCH)
@@ -12904,7 +12825,10 @@ else
             # needed for msi packaging
             pathmunge "$WINDOWS_SDK_HOME/bin/x86" "before"
         fi
-        pathmunge "$DOTNET_FRAMEWORK_HOME/bin" "before"
+        # .NET 4.6 and higher don't have bin directory
+        if test -f "$DOTNET_FRAMEWORK_HOME/bin"; then
+            pathmunge "$DOTNET_FRAMEWORK_HOME/bin" "before"
+        fi
         pathmunge "$ASM_HOME" "before"
         pathmunge "$WINDOWS_SDK_HOME/bin" "before"
         pathmunge "$CSC_PATH" "before"
@@ -12969,10 +12893,11 @@ AC_CONFIG_HEADERS([config_host/config_dconf.h])
 AC_CONFIG_HEADERS([config_host/config_eot.h])
 AC_CONFIG_HEADERS([config_host/config_extension_update.h])
 AC_CONFIG_HEADERS([config_host/config_cairo_canvas.h])
-AC_CONFIG_HEADERS([config_host/config_cups.h])
+AC_CONFIG_HEADERS([config_host/config_cxxabi.h])
+AC_CONFIG_HEADERS([config_host/config_dbus.h])
 AC_CONFIG_HEADERS([config_host/config_features.h])
 AC_CONFIG_HEADERS([config_host/config_folders.h])
-AC_CONFIG_HEADERS([config_host/config_gcc.h])
+AC_CONFIG_HEADERS([config_host/config_gio.h])
 AC_CONFIG_HEADERS([config_host/config_global.h])
 AC_CONFIG_HEADERS([config_host/config_graphite.h])
 AC_CONFIG_HEADERS([config_host/config_java.h])
@@ -12994,6 +12919,7 @@ AC_CONFIG_HEADERS([config_host/config_version.h])
 AC_CONFIG_HEADERS([config_host/config_oauth2.h])
 AC_CONFIG_HEADERS([config_host/config_poppler.h])
 AC_CONFIG_HEADERS([config_host/config_python.h])
+AC_CONFIG_HEADERS([config_host/config_writerperfect.h])
 AC_OUTPUT
 
 if test "$CROSS_COMPILING" = TRUE; then
@@ -13004,7 +12930,7 @@ fi
 if test ! -f config_host.mk.stamp; then
     echo > config_host.mk.stamp
 elif test "$config_md5" = `$MD5SUM config_host.mk | sed "s/ .*//"`; then
-    echo "Configuration unchanged - avoiding scp2 stamp update"
+    echo "Host Configuration unchanged - avoiding scp2 stamp update"
 else
     echo > config_host.mk.stamp
 fi
@@ -13013,7 +12939,7 @@ fi
 if test ! -f config_host_lang.mk.stamp; then
     echo > config_host_lang.mk.stamp
 elif test "$config_lang_md5" = `$MD5SUM config_host_lang.mk | sed "s/ .*//"`; then
-    echo "Configuration unchanged - avoiding scp2 stamp update"
+    echo "Language Configuration unchanged - avoiding scp2 stamp update"
 else
     echo > config_host_lang.mk.stamp
 fi
@@ -13047,7 +12973,7 @@ place yourself in a working directory of you choice.
  build_w32.bat --without-guile
 
 should result in a WinRel/gnumake.exe.
-Copy it to to the Cygwin /opt/lo/bin directory as make.exe
+Copy it to the Cygwin /opt/lo/bin directory as make.exe
 
 Then re-run autogen.sh
 

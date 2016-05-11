@@ -37,7 +37,6 @@
 #include <tools/multisel.hxx>
 #include "editbrowseboximpl.hxx"
 #include <com/sun/star/accessibility/AccessibleEventId.hpp>
-#include <com/sun/star/accessibility/XAccessible.hpp>
 #include <comphelper/types.hxx>
 
 
@@ -61,7 +60,6 @@ namespace svt
 
     using namespace ::com::sun::star::uno;
     using namespace com::sun::star::accessibility::AccessibleEventId;
-    using  com::sun::star::accessibility::XAccessible;
 
 
     IEditImplementation::~IEditImplementation()
@@ -85,7 +83,6 @@ namespace svt
             }
         }
     }
-
 
 
     //= EditBrowseBox
@@ -472,7 +469,7 @@ namespace svt
                         Control::KeyInput(rEvt);
                     return;
                 }
-                // fall-through
+                SAL_FALLTHROUGH;
             default:
                 BrowseBox::KeyInput(rEvt);
         }
@@ -1192,7 +1189,6 @@ namespace svt
     }
 
 
-
     bool EditBrowseBox::SaveModified()
     {
         return true;
@@ -1298,7 +1294,6 @@ namespace svt
     {
         Controller()->resume();
     }
-
 
 
     CellController::CellController(Control* pW)

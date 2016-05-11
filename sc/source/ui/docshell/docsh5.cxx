@@ -974,7 +974,7 @@ bool ScDocShell::MoveTable( SCTAB nSrcTab, SCTAB nDestTab, bool bCopy, bool bRec
         }
 
         ScProgress* pProgress = new ScProgress(this, ScGlobal::GetRscString(STR_UNDO_MOVE_TAB),
-                                                aDocument.GetCodeCount());
+                                                aDocument.GetCodeCount(), true);
         bool bDone = aDocument.MoveTab( nSrcTab, nDestTab, pProgress );
         delete pProgress;
         if (!bDone)
@@ -1011,7 +1011,7 @@ IMPL_LINK_TYPED( ScDocShell, RefreshDBDataHdl, Timer*, pRefreshTimer, void )
     {
         ScRange aRange;
         pDBData->GetArea( aRange );
-        bool bContinue = aFunc.DoImport( aRange.aStart.Tab(), aImportParam, nullptr, true ); //! Api-Flag as parameter
+        bool bContinue = aFunc.DoImport( aRange.aStart.Tab(), aImportParam, nullptr ); //! Api-Flag as parameter
         // internal operations (sort, query, subtotal) only if no error
         if (bContinue)
         {

@@ -30,9 +30,6 @@
 #include <algorithm>
 #include <iterator>
 
-#if OSL_DEBUG_LEVEL > 1
-#include <rtl/math.hxx>
-#endif
 #include <com/sun/star/beans/PropertyAttribute.hpp>
 
 using namespace ::com::sun::star;
@@ -88,7 +85,7 @@ struct StaticCooSysInfoHelper_Initializer
 private:
     static Sequence< Property > lcl_GetPropertySequence()
     {
-        ::std::vector< ::com::sun::star::beans::Property > aProperties;
+        ::std::vector< css::beans::Property > aProperties;
         lcl_AddPropertiesToVector( aProperties );
         ::chart::UserDefinedProperties::AddPropertiesToVector( aProperties );
 
@@ -124,8 +121,7 @@ namespace chart
 
 BaseCoordinateSystem::BaseCoordinateSystem(
     const Reference< uno::XComponentContext > & xContext,
-    sal_Int32 nDimensionCount /* = 2 */,
-    bool bSwapXAndYAxis /* = sal_False */ ) :
+    sal_Int32 nDimensionCount /* = 2 */ ) :
         ::property::OPropertySet( m_aMutex ),
         m_xContext( xContext ),
         m_xModifyEventForwarder( ModifyListenerHelper::createModifyEventForwarder()),
@@ -159,7 +155,7 @@ BaseCoordinateSystem::BaseCoordinateSystem(
     for( sal_Int32 i = 0; i < m_nDimensionCount; ++i )
         m_aOrigin[ i ] = uno::makeAny( double( 0.0 ) );
 
-    setFastPropertyValue_NoBroadcast( PROP_COORDINATESYSTEM_SWAPXANDYAXIS, uno::makeAny( bSwapXAndYAxis ));
+    setFastPropertyValue_NoBroadcast( PROP_COORDINATESYSTEM_SWAPXANDYAXIS, uno::makeAny( false ));
 }
 
 // explicit
@@ -176,8 +172,8 @@ BaseCoordinateSystem::BaseCoordinateSystem(
     m_aAllAxis.resize(rSource.m_aAllAxis.size());
     tAxisVecVecType::size_type nN=0;
     for( nN=0; nN<m_aAllAxis.size(); nN++ )
-        CloneHelper::CloneRefVector< Reference< chart2::XAxis > >( rSource.m_aAllAxis[nN], m_aAllAxis[nN] );
-    CloneHelper::CloneRefVector< Reference< chart2::XChartType > >( rSource.m_aChartTypes, m_aChartTypes );
+        CloneHelper::CloneRefVector<chart2::XAxis>( rSource.m_aAllAxis[nN], m_aAllAxis[nN] );
+    CloneHelper::CloneRefVector<chart2::XChartType>( rSource.m_aChartTypes, m_aChartTypes );
 
     for( nN=0; nN<m_aAllAxis.size(); nN++ )
         ModifyListenerHelper::addListenerToAllElements( m_aAllAxis[nN], m_xModifyEventForwarder );
@@ -188,8 +184,8 @@ BaseCoordinateSystem::~BaseCoordinateSystem()
 {
     try
     {
-        for( tAxisVecVecType::size_type nN=0; nN<m_aAllAxis.size(); nN++ )
-            ModifyListenerHelper::removeListenerFromAllElements( m_aAllAxis[nN], m_xModifyEventForwarder );
+        for(tAxisVecVecType::value_type & i : m_aAllAxis)
+            ModifyListenerHelper::removeListenerFromAllElements( i, m_xModifyEventForwarder );
         ModifyListenerHelper::removeListenerFromAllElements( m_aChartTypes, m_xModifyEventForwarder );
     }
     catch( const uno::Exception & ex )

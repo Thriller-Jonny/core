@@ -426,14 +426,14 @@ void RegionBand::CreateBandRange(long nYTop, long nYBottom)
 
 }
 
-bool RegionBand::InsertLine(const Point& rStartPt, const Point& rEndPt, long nLineId)
+void RegionBand::InsertLine(const Point& rStartPt, const Point& rEndPt, long nLineId)
 {
     long nX, nY;
 
     // lines consisting of a single point do not interest here
     if ( rStartPt == rEndPt )
     {
-        return true;
+        return;
     }
 
     LineType eLineType = (rStartPt.Y() > rEndPt.Y()) ? LINE_DESCENDING : LINE_ASCENDING;
@@ -490,7 +490,10 @@ bool RegionBand::InsertLine(const Point& rStartPt, const Point& rEndPt, long nLi
                 if ( nD < 0L )
                     nD += nDY2;
                 else
-                    nD += nDYX, nY += nYInc;
+                {
+                    nD += nDYX;
+                    nY += nYInc;
+                }
             }
         }
         else
@@ -506,25 +509,26 @@ bool RegionBand::InsertLine(const Point& rStartPt, const Point& rEndPt, long nLi
                 if ( nD < 0L )
                     nD += nDY2;
                 else
-                    nD += nDYX, nX += nXInc;
+                {
+                    nD += nDYX;
+                    nX += nXInc;
+                }
             }
         }
 
         // last point
         InsertPoint( Point( nEndX, nEndY ), nLineId, true, eLineType );
     }
-
-    return true;
 }
 
-bool RegionBand::InsertPoint(const Point &rPoint, long nLineID, bool bEndPoint, LineType eLineType)
+void RegionBand::InsertPoint(const Point &rPoint, long nLineID, bool bEndPoint, LineType eLineType)
 {
     DBG_ASSERT( mpFirstBand != nullptr, "RegionBand::InsertPoint - no bands available!" );
 
     if ( rPoint.Y() == mpLastCheckedBand->mnYTop )
     {
         mpLastCheckedBand->InsertPoint( rPoint.X(), nLineID, bEndPoint, eLineType );
-        return true;
+        return;
     }
 
     if ( rPoint.Y() > mpLastCheckedBand->mnYTop )
@@ -536,7 +540,7 @@ bool RegionBand::InsertPoint(const Point &rPoint, long nLineID, bool bEndPoint, 
             if ( rPoint.Y() == mpLastCheckedBand->mnYTop )
             {
                 mpLastCheckedBand->InsertPoint( rPoint.X(), nLineID, bEndPoint, eLineType );
-                return true;
+                return;
             }
 
             mpLastCheckedBand = mpLastCheckedBand->mpNextBand;
@@ -553,7 +557,7 @@ bool RegionBand::InsertPoint(const Point &rPoint, long nLineID, bool bEndPoint, 
             if ( rPoint.Y() == mpLastCheckedBand->mnYTop )
             {
                 mpLastCheckedBand->InsertPoint( rPoint.X(), nLineID, bEndPoint, eLineType );
-                return true;
+                return;
             }
 
             mpLastCheckedBand = mpLastCheckedBand->mpPrevBand;
@@ -566,8 +570,6 @@ bool RegionBand::InsertPoint(const Point &rPoint, long nLineID, bool bEndPoint, 
 
     // reinitialize pointer (should never be reached!)
     mpLastCheckedBand = mpFirstBand;
-
-    return false;
 }
 
 bool RegionBand::OptimizeBandList()
@@ -1231,25 +1233,25 @@ void RegionBand::GetRegionRectangles(RectangleVector& rTarget) const
 {
     // clear result vector
     rTarget.clear();
-    ImplRegionBand* mpCurrRectBand = mpFirstBand;
+    ImplRegionBand* pCurrRectBand = mpFirstBand;
     Rectangle aRectangle;
 
-    while(mpCurrRectBand)
+    while(pCurrRectBand)
     {
-        ImplRegionBandSep* mpCurrRectBandSep = mpCurrRectBand->mpFirstSep;
+        ImplRegionBandSep* pCurrRectBandSep = pCurrRectBand->mpFirstSep;
 
-        aRectangle.Top() = mpCurrRectBand->mnYTop;
-        aRectangle.Bottom() = mpCurrRectBand->mnYBottom;
+        aRectangle.Top() = pCurrRectBand->mnYTop;
+        aRectangle.Bottom() = pCurrRectBand->mnYBottom;
 
-        while(mpCurrRectBandSep)
+        while(pCurrRectBandSep)
         {
-            aRectangle.Left() = mpCurrRectBandSep->mnXLeft;
-            aRectangle.Right() = mpCurrRectBandSep->mnXRight;
+            aRectangle.Left() = pCurrRectBandSep->mnXLeft;
+            aRectangle.Right() = pCurrRectBandSep->mnXRight;
             rTarget.push_back(aRectangle);
-            mpCurrRectBandSep = mpCurrRectBandSep->mpNextSep;
+            pCurrRectBandSep = pCurrRectBandSep->mpNextSep;
         }
 
-        mpCurrRectBand = mpCurrRectBand->mpNextBand;
+        pCurrRectBand = pCurrRectBand->mpNextBand;
     }
 }
 

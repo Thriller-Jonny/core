@@ -52,7 +52,8 @@ SwUndoInsNum::SwUndoInsNum( const SwPosition& rPos, const SwNumRule& rRule,
     sReplaceRule( rReplaceRule ), nLRSavePos( 0 )
 {
     // No selection!
-    nEndNode = 0, nEndContent = COMPLETE_STRING;
+    nEndNode = 0;
+    nEndContent = COMPLETE_STRING;
     nSttNode = rPos.nNode.GetIndex();
     nSttContent = rPos.nContent.GetIndex();
 }
@@ -203,7 +204,7 @@ void SwUndoDelNum::RepeatImpl(::sw::RepeatContext & rContext)
     rContext.GetDoc().DelNumRules(rContext.GetRepeatPaM());
 }
 
-void SwUndoDelNum::AddNode( const SwTextNode& rNd, bool )
+void SwUndoDelNum::AddNode( const SwTextNode& rNd )
 {
     if( rNd.GetNumRule() )
     {

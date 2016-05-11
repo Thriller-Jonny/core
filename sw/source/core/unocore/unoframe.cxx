@@ -34,6 +34,7 @@
 #include <svx/xflgrit.hxx>
 #include <svx/sdtaitm.hxx>
 #include <svx/xflclit.hxx>
+#include <tools/globname.hxx>
 #include <editeng/memberids.hrc>
 #include <swtypes.hxx>
 #include <cmdid.h>
@@ -987,7 +988,7 @@ bool SwFrameProperties_Impl::AnyToItemSet(SwDoc *pDoc, SfxItemSet& rSet, SfxItem
         *pStyleName >>= sStyle;
         SwStyleNameMapper::FillUIName(sStyle, sStyle, nsSwGetPoolIdFromName::GET_POOLID_FRMFMT, true);
         pStyle = static_cast<SwDocStyleSheet*>(pDoc->GetDocShell()->GetStyleSheetPool()->Find(sStyle,
-                                                    SFX_STYLE_FAMILY_FRAME));
+                                                    SfxStyleFamily::Frame));
     }
 
     const ::uno::Any* pColumns = nullptr;
@@ -1061,7 +1062,7 @@ bool SwGraphicProperties_Impl::AnyToItemSet(
         *pStyleName >>= sStyle;
         SwStyleNameMapper::FillUIName(sStyle, sStyle, nsSwGetPoolIdFromName::GET_POOLID_FRMFMT, true);
         pStyle = static_cast<SwDocStyleSheet*>(pDoc->GetDocShell()->GetStyleSheetPool()->Find(sStyle,
-                                                    SFX_STYLE_FAMILY_FRAME));
+                                                    SfxStyleFamily::Frame));
     }
 
     const ::uno::Any* pHEvenMirror = nullptr;
@@ -1141,11 +1142,11 @@ bool SwOLEProperties_Impl::AnyToItemSet(
 class SwXFrame::Impl
 {
 private:
-    ::osl::Mutex m_Mutex; // just for OInterfaceContainerHelper
+    ::osl::Mutex m_Mutex; // just for OInterfaceContainerHelper2
 
 public:
     uno::WeakReference<uno::XInterface> m_wThis;
-    ::cppu::OInterfaceContainerHelper m_EventListeners;
+    ::comphelper::OInterfaceContainerHelper2 m_EventListeners;
 
     Impl() : m_EventListeners(m_Mutex) { }
 };
@@ -1205,7 +1206,7 @@ SwXFrame::SwXFrame(FlyCntType eSet, const ::SfxItemPropertySet* pSet, SwDoc *pDo
     // get the property set for the default style data
     // First get the model
     uno::Reference < XModel > xModel = pDoc->GetDocShell()->GetBaseModel();
-    // Ask the model for it's family supplier interface
+    // Ask the model for its family supplier interface
     uno::Reference < XStyleFamiliesSupplier > xFamilySupplier ( xModel, uno::UNO_QUERY );
     // Get the style families
     uno::Reference < XNameAccess > xFamilies = xFamilySupplier->getStyleFamilies();
@@ -1395,7 +1396,7 @@ static SwFrameFormat *lcl_GetFrameFormat( const ::uno::Any& rValue, SwDoc *pDoc 
                 nsSwGetPoolIdFromName::GET_POOLID_FRMFMT, true);
         SwDocStyleSheet* pStyle =
                 static_cast<SwDocStyleSheet*>(pDocSh->GetStyleSheetPool()->Find(sStyle,
-                                                    SFX_STYLE_FAMILY_FRAME));
+                                                    SfxStyleFamily::Frame));
         if(pStyle)
             pRet = pStyle->GetFrameFormat();
     }
@@ -1502,7 +1503,7 @@ void SwXFrame::setPropertyValue(const OUString& rPropertyName, const ::uno::Any&
                     // is no contour, or if the contour has been set by the
                     // API itself (or in other words, if the contour isn't
                     // used already).
-                    if( !pNoText->_HasContour() ||
+                    if( !pNoText->HasContour_() ||
                         !pNoText->IsContourMapModeValid() )
                         pNoText->SetPixelContour( *static_cast<sal_Bool const *>(aValue.getValue()) );
                     else
@@ -1565,7 +1566,10 @@ void SwXFrame::setPropertyValue(const OUString& rPropertyName, const ::uno::Any&
                             pSet->Put( *pItem );
                             if ( pFormat->GetDoc()->GetEditShell() != nullptr
                                  && !sw_ChkAndSetNewAnchor( *pFly, *pSet ) )
-                                delete pSet, pSet = nullptr;
+                            {
+                                delete pSet;
+                                pSet = nullptr;
+                            }
                         }
                     }
                 }
@@ -2923,7 +2927,10 @@ void SwXFrame::attachToRange(const uno::Reference< text::XTextRange > & xTextRan
 
                     pCnt.reset( new comphelper::EmbeddedObjectContainer );
                     OUString aName;
-                    xIPObj = pCnt->CreateEmbeddedObject( aClassName.GetByteSequence(), aName );
+
+                    OUString sDocumentBaseURL = pDoc->GetPersist()->getDocumentBaseURL();
+                    xIPObj = pCnt->CreateEmbeddedObject(aClassName.GetByteSequence(), aName,
+                                                        &sDocumentBaseURL);
                 }
                 if ( xIPObj.is() )
                 {
@@ -3006,12 +3013,12 @@ void SwXFrame::attachToRange(const uno::Reference< text::XTextRange > & xTextRan
                 // Not sure if these setParent() and InsertEmbeddedObject() calls are really
                 // needed, it seems to work without, but logic from code elsewhere suggests
                 // they should be done.
-                SfxObjectShell& mrPers = *pDoc->GetPersist();
+                SfxObjectShell& rPers = *pDoc->GetPersist();
                 uno::Reference < container::XChild > xChild( obj, uno::UNO_QUERY );
                 if ( xChild.is() )
-                    xChild->setParent( mrPers.GetModel() );
+                    xChild->setParent( rPers.GetModel() );
                 OUString rName;
-                mrPers.GetEmbeddedObjectContainer().InsertEmbeddedObject( obj, rName );
+                rPers.GetEmbeddedObjectContainer().InsertEmbeddedObject( obj, rName );
 
                 SwFlyFrameFormat* pFrameFormat = nullptr;
                 pFrameFormat = pDoc->getIDocumentContentOperations().Insert( aPam, xObj, &aFrameSet, nullptr, nullptr );
@@ -3298,7 +3305,7 @@ uno::Type  SwXTextFrame::getElementType() throw( uno::RuntimeException, std::exc
 
 sal_Bool SwXTextFrame::hasElements() throw( uno::RuntimeException, std::exception )
 {
-    return sal_True;
+    return true;
 }
 
 void SwXTextFrame::attach(const uno::Reference< text::XTextRange > & xTextRange)
@@ -3559,7 +3566,7 @@ void SAL_CALL SwXTextEmbeddedObject::release()throw()
 ::uno::Any SAL_CALL SwXTextEmbeddedObject::queryInterface( const uno::Type& aType )
     throw( uno::RuntimeException, std::exception)
 {
-    ::uno::Any aRet = SwXFrame::queryInterface(aType);;
+    ::uno::Any aRet = SwXFrame::queryInterface(aType);
     if(aRet.getValueType() == cppu::UnoType<void>::get())
         aRet = SwXTextEmbeddedObjectBaseClass::queryInterface(aType);
     return aRet;

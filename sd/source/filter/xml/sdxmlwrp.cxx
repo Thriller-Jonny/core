@@ -156,10 +156,9 @@ XML_SERVICES* getServices( bool bImport, bool bDraw, sal_uLong nStoreVer )
     return &gServices[ (bImport ? 2 : 0) + ((nStoreVer == SOFFICE_FILEFORMAT_60) ? 4 : 0) + (bDraw ? 1 : 0 ) ];
 }
 
-// - SdXMLWrapper -
 
-SdXMLFilter::SdXMLFilter( SfxMedium& rMedium, ::sd::DrawDocShell& rDocShell, bool bShowProgress, SdXMLFilterMode eFilterMode, sal_uLong nStoreVer ) :
-    SdFilter( rMedium, rDocShell, bShowProgress ), meFilterMode( eFilterMode ), mnStoreVer( nStoreVer )
+SdXMLFilter::SdXMLFilter( SfxMedium& rMedium, ::sd::DrawDocShell& rDocShell, SdXMLFilterMode eFilterMode, sal_uLong nStoreVer ) :
+    SdFilter( rMedium, rDocShell ), meFilterMode( eFilterMode ), mnStoreVer( nStoreVer )
 {
 }
 
@@ -171,8 +170,8 @@ namespace
 {
 
 sal_Int32 ReadThroughComponent(
-    Reference<io::XInputStream> xInputStream,
-    Reference<XComponent> xModelComponent,
+    const Reference<io::XInputStream>& xInputStream,
+    const Reference<XComponent>& xModelComponent,
     const OUString& rStreamName,
     Reference<uno::XComponentContext> & rxContext,
     const sal_Char* pFilterName,
@@ -242,9 +241,7 @@ sal_Int32 ReadThroughComponent(
         if( bEncrypted )
             return ERRCODE_SFX_WRONGPASSWORD;
 
-#if OSL_DEBUG_LEVEL > 1
         SAL_WARN( "sd.filter", "SAX parse exception caught while importing:" << r.Message);
-#endif
 
         OUString sErr( OUString::number( r.LineNumber ));
         sErr += ",";
@@ -274,36 +271,22 @@ sal_Int32 ReadThroughComponent(
         if( bEncrypted )
             return ERRCODE_SFX_WRONGPASSWORD;
 
-#if OSL_DEBUG_LEVEL > 1
         SAL_WARN( "sd.filter", "SAX exception caught while importing:" << r.Message);
-#endif
         return SD_XML_READERROR;
     }
     catch (const packages::zip::ZipIOException& r)
     {
-#if OSL_DEBUG_LEVEL > 1
         SAL_WARN( "sd.filter", "Zip exception caught while importing:" << r.Message);
-#else
-        (void)r;
-#endif
         return ERRCODE_IO_BROKENPACKAGE;
     }
     catch (const io::IOException& r)
     {
-#if OSL_DEBUG_LEVEL > 1
         SAL_WARN( "sd.filter", "IO exception caught while importing:" << r.Message);
-#else
-        (void)r;
-#endif
         return SD_XML_READERROR;
     }
     catch (const uno::Exception& r)
     {
-#if OSL_DEBUG_LEVEL > 1
         SAL_WARN( "sd.filter", "uno exception caught while importing:" << r.Message);
-#else
-        (void)r;
-#endif
         return SD_XML_READERROR;
     }
 
@@ -313,7 +296,7 @@ sal_Int32 ReadThroughComponent(
 
 sal_Int32 ReadThroughComponent(
     const uno::Reference < embed::XStorage >& xStorage,
-    Reference<XComponent> xModelComponent,
+    const Reference<XComponent>& xModelComponent,
     const sal_Char* pStreamName,
     const sal_Char* pCompatibilityStreamName,
     Reference<uno::XComponentContext> & rxContext,
@@ -529,7 +512,6 @@ bool SdXMLFilter::Import( ErrCode& nError )
     Reference< lang::XComponent > xModelComp( mxModel, uno::UNO_QUERY );
 
     // try to get an XStatusIndicator from the Medium
-    if( mbShowProgress )
     {
         SfxItemSet* pSet = mrMedium.GetItemSet();
         if(pSet)
@@ -587,7 +569,10 @@ bool SdXMLFilter::Import( ErrCode& nError )
     }
 
     // Set base URI
-    xInfoSet->setPropertyValue( "BaseURI" , makeAny( mrMedium.GetBaseURL() ) );
+    OUString const baseURI(mrMedium.GetBaseURL());
+    // needed for relative URLs, but in clipboard copy/paste there may be none
+    SAL_INFO_IF(baseURI.isEmpty(), "sd.filter", "SdXMLFilter: no base URL");
+    xInfoSet->setPropertyValue("BaseURI", makeAny(baseURI));
 
     if( 0 == nRet && SfxObjectCreateMode::EMBEDDED == mrDocShell.GetCreateMode() )
     {
@@ -607,7 +592,7 @@ bool SdXMLFilter::Import( ErrCode& nError )
     }
 
     if (SDXMLMODE_Organizer == meFilterMode)
-        xInfoSet->setPropertyValue("OrganizerMode", uno::makeAny(sal_True));
+        xInfoSet->setPropertyValue("OrganizerMode", uno::makeAny(true));
 
     if( 0 == nRet )
     {
@@ -692,7 +677,7 @@ bool SdXMLFilter::Import( ErrCode& nError )
             nError = ERRCODE_IO_BROKENPACKAGE;
             break;
         }
-        // fall through intended
+        SAL_FALLTHROUGH;
     default:
         {
             // TODO/LATER: this is completely wrong! Filter code should never call ErrorHandler directly!
@@ -781,7 +766,7 @@ bool SdXMLFilter::Import( ErrCode& nError )
                 else
                 {
                     // check for binary formats
-                     const SfxFilter * pFilter = mrMedium.GetFilter();
+                    std::shared_ptr<const SfxFilter> pFilter = mrMedium.GetFilter();
                     if( pFilter )
                     {
                         OUString typeName(pFilter->GetRealTypeName());
@@ -908,26 +893,23 @@ bool SdXMLFilter::Export()
                 xGrfResolver = pGraphicHelper;
             }
 
-            if(mbShowProgress)
+            CreateStatusIndicator();
+            if(mxStatusIndicator.is())
             {
-                CreateStatusIndicator();
-                if(mxStatusIndicator.is())
-                {
-                    sal_Int32 nProgressRange(1000000);
-                    sal_Int32 nProgressCurrent(0);
-                    OUString aMsg(SD_RESSTR(STR_SAVE_DOC));
-                    mxStatusIndicator->start(aMsg, nProgressRange);
+                sal_Int32 nProgressRange(1000000);
+                sal_Int32 nProgressCurrent(0);
+                OUString aMsg(SD_RESSTR(STR_SAVE_DOC));
+                mxStatusIndicator->start(aMsg, nProgressRange);
 
-                    // set ProgressRange
-                    uno::Any aProgRange;
-                    aProgRange <<= nProgressRange;
-                    xInfoSet->setPropertyValue( "ProgressRange" , aProgRange);
+                // set ProgressRange
+                uno::Any aProgRange;
+                aProgRange <<= nProgressRange;
+                xInfoSet->setPropertyValue( "ProgressRange" , aProgRange);
 
-                    // set ProgressCurrent
-                    uno::Any aProgCurrent;
-                    aProgCurrent <<= nProgressCurrent;
-                    xInfoSet->setPropertyValue( "ProgressCurrent" , aProgCurrent);
-                }
+                // set ProgressCurrent
+                uno::Any aProgCurrent;
+                aProgCurrent <<= nProgressCurrent;
+                xInfoSet->setPropertyValue( "ProgressCurrent" , aProgCurrent);
             }
 
             uno::Reference< lang::XComponent > xComponent( mxModel, uno::UNO_QUERY );
@@ -977,9 +959,7 @@ bool SdXMLFilter::Export()
                     if( !xDocOut.is() || !xProps.is() )
                         return false;
 
-                    uno::Any aAny;
-                    aAny <<= OUString( "text/xml");
-                    xProps->setPropertyValue( "MediaType" , aAny);
+                    xProps->setPropertyValue( "MediaType", Any(OUString( "text/xml")));
 
                     // encrypt all streams
                     xProps->setPropertyValue( "UseCommonStoragePasswordEncryption",
@@ -1017,20 +997,13 @@ bool SdXMLFilter::Export()
             }
             while( bDocRet && pServices->mpService );
 
-            if(mbShowProgress)
-            {
-                if(mxStatusIndicator.is())
-                    mxStatusIndicator->end();
-            }
+            if(mxStatusIndicator.is())
+                mxStatusIndicator->end();
         }
     }
     catch (const uno::Exception &e)
     {
-#if OSL_DEBUG_LEVEL > 1
         SAL_WARN( "sd.filter", "uno Exception caught while exporting:" << e.Message);
-#else
-        (void)e;
-#endif
         bDocRet = false;
     }
     if ( !bLocked )

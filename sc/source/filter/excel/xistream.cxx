@@ -62,14 +62,14 @@ XclImpDecrypterRef XclImpDecrypter::Clone() const
 {
     o_rEncryptionData = OnVerifyPassword( rPassword );
     mnError = o_rEncryptionData.getLength() ? ERRCODE_NONE : ERRCODE_ABORT;
-    return o_rEncryptionData.getLength() ? ::comphelper::DocPasswordVerifierResult_OK : ::comphelper::DocPasswordVerifierResult_WRONG_PASSWORD;
+    return o_rEncryptionData.getLength() ? ::comphelper::DocPasswordVerifierResult::OK : ::comphelper::DocPasswordVerifierResult::WrongPassword;
 }
 
 ::comphelper::DocPasswordVerifierResult XclImpDecrypter::verifyEncryptionData( const uno::Sequence< beans::NamedValue >& rEncryptionData )
 {
     bool bValid = OnVerifyEncryptionData( rEncryptionData );
     mnError = bValid ? ERRCODE_NONE : ERRCODE_ABORT;
-    return bValid ? ::comphelper::DocPasswordVerifierResult_OK : ::comphelper::DocPasswordVerifierResult_WRONG_PASSWORD;
+    return bValid ? ::comphelper::DocPasswordVerifierResult::OK : ::comphelper::DocPasswordVerifierResult::WrongPassword;
 }
 
 void XclImpDecrypter::Update( SvStream& rStrm, sal_uInt16 nRecSize )
@@ -148,7 +148,7 @@ uno::Sequence< beans::NamedValue > XclImpBiff5Decrypter::OnVerifyPassword( const
                 *aIt = static_cast< sal_uInt16 >( rPassword[nInd] );
 
             uno::Sequence< sal_Int8 > aDocId = ::comphelper::DocPasswordHelper::GenerateRandomByteSequence( 16 );
-            OSL_ENSURE( aDocId.getLength() == 16, "Unexpected length of the senquence!" );
+            OSL_ENSURE( aDocId.getLength() == 16, "Unexpected length of the sequence!" );
 
             ::msfilter::MSCodec_Std97 aCodec97;
             aCodec97.InitKey( &aPassVect.front(), reinterpret_cast<sal_uInt8 const *>(aDocId.getConstArray()) );
@@ -394,7 +394,7 @@ XclBiff XclImpStream::DetectBiffVersion( SvStream& rStrm )
     return eBiff;
 }
 
-XclImpStream::XclImpStream( SvStream& rInStrm, const XclImpRoot& rRoot, bool bContLookup ) :
+XclImpStream::XclImpStream( SvStream& rInStrm, const XclImpRoot& rRoot ) :
     mrStrm( rInStrm ),
     mrRoot( rRoot ),
     mnGlobRecId( EXC_ID_UNKNOWN ),
@@ -410,7 +410,7 @@ XclImpStream::XclImpStream( SvStream& rInStrm, const XclImpRoot& rRoot, bool bCo
     mnRawRecSize( 0 ),
     mnRawRecLeft( 0 ),
     mcNulSubst( '?' ),
-    mbCont( bContLookup ),
+    mbCont( true ),
     mbUseDecr( false ),
     mbValidRec( false ),
     mbValid( false )
@@ -741,17 +741,15 @@ sal_Size XclImpStream::CopyToStream( SvStream& rOutStrm, sal_Size nBytes )
     return nRet;
 }
 
-sal_Size XclImpStream::CopyRecordToStream( SvStream& rOutStrm )
+void XclImpStream::CopyRecordToStream( SvStream& rOutStrm )
 {
-    sal_Size nRet = 0;
     if( mbValidRec )
     {
         PushPosition();
         RestorePosition( maFirstRec );
-        nRet = CopyToStream( rOutStrm, GetRecSize() );
+        CopyToStream( rOutStrm, GetRecSize() );
         PopPosition();
     }
-    return nRet;
 }
 
 void XclImpStream::Seek( sal_Size nPos )

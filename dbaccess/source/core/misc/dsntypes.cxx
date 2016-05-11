@@ -84,7 +84,6 @@ OUString ODsnTypeCollection::getTypeDisplayName(const OUString& _sURL) const
 
 OUString ODsnTypeCollection::cutPrefix(const OUString& _sURL) const
 {
-    OUString sURL( _sURL);
     OUString sRet;
     OUString sOldPattern;
     StringVector::const_iterator aIter = m_aDsnPrefixes.begin();
@@ -99,8 +98,8 @@ OUString ODsnTypeCollection::cutPrefix(const OUString& _sURL) const
             //   foo*
             // that is, the very concept of "prefix" applies.
             OUString prefix(comphelper::string::stripEnd(*aIter, '*'));
-            OSL_ENSURE(prefix.getLength() <= sURL.getLength(), "How can A match B when A shorter than B?");
-            sRet = sURL.copy(prefix.getLength());
+            OSL_ENSURE(prefix.getLength() <= _sURL.getLength(), "How can A match B when A shorter than B?");
+            sRet = _sURL.copy(prefix.getLength());
             sOldPattern = *aIter;
         }
     }
@@ -110,7 +109,6 @@ OUString ODsnTypeCollection::cutPrefix(const OUString& _sURL) const
 
 OUString ODsnTypeCollection::getPrefix(const OUString& _sURL) const
 {
-    OUString sURL( _sURL);
     OUString sRet;
     OUString sOldPattern;
     StringVector::const_iterator aIter = m_aDsnPrefixes.begin();
@@ -118,13 +116,13 @@ OUString ODsnTypeCollection::getPrefix(const OUString& _sURL) const
     for(;aIter != aEnd;++aIter)
     {
         WildCard aWildCard(*aIter);
-        if ( sOldPattern.getLength() < aIter->getLength() && aWildCard.Matches(sURL) )
+        if ( sOldPattern.getLength() < aIter->getLength() && aWildCard.Matches(_sURL) )
         {
             // This relies on the fact that all patterns are of the form
             //   foo*
             // that is, the very concept of "prefix" applies.
             sRet = comphelper::string::stripEnd(*aIter, '*');
-            OSL_ENSURE(sRet.getLength() <= sURL.getLength(), "How can A match B when A shorter than B?");
+            OSL_ENSURE(sRet.getLength() <= _sURL.getLength(), "How can A match B when A shorter than B?");
             sOldPattern = *aIter;
         }
     }
@@ -140,7 +138,6 @@ bool ODsnTypeCollection::hasDriver( const sal_Char* _pAsciiPattern ) const
 
 bool ODsnTypeCollection::isConnectionUrlRequired(const OUString& _sURL) const
 {
-    OUString sURL( _sURL);
     OUString sRet;
     OUString sOldPattern;
     StringVector::const_iterator aIter = m_aDsnPrefixes.begin();
@@ -148,7 +145,7 @@ bool ODsnTypeCollection::isConnectionUrlRequired(const OUString& _sURL) const
     for(;aIter != aEnd;++aIter)
     {
         WildCard aWildCard(*aIter);
-        if ( sOldPattern.getLength() < aIter->getLength() && aWildCard.Matches(sURL) )
+        if ( sOldPattern.getLength() < aIter->getLength() && aWildCard.Matches(_sURL) )
         {
             sRet = *aIter;
             sOldPattern = *aIter;
@@ -254,31 +251,31 @@ OUString ODsnTypeCollection::getJavaDriverClass(const OUString& _sURL) const
 bool ODsnTypeCollection::isFileSystemBased(const OUString& _sURL) const
 {
     const ::comphelper::NamedValueCollection& aFeatures = m_aDriverConfig.getMetaData(_sURL);
-    return aFeatures.getOrDefault("FileSystemBased",sal_False);
+    return aFeatures.getOrDefault("FileSystemBased",false);
 }
 
 bool ODsnTypeCollection::supportsTableCreation(const OUString& _sURL) const
 {
     const ::comphelper::NamedValueCollection& aFeatures = m_aDriverConfig.getMetaData(_sURL);
-    return aFeatures.getOrDefault("SupportsTableCreation",sal_False);
+    return aFeatures.getOrDefault("SupportsTableCreation",false);
 }
 
 bool ODsnTypeCollection::supportsColumnDescription(const OUString& _sURL) const
 {
     const ::comphelper::NamedValueCollection& aFeatures = m_aDriverConfig.getMetaData(_sURL);
-    return aFeatures.getOrDefault("SupportsColumnDescription",sal_False);
+    return aFeatures.getOrDefault("SupportsColumnDescription",false);
 }
 
 bool ODsnTypeCollection::supportsBrowsing(const OUString& _sURL) const
 {
     const ::comphelper::NamedValueCollection& aFeatures = m_aDriverConfig.getMetaData(_sURL);
-    return aFeatures.getOrDefault("SupportsBrowsing",sal_False);
+    return aFeatures.getOrDefault("SupportsBrowsing",false);
 }
 
 bool ODsnTypeCollection::supportsDBCreation(const OUString& _sURL) const
 {
     const ::comphelper::NamedValueCollection& aFeatures = m_aDriverConfig.getMetaData(_sURL);
-    return aFeatures.getOrDefault("SupportsDBCreation",sal_False);
+    return aFeatures.getOrDefault("SupportsDBCreation",false);
 }
 
 Sequence<PropertyValue> ODsnTypeCollection::getDefaultDBSettings( const OUString& _sURL ) const
@@ -313,7 +310,6 @@ OUString ODsnTypeCollection::getEmbeddedDatabase() const
 
     return sEmbeddedDatabaseURL;
 }
-
 
 
 DATASOURCE_TYPE ODsnTypeCollection::determineType(const OUString& _rDsn) const
@@ -378,7 +374,7 @@ DATASOURCE_TYPE ODsnTypeCollection::determineType(const OUString& _rDsn) const
         {
         }
 
-        bool match( const OUString &url)
+        bool match( const OUString &url) const
         {
             if(bMatchComplete)
             {
@@ -390,7 +386,7 @@ DATASOURCE_TYPE ODsnTypeCollection::determineType(const OUString& _rDsn) const
             }
         }
     };
-    KnownPrefix aKnowPrefixes[] =
+    const KnownPrefix aKnowPrefixes[] =
     {
         KnownPrefix( "sdbc:calc:",          DST_CALC,               false ),
         KnownPrefix( "sdbc:flat:",          DST_FLAT,               false ),
@@ -401,7 +397,7 @@ DATASOURCE_TYPE ODsnTypeCollection::determineType(const OUString& _rDsn) const
         KnownPrefix( "sdbc:mysql:jdbc:",    DST_MYSQL_JDBC,         false ),
         KnownPrefix( "sdbc:mysql:mysqlc:",  DST_MYSQL_NATIVE,       false ),
         KnownPrefix( "sdbc:mysqlc:",        DST_MYSQL_NATIVE_DIRECT,false ),
-        KnownPrefix( "sdbc:postgresql:",    DST_POSTGRES,false ),
+        KnownPrefix( "sdbc:postgresql:",    DST_POSTGRES           ,false ),
 
         KnownPrefix( "sdbc:address:mozilla:",           DST_MOZILLA,            true ),
         KnownPrefix( "sdbc:address:thunderbird:",       DST_THUNDERBIRD,        true ),
@@ -415,11 +411,11 @@ DATASOURCE_TYPE ODsnTypeCollection::determineType(const OUString& _rDsn) const
         KnownPrefix( "sdbc:address:macab",              DST_MACAB,              true )
     };
 
-    for ( size_t i=0; i < sizeof( aKnowPrefixes ) / sizeof( aKnowPrefixes[0] ); ++i )
+    for (const auto & aKnowPrefixe : aKnowPrefixes)
     {
-        if( aKnowPrefixes[i].match(sDsn) )
+        if( aKnowPrefixe.match(sDsn) )
         {
-            return aKnowPrefixes[i].eType;
+            return aKnowPrefixe.eType;
         }
     }
 
@@ -508,14 +504,13 @@ OUString ODsnTypeCollection::getType(const OUString& _sURL) const
 sal_Int32 ODsnTypeCollection::getIndexOf(const OUString& _sURL) const
 {
     sal_Int32 nRet = -1;
-    OUString sURL( _sURL);
     OUString sOldPattern;
     StringVector::const_iterator aIter = m_aDsnPrefixes.begin();
     StringVector::const_iterator aEnd = m_aDsnPrefixes.end();
     for(sal_Int32 i = 0;aIter != aEnd;++aIter,++i)
     {
         WildCard aWildCard(*aIter);
-        if ( sOldPattern.getLength() < aIter->getLength() && aWildCard.Matches(sURL) )
+        if ( sOldPattern.getLength() < aIter->getLength() && aWildCard.Matches(_sURL) )
         {
             nRet = i;
             sOldPattern = *aIter;
@@ -574,14 +569,6 @@ const ODsnTypeCollection::TypeIterator& ODsnTypeCollection::TypeIterator::operat
     OSL_ENSURE(m_nPosition < (sal_Int32)m_pContainer->m_aDsnTypesDisplayNames.size(), "ODsnTypeCollection::TypeIterator::operator++ : invalid position!");
     if (m_nPosition < (sal_Int32)m_pContainer->m_aDsnTypesDisplayNames.size())
         ++m_nPosition;
-    return *this;
-}
-
-const ODsnTypeCollection::TypeIterator& ODsnTypeCollection::TypeIterator::operator--()
-{
-    OSL_ENSURE(m_nPosition >= 0, "ODsnTypeCollection::TypeIterator::operator-- : invalid position!");
-    if (m_nPosition >= 0)
-        --m_nPosition;
     return *this;
 }
 

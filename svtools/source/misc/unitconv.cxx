@@ -20,7 +20,6 @@
 #include <svtools/unitconv.hxx>
 
 
-
 void SetFieldUnit( MetricField& rField, FieldUnit eUnit, bool bAll )
 {
     sal_Int64 nFirst    = rField.Denormalize( rField.GetFirst( FUNIT_TWIP ) );
@@ -80,27 +79,23 @@ void SetFieldUnit( MetricField& rField, FieldUnit eUnit, bool bAll )
 }
 
 
-
-void SetFieldUnit( MetricBox& rBox, FieldUnit eUnit, bool bAll )
+void SetFieldUnit( MetricBox& rBox, FieldUnit eUnit )
 {
     sal_Int64 nMin = rBox.Denormalize( rBox.GetMin( FUNIT_TWIP ) );
     sal_Int64 nMax = rBox.Denormalize( rBox.GetMax( FUNIT_TWIP ) );
 
-    if ( !bAll )
+    switch ( eUnit )
     {
-        switch ( eUnit )
-        {
-            case FUNIT_M:
-            case FUNIT_KM:
-                eUnit = FUNIT_CM;
-                break;
+        case FUNIT_M:
+        case FUNIT_KM:
+            eUnit = FUNIT_CM;
+            break;
 
-            case FUNIT_FOOT:
-            case FUNIT_MILE:
-                eUnit = FUNIT_INCH;
-                break;
-            default: ;//prevent warning
-        }
+        case FUNIT_FOOT:
+        case FUNIT_MILE:
+            eUnit = FUNIT_INCH;
+            break;
+        default: ;//prevent warning
     }
     rBox.SetUnit( eUnit );
 
@@ -109,11 +104,8 @@ void SetFieldUnit( MetricBox& rBox, FieldUnit eUnit, bool bAll )
     else
         rBox.SetDecimalDigits( 2 );
 
-    if ( !bAll )
-    {
-        rBox.SetMin( rBox.Normalize( nMin ), FUNIT_TWIP );
-        rBox.SetMax( rBox.Normalize( nMax ), FUNIT_TWIP );
-    }
+    rBox.SetMin( rBox.Normalize( nMin ), FUNIT_TWIP );
+    rBox.SetMax( rBox.Normalize( nMax ), FUNIT_TWIP );
 }
 
 
@@ -124,7 +116,6 @@ void SetMetricValue( MetricField& rField, long nCoreValue, SfxMapUnit eUnit )
     rField.SetValue( nVal, FUNIT_100TH_MM );
 
 }
-
 
 
 long GetCoreValue( const MetricField& rField, SfxMapUnit eUnit )
@@ -150,7 +141,6 @@ long GetCoreValue( const MetricField& rField, SfxMapUnit eUnit )
         nUnitVal = rField.Denormalize( nUnitVal );
     return static_cast<long>(nUnitVal);
 }
-
 
 
 long CalcToUnit( float nIn, SfxMapUnit eUnit )
@@ -182,7 +172,6 @@ long CalcToUnit( float nIn, SfxMapUnit eUnit )
     return nRet;
 //! return (long)(nTmp * 20);
 }
-
 
 
 long ItemToControl( long nIn, SfxMapUnit eItem, FieldUnit eCtrl )
@@ -241,12 +230,10 @@ long ItemToControl( long nIn, SfxMapUnit eItem, FieldUnit eCtrl )
 }
 
 
-
 long ControlToItem( long nIn, FieldUnit eCtrl, SfxMapUnit eItem )
 {
     return ItemToControl( nIn, eItem, eCtrl );
 }
-
 
 
 FieldUnit MapToFieldUnit( const SfxMapUnit eUnit )
@@ -276,7 +263,6 @@ FieldUnit MapToFieldUnit( const SfxMapUnit eUnit )
     }
     return FUNIT_NONE;
 }
-
 
 
 long CalcToPoint( long nIn, SfxMapUnit eUnit, sal_uInt16 nFactor )
@@ -317,7 +303,6 @@ long CalcToPoint( long nIn, SfxMapUnit eUnit, sal_uInt16 nFactor )
 }
 
 
-
 long CMToTwips( long nIn )
 {
     long nRet = 0;
@@ -326,7 +311,6 @@ long CMToTwips( long nIn )
         nRet = nIn * 567;
     return nRet;
 }
-
 
 
 long MMToTwips( long nIn )
@@ -339,7 +323,6 @@ long MMToTwips( long nIn )
 }
 
 
-
 long InchToTwips( long nIn )
 {
     long nRet = 0;
@@ -348,7 +331,6 @@ long InchToTwips( long nIn )
         nRet = nIn * 1440;
     return nRet;
 }
-
 
 
 long PointToTwips( long nIn )
@@ -361,7 +343,6 @@ long PointToTwips( long nIn )
 }
 
 
-
 long PicaToTwips( long nIn )
 {
     long nRet = 0;
@@ -372,13 +353,11 @@ long PicaToTwips( long nIn )
 }
 
 
-
 long TwipsToCM( long nIn )
 {
     long nRet = nIn / 567;
     return nRet;
 }
-
 
 
 long InchToCM( long nIn )
@@ -391,13 +370,11 @@ long InchToCM( long nIn )
 }
 
 
-
 long MMToCM( long nIn )
 {
     long nRet = nIn / 10;
     return nRet;
 }
-
 
 
 long PointToCM( long nIn )
@@ -410,7 +387,6 @@ long PointToCM( long nIn )
 }
 
 
-
 long PicaToCM( long nIn)
 {
     long nRet = 0;
@@ -419,7 +395,6 @@ long PicaToCM( long nIn)
         nRet = nIn * 12 * 20 / 567;
     return nRet;
 }
-
 
 
 long TwipsToMM( long nIn )
@@ -432,7 +407,6 @@ long TwipsToMM( long nIn )
 }
 
 
-
 long CMToMM( long nIn )
 {
     long nRet = 0;
@@ -441,7 +415,6 @@ long CMToMM( long nIn )
         nRet = nIn * 10;
     return nRet;
 }
-
 
 
 long InchToMM( long nIn )
@@ -454,7 +427,6 @@ long InchToMM( long nIn )
 }
 
 
-
 long PointToMM( long nIn )
 {
     long nRet = 0;
@@ -463,7 +435,6 @@ long PointToMM( long nIn )
         nRet = nIn * 200 / 567;
     return nRet;
 }
-
 
 
 long PicaToMM( long nIn )
@@ -476,13 +447,11 @@ long PicaToMM( long nIn )
 }
 
 
-
 long TwipsToInch( long nIn )
 {
     long nRet = nIn / 1440;
     return nRet;
 }
-
 
 
 long CMToInch( long nIn )
@@ -495,7 +464,6 @@ long CMToInch( long nIn )
 }
 
 
-
 long MMToInch( long nIn )
 {
     long nRet = 0;
@@ -506,13 +474,11 @@ long MMToInch( long nIn )
 }
 
 
-
 long PointToInch( long nIn )
 {
     long nRet = nIn / 72;
     return nRet;
 }
-
 
 
 long PicaToInch( long nIn )
@@ -522,13 +488,11 @@ long PicaToInch( long nIn )
 }
 
 
-
 long TwipsToPoint( long nIn )
 {
     long nRet = nIn / 20;
     return nRet;
 }
-
 
 
 long InchToPoint( long nIn )
@@ -541,7 +505,6 @@ long InchToPoint( long nIn )
 }
 
 
-
 long CMToPoint( long nIn )
 {
     long nRet = 0;
@@ -550,7 +513,6 @@ long CMToPoint( long nIn )
         nRet = nIn * 567 / 20;
     return nRet;
 }
-
 
 
 long MMToPoint( long nIn )
@@ -563,7 +525,6 @@ long MMToPoint( long nIn )
 }
 
 
-
 long PicaToPoint( long nIn )
 {
     long nRet = nIn / 12;
@@ -571,13 +532,11 @@ long PicaToPoint( long nIn )
 }
 
 
-
 long TwipsToPica( long nIn )
 {
     long nRet = nIn / 240;
     return nRet;
 }
-
 
 
 long InchToPica( long nIn )
@@ -590,7 +549,6 @@ long InchToPica( long nIn )
 }
 
 
-
 long PointToPica( long nIn )
 {
     long nRet = 0;
@@ -599,7 +557,6 @@ long PointToPica( long nIn )
         nRet = nIn * 12;
     return nRet;
 }
-
 
 
 long CMToPica( long nIn )
@@ -612,7 +569,6 @@ long CMToPica( long nIn )
 }
 
 
-
 long MMToPica( long nIn )
 {
     long nRet = 0;
@@ -621,7 +577,6 @@ long MMToPica( long nIn )
         nRet = nIn * 567 / 200 / 12;
     return nRet;
 }
-
 
 
 long Nothing( long nIn )
@@ -640,7 +595,6 @@ FUNC_CONVERT ConvertTable[6][6] =
     { PicaToCM, PicaToMM,   PicaToInch,  PicaToPoint, Nothing,     PicaToTwips },
     { TwipsToCM,    TwipsToMM,  TwipsToInch, TwipsToPoint,TwipsToPica, Nothing }
 };
-
 
 
 long TransformMetric( long nVal, FieldUnit aOld, FieldUnit aNew )

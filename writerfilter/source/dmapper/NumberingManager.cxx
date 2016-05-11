@@ -121,7 +121,7 @@ void ListLevel::SetValue( Id nId, sal_Int32 nValue )
     }
 }
 
-void ListLevel::SetParaStyle( std::shared_ptr< StyleSheetEntry > pStyle )
+void ListLevel::SetParaStyle( const std::shared_ptr< StyleSheetEntry >& pStyle )
 {
     if (!pStyle)
         return;
@@ -388,7 +388,6 @@ void NumPicBullet::SetShape(uno::Reference<drawing::XShape> const& xShape)
 }
 
 
-
 //--------------------------------------- AbstractListDef implementation
 
 AbstractListDef::AbstractListDef( ) :
@@ -567,7 +566,7 @@ void ListDef::CreateNumberingRules( DomainMapper& rDMapper,
 
                     //create (or find) a character style containing the character
                     // attributes of the symbol and apply it to the numbering level
-                    OUString sStyle = rDMapper.getOrCreateCharStyle( aStyleProps );
+                    OUString sStyle = rDMapper.getOrCreateCharStyle( aStyleProps, /*bAlwaysCreate=*/true );
                     aLvlProps.push_back(comphelper::makePropertyValue(getPropertyName(PROP_CHAR_STYLE_NAME), sStyle));
                 }
 
@@ -709,7 +708,6 @@ void ListsManager::lcl_attribute( Id nName, Value& rVal )
             return;
     }
     int nIntValue = rVal.getInt();
-
 
 
     switch(nName)

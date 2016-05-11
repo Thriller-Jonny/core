@@ -135,7 +135,6 @@ enum ESCHER_wMode
 };
 
 
-
 enum ESCHER_ShapePath
 {
     ESCHER_ShapeLines,          // A line of straight segments
@@ -605,7 +604,6 @@ struct EscherPropertyValueHelper
 };
 
 
-
 struct EscherPersistEntry
 {
     sal_uInt32  mnID;
@@ -614,7 +612,6 @@ struct EscherPersistEntry
     EscherPersistEntry( sal_uInt32 nId, sal_uInt32 nOffset ) { mnID = nId; mnOffset = nOffset; };
 
 };
-
 
 
 class EscherBlibEntry
@@ -658,9 +655,8 @@ public:
 };
 
 
-
-#define _E_GRAPH_PROV_USE_INSTANCES             1
-#define _E_GRAPH_PROV_DO_NOT_ROTATE_METAFILES   2
+#define E_GRAPH_PROV_USE_INSTANCES             1
+#define E_GRAPH_PROV_DO_NOT_ROTATE_METAFILES   2
 
 class MSFILTER_DLLPUBLIC EscherGraphicProvider
 {
@@ -680,8 +676,8 @@ public:
 
     sal_uInt32  GetBlibStoreContainerSize( SvStream* pMergePicStreamBSE = nullptr ) const;
     void        WriteBlibStoreContainer( SvStream& rStrm, SvStream* pMergePicStreamBSE = nullptr  );
-    bool        WriteBlibStoreEntry(SvStream& rStrm, sal_uInt32 nBlipId,
-    bool        bWritePictureOffset, sal_uInt32 nResize = 0);
+    void        WriteBlibStoreEntry(SvStream& rStrm, sal_uInt32 nBlipId,
+                    bool bWritePictureOffset, sal_uInt32 nResize = 0);
     sal_uInt32  GetBlibID(
                     SvStream& rPicOutStream,
                     const OString& rGraphicId,
@@ -699,7 +695,7 @@ public:
     void        SetBaseURI( const OUString& rBaseURI ) { maBaseURI = rBaseURI; };
     const OUString& GetBaseURI() { return maBaseURI; };
 
-    EscherGraphicProvider( sal_uInt32 nFlags = _E_GRAPH_PROV_DO_NOT_ROTATE_METAFILES );
+    EscherGraphicProvider( sal_uInt32 nFlags = E_GRAPH_PROV_DO_NOT_ROTATE_METAFILES );
     virtual ~EscherGraphicProvider();
 };
 
@@ -734,7 +730,6 @@ public:
                     EscherSolverContainer(){};
                     ~EscherSolverContainer();
 };
-
 
 
 #define ESCHER_CREATEPOLYGON_LINE           1
@@ -818,7 +813,7 @@ public:
 
     void        Commit( SvStream& rSt, sal_uInt16 nVersion = 3, sal_uInt16 nRecType = ESCHER_OPT );
 
-    bool        CreateShapeProperties(
+    void        CreateShapeProperties(
                     const css::uno::Reference< css::drawing::XShape > & rXShape
                 );
     bool        CreateOLEGraphicProperties(
@@ -833,12 +828,12 @@ public:
                 );
 
     /** Creates a complex ESCHER_Prop_fillBlip containing the BLIP directly (for Excel charts). */
-    bool        CreateEmbeddedBitmapProperties(
+    void        CreateEmbeddedBitmapProperties(
                     const OUString& rBitmapUrl,
                     css::drawing::BitmapMode eBitmapMode
                 );
     /** Creates a complex ESCHER_Prop_fillBlip containing a hatch style (for Excel charts). */
-    bool        CreateEmbeddedHatchProperties(
+    void        CreateEmbeddedHatchProperties(
                     const css::drawing::Hatch& rHatch,
                     const Color& rBackColor,
                     bool bFillBackground
@@ -906,7 +901,7 @@ public:
 
                 // Because shadow properties depends to the line and fillstyle, the CreateShadowProperties method should be called at last.
                 // It activ only when at least a FillStyle or LineStyle is set.
-    bool        CreateShadowProperties(
+    void        CreateShadowProperties(
                     const css::uno::Reference< css::beans::XPropertySet > &
                 );
 
@@ -948,7 +943,6 @@ public:
 };
 
 
-
 class MSFILTER_DLLPUBLIC EscherPersistTable
 {
 
@@ -957,15 +951,14 @@ public:
 
     bool        PtIsID( sal_uInt32 nID );
     void        PtInsert( sal_uInt32 nID, sal_uInt32 nOfs );
-    sal_uInt32  PtDelete( sal_uInt32 nID );
+    void        PtDelete( sal_uInt32 nID );
     sal_uInt32  PtGetOffsetByID( sal_uInt32 nID );
-    sal_uInt32  PtReplace( sal_uInt32 nID, sal_uInt32 nOfs );
-    sal_uInt32  PtReplaceOrInsert( sal_uInt32 nID, sal_uInt32 nOfs );
+    void        PtReplace( sal_uInt32 nID, sal_uInt32 nOfs );
+    void        PtReplaceOrInsert( sal_uInt32 nID, sal_uInt32 nOfs );
 
                 EscherPersistTable();
     virtual     ~EscherPersistTable();
 };
-
 
 
 class EscherEx;
@@ -1056,13 +1049,11 @@ public:
 };
 
 
-
-
 /** Instance for global DFF data, shared through various instances of EscherEx. */
 class MSFILTER_DLLPUBLIC EscherExGlobal : public EscherGraphicProvider
 {
 public:
-    explicit            EscherExGlobal( sal_uInt32 nGraphicProvFlags = _E_GRAPH_PROV_DO_NOT_ROTATE_METAFILES );
+    explicit            EscherExGlobal( sal_uInt32 nGraphicProvFlags = E_GRAPH_PROV_DO_NOT_ROTATE_METAFILES );
     virtual             ~EscherExGlobal();
 
     /** Returns a new drawing ID for a new drawing container (DGCONTAINER). */
@@ -1216,10 +1207,10 @@ public:
     void            ReplacePersistOffset( sal_uInt32 nKey, sal_uInt32 nOffset );
     sal_uInt32      GetPersistOffset( sal_uInt32 nKey );
     bool            SeekToPersistOffset( sal_uInt32 nKey );
-    bool    InsertAtPersistOffset( sal_uInt32 nKey, sal_uInt32 nValue );   // nValue is being inserted into the Stream where it's appropriate (overwrite modus), without that the
+    void            InsertAtPersistOffset( sal_uInt32 nKey, sal_uInt32 nValue );   // nValue is being inserted into the Stream where it's appropriate (overwrite modus), without that the
                                                                                     // current StreamPosition changes
     void            SetEditAs( const OUString& rEditAs );
-    rtl::OUString   GetEditAs() { return mEditAs; }
+    const OUString& GetEditAs() { return mEditAs; }
     SvStream&       GetStream() const   { return *mpOutStrm; }
     sal_uLong       GetStreamPos() const    { return mpOutStrm->Tell(); }
 
@@ -1242,8 +1233,8 @@ public:
     virtual sal_uInt32 EnterGroup( const OUString& rShapeName, const Rectangle* pBoundRect = nullptr );
     sal_uInt32  EnterGroup( const Rectangle* pBoundRect = nullptr );
     sal_uInt32  GetGroupLevel() const { return mnGroupLevel; };
-    bool SetGroupSnapRect( sal_uInt32 nGroupLevel, const Rectangle& rRect );
-    bool SetGroupLogicRect( sal_uInt32 nGroupLevel, const Rectangle& rRect );
+    void SetGroupSnapRect( sal_uInt32 nGroupLevel, const Rectangle& rRect );
+    void SetGroupLogicRect( sal_uInt32 nGroupLevel, const Rectangle& rRect );
     virtual void LeaveGroup();
 
                 // a ESCHER_Sp is being written ( a ESCHER_DgContainer has to be opened for this purpose!)
@@ -1251,7 +1242,7 @@ public:
 
     virtual void Commit( EscherPropertyContainer& rProps, const Rectangle& rRect);
 
-    static sal_uInt32  GetColor( const sal_uInt32 nColor, bool bSwap = true );
+    static sal_uInt32  GetColor( const sal_uInt32 nColor );
     static sal_uInt32  GetColor( const Color& rColor, bool bSwap = true );
 
                 // ...Sdr... implemented in eschesdo.cxx
@@ -1313,10 +1304,6 @@ public:
 private:
                         EscherEx( const EscherEx& ) = delete;
     EscherEx&           operator=( const EscherEx& ) = delete;
-
-    // prevent C-style cast to former base class EscherGraphicProvider
-    operator EscherGraphicProvider&();
-    operator EscherGraphicProvider const&();
 };
 
 

@@ -203,7 +203,6 @@ OUString createStandardColumnPart(const Reference< XPropertySet >& xColProp,cons
 }
 
 
-
 OUString createStandardCreateStatement(const Reference< XPropertySet >& descriptor,const Reference< XConnection>& _xConnection,ISQLStatementHelper* _pHelper,const OUString& _sCreatePattern)
 {
     OUStringBuffer aSql("CREATE TABLE ");
@@ -216,7 +215,7 @@ OUString createStandardCreateStatement(const Reference< XPropertySet >& descript
     descriptor->getPropertyValue(rPropMap.getNameByIndex(PROPERTY_ID_SCHEMANAME))   >>= sSchema;
     descriptor->getPropertyValue(rPropMap.getNameByIndex(PROPERTY_ID_NAME))         >>= sTable;
 
-    sComposedName = ::dbtools::composeTableName( xMetaData, sCatalog, sSchema, sTable, true, ::dbtools::eInTableDefinitions );
+    sComposedName = ::dbtools::composeTableName( xMetaData, sCatalog, sSchema, sTable, true, ::dbtools::EComposeRule::InTableDefinitions );
     if ( sComposedName.isEmpty() )
         ::dbtools::throwFunctionSequenceException(_xConnection);
 
@@ -330,8 +329,8 @@ OUString createStandardKeyStatement(const Reference< XPropertySet >& descriptor,
                                                         sCatalog,
                                                         sSchema,
                                                         sTable,
-                                                        ::dbtools::eInDataManipulation);
-                    sComposedName = ::dbtools::composeTableName( xMetaData, sCatalog, sSchema, sTable, true, ::dbtools::eInTableDefinitions );
+                                                        ::dbtools::EComposeRule::InDataManipulation);
+                    sComposedName = ::dbtools::composeTableName( xMetaData, sCatalog, sSchema, sTable, true, ::dbtools::EComposeRule::InTableDefinitions );
 
 
                     if ( sComposedName.isEmpty() )
@@ -440,7 +439,7 @@ namespace
 
                         ColumnInformationMap aInfo(_bCase);
                         collectColumnInformation(_xConnection,sComposedName,sQuotedName,aInfo);
-                        ColumnInformationMap::iterator aIter = aInfo.begin();
+                        ColumnInformationMap::const_iterator aIter = aInfo.begin();
                         if ( aIter != aInfo.end() )
                         {
                             bAutoIncrement  = aIter->second.first.first;
@@ -511,7 +510,7 @@ namespace
     Reference< XModel> lcl_getXModel(const Reference< XInterface>& _xIface)
     {
         Reference< XInterface > xParent = _xIface;
-        Reference< XModel > xModel(xParent,UNO_QUERY);;
+        Reference< XModel > xModel(xParent,UNO_QUERY);
         while( xParent.is() && !xModel.is() )
         {
             Reference<XChild> xChild(xParent,UNO_QUERY);

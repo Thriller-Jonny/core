@@ -36,9 +36,7 @@
 #include "edit.hxx"
 #include "node.hxx"
 
-class Menu;
 class DataChangedEvent;
-class SmClipboardChangeListener;
 class SmDocShell;
 class SmViewShell;
 class SmPrintUIOptions;
@@ -92,7 +90,6 @@ protected:
     virtual void KeyInput(const KeyEvent& rKEvt) override;
     virtual void Command(const CommandEvent& rCEvt) override;
     virtual void StateChanged( StateChangedType eChanged ) override;
-    DECL_LINK_TYPED(MenuSelectHdl, Menu*, bool);
 
 private:
     void RepaintViewShellDoc();
@@ -163,9 +160,6 @@ protected:
 
 public:
     SmEditController(SmEditWindow &, sal_uInt16, SfxBindings  & );
-#if OSL_DEBUG_LEVEL > 1
-    virtual ~SmEditController();
-#endif
 
     virtual void StateChanged(sal_uInt16 nSID, SfxItemState eState, const SfxPoolItem* pState) override;
 };
@@ -218,10 +212,6 @@ class SmCmdBoxWrapper : public SfxChildWindow
 protected:
     SmCmdBoxWrapper(vcl::Window* pParentWindow, sal_uInt16 nId, SfxBindings* pBindings, SfxChildWinInfo* pInfo);
 
-#if OSL_DEBUG_LEVEL > 1
-    virtual ~SmCmdBoxWrapper();
-#endif
-
 public:
 
     SmEditWindow& GetEditWindow()
@@ -235,9 +225,6 @@ struct SmViewShell_Impl;
 
 class SmViewShell: public SfxViewShell
 {
-    // for handling the PasteClipboardState
-    friend class SmClipboardChangeListener;
-
     std::unique_ptr<SmViewShell_Impl> pImpl;
 
     VclPtr<SmGraphicWindow> aGraphic;
@@ -271,7 +258,7 @@ protected:
 
     virtual SfxPrinter *GetPrinter(bool bCreate = false) override;
     virtual sal_uInt16 SetPrinter(SfxPrinter *pNewPrinter,
-                              SfxPrinterChangeFlags nDiffFlags = SFX_PRINTER_ALL, bool bIsAPI=false) override;
+                              SfxPrinterChangeFlags nDiffFlags = SFX_PRINTER_ALL) override;
 
     void Insert( SfxMedium& rMedium );
     void InsertFrom(SfxMedium &rMedium);

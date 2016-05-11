@@ -414,7 +414,7 @@ ConvErr ExcelToSc::Convert( const ScTokenArray*& pErgebnis, XclImpStream& aIn, s
                     case EXC_BIFF4: aIn.Ignore( 10 );   break;
                     case EXC_BIFF5:
                         SAL_INFO( "sc", "-ExcelToSc::Convert(): 0x1A does not exist in Biff5!" );
-                        //fall-through
+                        SAL_FALLTHROUGH;
                     default:
                         SAL_INFO( "sc", "-ExcelToSc::Convert(): A little oblivious?" );
                 }
@@ -427,7 +427,7 @@ ConvErr ExcelToSc::Convert( const ScTokenArray*& pErgebnis, XclImpStream& aIn, s
                     case EXC_BIFF4: aIn.Ignore( 4 );    break;
                     case EXC_BIFF5:
                         SAL_INFO( "sc", "-ExcelToSc::Convert(): 0x1B does not exist in Biff5!" );
-                        //fall-through
+                        SAL_FALLTHROUGH;
                     default:
                         SAL_INFO( "sc", "-ExcelToSc::Convert(): A little oblivious?" );
                 }
@@ -544,7 +544,7 @@ ConvErr ExcelToSc::Convert( const ScTokenArray*& pErgebnis, XclImpStream& aIn, s
                 if(pName && !pName->GetScRangeData())
                     aStack << aPool.Store( ocMacro, pName->GetXclName() );
                 else
-                    aStack << aPool.StoreName(nUINT16, true);
+                    aStack << aPool.StoreName(nUINT16, -1);
             }
                 break;
             case 0x44:
@@ -625,7 +625,7 @@ ConvErr ExcelToSc::Convert( const ScTokenArray*& pErgebnis, XclImpStream& aIn, s
             case 0x66:
             case 0x26: // Constant Reference Subexpression      [321 271]
                 aExtensions.push_back( EXTENSION_MEMAREA );
-                // fall through
+                SAL_FALLTHROUGH;
 
             case 0x47:
             case 0x67:
@@ -733,7 +733,7 @@ ConvErr ExcelToSc::Convert( const ScTokenArray*& pErgebnis, XclImpStream& aIn, s
                     aPool >> aStack;
                 }
                 else
-                    aStack << aPool.StoreName( nUINT16, true );
+                    aStack << aPool.StoreName( nUINT16, -1 );
                 aIn.Ignore( 12 );
                 break;
             }
@@ -923,7 +923,7 @@ ConvErr ExcelToSc::Convert( const ScTokenArray*& pErgebnis, XclImpStream& aIn, s
 }
 
 // stream seeks to first byte after <nFormulaLen>
-ConvErr ExcelToSc::Convert( _ScRangeListTabs& rRangeList, XclImpStream& aIn, sal_Size nFormulaLen,
+ConvErr ExcelToSc::Convert( ScRangeListTabs& rRangeList, XclImpStream& aIn, sal_Size nFormulaLen,
                             SCsTAB nTab, const FORMULA_TYPE eFT )
 {
     RootData&       rR = GetOldRoot();
@@ -1028,7 +1028,7 @@ ConvErr ExcelToSc::Convert( _ScRangeListTabs& rRangeList, XclImpStream& aIn, sal
                     case EXC_BIFF3:
                     case EXC_BIFF4: nIgnore = 10;   break;
                     case EXC_BIFF5: SAL_INFO( "sc", "-ExcelToSc::Convert(): 0x1A does not exist in Biff5!" );
-                                    //fall-through
+                                    SAL_FALLTHROUGH;
                     default:        SAL_INFO( "sc", "-ExcelToSc::Convert(): A little oblivious?" );
                 }
                 break;
@@ -1039,7 +1039,7 @@ ConvErr ExcelToSc::Convert( _ScRangeListTabs& rRangeList, XclImpStream& aIn, sal
                     case EXC_BIFF3:
                     case EXC_BIFF4: nIgnore = 4;        break;
                     case EXC_BIFF5: SAL_INFO( "sc", "-ExcelToSc::Convert(): 0x1B does not exist in Biff5!" );
-                                    //fall-through
+                                    SAL_FALLTHROUGH;
                     default:        SAL_INFO( "sc", "-ExcelToSc::Convert(): A little oblivious?" );
                 }
                 break;
@@ -1354,18 +1354,16 @@ ConvErr ExcelToSc::Convert( _ScRangeListTabs& rRangeList, XclImpStream& aIn, sal
     return eRet;
 }
 
-ConvErr ExcelToSc::ConvertExternName( const ScTokenArray*& /*rpArray*/, XclImpStream& /*rStrm*/, sal_Size /*nFormulaLen*/,
+void ExcelToSc::ConvertExternName( const ScTokenArray*& /*rpArray*/, XclImpStream& /*rStrm*/, sal_Size /*nFormulaLen*/,
                                       const OUString& /*rUrl*/, const vector<OUString>& /*rTabNames*/ )
 {
-    // not implemented ...
-    return ConvErrNi;
 }
 
-bool ExcelToSc::GetAbsRefs( ScRangeList& rRangeList, XclImpStream& rStrm, sal_Size nLen )
+void ExcelToSc::GetAbsRefs( ScRangeList& rRangeList, XclImpStream& rStrm, sal_Size nLen )
 {
     OSL_ENSURE_BIFF( GetBiff() == EXC_BIFF5 );
     if( GetBiff() != EXC_BIFF5 )
-        return false;
+        return;
 
     sal_uInt8 nOp;
     sal_uInt16 nRow1, nRow2;
@@ -1574,8 +1572,6 @@ bool ExcelToSc::GetAbsRefs( ScRangeList& rRangeList, XclImpStream& rStrm, sal_Si
         rStrm.Ignore( nSeek );
     }
     rStrm.Seek( nEndPos );
-
-    return !rRangeList.empty();
 }
 
 void ExcelToSc::DoMulArgs( DefTokenId eId, sal_uInt8 nAnz )
@@ -1711,28 +1707,28 @@ void ExcelToSc::ExcRelToScRel( sal_uInt16 nRow, sal_uInt8 nCol, ScSingleRefData 
 
 const ScTokenArray* ExcelToSc::GetBoolErr( XclBoolError eType )
 {
-    sal_uInt16                  nError;
+    sal_uInt16 nError;
     aPool.Reset();
     aStack.Reset();
 
-    DefTokenId              eOc;
+    DefTokenId eOc;
 
     switch( eType )
     {
-        case xlErrNull:     eOc = ocStop;       nError = errNoCode;             break;
-        case xlErrDiv0:     eOc = ocStop;       nError = errDivisionByZero;     break;
-        case xlErrValue:    eOc = ocStop;       nError = errNoValue;            break;
-        case xlErrRef:      eOc = ocStop;       nError = errNoRef;              break;
-        case xlErrName:     eOc = ocStop;       nError = errNoName;             break;
-        case xlErrNum:      eOc = ocStop;       nError = errIllegalFPOperation; break;
-        case xlErrNA:       eOc = ocNotAvail;   nError = NOTAVAILABLE;          break;
-        case xlErrTrue:     eOc = ocTrue;       nError = 0;                     break;
-        case xlErrFalse:    eOc = ocFalse;      nError = 0;                     break;
-        case xlErrUnknown:  eOc = ocStop;       nError = errUnknownState;       break;
+        case xlErrNull:     eOc = ocStop;       nError = formula::errNoCode;             break;
+        case xlErrDiv0:     eOc = ocStop;       nError = formula::errDivisionByZero;     break;
+        case xlErrValue:    eOc = ocStop;       nError = formula::errNoValue;            break;
+        case xlErrRef:      eOc = ocStop;       nError = formula::errNoRef;              break;
+        case xlErrName:     eOc = ocStop;       nError = formula::errNoName;             break;
+        case xlErrNum:      eOc = ocStop;       nError = formula::errIllegalFPOperation; break;
+        case xlErrNA:       eOc = ocNotAvail;   nError = formula::NOTAVAILABLE;          break;
+        case xlErrTrue:     eOc = ocTrue;       nError = 0;                              break;
+        case xlErrFalse:    eOc = ocFalse;      nError = 0;                              break;
+        case xlErrUnknown:  eOc = ocStop;       nError = formula::errUnknownState;       break;
         default:
             OSL_FAIL( "ExcelToSc::GetBoolErr - wrong enum!" );
             eOc = ocNoName;
-            nError = errUnknownState;
+            nError = formula::errUnknownState;
     }
 
     aPool << eOc;
@@ -1783,11 +1779,11 @@ void ExcelToSc::SetError( ScFormulaCell &rCell, const ConvErr eErr )
 
     switch( eErr )
     {
-        case ConvErrNi:         nInd = errUnknownToken; break;
-        case ConvErrNoMem:      nInd = errCodeOverflow; break;
-        case ConvErrExternal:   nInd = errNoName; break;
-        case ConvErrCount:      nInd = errCodeOverflow; break;
-        default:                nInd = errNoCode;   // I had no better idea
+        case ConvErrNi:         nInd = formula::errUnknownToken; break;
+        case ConvErrNoMem:      nInd = formula::errCodeOverflow; break;
+        case ConvErrExternal:   nInd = formula::errNoName; break;
+        case ConvErrCount:      nInd = formula::errCodeOverflow; break;
+        default:                nInd = formula::errNoCode;   // I had no better idea
     }
 
     rCell.SetErrCode( nInd );
@@ -1813,8 +1809,6 @@ void ExcelToSc::SetComplRow( ScComplexRefData &rCRD )
 
 void ExcelToSc::ReadExtensionArray( unsigned int n, XclImpStream& aIn )
 {
-    ScMatrix*   pMatrix;
-
     sal_uInt8 nByte = aIn.ReaduInt8();
     sal_uInt16 nUINT16 = aIn.ReaduInt16();
 
@@ -1831,7 +1825,7 @@ void ExcelToSc::ReadExtensionArray( unsigned int n, XclImpStream& aIn )
         nRows = nUINT16;
     }
 
-    pMatrix = aPool.GetMatrix( n );
+    ScMatrix* pMatrix = aPool.GetMatrix( n );
 
     if( nullptr != pMatrix )
     {
@@ -1946,10 +1940,8 @@ void ExcelToSc::ReadExtensions( const ExtensionTypeVec& rExtensions,
 {
     unsigned int nArray = 0;
 
-    for( size_t i = 0 ; i < rExtensions.size() ; i++ )
+    for(int eType : rExtensions)
     {
-        ExtensionType eType = rExtensions[i];
-
         switch( eType )
         {
             case EXTENSION_ARRAY:

@@ -25,17 +25,13 @@
 #include <vcl/vclenum.hxx>
 #include <basegfx/vector/b2enums.hxx>
 #include <com/sun/star/drawing/LineCap.hpp>
-
-
-// - ImplLineInfo -
-
+#include <o3tl/cow_wrapper.hxx>
 
 class SvStream;
 namespace basegfx { class B2DPolyPolygon; }
 
 struct ImplLineInfo
 {
-    sal_uInt32              mnRefCount;
     LineStyle               meStyle;
     long                    mnWidth;
     sal_uInt16              mnDashCount;
@@ -51,25 +47,12 @@ struct ImplLineInfo
                         ImplLineInfo( const ImplLineInfo& rImplLineInfo );
 
     bool operator==( const ImplLineInfo& ) const;
-
-    friend SvStream&    ReadImplLineInfo( SvStream& rIStm, ImplLineInfo& rImplLineInfo );
-    friend SvStream&    WriteImplLineInfo( SvStream& rOStm, const ImplLineInfo& rImplLineInfo );
 };
-
-
-// - LineInfo -
 
 
 class VCL_DLLPUBLIC LineInfo
 {
-private:
-
-    ImplLineInfo*   mpImplLineInfo;
-
-    SAL_DLLPRIVATE void ImplMakeUnique();
-
 public:
-
                     LineInfo( LineStyle eLineStyle = LINE_SOLID, long nWidth = 0L );
                     LineInfo( const LineInfo& rLineInfo );
                     ~LineInfo();
@@ -112,13 +95,16 @@ public:
 
     // helper to get decomposed polygon data with the LineInfo applied. The source
     // hairline polygon is given in io_rLinePolyPolygon. Both given polygons may
-    // contain results; e.g. when no fat line but DasDot is defined, the result will
+    // contain results; e.g. when no fat line but DashDot is defined, the result will
     // be in io_rLinePolyPolygon while o_rFillPolyPolygon will be empty. When fat line
     // is defined, it will be vice-versa. If none is defined, io_rLinePolyPolygon will
     // not be changed (but o_rFillPolyPolygon will be freed)
     void applyToB2DPolyPolygon(
         basegfx::B2DPolyPolygon& io_rLinePolyPolygon,
         basegfx::B2DPolyPolygon& o_rFillPolyPolygon) const;
+
+private:
+    o3tl::cow_wrapper< ImplLineInfo >          mpImplLineInfo;
 };
 
 #endif // INCLUDED_VCL_LINEINFO_HXX

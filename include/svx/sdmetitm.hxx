@@ -23,7 +23,6 @@
 #include <svx/svxdllapi.h>
 
 
-
 // class SdrAngleItem
 // For all metrics. GetPresentation returns for example for
 // Value=2500 a "25mm".
@@ -36,7 +35,7 @@ public:
     virtual SfxPoolItem* Clone(SfxItemPool* pPool=nullptr) const override;
     virtual SfxPoolItem* Create(SvStream& rIn, sal_uInt16 nVer) const override;
     virtual bool HasMetrics() const override;
-    virtual bool ScaleMetrics(long nMul, long nDiv) override;
+    virtual void ScaleMetrics(long nMul, long nDiv) override;
 
     virtual bool GetPresentation(SfxItemPresentation ePres,
                                                 SfxMapUnit eCoreMetric,

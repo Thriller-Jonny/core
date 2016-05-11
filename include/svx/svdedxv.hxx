@@ -240,14 +240,13 @@ public:
     sal_uInt16 GetSelectionLevel() const;
 
 
-
     // Object-MacroModus (e.g. rect as button or sth. like that):
 
     // Persistent. Default TRUE. SvDraw evaluates the flag e.g. at SdrView::GetPreferredPointer().
     // Has only effect, if the document has draw-objects with macrofunctionality (SdrObject::HasMacro()==sal_True).
     bool IsMacroMode() const { return bMacroMode; }
     bool BegMacroObj(const Point& rPnt, short nTol, SdrObject* pObj, SdrPageView* pPV, vcl::Window* pWin);
-    bool BegMacroObj(const Point& rPnt, SdrObject* pObj, SdrPageView* pPV, vcl::Window* pWin) { return BegMacroObj(rPnt,-2,pObj,pPV,pWin); }
+    void BegMacroObj(const Point& rPnt, SdrObject* pObj, SdrPageView* pPV, vcl::Window* pWin) { BegMacroObj(rPnt,-2,pObj,pPV,pWin); }
     void MovMacroObj(const Point& rPnt);
     void BrkMacroObj();
     bool EndMacroObj();
@@ -259,13 +258,13 @@ public:
 
     virtual void MarkListHasChanged() override;
 
-    rtl::Reference< sdr::SelectionController > getSelectionController() const { return mxSelectionController; }
+    const rtl::Reference< sdr::SelectionController >& getSelectionController() const { return mxSelectionController; }
 
     /** returns true if the shape identified by its inventor and identifier supports format paint brush operation */
     static bool SupportsFormatPaintbrush( sal_uInt32 nObjectInventor, sal_uInt16 nObjectIdentifier );
 
     /** returns a format paint brush set from the current selection */
-    bool TakeFormatPaintBrush( std::shared_ptr< SfxItemSet >& rFormatSet  );
+    void TakeFormatPaintBrush( std::shared_ptr< SfxItemSet >& rFormatSet  );
 
     /** applies a format paint brush set from the current selection.
         if bNoCharacterFormats is true, no character attributes are changed.
@@ -277,8 +276,8 @@ public:
     static void ApplyFormatPaintBrushToText( SfxItemSet& rFormatSet, SdrTextObj& rTextObj, SdrText* pText, bool bNoCharacterFormats, bool bNoParagraphFormats );
 
 protected:
-    virtual void OnBeginPasteOrDrop( PasteOrDropInfos* pInfos );
-    virtual void OnEndPasteOrDrop( PasteOrDropInfos* pInfos );
+    virtual void OnBeginPasteOrDrop( PasteOrDropInfos* pInfo );
+    virtual void OnEndPasteOrDrop( PasteOrDropInfos* pInfo );
 
 };
 

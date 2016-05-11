@@ -42,7 +42,8 @@ bool Plugin::ignoreLocation( SourceLocation loc )
         return true;
     const char* bufferName = compiler.getSourceManager().getPresumedLoc( expansionLoc ).getFilename();
     if( bufferName == NULL
-        || strncmp( bufferName, WORKDIR, strlen( WORKDIR )) == 0 )
+        || strncmp( bufferName, WORKDIR, strlen( WORKDIR )) == 0
+        || strncmp( bufferName, SRCDIR "/external/", strlen( SRCDIR "/external/" )) == 0 )
         return true;
     if( strncmp( bufferName, BUILDDIR, strlen( BUILDDIR )) == 0
         || strncmp( bufferName, SRCDIR, strlen( SRCDIR )) == 0 )
@@ -61,8 +62,8 @@ const Stmt* Plugin::parentStmt( const Stmt* stmt )
     {
     if( parents.empty())
         buildParents( compiler );
-if(parents.count(stmt)!=1)stmt->dump();
-    assert( parents.count( stmt ) == 1 );
+    //if(parents.count(stmt)!=1)stmt->dump();
+    //assert( parents.count( stmt ) == 1 );
     return parents[ stmt ];
     }
 
@@ -70,7 +71,7 @@ Stmt* Plugin::parentStmt( Stmt* stmt )
     {
     if( parents.empty())
         buildParents( compiler );
-    assert( parents.count( stmt ) == 1 );
+    //assert( parents.count( stmt ) == 1 );
     return const_cast< Stmt* >( parents[ stmt ] );
     }
 
@@ -104,6 +105,7 @@ class ParentBuilder
         bool VisitFunctionDecl( const FunctionDecl* function );
         bool VisitObjCMethodDecl( const ObjCMethodDecl* method );
         void walk( const Stmt* stmt );
+        bool shouldVisitTemplateInstantiations () const { return true; }
         unordered_map< const Stmt*, const Stmt* >* parents;
     };
 

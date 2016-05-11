@@ -35,7 +35,6 @@ namespace basegfx {
 }
 
 
-
 namespace drawinglayer
 {
     namespace attribute
@@ -60,6 +59,9 @@ namespace drawinglayer
             MaterialAttribute3D(const MaterialAttribute3D& rCandidate);
             ~MaterialAttribute3D();
 
+            // checks if the incarnation is default constructed
+            bool isDefault() const;
+
             // assignment operator
             MaterialAttribute3D& operator=(const MaterialAttribute3D& rCandidate);
 
@@ -74,7 +76,6 @@ namespace drawinglayer
         };
     } // end of namespace attribute
 } // end of namespace drawinglayer
-
 
 
 #endif //INCLUDED_DRAWINGLAYER_ATTRIBUTE_MATERIALATTRIBUTE3D_HXX

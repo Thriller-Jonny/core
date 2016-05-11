@@ -29,6 +29,7 @@
 #include <rtl/strbuf.hxx>
 #include <rtl/tencinfo.h>
 #include <vcl/virdev.hxx>
+#include <o3tl/make_unique.hxx>
 
 #if OSL_DEBUG_LEVEL > 1
 #define EMFP_DEBUG(x) x
@@ -151,7 +152,7 @@ WinMtfFontStyle::WinMtfFontStyle( LOGFONTW& rFont )
     if ( eCharSet == RTL_TEXTENCODING_DONTKNOW )
         eCharSet = RTL_TEXTENCODING_MS_1252;
     aFont.SetCharSet( eCharSet );
-    aFont.SetName( rFont.alfFaceName );
+    aFont.SetFamilyName( rFont.alfFaceName );
     FontFamily eFamily;
     switch ( rFont.lfPitchAndFamily & 0xf0 )
     {
@@ -221,7 +222,7 @@ WinMtfFontStyle::WinMtfFontStyle( LOGFONTW& rFont )
         aFont.SetItalic( ITALIC_NORMAL );
 
     if( rFont.lfUnderline )
-        aFont.SetUnderline( UNDERLINE_SINGLE );
+        aFont.SetUnderline( LINESTYLE_SINGLE );
 
     if( rFont.lfStrikeOut )
         aFont.SetStrikeout( STRIKEOUT_SINGLE );
@@ -238,7 +239,7 @@ WinMtfFontStyle::WinMtfFontStyle( LOGFONTW& rFont )
         SolarMutexGuard aGuard;
         ScopedVclPtrInstance< VirtualDevice > pVDev;
         // converting the cell height into a font height
-        aFont.SetSize( aFontSize );
+        aFont.SetFontSize( aFontSize );
         pVDev->SetFont( aFont );
         FontMetric aMetric( pVDev->GetFontMetric() );
         long nHeight = aMetric.GetAscent() + aMetric.GetDescent();
@@ -252,11 +253,11 @@ WinMtfFontStyle::WinMtfFontStyle( LOGFONTW& rFont )
     // Convert height to positive
     aFontSize.Height() = std::abs(aFontSize.Height());
 
-    aFont.SetSize(aFontSize);
+    aFont.SetFontSize(aFontSize);
 };
 
-WinMtf::WinMtf( WinMtfOutput* pWinMtfOutput, SvStream& rStreamWMF, FilterConfigItem* pConfigItem )
-    : pOut( pWinMtfOutput )
+WinMtf::WinMtf( GDIMetaFile& rGDIMetaFile, SvStream& rStreamWMF, FilterConfigItem* pConfigItem )
+    : pOut( o3tl::make_unique<WinMtfOutput>(rGDIMetaFile) )
     , pWMF( &rStreamWMF )
     , nEndPos( 0 )
     , pFilterConfigItem( pConfigItem )
@@ -281,8 +282,6 @@ WinMtf::WinMtf( WinMtfOutput* pWinMtfOutput, SvStream& rStreamWMF, FilterConfigI
 
 WinMtf::~WinMtf()
 {
-    delete pOut;
-
     if ( xStatusIndicator.is() )
         xStatusIndicator->end();
 }
@@ -482,12 +481,12 @@ void WinMtfOutput::ImplMap( vcl::Font& rFont )
 {
     // !!! HACK: we now always set the width to zero because the OS width is interpreted differently;
     // must later be made portable in SV (KA 1996-02-08)
-    Size  aFontSize = ImplMap (rFont.GetSize(), false);
+    Size  aFontSize = ImplMap (rFont.GetFontSize(), false);
 
     if( aFontSize.Height() < 0 )
         aFontSize.Height() *= -1;
 
-    rFont.SetSize( aFontSize );
+    rFont.SetFontSize( aFontSize );
 
     if( ( mnWinExtX * mnWinExtY ) < 0 )
         rFont.SetOrientation( 3600 - rFont.GetOrientation() );
@@ -503,14 +502,13 @@ tools::Polygon& WinMtfOutput::ImplMap( tools::Polygon& rPolygon )
     return rPolygon;
 }
 
-tools::Polygon& WinMtfOutput::ImplScale( tools::Polygon& rPolygon )
+void WinMtfOutput::ImplScale( tools::Polygon& rPolygon )
 {
     sal_uInt16 nPoints = rPolygon.GetSize();
     for ( sal_uInt16 i = 0; i < nPoints; i++ )
     {
         rPolygon[ i ] = ImplScale( rPolygon[ i ] );
     }
-    return rPolygon;
 }
 
 tools::PolyPolygon& WinMtfOutput::ImplScale( tools::PolyPolygon& rPolyPolygon )
@@ -532,95 +530,89 @@ tools::PolyPolygon& WinMtfOutput::ImplMap( tools::PolyPolygon& rPolyPolygon )
 
 void WinMtfOutput::SelectObject( sal_Int32 nIndex )
 {
-    GDIObj* pGDIObj = nullptr;
-
-    if ( nIndex & ENHMETA_STOCK_OBJECT )
-        pGDIObj = new GDIObj();
-    else
-    {
-        nIndex &= 0xffff;       // safety check: don't allow index to be > 65535
-
-        if ( (sal_uInt32)nIndex < vGDIObj.size() )
-            pGDIObj = vGDIObj[ nIndex ];
-    }
-
-    if( pGDIObj == nullptr )
-        return;
-
     if ( nIndex & ENHMETA_STOCK_OBJECT )
     {
-        sal_uInt16 nStockId = (sal_uInt8)nIndex;
+         sal_uInt16 nStockId = (sal_uInt8)nIndex;
         switch( nStockId )
         {
             case WHITE_BRUSH :
             {
-                pGDIObj->Set( GDI_BRUSH, new WinMtfFillStyle( Color( COL_WHITE ) ) );
+                maFillStyle = WinMtfFillStyle( Color( COL_WHITE ) );
+                mbFillStyleSelected = true;
             }
             break;
             case LTGRAY_BRUSH :
             {
-                pGDIObj->Set( GDI_BRUSH, new WinMtfFillStyle( Color( COL_LIGHTGRAY ) ) );
+                maFillStyle = WinMtfFillStyle( Color( COL_LIGHTGRAY ) );
+                mbFillStyleSelected = true;
             }
             break;
             case GRAY_BRUSH :
             case DKGRAY_BRUSH :
             {
-                pGDIObj->Set( GDI_BRUSH, new WinMtfFillStyle( Color( COL_GRAY ) ) );
+                maFillStyle = WinMtfFillStyle( Color( COL_GRAY ) );
+                mbFillStyleSelected = true;
             }
             break;
             case BLACK_BRUSH :
             {
-                pGDIObj->Set( GDI_BRUSH, new WinMtfFillStyle( Color( COL_BLACK ) ) );
+                maFillStyle = WinMtfFillStyle( Color( COL_BLACK ) );
+                mbFillStyleSelected = true;
             }
             break;
             case NULL_BRUSH :
             {
-                pGDIObj->Set( GDI_BRUSH, new WinMtfFillStyle( Color( COL_TRANSPARENT ), true ) );
+               maFillStyle = WinMtfFillStyle( Color( COL_TRANSPARENT ), true );
+               mbFillStyleSelected = true;
             }
             break;
             case WHITE_PEN :
             {
-                pGDIObj->Set( GDI_PEN, new WinMtfLineStyle( Color( COL_WHITE ) ) );
+                maLineStyle = WinMtfLineStyle( Color( COL_WHITE ) );
             }
             break;
             case BLACK_PEN :
             {
-                pGDIObj->Set( GDI_PEN, new WinMtfLineStyle( Color( COL_BLACK ) ) );
+                maLineStyle = WinMtfLineStyle( Color( COL_BLACK ) );
             }
             break;
             case NULL_PEN :
             {
-                pGDIObj->Set( GDI_PEN, new WinMtfLineStyle( Color( COL_TRANSPARENT ), true ) );
+                maLineStyle = WinMtfLineStyle( Color( COL_TRANSPARENT ), true );
             }
             break;
             default:
             break;
         }
     }
-    if ( pGDIObj->pStyle )
+    else
     {
-        switch( pGDIObj->eType )
+        nIndex &= 0xffff;       // safety check: don't allow index to be > 65535
+
+        GDIObj *pGDIObj = nullptr;
+
+        if ( (sal_uInt32)nIndex < vGDIObj.size() )
+            pGDIObj = vGDIObj[ nIndex ].get();
+
+        if ( pGDIObj )
         {
-            case GDI_PEN :
-                maLineStyle = static_cast<WinMtfLineStyle*>(pGDIObj->pStyle);
-            break;
-            case GDI_BRUSH :
+            const auto pen = dynamic_cast<WinMtfLineStyle*>(pGDIObj);
+            if (pen)
+                maLineStyle = *pen;
+
+            const auto brush = dynamic_cast<WinMtfFillStyle*>(pGDIObj);
+            if (brush)
             {
-                maFillStyle = static_cast<WinMtfFillStyle*>(pGDIObj->pStyle);
+                maFillStyle = *brush;
                 mbFillStyleSelected = true;
             }
-            break;
-            case GDI_FONT :
-                maFont = static_cast<WinMtfFontStyle*>(pGDIObj->pStyle)->aFont;
-            break;
-            default:
-            break;  //  -Wall many options not handled.
+
+            const auto font = dynamic_cast<WinMtfFontStyle*>(pGDIObj);
+            if (font)
+                maFont = font->aFont;
         }
     }
-    if ( nIndex & ENHMETA_STOCK_OBJECT )
-        delete pGDIObj;
 }
-
 
 void WinMtfOutput::SetTextLayoutMode( ComplexTextLayoutMode nTextLayoutMode )
 {
@@ -649,7 +641,7 @@ void WinMtfOutput::SetTextAlign( sal_uInt32 nAlign )
 
 void WinMtfOutput::ImplResizeObjectArry( sal_uInt32 nNewEntrys )
 {
-    vGDIObj.resize(nNewEntrys, nullptr);
+    vGDIObj.resize(nNewEntrys);
 }
 
 void WinMtfOutput::ImplDrawClippedPolyPolygon( const tools::PolyPolygon& rPolyPoly )
@@ -681,20 +673,21 @@ void WinMtfOutput::ImplDrawClippedPolyPolygon( const tools::PolyPolygon& rPolyPo
     }
 }
 
-void WinMtfOutput::CreateObject( GDIObjectType eType, void* pStyle )
+void WinMtfOutput::CreateObject( std::unique_ptr<GDIObj> pObject )
 {
-    if ( pStyle )
+    if ( pObject )
     {
-        if ( eType == GDI_FONT )
+        const auto pLineStyle = dynamic_cast<WinMtfLineStyle*>(pObject.get());
+        const auto pFontStyle = dynamic_cast<WinMtfFontStyle*>(pObject.get());
+
+        if ( pFontStyle )
         {
-            WinMtfFontStyle* pFontStyle = static_cast<WinMtfFontStyle*>(pStyle);
-            if (pFontStyle->aFont.GetHeight() == 0)
-                pFontStyle->aFont.SetHeight(423);
+            if (pFontStyle->aFont.GetFontHeight() == 0)
+                pFontStyle->aFont.SetFontHeight(423);
             ImplMap(pFontStyle->aFont); // defaulting to 12pt
         }
-        else if ( eType == GDI_PEN )
+        else if ( pLineStyle )
         {
-            WinMtfLineStyle* pLineStyle = static_cast<WinMtfLineStyle*>(pStyle);
             Size aSize(pLineStyle->aLineInfo.GetWidth(), 0);
             aSize = ImplMap(aSize);
             pLineStyle->aLineInfo.SetWidth(aSize.Width());
@@ -703,64 +696,54 @@ void WinMtfOutput::CreateObject( GDIObjectType eType, void* pStyle )
     sal_uInt32 nIndex;
     for ( nIndex = 0; nIndex < vGDIObj.size(); nIndex++ )
     {
-        if ( vGDIObj[ nIndex ] == nullptr )
+        if ( !vGDIObj[ nIndex ] )
             break;
     }
     if ( nIndex == vGDIObj.size() )
         ImplResizeObjectArry( vGDIObj.size() + 16 );
 
-    vGDIObj[ nIndex ] = new GDIObj( eType, pStyle );
+    vGDIObj[ nIndex ] = std::move(pObject);
 }
 
-void WinMtfOutput::CreateObject( sal_Int32 nIndex, GDIObjectType eType, void* pStyle )
+void WinMtfOutput::CreateObjectIndexed( sal_Int32 nIndex, std::unique_ptr<GDIObj> pObject )
 {
     if ( ( nIndex & ENHMETA_STOCK_OBJECT ) == 0 )
     {
         nIndex &= 0xffff;       // safety check: do not allow index to be > 65535
-        if ( pStyle )
+        if ( pObject )
         {
-            if ( eType == GDI_FONT )
+            const auto pLineStyle = dynamic_cast<WinMtfLineStyle*>(pObject.get());
+            const auto pFontStyle = dynamic_cast<WinMtfFontStyle*>(pObject.get());
+            if ( pFontStyle )
             {
-                WinMtfFontStyle* pFontStyle = static_cast<WinMtfFontStyle*>(pStyle);
-                if (pFontStyle->aFont.GetHeight() == 0)
-                    pFontStyle->aFont.SetHeight(423);
+                if (pFontStyle->aFont.GetFontHeight() == 0)
+                    pFontStyle->aFont.SetFontHeight(423);
                 ImplMap(pFontStyle->aFont);
             }
-            else if ( eType == GDI_PEN )
+            else if ( pLineStyle )
             {
-                WinMtfLineStyle* pLineStyle = static_cast<WinMtfLineStyle*>(pStyle);
                 Size aSize(pLineStyle->aLineInfo.GetWidth(), 0);
-                aSize = ImplMap(aSize);
-                pLineStyle->aLineInfo.SetWidth(aSize.Width());
+                pLineStyle->aLineInfo.SetWidth( ImplMap(aSize).Width() );
+
+                if ( pLineStyle->aLineInfo.GetStyle() == LINE_DASH )
+                {
+                    aSize.Width() += 1;
+                    long nDotLen = ImplMap( aSize ).Width();
+                    pLineStyle->aLineInfo.SetDistance( nDotLen );
+                    pLineStyle->aLineInfo.SetDotLen( nDotLen );
+                    pLineStyle->aLineInfo.SetDashLen( nDotLen * 3 );
+                }
             }
         }
         if ( (sal_uInt32)nIndex >= vGDIObj.size() )
             ImplResizeObjectArry( nIndex + 16 );
 
-        if ( vGDIObj[ nIndex ] != nullptr )
-            delete vGDIObj[ nIndex ];
-
-        vGDIObj[ nIndex ] = new GDIObj( eType, pStyle );
+        vGDIObj[ nIndex ] = std::move(pObject);
     }
-    else
-    {
-        switch ( eType )
-        {
-            case GDI_PEN :
-                delete static_cast<WinMtfLineStyle*>(pStyle);
-            break;
-            case GDI_BRUSH :
-                delete static_cast<WinMtfFillStyle*>(pStyle);
-            break;
-            case GDI_FONT :
-                delete static_cast<WinMtfFontStyle*>(pStyle);
-            break;
+}
 
-            default:
-                OSL_FAIL( "unsupported style not deleted" );
-                break;
-        }
-    }
+GDIObj::~GDIObj()
+{
 }
 
 void WinMtfOutput::DeleteObject( sal_Int32 nIndex )
@@ -769,8 +752,7 @@ void WinMtfOutput::DeleteObject( sal_Int32 nIndex )
     {
         if ( (sal_uInt32)nIndex < vGDIObj.size() )
         {
-            delete vGDIObj[ nIndex ];
-            vGDIObj[ nIndex ] = nullptr;
+            vGDIObj[ nIndex ].reset();
         }
     }
 }
@@ -852,14 +834,14 @@ WinMtfOutput::WinMtfOutput( GDIMetaFile& rGDIMetaFile ) :
 {
     mbIsMapWinSet = false;
     mbIsMapDevSet = false;
-    mpGDIMetaFile->AddAction( new MetaPushAction( PushFlags::CLIPREGION ) );      // The original clipregion has to be on top
-                                                                            // of the stack so it can always be restored
-                                                                            // this is necessary to be able to support
-                                                                            // SetClipRgn( NULL ) and similar ClipRgn actions (SJ)
+    mpGDIMetaFile->AddAction( new MetaPushAction( PushFlags::CLIPREGION ) ); // The original clipregion has to be on top
+                                                                             // of the stack so it can always be restored
+                                                                             // this is necessary to be able to support
+                                                                             // SetClipRgn( NULL ) and similar ClipRgn actions (SJ)
 
-    maFont.SetName( "Arial" );                                              // sj: #i57205#, we do have some scaling problems if using
-    maFont.SetCharSet( RTL_TEXTENCODING_MS_1252 );                          // the default font then most times a x11 font is used, we
-    maFont.SetHeight( 423 );                                                // will prevent this defining a font
+    maFont.SetFamilyName( "Arial" );                                         // sj: #i57205#, we do have some scaling problems if using
+    maFont.SetCharSet( RTL_TEXTENCODING_MS_1252 );                           // the default font then most times a x11 font is used, we
+    maFont.SetFontHeight( 423 );                                      // will prevent this defining a font
 
     maLatestLineStyle.aLineColor = Color( 0x12, 0x34, 0x56 );
     maLatestFillStyle.aFillColor = Color( 0x12, 0x34, 0x56 );
@@ -876,9 +858,6 @@ WinMtfOutput::~WinMtfOutput()
         mpGDIMetaFile->SetPrefSize( Size( mnDevWidth, mnDevHeight ) );
     else
         mpGDIMetaFile->SetPrefSize( mrclFrame.GetSize() );
-
-    for ( size_t i = 0; i < vGDIObj.size(); i++ )
-        delete vGDIObj[ i ];
 }
 
 void WinMtfOutput::UpdateClipRegion()
@@ -1428,11 +1407,11 @@ void WinMtfOutput::DrawText( Point& rPosition, OUString& rText, long* pDXArry, b
         aTmp.SetTransparent( false );
 
     if ( ( mnTextAlign & TA_BASELINE) == TA_BASELINE )
-        aTmp.SetAlign( ALIGN_BASELINE );
+        aTmp.SetAlignment( ALIGN_BASELINE );
     else if( ( mnTextAlign & TA_BOTTOM) == TA_BOTTOM )
-        aTmp.SetAlign( ALIGN_BOTTOM );
+        aTmp.SetAlignment( ALIGN_BOTTOM );
     else
-        aTmp.SetAlign( ALIGN_TOP );
+        aTmp.SetAlignment( ALIGN_TOP );
 
     if ( nGfxMode == GM_ADVANCED )
     {
@@ -1490,7 +1469,7 @@ void WinMtfOutput::DrawText( Point& rPosition, OUString& rText, long* pDXArry, b
     {
         maLatestFont = aTmp;
         mpGDIMetaFile->AddAction( new MetaFontAction( aTmp ) );
-        mpGDIMetaFile->AddAction( new MetaTextAlignAction( aTmp.GetAlign() ) );
+        mpGDIMetaFile->AddAction( new MetaTextAlignAction( aTmp.GetAlignment() ) );
         mpGDIMetaFile->AddAction( new MetaTextColorAction( aTmp.GetColor() ) );
         mpGDIMetaFile->AddAction( new MetaTextFillColorAction( aTmp.GetFillColor(), !aTmp.IsTransparent() ) );
     }
@@ -1544,19 +1523,68 @@ void WinMtfOutput::ImplDrawBitmap( const Point& rPos, const Size& rSize, const B
 
         // #i50672# Extract whole VDev content (to match size of rBitmap)
         pVDev->EnableMapMode( false );
-        Bitmap aMask( pVDev->GetBitmap( aEmptyPoint, aSizePixel ).CreateMask( Color( COL_WHITE ) ) );
+        const Bitmap aVDevMask(pVDev->GetBitmap(aEmptyPoint, aSizePixel));
 
-        if ( aBmpEx.IsTransparent() )
+        if(aBmpEx.IsTransparent())
         {
-            if ( rBitmap.GetTransparentColor() == Color( COL_WHITE ) )
-                aMask.CombineSimple( rBitmap.GetMask(), BMP_COMBINE_OR );
+            // bitmap already uses a Mask or Alpha, we need to blend that with
+            // the new masking in pVDev
+            if(aBmpEx.IsAlpha())
+            {
+                // need to blend in AlphaMask quality (8Bit)
+                AlphaMask fromVDev(aVDevMask);
+                AlphaMask fromBmpEx(aBmpEx.GetAlpha());
+                BitmapReadAccess* pR = fromVDev.AcquireReadAccess();
+                BitmapWriteAccess* pW = fromBmpEx.AcquireWriteAccess();
+
+                if(pR && pW)
+                {
+                    const long nWidth(std::min(pR->Width(), pW->Width()));
+                    const long nHeight(std::min(pR->Height(), pW->Height()));
+
+                    for(long nY(0); nY < nHeight; nY++) for(long nX(0); nX < nWidth; nX++)
+                    {
+                        const sal_uInt8 nIndR(pR->GetPixelIndex(nY, nX));
+                        const sal_uInt8 nIndW(pW->GetPixelIndex(nY, nX));
+
+                        // these values represent transparency (0 == no, 255 == fully transparent),
+                        // so to blend these we have to multiply the inverse (opacity)
+                        // and re-invert the result to transparence
+                        const sal_uInt8 nCombined(0x00ff - (((0x00ff - nIndR) * (0x00ff - nIndW)) >> 8));
+
+                        pW->SetPixelIndex(nY, nX, nCombined);
+                    }
+                }
+
+                fromVDev.ReleaseAccess(pR);
+                fromBmpEx.ReleaseAccess(pW);
+                aBmpEx = BitmapEx(aBmpEx.GetBitmap(), fromBmpEx);
+            }
             else
-                aMask.CombineSimple( rBitmap.GetMask(), BMP_COMBINE_AND );
-            aBmpEx = BitmapEx( rBitmap.GetBitmap(), aMask );
+            {
+                // need to blend in Mask quality (1Bit)
+                Bitmap aMask(aVDevMask.CreateMask(Color(COL_WHITE)));
+
+                if ( rBitmap.GetTransparentColor() == Color( COL_WHITE ) )
+                {
+                    aMask.CombineSimple( rBitmap.GetMask(), BMP_COMBINE_OR );
+                }
+                else
+                {
+                    aMask.CombineSimple( rBitmap.GetMask(), BMP_COMBINE_AND );
+                }
+
+                aBmpEx = BitmapEx( rBitmap.GetBitmap(), aMask );
+            }
         }
         else
-            aBmpEx = BitmapEx( rBitmap.GetBitmap(), aMask );
+        {
+            // no mask yet, create and add new mask. For better quality, use Alpha,
+            // this allows the drawn mask being processed with AnitAliasing (AAed)
+            aBmpEx = BitmapEx(rBitmap.GetBitmap(), aVDevMask);
+        }
     }
+
     if ( aBmpEx.IsTransparent() )
         mpGDIMetaFile->AddAction( new MetaBmpExScaleAction( rPos, rSize, aBmpEx ) );
     else
@@ -1576,7 +1604,7 @@ void WinMtfOutput::ResolveBitmapActions( BSaveStructList_impl& rSaveList )
         size_t          nObjectsOfSameSize = 0;
         size_t          nObjectStartIndex = nObjects - nObjectsLeft;
 
-        BSaveStruct*    pSave = rSaveList[ nObjectStartIndex ];
+        BSaveStruct*    pSave = rSaveList[nObjectStartIndex].get();
         Rectangle       aRect( pSave->aOutRect );
 
         for ( i = nObjectStartIndex; i < nObjects; )
@@ -1584,7 +1612,7 @@ void WinMtfOutput::ResolveBitmapActions( BSaveStructList_impl& rSaveList )
             nObjectsOfSameSize++;
             if ( ++i < nObjects )
             {
-                pSave = rSaveList[ i ];
+                pSave = rSaveList[i].get();
                 if ( pSave->aOutRect != aRect )
                     break;
             }
@@ -1594,7 +1622,7 @@ void WinMtfOutput::ResolveBitmapActions( BSaveStructList_impl& rSaveList )
 
         for ( i = nObjectStartIndex; i < ( nObjectStartIndex + nObjectsOfSameSize ); i++ )
         {
-            pSave = rSaveList[ i ];
+            pSave = rSaveList[i].get();
 
             sal_uInt32  nWinRop = pSave->nWinRop;
             sal_uInt8   nRasterOperation = (sal_uInt8)( nWinRop >> 16 );
@@ -1622,9 +1650,9 @@ void WinMtfOutput::ResolveBitmapActions( BSaveStructList_impl& rSaveList )
                 {
                     if ( nObjectsOfSameSize == 2 )
                     {
-                        BSaveStruct* pSave2 = rSaveList[ i + 1 ];
-                        if ( ( pSave->aBmp.GetPrefSize() == pSave2->aBmp.GetPrefSize() ) &&
-                             ( pSave->aBmp.GetPrefMapMode() == pSave2->aBmp.GetPrefMapMode() ) )
+                        BSaveStruct* pSave2 = rSaveList[i + 1].get();
+                        if ( ( pSave->aBmpEx.GetPrefSize() == pSave2->aBmpEx.GetPrefSize() ) &&
+                             ( pSave->aBmpEx.GetPrefMapMode() == pSave2->aBmpEx.GetPrefMapMode() ) )
                         {
                             // TODO: Strictly speaking, we should
                             // check whether mask is monochrome, and
@@ -1634,8 +1662,8 @@ void WinMtfOutput::ResolveBitmapActions( BSaveStructList_impl& rSaveList )
                             // bitmap.
                             if ( ( nWinRop == SRCPAINT ) && ( pSave2->nWinRop == SRCAND ) )
                             {
-                                Bitmap aMask( pSave->aBmp ); aMask.Invert();
-                                BitmapEx aBmpEx( pSave2->aBmp, aMask );
+                                Bitmap aMask( pSave->aBmpEx.GetBitmap() ); aMask.Invert();
+                                BitmapEx aBmpEx( pSave2->aBmpEx.GetBitmap(), aMask );
                                 ImplDrawBitmap( aPos, aSize, aBmpEx );
                                 bDrawn = true;
                                 i++;
@@ -1645,8 +1673,8 @@ void WinMtfOutput::ResolveBitmapActions( BSaveStructList_impl& rSaveList )
                             // is inverted
                             else if ( ( nWinRop == SRCAND ) && ( pSave2->nWinRop == SRCPAINT ) )
                             {
-                                Bitmap aMask( pSave->aBmp );
-                                BitmapEx aBmpEx( pSave2->aBmp, aMask );
+                                Bitmap aMask( pSave->aBmpEx.GetBitmap() );
+                                BitmapEx aBmpEx( pSave2->aBmpEx.GetBitmap(), aMask );
                                 ImplDrawBitmap( aPos, aSize, aBmpEx );
                                 bDrawn = true;
                                 i++;
@@ -1654,8 +1682,8 @@ void WinMtfOutput::ResolveBitmapActions( BSaveStructList_impl& rSaveList )
                             // tdf#90539
                             else if ( ( nWinRop == SRCAND ) && ( pSave2->nWinRop == SRCINVERT ) )
                             {
-                                Bitmap aMask( pSave->aBmp );
-                                BitmapEx aBmpEx( pSave2->aBmp, aMask );
+                                Bitmap aMask( pSave->aBmpEx.GetBitmap() );
+                                BitmapEx aBmpEx( pSave2->aBmpEx.GetBitmap(), aMask );
                                 ImplDrawBitmap( aPos, aSize, aBmpEx );
                                 bDrawn = true;
                                 i++;
@@ -1668,24 +1696,31 @@ void WinMtfOutput::ResolveBitmapActions( BSaveStructList_impl& rSaveList )
                 {
                     Push();
                     sal_uInt32  nOldRop = SetRasterOp( R2_COPYPEN );
-                    Bitmap      aBitmap( pSave->aBmp );
+                    Bitmap      aBitmap( pSave->aBmpEx.GetBitmap() );
                     sal_uInt32  nOperation = ( nRasterOperation & 0xf );
                     switch( nOperation )
                     {
                         case 0x1 :
                         case 0xe :
                         {
-                            SetRasterOp( R2_XORPEN );
-                            ImplDrawBitmap( aPos, aSize, aBitmap );
-                            SetRasterOp( R2_COPYPEN );
-                            Bitmap  aMask( aBitmap );
-                            aMask.Invert();
-                            BitmapEx aBmpEx( aBitmap, aMask );
-                            ImplDrawBitmap( aPos, aSize, aBmpEx );
-                            if ( nOperation == 0x1 )
+                            if(pSave->aBmpEx.IsAlpha())
                             {
-                                SetRasterOp( R2_NOT );
-                                DrawRect( aRect, false );
+                                ImplDrawBitmap( aPos, aSize, pSave->aBmpEx );
+                            }
+                            else
+                            {
+                                SetRasterOp( R2_XORPEN );
+                                ImplDrawBitmap( aPos, aSize, aBitmap );
+                                SetRasterOp( R2_COPYPEN );
+                                Bitmap  aMask( aBitmap );
+                                aMask.Invert();
+                                BitmapEx aBmpEx( aBitmap, aMask );
+                                ImplDrawBitmap( aPos, aSize, aBmpEx );
+                                if ( nOperation == 0x1 )
+                                {
+                                    SetRasterOp( R2_NOT );
+                                    DrawRect( aRect, false );
+                                }
                             }
                         }
                         break;
@@ -1780,6 +1815,8 @@ void WinMtfOutput::ResolveBitmapActions( BSaveStructList_impl& rSaveList )
                             SetRasterOp( R2_NOT );
                             DrawRect( aRect, false );
                         }
+                        break;
+
                         case 0xa :  // no operation
                         break;
                     }
@@ -1791,8 +1828,6 @@ void WinMtfOutput::ResolveBitmapActions( BSaveStructList_impl& rSaveList )
         nObjectsLeft -= nObjectsOfSameSize;
     }
 
-    for( size_t i = 0, n = rSaveList.size(); i < n; ++i )
-        delete rSaveList[ i ];
     rSaveList.clear();
 }
 

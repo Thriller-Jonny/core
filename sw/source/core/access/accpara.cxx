@@ -53,7 +53,6 @@
 #include <unoport.hxx>
 #include <doc.hxx>
 #include <IDocumentRedlineAccess.hxx>
-#include <crsskip.hxx>
 #include <txtatr.hxx>
 #include <acchyperlink.hxx>
 #include <acchypertextdata.hxx>
@@ -382,7 +381,7 @@ void SwAccessibleParagraph::GetStates(
     }
 }
 
-void SwAccessibleParagraph::_InvalidateContent( bool bVisibleDataFired )
+void SwAccessibleParagraph::InvalidateContent_( bool bVisibleDataFired )
 {
     OUString sOldText( GetString() );
 
@@ -464,7 +463,7 @@ void SwAccessibleParagraph::_InvalidateContent( bool bVisibleDataFired )
     }
 }
 
-void SwAccessibleParagraph::_InvalidateCursorPos()
+void SwAccessibleParagraph::InvalidateCursorPos_()
 {
     // The text is changed
     sal_Int32 nNew = GetCaretPos();
@@ -513,7 +512,7 @@ void SwAccessibleParagraph::_InvalidateCursorPos()
     }
 }
 
-void SwAccessibleParagraph::_InvalidateFocus()
+void SwAccessibleParagraph::InvalidateFocus_()
 {
     vcl::Window *pWin = GetWindow();
     if( pWin )
@@ -531,10 +530,10 @@ void SwAccessibleParagraph::_InvalidateFocus()
 }
 
 SwAccessibleParagraph::SwAccessibleParagraph(
-        SwAccessibleMap& rInitMap,
+        SwAccessibleMap* pInitMap,
         const SwTextFrame& rTextFrame )
     : SwClient( const_cast<SwTextNode*>(rTextFrame.GetTextNode()) ) // #i108125#
-    , SwAccessibleContext( &rInitMap, AccessibleRole::PARAGRAPH, &rTextFrame )
+    , SwAccessibleContext( pInitMap, AccessibleRole::PARAGRAPH, &rTextFrame )
     , sDesc()
     , pPortionData( nullptr )
     , pHyperTextData( nullptr )
@@ -766,7 +765,7 @@ bool SwAccessibleParagraph::GetWordBoundary(
 
         // get word boundary, as the Break-Iterator sees fit.
         rBound = g_pBreakIt->GetBreakIter()->getWordBoundary(
-            rText, nPos, aLocale, nWordType, sal_True );
+            rText, nPos, aLocale, nWordType, true );
 
         // If we have a break-iterator let's trust that it
         // does the right thing.
@@ -973,7 +972,7 @@ uno::Reference<XAccessibleRelationSet> SAL_CALL SwAccessibleParagraph::getAccess
             "<SwAccessibleParagraph::getAccessibleRelationSet()> - missing text frame");
     if ( pTextFrame )
     {
-        const SwContentFrame* pPrevContentFrame( pTextFrame->FindPrevCnt( true ) );
+        const SwContentFrame* pPrevContentFrame( pTextFrame->FindPrevCnt() );
         if ( pPrevContentFrame )
         {
             uno::Sequence< uno::Reference<XInterface> > aSequence { GetMap()->GetContext( pPrevContentFrame ) };
@@ -1070,6 +1069,8 @@ static bool lcl_GetBackgroundColor( Color & rColor,
 sal_Int32 SAL_CALL SwAccessibleParagraph::getForeground()
                                 throw (uno::RuntimeException, std::exception)
 {
+    SolarMutexGuard g;
+
     Color aBackgroundCol;
 
     if ( lcl_GetBackgroundColor( aBackgroundCol, GetFrame(), GetCursorShell() ) )
@@ -1090,6 +1091,8 @@ sal_Int32 SAL_CALL SwAccessibleParagraph::getForeground()
 sal_Int32 SAL_CALL SwAccessibleParagraph::getBackground()
                                 throw (uno::RuntimeException, std::exception)
 {
+    SolarMutexGuard g;
+
     Color aBackgroundCol;
 
     if ( lcl_GetBackgroundColor( aBackgroundCol, GetFrame(), GetCursorShell() ) )
@@ -1483,21 +1486,21 @@ OUString SwAccessibleParagraph::GetFieldTypeNameAtIndex(sal_Int32 nIndex)
                         {
                             const SwGetRefField* pRefField = dynamic_cast<const SwGetRefField*>(pField);
                             if ( pRefField && pRefField->IsRefToHeadingCrossRefBookmark() )
-                                sEntry = OUString(RTL_CONSTASCII_USTRINGPARAM("Headings"));
+                                sEntry = "Headings";
                             else if ( pRefField && pRefField->IsRefToNumItemCrossRefBookmark() )
-                                sEntry = OUString(RTL_CONSTASCII_USTRINGPARAM("Numbered Paragraphs"));
+                                sEntry = "Numbered Paragraphs";
                             else
-                                sEntry = OUString(RTL_CONSTASCII_USTRINGPARAM("Bookmarks"));
+                                sEntry = "Bookmarks";
                         }
                         break;
                     case REF_FOOTNOTE:
-                        sEntry = OUString(RTL_CONSTASCII_USTRINGPARAM("Footnotes"));
+                        sEntry = "Footnotes";
                         break;
                     case REF_ENDNOTE:
-                        sEntry = OUString(RTL_CONSTASCII_USTRINGPARAM("Endnotes"));
+                        sEntry = "Endnotes";
                         break;
                     case REF_SETREFATTR:
-                        sEntry = OUString(RTL_CONSTASCII_USTRINGPARAM("Insert Reference"));
+                        sEntry = "Insert Reference";
                         break;
                     case REF_SEQUENCEFLD:
                         sEntry = static_cast<const SwGetRefField*>(pField)->GetSetRefName();
@@ -1638,8 +1641,7 @@ uno::Sequence<PropertyValue> SwAccessibleParagraph::getCharacterAttributes(
     _getRunAttributesImpl( nIndex, aNames, aRunAttrSeq );
 
     // merge default and run attributes
-    uno::Sequence< PropertyValue > aValues( aDefAttrSeq.size() );
-    PropertyValue* pValues = aValues.getArray();
+    std::vector< PropertyValue > aValues( aDefAttrSeq.size() );
     sal_Int32 i = 0;
     for ( tAccParaPropValMap::const_iterator aDefIter = aDefAttrSeq.begin();
           aDefIter != aDefAttrSeq.end();
@@ -1649,11 +1651,11 @@ uno::Sequence<PropertyValue> SwAccessibleParagraph::getCharacterAttributes(
                                         aRunAttrSeq.find( aDefIter->first );
         if ( aRunIter != aRunAttrSeq.end() )
         {
-            pValues[i] = aRunIter->second;
+            aValues[i] = aRunIter->second;
         }
         else
         {
-            pValues[i] = aDefIter->second;
+            aValues[i] = aDefIter->second;
         }
         ++i;
     }
@@ -1666,29 +1668,25 @@ uno::Sequence<PropertyValue> SwAccessibleParagraph::getCharacterAttributes(
         tAccParaPropValMap aSupplementalAttrSeq;
         _getSupplementalAttributesImpl( nIndex, aSupplementalNames, aSupplementalAttrSeq );
 
-        aValues.realloc( aValues.getLength() + aSupplementalAttrSeq.size() );
-        pValues = aValues.getArray();
+        aValues.resize( aValues.size() + aSupplementalAttrSeq.size() );
 
         for ( tAccParaPropValMap::const_iterator aSupplementalIter = aSupplementalAttrSeq.begin();
             aSupplementalIter != aSupplementalAttrSeq.end();
             ++aSupplementalIter )
         {
-            pValues[i] = aSupplementalIter->second;
+            aValues[i] = aSupplementalIter->second;
             ++i;
         }
 
         _correctValues( nIndex, aValues );
 
-        aValues.realloc( aValues.getLength() + 1 );
-
-        pValues = aValues.getArray();
+        aValues.resize( aValues.size() + 1 );
 
         OUString strTypeName = GetFieldTypeNameAtIndex(nIndex);
         if (!strTypeName.isEmpty())
         {
-            aValues.realloc( aValues.getLength() + 1 );
-            pValues = aValues.getArray();
-            PropertyValue& rValueFT = pValues[aValues.getLength() - 1];
+            aValues.resize( aValues.size() + 1 );
+            PropertyValue& rValueFT = aValues[aValues.size() - 1];
             rValueFT.Name = "FieldType";
             rValueFT.Value <<= strTypeName.toAsciiLowerCase();
             rValueFT.Handle = -1;
@@ -1697,24 +1695,23 @@ uno::Sequence<PropertyValue> SwAccessibleParagraph::getCharacterAttributes(
 
         //sort property values
         // build sorted index array
-        sal_Int32 nLength = aValues.getLength();
-        const PropertyValue* pPairs = aValues.getConstArray();
+        sal_Int32 nLength = aValues.size();
         sal_Int32* pIndices = new sal_Int32[nLength];
         for( i = 0; i < nLength; i++ )
             pIndices[i] = i;
-        sort( &pIndices[0], &pIndices[nLength], IndexCompare(pPairs) );
+        sort( &pIndices[0], &pIndices[nLength], IndexCompare(aValues.data()) );
         // create sorted sequences according to index array
         uno::Sequence<PropertyValue> aNewValues( nLength );
         PropertyValue* pNewValues = aNewValues.getArray();
         for( i = 0; i < nLength; i++ )
         {
-            pNewValues[i] = pPairs[pIndices[i]];
+            pNewValues[i] = aValues[pIndices[i]];
         }
         delete[] pIndices;
         return aNewValues;
     }
 
-    return aValues;
+    return comphelper::containerToSequence(aValues);
 }
 
 static void SetPutRecursive(SfxItemSet &targetSet, const SfxItemSet &sourceSet)
@@ -1833,7 +1830,7 @@ void SwAccessibleParagraph::_getDefaultAttributesImpl(
                     while ( pUpperFrame )
                     {
                         if ( pUpperFrame->GetType() &
-                               ( FRM_PAGE | FRM_FLY | FRM_SECTION | FRM_TAB | FRM_CELL ) )
+                               ( SwFrameType::Page | SwFrameType::Fly | SwFrameType::Section | SwFrameType::Tab | SwFrameType::Cell ) )
                         {
                             if ( pUpperFrame->IsVertical() )
                             {
@@ -2141,7 +2138,7 @@ void SwAccessibleParagraph::_getSupplementalAttributesImpl(
 }
 
 void SwAccessibleParagraph::_correctValues( const sal_Int32 nIndex,
-                                           uno::Sequence< PropertyValue >& rValues)
+                                            std::vector< PropertyValue >& rValues)
 {
     PropertyValue ChangeAttr, ChangeAttrColor;
 
@@ -2206,14 +2203,12 @@ void SwAccessibleParagraph::_correctValues( const sal_Int32 nIndex,
         }
     }
 
-    PropertyValue* pValues = rValues.getArray();
-
     const SwTextNode* pTextNode( GetTextNode() );
 
-    sal_Int32 nValues = rValues.getLength();
+    sal_Int32 nValues = rValues.size();
     for (sal_Int32 i = 0;  i < nValues;  ++i)
     {
-        PropertyValue& rValue = pValues[i];
+        PropertyValue& rValue = rValues[i];
 
         if (rValue.Name == ChangeAttr.Name )
         {
@@ -2279,7 +2274,7 @@ void SwAccessibleParagraph::_correctValues( const sal_Int32 nIndex,
                     sal_Int32 nLen = 1;
                     if( pWrongList->InWrongWord(nBegin,nLen) && !pTextNode->IsSymbol(nBegin) )
                     {
-                        rValue.Value <<= (sal_uInt16)UNDERLINE_WAVE;
+                        rValue.Value <<= (sal_uInt16)LINESTYLE_WAVE;
                     }
                 }
             }
@@ -2815,7 +2810,7 @@ sal_Bool SwAccessibleParagraph::copyText( sal_Int32 nStartIndex, sal_Int32 nEndI
     // select and copy (through dispatch mechanism)
     setSelection( nStartIndex, nEndIndex );
     ExecuteAtViewShell( SID_COPY );
-    return sal_True;
+    return true;
 }
 
 // XAccesibleEditableText
@@ -2827,12 +2822,12 @@ sal_Bool SwAccessibleParagraph::cutText( sal_Int32 nStartIndex, sal_Int32 nEndIn
     SolarMutexGuard aGuard;
 
     if( !IsEditableState() )
-        return sal_False;
+        return false;
 
     // select and cut (through dispatch mechanism)
     setSelection( nStartIndex, nEndIndex );
     ExecuteAtViewShell( SID_CUT );
-    return sal_True;
+    return true;
 }
 
 sal_Bool SwAccessibleParagraph::pasteText( sal_Int32 nIndex )
@@ -2842,12 +2837,12 @@ sal_Bool SwAccessibleParagraph::pasteText( sal_Int32 nIndex )
     SolarMutexGuard aGuard;
 
     if( !IsEditableState() )
-        return sal_False;
+        return false;
 
     // select and paste (through dispatch mechanism)
     setSelection( nIndex, nIndex );
     ExecuteAtViewShell( SID_PASTE );
-    return sal_True;
+    return true;
 }
 
 sal_Bool SwAccessibleParagraph::deleteText( sal_Int32 nStartIndex, sal_Int32 nEndIndex )
@@ -2876,7 +2871,7 @@ sal_Bool SwAccessibleParagraph::replaceText(
     if( IsValidRange( nStartIndex, nEndIndex, rText.getLength() ) )
     {
         if( !IsEditableState() )
-            return sal_False;
+            return false;
 
         SwTextNode* pNode = const_cast<SwTextNode*>( GetTextNode() );
 
@@ -2928,7 +2923,7 @@ sal_Bool SwAccessibleParagraph::setAttributes(
         throw lang::IndexOutOfBoundsException();
 
     if( !IsEditableState() )
-        return sal_False;
+        return false;
 
     // create a (dummy) text portion for the sole purpose of calling
     // setPropertyValue on it
@@ -3248,6 +3243,8 @@ sal_Int32 SAL_CALL SwAccessibleParagraph::getTextMarkupCount( sal_Int32 nTextMar
                                         throw (lang::IllegalArgumentException,
                                                uno::RuntimeException, std::exception)
 {
+    SolarMutexGuard g;
+
     std::unique_ptr<SwTextMarkupHelper> pTextMarkupHelper;
     switch ( nTextMarkupType )
     {
@@ -3273,7 +3270,7 @@ sal_Int32 SAL_CALL SwAccessibleParagraph::getTextMarkupCount( sal_Int32 nTextMar
 sal_Bool SAL_CALL SwAccessibleParagraph::scrollToPosition( const css::awt::Point&, sal_Bool )
     throw (css::lang::IllegalArgumentException, css::uno::RuntimeException, std::exception)
 {
-    return sal_False;
+    return false;
 }
 
 sal_Int32 SAL_CALL SwAccessibleParagraph::getSelectedPortionCount(  )
@@ -3350,7 +3347,7 @@ sal_Bool SAL_CALL SwAccessibleParagraph::removeSelection( sal_Int32 selectionInd
 {
     SolarMutexGuard g;
 
-    if(selectionIndex < 0) return sal_False;
+    if(selectionIndex < 0) return false;
 
     sal_Int32 nSelected = selectionIndex;
 
@@ -3398,7 +3395,7 @@ sal_Bool SAL_CALL SwAccessibleParagraph::removeSelection( sal_Int32 selectionInd
         }
         while( !bRet && (pCursor != pRingStart) );
     }
-    return sal_True;
+    return true;
 }
 
 sal_Int32 SAL_CALL SwAccessibleParagraph::addSelection( sal_Int32, sal_Int32 startOffset, sal_Int32 endOffset)
@@ -3473,6 +3470,8 @@ sal_Int32 SAL_CALL SwAccessibleParagraph::addSelection( sal_Int32, sal_Int32 sta
                                                lang::IllegalArgumentException,
                                                uno::RuntimeException, std::exception)
 {
+    SolarMutexGuard g;
+
     std::unique_ptr<SwTextMarkupHelper> pTextMarkupHelper;
     switch ( nTextMarkupType )
     {
@@ -3501,6 +3500,8 @@ uno::Sequence< /*accessibility::*/TextSegment > SAL_CALL
                                                lang::IllegalArgumentException,
                                                uno::RuntimeException, std::exception)
 {
+    SolarMutexGuard g;
+
     // parameter checking
     const sal_Int32 nLength = GetString().getLength();
     if ( ! IsValidPosition( nCharIndex, nLength ) )
@@ -3534,6 +3535,8 @@ sal_Int32 SAL_CALL SwAccessibleParagraph::getLineNumberAtIndex( sal_Int32 nIndex
                                         throw (lang::IndexOutOfBoundsException,
                                                uno::RuntimeException, std::exception)
 {
+    SolarMutexGuard g;
+
     // parameter checking
     const sal_Int32 nLength = GetString().getLength();
     if ( ! IsValidPosition( nIndex, nLength ) )
@@ -3550,6 +3553,8 @@ sal_Int32 SAL_CALL SwAccessibleParagraph::getLineNumberAtIndex( sal_Int32 nIndex
                                         throw (lang::IndexOutOfBoundsException,
                                                uno::RuntimeException, std::exception)
 {
+    SolarMutexGuard g;
+
     // parameter checking
     if ( nLineNo < 0 ||
          nLineNo >= GetPortionData().GetLineCount() )
@@ -3573,6 +3578,8 @@ sal_Int32 SAL_CALL SwAccessibleParagraph::getLineNumberAtIndex( sal_Int32 nIndex
 /*accessibility::*/TextSegment SAL_CALL SwAccessibleParagraph::getTextAtLineWithCaret()
                                         throw (uno::RuntimeException, std::exception)
 {
+    SolarMutexGuard g;
+
     const sal_Int32 nLineNoOfCaret = getNumberOfLineWithCaret();
 
     if ( nLineNoOfCaret >= 0 &&
@@ -3587,6 +3594,8 @@ sal_Int32 SAL_CALL SwAccessibleParagraph::getLineNumberAtIndex( sal_Int32 nIndex
 sal_Int32 SAL_CALL SwAccessibleParagraph::getNumberOfLineWithCaret()
                                         throw (uno::RuntimeException, std::exception)
 {
+    SolarMutexGuard g;
+
     const sal_Int32 nCaretPos = getCaretPosition();
     const sal_Int32 nLength = GetString().getLength();
     if ( !IsValidPosition( nCaretPos, nLength ) )
@@ -3708,7 +3717,7 @@ bool SwAccessibleParagraph::GetSelectionAtIndex(
                                 SAL_WARN_IF(
                                     GetPortionData().IsValidCorePosition(
                                                                   nCoreStart),
-                                    "sw.core",
+                                    "sw.a11y",
                                     "problem determining valid core position");
 
                                 nLocalStart =
@@ -3747,7 +3756,7 @@ bool SwAccessibleParagraph::GetSelectionAtIndex(
                                 SAL_WARN_IF(
                                     GetPortionData().IsValidCorePosition(
                                                                   nCoreEnd),
-                                    "sw.core",
+                                    "sw.a11y",
                                     "problem determining valid core position");
 
                                 nLocalEnd = GetPortionData().GetAccessiblePosition(
@@ -3808,8 +3817,7 @@ sal_Int16 SAL_CALL SwAccessibleParagraph::getAccessibleRole() throw (css::uno::R
 sal_Int32 SwAccessibleParagraph::GetRealHeadingLevel()
 {
     uno::Reference< css::beans::XPropertySet > xPortion = CreateUnoPortion( 0, 0 );
-    OUString pString = "ParaStyleName";
-    uno::Any styleAny = xPortion->getPropertyValue( pString );
+    uno::Any styleAny = xPortion->getPropertyValue( "ParaStyleName" );
     OUString sValue;
     if (styleAny >>= sValue)
     {

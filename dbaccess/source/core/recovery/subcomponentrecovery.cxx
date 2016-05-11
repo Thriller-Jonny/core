@@ -53,11 +53,8 @@ namespace dbaccess
     using css::uno::Exception;
     using css::uno::RuntimeException;
     using css::uno::Any;
-    using css::uno::makeAny;
     using css::uno::Sequence;
-    using css::uno::Type;
     using css::uno::XComponentContext;
-    using css::lang::XMultiServiceFactory;
     using css::embed::XStorage;
     using css::sdb::application::XDatabaseDocumentUI;
     using css::beans::Pair;
@@ -84,7 +81,7 @@ namespace dbaccess
     // helper
     namespace
     {
-        static OUString lcl_getComponentStorageBaseName( const SubComponentType i_eType )
+        OUString lcl_getComponentStorageBaseName( const SubComponentType i_eType )
         {
             switch ( i_eType )
             {
@@ -104,7 +101,7 @@ namespace dbaccess
             return OUString();
         }
 
-        static SubComponentType lcl_databaseObjectToSubComponentType( const sal_Int32 i_nObjectType )
+        SubComponentType lcl_databaseObjectToSubComponentType( const sal_Int32 i_nObjectType )
         {
             switch ( i_nObjectType )
             {
@@ -118,7 +115,7 @@ namespace dbaccess
             return UNKNOWN;
         }
 
-        static bool lcl_determineReadOnly( const Reference< XComponent >& i_rComponent )
+        bool lcl_determineReadOnly( const Reference< XComponent >& i_rComponent )
         {
             Reference< XModel > xDocument( i_rComponent, UNO_QUERY );
             if ( !xDocument.is() )
@@ -134,7 +131,7 @@ namespace dbaccess
             return aDocArgs.getOrDefault( "ReadOnly", false );
         }
 
-        static Reference< XCommandProcessor > lcl_getSubComponentDef_nothrow( const Reference< XDatabaseDocumentUI >& i_rAppUI,
+        Reference< XCommandProcessor > lcl_getSubComponentDef_nothrow( const Reference< XDatabaseDocumentUI >& i_rAppUI,
             const SubComponentType i_eType, const OUString& i_rName )
         {
             Reference< XController > xController( i_rAppUI, UNO_QUERY_THROW );
@@ -185,7 +182,7 @@ namespace dbaccess
     public:
         virtual void    AddAttribute( enum ::xmloff::token::XMLTokenEnum i_eName, const OUString& i_rValue ) override;
         virtual void    AddAttribute( enum ::xmloff::token::XMLTokenEnum i_eName, enum ::xmloff::token::XMLTokenEnum i_eValue ) override;
-        virtual void    StartElement( enum ::xmloff::token::XMLTokenEnum i_eName, const bool i_bIgnoreWhitespace ) override;
+        virtual void    StartElement( enum ::xmloff::token::XMLTokenEnum i_eName ) override;
         virtual void    EndElement  ( const bool i_bIgnoreWhitespace ) override;
         virtual void    Characters( const OUString& i_rCharacters ) override;
 
@@ -214,10 +211,9 @@ namespace dbaccess
         m_rDelegator.addAttribute( impl_prefix( i_eName ), ::xmloff::token::GetXMLToken( i_eValue ) );
     }
 
-    void SettingsExportContext::StartElement( enum ::xmloff::token::XMLTokenEnum i_eName, const bool i_bIgnoreWhitespace )
+    void SettingsExportContext::StartElement( enum ::xmloff::token::XMLTokenEnum i_eName )
     {
-        if ( i_bIgnoreWhitespace )
-            m_rDelegator.ignorableWhitespace( " " );
+        m_rDelegator.ignorableWhitespace( " " );
 
         m_rDelegator.startElement( impl_prefix( i_eName ) );
     }
@@ -444,7 +440,7 @@ namespace dbaccess
                 m_aCompDesc.bForEditing = true;
                 break;
             }
-            // fall through
+            SAL_FALLTHROUGH;
 
         case FORM:
             m_aCompDesc.bForEditing = !lcl_determineReadOnly( m_xComponent );
@@ -566,7 +562,7 @@ namespace dbaccess
         aDesignInput.import( pDocHandler.get() );
 
         const ::comphelper::NamedValueCollection& rSettings( pDocHandler->getSettings() );
-        const Any aCurrentQueryDesign = rSettings.get( sCurrentQueryDesignName );
+        const Any& aCurrentQueryDesign = rSettings.get( sCurrentQueryDesignName );
 #if OSL_DEBUG_LEVEL > 0
         Sequence< PropertyValue > aQueryDesignLayout;
         OSL_VERIFY( aCurrentQueryDesign >>= aQueryDesignLayout );

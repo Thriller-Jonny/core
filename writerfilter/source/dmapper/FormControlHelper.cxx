@@ -33,10 +33,10 @@
 #include <com/sun/star/text/TextContentAnchorType.hpp>
 #include <com/sun/star/text/VertOrientation.hpp>
 #include <com/sun/star/uno/Any.hxx>
-#include <com/sun/star/uno/Type.hxx>
 
 #include "FormControlHelper.hxx"
 #include <xmloff/odffields.hxx>
+#include <comphelper/sequence.hxx>
 
 namespace writerfilter {
 namespace dmapper {
@@ -183,32 +183,25 @@ bool FormControlHelper::createCheckbox(uno::Reference<text::XTextRange> const& x
     m_pImpl->aSize.Width = nCheckBoxHeight;
     m_pImpl->aSize.Height = m_pImpl->aSize.Width;
 
-    uno::Any aAny;
     if (!m_pFFData->getStatusText().isEmpty())
     {
-        aAny <<= m_pFFData->getStatusText();
-
-        xPropSet->setPropertyValue("HelpText", aAny);
+        xPropSet->setPropertyValue("HelpText", uno::Any(m_pFFData->getStatusText()));
     }
 
-    aAny <<= m_pFFData->getCheckboxChecked();
-    xPropSet->setPropertyValue("DefaultState", aAny);
+    xPropSet->setPropertyValue("DefaultState", uno::Any(m_pFFData->getCheckboxChecked()));
 
     if (!m_pFFData->getHelpText().isEmpty())
     {
-        aAny <<= m_pFFData->getHelpText();
-        xPropSet->setPropertyValue("HelpF1Text", aAny);
+        xPropSet->setPropertyValue("HelpF1Text", uno::Any(m_pFFData->getHelpText()));
     }
 
-    aAny <<= rControlName;
-    xPropSet->setPropertyValue("Name", aAny);
+    xPropSet->setPropertyValue("Name", uno::Any(rControlName));
 
     return true;
 }
 
-bool FormControlHelper::processField(uno::Reference<text::XFormField> const& xFormField)
+void FormControlHelper::processField(uno::Reference<text::XFormField> const& xFormField)
 {
-    bool bRes = true;
     uno::Reference<container::XNameContainer> xNameCont = xFormField->getParameters();
     uno::Reference<container::XNamed> xNamed( xFormField, uno::UNO_QUERY );
     if ( m_pFFData && xNamed.is() && xNameCont.is() )
@@ -234,15 +227,13 @@ bool FormControlHelper::processField(uno::Reference<text::XFormField> const& xFo
         else if (m_pImpl->m_eFieldId == FIELD_FORMDROPDOWN )
         {
             xFormField->setFieldType(ODF_FORMDROPDOWN);
-            uno::Sequence< OUString > sItems;
-            sItems.realloc( m_pFFData->getDropDownEntries().size() );
-            ::std::copy( m_pFFData->getDropDownEntries().begin(), m_pFFData->getDropDownEntries().end(), sItems.begin());
-            if ( sItems.getLength() )
+            const FFDataHandler::DropDownEntries_t& rEntries = m_pFFData->getDropDownEntries();
+            if (!rEntries.empty())
             {
                 if ( xNameCont->hasByName(ODF_FORMDROPDOWN_LISTENTRY) )
-                    xNameCont->replaceByName(ODF_FORMDROPDOWN_LISTENTRY, uno::makeAny( sItems ) );
+                    xNameCont->replaceByName(ODF_FORMDROPDOWN_LISTENTRY, uno::makeAny(comphelper::containerToSequence(rEntries)));
                 else
-                    xNameCont->insertByName(ODF_FORMDROPDOWN_LISTENTRY, uno::makeAny( sItems ) );
+                    xNameCont->insertByName(ODF_FORMDROPDOWN_LISTENTRY, uno::makeAny(comphelper::containerToSequence(rEntries)));
 
                 sal_Int32 nResult = m_pFFData->getDropDownResult().toInt32();
                 if ( nResult )
@@ -255,20 +246,17 @@ bool FormControlHelper::processField(uno::Reference<text::XFormField> const& xFo
             }
         }
     }
-    else
-        bRes = false;
-    return bRes;
 }
 
-bool FormControlHelper::insertControl(uno::Reference<text::XTextRange> const& xTextRange)
+void FormControlHelper::insertControl(uno::Reference<text::XTextRange> const& xTextRange)
 {
     bool bCreated = false;
     if ( !m_pFFData )
-        return false;
+        return;
     uno::Reference<container::XNameContainer> xFormCompsByName(m_pImpl->getForm(), uno::UNO_QUERY);
     uno::Reference<container::XIndexContainer> xFormComps(m_pImpl->getFormComps());
     if (! xFormComps.is())
-        return false;
+        return;
 
     static const char sControl[] = "Control";
 
@@ -300,48 +288,41 @@ bool FormControlHelper::insertControl(uno::Reference<text::XTextRange> const& xT
     }
 
     if (!bCreated)
-        return false;
+        return;
 
     uno::Any aAny(m_pImpl->rFormComponent);
     xFormComps->insertByIndex(xFormComps->getCount(), aAny);
 
     if (! m_pImpl->getServiceFactory().is())
-        return false;
+        return;
 
     uno::Reference<uno::XInterface> xInterface = m_pImpl->getServiceFactory()->createInstance("com.sun.star.drawing.ControlShape");
 
     if (! xInterface.is())
-        return false;
+        return;
 
     uno::Reference<drawing::XShape> xShape(xInterface, uno::UNO_QUERY);
 
     if (! xShape.is())
-        return false;
+        return;
 
     xShape->setSize(m_pImpl->aSize);
 
     uno::Reference<beans::XPropertySet> xShapeProps(xShape, uno::UNO_QUERY);
 
     sal_uInt16 nTmp = text::TextContentAnchorType_AS_CHARACTER;
-    aAny <<= nTmp;
-
-    xShapeProps->setPropertyValue("AnchorType", aAny);
+    xShapeProps->setPropertyValue("AnchorType", uno::makeAny<sal_uInt16>(nTmp));
 
     nTmp = text::VertOrientation::CENTER;
-    aAny <<= nTmp;
-    xShapeProps->setPropertyValue("VertOrient", aAny);
+    xShapeProps->setPropertyValue("VertOrient", uno::makeAny<sal_uInt16>(nTmp));
 
-    aAny <<= xTextRange;
-
-    xShapeProps->setPropertyValue("TextRange", aAny);
+    xShapeProps->setPropertyValue("TextRange", uno::Any(xTextRange));
 
     uno::Reference<drawing::XControlShape> xControlShape(xShape, uno::UNO_QUERY);
     uno::Reference<awt::XControlModel> xControlModel(m_pImpl->rFormComponent, uno::UNO_QUERY);
     xControlShape->setControl(xControlModel);
 
     m_pImpl->getDrawPage()->add(xShape);
-
-    return true;
 }
 
 }}

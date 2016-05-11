@@ -59,8 +59,7 @@ static const char aSpreadsheetDocument[] = "com.sun.star.sheet.SpreadsheetDocume
 static const char aTextDocument[] = "com.sun.star.text.TextDocument";
 
 typedef  std::unordered_map< OUString,
-                             sal_Int32, OUStringHash,
-                             ::std::equal_to< OUString > > NameIndexHash;
+                             sal_Int32, OUStringHash > NameIndexHash;
 
 typedef std::vector < uno::Reference< frame::XModel > > Documents;
 
@@ -81,10 +80,10 @@ public:
     explicit DocumentsEnumImpl( const uno::Reference< uno::XComponentContext >& xContext ) throw ( uno::RuntimeException ) :  m_xContext( xContext )
     {
         uno::Reference< frame::XDesktop2 > xDesktop = frame::Desktop::create( m_xContext );
-        uno::Reference< container::XEnumeration > mxComponents = xDesktop->getComponents()->createEnumeration();
-        while( mxComponents->hasMoreElements() )
+        uno::Reference< container::XEnumeration > xComponents = xDesktop->getComponents()->createEnumeration();
+        while( xComponents->hasMoreElements() )
         {
-            uno::Reference< frame::XModel > xNext( mxComponents->nextElement(), uno::UNO_QUERY );
+            uno::Reference< frame::XModel > xNext( xComponents->nextElement(), uno::UNO_QUERY );
             if ( xNext.is() )
                 m_documents.push_back( xNext );
         }
@@ -217,7 +216,7 @@ void lclSetupComponent( const uno::Reference< lang::XComponent >& rxComponent, b
         uno::Reference< frame::XModel > xModel( rxComponent, uno::UNO_QUERY_THROW );
         uno::Reference< frame::XController > xController( xModel->getCurrentController(), uno::UNO_SET_THROW );
         uno::Reference< frame::XFrame > xFrame( xController->getFrame(), uno::UNO_SET_THROW );
-        uno::Reference< awt::XWindow >( xFrame->getContainerWindow(), uno::UNO_SET_THROW )->setEnable( sal_False );
+        uno::Reference< awt::XWindow >( xFrame->getContainerWindow(), uno::UNO_SET_THROW )->setEnable( false );
     }
     catch( uno::Exception& )
     {

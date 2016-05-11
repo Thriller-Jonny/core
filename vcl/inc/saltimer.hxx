@@ -20,8 +20,10 @@
 #ifndef INCLUDED_VCL_INC_SALTIMER_HXX
 #define INCLUDED_VCL_INC_SALTIMER_HXX
 
-#include <tools/solar.h>
+#include <sal/config.h>
+
 #include <vcl/dllapi.h>
+
 #include <salwtype.hxx>
 
 /*

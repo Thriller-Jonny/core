@@ -96,8 +96,11 @@ class SwNumPositionTabPage : public SfxTabPage
 
     DECL_LINK_TYPED(LabelFollowedByHdl_Impl, ListBox&, void);
     DECL_LINK_TYPED( ListtabPosHdl_Impl, SpinField&, void );
+    DECL_LINK_TYPED( ListtabPosFocusHdl_Impl, Control&, void );
     DECL_LINK_TYPED( AlignAtHdl_Impl, SpinField&, void );
+    DECL_LINK_TYPED( AlignAtFocusHdl_Impl, Control&, void );
     DECL_LINK_TYPED( IndentAtHdl_Impl, SpinField&, void );
+    DECL_LINK_TYPED( IndentAtFocusHdl_Impl, Control&, void );
 
     using SfxTabPage::ActivatePage;
     using SfxTabPage::DeactivatePage;
@@ -120,15 +123,12 @@ public:
     void                SetOutlineTabDialog(SwOutlineTabDialog* pDlg){pOutlineDlg = pDlg;}
     void                SetWrtShell(SwWrtShell* pSh);
 #ifdef DBG_UTIL
-    void                SetModified(bool bRepaint = true);
+    void                SetModified();
 #else
-    void                SetModified(bool bRepaint = true)
+    void                SetModified()
                             {   bModified = true;
-                                if(bRepaint)
-                                {
-                                    m_pPreviewWIN->SetLevel(nActNumLvl);
-                                    m_pPreviewWIN->Invalidate();
-                                }
+                                m_pPreviewWIN->SetLevel(nActNumLvl);
+                                m_pPreviewWIN->Invalidate();
                             }
 #endif
 };

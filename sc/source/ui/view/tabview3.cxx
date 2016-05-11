@@ -62,6 +62,8 @@
 #include "tabprotection.hxx"
 #include "markdata.hxx"
 #include <formula/FormulaCompiler.hxx>
+#include <comphelper/lok.hxx>
+#include <LibreOfficeKit/LibreOfficeKitEnums.h>
 
 #include <com/sun/star/chart2/data/HighlightedRange.hpp>
 
@@ -152,27 +154,27 @@ void ScTabView::FakeButtonUp( ScSplitPos eWhich )
 
 void ScTabView::HideAllCursors()
 {
-    for (sal_uInt16 i=0; i<4; i++)
-        if (pGridWin[i])
-            if (pGridWin[i]->IsVisible())
+    for (VclPtr<ScGridWindow> & pWin : pGridWin)
+        if (pWin)
+            if (pWin->IsVisible())
             {
-                vcl::Cursor* pCur = pGridWin[i]->GetCursor();
+                vcl::Cursor* pCur = pWin->GetCursor();
                 if (pCur)
                     if (pCur->IsVisible())
                         pCur->Hide();
-                pGridWin[i]->HideCursor();
+                pWin->HideCursor();
             }
 }
 
 void ScTabView::ShowAllCursors()
 {
-    for (sal_uInt16 i=0; i<4; i++)
-        if (pGridWin[i])
-            if (pGridWin[i]->IsVisible())
+    for (VclPtr<ScGridWindow> & pWin : pGridWin)
+        if (pWin)
+            if (pWin->IsVisible())
             {
-                pGridWin[i]->ShowCursor();
+                pWin->ShowCursor();
 
-                pGridWin[i]->CursorChanged();
+                pWin->CursorChanged();
             }
 }
 
@@ -297,6 +299,22 @@ void ScTabView::SetCursor( SCCOL nPosX, SCROW nPosY, bool bNew )
         ShowAllCursors();
 
         CursorPosChanged();
+
+        if (comphelper::LibreOfficeKit::isActive())
+        {
+            if (nPosX > aViewData.GetMaxTiledCol() - 10 || nPosY > aViewData.GetMaxTiledRow() - 25)
+            {
+                if (nPosX > aViewData.GetMaxTiledCol() - 10)
+                    aViewData.SetMaxTiledCol(std::max(nPosX, aViewData.GetMaxTiledCol()) + 10);
+
+                if (nPosY > aViewData.GetMaxTiledRow() - 25)
+                    aViewData.SetMaxTiledRow(std::max(nPosY, aViewData.GetMaxTiledRow()) + 25);
+
+                ScDocShell* pDocSh = aViewData.GetDocShell();
+                if (pDocSh)
+                    pDocSh->libreOfficeKitCallback(LOK_CALLBACK_DOCUMENT_SIZE_CHANGED, "");
+            }
+        }
     }
 }
 
@@ -652,9 +670,9 @@ void ScTabView::TestHintWindow()
     else
         mpInputHintWindow.disposeAndClear();
 
-    for ( sal_uInt16 i=0; i<4; i++ )
-        if ( pGridWin[i] && pGridWin[i]->IsVisible() )
-            pGridWin[i]->UpdateListValPos( bListValButton, aListValPos );
+    for (VclPtr<ScGridWindow> & pWin : pGridWin)
+        if ( pWin && pWin->IsVisible() )
+            pWin->UpdateListValPos( bListValButton, aListValPos );
 }
 
 bool ScTabView::HasHintWindow() const
@@ -758,7 +776,7 @@ void ScTabView::AlignToCursor( SCsCOL nCurX, SCsROW nCurY, ScFollowMode eMode,
 
         // when for instance a search dialog is open, don't put the cursor behind the dialog
         // if possible, put the row with the cursor above or below the dialog
-        //! not if already complelely visible
+        //! not if already completely visible
 
         if ( eMode == SC_FOLLOW_JUMP )
         {
@@ -832,13 +850,15 @@ void ScTabView::AlignToCursor( SCsCOL nCurX, SCsROW nCurY, ScFollowMode eMode,
                 if ( nCurX < nDeltaX || nCurX >= nDeltaX+nSizeX )
                 {
                     nNewDeltaX = nCurX - static_cast<SCsCOL>(aViewData.CellsAtX( nCurX, -1, eAlignX, static_cast<sal_uInt16>(nSpaceX) ));
-                    if (nNewDeltaX < 0) nNewDeltaX = 0;
+                    if (nNewDeltaX < 0)
+                        nNewDeltaX = 0;
                     nSizeX = (SCsCOL) aViewData.CellsAtX( nNewDeltaX, 1, eAlignX );
                 }
                 if ( nCurY < nDeltaY || nCurY >= nDeltaY+nSizeY || bForceNew )
                 {
                     nNewDeltaY = nCurY - static_cast<SCsROW>(aViewData.CellsAtY( nCurY, -1, eAlignY, static_cast<sal_uInt16>(nSpaceY) ));
-                    if (nNewDeltaY < 0) nNewDeltaY = 0;
+                    if (nNewDeltaY < 0)
+                        nNewDeltaY = 0;
                     nSizeY = (SCsROW) aViewData.CellsAtY( nNewDeltaY, 1, eAlignY );
                 }
                 bDoLine = true;
@@ -852,13 +872,15 @@ void ScTabView::AlignToCursor( SCsCOL nCurX, SCsROW nCurY, ScFollowMode eMode,
                 if ( nCurX < nDeltaX || nCurX >= nDeltaX+nSizeX )
                 {
                     nNewDeltaX = nDeltaX + nCurX - aViewData.GetCurX();
-                    if (nNewDeltaX < 0) nNewDeltaX = 0;
+                    if (nNewDeltaX < 0)
+                        nNewDeltaX = 0;
                     nSizeX = (SCsCOL) aViewData.CellsAtX( nNewDeltaX, 1, eAlignX );
                 }
                 if ( nCurY < nDeltaY || nCurY >= nDeltaY+nSizeY )
                 {
                     nNewDeltaY = nDeltaY + nCurY - aViewData.GetCurY();
-                    if (nNewDeltaY < 0) nNewDeltaY = 0;
+                    if (nNewDeltaY < 0)
+                        nNewDeltaY = 0;
                     nSizeY = (SCsROW) aViewData.CellsAtY( nNewDeltaY, 1, eAlignY );
                 }
 
@@ -867,13 +889,15 @@ void ScTabView::AlignToCursor( SCsCOL nCurX, SCsROW nCurY, ScFollowMode eMode,
                 if ( nCurX < nNewDeltaX || nCurX >= nNewDeltaX+nSizeX )
                 {
                     nNewDeltaX = nCurX - (nSizeX / 2);
-                    if (nNewDeltaX < 0) nNewDeltaX = 0;
+                    if (nNewDeltaX < 0)
+                        nNewDeltaX = 0;
                     nSizeX = (SCsCOL) aViewData.CellsAtX( nNewDeltaX, 1, eAlignX );
                 }
                 if ( nCurY < nNewDeltaY || nCurY >= nNewDeltaY+nSizeY )
                 {
                     nNewDeltaY = nCurY - (nSizeY / 2);
-                    if (nNewDeltaY < 0) nNewDeltaY = 0;
+                    if (nNewDeltaY < 0)
+                        nNewDeltaY = 0;
                     nSizeY = (SCsROW) aViewData.CellsAtY( nNewDeltaY, 1, eAlignY );
                 }
 
@@ -907,22 +931,30 @@ void ScTabView::AlignToCursor( SCsCOL nCurX, SCsROW nCurY, ScFollowMode eMode,
                     ++nNewDeltaY;
                 nSizeY = (SCsROW) aViewData.CellsAtY( nNewDeltaY, 1, eAlignY );
             }
-            if ( nCurX < nNewDeltaX ) nNewDeltaX = nCurX;
-            if ( nCurY < nNewDeltaY ) nNewDeltaY = nCurY;
+            if ( nCurX < nNewDeltaX )
+                nNewDeltaX = nCurX;
+            if ( nCurY < nNewDeltaY )
+                nNewDeltaY = nCurY;
         }
 
         if ( nNewDeltaX != nDeltaX )
             nSizeX = (SCsCOL) aViewData.CellsAtX( nNewDeltaX, 1, eAlignX );
-        if (nNewDeltaX+nSizeX-1 > MAXCOL) nNewDeltaX = MAXCOL-nSizeX+1;
-        if (nNewDeltaX < 0) nNewDeltaX = 0;
+        if (nNewDeltaX+nSizeX-1 > MAXCOL)
+            nNewDeltaX = MAXCOL-nSizeX+1;
+        if (nNewDeltaX < 0)
+            nNewDeltaX = 0;
 
         if ( nNewDeltaY != nDeltaY )
             nSizeY = (SCsROW) aViewData.CellsAtY( nNewDeltaY, 1, eAlignY );
-        if (nNewDeltaY+nSizeY-1 > MAXROW) nNewDeltaY = MAXROW-nSizeY+1;
-        if (nNewDeltaY < 0) nNewDeltaY = 0;
+        if (nNewDeltaY+nSizeY-1 > MAXROW)
+            nNewDeltaY = MAXROW-nSizeY+1;
+        if (nNewDeltaY < 0)
+            nNewDeltaY = 0;
 
-        if ( nNewDeltaX != nDeltaX ) ScrollX( nNewDeltaX - nDeltaX, eAlignX );
-        if ( nNewDeltaY != nDeltaY ) ScrollY( nNewDeltaY - nDeltaY, eAlignY );
+        if ( nNewDeltaX != nDeltaX )
+            ScrollX( nNewDeltaX - nDeltaX, eAlignX );
+        if ( nNewDeltaY != nDeltaY )
+            ScrollY( nNewDeltaY - nDeltaY, eAlignY );
     }
 
     // switch active part again
@@ -937,7 +969,6 @@ void ScTabView::AlignToCursor( SCsCOL nCurX, SCsROW nCurY, ScFollowMode eMode,
         if (eActiveY == SC_SPLIT_BOTTOM && nCurY < (SCsROW)aViewData.GetFixPosY())
         {
             ActivatePart( (eActiveX==SC_SPLIT_LEFT) ? SC_SPLIT_TOPLEFT : SC_SPLIT_TOPRIGHT );
-            eActiveY = SC_SPLIT_TOP;
         }
 }
 
@@ -1065,6 +1096,17 @@ void ScTabView::MoveCursorRel( SCsCOL nMovX, SCsROW nMovY, ScFollowMode eMode,
         nOldY = (SCsROW) aViewData.GetCurY();
         nCurX = (nMovX != 0) ? nOldX+nMovX : (SCsCOL) aViewData.GetOldCurX();
         nCurY = (nMovY != 0) ? nOldY+nMovY : (SCsROW) aViewData.GetOldCurY();
+    }
+
+    if (nMovX < 0 && nOldX == 0)
+    { // trying to go left from 1st column
+        if (nMovY == 0) // done, because no vertical move is requested
+            return;
+    }
+    if (nMovY < 0 && nOldY == 0)
+    { // trying to go up from 1st row
+        if (nMovX == 0) // done, because no horizontal move is requested
+            return;
     }
 
     aViewData.ResetOldCursor();
@@ -1384,6 +1426,39 @@ void ScTabView::MarkRows()
     SelectionChanged();
 }
 
+
+void ScTabView::MarkColumns(SCCOL nCol, sal_Int16 nModifier)
+{
+    SCCOL nStartCol = nCol;
+    SCTAB nTab = aViewData.GetTabNo();
+
+    if ((nModifier & KEY_SHIFT) == KEY_SHIFT)
+        bMoveIsShift = true;
+
+    DoneBlockMode( nModifier != 0 );
+    InitBlockMode( nStartCol, 0, nTab, true, true);
+    MarkCursor( nCol, MAXROW, nTab );
+    bMoveIsShift = false;
+    SetCursor( nCol, 0 );
+    SelectionChanged();
+}
+
+void ScTabView::MarkRows(SCROW nRow, sal_Int16 nModifier)
+{
+    SCROW nStartRow = nRow;
+    SCTAB nTab = aViewData.GetTabNo();
+
+    if ((nModifier & KEY_SHIFT) == KEY_SHIFT)
+        bMoveIsShift = true;
+
+    DoneBlockMode( nModifier != 0 );
+    InitBlockMode( 0, nStartRow, nTab, true, false, true );
+    MarkCursor( MAXCOL, nRow, nTab );
+    bMoveIsShift = false;
+    SetCursor( 0, nRow );
+    SelectionChanged();
+}
+
 void ScTabView::MarkDataArea( bool bIncludeCursor )
 {
     ScDocument* pDoc = aViewData.GetDocument();
@@ -1483,18 +1558,21 @@ void ScTabView::MarkDataChanged()
 
 void ScTabView::SelectNextTab( short nDir, bool bExtendSelection )
 {
-    if (!nDir) return;
+    if (!nDir)
+        return;
     OSL_ENSURE( nDir==-1 || nDir==1, "SelectNextTab: invalid value");
 
     ScDocument* pDoc = aViewData.GetDocument();
     SCTAB nTab = aViewData.GetTabNo();
     if (nDir<0)
     {
-        if (!nTab) return;
+        if (!nTab)
+            return;
         --nTab;
         while (!pDoc->IsVisible(nTab))
         {
-            if (!nTab) return;
+            if (!nTab)
+                return;
             --nTab;
         }
     }
@@ -1502,16 +1580,23 @@ void ScTabView::SelectNextTab( short nDir, bool bExtendSelection )
     {
         SCTAB nCount = pDoc->GetTableCount();
         ++nTab;
-        if (nTab >= nCount) return;
+        if (nTab >= nCount)
+            return;
         while (!pDoc->IsVisible(nTab))
         {
             ++nTab;
-            if (nTab >= nCount) return;
+            if (nTab >= nCount)
+                return;
         }
     }
 
     SetTabNo( nTab, false, bExtendSelection );
     PaintExtras();
+}
+
+void ScTabView::SelectTabPage( const sal_uInt16 nTab )
+{
+    pTabControl->SwitchToPageId( nTab );
 }
 
 //  SetTabNo - set the displayed sheet
@@ -1643,9 +1728,9 @@ void ScTabView::SetTabNo( SCTAB nTab, bool bNew, bool bExtendSelection, bool bSa
 
         if ( bRefMode )     // hide EditView if necessary (after aViewData.SetTabNo !)
         {
-            for (sal_uInt16 i = 0; i < 4; ++i)
-                if (pGridWin[i] && pGridWin[i]->IsVisible())
-                    pGridWin[i]->UpdateEditViewPos();
+            for (VclPtr<ScGridWindow> & pWin : pGridWin)
+                if (pWin && pWin->IsVisible())
+                    pWin->UpdateEditViewPos();
         }
 
         TabChanged(bSameTabButMoved);                                       // DrawView
@@ -1707,9 +1792,9 @@ void ScTabView::SetTabNo( SCTAB nTab, bool bNew, bool bExtendSelection, bool bSa
 
         // Form Layer must know the visible area of the new sheet
         // that is why MapMode must already be correct here
-        for (sal_uInt16 i=0; i<4; i++)
-            if (pGridWin[i])
-                pGridWin[i]->SetMapMode( pGridWin[i]->GetDrawMapMode() );
+        for (VclPtr<ScGridWindow> & pWin : pGridWin)
+            if (pWin)
+                pWin->SetMapMode( pWin->GetDrawMapMode() );
         SetNewVisArea();
 
         PaintGrid();
@@ -1952,7 +2037,8 @@ void ScTabView::PaintArea( SCCOL nStartCol, SCROW nStartRow, SCCOL nEndCol, SCRO
 
         SCCOL nScrX = aViewData.GetPosX( eHWhich );
         SCROW nScrY = aViewData.GetPosY( eVWhich );
-        if (nCol1 < nScrX) nCol1 = nScrX;
+        if (nCol1 < nScrX)
+            nCol1 = nScrX;
         if (nCol2 < nScrX)
         {
             if ( eMode == SC_UPDATE_ALL )   // for UPDATE_ALL, paint anyway
@@ -1960,15 +2046,21 @@ void ScTabView::PaintArea( SCCOL nStartCol, SCROW nStartRow, SCCOL nEndCol, SCRO
             else
                 bOut = true;                // completely outside the window
         }
-        if (nRow1 < nScrY) nRow1 = nScrY;
-        if (nRow2 < nScrY) bOut = true;
+        if (nRow1 < nScrY)
+            nRow1 = nScrY;
+        if (nRow2 < nScrY)
+            bOut = true;
 
         SCCOL nLastX = nScrX + aViewData.VisibleCellsX( eHWhich ) + 1;
         SCROW nLastY = nScrY + aViewData.VisibleCellsY( eVWhich ) + 1;
-        if (nCol1 > nLastX) bOut = true;
-        if (nCol2 > nLastX) nCol2 = nLastX;
-        if (nRow1 > nLastY) bOut = true;
-        if (nRow2 > nLastY) nRow2 = nLastY;
+        if (nCol1 > nLastX)
+            bOut = true;
+        if (nCol2 > nLastX)
+            nCol2 = nLastX;
+        if (nRow1 > nLastY)
+            bOut = true;
+        if (nRow2 > nLastY)
+            nRow2 = nLastY;
 
         if (bOut)
             continue;
@@ -2510,9 +2602,9 @@ void ScTabView::ActivatePart( ScSplitPos eWhich )
 
 void ScTabView::HideListBox()
 {
-    for (sal_uInt16 i=0; i<4; i++)
-        if (pGridWin[i])
-            pGridWin[i]->ClickExtern();
+    for (VclPtr<ScGridWindow> & pWin : pGridWin)
+        if (pWin)
+            pWin->ClickExtern();
 }
 
 void ScTabView::UpdateInputContext()
@@ -2612,8 +2704,8 @@ void ScTabView::CheckNeedsRepaint()
 
 bool ScTabView::NeedsRepaint()
 {
-    for (size_t i = 0; i < 4; i++)
-        if (pGridWin[i] && pGridWin[i]->IsVisible() && pGridWin[i]->NeedsRepaint())
+    for (VclPtr<ScGridWindow> & pWin : pGridWin)
+        if (pWin && pWin->IsVisible() && pWin->NeedsRepaint())
             return true;
     return false;
 }

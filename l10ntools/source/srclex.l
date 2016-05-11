@@ -203,8 +203,8 @@ void YYWarning();
 }
 
 "{"?[ \t]*\".*\"[ \t]*";"[ \t]*"}" {
-/* _LISTTEXT */
-	WorkOnTokenSet( _LISTTEXT, yytext );
+/* LISTTEXT_ */
+	WorkOnTokenSet( LISTTEXT_, yytext );
 }
 
 %%
@@ -234,10 +234,8 @@ void yyerror( const char *s )
 }
 
 SAL_IMPLEMENT_MAIN_WITH_ARGS(argc, argv) {
-    int e;
     yyin = init(argc, argv);
     yylex();
-    e = GetError();
     Close();
     return EXIT_SUCCESS;
 }

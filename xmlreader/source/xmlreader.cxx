@@ -24,10 +24,10 @@
 #include <cstddef>
 
 #include <com/sun/star/container/NoSuchElementException.hpp>
-#include <com/sun/star/uno/Reference.hxx>
 #include <com/sun/star/uno/RuntimeException.hpp>
 #include <com/sun/star/uno/XInterface.hpp>
 #include <osl/file.h>
+#include <rtl/character.hxx>
 #include <rtl/string.h>
 #include <rtl/ustring.hxx>
 #include <sal/log.hxx>
@@ -399,7 +399,7 @@ char const * XmlReader::handleReference(char const * position, char const * end)
     ++position;
     if (*position == '#') {
         ++position;
-        sal_Int32 val = 0;
+        sal_uInt32 val = 0;
         char const * p;
         if (*position == 'x') {
             ++position;
@@ -415,7 +415,7 @@ char const * XmlReader::handleReference(char const * position, char const * end)
                 } else {
                     break;
                 }
-                if (val > 0x10FFFF) { // avoid overflow
+                if (!rtl::isUnicodeCodePoint(val)) { // avoid overflow
                     throw css::uno::RuntimeException(
                         "'&#x...' too large in " + fileUrl_ );
                 }
@@ -429,7 +429,7 @@ char const * XmlReader::handleReference(char const * position, char const * end)
                 } else {
                     break;
                 }
-                if (val > 0x10FFFF) { // avoid overflow
+                if (!rtl::isUnicodeCodePoint(val)) { // avoid overflow
                     throw css::uno::RuntimeException(
                         "'&#...' too large in " + fileUrl_ );
                 }
@@ -439,7 +439,7 @@ char const * XmlReader::handleReference(char const * position, char const * end)
             throw css::uno::RuntimeException(
                 "'&#...' missing ';' in " + fileUrl_ );
         }
-        assert(val >= 0 && val <= 0x10FFFF);
+        assert(rtl::isUnicodeCodePoint(val));
         if ((val < 0x20 && val != 0x9 && val != 0xA && val != 0xD) ||
             (val >= 0xD800 && val <= 0xDFFF) || val == 0xFFFE || val == 0xFFFF)
         {
@@ -487,7 +487,7 @@ char const * XmlReader::handleReference(char const * position, char const * end)
               RTL_CONSTASCII_STRINGPARAM("'") },
             { RTL_CONSTASCII_STRINGPARAM("quot;"),
               RTL_CONSTASCII_STRINGPARAM("\"") } };
-        for (std::size_t i = 0; i < sizeof refs / sizeof refs[0]; ++i) {
+        for (std::size_t i = 0; i < SAL_N_ELEMENTS(refs); ++i) {
             if (rtl_str_shortenedCompare_WithLength(
                     position, end - position, refs[i].inBegin, refs[i].inLength,
                     refs[i].inLength) ==

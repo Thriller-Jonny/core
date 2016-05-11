@@ -25,19 +25,11 @@
 #include <o3tl/typed_flags_set.hxx>
 
 
-// - Duplex Mode -
-
-
 enum DuplexMode { DUPLEX_UNKNOWN, DUPLEX_OFF, DUPLEX_LONGEDGE, DUPLEX_SHORTEDGE };
-
-
-// - Orientation -
 
 
 enum Orientation { ORIENTATION_PORTRAIT, ORIENTATION_LANDSCAPE };
 
-
-// - QueueInfo-Types -
 
 enum class PrintQueueFlags
 {
@@ -75,8 +67,6 @@ namespace o3tl
 
 #define QUEUE_JOBS_DONTKNOW             ((sal_uLong)0xFFFFFFFF)
 
-
-// - Printer-Types -
 
 enum class PrinterCapType
 {

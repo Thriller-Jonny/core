@@ -21,11 +21,11 @@
 #define INCLUDED_SD_SOURCE_UI_DLG_REMOTEDIALOGCLIENTBOX_HXX
 
 #include "rtl/ustring.hxx"
-#include "vcl/scrbar.hxx"
-#include "vcl/fixed.hxx"
-#include "vcl/button.hxx"
-#include "vcl/dialog.hxx"
-#include "vcl/field.hxx"
+#include <vcl/scrbar.hxx>
+#include <vcl/fixed.hxx>
+#include <vcl/button.hxx>
+#include <vcl/dialog.hxx>
+#include <vcl/field.hxx>
 
 #include "svtools/extensionlistbox.hxx"
 #include <cppuhelper/implbase.hxx>
@@ -147,7 +147,7 @@ public:
     void RecalcAll();
 
     void selectEntry( const long nPos );
-    long addEntry(std::shared_ptr<ClientInfo> pClientInfo);
+    long addEntry(const std::shared_ptr<ClientInfo>& pClientInfo);
     void clearEntries();
 
     OUString getPin();

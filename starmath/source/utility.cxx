@@ -33,8 +33,6 @@
 #include "smdll.hxx"
 
 
-
-
 // return pointer to active SmViewShell, if this is not possible
 // return 0 instead.
 //!! Since this method is based on the current focus it is somewhat
@@ -44,9 +42,6 @@ SmViewShell * SmGetActiveView()
     SfxViewShell *pView = SfxViewShell::Current();
     return  dynamic_cast<SmViewShell*>( pView);
 }
-
-
-
 
 
 /**************************************************************************/
@@ -66,11 +61,6 @@ SmFontPickList& SmFontPickList::operator = (const SmFontPickList& rList)
     return *this;
 }
 
-vcl::Font SmFontPickList::operator [] (sal_uInt16 nPos) const
-{
-    return aFontVec[nPos];
-}
-
 vcl::Font SmFontPickList::Get(sal_uInt16 nPos) const
 {
     return nPos < aFontVec.size() ? aFontVec[nPos] : vcl::Font();
@@ -78,16 +68,16 @@ vcl::Font SmFontPickList::Get(sal_uInt16 nPos) const
 
 bool SmFontPickList::CompareItem(const vcl::Font & rFirstFont, const vcl::Font & rSecondFont)
 {
-  return rFirstFont.GetName() == rSecondFont.GetName() &&
-        rFirstFont.GetFamily()  == rSecondFont.GetFamily()  &&
-        rFirstFont.GetCharSet() == rSecondFont.GetCharSet() &&
-        rFirstFont.GetWeight()  == rSecondFont.GetWeight()  &&
-        rFirstFont.GetItalic()  == rSecondFont.GetItalic();
+  return rFirstFont.GetFamilyName() == rSecondFont.GetFamilyName() &&
+         rFirstFont.GetFamilyType() == rSecondFont.GetFamilyType() &&
+         rFirstFont.GetCharSet()    == rSecondFont.GetCharSet()    &&
+         rFirstFont.GetWeight()     == rSecondFont.GetWeight()     &&
+         rFirstFont.GetItalic()     == rSecondFont.GetItalic();
 }
 
 OUString SmFontPickList::GetStringItem(const vcl::Font &rFont)
 {
-    OUStringBuffer aString(rFont.GetName());
+    OUStringBuffer aString(rFont.GetFamilyName());
 
     if (IsItalic( rFont ))
     {
@@ -204,23 +194,6 @@ void SmFontPickListBox::Insert(const vcl::Font &rFont)
 }
 
 
-void SmFontPickListBox::Update(const vcl::Font &rFont, const vcl::Font &rNewFont)
-{
-    SmFontPickList::Update(rFont, rNewFont);
-
-    return;
-}
-
-
-void SmFontPickListBox::Remove(const vcl::Font &rFont)
-{
-    SmFontPickList::Remove(rFont);
-
-    return;
-}
-
-
-
 bool IsItalic( const vcl::Font &rFont )
 {
     FontItalic eItalic = rFont.GetItalic();
@@ -238,9 +211,9 @@ bool IsBold( const vcl::Font &rFont )
 
 void SmFace::Impl_Init()
 {
-    SetSize( GetSize() );
+    SetSize( GetFontSize() );
     SetTransparent( true );
-    SetAlign( ALIGN_BASELINE );
+    SetAlignment( ALIGN_BASELINE );
     SetColor( COL_AUTO );
 }
 
@@ -259,7 +232,7 @@ void SmFace::SetSize(const Size& rSize)
     //! bodies (eg stack{...} with many entries).
     //! Of course this is holds only if characters are used and not polygons.
 
-    Font::SetSize(aSize);
+    Font::SetFontSize(aSize);
 }
 
 
@@ -283,13 +256,12 @@ SmFace & operator *= (SmFace &rFace, const Fraction &rFrac)
     // scales the width and height of 'rFace' by 'rFrac' and returns a
     // reference to 'rFace'.
     // It's main use is to make scaling fonts look easier.
-{   const Size &rFaceSize = rFace.GetSize();
+{   const Size &rFaceSize = rFace.GetFontSize();
 
     rFace.SetSize(Size(Fraction(rFaceSize.Width())  *= rFrac,
                        Fraction(rFaceSize.Height()) *= rFrac));
     return rFace;
 }
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

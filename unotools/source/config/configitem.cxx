@@ -356,7 +356,7 @@ Sequence< sal_Bool > ConfigItem::GetReadOnlyStates(const css::uno::Sequence< OUS
     // We must be sure to return a valid information every time!
     // Set default to non readonly... similar to the configuration handling of this property.
     for ( i=0; i<nCount; ++i)
-        lStates[i] = sal_False;
+        lStates[i] = false;
 
     // no access - no information...
     Reference< XHierarchicalNameAccess > xHierarchyAccess = GetTree();
@@ -608,7 +608,7 @@ static void lcl_normalizeLocalNames(Sequence< OUString >& _rNames, ConfigNameFor
             }
         }
         OSL_FAIL("Cannot create absolute paths: missing interface");
-        // make local paths instaed
+        SAL_FALLTHROUGH; // make local paths instaed
 
     case CONFIG_NAME_LOCAL_PATH:
         {

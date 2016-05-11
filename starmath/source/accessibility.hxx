@@ -37,6 +37,7 @@
 #include <editeng/unoedsrc.hxx>
 #include <svx/AccessibleTextHelper.hxx>
 #include <edit.hxx>
+#include <memory>
 
 class SmGraphicWindow;
 class SmEditWindow;
@@ -45,7 +46,6 @@ class SmDocShell;
 namespace com { namespace sun { namespace star { namespace accessibility {
 struct AccessibleEventObject;
 }}}}
-
 
 
 // classes and helper-classes used for accessibility in the graphic-window
@@ -145,7 +145,6 @@ public:
 };
 
 
-
 // classes and helper-classes used for accessibility in the command-window
 
 
@@ -197,7 +196,7 @@ public:
     virtual SfxItemSet  GetAttribs( const ESelection& rSel, EditEngineAttribs nOnlyHardAttrib = EditEngineAttribs_All ) const override;
     virtual SfxItemSet  GetParaAttribs( sal_Int32 nPara ) const override;
     virtual void        SetParaAttribs( sal_Int32 nPara, const SfxItemSet& rSet ) override;
-    virtual void        RemoveAttribs( const ESelection& rSelection, bool bRemoveParaAttribs, sal_uInt16 nWhich ) override;
+    virtual void        RemoveAttribs( const ESelection& rSelection ) override;
     virtual void        GetPortions( sal_Int32 nPara, std::vector<sal_Int32>& rList ) const override;
 
     virtual SfxItemState  GetItemState( const ESelection& rSel, sal_uInt16 nWhich ) const override;
@@ -297,8 +296,6 @@ public:
 };
 
 
-
-
 typedef
 cppu::WeakImplHelper
     <
@@ -314,7 +311,7 @@ class SmEditAccessible :
     public SmEditAccessibleBaseClass
 {
     OUString                                aAccName;
-    ::accessibility::AccessibleTextHelper    *pTextHelper;
+    std::unique_ptr<::accessibility::AccessibleTextHelper> pTextHelper;
     VclPtr<SmEditWindow>                    pWin;
 
     SmEditAccessible( const SmEditAccessible & ) = delete;
@@ -324,7 +321,7 @@ public:
     explicit SmEditAccessible( SmEditWindow *pEditWin );
     virtual ~SmEditAccessible();
 
-    ::accessibility::AccessibleTextHelper *   GetTextHelper() { return pTextHelper; }
+    ::accessibility::AccessibleTextHelper *   GetTextHelper();
 
     void                Init();
     void                ClearWin();     // to be called when view is destroyed
@@ -369,7 +366,6 @@ public:
     virtual sal_Bool SAL_CALL supportsService( const OUString& ServiceName ) throw (css::uno::RuntimeException, std::exception) override;
     virtual css::uno::Sequence< OUString > SAL_CALL getSupportedServiceNames(  ) throw (css::uno::RuntimeException, std::exception) override;
 };
-
 
 
 #endif

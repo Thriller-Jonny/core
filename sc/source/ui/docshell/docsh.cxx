@@ -134,7 +134,6 @@
 
 using namespace com::sun::star;
 using ::com::sun::star::uno::Reference;
-using ::com::sun::star::uno::UNO_QUERY;
 using ::com::sun::star::lang::XMultiServiceFactory;
 using std::shared_ptr;
 using ::std::vector;
@@ -620,8 +619,7 @@ void ScDocShell::Notify( SfxBroadcaster&, const SfxHint& rHint )
 
     if ( dynamic_cast<const SfxSimpleHint*>(&rHint) ) // Without parameter
     {
-        sal_uLong nSlot = static_cast<const SfxSimpleHint&>(rHint).GetId();
-        switch ( nSlot )
+        switch ( static_cast<const SfxSimpleHint&>(rHint).GetId() )
         {
             case SFX_HINT_TITLECHANGED:
                 aDocument.SetName( SfxShell::GetName() );
@@ -641,9 +639,9 @@ void ScDocShell::Notify( SfxBroadcaster&, const SfxHint& rHint )
         //  (handled by AddInitial)
 
         const ScAutoStyleHint& rStlHint = static_cast<const ScAutoStyleHint&>(rHint);
-        ScRange aRange = rStlHint.GetRange();
-        OUString aName1 = rStlHint.GetStyle1();
-        OUString aName2 = rStlHint.GetStyle2();
+        const ScRange& aRange = rStlHint.GetRange();
+        const OUString& aName1 = rStlHint.GetStyle1();
+        const OUString& aName2 = rStlHint.GetStyle2();
         sal_uInt32 nTimeout = rStlHint.GetTimeout();
 
         if (!pAutoStyleList)
@@ -783,7 +781,7 @@ void ScDocShell::Notify( SfxBroadcaster&, const SfxHint& rHint )
 
                                     if ( xStorable->isReadonly() )
                                     {
-                                        xCloseable->close( sal_True );
+                                        xCloseable->close( true );
 
                                         OUString aUserName( ScGlobal::GetRscString( STR_UNKNOWN_USER ) );
                                         bool bNoLockAccess = false;
@@ -832,7 +830,7 @@ void ScDocShell::Notify( SfxBroadcaster&, const SfxHint& rHint )
                                         }
 
                                         // close shared file
-                                        xCloseable->close( sal_True );
+                                        xCloseable->close( true );
 
                                         // TODO: keep file lock on shared file
 
@@ -881,7 +879,7 @@ void ScDocShell::Notify( SfxBroadcaster&, const SfxHint& rHint )
                                 }
                                 else
                                 {
-                                    xCloseable->close( sal_True );
+                                    xCloseable->close( true );
 
                                     if ( bEntriesNotAccessible )
                                     {
@@ -910,7 +908,7 @@ void ScDocShell::Notify( SfxBroadcaster&, const SfxHint& rHint )
                                 try
                                 {
                                     uno::Reference< util::XCloseable > xClose( xModel, uno::UNO_QUERY_THROW );
-                                    xClose->close( sal_True );
+                                    xClose->close( true );
                                 }
                                 catch ( uno::Exception& )
                                 {
@@ -939,7 +937,8 @@ void ScDocShell::Notify( SfxBroadcaster&, const SfxHint& rHint )
                             SetError( ERRCODE_IO_ABORT, OSL_LOG_PREFIX ); // this error code will produce no error message, but will break the further saving process
                         }
                     }
-                } // fall through
+                    SAL_FALLTHROUGH;
+                }
             case SFX_EVENT_SAVETODOC:
                 // #i108978# If no event is sent before saving, there will also be no "...DONE" event,
                 // and SAVE/SAVEAS can't be distinguished from SAVETO. So stream copying is only enabled
@@ -952,7 +951,8 @@ void ScDocShell::Notify( SfxBroadcaster&, const SfxHint& rHint )
                 {
                     // new positions are used after "save" and "save as", but not "save to"
                     UseSheetSaveEntries();      // use positions from saved file for next saving
-                } // fall through
+                    SAL_FALLTHROUGH;
+                }
             case SFX_EVENT_SAVETODOCDONE:
                 // only reset the flag, don't use the new positions
                 if (pSheetSaveData)
@@ -1050,7 +1050,7 @@ bool ScDocShell::ConvertFrom( SfxMedium& rMedium )
     const SfxUInt16Item* pUpdateDocItem = SfxItemSet::GetItem<SfxUInt16Item>(rMedium.GetItemSet(), SID_UPDATEDOCMODE, false);
     nCanUpdate = pUpdateDocItem ? pUpdateDocItem->GetValue() : css::document::UpdateDocMode::NO_UPDATE;
 
-    const SfxFilter* pFilter = rMedium.GetFilter();
+    std::shared_ptr<const SfxFilter> pFilter = rMedium.GetFilter();
     if (pFilter)
     {
         OUString aFltName = pFilter->GetFilterName();
@@ -1518,7 +1518,7 @@ bool ScDocShell::ConvertFrom( SfxMedium& rMedium )
 
 bool ScDocShell::LoadExternal( SfxMedium& rMed )
 {
-    const SfxFilter* pFilter = rMed.GetFilter();
+    std::shared_ptr<const SfxFilter> pFilter = rMed.GetFilter();
     if (!pFilter)
         return false;
 
@@ -1856,7 +1856,7 @@ void ScDocShell::AsciiSave( SvStream& rStream, const ScImportOptions& rAsciiOpt 
     SCROW nEndRow;
     aDocument.GetCellArea( nTab, nEndCol, nEndRow );
 
-    ScProgress aProgress( this, ScGlobal::GetRscString( STR_SAVE_DOC ), nEndRow );
+    ScProgress aProgress( this, ScGlobal::GetRscString( STR_SAVE_DOC ), nEndRow, true );
 
     OUString aString;
 
@@ -1969,7 +1969,7 @@ void ScDocShell::AsciiSave( SvStream& rStream, const ScImportOptions& rAsciiOpt 
                         if ( bFixedWidth || bSaveAsShown )
                         {
                             Color* pDummy;
-                            aString = ScCellFormat::GetString(aDocument, aPos, nFormat, &pDummy, rFormatter);
+                            ScCellFormat::GetString(*pCell, nFormat, aString, &pDummy, rFormatter, &aDocument);
                             bString = bSaveAsShown && rFormatter.IsTextFormat( nFormat);
                         }
                         else
@@ -1984,7 +1984,7 @@ void ScDocShell::AsciiSave( SvStream& rStream, const ScImportOptions& rAsciiOpt 
                         {
                             sal_uInt32 nFormat = aDocument.GetNumberFormat(aPos);
                             Color* pDummy;
-                            aString = ScCellFormat::GetString(aDocument, aPos, nFormat, &pDummy, rFormatter);
+                            ScCellFormat::GetString(*pCell, nFormat, aString, &pDummy, rFormatter, &aDocument);
                         }
                         else
                             aString = pCell->mpFormula->GetString().getString();
@@ -1997,7 +1997,7 @@ void ScDocShell::AsciiSave( SvStream& rStream, const ScImportOptions& rAsciiOpt 
                 {
                     sal_uInt32 nFormat = aDocument.GetNumberFormat(aPos);
                     Color* pDummy;
-                    aString = ScCellFormat::GetString(aDocument, aPos, nFormat, &pDummy, rFormatter);
+                    ScCellFormat::GetString(*pCell, nFormat, aString, &pDummy, rFormatter, &aDocument);
                 }
                 else
                     aString = pCell->mpString->getString();
@@ -2019,7 +2019,7 @@ void ScDocShell::AsciiSave( SvStream& rStream, const ScImportOptions& rAsciiOpt 
                     if ( bFixedWidth || bSaveAsShown )
                     {
                         Color* pDummy;
-                        aString = ScCellFormat::GetString(aDocument, aPos, nFormat, &pDummy, rFormatter);
+                        ScCellFormat::GetString(*pCell, nFormat, aString, &pDummy, rFormatter, &aDocument);
                         bString = bSaveAsShown && rFormatter.IsTextFormat( nFormat);
                     }
                     else
@@ -2450,9 +2450,9 @@ bool ScDocShell::SaveCompleted( const uno::Reference < embed::XStorage >& xStor 
     return SfxObjectShell::SaveCompleted( xStor );
 }
 
-bool ScDocShell::DoSaveCompleted( SfxMedium * pNewStor )
+bool ScDocShell::DoSaveCompleted( SfxMedium * pNewStor, bool bRegisterRecent )
 {
-    bool bRet = SfxObjectShell::DoSaveCompleted( pNewStor );
+    bool bRet = SfxObjectShell::DoSaveCompleted( pNewStor, bRegisterRecent );
 
     //  SC_HINT_DOC_SAVED for change ReadOnly -> Read/Write
     Broadcast( SfxSimpleHint( SC_HINT_DOC_SAVED ) );
@@ -2769,13 +2769,13 @@ void ScDocShell::SetModified( bool bModified )
     }
 }
 
-void ScDocShell::SetDocumentModified( bool bIsModified /* = true */ )
+void ScDocShell::SetDocumentModified()
 {
     //  BroadcastUno must also happen right away with pPaintLockData
     //  FIXME: Also for SetDrawModified, if Drawing is connected
     //  FIXME: Then own Hint?
 
-    if ( pPaintLockData && bIsModified )
+    if ( pPaintLockData )
     {
         // #i115009# broadcast BCA_BRDCST_ALWAYS, so a component can read recalculated results
         // of RecalcModeAlways formulas (like OFFSET) after modifying cells
@@ -2787,41 +2787,38 @@ void ScDocShell::SetDocumentModified( bool bIsModified /* = true */ )
         return;
     }
 
-    SetDrawModified( bIsModified );
+    SetDrawModified();
 
-    if ( bIsModified )
+    if ( aDocument.IsAutoCalcShellDisabled() )
+        SetDocumentModifiedPending( true );
+    else
     {
-        if ( aDocument.IsAutoCalcShellDisabled() )
-            SetDocumentModifiedPending( true );
-        else
+        SetDocumentModifiedPending( false );
+        aDocument.InvalidateStyleSheetUsage();
+        aDocument.InvalidateTableArea();
+        aDocument.InvalidateLastTableOpParams();
+        aDocument.Broadcast(ScHint(SC_HINT_DATACHANGED, BCA_BRDCST_ALWAYS));
+        if ( aDocument.IsForcedFormulaPending() && aDocument.GetAutoCalc() )
+            aDocument.CalcFormulaTree( true );
+        aDocument.RefreshDirtyTableColumnNames();
+        PostDataChanged();
+
+        //  Detective AutoUpdate:
+        //  Update if formulas were modified (DetectiveDirty) or the list contains
+        //  "Trace Error" entries (Trace Error can look completely different
+        //  after changes to non-formula cells).
+
+        ScDetOpList* pList = aDocument.GetDetOpList();
+        if ( pList && ( aDocument.IsDetectiveDirty() || pList->HasAddError() ) &&
+             pList->Count() && !IsInUndo() && SC_MOD()->GetAppOptions().GetDetectiveAuto() )
         {
-            SetDocumentModifiedPending( false );
-            aDocument.InvalidateStyleSheetUsage();
-            aDocument.InvalidateTableArea();
-            aDocument.InvalidateLastTableOpParams();
-            aDocument.Broadcast(ScHint(SC_HINT_DATACHANGED, BCA_BRDCST_ALWAYS));
-            if ( aDocument.IsForcedFormulaPending() && aDocument.GetAutoCalc() )
-                aDocument.CalcFormulaTree( true );
-            aDocument.RefreshDirtyTableColumnNames();
-            PostDataChanged();
-
-            //  Detective AutoUpdate:
-            //  Update if formulas were modified (DetectiveDirty) or the list contains
-            //  "Trace Error" entries (Trace Error can look completely different
-            //  after changes to non-formula cells).
-
-            ScDetOpList* pList = aDocument.GetDetOpList();
-            if ( pList && ( aDocument.IsDetectiveDirty() || pList->HasAddError() ) &&
-                 pList->Count() && !IsInUndo() && SC_MOD()->GetAppOptions().GetDetectiveAuto() )
-            {
-                GetDocFunc().DetectiveRefresh(true);    // sal_True = caused by automatic update
-            }
-            aDocument.SetDetectiveDirty(false);         // always reset, also if not refreshed
+            GetDocFunc().DetectiveRefresh(true);    // sal_True = caused by automatic update
         }
-
-        // notify UNO objects after BCA_BRDCST_ALWAYS etc.
-        aDocument.BroadcastUno( SfxSimpleHint( SFX_HINT_DATACHANGED ) );
+        aDocument.SetDetectiveDirty(false);         // always reset, also if not refreshed
     }
+
+    // notify UNO objects after BCA_BRDCST_ALWAYS etc.
+    aDocument.BroadcastUno( SfxSimpleHint( SFX_HINT_DATACHANGED ) );
 }
 
 /**
@@ -2830,11 +2827,11 @@ void ScDocShell::SetDocumentModified( bool bIsModified /* = true */ )
  * Drawing also needs to be updated for the normal SetDocumentModified
  * e.g.: when deleting tables etc.
  */
-void ScDocShell::SetDrawModified( bool bIsModified /* = true */ )
+void ScDocShell::SetDrawModified()
 {
-    bool bUpdate = bIsModified != IsModified();
+    bool bUpdate = !IsModified();
 
-    SetModified( bIsModified );
+    SetModified();
 
     SfxBindings* pBindings = GetViewBindings();
     if (bUpdate)
@@ -2846,25 +2843,22 @@ void ScDocShell::SetDrawModified( bool bIsModified /* = true */ )
         }
     }
 
-    if (bIsModified)
+    if (pBindings)
     {
-        if (pBindings)
-        {
-            // #i105960# Undo etc used to be volatile.
-            // They always have to be invalidated, including drawing layer or row height changes
-            // (but not while pPaintLockData is set).
-            pBindings->Invalidate( SID_UNDO );
-            pBindings->Invalidate( SID_REDO );
-            pBindings->Invalidate( SID_REPEAT );
-        }
-
-        if ( aDocument.IsChartListenerCollectionNeedsUpdate() )
-        {
-            aDocument.UpdateChartListenerCollection();
-            SfxGetpApp()->Broadcast(SfxSimpleHint( SC_HINT_DRAW_CHANGED ));    // Navigator
-        }
-        SC_MOD()->AnythingChanged();
+        // #i105960# Undo etc used to be volatile.
+        // They always have to be invalidated, including drawing layer or row height changes
+        // (but not while pPaintLockData is set).
+        pBindings->Invalidate( SID_UNDO );
+        pBindings->Invalidate( SID_REDO );
+        pBindings->Invalidate( SID_REPEAT );
     }
+
+    if ( aDocument.IsChartListenerCollectionNeedsUpdate() )
+    {
+        aDocument.UpdateChartListenerCollection();
+        SfxGetpApp()->Broadcast(SfxSimpleHint( SC_HINT_DRAW_CHANGED ));    // Navigator
+    }
+    SC_MOD()->AnythingChanged();
 }
 
 void ScDocShell::SetInUndo(bool bSet)
@@ -2885,10 +2879,9 @@ void ScDocShell::GetDocStat( ScDocStat& rDocStat )
                 (sal_uInt16) ScPrintFunc( this, pPrinter, i ).GetTotalPages() );
 }
 
-VclPtr<SfxDocumentInfoDialog> ScDocShell::CreateDocumentInfoDialog(
-                                         vcl::Window *pParent, const SfxItemSet &rSet )
+VclPtr<SfxDocumentInfoDialog> ScDocShell::CreateDocumentInfoDialog( const SfxItemSet &rSet )
 {
-    VclPtr<SfxDocumentInfoDialog> pDlg   = VclPtr<SfxDocumentInfoDialog>::Create( pParent, rSet );
+    VclPtr<SfxDocumentInfoDialog> pDlg   = VclPtr<SfxDocumentInfoDialog>::Create( nullptr, rSet );
     ScDocShell*            pDocSh = dynamic_cast< ScDocShell *>( SfxObjectShell::Current() );
 
     // Only for statistics, if this Doc is shown; not from the Doc Manager
@@ -2977,7 +2970,7 @@ void ScDocShell::ResetKeyBindings( ScOptionsUtil::KeyBindingType eType )
         return;
 
     vector<const awt::KeyEvent*> aKeys;
-    aKeys.reserve(4);
+    aKeys.reserve(9);
 
     // Backspace key
     awt::KeyEvent aBackspace;
@@ -3003,6 +2996,36 @@ void ScDocShell::ResetKeyBindings( ScOptionsUtil::KeyBindingType eType )
     aAltDown.Modifiers = awt::KeyModifier::MOD2;
     aKeys.push_back(&aAltDown);
 
+    // Ctrl-Space
+    awt::KeyEvent aCtrlSpace;
+    aCtrlSpace.KeyCode = awt::Key::SPACE;
+    aCtrlSpace.Modifiers = awt::KeyModifier::MOD1;
+    aKeys.push_back(&aCtrlSpace);
+
+    // Ctrl-Shift-Space
+    awt::KeyEvent aCtrlShiftSpace;
+    aCtrlShiftSpace.KeyCode = awt::Key::SPACE;
+    aCtrlShiftSpace.Modifiers = awt::KeyModifier::MOD1 | awt::KeyModifier::SHIFT;
+    aKeys.push_back(&aCtrlShiftSpace);
+
+    // F4
+    awt::KeyEvent aF4;
+    aF4.KeyCode = awt::Key::F4;
+    aF4.Modifiers = 0;
+    aKeys.push_back(&aF4);
+
+    // CTRL+SHIFT+F4
+    awt::KeyEvent aCtrlShiftF4;
+    aCtrlShiftF4.KeyCode = awt::Key::F4;
+    aCtrlShiftF4.Modifiers = awt::KeyModifier::MOD1 | awt::KeyModifier::SHIFT;
+    aKeys.push_back(&aCtrlShiftF4);
+
+    // SHIFT+F4
+    awt::KeyEvent aShiftF4;
+    aShiftF4.KeyCode = awt::Key::F4;
+    aShiftF4.Modifiers = awt::KeyModifier::SHIFT;
+    aKeys.push_back(&aShiftF4);
+
     // Remove all involved keys first, because swapping commands don't work
     // well without doing this.
     removeKeysIfExists(xScAccel, aKeys);
@@ -3015,11 +3038,18 @@ void ScDocShell::ResetKeyBindings( ScOptionsUtil::KeyBindingType eType )
             xScAccel->setKeyEvent(aBackspace, ".uno:Delete");
             xScAccel->setKeyEvent(aCtrlD, ".uno:FillDown");
             xScAccel->setKeyEvent(aAltDown, ".uno:DataSelect");
+            xScAccel->setKeyEvent(aCtrlSpace, ".uno:SelectColumn");
+            xScAccel->setKeyEvent(aCtrlShiftSpace, ".uno:SelectAll");
+            xScAccel->setKeyEvent(aF4, ".uno:ToggleRelative");
+            xScAccel->setKeyEvent(aCtrlShiftF4, ".uno:ViewDataSourceBrowser");
         break;
         case ScOptionsUtil::KEY_OOO_LEGACY:
             xScAccel->setKeyEvent(aDelete, ".uno:Delete");
             xScAccel->setKeyEvent(aBackspace, ".uno:ClearContents");
             xScAccel->setKeyEvent(aCtrlD, ".uno:DataSelect");
+            xScAccel->setKeyEvent(aCtrlShiftSpace, ".uno:SelectColumn");
+            xScAccel->setKeyEvent(aF4, ".uno:ViewDataSourceBrowser");
+            xScAccel->setKeyEvent(aShiftF4, ".uno:ToggleRelative");
         break;
         default:
             ;
@@ -3138,9 +3168,8 @@ void ScDocShell::SetChangeRecording( bool bActivate )
     }
 }
 
-bool ScDocShell::SetProtectionPassword( const OUString &rNewPassword )
+void ScDocShell::SetProtectionPassword( const OUString &rNewPassword )
 {
-    bool bRes = false;
     ScChangeTrack* pChangeTrack = aDocument.GetChangeTrack();
     if (pChangeTrack)
     {
@@ -3159,7 +3188,6 @@ bool ScDocShell::SetProtectionPassword( const OUString &rNewPassword )
         {
             pChangeTrack->SetProtection( css::uno::Sequence< sal_Int8 >() );
         }
-        bRes = true;
 
         if ( bProtected != pChangeTrack->IsProtected() )
         {
@@ -3167,8 +3195,6 @@ bool ScDocShell::SetProtectionPassword( const OUString &rNewPassword )
             SetDocumentModified();
         }
     }
-
-    return bRes;
 }
 
 bool ScDocShell::GetProtectionHash( /*out*/ css::uno::Sequence< sal_Int8 > &rPasswordHash )
@@ -3186,11 +3212,6 @@ bool ScDocShell::GetProtectionHash( /*out*/ css::uno::Sequence< sal_Int8 > &rPas
 void ScDocShell::libreOfficeKitCallback(int nType, const char* pPayload) const
 {
     aDocument.GetDrawLayer()->libreOfficeKitCallback(nType, pPayload);
-}
-
-bool ScDocShell::isTiledRendering() const
-{
-    return aDocument.GetDrawLayer() && aDocument.GetDrawLayer()->isTiledRendering();
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

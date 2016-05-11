@@ -138,7 +138,7 @@ Any IUnknownWrapper_Impl::queryInterface(const Type& t)
         return Any();
     if ( ( t == cppu::UnoType<XInvocation>::get() || t == cppu::UnoType<XAutomationInvocation>::get() ) && !m_spDispatch)
         return Any();
-    // XDirectInvocation seems to be an oracle replacement for XAutomationInvocation, however it is flawed esecially wrt. assumptions about whether to invoke a
+    // XDirectInvocation seems to be an oracle replacement for XAutomationInvocation, however it is flawed especially wrt. assumptions about whether to invoke a
     // Put or Get property, the implementation code has no business guessing that, it's up to the caller to decide that. Worse XDirectInvocation duplicates lots of code.
     // XAutomationInvocation provides separate calls for put& get
     // properties. Note: Currently the basic runtime doesn't call put properties directly, it should... after all the basic runtime should know whether it is calling a put or get property.
@@ -1019,7 +1019,8 @@ Any  IUnknownWrapper_Impl::invokeWithDispIdUnoTlb(const OUString& sFunctionName,
     CComVariant     varResult;
     ExcepInfo       excepinfo;
     unsigned int    uArgErr;
-    DISPPARAMS dispparams= { pVarParams, NULL, parameterCount, 0};
+    DISPPARAMS dispparams= { pVarParams, NULL, static_cast<UINT>(parameterCount), 0};
+
     // Get the DISPID
     FuncDesc aDesc(getTypeInfo());
     getFuncDesc(sFunctionName, & aDesc);
@@ -1174,8 +1175,6 @@ Any  IUnknownWrapper_Impl::invokeWithDispIdUnoTlb(const OUString& sFunctionName,
 
     return ret;
 }
-
-
 
 
 // XInitialization
@@ -1549,7 +1548,6 @@ Reference<XInterface> IUnknownWrapper_Impl::createComWrapperInstance()
 }
 
 
-
 void IUnknownWrapper_Impl::getMethodInfo(const OUString& sName, TypeDescription& methodInfo)
 {
     TypeDescription desc= getInterfaceMemberDescOfCurrentCall(sName);
@@ -1586,9 +1584,9 @@ TypeDescription IUnknownWrapper_Impl::getInterfaceMemberDescOfCurrentCall(const 
         {
             typelib_InterfaceMemberTypeDescription* pMember= NULL;
             //find the member description of the current call
-            for( int i=0; i < pInterface->nAllMembers; i++)
+            for( int j=0; j < pInterface->nAllMembers; j++)
             {
-                typelib_TypeDescriptionReference* pTypeRefMember = pInterface->ppAllMembers[i];
+                typelib_TypeDescriptionReference* pTypeRefMember = pInterface->ppAllMembers[j];
                 typelib_TypeDescription* pDescMember= NULL;
                 TYPELIB_DANGER_GET( &pDescMember, pTypeRefMember);
 
@@ -1639,7 +1637,6 @@ sal_Bool IUnknownWrapper_Impl::isJScriptObject()
 
     return m_eJScript == NoJScript ? sal_False : sal_True;
 }
-
 
 
 /** @internal
@@ -1962,7 +1959,7 @@ Any  IUnknownWrapper_Impl::invokeWithDispIdComTlb(FuncDesc& aFuncDesc,
                 //Basic:  obj.func() ' first parameter left out because it is optional
                 else if (paramFlags & PARAMFLAG_FHASDEFAULT)
                 {
-                    //optional arg with defaulteithter as direct arg : VT_XXX or
+                    //optional arg with default either as direct arg : VT_XXX or
                     VariantCopy( & arArgs[revIndex],
                         & aFuncDesc->lprgelemdescParam[i].paramdesc.
                             pparamdescex->varDefaultValue);
@@ -2008,9 +2005,9 @@ Any  IUnknownWrapper_Impl::invokeWithDispIdComTlb(FuncDesc& aFuncDesc,
 
         // allocate space for the out param Sequence and indices Sequence
         int outParamsCount= 0; // includes in/out parameter
-        for (int i = 0; i < aFuncDesc->cParams; i++)
+        for (int j = 0; j < aFuncDesc->cParams; j++)
         {
-            if (aFuncDesc->lprgelemdescParam[i].paramdesc.wParamFlags &
+            if (aFuncDesc->lprgelemdescParam[j].paramdesc.wParamFlags &
                 PARAMFLAG_FOUT)
                 outParamsCount++;
         }
@@ -2176,9 +2173,9 @@ void IUnknownWrapper_Impl::getFuncDescForInvoke(const OUString & sFuncName,
         {
             // Fallback: DISPATCH_PROPERTYGET can mostly be called as
             // DISPATCH_METHOD
-            ITypeInfo * pInfo = getTypeInfo();
-            FuncDesc aDescPut(pInfo);
-            VarDesc aVarDesc(pInfo);
+            ITypeInfo * pTypeInfo = getTypeInfo();
+            FuncDesc aDescPut(pTypeInfo);
+            VarDesc aVarDesc(pTypeInfo);
             getPropDesc(sFuncName, & aFuncDesc, & aDescPut, & aVarDesc);
             if ( ! aFuncDesc )
             {

@@ -83,7 +83,7 @@ namespace slideshow
 
             uno::Reference< beans::XPropertySet > xShapePropSet( rxShape,
                                                                  uno::UNO_QUERY_THROW );
-            uno::Reference< beans::XPropertySet > mxViewerPropSet( mxViewer,
+            uno::Reference< beans::XPropertySet > xViewerPropSet( mxViewer,
                                                                    uno::UNO_QUERY_THROW );
 
             // copy shape properties to applet viewer
@@ -91,12 +91,11 @@ namespace slideshow
             for( sal_Size i=0; i<nNumPropEntries; ++i )
             {
                 aPropName = OUString::createFromAscii( pPropCopyTable[i] );
-                mxViewerPropSet->setPropertyValue( aPropName,
-                                                   xShapePropSet->getPropertyValue(
-                                                       aPropName ));
+                xViewerPropSet->setPropertyValue( aPropName,
+                                                  xShapePropSet->getPropertyValue(
+                                                  aPropName ));
             }
         }
-
 
 
         ViewAppletShape::~ViewAppletShape()
@@ -115,17 +114,15 @@ namespace slideshow
         }
 
 
-
-        ViewLayerSharedPtr ViewAppletShape::getViewLayer() const
+        const ViewLayerSharedPtr& ViewAppletShape::getViewLayer() const
         {
             return mpViewLayer;
         }
 
 
-
-        bool ViewAppletShape::startApplet( const ::basegfx::B2DRectangle& rBounds )
+        void ViewAppletShape::startApplet( const ::basegfx::B2DRectangle& rBounds )
         {
-            ENSURE_OR_RETURN_FALSE( mpViewLayer && mpViewLayer->getCanvas() && mpViewLayer->getCanvas()->getUNOCanvas().is(),
+            ENSURE_OR_RETURN_VOID( mpViewLayer && mpViewLayer->getCanvas() && mpViewLayer->getCanvas()->getUNOCanvas().is(),
                                "ViewAppletShape::startApplet(): Invalid or disposed view" );
             try
             {
@@ -203,12 +200,8 @@ namespace slideshow
             }
             catch (uno::Exception &)
             {
-                return false;
             }
-
-            return true;
         }
-
 
 
         void ViewAppletShape::endApplet()
@@ -219,11 +212,10 @@ namespace slideshow
 
             if( xCloseable.is() )
             {
-                xCloseable->close( sal_True );
+                xCloseable->close( true );
                 mxFrame.clear();
             }
         }
-
 
 
         bool ViewAppletShape::render( const ::basegfx::B2DRectangle& rBounds ) const

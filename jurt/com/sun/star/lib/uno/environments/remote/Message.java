@@ -1,3 +1,4 @@
+/* -*- Mode: Java; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /*
  * This file is part of the LibreOffice project.
  *
@@ -163,7 +164,7 @@ public class Message {
      *
      * @return the in and in&ndash; {
      * }out arguments for a request (possibly
-     * <code>null</code> for a paramterless function), the out and in&ndash; {
+     * <code>null</code> for a parameterless function), the out and in&ndash; {
      * }out
      * arguments for a reply that represents normal termination (possibly
      * <code>null</code> for a parameterless function), <code>null</code> for a
@@ -184,3 +185,5 @@ public class Message {
     private final Object result;
     private final Object[] arguments;
 }
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -77,18 +77,18 @@ class LwpObject;
 class LwpObjectID
 {
 public:
-    LwpObjectID(sal_uInt32 low=0, sal_uInt16 high=0);
+    LwpObjectID();
 private:
     sal_uInt32 m_nLow;
     sal_uInt16 m_nHigh;
     sal_uInt8 m_nIndex;
     bool m_bIsCompressed;
 public:
-    sal_uInt32 Read( LwpSvStream *pStrm );
+    void Read( LwpSvStream *pStrm );
     sal_uInt32 Read( LwpObjectStream *pStrm );
-    sal_uInt32 ReadIndexed( LwpSvStream* pStrm );
+    void ReadIndexed( LwpSvStream* pStrm );
     sal_uInt32 ReadIndexed( LwpObjectStream *pStrm );
-    sal_uInt32 ReadCompressed( LwpObjectStream* pObj, LwpObjectID& prev );
+    void ReadCompressed( LwpObjectStream* pObj, LwpObjectID& prev );
 
     /**
      * @descr       return the size of object id with format: low(4bytes)+high(2bytes)

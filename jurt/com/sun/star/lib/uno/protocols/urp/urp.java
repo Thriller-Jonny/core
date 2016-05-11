@@ -1,3 +1,4 @@
+/* -*- Mode: Java; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /*
  * This file is part of the LibreOffice project.
  *
@@ -199,7 +200,7 @@ public final class urp implements IProtocol {
         if (propertiesTid == null) {
             propertiesTid = ThreadId.createFresh();
         }
-        random = new Random().nextInt();
+        random = randomGenerator.nextInt();
         writeRequest(
             true, PROPERTIES_OID,
             TypeDescription.getTypeDescription(XProtocolProperties.class),
@@ -398,14 +399,16 @@ public final class urp implements IProtocol {
         return readRequest(funId, sync);
     }
 
-    private UrpMessage readShortRequest(int header) {
+    private UrpMessage readShortRequest(int header) throws IOException {
         int funId = (header & HEADER_FUNCTIONID14) != 0
             ? ((header & HEADER_FUNCTIONID) << 8) | unmarshal.read8Bit()
             : header & HEADER_FUNCTIONID;
         return readRequest(funId, false);
     }
 
-    private UrpMessage readRequest(int functionId, boolean forcedSynchronous) {
+    private UrpMessage readRequest(int functionId, boolean forcedSynchronous)
+        throws IOException
+    {
         boolean internal = PROPERTIES_OID.equals(inL1Oid);
             // inL1Oid may be null in XInstanceProvider.getInstance("")
         XCurrentContext cc =
@@ -415,6 +418,10 @@ public final class urp implements IProtocol {
                 new Type(XCurrentContext.class))
             : null;
         IMethodDescription desc = inL1Type.getMethodDescription(functionId);
+        if (desc == null) {
+            throw new IOException(
+                "read URP request with unsupported function ID " + functionId);
+        }
         ITypeDescription[] inSig = desc.getInSignature();
         ITypeDescription[] outSig = desc.getOutSignature();
         Object[] args = new Object[inSig.length];
@@ -723,6 +730,8 @@ public final class urp implements IProtocol {
 
     private static final int MAX_RELEASE_QUEUE_SIZE = 100;
 
+    private static final Random randomGenerator = new Random();
+
     private final DataInput input;
     private final DataOutputStream output;
 
@@ -751,3 +760,5 @@ public final class urp implements IProtocol {
 
     private final ArrayList<QueuedRelease> releaseQueue = new ArrayList<QueuedRelease>(); // of QueuedRelease
 }
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

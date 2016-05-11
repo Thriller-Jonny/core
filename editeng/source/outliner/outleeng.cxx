@@ -147,22 +147,21 @@ OUString OutlinerEditEng::GetUndoComment( sal_uInt16 nUndoId ) const
 }
 
 void OutlinerEditEng::DrawingText( const Point& rStartPos, const OUString& rText, sal_Int32 nTextStart, sal_Int32 nTextLen,
-                                   const long* pDXArray, const SvxFont& rFont, sal_Int32 nPara, sal_Int32 /*nIndex*/, sal_uInt8 nRightToLeft,
+                                   const long* pDXArray, const SvxFont& rFont, sal_Int32 nPara, sal_uInt8 nRightToLeft,
                                    const EEngineData::WrongSpellVector* pWrongSpellVector,
                                    const SvxFieldData* pFieldData,
                                    bool bEndOfLine,
                                    bool bEndOfParagraph,
-                                   bool bEndOfBullet,
                                    const css::lang::Locale* pLocale,
                                    const Color& rOverlineColor,
                                    const Color& rTextLineColor)
 {
     pOwner->DrawingText(rStartPos,rText,nTextStart,nTextLen,pDXArray,rFont,nPara,nRightToLeft,
-        pWrongSpellVector, pFieldData, bEndOfLine, bEndOfParagraph, bEndOfBullet, pLocale, rOverlineColor, rTextLineColor);
+        pWrongSpellVector, pFieldData, bEndOfLine, bEndOfParagraph, false/*bEndOfBullet*/, pLocale, rOverlineColor, rTextLineColor);
 }
 
 void OutlinerEditEng::DrawingTab( const Point& rStartPos, long nWidth, const OUString& rChar,
-    const SvxFont& rFont, sal_Int32 nPara, sal_Int32 /*nIndex*/, sal_uInt8 nRightToLeft,
+    const SvxFont& rFont, sal_Int32 nPara, sal_uInt8 nRightToLeft,
     bool bEndOfLine, bool bEndOfParagraph,
     const Color& rOverlineColor, const Color& rTextLineColor)
 {

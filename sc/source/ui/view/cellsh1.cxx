@@ -482,7 +482,6 @@ void ScCellShell::ExecuteEdit( SfxRequest& rReq )
                     OSL_ENSURE(pFact, "ScAbstractFactory create fail!");
 
                     std::unique_ptr<AbstractScInsertContentsDlg> pDlg(pFact->CreateScInsertContentsDlg( pTabViewShell->GetDialogParent(),
-                                                                                            InsertDeleteFlags::NONE, /* nCheckDefaults */
                                                                                             &ScGlobal::GetRscString(STR_FILL_TAB)));
                     OSL_ENSURE(pDlg, "Dialog create fail!");
                     pDlg->SetFillMode(true);
@@ -568,8 +567,6 @@ void ScCellShell::ExecuteEdit( SfxRequest& rReq )
                     OUString  aFillStep, aFillStart, aFillMax;
                     sal_uInt32 nKey;
                     double  fTmpVal;
-
-                    bDoIt=false;
 
                     if( pReqArgs->HasItem( FID_FILL_SERIES, &pItem ) )
                         aFillDir = static_cast<const SfxStringItem*>(pItem)->GetValue();
@@ -720,7 +717,7 @@ void ScCellShell::ExecuteEdit( SfxRequest& rReq )
 
                     if ( nStartCol != nEndCol && nStartRow != nEndRow )
                     {
-                        pDlg->SetEdStartValEnabled();
+                        pDlg->SetEdStartValEnabled(false);
                     }
 
                     if ( pDlg->Execute() == RET_OK )
@@ -823,7 +820,7 @@ void ScCellShell::ExecuteEdit( SfxRequest& rReq )
                         ScAddress aScAddress;
                         OUString aArg = static_cast<const SfxStringItem*>(pItem)->GetValue();
 
-                        if( aScAddress.Parse( aArg, pDoc, pDoc->GetAddressConvention() ) & SCA_VALID )
+                        if( aScAddress.Parse( aArg, pDoc, pDoc->GetAddressConvention() ) & ScRefFlags::VALID )
                         {
                             nFillRow = aScAddress.Row();
                             nFillCol = aScAddress.Col();
@@ -894,7 +891,7 @@ void ScCellShell::ExecuteEdit( SfxRequest& rReq )
                             if( ! rReq.IsAPI() )
                             {
                                 ScAddress aAdr( nFillCol, nFillRow, 0 );
-                                OUString  aAdrStr(aAdr.Format(SCR_ABS, pDoc, pDoc->GetAddressConvention()));
+                                OUString  aAdrStr(aAdr.Format(ScRefFlags::RANGE_ABS, pDoc, pDoc->GetAddressConvention()));
 
                                 rReq.AppendItem( SfxStringItem( FID_FILL_AUTO, aAdrStr ) );
                                 rReq.Done();
@@ -1272,7 +1269,7 @@ void ScCellShell::ExecuteEdit( SfxRequest& rReq )
         case SID_CUT:               // for graphs in DrawShell
             {
                 WaitObject aWait( GetViewData()->GetDialogParent() );
-                pTabViewShell->CutToClip( nullptr, true );
+                pTabViewShell->CutToClip();
                 rReq.Done();
                 GetViewData()->SetPasteMode( (ScPasteFlags)(SC_PASTE_MODE | SC_PASTE_BORDER));
                 pTabViewShell->ShowCursor();
@@ -2245,7 +2242,6 @@ void ScCellShell::ExecuteEdit( SfxRequest& rReq )
                 ScViewData* pData  = GetViewData();
                 ScDocument* pDoc   = pData->GetDocument();
                 ScMarkData& rMark  = pData->GetMarkData();
-                bool bDone = false;
 
                 if (!rMark.IsMarked() && !rMark.IsMultiMarked())
                 {
@@ -2254,12 +2250,12 @@ void ScCellShell::ExecuteEdit( SfxRequest& rReq )
                     if( pDoc->GetNote(aPos) )
                     {
                         pData->GetDocShell()->GetDocFunc().ShowNote( aPos, bShowNote );
-                        bDone = true;
                     }
                 }
                 else
                 {
                     // Check selection range
+                    bool bDone = false;
                     ScRangeListRef aRangesRef;
                     pData->GetMultiArea(aRangesRef);
                     ScRangeList aRanges = *aRangesRef;
@@ -2352,7 +2348,7 @@ void ScCellShell::ExecuteEdit( SfxRequest& rReq )
 
                 SfxAllItemSet aSet( GetPool() );
                 aSet.Put( SfxBoolItem( FN_PARAM_1, false ) );
-                aSet.Put( SvxFontItem( aCurFont.GetFamily(), aCurFont.GetName(), aCurFont.GetStyleName(), aCurFont.GetPitch(), aCurFont.GetCharSet(), GetPool().GetWhich(SID_ATTR_CHAR_FONT) ) );
+                aSet.Put( SvxFontItem( aCurFont.GetFamilyType(), aCurFont.GetFamilyName(), aCurFont.GetStyleName(), aCurFont.GetPitch(), aCurFont.GetCharSet(), GetPool().GetWhich(SID_ATTR_CHAR_FONT) ) );
 
                 std::unique_ptr<SfxAbstractDialog> pDlg(pFact->CreateSfxDialog( pTabViewShell->GetDialogParent(), aSet,
                     pTabViewShell->GetViewFrame()->GetFrame().GetFrameInterface(), RID_SVXDLG_CHARMAP ));
@@ -2653,7 +2649,7 @@ void ScCellShell::ExecuteDataPilotDialog()
         {
             if ( pTypeDlg->IsExternal() )
             {
-                uno::Sequence<OUString> aSources = ScDPObject::GetRegisteredSources();
+                std::vector<OUString> aSources = ScDPObject::GetRegisteredSources();
                 std::unique_ptr<AbstractScDataPilotServiceDlg> pServDlg(
                     pFact->CreateScDataPilotServiceDlg(
                         pTabViewShell->GetDialogParent(), aSources, RID_SCDLG_DAPISERVICE));

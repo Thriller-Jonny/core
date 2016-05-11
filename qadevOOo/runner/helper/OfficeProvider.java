@@ -434,7 +434,7 @@ public class OfficeProvider implements AppProvider
         return msf;
     }
 
-    private synchronized boolean disposeOffice(XMultiServiceFactory msf,
+    private boolean disposeOffice(XMultiServiceFactory msf,
             TestParameters param)
     {
         XDesktop desk = null;
@@ -476,16 +476,6 @@ public class OfficeProvider implements AppProvider
 
                     desk.terminate();
                     dbg("Desktop terminated");
-
-                    try
-                    {
-                        final int closeTime = param.getInt(util.PropertyName.OFFICE_CLOSE_TIME_OUT);
-                        dbg("the Office has " + closeTime / 1000 + " seconds for closing...");
-                        Thread.sleep(closeTime);
-                    }
-                    catch (InterruptedException e)
-                    {
-                    }
                 }
             }
             catch (com.sun.star.uno.Exception ue)
@@ -738,21 +728,28 @@ public class OfficeProvider implements AppProvider
         }
     }
 
-private void deleteFilesAndDirector(File file)
+    private void deleteFilesAndDirector(File file)
+    {
+        File f = file;
+        if(f.isDirectory())
         {
-            File f = file;
-            if(f.isDirectory())
+            File files[] = f.listFiles();
+            int filesLength = files != null ? files.length : 0;
+            for(int i = 0; i < filesLength; ++i)
             {
-                File files[] = f.listFiles();
-                for(int i = 0; i < files.length; i++)
-                {
-                    deleteFilesAndDirector(files[i]);
-                }
-                f.delete();
+                deleteFilesAndDirector(files[i]);
             }
-            else if (f.isFile())
-            {
-                f.delete();
+            boolean bDeleteOk = f.delete();
+            if (!bDeleteOk) {
+                System.out.println("delete failed");
             }
         }
+        else if (f.isFile())
+        {
+            boolean bDeleteOk = f.delete();
+            if (!bDeleteOk) {
+                System.out.println("delete failed");
+            }
+        }
+    }
 }

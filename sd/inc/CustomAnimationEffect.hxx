@@ -100,13 +100,13 @@ public:
     SAL_DLLPRIVATE double          getIterateInterval() const { return mfIterateInterval; }
     void                           setIterateInterval( double fIterateInterval );
 
-    SAL_DLLPRIVATE css::uno::Any  getTarget() const { return maTarget; }
+    SAL_DLLPRIVATE const css::uno::Any& getTarget() const { return maTarget; }
     void                          setTarget( const css::uno::Any& rTarget );
 
     SAL_DLLPRIVATE bool             hasAfterEffect() const { return mbHasAfterEffect; }
     SAL_DLLPRIVATE void            setHasAfterEffect( bool bHasAfterEffect ) { mbHasAfterEffect = bHasAfterEffect; }
 
-    SAL_DLLPRIVATE css::uno::Any   getDimColor() const { return maDimColor; }
+    SAL_DLLPRIVATE const css::uno::Any& getDimColor() const { return maDimColor; }
     SAL_DLLPRIVATE void            setDimColor( const css::uno::Any& rDimColor ) { maDimColor = rDimColor; }
 
     SAL_DLLPRIVATE bool            IsAfterEffectOnNext() const { return mbAfterEffectOnNextEffect; }
@@ -151,7 +151,7 @@ public:
     SAL_DLLPRIVATE void setAudio( const css::uno::Reference< css::animations::XAudio >& xAudio );
     SAL_DLLPRIVATE bool getStopAudio() const;
     void setStopAudio();
-    void createAudio( const css::uno::Any& rSource, double fVolume = 1.0 );
+    void createAudio( const css::uno::Any& rSource );
     SAL_DLLPRIVATE void removeAudio();
     SAL_DLLPRIVATE const css::uno::Reference< css::animations::XAudio >& getAudio() const { return mxAudio; }
 
@@ -206,7 +206,7 @@ private:
 struct stl_CustomAnimationEffect_search_node_predict
 {
     stl_CustomAnimationEffect_search_node_predict( const css::uno::Reference< css::animations::XAnimationNode >& xSearchNode );
-    bool operator()( CustomAnimationEffectPtr pEffect ) const;
+    bool operator()( const CustomAnimationEffectPtr& pEffect ) const;
     const css::uno::Reference< css::animations::XAnimationNode >& mxSearchNode;
 };
 
@@ -310,14 +310,14 @@ public:
 
     SAL_DLLPRIVATE CustomAnimationTextGroupPtr findGroup( sal_Int32 nGroupId );
     CustomAnimationTextGroupPtr    createTextGroup( CustomAnimationEffectPtr pEffect, sal_Int32 nTextGrouping, double fTextGroupingAuto, bool bAnimateForm, bool bTextReverse );
-    SAL_DLLPRIVATE void setTextGrouping( CustomAnimationTextGroupPtr pTextGroup, sal_Int32 nTextGrouping );
-    SAL_DLLPRIVATE void setAnimateForm( CustomAnimationTextGroupPtr pTextGroup, bool bAnimateForm );
-    SAL_DLLPRIVATE void setTextGroupingAuto( CustomAnimationTextGroupPtr pTextGroup, double fTextGroupingAuto );
-    SAL_DLLPRIVATE void setTextReverse( CustomAnimationTextGroupPtr pTextGroup, bool bAnimateForm );
+    SAL_DLLPRIVATE void setTextGrouping( const CustomAnimationTextGroupPtr& pTextGroup, sal_Int32 nTextGrouping );
+    SAL_DLLPRIVATE void setAnimateForm( const CustomAnimationTextGroupPtr& pTextGroup, bool bAnimateForm );
+    SAL_DLLPRIVATE void setTextGroupingAuto( const CustomAnimationTextGroupPtr& pTextGroup, double fTextGroupingAuto );
+    SAL_DLLPRIVATE void setTextReverse( const  CustomAnimationTextGroupPtr& pTextGroup, bool bAnimateForm );
 
     SAL_DLLPRIVATE sal_Int32 getSequenceType() const { return mnSequenceType; }
 
-    SAL_DLLPRIVATE css::uno::Reference< css::drawing::XShape > getTriggerShape() const { return mxEventSource; }
+    SAL_DLLPRIVATE const css::uno::Reference< css::drawing::XShape >& getTriggerShape() const { return mxEventSource; }
     SAL_DLLPRIVATE void setTriggerShape( const css::uno::Reference< css::drawing::XShape >& xTrigger ) { mxEventSource = xTrigger; }
 
     SAL_DLLPRIVATE virtual sal_Int32 getOffsetFromEffect( const CustomAnimationEffectPtr& xEffect ) const;
@@ -327,7 +327,7 @@ protected:
     SAL_DLLPRIVATE virtual void implRebuild();
     SAL_DLLPRIVATE virtual void reset();
 
-    SAL_DLLPRIVATE void createTextGroupParagraphEffects( CustomAnimationTextGroupPtr pTextGroup, CustomAnimationEffectPtr pEffect, bool bUsed );
+    SAL_DLLPRIVATE void createTextGroupParagraphEffects( const CustomAnimationTextGroupPtr& pTextGroup, const CustomAnimationEffectPtr& pEffect, bool bUsed );
 
     SAL_DLLPRIVATE void notify_listeners();
 

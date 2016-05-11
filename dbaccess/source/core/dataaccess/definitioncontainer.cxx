@@ -53,14 +53,14 @@ namespace dbaccess
 {
 
 // ODefinitionContainer_Impl
-void ODefinitionContainer_Impl::erase( TContentPtr _pDefinition )
+void ODefinitionContainer_Impl::erase( const TContentPtr& _pDefinition )
 {
-    NamedDefinitions::iterator aPos = find( _pDefinition );
+    NamedDefinitions::const_iterator aPos = find( _pDefinition );
     if ( aPos != end() )
         m_aDefinitions.erase( aPos );
 }
 
-ODefinitionContainer_Impl::const_iterator ODefinitionContainer_Impl::find( TContentPtr _pDefinition ) const
+ODefinitionContainer_Impl::const_iterator ODefinitionContainer_Impl::find( const TContentPtr& _pDefinition ) const
 {
     return ::std::find_if(
         m_aDefinitions.begin(),
@@ -70,7 +70,7 @@ ODefinitionContainer_Impl::const_iterator ODefinitionContainer_Impl::find( TCont
         });
 }
 
-ODefinitionContainer_Impl::iterator ODefinitionContainer_Impl::find( TContentPtr _pDefinition )
+ODefinitionContainer_Impl::iterator ODefinitionContainer_Impl::find( const TContentPtr& _pDefinition )
 {
     return ::std::find_if(
         m_aDefinitions.begin(),
@@ -120,8 +120,8 @@ void SAL_CALL ODefinitionContainer::disposing()
     m_aContainerListeners.disposeAndClear(aEvt);
 
     // dispose our elements
-    Documents::iterator aIter = m_aDocumentMap.begin();
-    Documents::iterator aEnd = m_aDocumentMap.end();
+    Documents::const_iterator aIter = m_aDocumentMap.begin();
+    Documents::const_iterator aEnd = m_aDocumentMap.end();
 
     for (; aIter != aEnd; ++aIter)
     {
@@ -262,9 +262,9 @@ namespace
         {
         }
 
-        void operator()( const Reference< XContainerApproveListener >& _Listener ) const
+        void operator()( const Reference< XContainerApproveListener >& Listener ) const
         {
-            Reference< XVeto > xVeto = (_Listener.get()->*m_pMethod)( m_rEvent );
+            Reference< XVeto > xVeto = (Listener.get()->*m_pMethod)( m_rEvent );
             if ( !xVeto.is() )
                 return;
 
@@ -278,7 +278,7 @@ namespace
             if ( eVetoDetails >>= aWrappedError )
                 throw aWrappedError;
 
-            throw WrappedTargetException( xVeto->getReason(), _Listener.get(), eVetoDetails );
+            throw WrappedTargetException( xVeto->getReason(), Listener.get(), eVetoDetails );
         }
     };
 }
@@ -289,7 +289,7 @@ void ODefinitionContainer::notifyByName( ResettableMutexGuard& _rGuard, const OU
 {
     bool bApprove = ( _eType == ApproveListeners );
 
-    ::cppu::OInterfaceContainerHelper& rContainer( bApprove ? m_aApproveListeners : m_aContainerListeners );
+    ::comphelper::OInterfaceContainerHelper2& rContainer( bApprove ? m_aApproveListeners : m_aContainerListeners );
     if ( !rContainer.getLength() )
         return;
 
@@ -337,16 +337,16 @@ void SAL_CALL ODefinitionContainer::removeContainerListener( const Reference< XC
         m_aContainerListeners.removeInterface(_rxListener);
 }
 
-void SAL_CALL ODefinitionContainer::addContainerApproveListener( const Reference< XContainerApproveListener >& _Listener ) throw (RuntimeException, std::exception)
+void SAL_CALL ODefinitionContainer::addContainerApproveListener( const Reference< XContainerApproveListener >& Listener ) throw (RuntimeException, std::exception)
 {
-    if ( _Listener.is() )
-        m_aApproveListeners.addInterface( _Listener );
+    if ( Listener.is() )
+        m_aApproveListeners.addInterface( Listener );
 }
 
-void SAL_CALL ODefinitionContainer::removeContainerApproveListener( const Reference< XContainerApproveListener >& _Listener ) throw (RuntimeException, std::exception)
+void SAL_CALL ODefinitionContainer::removeContainerApproveListener( const Reference< XContainerApproveListener >& Listener ) throw (RuntimeException, std::exception)
 {
-    if ( _Listener.is() )
-        m_aApproveListeners.removeInterface( _Listener );
+    if ( Listener.is() )
+        m_aApproveListeners.removeInterface( Listener );
 }
 
 // XElementAccess
@@ -429,8 +429,8 @@ Sequence< OUString > SAL_CALL ODefinitionContainer::getElementNames(  ) throw(Ru
 
     Sequence< OUString > aNames(m_aDocumentMap.size());
     OUString* pNames = aNames.getArray();
-    Documents::iterator aEnd = m_aDocumentMap.end();
-    for (   Documents::iterator aNameIter = m_aDocumentMap.begin();
+    Documents::const_iterator aEnd = m_aDocumentMap.end();
+    for (   Documents::const_iterator aNameIter = m_aDocumentMap.begin();
             aNameIter != aEnd;
             ++pNames, ++aNameIter
         )
@@ -454,7 +454,7 @@ void SAL_CALL ODefinitionContainer::disposing( const EventObject& _rSource ) thr
     Reference< XContent > xSource(_rSource.Source, UNO_QUERY);
     // it's one of our documents ....
     Documents::iterator aIter = m_aDocumentMap.begin();
-    Documents::iterator aEnd = m_aDocumentMap.end();
+    Documents::const_iterator aEnd = m_aDocumentMap.end();
     for (;aIter != aEnd;++aIter )
     {
         if ( xSource == aIter->second.get() )
@@ -469,7 +469,7 @@ void SAL_CALL ODefinitionContainer::disposing( const EventObject& _rSource ) thr
 void ODefinitionContainer::implRemove(const OUString& _rName)
 {
     // from the object maps
-    Documents::iterator aFind = m_aDocumentMap.find(_rName);
+    Documents::const_iterator aFind = m_aDocumentMap.find(_rName);
     if ( aFind != m_aDocumentMap.end() )
     {
         m_aDocuments.erase( ::std::find(m_aDocuments.begin(),m_aDocuments.end(),aFind));

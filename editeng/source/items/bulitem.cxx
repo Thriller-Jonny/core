@@ -29,35 +29,30 @@
 #define BULITEM_VERSION     ((sal_uInt16)2)
 
 
-
-
-
-
 void SvxBulletItem::StoreFont( SvStream& rStream, const vcl::Font& rFont )
 {
     sal_uInt16 nTemp;
 
     WriteColor( rStream, rFont.GetColor() );
-    nTemp = (sal_uInt16)rFont.GetFamily(); rStream.WriteUInt16( nTemp );
+    nTemp = (sal_uInt16)rFont.GetFamilyType(); rStream.WriteUInt16( nTemp );
 
     nTemp = (sal_uInt16)GetSOStoreTextEncoding((rtl_TextEncoding)rFont.GetCharSet());
     rStream.WriteUInt16( nTemp );
 
     nTemp = (sal_uInt16)rFont.GetPitch(); rStream.WriteUInt16( nTemp );
-    nTemp = (sal_uInt16)rFont.GetAlign(); rStream.WriteUInt16( nTemp );
+    nTemp = (sal_uInt16)rFont.GetAlignment(); rStream.WriteUInt16( nTemp );
     nTemp = (sal_uInt16)rFont.GetWeight(); rStream.WriteUInt16( nTemp );
     nTemp = (sal_uInt16)rFont.GetUnderline(); rStream.WriteUInt16( nTemp );
     nTemp = (sal_uInt16)rFont.GetStrikeout(); rStream.WriteUInt16( nTemp );
     nTemp = (sal_uInt16)rFont.GetItalic(); rStream.WriteUInt16( nTemp );
 
-    // UNICODE: rStream << rFont.GetName();
-    rStream.WriteUniOrByteString(rFont.GetName(), rStream.GetStreamCharSet());
+    // UNICODE: rStream << rFont.GetFamilyName();
+    rStream.WriteUniOrByteString(rFont.GetFamilyName(), rStream.GetStreamCharSet());
 
     rStream.WriteBool( rFont.IsOutline() );
     rStream.WriteBool( rFont.IsShadow() );
     rStream.WriteBool( rFont.IsTransparent() );
 }
-
 
 
 vcl::Font SvxBulletItem::CreateFont( SvStream& rStream, sal_uInt16 nVer )
@@ -73,21 +68,21 @@ vcl::Font SvxBulletItem::CreateFont( SvStream& rStream, sal_uInt16 nVer )
     aFont.SetCharSet((rtl_TextEncoding)nTemp);
 
     rStream.ReadUInt16( nTemp ); aFont.SetPitch((FontPitch)nTemp);
-    rStream.ReadUInt16( nTemp ); aFont.SetAlign((FontAlign)nTemp);
+    rStream.ReadUInt16( nTemp ); aFont.SetAlignment((FontAlign)nTemp);
     rStream.ReadUInt16( nTemp ); aFont.SetWeight((FontWeight)nTemp);
-    rStream.ReadUInt16( nTemp ); aFont.SetUnderline((FontUnderline)nTemp);
+    rStream.ReadUInt16( nTemp ); aFont.SetUnderline((FontLineStyle)nTemp);
     rStream.ReadUInt16( nTemp ); aFont.SetStrikeout((FontStrikeout)nTemp);
     rStream.ReadUInt16( nTemp ); aFont.SetItalic((FontItalic)nTemp);
 
-    // UNICODE: rStream >> aName; aFont.SetName( aName );
+    // UNICODE: rStream >> aName; aFont.SetFamilyName( aName );
     OUString aName = rStream.ReadUniOrByteString(rStream.GetStreamCharSet());
-    aFont.SetName( aName );
+    aFont.SetFamilyName( aName );
 
     if( nVer == 1 )
     {
         sal_Int32 nHeight(0), nWidth(0);
         rStream.ReadInt32( nHeight ); rStream.ReadInt32( nWidth ); Size aSize( nWidth, nHeight );
-        aFont.SetSize( aSize );
+        aFont.SetFontSize( aSize );
     }
 
     bool bTemp;
@@ -96,8 +91,6 @@ vcl::Font SvxBulletItem::CreateFont( SvStream& rStream, sal_uInt16 nVer )
     rStream.ReadCharAsBool( bTemp ); aFont.SetTransparent( bTemp );
     return aFont;
 }
-
-
 
 
 SvxBulletItem::SvxBulletItem( sal_uInt16 _nWhich ) : SfxPoolItem( _nWhich )
@@ -177,12 +170,10 @@ SvxBulletItem::SvxBulletItem( const SvxBulletItem& rItem) : SfxPoolItem( rItem )
 }
 
 
-
 SvxBulletItem::~SvxBulletItem()
 {
     delete pGraphicObject;
 }
-
 
 
 SfxPoolItem* SvxBulletItem::Clone( SfxItemPool * /*pPool*/ ) const
@@ -191,21 +182,18 @@ SfxPoolItem* SvxBulletItem::Clone( SfxItemPool * /*pPool*/ ) const
 }
 
 
-
 SfxPoolItem* SvxBulletItem::Create( SvStream& rStrm, sal_uInt16 /*nVersion*/ ) const
 {
     return new SvxBulletItem( rStrm, Which() );
 }
 
 
-
 void SvxBulletItem::SetDefaultFont_Impl()
 {
     aFont = OutputDevice::GetDefaultFont( DefaultFontType::FIXED, LANGUAGE_SYSTEM, GetDefaultFontFlags::NONE );
-    aFont.SetAlign( ALIGN_BOTTOM);
+    aFont.SetAlignment( ALIGN_BOTTOM);
     aFont.SetTransparent( true );
 }
-
 
 
 void SvxBulletItem::SetDefaults_Impl()
@@ -219,20 +207,18 @@ void SvxBulletItem::SetDefaults_Impl()
 }
 
 
-
 sal_uInt16 SvxBulletItem::GetVersion( sal_uInt16 /*nVersion*/ ) const
 {
     return BULITEM_VERSION;
 }
 
 
-
 void SvxBulletItem::CopyValidProperties( const SvxBulletItem& rCopyFrom )
 {
     vcl::Font _aFont = GetFont();
     vcl::Font aNewFont = rCopyFrom.GetFont();
-    _aFont.SetName( aNewFont.GetName() );
-    _aFont.SetFamily( aNewFont.GetFamily() );
+    _aFont.SetFamilyName( aNewFont.GetFamilyName() );
+    _aFont.SetFamily( aNewFont.GetFamilyType() );
     _aFont.SetStyleName( aNewFont.GetStyleName() );
     _aFont.SetColor( aNewFont.GetColor() );
     SetSymbol( rCopyFrom.GetSymbol() );
@@ -244,8 +230,6 @@ void SvxBulletItem::CopyValidProperties( const SvxBulletItem& rCopyFrom )
     SetFollowText( rCopyFrom.GetFollowText() );
     SetFont( _aFont );
 }
-
-
 
 
 bool SvxBulletItem::operator==( const SfxPoolItem& rItem ) const
@@ -281,7 +265,6 @@ bool SvxBulletItem::operator==( const SfxPoolItem& rItem ) const
 
     return true;
 }
-
 
 
 SvStream& SvxBulletItem::Store( SvStream& rStrm, sal_uInt16 /*nItemVersion*/ ) const
@@ -345,7 +328,6 @@ SvStream& SvxBulletItem::Store( SvStream& rStrm, sal_uInt16 /*nItemVersion*/ ) c
 }
 
 
-
 OUString SvxBulletItem::GetFullText() const
 {
     OUStringBuffer aStr(aPrevText);
@@ -353,7 +335,6 @@ OUString SvxBulletItem::GetFullText() const
     aStr.append(aFollowText);
     return aStr.makeStringAndClear();
 }
-
 
 
 bool SvxBulletItem::GetPresentation
@@ -369,7 +350,6 @@ bool SvxBulletItem::GetPresentation
 }
 
 
-
 const GraphicObject& SvxBulletItem::GetGraphicObject() const
 {
     if( pGraphicObject )
@@ -380,7 +360,6 @@ const GraphicObject& SvxBulletItem::GetGraphicObject() const
         return aDefaultObject;
     }
 }
-
 
 
 void SvxBulletItem::SetGraphicObject( const GraphicObject& rGraphicObject )

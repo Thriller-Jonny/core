@@ -25,10 +25,9 @@
 #include <vcl/graph.hxx>
 #include <svtools/ehdl.hxx>
 #include <svx/ParaLineSpacingPopup.hxx>
+#include <svx/TextCharacterSpacingPopup.hxx>
+#include <svx/TextUnderlinePopup.hxx>
 #include <svx/svdobj.hxx>
-#include <svx/fntszctl.hxx>
-#include <svx/fntctl.hxx>
-#include <svx/SmartTagCtl.hxx>
 #include <svx/pszctrl.hxx>
 #include <svx/insctrl.hxx>
 #include <svx/selctrl.hxx>
@@ -95,15 +94,12 @@
 #include <zoomctrl.hxx>
 #include <wordcountctrl.hxx>
 #include <workctrl.hxx>
-#include <tbxanchr.hxx>
 #include <fldwrap.hxx>
 #include <redlndlg.hxx>
 #include <syncbtn.hxx>
-#include <mailmergechildwindow.hxx>
 #include <modcfg.hxx>
 #include <fontcfg.hxx>
 #include <sfx2/sidebar/SidebarChildWindow.hxx>
-#include <sfx2/taskpane.hxx>
 #include <sfx2/evntconf.hxx>
 #include <swatrset.hxx>
 #include <idxmrk.hxx>
@@ -287,10 +283,11 @@ void SwDLL::RegisterControls()
     SwModule* pMod = SW_MOD();
 
     SvxTbxCtlDraw::RegisterControl(SID_INSERT_DRAW, pMod );
-    SwTbxAnchor::RegisterControl(FN_TOOL_ANCHOR, pMod );
-    SwTbxFieldCtrl::RegisterControl(FN_INSERT_FIELD_CTRL, pMod );
+    SvxTbxCtlDraw::RegisterControl(SID_TRACK_CHANGES_BAR, pMod );
     SwTbxAutoTextCtrl::RegisterControl(FN_GLOSSARY_DLG, pMod );
     svx::ParaLineSpacingPopup::RegisterControl(SID_ATTR_PARA_LINESPACE, pMod);
+    svx::TextCharacterSpacingPopup::RegisterControl(SID_ATTR_CHAR_KERNING, pMod);
+    svx::TextUnderlinePopup::RegisterControl(SID_ATTR_CHAR_UNDERLINE, pMod);
 
     SvxColorToolBoxControl::RegisterControl( SID_EXTRUSION_3D_COLOR, pMod );
 
@@ -323,9 +320,6 @@ void SwDLL::RegisterControls()
     SvxTableToolBoxControl::RegisterControl(FN_INSERT_TABLE, pMod );
     SvxTableToolBoxControl::RegisterControl(FN_SHOW_MULTIPLE_PAGES, pMod );
 
-    SvxFontMenuControl::RegisterControl(SID_ATTR_CHAR_FONT, pMod );
-    SvxFontSizeMenuControl::RegisterControl(SID_ATTR_CHAR_FONTHEIGHT, pMod );
-
     SwZoomControl::RegisterControl(SID_ATTR_ZOOM, pMod );
     SwPreviewZoomControl::RegisterControl(FN_PREVIEW_ZOOM, pMod);
     SvxPosSizeStatusBarControl::RegisterControl(0, pMod );
@@ -351,7 +345,6 @@ void SwDLL::RegisterControls()
     SwInputChild::RegisterChildWindow( false, pMod, SfxChildWindowFlags::FORCEDOCK );
     SwRedlineAcceptChild::RegisterChildWindow( false, pMod );
     SwSyncChildWin::RegisterChildWindow( true, pMod );
-    SwMailMergeChildWindow::RegisterChildWindow( false, pMod );
     SwInsertIdxMarkWrapper::RegisterChildWindow( false, pMod );
     SwInsertAuthMarkWrapper::RegisterChildWindow( false, pMod );
     SwWordCountWrapper::RegisterChildWindow( false, pMod );
@@ -377,9 +370,8 @@ void SwDLL::RegisterControls()
     ::avmedia::MediaToolBoxControl::RegisterControl(SID_AVMEDIA_TOOLBOX, pMod);
     ::avmedia::MediaPlayer::RegisterChildWindow(false, pMod);
 
-    SvxSmartTagsControl::RegisterControl(SID_OPEN_SMARTTAGMENU, pMod);
     ::sfx2::sidebar::SidebarChildWindow::RegisterChildWindow(false, pMod);
-    ::sfx2::TaskPaneWrapper::RegisterChildWindow(false, pMod);
+
     SwJumpToSpecificPageControl::RegisterControl(SID_JUMP_TO_SPECIFIC_PAGE, pMod);
 }
 

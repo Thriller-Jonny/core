@@ -28,7 +28,6 @@
 #include <xmloff/xmluconv.hxx>
 
 using ::com::sun::star::beans::PropertyValue;
-using ::com::sun::star::beans::PropertyValues;
 using ::com::sun::star::uno::Reference;
 using ::com::sun::star::uno::Sequence;
 using ::com::sun::star::uno::Any;
@@ -109,8 +108,7 @@ void XMLIndexSimpleEntryContext::FillPropertyValues(
 
     // token type
     rValues[0].Name = rTemplateContext.sTokenType;
-    aAny <<= rEntryType;
-    rValues[0].Value = aAny;
+    rValues[0].Value = css::uno::Any(rEntryType);
 
     // char style
     if (bCharStyleNameOK)

@@ -25,7 +25,6 @@
 #include <vcl/edit.hxx>
 #include <vcl/fixed.hxx>
 #include <vcl/lstbox.hxx>
-#include <com/sun/star/uno/Sequence.hxx>
 
 class ScDataPilotSourceTypeDlg : public ModalDialog
 {
@@ -61,7 +60,7 @@ private:
 
 public:
             ScDataPilotServiceDlg( vcl::Window* pParent,
-                    const css::uno::Sequence<OUString>& rServices );
+                    const std::vector<OUString>& rServices );
             virtual ~ScDataPilotServiceDlg();
     virtual void dispose() override;
 

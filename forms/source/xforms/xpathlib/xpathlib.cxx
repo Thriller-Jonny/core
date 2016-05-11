@@ -31,7 +31,6 @@
 
 #include <com/sun/star/uno/Reference.hxx>
 #include <com/sun/star/uno/Sequence.hxx>
-#include <com/sun/star/uno/Any.hxx>
 #include <com/sun/star/xforms/XModel.hpp>
 #include <com/sun/star/xml/dom/XNode.hpp>
 #include <com/sun/star/xml/dom/XDocument.hpp>
@@ -214,8 +213,6 @@ void xforms_indexFunction(xmlXPathParserContextPtr /*ctxt*/, int /*nargs*/)
 }
 
 // String Functions
-static const char* _version = "1.0";
-static const char* _conformance = "conformance";
 void xforms_propertyFunction(xmlXPathParserContextPtr ctxt, int nargs)
 {
     if (nargs != 1) XP_ERROR(XPATH_INVALID_ARITY);
@@ -223,16 +220,16 @@ void xforms_propertyFunction(xmlXPathParserContextPtr ctxt, int nargs)
     if (xmlXPathCheckError(ctxt)) XP_ERROR(XPATH_INVALID_TYPE);
     OUString aString(reinterpret_cast<char*>(pString), strlen(reinterpret_cast<char*>(pString)), RTL_TEXTENCODING_UTF8);
     if (aString.equalsIgnoreAsciiCase("version"))
-        xmlXPathReturnString(ctxt, reinterpret_cast<xmlChar *>(const_cast<char *>(_version)));
+        xmlXPathReturnString(ctxt, reinterpret_cast<xmlChar *>(const_cast<char *>("1.0")));
     else if (aString.equalsIgnoreAsciiCase("conformance-level"))
-        xmlXPathReturnString(ctxt, reinterpret_cast<xmlChar *>(const_cast<char *>(_conformance)));
+        xmlXPathReturnString(ctxt, reinterpret_cast<xmlChar *>(const_cast<char *>("conformance")));
     else
         xmlXPathReturnEmptyString(ctxt);
 }
 
 // Date and Time Functions
 
-static OString makeDateTimeString (const DateTime& aDateTime, bool bUTC = true)
+static OString makeDateTimeString (const DateTime& aDateTime)
 {
     OStringBuffer aDateTimeString;
     aDateTimeString.append((sal_Int32)aDateTime.GetYear());
@@ -251,7 +248,7 @@ static OString makeDateTimeString (const DateTime& aDateTime, bool bUTC = true)
     aDateTimeString.append(":");
     if (aDateTime.GetSec()<10) aDateTimeString.append("0");
     aDateTimeString.append((sal_Int32)aDateTime.GetSec());
-    if (bUTC) aDateTimeString.append("Z");
+    aDateTimeString.append("Z");
 
     return aDateTimeString.makeStringAndClear();
 }

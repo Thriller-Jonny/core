@@ -39,14 +39,6 @@
 
 #include <map>
 
-// defines -------------------------------------------------------------------
-
-#define ABS_SREF          SCA_VALID \
-    | SCA_COL_ABSOLUTE | SCA_ROW_ABSOLUTE | SCA_TAB_ABSOLUTE
-#define ABS_DREF          ABS_SREF \
-    | SCA_COL2_ABSOLUTE | SCA_ROW2_ABSOLUTE | SCA_TAB2_ABSOLUTE
-#define ABS_DREF3D      ABS_DREF | SCA_TAB_3D
-
 //logic
 
 ScNameDlg::ScNameDlg( SfxBindings* pB, SfxChildWindow* pCW, vcl::Window* pParent,
@@ -189,7 +181,7 @@ void ScNameDlg::SetReference( const ScRange& rRef, ScDocument* pDocP )
     {
         if ( rRef.aStart != rRef.aEnd )
             RefInputStart(m_pEdAssign);
-        OUString aRefStr(rRef.Format(ABS_DREF3D, pDocP,
+        OUString aRefStr(rRef.Format(ScRefFlags::RANGE_ABS_3D, pDocP,
                 ScAddress::Details(pDocP->GetAddressConvention(), 0, 0)));
         m_pEdAssign->SetRefString( aRefStr );
     }
@@ -262,10 +254,10 @@ void ScNameDlg::UpdateChecks(ScRangeData* pData)
     m_pBtnColHeader->SetToggleHdl( Link<CheckBox&,void>() );
     m_pBtnRowHeader->SetToggleHdl( Link<CheckBox&,void>() );
 
-    m_pBtnCriteria->Check( pData->HasType( RT_CRITERIA ) );
-    m_pBtnPrintArea->Check( pData->HasType( RT_PRINTAREA ) );
-    m_pBtnColHeader->Check( pData->HasType( RT_COLHEADER ) );
-    m_pBtnRowHeader->Check( pData->HasType( RT_ROWHEADER ) );
+    m_pBtnCriteria->Check( pData->HasType( ScRangeData::Type::Criteria ) );
+    m_pBtnPrintArea->Check( pData->HasType( ScRangeData::Type::PrintArea ) );
+    m_pBtnColHeader->Check( pData->HasType( ScRangeData::Type::ColHeader ) );
+    m_pBtnRowHeader->Check( pData->HasType( ScRangeData::Type::RowHeader ) );
 
     // Restore handlers so user input is processed again
     Link<CheckBox&,void> aToggleHandler = LINK( this, ScNameDlg, EdModifyCheckBoxHdl );
@@ -338,12 +330,11 @@ void ScNameDlg::ShowOptions(const ScRangeNameLine& rLine)
     }
 }
 
-bool ScNameDlg::AddPushed()
+void ScNameDlg::AddPushed()
 {
     mbCloseWithoutUndo = true;
     ScTabViewShell* pViewSh = ScTabViewShell::GetActiveViewShell();
     pViewSh->SwitchBetweenRefDialogs(this);
-    return false;
 }
 
 void ScNameDlg::SetEntry(const OUString& rName, const OUString& rScope)
@@ -360,9 +351,9 @@ void ScNameDlg::SetEntry(const OUString& rName, const OUString& rScope)
 
 void ScNameDlg::RemovePushed()
 {
-    std::vector<ScRangeNameLine> maEntries = m_pRangeManagerTable->GetSelectedEntries();
+    std::vector<ScRangeNameLine> aEntries = m_pRangeManagerTable->GetSelectedEntries();
     m_pRangeManagerTable->DeleteSelectedEntries();
-    for (std::vector<ScRangeNameLine>::iterator itr = maEntries.begin(); itr != maEntries.end(); ++itr)
+    for (std::vector<ScRangeNameLine>::iterator itr = aEntries.begin(); itr != aEntries.end(); ++itr)
     {
         ScRangeName* pRangeName = GetRangeName(itr->aScope);
         ScRangeData* pData = pRangeName->findByUpperName(ScGlobal::pCharClass->uppercase(itr->aName));
@@ -417,11 +408,11 @@ void ScNameDlg::NameModified()
         pOldRangeName->erase(*pData);
         mbNeedUpdate = false;
         m_pRangeManagerTable->DeleteSelectedEntries();
-        RangeType nType = RT_NAME |
-            (m_pBtnRowHeader->IsChecked() ? RT_ROWHEADER : RangeType(0))
-            |(m_pBtnColHeader->IsChecked() ? RT_COLHEADER : RangeType(0))
-            |(m_pBtnPrintArea->IsChecked() ? RT_PRINTAREA : RangeType(0))
-            |(m_pBtnCriteria->IsChecked()  ? RT_CRITERIA  : RangeType(0));
+        ScRangeData::Type nType = ScRangeData::Type::Name;
+        if ( m_pBtnRowHeader->IsChecked() ) nType |= ScRangeData::Type::RowHeader;
+        if ( m_pBtnColHeader->IsChecked() ) nType |= ScRangeData::Type::ColHeader;
+        if ( m_pBtnPrintArea->IsChecked() ) nType |= ScRangeData::Type::PrintArea;
+        if ( m_pBtnCriteria->IsChecked()  ) nType |= ScRangeData::Type::Criteria;
 
         ScRangeData* pNewEntry = new ScRangeData( mpDoc, aNewName, aExpr,
                 maCursorPos, nType);

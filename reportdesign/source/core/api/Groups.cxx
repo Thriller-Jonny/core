@@ -21,7 +21,6 @@
 #include <tools/debug.hxx>
 #include "core_resource.hxx"
 #include "core_resource.hrc"
-#include <boost/mem_fn.hpp>
 #include <algorithm>
 
 namespace reportdesign
@@ -52,7 +51,8 @@ void SAL_CALL OGroups::dispose() throw(uno::RuntimeException, std::exception)
 
 void SAL_CALL OGroups::disposing()
 {
-    ::std::for_each(m_aGroups.begin(),m_aGroups.end(),::boost::mem_fn(&css::report::XGroup::dispose));
+    for(auto& rGroup : m_aGroups)
+        rGroup->dispose();
     m_aGroups.clear();
     lang::EventObject aDisposeEvent( static_cast< ::cppu::OWeakObject* >( this ) );
     m_aContainerListeners.disposeAndClear( aDisposeEvent );
@@ -143,7 +143,7 @@ uno::Any SAL_CALL OGroups::getByIndex( ::sal_Int32 Index ) throw (lang::IndexOut
 {
     ::osl::MutexGuard aGuard(m_aMutex);
     checkIndex(Index);
-    TGroups::iterator aPos = m_aGroups.begin();
+    TGroups::const_iterator aPos = m_aGroups.begin();
     ::std::advance(aPos,Index);
     return uno::makeAny(*aPos);
 }

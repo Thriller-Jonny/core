@@ -25,11 +25,11 @@ namespace dmapper
 using namespace ::com::sun::star;
 
 /// w:sdt's w:dropDownList doesn't have width, so guess the size based on the longest string.
-awt::Size lcl_getOptimalWidth(StyleSheetTablePtr pStyleSheet, OUString& rDefault, std::vector<OUString>& rItems)
+awt::Size lcl_getOptimalWidth(const StyleSheetTablePtr& pStyleSheet, OUString& rDefault, std::vector<OUString>& rItems)
 {
     OUString aLongest = rDefault;
     sal_Int32 nHeight = 0;
-    for (size_t i = 0; i < rItems.size(); ++i)
+    for (std::size_t i = 0; i < rItems.size(); ++i)
         if (rItems[i].getLength() > aLongest.getLength())
             aLongest = rItems[i];
 
@@ -41,12 +41,12 @@ awt::Size lcl_getOptimalWidth(StyleSheetTablePtr pStyleSheet, OUString& rDefault
     vcl::Font aFont(pOut->GetFont());
     boost::optional<PropertyMap::Property> aFontName = pDefaultCharProps->getProperty(PROP_CHAR_FONT_NAME);
     if (aFontName)
-        aFont.SetName(aFontName->second.get<OUString>());
+        aFont.SetFamilyName(aFontName->second.get<OUString>());
     boost::optional<PropertyMap::Property> aHeight = pDefaultCharProps->getProperty(PROP_CHAR_HEIGHT);
     if (aHeight)
     {
         nHeight = aHeight->second.get<double>() * 35; // points -> mm100
-        aFont.SetSize(Size(0, nHeight));
+        aFont.SetFontSize(Size(0, nHeight));
     }
     pOut->SetFont(aFont);
     pOut->SetMapMode(aMap);
@@ -79,7 +79,7 @@ void SdtHelper::createDropDownControl()
     uno::Reference<awt::XControlModel> xControlModel(m_rDM_Impl.GetTextFactory()->createInstance("com.sun.star.form.component.ComboBox"), uno::UNO_QUERY);
     uno::Reference<beans::XPropertySet> xPropertySet(xControlModel, uno::UNO_QUERY);
     xPropertySet->setPropertyValue("DefaultText", uno::makeAny(aDefaultText));
-    xPropertySet->setPropertyValue("Dropdown", uno::makeAny(sal_True));
+    xPropertySet->setPropertyValue("Dropdown", uno::makeAny(true));
     xPropertySet->setPropertyValue("StringItemList", uno::makeAny(comphelper::containerToSequence(m_aDropDownItems)));
 
     createControlShape(lcl_getOptimalWidth(m_rDM_Impl.GetStyleSheetTable(), aDefaultText, m_aDropDownItems), xControlModel);
@@ -105,7 +105,7 @@ void SdtHelper::createDateControl(OUString& rContentText, const beans::PropertyV
     uno::Reference<beans::XPropertySet> xPropertySet(
         xControlModel, uno::UNO_QUERY_THROW);
 
-    xPropertySet->setPropertyValue("Dropdown", uno::makeAny(sal_True));
+    xPropertySet->setPropertyValue("Dropdown", uno::makeAny(true));
 
     // See com/sun/star/awt/UnoControlDateFieldModel.idl, DateFormat; sadly there are no constants
     sal_Int16 nDateFormat = 0;
@@ -190,7 +190,7 @@ sal_Int32 SdtHelper::getInteropGrabBagSize()
 
 bool SdtHelper::containedInInteropGrabBag(const OUString& rValueName)
 {
-    for (size_t i=0; i < m_aGrabBag.size(); ++i)
+    for (std::size_t i=0; i < m_aGrabBag.size(); ++i)
         if (m_aGrabBag[i].Name == rValueName)
             return true;
 

@@ -79,8 +79,6 @@ private:
     sal_Int32 m_nNoBorderResizeReact;
     sal_Int32 m_nNoResizeReact;
 
-    css::uno::Reference< css::ui::XDockingAreaAcceptor > m_xCachedDocAreaAcc;
-
     css::uno::Sequence< css::uno::Any > m_aOutplaceFrameProps;
 
 
@@ -166,7 +164,7 @@ public:
         m_xOutplaceInterceptor = xOutplaceInterceptor;
     }
 
-    css::uno::Reference< css::util::XCloseable > GetComponent() { return m_xComponent; }
+    const css::uno::Reference< css::util::XCloseable >& GetComponent() { return m_xComponent; }
 
 // XEventListener
     virtual void SAL_CALL disposing( const css::lang::EventObject& Source ) throw (css::uno::RuntimeException, std::exception) override;

@@ -11,7 +11,7 @@
 #define nsWindowsRestart_cxx
 #endif
 
-#ifdef WNT
+#ifdef _WIN32
 #include <windows.h>
 #endif
 #include <stdint.h>
@@ -310,7 +310,7 @@ static int ArgStrLen(const wchar_t *s)
   BOOL addDoubleQuotes = wcspbrk(s, L" \t") != nullptr;
 
   if (addDoubleQuotes) {
-    i += 2; // initial and final duoblequote
+    i += 2; // initial and final doublequote
   }
 
   if (hasDoubleQuote) {
@@ -455,7 +455,6 @@ FreeAllocStrings(int argc, wchar_t **argv)
 
   delete [] argv;
 }
-
 
 
 /**

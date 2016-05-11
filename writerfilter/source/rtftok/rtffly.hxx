@@ -10,6 +10,10 @@
 #ifndef INCLUDED_WRITERFILTER_SOURCE_RTFTOK_RTFFLY_HXX
 #define INCLUDED_WRITERFILTER_SOURCE_RTFTOK_RTFFLY_HXX
 
+#include <com/sun/star/text/HoriOrientation.hpp>
+#include <com/sun/star/text/RelOrientation.hpp>
+#include <com/sun/star/text/VertOrientation.hpp>
+
 namespace writerfilter
 {
 namespace rtftok
@@ -19,18 +23,18 @@ class RTFVertOrient
 {
 public:
     RTFVertOrient(sal_uInt16 nValue)
-        : nVal(nValue)
+        : m_nVal(nValue)
     {
     }
 
     sal_uInt16 GetOrient() const
     {
-        return OSL_LONIBBLE(OSL_LOBYTE(nVal));
+        return OSL_LONIBBLE(OSL_LOBYTE(m_nVal));
     }
 
     sal_uInt16 GetRelation() const
     {
-        return OSL_HINIBBLE(OSL_LOBYTE(nVal));
+        return OSL_HINIBBLE(OSL_LOBYTE(m_nVal));
     }
 
     sal_Int32 GetAlign() const
@@ -72,7 +76,7 @@ public:
     }
 
 private:
-    sal_uInt16 nVal;
+    sal_uInt16 m_nVal;
 };
 
 /// Stores the horizontal orientation properties of an RTF fly frame.
@@ -80,18 +84,18 @@ class RTFHoriOrient
 {
 public:
     RTFHoriOrient(sal_uInt16 nValue)
-        : nVal(nValue)
+        : m_nVal(nValue)
     {
     }
 
     sal_uInt16 GetOrient() const
     {
-        return OSL_LONIBBLE(OSL_LOBYTE(nVal));
+        return OSL_LONIBBLE(OSL_LOBYTE(m_nVal));
     }
 
     sal_uInt16 GetRelation() const
     {
-        return OSL_LONIBBLE(OSL_HIBYTE(nVal));
+        return OSL_LONIBBLE(OSL_HIBYTE(m_nVal));
     }
 
     sal_Int32 GetAlign() const
@@ -139,7 +143,7 @@ public:
     }
 
 private:
-    sal_uInt16 nVal;
+    sal_uInt16 m_nVal;
 };
 } // namespace rtftok
 } // namespace writerfilter

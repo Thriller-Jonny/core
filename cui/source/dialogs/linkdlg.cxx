@@ -95,7 +95,8 @@ SvBaseLinksDlg::SvBaseLinksDlg( vcl::Window * pParent, LinkManager* pMgr, bool b
     aStrCloselinkmsgMulti( CUI_RES( STR_CLOSELINKMSG_MULTI ) ),
     aStrWaitinglink( CUI_RES( STR_WAITINGLINK ) ),
     pLinkMgr( nullptr ),
-    bHtmlMode(bHtml)
+    bHtmlMode(bHtml),
+    aUpdateIdle("cui SvBaseLinksDlg UpdateIdle")
 {
     get(m_pTbLinks, "TB_LINKS");
     Size aSize(LogicToPixel(Size(257, 87), MAP_APPFONT));
@@ -166,7 +167,7 @@ void SvBaseLinksDlg::dispose()
 *************************************************************************/
 IMPL_LINK_TYPED( SvBaseLinksDlg, LinksSelectHdl, SvTreeListBox *, pSvTabListBox, void )
 {
-    sal_uLong nSelectionCount = pSvTabListBox ?
+    const sal_uLong nSelectionCount = pSvTabListBox ?
         pSvTabListBox->GetSelectionCount() : 0;
     if(nSelectionCount > 1)
     {
@@ -180,7 +181,6 @@ IMPL_LINK_TYPED( SvBaseLinksDlg, LinksSelectHdl, SvTreeListBox *, pSvTabListBox,
         {
             pSvTabListBox->SelectAll(false);
             pSvTabListBox->Select(pEntry);
-            nSelectionCount = 1;
         }
         else
         {
@@ -225,7 +225,10 @@ IMPL_LINK_TYPED( SvBaseLinksDlg, LinksSelectHdl, SvTreeListBox *, pSvTabListBox,
             m_pRbManual->Check();
             m_pRbManual->Disable();
             if( OBJECT_CLIENT_GRF == pLink->GetObjType() )
-                pLinkNm = nullptr, pFilter = &sLink;
+            {
+                pLinkNm = nullptr;
+                pFilter = &sLink;
+            }
         }
         else
         {
@@ -274,9 +277,6 @@ IMPL_LINK_NOARG_TYPED( SvBaseLinksDlg, ManualClickHdl, Button*, void )
 IMPL_LINK_NOARG_TYPED(SvBaseLinksDlg, UpdateNowClickHdl, Button*, void)
 {
     SvTabListBox& rListBox = *m_pTbLinks;
-    sal_uLong nSelCnt = rListBox.GetSelectionCount();
-    if( 255 < nSelCnt )
-        nSelCnt = 255;
 
     std::vector< SvBaseLink* > aLnkArr;
     std::vector< sal_Int16 > aPosArr;
@@ -300,8 +300,8 @@ IMPL_LINK_NOARG_TYPED(SvBaseLinksDlg, UpdateNowClickHdl, Button*, void)
             tools::SvRef<SvBaseLink> xLink = aLnkArr[ n ];
 
             // first look for the entry in the array
-            for( size_t i = 0; i < pLinkMgr->GetLinks().size(); ++i )
-                if( xLink == pLinkMgr->GetLinks()[ i ] )
+            for(const auto & i : pLinkMgr->GetLinks())
+                if( xLink == i )
                 {
                     xLink->SetUseCache( false );
                     SetType( *xLink, aPosArr[ n ], xLink->GetUpdateMode() );
@@ -690,9 +690,8 @@ void SvBaseLinksDlg::SetActLink( SvBaseLink * pLink )
     {
         const SvBaseLinks& rLnks = pLinkMgr->GetLinks();
         sal_uLong nSelect = 0;
-        for( size_t n = 0; n < rLnks.size(); ++n )
+        for(const auto & rLinkRef : rLnks)
         {
-            const tools::SvRef<SvBaseLink>& rLinkRef = rLnks[ n ];
             // #109573# only visible links have been inserted into the TreeListBox,
             // invisible ones have to be skipped here
             if( rLinkRef->IsVisible() )

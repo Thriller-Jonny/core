@@ -31,7 +31,7 @@
 class CControlCommandResult
 {
 public:
-    CControlCommandResult( sal_Bool bResult = sal_False ) :
+    explicit CControlCommandResult( sal_Bool bResult = sal_False ) :
         m_bResult( bResult )
     {
     }
@@ -48,9 +48,6 @@ public:
 private:
     sal_Bool m_bResult;
 };
-
-
-
 
 
 class CValueCommandResult : public CControlCommandResult
@@ -70,9 +67,6 @@ public:
 private:
     css::uno::Any m_aValue;
 };
-
-
-
 
 
 class CLabelCommandResult : public CControlCommandResult

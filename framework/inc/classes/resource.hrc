@@ -17,8 +17,8 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef __FRAMEWORK_CLASSES_RESOURCE_HRC_
-#define __FRAMEWORK_CLASSES_RESOURCE_HRC_
+#ifndef INCLUDED_FRAMEWORK_INC_CLASSES_RESOURCE_HRC
+#define INCLUDED_FRAMEWORK_INC_CLASSES_RESOURCE_HRC
 
 #define RID_STR_START       2000
 #define RID_MENU_START      10000
@@ -52,6 +52,9 @@
 #define STR_LANGSTATUS_HINT                     (RID_STR_START+25)
 #define STR_OPEN_REMOTE                         (RID_STR_START+26)
 #define STR_REMOTE_TITLE                        (RID_STR_START+27)
+
+#define IMG_SAVEMODIFIED_SMALL                  (RID_IMAGE_START+0)
+#define IMG_SAVEMODIFIED_LARGE                  (RID_IMAGE_START+1)
 
 #define POPUPMENU_TOOLBAR_QUICKCUSTOMIZATION    (RID_MENU_START+0)
 

@@ -59,6 +59,9 @@ public:
 
     virtual sal_Bool registerClass() = 0;
     virtual sal_Bool deregisterClass() = 0;
+
+protected:
+    ~IClassFactoryWrapper() {}
 };
 
 /*****************************************************************************
@@ -169,7 +172,7 @@ class OleConverter_Impl2 : public WeakImplHelper<XBridgeSupplier2, XInitializati
                             public UnoConversionUtilities<OleConverter_Impl2>
 {
 public:
-    OleConverter_Impl2( const Reference<XMultiServiceFactory>& smgr);
+    explicit OleConverter_Impl2( const Reference<XMultiServiceFactory>& smgr);
     OleConverter_Impl2( const  Reference<XMultiServiceFactory>& smgr, sal_uInt8 unoWrapperClass, sal_uInt8 comWrapperClass );
     virtual ~OleConverter_Impl2();
 
@@ -214,7 +217,7 @@ class OleClient_Impl : public WeakImplHelper<XMultiServiceFactory, css::lang::XS
                        public UnoConversionUtilities<OleClient_Impl>
 {
 public:
-    OleClient_Impl( const Reference<XMultiServiceFactory>& smgr);
+    explicit OleClient_Impl( const Reference<XMultiServiceFactory>& smgr);
     ~OleClient_Impl();
 
     // XMultiServiceFactory
@@ -246,14 +249,14 @@ protected:
     Implementation of the UNO service com.sun.star.bridge.OleApplicationRegistration.
     Register the calling application as OLE automation server for
     standard OLE object. The objects will be registered while instanciating
-    this implementation and deregistrated, if this implementation is destroyed.
+    this implementation and deregistered, if this implementation is destroyed.
 
 *****************************************************************************/
 
 class OleServer_Impl : public cppu::WeakImplHelper<css::lang::XServiceInfo>
 {
 public:
-    OleServer_Impl( const Reference<XMultiServiceFactory> &smgr);
+    explicit OleServer_Impl( const Reference<XMultiServiceFactory> &smgr);
     ~OleServer_Impl();
 
     OUString SAL_CALL getImplementationName()

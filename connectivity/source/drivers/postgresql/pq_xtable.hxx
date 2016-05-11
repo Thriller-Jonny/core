@@ -63,7 +63,6 @@ class Table : public ReflectionBase,
               public com::sun::star::sdbcx::XRename,
               public com::sun::star::sdbcx::XAlterTable
 {
-    ::com::sun::star::uno::Reference< com::sun::star::sdbc::XDatabaseMetaData > m_meta;
     ::com::sun::star::uno::Reference< com::sun::star::container::XNameAccess > m_columns;
     ::com::sun::star::uno::Reference< com::sun::star::container::XIndexAccess > m_keys;
     ::com::sun::star::uno::Reference< com::sun::star::container::XNameAccess > m_indexes;
@@ -134,7 +133,6 @@ public:
 };
 
 
-
 class TableDescriptor
     : public ReflectionBase,
       public com::sun::star::sdbcx::XColumnsSupplier,
@@ -181,10 +179,6 @@ public: // XDataDescriptorFactory
     createDataDescriptor(  ) throw (::com::sun::star::uno::RuntimeException, std::exception) override;
 };
 
-
-void copyProperties(
-    ReflectionBase *target,
-    const com::sun::star::uno::Reference< com::sun::star::beans::XPropertySet > & source );
 
 }
 

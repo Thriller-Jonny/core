@@ -16,10 +16,6 @@
  *   except in compliance with the License. You may obtain a copy of
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
-#ifdef WINNT
-#define NOMINMAX
-#endif
-
 #include <config_features.h>
 #include <config_folders.h>
 
@@ -41,7 +37,6 @@
 #include <rtl/malformeduriexception.hxx>
 #include <rtl/uri.hxx>
 
-#include <boost/noncopyable.hpp>
 #include <list>
 #include <algorithm>
 #include <unordered_map>
@@ -275,8 +270,9 @@ static OUString & getIniFileName_Impl()
 #ifdef MACOSX
             // We keep only executables in the MacOS folder, and all
             // rc files in LIBO_ETC_FOLDER (typically "Resources").
-            sal_Int32 p = fileName.lastIndexOf( "/MacOS/" );
-            fileName = fileName.replaceAt( p+1, strlen("MacOS"), LIBO_ETC_FOLDER );
+            sal_Int32 off = fileName.lastIndexOf( "/MacOS/" );
+            if ( off != -1 )
+                fileName = fileName.replaceAt( off + 1, strlen("MacOS"), LIBO_ETC_FOLDER );
 #endif
         }
 #endif
@@ -352,12 +348,7 @@ Bootstrap_Impl::Bootstrap_Impl( OUString const & rIniName )
                 rtl_bootstrap_args_open( base_ini.pData ) );
         }
     }
-
-#if OSL_DEBUG_LEVEL > 1
-    OString sFile = OUStringToOString(_iniName, RTL_TEXTENCODING_ASCII_US);
-    OSL_TRACE("Bootstrap_Impl(): sFile=%s", sFile.getStr());
-#endif /* OSL_DEBUG_LEVEL > 1 */
-
+    SAL_INFO("sal.rtl", "Bootstrap_Impl(): sFile=" << _iniName);
     oslFileHandle handle;
     if (!_iniName.isEmpty() &&
         osl_File_E_None == osl_openFile(_iniName.pData, &handle, osl_File_OpenFlag_Read))
@@ -376,26 +367,17 @@ Bootstrap_Impl::Bootstrap_Impl( OUString const & rIniName )
                 nameValue.sValue = OStringToOUString(
                     line.copy(nIndex+1).trim(), RTL_TEXTENCODING_UTF8 );
 
-#if OSL_DEBUG_LEVEL > 1
-                OString name_tmp = OUStringToOString(nameValue.sName, RTL_TEXTENCODING_ASCII_US);
-                OString value_tmp = OUStringToOString(nameValue.sValue, RTL_TEXTENCODING_UTF8);
-                OSL_TRACE(
-                    "pushing: name=%s value=%s",
-                    name_tmp.getStr(), value_tmp.getStr() );
-#endif /* OSL_DEBUG_LEVEL > 1 */
+                SAL_INFO("sal.rtl", "pushing: name=" << nameValue.sName << " value=" << nameValue.sValue);
 
                 _nameValueList.push_back(nameValue);
             }
         }
         osl_closeFile(handle);
     }
-#if OSL_DEBUG_LEVEL > 1
     else
     {
-        OString file_tmp = OUStringToOString(_iniName, RTL_TEXTENCODING_ASCII_US);
-        OSL_TRACE( "couldn't open file: %s", file_tmp.getStr() );
+        SAL_WARN( "sal.rtl", "couldn't open file: " <<  _iniName );
     }
-#endif /* OSL_DEBUG_LEVEL > 1 */
 }
 
 Bootstrap_Impl::~Bootstrap_Impl()
@@ -425,7 +407,7 @@ Bootstrap_Impl * get_static_bootstrap_handle()
     return s_handle;
 }
 
-struct FundamentalIniData: private boost::noncopyable {
+struct FundamentalIniData {
     rtlBootstrapHandle ini;
 
     FundamentalIniData() {
@@ -440,6 +422,9 @@ struct FundamentalIniData: private boost::noncopyable {
     }
 
     ~FundamentalIniData() { rtl_bootstrap_args_close(ini); }
+
+    FundamentalIniData(const FundamentalIniData&) = delete;
+    FundamentalIniData& operator=(const FundamentalIniData&) = delete;
 };
 
 struct FundamentalIni: public rtl::Static< FundamentalIniData, FundamentalIni >
@@ -596,10 +581,13 @@ void Bootstrap_Impl::expandValue(
 
 namespace {
 
-struct bootstrap_map: private boost::noncopyable {
+struct bootstrap_map {
     typedef std::unordered_map<
         rtl::OUString, Bootstrap_Impl *,
-        rtl::OUStringHash, std::equal_to< rtl::OUString > > t;
+        rtl::OUStringHash > t;
+
+    bootstrap_map(const bootstrap_map&) = delete;
+    bootstrap_map& operator=(const bootstrap_map&) = delete;
 
     // get and release must only be called properly synchronized via some mutex
     // (e.g., osl::Mutex::getGlobalMutex()):
@@ -695,14 +683,7 @@ void SAL_CALL rtl_bootstrap_args_close (
     --that->_nRefCount;
     if (that->_nRefCount == 0)
     {
-        ::std::size_t nLeaking = 8; // only hold up to 8 files statically
-
-#if OSL_DEBUG_LEVEL == 1 // nonpro
-        nLeaking = 0;
-#elif OSL_DEBUG_LEVEL > 1 // debug
-        nLeaking = 1;
-#endif /* OSL_DEBUG_LEVEL */
-
+        std::size_t const nLeaking = 8; // only hold up to 8 files statically
         if (p_bootstrap_map->size() > nLeaking)
         {
             ::std::size_t erased = p_bootstrap_map->erase( that->_iniName );
@@ -796,13 +777,7 @@ void SAL_CALL rtl_bootstrap_set (
         }
     }
 
-#if OSL_DEBUG_LEVEL > 1
-    OString cstr_name( OUStringToOString( name, RTL_TEXTENCODING_ASCII_US ) );
-    OString cstr_value( OUStringToOString( value, RTL_TEXTENCODING_ASCII_US ) );
-    OSL_TRACE(
-        "bootstrap.cxx: explicitly setting: name=%s value=%s\n",
-        cstr_name.getStr(), cstr_value.getStr() );
-#endif /* OSL_DEBUG_LEVEL > 1 */
+    SAL_INFO("sal.rtl", "explicitly getting: name=" << name << " value=" <<value);
 
     r_rtl_bootstrap_set_list.push_back( rtl_bootstrap_NameValue( name, value ) );
 }

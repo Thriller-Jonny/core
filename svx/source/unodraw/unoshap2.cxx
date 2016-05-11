@@ -153,7 +153,6 @@ void SAL_CALL SvxShapeGroup::setPosition( const awt::Point& Position ) throw(uno
 }
 
 
-
 awt::Size SAL_CALL SvxShapeGroup::getSize() throw(uno::RuntimeException, std::exception)
 {
     return SvxShape::getSize();
@@ -199,7 +198,7 @@ void SvxShapeGroup::addUnoShape( const uno::Reference< drawing::XShape >& xShape
 
     SdrObject* pSdrShape = pShape->GetSdrObject();
     if( pSdrShape == nullptr )
-        pSdrShape = mxPage->_CreateSdrObject( xShape );
+        pSdrShape = mxPage->CreateSdrObject_( xShape );
 
     if( pSdrShape->IsInserted() )
         pSdrShape->GetObjList()->RemoveObject( pSdrShape->GetOrdNum() );
@@ -378,7 +377,6 @@ SvxShapeConnector::~SvxShapeConnector() throw()
 }
 
 
-
 uno::Any SAL_CALL SvxShapeConnector::queryInterface( const uno::Type & rType )
     throw(uno::RuntimeException, std::exception)
 {
@@ -441,7 +439,6 @@ void SAL_CALL SvxShapeConnector::setPosition( const awt::Point& Position ) throw
 }
 
 
-
 awt::Size SAL_CALL SvxShapeConnector::getSize() throw(uno::RuntimeException, std::exception)
 {
     return SvxShapeText::getSize();
@@ -453,7 +450,6 @@ void SAL_CALL SvxShapeConnector::setSize( const awt::Size& rSize )
 {
     SvxShapeText::setSize( rSize );
 }
-
 
 
 // XConnectorShape
@@ -595,7 +591,6 @@ void SAL_CALL SvxShapeControl::setPosition( const awt::Point& Position ) throw(u
 }
 
 
-
 awt::Size SAL_CALL SvxShapeControl::getSize() throw(uno::RuntimeException, std::exception)
 {
     return SvxShapeText::getSize();
@@ -692,7 +687,7 @@ SvxShapeControlPropertyMapping[] =
 
 namespace
 {
-    static bool lcl_convertPropertyName( const OUString& rApiName, OUString& rInternalName )
+    bool lcl_convertPropertyName( const OUString& rApiName, OUString& rInternalName )
     {
         sal_uInt16 i = 0;
         while( SvxShapeControlPropertyMapping[i].mpAPIName )
@@ -725,7 +720,7 @@ namespace
         {-1,-1}
     };
 
-    static void lcl_mapFormToAPIValue( Any& _rValue, const EnumConversionMap* _pMap )
+    void lcl_mapFormToAPIValue( Any& _rValue, const EnumConversionMap* _pMap )
     {
         sal_Int16 nValue = sal_Int16();
         OSL_VERIFY( _rValue >>= nValue );
@@ -742,7 +737,7 @@ namespace
         }
     }
 
-    static void lcl_mapAPIToFormValue( Any& _rValue, const EnumConversionMap* _pMap )
+    void lcl_mapAPIToFormValue( Any& _rValue, const EnumConversionMap* _pMap )
     {
         sal_Int32 nValue = 0;
         OSL_VERIFY( _rValue >>= nValue );
@@ -759,12 +754,12 @@ namespace
         }
     }
 
-    static void lcl_convertTextAlignmentToParaAdjustment( Any& rValue )
+    void lcl_convertTextAlignmentToParaAdjustment( Any& rValue )
     {
         lcl_mapFormToAPIValue( rValue, aMapAdjustToAlign );
     }
 
-    static void lcl_convertParaAdjustmentToTextAlignment( Any& rValue )
+    void lcl_convertParaAdjustmentToTextAlignment( Any& rValue )
     {
         lcl_mapAPIToFormValue( rValue, aMapAdjustToAlign );
     }
@@ -1056,7 +1051,6 @@ basegfx::B2DPolyPolygon SAL_CALL ImplSvxPointSequenceSequenceToB2DPolyPolygon( c
 }
 
 
-
 bool SvxShapePolyPolygon::setPropertyValueImpl( const OUString& rName, const SfxItemPropertySimpleEntry* pProperty, const css::uno::Any& rValue ) throw(css::beans::UnknownPropertyException, css::beans::PropertyVetoException, css::lang::IllegalArgumentException, css::lang::WrappedTargetException, css::uno::RuntimeException)
 {
     switch( pProperty->nWID )
@@ -1165,7 +1159,6 @@ void SAL_CALL B2DPolyPolygonToSvxPointSequenceSequence( const basegfx::B2DPolyPo
 }
 
 
-
 bool SvxShapePolyPolygon::getPropertyValueImpl( const OUString& rName, const SfxItemPropertySimpleEntry* pProperty,
                                                 css::uno::Any& rValue )
     throw(css::beans::UnknownPropertyException,
@@ -1241,8 +1234,6 @@ bool SvxShapePolyPolygon::getPropertyValueImpl( const OUString& rName, const Sfx
 }
 
 
-
-
 void SvxShapePolyPolygon::SetPolygon(const basegfx::B2DPolyPolygon& rNew) throw(uno::RuntimeException)
 {
     ::SolarMutexGuard aGuard;
@@ -1287,7 +1278,6 @@ SvxShapePolyPolygonBezier::~SvxShapePolyPolygonBezier() throw()
 }
 
 
-
 bool SvxShapePolyPolygonBezier::setPropertyValueImpl( const OUString& rName, const SfxItemPropertySimpleEntry* pProperty, const css::uno::Any& rValue ) throw(css::beans::UnknownPropertyException, css::beans::PropertyVetoException, css::lang::IllegalArgumentException, css::lang::WrappedTargetException, css::uno::RuntimeException)
 {
     switch( pProperty->nWID )
@@ -1330,7 +1320,6 @@ bool SvxShapePolyPolygonBezier::setPropertyValueImpl( const OUString& rName, con
 }
 
 
-
 bool SvxShapePolyPolygonBezier::getPropertyValueImpl( const OUString& rName, const SfxItemPropertySimpleEntry* pProperty, css::uno::Any& rValue ) throw(css::beans::UnknownPropertyException, css::lang::WrappedTargetException, css::uno::RuntimeException)
 {
     switch( pProperty->nWID )
@@ -1367,8 +1356,6 @@ bool SvxShapePolyPolygonBezier::getPropertyValueImpl( const OUString& rName, con
     }
     return true;
 }
-
-
 
 
 void SvxShapePolyPolygonBezier::SetPolygon(const basegfx::B2DPolyPolygon& rNew) throw(uno::RuntimeException)
@@ -1435,7 +1422,7 @@ bool SvxGraphicObject::setPropertyValueImpl( const OUString& rName, const SfxIte
                 SvMemoryStream  aMemStm;
                 Graphic         aGraphic;
 
-                aMemStm.SetBuffer( const_cast<css::uno::Sequence<sal_Int8> *>(pSeq)->getArray(), pSeq->getLength(), false, pSeq->getLength() );
+                aMemStm.SetBuffer( const_cast<css::uno::Sequence<sal_Int8> *>(pSeq)->getArray(), pSeq->getLength(), pSeq->getLength() );
 
                 if( GraphicConverter::Import( aMemStm, aGraphic ) == ERRCODE_NONE )
                 {
@@ -1493,10 +1480,10 @@ bool SvxGraphicObject::setPropertyValueImpl( const OUString& rName, const SfxIte
             {
                 // normal link
                 OUString            aFilterName;
-                const SfxFilter*    pSfxFilter = nullptr;
+                std::shared_ptr<const SfxFilter> pSfxFilter;
                 SfxMedium           aSfxMedium( aURL, referer_, StreamMode::READ | StreamMode::SHARE_DENYNONE );
 
-                SfxGetpApp()->GetFilterMatcher().GuessFilter( aSfxMedium, &pSfxFilter );
+                SfxGetpApp()->GetFilterMatcher().GuessFilter( aSfxMedium, pSfxFilter );
 
                 if( !pSfxFilter )
                 {
@@ -1657,7 +1644,6 @@ bool SvxGraphicObject::getPropertyValueImpl( const OUString& rName, const SfxIte
 }
 
 
-
 SvxShapeCaption::SvxShapeCaption( SdrObject* pObj ) throw()
 : SvxShapeText( pObj, getSvxMapProvider().GetMap(SVXMAP_CAPTION), getSvxMapProvider().GetPropertySet(SVXMAP_CAPTION, SdrObject::GetGlobalDrawObjectItemPool()) )
 {
@@ -1678,12 +1664,10 @@ SvxCustomShape::~SvxCustomShape() throw()
 }
 
 
-
 void SvxCustomShape::Create( SdrObject* pNewObj, SvxDrawPage* pNewPage )
 {
     SvxShapeText::Create( pNewObj, pNewPage );
 }
-
 
 
 uno::Any SAL_CALL SvxCustomShape::queryInterface( const uno::Type & rType )
@@ -1710,7 +1694,6 @@ void SAL_CALL SvxCustomShape::release() throw ( )
 {
     SvxShapeText::release();
 }
-
 
 
 uno::Sequence< uno::Type > SAL_CALL SvxCustomShape::getTypes()
@@ -1822,7 +1805,6 @@ void SAL_CALL SvxCustomShape::setPosition( const awt::Point& Position ) throw(un
 }
 
 
-
 awt::Size SAL_CALL SvxCustomShape::getSize() throw(uno::RuntimeException, std::exception)
 {
     return SvxShapeText::getSize();
@@ -1836,13 +1818,29 @@ void SAL_CALL SvxCustomShape::setSize( const awt::Size& rSize )
 }
 
 
-
-
 void SAL_CALL SvxCustomShape::setPropertyValue( const OUString& aPropertyName, const uno::Any& aValue )
     throw( beans::UnknownPropertyException, lang::WrappedTargetException, uno::RuntimeException, css::beans::PropertyVetoException, css::lang::IllegalArgumentException, std::exception)
 {
     ::SolarMutexGuard aGuard;
+
     SdrObject* pObject = mpObj.get();
+
+    // tdf#98163 Use a custom slot to have filter code flush the UNO
+    // API implementations of SdrObjCustomShape. Used e.g. by
+    // ~SdXMLCustomShapeContext, see there for more information
+    const OUString sFlushCustomShapeUnoApiObjects("FlushCustomShapeUnoApiObjects");
+    if(sFlushCustomShapeUnoApiObjects == aPropertyName)
+    {
+        SdrObjCustomShape* pTarget = dynamic_cast< SdrObjCustomShape* >(pObject);
+        if(pTarget)
+        {
+            // Luckily, the object causing problems in tdf#93994 is not the
+            // UNO API object, but the XCustomShapeEngine involved. This
+            // object is on-demand replacable and can be reset here. This
+            // will free the involved EditEngine and VirtualDevice.
+            pTarget->mxCustomShapeEngine.set(nullptr);
+        }
+    }
 
     bool bCustomShapeGeometry = pObject && aPropertyName == "CustomShapeGeometry";
 

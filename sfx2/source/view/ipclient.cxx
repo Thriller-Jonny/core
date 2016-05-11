@@ -73,9 +73,9 @@ class SfxBooleanFlagGuard
     bool& m_rFlag;
     bool  m_bLifeValue;
 public:
-    SfxBooleanFlagGuard( bool& bFlag, bool bLifeValue )
-    : m_rFlag( bFlag )
-    , m_bLifeValue( bLifeValue )
+    explicit SfxBooleanFlagGuard(bool& bFlag)
+        : m_rFlag( bFlag )
+        , m_bLifeValue( true )
     {
         m_rFlag = m_bLifeValue;
     }
@@ -245,7 +245,7 @@ void SAL_CALL SfxInPlaceClient_Impl::saveObject()
         // set non-reschedule progress to prevent problems when asynchronous calls are made
         // during storing of the embedded object
         uno::Reference< task::XStatusIndicatorFactory > xStatusIndicatorFactory =
-               task::StatusIndicatorFactory::createWithFrame( xContext, xFrame, sal_True/*DisableReschedule*/, sal_False/*AllowParentShow*/ );
+               task::StatusIndicatorFactory::createWithFrame( xContext, xFrame, true/*DisableReschedule*/, false/*AllowParentShow*/ );
 
         uno::Reference< beans::XPropertySet > xPropSet( xFrame, uno::UNO_QUERY );
         if ( xPropSet.is() )
@@ -333,9 +333,9 @@ sal_Bool SAL_CALL SfxInPlaceClient_Impl::canInplaceActivate()
 
     // we don't want to switch directly from outplace to inplace mode
     if ( m_xObject->getCurrentState() == embed::EmbedStates::ACTIVE || m_nAspect == embed::Aspects::MSOLE_ICON )
-        return sal_False;
+        return false;
 
-    return sal_True;
+    return true;
 }
 
 
@@ -499,7 +499,7 @@ void SAL_CALL SfxInPlaceClient_Impl::changedPlacement( const awt::Rectangle& aPo
     {
         // the calculation of the object area has not changed the object size
         // it should be done here then
-        SfxBooleanFlagGuard aGuard( m_bResizeNoScale, true );
+        SfxBooleanFlagGuard aGuard( m_bResizeNoScale );
 
         // new size of the object area without scaling
         Size aNewObjSize( Fraction( aNewLogicRect.GetWidth() ) / m_aScaleWidth,
@@ -593,9 +593,11 @@ void SfxInPlaceClient_Impl::SizeHasChanged()
 IMPL_LINK_NOARG_TYPED(SfxInPlaceClient_Impl, TimerHdl, Timer *, void)
 {
     if ( m_pClient && m_xObject.is() )
-        m_pClient->GetViewShell()->CheckIPClient_Impl( m_pClient, m_pClient->GetViewShell()->GetObjectShell()->GetVisArea() );
+    {
+        m_pClient->GetViewShell()->CheckIPClient_Impl(m_pClient,
+                m_pClient->GetViewShell()->GetObjectShell()->GetVisArea());
+    }
 }
-
 
 
 // SfxInPlaceClient
@@ -615,7 +617,6 @@ SfxInPlaceClient::SfxInPlaceClient( SfxViewShell* pViewShell, vcl::Window *pDraw
     m_pImp->m_aTimer.SetTimeout( SFX_CLIENTACTIVATE_TIMEOUT );
     m_pImp->m_aTimer.SetTimeoutHdl( LINK( m_pImp, SfxInPlaceClient_Impl, TimerHdl ) );
 }
-
 
 
 SfxInPlaceClient::~SfxInPlaceClient()
@@ -668,7 +669,7 @@ sal_Int64 SfxInPlaceClient::GetObjectMiscStatus() const
 }
 
 
-uno::Reference < embed::XEmbeddedObject > SfxInPlaceClient::GetObject() const
+const uno::Reference < embed::XEmbeddedObject >& SfxInPlaceClient::GetObject() const
 {
     return m_pImp->m_xObject;
 }
@@ -740,7 +741,7 @@ bool SfxInPlaceClient::SetObjArea( const Rectangle& rArea )
 }
 
 
-Rectangle SfxInPlaceClient::GetObjArea() const
+const Rectangle& SfxInPlaceClient::GetObjArea() const
 {
     return m_pImp->m_aObjArea;
 }
@@ -770,7 +771,7 @@ void SfxInPlaceClient::SetSizeScale( const Fraction & rScaleWidth, const Fractio
 }
 
 
-bool SfxInPlaceClient::SetObjAreaAndScale( const Rectangle& rArea, const Fraction& rScaleWidth, const Fraction& rScaleHeight )
+void SfxInPlaceClient::SetObjAreaAndScale( const Rectangle& rArea, const Fraction& rScaleWidth, const Fraction& rScaleHeight )
 {
     if( rArea != m_pImp->m_aObjArea || m_pImp->m_aScaleWidth != rScaleWidth || m_pImp->m_aScaleHeight != rScaleHeight )
     {
@@ -781,10 +782,7 @@ bool SfxInPlaceClient::SetObjAreaAndScale( const Rectangle& rArea, const Fractio
         m_pImp->SizeHasChanged();
 
         Invalidate();
-        return true;
     }
-
-    return false;
 }
 
 

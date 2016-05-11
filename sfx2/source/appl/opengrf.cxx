@@ -46,14 +46,11 @@
 #include <sfx2/sfxresid.hxx>
 
 
-
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::ui::dialogs;
 using namespace ::com::sun::star::uno;
 using namespace ::cppu;
-
-
 
 
 sal_uInt16  SvxOpenGrfErr2ResId(    short   err     )
@@ -215,8 +212,7 @@ void SvxOpenGraphicDialog::AsLink(bool bState)
     {
         try
         {
-            Any aAny; aAny <<= bState;
-            mpImpl->xCtrlAcc->setValue( ExtendedFilePickerElementIds::CHECKBOX_LINK, 0, aAny );
+            mpImpl->xCtrlAcc->setValue( ExtendedFilePickerElementIds::CHECKBOX_LINK, 0, Any(bState) );
         }
         catch(const IllegalArgumentException&)
         {

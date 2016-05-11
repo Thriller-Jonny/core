@@ -71,8 +71,6 @@
 
 #define PMGCHUNG_msOG       0x6d734f47      // Microsoft Office Animated GIF
 
-using namespace ::com::sun::star;
-
 using comphelper::string::getTokenCount;
 
 typedef ::std::vector< GraphicFilter* > FilterList_impl;
@@ -204,7 +202,7 @@ bool isPCT(SvStream& rStream, sal_uLong nStreamPos, sal_uLong nStreamLen)
 
         if (x1 > x2 || y1 > y2 || // bad bdbox
             (x1 == x2 && y1 == y2) || // 1 pixel picture
-            x2-x1 > 2048 || y2-y1 > 2048 ) // picture anormaly big
+            x2-x1 > 2048 || y2-y1 > 2048 ) // picture abnormally big
           bdBoxOk = false;
 
         // read version op
@@ -1121,7 +1119,8 @@ GraphicFilter::~GraphicFilter()
         }
         if( pFilterHdlList->empty() )
         {
-            delete pFilterHdlList, pFilterHdlList = nullptr;
+            delete pFilterHdlList;
+            pFilterHdlList = nullptr;
             delete pConfig;
         }
     }
@@ -1193,7 +1192,7 @@ OUString GraphicFilter::GetImportFormatTypeName( sal_uInt16 nFormat )
     return pConfig->GetImportFilterTypeName( nFormat );
 }
 
-#ifdef WNT
+#ifdef _WIN32
 OUString GraphicFilter::GetImportFormatMediaType( sal_uInt16 nFormat )
 {
     return pConfig->GetImportFormatMediaType( nFormat );
@@ -1255,9 +1254,9 @@ OUString GraphicFilter::GetExportFormatShortName( sal_uInt16 nFormat )
     return pConfig->GetExportFormatShortName( nFormat );
 }
 
-OUString GraphicFilter::GetExportWildcard( sal_uInt16 nFormat, sal_Int32 nEntry )
+OUString GraphicFilter::GetExportWildcard( sal_uInt16 nFormat )
 {
-    return pConfig->GetExportWildcard( nFormat, nEntry );
+    return pConfig->GetExportWildcard( nFormat, 0 );
 }
 
 bool GraphicFilter::IsExportPixelFormat( sal_uInt16 nFormat )
@@ -1327,7 +1326,7 @@ sal_uInt16 GraphicFilter::ImportGraphic( Graphic& rGraphic, const OUString& rPat
     sal_uInt16              nStatus;
     GraphicReader*          pContext = rGraphic.GetContext();
     GfxLinkType             eLinkType = GFX_LINK_TYPE_NONE;
-    bool                    bDummyContext = ( pContext == reinterpret_cast<GraphicReader*>(1) );
+    bool                    bDummyContext = rGraphic.IsDummyContext();
     const bool              bLinkSet = rGraphic.IsLink();
     FilterConfigItem*       pFilterConfigItem = nullptr;
 
@@ -1348,7 +1347,7 @@ sal_uInt16 GraphicFilter::ImportGraphic( Graphic& rGraphic, const OUString& rPat
         {
             if ( (*pFilterData)[ i ].Name == "PreviewSizeHint" )
             {
-                awt::Size aSize;
+                css::awt::Size aSize;
                 if ( (*pFilterData)[ i ].Value >>= aSize )
                 {
                     aPreviewSizeHint = Size( aSize.Width, aSize.Height );
@@ -1377,7 +1376,7 @@ sal_uInt16 GraphicFilter::ImportGraphic( Graphic& rGraphic, const OUString& rPat
     {
         if( bDummyContext )
         {
-            rGraphic.SetContext( nullptr );
+            rGraphic.SetDummyContext( false );
             nStreamBegin = 0;
         }
         else
@@ -1388,7 +1387,7 @@ sal_uInt16 GraphicFilter::ImportGraphic( Graphic& rGraphic, const OUString& rPat
         // if pending, return GRFILTER_OK in order to request more bytes
         if( rIStream.GetError() == ERRCODE_IO_PENDING )
         {
-            rGraphic.SetContext( reinterpret_cast<GraphicReader*>(1) );
+            rGraphic.SetDummyContext(true);
             rIStream.ResetError();
             rIStream.Seek( nStreamBegin );
             return (sal_uInt16) ImplSetError( GRFILTER_OK );
@@ -1419,8 +1418,8 @@ sal_uInt16 GraphicFilter::ImportGraphic( Graphic& rGraphic, const OUString& rPat
     {
         if( aFilterName.equalsIgnoreAsciiCase( IMP_GIF )  )
         {
-            if( rGraphic.GetContext() == reinterpret_cast<GraphicReader*>(1) )
-                rGraphic.SetContext( nullptr );
+            if( rGraphic.IsDummyContext())
+                rGraphic.SetDummyContext( false );
 
             if( !ImportGIF( rIStream, rGraphic ) )
                 nStatus = GRFILTER_FILTERERROR;
@@ -1429,8 +1428,8 @@ sal_uInt16 GraphicFilter::ImportGraphic( Graphic& rGraphic, const OUString& rPat
         }
         else if( aFilterName.equalsIgnoreAsciiCase( IMP_PNG ) )
         {
-            if ( rGraphic.GetContext() == reinterpret_cast<GraphicReader*>(1) )
-                rGraphic.SetContext( nullptr );
+            if( rGraphic.IsDummyContext())
+                rGraphic.SetDummyContext( false );
 
             vcl::PNGReader aPNGReader( rIStream );
 
@@ -1487,8 +1486,8 @@ sal_uInt16 GraphicFilter::ImportGraphic( Graphic& rGraphic, const OUString& rPat
         }
         else if( aFilterName.equalsIgnoreAsciiCase( IMP_JPEG ) )
         {
-            if( rGraphic.GetContext() == reinterpret_cast<GraphicReader*>(1) )
-                rGraphic.SetContext( nullptr );
+            if( rGraphic.IsDummyContext())
+                rGraphic.SetDummyContext( false );
 
             // set LOGSIZE flag always, if not explicitly disabled
             // (see #90508 and #106763)
@@ -1502,8 +1501,8 @@ sal_uInt16 GraphicFilter::ImportGraphic( Graphic& rGraphic, const OUString& rPat
         }
         else if( aFilterName.equalsIgnoreAsciiCase( IMP_SVG ) )
         {
-            if( rGraphic.GetContext() == reinterpret_cast<GraphicReader*>(1) )
-                rGraphic.SetContext( nullptr );
+            if( rGraphic.IsDummyContext())
+                rGraphic.SetDummyContext( false );
 
             const sal_uInt32 nStreamPosition(rIStream.Tell());
             const sal_uInt32 nStreamLength(rIStream.Seek(STREAM_SEEK_TO_END) - nStreamPosition);
@@ -1572,16 +1571,16 @@ sal_uInt16 GraphicFilter::ImportGraphic( Graphic& rGraphic, const OUString& rPat
         }
         else if( aFilterName.equalsIgnoreAsciiCase( IMP_XBM ) )
         {
-            if( rGraphic.GetContext() == reinterpret_cast<GraphicReader*>(1) )
-                rGraphic.SetContext( nullptr );
+            if( rGraphic.IsDummyContext())
+                rGraphic.SetDummyContext( false );
 
             if( !ImportXBM( rIStream, rGraphic ) )
                 nStatus = GRFILTER_FILTERERROR;
         }
         else if( aFilterName.equalsIgnoreAsciiCase( IMP_XPM ) )
         {
-            if( rGraphic.GetContext() == reinterpret_cast<GraphicReader*>(1) )
-                rGraphic.SetContext( nullptr );
+            if( rGraphic.IsDummyContext())
+                rGraphic.SetDummyContext( false );
 
             if( !ImportXPM( rIStream, rGraphic ) )
                 nStatus = GRFILTER_FILTERERROR;
@@ -1765,7 +1764,7 @@ sal_uInt16 GraphicFilter::ImportGraphic( Graphic& rGraphic, const OUString& rPat
         }
         if( nStatus == GRFILTER_OK )
         {
-            rGraphic.SetLink( GfxLink( pGraphicContent, nGraphicContentSize, eLinkType, true ) );
+            rGraphic.SetLink( GfxLink( pGraphicContent, nGraphicContentSize, eLinkType ) );
             bGraphicContentOwned = false; //ownership passed to the GfxLink
         }
     }
@@ -1789,7 +1788,7 @@ sal_uInt16 GraphicFilter::ImportGraphic( Graphic& rGraphic, const OUString& rPat
 }
 
 sal_uInt16 GraphicFilter::ExportGraphic( const Graphic& rGraphic, const INetURLObject& rPath,
-    sal_uInt16 nFormat, const uno::Sequence< beans::PropertyValue >* pFilterData )
+    sal_uInt16 nFormat, const css::uno::Sequence< css::beans::PropertyValue >* pFilterData )
 {
 #ifdef DISABLE_EXPORT
     (void) rGraphic;
@@ -1823,7 +1822,6 @@ sal_uInt16 GraphicFilter::ExportGraphic( const Graphic& rGraphic, const INetURLO
 #ifndef DISABLE_EXPORT
 
 extern "C" bool egiGraphicExport( SvStream& rStream, Graphic& rGraphic, FilterConfigItem* pConfigItem );
-extern "C" bool emeGraphicExport( SvStream& rStream, Graphic& rGraphic, FilterConfigItem* pConfigItem );
 extern "C" bool epsGraphicExport( SvStream& rStream, Graphic& rGraphic, FilterConfigItem* pConfigItem );
 extern "C" bool etiGraphicExport( SvStream& rStream, Graphic& rGraphic, FilterConfigItem* pConfigItem );
 
@@ -1832,7 +1830,7 @@ extern "C" bool etiGraphicExport( SvStream& rStream, Graphic& rGraphic, FilterCo
 #endif
 
 sal_uInt16 GraphicFilter::ExportGraphic( const Graphic& rGraphic, const OUString& rPath,
-    SvStream& rOStm, sal_uInt16 nFormat, const uno::Sequence< beans::PropertyValue >* pFilterData )
+    SvStream& rOStm, sal_uInt16 nFormat, const css::uno::Sequence< css::beans::PropertyValue >* pFilterData )
 {
 #ifdef DISABLE_EXPORT
     (void) rGraphic;
@@ -1866,7 +1864,7 @@ sal_uInt16 GraphicFilter::ExportGraphic( const Graphic& rGraphic, const OUString
     if( nFormat >= nFormatCount )
         return (sal_uInt16) ImplSetError( GRFILTER_FORMATERROR );
 
-    FilterConfigItem aConfigItem( const_cast<uno::Sequence< beans::PropertyValue >*>(pFilterData) );
+    FilterConfigItem aConfigItem( const_cast<css::uno::Sequence< css::beans::PropertyValue >*>(pFilterData) );
     OUString aFilterName( pConfig->GetExportFilterName( nFormat ) );
 #ifndef DISABLE_DYNLOADING
     OUString aExternalFilterName(pConfig->GetExternalFilterName(nFormat, true));
@@ -2041,11 +2039,11 @@ sal_uInt16 GraphicFilter::ExportGraphic( const Graphic& rGraphic, const OUString
                 bool bDone(false);
 
                 // do we have a native SVG RenderGraphic, whose data can be written directly?
-                const SvgDataPtr aSvgDataPtr(rGraphic.getSvgData());
+                const SvgDataPtr& aSvgDataPtr(rGraphic.getSvgData());
 
-                if(aSvgDataPtr.get() && aSvgDataPtr->getSvgDataArrayLength())
+                if (aSvgDataPtr.get() && aSvgDataPtr->getSvgDataArrayLength())
                 {
-                    rOStm.Write(aSvgDataPtr->getSvgDataArray().get(), aSvgDataPtr->getSvgDataArrayLength());
+                    rOStm.Write(aSvgDataPtr->getSvgDataArray().getConstArray(), aSvgDataPtr->getSvgDataArrayLength());
 
                     if( rOStm.GetError() )
                     {
@@ -2065,7 +2063,7 @@ sal_uInt16 GraphicFilter::ExportGraphic( const Graphic& rGraphic, const OUString
                         css::uno::Reference< css::uno::XComponentContext > xContext( ::comphelper::getProcessComponentContext() );
 
                         css::uno::Reference< css::xml::sax::XDocumentHandler > xSaxWriter(
-                            xml::sax::Writer::create( xContext ), uno::UNO_QUERY_THROW);
+                            css::xml::sax::Writer::create( xContext ), css::uno::UNO_QUERY_THROW);
                         css::uno::Sequence< css::uno::Any > aArguments( 1 );
                         aArguments[ 0 ] <<= aConfigItem.GetFilterData();
                         css::uno::Reference< css::svg::XSVGWriter > xSVGWriter(
@@ -2112,22 +2110,17 @@ sal_uInt16 GraphicFilter::ExportGraphic( const Graphic& rGraphic, const OUString
                 osl::Module aLibrary( aPhysicalName );
 
                 PFilterCall pFunc = nullptr;
-                OUString tmpFilterName = aExternalFilterName;
-                if (tmpFilterName == "egi")
+                if (aExternalFilterName == "egi")
                     pFunc = reinterpret_cast<PFilterCall>(aLibrary.getFunctionSymbol("egiGraphicExport"));
-                else if (tmpFilterName == "eme")
-                    pFunc = reinterpret_cast<PFilterCall>(aLibrary.getFunctionSymbol("emeGraphicExport"));
-                else if (tmpFilterName == "eps")
+                else if (aExternalFilterName == "eps")
                     pFunc = reinterpret_cast<PFilterCall>(aLibrary.getFunctionSymbol("epsGraphicExport"));
-                else if (tmpFilterName == "eti")
+                else if (aExternalFilterName == "eti")
                     pFunc = reinterpret_cast<PFilterCall>(aLibrary.getFunctionSymbol("etiGraphicExport"));
                  // Execute dialog in DLL
  #else
                 PFilterCall pFunc = NULL;
                 if (aFilterName == "egi")
                     pFunc = egiGraphicExport;
-                else if (aFilterName == "eme")
-                    pFunc = emeGraphicExport;
                 else if (aFilterName == "eps")
                     pFunc = epsGraphicExport;
                 else if (aFilterName == "eti")
@@ -2298,7 +2291,7 @@ sal_uInt16 GraphicFilter::compressAsPNG(const Graphic& rGraphic, SvStream& rOutp
 {
     nCompression = MinMax(nCompression, 0, 100);
 
-    uno::Sequence<beans::PropertyValue> aFilterData(1);
+    css::uno::Sequence< css::beans::PropertyValue > aFilterData(1);
     aFilterData[0].Name = "Compression";
     aFilterData[0].Value <<= nCompression;
 

@@ -48,7 +48,6 @@ class SdrObject;
 
 class SVX_DLLPRIVATE FmFormPageImpl
 {
-    ::std::map< css::uno::Reference< css::form::XFormComponent >,SdrObject* > m_aComponentMap;
     css::uno::Reference< css::form::XForm >               xCurrentForm;
     css::uno::Reference< css::form::XForms >              m_xForms;
     css::uno::WeakReference< css::container::XMap >       m_aControlShapeMap;
@@ -66,7 +65,7 @@ public:
     void initFrom( FmFormPageImpl& i_foreignImpl );
 
     //  nur wichtig fuer den DesignMode
-    void setCurForm(css::uno::Reference< css::form::XForm> xForm);
+    void setCurForm(const css::uno::Reference< css::form::XForm>& xForm);
     css::uno::Reference< css::form::XForm> getDefaultForm();
 
     /** finds a place in the form component hierarchy where to insert the given component

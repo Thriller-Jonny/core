@@ -236,7 +236,7 @@ void    SvxHtmlOptions::ImplCommit()
             case 15: bSet = 0 != (pImp->nFlags & HTMLCFG_NUMBERS_ENGLISH_US);break;//"Import/NumbersEnglishUS"
         }
         if(nProp < 2 || ( nProp > 9 && nProp < 14 ) || nProp == 15)
-            pValues[nProp].setValue(&bSet, cppu::UnoType<bool>::get());
+            pValues[nProp] <<= bSet;
     }
     PutProperties(aNames, aValues);
 }
@@ -264,16 +264,10 @@ void SvxHtmlOptions::SetFontSize(sal_uInt16 nPos, sal_uInt16 nSize)
 }
 
 
-
-
-
-
 bool SvxHtmlOptions::IsImportUnknown() const
 {
     return 0 != (pImp->nFlags & HTMLCFG_UNKNOWN_TAGS) ;
 }
-
-
 
 
 void SvxHtmlOptions::SetImportUnknown(bool bSet)
@@ -286,22 +280,16 @@ void SvxHtmlOptions::SetImportUnknown(bool bSet)
 }
 
 
-
-
 sal_uInt16  SvxHtmlOptions::GetExportMode() const
 {
     return (sal_uInt16)pImp->nExportMode;
 }
 
 
-
-
 bool SvxHtmlOptions::IsStarBasic() const
 {
     return 0 != (pImp->nFlags & HTMLCFG_STAR_BASIC) ;
 }
-
-
 
 
 void SvxHtmlOptions::SetStarBasic(bool bSet)

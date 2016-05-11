@@ -21,19 +21,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "osl/module.hxx"
+#include <osl/module.hxx>
 
-#include "unx/salunx.h"
-#include "unx/saldata.hxx"
-#include "unx/saldisp.hxx"
-#include "generic/geninst.h"
-#include "generic/genpspgraphics.h"
-#include "unx/salframe.h"
-#include "generic/genprn.h"
-#include "unx/sm.hxx"
+#include <unx/salunx.h>
+#include <unx/saldata.hxx>
+#include <unx/saldisp.hxx>
+#include <unx/geninst.h>
+#include <unx/genpspgraphics.h>
+#include <unx/salframe.h>
+#include <unx/genprn.h>
+#include <unx/sm.hxx>
 
-#include "vcl/apptypes.hxx"
-#include "vcl/helper.hxx"
+#include <vcl/inputtypes.hxx>
+#include <vcl/helper.hxx>
 
 #include "salwtype.hxx"
 #include <sal/macros.h>
@@ -63,6 +63,15 @@ extern "C"
 
         return pInstance;
     }
+}
+
+X11SalInstance::X11SalInstance(SalYieldMutex* pMutex)
+    : SalGenericInstance(pMutex)
+    , mpXLib(nullptr)
+{
+    ImplSVData* pSVData = ImplGetSVData();
+    delete pSVData->maAppData.mpToolkitName;
+    pSVData->maAppData.mpToolkitName = new OUString("x11");
 }
 
 X11SalInstance::~X11SalInstance()
@@ -208,7 +217,7 @@ void X11SalInstance::PostPrintersChanged()
     const std::list< SalFrame* >& rList = pDisp->getFrames();
     for( std::list< SalFrame* >::const_iterator it = rList.begin();
          it != rList.end(); ++it )
-        pDisp->SendInternalEvent( *it, nullptr, SALEVENT_PRINTERCHANGED );
+        pDisp->SendInternalEvent( *it, nullptr, SalEvent::PrinterChanged );
 }
 
 GenPspGraphics *X11SalInstance::CreatePrintGraphics()

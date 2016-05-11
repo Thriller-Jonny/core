@@ -55,7 +55,7 @@
 #include <comphelper/servicehelper.hxx>
 #include <comphelper/processfactory.hxx>
 #include <tools/diagnose_ex.h>
-
+#include <o3tl/make_unique.hxx>
 using namespace com::sun::star;
 
 class SdPageObjsTLB::IconProvider
@@ -81,7 +81,6 @@ bool SdPageObjsTLB::IsInDrag()
 
 SotClipboardFormatId SdPageObjsTLB::SdPageObjsTransferable::mnListBoxDropFormatId = static_cast<SotClipboardFormatId>(SAL_MAX_UINT32);
 
-// - SdPageObjsTLB::SdPageObjsTransferable -
 
 SdPageObjsTLB::SdPageObjsTransferable::SdPageObjsTransferable(
     SdPageObjsTLB& rParent,
@@ -373,8 +372,7 @@ void SdPageObjsTLB::InitEntry(SvTreeListEntry* pEntry,
     sal_uInt16 nColToHilite = 1; //0==Bitmap;1=="Spalte1";2=="Spalte2"
     SvTreeListBox::InitEntry( pEntry, rStr, rImg1, rImg2, eButtonKind );
     SvLBoxString& rCol = static_cast<SvLBoxString&>(pEntry->GetItem( nColToHilite ));
-    std::unique_ptr<SvLBoxString> pStr(new SvLBoxString(pEntry, 0, rCol.GetText()));
-    pEntry->ReplaceItem(std::move(pStr), nColToHilite );
+    pEntry->ReplaceItem(o3tl::make_unique<SvLBoxString>(rCol.GetText()), nColToHilite );
 }
 
 void SdPageObjsTLB::SaveExpandedTreeItemState(SvTreeListEntry* pEntry, std::vector<OUString>& vectTreeItem)
@@ -602,8 +600,7 @@ void SdPageObjsTLB::AddShapeList (
     SdrObjListIter aIter(
         rList,
         !rList.HasObjectNavigationOrder() /* use navigation order, if available */,
-        IM_FLAT,
-        false /*not reverse*/);
+        IM_FLAT);
 
     bool  bMarked=false;
     if(bisInSdNavigatorWin)
@@ -1010,7 +1007,7 @@ SdDrawDocument* SdPageObjsTLB::GetBookmarkDoc(SfxMedium* pMed)
             // in this mode the document is owned and controlled by the SdDrawDocument
             // it can be released by calling the corresponding CloseBookmarkDoc method
             // successful creation of a document makes this the owner of the medium
-            mpBookmarkDoc = const_cast<SdDrawDocument*>(mpDoc)->OpenBookmarkDoc(*mpMedium);
+            mpBookmarkDoc = const_cast<SdDrawDocument*>(mpDoc)->OpenBookmarkDoc(mpMedium);
 
         if ( !mpBookmarkDoc )
         {
@@ -1109,7 +1106,7 @@ void SdPageObjsTLB::KeyInput( const KeyEvent& rKEvt )
             sd::DrawDocShell* pSdDrawDocShell = SdNavigatorWin::GetDrawDocShell(mpDoc);
             if (pSdDrawDocShell)
             {
-                pSdDrawDocShell->GotoTreeBookmark(aStr);
+                pSdDrawDocShell->GetObjectIsmarked(aStr, true);
                 bMarked = pSdDrawDocShell->GetObjectIsmarked(aStr);
             }
             pNewEntry->SetMarked(bMarked);

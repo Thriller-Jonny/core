@@ -71,7 +71,6 @@
 #include <unordered_set>
 #include <vector>
 #include <boost/checked_delete.hpp>
-#include <boost/noncopyable.hpp>
 #include <mdds/flat_segment_tree.hpp>
 
 using namespace ::com::sun::star;
@@ -219,7 +218,7 @@ struct ScSortInfo
 };
 IMPL_FIXEDMEMPOOL_NEWDEL( ScSortInfo )
 
-class ScSortInfoArray : boost::noncopyable
+class ScSortInfoArray
 {
 public:
 
@@ -227,11 +226,10 @@ public:
     {
         ScRefCellValue maCell;
         const sc::CellTextAttr* mpAttr;
-        const SvtBroadcaster* mpBroadcaster;
         const ScPostIt* mpNote;
         const ScPatternAttr* mpPattern;
 
-        Cell() : mpAttr(nullptr), mpBroadcaster(nullptr), mpNote(nullptr), mpPattern(nullptr) {}
+        Cell() : mpAttr(nullptr), mpNote(nullptr), mpPattern(nullptr) {}
     };
 
     struct Row
@@ -260,6 +258,9 @@ private:
     bool mbUpdateRefs;
 
 public:
+    ScSortInfoArray(const ScSortInfoArray&) = delete;
+    const ScSortInfoArray& operator=(const ScSortInfoArray&) = delete;
+
     ScSortInfoArray( sal_uInt16 nSorts, SCCOLROW nInd1, SCCOLROW nInd2 ) :
         pppInfo(nullptr),
         nCount( nInd2 - nInd1 + 1 ), nStart( nInd1 ),
@@ -414,7 +415,7 @@ public:
 namespace {
 
 void initDataRows(
-    ScSortInfoArray& rArray, ScTable& rTab, ScColumn* pCols,
+    ScSortInfoArray& rArray, ScTable& rTab, ScColContainer& rCols,
     SCCOL nCol1, SCROW nRow1, SCCOL nCol2, SCROW nRow2,
     bool bPattern, bool bHiddenFiltered )
 {
@@ -423,7 +424,7 @@ void initDataRows(
 
     for (SCCOL nCol = nCol1; nCol <= nCol2; ++nCol)
     {
-        ScColumn& rCol = pCols[nCol];
+        ScColumn& rCol = rCols[nCol];
 
         // Skip reordering of cell formats if the whole span is on the same pattern entry.
         bool bUniformPattern = rCol.GetPatternCount(nRow1, nRow2) < 2u;
@@ -434,10 +435,8 @@ void initDataRows(
         {
             ScSortInfoArray::Row& rRow = *rRows[nRow-nRow1];
             ScSortInfoArray::Cell& rCell = rRow.maCells[nCol-nCol1];
-
             rCell.maCell = rCol.GetCellValue(aBlockPos, nRow);
             rCell.mpAttr = rCol.GetCellTextAttr(aBlockPos, nRow);
-            rCell.mpBroadcaster = rCol.GetBroadcaster(aBlockPos, nRow);
             rCell.mpNote = rCol.GetCellNote(aBlockPos, nRow);
 
             if (!bUniformPattern && bPattern)
@@ -541,7 +540,7 @@ ScSortInfoArray* ScTable::CreateSortInfoArray(
 
 namespace {
 
-struct SortedColumn : boost::noncopyable
+struct SortedColumn
 {
     typedef mdds::flat_segment_tree<SCROW, const ScPatternAttr*> PatRangeType;
 
@@ -552,6 +551,9 @@ struct SortedColumn : boost::noncopyable
 
     PatRangeType maPatterns;
     PatRangeType::const_iterator miPatternPos;
+
+    SortedColumn(const SortedColumn&) = delete;
+    const SortedColumn operator=(const SortedColumn&) = delete;
 
     explicit SortedColumn( size_t nTopEmptyRows ) :
         maCells(nTopEmptyRows),
@@ -650,12 +652,12 @@ void ScTable::DestroySortCollator()
 
 namespace {
 
-template<typename _Hint, typename _ReorderMap, typename _Index>
-class ReorderNotifier : std::unary_function<SvtListener*, void>
+template<typename Hint, typename ReorderMap, typename Index>
+class ReorderNotifier : public std::unary_function<SvtListener*, void>
 {
-    _Hint maHint;
+    Hint maHint;
 public:
-    ReorderNotifier( const _ReorderMap& rMap, SCTAB nTab, _Index nPos1, _Index nPos2 ) :
+    ReorderNotifier( const ReorderMap& rMap, SCTAB nTab, Index nPos1, Index nPos2 ) :
         maHint(rMap, nTab, nPos1, nPos2) {}
 
     void operator() ( SvtListener* p )
@@ -664,7 +666,7 @@ public:
     }
 };
 
-class StartListeningNotifier : std::unary_function<SvtListener*, void>
+class StartListeningNotifier : public std::unary_function<SvtListener*, void>
 {
     sc::RefStartListeningHint maHint;
 public:
@@ -676,7 +678,7 @@ public:
     }
 };
 
-class StopListeningNotifier : std::unary_function<SvtListener*, void>
+class StopListeningNotifier : public std::unary_function<SvtListener*, void>
 {
     sc::RefStopListeningHint maHint;
 public:
@@ -688,7 +690,7 @@ public:
     }
 };
 
-class FormulaGroupPosCollector : std::unary_function<SvtListener*, void>
+class FormulaGroupPosCollector : public std::unary_function<SvtListener*, void>
 {
     sc::RefQueryFormulaGroup& mrQuery;
 
@@ -705,10 +707,11 @@ void fillSortedColumnArray(
     std::vector<std::unique_ptr<SortedColumn>>& rSortedCols,
     SortedRowFlags& rRowFlags,
     std::vector<SvtListener*>& rCellListeners,
-    ScSortInfoArray* pArray, SCTAB nTab, SCCOL nCol1, SCCOL nCol2, ScProgress* pProgress )
+    ScSortInfoArray* pArray, SCTAB nTab, SCCOL nCol1, SCCOL nCol2, ScProgress* pProgress, const ScTable* pTable )
 {
     SCROW nRow1 = pArray->GetStart();
     ScSortInfoArray::RowsType* pRows = pArray->GetDataRows();
+    std::vector<SCCOLROW> aOrderIndices = pArray->GetOrderIndices();
 
     size_t nColCount = nCol2 - nCol1 + 1;
     std::vector<std::unique_ptr<SortedColumn>> aSortedCols; // storage for copied cells.
@@ -751,7 +754,7 @@ void fillSortedColumnArray(
                     assert(rCell.mpAttr);
                     ScAddress aOldPos = rCell.maCell.mpFormula->aPos;
 
-                    ScFormulaCell* pNew = rCell.maCell.mpFormula->Clone( aCellPos, SC_CLONECELL_DEFAULT);
+                    ScFormulaCell* pNew = rCell.maCell.mpFormula->Clone( aCellPos );
                     if (pArray->IsUpdateRefs())
                     {
                         pNew->CopyAllBroadcasters(*rCell.maCell.mpFormula);
@@ -791,10 +794,11 @@ void fillSortedColumnArray(
                 // At this point each broadcaster instance is managed by 2
                 // containers. We will release those in the original storage
                 // below before transferring them to the document.
+                const SvtBroadcaster* pBroadcaster = pTable->GetBroadcaster( nCol1 + j, aOrderIndices[i]);
                 sc::BroadcasterStoreType& rBCStore = aSortedCols.at(j).get()->maBroadcasters;
-                if (rCell.mpBroadcaster)
+                if (pBroadcaster)
                     // A const pointer would be implicitly converted to a bool type.
-                    rBCStore.push_back(const_cast<SvtBroadcaster*>(rCell.mpBroadcaster));
+                    rBCStore.push_back(const_cast<SvtBroadcaster*>(pBroadcaster));
                 else
                     rBCStore.push_back_empty();
             }
@@ -1087,7 +1091,7 @@ void ScTable::SortReorderByRow(
     // a copy before updating the document.
     std::vector<std::unique_ptr<SortedColumn>> aSortedCols; // storage for copied cells.
     SortedRowFlags aRowFlags;
-    fillSortedColumnArray(aSortedCols, aRowFlags, aCellListeners, pArray, nTab, nCol1, nCol2, pProgress);
+    fillSortedColumnArray(aSortedCols, aRowFlags, aCellListeners, pArray, nTab, nCol1, nCol2, pProgress, this);
 
     for (size_t i = 0, n = aSortedCols.size(); i < n; ++i)
     {
@@ -1130,7 +1134,7 @@ void ScTable::SortReorderByRow(
 
             for (it = aSpans.begin(); it != itEnd; ++it)
             {
-                aCol[nThisCol].SetPatternArea(it->mnRow1, it->mnRow2, *it->mpPattern, true);
+                aCol[nThisCol].SetPatternArea(it->mnRow1, it->mnRow2, *it->mpPattern);
                 pDocument->GetPool()->Remove(*it->mpPattern);
             }
         }
@@ -1156,7 +1160,8 @@ void ScTable::SortReorderByRow(
 
         aSpans = sc::toSpanArray<SCROW,sc::RowSpan>(aRowFlags.maRowsFiltered, nRow1);
 
-        it = aSpans.begin(), itEnd = aSpans.end();
+        it = aSpans.begin();
+        itEnd = aSpans.end();
         for (; it != itEnd; ++it)
             SetRowFiltered(it->mnRow1, it->mnRow2, true);
     }
@@ -1273,7 +1278,7 @@ void ScTable::SortReorderByRowRefUpdate(
     std::vector<std::unique_ptr<SortedColumn>> aSortedCols; // storage for copied cells.
     SortedRowFlags aRowFlags;
     std::vector<SvtListener*> aListenersDummy;
-    fillSortedColumnArray(aSortedCols, aRowFlags, aListenersDummy, pArray, nTab, nCol1, nCol2, pProgress);
+    fillSortedColumnArray(aSortedCols, aRowFlags, aListenersDummy, pArray, nTab, nCol1, nCol2, pProgress, this);
 
     for (size_t i = 0, n = aSortedCols.size(); i < n; ++i)
     {
@@ -1327,7 +1332,7 @@ void ScTable::SortReorderByRowRefUpdate(
 
             for (it = aSpans.begin(); it != itEnd; ++it)
             {
-                aCol[nThisCol].SetPatternArea(it->mnRow1, it->mnRow2, *it->mpPattern, true);
+                aCol[nThisCol].SetPatternArea(it->mnRow1, it->mnRow2, *it->mpPattern);
                 pDocument->GetPool()->Remove(*it->mpPattern);
             }
         }
@@ -1353,7 +1358,8 @@ void ScTable::SortReorderByRowRefUpdate(
 
         aSpans = sc::toSpanArray<SCROW,sc::RowSpan>(aRowFlags.maRowsFiltered, nRow1);
 
-        it = aSpans.begin(), itEnd = aSpans.end();
+        it = aSpans.begin();
+        itEnd = aSpans.end();
         for (; it != itEnd; ++it)
             SetRowFiltered(it->mnRow1, it->mnRow2, true);
     }
@@ -1894,7 +1900,7 @@ static void lcl_RemoveNumberFormat( ScTable* pTab, SCCOL nCol, SCROW nRow )
         SfxItemSet& rSet = aNewPattern.GetItemSet();
         rSet.ClearItem( ATTR_VALUE_FORMAT );
         rSet.ClearItem( ATTR_LANGUAGE_FORMAT );
-        pTab->SetPattern( nCol, nRow, aNewPattern, true );
+        pTab->SetPattern( nCol, nRow, aNewPattern );
     }
 }
 
@@ -1955,7 +1961,7 @@ bool ScTable::DoSubTotals( ScSubTotalParam& rParam )
                                 //TODO: sort?
 
     ScStyleSheet* pStyle = static_cast<ScStyleSheet*>(pDocument->GetStyleSheetPool()->Find(
-                                ScGlobal::GetRscString(STR_STYLENAME_RESULT), SFX_STYLE_FAMILY_PARA ));
+                                ScGlobal::GetRscString(STR_STYLENAME_RESULT), SfxStyleFamily::Para ));
 
     bool bSpaceLeft = true;                                         // Success when inserting?
 
@@ -2211,20 +2217,20 @@ class QueryEvaluator
         return false;
     }
 
-    bool isRealRegExp(const ScQueryEntry& rEntry) const
+    bool isRealWildOrRegExp(const ScQueryEntry& rEntry) const
     {
-        if (!mrParam.bRegExp)
+        if (mrParam.eSearchType == utl::SearchParam::SRCH_NORMAL)
             return false;
 
         return isTextMatchOp(rEntry);
     }
 
-    bool isTestRegExp(const ScQueryEntry& rEntry) const
+    bool isTestWildOrRegExp(const ScQueryEntry& rEntry) const
     {
         if (!mpTestEqualCondition)
             return false;
 
-        if (!mrParam.bRegExp)
+        if (mrParam.eSearchType == utl::SearchParam::SRCH_NORMAL)
             return false;
 
         return (rEntry.eOp == SC_LESS_EQUAL || rEntry.eOp == SC_GREATER_EQUAL);
@@ -2407,10 +2413,10 @@ public:
             aCellStr = mrStrPool.intern(aStr);
         }
 
-        bool bRealRegExp = isRealRegExp(rEntry);
-        bool bTestRegExp = isTestRegExp(rEntry);
+        bool bRealWildOrRegExp = isRealWildOrRegExp(rEntry);
+        bool bTestWildOrRegExp = isTestWildOrRegExp(rEntry);
 
-        if ( bRealRegExp || bTestRegExp )
+        if ( bRealWildOrRegExp || bTestWildOrRegExp )
         {
             sal_Int32 nStart = 0;
             sal_Int32 nEnd   = aCellStr.getLength();
@@ -2421,49 +2427,51 @@ public:
             {
                 nEnd = 0;
                 nStart = aCellStr.getLength();
-                bMatch = rEntry.GetSearchTextPtr( mrParam.bCaseSens )
+                bMatch = rEntry.GetSearchTextPtr( mrParam.eSearchType, mrParam.bCaseSens, bMatchWholeCell )
                     ->SearchBackward(aCellStr.getString(), &nStart, &nEnd);
             }
             else
             {
-                bMatch = rEntry.GetSearchTextPtr( mrParam.bCaseSens )
+                bMatch = rEntry.GetSearchTextPtr( mrParam.eSearchType, mrParam.bCaseSens, bMatchWholeCell )
                     ->SearchForward(aCellStr.getString(), &nStart, &nEnd);
             }
             if ( bMatch && bMatchWholeCell
                     && (nStart != 0 || nEnd != aCellStr.getLength()) )
                 bMatch = false;    // RegExp must match entire cell string
-            if ( bRealRegExp )
-                switch (rEntry.eOp)
+            if ( bRealWildOrRegExp )
             {
-                case SC_EQUAL:
-                case SC_CONTAINS:
-                    bOk = bMatch;
-                    break;
-                case SC_NOT_EQUAL:
-                case SC_DOES_NOT_CONTAIN:
-                    bOk = !bMatch;
-                    break;
-                case SC_BEGINS_WITH:
-                    bOk = ( bMatch && (nStart == 0) );
-                    break;
-                case SC_DOES_NOT_BEGIN_WITH:
-                    bOk = !( bMatch && (nStart == 0) );
-                    break;
-                case SC_ENDS_WITH:
-                    bOk = ( bMatch && (nEnd == aCellStr.getLength()) );
-                    break;
-                case SC_DOES_NOT_END_WITH:
-                    bOk = !( bMatch && (nEnd == aCellStr.getLength()) );
-                    break;
-                default:
-                    {
-                        // added to avoid warnings
-                    }
+                switch (rEntry.eOp)
+                {
+                    case SC_EQUAL:
+                    case SC_CONTAINS:
+                        bOk = bMatch;
+                        break;
+                    case SC_NOT_EQUAL:
+                    case SC_DOES_NOT_CONTAIN:
+                        bOk = !bMatch;
+                        break;
+                    case SC_BEGINS_WITH:
+                        bOk = ( bMatch && (nStart == 0) );
+                        break;
+                    case SC_DOES_NOT_BEGIN_WITH:
+                        bOk = !( bMatch && (nStart == 0) );
+                        break;
+                    case SC_ENDS_WITH:
+                        bOk = ( bMatch && (nEnd == aCellStr.getLength()) );
+                        break;
+                    case SC_DOES_NOT_END_WITH:
+                        bOk = !( bMatch && (nEnd == aCellStr.getLength()) );
+                        break;
+                    default:
+                        {
+                            // added to avoid warnings
+                        }
+                }
             }
             else
                 bTestEqual = bMatch;
         }
-        if ( !bRealRegExp )
+        if ( !bRealWildOrRegExp )
         {
             // Simple string matching i.e. no regexp match.
             if (isTextMatchOp(rEntry))
@@ -3105,7 +3113,6 @@ bool ScTable::CreateStarQuery(SCCOL nCol1, SCROW nRow1, SCCOL nCol2, SCROW nRow2
         return false;
 
     bool bValid;
-    bool bFound;
     OUString aCellStr;
     SCSIZE nIndex = 0;
     SCROW nRow = nRow1;
@@ -3141,7 +3148,7 @@ bool ScTable::CreateStarQuery(SCCOL nCol1, SCROW nRow1, SCCOL nCol2, SCROW nRow2
         // Second column field name
         if ((nIndex < 1) || bValid)
         {
-            bFound = false;
+            bool bFound = false;
             GetUpperCellString(nCol1 + 1, nRow, aCellStr);
             for (SCCOL i=rQueryParam.nCol1; (i <= nDBCol2) && (!bFound); i++)
             {
@@ -3163,7 +3170,6 @@ bool ScTable::CreateStarQuery(SCCOL nCol1, SCROW nRow1, SCCOL nCol2, SCROW nRow2
         // Third column operator =<>...
         if (bValid)
         {
-            bFound = false;
             GetUpperCellString(nCol1 + 2, nRow, aCellStr);
             if (aCellStr.startsWith("<"))
             {

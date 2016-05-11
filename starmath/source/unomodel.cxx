@@ -61,7 +61,7 @@ using namespace ::com::sun::star::script;
 SmPrintUIOptions::SmPrintUIOptions()
 {
     ResStringArray      aLocalizedStrings( SmResId( RID_PRINTUIOPTIONS ) );
-    SAL_WARN_IF( aLocalizedStrings.Count() < 18, "starmath", "resource incomplete" );
+    SAL_WARN_IF( aLocalizedStrings.Count() < 9, "starmath", "resource incomplete" );
     if( aLocalizedStrings.Count() < 9 ) // bad resource ?
         return;
 
@@ -75,7 +75,7 @@ SmPrintUIOptions::SmPrintUIOptions()
 
     // create sequence of print UI options
     // (Actually IsIgnoreSpacesRight is a parser option. Without it we need only 8 properties here.)
-    m_aUIProperties.realloc( nNumProps );
+    m_aUIProperties.resize( nNumProps );
 
     // load the math PrinterOptions into the custom tab
     m_aUIProperties[nIdx].Name = "OptionsUIFile";
@@ -145,13 +145,11 @@ SmPrintUIOptions::SmPrintUIOptions()
 
     Sequence< PropertyValue > aHintNoLayoutPage( 1 );
     aHintNoLayoutPage[0].Name = "HintNoLayoutPage";
-    aHintNoLayoutPage[0].Value = makeAny( sal_True );
+    aHintNoLayoutPage[0].Value = makeAny( true );
     m_aUIProperties[nIdx++].Value <<= aHintNoLayoutPage;
 
     assert(nIdx == nNumProps);
 }
-
-
 
 
 // class SmModel
@@ -389,9 +387,9 @@ static sal_Int16 lcl_AnyToINT16(const uno::Any& rAny)
 
     sal_Int16 nRet = 0;
     if( eType == uno::TypeClass_DOUBLE )
-        nRet = (sal_Int16)*static_cast<double const *>(rAny.getValue());
+        nRet = static_cast<sal_Int16>(*static_cast<double const *>(rAny.getValue()));
     else if( eType == uno::TypeClass_FLOAT )
-        nRet = (sal_Int16)*static_cast<float const *>(rAny.getValue());
+        nRet = static_cast<sal_Int16>(*static_cast<float const *>(rAny.getValue()));
     else
         rAny >>= nRet;
     return nRet;
@@ -454,13 +452,13 @@ void SmModel::_setPropertyValues(const PropertyMapEntry** ppEntries, const Any* 
                 if(sFontName.isEmpty())
                     throw IllegalArgumentException();
 
-                if(OUString(aFormat.GetFont((*ppEntries)->mnMemberId).GetName()) != sFontName)
+                if(OUString(aFormat.GetFont((*ppEntries)->mnMemberId).GetFamilyName()) != sFontName)
                 {
                     const SmFace rOld = aFormat.GetFont((*ppEntries)->mnMemberId);
 
-                    SmFace aSet( sFontName, rOld.GetSize() );
+                    SmFace aSet( sFontName, rOld.GetFontSize() );
                     aSet.SetBorderWidth( rOld.GetBorderWidth() );
-                    aSet.SetAlign( ALIGN_BASELINE );
+                    aSet.SetAlignment( ALIGN_BASELINE );
                     aFormat.SetFont( (*ppEntries)->mnMemberId, aSet );
                 }
             }
@@ -552,7 +550,7 @@ void SmModel::_setPropertyValues(const PropertyMapEntry** ppEntries, const Any* 
                 *pValues >>= nVal;
                 if(nVal < 0 || nVal > 2)
                     throw IllegalArgumentException();
-                aFormat.SetHorAlign((SmHorAlign)nVal);
+                aFormat.SetHorAlign(static_cast<SmHorAlign>(nVal));
             }
             break;
 
@@ -661,7 +659,7 @@ void SmModel::_setPropertyValues(const PropertyMapEntry** ppEntries, const Any* 
                     for (sal_uInt32 i = 0; i < nSize ; i++, pDescriptor++)
                     {
                         vcl::Font aFont;
-                        aFont.SetName ( pDescriptor->sFontName );
+                        aFont.SetFamilyName ( pDescriptor->sFontName );
                         aFont.SetCharSet ( static_cast < rtl_TextEncoding > (pDescriptor->nCharSet) );
                         aFont.SetFamily ( static_cast < FontFamily > (pDescriptor->nFamily ) );
                         aFont.SetPitch  ( static_cast < FontPitch >  (pDescriptor->nPitch ) );
@@ -727,7 +725,7 @@ void SmModel::_getPropertyValues( const PropertyMapEntry **ppEntries, Any *pValu
             case HANDLE_CUSTOM_FONT_NAME_FIXED             :
             {
                 const SmFace &  rFace = aFormat.GetFont((*ppEntries)->mnMemberId);
-                *pValue <<= OUString(rFace.GetName());
+                *pValue <<= OUString(rFace.GetFamilyName());
             }
             break;
             case HANDLE_CUSTOM_FONT_FIXED_POSTURE:
@@ -739,8 +737,7 @@ void SmModel::_getPropertyValues( const PropertyMapEntry **ppEntries, Any *pValu
             case HANDLE_FONT_TEXT_POSTURE        :
             {
                 const SmFace &  rFace = aFormat.GetFont((*ppEntries)->mnMemberId);
-                bool bVal = IsItalic( rFace );
-                (*pValue).setValue(&bVal, (*ppEntries)->maType);
+                *pValue <<= IsItalic( rFace );
             }
             break;
             case HANDLE_CUSTOM_FONT_FIXED_WEIGHT :
@@ -752,8 +749,7 @@ void SmModel::_getPropertyValues( const PropertyMapEntry **ppEntries, Any *pValu
             case HANDLE_FONT_TEXT_WEIGHT         :
             {
                 const SmFace &  rFace = aFormat.GetFont((*ppEntries)->mnMemberId);
-                bool bVal = IsBold( rFace ); // bold?
-                (*pValue).setValue(&bVal, (*ppEntries)->maType);
+                *pValue <<= IsBold( rFace );
             }
             break;
             case HANDLE_BASE_FONT_HEIGHT                   :
@@ -770,23 +766,20 @@ void SmModel::_getPropertyValues( const PropertyMapEntry **ppEntries, Any *pValu
             case HANDLE_RELATIVE_FONT_HEIGHT_FUNCTIONS     :
             case HANDLE_RELATIVE_FONT_HEIGHT_OPERATORS     :
             case HANDLE_RELATIVE_FONT_HEIGHT_LIMITS        :
-                *pValue <<= (sal_Int16) aFormat.GetRelSize((*ppEntries)->mnMemberId);
+                *pValue <<= static_cast<sal_Int16>(aFormat.GetRelSize((*ppEntries)->mnMemberId));
             break;
 
             case HANDLE_IS_TEXT_MODE                       :
-            {
-                sal_Bool bVal = aFormat.IsTextmode();
-                (*pValue).setValue(&bVal, cppu::UnoType<bool>::get());
-            }
+                *pValue <<= aFormat.IsTextmode();
             break;
 
             case HANDLE_GREEK_CHAR_STYLE                    :
-                *pValue <<= (sal_Int16)aFormat.GetGreekCharStyle();
+                *pValue <<= static_cast<sal_Int16>(aFormat.GetGreekCharStyle());
             break;
 
             case HANDLE_ALIGNMENT                          :
                 // SmHorAlign uses the same values as HorizontalAlignment
-                *pValue <<= (sal_Int16)aFormat.GetHorAlign();
+                *pValue <<= static_cast<sal_Int16>(aFormat.GetHorAlign());
             break;
 
             case HANDLE_RELATIVE_SPACING                   :
@@ -813,13 +806,10 @@ void SmModel::_getPropertyValues( const PropertyMapEntry **ppEntries, Any *pValu
             case HANDLE_RIGHT_MARGIN              :
             case HANDLE_TOP_MARGIN                :
             case HANDLE_BOTTOM_MARGIN             :
-                *pValue <<= (sal_Int16)aFormat.GetDistance((*ppEntries)->mnMemberId);
+                *pValue <<= static_cast<sal_Int16>(aFormat.GetDistance((*ppEntries)->mnMemberId));
             break;
             case HANDLE_IS_SCALE_ALL_BRACKETS              :
-            {
-                sal_Bool bVal = aFormat.IsScaleNormalBrackets();
-                (*pValue).setValue(&bVal, cppu::UnoType<bool>::get());
-            }
+                *pValue <<= aFormat.IsScaleNormalBrackets();
             break;
             case HANDLE_PRINTER_NAME:
             {
@@ -855,19 +845,15 @@ void SmModel::_getPropertyValues( const PropertyMapEntry **ppEntries, Any *pValu
                 vector < const SmSym * > aVector;
 
                 const SymbolPtrVec_t aSymbols( rManager.GetSymbols() );
-                size_t nCount = 0;
                 for (size_t i = 0; i < aSymbols.size(); ++i)
                 {
                     const SmSym * pSymbol = aSymbols[ i ];
                     if (pSymbol && !pSymbol->IsPredefined() &&
                         (!bUsedSymbolsOnly ||
                          rUsedSymbols.find( pSymbol->GetName() ) != rUsedSymbols.end()))
-                    {
                         aVector.push_back ( pSymbol );
-                        nCount++;
-                    }
                 }
-                Sequence < SymbolDescriptor > aSequence ( nCount );
+                Sequence < SymbolDescriptor > aSequence ( aVector.size() );
                 SymbolDescriptor * pDescriptor = aSequence.getArray();
 
                 vector < const SmSym * >::const_iterator aIter = aVector.begin(), aEnd = aVector.end();
@@ -879,9 +865,9 @@ void SmModel::_getPropertyValues( const PropertyMapEntry **ppEntries, Any *pValu
                     pDescriptor->nCharacter = static_cast < sal_Int32 > ((*aIter)->GetCharacter());
 
                     vcl::Font rFont = (*aIter)->GetFace();
-                    pDescriptor->sFontName = rFont.GetName();
+                    pDescriptor->sFontName = rFont.GetFamilyName();
                     pDescriptor->nCharSet  = sal::static_int_cast< sal_Int16 >(rFont.GetCharSet());
-                    pDescriptor->nFamily   = sal::static_int_cast< sal_Int16 >(rFont.GetFamily());
+                    pDescriptor->nFamily   = sal::static_int_cast< sal_Int16 >(rFont.GetFamilyType());
                     pDescriptor->nPitch    = sal::static_int_cast< sal_Int16 >(rFont.GetPitch());
                     pDescriptor->nWeight   = sal::static_int_cast< sal_Int16 >(rFont.GetWeight());
                     pDescriptor->nItalic   = sal::static_int_cast< sal_Int16 >(rFont.GetItalic());
@@ -924,7 +910,6 @@ void SmModel::_getPropertyValues( const PropertyMapEntry **ppEntries, Any *pValu
         }
     }
 }
-
 
 
 sal_Int32 SAL_CALL SmModel::getRendererCount(
@@ -1054,10 +1039,10 @@ void SAL_CALL SmModel::render(
                 {
                     aPrtPaperSize = lcl_GuessPaperSize();
                     // factors from Windows DIN A4
-                    aOutputSize    = Size( (long)(aPrtPaperSize.Width()  * 0.941),
-                                           (long)(aPrtPaperSize.Height() * 0.961));
-                    aPrtPageOffset = Point( (long)(aPrtPaperSize.Width()  * 0.0250),
-                                            (long)(aPrtPaperSize.Height() * 0.0214));
+                    aOutputSize    = Size( static_cast<long>(aPrtPaperSize.Width()  * 0.941),
+                                           static_cast<long>(aPrtPaperSize.Height() * 0.961));
+                    aPrtPageOffset = Point( static_cast<long>(aPrtPaperSize.Width()  * 0.0250),
+                                            static_cast<long>(aPrtPaperSize.Height() * 0.0214));
                 }
                 Point   aZeroPoint;
                 Rectangle OutputRect( aZeroPoint, aOutputSize );
@@ -1110,9 +1095,12 @@ void SAL_CALL SmModel::setParent( const uno::Reference< uno::XInterface >& xPare
     }
 }
 
-void SmModel::writeFormulaOoxml( ::sax_fastparser::FSHelperPtr m_pSerializer, oox::core::OoxmlVersion version )
+void SmModel::writeFormulaOoxml(
+        ::sax_fastparser::FSHelperPtr const pSerializer,
+        oox::core::OoxmlVersion const version,
+        oox::drawingml::DocumentType const documentType)
 {
-    static_cast< SmDocShell* >( GetObjectShell())->writeFormulaOoxml( m_pSerializer, version );
+    static_cast<SmDocShell*>(GetObjectShell())->writeFormulaOoxml(pSerializer, version, documentType);
 }
 
 void SmModel::writeFormulaRtf(OStringBuffer& rBuffer, rtl_TextEncoding nEncoding)

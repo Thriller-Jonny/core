@@ -54,6 +54,9 @@ using namespace com::sun::star::lang;
 using namespace com::sun::star::registry;
 using namespace test::testtools::bridgetest;
 
+#ifdef _MSC_VER
+#pragma warning (disable : 4503) // irrelevant for test code
+#endif
 
 #define SERVICENAME     "com.sun.star.test.bridge.CppTestObject"
 #define IMPLNAME        "com.sun.star.comp.bridge.CppTestObject"
@@ -486,7 +489,6 @@ Any Test_Impl::transportAny( const Any & value ) throw ( css::uno::RuntimeExcept
 {
     return value;
 }
-
 
 
 namespace {
@@ -1164,8 +1166,6 @@ Sequence< OUString > Test_Impl::getSupportedServiceNames()
 {
     return bridge_object::getSupportedServiceNames();
 }
-
-
 
 
 static Reference< XInterface > SAL_CALL Test_Impl_create(

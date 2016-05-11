@@ -31,6 +31,7 @@
 #include <cppuhelper/implbase.hxx>
 
 #include <toolkit/helper/vclunohelper.hxx>
+#include <tools/globname.hxx>
 #include <hintids.hxx>
 #include <sfx2/docfile.hxx>
 #include <sfx2/app.hxx>
@@ -84,7 +85,7 @@ public:
     void RemoveObj( SwOLEObj& rObj );
 };
 
-SwOLELRUCache* pOLELRU_Cache = nullptr;
+std::shared_ptr<SwOLELRUCache> g_pOLELRU_Cache;
 
 class SwOLEListener_Impl : public ::cppu::WeakImplHelper< embed::XStateChangeListener >
 {
@@ -102,7 +103,7 @@ SwOLEListener_Impl::SwOLEListener_Impl( SwOLEObj* pObj )
 {
     if ( mpObj->IsOleRef() && mpObj->GetOleRef()->getCurrentState() == embed::EmbedStates::RUNNING )
     {
-        pOLELRU_Cache->InsertObj( *mpObj );
+        g_pOLELRU_Cache->InsertObj( *mpObj );
     }
 }
 
@@ -114,29 +115,29 @@ void SAL_CALL SwOLEListener_Impl::stateChanged( const lang::EventObject&, ::sal_
 {
     if ( mpObj && nOldState == embed::EmbedStates::LOADED && nNewState == embed::EmbedStates::RUNNING )
     {
-        if( !pOLELRU_Cache )
-            pOLELRU_Cache = new SwOLELRUCache;
-        pOLELRU_Cache->InsertObj( *mpObj );
+        if (!g_pOLELRU_Cache)
+            g_pOLELRU_Cache.reset(new SwOLELRUCache);
+        g_pOLELRU_Cache->InsertObj( *mpObj );
     }
     else if ( mpObj && nNewState == embed::EmbedStates::LOADED && nOldState == embed::EmbedStates::RUNNING )
     {
-        if ( pOLELRU_Cache )
-            pOLELRU_Cache->RemoveObj( *mpObj );
+        if (g_pOLELRU_Cache)
+            g_pOLELRU_Cache->RemoveObj( *mpObj );
     }
 }
 
 void SwOLEListener_Impl::Release()
 {
-    if ( mpObj && pOLELRU_Cache )
-        pOLELRU_Cache->RemoveObj( *mpObj );
+    if (mpObj && g_pOLELRU_Cache)
+        g_pOLELRU_Cache->RemoveObj( *mpObj );
     mpObj=nullptr;
     release();
 }
 
 void SAL_CALL SwOLEListener_Impl::disposing( const lang::EventObject& ) throw (uno::RuntimeException, std::exception)
 {
-    if ( mpObj && pOLELRU_Cache )
-        pOLELRU_Cache->RemoveObj( *mpObj );
+    if (mpObj && g_pOLELRU_Cache)
+        g_pOLELRU_Cache->RemoveObj( *mpObj );
 }
 
 // TODO/LATER: actually SwEmbedObjectLink should be used here, but because different objects are used to control
@@ -191,7 +192,7 @@ SwEmbedObjectLink::~SwEmbedObjectLink()
                     xObject->changeState( nState );
                 }
             }
-            catch ( uno::Exception& )
+            catch (const uno::Exception&)
             {
             }
         }
@@ -346,7 +347,7 @@ bool SwOLENode::SavePersistentData()
                 }
             }
 
-            pCnt->RemoveEmbeddedObject( aOLEObj.aName, false, bKeepObjectToTempStorage );
+            pCnt->RemoveEmbeddedObject( aOLEObj.aName, bKeepObjectToTempStorage );
 
             // TODO/LATER: aOLEObj.aName has no meaning here, since the undo container contains the object
             // by different name, in future it might makes sense that the name is transported here.
@@ -356,7 +357,7 @@ bool SwOLENode::SavePersistentData()
                 // "unload" object
                 aOLEObj.xOLERef->changeState( embed::EmbedStates::LOADED );
             }
-            catch ( uno::Exception& )
+            catch (const uno::Exception&)
             {
             }
         }
@@ -369,13 +370,12 @@ bool SwOLENode::SavePersistentData()
 
 SwOLENode * SwNodes::MakeOLENode( const SwNodeIndex & rWhere,
                     const svt::EmbeddedObjectRef& xObj,
-                                    SwGrfFormatColl* pGrfColl,
-                                    SwAttrSet* pAutoAttr )
+                                    SwGrfFormatColl* pGrfColl )
 {
     OSL_ENSURE( pGrfColl,"SwNodes::MakeOLENode: Formatpointer is 0." );
 
     SwOLENode *pNode =
-        new SwOLENode( rWhere, xObj, pGrfColl, pAutoAttr );
+        new SwOLENode( rWhere, xObj, pGrfColl, nullptr );
 
     // set parent if XChild is supported
     //!! needed to supply Math objects with a valid reference device
@@ -439,8 +439,8 @@ SwContentNode* SwOLENode::MakeCopy( SwDoc* pDoc, const SwNodeIndex& rIdx ) const
         pSrc->GetEmbeddedObjectContainer(),
         pSrc->GetEmbeddedObjectContainer().GetEmbeddedObject( aOLEObj.aName ),
         aNewName,
-        SfxObjectShell::CreateShellID(pSrc),
-        SfxObjectShell::CreateShellID(pPersistShell));
+        pSrc->getDocumentBaseURL(),
+        pPersistShell->getDocumentBaseURL());
 
     SwOLENode* pOLENd = pDoc->GetNodes().MakeOLENode( rIdx, aNewName, GetAspect(),
                                     pDoc->GetDfltGrfFormatColl(),
@@ -486,7 +486,7 @@ bool SwOLENode::IsInGlobalDocSection() const
     }
 
     // pAnchorNd contains the most recently found Section Node, which
-    // now must fulfill the prerequesites for the GlobalDoc
+    // now must fulfill the prerequisites for the GlobalDoc
     pSectNd = static_cast<const SwSectionNode*>(pAnchorNd);
     return FILE_LINK_SECTION == pSectNd->GetSection().GetType() &&
             pSectNd->GetIndex() > nEndExtraIdx;
@@ -548,8 +548,9 @@ bool SwOLENode::UpdateLinkURL_Impl()
                     if ( nCurState != embed::EmbedStates::LOADED )
                         xObj->changeState( nCurState );
                 }
-                catch( uno::Exception& )
-                {}
+                catch (const uno::Exception&)
+                {
+                }
             }
 
             if ( !bResult )
@@ -700,7 +701,7 @@ SwOLEObj::~SwOLEObj()
             try
             {
                 // remove object from container but don't close it
-                pCnt->RemoveEmbeddedObject( aName, false);
+                pCnt->RemoveEmbeddedObject( aName );
             }
             catch ( uno::Exception& )
             {
@@ -771,9 +772,10 @@ const uno::Reference < embed::XEmbeddedObject > SwOLEObj::GetOleRef()
     if( !xOLERef.is() )
     {
         SfxObjectShell* p = pOLENd->GetDoc()->GetPersist();
-        OSL_ENSURE( p, "No SvPersist present" );
+        assert(p && "No SvPersist present");
 
-        uno::Reference < embed::XEmbeddedObject > xObj = p->GetEmbeddedObjectContainer().GetEmbeddedObject( aName );
+        OUString sDocumentBaseURL = p->getDocumentBaseURL();
+        uno::Reference < embed::XEmbeddedObject > xObj = p->GetEmbeddedObjectContainer().GetEmbeddedObject(aName, &sDocumentBaseURL);
         OSL_ENSURE( !xOLERef.is(), "Calling GetOleRef() recursively is not permitted" );
 
         if ( !xObj.is() )
@@ -810,9 +812,9 @@ const uno::Reference < embed::XEmbeddedObject > SwOLEObj::GetOleRef()
     else if ( xOLERef->getCurrentState() == embed::EmbedStates::RUNNING )
     {
         // move object to first position in cache
-        if( !pOLELRU_Cache )
-            pOLELRU_Cache = new SwOLELRUCache;
-        pOLELRU_Cache->InsertObj( *this );
+        if (!g_pOLELRU_Cache)
+            g_pOLELRU_Cache.reset(new SwOLELRUCache);
+        g_pOLELRU_Cache->InsertObj( *this );
     }
 
     return xOLERef.GetObject();
@@ -861,17 +863,14 @@ bool SwOLEObj::UnloadObject( uno::Reference< embed::XEmbeddedObject > xObj, cons
                     if( xMod.is() && xMod->isModified() )
                     {
                         uno::Reference < embed::XEmbedPersist > xPers( xObj, uno::UNO_QUERY );
-                        if ( xPers.is() )
-                            xPers->storeOwn();
-                        else {
-                            OSL_FAIL("Modified object without persistence in cache!");
-                        }
+                        assert(xPers.is() && "Modified object without persistence in cache!");
+                        xPers->storeOwn();
                     }
 
                     // setting object to loaded state will remove it from cache
                     xObj->changeState( embed::EmbedStates::LOADED );
                 }
-                catch ( uno::Exception& )
+                catch (const uno::Exception&)
                 {
                     bRet = false;
                 }
@@ -929,32 +928,31 @@ void SwOLELRUCache::Load()
     Sequence< Any > aValues = GetProperties( aNames );
     const Any* pValues = aValues.getConstArray();
     OSL_ENSURE( aValues.getLength() == aNames.getLength(), "GetProperties failed" );
-    if( aValues.getLength() == aNames.getLength() && pValues->hasValue() )
+    if (aValues.getLength() != aNames.getLength() || !pValues->hasValue())
+        return;
+
+    sal_Int32 nVal = 0;
+    *pValues >>= nVal;
+
+    if (nVal < m_nLRU_InitSize)
     {
-        sal_Int32 nVal = 0;
-        *pValues >>= nVal;
+        std::shared_ptr<SwOLELRUCache> tmp(g_pOLELRU_Cache); // prevent delete this
+        // size of cache has been changed
+        sal_Int32 nCount = m_OleObjects.size();
+        sal_Int32 nPos = nCount;
 
+        // try to remove the last entries until new maximum size is reached
+        while( nCount > nVal )
         {
-            if (nVal < m_nLRU_InitSize)
-            {
-                // size of cache has been changed
-                sal_Int32 nCount = m_OleObjects.size();
-                sal_Int32 nPos = nCount;
-
-                // try to remove the last entries until new maximum size is reached
-                while( nCount > nVal )
-                {
-                    SwOLEObj *const pObj = m_OleObjects[ --nPos ];
-                    if ( pObj->UnloadObject() )
-                        nCount--;
-                    if ( !nPos )
-                        break;
-                }
-            }
+            SwOLEObj *const pObj = m_OleObjects[ --nPos ];
+            if ( pObj->UnloadObject() )
+                nCount--;
+            if ( !nPos )
+                break;
         }
-
-        m_nLRU_InitSize = nVal;
     }
+
+    m_nLRU_InitSize = nVal;
 }
 
 void SwOLELRUCache::InsertObj( SwOLEObj& rObj )
@@ -970,6 +968,7 @@ void SwOLELRUCache::InsertObj( SwOLEObj& rObj )
     }
     if (it == m_OleObjects.end())
     {
+        std::shared_ptr<SwOLELRUCache> tmp(g_pOLELRU_Cache); // prevent delete this
         // try to remove objects if necessary
         sal_Int32 nCount = m_OleObjects.size();
         sal_Int32 nPos = nCount-1;
@@ -993,7 +992,10 @@ void SwOLELRUCache::RemoveObj( SwOLEObj& rObj )
     }
     if (m_OleObjects.empty())
     {
-        DELETEZ( pOLELRU_Cache );
+        if (g_pOLELRU_Cache.unique()) // test that we're not in InsertObj()
+        {
+            g_pOLELRU_Cache.reset();
+        }
     }
 }
 

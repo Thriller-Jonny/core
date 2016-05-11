@@ -67,7 +67,7 @@ class SwTextField;
 struct SwPosition;
 
 namespace com { namespace sun { namespace star { namespace util {
-    struct SearchOptions;
+    struct SearchOptions2;
 } } } }
 
 namespace com { namespace sun { namespace star { namespace text {
@@ -134,7 +134,7 @@ const int CRSR_POSOLD = 0x01,   // cursor stays at old position
           CRSR_POSCHG = 0x02;   // position changed by the layout
 
 /// Helperfunction to resolve backward references in regular expressions
-OUString *ReplaceBackReferences( const css::util::SearchOptions& rSearchOpt, SwPaM* pPam );
+OUString *ReplaceBackReferences( const css::util::SearchOptions2& rSearchOpt, SwPaM* pPam );
 
 class SW_DLLPUBLIC SwCursorShell
     : public SwViewShell
@@ -236,7 +236,7 @@ private:
 
     SAL_DLLPRIVATE void MoveCursorToNum();
 
-    SAL_DLLPRIVATE void _ParkPams( SwPaM* pDelRg, SwShellCursor** ppDelRing );
+    SAL_DLLPRIVATE void ParkPams( SwPaM* pDelRg, SwShellCursor** ppDelRing );
 
     /** Mark a certain list level of a certain list
 
@@ -263,7 +263,7 @@ private:
 typedef bool (SwCursor:: *FNCursor)();
     SAL_DLLPRIVATE bool CallCursorFN( FNCursor );
 
-    SAL_DLLPRIVATE const SwRangeRedline* _GotoRedline( sal_uInt16 nArrPos, bool bSelect );
+    SAL_DLLPRIVATE const SwRangeRedline* GotoRedline_( sal_uInt16 nArrPos, bool bSelect );
 
 protected:
 
@@ -284,7 +284,7 @@ protected:
     };
     int CompareCursor( CursorCompareType eType ) const;
 
-    bool _SelTableRowOrCol( bool bRow, bool bRowSimple = false );
+    bool SelTableRowOrCol( bool bRow, bool bRowSimple = false );
 
     bool SetInFrontOfLabel( bool bNew );
 
@@ -322,15 +322,15 @@ public:
     // only for usage in special cases allowed!
     void ExtendedSelectAll(bool bFootnotes = true);
     /// If ExtendedSelectAll() was called and selection didn't change since then.
-    bool ExtendedSelectedAll(bool bFootnotes = true);
+    bool ExtendedSelectedAll();
     /// If document body starts with a table.
     bool StartsWithTable();
 
     SwPaM* GetCursor( bool bMakeTableCursor = true ) const;
-    inline SwCursor* GetSwCursor( bool bMakeTableCursor = true ) const;
+    inline SwCursor* GetSwCursor() const;
     // return only the current cursor
-          SwShellCursor* _GetCursor()                       { return m_pCurrentCursor; }
-    const SwShellCursor* _GetCursor() const                 { return m_pCurrentCursor; }
+          SwShellCursor* GetCursor_()                       { return m_pCurrentCursor; }
+    const SwShellCursor* GetCursor_() const                 { return m_pCurrentCursor; }
 
     // show passed cursor - for UNO
     void    SetSelection(const SwPaM& rCursor);
@@ -367,7 +367,7 @@ public:
     bool MoveColumn( SwWhichColumn, SwPosColumn );
     bool MoveRegion( SwWhichRegion, SwPosRegion );
 
-    sal_uLong Find( const css::util::SearchOptions& rSearchOpt,
+    sal_uLong Find( const css::util::SearchOptions2& rSearchOpt,
                 bool bSearchInNotes,
                 SwDocPositions eStart, SwDocPositions eEnd,
                 bool& bCancel,
@@ -382,7 +382,7 @@ public:
                 SwDocPositions eStart, SwDocPositions eEnd,
                 bool& bCancel,
                 FindRanges eRng,
-                const css::util::SearchOptions* pSearchOpt = nullptr,
+                const css::util::SearchOptions2* pSearchOpt = nullptr,
                 const SfxItemSet* rReplSet = nullptr );
 
     //  Position the Cursor
@@ -419,9 +419,8 @@ public:
     void NormalizePam(bool bPointFirst = true);
 
     void SwapPam();
-    bool ChgCurrPam( const Point & rPt,
-                     bool bTstOnly = true,      // test only, don't set
-                     bool bTstHit  = false );   // only exact matches
+    bool TestCurrPam( const Point & rPt,
+                      bool bTstHit = false);   // only exact matches
     void KillPams();
 
     // story a copy of the cursor in the stack
@@ -448,9 +447,9 @@ public:
      * On the other hand, on receiving the focus all selected ranges are displayed again
      * (ranges must be recalculated!).
      */
-    bool HasShFcs() const { return m_bHasFocus; }
-    void ShLooseFcs();
-    void ShGetFcs( bool bUpdate = true );
+    bool HasShellFocus() const { return m_bHasFocus; }
+    void ShellLoseFocus();
+    void ShellGetFocus();
 
     // Methods for displaying or hiding the visible text cursor.
     void ShowCursor();
@@ -573,9 +572,9 @@ public:
     OUString GetText() const;
 
     // Check of SPoint or Mark of current cursor are placed within a table.
-    inline const SwTableNode* IsCursorInTable( bool bIsPtInTable = true ) const;
+    inline const SwTableNode* IsCursorInTable() const;
 
-    inline Point& GetCursorDocPos( bool bPoint = true ) const;
+    inline Point& GetCursorDocPos() const;
     inline bool IsCursorPtAtEnd() const;
 
     inline const  SwPaM* GetTableCrs() const;
@@ -592,8 +591,8 @@ public:
     bool GotoTable( const OUString& rName );
 
     // select a table row, column or box (based on the current cursor)
-    bool SelTableRow() { return _SelTableRowOrCol( true  ); }
-    bool SelTableCol() { return _SelTableRowOrCol( false ); }
+    bool SelTableRow() { return SelTableRowOrCol( true  ); }
+    bool SelTableCol() { return SelTableRowOrCol( false ); }
     bool SelTableBox();
 
     bool SelTable();
@@ -735,7 +734,7 @@ public:
     bool IsEndOfDoc() const;
     bool IsInFrontOfLabel() const;
     bool IsAtLeftMargin()   const       { return IsAtLRMargin( true ); }
-    bool IsAtRightMargin(bool bAPI = false) const   { return IsAtLRMargin( false, bAPI ); }
+    bool IsAtRightMargin() const   { return IsAtLRMargin( false, true/*bAPI*/ ); }
 
     // delete all created cursors, set the table cursor and the last cursor to
     // its TextNode (or StartNode?)
@@ -807,7 +806,7 @@ public:
     // is cursor or the point in/over a vertical formatted text?
     bool IsInVerticalText( const Point* pPt = nullptr ) const;
     // is cursor or the point in/over a right to left formatted text?
-    bool IsInRightToLeftText( const Point* pPt = nullptr ) const;
+    bool IsInRightToLeftText() const;
 
     static void FirePageChangeEvent(sal_uInt16 nOldPage, sal_uInt16 nNewPage);
     bool   bColumnChange();
@@ -852,9 +851,9 @@ inline SwMoveFnCollection* SwCursorShell::MakeFindRange(
     return m_pCurrentCursor->MakeFindRange( (SwDocPositions)nStt, (SwDocPositions)nEnd, pPam );
 }
 
-inline SwCursor* SwCursorShell::GetSwCursor( bool bMakeTableCursor ) const
+inline SwCursor* SwCursorShell::GetSwCursor() const
 {
-    return static_cast<SwCursor*>(GetCursor( bMakeTableCursor ));
+    return static_cast<SwCursor*>(GetCursor());
 }
 
 inline SwPaM* SwCursorShell::GetStackCursor() const { return m_pCursorStack; }
@@ -879,9 +878,9 @@ inline bool SwCursorShell::IsSelOnePara() const
            m_pCurrentCursor->GetPoint()->nNode == m_pCurrentCursor->GetMark()->nNode;
 }
 
-inline const SwTableNode* SwCursorShell::IsCursorInTable( bool bIsPtInTable ) const
+inline const SwTableNode* SwCursorShell::IsCursorInTable() const
 {
-    return m_pCurrentCursor->GetNode( bIsPtInTable ).FindTableNode();
+    return m_pCurrentCursor->GetNode().FindTableNode();
 }
 
 inline bool SwCursorShell::IsCursorPtAtEnd() const
@@ -889,9 +888,9 @@ inline bool SwCursorShell::IsCursorPtAtEnd() const
     return m_pCurrentCursor->End() == m_pCurrentCursor->GetPoint();
 }
 
-inline Point& SwCursorShell::GetCursorDocPos( bool bPoint ) const
+inline Point& SwCursorShell::GetCursorDocPos() const
 {
-    return bPoint ? m_pCurrentCursor->GetPtPos() : m_pCurrentCursor->GetMkPos();
+    return m_pCurrentCursor->GetPtPos();
 }
 
 inline const SwPaM* SwCursorShell::GetTableCrs() const

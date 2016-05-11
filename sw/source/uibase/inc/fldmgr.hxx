@@ -114,7 +114,6 @@ private:
 
     SAL_DLLPRIVATE sal_uInt16            GetCurrLanguage() const;
 
-    css::uno::Reference<css::container::XNameAccess> xDBContext;
     css::uno::Reference<css::text::XNumberingTypeInfo> xNumberingInfo;
     SAL_DLLPRIVATE css::uno::Reference<css::text::XNumberingTypeInfo> GetNumberingInfo()const;
 
@@ -134,8 +133,8 @@ public:
                                  const OUString& rPar2,
                                  SwField * _pField = nullptr);
 
-    OUString        GetCurFieldPar1() const { return aCurPar1; }
-    OUString        GetCurFieldPar2() const { return aCurPar2; }
+    const OUString& GetCurFieldPar1() const { return aCurPar1; }
+    const OUString& GetCurFieldPar2() const { return aCurPar2; }
 
     // determine a field
     SwField*        GetCurField();
@@ -144,13 +143,13 @@ public:
 
     bool            ChooseMacro(const OUString &rSelMacro = OUString());
     void            SetMacroPath(const OUString& rPath);
-    inline OUString GetMacroPath() const         { return sMacroPath; }
-    inline OUString GetMacroName() const         { return sMacroName; }
+    const OUString& GetMacroPath() const         { return sMacroPath; }
+    const OUString& GetMacroName() const         { return sMacroName; }
 
     // previous and next of the same type
     bool GoNextPrev( bool bNext = true, SwFieldType* pTyp = nullptr );
-    bool GoNext( SwFieldType* pTyp = nullptr )    { return GoNextPrev( true, pTyp ); }
-    bool GoPrev( SwFieldType* pTyp = nullptr )    { return GoNextPrev( false, pTyp ); }
+    bool GoNext()    { return GoNextPrev(); }
+    bool GoPrev()    { return GoNextPrev( false ); }
 
     bool            IsDBNumeric(const OUString& rDBName, const OUString& rTableQryName,
                                     bool bIsTable, const OUString& rFieldName);
@@ -159,7 +158,7 @@ public:
     bool            CanInsertRefMark( const OUString& rStr );
 
     // access to field types via ResId
-    size_t          GetFieldTypeCount(sal_uInt16 nResId = USHRT_MAX) const;
+    size_t          GetFieldTypeCount() const;
     SwFieldType*    GetFieldType(sal_uInt16 nResId, size_t nField = 0) const;
     SwFieldType*    GetFieldType(sal_uInt16 nResId, const OUString& rName) const;
 
@@ -168,7 +167,7 @@ public:
     // access via TypeId from the dialog
     // Ids for a range of fields
     static const SwFieldGroupRgn& GetGroupRange(bool bHtmlMode, sal_uInt16 nGrpId);
-    static sal_uInt16           GetGroup(bool bHtmlMode, sal_uInt16 nTypeId, sal_uInt16 nSubType = 0);
+    static sal_uInt16           GetGroup(sal_uInt16 nTypeId, sal_uInt16 nSubType = 0);
 
     // the current field's TypeId
     sal_uInt16          GetCurTypeId() const;
@@ -182,16 +181,16 @@ public:
     static sal_uInt16   GetPos(sal_uInt16 nTypeId);
 
     // subtypes to a type
-    bool            GetSubTypes(sal_uInt16 nId, std::vector<OUString>& rToFill);
+    void            GetSubTypes(sal_uInt16 nId, std::vector<OUString>& rToFill);
 
     // format to a type
-    sal_uInt16          GetFormatCount(sal_uInt16 nTypeId, bool bIsText, bool bHtmlMode = false) const;
+    sal_uInt16          GetFormatCount(sal_uInt16 nTypeId, bool bHtmlMode) const;
     OUString            GetFormatStr(sal_uInt16 nTypeId, sal_uLong nFormatId) const;
     sal_uInt16          GetFormatId(sal_uInt16 nTypeId, sal_uLong nFormatId) const;
-    sal_uLong           GetDefaultFormat(sal_uInt16 nTypeId, bool bIsText, SvNumberFormatter* pFormatter, double* pVal = nullptr);
+    sal_uLong           GetDefaultFormat(sal_uInt16 nTypeId, bool bIsText, SvNumberFormatter* pFormatter);
 
     // turn off evaluation of expression fields for insertation
-    // of many expressino fields (see labels)
+    // of many expression fields (see labels)
 
     inline void     SetEvalExpFields(bool bEval);
     void            EvalExpFields(SwWrtShell* pSh = nullptr);

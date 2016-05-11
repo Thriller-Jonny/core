@@ -109,7 +109,8 @@ const SwRect& SwFEShell::GetAnyCurRect( CurRectType eType, const Point* pPt,
     bool bFrame = true;
     switch ( eType )
     {
-        case RECT_PAGE_PRT:         bFrame = false; /* no break */
+        case RECT_PAGE_PRT:         bFrame = false;
+                                    SAL_FALLTHROUGH;
         case RECT_PAGE :            pFrame = pFrame->FindPageFrame();
                                     break;
 
@@ -118,7 +119,8 @@ const SwRect& SwFEShell::GetAnyCurRect( CurRectType eType, const Point* pPt,
                                     pFrame->Calc(Imp()->GetShell()->GetOut());
                                     break;
 
-        case RECT_FLY_PRT_EMBEDDED: bFrame = false; /* no break */
+        case RECT_FLY_PRT_EMBEDDED: bFrame = false;
+                                    SAL_FALLTHROUGH;
         case RECT_FLY_EMBEDDED:     pFrame = xObj.is() ? FindFlyFrame( xObj )
                                                 : pFrame->IsFlyFrame()
                                                     ? pFrame
@@ -131,7 +133,7 @@ const SwRect& SwFEShell::GetAnyCurRect( CurRectType eType, const Point* pPt,
                                     else {
                                         OSL_FAIL( "Missing Table" );
                                     }
-                                    /* no break */
+                                    SAL_FALLTHROUGH;
         case RECT_SECTION_PRT:
         case RECT_SECTION:          if( pFrame->IsInSct() )
                                         pFrame = pFrame->FindSctFrame();
@@ -144,7 +146,8 @@ const SwRect& SwFEShell::GetAnyCurRect( CurRectType eType, const Point* pPt,
                                         bFrame = false;
                                     break;
 
-        case RECT_HEADERFOOTER_PRT: bFrame = false; /* no break */
+        case RECT_HEADERFOOTER_PRT: bFrame = false;
+                                    SAL_FALLTHROUGH;
         case RECT_HEADERFOOTER:     if( nullptr == (pFrame = pFrame->FindFooterOrHeader()) )
                                         return GetLayout()->Frame();
                                     break;
@@ -226,7 +229,7 @@ FrameTypeFlags SwFEShell::GetFrameType( const Point *pPt, bool bStopAtFly ) cons
     {
         switch ( pFrame->GetType() )
         {
-            case FRM_COLUMN:    if( pFrame->GetUpper()->IsSctFrame() )
+            case SwFrameType::Column:    if( pFrame->GetUpper()->IsSctFrame() )
                                 {
                                     // Check, if isn't not only a single column
                                     // from a section with footnotes at the end.
@@ -238,17 +241,17 @@ FrameTypeFlags SwFEShell::GetFrameType( const Point *pPt, bool bStopAtFly ) cons
                                 else // only pages and frame columns
                                     nReturn |= FrameTypeFlags::COLUMN;
                                 break;
-            case FRM_PAGE:      nReturn |= FrameTypeFlags::PAGE;
+            case SwFrameType::Page:      nReturn |= FrameTypeFlags::PAGE;
                                 if( static_cast<const SwPageFrame*>(pFrame)->IsFootnotePage() )
                                     nReturn |= FrameTypeFlags::FTNPAGE;
                                 break;
-            case FRM_HEADER:    nReturn |= FrameTypeFlags::HEADER;      break;
-            case FRM_FOOTER:    nReturn |= FrameTypeFlags::FOOTER;      break;
-            case FRM_BODY:      if( pFrame->GetUpper()->IsPageFrame() ) // not for ColumnFrames
+            case SwFrameType::Header:    nReturn |= FrameTypeFlags::HEADER;      break;
+            case SwFrameType::Footer:    nReturn |= FrameTypeFlags::FOOTER;      break;
+            case SwFrameType::Body:      if( pFrame->GetUpper()->IsPageFrame() ) // not for ColumnFrames
                                     nReturn |= FrameTypeFlags::BODY;
                                 break;
-            case FRM_FTN:       nReturn |= FrameTypeFlags::FOOTNOTE;    break;
-            case FRM_FLY:       if( static_cast<const SwFlyFrame*>(pFrame)->IsFlyLayFrame() )
+            case SwFrameType::Ftn:       nReturn |= FrameTypeFlags::FOOTNOTE;    break;
+            case SwFrameType::Fly:       if( static_cast<const SwFlyFrame*>(pFrame)->IsFlyLayFrame() )
                                     nReturn |= FrameTypeFlags::FLY_FREE;
                                 else if ( static_cast<const SwFlyFrame*>(pFrame)->IsFlyAtContentFrame() )
                                     nReturn |= FrameTypeFlags::FLY_ATCNT;
@@ -262,9 +265,9 @@ FrameTypeFlags SwFEShell::GetFrameType( const Point *pPt, bool bStopAtFly ) cons
                                 if( bStopAtFly )
                                     return nReturn;
                                 break;
-            case FRM_TAB:
-            case FRM_ROW:
-            case FRM_CELL:      nReturn |= FrameTypeFlags::TABLE;       break;
+            case SwFrameType::Tab:
+            case SwFrameType::Row:
+            case SwFrameType::Cell:      nReturn |= FrameTypeFlags::TABLE;       break;
             default:            /* do nothing */                break;
         }
         if ( pFrame->IsFlyFrame() )
@@ -275,10 +278,10 @@ FrameTypeFlags SwFEShell::GetFrameType( const Point *pPt, bool bStopAtFly ) cons
     return nReturn;
 }
 
-void SwFEShell::ShGetFcs( bool bUpdate )
+void SwFEShell::ShellGetFocus()
 {
     ::SetShell( this );
-    SwCursorShell::ShGetFcs( bUpdate );
+    SwCursorShell::ShellGetFocus();
 
     if ( HasDrawView() )
     {
@@ -288,9 +291,9 @@ void SwFEShell::ShGetFcs( bool bUpdate )
     }
 }
 
-void SwFEShell::ShLooseFcs()
+void SwFEShell::ShellLoseFocus()
 {
-    SwCursorShell::ShLooseFcs();
+    SwCursorShell::ShellLoseFocus();
 
     if ( HasDrawView() && Imp()->GetDrawView()->AreObjectsMarked() )
     {
@@ -307,9 +310,9 @@ sal_uInt16 SwFEShell::GetPhyPageNum()
     return 0;
 }
 
-sal_uInt16 SwFEShell::GetVirtPageNum( const bool bCalcFrame )
+sal_uInt16 SwFEShell::GetVirtPageNum()
 {
-    SwFrame *pFrame = GetCurrFrame( bCalcFrame );
+    SwFrame *pFrame = GetCurrFrame();
     if ( pFrame )
         return pFrame->GetVirtPageNum();
     return 0;
@@ -471,7 +474,7 @@ void SwFEShell::InsertLabel( const SwLabelType eType, const OUString &rText, con
             //content was a frame/graphic, then set the contained element
             //to as-char anchoring because that's all msword is able to
             //do when inside a frame, and in writer for freshly captioned
-            //elements it's largely irrelevent what the anchor of the contained
+            //elements it's largely irrelevant what the anchor of the contained
             //type is but making it as-char by default results in very
             //good roundtripping
             if (pFlyFormat && bInnerCntIsFly)
@@ -502,7 +505,7 @@ void SwFEShell::InsertLabel( const SwLabelType eType, const OUString &rText, con
         {
             const Point aPt(GetCursorDocPos());
             if (SwFlyFrame* pFrame = pFlyFormat->GetFrame(&aPt))
-                SelectFlyFrame(*pFrame, true);
+                SelectFlyFrame(*pFrame);
         }
         EndUndo();
         EndAllActionAndCall();
@@ -578,7 +581,21 @@ bool SwFEShell::Sort(const SwSortOptions& rOpt)
     return bRet;
 }
 
-sal_uInt16 SwFEShell::_GetCurColNum( const SwFrame *pFrame,
+bool SwFEShell::IsColRightToLeft() const
+{
+    SwFrame* pFrame = GetCurrFrame();
+    while (pFrame)
+    {
+        pFrame = pFrame->GetUpper();
+        if (pFrame && pFrame->IsColumnFrame())
+        {
+            return pFrame->IsRightToLeft();
+        }
+    }
+    return false;
+}
+
+sal_uInt16 SwFEShell::GetCurColNum_( const SwFrame *pFrame,
                                 SwGetCurColNumPara* pPara ) const
 {
     sal_uInt16 nRet = 0;
@@ -599,7 +616,7 @@ sal_uInt16 SwFEShell::_GetCurColNum( const SwFrame *pFrame,
                 pFrame = pCurFrame->GetUpper();
                 while( pFrame )
                 {
-                    if( ( FRM_PAGE | FRM_FLY | FRM_SECTION ) & pFrame->GetType() )
+                    if( ( SwFrameType::Page | SwFrameType::Fly | SwFrameType::Section ) & pFrame->GetType() )
                     {
                         pPara->pFrameFormat = static_cast<const SwLayoutFrame*>(pFrame)->GetFormat();
                         pPara->pPrtRect = &pFrame->Prt();
@@ -624,10 +641,10 @@ sal_uInt16 SwFEShell::_GetCurColNum( const SwFrame *pFrame,
 sal_uInt16 SwFEShell::GetCurColNum( SwGetCurColNumPara* pPara ) const
 {
     OSL_ENSURE( GetCurrFrame(), "Cursor parked?" );
-    return _GetCurColNum( GetCurrFrame(), pPara );
+    return GetCurColNum_( GetCurrFrame(), pPara );
 }
 
-sal_uInt16 SwFEShell::GetCurOutColNum( SwGetCurColNumPara* pPara ) const
+sal_uInt16 SwFEShell::GetCurOutColNum() const
 {
     sal_uInt16 nRet = 0;
     SwFrame* pFrame = GetCurrFrame();
@@ -638,7 +655,7 @@ sal_uInt16 SwFEShell::GetCurOutColNum( SwGetCurColNumPara* pPara ) const
                                : static_cast<SwFrame*>(pFrame->FindSctFrame());
         OSL_ENSURE( pFrame, "No Tab, no Sect" );
         if( pFrame )
-            nRet = _GetCurColNum( pFrame, pPara );
+            nRet = GetCurColNum_( pFrame, nullptr );
     }
     return nRet;
 }
@@ -738,7 +755,7 @@ void SwFEShell::CalcBoundRect( SwRect& _orRect,
             {
                 case text::RelOrientation::PAGE_RIGHT:
                 case text::RelOrientation::FRAME_RIGHT: aPos.Y() += pFrame->Prt().Height();
-                // no break!
+                    SAL_FALLTHROUGH;
                 case text::RelOrientation::PRINT_AREA:
                 case text::RelOrientation::PAGE_PRINT_AREA: aPos.Y() += pFrame->Prt().Top(); break;
                 default: break;
@@ -750,7 +767,7 @@ void SwFEShell::CalcBoundRect( SwRect& _orRect,
             {
                 case text::RelOrientation::PRINT_AREA:
                 case text::RelOrientation::PAGE_PRINT_AREA: aPos.X() += pFrame->Prt().Width();
-                // no break
+                    SAL_FALLTHROUGH;
                 case text::RelOrientation::PAGE_RIGHT:
                 case text::RelOrientation::FRAME_RIGHT: aPos.X() += pFrame->Prt().Left(); break;
                 default: aPos.X() += pFrame->Frame().Width();
@@ -762,7 +779,7 @@ void SwFEShell::CalcBoundRect( SwRect& _orRect,
             {
                 case text::RelOrientation::PRINT_AREA:
                 case text::RelOrientation::PAGE_PRINT_AREA: aPos.X() += pFrame->Prt().Width();
-                // no break!
+                    SAL_FALLTHROUGH;
                 case text::RelOrientation::PAGE_LEFT:
                 case text::RelOrientation::FRAME_LEFT: aPos.X() += pFrame->Prt().Left() -
                                                pFrame->Frame().Width(); break;
@@ -775,7 +792,7 @@ void SwFEShell::CalcBoundRect( SwRect& _orRect,
             {
                 case text::RelOrientation::PAGE_RIGHT:
                 case text::RelOrientation::FRAME_RIGHT:   aPos.X() += pFrame->Prt().Width();
-                // no break!
+                    SAL_FALLTHROUGH;
                 case text::RelOrientation::PRINT_AREA:
                 case text::RelOrientation::PAGE_PRINT_AREA: aPos.X() += pFrame->Prt().Left(); break;
                 default:break;
@@ -870,7 +887,7 @@ void SwFEShell::CalcBoundRect( SwRect& _orRect,
                                 aEnvOfObj.GetHoriEnvironmentLayoutFrame( *pFrame );
             const SwLayoutFrame& rVertEnvironLayFrame =
                                 aEnvOfObj.GetVertEnvironmentLayoutFrame( *pFrame );
-            SwRect aHoriEnvironRect( rHoriEnvironLayFrame.Frame() );
+            const SwRect& aHoriEnvironRect( rHoriEnvironLayFrame.Frame() );
             SwRect aVertEnvironRect;
             if ( _bFollowTextFlow )
             {

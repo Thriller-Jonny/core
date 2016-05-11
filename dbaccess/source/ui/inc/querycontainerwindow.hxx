@@ -61,7 +61,7 @@ namespace dbaui
             // called when the beamer has been disposed
         void    disposingPreview();
 
-        css::uno::Reference< css::frame::XFrame2 >
+        const css::uno::Reference< css::frame::XFrame2 >&
                 getPreviewFrame() const { return m_xBeamer; }
 
         OQueryDesignView*   getDesignView() { return m_pViewSwitch->getDesignView(); }
@@ -84,7 +84,7 @@ namespace dbaui
 
         void    initialize() override                                                { m_pViewSwitch->initialize(); }
         void    SaveUIConfig()                                              { m_pViewSwitch->SaveUIConfig(); }
-        bool    reset( ::dbtools::SQLExceptionInfo* _pErrorInfo )           { return m_pViewSwitch->reset( _pErrorInfo ); }
+        void    reset( ::dbtools::SQLExceptionInfo* _pErrorInfo )           { m_pViewSwitch->reset( _pErrorInfo ); }
 
         bool    switchView( ::dbtools::SQLExceptionInfo* _pErrorInfo );
         void    forceInitialView();

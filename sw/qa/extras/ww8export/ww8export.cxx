@@ -23,7 +23,9 @@
 #include <com/sun/star/view/DocumentZoomType.hpp>
 #include <com/sun/star/rdf/URI.hpp>
 #include <com/sun/star/rdf/Statement.hpp>
+#include <grfatr.hxx>
 #include <pagedesc.hxx>
+#include <ndgrf.hxx>
 
 #include <sfx2/bindings.hxx>
 #include <sfx2/request.hxx>
@@ -103,10 +105,10 @@ DECLARE_WW8EXPORT_TEST(testN325936, "n325936.doc")
 DECLARE_WW8EXPORT_TEST(testTscp, "tscp.doc")
 {
     uno::Reference<uno::XComponentContext> xComponentContext(comphelper::getProcessComponentContext());
-    uno::Reference<rdf::XURI> xType = rdf::URI::create(xComponentContext, "urn:tscp:names:baf:1.1");
+    uno::Reference<rdf::XURI> xType = rdf::URI::create(xComponentContext, "urn:bails");
     uno::Reference<rdf::XDocumentMetadataAccess> xDocumentMetadataAccess(mxComponent, uno::UNO_QUERY);
     uno::Sequence< uno::Reference<rdf::XURI> > aGraphNames = xDocumentMetadataAccess->getMetadataGraphsWithType(xType);
-    // This failed, no graphs had the urn:tscp:names:baf:1.1 type.
+    // This failed, no graphs had the urn:bails type.
     CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(1), aGraphNames.getLength());
     uno::Reference<rdf::XURI> xGraphName = aGraphNames[0];
     uno::Reference<rdf::XNamedGraph> xGraph = xDocumentMetadataAccess->getRDFRepository()->getGraph(xGraphName);
@@ -118,10 +120,11 @@ DECLARE_WW8EXPORT_TEST(testTscp, "tscp.doc")
 
     // 3 RDF statements on the second paragraph.
     xParagraph.set(getParagraph(2), uno::UNO_QUERY);
-    std::map<OUString, OUString> aExpectedStatements = {
-        {"urn:tscp:names:baf:1.1#BusinessAuthorization", "urn:example:tscp:1"},
-        {"urn:tscp:names:baf:1.1#BusinessAuthorizationCategory", "urn:example:tscp:1:confidential"},
-        {"urn:tscp:names:baf:1.1#BusinessAuthorizationDate", "2015-11-27T11:45:00"}
+    std::map<OUString, OUString> aExpectedStatements =
+    {
+        {"urn:bails:ExportControl:BusinessAuthorization:Identifier", "urn:example:tscp:1"},
+        {"urn:bails:ExportControl:BusinessAuthorizationCategory:Identifier", "urn:example:tscp:1:confidential"},
+        {"urn:bails:ExportControl:Authorization:StartValidity", "2015-11-27"}
     };
     std::map<OUString, OUString> aActualStatements;
     xStatements = xGraph->getStatements(xParagraph, uno::Reference<rdf::XURI>(), uno::Reference<rdf::XURI>());
@@ -212,8 +215,8 @@ DECLARE_WW8EXPORT_TEST(testNewPageStylesTable, "new-page-styles.doc")
 DECLARE_WW8EXPORT_TEST(testFdo42144, "fdo42144.odt")
 {
     // Footer wasn't disabled -- instead empty footer was exported.
-    uno::Reference<beans::XPropertySet> xStyle(getStyles("PageStyles")->getByName(DEFAULT_STYLE), uno::UNO_QUERY);
-    CPPUNIT_ASSERT_EQUAL(false, bool(getProperty<sal_Bool>(xStyle, "FooterIsOn")));
+    uno::Reference<beans::XPropertySet> xStyle(getStyles("PageStyles")->getByName("Standard"), uno::UNO_QUERY);
+    CPPUNIT_ASSERT_EQUAL(false, bool(getProperty<bool>(xStyle, "FooterIsOn")));
 }
 
 DECLARE_WW8EXPORT_TEST(testCharacterBorder, "charborder.odt")
@@ -566,6 +569,24 @@ DECLARE_WW8EXPORT_TEST(testTextVerticalAdjustment, "tdf36117_verticalAdjustment.
     CPPUNIT_ASSERT_EQUAL( drawing::TextVerticalAdjust_BLOCK, nVA );
 }
 
+DECLARE_WW8EXPORT_TEST(testRES_MIRROR_GRAPH_BOTH, "tdf56321_flipImage_both.doc")
+{
+    SwXTextDocument* pTextDoc = dynamic_cast<SwXTextDocument *>(mxComponent.get());
+    CPPUNIT_ASSERT(pTextDoc);
+    SwDoc* pDoc = pTextDoc->GetDocShell()->GetDoc();
+    CPPUNIT_ASSERT(pDoc);
+
+    for (int n = 0; ; n++)
+    {
+        SwNode* pNode = pDoc->GetNodes()[ n ];
+        if (SwGrfNode *pGrfNode = pNode->GetGrfNode())
+        {
+            CPPUNIT_ASSERT(pGrfNode->GetSwAttrSet().GetMirrorGrf().GetValue() == 3);
+            break;
+        }
+    }
+}
+
 DECLARE_WW8EXPORT_TEST(testCommentExport, "comment-export.odt")
 {
     struct TextPortionInfo {
@@ -631,11 +652,14 @@ DECLARE_WW8EXPORT_TEST(testCommentExport, "comment-export.odt")
     }
 }
 
+#if !defined(MACOSX)
 DECLARE_WW8EXPORT_TEST(testTableKeep, "tdf91083.odt")
 {
     //emulate table "keep with next" -do not split table
-    CPPUNIT_ASSERT_EQUAL( OUString("Row 1"), parseDump("/root/page[5]/body/tab[1]/row[2]/cell[1]/txt[1]") );
+    CPPUNIT_ASSERT_EQUAL( OUString("Row 1"), parseDump("/root/page[3]/body/tab[1]/row[2]/cell[1]/txt[1]") );
+    CPPUNIT_ASSERT_EQUAL( OUString("Row 1"), parseDump("/root/page[6]/body/tab[1]/row[2]/cell[1]/txt[1]") );
 }
+#endif
 
 DECLARE_WW8EXPORT_TEST(testMoveRange, "fdo66304-1.odt")
 {
@@ -666,6 +690,34 @@ DECLARE_WW8EXPORT_TEST(testTdf94386, "tdf94386.odt")
     xNextPropertySet->getPropertyValue("Size") >>= lSize;
 
     CPPUNIT_ASSERT((fSize.Width != lSize.Width) && (fSize.Height != lSize.Height));
+}
+
+DECLARE_WW8EXPORT_TEST(testTdf99474, "tdf99474.odt")
+{
+    // The bullet colour of paragraph #3 should be COL_AUTO
+    auto xPara = getParagraph(3);
+    uno::Reference<container::XIndexReplace> xNumRules(
+        getProperty< uno::Reference<container::XIndexReplace> >(
+            xPara, "NumberingRules"),
+        uno::UNO_QUERY);
+    int numLevel = getProperty<sal_Int32>(xPara, "NumberingLevel");
+    uno::Sequence< beans::PropertyValue > aPropertyValues;
+    xNumRules->getByIndex(numLevel) >>= aPropertyValues;
+    OUString charStyleName;
+    for(int j = 0 ; j< aPropertyValues.getLength() ; ++j)
+    {
+        auto aProp = aPropertyValues[j];
+        if (aProp.Name == "CharStyleName") {
+            charStyleName = aProp.Value.get<OUString>();
+            break;
+        }
+    }
+    CPPUNIT_ASSERT(charStyleName.getLength());
+    uno::Reference<beans::XPropertySet> xStyle(
+        getStyles("CharacterStyles")->getByName(charStyleName),
+        uno::UNO_QUERY);
+    ColorData charColor = getProperty<util::Color>(xStyle, "CharColor");
+    CPPUNIT_ASSERT_EQUAL(COL_AUTO, charColor);
 }
 
 CPPUNIT_PLUGIN_IMPLEMENT();

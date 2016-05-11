@@ -22,7 +22,7 @@
 #include <tools/globname.hxx>
 #include <tools/poly.hxx>
 #include <vcl/graph.hxx>
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 #include <vcl/gradient.hxx>
 #include <rtl/ustring.hxx>
 #include <tools/stream.hxx>
@@ -168,7 +168,7 @@ void PPTWriter::exportPPTPost( )
     mbStatus = true;
 };
 
-void ImplExportComments( uno::Reference< drawing::XDrawPage > xPage, SvMemoryStream& rBinaryTagData10Atom );
+void ImplExportComments( const uno::Reference< drawing::XDrawPage >& xPage, SvMemoryStream& rBinaryTagData10Atom );
 
 void PPTWriter::ImplWriteSlide( sal_uInt32 nPageNum, sal_uInt32 nMasterNum, sal_uInt16 nMode,
                                 bool bHasBackground, Reference< XPropertySet > aXBackgroundPropSet )
@@ -198,9 +198,10 @@ void PPTWriter::ImplWriteSlide( sal_uInt32 nPageNum, sal_uInt32 nMasterNum, sal_
         {
             case 1 :        // automatic
                 mnDiaMode++;
-                // fall-through
+                SAL_FALLTHROUGH;
             case 2 :        // semi-automatic
                 mnDiaMode++;
+                break;
             default :
             case 0 :        // manual
             break;
@@ -506,7 +507,7 @@ bool PPTWriter::ImplCreateDocumentSummaryInformation()
     if (xDocProps.is()) {
 
         // no idea what this is...
-        static const sal_uInt8 aGuid[ 0x52 ] =
+        static const sal_Int8 aGuid[ 0x52 ] =
         {
             0x4e, 0x00, 0x00, 0x00,
             '{',0,'D',0,'B',0,'1',0,'A',0,'C',0,'9',0,'6',0,'4',0,'-',0,
@@ -514,25 +515,25 @@ bool PPTWriter::ImplCreateDocumentSummaryInformation()
             'A',0,'1',0,'E',0,'F',0,'-',0,'0',0,'0',0,'6',0,'0',0,'9',0,
             '7',0,'D',0,'A',0,'5',0,'6',0,'8',0,'9',0,'}',0
         };
-        uno::Sequence<sal_uInt8> aGuidSeq(aGuid, 0x52);
+        uno::Sequence<sal_Int8> aGuidSeq(aGuid, 0x52);
 
         SvMemoryStream  aHyperBlob;
         ImplCreateHyperBlob( aHyperBlob );
 
-        uno::Sequence<sal_uInt8> aHyperSeq(aHyperBlob.Tell());
-        const sal_uInt8* pBlob(
-            static_cast<const sal_uInt8*>(aHyperBlob.GetData()));
+        uno::Sequence<sal_Int8> aHyperSeq(aHyperBlob.Tell());
+        const sal_Int8* pBlob(
+            static_cast<const sal_Int8*>(aHyperBlob.GetData()));
         for (sal_Int32 j = 0; j < aHyperSeq.getLength(); ++j) {
             aHyperSeq[j] = pBlob[j];
         }
 
         if ( mnCnvrtFlags & 0x8000 )
         {
-            uno::Sequence<sal_uInt8> aThumbSeq;
+            uno::Sequence<sal_Int8> aThumbSeq;
             if ( GetPageByIndex( 0, NORMAL ) && ImplGetPropertyValue( mXPagePropSet, "PreviewBitmap" ) )
             {
                 aThumbSeq =
-                    *static_cast<const uno::Sequence<sal_uInt8>*>(mAny.getValue());
+                    *static_cast<const uno::Sequence<sal_Int8>*>(mAny.getValue());
             }
             sfx2::SaveOlePropertySet( xDocProps, mrStg,
                     &aThumbSeq, &aGuidSeq, &aHyperSeq);
@@ -922,7 +923,7 @@ bool PPTWriter::ImplCreateDocument()
     return true;
 };
 
-bool PPTWriter::ImplCreateHyperBlob( SvMemoryStream& rStrm )
+void PPTWriter::ImplCreateHyperBlob( SvMemoryStream& rStrm )
 {
     sal_uInt32 nCurrentOfs, nParaOfs, nParaCount = 0;
 
@@ -1000,7 +1001,6 @@ bool PPTWriter::ImplCreateHyperBlob( SvMemoryStream& rStrm )
     rStrm.WriteUInt32( nCurrentOfs - ( nParaOfs + 4 ) );
     rStrm.WriteUInt32( nParaCount );
     rStrm.Seek( nCurrentOfs );
-    return true;
 }
 
 bool PPTWriter::ImplCreateMainNotes()
@@ -1075,7 +1075,7 @@ static OUString getInitials( const OUString& rName )
     return sInitials;
 }
 
-void ImplExportComments( uno::Reference< drawing::XDrawPage > xPage, SvMemoryStream& rBinaryTagData10Atom )
+void ImplExportComments( const uno::Reference< drawing::XDrawPage >& xPage, SvMemoryStream& rBinaryTagData10Atom )
 {
     try
     {
@@ -1217,7 +1217,8 @@ void PPTWriter::ImplWriteBackground( css::uno::Reference< css::beans::XPropertyS
                 nFillColor = EscherEx::GetColor( *static_cast<sal_uInt32 const *>(mAny.getValue()) );
                 nFillBackColor = nFillColor ^ 0xffffff;
             }
-        }   // PASSTHROUGH INTENDED
+            SAL_FALLTHROUGH;
+        }
         case css::drawing::FillStyle_NONE :
         default:
             aPropOpt.AddOpt( ESCHER_Prop_fNoFillHitTest, 0x120012 );

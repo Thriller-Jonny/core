@@ -25,9 +25,12 @@
 
 #define SVT_SEARCHPATH_DELIMITER      ';'
 
-// class SvtPathOptions --------------------------------------------------
-
 class SvtPathOptions_Impl;
+
+/*! Handle various defined paths
+
+  All path functions return URLs!
+*/
 class SAL_WARN_UNUSED UNOTOOLS_DLLPUBLIC SvtPathOptions : public utl::detail::Options
 {
 private:
@@ -58,6 +61,7 @@ public:
         PATH_TEMPLATE,
         PATH_USERCONFIG,
         PATH_WORK,
+        PATH_CLASSIFICATION,
         PATH_UICONFIG,
         PATH_FINGERPRINT,
         PATH_COUNT // should always be the last element
@@ -91,6 +95,7 @@ public:
     const OUString& GetWorkPath() const;
     const OUString& GetUIConfigPath() const;
     const OUString& GetFingerprintPath() const;
+    const OUString& GetClassificationPath() const;
 
     // set the paths
     void            SetAddinPath( const OUString& rPath );
@@ -115,6 +120,7 @@ public:
     void            SetTemplatePath( const OUString& rPath );
     void            SetUserConfigPath( const OUString& rPath );
     void            SetWorkPath( const OUString& rPath );
+    void            SetClassificationPath( const OUString& rPath );
 
     OUString        SubstituteVariable( const OUString& rVar ) const;
     OUString        ExpandMacros( const OUString& rPath ) const;

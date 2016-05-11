@@ -56,16 +56,16 @@ using ::std::set;
 
 namespace {
 
-template<typename _Iter>
-void incBlock(std::pair<_Iter, size_t>& rPos)
+template<typename Iter>
+void incBlock(std::pair<Iter, size_t>& rPos)
 {
     // Move to the next block.
     ++rPos.first;
     rPos.second = 0;
 }
 
-template<typename _Iter>
-void decBlock(std::pair<_Iter, size_t>& rPos)
+template<typename Iter>
+void decBlock(std::pair<Iter, size_t>& rPos)
 {
     // Move to the last element of the previous block.
     --rPos.first;
@@ -789,7 +789,7 @@ ScFormulaGroupIterator::ScFormulaGroupIterator( ScDocument* pDoc ) :
     mnIndex(0)
 {
     ScTable *pTab = mpDoc->FetchTable(mnTab);
-    ScColumn *pCol = pTab->FetchColumn(mnCol);
+    ScColumn *pCol = pTab ? pTab->FetchColumn(mnCol) : nullptr;
     if (pCol)
     {
         mbNullCol = false;
@@ -820,7 +820,7 @@ sc::FormulaGroupEntry* ScFormulaGroupIterator::next()
                     return nullptr;
             }
             ScTable *pTab = mpDoc->FetchTable(mnTab);
-            ScColumn *pCol = pTab->FetchColumn(mnCol);
+            ScColumn *pCol = pTab ? pTab->FetchColumn(mnCol) : nullptr;
             if (pCol)
             {
                 mbNullCol = false;
@@ -1277,8 +1277,7 @@ void ScQueryCellIterator::AdvanceQueryParamEntryField()
 }
 
 bool ScQueryCellIterator::FindEqualOrSortedLastInRange( SCCOL& nFoundCol,
-        SCROW& nFoundRow, bool bSearchForEqualAfterMismatch,
-        bool bIgnoreMismatchOnLeadingStringsP )
+        SCROW& nFoundRow )
 {
     // Set and automatically reset mpParam->mbRangeLookup when returning. We
     // could use comphelper::FlagRestorationGuard, but really, that one is
@@ -1295,9 +1294,10 @@ bool ScQueryCellIterator::FindEqualOrSortedLastInRange( SCCOL& nFoundCol,
     nFoundRow = MAXROW+1;
     SetStopOnMismatch( true ); // assume sorted keys
     SetTestEqualCondition( true );
-    bIgnoreMismatchOnLeadingStrings = bIgnoreMismatchOnLeadingStringsP;
-    bool bRegExp = mpParam->bRegExp && mpParam->GetEntry(0).GetQueryItem().meType == ScQueryEntry::ByString;
-    bool bBinary = !bRegExp && mpParam->bByRow && (mpParam->GetEntry(0).eOp ==
+    bIgnoreMismatchOnLeadingStrings = true;
+    bool bLiteral = mpParam->eSearchType == utl::SearchParam::SRCH_NORMAL &&
+        mpParam->GetEntry(0).GetQueryItem().meType == ScQueryEntry::ByString;
+    bool bBinary = bLiteral && mpParam->bByRow && (mpParam->GetEntry(0).eOp ==
             SC_LESS_EQUAL || mpParam->GetEntry(0).eOp == SC_GREATER_EQUAL);
     bool bFound = false;
     if (bBinary)
@@ -1412,7 +1412,7 @@ bool ScQueryCellIterator::FindEqualOrSortedLastInRange( SCCOL& nFoundCol,
         maCurPos = aPosSave;
         return true;
     }
-    if ( (bSearchForEqualAfterMismatch || mpParam->bRegExp) &&
+    if ( (mpParam->eSearchType != utl::SearchParam::SRCH_NORMAL) &&
             StoppedOnMismatch() )
     {
         // Assume found entry to be the last value less than respectively
@@ -2108,7 +2108,7 @@ bool ScHorizontalCellIterator::SkipInvalidInRow()
     return false;
 }
 
-/// Find the next row that has some real content in one of it's columns.
+/// Find the next row that has some real content in one of its columns.
 SCROW ScHorizontalCellIterator::FindNextNonEmptyRow()
 {
     size_t nNextRow = MAXROW+1;
@@ -2169,14 +2169,14 @@ void ScHorizontalCellIterator::SkipInvalid()
 }
 
 ScHorizontalValueIterator::ScHorizontalValueIterator( ScDocument* pDocument,
-        const ScRange& rRange, bool bTextZero ) :
+        const ScRange& rRange ) :
     pDoc( pDocument ),
     nNumFmtIndex(0),
     nEndTab( rRange.aEnd.Tab() ),
     nNumFmtType( css::util::NumberFormat::UNDEFINED ),
     bNumValid( false ),
     bCalcAsShown( pDocument->GetDocOptions().IsCalcAsShown() ),
-    bTextAsZero( bTextZero )
+    bTextAsZero( false )
 {
     SCCOL nStartCol = rRange.aStart.Col();
     SCROW nStartRow = rRange.aStart.Row();
@@ -2605,7 +2605,7 @@ void ScDocRowHeightUpdater::update()
         }
     }
 
-    ScProgress aProgress(mrDoc.GetDocumentShell(), ScGlobal::GetRscString(STR_PROGRESS_HEIGHTING), nCellCount);
+    ScProgress aProgress(mrDoc.GetDocumentShell(), ScGlobal::GetRscString(STR_PROGRESS_HEIGHTING), nCellCount, true);
 
     Fraction aZoom(1, 1);
     itr = mpTabRangesArray->begin();
@@ -2643,7 +2643,7 @@ void ScDocRowHeightUpdater::updateAll()
         nCellCount += mrDoc.maTabs[nTab]->GetWeightedCount();
     }
 
-    ScProgress aProgress(mrDoc.GetDocumentShell(), ScGlobal::GetRscString(STR_PROGRESS_HEIGHTING), nCellCount);
+    ScProgress aProgress(mrDoc.GetDocumentShell(), ScGlobal::GetRscString(STR_PROGRESS_HEIGHTING), nCellCount, true);
 
     Fraction aZoom(1, 1);
     sc::RowHeightContext aCxt(mfPPTX, mfPPTY, aZoom, aZoom, mpOutDev);

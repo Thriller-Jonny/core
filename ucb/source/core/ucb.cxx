@@ -25,7 +25,7 @@
  *************************************************************************/
 #include <osl/diagnose.h>
 #include <comphelper/processfactory.hxx>
-#include <cppuhelper/interfacecontainer.hxx>
+#include <comphelper/interfacecontainer2.hxx>
 #include <com/sun/star/lang/IllegalArgumentException.hpp>
 #include <com/sun/star/ucb/GlobalTransferCommandArgument2.hpp>
 #include <com/sun/star/ucb/XCommandInfo.hpp>
@@ -44,7 +44,7 @@
 
 #include "ucb.hxx"
 
-using namespace cppu;
+using namespace comphelper;
 using namespace com::sun::star::uno;
 using namespace com::sun::star::lang;
 using namespace com::sun::star::ucb;
@@ -221,9 +221,7 @@ bool createContentProviderData(
 }
 
 
-
 // UniversalContentBroker Implementation.
-
 
 
 UniversalContentBroker::UniversalContentBroker(
@@ -242,7 +240,6 @@ UniversalContentBroker::~UniversalContentBroker()
 {
     delete m_pDisposeEventListeners;
 }
-
 
 
 // XInterface methods.
@@ -278,7 +275,6 @@ css::uno::Any SAL_CALL UniversalContentBroker::queryInterface( const css::uno::T
 // XTypeProvider methods.
 
 
-
 XTYPEPROVIDER_IMPL_9( UniversalContentBroker,
                       XUniversalContentBroker,
                       XTypeProvider,
@@ -291,9 +287,7 @@ XTYPEPROVIDER_IMPL_9( UniversalContentBroker,
                       XCommandProcessor );
 
 
-
 // XComponent methods.
-
 
 
 // virtual
@@ -318,7 +312,7 @@ void SAL_CALL UniversalContentBroker::addEventListener(
     throw( css::uno::RuntimeException, std::exception )
 {
     if ( !m_pDisposeEventListeners )
-        m_pDisposeEventListeners = new OInterfaceContainerHelper( m_aMutex );
+        m_pDisposeEventListeners = new OInterfaceContainerHelper2( m_aMutex );
 
     m_pDisposeEventListeners->addInterface( Listener );
 }
@@ -336,9 +330,7 @@ void SAL_CALL UniversalContentBroker::removeEventListener(
 }
 
 
-
 // XServiceInfo methods.
-
 
 
 XSERVICEINFO_IMPL_1_CTX( UniversalContentBroker,
@@ -346,17 +338,13 @@ XSERVICEINFO_IMPL_1_CTX( UniversalContentBroker,
                      UCB_SERVICE_NAME );
 
 
-
 // Service factory implementation.
-
 
 
 ONE_INSTANCE_SERVICE_FACTORY_IMPL( UniversalContentBroker );
 
 
-
 // XInitialization methods.
-
 
 
 // virtual
@@ -395,9 +383,7 @@ void SAL_CALL UniversalContentBroker::initialize( const css::uno::Sequence< Any 
 }
 
 
-
 // XContentProviderManager methods.
-
 
 
 // virtual
@@ -427,7 +413,7 @@ UniversalContentBroker::registerContentProvider(
         aList.push_front( ProviderListEntry_Impl(Provider) );
         try
         {
-            m_aProviders.add(Scheme, aList, false);
+            m_aProviders.add(Scheme, aList);
         }
         catch (const IllegalArgumentException&)
         {
@@ -523,9 +509,7 @@ Reference< XContentProvider > SAL_CALL
 }
 
 
-
 // XContentProvider methods.
-
 
 
 // virtual
@@ -574,9 +558,7 @@ sal_Int32 SAL_CALL UniversalContentBroker::compareContentIds(
 }
 
 
-
 // XContentIdentifierFactory methods.
-
 
 
 // virtual
@@ -610,9 +592,7 @@ Reference< XContentIdentifier > SAL_CALL
 }
 
 
-
 // XCommandProcessor methods.
-
 
 
 // virtual
@@ -712,9 +692,7 @@ Any SAL_CALL UniversalContentBroker::execute(
 }
 
 
-
 // XCommandProcessor2 methods.
-
 
 
 // virtual
@@ -731,7 +709,6 @@ void SAL_CALL UniversalContentBroker::abort( sal_Int32 )
 {
     // @@@ Not implemeted ( yet).
 }
-
 
 
 // XChangesListener methods
@@ -780,7 +757,6 @@ void SAL_CALL UniversalContentBroker::changesOccurred( const util::ChangesEvent&
 }
 
 
-
 // XEventListener methods
 
 
@@ -798,9 +774,7 @@ void SAL_CALL UniversalContentBroker::disposing(const lang::EventObject&)
 }
 
 
-
 // Non-interface methods
-
 
 
 Reference< XContentProvider > UniversalContentBroker::queryContentProvider(
@@ -815,7 +789,7 @@ Reference< XContentProvider > UniversalContentBroker::queryContentProvider(
                  : Reference< XContentProvider >();
 }
 
-bool UniversalContentBroker::configureUcb()
+void UniversalContentBroker::configureUcb()
     throw (uno::RuntimeException)
 {
     OUString aKey1;
@@ -824,19 +798,17 @@ bool UniversalContentBroker::configureUcb()
         || !(m_aArguments[0] >>= aKey1) || !(m_aArguments[1] >>= aKey2))
     {
         OSL_FAIL("UniversalContentBroker::configureUcb(): Bad arguments");
-        return false;
+        return;
     }
 
     ContentProviderDataList aData;
     if (!getContentProviderData(aKey1, aKey2, aData))
     {
         OSL_TRACE("UniversalContentBroker::configureUcb(): No configuration");
-        return false;
+        return;
     }
 
     prepareAndRegister(aData);
-
-    return true;
 }
 
 void UniversalContentBroker::prepareAndRegister(
@@ -966,9 +938,7 @@ bool UniversalContentBroker::getContentProviderData(
 }
 
 
-
 // ProviderListEntry_Impl implementation.
-
 
 
 Reference< XContentProvider > ProviderListEntry_Impl::resolveProvider() const

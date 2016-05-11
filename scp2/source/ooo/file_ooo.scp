@@ -59,39 +59,7 @@ End
 
 #endif
 
-#if defined UNX && ! defined MACOSX && ! defined LIBO_HEADLESS
-
-File gid_File_Bin_Gnome_Open_Url
-    BIN_FILE_BODY;
-    Dir = FILELIST_DIR;
-    Name = "shell_scripts_gnome.filelist";
-    Styles = (FILELIST, PACKED);
-End
-
-File gid_File_shell_scripts
-    BIN_FILE_BODY;
-    Dir = FILELIST_DIR;
-    Name = "shell_scripts.filelist";
-    Styles = (FILELIST, PACKED);
-End
-
-File gid_File_Bin_Kde_Open_Url
-    BIN_FILE_BODY;
-    Dir = FILELIST_DIR;
-    Name = "shell_scripts_kde.filelist";
-    Styles = (FILELIST, PACKED);
-End
-
-File gid_File_Bin_Tde_Open_Url
-    BIN_FILE_BODY;
-    Dir = FILELIST_DIR;
-    Name = "shell_scripts_tde.filelist";
-    Styles = (FILELIST, PACKED);
-End
-
-#endif
-
-#if defined UNX
+#if defined UNX && ! defined ENABLE_MACOSX_SANDBOX
 File gid_File_Bin_Senddoc
     BIN_FILE_BODY;
     Dir = FILELIST_DIR;
@@ -120,54 +88,6 @@ File gid_File_Help_Schart_Zip
     FILELIST_TXT_FILE_BODY_HELPPACK;
     EXTRA_ALL_GOOD_HELP_LOCALIZATIONS_LANG(schart);
 End
-#endif
-
-
-#ifndef AIX
-#ifndef DISABLE_PYUNO
-
-File gid_File_Wizards_Common
-    Dir = FILELIST_DIR;
-    TXT_FILE_BODY;
-    Styles = (FILELIST);
-    Name = "Pyuno/commonwizards.filelist";
-End
-
-File gid_File_Wizards_Fax
-    Dir = FILELIST_DIR;
-    TXT_FILE_BODY;
-    Styles = (FILELIST);
-    Name = "Pyuno/fax.filelist";
-End
-
-File gid_File_Wizards_Letter
-    Dir = FILELIST_DIR;
-    TXT_FILE_BODY;
-    Styles = (FILELIST);
-    Name = "Pyuno/letter.filelist";
-End
-
-File gid_File_Wizards_Agenda
-    Dir = FILELIST_DIR;
-    TXT_FILE_BODY;
-    Styles = (FILELIST);
-    Name = "Pyuno/agenda.filelist";
-End
-
-File gid_File_Wizards_Web
-    Dir = FILELIST_DIR;
-    TXT_FILE_BODY;
-    Styles = (FILELIST);
-    Name = "Pyuno/web.filelist";
-End
-
-File gid_File_Pymailmerge
-    Dir = FILELIST_DIR;
-    TXT_FILE_BODY;
-    Styles = (FILELIST);
-    Name = "Pyuno/mailmerge.filelist";
-End
-#endif
 #endif
 
 // mod files

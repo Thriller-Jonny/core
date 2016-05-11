@@ -242,8 +242,6 @@ static AquaSalFrame* getMouseContainerFrame()
         return YES;
     if( mpFrame->mbFullScreen )
         return YES;
-    if( (mpFrame->mnStyle & SalFrameStyleFlags::FLOAT_FOCUSABLE) )
-        return YES;
     return [super canBecomeKeyWindow];
 }
 
@@ -273,7 +271,7 @@ static AquaSalFrame* getMouseContainerFrame()
         if( (mpFrame->mpParent && mpFrame->mpParent->GetWindow()->IsInModalMode()) )
             AquaSalMenu::enableMainMenu( false );
         #endif
-        mpFrame->CallCallback( SALEVENT_GETFOCUS, nullptr );
+        mpFrame->CallCallback( SalEvent::GetFocus, nullptr );
         mpFrame->SendPaintEvent(); // repaint controls as active
     }
 }
@@ -285,7 +283,7 @@ static AquaSalFrame* getMouseContainerFrame()
 
     if( mpFrame && AquaSalFrame::isAlive( mpFrame ) )
     {
-        mpFrame->CallCallback(SALEVENT_LOSEFOCUS, nullptr);
+        mpFrame->CallCallback(SalEvent::LoseFocus, nullptr);
         mpFrame->SendPaintEvent(); // repaint controls as inactive
     }
 }
@@ -307,7 +305,7 @@ static AquaSalFrame* getMouseContainerFrame()
     if( mpFrame && AquaSalFrame::isAlive( mpFrame ) )
     {
         mpFrame->UpdateFrameGeometry();
-        mpFrame->CallCallback( SALEVENT_MOVE, nullptr );
+        mpFrame->CallCallback( SalEvent::Move, nullptr );
     }
 }
 
@@ -319,7 +317,7 @@ static AquaSalFrame* getMouseContainerFrame()
     if( mpFrame && AquaSalFrame::isAlive( mpFrame ) )
     {
         mpFrame->UpdateFrameGeometry();
-        mpFrame->CallCallback( SALEVENT_RESIZE, nullptr );
+        mpFrame->CallCallback( SalEvent::Resize, nullptr );
         mpFrame->SendPaintEvent();
     }
 }
@@ -333,7 +331,7 @@ static AquaSalFrame* getMouseContainerFrame()
     {
         mpFrame->mbShown = false;
         mpFrame->UpdateFrameGeometry();
-        mpFrame->CallCallback( SALEVENT_RESIZE, nullptr );
+        mpFrame->CallCallback( SalEvent::Resize, nullptr );
     }
 }
 
@@ -346,7 +344,7 @@ static AquaSalFrame* getMouseContainerFrame()
     {
         mpFrame->mbShown = true;
         mpFrame->UpdateFrameGeometry();
-        mpFrame->CallCallback( SALEVENT_RESIZE, nullptr );
+        mpFrame->CallCallback( SalEvent::Resize, nullptr );
     }
 }
 
@@ -359,10 +357,10 @@ static AquaSalFrame* getMouseContainerFrame()
     if( mpFrame && AquaSalFrame::isAlive( mpFrame ) )
     {
         // #i84461# end possible input
-        mpFrame->CallCallback( SALEVENT_ENDEXTTEXTINPUT, nullptr );
+        mpFrame->CallCallback( SalEvent::EndExtTextInput, nullptr );
         if( AquaSalFrame::isAlive( mpFrame ) )
         {
-            mpFrame->CallCallback( SALEVENT_CLOSE, nullptr );
+            mpFrame->CallCallback( SalEvent::Close, nullptr );
             bRet = NO; // application will close the window or not, AppKit shouldn't
         }
     }
@@ -551,7 +549,7 @@ private:
     }
 }
 
--(void)sendMouseEventToFrame: (NSEvent*)pEvent button:(sal_uInt16)nButton eventtype:(sal_uInt16)nEvent
+-(void)sendMouseEventToFrame: (NSEvent*)pEvent button:(sal_uInt16)nButton eventtype:(SalEvent)nEvent
 {
     SolarMutexGuard aGuard;
 
@@ -560,8 +558,8 @@ private:
     if( pDispatchFrame )
     {
         bIsCaptured = true;
-        if( nEvent == SALEVENT_MOUSELEAVE ) // no leave events if mouse is captured
-            nEvent = SALEVENT_MOUSEMOVE;
+        if( nEvent == SalEvent::MouseLeave ) // no leave events if mouse is captured
+            nEvent = SalEvent::MouseMove;
     }
     else if( s_pMouseFrame )
         pDispatchFrame = s_pMouseFrame;
@@ -645,7 +643,7 @@ private:
     }
 
     s_nLastButton = MOUSE_LEFT;
-    [self sendMouseEventToFrame:pEvent button:MOUSE_LEFT eventtype:SALEVENT_MOUSEBUTTONDOWN];
+    [self sendMouseEventToFrame:pEvent button:MOUSE_LEFT eventtype:SalEvent::MouseButtonDown];
 }
 
 -(void)mouseDragged: (NSEvent*)pEvent
@@ -656,19 +654,19 @@ private:
         [mpMouseEventListener mouseDragged: [pEvent copyWithZone: nullptr]];
     }
     s_nLastButton = MOUSE_LEFT;
-    [self sendMouseEventToFrame:pEvent button:MOUSE_LEFT eventtype:SALEVENT_MOUSEMOVE];
+    [self sendMouseEventToFrame:pEvent button:MOUSE_LEFT eventtype:SalEvent::MouseMove];
 }
 
 -(void)mouseUp: (NSEvent*)pEvent
 {
     s_nLastButton = 0;
-    [self sendMouseEventToFrame:pEvent button:MOUSE_LEFT eventtype:SALEVENT_MOUSEBUTTONUP];
+    [self sendMouseEventToFrame:pEvent button:MOUSE_LEFT eventtype:SalEvent::MouseButtonUp];
 }
 
 -(void)mouseMoved: (NSEvent*)pEvent
 {
     s_nLastButton = 0;
-    [self sendMouseEventToFrame:pEvent button:0 eventtype:SALEVENT_MOUSEMOVE];
+    [self sendMouseEventToFrame:pEvent button:0 eventtype:SalEvent::MouseMove];
 }
 
 -(void)mouseEntered: (NSEvent*)pEvent
@@ -678,7 +676,7 @@ private:
     // #i107215# the only mouse events we get when inactive are enter/exit
     // actually we would like to have all of them, but better none than some
     if( [NSApp isActive] )
-        [self sendMouseEventToFrame:pEvent button:s_nLastButton eventtype:SALEVENT_MOUSEMOVE];
+        [self sendMouseEventToFrame:pEvent button:s_nLastButton eventtype:SalEvent::MouseMove];
 }
 
 -(void)mouseExited: (NSEvent*)pEvent
@@ -689,25 +687,25 @@ private:
     // #i107215# the only mouse events we get when inactive are enter/exit
     // actually we would like to have all of them, but better none than some
     if( [NSApp isActive] )
-        [self sendMouseEventToFrame:pEvent button:s_nLastButton eventtype:SALEVENT_MOUSELEAVE];
+        [self sendMouseEventToFrame:pEvent button:s_nLastButton eventtype:SalEvent::MouseLeave];
 }
 
 -(void)rightMouseDown: (NSEvent*)pEvent
 {
     s_nLastButton = MOUSE_RIGHT;
-    [self sendMouseEventToFrame:pEvent button:MOUSE_RIGHT eventtype:SALEVENT_MOUSEBUTTONDOWN];
+    [self sendMouseEventToFrame:pEvent button:MOUSE_RIGHT eventtype:SalEvent::MouseButtonDown];
 }
 
 -(void)rightMouseDragged: (NSEvent*)pEvent
 {
     s_nLastButton = MOUSE_RIGHT;
-    [self sendMouseEventToFrame:pEvent button:MOUSE_RIGHT eventtype:SALEVENT_MOUSEMOVE];
+    [self sendMouseEventToFrame:pEvent button:MOUSE_RIGHT eventtype:SalEvent::MouseMove];
 }
 
 -(void)rightMouseUp: (NSEvent*)pEvent
 {
     s_nLastButton = 0;
-    [self sendMouseEventToFrame:pEvent button:MOUSE_RIGHT eventtype:SALEVENT_MOUSEBUTTONUP];
+    [self sendMouseEventToFrame:pEvent button:MOUSE_RIGHT eventtype:SalEvent::MouseButtonUp];
 }
 
 -(void)otherMouseDown: (NSEvent*)pEvent
@@ -715,7 +713,7 @@ private:
     if( [pEvent buttonNumber] == 2 )
     {
         s_nLastButton = MOUSE_MIDDLE;
-        [self sendMouseEventToFrame:pEvent button:MOUSE_MIDDLE eventtype:SALEVENT_MOUSEBUTTONDOWN];
+        [self sendMouseEventToFrame:pEvent button:MOUSE_MIDDLE eventtype:SalEvent::MouseButtonDown];
     }
     else
         s_nLastButton = 0;
@@ -726,7 +724,7 @@ private:
     if( [pEvent buttonNumber] == 2 )
     {
         s_nLastButton = MOUSE_MIDDLE;
-        [self sendMouseEventToFrame:pEvent button:MOUSE_MIDDLE eventtype:SALEVENT_MOUSEMOVE];
+        [self sendMouseEventToFrame:pEvent button:MOUSE_MIDDLE eventtype:SalEvent::MouseMove];
     }
     else
         s_nLastButton = 0;
@@ -736,7 +734,7 @@ private:
 {
     s_nLastButton = 0;
     if( [pEvent buttonNumber] == 2 )
-        [self sendMouseEventToFrame:pEvent button:MOUSE_MIDDLE eventtype:SALEVENT_MOUSEBUTTONUP];
+        [self sendMouseEventToFrame:pEvent button:MOUSE_MIDDLE eventtype:SalEvent::MouseButtonUp];
 }
 
 - (void)magnifyWithEvent: (NSEvent*)pEvent
@@ -802,7 +800,7 @@ private:
         aEvent.mnScrollLines = nDeltaZ;
         if( aEvent.mnScrollLines == 0 )
             aEvent.mnScrollLines = 1;
-        mpFrame->CallCallback( SALEVENT_WHEELMOUSE, &aEvent );
+        mpFrame->CallCallback( SalEvent::WheelMouse, &aEvent );
     }
 }
 
@@ -858,7 +856,7 @@ private:
                 aEvent.mnDelta = aEvent.mnNotchDelta;
             aEvent.mbHorz = TRUE;
             aEvent.mnScrollLines = SAL_WHEELMOUSE_EVENT_PAGESCROLL;
-            mpFrame->CallCallback( SALEVENT_WHEELMOUSE, &aEvent );
+            mpFrame->CallCallback( SalEvent::WheelMouse, &aEvent );
         }
         if( dY != 0.0 && AquaSalFrame::isAlive( mpFrame ))
         {
@@ -868,7 +866,7 @@ private:
                 aEvent.mnDelta = aEvent.mnNotchDelta;
             aEvent.mbHorz = FALSE;
             aEvent.mnScrollLines = SAL_WHEELMOUSE_EVENT_PAGESCROLL;
-            mpFrame->CallCallback( SALEVENT_WHEELMOUSE, &aEvent );
+            mpFrame->CallCallback( SalEvent::WheelMouse, &aEvent );
         }
     }
 }
@@ -921,7 +919,7 @@ private:
             if( aEvent.mnScrollLines == 0 )
                 aEvent.mnScrollLines = 1;
 
-            mpFrame->CallCallback( SALEVENT_WHEELMOUSE, &aEvent );
+            mpFrame->CallCallback( SalEvent::WheelMouse, &aEvent );
         }
         if( dY != 0.0 && AquaSalFrame::isAlive( mpFrame ) )
         {
@@ -934,7 +932,7 @@ private:
             if( aEvent.mnScrollLines == 0 )
                 aEvent.mnScrollLines = 1;
 
-            mpFrame->CallCallback( SALEVENT_WHEELMOUSE, &aEvent );
+            mpFrame->CallCallback( SalEvent::WheelMouse, &aEvent );
         }
     }
 }
@@ -1080,9 +1078,9 @@ private:
                 aEvent.mnCursorPos      = aInsertString.getLength();
                 aEvent.mnCursorFlags    = 0;
                 aEvent.mbOnlyCursor     = FALSE;
-                mpFrame->CallCallback( SALEVENT_EXTTEXTINPUT, &aEvent );
+                mpFrame->CallCallback( SalEvent::ExtTextInput, &aEvent );
                 if( AquaSalFrame::isAlive( mpFrame ) )
-                    mpFrame->CallCallback( SALEVENT_ENDEXTTEXTINPUT, nullptr );
+                    mpFrame->CallCallback( SalEvent::EndExtTextInput, nullptr );
             }
         }
         else
@@ -1094,9 +1092,9 @@ private:
             aEvent.mnCursorPos      = 0;
             aEvent.mnCursorFlags    = 0;
             aEvent.mbOnlyCursor     = FALSE;
-            mpFrame->CallCallback( SALEVENT_EXTTEXTINPUT, &aEvent );
+            mpFrame->CallCallback( SalEvent::ExtTextInput, &aEvent );
             if( AquaSalFrame::isAlive( mpFrame ) )
-                mpFrame->CallCallback( SALEVENT_ENDEXTTEXTINPUT, nullptr );
+                mpFrame->CallCallback( SalEvent::EndExtTextInput, nullptr );
 
         }
         mbKeyHandled = true;
@@ -1495,12 +1493,12 @@ private:
         aEvent.mnCode           = nKeyCode | ImplGetModifierMask( nMod );
         aEvent.mnCharCode       = aChar;
         aEvent.mnRepeat         = FALSE;
-        nRet = mpFrame->CallCallback( SALEVENT_KEYINPUT, &aEvent );
+        nRet = mpFrame->CallCallback( SalEvent::KeyInput, &aEvent );
         std::map< NSEvent*, bool >::iterator it = GetSalData()->maKeyEventAnswer.find( mpLastEvent );
         if( it != GetSalData()->maKeyEventAnswer.end() )
             it->second = nRet != 0;
         if( AquaSalFrame::isAlive( mpFrame ) )
-            mpFrame->CallCallback( SALEVENT_KEYUP, &aEvent );
+            mpFrame->CallCallback( SalEvent::KeyUp, &aEvent );
     }
     return nRet ? YES : NO;
 }
@@ -1640,14 +1638,14 @@ private:
         aInputEvent.maText = aInsertString;
         aInputEvent.mnCursorPos = selRange.location;
         aInputEvent.mpTextAttr = &aInputFlags[0];
-        mpFrame->CallCallback( SALEVENT_EXTTEXTINPUT, static_cast<void *>(&aInputEvent) );
+        mpFrame->CallCallback( SalEvent::ExtTextInput, static_cast<void *>(&aInputEvent) );
     } else {
         aInputEvent.maText.clear();
         aInputEvent.mnCursorPos = 0;
         aInputEvent.mnCursorFlags = 0;
         aInputEvent.mpTextAttr = nullptr;
-        mpFrame->CallCallback( SALEVENT_EXTTEXTINPUT, static_cast<void *>(&aInputEvent) );
-        mpFrame->CallCallback( SALEVENT_ENDEXTTEXTINPUT, nullptr );
+        mpFrame->CallCallback( SalEvent::ExtTextInput, static_cast<void *>(&aInputEvent) );
+        mpFrame->CallCallback( SalEvent::EndExtTextInput, nullptr );
     }
     mbKeyHandled= true;
 }
@@ -1713,7 +1711,7 @@ private:
     SolarMutexGuard aGuard;
 
     SalExtTextInputPosEvent aPosEvent;
-    mpFrame->CallCallback( SALEVENT_EXTTEXTINPUTPOS, static_cast<void *>(&aPosEvent) );
+    mpFrame->CallCallback( SalEvent::ExtTextInputPos, static_cast<void *>(&aPosEvent) );
 
     NSRect rect;
 

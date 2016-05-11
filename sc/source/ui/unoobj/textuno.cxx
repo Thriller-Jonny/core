@@ -42,6 +42,8 @@
 #include "miscuno.hxx"
 #include "cellsuno.hxx"
 #include "hints.hxx"
+#include "cellvalue.hxx"
+#include "cellform.hxx"
 #include "patattr.hxx"
 #include "formulacell.hxx"
 #include "docfunc.hxx"
@@ -91,9 +93,9 @@ SC_SIMPLE_SERVICE_INFO( ScHeaderFooterTextObj, "ScHeaderFooterTextObj", "stardiv
 ScHeaderFooterContentObj::ScHeaderFooterContentObj( const EditTextObject* pLeft,
                                                     const EditTextObject* pCenter,
                                                     const EditTextObject* pRight ) :
-    mxLeftText(new ScHeaderFooterTextObj(this, SC_HDFT_LEFT, pLeft)),
-    mxCenterText(new ScHeaderFooterTextObj(this, SC_HDFT_CENTER, pCenter)),
-    mxRightText(new ScHeaderFooterTextObj(this, SC_HDFT_RIGHT, pRight))
+    mxLeftText(new ScHeaderFooterTextObj(this, ScHeaderFooterPart::LEFT, pLeft)),
+    mxCenterText(new ScHeaderFooterTextObj(this, ScHeaderFooterPart::CENTER, pCenter)),
+    mxRightText(new ScHeaderFooterTextObj(this, ScHeaderFooterPart::RIGHT, pRight))
 {
 }
 
@@ -182,7 +184,7 @@ void ScHeaderFooterContentObj::dispose()
 }
 
 ScHeaderFooterTextData::ScHeaderFooterTextData(
-    rtl::Reference<ScHeaderFooterContentObj> const & rContent, sal_uInt16 nP, const EditTextObject* pTextObj) :
+    rtl::Reference<ScHeaderFooterContentObj> const & rContent, ScHeaderFooterPart nP, const EditTextObject* pTextObj) :
     mpTextObj(pTextObj ? pTextObj->Clone() : nullptr),
     rContentObj( rContent ),
     nPart( nP ),
@@ -198,7 +200,6 @@ ScHeaderFooterTextData::~ScHeaderFooterTextData()
 
     delete pForwarder;
     delete pEditEngine;
-    delete mpTextObj;
 }
 
 SvxTextForwarder* ScHeaderFooterTextData::GetTextForwarder()
@@ -207,7 +208,7 @@ SvxTextForwarder* ScHeaderFooterTextData::GetTextForwarder()
     {
         SfxItemPool* pEnginePool = EditEngine::CreatePool();
         pEnginePool->FreezeIdRanges();
-        ScHeaderEditEngine* pHdrEngine = new ScHeaderEditEngine( pEnginePool, true );
+        ScHeaderEditEngine* pHdrEngine = new ScHeaderEditEngine( pEnginePool );
 
         pHdrEngine->EnableUndo( false );
         pHdrEngine->SetRefMapMode( MAP_TWIP );
@@ -247,20 +248,18 @@ void ScHeaderFooterTextData::UpdateData()
 {
     if (pEditEngine)
     {
-        delete mpTextObj;
-        mpTextObj = pEditEngine->CreateTextObject();
+        mpTextObj.reset(pEditEngine->CreateTextObject());
     }
 }
 
 void ScHeaderFooterTextData::UpdateData(EditEngine& rEditEngine)
 {
-    delete mpTextObj;
-    mpTextObj = rEditEngine.CreateTextObject();
+    mpTextObj.reset(rEditEngine.CreateTextObject());
     bDataValid = false;
 }
 
 ScHeaderFooterTextObj::ScHeaderFooterTextObj(
-    rtl::Reference<ScHeaderFooterContentObj> const & rContent, sal_uInt16 nP, const EditTextObject* pTextObj) :
+    rtl::Reference<ScHeaderFooterContentObj> const & rContent, ScHeaderFooterPart nP, const EditTextObject* pTextObj) :
     aTextData(rContent, nP, pTextObj)
 {
     //  ScHeaderFooterTextData acquires rContent
@@ -328,19 +327,28 @@ OUString SAL_CALL ScHeaderFooterTextObj::getString() throw(uno::RuntimeException
     OUString aRet;
     const EditTextObject* pData;
 
-    sal_uInt16 nPart = aTextData.GetPart();
     rtl::Reference<ScHeaderFooterContentObj> rContentObj = aTextData.GetContentObj();
 
-    if (nPart == SC_HDFT_LEFT)
-        pData = rContentObj->GetLeftEditObject();
-    else if (nPart == SC_HDFT_CENTER)
-        pData = rContentObj->GetCenterEditObject();
-    else
-        pData = rContentObj->GetRightEditObject();
+    switch ( aTextData.GetPart() )
+    {
+        case ScHeaderFooterPart::LEFT:
+            pData = rContentObj->GetLeftEditObject();
+        break;
+        case ScHeaderFooterPart::CENTER:
+            pData = rContentObj->GetCenterEditObject();
+        break;
+        default: //needed for compiler warning: possible uninitialized pointer
+            assert(!"unexpected enum value of ScHeaderFooterPart");
+        // fall through
+        case ScHeaderFooterPart::RIGHT:
+            pData = rContentObj->GetRightEditObject();
+        break;
+    }
+
     if (pData)
     {
         // for pure text, no font info is needed in pool defaults
-        ScHeaderEditEngine aEditEngine( EditEngine::CreatePool(), true );
+        ScHeaderEditEngine aEditEngine( EditEngine::CreatePool() );
 
         ScHeaderFieldData aData;
         FillDummyFieldData( aData );
@@ -355,11 +363,10 @@ OUString SAL_CALL ScHeaderFooterTextObj::getString() throw(uno::RuntimeException
 void SAL_CALL ScHeaderFooterTextObj::setString( const OUString& aText ) throw(uno::RuntimeException, std::exception)
 {
     SolarMutexGuard aGuard;
-    OUString aString(aText);
 
     // for pure text, no font info is needed in pool defaults
-    ScHeaderEditEngine aEditEngine(EditEngine::CreatePool(), true);
-    aEditEngine.SetText( aString );
+    ScHeaderEditEngine aEditEngine(EditEngine::CreatePool());
+    aEditEngine.SetText( aText );
     aTextData.UpdateData(aEditEngine);
 }
 
@@ -423,28 +430,19 @@ void SAL_CALL ScHeaderFooterTextObj::insertTextContent(
             aSelection.nEndPos = aSelection.nStartPos + 1;
 
             uno::Reference<text::XTextRange> xTextRange;
-            switch (aTextData.GetPart())
+            switch ( aTextData.GetPart() )
             {
-                case SC_HDFT_LEFT:
-                {
-                    uno::Reference<text::XTextRange> xTemp(
-                        aTextData.GetContentObj()->getLeftText(), uno::UNO_QUERY);
-                    xTextRange = xTemp;
-                }
+                case ScHeaderFooterPart::LEFT:
+                    xTextRange = uno::Reference<text::XTextRange>(
+                                  aTextData.GetContentObj()->getLeftText(), uno::UNO_QUERY);
                 break;
-                case SC_HDFT_CENTER:
-                {
-                    uno::Reference<text::XTextRange> xTemp(
-                        aTextData.GetContentObj()->getCenterText(), uno::UNO_QUERY);
-                    xTextRange = xTemp;
-                }
+                case ScHeaderFooterPart::CENTER:
+                    xTextRange = uno::Reference<text::XTextRange>(
+                                  aTextData.GetContentObj()->getCenterText(), uno::UNO_QUERY);
                 break;
-                case SC_HDFT_RIGHT:
-                {
-                    uno::Reference<text::XTextRange> xTemp(
-                        aTextData.GetContentObj()->getRightText(), uno::UNO_QUERY);
-                    xTextRange = xTemp;
-                }
+                case ScHeaderFooterPart::RIGHT:
+                    xTextRange = uno::Reference<text::XTextRange>(
+                                  aTextData.GetContentObj()->getRightText(), uno::UNO_QUERY);
                 break;
             }
 
@@ -985,15 +983,16 @@ SvxTextForwarder* ScCellTextData::GetTextForwarder()
             pPattern->FillEditParaItems( &aDefaults );  // including alignment etc. (for reading)
         }
 
-        if (rDoc.GetCellType(aCellPos) == CELLTYPE_EDIT)
+        ScRefCellValue aCell(rDoc, aCellPos);
+        if (aCell.meType == CELLTYPE_EDIT)
         {
-            const EditTextObject* pObj = rDoc.GetEditText(aCellPos);
-            if (pObj)
-                pEditEngine->SetTextNewDefaults(*pObj, aDefaults);
+            const EditTextObject* pObj = aCell.mpEditText;
+            pEditEngine->SetTextNewDefaults(*pObj, aDefaults);
         }
         else
         {
-            GetCellText(aCellPos, aText);
+            sal_uLong nFormat = rDoc.GetNumberFormat(aCellPos);
+            ScCellFormat::GetInputString(aCell, nFormat, aText, *rDoc.GetFormatTable(), &rDoc);
             if (!aText.isEmpty())
                 pEditEngine->SetTextNewDefaults(aText, aDefaults);
             else
@@ -1036,7 +1035,7 @@ void ScCellTextData::Notify( SfxBroadcaster&, const SfxHint& rHint )
     }
     else if ( dynamic_cast<const SfxSimpleHint*>(&rHint) )
     {
-        sal_uLong nId = static_cast<const SfxSimpleHint&>(rHint).GetId();
+        const sal_uInt32 nId = static_cast<const SfxSimpleHint&>(rHint).GetId();
         if ( nId == SFX_HINT_DYING )
         {
             pDocShell = nullptr;                       // invalid now

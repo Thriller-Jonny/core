@@ -334,14 +334,14 @@ bool XMLOpaquePropHdl_Impl::importXML(
         const SvXMLUnitConverter& ) const
 {
     bool bRet = true;
-    sal_Bool bVal = sal_False;
+    bool bVal = false;
     if( IsXMLToken( rStrImpValue, XML_FOREGROUND ) )
-        bVal = sal_True;
+        bVal = true;
     else if( !IsXMLToken( rStrImpValue, XML_BACKGROUND ) )
         bRet = false;
 
     if( bRet )
-        rValue.setValue( &bVal, cppu::UnoType<bool>::get() );
+        rValue <<= bVal;
 
     return bRet;
 }
@@ -384,14 +384,14 @@ bool XMLContourModePropHdl_Impl::importXML(
         const SvXMLUnitConverter& ) const
 {
     bool bRet = true;
-    sal_Bool bVal = sal_False;
+    bool bVal = false;
     if( IsXMLToken( rStrImpValue, XML_OUTSIDE ) )
-        bVal = sal_True;
+        bVal = true;
     else if( ! IsXMLToken( rStrImpValue, XML_FULL ) )
         bRet = false;
 
     if( bRet )
-        rValue.setValue( &bVal, cppu::UnoType<bool>::get() );
+        rValue <<= bVal;
 
     return bRet;
 }
@@ -434,7 +434,7 @@ bool XMLParagraphOnlyPropHdl_Impl::importXML(
         const SvXMLUnitConverter& ) const
 {
     bool bRet = true;
-    sal_Bool bVal = sal_False;
+    bool bVal = false;
 
     if( ! IsXMLToken( rStrImpValue, XML_NO_LIMIT ) )
     {
@@ -444,7 +444,7 @@ bool XMLParagraphOnlyPropHdl_Impl::importXML(
     }
 
     if( bRet )
-        rValue.setValue( &bVal, cppu::UnoType<bool>::get() );
+        rValue <<= bVal;
 
     return bRet;
 }
@@ -552,7 +552,7 @@ bool XMLFrameProtectPropHdl_Impl::importXML(
         const SvXMLUnitConverter& ) const
 {
     bool bRet = true;
-    sal_Bool bVal = sal_False;
+    bool bVal = false;
     if( ! IsXMLToken( rStrImpValue, XML_NONE ) )
     {
         bRet = false;
@@ -563,14 +563,14 @@ bool XMLFrameProtectPropHdl_Impl::importXML(
             bRet = true;
             if( aToken == sVal )
             {
-                bVal = sal_True;
+                bVal = true;
                 break;
             }
         }
     }
 
     if( bRet )
-        rValue.setValue( &bVal, cppu::UnoType<bool>::get() );
+        rValue <<= bVal;
 
     return bRet;
 }
@@ -746,8 +746,7 @@ bool XMLHoriMirrorPropHdl_Impl::importXML(
 
     if( bRet )
     {
-        sal_Bool bTmp = nHoriMirror != 0;
-        rValue.setValue( &bTmp, cppu::UnoType<bool>::get() );
+        rValue <<= (nHoriMirror != 0);
     }
 
     return bRet;
@@ -794,7 +793,7 @@ bool XMLGrfMirrorPropHdl_Impl::importXML(
         const SvXMLUnitConverter& ) const
 {
     bool bRet = true;
-    sal_Bool bVal = sal_False;
+    bool bVal = false;
     if( ! IsXMLToken( rStrImpValue, XML_NONE ) )
     {
         bRet = false;
@@ -806,14 +805,14 @@ bool XMLGrfMirrorPropHdl_Impl::importXML(
             if( aToken == sVal ||
                  (bHori && IsXMLToken( aToken, XML_HORIZONTAL ) ) )
             {
-                bVal = sal_True;
+                bVal = true;
                 break;
             }
         }
     }
 
     if( bRet )
-        rValue.setValue( &bVal, cppu::UnoType<bool>::get() );
+        rValue <<= bVal;
 
     return bRet;
 }
@@ -1087,8 +1086,7 @@ bool XMLTextSyncWidthHeightPropHdl_Impl::importXML(
            Any& rValue,
         const SvXMLUnitConverter& ) const
 {
-    sal_Bool bValue = (rStrImpValue == sValue );
-    rValue.setValue( &bValue, cppu::UnoType<bool>::get() );
+    rValue <<= (rStrImpValue == sValue);
 
     return true;
 }
@@ -1219,16 +1217,8 @@ bool XMLNumber8OneBasedHdl::exportXML(
     }
     return bRet;
 }
-class XMLTextPropertyHandlerFactory_Impl
-{
-public:
-    static const XMLPropertyHandler *GetPropertyHandler( sal_Int32 nType );
 
-    XMLTextPropertyHandlerFactory_Impl();
-    ~XMLTextPropertyHandlerFactory_Impl();
-};
-
-const XMLPropertyHandler *XMLTextPropertyHandlerFactory_Impl::GetPropertyHandler
+static const XMLPropertyHandler *GetPropertyHandler
     ( sal_Int32 nType )
 {
     const XMLPropertyHandler* pHdl = nullptr;
@@ -1432,17 +1422,8 @@ const XMLPropertyHandler *XMLTextPropertyHandlerFactory_Impl::GetPropertyHandler
     return pHdl;
 }
 
-XMLTextPropertyHandlerFactory_Impl::XMLTextPropertyHandlerFactory_Impl()
-{
-}
-
-XMLTextPropertyHandlerFactory_Impl::~XMLTextPropertyHandlerFactory_Impl()
-{
-}
-
 XMLTextPropertyHandlerFactory::XMLTextPropertyHandlerFactory() :
-    XMLPropertyHandlerFactory(),
-   pImpl( new XMLTextPropertyHandlerFactory_Impl )
+    XMLPropertyHandlerFactory()
 {
 }
 
@@ -1458,7 +1439,7 @@ const XMLPropertyHandler *XMLTextPropertyHandlerFactory::GetPropertyHandler(
 
     if( !pHdl )
     {
-        const XMLPropertyHandler *pNewHdl = XMLTextPropertyHandlerFactory_Impl::GetPropertyHandler( nType );
+        const XMLPropertyHandler *pNewHdl = ::GetPropertyHandler( nType );
 
         if( pNewHdl )
             PutHdlCache( nType, pNewHdl );

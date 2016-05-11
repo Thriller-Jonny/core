@@ -17,7 +17,6 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 #include <sfx2/sidebar/ResourceDefinitions.hrc>
-#include <sfx2/sidebar/Theme.hxx>
 #include <sfx2/sidebar/ControlFactory.hxx>
 #include <svx/sidebar/LinePropertyPanelBase.hxx>
 #include <LinePropertyPanel.hrc>
@@ -48,12 +47,9 @@
 #include <svx/xlinjoit.hxx>
 #include "svx/sidebar/PopupContainer.hxx"
 #include "svx/sidebar/PopupControl.hxx"
-#include "LineWidthControl.hxx"
-#include <boost/bind.hpp>
 
 using namespace css;
 using namespace css::uno;
-using sfx2::sidebar::Theme;
 
 const char UNO_SELECTWIDTH[] = ".uno:SelectWidth";
 
@@ -175,10 +171,9 @@ LinePropertyPanelBase::LinePropertyPanelBase(
     mnWidthCoreValue(0),
     mpStartItem(),
     mpEndItem(),
-    maLineWidthPopup(this, ::boost::bind(&LinePropertyPanelBase::CreateLineWidthPopupControl, this, _1)),
+    mxLineWidthPopup(VclPtr<LineWidthPopup>::Create(*this)),
     maIMGNone(SVX_RES(IMG_NONE_ICON)),
     mpIMGWidthIcon(),
-    mxFrame(rxFrame),
     mbWidthValuable(true),
     mbArrowSupported(true)
 {
@@ -207,6 +202,7 @@ LinePropertyPanelBase::~LinePropertyPanelBase()
 
 void LinePropertyPanelBase::dispose()
 {
+    mxLineWidthPopup.disposeAndClear();
     mpFTWidth.clear();
     mpTBWidth.clear();
     mpTBColor.clear();
@@ -261,11 +257,6 @@ void LinePropertyPanelBase::Initialize()
     mpLBEnd->AdaptDropDownLineCountToMaximum();
 
     mpMFTransparent->SetModifyHdl(LINK(this, LinePropertyPanelBase, ChangeTransparentHdl));
-    mpMFTransparent->SetAccessibleName("Transparency");  //wj acc
-
-    mpTBWidth->SetAccessibleRelationLabeledBy(mpFTWidth);
-    mpMFTransparent->SetAccessibleRelationLabeledBy(mpFTTransparency);
-    mpLBEnd->SetAccessibleRelationLabeledBy(mpLBEnd);
 
     mpLBEdgeStyle->SetSelectHdl( LINK( this, LinePropertyPanelBase, ChangeEdgeStyleHdl ) );
     mpLBEdgeStyle->SetAccessibleName("Corner Style");
@@ -463,7 +454,6 @@ void LinePropertyPanelBase::updateLineJoint(bool bDisabled, bool bSetOrDefault,
 
             switch(pItem->GetValue())
             {
-                case drawing::LineJoint_MIDDLE:
                 case drawing::LineJoint_ROUND:
                 {
                     nEntryPos = 1;
@@ -474,6 +464,7 @@ void LinePropertyPanelBase::updateLineJoint(bool bDisabled, bool bSetOrDefault,
                     nEntryPos = 2;
                     break;
                 }
+                case drawing::LineJoint_MIDDLE:
                 case drawing::LineJoint_MITER:
                 {
                     nEntryPos = 3;
@@ -690,8 +681,8 @@ IMPL_LINK_TYPED(LinePropertyPanelBase, ToolboxWidthSelectHdl,ToolBox*, pToolBox,
 {
     if (pToolBox->GetItemCommand(pToolBox->GetCurItemId()) == UNO_SELECTWIDTH)
     {
-        maLineWidthPopup.SetWidthSelect(mnWidthCoreValue, mbWidthValuable, meMapUnit);
-        maLineWidthPopup.Show(*pToolBox);
+        mxLineWidthPopup->SetWidthSelect(mnWidthCoreValue, mbWidthValuable, meMapUnit);
+        mxLineWidthPopup->StartPopupMode(pToolBox, FloatWinPopupFlags::GrabFocus);
     }
 }
 
@@ -701,16 +692,6 @@ IMPL_LINK_NOARG_TYPED( LinePropertyPanelBase, ChangeTransparentHdl, Edit&, void 
     XLineTransparenceItem aItem( nVal );
 
     setLineTransparency(aItem);
-}
-
-VclPtr<PopupControl> LinePropertyPanelBase::CreateLineWidthPopupControl (PopupContainer* pParent)
-{
-    return VclPtrInstance<LineWidthControl>(pParent, *this);
-}
-
-void LinePropertyPanelBase::EndLineWidthPopupMode()
-{
-    maLineWidthPopup.Hide();
 }
 
 void LinePropertyPanelBase::SetWidthIcon(int n)

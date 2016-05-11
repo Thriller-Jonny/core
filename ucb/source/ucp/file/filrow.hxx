@@ -32,7 +32,7 @@ namespace fileaccess {
         css::sdbc::XRow >
     {
     public:
-        XRow_impl( shell* pShell,const css::uno::Sequence< css::uno::Any >& __m_aValueMap );
+        XRow_impl( shell* pShell,const css::uno::Sequence< css::uno::Any >& aValueMap );
         virtual ~XRow_impl();
 
         virtual sal_Bool SAL_CALL
@@ -158,11 +158,10 @@ namespace fileaccess {
                    css::uno::RuntimeException, std::exception) override;
 
     private:
-        osl::Mutex                                                              m_aMutex;
+        osl::Mutex                                         m_aMutex;
         css::uno::Sequence< css::uno::Any >                m_aValueMap;
-        bool                                                                 m_nWasNull;
-        shell*                                                                   m_pMyShell;
-        css::uno::Reference< css::ucb::XContentProvider >  m_xProvider;
+        bool                                               m_nWasNull;
+        shell*                                             m_pMyShell;
         css::uno::Reference< css::script::XTypeConverter > m_xTypeConverter;
     };
 

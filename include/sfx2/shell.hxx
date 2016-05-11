@@ -113,8 +113,6 @@ enum SfxInterfaceId
     SFX_INTERFACE_LIB               =  450
 };
 
-//TODO/CLEANUP: replace by UNO constant
-#define SVVERB_SHOW -1
 
 typedef void (*SfxExecFunc)(SfxShell *, SfxRequest &rReq);
 typedef void (*SfxStateFunc)(SfxShell *, SfxItemSet &rSet);
@@ -281,7 +279,7 @@ public:
     /**
         Asynchronous ExecuteSlot for the RELOAD
         */
-    const SfxPoolItem*          ExecuteSlot( SfxRequest &rReq, bool bAsync );
+    void                        ExecuteSlot( SfxRequest &rReq, bool bAsync );
 
     inline SfxItemPool&         GetPool() const;
     inline void                 SetPool( SfxItemPool *pNewPool ) ;
@@ -368,7 +366,7 @@ public:
 
         [Cross-reference]
 
-        StarView SystemWindow::Dectivate(bool)
+        StarView SystemWindow::Deactivate(bool)
         */
     virtual void                Deactivate(bool bMDI);
 
@@ -522,7 +520,7 @@ SfxItemPool& SfxShell::GetPool() const
     in the SfxShell. Each SfxShell instance must have access to a SfxItemPool.
     Usually this is the SfxItemPool of the SfxDocumentShell. The SfxShell
     subclass does not take ownership of the orphaned pool. Before it is
-    deleted it has to be deregisted with SetPool(0).
+    deleted it has to be deregistered with SetPool(0).
 */
 inline void SfxShell::SetPool
 (

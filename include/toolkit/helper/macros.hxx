@@ -70,7 +70,6 @@ css::uno::Sequence< css::uno::Type > ClassName::getTypes() throw(css::uno::Runti
             cppu::UnoType<css::lang::XTypeProvider>::get(),
 
 
-
 #define IMPL_XTYPEPROVIDER_END \
             ); \
             pCollection = &collection; \
@@ -78,7 +77,6 @@ css::uno::Sequence< css::uno::Type > ClassName::getTypes() throw(css::uno::Runti
     } \
     return (*pCollection).getTypes(); \
 }
-
 
 
 #define DECL_LISTENERMULTIPLEXER_START( ClassName, InterfaceName ) \
@@ -92,7 +90,6 @@ public: \
     void                        SAL_CALL disposing( const css::lang::EventObject& Source ) throw(css::uno::RuntimeException, std::exception) override;
 
 
-
 #define DECL_LISTENERMULTIPLEXER_START_DLLPUB( ClassName, InterfaceName ) \
 class TOOLKIT_DLLPUBLIC ClassName : public ListenerMultiplexerBase, public InterfaceName \
 { \
@@ -104,10 +101,8 @@ public: \
     void                        SAL_CALL disposing( const css::lang::EventObject& Source ) throw(css::uno::RuntimeException, std::exception) override;
 
 
-
 #define DECL_LISTENERMULTIPLEXER_END \
 };
-
 
 
 #define IMPL_LISTENERMULTIPLEXER_BASEMETHODS( ClassName, InterfaceName ) \
@@ -129,7 +124,6 @@ void ClassName::disposing( const css::lang::EventObject& ) throw(css::uno::Runti
 }
 
 
-
 #if OSL_DEBUG_LEVEL > 0
     #define DISPLAY_EXCEPTION( ClassName, MethodName, e )    \
         OString sMessage( #ClassName "::" #MethodName ": caught an exception!\n" ); \
@@ -142,7 +136,7 @@ void ClassName::disposing( const css::lang::EventObject& ) throw(css::uno::Runti
 #define IMPL_TABLISTENERMULTIPLEXER_LISTENERMETHOD_BODY_1PARAM( ClassName, InterfaceName, MethodName, ParamType1 ) \
 { \
     ParamType1 aMulti( evt ); \
-    ::cppu::OInterfaceIteratorHelper aIt( *this ); \
+    ::comphelper::OInterfaceIteratorHelper2 aIt( *this ); \
     while( aIt.hasMoreElements() ) \
     { \
         css::uno::Reference< InterfaceName > xListener( \
@@ -168,7 +162,7 @@ void ClassName::disposing( const css::lang::EventObject& ) throw(css::uno::Runti
 { \
     EventType aMulti( evt ); \
     aMulti.Source = &GetContext(); \
-    ::cppu::OInterfaceIteratorHelper aIt( *this ); \
+    ::comphelper::OInterfaceIteratorHelper2 aIt( *this ); \
     while( aIt.hasMoreElements() ) \
     { \
         css::uno::Reference< InterfaceName > xListener( \

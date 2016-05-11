@@ -113,14 +113,13 @@ namespace svx
     };
 
 
-
     typedef ::cppu::ImplHelper2 <   css::accessibility::XAccessible,
                                     css::accessibility::XAccessibleTable
                                 >   OAccessibleHelper_Base;
 
     // - SvxShowCharSetAcc -
 
-    /** The table implemtentation of the vcl control.
+    /** The table implementation of the vcl control.
     */
 
     class SvxShowCharSetAcc : public ::comphelper::OAccessibleSelectionHelper,

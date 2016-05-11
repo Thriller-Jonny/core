@@ -208,7 +208,7 @@ protected:
 
     virtual                     ~SfxStyleSheetBasePool();
 
-    void                        StoreStyleSheet(rtl::Reference< SfxStyleSheetBase >);
+    void                        StoreStyleSheet(const rtl::Reference< SfxStyleSheetBase >&);
 
     /** Obtain the indexed style sheets.
      */
@@ -259,7 +259,7 @@ public:
     /** Add a style sheet.
      * Not an actual public function. Do not call it from non-subclasses.
      */
-    SfxStyleSheetBase&          Add( const SfxStyleSheetBase& );
+    void                        Add( const SfxStyleSheetBase& );
 };
 
 class SVL_DLLPUBLIC SfxStyleSheet: public SfxStyleSheetBase,
@@ -278,7 +278,7 @@ public:
 
 protected:
     SfxStyleSheet() // do not use! needed by MSVC at compile time to satisfy ImplInheritanceHelper2
-        : SfxStyleSheetBase(OUString("dummy"), nullptr, SFX_STYLE_FAMILY_ALL, 0)
+        : SfxStyleSheetBase(OUString("dummy"), nullptr, SfxStyleFamily::All, 0)
     {
         assert(false);
     }
@@ -297,7 +297,6 @@ public:
 };
 
 
-
 enum SfxStyleSheetHintId
 {
     CREATED       = 1,  // new
@@ -312,7 +311,6 @@ class SVL_DLLPUBLIC SfxStyleSheetPoolHint : public SfxHint
 public:
                          SfxStyleSheetPoolHint(SfxStyleSheetHintId ) {}
 };
-
 
 
 class SVL_DLLPUBLIC SfxStyleSheetHint: public SfxHint
@@ -349,8 +347,6 @@ public:
     virtual ::sal_Int64 SAL_CALL getSomething( const css::uno::Sequence< ::sal_Int8 >& aIdentifier ) throw (css::uno::RuntimeException, std::exception) override;
 
 private:
-    SfxUnoStyleSheet(); // not implemented
-
     static const css::uno::Sequence< ::sal_Int8 >& getIdentifier();
 };
 

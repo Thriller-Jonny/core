@@ -36,7 +36,7 @@ namespace dbaui
         VclPtr<OTableFieldDescWin>          m_pFieldDescWin;
         VclPtr<OTableEditorCtrl>            m_pEditorCtrl;
 
-        void ImplInitSettings( bool bFont, bool bForeground, bool bBackground );
+        void ImplInitSettings();
         DECL_LINK_TYPED( SplitHdl, Splitter*, void );
     protected:
         virtual void DataChanged(const DataChangedEvent& rDCEvt) override;
@@ -87,7 +87,7 @@ namespace dbaui
         OTableFieldDescWin*     GetDescWin()    const { return m_pWin ? m_pWin->GetDescWin() : nullptr; }
         OTableController&       getController() const { return m_rController; }
 
-        css::lang::Locale      getLocale() const { return m_aLocale;}
+        const css::lang::Locale& getLocale() const { return m_aLocale;}
 
         // IClipboardTest
         virtual bool isCutAllowed() override;

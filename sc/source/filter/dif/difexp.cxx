@@ -32,8 +32,8 @@
 #include <rtl/strbuf.hxx>
 #include <osl/diagnose.h>
 
-FltError ScFormatFilterPluginImpl::ScExportDif( SvStream& rStream, ScDocument* pDoc,
-    const ScAddress& rOutPos, const rtl_TextEncoding eNach, sal_uInt32 nDifOption )
+void ScFormatFilterPluginImpl::ScExportDif( SvStream& rStream, ScDocument* pDoc,
+    const ScAddress& rOutPos, const rtl_TextEncoding eNach )
 {
     SCCOL       nEndCol;
     SCROW       nEndRow;
@@ -43,11 +43,11 @@ FltError ScFormatFilterPluginImpl::ScExportDif( SvStream& rStream, ScDocument* p
 
     aStart.PutInOrder( aEnd );
 
-    return ScExportDif( rStream, pDoc, ScRange( aStart, aEnd ), eNach, nDifOption );
+    ScExportDif( rStream, pDoc, ScRange( aStart, aEnd ), eNach );
 }
 
 FltError ScFormatFilterPluginImpl::ScExportDif( SvStream& rOut, ScDocument* pDoc,
-    const ScRange&rRange, const rtl_TextEncoding eCharSet, sal_uInt32 nDifOption )
+    const ScRange&rRange, const rtl_TextEncoding eCharSet )
 {
     OSL_ENSURE( rRange.aStart <= rRange.aEnd, "*ScExportDif(): Range not sorted!" );
     OSL_ENSURE( rRange.aStart.Tab() == rRange.aEnd.Tab(),
@@ -99,11 +99,7 @@ FltError ScFormatFilterPluginImpl::ScExportDif( SvStream& rOut, ScDocument* pDoc
     SCROW               nNumRows = nEndRow - rRange.aStart.Row() + 1;
     SCTAB               nTab = rRange.aStart.Tab();
 
-    double              fVal;
-
-    const bool bPlain = ( nDifOption == SC_DIFOPT_PLAIN );
-
-    ScProgress          aPrgrsBar( pDoc->GetDocumentShell(), ScGlobal::GetRscString( STR_LOAD_DOC ), nNumRows );
+    ScProgress          aPrgrsBar( pDoc->GetDocumentShell(), ScGlobal::GetRscString( STR_LOAD_DOC ), nNumRows, true );
 
     aPrgrsBar.SetState( 0 );
 
@@ -163,17 +159,8 @@ FltError ScFormatFilterPluginImpl::ScExportDif( SvStream& rOut, ScDocument* pDoc
                 break;
                 case CELLTYPE_VALUE:
                     aOS.appendAscii(pNumData);
-                    if( bPlain )
-                    {
-                        aOS.append(
-                            rtl::math::doubleToUString(
-                                aCell.mfValue, rtl_math_StringFormat_G, 14, '.', true));
-                    }
-                    else
-                    {
-                        pDoc->GetInputString( nColCnt, nRowCnt, nTab, aString );
-                        aOS.append(aString);
-                    }
+                    pDoc->GetInputString( nColCnt, nRowCnt, nTab, aString );
+                    aOS.append(aString);
                     aOS.append("\nV\n");
                 break;
                 case CELLTYPE_EDIT:
@@ -187,18 +174,8 @@ FltError ScFormatFilterPluginImpl::ScExportDif( SvStream& rOut, ScDocument* pDoc
                     else if (aCell.mpFormula->IsValue())
                     {
                         aOS.appendAscii(pNumData);
-                        if( bPlain )
-                        {
-                            fVal = aCell.mpFormula->GetValue();
-                            aOS.append(
-                                rtl::math::doubleToUString(
-                                    fVal, rtl_math_StringFormat_G, 14, '.', true));
-                        }
-                        else
-                        {
-                            pDoc->GetInputString( nColCnt, nRowCnt, nTab, aString );
-                            aOS.append(aString);
-                        }
+                        pDoc->GetInputString( nColCnt, nRowCnt, nTab, aString );
+                        aOS.append(aString);
                         aOS.append("\nV\n");
                     }
                     else

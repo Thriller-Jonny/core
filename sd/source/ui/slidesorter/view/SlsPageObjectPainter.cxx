@@ -46,7 +46,6 @@ PageObjectPainter::PageObjectPainter (
     const SlideSorter& rSlideSorter)
     : mrLayouter(rSlideSorter.GetView().GetLayouter()),
       mpCache(rSlideSorter.GetView().GetPreviewCache()),
-      mpProperties(rSlideSorter.GetProperties()),
       mpTheme(rSlideSorter.GetTheme()),
       mpPageNumberFont(Theme::GetFont(Theme::Font_PageNumber, *rSlideSorter.GetContentWindow())),
       mpShadowPainter(new FramePainter(mpTheme->GetIcon(Theme::Icon_RawShadow))),
@@ -58,7 +57,7 @@ PageObjectPainter::PageObjectPainter (
     sal_uInt16 nHue, nSat, nBri;
     aColor.RGBtoHSB(nHue, nSat, nBri);
     aColor = Color::HSBtoRGB(nHue, 28, 65);
-    mpFocusBorderPainter->AdaptColor(aColor, true);
+    mpFocusBorderPainter->AdaptColor(aColor);
 }
 
 PageObjectPainter::~PageObjectPainter()
@@ -192,7 +191,7 @@ Bitmap PageObjectPainter::GetPreviewBitmap (
     {
         PageObjectLayouter *pPageObjectLayouter = mrLayouter.GetPageObjectLayouter().get();
 
-        Bitmap aMarkedPreview (mpCache->GetMarkedPreviewBitmap(pPage,false));
+        Bitmap aMarkedPreview (mpCache->GetMarkedPreviewBitmap(pPage));
         const Rectangle aPreviewBox (pPageObjectLayouter->GetBoundingBox(
             rpDescriptor,
             PageObjectLayouter::Preview,

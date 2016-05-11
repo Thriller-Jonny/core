@@ -16,7 +16,6 @@ $(eval $(call gb_CppunitTest_add_exception_objects,desktop_lib, \
 ))
 
 $(eval $(call gb_CppunitTest_use_libraries,desktop_lib, \
-	basebmp \
 	comphelper \
 	cppu \
 	cppuhelper \
@@ -32,7 +31,15 @@ $(eval $(call gb_CppunitTest_use_libraries,desktop_lib, \
     $(gb_UWINAPI) \
 ))
 
-$(eval $(call gb_CppunitTest_use_external,desktop_lib,boost_headers))
+$(eval $(call gb_CppunitTest_use_externals,desktop_lib, \
+    boost_headers \
+    cairo \
+))
+
+$(eval $(call gb_CppunitTest_set_include,desktop_lib,\
+    -I$(SRCDIR)/desktop/inc \
+    $$(INCLUDE) \
+))
 
 $(eval $(call gb_CppunitTest_use_api,desktop_lib,\
 	offapi \
@@ -61,6 +68,8 @@ $(eval $(call gb_CppunitTest_use_components,desktop_lib,\
     sw/util/swd \
     sc/util/sc \
     sc/util/scd \
+    sd/util/sd \
+    sd/util/sdd \
     toolkit/util/tk \
     ucb/source/core/ucb1 \
     ucb/source/ucp/file/ucpfile1 \

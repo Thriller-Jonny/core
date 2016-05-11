@@ -188,7 +188,7 @@ connectivity::sdbcx::ObjectType OTableContainer::createObject(const OUString& _r
                                                 sCatalog,
                                                 sSchema,
                                                 sTable,
-                                                ::dbtools::eInDataManipulation);
+                                                ::dbtools::EComposeRule::InDataManipulation);
             Any aCatalog;
             if(!sCatalog.isEmpty())
                 aCatalog <<= sCatalog;
@@ -337,7 +337,7 @@ ObjectType OTableContainer::appendObject( const OUString& _rForName, const Refer
                                                     , OUString(PROPERTY_ROW_HEIGHT), OUString(PROPERTY_TEXTCOLOR)
                                                     , OUString(PROPERTY_TEXTLINECOLOR), OUString(PROPERTY_TEXTEMPHASIS)
                                                     , OUString(PROPERTY_TEXTRELIEF) };
-    Sequence< OUString> aNames(s_pTableProps,sizeof(s_pTableProps)/sizeof(s_pTableProps[0]));
+    Sequence< OUString> aNames(s_pTableProps, SAL_N_ELEMENTS(s_pTableProps));
     if ( bModified || !lcl_isPropertySetDefaulted(aNames,xTableDefinition) )
         ::dbaccess::notifyDataSourceModified(m_xTableDefinitions,true);
 
@@ -367,7 +367,7 @@ void OTableContainer::dropObject(sal_Int32 _nPos, const OUString& _sElementName)
                     xTable->getPropertyValue(PROPERTY_SCHEMANAME)   >>= sSchema;
                 xTable->getPropertyValue(PROPERTY_NAME)         >>= sTable;
 
-                sComposedName = ::dbtools::composeTableName( m_xMetaData, sCatalog, sSchema, sTable, true, ::dbtools::eInTableDefinitions );
+                sComposedName = ::dbtools::composeTableName( m_xMetaData, sCatalog, sSchema, sTable, true, ::dbtools::EComposeRule::InTableDefinitions );
 
                 OUString sType;
                 xTable->getPropertyValue(PROPERTY_TYPE)         >>= sType;

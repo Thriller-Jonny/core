@@ -26,7 +26,6 @@
 #include <com/sun/star/drawing/XDrawPagesSupplier.hpp>
 #include <com/sun/star/drawing/XDrawView.hpp>
 #include <com/sun/star/container/XIndexAccess.hpp>
-#include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/task/XStatusIndicatorFactory.hpp>
 #include <com/sun/star/io/XOutputStream.hpp>
 
@@ -57,8 +56,6 @@ using ::com::sun::star::lang::XComponent;
 using ::com::sun::star::beans::PropertyValue;
 using ::com::sun::star::io::XOutputStream;
 using ::com::sun::star::container::XIndexAccess;
-using ::osl::FileBase;
-using ::com::sun::star::frame::XModel;
 
 namespace swf {
 
@@ -136,7 +133,6 @@ void SAL_CALL OslOutputStreamWrapper::closeOutput(  ) throw (css::io::NotConnect
 }
 
 
-
 class FlashExportFilter : public cppu::WeakImplHelper
 <
     css::document::XFilter,
@@ -187,7 +183,7 @@ FlashExportFilter::FlashExportFilter(const Reference< XComponentContext > &rxCon
 {
 }
 
-OUString exportBackground(FlashExporter &aFlashExporter, Reference< XDrawPage > xDrawPage, const OUString& sPath, sal_uInt32 nPage, const char* suffix)
+OUString exportBackground(FlashExporter &aFlashExporter, const Reference< XDrawPage >& xDrawPage, const OUString& sPath, sal_uInt32 nPage, const char* suffix)
 {
     OUString filename = STR("slide") + VAL(nPage+1) + STR(suffix) + STR(".swf");
     OUString fullpath = sPath + STR("/") + filename;
@@ -239,7 +235,7 @@ sal_Bool SAL_CALL FlashExportFilter::filter( const css::uno::Sequence< css::bean
     aFilterData = findPropertyValue<Sequence< PropertyValue > >(aDescriptor, "FilterData", aFilterData);
 
     // #i56084# check if selection shall be exported only; if yes, get the selected page and the selection itself
-    if(findPropertyValue<sal_Bool>(aDescriptor, "SelectionOnly", sal_False))
+    if(findPropertyValue<bool>(aDescriptor, "SelectionOnly", false))
     {
         Reference< XDesktop2 > xDesktop(Desktop::create(mxContext));
 
@@ -287,7 +283,7 @@ sal_Bool SAL_CALL FlashExportFilter::filter( const css::uno::Sequence< css::bean
     }
 
     // #i56084# no multiple files (suppress) when selection since selection can only export a single page
-    if (!mbExportSelection && findPropertyValue<sal_Bool>(aFilterData, "ExportMultipleFiles", false ))
+    if (!mbExportSelection && findPropertyValue<bool>(aFilterData, "ExportMultipleFiles", false ))
     {
         ExportAsMultipleFiles(aDescriptor);
     }
@@ -299,7 +295,7 @@ sal_Bool SAL_CALL FlashExportFilter::filter( const css::uno::Sequence< css::bean
     if( mxStatusIndicator.is() )
         mxStatusIndicator->end();
 
-    return sal_True;
+    return true;
 }
 
 
@@ -369,18 +365,18 @@ bool FlashExportFilter::ExportAsMultipleFiles(const Sequence< PropertyValue >& a
 
     fullpath = swfdirpath + STR("/backgroundconfig.txt");
 
-    oslFileHandle xBackgroundConfig( nullptr );
+    oslFileHandle aBackgroundConfig( nullptr );
 
     // AS: Only export the background config if we're exporting all of the pages, otherwise we'll
     //  screw it up.
-    bool bExportAll = findPropertyValue<sal_Bool>(aFilterData, "ExportAll", true);
+    bool bExportAll = findPropertyValue<bool>(aFilterData, "ExportAll", true);
     if (bExportAll)
     {
         osl_removeFile(fullpath.pData);
-        osl_openFile( fullpath.pData, &xBackgroundConfig, osl_File_OpenFlag_Create | osl_File_OpenFlag_Write );
+        osl_openFile( fullpath.pData, &aBackgroundConfig, osl_File_OpenFlag_Create | osl_File_OpenFlag_Write );
 
         sal_uInt64 bytesWritten;
-        err = osl_writeFile(xBackgroundConfig, "slides=", strlen("slides="), &bytesWritten);
+        err = osl_writeFile(aBackgroundConfig, "slides=", strlen("slides="), &bytesWritten);
     }
 
     // TODO: check for errors
@@ -391,7 +387,7 @@ bool FlashExportFilter::ExportAsMultipleFiles(const Sequence< PropertyValue >& a
         mxSelectedShapes,
         mxSelectedDrawPage,
         findPropertyValue<sal_Int32>(aFilterData, "CompressMode", 75),
-        findPropertyValue<sal_Bool>(aFilterData, "ExportOLEAsJPEG", false));
+        findPropertyValue<bool>(aFilterData, "ExportOLEAsJPEG", false));
 
     const sal_Int32 nPageCount = xDrawPages->getCount();
     if ( mxStatusIndicator.is() )
@@ -408,17 +404,17 @@ bool FlashExportFilter::ExportAsMultipleFiles(const Sequence< PropertyValue >& a
             continue;
 
         // AS: Export the background, the background objects, and then the slide contents.
-        if (bExportAll || findPropertyValue<sal_Bool>(aFilterData, "ExportBackgrounds", true))
+        if (bExportAll || findPropertyValue<bool>(aFilterData, "ExportBackgrounds", true))
         {
             backgroundfilename = exportBackground(aFlashExporter, xDrawPage, swfdirpath, nPage, "b");
         }
 
-        if (bExportAll || findPropertyValue<sal_Bool>(aFilterData, "ExportBackgroundObjects", true))
+        if (bExportAll || findPropertyValue<bool>(aFilterData, "ExportBackgroundObjects", true))
         {
             objectsfilename = exportBackground(aFlashExporter, xDrawPage, swfdirpath, nPage, "o");
         }
 
-        if (bExportAll || findPropertyValue<sal_Bool>(aFilterData, "ExportSlideContents", true))
+        if (bExportAll || findPropertyValue<bool>(aFilterData, "ExportSlideContents", true))
         {
             fullpath = swfdirpath + STR("/slide") + VAL(nPage+1) + STR("p.swf");
 
@@ -439,15 +435,15 @@ bool FlashExportFilter::ExportAsMultipleFiles(const Sequence< PropertyValue >& a
             OString ASCIItemp(temp.getStr(), temp.getLength(), RTL_TEXTENCODING_ASCII_US);
 
             sal_uInt64 bytesWritten;
-            osl_writeFile(xBackgroundConfig, ASCIItemp.getStr(), ASCIItemp.getLength(), &bytesWritten);
+            osl_writeFile(aBackgroundConfig, ASCIItemp.getStr(), ASCIItemp.getLength(), &bytesWritten);
 
             if (nPage < nPageCount - 1)
-                osl_writeFile(xBackgroundConfig, "|", 1, &bytesWritten);
+                osl_writeFile(aBackgroundConfig, "|", 1, &bytesWritten);
         }
     }
 
     if (bExportAll)
-        osl_closeFile(xBackgroundConfig);
+        osl_closeFile(aBackgroundConfig);
 
     return true;
 }
@@ -468,11 +464,10 @@ bool FlashExportFilter::ExportAsSingleFile(const Sequence< PropertyValue >& aDes
         mxSelectedShapes,
         mxSelectedDrawPage,
         findPropertyValue<sal_Int32>(aFilterData, "CompressMode", 75),
-        findPropertyValue<sal_Bool>(aFilterData, "ExportOLEAsJPEG", false));
+        findPropertyValue<bool>(aFilterData, "ExportOLEAsJPEG", false));
 
     return aFlashExporter.exportAll( mxDoc, xOutputStream, mxStatusIndicator );
 }
-
 
 
 void SAL_CALL FlashExportFilter::cancel(  )
@@ -481,14 +476,12 @@ void SAL_CALL FlashExportFilter::cancel(  )
 }
 
 
-
 // XExporter
 void SAL_CALL FlashExportFilter::setSourceDocument( const css::uno::Reference< css::lang::XComponent >& xDoc )
     throw (css::lang::IllegalArgumentException, RuntimeException, std::exception)
 {
     mxDoc = xDoc;
 }
-
 
 
 // XInitialization

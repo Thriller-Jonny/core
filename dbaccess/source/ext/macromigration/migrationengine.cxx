@@ -28,19 +28,13 @@
 #include "progresscapture.hxx"
 #include "progressmixer.hxx"
 
-#include <com/sun/star/sdb/XFormDocumentsSupplier.hpp>
-#include <com/sun/star/sdb/XReportDocumentsSupplier.hpp>
-#include <com/sun/star/util/XCloseable.hpp>
 #include <com/sun/star/frame/XModel.hpp>
-#include <com/sun/star/frame/XComponentLoader.hpp>
 #include <com/sun/star/ucb/XCommandProcessor.hpp>
 #include <com/sun/star/ucb/XContent.hpp>
-#include <com/sun/star/embed/XComponentSupplier.hpp>
 #include <com/sun/star/embed/ElementModes.hpp>
 #include <com/sun/star/document/XStorageBasedDocument.hpp>
 #include <com/sun/star/embed/XTransactedObject.hpp>
 #include <com/sun/star/frame/XStorable.hpp>
-#include <com/sun/star/embed/XEmbedPersist.hpp>
 #include <com/sun/star/script/DocumentScriptLibraryContainer.hpp>
 #include <com/sun/star/script/DocumentDialogLibraryContainer.hpp>
 #include <com/sun/star/document/XEmbeddedScripts.hpp>
@@ -88,25 +82,18 @@ namespace dbmm
     using ::com::sun::star::uno::makeAny;
     using ::com::sun::star::uno::XComponentContext;
     using ::com::sun::star::sdb::XOfficeDatabaseDocument;
-    using ::com::sun::star::sdb::XFormDocumentsSupplier;
-    using ::com::sun::star::sdb::XReportDocumentsSupplier;
     using ::com::sun::star::container::XNameAccess;
     using ::com::sun::star::uno::Sequence;
-    using ::com::sun::star::util::XCloseable;
-    using ::com::sun::star::util::CloseVetoException;
     using ::com::sun::star::lang::XComponent;
     using ::com::sun::star::frame::XModel;
-    using ::com::sun::star::frame::XComponentLoader;
     using ::com::sun::star::ucb::XCommandProcessor;
     using ::com::sun::star::ucb::XContent;
     using ::com::sun::star::ucb::Command;
-    using ::com::sun::star::embed::XComponentSupplier;
     using ::com::sun::star::task::XStatusIndicator;
     using ::com::sun::star::embed::XStorage;
     using ::com::sun::star::document::XStorageBasedDocument;
     using ::com::sun::star::embed::XTransactedObject;
     using ::com::sun::star::frame::XStorable;
-    using ::com::sun::star::embed::XEmbedPersist;
     using ::com::sun::star::script::DocumentDialogLibraryContainer;
     using ::com::sun::star::script::DocumentScriptLibraryContainer;
     using ::com::sun::star::script::XStorageBasedLibraryContainer;
@@ -170,7 +157,7 @@ namespace dbmm
     {
         static const char sScriptsStorageName[] = "Scripts";
 
-        static OUString lcl_getScriptsSubStorageName( const ScriptType _eType )
+        OUString lcl_getScriptsSubStorageName( const ScriptType _eType )
         {
             switch ( _eType )
             {
@@ -186,20 +173,20 @@ namespace dbmm
             return OUString();
         }
 
-        static bool lcl_getScriptTypeFromLanguage( const OUString& _rLanguage, ScriptType& _out_rScriptType )
+        bool lcl_getScriptTypeFromLanguage( const OUString& _rLanguage, ScriptType& _out_rScriptType )
         {
             struct LanguageMapping
             {
-                const sal_Char*     pAsciiLanguage;
+                const char*         pAsciiLanguage;
                 const ScriptType    eScriptType;
 
-                LanguageMapping( const sal_Char* _pAsciiLanguage, const ScriptType _eScriptType )
+                LanguageMapping( const char* _pAsciiLanguage, const ScriptType _eScriptType )
                     :pAsciiLanguage( _pAsciiLanguage )
                     ,eScriptType( _eScriptType )
                 {
                 }
-            }
-            aLanguageMapping[] =
+            };
+            const LanguageMapping aLanguageMapping[] =
             {
                 LanguageMapping( "JavaScript", eJavaScript ),
                 LanguageMapping( "BeanShell",  eBeanShell ),
@@ -207,11 +194,11 @@ namespace dbmm
                 LanguageMapping( "Python",     ePython ),          // TODO: is this correct?
                 LanguageMapping( "Basic",      eBasic )
             };
-            for ( size_t i=0; i < sizeof( aLanguageMapping ) / sizeof( aLanguageMapping[0] ); ++i )
+            for (const LanguageMapping& i : aLanguageMapping)
             {
-                if ( _rLanguage.equalsAscii( aLanguageMapping[i].pAsciiLanguage ) )
+                if ( _rLanguage.equalsAscii( i.pAsciiLanguage ) )
                 {
-                    _out_rScriptType = aLanguageMapping[i].eScriptType;
+                    _out_rScriptType = i.eScriptType;
                     return true;
                 }
             }
@@ -228,7 +215,7 @@ namespace dbmm
             return sObjectName;
         }
 
-        static Any lcl_executeCommand_throw( const Reference< XCommandProcessor >& _rxCommandProc,
+        Any lcl_executeCommand_throw( const Reference< XCommandProcessor >& _rxCommandProc,
             const sal_Char* _pAsciiCommand )
         {
             OSL_PRECOND( _rxCommandProc.is(), "lcl_executeCommand_throw: illegal object!" );
@@ -263,7 +250,7 @@ namespace dbmm
             eFailure
         };
 
-        static OpenDocResult lcl_loadSubDocument_nothrow( SubDocument& _rDocument,
+        OpenDocResult lcl_loadSubDocument_nothrow( SubDocument& _rDocument,
             const Reference< XStatusIndicator >& _rxProgress, MigrationLog& _rLogger )
         {
             OSL_PRECOND( !_rDocument.xDocument.is(), "lcl_loadSubDocument_nothrow: already loaded!" );
@@ -317,7 +304,7 @@ namespace dbmm
             return _rDocument.xDocument.is() ? eOpenedDoc : eFailure;
         }
 
-        static bool lcl_unloadSubDocument_nothrow( SubDocument& _rDocument, MigrationLog& _rLogger )
+        bool lcl_unloadSubDocument_nothrow( SubDocument& _rDocument, MigrationLog& _rLogger )
         {
             bool bSuccess = false;
             Any aException;
@@ -431,8 +418,7 @@ namespace dbmm
     {
     public:
         explicit DrawPageIterator( const Reference< XModel >& _rxDocument )
-            :m_xDocument( _rxDocument )
-            ,m_nPageCount( 0 )
+            :m_nPageCount( 0 )
             ,m_nCurrentPage( 0 )
         {
             Reference< XDrawPageSupplier > xSingle( _rxDocument, UNO_QUERY );
@@ -471,7 +457,6 @@ namespace dbmm
         }
 
     private:
-        const Reference< XModel >   m_xDocument;
         Reference< XDrawPage >      m_xSinglePage;
         Reference< XDrawPages >     m_xMultiPages;
         sal_Int32                   m_nPageCount;
@@ -874,13 +859,13 @@ namespace dbmm
         /** adjust the document-events which refer to macros/scripts in the document, taking into
             account the new names of the moved libraries
         */
-        bool    impl_adjustDocumentEvents_nothrow(
+        void    impl_adjustDocumentEvents_nothrow(
                     const SubDocument& _rDocument
                 ) const;
 
         /** adjusts the script references bound to form component events
         */
-        bool    impl_adjustFormComponentEvents_nothrow(
+        void    impl_adjustFormComponentEvents_nothrow(
                     const SubDocument& _rDocument
                 ) const;
 
@@ -993,7 +978,7 @@ namespace dbmm
         {
             const OUString sHierarhicalBase(
                 _rContainerLoc.isEmpty() ? OUString() :
-                                           OUStringBuffer( _rContainerLoc ).append( "/" ).makeStringAndClear());
+                                           OUString( _rContainerLoc +  "/" ) );
 
             Sequence< OUString > aElementNames( _rxContainer->getElementNames() );
             for (   const OUString* elementName = aElementNames.getConstArray();
@@ -1134,7 +1119,7 @@ namespace dbmm
 
     namespace
     {
-        static OUString lcl_createTargetLibName( const SubDocument& _rDocument,
+        OUString lcl_createTargetLibName( const SubDocument& _rDocument,
             const OUString& _rSourceLibName, const Reference< XNameAccess >& _rxTargetContainer )
         {
             // The new library name is composed from the prefix, the base name, and the old library name.
@@ -1207,11 +1192,11 @@ namespace dbmm
             }
             ::std::set< OUString > aElementNames( aDocStorage.getElementNames() );
 
-            ScriptType aKnownStorageBasedTypes[] = {
+            const ScriptType aKnownStorageBasedTypes[] = {
                 eBeanShell, eJavaScript, ePython, eJava
             };
-            for ( size_t i=0; i<sizeof( aKnownStorageBasedTypes ) / sizeof( aKnownStorageBasedTypes[0] ); ++i )
-                aElementNames.erase( lcl_getScriptsSubStorageName( aKnownStorageBasedTypes[i] ) );
+            for (ScriptType aKnownStorageBasedType : aKnownStorageBasedTypes)
+                aElementNames.erase( lcl_getScriptsSubStorageName( aKnownStorageBasedType ) );
 
             if ( !aElementNames.empty() )
             {
@@ -1652,14 +1637,14 @@ namespace dbmm
         return true;
     }
 
-    bool MigrationEngine_Impl::impl_adjustDocumentEvents_nothrow( const SubDocument& _rDocument ) const
+    void MigrationEngine_Impl::impl_adjustDocumentEvents_nothrow( const SubDocument& _rDocument ) const
     {
         try
         {
             Reference< XEventsSupplier > xSuppEvents( _rDocument.xDocument, UNO_QUERY );
             if ( !xSuppEvents.is() )
                 // this is allowed. E.g. new-style reports currently do not support this
-                return true;
+                return;
 
             Reference< XNameReplace > xEvents( xSuppEvents->getEvents(), UNO_SET_THROW );
             Sequence< OUString > aEventNames = xEvents->getElementNames();
@@ -1689,9 +1674,7 @@ namespace dbmm
                 lcl_getSubDocumentDescription( _rDocument ),
                 ::cppu::getCaughtException()
             ) );
-            return false;
         }
-        return true;
     }
 
     void MigrationEngine_Impl::impl_adjustDialogElementEvents_throw( const Reference< XInterface >& _rxElement ) const
@@ -1788,7 +1771,7 @@ namespace dbmm
         }
     }
 
-    bool MigrationEngine_Impl::impl_adjustFormComponentEvents_nothrow( const SubDocument& _rDocument ) const
+    void MigrationEngine_Impl::impl_adjustFormComponentEvents_nothrow( const SubDocument& _rDocument ) const
     {
         try
         {
@@ -1807,9 +1790,7 @@ namespace dbmm
                 lcl_getSubDocumentDescription( _rDocument ),
                 ::cppu::getCaughtException()
             ) );
-            return false;
         }
-        return true;
     }
 
     bool MigrationEngine_Impl::impl_unprotectPasswordLibrary_throw( const Reference< XLibraryContainerPassword >& _rxPasswordManager,

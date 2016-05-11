@@ -32,6 +32,8 @@
 #include "drawingml/chart/datasourceconverter.hxx"
 #include "drawingml/chart/titlemodel.hxx"
 #include "oox/helper/containerhelper.hxx"
+#include <oox/token/properties.hxx>
+#include <oox/token/tokens.hxx>
 #include <com/sun/star/chart2/RelativePosition.hpp>
 #include <com/sun/star/drawing/Alignment.hpp>
 
@@ -46,7 +48,6 @@ using namespace ::com::sun::star::chart2::data;
 using namespace ::com::sun::star::drawing;
 using namespace ::com::sun::star::uno;
 
-using ::oox::core::XmlFilterBase;
 
 TextConverter::TextConverter( const ConverterRoot& rParent, TextModel& rModel ) :
     ConverterBase< TextModel >( rParent, rModel )

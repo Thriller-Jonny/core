@@ -392,7 +392,8 @@ OStorePageBIOS::Ace::Ace()
 
 OStorePageBIOS::Ace::~Ace()
 {
-  m_next->m_prev = m_prev, m_prev->m_next = m_next;
+  m_next->m_prev = m_prev;
+  m_prev->m_next = m_next;
 }
 
 int
@@ -442,7 +443,7 @@ public:
   static AceCache & get();
 
   OStorePageBIOS::Ace *
-  create (sal_uInt32 addr, sal_uInt32 used = 1);
+  create (sal_uInt32 addr);
 
   void
   destroy (OStorePageBIOS::Ace * ace);
@@ -485,11 +486,12 @@ OStorePageBIOS::AceCache::AceCache()
 
 OStorePageBIOS::AceCache::~AceCache()
 {
-  rtl_cache_destroy (m_ace_cache), m_ace_cache = nullptr;
+  rtl_cache_destroy (m_ace_cache);
+  m_ace_cache = nullptr;
 }
 
 OStorePageBIOS::Ace *
-OStorePageBIOS::AceCache::create (sal_uInt32 addr, sal_uInt32 used)
+OStorePageBIOS::AceCache::create (sal_uInt32 addr)
 {
   Ace * ace = static_cast<Ace*>(rtl_cache_alloc (m_ace_cache));
   if (ace != nullptr)
@@ -499,7 +501,7 @@ OStorePageBIOS::AceCache::create (sal_uInt32 addr, sal_uInt32 used)
 
     // initialize.
     ace->m_addr = addr;
-    ace->m_used = used;
+    ace->m_used = 1;
   }
   return ace;
 }
@@ -510,7 +512,8 @@ OStorePageBIOS::AceCache::destroy (OStorePageBIOS::Ace * ace)
   if (ace != nullptr)
   {
     // remove from queue (if any).
-    ace->m_next->m_prev = ace->m_prev, ace->m_prev->m_next = ace->m_next;
+    ace->m_next->m_prev = ace->m_prev;
+    ace->m_prev->m_next = ace->m_next;
 
     // restore invariant state.
     ace->m_next = ace->m_prev = ace;
@@ -667,7 +670,8 @@ void OStorePageBIOS::cleanup_Impl()
     }
 
     // Release SuperBlock page.
-    delete m_pSuper, m_pSuper = nullptr;
+    delete m_pSuper;
+    m_pSuper = nullptr;
 
     // Release PageCache.
     m_xCache.clear();
@@ -787,7 +791,7 @@ storeError OStorePageBIOS::releasePage (const OStorePageDescriptor& rDescr)
  * Precond: initialized, writeable.
  */
 storeError OStorePageBIOS::allocate (
-    OStorePageObject& rPage, Allocation eAlloc)
+    OStorePageObject& rPage)
 {
     // Acquire exclusive access.
     osl::MutexGuard aGuard (m_aMutex);
@@ -800,25 +804,22 @@ storeError OStorePageBIOS::allocate (
 
     // Check allocation type.
     storeError eErrCode = store_E_None;
-    if (eAlloc != ALLOCATE_EOF)
+    // Try freelist head.
+    PageData aPageHead;
+    eErrCode = m_pSuper->unusedHead (*this, aPageHead);
+    if (eErrCode != store_E_None)
+        return eErrCode;
+
+    sal_uInt32 const nAddr = aPageHead.location();
+    if (nAddr != STORE_PAGE_NULL)
     {
-        // Try freelist head.
-        PageData aPageHead;
-        eErrCode = m_pSuper->unusedHead (*this, aPageHead);
+        // Save page.
+        eErrCode = saveObjectAt_Impl (rPage, nAddr);
         if (eErrCode != store_E_None)
             return eErrCode;
 
-        sal_uInt32 const nAddr = aPageHead.location();
-        if (nAddr != STORE_PAGE_NULL)
-        {
-            // Save page.
-            eErrCode = saveObjectAt_Impl (rPage, nAddr);
-            if (eErrCode != store_E_None)
-                return eErrCode;
-
-            // Pop freelist head and finish.
-            return m_pSuper->unusedPop (*this, aPageHead);
-        }
+        // Pop freelist head and finish.
+        return m_pSuper->unusedPop (*this, aPageHead);
     }
 
     // Allocate from EOF. Determine current size.

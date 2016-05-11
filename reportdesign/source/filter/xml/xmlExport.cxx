@@ -58,6 +58,9 @@
 
 #include <boost/bind.hpp>
 
+#include <iterator>
+
+#define DEFAULT_LINE_WIDTH 2
 
 namespace rptxml
 {
@@ -155,7 +158,6 @@ namespace rptxml
     }
 
 
-
     class OSpecialHandleXMLExportPropertyMapper : public SvXMLExportPropertyMapper
     {
     public:
@@ -179,17 +181,17 @@ namespace rptxml
 void lcl_adjustColumnSpanOverRows(ORptExport::TSectionsGrid& _rGrid)
 {
     ORptExport::TSectionsGrid::iterator aSectionIter = _rGrid.begin();
-    ORptExport::TSectionsGrid::iterator aSectionEnd = _rGrid.end();
+    ORptExport::TSectionsGrid::const_iterator aSectionEnd = _rGrid.end();
     for (;aSectionIter != aSectionEnd ; ++aSectionIter)
     {
         ORptExport::TGrid::iterator aRowIter = aSectionIter->second.begin();
-        ORptExport::TGrid::iterator aRowEnd = aSectionIter->second.end();
+        ORptExport::TGrid::const_iterator aRowEnd = aSectionIter->second.end();
         for (; aRowIter != aRowEnd; ++aRowIter)
         {
             if ( aRowIter->first )
             {
-                ::std::vector< ORptExport::TCell >::iterator aColIter = aRowIter->second.begin();
-                ::std::vector< ORptExport::TCell >::iterator aColEnd = aRowIter->second.end();
+                ::std::vector< ORptExport::TCell >::const_iterator aColIter = aRowIter->second.begin();
+                ::std::vector< ORptExport::TCell >::const_iterator aColEnd = aRowIter->second.end();
                 for (; aColIter != aColEnd; ++aColIter)
                 {
                     if ( aColIter->nRowSpan > 1 )
@@ -216,45 +218,52 @@ ORptExport::ORptExport(const Reference< XComponentContext >& _rxContext, OUStrin
     GetMM100UnitConverter().SetXMLMeasureUnit(css::util::MeasureUnit::CM);
 
     // (getExportFlags() & EXPORT_CONTENT) != 0 ? : XML_N_OOO
-    _GetNamespaceMap().Add( GetXMLToken(XML_NP_OFFICE), GetXMLToken(XML_N_OFFICE ), XML_NAMESPACE_OFFICE );
-    _GetNamespaceMap().Add( GetXMLToken(XML_NP_OOO), GetXMLToken(XML_N_OOO), XML_NAMESPACE_OOO );
+    GetNamespaceMap_().Add( GetXMLToken(XML_NP_OFFICE), GetXMLToken(XML_N_OFFICE ), XML_NAMESPACE_OFFICE );
+    GetNamespaceMap_().Add( GetXMLToken(XML_NP_OOO), GetXMLToken(XML_N_OOO), XML_NAMESPACE_OOO );
 
-    _GetNamespaceMap().Add( GetXMLToken(XML_NP_RPT), GetXMLToken(XML_N_RPT), XML_NAMESPACE_REPORT );
-    _GetNamespaceMap().Add( GetXMLToken(XML_NP_SVG), GetXMLToken(XML_N_SVG_COMPAT),  XML_NAMESPACE_SVG );
-    _GetNamespaceMap().Add( GetXMLToken(XML_NP_FORM), GetXMLToken(XML_N_FORM), XML_NAMESPACE_FORM );
-    _GetNamespaceMap().Add( GetXMLToken(XML_NP_DRAW), GetXMLToken(XML_N_DRAW), XML_NAMESPACE_DRAW );
-    _GetNamespaceMap().Add( GetXMLToken(XML_NP_TEXT), GetXMLToken(XML_N_TEXT), XML_NAMESPACE_TEXT );
+    GetNamespaceMap_().Add( GetXMLToken(XML_NP_RPT), GetXMLToken(XML_N_RPT), XML_NAMESPACE_REPORT );
+    GetNamespaceMap_().Add( GetXMLToken(XML_NP_SVG), GetXMLToken(XML_N_SVG_COMPAT),  XML_NAMESPACE_SVG );
+    GetNamespaceMap_().Add( GetXMLToken(XML_NP_FORM), GetXMLToken(XML_N_FORM), XML_NAMESPACE_FORM );
+    GetNamespaceMap_().Add( GetXMLToken(XML_NP_DRAW), GetXMLToken(XML_N_DRAW), XML_NAMESPACE_DRAW );
+    GetNamespaceMap_().Add( GetXMLToken(XML_NP_TEXT), GetXMLToken(XML_N_TEXT), XML_NAMESPACE_TEXT );
 
 
     if( getExportFlags() & (SvXMLExportFlags::STYLES|SvXMLExportFlags::MASTERSTYLES|SvXMLExportFlags::AUTOSTYLES|SvXMLExportFlags::FONTDECLS) )
-        _GetNamespaceMap().Add( GetXMLToken(XML_NP_FO), GetXMLToken(XML_N_FO_COMPAT), XML_NAMESPACE_FO );
+        GetNamespaceMap_().Add( GetXMLToken(XML_NP_FO), GetXMLToken(XML_N_FO_COMPAT), XML_NAMESPACE_FO );
 
     if( getExportFlags() & (SvXMLExportFlags::META|SvXMLExportFlags::STYLES|SvXMLExportFlags::MASTERSTYLES|SvXMLExportFlags::AUTOSTYLES|SvXMLExportFlags::CONTENT|SvXMLExportFlags::SCRIPTS|SvXMLExportFlags::SETTINGS) )
     {
-        _GetNamespaceMap().Add( GetXMLToken(XML_NP_XLINK), GetXMLToken(XML_N_XLINK), XML_NAMESPACE_XLINK );
+        GetNamespaceMap_().Add( GetXMLToken(XML_NP_XLINK), GetXMLToken(XML_N_XLINK), XML_NAMESPACE_XLINK );
     }
     if( getExportFlags() & SvXMLExportFlags::SETTINGS )
     {
-        _GetNamespaceMap().Add( GetXMLToken(XML_NP_CONFIG), GetXMLToken(XML_N_CONFIG), XML_NAMESPACE_CONFIG );
+        GetNamespaceMap_().Add( GetXMLToken(XML_NP_CONFIG), GetXMLToken(XML_N_CONFIG), XML_NAMESPACE_CONFIG );
     }
 
     if( getExportFlags() & (SvXMLExportFlags::STYLES|SvXMLExportFlags::MASTERSTYLES|SvXMLExportFlags::AUTOSTYLES|SvXMLExportFlags::CONTENT|SvXMLExportFlags::FONTDECLS) )
     {
-        _GetNamespaceMap().Add( GetXMLToken(XML_NP_STYLE), GetXMLToken(XML_N_STYLE), XML_NAMESPACE_STYLE );
+        GetNamespaceMap_().Add( GetXMLToken(XML_NP_STYLE), GetXMLToken(XML_N_STYLE), XML_NAMESPACE_STYLE );
     }
     // RDFa: needed for content and header/footer styles
     if( getExportFlags() & (SvXMLExportFlags::STYLES|SvXMLExportFlags::AUTOSTYLES|SvXMLExportFlags::MASTERSTYLES|SvXMLExportFlags::CONTENT) )
     {
-        _GetNamespaceMap().Add( GetXMLToken(XML_NP_XHTML),GetXMLToken(XML_N_XHTML), XML_NAMESPACE_XHTML );
+        GetNamespaceMap_().Add( GetXMLToken(XML_NP_XHTML),GetXMLToken(XML_N_XHTML), XML_NAMESPACE_XHTML );
+        // loext, needed for paragraphs inside shapes
+        if (getDefaultVersion() > SvtSaveOptions::ODFVER_012)
+        {
+            GetNamespaceMap_().Add(
+                GetXMLToken(XML_NP_LO_EXT), GetXMLToken(XML_N_LO_EXT),
+                XML_NAMESPACE_LO_EXT);
+        }
     }
     // GRDDL: to convert RDFa and meta.xml to RDF
     if( getExportFlags() & (SvXMLExportFlags::META|SvXMLExportFlags::STYLES|SvXMLExportFlags::AUTOSTYLES|SvXMLExportFlags::MASTERSTYLES|SvXMLExportFlags::CONTENT) )
     {
-        _GetNamespaceMap().Add( GetXMLToken(XML_NP_GRDDL),GetXMLToken(XML_N_GRDDL), XML_NAMESPACE_GRDDL );
+        GetNamespaceMap_().Add( GetXMLToken(XML_NP_GRDDL),GetXMLToken(XML_N_GRDDL), XML_NAMESPACE_GRDDL );
     }
 
-    _GetNamespaceMap().Add( GetXMLToken(XML_NP_TABLE), GetXMLToken(XML_N_TABLE), XML_NAMESPACE_TABLE );
-    _GetNamespaceMap().Add( GetXMLToken(XML_NP_NUMBER), GetXMLToken(XML_N_NUMBER), XML_NAMESPACE_NUMBER );
+    GetNamespaceMap_().Add( GetXMLToken(XML_NP_TABLE), GetXMLToken(XML_N_TABLE), XML_NAMESPACE_TABLE );
+    GetNamespaceMap_().Add( GetXMLToken(XML_NP_NUMBER), GetXMLToken(XML_N_NUMBER), XML_NAMESPACE_NUMBER );
 
     m_sTableStyle = GetNamespaceMap().GetQNameByKey( XML_NAMESPACE_TABLE, GetXMLToken(XML_STYLE_NAME) );
     m_sColumnStyle = GetNamespaceMap().GetQNameByKey( XML_NAMESPACE_TABLE, GetXMLToken(XML_COLUMN) );
@@ -282,19 +291,19 @@ ORptExport::ORptExport(const Reference< XComponentContext >& _rxContext, OUStrin
     rtl::Reference < XMLPropertySetMapper > xPropMapper(new XMLTextPropertySetMapper( TextPropMap::PARA, true ));
     m_xParaPropMapper = new OSpecialHandleXMLExportPropertyMapper( xPropMapper);
 
-    OUString sFamily( GetXMLToken(XML_PARAGRAPH) );
+    const OUString& sFamily( GetXMLToken(XML_PARAGRAPH) );
     OUString aPrefix( 'P');
     GetAutoStylePool()->AddFamily( XML_STYLE_FAMILY_TEXT_PARAGRAPH, sFamily,
                               m_xParaPropMapper, aPrefix );
 
-    GetAutoStylePool()->AddFamily(XML_STYLE_FAMILY_TABLE_CELL, OUString(XML_STYLE_FAMILY_TABLE_CELL_STYLES_NAME),
-        m_xCellStylesExportPropertySetMapper, OUString(XML_STYLE_FAMILY_TABLE_CELL_STYLES_PREFIX));
-    GetAutoStylePool()->AddFamily(XML_STYLE_FAMILY_TABLE_COLUMN, OUString(XML_STYLE_FAMILY_TABLE_COLUMN_STYLES_NAME),
-        m_xColumnStylesExportPropertySetMapper, OUString(XML_STYLE_FAMILY_TABLE_COLUMN_STYLES_PREFIX));
-    GetAutoStylePool()->AddFamily(XML_STYLE_FAMILY_TABLE_ROW, OUString(XML_STYLE_FAMILY_TABLE_ROW_STYLES_NAME),
-        m_xRowStylesExportPropertySetMapper, OUString(XML_STYLE_FAMILY_TABLE_ROW_STYLES_PREFIX));
-    GetAutoStylePool()->AddFamily(XML_STYLE_FAMILY_TABLE_TABLE, OUString(XML_STYLE_FAMILY_TABLE_TABLE_STYLES_NAME),
-        m_xTableStylesExportPropertySetMapper, OUString(XML_STYLE_FAMILY_TABLE_TABLE_STYLES_PREFIX));
+    GetAutoStylePool()->AddFamily(XML_STYLE_FAMILY_TABLE_CELL, XML_STYLE_FAMILY_TABLE_CELL_STYLES_NAME,
+        m_xCellStylesExportPropertySetMapper, XML_STYLE_FAMILY_TABLE_CELL_STYLES_PREFIX);
+    GetAutoStylePool()->AddFamily(XML_STYLE_FAMILY_TABLE_COLUMN, XML_STYLE_FAMILY_TABLE_COLUMN_STYLES_NAME,
+        m_xColumnStylesExportPropertySetMapper, XML_STYLE_FAMILY_TABLE_COLUMN_STYLES_PREFIX);
+    GetAutoStylePool()->AddFamily(XML_STYLE_FAMILY_TABLE_ROW, XML_STYLE_FAMILY_TABLE_ROW_STYLES_NAME,
+        m_xRowStylesExportPropertySetMapper, XML_STYLE_FAMILY_TABLE_ROW_STYLES_PREFIX);
+    GetAutoStylePool()->AddFamily(XML_STYLE_FAMILY_TABLE_TABLE, XML_STYLE_FAMILY_TABLE_TABLE_STYLES_NAME,
+        m_xTableStylesExportPropertySetMapper, XML_STYLE_FAMILY_TABLE_TABLE_STYLES_PREFIX);
 }
 
 Reference< XInterface > ORptExport::create(Reference< XComponentContext > const & xContext)
@@ -483,7 +492,7 @@ void lcl_calculate(const ::std::vector<sal_Int32>& _aPosX,const ::std::vector<sa
         if ( nHeight )
             for (sal_Int32 i = 0; i < nCountX ; ++i)
             {
-                _rColumns[j].second[i] = ORptExport::TCell(_aPosX[i+1] - _aPosX[i],nHeight,1,1);
+                _rColumns[j].second[i] = ORptExport::TCell(1,1);
                 _rColumns[j].second[i].bSet = true;
             }
     }
@@ -563,7 +572,7 @@ void ORptExport::exportSectionAutoStyle(const Reference<XSection>& _xProp)
     TSectionsGrid::iterator aInsert = m_aSectionsGrid.insert(
         TSectionsGrid::value_type(
                                     _xProp.get(),
-                                    TGrid(aRowPos.size() - 1,TGrid::value_type(sal_False,TRow(aColumnPos.size() - 1)))
+                                    TGrid(aRowPos.size() - 1,TGrid::value_type(false,TRow(aColumnPos.size() - 1)))
                                   )
         ).first;
     lcl_calculate(aColumnPos,aRowPos,aInsert->second);
@@ -628,22 +637,16 @@ void ORptExport::exportSectionAutoStyle(const Reference<XSection>& _xProp)
                     aInsert->second[yi].second[xi] = TCell();
                     ++xi;
                 }
-                aInsert->second[yi].first = sal_True;
+                aInsert->second[yi].first = true;
                 ++yi;
             }
 
             if (x2 - x1 != 0 && y2 - y1 != 0)
             {
-                awt::Size aElementSize = xReportElement->getSize();
-                if ( xFixedLine.is() && xFixedLine->getOrientation() == 1 ) // vertical
-                    aElementSize.Width = static_cast<sal_Int32>(xFixedLine->getWidth()*0.5);
-
                 sal_Int32 nColSpan = x2 - x1;
                 sal_Int32 nRowSpan = y2 - y1;
                 aInsert->second[y1].second[x1] =
                     TCell(
-                        aElementSize.Width , // -1 why?
-                        aElementSize.Height, // -1 why?
                         nColSpan,
                         nRowSpan,
                         xReportElement
@@ -736,13 +739,13 @@ void ORptExport::exportSection(const Reference<XSection>& _xSection,bool bHeader
 void ORptExport::exportTableColumns(const Reference< XSection>& _xSection)
 {
     SvXMLElementExport aColumns(*this,XML_NAMESPACE_TABLE, XML_TABLE_COLUMNS, true, true);
-    TGridStyleMap::iterator aColFind = m_aColumnStyleNames.find(_xSection.get());
+    TGridStyleMap::const_iterator aColFind = m_aColumnStyleNames.find(_xSection.get());
     OSL_ENSURE(aColFind != m_aColumnStyleNames.end(),"ORptExport::exportTableColumns: Section not found in m_aColumnStyleNames!");
     if ( aColFind == m_aColumnStyleNames.end() )
         return;
 
-    TStringVec::iterator aColIter = aColFind->second.begin();
-    TStringVec::iterator aColEnd = aColFind->second.end();
+    TStringVec::const_iterator aColIter = aColFind->second.begin();
+    TStringVec::const_iterator aColEnd = aColFind->second.end();
     for (; aColIter != aColEnd; ++aColIter)
     {
         AddAttribute( m_sTableStyle,*aColIter );
@@ -756,16 +759,16 @@ void ORptExport::exportContainer(const Reference< XSection>& _xSection)
 
     exportTableColumns(_xSection);
 
-    TSectionsGrid::iterator aFind = m_aSectionsGrid.find(_xSection.get());
+    TSectionsGrid::const_iterator aFind = m_aSectionsGrid.find(_xSection.get());
     OSL_ENSURE(aFind != m_aSectionsGrid.end(),"ORptExport::exportContainer: Section not found in grid!");
     if ( aFind == m_aSectionsGrid.end() )
         return;
-    TGrid::iterator aRowIter = aFind->second.begin();
-    TGrid::iterator aRowEnd = aFind->second.end();
+    TGrid::const_iterator aRowIter = aFind->second.begin();
+    TGrid::const_iterator aRowEnd = aFind->second.end();
 
     sal_Int32 nEmptyCellColSpan = 0;
-    TGridStyleMap::iterator aRowFind = m_aRowStyleNames.find(_xSection.get());
-    TStringVec::iterator aHeightIter = aRowFind->second.begin();
+    TGridStyleMap::const_iterator aRowFind = m_aRowStyleNames.find(_xSection.get());
+    TStringVec::const_iterator aHeightIter = aRowFind->second.begin();
     OSL_ENSURE(aRowFind->second.size() == aFind->second.size(),"Different count for rows");
 
     bool bShapeHandled = false;
@@ -776,8 +779,8 @@ void ORptExport::exportContainer(const Reference< XSection>& _xSection)
         SvXMLElementExport aRow(*this,XML_NAMESPACE_TABLE, XML_TABLE_ROW, true, true);
         if ( aRowIter->first )
         {
-            ::std::vector< TCell >::iterator aColIter = aRowIter->second.begin();
-            ::std::vector< TCell >::iterator aColEnd = aRowIter->second.end();
+            ::std::vector< TCell >::const_iterator aColIter = aRowIter->second.begin();
+            ::std::vector< TCell >::const_iterator aColEnd = aRowIter->second.end();
             nEmptyCellColSpan = 0;
             for (; aColIter != aColEnd; ++aColIter)
             {
@@ -1015,7 +1018,7 @@ bool ORptExport::exportFormula(enum ::xmloff::token::XMLTokenEnum eName,const OU
 void ORptExport::exportStyleName(XPropertySet* _xProp,SvXMLAttributeList& _rAtt,const OUString& _sName)
 {
     Reference<XPropertySet> xFind(_xProp);
-    TPropertyStyleMap::iterator aFind = m_aAutoStyleNames.find(xFind);
+    TPropertyStyleMap::const_iterator aFind = m_aAutoStyleNames.find(xFind);
     if ( aFind != m_aAutoStyleNames.end() )
     {
         _rAtt.AddAttribute( _sName,
@@ -1024,9 +1027,8 @@ void ORptExport::exportStyleName(XPropertySet* _xProp,SvXMLAttributeList& _rAtt,
     }
 }
 
-bool ORptExport::exportGroup(const Reference<XReportDefinition>& _xReportDefinition,sal_Int32 _nPos,bool _bExportAutoStyle)
+void ORptExport::exportGroup(const Reference<XReportDefinition>& _xReportDefinition,sal_Int32 _nPos,bool _bExportAutoStyle)
 {
-    bool bGroupExported = false;
     if ( _xReportDefinition.is() )
     {
         Reference< XGroups > xGroups = _xReportDefinition->getGroups();
@@ -1035,7 +1037,6 @@ bool ORptExport::exportGroup(const Reference<XReportDefinition>& _xReportDefinit
             sal_Int32 nCount = xGroups->getCount();
             if ( _nPos >= 0 && _nPos < nCount )
             {
-                bGroupExported = true;
                 Reference<XGroup> xGroup(xGroups->getByIndex(_nPos),uno::UNO_QUERY);
                 OSL_ENSURE(xGroup.is(),"No Group prepare for GPF");
                 if ( _bExportAutoStyle )
@@ -1069,7 +1070,7 @@ bool ORptExport::exportGroup(const Reference<XReportDefinition>& _xReportDefinit
                         }
                         OUString sFormula("rpt:HASCHANGED(\"");
 
-                        TGroupFunctionMap::iterator aGroupFind = m_aGroupFunctionMap.find(xGroup);
+                        TGroupFunctionMap::const_iterator aGroupFind = m_aGroupFunctionMap.find(xGroup);
                         if ( aGroupFind != m_aGroupFunctionMap.end() )
                             sExpression = aGroupFind->second->getName();
                         sFormula += sExpression;
@@ -1116,7 +1117,6 @@ bool ORptExport::exportGroup(const Reference<XReportDefinition>& _xReportDefinit
             }
         }
     }
-    return bGroupExported;
 }
 
 void ORptExport::exportAutoStyle(XPropertySet* _xProp,const Reference<XFormattedField>& _xParentFormattedField)
@@ -1151,9 +1151,9 @@ void ORptExport::exportAutoStyle(XPropertySet* _xProp,const Reference<XFormatted
         table::BorderLine2 aValue;
         aValue.Color = COL_BLACK;
         aValue.InnerLineWidth = aValue.LineDistance = 0;
-        aValue.OuterLineWidth = 2;
+        aValue.OuterLineWidth = DEFAULT_LINE_WIDTH;
         aValue.LineStyle = table::BorderLineStyle::SOLID;
-        aValue.LineWidth = 2;
+        aValue.LineWidth = DEFAULT_LINE_WIDTH;
 
         awt::Point aPos = xFixedLine->getPosition();
         awt::Size aSize = xFixedLine->getSize();
@@ -1287,12 +1287,12 @@ void ORptExport::exportReportAttributes(const Reference<XReportDefinition>& _xRe
     }
 }
 
-void ORptExport::_ExportContent()
+void ORptExport::ExportContent_()
 {
     exportReport(getReportDefinition());
 }
 
-void ORptExport::_ExportMasterStyles()
+void ORptExport::ExportMasterStyles_()
 {
     GetPageExport()->exportMasterStyles( true );
 }
@@ -1324,7 +1324,7 @@ void ORptExport::collectComponentStyles()
     }
 }
 
-void ORptExport::_ExportAutoStyles()
+void ORptExport::ExportAutoStyles_()
 {
     // there are no styles that require their own autostyles
     if ( getExportFlags() & SvXMLExportFlags::CONTENT )
@@ -1362,9 +1362,9 @@ void ORptExport::_ExportAutoStyles()
         GetPageExport()->exportAutoStyles();
 }
 
-void ORptExport::_ExportStyles(bool bUsed)
+void ORptExport::ExportStyles_(bool bUsed)
 {
-    SvXMLExport::_ExportStyles(bUsed);
+    SvXMLExport::ExportStyles_(bUsed);
 
     // write draw:style-name for object graphic-styles
     GetShapeExport()->ExportGraphicDefaults();
@@ -1396,11 +1396,11 @@ void SAL_CALL ORptExport::setSourceDocument( const Reference< XComponent >& xDoc
     SvXMLExport::setSourceDocument(xDoc);
 }
 
-void ORptExport::_ExportFontDecls()
+void ORptExport::ExportFontDecls_()
 {
     GetFontAutoStylePool(); // make sure the pool is created
     collectComponentStyles();
-    SvXMLExport::_ExportFontDecls();
+    SvXMLExport::ExportFontDecls_();
 }
 
 void ORptExport::exportParagraph(const Reference< XReportControlModel >& _xReportElement)
@@ -1547,7 +1547,7 @@ void ORptExport::exportGroupsExpressionAsFunction(const Reference< XGroups>& _xG
                         {
                             sFunction = "INT";
                             uno::Reference< XFunction> xCountFunction = xFunctions->createFunction();
-                            xCountFunction->setInitialFormula(beans::Optional< OUString>(sal_True,OUString("rpt:0")));
+                            xCountFunction->setInitialFormula(beans::Optional< OUString>(true,OUString("rpt:0")));
                             OUString sCountName = sFunction + "_count_" + sExpression;
                             xCountFunction->setName(sCountName);
                             xCountFunction->setFormula( "rpt:[" + sCountName + "] + 1" );
@@ -1568,13 +1568,13 @@ void ORptExport::exportGroupsExpressionAsFunction(const Reference< XGroups>& _xG
                     sFunctionName = sFunction + "_" + sExpression;
                 if ( !sFunction.isEmpty() )
                 {
-                    sal_Unicode pReplaceChars[] = { '(',')',';',',','+','-','[',']','/','*'};
-                    for(sal_uInt32 j= 0; j < sizeof(pReplaceChars)/sizeof(pReplaceChars[0]);++j)
-                        sFunctionName = sFunctionName.replace(pReplaceChars[j],'_');
+                    const sal_Unicode pReplaceChars[] = { '(',')',';',',','+','-','[',']','/','*'};
+                    for(sal_Unicode ch : pReplaceChars)
+                        sFunctionName = sFunctionName.replace(ch,'_');
 
                     xFunction->setName(sFunctionName);
                     if ( !sInitialFormula.isEmpty() )
-                        xFunction->setInitialFormula(beans::Optional< OUString>(sal_True, sInitialFormula));
+                        xFunction->setInitialFormula(beans::Optional< OUString>(true, sInitialFormula));
                     sFunction = "rpt:" + sFunction;
                     sFunction += "([";
                     sFunction += sExpression;

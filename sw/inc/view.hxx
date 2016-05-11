@@ -79,6 +79,7 @@ class GraphicFilter;
 class SwPostItMgr;
 enum class SotExchangeDest;
 class SwCursorShell;
+enum class SvxSearchCmd;
 
 namespace com{ namespace sun { namespace star {
     namespace view{ class XSelectionSupplier; }
@@ -130,13 +131,13 @@ struct SwApplyTemplate
         SwNumRule*    pNumRule;
     } aColl;
 
-    int eType;
+    SfxStyleFamily eType;
     sal_uInt16 nColor;
     SwFormatClipboard* m_pFormatClipboard;
     size_t nUndo;     //< The initial undo stack depth.
 
     SwApplyTemplate() :
-        eType(0),
+        eType(SfxStyleFamily::None),
         nColor(0),
         m_pFormatClipboard(nullptr),
         nUndo(0)
@@ -166,7 +167,6 @@ class SW_DLLPUBLIC SwView: public SfxViewShell
     static SearchAttrItemList* m_pSrchList;
     static SearchAttrItemList* m_pReplList;
 
-    SvxHtmlOptions      m_aHTMLOpt;
     Timer               m_aTimer;         // for delayed ChgLnks during an action
     OUString            m_sSwViewData,
     //and the new cursor position if the user double click in the PagePreview
@@ -204,9 +204,6 @@ class SW_DLLPUBLIC SwView: public SfxViewShell
                         m_pVRuler;
     VclPtr<ImageButton> m_pTogglePageBtn;
 
-    VclPtr<SwHlpImageButton> m_pPageUpBtn,
-                             m_pPageDownBtn;
-
     SwGlossaryHdl       *m_pGlosHdl;          // handle text block
     SwDrawBase          *m_pDrawActual;
 
@@ -229,6 +226,8 @@ class SW_DLLPUBLIC SwView: public SfxViewShell
     // save the border distance status from SwView::StateTabWin to re-use it in SwView::ExecTabWin()
     sal_uInt16          m_nLeftBorderDistance;
     sal_uInt16          m_nRightBorderDistance;
+
+    SvxSearchCmd        m_eLastSearchCommand;
 
     bool m_bWheelScrollInProgress;
 
@@ -256,11 +255,15 @@ class SW_DLLPUBLIC SwView: public SfxViewShell
                     m_bMakeSelectionVisible : 1, // transport the bookmark selection
                     m_bAnnotationMode; ///< The real cursor position is inside an annotation.
 
+    /// LibreOfficeKit has to force the page size for PgUp/PgDown
+    /// functionality based on the user's view, instead of using the m_aVisArea.
+    SwTwips         m_nLOKPageUpDownOffset;
+
     // methods for searching
     // set search context
-    SAL_DLLPRIVATE bool              SearchAndWrap(bool bApi = false);
-    SAL_DLLPRIVATE bool          SearchAll(sal_uInt16* pFound = nullptr);
-    SAL_DLLPRIVATE sal_uLong         FUNC_Search( const SwSearchOptions& rOptions );
+    SAL_DLLPRIVATE bool          SearchAndWrap(bool bApi = false);
+    SAL_DLLPRIVATE bool          SearchAll();
+    SAL_DLLPRIVATE sal_uLong     FUNC_Search( const SwSearchOptions& rOptions );
     SAL_DLLPRIVATE void          Replace();
 
     bool                        IsDocumentBorder();
@@ -289,7 +292,7 @@ class SW_DLLPUBLIC SwView: public SfxViewShell
     SAL_DLLPRIVATE long          PhyPageUp();
     SAL_DLLPRIVATE long          PhyPageDown();
 
-    SAL_DLLPRIVATE int           _CreateScrollbar( bool bHori );
+    SAL_DLLPRIVATE void           CreateScrollbar( bool bHori );
     DECL_DLLPRIVATE_LINK_TYPED(  ScrollHdl, ScrollBar*, void );
     DECL_DLLPRIVATE_LINK_TYPED(  EndScrollHdl, ScrollBar*, void );
     SAL_DLLPRIVATE bool          UpdateScrollbars();
@@ -316,13 +319,13 @@ class SW_DLLPUBLIC SwView: public SfxViewShell
 
     // for readonly switching
     SAL_DLLPRIVATE virtual void  Notify( SfxBroadcaster& rBC, const SfxHint& rHint ) override;
-    SAL_DLLPRIVATE void          _CheckReadonlyState();
-    SAL_DLLPRIVATE void          _CheckReadonlySelection();
+    SAL_DLLPRIVATE void          CheckReadonlyState();
+    SAL_DLLPRIVATE void          CheckReadonlySelection();
 
     // method for rotating PageDesc
     SAL_DLLPRIVATE void          SwapPageMargin(const SwPageDesc&, SvxLRSpaceItem& rLR);
 
-    SAL_DLLPRIVATE void          _SetZoom( const Size &rEditSz,
+    SAL_DLLPRIVATE void          SetZoom_( const Size &rEditSz,
                               SvxZoomType eZoomType,
                               short nFactor = 100,
                               bool bViewOnly = false);
@@ -381,7 +384,7 @@ public:
     virtual ErrCode         DoVerb( long nVerb ) override;
 
     virtual sal_uInt16          SetPrinter( SfxPrinter* pNew,
-                                        SfxPrinterChangeFlags nDiff = SFX_PRINTER_ALL, bool bIsAPI=false) override;
+                                        SfxPrinterChangeFlags nDiff = SFX_PRINTER_ALL) override;
     ShellModes              GetShellMode();
 
     css::view::XSelectionSupplier*       GetUNOObject();
@@ -408,7 +411,7 @@ public:
     inline       SwEditWin &GetEditWin()        { return *m_pEditWin; }
     inline const SwEditWin &GetEditWin () const { return *m_pEditWin; }
 
-#if defined WNT || defined UNX
+#if defined(_WIN32) || defined UNX
     void ScannerEventHdl( const css::lang::EventObject& rEventObject );
 #endif
 
@@ -501,7 +504,7 @@ public:
     void            ExecTabWin(SfxRequest&);
     void            ExecuteStatusLine(SfxRequest&);
     DECL_LINK_TYPED( ExecRulerClick, Ruler *, void );
-    void            ExecSearch(SfxRequest&, bool bNoMessage = false);
+    void            ExecSearch(SfxRequest&);
     void            ExecViewOptions(SfxRequest &);
 
     void            StateViewOptions(SfxItemSet &);
@@ -554,6 +557,12 @@ public:
 
     OUString    GetPageStr(sal_uInt16 nPhyNum, sal_uInt16 nVirtNum, const OUString& rPgStr);
 
+    /// Force page size for PgUp/PgDown to overwrite the computation based on m_aVisArea.
+    void ForcePageUpDownOffset(SwTwips nTwips)
+    {
+        m_nLOKPageUpDownOffset = nTwips;
+    }
+
     // hand over Shell
                  SfxShell       *GetCurShell()  { return m_pShell; }
                  SwDocShell     *GetDocShell();
@@ -566,11 +575,11 @@ public:
 
     virtual void    WriteUserData(OUString &, bool bBrowse = false) override;
     virtual void    ReadUserData(const OUString &, bool bBrowse = false) override;
-    virtual void    ReadUserDataSequence ( const css::uno::Sequence < css::beans::PropertyValue >&, bool bBrowse ) override;
-    virtual void    WriteUserDataSequence ( css::uno::Sequence < css::beans::PropertyValue >&, bool bBrowse ) override;
+    virtual void    ReadUserDataSequence ( const css::uno::Sequence < css::beans::PropertyValue >& ) override;
+    virtual void    WriteUserDataSequence ( css::uno::Sequence < css::beans::PropertyValue >& ) override;
 
     void SetCursorAtTop( bool bFlag, bool bCenter = false )
-        { m_bTopCursor = bFlag, m_bCenterCursor = bCenter; }
+        { m_bTopCursor = bFlag; m_bCenterCursor = bCenter; }
     bool IsCursorAtTop() const                    { return m_bTopCursor; }
     bool IsCursorAtCenter() const                 { return m_bCenterCursor; }
 
@@ -589,7 +598,7 @@ public:
     bool IsPasteSpecialAllowed();
 
     // Enable mail merge - mail merge field dialog enabled
-    void EnableMailMerge(bool bEnable = true);
+    void EnableMailMerge();
     //apply Accessiblity options
     void ApplyAccessiblityOptions(SvtAccessibilityOptions& rAccessibilityOptions);
 
@@ -615,8 +624,7 @@ public:
     //public fuer D&D
     int     InsertGraphic( const OUString &rPath, const OUString &rFilter,
                             bool bLink = true, GraphicFilter *pFlt = nullptr,
-                            Graphic* pPreviewGrf = nullptr,
-                            bool bRule = false );
+                            Graphic* pPreviewGrf = nullptr );
 
     void ExecuteScan( SfxRequest& rReq );
 

@@ -62,7 +62,7 @@ merge_flists()
 if ! test -f $DESTDIR/gid_Module_Root; then
     echo "Error: Failed to generate package file lists";
     echo "       Have you defined DESTDIR?"
-    exit 1;
+    exit
 fi
 
 
@@ -227,7 +227,7 @@ if test "z$OOO_VENDOR" != "zDebian" ; then
     add_used_directories tde_list.txt common_list.txt
 
     # create kde4 subpackage
-    mv_file_between_flists kde4_list.txt kde_list.txt    $INSTALLDIR/program/kde4be1lo.so
+    test -f $DESTDIR/gid_Module_Optional_Kde && cp $DESTDIR/gid_Module_Optional_Kde kde4_list.txt || :
     mv_file_between_flists kde4_list.txt common_list.txt $INSTALLDIR/program/libvclplug_kde4l..so
     mv_file_between_flists kde4_list.txt common_list.txt $INSTALLDIR/program/fps_kde4lo.so
     add_used_directories kde4_list.txt common_list.txt
@@ -250,7 +250,7 @@ if test "z$OOO_VENDOR" != "zDebian" ; then
     add_used_directories mono_list.txt common_list.txt
     # add the files from GAC if it was installed
     test -f mono_gac && cat mono_gac >>mono_list.txt
-    
+
     # postgresql subpackage
     test -f $DESTDIR/gid_Module_Optional_PostgresqlSdbc && cp $DESTDIR/gid_Module_Optional_PostgresqlSdbc postgresql_list.txt || :
 
@@ -351,7 +351,6 @@ if test "z$OOO_VENDOR" != "zDebian" ; then
         # don't use remove_file as we don't want them removed from the buildroot.
         mv_file_between_flists /dev/null common_list.txt $INSTALLDIR/share/config/images_crystal.zip
         mv_file_between_flists /dev/null common_list.txt $INSTALLDIR/share/config/images_hicontrast.zip
-        mv_file_between_flists /dev/null common_list.txt $INSTALLDIR/share/config/images_industrial.zip
         mv_file_between_flists /dev/null common_list.txt $INSTALLDIR/share/config/images_tango.zip
         mv_file_between_flists /dev/null common_list.txt $INSTALLDIR/share/config/images.zip
     fi

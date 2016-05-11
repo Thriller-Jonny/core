@@ -47,7 +47,6 @@ SwHyphWrapper::SwHyphWrapper( SwView* pVw,
             bool bStart, bool bOther, bool bSelect ) :
     SvxSpellWrapper( &pVw->GetEditWin(), rxHyph, bStart, bOther ),
     pView( pVw ),
-    xHyph( rxHyph ),
     nPageCount( 0 ),
     nPageStart( 0 ),
     bInSelection( bSelect ),
@@ -69,7 +68,7 @@ void SwHyphWrapper::SpellStart( SvxSpellArea eSpell )
     pView->HyphStart( eSpell );
 }
 
-bool SwHyphWrapper::SpellContinue()
+void SwHyphWrapper::SpellContinue()
 {
     // for automatic separation, make actions visible only at the end
     std::unique_ptr<SwWait> pWait;
@@ -90,8 +89,6 @@ bool SwHyphWrapper::SpellContinue()
         PSH->EndAllAction();
         pWait.reset();
     }
-
-    return GetLast().is();
 }
 
 void SwHyphWrapper::SpellEnd()

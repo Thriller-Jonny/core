@@ -494,7 +494,7 @@ OUString SvtURLBox::ParseSmart( const OUString& _aText, const OUString& _aBaseUR
             INetURLObject aObj( aBaseURL );
 
             // HRO: I suppose this hack should only be done for Windows !!!???
-#ifdef WNT
+#ifdef _WIN32
             // HRO: INetURLObject::smatRel2Abs does not recognize '\\' as a relative path
             //      but in case of "\\\\" INetURLObject is right - this is an absolute path !
 
@@ -515,14 +515,10 @@ OUString SvtURLBox::ParseSmart( const OUString& _aText, const OUString& _aBaseUR
             // take base URL and append current input
             bool bWasAbsolute = false;
 #ifdef UNX
-            INetURLObject::FSysStyle eStyle = static_cast< INetURLObject::FSysStyle >( INetURLObject::FSYS_VOS | INetURLObject::FSYS_UNX | INetURLObject::FSYS_DOS );
             // encode file URL correctly
             aSmart = INetURLObject::encode( aSmart, INetURLObject::PART_FPATH, INetURLObject::ENCODE_ALL );
-            INetURLObject aTmp( aObj.smartRel2Abs(
-                aSmart, bWasAbsolute, false, INetURLObject::WAS_ENCODED, RTL_TEXTENCODING_UTF8, false, eStyle ) );
-#else
-            INetURLObject aTmp( aObj.smartRel2Abs( aSmart, bWasAbsolute ) );
 #endif
+            INetURLObject aTmp( aObj.smartRel2Abs( aSmart, bWasAbsolute ) );
 
             if ( aText.endsWith(".") )
                 // INetURLObject appends a final slash for the directories "." and "..", this is a bug!
@@ -887,8 +883,7 @@ void SvtURLBox::Init(bool bSetDefaultHelpID)
 
     SetText( OUString() );
 
-    GetSubEdit()->SignalConnectAutocomplete(nullptr,
-        [this] (Edit *const pEdit) { this->AutoCompleteHandler(pEdit); } );
+    GetSubEdit()->SetAutocompleteHdl(LINK(this, SvtURLBox, AutoCompleteHdl_Impl));
     UpdatePicklistForSmartProtocol_Impl();
 
     EnableAutoSize(GetStyle() & WB_AUTOSIZE);
@@ -1118,13 +1113,11 @@ bool SvtURLBox::PreNotify( NotifyEvent& rNEvt )
     return ComboBox::PreNotify( rNEvt );
 }
 
-
-void SvtURLBox::AutoCompleteHandler( Edit* )
+IMPL_LINK_NOARG_TYPED(SvtURLBox, AutoCompleteHdl_Impl, Edit&, void)
 {
     if ( GetSubEdit()->GetAutocompleteAction() == AUTOCOMPLETE_KEYINPUT )
         TryAutoComplete();
 }
-
 
 bool SvtURLBox::Notify( NotifyEvent &rEvt )
 {
@@ -1188,7 +1181,7 @@ OUString SvtURLBox::GetURL()
             return *j;
     }
 
-#ifdef WNT
+#ifdef _WIN32
     // erase trailing spaces on Windows since thay are invalid on this OS and
     // most of the time they are inserted by accident via copy / paste
     aText = comphelper::string::stripEnd(aText, ' ');

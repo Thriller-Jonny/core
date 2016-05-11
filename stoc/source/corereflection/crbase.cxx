@@ -108,20 +108,20 @@ sal_Bool IdlClassImpl::equals( const Reference< XIdlClass >& xType )
             (xType->getTypeClass() == _eTypeClass) && (xType->getName() == _aName));
 }
 
-static const sal_Bool s_aAssignableFromTab[11][11] =
+static const bool s_aAssignableFromTab[11][11] =
 {
-                         /* from CH,BO,BY,SH,US,LO,UL,HY,UH,FL,DO */
-/* TypeClass_CHAR */            { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-/* TypeClass_BOOLEAN */         { 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-/* TypeClass_BYTE */            { 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0 },
-/* TypeClass_SHORT */           { 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0 },
-/* TypeClass_UNSIGNED_SHORT */  { 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0 },
-/* TypeClass_LONG */            { 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0 },
-/* TypeClass_UNSIGNED_LONG */   { 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0 },
-/* TypeClass_HYPER */           { 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0 },
-/* TypeClass_UNSIGNED_HYPER */  { 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0 },
-/* TypeClass_FLOAT */           { 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0 },
-/* TypeClass_DOUBLE */          { 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1 }
+                         /* from  CH,    BO,    BY,    SH,    US,    LO,    UL,    HY,    UH,    FL,    DO */
+/* TypeClass_CHAR */            { true,  false, false, false, false, false, false, false, false, false, false },
+/* TypeClass_BOOLEAN */         { false, true,  false, false, false, false, false, false, false, false, false },
+/* TypeClass_BYTE */            { false, false, true,  false, false, false, false, false, false, false, false },
+/* TypeClass_SHORT */           { false, false, true,  true,  true,  false, false, false, false, false, false },
+/* TypeClass_UNSIGNED_SHORT */  { false, false, true,  true,  true,  false, false, false, false, false, false },
+/* TypeClass_LONG */            { false, false, true,  true,  true,  true,  true,  false, false, false, false },
+/* TypeClass_UNSIGNED_LONG */   { false, false, true,  true,  true,  true,  true,  false, false, false, false },
+/* TypeClass_HYPER */           { false, false, true,  true,  true,  true,  true,  true,  true,  false, false },
+/* TypeClass_UNSIGNED_HYPER */  { false, false, true,  true,  true,  true,  true,  true,  true,  false, false },
+/* TypeClass_FLOAT */           { false, false, true,  true,  true,  true,  true,  true,  true,  true,  false },
+/* TypeClass_DOUBLE */          { false, false, true,  true,  true,  true,  true,  true,  true,  true,  true  }
 };
 
 sal_Bool IdlClassImpl::isAssignableFrom( const Reference< XIdlClass > & xType )
@@ -130,7 +130,7 @@ sal_Bool IdlClassImpl::isAssignableFrom( const Reference< XIdlClass > & xType )
     TypeClass eAssign = getTypeClass();
     if (equals( xType ) || eAssign == TypeClass_ANY) // default shot
     {
-        return sal_True;
+        return true;
     }
     else
     {
@@ -141,7 +141,7 @@ sal_Bool IdlClassImpl::isAssignableFrom( const Reference< XIdlClass > & xType )
             return s_aAssignableFromTab[eAssign-1][eFrom-1];
         }
     }
-    return sal_False;
+    return false;
 }
 
 void IdlClassImpl::createObject( Any & rObj )
@@ -226,12 +226,6 @@ Reference< XIdlArray > IdlClassImpl::getArray()
 {
     return Reference< XIdlArray >();
 }
-
-
-
-
-
-
 
 
 IdlMemberImpl::IdlMemberImpl( IdlReflectionServiceImpl * pReflection, const OUString & rName,

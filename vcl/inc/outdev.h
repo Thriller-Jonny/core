@@ -27,8 +27,9 @@
 #include <tools/gen.hxx>
 #include <vcl/vclptr.hxx>
 
-#include "outfont.hxx"
+#include "fontinstance.hxx"
 #include "PhysicalFontFace.hxx"
+#include "impfontcache.hxx"
 
 class Size;
 namespace vcl { class Font; }
@@ -36,27 +37,27 @@ class VirtualDevice;
 class PhysicalFontCollection;
 enum class AddFontSubstituteFlags;
 
-// an ImplGetDevFontList is created by an PhysicalFontCollection
+// an ImplDeviceFontList is created by an PhysicalFontCollection
 // it becomes invalid when original PhysicalFontCollection is modified
-class ImplGetDevFontList
+class ImplDeviceFontList
 {
 private:
     std::vector<PhysicalFontFace*> maDevFontVector;
 
 public:
-                        ImplGetDevFontList()        { maDevFontVector.reserve(1024); }
+                        ImplDeviceFontList()        { maDevFontVector.reserve(1024); }
     void                Add( PhysicalFontFace* pFace )  { maDevFontVector.push_back( pFace ); }
     PhysicalFontFace*   Get( int nIndex ) const     { return maDevFontVector[ nIndex ]; }
     int                 Count() const               { return maDevFontVector.size(); }
 };
 
-class ImplGetDevSizeList
+class ImplDeviceFontSizeList
 {
 private:
     std::vector<int>    maSizeList;
 
 public:
-                        ImplGetDevSizeList()
+                        ImplDeviceFontSizeList()
                         { maSizeList.reserve( 32 ); }
     void                Add( int nHeight )      { maSizeList.push_back( nHeight ); }
     int                 Count() const           { return maSizeList.size(); }
@@ -102,7 +103,7 @@ public:
     void    RemoveFontSubstitute( int nIndex );
     int     GetFontSubstituteCount() const { return maFontSubstList.size(); };
 
-    bool    FindFontSubstitute( OUString& rSubstName, const OUString& rFontName, AddFontSubstituteFlags nFlags ) const;
+    bool    FindFontSubstitute( OUString& rSubstName, const OUString& rFontName ) const;
 };
 
 // PreMatchFontSubstitution
@@ -122,40 +123,6 @@ class ImplGlyphFallbackFontSubstitution
 {
 public:
     virtual bool FindFontSubstitute( FontSelectPattern&, OUString& rMissingCodes ) const = 0;
-};
-
-// TODO: closely couple with PhysicalFontCollection
-
-class ImplFontCache
-{
-private:
-    ImplFontEntry*      mpFirstEntry;
-    int                 mnRef0Count;    // number of unreferenced ImplFontEntries
-
-    // cache of recently used font instances
-    struct IFSD_Equal { bool operator()( const FontSelectPattern&, const FontSelectPattern& ) const; };
-    struct IFSD_Hash { size_t operator()( const FontSelectPattern& ) const; };
-    typedef std::unordered_map<FontSelectPattern,ImplFontEntry*,IFSD_Hash,IFSD_Equal > FontInstanceList;
-    FontInstanceList    maFontInstanceList;
-
-    int                 CountUnreferencedEntries() const;
-
-public:
-                        ImplFontCache();
-                        ~ImplFontCache();
-
-    ImplFontEntry*      GetFontEntry( PhysicalFontCollection*,
-                             const vcl::Font&, const Size& rPixelSize, float fExactHeight);
-    ImplFontEntry*      GetFontEntry( PhysicalFontCollection*, FontSelectPattern& );
-    ImplFontEntry*      GetGlyphFallbackFont( PhysicalFontCollection*, FontSelectPattern&,
-                            int nFallbackLevel, OUString& rMissingCodes );
-
-    /// Increase the refcount of the given ImplFontEntry.
-    void                Acquire(ImplFontEntry*);
-    /// Decrease the refcount and potentially cleanup the entries with zero refcount from the cache.
-    void                Release(ImplFontEntry*);
-
-    void                Invalidate();
 };
 
 namespace vcl { struct ControlLayoutData; }

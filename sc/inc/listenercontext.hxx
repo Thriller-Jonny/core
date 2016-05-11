@@ -13,7 +13,6 @@
 #include "address.hxx"
 #include "columnspanset.hxx"
 
-#include <boost/noncopyable.hpp>
 #include <memory>
 
 class ScDocument;
@@ -23,20 +22,26 @@ namespace sc {
 
 struct ColumnBlockPosition;
 class ColumnBlockPositionSet;
+class ColumnSet;
 
-class StartListeningContext : boost::noncopyable
+class StartListeningContext
 {
     ScDocument& mrDoc;
     std::shared_ptr<ColumnBlockPositionSet> mpSet;
+    std::shared_ptr<const ColumnSet> mpColSet;
 public:
+    StartListeningContext(const StartListeningContext&) = delete;
+    const StartListeningContext& operator=(const StartListeningContext&) = delete;
     StartListeningContext(ScDocument& rDoc);
     StartListeningContext(ScDocument& rDoc, const std::shared_ptr<ColumnBlockPositionSet>& pSet);
+    void setColumnSet( const std::shared_ptr<const ColumnSet>& pColSet );
+    const std::shared_ptr<const ColumnSet>& getColumnSet() const;
     ScDocument& getDoc() { return mrDoc;}
 
     ColumnBlockPosition* getBlockPosition(SCTAB nTab, SCCOL nCol);
 };
 
-class EndListeningContext : boost::noncopyable
+class EndListeningContext
 {
     ScDocument& mrDoc;
     ColumnSpanSet maSet;
@@ -45,6 +50,8 @@ class EndListeningContext : boost::noncopyable
     ScAddress maPosDelta; // Add this to get the old position prior to the move.
 
 public:
+    EndListeningContext(const EndListeningContext&) = delete;
+    const EndListeningContext& operator=(const EndListeningContext&) = delete;
     EndListeningContext(ScDocument& rDoc, ScTokenArray* pOldCode = nullptr);
     EndListeningContext(ScDocument& rDoc, const std::shared_ptr<ColumnBlockPositionSet>& pSet, ScTokenArray* pOldCode = nullptr);
 
@@ -60,12 +67,14 @@ public:
     void purgeEmptyBroadcasters();
 };
 
-class PurgeListenerAction : public ColumnSpanSet::Action, boost::noncopyable
+class PurgeListenerAction : public ColumnSpanSet::Action
 {
     ScDocument& mrDoc;
     std::unique_ptr<ColumnBlockPosition> mpBlockPos;
 
 public:
+    PurgeListenerAction(const PurgeListenerAction&) = delete;
+    const PurgeListenerAction& operator=(const PurgeListenerAction&) = delete;
     PurgeListenerAction( ScDocument& rDoc );
 
     virtual void startColumn( SCTAB nTab, SCCOL nCol ) override;

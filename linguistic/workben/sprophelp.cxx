@@ -39,8 +39,6 @@ using namespace com::sun::star::linguistic2;
 using namespace linguistic;
 
 
-
-
 PropertyChgHelper::PropertyChgHelper(
         const Reference< XInterface > & rxSource,
         Reference< XPropertySet > &rxPropSet,
@@ -176,7 +174,7 @@ static const char *aSP[] =
 PropertyHelper_Spell::PropertyHelper_Spell(
         const Reference< XInterface > & rxSource,
         Reference< XPropertySet > &rxPropSet ) :
-    PropertyChgHelper   ( rxSource, rxPropSet, aSP, sizeof(aSP) / sizeof(aSP[0]) )
+    PropertyChgHelper   ( rxSource, rxPropSet, aSP, SAL_N_ELEMENTS(aSP) )
 {
     SetDefault();
     sal_Int32 nLen = GetPropNames().getLength();

@@ -32,7 +32,7 @@ struct SwPosition;
 class SwTextField;
 class SwDoc;
 class SwFormatField;
-class _SetGetExpFields;
+class SetGetExpFields;
 class SwEditShell;
 
 /// Forward declaration: get "BodyTextNode" for exp.fld in Fly's headers/footers/footnotes.
@@ -41,45 +41,45 @@ const SwTextNode* GetBodyTextNode( const SwDoc& pDoc, SwPosition& rPos,
 
 OUString ReplacePoint(const OUString& sTmpName, bool bWithCommandType = false);
 
-struct _SeqFieldLstElem
+struct SeqFieldLstElem
 {
     OUString sDlgEntry;
     sal_uInt16 nSeqNo;
 
-    _SeqFieldLstElem( const OUString& rStr, sal_uInt16 nNo )
+    SeqFieldLstElem( const OUString& rStr, sal_uInt16 nNo )
         : sDlgEntry( rStr ), nSeqNo( nNo )
     {}
 };
 
 class SW_DLLPUBLIC SwSeqFieldList
 {
-    std::vector<_SeqFieldLstElem*> maData;
+    std::vector<SeqFieldLstElem*> maData;
 public:
     ~SwSeqFieldList()
     {
-        for( std::vector<_SeqFieldLstElem*>::const_iterator it = maData.begin(); it != maData.end(); ++it )
+        for( std::vector<SeqFieldLstElem*>::const_iterator it = maData.begin(); it != maData.end(); ++it )
             delete *it;
     }
 
-    bool InsertSort(_SeqFieldLstElem* pNew);
-    bool SeekEntry(const _SeqFieldLstElem& rNew, size_t* pPos) const;
+    bool InsertSort(SeqFieldLstElem* pNew);
+    bool SeekEntry(const SeqFieldLstElem& rNew, size_t* pPos) const;
 
     size_t Count() { return maData.size(); }
-    _SeqFieldLstElem* operator[](size_t nIndex) { return maData[nIndex]; }
-    const _SeqFieldLstElem* operator[](size_t nIndex) const { return maData[nIndex]; }
+    SeqFieldLstElem* operator[](size_t nIndex) { return maData[nIndex]; }
+    const SeqFieldLstElem* operator[](size_t nIndex) const { return maData[nIndex]; }
     void Clear() { maData.clear(); }
 };
 
 class SwGetExpFieldType : public SwValueFieldType
 {
 public:
-        SwGetExpFieldType(SwDoc* pDoc);
-        virtual SwFieldType*    Copy() const override;
+    SwGetExpFieldType(SwDoc* pDoc);
+    virtual SwFieldType*    Copy() const override;
 
-        /** Overlay, because get-field cannot be changed and therefore
-         does not need to be updated. Update at changing of set-values! */
+    /** Overlay, because get-field cannot be changed and therefore
+     does not need to be updated. Update at changing of set-values! */
 protected:
-   virtual void Modify( const SfxPoolItem* pOld, const SfxPoolItem *pNew ) override;
+    virtual void Modify( const SfxPoolItem* pOld, const SfxPoolItem *pNew ) override;
 };
 
 class SW_DLLPUBLIC SwGetExpField : public SwFormulaField
@@ -100,7 +100,7 @@ public:
     virtual void                SetValue( const double& rVal ) override;
     virtual void                SetLanguage(sal_uInt16 nLng) override;
 
-    inline OUString             GetExpStr() const;
+    inline const OUString&      GetExpStr() const;
     inline void                 ChgExpStr(const OUString& rExpand);
 
     /// Called by formatting.
@@ -132,7 +132,7 @@ public:
 inline void SwGetExpField::ChgExpStr(const OUString& rExpand)
     { sExpand = rExpand;}
 
-inline OUString SwGetExpField::GetExpStr() const
+inline const OUString& SwGetExpField::GetExpStr() const
     { return sExpand;   }
 
  /// Called by formatting.
@@ -155,7 +155,7 @@ class SW_DLLPUBLIC SwSetExpFieldType : public SwValueFieldType
     bool        bDeleted;
 
 protected:
-   virtual void Modify( const SfxPoolItem* pOld, const SfxPoolItem *pNew ) override;
+    virtual void Modify( const SfxPoolItem* pOld, const SfxPoolItem *pNew ) override;
 
 public:
     SwSetExpFieldType( SwDoc* pDoc, const OUString& rName,
@@ -173,16 +173,16 @@ public:
     void                    SetDeleted( bool b )    { bDeleted = b; }
 
     /// Overlay, because set-field takes care for its being updated by itself.
-    inline OUString         GetSetRefName() const;
+    inline const OUString&  GetSetRefName() const;
 
-    sal_uInt16 SetSeqRefNo( SwSetExpField& rField );
+    void   SetSeqRefNo( SwSetExpField& rField );
 
     size_t GetSeqFieldList( SwSeqFieldList& rList );
 
     /// Number sequence fields chapterwise if required.
-    OUString GetDelimiter() const             { return sDelim; }
+    const OUString& GetDelimiter() const      { return sDelim; }
     void SetDelimiter( const OUString& s )    { sDelim = s; }
-    sal_uInt8 GetOutlineLvl() const                 { return nLevel; }
+    sal_uInt8 GetOutlineLvl() const             { return nLevel; }
     void SetOutlineLvl( sal_uInt8 n )           { nLevel = n; }
     void SetChapter( SwSetExpField& rField, const SwNode& rNd );
 
@@ -204,7 +204,7 @@ inline void SwSetExpFieldType::SetType( sal_uInt16 nTyp )
 inline sal_uInt16 SwSetExpFieldType::GetType() const
     { return nType;   }
 
-inline OUString SwSetExpFieldType::GetSetRefName() const
+inline const OUString& SwSetExpFieldType::GetSetRefName() const
     { return sName; }
 
 class SW_DLLPUBLIC SwSetExpField : public SwFormulaField
@@ -227,12 +227,12 @@ public:
 
     virtual void                SetValue( const double& rVal ) override;
 
-    inline OUString             GetExpStr() const;
+    inline const OUString&      GetExpStr() const;
 
     inline void                 ChgExpStr( const OUString& rExpand );
 
     inline void                 SetPromptText(const OUString& rStr);
-    inline OUString             GetPromptText() const;
+    inline const OUString&      GetPromptText() const;
 
     inline void                 SetInputFlag(bool bInp);
     inline bool                 GetInputFlag() const;
@@ -258,7 +258,7 @@ public:
     virtual bool        PutValue( const css::uno::Any& rVal, sal_uInt16 nWhich ) override;
 };
 
-inline OUString SwSetExpField::GetExpStr() const
+inline const OUString& SwSetExpField::GetExpStr() const
     { return sExpand;       }
 
 inline void SwSetExpField::ChgExpStr( const OUString& rExpand )
@@ -267,7 +267,7 @@ inline void SwSetExpField::ChgExpStr( const OUString& rExpand )
 inline void  SwSetExpField::SetPromptText(const OUString& rStr)
     { aPText = rStr;        }
 
-inline OUString SwSetExpField::GetPromptText() const
+inline const OUString& SwSetExpField::GetPromptText() const
     { return aPText;        }
 
 inline void SwSetExpField::SetInputFlag(bool bInp)
@@ -340,11 +340,11 @@ public:
     virtual OUString        GetPar2() const override;
     virtual void            SetPar2(const OUString& rStr) override;
 
-    OUString        GetHelp() const;
-    void            SetHelp(const OUString & rStr);
+    const OUString&         GetHelp() const;
+    void                    SetHelp(const OUString & rStr);
 
-    OUString        GetToolTip() const;
-    void            SetToolTip(const OUString & rStr);
+    const OUString&         GetToolTip() const;
+    void                    SetToolTip(const OUString & rStr);
 
     virtual sal_uInt16      GetSubType() const override;
     virtual void            SetSubType(sal_uInt16 nSub) override;
@@ -373,7 +373,7 @@ public:
 
 private:
     SwEditShell*              pSh;
-    _SetGetExpFields*           pSrtLst;
+    SetGetExpFields*           pSrtLst;
     std::set<const SwTextField*> aTmpLst;
 };
 
@@ -403,10 +403,10 @@ public:
                 sal_uInt16 nSubType = 0, sal_uLong nFormat = 0);
 
     virtual void        SetValue( const double& rVal ) override;
-    virtual sal_uInt16      GetSubType() const override;
+    virtual sal_uInt16  GetSubType() const override;
     virtual void        SetSubType(sal_uInt16 nType) override;
 
-    OUString            GetExpStr() const               { return sExpand; }
+    const OUString&     GetExpStr() const               { return sExpand; }
     void                ChgExpStr(const OUString& rStr) { sExpand = rStr; }
 
     void                CalcField( SwTableCalcPara& rCalcPara );

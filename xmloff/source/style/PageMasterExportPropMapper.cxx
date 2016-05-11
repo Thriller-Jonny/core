@@ -42,13 +42,6 @@ static inline bool lcl_HasSameLineWidth( const table::BorderLine2& rLine1, const
             (rLine1.LineWidth == rLine2.LineWidth);
 }
 
-inline bool operator==( const table::BorderLine2& rLine1, const table::BorderLine2& rLine2 )
-{
-    return  (rLine1.Color == rLine2.Color) &&
-            lcl_HasSameLineWidth( rLine1, rLine2 ) &&
-            ( rLine1.LineStyle == rLine2.LineStyle );
-}
-
 static inline void lcl_RemoveState( XMLPropertyState* pState )
 {
     pState->mnIndex = -1;
@@ -62,7 +55,7 @@ static void lcl_RemoveStateIfZero16( XMLPropertyState* pState )
         lcl_RemoveState( pState );
 }
 
-static void lcl_AddState(::std::vector< XMLPropertyState >& rPropState, sal_Int32 nIndex, const OUString& rProperty, uno::Reference< beans::XPropertySet >& xProps)
+static void lcl_AddState(::std::vector< XMLPropertyState >& rPropState, sal_Int32 nIndex, const OUString& rProperty, const uno::Reference< beans::XPropertySet >& xProps)
 {
     if(::cppu::any2bool(xProps->getPropertyValue(rProperty)))
         rPropState.push_back(XMLPropertyState (nIndex, css::uno::Any(true)));
@@ -307,7 +300,7 @@ void XMLPageMasterExportPropMapper::handleSpecialItem(
 void XMLPageMasterExportPropMapper::ContextFilter(
         bool bEnableFoFontFamily,
         ::std::vector< XMLPropertyState >& rPropState,
-        Reference< XPropertySet > rPropSet ) const
+        const Reference< XPropertySet >& rPropSet ) const
 {
     XMLPropertyStateBuffer  aPageBuffer;
     XMLPropertyStateBuffer  aHeaderBuffer;

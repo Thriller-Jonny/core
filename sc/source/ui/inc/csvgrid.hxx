@@ -36,35 +36,20 @@ class ScEditEngineDefaulter;
 class ScAsciiOptions;
 class ScAccessibleCsvControl;
 
-const sal_uInt8 CSV_COLFLAG_NONE    = 0x00;         /// Nothing set.
-const sal_uInt8 CSV_COLFLAG_SELECT  = 0x01;         /// Column is selected.
-
 const sal_uInt32 CSV_COLUMN_INVALID = CSV_VEC_NOTFOUND;
 
 /** This struct contains the state of one table column. */
 struct ScCsvColState
 {
-    sal_Int32                   mnType;             /// Data type.
-    sal_uInt8                   mnFlags;            /// Flags (i.e. selection state).
+    sal_Int32            mnType;             /// Data type.
+    bool                 mbColumnSelected;
 
-    inline explicit             ScCsvColState(
-                                        sal_Int32 nType = CSV_TYPE_DEFAULT,
-                                        sal_uInt8 nFlags = CSV_COLFLAG_NONE ) :
-                                    mnType( nType ), mnFlags( nFlags ) {}
+    explicit             ScCsvColState( sal_Int32 nType = CSV_TYPE_DEFAULT ) :
+                                    mnType( nType ), mbColumnSelected( false ) {}
 
-    inline bool                 IsSelected() const;
-    inline void                 Select( bool bSel );
+    bool                 IsSelected() const { return mbColumnSelected; }
+    void                 Select( bool bSel ) { mbColumnSelected = bSel; }
 };
-
-inline bool ScCsvColState::IsSelected() const
-{
-    return (mnFlags & CSV_COLFLAG_SELECT) != 0;
-}
-
-inline void ScCsvColState::Select( bool bSel )
-{
-    if( bSel ) mnFlags |= CSV_COLFLAG_SELECT; else mnFlags &= ~CSV_COLFLAG_SELECT;
-}
 
 typedef ::std::vector< ScCsvColState > ScCsvColStateVec;
 
@@ -98,8 +83,8 @@ private:
 
     ScCsvSplits                 maSplits;           /// Vector with split positions.
     ScCsvColStateVec            maColStates;        /// State of each column.
-    StringVec                   maTypeNames;        /// UI names of data types.
-    StringVecVec                maTexts;            /// 2D-vector for cell texts.
+    std::vector<OUString>       maTypeNames;        /// UI names of data types.
+    std::vector< std::vector<OUString> > maTexts;   /// 2D-vector for cell texts.
 
     sal_Int32                   mnFirstImpLine;     /// First imported line (0-based).
     sal_uInt32                  mnRecentSelCol;     /// Index of most recently selected column.
@@ -192,7 +177,7 @@ public:
     /** Changes the data type of all selected columns. */
     void                        SetSelColumnType( sal_Int32 nType );
     /** Sets new UI data type names. */
-    void                        SetTypeNames( const StringVec& rTypeNames );
+    void                        SetTypeNames( const std::vector<OUString>& rTypeNames );
     /** Returns the UI type name of the specified column. */
     const OUString&             GetColumnTypeName( sal_uInt32 nColIndex ) const;
 

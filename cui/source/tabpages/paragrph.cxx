@@ -1035,14 +1035,9 @@ SvxParaAlignTabPage::SvxParaAlignTabPage( vcl::Window* pParent, const SfxItemSet
     m_pLastLineLB->SetSelectHdl( LINK( this, SvxParaAlignTabPage, LastLineHdl_Impl ) );
     m_pTextDirectionLB->SetSelectHdl( LINK( this, SvxParaAlignTabPage, TextDirectionHdl_Impl ) );
 
-    if( aLangOptions.IsCTLFontEnabled() )
-    {
-        m_pTextDirectionLB->InsertEntryValue( CUI_RESSTR( RID_SVXSTR_FRAMEDIR_LTR ), FRMDIR_HORI_LEFT_TOP );
-        m_pTextDirectionLB->InsertEntryValue( CUI_RESSTR( RID_SVXSTR_FRAMEDIR_RTL ), FRMDIR_HORI_RIGHT_TOP );
-        m_pTextDirectionLB->InsertEntryValue( CUI_RESSTR( RID_SVXSTR_FRAMEDIR_SUPER ), FRMDIR_ENVIRONMENT );
-
-        m_pPropertiesFL->Show();
-    }
+    m_pTextDirectionLB->InsertEntryValue( CUI_RESSTR( RID_SVXSTR_FRAMEDIR_LTR ), FRMDIR_HORI_LEFT_TOP );
+    m_pTextDirectionLB->InsertEntryValue( CUI_RESSTR( RID_SVXSTR_FRAMEDIR_RTL ), FRMDIR_HORI_RIGHT_TOP );
+    m_pTextDirectionLB->InsertEntryValue( CUI_RESSTR( RID_SVXSTR_FRAMEDIR_SUPER ), FRMDIR_ENVIRONMENT );
 
     setPreviewsToSamePlace(pParent, this);
 }
@@ -1620,7 +1615,7 @@ void SvxExtParagraphTabPage::Reset( const SfxItemSet* rSet )
 
             const SvxPageModelItem& rModel =
                 static_cast<const SvxPageModelItem&>(rSet->Get( _nWhich ));
-            OUString aStr( rModel.GetValue() );
+            const OUString& aStr( rModel.GetValue() );
 
             if ( !aStr.isEmpty() &&
                  m_pApplyCollBox->GetEntryPos( aStr ) != LISTBOX_ENTRY_NOTFOUND )
@@ -1929,7 +1924,7 @@ SvxExtParagraphTabPage::SvxExtParagraphTabPage( vcl::Window* pParent, const SfxI
     if ( pSh )
     {
         SfxStyleSheetBasePool* pPool = pSh->GetStyleSheetPool();
-        pPool->SetSearchMask( SFX_STYLE_FAMILY_PAGE );
+        pPool->SetSearchMask( SfxStyleFamily::Page );
         SfxStyleSheetBase* pStyle = pPool->First();
         OUString aStdName;
 
@@ -2058,7 +2053,7 @@ IMPL_LINK_NOARG_TYPED(SvxExtParagraphTabPage, WidowHdl_Impl, Button*, void)
             if ( m_pOrphanBox->GetState() == TRISTATE_FALSE )
                 m_pKeepTogetherBox->Enable();
 
-        // no break
+            SAL_FALLTHROUGH;
         case TRISTATE_INDET:
             m_pWidowRowNo->Enable(false);
             m_pWidowRowLabel->Enable(false);
@@ -2080,7 +2075,7 @@ IMPL_LINK_NOARG_TYPED(SvxExtParagraphTabPage, OrphanHdl_Impl, Button*, void)
             if ( m_pWidowBox->GetState() == TRISTATE_FALSE )
                 m_pKeepTogetherBox->Enable();
 
-        // no break
+            SAL_FALLTHROUGH;
         case TRISTATE_INDET:
             m_pOrphanRowNo->Enable(false);
             m_pOrphanRowLabel->Enable(false);

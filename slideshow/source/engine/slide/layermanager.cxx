@@ -32,13 +32,13 @@
 
 using namespace ::com::sun::star;
 
-namespace boost
+namespace std
 {
     // add operator!= for weak_ptr
     inline bool operator!=( slideshow::internal::LayerWeakPtr const& rLHS,
                             slideshow::internal::LayerWeakPtr const& rRHS )
     {
-        return (rLHS<rRHS) || (rRHS<rLHS);
+        return rLHS.lock().get() != rRHS.lock().get();
     }
 }
 
@@ -93,30 +93,18 @@ namespace slideshow
                 this->viewAdded( rView );
         }
 
-        void LayerManager::activate( bool bSlideBackgoundPainted )
+        void LayerManager::activate()
         {
             mbActive = true;
             maUpdateShapes.clear(); // update gets forced via area, or
                                     // has happened outside already
 
-            if( !bSlideBackgoundPainted )
-            {
-                for( const auto& pView : mrViews )
-                    pView->clearAll();
+            // clear all possibly pending update areas - content
+            // is there, already
+            for( const auto& pLayer : maLayers )
+                pLayer->clearUpdateRanges();
 
-                // force update of whole slide area
-                for( const auto& pLayer : maLayers )
-                    pLayer->addUpdateRange( maPageBounds );
-            }
-            else
-            {
-                // clear all possibly pending update areas - content
-                // is there, already
-                for( const auto& pLayer : maLayers )
-                    pLayer->clearUpdateRanges();
-            }
-
-            updateShapeLayers( bSlideBackgoundPainted );
+            updateShapeLayers( true/*bSlideBackgoundPainted*/ );
         }
 
         void LayerManager::deactivate()
@@ -667,7 +655,7 @@ namespace slideshow
 
         void LayerManager::commitLayerChanges( std::size_t              nCurrLayerIndex,
                                                LayerShapeMap::const_iterator  aFirstLayerShape,
-                                               LayerShapeMap::const_iterator  aEndLayerShapes )
+                                               const LayerShapeMap::const_iterator&  aEndLayerShapes )
         {
             const bool bLayerExists( maLayers.size() > nCurrLayerIndex );
             if( bLayerExists )

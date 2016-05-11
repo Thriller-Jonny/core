@@ -26,7 +26,6 @@
 #include <vcl/idle.hxx>
 
 
-
 namespace sdr
 {
     namespace overlay
@@ -64,13 +63,11 @@ namespace sdr
 
             OverlayManagerBuffered(
                 OutputDevice& rOutputDevice,
-                const SdrModel* pModel,
                 bool bRefreshWithPreRendering = false);
             virtual ~OverlayManagerBuffered();
 
         public:
             static rtl::Reference<OverlayManager> create(OutputDevice& rOutputDevice,
-                const SdrModel* pModel,
                 bool bRefreshWithPreRendering = false);
 
             // complete redraw
@@ -90,7 +87,6 @@ namespace sdr
         };
     } // end of namespace overlay
 } // end of namespace sdr
-
 
 
 #endif // INCLUDED_SVX_INC_SDR_OVERLAY_OVERLAYMANAGERBUFFERED_HXX

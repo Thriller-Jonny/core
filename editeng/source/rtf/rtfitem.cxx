@@ -94,10 +94,10 @@ inline const SvxEscapementItem& GetEscapement(const SfxItemSet& rSet,sal_uInt16 
 inline const SvxLineSpacingItem& GetLineSpacing(const SfxItemSet& rSet,sal_uInt16 nId,bool bInP=true)
     { return static_cast<const SvxLineSpacingItem&>(rSet.Get( nId,bInP)); }
 // frm
-inline const SvxLRSpaceItem& GetLRSpace(const SfxItemSet& rSet,sal_uInt16 nId,bool bInP=true)
-    { return static_cast<const SvxLRSpaceItem&>(rSet.Get( nId,bInP)); }
-inline const SvxULSpaceItem& GetULSpace(const SfxItemSet& rSet,sal_uInt16 nId,bool bInP=true)
-    { return static_cast<const SvxULSpaceItem&>(rSet.Get( nId,bInP)); }
+inline const SvxLRSpaceItem& GetLRSpace(const SfxItemSet& rSet,sal_uInt16 nId)
+    { return static_cast<const SvxLRSpaceItem&>(rSet.Get( nId)); }
+inline const SvxULSpaceItem& GetULSpace(const SfxItemSet& rSet,sal_uInt16 nId)
+    { return static_cast<const SvxULSpaceItem&>(rSet.Get( nId)); }
 
 void SvxRTFParser::SetScriptAttr( RTF_CharTypeDef eType, SfxItemSet& rSet,
                                     SfxPoolItem& rItem )
@@ -200,14 +200,13 @@ void SvxRTFParser::SetScriptAttr( RTF_CharTypeDef eType, SfxItemSet& rSet,
 }
 
 
-
 void SvxRTFParser::ReadAttr( int nToken, SfxItemSet* pSet )
 {
     DBG_ASSERT( pSet, "A SfxItemSet has to be provided as argument!" );
     bool bFirstToken = true;
     bool bContinue = true;
-    FontUnderline eUnderline;
-    FontUnderline eOverline;
+    FontLineStyle eUnderline;
+    FontLineStyle eOverline;
     FontEmphasisMark eEmphasis;
     bPardTokenRead = false;
     RTF_CharTypeDef eCharType = NOTDEF_CHARTYPE;
@@ -580,7 +579,7 @@ SET_FONTALIGNMENT:
                     if( DFLT_ESC_AUTO_SUPER == rOld.GetEsc() )
                     {
                         nEs = DFLT_ESC_AUTO_SUB;
-                        nProp = rOld.GetProp();
+                        nProp = rOld.GetProportionalHeight();
                     }
                     else
                     {
@@ -641,8 +640,8 @@ SET_FONTALIGNMENT:
             case RTF_AF:
                 {
                     const vcl::Font& rSVFont = GetFont( sal_uInt16(nTokenValue) );
-                    SvxFontItem aTmpItem( rSVFont.GetFamily(),
-                                    rSVFont.GetName(), rSVFont.GetStyleName(),
+                    SvxFontItem aTmpItem( rSVFont.GetFamilyType(),
+                                    rSVFont.GetFamilyName(), rSVFont.GetStyleName(),
                                     rSVFont.GetPitch(), rSVFont.GetCharSet(),
                                     SID_ATTR_CHAR_FONT );
                     SetScriptAttr( eCharType, *pSet, aTmpItem );
@@ -663,7 +662,7 @@ SET_FONTALIGNMENT:
                         nTokenValue *= 10;
 // #i66167#
 // for the SwRTFParser 'IsCalcValue' will be false and for the EditRTFParser
-// the converiosn takes now place in EditRTFParser since for other reasons
+// the conversion takes now place in EditRTFParser since for other reasons
 // the wrong MapUnit might still be use there
 //                   if( IsCalcValue() )
 //                       CalcValue();
@@ -725,60 +724,60 @@ SET_FONTALIGNMENT:
             case RTF_UL:
                 if( !IsAttrSttPos() )
                     break;
-                eUnderline = nTokenValue ? UNDERLINE_SINGLE : UNDERLINE_NONE;
+                eUnderline = nTokenValue ? LINESTYLE_SINGLE : LINESTYLE_NONE;
                 goto ATTR_SETUNDERLINE;
 
             case RTF_ULD:
-                eUnderline = UNDERLINE_DOTTED;
+                eUnderline = LINESTYLE_DOTTED;
                 goto ATTR_SETUNDERLINE;
             case RTF_ULDASH:
-                eUnderline = UNDERLINE_DASH;
+                eUnderline = LINESTYLE_DASH;
                 goto ATTR_SETUNDERLINE;
             case RTF_ULDASHD:
-                eUnderline = UNDERLINE_DASHDOT;
+                eUnderline = LINESTYLE_DASHDOT;
                 goto ATTR_SETUNDERLINE;
             case RTF_ULDASHDD:
-                eUnderline = UNDERLINE_DASHDOTDOT;
+                eUnderline = LINESTYLE_DASHDOTDOT;
                 goto ATTR_SETUNDERLINE;
             case RTF_ULDB:
-                eUnderline = UNDERLINE_DOUBLE;
+                eUnderline = LINESTYLE_DOUBLE;
                 goto ATTR_SETUNDERLINE;
             case RTF_ULNONE:
-                eUnderline = UNDERLINE_NONE;
+                eUnderline = LINESTYLE_NONE;
                 goto ATTR_SETUNDERLINE;
             case RTF_ULTH:
-                eUnderline = UNDERLINE_BOLD;
+                eUnderline = LINESTYLE_BOLD;
                 goto ATTR_SETUNDERLINE;
             case RTF_ULWAVE:
-                eUnderline = UNDERLINE_WAVE;
+                eUnderline = LINESTYLE_WAVE;
                 goto ATTR_SETUNDERLINE;
             case RTF_ULTHD:
-                eUnderline = UNDERLINE_BOLDDOTTED;
+                eUnderline = LINESTYLE_BOLDDOTTED;
                 goto ATTR_SETUNDERLINE;
             case RTF_ULTHDASH:
-                eUnderline = UNDERLINE_BOLDDASH;
+                eUnderline = LINESTYLE_BOLDDASH;
                 goto ATTR_SETUNDERLINE;
             case RTF_ULLDASH:
-                eUnderline = UNDERLINE_LONGDASH;
+                eUnderline = LINESTYLE_LONGDASH;
                 goto ATTR_SETUNDERLINE;
             case RTF_ULTHLDASH:
-                eUnderline = UNDERLINE_BOLDLONGDASH;
+                eUnderline = LINESTYLE_BOLDLONGDASH;
                 goto ATTR_SETUNDERLINE;
             case RTF_ULTHDASHD:
-                eUnderline = UNDERLINE_BOLDDASHDOT;
+                eUnderline = LINESTYLE_BOLDDASHDOT;
                 goto ATTR_SETUNDERLINE;
             case RTF_ULTHDASHDD:
-                eUnderline = UNDERLINE_BOLDDASHDOTDOT;
+                eUnderline = LINESTYLE_BOLDDASHDOTDOT;
                 goto ATTR_SETUNDERLINE;
             case RTF_ULHWAVE:
-                eUnderline = UNDERLINE_BOLDWAVE;
+                eUnderline = LINESTYLE_BOLDWAVE;
                 goto ATTR_SETUNDERLINE;
             case RTF_ULULDBWAVE:
-                eUnderline = UNDERLINE_DOUBLEWAVE;
+                eUnderline = LINESTYLE_DOUBLEWAVE;
                 goto ATTR_SETUNDERLINE;
 
             case RTF_ULW:
-                eUnderline = UNDERLINE_SINGLE;
+                eUnderline = LINESTYLE_SINGLE;
 
                 if( aPlainMap.nWordlineMode )
                 {
@@ -796,13 +795,13 @@ ATTR_SETUNDERLINE:
             case RTF_ULC:
                 if( aPlainMap.nUnderline )
                 {
-                    SvxUnderlineItem aUL( UNDERLINE_SINGLE, aPlainMap.nUnderline );
+                    SvxUnderlineItem aUL( LINESTYLE_SINGLE, aPlainMap.nUnderline );
                     const SfxPoolItem* pItem;
                     if( SfxItemState::SET == pSet->GetItemState(
                         aPlainMap.nUnderline, false, &pItem ) )
                     {
                         // is switched off ?
-                        if( UNDERLINE_NONE ==
+                        if( LINESTYLE_NONE ==
                             static_cast<const SvxUnderlineItem*>(pItem)->GetLineStyle() )
                             break;
                         aUL = *static_cast<const SvxUnderlineItem*>(pItem);
@@ -810,8 +809,8 @@ ATTR_SETUNDERLINE:
                     else
                         aUL = static_cast<const SvxUnderlineItem&>(pSet->Get( aPlainMap.nUnderline, false ));
 
-                    if( UNDERLINE_NONE == aUL.GetLineStyle() )
-                        aUL.SetLineStyle( UNDERLINE_SINGLE );
+                    if( LINESTYLE_NONE == aUL.GetLineStyle() )
+                        aUL.SetLineStyle( LINESTYLE_SINGLE );
                     aUL.SetColor( GetColor( sal_uInt16(nTokenValue) ));
                     pSet->Put( aUL );
                 }
@@ -820,60 +819,60 @@ ATTR_SETUNDERLINE:
             case RTF_OL:
                 if( !IsAttrSttPos() )
                     break;
-                eOverline = nTokenValue ? UNDERLINE_SINGLE : UNDERLINE_NONE;
+                eOverline = nTokenValue ? LINESTYLE_SINGLE : LINESTYLE_NONE;
                 goto ATTR_SETOVERLINE;
 
             case RTF_OLD:
-                eOverline = UNDERLINE_DOTTED;
+                eOverline = LINESTYLE_DOTTED;
                 goto ATTR_SETOVERLINE;
             case RTF_OLDASH:
-                eOverline = UNDERLINE_DASH;
+                eOverline = LINESTYLE_DASH;
                 goto ATTR_SETOVERLINE;
             case RTF_OLDASHD:
-                eOverline = UNDERLINE_DASHDOT;
+                eOverline = LINESTYLE_DASHDOT;
                 goto ATTR_SETOVERLINE;
             case RTF_OLDASHDD:
-                eOverline = UNDERLINE_DASHDOTDOT;
+                eOverline = LINESTYLE_DASHDOTDOT;
                 goto ATTR_SETOVERLINE;
             case RTF_OLDB:
-                eOverline = UNDERLINE_DOUBLE;
+                eOverline = LINESTYLE_DOUBLE;
                 goto ATTR_SETOVERLINE;
             case RTF_OLNONE:
-                eOverline = UNDERLINE_NONE;
+                eOverline = LINESTYLE_NONE;
                 goto ATTR_SETOVERLINE;
             case RTF_OLTH:
-                eOverline = UNDERLINE_BOLD;
+                eOverline = LINESTYLE_BOLD;
                 goto ATTR_SETOVERLINE;
             case RTF_OLWAVE:
-                eOverline = UNDERLINE_WAVE;
+                eOverline = LINESTYLE_WAVE;
                 goto ATTR_SETOVERLINE;
             case RTF_OLTHD:
-                eOverline = UNDERLINE_BOLDDOTTED;
+                eOverline = LINESTYLE_BOLDDOTTED;
                 goto ATTR_SETOVERLINE;
             case RTF_OLTHDASH:
-                eOverline = UNDERLINE_BOLDDASH;
+                eOverline = LINESTYLE_BOLDDASH;
                 goto ATTR_SETOVERLINE;
             case RTF_OLLDASH:
-                eOverline = UNDERLINE_LONGDASH;
+                eOverline = LINESTYLE_LONGDASH;
                 goto ATTR_SETOVERLINE;
             case RTF_OLTHLDASH:
-                eOverline = UNDERLINE_BOLDLONGDASH;
+                eOverline = LINESTYLE_BOLDLONGDASH;
                 goto ATTR_SETOVERLINE;
             case RTF_OLTHDASHD:
-                eOverline = UNDERLINE_BOLDDASHDOT;
+                eOverline = LINESTYLE_BOLDDASHDOT;
                 goto ATTR_SETOVERLINE;
             case RTF_OLTHDASHDD:
-                eOverline = UNDERLINE_BOLDDASHDOTDOT;
+                eOverline = LINESTYLE_BOLDDASHDOTDOT;
                 goto ATTR_SETOVERLINE;
             case RTF_OLHWAVE:
-                eOverline = UNDERLINE_BOLDWAVE;
+                eOverline = LINESTYLE_BOLDWAVE;
                 goto ATTR_SETOVERLINE;
             case RTF_OLOLDBWAVE:
-                eOverline = UNDERLINE_DOUBLEWAVE;
+                eOverline = LINESTYLE_DOUBLEWAVE;
                 goto ATTR_SETOVERLINE;
 
             case RTF_OLW:
-                eOverline = UNDERLINE_SINGLE;
+                eOverline = LINESTYLE_SINGLE;
 
                 if( aPlainMap.nWordlineMode )
                 {
@@ -891,13 +890,13 @@ ATTR_SETOVERLINE:
             case RTF_OLC:
                 if( aPlainMap.nOverline )
                 {
-                    SvxOverlineItem aOL( UNDERLINE_SINGLE, aPlainMap.nOverline );
+                    SvxOverlineItem aOL( LINESTYLE_SINGLE, aPlainMap.nOverline );
                     const SfxPoolItem* pItem;
                     if( SfxItemState::SET == pSet->GetItemState(
                         aPlainMap.nOverline, false, &pItem ) )
                     {
                         // is switched off ?
-                        if( UNDERLINE_NONE ==
+                        if( LINESTYLE_NONE ==
                             static_cast<const SvxOverlineItem*>(pItem)->GetLineStyle() )
                             break;
                         aOL = *static_cast<const SvxOverlineItem*>(pItem);
@@ -905,8 +904,8 @@ ATTR_SETOVERLINE:
                     else
                         aOL = static_cast<const SvxOverlineItem&>(pSet->Get( aPlainMap.nOverline, false ));
 
-                    if( UNDERLINE_NONE == aOL.GetLineStyle() )
-                        aOL.SetLineStyle( UNDERLINE_SINGLE );
+                    if( LINESTYLE_NONE == aOL.GetLineStyle() )
+                        aOL.SetLineStyle( LINESTYLE_SINGLE );
                     aOL.SetColor( GetColor( sal_uInt16(nTokenValue) ));
                     pSet->Put( aOL );
                 }
@@ -927,7 +926,7 @@ ATTR_SETOVERLINE:
                     if( DFLT_ESC_AUTO_SUB == rOld.GetEsc() )
                     {
                         nEs = DFLT_ESC_AUTO_SUPER;
-                        nProp = rOld.GetProp();
+                        nProp = rOld.GetProportionalHeight();
                     }
                     else
                     {
@@ -1006,14 +1005,14 @@ ATTR_SETOVERLINE:
 
 
             case RTF_ACCNONE:
-                eEmphasis = EMPHASISMARK_NONE;
+                eEmphasis = FontEmphasisMark::NONE;
                 goto ATTR_SETEMPHASIS;
             case RTF_ACCDOT:
-                eEmphasis = EMPHASISMARK_DOTS_ABOVE;
+                eEmphasis = (FontEmphasisMark::Dot | FontEmphasisMark::PosAbove);
                 goto ATTR_SETEMPHASIS;
 
             case RTF_ACCCOMMA:
-                eEmphasis = EMPHASISMARK_SIDE_DOTS;
+                eEmphasis = (FontEmphasisMark::Accent | FontEmphasisMark::PosAbove);
 ATTR_SETEMPHASIS:
                 if( aPlainMap.nEmphasis )
                 {
@@ -1028,11 +1027,11 @@ ATTR_SETEMPHASIS:
                     sal_Unicode cStt, cEnd;
                     switch ( nTokenValue )
                     {
-                    case 1: cStt = '(', cEnd = ')'; break;
-                    case 2: cStt = '[', cEnd = ']'; break;
-                    case 3: cStt = '<', cEnd = '>'; break;
-                    case 4: cStt = '{', cEnd = '}'; break;
-                    default: cStt = 0, cEnd = 0; break;
+                    case 1: cStt = '('; cEnd = ')'; break;
+                    case 2: cStt = '['; cEnd = ']'; break;
+                    case 3: cStt = '<'; cEnd = '>'; break;
+                    case 4: cStt = '{'; cEnd = '}'; break;
+                    default: cStt = 0; cEnd = 0; break;
                     }
 
                     pSet->Put( SvxTwoLinesItem( true, cStt, cEnd,
@@ -1367,17 +1366,17 @@ static void SetBorderLine( int nBorderTyp, SvxBoxItem& rItem,
         rItem.SetLine( &rBorder, SvxBoxItemLine::TOP );
         if( RTF_BOX != nBorderTyp )
             return;
-        // fall-through
+        SAL_FALLTHROUGH;
     case RTF_BRDRB:
         rItem.SetLine( &rBorder, SvxBoxItemLine::BOTTOM );
         if( RTF_BOX != nBorderTyp )
             return;
-        // fall-through
+        SAL_FALLTHROUGH;
     case RTF_BRDRL:
         rItem.SetLine( &rBorder, SvxBoxItemLine::LEFT );
         if( RTF_BOX != nBorderTyp )
             return;
-        // fall-through
+        SAL_FALLTHROUGH;
     case RTF_BRDRR:
         rItem.SetLine( &rBorder, SvxBoxItemLine::RIGHT );
         if( RTF_BOX != nBorderTyp )
@@ -1816,21 +1815,25 @@ void SvxRTFParser::SetDefault( int nToken, int nValue )
     bIsLeftToRightDef = true;
     switch( nToken )
     {
-    case RTF_ADEFF: bIsLeftToRightDef = false;  // no break!
+    case RTF_ADEFF:
+        bIsLeftToRightDef = false;
+        SAL_FALLTHROUGH;
     case RTF_DEFF:
         {
             if( -1 == nValue )
                 nValue = 0;
             const vcl::Font& rSVFont = GetFont( sal_uInt16(nValue) );
             SvxFontItem aTmpItem(
-                                rSVFont.GetFamily(), rSVFont.GetName(),
+                                rSVFont.GetFamilyType(), rSVFont.GetFamilyName(),
                                 rSVFont.GetStyleName(), rSVFont.GetPitch(),
                                 rSVFont.GetCharSet(), SID_ATTR_CHAR_FONT );
             SetScriptAttr( NOTDEF_CHARTYPE, aTmp, aTmpItem );
         }
         break;
 
-    case RTF_ADEFLANG:  bIsLeftToRightDef = false;  // no break!
+    case RTF_ADEFLANG:
+        bIsLeftToRightDef = false;
+        SAL_FALLTHROUGH;
     case RTF_DEFLANG:
         // store default Language
         if( -1 != nValue )

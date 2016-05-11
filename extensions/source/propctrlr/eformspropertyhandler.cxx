@@ -459,7 +459,7 @@ namespace pcr
             aDescriptor.Control = PropertyHandlerHelper::createComboBoxControl( _rxControlFactory, aListEntries, false, true );
             break;
         default:
-            aDescriptor.Control = _rxControlFactory->createPropertyControl( nControlType, sal_False );
+            aDescriptor.Control = _rxControlFactory->createPropertyControl( nControlType, false );
             break;
         }
 
@@ -501,7 +501,7 @@ namespace pcr
             // the binding for the dialog to work with
             Reference< XPropertySet > xBinding( m_pHelper->getCurrentBinding() );
             // the aspect of the binding which the dialog should modify
-            OUString sFacetName( _rPropertyName );
+            const OUString& sFacetName( _rPropertyName );
 
             OSL_ENSURE( xModel.is() && xBinding.is() && !sFacetName.isEmpty(),
                 "EFormsPropertyHandler::onInteractivePropertySelection: something is missing for the dialog initialization!" );
@@ -572,8 +572,8 @@ namespace pcr
             bool bBoundToSomeModel = !sDataModelName.isEmpty();
             _rxInspectorUI->rebuildPropertyUI( PROPERTY_BINDING_NAME );
             _rxInspectorUI->enablePropertyUI( PROPERTY_BINDING_NAME, bBoundToSomeModel );
+            SAL_FALLTHROUGH;
         }
-        // NO break
 
         case PROPERTY_ID_BINDING_NAME:
         {

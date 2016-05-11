@@ -336,7 +336,7 @@ void CommandToolBox::Select( sal_uInt16 nSelId )
     if ( nSelId == IID_ZOOMOUT || nSelId == IID_SCENARIOS )
     {
         NavListMode eOldMode = rDlg.eListMode;
-        NavListMode eNewMode = eOldMode;
+        NavListMode eNewMode;
 
         if ( nSelId == IID_SCENARIOS )
         {
@@ -823,7 +823,7 @@ void ScNavigatorDlg::Notify( SfxBroadcaster&, const SfxHint& rHint )
     const SfxSimpleHint* pSimpleHint = dynamic_cast<const SfxSimpleHint*>( &rHint );
     if ( pSimpleHint )
     {
-        sal_uLong nHintId = pSimpleHint->GetId();
+        const sal_uInt32 nHintId = pSimpleHint->GetId();
 
         if ( nHintId == SC_HINT_DOCNAME_CHANGED )
         {
@@ -916,7 +916,7 @@ void ScNavigatorDlg::SetCurrentCell( SCCOL nColNo, SCROW nRowNo )
         ppBoundItems[0]->ClearCache();
 
         ScAddress aScAddress( nColNo, nRowNo, 0 );
-        OUString aAddr(aScAddress.Format(SCA_ABS));
+        OUString aAddr(aScAddress.Format(ScRefFlags::ADDR_ABS));
 
         bool bUnmark = false;
         if ( GetViewData() )
@@ -925,9 +925,9 @@ void ScNavigatorDlg::SetCurrentCell( SCCOL nColNo, SCROW nRowNo )
         SfxStringItem   aPosItem( SID_CURRENTCELL, aAddr );
         SfxBoolItem     aUnmarkItem( FN_PARAM_1, bUnmark );     // cancel selektion
 
-        rBindings.GetDispatcher()->Execute( SID_CURRENTCELL,
+        rBindings.GetDispatcher()->ExecuteList(SID_CURRENTCELL,
                                   SfxCallMode::SYNCHRON | SfxCallMode::RECORD,
-                                  &aPosItem, &aUnmarkItem, 0L );
+                                  { &aPosItem, &aUnmarkItem });
     }
 }
 
@@ -936,9 +936,9 @@ void ScNavigatorDlg::SetCurrentCellStr( const OUString& rName )
     ppBoundItems[0]->ClearCache();
     SfxStringItem   aNameItem( SID_CURRENTCELL, rName );
 
-    rBindings.GetDispatcher()->Execute( SID_CURRENTCELL,
+    rBindings.GetDispatcher()->ExecuteList(SID_CURRENTCELL,
                               SfxCallMode::SYNCHRON | SfxCallMode::RECORD,
-                              &aNameItem, 0L );
+                              { &aNameItem });
 }
 
 void ScNavigatorDlg::SetCurrentTable( SCTAB nTabNo )
@@ -947,9 +947,9 @@ void ScNavigatorDlg::SetCurrentTable( SCTAB nTabNo )
     {
         // Table for basic is base-1
         SfxUInt16Item aTabItem( SID_CURRENTTAB, static_cast<sal_uInt16>(nTabNo) + 1 );
-        rBindings.GetDispatcher()->Execute( SID_CURRENTTAB,
+        rBindings.GetDispatcher()->ExecuteList(SID_CURRENTTAB,
                                   SfxCallMode::SYNCHRON | SfxCallMode::RECORD,
-                                  &aTabItem, 0L );
+                                  { &aTabItem });
     }
 }
 
@@ -975,17 +975,17 @@ void ScNavigatorDlg::SetCurrentTableStr( const OUString& rName )
 void ScNavigatorDlg::SetCurrentObject( const OUString& rName )
 {
     SfxStringItem aNameItem( SID_CURRENTOBJECT, rName );
-    rBindings.GetDispatcher()->Execute( SID_CURRENTOBJECT,
+    rBindings.GetDispatcher()->ExecuteList( SID_CURRENTOBJECT,
                               SfxCallMode::SYNCHRON | SfxCallMode::RECORD,
-                              &aNameItem, 0L );
+                              { &aNameItem });
 }
 
 void ScNavigatorDlg::SetCurrentDoc( const OUString& rDocName )        // activate
 {
     SfxStringItem aDocItem( SID_CURRENTDOC, rDocName );
-    rBindings.GetDispatcher()->Execute( SID_CURRENTDOC,
+    rBindings.GetDispatcher()->ExecuteList( SID_CURRENTDOC,
                               SfxCallMode::SYNCHRON | SfxCallMode::RECORD,
-                              &aDocItem, 0L );
+                              { &aDocItem });
 }
 
 ScTabViewShell* ScNavigatorDlg::GetTabViewShell()
@@ -1088,7 +1088,7 @@ void ScNavigatorDlg::SetListMode( NavListMode eMode, bool bSetSize )
                 break;
 
             case NAV_LMODE_SCENARIOS:
-                ShowScenarios( true, bSetSize );
+                ShowScenarios( bSetSize );
                 break;
         }
 
@@ -1151,36 +1151,22 @@ void ScNavigatorDlg::ShowList( bool bShow, bool bSetSize )
     }
 }
 
-void ScNavigatorDlg::ShowScenarios( bool bShow, bool bSetSize )
+void ScNavigatorDlg::ShowScenarios( bool bSetSize )
 {
     FloatingWindow* pFloat = pContextWin!=nullptr ? pContextWin->GetFloatingWindow() : nullptr;
     Size aSize = GetParent()->GetOutputSizePixel();
 
-    if ( bShow )
-    {
-        Size aMinSize = aInitSize;
-        aMinSize.Height() += nInitListHeight;
-        if ( pFloat )
-            pFloat->SetMinOutputSizePixel( aMinSize );
-        aSize.Height() = nListModeHeight;
+    Size aMinSize = aInitSize;
+    aMinSize.Height() += nInitListHeight;
+    if ( pFloat )
+        pFloat->SetMinOutputSizePixel( aMinSize );
+    aSize.Height() = nListModeHeight;
 
-        rBindings.Invalidate( SID_SELECT_SCENARIO );
-        rBindings.Update( SID_SELECT_SCENARIO );
+    rBindings.Invalidate( SID_SELECT_SCENARIO );
+    rBindings.Update( SID_SELECT_SCENARIO );
 
-        aWndScenarios->Show();
-        aLbDocuments->Show();
-    }
-    else
-    {
-        if ( pFloat )
-        {
-            pFloat->SetMinOutputSizePixel( aInitSize );
-            nListModeHeight = aSize.Height();
-        }
-        aSize.Height() = aInitSize.Height();
-        aWndScenarios->Hide();
-        aLbDocuments->Hide();
-    }
+    aWndScenarios->Show();
+    aLbDocuments->Show();
     aLbEntries->Hide();
 
     if ( pFloat )

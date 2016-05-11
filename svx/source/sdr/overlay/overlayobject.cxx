@@ -29,7 +29,6 @@
 #include <drawinglayer/primitive2d/polygonprimitive2d.hxx>
 
 
-
 namespace sdr
 {
     namespace overlay
@@ -90,7 +89,7 @@ namespace sdr
         }
 
         OverlayObject::OverlayObject(Color aBaseColor)
-        :   Event(0),
+        :   Event(),
             mpOverlayManager(nullptr),
             maBaseColor(aBaseColor),
             mbIsVisible(true),
@@ -182,7 +181,6 @@ namespace sdr
         }
     } // end of namespace overlay
 } // end of namespace sdr
-
 
 
 namespace sdr

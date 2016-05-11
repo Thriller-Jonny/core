@@ -18,10 +18,11 @@
  */
 
 #include <stdio.h>
-#ifdef WNT
+#ifdef _WIN32
 #include <prewin.h>
 #include <postwin.h>
 #endif
+#include <config_features.h>
 #include <com/sun/star/awt/WindowAttribute.hpp>
 #include <com/sun/star/awt/VclWindowPeerAttribute.hpp>
 #include <com/sun/star/awt/WindowClass.hpp>
@@ -113,6 +114,9 @@
 #include <vcl/window.hxx>
 #include <vcl/wrkwin.hxx>
 #include <vcl/throbber.hxx>
+#if HAVE_FEATURE_OPENGL
+#include <vcl/opengl/OpenGLWrapper.hxx>
+#endif
 #include "toolkit/awt/vclxspinbutton.hxx"
 #include <tools/debug.hxx>
 #include <comphelper/processfactory.hxx>
@@ -123,11 +127,11 @@
 #define VCLWINDOW_FRAMEWINDOW               0x1000
 #define VCLWINDOW_SYSTEMCHILDWINDOW         0x1001
 
-#if (defined WNT)
+#if defined(_WIN32)
 #define SYSTEM_DEPENDENT_TYPE css::lang::SystemDependent::SYSTEM_WIN32
-#elif (defined MACOSX)
+#elif defined(MACOSX)
 #define SYSTEM_DEPENDENT_TYPE css::lang::SystemDependent::SYSTEM_MAC
-#elif (defined UNX)
+#elif defined(UNX)
 #define SYSTEM_DEPENDENT_TYPE css::lang::SystemDependent::SYSTEM_XWINDOW
 #endif
 
@@ -157,9 +161,9 @@ class VCLXToolkit : public VCLXToolkitMutexHelper,
     oslModule           hSvToolsLib;
     FN_SvtCreateWindow  fnSvtCreateWindow;
 
-    ::cppu::OInterfaceContainerHelper m_aTopWindowListeners;
-    ::cppu::OInterfaceContainerHelper m_aKeyHandlers;
-    ::cppu::OInterfaceContainerHelper m_aFocusListeners;
+    ::comphelper::OInterfaceContainerHelper2 m_aTopWindowListeners;
+    ::comphelper::OInterfaceContainerHelper2 m_aKeyHandlers;
+    ::comphelper::OInterfaceContainerHelper2 m_aFocusListeners;
     ::Link<VclSimpleEvent&,void> m_aEventListenerLink;
     ::Link<VclWindowEvent&,bool> m_aKeyListenerLink;
     bool m_bEventListener;
@@ -193,6 +197,9 @@ public:
 
     // css::awt::XToolkitExperimental
     virtual void SAL_CALL processEventsToIdle()
+        throw (css::uno::RuntimeException, std::exception) override;
+
+    virtual sal_Int64 SAL_CALL getOpenGLBufferSwapCounter()
         throw (css::uno::RuntimeException, std::exception) override;
 
     // css::awt::XToolkit
@@ -552,7 +559,7 @@ namespace
         { css::awt::MessageBoxType_MAKE_FIXED_SIZE, nullptr, 0 }
     };
 
-    static bool lcl_convertMessageBoxType(
+    bool lcl_convertMessageBoxType(
         rtl::OUString &sType,
         css::awt::MessageBoxType eType )
     {
@@ -577,7 +584,7 @@ namespace
 static sal_Int32                            nVCLToolkitInstanceCount = 0;
 static bool                                 bInitedByVCLToolkit = false;
 
-static osl::Mutex & getInitMutex()
+osl::Mutex & getInitMutex()
 {
     static osl::Mutex * pM;
     if( !pM )
@@ -592,7 +599,7 @@ static osl::Mutex & getInitMutex()
     return *pM;
 }
 
-static osl::Condition & getInitCondition()
+osl::Condition & getInitCondition()
 {
     static osl::Condition * pC = nullptr;
     if( !pC )
@@ -1010,7 +1017,7 @@ vcl::Window* VCLXToolkit::ImplCreateWindow( VCLXWindow** ppNewComp,
                 *ppNewComp = new VCLXRadioButton;
 
                 // by default, disable RadioCheck
-                // Since the VCLXRadioButton really cares for it's RadioCheck settings, this is important:
+                // Since the VCLXRadioButton really cares for its RadioCheck settings, this is important:
                 // if we enable it, the VCLXRadioButton will use RadioButton::Check instead of RadioButton::SetState
                 // This leads to a strange behaviour if the control is newly created: when settings the initial
                 // state to "checked", the RadioButton::Check (called because RadioCheck=sal_True) will uncheck
@@ -1774,13 +1781,13 @@ void VCLXToolkit::callTopWindowListeners(
           = static_cast< ::VclWindowEvent const * >(pEvent)->GetWindow();
     if (pWindow->IsTopWindow())
     {
-        css::uno::Sequence< css::uno::Reference< css::uno::XInterface > >
+        std::vector< css::uno::Reference< css::uno::XInterface > >
               aListeners(m_aTopWindowListeners.getElements());
-        if (aListeners.hasElements())
+        if (!aListeners.empty())
         {
             css::lang::EventObject aAwtEvent(
                 static_cast< css::awt::XWindow * >(pWindow->GetWindowPeer()));
-            for (::sal_Int32 i = 0; i < aListeners.getLength(); ++i)
+            for (::sal_Int32 i = 0; i < (sal_Int32)aListeners.size(); ++i)
             {
                 css::uno::Reference< css::awt::XTopWindowListener >
                       xListener(aListeners[i], css::uno::UNO_QUERY);
@@ -1803,10 +1810,10 @@ void VCLXToolkit::callTopWindowListeners(
 bool VCLXToolkit::callKeyHandlers(::VclSimpleEvent const * pEvent,
                                   bool bPressed)
 {
-    css::uno::Sequence< css::uno::Reference< css::uno::XInterface > >
+    std::vector< css::uno::Reference< css::uno::XInterface > >
           aHandlers(m_aKeyHandlers.getElements());
 
-    if (aHandlers.hasElements())
+    if (!aHandlers.empty())
     {
         vcl::Window * pWindow = static_cast< ::VclWindowEvent const * >(pEvent)->GetWindow();
 
@@ -1826,7 +1833,7 @@ bool VCLXToolkit::callKeyHandlers(::VclSimpleEvent const * pEvent,
             pKeyEvent->GetKeyCode().GetCode(), pKeyEvent->GetCharCode(),
             sal::static_int_cast< sal_Int16 >(
                 pKeyEvent->GetKeyCode().GetFunction()));
-        for (::sal_Int32 i = 0; i < aHandlers.getLength(); ++i)
+        for (::sal_Int32 i = 0; i < (sal_Int32)aHandlers.size(); ++i)
         {
             css::uno::Reference< css::awt::XKeyHandler > xHandler(
                 aHandlers[i], css::uno::UNO_QUERY);
@@ -1855,9 +1862,9 @@ void VCLXToolkit::callFocusListeners(::VclSimpleEvent const * pEvent,
           = static_cast< ::VclWindowEvent const * >(pEvent)->GetWindow();
     if (pWindow->IsTopWindow())
     {
-        css::uno::Sequence< css::uno::Reference< css::uno::XInterface > >
+        std::vector< css::uno::Reference< css::uno::XInterface > >
               aListeners(m_aFocusListeners.getElements());
-        if (aListeners.hasElements())
+        if (!aListeners.empty())
         {
             // Ignore the interior of compound controls when determining the
             // window that gets the focus next (see implementation in
@@ -1876,7 +1883,7 @@ void VCLXToolkit::callFocusListeners(::VclSimpleEvent const * pEvent,
                 static_cast< css::awt::XWindow * >(pWindow->GetWindowPeer()),
                 static_cast<sal_Int16>(pWindow->GetGetFocusFlags()),
                 xNext, false);
-            for (::sal_Int32 i = 0; i < aListeners.getLength(); ++i)
+            for (::sal_Int32 i = 0; i < (sal_Int32)aListeners.size(); ++i)
             {
                 css::uno::Reference< css::awt::XFocusListener > xListener(
                     aListeners[i], css::uno::UNO_QUERY);
@@ -1906,11 +1913,23 @@ void SAL_CALL VCLXToolkit::reschedule()
     Application::Reschedule(true);
 }
 
+// css::awt::XToolkitExperimental
+
 void SAL_CALL VCLXToolkit::processEventsToIdle()
     throw (css::uno::RuntimeException, std::exception)
 {
     SolarMutexGuard aSolarGuard;
     Scheduler::ProcessEventsToIdle();
+}
+
+sal_Int64 SAL_CALL VCLXToolkit::getOpenGLBufferSwapCounter()
+    throw (css::uno::RuntimeException, std::exception)
+{
+#if HAVE_FEATURE_OPENGL
+     return OpenGLWrapper::getBufferSwapCounter();
+#else
+     return 0;
+#endif
 }
 
 // css:awt:XToolkitRobot

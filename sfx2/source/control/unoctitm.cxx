@@ -65,6 +65,10 @@
 #include "statcach.hxx"
 #include <sfx2/msgpool.hxx>
 #include <sfx2/objsh.hxx>
+#include <osl/file.hxx>
+#include <rtl/ustring.hxx>
+#include <unotools/pathoptions.hxx>
+#include <osl/time.h>
 
 #include <iostream>
 #include <map>
@@ -72,6 +76,7 @@
 
 #include <sal/log.hxx>
 #include <LibreOfficeKit/LibreOfficeKitEnums.h>
+#include <comphelper/lok.hxx>
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
@@ -151,27 +156,27 @@ void SAL_CALL SfxUnoControllerItem::statusChanged(const css::frame::FeatureState
         if ( rEvent.IsEnabled )
         {
             eState = SfxItemState::DEFAULT;
-            css::uno::Type pType = rEvent.State.getValueType();
+            css::uno::Type aType = rEvent.State.getValueType();
 
-            if ( pType == cppu::UnoType< bool >::get() )
+            if ( aType == cppu::UnoType< bool >::get() )
             {
                 bool bTemp = false;
                 rEvent.State >>= bTemp ;
                 pItem = new SfxBoolItem( pCtrlItem->GetId(), bTemp );
             }
-            else if ( pType == cppu::UnoType< ::cppu::UnoUnsignedShortType >::get() )
+            else if ( aType == cppu::UnoType< ::cppu::UnoUnsignedShortType >::get() )
             {
                 sal_uInt16 nTemp = 0;
                 rEvent.State >>= nTemp ;
                 pItem = new SfxUInt16Item( pCtrlItem->GetId(), nTemp );
             }
-            else if ( pType == cppu::UnoType<sal_uInt32>::get() )
+            else if ( aType == cppu::UnoType<sal_uInt32>::get() )
             {
                 sal_uInt32 nTemp = 0;
                 rEvent.State >>= nTemp ;
                 pItem = new SfxUInt32Item( pCtrlItem->GetId(), nTemp );
             }
-            else if ( pType == cppu::UnoType<OUString>::get() )
+            else if ( aType == cppu::UnoType<OUString>::get() )
             {
                 OUString sTemp ;
                 rEvent.State >>= sTemp ;
@@ -290,8 +295,8 @@ void SAL_CALL SfxStatusDispatcher::addStatusListener(const css::uno::Reference< 
         css::frame::FeatureStateEvent aEvent;
         aEvent.FeatureURL = aURL;
         aEvent.Source = static_cast<css::frame::XDispatch*>(this);
-        aEvent.IsEnabled = sal_True;
-        aEvent.Requery = sal_False;
+        aEvent.IsEnabled = true;
+        aEvent.Requery = false;
         aListener->statusChanged( aEvent );
     }
 }
@@ -355,8 +360,7 @@ void SAL_CALL SfxOfficeDispatch::dispatch( const css::util::URL& aURL, const css
         // user selects a menu entry than they may get only one notification that
         // a JRE is not selected.
         css::uno::ContextLayer layer(
-            new svt::JavaContext( css::uno::getCurrentContext(),
-                                  true) );
+            new svt::JavaContext( css::uno::getCurrentContext() ) );
 #endif
         pControllerItem->dispatch( aURL, aArgs, css::uno::Reference < css::frame::XDispatchResultListener >() );
     }
@@ -371,7 +375,7 @@ void SAL_CALL SfxOfficeDispatch::dispatchWithNotification( const css::util::URL&
     {
 #if HAVE_FEATURE_JAVA
         // see comment for SfxOfficeDispatch::dispatch
-        css::uno::ContextLayer layer( new svt::JavaContext( css::uno::getCurrentContext(), true) );
+        css::uno::ContextLayer layer( new svt::JavaContext( css::uno::getCurrentContext() ) );
 #endif
         pControllerItem->dispatch( aURL, aArgs, rListener );
     }
@@ -639,13 +643,38 @@ void UsageInfo::save()
     if (!mbIsCollecting)
         return;
 
-    // TODO - do a real saving here, not only dump to the screen
-    std::cerr << "Usage information:" << std::endl;
-    for (UsageMap::const_iterator it = maUsage.begin(); it != maUsage.end(); ++it)
+    OUString path(SvtPathOptions().GetConfigPath());
+    path += "usage/";
+    osl::Directory::createPath(path);
+
+    //get system time information.
+    TimeValue systemTime;
+    TimeValue localTime;
+    oslDateTime localDateTime;
+    osl_getSystemTime( &systemTime );
+    osl_getLocalTimeFromSystemTime( &systemTime, &localTime );
+    osl_getDateTimeFromTimeValue( &localTime, &localDateTime );
+
+    sal_Char time[1024];
+    sprintf(time,"%4i-%02i-%02iT%02i_%02i_%02i", localDateTime.Year, localDateTime.Month, localDateTime.Day, localDateTime.Hours, localDateTime.Minutes, localDateTime.Seconds);
+
+    //filename type: usage-YYYY-MM-DDTHH_MM_SS.csv
+    OUString filename = "usage-" + OUString::createFromAscii(time) + ".csv";
+    path += filename;
+
+    osl::File file(path);
+
+    if( file.open(osl_File_OpenFlag_Read | osl_File_OpenFlag_Write | osl_File_OpenFlag_Create) == osl::File::E_None )
     {
-        std::cerr << it->first << ';' << it->second << std::endl;
+        OString aUsageInfoMsg = "Document Type;Command;Count";
+
+        for (UsageMap::const_iterator it = maUsage.begin(); it != maUsage.end(); ++it)
+            aUsageInfoMsg += "\n" + it->first.toUtf8() + ";" + OString::number(it->second);
+
+        sal_uInt64 written = 0;
+        file.write(aUsageInfoMsg.pData->buffer, aUsageInfoMsg.getLength(), written);
+        file.close();
     }
-    std::cerr << "Usage information end" << std::endl;
 }
 
 class theUsageInfo : public rtl::Static<UsageInfo, theUsageInfo> {};
@@ -653,7 +682,7 @@ class theUsageInfo : public rtl::Static<UsageInfo, theUsageInfo> {};
 /// Extracts information about the command + args, and stores that.
 void collectUsageInformation(const util::URL& rURL, const uno::Sequence<beans::PropertyValue>& rArgs)
 {
-    bool bCollecting = officecfg::Office::Common::Misc::CollectUsageInformation::get();
+    bool bCollecting = getenv("LO_COLLECT_USAGE") || officecfg::Office::Common::Misc::CollectUsageInformation::get();
     theUsageInfo::get().setCollecting(bCollecting);
     if (!bCollecting)
         return;
@@ -933,7 +962,7 @@ void SAL_CALL SfxDispatchController_Impl::addStatusListener(const css::uno::Refe
     css::frame::FeatureStateEvent  aEvent;
     aEvent.FeatureURL = aURL;
     aEvent.Source     = static_cast<css::frame::XDispatch*>(pDispatch);
-    aEvent.Requery    = sal_False;
+    aEvent.Requery    = false;
     if ( bVisible )
     {
         aEvent.IsEnabled  = eState != SfxItemState::DISABLED;
@@ -942,11 +971,11 @@ void SAL_CALL SfxDispatchController_Impl::addStatusListener(const css::uno::Refe
     else
     {
         css::frame::status::Visibility aVisibilityStatus;
-        aVisibilityStatus.bVisible = sal_False;
+        aVisibilityStatus.bVisible = false;
 
         // MBA: we might decide to *not* disable "invisible" slots, but this would be
         // a change that needs to adjust at least the testtool
-        aEvent.IsEnabled           = sal_False;
+        aEvent.IsEnabled           = false;
         aEvent.State               = makeAny( aVisibilityStatus );
     }
 
@@ -1022,7 +1051,7 @@ void SfxDispatchController_Impl::StateChanged( sal_uInt16 nSID, SfxItemState eSt
         aEvent.FeatureURL = aDispatchURL;
         aEvent.Source = static_cast<css::frame::XDispatch*>(pDispatch);
         aEvent.IsEnabled = eState != SfxItemState::DISABLED;
-        aEvent.Requery = sal_False;
+        aEvent.Requery = false;
         aEvent.State = aState;
 
         if (pDispatcher && pDispatcher->GetFrame())
@@ -1056,7 +1085,7 @@ void SfxDispatchController_Impl::StateChanged( sal_uInt16 nSID, SfxItemState eSt
 
 void SfxDispatchController_Impl::InterceptLOKStateChangeEvent(const SfxObjectShell* objSh, const css::frame::FeatureStateEvent& aEvent)
 {
-    if (!objSh || !objSh->isTiledRendering())
+    if (!comphelper::LibreOfficeKit::isActive())
         return;
 
     OUStringBuffer aBuffer;
@@ -1065,6 +1094,7 @@ void SfxDispatchController_Impl::InterceptLOKStateChangeEvent(const SfxObjectShe
 
     if (aEvent.FeatureURL.Path == "Bold" ||
         aEvent.FeatureURL.Path == "CenterPara" ||
+        aEvent.FeatureURL.Path == "CharBackgroundExt" ||
         aEvent.FeatureURL.Path == "DefaultBullet" ||
         aEvent.FeatureURL.Path == "DefaultNumbering" ||
         aEvent.FeatureURL.Path == "Italic" ||
@@ -1076,12 +1106,12 @@ void SfxDispatchController_Impl::InterceptLOKStateChangeEvent(const SfxObjectShe
         aEvent.FeatureURL.Path == "SubScript" ||
         aEvent.FeatureURL.Path == "SuperScript" ||
         aEvent.FeatureURL.Path == "Strikeout" ||
-        aEvent.FeatureURL.Path == "Underline")
+        aEvent.FeatureURL.Path == "Underline" ||
+        aEvent.FeatureURL.Path == "ModifiedStatus")
     {
         bool bTemp = false;
         aEvent.State >>= bTemp;
         aBuffer.append(bTemp);
-
     }
     else if (aEvent.FeatureURL.Path == "CharFontName")
     {
@@ -1101,12 +1131,26 @@ void SfxDispatchController_Impl::InterceptLOKStateChangeEvent(const SfxObjectShe
         aEvent.State >>= aTemplate;
         aBuffer.append(aTemplate.StyleName);
     }
-    else if (aEvent.FeatureURL.Path == "FontColor" ||
-             aEvent.FeatureURL.Path == "BackColor")
+    else if (aEvent.FeatureURL.Path == "BackColor" ||
+             aEvent.FeatureURL.Path == "BackgroundColor" ||
+             aEvent.FeatureURL.Path == "CharBackColor" ||
+             aEvent.FeatureURL.Path == "Color" ||
+             aEvent.FeatureURL.Path == "FontColor")
     {
         sal_Int32 nColor = -1;
         aEvent.State >>= nColor;
         aBuffer.append(nColor);
+    }
+    else if (aEvent.FeatureURL.Path == "Undo" ||
+             aEvent.FeatureURL.Path == "Redo")
+    {
+        aBuffer.append(aEvent.IsEnabled ? OUString("enabled") : OUString("disabled"));
+    }
+    else if (aEvent.FeatureURL.Path == "InsertPage" ||
+             aEvent.FeatureURL.Path == "DeletePage" ||
+             aEvent.FeatureURL.Path == "DuplicatePage")
+    {
+        aBuffer.append(OUString::boolean(aEvent.IsEnabled));
     }
     else
     {

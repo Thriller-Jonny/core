@@ -28,6 +28,7 @@
 #include <svl/stritem.hxx>
 #include <sfx2/dispatch.hxx>
 #include <sfx2/sfxmodelfactory.hxx>
+#include <vcl/help.hxx>
 #include <vcl/settings.hxx>
 
 SmElement::SmElement(SmNodePointer pNode, const OUString& aText, const OUString& aHelpText) :
@@ -39,7 +40,7 @@ SmElement::SmElement(SmNodePointer pNode, const OUString& aText, const OUString&
 SmElement::~SmElement()
 {}
 
-SmNodePointer SmElement::getNode()
+const SmNodePointer& SmElement::getNode()
 {
     return mpNode;
 }
@@ -387,10 +388,55 @@ void SmElementsControl::Paint(vcl::RenderContext& rRenderContext, const Rectangl
     rRenderContext.Pop();
 }
 
+void SmElementsControl::RequestHelp(const HelpEvent& rHEvt)
+{
+    if (rHEvt.GetMode() & (HelpEventMode::BALLOON | HelpEventMode::QUICK))
+    {
+        SmElement* pHelpElement = mpCurrentElement;
+
+        if (!rHEvt.KeyboardActivated())
+        {
+            Point aHelpEventPos(ScreenToOutputPixel(rHEvt.GetMousePosPixel()));
+            for (size_t i = 0; i < maElementList.size() ; i++)
+            {
+                SmElement* pElement = maElementList[i].get();
+                Rectangle aRect(pElement->mBoxLocation, pElement->mBoxSize);
+                if (aRect.IsInside(aHelpEventPos))
+                {
+                    pHelpElement = pElement;
+                    break;
+                }
+            }
+        }
+
+        if (!pHelpElement)
+            return;
+
+        Rectangle aHelpRect(pHelpElement->mBoxLocation, pHelpElement->mBoxSize);
+        Point aPt = OutputToScreenPixel( aHelpRect.TopLeft() );
+        aHelpRect.Left() = aPt.X();
+        aHelpRect.Top()= aPt.Y();
+        aPt = OutputToScreenPixel( aHelpRect.BottomRight() );
+        aHelpRect.Right() = aPt.X();
+        aHelpRect.Bottom() = aPt.Y();
+
+        // get text and display it
+        OUString aStr = pHelpElement->getHelpText();
+        if (rHEvt.GetMode() & HelpEventMode::BALLOON)
+        {
+            Help::ShowBalloon(this, aHelpRect.Center(), aHelpRect, aStr);
+        }
+        else
+            Help::ShowQuickHelp(this, aHelpRect, aStr, aStr, QuickHelpFlags::CtrlText);
+        return;
+    }
+
+    Control::RequestHelp(rHEvt);
+}
+
 void SmElementsControl::MouseMove( const MouseEvent& rMouseEvent )
 {
     mpCurrentElement = nullptr;
-    OUString tooltip;
     if (Rectangle(Point(0, 0), GetOutputSizePixel()).IsInside(rMouseEvent.GetPosPixel()))
     {
         for (size_t i = 0; i < maElementList.size() ; i++)
@@ -404,24 +450,20 @@ void SmElementsControl::MouseMove( const MouseEvent& rMouseEvent )
                     mpCurrentElement = element;
                     LayoutOrPaintContents();
                     Invalidate();
-                    tooltip = element->getHelpText();
                 }
             }
         }
-    }
-    else
-    {
-        Control::MouseMove (rMouseEvent);
+        return;
     }
 
-    SetQuickHelpText(tooltip);
+    Control::MouseMove(rMouseEvent);
 }
 
 void SmElementsControl::MouseButtonDown(const MouseEvent& rMouseEvent)
 {
     GrabFocus();
 
-    if (rMouseEvent.IsLeft() && Rectangle(Point(0, 0), GetOutputSizePixel()).IsInside(rMouseEvent.GetPosPixel()))
+    if (rMouseEvent.IsLeft() && Rectangle(Point(0, 0), GetOutputSizePixel()).IsInside(rMouseEvent.GetPosPixel()) && maSelectHdlLink.IsSet())
     {
         for (size_t i = 0; i < maElementList.size() ; i++)
         {
@@ -429,7 +471,7 @@ void SmElementsControl::MouseButtonDown(const MouseEvent& rMouseEvent)
             Rectangle rect(element->mBoxLocation, element->mBoxSize);
             if (rect.IsInside(rMouseEvent.GetPosPixel()))
             {
-                selectedSignal(element);
+                maSelectHdlLink.Call(*element);
                 return;
             }
         }
@@ -626,7 +668,7 @@ void SmElementsControl::build()
             addElement(aEquation, aEquation, "");
             aEquation = "f ( x ) = sum from { { i = 0 } } to { infinity } { {f^{(i)}(0)} over {i!} x^i}";
             addElement(aEquation, aEquation, "");
-            aEquation = "f ( x ) = {1} over {%sigma sqrt{2%pi} }e^-{{(x-%mu)^2} over {2%sigma^2}}";
+            aEquation = "f ( x ) = {1} over {%sigma sqrt{2%pi} }func e^-{{(x-%mu)^2} over {2%sigma^2}}";
             addElement(aEquation, aEquation, "");
         }
         break;
@@ -678,7 +720,7 @@ SmElementsDockingWindow::SmElementsDockingWindow(SfxBindings* pInputBindings, Sf
     mpElementsControl->SetBackground( Color( COL_WHITE ) );
     mpElementsControl->SetTextColor( Color( COL_BLACK ) );
     mpElementsControl->setElementSetId(RID_CATEGORY_UNARY_BINARY_OPERATORS);
-    mpElementsControl->selectedSignal.connect( boost::bind( &SmElementsDockingWindow::SelectClickHandler, this, _1 ) );
+    mpElementsControl->SetSelectHdl(LINK(this, SmElementsDockingWindow, SelectClickHandler));
 }
 
 SmElementsDockingWindow::~SmElementsDockingWindow ()
@@ -710,15 +752,15 @@ void SmElementsDockingWindow::EndDocking( const Rectangle& rReactangle, bool bFl
     mpElementsControl->setVerticalMode(bVertical);
 }
 
-void SmElementsDockingWindow::SelectClickHandler( SmElement* pElement )
+IMPL_LINK_TYPED(SmElementsDockingWindow, SelectClickHandler, SmElement&, rElement, void)
 {
     SmViewShell* pViewSh = GetView();
 
     if (pViewSh)
     {
-        pViewSh->GetViewFrame()->GetDispatcher()->Execute(
+        pViewSh->GetViewFrame()->GetDispatcher()->ExecuteList(
             SID_INSERTCOMMANDTEXT, SfxCallMode::RECORD,
-            new SfxStringItem(SID_INSERTCOMMANDTEXT, pElement->getText()), 0L);
+            { new SfxStringItem(SID_INSERTCOMMANDTEXT, rElement.getText()) });
     }
 }
 

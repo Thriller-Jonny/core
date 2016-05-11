@@ -53,8 +53,8 @@ public:
     virtual ~ShowWindow();
     virtual void dispose() override;
 
-    bool         SetEndMode();
-    bool            SetPauseMode( sal_Int32 nPageIndexToRestart, sal_Int32 nTimeoutSec = SLIDE_NO_TIMEOUT, Graphic* pLogo = nullptr );
+    void            SetEndMode();
+    bool            SetPauseMode( sal_Int32 nTimeoutSec = SLIDE_NO_TIMEOUT, Graphic* pLogo = nullptr );
     bool            SetBlankMode( sal_Int32 nPageIndexToRestart, const Color& rBlankColor );
 
     const Color&        GetBlankColor() const { return maShowBackground.GetColor(); }

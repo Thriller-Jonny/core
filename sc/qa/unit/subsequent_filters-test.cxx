@@ -31,6 +31,9 @@
 #include <editeng/udlnitem.hxx>
 #include <editeng/editobj.hxx>
 #include <editeng/borderline.hxx>
+#include <editeng/fhgtitem.hxx>
+#include <editeng/brushitem.hxx>
+#include <editeng/fontitem.hxx>
 #include <editeng/flditem.hxx>
 #include <editeng/justifyitem.hxx>
 #include <dbdata.hxx>
@@ -141,8 +144,10 @@ public:
     void testNewCondFormatXLSX();
     void testCondFormatThemeColorXLSX();
     void testCondFormatThemeColor2XLSX(); // negative bar color and axis color
+    void testCondFormatThemeColor3XLSX(); // theme index 2 and 3 are switched
     void testComplexIconSetsXLSX();
     void testCondFormatParentXLSX();
+    void testColorScaleNumWithRefXLSX();
 
     void testLiteralInFormulaXLS();
 
@@ -157,7 +162,7 @@ public:
     void testErrorOnExternalReferences();
 
     //misc tests unrelated to the import filters
-#if !defined(MACOSX) && !defined(DRAGONFLY) && !defined(WNT)
+#if !defined(MACOSX) && !defined(DRAGONFLY) && !defined(_WIN32)
     void testPasswordNew();
     void testPasswordOld();
     void testPasswordWrongSHA();
@@ -205,6 +210,8 @@ public:
     void testEditEngStrikeThroughXLSX();
     void testRefStringXLSX();
     void testHiddenSheetsXLSX();
+    void testRelFormulaValidationXLS();
+    void testColumnStyle2XLSX();
 
     void testBnc762542();
 
@@ -257,8 +264,10 @@ public:
     CPPUNIT_TEST(testNewCondFormatXLSX);
     CPPUNIT_TEST(testCondFormatThemeColorXLSX);
     CPPUNIT_TEST(testCondFormatThemeColor2XLSX);
+    CPPUNIT_TEST(testCondFormatThemeColor3XLSX);
     CPPUNIT_TEST(testComplexIconSetsXLSX);
     CPPUNIT_TEST(testCondFormatParentXLSX);
+    CPPUNIT_TEST(testColorScaleNumWithRefXLSX);
     CPPUNIT_TEST(testLiteralInFormulaXLS);
 
     CPPUNIT_TEST(testNumberFormatHTML);
@@ -277,7 +286,7 @@ public:
 
     //disable testPassword on MacOSX due to problems with libsqlite3
     //also crashes on DragonFly due to problems with nss/nspr headers
-#if !defined(MACOSX) && !defined(DRAGONFLY) && !defined(WNT)
+#if !defined(MACOSX) && !defined(DRAGONFLY) && !defined(_WIN32)
     CPPUNIT_TEST(testPasswordWrongSHA);
     CPPUNIT_TEST(testPasswordOld);
     CPPUNIT_TEST(testPasswordNew);
@@ -302,6 +311,8 @@ public:
     CPPUNIT_TEST(testErrorOnExternalReferences);
     CPPUNIT_TEST(testEditEngStrikeThroughXLSX);
     CPPUNIT_TEST(testRefStringXLSX);
+    CPPUNIT_TEST(testRelFormulaValidationXLS);
+    CPPUNIT_TEST(testColumnStyle2XLSX);
 
     CPPUNIT_TEST(testBnc762542);
 
@@ -310,7 +321,7 @@ public:
     CPPUNIT_TEST_SUITE_END();
 
 private:
-#if !defined(MACOSX) && !defined(DRAGONFLY) && !defined(WNT)
+#if !defined(MACOSX) && !defined(DRAGONFLY) && !defined(_WIN32)
     void testPassword_Impl(const OUString& rFileNameBase);
 #endif
 
@@ -1505,7 +1516,7 @@ void ScFiltersTest::testRowIndex1BasedXLSX()
     xDocSh->DoClose();
 }
 
-#if !defined(MACOSX) && !defined(DRAGONFLY) && !defined(WNT)
+#if !defined(MACOSX) && !defined(DRAGONFLY) && !defined(_WIN32)
 void ScFiltersTest::testPassword_Impl(const OUString& aFileNameBase)
 {
     OUString aFileExtension(getFileFormats()[0].pName, strlen(getFileFormats()[0].pName), RTL_TEXTENCODING_UTF8 );
@@ -1515,17 +1526,17 @@ void ScFiltersTest::testPassword_Impl(const OUString& aFileNameBase)
     OUString aFilterType(getFileFormats()[0].pTypeName, strlen(getFileFormats()[0].pTypeName), RTL_TEXTENCODING_UTF8);
 
     SotClipboardFormatId nFormat = SotClipboardFormatId::STARCALC_8;
-    SfxFilter* aFilter = new SfxFilter(
+    std::shared_ptr<const SfxFilter> pFilter(new SfxFilter(
         aFilterName,
         OUString(), getFileFormats()[0].nFormatType, nFormat, aFilterType, 0, OUString(),
-        OUString(), OUString("private:factory/scalc*") );
-    aFilter->SetVersion(SOFFICE_FILEFORMAT_CURRENT);
+        OUString(), OUString("private:factory/scalc*") ));
+    const_cast<SfxFilter*>(pFilter.get())->SetVersion(SOFFICE_FILEFORMAT_CURRENT);
 
     ScDocShellRef xDocSh = new ScDocShell;
     SfxMedium* pMedium = new SfxMedium(aFileName, STREAM_STD_READWRITE);
     SfxItemSet* pSet = pMedium->GetItemSet();
     pSet->Put(SfxStringItem(SID_PASSWORD, OUString("test")));
-    pMedium->SetFilter(aFilter);
+    pMedium->SetFilter(pFilter);
     if (!xDocSh->DoLoad(pMedium))
     {
         xDocSh->DoClose();
@@ -1729,11 +1740,13 @@ void ScFiltersTest::testCellAnchoredHiddenShapesXLSX()
     SdrObject* pObj = pPage->GetObj(1);
     CPPUNIT_ASSERT_MESSAGE("Failed to get drawing object.", pObj);
     CPPUNIT_ASSERT_MESSAGE("The shape having same twocellanchor from and to attribute values, is visible.", !pObj->IsVisible());
+
+    xDocSh->DoClose();
 }
 
 namespace {
 
-class FindDimByName : std::unary_function<const ScDPSaveDimension*, bool>
+class FindDimByName : public std::unary_function<const ScDPSaveDimension*, bool>
 {
     OUString maName;
 public:
@@ -1823,7 +1836,7 @@ void ScFiltersTest::testPivotTableNamedRangeSourceODS()
     ScDocument& rDoc = xDocSh->GetDocument();
 
     ScDPCollection* pDPs = rDoc.GetDPCollection();
-    CPPUNIT_ASSERT(pDPs->GetCount() == 1);
+    CPPUNIT_ASSERT_EQUAL(size_t(1), pDPs->GetCount());
 
     ScDPObject* pDP = &(*pDPs)[0];
     CPPUNIT_ASSERT(pDP);
@@ -1835,7 +1848,7 @@ void ScFiltersTest::testPivotTableNamedRangeSourceODS()
 
     sal_uInt16 nOrient;
     long nDim = pDP->GetHeaderDim(ScAddress(0,1,1), nOrient);
-    CPPUNIT_ASSERT_MESSAGE("Failed to detect header dimension.", nDim == 0);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("Failed to detect header dimension.", long(0), nDim);
     CPPUNIT_ASSERT_MESSAGE("This dimension should be a page dimension.",
                            nOrient == sheet::DataPilotFieldOrientation_PAGE);
 
@@ -2241,7 +2254,7 @@ void ScFiltersTest::testRichTextContentODS()
         if (it->pAttr->Which() == EE_CHAR_UNDERLINE)
         {
             const SvxUnderlineItem& rItem = static_cast<const SvxUnderlineItem&>(*it->pAttr);
-            bHasUnderline = (rItem.GetLineStyle() == UNDERLINE_SINGLE);
+            bHasUnderline = (rItem.GetLineStyle() == LINESTYLE_SINGLE);
             if (bHasUnderline)
                 break;
         }
@@ -2437,6 +2450,8 @@ void ScFiltersTest::testCondFormatThemeColorXLSX()
     pColorScaleEntry = pColorScale->GetEntry(1);
     CPPUNIT_ASSERT(pColorScaleEntry);
     CPPUNIT_ASSERT_EQUAL(Color(157, 195, 230), pColorScaleEntry->GetColor());
+
+    xDocSh->DoClose();
 }
 
 void ScFiltersTest::testCondFormatThemeColor2XLSX()
@@ -2458,6 +2473,62 @@ void ScFiltersTest::testCondFormatThemeColor2XLSX()
     CPPUNIT_ASSERT(pDataBarFormatData->mpNegativeColor.get());
     CPPUNIT_ASSERT_EQUAL(Color(217, 217, 217), *pDataBarFormatData->mpNegativeColor.get());
     CPPUNIT_ASSERT_EQUAL(Color(197, 90, 17), pDataBarFormatData->maAxisColor);
+
+    xDocSh->DoClose();
+}
+
+namespace {
+
+void checkDatabarPositiveColor(ScConditionalFormat* pFormat, const Color& rColor)
+{
+    CPPUNIT_ASSERT(pFormat);
+    const ScFormatEntry* pEntry = pFormat->GetEntry(0);
+    CPPUNIT_ASSERT(pEntry);
+    CPPUNIT_ASSERT_EQUAL(pEntry->GetType(), condformat::DATABAR);
+    const ScDataBarFormat* pDataBar = static_cast<const ScDataBarFormat*>(pEntry);
+    const ScDataBarFormatData* pDataBarFormatData = pDataBar->GetDataBarData();
+
+    CPPUNIT_ASSERT_EQUAL(rColor, pDataBarFormatData->maPositiveColor);
+}
+
+}
+
+void ScFiltersTest::testCondFormatThemeColor3XLSX()
+{
+    ScDocShellRef xDocSh = ScBootstrapFixture::loadDoc("cond_format_theme_color3.", FORMAT_XLSX);
+
+    CPPUNIT_ASSERT_MESSAGE("Failed to load document", xDocSh.Is());
+
+    ScDocument& rDoc = xDocSh->GetDocument();
+    ScConditionalFormat* pFormat = rDoc.GetCondFormat(1, 3, 0);
+    CPPUNIT_ASSERT(pFormat);
+    const ScFormatEntry* pEntry = pFormat->GetEntry(0);
+    CPPUNIT_ASSERT(pEntry);
+    CPPUNIT_ASSERT_EQUAL(pEntry->GetType(), condformat::COLORSCALE);
+    const ScColorScaleFormat* pColorScale = static_cast<const ScColorScaleFormat*>(pEntry);
+
+    CPPUNIT_ASSERT_EQUAL(size_t(2), pColorScale->size());
+    const ScColorScaleEntry* pColorScaleEntry = pColorScale->GetEntry(0);
+    CPPUNIT_ASSERT(pColorScaleEntry);
+    CPPUNIT_ASSERT_EQUAL(Color(175, 171, 171), pColorScaleEntry->GetColor());
+
+    pColorScaleEntry = pColorScale->GetEntry(1);
+    CPPUNIT_ASSERT(pColorScaleEntry);
+    CPPUNIT_ASSERT_EQUAL(Color(51, 63, 80), pColorScaleEntry->GetColor());
+
+    pFormat = rDoc.GetCondFormat(3, 3, 0);
+    checkDatabarPositiveColor(pFormat, Color(59, 56, 56));
+
+    pFormat = rDoc.GetCondFormat(5, 3, 0);
+    checkDatabarPositiveColor(pFormat, Color(173, 185, 202));
+
+    pFormat = rDoc.GetCondFormat(7, 3, 0);
+    checkDatabarPositiveColor(pFormat, Color(89, 89, 89));
+
+    pFormat = rDoc.GetCondFormat(9, 3, 0);
+    checkDatabarPositiveColor(pFormat, Color(217, 217, 217));
+
+    xDocSh->DoClose();
 }
 
 namespace {
@@ -2518,6 +2589,8 @@ void ScFiltersTest::testComplexIconSetsXLSX()
     testCustomIconSetsXLSX_Impl(rDoc, 3, 1, IconSet_4RedToBlack, 3);
     testCustomIconSetsXLSX_Impl(rDoc, 3, 2, IconSet_3TrafficLights1, 1);
     testCustomIconSetsXLSX_Impl(rDoc, 3, 3, IconSet_3Arrows, 2);
+
+    xDocSh->DoClose();
 }
 
 void ScFiltersTest::testCondFormatParentXLSX()
@@ -2532,6 +2605,39 @@ void ScFiltersTest::testCondFormatParentXLSX()
     const SfxPoolItem& rPoolItem = pPattern->GetItem(ATTR_VER_JUSTIFY, pCondSet);
     const SvxVerJustifyItem& rVerJustify = static_cast<const SvxVerJustifyItem&>(rPoolItem);
     CPPUNIT_ASSERT_EQUAL(SVX_VER_JUSTIFY_TOP, static_cast<SvxCellVerJustify>(rVerJustify.GetValue()));
+
+    xDocSh->DoClose();
+}
+
+void ScFiltersTest::testColorScaleNumWithRefXLSX()
+{
+    ScDocShellRef xDocSh = ScBootstrapFixture::loadDoc("colorscale_num_with_ref.", FORMAT_XLSX);
+
+    CPPUNIT_ASSERT_MESSAGE("Failed to load colorscale_num_with_ref.xlsx", xDocSh.Is());
+
+    ScDocument& rDoc = xDocSh->GetDocument();
+    ScConditionalFormatList* pList = rDoc.GetCondFormList(0);
+    CPPUNIT_ASSERT(pList);
+
+    CPPUNIT_ASSERT_EQUAL(size_t(1), pList->size());
+
+    ScConditionalFormat* pFormat = pList->begin()->get();
+    CPPUNIT_ASSERT(pFormat);
+
+    CPPUNIT_ASSERT_EQUAL(size_t(1), pFormat->size());
+    const ScFormatEntry* pEntry = pFormat->GetEntry(0);
+    CPPUNIT_ASSERT(pEntry);
+
+    CPPUNIT_ASSERT_EQUAL(condformat::COLORSCALE, pEntry->GetType());
+
+    const ScColorScaleFormat* pColorScale= dynamic_cast<const ScColorScaleFormat*>(pEntry);
+    CPPUNIT_ASSERT(pColorScale);
+
+    const ScColorScaleEntry* pColorScaleEntry = pColorScale->GetEntry(1);
+    CPPUNIT_ASSERT_EQUAL(OUString("=$A$1"),
+            pColorScaleEntry->GetFormula(formula::FormulaGrammar::GRAM_NATIVE));
+
+    xDocSh->DoClose();
 }
 
 void ScFiltersTest::testLiteralInFormulaXLS()
@@ -3058,7 +3164,7 @@ void ScFiltersTest::testErrorOnExternalReferences()
 
     ScFormulaCell* pFC = rDoc.GetFormulaCell(ScAddress(0,0,0));
     CPPUNIT_ASSERT(pFC);
-    CPPUNIT_ASSERT_EQUAL(ScErrorCodes::errNoName, pFC->GetErrCode());
+    CPPUNIT_ASSERT_EQUAL(formula::errNoName, pFC->GetErrCode());
 
     if (!checkFormula(rDoc, ScAddress(0,0,0), "'file:///Path/To/FileA.ods'#$Sheet1.A1A"))
         CPPUNIT_FAIL("Formula changed");
@@ -3112,6 +3218,46 @@ void ScFiltersTest::testRefStringXLSX()
     const ScCalcConfig& rCalcConfig = rDoc.GetCalcConfig();
     CPPUNIT_ASSERT_EQUAL(formula::FormulaGrammar::CONV_XL_A1, rCalcConfig.meStringRefAddressSyntax);
 
+    xDocSh->DoClose();
+}
+
+void ScFiltersTest::testColumnStyle2XLSX()
+{
+    ScDocShellRef xDocSh = loadDoc("column_style.", FORMAT_XLSX);
+    CPPUNIT_ASSERT_MESSAGE("Failed to open doc", xDocSh.Is());
+
+    ScDocument& rDoc = xDocSh->GetDocument();
+    const ScPatternAttr* pAttr = rDoc.GetPattern(1, 1, 0);
+
+    {
+        const SfxPoolItem& rItem = pAttr->GetItem(ATTR_BACKGROUND);
+        const SvxBrushItem& rBackground = static_cast<const SvxBrushItem&>(rItem);
+        const Color& rColor = rBackground.GetColor();
+        CPPUNIT_ASSERT_EQUAL(Color(255, 51, 51), rColor);
+    }
+
+    {
+        const SfxPoolItem& rItem = pAttr->GetItem(ATTR_HOR_JUSTIFY);
+        const SvxHorJustifyItem& rJustify = static_cast<const SvxHorJustifyItem&>(rItem);
+        sal_uInt16 nVal = rJustify.GetValue();
+        CPPUNIT_ASSERT_EQUAL((sal_uInt16)SVX_HOR_JUSTIFY_CENTER, nVal);
+    }
+
+    {
+        const SfxPoolItem& rItem = pAttr->GetItem(ATTR_FONT_HEIGHT);
+        const SvxFontHeightItem& rFontHeight = static_cast<const SvxFontHeightItem&>(rItem);
+        sal_uInt16 nHeight = rFontHeight.GetHeight();
+        CPPUNIT_ASSERT_EQUAL((sal_uInt16)240, nHeight);
+    }
+
+    {
+        const SfxPoolItem& rItem = pAttr->GetItem(ATTR_FONT);
+        const SvxFontItem& rFont = static_cast<const SvxFontItem&>(rItem);
+        OUString aName = rFont.GetFamilyName();
+        CPPUNIT_ASSERT_EQUAL(OUString("Linux Biolinum G"), aName);
+    }
+
+    xDocSh->DoClose();
 }
 
 void ScFiltersTest::testBnc762542()
@@ -3149,6 +3295,37 @@ void ScFiltersTest::testHiddenSheetsXLSX()
     CPPUNIT_ASSERT_EQUAL_MESSAGE("1st sheet should be hidden", false, rDoc.IsVisible(0));
     CPPUNIT_ASSERT_EQUAL_MESSAGE("2nd sheet should be visible", true, rDoc.IsVisible(1));
     CPPUNIT_ASSERT_EQUAL_MESSAGE("3rd sheet should be hidden", false, rDoc.IsVisible(2));
+
+    xDocSh->DoClose();
+}
+
+namespace {
+
+void checkValidationFormula(const ScAddress& rPos, ScDocument& rDoc, const OUString& rExpectedFormula)
+{
+    const SfxUInt32Item* pItem = static_cast<const SfxUInt32Item*>(rDoc.GetAttr(rPos, ATTR_VALIDDATA) );
+    CPPUNIT_ASSERT(pItem);
+    sal_uLong nKey = pItem->GetValue();
+    const ScValidationData* pData = rDoc.GetValidationEntry(nKey);
+    CPPUNIT_ASSERT(pData);
+
+    OUString aFormula = pData->GetExpression(rPos, 0);
+    CPPUNIT_ASSERT_EQUAL(rExpectedFormula, aFormula);
+}
+
+}
+
+void ScFiltersTest::testRelFormulaValidationXLS()
+{
+    ScDocShellRef xDocSh = loadDoc("validation.", FORMAT_XLS);
+    CPPUNIT_ASSERT_MESSAGE("Failed to open doc", xDocSh.Is());
+
+    ScDocument& rDoc = xDocSh->GetDocument();
+
+    checkValidationFormula(ScAddress(3, 4, 0), rDoc, "C5");
+    checkValidationFormula(ScAddress(5, 8, 0), rDoc, "D7");
+
+    xDocSh->DoClose();
 }
 
 ScFiltersTest::ScFiltersTest()

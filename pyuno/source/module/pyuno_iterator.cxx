@@ -35,7 +35,6 @@ using com::sun::star::lang::WrappedTargetException;
 using com::sun::star::uno::Any;
 using com::sun::star::uno::Reference;
 using com::sun::star::uno::RuntimeException;
-using com::sun::star::uno::UNO_QUERY;
 
 
 namespace pyuno
@@ -167,7 +166,7 @@ static PyTypeObject PyUNO_iterator_Type =
 #endif
 };
 
-PyObject* PyUNO_iterator_new( const Reference< XEnumeration > xEnumeration )
+PyObject* PyUNO_iterator_new( const Reference< XEnumeration >& xEnumeration )
 {
     PyUNO_iterator* self = PyObject_New( PyUNO_iterator, &PyUNO_iterator_Type );
     if ( self == nullptr )

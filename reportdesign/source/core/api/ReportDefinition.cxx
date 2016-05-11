@@ -125,8 +125,6 @@
 #include <vcl/virdev.hxx>
 
 #include <boost/bind.hpp>
-#include <boost/mem_fn.hpp>
-#include <boost/noncopyable.hpp>
 
 //  page styles
 #define SC_UNO_PAGE_LEFTBORDER      "LeftBorder"
@@ -289,8 +287,8 @@ OStyle::OStyle()
     m_aSize.Width = aDefaultSize.Width();
 
     const style::GraphicLocation eGraphicLocation = style::GraphicLocation_NONE;
-    const sal_Bool bFalse = sal_False;
-    const sal_Bool bTrue = sal_True;
+    const sal_Bool bFalse = false;
+    const sal_Bool bTrue = true;
     const sal_Int32 nMargin = 2000;
     //const sal_Int32 nColor = COL_WHITE;
     const sal_Int32 nTransparent = COL_TRANSPARENT;
@@ -420,12 +418,12 @@ void OStyle::getPropertyDefaultByHandle( sal_Int32 /*_nHandle*/, uno::Any& /*_rD
 // XStyle
 sal_Bool SAL_CALL OStyle::isUserDefined(  ) throw (uno::RuntimeException, std::exception)
 {
-    return sal_False;
+    return false;
 }
 
 sal_Bool SAL_CALL OStyle::isInUse(  ) throw (uno::RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 OUString SAL_CALL OStyle::getParentStyle(  ) throw (uno::RuntimeException, std::exception)
@@ -475,10 +473,11 @@ uno::Sequence< uno::Any > SAL_CALL OStyle::getPropertyDefaults( const uno::Seque
 struct OReportDefinitionImpl
 {
     uno::WeakReference< uno::XInterface >                   m_xParent;
-    ::cppu::OInterfaceContainerHelper                       m_aStorageChangeListeners;
-    ::cppu::OInterfaceContainerHelper                       m_aCloseListener;
-    ::cppu::OInterfaceContainerHelper                       m_aModifyListeners;
-    ::cppu::OInterfaceContainerHelper                       m_aDocEventListeners;
+    ::comphelper::OInterfaceContainerHelper2                      m_aStorageChangeListeners;
+    ::comphelper::OInterfaceContainerHelper2                      m_aCloseListener;
+    ::comphelper::OInterfaceContainerHelper2                      m_aModifyListeners;
+    ::comphelper::OInterfaceContainerHelper2                      m_aLegacyEventListeners;
+    ::comphelper::OInterfaceContainerHelper2                      m_aDocEventListeners;
     ::std::vector< uno::Reference< frame::XController> >    m_aControllers;
     uno::Sequence< beans::PropertyValue >                   m_aArgs;
 
@@ -532,6 +531,7 @@ struct OReportDefinitionImpl
     :m_aStorageChangeListeners(_aMutex)
     ,m_aCloseListener(_aMutex)
     ,m_aModifyListeners(_aMutex)
+    ,m_aLegacyEventListeners(_aMutex)
     ,m_aDocEventListeners(_aMutex)
     ,m_sMimeType(MIMETYPE_OASIS_OPENDOCUMENT_TEXT_ASCII)
     ,m_sIdentifier(SERVICE_REPORTDEFINITION)
@@ -653,6 +653,7 @@ void SAL_CALL OReportDefinition::disposing()
     lang::EventObject aDisposeEvent( static_cast< ::cppu::OWeakObject* >( this ) );
     m_pImpl->m_aModifyListeners.disposeAndClear( aDisposeEvent );
     m_pImpl->m_aCloseListener.disposeAndClear( aDisposeEvent );
+    m_pImpl->m_aLegacyEventListeners.disposeAndClear( aDisposeEvent );
     m_pImpl->m_aDocEventListeners.disposeAndClear( aDisposeEvent );
     m_pImpl->m_aStorageChangeListeners.disposeAndClear( aDisposeEvent );
 
@@ -1050,7 +1051,7 @@ uno::Reference< util::XCloneable > SAL_CALL OReportDefinition::createClone(  ) t
 }
 
 void OReportDefinition::setSection(  const OUString& _sProperty
-                            ,const bool& _bOn
+                            ,bool _bOn
                             ,const OUString& _sName
                             ,uno::Reference< report::XSection>& _member)
 {
@@ -1096,7 +1097,7 @@ void SAL_CALL OReportDefinition::close( sal_Bool _bDeliverOwnership ) throw (uti
 
     ::std::vector< uno::Reference< frame::XController> > aCopy = m_pImpl->m_aControllers;
     ::std::vector< uno::Reference< frame::XController> >::iterator aIter = aCopy.begin();
-    ::std::vector< uno::Reference< frame::XController> >::iterator aEnd = aCopy.end();
+    ::std::vector< uno::Reference< frame::XController> >::const_iterator aEnd = aCopy.end();
     for (;aIter != aEnd ; ++aIter)
     {
         if ( aIter->is() )
@@ -1144,7 +1145,7 @@ sal_Bool SAL_CALL OReportDefinition::attachResource( const OUString& /*_rURL*/, 
         throw;
     }
     m_pImpl->m_pUndoManager->GetSfxUndoManager().EnableUndo( true );
-    return sal_True;
+    return true;
 }
 
 void OReportDefinition::fillArgs(utl::MediaDescriptor& _aDescriptor)
@@ -1470,7 +1471,7 @@ void SAL_CALL OReportDefinition::storeToStorage( const uno::Reference< embed::XS
         }
 
         if ( _xStorageToSaveTo == m_pImpl->m_xStorage )
-            setModified(sal_False);
+            setModified(false);
     }
     if ( xStatusIndicator.is() )
         xStatusIndicator->end();
@@ -1526,10 +1527,9 @@ bool OReportDefinition::WriteThroughComponent(
     OSL_ENSURE( nullptr != pServiceName, "Need service name!" );
     try
     {
-        uno::Reference<embed::XStorage> xMyStorage = _xStorageToSaveTo;
         // open stream
         OUString sStreamName = OUString::createFromAscii( pStreamName );
-        uno::Reference<io::XStream> xStream = xMyStorage->openStreamElement( sStreamName,embed::ElementModes::READWRITE | embed::ElementModes::TRUNCATE );
+        uno::Reference<io::XStream> xStream = _xStorageToSaveTo->openStreamElement( sStreamName,embed::ElementModes::READWRITE | embed::ElementModes::TRUNCATE );
         if ( !xStream.is() )
             return false;
         uno::Reference<io::XOutputStream> xOutputStream = xStream->getOutputStream();
@@ -1549,9 +1549,7 @@ bool OReportDefinition::WriteThroughComponent(
 
         OUString aPropName("MediaType");
         OUString aMime("text/xml");
-        uno::Any aAny;
-        aAny <<= aMime;
-        xStreamProp->setPropertyValue( aPropName, aAny );
+        xStreamProp->setPropertyValue( aPropName, uno::Any(aMime) );
 
         // encrypt all streams
         xStreamProp->setPropertyValue( "UseCommonStoragePasswordEncryption",
@@ -1616,8 +1614,8 @@ bool OReportDefinition::WriteThroughComponent(
 // XLoadable
 void SAL_CALL OReportDefinition::initNew(  ) throw (frame::DoubleInitializationException, io::IOException, uno::Exception, uno::RuntimeException, std::exception)
 {
-     setPageHeaderOn( sal_True );
-     setPageFooterOn( sal_True );
+     setPageHeaderOn( true );
+     setPageFooterOn( true );
 }
 
 void SAL_CALL OReportDefinition::load( const uno::Sequence< beans::PropertyValue >& _rArguments ) throw (frame::DoubleInitializationException, io::IOException, uno::Exception, uno::RuntimeException, std::exception)
@@ -1684,7 +1682,7 @@ void SAL_CALL OReportDefinition::load( const uno::Sequence< beans::PropertyValue
         aArguments.get_ensureType( "ReadOnly", bReadOnly );
         nFirstOpenMode = bReadOnly ? 1 : 0;
     }
-    const size_t nLastOpenMode = sizeof( nOpenModes ) / sizeof( nOpenModes[0] ) - 1;
+    const size_t nLastOpenMode = SAL_N_ELEMENTS( nOpenModes ) - 1;
     for ( size_t i=nFirstOpenMode; i <= nLastOpenMode; ++i )
     {
         uno::Sequence< uno::Any > aStorageCreationArgs(2);
@@ -1727,7 +1725,7 @@ void SAL_CALL OReportDefinition::setVisualAreaSize( ::sal_Int64 _nAspect, const 
              m_pImpl->m_aVisualAreaSize.Height != _aSize.Height);
         m_pImpl->m_aVisualAreaSize = _aSize;
         if( bChanged )
-            setModified( sal_True );
+            setModified( true );
     m_pImpl->m_nAspect = _nAspect;
 }
 
@@ -1848,11 +1846,44 @@ void OReportDefinition::notifyEvent(const OUString& _sEventName)
         ::connectivity::checkDisposed(ReportDefinitionBase::rBHelper.bDisposed);
         document::EventObject aEvt(*this, _sEventName);
         aGuard.clear();
-        m_pImpl->m_aDocEventListeners.notifyEach(&document::XEventListener::notifyEvent,aEvt);
+        m_pImpl->m_aLegacyEventListeners.notifyEach(&document::XEventListener::notifyEvent,aEvt);
     }
     catch (const uno::Exception&)
     {
     }
+
+    notifyDocumentEvent(_sEventName, nullptr, css::uno::Any());
+}
+
+// document::XDocumentEventBroadcaster
+void SAL_CALL OReportDefinition::notifyDocumentEvent( const OUString& rEventName, const uno::Reference< frame::XController2 >& rViewController, const uno::Any& rSupplement ) throw (lang::IllegalArgumentException, lang::NoSupportException, uno::RuntimeException, std::exception)
+{
+    try
+    {
+        ::osl::ResettableMutexGuard aGuard(m_aMutex);
+        ::connectivity::checkDisposed(ReportDefinitionBase::rBHelper.bDisposed);
+        document::DocumentEvent aEvt(*this, rEventName, rViewController, rSupplement);
+        aGuard.clear();
+        m_pImpl->m_aDocEventListeners.notifyEach(&document::XDocumentEventListener::documentEventOccured,aEvt);
+    }
+    catch (const uno::Exception&)
+    {
+    }
+}
+
+void SAL_CALL OReportDefinition::addDocumentEventListener( const uno::Reference< document::XDocumentEventListener >& rListener ) throw (uno::RuntimeException, std::exception)
+{
+    ::osl::MutexGuard aGuard(m_aMutex);
+    ::connectivity::checkDisposed(ReportDefinitionBase::rBHelper.bDisposed);
+    if ( rListener.is() )
+        m_pImpl->m_aDocEventListeners.addInterface(rListener);
+}
+
+void SAL_CALL OReportDefinition::removeDocumentEventListener( const uno::Reference< document::XDocumentEventListener >& rListener ) throw (uno::RuntimeException, std::exception)
+{
+    ::osl::MutexGuard aGuard(m_aMutex);
+    ::connectivity::checkDisposed(ReportDefinitionBase::rBHelper.bDisposed);
+    m_pImpl->m_aDocEventListeners.removeInterface(rListener);
 }
 
 // document::XEventBroadcaster
@@ -1861,14 +1892,14 @@ void SAL_CALL OReportDefinition::addEventListener(const uno::Reference< document
     ::osl::MutexGuard aGuard(m_aMutex);
     ::connectivity::checkDisposed(ReportDefinitionBase::rBHelper.bDisposed);
     if ( _xListener.is() )
-        m_pImpl->m_aDocEventListeners.addInterface(_xListener);
+        m_pImpl->m_aLegacyEventListeners.addInterface(_xListener);
 }
 
 void SAL_CALL OReportDefinition::removeEventListener( const uno::Reference< document::XEventListener >& _xListener ) throw (uno::RuntimeException, std::exception)
 {
     ::osl::MutexGuard aGuard(m_aMutex);
     ::connectivity::checkDisposed(ReportDefinitionBase::rBHelper.bDisposed);
-    m_pImpl->m_aDocEventListeners.removeInterface(_xListener);
+    m_pImpl->m_aLegacyEventListeners.removeInterface(_xListener);
 }
 
 // document::XViewDataSupplier
@@ -1880,8 +1911,8 @@ uno::Reference< container::XIndexAccess > SAL_CALL OReportDefinition::getViewDat
     {
         m_pImpl->m_xViewData.set( document::IndexedPropertyValues::create(m_aProps->m_xContext), uno::UNO_QUERY);
         uno::Reference< container::XIndexContainer > xContainer(m_pImpl->m_xViewData,uno::UNO_QUERY);
-        ::std::vector< uno::Reference< frame::XController> >::iterator aIter = m_pImpl->m_aControllers.begin();
-        ::std::vector< uno::Reference< frame::XController> >::iterator aEnd = m_pImpl->m_aControllers.end();
+        ::std::vector< uno::Reference< frame::XController> >::const_iterator aIter = m_pImpl->m_aControllers.begin();
+        ::std::vector< uno::Reference< frame::XController> >::const_iterator aEnd = m_pImpl->m_aControllers.end();
         for (;aIter != aEnd ; ++aIter)
         {
             if ( aIter->is() )
@@ -2214,7 +2245,7 @@ uno::Sequence< OUString > SAL_CALL OReportDefinition::getAvailableServiceNames()
         OUString("com.sun.star.drawing.MarkerTable")
     };
 
-    static const sal_uInt16 nSvxComponentServiceNameListCount = sizeof(aSvxComponentServiceNameList) / sizeof ( aSvxComponentServiceNameList[0] );
+    static const sal_uInt16 nSvxComponentServiceNameListCount = SAL_N_ELEMENTS(aSvxComponentServiceNameList);
 
     uno::Sequence< OUString > aSeq( nSvxComponentServiceNameListCount );
     OUString* pStrings = aSeq.getArray();
@@ -2279,7 +2310,7 @@ typedef ::cppu::WeakImplHelper< container::XNameContainer,
                              container::XIndexAccess
                             > TStylesBASE;
 class OStylesHelper:
-    public cppu::BaseMutex, public TStylesBASE, private boost::noncopyable
+    public cppu::BaseMutex, public TStylesBASE
 {
     typedef ::std::map< OUString, uno::Any  , ::comphelper::UStringMixLess> TStyleElements;
     TStyleElements                                  m_aElements;
@@ -2290,6 +2321,8 @@ protected:
     virtual ~OStylesHelper(){}
 public:
     explicit OStylesHelper(const uno::Type& rType = cppu::UnoType<container::XElementAccess>::get());
+    OStylesHelper(const OStylesHelper&) = delete;
+    OStylesHelper& operator=(const OStylesHelper&) = delete;
 
     // XNameContainer
     virtual void SAL_CALL insertByName( const OUString& aName, const uno::Any& aElement ) throw(lang::IllegalArgumentException, container::ElementExistException,lang::WrappedTargetException, uno::RuntimeException, std::exception) override;
@@ -2349,7 +2382,7 @@ uno::Any SAL_CALL OStylesHelper::getByIndex( sal_Int32 Index ) throw(lang::Index
 uno::Any SAL_CALL OStylesHelper::getByName( const OUString& aName ) throw(container::NoSuchElementException, lang::WrappedTargetException, uno::RuntimeException, std::exception)
 {
     ::osl::MutexGuard aGuard(m_aMutex);
-    TStyleElements::iterator aFind = m_aElements.find(aName);
+    TStyleElements::const_iterator aFind = m_aElements.find(aName);
     if ( aFind == m_aElements.end() )
         throw container::NoSuchElementException();
     return aFind->second;
@@ -2390,7 +2423,7 @@ void SAL_CALL OStylesHelper::insertByName( const OUString& aName, const uno::Any
 void SAL_CALL OStylesHelper::removeByName( const OUString& aName ) throw(container::NoSuchElementException, lang::WrappedTargetException,uno::RuntimeException, std::exception)
 {
     ::osl::MutexGuard aGuard(m_aMutex);
-    TStyleElements::iterator aFind = m_aElements.find(aName);
+    TStyleElements::const_iterator aFind = m_aElements.find(aName);
     if ( aFind != m_aElements.end() )
         throw container::NoSuchElementException();
     m_aElementsPos.erase(::std::find(m_aElementsPos.begin(),m_aElementsPos.end(),aFind));
@@ -2514,7 +2547,23 @@ bool OReportDefinition::isEnableSetModified() const
 
 OUString OReportDefinition::getDocumentBaseURL() const
 {
-    return const_cast<OReportDefinition*>(this)->getURL();
+    // TODO: should this be in getURL()? not sure...
+    uno::Reference<frame::XModel> const xParent(
+        const_cast<OReportDefinition*>(this)->getParent(), uno::UNO_QUERY);
+    if (xParent.is())
+    {
+        return xParent->getURL();
+    }
+
+    ::osl::MutexGuard aGuard(m_aMutex);
+    ::connectivity::checkDisposed(ReportDefinitionBase::rBHelper.bDisposed);
+    for (beans::PropertyValue const& it : m_pImpl->m_aArgs)
+    {
+        if (it.Name == "DocumentBaseURL")
+            return it.Value.get<OUString>();
+    }
+
+    return OUString();
 }
 
 uno::Reference< frame::XTitle > OReportDefinition::impl_getTitleHelper_throw()

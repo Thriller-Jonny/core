@@ -121,6 +121,11 @@ public class InterfaceContainer implements Cloneable
         this.elementData = new Object[initialCapacity];
     }
 
+    private InterfaceContainer(Object[] data) {
+        elementData = data;
+        size = elementData == null ? 0 : elementData.length;
+    }
+
     /**
      * Trims the capacity of this <tt>ArrayList</tt> instance to be the
      * list's current size.  An application can use this operation to minimize
@@ -215,6 +220,7 @@ public class InterfaceContainer implements Cloneable
      * @param c the elements to be inserted into this list.
      * @throws    IndexOutOfBoundsException if index out of range <tt>(index
      *        &lt; 0 || index &gt; size())</tt>.
+     * @return true if an element was inserted.
      */
     synchronized public boolean addAll(Collection c)
     {
@@ -243,6 +249,7 @@ public class InterfaceContainer implements Cloneable
      * @param c elements to be inserted into this list.
      * @throws    IndexOutOfBoundsException if index out of range <tt>(index
      *        &lt; 0 || index &gt; size())</tt>.
+     * @return true if an element was inserted.
      */
     synchronized public boolean addAll(int index, Collection c)
     {
@@ -300,6 +307,7 @@ public class InterfaceContainer implements Cloneable
      * Returns <tt>true</tt> if this list contains the specified element.
      *
      * @param elem element whose presence in this List is to be tested.
+     * @return <tt>true</tt> if this list contains the specified element.
      */
     synchronized public boolean contains(Object elem)
     {
@@ -448,16 +456,14 @@ public class InterfaceContainer implements Cloneable
     @Override
     synchronized public Object clone()
     {
-        Object ret= null;
-        if (elementData != null)
-        {
-            InterfaceContainer cont= new InterfaceContainer();
-            cont.elementData = new Object[size];
-            cont.size= size;
-            System.arraycopy(elementData, 0, cont.elementData, 0, size);
-            ret= cont;
+        Object[] data;
+        if (elementData == null) {
+            data = null;
+        } else {
+            data = new Object[size];
+            System.arraycopy(elementData, 0, data, 0, size);
         }
-        return ret;
+        return new InterfaceContainer(data);
     }
     synchronized public ListIterator listIterator()
     {
@@ -467,6 +473,8 @@ public class InterfaceContainer implements Cloneable
     /** The iterator keeps a copy of the list. Changes to InterfaceContainer do not
      *  affect the data of the iterator. Conversely, changes to the iterator are effect
      *  InterfaceContainer.
+     *  @param index the starting offset into the list.
+     *  @return a new iterator.
      */
     synchronized public ListIterator listIterator(int index)
     {
@@ -505,7 +513,11 @@ public class InterfaceContainer implements Cloneable
     }
 
 
-    /** Parameter obj may  */
+    /** Parameter obj may... or may not. What did the original author want
+     *  to tell us here?
+     *  @param obj the object to be removed.
+     *  @return true if obj was successfully removed from the list.
+     */
     synchronized public boolean remove(Object obj)
     {
         boolean ret= false;

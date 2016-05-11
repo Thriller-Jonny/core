@@ -17,8 +17,8 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include "vcl/throbber.hxx"
-#include "vcl/svapp.hxx"
+#include <vcl/throbber.hxx>
+#include <vcl/svapp.hxx>
 
 #include <com/sun/star/uno/XComponentContext.hpp>
 #include <com/sun/star/graphic/GraphicProvider.hpp>
@@ -33,21 +33,19 @@
 
 #include <limits>
 
-using ::com::sun::star::uno::Sequence;
 using ::com::sun::star::uno::Reference;
 using ::com::sun::star::graphic::XGraphic;
 using ::com::sun::star::graphic::XGraphicProvider;
-using ::com::sun::star::uno::UNO_QUERY_THROW;
 using ::com::sun::star::uno::UNO_QUERY;
 using ::com::sun::star::uno::Exception;
 namespace ImageScaleMode = ::com::sun::star::awt::ImageScaleMode;
 
-Throbber::Throbber( vcl::Window* i_parentWindow, WinBits i_style, const ImageSet i_imageSet )
+Throbber::Throbber( vcl::Window* i_parentWindow, WinBits i_style )
     :ImageControl( i_parentWindow, i_style )
     ,mbRepeat( true )
     ,mnStepTime( 100 )
     ,mnCurStep( 0 )
-    ,meImageSet( i_imageSet )
+    ,meImageSet( IMAGES_AUTO )
 {
     maWaitTimer.SetTimeout( mnStepTime );
     maWaitTimer.SetTimeoutHdl( LINK( this, Throbber, TimeOutHdl ) );

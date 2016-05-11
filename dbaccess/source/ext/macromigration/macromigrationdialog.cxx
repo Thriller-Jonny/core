@@ -64,24 +64,18 @@ namespace dbmm
     using ::com::sun::star::uno::UNO_QUERY_THROW;
     using ::com::sun::star::uno::UNO_SET_THROW;
     using ::com::sun::star::uno::Exception;
-    using ::com::sun::star::uno::RuntimeException;
     using ::com::sun::star::uno::Any;
-    using ::com::sun::star::uno::makeAny;
     using ::com::sun::star::sdb::application::XDatabaseDocumentUI;
     using ::com::sun::star::sdb::XOfficeDatabaseDocument;
     using ::com::sun::star::frame::XModel2;
-    using ::com::sun::star::frame::XController;
     using ::com::sun::star::frame::XController2;
     using ::com::sun::star::container::XEnumeration;
     using ::com::sun::star::frame::XStorable;
     using ::com::sun::star::uno::Sequence;
     using ::com::sun::star::beans::PropertyValue;
     using ::com::sun::star::frame::XFrame;
-    using ::com::sun::star::awt::XWindow;
     using ::com::sun::star::util::XCloseable;
-    using ::com::sun::star::util::XCloseListener;
     using ::com::sun::star::util::CloseVetoException;
-    using ::com::sun::star::lang::EventObject;
     using ::com::sun::star::frame::XComponentLoader;
     using ::com::sun::star::util::XModifiable;
     using ::com::sun::star::ucb::UniversalContentBroker;
@@ -141,7 +135,7 @@ namespace dbmm
         describeState( STATE_MIGRATE,           sTitleMigrate, &ProgressPage::Create      );
         describeState( STATE_SUMMARY,           sTitleSummary, &ResultPage::Create        );
 
-        declarePath( PATH_DEFAULT, STATE_CLOSE_SUB_DOCS, STATE_BACKUP_DBDOC, STATE_MIGRATE, STATE_SUMMARY, WZS_INVALID_STATE );
+        declarePath( PATH_DEFAULT, {STATE_CLOSE_SUB_DOCS, STATE_BACKUP_DBDOC, STATE_MIGRATE, STATE_SUMMARY} );
 
         SetPageSizePixel( LogicToPixel( ::Size( TAB_PAGE_WIDTH, TAB_PAGE_HEIGHT ), MAP_APPFONT ) );
         SetRoadmapInteractive( true );
@@ -454,7 +448,7 @@ namespace dbmm
                 aDocumentArgs.put( "SalvagedFile", m_pData->sSuccessfulBackupLocation );
                 // reset the modified flag of the document, so the controller can be suspended later
                 Reference< XModifiable > xModify( m_pData->xDocument, UNO_QUERY_THROW );
-                xModify->setModified( sal_False );
+                xModify->setModified( false );
                 // after this reload, don't show the migration warning, again
                 aDocumentArgs.put( "SuppressMigrationWarning", true );
             }
@@ -479,7 +473,7 @@ namespace dbmm
                 Reference< XFrame > xFrame( xController->getFrame(), UNO_SET_THROW );
                 OUString sViewName( xController->getViewControllerName() );
 
-                if ( !xController->suspend( sal_True ) )
+                if ( !xController->suspend( true ) )
                 {   // ouch. There shouldn't be any modal dialogs and such, so there
                     // really is no reason why suspending shouldn't work.
                     OSL_FAIL( "MacroMigrationDialog::impl_reloadDocument_nothrow: could not suspend a controller!" );
@@ -542,7 +536,7 @@ namespace dbmm
             if ( !_bMigrationSuccess )
             {
                 Reference< XModifiable > xModify( m_pData->xDocument, UNO_QUERY_THROW );
-                xModify->setModified( sal_True );
+                xModify->setModified( true );
                     // this is just paranoia - in case saving the doc fails, perhaps the user is tempted to do so
                 Reference< XStorable > xStor( m_pData->xDocument, UNO_QUERY_THROW );
                 xStor->store();
@@ -562,7 +556,7 @@ namespace dbmm
             try
             {
                 Reference< XCloseable > xFrameClose( aView.first, UNO_QUERY_THROW );
-                xFrameClose->close( sal_True );
+                xFrameClose->close( true );
             }
             catch( const Exception& )
             {

@@ -42,7 +42,6 @@ using ::com::sun::star::xml::sax::XAttributeList;
 using ::com::sun::star::text::XLineNumberingProperties;
 
 
-
 XMLLineNumberingImportContext::XMLLineNumberingImportContext(
     SvXMLImport& rImport,
     sal_uInt16 nPrfx,
@@ -234,45 +233,30 @@ void XMLLineNumberingImportContext::CreateAndInsert(bool)
                 xLineNumbering->setPropertyValue(sCharStyleName, aAny);
             }
 
-            aAny <<= sSeparator;
-            xLineNumbering->setPropertyValue(sSeparatorText, aAny);
-
-            aAny <<= nOffset;
-            xLineNumbering->setPropertyValue(sDistance, aAny);
-
-            aAny <<= nNumberPosition;
-            xLineNumbering->setPropertyValue(sNumberPosition, aAny);
+            xLineNumbering->setPropertyValue(sSeparatorText, Any(sSeparator));
+            xLineNumbering->setPropertyValue(sDistance, Any(nOffset));
+            xLineNumbering->setPropertyValue(sNumberPosition, Any(nNumberPosition));
 
             if (nIncrement >= 0)
             {
-                aAny <<= nIncrement;
-                xLineNumbering->setPropertyValue(sInterval, aAny);
+                xLineNumbering->setPropertyValue(sInterval, Any(nIncrement));
             }
 
             if (nSeparatorIncrement >= 0)
             {
-                aAny <<= nSeparatorIncrement;
-                xLineNumbering->setPropertyValue(sSeparatorInterval, aAny);
+                xLineNumbering->setPropertyValue(sSeparatorInterval, Any(nSeparatorIncrement));
             }
 
-            aAny.setValue(&bNumberLines, cppu::UnoType<bool>::get());
-            xLineNumbering->setPropertyValue(sIsOn, aAny);
-
-            aAny.setValue(&bCountEmptyLines, cppu::UnoType<bool>::get());
-            xLineNumbering->setPropertyValue(sCountEmptyLines, aAny);
-
-            aAny.setValue(&bCountInFloatingFrames, cppu::UnoType<bool>::get());
-            xLineNumbering->setPropertyValue(sCountLinesInFrames, aAny);
-
-            aAny.setValue(&bRestartNumbering, cppu::UnoType<bool>::get());
-            xLineNumbering->setPropertyValue(sRestartAtEachPage, aAny);
+            xLineNumbering->setPropertyValue(sIsOn, Any(bNumberLines));
+            xLineNumbering->setPropertyValue(sCountEmptyLines, Any(bCountEmptyLines));
+            xLineNumbering->setPropertyValue(sCountLinesInFrames, Any(bCountInFloatingFrames));
+            xLineNumbering->setPropertyValue(sRestartAtEachPage, Any(bRestartNumbering));
 
             sal_Int16 nNumType = NumberingType::ARABIC;
             GetImport().GetMM100UnitConverter().convertNumFormat( nNumType,
                                                     sNumFormat,
                                                     sNumLetterSync );
-            aAny <<= nNumType;
-            xLineNumbering->setPropertyValue(sNumberingType, aAny);
+            xLineNumbering->setPropertyValue(sNumberingType, Any(nNumType));
         }
     }
 }

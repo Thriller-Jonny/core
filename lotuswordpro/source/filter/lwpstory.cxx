@@ -314,7 +314,7 @@ void LwpStory::XFConvertFrameInCell(XFContentContainer* pCont)
                     pCont->FindFirstContent(enumXFContentPara));
                 XFContentContainer* pXFFirtPara = static_cast<XFContentContainer*>(first.get());
                 if(pXFFirtPara)
-                    xFrameLayout->XFConvert(pXFFirtPara);
+                    xFrameLayout->DoXFConvert(pXFFirtPara);
             }
             xFrameLayout.set(dynamic_cast<LwpVirtualLayout*>(xFrameLayout->GetNext().obj().get()));
         }
@@ -338,7 +338,7 @@ void LwpStory::XFConvertFrameInPage(XFContentContainer* pCont)
                       || xFrameLayout->IsSuperTable()
                       || xFrameLayout->IsGroupHead())))
             {
-                xFrameLayout->XFConvert(pCont);
+                xFrameLayout->DoXFConvert(pCont);
             }
             xFrameLayout.set(dynamic_cast<LwpVirtualLayout*>(xFrameLayout->GetNext().obj().get()));
         }
@@ -358,7 +358,7 @@ void LwpStory::XFConvertFrameInFrame(XFContentContainer* pCont)
         {
             if (xFrameLayout->IsAnchorFrame())
             {
-                xFrameLayout->XFConvert(pCont);
+                xFrameLayout->DoXFConvert(pCont);
             }
             xFrameLayout.set(dynamic_cast<LwpVirtualLayout*>(xFrameLayout->GetNext().obj().get()));
         }
@@ -383,7 +383,7 @@ void LwpStory::XFConvertFrameInHeaderFooter(XFContentContainer* pCont)
                     pCont->FindFirstContent(enumXFContentPara));
                 XFContentContainer* pXFFirtPara = static_cast<XFContentContainer*>(first.get());
                 if(pXFFirtPara)
-                    xFrameLayout->XFConvert(pXFFirtPara);
+                    xFrameLayout->DoXFConvert(pXFFirtPara);
             }
             xFrameLayout.set(dynamic_cast<LwpVirtualLayout*>(xFrameLayout->GetNext().obj().get()));
         }
@@ -407,7 +407,7 @@ XFContentContainer* LwpStory::GetXFContent()
 
 LwpPara* LwpStory::GetLastParaOfPreviousStory()
 {
-    rtl::Reference<LwpVirtualLayout> xVLayout(this->GetLayout(nullptr));
+    rtl::Reference<LwpVirtualLayout> xVLayout(GetLayout(nullptr));
     if (xVLayout.is())
     {
         return xVLayout->GetLastParaOfPreviousStory();
@@ -469,7 +469,7 @@ OUString LwpStory::RegisterFirstFribStyle()
     return sName;
 }
 
-bool LwpStory::IsBullStyleUsedBefore(const OUString& rStyleName, const sal_uInt8& nPos)
+bool LwpStory::IsBullStyleUsedBefore(const OUString& rStyleName, sal_uInt8 nPos)
 {
     std::vector <NamePosPair>::reverse_iterator rIter;
     for (rIter = m_vBulletStyleNameList.rbegin(); rIter != m_vBulletStyleNameList.rend(); ++rIter)

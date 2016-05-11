@@ -29,7 +29,6 @@
 #include <drawinglayer/attribute/strokeattribute.hxx>
 
 
-
 namespace drawinglayer
 {
     namespace primitive3d
@@ -74,7 +73,6 @@ namespace drawinglayer
 } // end of namespace drawinglayer
 
 
-
 namespace drawinglayer
 {
     namespace primitive3d
@@ -109,7 +107,7 @@ namespace drawinglayer
                 const attribute::StrokeAttribute& rStrokeAttribute);
 
             /// data read access
-            basegfx::B3DPolygon getB3DPolygon() const { return maPolygon; }
+            const basegfx::B3DPolygon& getB3DPolygon() const { return maPolygon; }
             const attribute::LineAttribute& getLineAttribute() const { return maLineAttribute; }
             const attribute::StrokeAttribute& getStrokeAttribute() const { return maStrokeAttribute; }
 
@@ -121,7 +119,6 @@ namespace drawinglayer
         };
     } // end of namespace primitive3d
 } // end of namespace drawinglayer
-
 
 
 #endif //INCLUDED_DRAWINGLAYER_PRIMITIVE3D_POLYGONPRIMITIVE3D_HXX

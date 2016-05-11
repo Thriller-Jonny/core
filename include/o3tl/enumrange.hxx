@@ -20,8 +20,6 @@
 #ifndef INCLUDED_O3TL_ENUMRANGE_HXX
 #define INCLUDED_O3TL_ENUMRANGE_HXX
 
-#include <sal/config.h>
-
 namespace o3tl {
 
 ///
@@ -29,7 +27,7 @@ namespace o3tl {
 ///
 /// This assumes that the 'enum class' definition
 ///  - starts at zero
-///  - has no holes in it's sequence of values
+///  - has no holes in its sequence of values
 ///  - defines a value called LAST which refers to the greatest constant.
 ///
 ///  Use like this:

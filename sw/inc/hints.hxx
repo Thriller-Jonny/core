@@ -192,27 +192,27 @@ public:
  */
 class SwAttrSetChg: public SwMsgPoolItem
 {
-    bool bDelSet;
-    SwAttrSet* pChgSet;           ///< what has changed
-    const SwAttrSet* pTheChgdSet; ///< is only used to compare
+    bool m_bDelSet;
+    SwAttrSet* m_pChgSet;           ///< what has changed
+    const SwAttrSet* m_pTheChgdSet; ///< is only used to compare
 public:
     SwAttrSetChg( const SwAttrSet& rTheSet, SwAttrSet& rSet );
     SwAttrSetChg( const SwAttrSetChg& );
     virtual ~SwAttrSetChg();
 
     /// What has changed
-    const SwAttrSet* GetChgSet() const     { return pChgSet; }
-          SwAttrSet* GetChgSet()           { return pChgSet; }
+    const SwAttrSet* GetChgSet() const     { return m_pChgSet; }
+          SwAttrSet* GetChgSet()           { return m_pChgSet; }
 
     /// Where it has changed
-    const SwAttrSet* GetTheChgdSet() const { return pTheChgdSet; }
+    const SwAttrSet* GetTheChgdSet() const { return m_pTheChgdSet; }
 
-    sal_uInt16 Count() const { return pChgSet->Count(); }
+    sal_uInt16 Count() const { return m_pChgSet->Count(); }
     void ClearItem( sal_uInt16 nWhichL = 0 )
 #ifdef DBG_UTIL
         ;
 #else
-    { pChgSet->ClearItem( nWhichL ); }
+    { m_pChgSet->ClearItem( nWhichL ); }
 #endif
 };
 
@@ -237,7 +237,7 @@ public:
     const SwPageFrame *GetOrigPage()      { return m_pOrigPage;}
     const SwFrame *GetFrame()               { return m_pFrame; }
     void  SetInfo( const SwPageFrame *pPg,
-                   const SwFrame *pF )    { m_pFrame = pF, m_pPage = pPg; }
+                   const SwFrame *pF )    { m_pFrame = pF; m_pPage = pPg; }
 };
 
 class SwFindNearestNode : public SwMsgPoolItem
@@ -255,7 +255,7 @@ class SwStringMsgPoolItem : public SwMsgPoolItem
     OUString m_sStr;
 public:
 
-    OUString GetString() const { return m_sStr; }
+    const OUString& GetString() const { return m_sStr; }
 
     SwStringMsgPoolItem( sal_uInt16 nId, const OUString& rStr )
         : SwMsgPoolItem( nId ), m_sStr( rStr )

@@ -37,9 +37,9 @@
 
 using namespace ::com::sun::star;
 
-SwFieldFuncPage::SwFieldFuncPage(vcl::Window* pParent, const SfxItemSet& rCoreSet)
+SwFieldFuncPage::SwFieldFuncPage(vcl::Window* pParent, const SfxItemSet *const pCoreSet)
     : SwFieldPage(pParent, "FieldFuncPage",
-        "modules/swriter/ui/fldfuncpage.ui", rCoreSet)
+        "modules/swriter/ui/fldfuncpage.ui", pCoreSet)
     , nOldFormat(0)
     , bDropDownLBChanged(false)
 {
@@ -234,7 +234,7 @@ IMPL_LINK_NOARG_TYPED(SwFieldFuncPage, TypeHdl, ListBox&, void)
         // fill Format-Listbox
         m_pFormatLB->Clear();
 
-        const sal_uInt16 nSize = GetFieldMgr().GetFormatCount(nTypeId, false, IsFieldDlgHtmlMode());
+        const sal_uInt16 nSize = GetFieldMgr().GetFormatCount(nTypeId, IsFieldDlgHtmlMode());
 
         for (sal_uInt16 i = 0; i < nSize; i++)
         {
@@ -630,9 +630,9 @@ OUString SwFieldFuncPage::TurnMacroString(const OUString &rMacro)
 }
 
 VclPtr<SfxTabPage> SwFieldFuncPage::Create( vcl::Window* pParent,
-                                          const SfxItemSet* rAttrSet )
+                                          const SfxItemSet *const pAttrSet)
 {
-    return VclPtr<SwFieldFuncPage>::Create( pParent, *rAttrSet );
+    return VclPtr<SwFieldFuncPage>::Create( pParent, pAttrSet );
 }
 
 sal_uInt16 SwFieldFuncPage::GetGroup()

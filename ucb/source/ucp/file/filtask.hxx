@@ -28,9 +28,9 @@
 #include <com/sun/star/ucb/XProgressHandler.hpp>
 #include <com/sun/star/task/XInteractionHandler.hpp>
 #include <com/sun/star/task/XInteractionRequest.hpp>
-#include <boost/functional/hash.hpp>
 #include "filerror.hxx"
 #include <unordered_map>
+#include <functional>
 
 namespace fileaccess
 {
@@ -55,7 +55,6 @@ namespace fileaccess
             bool m_bAbort,m_bHandled;
             sal_Int32 m_nErrorCode,m_nMinorCode;
             css::uno::Reference< css::task::XInteractionHandler > m_xInteractionHandler;
-            css::uno::Reference< css::ucb::XProgressHandler >     m_xProgressHandler;
             css::uno::Reference< css::ucb::XCommandEnvironment >  m_xCommandEnvironment;
 
 
@@ -69,7 +68,6 @@ namespace fileaccess
                   m_nErrorCode( TASKHANDLER_NO_ERROR ),
                   m_nMinorCode( TASKHANDLER_NO_ERROR ),
                   m_xInteractionHandler( nullptr ),
-                  m_xProgressHandler( nullptr ),
                   m_xCommandEnvironment( xCommandEnv )
             {
             }
@@ -121,7 +119,7 @@ namespace fileaccess
                 return m_xInteractionHandler;
             }
 
-            css::uno::Reference< css::ucb::XCommandEnvironment > SAL_CALL
+            const css::uno::Reference< css::ucb::XCommandEnvironment >& SAL_CALL
             getCommandEnvironment()
             {
                 return m_xCommandEnvironment;
@@ -130,7 +128,7 @@ namespace fileaccess
         };  // end class TaskHandling
 
 
-        typedef std::unordered_map< sal_Int32,TaskHandling,boost::hash< sal_Int32 > > TaskMap;
+        typedef std::unordered_map< sal_Int32,TaskHandling > TaskMap;
     private:
 
         osl::Mutex                                                         m_aMutex;

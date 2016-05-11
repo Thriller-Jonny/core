@@ -7,8 +7,8 @@
 /* "This product is not manufactured, approved, or supported by
  * Corel Corporation or Corel Corporation Limited."
  */
-#ifndef _WORDPERFECTIMPORTFILTER_HXX
-#define _WORDPERFECTIMPORTFILTER_HXX
+#ifndef INCLUDED_WRITERPERFECT_SOURCE_WRITER_WORDPERFECTIMPORTFILTER_HXX
+#define INCLUDED_WRITERPERFECT_SOURCE_WRITER_WORDPERFECTIMPORTFILTER_HXX
 
 #include <com/sun/star/document/XFilter.hpp>
 #include <com/sun/star/document/XImporter.hpp>
@@ -38,7 +38,6 @@ protected:
     css::uno::Reference< css::uno::XComponentContext > mxContext;
     css::uno::Reference< css::lang::XComponent > mxDoc;
     OUString msFilterName;
-    css::uno::Reference< css::xml::sax::XDocumentHandler > mxHandler;
 
     bool SAL_CALL importImpl(const css::uno::Sequence< css::beans::PropertyValue > &aDescriptor)
     throw (css::uno::RuntimeException, std::exception);
@@ -96,7 +95,6 @@ class WordPerfectImportFilterDialog : public cppu::WeakImplHelper <
     css::beans::XPropertyAccess
     >
 {
-    css::uno::Reference< css::uno::XComponentContext > mxContext;
     OUString msPassword;
     css::uno::Reference< css::io::XInputStream > mxInputStream;
 
@@ -128,22 +126,9 @@ class WordPerfectImportFilterDialog : public cppu::WeakImplHelper <
            css::uno::RuntimeException, std::exception) override;
 
 public:
-    explicit WordPerfectImportFilterDialog(const css::uno::Reference< css::uno::XComponentContext > &rContext);
+    explicit WordPerfectImportFilterDialog();
 
 };
-
-OUString WordPerfectImportFilterDialog_getImplementationName()
-throw (css::uno::RuntimeException);
-
-bool SAL_CALL WordPerfectImportFilterDialog_supportsService(const OUString &ServiceName)
-throw (css::uno::RuntimeException);
-
-css::uno::Sequence< OUString > SAL_CALL WordPerfectImportFilterDialog_getSupportedServiceNames()
-throw (css::uno::RuntimeException);
-
-css::uno::Reference< css::uno::XInterface >
-SAL_CALL WordPerfectImportFilterDialog_createInstance(const css::uno::Reference< css::uno::XComponentContext > &rContext)
-throw (css::uno::Exception);
 
 #endif
 

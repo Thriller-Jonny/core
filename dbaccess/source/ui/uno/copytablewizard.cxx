@@ -48,8 +48,6 @@
 #include <com/sun/star/sdb/XSingleSelectQueryComposer.hpp>
 #include <com/sun/star/sdbc/XParameters.hpp>
 #include <com/sun/star/sdbc/XRow.hpp>
-#include <com/sun/star/sdbc/XBlob.hpp>
-#include <com/sun/star/sdbc/XClob.hpp>
 #include <com/sun/star/sdbcx/XRowLocate.hpp>
 #include <com/sun/star/sdbc/XResultSetMetaDataSupplier.hpp>
 #include <com/sun/star/sdb/SQLContext.hpp>
@@ -64,6 +62,7 @@
 #include <connectivity/dbtools.hxx>
 #include <cppuhelper/exc_hlp.hxx>
 #include <cppuhelper/implbase.hxx>
+#include <comphelper/interfacecontainer2.hxx>
 #include <rtl/ustrbuf.hxx>
 #include <svtools/genericunodialog.hxx>
 #include <tools/diagnose_ex.h>
@@ -119,15 +118,12 @@ namespace dbaui
     using ::com::sun::star::sdbc::XParameters;
     using ::com::sun::star::sdbc::XResultSet;
     using ::com::sun::star::sdbc::XRow;
-    using ::com::sun::star::sdbc::XBlob;
-    using ::com::sun::star::sdbc::XClob;
     using ::com::sun::star::sdbcx::XRowLocate;
     using ::com::sun::star::sdbc::XResultSetMetaDataSupplier;
     using ::com::sun::star::sdbc::XResultSetMetaData;
     using ::com::sun::star::sdbc::SQLException;
     using ::com::sun::star::sdb::SQLContext;
     using ::com::sun::star::sdbc::ConnectionPool;
-    using ::com::sun::star::sdbc::XConnectionPool;
     using ::com::sun::star::sdbc::XDriverManager;
     using ::com::sun::star::sdbc::DriverManager;
     using ::com::sun::star::beans::PropertyValue;
@@ -246,7 +242,7 @@ namespace dbaui
 
             Effectively, this method extracts m_xSourceResultSet, m_aSourceSelection, and m_bSourceSelectionBookmarks.
 
-            If an inconsistent/insufficent sub set of those properties is present in the descriptor, and exception
+            If an inconsistent/insufficient sub set of those properties is present in the descriptor, and exception
             is thrown.
         */
         void    impl_extractSourceResultSet_throw(
@@ -346,7 +342,7 @@ private:
 
         // other
         Reference< XInteractionHandler > m_xInteractionHandler;
-        ::cppu::OInterfaceContainerHelper
+        ::comphelper::OInterfaceContainerHelper2
                                         m_aCopyTableListeners;
         sal_Int16                       m_nOverrideExecutionResult;
     };
@@ -377,7 +373,7 @@ CopyTableWizard::CopyTableWizard( const Reference< XComponentContext >& _rxORB )
     ,m_xContext( _rxORB )
     ,m_nOperation( CopyTableOperation::CopyDefinitionAndData )
     ,m_sDestinationTable()
-    ,m_aPrimaryKeyName( sal_False,  "ID" )
+    ,m_aPrimaryKeyName( false,  "ID" )
     ,m_bUseHeaderLineAsColumnNames( true )
     ,m_xSourceConnection()
     ,m_nCommandType( CommandType::COMMAND )
@@ -581,7 +577,7 @@ namespace
     /** tries to obtain the InteractionHandler associated with a given data source
 
         If the data source is a sdb-level data source, it will have a DatabaseDocument associated
-        with it. This doocument may have an InteractionHandler used while loading it.
+        with it. This document may have an InteractionHandler used while loading it.
 
         @throws RuntimeException
             if it occurs during invoking any of the data source's methods, or if any of the involved
@@ -690,11 +686,11 @@ void CopyTableWizard::impl_checkForUnsupportedSettings_throw( const Reference< X
     const OUString aSettings[] = {
         OUString(PROPERTY_FILTER), OUString(PROPERTY_ORDER), OUString(PROPERTY_HAVING_CLAUSE), OUString(PROPERTY_GROUP_BY)
     };
-    for ( size_t i=0; i < sizeof( aSettings ) / sizeof( aSettings[0] ); ++i )
+    for (const auto & aSetting : aSettings)
     {
-        if ( lcl_hasNonEmptyStringValue_throw( _rxSourceDescriptor, xPSI, aSettings[i] ) )
+        if ( lcl_hasNonEmptyStringValue_throw( _rxSourceDescriptor, xPSI, aSetting ) )
         {
-            sUnsupportedSetting = aSettings[i];
+            sUnsupportedSetting = aSetting;
             break;
         }
     }
@@ -1016,7 +1012,7 @@ bool CopyTableWizard::impl_processCopyError_nothrow( const CopyTableRowEvent& _r
     Reference< XCopyTableListener > xListener;
     try
     {
-        ::cppu::OInterfaceIteratorHelper aIter( m_aCopyTableListeners );
+        ::comphelper::OInterfaceIteratorHelper2 aIter( m_aCopyTableListeners );
         while ( aIter.hasMoreElements() )
         {
             xListener.set( aIter.next(), UNO_QUERY_THROW );
@@ -1200,7 +1196,7 @@ void CopyTableWizard::impl_copyRows_throw( const Reference< XResultSet >& _rxSou
                 if ( ( nSourceColumn < 1 ) || ( nSourceColumn >= (sal_Int32)aSourceColTypes.size() ) )
                 {   // ( we have to check here against 1 because the parameters are 1 based)
                     ::dbtools::throwSQLException("Internal error: invalid column type index.",
-                                                 ::dbtools::SQL_INVALID_DESCRIPTOR_INDEX, *this);
+                                                 ::dbtools::StandardSQLState::INVALID_DESCRIPTOR_INDEX, *this);
                 }
 
                 switch ( aSourceColTypes[ nSourceColumn ] )
@@ -1250,7 +1246,7 @@ void CopyTableWizard::impl_copyRows_throw( const Reference< XResultSet >& _rxSou
                             aTransfer.transferComplexValue( &XRow::getBytes, &XParameters::setBytes );
                             break;
                         }
-                        // run through
+                        SAL_FALLTHROUGH;
                     case DataType::BOOLEAN:
                         aTransfer.transferValue( &XRow::getBoolean, &XParameters::setBoolean );
                         break;
@@ -1284,7 +1280,7 @@ void CopyTableWizard::impl_copyRows_throw( const Reference< XResultSet >& _rxSou
 
                         ::dbtools::throwSQLException(
                             aMessage,
-                            ::dbtools::SQL_INVALID_SQL_DATA_TYPE,
+                            ::dbtools::StandardSQLState::INVALID_SQL_DATA_TYPE,
                             *this
                         );
                     }
@@ -1333,8 +1329,9 @@ void CopyTableWizard::impl_doCopy_nothrow()
 
                 if( CopyTableOperation::CopyDefinitionOnly == rWizard.getOperation() )
                     break;
+
+                SAL_FALLTHROUGH;
             }
-            // run through
 
             case CopyTableOperation::AppendData:
             {
@@ -1443,7 +1440,7 @@ OUString CopyTableWizard::impl_getServerSideCopyStatement_throw(const Reference<
             sColumns.append(sQuote + aDestColumnNames[aPosIter->second - 1] + sQuote);
         }
     }
-    const OUString sComposedTableName = ::dbtools::composeTableName( xDestMetaData, _xTable, ::dbtools::eInDataManipulation, false, false, true );
+    const OUString sComposedTableName = ::dbtools::composeTableName( xDestMetaData, _xTable, ::dbtools::EComposeRule::InDataManipulation, false, false, true );
     OUString sSql("INSERT INTO " + sComposedTableName + " ( " + sColumns.makeStringAndClear() + " ) ( " + m_pSourceObject->getSelectStatement() + " )");
 
     return sSql;

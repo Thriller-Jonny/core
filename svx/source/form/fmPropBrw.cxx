@@ -224,7 +224,7 @@ FmPropBrw::FmPropBrw( const Reference< XComponentContext >& _xORB, SfxBindings* 
 
 
     if ( m_xBrowserComponentWindow.is() )
-        m_xBrowserComponentWindow->setVisible( sal_True );
+        m_xBrowserComponentWindow->setVisible( true );
 
     if ( _pInfo )
         m_sLastActivePage = _pInfo->aExtraString;
@@ -271,7 +271,7 @@ void FmPropBrw::dispose()
                                              , OUString( "DialogParentWindow" )
                                              , OUString( "ControlContext" )
                                              , OUString( "ControlShapeAccess" ) };
-            for ( size_t i = 0; i < sizeof(pProps)/sizeof(pProps[0]); ++i )
+            for ( size_t i = 0; i < SAL_N_ELEMENTS(pProps); ++i )
                 xName->removeByName( pProps[i] );
         }
     }
@@ -341,7 +341,7 @@ bool FmPropBrw::Close()
         try
         {
             Reference< XController > xController( m_xMeAsFrame->getController() );
-            if ( xController.is() && !xController->suspend( sal_True ) )
+            if ( xController.is() && !xController->suspend( true ) )
                 return false;
         }
         catch( const Exception& )
@@ -491,7 +491,7 @@ IMPL_LINK_NOARG_TYPED( FmPropBrw, OnAsyncGetFocus, void*, void )
 
 namespace
 {
-    static bool lcl_shouldEnableHelpSection( const Reference< XComponentContext >& _rxContext )
+    bool lcl_shouldEnableHelpSection( const Reference< XComponentContext >& _rxContext )
     {
         ::utl::OConfigurationTreeRoot aConfiguration(
             ::utl::OConfigurationTreeRoot::createWithComponentContext(
@@ -548,7 +548,7 @@ void FmPropBrw::impl_createPropertyBrowser_throw( FmFormShell* _pFormShell )
         ::cppu::ContextEntry_Init( OUString( "ControlShapeAccess" ), makeAny( xControlMap ) )
     };
     m_xInspectorContext.set(
-        ::cppu::createComponentContext( aHandlerContextInfo, sizeof( aHandlerContextInfo ) / sizeof( aHandlerContextInfo[0] ),
+        ::cppu::createComponentContext( aHandlerContextInfo, SAL_N_ELEMENTS( aHandlerContextInfo ),
         m_xORB ) );
 
     bool bEnableHelpSection = lcl_shouldEnableHelpSection( m_xORB );

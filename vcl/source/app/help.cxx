@@ -23,12 +23,12 @@
 #include "tools/diagnose_ex.h"
 #include "tools/time.hxx"
 
-#include "vcl/window.hxx"
-#include "vcl/event.hxx"
-#include "vcl/svapp.hxx"
-#include "vcl/wrkwin.hxx"
-#include "vcl/help.hxx"
-#include "vcl/settings.hxx"
+#include <vcl/window.hxx>
+#include <vcl/event.hxx>
+#include <vcl/svapp.hxx>
+#include <vcl/wrkwin.hxx>
+#include <vcl/help.hxx>
+#include <vcl/settings.hxx>
 
 #include "helpwin.hxx"
 #include "salframe.hxx"
@@ -191,23 +191,37 @@ void Help::HideBalloonAndQuickHelp()
     ImplDestroyHelpWindow( bIsVisible );
 }
 
-sal_uIntPtr Help::ShowTip( vcl::Window* pParent, const Rectangle& rScreenRect,
-                     const OUString& rText, QuickHelpFlags nStyle )
+sal_uIntPtr Help::ShowPopover(vcl::Window* pParent, const Rectangle& rScreenRect,
+                              const OUString& rText, QuickHelpFlags nStyle)
 {
+    sal_uIntPtr nId = pParent->ImplGetFrame()->ShowPopover(rText, rScreenRect, nStyle);
+    if (nId)
+    {
+        //popovers are handled natively, return early
+        return nId;
+    }
+
     sal_uInt16 nHelpWinStyle = ( nStyle & QuickHelpFlags::TipStyleBalloon ) ? HELPWINSTYLE_BALLOON : HELPWINSTYLE_QUICK;
     VclPtrInstance<HelpTextWindow> pHelpWin( pParent, rText, nHelpWinStyle, nStyle );
 
-    sal_uIntPtr nId = reinterpret_cast< sal_uIntPtr >( pHelpWin.get() );
-    UpdateTip( nId, pParent, rScreenRect, rText );
+    nId = reinterpret_cast< sal_uIntPtr >( pHelpWin.get() );
+    UpdatePopover(nId, pParent, rScreenRect, rText);
 
     pHelpWin->ShowHelp( HELPDELAY_NONE );
     return nId;
 }
 
-void Help::UpdateTip( sal_uIntPtr nId, vcl::Window* pParent, const Rectangle& rScreenRect, const OUString& rText )
+void Help::UpdatePopover(sal_uIntPtr nId, vcl::Window* pParent, const Rectangle& rScreenRect,
+                         const OUString& rText)
 {
+    if (pParent->ImplGetFrame()->UpdatePopover(nId, rText, rScreenRect))
+    {
+        //popovers are handled natively, return early
+        return;
+    }
+
     HelpTextWindow* pHelpWin = reinterpret_cast< HelpTextWindow* >( nId );
-    ENSURE_OR_RETURN_VOID( pHelpWin != nullptr, "Help::UpdateTip: invalid ID!" );
+    ENSURE_OR_RETURN_VOID( pHelpWin != nullptr, "Help::UpdatePopover: invalid ID!" );
 
     Size aSz = pHelpWin->CalcOutSize();
     pHelpWin->SetOutputSizePixel( aSz );
@@ -218,8 +232,14 @@ void Help::UpdateTip( sal_uIntPtr nId, vcl::Window* pParent, const Rectangle& rS
     pHelpWin->Invalidate();
 }
 
-void Help::HideTip( sal_uLong nId )
+void Help::HidePopover(vcl::Window* pParent, sal_uLong nId)
 {
+    if (pParent->ImplGetFrame()->HidePopover(nId))
+    {
+        //popovers are handled natively, return early
+        return;
+    }
+
     VclPtr<HelpTextWindow> pHelpWin = reinterpret_cast<HelpTextWindow*>(nId);
     vcl::Window* pFrameWindow = pHelpWin->ImplGetFrameWindow();
     pHelpWin->Hide();
@@ -237,9 +257,6 @@ HelpTextWindow::HelpTextWindow( vcl::Window* pParent, const OUString& rText, sal
     ImplSetMouseTransparent( true );
     mnHelpWinStyle = nHelpWinStyle;
     mnStyle = nStyle;
-//  on windows this will raise the application window, because help windows are system windows now
-//  EnableAlwaysOnTop();
-    EnableSaveBackground();
 
     if( mnStyle & QuickHelpFlags::BiDiRtl )
     {
@@ -342,9 +359,9 @@ void HelpTextWindow::SetHelpText( const OUString& rHelpText )
 
 void HelpTextWindow::ImplShow()
 {
-    ImplDelData aDogTag( this );
+    VclPtr<HelpTextWindow> xWindow( this );
     Show( true, ShowFlags::NoActivate );
-    if( !aDogTag.IsDead() )
+    if( !xWindow->IsDisposed() )
     Update();
 }
 
@@ -498,7 +515,7 @@ void ImplShowHelpWindow( vcl::Window* pParent, sal_uInt16 nHelpWinStyle, QuickHe
         else
         {
             bool const bTextChanged = rHelpText != pHelpWin->GetHelpText();
-            if ( bTextChanged || ( nStyle & QuickHelpFlags::ForceReposition ) )
+            if (bTextChanged)
             {
                 vcl::Window * pWindow = pHelpWin->GetParent()->ImplGetFrameWindow();
                 Rectangle aInvRect( pHelpWin->GetWindowExtentsRelative( pWindow ) );
@@ -567,8 +584,8 @@ void ImplSetHelpWindowPos( vcl::Window* pHelpWin, sal_uInt16 nHelpWinStyle, Quic
     Rectangle   aScreenRect = pHelpWin->ImplGetFrameWindow()->GetDesktopRectPixel();
     aPos = pHelpWin->GetParent()->ImplGetFrameWindow()->OutputToAbsoluteScreenPixel( aPos );
     // get mouse screen coords
-    Point mPos( pHelpWin->GetParent()->ImplGetFrameWindow()->GetPointerPosPixel() );
-    mPos = pHelpWin->GetParent()->ImplGetFrameWindow()->OutputToAbsoluteScreenPixel( mPos );
+    Point aMousePos( pHelpWin->GetParent()->ImplGetFrameWindow()->GetPointerPosPixel() );
+    aMousePos = pHelpWin->GetParent()->ImplGetFrameWindow()->OutputToAbsoluteScreenPixel( aMousePos );
 
     if ( nHelpWinStyle == HELPWINSTYLE_QUICK )
     {
@@ -586,7 +603,7 @@ void ImplSetHelpWindowPos( vcl::Window* pHelpWin, sal_uInt16 nHelpWinStyle, Quic
     {
         // If it's the mouse position, move the window slightly
         // so the mouse pointer does not cover it
-        if ( aPos == mPos )
+        if ( aPos == aMousePos )
         {
             aPos.X() += 12;
             aPos.Y() += 16;
@@ -648,15 +665,15 @@ void ImplSetHelpWindowPos( vcl::Window* pHelpWin, sal_uInt16 nHelpWinStyle, Quic
         // otherwise it would directly be closed due to a focus change...
         */
         Rectangle aHelpRect( aPos, aSz );
-        if( aHelpRect.IsInside( mPos ) )
+        if( aHelpRect.IsInside( aMousePos ) )
         {
             Point delta(2,2);
-            Point pSize( aSz.Width(), aSz.Height() );
-            Point pTest( mPos - pSize - delta );
-            if( pTest.X() > aScreenRect.Left() &&  pTest.Y() > aScreenRect.Top() )
-                aPos = pTest;
+            Point aSize( aSz.Width(), aSz.Height() );
+            Point aTest( aMousePos - aSize - delta );
+            if( aTest.X() > aScreenRect.Left() && aTest.Y() > aScreenRect.Top() )
+                aPos = aTest;
             else
-                aPos = mPos + delta;
+                aPos = aMousePos + delta;
         }
     }
 

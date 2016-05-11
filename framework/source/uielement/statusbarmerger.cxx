@@ -19,8 +19,6 @@
 #include <uielement/statusbarmerger.hxx>
 
 using rtl::OUString;
-using com::sun::star::frame::XFrame;
-using com::sun::star::uno::Reference;
 using com::sun::star::beans::PropertyValue;
 using com::sun::star::uno::Sequence;
 
@@ -48,7 +46,7 @@ static const char MERGEFALLBACK_ADDLAST[]       = "AddLast";
 static const char MERGEFALLBACK_ADDFIRST[]      = "AddFirst";
 static const char MERGEFALLBACK_IGNORE[]        = "Ignore";
 
-static void lcl_ConvertSequenceToValues(
+void lcl_ConvertSequenceToValues(
     const Sequence< PropertyValue > &rSequence,
     AddonStatusbarItem &rItem )
 {
@@ -80,22 +78,22 @@ static void lcl_ConvertSequenceToValues(
         }
     }
 
-    sal_uInt16 nItemBits(0);
+    StatusBarItemBits nItemBits(StatusBarItemBits::NONE);
     if ( bAutoSize )
-        nItemBits |= SIB_AUTOSIZE;
+        nItemBits |= StatusBarItemBits::AutoSize;
     if ( bOwnerDraw )
-        nItemBits |= SIB_USERDRAW;
+        nItemBits |= StatusBarItemBits::UserDraw;
     if ( sAlignment == STATUSBAR_ALIGN_CENTER )
-        nItemBits |= SIB_CENTER;
+        nItemBits |= StatusBarItemBits::Center;
     else if ( sAlignment == STATUSBAR_ALIGN_RIGHT )
-        nItemBits |= SIB_RIGHT;
+        nItemBits |= StatusBarItemBits::Right;
     else
         // if unset, defaults to left alignment
-        nItemBits |= SIB_LEFT;
+        nItemBits |= StatusBarItemBits::Left;
     rItem.nItemBits = nItemBits;
 }
 
-static void lcl_CreateStatusbarItem( StatusBar* pStatusbar,
+void lcl_CreateStatusbarItem( StatusBar* pStatusbar,
                                      sal_uInt16 nPos,
                                      sal_uInt16 nItemId,
                                      const AddonStatusbarItem& rAddonItem )
@@ -116,7 +114,7 @@ static void lcl_CreateStatusbarItem( StatusBar* pStatusbar,
     pStatusbar->SetItemData( nItemId, pUserData );
 }
 
-static bool lcl_MergeItems( StatusBar* pStatusbar,
+bool lcl_MergeItems( StatusBar* pStatusbar,
                             sal_uInt16 nPos,
                             sal_uInt16 nModIndex,
                             sal_uInt16& rItemId,
@@ -141,7 +139,7 @@ static bool lcl_MergeItems( StatusBar* pStatusbar,
     return true;
 }
 
-static bool lcl_ReplaceItem( StatusBar* pStatusbar,
+bool lcl_ReplaceItem( StatusBar* pStatusbar,
                              sal_uInt16 nPos,
                              sal_uInt16& rItemId,
                             const ::rtl::OUString& rModuleIdentifier,
@@ -151,7 +149,7 @@ static bool lcl_ReplaceItem( StatusBar* pStatusbar,
     return lcl_MergeItems( pStatusbar, nPos, 0, rItemId, rModuleIdentifier, rAddonToolbarItems );
 }
 
-static bool lcl_RemoveItems( StatusBar* pStatusbar,
+bool lcl_RemoveItems( StatusBar* pStatusbar,
                              sal_uInt16 nPos,
                              const ::rtl::OUString& rMergeCommandParameter )
 {

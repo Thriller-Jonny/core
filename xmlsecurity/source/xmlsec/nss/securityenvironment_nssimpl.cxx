@@ -77,7 +77,6 @@ struct UsageDescription
 };
 
 
-
 char* GetPasswordFunction( PK11SlotInfo* pSlot, PRBool bRetry, void* /*arg*/ )
 {
     uno::Reference< uno::XComponentContext > xContext( ::comphelper::getProcessComponentContext() );
@@ -86,7 +85,7 @@ char* GetPasswordFunction( PK11SlotInfo* pSlot, PRBool bRetry, void* /*arg*/ )
 
     task::PasswordRequestMode eMode = bRetry ? task::PasswordRequestMode_PASSWORD_REENTER : task::PasswordRequestMode_PASSWORD_ENTER;
     ::comphelper::DocPasswordRequest* pPasswordRequest = new ::comphelper::DocPasswordRequest(
-        ::comphelper::DocPasswordRequestType_STANDARD, eMode, OUString::createFromAscii(PK11_GetTokenName(pSlot)) );
+        ::comphelper::DocPasswordRequestType::Standard, eMode, OUString::createFromAscii(PK11_GetTokenName(pSlot)) );
 
     uno::Reference< task::XInteractionRequest > xRequest( pPasswordRequest );
     xInteractionHandler->handle( xRequest );
@@ -153,9 +152,9 @@ sal_Bool SAL_CALL SecurityEnvironment_NssImpl::supportsService( const OUString& 
     const OUString* pArray = seqServiceNames.getConstArray() ;
     for( sal_Int32 i = 0 ; i < seqServiceNames.getLength() ; i ++ ) {
         if( *( pArray + i ) == serviceName )
-            return sal_True ;
+            return true ;
     }
-    return sal_False ;
+    return false ;
 }
 
 /* XServiceInfo */
@@ -204,7 +203,7 @@ const Sequence< sal_Int8>& SecurityEnvironment_NssImpl::getUnoTunnelId() {
     return theSecurityEnvironment_NssImplUnoTunnelId::get().getSeq();
 }
 
-OUString SecurityEnvironment_NssImpl::getSecurityEnvironmentInformation() throw( ::com::sun::star::uno::RuntimeException, std::exception )
+OUString SecurityEnvironment_NssImpl::getSecurityEnvironmentInformation() throw( css::uno::RuntimeException, std::exception )
 {
     OUStringBuffer buff;
     for (CIT_SLOTS is = m_Slots.begin(); is != m_Slots.end(); is++)
@@ -281,7 +280,7 @@ SECKEYPublicKey* SecurityEnvironment_NssImpl::getPubKey( unsigned int position )
     return pubkey ;
 }
 
-SECKEYPrivateKey* SecurityEnvironment_NssImpl::getPriKey( unsigned int position ) throw( ::com::sun::star::uno::Exception , ::com::sun::star::uno::RuntimeException )  {
+SECKEYPrivateKey* SecurityEnvironment_NssImpl::getPriKey( unsigned int position ) throw( css::uno::Exception , css::uno::RuntimeException )  {
     SECKEYPrivateKey* prikey ;
     std::list< SECKEYPrivateKey* >::iterator keyIt ;
     unsigned int pos ;
@@ -575,7 +574,7 @@ Reference< XCertificate > SecurityEnvironment_NssImpl::createCertificateFromAsci
 sal_Int32 SecurityEnvironment_NssImpl ::
 verifyCertificate( const Reference< csss::XCertificate >& aCert,
                    const Sequence< Reference< csss::XCertificate > >&  intermediateCerts )
-    throw( ::com::sun::star::uno::SecurityException, ::com::sun::star::uno::RuntimeException, std::exception )
+    throw( css::uno::SecurityException, css::uno::RuntimeException, std::exception )
 {
     sal_Int32 validity = csss::CertificateValidity::INVALID;
     const X509Certificate_NssImpl* xcert ;
@@ -707,7 +706,7 @@ verifyCertificate( const Reference< csss::XCertificate >& aCert,
         cvout[1].value.pointer.log = &log;
         cvout[2].type = cert_po_end;
 
-        // We check SSL server certificates, CA certificates and signing sertificates.
+        // We check SSL server certificates, CA certificates and signing certificates.
         //
         // ToDo check keyusage, looking at CERT_KeyUsageAndTypeForCertUsage (
         // mozilla/security/nss/lib/certdb/certdb.c indicates that
@@ -786,7 +785,7 @@ verifyCertificate( const Reference< csss::XCertificate >& aCert,
     }
     else
     {
-        validity = ::com::sun::star::security::CertificateValidity::INVALID ;
+        validity = css::security::CertificateValidity::INVALID ;
     }
 
     //Destroying the temporary certificates
@@ -800,7 +799,7 @@ verifyCertificate( const Reference< csss::XCertificate >& aCert,
 }
 
 sal_Int32 SecurityEnvironment_NssImpl::getCertificateCharacters(
-    const ::com::sun::star::uno::Reference< ::com::sun::star::security::XCertificate >& aCert ) throw( ::com::sun::star::uno::SecurityException, ::com::sun::star::uno::RuntimeException, std::exception ) {
+    const css::uno::Reference< css::security::XCertificate >& aCert ) throw( css::uno::SecurityException, css::uno::RuntimeException, std::exception ) {
     sal_Int32 characters ;
     const X509Certificate_NssImpl* xcert ;
     const CERTCertificate* cert ;
@@ -822,9 +821,9 @@ sal_Int32 SecurityEnvironment_NssImpl::getCertificateCharacters(
 
     //Firstly, find out whether or not the cert is self-signed.
     if( SECITEM_CompareItem( &(cert->derIssuer), &(cert->derSubject) ) == SECEqual ) {
-        characters |= ::com::sun::star::security::CertificateCharacters::SELF_SIGNED ;
+        characters |= css::security::CertificateCharacters::SELF_SIGNED ;
     } else {
-        characters &= ~ ::com::sun::star::security::CertificateCharacters::SELF_SIGNED ;
+        characters &= ~ css::security::CertificateCharacters::SELF_SIGNED ;
     }
 
     //Secondly, find out whether or not the cert has a private key.
@@ -850,11 +849,11 @@ sal_Int32 SecurityEnvironment_NssImpl::getCertificateCharacters(
         }
     }
     if( priKey != nullptr ) {
-        characters |=  ::com::sun::star::security::CertificateCharacters::HAS_PRIVATE_KEY ;
+        characters |=  css::security::CertificateCharacters::HAS_PRIVATE_KEY ;
 
         SECKEY_DestroyPrivateKey( priKey ) ;
     } else {
-        characters &= ~ ::com::sun::star::security::CertificateCharacters::HAS_PRIVATE_KEY ;
+        characters &= ~ css::security::CertificateCharacters::HAS_PRIVATE_KEY ;
     }
 
     return characters ;

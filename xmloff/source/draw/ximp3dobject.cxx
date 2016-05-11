@@ -44,9 +44,8 @@ SdXML3DObjectContext::SdXML3DObjectContext(
     sal_uInt16 nPrfx,
     const OUString& rLocalName,
     const css::uno::Reference< css::xml::sax::XAttributeList>& xAttrList,
-    uno::Reference< drawing::XShapes >& rShapes,
-    bool bTemporaryShape)
-:   SdXMLShapeContext( rImport, nPrfx, rLocalName, xAttrList, rShapes, bTemporaryShape ),
+    uno::Reference< drawing::XShapes >& rShapes)
+:   SdXMLShapeContext( rImport, nPrfx, rLocalName, xAttrList, rShapes, false/*bTemporaryShape*/ ),
     mbSetTransform( false )
 {
     sal_Int16 nAttrCount = xAttrList.is() ? xAttrList->getLength() : 0;
@@ -88,9 +87,7 @@ void SdXML3DObjectContext::StartElement(const uno::Reference< xml::sax::XAttribu
         // set parameters
         if(mbSetTransform)
         {
-            uno::Any aAny;
-            aAny <<= mxHomMat;
-            xPropSet->setPropertyValue("D3DTransformMatrix", aAny);
+            xPropSet->setPropertyValue("D3DTransformMatrix", uno::Any(mxHomMat));
         }
 
         // call parent
@@ -110,9 +107,8 @@ SdXML3DCubeObjectShapeContext::SdXML3DCubeObjectShapeContext(
     sal_uInt16 nPrfx,
     const OUString& rLocalName,
     const css::uno::Reference< css::xml::sax::XAttributeList>& xAttrList,
-    uno::Reference< drawing::XShapes >& rShapes,
-    bool bTemporaryShape)
-:   SdXML3DObjectContext( rImport, nPrfx, rLocalName, xAttrList, rShapes, bTemporaryShape ),
+    uno::Reference< drawing::XShapes >& rShapes)
+:   SdXML3DObjectContext( rImport, nPrfx, rLocalName, xAttrList, rShapes ),
     maMinEdge(-2500.0, -2500.0, -2500.0),
     maMaxEdge(2500.0, 2500.0, 2500.0),
     mbMinEdgeUsed(false),
@@ -190,11 +186,8 @@ void SdXML3DCubeObjectShapeContext::StartElement(const uno::Reference< xml::sax:
             aDirection3D.DirectionY = maMaxEdge.getY();
             aDirection3D.DirectionZ = maMaxEdge.getZ();
 
-            uno::Any aAny;
-            aAny <<= aPosition3D;
-            xPropSet->setPropertyValue("D3DPosition", aAny);
-            aAny <<= aDirection3D;
-            xPropSet->setPropertyValue("D3DSize", aAny);
+            xPropSet->setPropertyValue("D3DPosition", uno::Any(aPosition3D));
+            xPropSet->setPropertyValue("D3DSize", uno::Any(aDirection3D));
         }
     }
 }
@@ -211,9 +204,8 @@ SdXML3DSphereObjectShapeContext::SdXML3DSphereObjectShapeContext(
     sal_uInt16 nPrfx,
     const OUString& rLocalName,
     const css::uno::Reference< css::xml::sax::XAttributeList>& xAttrList,
-    uno::Reference< drawing::XShapes >& rShapes,
-    bool bTemporaryShape)
-:   SdXML3DObjectContext( rImport, nPrfx, rLocalName, xAttrList, rShapes, bTemporaryShape ),
+    uno::Reference< drawing::XShapes >& rShapes)
+:   SdXML3DObjectContext( rImport, nPrfx, rLocalName, xAttrList, rShapes ),
     maCenter(0.0, 0.0, 0.0),
     maSize(5000.0, 5000.0, 5000.0),
     mbCenterUsed(false),
@@ -288,11 +280,8 @@ void SdXML3DSphereObjectShapeContext::StartElement(const uno::Reference< xml::sa
             aDirection3D.DirectionY = maSize.getY();
             aDirection3D.DirectionZ = maSize.getZ();
 
-            uno::Any aAny;
-            aAny <<= aPosition3D;
-            xPropSet->setPropertyValue("D3DPosition", aAny);
-            aAny <<= aDirection3D;
-            xPropSet->setPropertyValue("D3DSize", aAny);
+            xPropSet->setPropertyValue("D3DPosition", uno::Any(aPosition3D));
+            xPropSet->setPropertyValue("D3DSize", uno::Any(aDirection3D));
         }
     }
 }
@@ -309,9 +298,8 @@ SdXML3DPolygonBasedShapeContext::SdXML3DPolygonBasedShapeContext(
     sal_uInt16 nPrfx,
     const OUString& rLocalName,
     const css::uno::Reference< css::xml::sax::XAttributeList>& xAttrList,
-    uno::Reference< drawing::XShapes >& rShapes,
-    bool bTemporaryShape)
-:   SdXML3DObjectContext( rImport, nPrfx, rLocalName, xAttrList, rShapes, bTemporaryShape )
+    uno::Reference< drawing::XShapes >& rShapes)
+:   SdXML3DObjectContext( rImport, nPrfx, rLocalName, xAttrList, rShapes )
 {
     sal_Int16 nAttrCount = xAttrList.is() ? xAttrList->getLength() : 0;
     for(sal_Int16 i=0; i < nAttrCount; i++)
@@ -362,15 +350,13 @@ void SdXML3DPolygonBasedShapeContext::StartElement(const uno::Reference< xml::sa
                         aPolyPolygon));
 
                 // convert to UNO API class PolyPolygonShape3D
-                drawing::PolyPolygonShape3D xPolyPolygon3D;
+                drawing::PolyPolygonShape3D aPolyPolygon3D;
                 basegfx::tools::B3DPolyPolygonToUnoPolyPolygonShape3D(
                     aB3DPolyPolygon,
-                    xPolyPolygon3D);
+                    aPolyPolygon3D);
 
                 // set polygon data
-                uno::Any aAny;
-                aAny <<= xPolyPolygon3D;
-                xPropSet->setPropertyValue("D3DPolyPolygon3D", aAny);
+                xPropSet->setPropertyValue("D3DPolyPolygon3D", uno::Any(aPolyPolygon3D));
             }
             else
             {
@@ -395,9 +381,8 @@ SdXML3DLatheObjectShapeContext::SdXML3DLatheObjectShapeContext(
     sal_uInt16 nPrfx,
     const OUString& rLocalName,
     const css::uno::Reference< css::xml::sax::XAttributeList>& xAttrList,
-    uno::Reference< drawing::XShapes >& rShapes,
-    bool bTemporaryShape)
-:   SdXML3DPolygonBasedShapeContext( rImport, nPrfx, rLocalName, xAttrList, rShapes, bTemporaryShape )
+    uno::Reference< drawing::XShapes >& rShapes)
+:   SdXML3DPolygonBasedShapeContext( rImport, nPrfx, rLocalName, xAttrList, rShapes )
 {
 }
 
@@ -429,9 +414,8 @@ SdXML3DExtrudeObjectShapeContext::SdXML3DExtrudeObjectShapeContext(
     sal_uInt16 nPrfx,
     const OUString& rLocalName,
     const css::uno::Reference< css::xml::sax::XAttributeList>& xAttrList,
-    uno::Reference< drawing::XShapes >& rShapes,
-    bool bTemporaryShape)
-:   SdXML3DPolygonBasedShapeContext( rImport, nPrfx, rLocalName, xAttrList, rShapes, bTemporaryShape )
+    uno::Reference< drawing::XShapes >& rShapes)
+:   SdXML3DPolygonBasedShapeContext( rImport, nPrfx, rLocalName, xAttrList, rShapes )
 {
 }
 

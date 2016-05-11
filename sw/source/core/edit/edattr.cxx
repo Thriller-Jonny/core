@@ -37,7 +37,6 @@
 #include <breakit.hxx>
 #include <txtfld.hxx>
 #include <fmtfld.hxx>
-#include <crsskip.hxx>
 #include <txtfrm.hxx>
 #include <scriptinfo.hxx>
 #include <svl/ctloptions.hxx>
@@ -458,7 +457,7 @@ size_t SwEditShell::GetSeqFootnoteList( SwSeqFieldList& rList, bool bEndNotes )
                     sText += " ";
                 sText += pTextNd->GetExpandText();
 
-                _SeqFieldLstElem* pNew = new _SeqFieldLstElem( sText,
+                SeqFieldLstElem* pNew = new SeqFieldLstElem( sText,
                                             pTextFootnote->GetSeqRefNo() );
                 while( rList.InsertSort( pNew ) )
                     pNew->sDlgEntry += " ";

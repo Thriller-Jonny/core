@@ -35,6 +35,7 @@
 #include <sfx2/printer.hxx>
 #include <svx/svxerr.hxx>
 #include <svx/svdotext.hxx>
+#include <svx/svdotable.hxx>
 #include <editeng/unolingu.hxx>
 #include <svx/svditer.hxx>
 #include <comphelper/extract.hxx>
@@ -73,6 +74,8 @@
 #include <editeng/editerr.hxx>
 #include <LibreOfficeKit/LibreOfficeKitEnums.h>
 #include <comphelper/string.hxx>
+#include <comphelper/lok.hxx>
+#include <comphelper/scopeguard.hxx>
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
@@ -134,7 +137,7 @@ private:
     OutlinerView* mpOutlineView;
 };
 
-Outliner::Outliner( SdDrawDocument* pDoc, sal_uInt16 nMode )
+Outliner::Outliner( SdDrawDocument* pDoc, OutlinerMode nMode )
     : SdrOutliner( &pDoc->GetItemPool(), nMode ),
       mpImpl(new Implementation()),
       meMode(SEARCH),
@@ -590,6 +593,8 @@ void Outliner::Initialize (bool bDirectionIsForward)
 
 bool Outliner::SearchAndReplaceAll()
 {
+    DetectChange();
+
     bool bRet = true;
     // Save the current position to be restored after having replaced all
     // matches.
@@ -613,14 +618,19 @@ bool Outliner::SearchAndReplaceAll()
     }
     else if( nullptr != dynamic_cast< const DrawViewShell *>( pViewShell.get() ))
     {
+        // Disable selection change notifications during search all.
+        pViewShell->GetDoc()->setTiledSearching(true);
+        comphelper::ScopeGuard aGuard([pViewShell]() { pViewShell->GetDoc()->setTiledSearching(false); });
+
         // Go to beginning/end of document.
         maObjectIterator = ::sd::outliner::OutlinerContainer(this).begin();
-        // Switch to the current object only if it is a valid text object.
-        ::sd::outliner::IteratorPosition aNewPosition (*maObjectIterator);
-        if (IsValidTextObject (aNewPosition))
+        // Switch to the first object which contains the search string.
+        ProvideNextTextObject();
+        if( !mbStringFound  )
         {
-            maCurrentPosition = aNewPosition;
-            SetObject (maCurrentPosition);
+            RestoreStartPosition ();
+            mnStartPageIndex = (sal_uInt16)-1;
+            return true;
         }
 
         // Search/replace until the end of the document is reached.
@@ -628,7 +638,7 @@ bool Outliner::SearchAndReplaceAll()
         do
         {
             bFoundMatch = ! SearchAndReplaceOnce(&aSelections);
-            if (mpSearchItem->GetCommand() == SvxSearchCmd::FIND_ALL && pViewShell->GetDoc()->isTiledRendering() && bFoundMatch && aSelections.size() == 1)
+            if (mpSearchItem->GetCommand() == SvxSearchCmd::FIND_ALL && comphelper::LibreOfficeKit::isActive() && bFoundMatch && aSelections.size() == 1)
             {
                 // Without this, RememberStartPosition() will think it already has a remembered position.
                 mnStartPageIndex = (sal_uInt16)-1;
@@ -641,10 +651,11 @@ bool Outliner::SearchAndReplaceAll()
         }
         while (bFoundMatch);
 
-        if (mpSearchItem->GetCommand() == SvxSearchCmd::FIND_ALL && pViewShell->GetDoc()->isTiledRendering() && !aSelections.empty())
+        if (mpSearchItem->GetCommand() == SvxSearchCmd::FIND_ALL && comphelper::LibreOfficeKit::isActive() && !aSelections.empty())
         {
             boost::property_tree::ptree aTree;
             aTree.put("searchString", mpSearchItem->GetSearchString().toUtf8().getStr());
+            aTree.put("highlightAll", true);
 
             boost::property_tree::ptree aChildren;
             for (const SearchSelection& rSelection : aSelections)
@@ -665,7 +676,7 @@ bool Outliner::SearchAndReplaceAll()
 
     RestoreStartPosition ();
 
-    if (mpSearchItem->GetCommand() == SvxSearchCmd::FIND_ALL && pViewShell->GetDoc()->isTiledRendering() && !bRet)
+    if (mpSearchItem->GetCommand() == SvxSearchCmd::FIND_ALL && comphelper::LibreOfficeKit::isActive() && !bRet)
     {
         // Find-all, tiled rendering and we have at least one match.
         OString aPayload = OString::number(mnStartPageIndex);
@@ -695,11 +706,8 @@ bool Outliner::SearchAndReplaceOnce(std::vector<SearchSelection>* pSelections)
     DetectChange ();
 
     OutlinerView* pOutlinerView = mpImpl->GetOutlinerView();
-    DBG_ASSERT(pOutlinerView!=nullptr && GetEditEngine().HasView( &pOutlinerView->GetEditView() ),
-        "SearchAndReplace without valid view!" );
-
-    if( nullptr == pOutlinerView || !GetEditEngine().HasView( &pOutlinerView->GetEditView() ) )
-        return true;
+    if (!pOutlinerView)
+        return true; // end of search
 
     std::shared_ptr<ViewShell> pViewShell (mpWeakViewShell.lock());
     if (pViewShell != nullptr)
@@ -749,7 +757,7 @@ bool Outliner::SearchAndReplaceOnce(std::vector<SearchSelection>* pSelections)
                     }
 
                     if (meMode == SEARCH)
-                        nMatchCount = pOutlinerView->StartSearchAndReplace(*mpSearchItem);
+                        pOutlinerView->StartSearchAndReplace(*mpSearchItem);
                 }
             }
         }
@@ -778,7 +786,7 @@ bool Outliner::SearchAndReplaceOnce(std::vector<SearchSelection>* pSelections)
 
     mpDrawDocument->GetDocSh()->SetWaitCursor( false );
 
-    if (pViewShell && pViewShell->GetDoc()->isTiledRendering() && mbStringFound)
+    if (pViewShell && comphelper::LibreOfficeKit::isActive() && mbStringFound)
     {
         std::vector<Rectangle> aLogicRects;
         pOutlinerView->GetSelectionRectangles(aLogicRects);
@@ -796,6 +804,7 @@ bool Outliner::SearchAndReplaceOnce(std::vector<SearchSelection>* pSelections)
             // also about search result selections
             boost::property_tree::ptree aTree;
             aTree.put("searchString", mpSearchItem->GetSearchString().toUtf8().getStr());
+            aTree.put("highlightAll", false);
 
             boost::property_tree::ptree aChildren;
             boost::property_tree::ptree aChild;
@@ -1228,7 +1237,7 @@ void Outliner::PutTextIntoOutliner()
     mpTextObj = dynamic_cast<SdrTextObj*>( mpObj );
     if ( mpTextObj && mpTextObj->HasText() && !mpTextObj->IsEmptyPresObj() )
     {
-        SdrText* pText = mpTextObj->getText( mnText );
+        SdrText* pText = mpTextObj->getText( maCurrentPosition.mnText );
         mpParaObj = pText ? pText->GetOutlinerParaObject() : nullptr;
 
         if (mpParaObj != nullptr)
@@ -1336,7 +1345,7 @@ void Outliner::SetViewMode (PageKind ePageKind)
 
         // Force (well, request) a synchronous update of the configuration.
         // In a better world we would handle the asynchronous view update
-        // instead.  But that would involve major restucturing of the
+        // instead.  But that would involve major restructuring of the
         // Outliner code.
         framework::FrameworkHelper::Instance(rBase)->RequestSynchronousUpdate();
         SetViewShell(rBase.GetMainViewShell());
@@ -1390,9 +1399,8 @@ void Outliner::EnterEditMode (bool bGrabFocus)
         // Make FuText the current function.
         SfxUInt16Item aItem (SID_TEXTEDIT, 1);
         std::shared_ptr<ViewShell> pViewShell (mpWeakViewShell.lock());
-        pViewShell->GetDispatcher()->
-            Execute(SID_TEXTEDIT, SfxCallMode::SYNCHRON |
-                SfxCallMode::RECORD, &aItem, 0L);
+        pViewShell->GetDispatcher()->ExecuteList(SID_TEXTEDIT,
+                SfxCallMode::SYNCHRON | SfxCallMode::RECORD, { &aItem });
 
         // To be consistent with the usual behaviour in the Office the text
         // object that is put into edit mode would have also to be selected.

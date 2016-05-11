@@ -54,6 +54,7 @@
 
 #include <boost/optional.hpp>
 #include <memory>
+#include <iterator>
 
 namespace dbaxml
 {
@@ -190,37 +191,37 @@ ODBExport::ODBExport(const Reference< XComponentContext >& _rxContext, OUString 
     GetMM100UnitConverter().SetCoreMeasureUnit(util::MeasureUnit::MM_10TH);
     GetMM100UnitConverter().SetXMLMeasureUnit(util::MeasureUnit::CM);
 
-    _GetNamespaceMap().Add( GetXMLToken(XML_NP_OFFICE), GetXMLToken(XML_N_OFFICE), XML_NAMESPACE_OFFICE );
-    _GetNamespaceMap().Add( GetXMLToken(XML_NP_OOO), GetXMLToken(XML_N_OOO), XML_NAMESPACE_OOO );
-    _GetNamespaceMap().Add( GetXMLToken(XML_NP_SVG), GetXMLToken(XML_N_SVG), XML_NAMESPACE_SVG );
+    GetNamespaceMap_().Add( GetXMLToken(XML_NP_OFFICE), GetXMLToken(XML_N_OFFICE), XML_NAMESPACE_OFFICE );
+    GetNamespaceMap_().Add( GetXMLToken(XML_NP_OOO), GetXMLToken(XML_N_OOO), XML_NAMESPACE_OOO );
+    GetNamespaceMap_().Add( GetXMLToken(XML_NP_SVG), GetXMLToken(XML_N_SVG), XML_NAMESPACE_SVG );
 
-    _GetNamespaceMap().Add( GetXMLToken(XML_NP_DB), GetXMLToken(XML_N_DB_OASIS), XML_NAMESPACE_DB );
+    GetNamespaceMap_().Add( GetXMLToken(XML_NP_DB), GetXMLToken(XML_N_DB_OASIS), XML_NAMESPACE_DB );
 
     if( nExportFlag & (SvXMLExportFlags::STYLES|SvXMLExportFlags::MASTERSTYLES|SvXMLExportFlags::AUTOSTYLES|SvXMLExportFlags::FONTDECLS) )
-        _GetNamespaceMap().Add( GetXMLToken(XML_NP_FO), GetXMLToken(XML_N_FO_COMPAT), XML_NAMESPACE_FO );
+        GetNamespaceMap_().Add( GetXMLToken(XML_NP_FO), GetXMLToken(XML_N_FO_COMPAT), XML_NAMESPACE_FO );
 
     if( nExportFlag & (SvXMLExportFlags::META|SvXMLExportFlags::STYLES|SvXMLExportFlags::MASTERSTYLES|SvXMLExportFlags::AUTOSTYLES|SvXMLExportFlags::CONTENT|SvXMLExportFlags::SCRIPTS|SvXMLExportFlags::SETTINGS) )
     {
-        _GetNamespaceMap().Add( GetXMLToken(XML_NP_XLINK), GetXMLToken(XML_N_XLINK), XML_NAMESPACE_XLINK );
+        GetNamespaceMap_().Add( GetXMLToken(XML_NP_XLINK), GetXMLToken(XML_N_XLINK), XML_NAMESPACE_XLINK );
     }
     if( nExportFlag & SvXMLExportFlags::SETTINGS )
     {
-        _GetNamespaceMap().Add( GetXMLToken(XML_NP_CONFIG), GetXMLToken(XML_N_CONFIG), XML_NAMESPACE_CONFIG );
+        GetNamespaceMap_().Add( GetXMLToken(XML_NP_CONFIG), GetXMLToken(XML_N_CONFIG), XML_NAMESPACE_CONFIG );
     }
 
     if( nExportFlag & (SvXMLExportFlags::STYLES|SvXMLExportFlags::MASTERSTYLES|SvXMLExportFlags::AUTOSTYLES|SvXMLExportFlags::CONTENT|SvXMLExportFlags::FONTDECLS) )
     {
-        _GetNamespaceMap().Add( GetXMLToken(XML_NP_STYLE), GetXMLToken(XML_N_STYLE), XML_NAMESPACE_STYLE );
+        GetNamespaceMap_().Add( GetXMLToken(XML_NP_STYLE), GetXMLToken(XML_N_STYLE), XML_NAMESPACE_STYLE );
     }
 
-    _GetNamespaceMap().Add( GetXMLToken(XML_NP_TABLE), GetXMLToken(XML_N_TABLE), XML_NAMESPACE_TABLE );
-    _GetNamespaceMap().Add( GetXMLToken(XML_NP_NUMBER), GetXMLToken(XML_N_NUMBER), XML_NAMESPACE_NUMBER );
+    GetNamespaceMap_().Add( GetXMLToken(XML_NP_TABLE), GetXMLToken(XML_N_TABLE), XML_NAMESPACE_TABLE );
+    GetNamespaceMap_().Add( GetXMLToken(XML_NP_NUMBER), GetXMLToken(XML_N_NUMBER), XML_NAMESPACE_NUMBER );
 
     m_xExportHelper = new SvXMLExportPropertyMapper(GetTableStylesPropertySetMapper());
     m_xColumnExportHelper = new OSpecialHandleXMLExportPropertyMapper(GetColumnStylesPropertySetMapper());
 
     m_xCellExportHelper = new OSpecialHandleXMLExportPropertyMapper(GetCellStylesPropertySetMapper());
-    m_xRowExportHelper = new OSpecialHandleXMLExportPropertyMapper(OXMLHelper::GetRowStylesPropertySetMapper( true));
+    m_xRowExportHelper = new OSpecialHandleXMLExportPropertyMapper(OXMLHelper::GetRowStylesPropertySetMapper());
 
     GetAutoStylePool()->AddFamily(
         XML_STYLE_FAMILY_TABLE_TABLE,
@@ -346,7 +347,7 @@ void ODBExport::exportDataSource()
                 }
             };
 
-            PropertyMap aTokens[] =
+            const PropertyMap aTokens[] =
             {
                 PropertyMap( INFO_TEXTFILEHEADER,       XML_IS_FIRST_ROW_HEADER_LINE,       s_sTrue     ),
                 PropertyMap( INFO_SHOWDELETEDROWS,      XML_SHOW_DELETED,                   s_sFalse    ),
@@ -363,14 +364,14 @@ void ODBExport::exportDataSource()
             };
 
             bool bIsXMLDefault = false;
-            for ( size_t i=0; i < sizeof( aTokens ) / sizeof( aTokens[0] ); ++i )
+            for (const auto & aToken : aTokens)
             {
-                if ( pProperties->Name == aTokens[i].sPropertyName )
+                if ( pProperties->Name == aToken.sPropertyName )
                 {
-                    eToken = aTokens[i].eAttributeToken;
+                    eToken = aToken.eAttributeToken;
 
-                    if  (   !!aTokens[i].aXMLDefault
-                        &&  ( sValue == *aTokens[i].aXMLDefault )
+                    if  (   !!aToken.aXMLDefault
+                        &&  ( sValue == *aToken.aXMLDefault )
                         )
                     {
                         bIsXMLDefault = true;
@@ -497,9 +498,9 @@ void ODBExport::exportApplicationConnectionSettings(const TSettingsMap& _aSettin
         ,XML_MAX_ROW_COUNT
         ,XML_SUPPRESS_VERSION_COLUMNS
     };
-    for (size_t i = 0; i< sizeof(pSettings)/sizeof(pSettings[0]); ++i)
+    for (::xmloff::token::XMLTokenEnum i : pSettings)
     {
-        TSettingsMap::const_iterator aFind = _aSettings.find(pSettings[i]);
+        TSettingsMap::const_iterator aFind = _aSettings.find(i);
         if ( aFind != _aSettings.end() )
             AddAttribute(XML_NAMESPACE_DB, aFind->first,aFind->second);
     }
@@ -530,9 +531,9 @@ void ODBExport::exportDriverSettings(const TSettingsMap& _aSettings)
         ,XML_IS_FIRST_ROW_HEADER_LINE
         ,XML_PARAMETER_NAME_SUBSTITUTION
     };
-    for (size_t i = 0; i< sizeof(pSettings)/sizeof(pSettings[0]); ++i)
+    for (::xmloff::token::XMLTokenEnum nSetting : pSettings)
     {
-        TSettingsMap::const_iterator aFind = _aSettings.find(pSettings[i]);
+        TSettingsMap::const_iterator aFind = _aSettings.find(nSetting);
         if ( aFind != _aSettings.end() )
             AddAttribute(XML_NAMESPACE_DB, aFind->first,aFind->second);
     }
@@ -661,7 +662,7 @@ void ODBExport::exportDataSourceSettings()
 
     SvXMLElementExport aElem(*this,XML_NAMESPACE_DB, XML_DATA_SOURCE_SETTINGS, true, true);
     ::std::vector< TypedPropertyValue >::iterator aIter = m_aDataSourceSettings.begin();
-    ::std::vector< TypedPropertyValue >::iterator aEnd = m_aDataSourceSettings.end();
+    ::std::vector< TypedPropertyValue >::const_iterator aEnd = m_aDataSourceSettings.end();
     for ( ; aIter != aEnd; ++aIter )
     {
         bool bIsSequence = TypeClass_SEQUENCE == aIter->Type.getTypeClass();
@@ -905,7 +906,7 @@ void ODBExport::exportStyleName(XPropertySet* _xProp,SvXMLAttributeList& _rAtt)
 
 void ODBExport::exportStyleName(const ::xmloff::token::XMLTokenEnum _eToken,const uno::Reference<beans::XPropertySet>& _xProp,SvXMLAttributeList& _rAtt,TPropertyStyleMap& _rMap)
 {
-    TPropertyStyleMap::iterator aFind = _rMap.find(_xProp);
+    TPropertyStyleMap::const_iterator aFind = _rMap.find(_xProp);
     if ( aFind != _rMap.end() )
     {
         _rAtt.AddAttribute( GetNamespaceMap().GetQNameByKey( XML_NAMESPACE_DB, GetXMLToken(_eToken) ),
@@ -962,7 +963,7 @@ void ODBExport::exportColumns(const Reference<XColumnsSupplier>& _xColSup)
         if ( !xNameAccess->hasElements() )
         {
             Reference< XPropertySet > xComponent(_xColSup,UNO_QUERY);
-            TTableColumnMap::iterator aFind = m_aTableDummyColumns.find(xComponent);
+            TTableColumnMap::const_iterator aFind = m_aTableDummyColumns.find(xComponent);
             if ( aFind != m_aTableDummyColumns.end() )
             {
                 SvXMLElementExport aColumns(*this,XML_NAMESPACE_DB, XML_COLUMNS, true, true);
@@ -1131,11 +1132,11 @@ void ODBExport::exportAutoStyle(XPropertySet* _xProp)
         };
 
         ::std::vector< XMLPropertyState > aPropertyStates;
-        for (size_t i = 0 ; i < sizeof(pExportHelper)/sizeof(pExportHelper[0]); ++i)
+        for (const auto & i : pExportHelper)
         {
-            aPropertyStates = pExportHelper[i].first->Filter(_xProp);
+            aPropertyStates = i.first->Filter(_xProp);
             if ( !aPropertyStates.empty() )
-                pExportHelper[i].second.first->insert( TPropertyStyleMap::value_type(_xProp,GetAutoStylePool()->Add( pExportHelper[i].second.second, aPropertyStates )));
+                i.second.first->insert( TPropertyStyleMap::value_type(_xProp,GetAutoStylePool()->Add( i.second.second, aPropertyStates )));
         }
 
         Reference< XNameAccess > xCollection;
@@ -1172,18 +1173,18 @@ void ODBExport::exportAutoStyle(XPropertySet* _xProp)
     }
     else
     { // here I know I have a column
-        TExportPropMapperPair pExportHelper[] = {
+        const TExportPropMapperPair pExportHelper[] = {
              TExportPropMapperPair(m_xColumnExportHelper,TEnumMapperPair(&m_aAutoStyleNames,XML_STYLE_FAMILY_TABLE_COLUMN ))
             ,TExportPropMapperPair(m_xCellExportHelper,TEnumMapperPair(&m_aCellAutoStyleNames,XML_STYLE_FAMILY_TABLE_CELL))
         };
-        for (size_t i = 0 ; i < sizeof(pExportHelper)/sizeof(pExportHelper[0]); ++i)
+        for (const auto & i : pExportHelper)
         {
-            ::std::vector< XMLPropertyState > aPropStates = pExportHelper[i].first->Filter( _xProp );
+            ::std::vector< XMLPropertyState > aPropStates = i.first->Filter( _xProp );
             if ( !aPropStates.empty() )
             {
                 ::std::vector< XMLPropertyState >::iterator aItr = aPropStates.begin();
-                ::std::vector< XMLPropertyState >::iterator aEnd = aPropStates.end();
-                const rtl::Reference < XMLPropertySetMapper >& pStyle = pExportHelper[i].first->getPropertySetMapper();
+                ::std::vector< XMLPropertyState >::const_iterator aEnd = aPropStates.end();
+                const rtl::Reference < XMLPropertySetMapper >& pStyle = i.first->getPropertySetMapper();
                 while ( aItr != aEnd )
                 {
                     if ( aItr->mnIndex != -1 )
@@ -1207,15 +1208,15 @@ void ODBExport::exportAutoStyle(XPropertySet* _xProp)
                 }
 
             }
-            if ( XML_STYLE_FAMILY_TABLE_CELL == pExportHelper[i].second.second )
+            if ( XML_STYLE_FAMILY_TABLE_CELL == i.second.second )
                 ::std::copy( m_aCurrentPropertyStates.begin(), m_aCurrentPropertyStates.end(), ::std::back_inserter( aPropStates ));
             if ( !aPropStates.empty() )
-                pExportHelper[i].second.first->insert( TPropertyStyleMap::value_type(_xProp,GetAutoStylePool()->Add( pExportHelper[i].second.second, aPropStates )));
+                i.second.first->insert( TPropertyStyleMap::value_type(_xProp,GetAutoStylePool()->Add( i.second.second, aPropStates )));
         }
     }
 }
 
-void ODBExport::_ExportContent()
+void ODBExport::ExportContent_()
 {
     exportDataSource();
     exportForms();
@@ -1224,12 +1225,12 @@ void ODBExport::_ExportContent()
     exportTables(true);
 }
 
-void ODBExport::_ExportMasterStyles()
+void ODBExport::ExportMasterStyles_()
 {
     GetPageExport()->exportMasterStyles( true );
 }
 
-void ODBExport::_ExportAutoStyles()
+void ODBExport::ExportAutoStyles_()
 {
     // there are no styles that require their own autostyles
     if ( getExportFlags() & SvXMLExportFlags::CONTENT )
@@ -1259,9 +1260,9 @@ void ODBExport::_ExportAutoStyles()
     }
 }
 
-void ODBExport::_ExportStyles(bool bUsed)
+void ODBExport::ExportStyles_(bool bUsed)
 {
-    SvXMLExport::_ExportStyles(bUsed);
+    SvXMLExport::ExportStyles_(bUsed);
 }
 
 sal_uInt32 ODBExport::exportDoc(enum ::xmloff::token::XMLTokenEnum eClass)
@@ -1406,11 +1407,11 @@ void SAL_CALL ODBExport::setSourceDocument( const Reference< XComponent >& xDoc 
     SvXMLExport::setSourceDocument(xDoc);
 }
 
-void ODBExport::_ExportFontDecls()
+void ODBExport::ExportFontDecls_()
 {
     GetFontAutoStylePool(); // make sure the pool is created
     collectComponentStyles();
-    SvXMLExport::_ExportFontDecls();
+    SvXMLExport::ExportFontDecls_();
 }
 
 void ODBExport::collectComponentStyles()

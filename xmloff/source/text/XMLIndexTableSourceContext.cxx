@@ -52,8 +52,6 @@ const sal_Char sAPI_LabelCategory[] = "LabelCategory";
 const sal_Char sAPI_LabelDisplayType[] = "LabelDisplayType";
 
 
-
-
 XMLIndexTableSourceContext::XMLIndexTableSourceContext(
     SvXMLImport& rImport, sal_uInt16 nPrfx,
     const OUString& rLocalName, Reference<XPropertySet> & rPropSet)
@@ -128,21 +126,16 @@ void XMLIndexTableSourceContext::ProcessAttribute(
 
 void XMLIndexTableSourceContext::EndElement()
 {
-    Any aAny;
-
-    aAny.setValue(&bUseCaption, cppu::UnoType<bool>::get());
-    rIndexPropertySet->setPropertyValue(sCreateFromLabels, aAny);
+    rIndexPropertySet->setPropertyValue(sCreateFromLabels, css::uno::Any(bUseCaption));
 
     if (bSequenceOK)
     {
-        aAny <<= sSequence;
-        rIndexPropertySet->setPropertyValue(sLabelCategory, aAny);
+        rIndexPropertySet->setPropertyValue(sLabelCategory, css::uno::Any(sSequence));
     }
 
     if (bDisplayFormatOK)
     {
-        aAny <<= nDisplayFormat;
-        rIndexPropertySet->setPropertyValue(sLabelDisplayType, aAny);
+        rIndexPropertySet->setPropertyValue(sLabelDisplayType, css::uno::Any(nDisplayFormat));
     }
 
     XMLIndexSourceBaseContext::EndElement();

@@ -40,13 +40,10 @@ namespace connectivity { namespace hsqldb
 
 
     using ::com::sun::star::uno::Reference;
-    using ::com::sun::star::uno::UNO_QUERY;
     using ::com::sun::star::uno::UNO_QUERY_THROW;
     using ::com::sun::star::uno::Exception;
     using ::com::sun::star::uno::RuntimeException;
     using ::com::sun::star::uno::Any;
-    using ::com::sun::star::uno::makeAny;
-    using ::com::sun::star::sdbc::XDatabaseMetaData;
     using ::com::sun::star::sdbc::SQLException;
     using ::com::sun::star::sdbc::XConnection;
     using ::com::sun::star::lang::WrappedTargetException;
@@ -87,7 +84,7 @@ namespace connectivity { namespace hsqldb
         // backend support.
 
         OUString sQualifiedName( ::dbtools::composeTableName(
-            m_xMetaData, m_CatalogName, m_SchemaName, m_Name, true, ::dbtools::eInDataManipulation ) );
+            m_xMetaData, m_CatalogName, m_SchemaName, m_Name, true, ::dbtools::EComposeRule::InDataManipulation ) );
 
         ::utl::SharedUNOComponent< XStatement > xStatement; xStatement.set( m_xConnection->createStatement(), UNO_QUERY_THROW );
 

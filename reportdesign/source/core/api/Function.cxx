@@ -40,11 +40,10 @@ uno::Reference< uno::XInterface > OFunction::create(uno::Reference< uno::XCompon
 OFunction::OFunction(uno::Reference< uno::XComponentContext > const & _xContext)
 :FunctionBase(m_aMutex)
 ,FunctionPropertySet(_xContext,static_cast< Implements >(IMPLEMENTS_PROPERTY_SET),uno::Sequence< OUString >())
-,m_xContext(_xContext)
 ,m_bPreEvaluated(false)
 ,m_bDeepTraversing(false)
 {
-    m_sInitialFormula.IsPresent = sal_False;
+    m_sInitialFormula.IsPresent = false;
 }
 
 OFunction::~OFunction()
@@ -200,7 +199,6 @@ void SAL_CALL OFunction::setParent( const uno::Reference< uno::XInterface >& Par
     else
         m_xParent.clear();
 }
-
 
 
 } // namespace reportdesign

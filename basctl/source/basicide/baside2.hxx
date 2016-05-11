@@ -38,6 +38,7 @@ class SvxSearchItem;
 #include <vcl/idle.hxx>
 
 #include <sfx2/progress.hxx>
+#include <o3tl/enumarray.hxx>
 
 #include <set>
 
@@ -86,8 +87,7 @@ private:
 
     SyntaxHighlighter   aHighlighter;
     Idle                aSyntaxIdle;
-    typedef std::set<sal_uInt16> SyntaxLineSet;
-    SyntaxLineSet       aSyntaxLineTable;
+    std::set<sal_uInt16>       aSyntaxLineTable;
     DECL_LINK_TYPED(SyntaxTimerHdl, Idle *, void);
 
     // progress bar
@@ -152,7 +152,7 @@ public:
     void            InitScrollBars();
 
     void            ForceSyntaxTimeout();
-    bool            SetSourceInBasic();
+    void            SetSourceInBasic();
 
     bool            CanModify() { return ImpCanModify(); }
 
@@ -190,7 +190,7 @@ public:
     void            SetMarkerPos( sal_uInt16 nLine, bool bErrorMarker = false );
     void            SetNoMarker ();
 
-    void            DoScroll( long nHorzScroll, long nVertScroll );
+    void            DoScroll( long nVertScroll );
     long&           GetCurYOffset()         { return nCurYOffset; }
     BreakPointList& GetBreakPoints()        { return aBreakPointList; }
 };
@@ -220,7 +220,6 @@ public:
 };
 
 
-
 class WatchWindow : public DockingWindow
 {
 private:
@@ -246,7 +245,7 @@ public:
     virtual void    dispose() override;
 
     void            AddWatch( const OUString& rVName );
-    bool            RemoveSelectedWatch();
+    void            RemoveSelectedWatch();
     void            UpdateWatches( bool bBasicStopped = false );
 };
 
@@ -300,17 +299,17 @@ public:
 class ModulWindow: public BaseWindow
 {
 private:
-    ModulWindowLayout&  rLayout;
-    StarBASICRef        xBasic;
-    short               nValid;
-    VclPtr<ComplexEditorWindow> aXEditorWindow;
-    BasicStatus         aStatus;
-    SbModuleRef         xModule;
-    OUString            aCurPath;
+    ModulWindowLayout&  m_rLayout;
+    StarBASICRef        m_xBasic;
+    short               m_nValid;
+    VclPtr<ComplexEditorWindow> m_aXEditorWindow;
+    BasicStatus         m_aStatus;
+    SbModuleRef         m_xModule;
+    OUString            m_sCurPath;
     OUString            m_aModule;
 
     void                CheckCompileBasic();
-    bool                BasicExecute();
+    void                BasicExecute();
 
     static void         GoOnTop();
 
@@ -345,19 +344,19 @@ public:
     virtual void    SetReadOnly (bool bReadOnly) override;
     virtual bool    IsReadOnly() override;
 
-    StarBASIC*      GetBasic() { XModule(); return xBasic; }
+    StarBASIC*      GetBasic() { XModule(); return m_xBasic; }
 
-    SbModule*       GetSbModule() { return xModule; }
-    void            SetSbModule( SbModule* pModule ) { xModule = pModule; }
+    SbModule*       GetSbModule() { return m_xModule; }
+    void            SetSbModule( SbModule* pModule ) { m_xModule = pModule; }
     OUString        GetSbModuleName();
 
-    bool            CompileBasic();
-    bool            BasicRun();
-    bool            BasicStepOver();
-    bool            BasicStepInto();
-    bool            BasicStepOut();
+    void            CompileBasic();
+    void            BasicRun();
+    void            BasicStepOver();
+    void            BasicStepInto();
+    void            BasicStepOut();
     void            BasicStop();
-    bool            BasicToggleBreakPoint();
+    void            BasicToggleBreakPoint();
     void            BasicToggleBreakPointEnabled();
     void            ManageBreakPoints();
     void            UpdateBreakPoint( const BreakPoint& rBrk );
@@ -367,15 +366,15 @@ public:
     long            BasicBreakHdl( StarBASIC* pBasic );
     void            AssertValidEditEngine();
 
-    bool            LoadBasic();
-    bool            SaveBasicSource();
-    bool            ImportDialog();
+    void            LoadBasic();
+    void            SaveBasicSource();
+    void            ImportDialog();
 
     void            EditMacro( const OUString& rMacroName );
 
-    bool            ToggleBreakPoint( sal_uLong nLine );
+    void            ToggleBreakPoint( sal_uLong nLine );
 
-    BasicStatus&    GetBasicStatus() { return aStatus; }
+    BasicStatus&    GetBasicStatus() { return m_aStatus; }
 
     virtual bool    IsModified () override;
     virtual bool    IsPasteAllowed () override;
@@ -385,14 +384,14 @@ public:
     virtual SearchOptionFlags GetSearchOptions() override;
     virtual sal_uInt16  StartSearchAndReplace (SvxSearchItem const&, bool bFromStart = false) override;
 
-    EditorWindow&       GetEditorWindow()       { return aXEditorWindow->GetEdtWindow(); }
-    BreakPointWindow&   GetBreakPointWindow()   { return aXEditorWindow->GetBrkWindow(); }
-    LineNumberWindow&   GetLineNumberWindow()   { return aXEditorWindow->GetLineNumberWindow(); }
-    ScrollBar&          GetEditVScrollBar()     { return aXEditorWindow->GetEWVScrollBar(); }
+    EditorWindow&       GetEditorWindow()       { return m_aXEditorWindow->GetEdtWindow(); }
+    BreakPointWindow&   GetBreakPointWindow()   { return m_aXEditorWindow->GetBrkWindow(); }
+    LineNumberWindow&   GetLineNumberWindow()   { return m_aXEditorWindow->GetLineNumberWindow(); }
+    ScrollBar&          GetEditVScrollBar()     { return m_aXEditorWindow->GetEWVScrollBar(); }
     ExtTextEngine*      GetEditEngine()         { return GetEditorWindow().GetEditEngine(); }
     ExtTextView*        GetEditView()           { return GetEditorWindow().GetEditView(); }
     BreakPointList&     GetBreakPoints()        { return GetBreakPointWindow().GetBreakPoints(); }
-    ModulWindowLayout&  GetLayout ()            { return rLayout; }
+    ModulWindowLayout&  GetLayout ()            { return m_rLayout; }
 
     virtual void        BasicStarted() override;
     virtual void        BasicStopped() override;
@@ -429,7 +428,7 @@ public:
 public:
     void BasicAddWatch (OUString const&);
     void BasicRemoveWatch ();
-    Color GetSyntaxColor (TokenTypes eType) const { return aSyntaxColors.GetColor(eType); }
+    Color GetSyntaxColor (TokenType eType) const { return aSyntaxColors.GetColor(eType); }
 
 protected:
     // Window:
@@ -457,15 +456,15 @@ private:
         void SetActiveEditor (EditorWindow* pEditor_) { pEditor = pEditor_; }
         void SettingsChanged ();
     public:
-        Color GetColor (TokenTypes eType) const { return aColors[eType]; }
+        Color GetColor (TokenType eType) const { return aColors[eType]; }
 
     private:
         virtual void ConfigurationChanged (utl::ConfigurationBroadcaster*, sal_uInt32) override;
         void NewConfig (bool bFirst);
 
     private:
-        // the color values (the indexes are TokenTypes, see comphelper/syntaxhighlight.hxx)
-        Color aColors[TT_KEYWORDS + 1];
+        // the color values (the indexes are TokenType, see comphelper/syntaxhighlight.hxx)
+        o3tl::enumarray<TokenType, Color> aColors;
         // the configuration
         svtools::ColorConfig aConfig;
         // the active editor
@@ -534,8 +533,6 @@ public:
 class UnoTypeCodeCompletetor
 {
 private:
-    css::uno::Reference< css::lang::XMultiServiceFactory > xFactory;
-    css::uno::Reference< css::reflection::XIdlReflection > xRefl;
     css::uno::Reference< css::reflection::XIdlClass > xClass;
     bool bCanComplete;
 

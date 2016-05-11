@@ -19,7 +19,7 @@
 
 
 #include <vcl/graph.hxx>
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 #include <vcl/outdev.hxx>
 #include <tools/fract.hxx>
 #include <memory>
@@ -169,7 +169,6 @@ bool PSDReader::ReadPSD(Graphic & rGraphic )
 }
 
 
-
 bool PSDReader::ImplReadHeader()
 {
     mpFileHeader = new PSDFileHeader;
@@ -199,6 +198,7 @@ bool PSDReader::ImplReadHeader()
         {
             case 5 :
                 mbTransparent = true;
+                SAL_FALLTHROUGH;
             case 4 :
                 mnDestBitDepth = 24;
             break;
@@ -210,10 +210,12 @@ bool PSDReader::ImplReadHeader()
     {
         case 2 :
             mbTransparent = true;
+            break;
         case 1 :
             break;
         case 4 :
             mbTransparent = true;
+            SAL_FALLTHROUGH;
         case 3 :
             mnDestBitDepth = 24;
             break;
@@ -242,7 +244,7 @@ bool PSDReader::ImplReadHeader()
         case PSD_DUOTONE :                  // we'll handle the duotone color like a normal grayscale picture
             m_rPSD.SeekRel( nColorLength );
             nColorLength = 0;
-            /* Fall through */
+            SAL_FALLTHROUGH;
         case PSD_GRAYSCALE :
         {
             if ( nColorLength )

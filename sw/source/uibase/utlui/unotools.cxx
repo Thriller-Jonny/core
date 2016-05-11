@@ -90,13 +90,13 @@ SwOneExampleFrame::SwOneExampleFrame( vcl::Window& rWin,
     aTopWindow->Show();
 }
 
-void SwOneExampleFrame::CreateErrorMessage(vcl::Window* pParent)
+void SwOneExampleFrame::CreateErrorMessage()
 {
     if(SwOneExampleFrame::bShowServiceNotAvailableMessage)
     {
         OUString sInfo(SW_RES(STR_SERVICE_UNAVAILABLE));
         sInfo += cFrameControl;
-        ScopedVclPtr<InfoBox>::Create(pParent, sInfo)->Execute();
+        ScopedVclPtr<InfoBox>::Create(nullptr, sInfo)->Execute();
         SwOneExampleFrame::bShowServiceNotAvailableMessage = false;
     }
 }
@@ -124,7 +124,7 @@ void SwOneExampleFrame::CreateControl()
         _xControl->createPeer( xToolkit, xParent );
 
         uno::Reference< awt::XWindow >  xWin( _xControl, uno::UNO_QUERY );
-        xWin->setVisible(sal_False);
+        xWin->setVisible(false);
         Size aWinSize(aTopWindow->GetOutputSizePixel());
         xWin->setPosSize( 0, 0, aWinSize.Width(), aWinSize.Height(), awt::PosSize::SIZE );
 
@@ -214,7 +214,7 @@ IMPL_LINK_TYPED( SwOneExampleFrame, TimeoutHdl, Idle*, pTimer, void )
             uno::Any aValue = xPropSet->getPropertyValue("LayoutManager");
             aValue >>= xLayoutManager;
             if ( xLayoutManager.is() )
-                xLayoutManager->setVisible( sal_False );
+                xLayoutManager->setVisible( false );
         }
         catch (const uno::Exception&)
         {
@@ -377,7 +377,7 @@ IMPL_LINK_TYPED( SwOneExampleFrame, TimeoutHdl, Idle*, pTimer, void )
         if(xScrCursor.is())
             xScrCursor->screenUp();
 
-        xWin->setVisible( sal_True );
+        xWin->setVisible( true );
         aTopWindow->Show();
 
         if( xTunnel.is() )
@@ -401,7 +401,7 @@ IMPL_LINK_TYPED( SwOneExampleFrame, TimeoutHdl, Idle*, pTimer, void )
         pTimer->Start();
 }
 
-void SwOneExampleFrame::ClearDocument( bool bStartUpdateTimer )
+void SwOneExampleFrame::ClearDocument()
 {
     uno::Reference< lang::XUnoTunnel> xTunnel( _xCursor, uno::UNO_QUERY);
     if( xTunnel.is() )
@@ -419,18 +419,17 @@ void SwOneExampleFrame::ClearDocument( bool bStartUpdateTimer )
             pDoc->ClearDoc();
             pSh->ClearUpCursors();
 
-            if( aLoadedIdle.IsActive() || !bStartUpdateTimer )
+            if( aLoadedIdle.IsActive())
             {
                 pSh->EndAllAction();
                 pSh->UnlockPaint();
             }
-            if( bStartUpdateTimer )
-                aLoadedIdle.Start();
+            aLoadedIdle.Start();
         }
         else
         {
-            _xCursor->gotoStart(sal_False);
-            _xCursor->gotoEnd(sal_True);
+            _xCursor->gotoStart(false);
+            _xCursor->gotoEnd(true);
             _xCursor->setString(OUString());
         }
     }
@@ -471,8 +470,7 @@ void SwOneExampleFrame::CreatePopup(const Point& rPt)
         sal_Int16 nZoom = 0;
         aZoom >>= nZoom;
 
-        for (sal_uInt16 i = 0;
-                i < (sizeof(nZoomValues)/sizeof(nZoomValues[0])); ++i)
+        for (sal_uInt16 i = 0; i < SAL_N_ELEMENTS(nZoomValues); ++i)
         {
             OUString sTemp = unicode::formatPercent(nZoomValues[i],
                 Application::GetSettings().GetUILanguageTag());
@@ -491,7 +489,7 @@ IMPL_LINK_TYPED(SwOneExampleFrame, PopupHdl, Menu*, pMenu, bool )
 {
     sal_uInt16 nId = pMenu->GetCurItemId();
     if ((nId > ITEM_ZOOM) &&
-        (nId <= (ITEM_ZOOM + (sizeof(nZoomValues)/sizeof(nZoomValues[0])))))
+        (nId <= (ITEM_ZOOM + SAL_N_ELEMENTS(nZoomValues))))
     {
         sal_Int16 nZoom = nZoomValues[nId - ITEM_ZOOM - 1];
         uno::Reference< view::XViewSettingsSupplier >  xSettings(_xController, uno::UNO_QUERY);
@@ -550,7 +548,7 @@ Size SwFrameCtrlWindow::GetOptimalSize() const
 void SwFrameCtrlWindow::Resize()
 {
     VclEventBox::Resize();
-    pExampleFrame->ClearDocument(true);
+    pExampleFrame->ClearDocument();
 }
 
 MenuResource::MenuResource(const ResId& rResId) :

@@ -20,8 +20,6 @@
 
 #include "fltlst.hxx"
 
-#include <com/sun/star/uno/Sequence.hxx>
-#include <com/sun/star/uno/Any.hxx>
 #include <com/sun/star/document/FilterConfigRefresh.hpp>
 #include <comphelper/processfactory.hxx>
 
@@ -74,7 +72,7 @@ class SfxRefreshListener : public ::cppu::WeakImplHelper<css::util::XRefreshList
                     on right FilterFactory-Service for all changes and synchronize right SfxFilterContainer with
                     corresponding framework-cache.
                     We use given "sFactory" value to decide which query must be used to fill "pContainer" with new values.
-                    Given "pContainer" hold us alive as uno reference and we use it to syschronize it with framework caches.
+                    Given "pContainer" hold us alive as uno reference and we use it to synchronize it with framework caches.
                     We will die, if he die! see dtor for further information.
 
     @seealso        dtor

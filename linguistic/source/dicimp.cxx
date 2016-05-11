@@ -29,6 +29,7 @@
 #include <tools/urlobj.hxx>
 #include <comphelper/processfactory.hxx>
 #include <comphelper/string.hxx>
+#include <comphelper/sequence.hxx>
 #include <unotools/ucbstreamhelper.hxx>
 
 #include <com/sun/star/ucb/SimpleFileAccess.hpp>
@@ -50,7 +51,6 @@ using namespace com::sun::star::lang;
 using namespace com::sun::star::uno;
 using namespace com::sun::star::linguistic2;
 using namespace linguistic;
-
 
 
 #define BUFSIZE             4096
@@ -192,7 +192,6 @@ DictionaryNeo::DictionaryNeo(const OUString &rName,
     eDicType        (eType),
     nLanguage       (nLang)
 {
-    nCount       = 0;
     nDicVersion  = DIC_VERSION_DONTKNOW;
     bNeedEntries = true;
     bIsModified  = bIsActive = false;
@@ -275,7 +274,7 @@ sal_uLong DictionaryNeo::loadEntries(const OUString &rMainURL)
     rtl_TextEncoding eEnc = osl_getThreadTextEncoding();
     if (nDicVersion >= DIC_VERSION_6)
         eEnc = RTL_TEXTENCODING_UTF8;
-    nCount = 0;
+    aEntries.clear();
 
     if (DIC_VERSION_6 == nDicVersion ||
         DIC_VERSION_5 == nDicVersion ||
@@ -471,10 +470,9 @@ sal_uLong DictionaryNeo::saveEntries(const OUString &rURL)
     pStream->WriteLine(OString("---"));
     if (0 != (nErr = pStream->GetError()))
         return nErr;
-    const uno::Reference< XDictionaryEntry > *pEntry = aEntries.getConstArray();
-    for (sal_Int32 i = 0;  i < nCount;  i++)
+    for (Reference<XDictionaryEntry> & aEntrie : aEntries)
     {
-        OString aOutStr = formatForSave(pEntry[i], eEnc);
+        OString aOutStr = formatForSave(aEntrie, eEnc);
         pStream->WriteLine (aOutStr);
         if (0 != (nErr = pStream->GetError()))
             break;
@@ -492,7 +490,7 @@ sal_uLong DictionaryNeo::saveEntries(const OUString &rURL)
 }
 
 void DictionaryNeo::launchEvent(sal_Int16 nEvent,
-                                uno::Reference< XDictionaryEntry > xEntry)
+                                const uno::Reference< XDictionaryEntry >& xEntry)
 {
     MutexGuard  aGuard( GetLinguMutex() );
 
@@ -501,13 +499,7 @@ void DictionaryNeo::launchEvent(sal_Int16 nEvent,
     aEvt.nEvent = nEvent;
     aEvt.xDictionaryEntry = xEntry;
 
-    cppu::OInterfaceIteratorHelper aIt( aDicEvtListeners );
-    while (aIt.hasMoreElements())
-    {
-        uno::Reference< XDictionaryEventListener > xRef( aIt.next(), UNO_QUERY );
-        if (xRef.is())
-            xRef->processDictionaryEvent( aEvt );
-    }
+    aDicEvtListeners.notifyEach( &XDictionaryEventListener::processDictionaryEvent, aEvt);
 }
 
 int DictionaryNeo::cmpDicEntry(const OUString& rWord1,
@@ -522,16 +514,14 @@ int DictionaryNeo::cmpDicEntry(const OUString& rWord1,
 
     int nRes = 0;
 
-    OUString    aWord1( rWord1 ),
-                aWord2( rWord2 );
-    sal_Int32       nLen1 = aWord1.getLength(),
-                  nLen2 = aWord2.getLength();
+    sal_Int32     nLen1 = rWord1.getLength(),
+                  nLen2 = rWord2.getLength();
     if (bSimilarOnly)
     {
         const sal_Unicode cChar = '.';
-        if (nLen1  &&  cChar == aWord1[ nLen1 - 1 ])
+        if (nLen1  &&  cChar == rWord1[ nLen1 - 1 ])
             nLen1--;
-        if (nLen2  &&  cChar == aWord2[ nLen2 - 1 ])
+        if (nLen2  &&  cChar == rWord2[ nLen2 - 1 ])
             nLen2--;
     }
 
@@ -551,7 +541,7 @@ int DictionaryNeo::cmpDicEntry(const OUString& rWord1,
     {
         // skip chars to be ignored
         IgnState = false;
-        while (nIdx1 < nLen1  &&  ((cChar1 = aWord1[ nIdx1 ]) == cIgnChar || cChar1 == cIgnBeg || IgnState ))
+        while (nIdx1 < nLen1  &&  ((cChar1 = rWord1[ nIdx1 ]) == cIgnChar || cChar1 == cIgnBeg || IgnState ))
         {
             if ( cChar1 == cIgnBeg )
                 IgnState = true;
@@ -561,7 +551,7 @@ int DictionaryNeo::cmpDicEntry(const OUString& rWord1,
             nNumIgnChar1++;
         }
         IgnState = false;
-        while (nIdx2 < nLen2  &&  ((cChar2 = aWord2[ nIdx2 ]) == cIgnChar || cChar2 == cIgnBeg || IgnState ))
+        while (nIdx2 < nLen2  &&  ((cChar2 = rWord2[ nIdx2 ]) == cIgnChar || cChar2 == cIgnBeg || IgnState ))
         {
             if ( cChar2 == cIgnBeg )
                 IgnState = true;
@@ -592,22 +582,22 @@ int DictionaryNeo::cmpDicEntry(const OUString& rWord1,
         IgnState = false;
         while (nIdx1 < nLen1 )
         {
-            if (aWord1[ nIdx1 ] == cIgnBeg)
+            if (rWord1[ nIdx1 ] == cIgnBeg)
                 IgnState = true;
-            if (IgnState || aWord1[ nIdx1 ] == cIgnChar)
+            if (IgnState || rWord1[ nIdx1 ] == cIgnChar)
                 nNumIgnChar1++;
-            if (aWord1[ nIdx1] == cIgnEnd)
+            if (rWord1[ nIdx1] == cIgnEnd)
                 IgnState = false;
             nIdx1++;
         }
         IgnState = false;
         while (nIdx2 < nLen2 )
         {
-            if (aWord2[ nIdx2 ] == cIgnBeg)
+            if (rWord2[ nIdx2 ] == cIgnBeg)
                 IgnState = true;
-            if (IgnState || aWord2[ nIdx2 ] == cIgnChar)
+            if (IgnState || rWord2[ nIdx2 ] == cIgnChar)
                 nNumIgnChar2++;
-            if (aWord2[ nIdx2 ] == cIgnEnd)
+            if (rWord2[ nIdx2 ] == cIgnEnd)
                 IgnState = false;
             nIdx2++;
         }
@@ -629,7 +619,6 @@ bool DictionaryNeo::seekEntry(const OUString &rWord,
 
     MutexGuard  aGuard( GetLinguMutex() );
 
-    const uno::Reference< XDictionaryEntry > *pEntry = aEntries.getConstArray();
     sal_Int32 nUpperIdx = getCount(),
           nMidIdx,
           nLowerIdx = 0;
@@ -639,9 +628,9 @@ bool DictionaryNeo::seekEntry(const OUString &rWord,
         while( nLowerIdx <= nUpperIdx )
         {
             nMidIdx = (nLowerIdx + nUpperIdx) / 2;
-            DBG_ASSERT(pEntry[nMidIdx].is(), "lng : empty entry encountered");
+            DBG_ASSERT(aEntries[nMidIdx].is(), "lng : empty entry encountered");
 
-            int nCmp = - cmpDicEntry( pEntry[nMidIdx]->getDictionaryWord(),
+            int nCmp = - cmpDicEntry( aEntries[nMidIdx]->getDictionaryWord(),
                                       rWord, bSimilarOnly );
             if(nCmp == 0)
             {
@@ -667,13 +656,12 @@ bool DictionaryNeo::isSorted()
 {
     bool bRes = true;
 
-    const uno::Reference< XDictionaryEntry > *pEntry = aEntries.getConstArray();
     sal_Int32 nEntries = getCount();
     sal_Int32 i;
     for (i = 1;  i < nEntries;  i++)
     {
-        if (cmpDicEntry( pEntry[i-1]->getDictionaryWord(),
-                         pEntry[i]->getDictionaryWord() ) > 0)
+        if (cmpDicEntry( aEntries[i-1]->getDictionaryWord(),
+                         aEntries[i]->getDictionaryWord() ) > 0)
         {
             bRes = false;
             break;
@@ -711,19 +699,9 @@ bool DictionaryNeo::addEntry_Impl(const uno::Reference< XDictionaryEntry >& xDic
         {
             DBG_ASSERT(!bNeedEntries, "lng : entries still not loaded");
 
-            if (nCount >= aEntries.getLength())
-                aEntries.realloc( std::max(2 * nCount, nCount + 32) );
-            uno::Reference< XDictionaryEntry > *pEntry = aEntries.getArray();
-
-            // shift old entries right
-            sal_Int32 i;
-            for (i = nCount - 1; i >= nPos;  i--)
-                pEntry[ i+1 ] = pEntry[ i ];
             // insert new entry at specified position
-            pEntry[ nPos ] = xDicEntry;
+            aEntries.insert(aEntries.begin() + nPos, xDicEntry);
             SAL_WARN_IF(!isSorted(), "linguistic", "dictionary entries unsorted");
-
-            nCount++;
 
             bIsModified = true;
             bRes = true;
@@ -777,15 +755,14 @@ void SAL_CALL DictionaryNeo::setActive( sal_Bool bActivate )
         // remove entries from memory if dictionary is deactivated
         if (!bIsActive)
         {
-            bool bIsEmpty = nCount == 0;
+            bool bIsEmpty = aEntries.empty();
 
             // save entries first if necessary
             if (bIsModified && hasLocation() && !isReadonly())
             {
                 store();
 
-                aEntries.realloc( 0 );
-                nCount = 0;
+                aEntries.clear();
                 bNeedEntries = !bIsEmpty;
             }
             DBG_ASSERT( !bIsModified || !hasLocation() || isReadonly(),
@@ -810,7 +787,7 @@ sal_Int32 SAL_CALL DictionaryNeo::getCount(  )
 
     if (bNeedEntries)
         loadEntries( aMainURL );
-    return nCount;
+    return (sal_Int32)aEntries.size();
 }
 
 Locale SAL_CALL DictionaryNeo::getLocale(  )
@@ -845,10 +822,9 @@ uno::Reference< XDictionaryEntry > SAL_CALL DictionaryNeo::getEntry(
 
     sal_Int32 nPos;
     bool bFound = seekEntry( aWord, &nPos, true );
-    DBG_ASSERT( nCount <= aEntries.getLength(), "lng : wrong number of entries");
-    DBG_ASSERT(!bFound || nPos < nCount, "lng : index out of range");
+    DBG_ASSERT(!bFound || nPos < (sal_Int32)aEntries.size(), "lng : index out of range");
 
-    return bFound ? aEntries.getConstArray()[ nPos ]
+    return bFound ? aEntries[ nPos ]
                     : uno::Reference< XDictionaryEntry >();
 }
 
@@ -889,26 +865,6 @@ sal_Bool SAL_CALL
     return bRes;
 }
 
-static void lcl_SequenceRemoveElementAt(
-            uno::Sequence< uno::Reference< XDictionaryEntry > >& rEntries, int nPos )
-{
-    //TODO: helper for SequenceRemoveElementAt available?
-    if(nPos >= rEntries.getLength())
-        return;
-    uno::Sequence< uno::Reference< XDictionaryEntry > > aTmp(rEntries.getLength() - 1);
-    uno::Reference< XDictionaryEntry > * pOrig = rEntries.getArray();
-    uno::Reference< XDictionaryEntry > * pTemp = aTmp.getArray();
-    int nOffset = 0;
-    for(int i = 0; i < aTmp.getLength(); i++)
-    {
-        if(nPos == i)
-            nOffset++;
-        pTemp[i] = pOrig[i + nOffset];
-    }
-
-    rEntries = aTmp;
-}
-
 sal_Bool SAL_CALL DictionaryNeo::remove( const OUString& aWord )
         throw(RuntimeException, std::exception)
 {
@@ -923,22 +879,18 @@ sal_Bool SAL_CALL DictionaryNeo::remove( const OUString& aWord )
 
         sal_Int32 nPos;
         bool bFound = seekEntry( aWord, &nPos );
-        DBG_ASSERT( nCount < aEntries.getLength(),
-                "lng : wrong number of entries");
-        DBG_ASSERT(!bFound || nPos < nCount, "lng : index out of range");
+        DBG_ASSERT(!bFound || nPos < (sal_Int32)aEntries.size(), "lng : index out of range");
 
         // remove element if found
         if (bFound)
         {
             // entry to be removed
             uno::Reference< XDictionaryEntry >
-                    xDicEntry( aEntries.getConstArray()[ nPos ] );
+                    xDicEntry( aEntries[ nPos ] );
             DBG_ASSERT(xDicEntry.is(), "lng : dictionary entry is NULL");
 
-            nCount--;
+            aEntries.erase(aEntries.begin() + nPos);
 
-            //! the following call reduces the length of the sequence by 1 also
-            lcl_SequenceRemoveElementAt( aEntries, nPos );
             bRemoved = bIsModified = true;
 
             launchEvent( DictionaryEventFlags::DEL_ENTRY, xDicEntry );
@@ -955,7 +907,7 @@ sal_Bool SAL_CALL DictionaryNeo::isFull(  )
 
     if (bNeedEntries)
         loadEntries( aMainURL );
-    return nCount >= DIC_MAX_ENTRIES;
+    return aEntries.size() >= DIC_MAX_ENTRIES;
 }
 
 uno::Sequence< uno::Reference< XDictionaryEntry > >
@@ -966,10 +918,7 @@ uno::Sequence< uno::Reference< XDictionaryEntry > >
 
     if (bNeedEntries)
         loadEntries( aMainURL );
-    //! return sequence with length equal to the number of dictionary entries
-    //! (internal used sequence may have additional unused elements.)
-    return uno::Sequence< uno::Reference< XDictionaryEntry > >
-        (aEntries.getConstArray(), nCount);
+    return comphelper::containerToSequence(aEntries);
 }
 
 
@@ -978,12 +927,11 @@ void SAL_CALL DictionaryNeo::clear(  )
 {
     MutexGuard  aGuard( GetLinguMutex() );
 
-    if (!bIsReadonly && nCount)
+    if (!bIsReadonly && !aEntries.empty())
     {
-        // release all references to old entries and provide space for new ones
-        aEntries = uno::Sequence< uno::Reference< XDictionaryEntry > > ( 32 );
+        // release all references to old entries
+        aEntries.clear();
 
-        nCount = 0;
         bNeedEntries = false;
         bIsModified = true;
 
@@ -1146,7 +1094,6 @@ OUString SAL_CALL DicEntry::getReplacementText(  )
     MutexGuard  aGuard( GetLinguMutex() );
     return aReplacement;
 }
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

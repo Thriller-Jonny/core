@@ -43,7 +43,7 @@ void Test::testSort()
 
         clearRange(m_pDoc, ScRange(0, 0, 0, 1, SAL_N_ELEMENTS(aData), 0));
         aDataRange = insertRangeData(m_pDoc, aPos, aData, SAL_N_ELEMENTS(aData));
-        CPPUNIT_ASSERT_MESSAGE("failed to insert range data at correct position", aDataRange.aStart == aPos);
+        CPPUNIT_ASSERT_EQUAL_MESSAGE("failed to insert range data at correct position", aPos, aDataRange.aStart);
     }
 
     // Insert note in cell B2.
@@ -85,7 +85,7 @@ void Test::testSort()
         };
 
         aDataRange = insertRangeData(m_pDoc, aPos, aData, SAL_N_ELEMENTS(aData));
-        CPPUNIT_ASSERT_MESSAGE("failed to insert range data at correct position", aDataRange.aStart == aPos);
+        CPPUNIT_ASSERT_EQUAL_MESSAGE("failed to insert range data at correct position", aPos, aDataRange.aStart);
     }
 
     aSortData.nCol1 = aDataRange.aStart.Col();
@@ -141,7 +141,7 @@ void Test::testSortHorizontal()
 
     // Insert raw data into A1:D4.
     ScRange aDataRange = insertRangeData(m_pDoc, ScAddress(0,0,0), aData, SAL_N_ELEMENTS(aData));
-    CPPUNIT_ASSERT_EQUAL(OUString("A1:D4"), aDataRange.Format(SCA_VALID));
+    CPPUNIT_ASSERT_EQUAL(OUString("A1:D4"), aDataRange.Format(ScRefFlags::VALID));
 
     // Check the formula values.
     CPPUNIT_ASSERT_EQUAL(OUString("Yes-No"), m_pDoc->GetString(ScAddress(3,1,0)));
@@ -1062,7 +1062,7 @@ void Test::testSortRefUpdate4_Impl()
         ScAddress aPos(0,0,nTab);
         clearRange(m_pDoc, ScRange(0, 0, nTab, 1, SAL_N_ELEMENTS(aData), nTab));
         aLesson1Range = insertRangeData(m_pDoc, aPos, aData, SAL_N_ELEMENTS(aData));
-        CPPUNIT_ASSERT_MESSAGE("failed to insert range data at correct position", aLesson1Range.aStart == aPos);
+        CPPUNIT_ASSERT_EQUAL_MESSAGE("failed to insert range data at correct position", aPos, aLesson1Range.aStart);
     }
 
     ScRange aLesson2Range;
@@ -1080,7 +1080,7 @@ void Test::testSortRefUpdate4_Impl()
         ScAddress aPos(0,0,nTab);
         clearRange(m_pDoc, ScRange(0, 0, nTab, 1, SAL_N_ELEMENTS(aData), nTab));
         aLesson2Range = insertRangeData(m_pDoc, aPos, aData, SAL_N_ELEMENTS(aData));
-        CPPUNIT_ASSERT_MESSAGE("failed to insert range data at correct position", aLesson2Range.aStart == aPos);
+        CPPUNIT_ASSERT_EQUAL_MESSAGE("failed to insert range data at correct position", aPos, aLesson2Range.aStart);
     }
 
     ScRange aSortRange;
@@ -1098,7 +1098,7 @@ void Test::testSortRefUpdate4_Impl()
         ScAddress aPos(0,0,nTab);
         clearRange(m_pDoc, ScRange(0, 0, nTab, 1, SAL_N_ELEMENTS(aData), nTab));
         aSortRange = insertRangeData(m_pDoc, aPos, aData, SAL_N_ELEMENTS(aData));
-        CPPUNIT_ASSERT_MESSAGE("failed to insert range data at correct position", aSortRange.aStart == aPos);
+        CPPUNIT_ASSERT_EQUAL_MESSAGE("failed to insert range data at correct position", aPos, aSortRange.aStart);
     }
 
     ScDBDocFunc aFunc(getDocShell());
@@ -1265,7 +1265,7 @@ void Test::testSortRefUpdate5()
         ScAddress aPos(0,0,nTab);
         clearRange(m_pDoc, ScRange(0, 0, nTab, 2, SAL_N_ELEMENTS(aData), nTab));
         aSortRange = insertRangeData(m_pDoc, aPos, aData, SAL_N_ELEMENTS(aData));
-        CPPUNIT_ASSERT_MESSAGE("failed to insert range data at correct position", aSortRange.aStart == aPos);
+        CPPUNIT_ASSERT_EQUAL_MESSAGE("failed to insert range data at correct position", aPos, aSortRange.aStart);
 
         // Actual results and expected sorted results.
         for (SCROW nRow=0; nRow < static_cast<SCROW>(SAL_N_ELEMENTS(aValCheck)); ++nRow)
@@ -1357,7 +1357,7 @@ void Test::testSortRefUpdate6()
 
     ScAddress aPos(0,0,0);
     ScRange aDataRange = insertRangeData(m_pDoc, aPos, aData, SAL_N_ELEMENTS(aData));
-    CPPUNIT_ASSERT(aDataRange.aStart == aPos);
+    CPPUNIT_ASSERT_EQUAL(aPos, aDataRange.aStart);
 
     {
         // Expected output table content.  0 = empty cell
@@ -1497,7 +1497,7 @@ void Test::testSortBroadcaster()
 
         ScAddress aPos(0,0,0);
         ScRange aDataRange = insertRangeData(m_pDoc, aPos, aData, SAL_N_ELEMENTS(aData));
-        CPPUNIT_ASSERT(aDataRange.aStart == aPos);
+        CPPUNIT_ASSERT_EQUAL(aPos, aDataRange.aStart);
 
         {
             // Expected output table content.  0 = empty cell
@@ -1597,7 +1597,7 @@ void Test::testSortBroadcaster()
 
         ScAddress aPos(0,4,0);
         ScRange aDataRange = insertRangeData(m_pDoc, aPos, aData, SAL_N_ELEMENTS(aData));
-        CPPUNIT_ASSERT(aDataRange.aStart == aPos);
+        CPPUNIT_ASSERT_EQUAL(aPos, aDataRange.aStart);
 
         {
             // Expected output table content.  0 = empty cell
@@ -1690,6 +1690,82 @@ void Test::testSortBroadcaster()
         ASSERT_DOUBLES_EQUAL(nVal, 34.0);
         nVal = m_pDoc->GetValue(0,10,0);
         ASSERT_DOUBLES_EQUAL(nVal, 34.0);
+    }
+
+    m_pDoc->DeleteTab(0);
+}
+
+// tdf#99417 check that formulas are tracked that *only* indirectly depend on
+// sorted data and no other broadcasting than BroadcastBroadcasters is
+// involved (for which this test can not be included in testSortBroadcaster()).
+void Test::testSortBroadcastBroadcaster()
+{
+    SortRefNoUpdateSetter aUpdateSet;
+
+    sc::AutoCalcSwitch aACSwitch(*m_pDoc, true); // turn auto calc on.
+    m_pDoc->InsertTab(0, "Sort");
+
+    {
+        const char* aData[][3] = {
+            { "1", "=A1", "=B1" },
+            { "2", "=A2", "=B2" },
+        };
+
+        ScAddress aPos(0,0,0);
+        ScRange aDataRange = insertRangeData(m_pDoc, aPos, aData, SAL_N_ELEMENTS(aData));
+        CPPUNIT_ASSERT_EQUAL(aPos, aDataRange.aStart);
+
+        {
+            // Expected output table content.  0 = empty cell
+            const char* aOutputCheck[][3] = {
+                { "1", "1", "1" },
+                { "2", "2", "2" },
+            };
+
+            bool bSuccess = checkOutput<3>(m_pDoc, aDataRange, aOutputCheck, "Initial value");
+            CPPUNIT_ASSERT_MESSAGE("Table output check failed", bSuccess);
+        }
+
+        // Sort A1:A2.
+        m_pDoc->SetAnonymousDBData(
+                0, new ScDBData(STR_DB_LOCAL_NONAME, 0, 0, 0, 0, 1));
+
+        ScDBDocFunc aFunc(getDocShell());
+
+        // Sort A1:A2 by column A descending.
+        ScSortParam aSortData;
+        aSortData.nCol1 = 0;
+        aSortData.nCol2 = 0;
+        aSortData.nRow1 = 0;
+        aSortData.nRow2 = 1;
+        aSortData.bHasHeader = false;
+        aSortData.bByRow = true;
+        aSortData.maKeyState[0].bDoSort = true;
+        aSortData.maKeyState[0].nField = 0;
+        aSortData.maKeyState[0].bAscending = false;
+        bool bSorted = aFunc.Sort(0, aSortData, true, true, true);
+        CPPUNIT_ASSERT(bSorted);
+
+        {
+            // Expected output table content.  0 = empty cell
+            const char* aOutputCheck[][3] = {
+                { "2", "2", "2" },
+                { "1", "1", "1" },
+            };
+
+            bool bSuccess = checkOutput<3>(m_pDoc, aDataRange, aOutputCheck, "Sorted without reference update");
+            CPPUNIT_ASSERT_MESSAGE("Table output check failed", bSuccess);
+        }
+
+        // Make sure that the formulas in B1:C2 are not adjusted.
+        if (!checkFormula(*m_pDoc, ScAddress(1,0,0), "A1"))
+            CPPUNIT_FAIL("Wrong formula!");
+        if (!checkFormula(*m_pDoc, ScAddress(1,1,0), "A2"))
+            CPPUNIT_FAIL("Wrong formula!");
+        if (!checkFormula(*m_pDoc, ScAddress(2,0,0), "B1"))
+            CPPUNIT_FAIL("Wrong formula!");
+        if (!checkFormula(*m_pDoc, ScAddress(2,1,0), "B2"))
+            CPPUNIT_FAIL("Wrong formula!");
     }
 
     m_pDoc->DeleteTab(0);
@@ -1799,7 +1875,7 @@ void Test::testSortPartialFormulaGroup()
     const ScFormulaCell* pFC = m_pDoc->GetFormulaCell(ScAddress(1,1,0));
     CPPUNIT_ASSERT(pFC);
     CPPUNIT_ASSERT_MESSAGE("This formula cell should be the first in a group.", pFC->IsSharedTop());
-    CPPUNIT_ASSERT_MESSAGE("Incorrect formula group length.", pFC->GetSharedLength() == 5);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("Incorrect formula group length.", static_cast<SCROW>(5), pFC->GetSharedLength());
 
     ScDBDocFunc aFunc(getDocShell());
 

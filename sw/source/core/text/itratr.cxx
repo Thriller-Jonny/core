@@ -390,7 +390,7 @@ static bool lcl_MinMaxString( SwMinMaxArgs& rArg, SwFont* pFnt, const OUString &
         }
 
         SwDrawTextInfo aDrawInf( rArg.pSh, *rArg.pOut, nullptr, rText, nIdx, nStop - nIdx );
-        long nAktWidth = pFnt->_GetTextSize( aDrawInf ).Width();
+        long nAktWidth = pFnt->GetTextSize_( aDrawInf ).Width();
         rArg.nRowWidth += nAktWidth;
         if( bClear )
             rArg.NewWord();
@@ -555,16 +555,14 @@ static void lcl_MinMaxNode( SwFrameFormat* pNd, SwMinMaxNodeArgs* pIn )
  * Changing this method very likely requires changing of GetScalingOfSelectedText
  */
 void SwTextNode::GetMinMaxSize( sal_uLong nIndex, sal_uLong& rMin, sal_uLong &rMax,
-                               sal_uLong& rAbsMin, OutputDevice* pOut ) const
+                               sal_uLong& rAbsMin ) const
 {
     SwViewShell const * pSh = GetDoc()->getIDocumentLayoutAccess().GetCurrentViewShell();
+    OutputDevice* pOut = nullptr;
+    if( pSh )
+        pOut = pSh->GetWin();
     if( !pOut )
-    {
-        if( pSh )
-            pOut = pSh->GetWin();
-        if( !pOut )
-            pOut = Application::GetDefaultDevice();
-    }
+        pOut = Application::GetDefaultDevice();
 
     MapMode aOldMap( pOut->GetMapMode() );
     pOut->SetMapMode( MapMode( MAP_TWIP ) );
@@ -668,7 +666,7 @@ void SwTextNode::GetMinMaxSize( sal_uLong nIndex, sal_uLong& rMin, sal_uLong &rM
                 OUString sTmp( cChar );
                 SwDrawTextInfo aDrawInf( getIDocumentLayoutAccess().GetCurrentViewShell(),
                     *pOut, nullptr, sTmp, 0, 1, 0, false );
-                nAktWidth = aIter.GetFnt()->_GetTextSize( aDrawInf ).Width();
+                nAktWidth = aIter.GetFnt()->GetTextSize_( aDrawInf ).Width();
                 aArg.nWordWidth += nAktWidth;
                 aArg.nRowWidth += nAktWidth;
                 if( (long)rAbsMin < aArg.nWordWidth )
@@ -706,7 +704,7 @@ void SwTextNode::GetMinMaxSize( sal_uLong nIndex, sal_uLong& rMin, sal_uLong &rM
                             if( RES_FLYFRMFMT == pFrameFormat->Which()
                                 && rTmpSize.GetWidthPercent() )
                             {
-                                // This is a hack for the wollowing situation: In the paragraph there's a
+                                // This is a hack for the following situation: In the paragraph there's a
                                 // text frame with relative size. Then let's take 0.5 cm as minimum width
                                 // and USHRT_MAX as maximum width
                                 // It were cleaner and maybe necessary later on to iterate over the content
@@ -893,7 +891,7 @@ sal_uInt16 SwTextNode::GetScalingOfSelectedText( sal_Int32 nStt, sal_Int32 nEnd 
         if ( nStop > nIdx )
         {
             SwDrawTextInfo aDrawInf( pSh, *pOut, nullptr, GetText(), nIdx, nStop - nIdx );
-            nProWidth += aIter.GetFnt()->_GetTextSize( aDrawInf ).Width();
+            nProWidth += aIter.GetFnt()->GetTextSize_( aDrawInf ).Width();
         }
 
         nIdx = nStop;
@@ -910,7 +908,7 @@ sal_uInt16 SwTextNode::GetScalingOfSelectedText( sal_Int32 nStt, sal_Int32 nEnd 
             // tab receives width of one space
             OUString sTmp( CH_BLANK );
             SwDrawTextInfo aDrawInf( pSh, *pOut, nullptr, sTmp, 0, 1 );
-            nProWidth += aIter.GetFnt()->_GetTextSize( aDrawInf ).Width();
+            nProWidth += aIter.GetFnt()->GetTextSize_( aDrawInf ).Width();
             nIdx++;
         }
         else if ( cChar == CHAR_SOFTHYPHEN )
@@ -919,7 +917,7 @@ sal_uInt16 SwTextNode::GetScalingOfSelectedText( sal_Int32 nStt, sal_Int32 nEnd 
         {
             OUString sTmp( cChar );
             SwDrawTextInfo aDrawInf( pSh, *pOut, nullptr, sTmp, 0, 1 );
-            nProWidth += aIter.GetFnt()->_GetTextSize( aDrawInf ).Width();
+            nProWidth += aIter.GetFnt()->GetTextSize_( aDrawInf ).Width();
             nIdx++;
         }
         else if ( pHint && ( cChar == CH_TXTATR_BREAKWORD || cChar == CH_TXTATR_INWORD ) )
@@ -931,7 +929,7 @@ sal_uInt16 SwTextNode::GetScalingOfSelectedText( sal_Int32 nStt, sal_Int32 nEnd 
                     const OUString aText = pHint->GetFootnote().GetNumStr();
                     SwDrawTextInfo aDrawInf( pSh, *pOut, nullptr, aText, 0, aText.getLength() );
 
-                    nProWidth += aIter.GetFnt()->_GetTextSize( aDrawInf ).Width();
+                    nProWidth += aIter.GetFnt()->GetTextSize_( aDrawInf ).Width();
                     break;
                 }
 
@@ -942,7 +940,7 @@ sal_uInt16 SwTextNode::GetScalingOfSelectedText( sal_Int32 nStt, sal_Int32 nEnd 
                     OUString const aText = pField->ExpandField(true);
                     SwDrawTextInfo aDrawInf( pSh, *pOut, nullptr, aText, 0, aText.getLength() );
 
-                    nProWidth += aIter.GetFnt()->_GetTextSize( aDrawInf ).Width();
+                    nProWidth += aIter.GetFnt()->GetTextSize_( aDrawInf ).Width();
                     break;
                 }
 
@@ -989,7 +987,7 @@ sal_uInt16 SwTextNode::GetScalingOfSelectedText( sal_Int32 nStt, sal_Int32 nEnd 
 
     SwDrawTextInfo aDrawInf( pSh, *pOut, nullptr, GetText(), nStt, 1 );
     return (sal_uInt16)
-           ( nWidth ? ((100 * aIter.GetFnt()->_GetTextSize( aDrawInf ).Height()) / nWidth ) : 0 );
+           ( nWidth ? ((100 * aIter.GetFnt()->GetTextSize_( aDrawInf ).Height()) / nWidth ) : 0 );
 }
 
 SwTwips SwTextNode::GetWidthOfLeadingTabs() const

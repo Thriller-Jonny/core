@@ -267,12 +267,6 @@ Bitmap BMP_GRAPHIC
     File = "graphic.bmp" ;
 };
 
-#define SfxStyleFamiliesRes1\
-    Text [ en-US ] = "Graphic Styles" ;\
-
-#define SfxStyleFamiliesRes2\
-    Text [ en-US ] = "Presentation Styles" ;\
-
 String STR_STYLE_FILTER_USED
 {
     Text [ en-US ] = "Applied Styles" ;
@@ -292,8 +286,8 @@ SfxStyleFamilies DLG_STYLE_DESIGNER
     {
         SfxStyleFamilyItem RID_GRAPHICSTYLEFAMILY
         {
-            SfxStyleFamiliesRes1
-            StyleFamily = SFX_STYLE_FAMILY_PARA ;
+            Text [ en-US ] = "Graphic Styles" ;
+            StyleFamily = SfxStyleFamily::Para ;
             FilterList [ en-US ] =
             {
                 < "All Styles" ; SFXSTYLEBIT_ALL_VISIBLE ; > ;
@@ -304,8 +298,8 @@ SfxStyleFamilies DLG_STYLE_DESIGNER
         };
         SfxStyleFamilyItem RID_PRESENTATIONSTYLEFAMILY
         {
-            SfxStyleFamiliesRes2
-            StyleFamily = SFX_STYLE_FAMILY_PSEUDO ;
+            Text [ en-US ] = "Presentation Styles" ;
+            StyleFamily = SfxStyleFamily::Pseudo ;
             FilterList [ en-US ] =
             {
                 < "All Styles" ; SFXSTYLEBIT_ALL_VISIBLE ; > ;

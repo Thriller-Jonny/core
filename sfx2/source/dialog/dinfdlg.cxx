@@ -90,19 +90,6 @@ struct CustomProperty
         m_sName( sName ), m_aValue( rValue ) {}
 };
 
-static
-bool operator==(const util::DateTime &i_rLeft, const util::DateTime &i_rRight)
-{
-    return i_rLeft.Year             == i_rRight.Year
-        && i_rLeft.Month            == i_rRight.Month
-        && i_rLeft.Day              == i_rRight.Day
-        && i_rLeft.Hours            == i_rRight.Hours
-        && i_rLeft.Minutes          == i_rRight.Minutes
-        && i_rLeft.Seconds          == i_rRight.Seconds
-        && i_rLeft.NanoSeconds      == i_rRight.NanoSeconds
-        && i_rLeft.IsUTC            == i_rRight.IsUTC;
-}
-
 SfxPoolItem* SfxDocumentInfoItem::CreateDefault() { return new SfxDocumentInfoItem; }
 
 const sal_uInt16 HI_NAME = 1;
@@ -175,14 +162,14 @@ OUString ConvertDateTime_Impl( const OUString& rName,
 {
      Date aD(uDT);
      tools::Time aT(uDT);
-     const OUString pDelim ( ", " );
+     const OUString aDelim( ", " );
      OUString aStr( rWrapper.getDate( aD ) );
-     aStr += pDelim;
+     aStr += aDelim;
      aStr += rWrapper.getTime( aT );
      OUString aAuthor = comphelper::string::stripStart(rName, ' ');
      if (!aAuthor.isEmpty())
      {
-        aStr += pDelim;
+        aStr += aDelim;
         aStr += aAuthor;
      }
      return aStr;
@@ -276,7 +263,6 @@ SfxDocumentInfoItem::SfxDocumentInfoItem( const OUString& rFile,
 }
 
 
-
 SfxDocumentInfoItem::SfxDocumentInfoItem( const SfxDocumentInfoItem& rItem )
     : SfxStringItem( rItem )
     , m_AutoloadDelay( rItem.getAutoloadDelay() )
@@ -301,10 +287,10 @@ SfxDocumentInfoItem::SfxDocumentInfoItem( const SfxDocumentInfoItem& rItem )
     , m_bUseUserData( rItem.m_bUseUserData )
     , m_bUseThumbnailSave( rItem.m_bUseThumbnailSave )
 {
-    for ( size_t i = 0; i < rItem.m_aCustomProperties.size(); i++ )
+    for (const CustomProperty* pOtherProp : rItem.m_aCustomProperties)
     {
-        CustomProperty* pProp = new CustomProperty( rItem.m_aCustomProperties[i]->m_sName,
-                                                    rItem.m_aCustomProperties[i]->m_aValue );
+        CustomProperty* pProp = new CustomProperty( pOtherProp->m_sName,
+                                                    pOtherProp->m_aValue );
         m_aCustomProperties.push_back( pProp );
     }
 
@@ -419,12 +405,12 @@ void SfxDocumentInfoItem::UpdateDocumentInfo(
             }
         }
 
-        for ( size_t k = 0; k < m_aCustomProperties.size(); ++k )
+        for (const CustomProperty* pProp : m_aCustomProperties)
         {
             try
             {
-                xContainer->addProperty( m_aCustomProperties[k]->m_sName,
-                    beans::PropertyAttribute::REMOVABLE, m_aCustomProperties[k]->m_aValue );
+                xContainer->addProperty( pProp->m_sName,
+                    beans::PropertyAttribute::REMOVABLE, pProp->m_aValue );
             }
             catch ( Exception& )
             {
@@ -437,7 +423,6 @@ void SfxDocumentInfoItem::UpdateDocumentInfo(
         SAL_WARN( "sfx.dialog", "SfxDocumentInfoItem::updateDocumentInfo(): exception while removing custom properties" );
     }
 }
-
 
 
 void SfxDocumentInfoItem::SetDeleteUserData( bool bSet )
@@ -459,10 +444,10 @@ void SfxDocumentInfoItem::SetUseThumbnailSave( bool bSet )
 std::vector< CustomProperty* > SfxDocumentInfoItem::GetCustomProperties() const
 {
     std::vector< CustomProperty* > aRet;
-    for ( size_t i = 0; i < m_aCustomProperties.size(); i++ )
+    for (CustomProperty* pOtherProp : m_aCustomProperties)
     {
-        CustomProperty* pProp = new CustomProperty( m_aCustomProperties[i]->m_sName,
-                                                    m_aCustomProperties[i]->m_aValue );
+        CustomProperty* pProp = new CustomProperty( pOtherProp->m_sName,
+                                                    pOtherProp->m_aValue );
         aRet.push_back( pProp );
     }
 
@@ -471,8 +456,8 @@ std::vector< CustomProperty* > SfxDocumentInfoItem::GetCustomProperties() const
 
 void SfxDocumentInfoItem::ClearCustomProperties()
 {
-    for ( size_t i = 0; i < m_aCustomProperties.size(); i++ )
-        delete m_aCustomProperties[i];
+    for (CustomProperty* pProp : m_aCustomProperties)
+        delete pProp;
     m_aCustomProperties.clear();
 }
 
@@ -882,7 +867,7 @@ IMPL_STATIC_LINK_NOARG_TYPED(SfxDocumentPage, ChangePassHdl, Button*, void)
         SfxItemSet* pMedSet = pShell->GetMedium()->GetItemSet();
         if (!pMedSet)
             break;
-        const SfxFilter* pFilter = pShell->GetMedium()->GetFilter();
+        std::shared_ptr<const SfxFilter> pFilter = pShell->GetMedium()->GetFilter();
         if (!pFilter)
             break;
 
@@ -974,10 +959,10 @@ bool SfxDocumentPage::FillItemSet( SfxItemSet* rSet )
 
         if ( pExpSet && SfxItemState::SET == pExpSet->GetItemState( SID_DOCINFO, true, &pItem ) )
         {
-            const SfxDocumentInfoItem* m_pInfoItem = static_cast<const SfxDocumentInfoItem*>(pItem);
+            const SfxDocumentInfoItem* pInfoItem = static_cast<const SfxDocumentInfoItem*>(pItem);
             bool bUseData = ( TRISTATE_TRUE == m_pUseUserDataCB->GetState() );
-            const_cast<SfxDocumentInfoItem*>(m_pInfoItem)->SetUseUserData( bUseData );
-            rSet->Put( SfxDocumentInfoItem( *m_pInfoItem ) );
+            const_cast<SfxDocumentInfoItem*>(pInfoItem)->SetUseUserData( bUseData );
+            rSet->Put( SfxDocumentInfoItem( *pInfoItem ) );
             bRet = true;
         }
     }
@@ -1011,10 +996,10 @@ bool SfxDocumentPage::FillItemSet( SfxItemSet* rSet )
 
         if ( pExpSet && SfxItemState::SET == pExpSet->GetItemState( SID_DOCINFO, true, &pItem ) )
         {
-            const SfxDocumentInfoItem* m_pxInfoItem = static_cast<const SfxDocumentInfoItem*>(pItem);
+            const SfxDocumentInfoItem* pInfoItem = static_cast<const SfxDocumentInfoItem*>(pItem);
             bool bUseThumbnail = ( TRISTATE_TRUE == m_pUseThumbnailSaveCB->GetState() );
-            const_cast<SfxDocumentInfoItem*>(m_pxInfoItem)->SetUseThumbnailSave( bUseThumbnail );
-            rSet->Put( SfxDocumentInfoItem( *m_pxInfoItem ) );
+            const_cast<SfxDocumentInfoItem*>(pInfoItem)->SetUseThumbnailSave( bUseThumbnail );
+            rSet->Put( SfxDocumentInfoItem( *pInfoItem ) );
             bRet = true;
         }
     }
@@ -1071,7 +1056,8 @@ void SfxDocumentPage::Reset( const SfxItemSet* rSet )
 
     // determine size and type
     OUString aSizeText( m_aUnknownSize );
-    if ( aURL.GetProtocol() == INetProtocol::File )
+    if ( aURL.GetProtocol() == INetProtocol::File ||
+         aURL.isAnyKnownWebDAVScheme() )
         aSizeText = CreateSizeText( SfxContentHelper::GetSize( aURL.GetMainURL( INetURLObject::NO_DECODE ) ) );
     m_pShowSizeFT->SetText( aSizeText );
 
@@ -1096,7 +1082,7 @@ void SfxDocumentPage::Reset( const SfxItemSet* rSet )
         m_pFileValEd->SetText( aURL.GetPartBeforeLastName() );
 
     // handle access data
-    bool m_bUseUserData = rInfoItem.IsUseUserData();
+    bool bUseUserData = rInfoItem.IsUseUserData();
     const LocaleDataWrapper& rLocaleWrapper( Application::GetSettings().GetLocaleDataWrapper() );
     m_pCreateValFt->SetText( ConvertDateTime_Impl( rInfoItem.getAuthor(),
         rInfoItem.getCreationDate(), rLocaleWrapper ) );
@@ -1109,7 +1095,7 @@ void SfxDocumentPage::Reset( const SfxItemSet* rSet )
         m_pPrintValFt->SetText( ConvertDateTime_Impl( rInfoItem.getPrintedBy(),
             aTime, rLocaleWrapper ) );
     const long nTime = rInfoItem.getEditingDuration();
-    if ( m_bUseUserData )
+    if ( bUseUserData )
     {
         const tools::Time aT( nTime/3600, (nTime%3600)/60, nTime%60 );
         m_pTimeLogValFt->SetText( rLocaleWrapper.getDuration( aT ) );
@@ -1117,7 +1103,7 @@ void SfxDocumentPage::Reset( const SfxItemSet* rSet )
             rInfoItem.getEditingCycles() ) );
     }
 
-    bool m_bUseThumbnailSave = rInfoItem.IsUseThumbnailSave();
+    bool bUseThumbnailSave = rInfoItem.IsUseThumbnailSave();
 
     // Check for cmis properties where otherwise unavailable
     if ( rInfoItem.isCmisDocument( ) )
@@ -1130,13 +1116,13 @@ void SfxDocumentPage::Reset( const SfxItemSet* rSet )
             {
                 Sequence< sal_Int64 > seqValue;
                 aCmisProps[i].Value >>= seqValue;
-                SvNumberFormatter m_aNumberFormatter( ::comphelper::getProcessComponentContext(),
+                SvNumberFormatter aNumberFormatter( ::comphelper::getProcessComponentContext(),
                         Application::GetSettings().GetLanguageTag().getLanguageType() );
-                sal_uInt32 nIndex = m_aNumberFormatter.GetFormatIndex( NF_NUMBER_SYSTEM );
+                sal_uInt32 nIndex = aNumberFormatter.GetFormatIndex( NF_NUMBER_SYSTEM );
                 if ( seqValue.getLength( ) > 0 )
                 {
                     OUString sValue;
-                    m_aNumberFormatter.GetInputLineString( seqValue[0], nIndex, sValue );
+                    aNumberFormatter.GetInputLineString( seqValue[0], nIndex, sValue );
                     m_pShowSizeFT->SetText( CreateSizeText( sValue.toInt64( ) ) );
                 }
             }
@@ -1168,12 +1154,12 @@ void SfxDocumentPage::Reset( const SfxItemSet* rSet )
         }
     }
 
-    m_pUseUserDataCB->SetState( static_cast<TriState>(m_bUseUserData) );
+    m_pUseUserDataCB->SetState( static_cast<TriState>(bUseUserData) );
     m_pUseUserDataCB->SaveValue();
     m_pUseUserDataCB->Enable( bEnableUseUserData );
     bHandleDelete = false;
     m_pDeleteBtn->Enable( bEnableUseUserData );
-    m_pUseThumbnailSaveCB->SetState( static_cast<TriState>(m_bUseThumbnailSave) );
+    m_pUseThumbnailSaveCB->SetState( static_cast<TriState>(bUseThumbnailSave) );
     m_pUseThumbnailSaveCB->SaveValue();
 }
 
@@ -1199,7 +1185,7 @@ SfxDocumentInfoDialog::SfxDocumentInfoDialog( vcl::Window* pParent,
          rItemSet.GetItemState( SID_EXPLORER_PROPS_START, false, &pItem ) )
     {
         // File name
-        OUString aFile( rInfoItem.GetValue() );
+        const OUString& aFile( rInfoItem.GetValue() );
 
         INetURLObject aURL;
         aURL.SetSmartProtocol( INetProtocol::File );
@@ -1208,18 +1194,18 @@ SfxDocumentInfoDialog::SfxDocumentInfoDialog( vcl::Window* pParent,
         {
             OUString aLastName( aURL.GetLastName() );
             if ( !aLastName.isEmpty() )
-                aTitle += aLastName;
+                aTitle = aTitle.replaceFirst("%1", aLastName);
             else
-                aTitle += aFile;
+                aTitle = aTitle.replaceFirst("%1", aFile);
         }
         else
-            aTitle += SfxResId( STR_NONAME ).toString();
+            aTitle = aTitle.replaceFirst("%1", SfxResId( STR_NONAME ).toString());
     }
     else
     {
         DBG_ASSERT( dynamic_cast<const SfxStringItem *>(pItem) != nullptr,
                     "SfxDocumentInfoDialog:<SfxStringItem> expected" );
-        aTitle += static_cast<const SfxStringItem*>(pItem)->GetValue();
+        aTitle = aTitle.replaceFirst("%1", static_cast<const SfxStringItem*>(pItem)->GetValue());
     }
     SetText( aTitle );
 
@@ -1230,7 +1216,6 @@ SfxDocumentInfoDialog::SfxDocumentInfoDialog( vcl::Window* pParent,
     AddTabPage("cmisprops", SfxCmisPropertiesPage::Create, nullptr);
     AddTabPage("security", SfxSecurityPage::Create, nullptr);
 }
-
 
 
 void SfxDocumentInfoDialog::PageCreated( sal_uInt16 nId, SfxTabPage &rPage )
@@ -2271,9 +2256,9 @@ void SfxCustomPropertiesPage::Reset( const SfxItemSet* rItemSet )
     m_pPropertiesCtrl->ClearAllLines();
     const SfxDocumentInfoItem& rInfoItem = static_cast<const SfxDocumentInfoItem &>(rItemSet->Get(SID_DOCINFO));
     std::vector< CustomProperty* > aCustomProps = rInfoItem.GetCustomProperties();
-    for ( size_t i = 0; i < aCustomProps.size(); i++ )
+    for (CustomProperty* pCustomProp : aCustomProps)
     {
-        m_pPropertiesCtrl->AddLine( aCustomProps[i]->m_sName, aCustomProps[i]->m_aValue, false );
+        m_pPropertiesCtrl->AddLine( pCustomProp->m_sName, pCustomProp->m_aValue, false );
     }
 }
 
@@ -2329,7 +2314,6 @@ CmisPropertyLine::CmisPropertyLine(vcl::Window* pParent)
     , m_bRequired(false)
     , m_bMultiValued(false)
     , m_bOpenChoice(false)
-    , m_nNumValue(1)
 {
     m_pUIBuilder = new VclBuilder( pParent, getUIRootDir(), "sfx/ui/cmisline.ui");
     get( m_pFrame, "CmisFrame" );
@@ -2379,7 +2363,6 @@ long CmisPropertyLine::getItemHeight() const
 CmisPropertiesWindow::CmisPropertiesWindow(SfxTabPage* pParent):
     m_aNumberFormatter( ::comphelper::getProcessComponentContext(),
                         Application::GetSettings().GetLanguageTag().getLanguageType() )
-
 {
     pParent->get(m_pBox, "CmisWindow");
     CmisPropertyLine aTemp( m_pBox );
@@ -2403,16 +2386,6 @@ void CmisPropertiesWindow::ClearAllLines()
     m_aCmisPropertiesLines.clear();
 }
 
-sal_uInt16 CmisPropertiesWindow::GetLineCount() const
-{
-    sal_uInt16 nCount = 0;
-    std::vector< CmisPropertyLine* >::const_iterator pIter;
-    for ( pIter = m_aCmisPropertiesLines.begin();
-          pIter != m_aCmisPropertiesLines.end(); ++pIter )
-        nCount += ( (*pIter)->m_nNumValue + 1 );
-    return nCount;
-}
-
 void CmisPropertiesWindow::AddLine( const OUString& sId, const OUString& sName,
                                     const OUString& sType, const bool bUpdatable,
                                     const bool bRequired, const bool bMultiValued,
@@ -2432,8 +2405,8 @@ void CmisPropertiesWindow::AddLine( const OUString& sId, const OUString& sName,
         Sequence< sal_Int64 > seqValue;
         rAny >>= seqValue;
         sal_uInt32 nIndex = m_aNumberFormatter.GetFormatIndex( NF_NUMBER_SYSTEM );
-        sal_Int32 m_nNumValue = seqValue.getLength( );
-        for ( sal_Int32 i = 0; i < m_nNumValue; ++i )
+        sal_Int32 nNumValue = seqValue.getLength( );
+        for ( sal_Int32 i = 0; i < nNumValue; ++i )
         {
             OUString sValue;
             m_aNumberFormatter.GetInputLineString( seqValue[i], nIndex, sValue );
@@ -2447,8 +2420,8 @@ void CmisPropertiesWindow::AddLine( const OUString& sId, const OUString& sName,
         Sequence< double > seqValue;
         rAny >>= seqValue;
         sal_uInt32 nIndex = m_aNumberFormatter.GetFormatIndex( NF_NUMBER_SYSTEM );
-        sal_Int32 m_nNumValue = seqValue.getLength( );
-        for ( sal_Int32 i = 0; i < m_nNumValue; ++i )
+        sal_Int32 nNumValue = seqValue.getLength( );
+        for ( sal_Int32 i = 0; i < nNumValue; ++i )
         {
             OUString sValue;
             m_aNumberFormatter.GetInputLineString( seqValue[i], nIndex, sValue );
@@ -2462,8 +2435,8 @@ void CmisPropertiesWindow::AddLine( const OUString& sId, const OUString& sName,
     {
         Sequence<sal_Bool> seqValue;
         rAny >>= seqValue;
-        sal_Int32 m_nNumValue = seqValue.getLength( );
-        for ( sal_Int32 i = 0; i < m_nNumValue; ++i )
+        sal_Int32 nNumValue = seqValue.getLength( );
+        for ( sal_Int32 i = 0; i < nNumValue; ++i )
         {
             CmisYesNo* pYesNo = new CmisYesNo( m_pBox, seqValue[i] );
             pYesNo->m_aYesButton->Enable( bUpdatable );
@@ -2475,8 +2448,8 @@ void CmisPropertiesWindow::AddLine( const OUString& sId, const OUString& sName,
     {
         Sequence< OUString > seqValue;
         rAny >>= seqValue;
-        sal_Int32 m_nNumValue = seqValue.getLength( );
-        for ( sal_Int32 i = 0; i < m_nNumValue; ++i )
+        sal_Int32 nNumValue = seqValue.getLength( );
+        for ( sal_Int32 i = 0; i < nNumValue; ++i )
         {
             CmisValue* pValue = new CmisValue( m_pBox, seqValue[i] );
             pValue->m_aValueEdit->SetReadOnly( !bUpdatable );
@@ -2487,15 +2460,14 @@ void CmisPropertiesWindow::AddLine( const OUString& sId, const OUString& sName,
     {
         Sequence< util::DateTime > seqValue;
         rAny >>= seqValue;
-        sal_Int32 m_nNumValue = seqValue.getLength( );
-        for ( sal_Int32 i = 0; i < m_nNumValue; ++i )
+        sal_Int32 nNumValue = seqValue.getLength( );
+        for ( sal_Int32 i = 0; i < nNumValue; ++i )
         {
             CmisDateTime* pDateTime = new CmisDateTime( m_pBox, seqValue[i]);
             pDateTime->m_aDateField->SetReadOnly( !bUpdatable );
             pDateTime->m_aTimeField->SetReadOnly( !bUpdatable );
             pNewLine->m_aDateTimes.push_back( pDateTime );
         }
-
     }
     pNewLine->m_aName->SetText( sName );
     pNewLine->m_aName->Show();
@@ -2593,7 +2565,7 @@ Sequence< document::CmisProperty > CmisPropertiesWindow::GetCmisProperties() con
                     util::DateTime aDateTime( aTmpTime.GetNanoSec(), aTmpTime.GetSec(),
                                               aTmpTime.GetMin(), aTmpTime.GetHour(),
                                               aTmpDate.GetDay(), aTmpDate.GetMonth(),
-                                              aTmpDate.GetYear(), sal_True );
+                                              aTmpDate.GetYear(), true );
                     seqValue[k] = aDateTime;
                 }
                 aPropertiesSeq[i].Value <<= makeAny( seqValue );
@@ -2672,10 +2644,13 @@ void CmisPropertiesControl::AddLine( const OUString& sId, const OUString& sName,
                                      const bool bOpenChoice, Any& aChoices, Any& rAny
                                      )
 {
-    m_rVertScroll.SetRangeMax( m_pPropertiesWin.GetLineCount() + 1 );
-    m_rVertScroll.DoScroll( m_pPropertiesWin.GetLineCount() + 1 );
     m_pPropertiesWin.AddLine( sId, sName, sType, bUpdatable, bRequired, bMultiValued,
                                bOpenChoice, aChoices, rAny );
+    //compute logical elements
+    sal_Int32 nLogicElements = ( m_pPropertiesWin.getBoxHeight()
+                                 + m_pPropertiesWin.GetItemHeight() ) / m_pPropertiesWin.GetItemHeight();
+    m_rVertScroll.SetRangeMax( nLogicElements );
+    m_rVertScroll.DoScroll( nLogicElements );
     checkAutoVScroll();
 }
 
@@ -2684,6 +2659,17 @@ SfxCmisPropertiesPage::SfxCmisPropertiesPage( vcl::Window* pParent, const SfxIte
     : SfxTabPage(pParent, "CmisInfoPage", "sfx/ui/cmisinfopage.ui", &rItemSet)
     , m_pPropertiesCtrl( this )
 {
+}
+
+SfxCmisPropertiesPage::~SfxCmisPropertiesPage()
+{
+    disposeOnce();
+}
+
+void SfxCmisPropertiesPage::dispose()
+{
+    m_pPropertiesCtrl.ClearAllLines();
+    SfxTabPage::dispose();
 }
 
 bool SfxCmisPropertiesPage::FillItemSet( SfxItemSet* rSet )
@@ -2784,5 +2770,24 @@ VclPtr<SfxTabPage> SfxCmisPropertiesPage::Create( vcl::Window* pParent, const Sf
 {
     return VclPtr<SfxCmisPropertiesPage>::Create( pParent, *rItemSet );
 }
+
+void SfxCmisPropertiesPage::SetPosSizePixel(const Point& rAllocPos, const Size& rAllocation)
+{
+    SfxTabPage::SetPosSizePixel(rAllocPos, rAllocation);
+    m_pPropertiesCtrl.setScrollRange();
+}
+
+void SfxCmisPropertiesPage::SetSizePixel(const Size& rAllocation)
+{
+    SfxTabPage::SetSizePixel(rAllocation);
+    m_pPropertiesCtrl.setScrollRange();
+}
+
+void SfxCmisPropertiesPage::SetPosPixel(const Point& rAllocPos)
+{
+    SfxTabPage::SetPosPixel(rAllocPos);
+    m_pPropertiesCtrl.setScrollRange();
+}
+
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -149,7 +149,6 @@ enum FieldIdEnum {
 };
 
 
-
 class XMLTextFieldExport
 {
     SvXMLExport& rExport;
@@ -190,7 +189,7 @@ public:
         const css::uno::Reference < css::text::XText > & rText);
 
     /// export all field declarations, or only those that have been used?
-    /// Calling this method will reset the list of used field declataions.
+    /// Calling this method will reset the list of used field declarations.
     void SetExportOnlyUsedFieldDeclarations(
         bool bExportOnlyUsed = true);
 
@@ -230,9 +229,7 @@ protected:
 
     /// export an element with string content
     void ExportElement(enum ::xmloff::token::XMLTokenEnum eElement, /// element token
-                       const OUString& sContent, /// element content
-                       bool bAddSpace = false); /// add blanks around
-                                                        /// element?
+                       const OUString& sContent); /// element content
 
     /// export a macro (as used in the macro field)
     void ExportMacro( const css::uno::Reference< css::beans::XPropertySet> & rPropSet,
@@ -270,39 +267,33 @@ protected:
     void ProcessString(
         enum ::xmloff::token::XMLTokenEnum eXmlName,        /// attribute token (namespace text)
         sal_uInt16 nValuePrefix,
-        const OUString& sValue,  /// attribute value
-        bool bOmitEmpty = false, /// omit attribute, if value is empty
-        sal_uInt16 nPrefix = XML_NAMESPACE_TEXT);   /// attribute name prefix
+        const OUString& sValue);  /// attribute value
 
 
     /// export a string attribute, omit if default
     void ProcessString(
         enum ::xmloff::token::XMLTokenEnum eXmlName,        /// attribute token (namespace text)
         const OUString& sValue,  /// attribute value
-        const OUString& sDefault, /// default value; omit if equal
-        sal_uInt16 nPrefix = XML_NAMESPACE_TEXT);   /// attribute name prefix
+        const OUString& sDefault); /// default value; omit if equal
 
     /// export a string attribute, omit if default
     void ProcessString(
         enum ::xmloff::token::XMLTokenEnum eXmlName,        /// attribute token (namespace text)
         sal_uInt16 nValuePrefix,
         const OUString& sValue,  /// attribute value
-        const OUString& sDefault, /// default value; omit if equal
-        sal_uInt16 nPrefix = XML_NAMESPACE_TEXT);   /// attribute name prefix
+        const OUString& sDefault); /// default value; omit if equal
 
     /// export a string attribute
     void ProcessString(
         enum ::xmloff::token::XMLTokenEnum eXmlName,        /// attribute token (namespace text)
         enum ::xmloff::token::XMLTokenEnum eValue,          /// attribute token
-        bool bOmitEmpty = false, /// omit attribute, if value is empty
         sal_uInt16 nPrefix = XML_NAMESPACE_TEXT);   /// attribute name prefix
 
     /// export a string attribute, omit if default
     void ProcessString(
         enum ::xmloff::token::XMLTokenEnum eXmlName,        /// attribute token (namespace text)
         enum ::xmloff::token::XMLTokenEnum eValue,          /// attribute value token
-        enum ::xmloff::token::XMLTokenEnum eDefault,        /// default value token
-        sal_uInt16 nPrefix = XML_NAMESPACE_TEXT);   /// attribute name prefix
+        enum ::xmloff::token::XMLTokenEnum eDefault);       /// default value token
 
     /// export a string as a sequence of paragraphs
     void ProcessParagraphSequence(
@@ -315,8 +306,7 @@ protected:
 
     /// export display attribute (value, formula, none)
     void ProcessDisplay(bool bIsVisible,    /// is visible?
-                        bool bIsCommand,    /// is show command/show name?
-                        bool bDefault = true);  /// omit, if default
+                        bool bIsCommand);    /// is show command/show name?
 
     /// export all data-style related attributes
     void ProcessValueAndType(
@@ -345,22 +335,17 @@ protected:
         enum ::xmloff::token::XMLTokenEnum eXMLName,    /// attribute token
         sal_Int32 nMinutes,             /// date/time value in minutes
         bool bIsDate,           /// export as date?
-        bool bIsDuration,       /// export as duration?
-        bool bOmitDurationIfZero,   /// omit zero-length durations
-        sal_uInt16 nPrefix = XML_NAMESPACE_TEXT);   /// attribute name prefix
+        bool bIsDuration);       /// export as duration?
 
     /// export times, dates and durations according to ISO 8601
     void ProcessDateTime(
         enum ::xmloff::token::XMLTokenEnum eXMLName,    /// attribute token
-        const css::util::DateTime& rTime,      /// date/time value
-        bool bIsDate,           /// export as date (rather than date/time)?
-        sal_uInt16 nPrefix = XML_NAMESPACE_TEXT);   /// attribute name prefix
+        const css::util::DateTime& rTime);      /// date/time value
 
     /// export time or dateTime
     void ProcessTimeOrDateTime(
         enum ::xmloff::token::XMLTokenEnum eXMLName,    /// attribute token
-        const css::util::DateTime& rTime,  /// date/time value
-        sal_uInt16 nPrefix = XML_NAMESPACE_TEXT);   /// attribute name prefix
+        const css::util::DateTime& rTime);  /// date/time value
 
     /// export all attributes for bibliography data fields
     void ProcessBibliographyData(
@@ -410,7 +395,7 @@ protected:
 
 
     /// explode a field master name into field type and field name
-    bool ExplodeFieldMasterName(
+    void ExplodeFieldMasterName(
         const OUString& sMasterName, /// name as returned by SO API
         OUString& sFieldType,        /// out: field type
         OUString& sVarName);         /// out: variable name
@@ -501,10 +486,6 @@ private:
     XMLPropertyState* pCombinedCharactersPropertyState;
 
 };
-
-
-
-
 
 
 #endif

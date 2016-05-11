@@ -55,11 +55,8 @@
 #include <utility>
 #include <vector>
 #include <boost/checked_delete.hpp>
-#include <boost/current_function.hpp>
-#include <boost/functional/hash.hpp>
 #include <boost/intrusive_ptr.hpp>
 #include <boost/optional.hpp>
-#include <boost/ref.hpp>
 #include <boost/shared_array.hpp>
 #include <osl/conditn.hxx>
 #include <osl/diagnose.h>
@@ -133,7 +130,6 @@
 #include <vcl/hatch.hxx>
 #include <vcl/idle.hxx>
 #include <vcl/image.hxx>
-#include <vcl/impdel.hxx>
 #include <vcl/jobset.hxx>
 #include <vcl/keycod.hxx>
 #include <vcl/keycodes.hxx>
@@ -174,10 +170,6 @@
 #include <vcl/wall.hxx>
 #include <vcl/window.hxx>
 #include <ChartModel.hxx>
-#include <basebmp/basebmpdllapi.h>
-#include <basebmp/bitmapdevice.hxx>
-#include <basebmp/drawmodes.hxx>
-#include <basebmp/scanlineformats.hxx>
 #include <basegfx/basegfxdllapi.h>
 #include <basegfx/color/bcolor.hxx>
 #include <basegfx/color/bcolormodifier.hxx>
@@ -317,7 +309,6 @@
 #include <com/sun/star/util/XChangesBatch.hpp>
 #include <com/sun/star/util/XURLTransformer.hpp>
 #include <com/sun/star/view/PrintableState.hpp>
-#include <comphelper/InlineContainer.hxx>
 #include <comphelper/broadcasthelper.hxx>
 #include <comphelper/comphelperdllapi.h>
 #include <comphelper/fileformat.h>

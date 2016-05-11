@@ -82,7 +82,7 @@ void SAL_CALL WrappedResultSet::insertRow( const ORowSetRow& _rInsertRow,const c
 {
     m_xUpd->moveToInsertRow();
     sal_Int32 i = 1;
-    connectivity::ORowVector< ORowSetValue > ::Vector::iterator aEnd = _rInsertRow->get().end();
+    connectivity::ORowVector< ORowSetValue > ::Vector::const_iterator aEnd = _rInsertRow->get().end();
     for(connectivity::ORowVector< ORowSetValue > ::Vector::iterator aIter = _rInsertRow->get().begin()+1;aIter != aEnd;++aIter,++i)
     {
         aIter->setSigned(m_aSignedFlags[i-1]);
@@ -115,7 +115,7 @@ void WrappedResultSet::fillValueRow(ORowSetRow& _rRow,sal_Int32 _nPosition)
     OCacheSet::fillValueRow(_rRow,_nPosition);
 }
 
-void WrappedResultSet::updateColumn(sal_Int32 nPos,Reference< XRowUpdate > _xParameter,const ORowSetValue& _rValue)
+void WrappedResultSet::updateColumn(sal_Int32 nPos, const Reference< XRowUpdate >& _xParameter, const ORowSetValue& _rValue)
 {
     if(_rValue.isBound() && _rValue.isModified())
     {

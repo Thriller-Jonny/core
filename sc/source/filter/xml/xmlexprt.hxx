@@ -104,14 +104,12 @@ class ScXMLExport : public SvXMLExport
     ScMyOpenCloseColumnRowGroup*        pGroupColumns;
     ScMyOpenCloseColumnRowGroup*        pGroupRows;
     ScMyDefaultStyles*                  pDefaults;
-    ScChartListener*                    pChartListener;
     const ScMyCell*                     pCurrentCell;
 
     ScMyMergedRangesContainer*  pMergedRangesContainer;
     ScMyValidationsContainer*   pValidationsContainer;
     ScChangeTrackingExportHelper*   pChangeTrackingExportHelper;
     const OUString         sLayerID;
-    const OUString         sCaptionShape;
     OUString               sExternalRefTabStyleName;
     OUString               sAttrName;
     OUString               sAttrStyleName;
@@ -134,13 +132,13 @@ class ScXMLExport : public SvXMLExport
     sal_Int32       GetNumberFormatStyleIndex(sal_Int32 nNumFmt) const;
     void            CollectSharedData(SCTAB& nTableCount, sal_Int32& nShapesCount);
     void            CollectShapesAutoStyles(SCTAB nTableCount);
-    virtual void _ExportFontDecls() override;
-    virtual void _ExportStyles( bool bUsed ) override;
-    virtual void _ExportAutoStyles() override;
-    virtual void _ExportMasterStyles() override;
+    virtual void ExportFontDecls_() override;
+    virtual void ExportStyles_( bool bUsed ) override;
+    virtual void ExportAutoStyles_() override;
+    virtual void ExportMasterStyles_() override;
     virtual void SetBodyAttributes() override;
-    virtual void _ExportContent() override;
-    virtual void _ExportMeta() override;
+    virtual void ExportContent_() override;
+    virtual void ExportMeta_() override;
 
     void CollectInternalShape( css::uno::Reference< css::drawing::XShape > xShape );
 
@@ -244,8 +242,8 @@ public:
     bool IsMatrix (const ScAddress& aCell,
         css::table::CellRangeAddress& aCellAddress, bool& bIsFirst) const;
 
-    rtl::Reference < XMLPropertySetMapper > GetCellStylesPropertySetMapper() { return xCellStylesPropertySetMapper; }
-    rtl::Reference < XMLPropertySetMapper > GetTableStylesPropertySetMapper() { return xTableStylesPropertySetMapper; }
+    const rtl::Reference < XMLPropertySetMapper >& GetCellStylesPropertySetMapper() { return xCellStylesPropertySetMapper; }
+    const rtl::Reference < XMLPropertySetMapper >& GetTableStylesPropertySetMapper() { return xTableStylesPropertySetMapper; }
 
     void SetSourceStream( const css::uno::Reference<css::io::XInputStream>& xNewStream );
 

@@ -73,10 +73,10 @@ public:
 public:
     void    SetDecimalDigits(sal_Int32 decimal);
 
-    void    SetGroup(bool group = true);
+    void    SetGroup();
 
     void    SetColor(const XFColor& color);
-    XFColor GetColor(){return m_aColor;}
+    const XFColor& GetColor() {return m_aColor;}
 
     void    SetPrefix(const OUString& prefix);
 
@@ -134,9 +134,9 @@ inline void XFNumberStyle::SetNegativeStyle(const OUString& prefix, const OUStri
     m_strNegativeSuffix = suffix;
 }
 
-inline void XFNumberStyle::SetGroup(bool group)
+inline void XFNumberStyle::SetGroup()
 {
-    m_bGroup = group;
+    m_bGroup = true;
 }
 
 inline void XFNumberStyle::SetColor(const XFColor& color)
@@ -158,7 +158,6 @@ inline void XFNumberStyle::SetSurfix(const OUString& surfix)
 {
     m_strSuffix = surfix;
 }
-
 
 
 #endif

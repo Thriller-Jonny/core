@@ -120,7 +120,7 @@ public:
             sal_Unicode cName[MAXSTRLEN+1];
         } extname;
         struct {
-            bool        bGlobal;
+            sal_Int16   nSheet;
             sal_uInt16  nIndex;
         } name;
         struct {
@@ -157,7 +157,7 @@ public:
     void SetErrorConstant( sal_uInt16 nErr );
 
     // These methods are ok to use, reference count not cleared.
-    void SetName(bool bGlobal, sal_uInt16 nIndex);
+    void SetName(sal_Int16 nSheet, sal_uInt16 nIndex);
     void SetExternalSingleRef( sal_uInt16 nFileId, const OUString& rTabName, const ScSingleRefData& rRef );
     void SetExternalDoubleRef( sal_uInt16 nFileId, const OUString& rTabName, const ScComplexRefData& rRef );
     void SetExternalName( sal_uInt16 nFileId, const OUString& rName );
@@ -272,6 +272,9 @@ private:
 
     SvNumberFormatter* mpFormatter;
 
+    SCTAB       mnCurrentSheetTab;      // indicates current sheet number parsed so far
+    sal_Int32   mnCurrentSheetEndPos;   // position after current sheet name if parsed
+
     // For CONV_XL_OOX, may be set via API by MOOXML filter.
     css::uno::Sequence<css::sheet::ExternalLinkInfo> maExternalLinks;
 
@@ -321,6 +324,7 @@ private:
     bool IsBoolean( const OUString& );
     void AutoCorrectParsedSymbol();
 
+    void AdjustSheetLocalNameRelReferences( SCTAB nDelta );
     void SetRelNameReference();
 
     /** Obtain range data for ocName token, global or sheet local.
@@ -434,17 +438,16 @@ public:
 
     /** If the character is allowed as tested by nFlags (SC_COMPILER_C_...
         bits) for all known address conventions. If more than one bit is given
-        in nFlags, all bits must match. If bTestLetterNumeric is false and
-        char>=128, no LetterNumeric test is done and false is returned. */
+        in nFlags, all bits must match. */
     static bool IsCharFlagAllConventions(
-        OUString const & rStr, sal_Int32 nPos, sal_uLong nFlags, bool bTestLetterNumeric = true );
+        OUString const & rStr, sal_Int32 nPos, sal_uLong nFlags );
 
 private:
     // FormulaCompiler
     virtual OUString FindAddInFunction( const OUString& rUpperName, bool bLocalFirst ) const override;
-    virtual void fillFromAddInCollectionUpperName( NonConstOpCodeMapPtr xMap ) const override;
-    virtual void fillFromAddInCollectionEnglishName( NonConstOpCodeMapPtr xMap ) const override;
-    virtual void fillFromAddInMap( NonConstOpCodeMapPtr xMap, formula::FormulaGrammar::Grammar _eGrammar ) const override;
+    virtual void fillFromAddInCollectionUpperName( const NonConstOpCodeMapPtr& xMap ) const override;
+    virtual void fillFromAddInCollectionEnglishName( const NonConstOpCodeMapPtr& xMap ) const override;
+    virtual void fillFromAddInMap( const NonConstOpCodeMapPtr& xMap, formula::FormulaGrammar::Grammar _eGrammar ) const override;
     virtual void fillAddInToken(::std::vector< css::sheet::FormulaOpCodeMapEntry >& _rVec,bool _bIsEnglish) const override;
 
     virtual bool HandleExternalReference(const formula::FormulaToken& _aToken) override;
@@ -453,7 +456,7 @@ private:
     virtual bool HandleDbData() override;
     virtual bool HandleTableRef() override;
 
-    virtual formula::FormulaTokenRef ExtendRangeReference( formula::FormulaToken & rTok1, formula::FormulaToken & rTok2, bool bReuseDoubleRef ) override;
+    virtual formula::FormulaTokenRef ExtendRangeReference( formula::FormulaToken & rTok1, formula::FormulaToken & rTok2 ) override;
     virtual void CreateStringFromExternal( OUStringBuffer& rBuffer, const formula::FormulaToken* pToken ) const override;
     virtual void CreateStringFromSingleRef( OUStringBuffer& rBuffer, const formula::FormulaToken* pToken ) const override;
     virtual void CreateStringFromDoubleRef( OUStringBuffer& rBuffer, const formula::FormulaToken* pToken ) const override;

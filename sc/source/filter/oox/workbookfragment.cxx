@@ -21,11 +21,14 @@
 
 #include <com/sun/star/table/CellAddress.hpp>
 #include <oox/core/filterbase.hxx>
+#include <oox/core/xmlfilterbase.hxx>
 #include <oox/drawingml/themefragmenthandler.hxx>
 #include <oox/helper/attributelist.hxx>
 #include <oox/helper/progressbar.hxx>
 #include <oox/helper/propertyset.hxx>
 #include <oox/ole/olestorage.hxx>
+#include <oox/token/namespaces.hxx>
+#include <oox/token/tokens.hxx>
 
 #include "biffinputstream.hxx"
 #include "chartsheetfragment.hxx"
@@ -237,7 +240,7 @@ public:
         // the small safe section of the inner loop in
         // sheetdatacontext.cxx
         SAL_INFO( "sc.filter",  "start wait on solar\n" );
-        SolarMutexGuard maGuard;
+        SolarMutexGuard aGuard;
         SAL_INFO( "sc.filter",  "got solar\n" );
 
         std::unique_ptr<oox::core::FastParser> xParser(
@@ -253,7 +256,7 @@ public:
     }
 };
 
-class ProgressBarTimer : Timer
+class ProgressBarTimer : private Timer
 {
     // FIXME: really we should unify all sheet loading
     // progress reporting into something pleasant.
@@ -299,8 +302,8 @@ public:
     }
     virtual void Invoke() override
     {
-        for( size_t i = 0; i < aSegments.size(); i++)
-            static_cast< ProgressWrapper *>( aSegments[ i ].get() )->UpdateBar();
+        for(std::shared_ptr<ISegmentProgressBar> & pSegment : aSegments)
+            static_cast< ProgressWrapper *>( pSegment.get() )->UpdateBar();
     }
 };
 
@@ -393,7 +396,7 @@ void WorkbookFragment::finalizeImport()
         loaded. Additionally, the instances of the WorkbookGlobals structures
         have to be stored for every sheet. */
     SheetFragmentVector aSheetFragments;
-    std::vector<WorksheetHelper*> maHelpers;
+    std::vector<WorksheetHelper*> aHelpers;
     WorksheetBuffer& rWorksheets = getWorksheets();
     sal_Int32 nWorksheetCount = rWorksheets.getWorksheetCount();
     for( sal_Int32 nWorksheet = 0; nWorksheet < nWorksheetCount; ++nWorksheet )
@@ -456,7 +459,7 @@ void WorkbookFragment::finalizeImport()
                         if( xFragment.is() )
                         {
                             aSheetFragments.push_back( SheetFragmentHandler( xSheetGlob, xFragment.get() ) );
-                            maHelpers.push_back(xFragment.get());
+                            aHelpers.push_back(xFragment.get());
                         }
                     }
                 }
@@ -500,7 +503,7 @@ void WorkbookFragment::finalizeImport()
 
     recalcFormulaCells();
 
-    for( std::vector<WorksheetHelper*>::iterator aIt = maHelpers.begin(), aEnd = maHelpers.end(); aIt != aEnd; ++aIt )
+    for( std::vector<WorksheetHelper*>::iterator aIt = aHelpers.begin(), aEnd = aHelpers.end(); aIt != aEnd; ++aIt )
     {
         (*aIt)->finalizeDrawingImport();
     }

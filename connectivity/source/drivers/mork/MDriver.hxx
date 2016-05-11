@@ -10,26 +10,12 @@
 #ifndef INCLUDED_CONNECTIVITY_SOURCE_DRIVERS_MORK_MDRIVER_HXX
 #define INCLUDED_CONNECTIVITY_SOURCE_DRIVERS_MORK_MDRIVER_HXX
 
-#include <sal/config.h>
-
-#include <cassert>
-
-#include <boost/noncopyable.hpp>
-#include <com/sun/star/beans/PropertyValue.hpp>
 #include <com/sun/star/lang/XServiceInfo.hpp>
 #include <com/sun/star/sdbc/DriverPropertyInfo.hpp>
-#include <com/sun/star/sdbc/SQLException.hpp>
-#include <com/sun/star/sdbc/XConnection.hpp>
+
 #include <com/sun/star/sdbc/XDriver.hpp>
-#include <com/sun/star/uno/Reference.hxx>
-#include <com/sun/star/uno/RuntimeException.hpp>
-#include <com/sun/star/uno/Sequence.hxx>
-#include <com/sun/star/uno/XComponentContext.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <cppuhelper/implbase.hxx>
-#include <cppuhelper/weak.hxx>
-#include <rtl/ustring.hxx>
-#include <sal/types.h>
 
 #define MORK_DRIVER_IMPL_NAME "com.sun.star.comp.sdbc.MorkDriver"
 
@@ -43,23 +29,22 @@ namespace com { namespace sun { namespace star {
 namespace connectivity { namespace mork {
 class ProfileAccess;
 
-css::uno::Reference< css::uno::XInterface > SAL_CALL
-create(css::uno::Reference< css::uno::XComponentContext > const &);
-
 class MorkDriver:
-    public cppu::WeakImplHelper< css::lang::XServiceInfo, css::sdbc::XDriver >,
-    private boost::noncopyable
+    public cppu::WeakImplHelper< css::lang::XServiceInfo, css::sdbc::XDriver >
 {
 public:
-    explicit MorkDriver(css::uno::Reference< css::uno::XComponentContext > const context);
+    explicit MorkDriver(const css::uno::Reference< css::uno::XComponentContext >& context);
     static OUString getImplementationName_Static()
         throw(css::uno::RuntimeException);
     static css::uno::Sequence< OUString > getSupportedServiceNames_Static()
         throw (css::uno::RuntimeException);
 
-    css::uno::Reference< com::sun::star::lang::XMultiServiceFactory > getFactory(){return m_xFactory;}
-    OUString getProfilePath() {return m_sProfilePath;}
+    const css::uno::Reference< com::sun::star::lang::XMultiServiceFactory >& getFactory(){return m_xFactory;}
+    const OUString& getProfilePath() {return m_sProfilePath;}
 private:
+
+    MorkDriver(const MorkDriver&) = delete;
+    MorkDriver& operator=(const MorkDriver&) = delete;
 
     virtual ~MorkDriver() {}
 

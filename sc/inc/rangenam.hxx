@@ -43,26 +43,28 @@ class CompileFormulaContext;
 
 }
 
-typedef sal_uInt16 RangeType;
-
-#define RT_NAME             ((RangeType)0x0000)
-#define RT_DATABASE         ((RangeType)0x0001)
-#define RT_CRITERIA         ((RangeType)0x0002)
-#define RT_PRINTAREA        ((RangeType)0x0004)
-#define RT_COLHEADER        ((RangeType)0x0008)
-#define RT_ROWHEADER        ((RangeType)0x0010)
-#define RT_ABSAREA          ((RangeType)0x0020)
-#define RT_REFAREA          ((RangeType)0x0040)
-#define RT_ABSPOS           ((RangeType)0x0080)
-
 class ScRangeData
 {
+public:
+    enum class Type //specialization to typed_flags outside of class
+    {
+        Name       = 0x0000,
+        Database   = 0x0001,
+        Criteria   = 0x0002,
+        PrintArea  = 0x0004,
+        ColHeader  = 0x0008,
+        RowHeader  = 0x0010,
+        AbsArea    = 0x0020,
+        RefArea    = 0x0040,
+        AbsPos     = 0x0080
+    };
+
 private:
     OUString   aName;
     OUString   aUpperName;     // #i62977# for faster searching (aName is never modified after ctor)
     ScTokenArray*   pCode;
     ScAddress       aPos;
-    RangeType       eType;
+    Type            eType;
     ScDocument*     pDoc;
     formula::FormulaGrammar::Grammar    eTempGrammar;   // needed for unresolved XML compiles
     sal_uInt16      nIndex;
@@ -83,18 +85,22 @@ public:
                                  const OUString& rName,
                                  const OUString& rSymbol,
                                  const ScAddress& rAdr = ScAddress(),
-                                 RangeType nType = RT_NAME,
+                                 Type nType = Type::Name,
                                  const formula::FormulaGrammar::Grammar eGrammar = formula::FormulaGrammar::GRAM_DEFAULT );
     SC_DLLPUBLIC                ScRangeData( ScDocument* pDoc,
                                  const OUString& rName,
                                  const ScTokenArray& rArr,
                                  const ScAddress& rAdr = ScAddress(),
-                                 RangeType nType = RT_NAME );
+                                 Type nType = Type::Name );
     SC_DLLPUBLIC                ScRangeData( ScDocument* pDoc,
                                  const OUString& rName,
                                  const ScAddress& rTarget );
                                 // rTarget is ABSPOS jump label
-                    ScRangeData(const ScRangeData& rScRangeData, ScDocument* pDocument = nullptr);
+
+    /* Exact copy, not recompiled, no other index (!), nothing.. except if
+     * pDocument or pPos are passed, those values are assigned instead of the
+     * copies. */
+    ScRangeData( const ScRangeData& rScRangeData, ScDocument* pDocument = nullptr, const ScAddress* pPos = nullptr );
 
     SC_DLLPUBLIC ~ScRangeData();
 
@@ -103,23 +109,22 @@ public:
     void            GetName( OUString& rName ) const  { rName = aName; }
     const OUString&   GetName() const           { return aName; }
     const OUString&   GetUpperName() const      { return aUpperName; }
-    ScAddress       GetPos() const                  { return aPos; }
+    const ScAddress&  GetPos() const                  { return aPos; }
     // The index has to be unique. If index=0 a new index value is assigned.
     void            SetIndex( sal_uInt16 nInd )         { nIndex = nInd; }
-    sal_uInt16    GetIndex() const                { return nIndex; }
+    sal_uInt16      GetIndex() const                { return nIndex; }
     ScTokenArray*   GetCode()                       { return pCode; }
     SC_DLLPUBLIC void   SetCode( ScTokenArray& );
     const ScTokenArray* GetCode() const             { return pCode; }
     SC_DLLPUBLIC sal_uInt16 GetErrCode() const;
     bool            HasReferences() const;
-    void            AddType( RangeType nType )      { eType = eType|nType; }
-    RangeType       GetType() const                 { return eType; }
-    bool            HasType( RangeType nType ) const;
+    void            AddType( Type nType );
+    Type            GetType() const                 { return eType; }
+    bool            HasType( Type nType ) const;
     sal_uInt32      GetUnoType() const;
     SC_DLLPUBLIC void GetSymbol( OUString& rSymbol, const formula::FormulaGrammar::Grammar eGrammar = formula::FormulaGrammar::GRAM_DEFAULT ) const;
     SC_DLLPUBLIC void GetSymbol( OUString& rSymbol, const ScAddress& rPos, const formula::FormulaGrammar::Grammar eGrammar = formula::FormulaGrammar::GRAM_DEFAULT ) const;
-    void            UpdateSymbol( OUStringBuffer& rBuffer, const ScAddress&,
-                                    const formula::FormulaGrammar::Grammar eGrammar = formula::FormulaGrammar::GRAM_DEFAULT );
+    void            UpdateSymbol( OUStringBuffer& rBuffer, const ScAddress& );
 
     /**
      * @param nLocalTab sheet index where this name belongs, or -1 for global
@@ -156,15 +161,23 @@ public:
     void Dump() const;
 #endif
 };
+namespace o3tl
+{
+    template<> struct typed_flags<ScRangeData::Type> : is_typed_flags<ScRangeData::Type, 0xff> {};
+}
 
-inline bool ScRangeData::HasType( RangeType nType ) const
+
+inline void ScRangeData::AddType( Type nType )
+{
+    eType = eType|nType;
+}
+
+inline bool ScRangeData::HasType( Type nType ) const
 {
     return ( ( eType & nType ) == nType );
 }
 
 extern "C" int SAL_CALL ScRangeData_QsortNameCompare( const void*, const void* );
-
-bool operator< (const ScRangeData& left, const ScRangeData& right);
 
 class ScRangeName
 {
@@ -199,6 +212,26 @@ public:
         inserting because they may have referred a name that was inserted later.
      */
     void CompileUnresolvedXML( sc::CompileFormulaContext& rCxt );
+
+    /** Copy names while copying a sheet if they reference the sheet to be copied.
+
+        Assumes that new sheet was already inserted, global names have been
+        updated/adjusted, but sheet-local names on nOldTab are not, as is the
+        case in ScDocument::CopyTab()
+
+        @param  nLocalTab
+                -1 when operating on global names, else sheet/tab of
+                sheet-local name scope. The already adjusted tab on which to
+                find the name.
+
+        @param  nOldTab
+                The original unadjusted tab position.
+
+        @param  nNewTab
+                The new tab position.
+     */
+    void CopyUsedNames( const SCTAB nLocalTab, const SCTAB nOldTab, const SCTAB nNewTab,
+            const ScDocument& rOldDoc, ScDocument& rNewDoc, const bool bGlobalNamesToLocal ) const;
 
     SC_DLLPUBLIC const_iterator begin() const;
     SC_DLLPUBLIC const_iterator end() const;

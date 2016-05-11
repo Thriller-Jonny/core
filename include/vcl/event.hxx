@@ -24,7 +24,7 @@
 #include <vcl/dllapi.h>
 #include <tools/gen.hxx>
 #include <vcl/keycod.hxx>
-#include <vcl/cmdevt.hxx>
+#include <vcl/commandevent.hxx>
 #include <vcl/settings.hxx>
 #include <vcl/vclptr.hxx>
 #include <vcl/outdev.hxx>
@@ -81,9 +81,6 @@ inline KeyEvent::KeyEvent( sal_Unicode nChar, const vcl::KeyCode& rKeyCode,
 }
 
 
-// - MouseEvent-Types -
-
-
 enum class MouseEventModifiers
 {
    NONE              = 0,
@@ -110,9 +107,6 @@ namespace o3tl
 #define MOUSE_LEFT              ((sal_uInt16)0x0001)
 #define MOUSE_MIDDLE            ((sal_uInt16)0x0002)
 #define MOUSE_RIGHT             ((sal_uInt16)0x0004)
-
-
-// - MouseEvent -
 
 
 class VCL_DLLPUBLIC MouseEvent
@@ -244,8 +238,6 @@ public:
 };
 
 
-// - HelpEvent -
-
 enum class HelpEventMode
 {
     NONE           = 0x0000,
@@ -341,9 +333,6 @@ inline UserDrawEvent::UserDrawEvent(vcl::Window* pWindow, vcl::RenderContext* pR
 }
 
 
-// - TrackingEvent -
-
-
 class VCL_DLLPUBLIC TrackingEvent
 {
 private:
@@ -378,8 +367,6 @@ inline TrackingEvent::TrackingEvent( const MouseEvent& rMEvt,
 }
 
 
-// - NotifyEvent -
-
 enum class MouseNotifyEvent
 {
     NONE             = 0,
@@ -409,8 +396,7 @@ private:
 public:
                             NotifyEvent( MouseNotifyEvent nEventType,
                                          vcl::Window* pWindow,
-                                         const void* pEvent = nullptr,
-                                         long nRet = 0 );
+                                         const void* pEvent = nullptr );
 
     MouseNotifyEvent        GetType() const { return mnEventType; }
     vcl::Window*            GetWindow() const { return mpWindow; }
@@ -443,9 +429,6 @@ inline const CommandEvent* NotifyEvent::GetCommandEvent() const
     else
         return nullptr;
 }
-
-
-// - DataChangedEvent -
 
 
 enum class DataChangedEventType {

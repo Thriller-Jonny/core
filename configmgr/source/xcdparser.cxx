@@ -23,7 +23,6 @@
 #include <climits>
 #include <set>
 
-#include <com/sun/star/uno/Reference.hxx>
 #include <com/sun/star/uno/RuntimeException.hpp>
 #include <com/sun/star/uno/XInterface.hpp>
 #include <rtl/ustring.hxx>
@@ -117,7 +116,7 @@ bool XcdParser::startElement(
             return true;
         }
         state_ = STATE_COMPONENTS;
-        // fall through
+        SAL_FALLTHROUGH;
     case STATE_COMPONENTS:
         if (nsId == ParseManager::NAMESPACE_OOR &&
             name.equals("component-schema"))

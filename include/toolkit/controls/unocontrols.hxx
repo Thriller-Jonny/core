@@ -238,8 +238,6 @@ private:
     bool                                                                                    mbAdjustingImagePosition;
     bool                                                                                    mbAdjustingGraphic;
 
-    css::uno::Reference< css::graphic::XGraphicObject > mxGrfObj;
-
 protected:
     GraphicControlModel( const css::uno::Reference< css::uno::XComponentContext >& rxContext )
         :UnoControlModel( rxContext )
@@ -879,7 +877,7 @@ private:
 
 protected:
     std::unique_ptr<UnoControlListBoxModel_Data>  m_xData;
-    ::cppu::OInterfaceContainerHelper             m_aItemListListeners;
+    ::comphelper::OInterfaceContainerHelper2             m_aItemListListeners;
 };
 
 
@@ -1095,7 +1093,6 @@ public:
     // css::lang::XServiceInfo
     // No service info, only base class for other fields.
 };
-
 
 
 //  class UnoControlDateFieldModel
@@ -1558,7 +1555,6 @@ public:
 };
 
 
-
 //  class UnoControlFixedLineModel
 
 class UnoControlFixedLineModel : public UnoControlModel
@@ -1605,7 +1601,6 @@ public:
     css::uno::Sequence<OUString> SAL_CALL getSupportedServiceNames()
         throw (css::uno::RuntimeException, std::exception) override;
 };
-
 
 
 #endif // INCLUDED_TOOLKIT_CONTROLS_UNOCONTROLS_HXX

@@ -29,7 +29,7 @@ class SwFrameFormats;
 class SwFormatContent;
 class SwDoc;
 class Rectangle;
-class _ZSortFly;
+class ZSortFly;
 class SwNode;
 
 /**
@@ -64,7 +64,7 @@ public:
 
     /// If we have an associated TextFrame, then return that.
     static SwFrameFormat* findTextBox(const SwFrameFormat* pShape);
-    static SwFrameFormat* findTextBox(css::uno::Reference<css::drawing::XShape> xShape);
+    static SwFrameFormat* findTextBox(const css::uno::Reference<css::drawing::XShape>& xShape);
     /// Return the textbox rectangle of a draw shape (in twips).
     static Rectangle getTextRectangle(SwFrameFormat* pShape, bool bAbsolute = true);
 
@@ -87,13 +87,15 @@ public:
     static css::uno::Any getByIndex(SdrPage* pPage, sal_Int32 nIndex, std::set<const SwFrameFormat*>& rTextBoxes) throw(css::lang::IndexOutOfBoundsException);
     /// Get the order of the shape, excluding TextBoxes.
     static sal_Int32 getOrdNum(const SdrObject* pObject, std::set<const SwFrameFormat*>& rTextBoxes);
+    /// If pTextBox is a textbox, then set rWrapThrough to the surround of its shape.
+    static void getShapeWrapThrough(const SwFrameFormat* pTextBox, bool& rWrapThrough);
 
     /// Saves the current shape -> textbox links in a map, so they can be restored later.
     static void saveLinks(const SwFrameFormats& rFormats, std::map<const SwFrameFormat*, const SwFrameFormat*>& rLinks);
     /// Reset the shape -> textbox link on the shape, and save it to the map, so it can be restored later.
     static void resetLink(SwFrameFormat* pShape, std::map<const SwFrameFormat*, SwFormatContent>& rOldContent);
     /// Undo the effect of saveLinks() + individual resetLink() calls.
-    static void restoreLinks(std::set<_ZSortFly>& rOld, std::vector<SwFrameFormat*>& rNew, SavedLink& rSavedLinks, SavedContent& rResetContent);
+    static void restoreLinks(std::set<ZSortFly>& rOld, std::vector<SwFrameFormat*>& rNew, SavedLink& rSavedLinks, SavedContent& rResetContent);
 };
 
 #endif // INCLUDED_SW_INC_TEXTBOXHELPER_HXX

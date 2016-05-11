@@ -68,7 +68,6 @@ void BaseWindow::dispose()
 }
 
 
-
 void BaseWindow::Init()
 {
     if ( pShellVScrollBar )
@@ -79,10 +78,8 @@ void BaseWindow::Init()
 }
 
 
-
 void BaseWindow::DoInit()
 { }
-
 
 
 void BaseWindow::GrabScrollBars( ScrollBar* pHScroll, ScrollBar* pVScroll )
@@ -91,7 +88,6 @@ void BaseWindow::GrabScrollBars( ScrollBar* pHScroll, ScrollBar* pVScroll )
     pShellVScrollBar = pVScroll;
 //  Init(); // does not make sense, leads to flickering and errors...
 }
-
 
 
 IMPL_LINK_TYPED( BaseWindow, ScrollHdl, ScrollBar *, pCurScrollBar, void )
@@ -154,7 +150,6 @@ bool BaseWindow::AllowUndo()
 {
     return true;
 }
-
 
 
 void BaseWindow::UpdateData()
@@ -227,7 +222,7 @@ void BaseWindow::OnNewDocument ()
 void BaseWindow::InsertLibInfo () const
 {
     if (ExtraData* pData = GetExtraData())
-        pData->GetLibInfos().InsertInfo(m_aDocument, m_aLibName, m_aName, GetType());
+        pData->GetLibInfo().InsertInfo(m_aDocument, m_aLibName, m_aName, GetType());
 }
 
 bool BaseWindow::Is (
@@ -254,9 +249,7 @@ bool BaseWindow::HasActiveEditor () const
 }
 
 
-
 // DockingWindow
-
 
 
 // style bits for DockingWindow
@@ -422,9 +415,7 @@ void DockingWindow::DockThis ()
 }
 
 
-
 // ExtendedEdit
-
 
 
 ExtendedEdit::ExtendedEdit( vcl::Window* pParent, IDEResId nRes ) :
@@ -454,7 +445,6 @@ IMPL_LINK_TYPED( ExtendedEdit, EditAccHdl, Accelerator&, rAcc, void )
 }
 
 //  TabBar
-
 
 
 TabBar::TabBar( vcl::Window* pParent ) :
@@ -564,8 +554,8 @@ void TabBar::EndRenaming()
         SfxUInt16Item aID( SID_BASICIDE_ARG_TABID, GetEditPageId() );
         SfxStringItem aNewName( SID_BASICIDE_ARG_MODULENAME, GetEditText() );
         if (SfxDispatcher* pDispatcher = GetDispatcher())
-            pDispatcher->Execute( SID_BASICIDE_NAMECHANGEDONTAB,
-                                  SfxCallMode::SYNCHRON, &aID, &aNewName, 0L );
+            pDispatcher->ExecuteList( SID_BASICIDE_NAMECHANGEDONTAB,
+                      SfxCallMode::SYNCHRON, { &aID, &aNewName });
     }
 }
 
@@ -713,17 +703,16 @@ sal_uLong CalcLineCount( SvStream& rStream )
 }
 
 
-// LibInfos
+// LibInfo
 
 
-
-LibInfos::LibInfos ()
+LibInfo::LibInfo ()
 { }
 
-LibInfos::~LibInfos ()
+LibInfo::~LibInfo ()
 { }
 
-void LibInfos::InsertInfo (
+void LibInfo::InsertInfo (
     ScriptDocument const& rDocument,
     OUString const& rLibName,
     OUString const& rCurrentName,
@@ -732,10 +721,10 @@ void LibInfos::InsertInfo (
 {
     Key aKey(rDocument, rLibName);
     m_aMap.erase(aKey);
-    m_aMap.insert(Map::value_type(aKey, Item(rDocument, rCurrentName, eCurrentType)));
+    m_aMap.insert(Map::value_type(aKey, Item(rCurrentName, eCurrentType)));
 }
 
-void LibInfos::RemoveInfoFor (ScriptDocument const& rDocument)
+void LibInfo::RemoveInfoFor (ScriptDocument const& rDocument)
 {
     Map::iterator it;
     for (it = m_aMap.begin(); it != m_aMap.end(); ++it)
@@ -745,7 +734,7 @@ void LibInfos::RemoveInfoFor (ScriptDocument const& rDocument)
         m_aMap.erase(it);
 }
 
-LibInfos::Item const* LibInfos::GetInfo (
+LibInfo::Item const* LibInfo::GetInfo (
     ScriptDocument const& rDocument, OUString const& rLibName
 )
 {
@@ -753,34 +742,32 @@ LibInfos::Item const* LibInfos::GetInfo (
     return it != m_aMap.end() ? &it->second : nullptr;
 }
 
-LibInfos::Key::Key (ScriptDocument const& rDocument, OUString const& rLibName) :
+LibInfo::Key::Key (ScriptDocument const& rDocument, OUString const& rLibName) :
     m_aDocument(rDocument), m_aLibName(rLibName)
 { }
 
-LibInfos::Key::~Key ()
+LibInfo::Key::~Key ()
 { }
 
-bool LibInfos::Key::operator == (Key const& rKey) const
+bool LibInfo::Key::operator == (Key const& rKey) const
 {
     return m_aDocument == rKey.m_aDocument && m_aLibName == rKey.m_aLibName;
 }
 
-size_t LibInfos::Key::Hash::operator () (Key const& rKey) const
+size_t LibInfo::Key::Hash::operator () (Key const& rKey) const
 {
     return rKey.m_aDocument.hashCode() + rKey.m_aLibName.hashCode();
 }
 
-LibInfos::Item::Item (
-    ScriptDocument const& rDocument,
+LibInfo::Item::Item (
     OUString const& rCurrentName,
     ItemType eCurrentType
 ) :
-    m_aDocument(rDocument),
     m_aCurrentName(rCurrentName),
     m_eCurrentType(eCurrentType)
 { }
 
-LibInfos::Item::~Item ()
+LibInfo::Item::~Item ()
 { }
 
 bool QueryDel( const OUString& rName, const ResId& rId, vcl::Window* pParent )

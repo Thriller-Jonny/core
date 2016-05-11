@@ -1,3 +1,4 @@
+/* -*- Mode: Java; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /*
  * This file is part of the LibreOffice project.
  *
@@ -112,7 +113,7 @@ class OWeakRefListener implements XReference
     /**
      * Method of <code>com.sun.star.uno.XReference</code>.
      *
-     * <p>When called, it deregisteres this object with the adapter and releases
+     * <p>When called, it deregisters this object with the adapter and releases
      * the reference to it.</p>
      */
     synchronized public void dispose()
@@ -149,3 +150,5 @@ class OWeakRefListener implements XReference
         return retVal;
     }
 }
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -19,6 +19,7 @@
 
 #include <sal/config.h>
 
+#include <iterator>
 #include <map>
 
 #include "dbu_reghelper.hxx"
@@ -172,7 +173,7 @@ void ORelationController::Execute(sal_uInt16 _nId, const Sequence< PropertyValue
                             ::comphelper::NamedValueCollection aWindowsData;
                             saveTableWindows( aWindowsData );
                             getDataSource()->setPropertyValue( PROPERTY_LAYOUTINFORMATION, makeAny( aWindowsData.getPropertyValues() ) );
-                            setModified(sal_False);
+                            setModified(false);
                         }
                     }
                     catch ( const Exception& )
@@ -322,7 +323,7 @@ namespace
                                                 sCatalog,
                                                 sSchema,
                                                 sTable,
-                                                ::dbtools::eInDataManipulation);
+                                                ::dbtools::EComposeRule::InDataManipulation);
             Any aCatalog;
             if ( !sCatalog.isEmpty() )
                 aCatalog <<= sCatalog;
@@ -351,8 +352,8 @@ namespace
     void RelationLoader::loadTableData(const Any& _aTable)
     {
         Reference<XPropertySet> xTableProp(_aTable,UNO_QUERY);
-        const OUString sSourceName = ::dbtools::composeTableName( m_xMetaData, xTableProp, ::dbtools::eInTableDefinitions, false, false, false );
-        TTableDataHelper::iterator aFind = m_aTableData.find(sSourceName);
+        const OUString sSourceName = ::dbtools::composeTableName( m_xMetaData, xTableProp, ::dbtools::EComposeRule::InTableDefinitions, false, false, false );
+        TTableDataHelper::const_iterator aFind = m_aTableData.find(sSourceName);
         if ( aFind == m_aTableData.end() )
         {
             aFind = m_aTableData.insert(TTableDataHelper::value_type(sSourceName,::std::shared_ptr<OTableWindowData>(new OTableWindowData(xTableProp,sSourceName, sSourceName)))).first;
@@ -382,7 +383,7 @@ namespace
                     xKey->getPropertyValue(PROPERTY_REFERENCEDTABLE) >>= sReferencedTable;
 
                     // insert windows
-                    TTableDataHelper::iterator aRefFind = m_aTableData.find(sReferencedTable);
+                    TTableDataHelper::const_iterator aRefFind = m_aTableData.find(sReferencedTable);
                     if ( aRefFind == m_aTableData.end() )
                     {
                         if ( m_xTables->hasByName(sReferencedTable) )
@@ -442,18 +443,16 @@ void ORelationController::mergeData(const TTableConnectionData& _aConnectionData
     ::osl::MutexGuard aGuard( getMutex() );
 
     ::std::copy( _aConnectionData.begin(), _aConnectionData.end(), ::std::back_inserter( m_vTableConnectionData ));
-    //const Reference< XDatabaseMetaData> xMetaData = getConnection()->getMetaData();
-    const bool bCase = true;//xMetaData.is() && xMetaData->supportsMixedCaseQuotedIdentifiers();
     // here we are finished, so we can collect the table from connection data
-    TTableConnectionData::iterator aConnDataIter = m_vTableConnectionData.begin();
-    TTableConnectionData::iterator aConnDataEnd = m_vTableConnectionData.end();
+    TTableConnectionData::const_iterator aConnDataIter = m_vTableConnectionData.begin();
+    TTableConnectionData::const_iterator aConnDataEnd = m_vTableConnectionData.end();
     for(;aConnDataIter != aConnDataEnd;++aConnDataIter)
     {
-        if ( !existsTable((*aConnDataIter)->getReferencingTable()->GetComposedName(),bCase) )
+        if ( !existsTable((*aConnDataIter)->getReferencingTable()->GetComposedName()) )
         {
             m_vTableData.push_back((*aConnDataIter)->getReferencingTable());
         }
-        if ( !existsTable((*aConnDataIter)->getReferencedTable()->GetComposedName(),bCase) )
+        if ( !existsTable((*aConnDataIter)->getReferencedTable()->GetComposedName()) )
         {
             m_vTableData.push_back((*aConnDataIter)->getReferencedTable());
         }
@@ -475,7 +474,7 @@ IMPL_LINK_NOARG_TYPED( ORelationController, OnThreadFinished, void*, void )
         getView()->initialize();    // show the windows and fill with our information
         getView()->Invalidate(InvalidateFlags::NoErase);
         ClearUndoManager();
-        setModified(sal_False);     // and we are not modified yet
+        setModified(false);     // and we are not modified yet
 
         if(m_vTableData.empty())
             Execute(ID_BROWSER_ADDTABLE,Sequence<PropertyValue>());
@@ -532,9 +531,9 @@ void ORelationController::loadData()
     }
 }
 
-TTableWindowData::value_type ORelationController::existsTable(const OUString& _rComposedTableName,bool _bCase)  const
+TTableWindowData::value_type ORelationController::existsTable(const OUString& _rComposedTableName)  const
 {
-    ::comphelper::UStringMixEqual bCase(_bCase);
+    ::comphelper::UStringMixEqual bCase(true);
     TTableWindowData::const_iterator aIter = m_vTableData.begin();
     TTableWindowData::const_iterator aEnd = m_vTableData.end();
     for(;aIter != aEnd;++aIter)

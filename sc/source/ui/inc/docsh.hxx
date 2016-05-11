@@ -80,7 +80,7 @@ typedef std::unordered_map< sal_uLong, sal_uLong > ScChangeActionMergeMap;
 #define SC_PF_TESTMERGE     2
 #define SC_PF_WHOLEROWS     4
 
-class SC_DLLPUBLIC ScDocShell: public SfxObjectShell, public SfxListener
+class SC_DLLPUBLIC ScDocShell final: public SfxObjectShell, public SfxListener
 {
     ScDocument          aDocument;
 
@@ -203,7 +203,7 @@ public:
     virtual void    LoadStyles( SfxObjectShell &rSource ) override;
 
     virtual bool    SaveCompleted( const css::uno::Reference< css::embed::XStorage >& ) override;      // SfxInPlaceObject
-    virtual bool    DoSaveCompleted( SfxMedium * pNewStor) override;     // SfxObjectShell
+    virtual bool    DoSaveCompleted( SfxMedium * pNewStor, bool bRegisterRecent ) override;     // SfxObjectShell
     virtual bool    QuerySlotExecutable( sal_uInt16 nSlotId ) override;
 
     virtual void    Draw( OutputDevice *, const JobSetup & rSetup,
@@ -218,15 +218,15 @@ public:
 
     virtual void    SetModified( bool = true ) override;
 
-    void            SetVisAreaOrSize( const Rectangle& rVisArea, bool bModifyStart );
+    void            SetVisAreaOrSize( const Rectangle& rVisArea );
 
-    virtual VclPtr<SfxDocumentInfoDialog> CreateDocumentInfoDialog( vcl::Window *pParent,
-                                                              const SfxItemSet &rSet ) override;
+    virtual VclPtr<SfxDocumentInfoDialog> CreateDocumentInfoDialog( const SfxItemSet &rSet ) override;
 
     void    GetDocStat( ScDocStat& rDocStat );
 
     ScDocument&     GetDocument()   { return aDocument; }
     ScDocFunc&      GetDocFunc()    { return *pDocFunc; }
+    void            SetDocFunc( ScDocFunc *pDF ) { pDocFunc = pDF; }
 
     SfxPrinter*     GetPrinter( bool bCreateIfNotExist = true );
     sal_uInt16      SetPrinter( SfxPrinter* pNewPrinter, SfxPrinterChangeFlags nDiffFlags = SFX_PRINTER_ALL );
@@ -305,7 +305,7 @@ public:
 
     virtual void    ReconnectDdeLink(SfxObjectShell& rServer) override;
     void            UpdateLinks() override;
-    bool            ReloadTabLinks();
+    void            ReloadTabLinks();
 
     void            SetFormulaOptions( const ScFormulaOptions& rOpt, bool bForLoading = false );
     void            SetCalcConfig( const ScCalcConfig& rConfig );
@@ -331,8 +331,8 @@ public:
                                                        SCCOL nEndCol, SCROW nEndRow, SCTAB nEndTab );
     void            UpdatePaintExt( sal_uInt16& rExtFlags, const ScRange& rRange );
 
-    void            SetDocumentModified( bool bIsModified = true );
-    void            SetDrawModified( bool bIsModified = true );
+    void            SetDocumentModified();
+    void            SetDrawModified();
 
     void            LockPaint();
     void            UnlockPaint();
@@ -360,7 +360,7 @@ public:
                                                bool&             rbHeader,
                                                bool&             rbFooter );
 
-#if defined WNT
+#if defined(_WIN32)
     virtual bool DdeGetData( const OUString& rItem, const OUString& rMimeType,
                                 css::uno::Any & rValue ) override;
     virtual bool DdeSetData( const OUString& rItem, const OUString& rMimeType,
@@ -418,13 +418,12 @@ public:
     virtual bool    IsChangeRecording() const override;
     virtual bool    HasChangeRecordProtection() const override;
     virtual void    SetChangeRecording( bool bActivate ) override;
-    virtual bool    SetProtectionPassword( const OUString &rPassword ) override;
+    virtual void    SetProtectionPassword( const OUString &rPassword ) override;
     virtual bool    GetProtectionHash( /*out*/ css::uno::Sequence< sal_Int8 > &rPasswordHash ) override;
 
     void SnapVisArea( Rectangle& rRect ) const;
 
     virtual void libreOfficeKitCallback(int nType, const char* pPayload) const override;
-    virtual bool isTiledRendering() const override;
 };
 
 void UpdateAcceptChangesDialog();

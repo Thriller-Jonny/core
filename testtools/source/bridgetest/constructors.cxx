@@ -20,7 +20,6 @@
 
 #include "sal/config.h"
 
-#include "boost/noncopyable.hpp"
 #include "com/sun/star/lang/XInitialization.hpp"
 #include "com/sun/star/lang/XComponent.hpp"
 #include "com/sun/star/uno/Any.hxx"
@@ -50,11 +49,12 @@ namespace {
 
 namespace ttb = ::test::testtools::bridgetest;
 class Impl:
-    public cppu::WeakImplHelper<css::lang::XInitialization>,
-    private boost::noncopyable
+    public cppu::WeakImplHelper<css::lang::XInitialization>
 {
 public:
     Impl() {}
+    Impl(const Impl&) = delete;
+    Impl& operator=(const Impl&) = delete;
 
 private:
     virtual ~Impl() {}
@@ -229,7 +229,7 @@ void Impl2::initialize(css::uno::Sequence< css::uno::Any > const & arguments)
 {
     ttb::TestPolyStruct< css::uno::Type > arg0;
     ttb::TestPolyStruct< css::uno::Any > arg1;
-    css::uno::Any arg1b(sal_True);
+    css::uno::Any arg1b(true);
     ttb::TestPolyStruct< sal_Bool > arg2;
     ttb::TestPolyStruct< ::sal_Int8 > arg3;
     ttb::TestPolyStruct< ::sal_Int16 > arg4;

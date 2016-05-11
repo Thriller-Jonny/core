@@ -59,7 +59,7 @@ inline void MovePoint(Point& rPnt, const Size& S)        { rPnt.X()+=S.Width(); 
 inline void MovePoly(tools::Polygon& rPoly, const Size& S)      { rPoly.Move(S.Width(),S.Height()); }
 void MoveXPoly(XPolygon& rPoly, const Size& S);
 
-SVX_DLLPUBLIC void ResizeRect(Rectangle& rRect, const Point& rRef, const Fraction& xFact, const Fraction& yFact, bool bNoJustify = false);
+SVX_DLLPUBLIC void ResizeRect(Rectangle& rRect, const Point& rRef, const Fraction& xFact, const Fraction& yFact);
 inline void ResizePoint(Point& rPnt, const Point& rRef, Fraction xFact, Fraction yFact);
 void ResizePoly(tools::Polygon& rPoly, const Point& rRef, const Fraction& xFact, const Fraction& yFact);
 void ResizeXPoly(XPolygon& rPoly, const Point& rRef, const Fraction& xFact, const Fraction& yFact);
@@ -73,7 +73,7 @@ void MirrorPoint(Point& rPnt, const Point& rRef1, const Point& rRef2);
 void MirrorXPoly(XPolygon& rPoly, const Point& rRef1, const Point& rRef2);
 
 inline void ShearPoint(Point& rPnt, const Point& rRef, double tn, bool bVShear = false);
-SVX_DLLPUBLIC void ShearPoly(tools::Polygon& rPoly, const Point& rRef, double tn, bool bVShear = false);
+SVX_DLLPUBLIC void ShearPoly(tools::Polygon& rPoly, const Point& rRef, double tn);
 void ShearXPoly(XPolygon& rPoly, const Point& rRef, double tn, bool bVShear = false);
 
 /**
@@ -232,9 +232,8 @@ public:
     double   nTan;      // tan(nShearAngle)
     double   nSin;      // sin(nRotationAngle)
     double   nCos;      // cos(nRotationAngle)
-    bool     bMirrored; // Horizontally mirrored? (ni)
-public:
-    GeoStat(): nRotationAngle(0),nShearAngle(0),nTan(0.0),nSin(0.0),nCos(1.0),bMirrored(false) {}
+
+    GeoStat(): nRotationAngle(0),nShearAngle(0),nTan(0.0),nSin(0.0),nCos(1.0) {}
     void RecalcSinCos();
     void RecalcTan();
 };
@@ -322,7 +321,6 @@ public:
     static void TakeUnitStr(FieldUnit eUnit, OUString& rStr);
     static OUString GetUnitStr(FieldUnit eUnit) { OUString aStr; TakeUnitStr(eUnit,aStr); return aStr; }
 };
-
 
 
 #endif // INCLUDED_SVX_SVDTRANS_HXX

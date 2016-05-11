@@ -20,11 +20,9 @@
 #ifndef INCLUDED_VCL_INC_SALPRN_HXX
 #define INCLUDED_VCL_INC_SALPRN_HXX
 
-#include <rtl/ustring.hxx>
-
-#include <tools/solar.h>
-#include <vcl/dllapi.h>
 #include <vcl/prntypes.hxx>
+
+#include "salptype.hxx"
 
 #include <vector>
 
@@ -69,13 +67,13 @@ public:
     // and set the new indepen data in pSetupData
     // Only the data must changed, where the bit
     // in nFlags is set
-    virtual bool                    SetData( sal_uLong nFlags, ImplJobSetup* pSetupData ) = 0;
+    virtual bool                    SetData( JobSetFlags nFlags, ImplJobSetup* pSetupData ) = 0;
 
     virtual void                    GetPageInfo( const ImplJobSetup* pSetupData,
                                                  long& rOutWidth, long& rOutHeight,
                                                  long& rPageOffX, long& rPageOffY,
                                                  long& rPageWidth, long& rPageHeight ) = 0;
-    virtual sal_uLong               GetCapabilities( const ImplJobSetup* pSetupData, PrinterCapType nType ) = 0;
+    virtual sal_uInt32              GetCapabilities( const ImplJobSetup* pSetupData, PrinterCapType nType ) = 0;
     virtual sal_uLong               GetPaperBinCount( const ImplJobSetup* pSetupData ) = 0;
     virtual OUString                GetPaperBinName( const ImplJobSetup* pSetupData, sal_uLong nPaperBin ) = 0;
     // fills m_aPaperFormats and sets m_bPapersInit to true
@@ -93,7 +91,7 @@ public:
     virtual bool                    StartJob( const OUString* pFileName,
                                               const OUString& rJobName,
                                               const OUString& rAppName,
-                                              sal_uLong nCopies,
+                                              sal_uInt32 nCopies,
                                               bool bCollate,
                                               bool bDirect,
                                               ImplJobSetup* pSetupData ) = 0;
@@ -108,7 +106,7 @@ public:
 
     virtual bool                    EndJob() = 0;
     virtual SalGraphics*            StartPage( ImplJobSetup* pSetupData, bool bNewJobData ) = 0;
-    virtual bool                    EndPage() = 0;
+    virtual void                    EndPage() = 0;
     virtual sal_uLong               GetErrorCode() = 0;
 
 };

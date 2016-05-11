@@ -43,12 +43,7 @@ using namespace webdav_ucp;
 using namespace com::sun::star;
 
 
-
-
 // DAVAuthListener_Impl Implementation.
-
-
-
 
 
 // virtual
@@ -78,7 +73,6 @@ int DAVAuthListener_Impl::authenticate(
                 = new ucbhelper::SimpleAuthenticationRequest(
                     m_aURL, inHostName, inRealm, inoutUserName,
                     outPassWord, OUString(),
-                    true /*bAllowPersistentStoring*/,
                     bCanUseSystemCredentials );
             xIH->handle( xRequest.get() );
 
@@ -130,12 +124,7 @@ int DAVAuthListener_Impl::authenticate(
 }
 
 
-
-
 // DAVResourceAccess Implementation.
-
-
-
 
 
 DAVResourceAccess::DAVResourceAccess(

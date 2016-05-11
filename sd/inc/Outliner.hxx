@@ -26,7 +26,6 @@
 #include "OutlinerIterator.hxx"
 #include <editeng/SpellPortions.hxx>
 #include <memory>
-#include <boost/noncopyable.hpp>
 
 class Dialog;
 class SdrObject;
@@ -106,8 +105,7 @@ struct SearchSelection
     </p>
 */
 class Outliner
-    : public SdrOutliner,
-      public ::boost::noncopyable
+    : public SdrOutliner
 {
 public:
     friend class ::sd::outliner::OutlinerContainer;
@@ -116,15 +114,18 @@ public:
         @param pDoc
             The draw document from which to take the content.
         @param nMode
-            The valid values <const>OUTLINERMODE_DONTKNOW</const>,
-            <const>OUTLINERMODE_TEXTOBJECT</const>,
-            <const>OUTLINERMODE_TITLEOBJECT</const>,
-            <const>OUTLINERMODE_OUTLINEOBJECT</const>, and
-            <const>OUTLINERMODE_OUTLINEVIEW</const> are defined in
+            The valid values <const>OutlinerMode::DontKnow</const>,
+            <const>OutlinerMode::TextObject</const>,
+            <const>OutlinerMode::TitleObject</const>,
+            <const>OutlinerMode::OutlineObject</const>, and
+            <const>OutlinerMode::OutlineView</const> are defined in
             editeng/outliner.hxx.
     */
-    Outliner( SdDrawDocument* pDoc, sal_uInt16 nMode );
+    Outliner( SdDrawDocument* pDoc, OutlinerMode nMode );
     virtual ~Outliner();
+    /// Forbid copy construction and copy assignment
+    Outliner(const Outliner&) = delete;
+    Outliner& operator=(const Outliner&) = delete;
 
     /** Despite the name this method is called prior to spell checking *and*
         searching and replacing.  The position of current view

@@ -22,7 +22,6 @@
 #include <svtools/svtdllapi.h>
 #include <rtl/ustring.hxx>
 #include <tools/color.hxx>
-#include <com/sun/star/uno/Sequence.h>
 #include <svl/SfxBroadcaster.hxx>
 #include <svl/lstner.hxx>
 #include <memory>
@@ -50,15 +49,12 @@ public:
     ,m_nDefaultColor(_nDefaultColor)
     {}
 
-    inline OUString        getName()         const { return m_sName; }
-    inline OUString        getDisplayName()  const { return m_sDisplayName; }
+    inline const OUString& getName()         const { return m_sName; }
+    inline const OUString& getDisplayName()  const { return m_sDisplayName; }
     inline sal_Int32       getColor()        const { return m_nColor; }
     inline sal_Int32       getDefaultColor() const { return m_nDefaultColor; }
 
     inline void            setColor(sal_Int32 _nColor) { m_nColor = _nColor; }
-
-    bool operator !=(const ExtendedColorConfigValue& rCmp) const
-        { return m_nColor != rCmp.m_nColor;}
 };
 
 class SVT_DLLPUBLIC ExtendedColorConfig : public SfxBroadcaster, public SfxListener

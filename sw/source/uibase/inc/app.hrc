@@ -17,8 +17,8 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef _APP_HRC
-#define _APP_HRC
+#ifndef INCLUDED_SW_SOURCE_UIBASE_INC_APP_HRC
+#define INCLUDED_SW_SOURCE_UIBASE_INC_APP_HRC
 
 #include "rcid.hrc"
 
@@ -39,6 +39,8 @@
 #define STR_REDLINE_UNKNOWN_AUTHOR      (RC_APP_BEGIN + 76)
 #define STR_WESTERN_FONT                (RC_APP_BEGIN + 77)
 #define STR_CJK_FONT                    (RC_APP_BEGIN + 78)
+#define STR_DELETE_NOTE_AUTHOR          (RC_APP_BEGIN + 79)
+#define STR_HIDE_NOTE_AUTHOR            (RC_APP_BEGIN + 80)
 
 #define STR_ENV_TITLE                   (RC_APP_BEGIN + 91)
 #define STR_LAB_TITLE                   (RC_APP_BEGIN + 92)
@@ -49,19 +51,6 @@
 
 #define STR_FDLG_TEMPLATE_BUTTON        (RC_APP_BEGIN + 1)
 #define STR_FDLG_TEMPLATE_NAME          (RC_APP_BEGIN + 2)
-
-// Ids for all the PopUpMenues
-#define MN_FORMAT_STYLE                 (RC_APP_BEGIN + 17)
-#define MN_FORMAT_ALGN                  (RC_APP_BEGIN + 18)
-#define MN_FORMAT_LINESPACE             (RC_APP_BEGIN + 19)
-#define MN_FORMAT_FRM_HORZ              (RC_APP_BEGIN + 23)
-#define MN_CELL                         (RC_APP_BEGIN + 29)
-#define MN_WRAP                         (RC_APP_BEGIN + 38)
-#define MN_SUB_TBLROW                   (RC_APP_BEGIN + 39)
-#define MN_SUB_TBLCOL                   (RC_APP_BEGIN + 40)
-#define MN_SUB_ARRANGE                  (RC_APP_BEGIN + 46)
-
-#define MN_SUB_ALIGN                    (RC_APP_BEGIN + 50)
 
 #define STR_WRITER_DOCUMENT_FULLTYPE    (RC_APP_BEGIN + 100)
 #define STR_CONVERT_TEXT_TABLE          (RC_APP_BEGIN + 101)

@@ -605,9 +605,9 @@ void DocxTableStyleExport::Impl::TableStyle(uno::Sequence<beans::PropertyValue>&
     for (sal_Int32 i = 0; i < rStyle.getLength(); ++i)
     {
         if (rStyle[i].Name == "default")
-            bDefault = rStyle[i].Value.get<sal_Bool>();
+            bDefault = rStyle[i].Value.get<bool>();
         else if (rStyle[i].Name == "customStyle")
-            bCustomStyle = rStyle[i].Value.get<sal_Bool>();
+            bCustomStyle = rStyle[i].Value.get<bool>();
         else if (rStyle[i].Name == "styleId")
             aStyleId = rStyle[i].Value.get<OUString>();
         else if (rStyle[i].Name == "name")
@@ -673,7 +673,7 @@ void DocxTableStyleExport::Impl::TableStyle(uno::Sequence<beans::PropertyValue>&
     tableStyleRPr(aRPr);
     tableStyleTablePr(aTablePr);
     tableStyleTcPr(aTcPr);
-    for (size_t i = 0; i < aTableStylePrs.size(); ++i)
+    for (std::size_t i = 0; i < aTableStylePrs.size(); ++i)
         tableStyleTableStylePr(aTableStylePrs[i]);
 
     m_pSerializer->endElementNS(XML_w, XML_style);

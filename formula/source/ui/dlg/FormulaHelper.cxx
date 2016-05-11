@@ -44,7 +44,9 @@ namespace formula
             virtual void initArgumentInfo()  const override {}
             virtual OUString getSignature() const override { return OUString(); }
             virtual OString getHelpId() const override { return ""; }
+            virtual bool isHidden() const override { return false; }
             virtual sal_uInt32 getParameterCount() const override { return 0; }
+            virtual sal_uInt32 getVarArgsStart() const override { return 0; }
             virtual OUString getParameterName(sal_uInt32 ) const override { return OUString(); }
             virtual OUString getParameterDescription(sal_uInt32 ) const override { return OUString(); }
             virtual bool isParameterOptional(sal_uInt32 ) const override { return false; }
@@ -89,7 +91,6 @@ bool FormulaHelper::GetNextFunc( const OUString&  rFormula,
         if ( ppFDesc )
         {
             *ppFDesc = nullptr;
-            const OUString sTemp( aFname );
             const sal_uInt32 nCategoryCount = m_pFunctionManager->getCount();
             for(sal_uInt32 j= 0; j < nCategoryCount && !*ppFDesc; ++j)
             {
@@ -98,7 +99,7 @@ bool FormulaHelper::GetNextFunc( const OUString&  rFormula,
                 for(sal_uInt32 i = 0 ; i < nCount; ++i)
                 {
                     const IFunctionDescription* pCurrent = pCategory->getFunction(i);
-                    if ( pCurrent->getFunctionName().equalsIgnoreAsciiCase(sTemp) )
+                    if ( pCurrent->getFunctionName().equalsIgnoreAsciiCase(aFname) )
                     {
                         *ppFDesc = pCurrent;
                         break;
@@ -123,7 +124,6 @@ bool FormulaHelper::GetNextFunc( const OUString&  rFormula,
 }
 
 
-
 void FormulaHelper::FillArgStrings( const OUString&   rFormula,
                                     sal_Int32         nFuncPos,
                                     sal_uInt16        nArgs,
@@ -145,7 +145,10 @@ void FormulaHelper::FillArgStrings( const OUString&   rFormula,
             if ( nEnd != nStart )
                 _rArgs.push_back(rFormula.copy( nStart, nEnd-1-nStart ));
             else
-                _rArgs.push_back(OUString()), bLast = true;
+            {
+                _rArgs.push_back(OUString());
+                bLast = true;
+            }
         }
         else
         {
@@ -163,7 +166,6 @@ void FormulaHelper::FillArgStrings( const OUString&   rFormula,
 }
 
 
-
 void FormulaHelper::GetArgStrings( ::std::vector< OUString >& _rArgs,
                                    const OUString& rFormula,
                                    sal_Int32 nFuncPos,
@@ -174,7 +176,6 @@ void FormulaHelper::GetArgStrings( ::std::vector< OUString >& _rArgs,
         FillArgStrings( rFormula, nFuncPos, nArgs, _rArgs );
     }
 }
-
 
 
 inline bool IsFormulaText( const CharClass* _pCharClass,const OUString& rStr, sal_Int32 nPos )
@@ -283,7 +284,6 @@ sal_Int32 FormulaHelper::GetFunctionStart( const OUString&   rFormula,
 }
 
 
-
 sal_Int32  FormulaHelper::GetFunctionEnd( const OUString& rStr, sal_Int32 nStart ) const
 {
     sal_Int32 nStrLen = rStr.getLength();
@@ -339,7 +339,6 @@ sal_Int32  FormulaHelper::GetFunctionEnd( const OUString& rStr, sal_Int32 nStart
 
     return nStart;
 }
-
 
 
 sal_Int32 FormulaHelper::GetArgStart( const OUString& rStr, sal_Int32 nStart, sal_uInt16 nArg ) const

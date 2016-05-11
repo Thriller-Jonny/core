@@ -74,8 +74,7 @@ using namespace ::com::sun::star::io;
 using namespace ::com::sun::star::sdbc;
 using namespace ::ucbhelper;
 
-#if OSL_DEBUG_LEVEL > 1
-#include <stdio.h>
+#if OSL_DEBUG_LEVEL > 0
 static int nOpenFiles=0;
 static int nOpenStreams=0;
 #endif
@@ -120,7 +119,7 @@ FileStreamWrapper_Impl::~FileStreamWrapper_Impl()
     if ( m_pSvStream )
     {
         delete m_pSvStream;
-#if OSL_DEBUG_LEVEL > 1
+#if OSL_DEBUG_LEVEL > 0
         --nOpenFiles;
 #endif
     }
@@ -146,13 +145,14 @@ sal_Int32 SAL_CALL FileStreamWrapper_Impl::readBytes(Sequence< sal_Int8 >& aData
 
     ::osl::MutexGuard aGuard( m_aMutex );
 
-    aData.realloc(nBytesToRead);
+    if (aData.getLength() < nBytesToRead)
+        aData.realloc(nBytesToRead);
 
     sal_uInt32 nRead = m_pSvStream->Read(static_cast<void*>(aData.getArray()), nBytesToRead);
     checkError();
 
     // Wenn gelesene Zeichen < MaxLength, Sequence anpassen
-    if (nRead < (sal_uInt32)nBytesToRead)
+    if ((sal_Int32)nRead < aData.getLength())
         aData.realloc( nRead );
 
     return nRead;
@@ -225,7 +225,7 @@ void SAL_CALL FileStreamWrapper_Impl::closeInput() throw( NotConnectedException,
     ::osl::MutexGuard aGuard( m_aMutex );
     checkConnected();
     DELETEZ( m_pSvStream );
-#if OSL_DEBUG_LEVEL > 1
+#if OSL_DEBUG_LEVEL > 0
     --nOpenFiles;
 #endif
     ::utl::UCBContentHelper::Kill( m_aURL );
@@ -288,7 +288,7 @@ void FileStreamWrapper_Impl::checkConnected()
     if ( !m_pSvStream )
     {
         m_pSvStream = ::utl::UcbStreamHelper::CreateStream( m_aURL, STREAM_STD_READ );
-#if OSL_DEBUG_LEVEL > 1
+#if OSL_DEBUG_LEVEL > 0
         ++nOpenFiles;
 #endif
     }
@@ -311,7 +311,7 @@ void FileStreamWrapper_Impl::checkError()
 
 #define min( x, y ) (( x < y ) ? x : y)
 
-SotClipboardFormatId GetFormatId_Impl( SvGlobalName aName )
+SotClipboardFormatId GetFormatId_Impl( const SvGlobalName& aName )
 {
     if ( aName == SvGlobalName( SO3_SW_CLASSID_60 ) )
         return SotClipboardFormatId::STARWRITER_60;
@@ -443,15 +443,15 @@ public:
     bool                        Init();
     bool                        Clear();
     sal_Int16                   Commit();       // if modified and committed: transfer an XInputStream to the content
-    bool                        Revert();       // discard all changes
+    void                        Revert();       // discard all changes
     BaseStorage*                CreateStorage();// create an OLE Storage on the UCBStorageStream
     sal_uLong                   GetSize();
 
     sal_uInt64                  ReadSourceWriteTemporary( sal_uInt64 aLength ); // read aLength from source and copy to temporary,
                                                                            // no seeking is produced
-    sal_uLong                   ReadSourceWriteTemporary();                // read source till the end and copy to temporary,
+    void                        ReadSourceWriteTemporary();                // read source till the end and copy to temporary,
 
-    sal_uLong                   CopySourceToTemporary();                // same as ReadSourceWriteToTemporary()
+    void                        CopySourceToTemporary();                // same as ReadSourceWriteToTemporary()
                                                                         // but the writing is done at the end of temporary
                                                                         // pointer position is not changed
     using SvStream::SetError;
@@ -507,7 +507,7 @@ public:
     bool                        Revert();
     bool                        Insert( ::ucbhelper::Content *pContent );
     UCBStorage_Impl*            OpenStorage( UCBStorageElement_Impl* pElement, StreamMode nMode, bool bDirect );
-    UCBStorageStream_Impl*      OpenStream( UCBStorageElement_Impl*, StreamMode, bool, const OString* pKey=nullptr );
+    void                        OpenStream( UCBStorageElement_Impl*, StreamMode, bool, const OString* pKey=nullptr );
     void                        SetProps( const Sequence < Sequence < PropertyValue > >& rSequence, const OUString& );
     void                        GetProps( sal_Int32&, Sequence < Sequence < PropertyValue > >& rSequence, const OUString& );
     sal_Int32                   GetObjectCount();
@@ -677,9 +677,7 @@ UCBStorageStream_Impl::UCBStorageStream_Impl( const OUString& rName, StreamMode 
             {
                 sal_uInt8* pBuffer = aBuffer;
                 css::uno::Sequence < sal_Int8 > aSequ( reinterpret_cast<sal_Int8*>(pBuffer), RTL_DIGEST_LENGTH_SHA1 );
-                css::uno::Any aAny;
-                aAny <<= aSequ;
-                m_pContent->setPropertyValue("EncryptionKey", aAny );
+                m_pContent->setPropertyValue("EncryptionKey", Any(aSequ) );
             }
         }
     }
@@ -729,7 +727,7 @@ bool UCBStorageStream_Impl::Init()
             m_aTempURL = ::utl::TempFile().GetURL();
 
         m_pStream = ::utl::UcbStreamHelper::CreateStream( m_aTempURL, STREAM_STD_READWRITE, true /* bFileExists */ );
-#if OSL_DEBUG_LEVEL > 1
+#if OSL_DEBUG_LEVEL > 0
         ++nOpenFiles;
 #endif
 
@@ -793,12 +791,10 @@ bool UCBStorageStream_Impl::Init()
     return true;
 }
 
-sal_uLong UCBStorageStream_Impl::ReadSourceWriteTemporary()
+void UCBStorageStream_Impl::ReadSourceWriteTemporary()
 {
     // read source stream till the end and copy all the data to
     // the current position of the temporary stream
-
-    sal_uLong aResult = 0;
 
     if( m_bSourceRead )
     {
@@ -810,7 +806,7 @@ sal_uLong UCBStorageStream_Impl::ReadSourceWriteTemporary()
             do
             {
                 aReaded = m_rSource->readBytes( aData, 32000 );
-                aResult += m_pStream->Write( aData.getArray(), aReaded );
+                m_pStream->Write( aData.getArray(), aReaded );
             } while( aReaded == 32000 );
         }
         catch (const Exception &e)
@@ -821,9 +817,6 @@ sal_uLong UCBStorageStream_Impl::ReadSourceWriteTemporary()
     }
 
     m_bSourceRead = false;
-
-    return aResult;
-
 }
 
 sal_uInt64 UCBStorageStream_Impl::ReadSourceWriteTemporary(sal_uInt64 aLength)
@@ -842,9 +835,9 @@ sal_uInt64 UCBStorageStream_Impl::ReadSourceWriteTemporary(sal_uInt64 aLength)
 
             sal_uLong aReaded = 32000;
 
-            for (sal_uInt64 pInd = 0; pInd < aLength && aReaded == 32000 ; pInd += 32000)
+            for (sal_uInt64 nInd = 0; nInd < aLength && aReaded == 32000 ; nInd += 32000)
             {
-                sal_uLong aToCopy = min( aLength - pInd, 32000 );
+                sal_uLong aToCopy = min( aLength - nInd, 32000 );
                 aReaded = m_rSource->readBytes( aData, aToCopy );
                 aResult += m_pStream->Write( aData.getArray(), aReaded );
             }
@@ -862,21 +855,16 @@ sal_uInt64 UCBStorageStream_Impl::ReadSourceWriteTemporary(sal_uInt64 aLength)
     return aResult;
 }
 
-sal_uLong UCBStorageStream_Impl::CopySourceToTemporary()
+void UCBStorageStream_Impl::CopySourceToTemporary()
 {
     // current position of the temporary stream is not changed
-    sal_uLong aResult = 0;
-
     if( m_bSourceRead )
     {
         sal_uLong aPos = m_pStream->Tell();
         m_pStream->Seek( STREAM_SEEK_TO_END );
-        aResult = ReadSourceWriteTemporary();
+        ReadSourceWriteTemporary();
         m_pStream->Seek( aPos );
     }
-
-    return aResult;
-
 }
 
 // UCBStorageStream_Impl must have a SvStream interface, because it then can be used as underlying stream
@@ -957,7 +945,7 @@ sal_uInt64 UCBStorageStream_Impl::SeekPos(sal_uInt64 const nPos)
     else
     {
         // the problem is that even if nPos is larger the length
-        // of the stream the stream pointer will be moved to this position
+        // of the stream, the stream pointer will be moved to this position
         // so we have to check if temporary stream does not contain required position
 
         if( m_pStream->Tell() > nPos
@@ -1108,12 +1096,10 @@ sal_Int16 UCBStorageStream_Impl::Commit()
                 // create wrapper to stream that is only used while reading inside package component
                 Reference < XInputStream > xStream = new FileStreamWrapper_Impl( m_aTempURL );
 
-                Any aAny;
                 InsertCommandArgument aArg;
                 aArg.Data = xStream;
                 aArg.ReplaceExisting = true;
-                aAny <<= aArg;
-                m_pContent->executeCommand( "insert", aAny );
+                m_pContent->executeCommand( "insert", Any(aArg) );
 
                 // wrapper now controls lifetime of temporary file
                 m_aTempURL.clear();
@@ -1151,13 +1137,13 @@ sal_Int16 UCBStorageStream_Impl::Commit()
     return COMMIT_RESULT_NOTHING_TO_DO;
 }
 
-bool UCBStorageStream_Impl::Revert()
+void UCBStorageStream_Impl::Revert()
 {
     // if an OLEStorage is created on this stream, no "revert" is necessary because OLEStorages do nothing on "Revert" !
     if ( m_bCommited )
     {
         OSL_FAIL("Revert while commit is in progress!" );
-        return false;                   //  ???
+        return;                   //  ???
     }
 
     Free();
@@ -1200,7 +1186,6 @@ bool UCBStorageStream_Impl::Revert()
     m_bModified = false;
     m_aName = m_aOriginalName;
     m_aContentType = m_aOriginalContentType;
-    return ( GetError() == ERRCODE_NONE );
 }
 
 bool UCBStorageStream_Impl::Clear()
@@ -1217,7 +1202,7 @@ bool UCBStorageStream_Impl::Clear()
 
 void UCBStorageStream_Impl::Free()
 {
-#if OSL_DEBUG_LEVEL > 1
+#if OSL_DEBUG_LEVEL > 0
     if ( m_pStream )
     {
         if ( !m_aTempURL.isEmpty() )
@@ -1366,10 +1351,10 @@ bool UCBStorageStream::Commit()
     return true;
 }
 
-bool UCBStorageStream::CopyTo( BaseStorageStream* pDestStm )
+void UCBStorageStream::CopyTo( BaseStorageStream* pDestStm )
 {
     if( !pImp->Init() )
-        return false;
+        return;
 
     UCBStorageStream* pStg =  dynamic_cast<UCBStorageStream*>( pDestStm );
     if ( pStg )
@@ -1379,7 +1364,7 @@ bool UCBStorageStream::CopyTo( BaseStorageStream* pDestStm )
     Seek( STREAM_SEEK_TO_END );
     sal_Int32 n = Tell();
     if( n < 0 )
-        return false;
+        return;
 
     if( pDestStm->SetSize( n ) && n )
     {
@@ -1398,8 +1383,6 @@ bool UCBStorageStream::CopyTo( BaseStorageStream* pDestStm )
             n -= nn;
         }
     }
-
-    return true;
 }
 
 bool UCBStorageStream::SetProperty( const OUString& rName, const css::uno::Any& rValue )
@@ -2155,7 +2138,7 @@ sal_Int16 UCBStorage_Impl::Commit()
                         nLocalRet = pElement->m_xStream->Commit();
                         if ( pElement->m_xStream->m_bIsOLEStorage )
                         {
-                            // OLE storage should be stored encrytped, if the storage uses encryption
+                            // OLE storage should be stored encrypted, if the storage uses encryption
                             pElement->m_xStream->m_aContentType = "application/vnd.sun.star.oleobject";
                             Any aValue;
                             aValue <<= true;
@@ -2169,18 +2152,14 @@ sal_Int16 UCBStorage_Impl::Commit()
                     {
                         // name ( title ) of the element was changed
                         nLocalRet = COMMIT_RESULT_SUCCESS;
-                        Any aAny;
-                        aAny <<= pElement->m_aName;
-                        pContent->setPropertyValue("Title", aAny );
+                        pContent->setPropertyValue("Title", Any(pElement->m_aName) );
                     }
 
                     if (pContent && pElement->IsLoaded() && pElement->GetContentType() != pElement->GetOriginalContentType())
                     {
                         // mediatype of the element was changed
                         nLocalRet = COMMIT_RESULT_SUCCESS;
-                        Any aAny;
-                        aAny <<= pElement->GetContentType();
-                        pContent->setPropertyValue("MediaType", aAny );
+                        pContent->setPropertyValue("MediaType", Any(pElement->GetContentType()) );
                     }
 
                     if ( nLocalRet != COMMIT_RESULT_NOTHING_TO_DO )
@@ -2266,9 +2245,9 @@ sal_Int16 UCBStorage_Impl::Commit()
                     }
                     else
                     {
-#if OSL_DEBUG_LEVEL > 1
-                        fprintf ( stderr, "Files: %i\n", nOpenFiles );
-                        fprintf ( stderr, "Streams: %i\n", nOpenStreams );
+#if OSL_DEBUG_LEVEL > 0
+                        SAL_INFO("sot", "Files: " << nOpenFiles);
+                        SAL_INFO("sot", "Streams: " << nOpenStreams);
 #endif
                         // force writing
                         Any aAny;
@@ -2710,13 +2689,12 @@ BaseStorageStream* UCBStorage::OpenStream( const OUString& rEleName, StreamMode 
     return nullptr;
 }
 
-UCBStorageStream_Impl* UCBStorage_Impl::OpenStream( UCBStorageElement_Impl* pElement, StreamMode nMode, bool bDirect, const OString* pKey )
+void UCBStorage_Impl::OpenStream( UCBStorageElement_Impl* pElement, StreamMode nMode, bool bDirect, const OString* pKey )
 {
     OUString aName( m_aURL );
     aName += "/";
     aName += pElement->m_aOriginalName;
     pElement->m_xStream = new UCBStorageStream_Impl( aName, nMode, nullptr, bDirect, pKey, m_bRepairPackage, m_xProgressHandler );
-    return pElement->m_xStream;
 }
 
 BaseStorage* UCBStorage::OpenUCBStorage( const OUString& rEleName, StreamMode nMode, bool bDirect )
@@ -2924,10 +2902,10 @@ bool UCBStorage::IsContained( const OUString & rEleName ) const
     return ( pElement != nullptr );
 }
 
-bool UCBStorage::Remove( const OUString& rEleName )
+void UCBStorage::Remove( const OUString& rEleName )
 {
     if( rEleName.isEmpty() )
-        return false;
+        return;
 
     UCBStorageElement_Impl *pElement = FindElement_Impl( rEleName );
     if ( pElement )
@@ -2936,8 +2914,6 @@ bool UCBStorage::Remove( const OUString& rEleName )
     }
     else
         SetError( SVSTREAM_FILE_NOT_FOUND );
-
-    return ( pElement != nullptr );
 }
 
 bool UCBStorage::ValidateFAT()

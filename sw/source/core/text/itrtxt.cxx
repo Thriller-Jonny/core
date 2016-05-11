@@ -68,7 +68,7 @@ void SwTextIter::CalcAscentAndHeight( sal_uInt16 &rAscent, sal_uInt16 &rHeight )
     rAscent = m_pCurr->GetAscent() + rHeight - m_pCurr->Height();
 }
 
-SwLineLayout *SwTextIter::_GetPrev()
+SwLineLayout *SwTextIter::GetPrev_()
 {
     m_pPrev = nullptr;
     m_bPrev = true;
@@ -83,14 +83,14 @@ SwLineLayout *SwTextIter::_GetPrev()
 const SwLineLayout *SwTextIter::GetPrev()
 {
     if(! m_bPrev)
-        _GetPrev();
+        GetPrev_();
     return m_pPrev;
 }
 
 const SwLineLayout *SwTextIter::Prev()
 {
     if( !m_bPrev )
-        _GetPrev();
+        GetPrev_();
     if( m_pPrev )
     {
         m_bPrev = false;
@@ -290,13 +290,12 @@ sal_uInt16 SwTextCursor::AdjustBaseLine( const SwLineLayout& rLine,
     return nOfst;
 }
 
-const SwLineLayout *SwTextIter::TwipsToLine( const SwTwips y)
+void SwTextIter::TwipsToLine( const SwTwips y)
 {
     while( m_nY + GetLineHeight() <= y && Next() )
         ;
     while( m_nY > y && Prev() )
         ;
-    return m_pCurr;
 }
 
 // Local helper function to check, if pCurr needs a field rest portion:
@@ -353,7 +352,7 @@ void SwTextIter::TruncLines( bool bNoteFollow )
                         // check, if hint is in our range
                         const sal_uInt16 nTmpPos = pHt->GetStart();
                         if ( nEnd <= nTmpPos && nTmpPos < nRangeEnd )
-                            pFollow->_InvalidateRange(
+                            pFollow->InvalidateRange_(
                                 SwCharRange( nTmpPos, nTmpPos ) );
                     }
                 }

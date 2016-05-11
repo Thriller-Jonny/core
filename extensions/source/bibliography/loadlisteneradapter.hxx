@@ -61,7 +61,6 @@ namespace bib
         OComponentListener*                 m_pListener;
         sal_Int32                           m_nLockCount;
         bool                                m_bListening    : 1;
-        bool                                m_bAutoRelease  : 1;
 
         // impl method for dispose - virtual, 'cause you at least need to remove the listener from the broadcaster
         virtual void disposing() = 0;
@@ -78,9 +77,8 @@ namespace bib
         virtual ~OComponentAdapterBase();
 
     public:
-        OComponentAdapterBase(
-            const css::uno::Reference< css::lang::XComponent >& _rxComp,
-            bool _bAutoRelease = true
+        explicit OComponentAdapterBase(
+            const css::uno::Reference< css::lang::XComponent >& _rxComp
         );
 
         // late construction
@@ -132,9 +130,8 @@ namespace bib
         virtual void    startComponentListening() override;
 
     public:
-        OLoadListenerAdapter(
-            const css::uno::Reference< css::form::XLoadable >& _rxLoadable,
-            bool _bAutoRelease = true
+        explicit OLoadListenerAdapter(
+            const css::uno::Reference< css::form::XLoadable >& _rxLoadable
         );
 
 

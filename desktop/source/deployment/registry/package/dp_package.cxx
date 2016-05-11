@@ -158,7 +158,6 @@ class BackendImpl : public ImplBaseT
         virtual void SAL_CALL disposing() override;
 
 
-
     public:
         PackageImpl(
             ::rtl::Reference<PackageRegistryBackend> const & myBackend,
@@ -472,7 +471,6 @@ void BackendImpl::revokeEntryFromDb(OUString const & url)
 }
 
 
-
 BackendImpl::PackageImpl::PackageImpl(
     ::rtl::Reference<PackageRegistryBackend> const & myBackend,
     OUString const & url,
@@ -580,9 +578,9 @@ OUString BackendImpl::PackageImpl::getTextFromURL(
     {
         ::ucbhelper::Content descContent(
             licenseUrl, xCmdEnv, getMyBackend()->getComponentContext());
-        ::rtl::ByteSequence seq = dp_misc::readFile(descContent);
+        std::vector<sal_Int8> seq = dp_misc::readFile(descContent);
         return OUString( reinterpret_cast<sal_Char const *>(
-            seq.getConstArray()), seq.getLength(), RTL_TEXTENCODING_UTF8);
+            seq.data()), seq.size(), RTL_TEXTENCODING_UTF8);
     }
     catch (const css::uno::Exception&)
     {
@@ -603,7 +601,7 @@ bool BackendImpl::PackageImpl::checkPlatform(
 {
     bool ret = false;
     DescriptionInfoset info(getDescriptionInfoset());
-    Sequence<OUString> platforms(info.getSupportedPlaforms());
+    Sequence<OUString> platforms(info.getSupportedPlatforms());
     if (hasValidPlatform(platforms))
     {
         ret = true;
@@ -767,7 +765,7 @@ sal_Bool BackendImpl::PackageImpl::checkDependencies(
         throw deployment::ExtensionRemovedException();
     DescriptionInfoset info = getDescriptionInfoset();
     if (!info.hasDescription())
-        return sal_True;
+        return true;
 
     return checkDependencies(xCmdEnv, info);
 }
@@ -1546,13 +1544,13 @@ void BackendImpl::PackageImpl::scanBundle(
                                 xCmdEnv, false /* no throw */ ))
         {
             // patch description:
-            ::rtl::ByteSequence bytes( readFile( descrFileContent ) );
+            std::vector<sal_Int8> bytes( readFile( descrFileContent ) );
             OUStringBuffer buf;
-            if ( bytes.getLength() )
+            if ( bytes.size() )
             {
                 buf.append( OUString( reinterpret_cast<sal_Char const *>(
-                                          bytes.getConstArray() ),
-                                      bytes.getLength(), RTL_TEXTENCODING_UTF8 ) );
+                                          bytes.data() ),
+                                      bytes.size(), RTL_TEXTENCODING_UTF8 ) );
             }
             else
             {

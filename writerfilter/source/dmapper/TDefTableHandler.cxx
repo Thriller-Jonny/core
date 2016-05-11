@@ -32,7 +32,6 @@ namespace dmapper {
 using namespace ::com::sun::star;
 
 
-
 TDefTableHandler::TDefTableHandler() :
 LoggedProperties("TDefTableHandler"),
 m_nLineWidth(0),
@@ -315,7 +314,7 @@ void TDefTableHandler::lcl_attribute(Id rName, Value & rVal)
 }
 
 
-void TDefTableHandler::localResolve(Id rName, writerfilter::Reference<Properties>::Pointer_t pProperties)
+void TDefTableHandler::localResolve(Id rName, const writerfilter::Reference<Properties>::Pointer_t& pProperties)
 {
     if( pProperties.get())
     {
@@ -418,7 +417,7 @@ void TDefTableHandler::lcl_sprm(Sprm & rSprm)
 }
 
 void TDefTableHandler::fillCellProperties(
-            size_t nCell, ::std::shared_ptr< TablePropertyMap > pCellProperties ) const
+            size_t nCell, const ::std::shared_ptr< TablePropertyMap >& pCellProperties ) const
 {
     if( m_aCellBorderPositions.size() > nCell )
     {

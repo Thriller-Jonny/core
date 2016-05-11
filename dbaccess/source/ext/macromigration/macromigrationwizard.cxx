@@ -35,11 +35,9 @@ namespace dbmm
     using ::com::sun::star::uno::XInterface;
     using ::com::sun::star::uno::UNO_QUERY;
     using ::com::sun::star::uno::UNO_QUERY_THROW;
-    using ::com::sun::star::uno::UNO_SET_THROW;
     using ::com::sun::star::uno::Exception;
     using ::com::sun::star::uno::RuntimeException;
     using ::com::sun::star::uno::Any;
-    using ::com::sun::star::uno::makeAny;
     using ::com::sun::star::uno::XComponentContext;
     using ::com::sun::star::uno::Sequence;
     using ::com::sun::star::beans::XPropertySetInfo;
@@ -106,8 +104,8 @@ namespace dbmm
 
     MacroMigrationDialogService::~MacroMigrationDialogService()
     {
-        // we do this here cause the base class' call to destroyDialog won't reach us anymore : we're within an dtor,
-        // so this virtual-method-call the base class does does not work, we're already dead then ...
+        // we do this here cause the base class' call to destroyDialog won't reach us anymore: we're within an dtor,
+        // so this virtual-method-call the base class does not work, we're already dead then...
         if ( m_pDialog )
         {
             ::osl::MutexGuard aGuard( m_aMutex );

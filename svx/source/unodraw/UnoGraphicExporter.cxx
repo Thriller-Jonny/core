@@ -363,7 +363,7 @@ IMPL_LINK_TYPED(GraphicExporter, CalcFieldValueHdl, EditFieldInfo*, pInfo, void)
                         break;
                     case SVX_ROMAN_UPPER:
                         bUpper = true;
-                        /* Fall through */
+                        SAL_FALLTHROUGH;
                     case SVX_ROMAN_LOWER:
                         aPageNumValue += SvxNumberFormat::CreateRomanString(mnPageNumber, bUpper);
                         break;
@@ -744,6 +744,10 @@ bool GraphicExporter::GetGraphic( ExportSettings& rSettings, Graphic& aGraphic, 
                 pView->SetPageVisible( false );
                 pView->ShowSdrPage( pPage );
 
+                // tdf#96922 completely deactivate EditView PageVisualization, including
+                // PageBackground (formally 'wiese').
+                pView->SetPagePaintingAllowed(false);
+
                 const Point aNewOrg( pPage->GetLftBorder(), pPage->GetUppBorder() );
                 aNewSize = Size( aSize.Width() - pPage->GetLftBorder() - pPage->GetRgtBorder(),
                                  aSize.Height() - pPage->GetUppBorder() - pPage->GetLwrBorder() );
@@ -1002,10 +1006,10 @@ sal_Bool SAL_CALL GraphicExporter::filter( const Sequence< PropertyValue >& aDes
     ::SolarMutexGuard aGuard;
 
     if( nullptr == mpUnoPage )
-        return sal_False;
+        return false;
 
     if( nullptr == mpUnoPage->GetSdrPage() || nullptr == mpDoc )
-        return sal_False;
+        return false;
 
     GraphicFilter &rFilter = GraphicFilter::GetGraphicFilter();
 
@@ -1212,22 +1216,20 @@ Sequence< OUString > SAL_CALL GraphicExporter::getSupportedServiceNames(  )
 }
 
 // XMimeTypeInfo
-sal_Bool SAL_CALL GraphicExporter::supportsMimeType( const OUString& MimeTypeName ) throw (RuntimeException, std::exception)
+sal_Bool SAL_CALL GraphicExporter::supportsMimeType( const OUString& rMimeTypeName ) throw (RuntimeException, std::exception)
 {
-    const OUString aMimeTypeName( MimeTypeName );
-
     GraphicFilter &rFilter = GraphicFilter::GetGraphicFilter();
     sal_uInt16 nCount = rFilter.GetExportFormatCount();
     sal_uInt16 nFilter;
     for( nFilter = 0; nFilter < nCount; nFilter++ )
     {
-        if( aMimeTypeName == rFilter.GetExportFormatMediaType( nFilter ) )
+        if( rMimeTypeName == rFilter.GetExportFormatMediaType( nFilter ) )
         {
-            return sal_True;
+            return true;
         }
     }
 
-    return sal_False;
+    return false;
 }
 
 Sequence< OUString > SAL_CALL GraphicExporter::getSupportedMimeTypeNames(  ) throw (RuntimeException, std::exception)

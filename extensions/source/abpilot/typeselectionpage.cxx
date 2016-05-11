@@ -31,7 +31,7 @@ namespace abp
     using namespace ::com::sun::star::sdbc;
 
     // TypeSelectionPage
-    TypeSelectionPage::TypeSelectionPage( OAddessBookSourcePilot* _pParent )
+    TypeSelectionPage::TypeSelectionPage( OAddressBookSourcePilot* _pParent )
       : AddressBookSourcePage(_pParent, "SelectTypePage",
           "modules/sabpilot/ui/selecttypepage.ui")
     {
@@ -70,7 +70,7 @@ namespace abp
         bool bHaveKab = false;
         bool bHaveMacab = false;
 
-#if !defined WNT
+#if !defined(_WIN32)
 
         Reference< XDriverManager2 > xManager = DriverManager::create( _pParent->getORB() );
 

@@ -16,9 +16,6 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 interface ImpressEditView : DrawView
-[
-    uuid ( "661B07E0-2FB4-11CF-89CA-008029E4B0B1" ) ;
-]
 {
     SID_MODIFYPAGE // ole : no, status : play rec
     [
@@ -106,11 +103,6 @@ interface ImpressEditView : DrawView
         ExecMethod = ExecAnimationWin ;
         StateMethod = GetAnimationWinState ;
     ]
-    SID_NAVIGATOR_PEN // ole : no, status : ?
-    [
-        ExecMethod = ExecNavigatorWin ;
-        StateMethod = GetNavigatorWinState ;
-    ]
     SID_PRESENTATION_DLG
     [
         ExecMethod = FuTemporary ;
@@ -146,7 +138,6 @@ interface ImpressEditView : DrawView
         ExecMethod = Execute ;
         StateMethod = GetState ;
         GroupId = GID_DOCUMENT ;
-        Cachable ;
     ]
     SID_SEARCH_ITEM // ole : ?, status : ?
     [
@@ -202,17 +193,17 @@ interface ImpressEditView : DrawView
 
 shell DrawViewShell
 {
-    import ImpressEditView[Automation];
+    import ImpressEditView;
 }
 
 
 shell PresentationViewShell
 {
-    import ImpressEditView[Automation];
+    import ImpressEditView;
 }
 
 
 shell PreviewViewShell
 {
-    import ImpressEditView[Automation];
+    import ImpressEditView;
 }

@@ -46,7 +46,7 @@ public:
 
     CPPUNIT_TEST_SUITE(DialogSaveTest);
 // Should we disable this test on MOX and WNT?
-// #if !defined(MACOSX) && !defined(WNT)
+// #if !defined(MACOSX) && !defined(_WIN32)
     CPPUNIT_TEST(test);
 // #endif
     CPPUNIT_TEST_SUITE_END();
@@ -68,7 +68,7 @@ void DialogSaveTest::test()
     SolarMutexReleaser rel;
 
     const OUString sStandard("Standard");
-    const OUString aFileName(getURLFromWorkdir("CppunitTest/testDialogSave.odb"));
+    const OUString aFileName(m_directories.getURLFromWorkdir("CppunitTest/testDialogSave.odb"));
     {
         uno::Reference< lang::XComponent > xComponent = loadFromDesktop(aFileName);
         CPPUNIT_ASSERT(xComponent.is());
@@ -98,7 +98,7 @@ void DialogSaveTest::test()
         // xDocProps.setTitle(xDocProps.getTitle() + " suffix");
         uno::Reference< util::XModifiable > xDocMod(xComponent, UNO_QUERY_THROW);
         CPPUNIT_ASSERT(xDocMod.is());
-        xDocMod->setModified(sal_True);
+        xDocMod->setModified(true);
 
         // now save; the code path to exercise in this test is the "store to same location"
         //           do *not* change to store(As|To|URL)!

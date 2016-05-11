@@ -458,7 +458,7 @@ sal_uInt32 ImpEditEngine::WriteRTF( SvStream& rOutput, EditSelection aSel )
     if ( GetStyleSheetPool() )
     {
         SfxStyleSheetIteratorPtr aSSSIterator = std::make_shared<SfxStyleSheetIterator>(GetStyleSheetPool(),
-                SFX_STYLE_FAMILY_ALL);
+                SfxStyleFamily::All);
         // fill aStyleSheetToIdMap
         sal_uInt32 nId = 1;
         for ( SfxStyleSheetBase* pStyle = aSSSIterator->First(); pStyle;
@@ -849,13 +849,13 @@ void ImpEditEngine::WriteItemAsRTF( const SfxPoolItem& rItem, SvStream& rOutput,
         {
             // Must underlined if in WordLineMode, but the information is
             // missing here
-            FontUnderline e = static_cast<const SvxUnderlineItem&>(rItem).GetLineStyle();
+            FontLineStyle e = static_cast<const SvxUnderlineItem&>(rItem).GetLineStyle();
             switch ( e )
             {
-                case UNDERLINE_NONE:    rOutput.WriteCharPtr( OOO_STRING_SVTOOLS_RTF_ULNONE );       break;
-                case UNDERLINE_SINGLE:  rOutput.WriteCharPtr( OOO_STRING_SVTOOLS_RTF_UL );       break;
-                case UNDERLINE_DOUBLE:  rOutput.WriteCharPtr( OOO_STRING_SVTOOLS_RTF_ULDB );     break;
-                case UNDERLINE_DOTTED:  rOutput.WriteCharPtr( OOO_STRING_SVTOOLS_RTF_ULD );      break;
+                case LINESTYLE_NONE:    rOutput.WriteCharPtr( OOO_STRING_SVTOOLS_RTF_ULNONE );       break;
+                case LINESTYLE_SINGLE:  rOutput.WriteCharPtr( OOO_STRING_SVTOOLS_RTF_UL );       break;
+                case LINESTYLE_DOUBLE:  rOutput.WriteCharPtr( OOO_STRING_SVTOOLS_RTF_ULDB );     break;
+                case LINESTYLE_DOTTED:  rOutput.WriteCharPtr( OOO_STRING_SVTOOLS_RTF_ULD );      break;
                 default:
                     break;
             }
@@ -863,13 +863,13 @@ void ImpEditEngine::WriteItemAsRTF( const SfxPoolItem& rItem, SvStream& rOutput,
         break;
         case EE_CHAR_OVERLINE:
         {
-            FontUnderline e = static_cast<const SvxOverlineItem&>(rItem).GetLineStyle();
+            FontLineStyle e = static_cast<const SvxOverlineItem&>(rItem).GetLineStyle();
             switch ( e )
             {
-                case UNDERLINE_NONE:    rOutput.WriteCharPtr( OOO_STRING_SVTOOLS_RTF_OLNONE );       break;
-                case UNDERLINE_SINGLE:  rOutput.WriteCharPtr( OOO_STRING_SVTOOLS_RTF_OL );       break;
-                case UNDERLINE_DOUBLE:  rOutput.WriteCharPtr( OOO_STRING_SVTOOLS_RTF_OLDB );     break;
-                case UNDERLINE_DOTTED:  rOutput.WriteCharPtr( OOO_STRING_SVTOOLS_RTF_OLD );      break;
+                case LINESTYLE_NONE:    rOutput.WriteCharPtr( OOO_STRING_SVTOOLS_RTF_OLNONE );       break;
+                case LINESTYLE_SINGLE:  rOutput.WriteCharPtr( OOO_STRING_SVTOOLS_RTF_OL );       break;
+                case LINESTYLE_DOUBLE:  rOutput.WriteCharPtr( OOO_STRING_SVTOOLS_RTF_OLDB );     break;
+                case LINESTYLE_DOTTED:  rOutput.WriteCharPtr( OOO_STRING_SVTOOLS_RTF_OLD );      break;
                 default:
                     break;
             }
@@ -921,10 +921,10 @@ void ImpEditEngine::WriteItemAsRTF( const SfxPoolItem& rItem, SvStream& rOutput,
         break;
         case EE_CHAR_EMPHASISMARK:
         {
-            sal_uInt16 nMark = static_cast<const SvxEmphasisMarkItem&>(rItem).GetValue();
-            if ( nMark == EMPHASISMARK_NONE )
+            FontEmphasisMark nMark = static_cast<const SvxEmphasisMarkItem&>(rItem).GetEmphasisMark();
+            if ( nMark == FontEmphasisMark::NONE )
                 rOutput.WriteCharPtr( OOO_STRING_SVTOOLS_RTF_ACCNONE );
-            else if ( nMark == EMPHASISMARK_SIDE_DOTS )
+            else if ( nMark == (FontEmphasisMark::Accent | FontEmphasisMark::PosAbove) )
                 rOutput.WriteCharPtr( OOO_STRING_SVTOOLS_RTF_ACCCOMMA );
             else
                 rOutput.WriteCharPtr( OOO_STRING_SVTOOLS_RTF_ACCDOT );
@@ -967,9 +967,9 @@ void ImpEditEngine::WriteItemAsRTF( const SfxPoolItem& rItem, SvStream& rOutput,
             SeekCursor( pNode, nPos, aFont );
             MapMode aPntMode( MAP_POINT );
             long nFontHeight = GetRefDevice()->LogicToLogic(
-                    aFont.GetSize(), &GetRefMapMode(), &aPntMode ).Height();
+                    aFont.GetFontSize(), &GetRefMapMode(), &aPntMode ).Height();
             nFontHeight *=2;    // Half Points
-            sal_uInt16 nProp = static_cast<const SvxEscapementItem&>(rItem).GetProp();
+            sal_uInt16 const nProp = static_cast<const SvxEscapementItem&>(rItem).GetProportionalHeight();
             sal_uInt16 nProp100 = nProp*100;    // For SWG-Token Prop in 100th percent.
             short nEsc = static_cast<const SvxEscapementItem&>(rItem).GetEsc();
             if ( nEsc == DFLT_ESC_AUTO_SUPER )
@@ -1465,7 +1465,7 @@ SpellInfo * ImpEditEngine::CreateSpellInfo( bool bMultipleDocs )
         *pSpellInfo = SpellInfo();  // reset to default values
 
     pSpellInfo->bMultipleDoc = bMultipleDocs;
-    // always spell draw objects completely, startting at the top.
+    // always spell draw objects completely, starting at the top.
     // (spelling in only a selection or not starting with the top requires
     // further changes elsewhere to work properly)
     pSpellInfo->aSpellStart = EPaM();
@@ -1499,7 +1499,7 @@ EESpellState ImpEditEngine::Spell( EditView* pEditView, bool bMultipleDoc )
         bIsStart = true;
 
     EditSpellWrapper* pWrp = new EditSpellWrapper( Application::GetDefDialogParent(),
-            xSpeller, bIsStart, false, pEditView );
+            bIsStart, pEditView );
     pWrp->SpellDocument();
     delete pWrp;
 
@@ -1661,8 +1661,8 @@ void ImpEditEngine::SetLanguageAndFont(
     {
         // set new font attribute
         SvxFontItem aFontItem = static_cast<const SvxFontItem&>( aNewSet.Get( nFontWhichId ) );
-        aFontItem.SetFamilyName( pFont->GetName());
-        aFontItem.SetFamily( pFont->GetFamily());
+        aFontItem.SetFamilyName( pFont->GetFamilyName());
+        aFontItem.SetFamily( pFont->GetFamilyType());
         aFontItem.SetStyleName( pFont->GetStyleName());
         aFontItem.SetPitch( pFont->GetPitch());
         aFontItem.SetCharSet( pFont->GetCharSet() );
@@ -2018,9 +2018,9 @@ bool ImpEditEngine::SpellSentence(EditView& rEditView,
 // Adds one portion to the SpellPortions
 void ImpEditEngine::AddPortion(
                             const EditSelection& rSel,
-                            uno::Reference< XSpellAlternatives > xAlt,
-                                svx::SpellPortions& rToFill,
-                                bool bIsField)
+                            const uno::Reference< XSpellAlternatives >& xAlt,
+                            svx::SpellPortions& rToFill,
+                            bool bIsField)
 {
     if(rSel.HasRange())
     {
@@ -2042,8 +2042,8 @@ void ImpEditEngine::AddPortion(
 void ImpEditEngine::AddPortionIterated(
                             EditView& rEditView,
                             const EditSelection& rSel,
-                            Reference< XSpellAlternatives > xAlt,
-                                svx::SpellPortions& rToFill)
+                            const Reference< XSpellAlternatives >& xAlt,
+                            svx::SpellPortions& rToFill)
 {
     if (rSel.HasRange())
     {
@@ -2244,7 +2244,7 @@ void ImpEditEngine::PutSpellingToSentenceStart( EditView& rEditView )
 }
 
 
-void ImpEditEngine::DoOnlineSpelling( ContentNode* pThisNodeOnly, bool bSpellAtCursorPos, bool bInteruptable )
+void ImpEditEngine::DoOnlineSpelling( ContentNode* pThisNodeOnly, bool bSpellAtCursorPos, bool bInterruptible )
 {
     /*
      It will iterate over all the paragraphs, paragraphs with only
@@ -2407,9 +2407,8 @@ void ImpEditEngine::DoOnlineSpelling( ContentNode* pThisNodeOnly, bool bSpellAtC
                     }
                     else if ( bSimpleRepaint )
                     {
-                        for (size_t nView = 0; nView < aEditViews.size(); ++nView)
+                        for (EditView* pView : aEditViews)
                         {
-                            EditView* pView = aEditViews[nView];
                             Rectangle aClipRect( aInvalidRect );
                             aClipRect.Intersection( pView->GetVisArea() );
                             if ( !aClipRect.IsEmpty() )
@@ -2429,7 +2428,7 @@ void ImpEditEngine::DoOnlineSpelling( ContentNode* pThisNodeOnly, bool bSpellAtC
             }
             // After two corrected nodes give up the control ...
             nInvalids++;
-            if ( bInteruptable && ( nInvalids >= 2 ) )
+            if ( bInterruptible && ( nInvalids >= 2 ) )
             {
                 bRestartTimer = true;
                 break;
@@ -2606,7 +2605,7 @@ bool ImpEditEngine::Search( const SvxSearchItem& rSearchItem, EditView* pEditVie
 bool ImpEditEngine::ImpSearch( const SvxSearchItem& rSearchItem,
     const EditSelection& rSearchSelection, const EditPaM& rStartPos, EditSelection& rFoundSel )
 {
-    util::SearchOptions aSearchOptions( rSearchItem.GetSearchOptions() );
+    util::SearchOptions2 aSearchOptions( rSearchItem.GetSearchOptions() );
     aSearchOptions.Locale = GetLocale( rStartPos );
 
     bool bBack = rSearchItem.GetBackward();
@@ -2952,9 +2951,9 @@ EditSelection ImpEditEngine::TransliterateText( const EditSelection& rSelection,
             if ( !pUndo && IsUndoEnabled() && !IsInUndo() )
             {
                 // adjust selection to include all changes
-                for (size_t i = 0; i < aChanges.size(); ++i)
+                for (eeTransliterationChgData & aChange : aChanges)
                 {
-                    const EditSelection &rSel = aChanges[i].aSelection;
+                    const EditSelection &rSel = aChange.aSelection;
                     if (aSel.Min().GetNode() == rSel.Min().GetNode() &&
                         aSel.Min().GetIndex() > rSel.Min().GetIndex())
                         aSel.Min().SetIndex( rSel.Min().GetIndex() );
@@ -3105,7 +3104,6 @@ void ImpEditEngine::SetAddExtLeading( bool bExtLeading )
         }
     }
 };
-
 
 
 bool ImpEditEngine::ImplHasText() const

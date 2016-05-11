@@ -77,9 +77,7 @@ class SVX_DLLPUBLIC SdrGluePoint {
     bool bUserDefined:1; // #i38892#
 public:
     SdrGluePoint(): nEscDir(SdrEscapeDirection::SMART),nId(0),nAlign(SdrAlign::NONE),bNoPercent(false),bReallyAbsolute(false),bUserDefined(true) {}
-    SdrGluePoint(const Point& rNewPos, bool bNewPercent=true, SdrAlign nNewAlign = SdrAlign::HORZ_CENTER): aPos(rNewPos),nEscDir(SdrEscapeDirection::SMART),nId(0),nAlign(nNewAlign),bNoPercent(!bNewPercent),bReallyAbsolute(false),bUserDefined(true) {}
-    bool operator==(const SdrGluePoint& rCmpGP) const   { return aPos==rCmpGP.aPos && nEscDir==rCmpGP.nEscDir && nId==rCmpGP.nId && nAlign==rCmpGP.nAlign && bNoPercent==rCmpGP.bNoPercent && bReallyAbsolute==rCmpGP.bReallyAbsolute && bUserDefined==rCmpGP.bUserDefined; }
-    bool operator!=(const SdrGluePoint& rCmpGP) const   { return !operator==(rCmpGP); }
+    SdrGluePoint(const Point& rNewPos): aPos(rNewPos),nEscDir(SdrEscapeDirection::SMART),nId(0),nAlign(SdrAlign::NONE),bNoPercent(false),bReallyAbsolute(false),bUserDefined(true) {}
     const Point& GetPos() const                             { return aPos; }
     void         SetPos(const Point& rNewPos)               { aPos=rNewPos; }
     SdrEscapeDirection GetEscDir() const                          { return nEscDir; }
@@ -139,7 +137,7 @@ public:
     SdrGluePoint&       operator[](sal_uInt16 nPos)                             { return *GetObject(nPos); }
     const SdrGluePoint& operator[](sal_uInt16 nPos) const                       { return *GetObject(nPos); }
     sal_uInt16          FindGluePoint(sal_uInt16 nId) const;
-    sal_uInt16          HitTest(const Point& rPnt, const OutputDevice& rOut, const SdrObject* pObj, bool bBack = false, bool bNext = false, sal_uInt16 nId0=0) const;
+    sal_uInt16          HitTest(const Point& rPnt, const OutputDevice& rOut, const SdrObject* pObj) const;
     void                Invalidate(vcl::Window& rWin, const SdrObject* pObj) const;
     // temp for transformations on the reference object
     void                SetReallyAbsolute(bool bOn, const SdrObject& rObj);
@@ -148,8 +146,6 @@ public:
     void                Mirror(const Point& rRef1, const Point& rRef2, long nAngle, const SdrObject* pObj);
     void                Shear (const Point& rRef, long nAngle, double tn, bool bVShear, const SdrObject* pObj);
 };
-
-
 
 
 #endif // INCLUDED_SVX_SVDGLUE_HXX

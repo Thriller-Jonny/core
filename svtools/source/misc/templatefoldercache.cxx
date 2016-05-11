@@ -91,26 +91,6 @@ namespace svt
         return _rStorage;
     }
 
-
-    bool operator == ( const util::DateTime& _rLHS, const util::DateTime& _rRHS )
-    {
-        return  _rLHS.NanoSeconds == _rRHS.NanoSeconds
-            &&  _rLHS.Seconds   == _rRHS.Seconds
-            &&  _rLHS.Minutes   == _rRHS.Minutes
-            &&  _rLHS.Hours     == _rRHS.Hours
-            &&  _rLHS.Day       == _rRHS.Day
-            &&  _rLHS.Month     == _rRHS.Month
-            &&  _rLHS.Year      == _rRHS.Year
-            &&  _rLHS.IsUTC     == _rRHS.IsUTC;
-    }
-
-
-    bool operator != ( const util::DateTime& _rLHS, const util::DateTime& _rRHS )
-    {
-        return !( _rLHS == _rRHS );
-    }
-
-
     //= TemplateContent
 
     struct TemplateContent;
@@ -158,8 +138,6 @@ namespace svt
         inline void                     push_back( const ::rtl::Reference< TemplateContent >& _rxNewElement )
                                                         { m_aSubContents.push_back( _rxNewElement ); }
     };
-
-
 
 
     TemplateContent::TemplateContent( const INetURLObject& _rURL )
@@ -439,8 +417,8 @@ namespace svt
         explicit TemplateFolderCacheImpl( bool _bAutoStoreState );
         ~TemplateFolderCacheImpl( );
 
-        bool        needsUpdate( bool _bForceCheck );
-        void        storeState( bool _bForceRetrieval );
+        bool        needsUpdate();
+        void        storeState();
 
     private:
         bool        openCacheStream( bool _bForRead );
@@ -481,7 +459,7 @@ namespace svt
     {
         // store the current state if possible and required
         if ( m_bValidCurrentState && m_bAutoStoreState )
-            storeState( false );
+            storeState();
 
         closeCacheStream( );
     }
@@ -502,7 +480,6 @@ namespace svt
     {
         return OUString(".templdir.cache");
     }
-
 
 
     void TemplateFolderCacheImpl::normalize( TemplateFolderContent& _rState )
@@ -530,9 +507,9 @@ namespace svt
     }
 
 
-    void TemplateFolderCacheImpl::storeState( bool _bForceRetrieval )
+    void TemplateFolderCacheImpl::storeState()
     {
-        if ( !m_bValidCurrentState || _bForceRetrieval )
+        if ( !m_bValidCurrentState )
             readCurrentState( );
 
         if ( m_bValidCurrentState && openCacheStream( false ) )
@@ -660,7 +637,7 @@ namespace svt
 
         // the template directories from the config
         const SvtPathOptions aPathOptions;
-        OUString aDirs = aPathOptions.GetTemplatePath();
+        const OUString& aDirs = aPathOptions.GetTemplatePath();
 
         // loop through all the root-level template folders
         sal_Int32 nIndex = 0;
@@ -777,9 +754,9 @@ namespace svt
     }
 
 
-    bool TemplateFolderCacheImpl::needsUpdate( bool _bForceCheck )
+    bool TemplateFolderCacheImpl::needsUpdate()
     {
-        if ( m_bKnowState && !_bForceCheck )
+        if ( m_bKnowState )
             return m_bNeedsUpdate;
 
         m_bNeedsUpdate = true;
@@ -835,15 +812,15 @@ namespace svt
     }
 
 
-    bool TemplateFolderCache::needsUpdate( bool _bForceCheck )
+    bool TemplateFolderCache::needsUpdate()
     {
-        return m_pImpl->needsUpdate( _bForceCheck );
+        return m_pImpl->needsUpdate();
     }
 
 
-    void TemplateFolderCache::storeState( bool _bForceRetrieval )
+    void TemplateFolderCache::storeState()
     {
-        m_pImpl->storeState( _bForceRetrieval );
+        m_pImpl->storeState();
     }
 
 

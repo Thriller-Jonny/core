@@ -27,6 +27,7 @@
 #include "scdllapi.h"
 #include <rtl/ustring.hxx>
 #include <svl/sharedstring.hxx>
+#include <svl/sharedstringpool.hxx>
 
 #include <functional>
 #include <memory>
@@ -60,10 +61,10 @@ struct ScMatrixValue
     ScMatValType nType;
 
     /// Only valid if ScMatrix methods indicate so!
-    svl::SharedString GetString() const { return aStr; }
+    const svl::SharedString& GetString() const { return aStr; }
 
     /// Only valid if ScMatrix methods indicate that this is no string!
-    sal_uInt16 GetError() const         { return GetDoubleErrorValue( fVal); }
+    sal_uInt16 GetError() const { return formula::GetDoubleErrorValue( fVal); }
 
     /// Only valid if ScMatrix methods indicate that this is a boolean
     bool GetBoolean() const         { return fVal != 0.0; }
@@ -123,6 +124,10 @@ protected:
 public:
     enum Op { Add, Sub, Mul, Div };
 
+    typedef std::function<void(size_t, size_t, double)> DoubleOpFunction;
+    typedef std::function<void(size_t, size_t, bool)> BoolOpFunction;
+    typedef std::function<void(size_t, size_t, svl::SharedString)> StringOpFunction;
+
     /**
      * When adding all numerical matrix elements for a scalar result such as
      * summation, the interpreter wants to separate the first non-zero value
@@ -159,6 +164,12 @@ public:
         return nMemMax < nArbitraryLimit ? nMemMax : nArbitraryLimit;
 #endif
     }
+
+    /** Checks nC or nR for zero and uses GetElementsMax() whether a matrix of
+        the size of nC*nR could be allocated. A zero size (both nC and nR zero)
+        matrix is allowed for later resize.
+     */
+    bool static IsSizeAllocatable( SCSIZE nC, SCSIZE nR );
 
     /// Value or boolean.
     inline static bool IsValueType( ScMatValType nType )
@@ -362,7 +373,7 @@ public:
     virtual IterateResult Sum(bool bTextAsZero) const = 0;
     virtual IterateResult SumSquare(bool bTextAsZero) const = 0;
     virtual IterateResult Product(bool bTextAsZero) const = 0;
-    virtual size_t Count(bool bCountStrings) const = 0;
+    virtual size_t Count(bool bCountStrings, bool bCountErrors) const = 0;
     virtual size_t MatchDoubleInColumns(double fValue, size_t nCol1, size_t nCol2) const = 0;
     virtual size_t MatchStringInColumns(const svl::SharedString& rStr, size_t nCol1, size_t nCol2) const = 0;
 
@@ -393,8 +404,14 @@ public:
 
     virtual std::vector<ScMatrix::IterateResult> Collect(bool bTextAsZero, const std::vector<std::unique_ptr<sc::op::Op>>& aOp) = 0;
 
+    virtual void ExecuteOperation(const std::pair<size_t, size_t>& rStartPos, const std::pair<size_t, size_t>& rEndPos,
+            DoubleOpFunction aDoubleFunc, BoolOpFunction aBoolFunc, StringOpFunction aStringFunc) const = 0;
+
+    virtual void MatConcat(SCSIZE nMaxCol, SCSIZE nMaxRow, const ScMatrixRef& xMat1, const ScMatrixRef& xMat2,
+            SvNumberFormatter& rFormatter, svl::SharedStringPool& rPool) = 0;
+
 #if DEBUG_MATRIX
-    void Dump() const;
+    virtual void Dump() const = 0;
 #endif
 };
 
@@ -567,7 +584,7 @@ public:
     virtual IterateResult Sum(bool bTextAsZero) const override;
     virtual IterateResult SumSquare(bool bTextAsZero) const override;
     virtual IterateResult Product(bool bTextAsZero) const override;
-    virtual size_t Count(bool bCountStrings) const override;
+    virtual size_t Count(bool bCountStrings, bool bCountErrors) const override;
     virtual size_t MatchDoubleInColumns(double fValue, size_t nCol1, size_t nCol2) const override;
     virtual size_t MatchStringInColumns(const svl::SharedString& rStr, size_t nCol1, size_t nCol2) const override;
 
@@ -598,10 +615,15 @@ public:
 
     virtual std::vector<ScMatrix::IterateResult> Collect(bool bTextAsZero, const std::vector<std::unique_ptr<sc::op::Op>>& aOp) override;
 
+    virtual void ExecuteOperation(const std::pair<size_t, size_t>& rStartPos, const std::pair<size_t, size_t>& rEndPos,
+            DoubleOpFunction aDoubleFunc, BoolOpFunction aBoolFunc, StringOpFunction aStringFunc) const override;
     ScFullMatrix& operator+= ( const ScFullMatrix& r );
 
+    virtual void MatConcat(SCSIZE nMaxCol, SCSIZE nMaxRow, const ScMatrixRef& xMat1, const ScMatrixRef& xMat2,
+            SvNumberFormatter& rFormatter, svl::SharedStringPool& rPool) override;
+
 #if DEBUG_MATRIX
-    void Dump() const;
+    virtual void Dump() const override;
 #endif
 };
 
@@ -776,7 +798,7 @@ public:
     virtual IterateResult Sum(bool bTextAsZero) const override;
     virtual IterateResult SumSquare(bool bTextAsZero) const override;
     virtual IterateResult Product(bool bTextAsZero) const override;
-    virtual size_t Count(bool bCountStrings) const override;
+    virtual size_t Count(bool bCountStrings, bool bCountErrors) const override;
     virtual size_t MatchDoubleInColumns(double fValue, size_t nCol1, size_t nCol2) const override;
     virtual size_t MatchStringInColumns(const svl::SharedString& rStr, size_t nCol1, size_t nCol2) const override;
 
@@ -806,7 +828,19 @@ public:
 
     virtual std::vector<ScMatrix::IterateResult> Collect(bool bTextAsZero, const std::vector<std::unique_ptr<sc::op::Op>>& aOp) override;
 
+    virtual void ExecuteOperation(const std::pair<size_t, size_t>& rStartPos, const std::pair<size_t, size_t>& rEndPos,
+            DoubleOpFunction aDoubleFunc, BoolOpFunction aBoolFunc, StringOpFunction aStringFunc) const override;
+
     ScVectorRefMatrix& operator+=(const ScVectorRefMatrix& r);
+
+    virtual void MatConcat(SCSIZE nMaxCol, SCSIZE nMaxRow, const ScMatrixRef& xMat1, const ScMatrixRef& xMat2,
+            SvNumberFormatter& rFormatter, svl::SharedStringPool& rPool) override;
+
+#if DEBUG_MATRIX
+    virtual void Dump() const override
+    {
+    }
+#endif
 };
 
 inline void intrusive_ptr_add_ref(const ScMatrix* p)

@@ -16,8 +16,8 @@
  *   except in compliance with the License. You may obtain a copy of
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
-#ifndef _SVX_FMRESIDS_HRC
-#define _SVX_FMRESIDS_HRC
+#ifndef INCLUDED_SVX_FMRESIDS_HRC
+#define INCLUDED_SVX_FMRESIDS_HRC
 
 #include <svl/solar.hrc>
 
@@ -75,10 +75,6 @@
 #define RID_SVXMNU_CELL                             (RID_FORMS_START + 3)
 #define RID_FMSHELL_CONVERSIONMENU                  (RID_FORMS_START + 4)
 #define RID_FM_FILTER_MENU                          (RID_FORMS_START + 5)
-#define RID_FM_TEXTATTRIBUTE_MENU                   (RID_FORMS_START + 6)
-#define MENU_FM_TEXTATTRIBITES_STYLE                (RID_FORMS_START + 7)
-#define MENU_FM_TEXTATTRIBITES_ALIGNMENT            (RID_FORMS_START + 8)
-#define MENU_FM_TEXTATTRIBITES_SPACING              (RID_FORMS_START + 9)
 #define RID_MENU_DATANAVIGATOR                      (RID_FORMS_START + 10)
 
 // String-Id's -----------------------------------------------------------

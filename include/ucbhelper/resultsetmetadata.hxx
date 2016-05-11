@@ -44,7 +44,6 @@ namespace ucbhelper
 {
 
 
-
 /**
  * This is a structure that holds additional meta data for one column
  * of a resultset. The default values set in the constructor should be a
@@ -129,7 +128,6 @@ ResultSetColumnData::ResultSetColumnData()
 }
 
 
-
 /**
  * This is an implementation of the interface XResultSetMetaData. It can be
  * used to implement the interface
@@ -152,18 +150,15 @@ protected:
 public:
 
     /**
-      * Constructor.
+      * Constructor. ResultSet is readonly by default.
       *
       * @param rxSMgr is a Servive Manager.
       * @param rProps is a sequence of properties (partially) describing the
       *        columns of a resultset.
-      * @param bReadOnly is used to specify whether the whole(!) resultset
-      *        is read-only.
       */
     ResultSetMetaData(
             const css::uno::Reference< css::uno::XComponentContext >& rxContext,
-            const css::uno::Sequence< css::beans::Property >& rProps,
-            bool bReadOnly = true );
+            const css::uno::Sequence< css::beans::Property >& rProps );
 
     /**
       * Constructor.

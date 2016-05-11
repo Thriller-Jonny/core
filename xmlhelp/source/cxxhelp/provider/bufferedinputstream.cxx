@@ -30,21 +30,6 @@ using namespace com::sun::star::io;
 using namespace chelp;
 
 
-Reference<XInputStream> chelp::turnToSeekable(const Reference<XInputStream>& xInputStream)
-{
-    if( ! xInputStream.is() )
-        return xInputStream;
-
-    Reference<XSeekable> xSeekable(xInputStream,UNO_QUERY);
-
-    if( xSeekable.is() )
-        return xInputStream;
-
-    return new BufferedInputStream(xInputStream);
-}
-
-
-
 BufferedInputStream::BufferedInputStream(const Reference<XInputStream>& xInputStream)
     : m_nBufferLocation(0),
       m_nBufferSize(0),
@@ -116,7 +101,6 @@ void SAL_CALL BufferedInputStream::release() throw()
 }
 
 
-
 sal_Int32 SAL_CALL BufferedInputStream::readBytes( Sequence< sal_Int8 >& aData,sal_Int32 nBytesToRead )
     throw( NotConnectedException,
            BufferSizeExceededException,
@@ -153,7 +137,6 @@ sal_Int32 SAL_CALL BufferedInputStream::readSomeBytes(
 }
 
 
-
 void SAL_CALL BufferedInputStream::skipBytes( sal_Int32 nBytesToSkip )
     throw( NotConnectedException,
            BufferSizeExceededException,
@@ -171,7 +154,6 @@ void SAL_CALL BufferedInputStream::skipBytes( sal_Int32 nBytesToSkip )
 }
 
 
-
 sal_Int32 SAL_CALL BufferedInputStream::available()
     throw( NotConnectedException,
            IOException,
@@ -180,7 +162,6 @@ sal_Int32 SAL_CALL BufferedInputStream::available()
     osl::MutexGuard aGuard( m_aMutex );
     return  m_nBufferSize-m_nBufferLocation;
 }
-
 
 
 void SAL_CALL BufferedInputStream::closeInput()
@@ -206,7 +187,6 @@ void SAL_CALL BufferedInputStream::seek( sal_Int64 location )
 }
 
 
-
 sal_Int64 SAL_CALL BufferedInputStream::getPosition()
     throw( IOException,
            RuntimeException, std::exception )
@@ -214,7 +194,6 @@ sal_Int64 SAL_CALL BufferedInputStream::getPosition()
     osl::MutexGuard aGuard( m_aMutex );
     return m_nBufferLocation;
 }
-
 
 
 sal_Int64 SAL_CALL BufferedInputStream::getLength() throw( IOException,RuntimeException, std::exception )

@@ -35,8 +35,8 @@
 #include "continuouskeytimeactivitybase.hxx"
 
 #include <boost/optional.hpp>
-#include <boost/shared_ptr.hpp>
 
+#include <memory>
 #include <cmath>
 #include <vector>
 #include <algorithm>
@@ -141,13 +141,17 @@ public:
         value, or start fresh each time.
     */
     FromToByActivity(
+        const OptionalValueType&                      rFrom,
         const OptionalValueType&                      rTo,
         const OptionalValueType&                      rBy,
         const ActivityParameters&                     rParms,
-        const ::boost::shared_ptr< AnimationType >&   rAnim,
+        const ::std::shared_ptr< AnimationType >&   rAnim,
         const Interpolator< ValueType >&              rInterpolator,
         bool                                          bCumulative )
         : BaseType( rParms ),
+          maFrom( rFrom ),
+          maTo( rTo ),
+          maBy( rBy ),
           mpFormula( rParms.mpFormula ),
           maStartValue(),
           maEndValue(),
@@ -164,6 +168,74 @@ public:
         ENSURE_OR_THROW(
             rTo || rBy,
             "From and one of To or By, or To or By alone must be valid" );
+    }
+
+    virtual void startAnimation()
+    {
+        if (this->isDisposed() || !mpAnim)
+            return;
+        BaseType::startAnimation();
+
+        // start animation
+        mpAnim->start( BaseType::getShape(),
+                       BaseType::getShapeAttributeLayer() );
+
+        // setup start and end value. Determine animation
+        // start value only when animation actually
+        // started up (this order is part of the Animation
+        // interface contract)
+        const ValueType aAnimationStartValue( mpAnim->getUnderlyingValue() );
+
+        // first of all, determine general type of
+        // animation, by inspecting which of the FromToBy values
+        // are actually valid.
+        // See http://www.w3.org/TR/smil20/animation.html#AnimationNS-FromToBy
+        // for a definition
+        if( maFrom )
+        {
+            // From-to or From-by animation. According to
+            // SMIL spec, the To value takes precedence
+            // over the By value, if both are specified
+            if( maTo )
+            {
+                // From-To animation
+                maStartValue = *maFrom;
+                maEndValue = *maTo;
+            }
+            else if( maBy )
+            {
+                // From-By animation
+                maStartValue = *maFrom;
+                maEndValue = maStartValue + *maBy;
+            }
+        }
+        else
+        {
+            maStartValue = aAnimationStartValue;
+            maStartInterpolationValue = maStartValue;
+
+            // By or To animation. According to SMIL spec,
+            // the To value takes precedence over the By
+            // value, if both are specified
+            if( maTo )
+            {
+                // To animation
+
+                // According to the SMIL spec
+                // (http://www.w3.org/TR/smil20/animation.html#animationNS-ToAnimation),
+                // the to animation interpolates between
+                // the _running_ underlying value and the to value (as the end value)
+                mbDynamicStartValue = true;
+                maPreviousValue = maStartValue;
+                maEndValue = *maTo;
+            }
+            else if( maBy )
+            {
+                // By animation
+                maStartValue = aAnimationStartValue;
+                maEndValue = maStartValue + *maBy;
+            }
+        }
     }
 
     virtual void endAnimation()
@@ -268,7 +340,18 @@ public:
         }
     }
 
+    /// Disposable:
+    virtual void dispose()
+    {
+        mpAnim.reset();
+        BaseType::dispose();
+    }
+
 private:
+    const OptionalValueType                 maFrom;
+    const OptionalValueType                 maTo;
+    const OptionalValueType                 maBy;
+
     ExpressionNodeSharedPtr                 mpFormula;
 
     ValueType                               maStartValue;
@@ -278,7 +361,7 @@ private:
     mutable ValueType                               maStartInterpolationValue;
     mutable sal_uInt32                              mnIteration;
 
-    ::boost::shared_ptr< AnimationType >    mpAnim;
+    ::std::shared_ptr< AnimationType >    mpAnim;
     Interpolator< ValueType >               maInterpolator;
     bool                                    mbDynamicStartValue;
     bool                                    mbCumulative;
@@ -299,7 +382,7 @@ AnimationActivitySharedPtr createFromToByActivity(
     const uno::Any&                                          rToAny,
     const uno::Any&                                          rByAny,
     const ActivityParameters&                                rParms,
-    const ::boost::shared_ptr< AnimationType >&              rAnim,
+    const ::std::shared_ptr< AnimationType >&              rAnim,
     const Interpolator< typename AnimationType::ValueType >& rInterpolator,
     bool                                                     bCumulative,
     const ShapeSharedPtr&                                    rShape,
@@ -338,6 +421,7 @@ AnimationActivitySharedPtr createFromToByActivity(
 
     return AnimationActivitySharedPtr(
         new FromToByActivity<BaseType, AnimationType>(
+            aFrom,
             aTo,
             aBy,
             rParms,
@@ -425,7 +509,7 @@ public:
     ValuesActivity(
         const ValueVectorType&                      rValues,
         const ActivityParameters&                   rParms,
-        const boost::shared_ptr<AnimationType>&     rAnim,
+        const std::shared_ptr<AnimationType>&     rAnim,
         const Interpolator< ValueType >&            rInterpolator,
         bool                                        bCumulative )
         : BaseType( rParms ),
@@ -437,6 +521,17 @@ public:
     {
         ENSURE_OR_THROW( mpAnim, "Invalid animation object" );
         ENSURE_OR_THROW( !rValues.empty(), "Empty value vector" );
+    }
+
+    virtual void startAnimation()
+    {
+        if (this->isDisposed() || !mpAnim)
+            return;
+        BaseType::startAnimation();
+
+        // start animation
+        mpAnim->start( BaseType::getShape(),
+                       BaseType::getShapeAttributeLayer() );
     }
 
     virtual void endAnimation()
@@ -496,7 +591,7 @@ private:
 
     ExpressionNodeSharedPtr                 mpFormula;
 
-    boost::shared_ptr<AnimationType>        mpAnim;
+    std::shared_ptr<AnimationType>        mpAnim;
     Interpolator< ValueType >               maInterpolator;
     bool                                    mbCumulative;
 };
@@ -513,7 +608,7 @@ template<class BaseType, typename AnimationType>
 AnimationActivitySharedPtr createValueListActivity(
     const uno::Sequence<uno::Any>&                            rValues,
     const ActivityParameters&                                 rParms,
-    const boost::shared_ptr<AnimationType>&                   rAnim,
+    const std::shared_ptr<AnimationType>&                   rAnim,
     const Interpolator<typename AnimationType::ValueType>&    rInterpolator,
     bool                                                      bCumulative,
     const ShapeSharedPtr&                                     rShape,
@@ -568,7 +663,7 @@ template<typename AnimationType>
 AnimationActivitySharedPtr createActivity(
     const ActivitiesFactory::CommonParameters&               rParms,
     const uno::Reference< animations::XAnimate >&            xNode,
-    const ::boost::shared_ptr< AnimationType >&              rAnim,
+    const ::std::shared_ptr< AnimationType >&              rAnim,
     const Interpolator< typename AnimationType::ValueType >& rInterpolator
     = Interpolator< typename AnimationType::ValueType >() )
 {
@@ -669,11 +764,9 @@ AnimationActivitySharedPtr createActivity(
 
             default:
                 OSL_FAIL( "createActivity(): unexpected case" );
-                // FALLTHROUGH intended
+                SAL_FALLTHROUGH;
             case animations::AnimationCalcMode::PACED:
-                // FALLTHROUGH intended
             case animations::AnimationCalcMode::SPLINE:
-                // FALLTHROUGH intended
             case animations::AnimationCalcMode::LINEAR:
                 return createValueListActivity< ContinuousKeyTimeActivityBase >(
                     xNode->getValues(),
@@ -737,11 +830,9 @@ AnimationActivitySharedPtr createActivity(
 
             default:
                 OSL_FAIL( "createActivity(): unexpected case" );
-                // FALLTHROUGH intended
+                SAL_FALLTHROUGH;
             case animations::AnimationCalcMode::PACED:
-                // FALLTHROUGH intended
             case animations::AnimationCalcMode::SPLINE:
-                // FALLTHROUGH intended
             case animations::AnimationCalcMode::LINEAR:
                 return createFromToByActivity< ContinuousActivityBase >(
                     xNode->getFrom(),

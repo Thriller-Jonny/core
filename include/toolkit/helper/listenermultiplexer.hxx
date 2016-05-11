@@ -43,7 +43,7 @@
 #include <com/sun/star/view/XSelectionChangeListener.hpp>
 #include <com/sun/star/util/VetoException.hpp>
 #include <cppuhelper/weak.hxx>
-#include <cppuhelper/interfacecontainer.hxx>
+#include <comphelper/interfacecontainer2.hxx>
 #include <osl/mutex.hxx>
 #include <toolkit/helper/mutexhelper.hxx>
 #include <toolkit/helper/macros.hxx>
@@ -54,7 +54,7 @@
 
 
 class TOOLKIT_DLLPUBLIC ListenerMultiplexerBase : public MutexHelper,
-                                public ::cppu::OInterfaceContainerHelper,
+                                public ::comphelper::OInterfaceContainerHelper2,
                                 public css::uno::XInterface
 {
 private:
@@ -74,7 +74,6 @@ public:
 };
 
 
-
 //  class EventListenerMultiplexer
 
 DECL_LISTENERMULTIPLEXER_START( EventListenerMultiplexer, css::lang::XEventListener )
@@ -89,7 +88,6 @@ DECL_LISTENERMULTIPLEXER_START_DLLPUB( FocusListenerMultiplexer, css::awt::XFocu
 DECL_LISTENERMULTIPLEXER_END
 
 
-
 //  class WindowListenerMultiplexer
 
 DECL_LISTENERMULTIPLEXER_START_DLLPUB( WindowListenerMultiplexer, css::awt::XWindowListener )
@@ -98,8 +96,6 @@ DECL_LISTENERMULTIPLEXER_START_DLLPUB( WindowListenerMultiplexer, css::awt::XWin
     void SAL_CALL windowShown( const css::lang::EventObject& e ) throw(css::uno::RuntimeException, std::exception) override;
     void SAL_CALL windowHidden( const css::lang::EventObject& e ) throw(css::uno::RuntimeException, std::exception) override;
 DECL_LISTENERMULTIPLEXER_END
-
-
 
 
 //  class VclContainerListenerMultiplexer

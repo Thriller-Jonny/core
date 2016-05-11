@@ -23,9 +23,10 @@
 #include <queue>
 #include <set>
 
-#include <prex.h>
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
+#include <X11/extensions/Xrender.h>
 #include <X11/Xproto.h>
-#include <postx.h>
 
 #include "tools/debug.hxx"
 
@@ -53,17 +54,18 @@
 #include <unx/x11/xlimits.hxx>
 
 #include "salgdiimpl.hxx"
-#include "unx/x11windowprovider.hxx"
+#include "unx/nativewindowhandleprovider.hxx"
 #include "textrender.hxx"
 #include "gdiimpl.hxx"
 #include "opengl/x11/gdiimpl.hxx"
 #include "x11cairotextrender.hxx"
 #include "openglx11cairotextrender.hxx"
 
-#include "generic/printergfx.hxx"
+#include "unx/printergfx.hxx"
 #include "xrender_peer.hxx"
 #include "cairo_cairo.hxx"
 #include "cairo_xlib_cairo.hxx"
+#include <cairo-xlib.h>
 
 #include <vcl/opengl/OpenGLHelper.hxx>
 
@@ -111,17 +113,34 @@ void X11SalGraphics::freeResources()
     Display *pDisplay = GetXDisplay();
 
     DBG_ASSERT( !pPaintRegion_, "pPaintRegion_" );
-    if( mpClipRegion ) XDestroyRegion( mpClipRegion ), mpClipRegion = None;
+    if( mpClipRegion )
+    {
+        XDestroyRegion( mpClipRegion );
+        mpClipRegion = None;
+    }
 
     mxImpl->freeResources();
 
-    if( hBrush_ )       XFreePixmap( pDisplay, hBrush_ ), hBrush_ = None;
-    if( pFontGC_ ) XFreeGC( pDisplay, pFontGC_ ), pFontGC_ = None;
+    if( hBrush_ )
+    {
+        XFreePixmap( pDisplay, hBrush_ );
+        hBrush_ = None;
+    }
+    if( pFontGC_ )
+    {
+        XFreeGC( pDisplay, pFontGC_ );
+        pFontGC_ = None;
+    }
     if( m_pDeleteColormap )
-        delete m_pDeleteColormap, m_pColormap = m_pDeleteColormap = nullptr;
-
+    {
+        delete m_pDeleteColormap;
+        m_pColormap = m_pDeleteColormap = nullptr;
+    }
     if( m_aXRenderPicture )
-        XRenderPeer::GetInstance().FreePicture( m_aXRenderPicture ), m_aXRenderPicture = 0;
+    {
+        XRenderPeer::GetInstance().FreePicture( m_aXRenderPicture );
+        m_aXRenderPicture = 0;
+    }
 
     bFontGC_ = false;
 }
@@ -476,7 +495,7 @@ cairo::SurfaceSharedPtr X11SalGraphics::CreateSurface(const cairo::CairoSurfaceS
 
 namespace
 {
-    static cairo::X11SysData getSysData( const vcl::Window& rWindow )
+    cairo::X11SysData getSysData( const vcl::Window& rWindow )
     {
         const SystemEnvData* pSysData = cairo::GetSysData(&rWindow);
 
@@ -486,7 +505,7 @@ namespace
             return cairo::X11SysData(*pSysData);
     }
 
-    static cairo::X11SysData getSysData( const VirtualDevice& rVirDev )
+    cairo::X11SysData getSysData( const VirtualDevice& rVirDev )
     {
         return cairo::X11SysData( rVirDev.GetSystemGfxData() );
     }
@@ -545,20 +564,16 @@ bool X11SalGraphics::drawPolyLine(
     double fTransparency,
     const basegfx::B2DVector& rLineWidth,
     basegfx::B2DLineJoin eLineJoin,
-    css::drawing::LineCap eLineCap)
+    css::drawing::LineCap eLineCap,
+    double fMiterMinimumAngle)
 {
     return mxImpl->drawPolyLine( rPolygon, fTransparency, rLineWidth,
-            eLineJoin, eLineCap );
+            eLineJoin, eLineCap, fMiterMinimumAngle );
 }
 
 bool X11SalGraphics::drawGradient(const tools::PolyPolygon& rPoly, const Gradient& rGradient)
 {
     return mxImpl->drawGradient(rPoly, rGradient);
-}
-
-OpenGLContext *X11SalGraphics::BeginPaint()
-{
-    return mxImpl->beginPaint();
 }
 
 SalGeometryProvider *X11SalGraphics::GetGeometryProvider() const
@@ -567,6 +582,22 @@ SalGeometryProvider *X11SalGraphics::GetGeometryProvider() const
         return static_cast< SalGeometryProvider * >(m_pFrame);
     else
         return static_cast< SalGeometryProvider * >(m_pVDev);
+}
+
+cairo_t* X11SalGraphics::getCairoContext()
+{
+    cairo_surface_t* surface = cairo_xlib_surface_create(GetXDisplay(), hDrawable_,
+            GetVisual().visual, SAL_MAX_INT16, SAL_MAX_INT16);
+
+    cairo_t *cr = cairo_create(surface);
+    cairo_surface_destroy(surface);
+
+    return cr;
+}
+
+void X11SalGraphics::releaseCairoContext(cairo_t* cr)
+{
+   cairo_destroy(cr);
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -25,6 +25,7 @@
 #include <sfx2/bindings.hxx>
 #include <sfx2/dispatch.hxx>
 #include <sfx2/printer.hxx>
+#include <tools/globname.hxx>
 #include <fmtfsize.hxx>
 #include <fmthdft.hxx>
 #include <fmtcntnt.hxx>
@@ -289,7 +290,7 @@ void SwDoc::CopyMasterHeader(const SwPageDesc &rChged, const SwFormatHeader &rHe
                 SwNodeRange aRange( aRCnt.GetContentIdx()->GetNode(), 0,
                             *aRCnt.GetContentIdx()->GetNode().EndOfSectionNode() );
                 aTmp = *pSttNd->EndOfSectionNode();
-                GetNodes()._Copy( aRange, aTmp, false );
+                GetNodes().Copy_( aRange, aTmp, false );
                 aTmp = *pSttNd;
                 GetDocumentContentOperationsManager().CopyFlyInFlyImpl(aRange, 0, aTmp);
 
@@ -361,7 +362,7 @@ void SwDoc::CopyMasterFooter(const SwPageDesc &rChged, const SwFormatFooter &rFo
                 SwNodeRange aRange( aRCnt.GetContentIdx()->GetNode(), 0,
                             *aRCnt.GetContentIdx()->GetNode().EndOfSectionNode() );
                 aTmp = *pSttNd->EndOfSectionNode();
-                GetNodes()._Copy( aRange, aTmp, false );
+                GetNodes().Copy_( aRange, aTmp, false );
                 aTmp = *pSttNd;
                 GetDocumentContentOperationsManager().CopyFlyInFlyImpl(aRange, 0, aTmp);
 
@@ -620,7 +621,7 @@ void SwDoc::DelPageDesc( size_t i, bool bBroadcast )
     SwPageDesc &rDel = *m_PageDescs[i];
 
     if (bBroadcast)
-        BroadcastStyleOperation(rDel.GetName(), SFX_STYLE_FAMILY_PAGE,
+        BroadcastStyleOperation(rDel.GetName(), SfxStyleFamily::Page,
                                 SfxStyleSheetHintId::ERASED);
 
     if (GetIDocumentUndoRedo().DoesUndo())
@@ -668,7 +669,7 @@ SwPageDesc* SwDoc::MakePageDesc(const OUString &rName, const SwPageDesc *pCpy,
     m_PageDescs.push_back(std::unique_ptr<SwPageDesc>(pNew));
 
     if (bBroadcast)
-        BroadcastStyleOperation(rName, SFX_STYLE_FAMILY_PAGE,
+        BroadcastStyleOperation(rName, SfxStyleFamily::Page,
                                 SfxStyleSheetHintId::CREATED);
 
     if (GetIDocumentUndoRedo().DoesUndo())

@@ -109,7 +109,6 @@ OXMLReport::~OXMLReport()
 }
 
 
-
 void OXMLReport::impl_initRuntimeDefaults() const
 {
     OSL_PRECOND( m_xComponent.is(), "OXMLReport::impl_initRuntimeDefaults: no component!" );
@@ -127,13 +126,12 @@ void OXMLReport::impl_initRuntimeDefaults() const
 }
 
 
-
 SvXMLImportContext* OXMLReport::CreateChildContext(
         sal_uInt16 nPrefix,
         const OUString& rLocalName,
         const Reference< XAttributeList > & xAttrList )
 {
-    SvXMLImportContext *pContext = _CreateChildContext(nPrefix,rLocalName,xAttrList);
+    SvXMLImportContext *pContext = CreateChildContext_(nPrefix,rLocalName,xAttrList);
     if ( pContext )
         return pContext;
     const SvXMLTokenMap&    rTokenMap   = m_rImport.GetReportElemTokenMap();
@@ -153,14 +151,14 @@ SvXMLImportContext* OXMLReport::CreateChildContext(
         case XML_TOK_REPORT_HEADER:
             {
                 m_rImport.GetProgressBarHelper()->Increment( PROGRESS_BAR_STEP );
-                m_xComponent->setReportHeaderOn(sal_True);
+                m_xComponent->setReportHeaderOn(true);
                 pContext = new OXMLSection( m_rImport, nPrefix, rLocalName,xAttrList ,m_xComponent->getReportHeader());
             }
             break;
         case XML_TOK_PAGE_HEADER:
             {
                 m_rImport.GetProgressBarHelper()->Increment( PROGRESS_BAR_STEP );
-                m_xComponent->setPageHeaderOn(sal_True);
+                m_xComponent->setPageHeaderOn(true);
                 pContext = new OXMLSection( m_rImport, nPrefix, rLocalName,xAttrList ,m_xComponent->getPageHeader());
             }
             break;
@@ -177,14 +175,14 @@ SvXMLImportContext* OXMLReport::CreateChildContext(
         case XML_TOK_PAGE_FOOTER:
             {
                 m_rImport.GetProgressBarHelper()->Increment( PROGRESS_BAR_STEP );
-                m_xComponent->setPageFooterOn(sal_True);
+                m_xComponent->setPageFooterOn(true);
                 pContext = new OXMLSection( m_rImport, nPrefix, rLocalName,xAttrList ,m_xComponent->getPageFooter(),false);
             }
             break;
         case XML_TOK_REPORT_FOOTER:
             {
                 m_rImport.GetProgressBarHelper()->Increment( PROGRESS_BAR_STEP );
-                m_xComponent->setReportFooterOn(sal_True);
+                m_xComponent->setReportFooterOn(true);
                 pContext = new OXMLSection( m_rImport, nPrefix, rLocalName,xAttrList ,m_xComponent->getReportFooter());
             }
             break;

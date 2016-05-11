@@ -29,12 +29,13 @@
 
 class SdXMLDrawPageContext : public SdXMLGenericPageContext
 {
-    OUString               maName;
+    OUString               maContextName;
     OUString               maMasterPageName;
     OUString               maStyleName;
     OUString               maHREF;
 
-    bool                        mbHadSMILNodes;
+    bool                   mbHadSMILNodes;
+
 public:
     SdXMLDrawPageContext( SdXMLImport& rImport, sal_uInt16 nPrfx,
         const OUString& rLocalName,
@@ -57,7 +58,7 @@ class SdXMLBodyContext : public SvXMLImportContext
     SdXMLImport& GetSdImport() { return static_cast<SdXMLImport&>(GetImport()); }
 
 public:
-    SdXMLBodyContext( SdXMLImport& rImport, sal_uInt16 nPrfx, const OUString& rLocalName );
+    SdXMLBodyContext( SdXMLImport& rImport, const OUString& rLocalName );
     virtual ~SdXMLBodyContext();
 
     virtual SvXMLImportContext *CreateChildContext(

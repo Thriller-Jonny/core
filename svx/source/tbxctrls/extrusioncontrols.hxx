@@ -34,7 +34,6 @@
 class ValueSet;
 
 
-
 namespace svx
 {
 class ExtrusionDirectionWindow : public svtools::ToolbarMenu
@@ -55,9 +54,6 @@ private:
     Image       maImgPerspective;
     Image       maImgParallel;
 
-    const OUString msExtrusionDirection;
-    const OUString msExtrusionProjection;
-
     DECL_LINK_TYPED( SelectToolbarMenuHdl, ToolbarMenu*, void );
     DECL_LINK_TYPED( SelectValueSetHdl, ValueSet*, void );
     void SelectHdl(void*);
@@ -66,7 +62,6 @@ private:
     void implSetProjection( sal_Int32 nProjection, bool bEnabled = true );
 
 };
-
 
 
 class ExtrusionDirectionControl : public svt::PopupWindowController
@@ -135,7 +130,6 @@ public:
 };
 
 
-
 class ExtrusionLightingWindow : public svtools::ToolbarMenu
 {
 private:
@@ -155,9 +149,6 @@ private:
     int     mnDirection;
     bool    mbDirectionEnabled;
 
-    const OUString msExtrusionLightingDirection;
-    const OUString msExtrusionLightingIntensity;
-
     void    implSetIntensity( int nLevel, bool bEnabled );
     void    implSetDirection( int nDirection, bool bEnabled );
 
@@ -172,7 +163,6 @@ public:
     virtual void statusChanged( const css::frame::FeatureStateEvent& Event ) throw ( css::uno::RuntimeException ) override;
     virtual void DataChanged( const DataChangedEvent& rDCEvt ) override;
 };
-
 
 
 class ExtrusionLightingControl : public svt::PopupWindowController
@@ -194,7 +184,6 @@ public:
 };
 
 
-
 class ExtrusionSurfaceWindow : public svtools::ToolbarMenu
 {
 private:
@@ -205,8 +194,6 @@ private:
     Image maImgSurface3;
     Image maImgSurface4;
 
-    const OUString msExtrusionSurface;
-
     DECL_LINK_TYPED( SelectHdl, ToolbarMenu*, void );
 
     void    implSetSurface( int nSurface, bool bEnabled );
@@ -216,7 +203,6 @@ public:
 
     virtual void statusChanged( const css::frame::FeatureStateEvent& Event ) throw ( css::uno::RuntimeException ) override;
 };
-
 
 
 class ExtrusionSurfaceControl : public svt::PopupWindowController
@@ -236,7 +222,6 @@ public:
 
     using svt::PopupWindowController::createPopupWindow;
 };
-
 
 
 }

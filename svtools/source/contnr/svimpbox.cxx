@@ -27,8 +27,10 @@
 #include <stack>
 
 #include <svtools/treelistbox.hxx>
+#include <svtools/iconview.hxx>
 #include <svtools/svlbitm.hxx>
 #include <svimpbox.hxx>
+#include <iconviewimpl.hxx>
 #include <rtl/instance.hxx>
 #include <svtools/svtresid.hxx>
 #include <tools/wintypes.hxx>
@@ -39,25 +41,22 @@
 #include <svtools/treelistentry.hxx>
 #include <svtools/viewdataentry.hxx>
 
-#define NODE_BMP_TABDIST_NOTVALID   -2000000
-#define FIRST_ENTRY_TAB             1
-
 // #i27063# (pl), #i32300# (pb) never access VCL after DeInitVCL - also no destructors
 Image*  SvImpLBox::s_pDefCollapsed      = nullptr;
 Image*  SvImpLBox::s_pDefExpanded       = nullptr;
 sal_Int32 SvImpLBox::s_nImageRefCount   = 0;
 
 SvImpLBox::SvImpLBox( SvTreeListBox* pLBView, SvTreeList* pLBTree, WinBits nWinStyle)
-    : aVerSBar(VclPtr<ScrollBar>::Create(pLBView, WB_DRAG | WB_VSCROLL))
-    , aHorSBar(VclPtr<ScrollBar>::Create(pLBView, WB_DRAG | WB_HSCROLL))
+    : aHorSBar(VclPtr<ScrollBar>::Create(pLBView, WB_DRAG | WB_HSCROLL))
     , aScrBarBox(VclPtr<ScrollBarBox>::Create(pLBView))
-    , aOutputSize(0, 0)
-    , aSelEng(pLBView, nullptr)
     , aFctSet(this, &aSelEng, pLBView)
-    , nNextVerVisSize(0)
-    , nExtendedWinBits(0)
     , bAreChildrenTransient(true)
     , m_pStringSorter(nullptr)
+    , aVerSBar(VclPtr<ScrollBar>::Create(pLBView, WB_DRAG | WB_VSCROLL))
+    , aOutputSize(0, 0)
+    , nExtendedWinBits(0)
+    , aSelEng(pLBView, nullptr)
+    , nNextVerVisSize(0)
 {
     osl_atomic_increment(&s_nImageRefCount);
     pView = pLBView;
@@ -466,7 +465,7 @@ void SvImpLBox::PageUp( sal_uInt16 nDelta )
     ShowCursor( true );
 }
 
-void SvImpLBox::KeyUp( bool bPageUp, bool bNotifyScroll )
+void SvImpLBox::KeyUp( bool bPageUp )
 {
     if( !aVerSBar->IsVisible() )
         return;
@@ -486,8 +485,7 @@ void SvImpLBox::KeyUp( bool bPageUp, bool bNotifyScroll )
         return;
 
     nFlags &= (~F_FILLING);
-    if( bNotifyScroll )
-        BeginScroll();
+    BeginScroll();
 
     aVerSBar->SetThumbPos( nThumbPos - nDelta );
     if( bPageUp )
@@ -495,12 +493,11 @@ void SvImpLBox::KeyUp( bool bPageUp, bool bNotifyScroll )
     else
         CursorUp();
 
-    if( bNotifyScroll )
-        EndScroll();
+    EndScroll();
 }
 
 
-void SvImpLBox::KeyDown( bool bPageDown, bool bNotifyScroll )
+void SvImpLBox::KeyDown( bool bPageDown )
 {
     if( !aVerSBar->IsVisible() )
         return;
@@ -523,8 +520,7 @@ void SvImpLBox::KeyDown( bool bPageDown, bool bNotifyScroll )
         return;
 
     nFlags &= (~F_FILLING);
-    if( bNotifyScroll )
-        BeginScroll();
+    BeginScroll();
 
     aVerSBar->SetThumbPos( nThumbPos+nDelta );
     if( bPageDown )
@@ -532,10 +528,8 @@ void SvImpLBox::KeyDown( bool bPageDown, bool bNotifyScroll )
     else
         CursorDown();
 
-    if( bNotifyScroll )
-        EndScroll();
+    EndScroll();
 }
-
 
 
 void SvImpLBox::InvalidateEntriesFrom( long nY ) const
@@ -701,12 +695,9 @@ void SvImpLBox::ShowCursor( bool bShow )
 }
 
 
-
-void SvImpLBox::UpdateAll(
-    bool bInvalidateCompleteView, bool bUpdateVerScrollBar )
+void SvImpLBox::UpdateAll( bool bInvalidateCompleteView )
 {
-    if( bUpdateVerScrollBar )
-        FindMostRight(nullptr);
+    FindMostRight(nullptr);
     aVerSBar->SetRange( Range(0, pView->GetVisibleCount()-1 ) );
     SyncVerThumb();
     FillView();
@@ -829,7 +820,7 @@ SvTreeListEntry* SvImpLBox::GetEntry( const Point& rPoint ) const
 }
 
 
-SvTreeListEntry* SvImpLBox::MakePointVisible(const Point& rPoint, bool bNotifyScroll)
+SvTreeListEntry* SvImpLBox::MakePointVisible(const Point& rPoint)
 {
     if( !pCursor )
         return nullptr;
@@ -847,9 +838,9 @@ SvTreeListEntry* SvImpLBox::MakePointVisible(const Point& rPoint, bool bNotifySc
             pView->SetEntryFocus( pCursor, false );
 
         if( nY < 0 )
-            KeyUp( false, bNotifyScroll );
+            KeyUp( false );
         else
-            KeyDown( false, bNotifyScroll );
+            KeyDown( false );
     }
     else
     {
@@ -937,19 +928,19 @@ void SvImpLBox::Paint(vcl::RenderContext& rRenderContext, const Rectangle& rRect
 
     rRenderContext.SetClipRegion(aClipRegion);
 
-    for(sal_uInt16 n=0; n< nCount && pEntry; n++)
-    {
-        /*long nMaxRight=*/
-        pView->PaintEntry1(*pEntry, nY, rRenderContext, SvLBoxTabFlags::ALL, true );
-        nY += nEntryHeight;
-        pEntry = pView->NextVisible(pEntry);
-    }
-
     if (!pCursor && ((nExtendedWinBits & EWB_NO_AUTO_CURENTRY) == 0))
     {
         // do not select if multiselection or explicit set
         bool bNotSelect = (aSelEng.GetSelectionMode() == MULTIPLE_SELECTION ) || ((m_nStyle & WB_NOINITIALSELECTION) == WB_NOINITIALSELECTION);
         SetCursor(pStartEntry, bNotSelect);
+    }
+
+    for(sal_uInt16 n=0; n< nCount && pEntry; n++)
+    {
+        /*long nMaxRight=*/
+        pView->PaintEntry1(*pEntry, nY, rRenderContext );
+        nY += nEntryHeight;
+        pEntry = pView->NextVisible(pEntry);
     }
 
     nFlags &= (~F_DESEL_ALL);
@@ -1181,12 +1172,11 @@ void SvImpLBox::PositionScrollBars( Size& rSize, sal_uInt16 nMask )
         aScrBarBox->Hide();
 }
 
-// nResult: Bit0 == VerSBar Bit1 == HorSBar
-sal_uInt16 SvImpLBox::AdjustScrollBars( Size& rSize )
+void SvImpLBox::AdjustScrollBars( Size& rSize )
 {
     long nEntryHeight = pView->GetEntryHeight();
     if( !nEntryHeight )
-        return 0;
+        return;
 
     sal_uInt16 nResult = 0;
 
@@ -1303,7 +1293,6 @@ sal_uInt16 SvImpLBox::AdjustScrollBars( Size& rSize )
         aHorSBar->Hide();
     }
     rSize = aOSize;
-    return nResult;
 }
 
 void SvImpLBox::InitScrollBarBox()
@@ -1376,8 +1365,6 @@ void SvImpLBox::FillView()
         }
     }
 }
-
-
 
 
 void SvImpLBox::ShowVerSBar()
@@ -1498,7 +1485,6 @@ void SvImpLBox::SetEntryHeight( short /* nHeight */ )
             pView->Invalidate();
     }
 }
-
 
 
 // ***********************************************************************
@@ -1825,7 +1811,6 @@ void SvImpLBox::EntryMoved( SvTreeListEntry* pEntry )
 }
 
 
-
 void SvImpLBox::EntryInserted( SvTreeListEntry* pEntry )
 {
     if( GetUpdateMode() )
@@ -1879,7 +1864,6 @@ void SvImpLBox::EntryInserted( SvTreeListEntry* pEntry )
             pView->Update();
     }
 }
-
 
 
 // ********************************************************************
@@ -2163,16 +2147,13 @@ bool SvImpLBox::KeyInput( const KeyEvent& rKEvt)
             // if there is no next entry, take the current one
             // this ensures that in case of _one_ entry in the list, this entry is selected when pressing
             // the cursor key
-            if ( !pNewCursor && pCursor )
+            if (!pNewCursor)
                 pNewCursor = pCursor;
 
-            if( pNewCursor )
-            {
-                aSelEng.CursorPosChanging( bShift, bMod1 );
-                SetCursor( pNewCursor, bMod1 );     // no selection, when Ctrl is on
-                if( !IsEntryInView( pNewCursor ) )
-                    KeyUp( false );
-            }
+            aSelEng.CursorPosChanging( bShift, bMod1 );
+            SetCursor( pNewCursor, bMod1 );     // no selection, when Ctrl is on
+            if( !IsEntryInView( pNewCursor ) )
+                KeyUp( false );
             break;
 
         case KEY_DOWN:
@@ -3416,7 +3397,6 @@ void SvImpLBox::CallEventListeners( sal_uLong nEvent, void* pData )
 }
 
 
-
 bool SvImpLBox::SetCurrentTabPos( sal_uInt16 _nNewPos )
 {
     bool bRet = false;
@@ -3430,7 +3410,6 @@ bool SvImpLBox::SetCurrentTabPos( sal_uInt16 _nNewPos )
 
     return bRet;
 }
-
 
 
 bool SvImpLBox::IsSelectable( const SvTreeListEntry* pEntry )

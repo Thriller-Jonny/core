@@ -89,11 +89,7 @@ static ContentType lcl_getContentType( const OUString & rType )
 }
 
 
-
-
 // Content Implementation.
-
-
 
 
 // static ( "virtual" ctor )
@@ -166,9 +162,7 @@ Content::~Content()
 }
 
 
-
 // XInterface methods.
-
 
 
 // virtual
@@ -208,9 +202,7 @@ uno::Any SAL_CALL Content::queryInterface( const uno::Type & rType )
 }
 
 
-
 // XTypeProvider methods.
-
 
 
 XTYPEPROVIDER_COMMON_IMPL( Content );
@@ -292,9 +284,7 @@ uno::Sequence< uno::Type > SAL_CALL Content::getTypes()
 }
 
 
-
 // XServiceInfo methods.
-
 
 
 // virtual
@@ -326,9 +316,7 @@ uno::Sequence< OUString > SAL_CALL Content::getSupportedServiceNames()
 }
 
 
-
 // XContent methods.
-
 
 
 // virtual
@@ -359,9 +347,7 @@ Content::getIdentifier()
 }
 
 
-
 // XCommandProcessor methods.
-
 
 
 // virtual
@@ -564,7 +550,7 @@ uno::Any SAL_CALL Content::execute(
         }
 
         // Remove own and all children's Additional Core Properties.
-        removeAdditionalPropertySet( true );
+        removeAdditionalPropertySet();
     }
     else if ( aCommand.Name == "transfer" )
     {
@@ -668,9 +654,7 @@ void SAL_CALL Content::abort( sal_Int32 /*CommandId*/ )
 }
 
 
-
 // XContentCreator methods.
-
 
 
 // virtual
@@ -1134,7 +1118,7 @@ uno::Sequence< uno::Any > Content::setPropertyValues(
 
     beans::PropertyChangeEvent aEvent;
     aEvent.Source         = static_cast< cppu::OWeakObject * >( this );
-    aEvent.Further        = sal_False;
+    aEvent.Further        = false;
     //    aEvent.PropertyName   =
     aEvent.PropertyHandle = -1;
     //    aEvent.OldValue       =
@@ -1337,8 +1321,7 @@ uno::Sequence< uno::Any > Content::setPropertyValues(
 
             // Adapt Additional Core Properties.
             renameAdditionalPropertySet( xOldId->getContentIdentifier(),
-                                         xNewId->getContentIdentifier(),
-                                         true );
+                                         xNewId->getContentIdentifier() );
         }
         else
         {
@@ -1501,14 +1484,14 @@ uno::Any Content::open(
                 try
                 {
                     uno::Sequence< sal_Int8 > aBuffer;
-                    sal_Int32  nRead = xIn->readSomeBytes( aBuffer, 65536 );
 
-                    while ( nRead > 0 )
+                    while (true)
                     {
+                        sal_Int32 nRead = xIn->readSomeBytes( aBuffer, 65536 );
+                        if (!nRead)
+                            break;
                         aBuffer.realloc( nRead );
                         xOut->writeBytes( aBuffer );
-                        aBuffer.realloc( 0 );
-                        nRead = xIn->readSomeBytes( aBuffer, 65536 );
                     }
 
                     xOut->closeOutput();
@@ -2048,7 +2031,7 @@ void Content::transfer(
             ucbhelper::cancelCommandExecution(
                 uno::makeAny( lang::IllegalArgumentException(
                                     OUString( "Invalid source URI! "
-                                        "Unabale to determine source type!" ),
+                                        "Unable to determine source type!" ),
                                     static_cast< cppu::OWeakObject * >( this ),
                                     -1 ) ),
                 xEnv );
@@ -2096,8 +2079,7 @@ void Content::transfer(
     else
         aTargetUri += aSourceUri.getName();
 
-    if ( !copyAdditionalPropertySet(
-            aSourceUri.getUri(), aTargetUri, true ) )
+    if ( !copyAdditionalPropertySet( aSourceUri.getUri(), aTargetUri ) )
     {
         uno::Any aProps
             = uno::makeAny(
@@ -2218,7 +2200,7 @@ void Content::transfer(
         }
 
         // Remove own and all children's Additional Core Properties.
-        if ( !xSource->removeAdditionalPropertySet( true ) )
+        if ( !xSource->removeAdditionalPropertySet() )
         {
             uno::Any aProps
                 = uno::makeAny(
@@ -2435,14 +2417,13 @@ bool Content::storeData( const uno::Reference< io::XInputStream >& xData,
             try
             {
                 uno::Sequence< sal_Int8 > aBuffer;
-                sal_Int32 nRead = xData->readSomeBytes( aBuffer, 65536 );
-
-                while ( nRead > 0 )
+                while (true)
                 {
+                    sal_Int32 nRead = xData->readSomeBytes( aBuffer, 65536 );
+                    if (!nRead)
+                        break;
                     aBuffer.realloc( nRead );
                     xOut->writeBytes( aBuffer );
-                    aBuffer.realloc( 0 );
-                    nRead = xData->readSomeBytes( aBuffer, 65536 );
                 }
 
                 closeOutputStream( xOut );
@@ -2488,7 +2469,7 @@ bool Content::storeData( const uno::Reference< io::XInputStream >& xData,
 }
 
 
-bool Content::renameData(
+void Content::renameData(
             const uno::Reference< ucb::XContentIdentifier >& xOldId,
             const uno::Reference< ucb::XContentIdentifier >& xNewId )
 {
@@ -2498,7 +2479,7 @@ bool Content::renameData(
     if ( ( eType == ROOT ) || ( eType == DOCUMENT ) )
     {
         OSL_FAIL( "renameData not supported by root and documents!" );
-        return false;
+        return;
     }
 
     Uri aOldUri( xOldId->getContentIdentifier() );
@@ -2507,7 +2488,7 @@ bool Content::renameData(
             aOldUri.getParentUri(), READ_WRITE_NOCREATE );
 
     if ( !xStorage.is() )
-        return false;
+        return;
 
     try
     {
@@ -2519,40 +2500,40 @@ bool Content::renameData(
     {
         // this storage is in invalid state for eny reason
         OSL_FAIL( "Caught InvalidStorageException!" );
-        return false;
+        return;
     }
     catch ( lang::IllegalArgumentException const & )
     {
         // an illegal argument is provided
         OSL_FAIL( "Caught IllegalArgumentException!" );
-        return false;
+        return;
     }
     catch ( container::NoSuchElementException const & )
     {
         // there is no element with old name in this storage
         OSL_FAIL( "Caught NoSuchElementException!" );
-        return false;
+        return;
     }
     catch ( container::ElementExistException const & )
     {
         // an element with new name already exists in this storage
         OSL_FAIL( "Caught ElementExistException!" );
-        return false;
+        return;
     }
     catch ( io::IOException const & )
     {
         // in case of io errors during renaming
         OSL_FAIL( "Caught IOException!" );
-        return false;
+        return;
     }
     catch ( embed::StorageWrappedTargetException const & )
     {
         // wraps other exceptions
         OSL_FAIL( "Caught StorageWrappedTargetException!" );
-        return false;
+        return;
     }
 
-    return commitStorage( xStorage );
+    commitStorage( xStorage );
 }
 
 
@@ -2925,11 +2906,7 @@ uno::Reference< io::XStream > Content::getStream(
 }
 
 
-
-
 // ContentProperties Implementation.
-
-
 
 
 uno::Sequence< ucb::ContentInfo >

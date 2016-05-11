@@ -47,6 +47,7 @@
 #include <editeng/flditem.hxx>
 #include <svx/sdr/contact/displayinfo.hxx>
 #include <svx/svditer.hxx>
+#include <svx/svdlayer.hxx>
 #include <com/sun/star/xml/dom/XNode.hpp>
 #include <com/sun/star/xml/dom/XNodeList.hpp>
 #include <com/sun/star/xml/dom/XNamedNodeMap.hpp>
@@ -457,8 +458,8 @@ SdrObject* SdPage::CreatePresObj(PresObjKind eObjKind, bool bVertical, const Rec
         {
             SdrOutliner* pOutliner = static_cast<SdDrawDocument*>( GetModel() )->GetInternalOutliner();
 
-            sal_uInt16 nOutlMode = pOutliner->GetMode();
-            pOutliner->Init( OUTLINERMODE_TEXTOBJECT );
+            OutlinerMode nOutlMode = pOutliner->GetMode();
+            pOutliner->Init( OutlinerMode::TextObject );
             pOutliner->SetStyleSheet( 0, nullptr );
             pOutliner->SetVertical( bVertical );
 
@@ -819,11 +820,11 @@ void SdPage::CreateTitleAndLayout(bool bInit, bool bCreate )
         {
             SdrObject* pMasterTitle = pMasterPage->GetPresObj( PRESOBJ_TITLE );
             if( pMasterTitle == nullptr )
-                pMasterPage->CreateDefaultPresObj(PRESOBJ_TITLE, true);
+                pMasterPage->CreateDefaultPresObj(PRESOBJ_TITLE);
 
             SdrObject* pMasterOutline = pMasterPage->GetPresObj( mePageKind==PK_NOTES ? PRESOBJ_NOTES : PRESOBJ_OUTLINE );
             if( pMasterOutline == nullptr )
-                pMasterPage->CreateDefaultPresObj( mePageKind == PK_STANDARD ? PRESOBJ_OUTLINE : PRESOBJ_NOTES, true );
+                pMasterPage->CreateDefaultPresObj( mePageKind == PK_STANDARD ? PRESOBJ_OUTLINE : PRESOBJ_NOTES );
         }
 
         // create header&footer objects
@@ -834,20 +835,20 @@ void SdPage::CreateTitleAndLayout(bool bInit, bool bCreate )
             {
                 SdrObject* pHeader = pMasterPage->GetPresObj( PRESOBJ_HEADER );
                 if( pHeader == nullptr )
-                    pMasterPage->CreateDefaultPresObj( PRESOBJ_HEADER, true );
+                    pMasterPage->CreateDefaultPresObj( PRESOBJ_HEADER );
             }
 
             SdrObject* pDate   = pMasterPage->GetPresObj( PRESOBJ_DATETIME );
             if( pDate == nullptr )
-                pMasterPage->CreateDefaultPresObj( PRESOBJ_DATETIME, true );
+                pMasterPage->CreateDefaultPresObj( PRESOBJ_DATETIME );
 
             SdrObject* pFooter = pMasterPage->GetPresObj( PRESOBJ_FOOTER );
             if( pFooter == nullptr )
-                pMasterPage->CreateDefaultPresObj( PRESOBJ_FOOTER, true );
+                pMasterPage->CreateDefaultPresObj( PRESOBJ_FOOTER );
 
             SdrObject* pNumber = pMasterPage->GetPresObj( PRESOBJ_SLIDENUMBER );
             if( pNumber == nullptr )
-                pMasterPage->CreateDefaultPresObj( PRESOBJ_SLIDENUMBER, true );
+                pMasterPage->CreateDefaultPresObj( PRESOBJ_SLIDENUMBER );
         }
     }
 }
@@ -931,23 +932,23 @@ void getPresObjProp( const SdPage& rPage, const char* sObjKind, const char* sPag
 
 }
 
-SdrObject* SdPage::CreateDefaultPresObj(PresObjKind eObjKind, bool bInsert)
+SdrObject* SdPage::CreateDefaultPresObj(PresObjKind eObjKind)
 {
 
     if( eObjKind == PRESOBJ_TITLE )
     {
         Rectangle aTitleRect( GetTitleRect() );
-        return CreatePresObj(PRESOBJ_TITLE, false, aTitleRect, bInsert);
+        return CreatePresObj(PRESOBJ_TITLE, false, aTitleRect, true/*bInsert*/);
     }
     else if( eObjKind == PRESOBJ_OUTLINE )
     {
         Rectangle aLayoutRect( GetLayoutRect() );
-        return CreatePresObj( PRESOBJ_OUTLINE, false, aLayoutRect, bInsert);
+        return CreatePresObj( PRESOBJ_OUTLINE, false, aLayoutRect, true/*bInsert*/);
     }
     else if( eObjKind == PRESOBJ_NOTES )
     {
         Rectangle aLayoutRect( GetLayoutRect() );
-        return CreatePresObj( PRESOBJ_NOTES, false, aLayoutRect, bInsert);
+        return CreatePresObj( PRESOBJ_NOTES, false, aLayoutRect, true/*bInsert*/);
     }
     else if( (eObjKind == PRESOBJ_FOOTER) || (eObjKind == PRESOBJ_DATETIME) || (eObjKind == PRESOBJ_SLIDENUMBER) || (eObjKind == PRESOBJ_HEADER ) )
     {
@@ -980,7 +981,7 @@ SdrObject* SdPage::CreateDefaultPresObj(PresObjKind eObjKind, bool bInsert)
             else
             {
                 Rectangle aRect( aPos, aSize );
-                return CreatePresObj( eObjKind, false, aRect, bInsert );
+                return CreatePresObj( eObjKind, false, aRect, true/*bInsert*/ );
             }
         }
         else
@@ -1007,7 +1008,7 @@ SdrObject* SdPage::CreateDefaultPresObj(PresObjKind eObjKind, bool bInsert)
                 aPos.Y() = aPosition.Y() + long( aPageSize.Height() - NOTES_HEADER_FOOTER_HEIGHT );
 
             Rectangle aRect( aPos, aSize );
-            return CreatePresObj( eObjKind, false, aRect, bInsert );
+            return CreatePresObj( eObjKind, false, aRect, true/*bInsert*/ );
         }
     }
     else
@@ -1197,7 +1198,7 @@ LayoutDescriptor::LayoutDescriptor( int k0, int k1, int k2, int k3, int k4, int 
 
 static const LayoutDescriptor& GetLayoutDescriptor( AutoLayout eLayout )
 {
-    static const LayoutDescriptor aLayouts[AUTOLAYOUT__END-AUTOLAYOUT__START] =
+    static const LayoutDescriptor aLayouts[AUTOLAYOUT_END-AUTOLAYOUT_START] =
     {
         LayoutDescriptor( PRESOBJ_TITLE, PRESOBJ_TEXT ),                                 // AUTOLAYOUT_TITLE
         LayoutDescriptor( PRESOBJ_TITLE, PRESOBJ_OUTLINE ),                              // AUTOLAYOUT_ENUM
@@ -1239,10 +1240,10 @@ static const LayoutDescriptor& GetLayoutDescriptor( AutoLayout eLayout )
             PRESOBJ_OUTLINE, PRESOBJ_OUTLINE, PRESOBJ_OUTLINE, PRESOBJ_OUTLINE )
     };
 
-    if( (eLayout < AUTOLAYOUT__START) || (eLayout >= AUTOLAYOUT__END) )
+    if( (eLayout < AUTOLAYOUT_START) || (eLayout >= AUTOLAYOUT_END) )
         eLayout = AUTOLAYOUT_NONE;
 
-    return aLayouts[ eLayout - AUTOLAYOUT__START ];
+    return aLayouts[ eLayout - AUTOLAYOUT_START ];
 }
 
 rtl::OUString enumtoString(AutoLayout aut)
@@ -1271,8 +1272,8 @@ rtl::OUString enumtoString(AutoLayout aut)
         case AUTOLAYOUT_TITLE_6CONTENT:
             retstr="AUTOLAYOUT_TITLE_6CONTENT";
             break;
-        case AUTOLAYOUT__START:
-            retstr="AUTOLAYOUT__START";
+        case AUTOLAYOUT_START:
+            retstr="AUTOLAYOUT_START";
             break;
         case AUTOLAYOUT_TITLE_2CONTENT_CONTENT:
             retstr="AUTOLAYOUT_TITLE_2CONTENT_CONTENT";
@@ -2383,7 +2384,7 @@ void SdPage::SetObjText(SdrTextObj* pObj, SdrOutliner* pOutliner, PresObjKind eO
         if (!pOutliner)
         {
             SfxItemPool* pPool = static_cast<SdDrawDocument*>(GetModel())->GetDrawOutliner().GetEmptyItemSet().GetPool();
-            pOutl = new ::Outliner( pPool, OUTLINERMODE_OUTLINEOBJECT );
+            pOutl = new ::Outliner( pPool, OutlinerMode::OutlineObject );
             pOutl->SetRefDevice( SD_MOD()->GetRefDevice( *static_cast<SdDrawDocument*>( GetModel() )->GetDocSh() ) );
             pOutl->SetEditTextObjectPool(pPool);
             pOutl->SetStyleSheetPool(static_cast<SfxStyleSheetPool*>(GetModel()->GetStyleSheetPool()));
@@ -2391,7 +2392,7 @@ void SdPage::SetObjText(SdrTextObj* pObj, SdrOutliner* pOutliner, PresObjKind eO
             pOutl->SetUpdateMode( false );
         }
 
-        sal_uInt16 nOutlMode = pOutl->GetMode();
+        OutlinerMode nOutlMode = pOutl->GetMode();
         Size aPaperSize = pOutl->GetPaperSize();
         bool bUpdateMode = pOutl->GetUpdateMode();
         pOutl->SetUpdateMode(false);
@@ -2410,7 +2411,7 @@ void SdPage::SetObjText(SdrTextObj* pObj, SdrOutliner* pOutliner, PresObjKind eO
         {
             case PRESOBJ_OUTLINE:
             {
-                pOutl->Init( OUTLINERMODE_OUTLINEOBJECT );
+                pOutl->Init( OutlinerMode::OutlineObject );
 
                 aString += "\t";
                 aString += rString;
@@ -2442,14 +2443,14 @@ void SdPage::SetObjText(SdrTextObj* pObj, SdrOutliner* pOutliner, PresObjKind eO
 
             case PRESOBJ_TITLE:
             {
-                pOutl->Init( OUTLINERMODE_TITLEOBJECT );
+                pOutl->Init( OutlinerMode::TitleObject );
                 aString += rString;
             }
             break;
 
             default:
             {
-                pOutl->Init( OUTLINERMODE_TEXTOBJECT );
+                pOutl->Init( OutlinerMode::TextObject );
                 aString += rString;
 
                 // check if we need to add a text field
@@ -2696,6 +2697,11 @@ SdPage* SdPage::getImplementation( const css::uno::Reference< css::drawing::XDra
     }
 
     return nullptr;
+}
+
+sal_Int64 SdPage::GetHashCode() const
+{
+    return sal::static_int_cast<sal_Int64>(reinterpret_cast<sal_IntPtr>(this));
 }
 
 void SdPage::SetName (const OUString& rName)

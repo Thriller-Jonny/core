@@ -78,8 +78,6 @@ public:
 };
 
 typedef std::shared_ptr<StyleSheetEntry> StyleSheetEntryPtr;
-typedef std::deque<StyleSheetEntryPtr> StyleSheetEntryDeque;
-typedef std::shared_ptr<StyleSheetEntryDeque> StyleSheetEntryDequePtr;
 
 class DomainMapper;
 class StyleSheetTable :
@@ -92,7 +90,7 @@ public:
     StyleSheetTable(DomainMapper& rDMapper, css::uno::Reference<css::text::XTextDocument> const& xTextDocument, bool bIsNewDoc);
     virtual ~StyleSheetTable();
 
-    void ApplyStyleSheets( FontTablePtr rFontTable );
+    void ApplyStyleSheets( const FontTablePtr& rFontTable );
     const StyleSheetEntryPtr FindStyleSheetByISTD(const OUString& sIndex);
     const StyleSheetEntryPtr FindStyleSheetByStyleName(const OUString& rIndex);
     const StyleSheetEntryPtr FindStyleSheetByConvertedStyleName(const OUString& rIndex);
@@ -102,7 +100,7 @@ public:
 
     OUString ConvertStyleName( const OUString& rWWName, bool bExtendedSearch = false );
 
-    OUString getOrCreateCharStyle( PropertyValueVector_t& rCharProperties );
+    OUString getOrCreateCharStyle( PropertyValueVector_t& rCharProperties, bool bAlwaysCreate );
 
     /// Returns the default character properties.
     PropertyMapPtr GetDefaultCharProps();
@@ -136,15 +134,14 @@ public:
 
     // Adds a new tblStylePr to the table style entry. This method
     // fixes some possible properties conflicts, like borders ones.
-    void AddTblStylePr( TblStyleType nType, PropertyMapPtr pProps );
+    void AddTblStylePr( TblStyleType nType, const PropertyMapPtr& pProps );
 
     // Gets all the properties
     //     + corresponding to the mask,
     //     + from the parent styles
 
     // @param mask      mask describing which properties to return
-    // @param pStack    already processed StyleSheetEntries
-    PropertyMapPtr GetProperties( sal_Int32 nMask, StyleSheetEntryDequePtr pStack = StyleSheetEntryDequePtr());
+    PropertyMapPtr GetProperties( sal_Int32 nMask);
 
     TableStyleSheetEntry( StyleSheetEntry& aEntry, StyleSheetTable* pStyles );
     virtual ~TableStyleSheetEntry( );

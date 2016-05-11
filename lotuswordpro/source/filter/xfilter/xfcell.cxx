@@ -66,15 +66,14 @@
 #include "xfrow.hxx"
 
 XFCell::XFCell()
-{
-    m_pSubTable = nullptr;
-    m_pOwnerRow = nullptr;
-    m_nCol = 0;
-    m_nColSpaned = 1;
-    m_nRepeated = 0;
-    m_eValueType = enumXFValueTypeNone;
-    m_bProtect = false;
-}
+    : m_pOwnerRow(nullptr)
+    , m_pSubTable(nullptr)
+    , m_nCol(0)
+    , m_nColSpaned(1)
+    , m_nRepeated(0)
+    , m_eValueType(enumXFValueTypeNone)
+    , m_bProtect(false)
+{}
 
 XFCell::~XFCell()
 {
@@ -88,10 +87,9 @@ void    XFCell::Add(XFContent *pContent)
         Reset();
         m_eValueType = enumXFValueTypeNone;
     }
-    if( m_pSubTable )
+    if (m_pSubTable)
     {
-        assert(false);
-        return;
+        throw std::runtime_error("subtable already set");
     }
     if (!pContent)
     {
@@ -99,7 +97,7 @@ void    XFCell::Add(XFContent *pContent)
     }
     if( pContent->GetContentType() == enumXFContentTable )
     {
-        XFTable *pTable = static_cast<XFTable*>(pContent);
+        XFTable *pTable = dynamic_cast<XFTable*>(pContent);
         if( !pTable )
             return;
         //the sub table will fill all the cell, there can't be other contents.

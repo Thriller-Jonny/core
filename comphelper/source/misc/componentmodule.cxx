@@ -33,9 +33,6 @@ namespace comphelper
     using ::com::sun::star::uno::Sequence;
     using ::com::sun::star::uno::RuntimeException;
     using ::com::sun::star::uno::Reference;
-    using ::com::sun::star::lang::XMultiServiceFactory;
-    using ::com::sun::star::registry::XRegistryKey;
-    using ::com::sun::star::uno::Exception;
     using ::com::sun::star::uno::XInterface;
 
     typedef ::std::vector< ComponentDescription >   ComponentDescriptions;
@@ -75,22 +72,17 @@ namespace comphelper
 
     void OModule::registerClient( OModule::ClientAccess )
     {
-        ::osl::MutexGuard aGuard(m_aMutex);
-        if ( 1 == osl_atomic_increment( &m_nClients ) )
-            onFirstClient();
+        osl_atomic_increment( &m_nClients );
     }
 
 
     void OModule::revokeClient( OModule::ClientAccess )
     {
-        ::osl::MutexGuard aGuard(m_aMutex);
         if ( 0 == osl_atomic_decrement( &m_nClients ) )
+        {
+            ::osl::MutexGuard aGuard(m_aMutex);
             onLastClient();
-    }
-
-
-    void OModule::onFirstClient()
-    {
+        }
     }
 
 
@@ -110,9 +102,9 @@ namespace comphelper
 
 
     void OModule::registerImplementation( const OUString& _rImplementationName, const css::uno::Sequence< OUString >& _rServiceNames,
-        ::cppu::ComponentFactoryFunc _pCreateFunction, FactoryInstantiation _pFactoryFunction )
+        ::cppu::ComponentFactoryFunc _pCreateFunction )
     {
-        ComponentDescription aComponent( _rImplementationName, _rServiceNames, _pCreateFunction, _pFactoryFunction );
+        ComponentDescription aComponent( _rImplementationName, _rServiceNames, _pCreateFunction, ::cppu::createSingleComponentFactory );
         registerImplementation( aComponent );
     }
 

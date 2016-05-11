@@ -19,7 +19,6 @@
 
 #include "sal/config.h"
 
-#include "boost/noncopyable.hpp"
 #include "cppuhelper/factory.hxx"
 #include "cppuhelper/implementationentry.hxx"
 #include <cppuhelper/implbase.hxx>
@@ -67,11 +66,12 @@ class StringRepresentation:
     public ::cppu::WeakImplHelper<
         lang::XServiceInfo,
         inspection::XStringRepresentation,
-        lang::XInitialization>,
-    private boost::noncopyable
+        lang::XInitialization>
 {
 public:
     explicit StringRepresentation(uno::Reference< uno::XComponentContext > const & context);
+    StringRepresentation (const StringRepresentation&) = delete;
+    StringRepresentation& operator=(const StringRepresentation&) = delete;
 
     // lang::XServiceInfo:
     virtual OUString SAL_CALL getImplementationName() throw (uno::RuntimeException, std::exception) override;
@@ -527,48 +527,47 @@ bool StringRepresentation::convertStringToGenericValue( const OUString& _rString
     {
         uno::Type aElementType = ::comphelper::getSequenceElementType( _rTargetType );
 
-        OUString aStr( _rStringRep );
         switch ( aElementType.getTypeClass() )
         {
             case uno::TypeClass_STRING:
             {
                 Sequence< OUString > aElements;
-                splitComposedStringToSequence( aStr, aElements, StringIdentity() );
+                splitComposedStringToSequence( _rStringRep, aElements, StringIdentity() );
                 _rValue <<= aElements;
             }
             break;
             case uno::TypeClass_SHORT:
             {
                 Sequence< sal_Int16 > aElements;
-                splitComposedStringToSequence( aStr, aElements, ConvertIntegerFromAndToString() );
+                splitComposedStringToSequence( _rStringRep, aElements, ConvertIntegerFromAndToString() );
                 _rValue <<= aElements;
             }
             break;
             case uno::TypeClass_UNSIGNED_SHORT:
             {
                 Sequence< sal_uInt16 > aElements;
-                splitComposedStringToSequence( aStr, aElements, ConvertIntegerFromAndToString() );
+                splitComposedStringToSequence( _rStringRep, aElements, ConvertIntegerFromAndToString() );
                 _rValue <<= aElements;
             }
             break;
             case uno::TypeClass_LONG:
             {
                 Sequence< sal_Int32 > aElements;
-                splitComposedStringToSequence( aStr, aElements, ConvertIntegerFromAndToString() );
+                splitComposedStringToSequence( _rStringRep, aElements, ConvertIntegerFromAndToString() );
                 _rValue <<= aElements;
             }
             break;
             case uno::TypeClass_UNSIGNED_LONG:
             {
                 Sequence< sal_uInt32 > aElements;
-                splitComposedStringToSequence( aStr, aElements, ConvertIntegerFromAndToString() );
+                splitComposedStringToSequence( _rStringRep, aElements, ConvertIntegerFromAndToString() );
                 _rValue <<= aElements;
             }
             break;
             case uno::TypeClass_BYTE:
             {
                 Sequence< sal_Int8 > aElements;
-                splitComposedStringToSequence( aStr, aElements, ConvertIntegerFromAndToString() );
+                splitComposedStringToSequence( _rStringRep, aElements, ConvertIntegerFromAndToString() );
                 _rValue <<= aElements;
             }
             break;
@@ -612,7 +611,6 @@ bool StringRepresentation::convertStringToGenericValue( const OUString& _rString
 
 
 } // pcr
-
 
 
 // component helper namespace

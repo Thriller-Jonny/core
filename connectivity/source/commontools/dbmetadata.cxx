@@ -27,13 +27,10 @@
 #include <com/sun/star/lang/IllegalArgumentException.hpp>
 #include <com/sun/star/container/XChild.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
-#include <com/sun/star/beans/PropertyValue.hpp>
-#include <com/sun/star/beans/XPropertySetInfo.hpp>
 #include <com/sun/star/sdb/BooleanComparisonMode.hpp>
 #include <com/sun/star/sdbc/XDatabaseMetaData2.hpp>
 #include <com/sun/star/sdbcx/XUsersSupplier.hpp>
 #include <com/sun/star/sdbcx/XDataDefinitionSupplier.hpp>
-#include <com/sun/star/sdbc/XDriverAccess.hpp>
 #include <com/sun/star/sdbc/DriverManager.hpp>
 
 #include <tools/diagnose_ex.h>
@@ -59,13 +56,9 @@ namespace dbtools
     using ::com::sun::star::container::XChild;
     using ::com::sun::star::uno::UNO_QUERY_THROW;
     using ::com::sun::star::beans::XPropertySet;
-    using ::com::sun::star::uno::Sequence;
-    using ::com::sun::star::beans::PropertyValue;
-    using ::com::sun::star::beans::XPropertySetInfo;
     using ::com::sun::star::uno::UNO_QUERY;
     using ::com::sun::star::sdbcx::XUsersSupplier;
     using ::com::sun::star::sdbcx::XDataDefinitionSupplier;
-    using ::com::sun::star::sdbc::XDriverAccess;
     using ::com::sun::star::sdbc::DriverManager;
     using ::com::sun::star::sdbc::XDriverManager2;
     using ::com::sun::star::uno::UNO_SET_THROW;
@@ -95,7 +88,7 @@ namespace dbtools
     namespace
     {
 
-        static void lcl_construct( DatabaseMetaData_Impl& _metaDataImpl, const Reference< XConnection >& _connection )
+        void lcl_construct( DatabaseMetaData_Impl& _metaDataImpl, const Reference< XConnection >& _connection )
         {
             _metaDataImpl.xConnection = _connection;
             if ( !_metaDataImpl.xConnection.is() )
@@ -107,18 +100,18 @@ namespace dbtools
         }
 
 
-        static void lcl_checkConnected( const DatabaseMetaData_Impl& _metaDataImpl )
+        void lcl_checkConnected( const DatabaseMetaData_Impl& _metaDataImpl )
         {
             if ( !_metaDataImpl.xConnection.is() || !_metaDataImpl.xConnectionMetaData.is() )
             {
                 ::connectivity::SharedResources aResources;
                 const OUString sError( aResources.getResourceString(STR_NO_CONNECTION_GIVEN));
-                throwSQLException( sError, SQL_CONNECTION_DOES_NOT_EXIST, nullptr );
+                throwSQLException( sError, StandardSQLState::CONNECTION_DOES_NOT_EXIST, nullptr );
             }
         }
 
 
-        static bool lcl_getDriverSetting( const sal_Char* _asciiName, const DatabaseMetaData_Impl& _metaData, Any& _out_setting )
+        bool lcl_getDriverSetting( const sal_Char* _asciiName, const DatabaseMetaData_Impl& _metaData, Any& _out_setting )
         {
             lcl_checkConnected( _metaData );
             const ::comphelper::NamedValueCollection& rDriverMetaData = _metaData.aDriverConfig.getMetaData( _metaData.xConnectionMetaData->getURL() );
@@ -129,7 +122,7 @@ namespace dbtools
         }
 
 
-        static bool lcl_getConnectionSetting( const sal_Char* _asciiName, const DatabaseMetaData_Impl& _metaData, Any& _out_setting )
+        bool lcl_getConnectionSetting( const sal_Char* _asciiName, const DatabaseMetaData_Impl& _metaData, Any& _out_setting )
         {
             try
             {
@@ -160,7 +153,7 @@ namespace dbtools
         }
 
 
-        static const OUString& lcl_getConnectionStringSetting(
+        const OUString& lcl_getConnectionStringSetting(
             const DatabaseMetaData_Impl& _metaData, ::boost::optional< OUString >& _cachedSetting,
             OUString (SAL_CALL XDatabaseMetaData::*_getter)() )
         {
@@ -336,8 +329,7 @@ namespace dbtools
             if ( !bSupport )
             {
                 const OUString url = m_pImpl->xConnectionMetaData->getURL();
-                char pMySQL[] = "sdbc:mysql";
-                bSupport = url.matchAsciiL(pMySQL,(sizeof(pMySQL)/sizeof(pMySQL[0]))-1);
+                bSupport = url.startsWith("sdbc:mysql");
             }
         }
         catch( const Exception& )

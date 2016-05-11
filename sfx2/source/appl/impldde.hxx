@@ -40,8 +40,7 @@ class SvDDEObject : public SvLinkSource
     DdeRequest* pRequest;
     css::uno::Any * pGetData;
 
-    sal_uInt8 bWaitForData : 1;  // waiting for data?
-    sal_uInt8 nError       : 7;  // Error code for dialogue
+    bool bWaitForData;  // waiting for data?
 
 
     static bool ImplHasOtherFormat( DdeTransaction& );

@@ -20,7 +20,7 @@
 #define INCLUDED_JVMFWK_SOURCE_ELEMENTS_HXX
 
 #include <vector>
-#include "jvmfwk/framework.h"
+#include "jvmfwk/framework.hxx"
 #include "fwkutil.hxx"
 #include "rtl/ustring.hxx"
 #include "rtl/byteseq.hxx"
@@ -300,7 +300,7 @@ public:
      */
     OString const & getJavaInfoAttrVendorUpdate() const { return m_javaInfo.sAttrVendorUpdate;}
 
-#ifdef WNT
+#ifdef _WIN32
     /** returns the javaInfo@autoSelect attribute.
         Before calling this function loadFromSettings must be called.
         It uses the javaInfo@autoSelect attribute  to determine

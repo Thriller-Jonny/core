@@ -96,7 +96,7 @@ void FloatingWindow::ImplInit( vcl::Window* pParent, WinBits nStyle )
         }
         else
         {
-            ImplBorderWindow* pBorderWin;
+            VclPtr<ImplBorderWindow> pBorderWin;
             sal_uInt16 nBorderStyle = BORDERWINDOW_STYLE_BORDER | BORDERWINDOW_STYLE_FLOAT;
 
             if (nStyle & WB_OWNERDRAWDECORATION)
@@ -170,7 +170,6 @@ FloatingWindow::FloatingWindow(vcl::Window* pParent, const OString& rID, const O
     , mbPopupModeCanceled(false)
     , mbPopupModeTearOff(false)
     , mbMouseDown(false)
-    , mbOldSaveBackMode(false)
     , mbGrabFocus(false)
     , mbInCleanUp(false)
 {
@@ -245,7 +244,7 @@ Point FloatingWindow::ImplCalcPos( vcl::Window* pWindow,
 {
     // get window position
     Point       aPos;
-    Size        aSize = pWindow->GetSizePixel();
+    Size        aSize = ::isLayoutEnabled(pWindow) ? pWindow->get_preferred_size() : pWindow->GetSizePixel();
     Rectangle   aScreenRect = pWindow->ImplGetFrameWindow()->GetDesktopRectPixel();
     FloatingWindow *pFloatingWindow = dynamic_cast<FloatingWindow*>( pWindow );
 
@@ -450,10 +449,8 @@ Point FloatingWindow::ImplCalcPos( vcl::Window* pWindow,
     return pW->OutputToScreenPixel( aPos );
 }
 
-FloatingWindow* FloatingWindow::ImplFloatHitTest( vcl::Window* pReference, const Point& rPos, HitTest& rHitTest )
+Point FloatingWindow::ImplConvertToAbsPos(vcl::Window* pReference, const Point& rPos)
 {
-    FloatingWindow* pWin = this;
-
     Point aAbsolute( rPos );
 
     const OutputDevice *pWindowOutDev = pReference->GetOutDev();
@@ -472,6 +469,37 @@ FloatingWindow* FloatingWindow::ImplFloatHitTest( vcl::Window* pReference, const
     else
         aAbsolute = Point( pReference->OutputToAbsoluteScreenPixel(
             pReference->ScreenToOutputPixel(rPos) ) );
+
+    return aAbsolute;
+}
+
+Rectangle FloatingWindow::ImplConvertToAbsPos(vcl::Window* pReference, const Rectangle& rRect)
+{
+    Rectangle aFloatRect = rRect;
+
+    const OutputDevice *pParentWinOutDev = pReference->GetOutDev();
+
+    // compare coordinates in absolute screen coordinates
+    // Keep in sync with FloatingWindow::ImplFloatHitTest, e.g. fdo#33509
+    if( pReference->HasMirroredGraphics()  )
+    {
+        if(!pReference->IsRTLEnabled() )
+            // --- RTL --- re-mirror back to get device coordinates
+            pParentWinOutDev->ReMirror(aFloatRect);
+
+        aFloatRect.SetPos(pReference->ScreenToOutputPixel(aFloatRect.TopLeft()));
+        aFloatRect = pReference->ImplOutputToUnmirroredAbsoluteScreenPixel(aFloatRect);
+    }
+    else
+        aFloatRect.SetPos(pReference->OutputToAbsoluteScreenPixel(pReference->ScreenToOutputPixel(rRect.TopLeft())));
+    return aFloatRect;
+}
+
+FloatingWindow* FloatingWindow::ImplFloatHitTest( vcl::Window* pReference, const Point& rPos, HitTest& rHitTest )
+{
+    FloatingWindow* pWin = this;
+
+    Point aAbsolute(FloatingWindow::ImplConvertToAbsPos(pReference, rPos));
 
     do
     {
@@ -666,24 +694,7 @@ void FloatingWindow::StartPopupMode( const Rectangle& rRect, FloatWinPopupFlags 
     // convert maFloatRect to absolute device coordinates
     // so they can be compared across different frames
     // !!! rRect is expected to be in screen coordinates of the parent frame window !!!
-    maFloatRect             = rRect;
-
-    vcl::Window *pReference =  GetParent();
-    const OutputDevice *pParentWinOutDev = pReference->GetOutDev();
-
-    // compare coordinates in absolute screen coordinates
-    // Keep in sync with FloatingWindow::ImplFloatHitTest, e.g. fdo#33509
-    if( pReference->HasMirroredGraphics()  )
-    {
-        if(!pReference->IsRTLEnabled() )
-            // --- RTL --- re-mirror back to get device coordinates
-            pParentWinOutDev->ReMirror(maFloatRect);
-
-        maFloatRect.SetPos(pReference->ScreenToOutputPixel(maFloatRect.TopLeft()));
-        maFloatRect = pReference->ImplOutputToUnmirroredAbsoluteScreenPixel(maFloatRect);
-    }
-    else
-        maFloatRect.SetPos(pReference->OutputToAbsoluteScreenPixel(pReference->ScreenToOutputPixel(rRect.TopLeft())));
+    maFloatRect = FloatingWindow::ImplConvertToAbsPos(GetParent(), rRect);
 
     maFloatRect.Left()     -= 2;
     maFloatRect.Top()      -= 2;
@@ -696,9 +707,6 @@ void FloatingWindow::StartPopupMode( const Rectangle& rRect, FloatWinPopupFlags 
     mbPopupModeTearOff      = false;
     mbMouseDown             = false;
 
-    mbOldSaveBackMode       = IsSaveBackgroundEnabled();
-    EnableSaveBackground();
-
     // add FloatingWindow to list of windows that are in popup mode
     ImplSVData* pSVData = ImplGetSVData();
     mpNextFloat = pSVData->maWinData.mpFirstFloat;
@@ -707,6 +715,8 @@ void FloatingWindow::StartPopupMode( const Rectangle& rRect, FloatWinPopupFlags 
     {
         // force key input even without focus (useful for menus)
         mbGrabFocus = true;
+        mpWindowImpl->mpFrameData->mbHasFocus = true;
+        GrabFocus();
     }
     Show( true, ShowFlags::NoActivate );
 }
@@ -756,7 +766,7 @@ void FloatingWindow::StartPopupMode( ToolBox* pBox, FloatWinPopupFlags nFlags )
     StartPopupMode( aRect, nFlags );
 }
 
-void FloatingWindow::ImplEndPopupMode( FloatWinPopupEndFlags nFlags, sal_uLong nFocusId )
+void FloatingWindow::ImplEndPopupMode( FloatWinPopupEndFlags nFlags, const VclPtr<vcl::Window>& xFocusId )
 {
     if ( !mbInPopupMode )
         return;
@@ -782,8 +792,8 @@ void FloatingWindow::ImplEndPopupMode( FloatWinPopupEndFlags nFlags, sal_uLong n
         Show( false, ShowFlags::NoFocusChange );
 
         // maybe pass focus on to a suitable FloatingWindow
-        if ( nFocusId )
-            Window::EndSaveFocus( nFocusId );
+        if ( xFocusId != nullptr )
+            Window::EndSaveFocus( xFocusId );
         else if ( pSVData->maWinData.mpFocusWin && pSVData->maWinData.mpFirstFloat &&
                   ImplIsWindowOrChild( pSVData->maWinData.mpFocusWin ) )
             pSVData->maWinData.mpFirstFloat->GrabFocus();
@@ -792,10 +802,9 @@ void FloatingWindow::ImplEndPopupMode( FloatWinPopupEndFlags nFlags, sal_uLong n
     else
     {
         mbPopupModeTearOff = true;
-        if ( nFocusId )
-            Window::EndSaveFocus( nFocusId, false );
+        if ( xFocusId != nullptr )
+            Window::EndSaveFocus( xFocusId, false );
     }
-    EnableSaveBackground( mbOldSaveBackMode );
 
     mbPopupModeCanceled = bool(nFlags & FloatWinPopupEndFlags::Cancel);
 

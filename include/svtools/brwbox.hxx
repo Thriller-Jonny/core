@@ -46,13 +46,10 @@ namespace svt {
     class BrowseBoxImpl;
     class IAccessibleFactory;
 }
+
 namespace utl {
     class AccessibleStateSetHelper;
 }
-
-
-// - BrowseBox-Types -
-
 
 #define BROWSER_INVALIDID           SAL_MAX_UINT16
 #define BROWSER_ENDOFSELECTION      (static_cast<long>(SFX_ENDOFSELECTION))
@@ -125,9 +122,6 @@ namespace o3tl
 #define BROWSER_MOVECOLUMNRIGHT         757
 
 
-// - BrowseEvent -
-
-
 class BrowseEvent
 {
     VclPtr<vcl::Window>     pWin;
@@ -151,9 +145,6 @@ public:
 };
 
 
-// - BrowserMouseEvent -
-
-
 class BrowserMouseEvent: public MouseEvent, public BrowseEvent
 {
 public:
@@ -165,9 +156,6 @@ public:
 };
 
 
-// - BrowserAcceptDropEvent -
-
-
 class BrowserAcceptDropEvent : public AcceptDropEvent, public BrowseEvent
 {
 public:
@@ -176,18 +164,12 @@ public:
 };
 
 
-// - BrowserExecuteDropEvent -
-
-
 class BrowserExecuteDropEvent : public ExecuteDropEvent, public BrowseEvent
 {
 public:
     BrowserExecuteDropEvent();
     BrowserExecuteDropEvent( BrowserDataWin* pWin, const ExecuteDropEvent& rEvt );
 };
-
-
-// - BrowseBox -
 
 
 // TODO
@@ -271,8 +253,7 @@ private:
     }               uRow;
     MultiSelection* pColSel;        // selected column-ids
 
-    //fdo#83943, detect if making the cursor position
-    //visible is impossible to achieve
+    // fdo#83943, detect if making the cursor position visible is impossible to achieve
     struct CursorMoveAttempt
     {
         long m_nCol;
@@ -304,7 +285,7 @@ private:
 private:
     SVT_DLLPRIVATE void            ConstructImpl(BrowserMode nMode);
     SVT_DLLPRIVATE void            ExpandRowSelection( const BrowserMouseEvent& rEvt );
-    SVT_DLLPRIVATE void            ToggleSelection( bool bForce = false );
+    SVT_DLLPRIVATE void            ToggleSelection();
 
     SVT_DLLPRIVATE void            UpdateScrollbars();
     SVT_DLLPRIVATE void            AutoSizeLastColumn();
@@ -479,7 +460,7 @@ public:
     void            SetColumnTitle( sal_uInt16 nColumnId, const OUString &rTitle );
     void            SetColumnWidth( sal_uInt16 nColumnId, sal_uLong nWidth );
     void            SetColumnPos( sal_uInt16 nColumnId, sal_uInt16 nPos );
-    void            FreezeColumn( sal_uInt16 nColumnId, bool bFreeze = true );
+    void            FreezeColumn( sal_uInt16 nColumnId );
     void            RemoveColumn( sal_uInt16 nColumnId );
     void            RemoveColumns();
 
@@ -500,7 +481,7 @@ public:
     // movement of visible area
     long            ScrollColumns( long nColumns );
     long            ScrollRows( long nRows );
-    bool            MakeFieldVisible( long nRow, sal_uInt16 nColId, bool bComplete = false );
+    void            MakeFieldVisible( long nRow, sal_uInt16 nColId );
 
     // access and movement of cursor
     long            GetCurRow() const { return nCurRow; }
@@ -515,13 +496,13 @@ public:
     virtual void    SelectRow( long nRow, bool _bSelect = true, bool bExpand = true ) override;
     void            SelectColumnPos( sal_uInt16 nCol, bool _bSelect = true )
                         { SelectColumnPos( nCol, _bSelect, true); }
-    void            SelectColumnId( sal_uInt16 nColId, bool _bSelect = true )
-                        { SelectColumnPos( GetColumnPos(nColId), _bSelect, true); }
+    void            SelectColumnId( sal_uInt16 nColId )
+                        { SelectColumnPos( GetColumnPos(nColId), true, true); }
     long            GetSelectRowCount() const;
     sal_uInt16          GetSelectColumnCount() const;
     virtual bool    IsRowSelected( long nRow ) const override;
     bool            IsColumnSelected( sal_uInt16 nColumnId ) const;
-    long            FirstSelectedRow( bool bInverse = false );
+    long            FirstSelectedRow();
     long            LastSelectedRow();
     long            NextSelectedRow();
     const MultiSelection* GetColumnSelection() const { return pColSel; }
@@ -533,9 +514,8 @@ public:
     bool            IsResizing() const { return bResizing; }
 
     // access to positions of fields, column and rows
-    vcl::Window&         GetDataWindow() const { return *pDataWin; }
-    Rectangle       GetRowRectPixel( long nRow,
-                                     bool bRelToBrowser = true ) const;
+    vcl::Window&    GetDataWindow() const { return *pDataWin; }
+    Rectangle       GetRowRectPixel( long nRow ) const;
     Rectangle       GetFieldRectPixel( long nRow, sal_uInt16 nColId,
                                        bool bRelToBrowser = true) const;
     bool            IsFieldVisible( long nRow, sal_uInt16 nColId,
@@ -567,7 +547,7 @@ public:
         Note that this works only if there's a handle column, since only in this case,
         there *is* something for the user to click onto
     */
-    void            EnableInteractiveRowHeight( bool _bEnable = true ) { mbInteractiveRowHeight = _bEnable; }
+    void            EnableInteractiveRowHeight() { mbInteractiveRowHeight = true; }
     bool            IsInteractiveRowHeightEnabled( ) const { return mbInteractiveRowHeight; }
 
     /// access to selected methods, to be granted to the BrowserColumn
@@ -670,7 +650,6 @@ public:
     /// return <TRUE/> if and only if the accessible object for this instance has been created and is alive
     bool isAccessibleAlive( ) const;
 
-    // ACCESSIBILITY ==========================================================
 public:
     /** Creates and returns the accessible object of the whole BrowseBox. */
     virtual css::uno::Reference<
@@ -710,8 +689,6 @@ public:
         css::accessibility::XAccessible >
     CreateAccessibleControl( sal_Int32 nIndex ) override;
 
-    // Conversions ------------------------------------------------------------
-
     /** Converts a point relative to the data window origin to a cell address.
         @param rnRow  Out-parameter that takes the row index.
         @param rnColumnId  Out-parameter that takes the column ID.
@@ -740,8 +717,6 @@ public:
         @param rPoint  The position in pixels relative to the BrowseBox.
         @return <TRUE/>, if the point could be converted to a valid index. */
     virtual bool ConvertPointToControlIndex( sal_Int32& rnIndex, const Point& rPoint ) override;
-
-    // Object data and state --------------------------------------------------
 
     /** return the name of the specified object.
         @param  eObjType
@@ -800,7 +775,7 @@ public:
     virtual bool                    GetGlyphBoundRects( const Point& rOrigin, const OUString& rStr, int nIndex, int nLen, int nBase, MetricVector& rVector ) override;
     virtual Rectangle               GetWindowExtentsRelative( vcl::Window *pRelativeWindow ) const override;
     virtual void                    GrabFocus() override;
-    virtual css::uno::Reference< css::accessibility::XAccessible > GetAccessible( bool bCreate = true ) override;
+    virtual css::uno::Reference< css::accessibility::XAccessible > GetAccessible() override;
     virtual vcl::Window*            GetAccessibleParentWindow() const override;
     virtual vcl::Window*            GetWindowInstance() override;
 
@@ -825,6 +800,6 @@ inline const DataFlavorExVector& BrowseBox::GetDataFlavors() const
     return *static_cast<DataFlavorExVector*>(implGetDataFlavors());
 }
 
-#endif
+#endif // INCLUDED_SVTOOLS_BRWBOX_HXX
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -32,7 +32,6 @@ MenuFloatingWindow::MenuFloatingWindow( Menu* pMen, vcl::Window* pParent, WinBit
     mpWindowImpl->mbMenuFloatingWindow= true;
     pMenu               = pMen;
     pActivePopup        = nullptr;
-    nSaveFocusId        = 0;
     bInExecute          = false;
     bScrollMenu         = false;
     nHighlightedItem    = ITEMPOS_INVALID;
@@ -46,7 +45,6 @@ MenuFloatingWindow::MenuFloatingWindow( Menu* pMen, vcl::Window* pParent, WinBit
     bIgnoreFirstMove    = true;
     bKeyInput           = false;
 
-    EnableSaveBackground();
     ApplySettings(*this);
 
     SetPopupModeEndHdl( LINK( this, MenuFloatingWindow, PopupEnd ) );
@@ -397,21 +395,21 @@ void MenuFloatingWindow::Execute()
     pSVData->maAppData.mpActivePopupMenu = nullptr;
 }
 
-void MenuFloatingWindow::StopExecute( sal_uLong nFocusId )
+void MenuFloatingWindow::StopExecute( VclPtr<vcl::Window> xFocusId )
 {
     // restore focus
     // (could have been restored in Select)
-    if ( nSaveFocusId )
+    if ( xSaveFocusId != nullptr )
     {
-        Window::EndSaveFocus( nFocusId, false );
-        nFocusId = nSaveFocusId;
-        if ( nFocusId )
+        Window::EndSaveFocus( xFocusId, false );
+        xFocusId = xSaveFocusId;
+        if ( xFocusId != nullptr )
         {
-            nSaveFocusId = 0;
+            xSaveFocusId = nullptr;
             ImplGetSVData()->maWinData.mbNoDeactivate = false;
         }
     }
-    ImplEndPopupMode( FloatWinPopupEndFlags::NONE, nFocusId );
+    ImplEndPopupMode( FloatWinPopupEndFlags::NONE, xFocusId );
 
     aHighlightChangedTimer.Stop();
     bInExecute = false;
@@ -456,9 +454,7 @@ void MenuFloatingWindow::KillActivePopup( PopupMenu* pThisOnly )
 void MenuFloatingWindow::EndExecute()
 {
     Menu* pStart = pMenu ? pMenu->ImplGetStartMenu() : nullptr;
-    sal_uLong nFocusId = 0;
-    if (pStart)
-        nFocusId = pStart->DeactivateMenuBar(nFocusId);
+    VclPtr<vcl::Window> xFocusId;
 
     // if started elsewhere, cleanup there as well
     MenuFloatingWindow* pCleanUpFrom = this;
@@ -475,7 +471,7 @@ void MenuFloatingWindow::EndExecute()
     Menu* pM = pMenu;
     sal_uInt16 nItem = nHighlightedItem;
 
-    pCleanUpFrom->StopExecute( nFocusId );
+    pCleanUpFrom->StopExecute( xFocusId );
 
     if ( nItem != ITEMPOS_INVALID && pM )
     {
@@ -762,7 +758,7 @@ void MenuFloatingWindow::InvalidateItem(sal_uInt16 nPos)
     }
 }
 
-void MenuFloatingWindow::RenderHighlightItem(vcl::RenderContext& rRenderContext, sal_uInt16 nPos, bool bHighlight)
+void MenuFloatingWindow::RenderHighlightItem(vcl::RenderContext& rRenderContext, sal_uInt16 nPos)
 {
     if (!pMenu)
         return;
@@ -807,8 +803,7 @@ void MenuFloatingWindow::RenderHighlightItem(vcl::RenderContext& rRenderContext,
                     MenupopupValue aVal(pMenu->nTextPos-GUTTERBORDER, aItemRect);
                     rRenderContext.DrawNativeControl(CTRL_MENU_POPUP, PART_ENTIRE_CONTROL,
                                                      aCtrlRect, ControlState::ENABLED, aVal, OUString());
-                    if (bHighlight &&
-                        rRenderContext.IsNativeControlSupported(CTRL_MENU_POPUP, PART_MENU_ITEM))
+                    if (rRenderContext.IsNativeControlSupported(CTRL_MENU_POPUP, PART_MENU_ITEM))
                     {
                         bDrawItemRect = false;
                         if (!rRenderContext.DrawNativeControl(CTRL_MENU_POPUP, PART_MENU_ITEM, aItemRect,
@@ -817,33 +812,28 @@ void MenuFloatingWindow::RenderHighlightItem(vcl::RenderContext& rRenderContext,
                                                                                             : ControlState::NONE),
                                                               aVal, OUString()))
                         {
-                            bDrawItemRect = bHighlight;
+                            bDrawItemRect = true;
                         }
                     }
                     else
-                        bDrawItemRect = bHighlight;
+                        bDrawItemRect = true;
                     rRenderContext.Pop();
                 }
                 if (bDrawItemRect)
                 {
-                    if (bHighlight)
-                    {
-                        if (pData->bEnabled)
-                            rRenderContext.SetFillColor(rRenderContext.GetSettings().GetStyleSettings().GetMenuHighlightColor());
-                        else
-                        {
-                            rRenderContext.SetFillColor();
-                            oldLineColor = rRenderContext.GetLineColor();
-                            rRenderContext.SetLineColor(rRenderContext.GetSettings().GetStyleSettings().GetMenuHighlightColor());
-                            bRestoreLineColor = true;
-                        }
-                    }
+                    if (pData->bEnabled)
+                        rRenderContext.SetFillColor(rRenderContext.GetSettings().GetStyleSettings().GetMenuHighlightColor());
                     else
-                        rRenderContext.SetFillColor(rRenderContext.GetSettings().GetStyleSettings().GetMenuColor());
+                    {
+                        rRenderContext.SetFillColor();
+                        oldLineColor = rRenderContext.GetLineColor();
+                        rRenderContext.SetLineColor(rRenderContext.GetSettings().GetStyleSettings().GetMenuHighlightColor());
+                        bRestoreLineColor = true;
+                    }
 
                     rRenderContext.DrawRect(aItemRect);
                 }
-                pMenu->ImplPaint(rRenderContext, nScrollerHeight, nStartY, pData, bHighlight);
+                pMenu->ImplPaint(rRenderContext, nScrollerHeight, nStartY, pData, true/*bHighlight*/);
                 if (bRestoreLineColor)
                     rRenderContext.SetLineColor(oldLineColor);
             }
@@ -977,8 +967,7 @@ void MenuFloatingWindow::ImplCursorUpDown( bool bUp, bool bHomeEnd )
 
 void MenuFloatingWindow::KeyInput( const KeyEvent& rKEvent )
 {
-    ImplDelData aDelData;
-    ImplAddDel( &aDelData );
+    VclPtr<vcl::Window> xWindow = this;
 
     sal_uInt16 nCode = rKEvent.GetKeyCode().GetCode();
     bKeyInput = true;
@@ -1135,9 +1124,8 @@ void MenuFloatingWindow::KeyInput( const KeyEvent& rKEvent )
         }
     }
     // #105474# check if menu window was not destroyed
-    if ( !aDelData.IsDead() )
+    if ( !xWindow->IsDisposed() )
     {
-        ImplRemoveDel( &aDelData );
         bKeyInput = false;
     }
 }
@@ -1170,7 +1158,7 @@ void MenuFloatingWindow::Paint(vcl::RenderContext& rRenderContext, const Rectang
     rRenderContext.SetFillColor(rRenderContext.GetSettings().GetStyleSettings().GetMenuColor());
     pMenu->ImplPaint(rRenderContext, nScrollerHeight, ImplGetStartY());
     if (nHighlightedItem != ITEMPOS_INVALID)
-        RenderHighlightItem(rRenderContext, nHighlightedItem, true);
+        RenderHighlightItem(rRenderContext, nHighlightedItem);
 
     rRenderContext.Pop();
 }

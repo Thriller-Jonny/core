@@ -99,7 +99,7 @@ namespace pcr
 
         default:
             OSL_FAIL( "PropertyHandlerHelper::describePropertyLine: don't know how to represent this at the UI!" );
-            // NO break!
+            SAL_FALLTHROUGH;
 
         case TypeClass_STRING:
             nControlType = PropertyControlType::TextField;
@@ -244,7 +244,7 @@ namespace pcr
         try
         {
             Reference< XModifiable > xDocumentModifiable( getContextDocument_throw(_rContext), UNO_QUERY_THROW );
-            xDocumentModifiable->setModified( sal_True );
+            xDocumentModifiable->setModified( true );
         }
         catch( const Exception& )
         {

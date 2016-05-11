@@ -65,7 +65,7 @@ public:
     SVX_DLLPUBLIC ~SdrObjConnection();
 
     void ResetVars();
-    bool TakeGluePoint(SdrGluePoint& rGP, bool bSetAbsolutePos) const;
+    bool TakeGluePoint(SdrGluePoint& rGP) const;
 
     inline void SetBestConnection( bool rB ) { bBestConn = rB; };
     inline void SetBestVertex( bool rB ) { bBestVertex = rB; };
@@ -169,7 +169,7 @@ protected:
     bool                        bEdgeTrackDirty : 1; // sal_True=Verbindungsverlauf muss neu berechnet werden.
     bool                        bEdgeTrackUserDefined : 1;
 
-    // Bool to allow supporession of default connects at object
+    // Bool to allow suppression of default connects at object
     // inside test (HitTest) and object center test (see ImpFindConnector())
     bool                        mbSuppressDefaultConnect : 1;
 

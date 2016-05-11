@@ -22,7 +22,7 @@
 #include <utility>
 
 #include <osl/mutex.hxx>
-#include <cppuhelper/interfacecontainer.h>
+#include <comphelper/interfacecontainer2.hxx>
 #include <cppuhelper/supportsservice.hxx>
 #include <vcl/svapp.hxx>
 
@@ -46,11 +46,11 @@ class SwXReferenceMark::Impl
     : public SwClient
 {
 private:
-    ::osl::Mutex m_Mutex; // just for OInterfaceContainerHelper
+    ::osl::Mutex m_Mutex; // just for OInterfaceContainerHelper2
 
 public:
     uno::WeakReference<uno::XInterface> m_wThis;
-    ::cppu::OInterfaceContainerHelper m_EventListeners;
+    ::comphelper::OInterfaceContainerHelper2 m_EventListeners;
     bool                        m_bIsDescriptor;
     SwDoc *                     m_pDoc;
     const SwFormatRefMark *        m_pMarkFormat;
@@ -168,8 +168,7 @@ static char const*const g_ServicesReferenceMark[] =
     "com.sun.star.text.ReferenceMark",
 };
 
-static const size_t g_nServicesReferenceMark(
-    sizeof(g_ServicesReferenceMark)/sizeof(g_ServicesReferenceMark[0]));
+static const size_t g_nServicesReferenceMark(SAL_N_ELEMENTS(g_ServicesReferenceMark));
 
 sal_Bool SAL_CALL
 SwXReferenceMark::supportsService(const OUString& rServiceName)
@@ -626,7 +625,7 @@ SwXMetaText::createTextCursorByRange(
     throw (uno::RuntimeException, std::exception)
 {
     const uno::Reference<text::XTextCursor> xCursor( CreateCursor() );
-    xCursor->gotoRange(xTextPosition, sal_False);
+    xCursor->gotoRange(xTextPosition, false);
     return xCursor;
 }
 
@@ -637,11 +636,11 @@ class SwXMeta::Impl
     : public SwClient
 {
 private:
-    ::osl::Mutex m_Mutex; // just for OInterfaceContainerHelper
+    ::osl::Mutex m_Mutex; // just for OInterfaceContainerHelper2
 
 public:
     uno::WeakReference<uno::XInterface> m_wThis;
-    ::cppu::OInterfaceContainerHelper m_EventListeners;
+    ::comphelper::OInterfaceContainerHelper2 m_EventListeners;
     ::std::unique_ptr<const TextRangeList_t> m_pTextPortions;
     // 3 possible states: not attached, attached, disposed
     bool m_bIsDisposed;
@@ -906,8 +905,7 @@ static char const*const g_ServicesMeta[] =
     "com.sun.star.text.InContentMetadata",
 };
 
-static const size_t g_nServicesMeta(
-    sizeof(g_ServicesMeta)/sizeof(g_ServicesMeta[0]));
+static const size_t g_nServicesMeta(SAL_N_ELEMENTS(g_ServicesMeta));
 
 sal_Bool SAL_CALL
 SwXMeta::supportsService(const OUString& rServiceName)
@@ -1331,8 +1329,7 @@ static char const*const g_ServicesMetaField[] =
     "com.sun.star.text.textfield.MetadataField",
 };
 
-static const size_t g_nServicesMetaField(
-    sizeof(g_ServicesMetaField)/sizeof(g_ServicesMetaField[0]));
+static const size_t g_nServicesMetaField(SAL_N_ELEMENTS(g_ServicesMetaField));
 
 sal_Bool SAL_CALL
 SwXMetaField::supportsService(const OUString& rServiceName)
@@ -1448,7 +1445,7 @@ throw (beans::UnknownPropertyException, lang::WrappedTargetException,
 
     if ( rPropertyName == "NumberFormat" )
     {
-        const OUString text( getPresentation(sal_False) );
+        const OUString text( getPresentation(false) );
         any <<= static_cast<sal_Int32>(pMeta->GetNumberFormat(text));
     }
     else if ( rPropertyName == "IsFixedLanguage" )

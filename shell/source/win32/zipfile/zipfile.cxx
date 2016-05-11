@@ -18,10 +18,10 @@
  */
 
 #include "zipexcptn.hxx"
-#include "internal/zipfile.hxx"
-#include "internal/global.hxx"
-#include "internal/types.hxx"
-#include "internal/stream_helper.hxx"
+#include "zipfile.hxx"
+#include "global.hxx"
+#include "types.hxx"
+#include "stream_helper.hxx"
 
 #include <malloc.h>
 #include <algorithm>
@@ -331,7 +331,7 @@ namespace internal
 /* for case in-sensitive string comparison */
 struct stricmp : public std::unary_function<std::string, bool>
 {
-    stricmp(const std::string &str) : str_(str)
+    explicit stricmp(const std::string &str) : str_(str)
     {}
 
     bool operator() (const std::string &other)
@@ -531,7 +531,7 @@ ZipFile::DirectoryPtr_t ZipFile::GetDirectory() const
     return dir;
 }
 
-/** Convinience query function may even realized with
+/** Convenience query function may even realized with
     iterating over a ZipFileDirectory returned by
     GetDirectory */
 bool ZipFile::HasContent(const std::string &ContentName) const

@@ -56,9 +56,9 @@ class EDITENG_DLLPUBLIC SvxLRSpaceItem : public SfxPoolItem
 
     sal_uInt16  nPropFirstLineOfst, nPropLeftMargin, nPropRightMargin;
     short   nFirstLineOfst;     // First-line indent _always_ relative to nTxtLeft
-    bool        bAutoFirst  : 1;    // Automatic calculation of the first line indent
-    bool        bExplicitZeroMarginValRight : 1;
-    bool        bExplicitZeroMarginValLeft : 1;
+    bool        bAutoFirst;    // Automatic calculation of the first line indent
+    bool        bExplicitZeroMarginValRight;
+    bool        bExplicitZeroMarginValLeft;
 
     void   AdjustLeft();        // nLeftMargin and nTxtLeft are being adjusted.
 
@@ -87,7 +87,7 @@ public:
     virtual SfxPoolItem*     Create(SvStream &, sal_uInt16) const override;
     virtual SvStream&        Store(SvStream &, sal_uInt16 nItemVersion ) const override;
     virtual sal_uInt16           GetVersion( sal_uInt16 nFileVersion ) const override;
-    virtual bool                 ScaleMetrics( long nMult, long nDiv ) override;
+    virtual void                 ScaleMetrics( long nMult, long nDiv ) override;
     virtual bool                 HasMetrics() const override;
 
     // Die "Layout-Schnittstelle":

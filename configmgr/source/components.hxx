@@ -33,7 +33,6 @@
 #include "additions.hxx"
 #include "data.hxx"
 #include "modifications.hxx"
-#include "path.hxx"
 
 namespace com { namespace sun { namespace star {
     namespace beans { class XPropertySet; }
@@ -59,7 +58,7 @@ public:
 
     rtl::Reference< Node > resolvePathRepresentation(
         OUString const & pathRepresentation,
-        OUString * canonicRepresenation, Path * path, int * finalizedLayer)
+        OUString * canonicRepresenation, std::vector<OUString> * path, int * finalizedLayer)
         const;
 
     rtl::Reference< Node > getTemplate(
@@ -74,12 +73,12 @@ public:
         rtl::Reference< RootAccess > const & exclude,
         Broadcaster * broadcaster);
 
-    void addModification(Path const & path);
+    void addModification(std::vector<OUString> const & path);
 
     void writeModifications();
 
     void flushModifications();
-        // must be called with configmgr::lock unaquired; must be called before
+        // must be called with configmgr::lock unacquired; must be called before
         // shutdown if writeModifications has ever been called (probably
         // indirectly, via removeExtensionXcuFile)
 

@@ -161,11 +161,10 @@ class StyleCollectionHelper : public ::cppu::WeakImplHelper< container::XNameAcc
                                                              container::XEnumerationAccess >
 {
 private:
-    uno::Reference< frame::XModel > mxModel;
     uno::Reference< container::XNameAccess > mxParaStyles;
     uno::Any cachePos;
 public:
-    explicit StyleCollectionHelper( const uno::Reference< frame::XModel >& _xModel ) : mxModel( _xModel )
+    explicit StyleCollectionHelper( const uno::Reference< frame::XModel >& _xModel )
     {
         // we only concern about the Paragraph styles
         uno::Reference< style::XStyleFamiliesSupplier > xStyleSupplier( _xModel, uno::UNO_QUERY_THROW);
@@ -198,16 +197,16 @@ public:
                 if( mxParaStyles->hasByName( sStyleName ) )
                 {
                     cachePos = mxParaStyles->getByName( sStyleName );
-                    return sal_True;
+                    return true;
                 }
-                return sal_False;
+                return false;
             }
         }
 
         if( mxParaStyles->hasByName( aName ) )
         {
             cachePos = mxParaStyles->getByName( aName );
-            return sal_True;
+            return true;
         }
         else
         {
@@ -218,11 +217,11 @@ public:
                 if( aStyleName.equalsIgnoreAsciiCase( aName ) )
                 {
                     cachePos = mxParaStyles->getByName( aStyleName );
-                    return sal_True;
+                    return true;
                 }
             }
         }
-        return sal_False;
+        return false;
     }
 
     // XIndexAccess

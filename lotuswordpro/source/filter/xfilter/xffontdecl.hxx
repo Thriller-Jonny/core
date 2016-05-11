@@ -71,18 +71,18 @@
 class   XFFontDecl
 {
 public:
-    XFFontDecl(const OUString& name, const OUString& family, bool fixed = false);
+    XFFontDecl(const OUString& name, const OUString& family);
 
 public:
     /**
      * @descr   Get font name.
      */
-    OUString   GetFontName() { return m_strFontName;}
+    const OUString& GetFontName() { return m_strFontName;}
 
     /**
      * @descr   Get font family.
      */
-    OUString   GetFontFamily() { return m_strFontFamily;}
+    const OUString& GetFontFamily() { return m_strFontFamily;}
 
     bool        GetFontPitchFixed() { return m_bPitchFixed;}
 

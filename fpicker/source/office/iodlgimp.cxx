@@ -65,7 +65,7 @@ namespace
 
     struct SvtSimpleResId : public ResId
     {
-        SvtSimpleResId (sal_uInt16 nId) : ResId (nId, *ResMgrHolder::getOrCreate()) {}
+        explicit SvtSimpleResId (sal_uInt16 nId) : ResId (nId, *ResMgrHolder::getOrCreate()) {}
     };
 }
 
@@ -77,7 +77,6 @@ SvtFileDialogFilter_Impl::SvtFileDialogFilter_Impl( const OUString& rName, const
 }
 
 
-
 SvtFileDialogFilter_Impl::~SvtFileDialogFilter_Impl()
 {
 }
@@ -86,9 +85,7 @@ SvtFileDialogFilter_Impl::~SvtFileDialogFilter_Impl()
 // SvtFileDialogFilterList_Impl
 
 
-
 //= SvtFileDialogURLSelector
-
 
 
 SvtFileDialogURLSelector::SvtFileDialogURLSelector( vcl::Window* _pParent, SvtFileDialog* _pDlg, WinBits nBits, sal_uInt16 _nButtonId )
@@ -127,7 +124,6 @@ void SvtFileDialogURLSelector::Activate()
 
 
 //= SvtUpButton_Impl
-
 
 
 SvtUpButton_Impl::SvtUpButton_Impl( vcl::Window *pParent, SvtFileDialog* pDlg, WinBits nBits )
@@ -190,7 +186,7 @@ void SvtUpButton_Impl::Select()
     if ( nId )
     {
         --nId;
-        DBG_ASSERT( nId <= _aURLs.size(), "SvtUpButton_Impl:falscher Index" );
+        assert( nId <= _aURLs.size() &&  "SvtUpButton_Impl:falscher Index" );
 
         GetDialogParent()->OpenURL_Impl(_aURLs[nId]);
     }
@@ -244,14 +240,12 @@ SvtExpFileDlg_Impl::SvtExpFileDlg_Impl( WinBits )   :
 }
 
 
-
 SvtExpFileDlg_Impl::~SvtExpFileDlg_Impl()
 {
     _pBtnUp.disposeAndClear();
     delete _pUserFilter;
     _pPlaces.disposeAndClear();
 }
-
 
 
 void SvtExpFileDlg_Impl::SetStandardDir( const OUString& _rDir )
@@ -302,7 +296,6 @@ void SvtExpFileDlg_Impl::InsertFilterListEntry( const SvtFileDialogFilter_Impl* 
     const sal_Int32 nPos = _pLbFilter->InsertEntry( sName );
     _pLbFilter->SetEntryData( nPos, const_cast< void* >( static_cast< const void* >( _pFilterDesc ) ) );
 }
-
 
 
 void SvtExpFileDlg_Impl::InitFilterList( )

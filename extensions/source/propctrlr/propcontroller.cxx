@@ -472,11 +472,11 @@ namespace pcr
         {   // this means a "suspend" is to be "revoked"
             suspendPropertyHandlers_nothrow( false );
             // we ourself cannot revoke our suspend
-            return sal_False;
+            return false;
         }
 
         if ( !suspendAll_nothrow() )
-            return sal_False;
+            return false;
 
         // commit the editor's content
         if ( haveView() )
@@ -486,7 +486,7 @@ namespace pcr
         stopContainerWindowListening();
 
         // outtahere
-        return sal_True;
+        return true;
     }
 
 
@@ -760,7 +760,7 @@ namespace pcr
     }
 
 
-    Reference< XPropertyControl > SAL_CALL OPropertyBrowserController::createPropertyControl( ::sal_Int16 ControlType, sal_Bool _CreateReadOnly ) throw (IllegalArgumentException, RuntimeException, std::exception)
+    Reference< XPropertyControl > SAL_CALL OPropertyBrowserController::createPropertyControl( ::sal_Int16 ControlType, sal_Bool CreateReadOnly ) throw (IllegalArgumentException, RuntimeException, std::exception)
     {
         ::osl::MutexGuard aGuard( m_aMutex );
 
@@ -770,8 +770,8 @@ namespace pcr
         WinBits nWinBits = WB_BORDER;
 
         // read-only-ness
-        _CreateReadOnly |= impl_isReadOnlyModel_throw() ? 1 : 0;
-        if ( _CreateReadOnly )
+        CreateReadOnly |= impl_isReadOnlyModel_throw() ? 1 : 0;
+        if ( CreateReadOnly )
             nWinBits |= WB_READONLY;
 
         switch ( ControlType )
@@ -1001,19 +1001,16 @@ namespace pcr
 
                 // append these properties to our "all properties" array
                 aProperties.reserve( aProperties.size() + aThisHandlersProperties.size() );
-                for (   StlSyntaxSequence< Property >::const_iterator copyProperty = aThisHandlersProperties.begin();
-                        copyProperty != aThisHandlersProperties.end();
-                        ++copyProperty
-                    )
+                for (const auto & aThisHandlersPropertie : aThisHandlersProperties)
                 {
                     ::std::vector< Property >::const_iterator previous = ::std::find_if(
                         aProperties.begin(),
                         aProperties.end(),
-                        FindPropertyByName( copyProperty->Name )
+                        FindPropertyByName( aThisHandlersPropertie.Name )
                     );
                     if ( previous == aProperties.end() )
                     {
-                        aProperties.push_back( *copyProperty );
+                        aProperties.push_back( aThisHandlersPropertie );
                         continue;
                     }
 
@@ -1026,21 +1023,18 @@ namespace pcr
                     // which means it can give it a completely different meaning than the previous
                     // handler for this property is prepared for.
                     ::std::pair< PropertyHandlerMultiRepository::iterator, PropertyHandlerMultiRepository::iterator >
-                        aDepHandlers = m_aDependencyHandlers.equal_range( copyProperty->Name );
+                        aDepHandlers = m_aDependencyHandlers.equal_range( aThisHandlersPropertie.Name );
                     m_aDependencyHandlers.erase( aDepHandlers.first, aDepHandlers.second );
                 }
 
                 // determine the superseded properties
                 StlSyntaxSequence< OUString > aSupersededByThisHandler( (*aHandler)->getSupersededProperties() );
-                for (   StlSyntaxSequence< OUString >::const_iterator superseded = aSupersededByThisHandler.begin();
-                        superseded != aSupersededByThisHandler.end();
-                        ++superseded
-                    )
+                for (const auto & superseded : aSupersededByThisHandler)
                 {
                     ::std::vector< Property >::iterator existent = ::std::find_if(
                         aProperties.begin(),
                         aProperties.end(),
-                        FindPropertyByName( *superseded )
+                        FindPropertyByName( superseded )
                     );
                     if ( existent != aProperties.end() )
                         // one of the properties superseded by this handler was supported by a previous
@@ -1053,25 +1047,19 @@ namespace pcr
 
                 // remember this handler for every of the properties which it is responsible
                 // for
-                for (   StlSyntaxSequence< Property >::const_iterator remember = aThisHandlersProperties.begin();
-                        remember != aThisHandlersProperties.end();
-                        ++remember
-                    )
+                for (const auto & aThisHandlersPropertie : aThisHandlersProperties)
                 {
-                    m_aPropertyHandlers[ remember->Name ] = *aHandler;
+                    m_aPropertyHandlers[ aThisHandlersPropertie.Name ] = *aHandler;
                     // note that this implies that if two handlers support the same property,
                     // the latter wins
                 }
 
                 // see if the handler expresses interest in any actuating properties
                 StlSyntaxSequence< OUString > aInterestingActuations( (*aHandler)->getActuatingProperties() );
-                for (   StlSyntaxSequence< OUString >::const_iterator aLoop = aInterestingActuations.begin();
-                        aLoop != aInterestingActuations.end();
-                        ++aLoop
-                    )
+                for (const auto & aInterestingActuation : aInterestingActuations)
                 {
                     m_aDependencyHandlers.insert( PropertyHandlerMultiRepository::value_type(
-                        *aLoop, *aHandler ) );
+                        aInterestingActuation, *aHandler ) );
                 }
 
                 ++aHandler;
@@ -1139,7 +1127,6 @@ namespace pcr
                 throw RuntimeException();   // caught below
 
             _rDescriptor.assignFrom( handler->second->describePropertyLine( _rProperty.Name, this ) );
-
 
 
             _rDescriptor.xPropertyHandler = handler->second;
@@ -1429,15 +1416,15 @@ namespace pcr
     }
 
 
-    void OPropertyBrowserController::focusGained( const Reference< XPropertyControl >& _Control )
+    void OPropertyBrowserController::focusGained( const Reference< XPropertyControl >& Control )
     {
-        m_aControlObservers.notifyEach( &XPropertyControlObserver::focusGained, _Control );
+        m_aControlObservers.notifyEach( &XPropertyControlObserver::focusGained, Control );
     }
 
 
-    void OPropertyBrowserController::valueChanged( const Reference< XPropertyControl >& _Control )
+    void OPropertyBrowserController::valueChanged( const Reference< XPropertyControl >& Control )
     {
-        m_aControlObservers.notifyEach( &XPropertyControlObserver::valueChanged, _Control );
+        m_aControlObservers.notifyEach( &XPropertyControlObserver::valueChanged, Control );
     }
 
 
@@ -1688,15 +1675,15 @@ namespace pcr
     }
 
 
-    void SAL_CALL OPropertyBrowserController::registerControlObserver( const Reference< XPropertyControlObserver >& _Observer ) throw (RuntimeException, std::exception)
+    void SAL_CALL OPropertyBrowserController::registerControlObserver( const Reference< XPropertyControlObserver >& Observer ) throw (RuntimeException, std::exception)
     {
-        m_aControlObservers.addInterface( _Observer );
+        m_aControlObservers.addInterface( Observer );
     }
 
 
-    void SAL_CALL OPropertyBrowserController::revokeControlObserver( const Reference< XPropertyControlObserver >& _Observer ) throw (RuntimeException, std::exception)
+    void SAL_CALL OPropertyBrowserController::revokeControlObserver( const Reference< XPropertyControlObserver >& Observer ) throw (RuntimeException, std::exception)
     {
-        m_aControlObservers.removeInterface( _Observer );
+        m_aControlObservers.removeInterface( Observer );
     }
 
 
@@ -1745,7 +1732,6 @@ namespace pcr
 
 
 } // namespace pcr
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

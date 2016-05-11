@@ -98,11 +98,11 @@ private:
     DECL_DLLPRIVATE_LINK_TYPED( ImplDoubleClickHdl, ImplListBoxWindow*, void );
     DECL_DLLPRIVATE_LINK_TYPED( ImplPopupModeEndHdl, FloatingWindow*, void );
     DECL_DLLPRIVATE_LINK_TYPED( ImplSelectionChangedHdl, sal_Int32, void );
+    DECL_DLLPRIVATE_LINK_TYPED( ImplUserDrawHdl, UserDrawEvent*, void );
     DECL_DLLPRIVATE_LINK_TYPED( ImplFocusHdl, sal_Int32, void );
     DECL_DLLPRIVATE_LINK_TYPED( ImplListItemSelectHdl, LinkParamNone*, void );
 
-    SAL_DLLPRIVATE void ImplClickButtonHandler( Control* );
-    SAL_DLLPRIVATE void ImplUserDrawHandler( UserDrawEvent* );
+    DECL_DLLPRIVATE_LINK_TYPED( ImplClickBtnHdl, void*, void );
 
 protected:
     using Window::ImplInit;
@@ -134,7 +134,6 @@ public:
     virtual void        DoubleClick();
     virtual void        GetFocus() override;
     virtual void        LoseFocus() override;
-    virtual vcl::Window*     GetPreferredKeyInputWindow() override;
 
     virtual const Wallpaper& GetDisplayBackground() const override;
 
@@ -226,7 +225,7 @@ public:
 
     void                EnableUserDraw( bool bUserDraw );
 
-    void                DrawEntry( const UserDrawEvent& rEvt, bool bDrawImage, bool bDrawText, bool bDrawTextAtImagePos = false );
+    void                DrawEntry( const UserDrawEvent& rEvt, bool bDrawImage, bool bDrawTextAtImagePos );
 
     void                SetSelectHdl( const Link<ListBox&,void>& rLink )     { maSelectHdl = rLink; }
     const Link<ListBox&,void>& GetSelectHdl() const                    { return maSelectHdl; }
@@ -272,7 +271,7 @@ public:
 
     virtual bool set_property(const OString &rKey, const OString &rValue) override;
 
-    void EnableQuickSelection( const bool& b );
+    void EnableQuickSelection( bool b );
 
     static sal_Int32 NaturalSortCompare(const OUString &rA, const OUString &rB);
 };

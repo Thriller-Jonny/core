@@ -29,10 +29,12 @@
 #pragma clang diagnostic ignored "-Wall"
 #pragma clang diagnostic ignored "-Wattributes"
 #pragma clang diagnostic ignored "-Wdelete-incomplete"
+#pragma clang diagnostic ignored "-Wextra"
 #pragma clang diagnostic ignored "-Wint-to-pointer-cast"
 #pragma clang diagnostic ignored "-Winvalid-noreturn"
 #pragma clang diagnostic ignored "-Wmicrosoft"
 #pragma clang diagnostic ignored "-Wnon-pod-varargs"
+#pragma clang diagnostic ignored "-Wnon-virtual-dtor"
 #endif
 
 #ifdef __MINGW32__
@@ -49,8 +51,14 @@ CComModule _Module;
 #pragma warning (pop)
 
 BEGIN_OBJECT_MAP(ObjectMap)
+#if defined __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wmissing-field-initializers"
+#endif
 END_OBJECT_MAP()
-
+#if defined __clang__
+#pragma clang diagnostic pop
+#endif
 
 // DLL Entry Point
 

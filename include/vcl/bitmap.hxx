@@ -238,7 +238,7 @@ namespace vcl
 
 struct BitmapSystemData
 {
-    #if defined( WNT )
+    #if defined(_WIN32)
     void* pDIB; // device independent byte buffer
     void* pDDB; // if not NULL then this is actually an HBITMAP
     #elif defined( MACOSX ) || defined( IOS )
@@ -708,9 +708,6 @@ public:
         @param pFilterParam
         Various parameter for the different bitmap filter algorithms
 
-        @param pProgress
-        A callback for showing the progress of the vectorization
-
         @return true, if the operation was completed successfully.
      */
     bool                    Filter(
@@ -719,16 +716,14 @@ public:
 
 public:
 
-    SAL_DLLPRIVATE void     ImplReleaseRef();
     SAL_DLLPRIVATE void     ImplMakeUnique();
-    ImpBitmap*              ImplGetImpBitmap() const { return mpImpBmp;}
-    SAL_DLLPRIVATE void     ImplSetImpBitmap( ImpBitmap* pImpBmp );
+    const std::shared_ptr<ImpBitmap>& ImplGetImpBitmap() const { return mxImpBmp; }
+    SAL_DLLPRIVATE void     ImplSetImpBitmap( const std::shared_ptr<ImpBitmap>& xImpBmp );
     SAL_DLLPRIVATE void     ImplAssignWithSize( const Bitmap& rBitmap );
 
     SAL_DLLPRIVATE void     ImplAdaptBitCount(Bitmap& rNew) const;
     SAL_DLLPRIVATE bool     ImplScaleFast( const double& rScaleX, const double& rScaleY );
     SAL_DLLPRIVATE bool     ImplScaleInterpolate( const double& rScaleX, const double& rScaleY );
-    SAL_DLLPRIVATE bool     ImplScaleConvolution( const double& rScaleX, const double& rScaleY, const vcl::Kernel& rKernel);
 
     SAL_DLLPRIVATE bool     ImplConvolutionPass(
                                 Bitmap& aNewBitmap,
@@ -791,7 +786,7 @@ public:
 
 private:
 
-    ImpBitmap*              mpImpBmp;
+    std::shared_ptr<ImpBitmap> mxImpBmp;
     MapMode                 maPrefMapMode;
     Size                    maPrefSize;
 
@@ -799,27 +794,27 @@ private:
 
 inline bool Bitmap::operator!() const
 {
-    return( mpImpBmp == nullptr );
+    return( mxImpBmp == nullptr );
 }
 
 inline bool Bitmap::operator==( const Bitmap& rBitmap ) const
 {
-    return( rBitmap.mpImpBmp == mpImpBmp );
+    return( rBitmap.mxImpBmp == mxImpBmp );
 }
 
 inline bool Bitmap::operator!=( const Bitmap& rBitmap ) const
 {
-    return( rBitmap.mpImpBmp != mpImpBmp );
+    return( rBitmap.mxImpBmp != mxImpBmp );
 }
 
 inline bool Bitmap::IsSameInstance( const Bitmap& rBitmap ) const
 {
-    return( rBitmap.mpImpBmp == mpImpBmp );
+    return( rBitmap.mxImpBmp == mxImpBmp );
 }
 
 inline bool Bitmap::IsEmpty() const
 {
-    return( mpImpBmp == nullptr );
+    return( mxImpBmp == nullptr );
 }
 
 inline const MapMode& Bitmap::GetPrefMapMode() const

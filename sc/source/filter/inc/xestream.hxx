@@ -127,10 +127,7 @@ public:
     // (slice length setting has no effect here -> disabled automatically)
 
     /** Writes string length field and OString buffer. */
-    void                WriteByteString(
-                            const OString& rString,
-                            sal_uInt16 nMaxLen = 0x00FF,
-                            bool b16BitCount = false );
+    void                WriteByteString( const OString& rString );
 
     /** Writes 8-bit character buffer. */
     void                WriteCharBuffer( const ScfUInt8Vec& rBuffer );
@@ -138,7 +135,7 @@ public:
     // *** SvStream access ***
 
     /** Sets position of system stream (only allowed outside of records). */
-    sal_uInt64          SetSvStreamPos(sal_uInt64 nPos);
+    void                SetSvStreamPos(sal_uInt64 nPos);
     /** Returns the absolute position of the system stream. */
     inline sal_uInt64   GetSvStreamPos() const { return mrStrm.Tell(); }
 
@@ -250,11 +247,12 @@ namespace sc { class CompileFormulaContext; }
 
 class XclXmlUtils
 {
-    XclXmlUtils();
-    ~XclXmlUtils();
+public:
+    XclXmlUtils() = delete;
+    ~XclXmlUtils() = delete;
     XclXmlUtils(const XclXmlUtils&) = delete;
     XclXmlUtils& operator=(const XclXmlUtils&) = delete;
-public:
+
     static void                     GetFormulaTypeAndValue( ScFormulaCell& rCell, const char*& sType, OUString& rValue);
     static OUString          GetStreamName( const char* sStreamDir, const char* sStream, sal_Int32 nId );
 

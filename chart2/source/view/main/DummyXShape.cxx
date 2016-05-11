@@ -78,7 +78,7 @@ void TextCache::insertBitmap(const TextCacheKey& rKey, const BitmapEx& rBitmap)
 }
 
 class DummyPropertySetInfo : public cppu::WeakImplHelper<
-                                com::sun::star::beans::XPropertySetInfo >
+                                css::beans::XPropertySetInfo >
 {
 public:
     explicit DummyPropertySetInfo(const std::map<OUString, uno::Any>& rProps ):
@@ -453,9 +453,8 @@ void DummyPieSegment2D::render()
 
 }
 
-DummyStripe::DummyStripe(const Stripe& rStripe, const uno::Reference< beans::XPropertySet > & xPropSet,
-        const tPropertyNameMap& rPropertyNameMap ):
-    maStripe(rStripe)
+DummyStripe::DummyStripe(const uno::Reference< beans::XPropertySet > & xPropSet,
+        const tPropertyNameMap& rPropertyNameMap )
 {
     setProperties(xPropSet, rPropertyNameMap, maProperties);
 }
@@ -472,11 +471,11 @@ void DummyArea2D::render()
     sal_Int32 nPointssCount = maShapes.getLength();
     for(sal_Int32 i = 0; i < nPointssCount; i++)
     {
-        const com::sun::star::uno::Sequence<com::sun::star::awt::Point>& points = maShapes[i];
+        const css::uno::Sequence<css::awt::Point>& points = maShapes[i];
         sal_Int32 nPointsCount = points.getLength();
         for(sal_Int32 j = 0; j < nPointsCount; j++)
         {
-            const com::sun::star::awt::Point& p = points[j];
+            const css::awt::Point& p = points[j];
             pChart->m_GLRender.SetArea2DShapePoint((float)p.X, (float)p.Y, nPointsCount);
         }
     }
@@ -656,11 +655,11 @@ void DummyLine2D::render()
     sal_Int32 pointsscount = maPoints.getLength();
     for(sal_Int32 i = 0; i < pointsscount; i++)
     {
-        com::sun::star::uno::Sequence<com::sun::star::awt::Point>& points = maPoints[i];
+        css::uno::Sequence<css::awt::Point>& points = maPoints[i];
         sal_Int32 pointscount = points.getLength();
         for(sal_Int32 j = 0; j < pointscount; j++)
         {
-            com::sun::star::awt::Point& p = points[j];
+            css::awt::Point& p = points[j];
             pChart->m_GLRender.SetLine2DShapePoint((float)p.X, (float)p.Y, pointscount);
         }
 
@@ -758,7 +757,7 @@ struct FontAttribSetter
         if(rPropName == "CharFontName")
         {
             OUString aName = rProp.second.get<OUString>();
-            mrFont.SetName(aName);
+            mrFont.SetFamilyName(aName);
         }
         else if(rPropName == "CharColor")
         {
@@ -768,11 +767,11 @@ struct FontAttribSetter
         else if(rPropName == "CharHeight")
         {
             float fHeight = rProp.second.get<float>();
-            mrFont.SetSize(Size(0,(fHeight*127+36)/72)); //taken from the MCW implementation
+            mrFont.SetFontSize(Size(0,(fHeight*127+36)/72)); //taken from the MCW implementation
         }
         else if(rPropName == "CharUnderline")
         {
-            FontUnderline eUnderline = static_cast<FontUnderline>(rProp.second.get<sal_Int16>());
+            FontLineStyle eUnderline = static_cast<FontLineStyle>(rProp.second.get<sal_Int16>());
             mrFont.SetUnderline(eUnderline);
         }
         else if(rPropName == "CharWeight")
@@ -785,7 +784,7 @@ struct FontAttribSetter
         {
             float fWidth = rProp.second.get<float>();
             FontWidth eFontWidth = VCLUnoHelper::ConvertFontWidth(fWidth);
-            mrFont.SetWidth(eFontWidth);
+            mrFont.SetAverageFontWidth(eFontWidth);
         }
     }
 private:
@@ -924,9 +923,7 @@ void SAL_CALL DummyText::setPosition(const awt::Point& rPosition )
 
 void DummyText::setTransformatAsProperty(const drawing::HomogenMatrix3& rMatrix)
 {
-    uno::Any aNewTrans;
-    aNewTrans <<= rMatrix;
-    setPropertyValue("Transformation", aNewTrans);
+    setPropertyValue("Transformation", uno::Any(rMatrix));
 }
 
 DummyGroup3D::DummyGroup3D(const OUString& rName)
@@ -997,9 +994,7 @@ void SAL_CALL DummyGroup2D::setSize( const awt::Size& )
     SAL_WARN("chart2.opengl", "set size on group shape");
 }
 
-DummyGraphic2D::DummyGraphic2D(const drawing::Position3D& rPos, const drawing::Direction3D& rSize,
-        const uno::Reference< graphic::XGraphic >& rGraphic ):
-    mxGraphic(rGraphic)
+DummyGraphic2D::DummyGraphic2D(const drawing::Position3D& rPos, const drawing::Direction3D& rSize)
 {
     setPosition(Position3DToAWTPoint(rPos));
     setSize(Direction3DToAWTSize(rSize));

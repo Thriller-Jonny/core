@@ -29,9 +29,7 @@
 #include <com/sun/star/uno/Sequence.h>
 
 
-
 using namespace com::sun::star;
-
 
 
 class ImplPairDephAndObject
@@ -55,7 +53,6 @@ public:
     // data read access
     const E3dCompoundObject* getObject() const { return mpObject; }
 };
-
 
 
 void getAllHit3DObjectWithRelativePoint(
@@ -94,7 +91,6 @@ void getAllHit3DObjectWithRelativePoint(
         }
     }
 }
-
 
 
 E3dScene* fillViewInformation3DForCompoundObject(drawinglayer::geometry::ViewInformation3D& o_rViewInformation3D, const E3dCompoundObject& rCandidate)
@@ -137,7 +133,7 @@ E3dScene* fillViewInformation3DForCompoundObject(drawinglayer::geometry::ViewInf
         else
         {
             // build new ViewInformation containing all transforms for the candidate
-            const drawinglayer::geometry::ViewInformation3D aViewInfo3D(rVCScene.getViewInformation3D());
+            const drawinglayer::geometry::ViewInformation3D& aViewInfo3D(rVCScene.getViewInformation3D());
 
             o_rViewInformation3D = drawinglayer::geometry::ViewInformation3D(
                 aViewInfo3D.getObjectTransformation() * aInBetweenSceneMatrix,
@@ -156,7 +152,6 @@ E3dScene* fillViewInformation3DForCompoundObject(drawinglayer::geometry::ViewInf
 
     return pRootScene;
 }
-
 
 
 void getAllHit3DObjectsSortedFrontToBack(
@@ -224,8 +219,9 @@ void getAllHit3DObjectsSortedFrontToBack(
 
                 // copy SdrObject pointers to return result set
                 ::std::vector< ImplPairDephAndObject >::iterator aIterator2(aDepthAndObjectResults.begin());
+                ::std::vector< ImplPairDephAndObject >::const_iterator aEnd(aDepthAndObjectResults.end());
 
-                for(;aIterator2 != aDepthAndObjectResults.end(); ++aIterator2)
+                for(;aIterator2 != aEnd; ++aIterator2)
                 {
                     o_rResult.push_back(aIterator2->getObject());
                 }
@@ -233,7 +229,6 @@ void getAllHit3DObjectsSortedFrontToBack(
         }
     }
 }
-
 
 
 bool checkHitSingle3DObject(

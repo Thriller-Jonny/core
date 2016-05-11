@@ -7,6 +7,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 #include "RemoteFilesDialog.hxx"
+#include <comphelper/stillreadwriteinteraction.hxx>
 
 class FileViewContainer : public vcl::Window
 {
@@ -28,7 +29,7 @@ class FileViewContainer : public vcl::Window
     VclPtr<vcl::Window> m_pFocusWidgets[FocusState::FocusCount];
 
     public:
-    FileViewContainer( vcl::Window *pParent )
+    explicit FileViewContainer( vcl::Window *pParent )
         : Window( pParent, WB_TABSTOP )
         , m_pFileView( nullptr )
         , m_pTreeView( nullptr )
@@ -185,6 +186,8 @@ RemoteFilesDialog::RemoteFilesDialog( vcl::Window* pParent, WinBits nBits )
     get( m_pServices_lb, "services_lb" );
     get( m_pFilter_lb, "filter_lb" );
     get( m_pNewFolder, "new_folder" );
+    get( m_pListView_btn, "list_view" );
+    get( m_pIconView_btn, "icon_view" );
 
     m_eMode = ( nBits & WB_SAVEAS ) ? REMOTEDLG_MODE_SAVE : REMOTEDLG_MODE_OPEN;
     m_eType = ( nBits & WB_PATH ) ? REMOTEDLG_TYPE_PATHDLG : REMOTEDLG_TYPE_FILEDLG;
@@ -214,6 +217,9 @@ RemoteFilesDialog::RemoteFilesDialog( vcl::Window* pParent, WinBits nBits )
         m_pNewFolder->SetModeImage( m_aImages.GetImage( IMG_FILEDLG_CREATEFOLDER ) );
         m_pNewFolder->SetClickHdl( LINK( this, RemoteFilesDialog, NewFolderHdl ) );
     }
+
+    m_pIconView_btn->SetClickHdl( LINK( this, RemoteFilesDialog, IconViewHdl ) );
+    m_pListView_btn->SetClickHdl( LINK( this, RemoteFilesDialog, ListViewHdl ) );
 
     m_pOk_btn->Show();
     m_pOk_btn->Enable( false );
@@ -346,6 +352,8 @@ void RemoteFilesDialog::dispose()
     m_pFilter_lb.clear();
     m_pName_ed.disposeAndClear();
     m_pNewFolder.clear();
+    m_pIconView_btn.clear();
+    m_pListView_btn.clear();
 
     ModalDialog::dispose();
 }
@@ -391,7 +399,7 @@ void RemoteFilesDialog::Show()
     }
 }
 
-OUString lcl_GetServiceType( ServicePtr pService )
+OUString lcl_GetServiceType( const ServicePtr& pService )
 {
     INetProtocol aProtocol = pService->GetUrlObject().GetProtocol();
     switch( aProtocol )
@@ -457,6 +465,8 @@ void RemoteFilesDialog::InitSize()
             }
         }
     }
+    else
+        m_pFileView->SetConfigString( "" );
 }
 
 void RemoteFilesDialog::FillServicesListbox()
@@ -565,7 +575,7 @@ FileViewResult RemoteFilesDialog::OpenURL( OUString const & sURL )
                 sFilter = m_aFilters[m_nCurrentFilter].second;
             }
 
-            m_pFileView->EndInplaceEditing( false );
+            m_pFileView->EndInplaceEditing();
 
             DBG_ASSERT( !m_pCurrentAsyncAction.is(), "SvtFileDialog::executeAsync: previous async action not yet finished!" );
 
@@ -717,6 +727,16 @@ void RemoteFilesDialog::SavePassword( const OUString& rURL, const OUString& rUse
     }
     catch( const Exception& )
     {}
+}
+
+IMPL_LINK_NOARG_TYPED ( RemoteFilesDialog, IconViewHdl, Button*, void )
+{
+    m_pFileView->SetViewMode( eIcon );
+}
+
+IMPL_LINK_NOARG_TYPED ( RemoteFilesDialog, ListViewHdl, Button*, void )
+{
+    m_pFileView->SetViewMode( eDetailedList );
 }
 
 IMPL_LINK_NOARG_TYPED ( RemoteFilesDialog, AddServiceHdl, Button*, void )
@@ -1047,7 +1067,7 @@ IMPL_LINK_TYPED ( RemoteFilesDialog, SelectBreadcrumbHdl, Breadcrumb*, pPtr, voi
 
 IMPL_LINK_NOARG_TYPED ( RemoteFilesDialog, NewFolderHdl, Button*, void )
 {
-    m_pFileView->EndInplaceEditing( false );
+    m_pFileView->EndInplaceEditing();
 
     SmartContent aContent( m_pFileView->GetViewURL() );
     OUString aTitle;
@@ -1325,18 +1345,23 @@ void RemoteFilesDialog::UpdateControls( const OUString& rURL )
 
     m_pName_ed->ClearEntries();
 
-    for( ::std::vector< SvtContentEntry >::size_type i = 0; i < rFolders.size(); i++ )
+    for(const auto & rFolder : rFolders)
     {
-        int nTitleStart = rFolders[i].maURL.lastIndexOf( '/' );
+        //WebDAV folders path ends in '/', so strip it
+        OUString aFolderName = rFolder.maURL;
+        if( rFolder.mbIsFolder && ( ( aFolderName.lastIndexOf( '/' ) + 1 ) == aFolderName.getLength() ) )
+            aFolderName = aFolderName.copy( 0, aFolderName.getLength() - 1 );
+
+        int nTitleStart = aFolderName.lastIndexOf( '/' );
         if( nTitleStart != -1 )
         {
             OUString sTitle( INetURLObject::decode(
-                                rFolders[i].maURL.copy( nTitleStart + 1 ),
+                                aFolderName.copy( nTitleStart + 1 ),
                                 INetURLObject::DECODE_WITH_CHARSET ) );
 
-            if( rFolders[i].mbIsFolder )
+            if( rFolder.mbIsFolder )
             {
-                aFolders.push_back( std::pair< OUString, OUString > ( sTitle, rFolders[i].maURL ) );
+                aFolders.push_back( std::pair< OUString, OUString > ( sTitle, aFolderName ) );
             }
 
             // add entries to the autocompletion mechanism
@@ -1411,10 +1436,29 @@ bool RemoteFilesDialog::ContentIsDocument( const OUString& rURL )
     {
         Reference< XInteractionHandler > xInteractionHandler(
                         InteractionHandler::createWithParent( m_xContext, nullptr ), UNO_QUERY_THROW );
-        Reference< XCommandEnvironment > xEnv = new ::ucbhelper::CommandEnvironment( xInteractionHandler, Reference< XProgressHandler >() );
-        ::ucbhelper::Content aContent( rURL, xEnv, m_xContext );
+        //check if WebDAV or not
+        if ( !INetURLObject( rURL ).isAnyKnownWebDAVScheme() )
+        {
+                // no webdav, use the interaction handler as is
+                Reference< XCommandEnvironment > xEnv = new ::ucbhelper::CommandEnvironment( xInteractionHandler, Reference< XProgressHandler >() );
+                ::ucbhelper::Content aContent( rURL, xEnv, m_xContext );
 
-        return aContent.isDocument();
+                return aContent.isDocument();
+        }
+        else
+        {
+            // It's a webdav URL, so use the same open sequence as in normal open process.
+            // Let's use a comphelper::StillReadWriteInteraction to trap errors here without showing the user.
+            // This sequence will result in an exception if the target URL resource is not present
+            comphelper::StillReadWriteInteraction* pInteraction = new comphelper::StillReadWriteInteraction(xInteractionHandler,xInteractionHandler);
+            css::uno::Reference< css::task::XInteractionHandler > xInteraction(static_cast< css::task::XInteractionHandler* >(pInteraction), css::uno::UNO_QUERY);
+
+            Reference< XCommandEnvironment > xEnv = new ::ucbhelper::CommandEnvironment( xInteraction, Reference< XProgressHandler >() );
+            ::ucbhelper::Content aContent( rURL, xEnv, m_xContext );
+
+            aContent.openStream();
+            return aContent.isDocument();
+        }
     }
     catch( const Exception& )
     {

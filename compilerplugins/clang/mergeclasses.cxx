@@ -79,11 +79,11 @@ public:
     bool VisitCallExpr(const CallExpr* decl);
 };
 
-static bool startsWith(const std::string& rStr, const char* pSubStr) {
+bool startsWith(const std::string& rStr, const char* pSubStr) {
     return rStr.compare(0, strlen(pSubStr), pSubStr) == 0;
 }
 
-static void addToInstantiatedSet(const std::string& s)
+void addToInstantiatedSet(const std::string& s)
 {
     // ignore stuff in the standard library, and UNO stuff we can't touch.
     if (startsWith(s, "rtl::") || startsWith(s, "sal::") || startsWith(s, "com::sun::")
@@ -120,7 +120,7 @@ bool MergeClasses::VisitCXXConstructExpr( const CXXConstructExpr* pCXXConstructE
     if (ignoreLocation(pCXXConstructExpr)) {
         return true;
     }
-    // ignore calls when a sub-class is constructing it's superclass
+    // ignore calls when a sub-class is constructing its superclass
     if (pCXXConstructExpr->getConstructionKind() != CXXConstructExpr::ConstructionKind::CK_Complete) {
         return true;
     }
@@ -161,12 +161,12 @@ bool MergeClasses::VisitFunctionDecl(const FunctionDecl* decl)
     return true;
 }
 
-static bool startswith(const std::string& s, const std::string& prefix)
+bool startswith(const std::string& s, const std::string& prefix)
 {
     return s.rfind(prefix,0) == 0;
 }
 
-static bool endswith(const std::string& s, const std::string& suffix)
+bool endswith(const std::string& s, const std::string& suffix)
 {
     return s.rfind(suffix) == (s.size()-suffix.size());
 }

@@ -220,11 +220,17 @@ class SwAutoFormat
     bool DoUnderline();
     bool DoTable();
 
-    void _SetRedlineText( sal_uInt16 nId );
-    bool SetRedlineText( sal_uInt16 nId )
-        { if( m_aFlags.bWithRedlining )   _SetRedlineText( nId );  return true; }
-    bool ClearRedlineText()
-        { if( m_aFlags.bWithRedlining )   m_pDoc->GetDocumentRedlineManager().SetAutoFormatRedlineComment(nullptr);  return true; }
+    void SetRedlineText_( sal_uInt16 nId );
+    bool SetRedlineText( sal_uInt16 nId ) {
+        if( m_aFlags.bWithRedlining )
+            SetRedlineText_( nId );
+        return true;
+    }
+    bool ClearRedlineText() {
+        if( m_aFlags.bWithRedlining )
+            m_pDoc->GetDocumentRedlineManager().SetAutoFormatRedlineComment(nullptr);
+        return true;
+    }
 
 public:
     SwAutoFormat( SwEditShell* pEdShell, SvxSwAutoFormatFlags& rFlags,
@@ -255,7 +261,7 @@ SwTextFrame* SwAutoFormat::GetFrame( const SwTextNode& rTextNd ) const
     return const_cast<SwTextFrame*>(static_cast<const SwTextFrame*>(pFrame))->GetFormatted();
 }
 
-void SwAutoFormat::_SetRedlineText( sal_uInt16 nActionId )
+void SwAutoFormat::SetRedlineText_( sal_uInt16 nActionId )
 {
     OUString sText;
     sal_uInt16 nSeqNo = 0;
@@ -451,9 +457,13 @@ sal_uInt16 SwAutoFormat::CalcLevel( const SwTextNode& rNd, sal_uInt16 *pDigitLvl
         switch (rText[n])
         {
         case ' ':   if( 3 == ++nBlnk )
-                        ++nLvl, nBlnk = 0;
+                    {
+                        ++nLvl;
+                        nBlnk = 0;
+                    }
                     break;
-        case '\t':  ++nLvl, nBlnk = 0;
+        case '\t':  ++nLvl;
+                    nBlnk = 0;
                     break;
         default:
             if( pDigitLvl )
@@ -792,14 +802,26 @@ sal_uInt16 SwAutoFormat::GetDigitLevel( const SwTextNode& rNd, sal_Int32& rPos,
 #endif
             {
                 if( bIsUpper )
-                    cNumTyp = '0' + SVX_NUM_ROMAN_UPPER, eTmpScan = UPPER_ROMAN;
+                {
+                    cNumTyp = '0' + SVX_NUM_ROMAN_UPPER;
+                    eTmpScan = UPPER_ROMAN;
+                }
                 else
-                    cNumTyp = '0' + SVX_NUM_ROMAN_LOWER, eTmpScan = LOWER_ROMAN;
+                {
+                    cNumTyp = '0' + SVX_NUM_ROMAN_LOWER;
+                    eTmpScan = LOWER_ROMAN;
+                }
             }
             else if( bIsUpper )
-                cNumTyp = '0' + SVX_NUM_CHARS_UPPER_LETTER, eTmpScan = UPPER_ALPHA;
+            {
+                cNumTyp = '0' + SVX_NUM_CHARS_UPPER_LETTER;
+                eTmpScan = UPPER_ALPHA;
+            }
             else
-                cNumTyp = '0' + SVX_NUM_CHARS_LOWER_LETTER, eTmpScan = LOWER_ALPHA;
+            {
+                cNumTyp = '0' + SVX_NUM_CHARS_LOWER_LETTER;
+                eTmpScan = LOWER_ALPHA;
+            }
 
             // Switch to roman numbers (only for c/d!)
             if( 1 == nDigitCnt && ( eScan & (UPPER_ALPHA|LOWER_ALPHA) ) &&
@@ -811,9 +833,15 @@ sal_uInt16 SwAutoFormat::GetDigitLevel( const SwTextNode& rNd, sal_Int32& rPos,
                 sal_Unicode c = '0';
                 nStart = 3 == nStart ? 100 : 500;
                 if( UPPER_ALPHA == eTmpScan )
-                    eTmpScan = UPPER_ROMAN, c += SVX_NUM_ROMAN_UPPER;
+                {
+                    eTmpScan = UPPER_ROMAN;
+                    c += SVX_NUM_ROMAN_UPPER;
+                }
                 else
-                    eTmpScan = LOWER_ROMAN, c += SVX_NUM_ROMAN_LOWER;
+                {
+                    eTmpScan = LOWER_ROMAN;
+                    c += SVX_NUM_ROMAN_LOWER;
+                }
 
                 ( eScan &= ~(UPPER_ALPHA|LOWER_ALPHA)) |= eTmpScan;
                 if( pNumTypes )
@@ -1084,7 +1112,7 @@ void SwAutoFormat::DeleteSel( SwPaM& rDelPam )
     if( m_aFlags.bWithRedlining )
     {
         // Add to Shell-Cursor-Ring so that DelPam will be moved as well!
-        SwPaM* pShCursor = m_pEditShell->_GetCursor();
+        SwPaM* pShCursor = m_pEditShell->GetCursor_();
         SwPaM aTmp( *m_pCurTextNd, 0, pShCursor );
 
         SwPaM* pPrev = rDelPam.GetPrev();
@@ -1353,7 +1381,7 @@ void SwAutoFormat::BuildEnum( sal_uInt16 nLvl, sal_uInt16 nDigitLevel )
     bool bBreak = true;
 
     // first, determine current indentation and frame width
-    SwTwips nFrameWidth = m_pCurTextFrame->Prt().Width();;
+    SwTwips nFrameWidth = m_pCurTextFrame->Prt().Width();
     SwTwips nLeftTextPos;
     {
         sal_Int32 nPos(0);
@@ -1613,8 +1641,8 @@ void SwAutoFormat::BuildEnum( sal_uInt16 nLvl, sal_uInt16 nDigitLevel )
                 m_aDelPam.SetMark();
                 m_aDelPam.GetMark()->nContent = 1;
                 SetAllScriptItem( aSet,
-                     SvxFontItem( m_aFlags.aBulletFont.GetFamily(),
-                                  m_aFlags.aBulletFont.GetName(),
+                     SvxFontItem( m_aFlags.aBulletFont.GetFamilyType(),
+                                  m_aFlags.aBulletFont.GetFamilyName(),
                                   m_aFlags.aBulletFont.GetStyleName(),
                                   m_aFlags.aBulletFont.GetPitch(),
                                   m_aFlags.aBulletFont.GetCharSet(),
@@ -1976,7 +2004,7 @@ void SwAutoFormat::AutoCorrect( sal_Int32 nPos )
             case '?':
                 if( m_aFlags.bCapitalStartSentence )
                     bFirstSent = true;
-                /* fallthrough */
+                SAL_FALLTHROUGH;
             default:
                 if( !( rAppCC.isLetterNumeric( *pText, nPos )
                         || '/' == cChar )) //  '/' should not be a word separator (e.g. '1/2' needs to be handled as one word for replacement)
@@ -2244,7 +2272,7 @@ SwAutoFormat::SwAutoFormat( SwEditShell* pEdShell, SvxSwAutoFormatFlags& rFlags,
                         ( 0 != (nSz = pLRSpace->GetTextFirstLineOfst()) ||
                             0 != pLRSpace->GetTextLeft() ) )
                     {
-                        // exception: numbering/enumation can have an indentation
+                        // exception: numbering/enumeration can have an indentation
                         if( IsEnumericChar( *m_pCurTextNd ))
                         {
                             nLevel = CalcLevel( *m_pCurTextNd, &nDigitLvl );
@@ -2571,12 +2599,12 @@ void SwEditShell::AutoFormatBySplitNode()
         else
         {
             // then go one node backwards
-            SwNodeIndex m_aNdIdx( pCursor->GetMark()->nNode, -1 );
-            SwTextNode* pTextNd = m_aNdIdx.GetNode().GetTextNode();
+            SwNodeIndex aNdIdx( pCursor->GetMark()->nNode, -1 );
+            SwTextNode* pTextNd = aNdIdx.GetNode().GetTextNode();
             if (pTextNd && !pTextNd->GetText().isEmpty())
             {
                 pContent->Assign( pTextNd, 0 );
-                pCursor->GetMark()->nNode = m_aNdIdx;
+                pCursor->GetMark()->nNode = aNdIdx;
                 bRange = true;
             }
         }

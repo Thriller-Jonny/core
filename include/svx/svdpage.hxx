@@ -28,7 +28,6 @@
 #include <tools/contnr.hxx>
 #include <cppuhelper/weakref.hxx>
 #include <svx/svdtypes.hxx>
-#include <svx/svdlayer.hxx>
 #include <svx/sdrpageuser.hxx>
 #include <svx/sdr/contact/viewobjectcontactredirector.hxx>
 #include <svx/sdrmasterpagedescriptor.hxx>
@@ -376,6 +375,14 @@ public:
 */
 class SVX_DLLPUBLIC SdrPage : public SdrObjList, public tools::WeakBase< SdrPage >
 {
+    // #i9076#
+    friend class SdrModel;
+    friend class SvxUnoDrawPagesAccess;
+
+    // this class uses its own UNO wrapper
+    // and thus has to set mxUnoPage (it also relies on mxUnoPage not being WeakRef)
+    friend class reportdesign::OSection;
+
     SdrPage& operator=(const SdrPage& rSrcPage) = delete;
 
     // start PageUser section
@@ -383,33 +390,22 @@ private:
     // #111111# PageUser section
     sdr::PageUserVector                                             maPageUsers;
 
+    std::unique_ptr<sdr::contact::ViewContact> mpViewContact;
+
 public:
     void AddPageUser(sdr::PageUser& rNewUser);
     void RemovePageUser(sdr::PageUser& rOldUser);
 
-
-    // end PageUser section
-
-
-    // #110094# DrawContact section
-private:
-    sdr::contact::ViewContact*                                      mpViewContact;
 protected:
     sdr::contact::ViewContact* CreateObjectSpecificViewContact();
 public:
-    sdr::contact::ViewContact& GetViewContact() const;
+    const sdr::contact::ViewContact& GetViewContact() const;
+    sdr::contact::ViewContact& GetViewContact();
 
     // #110094# DrawContact support: Methods for handling Page changes
-    void ActionChanged() const;
+    void ActionChanged();
 
-    // #i9076#
-    friend class SdrModel;
-    friend class SvxUnoDrawPagesAccess;
-
-// this class uses its own UNO wrapper
-// and thus has to set mxUnoPage (it also relies on mxUnoPage not being WeakRef)
-friend class reportdesign::OSection;
-
+private:
     sal_Int32 nWdt;     // Seitengroesse
     sal_Int32 nHgt;     // Seitengroesse
     sal_Int32 nBordLft; // Seitenrand links
@@ -417,15 +413,13 @@ friend class reportdesign::OSection;
     sal_Int32 nBordRgt; // Seitenrand rechts
     sal_Int32 nBordLwr; // Seitenrand unten
 
-protected:
-    SdrLayerAdmin*      pLayerAdmin;
-private:
-    SdrPageProperties*  mpSdrPageProperties;
+    std::unique_ptr<SdrLayerAdmin> mpLayerAdmin;
+    std::unique_ptr<SdrPageProperties> mpSdrPageProperties;
     css::uno::Reference< css::uno::XInterface > mxUnoPage;
 
 public:
-    SdrPageProperties& getSdrPageProperties() { return *mpSdrPageProperties; }
-    const SdrPageProperties& getSdrPageProperties() const { return *mpSdrPageProperties; }
+    SdrPageProperties& getSdrPageProperties();
+    const SdrPageProperties& getSdrPageProperties() const;
     const SdrPageProperties* getCorrectSdrPageProperties() const;
 
 protected:
@@ -506,8 +500,8 @@ protected:
 public:
 
     /// changing the layers does not set the modified-flag!
-    const         SdrLayerAdmin& GetLayerAdmin() const                  { return *pLayerAdmin; }
-                  SdrLayerAdmin& GetLayerAdmin()                        { return *pLayerAdmin; }
+    const SdrLayerAdmin& GetLayerAdmin() const;
+    SdrLayerAdmin& GetLayerAdmin();
 
     virtual OUString GetLayoutName() const;
 
@@ -559,7 +553,6 @@ public:
         const sdr::contact::ViewObjectContact& rOriginal,
         const sdr::contact::DisplayInfo& rDisplayInfo) override;
 };
-
 
 
 #endif // INCLUDED_SVX_SVDPAGE_HXX

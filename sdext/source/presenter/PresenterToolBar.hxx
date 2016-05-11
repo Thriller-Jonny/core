@@ -43,8 +43,6 @@
 #include <com/sun/star/drawing/framework/XResourceId.hpp>
 #include <com/sun/star/frame/XController.hpp>
 
-#include <boost/noncopyable.hpp>
-
 #include <functional>
 
 namespace {
@@ -67,12 +65,11 @@ namespace sdext { namespace presenter {
 
 /** A simple tool bar that can display bitmapped buttons and labels.  At the
     moment there are buttons for moving to the next and previous slide and
-    to the next effect.  A label displayes the index of the current slide
+    to the next effect.  A label displays the index of the current slide
     and the total number of slides.
 */
 class PresenterToolBar
     : private ::cppu::BaseMutex,
-      private ::boost::noncopyable,
       public PresenterToolBarInterfaceBase,
       public CachablePresenterView
 {
@@ -88,6 +85,8 @@ public:
         const ::rtl::Reference<PresenterController>& rpPresenterController,
         const Anchor eAnchor);
     virtual ~PresenterToolBar();
+    PresenterToolBar(const PresenterToolBar&) = delete;
+    PresenterToolBar& operator=(const PresenterToolBar&) = delete;
 
     void Initialize (
         const OUString& rsConfigurationPath);
@@ -100,8 +99,8 @@ public:
 
     void RequestLayout();
     css::geometry::RealSize2D GetMinimalSize();
-    ::rtl::Reference<PresenterController> GetPresenterController() const;
-    css::uno::Reference<css::uno::XComponentContext> GetComponentContext() const;
+    const ::rtl::Reference<PresenterController>& GetPresenterController() const;
+    const css::uno::Reference<css::uno::XComponentContext>& GetComponentContext() const;
 
     // lang::XEventListener
 
@@ -221,7 +220,6 @@ private:
 */
 class PresenterToolBarView
     : private ::cppu::BaseMutex,
-      private ::boost::noncopyable,
       public PresenterToolBarViewInterfaceBase
 {
 public:
@@ -231,10 +229,12 @@ public:
         const css::uno::Reference<css::frame::XController>& rxController,
         const ::rtl::Reference<PresenterController>& rpPresenterController);
     virtual ~PresenterToolBarView();
+    PresenterToolBarView(const PresenterToolBarView&) = delete;
+    PresenterToolBarView& operator=(const PresenterToolBarView&) = delete;
 
     virtual void SAL_CALL disposing() override;
 
-    ::rtl::Reference<PresenterToolBar> GetPresenterToolBar() const;
+    const ::rtl::Reference<PresenterToolBar>& GetPresenterToolBar() const;
 
     // XPaintListener
 

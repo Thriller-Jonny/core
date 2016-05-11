@@ -28,7 +28,8 @@
 #include <com/sun/star/container/XIndexAccess.hpp>
 #include <com/sun/star/script/XDefaultMethod.hpp>
 #include <com/sun/star/uno/Any.hxx>
-#include <com/sun/star/util/SearchOptions.hpp>
+#include <com/sun/star/util/SearchOptions2.hpp>
+#include <com/sun/star/util/SearchAlgorithms2.hpp>
 
 #include <comphelper/processfactory.hxx>
 #include <comphelper/string.hxx>
@@ -110,11 +111,24 @@ bool StarBASIC::isVBAEnabled()
     return false;
 }
 
-
-struct SbiArgvStack {                   // Argv stack:
-    SbiArgvStack*  pNext;               // Stack Chain
+struct SbiArgv {                   // Argv stack:
     SbxArrayRef    refArgv;             // Argv
     short nArgc;                        // Argc
+
+    SbiArgv(SbxArrayRef refArgv_, short nArgc_) :
+        refArgv(refArgv_),
+        nArgc(nArgc_) {}
+};
+
+#define MAXRECURSION 500 //to prevent dead-recursions
+
+struct SbiGosub {              // GOSUB-Stack:
+    const sal_uInt8* pCode;         // Return-Pointer
+    sal_uInt16 nStartForLvl;        // #118235: For Level in moment of gosub
+
+    SbiGosub(const sal_uInt8* pCode_, sal_uInt16 nStartForLvl_) :
+        pCode(pCode_),
+        nStartForLvl(nStartForLvl_) {}
 };
 
 SbiRuntime::pStep0 SbiRuntime::aStep0[] = { // all opcodes without operands
@@ -251,7 +265,7 @@ SbiRuntime::pStep2 SbiRuntime::aStep2[] = {// all opcodes with two operands
 SbiRTLData::SbiRTLData()
 {
     pDir        = nullptr;
-    nDirFlags   = 0;
+    nDirFlags   = SbAttributes::NONE;
     nCurDirPos  = 0;
     pWildCard   = nullptr;
 }
@@ -566,8 +580,6 @@ SbiRuntime::SbiRuntime( SbModule* pm, SbMethod* pe, sal_uInt32 nStart )
 {
     nFlags    = pe ? pe->GetDebugFlags() : 0;
     pIosys    = pInst->GetIoSystem();
-    pArgvStk  = nullptr;
-    pGosubStk = nullptr;
     pForStk   = nullptr;
     pError    = nullptr;
     pErrCode  =
@@ -586,30 +598,17 @@ SbiRuntime::SbiRuntime( SbModule* pm, SbMethod* pe, sal_uInt32 nStart )
     nExprLvl  = 0;
     nArgc     = 0;
     nError    = 0;
-    nGosubLvl = 0;
     nForLvl   = 0;
     nOps      = 0;
     refExprStk = new SbxArray;
     SetVBAEnabled( pMod->IsVBACompat() );
     SetParameters( pe ? pe->GetParameters() : nullptr );
-    pRefSaveList = nullptr;
-    pItemStoreList = nullptr;
 }
 
 SbiRuntime::~SbiRuntime()
 {
-    ClearGosubStack();
     ClearArgvStack();
     ClearForStack();
-
-    // #74254 free items for saving temporary references
-    ClearRefs();
-    while( pItemStoreList )
-    {
-        RefSaveItem* pToDeleteItem = pItemStoreList;
-        pItemStoreList = pToDeleteItem->pNext;
-        delete pToDeleteItem;
-    }
 }
 
 void SbiRuntime::SetVBAEnabled(bool bEnabled )
@@ -766,21 +765,21 @@ bool SbiRuntime::Step()
 
         SbiOpcode eOp = (SbiOpcode ) ( *pCode++ );
         sal_uInt32 nOp1, nOp2;
-        if (eOp <= SbOP0_END)
+        if (eOp <= SbiOpcode::SbOP0_END)
         {
-            (this->*( aStep0[ eOp ] ) )();
+            (this->*( aStep0[ int(eOp) ] ) )();
         }
-        else if (eOp >= SbOP1_START && eOp <= SbOP1_END)
+        else if (eOp >= SbiOpcode::SbOP1_START && eOp <= SbiOpcode::SbOP1_END)
         {
             nOp1 = *pCode++; nOp1 |= *pCode++ << 8; nOp1 |= *pCode++ << 16; nOp1 |= *pCode++ << 24;
 
-            (this->*( aStep1[ eOp - SbOP1_START ] ) )( nOp1 );
+            (this->*( aStep1[ int(eOp) - int(SbiOpcode::SbOP1_START) ] ) )( nOp1 );
         }
-        else if (eOp >= SbOP2_START && eOp <= SbOP2_END)
+        else if (eOp >= SbiOpcode::SbOP2_START && eOp <= SbiOpcode::SbOP2_END)
         {
             nOp1 = *pCode++; nOp1 |= *pCode++ << 8; nOp1 |= *pCode++ << 16; nOp1 |= *pCode++ << 24;
             nOp2 = *pCode++; nOp2 |= *pCode++ << 8; nOp2 |= *pCode++ << 16; nOp2 |= *pCode++ << 24;
-            (this->*( aStep2[ eOp - SbOP2_START ] ) )( nOp1, nOp2 );
+            (this->*( aStep2[ int(eOp) - int(SbiOpcode::SbOP2_START) ] ) )( nOp1, nOp2 );
         }
         else
         {
@@ -1013,9 +1012,9 @@ void SbiRuntime::ClearExprStack()
 // Take variable from the expression-stack without removing it
 // n counts from 0
 
-SbxVariable* SbiRuntime::GetTOS( short n )
+SbxVariable* SbiRuntime::GetTOS()
 {
-    n = nExprLvl - n - 1;
+    short n = nExprLvl - 1;
 #ifdef DBG_UTIL
     if( n < 0 )
     {
@@ -1059,73 +1058,49 @@ void SbiRuntime::TOSMakeTemp()
 // the GOSUB-stack collects return-addresses for GOSUBs
 void SbiRuntime::PushGosub( const sal_uInt8* pc )
 {
-    if( ++nGosubLvl > MAXRECURSION )
+    if( pGosubStk.size() >= MAXRECURSION )
     {
         StarBASIC::FatalError( ERRCODE_BASIC_STACK_OVERFLOW );
     }
-    SbiGosubStack* p = new SbiGosubStack;
-    p->pCode  = pc;
-    p->pNext  = pGosubStk;
-    p->nStartForLvl = nForLvl;
-    pGosubStk = p;
+    pGosubStk.emplace_back(pc, nForLvl);
 }
 
 void SbiRuntime::PopGosub()
 {
-    if( !pGosubStk )
+    if( pGosubStk.empty() )
     {
         Error( ERRCODE_BASIC_NO_GOSUB );
     }
     else
     {
-        SbiGosubStack* p = pGosubStk;
-        pCode = p->pCode;
-        pGosubStk = p->pNext;
-        delete p;
-        nGosubLvl--;
+        pCode = pGosubStk.back().pCode;
+        pGosubStk.pop_back();
     }
-}
-
-
-void SbiRuntime::ClearGosubStack()
-{
-    SbiGosubStack* p;
-    while(( p = pGosubStk ) != nullptr )
-    {
-        pGosubStk = p->pNext, delete p;
-    }
-    nGosubLvl = 0;
 }
 
 // the Argv-stack collects current argument-vectors
 
 void SbiRuntime::PushArgv()
 {
-    SbiArgvStack* p = new SbiArgvStack;
-    p->refArgv = refArgv;
-    p->nArgc = nArgc;
+    pArgvStk.emplace_back(refArgv, nArgc);
     nArgc = 1;
     refArgv.Clear();
-    p->pNext = pArgvStk;
-    pArgvStk = p;
 }
 
 void SbiRuntime::PopArgv()
 {
-    if( pArgvStk )
+    if( !pArgvStk.empty() )
     {
-        SbiArgvStack* p = pArgvStk;
-        pArgvStk = p->pNext;
-        refArgv = p->refArgv;
-        nArgc = p->nArgc;
-        delete p;
+        refArgv = pArgvStk.back().refArgv;
+        nArgc = pArgvStk.back().nArgc;
+        pArgvStk.pop_back();
     }
 }
 
 
 void SbiRuntime::ClearArgvStack()
 {
-    while( pArgvStk )
+    while( !pArgvStk.empty() )
     {
         PopArgv();
     }
@@ -1137,7 +1112,7 @@ void SbiRuntime::ClearArgvStack()
 void SbiRuntime::PushFor()
 {
     SbiForStack* p = new SbiForStack;
-    p->eForType = FOR_TO;
+    p->eForType = ForType::To;
     p->pNext = pForStk;
     pForStk = p;
 
@@ -1166,7 +1141,7 @@ void SbiRuntime::PushForEach()
     bool bError_ = false;
     if (SbxDimArray* pArray = dynamic_cast<SbxDimArray*>(pObj))
     {
-        p->eForType = FOR_EACH_ARRAY;
+        p->eForType = ForType::EachArray;
         p->refEnd = reinterpret_cast<SbxVariable*>(pArray);
 
         short nDims = pArray->GetDims();
@@ -1183,7 +1158,7 @@ void SbiRuntime::PushForEach()
     }
     else if (BasicCollection* pCollection = dynamic_cast<BasicCollection*>(pObj))
     {
-        p->eForType = FOR_EACH_COLLECTION;
+        p->eForType = ForType::EachCollection;
         p->refEnd = pCollection;
         p->nCurCollectionIndex = 0;
     }
@@ -1195,7 +1170,7 @@ void SbiRuntime::PushForEach()
         if( (aAny >>= xEnumerationAccess) )
         {
             p->xEnumeration = xEnumerationAccess->createEnumeration();
-            p->eForType = FOR_EACH_XENUMERATION;
+            p->eForType = ForType::EachXEnumeration;
         }
         else if ( isVBAEnabled() && pUnoObj->isNativeCOMObject() )
         {
@@ -1205,7 +1180,7 @@ void SbiRuntime::PushForEach()
                 try
                 {
                     p->xEnumeration = new ComEnumerationWrapper( xInvocation );
-                    p->eForType = FOR_EACH_XENUMERATION;
+                    p->eForType = ForType::EachXEnumeration;
                 }
                 catch(const uno::Exception& )
                 {}
@@ -1262,8 +1237,9 @@ SbiForStack* SbiRuntime::FindForStackItemForCollection( class BasicCollection* p
     for (SbiForStack *p = pForStk; p; p = p->pNext)
     {
         SbxVariable* pVar = p->refEnd.Is() ? p->refEnd.get() : nullptr;
-        if( p->eForType == FOR_EACH_COLLECTION && pVar != nullptr &&
-            dynamic_cast<BasicCollection*>( pVar) == pCollection  )
+        if( p->eForType == ForType::EachCollection
+         && pVar != nullptr
+         && dynamic_cast<BasicCollection*>( pVar) == pCollection  )
         {
             return p;
         }
@@ -1271,8 +1247,6 @@ SbiForStack* SbiRuntime::FindForStackItemForCollection( class BasicCollection* p
 
     return nullptr;
 }
-
-
 
 
 //  DLL-calls
@@ -1284,13 +1258,6 @@ void SbiRuntime::DllCall
       SbxDataType eResType,     // return value
       bool bCDecl )         // true: according to C-conventions
 {
-    // No DllCall for "virtual" portal users
-    if( needSecurityRestrictions() )
-    {
-        StarBASIC::Error(ERRCODE_BASIC_NOT_IMPLEMENTED);
-        return;
-    }
-
     // NOT YET IMPLEMENTED
 
     SbxVariable* pRes = new SbxVariable( eResType );
@@ -1551,9 +1518,9 @@ void SbiRuntime::StepLIKE()
     OUString pattern = VBALikeToRegexp(refVar1->GetOUString());
     OUString value = refVar2->GetOUString();
 
-    css::util::SearchOptions aSearchOpt;
+    css::util::SearchOptions2 aSearchOpt;
 
-    aSearchOpt.algorithmType = css::util::SearchAlgorithms_REGEXP;
+    aSearchOpt.AlgorithmType2 = css::util::SearchAlgorithms2::REGEXP;
 
     aSearchOpt.Locale = Application::GetSettings().GetLanguageTag().getLocale();
     aSearchOpt.searchString = pattern;
@@ -1569,7 +1536,7 @@ void SbiRuntime::StepLIKE()
         aSearchOpt.transliterateFlags |= css::i18n::TransliterationModules_IGNORE_CASE;
     }
     SbxVariable* pRes = new SbxVariable;
-    utl::TextSearch aSearch(aSearchOpt);
+    utl::TextSearch aSearch( aSearchOpt);
     sal_Int32 nStart=0, nEnd=value.getLength();
     bool bRes = aSearch.SearchForward(value, &nStart, &nEnd);
     pRes->PutBool( bRes );
@@ -1866,7 +1833,7 @@ void SbiRuntime::StepSET_Impl( SbxVariableRef& refVal, SbxVariableRef& refVar, b
             // SbxVariable* defaultProp = NULL; unused variable
             // LHS try determine if a default prop exists
             // again like in StepPUT (see there too ) we are tweaking the
-            // heursitics again for when to assign an object reference or
+            // heuristics again for when to assign an object reference or
             // use default memebers if they exists
             // #FIXME we really need to get to the bottom of this mess
             bool bObjAssign = false;
@@ -1932,10 +1899,9 @@ void SbiRuntime::StepSET_Impl( SbxVariableRef& refVal, SbxVariableRef& refVar, b
             {
                 Any aControlAny = pUnoObj->getUnoAny();
                 OUString aDeclareClassName = refVar->GetDeclareClassName();
-                OUString aVBAType = aDeclareClassName;
                 OUString aPrefix = refVar->GetName();
                 SbxObjectRef xScopeObj = refVar->GetParent();
-                xComListener = createComListener( aControlAny, aVBAType, aPrefix, xScopeObj );
+                xComListener = createComListener( aControlAny, aDeclareClassName, aPrefix, xScopeObj );
 
                 refVal->SetDeclareClassName( aDeclareClassName );
                 refVal->SetComListener( xComListener, &rBasic );        // Hold reference
@@ -2170,7 +2136,8 @@ void SbiRuntime::DimImpl( SbxVariableRef refVar )
                 sal_Int32 ub = pDims->Get( i++ )->GetLong();
                 if( ub < lb )
                 {
-                    Error( ERRCODE_BASIC_OUT_OF_RANGE ), ub = lb;
+                    Error( ERRCODE_BASIC_OUT_OF_RANGE );
+                    ub = lb;
                 }
                 pArray->AddDim32( lb, ub );
                 if ( lb != ub )
@@ -2603,7 +2570,7 @@ void SbiRuntime::StepNEXT()
         StarBASIC::FatalError( ERRCODE_BASIC_INTERNAL_ERROR );
         return;
     }
-    if( pForStk->eForType == FOR_TO )
+    if( pForStk->eForType == ForType::To )
     {
         pForStk->refVar->Compute( SbxPLUS, *pForStk->refInc );
     }
@@ -3017,14 +2984,14 @@ void SbiRuntime::StepTESTFOR( sal_uInt32 nOp1 )
     bool bEndLoop = false;
     switch( pForStk->eForType )
     {
-        case FOR_TO:
+        case ForType::To:
         {
             SbxOperator eOp = ( pForStk->refInc->GetDouble() < 0 ) ? SbxLT : SbxGT;
             if( pForStk->refVar->Compare( eOp, *pForStk->refEnd ) )
                 bEndLoop = true;
             break;
         }
-        case FOR_EACH_ARRAY:
+        case ForType::EachArray:
         {
             SbiForStack* p = pForStk;
             if( p->pArrayCurIndices == nullptr )
@@ -3065,7 +3032,7 @@ void SbiRuntime::StepTESTFOR( sal_uInt32 nOp1 )
             }
             break;
         }
-        case FOR_EACH_COLLECTION:
+        case ForType::EachCollection:
         {
             BasicCollection* pCollection = static_cast<BasicCollection*>(static_cast<SbxVariable*>(pForStk->refEnd));
             SbxArrayRef xItemArray = pCollection->xItemArray;
@@ -3082,7 +3049,7 @@ void SbiRuntime::StepTESTFOR( sal_uInt32 nOp1 )
             }
             break;
         }
-        case FOR_EACH_XENUMERATION:
+        case ForType::EachXEnumeration:
         {
             SbiForStack* p = pForStk;
             if( p->xEnumeration->hasMoreElements() )
@@ -3544,7 +3511,8 @@ SbxVariable* SbiRuntime::FindElement( SbxObject* pObj, sal_uInt32 nOp1, sal_uInt
                 if( t != SbxVARIANT && t != t2 &&
                     t >= SbxINTEGER && t <= SbxSTRING )
                 {
-                    pElem->SetType( t ), bSet = true;
+                    pElem->SetType( t );
+                    bSet = true;
                 }
             }
             // assign pElem to a Ref, to delete a temp-var if applicable
@@ -3654,7 +3622,6 @@ SbxBase* SbiRuntime::FindElementExtern( const OUString& rName )
     }
     return pElem;
 }
-
 
 
 void SbiRuntime::SetupArgs( SbxVariable* p, sal_uInt32 nOp1 )
@@ -3986,19 +3953,19 @@ void SbiRuntime::StepRTL( sal_uInt32 nOp1, sal_uInt32 nOp2 )
 }
 
 void SbiRuntime::StepFIND_Impl( SbxObject* pObj, sal_uInt32 nOp1, sal_uInt32 nOp2,
-                                SbError nNotFound, bool bLocal, bool bStatic )
+                                SbError nNotFound, bool bStatic )
 {
     if( !refLocals )
     {
         refLocals = new SbxArray;
     }
-    PushVar( FindElement( pObj, nOp1, nOp2, nNotFound, bLocal, bStatic ) );
+    PushVar( FindElement( pObj, nOp1, nOp2, nNotFound, true/*bLocal*/, bStatic ) );
 }
 // loading a local/global variable (+StringID+type)
 
 void SbiRuntime::StepFIND( sal_uInt32 nOp1, sal_uInt32 nOp2 )
 {
-    StepFIND_Impl( pMod, nOp1, nOp2, ERRCODE_BASIC_PROC_UNDEFINED, true );
+    StepFIND_Impl( pMod, nOp1, nOp2, ERRCODE_BASIC_PROC_UNDEFINED );
 }
 
 // Search inside a class module (CM) to enable global search in time
@@ -4010,7 +3977,7 @@ void SbiRuntime::StepFIND_CM( sal_uInt32 nOp1, sal_uInt32 nOp2 )
     {
         pMod->SetFlag( SbxFlagBits::GlobalSearch );
     }
-    StepFIND_Impl( pMod, nOp1, nOp2, ERRCODE_BASIC_PROC_UNDEFINED, true );
+    StepFIND_Impl( pMod, nOp1, nOp2, ERRCODE_BASIC_PROC_UNDEFINED);
 
     if( pClassModuleObject )
     {
@@ -4020,7 +3987,7 @@ void SbiRuntime::StepFIND_CM( sal_uInt32 nOp1, sal_uInt32 nOp2 )
 
 void SbiRuntime::StepFIND_STATIC( sal_uInt32 nOp1, sal_uInt32 nOp2 )
 {
-    StepFIND_Impl( pMod, nOp1, nOp2, ERRCODE_BASIC_PROC_UNDEFINED, true, true );
+    StepFIND_Impl( pMod, nOp1, nOp2, ERRCODE_BASIC_PROC_UNDEFINED, true );
 }
 
 // loading an object-element (+StringID+type)
@@ -4043,7 +4010,7 @@ void SbiRuntime::StepELEM( sal_uInt32 nOp1, sal_uInt32 nOp2 )
     // #74254 now per list
     if( pObj )
     {
-        SaveRef( static_cast<SbxVariable*>(pObj) );
+        aRefSaved.push_back( pObj );
     }
     PushVar( FindElement( pObj, nOp1, nOp2, ERRCODE_BASIC_NO_METHOD, false ) );
 }
@@ -4123,7 +4090,7 @@ void SbiRuntime::StepPARAM( sal_uInt32 nOp1, sal_uInt32 nOp2 )
     else if( t != SbxVARIANT && (SbxDataType)(p->GetType() & 0x0FFF ) != t )
     {
         SbxVariable* q = new SbxVariable( t );
-        SaveRef( q );
+        aRefSaved.push_back( q );
         *q = *p;
         p = q;
         if ( i )
@@ -4217,7 +4184,7 @@ void SbiRuntime::StepSTMNT( sal_uInt32 nOp1, sal_uInt32 nOp2 )
 
     ClearExprStack();
 
-    ClearRefs();
+    aRefSaved.clear();
 
     // We have to cancel hard here because line and column
     // would be wrong later otherwise!
@@ -4253,9 +4220,9 @@ void SbiRuntime::StepSTMNT( sal_uInt32 nOp1, sal_uInt32 nOp2 )
     {
         // (there's a difference here in case of a jump out of a loop)
         sal_uInt16 nExspectedForLevel = static_cast<sal_uInt16>( nOp2 / 0x100 );
-        if( pGosubStk )
+        if( !pGosubStk.empty() )
         {
-            nExspectedForLevel = nExspectedForLevel + pGosubStk->nStartForLvl;
+            nExspectedForLevel = nExspectedForLevel + pGosubStk.back().nStartForLvl;
         }
 
         // if the actual for-level is too small it'd jump out
@@ -4536,7 +4503,7 @@ void SbiRuntime::StepLOCAL( sal_uInt32 nOp1, sal_uInt32 nOp2 )
 void SbiRuntime::StepPUBLIC_Impl( sal_uInt32 nOp1, sal_uInt32 nOp2, bool bUsedForClassModule )
 {
     OUString aName( pImg->GetString( static_cast<short>( nOp1 ) ) );
-    SbxDataType t = (SbxDataType)(SbxDataType)(nOp2 & 0xffff);;
+    SbxDataType t = (SbxDataType)(SbxDataType)(nOp2 & 0xffff);
     bool bFlag = pMod->IsSet( SbxFlagBits::NoModify );
     pMod->SetFlag( SbxFlagBits::NoModify );
     SbxVariableRef p = pMod->Find( aName, SbxCLASS_PROPERTY );

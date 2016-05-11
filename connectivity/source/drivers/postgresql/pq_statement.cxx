@@ -82,26 +82,21 @@ using com::sun::star::uno::UNO_QUERY;
 
 using com::sun::star::lang::IllegalArgumentException;
 
-using com::sun::star::sdbc::XWarningsSupplier;
 using com::sun::star::sdbc::XCloseable;
 using com::sun::star::sdbc::XStatement;
 using com::sun::star::sdbc::XPreparedStatement;
 using com::sun::star::sdbc::XParameters;
 using com::sun::star::sdbc::XRow;
 using com::sun::star::sdbc::XResultSet;
-using com::sun::star::sdbc::XGeneratedResultSet;
 using com::sun::star::sdbc::XConnection;
 using com::sun::star::sdbc::SQLException;
 
 using com::sun::star::sdbcx::XColumnsSupplier;
-using com::sun::star::sdbcx::XTablesSupplier;
 using com::sun::star::sdbcx::XKeysSupplier;
 
 using com::sun::star::beans::Property;
 using com::sun::star::beans::XPropertySetInfo;
 using com::sun::star::beans::XPropertySet;
-using com::sun::star::beans::XFastPropertySet;
-using com::sun::star::beans::XMultiPropertySet;
 
 using com::sun::star::container::XNameAccess;
 using com::sun::star::container::XEnumerationAccess;
@@ -149,7 +144,7 @@ static ::cppu::IPropertyArrayHelper & getStatementPropertyArrayHelper()
                         ::cppu::UnoType<sal_Int32>::get() , 0 )
                 };
             OSL_ASSERT( sizeof(aTable)/ sizeof(Property)  == STATEMENT_SIZE );
-            static ::cppu::OPropertyArrayHelper arrayHelper( aTable, STATEMENT_SIZE, sal_True );
+            static ::cppu::OPropertyArrayHelper arrayHelper( aTable, STATEMENT_SIZE, true );
             pArrayHelper = &arrayHelper;
         }
     }
@@ -242,17 +237,11 @@ void Statement::close(  ) throw (SQLException, RuntimeException, std::exception)
 }
 
 void Statement::raiseSQLException(
-    const OUString & sql, const char * errorMsg, const char *errorType )
+    const OUString & sql, const char * errorMsg )
     throw( SQLException )
 {
     OUStringBuffer buf(128);
     buf.append( "pq_driver: ");
-    if( errorType )
-    {
-        buf.append( "[" );
-        buf.appendAscii( errorType );
-        buf.append( "]" );
-    }
     buf.append(
         OUString( errorMsg, strlen(errorMsg) , m_pSettings->encoding ) );
     buf.append( " (caused by statement '" );
@@ -317,14 +306,14 @@ static void raiseSQLException(
 
 // returns the elements of the primary key of the given table
 // static Sequence< Reference< com::sun::star::beans::XPropertySet > > lookupKeys(
-static Sequence< OUString > lookupKeys(
+static std::vector< OUString > lookupKeys(
     const Reference< com::sun::star::container::XNameAccess > &tables,
     const OUString & table,
     OUString *pSchema,
     OUString *pTable,
     ConnectionSettings *pSettings)
 {
-    Sequence< OUString  > ret;
+    std::vector< OUString  > ret;
     Reference< XKeysSupplier > keySupplier;
     Statics & st = getStatics();
 
@@ -406,7 +395,7 @@ static Sequence< OUString > lookupKeys(
                     Reference< XIndexAccess > ( columns->getColumns(), UNO_QUERY );
 
                 int length = indexAccess->getCount();
-                ret.realloc( length );
+                ret.resize( length );
 //                 printf( "primary key for Table %s is ",
 //                         OUStringToOString( table, RTL_TEXTENCODING_ASCII_US ).getStr() );
                 for( int i = 0 ; i < length ; i ++ )
@@ -420,7 +409,7 @@ static Sequence< OUString > lookupKeys(
 //                 printf( "\n" );
             }
         }
-        if( ! ret.getLength() )
+        if( ! ret.size() )
         {
             if( isLog( pSettings, LogLevel::INFO ) )
             {
@@ -496,7 +485,7 @@ bool executePostgresCommand( const OString & cmd, struct CommandData *data )
         // belonging to the primary key are in the result set, allow updateable result sets
         // otherwise, don't
         OUString table, schema;
-        Sequence< OUString > sourceTableKeys;
+        std::vector< OUString > sourceTableKeys;
         OStringVector vec;
         tokenizeSQL( cmd, vec );
         OUString sourceTable =
@@ -519,7 +508,7 @@ bool executePostgresCommand( const OString & cmd, struct CommandData *data )
 
                 // check, whether the columns are in the result set (required !)
                 int i;
-                for( i = 0 ; i < sourceTableKeys.getLength() ;  i ++ )
+                for( i = 0 ; i < (int)sourceTableKeys.size() ;  i ++ )
                 {
                     if( -1 == PQfnumber(
                             result,
@@ -530,7 +519,7 @@ bool executePostgresCommand( const OString & cmd, struct CommandData *data )
                     }
                 }
 
-                if( sourceTableKeys.getLength() && i == sourceTableKeys.getLength() )
+                if( sourceTableKeys.size() && i == (int)sourceTableKeys.size() )
                 {
                     *(data->pLastResultset) =
                         UpdateableResultSet::createFromPGResultSet(
@@ -546,7 +535,7 @@ bool executePostgresCommand( const OString & cmd, struct CommandData *data )
                     buf.append( "." );
                     aReason = buf.makeStringAndClear();
                 }
-                else if( sourceTableKeys.getLength() )
+                else if( sourceTableKeys.size() )
                 {
                     OStringBuffer buf( 128 );
                     buf.append( "can't support updateable resultset for table " );
@@ -763,7 +752,7 @@ Reference< XResultSet > getGeneratedValuesFromLastInsert(
             {
                 OUString value;
                 OString columnName = OUStringToOString( keyColumnNames[i], pConnectionSettings->encoding );
-                String2StringMap::iterator ii = namedValues.begin();
+                String2StringMap::const_iterator ii = namedValues.begin();
                 for( ; ii != namedValues.end() ; ++ii )
                 {
                     if( columnName.equalsIgnoreAsciiCase( ii->first ) )
@@ -782,7 +771,7 @@ Reference< XResultSet > getGeneratedValuesFromLastInsert(
                         getAutoValues( autoValues, connection, schemaName, tableName );
                     }
                     // this could mean, that the column is a default or auto value, check this ...
-                    String2StringMap::iterator j = autoValues.begin();
+                    String2StringMap::const_iterator j = autoValues.begin();
                     for( ; j != autoValues.end() ; ++j )
                     {
                         if( columnName.equalsIgnoreAsciiCase( j->first ) )
@@ -982,9 +971,8 @@ sal_Int32 Statement::getUpdateCount(  )
 sal_Bool Statement::getMoreResults(  )
     throw (::com::sun::star::sdbc::SQLException, ::com::sun::star::uno::RuntimeException, std::exception)
 {
-    return sal_False;
+    return false;
 }
-
 
 
 void Statement::disposing()

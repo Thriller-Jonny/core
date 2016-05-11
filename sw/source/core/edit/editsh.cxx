@@ -18,7 +18,7 @@
  */
 
 #include <hintids.hxx>
-#include <vcl/cmdevt.hxx>
+#include <vcl/commandevent.hxx>
 #include <unotools/charclass.hxx>
 #include <comphelper/processfactory.hxx>
 #include <comphelper/string.hxx>
@@ -53,7 +53,6 @@
 #include <txtfrm.hxx>
 #include <rootfrm.hxx>
 #include <extinput.hxx>
-#include <crsskip.hxx>
 #include <scriptinfo.hxx>
 #include <unocrsrhelper.hxx>
 #include <section.hxx>
@@ -116,7 +115,7 @@ void SwEditShell::Insert2(const OUString &rStr, const bool bForceExpandHints )
     }
 
     // calculate cursor bidi level
-    SwCursor* pTmpCursor = _GetCursor();
+    SwCursor* pTmpCursor = GetCursor_();
     const bool bDoNotSetBidiLevel = ! pTmpCursor ||
                                 ( dynamic_cast<SwUnoCursor*>(pTmpCursor) !=  nullptr );
 
@@ -219,7 +218,7 @@ bool SwEditShell::AppendTextNode()
 }
 
 // the returned SwGrfNode pointer is used in GetGraphic() and GetGraphicSize()
-SwGrfNode * SwEditShell::_GetGrfNode() const
+SwGrfNode * SwEditShell::GetGrfNode_() const
 {
     SwGrfNode *pGrfNode = nullptr;
     SwPaM* pCursor = GetCursor();
@@ -234,7 +233,7 @@ SwGrfNode * SwEditShell::_GetGrfNode() const
 // GetMark is not set or points to the same Graphic
 const Graphic* SwEditShell::GetGraphic( bool bWait ) const
 {
-    SwGrfNode* pGrfNode = _GetGrfNode();
+    SwGrfNode* pGrfNode = GetGrfNode_();
     const Graphic* pGrf( nullptr );
     if ( pGrfNode )
     {
@@ -243,25 +242,24 @@ const Graphic* SwEditShell::GetGraphic( bool bWait ) const
     return pGrf;
 }
 
-bool SwEditShell::IsGrfSwapOut( bool bOnlyLinked ) const
+bool SwEditShell::IsLinkedGrfSwapOut() const
 {
-    SwGrfNode *pGrfNode = _GetGrfNode();
+    SwGrfNode *pGrfNode = GetGrfNode_();
     return pGrfNode &&
-        (bOnlyLinked ? ( pGrfNode->IsLinkedFile() &&
-                        ( GRAPHIC_DEFAULT == pGrfNode->GetGrfObj().GetType()||
-                          pGrfNode->GetGrfObj().IsSwappedOut()))
-                     : pGrfNode->GetGrfObj().IsSwappedOut());
+        ( pGrfNode->IsLinkedFile() &&
+          ( GRAPHIC_DEFAULT == pGrfNode->GetGrfObj().GetType() ||
+            pGrfNode->GetGrfObj().IsSwappedOut()));
 }
 
 const GraphicObject* SwEditShell::GetGraphicObj() const
 {
-    SwGrfNode* pGrfNode = _GetGrfNode();
+    SwGrfNode* pGrfNode = GetGrfNode_();
     return pGrfNode ? &(pGrfNode->GetGrfObj()) : nullptr;
 }
 
 sal_uInt16 SwEditShell::GetGraphicType() const
 {
-    SwGrfNode *pGrfNode = _GetGrfNode();
+    SwGrfNode *pGrfNode = GetGrfNode_();
     return static_cast<sal_uInt16>(pGrfNode ? pGrfNode->GetGrfObj().GetType() : GRAPHIC_NONE);
 }
 
@@ -301,7 +299,7 @@ void SwEditShell::GetGrfNms( OUString* pGrfName, OUString* pFltName,
         SwDoc::GetGrfNms( *pFormat, pGrfName, pFltName );
     else
     {
-        SwGrfNode *pGrfNode = _GetGrfNode();
+        SwGrfNode *pGrfNode = GetGrfNode_();
         if( pGrfNode && pGrfNode->IsLinkedFile() )
             pGrfNode->GetFileFilterNms( pGrfName, pFltName );
     }
@@ -809,7 +807,7 @@ void SwEditShell::SetNumberingRestart()
     EndAllAction();
 }
 
-sal_uInt16 SwEditShell::GetLineCount( bool bActPos )
+sal_uInt16 SwEditShell::GetLineCount()
 {
     sal_uInt16 nRet = 0;
     CalcLayout();
@@ -818,49 +816,15 @@ sal_uInt16 SwEditShell::GetLineCount( bool bActPos )
     SwNodeIndex aStart( rPtIdx );
     SwContentNode* pCNd;
     SwContentFrame *pContentFrame = nullptr;
-    sal_uLong nTmpPos;
 
-    if( !bActPos )
-        aStart = 0;
-    else if( rPtIdx > ( nTmpPos = GetDoc()->GetNodes().GetEndOfExtras().GetIndex()) )
-        // BodyArea => Start is EndOfIcons + 1
-        aStart = nTmpPos + 1;
-    else
-    {
-        if( nullptr != ( pCNd = pPam->GetContentNode() ) &&
-            nullptr != ( pContentFrame = pCNd->getLayoutFrame( GetLayout() ) ) )
-        {
-            const SwStartNode *pTmp;
-            if( pContentFrame->IsInFly() )                        // Fly
-                pTmp = pCNd->FindFlyStartNode();
-            else if( pContentFrame->IsInFootnote() )                   // Footnote
-                pTmp = pCNd->FindFootnoteStartNode();
-            else
-            {                                               // Footer/Header
-                const sal_uInt16 nTyp = FRM_HEADER | FRM_FOOTER;
-                SwFrame* pFrame = pContentFrame;
-                while( pFrame && !(pFrame->GetType() & nTyp) )
-                    pFrame = pFrame->GetUpper();
-                OSL_ENSURE( pFrame, "Wo bin ich?" );
-                if( pFrame && ( pFrame->GetType() & FRM_FOOTER ) )
-                    pTmp = pCNd->FindFooterStartNode();
-                else
-                    pTmp = pCNd->FindHeaderStartNode();
-            }
-            OSL_ENSURE( pTmp, "Missing StartNode" );
-            aStart  = *pTmp;
-        }
-        OSL_ENSURE( pCNd && pContentFrame, "Missing Layout-Information" );
-    }
+    aStart = 0;
 
     while( nullptr != ( pCNd = GetDoc()->GetNodes().GoNextSection(
-                &aStart, true, false )) && ( !bActPos || aStart <= rPtIdx ) )
+                &aStart, true, false )) )
     {
         if( nullptr != ( pContentFrame = pCNd->getLayoutFrame( GetLayout() ) ) && pContentFrame->IsTextFrame() )
         {
-            const sal_Int32 nActPos = bActPos && aStart == rPtIdx ?
-                pPam->GetPoint()->nContent.GetIndex() : COMPLETE_STRING;
-            nRet = nRet + static_cast<SwTextFrame*>(pContentFrame)->GetLineCount( nActPos );
+            nRet = nRet + static_cast<SwTextFrame*>(pContentFrame)->GetLineCount( COMPLETE_STRING );
         }
     }
     return nRet;
@@ -923,9 +887,9 @@ void SwEditShell::SetLineNumberInfo(const SwLineNumberInfo& rInfo)
     EndAllAction();
 }
 
-sal_uInt16 SwEditShell::GetLinkUpdMode(bool bDocSettings) const
+sal_uInt16 SwEditShell::GetLinkUpdMode() const
 {
-    return getIDocumentSettingAccess().getLinkUpdateMode( !bDocSettings );
+    return getIDocumentSettingAccess().getLinkUpdateMode( false );
 }
 
 void SwEditShell::SetLinkUpdMode( sal_uInt16 nMode )
@@ -934,28 +898,24 @@ void SwEditShell::SetLinkUpdMode( sal_uInt16 nMode )
 }
 
 // Interface for TextInputData - (for text input of japanese/chinese characters)
-SwExtTextInput* SwEditShell::CreateExtTextInput(LanguageType eInputLanguage)
+void SwEditShell::CreateExtTextInput(LanguageType eInputLanguage)
 {
     SwExtTextInput* pRet = GetDoc()->CreateExtTextInput( *GetCursor() );
     pRet->SetLanguage(eInputLanguage);
     pRet->SetOverwriteCursor( SwCursorShell::IsOverwriteCursor() );
-    return pRet;
 }
 
-OUString SwEditShell::DeleteExtTextInput( SwExtTextInput* pDel, bool bInsText )
+OUString SwEditShell::DeleteExtTextInput( bool bInsText )
 {
+    const SwPosition& rPos = *GetCursor()->GetPoint();
+    SwExtTextInput* pDel = GetDoc()->GetExtTextInput( rPos.nNode.GetNode(),
+                                      rPos.nContent.GetIndex() );
     if( !pDel )
     {
-        const SwPosition& rPos = *GetCursor()->GetPoint();
-        pDel = GetDoc()->GetExtTextInput( rPos.nNode.GetNode(),
-                                          rPos.nContent.GetIndex() );
-        if( !pDel )
-        {
-            //JP 25.10.2001: under UNIX the cursor is moved before the Input-
-            //              Engine event comes in. So take any - normally there
-            //              exist only one at the time. -- Task 92016
-            pDel = GetDoc()->GetExtTextInput();
-        }
+        //JP 25.10.2001: under UNIX the cursor is moved before the Input-
+        //              Engine event comes in. So take any - normally there
+        //              exist only one at the time. -- Task 92016
+        pDel = GetDoc()->GetExtTextInput();
     }
     OUString sRet;
     if( pDel )

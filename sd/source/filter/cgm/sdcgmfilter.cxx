@@ -48,8 +48,8 @@ extern "C" sal_uInt32 ImportCGM( OUString const &, Reference< XModel > const &, 
 
 #endif
 
-SdCGMFilter::SdCGMFilter( SfxMedium& rMedium, ::sd::DrawDocShell& rDocShell, bool bShowProgress ) :
-    SdFilter( rMedium, rDocShell, bShowProgress )
+SdCGMFilter::SdCGMFilter( SfxMedium& rMedium, ::sd::DrawDocShell& rDocShell ) :
+    SdFilter( rMedium, rDocShell )
 {
 }
 
@@ -78,7 +78,7 @@ bool SdCGMFilter::Import()
         OUString aFileURL( mrMedium.GetURLObject().GetMainURL( INetURLObject::NO_DECODE ) );
         sal_uInt32          nRetValue;
 
-        if( mrDocument.GetPageCount() == 0L )
+        if( mrDocument.GetPageCount() == 0 )
             mrDocument.CreateFirstPages();
 
         CreateStatusIndicator();

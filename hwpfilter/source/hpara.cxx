@@ -29,29 +29,29 @@
 #include "hbox.h"
 #include "hutil.h"
 
-bool LineInfo::Read(HWPFile & hwpf, HWPPara *pPara)
+void LineInfo::Read(HWPFile & hwpf, HWPPara *pPara)
 {
     if (!hwpf.Read2b(pos))
-        return false;
+        return;
     unsigned short tmp16;
     if (!hwpf.Read2b(tmp16))
-        return false;
+        return;
     space_width = tmp16;
     if (!hwpf.Read2b(tmp16))
-        return false;
+        return;
     height = tmp16;
 // internal information
     if (!hwpf.Read2b(tmp16))
-        return false;
+        return;
     pgy = tmp16;
     if (!hwpf.Read2b(tmp16))
-        return false;
+        return;
     sx = tmp16;
     if (!hwpf.Read2b(tmp16))
-        return false;
+        return;
     psx = tmp16;
     if (!hwpf.Read2b(tmp16))
-        return false;
+        return;
     pex = tmp16;
     height_sp = 0;
 
@@ -62,8 +62,6 @@ bool LineInfo::Read(HWPFile & hwpf, HWPPara *pPara)
         pPara->pshape.reserved[0] = sal::static_int_cast<unsigned char>(pex & 0x01);
         pPara->pshape.reserved[1] = sal::static_int_cast<unsigned char>(pex & 0x02);
     }
-
-    return (!hwpf.State());
 }
 
 HWPPara::HWPPara()
@@ -77,7 +75,6 @@ HWPPara::HWPPara()
     , etcflag(0)
     , ctrlflag(0)
     , pstyno(0)
-    , pno(0)
     , linfo(nullptr)
     , cshapep(nullptr)
     , hhstr(nullptr)
@@ -202,16 +199,12 @@ bool HWPPara::Read(HWPFile & hwpf, unsigned char flag)
 }
 
 
-
-
 CharShape *HWPPara::GetCharShape(int pos)
 {
     if (contain_cshape == 0)
         return &cshape;
     return cshapep + pos;
 }
-
-
 
 
 HBox *HWPPara::readHBox(HWPFile & hwpf)

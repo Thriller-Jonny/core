@@ -21,7 +21,6 @@
 #define INCLUDED_VCL_SOURCE_FILTER_FILTERCONFIGCACHE_HXX
 
 #include <com/sun/star/uno/Sequence.h>
-#include <com/sun/star/uno/Reference.h>
 #include <com/sun/star/beans/PropertyValue.hpp>
 #include <com/sun/star/container/XNameAccess.hpp>
 #include <rtl/ustring.hxx>
@@ -48,7 +47,7 @@ class FilterConfigCache
         bool        bIsInternalFilter   : 1;
         bool        bIsPixelFormat      : 1;
 
-        bool        CreateFilterName( const OUString& rUserDataEntry );
+        void            CreateFilterName( const OUString& rUserDataEntry );
         OUString        GetShortName( );
 
         static const char* InternalPixelFilterNameList[];

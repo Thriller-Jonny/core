@@ -126,7 +126,7 @@ namespace
 OUString SwFieldType::GetTypeStr(sal_uInt16 nTypeId)
 {
     if (!s_pFieldNames)
-        _GetFieldName();
+        GetFieldName_();
 
     if (nTypeId < SwFieldType::s_pFieldNames->size())
         return (*SwFieldType::s_pFieldNames)[nTypeId];
@@ -399,7 +399,7 @@ bool SwField::IsFixed() const
     return bRet;
 }
 
-OUString SwField::ExpandField(bool const bCached, ToxAuthorityField eField) const
+OUString SwField::ExpandField(bool const bCached) const
 {
     if ( m_bUseFieldValueCache )
     {
@@ -408,7 +408,7 @@ OUString SwField::ExpandField(bool const bCached, ToxAuthorityField eField) cons
             if (GetTypeId() == TYP_AUTHORITY)
             {
                 const SwAuthorityField* pAuthorityField = static_cast<const SwAuthorityField*>(this);
-                m_Cache = pAuthorityField->ConditionalExpand(eField);
+                m_Cache = pAuthorityField->ConditionalExpandAuthIdentifier();
             }
             else
                 m_Cache = Expand();

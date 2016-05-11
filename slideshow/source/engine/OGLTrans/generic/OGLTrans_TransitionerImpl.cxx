@@ -65,8 +65,6 @@
 #include <vcl/opengl/OpenGLHelper.hxx>
 #include <vcl/window.hxx>
 
-#include <boost/noncopyable.hpp>
-
 #include "OGLTrans_TransitionImpl.hxx"
 
 #if defined( UNX ) && !defined( MACOSX )
@@ -76,7 +74,7 @@
 
 #include <vcl/sysdata.hxx>
 
-#if OSL_DEBUG_LEVEL > 1
+#if OSL_DEBUG_LEVEL > 0
 #include <boost/date_time/posix_time/posix_time.hpp>
 using namespace ::boost::posix_time;
 
@@ -95,7 +93,7 @@ namespace
 
 typedef cppu::WeakComponentImplHelper<presentation::XTransition> OGLTransitionerImplBase;
 
-#if OSL_DEBUG_LEVEL > 1
+#if OSL_DEBUG_LEVEL > 0
 class TimerContext
 {
 public:
@@ -171,11 +169,13 @@ int oglErrorHandler( Display* /*dpy*/, XErrorEvent* /*evnt*/ )
  * slideshow. This class is implicitly
  * constructed from XTransitionFactory.
 */
-class OGLTransitionerImpl : private cppu::BaseMutex, private boost::noncopyable, public OGLTransitionerImplBase
+class OGLTransitionerImpl : private cppu::BaseMutex, public OGLTransitionerImplBase
 {
 public:
     OGLTransitionerImpl();
-    bool setTransition( std::shared_ptr<OGLTransitionImpl> pOGLTransition );
+    OGLTransitionerImpl(const OGLTransitionerImpl&) = delete;
+    OGLTransitionerImpl& operator=(const OGLTransitionerImpl&) = delete;
+    bool setTransition( const std::shared_ptr<OGLTransitionImpl>& pOGLTransition );
     bool initialize( const Reference< presentation::XSlideShowView >& xView,
             const Reference< rendering::XBitmap >& xLeavingSlide,
             const Reference< rendering::XBitmap >& xEnteringSlide );
@@ -299,7 +299,7 @@ public:
     */
     bool mbHasTFPVisual;
 
-#if OSL_DEBUG_LEVEL > 1
+#if OSL_DEBUG_LEVEL > 0
     ptime maUpdateStartTime;
     ptime maUpdateEndTime;
     ptime maStartTime;
@@ -350,7 +350,7 @@ bool OGLTransitionerImpl::initWindowFromSlideShowView( const Reference< presenta
     if( !mxView.is() )
         return false;
 
-#if OSL_DEBUG_LEVEL > 1
+#if OSL_DEBUG_LEVEL > 0
     TimerContext aTimerContext("initWindowFromSlideShowView");
 #endif
 
@@ -374,7 +374,9 @@ bool OGLTransitionerImpl::initWindowFromSlideShowView( const Reference< presenta
     }
     SAL_INFO("slideshow", "created the context");
 
+    mpContext->makeCurrent();
     CHECK_GL_ERROR();
+
     awt::Rectangle aCanvasArea = mxView->getCanvasArea();
     mpContext->setWinPosAndSize(Point(aCanvasArea.X, aCanvasArea.Y), Size(aCanvasArea.Width, aCanvasArea.Height));
     SAL_INFO("slideshow.opengl", "canvas area: " << aCanvasArea.X << "," << aCanvasArea.Y << " - " << aCanvasArea.Width << "x" << aCanvasArea.Height);
@@ -544,12 +546,15 @@ void OGLTransitionerImpl::impl_finishTransition()
         mpTransition->finish();
 }
 
-bool OGLTransitionerImpl::setTransition( std::shared_ptr<OGLTransitionImpl> pTransition )
+bool OGLTransitionerImpl::setTransition( const std::shared_ptr<OGLTransitionImpl>& pTransition )
 {
     if ( mpTransition ) // already initialized
         return true;
 
     mpTransition = pTransition;
+
+    mpContext->makeCurrent();
+    CHECK_GL_ERROR();
 
     bool succeeded = impl_prepareTransition();
     if (!succeeded) {
@@ -1150,7 +1155,7 @@ void OGLTransitionerImpl::GLInitSlides()
     if (isDisposed() || !mpTransition || mpTransition->getSettings().mnRequiredGLVersion > mnGLVersion)
         return;
 
-#if OSL_DEBUG_LEVEL > 1
+#if OSL_DEBUG_LEVEL > 0
     TimerContext aTimerContext("texture creation");
 #endif
 
@@ -1186,7 +1191,7 @@ void OGLTransitionerImpl::GLInitSlides()
 
 void SAL_CALL OGLTransitionerImpl::update( double nTime ) throw (uno::RuntimeException, std::exception)
 {
-#if OSL_DEBUG_LEVEL > 1
+#if OSL_DEBUG_LEVEL > 0
     mnFrameCount ++;
     maUpdateStartTime = microsec_clock::local_time();
     if( mnFrameCount == 1 ) {
@@ -1218,7 +1223,7 @@ void SAL_CALL OGLTransitionerImpl::update( double nTime ) throw (uno::RuntimeExc
     mpContext->sync();
     CHECK_GL_ERROR();
 
-#if OSL_DEBUG_LEVEL > 1
+#if OSL_DEBUG_LEVEL > 0
     maUpdateEndTime = microsec_clock::local_time();
 
     SAL_INFO("slideshow.opengl", "update time: " << nTime);
@@ -1288,6 +1293,9 @@ void OGLTransitionerImpl::disposeTextures()
 
 void OGLTransitionerImpl::impl_dispose()
 {
+    mpContext->makeCurrent();
+    CHECK_GL_ERROR();
+
     impl_finishTransition();
     disposeTextures();
     if( mpContext.is() )
@@ -1300,7 +1308,7 @@ void OGLTransitionerImpl::disposing()
 {
     osl::MutexGuard const guard( m_aMutex );
 
-#if OSL_DEBUG_LEVEL > 1
+#if OSL_DEBUG_LEVEL > 0
     SAL_INFO("slideshow.opengl", "dispose " << this);
     if( mnFrameCount ) {
         maEndTime = microsec_clock::local_time();
@@ -1406,21 +1414,21 @@ public:
                 case animations::TransitionSubType::HEART:              //  31
                 case animations::TransitionSubType::FANOUTHORIZONTAL:   //  55
                 case animations::TransitionSubType::ACROSS:             // 108
-                    return sal_True;
+                    return true;
 
                 default:
-                    return sal_False;
+                    return false;
             }
         } else if( transitionType == animations::TransitionType::FADE && transitionSubType == animations::TransitionSubType::CROSSFADE ) {
-            return sal_True;
+            return true;
         } else if( transitionType == animations::TransitionType::FADE && transitionSubType == animations::TransitionSubType::FADEOVERCOLOR ) {
-            return sal_True;
+            return true;
         } else if( transitionType == animations::TransitionType::IRISWIPE && transitionSubType == animations::TransitionSubType::DIAMOND ) {
-            return sal_True;
+            return true;
         } else if( transitionType == animations::TransitionType::ZOOM && transitionSubType == animations::TransitionSubType::ROTATEIN ) {
-            return sal_True;
+            return true;
         } else
-            return sal_False;
+            return false;
     }
 
     virtual uno::Reference< presentation::XTransition > SAL_CALL createTransition(

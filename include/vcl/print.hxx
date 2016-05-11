@@ -50,7 +50,6 @@ namespace vcl {
 }
 
 
-
 enum PrinterSupport
 {
     SUPPORT_SET_ORIENTATION, SUPPORT_SET_PAPERBIN,
@@ -58,21 +57,6 @@ enum PrinterSupport
     SUPPORT_COPY, SUPPORT_COLLATECOPY,
     SUPPORT_SETUPDIALOG, SUPPORT_FAX, SUPPORT_PDF
 };
-
-
-class VCL_DLLPUBLIC PrinterPage
-{
-    GDIMetaFile*    mpMtf;
-    JobSetup        maJobSetup;
-
-public:
-
-                    PrinterPage() : mpMtf( new GDIMetaFile() ) {}
-                    PrinterPage( GDIMetaFile* pMtf, const JobSetup& rSetup )
-                        : mpMtf( pMtf ), maJobSetup( rSetup ) {}
-                    ~PrinterPage() { delete mpMtf; }
-};
-
 
 
 class VCL_DLLPUBLIC QueueInfo
@@ -98,8 +82,6 @@ public:
     const OUString&            GetComment() const { return maComment; }
     PrintQueueFlags            GetStatus() const { return mnStatus; }
     sal_uInt32                 GetJobs() const { return mnJobs; }
-
-    bool                       operator==( const QueueInfo& rInfo ) const;
 };
 
 
@@ -110,13 +92,11 @@ enum PrinterTransparencyMode
 };
 
 
-
 enum PrinterGradientMode
 {
     PRINTER_GRADIENT_STRIPES  = 0,
     PRINTER_GRADIENT_COLOR    = 1
 };
-
 
 
 enum PrinterBitmapMode
@@ -125,7 +105,6 @@ enum PrinterBitmapMode
     PRINTER_BITMAP_NORMAL     = 1,
     PRINTER_BITMAP_RESOLUTION = 2
 };
-
 
 
 class VCL_DLLPUBLIC PrinterOptions
@@ -230,7 +209,7 @@ private:
 
     SAL_DLLPRIVATE void         ImplInitData();
     SAL_DLLPRIVATE void         ImplInit( SalPrinterQueueInfo* pInfo );
-    SAL_DLLPRIVATE void         ImplInitDisplay( const vcl::Window* pWindow );
+    SAL_DLLPRIVATE void         ImplInitDisplay();
     SAL_DLLPRIVATE static SalPrinterQueueInfo*
                                 ImplGetQueueInfo( const OUString& rPrinterName, const OUString* pDriver );
     SAL_DLLPRIVATE void         ImplUpdatePageData();
@@ -287,7 +266,7 @@ protected:
                                     sal_uInt16 nTransparencePercent ) override;
 
     virtual void                InitFont() const override;
-    virtual void                SetFontOrientation( ImplFontEntry* const pFontEntry ) const override;
+    virtual void                SetFontOrientation( LogicalFontInstance* const pFontInstance ) const override;
 
 public:
                                 Printer();
@@ -308,7 +287,7 @@ public:
     bool                        IsDisplayPrinter() const    { return mpDisplayDev != nullptr; }
     bool                        IsValid() const             { return !IsDisplayPrinter(); }
 
-    sal_uLong                   GetCapabilities( PrinterCapType nType ) const;
+    sal_uInt32                  GetCapabilities( PrinterCapType nType ) const;
     bool                        HasSupport( PrinterSupport eFeature ) const;
 
     bool                        SetJobSetup( const JobSetup& rSetup );
@@ -344,8 +323,8 @@ public:
     Paper                       GetPaper() const;
     static OUString             GetPaperName( Paper ePaper );
 
-    /** @return A UI string for the current paper; i_bPaperUser == false means an empty string for PAPER_USER */
-    OUString                    GetPaperName( bool i_bPaperUser = true ) const;
+    /** @return A UI string for the current paper; an empty string for PAPER_USER */
+    OUString                    GetPaperName() const;
 
     /** @return Number of available paper formats */
     int                         GetPaperInfoCount() const;
@@ -393,22 +372,18 @@ public:
     virtual void                CopyArea( const Point& rDestPt, const Point& rSrcPt,
                                     const Size& rSrcSize, bool bWindowInvalidate = false ) override;
 
-    virtual void                DrawImage( const Point&, const Image&, DrawImageFlags ) override;
-    virtual void                DrawImage( const Point&, const Size&, const Image&, DrawImageFlags ) override;
-
-
     // These 3 together are more modular PrintJob(), allowing printing more documents as one print job
     // by repeated calls to ExecutePrintJob(). Used by mailmerge.
     static bool                 PreparePrintJob( std::shared_ptr<vcl::PrinterController> i_pController,
                                     const JobSetup& i_rInitSetup );
     static bool                 ExecutePrintJob( std::shared_ptr<vcl::PrinterController> i_pController );
-    static void                 FinishPrintJob( std::shared_ptr<vcl::PrinterController> i_pController );
+    static void                 FinishPrintJob( const std::shared_ptr<vcl::PrinterController>& i_pController );
 
     /** Implementation detail of PrintJob being asynchronous
 
         not exported, not usable outside vcl
     */
-    static void SAL_DLLPRIVATE  ImplPrintJob( std::shared_ptr<vcl::PrinterController> i_pController,
+    static void SAL_DLLPRIVATE  ImplPrintJob( const std::shared_ptr<vcl::PrinterController>& i_pController,
                                     const JobSetup& i_rInitSetup );
 };
 
@@ -598,29 +573,27 @@ public:
 
 class VCL_DLLPUBLIC PrinterOptionsHelper
 {
-    protected:
+protected:
     std::unordered_map< OUString, css::uno::Any, OUStringHash >
                          m_aPropertyMap;
-    css::uno::Sequence< css::beans::PropertyValue >
+    std::vector< css::beans::PropertyValue >
                          m_aUIProperties;
 
-    public:
+public:
 
                          /// Create without ui properties
                          PrinterOptionsHelper() {}
-                         PrinterOptionsHelper( const css::uno::Sequence< css::beans::PropertyValue >& i_rUIProperties )
+                         PrinterOptionsHelper( const std::vector< css::beans::PropertyValue >& i_rUIProperties )
                              : m_aUIProperties( i_rUIProperties )  {}
                          ~PrinterOptionsHelper() {}
 
     /** Process a new set of properties
 
         merges changed properties and returns "true" if any occurred
-        if the optional output set is not NULL then the names of the changed properties are returned
     */
-    bool                 processProperties( const css::uno::Sequence< css::beans::PropertyValue >& i_rNewProp,
-                             std::set< OUString >* o_pChangeProp = nullptr );
+    bool                 processProperties( const css::uno::Sequence< css::beans::PropertyValue >& i_rNewProp );
 
-    /** Append  to a sequence of property values the ui property sequence passed at creation
+    /** Append to a sequence of property values the ui property sequence passed at creation
 
         as the "ExtraPrintUIOptions" property. if that sequence was empty, no "ExtraPrintUIOptions" property
         will be appended.
@@ -640,10 +613,10 @@ class VCL_DLLPUBLIC PrinterOptionsHelper
     sal_Int64            getIntValue( const char* i_pPropName, sal_Int64 i_nDefault ) const
                              { return getIntValue( OUString::createFromAscii( i_pPropName ), i_nDefault ); }
 
-    OUString             getStringValue( const OUString& i_rPropertyName, const OUString& i_rDefault = OUString() ) const;
+    OUString             getStringValue( const OUString& i_rPropertyName ) const;
     // convenience for fixed strings
-    OUString             getStringValue( const char* i_pPropName, const OUString& i_rDefault = OUString() ) const
-                             { return getStringValue( OUString::createFromAscii( i_pPropName ), i_rDefault ); }
+    OUString             getStringValue( const char* i_pPropName ) const
+                             { return getStringValue( OUString::createFromAscii( i_pPropName ) ); }
 
     // helper functions for user to create a single control
     struct UIControlOptions
@@ -654,19 +627,18 @@ class VCL_DLLPUBLIC PrinterOptionsHelper
         OUString         maGroupHint;
         bool             mbInternalOnly;
         bool             mbEnabled;
-        css::uno::Sequence< css::beans::PropertyValue >
+        std::vector< css::beans::PropertyValue >
                          maAddProps;
 
                          UIControlOptions( const OUString& i_rDependsOnName = OUString(),
                              sal_Int32 i_nDependsOnEntry = -1, bool i_bAttachToDependency = false,
-                             const OUString& i_rGroupHint = OUString(), bool i_bInternalOnly = false,
-                             bool i_bEnabled = true)
+                             const OUString& i_rGroupHint = OUString())
                              : maDependsOnName( i_rDependsOnName )
                              , mnDependsOnEntry( i_nDependsOnEntry )
                              , mbAttachToDependency( i_bAttachToDependency )
                              , maGroupHint( i_rGroupHint )
-                             , mbInternalOnly( i_bInternalOnly )
-                             , mbEnabled( i_bEnabled ) {}
+                             , mbInternalOnly( false )
+                             , mbEnabled( true ) {}
     };
 
     // note: in the following helper functions HelpIds are expected as an OUString

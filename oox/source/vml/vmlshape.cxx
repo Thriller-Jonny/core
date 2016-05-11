@@ -44,6 +44,7 @@
 #include <com/sun/star/text/XTextFrame.hpp>
  #include <com/sun/star/lang/XServiceInfo.hpp>
 #include <com/sun/star/text/TextContentAnchorType.hpp>
+#include <com/sun/star/text/GraphicCrop.hpp>
 #include <rtl/math.hxx>
 #include <rtl/ustrbuf.hxx>
 #include <svx/svdtrans.hxx>
@@ -53,6 +54,8 @@
 #include "oox/ole/axcontrol.hxx"
 #include "oox/ole/axcontrolfragment.hxx"
 #include "oox/ole/oleobjecthelper.hxx"
+#include <oox/token/properties.hxx>
+#include <oox/token/tokens.hxx>
 #include "oox/vml/vmldrawing.hxx"
 #include "oox/vml/vmlshapecontainer.hxx"
 #include "oox/vml/vmltextbox.hxx"
@@ -106,6 +109,19 @@ awt::Rectangle lclGetAbsRect( const awt::Rectangle& rRelRect, const awt::Rectang
     aAbsRect.Width = static_cast< sal_Int32 >( fWidthRatio * rRelRect.Width + 0.5 );
     aAbsRect.Height = static_cast< sal_Int32 >( fHeightRatio * rRelRect.Height + 0.5 );
     return aAbsRect;
+}
+
+/// Count the crop value based on a crop fraction and a reference size.
+sal_Int32 lclConvertCrop(const OUString& rCrop, sal_uInt32 nSize)
+{
+    if (rCrop.endsWith("f"))
+    {
+        // Numeric value is specified in 1/65536-ths.
+        sal_uInt32 nCrop = rCrop.copy(0, rCrop.getLength() - 1).toUInt32();
+        return (nCrop * nSize) / 65536;
+    }
+
+    return 0;
 }
 
 } // namespace
@@ -409,7 +425,7 @@ Reference< XShape > ShapeBase::convertAndInsert( const Reference< XShapes >& rxS
                 if ( xControlShape.is() && !getTypeModel().mbVisible )
                 {
                     PropertySet aControlShapeProp( xControlShape->getControl() );
-                    aControlShapeProp.setProperty( PROP_EnableVisible, uno::makeAny( sal_False ) );
+                    aControlShapeProp.setProperty( PROP_EnableVisible, uno::makeAny( false ) );
                 }
                 /*  Notify the drawing that a new shape has been inserted. For
                     convenience, pass the rectangle that contains position and
@@ -424,13 +440,13 @@ Reference< XShape > ShapeBase::convertAndInsert( const Reference< XShapes >& rxS
     return xShape;
 }
 
-void ShapeBase::convertFormatting( const Reference< XShape >& rxShape, const ShapeParentAnchor* pParentAnchor ) const
+void ShapeBase::convertFormatting( const Reference< XShape >& rxShape ) const
 {
     if( rxShape.is() )
     {
         /*  Calculate shape rectangle. Applications may do something special
             according to some imported shape client data (e.g. Excel cell anchor). */
-        awt::Rectangle aShapeRect = calcShapeRectangle( pParentAnchor );
+        awt::Rectangle aShapeRect = calcShapeRectangle( nullptr );
 
         // convert the shape, if the calculated rectangle is not empty
         if( (aShapeRect.Width > 0) || (aShapeRect.Height > 0) )
@@ -489,13 +505,13 @@ void ShapeBase::convertShapeProperties( const Reference< XShape >& rxShape ) con
             static const sal_Int32 aBorders[] = {
                 PROP_TopBorder, PROP_LeftBorder, PROP_BottomBorder, PROP_RightBorder
             };
-            for (unsigned int i = 0; i < SAL_N_ELEMENTS(aBorders); ++i)
+            for (sal_Int32 nBorder : aBorders)
             {
-                table::BorderLine2 aBorderLine = xPropertySet->getPropertyValue(PropertyMap::getPropertyName(aBorders[i])).get<table::BorderLine2>();
+                table::BorderLine2 aBorderLine = xPropertySet->getPropertyValue(PropertyMap::getPropertyName(nBorder)).get<table::BorderLine2>();
                 aBorderLine.Color = aPropMap.getProperty(PROP_LineColor).get<sal_Int32>();
                 if (oLineWidth)
                     aBorderLine.LineWidth = *oLineWidth;
-                aPropMap.setProperty(aBorders[i], uno::makeAny(aBorderLine));
+                aPropMap.setProperty(nBorder, uno::makeAny(aBorderLine));
             }
             aPropMap.erase(PROP_LineColor);
         }
@@ -548,12 +564,12 @@ void lcl_SetAnchorType(PropertySet& rPropSet, const ShapeTypeModel& rTypeModel, 
     else if ( rTypeModel.maPositionHorizontal == "inside" )
     {
         rPropSet.setAnyProperty(PROP_HoriOrient, makeAny(text::HoriOrientation::LEFT));
-        rPropSet.setAnyProperty(PROP_PageToggle, makeAny(sal_True));
+        rPropSet.setAnyProperty(PROP_PageToggle, makeAny(true));
     }
     else if ( rTypeModel.maPositionHorizontal == "outside" )
     {
         rPropSet.setAnyProperty(PROP_HoriOrient, makeAny(text::HoriOrientation::RIGHT));
-        rPropSet.setAnyProperty(PROP_PageToggle, makeAny(sal_True));
+        rPropSet.setAnyProperty(PROP_PageToggle, makeAny(true));
     }
 
     if ( rTypeModel.maPositionHorizontalRelative == "page" )
@@ -825,7 +841,7 @@ Reference< XShape > SimpleShape::createPictureObject( const Reference< XShapes >
         {
             aPropSet.setProperty(PROP_HoriOrientPosition, rShapeRect.X);
             aPropSet.setProperty(PROP_VertOrientPosition, rShapeRect.Y);
-            aPropSet.setProperty(PROP_Opaque, sal_False);
+            aPropSet.setProperty(PROP_Opaque, false);
         }
         // fdo#70457: preserve rotation information
         if ( !maTypeModel.maRotation.isEmpty() )
@@ -833,6 +849,25 @@ Reference< XShape > SimpleShape::createPictureObject( const Reference< XShapes >
 
         const GraphicHelper& rGraphicHelper = mrDrawing.getFilter().getGraphicHelper();
         lcl_SetAnchorType(aPropSet, maTypeModel, rGraphicHelper);
+
+        if (maTypeModel.moCropBottom.has() || maTypeModel.moCropLeft.has() || maTypeModel.moCropRight.has() || maTypeModel.moCropTop.has())
+        {
+            text::GraphicCrop aGraphicCrop;
+            uno::Reference<graphic::XGraphic> xGraphic;
+            aPropSet.getProperty(xGraphic, PROP_Graphic);
+            awt::Size aOriginalSize = rGraphicHelper.getOriginalSize(xGraphic);
+
+            if (maTypeModel.moCropBottom.has())
+                aGraphicCrop.Bottom = lclConvertCrop(maTypeModel.moCropBottom.get(), aOriginalSize.Height);
+            if (maTypeModel.moCropLeft.has())
+                aGraphicCrop.Left = lclConvertCrop(maTypeModel.moCropLeft.get(), aOriginalSize.Width);
+            if (maTypeModel.moCropRight.has())
+                aGraphicCrop.Right = lclConvertCrop(maTypeModel.moCropRight.get(), aOriginalSize.Width);
+            if (maTypeModel.moCropTop.has())
+                aGraphicCrop.Top = lclConvertCrop(maTypeModel.moCropTop.get(), aOriginalSize.Height);
+
+            aPropSet.setProperty(PROP_GraphicCrop, aGraphicCrop);
+        }
     }
     return xShape;
 }

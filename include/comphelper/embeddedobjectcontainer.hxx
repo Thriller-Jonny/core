@@ -98,11 +98,13 @@ public:
 
     // create an object from a ClassId
     css::uno::Reference < css::embed::XEmbeddedObject >
-                        CreateEmbeddedObject( const css::uno::Sequence < sal_Int8 >&, OUString& );
+                        CreateEmbeddedObject( const css::uno::Sequence < sal_Int8 >&, OUString&,
+                                              OUString const* pBaseURL = nullptr );
 
     css::uno::Reference < css::embed::XEmbeddedObject >
                         CreateEmbeddedObject( const css::uno::Sequence < sal_Int8 >&,
-                        const css::uno::Sequence < css::beans::PropertyValue >&, OUString& );
+                        const css::uno::Sequence < css::beans::PropertyValue >&, OUString&,
+                        OUString const* pBaseURL = nullptr );
 
     // insert an embedded object into the container - objects persistent representation will be added to the storage
     bool            InsertEmbeddedObject( const css::uno::Reference < css::embed::XEmbeddedObject >&, OUString& );
@@ -110,7 +112,7 @@ public:
     // load an embedded object from a MediaDescriptor and insert it into the container
     // a new object will be created from the new content and returned
     css::uno::Reference < css::embed::XEmbeddedObject >
-                        InsertEmbeddedObject( const css::uno::Sequence < css::beans::PropertyValue >&, OUString& );
+                        InsertEmbeddedObject( const css::uno::Sequence < css::beans::PropertyValue >&, OUString& rName, OUString const* pBaseURL = nullptr);
 
     // create an embedded link based on a MediaDescriptor and insert it into the container
     // a new object will be created from the new content and returned
@@ -132,8 +134,8 @@ public:
 
     // remove an embedded object from the container and from the storage; if object can't be closed
     // #i119941, bKeepToTempStorage: use to specify whether store the removed object to temporary storage+
-    bool            RemoveEmbeddedObject( const OUString& rName, bool bClose = true, bool bKeepToTempStorage = true );
-    bool            RemoveEmbeddedObject( const css::uno::Reference < css::embed::XEmbeddedObject >&, bool bClose = true, bool bKeepToTempStorage = true );
+    bool            RemoveEmbeddedObject( const OUString& rName, bool bKeepToTempStorage = true);
+    bool            RemoveEmbeddedObject( const css::uno::Reference < css::embed::XEmbeddedObject >&, bool bKeepToTempStorage = true);
 
     // close and remove an embedded object from the container without removing it from the storage
     bool            CloseEmbeddedObject( const css::uno::Reference < css::embed::XEmbeddedObject >& );
@@ -142,7 +144,7 @@ public:
     bool            MoveEmbeddedObject( const OUString& rName, EmbeddedObjectContainer& );
 
     // get the stored representation for the object
-    css::uno::Reference < css::io::XInputStream > GetObjectStream( const css::uno::Reference < css::embed::XEmbeddedObject >&, OUString* pMediaType=nullptr );
+    css::uno::Reference < css::io::XInputStream > GetObjectStream( const css::uno::Reference < css::embed::XEmbeddedObject >& );
     css::uno::Reference < css::io::XInputStream > GetObjectStream( const OUString& aName, OUString* pMediaType );
 
     // get the stored graphical representation for the object

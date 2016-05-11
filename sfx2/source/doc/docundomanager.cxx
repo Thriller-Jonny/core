@@ -24,7 +24,6 @@
 #include <sfx2/viewfrm.hxx>
 #include <sfx2/viewsh.hxx>
 #include <sfx2/bindings.hxx>
-#include <com/sun/star/lang/XComponent.hpp>
 
 #include <comphelper/anytostring.hxx>
 #include <comphelper/flagguard.hxx>
@@ -32,7 +31,6 @@
 #include <tools/diagnose_ex.h>
 #include <framework/undomanagerhelper.hxx>
 
-#include <boost/noncopyable.hpp>
 #include <stack>
 
 
@@ -42,26 +40,15 @@ namespace sfx2
 
     using ::com::sun::star::uno::Reference;
     using ::com::sun::star::uno::XInterface;
-    using ::com::sun::star::uno::UNO_QUERY;
-    using ::com::sun::star::uno::UNO_QUERY_THROW;
-    using ::com::sun::star::uno::UNO_SET_THROW;
-    using ::com::sun::star::uno::Exception;
     using ::com::sun::star::uno::RuntimeException;
-    using ::com::sun::star::uno::Any;
-    using ::com::sun::star::uno::makeAny;
     using ::com::sun::star::uno::Sequence;
-    using ::com::sun::star::uno::Type;
     using ::com::sun::star::util::InvalidStateException;
     using ::com::sun::star::document::EmptyUndoStackException;
     using ::com::sun::star::util::NotLockedException;
     using ::com::sun::star::document::UndoContextNotClosedException;
     using ::com::sun::star::document::XUndoAction;
-    using ::com::sun::star::document::XUndoManagerSupplier;
-    using ::com::sun::star::lang::XComponent;
     using ::com::sun::star::lang::IllegalArgumentException;
     using ::com::sun::star::lang::NotInitializedException;
-    using ::com::sun::star::lang::EventObject;
-    using ::com::sun::star::document::UndoManagerEvent;
     using ::com::sun::star::document::XUndoManagerListener;
     using ::com::sun::star::document::UndoFailedException;
     using ::com::sun::star::document::XUndoManager;
@@ -187,7 +174,6 @@ namespace sfx2
     //= UndoManagerGuard
 
     class UndoManagerGuard  :public ::framework::IMutexGuard
-                            ,public ::boost::noncopyable
     {
     public:
         explicit UndoManagerGuard( DocumentUndoManager& i_undoManager )
@@ -199,6 +185,9 @@ namespace sfx2
         virtual ~UndoManagerGuard()
         {
         }
+
+        UndoManagerGuard(const UndoManagerGuard&) = delete;
+        UndoManagerGuard& operator=(const UndoManagerGuard&) = delete;
 
         virtual void clear() override
         {

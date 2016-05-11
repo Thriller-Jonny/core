@@ -43,11 +43,11 @@ size_t MultiSelection::ImplFindSubSelection( long nIndex ) const
     return n;
 }
 
-bool MultiSelection::ImplMergeSubSelections( size_t nPos1, size_t nPos2 )
+void MultiSelection::ImplMergeSubSelections( size_t nPos1, size_t nPos2 )
 {
     // didn't a sub selection at nPos2 exist?
     if ( nPos2 >= aSels.size() )
-        return false;
+        return;
 
     // did the sub selections touch each other?
     if ( (aSels[ nPos1 ]->Max() + 1) == aSels[ nPos2 ]->Min() )
@@ -58,10 +58,7 @@ bool MultiSelection::ImplMergeSubSelections( size_t nPos1, size_t nPos2 )
         ::std::advance( it, nPos2 );
         delete *it;
         aSels.erase( it );
-        return true;
     }
-
-    return false;
 }
 
 MultiSelection::MultiSelection():
@@ -134,19 +131,6 @@ MultiSelection& MultiSelection::operator= ( const MultiSelection& rOrig )
     nSelCount = rOrig.nSelCount;
 
     return *this;
-}
-
-bool MultiSelection::operator== ( MultiSelection& rWith )
-{
-    if ( aTotRange != rWith.aTotRange || nSelCount != rWith.nSelCount ||
-         aSels.size() != rWith.aSels.size() )
-        return false;
-
-    // compare the sub selections
-    for ( size_t n = 0; n < aSels.size(); ++n )
-        if ( *aSels[ n ] != *rWith.aSels[ n ] )
-            return false;
-    return true;
 }
 
 void MultiSelection::SelectAll( bool bSelect )
@@ -448,26 +432,14 @@ long MultiSelection::ImplFwdUnselected()
         return SFX_ENDOFSELECTION;
 }
 
-long MultiSelection::FirstSelected( bool bInverse )
+long MultiSelection::FirstSelected()
 {
-    bInverseCur = bInverse;
+    bInverseCur = false;
     nCurSubSel = 0;
 
-    if ( bInverseCur )
-    {
-        bCurValid = nSelCount < sal_uIntPtr(aTotRange.Len());
-        if ( bCurValid )
-        {
-            nCurIndex = 0;
-            return ImplFwdUnselected();
-        }
-    }
-    else
-    {
-        bCurValid = !aSels.empty();
-        if ( bCurValid )
-            return nCurIndex = aSels[ 0 ]->Min();
-    }
+    bCurValid = !aSels.empty();
+    if ( bCurValid )
+        return nCurIndex = aSels[ 0 ]->Min();
 
     return SFX_ENDOFSELECTION;
 }
@@ -589,22 +561,19 @@ bool StringRangeEnumerator::checkValue( sal_Int32 i_nValue, const std::set< sal_
     return true;
 }
 
-bool StringRangeEnumerator::insertRange( sal_Int32 i_nFirst, sal_Int32 i_nLast, bool bSequence, bool bMayAdjust )
+bool StringRangeEnumerator::insertRange( sal_Int32 i_nFirst, sal_Int32 i_nLast, bool bSequence )
 {
     bool bSuccess = true;
     if( bSequence )
     {
-        if( bMayAdjust )
-        {
-            if( i_nFirst < mnMin )
-                i_nFirst = mnMin;
-            if( i_nFirst > mnMax )
-                i_nFirst = mnMax;
-            if( i_nLast < mnMin )
-                i_nLast = mnMin;
-            if( i_nLast > mnMax )
-                i_nLast = mnMax;
-        }
+        if( i_nFirst < mnMin )
+            i_nFirst = mnMin;
+        if( i_nFirst > mnMax )
+            i_nFirst = mnMax;
+        if( i_nLast < mnMin )
+            i_nLast = mnMin;
+        if( i_nLast > mnMax )
+            i_nLast = mnMax;
         if( checkValue( i_nFirst ) && checkValue( i_nLast ) )
         {
             maSequence.push_back( Range( i_nFirst, i_nLast ) );
@@ -635,14 +604,14 @@ bool StringRangeEnumerator::insertRange( sal_Int32 i_nFirst, sal_Int32 i_nLast, 
 }
 
 bool StringRangeEnumerator::insertJoinedRanges(
-    const std::vector< sal_Int32 >& rNumbers, bool i_bStrict )
+    const std::vector< sal_Int32 >& rNumbers )
 {
     size_t nCount = rNumbers.size();
     if( nCount == 0 )
         return true;
 
     if( nCount == 1 )
-        return insertRange( rNumbers[0], -1, false, ! i_bStrict );
+        return insertRange( rNumbers[0], -1, false );
 
     for( size_t i = 0; i < nCount - 1; i++ )
     {
@@ -654,14 +623,13 @@ bool StringRangeEnumerator::insertJoinedRanges(
             else if( nFirst < nLast ) nFirst++;
         }
 
-        if ( ! insertRange( nFirst, nLast, nFirst != nLast, ! i_bStrict ) && i_bStrict)
-            return false;
+        insertRange( nFirst, nLast, nFirst != nLast );
     }
 
     return true;
 }
 
-bool StringRangeEnumerator::setRange( const OUString& i_rNewRange, bool i_bStrict )
+bool StringRangeEnumerator::setRange( const OUString& i_rNewRange )
 {
     mnCount = 0;
     maSequence.clear();
@@ -691,8 +659,7 @@ bool StringRangeEnumerator::setRange( const OUString& i_rNewRange, bool i_bStric
         {
             if( bSequence && !aNumbers.empty() )
                 aNumbers.push_back( mnMax );
-            if( ! insertJoinedRanges( aNumbers, i_bStrict ) && i_bStrict )
-                return false;
+            insertJoinedRanges( aNumbers );
 
             aNumbers.clear();
             bSequence = false;
@@ -706,8 +673,7 @@ bool StringRangeEnumerator::setRange( const OUString& i_rNewRange, bool i_bStric
     // insert last entries
     if( bSequence && !aNumbers.empty() )
         aNumbers.push_back( mnMax );
-    if( ! insertJoinedRanges( aNumbers, i_bStrict ) && i_bStrict )
-        return false;
+    insertJoinedRanges( aNumbers );
 
     return true;
 }

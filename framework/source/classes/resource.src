@@ -116,7 +116,7 @@ String STR_CLEAR_RECENT_FILES_HELP
 
 String STR_OPEN_REMOTE
 {
-    Text [ en-US ] = "Open remote file";
+    Text [ en-US ] = "Open Remote File";
 };
 
 String STR_REMOTE_TITLE
@@ -203,6 +203,15 @@ String STR_SET_LANGUAGE_FOR_ALL_TEXT
 String STR_LANGSTATUS_HINT
 {
     Text [ en-US ] = "Text Language. Right-click to set character or paragraph language" ;
+};
+
+Image IMG_SAVEMODIFIED_SMALL
+{
+    ImageBitmap = Bitmap{File = "savemodified_small.png";};
+};
+Image IMG_SAVEMODIFIED_LARGE
+{
+    ImageBitmap = Bitmap{File = "savemodified_large.png";};
 };
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

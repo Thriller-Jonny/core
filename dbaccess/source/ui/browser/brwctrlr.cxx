@@ -135,7 +135,7 @@ class OParameterContinuation : public OInteraction< XInteractionSupplyParameters
 public:
     OParameterContinuation() { }
 
-    Sequence< PropertyValue >   getValues() const { return m_aValues; }
+    const Sequence< PropertyValue >&  getValues() const { return m_aValues; }
 
 // XInteractionSupplyParameters
     virtual void SAL_CALL setParameters( const Sequence< PropertyValue >& _rValues ) throw(RuntimeException, std::exception) override;
@@ -154,7 +154,7 @@ class SbaXDataBrowserController::FormControllerImpl
                                          css::frame::XFrameActionListener >
 {
     friend class SbaXDataBrowserController;
-    ::cppu::OInterfaceContainerHelper   m_aActivateListeners;
+    ::comphelper::OInterfaceContainerHelper2   m_aActivateListeners;
     SbaXDataBrowserController*          m_pOwner;
 
 public:
@@ -165,7 +165,7 @@ public:
     virtual css::uno::Reference< css::awt::XControl >  SAL_CALL getCurrentControl() throw( css::uno::RuntimeException, std::exception ) override;
     virtual void SAL_CALL addActivateListener(const css::uno::Reference< css::form::XFormControllerListener > & l) throw( css::uno::RuntimeException, std::exception ) override;
     virtual void SAL_CALL removeActivateListener(const css::uno::Reference< css::form::XFormControllerListener > & l) throw( css::uno::RuntimeException, std::exception ) override;
-    virtual void SAL_CALL addChildController( const css::uno::Reference< css::form::runtime::XFormController >& _ChildController ) throw( css::uno::RuntimeException, css::lang::IllegalArgumentException, std::exception ) override;
+    virtual void SAL_CALL addChildController( const css::uno::Reference< css::form::runtime::XFormController >& ChildController ) throw( css::uno::RuntimeException, css::lang::IllegalArgumentException, std::exception ) override;
     virtual css::uno::Reference< css::form::runtime::XFormControllerContext > SAL_CALL getContext() throw (css::uno::RuntimeException, std::exception) override;
     virtual void SAL_CALL setContext( const css::uno::Reference< css::form::runtime::XFormControllerContext >& _context ) throw (css::uno::RuntimeException, std::exception) override;
     virtual css::uno::Reference< css::task::XInteractionHandler > SAL_CALL getInteractionHandler() throw (css::uno::RuntimeException, std::exception) override;
@@ -224,7 +224,7 @@ public:
     // XTabController, base of XFormController
     virtual void SAL_CALL setModel(const css::uno::Reference< css::awt::XTabControllerModel > & Model) throw( css::uno::RuntimeException, std::exception ) override;
     virtual css::uno::Reference< css::awt::XTabControllerModel >  SAL_CALL getModel() throw( css::uno::RuntimeException, std::exception ) override;
-    virtual void SAL_CALL setContainer(const css::uno::Reference< css::awt::XControlContainer > & _Container) throw( css::uno::RuntimeException, std::exception ) override;
+    virtual void SAL_CALL setContainer(const css::uno::Reference< css::awt::XControlContainer > & Container) throw( css::uno::RuntimeException, std::exception ) override;
     virtual css::uno::Reference< css::awt::XControlContainer >  SAL_CALL getContainer() throw( css::uno::RuntimeException, std::exception ) override;
     virtual css::uno::Sequence< css::uno::Reference< css::awt::XControl >  > SAL_CALL getControls() throw( css::uno::RuntimeException, std::exception ) override;
     virtual void SAL_CALL autoTabOrder() throw( css::uno::RuntimeException, std::exception ) override;
@@ -275,7 +275,7 @@ void SAL_CALL SbaXDataBrowserController::FormControllerImpl::removeActivateListe
     m_aActivateListeners.removeInterface(l);
 }
 
-void SAL_CALL SbaXDataBrowserController::FormControllerImpl::addChildController( const Reference< runtime::XFormController >& /*_ChildController*/ ) throw( RuntimeException, IllegalArgumentException, std::exception )
+void SAL_CALL SbaXDataBrowserController::FormControllerImpl::addChildController( const Reference< runtime::XFormController >& ) throw( RuntimeException, IllegalArgumentException, std::exception )
 {
     // not supported
     throw IllegalArgumentException( OUString(), *this, 1 );
@@ -449,7 +449,7 @@ Reference< css::awt::XTabControllerModel >  SAL_CALL SbaXDataBrowserController::
     return Reference< XTabControllerModel >(m_pOwner->getRowSet(), UNO_QUERY);
 }
 
-void SAL_CALL SbaXDataBrowserController::FormControllerImpl::setContainer(const Reference< css::awt::XControlContainer > & /*_Container*/) throw( RuntimeException, std::exception )
+void SAL_CALL SbaXDataBrowserController::FormControllerImpl::setContainer(const Reference< css::awt::XControlContainer > &) throw( RuntimeException, std::exception )
 {
     SAL_WARN("dbaccess.ui","SbaXDataBrowserController::FormControllerImpl::setContainer : invalid call, can't change my container !");
 }
@@ -935,7 +935,7 @@ void SAL_CALL SbaXDataBrowserController::focusGained(const FocusEvent& /*e*/) th
 {
     // notify our activate listeners (registered on the form controller aggregate)
     EventObject aEvt(*this);
-    ::cppu::OInterfaceIteratorHelper aIter(m_pFormControllerImpl->m_aActivateListeners);
+    ::comphelper::OInterfaceIteratorHelper2 aIter(m_pFormControllerImpl->m_aActivateListeners);
     while (aIter.hasMoreElements())
         static_cast<XFormControllerListener*>(aIter.next())->formActivated(aEvt);
 }
@@ -961,7 +961,7 @@ void SAL_CALL SbaXDataBrowserController::focusLost(const FocusEvent& e) throw( R
 
     // notify the listeners that the "form" we represent has been deactivated
     EventObject aEvt(*this);
-    ::cppu::OInterfaceIteratorHelper aIter(m_pFormControllerImpl->m_aActivateListeners);
+    ::comphelper::OInterfaceIteratorHelper2 aIter(m_pFormControllerImpl->m_aActivateListeners);
     while (aIter.hasMoreElements())
         static_cast<XFormControllerListener*>(aIter.next())->formDeactivated(aEvt);
 
@@ -1054,10 +1054,10 @@ void SbaXDataBrowserController::disposing(const EventObject& Source) throw( Runt
     SbaXDataBrowserController_Base::OGenericUnoController::disposing( Source );
 }
 
-void SAL_CALL SbaXDataBrowserController::setIdentifier( const OUString& _Identifier ) throw (RuntimeException, std::exception)
+void SAL_CALL SbaXDataBrowserController::setIdentifier( const OUString& Identifier ) throw (RuntimeException, std::exception)
 {
     ::osl::MutexGuard aGuard( getMutex() );
-    m_sModuleIdentifier = _Identifier;
+    m_sModuleIdentifier = Identifier;
 }
 
 OUString SAL_CALL SbaXDataBrowserController::getIdentifier(  ) throw (RuntimeException, std::exception)
@@ -1300,7 +1300,7 @@ sal_Bool SbaXDataBrowserController::approveParameter(const css::form::DatabasePa
     {
         // not my data source -> allow anything
         SAL_WARN("dbaccess.ui","SbaXDataBrowserController::approveParameter : invalid event source !");
-        return sal_True;
+        return true;
     }
 
     Reference< css::container::XIndexAccess >  xParameters = aEvent.Parameters;
@@ -1329,7 +1329,7 @@ sal_Bool SbaXDataBrowserController::approveParameter(const css::form::DatabasePa
         if (!pParamValues->wasSelected())
         {   // canceled
             setLoadingCancelled();
-            return sal_False;
+            return false;
         }
 
         // transfer the values into the parameter supplier
@@ -1338,7 +1338,7 @@ sal_Bool SbaXDataBrowserController::approveParameter(const css::form::DatabasePa
         {
             SAL_WARN("dbaccess.ui","SbaXDataBrowserController::approveParameter: the InteractionHandler returned nonsense!");
             setLoadingCancelled();
-            return sal_False;
+            return false;
         }
         const PropertyValue* pFinalValues = aFinalValues.getConstArray();
         for (sal_Int32 i=0; i<aFinalValues.getLength(); ++i, ++pFinalValues)
@@ -1366,12 +1366,12 @@ sal_Bool SbaXDataBrowserController::approveParameter(const css::form::DatabasePa
         DBG_UNHANDLED_EXCEPTION();
     }
 
-    return sal_True;
+    return true;
 }
 
 sal_Bool SbaXDataBrowserController::approveReset(const css::lang::EventObject& /*rEvent*/) throw( RuntimeException, std::exception )
 {
-    return sal_True;
+    return true;
 }
 
 void SbaXDataBrowserController::resetted(const css::lang::EventObject& rEvent) throw( RuntimeException, std::exception )
@@ -1384,9 +1384,9 @@ void SbaXDataBrowserController::resetted(const css::lang::EventObject& rEvent) t
 sal_Bool SbaXDataBrowserController::confirmDelete(const css::sdb::RowChangeEvent& /*aEvent*/) throw( RuntimeException, std::exception )
 {
     if (ScopedVclPtrInstance<MessageDialog>::Create(getBrowserView(), ModuleRes(STR_QUERY_BRW_DELETE_ROWS), VCL_MESSAGE_QUESTION, VCL_BUTTONS_YES_NO)->Execute() != RET_YES)
-        return sal_False;
+        return false;
 
-    return sal_True;
+    return true;
 }
 
 FeatureState SbaXDataBrowserController::GetState(sal_uInt16 nId) const
@@ -1470,7 +1470,7 @@ FeatureState SbaXDataBrowserController::GetState(sal_uInt16 nId) const
                     aReturn.bEnabled = m_aCurrentFrame.isActive();
                     break;
                 }
-                // run through
+                SAL_FALLTHROUGH;
             case ID_BROWSER_PASTE:
             case ID_BROWSER_CUT:
             {
@@ -1526,7 +1526,7 @@ FeatureState SbaXDataBrowserController::GetState(sal_uInt16 nId) const
                     aReturn.bEnabled = true;
                     break;
                 }
-                // no break
+                SAL_FALLTHROUGH;
             case ID_BROWSER_ORDERCRIT:
                 {
                     const Reference< XPropertySet >  xFormSet(getRowSet(), UNO_QUERY);
@@ -1671,7 +1671,7 @@ void SbaXDataBrowserController::applyParserFilter(const OUString& _rOldFilter, b
         FormErrorHelper aError(this);
         xFormSet->setPropertyValue(PROPERTY_FILTER, makeAny(_xParser->getFilter()));
         xFormSet->setPropertyValue(PROPERTY_HAVING_CLAUSE, makeAny(_xParser->getHavingClause()));
-        xFormSet->setPropertyValue(PROPERTY_APPLYFILTER, ::comphelper::makeBoolAny(true));
+        xFormSet->setPropertyValue(PROPERTY_APPLYFILTER, css::uno::Any(true));
 
         bSuccess = reloadForm(m_xLoadable);
     }
@@ -1683,7 +1683,7 @@ void SbaXDataBrowserController::applyParserFilter(const OUString& _rOldFilter, b
     {
         xFormSet->setPropertyValue(PROPERTY_FILTER, makeAny(_rOldFilter));
         xFormSet->setPropertyValue(PROPERTY_HAVING_CLAUSE, makeAny(_sOldHaving));
-        xFormSet->setPropertyValue(PROPERTY_APPLYFILTER, ::comphelper::makeBoolAny(_bOldFilterApplied));
+        xFormSet->setPropertyValue(PROPERTY_APPLYFILTER, css::uno::Any(_bOldFilterApplied));
 
         try
         {
@@ -1834,8 +1834,8 @@ void SbaXDataBrowserController::ExecuteSearch()
     // prohibit the synchronization of the grid's display with the cursor's position
     Reference< XPropertySet >  xModelSet(getControlModel(), UNO_QUERY);
     OSL_ENSURE(xModelSet.is(), "SbaXDataBrowserController::ExecuteSearch : no model set ?!");
-    xModelSet->setPropertyValue("DisplayIsSynchron", ::comphelper::makeBoolAny(false));
-    xModelSet->setPropertyValue("AlwaysShowCursor", ::comphelper::makeBoolAny(true));
+    xModelSet->setPropertyValue("DisplayIsSynchron", css::uno::Any(false));
+    xModelSet->setPropertyValue("AlwaysShowCursor", css::uno::Any(true));
     xModelSet->setPropertyValue("CursorColor", makeAny(sal_Int32(COL_LIGHTRED)));
 
     Reference< css::util::XNumberFormatsSupplier >  xNFS(::dbtools::getNumberFormats(::dbtools::getConnection(m_xRowSet), true, getORB()));
@@ -1859,8 +1859,8 @@ void SbaXDataBrowserController::ExecuteSearch()
     }
 
     // restore the grid's normal operating state
-    xModelSet->setPropertyValue("DisplayIsSynchron", ::comphelper::makeBoolAny(true));
-    xModelSet->setPropertyValue("AlwaysShowCursor", ::comphelper::makeBoolAny(false));
+    xModelSet->setPropertyValue("DisplayIsSynchron", css::uno::Any(true));
+    xModelSet->setPropertyValue("AlwaysShowCursor", css::uno::Any(false));
     xModelSet->setPropertyValue("CursorColor", Any());
 }
 
@@ -1912,7 +1912,7 @@ void SbaXDataBrowserController::Execute(sal_uInt16 nId, const Sequence< Property
             {
                 Reference< XPropertySet >  xActiveSet(getRowSet(), UNO_QUERY);
                 bool bApplied = ::comphelper::getBOOL(xActiveSet->getPropertyValue(PROPERTY_APPLYFILTER));
-                xActiveSet->setPropertyValue(PROPERTY_APPLYFILTER, ::comphelper::makeBoolAny(!bApplied));
+                xActiveSet->setPropertyValue(PROPERTY_APPLYFILTER, css::uno::Any(!bApplied));
                 reloadForm(m_xLoadable);
             }
             InvalidateFeature(ID_BROWSER_FILTERED);
@@ -1950,7 +1950,7 @@ void SbaXDataBrowserController::Execute(sal_uInt16 nId, const Sequence< Property
                 getBrowserView()->getVclControl()->CopySelectedRowsToClipboard();
                 break;
             }
-            // run through
+            SAL_FALLTHROUGH;
         case ID_BROWSER_CUT:
         case ID_BROWSER_PASTE:
         {
@@ -1978,7 +1978,7 @@ void SbaXDataBrowserController::Execute(sal_uInt16 nId, const Sequence< Property
 
         case ID_BROWSER_SORTDOWN:
             bSortUp = false;
-            // DON'T break
+            SAL_FALLTHROUGH;
         case ID_BROWSER_SORTUP:
         {
             if (!SaveModified())
@@ -2053,7 +2053,7 @@ void SbaXDataBrowserController::Execute(sal_uInt16 nId, const Sequence< Property
             if ( bHaving )
             {
                 HANDLE_SQL_ERRORS(
-                    xParser->appendHavingClauseByColumn(xField,sal_True,nOp),
+                    xParser->appendHavingClauseByColumn(xField,true,nOp),
                     bParserSuccess,
                     ModuleRes(SBA_BROWSER_SETTING_FILTER).toString(),
                     "SbaXDataBrowserController::Execute : caught an exception while composing the new filter !"
@@ -2062,7 +2062,7 @@ void SbaXDataBrowserController::Execute(sal_uInt16 nId, const Sequence< Property
             else
             {
                 HANDLE_SQL_ERRORS(
-                    xParser->appendFilterByColumn(xField,sal_True,nOp),
+                    xParser->appendFilterByColumn(xField,true,nOp),
                     bParserSuccess,
                     ModuleRes(SBA_BROWSER_SETTING_FILTER).toString(),
                     "SbaXDataBrowserController::Execute : caught an exception while composing the new filter !"
@@ -2092,7 +2092,7 @@ void SbaXDataBrowserController::Execute(sal_uInt16 nId, const Sequence< Property
                 break;
 
             bool bNeedPostReload = preReloadForm();
-            // reset the filter and the sort property simutaneously so only _one_ new statement has to be
+            // reset the filter and the sort property simultaneously so only _one_ new statement has to be
             // sent
             Reference< XPropertySet >  xSet(getRowSet(), UNO_QUERY);
             if ( xSet.is() )
@@ -2287,7 +2287,7 @@ IMPL_LINK_TYPED(SbaXDataBrowserController, OnInvalidateClipboard, Timer*, _pTime
     InvalidateFeature(ID_BROWSER_COPY);
 
     // if the invalidation was triggered by the timer, we do not need to invalidate PASTE.
-    // The timer is only for checking the CUT/COPY slots regulariry, which depend on the
+    // The timer is only for checking the CUT/COPY slots regulary, which depend on the
     // selection state of the active cell
     // TODO: get a callback at the Edit which allows to be notified when the selection
     // changes. This would be much better than this cycle-eating polling mechanism here ....
@@ -2295,18 +2295,15 @@ IMPL_LINK_TYPED(SbaXDataBrowserController, OnInvalidateClipboard, Timer*, _pTime
         InvalidateFeature(ID_BROWSER_PASTE);
 }
 
-Reference< XPropertySet >  SbaXDataBrowserController::getBoundField(sal_uInt16 nViewPos) const
+Reference< XPropertySet >  SbaXDataBrowserController::getBoundField() const
 {
     Reference< XPropertySet >  xEmptyReturn;
 
     // get the current column from the grid
-    if (nViewPos == (sal_uInt16)-1)
-    {
-        Reference< css::form::XGrid >  xGrid(getBrowserView()->getGridControl(), UNO_QUERY);
-        if (!xGrid.is())
+    Reference< css::form::XGrid >  xGrid(getBrowserView()->getGridControl(), UNO_QUERY);
+    if (!xGrid.is())
             return xEmptyReturn;
-        nViewPos = xGrid->getCurrentColumnPosition();
-    }
+    sal_uInt16 nViewPos = xGrid->getCurrentColumnPosition();
     sal_uInt16 nCurrentCol = getBrowserView()->View2ModelPos(nViewPos);
     if (nCurrentCol == (sal_uInt16)-1)
         return xEmptyReturn;
@@ -2375,11 +2372,11 @@ IMPL_LINK_TYPED(SbaXDataBrowserController, OnFoundData, FmFoundRecordInformation
     // move the cursor
     xCursor->moveToBookmark(rInfo.aPosition);
 
-    // let the grid snyc it's display with the cursor
+    // let the grid sync its display with the cursor
     Reference< XPropertySet >  xModelSet(getControlModel(), UNO_QUERY);
     OSL_ENSURE(xModelSet.is(), "SbaXDataBrowserController::OnFoundData : no model set ?!");
     Any aOld = xModelSet->getPropertyValue("DisplayIsSynchron");
-    xModelSet->setPropertyValue("DisplayIsSynchron", ::comphelper::makeBoolAny(true));
+    xModelSet->setPropertyValue("DisplayIsSynchron", css::uno::Any(true));
     xModelSet->setPropertyValue("DisplayIsSynchron", aOld);
 
     // and move to the field
@@ -2423,7 +2420,7 @@ IMPL_LINK_TYPED(SbaXDataBrowserController, OnCanceledNotFound, FmFoundRecordInfo
         Reference< XPropertySet >  xModelSet(getControlModel(), UNO_QUERY);
         OSL_ENSURE(xModelSet.is(), "SbaXDataBrowserController::OnCanceledNotFound : no model set ?!");
         Any aOld = xModelSet->getPropertyValue("DisplayIsSynchron");
-        xModelSet->setPropertyValue("DisplayIsSynchron", ::comphelper::makeBoolAny(true));
+        xModelSet->setPropertyValue("DisplayIsSynchron", css::uno::Any(true));
         xModelSet->setPropertyValue("DisplayIsSynchron", aOld);
     }
     catch( const Exception& )
@@ -2464,7 +2461,7 @@ void SbaXDataBrowserController::LoadFinished(bool /*bWasSynch*/)
         }
 
         // switch the control to alive mode
-        getBrowserView()->getGridControl()->setDesignMode(sal_False);
+        getBrowserView()->getGridControl()->setDesignMode(false);
 
         initializeParser();
 
@@ -2500,7 +2497,7 @@ void SbaXDataBrowserController::initializeParser() const
 void SbaXDataBrowserController::loaded(const EventObject& /*aEvent*/) throw( RuntimeException, std::exception )
 {
     // not interested in
-    // we're loading within an separate thread and have a handling  for it's "finished event"
+    // we're loading within an separate thread and have a handling for its "finished event"
 }
 
 void SbaXDataBrowserController::unloading(const EventObject& /*aEvent*/) throw( RuntimeException, std::exception )

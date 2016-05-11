@@ -31,7 +31,6 @@ using namespace ::com::sun::star::accessibility;
 using namespace ::comphelper;
 
 
-
 //  class VCLXAccessibleStatusBar
 
 
@@ -45,11 +44,9 @@ VCLXAccessibleStatusBar::VCLXAccessibleStatusBar( VCLXWindow* pVCLXWindow )
 }
 
 
-
 VCLXAccessibleStatusBar::~VCLXAccessibleStatusBar()
 {
 }
-
 
 
 void VCLXAccessibleStatusBar::UpdateShowing( sal_Int32 i, bool bShowing )
@@ -65,7 +62,6 @@ void VCLXAccessibleStatusBar::UpdateShowing( sal_Int32 i, bool bShowing )
         }
     }
 }
-
 
 
 void VCLXAccessibleStatusBar::UpdateItemName( sal_Int32 i )
@@ -86,7 +82,6 @@ void VCLXAccessibleStatusBar::UpdateItemName( sal_Int32 i )
 }
 
 
-
 void VCLXAccessibleStatusBar::UpdateItemText( sal_Int32 i )
 {
     if ( i >= 0 && i < (sal_Int32)m_aAccessibleChildren.size() )
@@ -103,7 +98,6 @@ void VCLXAccessibleStatusBar::UpdateItemText( sal_Int32 i )
         }
     }
 }
-
 
 
 void VCLXAccessibleStatusBar::InsertChild( sal_Int32 i )
@@ -123,7 +117,6 @@ void VCLXAccessibleStatusBar::InsertChild( sal_Int32 i )
         }
     }
 }
-
 
 
 void VCLXAccessibleStatusBar::RemoveChild( sal_Int32 i )
@@ -149,7 +142,6 @@ void VCLXAccessibleStatusBar::RemoveChild( sal_Int32 i )
         }
     }
 }
-
 
 
 void VCLXAccessibleStatusBar::ProcessWindowEvent( const VclWindowEvent& rVclWindowEvent )
@@ -237,9 +229,9 @@ void VCLXAccessibleStatusBar::ProcessWindowEvent( const VclWindowEvent& rVclWind
                 m_pStatusBar = nullptr;
 
                 // dispose all children
-                for ( size_t i = 0; i < m_aAccessibleChildren.size(); ++i )
+                for (Reference<XAccessible>& i : m_aAccessibleChildren)
                 {
-                    Reference< XComponent > xComponent( m_aAccessibleChildren[i], UNO_QUERY );
+                    Reference< XComponent > xComponent( i, UNO_QUERY );
                     if ( xComponent.is() )
                         xComponent->dispose();
                 }
@@ -267,9 +259,9 @@ void VCLXAccessibleStatusBar::disposing()
         m_pStatusBar = nullptr;
 
         // dispose all children
-        for ( size_t i = 0; i < m_aAccessibleChildren.size(); ++i )
+        for (Reference<XAccessible>& i : m_aAccessibleChildren)
         {
-            Reference< XComponent > xComponent( m_aAccessibleChildren[i], UNO_QUERY );
+            Reference< XComponent > xComponent( i, UNO_QUERY );
             if ( xComponent.is() )
                 xComponent->dispose();
         }
@@ -285,7 +277,6 @@ OUString VCLXAccessibleStatusBar::getImplementationName() throw (RuntimeExceptio
 {
     return OUString( "com.sun.star.comp.toolkit.AccessibleStatusBar" );
 }
-
 
 
 Sequence< OUString > VCLXAccessibleStatusBar::getSupportedServiceNames() throw (RuntimeException, std::exception)
@@ -304,7 +295,6 @@ sal_Int32 VCLXAccessibleStatusBar::getAccessibleChildCount() throw (RuntimeExcep
 
     return m_aAccessibleChildren.size();
 }
-
 
 
 Reference< XAccessible > VCLXAccessibleStatusBar::getAccessibleChild( sal_Int32 i ) throw (IndexOutOfBoundsException, RuntimeException, std::exception)
@@ -350,7 +340,6 @@ Reference< XAccessible > VCLXAccessibleStatusBar::getAccessibleAtPoint( const aw
 
     return xChild;
 }
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

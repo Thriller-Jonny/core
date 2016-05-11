@@ -112,8 +112,7 @@ public:
     ViewShell (
         SfxViewFrame *pFrame,
         vcl::Window* pParentWindow,
-        ViewShellBase& rViewShellBase,
-        bool bAllowCenter = true);
+        ViewShellBase& rViewShellBase);
     virtual ~ViewShell();
 
     /** The Init method has to be called from the outside directly
@@ -243,9 +242,9 @@ public:
     */
     virtual SdPage* getCurrentPage() const = 0;
 
-    rtl::Reference<FuPoor> GetOldFunction() const { return mxOldFunction; }
+    const rtl::Reference<FuPoor>& GetOldFunction() const { return mxOldFunction; }
     bool HasOldFunction() const { return mxOldFunction.is(); }
-    rtl::Reference<FuPoor> GetCurrentFunction() const { return mxCurrentFunction; }
+    const rtl::Reference<FuPoor>& GetCurrentFunction() const { return mxCurrentFunction; }
     bool HasCurrentFunction( sal_uInt16 nSID ) { return mxCurrentFunction.is() && (mxCurrentFunction->GetSlotID() == nSID ); }
     bool HasCurrentFunction() { return mxCurrentFunction.is(); }
 
@@ -293,12 +292,12 @@ public:
     virtual css::uno::Reference<css::accessibility::XAccessible>
         CreateAccessibleDocumentView (::sd::Window* pWindow);
 
-    virtual void SwitchViewFireFocus( css::uno::Reference< css::accessibility::XAccessible > xAcc );
+    virtual void SwitchViewFireFocus( const css::uno::Reference< css::accessibility::XAccessible >& xAcc );
     void SwitchActiveViewFireFocus( );
     // Move these two methods from DrawViewShell to enable slide show view
     void    NotifyAccUpdate();
     void    fireSwitchCurrentPage(sal_Int32 pageIndex);
-    void SetWinViewPos(const Point& rWinPos, bool bUpdate);
+    void SetWinViewPos(const Point& rWinPos);
     Point GetWinViewPos() const;
     Point GetViewOrigin() const;
 
@@ -329,28 +328,7 @@ public:
     */
     virtual void Resize();
 
-    /** Set the position and size of the area which contains the GUI
-        elements like rulers, sliders, and buttons as well as the document
-        view.  Both size and position are expected to be in pixel
-        coordinates.  The positions and sizes of the mentioned GUI elements
-        are updated as well.
-
-        <p> This method is implemented by first setting copying the given
-        values to internal variables and then calling the
-        <type>ArrangeGUIElements</type> method which performs the actual
-        work of sizeing and arranging the UI elements accordingly.</p>
-        @param rPos
-            The position of the enclosing window relative to the document
-            window.  This is only interesting if a Draw/Impress document
-            view is embedded as OLE object into another document view.  For
-            normal documents this position is (0,0).
-        @param rSize
-            The new size in pixel.
-    */
-    // This is to be replaced by Resize.
-    //  virtual void AdjustPosSizePixel(const Point &rPos, const Size &rSize);
-
-    /** Set position and size of the GUI elements that are controllerd by
+    /** Set position and size of the GUI elements that are controlled by
         the view shell like rulers and scroll bars as well as the actual
         document view according to the position and size that were given
         with the last Resize() call.
@@ -531,11 +509,11 @@ protected:
     DECL_LINK_TYPED( VScrollHdl, ScrollBar *, void );
 
     // virtual scroll handler, here, derivative classes can add themselves here
-    virtual long VirtHScrollHdl(ScrollBar* pHScroll);
-    virtual long VirtVScrollHdl(ScrollBar* pVScroll);
+    virtual void VirtHScrollHdl(ScrollBar* pHScroll);
+    virtual void VirtVScrollHdl(ScrollBar* pVScroll);
 
     // virtual functions ruler handling
-    virtual SvxRuler* CreateHRuler(::sd::Window* pWin, bool bIsFirst);
+    virtual SvxRuler* CreateHRuler(::sd::Window* pWin);
     virtual SvxRuler* CreateVRuler(::sd::Window* pWin);
     virtual void UpdateHRuler();
     virtual void UpdateVRuler();

@@ -7,7 +7,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include <com/sun/star/uno/Reference.h>
 #include <com/sun/star/uno/XComponentContext.hpp>
 #include <cppuhelper/supportsservice.hxx>
 
@@ -16,8 +15,6 @@
 
 #include "VisioImportFilter.hxx"
 
-using com::sun::star::uno::Reference;
-using com::sun::star::uno::Exception;
 using com::sun::star::uno::RuntimeException;
 using com::sun::star::uno::Sequence;
 using com::sun::star::uno::XComponentContext;
@@ -39,14 +36,21 @@ bool VisioImportFilter::doDetectFormat(librevenge::RVNGInputStream &rInput, OUSt
     return false;
 }
 
-OUString VisioImportFilter_getImplementationName()
-throw (RuntimeException)
+// XServiceInfo
+OUString SAL_CALL VisioImportFilter::getImplementationName()
+throw (RuntimeException, std::exception)
 {
     return OUString("com.sun.star.comp.Draw.VisioImportFilter");
 }
 
-Sequence< OUString > SAL_CALL VisioImportFilter_getSupportedServiceNames()
-throw (RuntimeException)
+sal_Bool SAL_CALL VisioImportFilter::supportsService(const OUString &rServiceName)
+throw (RuntimeException, std::exception)
+{
+    return cppu::supportsService(this, rServiceName);
+}
+
+Sequence< OUString > SAL_CALL VisioImportFilter::getSupportedServiceNames()
+throw (RuntimeException, std::exception)
 {
     Sequence < OUString > aRet(2);
     OUString *pArray = aRet.getArray();
@@ -55,27 +59,13 @@ throw (RuntimeException)
     return aRet;
 }
 
-Reference< XInterface > SAL_CALL VisioImportFilter_createInstance(const Reference< XComponentContext > &rContext)
-throw(Exception)
+extern "C"
+SAL_DLLPUBLIC_EXPORT css::uno::XInterface *SAL_CALL
+com_sun_star_comp_Draw_VisioImportFilter_get_implementation(
+    css::uno::XComponentContext *const context,
+    const css::uno::Sequence<css::uno::Any> &)
 {
-    return static_cast<cppu::OWeakObject *>(new VisioImportFilter(rContext));
-}
-
-// XServiceInfo
-OUString SAL_CALL VisioImportFilter::getImplementationName()
-throw (RuntimeException, std::exception)
-{
-    return VisioImportFilter_getImplementationName();
-}
-sal_Bool SAL_CALL VisioImportFilter::supportsService(const OUString &rServiceName)
-throw (RuntimeException, std::exception)
-{
-    return cppu::supportsService(this, rServiceName);
-}
-Sequence< OUString > SAL_CALL VisioImportFilter::getSupportedServiceNames()
-throw (RuntimeException, std::exception)
-{
-    return VisioImportFilter_getSupportedServiceNames();
+    return cppu::acquire(new VisioImportFilter(context));
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

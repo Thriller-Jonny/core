@@ -14,7 +14,9 @@
 #include <com/sun/star/awt/Key.hpp>
 #include <com/sun/star/awt/XReschedule.hpp>
 #include <com/sun/star/awt/Toolkit.hpp>
-#include <basebmp/bitmapdevice.hxx>
+#include <com/sun/star/drawing/XDrawPageSupplier.hpp>
+#include <com/sun/star/util/XModifiable.hpp>
+#include <com/sun/star/text/TextContentAnchorType.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <comphelper/processfactory.hxx>
 #include <sfx2/objsh.hxx>
@@ -27,8 +29,9 @@
 #include <svl/srchitem.hxx>
 #include <LibreOfficeKit/LibreOfficeKitEnums.h>
 #include <unotools/tempfile.hxx>
+#include <cairo.h>
 
-#include "../../inc/lib/init.hxx"
+#include <lib/init.hxx>
 
 using namespace com::sun::star;
 using namespace desktop;
@@ -36,7 +39,10 @@ using namespace desktop;
 class DesktopLOKTest : public UnoApiTest
 {
 public:
-    DesktopLOKTest() : UnoApiTest("/desktop/qa/data/")
+    DesktopLOKTest() : UnoApiTest("/desktop/qa/data/"),
+    m_nSelectionBeforeSearchResult(0),
+    m_nSelectionAfterSearchResult(0),
+    m_bModified(false)
     {
     }
 
@@ -67,14 +73,24 @@ public:
     void testGetFilterTypes();
     void testGetPartPageRectangles();
     void testSearchCalc();
+    void testSearchAllNotificationsCalc();
     void testPaintTile();
     void testSaveAs();
     void testSaveAsCalc();
     void testPasteWriter();
+    void testPasteWriterJPEG();
     void testRowColumnHeaders();
+    void testHiddenRowHeaders();
     void testCellCursor();
     void testCommandResult();
     void testWriterComments();
+    void testModifiedStatus();
+    void testSheetOperations();
+    void testSheetSelections();
+    void testContextMenuCalc();
+    void testContextMenuWriter();
+    void testContextMenuImpress();
+    void testNotificationCompression();
 
     CPPUNIT_TEST_SUITE(DesktopLOKTest);
     CPPUNIT_TEST(testGetStyles);
@@ -83,24 +99,44 @@ public:
     CPPUNIT_TEST(testGetFilterTypes);
     CPPUNIT_TEST(testGetPartPageRectangles);
     CPPUNIT_TEST(testSearchCalc);
+    CPPUNIT_TEST(testSearchAllNotificationsCalc);
     CPPUNIT_TEST(testPaintTile);
     CPPUNIT_TEST(testSaveAs);
     CPPUNIT_TEST(testSaveAsCalc);
     CPPUNIT_TEST(testPasteWriter);
+    CPPUNIT_TEST(testPasteWriterJPEG);
     CPPUNIT_TEST(testRowColumnHeaders);
+    CPPUNIT_TEST(testHiddenRowHeaders);
     CPPUNIT_TEST(testCellCursor);
     CPPUNIT_TEST(testCommandResult);
     CPPUNIT_TEST(testWriterComments);
+    CPPUNIT_TEST(testModifiedStatus);
+    CPPUNIT_TEST(testSheetOperations);
+    CPPUNIT_TEST(testSheetSelections);
+    CPPUNIT_TEST(testContextMenuCalc);
+    CPPUNIT_TEST(testContextMenuWriter);
+    CPPUNIT_TEST(testContextMenuImpress);
+    CPPUNIT_TEST(testNotificationCompression);
     CPPUNIT_TEST_SUITE_END();
 
     uno::Reference<lang::XComponent> mxComponent;
     OString m_aTextSelection;
     std::vector<OString> m_aSearchResultSelection;
     std::vector<int> m_aSearchResultPart;
+    int m_nSelectionBeforeSearchResult;
+    int m_nSelectionAfterSearchResult;
 
     // for testCommandResult
     osl::Condition m_aCommandResultCondition;
     OString m_aCommandResult;
+
+    // for testModifiedStatus
+    osl::Condition m_aStateChangedCondition;
+    bool m_bModified;
+
+    // for testContextMenu{Calc, Writer}
+    osl::Condition m_aContextMenuCondition;
+    boost::property_tree::ptree m_aContextMenuResult;
 };
 
 LibLODocument_Impl* DesktopLOKTest::loadDoc(const char* pName, LibreOfficeKitDocumentType eType)
@@ -115,6 +151,9 @@ LibLODocument_Impl* DesktopLOKTest::loadDoc(const char* pName, LibreOfficeKitDoc
         break;
     case LOK_DOCTYPE_SPREADSHEET:
         aService = "com.sun.star.sheet.SpreadsheetDocument";
+        break;
+    case LOK_DOCTYPE_PRESENTATION:
+        aService = "com.sun.star.presentation.PresentationDocument";
         break;
     default:
         CPPUNIT_ASSERT(false);
@@ -149,6 +188,10 @@ void DesktopLOKTest::callbackImpl(int nType, const char* pPayload)
     case LOK_CALLBACK_TEXT_SELECTION:
     {
         m_aTextSelection = pPayload;
+        if (m_aSearchResultSelection.empty())
+            ++m_nSelectionBeforeSearchResult;
+        else
+            ++m_nSelectionAfterSearchResult;
     }
     break;
     case LOK_CALLBACK_SEARCH_RESULT_SELECTION:
@@ -168,6 +211,25 @@ void DesktopLOKTest::callbackImpl(int nType, const char* pPayload)
     {
         m_aCommandResult = pPayload;
         m_aCommandResultCondition.set();
+    }
+    break;
+    case LOK_CALLBACK_STATE_CHANGED:
+    {
+        OString aPayload(pPayload);
+        OString aPrefix(".uno:ModifiedStatus=");
+        if (aPayload.startsWith(aPrefix))
+        {
+            m_bModified = aPayload.copy(aPrefix.getLength()).toBoolean();
+            m_aStateChangedCondition.set();
+        }
+    }
+    break;
+    case LOK_CALLBACK_CONTEXT_MENU:
+    {
+        m_aContextMenuResult.clear();
+        std::stringstream aStream(pPayload);
+        boost::property_tree::read_json(aStream, m_aContextMenuResult);
+        m_aContextMenuCondition.set();
     }
     break;
     }
@@ -293,6 +355,7 @@ void DesktopLOKTest::testSearchCalc()
         {"SearchItem.Command", uno::makeAny(static_cast<sal_uInt16>(SvxSearchCmd::FIND_ALL))},
     }));
     comphelper::dispatchCommand(".uno:ExecuteSearch", aPropertyValues);
+    Scheduler::ProcessEventsToIdle();
 
     std::vector<OString> aSelections;
     sal_Int32 nIndex = 0;
@@ -311,13 +374,37 @@ void DesktopLOKTest::testSearchCalc()
     comphelper::LibreOfficeKit::setActive(false);
 }
 
+void DesktopLOKTest::testSearchAllNotificationsCalc()
+{
+    LibLibreOffice_Impl aOffice;
+    comphelper::LibreOfficeKit::setActive();
+    LibLODocument_Impl* pDocument = loadDoc("search.ods");
+    pDocument->pClass->initializeForRendering(pDocument, nullptr);
+    pDocument->pClass->registerCallback(pDocument, &DesktopLOKTest::callback, this);
+
+    uno::Sequence<beans::PropertyValue> aPropertyValues(comphelper::InitPropertySequence(
+    {
+        {"SearchItem.SearchString", uno::makeAny(OUString("foo"))},
+        {"SearchItem.Backward", uno::makeAny(false)},
+        {"SearchItem.Command", uno::makeAny(static_cast<sal_uInt16>(SvxSearchCmd::FIND_ALL))},
+    }));
+    comphelper::dispatchCommand(".uno:ExecuteSearch", aPropertyValues);
+    Scheduler::ProcessEventsToIdle();
+
+    // This was 1, make sure that we get no notifications about selection changes during search.
+    CPPUNIT_ASSERT_EQUAL(0, m_nSelectionBeforeSearchResult);
+    // But we do get the selection afterwards.
+    CPPUNIT_ASSERT(m_nSelectionAfterSearchResult > 0);
+
+    comphelper::LibreOfficeKit::setActive(false);
+}
+
 void DesktopLOKTest::testPaintTile()
 {
     LibLODocument_Impl* pDocument = loadDoc("blank_text.odt");
     int nCanvasWidth = 100;
     int nCanvasHeight = 300;
-    sal_Int32 nStride = basebmp::getBitmapDeviceStrideForWidth(basebmp::Format::ThirtyTwoBitTcMaskBGRA,
-                                                               nCanvasWidth);
+    sal_Int32 nStride = cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, nCanvasWidth);
     std::vector<unsigned char> aBuffer(nStride * nCanvasHeight);
     int nTilePosX = 0;
     int nTilePosY = 0;
@@ -371,6 +458,41 @@ void DesktopLOKTest::testPasteWriter()
     CPPUNIT_ASSERT(!pDocument->pClass->paste(pDocument, "textt/plain;charset=utf-8", aText.getStr(), aText.getLength()));
     // Writer is expected to support text/html.
     CPPUNIT_ASSERT(pDocument->pClass->paste(pDocument, "text/html", aText.getStr(), aText.getLength()));
+
+    comphelper::LibreOfficeKit::setActive(false);
+}
+
+void DesktopLOKTest::testPasteWriterJPEG()
+{
+    comphelper::LibreOfficeKit::setActive();
+    LibLODocument_Impl* pDocument = loadDoc("blank_text.odt");
+
+    OUString aFileURL;
+    createFileURL("paste.jpg", aFileURL);
+    std::ifstream aImageStream(aFileURL.toUtf8().copy(strlen("file://")).getStr());
+    std::vector<char> aImageContents((std::istreambuf_iterator<char>(aImageStream)), std::istreambuf_iterator<char>());
+
+    CPPUNIT_ASSERT(pDocument->pClass->paste(pDocument, "image/jpeg", aImageContents.data(), aImageContents.size()));
+
+    uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(mxComponent, uno::UNO_QUERY);
+    uno::Reference<drawing::XDrawPage> xDrawPage = xDrawPageSupplier->getDrawPage();
+    // This was 0, JPEG was not handled as a format for clipboard paste.
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(1), xDrawPage->getCount());
+
+    uno::Reference<beans::XPropertySet> xShape(xDrawPage->getByIndex(0), uno::UNO_QUERY);
+    // This was text::TextContentAnchorType_AT_PARAGRAPH.
+    CPPUNIT_ASSERT_EQUAL(text::TextContentAnchorType_AS_CHARACTER, xShape->getPropertyValue("AnchorType").get<text::TextContentAnchorType>());
+
+    // Delete the pasted picture, and paste again with a custom anchor type.
+    uno::Reference<lang::XComponent>(xShape, uno::UNO_QUERY)->dispose();
+    uno::Sequence<beans::PropertyValue> aPropertyValues(comphelper::InitPropertySequence(
+    {
+        {"AnchorType", uno::makeAny(static_cast<sal_uInt16>(text::TextContentAnchorType_AT_CHARACTER))},
+    }));
+    comphelper::dispatchCommand(".uno:Paste", aPropertyValues);
+    xShape.set(xDrawPage->getByIndex(0), uno::UNO_QUERY);
+    // This was text::TextContentAnchorType_AS_CHARACTER, AnchorType argument was ignored.
+    CPPUNIT_ASSERT_EQUAL(text::TextContentAnchorType_AT_CHARACTER, xShape->getPropertyValue("AnchorType").get<text::TextContentAnchorType>());
 
     comphelper::LibreOfficeKit::setActive(false);
 }
@@ -452,6 +574,39 @@ void DesktopLOKTest::testRowColumnHeaders()
     }
 }
 
+void DesktopLOKTest::testHiddenRowHeaders()
+{
+    LibLODocument_Impl* pDocument = loadDoc("hidden-row.ods");
+
+    pDocument->pClass->initializeForRendering(pDocument, nullptr);
+
+    boost::property_tree::ptree aTree;
+    char* pJSON = pDocument->m_pDocumentClass->getCommandValues(pDocument, ".uno:ViewRowColumnHeaders");
+    std::stringstream aStream(pJSON);
+    free(pJSON);
+    CPPUNIT_ASSERT(!aStream.str().empty());
+
+    boost::property_tree::read_json(aStream, aTree);
+    sal_Int32 nPrevious = 0;
+    bool bFirst = true;
+    for (boost::property_tree::ptree::value_type& rValue : aTree.get_child("rows"))
+    {
+        sal_Int32 nSize = OString(rValue.second.get<std::string>("size").c_str()).toInt32();
+        CPPUNIT_ASSERT(nSize > 0);
+
+        if (bFirst)
+            bFirst = false;
+        else
+        {
+            // nSize was 509, nPrevious was 254, i.e. hidden row wasn't reported as 0 height.
+            CPPUNIT_ASSERT_EQUAL(nPrevious, nSize);
+            break;
+        }
+
+        nPrevious = nSize;
+    }
+}
+
 void DesktopLOKTest::testCellCursor()
 {
     LibLODocument_Impl* pDocument = loadDoc("search.ods");
@@ -483,6 +638,7 @@ void DesktopLOKTest::testCommandResult()
     // the condition var.
     m_aCommandResultCondition.reset();
     pDocument->pClass->postUnoCommand(pDocument, ".uno:Bold", nullptr, true);
+    Scheduler::ProcessEventsToIdle();
     m_aCommandResultCondition.wait(aTimeValue);
 
     CPPUNIT_ASSERT(m_aCommandResult.isEmpty());
@@ -492,6 +648,7 @@ void DesktopLOKTest::testCommandResult()
 
     m_aCommandResultCondition.reset();
     pDocument->pClass->postUnoCommand(pDocument, ".uno:Bold", nullptr, true);
+    Scheduler::ProcessEventsToIdle();
     m_aCommandResultCondition.wait(aTimeValue);
 
     boost::property_tree::ptree aTree;
@@ -514,6 +671,7 @@ void DesktopLOKTest::testWriterComments()
     TimeValue aTimeValue = {2 , 0}; // 2 seconds max
     m_aCommandResultCondition.reset();
     pDocument->pClass->postUnoCommand(pDocument, ".uno:InsertAnnotation", nullptr, true);
+    Scheduler::ProcessEventsToIdle();
     m_aCommandResultCondition.wait(aTimeValue);
     CPPUNIT_ASSERT(!m_aCommandResult.isEmpty());
     xToolkit->reschedule();
@@ -540,6 +698,657 @@ void DesktopLOKTest::testWriterComments()
     CPPUNIT_ASSERT_EQUAL(OUString("test"), xTextField->getPropertyValue("Content").get<OUString>());
 
     comphelper::LibreOfficeKit::setActive(false);
+}
+
+void DesktopLOKTest::testModifiedStatus()
+{
+    LibLibreOffice_Impl aOffice;
+    comphelper::LibreOfficeKit::setActive();
+    LibLODocument_Impl* pDocument = loadDoc("blank_text.odt");
+    pDocument->pClass->initializeForRendering(pDocument, nullptr);
+    pDocument->pClass->registerCallback(pDocument, &DesktopLOKTest::callback, this);
+
+    // Type "t" and check that the document was set as modified
+    m_bModified = false;
+    m_aStateChangedCondition.reset();
+    pDocument->pClass->postKeyEvent(pDocument, LOK_KEYEVENT_KEYINPUT, 't', 0);
+    Scheduler::ProcessEventsToIdle();
+    TimeValue aTimeValue = { 2 , 0 }; // 2 seconds max
+    m_aStateChangedCondition.wait(aTimeValue);
+    Scheduler::ProcessEventsToIdle();
+
+    // This was false, there was no callback about the modified status change.
+    CPPUNIT_ASSERT(m_bModified);
+
+    // Perform SaveAs with "TakeOwnership" option set, and check that the
+    // modification state was reset
+    m_aStateChangedCondition.reset();
+    utl::TempFile aTempFile;
+    aTempFile.EnableKillingFile();
+    CPPUNIT_ASSERT(pDocument->pClass->saveAs(pDocument, aTempFile.GetURL().toUtf8().getStr(), "odt", "TakeOwnership"));
+    Scheduler::ProcessEventsToIdle();
+    m_aStateChangedCondition.wait(aTimeValue);
+    Scheduler::ProcessEventsToIdle();
+
+    // There was no callback about the modified status change.
+    CPPUNIT_ASSERT(!m_bModified);
+
+    // Modify the document again
+    m_aStateChangedCondition.reset();
+    pDocument->pClass->postKeyEvent(pDocument, LOK_KEYEVENT_KEYINPUT, 't', 0);
+    Scheduler::ProcessEventsToIdle();
+    m_aStateChangedCondition.wait(aTimeValue);
+    Scheduler::ProcessEventsToIdle();
+
+    // There was no callback about the modified status change.
+    CPPUNIT_ASSERT(m_bModified);
+
+    /*
+    // TODO: move this to a test where LOK is fully bootstrapped, so that we can
+    // get back the notification about ".uno:Save" too
+    // Now perform a normal "Save", and check the modified state was reset
+    // again
+    m_aStateChangedCondition.reset();
+    pDocument->pClass->postUnoCommand(pDocument, ".uno:Save", nullptr, false);
+    m_aStateChangedCondition.wait(aTimeValue);
+    Scheduler::ProcessEventsToIdle();
+
+    // There was no callback about the modified status change.
+    CPPUNIT_ASSERT(!m_bModified);
+    */
+
+    comphelper::LibreOfficeKit::setActive(false);
+}
+
+void DesktopLOKTest::testSheetOperations()
+{
+    comphelper::LibreOfficeKit::setActive();
+    LibLODocument_Impl* pDocument = loadDoc("sheets.ods");
+
+    // insert the last sheet
+    pDocument->pClass->postUnoCommand(pDocument, ".uno:Insert",
+          "{ \"Name\": { \"type\": \"string\", \"value\": \"LastSheet\" }, \"Index\": { \"type\": \"long\", \"value\": 0 } }", false);
+
+    // insert the first sheet
+    pDocument->pClass->postUnoCommand(pDocument, ".uno:Insert",
+          "{ \"Name\": { \"type\": \"string\", \"value\": \"FirstSheet\" }, \"Index\": { \"type\": \"long\", \"value\": 1 } }", false);
+
+    // rename the \"Sheet1\" (2nd now) to \"Renamed\"
+    pDocument->pClass->postUnoCommand(pDocument, ".uno:Name",
+          "{ \"Name\": { \"type\": \"string\", \"value\": \"Renamed\" }, \"Index\": { \"type\": \"long\", \"value\": 2 } }", false);
+
+    // delete the \"Sheet2\" (3rd)
+    pDocument->pClass->postUnoCommand(pDocument, ".uno:Remove",
+          "{ \"Index\": { \"type\": \"long\", \"value\": 3 } }", false);
+
+    CPPUNIT_ASSERT_EQUAL(pDocument->pClass->getParts(pDocument), 6);
+
+    std::vector<OString> aExpected = { "FirstSheet", "Renamed", "Sheet3", "Sheet4", "Sheet5", "LastSheet" };
+    for (int i = 0; i < 6; ++i)
+    {
+        CPPUNIT_ASSERT_EQUAL(aExpected[i], OString(pDocument->pClass->getPartName(pDocument, i)));
+    }
+
+    comphelper::LibreOfficeKit::setActive(false);
+}
+
+void DesktopLOKTest::testSheetSelections()
+{
+    comphelper::LibreOfficeKit::setActive();
+    LibLODocument_Impl* pDocument = loadDoc("sheets.ods", LOK_DOCTYPE_SPREADSHEET);
+    pDocument->pClass->initializeForRendering(pDocument, nullptr);
+    pDocument->pClass->registerCallback(pDocument, &DesktopLOKTest::callback, this);
+
+    /*
+     * Check if selection data is correct
+     */
+    // Values in twips
+    int row5 = 1150;
+    int col1 = 1100;
+    int col2 = 2200;
+    int col3 = 3300;
+    int col4 = 4400;
+    int col5 = 5500;
+
+    // Select row 5 from column 1 through column 5
+    pDocument->pClass->postMouseEvent(pDocument,
+                                      LOK_MOUSEEVENT_MOUSEBUTTONDOWN,
+                                      col1, row5,
+                                      1, 1, 0);
+    pDocument->pClass->postMouseEvent(pDocument,
+                                      LOK_MOUSEEVENT_MOUSEMOVE,
+                                      col2, row5,
+                                      1, 1, 0);
+    pDocument->pClass->postMouseEvent(pDocument,
+                                      LOK_MOUSEEVENT_MOUSEMOVE,
+                                      col3, row5,
+                                      1, 1, 0);
+    pDocument->pClass->postMouseEvent(pDocument,
+                                      LOK_MOUSEEVENT_MOUSEMOVE,
+                                      col4, row5,
+                                      1, 1, 0);
+    pDocument->pClass->postMouseEvent(pDocument,
+                                      LOK_MOUSEEVENT_MOUSEMOVE,
+                                      col5, row5,
+                                      1, 1, 0);
+    pDocument->pClass->postMouseEvent(pDocument,
+                                      LOK_MOUSEEVENT_MOUSEBUTTONUP,
+                                      col5, row5,
+                                      1, 1, 0);
+
+    // Copy the contents and check if matches expected data
+    {
+        char* pUsedMimeType = nullptr;
+        char* pCopiedContent = pDocument->pClass->getTextSelection(pDocument, nullptr, &pUsedMimeType);
+        std::vector<int> aExpected = {5, 6, 7, 8, 9};
+        std::istringstream iss(pCopiedContent);
+        for (size_t i = 0; i < aExpected.size(); i++)
+        {
+            std::string token;
+            iss >> token;
+            CPPUNIT_ASSERT_EQUAL(aExpected[i], std::stoi(token));
+        }
+
+        free(pUsedMimeType);
+        free(pCopiedContent);
+    }
+
+    /*
+     * Check if clicking inside the selection deselects the whole selection
+     */
+    int row10 = 2400;
+    // Select starting from row5, col1 to row10, col5
+    pDocument->pClass->postMouseEvent(pDocument,
+                                      LOK_MOUSEEVENT_MOUSEBUTTONDOWN,
+                                      col1, row5,
+                                      1, 1, 0);
+    pDocument->pClass->postMouseEvent(pDocument,
+                                      LOK_MOUSEEVENT_MOUSEMOVE,
+                                      col5, row5,
+                                      1, 1, 0);
+    pDocument->pClass->postMouseEvent(pDocument,
+                                      LOK_MOUSEEVENT_MOUSEBUTTONUP,
+                                      col5, row10,
+                                      1, 1, 0);
+
+    // Click at row5, col4
+    pDocument->pClass->postMouseEvent(pDocument,
+                                      LOK_MOUSEEVENT_MOUSEBUTTONDOWN,
+                                      col4, row5,
+                                      1, 1, 0);
+    pDocument->pClass->postMouseEvent(pDocument,
+                                      LOK_MOUSEEVENT_MOUSEBUTTONUP,
+                                      col4, row5,
+                                      1, 1, 0);
+
+    // Selected text should get deselected and copying should give us
+    // content of only one cell, now
+    {
+        char* pUsedMimeType  = nullptr;
+        char* pCopiedContent = pDocument->pClass->getTextSelection(pDocument, nullptr, &pUsedMimeType);
+        std::vector<int> aExpected = { 8 };
+        std::istringstream iss(pCopiedContent);
+        for (size_t i = 0; i < aExpected.size(); i++)
+        {
+            std::string token;
+            iss >> token;
+            CPPUNIT_ASSERT_EQUAL(aExpected[i], std::stoi(token));
+        }
+
+        free(pUsedMimeType);
+        free(pCopiedContent);
+    }
+
+    comphelper::LibreOfficeKit::setActive(false);
+}
+
+namespace {
+
+    void verifyContextMenuStructure(boost::property_tree::ptree& aRoot)
+    {
+        for (const auto& aItemPair: aRoot)
+        {
+            // This is an array, so no key
+            CPPUNIT_ASSERT_EQUAL(std::string(aItemPair.first.data()), std::string(""));
+
+            boost::property_tree::ptree aItemValue = aItemPair.second;
+            boost::optional<boost::property_tree::ptree&> aText = aItemValue.get_child_optional("text");
+            boost::optional<boost::property_tree::ptree&> aType = aItemValue.get_child_optional("type");
+            boost::optional<boost::property_tree::ptree&> aCommand = aItemValue.get_child_optional("command");
+            boost::optional<boost::property_tree::ptree&> aSubmenu = aItemValue.get_child_optional("menu");
+            boost::optional<boost::property_tree::ptree&> aEnabled = aItemValue.get_child_optional("enabled");
+            boost::optional<boost::property_tree::ptree&> aChecktype = aItemValue.get_child_optional("checktype");
+            boost::optional<boost::property_tree::ptree&> aChecked = aItemValue.get_child_optional("checked");
+
+            // type is omnipresent
+            CPPUNIT_ASSERT( aType );
+
+            // seperator doesn't have any other attribs
+            if ( aType.get().data() == "separator" )
+            {
+                CPPUNIT_ASSERT( !aText && !aCommand && !aSubmenu && !aEnabled && !aChecktype && !aChecked );
+            }
+            else if ( aType.get().data() == "command" )
+            {
+                CPPUNIT_ASSERT( aCommand && aText );
+            }
+            else if ( aType.get().data() == "menu")
+            {
+                CPPUNIT_ASSERT( aSubmenu && aText );
+                verifyContextMenuStructure( aSubmenu.get() );
+            }
+
+            if ( aChecktype )
+            {
+                CPPUNIT_ASSERT( aChecktype.get().data() == "radio" ||
+                                aChecktype.get().data() == "checkmark" ||
+                                aChecktype.get().data() == "auto" );
+
+                CPPUNIT_ASSERT( aChecked &&
+                                ( aChecked.get().data() == "true" || aChecked.get().data() == "false" ) );
+            }
+        }
+
+    }
+
+    boost::optional<boost::property_tree::ptree>
+    getContextMenuItem(boost::property_tree::ptree& aMenu, std::string unoSelector)
+    {
+        boost::optional<boost::property_tree::ptree> aMenuItem;
+        for (const auto& aItemPair: aMenu)
+        {
+            boost::property_tree::ptree aItemValue = aItemPair.second;
+
+            boost::optional<boost::property_tree::ptree&> aCommand = aItemValue.get_child_optional("command");
+            if (aCommand && aCommand.get().data() == unoSelector )
+            {
+                aMenuItem = aItemValue;
+                break;
+            }
+        }
+
+        return aMenuItem;
+    }
+
+} // end anonymous namespace
+
+void DesktopLOKTest::testContextMenuCalc()
+{
+    comphelper::LibreOfficeKit::setActive();
+    LibLODocument_Impl* pDocument = loadDoc("sheet_with_image.ods", LOK_DOCTYPE_SPREADSHEET);
+    pDocument->pClass->initializeForRendering(pDocument, nullptr);
+    pDocument->pClass->registerCallback(pDocument, &DesktopLOKTest::callback, this);
+
+    // Values in twips
+    Point aPointOnImage(1150, 1100);
+    pDocument->pClass->postMouseEvent(pDocument,
+                                      LOK_MOUSEEVENT_MOUSEBUTTONDOWN,
+                                      aPointOnImage.X(), aPointOnImage.Y(),
+                                      1, 4, 0);
+    Scheduler::ProcessEventsToIdle();
+
+    TimeValue aTimeValue = {2 , 0}; // 2 seconds max
+    m_aContextMenuCondition.wait(aTimeValue);
+
+    CPPUNIT_ASSERT( !m_aContextMenuResult.empty() );
+    boost::optional<boost::property_tree::ptree&> aMenu = m_aContextMenuResult.get_child_optional("menu");
+    CPPUNIT_ASSERT( aMenu );
+    verifyContextMenuStructure( aMenu.get() );
+
+    // tests for calc specific context menu
+    // Cut is enabled
+    {
+        boost::optional<boost::property_tree::ptree> aMenuItem = getContextMenuItem(aMenu.get(), ".uno:Cut");
+        CPPUNIT_ASSERT(aMenuItem);
+
+        boost::optional<boost::property_tree::ptree&> aEnabled = aMenuItem.get().get_child_optional("enabled");
+        CPPUNIT_ASSERT(aEnabled);
+        CPPUNIT_ASSERT_EQUAL(std::string(aEnabled.get().data()), std::string("true"));
+    }
+
+    // Copy is enabled
+    {
+        boost::optional<boost::property_tree::ptree> aMenuItem = getContextMenuItem(aMenu.get(), ".uno:Copy");
+        CPPUNIT_ASSERT(aMenuItem);
+
+        boost::optional<boost::property_tree::ptree&> aEnabled = aMenuItem.get().get_child_optional("enabled");
+        CPPUNIT_ASSERT(aEnabled);
+        CPPUNIT_ASSERT_EQUAL(std::string(aEnabled.get().data()), std::string("true"));
+    }
+
+    // Paste is enabled
+    {
+        boost::optional<boost::property_tree::ptree> aMenuItem = getContextMenuItem(aMenu.get(), ".uno:Paste");
+        CPPUNIT_ASSERT(aMenuItem);
+
+        boost::optional<boost::property_tree::ptree&> aEnabled = aMenuItem.get().get_child_optional("enabled");
+        CPPUNIT_ASSERT(aEnabled);
+        CPPUNIT_ASSERT_EQUAL(std::string(aEnabled.get().data()), std::string("true"));
+    }
+
+    // Remove hyperlink is disabled
+    {
+        boost::optional<boost::property_tree::ptree> aMenuItem = getContextMenuItem(aMenu.get(), ".uno:DeleteShapeHyperlink");
+        CPPUNIT_ASSERT(aMenuItem);
+
+        boost::optional<boost::property_tree::ptree&> aEnabled = aMenuItem.get().get_child_optional("enabled");
+        CPPUNIT_ASSERT(aEnabled);
+        CPPUNIT_ASSERT_EQUAL(std::string(aEnabled.get().data()), std::string("false"));
+    }
+
+    // open hyperlink is disabled
+    {
+        boost::optional<boost::property_tree::ptree> aMenuItem = getContextMenuItem(aMenu.get(), ".uno:OpenHyperlinkOnCursor");
+        CPPUNIT_ASSERT(aMenuItem);
+
+        boost::optional<boost::property_tree::ptree&> aEnabled = aMenuItem.get().get_child_optional("enabled");
+        CPPUNIT_ASSERT(aEnabled);
+        CPPUNIT_ASSERT_EQUAL(std::string(aEnabled.get().data()), std::string("false"));
+    }
+
+    // checkbutton tests
+    {
+        boost::optional<boost::property_tree::ptree> aMenuItem = getContextMenuItem(aMenu.get(), ".uno:AnchorMenu");
+        CPPUNIT_ASSERT(aMenuItem);
+
+        boost::optional<boost::property_tree::ptree&> aSubmenu = aMenuItem.get().get_child_optional("menu");
+        CPPUNIT_ASSERT(aSubmenu);
+
+        boost::optional<boost::property_tree::ptree> aMenuItemToPage = getContextMenuItem(aSubmenu.get(), ".uno:SetAnchorToPage");
+        CPPUNIT_ASSERT(aMenuItemToPage);
+
+        boost::optional<boost::property_tree::ptree> aMenuItemToCell = getContextMenuItem(aSubmenu.get(), ".uno:SetAnchorToCell");
+        CPPUNIT_ASSERT(aMenuItemToCell);
+
+        // these are radio buttons
+        boost::optional<boost::property_tree::ptree&> aChecktypeToPage = aMenuItemToPage.get().get_child_optional("checktype");
+        CPPUNIT_ASSERT(aChecktypeToPage);
+        CPPUNIT_ASSERT_EQUAL(std::string(aChecktypeToPage.get().data()), std::string("radio"));
+
+        boost::optional<boost::property_tree::ptree&> aChecktypeToCell = aMenuItemToCell.get().get_child_optional("checktype");
+        CPPUNIT_ASSERT(aChecktypeToCell);
+        CPPUNIT_ASSERT_EQUAL(std::string(aChecktypeToCell.get().data()), std::string("radio"));
+
+        // ToPage is checked
+        boost::optional<boost::property_tree::ptree&> aCheckedToPage = aMenuItemToPage.get().get_child_optional("checked");
+        CPPUNIT_ASSERT(aCheckedToPage);
+        CPPUNIT_ASSERT_EQUAL(std::string(aCheckedToPage.get().data()), std::string("true"));
+
+        // ToCell is unchecked
+        boost::optional<boost::property_tree::ptree&> aCheckedToCell = aMenuItemToCell.get().get_child_optional("checked");
+        CPPUNIT_ASSERT(aCheckedToCell);
+        CPPUNIT_ASSERT_EQUAL(std::string(aCheckedToCell.get().data()), std::string("false"));
+    }
+
+    comphelper::LibreOfficeKit::setActive(false);
+}
+
+void DesktopLOKTest::testContextMenuWriter()
+{
+    comphelper::LibreOfficeKit::setActive();
+    LibLODocument_Impl* pDocument = loadDoc("blank_text.odt");
+    pDocument->pClass->initializeForRendering(pDocument, nullptr);
+    pDocument->pClass->registerCallback(pDocument, &DesktopLOKTest::callback, this);
+
+    Point aRandomPoint(1150, 1100);
+    pDocument->pClass->postMouseEvent(pDocument,
+                                      LOK_MOUSEEVENT_MOUSEBUTTONDOWN,
+                                      aRandomPoint.X(), aRandomPoint.Y(),
+                                      1, 4, 0);
+    Scheduler::ProcessEventsToIdle();
+
+    TimeValue aTimeValue = {2 , 0}; // 2 seconds max
+    m_aContextMenuCondition.wait(aTimeValue);
+
+    CPPUNIT_ASSERT( !m_aContextMenuResult.empty() );
+    boost::optional<boost::property_tree::ptree&> aMenu = m_aContextMenuResult.get_child_optional("menu");
+    CPPUNIT_ASSERT( aMenu );
+    verifyContextMenuStructure( aMenu.get() );
+
+    // tests for writer specific context menu
+   // Cut is disabled
+    {
+        boost::optional<boost::property_tree::ptree> aMenuItem = getContextMenuItem(aMenu.get(), ".uno:Cut");
+        CPPUNIT_ASSERT(aMenuItem);
+
+        boost::optional<boost::property_tree::ptree&> aEnabled = aMenuItem.get().get_child_optional("enabled");
+        CPPUNIT_ASSERT(aEnabled);
+        CPPUNIT_ASSERT_EQUAL(std::string(aEnabled.get().data()), std::string("false"));
+    }
+
+    // Copy is disabled
+    {
+        boost::optional<boost::property_tree::ptree> aMenuItem = getContextMenuItem(aMenu.get(), ".uno:Copy");
+        CPPUNIT_ASSERT(aMenuItem);
+
+        boost::optional<boost::property_tree::ptree&> aEnabled = aMenuItem.get().get_child_optional("enabled");
+        CPPUNIT_ASSERT(aEnabled);
+        CPPUNIT_ASSERT_EQUAL(std::string(aEnabled.get().data()), std::string("false"));
+    }
+
+    // Paste is enabled
+    {
+        boost::optional<boost::property_tree::ptree> aMenuItem = getContextMenuItem(aMenu.get(), ".uno:Paste");
+        CPPUNIT_ASSERT(aMenuItem);
+
+        boost::optional<boost::property_tree::ptree&> aEnabled = aMenuItem.get().get_child_optional("enabled");
+        CPPUNIT_ASSERT(aEnabled);
+        CPPUNIT_ASSERT_EQUAL(std::string(aEnabled.get().data()), std::string("true"));
+    }
+
+    comphelper::LibreOfficeKit::setActive(false);
+}
+
+void DesktopLOKTest::testContextMenuImpress()
+{
+    comphelper::LibreOfficeKit::setActive();
+    LibLODocument_Impl* pDocument = loadDoc("blank_presentation.odp", LOK_DOCTYPE_PRESENTATION);
+    pDocument->pClass->initializeForRendering(pDocument, nullptr);
+    pDocument->pClass->registerCallback(pDocument, &DesktopLOKTest::callback, this);
+
+    Point aRandomPoint(1150, 1100);
+    pDocument->pClass->postMouseEvent(pDocument,
+                                      LOK_MOUSEEVENT_MOUSEBUTTONDOWN,
+                                      aRandomPoint.X(), aRandomPoint.Y(),
+                                      1, 4, 0);
+    Scheduler::ProcessEventsToIdle();
+
+    TimeValue aTimeValue = {2 , 0}; // 2 seconds max
+    m_aContextMenuCondition.wait(aTimeValue);
+
+    CPPUNIT_ASSERT( !m_aContextMenuResult.empty() );
+    boost::optional<boost::property_tree::ptree&> aMenu = m_aContextMenuResult.get_child_optional("menu");
+    CPPUNIT_ASSERT( aMenu );
+    verifyContextMenuStructure( aMenu.get() );
+
+    // tests for impress specific context menu
+    // Cut is disabled
+    {
+        boost::optional<boost::property_tree::ptree> aMenuItem = getContextMenuItem(aMenu.get(), ".uno:Cut");
+        CPPUNIT_ASSERT(aMenuItem);
+
+        boost::optional<boost::property_tree::ptree&> aEnabled = aMenuItem.get().get_child_optional("enabled");
+        CPPUNIT_ASSERT(aEnabled);
+        CPPUNIT_ASSERT_EQUAL(std::string(aEnabled.get().data()), std::string("false"));
+    }
+
+    // Copy is disabled
+    {
+        boost::optional<boost::property_tree::ptree> aMenuItem = getContextMenuItem(aMenu.get(), ".uno:Copy");
+        CPPUNIT_ASSERT(aMenuItem);
+
+        boost::optional<boost::property_tree::ptree&> aEnabled = aMenuItem.get().get_child_optional("enabled");
+        CPPUNIT_ASSERT(aEnabled);
+        CPPUNIT_ASSERT_EQUAL(std::string(aEnabled.get().data()), std::string("false"));
+    }
+
+    // Paste is enabled
+    {
+        boost::optional<boost::property_tree::ptree> aMenuItem = getContextMenuItem(aMenu.get(), ".uno:Paste");
+        CPPUNIT_ASSERT(aMenuItem);
+
+        boost::optional<boost::property_tree::ptree&> aEnabled = aMenuItem.get().get_child_optional("enabled");
+        CPPUNIT_ASSERT(aEnabled);
+        CPPUNIT_ASSERT_EQUAL(std::string(aEnabled.get().data()), std::string("true"));
+    }
+
+    // SaveBackground is disabled
+    {
+        boost::optional<boost::property_tree::ptree> aMenuItem = getContextMenuItem(aMenu.get(), ".uno:SaveBackground");
+        CPPUNIT_ASSERT(aMenuItem);
+
+        boost::optional<boost::property_tree::ptree&> aEnabled = aMenuItem.get().get_child_optional("enabled");
+        CPPUNIT_ASSERT(aEnabled);
+        CPPUNIT_ASSERT_EQUAL(std::string(aEnabled.get().data()), std::string("false"));
+    }
+
+    // checkbutton tests
+    {
+        boost::optional<boost::property_tree::ptree> aMenuItem = getContextMenuItem(aMenu.get(), ".uno:ShowRuler");
+        CPPUNIT_ASSERT(aMenuItem);
+
+        boost::optional<boost::property_tree::ptree&> aChecktype = aMenuItem.get().get_child_optional("checktype");
+        CPPUNIT_ASSERT(aChecktype);
+        CPPUNIT_ASSERT_EQUAL(std::string(aChecktype.get().data()), std::string("checkmark"));
+
+        boost::optional<boost::property_tree::ptree&> aChecked = aMenuItem.get().get_child_optional("checked");
+        CPPUNIT_ASSERT(aChecked);
+        CPPUNIT_ASSERT_EQUAL(std::string(aChecked.get().data()), std::string("false"));
+    }
+
+    // Checkbutton tests inside SnapLines submenu
+    {
+        boost::optional<boost::property_tree::ptree> aMenuItem = getContextMenuItem(aMenu.get(), ".uno:SnapLinesMenu");
+        CPPUNIT_ASSERT(aMenuItem);
+
+        boost::optional<boost::property_tree::ptree&> aSubmenu = aMenuItem.get().get_child_optional("menu");
+        CPPUNIT_ASSERT(aSubmenu);
+
+        boost::optional<boost::property_tree::ptree> aMenuItemHelpVis = getContextMenuItem(aSubmenu.get(), ".uno:HelplinesVisible");
+        CPPUNIT_ASSERT(aMenuItemHelpVis);
+
+        boost::optional<boost::property_tree::ptree> aMenuItemHelpUse = getContextMenuItem(aSubmenu.get(), ".uno:HelplinesUse");
+        CPPUNIT_ASSERT(aMenuItemHelpUse);
+
+        boost::optional<boost::property_tree::ptree> aMenuItemHelpFront = getContextMenuItem(aSubmenu.get(), ".uno:HelplinesFront");
+        CPPUNIT_ASSERT(aMenuItemHelpFront);
+
+        // these are checkmarks
+        boost::optional<boost::property_tree::ptree&> aChecktypeHelpVis = aMenuItemHelpVis.get().get_child_optional("checktype");
+        CPPUNIT_ASSERT(aChecktypeHelpVis);
+        CPPUNIT_ASSERT_EQUAL(std::string(aChecktypeHelpVis.get().data()), std::string("checkmark"));
+
+        boost::optional<boost::property_tree::ptree&> aChecktypeHelpUse = aMenuItemHelpUse.get().get_child_optional("checktype");
+        CPPUNIT_ASSERT(aChecktypeHelpUse);
+        CPPUNIT_ASSERT_EQUAL(std::string(aChecktypeHelpUse.get().data()), std::string("checkmark"));
+
+        boost::optional<boost::property_tree::ptree&> aChecktypeHelpFront = aMenuItemHelpFront.get().get_child_optional("checktype");
+        CPPUNIT_ASSERT(aChecktypeHelpFront);
+        CPPUNIT_ASSERT_EQUAL(std::string(aChecktypeHelpFront.get().data()), std::string("checkmark"));
+
+        // HelplineVisible is unchecked
+        boost::optional<boost::property_tree::ptree&> aCheckedHelpVis = aMenuItemHelpVis.get().get_child_optional("checked");
+        CPPUNIT_ASSERT(aCheckedHelpVis);
+        CPPUNIT_ASSERT_EQUAL(std::string(aCheckedHelpVis.get().data()), std::string("false"));
+
+        // HelplineUse is checked
+        boost::optional<boost::property_tree::ptree&> aCheckedHelpUse = aMenuItemHelpUse.get().get_child_optional("checked");
+        CPPUNIT_ASSERT(aCheckedHelpUse);
+        CPPUNIT_ASSERT_EQUAL(std::string(aCheckedHelpUse.get().data()), std::string("true"));
+
+        // HelplineFront is checked
+        boost::optional<boost::property_tree::ptree&> aCheckedHelpFront = aMenuItemHelpFront.get().get_child_optional("checked");
+        CPPUNIT_ASSERT(aCheckedHelpFront);
+        CPPUNIT_ASSERT_EQUAL(std::string(aCheckedHelpFront.get().data()), std::string("true"));
+    }
+
+    comphelper::LibreOfficeKit::setActive(false);
+}
+
+static void callbackCompressionTest(const int type, const char* payload, void* data)
+{
+    std::vector<std::tuple<int, std::string>>* notifs = static_cast<std::vector<std::tuple<int, std::string>>*>(data);
+    notifs->emplace_back(type, std::string(payload ? payload : "(nil)"));
+}
+
+void DesktopLOKTest::testNotificationCompression()
+{
+    std::vector<std::tuple<int, std::string>> notifs;
+    std::unique_ptr<CallbackFlushHandler> handler(new CallbackFlushHandler(callbackCompressionTest, &notifs));
+
+    handler->queue(LOK_CALLBACK_INVALIDATE_VISIBLE_CURSOR, ""); // 0
+    handler->queue(LOK_CALLBACK_TEXT_SELECTION, "15 25 15 10"); // Superseeded.
+    handler->queue(LOK_CALLBACK_INVALIDATE_VISIBLE_CURSOR, ""); // Should be dropped.
+    handler->queue(LOK_CALLBACK_INVALIDATE_TILES, "15 25 15 10"); // Superseeded.
+    handler->queue(LOK_CALLBACK_TEXT_SELECTION, "15 25 15 10"); // Should be dropped.
+    handler->queue(LOK_CALLBACK_TEXT_SELECTION, ""); // Superseeded.
+    handler->queue(LOK_CALLBACK_STATE_CHANGED, ""); // 2
+    handler->queue(LOK_CALLBACK_STATE_CHANGED, ".uno:Bold"); // 3
+    handler->queue(LOK_CALLBACK_STATE_CHANGED, ""); // 4
+    handler->queue(LOK_CALLBACK_MOUSE_POINTER, "text"); // 5
+    handler->queue(LOK_CALLBACK_INVALIDATE_TILES, "15 25 15 10"); // 6
+    handler->queue(LOK_CALLBACK_INVALIDATE_TILES, "15 25 15 10"); // Should be dropped.
+    handler->queue(LOK_CALLBACK_MOUSE_POINTER, "text"); // Should be dropped.
+    handler->queue(LOK_CALLBACK_TEXT_SELECTION_START, "15 25 15 10"); // Superseeded.
+    handler->queue(LOK_CALLBACK_TEXT_SELECTION_END, "15 25 15 10"); // Superseeded.
+    handler->queue(LOK_CALLBACK_TEXT_SELECTION, "15 25 15 10"); // Superseedd.
+    handler->queue(LOK_CALLBACK_TEXT_SELECTION_START, "15 25 15 10"); // Should be dropped.
+    handler->queue(LOK_CALLBACK_TEXT_SELECTION_END, "15 25 15 10"); // Should be dropped.
+    handler->queue(LOK_CALLBACK_TEXT_SELECTION, ""); // 7
+    handler->queue(LOK_CALLBACK_TEXT_SELECTION_START, "15 25 15 10"); // 8
+    handler->queue(LOK_CALLBACK_TEXT_SELECTION_END, "15 25 15 10"); // 9
+    handler->queue(LOK_CALLBACK_CELL_CURSOR, "15 25 15 10"); // 10
+    handler->queue(LOK_CALLBACK_CURSOR_VISIBLE, ""); // 11
+    handler->queue(LOK_CALLBACK_CELL_CURSOR, "15 25 15 10"); // Should be dropped.
+    handler->queue(LOK_CALLBACK_CELL_FORMULA, "blah"); // 12
+    handler->queue(LOK_CALLBACK_SET_PART, "1"); // 13
+    handler->queue(LOK_CALLBACK_CURSOR_VISIBLE, ""); // Should be dropped.
+    handler->queue(LOK_CALLBACK_CELL_FORMULA, "blah"); // Should be dropped.
+    handler->queue(LOK_CALLBACK_SET_PART, "1"); // Should be dropped.
+
+    Scheduler::ProcessEventsToIdle();
+
+    CPPUNIT_ASSERT_EQUAL(static_cast<size_t>(13), notifs.size());
+
+    size_t i = 0;
+    CPPUNIT_ASSERT_EQUAL((int)LOK_CALLBACK_INVALIDATE_VISIBLE_CURSOR, (int)std::get<0>(notifs[i]));
+    CPPUNIT_ASSERT_EQUAL(std::string(""), std::get<1>(notifs[i++]));
+
+    CPPUNIT_ASSERT_EQUAL((int)LOK_CALLBACK_STATE_CHANGED, (int)std::get<0>(notifs[i]));
+    CPPUNIT_ASSERT_EQUAL(std::string(""), std::get<1>(notifs[i++]));
+
+    CPPUNIT_ASSERT_EQUAL((int)LOK_CALLBACK_STATE_CHANGED, (int)std::get<0>(notifs[i]));
+    CPPUNIT_ASSERT_EQUAL(std::string(".uno:Bold"), std::get<1>(notifs[i++]));
+
+    CPPUNIT_ASSERT_EQUAL((int)LOK_CALLBACK_STATE_CHANGED, (int)std::get<0>(notifs[i]));
+    CPPUNIT_ASSERT_EQUAL(std::string(""), std::get<1>(notifs[i++]));
+
+    CPPUNIT_ASSERT_EQUAL((int)LOK_CALLBACK_MOUSE_POINTER, (int)std::get<0>(notifs[i]));
+    CPPUNIT_ASSERT_EQUAL(std::string("text"), std::get<1>(notifs[i++]));
+
+    CPPUNIT_ASSERT_EQUAL((int)LOK_CALLBACK_INVALIDATE_TILES, (int)std::get<0>(notifs[i]));
+    CPPUNIT_ASSERT_EQUAL(std::string("15 25 15 10"), std::get<1>(notifs[i++]));
+
+    CPPUNIT_ASSERT_EQUAL((int)LOK_CALLBACK_TEXT_SELECTION, (int)std::get<0>(notifs[i]));
+    CPPUNIT_ASSERT_EQUAL(std::string(""), std::get<1>(notifs[i++]));
+
+    CPPUNIT_ASSERT_EQUAL((int)LOK_CALLBACK_TEXT_SELECTION_START, (int)std::get<0>(notifs[i]));
+    CPPUNIT_ASSERT_EQUAL(std::string("15 25 15 10"), std::get<1>(notifs[i++]));
+
+    CPPUNIT_ASSERT_EQUAL((int)LOK_CALLBACK_TEXT_SELECTION_END, (int)std::get<0>(notifs[i]));
+    CPPUNIT_ASSERT_EQUAL(std::string("15 25 15 10"), std::get<1>(notifs[i++]));
+
+    CPPUNIT_ASSERT_EQUAL((int)LOK_CALLBACK_CELL_CURSOR, (int)std::get<0>(notifs[i]));
+    CPPUNIT_ASSERT_EQUAL(std::string("15 25 15 10"), std::get<1>(notifs[i++]));
+
+    CPPUNIT_ASSERT_EQUAL((int)LOK_CALLBACK_CURSOR_VISIBLE, (int)std::get<0>(notifs[i]));
+    CPPUNIT_ASSERT_EQUAL(std::string(""), std::get<1>(notifs[i++]));
+
+    CPPUNIT_ASSERT_EQUAL((int)LOK_CALLBACK_CELL_FORMULA, (int)std::get<0>(notifs[i]));
+    CPPUNIT_ASSERT_EQUAL(std::string("blah"), std::get<1>(notifs[i++]));
+
+    CPPUNIT_ASSERT_EQUAL((int)LOK_CALLBACK_SET_PART, (int)std::get<0>(notifs[i]));
+    CPPUNIT_ASSERT_EQUAL(std::string("1"), std::get<1>(notifs[i++]));
 }
 
 CPPUNIT_TEST_SUITE_REGISTRATION(DesktopLOKTest);

@@ -24,7 +24,7 @@
  <toolbar:toolbaritem xlink:href=".uno:OpenFromWriter"/>
  <toolbar:toolbaritem xlink:href=".uno:OpenRemote" toolbar:visible="false"/>
  <toolbar:toolbaritem xlink:href=".uno:Save" toolbar:helpid="5505"/>
- <toolbar:toolbaritem xlink:href=".uno:SaveAs" toolbar:helpid="5502"/>
+ <toolbar:toolbaritem xlink:href=".uno:SaveAs" toolbar:helpid="5502" toolbar:visible="false"/>
  <toolbar:toolbaritem xlink:href=".uno:SendMail" toolbar:visible="false" toolbar:helpid="5331"/>
  <toolbar:toolbarseparator/>
  <toolbar:toolbaritem xlink:href=".uno:EditDoc" toolbar:helpid="6312" toolbar:visible="false"/>
@@ -61,7 +61,7 @@
  <toolbar:toolbarseparator/>
  <toolbar:toolbaritem xlink:href=".uno:HyperlinkDialog" toolbar:helpid="5678"/>
  <toolbar:toolbaritem xlink:href=".uno:InsertFootnote" toolbar:helpid="20399"/>
- <toolbar:toolbaritem xlink:href=".uno:InsertEndnote" toolbar:visible="false"/>
+ <toolbar:toolbaritem xlink:href=".uno:InsertEndnote"/>
  <toolbar:toolbaritem xlink:href=".uno:InsertBookmark"/>
  <toolbar:toolbaritem xlink:href=".uno:InsertReferenceField" toolbar:visible="false"/>
  <toolbar:toolbaritem xlink:href=".uno:InsertIndexesEntry" toolbar:visible="false"/>
@@ -69,6 +69,7 @@
  <toolbar:toolbaritem xlink:href=".uno:InsertAnnotation" toolbar:helpid="20329"/>
  <toolbar:toolbaritem xlink:href=".uno:ShowTrackedChanges" toolbar:visible="false"/>
  <toolbar:toolbaritem xlink:href=".uno:TrackChanges"/>
+ <toolbar:toolbaritem xlink:href=".uno:TrackChangesBar"/>
  <toolbar:toolbarseparator/>
  <toolbar:toolbaritem xlink:href=".uno:Line" toolbar:helpid="10102"/>
  <toolbar:toolbaritem xlink:href=".uno:BasicShapes" toolbar:helpid="11002"/>

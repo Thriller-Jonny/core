@@ -29,8 +29,6 @@ using namespace ::osl;
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
 
-using rtl::OUString;
-using rtl::OString;
 
 namespace cppu
 {
@@ -97,7 +95,7 @@ void WeakComponentImplHelperBase::dispose()
     ClearableMutexGuard aGuard( rBHelper.rMutex );
     if (!rBHelper.bDisposed && !rBHelper.bInDispose)
     {
-        rBHelper.bInDispose = sal_True;
+        rBHelper.bInDispose = true;
         aGuard.clear();
         try
         {
@@ -112,14 +110,14 @@ void WeakComponentImplHelperBase::dispose()
             {
                 MutexGuard aGuard2( rBHelper.rMutex );
                 // bDisposed and bInDispose must be set in this order:
-                rBHelper.bDisposed = sal_True;
-                rBHelper.bInDispose = sal_False;
+                rBHelper.bDisposed = true;
+                rBHelper.bInDispose = false;
                 throw;
             }
             MutexGuard aGuard2( rBHelper.rMutex );
             // bDisposed and bInDispose must be set in this order:
-            rBHelper.bDisposed = sal_True;
-            rBHelper.bInDispose = sal_False;
+            rBHelper.bDisposed = true;
+            rBHelper.bInDispose = false;
         }
         catch (RuntimeException &)
         {
@@ -229,7 +227,7 @@ void WeakAggComponentImplHelperBase::dispose()
     ClearableMutexGuard aGuard( rBHelper.rMutex );
     if (!rBHelper.bDisposed && !rBHelper.bInDispose)
     {
-        rBHelper.bInDispose = sal_True;
+        rBHelper.bInDispose = true;
         aGuard.clear();
         try
         {
@@ -244,14 +242,14 @@ void WeakAggComponentImplHelperBase::dispose()
             {
                 MutexGuard aGuard2( rBHelper.rMutex );
                 // bDisposed and bInDispose must be set in this order:
-                rBHelper.bDisposed = sal_True;
-                rBHelper.bInDispose = sal_False;
+                rBHelper.bDisposed = true;
+                rBHelper.bInDispose = false;
                 throw;
             }
             MutexGuard aGuard2( rBHelper.rMutex );
             // bDisposed and bInDispose must be set in this order:
-            rBHelper.bDisposed = sal_True;
-            rBHelper.bInDispose = sal_False;
+            rBHelper.bDisposed = true;
+            rBHelper.bInDispose = false;
         }
         catch (RuntimeException &)
         {

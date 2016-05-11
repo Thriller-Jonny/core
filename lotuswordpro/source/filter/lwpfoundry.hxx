@@ -106,7 +106,7 @@ private:
     LwpObjectID m_TableRange;
 public:
     void Read(LwpObjectStream *pStrm);
-    LwpObjectID GetTableRangeID(){ return m_TableRange;}
+    const LwpObjectID& GetTableRangeID(){ return m_TableRange;}
 };
 
 class LwpBulletManager
@@ -211,7 +211,6 @@ private:
     LwpDocument* m_pDoc;
     bool m_bRegisteredAll;
 private: //file members
-    LwpVersionManager m_VerMgr;
     LwpObjectManager m_ObjMgr;
     LwpObjectID m_MarkerHead;
     LwpObjectID m_FootnoteMgr;
@@ -309,7 +308,7 @@ private:
     LwpStyleMap m_StyleList;
 public:
     void SetFoundry(LwpFoundry* pFoundry){m_pFoundry = pFoundry;}
-    IXFStyle* AddStyle(LwpObjectID styleObjID, IXFStyle* pStyle);
+    void AddStyle(LwpObjectID styleObjID, IXFStyle* pStyle);
     IXFStyle* GetStyle(const LwpObjectID &styleObjID);
 };
 #endif

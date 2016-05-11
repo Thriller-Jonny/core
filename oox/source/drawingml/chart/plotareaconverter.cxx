@@ -31,6 +31,10 @@
 #include "drawingml/chart/axisconverter.hxx"
 #include "drawingml/chart/plotareamodel.hxx"
 #include "drawingml/chart/typegroupconverter.hxx"
+#include <oox/core/xmlfilterbase.hxx>
+#include <oox/token/namespaces.hxx>
+#include <oox/token/properties.hxx>
+#include <oox/token/tokens.hxx>
 
 namespace oox {
 namespace drawingml {

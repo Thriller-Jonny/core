@@ -7,8 +7,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#ifndef _ABIWORDIMPORTFILTER_HXX
-#define _ABIWORDIMPORTFILTER_HXX
+#ifndef INCLUDED_WRITERPERFECT_SOURCE_WRITER_ABIWORDIMPORTFILTER_HXX
+#define INCLUDED_WRITERPERFECT_SOURCE_WRITER_ABIWORDIMPORTFILTER_HXX
 
 #include <com/sun/star/lang/XServiceInfo.hpp>
 #include <com/sun/star/uno/XComponentContext.hpp>
@@ -38,16 +38,6 @@ private:
     virtual bool doDetectFormat(librevenge::RVNGInputStream &rInput, OUString &rTypeName) override;
     virtual bool doImportDocument(librevenge::RVNGInputStream &rInput, OdtGenerator &rGenerator, utl::MediaDescriptor &) override;
 };
-
-OUString AbiWordImportFilter_getImplementationName()
-throw (css::uno::RuntimeException);
-
-css::uno::Sequence< OUString > SAL_CALL AbiWordImportFilter_getSupportedServiceNames()
-throw (css::uno::RuntimeException);
-
-css::uno::Reference< css::uno::XInterface >
-SAL_CALL AbiWordImportFilter_createInstance(const css::uno::Reference< css::uno::XComponentContext > &rContext)
-throw (css::uno::Exception);
 
 #endif
 

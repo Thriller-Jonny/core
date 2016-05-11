@@ -273,7 +273,7 @@ void SwFlyFreeFrame::CheckClip( const SwFormatFrameSize &rSz )
     SwRect aClip, aTmpStretch;
     ::CalcClipRect( pObj, aClip );
     ::CalcClipRect( pObj, aTmpStretch, false );
-    aClip._Intersection( aTmpStretch );
+    aClip.Intersection_( aTmpStretch );
 
     const long nBot = Frame().Top() + Frame().Height();
     const long nRig = Frame().Left() + Frame().Width();
@@ -399,7 +399,7 @@ void SwFlyFreeFrame::CheckClip( const SwFormatFrameSize &rSz )
                 // the environment of the ole object does not have to be valid
                 // at this moment, or even worse, it does not have to have a
                 // reasonable size. In this case we do not want to change to
-                // attributes permanentely. Maybe one day somebody dares to remove
+                // attributes permanently. Maybe one day somebody dares to remove
                 // this code.
                 if ( aFrameRect.HasArea() &&
                      static_cast<SwContentFrame*>(Lower())->GetNode()->GetOLENode() &&
@@ -1032,10 +1032,11 @@ bool CalcClipRect( const SdrObject *pSdrObj, SwRect &rRect, bool bMove )
                 SWRECTFN( pClip )
                 const SwLayoutFrame *pUp = pClip->GetUpper();
                 const SwFrame *pCell = pUp->IsCellFrame() ? pUp : nullptr;
-                const sal_uInt16 nType = bMove ? FRM_ROOT   | FRM_FLY | FRM_HEADER |
-                                       FRM_FOOTER | FRM_FTN
-                                     : FRM_BODY   | FRM_FLY | FRM_HEADER |
-                                       FRM_FOOTER | FRM_CELL| FRM_FTN;
+                const SwFrameType nType = bMove
+                                     ? SwFrameType::Root   | SwFrameType::Fly | SwFrameType::Header |
+                                       SwFrameType::Footer | SwFrameType::Ftn
+                                     : SwFrameType::Body   | SwFrameType::Fly | SwFrameType::Header |
+                                       SwFrameType::Footer | SwFrameType::Cell| SwFrameType::Ftn;
 
                 while ( !(pUp->GetType() & nType) || pUp->IsColBodyFrame() )
                 {
@@ -1054,7 +1055,7 @@ bool CalcClipRect( const SdrObject *pSdrObj, SwRect &rRect, bool bMove )
                 }
                 if ( pUp )
                 {
-                    if ( pUp->GetType() & FRM_BODY )
+                    if ( pUp->GetType() & SwFrameType::Body )
                     {
                         const SwPageFrame *pPg;
                         if ( pUp->GetUpper() != (pPg = pFly->FindPageFrame()) )
@@ -1068,7 +1069,7 @@ bool CalcClipRect( const SdrObject *pSdrObj, SwRect &rRect, bool bMove )
                     }
                     else
                     {
-                        if( ( pUp->GetType() & (FRM_FLY | FRM_FTN ) ) &&
+                        if( ( pUp->GetType() & (SwFrameType::Fly | SwFrameType::Ftn ) ) &&
                             !pUp->Frame().IsInside( pFly->Frame().Pos() ) )
                         {
                             if( pUp->IsFlyFrame() )
@@ -1096,7 +1097,7 @@ bool CalcClipRect( const SdrObject *pSdrObj, SwRect &rRect, bool bMove )
                         }
                         rRect = pUp->Prt();
                         rRect.Pos() += pUp->Frame().Pos();
-                        if ( pUp->GetType() & (FRM_HEADER | FRM_FOOTER) )
+                        if ( pUp->GetType() & (SwFrameType::Header | SwFrameType::Footer) )
                         {
                             rRect.Left ( pUp->GetUpper()->Frame().Left() );
                             rRect.Width( pUp->GetUpper()->Frame().Width());

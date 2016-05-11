@@ -473,7 +473,7 @@ sal_uInt16 SetTextContext(OutputDevice& rOut, ObjTextType& Atr, bool Kapt, sal_u
         if (pSgfFont->Fixd) aFont.SetPitch(PITCH_FIXED); else aFont.SetPitch(PITCH_VARIABLE);
         aFont.SetFamily(pSgfFont->SVFamil);
         aFont.SetCharSet(pSgfFont->SVChSet);
-        aFont.SetName(FNam);
+        aFont.SetFamilyName(FNam);
     }
     else
     {  // if not in Inifile, some fonts are hard coded here
@@ -481,7 +481,7 @@ sal_uInt16 SetTextContext(OutputDevice& rOut, ObjTextType& Atr, bool Kapt, sal_u
         switch (Atr.GetFont()) {
           case 92500: case 92501: case 92504: case 92505:
           {
-#if defined(WNT)
+#if defined(_WIN32)
               FNam = "Times New Roman";  // CG Times is Times New Roman in Windows
 #else
               FNam = "Times";            // otherwise just Times
@@ -490,7 +490,7 @@ sal_uInt16 SetTextContext(OutputDevice& rOut, ObjTextType& Atr, bool Kapt, sal_u
               aFont.SetFamily(FAMILY_ROMAN);
           } break;
           case 94021: case 94022: case 94023: case 94024: {
-#if defined(WNT)
+#if defined(_WIN32)
               FNam = "Arial";            // Univers is Arial in Windows
 #else
               FNam = "Helvetica";        // otherwise Helvetica
@@ -499,7 +499,7 @@ sal_uInt16 SetTextContext(OutputDevice& rOut, ObjTextType& Atr, bool Kapt, sal_u
               StdBrei=47;
           } break;
           case 93950: case 93951: case 93952: case 93953: {
-#if defined(WNT)
+#if defined(_WIN32)
               FNam = "Courier New";      // The vector-Courierfont is called Courier New in Windows
 #else
               FNam = "Courier";          // otherwise Courier remains Courier
@@ -509,7 +509,7 @@ sal_uInt16 SetTextContext(OutputDevice& rOut, ObjTextType& Atr, bool Kapt, sal_u
           } break;
           default: FNam = "Helvetica";
         }
-        aFont.SetName(FNam);
+        aFont.SetFamilyName(FNam);
         //aFont.SetCharSet(CHARSET_SYSTEM);
     }
 
@@ -524,23 +524,23 @@ sal_uInt16 SetTextContext(OutputDevice& rOut, ObjTextType& Atr, bool Kapt, sal_u
         }
         Brei=Brei*sal_uLong(Atr.Breite)/100;
         Brei=Brei*sal_uLong(StdBrei)/100;
-        aFont.SetSize(Size(hPoint2Sgf(sal_uInt16(Brei)),hPoint2Sgf(sal_uInt16(Grad))));
+        aFont.SetFontSize(Size(hPoint2Sgf(sal_uInt16(Brei)),hPoint2Sgf(sal_uInt16(Grad))));
     } else {
-        aFont.SetSize(Size(0,hPoint2Sgf(sal_uInt16(Grad))));
+        aFont.SetFontSize(Size(0,hPoint2Sgf(sal_uInt16(Grad))));
     }
 
     aColor=Sgv2SvFarbe(Atr.L.LFarbe,Atr.L.LBFarbe,Atr.L.LIntens); aFont.SetColor(aColor);
     aColor=Sgv2SvFarbe(Atr.F.FFarbe,Atr.F.FBFarbe,Atr.F.FIntens); aFont.SetFillColor(aColor);
     aFont.SetTransparent(true);
-    aFont.SetAlign(ALIGN_BASELINE);
+    aFont.SetAlignment(ALIGN_BASELINE);
 
     nRotation/=10; nRotation=3600-nRotation; if (nRotation==3600) nRotation=0;
     aFont.SetOrientation(nRotation);
 
     if ((Atr.Schnitt & TextBoldBit) !=0) aFont.SetWeight(WEIGHT_BOLD);
     if ((Atr.Schnitt & TextRSlnBit) !=0) aFont.SetItalic(ITALIC_NORMAL);
-    if ((Atr.Schnitt & TextUndlBit) !=0) aFont.SetUnderline(UNDERLINE_SINGLE);
-    if ((Atr.Schnitt & TextDbUnBit) !=0) aFont.SetUnderline(UNDERLINE_DOUBLE);
+    if ((Atr.Schnitt & TextUndlBit) !=0) aFont.SetUnderline(LINESTYLE_SINGLE);
+    if ((Atr.Schnitt & TextDbUnBit) !=0) aFont.SetUnderline(LINESTYLE_DOUBLE);
     if ((Atr.Schnitt & TextStrkBit) !=0) aFont.SetStrikeout(STRIKEOUT_SINGLE);
     if ((Atr.Schnitt & TextDbStBit) !=0) aFont.SetStrikeout(STRIKEOUT_DOUBLE);
     if ((Atr.Schnitt & TextSh2DBit) !=0) aFont.SetShadow(true);
@@ -963,8 +963,10 @@ void TextType::Draw(OutputDevice& rOut)
                     PointType Pos;
                     xp1=long(Pos1.x)+xPos+long(xLine[i]);
                     yp1=long(Pos1.y)+yPos;
-                    if (xp1>32000) xp1=32000; if (xp1<-12000) xp1=-12000;
-                    if (yp1>32000) yp1=32000; if (yp1<-12000) yp1=-12000;
+                    if (xp1>32000) xp1=32000;
+                    if (xp1<-12000) xp1=-12000;
+                    if (yp1>32000) yp1=32000;
+                    if (yp1<-12000) yp1=-12000;
                     Pos.x=short(xp1);
                     Pos.y=short(yp1);
 

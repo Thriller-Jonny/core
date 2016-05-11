@@ -25,15 +25,14 @@
 #include <comphelper/comphelperdllapi.h>
 
 #include <map>
+#include <vector>
 
 
 //= property helper classes
 
 
-
 namespace comphelper
 {
-
 
 
 //= OPropertyAccessor
@@ -91,7 +90,7 @@ class COMPHELPER_DLLPUBLIC OPropertyArrayAggregationHelper: public ::cppu::IProp
     friend class OPropertySetAggregationHelper;
 protected:
 
-    css::uno::Sequence< css::beans::Property> m_aProperties;
+    std::vector<css::beans::Property>         m_aProperties;
     internal::PropertyAccessorMap             m_aPropertyAccessors;
 
 public:
@@ -157,11 +156,11 @@ public:
     bool getPropertyByHandle( sal_Int32 _nHandle, css::beans::Property& _rProperty ) const;
 
 
-    enum PropertyOrigin
+    enum class PropertyOrigin
     {
-        AGGREGATE_PROPERTY,
-        DELEGATOR_PROPERTY,
-        UNKNOWN_PROPERTY
+        Aggregate,
+        Delegator,
+        Unknown
     };
     /** prefer this one over the XPropertySetInfo of the aggregate!
 

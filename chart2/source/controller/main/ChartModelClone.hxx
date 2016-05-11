@@ -23,8 +23,6 @@
 #include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/chart2/XInternalDataProvider.hpp>
 
-#include <boost/noncopyable.hpp>
-
 namespace chart
 {
 
@@ -35,24 +33,27 @@ namespace chart
         E_MODEL_WITH_SELECTION
     };
 
-    class ChartModelClone : public ::boost::noncopyable
+    class ChartModelClone
     {
     public:
         ChartModelClone(
-            const ::com::sun::star::uno::Reference< ::com::sun::star::frame::XModel >& i_model,
+            const css::uno::Reference< css::frame::XModel >& i_model,
             const ModelFacet i_facet
         );
 
         ~ChartModelClone();
 
+        ChartModelClone(const ChartModelClone&) = delete;
+        const ChartModelClone& operator=(const ChartModelClone&) = delete;
+
         ModelFacet getFacet() const;
 
-        void applyToModel( const ::com::sun::star::uno::Reference< ::com::sun::star::frame::XModel >& i_model ) const;
+        void applyToModel( const css::uno::Reference< css::frame::XModel >& i_model ) const;
 
         static void applyModelContentToModel(
-            const ::com::sun::star::uno::Reference< ::com::sun::star::frame::XModel > & i_model,
-            const ::com::sun::star::uno::Reference< ::com::sun::star::frame::XModel > & i_modelToCopyFrom,
-            const ::com::sun::star::uno::Reference< ::com::sun::star::chart2::XInternalDataProvider > & i_data );
+            const css::uno::Reference< css::frame::XModel > & i_model,
+            const css::uno::Reference< css::frame::XModel > & i_modelToCopyFrom,
+            const css::uno::Reference< css::chart2::XInternalDataProvider > & i_data );
 
         void dispose();
 
@@ -60,9 +61,9 @@ namespace chart
         bool    impl_isDisposed() const { return !m_xModelClone.is(); }
 
     private:
-        ::com::sun::star::uno::Reference< ::com::sun::star::frame::XModel >                 m_xModelClone;
-        ::com::sun::star::uno::Reference< ::com::sun::star::chart2::XInternalDataProvider > m_xDataClone;
-        ::com::sun::star::uno::Any                                                          m_aSelection;
+        css::uno::Reference< css::frame::XModel >                 m_xModelClone;
+        css::uno::Reference< css::chart2::XInternalDataProvider > m_xDataClone;
+        css::uno::Any                                             m_aSelection;
     };
 
 } // namespace chart

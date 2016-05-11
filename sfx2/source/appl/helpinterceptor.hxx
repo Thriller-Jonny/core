@@ -73,9 +73,8 @@ public:
     HelpInterceptor_Impl();
     virtual ~HelpInterceptor_Impl();
 
-    void                    setInterception( css::uno::Reference< css::frame::XFrame > xFrame );
-    OUString                GetCurrentURL() const { return m_aCurrentURL; }
-
+    void                    setInterception( const css::uno::Reference< css::frame::XFrame >& xFrame );
+    const OUString&         GetCurrentURL() const { return m_aCurrentURL; }
 
 
     const css::uno::Any&     GetViewData()const {return m_aViewData;}
@@ -130,7 +129,7 @@ public:
                                 throw( css::uno::RuntimeException, std::exception ) override;
 
     void                    SetChangeHdl( const Link<HelpListener_Impl&,void>& rLink ) { aChangeLink = rLink; }
-    OUString                GetFactory() const { return aFactory; }
+    const OUString&         GetFactory() const { return aFactory; }
 };
 // HelpStatusListener_Impl -----------------------------------------------------
 

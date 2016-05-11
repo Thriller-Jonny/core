@@ -1,3 +1,4 @@
+/* -*- Mode: Java; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /*
  * This file is part of the LibreOffice project.
  *
@@ -21,8 +22,7 @@ package com.sun.star.lib.uno.environments.remote;
 /**
  * This interface is an abstraction of the various threadpool implementations.
  *
- * @see         com.sun.star.lib.uno.environments.remote.ThreadPoolFactory
- * @see         com.sun.star.lib.uno.environments.remote.IThreadPoolFactory
+ * @see         com.sun.star.lib.uno.environments.remote.ThreadPoolManager
  * @since       UDK1.0
  */
 public interface IThreadPool {
@@ -112,3 +112,4 @@ public interface IThreadPool {
     void destroy();
 }
 
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

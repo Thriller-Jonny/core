@@ -27,17 +27,15 @@
 #include <basegfx/polygon/b2dpolypolygon.hxx>
 #include <i18nlangtag/languagetag.hxx>
 #include <tools/gen.hxx>
-#include <sal/log.hxx>
 #include <vcl/dllapi.h>
 #include <vcl/vclenum.hxx> // for typedef sal_UCS4
 #include <vcl/devicecoordinate.hxx>
 
-#ifndef _TOOLS_LANG_HXX
-typedef unsigned short LanguageType;
-#endif
-
-#include "magic.h"
 #include "salglyphid.hxx"
+
+#define MAX_FALLBACK 16
+
+typedef unsigned short LanguageType;
 
 class SalGraphics;
 class PhysicalFontFace;
@@ -57,8 +55,8 @@ public:
             ImplLayoutRuns() { mnRunIndex = 0; maRuns.reserve(8); }
 
     void    Clear()             { maRuns.clear(); }
-    bool    AddPos( int nCharPos, bool bRTL );
-    bool    AddRun( int nMinRunPos, int nEndRunPos, bool bRTL );
+    void    AddPos( int nCharPos, bool bRTL );
+    void    AddRun( int nMinRunPos, int nEndRunPos, bool bRTL );
 
     bool    IsEmpty() const     { return maRuns.empty(); }
     void    ResetPos()          { mnRunIndex = 0; }
@@ -106,10 +104,10 @@ public:
     bool        GetNextPos( int* nCharPos, bool* bRTL )
                     { return maRuns.GetNextPos( nCharPos, bRTL ); }
     bool        GetNextRun( int* nMinRunPos, int* nEndRunPos, bool* bRTL );
-    bool        NeedFallback( int nCharPos, bool bRTL )
-                    { return maFallbackRuns.AddPos( nCharPos, bRTL ); }
-    bool        NeedFallback( int nMinRunPos, int nEndRunPos, bool bRTL )
-                    { return maFallbackRuns.AddRun( nMinRunPos, nEndRunPos, bRTL ); }
+    void        NeedFallback( int nCharPos, bool bRTL )
+                    { maFallbackRuns.AddPos( nCharPos, bRTL ); }
+    void        NeedFallback( int nMinRunPos, int nEndRunPos, bool bRTL )
+                    { maFallbackRuns.AddRun( nMinRunPos, nEndRunPos, bRTL ); }
     // methods used by BiDi and glyph fallback
     bool        NeedFallback() const
                     { return !maFallbackRuns.IsEmpty(); }
@@ -247,13 +245,13 @@ public:
     // used only by OutputDevice::ImplLayout, TODO: make friend
     explicit        MultiSalLayout( SalLayout& rBaseLayout,
                                     const PhysicalFontFace* pBaseFont = nullptr );
-    bool            AddFallback( SalLayout& rFallbackLayout,
+    void            AddFallback( SalLayout& rFallbackLayout,
                                  ImplLayoutRuns&, const PhysicalFontFace* pFallbackFont );
     virtual bool    LayoutText( ImplLayoutArgs& ) override;
     virtual void    AdjustLayout( ImplLayoutArgs& ) override;
     virtual void    InitFont() const override;
 
-    void SetIncomplete(bool bIncomplete = true);
+    void SetIncomplete(bool bIncomplete);
 
 protected:
     virtual         ~MultiSalLayout();
@@ -284,8 +282,6 @@ struct GlyphItem
     int     mnNewWidth;     // width after adjustments
     int     mnXOffset;
 
-    int     mnYOffset;
-
     sal_GlyphId maGlyphId;
     Point   maLinearPos;    // absolute position of non rotated string
 
@@ -296,7 +292,6 @@ public:
                 , mnOrigWidth(0)
                 , mnNewWidth(0)
                 , mnXOffset(0)
-                , mnYOffset(0)
                 , maGlyphId(0)
             {}
 
@@ -305,16 +300,14 @@ public:
             :   mnFlags(nFlags), mnCharPos(nCharPos),
                 mnOrigWidth(nOrigWidth), mnNewWidth(nOrigWidth),
                 mnXOffset(0),
-                mnYOffset(0),
                 maGlyphId(aGlyphId), maLinearPos(rLinearPos)
             {}
 
             GlyphItem( int nCharPos, sal_GlyphId aGlyphId, const Point& rLinearPos,
-                long nFlags, int nOrigWidth, int nXOffset, int nYOffset )
+                long nFlags, int nOrigWidth, int nXOffset )
             :   mnFlags(nFlags), mnCharPos(nCharPos),
                 mnOrigWidth(nOrigWidth), mnNewWidth(nOrigWidth),
                 mnXOffset(nXOffset),
-                mnYOffset(nYOffset),
                 maGlyphId(aGlyphId), maLinearPos(rLinearPos)
             {}
 

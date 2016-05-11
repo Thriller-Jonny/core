@@ -24,7 +24,7 @@
 #include <rtl/alloc.h>
 #include <tools/zcodec.hxx>
 #include <tools/stream.hxx>
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/alpha.hxx>
 #include <osl/endian.h>
@@ -120,7 +120,7 @@ private:
     bool                mbStatus : 1;
     bool                mbIDAT : 1;         // true if finished with enough IDAT chunks
     bool                mbGamma : 1;        // true if Gamma Correction available
-    bool                mbpHYs : 1;         // true if pysical size of pixel available
+    bool                mbpHYs : 1;         // true if physical size of pixel available
     bool                mbIgnoreGammaChunk : 1;
 
 #if OSL_DEBUG_LEVEL > 0
@@ -424,7 +424,10 @@ BitmapEx PNGReaderImpl::GetBitmapEx( const Size& rPreviewSizeHint )
 
     // release write access of the bitmaps
     if ( mpAcc )
-        Bitmap::ReleaseAccess( mpAcc ), mpAcc = nullptr;
+    {
+        Bitmap::ReleaseAccess( mpAcc );
+        mpAcc = nullptr;
+    }
 
     if ( mpMaskAcc )
     {
@@ -513,7 +516,7 @@ bool PNGReaderImpl::ImplReadHeader( const Size& rPreviewSizeHint )
                     break;
                 case 16 :
                     mnTargetDepth = 8;  // we have to reduce the bitmap
-                    // fall through
+                    SAL_FALLTHROUGH;
                 case 1 :
                 case 4 :
                 case 8 :
@@ -547,7 +550,7 @@ bool PNGReaderImpl::ImplReadHeader( const Size& rPreviewSizeHint )
             {
                 case 2 :
                     mnTargetDepth = 4;  // we have to expand the bitmap
-                    // fall through
+                    SAL_FALLTHROUGH;
                 case 1 :
                 case 4 :
                 case 8 :
@@ -567,6 +570,7 @@ bool PNGReaderImpl::ImplReadHeader( const Size& rPreviewSizeHint )
             {
                 case 16 :
                     mnTargetDepth = 8;  // we have to reduce the bitmap
+                    SAL_FALLTHROUGH;
                 case 8 :
                     mbGrayScale = true;
                     break;
@@ -1101,7 +1105,10 @@ void PNGReaderImpl::ImplApplyFilter()
                     npc =-npc;
 
                 if( npa > npb )
-                    na = nb, npa = npb;
+                {
+                    na = nb;
+                    npa = npb;
+                }
                 if( npa > npc )
                     na = nc;
 

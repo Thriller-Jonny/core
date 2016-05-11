@@ -22,9 +22,9 @@
 
 #include <svl/lstner.hxx>
 
-#include <com/sun/star/uno/Sequence.hxx>
 #include <com/sun/star/script/XStorageBasedLibraryContainer.hpp>
 #include <com/sun/star/embed/XStorage.hpp>
+#include <vector>
 
 class BasicManager;
 
@@ -85,7 +85,7 @@ public:
     /** checks if any modules in the SfxLibraryContainer exceed the binary
         limits.
     */
-    bool LegacyPsswdBinaryLimitExceeded( css::uno::Sequence< OUString >& sModules );
+    bool LegacyPsswdBinaryLimitExceeded( std::vector< OUString >& sModules );
 
     virtual void Notify(SfxBroadcaster& rBC, SfxHint const& rHint) override;
 

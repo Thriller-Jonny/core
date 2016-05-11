@@ -126,7 +126,7 @@ static const sal_Unicode aWhiteSpaces[] =
     0xfffb    /* INTERLINEAR ANNOTATION TERMINATOR */
 };
 
-static const int nWhiteSpaces = sizeof( aWhiteSpaces ) / sizeof( aWhiteSpaces[0] );
+static const int nWhiteSpaces = SAL_N_ELEMENTS( aWhiteSpaces );
 
 static bool lcl_IsWhiteSpace( sal_Unicode cChar )
 {
@@ -225,7 +225,7 @@ extern "C" void lcl_workerfunc (void * gci)
 }
 
 static lang::Locale lcl_GetPrimaryLanguageOfSentence(
-    uno::Reference< text::XFlatParagraph > xFlatPara,
+    const uno::Reference< text::XFlatParagraph >& xFlatPara,
     sal_Int32 nStartIndex )
 {
     //get the language of the first word
@@ -301,8 +301,8 @@ OUString GrammarCheckingIterator::GetOrCreateDocId(
 
 
 void GrammarCheckingIterator::AddEntry(
-    uno::WeakReference< text::XFlatParagraphIterator > xFlatParaIterator,
-    uno::WeakReference< text::XFlatParagraph > xFlatPara,
+    const uno::WeakReference< text::XFlatParagraphIterator >& xFlatParaIterator,
+    const uno::WeakReference< text::XFlatParagraph >& xFlatPara,
     const OUString & rDocId,
     sal_Int32 nStartIndex,
     bool bAutomatic )
@@ -900,7 +900,7 @@ throw (uno::RuntimeException, std::exception)
     {
         m_aNotifyListeners.addInterface( xListener );
     }
-    return sal_True;
+    return true;
 }
 
 
@@ -912,7 +912,7 @@ throw (uno::RuntimeException, std::exception)
     {
         m_aNotifyListeners.removeInterface( xListener );
     }
-    return sal_True;
+    return true;
 }
 
 
@@ -1064,8 +1064,6 @@ void GrammarCheckingIterator::GetConfiguredGCSvcs_Impl()
         // ---- THREAD SAFE END ----
     }
 }
-
-
 
 
 sal_Bool SAL_CALL GrammarCheckingIterator::supportsService(

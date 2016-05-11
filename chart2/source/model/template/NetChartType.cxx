@@ -36,8 +36,6 @@ using namespace ::com::sun::star::chart2;
 using ::com::sun::star::beans::Property;
 using ::com::sun::star::uno::Sequence;
 using ::com::sun::star::uno::Reference;
-using ::com::sun::star::uno::Any;
-using ::osl::MutexGuard;
 
 namespace chart
 {
@@ -66,8 +64,7 @@ Reference< XCoordinateSystem > SAL_CALL
             static_cast< ::cppu::OWeakObject* >( this ), 0 );
 
     Reference< XCoordinateSystem > xResult(
-        new PolarCoordinateSystem(
-            GetComponentContext(), DimensionCount, /* bSwapXAndYAxis */ false ));
+        new PolarCoordinateSystem( GetComponentContext(), DimensionCount ));
 
     Reference< XAxis > xAxis( xResult->getAxisByDimension( 0, MAIN_AXIS_INDEX ) );
     if( xAxis.is() )

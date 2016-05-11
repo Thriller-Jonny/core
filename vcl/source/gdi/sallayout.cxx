@@ -281,7 +281,7 @@ inline bool IsControlChar( sal_UCS4 cChar )
     return false;
 }
 
-bool ImplLayoutRuns::AddPos( int nCharPos, bool bRTL )
+void ImplLayoutRuns::AddPos( int nCharPos, bool bRTL )
 {
     // check if charpos could extend current run
     int nIndex = maRuns.size();
@@ -293,25 +293,24 @@ bool ImplLayoutRuns::AddPos( int nCharPos, bool bRTL )
         {
             // extend current run by new charpos
             maRuns[ nIndex-1 ] = nCharPos + int(!bRTL);
-            return false;
+            return;
         }
         // ignore new charpos when it is in current run
         if( (nRunPos0 <= nCharPos) && (nCharPos < nRunPos1) )
-            return false;
+            return;
         if( (nRunPos1 <= nCharPos) && (nCharPos < nRunPos0) )
-            return false;
+            return;
     }
 
     // else append a new run consisting of the new charpos
     maRuns.push_back( nCharPos + (bRTL ? 1 : 0) );
     maRuns.push_back( nCharPos + (bRTL ? 0 : 1) );
-    return true;
 }
 
-bool ImplLayoutRuns::AddRun( int nCharPos0, int nCharPos1, bool bRTL )
+void ImplLayoutRuns::AddRun( int nCharPos0, int nCharPos1, bool bRTL )
 {
     if( nCharPos0 == nCharPos1 )
-        return false;
+        return;
 
     // swap if needed
     if( bRTL == (nCharPos0 < nCharPos1) )
@@ -324,7 +323,6 @@ bool ImplLayoutRuns::AddRun( int nCharPos0, int nCharPos1, bool bRTL )
     // append new run
     maRuns.push_back( nCharPos0 );
     maRuns.push_back( nCharPos1 );
-    return true;
 }
 
 bool ImplLayoutRuns::PosIsInRun( int nCharPos ) const
@@ -551,8 +549,7 @@ bool ImplLayoutArgs::PrepareFallback()
     int nMin, nEnd;
 
     // get the individual fallback requests
-    typedef std::vector<int> IntVector;
-    IntVector aPosVector;
+    std::vector<int> aPosVector;
     aPosVector.reserve(mrStr.getLength());
     maFallbackRuns.ResetPos();
     for(; maFallbackRuns.GetRun( &nMin, &nEnd, &bRTL ); maFallbackRuns.NextRun() )
@@ -569,11 +566,11 @@ bool ImplLayoutArgs::PrepareFallback()
     for(; maRuns.GetRun( &nMin, &nEnd, &bRTL ); maRuns.NextRun() )
     {
         if( !bRTL) {
-            IntVector::const_iterator it = std::lower_bound( aPosVector.begin(), aPosVector.end(), nMin );
+            auto it = std::lower_bound( aPosVector.begin(), aPosVector.end(), nMin );
             for(; (it != aPosVector.end()) && (*it < nEnd); ++it )
                 aNewRuns.AddPos( *it, bRTL );
         } else {
-            IntVector::const_iterator it = std::upper_bound( aPosVector.begin(), aPosVector.end(), nEnd );
+            auto it = std::upper_bound( aPosVector.begin(), aPosVector.end(), nEnd );
             while( (it != aPosVector.begin()) && (*--it >= nMin) )
                 aNewRuns.AddPos( *it, bRTL );
         }
@@ -1459,17 +1456,16 @@ MultiSalLayout::~MultiSalLayout()
         mpLayouts[ i ]->Release();
 }
 
-bool MultiSalLayout::AddFallback( SalLayout& rFallback,
+void MultiSalLayout::AddFallback( SalLayout& rFallback,
     ImplLayoutRuns& rFallbackRuns, const PhysicalFontFace* pFallbackFont )
 {
     if( mnLevel >= MAX_FALLBACK )
-        return false;
+        return;
 
     mpFallbackFonts[ mnLevel ]  = pFallbackFont;
     mpLayouts[ mnLevel ]        = &rFallback;
     maFallbackRuns[ mnLevel-1 ] = rFallbackRuns;
     ++mnLevel;
-    return true;
 }
 
 bool MultiSalLayout::LayoutText( ImplLayoutArgs& rArgs )

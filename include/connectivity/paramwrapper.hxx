@@ -44,7 +44,6 @@ namespace param
 {
 
 
-
     //= ParameterWrapper
 
     /** wraps a parameter column as got from an SQLQueryComposer, so that it has an additional
@@ -115,9 +114,6 @@ namespace param
 
     private:
         OUString impl_getPseudoAggregatePropertyName( sal_Int32 _nHandle ) const;
-
-    private:
-        ParameterWrapper(); // not implemented
     };
 
 

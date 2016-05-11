@@ -22,9 +22,9 @@ HtmlWriter::HtmlWriter(SvStream& rStream) :
 HtmlWriter::~HtmlWriter()
 {}
 
-void HtmlWriter::prettyPrint(bool bChoice)
+void HtmlWriter::prettyPrint(bool b)
 {
-    mbPrettyPrint = bChoice;
+    mbPrettyPrint = b;
 }
 
 void HtmlWriter::start(const OString& aElement)
@@ -76,16 +76,6 @@ void HtmlWriter::flushStack()
     }
 }
 
-void HtmlWriter::flushStack(const OString& aElement)
-{
-    OString sCurrentElement;
-    do
-    {
-        sCurrentElement = maElementStack.back();
-        end();
-    } while (!maElementStack.empty() && aElement != sCurrentElement);
-}
-
 void HtmlWriter::end()
 {
     if (mbElementOpen)
@@ -112,17 +102,6 @@ void HtmlWriter::end()
     maElementStack.pop_back();
     mbElementOpen = false;
     mbContentWritten = false;
-}
-
-void HtmlWriter::write(const OString &aContent)
-{
-    if (mbElementOpen)
-    {
-        mrStream.WriteChar('>');
-        mbElementOpen = false;
-    }
-    mbContentWritten = true;
-    mrStream.WriteOString(aContent);
 }
 
 void HtmlWriter::attribute(const OString &aAttribute, const OString& aValue)

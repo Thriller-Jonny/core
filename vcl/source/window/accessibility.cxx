@@ -28,42 +28,41 @@
 #include "unotools/fontcfg.hxx"
 #include "unotools/confignode.hxx"
 
-#include "vcl/layout.hxx"
-#include "vcl/salgtype.hxx"
-#include "vcl/event.hxx"
-#include "vcl/fixed.hxx"
-#include "vcl/help.hxx"
-#include "vcl/cursor.hxx"
-#include "vcl/svapp.hxx"
-#include "vcl/window.hxx"
-#include "vcl/syswin.hxx"
-#include "vcl/syschild.hxx"
-#include "vcl/dockwin.hxx"
-#include "vcl/menu.hxx"
-#include "vcl/wrkwin.hxx"
-#include "vcl/wall.hxx"
-#include "vcl/gradient.hxx"
-#include "vcl/button.hxx"
-#include "vcl/taskpanelist.hxx"
-#include "vcl/dialog.hxx"
-#include "vcl/unowrap.hxx"
-#include "vcl/gdimtf.hxx"
-#include "vcl/pdfextoutdevdata.hxx"
-#include "vcl/popupmenuwindow.hxx"
-#include "vcl/lazydelete.hxx"
-#include "vcl/virdev.hxx"
-#include "vcl/settings.hxx"
+#include <vcl/layout.hxx>
+#include <vcl/salgtype.hxx>
+#include <vcl/event.hxx>
+#include <vcl/fixed.hxx>
+#include <vcl/help.hxx>
+#include <vcl/cursor.hxx>
+#include <vcl/svapp.hxx>
+#include <vcl/window.hxx>
+#include <vcl/syswin.hxx>
+#include <vcl/syschild.hxx>
+#include <vcl/dockwin.hxx>
+#include <vcl/menu.hxx>
+#include <vcl/wrkwin.hxx>
+#include <vcl/wall.hxx>
+#include <vcl/gradient.hxx>
+#include <vcl/button.hxx>
+#include <vcl/taskpanelist.hxx>
+#include <vcl/dialog.hxx>
+#include <vcl/unowrap.hxx>
+#include <vcl/gdimtf.hxx>
+#include <vcl/pdfextoutdevdata.hxx>
+#include <vcl/popupmenuwindow.hxx>
+#include <vcl/lazydelete.hxx>
+#include <vcl/virdev.hxx>
+#include <vcl/settings.hxx>
 
 // declare system types in sysdata.hxx
-#include "vcl/sysdata.hxx"
+#include <vcl/sysdata.hxx>
 
 #include "salframe.hxx"
 #include "salobj.hxx"
 #include "salinst.hxx"
 #include "salgdi.hxx"
 #include "svdata.hxx"
-#include "dbggui.hxx"
-#include "outfont.hxx"
+#include "fontinstance.hxx"
 #include "window.h"
 #include "toolbox.h"
 #include "outdev.h"
@@ -71,15 +70,11 @@
 #include "brdwin.hxx"
 #include "helpwin.hxx"
 #include "sallayout.hxx"
-#include "dndlcon.hxx"
-#include "dndevdis.hxx"
+#include "dndlistenercontainer.hxx"
+#include "dndeventdispatcher.hxx"
 
 #include "com/sun/star/accessibility/XAccessible.hpp"
 #include "com/sun/star/accessibility/AccessibleRole.hpp"
-#include "com/sun/star/awt/XWindowPeer.hpp"
-#include "com/sun/star/awt/XTopWindow.hpp"
-#include "com/sun/star/awt/XWindow.hpp"
-#include "com/sun/star/awt/XDisplayConnection.hpp"
 #include "com/sun/star/datatransfer/dnd/XDragSource.hpp"
 #include "com/sun/star/datatransfer/dnd/XDropTarget.hpp"
 #include "com/sun/star/datatransfer/clipboard/XClipboard.hpp"
@@ -87,9 +82,6 @@
 #include "com/sun/star/lang/XInitialization.hpp"
 #include "com/sun/star/lang/XComponent.hpp"
 #include "com/sun/star/lang/XServiceName.hpp"
-#include "com/sun/star/rendering/CanvasFactory.hpp"
-#include "com/sun/star/rendering/XCanvas.hpp"
-#include "com/sun/star/rendering/XSpriteCanvas.hpp"
 #include "comphelper/processfactory.hxx"
 
 #include <sal/macros.h>
@@ -104,7 +96,6 @@ using namespace ::com::sun::star::datatransfer::clipboard;
 using namespace ::com::sun::star::datatransfer::dnd;
 using namespace ::com::sun::star;
 
-using ::com::sun::star::awt::XTopWindow;
 
 ImplAccessibleInfos::ImplAccessibleInfos()
 {
@@ -150,7 +141,7 @@ css::uno::Reference< css::accessibility::XAccessible > Window::CreateAccessible(
     return xAcc;
 }
 
-void Window::SetAccessible( css::uno::Reference< css::accessibility::XAccessible > x )
+void Window::SetAccessible( const css::uno::Reference< css::accessibility::XAccessible >& x )
 {
     mpWindowImpl->mxAccessible = x;
 }
@@ -178,44 +169,6 @@ bool Window::ImplIsAccessibleNativeFrame() const
             return false;
     else
         return false;
-}
-
-sal_uInt16 Window::ImplGetAccessibleCandidateChildWindowCount( GetWindowType nFirstWindowType ) const
-{
-    sal_uInt16  nChildren = 0;
-    vcl::Window* pChild = GetWindow( nFirstWindowType );
-    while ( pChild )
-    {
-        if( pChild->ImplIsAccessibleCandidate() )
-            nChildren++;
-        else
-            nChildren = sal::static_int_cast<sal_uInt16>(nChildren + pChild->ImplGetAccessibleCandidateChildWindowCount( GetWindowType::FirstChild ));
-        pChild = pChild->mpWindowImpl->mpNext;
-    }
-    return nChildren;
-}
-
-vcl::Window* Window::ImplGetAccessibleCandidateChild( sal_uInt16 nChild, sal_uInt16& rChildCount, GetWindowType nFirstWindowType, bool bTopLevel ) const
-{
-
-    if( bTopLevel )
-        rChildCount = 0;
-
-    vcl::Window* pChild = GetWindow( nFirstWindowType );
-    while ( pChild )
-    {
-        vcl::Window *pTmpChild = pChild;
-
-        if( !pChild->ImplIsAccessibleCandidate() )
-            pTmpChild = pChild->ImplGetAccessibleCandidateChild( nChild, rChildCount, GetWindowType::FirstChild, false );
-
-        if ( nChild == rChildCount )
-            return pTmpChild;
-        pChild = pChild->mpWindowImpl->mpNext;
-        rChildCount++;
-    }
-
-    return nullptr;
 }
 
 vcl::Window* Window::GetAccessibleParentWindow() const
@@ -544,8 +497,6 @@ OUString Window::getDefaultAccessibleName() const
 
         case WINDOW_TOOLBOX:
             aAccessibleName = GetText();
-            if( aAccessibleName.isEmpty() )
-                aAccessibleName = "Tool Bar";
             break;
 
         case WINDOW_MOREBUTTON:

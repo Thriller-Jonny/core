@@ -224,7 +224,7 @@ CertificateViewerDetailsTP::CertificateViewerDetailsTP( vcl::Window* _pParent, C
     nStyle &= ~WB_HSCROLL;
     m_pElementsLB->SetStyle( nStyle );
 
-    m_aFixedWidthFont.SetHeight( m_aStdFont.GetHeight() );
+    m_aFixedWidthFont.SetFontHeight( m_aStdFont.GetFontHeight() );
 
     static long nTabs[] = { 2, 0, 30*CS_LB_WIDTH/100 };
     m_pElementsLB->SetTabs( &nTabs[ 0 ] );
@@ -461,7 +461,7 @@ void CertificateViewerCertPathTP::Clear()
 }
 
 SvTreeListEntry* CertificateViewerCertPathTP::InsertCert(
-    SvTreeListEntry* _pParent, const OUString& _rName, css::uno::Reference< css::security::XCertificate > rxCert,
+    SvTreeListEntry* _pParent, const OUString& _rName, const css::uno::Reference< css::security::XCertificate >& rxCert,
     bool bValid)
 {
     Image aImage = bValid ? maCertImage : maCertNotValidatedImage;

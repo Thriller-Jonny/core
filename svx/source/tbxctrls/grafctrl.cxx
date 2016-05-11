@@ -62,7 +62,7 @@ using namespace ::com::sun::star::lang;
 
 #define SYMBOL_TO_FIELD_OFFSET      4
 #define ITEMVALUE(ItemSet,Id,Cast)  static_cast<const Cast&>((ItemSet).Get(Id)).GetValue()
-#define TOOLBOX_NAME                OUString( "colorbar" )
+#define TOOLBOX_NAME                "colorbar"
 
 
 TbxImageItem::TbxImageItem( sal_uInt16 _nWhich, sal_uInt16 nImage ) :
@@ -109,7 +109,8 @@ ImplGrafMetricField::ImplGrafMetricField( vcl::Window* pParent, const OUString& 
 {
     Size aSize( GetTextWidth( "-100 %" ), GetTextHeight() );
 
-    aSize.Width() += 20, aSize.Height() += 6;
+    aSize.Width() += 20;
+    aSize.Height() += 6;
     SetSizePixel( aSize );
 
     if ( maCommand == ".uno:GrafGamma" )
@@ -274,9 +275,15 @@ ImplGrafControl::ImplGrafControl(
     SetBackground( Wallpaper( COL_TRANSPARENT ) );
 
     if( aImgSize.Height() > aFldSize.Height() )
-        nImgY = 0, nFldY = ( aImgSize.Height() - aFldSize.Height() ) >> 1;
+    {
+        nImgY = 0;
+        nFldY = ( aImgSize.Height() - aFldSize.Height() ) >> 1;
+    }
     else
-        nFldY = 0, nImgY = ( aFldSize.Height() - aImgSize.Height() ) >> 1;
+    {
+        nFldY = 0;
+        nImgY = ( aFldSize.Height() - aImgSize.Height() ) >> 1;
+    }
 
     long nOffset = SYMBOL_TO_FIELD_OFFSET / 2;
     maImage->SetPosPixel( Point( nOffset, nImgY ) );
@@ -657,7 +664,7 @@ void SvxGrafAttrHelper::ExecuteGrafAttr( SfxRequest& rReq, SdrView& rView )
         }
         break;
 
-        case( SID_ATTR_GRAF_CROP ):
+        case SID_ATTR_GRAF_CROP:
         {
             const SdrMarkList& rMarkList = rView.GetMarkedObjectList();
 
@@ -862,7 +869,7 @@ void SvxGrafAttrHelper::GetGrafAttrState( SfxItemSet& rSet, SdrView& rView )
 
         switch( nSlotId )
         {
-            case( SID_ATTR_GRAF_MODE ):
+            case SID_ATTR_GRAF_MODE:
             {
                 if( SfxItemState::DEFAULT <= aAttrSet.GetItemState( SDRATTR_GRAFMODE ) )
                 {
@@ -879,7 +886,7 @@ void SvxGrafAttrHelper::GetGrafAttrState( SfxItemSet& rSet, SdrView& rView )
             }
             break;
 
-            case( SID_ATTR_GRAF_RED ):
+            case SID_ATTR_GRAF_RED:
             {
                 if( SfxItemState::DEFAULT <= aAttrSet.GetItemState( SDRATTR_GRAFRED ) )
                 {
@@ -896,7 +903,7 @@ void SvxGrafAttrHelper::GetGrafAttrState( SfxItemSet& rSet, SdrView& rView )
             }
             break;
 
-            case( SID_ATTR_GRAF_GREEN ):
+            case SID_ATTR_GRAF_GREEN:
             {
                 if( SfxItemState::DEFAULT <= aAttrSet.GetItemState( SDRATTR_GRAFGREEN ) )
                 {
@@ -913,7 +920,7 @@ void SvxGrafAttrHelper::GetGrafAttrState( SfxItemSet& rSet, SdrView& rView )
             }
             break;
 
-            case( SID_ATTR_GRAF_BLUE ):
+            case SID_ATTR_GRAF_BLUE:
             {
                 if( SfxItemState::DEFAULT <= aAttrSet.GetItemState( SDRATTR_GRAFBLUE ) )
                 {
@@ -930,7 +937,7 @@ void SvxGrafAttrHelper::GetGrafAttrState( SfxItemSet& rSet, SdrView& rView )
             }
             break;
 
-            case( SID_ATTR_GRAF_LUMINANCE ):
+            case SID_ATTR_GRAF_LUMINANCE:
             {
                 if( SfxItemState::DEFAULT <= aAttrSet.GetItemState( SDRATTR_GRAFLUMINANCE ) )
                 {
@@ -947,7 +954,7 @@ void SvxGrafAttrHelper::GetGrafAttrState( SfxItemSet& rSet, SdrView& rView )
             }
             break;
 
-            case( SID_ATTR_GRAF_CONTRAST ):
+            case SID_ATTR_GRAF_CONTRAST:
             {
                 if( SfxItemState::DEFAULT <= aAttrSet.GetItemState( SDRATTR_GRAFCONTRAST ) )
                 {
@@ -964,7 +971,7 @@ void SvxGrafAttrHelper::GetGrafAttrState( SfxItemSet& rSet, SdrView& rView )
             }
             break;
 
-            case( SID_ATTR_GRAF_GAMMA ):
+            case SID_ATTR_GRAF_GAMMA:
             {
                 if( SfxItemState::DEFAULT <= aAttrSet.GetItemState( SDRATTR_GRAFGAMMA ) )
                 {
@@ -981,7 +988,7 @@ void SvxGrafAttrHelper::GetGrafAttrState( SfxItemSet& rSet, SdrView& rView )
             }
             break;
 
-            case( SID_ATTR_GRAF_TRANSPARENCE ):
+            case SID_ATTR_GRAF_TRANSPARENCE:
             {
                 if( SfxItemState::DEFAULT <= aAttrSet.GetItemState( SDRATTR_GRAFTRANSPARENCE ) )
                 {
@@ -998,7 +1005,7 @@ void SvxGrafAttrHelper::GetGrafAttrState( SfxItemSet& rSet, SdrView& rView )
             }
             break;
 
-            case( SID_ATTR_GRAF_CROP ):
+            case SID_ATTR_GRAF_CROP:
             {
                 if( !bEnableCrop )
                     rSet.DisableItem( nSlotId );

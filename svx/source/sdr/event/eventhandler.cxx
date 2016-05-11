@@ -42,7 +42,6 @@ namespace sdr
 } // end of namespace sdr
 
 
-
 namespace sdr
 {
     namespace event
@@ -116,14 +115,13 @@ namespace sdr
 } // end of namespace sdr
 
 
-
 namespace sdr
 {
     namespace event
     {
-        TimerEventHandler::TimerEventHandler(SchedulerPriority ePriority)
+        TimerEventHandler::TimerEventHandler()
         {
-            SetPriority(ePriority);
+            SetPriority(SchedulerPriority::HIGH);
             Stop();
         }
 

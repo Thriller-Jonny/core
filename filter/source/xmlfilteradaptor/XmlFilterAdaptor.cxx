@@ -67,8 +67,8 @@ using namespace ::com::sun::star::task;
 bool SAL_CALL XmlFilterAdaptor::importImpl( const Sequence< css::beans::PropertyValue >& aDescriptor )
     throw (RuntimeException, std::exception)
 {
-    OUString udConvertClass=msUserData[0];
-    OUString udImport =msUserData[2];
+    OUString udConvertClass    = msUserData[0];
+    const OUString sXMLImportService = msUserData[2];
     sal_Int32 nSteps= 0;
     sal_Int32 nProgressRange = 4;
 
@@ -80,7 +80,6 @@ bool SAL_CALL XmlFilterAdaptor::importImpl( const Sequence< css::beans::Property
         xStatusIndicator->start( "Loading :",nProgressRange);
     }
 
-    OUString sXMLImportService (  udImport  );
     Reference < XParser > xSaxParser = Parser::create( mxContext );
 
     Sequence< Any > aAnys(1);
@@ -95,14 +94,14 @@ bool SAL_CALL XmlFilterAdaptor::importImpl( const Sequence< css::beans::Property
 
     // create an XProperty set to configure the exporter for pretty printing
     PropertyMapEntry aImportInfoMap[] =
-     {
+    {
         { OUString("BaseURI"), 0, ::cppu::UnoType<OUString>::get(), PropertyAttribute::MAYBEVOID, 0},
-         { OUString(), 0, css::uno::Type(), 0, 0 }
-     };
+        { OUString(), 0, css::uno::Type(), 0, 0 }
+    };
 
-     Reference< XPropertySet > xInfoSet(
-        GenericPropertySet_CreateInstance( new PropertySetInfo( aImportInfoMap ) ) );
-     xInfoSet->setPropertyValue( "BaseURI", makeAny( aBaseURI ));
+    Reference< XPropertySet > xInfoSet(
+            GenericPropertySet_CreateInstance( new PropertySetInfo( aImportInfoMap ) ) );
+    xInfoSet->setPropertyValue( "BaseURI", makeAny( aBaseURI ));
     aAnys[0] <<= xInfoSet;
 
 
@@ -138,7 +137,7 @@ bool SAL_CALL XmlFilterAdaptor::importImpl( const Sequence< css::beans::Property
         Reference< XStyleFamiliesSupplier > xstylefamiliessupplier(mxDoc, UNO_QUERY);
         Reference< XStyleLoader > xstyleLoader (xstylefamiliessupplier->getStyleFamilies(), UNO_QUERY);
         if(xstyleLoader.is()){
-            Sequence<css::beans::PropertyValue> pValue=xstyleLoader->getStyleLoaderOptions();
+            Sequence<css::beans::PropertyValue> aValue = xstyleLoader->getStyleLoaderOptions();
 
             //Load the Styles from the Template URL Supplied in the TypeDetection file
             if(!comphelper::isFileUrl(msTemplateName))
@@ -149,7 +148,7 @@ bool SAL_CALL XmlFilterAdaptor::importImpl( const Sequence< css::beans::Property
                 msTemplateName=PathString.concat(msTemplateName);
             }
 
-            xstyleLoader->loadStylesFromURL(msTemplateName,pValue);
+            xstyleLoader->loadStylesFromURL(msTemplateName,aValue);
         }
     }
 

@@ -119,10 +119,8 @@
 #define HID_MN_SUB_FIELD                                        "SW_HID_MN_SUB_FIELD"
 #define HID_MN_SUB_GRAPHIC                                      "SW_HID_MN_SUB_GRAPHIC"
 #define HID_MN_SUB_TEMPLATES                                    "SW_HID_MN_SUB_TEMPLATES"
-#define HID_MN_SUB_ARRANGE                                      "SW_HID_MN_SUB_ARRANGE"
 #define HID_MN_SUB_SPELLING                                     "SW_HID_MN_SUB_SPELLING"
 #define HID_MN_SUB_MIRROR                                       "SW_HID_MN_SUB_MIRROR"
-#define HID_MN_SUB_ALIGN                                        "SW_HID_MN_SUB_ALIGN"
 
 #define HID_MN_CALC_PHD                                         "SW_HID_MN_CALC_PHD"
 #define HID_MN_CALC_SQRT                                        "SW_HID_MN_CALC_SQRT"
@@ -163,7 +161,6 @@
 #define HID_MN_READONLY_COPYGRAPHIC                             "SW_HID_MN_READONLY_COPYGRAPHIC"
 #define HID_MN_READONLY_LOADGRAPHIC                             "SW_HID_MN_READONLY_LOADGRAPHIC"
 #define HID_MN_READONLY_GRAPHICOFF                              "SW_HID_MN_READONLY_GRAPHICOFF"
-#define HID_MN_READONLY_PLUGINOFF                               "SW_HID_MN_READONLY_PLUGINOFF"
 
 #define HID_LINGU_ADD_WORD                                      "SW_HID_LINGU_ADD_WORD"
 #define HID_LINGU_IGNORE_WORD                                   "SW_HID_LINGU_IGNORE_WORD"

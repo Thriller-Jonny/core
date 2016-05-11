@@ -282,10 +282,7 @@ bool SwFormatFrameSize::PutValue( const uno::Any& rVal, sal_uInt8 nMemberId )
                     aTmp.Height() = convertMm100ToTwip(aTmp.Height());
                     aTmp.Width() = convertMm100ToTwip(aTmp.Width());
                 }
-                if(aTmp.Height() || aTmp.Width())
-                    m_aSize = aTmp;
-                else
-                    bRet = false;
+                m_aSize = aTmp;
             }
         }
         break;
@@ -2653,8 +2650,7 @@ void SwFrameFormat::MakeFrames()
     OSL_ENSURE( false, "Sorry not implemented." );
 }
 
-SwRect SwFrameFormat::FindLayoutRect( const bool bPrtArea, const Point* pPoint,
-                                 const bool bCalcFrame ) const
+SwRect SwFrameFormat::FindLayoutRect( const bool bPrtArea, const Point* pPoint ) const
 {
     SwRect aRet;
     SwFrame *pFrame = nullptr;
@@ -2687,9 +2683,8 @@ SwRect SwFrameFormat::FindLayoutRect( const bool bPrtArea, const Point* pPoint,
     }
     else
     {
-        const sal_uInt16 nFrameType = RES_FLYFRMFMT == Which() ? FRM_FLY : USHRT_MAX;
-        pFrame = ::GetFrameOfModify( nullptr, *const_cast<SwModify*>(static_cast<SwModify const *>(this)), nFrameType, pPoint,
-                                    nullptr, bCalcFrame );
+        const SwFrameType nFrameType = RES_FLYFRMFMT == Which() ? SwFrameType::Fly : FRM_ALL;
+        pFrame = ::GetFrameOfModify( nullptr, *const_cast<SwModify*>(static_cast<SwModify const *>(this)), nFrameType, pPoint);
     }
 
     if( pFrame )
@@ -2720,7 +2715,7 @@ SdrObject* SwFrameFormat::FindRealSdrObject()
     if( RES_FLYFRMFMT == Which() )
     {
         Point aNullPt;
-        SwFlyFrame* pFly = static_cast<SwFlyFrame*>(::GetFrameOfModify( nullptr, *this, FRM_FLY,
+        SwFlyFrame* pFly = static_cast<SwFlyFrame*>(::GetFrameOfModify( nullptr, *this, SwFrameType::Fly,
                                                     &aNullPt ));
         return pFly ? pFly->GetVirtDrawObj() : nullptr;
     }
@@ -3038,15 +3033,15 @@ void SwFlyFrameFormat::MakeFrames()
     }
 }
 
-SwFlyFrame* SwFlyFrameFormat::GetFrame( const Point* pPoint, const bool bCalcFrame ) const
+SwFlyFrame* SwFlyFrameFormat::GetFrame( const Point* pPoint ) const
 {
-    return static_cast<SwFlyFrame*>(::GetFrameOfModify( nullptr, *const_cast<SwModify*>(static_cast<SwModify const *>(this)), FRM_FLY,
-                                            pPoint, nullptr, bCalcFrame ));
+    return static_cast<SwFlyFrame*>(::GetFrameOfModify( nullptr, *const_cast<SwModify*>(static_cast<SwModify const *>(this)), SwFrameType::Fly,
+                                            pPoint ));
 }
 
-SwAnchoredObject* SwFlyFrameFormat::GetAnchoredObj( const Point* pPoint, const bool bCalcFrame ) const
+SwAnchoredObject* SwFlyFrameFormat::GetAnchoredObj() const
 {
-    SwFlyFrame* pFlyFrame( GetFrame( pPoint, bCalcFrame ) );
+    SwFlyFrame* pFlyFrame( GetFrame() );
     if ( pFlyFrame )
     {
         return dynamic_cast<SwAnchoredObject*>(pFlyFrame);
@@ -3466,7 +3461,7 @@ bool IsFlyFrameFormatInHeader(const SwFrameFormat& rFormat)
     }
     SwPageFrame* pPageFrame = pFlyFrame->FindPageFrameOfAnchor();
     SwFrame* pHeader = pPageFrame->Lower();
-    if (pHeader->GetType() == FRM_HEADER)
+    if (pHeader->GetType() == SwFrameType::Header)
     {
         const SwFrame* pFrame = pFlyFrame->GetAnchorFrame();
         while (pFrame)

@@ -104,30 +104,22 @@ public:
      */
     bool                Convert( BmpConversion eConversion );
 
-    /** Reduce number of colors for the bitmap
+    /** Reduce number of colors for the bitmap using the POPULAR algorithm
 
         @param nNewColorCount
         Maximal number of bitmap colors after the reduce operation
 
-        @param eReduce
-        Algorithm to use for color reduction
-
         @return true, if the color reduction operation was completed successfully.
      */
-    bool                ReduceColors(
-                            sal_uInt16 nNewColorCount,
-                            BmpReduce eReduce = BMP_REDUCE_SIMPLE );
+    bool                ReduceColors( sal_uInt16 nNewColorCount );
 
     /** Apply a dither algorithm to the bitmap
 
         This method dithers the bitmap inplace, i.e. a true color
         bitmap is converted to a paletted bitmap, reducing the color
         deviation by error diffusion.
-
-        @param nDitherFlags
-        The algorithm to be used for dithering
      */
-    bool                Dither( BmpDitherFlags nDitherFlags = BmpDitherFlags::Matrix );
+    bool                Dither();
 
     /** Crop the bitmap
 
@@ -277,17 +269,11 @@ public:
         @param rReplaceColor
         Color to be placed in all changed pixel
 
-        @param nTol
-        Tolerance value. Specifies the maximal difference between
-        rSearchColor and the individual pixel values, such that the
-        corresponding pixel is still regarded a match.
-
         @return true, if the operation was completed successfully.
      */
     bool                Replace(
                             const Color& rSearchColor,
-                            const Color& rReplaceColor,
-                            sal_uLong nTol = 0 );
+                            const Color& rReplaceColor );
 
     /** Replace all pixel having one the search colors with the corresponding replace color
 
@@ -338,7 +324,7 @@ public:
         @param bInvert
         If true, invert the channel values with the logical 'not' operator
 
-        @param msoFormula
+        @param msoBrightness
         Use the same formula for brightness as used by MSOffice.
 
         @return true, if the operation was completed successfully.
@@ -445,8 +431,8 @@ public:
                             const Size &rSize );
 public:
 
-    SAL_DLLPRIVATE  ImpBitmap*  ImplGetBitmapImpBitmap() const { return aBitmap.ImplGetImpBitmap(); }
-    SAL_DLLPRIVATE  ImpBitmap*  ImplGetMaskImpBitmap() const { return aMask.ImplGetImpBitmap(); }
+    SAL_DLLPRIVATE  std::shared_ptr<ImpBitmap>  ImplGetBitmapImpBitmap() const { return aBitmap.ImplGetImpBitmap(); }
+    SAL_DLLPRIVATE  std::shared_ptr<ImpBitmap>  ImplGetMaskImpBitmap() const { return aMask.ImplGetImpBitmap(); }
 
 
 private:

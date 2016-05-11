@@ -479,7 +479,6 @@ inline void UNO_proxy::release() const
 }
 
 
-
 uno_Interface * Bridge::map_to_uno(
     JNI_context const & jni,
     jobject javaI, JNI_interface_type_info const * info ) const
@@ -611,8 +610,8 @@ void SAL_CALL UNO_proxy_dispatch(
             {
                 typelib_MethodParameter param;
                 param.pTypeRef = attrib_td->pAttributeTypeRef;
-                param.bIn = sal_True;
-                param.bOut = sal_False;
+                param.bIn = true;
+                param.bOut = false;
 
                 bridge->call_java(
                     that->m_javaI, iface_td,

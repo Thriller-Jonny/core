@@ -266,7 +266,7 @@ public:
      * Set a table as referenced, used only during store-to-file.
      * @returns <TRUE/> if ALL tables of ALL documents are marked.
      */
-    bool setCacheTableReferenced( sal_uInt16 nFileId, const OUString& rTabName, size_t nSheets, bool bPermanent );
+    bool setCacheTableReferenced( sal_uInt16 nFileId, const OUString& rTabName, size_t nSheets );
     void setAllCacheTableReferencedStati( bool bReferenced );
     bool areAllCacheTablesReferenced() const { return maReferenced.mbAllReferenced;}
 
@@ -358,7 +358,7 @@ private:
     mutable DocDataType maDocs;
 };
 
-class SC_DLLPUBLIC ScExternalRefManager : public formula::ExternalReferenceHelper, SfxListener
+class SC_DLLPUBLIC ScExternalRefManager : public formula::ExternalReferenceHelper, public SfxListener
 {
 public:
 
@@ -513,11 +513,10 @@ public:
     /**
      * Mark all tables as referenced that are used by any LinkListener, used
      * only during store-to-file.
-     * @returns <TRUE/> if ALL tables of ALL external documents are marked.
      */
-    bool markUsedByLinkListeners();
+    void markUsedByLinkListeners();
 
-    bool markUsedExternalRefCells();
+    void markUsedExternalRefCells();
 
     /**
      * Set a table as referenced, used only during store-to-file.

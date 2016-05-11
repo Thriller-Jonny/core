@@ -323,7 +323,7 @@ ScVbaFormat< Ifc... >::setWrapText( const uno::Any& _aWrapText ) throw (script::
 
 template< typename... Ifc >
 uno::Any SAL_CALL
-ScVbaFormat< Ifc... >::getWrapText(  ) throw (script::BasicErrorException, uno::RuntimeException)
+ScVbaFormat< Ifc... >::getWrapText(  ) throw (script::BasicErrorException, uno::RuntimeException, std::exception)
 {
     uno::Any aWrap = aNULL();
     try
@@ -418,7 +418,7 @@ ScVbaFormat< Ifc... >::setNumberFormatLocal( const uno::Any& _oLocalFormatString
         initializeNumberFormats();
         lang::Locale aRangeLocale;
         xNumberFormats->getByKey(nFormat)->getPropertyValue( LOCALE ) >>= aRangeLocale;
-        sal_Int32 nNewFormat = xNumberFormats->queryKey(sLocalFormatString, aRangeLocale, sal_True);
+        sal_Int32 nNewFormat = xNumberFormats->queryKey(sLocalFormatString, aRangeLocale, true);
 
         if (nNewFormat == -1)
             nNewFormat = xNumberFormats->addNew(sLocalFormatString, aRangeLocale);
@@ -444,7 +444,7 @@ ScVbaFormat< Ifc... >::setNumberFormat( const uno::Any& _oFormatString ) throw (
 
         lang::Locale aDefaultLocale = m_aDefaultLocale;
         initializeNumberFormats();
-        sal_Int32 nFormat = xNumberFormats->queryKey(sFormatString, aDefaultLocale, sal_True);
+        sal_Int32 nFormat = xNumberFormats->queryKey(sFormatString, aDefaultLocale, true);
 
         if (nFormat == -1)
             nFormat = xNumberFormats->addNew(sFormatString, aDefaultLocale);
@@ -552,7 +552,7 @@ ScVbaFormat< Ifc... >::setFormulaHidden( const uno::Any& FormulaHidden ) throw (
 
 template< typename... Ifc >
 uno::Any SAL_CALL
-ScVbaFormat< Ifc... >::getLocked(  ) throw (script::BasicErrorException, uno::RuntimeException)
+ScVbaFormat< Ifc... >::getLocked(  ) throw (script::BasicErrorException, uno::RuntimeException, std::exception)
 {
     uno::Any aCellProtection = aNULL();
     try
@@ -586,7 +586,7 @@ ScVbaFormat< Ifc... >::getLocked(  ) throw (script::BasicErrorException, uno::Ru
 
 template< typename... Ifc >
 uno::Any SAL_CALL
-ScVbaFormat< Ifc... >::getFormulaHidden(  ) throw (script::BasicErrorException, uno::RuntimeException)
+ScVbaFormat< Ifc... >::getFormulaHidden(  ) throw (script::BasicErrorException, uno::RuntimeException, std::exception)
 {
     uno::Any aBoolRet = aNULL();
     try
@@ -717,7 +717,7 @@ ScVbaFormat< Ifc... >::getReadingOrder(  ) throw (script::BasicErrorException, u
 
 template< typename... Ifc >
 uno::Any SAL_CALL
-ScVbaFormat< Ifc... >::getNumberFormat(  ) throw (script::BasicErrorException, uno::RuntimeException)
+ScVbaFormat< Ifc... >::getNumberFormat(  ) throw (script::BasicErrorException, uno::RuntimeException, std::exception)
 {
     uno::Any aFormat = aNULL();
     try
@@ -789,7 +789,7 @@ ScVbaFormat< Ifc... >::getCellRangesBase() throw ( ::uno::RuntimeException )
 
 template< typename... Ifc >
 SfxItemSet*
-ScVbaFormat< Ifc... >::getCurrentDataSet( ) throw ( uno::RuntimeException )
+ScVbaFormat< Ifc... >::getCurrentDataSet() throw (uno::RuntimeException, std::exception)
 {
     SfxItemSet* pDataSet = excel::ScVbaCellRangeAccess::GetDataSet( getCellRangesBase() );
     if ( !pDataSet )

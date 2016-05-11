@@ -7,7 +7,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include <com/sun/star/uno/Any.hxx>
 #include <com/sun/star/uno/Sequence.hxx>
 #include <osl/diagnose.h>
 
@@ -53,11 +52,6 @@ bool ScDefaultsOptions::operator==( const ScDefaultsOptions& rOpt ) const
 {
     return rOpt.nInitTabCount  == nInitTabCount
         && rOpt.aInitTabPrefix == aInitTabPrefix;
-}
-
-bool ScDefaultsOptions::operator!=( const ScDefaultsOptions& rOpt ) const
-{
-    return !(operator==(rOpt));
 }
 
 ScTpDefaultsItem::ScTpDefaultsItem( sal_uInt16 nWhichP, const ScDefaultsOptions& rOpt ) :

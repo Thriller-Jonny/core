@@ -57,7 +57,7 @@ public:
 
     void finish()
         throw(css::io::IOException, css::uno::RuntimeException);
-    css::uno::Reference< css::io::XOutputStream > getStream();
+    const css::uno::Reference< css::io::XOutputStream >& getStream();
 
     static sal_uInt32 getCurrentDosTime();
     static void setEntry( ZipEntry *pEntry );
@@ -69,6 +69,16 @@ private:
         throw(css::io::IOException, css::uno::RuntimeException);
     void writeEXT( const ZipEntry &rEntry )
         throw(css::io::IOException, css::uno::RuntimeException);
+
+    // ScheduledThread handling helpers
+    void consumeScheduledThreadEntry(ZipOutputEntry* pCandidate);
+    void consumeFinishedScheduledThreadEntries();
+    void consumeAllScheduledThreadEntries();
+
+public:
+    void reduceScheduledThreadsToGivenNumberOrLess(
+        sal_Int32 nThreads,
+        sal_Int32 nWaitTimeInTenthSeconds);
 };
 
 #endif

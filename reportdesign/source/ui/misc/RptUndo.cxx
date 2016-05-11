@@ -127,8 +127,8 @@ OSectionUndo::~OSectionUndo()
     if ( !m_bInserted )
     {
         OXUndoEnvironment& rEnv = static_cast< OReportModel& >( rMod ).GetUndoEnv();
-        ::std::vector< uno::Reference< drawing::XShape> >::iterator aEnd = m_aControls.end();
-        for (::std::vector< uno::Reference< drawing::XShape> >::iterator aIter = m_aControls.begin(); aIter != aEnd; ++aIter)
+        ::std::vector< uno::Reference< drawing::XShape> >::const_iterator aEnd = m_aControls.end();
+        for (::std::vector< uno::Reference< drawing::XShape> >::const_iterator aIter = m_aControls.begin(); aIter != aEnd; ++aIter)
         {
             uno::Reference< drawing::XShape> xShape = *aIter;
             rEnv.RemoveElement(xShape);
@@ -220,9 +220,8 @@ OReportSectionUndo::OReportSectionUndo(OReportModel& _rMod,sal_uInt16 _nSlot
                                        ,::std::mem_fun_t< uno::Reference< report::XSection >
                                             ,OReportHelper> _pMemberFunction
                                        ,const uno::Reference< report::XReportDefinition >& _xReport
-                                       ,Action _eAction
-                                       ,sal_uInt16 nCommentID)
-: OSectionUndo(_rMod,_nSlot,_eAction,nCommentID)
+                                       ,Action _eAction)
+: OSectionUndo(_rMod,_nSlot,_eAction,0)
 ,m_aReportHelper(_xReport)
 ,m_pMemberFunction(_pMemberFunction)
 {
@@ -296,7 +295,7 @@ void OGroupSectionUndo::implReInsert( )
     uno::Sequence< beans::PropertyValue > aArgs(2);
 
     aArgs[0].Name = SID_GROUPHEADER_WITHOUT_UNDO == m_nSlot? OUString(PROPERTY_HEADERON) : OUString(PROPERTY_FOOTERON);
-    aArgs[0].Value <<= sal_True;
+    aArgs[0].Value <<= true;
     aArgs[1].Name = PROPERTY_GROUP;
     aArgs[1].Value <<= m_aGroupHelper.getGroup();
     m_pController->executeChecked(m_nSlot,aArgs);
@@ -315,7 +314,7 @@ void OGroupSectionUndo::implReRemove( )
     uno::Sequence< beans::PropertyValue > aArgs(2);
 
     aArgs[0].Name = SID_GROUPHEADER_WITHOUT_UNDO == m_nSlot? OUString(PROPERTY_HEADERON) : OUString(PROPERTY_FOOTERON);
-    aArgs[0].Value <<= sal_False;
+    aArgs[0].Value <<= false;
     aArgs[1].Name = PROPERTY_GROUP;
     aArgs[1].Value <<= m_aGroupHelper.getGroup();
 
@@ -392,7 +391,6 @@ void OGroupUndo::Redo()
 
 
 } // rptui
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

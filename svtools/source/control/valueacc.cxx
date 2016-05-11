@@ -32,9 +32,6 @@
 using namespace ::com::sun::star;
 
 
-// - ValueSetItem -
-
-
 ValueSetItem::ValueSetItem( ValueSet& rParent )
     : mrParent(rParent)
     , mnId(0)
@@ -46,7 +43,6 @@ ValueSetItem::ValueSetItem( ValueSet& rParent )
 }
 
 
-
 ValueSetItem::~ValueSetItem()
 {
     if( mxAcc.is() )
@@ -54,7 +50,6 @@ ValueSetItem::~ValueSetItem()
         static_cast< ValueItemAcc* >( mxAcc.get() )->ParentDestroyed();
     }
 }
-
 
 
 uno::Reference< accessibility::XAccessible > ValueSetItem::GetAccessible( bool bIsTransientChildrenDisabled )
@@ -66,9 +61,6 @@ uno::Reference< accessibility::XAccessible > ValueSetItem::GetAccessible( bool b
 }
 
 
-// - ValueSetAcc -
-
-
 ValueSetAcc::ValueSetAcc( ValueSet* pParent, bool bIsTransientChildrenDisabled ) :
     ValueSetAccComponentBase (m_aMutex),
     mpParent( pParent ),
@@ -78,11 +70,9 @@ ValueSetAcc::ValueSetAcc( ValueSet* pParent, bool bIsTransientChildrenDisabled )
 }
 
 
-
 ValueSetAcc::~ValueSetAcc()
 {
 }
-
 
 
 void ValueSetAcc::FireAccessibleEvent( short nEventId, const uno::Any& rOldValue, const uno::Any& rNewValue )
@@ -122,7 +112,6 @@ const uno::Sequence< sal_Int8 >& ValueSetAcc::getUnoTunnelId()
 }
 
 
-
 ValueSetAcc* ValueSetAcc::getImplementation( const uno::Reference< uno::XInterface >& rxData )
     throw()
 {
@@ -138,8 +127,6 @@ ValueSetAcc* ValueSetAcc::getImplementation( const uno::Reference< uno::XInterfa
 }
 
 
-
-
 void ValueSetAcc::GetFocus()
 {
     mbIsFocused = true;
@@ -151,7 +138,6 @@ void ValueSetAcc::GetFocus()
         css::accessibility::AccessibleEventId::STATE_CHANGED,
         aOldState, aNewState);
 }
-
 
 
 void ValueSetAcc::LoseFocus()
@@ -167,14 +153,12 @@ void ValueSetAcc::LoseFocus()
 }
 
 
-
 uno::Reference< accessibility::XAccessibleContext > SAL_CALL ValueSetAcc::getAccessibleContext()
     throw (uno::RuntimeException, std::exception)
 {
     ThrowIfDisposed();
     return this;
 }
-
 
 
 sal_Int32 SAL_CALL ValueSetAcc::getAccessibleChildCount()
@@ -188,7 +172,6 @@ sal_Int32 SAL_CALL ValueSetAcc::getAccessibleChildCount()
         nCount += 1;
     return nCount;
 }
-
 
 
 uno::Reference< accessibility::XAccessible > SAL_CALL ValueSetAcc::getAccessibleChild( sal_Int32 i )
@@ -208,7 +191,6 @@ uno::Reference< accessibility::XAccessible > SAL_CALL ValueSetAcc::getAccessible
 }
 
 
-
 uno::Reference< accessibility::XAccessible > SAL_CALL ValueSetAcc::getAccessibleParent()
     throw (uno::RuntimeException, std::exception)
 {
@@ -222,7 +204,6 @@ uno::Reference< accessibility::XAccessible > SAL_CALL ValueSetAcc::getAccessible
 
     return xRet;
 }
-
 
 
 sal_Int32 SAL_CALL ValueSetAcc::getAccessibleIndexInParent()
@@ -251,7 +232,6 @@ sal_Int32 SAL_CALL ValueSetAcc::getAccessibleIndexInParent()
 }
 
 
-
 sal_Int16 SAL_CALL ValueSetAcc::getAccessibleRole()
     throw (uno::RuntimeException, std::exception)
 {
@@ -264,7 +244,6 @@ sal_Int16 SAL_CALL ValueSetAcc::getAccessibleRole()
 }
 
 
-
 OUString SAL_CALL ValueSetAcc::getAccessibleDescription()
     throw (uno::RuntimeException, std::exception)
 {
@@ -274,7 +253,6 @@ OUString SAL_CALL ValueSetAcc::getAccessibleDescription()
 
     return aRet;
 }
-
 
 
 OUString SAL_CALL ValueSetAcc::getAccessibleName()
@@ -301,7 +279,6 @@ OUString SAL_CALL ValueSetAcc::getAccessibleName()
 
     return aRet;
 }
-
 
 
 uno::Reference< accessibility::XAccessibleRelationSet > SAL_CALL ValueSetAcc::getAccessibleRelationSet()
@@ -334,7 +311,6 @@ uno::Reference< accessibility::XAccessibleRelationSet > SAL_CALL ValueSetAcc::ge
 }
 
 
-
 uno::Reference< accessibility::XAccessibleStateSet > SAL_CALL ValueSetAcc::getAccessibleStateSet()
     throw (uno::RuntimeException, std::exception)
 {
@@ -356,7 +332,6 @@ uno::Reference< accessibility::XAccessibleStateSet > SAL_CALL ValueSetAcc::getAc
 }
 
 
-
 lang::Locale SAL_CALL ValueSetAcc::getLocale()
     throw (accessibility::IllegalAccessibleComponentStateException, uno::RuntimeException, std::exception)
 {
@@ -375,7 +350,6 @@ lang::Locale SAL_CALL ValueSetAcc::getLocale()
 
     return aRet;
 }
-
 
 
 void SAL_CALL ValueSetAcc::addAccessibleEventListener( const uno::Reference< accessibility::XAccessibleEventListener >& rxListener )
@@ -403,7 +377,6 @@ void SAL_CALL ValueSetAcc::addAccessibleEventListener( const uno::Reference< acc
 }
 
 
-
 void SAL_CALL ValueSetAcc::removeAccessibleEventListener( const uno::Reference< accessibility::XAccessibleEventListener >& rxListener )
     throw (uno::RuntimeException, std::exception)
 {
@@ -421,7 +394,6 @@ void SAL_CALL ValueSetAcc::removeAccessibleEventListener( const uno::Reference< 
 }
 
 
-
 sal_Bool SAL_CALL ValueSetAcc::containsPoint( const awt::Point& aPoint )
     throw (uno::RuntimeException, std::exception)
 {
@@ -432,7 +404,6 @@ sal_Bool SAL_CALL ValueSetAcc::containsPoint( const awt::Point& aPoint )
 
     return Rectangle( aNullPoint, aSize ).IsInside( aTestPoint );
 }
-
 
 
 uno::Reference< accessibility::XAccessible > SAL_CALL ValueSetAcc::getAccessibleAtPoint( const awt::Point& aPoint )
@@ -458,7 +429,6 @@ uno::Reference< accessibility::XAccessible > SAL_CALL ValueSetAcc::getAccessible
 }
 
 
-
 awt::Rectangle SAL_CALL ValueSetAcc::getBounds()
     throw (uno::RuntimeException, std::exception)
 {
@@ -477,7 +447,6 @@ awt::Rectangle SAL_CALL ValueSetAcc::getBounds()
 }
 
 
-
 awt::Point SAL_CALL ValueSetAcc::getLocation()
     throw (uno::RuntimeException, std::exception)
 {
@@ -490,7 +459,6 @@ awt::Point SAL_CALL ValueSetAcc::getLocation()
 
     return aRet;
 }
-
 
 
 awt::Point SAL_CALL ValueSetAcc::getLocationOnScreen()
@@ -506,7 +474,6 @@ awt::Point SAL_CALL ValueSetAcc::getLocationOnScreen()
 
     return aRet;
 }
-
 
 
 awt::Size SAL_CALL ValueSetAcc::getSize()
@@ -563,7 +530,6 @@ void SAL_CALL ValueSetAcc::selectAccessibleChild( sal_Int32 nChildIndex )
 }
 
 
-
 sal_Bool SAL_CALL ValueSetAcc::isAccessibleChildSelected( sal_Int32 nChildIndex )
     throw (lang::IndexOutOfBoundsException, uno::RuntimeException, std::exception)
 {
@@ -581,7 +547,6 @@ sal_Bool SAL_CALL ValueSetAcc::isAccessibleChildSelected( sal_Int32 nChildIndex 
 }
 
 
-
 void SAL_CALL ValueSetAcc::clearAccessibleSelection()
     throw (uno::RuntimeException, std::exception)
 {
@@ -591,14 +556,12 @@ void SAL_CALL ValueSetAcc::clearAccessibleSelection()
 }
 
 
-
 void SAL_CALL ValueSetAcc::selectAllAccessibleChildren()
     throw (uno::RuntimeException, std::exception)
 {
     ThrowIfDisposed();
     // unsupported due to single selection only
 }
-
 
 
 sal_Int32 SAL_CALL ValueSetAcc::getSelectedAccessibleChildCount()
@@ -620,7 +583,6 @@ sal_Int32 SAL_CALL ValueSetAcc::getSelectedAccessibleChildCount()
 }
 
 
-
 uno::Reference< accessibility::XAccessible > SAL_CALL ValueSetAcc::getSelectedAccessibleChild( sal_Int32 nSelectedChildIndex )
     throw (lang::IndexOutOfBoundsException, uno::RuntimeException, std::exception)
 {
@@ -640,7 +602,6 @@ uno::Reference< accessibility::XAccessible > SAL_CALL ValueSetAcc::getSelectedAc
 }
 
 
-
 void SAL_CALL ValueSetAcc::deselectAccessibleChild( sal_Int32 nChildIndex )
     throw (lang::IndexOutOfBoundsException, uno::RuntimeException, std::exception)
 {
@@ -651,7 +612,6 @@ void SAL_CALL ValueSetAcc::deselectAccessibleChild( sal_Int32 nChildIndex )
     if (isAccessibleChildSelected(nChildIndex))
         mpParent->SetNoSelection();
 }
-
 
 
 sal_Int64 SAL_CALL ValueSetAcc::getSomething( const uno::Sequence< sal_Int8 >& rId ) throw( uno::RuntimeException, std::exception )
@@ -665,8 +625,6 @@ sal_Int64 SAL_CALL ValueSetAcc::getSomething( const uno::Sequence< sal_Int8 >& r
 
     return nRet;
 }
-
-
 
 
 void SAL_CALL ValueSetAcc::disposing()
@@ -736,8 +694,6 @@ ValueSetItem* ValueSetAcc::getItem (sal_uInt16 nIndex) const
 }
 
 
-
-
 void ValueSetAcc::ThrowIfDisposed()
     throw (css::lang::DisposedException)
 {
@@ -760,7 +716,6 @@ bool ValueSetAcc::HasNoneField() const
     return ((mpParent->GetStyle() & WB_NONEFIELD) != 0);
 }
 
-// - ValueItemAcc -
 ValueItemAcc::ValueItemAcc( ValueSetItem* pParent, bool bIsTransientChildrenDisabled ) :
     mpParent( pParent ),
     mbIsTransientChildrenDisabled( bIsTransientChildrenDisabled )
@@ -792,7 +747,6 @@ void ValueItemAcc::FireAccessibleEvent( short nEventId, const uno::Any& rOldValu
 }
 
 
-
 void ValueItemAcc::ParentDestroyed()
 {
     const ::osl::MutexGuard aGuard( maMutex );
@@ -810,7 +764,6 @@ const uno::Sequence< sal_Int8 >& ValueItemAcc::getUnoTunnelId()
 }
 
 
-
 ValueItemAcc* ValueItemAcc::getImplementation( const uno::Reference< uno::XInterface >& rxData )
     throw()
 {
@@ -826,13 +779,11 @@ ValueItemAcc* ValueItemAcc::getImplementation( const uno::Reference< uno::XInter
 }
 
 
-
 uno::Reference< accessibility::XAccessibleContext > SAL_CALL ValueItemAcc::getAccessibleContext()
     throw (uno::RuntimeException, std::exception)
 {
     return this;
 }
-
 
 
 sal_Int32 SAL_CALL ValueItemAcc::getAccessibleChildCount()
@@ -842,13 +793,11 @@ sal_Int32 SAL_CALL ValueItemAcc::getAccessibleChildCount()
 }
 
 
-
 uno::Reference< accessibility::XAccessible > SAL_CALL ValueItemAcc::getAccessibleChild( sal_Int32 )
     throw (lang::IndexOutOfBoundsException, uno::RuntimeException, std::exception)
 {
     throw lang::IndexOutOfBoundsException();
 }
-
 
 
 uno::Reference< accessibility::XAccessible > SAL_CALL ValueItemAcc::getAccessibleParent()
@@ -862,7 +811,6 @@ uno::Reference< accessibility::XAccessible > SAL_CALL ValueItemAcc::getAccessibl
 
     return xRet;
 }
-
 
 
 sal_Int32 SAL_CALL ValueItemAcc::getAccessibleIndexInParent()
@@ -915,7 +863,6 @@ sal_Int32 SAL_CALL ValueItemAcc::getAccessibleIndexInParent()
 }
 
 
-
 sal_Int16 SAL_CALL ValueItemAcc::getAccessibleRole()
     throw (uno::RuntimeException, std::exception)
 {
@@ -923,13 +870,11 @@ sal_Int16 SAL_CALL ValueItemAcc::getAccessibleRole()
 }
 
 
-
 OUString SAL_CALL ValueItemAcc::getAccessibleDescription()
     throw (uno::RuntimeException, std::exception)
 {
     return OUString();
 }
-
 
 
 OUString SAL_CALL ValueItemAcc::getAccessibleName()
@@ -954,13 +899,11 @@ OUString SAL_CALL ValueItemAcc::getAccessibleName()
 }
 
 
-
 uno::Reference< accessibility::XAccessibleRelationSet > SAL_CALL ValueItemAcc::getAccessibleRelationSet()
     throw (uno::RuntimeException, std::exception)
 {
     return uno::Reference< accessibility::XAccessibleRelationSet >();
 }
-
 
 
 uno::Reference< accessibility::XAccessibleStateSet > SAL_CALL ValueItemAcc::getAccessibleStateSet()
@@ -994,7 +937,6 @@ uno::Reference< accessibility::XAccessibleStateSet > SAL_CALL ValueItemAcc::getA
 }
 
 
-
 lang::Locale SAL_CALL ValueItemAcc::getLocale()
     throw (accessibility::IllegalAccessibleComponentStateException, uno::RuntimeException, std::exception)
 {
@@ -1012,7 +954,6 @@ lang::Locale SAL_CALL ValueItemAcc::getLocale()
 
     return aRet;
 }
-
 
 
 void SAL_CALL ValueItemAcc::addAccessibleEventListener( const uno::Reference< accessibility::XAccessibleEventListener >& rxListener )
@@ -1039,7 +980,6 @@ void SAL_CALL ValueItemAcc::addAccessibleEventListener( const uno::Reference< ac
 }
 
 
-
 void SAL_CALL ValueItemAcc::removeAccessibleEventListener( const uno::Reference< accessibility::XAccessibleEventListener >& rxListener )
     throw (uno::RuntimeException, std::exception)
 {
@@ -1054,7 +994,6 @@ void SAL_CALL ValueItemAcc::removeAccessibleEventListener( const uno::Reference<
             mxEventListeners.erase(aIter);
     }
 }
-
 
 
 sal_Bool SAL_CALL ValueItemAcc::containsPoint( const awt::Point& aPoint )

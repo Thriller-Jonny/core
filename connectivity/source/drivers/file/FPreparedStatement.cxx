@@ -84,7 +84,7 @@ void OPreparedStatement::construct(const OUString& sql)  throw(SQLException, Run
 
     Reference<XIndexAccess> xNames(m_xColNames,UNO_QUERY);
 
-    if ( m_aSQLIterator.getStatementType() == SQL_STATEMENT_SELECT )
+    if ( m_aSQLIterator.getStatementType() == OSQLStatementType::Select )
         m_xParamColumns = m_aSQLIterator.getParameters();
     else
     {
@@ -158,7 +158,7 @@ sal_Bool SAL_CALL OPreparedStatement::execute(  ) throw(SQLException, RuntimeExc
     if(xRS.is())
         xRS->dispose();
 
-    return m_aSQLIterator.getStatementType() == SQL_STATEMENT_SELECT;
+    return m_aSQLIterator.getStatementType() == OSQLStatementType::Select;
 }
 
 
@@ -236,7 +236,6 @@ void SAL_CALL OPreparedStatement::setDouble( sal_Int32 parameterIndex, double x 
 {
     setParameter(parameterIndex,x);
 }
-
 
 
 void SAL_CALL OPreparedStatement::setFloat( sal_Int32 parameterIndex, float x ) throw(SQLException, RuntimeException, std::exception)
@@ -338,7 +337,6 @@ void SAL_CALL OPreparedStatement::setBytes( sal_Int32 parameterIndex, const Sequ
 {
     setParameter(parameterIndex,x);
 }
-
 
 
 void SAL_CALL OPreparedStatement::setCharacterStream( sal_Int32 parameterIndex, const Reference< ::com::sun::star::io::XInputStream >& x, sal_Int32 length ) throw(SQLException, RuntimeException, std::exception)
@@ -489,10 +487,10 @@ void OPreparedStatement::describeParameter()
     if ( !aParseNodes.empty() )
     {
         //  m_xParamColumns = new OSQLColumns();
-        const OSQLTables& xTabs = m_aSQLIterator.getTables();
-        if( !xTabs.empty() )
+        const OSQLTables& rTabs = m_aSQLIterator.getTables();
+        if( !rTabs.empty() )
         {
-            OSQLTable xTable = xTabs.begin()->second;
+            OSQLTable xTable = rTabs.begin()->second;
             ::std::vector< OSQLParseNode*>::const_iterator aIter = aParseNodes.begin();
             for (;aIter != aParseNodes.end();++aIter )
             {
@@ -557,7 +555,6 @@ void OPreparedStatement::parseParamterElem(const OUString& _sColumnName, OSQLPar
     // Save number of parameter in the variable:
     SetAssignValue(_sColumnName, OUString(), true, nParameter);
 }
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

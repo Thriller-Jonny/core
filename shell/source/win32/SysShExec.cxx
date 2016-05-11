@@ -46,11 +46,8 @@
 using com::sun::star::uno::Reference;
 using com::sun::star::uno::RuntimeException;
 using com::sun::star::uno::Sequence;
-using com::sun::star::uno::XInterface;
-using com::sun::star::lang::EventObject;
 using com::sun::star::lang::XServiceInfo;
 using com::sun::star::lang::IllegalArgumentException;
-using osl::Mutex;
 using com::sun::star::system::XSystemShellExecute;
 using com::sun::star::system::SystemShellExecuteException;
 
@@ -172,7 +169,6 @@ namespace // private
     #define E_UNKNOWN_EXEC_ERROR -1
 
 
-
     bool is_system_path(const OUString& path_or_uri)
     {
         OUString url;
@@ -199,7 +195,6 @@ namespace // private
 
         return (jmp_mark > -1);
     }
-
 
 
     bool is_existing_file(const OUString& file_name)
@@ -242,7 +237,6 @@ namespace // private
 } // end namespace
 
 
-
 CSysShExec::CSysShExec( const Reference< css::uno::XComponentContext >& xContext ) :
     WeakComponentImplHelper< XSystemShellExecute, XServiceInfo >( m_aMutex ),
     m_xContext(xContext)
@@ -257,7 +251,6 @@ CSysShExec::CSysShExec( const Reference< css::uno::XComponentContext >& xContext
     CoUninitialize();
     CoInitialize( NULL );
 }
-
 
 
 void SAL_CALL CSysShExec::execute( const OUString& aCommand, const OUString& aParameter, sal_Int32 nFlags )

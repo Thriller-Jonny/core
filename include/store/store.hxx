@@ -81,13 +81,6 @@ public:
             (void) store_acquireHandle (m_hImpl);
     }
 
-    /** Conversion into Stream Handle.
-     */
-    inline operator storeStreamHandle() const
-    {
-        return m_hImpl;
-    }
-
     /** Open the stream.
         @see store_openStream()
      */
@@ -191,13 +184,6 @@ public:
     {
         if (m_hImpl)
             (void) store_acquireHandle (m_hImpl);
-    }
-
-    /** Conversion into Directory Handle.
-     */
-    inline operator storeDirectoryHandle() const
-    {
-        return m_hImpl;
     }
 
     /** Open the directory.
@@ -337,15 +323,14 @@ public:
     /** Open the temporary file in memory.
         @see store_createMemoryFile()
      */
-    inline storeError createInMemory (
-        sal_uInt16 nPageSize = STORE_DEFAULT_PAGESIZE)
+    inline storeError createInMemory ()
     {
         if (m_hImpl)
         {
             (void) store_releaseHandle (m_hImpl);
             m_hImpl = nullptr;
         }
-        return store_createMemoryFile (nPageSize, &m_hImpl);
+        return store_createMemoryFile (STORE_DEFAULT_PAGESIZE, &m_hImpl);
     }
 
     /** Close the file.
@@ -398,8 +383,6 @@ private:
 } // namespace store
 
 #endif /* ! INCLUDED_STORE_STORE_HXX */
-
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

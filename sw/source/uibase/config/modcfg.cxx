@@ -34,7 +34,6 @@
 #include <unotools/configmgr.hxx>
 #include <unotools/syslocaleoptions.hxx>
 #include <caption.hxx>
-#include <com/sun/star/uno/Any.hxx>
 
 #include <unomid.h>
 
@@ -249,7 +248,7 @@ SwRevisionConfig::SwRevisionConfig() :
         ConfigItemMode::DelayedUpdate|ConfigItemMode::ReleaseTree)
 {
     aInsertAttr.nItemId = SID_ATTR_CHAR_UNDERLINE;
-    aInsertAttr.nAttr = UNDERLINE_SINGLE;
+    aInsertAttr.nAttr = LINESTYLE_SINGLE;
     aInsertAttr.nColor = COL_TRANSPARENT;
     aDeletedAttr.nItemId = SID_ATTR_CHAR_STRIKEOUT;
     aDeletedAttr.nAttr = STRIKEOUT_SINGLE;
@@ -272,7 +271,7 @@ static sal_Int32 lcl_ConvertAttrToCfg(const AuthorCharAttr& rAttr)
     {
         case  SID_ATTR_CHAR_WEIGHT: nRet = 1; break;
         case  SID_ATTR_CHAR_POSTURE: nRet = 2; break;
-        case  SID_ATTR_CHAR_UNDERLINE: nRet = UNDERLINE_SINGLE == rAttr.nAttr ? 3 : 4; break;
+        case  SID_ATTR_CHAR_UNDERLINE: nRet = LINESTYLE_SINGLE == rAttr.nAttr ? 3 : 4; break;
         case  SID_ATTR_CHAR_STRIKEOUT: nRet = 3; break;
         case  SID_ATTR_CHAR_CASEMAP:
         {
@@ -332,10 +331,10 @@ static void lcl_ConvertCfgToAttr(sal_Int32 nVal, AuthorCharAttr& rAttr, bool bDe
                 else
                 {
                     rAttr.nItemId = SID_ATTR_CHAR_UNDERLINE;
-                    rAttr.nAttr = UNDERLINE_SINGLE;
+                    rAttr.nAttr = LINESTYLE_SINGLE;
                 }
         break;
-        case 4: rAttr.nItemId = SID_ATTR_CHAR_UNDERLINE;rAttr.nAttr = UNDERLINE_DOUBLE         ; break;
+        case 4: rAttr.nItemId = SID_ATTR_CHAR_UNDERLINE;rAttr.nAttr = LINESTYLE_DOUBLE         ; break;
         case 5: rAttr.nItemId = SID_ATTR_CHAR_CASEMAP;  rAttr.nAttr = SVX_CASEMAP_VERSALIEN    ; break;
         case 6: rAttr.nItemId = SID_ATTR_CHAR_CASEMAP;  rAttr.nAttr = SVX_CASEMAP_GEMEINE      ; break;
         case 7: rAttr.nItemId = SID_ATTR_CHAR_CASEMAP;  rAttr.nAttr = SVX_CASEMAP_KAPITAELCHEN ; break;
@@ -1302,9 +1301,9 @@ const Sequence<OUString>& SwCompareConfig::GetPropertyNames()
         aNames.realloc(nCount);
         static const char* aPropNames[] =
         {
-            "Mode",							// 0
-            "UseRSID",						// 1
-            "IgnorePieces",				// 2
+            "Mode",                         // 0
+            "UseRSID",                      // 1
+            "IgnorePieces",             // 2
             "IgnoreLength", // 3
             "StoreRSID" // 4
         };
@@ -1362,7 +1361,7 @@ void SwCompareConfig::Load()
 
             switch(nProp)
             {
-                case 0 : eCmpMode = (SvxCompareMode) nVal; break;;
+                case 0 : eCmpMode = (SvxCompareMode) nVal; break;
                 case 1 : bUseRsid = *static_cast<sal_Bool const *>(pValues[nProp].getValue()); break;
                 case 2 : bIgnorePieces = *static_cast<sal_Bool const *>(pValues[nProp].getValue()); break;
                 case 3 : nPieceLen = nVal; break;

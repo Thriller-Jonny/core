@@ -110,7 +110,7 @@ public:
     virtual ~FmNavNameChangedHint();
 
     FmEntryData*    GetEntryData() const { return pEntryData; }
-    OUString          GetNewName() const { return aNewName; }
+    const OUString& GetNewName() const { return aNewName; }
 };
 
 
@@ -163,7 +163,7 @@ public:
 
     const Image&    GetNormalImage() const { return m_aNormalImage; }
 
-    OUString          GetText() const { return aText; }
+    const OUString& GetText() const { return aText; }
     FmEntryData*    GetParent() const { return pParent; }
     FmEntryDataList* GetChildList() const { return pChildList; }
 
@@ -257,7 +257,6 @@ public:
 };
 
 
-
 class FmControlData : public FmEntryData
 {
     css::uno::Reference< css::form::XFormComponent >  m_xFormComponent;
@@ -283,8 +282,6 @@ public:
         const ImageList& _rNormalImages
     );
 };
-
-
 
 
 namespace svxform
@@ -374,7 +371,7 @@ namespace svxform
         static bool Rename( FmEntryData* pEntryData, const OUString& rNewText );
 
         void Clear();
-        void SetModified( bool bMod=true );
+        void SetModified();
 
         css::uno::Reference< css::form::XForms >    GetForms() const;
         FmFormShell*        GetFormShell() const { return m_pFormShell; }
@@ -493,8 +490,8 @@ namespace svxform
 
         void Clear();
         void UpdateContent( FmFormShell* pFormShell );
-        void MarkViewObj( FmFormData* pFormData, bool bMark, bool bDeep = false );
-        void MarkViewObj( FmControlData* pControlData, bool bMarkHandles, bool bMark );
+        void MarkViewObj( FmFormData* pFormData, bool bDeep );
+        void MarkViewObj( FmControlData* pControlData );
         void UnmarkAllViewObj();
 
         static bool IsFormEntry( SvTreeListEntry* pEntry );

@@ -32,6 +32,7 @@
 #include <vcl/opengl/OpenGLHelper.hxx>
 
 #include <algorithm>
+#include <array>
 #include <utility>
 
 #include <comphelper/random.hxx>
@@ -169,6 +170,7 @@ bool OGLTransitionImpl::prepare( sal_Int32 glLeavingSlideTex, sal_Int32 glEnteri
     m_nPrimitiveTransformLocation = glGetUniformLocation( m_nProgramObject, "u_primitiveTransformMatrix" );
     m_nSceneTransformLocation = glGetUniformLocation( m_nProgramObject, "u_sceneTransformMatrix" );
     m_nOperationsTransformLocation = glGetUniformLocation( m_nProgramObject, "u_operationsTransformMatrix" );
+    m_nTimeLocation = glGetUniformLocation( m_nProgramObject, "time" );
 
     glGenVertexArrays(1, &m_nVertexArrayObject);
     glBindVertexArray(m_nVertexArrayObject);
@@ -250,9 +252,7 @@ void OGLTransitionImpl::displaySlides_( double nTime, sal_Int32 glLeavingSlideTe
     CHECK_GL_ERROR();
     applyOverallOperations( nTime, SlideWidthScale, SlideHeightScale );
 
-    GLint location = glGetUniformLocation( m_nProgramObject, "time" );
-    if( location != -1 )
-        glUniform1f( location, nTime );
+    glUniform1f( m_nTimeLocation, nTime );
 
     glActiveTexture( GL_TEXTURE2 );
     glBindTexture( GL_TEXTURE_2D, glEnteringSlideTex );
@@ -1394,7 +1394,7 @@ int permutation256 [256]= {
 116, 171,  99, 202,   7, 107, 253, 108
 };
 
-static void initPermTexture(GLuint *texID)
+void initPermTexture(GLuint *texID)
 {
     CHECK_GL_ERROR();
   glGenTextures(1, texID);
@@ -1547,53 +1547,66 @@ class VortexTransition : public PermTextureTransition
 public:
     VortexTransition(const TransitionScene& rScene, const TransitionSettings& rSettings, int nNX, int nNY)
         : PermTextureTransition(rScene, rSettings)
-        , mnTileInfoLocation(0)
-        , mnTileInfoBuffer(0)
         , maNumTiles(nNX,nNY)
     {
         mvTileInfo.resize(6*maNumTiles.x*maNumTiles.y);
+        mnFramebuffers[0] = 0;
+        mnFramebuffers[1] = 0;
+        mnDepthTextures[0] = 0;
+        mnDepthTextures[1] = 0;
     }
 
 private:
-    virtual void prepare( double nTime, double SlideWidth, double SlideHeight, double DispWidth, double DispHeight ) override;
-
-    virtual void finish( double nTime, double SlideWidth, double SlideHeight, double DispWidth, double DispHeight ) override;
-
+    virtual void finishTransition() override;
     virtual GLuint makeShader() const override;
-
     virtual void prepareTransition( sal_Int32 glLeavingSlideTex, sal_Int32 glEnteringSlideTex ) override;
+    virtual void displaySlides_( double nTime, sal_Int32 glLeavingSlideTex, sal_Int32 glEnteringSlideTex, double SlideWidthScale, double SlideHeightScale ) override;
 
-    GLint mnTileInfoLocation;
-    GLuint mnTileInfoBuffer;
+    GLint mnSlideLocation = -1;
+    GLint mnTileInfoLocation = -1;
+    GLuint mnTileInfoBuffer = 0u;
+    GLint mnShadowLocation = -1;
+    std::array<GLuint, 2> mnFramebuffers;
+    std::array<GLuint, 2> mnDepthTextures;
 
     glm::ivec2 maNumTiles;
 
     std::vector<GLfloat> mvTileInfo;
 };
 
-void VortexTransition::prepare( double, double, double, double, double )
+void VortexTransition::finishTransition()
 {
-    glDisable(GL_CULL_FACE);
+    PermTextureTransition::finishTransition();
 
-    glBindBuffer(GL_ARRAY_BUFFER, mnTileInfoBuffer);
     CHECK_GL_ERROR();
-    glEnableVertexAttribArray(mnTileInfoLocation);
+    glDeleteTextures(2, mnDepthTextures.data());
+    mnDepthTextures = {0u, 0u};
     CHECK_GL_ERROR();
-    glVertexAttribPointer(mnTileInfoLocation, 1, GL_FLOAT, GL_FALSE, 0, nullptr);
+    glDeleteFramebuffers(2, mnFramebuffers.data());
+    mnFramebuffers = {0u, 0u};
+    glDeleteBuffers(1, &mnTileInfoBuffer);
+    mnTileInfoBuffer = 0u;
+    mnSlideLocation = -1;
+    mnTileInfoLocation = -1;
+    mnShadowLocation = -1;
     CHECK_GL_ERROR();
-
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    CHECK_GL_ERROR();
-}
-
-void VortexTransition::finish( double, double, double, double, double )
-{
-    glEnable(GL_CULL_FACE);
 }
 
 GLuint VortexTransition::makeShader() const
 {
-    return OpenGLHelper::LoadShaders( "vortexVertexShader", "vortexFragmentShader" );
+    return OpenGLHelper::LoadShaders( "vortexVertexShader", "vortexFragmentShader", "vortexGeometryShader" );
+}
+
+glm::mat4 lookAt(const glm::vec3& eye, const glm::vec3& center, const glm::vec3& up) {
+    glm::vec3 f = glm::normalize(center - eye);
+    glm::vec3 u = glm::normalize(up);
+    glm::vec3 s = glm::normalize(glm::cross(f, u));
+    u = glm::cross(s, f);
+
+    return glm::mat4(s.x, u.x, -f.x, 0,
+                     s.y, u.y, -f.y, 0,
+                     s.z, u.z, -f.z, 0,
+                     -glm::dot(s, eye), -glm::dot(u, eye), glm::dot(f, eye), 1);
 }
 
 void VortexTransition::prepareTransition( sal_Int32 glLeavingSlideTex, sal_Int32 glEnteringSlideTex )
@@ -1602,10 +1615,16 @@ void VortexTransition::prepareTransition( sal_Int32 glLeavingSlideTex, sal_Int32
     PermTextureTransition::prepareTransition( glLeavingSlideTex, glEnteringSlideTex );
     CHECK_GL_ERROR();
 
+    mnSlideLocation = glGetUniformLocation(m_nProgramObject, "slide");
     mnTileInfoLocation = glGetAttribLocation(m_nProgramObject, "tileInfo");
-    CHECK_GL_ERROR();
-
     GLint nNumTilesLocation = glGetUniformLocation(m_nProgramObject, "numTiles");
+    mnShadowLocation = glGetUniformLocation(m_nProgramObject, "shadow");
+    GLint nOrthoProjectionMatrix = glGetUniformLocation(m_nProgramObject, "orthoProjectionMatrix");
+    GLint nOrthoViewMatrix = glGetUniformLocation(m_nProgramObject, "orthoViewMatrix");
+    GLint location = glGetUniformLocation(m_nProgramObject, "leavingShadowTexture");
+    glUniform1i(location, 2);
+    location = glGetUniformLocation(m_nProgramObject, "enteringShadowTexture");
+    glUniform1i(location, 3);
     CHECK_GL_ERROR();
 
     glUniform2iv(nNumTilesLocation, 1, glm::value_ptr(maNumTiles));
@@ -1636,10 +1655,102 @@ void VortexTransition::prepareTransition( sal_Int32 glLeavingSlideTex, sal_Int32
 
     glBindBuffer(GL_ARRAY_BUFFER, mnTileInfoBuffer);
     CHECK_GL_ERROR();
+    glEnableVertexAttribArray(mnTileInfoLocation);
+    CHECK_GL_ERROR();
+    glVertexAttribPointer(mnTileInfoLocation, 1, GL_FLOAT, GL_FALSE, 0, nullptr);
+    CHECK_GL_ERROR();
     glBufferData(GL_ARRAY_BUFFER, mvTileInfo.size()*sizeof(GLfloat), mvTileInfo.data(), GL_STATIC_DRAW);
     CHECK_GL_ERROR();
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
+    CHECK_GL_ERROR();
+
+    double EyePos(10.0);
+    double RealF(1.0);
+    double RealN(-1.0);
+    double RealL(-2.0);
+    double RealR(2.0);
+    double RealB(-2.0);
+    double RealT(2.0);
+    double ClipN(EyePos+5.0*RealN);
+    double ClipF(EyePos+15.0*RealF);
+    double ClipL(RealL*8.0);
+    double ClipR(RealR*8.0);
+    double ClipB(RealB*8.0);
+    double ClipT(RealT*8.0);
+
+    glm::mat4 projection = glm::ortho<float>(ClipL, ClipR, ClipB, ClipT, ClipN, ClipF);
+    //This scaling is to take the plane with BottomLeftCorner(-1,-1,0) and TopRightCorner(1,1,0) and map it to the screen after the perspective division.
+    glm::vec3 scale(1.0 / (((RealR * 2.0 * ClipN) / (EyePos * (ClipR - ClipL))) - ((ClipR + ClipL) / (ClipR - ClipL))),
+                    1.0 / (((RealT * 2.0 * ClipN) / (EyePos * (ClipT - ClipB))) - ((ClipT + ClipB) / (ClipT - ClipB))),
+                    1.0);
+    projection = glm::scale(projection, scale);
+    glUniformMatrix4fv(nOrthoProjectionMatrix, 1, false, glm::value_ptr(projection));
+
+    glm::mat4 view = lookAt(glm::vec3(-1, 1, EyePos), glm::vec3(-0.5, 0.5, 0), glm::vec3(0, 1, 0));
+    glUniformMatrix4fv(nOrthoViewMatrix, 1, false, glm::value_ptr(view));
+
+    // Generate the framebuffers and textures for the shadows.
+    glGenTextures(2, mnDepthTextures.data());
+    glGenFramebuffers(2, mnFramebuffers.data());
+
+    for (int i : {0, 1}) {
+        glBindTexture(GL_TEXTURE_2D, mnDepthTextures[i]);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16, 2048, 2048, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+        glBindFramebuffer(GL_FRAMEBUFFER, mnFramebuffers[i]);
+        glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, mnDepthTextures[i], 0);
+        glDrawBuffer(GL_NONE); // No color buffer is drawn to.
+
+        // Always check that our framebuffer is ok
+        if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+            SAL_WARN("slideshow.opengl", "Wrong framebuffer!");
+            return;
+        }
+    }
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    glActiveTexture( GL_TEXTURE2 );
+    glBindTexture( GL_TEXTURE_2D, mnDepthTextures[0] );
+    glActiveTexture( GL_TEXTURE3 );
+    glBindTexture( GL_TEXTURE_2D, mnDepthTextures[1] );
+    glActiveTexture( GL_TEXTURE0 );
+}
+
+void VortexTransition::displaySlides_( double nTime, sal_Int32 glLeavingSlideTex, sal_Int32 glEnteringSlideTex, double SlideWidthScale, double SlideHeightScale )
+{
+    CHECK_GL_ERROR();
+    applyOverallOperations( nTime, SlideWidthScale, SlideHeightScale );
+    glUniform1f( m_nTimeLocation, nTime );
+    glUniform1f( mnShadowLocation, 1.0 );
+
+    std::array<GLint, 4> viewport;
+    glGetIntegerv(GL_VIEWPORT, viewport.data());
+    glViewport(0, 0, 2048, 2048);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, mnFramebuffers[0]);
+    glClear(GL_DEPTH_BUFFER_BIT);
+    glUniform1f( mnSlideLocation, 0.0 );
+    displaySlide( nTime, glLeavingSlideTex, getScene().getLeavingSlide(), SlideWidthScale, SlideHeightScale );
+
+    glBindFramebuffer(GL_FRAMEBUFFER, mnFramebuffers[1]);
+    glClear(GL_DEPTH_BUFFER_BIT);
+    glUniform1f( mnSlideLocation, 1.0 );
+    displaySlide( nTime, glEnteringSlideTex, getScene().getEnteringSlide(), SlideWidthScale, SlideHeightScale );
+
+    glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glUniform1f( mnShadowLocation, 0.0 );
+    glUniform1f( mnSlideLocation, 0.0 );
+    displaySlide( nTime, glLeavingSlideTex, getScene().getLeavingSlide(), SlideWidthScale, SlideHeightScale );
+    glUniform1f( mnSlideLocation, 1.0 );
+    displaySlide( nTime, glEnteringSlideTex, getScene().getEnteringSlide(), SlideWidthScale, SlideHeightScale );
     CHECK_GL_ERROR();
 }
 
@@ -1659,7 +1770,7 @@ makeVortexTransition(const Primitives_t& rLeavingSlidePrimitives,
 
 std::shared_ptr<OGLTransitionImpl> makeVortex()
 {
-    const int NX = 40, NY = 40;
+    const int NX = 96, NY = 96;
     Primitive Slide;
 
     for (int x = 0; x < NX; x++)
@@ -1677,6 +1788,7 @@ std::shared_ptr<OGLTransitionImpl> makeVortex()
 
     TransitionSettings aSettings;
     aSettings.mbUseMipMapLeaving = aSettings.mbUseMipMapEntering = false;
+    aSettings.mnRequiredGLVersion = 3.2f;
 
     return makeVortexTransition(aLeavingSlide, aEnteringSlide, aSettings, NX, NY);
 }
@@ -1696,8 +1808,10 @@ public:
 private:
     virtual GLuint makeShader() const override;
     virtual void prepareTransition( sal_Int32 glLeavingSlideTex, sal_Int32 glEnteringSlideTex ) override;
+    virtual void prepare( double nTime, double SlideWidth, double SlideHeight, double DispWidth, double DispHeight ) override;
 
     glm::vec2 maCenter;
+    GLint maSlideRatioLocation = -1;
 };
 
 GLuint RippleTransition::makeShader() const
@@ -1712,6 +1826,15 @@ void RippleTransition::prepareTransition( sal_Int32, sal_Int32 )
 
     glUniform2fv(nCenterLocation, 1, glm::value_ptr(maCenter));
     CHECK_GL_ERROR();
+
+    maSlideRatioLocation = glGetUniformLocation(m_nProgramObject, "slideRatio");
+    CHECK_GL_ERROR();
+}
+
+void RippleTransition::prepare( double /* nTime */, double SlideWidth, double SlideHeight, double /* DispWidth */, double /* DispHeight */ )
+{
+    if( maSlideRatioLocation != -1 )
+        glUniform1f( maSlideRatioLocation, SlideWidth / SlideHeight );
 }
 
 std::shared_ptr<OGLTransitionImpl>
@@ -1878,17 +2001,41 @@ public:
     HoneycombTransition(const TransitionScene& rScene, const TransitionSettings& rSettings)
         : PermTextureTransition(rScene, rSettings)
     {
+        mnDepthTextures[0] = 0;
+        mnDepthTextures[1] = 0;
     }
 
 private:
+    virtual void finishTransition() override;
     virtual GLuint makeShader() const override;
     virtual void prepareTransition( sal_Int32 glLeavingSlideTex, sal_Int32 glEnteringSlideTex ) override;
     virtual void displaySlides_( double nTime, sal_Int32 glLeavingSlideTex, sal_Int32 glEnteringSlideTex, double SlideWidthScale, double SlideHeightScale ) override;
 
-    GLint maHexagonSizeLocation = 0;
-    GLint maTimeLocation = 0;
-    GLint maSelectedTextureLocation = 0;
+    GLint maHexagonSizeLocation = -1;
+    GLint maSelectedTextureLocation = -1;
+    GLint mnShadowLocation = -1;
+    GLuint mnFramebuffer = 0u;
+    std::array<GLuint, 2> mnDepthTextures;
 };
+
+void HoneycombTransition::finishTransition()
+{
+    PermTextureTransition::finishTransition();
+
+    CHECK_GL_ERROR();
+    glActiveTexture( GL_TEXTURE2 );
+    glBindTexture( GL_TEXTURE_2D, 0 );
+    glActiveTexture( GL_TEXTURE3 );
+    glBindTexture( GL_TEXTURE_2D, 0 );
+    glActiveTexture( GL_TEXTURE0 );
+    CHECK_GL_ERROR();
+    glDeleteTextures(2, mnDepthTextures.data());
+    mnDepthTextures = {0u, 0u};
+    CHECK_GL_ERROR();
+    glDeleteFramebuffers(1, &mnFramebuffer);
+    mnFramebuffer = 0u;
+    CHECK_GL_ERROR();
+}
 
 GLuint HoneycombTransition::makeShader() const
 {
@@ -1902,40 +2049,117 @@ void HoneycombTransition::prepareTransition( sal_Int32 glLeavingSlideTex, sal_In
 
     CHECK_GL_ERROR();
     maHexagonSizeLocation = glGetUniformLocation(m_nProgramObject, "hexagonSize");
-    maTimeLocation = glGetUniformLocation( m_nProgramObject, "time" );
     maSelectedTextureLocation = glGetUniformLocation( m_nProgramObject, "selectedTexture" );
+    mnShadowLocation = glGetUniformLocation(m_nProgramObject, "shadow");
+    GLint nOrthoProjectionMatrix = glGetUniformLocation(m_nProgramObject, "orthoProjectionMatrix");
+    GLint nOrthoViewMatrix = glGetUniformLocation(m_nProgramObject, "orthoViewMatrix");
+    GLint location = glGetUniformLocation(m_nProgramObject, "colorShadowTexture");
+    glUniform1i(location, 2);
+    location = glGetUniformLocation(m_nProgramObject, "depthShadowTexture");
+    glUniform1i(location, 3);
     CHECK_GL_ERROR();
 
     // We want to see the entering slide behind the leaving one.
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     CHECK_GL_ERROR();
+
+    double EyePos(10.0);
+    double RealF(1.0);
+    double RealN(-1.0);
+    double RealL(-4.0);
+    double RealR(4.0);
+    double RealB(-4.0);
+    double RealT(4.0);
+    double ClipN(EyePos+5.0*RealN);
+    double ClipF(EyePos+15.0*RealF);
+    double ClipL(RealL*8.0);
+    double ClipR(RealR*8.0);
+    double ClipB(RealB*8.0);
+    double ClipT(RealT*8.0);
+
+    glm::mat4 projection = glm::ortho<float>(ClipL, ClipR, ClipB, ClipT, ClipN, ClipF);
+    //This scaling is to take the plane with BottomLeftCorner(-1,-1,0) and TopRightCorner(1,1,0) and map it to the screen after the perspective division.
+    glm::vec3 scale(1.0 / (((RealR * 2.0 * ClipN) / (EyePos * (ClipR - ClipL))) - ((ClipR + ClipL) / (ClipR - ClipL))),
+                    1.0 / (((RealT * 2.0 * ClipN) / (EyePos * (ClipT - ClipB))) - ((ClipT + ClipB) / (ClipT - ClipB))),
+                    1.0);
+    projection = glm::scale(projection, scale);
+    glUniformMatrix4fv(nOrthoProjectionMatrix, 1, false, glm::value_ptr(projection));
+
+    glm::mat4 view = lookAt(glm::vec3(0, 0, EyePos), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
+    glUniformMatrix4fv(nOrthoViewMatrix, 1, false, glm::value_ptr(view));
+
+    // Generate the framebuffer and textures for the shadows.
+    glGenTextures(2, mnDepthTextures.data());
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, mnDepthTextures[0]);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 2048, 2048, 0, GL_RGBA, GL_FLOAT, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    glActiveTexture(GL_TEXTURE3);
+    glBindTexture(GL_TEXTURE_2D, mnDepthTextures[1]);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16, 2048, 2048, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    glActiveTexture(GL_TEXTURE0);
+    glGenFramebuffers(1, &mnFramebuffer);
+    glBindFramebuffer(GL_FRAMEBUFFER, mnFramebuffer);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, mnDepthTextures[0], 0);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, mnDepthTextures[1], 0);
+
+    // Always check that our framebuffer is ok
+    if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        SAL_WARN("slideshow.opengl", "Wrong framebuffer!");
+        return;
+    }
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 void HoneycombTransition::displaySlides_( double nTime, sal_Int32 glLeavingSlideTex, sal_Int32 glEnteringSlideTex,
                                               double SlideWidthScale, double SlideHeightScale )
 {
     CHECK_GL_ERROR();
-    applyOverallOperations( nTime, SlideWidthScale, SlideHeightScale );
-    glUniform1f( maTimeLocation, nTime );
-
-    // The back (entering) slide needs to be drawn before the front (leaving) one in order for blending to work.
+    applyOverallOperations(nTime, SlideWidthScale, SlideHeightScale);
+    glUniform1f(m_nTimeLocation, nTime);
+    glUniform1f(mnShadowLocation, 1.0);
+    CHECK_GL_ERROR();
 
     const float borderSize = 0.15f;
 
-    CHECK_GL_ERROR();
-    glUniform1f(maSelectedTextureLocation, 0.0);
-    glUniform1f(maHexagonSizeLocation, 1.0 - borderSize);
-    displaySlide( nTime, glEnteringSlideTex, getScene().getEnteringSlide(), SlideWidthScale, SlideHeightScale );
-    glUniform1f(maHexagonSizeLocation, 1.0 + borderSize);
-    displaySlide( nTime, glEnteringSlideTex, getScene().getEnteringSlide(), SlideWidthScale, SlideHeightScale );
-    CHECK_GL_ERROR();
-
+    std::array<GLint, 4> viewport;
+    glGetIntegerv(GL_VIEWPORT, viewport.data());
+    glViewport(0, 0, 2048, 2048);
+    glBindFramebuffer(GL_FRAMEBUFFER, mnFramebuffer);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glUniform1f(mnShadowLocation, 1.0);
     glUniform1f(maSelectedTextureLocation, 1.0);
-    glUniform1f(maHexagonSizeLocation, 1.0 - borderSize);
-    displaySlide( nTime, glLeavingSlideTex, getScene().getLeavingSlide(), SlideWidthScale, SlideHeightScale );
-    glUniform1f(maHexagonSizeLocation, 1.0 + borderSize);
-    displaySlide( nTime, glLeavingSlideTex, getScene().getLeavingSlide(), SlideWidthScale, SlideHeightScale );
+    glUniform1f(maHexagonSizeLocation, 1.0f - borderSize);
+    displaySlide(nTime, glLeavingSlideTex, getScene().getLeavingSlide(), SlideWidthScale, SlideHeightScale);
+    glUniform1f(maHexagonSizeLocation, 1.0f + borderSize);
+    displaySlide(nTime, glLeavingSlideTex, getScene().getLeavingSlide(), SlideWidthScale, SlideHeightScale);
+
+    // The back (entering) slide needs to be drawn before the front (leaving) one in order for blending to work.
+    glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glUniform1f(mnShadowLocation, 0.0);
+    glUniform1f(maSelectedTextureLocation, 0.0);
+    glUniform1f(maHexagonSizeLocation, 1.0f - borderSize);
+    displaySlide(nTime, glEnteringSlideTex, getScene().getEnteringSlide(), SlideWidthScale, SlideHeightScale);
+    glUniform1f(maHexagonSizeLocation, 1.0f + borderSize);
+    displaySlide(nTime, glEnteringSlideTex, getScene().getEnteringSlide(), SlideWidthScale, SlideHeightScale);
+    glUniform1f(maSelectedTextureLocation, 1.0);
+    glUniform1f(maHexagonSizeLocation, 1.0f - borderSize);
+    displaySlide(nTime, glLeavingSlideTex, getScene().getLeavingSlide(), SlideWidthScale, SlideHeightScale);
+    glUniform1f(maHexagonSizeLocation, 1.0f + borderSize);
+    displaySlide(nTime, glLeavingSlideTex, getScene().getLeavingSlide(), SlideWidthScale, SlideHeightScale);
+    CHECK_GL_ERROR();
 }
 
 std::shared_ptr<OGLTransitionImpl>

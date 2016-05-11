@@ -559,8 +559,7 @@ void SvxCSS1PropertyInfo::CopyBorderInfo( sal_uInt16 nCount, sal_uInt16 nWhat )
 
 void SvxCSS1PropertyInfo::SetBoxItem( SfxItemSet& rItemSet,
                                       sal_uInt16 nMinBorderDist,
-                                      const SvxBoxItem *pDfltItem,
-                                      bool bTable )
+                                      const SvxBoxItem *pDfltItem )
 {
     bool bChg = nTopBorderDistance != USHRT_MAX ||
                 nBottomBorderDistance != USHRT_MAX ||
@@ -627,13 +626,7 @@ void SvxCSS1PropertyInfo::SetBoxItem( SfxItemSet& rItemSet,
         }
         else
         {
-            if( USHRT_MAX == nDist )
-                nDist = aBoxItem.GetDistance( nLine );
-
-            if( !bTable )
-                nDist = 0U;
-            else if( nDist && nDist < nMinBorderDist )
-                nDist = nMinBorderDist;
+            nDist = 0U;
         }
 
         aBoxItem.SetDistance( nDist, nLine );
@@ -650,12 +643,11 @@ SvxCSS1MapEntry::SvxCSS1MapEntry( const SfxItemSet& rItemSet,
     aPropInfo( rProp )
 {}
 
-bool SvxCSS1Parser::StyleParsed( const CSS1Selector * /*pSelector*/,
+void SvxCSS1Parser::StyleParsed( const CSS1Selector * /*pSelector*/,
                                  SfxItemSet& /*rItemSet*/,
                                  SvxCSS1PropertyInfo& /*rPropInfo*/ )
 {
     // wie man sieht passiert hier gar nichts
-    return true;
 }
 
 bool SvxCSS1Parser::SelectorParsed( CSS1Selector *pSelector, bool bFirst )
@@ -844,20 +836,18 @@ bool SvxCSS1Parser::ParseStyleSheet( const OUString& rIn )
     return bSuccess;
 }
 
-bool SvxCSS1Parser::ParseStyleOption( const OUString& rIn,
+void SvxCSS1Parser::ParseStyleOption( const OUString& rIn,
                                       SfxItemSet& rItemSet,
                                       SvxCSS1PropertyInfo& rPropInfo )
 {
     pItemSet = &rItemSet;
     pPropInfo = &rPropInfo;
 
-    bool bSuccess = CSS1Parser::ParseStyleOption( rIn );
+    CSS1Parser::ParseStyleOption( rIn );
     rItemSet.ClearItem( aItemIds.nDirection );
 
     pItemSet = nullptr;
     pPropInfo = nullptr;
-
-    return bSuccess;
 }
 
 bool SvxCSS1Parser::GetEnum( const CSS1PropertyEnum *pPropTable,
@@ -1088,14 +1078,14 @@ static void ParseCSS1_font_family( const CSS1Expression *pExpr,
             {
                 if( !bFound && pFList )
                 {
-                    sal_Handle hFont = pFList->GetFirstFontInfo( aIdent );
+                    sal_Handle hFont = pFList->GetFirstFontMetric( aIdent );
                     if( nullptr != hFont )
                     {
-                        const vcl::FontInfo& rFInfo = FontList::GetFontInfo( hFont );
-                        if( RTL_TEXTENCODING_DONTKNOW != rFInfo.GetCharSet() )
+                        const FontMetric& rFMetric = FontList::GetFontMetric( hFont );
+                        if( RTL_TEXTENCODING_DONTKNOW != rFMetric.GetCharSet() )
                         {
                             bFound = true;
-                            if( RTL_TEXTENCODING_SYMBOL == rFInfo.GetCharSet() )
+                            if( RTL_TEXTENCODING_SYMBOL == rFMetric.GetCharSet() )
                                 eEnc = RTL_TEXTENCODING_SYMBOL;
                         }
                     }
@@ -1274,9 +1264,10 @@ static void ParseCSS1_font_variant( const CSS1Expression *pExpr,
                 rItemSet.Put( SvxCaseMapItem( (SvxCaseMap)nCaseMap,
                                                 aItemIds.nCaseMap ) );
             }
+            break;
         }
     default:
-        ;
+        break;
     }
 }
 
@@ -1300,9 +1291,10 @@ static void ParseCSS1_text_transform( const CSS1Expression *pExpr,
                 rItemSet.Put( SvxCaseMapItem( (SvxCaseMap)nCaseMap,
                                                 aItemIds.nCaseMap ) );
             }
+            break;
         }
     default:
-        ;
+        break;
     }
 }
 
@@ -1843,8 +1835,8 @@ static void ParseCSS1_text_decoration( const CSS1Expression *pExpr,
     bool bCrossedOut = false;
     bool bBlink = false;
     bool bBlinkOn = false;
-    FontUnderline eUnderline  = UNDERLINE_NONE;
-    FontUnderline eOverline   = UNDERLINE_NONE;
+    FontLineStyle eUnderline  = LINESTYLE_NONE;
+    FontLineStyle eOverline   = LINESTYLE_NONE;
     FontStrikeout eCrossedOut = STRIKEOUT_NONE;
 
     // der Wert kann zwei Werte enthalten! Und MS-IE auch Strings
@@ -1860,10 +1852,10 @@ static void ParseCSS1_text_decoration( const CSS1Expression *pExpr,
             if( aValue == "none" )
             {
                 bUnderline = true;
-                eUnderline = UNDERLINE_NONE;
+                eUnderline = LINESTYLE_NONE;
 
                 bOverline = true;
-                eOverline = UNDERLINE_NONE;
+                eOverline = LINESTYLE_NONE;
 
                 bCrossedOut = true;
                 eCrossedOut = STRIKEOUT_NONE;
@@ -1879,7 +1871,7 @@ static void ParseCSS1_text_decoration( const CSS1Expression *pExpr,
             if( aValue == "underline" )
             {
                 bUnderline = true;
-                eUnderline = UNDERLINE_SINGLE;
+                eUnderline = LINESTYLE_SINGLE;
 
                 bKnown = true;
             }
@@ -1889,7 +1881,7 @@ static void ParseCSS1_text_decoration( const CSS1Expression *pExpr,
             if( aValue == "overline" )
             {
                 bOverline = true;
-                eOverline = UNDERLINE_SINGLE;
+                eOverline = LINESTYLE_SINGLE;
 
                 bKnown = true;
             }
@@ -1919,7 +1911,7 @@ static void ParseCSS1_text_decoration( const CSS1Expression *pExpr,
         if( !bKnown )
         {
             bUnderline = true;
-            eUnderline = UNDERLINE_SINGLE;
+            eUnderline = LINESTYLE_SINGLE;
         }
 
         pExpr = pExpr->GetNext();

@@ -24,10 +24,8 @@
 #include <xmloff/xmlimp.hxx>
 #include <xmloff/xmlerror.hxx>
 
-#include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/uno/Reference.hxx>
 #include <com/sun/star/uno/Sequence.hxx>
-#include <com/sun/star/xml/dom/XAttr.hpp>
 #include <com/sun/star/xml/dom/DocumentBuilder.hpp>
 #include <com/sun/star/xml/dom/XNode.hpp>
 #include <com/sun/star/xml/dom/XElement.hpp>
@@ -40,14 +38,12 @@
 #include <comphelper/processfactory.hxx>
 
 
-using com::sun::star::lang::XMultiServiceFactory;
 using com::sun::star::uno::XComponentContext;
 using com::sun::star::uno::Reference;
 using com::sun::star::uno::Sequence;
 using com::sun::star::uno::UNO_QUERY;
 using com::sun::star::uno::UNO_QUERY_THROW;
 using com::sun::star::xml::dom::DocumentBuilder;
-using com::sun::star::xml::dom::XAttr;
 using com::sun::star::xml::dom::XDocument;
 using com::sun::star::xml::dom::XDocumentBuilder;
 using com::sun::star::xml::dom::XNode;
@@ -61,7 +57,7 @@ static Reference<XNode> lcl_createDomInstance();
 static Reference<XNode> lcl_createElement( SvXMLImport& rImport,
                                     sal_uInt16 nPrefix,
                                     const OUString& rLocalName,
-                                    Reference<XNode> xParent);
+                                    const Reference<XNode>& xParent);
 
 
 DomBuilderContext::DomBuilderContext( SvXMLImport& rImport,
@@ -125,7 +121,7 @@ void DomBuilderContext::StartElement(
         // namespace handling: determine namespace & namespace key
         OUString sNamespace;
         sal_uInt16 nNamespaceKey =
-            GetImport().GetNamespaceMap()._GetKeyByAttrName(
+            GetImport().GetNamespaceMap().GetKeyByAttrName_(
                 rName, nullptr, nullptr, &sNamespace );
 
         // create attribute node and set value
@@ -179,7 +175,6 @@ void DomBuilderContext::Characters( const OUString& rCharacters )
 }
 
 
-
 // helper function implementations
 
 
@@ -196,7 +191,7 @@ static Reference<XNode> lcl_createDomInstance()
 static Reference<XNode> lcl_createElement( SvXMLImport& rImport,
                                     sal_uInt16 nPrefix,
                                     const OUString& rLocalName,
-                                    Reference<XNode> xParent)
+                                    const Reference<XNode>& xParent)
 {
     DBG_ASSERT( xParent.is(), "need parent node" );
 

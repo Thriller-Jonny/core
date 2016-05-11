@@ -20,17 +20,17 @@
 #ifndef DONT_HAVE_GDIPLUS
 
 
-#include "internal/global.hxx"
+#include "global.hxx"
 
-#include "internal/thumbviewer.hxx"
-#include "internal/shlxthdl.hxx"
-#include "internal/registry.hxx"
-#include "internal/fileextensions.hxx"
-#include "internal/config.hxx"
-#include "internal/zipfile.hxx"
-#include "internal/utilities.hxx"
+#include "thumbviewer.hxx"
+#include "shlxthdl.hxx"
+#include "registry.hxx"
+#include "fileextensions.hxx"
+#include "config.hxx"
+#include "zipfile.hxx"
+#include "utilities.hxx"
 
-#include "internal/resource.h"
+#include "resource.h"
 
 #include <stdio.h>
 #include <utility>
@@ -120,7 +120,7 @@ namespace internal
 class StreamOnZipBuffer final : public IStream
 {
 public:
-    StreamOnZipBuffer(const ZipFile::ZipContentBuffer_t& zip_buffer);
+    explicit StreamOnZipBuffer(const ZipFile::ZipContentBuffer_t& zip_buffer);
 
     // IUnknown
     virtual ULONG STDMETHODCALLTYPE AddRef();
@@ -286,8 +286,6 @@ HRESULT STDMETHODCALLTYPE StreamOnZipBuffer::UnlockRegion(ULARGE_INTEGER, ULARGE
 
 HRESULT STDMETHODCALLTYPE StreamOnZipBuffer::Clone(IStream **)
 {  return E_NOTIMPL; }
-
-
 
 
 CThumbviewer::CThumbviewer(long RefCnt) :

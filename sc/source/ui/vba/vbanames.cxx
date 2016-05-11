@@ -26,7 +26,6 @@
 #include "vbarange.hxx"
 #include "vbaglobals.hxx"
 #include <vector>
-#include <rangenam.hxx>
 #include <vcl/msgbox.hxx>
 #include "tabvwsh.hxx"
 #include "viewdata.hxx"
@@ -170,8 +169,7 @@ ScVbaNames::Add( const css::uno::Any& Name ,
                     if ( sFormula.startsWith("=") )
                         sFormula = sFormula.copy(1);
                     ScRangeList aCellRanges;
-                    sal_uInt16 nFlags = 0;
-
+                    ScRefFlags nFlags = ScRefFlags::ZERO;
                     formula::FormulaGrammar::AddressConvention eConv = ( eGram == formula::FormulaGrammar::GRAM_NATIVE_XL_A1 ) ? formula::FormulaGrammar::CONV_XL_A1 : formula::FormulaGrammar::CONV_XL_R1C1;
                     if ( ScVbaRange::getCellRangesForAddress( nFlags, sFormula, pDocSh, aCellRanges, eConv , ',' ) )
                     {
@@ -196,16 +194,16 @@ ScVbaNames::Add( const css::uno::Any& Name ,
 
         uno::Reference< excel::XRange > xArea( xRange->Areas( uno::makeAny( sal_Int32(1) ) ), uno::UNO_QUERY );
 
-        uno::Any xAny = xArea->getCellRange() ;
+        uno::Any aAny = xArea->getCellRange() ;
 
-        uno::Reference< sheet::XCellRangeAddressable > thisRangeAdd( xAny, ::uno::UNO_QUERY_THROW);
+        uno::Reference< sheet::XCellRangeAddressable > thisRangeAdd( aAny, ::uno::UNO_QUERY_THROW);
 
         table::CellRangeAddress aAddr = thisRangeAdd->getRangeAddress();
         ScAddress aPos( static_cast< SCCOL >( aAddr.StartColumn ) , static_cast< SCROW >( aAddr.StartRow ) , static_cast< SCTAB >(aAddr.Sheet ) );
-        uno::Any xAny2 ;
+        uno::Any aAny2 ;
         if ( mxNames.is() )
         {
-            RangeType nType = RT_NAME;
+            sal_Int32 nUnoType = 0;
             table::CellAddress aCellAddr( aAddr.Sheet , aAddr.StartColumn , aAddr.StartRow );
             if ( mxNames->hasByName( sName ) )
                 mxNames->removeByName(sName);
@@ -215,12 +213,12 @@ ScVbaNames::Add( const css::uno::Any& Name ,
             {
                 xArea.set( xRange->Areas( uno::makeAny( nArea ) ), uno::UNO_QUERY_THROW );
 
-                OUString sRangeAdd = xArea->Address( xAny2, xAny2 , xAny2 , xAny2, xAny2 );
+                OUString sRangeAdd = xArea->Address( aAny2, aAny2 , aAny2 , aAny2, aAny2 );
                 if ( nArea > 1 )
                     sTmp += ",";
                 sTmp = sTmp + "'" + xRange->getWorksheet()->getName() + "'." + sRangeAdd;
             }
-            mxNames->addNewByName( sName , sTmp , aCellAddr , (sal_Int32)nType);
+            mxNames->addNewByName( sName , sTmp , aCellAddr , nUnoType);
             return Item( uno::makeAny( sName ), uno::Any() );
         }
     }

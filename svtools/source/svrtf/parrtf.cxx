@@ -52,9 +52,7 @@ SvRTFParser::~SvRTFParser()
 }
 
 
-
-
-int SvRTFParser::_GetNextToken()
+int SvRTFParser::GetNextToken_()
 {
     int nRet = 0;
     do {
@@ -175,10 +173,10 @@ int SvRTFParser::_GetNextToken()
                             if (!_inSkipGroup) {
                             // UPR - overread the group with the ansi
                             //       information
-                            while( '{' != _GetNextToken() )
+                            while( '{' != GetNextToken_() )
                                 ;
                             SkipGroup();
-                            _GetNextToken();  // overread the last bracket
+                            GetNextToken_();  // overread the last bracket
                             nRet = 0;
                             }
                             break;
@@ -193,7 +191,7 @@ int SvRTFParser::_GetNextToken()
                                 // can be also \{, \}, \'88
                                 for( sal_uInt8 m = 0; m < nUCharOverread; ++m )
                                 {
-                                    sal_Unicode cAnsi = nNextCh;
+                                    sal_uInt32 cAnsi = nNextCh;
                                     while( 0xD == cAnsi )
                                         cAnsi = GetNextChar();
                                     while( 0xA == cAnsi )
@@ -306,8 +304,9 @@ sal_Unicode SvRTFParser::GetHexValue()
     return nHexVal;
 }
 
-void SvRTFParser::ScanText( const sal_Unicode cBreak )
+void SvRTFParser::ScanText()
 {
+     const sal_Unicode cBreak = 0;
     OUStringBuffer aStrBuffer;
     bool bContinue = true;
     while( bContinue && IsParserWorking() && aStrBuffer.getLength() < MAX_STRING_LEN)
@@ -338,16 +337,16 @@ void SvRTFParser::ScanText( const sal_Unicode cBreak )
                             sal_Char nSlash = '\\';
                             while (!bBreak)
                             {
-                                wchar_t __next=GetNextChar();
-                                if (__next>0xFF) // fix for #i43933# and #i35653#
+                                wchar_t next=GetNextChar();
+                                if (next>0xFF) // fix for #i43933# and #i35653#
                                 {
                                     if (!aByteString.isEmpty())
                                         aStrBuffer.append( OStringToOUString(aByteString.makeStringAndClear(), GetSrcEncoding()) );
-                                    aStrBuffer.append((sal_Unicode)__next);
+                                    aStrBuffer.append((sal_Unicode)next);
 
                                     continue;
                                 }
-                                nSlash = (sal_Char)__next;
+                                nSlash = (sal_Char)next;
                                 while (nSlash == 0xD || nSlash == 0xA)
                                     nSlash = (sal_Char)GetNextChar();
 
@@ -384,7 +383,7 @@ void SvRTFParser::ScanText( const sal_Unicode cBreak )
                 case '}':
                 case '{':
                 case '+':       // I found in a RTF file
-                    aStrBuffer.append(nNextCh);
+                    aStrBuffer.append(sal_Unicode(nNextCh));
                     break;
                 case '~':       // nonbreaking space
                     aStrBuffer.append(static_cast< sal_Unicode >(0xA0));
@@ -408,7 +407,7 @@ void SvRTFParser::ScanText( const sal_Unicode cBreak )
 
                             OUString sSave( aToken );
                             nNextCh = '\\';
-                            int nToken = _GetNextToken();
+                            int nToken = GetNextToken_();
                             DBG_ASSERT( RTF_U == nToken, "doch kein UNI-Code Zeichen" );
                             // don't convert symbol chars
                             aStrBuffer.append(static_cast< sal_Unicode >(nTokenValue));
@@ -468,8 +467,9 @@ void SvRTFParser::ScanText( const sal_Unicode cBreak )
             }
             break;
 
-        case sal_Unicode(EOF): eState = SVPAR_ERROR;
-                // continue
+        case sal_Unicode(EOF):
+            eState = SVPAR_ERROR;
+            SAL_FALLTHROUGH;
         case '{':
         case '}':
             bContinue = false;
@@ -486,7 +486,7 @@ void SvRTFParser::ScanText( const sal_Unicode cBreak )
             {
                 do {
                     // all other characters end up in the text
-                    aStrBuffer.append(nNextCh);
+                    aStrBuffer.appendUtf32(nNextCh);
 
                     if (sal_Unicode(EOF) == (nNextCh = GetNextChar()))
                     {
@@ -535,7 +535,7 @@ _inSkipGroup++;
                 }
                 break;
         }
-        int nToken = _GetNextToken();
+        int nToken = GetNextToken_();
         if (nToken == RTF_BIN)
         {
             rInput.SeekRel(-1);

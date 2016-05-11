@@ -107,8 +107,8 @@ void SwAccessibleTextFrame::Modify( const SfxPoolItem* pOld, const SfxPoolItem *
             {
                 break;
             }
+            SAL_FALLTHROUGH;
         }
-        // intentionally no break here
         case RES_DESCRIPTION_CHANGED:
         {
             if ( pFlyFrame )
@@ -172,7 +172,7 @@ void SAL_CALL
 void SAL_CALL SwAccessibleTextFrame::selectAccessibleChild( sal_Int32 )
     throw ( lang::IndexOutOfBoundsException, uno::RuntimeException, std::exception )
 {
-    SAL_WARN("sw.core", "<SwAccessibleTextFrame::selectAccessibleChild( sal_Int32 )> - missing implementation" );
+    SAL_WARN("sw.a11y", "<SwAccessibleTextFrame::selectAccessibleChild( sal_Int32 )> - missing implementation");
 }
 
 sal_Bool SAL_CALL SwAccessibleTextFrame::isAccessibleChildSelected( sal_Int32 nChildIndex )
@@ -193,24 +193,24 @@ sal_Bool SAL_CALL SwAccessibleTextFrame::isAccessibleChildSelected( sal_Int32 nC
                 xText(xAcc, uno::UNO_QUERY);
             if( xText.is() )
             {
-                if( xText->getSelectionStart() >= 0 ) return sal_True;
+                if( xText->getSelectionStart() >= 0 ) return true;
             }
         }
     }
 
-    return sal_False;
+    return false;
 }
 
 void SAL_CALL SwAccessibleTextFrame::clearAccessibleSelection(  )
     throw ( uno::RuntimeException, std::exception )
 {
-    SAL_WARN("sw.core", "<SwAccessibleTextFrame::clearAccessibleSelection(  )> - missing implementation");
+    SAL_WARN("sw.a11y", "<SwAccessibleTextFrame::clearAccessibleSelection()> - missing implementation");
 }
 
 void SAL_CALL SwAccessibleTextFrame::selectAllAccessibleChildren(  )
     throw ( uno::RuntimeException, std::exception )
 {
-    SAL_WARN("sw.core", "<SwAccessibleTextFrame::selectAllAccessibleChildren(  )> - missing implementation");
+    SAL_WARN("sw.a11y", "<SwAccessibleTextFrame::selectAllAccessibleChildren()> - missing implementation");
 }
 
 sal_Int32 SAL_CALL SwAccessibleTextFrame::getSelectedAccessibleChildCount()
@@ -245,7 +245,7 @@ uno::Reference<XAccessible> SAL_CALL SwAccessibleTextFrame::getSelectedAccessibl
 void SAL_CALL SwAccessibleTextFrame::deselectAccessibleChild( sal_Int32 )
     throw ( lang::IndexOutOfBoundsException, uno::RuntimeException, std::exception )
 {
-    SAL_WARN("sw.core", "<SwAccessibleTextFrame::selectAllAccessibleChildren( sal_Int32 )> - missing implementation");
+    SAL_WARN("sw.a11y", "<SwAccessibleTextFrame::selectAllAccessibleChildren( sal_Int32 )> - missing implementation");
 }
 
 // #i73249#

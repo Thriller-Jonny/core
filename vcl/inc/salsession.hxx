@@ -20,7 +20,7 @@
 #ifndef INCLUDED_VCL_INC_SALSESSION_HXX
 #define INCLUDED_VCL_INC_SALSESSION_HXX
 
-#include "vcl/dllapi.h"
+#include <vcl/dllapi.h>
 
 enum SalSessionEventType
 {
@@ -52,12 +52,10 @@ struct SalSessionInteractionEvent : public SalSessionEvent
 struct SalSessionSaveRequestEvent : public SalSessionEvent
 {
     bool                        m_bShutdown;
-    bool                        m_bCancelable;
 
-    SalSessionSaveRequestEvent( bool bShutdown, bool bCancelable )
+    SalSessionSaveRequestEvent( bool bShutdown )
             : SalSessionEvent( SaveRequest ),
-              m_bShutdown( bShutdown ),
-              m_bCancelable( bCancelable )
+              m_bShutdown( bShutdown )
     {}
 };
 
@@ -110,6 +108,6 @@ public:
     virtual bool cancelShutdown() = 0;
 };
 
-#endif
+#endif // INCLUDED_VCL_INC_SALSESSION_HXX
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

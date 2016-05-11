@@ -16,8 +16,8 @@
  *   except in compliance with the License. You may obtain a copy of
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
-#include "vcl/svapp.hxx"
-#include "vcl/settings.hxx"
+#include <vcl/svapp.hxx>
+#include <vcl/settings.hxx>
 #include "PresenterNotesView.hxx"
 #include "PresenterButton.hxx"
 #include "PresenterCanvasHelper.hxx"
@@ -111,7 +111,7 @@ PresenterNotesView::PresenterNotesView (
             mxParentWindow->addWindowListener(this);
             mxParentWindow->addPaintListener(this);
             mxParentWindow->addKeyListener(this);
-            mxParentWindow->setVisible(sal_True);
+            mxParentWindow->setVisible(true);
         }
 
         mpScrollBar = new PresenterVerticalScrollBar(
@@ -197,10 +197,10 @@ void PresenterNotesView::CreateToolBar (
     // Create a new window as container of the tool bar.
     mxToolBarWindow = xPresenterHelper->createWindow(
         mxParentWindow,
-        sal_False,
-        sal_True,
-        sal_False,
-        sal_False);
+        false,
+        true,
+        false,
+        false);
     mxToolBarCanvas = xPresenterHelper->createSharedCanvas (
         Reference<rendering::XSpriteCanvas>(mxCanvas, UNO_QUERY),
         mxParentWindow,
@@ -421,7 +421,6 @@ void SAL_CALL PresenterNotesView::keyReleased (const awt::KeyEvent& rEvent)
 }
 
 
-
 void PresenterNotesView::Layout()
 {
     if ( ! mxParentWindow.is())
@@ -601,7 +600,7 @@ void PresenterNotesView::PaintText (const awt::Rectangle& rUpdateBox)
 
     Reference<rendering::XSpriteCanvas> xSpriteCanvas (mxCanvas, UNO_QUERY);
     if (xSpriteCanvas.is())
-        xSpriteCanvas->updateScreen(sal_False);
+        xSpriteCanvas->updateScreen(false);
 }
 
 void PresenterNotesView::Invalidate()
@@ -674,7 +673,7 @@ void PresenterNotesView::ChangeFontSize (const sal_Int32 nSizeChange)
     }
 }
 
-std::shared_ptr<PresenterTextView> PresenterNotesView::GetTextView() const
+const std::shared_ptr<PresenterTextView>& PresenterNotesView::GetTextView() const
 {
     return mpTextView;
 }

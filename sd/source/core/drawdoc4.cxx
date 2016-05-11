@@ -84,6 +84,7 @@
 #include <svx/xlnclit.hxx>
 #include <svx/svditer.hxx>
 #include <svx/svdogrp.hxx>
+#include <svx/svdlayer.hxx>
 #include <tools/shl.hxx>
 #include <editeng/numitem.hxx>
 #include <editeng/editeng.hxx>
@@ -184,13 +185,13 @@ void SdDrawDocument::CreateLayoutTemplates()
 
     getDefaultFonts( aLatinFont, aCJKFont, aCTLFont );
 
-    SvxFontItem aSvxFontItem( aLatinFont.GetFamily(), aLatinFont.GetName(), aLatinFont.GetStyleName(), aLatinFont.GetPitch(),
+    SvxFontItem aSvxFontItem( aLatinFont.GetFamilyType(), aLatinFont.GetFamilyName(), aLatinFont.GetStyleName(), aLatinFont.GetPitch(),
                               aLatinFont.GetCharSet(), EE_CHAR_FONTINFO );
 
-    SvxFontItem aSvxFontItemCJK( aCJKFont.GetFamily(), aCJKFont.GetName(), aCJKFont.GetStyleName(), aCJKFont.GetPitch(),
+    SvxFontItem aSvxFontItemCJK( aCJKFont.GetFamilyType(), aCJKFont.GetFamilyName(), aCJKFont.GetStyleName(), aCJKFont.GetPitch(),
                                  aCJKFont.GetCharSet(), EE_CHAR_FONTINFO_CJK );
 
-    SvxFontItem aSvxFontItemCTL( aCTLFont.GetFamily(), aCTLFont.GetName(), aCTLFont.GetStyleName(), aCTLFont.GetPitch(),
+    SvxFontItem aSvxFontItemCTL( aCTLFont.GetFamilyType(), aCTLFont.GetFamilyName(), aCTLFont.GetStyleName(), aCTLFont.GetPitch(),
                                  aCTLFont.GetCharSet(), EE_CHAR_FONTINFO_CTL );
 
     rISet.Put( aSvxFontItem );
@@ -211,11 +212,11 @@ void SdDrawDocument::CreateLayoutTemplates()
 
     rISet.Put(SvxContourItem(false, EE_CHAR_OUTLINE ));
     rISet.Put(SvxShadowedItem(false, EE_CHAR_SHADOW ));
-    rISet.Put(SvxUnderlineItem(UNDERLINE_NONE, EE_CHAR_UNDERLINE));
-    rISet.Put(SvxOverlineItem(UNDERLINE_NONE, EE_CHAR_OVERLINE));
+    rISet.Put(SvxUnderlineItem(LINESTYLE_NONE, EE_CHAR_UNDERLINE));
+    rISet.Put(SvxOverlineItem(LINESTYLE_NONE, EE_CHAR_OVERLINE));
     rISet.Put(SvxCrossedOutItem(STRIKEOUT_NONE, EE_CHAR_STRIKEOUT ));
     rISet.Put(SvxCaseMapItem(SVX_CASEMAP_NOT_MAPPED, EE_CHAR_CASEMAP ));
-    rISet.Put(SvxEmphasisMarkItem(EMPHASISMARK_NONE, EE_CHAR_EMPHASISMARK));
+    rISet.Put(SvxEmphasisMarkItem(FontEmphasisMark::NONE, EE_CHAR_EMPHASISMARK));
     rISet.Put(SvxCharReliefItem(RELIEF_NONE, EE_CHAR_RELIEF));
     rISet.Put(SvxColorItem(Color(COL_AUTO), EE_CHAR_COLOR ));
 
@@ -243,7 +244,7 @@ void SdDrawDocument::CreateLayoutTemplates()
 
     vcl::Font aBulletFont( SdStyleSheetPool::GetBulletFont() );
 
-    aBulletFont.SetSize(Size(0,635));   // sj: (i33745) changed default from 24 to 18 pt
+    aBulletFont.SetFontSize(Size(0,635));   // sj: (i33745) changed default from 24 to 18 pt
 
     aBulletItem.SetFont(aBulletFont);
     aBulletItem.SetSymbol( 0x25CF );                    // In points
@@ -563,13 +564,13 @@ void SdDrawDocument::CreateDefaultCellStyles()
 
     getDefaultFonts( aLatinFont, aCJKFont, aCTLFont );
 
-    SvxFontItem aSvxFontItem( aLatinFont.GetFamily(), aLatinFont.GetName(), aLatinFont.GetStyleName(), aLatinFont.GetPitch(),
+    SvxFontItem aSvxFontItem( aLatinFont.GetFamilyType(), aLatinFont.GetFamilyName(), aLatinFont.GetStyleName(), aLatinFont.GetPitch(),
                               aLatinFont.GetCharSet(), EE_CHAR_FONTINFO );
 
-    SvxFontItem aSvxFontItemCJK( aCJKFont.GetFamily(), aCJKFont.GetName(), aCJKFont.GetStyleName(), aCJKFont.GetPitch(),
+    SvxFontItem aSvxFontItemCJK( aCJKFont.GetFamilyType(), aCJKFont.GetFamilyName(), aCJKFont.GetStyleName(), aCJKFont.GetPitch(),
                                  aCJKFont.GetCharSet(), EE_CHAR_FONTINFO_CJK );
 
-    SvxFontItem aSvxFontItemCTL( aCTLFont.GetFamily(), aCTLFont.GetName(), aCTLFont.GetStyleName(), aCTLFont.GetPitch(),
+    SvxFontItem aSvxFontItemCTL( aCTLFont.GetFamilyType(), aCTLFont.GetFamilyName(), aCTLFont.GetStyleName(), aCTLFont.GetPitch(),
                                  aCTLFont.GetCharSet(), EE_CHAR_FONTINFO_CTL );
 
     rISet.Put( aSvxFontItem );
@@ -771,7 +772,7 @@ void SdDrawDocument::StartOnlineSpelling(bool bForceSpelling)
         }
 
         mpOnlineSpellingList->seekShape(0);
-        mpOnlineSpellingIdle = new Idle();
+        mpOnlineSpellingIdle = new Idle("OnlineSpelling");
         mpOnlineSpellingIdle->SetIdleHdl( LINK(this, SdDrawDocument, OnlineSpellingHdl) );
         mpOnlineSpellingIdle->SetPriority(SchedulerPriority::LOWEST);
         mpOnlineSpellingIdle->Start();
@@ -883,12 +884,12 @@ void SdDrawDocument::SpellObject(SdrTextObj* pObj)
         Link<EditStatus&,void> aEvtHdl = pOutl->GetStatusEventHdl();
         pOutl->SetStatusEventHdl(LINK(this, SdDrawDocument, OnlineSpellEventHdl));
 
-        sal_uInt16 nOldOutlMode = pOutl->GetMode();
-        sal_uInt16 nOutlMode = OUTLINERMODE_TEXTOBJECT;
+        OutlinerMode nOldOutlMode = pOutl->GetMode();
+        OutlinerMode nOutlMode = OutlinerMode::TextObject;
         if (pObj->GetObjInventor() == SdrInventor &&
             pObj->GetObjIdentifier() == OBJ_OUTLINETEXT)
         {
-            nOutlMode = OUTLINERMODE_OUTLINEOBJECT;
+            nOutlMode = OutlinerMode::OutlineObject;
         }
         pOutl->Init( nOutlMode );
 
@@ -1046,7 +1047,7 @@ OUString SdDrawDocument::CreatePageNumValue(sal_uInt16 nNum) const
             break;
         case SVX_ROMAN_UPPER:
             bUpper = true;
-            //fall-through
+            SAL_FALLTHROUGH;
         case SVX_ROMAN_LOWER:
             aPageNumValue += SvxNumberFormat::CreateRomanString(nNum, bUpper);
             break;
@@ -1197,7 +1198,7 @@ void SdDrawDocument::SetTextDefaults() const
     // BulletItem and BulletFont for Titel and Outline
     SvxBulletItem aBulletItem(EE_PARA_BULLET);
     vcl::Font aBulletFont( SdStyleSheetPool::GetBulletFont() );
-    aBulletFont.SetSize(Size(0,846));       // 24 pt
+    aBulletFont.SetFontSize(Size(0,846));       // 24 pt
     aBulletItem.SetFont(aBulletFont);
     aBulletItem.SetStyle(SvxBulletStyle::BULLET);
     aBulletItem.SetStart(1);
@@ -1241,9 +1242,9 @@ css::text::WritingMode SdDrawDocument::GetDefaultWritingMode() const
     {
         switch( static_cast<const SvxFrameDirectionItem&>( *pItem ).GetValue() )
         {
-            case( FRMDIR_HORI_LEFT_TOP ): eRet = css::text::WritingMode_LR_TB; break;
-            case( FRMDIR_HORI_RIGHT_TOP ): eRet = css::text::WritingMode_RL_TB; break;
-            case( FRMDIR_VERT_TOP_RIGHT ): eRet = css::text::WritingMode_TB_RL; break;
+            case FRMDIR_HORI_LEFT_TOP: eRet = css::text::WritingMode_LR_TB; break;
+            case FRMDIR_HORI_RIGHT_TOP: eRet = css::text::WritingMode_RL_TB; break;
+            case FRMDIR_VERT_TOP_RIGHT: eRet = css::text::WritingMode_TB_RL; break;
 
             default:
                 OSL_FAIL( "Frame direction not supported yet" );

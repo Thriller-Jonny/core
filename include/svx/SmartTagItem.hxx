@@ -57,9 +57,9 @@ public:
                      const css::uno::Sequence < css::uno::Sequence< css::uno::Reference< css::smarttags::XSmartTagAction > > >& rActionComponentsSequence,
                      const css::uno::Sequence < css::uno::Sequence< sal_Int32 > >& rActionIndicesSequence,
                      const css::uno::Sequence< css::uno::Reference< css::container::XStringKeyMap > >& rStringKeyMaps,
-                     const css::uno::Reference<css::text::XTextRange> rRange,
-                     const css::uno::Reference<css::frame::XController> rController,
-                     const css::lang::Locale rLocale,
+                     const css::uno::Reference<css::text::XTextRange>& rRange,
+                     const css::uno::Reference<css::frame::XController>& rController,
+                     const css::lang::Locale& rLocale,
                      const OUString& rApplicationName,
                      const OUString& rRangeText );
 
@@ -77,8 +77,8 @@ public:
     const css::uno::Reference<css::text::XTextRange>& GetTextRange() const { return mxRange; }
     const css::uno::Reference<css::frame::XController>& GetController() const { return mxController; }
     const css::lang::Locale& GetLocale() const { return maLocale; }
-    const OUString GetApplicationName() const { return maApplicationName; }
-    const OUString GetRangeText() const { return maRangeText; }
+    const OUString& GetApplicationName() const { return maApplicationName; }
+    const OUString& GetRangeText() const { return maRangeText; }
 };
 
 #endif // INCLUDED_SVX_SMARTTAGITEM_HXX

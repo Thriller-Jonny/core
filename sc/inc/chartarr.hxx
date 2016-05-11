@@ -61,7 +61,6 @@ class SC_DLLPUBLIC ScChartArray             // only parameter-struct
     OUString aName;
     ScDocument* pDocument;
     ScChartPositioner aPositioner;
-    bool        bValid;             // for creation out of SchMemChart
 
 private:
     ScMemChart* CreateMemChartSingle();
@@ -84,8 +83,6 @@ public:
     bool    HasRowHeaders() const { return aPositioner.HasRowHeaders(); }
     const OUString& GetName() const { return aName; }
 
-    bool operator==(const ScChartArray& rCmp) const;
-
     ScMemChart* CreateMemChart();
 };
 
@@ -104,8 +101,6 @@ public:
     bool empty() const;
     ScChartArray* operator[](size_t nIndex);
     const ScChartArray* operator[](size_t nIndex) const;
-
-    bool operator==(const ScChartCollection& rCmp) const;
 };
 
 #endif

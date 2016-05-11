@@ -284,7 +284,6 @@ void SdrTextObj::NbcMirror(const Point& rRef1, const Point& rRef2)
 }
 
 
-
 SdrObject* SdrTextObj::ImpConvertContainedTextToSdrPathObjs(bool bToPoly) const
 {
     SdrObject* pRetval = nullptr;
@@ -407,7 +406,6 @@ SdrObject* SdrTextObj::ImpConvertContainedTextToSdrPathObjs(bool bToPoly) const
 }
 
 
-
 SdrObject* SdrTextObj::DoConvertToPolyObj(bool bBezier, bool bAddText) const
 {
     if(bAddText)
@@ -423,7 +421,7 @@ bool SdrTextObj::ImpCanConvTextToCurve() const
     return !IsOutlText();
 }
 
-SdrObject* SdrTextObj::ImpConvertMakeObj(const basegfx::B2DPolyPolygon& rPolyPolygon, bool bClosed, bool bBezier, bool bNoSetAttr) const
+SdrObject* SdrTextObj::ImpConvertMakeObj(const basegfx::B2DPolyPolygon& rPolyPolygon, bool bClosed, bool bBezier) const
 {
     SdrObjKind ePathKind = bClosed ? OBJ_PATHFILL : OBJ_PATHLINE;
     basegfx::B2DPolyPolygon aB2DPolyPolygon(rPolyPolygon);
@@ -450,15 +448,12 @@ SdrObject* SdrTextObj::ImpConvertMakeObj(const basegfx::B2DPolyPolygon& rPolyPol
     {
         pPathObj->SetModel(pModel);
 
-        if(!bNoSetAttr)
-        {
-            sdr::properties::ItemChangeBroadcaster aC(*pPathObj);
+        sdr::properties::ItemChangeBroadcaster aC(*pPathObj);
 
-            pPathObj->ClearMergedItem();
-            pPathObj->SetMergedItemSet(GetObjectItemSet());
-            pPathObj->GetProperties().BroadcastItemChange(aC);
-            pPathObj->NbcSetStyleSheet(GetStyleSheet(), true);
-        }
+        pPathObj->ClearMergedItem();
+        pPathObj->SetMergedItemSet(GetObjectItemSet());
+        pPathObj->GetProperties().BroadcastItemChange(aC);
+        pPathObj->NbcSetStyleSheet(GetStyleSheet(), true);
     }
 
     return pPathObj;

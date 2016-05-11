@@ -32,7 +32,9 @@
 #include <salframe.hxx>
 #include <svdata.hxx>
 #include <comphelper/lok.hxx>
+#if HAVE_FEATURE_OPENGL
 #include <vcl/opengl/OpenGLHelper.hxx>
+#endif
 
 #define IMPL_PAINT_PAINT            ((sal_uInt16)0x0001)
 #define IMPL_PAINT_PAINTALL         ((sal_uInt16)0x0002)
@@ -273,11 +275,12 @@ void PaintHelper::DoPaint(const vcl::Region* pRegion)
     pWindowImpl->mnPaintFlags = 0;
     if (!pWindowImpl->maInvalidateRegion.IsEmpty())
     {
+#if HAVE_FEATURE_OPENGL
         VCL_GL_INFO("PaintHelper::DoPaint on " <<
                     typeid( *m_pWindow ).name() << " '" << m_pWindow->GetText() << "' begin");
 
         OutputDevice::PaintScope aScope( m_pWindow );
-
+#endif
         // double-buffering: setup the buffer if it does not exist
         if (!pFrameData->mbInBufferedPaint && m_pWindow->SupportsDoubleBuffering())
             StartBufferedPaint();
@@ -305,9 +308,10 @@ void PaintHelper::DoPaint(const vcl::Region* pRegion)
             m_pWindow->PushPaintHelper(this, *m_pWindow);
             m_pWindow->Paint(*m_pWindow, m_aPaintRect);
         }
-
+#if HAVE_FEATURE_OPENGL
         VCL_GL_INFO("PaintHelper::DoPaint end on " <<
                     typeid( *m_pWindow ).name() << " '" << m_pWindow->GetText() << "'");
+#endif
     }
 }
 
@@ -564,7 +568,7 @@ PaintHelper::~PaintHelper()
 
     // #98943# draw toolbox selection
     if( !m_aSelectionRect.IsEmpty() )
-        m_pWindow->DrawSelectionBackground( m_aSelectionRect, 3, false, true, false );
+        m_pWindow->DrawSelectionBackground( m_aSelectionRect, 3, false, true );
 
     delete m_pChildRegion;
 }
@@ -625,30 +629,34 @@ void Window::ImplCallOverlapPaint()
     {
         // - RTL - notify ImplCallPaint to check for re-mirroring (CHECKRTL)
         //         because we were called from the Sal layer
+#if HAVE_FEATURE_OPENGL
         OutputDevice::PaintScope aScope( GetOutDev() );
+#endif
         ImplCallPaint(nullptr, mpWindowImpl->mnPaintFlags /*| IMPL_PAINT_CHECKRTL */);
     }
 }
 
 void Window::ImplPostPaint()
 {
-    if ( !ImplDoTiledRendering() && !mpWindowImpl->mpFrameData->maPaintIdle.IsActive() )
+    if ( !mpWindowImpl->mpFrameData->maPaintIdle.IsActive() )
         mpWindowImpl->mpFrameData->maPaintIdle.Start();
 }
 
 IMPL_LINK_NOARG_TYPED(Window, ImplHandlePaintHdl, Idle *, void)
 {
     // save paint events until layout is done
-    if (!ImplDoTiledRendering() && IsSystemWindow() && static_cast<const SystemWindow*>(this)->hasPendingLayout())
+    if (IsSystemWindow() && static_cast<const SystemWindow*>(this)->hasPendingLayout())
     {
         mpWindowImpl->mpFrameData->maPaintIdle.Start();
         return;
     }
 
+#if HAVE_FEATURE_OPENGL
     OutputDevice::PaintScope aScope(this);
+#endif
 
     // save paint events until resizing or initial sizing done
-    if (!ImplDoTiledRendering() && mpWindowImpl->mbFrame &&
+    if (mpWindowImpl->mbFrame &&
         (mpWindowImpl->mpFrameData->maResizeIdle.IsActive() ||
          mpWindowImpl->mpFrame->PaintsBlocked()))
     {
@@ -664,14 +672,11 @@ IMPL_LINK_NOARG_TYPED(Window, ImplHandleResizeTimerHdl, Idle *, void)
 {
     if( mpWindowImpl->mbReallyVisible )
     {
+#if HAVE_FEATURE_OPENGL
         OutputDevice::PaintScope aScope(this);
-
+#endif
         ImplCallResize();
-        if( ImplDoTiledRendering() )
-        {
-            ImplHandlePaintHdl(nullptr);
-        }
-        else if( mpWindowImpl->mpFrameData->maPaintIdle.IsActive() )
+        if( mpWindowImpl->mpFrameData->maPaintIdle.IsActive() )
         {
             mpWindowImpl->mpFrameData->maPaintIdle.Stop();
             mpWindowImpl->mpFrameData->maPaintIdle.GetIdleHdl().Call( nullptr );
@@ -768,10 +773,6 @@ void Window::ImplInvalidateParentFrameRegion( vcl::Region& rRegion )
 
 void Window::ImplInvalidate( const vcl::Region* pRegion, InvalidateFlags nFlags )
 {
-    // reset background storage
-    if ( mpWindowImpl->mpFrameData->mpFirstBackWin )
-        ImplInvalidateAllOverlapBackgrounds();
-
     // check what has to be redrawn
     bool bInvalidateAll = !pRegion;
 
@@ -953,18 +954,15 @@ void Window::ImplValidateFrameRegion( const vcl::Region* pRegion, ValidateFlags 
     }
 }
 
-void Window::ImplValidate( const vcl::Region* pRegion, ValidateFlags nFlags )
+void Window::ImplValidate()
 {
     // assemble region
-    bool    bValidateAll = !pRegion;
-    ValidateFlags nOrgFlags = nFlags;
-    if ( !(nFlags & (ValidateFlags::Children | ValidateFlags::NoChildren)) )
-    {
-        if ( GetStyle() & WB_CLIPCHILDREN )
-            nFlags |= ValidateFlags::NoChildren;
-        else
-            nFlags |= ValidateFlags::Children;
-    }
+    bool    bValidateAll = true;
+    ValidateFlags nFlags = ValidateFlags::NONE;
+    if ( GetStyle() & WB_CLIPCHILDREN )
+        nFlags |= ValidateFlags::NoChildren;
+    else
+        nFlags |= ValidateFlags::Children;
     if ( (nFlags & ValidateFlags::NoChildren) && mpWindowImpl->mpFirstChild )
         bValidateAll = false;
     if ( bValidateAll )
@@ -973,26 +971,19 @@ void Window::ImplValidate( const vcl::Region* pRegion, ValidateFlags nFlags )
     {
         Rectangle   aRect( Point( mnOutOffX, mnOutOffY ), Size( mnOutWidth, mnOutHeight ) );
         vcl::Region      aRegion( aRect );
-        if ( pRegion )
-            aRegion.Intersect( *pRegion );
         ImplClipBoundaries( aRegion, true, true );
         if ( nFlags & ValidateFlags::NoChildren )
         {
             nFlags &= ~ValidateFlags::Children;
-            if ( nOrgFlags & ValidateFlags::NoChildren )
-                ImplClipAllChildren( aRegion );
-            else
-            {
-                if ( ImplClipChildren( aRegion ) )
-                    nFlags |= ValidateFlags::Children;
-            }
+            if ( ImplClipChildren( aRegion ) )
+                nFlags |= ValidateFlags::Children;
         }
         if ( !aRegion.IsEmpty() )
             ImplValidateFrameRegion( &aRegion, nFlags );
     }
 }
 
-void Window::ImplUpdateAll( bool bOverlapWindows )
+void Window::ImplUpdateAll()
 {
     if ( !mpWindowImpl->mbReallyVisible )
         return;
@@ -1010,13 +1001,7 @@ void Window::ImplUpdateAll( bool bOverlapWindows )
     // an update changes the OverlapWindow, such that for later paints
     // not too much has to be drawn, if ALLCHILDREN etc. is set
     vcl::Window* pWindow = ImplGetFirstOverlapWindow();
-    if ( bOverlapWindows )
-        pWindow->ImplCallOverlapPaint();
-    else
-    {
-        if (pWindow->mpWindowImpl->mnPaintFlags & (IMPL_PAINT_PAINT | IMPL_PAINT_PAINTCHILDREN))
-            pWindow->ImplCallPaint(nullptr, pWindow->mpWindowImpl->mnPaintFlags);
-    }
+    pWindow->ImplCallOverlapPaint();
 
     if ( bFlush )
         Flush();
@@ -1064,11 +1049,6 @@ void Window::SetWindowRegionPixel()
 
             if ( IsReallyVisible() )
             {
-                // restore background storage
-                if ( mpWindowImpl->mpOverlapData && mpWindowImpl->mpOverlapData->mpSaveBackDev )
-                    ImplDeleteOverlapBackground();
-                if ( mpWindowImpl->mpFrameData->mpFirstBackWin )
-                    ImplInvalidateAllOverlapBackgrounds();
                 Rectangle   aRect( Point( mnOutOffX, mnOutOffY ), Size( mnOutWidth, mnOutHeight ) );
                 vcl::Region      aRegion( aRect );
                 ImplInvalidateParentFrameRegion( aRegion );
@@ -1151,11 +1131,6 @@ void Window::SetWindowRegionPixel( const vcl::Region& rRegion )
 
         if ( IsReallyVisible() )
         {
-            // restore background storage
-            if ( mpWindowImpl->mpOverlapData && mpWindowImpl->mpOverlapData->mpSaveBackDev )
-                ImplDeleteOverlapBackground();
-            if ( mpWindowImpl->mpFrameData->mpFirstBackWin )
-                ImplInvalidateAllOverlapBackgrounds();
             Rectangle   aRect( Point( mnOutOffX, mnOutOffY ), Size( mnOutWidth, mnOutHeight ) );
             vcl::Region      aRegion( aRect );
             ImplInvalidateParentFrameRegion( aRegion );
@@ -1244,12 +1219,12 @@ void Window::Invalidate( const vcl::Region& rRegion, InvalidateFlags nFlags )
     }
 }
 
-void Window::Validate( ValidateFlags nFlags )
+void Window::Validate()
 {
     if ( !comphelper::LibreOfficeKit::isActive() && (!IsDeviceOutputNecessary() || !mnOutWidth || !mnOutHeight) )
         return;
 
-    ImplValidate( nullptr, nFlags );
+    ImplValidate();
 }
 
 bool Window::HasPaintEvent() const
@@ -1328,7 +1303,7 @@ void Window::Update()
     // if there is something to paint, trigger a Paint
     if ( pUpdateWindow->mpWindowImpl->mnPaintFlags & (IMPL_PAINT_PAINT | IMPL_PAINT_PAINTCHILDREN) )
     {
-        ImplDelData aDogTag(this);
+        VclPtr<vcl::Window> xWindow(this);
 
         // trigger an update also for system windows on top of us,
         // otherwise holes would remain
@@ -1341,7 +1316,7 @@ void Window::Update()
 
         pUpdateWindow->ImplCallPaint(nullptr, pUpdateWindow->mpWindowImpl->mnPaintFlags);
 
-        if (aDogTag.IsDead())
+        if (xWindow->IsDisposed())
            return;
         bFlush = true;
     }
@@ -1384,8 +1359,8 @@ void Window::ImplPaintToDevice( OutputDevice* i_pTargetOutDev, const Point& i_rP
     vcl::Font aCopyFont = GetFont();
     if( nOldDPIX != mnDPIX || nOldDPIY != mnDPIY )
     {
-        aCopyFont.SetHeight( aCopyFont.GetHeight() * mnDPIY / nOldDPIY );
-        aCopyFont.SetWidth( aCopyFont.GetWidth() * mnDPIX / nOldDPIX );
+        aCopyFont.SetFontHeight( aCopyFont.GetFontHeight() * mnDPIY / nOldDPIY );
+        aCopyFont.SetAverageFontWidth( aCopyFont.GetAverageFontWidth() * mnDPIX / nOldDPIX );
     }
     SetFont( aCopyFont );
     SetTextColor( GetTextColor() );
@@ -1554,10 +1529,6 @@ void Window::ImplScroll( const Rectangle& rRect,
     if ( !nHorzScroll && !nVertScroll )
         return;
 
-    // restore background storage
-    if ( mpWindowImpl->mpFrameData->mpFirstBackWin )
-        ImplInvalidateAllOverlapBackgrounds();
-
     if ( mpWindowImpl->mpCursor )
         mpWindowImpl->mpCursor->ImplSuspend();
 
@@ -1595,7 +1566,7 @@ void Window::ImplScroll( const Rectangle& rRect,
 
     if ( !(nFlags & ScrollFlags::NoInvalidate) )
     {
-        ImplCalcOverlapRegion( aRectMirror, aInvalidateRegion, !bScrollChildren, true, false );
+        ImplCalcOverlapRegion( aRectMirror, aInvalidateRegion, !bScrollChildren, false );
 
         // --- RTL ---
         // if the scrolling on the device is performed in the opposite direction
@@ -1676,7 +1647,7 @@ void Window::ImplScroll( const Rectangle& rRect,
             pGraphics->CopyArea( rRect.Left()+nHorzScroll, rRect.Top()+nVertScroll,
                                  rRect.Left(), rRect.Top(),
                                  rRect.GetWidth(), rRect.GetHeight(),
-                                 SAL_COPYAREA_WINDOWINVALIDATE, this );
+                                 this );
         }
 #endif
         if ( mpWindowImpl->mpWinData )

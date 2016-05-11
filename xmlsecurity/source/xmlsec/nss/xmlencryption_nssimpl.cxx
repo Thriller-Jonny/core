@@ -43,7 +43,7 @@ using ::com::sun::star::xml::crypto::XXMLEncryptionTemplate ;
 using ::com::sun::star::xml::crypto::XXMLSecurityContext ;
 using ::com::sun::star::xml::crypto::XMLEncryptionException ;
 
-XMLEncryption_NssImpl::XMLEncryption_NssImpl( const Reference< XMultiServiceFactory >& aFactory ) : m_xServiceManager( aFactory ) {
+XMLEncryption_NssImpl::XMLEncryption_NssImpl() {
 }
 
 XMLEncryption_NssImpl::~XMLEncryption_NssImpl() {
@@ -54,9 +54,9 @@ Reference< XXMLEncryptionTemplate >
 SAL_CALL XMLEncryption_NssImpl::encrypt(
     const Reference< XXMLEncryptionTemplate >& aTemplate ,
     const Reference< XSecurityEnvironment >& aEnvironment
-) throw (com::sun::star::xml::crypto::XMLEncryptionException,
-         com::sun::star::uno::SecurityException,
-         com::sun::star::uno::RuntimeException, std::exception)
+) throw (css::xml::crypto::XMLEncryptionException,
+         css::uno::SecurityException,
+         css::uno::RuntimeException, std::exception)
 {
     xmlSecKeysMngrPtr pMngr = nullptr ;
     xmlSecEncCtxPtr pEncCtx = nullptr ;
@@ -193,9 +193,9 @@ Reference< XXMLEncryptionTemplate >
 SAL_CALL XMLEncryption_NssImpl::decrypt(
     const Reference< XXMLEncryptionTemplate >& aTemplate ,
     const Reference< XXMLSecurityContext >& aSecurityCtx
-) throw (com::sun::star::xml::crypto::XMLEncryptionException ,
-         com::sun::star::uno::SecurityException,
-         com::sun::star::uno::RuntimeException, std::exception)
+) throw (css::xml::crypto::XMLEncryptionException ,
+         css::uno::SecurityException,
+         css::uno::RuntimeException, std::exception)
 {
     xmlSecKeysMngrPtr pMngr = nullptr ;
     xmlSecEncCtxPtr pEncCtx = nullptr ;
@@ -320,9 +320,9 @@ sal_Bool SAL_CALL XMLEncryption_NssImpl::supportsService( const OUString& servic
     const OUString* pArray = seqServiceNames.getConstArray() ;
     for( sal_Int32 i = 0 ; i < seqServiceNames.getLength() ; i ++ ) {
         if( *( pArray + i ) == serviceName )
-            return sal_True ;
+            return true ;
     }
-    return sal_False ;
+    return false ;
 }
 
 /* XServiceInfo */
@@ -342,8 +342,8 @@ OUString XMLEncryption_NssImpl::impl_getImplementationName() throw( RuntimeExcep
 }
 
 //Helper for registry
-Reference< XInterface > SAL_CALL XMLEncryption_NssImpl::impl_createInstance( const Reference< XMultiServiceFactory >& aServiceManager ) throw( RuntimeException ) {
-    return Reference< XInterface >( *new XMLEncryption_NssImpl( aServiceManager ) ) ;
+Reference< XInterface > SAL_CALL XMLEncryption_NssImpl::impl_createInstance( const Reference< XMultiServiceFactory >&  ) throw( RuntimeException ) {
+    return Reference< XInterface >( *new XMLEncryption_NssImpl ) ;
 }
 
 Reference< XSingleServiceFactory > XMLEncryption_NssImpl::impl_createFactory( const Reference< XMultiServiceFactory >& aServiceManager ) {

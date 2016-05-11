@@ -95,7 +95,7 @@ public:
     /**
        Return properties of the cell.
      */
-    TablePropertyMapPtr getProperties() { return mpProps; }
+    const TablePropertyMapPtr& getProperties() { return mpProps; }
 
     bool isOpen() const { return mbOpen; }
 };
@@ -230,7 +230,7 @@ public:
     /**
        Return properties of the row.
      */
-    TablePropertyMapPtr getProperties()
+    const TablePropertyMapPtr& getProperties()
     {
         return mpProperties;
     }
@@ -243,11 +243,6 @@ class TableData
 {
     typedef RowData::Pointer_t RowPointer_t;
     typedef ::std::vector<RowPointer_t> Rows;
-
-    /**
-       the table properties
-     */
-    TablePropertyMapPtr mpTableProps;
 
     /**
        the data of the rows of the table
@@ -367,7 +362,7 @@ public:
         return mRows[i];
     }
 
-    const RowPointer_t getCurrentRow() const
+    const RowPointer_t& getCurrentRow() const
     {
         return mpRow;
     }

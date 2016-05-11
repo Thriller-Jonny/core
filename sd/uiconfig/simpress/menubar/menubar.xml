@@ -88,7 +88,6 @@
             <menu:menuitem menu:id=".uno:EditHyperlink"/>
             <menu:menuitem menu:id=".uno:ModifyField"/>
             <menu:menuitem menu:id=".uno:ManageLinks"/>
-            <menu:menuitem menu:id=".uno:PlugInsActive"/>
             <menu:menuitem menu:id=".uno:ImageMapDialog"/>
             <menu:menuitem menu:id=".uno:ObjectMenue"/>
             <menu:menuseparator/>
@@ -139,6 +138,9 @@
             <menu:menuitem menu:id=".uno:ShowImeStatusWindow"/>
             <menu:menuseparator/>
             <menu:menuitem menu:id=".uno:Sidebar"/>
+            <menu:menuitem menu:id=".uno:ModifyPage"/>
+            <menu:menuitem menu:id=".uno:SlideChangeWindow"/>
+            <menu:menuitem menu:id=".uno:CustomAnimation"/>
             <menu:menuitem menu:id=".uno:DesignerDialog"/>
             <menu:menuitem menu:id=".uno:Gallery"/>
             <menu:menuitem menu:id=".uno:Navigator"/>
@@ -182,7 +184,6 @@
                     <menu:menuitem menu:id=".uno:InsertMath"/>
                     <menu:menuitem menu:id=".uno:Insert3DModel"/>
                     <menu:menuitem menu:id=".uno:InsertObject"/>
-                    <menu:menuitem menu:id=".uno:InsertPlugin"/>
                 </menu:menupopup>
             </menu:menu>
             <menu:menu menu:id=".uno:ShapesMenu">
@@ -295,13 +296,14 @@
                     <menu:menuitem menu:id=".uno:Grow"/>
                     <menu:menuitem menu:id=".uno:Shrink"/>
                     <menu:menuseparator/>
+                    <menu:menuitem menu:id=".uno:ChangeCaseToUpper"/>
+                    <menu:menuitem menu:id=".uno:ChangeCaseToLower"/>
                     <menu:menu menu:id=".uno:TransliterateMenu">
                         <menu:menupopup>
                             <menu:menuitem menu:id=".uno:ChangeCaseToSentenceCase"/>
-                            <menu:menuitem menu:id=".uno:ChangeCaseToLower"/>
-                            <menu:menuitem menu:id=".uno:ChangeCaseToUpper"/>
                             <menu:menuitem menu:id=".uno:ChangeCaseToTitleCase"/>
                             <menu:menuitem menu:id=".uno:ChangeCaseToToggleCase"/>
+                            <menu:menuseparator/>
                             <menu:menuitem menu:id=".uno:ChangeCaseToHalfWidth"/>
                             <menu:menuitem menu:id=".uno:ChangeCaseToFullWidth"/>
                             <menu:menuitem menu:id=".uno:ChangeCaseToHiragana"/>
@@ -406,6 +408,9 @@
             </menu:menu>
             <menu:menuitem menu:id=".uno:FillShadow"/>
             <menu:menuseparator/>
+            <menu:menuitem menu:id=".uno:CustomAnimation"/>
+            <menu:menuitem menu:id=".uno:AnimationEffects"/>
+            <menu:menuseparator/>
             <menu:menuitem menu:id=".uno:NameGroup"/>
             <menu:menuitem menu:id=".uno:ObjectTitleDescription"/>
             <menu:menuseparator/>
@@ -465,63 +470,82 @@
     </menu:menu>
     <menu:menu menu:id=".uno:SlideMenu">
         <menu:menupopup>
-            <menu:menuitem menu:id=".uno:InsertPage"/>
-            <menu:menuitem menu:id=".uno:DuplicatePage"/>
-            <menu:menuitem menu:id=".uno:DeletePage"/>
+            <menu:menuitem menu:id=".uno:InsertSlide"/>
+            <menu:menuitem menu:id=".uno:DuplicateSlide"/>
+            <menu:menuitem menu:id=".uno:DeleteSlide"/>
             <menu:menuseparator/>
             <menu:menuitem menu:id=".uno:InsertMasterPage"/>
             <menu:menuitem menu:id=".uno:DeleteMasterPage"/>
             <menu:menuseparator/>
-            <menu:menuitem menu:id=".uno:PageSetup"/>
+            <menu:menu menu:id=".uno:SlideLayoutMenu">
+                <menu:menupopup>
+                     <menu:menuitem menu:id=".uno:AssignLayout?WhatLayout:long=20"/>
+                     <menu:menuitem menu:id=".uno:AssignLayout?WhatLayout:long=19"/>
+                     <menu:menuitem menu:id=".uno:AssignLayout?WhatLayout:long=0"/>
+                     <menu:menuitem menu:id=".uno:AssignLayout?WhatLayout:long=1"/>
+                     <menu:menuitem menu:id=".uno:AssignLayout?WhatLayout:long=32"/>
+                     <menu:menuseparator/>
+                     <menu:menuitem menu:id=".uno:AssignLayout?WhatLayout:long=3"/>
+                     <menu:menuitem menu:id=".uno:AssignLayout?WhatLayout:long=12"/>
+                     <menu:menuitem menu:id=".uno:AssignLayout?WhatLayout:long=15"/>
+                     <menu:menuitem menu:id=".uno:AssignLayout?WhatLayout:long=14"/>
+                     <menu:menuitem menu:id=".uno:AssignLayout?WhatLayout:long=16"/>
+                     <menu:menuitem menu:id=".uno:AssignLayout?WhatLayout:long=18"/>
+                     <menu:menuitem menu:id=".uno:AssignLayout?WhatLayout:long=34"/>
+                     <menu:menuseparator/>
+                     <menu:menuitem menu:id=".uno:AssignLayout?WhatLayout:long=28"/>
+                     <menu:menuitem menu:id=".uno:AssignLayout?WhatLayout:long=27"/>
+                     <menu:menuitem menu:id=".uno:AssignLayout?WhatLayout:long=29"/>
+                     <menu:menuitem menu:id=".uno:AssignLayout?WhatLayout:long=30"/>
+                </menu:menupopup>
+            </menu:menu>
+            <menu:menuitem menu:id=".uno:SlideSetup"/>
             <menu:menuitem menu:id=".uno:SelectBackground"/>
             <menu:menuitem menu:id=".uno:SaveBackground"/>
             <menu:menuseparator/>
+            <menu:menuitem menu:id=".uno:PresentationLayout"/>
+            <menu:menuitem menu:id=".uno:MasterLayouts"/>
             <menu:menuitem menu:id=".uno:DisplayMasterBackground"/>
             <menu:menuitem menu:id=".uno:DisplayMasterObjects"/>
-            <menu:menuitem menu:id=".uno:MasterLayouts"/>
             <menu:menuseparator/>
             <menu:menuitem menu:id=".uno:HideSlide"/>
             <menu:menuitem menu:id=".uno:ShowSlide"/>
-            <menu:menuitem menu:id=".uno:RenamePage"/>
+            <menu:menuitem menu:id=".uno:RenameSlide"/>
             <menu:menuseparator/>
             <menu:menuitem menu:id=".uno:SummaryPage"/>
             <menu:menuitem menu:id=".uno:ExpandPage"/>
             <menu:menuseparator/>
-            <menu:menuitem menu:id=".uno:ModifyPage"/>
-            <menu:menuitem menu:id=".uno:SlideChangeWindow"/>
-            <menu:menuitem menu:id=".uno:CustomAnimation"/>
-            <menu:menuitem menu:id=".uno:AnimationEffects"/>
-            <menu:menuseparator/>
             <menu:menu menu:id=".uno:SlideNavigateMenu">
               <menu:menupopup>
-                <menu:menuitem menu:id=".uno:FirstPage"/>
-                <menu:menuitem menu:id=".uno:PreviousPage"/>
-                <menu:menuitem menu:id=".uno:NextPage"/>
-                <menu:menuitem menu:id=".uno:LastPage"/>
+                <menu:menuitem menu:id=".uno:FirstSlide"/>
+                <menu:menuitem menu:id=".uno:PreviousSlide"/>
+                <menu:menuitem menu:id=".uno:NextSlide"/>
+                <menu:menuitem menu:id=".uno:LastSlide"/>
               </menu:menupopup>
             </menu:menu>
+            <menu:menuitem menu:id=".uno:RestoreEditingView"/>
             <menu:menu menu:id=".uno:SlideMoveMenu">
               <menu:menupopup>
-                <menu:menuitem menu:id=".uno:MovePageFirst"/>
-                <menu:menuitem menu:id=".uno:MovePageUp"/>
-                <menu:menuitem menu:id=".uno:MovePageDown"/>
-                <menu:menuitem menu:id=".uno:MovePageLast"/>
+                <menu:menuitem menu:id=".uno:MoveSlideFirst"/>
+                <menu:menuitem menu:id=".uno:MoveSlideUp"/>
+                <menu:menuitem menu:id=".uno:MoveSlideDown"/>
+                <menu:menuitem menu:id=".uno:MoveSlideLast"/>
               </menu:menupopup>
             </menu:menu>
             <menu:menuseparator/>
-            <menu:menuitem menu:id=".uno:PresentationLayout"/>
+            <menu:menuitem menu:id=".uno:SlideChangeWindow"/>
         </menu:menupopup>
     </menu:menu>
     <menu:menu menu:id=".uno:SlideShowMenu">
         <menu:menupopup>
             <menu:menuitem menu:id=".uno:Presentation"/>
             <menu:menuitem menu:id=".uno:PresentationCurrentSlide"/>
-            <menu:menuitem menu:id=".uno:PresentationDialog"/>
+            <menu:menuseparator/>
             <menu:menuitem menu:id=".uno:RehearseTimings"/>
-            <menu:menuitem menu:id=".uno:RestoreEditingView"/>
+            <menu:menuitem menu:id=".uno:CustomShowDialog"/>
             <menu:menuitem menu:id=".uno:Remote"/>
             <menu:menuseparator/>
-            <menu:menuitem menu:id=".uno:CustomShowDialog"/>
+            <menu:menuitem menu:id=".uno:PresentationDialog"/>
         </menu:menupopup>
     </menu:menu>
     <menu:menu menu:id=".uno:ToolsMenu">

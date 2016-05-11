@@ -107,7 +107,7 @@ SwRead SwGetReaderXML() // SW_DLLPUBLIC
         return ReadXML;
 }
 
-inline void _SetFltPtr( sal_uInt16 rPos, SwRead pReader )
+inline void SetFltPtr( sal_uInt16 rPos, SwRead pReader )
 {
         aReaderWriter[ rPos ].pReader = pReader;
 }
@@ -116,11 +116,11 @@ namespace sw {
 
 Filters::Filters()
 {
-    _SetFltPtr( READER_WRITER_BAS, (ReadAscii = new AsciiReader) );
-    _SetFltPtr( READER_WRITER_HTML, (ReadHTML = new HTMLReader) );
-    _SetFltPtr( READER_WRITER_XML, (ReadXML = new XMLReader)  );
-    _SetFltPtr( READER_WRITER_TEXT_DLG, ReadAscii );
-    _SetFltPtr( READER_WRITER_TEXT, ReadAscii );
+    SetFltPtr( READER_WRITER_BAS, (ReadAscii = new AsciiReader) );
+    SetFltPtr( READER_WRITER_HTML, (ReadHTML = new HTMLReader) );
+    SetFltPtr( READER_WRITER_XML, (ReadXML = new XMLReader)  );
+    SetFltPtr( READER_WRITER_TEXT_DLG, ReadAscii );
+    SetFltPtr( READER_WRITER_TEXT, ReadAscii );
 }
 
 Filters::~Filters()
@@ -130,7 +130,10 @@ Filters::~Filters()
     {
         SwReaderWriterEntry& rEntry = aReaderWriter[n];
         if( rEntry.bDelReader && rEntry.pReader )
-            delete rEntry.pReader, rEntry.pReader = nullptr;
+        {
+            delete rEntry.pReader;
+            rEntry.pReader = nullptr;
+        }
     }
 }
 
@@ -156,9 +159,9 @@ oslGenericFunction Filters::GetMswordLibSymbol( const char *pSymbol )
 
 namespace SwReaderWriter {
 
-Reader* GetReader( ReaderWriterEnum eReader )
+Reader* GetRtfReader()
 {
-    return aReaderWriter[eReader].GetReader();
+    return aReaderWriter[READER_WRITER_RTF].GetReader();
 }
 
 void GetWriter( const OUString& rFltName, const OUString& rBaseURL, WriterRef& xRet )

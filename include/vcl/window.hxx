@@ -27,7 +27,7 @@
 #include <vcl/pointr.hxx>
 #include <tools/wintypes.hxx>
 #include <rsc/rsc-vcl-shared-types.hxx>
-#include <vcl/apptypes.hxx>
+#include <vcl/inputtypes.hxx>
 #include <vcl/cursor.hxx>
 #include <vcl/inputctx.hxx>
 #include <vcl/keycodes.hxx>
@@ -40,7 +40,6 @@
 #include <memory>
 
 class VirtualDevice;
-struct ImplDelData;
 struct ImplSVEvent;
 struct ImplWinData;
 struct ImplFrameData;
@@ -122,9 +121,6 @@ namespace o3tl
 }
 
 
-// - WindowTypes -
-
-
 // Type fuer GetWindow()
 enum class GetWindowType
 {
@@ -161,11 +157,10 @@ enum class PosSizeFlags
     PosSize          = Pos | Size,
     All              = PosSize,
     Dropdown         = 0x0010,
-    ByDrag           = 0x0020,
 };
 namespace o3tl
 {
-    template<> struct typed_flags<PosSizeFlags> : is_typed_flags<PosSizeFlags, 0x003f> {};
+    template<> struct typed_flags<PosSizeFlags> : is_typed_flags<PosSizeFlags, 0x001f> {};
 }
 
 // Flags for Show()
@@ -301,10 +296,11 @@ enum class StartTrackingFlags
     ButtonRepeat         = 0x0010,
     MouseButtonDown      = 0x0020,
     FocusCancel          = 0x0040,
+    UseToolKitDrag       = 0x0080,
 };
 namespace o3tl
 {
-    template<> struct typed_flags<StartTrackingFlags> : is_typed_flags<StartTrackingFlags, 0x007f> {};
+    template<> struct typed_flags<StartTrackingFlags> : is_typed_flags<StartTrackingFlags, 0x00ff> {};
 }
 
 // Flags for StartAutoScroll()
@@ -429,9 +425,6 @@ enum class GetDlgWindowType
 {
     Prev, Next, First
 };
-
-
-// - Window -
 
 
 #ifdef DBG_UTIL
@@ -583,18 +576,13 @@ public:
     SAL_DLLPRIVATE void                 ImplNotifyKeyMouseCommandEventListeners( NotifyEvent& rNEvt );
     SAL_DLLPRIVATE void                 ImplNotifyIconifiedState( bool bIconified );
 
-    SAL_DLLPRIVATE void                 ImplUpdateAll( bool bOverlapWindows = true );
-
-    SAL_DLLPRIVATE void                 ImplDeleteOverlapBackground();
+    SAL_DLLPRIVATE void                 ImplUpdateAll();
 
     SAL_DLLPRIVATE void                 ImplControlFocus( GetFocusFlags nFlags = GetFocusFlags::NONE );
 
     SAL_DLLPRIVATE void                 ImplMirrorFramePos( Point &pt ) const;
 
     SAL_DLLPRIVATE void                 ImplPosSizeWindow( long nX, long nY, long nWidth, long nHeight, PosSizeFlags nFlags );
-
-    SAL_DLLPRIVATE void                 ImplAddDel( ImplDelData* pDel );
-    SAL_DLLPRIVATE void                 ImplRemoveDel( ImplDelData* pDel );
 
     SAL_DLLPRIVATE void                 ImplCallResize();
     SAL_DLLPRIVATE void                 ImplCallMove();
@@ -615,7 +603,7 @@ protected:
 
     SAL_DLLPRIVATE void                 ImplInvalidateParentFrameRegion( vcl::Region& rRegion );
     SAL_DLLPRIVATE void                 ImplValidateFrameRegion( const vcl::Region* rRegion, ValidateFlags nFlags );
-    SAL_DLLPRIVATE void                 ImplValidate( const vcl::Region* rRegion, ValidateFlags nFlags );
+    SAL_DLLPRIVATE void                 ImplValidate();
     SAL_DLLPRIVATE void                 ImplMoveInvalidateRegion( const Rectangle& rRect, long nHorzScroll, long nVertScroll, bool bChildren );
     SAL_DLLPRIVATE void                 ImplMoveAllInvalidateRegions( const Rectangle& rRect, long nHorzScroll, long nVertScroll, bool bChildren );
 
@@ -629,10 +617,6 @@ protected:
 
     SAL_DLLPRIVATE void                 ImplScroll( const Rectangle& rRect, long nHorzScroll, long nVertScroll, ScrollFlags nFlags );
 
-    SAL_DLLPRIVATE void                 ImplSaveOverlapBackground();
-    SAL_DLLPRIVATE bool                 ImplRestoreOverlapBackground( vcl::Region& rInvRegion );
-    SAL_DLLPRIVATE void                 ImplInvalidateAllOverlapBackgrounds();
-
     SAL_DLLPRIVATE bool                 ImplSetClipFlagChildren( bool bSysObjOnlySmaller = false );
     SAL_DLLPRIVATE bool                 ImplSetClipFlagOverlapWindows( bool bSysObjOnlySmaller = false );
 
@@ -644,15 +628,6 @@ protected:
     SAL_DLLPRIVATE void                 PopPaintHelper(PaintHelper* pHelper);
 
 private:
-
-    SAL_DLLPRIVATE void                 ImplInitWindowData( WindowType nType );
-
-    SAL_DLLPRIVATE void                 getFrameDev( const Point& rPt, const Point& rDevPt, const Size& rDevSize,
-                                                     OutputDevice& rOutDev );
-
-
-    SAL_DLLPRIVATE void                 drawFrameDev( const Point& rPt, const Point& rDevPt, const Size& rDevSize,
-                                                      const OutputDevice& rOutDev, const vcl::Region& rRegion );
 
     SAL_DLLPRIVATE void                 ImplSetFrameParent( const vcl::Window* pParent );
 
@@ -703,7 +678,7 @@ private:
     SAL_DLLPRIVATE void                 ImplIntersectAndUnionOverlapWindows2( const vcl::Region& rInterRegion, vcl::Region& rRegion );
     SAL_DLLPRIVATE void                 ImplCalcOverlapRegionOverlaps( const vcl::Region& rInterRegion, vcl::Region& rRegion );
     SAL_DLLPRIVATE void                 ImplCalcOverlapRegion( const Rectangle& rSourceRect, vcl::Region& rRegion,
-                                                               bool bChildren, bool bParent, bool bSiblings );
+                                                               bool bChildren, bool bSiblings );
 
     /** Invoke the actual painting.
 
@@ -744,8 +719,6 @@ private:
     SAL_DLLPRIVATE long                 ImplLogicUnitToPixelX( long nX, MapUnit eUnit );
     SAL_DLLPRIVATE long                 ImplLogicUnitToPixelY( long nY, MapUnit eUnit );
 
-    SAL_DLLPRIVATE bool                 ImplIsWindowInFront( const vcl::Window* pTestWindow ) const;
-
     SAL_DLLPRIVATE static void          ImplNewInputContext();
 
     SAL_DLLPRIVATE void                 ImplCallActivateListeners(vcl::Window*);
@@ -769,7 +742,7 @@ private:
     SAL_DLLPRIVATE void                 ImplPaintToDevice( ::OutputDevice* pTargetOutDev, const Point& rPos );
 
     SAL_DLLPRIVATE css::uno::Reference< css::rendering::XCanvas >
-                                        ImplGetCanvas( const Size& rFullscreenSize, bool bFullscreen, bool bSpriteCanvas ) const;
+                                        ImplGetCanvas( bool bSpriteCanvas ) const;
 
 public:
     virtual vcl::Region                 GetActiveClipRegion() const override;
@@ -849,7 +822,6 @@ public:
     virtual void                        DataChanged( const DataChangedEvent& rDCEvt );
     virtual bool                        PreNotify( NotifyEvent& rNEvt );
     virtual bool                        Notify( NotifyEvent& rNEvt );
-    virtual vcl::Window*                GetPreferredKeyInputWindow();
 
     // These methods call the relevant virtual method when not in/post dispose
     void                                CompatGetFocus();
@@ -869,7 +841,7 @@ public:
 
     void                                IncrementLockCount();
     void                                DecrementLockCount();
-    bool                                IsLocked( bool bChildren = false ) const;
+    bool                                IsLocked() const;
 
                                         // returns the input language used for the last key stroke
                                         // may be LANGUAGE_DONTKNOW if not supported by the OS
@@ -896,7 +868,7 @@ public:
     /// Enable/disable double-buffering of the frame window and all its children.
     void                                RequestDoubleBuffering(bool bRequest);
 
-    void                                EnableAllResize( bool bEnable = true );
+    void                                EnableAllResize();
 
     void                                SetBorderStyle( WindowBorderStyle nBorderStyle );
     WindowBorderStyle                   GetBorderStyle() const;
@@ -930,7 +902,7 @@ public:
 
     void                                SetInputContext( const InputContext& rInputContext );
     const InputContext&                 GetInputContext() const;
-    void                                EndExtTextInput( EndExtTextInputFlags nFlags );
+    void                                EndExtTextInput();
     void                                SetCursorRect( const Rectangle* pRect = nullptr, long nExtTextInputWidth = 0 );
     const Rectangle*                    GetCursorRect() const;
     long                                GetCursorExtTextInputWidth() const;
@@ -957,13 +929,13 @@ public:
 
     void SetControlForeground();
     void SetControlForeground(const Color& rColor);
-    Color GetControlForeground() const;
+    const Color& GetControlForeground() const;
     bool IsControlForeground() const;
     void ApplyControlForeground(vcl::RenderContext& rRenderContext, const Color& rDefaultColor);
 
     void SetControlBackground();
     void SetControlBackground( const Color& rColor );
-    Color GetControlBackground() const;
+    const Color& GetControlBackground() const;
     bool IsControlBackground() const;
     void ApplyControlBackground(vcl::RenderContext& rRenderContext, const Color& rDefaultColor);
 
@@ -999,8 +971,7 @@ public:
     bool                                IsEnabled() const;
 
     void                                EnableInput( bool bEnable = true, bool bChild = true );
-    void                                EnableInput( bool bEnable, bool bChild, bool bSysWin,
-                                                     const vcl::Window* pExcludeWindow = nullptr );
+    void                                EnableInput( bool bEnable, const vcl::Window* pExcludeWindow );
     bool                                IsInputEnabled() const;
 
     /** Override <code>EnableInput</code>. This can be necessary due to other people
@@ -1096,10 +1067,10 @@ public:
     Point                               OutputToAbsoluteScreenPixel( const Point& rPos ) const;
     Point                               AbsoluteScreenToOutputPixel( const Point& rPos ) const;
     Rectangle                           GetDesktopRectPixel() const;
-    //  window extents including border and decoratrion
+    //  window extents including border and decoration
     Rectangle                           GetWindowExtentsRelative( vcl::Window *pRelativeWindow ) const;
     // window extents of the client window, coordinates to be used in SetPosPixel
-    Rectangle                           GetClientWindowExtentsRelative( vcl::Window *pRelativeWindow ) const;
+    Rectangle                           GetClientWindowExtentsRelative() const;
 
     bool                                IsScrollable() const;
     virtual void                        Scroll( long nHorzScroll, long nVertScroll,
@@ -1109,7 +1080,7 @@ public:
     virtual void                        Invalidate( InvalidateFlags nFlags = InvalidateFlags::NONE );
     virtual void                        Invalidate( const Rectangle& rRect, InvalidateFlags nFlags = InvalidateFlags::NONE );
     virtual void                        Invalidate( const vcl::Region& rRegion, InvalidateFlags nFlags = InvalidateFlags::NONE );
-    void                                Validate( ValidateFlags nFlags = ValidateFlags::NONE );
+    void                                Validate();
     bool                                HasPaintEvent() const;
     void                                Update();
     void                                Flush();
@@ -1142,8 +1113,8 @@ public:
 
     bool                                IsCompoundControl() const;
 
-    static sal_uIntPtr                  SaveFocus();
-    static bool                         EndSaveFocus( sal_uIntPtr nSaveId, bool bRestore = true );
+    static VclPtr<vcl::Window>          SaveFocus();
+    static bool                         EndSaveFocus( const VclPtr<vcl::Window>& xFocusWin, bool bRestore = true );
 
     void                                CaptureMouse();
     void                                ReleaseMouse();
@@ -1204,16 +1175,16 @@ public:
     void                                SetData( void* pNewData );
     void*                               GetData() const;
 
-    /// Add all children to @rAllChildren recursively.
+    /// Add all children to rAllChildren recursively.
     SAL_DLLPRIVATE void                 CollectChildren(::std::vector<vcl::Window *>& rAllChildren );
 
     virtual void                        ShowFocus(const Rectangle& rRect);
     void                                HideFocus();
 
     // transparent background for selected or checked items in toolboxes etc.
-    void                                DrawSelectionBackground( const Rectangle& rRect, sal_uInt16 highlight, bool bChecked, bool bDrawBorder, bool bDrawExtBorderOnly );
+    void                                DrawSelectionBackground( const Rectangle& rRect, sal_uInt16 highlight, bool bChecked, bool bDrawBorder );
     // support rounded edges in the selection rect
-    void                                DrawSelectionBackground( const Rectangle& rRect, sal_uInt16 highlight, bool bChecked, bool bDrawBorder, bool bDrawExtBorderOnly, long nCornerRadius, Color* pSelectionTextColor, Color* pPaintColor );
+    void                                DrawSelectionBackground( const Rectangle& rRect, sal_uInt16 highlight, bool bChecked, bool bDrawBorder, Color* pSelectionTextColor, Color* pPaintColor );
 
     void                                ShowTracking( const Rectangle& rRect,
                                                       sal_uInt16 nFlags = SHOWTRACK_SMALL );
@@ -1256,7 +1227,7 @@ public:
     virtual css::uno::Reference< css::accessibility::XAccessible >
                                         CreateAccessible();
 
-    void                                SetAccessible( css::uno::Reference< css::accessibility::XAccessible > );
+    void                                SetAccessible( const css::uno::Reference< css::accessibility::XAccessible >& );
 
     vcl::Window*                        GetAccessibleParentWindow() const;
     sal_uInt16                          GetAccessibleChildWindowCount();
@@ -1322,8 +1293,6 @@ private:
 
     SAL_DLLPRIVATE bool                 ImplIsAccessibleCandidate() const;
     SAL_DLLPRIVATE bool                 ImplIsAccessibleNativeFrame() const;
-    SAL_DLLPRIVATE sal_uInt16           ImplGetAccessibleCandidateChildWindowCount( GetWindowType nFirstWindowType ) const;
-    SAL_DLLPRIVATE vcl::Window*         ImplGetAccessibleCandidateChild( sal_uInt16 nChild, sal_uInt16& rChildCount, GetWindowType nFirstWindowType, bool bTopLevel = true ) const;
     ///@}
 
     /*
@@ -1537,7 +1506,7 @@ public:
      * Adds this widget to the xGroup VclSizeGroup
      *
      */
-    void add_to_size_group(std::shared_ptr<VclSizeGroup> xGroup);
+    void add_to_size_group(const std::shared_ptr<VclSizeGroup>& xGroup);
     void remove_from_all_size_groups();
 
     /*
@@ -1545,7 +1514,7 @@ public:
      */
     void add_mnemonic_label(FixedText *pLabel);
     void remove_mnemonic_label(FixedText *pLabel);
-    std::vector<VclPtr<FixedText> > list_mnemonic_labels() const;
+    const std::vector<VclPtr<FixedText> >& list_mnemonic_labels() const;
 
     /*
      * Move this widget to be the nNewPosition'd child of its parent

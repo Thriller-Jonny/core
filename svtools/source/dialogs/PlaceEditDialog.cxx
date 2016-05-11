@@ -28,6 +28,7 @@ PlaceEditDialog::PlaceEditDialog(vcl::Window* pParent)
     get( m_pEDServerName, "name" );
     get( m_pLBServerType, "type" );
     get( m_pEDUsername, "login" );
+    get( m_pFTUsernameLabel, "loginLabel" );
     get( m_pBTOk, "ok" );
     get( m_pBTCancel, "cancel" );
     get( m_pBTDelete, "delete" );
@@ -61,6 +62,7 @@ PlaceEditDialog::PlaceEditDialog(vcl::Window* pParent, const std::shared_ptr<Pla
     get( m_pEDServerName, "name" );
     get( m_pLBServerType, "type" );
     get( m_pEDUsername, "login" );
+    get( m_pFTUsernameLabel, "loginLabel" );
     get( m_pBTOk, "ok" );
     get( m_pBTCancel, "cancel" );
     get( m_pBTDelete, "delete" );
@@ -120,6 +122,7 @@ void PlaceEditDialog::dispose()
     m_pEDServerName.clear();
     m_pLBServerType.clear();
     m_pEDUsername.clear();
+    m_pFTUsernameLabel.clear();
     m_pBTOk.clear();
     m_pBTCancel.clear();
     m_pBTDelete.clear();
@@ -134,7 +137,7 @@ OUString PlaceEditDialog::GetServerUrl()
     if (m_xCurrentDetails.get())
     {
         INetURLObject aUrl = m_xCurrentDetails->getUrl();
-        OUString sUsername = OUString( m_pEDUsername->GetText( ) ).trim( );
+        OUString sUsername = m_pEDUsername->GetText( ).trim( );
         if ( !sUsername.isEmpty( ) )
             aUrl.SetUser( sUsername );
         if ( !aUrl.HasError( ) )
@@ -170,18 +173,20 @@ void PlaceEditDialog::InitDetails( )
     for ( sal_Int32 i = 0; i < aTypesUrlsList.getLength( ) && aTypesNamesList.getLength( ); ++i )
     {
         OUString sUrl = aTypesUrlsList[i];
+
+        if ((sUrl == GDRIVE_BASE_URL && bSkipGDrive) ||
+            (sUrl.startsWith( ALFRESCO_CLOUD_BASE_URL) && bSkipAlfresco) ||
+            (sUrl == ONEDRIVE_BASE_URL && bSkipOneDrive))
+        {
+            // this service is not supported
+            continue;
+        }
+
         nPos = m_pLBServerType->InsertEntry( aTypesNamesList[i], nPos );
 
         std::shared_ptr<DetailsContainer> xCmisDetails(std::make_shared<CmisDetailsContainer>(this, sUrl));
         xCmisDetails->setChangeHdl( LINK( this, PlaceEditDialog, EditHdl ) );
         m_aDetailsContainers.push_back(xCmisDetails);
-
-        if ( ( sUrl == GDRIVE_BASE_URL && bSkipGDrive ) ||
-             ( sUrl.startsWith( ALFRESCO_CLOUD_BASE_URL ) && bSkipAlfresco ) ||
-             ( sUrl == ONEDRIVE_BASE_URL && bSkipOneDrive ) )
-        {
-            xCmisDetails->setActive( false );
-        }
 
         nPos++;
     }
@@ -285,7 +290,7 @@ IMPL_LINK_NOARG_TYPED( PlaceEditDialog, EditHdl, DetailsContainer*, void )
     UpdateLabel( );
 
     OUString sUrl = GetServerUrl( );
-    OUString sName = OUString( m_pEDServerName->GetText() ).trim( );
+    OUString sName = m_pEDServerName->GetText().trim( );
     m_pBTOk->Enable( !sName.isEmpty( ) && !sUrl.isEmpty( ) );
 }
 
@@ -333,9 +338,11 @@ IMPL_LINK_NOARG_TYPED( PlaceEditDialog, SelectTypeHdl, ListBox&, void )
 
     m_xCurrentDetails->show();
 
-    m_pCBPassword->Show( m_bShowPassword );
-    m_pEDPassword->Show( m_bShowPassword );
-    m_pFTPasswordLabel->Show( m_bShowPassword );
+    m_pCBPassword->Show( m_bShowPassword && m_xCurrentDetails->enableUserCredentials() );
+    m_pEDPassword->Show( m_bShowPassword && m_xCurrentDetails->enableUserCredentials() );
+    m_pFTPasswordLabel->Show( m_bShowPassword && m_xCurrentDetails->enableUserCredentials() );
+    m_pEDUsername->Show( m_xCurrentDetails->enableUserCredentials() );
+    m_pFTUsernameLabel->Show( m_xCurrentDetails->enableUserCredentials() );
 
     SetSizePixel(GetOptimalSize());
 

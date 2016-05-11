@@ -27,8 +27,8 @@
 #include <unx/wmadaptor.hxx>
 #include <unx/sm.hxx>
 #include <unx/salbmp.h>
-#include <generic/genprn.h>
-#include <generic/geninst.h>
+#include <unx/genprn.h>
+#include <unx/geninst.h>
 #include <headless/svpgdi.hxx>
 #include <osl/file.hxx>
 #include <rtl/bootstrap.hxx>
@@ -38,7 +38,9 @@
 #include <vcl/window.hxx>
 #include <vcl/settings.hxx>
 
-#if defined(ENABLE_DBUS) && defined(ENABLE_GIO)
+#include <config_gio.h>
+
+#if ENABLE_DBUS && ENABLE_GIO
 #  include <unx/gtk/gtksalmenu.hxx>
 #endif
 #if defined ENABLE_GMENU_INTEGRATION // defined in gtksalmenu.hxx above
@@ -46,10 +48,16 @@
 #endif
 
 #include <gtk/gtk.h>
-#include <prex.h>
+
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
 #include <X11/Xatom.h>
-#include <gdk/gdkx.h>
-#include <postx.h>
+#if defined(GDK_WINDOWING_X11)
+#   include <gdk/gdkx.h>
+#endif
+#if defined(GDK_WINDOWING_WAYLAND)
+#   include <gdk/gdkwayland.h>
+#endif
 
 #include <dlfcn.h>
 #include <vcl/salbtype.hxx>
@@ -74,6 +82,8 @@
 #include <com/sun/star/accessibility/XAccessibleStateSet.hpp>
 #include <com/sun/star/accessibility/AccessibleStateType.hpp>
 #include <com/sun/star/accessibility/XAccessibleEditableText.hpp>
+#include <com/sun/star/awt/MouseButton.hpp>
+#include <com/sun/star/datatransfer/dnd/DNDConstants.hpp>
 #include <com/sun/star/frame/Desktop.hpp>
 #include <com/sun/star/frame/ModuleManager.hpp>
 #include <com/sun/star/frame/XFrame.hpp>
@@ -94,6 +104,7 @@
 using namespace com::sun::star;
 
 int GtkSalFrame::m_nFloats = 0;
+std::vector<GtkWidget*> GtkSalFrame::m_aGrabWidgetsBeforeShowFloat;
 
 #if defined ENABLE_GMENU_INTEGRATION
 static GDBusConnection* pSessionBus = nullptr;
@@ -335,24 +346,6 @@ GetAlternateKeyCode( const sal_uInt16 nKeyCode )
     return aAlternate;
 }
 
-namespace {
-/// Decouple SalFrame lifetime from damagetracker lifetime
-struct DamageTracker : public basebmp::IBitmapDeviceDamageTracker
-{
-    DamageTracker(GtkSalFrame& rFrame) : m_rFrame(rFrame)
-    {}
-
-    virtual ~DamageTracker() {}
-
-    virtual void damaged(const basegfx::B2IBox& rDamageRect) const override
-    {
-        m_rFrame.damaged(rDamageRect);
-    }
-
-    GtkSalFrame& m_rFrame;
-};
-}
-
 static bool dumpframes = false;
 
 void GtkSalFrame::doKeyCallback( guint state,
@@ -441,7 +434,7 @@ void GtkSalFrame::doKeyCallback( guint state,
 
     if( bDown )
     {
-        bool bHandled = CallCallback( SALEVENT_KEYINPUT, &aEvent );
+        bool bHandled = CallCallback( SalEvent::KeyInput, &aEvent );
         // #i46889# copy AlternateKeyCode handling from generic plugin
         if( ! bHandled )
         {
@@ -451,16 +444,16 @@ void GtkSalFrame::doKeyCallback( guint state,
                 aEvent.mnCode = aAlternate.nKeyCode;
                 if( aAlternate.nCharCode )
                     aEvent.mnCharCode = aAlternate.nCharCode;
-                CallCallback( SALEVENT_KEYINPUT, &aEvent );
+                CallCallback( SalEvent::KeyInput, &aEvent );
             }
         }
         if( bSendRelease && ! aDel.isDeleted() )
         {
-            CallCallback( SALEVENT_KEYUP, &aEvent );
+            CallCallback( SalEvent::KeyUp, &aEvent );
         }
     }
     else
-        CallCallback( SALEVENT_KEYUP, &aEvent );
+        CallCallback( SalEvent::KeyUp, &aEvent );
 }
 
 GtkSalFrame::GtkSalFrame( SalFrame* pParent, SalFrameStyleFlags nStyle )
@@ -472,9 +465,6 @@ GtkSalFrame::GtkSalFrame( SalFrame* pParent, SalFrameStyleFlags nStyle )
     m_bDefaultPos       = true;
     m_bDefaultSize      = ( (nStyle & SalFrameStyleFlags::SIZEABLE) && ! pParent );
     m_bWindowIsGtkPlug  = false;
-#if defined(ENABLE_DBUS) && defined(ENABLE_GIO)
-    m_pLastSyncedDbusMenu = nullptr;
-#endif
     Init( pParent, nStyle );
 }
 
@@ -488,20 +478,10 @@ GtkSalFrame::GtkSalFrame( SystemParentData* pSysData )
     GetGenericData()->ErrorTrapPush();
     m_bDefaultPos       = true;
     m_bDefaultSize      = true;
-#if defined(ENABLE_DBUS) && defined(ENABLE_GIO)
-    m_pLastSyncedDbusMenu = nullptr;
-#endif
     Init( pSysData );
 }
 
 #ifdef ENABLE_GMENU_INTEGRATION
-
-static void
-gdk_x11_window_set_utf8_property  (GdkWindow * /*window*/,
-                                   const gchar * /*name*/,
-                                   const gchar * /*value*/)
-{
-}
 
 // AppMenu watch functions.
 
@@ -511,17 +491,6 @@ static void ObjectDestroyedNotify( gpointer data )
         g_object_unref( data );
     }
 }
-
-#if defined(ENABLE_DBUS) && defined(ENABLE_GIO)
-void GtkSalFrame::EnsureDbusMenuSynced()
-{
-    GtkSalMenu* pSalMenu = static_cast<GtkSalMenu*>(GetMenu());
-    if(m_pLastSyncedDbusMenu != pSalMenu) {
-        m_pLastSyncedDbusMenu = pSalMenu;
-        static_cast<GtkSalMenu*>(pSalMenu)->Activate();
-    }
-}
-#endif
 
 static void hud_activated( gboolean hud_active, gpointer user_data )
 {
@@ -554,7 +523,7 @@ static void activate_uno(GSimpleAction *action, GVariant*, gpointer)
         return;
 
     gchar *strval = nullptr;
-    g_object_get(action, "name", &strval, NULL);
+    g_object_get(action, "name", &strval, nullptr);
     if (!strval)
         return;
 
@@ -621,7 +590,7 @@ gboolean ensure_dbus_setup( gpointer data )
         GActionGroup* pActionGroup = reinterpret_cast<GActionGroup*>(g_lo_action_group_new( static_cast< gpointer >( pSalFrame ) ));
 
         // Generate menu paths.
-        ::Window windowId = GDK_WINDOW_XID( gdkWindow );
+        sal_uIntPtr windowId = pSalFrame->GetNativeWindowHandle(pSalFrame->getWindow());
         gchar* aDBusWindowPath = g_strdup_printf( "/org/libreoffice/window/%lu", windowId );
         gchar* aDBusMenubarPath = g_strdup_printf( "/org/libreoffice/window/%lu/menus/menubar", windowId );
 
@@ -629,24 +598,38 @@ gboolean ensure_dbus_setup( gpointer data )
         g_object_set_data_full( G_OBJECT( gdkWindow ), "g-lo-menubar", pMenuModel, ObjectDestroyedNotify );
         g_object_set_data_full( G_OBJECT( gdkWindow ), "g-lo-action-group", pActionGroup, ObjectDestroyedNotify );
 
-        gdk_x11_window_set_utf8_property( gdkWindow, "_GTK_APPLICATION_ID", "org.libreoffice" );
-        gdk_x11_window_set_utf8_property( gdkWindow, "_GTK_UNIQUE_BUS_NAME", g_dbus_connection_get_unique_name( pSessionBus ) );
-        gdk_x11_window_set_utf8_property( gdkWindow, "_GTK_APPLICATION_OBJECT_PATH", "/org/libreoffice" );
-        gdk_x11_window_set_utf8_property( gdkWindow, "_GTK_WINDOW_OBJECT_PATH", aDBusWindowPath );
-        gdk_x11_window_set_utf8_property( gdkWindow, "_GTK_MENUBAR_OBJECT_PATH", aDBusMenubarPath );
-
+        GdkDisplay *pDisplay = GtkSalFrame::getGdkDisplay();
+        // fdo#70885 we don't want app menu under Unity
+        const bool bDesktopIsUnity = (SalGetDesktopEnvironment() == "UNITY");
+#if defined(GDK_WINDOWING_X11)
+        if (GDK_IS_X11_DISPLAY(pDisplay))
+        {
+            gdk_x11_window_set_utf8_property( gdkWindow, "_GTK_APPLICATION_ID", "org.libreoffice" );
+            if (!bDesktopIsUnity)
+                gdk_x11_window_set_utf8_property( gdkWindow, "_GTK_APP_MENU_OBJECT_PATH", "/org/libreoffice/menus/appmenu" );
+            gdk_x11_window_set_utf8_property( gdkWindow, "_GTK_MENUBAR_OBJECT_PATH", aDBusMenubarPath );
+            gdk_x11_window_set_utf8_property( gdkWindow, "_GTK_WINDOW_OBJECT_PATH", aDBusWindowPath );
+            gdk_x11_window_set_utf8_property( gdkWindow, "_GTK_APPLICATION_OBJECT_PATH", "/org/libreoffice" );
+            gdk_x11_window_set_utf8_property( gdkWindow, "_GTK_UNIQUE_BUS_NAME", g_dbus_connection_get_unique_name( pSessionBus ) );
+        }
+#endif
+#if defined(GDK_WINDOWING_WAYLAND)
+        if (GDK_IS_WAYLAND_DISPLAY(pDisplay))
+        {
+            gdk_wayland_window_set_dbus_properties_libgtk_only(gdkWindow, "org.libreoffice",
+                                                               "/org/libreoffice/menus/appmenu",
+                                                               !bDesktopIsUnity ? aDBusMenubarPath : nullptr,
+                                                               aDBusWindowPath,
+                                                               "/org/libreoffice",
+                                                               g_dbus_connection_get_unique_name( pSessionBus ));
+        }
+#endif
         // Publish the menu model and the action group.
         SAL_INFO("vcl.unity", "exporting menu model at " << pMenuModel << " for window " << windowId);
         pSalFrame->m_nMenuExportId = g_dbus_connection_export_menu_model (pSessionBus, aDBusMenubarPath, pMenuModel, nullptr);
         SAL_INFO("vcl.unity", "exporting action group at " << pActionGroup << " for window " << windowId);
         pSalFrame->m_nActionGroupExportId = g_dbus_connection_export_action_group( pSessionBus, aDBusWindowPath, pActionGroup, nullptr);
         pSalFrame->m_nHudAwarenessId = hud_awareness_register( pSessionBus, aDBusMenubarPath, hud_activated, pSalFrame, nullptr, nullptr );
-
-        // fdo#70885 we don't want app menu under Unity
-        bool bDesktopIsUnity = (SalGetDesktopEnvironment() == "UNITY");
-
-        if (!bDesktopIsUnity)
-            gdk_x11_window_set_utf8_property( gdkWindow, "_GTK_APP_MENU_OBJECT_PATH", "/org/libreoffice/menus/appmenu" );
 
         //app menu, to-do translations, block normal menus when active, honor use appmenu settings
         ResMgr* pMgr = ImplGetResMgr();
@@ -735,7 +718,7 @@ void on_registrar_available( GDBusConnection * /*connection*/,
     if ( pSalMenu != nullptr )
     {
         GtkSalMenu* pGtkSalMenu = static_cast<GtkSalMenu*>(pSalMenu);
-        pGtkSalMenu->Display( true );
+        pGtkSalMenu->EnableUnity(true);
         pGtkSalMenu->UpdateFull();
     }
 }
@@ -756,7 +739,7 @@ void on_registrar_unavailable( GDBusConnection * /*connection*/,
 
     if ( pSalMenu ) {
         GtkSalMenu* pGtkSalMenu = static_cast< GtkSalMenu* >( pSalMenu );
-        pGtkSalMenu->Display( false );
+        pGtkSalMenu->EnableUnity(false);
     }
 }
 #endif
@@ -784,8 +767,6 @@ void GtkSalFrame::EnsureAppMenuWatch()
                                                        static_cast<GtkSalFrame*>(this),
                                                        nullptr );
     }
-
-    //ensure_dbus_setup( this );
 #else
     (void) this; // loplugin:staticmethods
 #endif
@@ -801,6 +782,18 @@ void GtkSalFrame::InvalidateGraphics()
 
 GtkSalFrame::~GtkSalFrame()
 {
+    if (m_pDropTarget)
+    {
+        m_pDropTarget->deinitialize();
+        m_pDropTarget = nullptr;
+    }
+
+    if (m_pDragSource)
+    {
+        m_pDragSource->deinitialize();
+        m_pDragSource= nullptr;
+    }
+
     InvalidateGraphics();
 
     if( m_pParent )
@@ -822,6 +815,8 @@ GtkSalFrame::~GtkSalFrame()
         gtk_widget_destroy( GTK_WIDGET( m_pFixedContainer ) );
     if( m_pEventBox )
         gtk_widget_destroy( GTK_WIDGET(m_pEventBox) );
+    if( m_pTopLevelGrid )
+        gtk_widget_destroy( GTK_WIDGET(m_pTopLevelGrid) );
     {
         SolarMutexGuard aGuard;
 #if defined ENABLE_GMENU_INTEGRATION
@@ -857,6 +852,9 @@ GtkSalFrame::~GtkSalFrame()
 
     delete m_pGraphics;
     m_pGraphics = nullptr;
+
+    if (m_pSurface)
+        cairo_surface_destroy(m_pSurface);
 }
 
 void GtkSalFrame::moveWindow( long nX, long nY )
@@ -870,14 +868,6 @@ void GtkSalFrame::moveWindow( long nX, long nY )
     }
     else
         gtk_window_move( GTK_WINDOW(m_pWindow), nX, nY );
-}
-
-void GtkSalFrame::dragWindowTo(long nX, long nY)
-{
-    if (isChild(false))
-        moveWindow(nX, nY);
-    else
-        gtk_window_begin_move_drag(GTK_WINDOW(m_pWindow), 1, nX, nY, GDK_CURRENT_TIME);
 }
 
 void GtkSalFrame::widget_set_size_request(long nWidth, long nHeight)
@@ -956,12 +946,31 @@ GtkWidget *GtkSalFrame::getMouseEventWidget() const
     return GTK_WIDGET(m_pEventBox);
 }
 
+static void damaged(void *handle,
+                    sal_Int32 nExtentsLeft, sal_Int32 nExtentsTop,
+                    sal_Int32 nExtentsRight, sal_Int32 nExtentsBottom)
+{
+    GtkSalFrame* pThis = static_cast<GtkSalFrame*>(handle);
+    pThis->damaged(nExtentsLeft, nExtentsTop,
+                   nExtentsRight, nExtentsBottom);
+}
+
 void GtkSalFrame::InitCommon()
 {
+    m_pSurface = nullptr;
+
+    m_aDamageHandler.handle = this;
+    m_aDamageHandler.damaged = ::damaged;
+
+    m_pTopLevelGrid = GTK_GRID(gtk_grid_new());
+    gtk_container_add(GTK_CONTAINER(m_pWindow), GTK_WIDGET(m_pTopLevelGrid));
+
     m_pEventBox = GTK_EVENT_BOX(gtk_event_box_new());
     gtk_widget_add_events( GTK_WIDGET(m_pEventBox),
                            GDK_ALL_EVENTS_MASK );
-    gtk_container_add( GTK_CONTAINER(m_pWindow), GTK_WIDGET(m_pEventBox) );
+    gtk_widget_set_vexpand(GTK_WIDGET(m_pEventBox), true);
+    gtk_widget_set_hexpand(GTK_WIDGET(m_pEventBox), true);
+    gtk_grid_attach(m_pTopLevelGrid, GTK_WIDGET(m_pEventBox), 0, 0, 1, 1);
 
     // add the fixed container child,
     // fixed is needed since we have to position plugin windows
@@ -985,6 +994,21 @@ void GtkSalFrame::InitCommon()
     m_aMouseSignalIds.push_back(g_signal_connect( G_OBJECT(pEventWidget), "button-press-event", G_CALLBACK(signalButton), this ));
     m_aMouseSignalIds.push_back(g_signal_connect( G_OBJECT(pEventWidget), "motion-notify-event", G_CALLBACK(signalMotion), this ));
     m_aMouseSignalIds.push_back(g_signal_connect( G_OBJECT(pEventWidget), "button-release-event", G_CALLBACK(signalButton), this ));
+
+    //Drop Target Stuff
+    gtk_drag_dest_set(GTK_WIDGET(pEventWidget), (GtkDestDefaults)0, nullptr, 0, (GdkDragAction)0);
+    gtk_drag_dest_set_track_motion(GTK_WIDGET(pEventWidget), true);
+    m_aMouseSignalIds.push_back(g_signal_connect( G_OBJECT(pEventWidget), "drag-motion", G_CALLBACK(signalDragMotion), this ));
+    m_aMouseSignalIds.push_back(g_signal_connect( G_OBJECT(pEventWidget), "drag-drop", G_CALLBACK(signalDragDrop), this ));
+    m_aMouseSignalIds.push_back(g_signal_connect( G_OBJECT(pEventWidget), "drag-data-received", G_CALLBACK(signalDragDropReceived), this ));
+    m_aMouseSignalIds.push_back(g_signal_connect( G_OBJECT(pEventWidget), "drag-leave", G_CALLBACK(signalDragLeave), this ));
+
+    //Drag Source Stuff
+    m_aMouseSignalIds.push_back(g_signal_connect( G_OBJECT(pEventWidget), "drag-end", G_CALLBACK(signalDragEnd), this ));
+    m_aMouseSignalIds.push_back(g_signal_connect( G_OBJECT(pEventWidget), "drag-failed", G_CALLBACK(signalDragFailed), this ));
+    m_aMouseSignalIds.push_back(g_signal_connect( G_OBJECT(pEventWidget), "drag-data-delete", G_CALLBACK(signalDragDelete), this ));
+    m_aMouseSignalIds.push_back(g_signal_connect( G_OBJECT(pEventWidget), "drag-data-get", G_CALLBACK(signalDragDataGet), this ));
+
     g_signal_connect( G_OBJECT(m_pFixedContainer), "draw", G_CALLBACK(signalDraw), this );
     g_signal_connect( G_OBJECT(m_pFixedContainer), "size-allocate", G_CALLBACK(sizeAllocated), this );
 #if GTK_CHECK_VERSION(3,14,0)
@@ -1028,6 +1052,10 @@ void GtkSalFrame::InitCommon()
     m_hBackgroundPixmap = None;
     m_nExtStyle         = 0;
     m_pRegion           = nullptr;
+    m_pDropTarget       = nullptr;
+    m_pDragSource       = nullptr;
+    m_bInDrag           = false;
+    m_pFormatConversionRequest = nullptr;
     m_ePointerStyle     = static_cast<PointerStyle>(0xffff);
     m_bSetFocusOnMap    = false;
     m_pSalMenu          = nullptr;
@@ -1045,22 +1073,21 @@ void GtkSalFrame::InitCommon()
                            );
 
     // show the widgets
-    gtk_widget_show_all( GTK_WIDGET(m_pEventBox) );
+    gtk_widget_show_all(GTK_WIDGET(m_pTopLevelGrid));
 
     // realize the window, we need an XWindow id
     gtk_widget_realize( m_pWindow );
 
     //system data
     m_aSystemData.nSize         = sizeof( SystemEnvData );
-    static int nWindow = 0;
-    m_aSystemData.aWindow       = nWindow;
-    m_aSystemData.aShellWindow  = nWindow;
-    ++nWindow;
+    m_aSystemData.aWindow       = GetNativeWindowHandle(m_pWindow);
+    m_aSystemData.aShellWindow  = reinterpret_cast<long>(this);
     m_aSystemData.pSalFrame     = this;
     m_aSystemData.pWidget       = m_pWindow;
     m_aSystemData.nScreen       = m_nXScreen.getXScreen();
     m_aSystemData.pAppContext   = nullptr;
     m_aSystemData.pShellWidget  = m_aSystemData.pWidget;
+    m_aSystemData.pToolkit      = "gtk3";
 
     m_bGraphics = false;
     m_pGraphics = nullptr;
@@ -1118,8 +1145,7 @@ void GtkSalFrame::Init( SalFrame* pParent, SalFrameStyleFlags nStyle )
     m_nStyle = nStyle;
 
     GtkWindowType eWinType = (  (nStyle & SalFrameStyleFlags::FLOAT) &&
-                              ! (nStyle & (SalFrameStyleFlags::OWNERDRAWDECORATION|
-                                           SalFrameStyleFlags::FLOAT_FOCUSABLE))
+                              ! (nStyle & SalFrameStyleFlags::OWNERDRAWDECORATION)
                               )
         ? GTK_WINDOW_POPUP : GTK_WINDOW_TOPLEVEL;
 
@@ -1143,10 +1169,12 @@ void GtkSalFrame::Init( SalFrame* pParent, SalFrameStyleFlags nStyle )
     g_object_set_data( G_OBJECT( m_pWindow ), "libo-version", const_cast<char *>(LIBO_VERSION_DOTTED));
 
     // force wm class hint
-    m_nExtStyle = ~0;
-    if (m_pParent)
-        m_sWMClass = m_pParent->m_sWMClass;
-    SetExtendedFrameStyle( 0 );
+    if (!isChild())
+    {
+        if (m_pParent)
+            m_sWMClass = m_pParent->m_sWMClass;
+        updateWMClass();
+    }
 
     if( m_pParent && m_pParent->m_pWindow && ! isChild() )
         gtk_window_set_screen( GTK_WINDOW(m_pWindow), gtk_window_get_screen( GTK_WINDOW(m_pParent->m_pWindow) ) );
@@ -1158,13 +1186,11 @@ void GtkSalFrame::Init( SalFrame* pParent, SalFrameStyleFlags nStyle )
         m_pParent->m_aChildren.push_back( this );
     }
 
-    InitCommon();
-
     // set window type
     bool bDecoHandling =
         ! isChild() &&
         ( ! (nStyle & SalFrameStyleFlags::FLOAT) ||
-          (nStyle & (SalFrameStyleFlags::OWNERDRAWDECORATION|SalFrameStyleFlags::FLOAT_FOCUSABLE) ) );
+          (nStyle & SalFrameStyleFlags::OWNERDRAWDECORATION) );
 
     if( bDecoHandling )
     {
@@ -1187,15 +1213,14 @@ void GtkSalFrame::Init( SalFrame* pParent, SalFrameStyleFlags nStyle )
             gtk_window_set_accept_focus(GTK_WINDOW(m_pWindow), false);
             gtk_window_set_decorated(GTK_WINDOW(m_pWindow), false);
         }
-        else if( (nStyle & SalFrameStyleFlags::FLOAT_FOCUSABLE) )
-        {
-            eType = GDK_WINDOW_TYPE_HINT_UTILITY;
-        }
         gtk_window_set_type_hint( GTK_WINDOW(m_pWindow), eType );
         gtk_window_set_gravity( GTK_WINDOW(m_pWindow), GDK_GRAVITY_STATIC );
+        gtk_window_set_resizable( GTK_WINDOW(m_pWindow), bool(nStyle & SalFrameStyleFlags::SIZEABLE) );
     }
     else if( (nStyle & SalFrameStyleFlags::FLOAT) )
         gtk_window_set_type_hint( GTK_WINDOW(m_pWindow), GDK_WINDOW_TYPE_HINT_POPUP_MENU );
+
+    InitCommon();
 
     if( eWinType == GTK_WINDOW_TOPLEVEL )
     {
@@ -1204,13 +1229,6 @@ void GtkSalFrame::Init( SalFrame* pParent, SalFrameStyleFlags nStyle )
         ensure_dbus_setup( this );
 #endif
 
-    }
-
-    if( bDecoHandling )
-    {
-        gtk_window_set_resizable( GTK_WINDOW(m_pWindow), bool(nStyle & SalFrameStyleFlags::SIZEABLE) );
-        if( ( (nStyle & (SalFrameStyleFlags::OWNERDRAWDECORATION)) ) )
-            gtk_window_set_accept_focus(GTK_WINDOW(m_pWindow), false);
     }
 }
 
@@ -1276,12 +1294,12 @@ SalGraphics* GtkSalFrame::AcquireGraphics()
     if( !m_pGraphics )
     {
         m_pGraphics = new GtkSalGraphics( this, m_pWindow );
-        if( !m_aFrame.get() )
+        if (!m_pSurface)
         {
             AllocateFrame();
             TriggerPaintEvent();
         }
-        m_pGraphics->setDevice( m_aFrame );
+        m_pGraphics->setSurface(m_pSurface);
     }
     m_bGraphics = true;
     return m_pGraphics;
@@ -1328,7 +1346,7 @@ void GtkSalFrame::SetIcon( sal_uInt16 nIcon )
     else if (nIcon == SV_ICON_ID_FORMULA)
         appicon = g_strdup ("libreoffice-math");
     else
-        appicon = g_strdup ("libreoffice-main");
+        appicon = g_strdup ("libreoffice-startcenter");
 
     gtk_window_set_icon_name (GTK_WINDOW (m_pWindow), appicon);
     g_free (appicon);
@@ -1390,21 +1408,6 @@ void GtkSalFrame::Show( bool bVisible, bool bNoActivate )
                 SetDefaultSize();
             setMinMaxSize();
 
-            if( isFloatGrabWindow() &&
-                m_pParent &&
-                m_nFloats == 0 &&
-                ! getDisplay()->GetCaptureFrame() )
-            {
-                /* #i63086#
-                 * outsmart Metacity's "focus:mouse" mode
-                 * which insists on taking the focus from the document
-                 * to the new float. Grab focus to parent frame BEFORE
-                 * showing the float (cannot grab it to the float
-                 * before show).
-                 */
-                 m_pParent->grabPointer( true, true );
-            }
-
             if( ! bNoActivate && (m_nStyle & SalFrameStyleFlags::TOOLWINDOW) )
                 m_bSetFocusOnMap = true;
 
@@ -1415,6 +1418,12 @@ void GtkSalFrame::Show( bool bVisible, bool bNoActivate )
                 m_nFloats++;
                 if( ! getDisplay()->GetCaptureFrame() && m_nFloats == 1 )
                 {
+                    GtkWidget* pGrabWidgetBeforeShowFloat;
+                    while ((pGrabWidgetBeforeShowFloat = gtk_grab_get_current()))
+                    {
+                        m_aGrabWidgetsBeforeShowFloat.push_back(pGrabWidgetBeforeShowFloat);
+                        gtk_grab_remove(pGrabWidgetBeforeShowFloat);
+                    }
                     grabPointer(true, true);
                     GtkSalFrame *pKeyboardFrame = m_pParent ? m_pParent : this;
                     pKeyboardFrame->grabKeyboard(true);
@@ -1436,6 +1445,9 @@ void GtkSalFrame::Show( bool bVisible, bool bNoActivate )
                     GtkSalFrame *pKeyboardFrame = m_pParent ? m_pParent : this;
                     pKeyboardFrame->grabKeyboard(false);
                     grabPointer(false);
+                    for (auto i = m_aGrabWidgetsBeforeShowFloat.rbegin(); i != m_aGrabWidgetsBeforeShowFloat.rend(); ++i)
+                        gtk_grab_add(*i);
+                    m_aGrabWidgetsBeforeShowFloat.clear();
                 }
             }
             gtk_widget_hide( m_pWindow );
@@ -1530,25 +1542,34 @@ void GtkSalFrame::SetMinClientSize( long nWidth, long nHeight )
 void GtkSalFrame::AllocateFrame()
 {
     basegfx::B2IVector aFrameSize( maGeometry.nWidth, maGeometry.nHeight );
-    if( ! m_aFrame.get() || m_aFrame->getSize() != aFrameSize )
+    if (!m_pSurface || cairo_image_surface_get_width(m_pSurface) != aFrameSize.getX() ||
+                       cairo_image_surface_get_height(m_pSurface) != aFrameSize.getY() )
     {
         if( aFrameSize.getX() == 0 )
             aFrameSize.setX( 1 );
         if( aFrameSize.getY() == 0 )
             aFrameSize.setY( 1 );
-        m_aFrame = basebmp::createBitmapDevice(aFrameSize, true, SVP_CAIRO_FORMAT);
-        assert(cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, aFrameSize.getX()) ==
-               m_aFrame->getScanlineStride());
-        m_aFrame->setDamageTracker(
-            basebmp::IBitmapDeviceDamageTrackerSharedPtr(new DamageTracker(*this)) );
-        SAL_INFO("vcl.gtk3", "allocated m_aFrame size of " << maGeometry.nWidth << " x " << maGeometry.nHeight);
 
-#if OSL_DEBUG_LEVEL > 0 // set background to orange
-        m_aFrame->clear( basebmp::Color( 255, 127, 0 ) );
+        if (m_pSurface)
+            cairo_surface_destroy(m_pSurface);
+
+
+#if GTK_CHECK_VERSION(3,10,0)
+        m_pSurface = gdk_window_create_similar_image_surface(widget_get_window(m_pWindow),
+                                                             CAIRO_FORMAT_ARGB32,
+                                                             aFrameSize.getX(),
+                                                             aFrameSize.getY(),
+                                                             0);
+#else
+        m_pSurface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
+                                                aFrameSize.getX(),
+                                                aFrameSize.getY());
 #endif
+        cairo_surface_set_user_data(m_pSurface, SvpSalGraphics::getDamageKey(), &m_aDamageHandler, nullptr);
+        SAL_INFO("vcl.gtk3", "allocated Frame size of " << maGeometry.nWidth << " x " << maGeometry.nHeight);
 
-        if( m_pGraphics )
-            m_pGraphics->setDevice( m_aFrame );
+        if (m_pGraphics)
+            m_pGraphics->setSurface(m_pSurface);
     }
 }
 
@@ -1580,17 +1601,14 @@ void GtkSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight, sal_u
         if( m_pParent )
         {
             if( AllSettings::GetLayoutRTL() )
-                nX = m_pParent->maGeometry.nWidth-maGeometry.nWidth-1-nX;
+                nX = m_pParent->maGeometry.nWidth-m_nWidthRequest-1-nX;
             nX += m_pParent->maGeometry.nX;
             nY += m_pParent->maGeometry.nY;
         }
 
         m_bDefaultPos = false;
 
-        if (nFlags & SAL_FRAME_POSSIZE_BYDRAG)
-            dragWindowTo(nX, nY);
-        else
-            moveWindow(nX, nY);
+        moveWindow(nX, nY);
 
         updateScreenNumber();
     }
@@ -1636,15 +1654,15 @@ void GtkSalFrame::SetWindowState( const SalFrameState* pState )
     if( ! m_pWindow || ! pState || isChild( true, false ) )
         return;
 
-    const sal_uLong nMaxGeometryMask =
-        WINDOWSTATE_MASK_X | WINDOWSTATE_MASK_Y |
-        WINDOWSTATE_MASK_WIDTH | WINDOWSTATE_MASK_HEIGHT |
-        WINDOWSTATE_MASK_MAXIMIZED_X | WINDOWSTATE_MASK_MAXIMIZED_Y |
-        WINDOWSTATE_MASK_MAXIMIZED_WIDTH | WINDOWSTATE_MASK_MAXIMIZED_HEIGHT;
+    const WindowStateMask nMaxGeometryMask =
+        WindowStateMask::X | WindowStateMask::Y |
+        WindowStateMask::Width | WindowStateMask::Height |
+        WindowStateMask::MaximizedX | WindowStateMask::MaximizedY |
+        WindowStateMask::MaximizedWidth | WindowStateMask::MaximizedHeight;
 
-    if( (pState->mnMask & WINDOWSTATE_MASK_STATE) &&
+    if( (pState->mnMask & WindowStateMask::State) &&
         ! ( m_nState & GDK_WINDOW_STATE_MAXIMIZED ) &&
-        (pState->mnState & WINDOWSTATE_STATE_MAXIMIZED) &&
+        (pState->mnState & WindowStateState::Maximized) &&
         (pState->mnMask & nMaxGeometryMask) == nMaxGeometryMask )
     {
         resizeWindow( pState->mnWidth, pState->mnHeight );
@@ -1657,29 +1675,29 @@ void GtkSalFrame::SetWindowState( const SalFrameState* pState )
         m_aRestorePosSize = Rectangle( Point( pState->mnX, pState->mnY ),
                                        Size( pState->mnWidth, pState->mnHeight ) );
     }
-    else if( pState->mnMask & (WINDOWSTATE_MASK_X | WINDOWSTATE_MASK_Y |
-                               WINDOWSTATE_MASK_WIDTH | WINDOWSTATE_MASK_HEIGHT ) )
+    else if( pState->mnMask & (WindowStateMask::X | WindowStateMask::Y |
+                               WindowStateMask::Width | WindowStateMask::Height ) )
     {
         sal_uInt16 nPosSizeFlags = 0;
         long nX         = pState->mnX - (m_pParent ? m_pParent->maGeometry.nX : 0);
         long nY         = pState->mnY - (m_pParent ? m_pParent->maGeometry.nY : 0);
-        if( pState->mnMask & WINDOWSTATE_MASK_X )
+        if( pState->mnMask & WindowStateMask::X )
             nPosSizeFlags |= SAL_FRAME_POSSIZE_X;
         else
             nX = maGeometry.nX - (m_pParent ? m_pParent->maGeometry.nX : 0);
-        if( pState->mnMask & WINDOWSTATE_MASK_Y )
+        if( pState->mnMask & WindowStateMask::Y )
             nPosSizeFlags |= SAL_FRAME_POSSIZE_Y;
         else
             nY = maGeometry.nY - (m_pParent ? m_pParent->maGeometry.nY : 0);
-        if( pState->mnMask & WINDOWSTATE_MASK_WIDTH )
+        if( pState->mnMask & WindowStateMask::Width )
             nPosSizeFlags |= SAL_FRAME_POSSIZE_WIDTH;
-        if( pState->mnMask & WINDOWSTATE_MASK_HEIGHT )
+        if( pState->mnMask & WindowStateMask::Height )
             nPosSizeFlags |= SAL_FRAME_POSSIZE_HEIGHT;
         SetPosSize( nX, nY, pState->mnWidth, pState->mnHeight, nPosSizeFlags );
     }
-    if( pState->mnMask & WINDOWSTATE_MASK_STATE && ! isChild() )
+    if( pState->mnMask & WindowStateMask::State && ! isChild() )
     {
-        if( pState->mnState & WINDOWSTATE_STATE_MAXIMIZED )
+        if( pState->mnState & WindowStateState::Maximized )
             gtk_window_maximize( GTK_WINDOW(m_pWindow) );
         else
             gtk_window_unmaximize( GTK_WINDOW(m_pWindow) );
@@ -1691,7 +1709,7 @@ void GtkSalFrame::SetWindowState( const SalFrameState* pState )
         *  on windows with a parent (that is transient frames) since these tend
         *  to not be represented in an icon task list.
         */
-        if( (pState->mnState & WINDOWSTATE_STATE_MINIMIZED)
+        if( (pState->mnState & WindowStateState::Minimized)
             && ! m_pParent )
             gtk_window_iconify( GTK_WINDOW(m_pWindow) );
         else
@@ -1700,40 +1718,58 @@ void GtkSalFrame::SetWindowState( const SalFrameState* pState )
     TriggerPaintEvent();
 }
 
+namespace
+{
+    void GetPosAndSize(GtkWindow *pWindow, long& rX, long &rY, long &rWidth, long &rHeight)
+    {
+       gint root_x, root_y;
+       gtk_window_get_position(GTK_WINDOW(pWindow), &root_x, &root_y);
+       rX = root_x;
+       rY = root_y;
+       gint width, height;
+       gtk_window_get_size(GTK_WINDOW(pWindow), &width, &height);
+       rWidth = width;
+       rHeight = height;
+    }
+
+    Rectangle GetPosAndSize(GtkWindow *pWindow)
+    {
+        long nX, nY, nWidth, nHeight;
+        GetPosAndSize(pWindow, nX, nY, nWidth, nHeight);
+        return Rectangle(nX, nY, nX + nWidth, nY + nHeight);
+    }
+}
+
 bool GtkSalFrame::GetWindowState( SalFrameState* pState )
 {
-    pState->mnState = WINDOWSTATE_STATE_NORMAL;
-    pState->mnMask  = WINDOWSTATE_MASK_STATE;
+    pState->mnState = WindowStateState::Normal;
+    pState->mnMask  = WindowStateMask::State;
     // rollup ? gtk 2.2 does not seem to support the shaded state
     if( (m_nState & GDK_WINDOW_STATE_ICONIFIED) )
-        pState->mnState |= WINDOWSTATE_STATE_MINIMIZED;
+        pState->mnState |= WindowStateState::Minimized;
     if( m_nState & GDK_WINDOW_STATE_MAXIMIZED )
     {
-        pState->mnState |= WINDOWSTATE_STATE_MAXIMIZED;
+        pState->mnState |= WindowStateState::Maximized;
         pState->mnX                 = m_aRestorePosSize.Left();
         pState->mnY                 = m_aRestorePosSize.Top();
         pState->mnWidth             = m_aRestorePosSize.GetWidth();
         pState->mnHeight            = m_aRestorePosSize.GetHeight();
-        pState->mnMaximizedX        = maGeometry.nX;
-        pState->mnMaximizedY        = maGeometry.nY;
-        pState->mnMaximizedWidth    = maGeometry.nWidth;
-        pState->mnMaximizedHeight   = maGeometry.nHeight;
-        pState->mnMask  |= WINDOWSTATE_MASK_MAXIMIZED_X          |
-                           WINDOWSTATE_MASK_MAXIMIZED_Y          |
-                           WINDOWSTATE_MASK_MAXIMIZED_WIDTH      |
-                           WINDOWSTATE_MASK_MAXIMIZED_HEIGHT;
+        GetPosAndSize(GTK_WINDOW(m_pWindow), pState->mnMaximizedX, pState->mnMaximizedY,
+                                             pState->mnMaximizedWidth, pState->mnMaximizedHeight);
+        pState->mnMask  |= WindowStateMask::MaximizedX          |
+                           WindowStateMask::MaximizedY          |
+                           WindowStateMask::MaximizedWidth      |
+                           WindowStateMask::MaximizedHeight;
     }
     else
     {
-        pState->mnX         = maGeometry.nX;
-        pState->mnY         = maGeometry.nY;
-        pState->mnWidth     = maGeometry.nWidth;
-        pState->mnHeight    = maGeometry.nHeight;
+        GetPosAndSize(GTK_WINDOW(m_pWindow), pState->mnX, pState->mnY,
+                                             pState->mnWidth, pState->mnHeight);
     }
-    pState->mnMask  |= WINDOWSTATE_MASK_X            |
-                       WINDOWSTATE_MASK_Y            |
-                       WINDOWSTATE_MASK_WIDTH        |
-                       WINDOWSTATE_MASK_HEIGHT;
+    pState->mnMask  |= WindowStateMask::X            |
+                       WindowStateMask::Y            |
+                       WindowStateMask::Width        |
+                       WindowStateMask::Height;
 
     return true;
 }
@@ -1929,8 +1965,7 @@ void GtkSalFrame::ShowFullScreen( bool bFullScreen, sal_Int32 nScreen )
 
     if( bFullScreen )
     {
-        m_aRestorePosSize = Rectangle( Point( maGeometry.nX, maGeometry.nY ),
-                                       Size( maGeometry.nWidth, maGeometry.nHeight ) );
+        m_aRestorePosSize = GetPosAndSize(GTK_WINDOW(m_pWindow));
         SetScreen( nScreen, SET_FULLSCREEN );
     }
     else
@@ -2019,9 +2054,9 @@ void GtkSalFrame::grabPointer( bool bGrab, bool bOwnerEvents )
     GdkDeviceManager* pDeviceManager = gdk_display_get_device_manager(getGdkDisplay());
     GdkDevice* pPointer = gdk_device_manager_get_client_pointer(pDeviceManager);
     if (bGrab)
-        gdk_device_grab(pPointer, widget_get_window(getMouseEventWidget()), GDK_OWNERSHIP_NONE, bOwnerEvents, (GdkEventMask) nMask, m_pCurrentCursor, GDK_CURRENT_TIME);
+        gdk_device_grab(pPointer, widget_get_window(getMouseEventWidget()), GDK_OWNERSHIP_NONE, bOwnerEvents, (GdkEventMask) nMask, m_pCurrentCursor, gtk_get_current_event_time());
     else
-        gdk_device_ungrab(pPointer, GDK_CURRENT_TIME);
+        gdk_device_ungrab(pPointer, gtk_get_current_event_time());
 }
 
 void GtkSalFrame::grabKeyboard( bool bGrab )
@@ -2039,11 +2074,11 @@ void GtkSalFrame::grabKeyboard( bool bGrab )
     if (bGrab)
     {
         gdk_device_grab(pKeyboard, widget_get_window(m_pWindow), GDK_OWNERSHIP_NONE,
-                        true, (GdkEventMask)(GDK_KEY_PRESS | GDK_KEY_RELEASE), nullptr, GDK_CURRENT_TIME);
+                        true, (GdkEventMask)(GDK_KEY_PRESS | GDK_KEY_RELEASE), nullptr, gtk_get_current_event_time());
     }
     else
     {
-        gdk_device_ungrab(pKeyboard, GDK_CURRENT_TIME);
+        gdk_device_ungrab(pKeyboard, gtk_get_current_event_time());
     }
 }
 
@@ -2373,6 +2408,8 @@ gboolean GtkSalFrame::signalTooltipQuery(GtkWidget*, gint /*x*/, gint /*y*/,
     aHelpArea.y = pThis->m_aHelpArea.Top();
     aHelpArea.width = pThis->m_aHelpArea.GetWidth();
     aHelpArea.height = pThis->m_aHelpArea.GetHeight();
+    if (AllSettings::GetLayoutRTL())
+        aHelpArea.x = pThis->maGeometry.nWidth-aHelpArea.width-1-aHelpArea.x;
     gtk_tooltip_set_tip_area(tooltip, &aHelpArea);
     return true;
 }
@@ -2385,19 +2422,132 @@ bool GtkSalFrame::ShowTooltip(const OUString& rHelpText, const Rectangle& rHelpA
     return true;
 }
 
+#if GTK_CHECK_VERSION(3,12,0)
+namespace
+{
+    void set_pointing_to(GtkPopover *pPopOver, const Rectangle& rHelpArea)
+    {
+        GdkRectangle aRect;
+        aRect.x = rHelpArea.Left();
+        aRect.y = rHelpArea.Top();
+        aRect.width = 1;
+        aRect.height = 1;
+
+        GtkPositionType ePos = gtk_popover_get_position(pPopOver);
+        switch (ePos)
+        {
+            case GTK_POS_BOTTOM:
+            case GTK_POS_TOP:
+                aRect.width = rHelpArea.GetWidth();
+                break;
+            case GTK_POS_RIGHT:
+            case GTK_POS_LEFT:
+                aRect.height = rHelpArea.GetHeight();
+                break;
+        }
+
+        gtk_popover_set_pointing_to(pPopOver, &aRect);
+    }
+}
+#endif
+
+sal_uIntPtr GtkSalFrame::ShowPopover(const OUString& rHelpText, const Rectangle& rHelpArea, QuickHelpFlags nFlags)
+{
+#if GTK_CHECK_VERSION(3,12,0)
+    GtkWidget *pWidget = gtk_popover_new(getMouseEventWidget());
+    OString sUTF = OUStringToOString(rHelpText, RTL_TEXTENCODING_UTF8);
+    GtkWidget *pLabel =  gtk_label_new(sUTF.getStr());
+    gtk_container_add(GTK_CONTAINER(pWidget), pLabel);
+
+    if (nFlags & QuickHelpFlags::Top)
+        gtk_popover_set_position(GTK_POPOVER(pWidget), GTK_POS_BOTTOM);
+    else if (nFlags & QuickHelpFlags::Bottom)
+        gtk_popover_set_position(GTK_POPOVER(pWidget), GTK_POS_TOP);
+    else if (nFlags & QuickHelpFlags::Left)
+        gtk_popover_set_position(GTK_POPOVER(pWidget), GTK_POS_RIGHT);
+    else if (nFlags & QuickHelpFlags::Right)
+        gtk_popover_set_position(GTK_POPOVER(pWidget), GTK_POS_LEFT);
+
+    set_pointing_to(GTK_POPOVER(pWidget), rHelpArea);
+
+    gtk_popover_set_modal(GTK_POPOVER(pWidget), false);
+
+    gtk_widget_show_all(pWidget);
+
+    return reinterpret_cast<sal_uIntPtr>(pWidget);
+#else
+    (void)rHelpText;
+    (void)rHelpArea;
+    (void)nFlags;
+    return 0;
+#endif
+}
+
+bool GtkSalFrame::UpdatePopover(sal_uIntPtr nId, const OUString& rHelpText, const Rectangle& rHelpArea)
+{
+#if GTK_CHECK_VERSION(3,12,0)
+    GtkWidget *pWidget = reinterpret_cast<GtkWidget*>(nId);
+
+    set_pointing_to(GTK_POPOVER(pWidget), rHelpArea);
+
+    GtkWidget *pLabel = gtk_bin_get_child(GTK_BIN(pWidget));
+    OString sUTF = OUStringToOString(rHelpText, RTL_TEXTENCODING_UTF8);
+    gtk_label_set_text(GTK_LABEL(pLabel), sUTF.getStr());
+
+    return true;
+#else
+    (void)nId;
+    (void)rHelpText;
+    (void)rHelpArea;
+    return false;
+#endif
+}
+
+bool GtkSalFrame::HidePopover(sal_uIntPtr nId)
+{
+#if GTK_CHECK_VERSION(3,12,0)
+    GtkWidget *pWidget = reinterpret_cast<GtkWidget*>(nId);
+    gtk_widget_destroy(pWidget);
+    return true;
+#else
+    (void)nId;
+    return false;
+#endif
+}
+
+void GtkSalFrame::StartToolKitMoveBy()
+{
+    GdkEvent *pEvent = gtk_get_current_event();
+    if (!pEvent)
+    {
+        SAL_WARN("vcl.gtk", "no current event for starting window move by wm");
+        return;
+    }
+    if (pEvent->type != GDK_BUTTON_PRESS)
+    {
+        SAL_WARN("vcl.gtk", "current event for starting window move by wm is not a button");
+        return;
+    }
+    gtk_window_begin_move_drag(GTK_WINDOW(m_pWindow),
+                               pEvent->button.button,
+                               pEvent->button.x_root,
+                               pEvent->button.y_root,
+                               pEvent->button.time);
+}
+
 gboolean GtkSalFrame::signalButton( GtkWidget*, GdkEventButton* pEvent, gpointer frame )
 {
     GtkSalFrame* pThis = static_cast<GtkSalFrame*>(frame);
 
     SalMouseEvent aEvent;
-    sal_uInt16 nEventType = 0;
+    SalEvent nEventType = SalEvent::NONE;
     switch( pEvent->type )
     {
         case GDK_BUTTON_PRESS:
-            nEventType = SALEVENT_MOUSEBUTTONDOWN;
+            nEventType = SalEvent::MouseButtonDown;
             break;
         case GDK_BUTTON_RELEASE:
-            nEventType = SALEVENT_MOUSEBUTTONUP;
+            nEventType = SalEvent::MouseButtonUp;
             break;
         default:
             return false;
@@ -2468,7 +2618,7 @@ gboolean GtkSalFrame::signalButton( GtkWidget*, GdkEventButton* pEvent, gpointer
             {
                 pThis->maGeometry.nX = frame_x;
                 pThis->maGeometry.nY = frame_y;
-                pThis->CallCallback( SALEVENT_MOVE, nullptr );
+                pThis->CallCallback( SalEvent::Move, nullptr );
             }
         }
     }
@@ -2500,14 +2650,12 @@ gboolean GtkSalFrame::signalScroll( GtkWidget*, GdkEvent* pEvent, gpointer frame
     {
         case GDK_SCROLL_SMOOTH:
         {
-            double delta_x, delta_y;
-            gdk_event_get_scroll_deltas(pEvent, &delta_x, &delta_y);
             //pick the bigger one I guess
-            aEvent.mbHorz = fabs(delta_x) > fabs(delta_y);
+            aEvent.mbHorz = fabs(pSEvent->delta_x) > fabs(pSEvent->delta_y);
             if (aEvent.mbHorz)
-                aEvent.mnDelta = -delta_x;
+                aEvent.mnDelta = -pSEvent->delta_x * 40;
             else
-                aEvent.mnDelta = -delta_y;
+                aEvent.mnDelta = -pSEvent->delta_y * 40;
             aEvent.mnScrollLines = 1;
             pThis->m_nLastScrollEventTime = pSEvent->time;
             break;
@@ -2536,7 +2684,7 @@ gboolean GtkSalFrame::signalScroll( GtkWidget*, GdkEvent* pEvent, gpointer frame
     if( AllSettings::GetLayoutRTL() )
         aEvent.mnX = pThis->maGeometry.nWidth-1-aEvent.mnX;
 
-    pThis->CallCallback( SALEVENT_WHEELMOUSE, &aEvent );
+    pThis->CallCallback( SalEvent::WheelMouse, &aEvent );
 
     return true;
 }
@@ -2559,7 +2707,7 @@ void GtkSalFrame::gestureSwipe(GtkGestureSwipe* gesture, gdouble velocity_x, gdo
         aEvent.mnX = x;
         aEvent.mnY = y;
 
-        pThis->CallCallback(SALEVENT_SWIPE, &aEvent);
+        pThis->CallCallback(SalEvent::Swipe, &aEvent);
     }
 }
 
@@ -2577,7 +2725,7 @@ void GtkSalFrame::gestureLongPress(GtkGestureLongPress* gesture, gpointer frame)
         aEvent.mnX = x;
         aEvent.mnY = y;
 
-        pThis->CallCallback(SALEVENT_LONGPRESS, &aEvent);
+        pThis->CallCallback(SalEvent::LongPress, &aEvent);
     }
 }
 
@@ -2600,7 +2748,7 @@ gboolean GtkSalFrame::signalMotion( GtkWidget*, GdkEventMotion* pEvent, gpointer
 
     vcl::DeletionListener aDel( pThis );
 
-    pThis->CallCallback( SALEVENT_MOUSEMOVE, &aEvent );
+    pThis->CallCallback( SalEvent::MouseMove, &aEvent );
 
     if( ! aDel.isDeleted() )
     {
@@ -2610,7 +2758,7 @@ gboolean GtkSalFrame::signalMotion( GtkWidget*, GdkEventMotion* pEvent, gpointer
         {
             pThis->maGeometry.nX = frame_x;
             pThis->maGeometry.nY = frame_y;
-            pThis->CallCallback( SALEVENT_MOVE, nullptr );
+            pThis->CallCallback( SalEvent::Move, nullptr );
         }
 
         if( ! aDel.isDeleted() )
@@ -2635,33 +2783,21 @@ gboolean GtkSalFrame::signalCrossing( GtkWidget*, GdkEventCrossing* pEvent, gpoi
     aEvent.mnCode   = GetMouseModCode( pEvent->state );
     aEvent.mnButton = 0;
 
-    pThis->CallCallback( (pEvent->type == GDK_ENTER_NOTIFY) ? SALEVENT_MOUSEMOVE : SALEVENT_MOUSELEAVE, &aEvent );
+    pThis->CallCallback( (pEvent->type == GDK_ENTER_NOTIFY) ? SalEvent::MouseMove : SalEvent::MouseLeave, &aEvent );
 
     return true;
 }
 
 cairo_t* GtkSalFrame::getCairoContext() const
 {
-    cairo_t* cr = SvpSalGraphics::createCairoContext(m_aFrame);
+    cairo_t* cr = cairo_create(m_pSurface);
     assert(cr);
     return cr;
 }
 
-void GtkSalFrame::damaged (const basegfx::B2IBox& rDamageRect)
+void GtkSalFrame::damaged(sal_Int32 nExtentsLeft, sal_Int32 nExtentsTop,
+                          sal_Int32 nExtentsRight, sal_Int32 nExtentsBottom) const
 {
-#if OSL_DEBUG_LEVEL > 1
-    long long area = rDamageRect.getWidth() * rDamageRect.getHeight();
-    if( area > 32 * 1024 )
-    {
-        fprintf( stderr, "bitmap damaged  %d %d (%dx%d) area %lld widget\n",
-                  (int) rDamageRect.getMinX(),
-                  (int) rDamageRect.getMinY(),
-                  (int) rDamageRect.getWidth(),
-                 (int) rDamageRect.getHeight(),
-                 area );
-    }
-#endif
-
     if (dumpframes)
     {
         static int frame;
@@ -2672,31 +2808,18 @@ void GtkSalFrame::damaged (const basegfx::B2IBox& rDamageRect)
     }
 
     gtk_widget_queue_draw_area(GTK_WIDGET(m_pFixedContainer),
-                               rDamageRect.getMinX(),
-                               rDamageRect.getMinY(),
-                               rDamageRect.getWidth(),
-                               rDamageRect.getHeight());
+                               nExtentsLeft, nExtentsTop,
+                               nExtentsRight - nExtentsLeft,
+                               nExtentsBottom - nExtentsTop);
 }
 
-// blit our backing basebmp buffer to the target cairo context cr
-gboolean GtkSalFrame::signalDraw( GtkWidget*, cairo_t *cr, gpointer frame )
+// blit our backing cairo surface to the target cairo context
+gboolean GtkSalFrame::signalDraw(GtkWidget*, cairo_t *cr, gpointer frame)
 {
     GtkSalFrame* pThis = static_cast<GtkSalFrame*>(frame);
 
-    cairo_save(cr);
-
-    cairo_t* source = pThis->getCairoContext();
-    cairo_surface_t *pSurface = cairo_get_target(source);
-
-    cairo_set_operator( cr, CAIRO_OPERATOR_OVER );
-    cairo_set_source_surface(cr, pSurface, 0, 0);
+    cairo_set_source_surface(cr, pThis->m_pSurface, 0, 0);
     cairo_paint(cr);
-
-    cairo_destroy(source);
-
-    cairo_restore(cr);
-
-    cairo_surface_flush(cairo_get_target(cr));
 
     return false;
 }
@@ -2707,7 +2830,7 @@ void GtkSalFrame::sizeAllocated(GtkWidget*, GdkRectangle *pAllocation, gpointer 
     pThis->maGeometry.nWidth = pAllocation->width;
     pThis->maGeometry.nHeight = pAllocation->height;
     pThis->AllocateFrame();
-    pThis->CallCallback( SALEVENT_RESIZE, nullptr );
+    pThis->CallCallback( SalEvent::Resize, nullptr );
     pThis->TriggerPaintEvent();
 }
 
@@ -2740,7 +2863,7 @@ gboolean GtkSalFrame::signalConfigure(GtkWidget*, GdkEventConfigure* pEvent, gpo
     pThis->updateScreenNumber();
 
     if (bMoved)
-        pThis->CallCallback(SALEVENT_MOVE, nullptr);
+        pThis->CallCallback(SalEvent::Move, nullptr);
 
     return false;
 }
@@ -2761,7 +2884,7 @@ void GtkSalFrame::TriggerPaintEvent()
     //that duplicates the amount of drawing and is hideously slow
     SAL_INFO("vcl.gtk3", "force painting" << 0 << "," << 0 << " " << maGeometry.nWidth << "x" << maGeometry.nHeight);
     SalPaintEvent aPaintEvt(0, 0, maGeometry.nWidth, maGeometry.nHeight, true);
-    CallCallback(SALEVENT_PAINT, &aPaintEvt);
+    CallCallback(SalEvent::Paint, &aPaintEvt);
     gtk_widget_queue_draw(GTK_WIDGET(m_pFixedContainer));
 }
 
@@ -2795,7 +2918,7 @@ gboolean GtkSalFrame::signalFocus( GtkWidget*, GdkEventFocus* pEvent, gpointer f
 
     // in the meantime do not propagate focus get/lose if floats are open
     if( m_nFloats == 0 )
-        pThis->CallCallback( pEvent->in ? SALEVENT_GETFOCUS : SALEVENT_LOSEFOCUS, nullptr );
+        pThis->CallCallback( pEvent->in ? SalEvent::GetFocus : SalEvent::LoseFocus, nullptr );
 
     return false;
 }
@@ -2810,7 +2933,7 @@ gboolean GtkSalFrame::signalMap( GtkWidget *pWidget, GdkEvent*, gpointer frame )
     (void)pWidget; (void)bSetFocus;
     //FIXME: no set input focus ...
 
-    pThis->CallCallback( SALEVENT_RESIZE, nullptr );
+    pThis->CallCallback( SalEvent::Resize, nullptr );
     pThis->TriggerPaintEvent();
 
     return false;
@@ -2820,7 +2943,7 @@ gboolean GtkSalFrame::signalUnmap( GtkWidget*, GdkEvent*, gpointer frame )
 {
     GtkSalFrame* pThis = static_cast<GtkSalFrame*>(frame);
 
-    pThis->CallCallback( SALEVENT_RESIZE, nullptr );
+    pThis->CallCallback( SalEvent::Resize, nullptr );
 
     return false;
 }
@@ -2918,7 +3041,7 @@ gboolean GtkSalFrame::signalKey( GtkWidget*, GdkEventKey* pEvent, gpointer frame
         aModEvt.mnTime = pEvent->time;
         aModEvt.mnModKeyCode = pThis->m_nKeyModifiers;
 
-        pThis->CallCallback( SALEVENT_KEYMODCHANGE, &aModEvt );
+        pThis->CallCallback( SalEvent::KeyModChange, &aModEvt );
 
     }
     else
@@ -2938,7 +3061,7 @@ gboolean GtkSalFrame::signalKey( GtkWidget*, GdkEventKey* pEvent, gpointer frame
     if( !aDel.isDeleted() && pThis->m_pIMHandler )
         pThis->m_pIMHandler->updateIMSpotLocation();
 
-    return true;
+    return false;
 }
 
 gboolean GtkSalFrame::signalDelete( GtkWidget*, GdkEvent*, gpointer frame )
@@ -2951,7 +3074,7 @@ gboolean GtkSalFrame::signalDelete( GtkWidget*, GdkEvent*, gpointer frame )
     if (bBackDrop)
         pThis->GetWindow()->Enable();
 
-    pThis->CallCallback( SALEVENT_CLOSE, nullptr );
+    pThis->CallCallback( SalEvent::Close, nullptr );
 
     return true;
 }
@@ -2967,10 +3090,10 @@ void GtkSalFrame::signalStyleSet( GtkWidget*, GtkStyle* pPrevious, gpointer fram
     if( pPrevious != nullptr )
     {
         // signalStyleSet does NOT usually have the gdk lock
-        // so post user event to safely dispatch the SALEVENT_SETTINGSCHANGED
+        // so post user event to safely dispatch the SalEvent::SettingsChanged
         // note: settings changed for multiple frames is avoided in winproc.cxx ImplHandleSettings
-        GtkSalFrame::getDisplay()->SendInternalEvent( pThis, nullptr, SALEVENT_SETTINGSCHANGED );
-        GtkSalFrame::getDisplay()->SendInternalEvent( pThis, nullptr, SALEVENT_FONTCHANGED );
+        GtkSalFrame::getDisplay()->SendInternalEvent( pThis, nullptr, SalEvent::SettingsChanged );
+        GtkSalFrame::getDisplay()->SendInternalEvent( pThis, nullptr, SalEvent::FontChanged );
     }
 }
 
@@ -2979,16 +3102,14 @@ gboolean GtkSalFrame::signalWindowState( GtkWidget*, GdkEvent* pEvent, gpointer 
     GtkSalFrame* pThis = static_cast<GtkSalFrame*>(frame);
     if( (pThis->m_nState & GDK_WINDOW_STATE_ICONIFIED) != (pEvent->window_state.new_window_state & GDK_WINDOW_STATE_ICONIFIED ) )
     {
-        GtkSalFrame::getDisplay()->SendInternalEvent( pThis, nullptr, SALEVENT_RESIZE );
+        GtkSalFrame::getDisplay()->SendInternalEvent( pThis, nullptr, SalEvent::Resize );
         pThis->TriggerPaintEvent();
     }
 
     if(   (pEvent->window_state.new_window_state & GDK_WINDOW_STATE_MAXIMIZED) &&
         ! (pThis->m_nState & GDK_WINDOW_STATE_MAXIMIZED) )
     {
-        pThis->m_aRestorePosSize =
-            Rectangle( Point( pThis->maGeometry.nX, pThis->maGeometry.nY ),
-                       Size( pThis->maGeometry.nWidth, pThis->maGeometry.nHeight ) );
+        pThis->m_aRestorePosSize = GetPosAndSize(GTK_WINDOW(pThis->m_pWindow));
     }
     pThis->m_nState = pEvent->window_state.new_window_state;
 
@@ -3011,6 +3132,288 @@ gboolean GtkSalFrame::signalVisibility( GtkWidget*, GdkEventVisibility* pEvent, 
     return true;
 }
 
+namespace
+{
+    GdkDragAction VclToGdk(sal_Int8 dragOperation)
+    {
+        GdkDragAction eRet(static_cast<GdkDragAction>(0));
+        if (dragOperation & css::datatransfer::dnd::DNDConstants::ACTION_COPY)
+            eRet = static_cast<GdkDragAction>(eRet | GDK_ACTION_COPY);
+        if (dragOperation & css::datatransfer::dnd::DNDConstants::ACTION_MOVE)
+            eRet = static_cast<GdkDragAction>(eRet | GDK_ACTION_MOVE);
+        if (dragOperation & css::datatransfer::dnd::DNDConstants::ACTION_LINK)
+            eRet = static_cast<GdkDragAction>(eRet | GDK_ACTION_LINK);
+        return eRet;
+    }
+
+    sal_Int8 GdkToVcl(GdkDragAction dragOperation)
+    {
+        sal_Int8 nRet(0);
+        if (dragOperation & GDK_ACTION_COPY)
+            nRet |= css::datatransfer::dnd::DNDConstants::ACTION_COPY;
+        if (dragOperation & GDK_ACTION_MOVE)
+            nRet |= css::datatransfer::dnd::DNDConstants::ACTION_MOVE;
+        if (dragOperation & GDK_ACTION_LINK)
+            nRet |= css::datatransfer::dnd::DNDConstants::ACTION_LINK;
+        return nRet;
+    }
+}
+
+class GtkDropTargetDropContext : public cppu::WeakImplHelper<css::datatransfer::dnd::XDropTargetDropContext>
+{
+    GdkDragContext *m_pContext;
+    guint m_nTime;
+public:
+    GtkDropTargetDropContext(GdkDragContext *pContext, guint nTime)
+        : m_pContext(pContext)
+        , m_nTime(nTime)
+    {
+    }
+
+    // XDropTargetDropContext
+    virtual void SAL_CALL acceptDrop(sal_Int8 dragOperation) throw(std::exception) override
+    {
+        GdkDragAction eAct(static_cast<GdkDragAction>(0));
+
+        if (dragOperation & css::datatransfer::dnd::DNDConstants::ACTION_MOVE)
+            eAct = GDK_ACTION_MOVE;
+        else if (dragOperation & css::datatransfer::dnd::DNDConstants::ACTION_COPY)
+            eAct = GDK_ACTION_COPY;
+        else if (dragOperation & css::datatransfer::dnd::DNDConstants::ACTION_LINK)
+            eAct = GDK_ACTION_LINK;
+
+        gdk_drag_status(m_pContext, eAct, m_nTime);
+    }
+
+    virtual void SAL_CALL rejectDrop() throw(std::exception) override
+    {
+        gdk_drag_status(m_pContext, static_cast<GdkDragAction>(0), m_nTime);
+    }
+
+    virtual void SAL_CALL dropComplete(sal_Bool bSuccess) throw(std::exception) override
+    {
+        gtk_drag_finish(m_pContext, bSuccess, false, m_nTime);
+    }
+};
+
+class GtkDnDTransferable : public GtkTransferable
+{
+    GdkDragContext *m_pContext;
+    guint m_nTime;
+    GtkWidget *m_pWidget;
+    GtkSalFrame *m_pFrame;
+    GMainLoop *m_pLoop;
+    GtkSelectionData *m_pData;
+public:
+    GtkDnDTransferable(GdkDragContext *pContext, guint nTime, GtkWidget *pWidget, GtkSalFrame *pFrame)
+        : m_pContext(pContext)
+        , m_nTime(nTime)
+        , m_pWidget(pWidget)
+        , m_pFrame(pFrame)
+        , m_pLoop(nullptr)
+        , m_pData(nullptr)
+    {
+    }
+
+    virtual css::uno::Any SAL_CALL getTransferData(const css::datatransfer::DataFlavor& rFlavor)
+        throw(css::datatransfer::UnsupportedFlavorException,
+              css::io::IOException,
+              css::uno::RuntimeException, std::exception) override
+    {
+        css::datatransfer::DataFlavor aFlavor(rFlavor);
+        if (aFlavor.MimeType == "text/plain;charset=utf-16")
+            aFlavor.MimeType = "text/plain;charset=utf-8";
+
+        auto it = m_aMimeTypeToAtom.find(aFlavor.MimeType);
+        if (it == m_aMimeTypeToAtom.end())
+            return css::uno::Any();
+
+        /* like gtk_clipboard_wait_for_contents run a sub loop
+         * waiting for drag-data-received triggered from
+         * gtk_drag_get_data
+         */
+        {
+            m_pLoop = g_main_loop_new(nullptr, true);
+            m_pFrame->SetFormatConversionRequest(this);
+
+            gtk_drag_get_data(m_pWidget, m_pContext, it->second, m_nTime);
+
+            if (g_main_loop_is_running(m_pLoop))
+            {
+                gdk_threads_leave();
+                g_main_loop_run(m_pLoop);
+                gdk_threads_enter();
+            }
+
+            g_main_loop_unref(m_pLoop);
+            m_pLoop = nullptr;
+            m_pFrame->SetFormatConversionRequest(nullptr);
+        }
+
+        css::uno::Any aRet;
+
+        if (aFlavor.MimeType == "text/plain;charset=utf-8")
+        {
+            OUString aStr;
+            gchar *pText = reinterpret_cast<gchar*>(gtk_selection_data_get_text(m_pData));
+            if (pText)
+                aStr = OUString(pText, rtl_str_getLength(pText), RTL_TEXTENCODING_UTF8);
+            g_free(pText);
+            aRet <<= aStr.replaceAll("\r\n", "\n");
+        }
+        else
+        {
+            gint length(0);
+            const guchar *rawdata = gtk_selection_data_get_data_with_length(m_pData,
+                                                                            &length);
+            css::uno::Sequence<sal_Int8> aSeq(reinterpret_cast<const sal_Int8*>(rawdata), length);
+            aRet <<= aSeq;
+        }
+
+        gtk_selection_data_free(m_pData);
+
+        return aRet;
+    }
+
+    virtual std::vector<css::datatransfer::DataFlavor> getTransferDataFlavorsAsVector() override
+    {
+        std::vector<GdkAtom> targets;
+        for (GList* l = gdk_drag_context_list_targets(m_pContext); l; l = l->next)
+            targets.push_back(static_cast<GdkAtom>(l->data));
+        return GtkTransferable::getTransferDataFlavorsAsVector(targets.data(), targets.size());
+    }
+
+    void LoopEnd(GtkSelectionData *pData)
+    {
+        m_pData = pData;
+        g_main_loop_quit(m_pLoop);
+    }
+};
+
+gboolean GtkSalFrame::signalDragDrop(GtkWidget* pWidget, GdkDragContext* context, gint x, gint y, guint time, gpointer frame)
+{
+    GtkSalFrame* pThis = static_cast<GtkSalFrame*>(frame);
+
+    if (!pThis->m_pDropTarget)
+        return false;
+
+    css::datatransfer::dnd::DropTargetDropEvent aEvent;
+    aEvent.Source = static_cast<css::datatransfer::dnd::XDropTarget*>(pThis->m_pDropTarget);
+    aEvent.Context = new GtkDropTargetDropContext(context, time);
+    aEvent.LocationX = x;
+    aEvent.LocationY = y;
+    aEvent.DropAction = GdkToVcl(gdk_drag_context_get_selected_action(context));
+    aEvent.SourceActions = GdkToVcl(gdk_drag_context_get_actions(context));
+    css::uno::Reference<css::datatransfer::XTransferable> xTransferable(new GtkDnDTransferable(context, time, pWidget, pThis));
+    aEvent.Transferable = xTransferable;
+
+    pThis->m_pDropTarget->fire_drop(aEvent);
+
+    return true;
+}
+
+class GtkDropTargetDragContext : public cppu::WeakImplHelper<css::datatransfer::dnd::XDropTargetDragContext>
+{
+    GdkDragContext *m_pContext;
+    guint m_nTime;
+public:
+    GtkDropTargetDragContext(GdkDragContext *pContext, guint nTime)
+        : m_pContext(pContext)
+        , m_nTime(nTime)
+    {
+    }
+
+    virtual void SAL_CALL acceptDrag(sal_Int8 dragOperation) throw(std::exception) override
+    {
+        GdkDragAction eAct(static_cast<GdkDragAction>(0));
+
+        if (dragOperation & css::datatransfer::dnd::DNDConstants::ACTION_MOVE)
+            eAct = GDK_ACTION_MOVE;
+        else if (dragOperation & css::datatransfer::dnd::DNDConstants::ACTION_COPY)
+            eAct = GDK_ACTION_COPY;
+        else if (dragOperation & css::datatransfer::dnd::DNDConstants::ACTION_LINK)
+            eAct = GDK_ACTION_LINK;
+
+        gdk_drag_status(m_pContext, eAct, m_nTime);
+    }
+
+    virtual void SAL_CALL rejectDrag() throw(std::exception) override
+    {
+        gdk_drag_status(m_pContext, static_cast<GdkDragAction>(0), m_nTime);
+    }
+};
+
+void GtkSalFrame::signalDragDropReceived(GtkWidget* /*pWidget*/, GdkDragContext * /*context*/, gint /*x*/, gint /*y*/, GtkSelectionData* data, guint /*ttype*/, guint /*time*/, gpointer frame)
+{
+    GtkSalFrame* pThis = static_cast<GtkSalFrame*>(frame);
+
+    /*
+     * If we get a drop, then we will call like gtk_clipboard_wait_for_contents
+     * with a loop inside a loop to get the right format, so if this is the
+     * case return to the outer loop here with a copy of the desired data
+     *
+     * don't look at me like that.
+     */
+    if (!pThis->m_pFormatConversionRequest)
+        return;
+
+    pThis->m_pFormatConversionRequest->LoopEnd(gtk_selection_data_copy(data));
+}
+
+gboolean GtkSalFrame::signalDragMotion(GtkWidget *widget, GdkDragContext *context, gint x, gint y, guint time, gpointer frame)
+{
+    GtkSalFrame* pThis = static_cast<GtkSalFrame*>(frame);
+
+    if (!pThis->m_pDropTarget)
+        return false;
+
+    if (!pThis->m_bInDrag)
+        gtk_drag_highlight(widget);
+
+    css::datatransfer::dnd::DropTargetDragEnterEvent aEvent;
+    aEvent.Source = static_cast<css::datatransfer::dnd::XDropTarget*>(pThis->m_pDropTarget);
+    GtkDropTargetDragContext* pContext = new GtkDropTargetDragContext(context, time);
+    //preliminary accept the Drag and select the preferred action, the fire_* will
+    //inform the original caller of our choice and the callsite can decide
+    //to overrule this choice. i.e. typically here we default to ACTION_MOVE
+    pContext->acceptDrag(GdkToVcl(gdk_drag_context_get_actions(context)));
+    aEvent.Context = pContext;
+    aEvent.LocationX = x;
+    aEvent.LocationY = y;
+    aEvent.DropAction = GdkToVcl(gdk_drag_context_get_selected_action(context));
+    aEvent.SourceActions = GdkToVcl(gdk_drag_context_get_actions(context));
+
+    if (!pThis->m_bInDrag)
+    {
+        css::uno::Reference<css::datatransfer::XTransferable> xTrans(new GtkDnDTransferable(context, time, widget, pThis));
+        css::uno::Sequence<css::datatransfer::DataFlavor> aFormats = xTrans->getTransferDataFlavors();
+        aEvent.SupportedDataFlavors = aFormats;
+        pThis->m_pDropTarget->fire_dragEnter(aEvent);
+        pThis->m_bInDrag = true;
+    }
+    else
+    {
+        pThis->m_pDropTarget->fire_dragOver(aEvent);
+    }
+
+    return true;
+}
+
+void GtkSalFrame::signalDragLeave(GtkWidget *widget, GdkDragContext * /*context*/, guint /*time*/, gpointer frame)
+{
+    GtkSalFrame* pThis = static_cast<GtkSalFrame*>(frame);
+    if (!pThis->m_pDropTarget)
+        return;
+    pThis->m_bInDrag = false;
+    gtk_drag_unhighlight(widget);
+
+#if 0
+    css::datatransfer::dnd::DropTargetEvent aEvent;
+    aEvent.Source = static_cast<css::datatransfer::dnd::XDropTarget*>(pThis->m_pDropTarget);
+    pThis->m_pDropTarget->fire_dragExit(aEvent);
+#endif
+}
+
 void GtkSalFrame::signalDestroy( GtkWidget* pObj, gpointer frame )
 {
     GtkSalFrame* pThis = static_cast<GtkSalFrame*>(frame);
@@ -3018,6 +3421,7 @@ void GtkSalFrame::signalDestroy( GtkWidget* pObj, gpointer frame )
     {
         pThis->m_pFixedContainer = nullptr;
         pThis->m_pEventBox = nullptr;
+        pThis->m_pTopLevelGrid = nullptr;
         pThis->m_pWindow = nullptr;
         pThis->InvalidateGraphics();
     }
@@ -3039,7 +3443,7 @@ GtkSalFrame::IMHandler::IMHandler( GtkSalFrame* pFrame )
 GtkSalFrame::IMHandler::~IMHandler()
 {
     // cancel an eventual event posted to begin preedit again
-    GtkSalFrame::getDisplay()->CancelInternalEvent( m_pFrame, &m_aInputEvent, SALEVENT_EXTTEXTINPUT );
+    GtkSalFrame::getDisplay()->CancelInternalEvent( m_pFrame, &m_aInputEvent, SalEvent::ExtTextInput );
     deleteIMContext();
 }
 
@@ -3086,13 +3490,13 @@ void GtkSalFrame::IMHandler::deleteIMContext()
 void GtkSalFrame::IMHandler::doCallEndExtTextInput()
 {
     m_aInputEvent.mpTextAttr = nullptr;
-    m_pFrame->CallCallback( SALEVENT_ENDEXTTEXTINPUT, nullptr );
+    m_pFrame->CallCallback( SalEvent::EndExtTextInput, nullptr );
 }
 
 void GtkSalFrame::IMHandler::updateIMSpotLocation()
 {
     SalExtTextInputPosEvent aPosEvent;
-    m_pFrame->CallCallback( SALEVENT_EXTTEXTINPUTPOS, static_cast<void*>(&aPosEvent) );
+    m_pFrame->CallCallback( SalEvent::ExtTextInputPos, static_cast<void*>(&aPosEvent) );
     GdkRectangle aArea;
     aArea.x = aPosEvent.mnX;
     aArea.y = aPosEvent.mnY;
@@ -3114,9 +3518,9 @@ void GtkSalFrame::IMHandler::sendEmptyCommit()
     aEmptyEv.mnCursorPos        = 0;
     aEmptyEv.mnCursorFlags      = 0;
     aEmptyEv.mbOnlyCursor       = False;
-    m_pFrame->CallCallback( SALEVENT_EXTTEXTINPUT, static_cast<void*>(&aEmptyEv) );
+    m_pFrame->CallCallback( SalEvent::ExtTextInput, static_cast<void*>(&aEmptyEv) );
     if( ! aDel.isDeleted() )
-        m_pFrame->CallCallback( SALEVENT_ENDEXTTEXTINPUT, nullptr );
+        m_pFrame->CallCallback( SalEvent::EndExtTextInput, nullptr );
 }
 
 void GtkSalFrame::IMHandler::endExtTextInput( EndExtTextInputFlags /*nFlags*/ )
@@ -3135,7 +3539,7 @@ void GtkSalFrame::IMHandler::endExtTextInput( EndExtTextInputFlags /*nFlags*/ )
             if( m_bFocused )
             {
                 // begin preedit again
-                GtkSalFrame::getDisplay()->SendInternalEvent( m_pFrame, &m_aInputEvent, SALEVENT_EXTTEXTINPUT );
+                GtkSalFrame::getDisplay()->SendInternalEvent( m_pFrame, &m_aInputEvent, SalEvent::ExtTextInput );
             }
         }
     }
@@ -3153,7 +3557,7 @@ void GtkSalFrame::IMHandler::focusChanged( bool bFocusIn )
         {
             sendEmptyCommit();
             // begin preedit again
-            GtkSalFrame::getDisplay()->SendInternalEvent( m_pFrame, &m_aInputEvent, SALEVENT_EXTTEXTINPUT );
+            GtkSalFrame::getDisplay()->SendInternalEvent( m_pFrame, &m_aInputEvent, SalEvent::ExtTextInput );
         }
     }
     else
@@ -3162,7 +3566,7 @@ void GtkSalFrame::IMHandler::focusChanged( bool bFocusIn )
         gtk_im_context_focus_out( m_pIMContext );
         GetGenericData()->ErrorTrapPop();
         // cancel an eventual event posted to begin preedit again
-        GtkSalFrame::getDisplay()->CancelInternalEvent( m_pFrame, &m_aInputEvent, SALEVENT_EXTTEXTINPUT );
+        GtkSalFrame::getDisplay()->CancelInternalEvent( m_pFrame, &m_aInputEvent, SalEvent::ExtTextInput );
     }
 }
 
@@ -3313,7 +3717,7 @@ void GtkSalFrame::IMHandler::signalIMCommit( GtkIMContext* pContext, gchar* pTex
          *  never was a preedit and the text is only one character.
          *
          *  In this case there the last ExtText event must have been
-         *  SALEVENT_ENDEXTTEXTINPUT, either because of a regular commit
+         *  SalEvent::EndExtTextInput, either because of a regular commit
          *  or because there never was a preedit.
          */
         bool bSingleCommit = false;
@@ -3333,7 +3737,7 @@ void GtkSalFrame::IMHandler::signalIMCommit( GtkIMContext* pContext, gchar* pTex
         }
         if( ! bSingleCommit )
         {
-            pThis->m_pFrame->CallCallback( SALEVENT_EXTTEXTINPUT, static_cast<void*>(&pThis->m_aInputEvent));
+            pThis->m_pFrame->CallCallback( SalEvent::ExtTextInput, static_cast<void*>(&pThis->m_aInputEvent));
             if( ! aDel.isDeleted() )
                 pThis->doCallEndExtTextInput();
         }
@@ -3417,7 +3821,8 @@ void GtkSalFrame::IMHandler::signalIMPreeditChanged( GtkIMContext*, gpointer im_
             switch (pango_attr->klass->type)
             {
                 case PANGO_ATTR_BACKGROUND:
-                    sal_attr |= (EXTTEXTINPUT_ATTR_HIGHLIGHT | EXTTEXTINPUT_CURSOR_INVISIBLE);
+                    sal_attr |= EXTTEXTINPUT_ATTR_HIGHLIGHT;
+                    pThis->m_aInputEvent.mnCursorFlags |= EXTTEXTINPUT_CURSOR_INVISIBLE;
                     break;
                 case PANGO_ATTR_UNDERLINE:
                     sal_attr |= EXTTEXTINPUT_ATTR_UNDERLINE;
@@ -3457,7 +3862,7 @@ void GtkSalFrame::IMHandler::signalIMPreeditChanged( GtkIMContext*, gpointer im_
     SolarMutexGuard aGuard;
     vcl::DeletionListener aDel( pThis->m_pFrame );
 
-    pThis->m_pFrame->CallCallback( SALEVENT_EXTTEXTINPUT, static_cast<void*>(&pThis->m_aInputEvent));
+    pThis->m_pFrame->CallCallback( SalEvent::ExtTextInput, static_cast<void*>(&pThis->m_aInputEvent));
     if( bEndPreedit && ! aDel.isDeleted() )
         pThis->doCallEndExtTextInput();
     if( ! aDel.isDeleted() )
@@ -3491,7 +3896,12 @@ uno::Reference<accessibility::XAccessibleEditableText>
     if (xState.is())
     {
         if (xState->contains(accessibility::AccessibleStateType::FOCUSED))
-            return uno::Reference<accessibility::XAccessibleEditableText>(xContext, uno::UNO_QUERY);
+        {
+            uno::Reference< accessibility::XAccessibleEditableText > xText =
+                uno::Reference<accessibility::XAccessibleEditableText>(xContext, uno::UNO_QUERY);
+            if (xText.is())
+                return xText;
+        }
     }
 
     for (sal_Int32 i = 0; i < xContext->getAccessibleChildCount(); ++i)
@@ -3591,9 +4001,167 @@ Size GtkSalDisplay::GetScreenSize( int nDisplayScreen )
     return Size( aRect.GetWidth(), aRect.GetHeight() );
 }
 
-Window GtkSalFrame::GetX11Window()
+sal_uIntPtr GtkSalFrame::GetNativeWindowHandle(GtkWidget *pWidget)
 {
-    return widget_get_xid(m_pWindow);
+    (void) this;                // Silence loplugin:staticmethods
+    GdkDisplay *pDisplay = getGdkDisplay();
+    GdkWindow *pWindow = gtk_widget_get_window(pWidget);
+
+#if defined(GDK_WINDOWING_X11)
+    if (GDK_IS_X11_DISPLAY(pDisplay))
+    {
+        return GDK_WINDOW_XID(pWindow);
+    }
+#endif
+#if defined(GDK_WINDOWING_WAYLAND)
+    if (GDK_IS_WAYLAND_DISPLAY(pDisplay))
+    {
+        return reinterpret_cast<sal_uIntPtr>(gdk_wayland_window_get_wl_surface(pWindow));
+    }
+#endif
+    return 0;
 }
+
+sal_uIntPtr GtkSalFrame::GetNativeWindowHandle()
+{
+    return GetNativeWindowHandle(m_pWindow);
+}
+
+void GtkDragSource::startDrag(const datatransfer::dnd::DragGestureEvent& rEvent,
+                              sal_Int8 sourceActions, sal_Int32 /*cursor*/, sal_Int32 /*image*/,
+                              const css::uno::Reference<css::datatransfer::XTransferable>& rTrans,
+                              const css::uno::Reference<css::datatransfer::dnd::XDragSourceListener>& rListener) throw(std::exception)
+{
+    m_xListener = rListener;
+    m_xTrans = rTrans;
+
+    if (m_pFrame)
+    {
+        css::uno::Sequence<css::datatransfer::DataFlavor> aFormats = rTrans->getTransferDataFlavors();
+        std::vector<GtkTargetEntry> aGtkTargets(m_aConversionHelper.FormatsToGtk(aFormats));
+        GtkTargetList *pTargetList = gtk_target_list_new(aGtkTargets.data(), aGtkTargets.size());
+
+        gint nDragButton = 1; // default to left button
+        css::awt::MouseEvent aEvent;
+        if (rEvent.Event >>= aEvent)
+        {
+            if (aEvent.Buttons & css::awt::MouseButton::LEFT )
+                nDragButton = 1;
+            else if (aEvent.Buttons & css::awt::MouseButton::RIGHT)
+                nDragButton = 3;
+            else if (aEvent.Buttons & css::awt::MouseButton::MIDDLE)
+                nDragButton = 2;
+        }
+
+        m_pFrame->startDrag(nDragButton, rEvent.DragOriginX, rEvent.DragOriginY,
+                            VclToGdk(sourceActions), pTargetList);
+        gtk_target_list_unref(pTargetList);
+        for (auto &a : aGtkTargets)
+            g_free(a.target);
+    }
+    else
+        dragFailed();
+}
+
+void GtkSalFrame::startDrag(gint nButton, gint nDragOriginX, gint nDragOriginY,
+                            GdkDragAction sourceActions, GtkTargetList* pTargetList)
+{
+    SolarMutexGuard aGuard;
+
+    assert(m_pDragSource);
+
+    GdkEvent aFakeEvent;
+    memset(&aFakeEvent, 0, sizeof(GdkEvent));
+    aFakeEvent.type = GDK_BUTTON_PRESS;
+    aFakeEvent.button.window = widget_get_window(getMouseEventWidget());
+    aFakeEvent.button.time = GDK_CURRENT_TIME;
+    GdkDeviceManager* pDeviceManager = gdk_display_get_device_manager(getGdkDisplay());
+    aFakeEvent.button.device = gdk_device_manager_get_client_pointer(pDeviceManager);
+
+#if GTK_CHECK_VERSION(3,10,0)
+    GdkDragContext *pContext = gtk_drag_begin_with_coordinates(getMouseEventWidget(),
+                                                               pTargetList,
+                                                               sourceActions,
+                                                               nButton,
+                                                               &aFakeEvent,
+                                                               nDragOriginX,
+                                                               nDragOriginY);
+#else
+    GdkDragContext *pContext = gtk_drag_begin(getMouseEventWidget(),
+                                              pTargetList,
+                                              sourceActions,
+                                              nButton,
+                                              &aFakeEvent);
+    (void)nDragOriginX;
+    (void)nDragOriginY;
+#endif
+
+    if (!pContext)
+        m_pDragSource->dragFailed();
+}
+
+void GtkDragSource::dragFailed()
+{
+    datatransfer::dnd::DragSourceDropEvent aEv;
+    aEv.DropAction = datatransfer::dnd::DNDConstants::ACTION_NONE;
+    aEv.DropSuccess = false;
+    m_xListener->dragDropEnd(aEv);
+}
+
+gboolean GtkSalFrame::signalDragFailed(GtkWidget* /*widget*/, GdkDragContext* /*context*/, GtkDragResult /*result*/, gpointer frame)
+{
+    GtkSalFrame* pThis = static_cast<GtkSalFrame*>(frame);
+    if (!pThis->m_pDragSource)
+        return false;
+    pThis->m_pDragSource->dragFailed();
+    return false;
+}
+
+void GtkDragSource::dragDelete()
+{
+    datatransfer::dnd::DragSourceDropEvent aEv;
+    aEv.DropAction = datatransfer::dnd::DNDConstants::ACTION_MOVE;
+    aEv.DropSuccess = true;
+    m_xListener->dragDropEnd(aEv);
+}
+
+void GtkSalFrame::signalDragDelete(GtkWidget* /*widget*/, GdkDragContext* /*context*/, gpointer frame)
+{
+    GtkSalFrame* pThis = static_cast<GtkSalFrame*>(frame);
+    if (!pThis->m_pDragSource)
+        return;
+    pThis->m_pDragSource->dragDelete();
+}
+
+void GtkDragSource::dragEnd(GdkDragContext* context)
+{
+    datatransfer::dnd::DragSourceDropEvent aEv;
+    aEv.DropAction = GdkToVcl(gdk_drag_context_get_selected_action(context));
+    aEv.DropSuccess = gdk_drag_drop_succeeded(context);
+    m_xListener->dragDropEnd(aEv);
+}
+
+void GtkSalFrame::signalDragEnd(GtkWidget* /*widget*/, GdkDragContext* context, gpointer frame)
+{
+    GtkSalFrame* pThis = static_cast<GtkSalFrame*>(frame);
+    if (!pThis->m_pDragSource)
+        return;
+    pThis->m_pDragSource->dragEnd(context);
+}
+
+void GtkDragSource::dragDataGet(GtkSelectionData *data, guint info)
+{
+    m_aConversionHelper.setSelectionData(m_xTrans, data, info);
+}
+
+void GtkSalFrame::signalDragDataGet(GtkWidget* /*widget*/, GdkDragContext* /*context*/, GtkSelectionData *data, guint info,
+                                    guint /*time*/, gpointer frame)
+{
+    GtkSalFrame* pThis = static_cast<GtkSalFrame*>(frame);
+    if (!pThis->m_pDragSource)
+        return;
+    pThis->m_pDragSource->dragDataGet(data, info);
+}
+
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

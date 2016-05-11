@@ -22,11 +22,7 @@
 #include <clang/Lex/Preprocessor.h>
 #include <unordered_map>
 
-#if __clang_major__ < 3 || __clang_major__ == 3 && __clang_minor__ < 2
-#include <clang/Rewrite/Rewriter.h>
-#else
 #include <clang/Rewrite/Core/Rewriter.h>
-#endif
 
 using namespace clang;
 using namespace llvm;
@@ -116,7 +112,7 @@ class RewritePlugin
             : public Rewriter::RewriteOptions
             {
             RewriteOptions();
-            RewriteOptions( RewriteOption option );
+            explicit RewriteOptions( RewriteOption option );
             const int flags;
             };
         // syntactic sugar to be able to write 'RemoveLineIfEmpty | RemoveWholeStatement'

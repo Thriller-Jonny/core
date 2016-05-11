@@ -292,7 +292,7 @@ protected:
     /** Reads fil data, line data, and frame flags. */
     void                ReadFrameData( XclImpStream& rStrm );
 
-    /** Converts fill formatting, line formattind, and frame style. */
+    /** Converts fill formatting, line formatting, and frame style. */
     void                ConvertRectStyle( SdrObject& rSdrObj ) const;
 
     /** Reads the contents of the a BIFF3 OBJ record from the passed stream. */
@@ -980,6 +980,11 @@ private:
                             Rectangle& rTextRect,
                             SdrObject* pOldSdrObj = nullptr ) override;
 
+    /** Finalize a DFF object, sets anchor after nested objs have been loaded. */
+    virtual SdrObject*  FinalizeObj(
+                            DffObjData& rDffObjData,
+                            SdrObject* pOldSdrObj = nullptr ) override;
+
     // virtual functions of SvxMSConvertOCXControls
 
     /** Inserts the passed control rxFComp into the form. Needs call to SetCurrentForm() before. */
@@ -1201,8 +1206,8 @@ public:
         @descr  The stream must point to the start of an DFF record containing properties. */
     void                Read( XclImpStream& rStrm );
 
-    /** Returns the specified property or the default value, if not extant. */
-    sal_uInt32          GetPropertyValue( sal_uInt16 nPropId, sal_uInt32 nDefault = 0 ) const;
+    /** Returns the specified property or zero, if not extant. */
+    sal_uInt32          GetPropertyValue( sal_uInt16 nPropId ) const;
 
     /** Translates the properties and fills the item set. */
     void                FillToItemSet( SfxItemSet& rItemSet ) const;

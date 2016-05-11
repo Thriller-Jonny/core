@@ -689,12 +689,12 @@ static void RemoveScriptItems( SfxItemSet& rItemSet, sal_uInt16 nScript,
     }
 }
 
-bool SwCSS1Parser::StyleParsed( const CSS1Selector *pSelector,
+void SwCSS1Parser::StyleParsed( const CSS1Selector *pSelector,
                                 SfxItemSet& rItemSet,
                                 SvxCSS1PropertyInfo& rPropInfo )
 {
     if( !bIsNewDoc )
-        return true;
+        return;
 
     CSS1SelectorType eSelType = pSelector->GetType();
     const CSS1Selector *pNext = pSelector->GetNext();
@@ -737,7 +737,7 @@ bool SwCSS1Parser::StyleParsed( const CSS1Selector *pSelector,
 
     if( CSS1_SELTYPE_ELEMENT != eSelType &&
         CSS1_SELTYPE_ELEM_CLASS != eSelType)
-        return true;
+        return;
 
     // Token und Class zu dem Selektor holen
     OUString aToken2;
@@ -759,7 +759,7 @@ bool SwCSS1Parser::StyleParsed( const CSS1Selector *pSelector,
             if( !pNext )
             {
                 InsertTag( aToken2, rItemSet, rPropInfo );
-                return false;
+                return;
             }
             else if( pNext && CSS1_SELTYPE_PSEUDO == eNextType )
             {
@@ -796,7 +796,7 @@ bool SwCSS1Parser::StyleParsed( const CSS1Selector *pSelector,
                     {
                         InsertTag( sTmp, rItemSet, rPropInfo );
                     }
-                    return false;
+                    return;
                 }
             }
             break;
@@ -835,7 +835,7 @@ bool SwCSS1Parser::StyleParsed( const CSS1Selector *pSelector,
                     GetTextCollFromPool( RES_POOLCOLL_STANDARD ),
                     rItemSet, rPropInfo, this );
 
-                return false;
+                return;
             }
             break;
         }
@@ -862,7 +862,7 @@ bool SwCSS1Parser::StyleParsed( const CSS1Selector *pSelector,
                 SetCharFormatAttrs( GetCharFormatFromPool(nPoolFormatId),
                                  aScriptItemSet);
             }
-            return false;
+            return;
         }
     }
 
@@ -928,7 +928,7 @@ bool SwCSS1Parser::StyleParsed( const CSS1Selector *pSelector,
         if( CSS1_SELTYPE_ELEMENT==eSelType && !pNext )
         {
             InsertTag( aToken2, rItemSet, rPropInfo );
-            return false;
+            return;
         }
         else if( CSS1_SELTYPE_ELEMENT==eSelType && pNext &&
                  (CSS1_SELTYPE_ELEMENT==eNextType ||
@@ -964,7 +964,7 @@ bool SwCSS1Parser::StyleParsed( const CSS1Selector *pSelector,
                         InsertTag( sTmp, aScriptItemSet, rPropInfo );
                     }
 
-                    return false;
+                    return;
                 }
             }
         }
@@ -1069,17 +1069,15 @@ bool SwCSS1Parser::StyleParsed( const CSS1Selector *pSelector,
                     pColl->SetFormatAttr( aDrop );
                 }
             }
-
-            return false;
         }
 
-        return true;
+        return;
     }
 
     // Jetzt werden die Selektoten verarbeitet, die zu einer Zechenvorlage
     // gehoehren. Zusammengesetzte gibt es hier allerdings nich nicht.
     if( pNext )
-        return true;
+        return;
 
     SwCharFormat *pCFormat = GetChrFormat( static_cast< sal_uInt16 >(nToken2), aEmptyOUStr );
     if( pCFormat )
@@ -1110,10 +1108,7 @@ bool SwCSS1Parser::StyleParsed( const CSS1Selector *pSelector,
                                pParentCFormat ? &pParentCFormat->GetAttrSet() : nullptr );
             SetCharFormatAttrs( pCFormat, aScriptItemSet );
         }
-        return false;
     }
-
-    return true;
 }
 
 sal_uInt32 SwCSS1Parser::GetFontHeight( sal_uInt16 nSize ) const
@@ -1542,10 +1537,10 @@ void SwCSS1Parser::FillDropCap( SwFormatDrop& rDrop,
 
 // CSS1-sezifisches des SwHTMLParsers
 
-_HTMLAttr **SwHTMLParser::GetAttrTabEntry( sal_uInt16 nWhich )
+HTMLAttr **SwHTMLParser::GetAttrTabEntry( sal_uInt16 nWhich )
 {
     // den zu dem Item gehoehrenden Tabellen-Eintrag ermitteln ...
-    _HTMLAttr **ppAttr = nullptr;
+    HTMLAttr **ppAttr = nullptr;
     switch( nWhich )
     {
     case RES_CHRATR_BLINK:
@@ -2126,10 +2121,9 @@ void SwHTMLParser::SetFrameFormatAttrs( SfxItemSet &rItemSet,
     }
 }
 
-_HTMLAttrContext *SwHTMLParser::PopContext( sal_uInt16 nToken, sal_uInt16 nLimit,
-                                            bool bRemove )
+HTMLAttrContext *SwHTMLParser::PopContext( sal_uInt16 nToken )
 {
-    _HTMLAttrContexts::size_type nPos = m_aContexts.size();
+    HTMLAttrContexts::size_type nPos = m_aContexts.size();
     if( nPos <= m_nContextStMin )
         return nullptr;
 
@@ -2145,7 +2139,7 @@ _HTMLAttrContext *SwHTMLParser::PopContext( sal_uInt16 nToken, sal_uInt16 nLimit
                 bFound = true;
                 break;
             }
-            else if( nCntxtToken == nLimit ) // 0 als Token kommt nicht vor
+            else if( nCntxtToken == 0 ) // 0 als Token kommt nicht vor
             {
                 break;
             }
@@ -2156,12 +2150,11 @@ _HTMLAttrContext *SwHTMLParser::PopContext( sal_uInt16 nToken, sal_uInt16 nLimit
         nPos--;
     }
 
-    _HTMLAttrContext *pCntxt = nullptr;
+    HTMLAttrContext *pCntxt = nullptr;
     if( bFound )
     {
         pCntxt = m_aContexts[nPos];
-        if( bRemove )
-            m_aContexts.erase( m_aContexts.begin() + nPos );
+        m_aContexts.erase( m_aContexts.begin() + nPos );
     }
 
     return pCntxt;
@@ -2172,7 +2165,7 @@ bool SwHTMLParser::GetMarginsFromContext( sal_uInt16& nLeft,
                                           short& nIndent,
                                           bool bIgnoreTopContext ) const
 {
-    _HTMLAttrContexts::size_type nPos = m_aContexts.size();
+    HTMLAttrContexts::size_type nPos = m_aContexts.size();
     if( bIgnoreTopContext )
     {
         if( !nPos )
@@ -2183,7 +2176,7 @@ bool SwHTMLParser::GetMarginsFromContext( sal_uInt16& nLeft,
 
     while( nPos > m_nContextStAttrMin )
     {
-        const _HTMLAttrContext *pCntxt = m_aContexts[--nPos];
+        const HTMLAttrContext *pCntxt = m_aContexts[--nPos];
         if( pCntxt->IsLRSpaceChanged() )
         {
             pCntxt->GetMargins( nLeft, nRight, nIndent );
@@ -2194,11 +2187,11 @@ bool SwHTMLParser::GetMarginsFromContext( sal_uInt16& nLeft,
     return false;
 }
 
-bool SwHTMLParser::GetMarginsFromContextWithNumBul( sal_uInt16& nLeft,
+void SwHTMLParser::GetMarginsFromContextWithNumBul( sal_uInt16& nLeft,
                                                     sal_uInt16& nRight,
                                                     short& nIndent ) const
 {
-    bool bRet = GetMarginsFromContext( nLeft, nRight, nIndent );
+    GetMarginsFromContext( nLeft, nRight, nIndent );
     const SwHTMLNumRuleInfo& rInfo = const_cast<SwHTMLParser*>(this)->GetNumInfo();
     if( rInfo.GetDepth() )
     {
@@ -2208,8 +2201,6 @@ bool SwHTMLParser::GetMarginsFromContextWithNumBul( sal_uInt16& nLeft,
         nLeft = nLeft + rNumFormat.GetAbsLSpace();
         nIndent = rNumFormat.GetFirstLineOffset();
     }
-
-    return bRet;
 }
 
 void SwHTMLParser::GetULSpaceFromContext( sal_uInt16& nUpper,
@@ -2218,10 +2209,10 @@ void SwHTMLParser::GetULSpaceFromContext( sal_uInt16& nUpper,
     sal_uInt16 nDfltColl = 0;
     OUString aDfltClass;
 
-    _HTMLAttrContexts::size_type nPos = m_aContexts.size();
+    HTMLAttrContexts::size_type nPos = m_aContexts.size();
     while( nPos > m_nContextStAttrMin )
     {
-        const _HTMLAttrContext *pCntxt = m_aContexts[--nPos];
+        const HTMLAttrContext *pCntxt = m_aContexts[--nPos];
         if( pCntxt->IsULSpaceChanged() )
         {
             pCntxt->GetULSpace( nUpper, nLower );
@@ -2245,16 +2236,16 @@ void SwHTMLParser::GetULSpaceFromContext( sal_uInt16& nUpper,
     nLower = rULSpace.GetLower();
 }
 
-void SwHTMLParser::EndContextAttrs( _HTMLAttrContext *pContext, bool bRemove )
+void SwHTMLParser::EndContextAttrs( HTMLAttrContext *pContext )
 {
-    _HTMLAttrs &rAttrs = pContext->GetAttrs();
+    HTMLAttrs &rAttrs = pContext->GetAttrs();
     for( auto pAttr : rAttrs )
     {
         if( RES_PARATR_DROP==pAttr->GetItem().Which() )
         {
             // Fuer DropCaps noch die Anzahl der Zeichen anpassen. Wenn
             // es am Ende 0 sind, wird das Attribut invalidiert und dann
-            // von _SetAttr gar nicht erst gesetzt.
+            // von SetAttr_ gar nicht erst gesetzt.
             sal_Int32 nChars = m_pPam->GetPoint()->nContent.GetIndex();
             if( nChars < 1 )
                 pAttr->Invalidate();
@@ -2265,9 +2256,6 @@ void SwHTMLParser::EndContextAttrs( _HTMLAttrContext *pContext, bool bRemove )
 
         EndAttr( pAttr );
     }
-
-    if( bRemove && !rAttrs.empty() )
-        rAttrs.clear();
 }
 
 void SwHTMLParser::InsertParaAttrs( const SfxItemSet& rItemSet )
@@ -2279,7 +2267,7 @@ void SwHTMLParser::InsertParaAttrs( const SfxItemSet& rItemSet )
     {
         // den zu dem Item gehoehrenden Tabellen-Eintrag ermitteln ...
         sal_uInt16 nWhich = pItem->Which();
-        _HTMLAttr **ppAttr = GetAttrTabEntry( nWhich );
+        HTMLAttr **ppAttr = GetAttrTabEntry( nWhich );
 
         if( ppAttr )
         {

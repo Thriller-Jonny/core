@@ -33,6 +33,7 @@
 #include <unotools/moduleoptions.hxx>
 #include <comphelper/classids.hxx>
 #include <toolkit/helper/vclunohelper.hxx>
+#include <tools/globname.hxx>
 #include <svx/charthelper.hxx>
 #include <svtools/embedhlp.hxx>
 
@@ -247,7 +248,7 @@ void SAL_CALL ScChartsObj::addNewByName( const OUString& rName,
             if( xReceiver.is())
             {
                 OUString sRangeStr;
-                xNewRanges->Format(sRangeStr, SCR_ABS_3D, &rDoc);
+                xNewRanges->Format(sRangeStr, ScRefFlags::RANGE_ABS_3D, &rDoc);
 
                 // connect
                 if( !sRangeStr.isEmpty() )

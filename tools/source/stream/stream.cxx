@@ -690,7 +690,10 @@ OString read_zeroTerminated_uInt8s_ToOString(SvStream& rStream)
         sal_Size nReallyRead = nLen;
         const sal_Char* pPtr = buf;
         while (nLen && *pPtr)
-            ++pPtr, --nLen;
+        {
+            ++pPtr;
+            --nLen;
+        }
 
         bEnd =  ( nReallyRead < sizeof(buf)-1 )         // read less than attempted to read
                 ||  (  ( nLen > 0 )                    // OR it is inside the block we read
@@ -780,22 +783,21 @@ bool SvStream::WriteUniOrByteChar( sal_Unicode ch, rtl_TextEncoding eDestCharSet
     return m_nError == SVSTREAM_OK;
 }
 
-bool SvStream::StartWritingUnicodeText()
+void SvStream::StartWritingUnicodeText()
 {
     // BOM, Byte Order Mark, U+FEFF, see
     // http://www.unicode.org/faq/utf_bom.html#BOM
     // Upon read: 0xfeff(-257) => no swap; 0xfffe(-2) => swap
     sal_uInt16 v = 0xfeff;
     WRITENUMBER_WITHOUT_SWAP(sal_uInt16, v); // write native format
-    return m_nError == SVSTREAM_OK;
 }
 
-bool SvStream::StartReadingUnicodeText( rtl_TextEncoding eReadBomCharSet )
+void SvStream::StartReadingUnicodeText( rtl_TextEncoding eReadBomCharSet )
 {
     if (!(  eReadBomCharSet == RTL_TEXTENCODING_DONTKNOW ||
             eReadBomCharSet == RTL_TEXTENCODING_UNICODE ||
             eReadBomCharSet == RTL_TEXTENCODING_UTF8))
-        return true;    // nothing to read
+        return;    // nothing to read
 
     bool bTryUtf8 = false;
     sal_uInt16 nFlag(0);
@@ -843,7 +845,6 @@ bool SvStream::StartReadingUnicodeText( rtl_TextEncoding eReadBomCharSet )
     }
     if (nBack)
         SeekRel( -nBack );      // no BOM, pure data
-    return m_nError == SVSTREAM_OK;
 }
 
 sal_uInt64 SvStream::SeekRel(sal_Int64 const nPos)
@@ -1738,34 +1739,28 @@ sal_uInt64 SvMemoryStream::GetSize()
     return nLength;
 }
 
-void* SvMemoryStream::SetBuffer( void* pNewBuf, sal_Size nCount,
-                                 bool bOwnsDat, sal_Size nEOF )
+void SvMemoryStream::SetBuffer( void* pNewBuf, sal_Size nCount,
+                                 sal_Size nEOF )
 {
-    void* pResult;
     SetBufferSize( 0 ); // Buffering in der Basisklasse initialisieren
     Seek( 0 );
     if( bOwnsData )
     {
-        pResult = nullptr;
         if( pNewBuf != pBuf )
             FreeMemory();
     }
-    else
-        pResult = pBuf;
 
     pBuf        = static_cast<sal_uInt8 *>(pNewBuf);
     nPos        = 0;
     nSize       = nCount;
     nResize     = 0;
-    bOwnsData   = bOwnsDat;
+    bOwnsData   = false;
 
     if( nEOF > nCount )
         nEOF = nCount;
     nEndOfData = nEOF;
 
     ResetError();
-
-    return pResult;
 }
 
 sal_Size SvMemoryStream::GetData( void* pData, sal_Size nCount )
@@ -1818,7 +1813,7 @@ sal_Size SvMemoryStream::PutData( const void* pData, sal_Size nCount )
             else
             {
                 // lacking memory is larger than nResize,
-                // resize by (nCoount-nMaxCount) + resize offset
+                // resize by (nCount-nMaxCount) + resize offset
                 if( !ReAllocateMemory( nCount-nMaxCount+nNewResize ) )
                 {
                     nCount = 0;
@@ -1942,7 +1937,7 @@ void SvMemoryStream::FreeMemory()
     delete[] pBuf;
 }
 
-void* SvMemoryStream::SwitchBuffer( sal_Size nInitSize, sal_Size nResizeOffset)
+void* SvMemoryStream::SwitchBuffer()
 {
     Flush();
     if( !bOwnsData )
@@ -1952,7 +1947,7 @@ void* SvMemoryStream::SwitchBuffer( sal_Size nInitSize, sal_Size nResizeOffset)
     void* pRetVal = pBuf;
     pBuf          = nullptr;
     nEndOfData    = 0L;
-    nResize       = nResizeOffset;
+    nResize       = 64;
     nPos          = 0;
 
     if( nResize != 0 && nResize < 16 )
@@ -1960,7 +1955,8 @@ void* SvMemoryStream::SwitchBuffer( sal_Size nInitSize, sal_Size nResizeOffset)
 
     ResetError();
 
-    if( nInitSize && !AllocateMemory(nInitSize) )
+    sal_Size nInitSize = 512;
+    if( !AllocateMemory(nInitSize) )
     {
         SetError( SVSTREAM_OUTOFMEMORY );
         nSize = 0;

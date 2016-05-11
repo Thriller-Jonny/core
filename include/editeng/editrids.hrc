@@ -16,8 +16,8 @@
  *   except in compliance with the License. You may obtain a copy of
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
-#ifndef _EDIT_RIDS_HRC
-#define _EDIT_RIDS_HRC
+#ifndef INCLUDED_EDITENG_EDITRIDS_HRC
+#define INCLUDED_EDITENG_EDITRIDS_HRC
 
 #include <svl/solar.hrc>
 
@@ -341,7 +341,7 @@
 #define RID_SVXITEMS_CHARHIDDEN_FALSE       (RID_EDIT_START + 295)
 #define RID_SVXITEMS_CHARHIDDEN_TRUE        (RID_EDIT_START + 296)
 
-// strings for error messsages in dictionary updates
+// strings for error messages in dictionary updates
 #define RID_SVXSTR_DIC_ERR_UNKNOWN          (RID_EDIT_START + 297)
 #define RID_SVXSTR_DIC_ERR_FULL             (RID_EDIT_START + 298)
 #define RID_SVXSTR_DIC_ERR_READONLY         (RID_EDIT_START + 299)

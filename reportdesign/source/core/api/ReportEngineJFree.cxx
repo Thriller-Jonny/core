@@ -167,7 +167,7 @@ OUString OReportEngineJFree::getNewOutputName()
         {
             MimeConfigurationHelper aConfighelper(m_xContext);
             const OUString sMimeType = m_xReport->getMimeType();
-            const SfxFilter* pFilter = SfxFilter::GetDefaultFilter( aConfighelper.GetDocServiceNameFromMediaType(sMimeType) );
+            std::shared_ptr<const SfxFilter> pFilter = SfxFilter::GetDefaultFilter( aConfighelper.GetDocServiceNameFromMediaType(sMimeType) );
             OUString sExt(".rpt");
             if ( pFilter )
                 sExt = ::comphelper::string::stripStart(pFilter->GetDefaultExtension(), '*');
@@ -299,15 +299,15 @@ uno::Reference< frame::XModel > SAL_CALL OReportEngineJFree::createDocumentAlive
             uno::Sequence < beans::PropertyValue > aArgs( _bHidden ? 3 : 2 );
             sal_Int32 nLen = 0;
             aArgs[nLen].Name = "AsTemplate";
-            aArgs[nLen++].Value <<= sal_False;
+            aArgs[nLen++].Value <<= false;
 
             aArgs[nLen].Name = "ReadOnly";
-            aArgs[nLen++].Value <<= sal_True;
+            aArgs[nLen++].Value <<= true;
 
             if ( _bHidden )
             {
                 aArgs[nLen].Name = "Hidden";
-                aArgs[nLen++].Value <<= sal_True;
+                aArgs[nLen++].Value <<= true;
             }
 
             uno::Reference< lang::XMultiServiceFactory > xFac(m_xContext->getServiceManager(),uno::UNO_QUERY);
@@ -395,9 +395,9 @@ void SAL_CALL OReportEngineJFree::setActiveConnection( const uno::Reference< sdb
     return m_nMaxRows;
 }
 
-void SAL_CALL OReportEngineJFree::setMaxRows( ::sal_Int32 _MaxRows ) throw (uno::RuntimeException, std::exception)
+void SAL_CALL OReportEngineJFree::setMaxRows( ::sal_Int32 MaxRows ) throw (uno::RuntimeException, std::exception)
 {
-    set(PROPERTY_MAXROWS,_MaxRows,m_nMaxRows);
+    set(PROPERTY_MAXROWS,MaxRows,m_nMaxRows);
 }
 
 } // namespace reportdesign

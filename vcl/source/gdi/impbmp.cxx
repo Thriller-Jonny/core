@@ -24,15 +24,13 @@
 #include <salbmp.hxx>
 #include <impbmp.hxx>
 
-ImpBitmap::ImpBitmap() :
-            mnRefCount  ( 1 ),
-            mpSalBitmap ( ImplGetSVData()->mpDefInst->CreateSalBitmap() )
+ImpBitmap::ImpBitmap()
+    : mpSalBitmap(ImplGetSVData()->mpDefInst->CreateSalBitmap())
 {
 }
 
-ImpBitmap::ImpBitmap(SalBitmap* pBitmap) :
-            mnRefCount  ( 1 ),
-            mpSalBitmap ( pBitmap )
+ImpBitmap::ImpBitmap(SalBitmap* pBitmap)
+    : mpSalBitmap(pBitmap)
 {
 }
 
@@ -76,7 +74,8 @@ Size ImpBitmap::ImplGetSize() const
 sal_uInt16 ImpBitmap::ImplGetBitCount() const
 {
     sal_uInt16 nBitCount = mpSalBitmap->GetBitCount();
-    return( ( nBitCount <= 1 ) ? 1 : ( nBitCount <= 4 ) ? 4 : ( nBitCount <= 8 ) ? 8 : 24 );
+    return ( nBitCount <= 4 ) ? ( ( nBitCount <= 1 ) ? 1 : 4 ):
+                                ( ( nBitCount <= 8 ) ? 8 : 24);
 }
 
 BitmapBuffer* ImpBitmap::ImplAcquireBuffer( BitmapAccessMode nMode )
@@ -112,6 +111,16 @@ bool ImpBitmap::ImplScale( const double& rScaleX, const double& rScaleY, BmpScal
 bool ImpBitmap::ImplReplace( const Color& rSearchColor, const Color& rReplaceColor, sal_uLong nTol )
 {
     return mpSalBitmap->Replace( rSearchColor, rReplaceColor, nTol );
+}
+
+bool ImpBitmap::ImplConvert( BmpConversion eConversion )
+{
+    // avoid large chunk of obsolete and hopefully rarely used conversions.
+    if (eConversion != BMP_CONVERSION_8BIT_GREYS)
+        return false;
+
+    // frequently used conversion for creating alpha masks
+    return mpSalBitmap->ConvertToGreyscale();
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

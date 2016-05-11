@@ -66,12 +66,12 @@ bool ScAddressConversionObj::ParseUIString( const OUString& rUIString, ::formula
     bool bSuccess = false;
     if ( bIsRange )
     {
-        sal_uInt16 nResult = aRange.ParseAny( rUIString, &rDoc, eConv );
-        if ( nResult & SCA_VALID )
+        ScRefFlags nResult = aRange.ParseAny( rUIString, &rDoc, eConv );
+        if ( nResult & ScRefFlags::VALID )
         {
-            if ( ( nResult & SCA_TAB_3D ) == 0 )
+            if ( ( nResult & ScRefFlags::TAB_3D ) == ScRefFlags::ZERO )
                 aRange.aStart.SetTab( static_cast<SCTAB>(nRefSheet) );
-            if ( ( nResult & SCA_TAB2_3D ) == 0 )
+            if ( ( nResult & ScRefFlags::TAB2_3D ) == ScRefFlags::ZERO )
                 aRange.aEnd.SetTab( aRange.aStart.Tab() );
             // different sheets are not supported in CellRangeAddress
             if ( aRange.aStart.Tab() == aRange.aEnd.Tab() )
@@ -80,10 +80,10 @@ bool ScAddressConversionObj::ParseUIString( const OUString& rUIString, ::formula
     }
     else
     {
-        sal_uInt16 nResult = aRange.aStart.Parse( rUIString, &rDoc, eConv );
-        if ( nResult & SCA_VALID )
+        ScRefFlags nResult = aRange.aStart.Parse( rUIString, &rDoc, eConv );
+        if ( nResult & ScRefFlags::VALID )
         {
-            if ( ( nResult & SCA_TAB_3D ) == 0 )
+            if ( ( nResult & ScRefFlags::TAB_3D ) == ScRefFlags::ZERO )
                 aRange.aStart.SetTab( static_cast<SCTAB>(nRefSheet) );
             bSuccess = true;
         }
@@ -139,8 +139,7 @@ void SAL_CALL ScAddressConversionObj::setPropertyValue( const OUString& aPropert
         throw uno::RuntimeException();
 
     bool bSuccess = false;
-    OUString aNameStr(aPropertyName);
-    if ( aNameStr == SC_UNONAME_ADDRESS )
+    if ( aPropertyName == SC_UNONAME_ADDRESS )
     {
         //  read the cell/range address from API struct
         if ( bIsRange )
@@ -162,7 +161,7 @@ void SAL_CALL ScAddressConversionObj::setPropertyValue( const OUString& aPropert
             }
         }
     }
-    else if ( aNameStr == SC_UNONAME_REFSHEET )
+    else if ( aPropertyName == SC_UNONAME_REFSHEET )
     {
         //  set the reference sheet
         sal_Int32 nIntVal = 0;
@@ -172,19 +171,18 @@ void SAL_CALL ScAddressConversionObj::setPropertyValue( const OUString& aPropert
             bSuccess = true;
         }
     }
-    else if ( aNameStr == SC_UNONAME_UIREPR )
+    else if ( aPropertyName == SC_UNONAME_UIREPR )
     {
         //  parse the UI representation string
         OUString sRepresentation;
         if (aValue >>= sRepresentation)
         {
-            OUString aUIString = sRepresentation;
-            bSuccess = ParseUIString( aUIString );
+            bSuccess = ParseUIString( sRepresentation );
         }
     }
-    else if ( aNameStr == SC_UNONAME_PERSREPR || aNameStr == SC_UNONAME_XLA1REPR )
+    else if ( aPropertyName == SC_UNONAME_PERSREPR || aPropertyName == SC_UNONAME_XLA1REPR )
     {
-        ::formula::FormulaGrammar::AddressConvention eConv = aNameStr == SC_UNONAME_XLA1REPR ?
+        ::formula::FormulaGrammar::AddressConvention eConv = aPropertyName == SC_UNONAME_XLA1REPR ?
             ::formula::FormulaGrammar::CONV_XL_A1 : ::formula::FormulaGrammar::CONV_OOO;
 
         //  parse the file format string
@@ -200,7 +198,7 @@ void SAL_CALL ScAddressConversionObj::setPropertyValue( const OUString& aPropert
             if ( bIsRange )
             {
                 //  range: also strip a "." after the last colon
-                sal_Int32 nColon = OUString(aUIString).lastIndexOf( (sal_Unicode) ':' );
+                sal_Int32 nColon = aUIString.lastIndexOf( (sal_Unicode) ':' );
                 if ( nColon >= 0 && nColon < aUIString.getLength() - 1 &&
                      aUIString[nColon+1] == '.' )
                     aUIString = aUIString.replaceAt( nColon+1, 1, "" );
@@ -227,8 +225,7 @@ uno::Any SAL_CALL ScAddressConversionObj::getPropertyValue( const OUString& aPro
     ScDocument& rDoc = pDocShell->GetDocument();
     uno::Any aRet;
 
-    OUString aNameStr(aPropertyName);
-    if ( aNameStr == SC_UNONAME_ADDRESS )
+    if ( aPropertyName == SC_UNONAME_ADDRESS )
     {
         if ( bIsRange )
         {
@@ -243,37 +240,37 @@ uno::Any SAL_CALL ScAddressConversionObj::getPropertyValue( const OUString& aPro
             aRet <<= aCellAddress;
         }
     }
-    else if ( aNameStr == SC_UNONAME_REFSHEET )
+    else if ( aPropertyName == SC_UNONAME_REFSHEET )
     {
         aRet <<= nRefSheet;
     }
-    else if ( aNameStr == SC_UNONAME_UIREPR )
+    else if ( aPropertyName == SC_UNONAME_UIREPR )
     {
         //  generate UI representation string - include sheet only if different from ref sheet
         OUString aFormatStr;
-        sal_uInt16 nFlags = SCA_VALID;
+        ScRefFlags nFlags = ScRefFlags::VALID;
         if ( aRange.aStart.Tab() != nRefSheet )
-            nFlags |= SCA_TAB_3D;
+            nFlags |= ScRefFlags::TAB_3D;
         if ( bIsRange )
             aFormatStr = aRange.Format(nFlags, &rDoc);
         else
             aFormatStr = aRange.aStart.Format(nFlags, &rDoc);
         aRet <<= aFormatStr;
     }
-    else if ( aNameStr == SC_UNONAME_PERSREPR || aNameStr == SC_UNONAME_XLA1REPR )
+    else if ( aPropertyName == SC_UNONAME_PERSREPR || aPropertyName == SC_UNONAME_XLA1REPR )
     {
-        ::formula::FormulaGrammar::AddressConvention eConv = aNameStr == SC_UNONAME_XLA1REPR ?
+        ::formula::FormulaGrammar::AddressConvention eConv = aPropertyName == SC_UNONAME_XLA1REPR ?
             ::formula::FormulaGrammar::CONV_XL_A1 : ::formula::FormulaGrammar::CONV_OOO;
 
         //  generate file format string - always include sheet
-        OUString aFormatStr(aRange.aStart.Format(SCA_VALID | SCA_TAB_3D, &rDoc, eConv));
+        OUString aFormatStr(aRange.aStart.Format(ScRefFlags::VALID | ScRefFlags::TAB_3D, &rDoc, eConv));
         if ( bIsRange )
         {
             //  manually concatenate range so both parts always have the sheet name
             aFormatStr += ":";
-            sal_uInt16 nFlags = SCA_VALID;
+            ScRefFlags nFlags = ScRefFlags::VALID;
             if( eConv != ::formula::FormulaGrammar::CONV_XL_A1 )
-                nFlags |= SCA_TAB_3D;
+                nFlags |= ScRefFlags::TAB_3D;
             OUString aSecond(aRange.aEnd.Format(nFlags, &rDoc, eConv));
             aFormatStr += aSecond ;
         }

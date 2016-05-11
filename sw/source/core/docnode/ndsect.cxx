@@ -190,7 +190,7 @@ SwDoc::InsertSwSection(SwPaM const& rRange, SwSectionData & rNewData,
         GetIDocumentUndoRedo().DoUndo(false);
     }
 
-    SwSectionFormat* const pFormat = MakeSectionFormat( nullptr );
+    SwSectionFormat* const pFormat = MakeSectionFormat();
     if ( pAttr )
     {
         pFormat->SetFormatAttr( *pAttr );
@@ -506,10 +506,9 @@ SwSection* SwDoc::GetCurrSection( const SwPosition& rPos )
     return nullptr;
 }
 
-SwSectionFormat* SwDoc::MakeSectionFormat( SwSectionFormat *pDerivedFrom )
+SwSectionFormat* SwDoc::MakeSectionFormat()
 {
-    SwSectionFormat* pNew = new SwSectionFormat(
-        pDerivedFrom == nullptr ? mpDfltFrameFormat : pDerivedFrom, this );
+    SwSectionFormat* pNew = new SwSectionFormat( mpDfltFrameFormat, this );
     mpSectionFormatTable->push_back( pNew );
     return pNew;
 }
@@ -759,7 +758,7 @@ void sw_DeleteFootnote( SwSectionNode *pNd, sal_uLong nStt, sal_uLong nEnd )
 
         // Delete all succeeding Footnotes
         while( nPos < rFootnoteArr.size() &&
-            _SwTextFootnote_GetIndex( (pSrch = rFootnoteArr[ nPos ]) ) <= nEnd )
+            SwTextFootnote_GetIndex( (pSrch = rFootnoteArr[ nPos ]) ) <= nEnd )
         {
             // If the Nodes are not deleted, they need to deregister at the Pages
             // (delete Frames) or else they will remain there (Undo does not delete them!)
@@ -768,7 +767,7 @@ void sw_DeleteFootnote( SwSectionNode *pNd, sal_uLong nStt, sal_uLong nEnd )
         }
 
         while( nPos-- &&
-            _SwTextFootnote_GetIndex( (pSrch = rFootnoteArr[ nPos ]) ) >= nStt )
+            SwTextFootnote_GetIndex( (pSrch = rFootnoteArr[ nPos ]) ) >= nStt )
         {
             // If the Nodes are not deleted, they need to deregister at the Pages
             // (delete Frames) or else they will remain there (Undo does not delete them!)
@@ -1022,7 +1021,7 @@ SwFrame *SwSectionNode::MakeFrame( SwFrame *pSib )
     return new SwSectionFrame( *m_pSection, pSib );
 }
 
-// Creates all Document Views for the precedeing Node.
+// Creates all Document Views for the preceding Node.
 // The created ContentFrames are attached to the corresponding Layout
 void SwSectionNode::MakeFrames(const SwNodeIndex & rIdx )
 {
@@ -1096,7 +1095,7 @@ void SwSectionNode::MakeFrames(const SwNodeIndex & rIdx )
                         {
                             pViewShell->InvalidateAccessibleParaFlowRelation(
                                 dynamic_cast<SwTextFrame*>(pNew->FindNextCnt( true )),
-                                dynamic_cast<SwTextFrame*>(pNew->FindPrevCnt( true )) );
+                                dynamic_cast<SwTextFrame*>(pNew->FindPrevCnt()) );
                         }
                     }
                     pNew = pSct;
@@ -1122,7 +1121,7 @@ void SwSectionNode::MakeFrames(const SwNodeIndex & rIdx )
                     {
                         pViewShell->InvalidateAccessibleParaFlowRelation(
                             dynamic_cast<SwTextFrame*>(pNew->FindNextCnt( true )),
-                            dynamic_cast<SwTextFrame*>(pNew->FindPrevCnt( true )) );
+                            dynamic_cast<SwTextFrame*>(pNew->FindPrevCnt()) );
                     }
                 }
                 if ( bInitNewSect )
@@ -1196,7 +1195,7 @@ SwSectionNode* SwSectionNode::MakeCopy( SwDoc* pDoc, const SwNodeIndex& rIdx ) c
     const SwNodes& rNds = GetNodes();
 
     // Copy the SectionFrameFormat
-    SwSectionFormat* pSectFormat = pDoc->MakeSectionFormat( nullptr );
+    SwSectionFormat* pSectFormat = pDoc->MakeSectionFormat();
     pSectFormat->CopyAttrs( *GetSection().GetFormat() );
 
     std::unique_ptr<SwTOXBase> pTOXBase;
@@ -1242,7 +1241,7 @@ SwSectionNode* SwSectionNode::MakeCopy( SwDoc* pDoc, const SwNodeIndex& rIdx ) c
         pNewSect->SetEditInReadonly();
 
     SwNodeRange aRg( *this, +1, *EndOfSectionNode() ); // Where am I?
-    rNds._Copy( aRg, aInsPos, false );
+    rNds.Copy_( aRg, aInsPos, false );
 
     // Delete all Frames from the copied Area. They are created when creating
     // the SectionFrames.

@@ -29,6 +29,7 @@
 #include <svl/zforlist.hxx>
 #include <editeng/brushitem.hxx>
 #include <editeng/boxitem.hxx>
+#include <editeng/xmlcnitm.hxx>
 #include <fmtrowsplt.hxx>
 #include <editeng/frmdiritem.hxx>
 #include <list>
@@ -61,6 +62,10 @@ using namespace ::xmloff::token;
 using table::XCell;
 using ::std::vector;
 using ::std::advance;
+
+// string constants for table cell export
+static const char g_sNumberFormat[] = "NumberFormat";
+static const char g_sIsProtected[] = "IsProtected";
 
 class SwXMLTableColumn_Impl : public SwWriteTableCol
 {
@@ -312,6 +317,7 @@ bool SwXMLTableFrameFormatsSort_Impl::AddCell( SwFrameFormat& rFrameFormat,
     const SvxBoxItem *pBox = nullptr;
     const SwTableBoxNumFormat *pNumFormat = nullptr;
     const SvxFrameDirectionItem *pFrameDir = nullptr;
+    const SvXMLAttrContainerItem *pAttCnt = nullptr;
 
     const SfxItemSet& rItemSet = rFrameFormat.GetAttrSet();
     const SfxPoolItem *pItem;
@@ -331,9 +337,12 @@ bool SwXMLTableFrameFormatsSort_Impl::AddCell( SwFrameFormat& rFrameFormat,
     if ( SfxItemState::SET == rItemSet.GetItemState( RES_FRAMEDIR,
                                                 false, &pItem ) )
         pFrameDir = static_cast<const SvxFrameDirectionItem *>(pItem);
+    if ( SfxItemState::SET == rItemSet.GetItemState( RES_UNKNOWNATR_CONTAINER,
+                                                false, &pItem ) )
+        pAttCnt = static_cast<const SvXMLAttrContainerItem *>(pItem);
 
     // empty styles have not to be exported
-    if( !pVertOrient && !pBrush && !pBox && !pNumFormat && !pFrameDir )
+    if( !pVertOrient && !pBrush && !pBox && !pNumFormat && !pFrameDir && !pAttCnt )
         return false;
 
     // order is: -/-/-/num,
@@ -351,6 +360,7 @@ bool SwXMLTableFrameFormatsSort_Impl::AddCell( SwFrameFormat& rFrameFormat,
         const SvxBoxItem *pTestBox = nullptr;
         const SwTableBoxNumFormat *pTestNumFormat = nullptr;
         const SvxFrameDirectionItem *pTestFrameDir = nullptr;
+        const SvXMLAttrContainerItem *pTestAttCnt = nullptr;
         const SwFrameFormat* pTestFormat = *i;
         const SfxItemSet& rTestSet = pTestFormat->GetAttrSet();
         if( SfxItemState::SET == rTestSet.GetItemState( RES_VERT_ORIENT, false,
@@ -424,6 +434,21 @@ bool SwXMLTableFrameFormatsSort_Impl::AddCell( SwFrameFormat& rFrameFormat,
 
         }
 
+        if ( SfxItemState::SET == rTestSet.GetItemState( RES_UNKNOWNATR_CONTAINER,
+                                                false, &pItem ) )
+        {
+             if( !pAttCnt )
+                 break;
+
+             pTestAttCnt = static_cast<const SvXMLAttrContainerItem *>(pItem);
+        }
+        else
+        {
+             if ( pAttCnt )
+                 continue;
+
+        }
+
         if( pVertOrient &&
             pVertOrient->GetVertOrient() != pTestVertOrient->GetVertOrient() )
             continue;
@@ -438,6 +463,9 @@ bool SwXMLTableFrameFormatsSort_Impl::AddCell( SwFrameFormat& rFrameFormat,
             continue;
 
         if( pFrameDir && pFrameDir->GetValue() != pTestFrameDir->GetValue() )
+            continue;
+
+        if( pAttCnt && ( *pAttCnt != *pTestAttCnt ) )
             continue;
 
         // found!
@@ -794,7 +822,7 @@ void SwXMLExport::ExportTableBox( const SwTableBox& rBox,
                 if (xCellPropertySet.is())
                 {
                     sal_Int32 nNumberFormat = 0;
-                    Any aAny = xCellPropertySet->getPropertyValue(sNumberFormat);
+                    Any aAny = xCellPropertySet->getPropertyValue(g_sNumberFormat);
                     aAny >>= nNumberFormat;
 
                     if (css::util::NumberFormat::TEXT == nNumberFormat)
@@ -814,7 +842,7 @@ void SwXMLExport::ExportTableBox( const SwTableBox& rBox,
                     // else: invalid key; ignore
 
                     // cell protection
-                    aAny = xCellPropertySet->getPropertyValue(sIsProtected);
+                    aAny = xCellPropertySet->getPropertyValue(g_sIsProtected);
                     if (*static_cast<sal_Bool const *>(aAny.getValue()))
                     {
                         AddAttribute( XML_NAMESPACE_TABLE, XML_PROTECTED,
@@ -1128,7 +1156,7 @@ void SwXMLTextParagraphExport::exportTable(
     OSL_ENSURE( xTextTable.is(), "text table missing" );
     if( xTextTable.is() )
     {
-        const SwXTextTable *pXTable = nullptr;
+        SwXTextTable *pXTable = nullptr;
         Reference<XUnoTunnel> xTableTunnel( rTextContent, UNO_QUERY);
         if( xTableTunnel.is() )
         {
@@ -1138,7 +1166,7 @@ void SwXMLTextParagraphExport::exportTable(
         }
         if( pXTable )
         {
-            SwFrameFormat *pFormat = pXTable->GetFrameFormat();
+            SwFrameFormat *const pFormat = pXTable->GetFrameFormat();
             OSL_ENSURE( pFormat, "table format missing" );
             const SwTable *pTable = SwTable::FindTable( pFormat );
             OSL_ENSURE( pTable, "table missing" );

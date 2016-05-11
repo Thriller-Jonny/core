@@ -31,7 +31,7 @@
 #include <tools/resary.hxx>
 #include <tools/rc.hxx>
 #include <cppuhelper/implbase.hxx>
-#include <cppuhelper/interfacecontainer.hxx>
+#include <comphelper/interfacecontainer2.hxx>
 #include <comphelper/accessibleeventnotifier.hxx>
 #include <svx/framebordertype.hxx>
 #include <vcl/vclptr.hxx>
@@ -44,7 +44,6 @@ namespace svx {
 class FrameSelector;
 
 namespace a11y {
-
 
 
 class AccFrameSelector :
@@ -116,15 +115,14 @@ private:
 
     FrameBorderType     meBorder;
 
-    ::cppu::OInterfaceContainerHelper maFocusListeners;
-    ::cppu::OInterfaceContainerHelper maPropertyListeners;
+    ::comphelper::OInterfaceContainerHelper2 maFocusListeners;
+    ::comphelper::OInterfaceContainerHelper2 maPropertyListeners;
 
     ResStringArray      maNames;
     ResStringArray      maDescriptions;
 
     ::comphelper::AccessibleEventNotifier::TClientId    mnClientId;
 };
-
 
 
 }

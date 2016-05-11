@@ -299,7 +299,7 @@ namespace svgio
             drawinglayer::primitive2d::Primitive2DContainer aSequence;
 
             // #i125258# check now if we need to init some style settings locally. Do not do this
-            // in the constructor, there is not yet informatikon e.g. about existing CssStyles.
+            // in the constructor, there is not yet information e.g. about existing CssStyles.
             // Here all nodes are read and interpreted
             const_cast< SvgSvgNode* >(this)->initializeStyleAttributes();
 
@@ -353,7 +353,7 @@ namespace svgio
                         {
                             // Even outermost svg has not all information to resolve relative values,
                             // I use content itself as fallback to set missing values for viewport
-                            // Any better idea for such ill structures svg documents?
+                            // Any better idea for such ill structured svg documents?
                             const basegfx::B2DRange aChildRange(
                                         aSequence.getB2DRange(
                                             drawinglayer::geometry::ViewInformation2D()));
@@ -380,7 +380,7 @@ namespace svgio
                         {
                             // Even outermost svg has not all information to resolve relative values,
                             // I use content itself as fallback to set missing values for viewport
-                            // Any better idea for such ill structures svg documents?
+                            // Any better idea for such ill structured svg documents?
                             const basegfx::B2DRange aChildRange(
                                     aSequence.getB2DRange(
                                         drawinglayer::geometry::ViewInformation2D()));
@@ -417,7 +417,7 @@ namespace svgio
                                 // create mapping
                                 // #i122610 SVG 1.1 defines in section 5.1.2 that if the attribute perserveAspectRatio is not specified,
                                 // then the effect is as if a value of 'xMidYMid meet' were specified.
-                                SvgAspectRatio aRatioDefault(Align_xMidYMid,false,true);
+                                SvgAspectRatio aRatioDefault(Align_xMidYMid,true);
                                 const SvgAspectRatio& rRatio = getSvgAspectRatio().isSet()? getSvgAspectRatio() : aRatioDefault;
 
                                 // let mapping be created from SvgAspectRatio
@@ -485,8 +485,8 @@ namespace svgio
                     const bool bHeightInvalid(getHeight().isSet() && basegfx::fTools::lessOrEqual(getHeight().getNumber(), 0.0));
                     if(!bWidthInvalid && !bHeightInvalid)
                     {
-                        basegfx::B2DRange aSvgCanvasRange; // effective value depends on viewBox
-                        double fW = 0.0; // effective value depends on viewBox
+                        basegfx::B2DRange aSvgCanvasRange; // viewport
+                        double fW = 0.0; // dummy values
                         double fH = 0.0;
                         if(getViewBox())
                         {
@@ -496,78 +496,110 @@ namespace svgio
                             const double fViewBoxHeight = getViewBox()->getHeight();
                             if(basegfx::fTools::more(fViewBoxWidth,0.0) && basegfx::fTools::more(fViewBoxHeight,0.0))
                             {
-                                // The intrinsic aspect ratio of the svg element is given by absolute values of both width and height
-                                // or if one or both of them is relative by the width and height of the viewBox
+                                // The intrinsic aspect ratio of the svg element is given by absolute values of svg width and svg height
+                                // or by the width and height of the viewBox, if svg width or svg height is relative.
                                 // see SVG 1.1 section 7.12
+                                bool bNeedsMapping(true);
                                 const bool bWidthIsAbsolute(getWidth().isSet() && Unit_percent != getWidth().getUnit());
                                 const bool bHeightIsAbsolute(getHeight().isSet() && Unit_percent != getHeight().getUnit());
+                                const double fViewBoxRatio(fViewBoxWidth/fViewBoxHeight);
                                 if(bWidthIsAbsolute && bHeightIsAbsolute)
                                 {
-                                    fW =getWidth().solveNonPercentage(*this);
-                                    fH =getHeight().solveNonPercentage(*this);
+                                    fW = getWidth().solveNonPercentage(*this);
+                                    fH = getHeight().solveNonPercentage(*this);
+                                    aSvgCanvasRange = basegfx::B2DRange(0.0, 0.0, fW, fH);
                                 }
                                 else if (bWidthIsAbsolute)
                                 {
                                     fW = getWidth().solveNonPercentage(*this);
-                                    fH = fW * fViewBoxWidth / fViewBoxHeight ;
+                                    fH = fW / fViewBoxRatio ;
+                                    aSvgCanvasRange = basegfx::B2DRange(0.0, 0.0, fW, fH);
                                 }
                                 else if (bHeightIsAbsolute)
                                 {
                                     fH = getHeight().solveNonPercentage(*this);
-                                    fW = fH * fViewBoxWidth / fViewBoxHeight ;
+                                    fW = fH * fViewBoxRatio ;
+                                    aSvgCanvasRange = basegfx::B2DRange(0.0, 0.0, fW, fH);
                                 }
                                 else
                                 {
-                                    fW = fViewBoxWidth;
-                                    fH = fViewBoxHeight;
+                                    // There exists no parent to resolve relative width or height.
+                                    // Use child size as fallback and expand to aspect ratio given
+                                    // by the viewBox. No mapping.
+                                    // We get viewport >= content, therefore no clipping.
+                                    bNeedsMapping = false;
+                                    const basegfx::B2DRange aChildRange(
+                                        aSequence.getB2DRange(
+                                            drawinglayer::geometry::ViewInformation2D()));
+                                    const double fChildWidth(aChildRange.getWidth());
+                                    const double fChildHeight(aChildRange.getHeight());
+                                    const double fLeft(aChildRange.getMinX());
+                                    const double fTop(aChildRange.getMinY());
+                                    if ( fChildWidth / fViewBoxWidth > fChildHeight / fViewBoxHeight )
+                                    {  // expand y
+                                        fW = fChildWidth;
+                                        fH = fChildWidth / fViewBoxRatio;
+                                    }
+                                    else
+                                    {  // expand x
+                                        fH = fChildHeight;
+                                        fW = fChildHeight * fViewBoxRatio;
+                                    }
+                                    aSvgCanvasRange = basegfx::B2DRange(fLeft, fTop, fLeft + fW, fTop + fH);
                                 }
-                                // SVG 1.1 defines in section 5.1.2 that x,y has no meanig for the outermost SVG element.
-                                aSvgCanvasRange = basegfx::B2DRange(0.0, 0.0, fW, fH);
 
-                                // create mapping
-                                // SVG 1.1 defines in section 5.1.2 that if the attribute perserveAspectRatio is not specified,
-                                // then the effect is as if a value of 'xMidYMid meet' were specified.
-                                SvgAspectRatio aRatioDefault(Align_xMidYMid,false,true);
-                                const SvgAspectRatio& rRatio = getSvgAspectRatio().isSet()? getSvgAspectRatio() : aRatioDefault;
 
-                                basegfx::B2DHomMatrix aViewBoxMapping;
-                                aViewBoxMapping = rRatio.createMapping(aSvgCanvasRange, *getViewBox());
-                                // no need to check ratio here for slice, the outermost Svg will
-                                // be clipped anyways (see below)
+                                if (bNeedsMapping)
+                                {
+                                    // create mapping
+                                    // SVG 1.1 defines in section 5.1.2 that if the attribute perserveAspectRatio is not specified,
+                                    // then the effect is as if a value of 'xMidYMid meet' were specified.
+                                    SvgAspectRatio aRatioDefault(Align_xMidYMid,true);
+                                    const SvgAspectRatio& rRatio = getSvgAspectRatio().isSet()? getSvgAspectRatio() : aRatioDefault;
 
-                                // scale content to viewBox definitions
-                                const drawinglayer::primitive2d::Primitive2DReference xTransform(
-                                    new drawinglayer::primitive2d::TransformPrimitive2D(
-                                        aViewBoxMapping,
-                                        aSequence));
+                                    basegfx::B2DHomMatrix aViewBoxMapping;
+                                    aViewBoxMapping = rRatio.createMapping(aSvgCanvasRange, *getViewBox());
+                                    // no need to check ratio here for slice, the outermost Svg will
+                                    // be clipped anyways (see below)
 
-                                aSequence = drawinglayer::primitive2d::Primitive2DContainer { xTransform };
+                                    // scale content to viewBox definitions
+                                    const drawinglayer::primitive2d::Primitive2DReference xTransform(
+                                        new drawinglayer::primitive2d::TransformPrimitive2D(
+                                            aViewBoxMapping,
+                                            aSequence));
+
+                                    aSequence = drawinglayer::primitive2d::Primitive2DContainer { xTransform };
+                                }
                             }
                         }
-                        else // no viewbox
+                        else // no viewbox => no mapping
                         {
-                           // There exists no parent to resolve relative width or height.
-                           // Use child size as fallback.
                             const bool bWidthIsAbsolute(getWidth().isSet() && Unit_percent != getWidth().getUnit());
                             const bool bHeightIsAbsolute(getHeight().isSet() && Unit_percent != getHeight().getUnit());
                             if (bWidthIsAbsolute && bHeightIsAbsolute)
                             {
                                 fW =getWidth().solveNonPercentage(*this);
                                 fH =getHeight().solveNonPercentage(*this);
-
+                                aSvgCanvasRange = basegfx::B2DRange(0.0, 0.0, fW, fH);
                             }
                             else
                             {
+                                // There exists no parent to resolve relative width or height.
+                                // Use child size as fallback. We get viewport >= content, therefore no clipping.
                                 const basegfx::B2DRange aChildRange(
                                      aSequence.getB2DRange(
                                          drawinglayer::geometry::ViewInformation2D()));
                                 const double fChildWidth(aChildRange.getWidth());
                                 const double fChildHeight(aChildRange.getHeight());
+                                const double fChildLeft(aChildRange.getMinX());
+                                const double fChildTop(aChildRange.getMinY());
                                 fW = bWidthIsAbsolute ? getWidth().solveNonPercentage(*this) : fChildWidth;
                                 fH = bHeightIsAbsolute ? getHeight().solveNonPercentage(*this) : fChildHeight;
+                                const double fLeft(bWidthIsAbsolute ? 0.0 : fChildLeft);
+                                const double fTop(bHeightIsAbsolute ? 0.0 : fChildTop);
+                                aSvgCanvasRange = basegfx::B2DRange(fLeft, fTop, fLeft+fW, fTop+fH);
                             }
-                            // SVG 1.1 defines in section 5.1.2 that x,y has no meanig for the outermost SVG element.
-                            aSvgCanvasRange = basegfx::B2DRange(0.0, 0.0, fW, fH);
+
                         }
 
                         // to be completely correct in Svg sense it is necessary to clip
@@ -590,7 +622,7 @@ namespace svgio
                                 // no clip needed, but an invisible HiddenGeometryPrimitive2D
                                 // to allow getting the full Svg range using the primitive mechanisms.
                                 // This is needed since e.g. an SdrObject using this as graphic will
-                                // create a mapping transformation to exactly map the content to it's
+                                // create a mapping transformation to exactly map the content to its
                                 // real life size
                                 const drawinglayer::primitive2d::Primitive2DReference xLine(
                                     new drawinglayer::primitive2d::PolygonHairlinePrimitive2D(

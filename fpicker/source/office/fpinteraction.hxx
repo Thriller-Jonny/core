@@ -28,7 +28,6 @@ namespace svt
 {
 
 
-
     //= OFilePickerInteractionHandler
 
     typedef ::cppu::WeakImplHelper <   css::task::XInteractionHandler
@@ -40,7 +39,7 @@ namespace svt
     {
     public:
         /** flags, which indicates special handled interactions
-            These values will be used combained as flags - so they must
+            These values will be used combined as flags - so they must
             in range [2^n]!
          */
         enum EInterceptedInteractions
@@ -57,7 +56,7 @@ namespace svt
         EInterceptedInteractions                              m_eInterceptions; // enable/disable interception of some special interactions
 
     public:
-        OFilePickerInteractionHandler( const css::uno::Reference< css::task::XInteractionHandler >& _rxMaster );
+        explicit OFilePickerInteractionHandler( const css::uno::Reference< css::task::XInteractionHandler >& _rxMaster );
 
         // some generic functions
         void     enableInterceptions( EInterceptedInteractions eInterceptions );

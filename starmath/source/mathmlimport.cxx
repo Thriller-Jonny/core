@@ -141,8 +141,11 @@ sal_uLong SmXMLImportWrapper::Import(SfxMedium &rMedium)
                             new comphelper::PropertySetInfo( aInfoMap ) ) );
 
     // Set base URI
-    OUString sPropName( "BaseURI" );
-    xInfoSet->setPropertyValue( sPropName, makeAny( rMedium.GetBaseURL() ) );
+    OUString const baseURI(rMedium.GetBaseURL());
+    // needed for relative URLs; but it's OK to import e.g. MathML from the
+    // clipboard without one
+    SAL_INFO_IF(baseURI.isEmpty(), "starmath", "SmXMLImportWrapper: no base URL");
+    xInfoSet->setPropertyValue("BaseURI", makeAny(baseURI));
 
     sal_Int32 nSteps=3;
     if ( !(rMedium.IsStorage()))
@@ -174,8 +177,7 @@ sal_uLong SmXMLImportWrapper::Import(SfxMedium &rMedium)
 
             if ( !aName.isEmpty() )
             {
-                sPropName = "StreamRelPath";
-                xInfoSet->setPropertyValue( sPropName, makeAny( aName ) );
+                xInfoSet->setPropertyValue("StreamRelPath", makeAny(aName));
             }
         }
 
@@ -235,8 +237,8 @@ sal_uLong SmXMLImportWrapper::Import(SfxMedium &rMedium)
 
 /// read a component (file + filter version)
 sal_uLong SmXMLImportWrapper::ReadThroughComponent(
-    Reference<io::XInputStream> xInputStream,
-    Reference<XComponent> xModelComponent,
+    const Reference<io::XInputStream>& xInputStream,
+    const Reference<XComponent>& xModelComponent,
     Reference<uno::XComponentContext> & rxContext,
     Reference<beans::XPropertySet> & rPropSet,
     const sal_Char* pFilterName,
@@ -332,7 +334,7 @@ sal_uLong SmXMLImportWrapper::ReadThroughComponent(
 
 sal_uLong SmXMLImportWrapper::ReadThroughComponent(
     const uno::Reference< embed::XStorage >& xStorage,
-    Reference<XComponent> xModelComponent,
+    const Reference<XComponent>& xModelComponent,
     const sal_Char* pStreamName,
     const sal_Char* pCompatibilityStreamName,
     Reference<uno::XComponentContext> & rxContext,
@@ -392,7 +394,6 @@ sal_uLong SmXMLImportWrapper::ReadThroughComponent(
 }
 
 
-
 SmXMLImport::SmXMLImport(
     const css::uno::Reference< css::uno::XComponentContext >& rContext,
     OUString const & implementationName, SvXMLImportFlags nImportFlags)
@@ -430,7 +431,6 @@ uno::Reference< uno::XInterface > SAL_CALL SmXMLImport_createInstance(
 }
 
 
-
 OUString SAL_CALL SmXMLImportMeta_getImplementationName() throw()
 {
     return OUString( "com.sun.star.comp.Math.XMLOasisMetaImporter" );
@@ -448,7 +448,6 @@ throw( uno::Exception )
 {
     return static_cast<cppu::OWeakObject*>(new SmXMLImport( comphelper::getComponentContext(rSMgr), SmXMLImportMeta_getImplementationName(), SvXMLImportFlags::META ));
 }
-
 
 
 OUString SAL_CALL SmXMLImportSettings_getImplementationName() throw()
@@ -525,7 +524,6 @@ void SmXMLImport::endDocument()
 }
 
 
-
 class SmXMLImportContext: public SvXMLImportContext
 {
 public:
@@ -569,7 +567,6 @@ SvXMLImportContext * SmXMLImportContext::CreateChildContext(sal_uInt16 /*nPrefix
 }
 
 
-
 struct SmXMLContext_Helper
 {
     sal_Int8 nIsBold;
@@ -579,7 +576,7 @@ struct SmXMLContext_Helper
     OUString sFontFamily;
     OUString sColor;
 
-    SmXMLImportContext rContext;
+    SmXMLImportContext & rContext;
 
     explicit SmXMLContext_Helper(SmXMLImportContext &rImport)
         : nIsBold( -1 )
@@ -743,7 +740,6 @@ void SmXMLContext_Helper::ApplyAttrs()
 }
 
 
-
 class SmXMLDocContext_Impl : public SmXMLImportContext
 {
 public:
@@ -755,7 +751,6 @@ public:
 
     void EndElement() override;
 };
-
 
 
 /*avert thy gaze from the proginator*/
@@ -778,7 +773,6 @@ public:
 
     void EndElement() override;
 };
-
 
 
 class SmXMLEncloseContext_Impl : public SmXMLRowContext_Impl
@@ -805,7 +799,6 @@ void SmXMLEncloseContext_Impl::EndElement()
 }
 
 
-
 class SmXMLFracContext_Impl : public SmXMLRowContext_Impl
 {
 public:
@@ -816,7 +809,6 @@ public:
 
     void EndElement() override;
 };
-
 
 
 class SmXMLSqrtContext_Impl : public SmXMLRowContext_Impl
@@ -830,7 +822,6 @@ public:
 };
 
 
-
 class SmXMLRootContext_Impl : public SmXMLRowContext_Impl
 {
 public:
@@ -840,7 +831,6 @@ public:
 
     void EndElement() override;
 };
-
 
 
 class SmXMLStyleContext_Impl : public SmXMLRowContext_Impl
@@ -879,7 +869,6 @@ void SmXMLStyleContext_Impl::EndElement()
 }
 
 
-
 class SmXMLPaddedContext_Impl : public SmXMLRowContext_Impl
 {
 public:
@@ -901,7 +890,6 @@ void SmXMLPaddedContext_Impl::EndElement()
     if (GetSmImport().GetNodeStack().size() - nElementCount > 1)
         SmXMLRowContext_Impl::EndElement();
 }
-
 
 
 class SmXMLPhantomContext_Impl : public SmXMLRowContext_Impl
@@ -935,7 +923,6 @@ void SmXMLPhantomContext_Impl::EndElement()
     pPhantom->SetSubNodes(nullptr,popOrZero(rNodeStack));
     rNodeStack.push_front(std::move(pPhantom));
 }
-
 
 
 class SmXMLFencedContext_Impl : public SmXMLRowContext_Impl
@@ -1032,8 +1019,6 @@ void SmXMLFencedContext_Impl::EndElement()
 }
 
 
-
-
 class SmXMLErrorContext_Impl : public SmXMLRowContext_Impl
 {
 public:
@@ -1059,7 +1044,6 @@ void SmXMLErrorContext_Impl::EndElement()
         rNodeStack.pop_front();
     }
 }
-
 
 
 class SmXMLNumberContext_Impl : public SmXMLImportContext
@@ -1091,7 +1075,6 @@ void SmXMLNumberContext_Impl::EndElement()
 {
     GetSmImport().GetNodeStack().push_front(o3tl::make_unique<SmTextNode>(aToken,FNT_NUMBER));
 }
-
 
 
 class SmXMLAnnotationContext_Impl : public SmXMLImportContext
@@ -1140,7 +1123,6 @@ void SmXMLAnnotationContext_Impl::Characters(const OUString &rChars)
 }
 
 
-
 class SmXMLTextContext_Impl : public SmXMLImportContext
 {
 protected:
@@ -1170,7 +1152,6 @@ void SmXMLTextContext_Impl::EndElement()
 {
     GetSmImport().GetNodeStack().push_front(o3tl::make_unique<SmTextNode>(aToken,FNT_TEXT));
 }
-
 
 
 class SmXMLStringContext_Impl : public SmXMLImportContext
@@ -1212,7 +1193,6 @@ void SmXMLStringContext_Impl::EndElement()
 {
     GetSmImport().GetNodeStack().push_front(o3tl::make_unique<SmTextNode>(aToken,FNT_FIXED));
 }
-
 
 
 class SmXMLIdentifierContext_Impl : public SmXMLImportContext
@@ -1278,7 +1258,6 @@ void SmXMLIdentifierContext_Impl::TCharacters(const OUString &rChars)
 }
 
 
-
 class SmXMLOperatorContext_Impl : public SmXMLImportContext
 {
     bool bIsStretchy;
@@ -1317,7 +1296,6 @@ void SmXMLOperatorContext_Impl::EndElement()
 }
 
 
-
 void SmXMLOperatorContext_Impl::StartElement(const uno::Reference<
     xml::sax::XAttributeList > & xAttrList )
 {
@@ -1345,8 +1323,6 @@ void SmXMLOperatorContext_Impl::StartElement(const uno::Reference<
 }
 
 
-
-
 class SmXMLSpaceContext_Impl : public SmXMLImportContext
 {
 public:
@@ -1370,7 +1346,6 @@ void SmXMLSpaceContext_Impl::StartElement(
     pBlank->IncreaseBy(aToken);
     GetSmImport().GetNodeStack().push_front(std::move(pBlank));
 }
-
 
 
 class SmXMLSubContext_Impl : public SmXMLRowContext_Impl
@@ -1417,7 +1392,6 @@ void SmXMLSubContext_Impl::GenericEndElement(SmTokenType eType, SmSubSup eSubSup
 }
 
 
-
 class SmXMLSupContext_Impl : public SmXMLSubContext_Impl
 {
 public:
@@ -1430,7 +1404,6 @@ public:
         GenericEndElement(TRSUP,RSUP);
     }
 };
-
 
 
 class SmXMLSubSupContext_Impl : public SmXMLRowContext_Impl
@@ -1476,7 +1449,6 @@ void SmXMLSubSupContext_Impl::GenericEndElement(SmTokenType eType,
     pNode->SetSubNodes(aSubNodes);
     rNodeStack.push_front(std::move(pNode));
 }
-
 
 
 class SmXMLUnderContext_Impl : public SmXMLSubContext_Impl
@@ -1545,7 +1517,6 @@ void SmXMLUnderContext_Impl::EndElement()
 }
 
 
-
 class SmXMLOverContext_Impl : public SmXMLSubContext_Impl
 {
 protected:
@@ -1603,7 +1574,6 @@ void SmXMLOverContext_Impl::HandleAccent()
 }
 
 
-
 class SmXMLUnderOverContext_Impl : public SmXMLSubSupContext_Impl
 {
 public:
@@ -1616,7 +1586,6 @@ public:
         GenericEndElement(TCSUB,CSUB,CSUP);
     }
 };
-
 
 
 class SmXMLMultiScriptsContext_Impl : public SmXMLSubSupContext_Impl
@@ -1636,7 +1605,6 @@ public:
         const OUString& rLocalName,
         const uno::Reference< xml::sax::XAttributeList > &xAttrList) override;
 };
-
 
 
 class SmXMLNoneContext_Impl : public SmXMLImportContext
@@ -1662,7 +1630,6 @@ void SmXMLNoneContext_Impl::EndElement()
 }
 
 
-
 class SmXMLPrescriptsContext_Impl : public SmXMLImportContext
 {
 public:
@@ -1670,7 +1637,6 @@ public:
         const OUString& rLName)
         : SmXMLImportContext(rImport,nPrefix,rLName) {}
 };
-
 
 
 class SmXMLTableRowContext_Impl : public SmXMLRowContext_Impl
@@ -1685,8 +1651,6 @@ public:
         const OUString& rLocalName,
         const uno::Reference< xml::sax::XAttributeList > &xAttrList) override;
 };
-
-
 
 
 class SmXMLTableContext_Impl : public SmXMLTableRowContext_Impl
@@ -1704,8 +1668,6 @@ public:
 };
 
 
-
-
 class SmXMLTableCellContext_Impl : public SmXMLRowContext_Impl
 {
 public:
@@ -1714,7 +1676,6 @@ public:
         SmXMLRowContext_Impl(rImport,nPrefix,rLName)
         {}
 };
-
 
 
 class SmXMLAlignGroupContext_Impl : public SmXMLRowContext_Impl
@@ -1732,7 +1693,6 @@ public:
 };
 
 
-
 class SmXMLActionContext_Impl : public SmXMLRowContext_Impl
 {
     size_t mnSelection; // 1-based
@@ -1747,7 +1707,6 @@ public:
     void StartElement(const uno::Reference<xml::sax::XAttributeList> &xAttrList) override;
     void EndElement() override;
 };
-
 
 
 // NB: virtually inherit so we can multiply inherit properly
@@ -1784,7 +1743,6 @@ SvXMLImportContext *SmXMLOfficeContext_Impl::CreateChildContext(sal_uInt16 nPref
 
     return pContext;
 }
-
 
 
 // context for flat file xml format
@@ -1832,7 +1790,6 @@ SvXMLImportContext *SmXMLFlatDocContext_Impl::CreateChildContext(
                     i_nPrefix, i_rLocalName, i_xAttrList );
     }
 }
-
 
 
 static const SvXMLTokenMapEntry aPresLayoutElemTokenMap[] =
@@ -2978,7 +2935,7 @@ void SmXMLImport::SetConfigurationSettings(const Sequence<PropertyValue>& aConfP
                     {
                         // dealing with read-only properties here. Nothing to do...
                     }
-                    catch( Exception& rEx)
+                    catch (const Exception& rEx)
                     {
                         SAL_WARN("starmath", "SmXMLImport::SetConfigurationSettings: Exception: " << rEx.Message );
                     }
@@ -2989,9 +2946,6 @@ void SmXMLImport::SetConfigurationSettings(const Sequence<PropertyValue>& aConfP
         }
     }
 }
-
-
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

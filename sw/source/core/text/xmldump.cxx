@@ -22,6 +22,7 @@
 #include <anchoredobject.hxx>
 #include <libxml/xmlwriter.h>
 #include <SwPortionHandler.hxx>
+#include <svx/svdobj.hxx>
 
 class XmlPortionDumper:public SwPortionHandler
 {
@@ -160,9 +161,7 @@ class XmlPortionDumper:public SwPortionHandler
         xmlTextWriterWriteFormatAttribute( writer,
                                            BAD_CAST( "nType" ),
                                            "%s", getTypeName( nType ) );
-        OUString sText( rText );
-        OString sText8 =OUStringToOString( sText,
-                                                       RTL_TEXTENCODING_UTF8 );
+        OString sText8 = OUStringToOString( rText, RTL_TEXTENCODING_UTF8 );
         xmlTextWriterWriteFormatAttribute( writer, BAD_CAST( "rText" ),
                                            "%s", sText8.getStr(  ) );
 
@@ -237,54 +236,52 @@ void SwFrame::dumpAsXml( xmlTextWriterPtr writer ) const
 
     switch ( GetType(  ) )
     {
-    case FRM_ROOT:
+    case SwFrameType::Root:
         name = "root";
         break;
-    case FRM_PAGE:
+    case SwFrameType::Page:
         name = "page";
         break;
-    case FRM_COLUMN:
+    case SwFrameType::Column:
         name = "column";
         break;
-    case FRM_HEADER:
+    case SwFrameType::Header:
         name = "header";
         break;
-    case FRM_FOOTER:
+    case SwFrameType::Footer:
         name = "footer";
         break;
-    case FRM_FTNCONT:
+    case SwFrameType::FtnCont:
         name = "ftncont";
         break;
-    case FRM_FTN:
+    case SwFrameType::Ftn:
         name = "ftn";
         break;
-    case FRM_BODY:
+    case SwFrameType::Body:
         name = "body";
         break;
-    case FRM_FLY:
+    case SwFrameType::Fly:
         name = "fly";
         break;
-    case FRM_SECTION:
+    case SwFrameType::Section:
         name = "section";
         break;
-    case FRM_UNUSED:
-        name = "unused";
-        break;
-    case FRM_TAB:
+    case SwFrameType::Tab:
         name = "tab";
         break;
-    case FRM_ROW:
+    case SwFrameType::Row:
         name = "row";
         break;
-    case FRM_CELL:
+    case SwFrameType::Cell:
         name = "cell";
         break;
-    case FRM_TXT:
+    case SwFrameType::Txt:
         name = "txt";
         break;
-    case FRM_NOTXT:
+    case SwFrameType::NoTxt:
         name = "notxt";
         break;
+    default: break;
     };
 
     if ( name != nullptr )
@@ -357,6 +354,15 @@ void SwFrame::dumpInfosAsXml( xmlTextWriterPtr writer ) const
     xmlTextWriterWriteFormatAttribute( writer, BAD_CAST( "top" ), "%ld", Frame().Top() );
     xmlTextWriterWriteFormatAttribute( writer, BAD_CAST( "width" ), "%ld", Frame().Width() );
     xmlTextWriterWriteFormatAttribute( writer, BAD_CAST( "height" ), "%ld", Frame().Height() );
+    xmlTextWriterWriteAttribute(writer, BAD_CAST("mbFixSize"), BAD_CAST(OString::boolean(HasFixSize()).getStr()));
+    xmlTextWriterEndElement( writer );
+
+    // output the Prt
+    xmlTextWriterStartElement( writer, BAD_CAST( "prtBounds" ) );
+    xmlTextWriterWriteFormatAttribute( writer, BAD_CAST( "left" ), "%ld", Prt().Left() );
+    xmlTextWriterWriteFormatAttribute( writer, BAD_CAST( "top" ), "%ld", Prt().Top() );
+    xmlTextWriterWriteFormatAttribute( writer, BAD_CAST( "width" ), "%ld", Prt().Width() );
+    xmlTextWriterWriteFormatAttribute( writer, BAD_CAST( "height" ), "%ld", Prt().Height() );
     xmlTextWriterEndElement( writer );
 }
 
@@ -416,6 +422,9 @@ void SwAnchoredObject::dumpAsXml( xmlTextWriterPtr writer ) const
     xmlTextWriterWriteFormatAttribute( writer, BAD_CAST( "width" ), "%ld", GetObjBoundRect().Width() );
     xmlTextWriterWriteFormatAttribute( writer, BAD_CAST( "height" ), "%ld", GetObjBoundRect().Height() );
     xmlTextWriterEndElement( writer );
+
+    if (const SdrObject* pObject = GetDrawObj())
+        pObject->dumpAsXml(writer);
 
     xmlTextWriterEndElement( writer );
 

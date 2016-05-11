@@ -35,10 +35,6 @@ certain functionality.
 
 @li @c basctl.basicide
 
-@section basebmp
-
-@li @c basebmp.bitmapdevice
-
 @section basic
 
 @li @c basic
@@ -63,10 +59,13 @@ certain functionality.
 
 @li @c chart2
 @li @c chart2.3dopengl
+@li @c chart2.accessibility
 @li @c chart2.areachart
+@li @c chart2.main
 @li @c chart2.opengl
 @li @c chart2.pie.label.bestfit
 @li @c chart2.pie.label.bestfit.inside
+@li @c chart2.template
 @li @c chart2.tools
 
 @section connectivity
@@ -96,12 +95,18 @@ certain functionality.
 @li @c cppu
 @li @c cppu.log
 @li @c cppu.threadpool
+@li @c cppu.typelib
 @li @c cppu.unsafebridge
 
 @section cppuhelper
 
 @li @c cppuhelper
 @li @c cppuhelper.shlib
+
+@section cpputools
+
+@li @c cpputools
+@li @c cpputools.unoexe
 
 @section cui
 
@@ -135,6 +140,7 @@ certain functionality.
 
 @li @c desktop
 @li @c desktop.app
+@li @c destkop.crashreport
 @li @c desktop.deployment
 @li @c desktop.lib
 @li @c desktop.migration
@@ -147,6 +153,7 @@ certain functionality.
 
 @li @c sd
 @li @c sd.core
+@li @c sd.eppt
 @li @c sd.filter
 @li @c sd.fwk
 @li @c sd.slideshow
@@ -178,6 +185,7 @@ certain functionality.
 
 @section extensions
 
+@li @c extensions.abpilot
 @li @c extensions.biblio
 @li @c extensions.dbpilots
 @li @c extensions.plugin
@@ -425,6 +433,7 @@ certain functionality.
 @li @c vcl.kde - KDE
 @li @c vcl.kde4 - KDE4
 @li @c vcl.layout - Widget layout
+@li @c vcl.lazydelete
 @li @c vcl.pdfwriter
 @li @c vcl.plugadapt - the Unix/X11 backend plugin mechanism
 @li @c vcl.opengl
@@ -450,6 +459,7 @@ certain functionality.
 
 @li @c sw
 @li @c sw.core - Writer core
+@li @c sw.a11y - accessibility
 @li @c sw.createcopy
 @li @c sw.doc
 @li @c sw.docappend
@@ -521,7 +531,6 @@ certain functionality.
 @section other
 
 @li @c accessibility
-@li @c basebmp
 @li @c basegfx
 @li @c binaryurp
 @li @c configmgr
@@ -531,6 +540,7 @@ certain functionality.
 @li @c drawinglayer
 @li @c helpcompiler
 @li @c jvmaccess
+@li @c lingucomponent
 @li @c linguistic
 @li @c lwp - lotuswordpro
 @li @c mysqlc
@@ -549,6 +559,7 @@ certain functionality.
 @li @c svg
 @li @c test
 @li @c ucbhelper
+@li @c unodevtools
 @li @c unoidl
 @li @c unoxml
 @li @c uui

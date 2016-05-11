@@ -34,7 +34,6 @@
 #include <vector>
 
 
-
 namespace accessibility
 {
 
@@ -57,11 +56,9 @@ namespace accessibility
     }
 
 
-
     AccessibleTabBar::~AccessibleTabBar()
     {
     }
-
 
 
     void AccessibleTabBar::ProcessWindowEvent( const VclWindowEvent& rVclWindowEvent )
@@ -119,7 +116,6 @@ namespace accessibility
     }
 
 
-
     void AccessibleTabBar::FillAccessibleStateSet( utl::AccessibleStateSetHelper& rStateSet )
     {
         if ( m_pTabBar )
@@ -162,13 +158,13 @@ namespace accessibility
     // XInterface
 
 
-    IMPLEMENT_FORWARD_XINTERFACE2( AccessibleTabBar, AccessibleExtendedComponentHelper_BASE, AccessibleTabBar_BASE )
+    IMPLEMENT_FORWARD_XINTERFACE2( AccessibleTabBar, OAccessibleExtendedComponentHelper, AccessibleTabBar_BASE )
 
 
     // XTypeProvider
 
 
-    IMPLEMENT_FORWARD_XTYPEPROVIDER2( AccessibleTabBar, AccessibleExtendedComponentHelper_BASE, AccessibleTabBar_BASE )
+    IMPLEMENT_FORWARD_XTYPEPROVIDER2( AccessibleTabBar, OAccessibleExtendedComponentHelper, AccessibleTabBar_BASE )
 
 
     // XComponent
@@ -179,9 +175,9 @@ namespace accessibility
         AccessibleTabBarBase::disposing();
 
         // dispose all children
-        for ( size_t i = 0; i < m_aAccessibleChildren.size(); ++i )
+        for (Reference<XAccessible>& i : m_aAccessibleChildren)
         {
-            Reference< XComponent > xComponent( m_aAccessibleChildren[i], UNO_QUERY );
+            Reference< XComponent > xComponent( i, UNO_QUERY );
             if ( xComponent.is() )
                 xComponent->dispose();
         }
@@ -198,12 +194,10 @@ namespace accessibility
     }
 
 
-
     sal_Bool AccessibleTabBar::supportsService( const OUString& rServiceName ) throw (RuntimeException, std::exception)
     {
         return cppu::supportsService(this, rServiceName);
     }
-
 
 
     Sequence< OUString > AccessibleTabBar::getSupportedServiceNames() throw (RuntimeException, std::exception)
@@ -233,7 +227,6 @@ namespace accessibility
 
         return m_aAccessibleChildren.size();
     }
-
 
 
     Reference< XAccessible > AccessibleTabBar::getAccessibleChild( sal_Int32 i ) throw (IndexOutOfBoundsException, RuntimeException, std::exception)
@@ -270,7 +263,6 @@ namespace accessibility
     }
 
 
-
     Reference< XAccessible > AccessibleTabBar::getAccessibleParent(  ) throw (RuntimeException, std::exception)
     {
         OExternalLockGuard aGuard( this );
@@ -285,7 +277,6 @@ namespace accessibility
 
         return xParent;
     }
-
 
 
     sal_Int32 AccessibleTabBar::getAccessibleIndexInParent(  ) throw (RuntimeException, std::exception)
@@ -314,14 +305,12 @@ namespace accessibility
     }
 
 
-
     sal_Int16 AccessibleTabBar::getAccessibleRole(  ) throw (RuntimeException, std::exception)
     {
         OExternalLockGuard aGuard( this );
 
         return AccessibleRole::PANEL;
     }
-
 
 
     OUString AccessibleTabBar::getAccessibleDescription( ) throw (RuntimeException, std::exception)
@@ -336,7 +325,6 @@ namespace accessibility
     }
 
 
-
     OUString AccessibleTabBar::getAccessibleName(  ) throw (RuntimeException, std::exception)
     {
         OExternalLockGuard aGuard( this );
@@ -349,7 +337,6 @@ namespace accessibility
     }
 
 
-
     Reference< XAccessibleRelationSet > AccessibleTabBar::getAccessibleRelationSet(  ) throw (RuntimeException, std::exception)
     {
         OExternalLockGuard aGuard( this );
@@ -358,7 +345,6 @@ namespace accessibility
         Reference< XAccessibleRelationSet > xSet = pRelationSetHelper;
         return xSet;
     }
-
 
 
     Reference< XAccessibleStateSet > AccessibleTabBar::getAccessibleStateSet(  ) throw (RuntimeException, std::exception)
@@ -379,7 +365,6 @@ namespace accessibility
 
         return xSet;
     }
-
 
 
     Locale AccessibleTabBar::getLocale(  ) throw (IllegalAccessibleComponentStateException, RuntimeException, std::exception)
@@ -421,7 +406,6 @@ namespace accessibility
     }
 
 
-
     void AccessibleTabBar::grabFocus(  ) throw (RuntimeException, std::exception)
     {
         OExternalLockGuard aGuard( this );
@@ -429,7 +413,6 @@ namespace accessibility
         if ( m_pTabBar )
             m_pTabBar->GrabFocus();
     }
-
 
 
     sal_Int32 AccessibleTabBar::getForeground(  ) throw (RuntimeException, std::exception)
@@ -454,7 +437,6 @@ namespace accessibility
 
         return nColor;
     }
-
 
 
     sal_Int32 AccessibleTabBar::getBackground(  ) throw (RuntimeException, std::exception)
@@ -502,7 +484,6 @@ namespace accessibility
     }
 
 
-
     OUString AccessibleTabBar::getTitledBorderText(  ) throw (RuntimeException, std::exception)
     {
         OExternalLockGuard aGuard( this );
@@ -515,7 +496,6 @@ namespace accessibility
     }
 
 
-
     OUString AccessibleTabBar::getToolTipText(  ) throw (RuntimeException, std::exception)
     {
         OExternalLockGuard aGuard( this );
@@ -526,8 +506,6 @@ namespace accessibility
 
         return sText;
     }
-
-
 
 
 }   // namespace accessibility

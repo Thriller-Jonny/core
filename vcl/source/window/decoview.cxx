@@ -256,7 +256,7 @@ void ImplDrawSymbol( OutputDevice* pDev, Rectangle nRect, const SymbolType eType
             pDev->DrawLine( Point( nRect.Left(), aCenter.Y()-n2+1 ),
                             Point( nRect.Left(), aCenter.Y()+n2-1 ) );
             ++nRect.Left();
-            // Intentional fall-through
+            SAL_FALLTHROUGH;
         case SymbolType::WINDBACKWARD:
             pDev->DrawPixel( Point( nRect.Left(), aCenter.Y() ) );
             pDev->DrawPixel( Point( nRect.Left()+n2, aCenter.Y() ) );
@@ -274,7 +274,7 @@ void ImplDrawSymbol( OutputDevice* pDev, Rectangle nRect, const SymbolType eType
             pDev->DrawLine( Point( nRect.Right(), aCenter.Y()-n2+1 ),
                             Point( nRect.Right(), aCenter.Y()+n2-1 ) );
             --nRect.Right();
-            // Intentional fall-through
+            SAL_FALLTHROUGH;
         case SymbolType::WINDFORWARD:
             pDev->DrawPixel( Point( nRect.Right(), aCenter.Y() ) );
             pDev->DrawPixel( Point( nRect.Right()-n2, aCenter.Y() ) );
@@ -313,7 +313,7 @@ void ImplDrawSymbol( OutputDevice* pDev, Rectangle nRect, const SymbolType eType
                             Point( nRect.Right(), nRect.Bottom() ) );
             pDev->DrawLine( Point( nRect.Left(), nRect.Bottom() ),
                             Point( nRect.Right(), nRect.Bottom() ) );
-            // Intentional fall-through
+            SAL_FALLTHROUGH;
         case SymbolType::ROLLUP:
             pDev->DrawRect( Rectangle( nRect.Left(), nRect.Top(),
                                        nRect.Right(), nRect.Top()+n8 ) );
@@ -412,10 +412,10 @@ void ImplDrawSymbol( OutputDevice* pDev, Rectangle nRect, const SymbolType eType
             break;
 
         case SymbolType::PLUS:
-            pDev->DrawRect( Rectangle( nRect.Left(), aCenter.Y()-n8,
-                                       nRect.Right(), aCenter.Y()+n8 ) );
-            pDev->DrawRect( Rectangle( aCenter.X()-n8, nRect.Top(),
-                                       aCenter.X()+n8, nRect.Bottom() ) );
+            pDev->DrawRect( Rectangle( nRect.Left(), aCenter.Y()-n8/2,
+                                       nRect.Right()+1, aCenter.Y()+n8/2+1 ) );
+            pDev->DrawRect( Rectangle( aCenter.X()-n8/2, nRect.Top(),
+                                       aCenter.X()+n8/2+1, nRect.Bottom()+1 ) );
             break;
         case SymbolType::DONTKNOW:
         case SymbolType::IMAGE:
@@ -892,7 +892,7 @@ void DecorationView::DrawFrame( const Rectangle& rRect,
 }
 
 void DecorationView::DrawHighlightFrame( const Rectangle& rRect,
-                                         DrawHighlightFrameStyle nStyle, bool bTestBackground )
+                                         DrawHighlightFrameStyle nStyle )
 {
     const StyleSettings& rStyleSettings = mpOutDev->GetSettings().GetStyleSettings();
     Color aLightColor = rStyleSettings.GetLightColor();
@@ -904,7 +904,7 @@ void DecorationView::DrawHighlightFrame( const Rectangle& rRect,
         aLightColor = Color( COL_BLACK );
         aShadowColor = Color( COL_BLACK );
     }
-    else if ( bTestBackground )
+    else
     {
         Wallpaper aBackground = mpOutDev->GetBackground();
         if ( aBackground.IsBitmap() || aBackground.IsGradient() )
@@ -955,11 +955,11 @@ Rectangle DecorationView::DrawFrame( const Rectangle& rRect, DrawFrameStyle nSty
              ImplDrawFrame( mpOutDev, aRect, mpOutDev->GetSettings().GetStyleSettings(), nStyle, nFlags );
         else
         {
-             Color maOldLineColor  = mpOutDev->GetLineColor();
-             Color maOldFillColor  = mpOutDev->GetFillColor();
+             Color aOldLineColor  = mpOutDev->GetLineColor();
+             Color aOldFillColor  = mpOutDev->GetFillColor();
              ImplDrawFrame( mpOutDev, aRect, mpOutDev->GetSettings().GetStyleSettings(), nStyle, nFlags );
-             mpOutDev->SetLineColor( maOldLineColor );
-             mpOutDev->SetFillColor( maOldFillColor );
+             mpOutDev->SetLineColor( aOldLineColor );
+             mpOutDev->SetFillColor( aOldFillColor );
         }
     }
 
@@ -988,11 +988,11 @@ Rectangle DecorationView::DrawButton( const Rectangle& rRect, DrawButtonFlags nS
         mpOutDev->EnableMapMode( false );
     }
 
-    const Color maOldLineColor = mpOutDev->GetLineColor();
-    const Color maOldFillColor = mpOutDev->GetFillColor();
+    const Color aOldLineColor = mpOutDev->GetLineColor();
+    const Color aOldFillColor = mpOutDev->GetFillColor();
     ImplDrawButton( mpOutDev, aRect, nStyle );
-    mpOutDev->SetLineColor( maOldLineColor );
-    mpOutDev->SetFillColor( maOldFillColor );
+    mpOutDev->SetLineColor( aOldLineColor );
+    mpOutDev->SetFillColor( aOldFillColor );
 
     // keep border free, although it is used at default representation
     ++aRect.Left();
@@ -1092,7 +1092,7 @@ void DecorationView::DrawSeparator( const Point& rStart, const Point& rStop, boo
     mpOutDev->Pop();
 }
 
-void DecorationView::DrawHandle(const Rectangle& rRect, bool bVertical)
+void DecorationView::DrawHandle(const Rectangle& rRect)
 {
     const StyleSettings& rStyleSettings = mpOutDev->GetSettings().GetStyleSettings();
 
@@ -1104,31 +1104,20 @@ void DecorationView::DrawHandle(const Rectangle& rRect, bool bVertical)
     const sal_Int32 nNumberOfPoints = 3;
 
     long nHalfWidth = aOutputSize.Width() / 2.0f;
-    long nHalfHeight = aOutputSize.Height() / 2.0f;
 
-    float fDistance = bVertical ? aOutputSize.Height() : aOutputSize.Width();
+    float fDistance = aOutputSize.Height();
     fDistance /= (nNumberOfPoints + 1);
 
-    long nRadius = bVertical ? aOutputSize.Width() : aOutputSize.Height();
+    long nRadius = aOutputSize.Width();
     nRadius /= (nNumberOfPoints + 2);
 
     for (long i = 1; i <= nNumberOfPoints; i++)
     {
         Rectangle aLocation;
-        if (bVertical)
-        {
-            aLocation = Rectangle(nHalfWidth - nRadius,
-                                  round(fDistance * i) - nRadius,
-                                  nHalfWidth + nRadius,
-                                  round(fDistance * i) + nRadius);
-        }
-        else
-        {
-            aLocation = Rectangle(round(fDistance * i) - nRadius,
-                                  nHalfHeight - nRadius,
-                                  round(fDistance * i) + nRadius,
-                                  nHalfHeight + nRadius);
-        }
+        aLocation = Rectangle(nHalfWidth - nRadius,
+                              round(fDistance * i) - nRadius,
+                              nHalfWidth + nRadius,
+                              round(fDistance * i) + nRadius);
         mpOutDev->DrawEllipse(aLocation);
     }
 }

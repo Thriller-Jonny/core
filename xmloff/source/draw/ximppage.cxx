@@ -67,6 +67,7 @@ private:
     Reference< XTextCursor > mxCursor;
 
     OUStringBuffer maAuthorBuffer;
+    OUStringBuffer maInitialsBuffer;
     OUStringBuffer maDateBuffer;
 };
 
@@ -141,6 +142,11 @@ SvXMLImportContext * DrawAnnotationContext::CreateChildContext( sal_uInt16 nPref
             else if( IsXMLToken( rLocalName, XML_DATE ) )
                 pContext = new XMLStringBufferImportContext(GetImport(), nPrefix, rLocalName, maDateBuffer);
         }
+        else if( (XML_NAMESPACE_TEXT == nPrefix || XML_NAMESPACE_LO_EXT == nPrefix) &&
+                 IsXMLToken(rLocalName, XML_SENDER_INITIALS) )
+        {
+            pContext = new XMLStringBufferImportContext(GetImport(), nPrefix, rLocalName, maInitialsBuffer);
+        }
         else
         {
             // create text cursor on demand
@@ -177,8 +183,8 @@ void DrawAnnotationContext::EndElement()
     {
         // delete addition newline
         const OUString aEmpty;
-        mxCursor->gotoEnd( sal_False );
-        mxCursor->goLeft( 1, sal_True );
+        mxCursor->gotoEnd( false );
+        mxCursor->goLeft( 1, true );
         mxCursor->setString( aEmpty );
 
         // reset cursor
@@ -188,6 +194,7 @@ void DrawAnnotationContext::EndElement()
     if( mxAnnotation.is() )
     {
         mxAnnotation->setAuthor( maAuthorBuffer.makeStringAndClear() );
+        mxAnnotation->setInitials( maInitialsBuffer.makeStringAndClear() );
 
         util::DateTime aDateTime;
         if (::sax::Converter::parseDateTime(aDateTime, nullptr,
@@ -500,28 +507,13 @@ void SdXMLGenericPageContext::SetPageMaster( OUString& rsPageMasterName )
                     Reference <beans::XPropertySet> xPropSet(xMasterPage, uno::UNO_QUERY);
                     if(xPropSet.is())
                     {
-                        uno::Any aAny;
-
-                        aAny <<= pPageMasterContext->GetBorderBottom();
-                        xPropSet->setPropertyValue("BorderBottom", aAny);
-
-                        aAny <<= pPageMasterContext->GetBorderLeft();
-                        xPropSet->setPropertyValue("BorderLeft", aAny);
-
-                        aAny <<= pPageMasterContext->GetBorderRight();
-                        xPropSet->setPropertyValue("BorderRight", aAny);
-
-                        aAny <<= pPageMasterContext->GetBorderTop();
-                        xPropSet->setPropertyValue("BorderTop", aAny);
-
-                        aAny <<= pPageMasterContext->GetWidth();
-                        xPropSet->setPropertyValue("Width", aAny);
-
-                        aAny <<= pPageMasterContext->GetHeight();
-                        xPropSet->setPropertyValue("Height", aAny);
-
-                        aAny <<= pPageMasterContext->GetOrientation();
-                        xPropSet->setPropertyValue("Orientation", aAny);
+                        xPropSet->setPropertyValue("BorderBottom", Any(pPageMasterContext->GetBorderBottom()));
+                        xPropSet->setPropertyValue("BorderLeft", Any(pPageMasterContext->GetBorderLeft()));
+                        xPropSet->setPropertyValue("BorderRight", Any(pPageMasterContext->GetBorderRight()));
+                        xPropSet->setPropertyValue("BorderTop", Any(pPageMasterContext->GetBorderTop()));
+                        xPropSet->setPropertyValue("Width", Any(pPageMasterContext->GetWidth()));
+                        xPropSet->setPropertyValue("Height", Any(pPageMasterContext->GetHeight()));
+                        xPropSet->setPropertyValue("Orientation", Any(pPageMasterContext->GetOrientation()));
                     }
                 }
             }

@@ -19,7 +19,7 @@
 
 #include <sal/config.h>
 
-#include <boost/tuple/tuple.hpp>
+#include <tuple>
 
 #include <basegfx/matrix/b2dhommatrix.hxx>
 #include <basegfx/matrix/b2dhommatrixtools.hxx>
@@ -325,7 +325,7 @@ namespace dxcanvas
                     std::ptrdiff_t nIndex;
                     double fAlpha;
                     const double fT( i/double(nStepCount) );
-                    boost::tuples::tie(nIndex,fAlpha)=aLerper.lerp(fT);
+                    std::tie(nIndex,fAlpha)=aLerper.lerp(fT);
 
                     const Gdiplus::Color aFillColor(
                         static_cast<BYTE>( basegfx::tools::lerp(rColors[nIndex].GetRed(),rColors[nIndex+1].GetRed(),fAlpha) ),
@@ -407,7 +407,7 @@ namespace dxcanvas
                 rGraphics->FillPath( pGradientBrush.get(), pFillPath.get() );
             }
 
-#if OSL_DEBUG_LEVEL > 2
+#if OSL_DEBUG_LEVEL > 0
             Gdiplus::Pen aPen( Gdiplus::Color( 255, 255, 0, 0 ),
                                0.0001f );
 
@@ -430,7 +430,7 @@ namespace dxcanvas
         {
             switch( rValues.meType )
             {
-                case ::canvas::ParametricPolyPolygon::GRADIENT_LINEAR:
+                case ::canvas::ParametricPolyPolygon::GradientType::Linear:
                     fillLinearGradient( rGraphics,
                                         rValues,
                                         rColors,
@@ -439,9 +439,9 @@ namespace dxcanvas
                                         texture  );
                     break;
 
-                case ::canvas::ParametricPolyPolygon::GRADIENT_ELLIPTICAL:
+                case ::canvas::ParametricPolyPolygon::GradientType::Elliptical:
                     // FALLTHROUGH intended
-                case ::canvas::ParametricPolyPolygon::GRADIENT_RECTANGULAR:
+                case ::canvas::ParametricPolyPolygon::GradientType::Rectangular:
                     fillPolygonalGradient( rValues,
                                            rColors,
                                            rStops,
@@ -535,7 +535,6 @@ namespace dxcanvas
                 "CanvasHelper::fillTexturedPolyPolygon(): GDI+ call failed" );
         }
     }
-
 
 
     uno::Reference< rendering::XCachedPrimitive > CanvasHelper::fillTexturedPolyPolygon( const rendering::XCanvas*                          /*pCanvas*/,

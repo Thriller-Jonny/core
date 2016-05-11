@@ -314,8 +314,8 @@ bool ScColumn::HasAttribSelection( const ScMarkData& rMark, sal_uInt16 nMask ) c
 
     if (rMark.IsMultiMarked())
     {
-        ScMarkArrayIter aMarkIter( rMark.GetArray()+nCol );
-        while (aMarkIter.Next( nTop, nBottom ) && !bFound)
+        ScMultiSelIter aMultiIter( rMark.GetMultiSelData(), nCol );
+        while (aMultiIter.Next( nTop, nBottom ) && !bFound)
         {
             if (pAttrArray->HasAttrib( nTop, nBottom, nMask ))
                 bFound = true;
@@ -339,11 +339,11 @@ void ScColumn::MergeSelectionPattern( ScMergePatternState& rState, const ScMarkD
 
     if ( rMark.IsMultiMarked() )
     {
-        const ScMarkArray* pArray = rMark.GetArray() + nCol;
-        if ( pArray->HasMarks() )
+        const ScMultiSel& rMultiSel = rMark.GetMultiSelData();
+        if ( rMultiSel.HasMarks( nCol ) )
         {
-            ScMarkArrayIter aMarkIter( pArray );
-            while (aMarkIter.Next( nTop, nBottom ))
+            ScMultiSelIter aMultiIter( rMultiSel, nCol );
+            while (aMultiIter.Next( nTop, nBottom ))
                 pAttrArray->MergePatternArea( nTop, nBottom, rState, bDeep );
         }
     }
@@ -430,8 +430,8 @@ SCsROW ScColumn::ApplySelectionCache( SfxItemPoolCache* pCache, const ScMarkData
 
     if ( rMark.IsMultiMarked() )
     {
-        ScMarkArrayIter aMarkIter( rMark.GetArray() + nCol );
-        while (aMarkIter.Next( nTop, nBottom ))
+        ScMultiSelIter aMultiIter( rMark.GetMultiSelData(), nCol );
+        while (aMultiIter.Next( nTop, nBottom ))
         {
             pAttrArray->ApplyCacheArea( nTop, nBottom, pCache, pDataArray );
             bFound = true;
@@ -453,8 +453,8 @@ void ScColumn::ChangeSelectionIndent( bool bIncrement, const ScMarkData& rMark )
 
     if ( pAttrArray && rMark.IsMultiMarked() )
     {
-        ScMarkArrayIter aMarkIter( rMark.GetArray() + nCol );
-        while (aMarkIter.Next( nTop, nBottom ))
+        ScMultiSelIter aMultiIter( rMark.GetMultiSelData(), nCol );
+        while (aMultiIter.Next( nTop, nBottom ))
             pAttrArray->ChangeIndent(nTop, nBottom, bIncrement);
     }
 }
@@ -466,8 +466,8 @@ void ScColumn::ClearSelectionItems( const sal_uInt16* pWhich,const ScMarkData& r
 
     if ( pAttrArray && rMark.IsMultiMarked() )
     {
-        ScMarkArrayIter aMarkIter( rMark.GetArray() + nCol );
-        while (aMarkIter.Next( nTop, nBottom ))
+        ScMultiSelIter aMultiIter( rMark.GetMultiSelData(), nCol );
+        while (aMultiIter.Next( nTop, nBottom ))
             pAttrArray->ClearItems(nTop, nBottom, pWhich);
     }
 }
@@ -479,8 +479,8 @@ void ScColumn::DeleteSelection( InsertDeleteFlags nDelFlag, const ScMarkData& rM
 
     if ( rMark.IsMultiMarked() )
     {
-        ScMarkArrayIter aMarkIter( rMark.GetArray() + nCol );
-        while (aMarkIter.Next( nTop, nBottom ))
+        ScMultiSelIter aMultiIter( rMark.GetMultiSelData(), nCol );
+        while (aMultiIter.Next( nTop, nBottom ))
             DeleteArea(nTop, nBottom, nDelFlag, bBroadcast);
     }
 }
@@ -494,7 +494,7 @@ void ScColumn::ApplyPattern( SCROW nRow, const ScPatternAttr& rPatAttr )
 
     //  true = keep old content
 
-    const ScPatternAttr* pNewPattern = static_cast<const ScPatternAttr*>( &aCache.ApplyTo( *pPattern, true ) );
+    const ScPatternAttr* pNewPattern = static_cast<const ScPatternAttr*>( &aCache.ApplyTo( *pPattern ) );
     ScDocumentPool::CheckRef( *pPattern );
     ScDocumentPool::CheckRef( *pNewPattern );
 
@@ -569,8 +569,8 @@ void ScColumn::ApplySelectionStyle(const ScStyleSheet& rStyle, const ScMarkData&
 
     if ( rMark.IsMultiMarked() )
     {
-        ScMarkArrayIter aMarkIter( rMark.GetArray() + nCol );
-        while (aMarkIter.Next( nTop, nBottom ))
+        ScMultiSelIter aMultiIter( rMark.GetMultiSelData(), nCol );
+        while (aMultiIter.Next( nTop, nBottom ))
             pAttrArray->ApplyStyleArea(nTop, nBottom, const_cast<ScStyleSheet*>(&rStyle));
     }
 }
@@ -586,8 +586,8 @@ void ScColumn::ApplySelectionLineStyle( const ScMarkData& rMark,
 
     if (rMark.IsMultiMarked())
     {
-        ScMarkArrayIter aMarkIter( rMark.GetArray()+nCol );
-        while (aMarkIter.Next( nTop, nBottom ))
+        ScMultiSelIter aMultiIter( rMark.GetMultiSelData(), nCol );
+        while (aMultiIter.Next( nTop, nBottom ))
             pAttrArray->ApplyLineStyleArea(nTop, nBottom, pLine, bColorOnly );
     }
 }
@@ -611,10 +611,10 @@ const ScStyleSheet* ScColumn::GetSelectionStyle( const ScMarkData& rMark, bool& 
     const ScStyleSheet* pStyle = nullptr;
     const ScStyleSheet* pNewStyle;
 
-    ScMarkArrayIter aMarkIter( rMark.GetArray() + nCol );
+    ScMultiSelIter aMultiIter( rMark.GetMultiSelData(), nCol );
     SCROW nTop;
     SCROW nBottom;
-    while (bEqual && aMarkIter.Next( nTop, nBottom ))
+    while (bEqual && aMultiIter.Next( nTop, nBottom ))
     {
         ScAttrIterator aAttrIter( pAttrArray, nTop, nBottom );
         SCROW nRow;
@@ -663,9 +663,9 @@ void ScColumn::FindStyleSheet( const SfxStyleSheetBase* pStyleSheet, ScFlatBoolR
     pAttrArray->FindStyleSheet( pStyleSheet, rUsedRows, bReset );
 }
 
-bool ScColumn::IsStyleSheetUsed( const ScStyleSheet& rStyle, bool bGatherAllStyles ) const
+bool ScColumn::IsStyleSheetUsed( const ScStyleSheet& rStyle ) const
 {
-    return pAttrArray->IsStyleSheetUsed( rStyle, bGatherAllStyles );
+    return pAttrArray->IsStyleSheetUsed( rStyle, true/*bGatherAllStyles*/ );
 }
 
 bool ScColumn::ApplyFlags( SCROW nStartRow, SCROW nEndRow, sal_Int16 nFlags )
@@ -683,15 +683,15 @@ void ScColumn::ClearItems( SCROW nStartRow, SCROW nEndRow, const sal_uInt16* pWh
     pAttrArray->ClearItems( nStartRow, nEndRow, pWhich );
 }
 
-void ScColumn::SetPattern( SCROW nRow, const ScPatternAttr& rPatAttr, bool bPutToPool )
+void ScColumn::SetPattern( SCROW nRow, const ScPatternAttr& rPatAttr )
 {
-    pAttrArray->SetPattern( nRow, &rPatAttr, bPutToPool );
+    pAttrArray->SetPattern( nRow, &rPatAttr, true/*bPutToPool*/ );
 }
 
 void ScColumn::SetPatternArea( SCROW nStartRow, SCROW nEndRow,
-                                const ScPatternAttr& rPatAttr, bool bPutToPool )
+                                const ScPatternAttr& rPatAttr )
 {
-    pAttrArray->SetPatternArea( nStartRow, nEndRow, &rPatAttr, bPutToPool );
+    pAttrArray->SetPatternArea( nStartRow, nEndRow, &rPatAttr, true/*bPutToPool*/ );
 }
 
 void ScColumn::ApplyAttr( SCROW nRow, const SfxPoolItem& rAttr )
@@ -1372,6 +1372,7 @@ class CopyByCloneHandler
     InsertDeleteFlags mnCopyFlags;
 
     sc::StartListeningType meListenType;
+    int mnFormulaCellCloneFlags;
 
     void setDefaultAttrToDest(size_t nRow)
     {
@@ -1414,7 +1415,7 @@ class CopyByCloneHandler
         if (bForceFormula || bCloneFormula)
         {
             // Clone as formula cell.
-            ScFormulaCell* pCell = new ScFormulaCell(rSrcCell, mrDestCol.GetDoc(), aDestPos);
+            ScFormulaCell* pCell = new ScFormulaCell(rSrcCell, mrDestCol.GetDoc(), aDestPos, mnFormulaCellCloneFlags);
             pCell->SetDirtyVar();
             mrDestCol.SetFormulaCell(maDestPos, nRow, pCell, meListenType);
             setDefaultAttrToDest(nRow);
@@ -1485,13 +1486,14 @@ class CopyByCloneHandler
 
 public:
     CopyByCloneHandler(const ScColumn& rSrcCol, ScColumn& rDestCol, sc::ColumnBlockPosition* pDestPos,
-            InsertDeleteFlags nCopyFlags, svl::SharedStringPool* pSharedStringPool) :
+            InsertDeleteFlags nCopyFlags, svl::SharedStringPool* pSharedStringPool, bool bGlobalNamesToLocal) :
         mrSrcCol(rSrcCol),
         mrDestCol(rDestCol),
         mpDestPos(pDestPos),
         mpSharedStringPool(pSharedStringPool),
         mnCopyFlags(nCopyFlags),
-        meListenType(sc::SingleCellListening)
+        meListenType(sc::SingleCellListening),
+        mnFormulaCellCloneFlags(bGlobalNamesToLocal ? SC_CLONECELL_NAMES_TO_LOCAL : 0)
     {
         if (mpDestPos)
             maDestPos = *mpDestPos;
@@ -1624,14 +1626,14 @@ public:
 void ScColumn::CopyToColumn(
     sc::CopyToDocContext& rCxt,
     SCROW nRow1, SCROW nRow2, InsertDeleteFlags nFlags, bool bMarked, ScColumn& rColumn,
-    const ScMarkData* pMarkData, bool bAsLink) const
+    const ScMarkData* pMarkData, bool bAsLink, bool bGlobalNamesToLocal) const
 {
     if (bMarked)
     {
         SCROW nStart, nEnd;
         if (pMarkData && pMarkData->IsMultiMarked())
         {
-            ScMarkArrayIter aIter( pMarkData->GetArray()+nCol );
+            ScMultiSelIter aIter( pMarkData->GetMultiSelData(), nCol );
 
             while ( aIter.Next( nStart, nEnd ) && nStart <= nRow2 )
             {
@@ -1682,7 +1684,7 @@ void ScColumn::CopyToColumn(
                 (pDocument->GetPool() != rColumn.pDocument->GetPool()) ?
                 &rColumn.pDocument->GetSharedStringPool() : nullptr;
             CopyByCloneHandler aFunc(*this, rColumn, rCxt.getBlockPosition(rColumn.nTab, rColumn.nCol), nFlags,
-                    pSharedStringPool);
+                    pSharedStringPool, bGlobalNamesToLocal);
             aFunc.setStartListening(rCxt.isStartListening());
             sc::ParseBlock(maCells.begin(), maCells, aFunc, nRow1, nRow2);
         }
@@ -1693,12 +1695,12 @@ void ScColumn::CopyToColumn(
 
 void ScColumn::UndoToColumn(
     sc::CopyToDocContext& rCxt, SCROW nRow1, SCROW nRow2, InsertDeleteFlags nFlags, bool bMarked,
-    ScColumn& rColumn, const ScMarkData* pMarkData ) const
+    ScColumn& rColumn ) const
 {
     if (nRow1 > 0)
         CopyToColumn(rCxt, 0, nRow1-1, InsertDeleteFlags::FORMULA, false, rColumn);
 
-    CopyToColumn(rCxt, nRow1, nRow2, nFlags, bMarked, rColumn, pMarkData);      //TODO: bMarked ????
+    CopyToColumn(rCxt, nRow1, nRow2, nFlags, bMarked, rColumn);      //TODO: bMarked ????
 
     if (nRow2 < MAXROW)
         CopyToColumn(rCxt, nRow2+1, MAXROW, InsertDeleteFlags::FORMULA, false, rColumn);
@@ -1909,14 +1911,20 @@ void ScColumn::MoveTo(SCROW nStartRow, SCROW nEndRow, ScColumn& rCol)
     // Split the formula grouping at the top and bottom boundaries.
     sc::CellStoreType::position_type aPos = maCells.position(nStartRow);
     sc::SharedFormulaUtil::splitFormulaCellGroup(aPos, nullptr);
-    aPos = maCells.position(aPos.first, nEndRow+1);
-    sc::SharedFormulaUtil::splitFormulaCellGroup(aPos, nullptr);
+    if (ValidRow(nEndRow+1))
+    {
+        aPos = maCells.position(aPos.first, nEndRow+1);
+        sc::SharedFormulaUtil::splitFormulaCellGroup(aPos, nullptr);
+    }
 
     // Do the same with the destination column.
     aPos = rCol.maCells.position(nStartRow);
     sc::SharedFormulaUtil::splitFormulaCellGroup(aPos, nullptr);
-    aPos = rCol.maCells.position(aPos.first, nEndRow+1);
-    sc::SharedFormulaUtil::splitFormulaCellGroup(aPos, nullptr);
+    if (ValidRow(nEndRow+1))
+    {
+        aPos = rCol.maCells.position(aPos.first, nEndRow+1);
+        sc::SharedFormulaUtil::splitFormulaCellGroup(aPos, nullptr);
+    }
 
     // Move the broadcasters to the destination column.
     maBroadcasters.transfer(nStartRow, nEndRow, rCol.maBroadcasters, nStartRow);
@@ -1930,8 +1938,11 @@ void ScColumn::MoveTo(SCROW nStartRow, SCROW nEndRow, ScColumn& rCol)
     // Re-group transferred formula cells.
     aPos = rCol.maCells.position(nStartRow);
     sc::SharedFormulaUtil::joinFormulaCellAbove(aPos);
-    aPos = rCol.maCells.position(aPos.first, nEndRow+1);
-    sc::SharedFormulaUtil::joinFormulaCellAbove(aPos);
+    if (ValidRow(nEndRow+1))
+    {
+        aPos = rCol.maCells.position(aPos.first, nEndRow+1);
+        sc::SharedFormulaUtil::joinFormulaCellAbove(aPos);
+    }
 
     CellStorageModified();
     rCol.CellStorageModified();
@@ -1952,7 +1963,7 @@ void ScColumn::MoveTo(SCROW nStartRow, SCROW nEndRow, ScColumn& rCol)
 
 namespace {
 
-class SharedTopFormulaCellPicker : std::unary_function<sc::CellStoreType::value_type, void>
+class SharedTopFormulaCellPicker : public std::unary_function<sc::CellStoreType::value_type, void>
 {
 public:
     virtual ~SharedTopFormulaCellPicker() {}
@@ -2026,7 +2037,7 @@ public:
     }
 };
 
-class UpdateRefOnNonCopy : std::unary_function<sc::FormulaGroupEntry, void>
+class UpdateRefOnNonCopy : public std::unary_function<sc::FormulaGroupEntry, void>
 {
     SCCOL mnCol;
     SCROW mnTab;
@@ -2623,9 +2634,9 @@ public:
 
 class UsedRangeNameFinder
 {
-    std::set<sal_uInt16>& mrIndexes;
+    sc::UpdatedRangeNames& mrIndexes;
 public:
-    explicit UsedRangeNameFinder(std::set<sal_uInt16>& rIndexes) : mrIndexes(rIndexes) {}
+    explicit UsedRangeNameFinder(sc::UpdatedRangeNames& rIndexes) : mrIndexes(rIndexes) {}
 
     void operator() (size_t /*nRow*/, const ScFormulaCell* pCell)
     {
@@ -2781,23 +2792,25 @@ struct SetDirtyIfPostponedHandler
 
 struct CalcAllHandler
 {
+#define DEBUG_SC_CHECK_FORMULATREE_CALCULATION 0
     void operator() (size_t /*nRow*/, ScFormulaCell* pCell)
     {
-#if OSL_DEBUG_LEVEL > 1
+#if DEBUG_SC_CHECK_FORMULATREE_CALCULATION
         // after F9 ctrl-F9: check the calculation for each FormulaTree
         double nOldVal, nNewVal;
         nOldVal = pCell->GetValue();
 #endif
         pCell->Interpret();
-#if OSL_DEBUG_LEVEL > 1
+#if DEBUG_SC_CHECK_FORMULATREE_CALCULATION
         if (pCell->GetCode()->IsRecalcModeNormal())
             nNewVal = pCell->GetValue();
         else
             nNewVal = nOldVal;  // random(), jetzt() etc.
 
-        OSL_ENSURE(nOldVal == nNewVal, "CalcAll: nOldVal != nNewVal");
+        assert(nOldVal == nNewVal);
 #endif
     }
+#undef DEBUG_SC_CHECK_FORMULATREE_CALCULATION
 };
 
 class CompileAllHandler
@@ -3049,7 +3062,7 @@ void ScColumn::SetTabNo(SCTAB nNewTab)
     sc::ProcessFormula(maCells, aFunc);
 }
 
-void ScColumn::FindRangeNamesInUse(SCROW nRow1, SCROW nRow2, std::set<sal_uInt16>& rIndexes) const
+void ScColumn::FindRangeNamesInUse(SCROW nRow1, SCROW nRow2, sc::UpdatedRangeNames& rIndexes) const
 {
     UsedRangeNameFinder aFunc(rIndexes);
     sc::ParseFormula(maCells.begin(), maCells, nRow1, nRow2, aFunc);
@@ -3160,7 +3173,14 @@ void ScColumn::SetDirty( SCROW nRow1, SCROW nRow2, BroadcastMode eMode )
                 sc::ProcessFormula(maCells.begin(), maCells, nRow1, nRow2, aHdl);
                 // Broadcast all broadcasters in range.
                 ScHint aHint( SC_HINT_DATACHANGED, ScAddress( nCol, nRow1, nTab));
-                BroadcastBroadcasters( nRow1, nRow2, aHint);
+                if (BroadcastBroadcasters( nRow1, nRow2, aHint))
+                {
+                    // SetDirtyOnRangeHandler implicitly tracks notified
+                    // formulas via ScDocument::Broadcast(), which
+                    // BroadcastBroadcastersHandler doesn't, so explicitly
+                    // track them here.
+                    pDocument->TrackFormulas();
+                }
             }
             break;
     }
@@ -3418,7 +3438,10 @@ SCsROW ScColumn::SearchStyle(
     if (bInSelection)
     {
         if (rMark.IsMultiMarked())
-            return pAttrArray->SearchStyle(nRow, pSearchStyle, bUp, rMark.GetArray()+nCol);
+        {
+            ScMarkArray aArray(rMark.GetMarkArray(nCol));
+            return pAttrArray->SearchStyle(nRow, pSearchStyle, bUp, &aArray);
+        }
         else
             return -1;
     }
@@ -3433,8 +3456,11 @@ bool ScColumn::SearchStyleRange(
     if (bInSelection)
     {
         if (rMark.IsMultiMarked())
+        {
+            ScMarkArray aArray(rMark.GetMarkArray(nCol));
             return pAttrArray->SearchStyleRange(
-                rRow, rEndRow, pSearchStyle, bUp, rMark.GetArray() + nCol);
+                rRow, rEndRow, pSearchStyle, bUp, &aArray);
+        }
         else
             return false;
     }

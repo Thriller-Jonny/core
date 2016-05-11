@@ -58,7 +58,7 @@
 #include <list>
 #include <algorithm>
 #include <memory>
-
+#include <o3tl/make_unique.hxx>
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::accessibility;
 
@@ -140,9 +140,7 @@ ScNotesChildren::~ScNotesChildren()
 
 ::accessibility::AccessibleTextHelper* ScNotesChildren::CreateTextHelper(const OUString& rString, const Rectangle& rVisRect, const ScAddress& aCellPos, bool bMarkNote, sal_Int32 nChildOffset) const
 {
-    ::std::unique_ptr < ScAccessibleTextData > pAccessiblePreviewHeaderCellTextData
-        (new ScAccessibleNoteTextData(mpViewShell, rString, aCellPos, bMarkNote));
-    ::std::unique_ptr< SvxEditSource > pEditSource (new ScAccessibilityEditSource(std::move(pAccessiblePreviewHeaderCellTextData)));
+    ::std::unique_ptr< SvxEditSource > pEditSource (new ScAccessibilityEditSource(o3tl::make_unique<ScAccessibleNoteTextData>(mpViewShell, rString, aCellPos, bMarkNote)));
 
     ::accessibility::AccessibleTextHelper* pTextHelper = new ::accessibility::AccessibleTextHelper(std::move(pEditSource));
 
@@ -174,7 +172,7 @@ sal_Int32 ScNotesChildren::AddNotes(const ScPreviewLocationData& rData, const Re
                 if (bMark)
                 {
                     // Document not needed, because only the cell address, but not the tablename is needed
-                    aNote.maNoteText = aNote.maNoteCell.Format(SCA_VALID);
+                    aNote.maNoteText = aNote.maNoteCell.Format(ScRefFlags::VALID);
                 }
                 else
                 {
@@ -346,7 +344,7 @@ sal_Int32 ScNotesChildren::CheckChanges(const ScPreviewLocationData& rData,
                 if (bMark)
                 {
                     // Document not needed, because only the cell address, but not the tablename is needed
-                    aNote.maNoteText = aNote.maNoteCell.Format(SCA_VALID);
+                    aNote.maNoteText = aNote.maNoteCell.Format(ScRefFlags::VALID);
                 }
                 else
                 {
@@ -499,11 +497,10 @@ private:
     ScPreviewShell*                     mpViewShell;
     ScAccessibleDocumentPagePreview*    mpAccDoc;
     MapMode                             maMapMode;
-    bool                            mbValid;
 };
 
 ScIAccessibleViewForwarder::ScIAccessibleViewForwarder()
-    : mpViewShell(nullptr), mpAccDoc(nullptr), mbValid(false)
+    : mpViewShell(nullptr), mpAccDoc(nullptr)
 {
 }
 
@@ -512,8 +509,7 @@ ScIAccessibleViewForwarder::ScIAccessibleViewForwarder(ScPreviewShell* pViewShel
                                 const MapMode& aMapMode)
     : mpViewShell(pViewShell),
     mpAccDoc(pAccDoc),
-    maMapMode(aMapMode),
-    mbValid(true)
+    maMapMode(aMapMode)
 {
 }
 

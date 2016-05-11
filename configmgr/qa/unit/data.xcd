@@ -1834,7 +1834,7 @@
       </node>
       <node oor:name=".uno:GrafMode" oor:op="replace">
         <prop oor:name="Label" oor:type="xs:string">
-          <value xml:lang="x-no-translate"></value><value xml:lang="en-US">Graphics mode</value>
+          <value xml:lang="x-no-translate"></value><value xml:lang="en-US">Image mode</value>
         </prop>
         <prop oor:name="Properties" oor:type="xs:int">
           <value>1</value>
@@ -2416,14 +2416,6 @@
       <node oor:name=".uno:ProgressBar" oor:op="replace">
         <prop oor:name="Label" oor:type="xs:string">
           <value xml:lang="x-no-translate"></value><value xml:lang="en-US">Progress Bar</value>
-        </prop>
-        <prop oor:name="Properties" oor:type="xs:int">
-          <value>1</value>
-        </prop>
-      </node>
-      <node oor:name=".uno:PlugInsActive" oor:op="replace">
-        <prop oor:name="Label" oor:type="xs:string">
-          <value xml:lang="x-no-translate"></value><value xml:lang="en-US">P~lug-in</value>
         </prop>
         <prop oor:name="Properties" oor:type="xs:int">
           <value>1</value>
@@ -3174,14 +3166,6 @@
           <value xml:lang="x-no-translate"></value><value xml:lang="en-US">Insert business cards</value>
         </prop>
       </node>
-      <node oor:name=".uno:InsertPlugin" oor:op="replace">
-        <prop oor:name="Label" oor:type="xs:string">
-          <value xml:lang="x-no-translate"></value><value xml:lang="en-US">~Plug-in...</value>
-        </prop>
-        <prop oor:name="Properties" oor:type="xs:int">
-          <value>1</value>
-        </prop>
-      </node>
       <node oor:name=".uno:BringToFront" oor:op="replace">
         <prop oor:name="Label" oor:type="xs:string">
           <value xml:lang="x-no-translate"></value><value xml:lang="en-US">~Bring to Front</value>
@@ -3209,22 +3193,6 @@
       <node oor:name=".uno:SourceView" oor:op="replace">
         <prop oor:name="Label" oor:type="xs:string">
           <value xml:lang="x-no-translate"></value><value xml:lang="en-US">HT~ML Source</value>
-        </prop>
-        <prop oor:name="Properties" oor:type="xs:int">
-          <value>1</value>
-        </prop>
-      </node>
-      <node oor:name=".uno:InsertSound" oor:op="replace">
-        <prop oor:name="Label" oor:type="xs:string">
-          <value xml:lang="x-no-translate"></value><value xml:lang="en-US">~Sound...</value>
-        </prop>
-        <prop oor:name="Properties" oor:type="xs:int">
-          <value>1</value>
-        </prop>
-      </node>
-      <node oor:name=".uno:InsertVideo" oor:op="replace">
-        <prop oor:name="Label" oor:type="xs:string">
-          <value xml:lang="x-no-translate"></value><value xml:lang="en-US">~Video...</value>
         </prop>
         <prop oor:name="Properties" oor:type="xs:int">
           <value>1</value>
@@ -3864,7 +3832,7 @@
       </node>
       <node oor:name=".uno:SdGraphicOptions" oor:op="replace">
         <prop oor:name="Label" oor:type="xs:string">
-          <value xml:lang="x-no-translate"></value><value xml:lang="en-US">Presentation Graphic Options</value>
+          <value xml:lang="x-no-translate"></value><value xml:lang="en-US">Presentation Image Options</value>
         </prop>
       </node>
       <node oor:name=".uno:NavigationBarVisible" oor:op="replace">

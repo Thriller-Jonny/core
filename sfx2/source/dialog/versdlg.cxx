@@ -19,7 +19,6 @@
 
 #include <sal/config.h>
 
-#include <boost/noncopyable.hpp>
 #include <unotools/localedatawrapper.hxx>
 #include <comphelper/processfactory.hxx>
 #include <svl/eitem.hxx>
@@ -63,7 +62,7 @@ struct SfxVersionInfo
                             SfxVersionInfo();
 };
 
-class SfxVersionTableDtor: private boost::noncopyable
+class SfxVersionTableDtor
 {
 private:
     std::vector< SfxVersionInfo* >  aTableList;
@@ -72,6 +71,8 @@ public:
     explicit                SfxVersionTableDtor( const uno::Sequence < document::CmisVersion > & rInfo );
                             ~SfxVersionTableDtor()
                             { DelDtor(); }
+                            SfxVersionTableDtor(const SfxVersionTableDtor&) = delete;
+    SfxVersionTableDtor&    operator=(const SfxVersionTableDtor&) = delete;
 
     void                    DelDtor();
 
@@ -112,8 +113,8 @@ SfxVersionTableDtor::SfxVersionTableDtor( const uno::Sequence < document::CmisVe
 
 void SfxVersionTableDtor::DelDtor()
 {
-    for ( size_t i = 0, n = aTableList.size(); i < n; ++i )
-        delete aTableList[ i ];
+    for (SfxVersionInfo* i : aTableList)
+        delete i;
     aTableList.clear();
 }
 
@@ -359,12 +360,16 @@ void SfxVersionDialog::Open_Impl()
     {
         // there is a password, it should be used during the opening
         SfxUnoAnyItem aEncryptionDataItem( SID_ENCRYPTIONDATA, uno::makeAny( aEncryptionData ) );
-        pViewFrame->GetDispatcher()->Execute(
-            SID_OPENDOC, SfxCallMode::ASYNCHRON, &aFile, &aItem, &aTarget, &aReferer, &aEncryptionDataItem, 0L );
+        pViewFrame->GetDispatcher()->ExecuteList(
+            SID_OPENDOC, SfxCallMode::ASYNCHRON,
+            { &aFile, &aItem, &aTarget, &aReferer, &aEncryptionDataItem });
     }
     else
-        pViewFrame->GetDispatcher()->Execute(
-            SID_OPENDOC, SfxCallMode::ASYNCHRON, &aFile, &aItem, &aTarget, &aReferer, 0L );
+    {
+        pViewFrame->GetDispatcher()->ExecuteList(
+            SID_OPENDOC, SfxCallMode::ASYNCHRON,
+            { &aFile, &aItem, &aTarget, &aReferer });
+    }
 
     Close();
 }

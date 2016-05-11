@@ -37,7 +37,6 @@
 #include <cppuhelper/implbase.hxx>
 
 
-
 #include <sfx2/app.hxx>
 #include "sfxpicklist.hxx"
 #include <sfx2/sfxuno.hxx>
@@ -58,11 +57,9 @@
 #include <algorithm>
 
 
-
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::util;
-
 
 
 class StringLength : public ::cppu::WeakImplHelper< XStringWidth >
@@ -146,8 +143,8 @@ namespace
 void SfxPickList::RemovePickListEntries()
 {
     ::osl::MutexGuard aGuard( thePickListMutex::get() );
-    for ( size_t i = 0; i < m_aPicklistVector.size(); i++ )
-        delete m_aPicklistVector[i];
+    for (PickListEntry* p : m_aPicklistVector)
+        delete p;
     m_aPicklistVector.clear();
 }
 
@@ -194,7 +191,7 @@ void SfxPickList::AddDocumentToPickList( SfxObjectShell* pDocSh )
 
     OUString  aTitle = pDocSh->GetTitle(SFX_TITLE_PICKLIST);
     OUString  aFilter;
-    const SfxFilter* pFilter = pMed->GetOrigFilter();
+    std::shared_ptr<const SfxFilter> pFilter = pMed->GetOrigFilter();
     if ( pFilter )
         aFilter = pFilter->GetFilterName();
 

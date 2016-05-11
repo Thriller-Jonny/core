@@ -154,14 +154,14 @@ public:
     bool mbTemplatesReady;
 
     /** Flag used to prevent nested or concurrent calls to the
-        <member>UpdatePreview</memember> method.  A <TRUE/> value indicates
+        <member>UpdatePreview</member> method.  A <TRUE/> value indicates
         that a preview update is currently active.
     */
     bool mbPreviewUpdating;
 
     VclPtr<vcl::Window> mpWindow;
 
-    void SavePassword( SfxObjectShellLock xDoc, const OUString& rPath );
+    void SavePassword( const SfxObjectShellLock& xDoc, const OUString& rPath );
     void RestorePassword( SfxItemSet* pSet, const OUString& rPath );
     uno::Sequence < beans::NamedValue > GetPassword( const OUString& rPath );
     void DeletePasswords();
@@ -209,7 +209,7 @@ public:
     static bool IsOwnFormat( const OUString& rPath );
 
     // dlg status
-    void EndDialog( long nResult = 0 );
+    void EndDialog();
 
     void SetStartType( StartType eType );
     StartType GetStartType();
@@ -678,7 +678,7 @@ void AssistentDlgImpl::CloseDocShell()
         uno::Reference< util::XCloseable > xCloseable( xDocShell->GetModel(), uno::UNO_QUERY );
         if( xCloseable.is() )
         {
-            xCloseable->close( sal_True );
+            xCloseable->close( true );
             xDocShell = nullptr;
         }
         else
@@ -689,7 +689,7 @@ void AssistentDlgImpl::CloseDocShell()
     }
 }
 
-void AssistentDlgImpl::EndDialog( long )
+void AssistentDlgImpl::EndDialog()
 {
     mpWindow = nullptr;
 }
@@ -1469,7 +1469,7 @@ void AssistentDlgImpl::UpdatePreview( bool bDocPreview )
             if(bDocPreview)
                 pSet->Put( SfxBoolItem( SID_PREVIEW, true ) );
             RestorePassword( pSet, aDocFile );
-            if( (lErr = pSfxApp->LoadTemplate( xDocShell, aDocFile, true, pSet )) != 0 )
+            if( (lErr = pSfxApp->LoadTemplate( xDocShell, aDocFile, pSet )) != 0 )
                 ErrorHandler::HandleError(lErr);
             else
                 SavePassword( xDocShell, aDocFile );
@@ -1513,7 +1513,7 @@ void AssistentDlgImpl::UpdatePreview( bool bDocPreview )
             pSet->Put( SfxBoolItem( SID_PREVIEW, true ) );
 
             RestorePassword( pSet, aLayoutFile );
-            if( (lErr = pSfxApp->LoadTemplate( xLayoutDocShell, aLayoutFile, true, pSet )) != 0 )
+            if( (lErr = pSfxApp->LoadTemplate( xLayoutDocShell, aLayoutFile, pSet )) != 0 )
                 ErrorHandler::HandleError(lErr);
             SavePassword( xLayoutDocShell, aLayoutFile );
         }
@@ -1555,7 +1555,7 @@ void AssistentDlgImpl::UpdatePreview( bool bDocPreview )
     mbPreviewUpdating = false;
 }
 
-void AssistentDlgImpl::SavePassword( SfxObjectShellLock xDoc, const OUString& rPath )
+void AssistentDlgImpl::SavePassword( const SfxObjectShellLock& xDoc, const OUString& rPath )
 {
     if(xDoc.Is())
     {
@@ -1573,11 +1573,11 @@ void AssistentDlgImpl::SavePassword( SfxObjectShellLock xDoc, const OUString& rP
           {
 
             PasswordEntry* pEntry = nullptr;
-            for ( size_t i = 0, n = maPasswordList.size(); i < n; ++i )
+            for (PasswordEntry& rEntry : maPasswordList)
             {
-                if ( maPasswordList[ i ].maPath == rPath )
+                if ( rEntry.maPath == rPath )
                 {
-                    pEntry = &maPasswordList[ i ];
+                    pEntry = &rEntry;
                     break;
                 }
             }
@@ -1605,13 +1605,12 @@ void AssistentDlgImpl::RestorePassword( SfxItemSet* pSet, const OUString& rPath 
 
 uno::Sequence < beans::NamedValue > AssistentDlgImpl::GetPassword( const OUString& rPath )
 {
-    for ( size_t i = 0, n = maPasswordList.size(); i < n; ++i )
+    for (PasswordEntry & rEntry : maPasswordList)
     {
-        PasswordEntry* pEntry = &maPasswordList[ i ];
-        if(pEntry->maPath == rPath)
-            return pEntry->aEncryptionData;
+        if(rEntry.maPath == rPath)
+            return rEntry.aEncryptionData;
     }
-    return uno::Sequence < beans::NamedValue > ();;
+    return uno::Sequence < beans::NamedValue > ();
 }
 
 void AssistentDlgImpl::DeletePasswords()
@@ -1778,7 +1777,7 @@ void AssistentDlg::FinishHdl()
     }
 
     // end
-    mpImpl->EndDialog(RET_OK);
+    mpImpl->EndDialog();
     EndDialog(RET_OK);
 }
 

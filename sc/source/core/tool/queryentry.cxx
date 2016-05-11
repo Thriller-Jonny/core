@@ -24,7 +24,7 @@
 /*
  * dialog returns the special field values "empty"/"not empty"
  * as constants SC_EMPTYFIELDS and SC_NONEMPTYFIELDS respectively in nVal in
- * conjuctions with the flag bQueryByString = FALSE.
+ * conjunctions with the flag bQueryByString = FALSE.
  */
 
 #define SC_EMPTYFIELDS      ((double)0x0042)
@@ -164,13 +164,14 @@ bool ScQueryEntry::operator==( const ScQueryEntry& r ) const
     // do not compare pSearchParam and pSearchText!
 }
 
-utl::TextSearch* ScQueryEntry::GetSearchTextPtr( bool bCaseSens ) const
+utl::TextSearch* ScQueryEntry::GetSearchTextPtr( utl::SearchParam::SearchType eSearchType, bool bCaseSens,
+        bool bWildMatchSel ) const
 {
     if ( !pSearchParam )
     {
         OUString aStr = maQueryItems[0].maString.getString();
         pSearchParam = new utl::SearchParam(
-            aStr, utl::SearchParam::SRCH_REGEXP, bCaseSens, false, false);
+            aStr, eSearchType, bCaseSens, '~', bWildMatchSel);
         pSearchText = new utl::TextSearch( *pSearchParam, *ScGlobal::pCharClass );
     }
     return pSearchText;

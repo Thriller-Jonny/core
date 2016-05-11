@@ -28,9 +28,6 @@
 #include <memory>
 
 
-// - SVGDialog -
-
-
 class ResMgr;
 
 class SVGDialog : public ::svt::OGenericUnoDialog,
@@ -40,7 +37,6 @@ class SVGDialog : public ::svt::OGenericUnoDialog,
 {
 private:
 
-    ::std::unique_ptr< ResMgr >                     mapResMgr;
     css::uno::Sequence< css::beans::PropertyValue > maMediaDescriptor;
     css::uno::Sequence< css::beans::PropertyValue > maFilterData;
     css::uno::Reference< css::lang::XComponent >    mxSrcDoc;
@@ -78,26 +74,22 @@ public:
 };
 
 
-
 OUString SVGDialog_getImplementationName ()
     throw ( css::uno::RuntimeException );
-
 
 
 bool SAL_CALL SVGDialog_supportsService( const OUString& ServiceName )
     throw ( css::uno::RuntimeException );
 
 
-
 css::uno::Sequence< OUString > SAL_CALL SVGDialog_getSupportedServiceNames(  )
     throw ( css::uno::RuntimeException );
-
 
 
 css::uno::Reference< css::uno::XInterface >
     SAL_CALL SVGDialog_createInstance( const css::uno::Reference< css::lang::XMultiServiceFactory > & rSMgr)
         throw ( css::uno::Exception );
 
-#endif // SVGDialog_HXX
+#endif // INCLUDED_FILTER_SOURCE_SVG_SVGDIALOG_HXX
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

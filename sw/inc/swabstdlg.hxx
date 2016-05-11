@@ -36,6 +36,7 @@
 #include "itabenum.hxx"
 #include <boost/optional.hpp>
 #include "dbmgr.hxx"
+#include <cnttab.hxx>
 
 class SfxViewFrame;
 class SfxBindings;
@@ -73,7 +74,8 @@ struct SfxChildWinInfo;
 class SwTOXMark;
 struct SwDocStat;
 enum class SwBorderModes;
-#include <cnttab.hxx>
+enum class SwCharDlgMode;
+enum class SfxStyleFamily;
 
 namespace com{namespace sun{namespace star{
     namespace frame{
@@ -106,19 +108,19 @@ class AbstractFieldInputDlg : public VclAbstractTerminatedDialog
 public:
     //from class SalFrame
     virtual void         SetWindowState( const OString & rStr ) = 0;
-    virtual OString GetWindowState( sal_uLong nMask = WINDOWSTATE_MASK_ALL ) const = 0;
+    virtual OString      GetWindowState() const = 0;
     virtual void         EndDialog(long ) override = 0;
 };
 
 class AbstractInsFootNoteDlg : public VclAbstractDialog
 {
 public:
-    virtual OUString        GetFontName() = 0;
+    virtual OUString    GetFontName() = 0;
     virtual bool        IsEndNote() = 0;
-    virtual OUString        GetStr() = 0;
+    virtual OUString    GetStr() = 0;
     //from class Window
-    virtual void    SetHelpId( const OString& sHelpId ) = 0;
-    virtual void    SetText( const OUString& rStr ) = 0;
+    virtual void        SetHelpId( const OString& sHelpId ) = 0;
+    virtual void        SetText( const OUString& rStr ) = 0;
 };
 
 class AbstractInsTableDlg : public VclAbstractDialog
@@ -149,14 +151,15 @@ public:
     virtual bool IsSaveSingleDoc() const = 0;
     virtual bool IsGenerateFromDataBase() const = 0;
     virtual OUString GetColumnName() const = 0;
-    virtual OUString GetPath() const = 0;
-
+    virtual OUString GetTargetURL() const = 0;
 };
+
 class AbstractMailMergeCreateFromDlg : public VclAbstractDialog
 {
 public:
     virtual bool    IsThisDocument() const = 0;
 };
+
 class AbstractMailMergeFieldConnectionsDlg : public VclAbstractDialog
 {
 public:
@@ -241,8 +244,8 @@ public:
 class AbstractDropDownFieldDialog : public VclAbstractDialog
 {
 public:
-     virtual OString GetWindowState( sal_uLong nMask = WINDOWSTATE_MASK_ALL ) const = 0; //this method inherit from SystemWindow
-     virtual void         SetWindowState( const OString & rStr ) =0;//this method inherit from SystemWindow
+     virtual OString GetWindowState() const = 0; //this method inherit from SystemWindow
+     virtual void    SetWindowState( const OString & rStr ) = 0; //this method inherit from SystemWindow
 };
 
 class AbstractSwLabDlg  : public SfxAbstractTabDialog
@@ -269,7 +272,7 @@ public:
 class AbstractSwFieldDlg : public SfxAbstractTabDialog
 {
 public:
-    virtual void                Start( bool bShow = true ) = 0;  //this method from sfxtabdialog
+    virtual void                Start() = 0;  //this method from sfxtabdialog
     virtual void                Initialize(SfxChildWinInfo *pInfo) = 0;
     virtual void                ReInitDlg() = 0;
     virtual void                ActivateDatabasePage() = 0;
@@ -300,8 +303,6 @@ public:
 };
 
 #define RET_LOAD_DOC            100
-#define RET_EDIT_DOC            101
-#define RET_EDIT_RESULT_DOC     102
 #define RET_TARGET_CREATED      103
 #define RET_REMOVE_TARGET       104
 
@@ -329,15 +330,15 @@ public:
     virtual AbstractSwWordCountFloatDlg* CreateSwWordCountDialog(SfxBindings* pBindings,
         SfxChildWindow* pChild, vcl::Window *pParent, SfxChildWinInfo* pInfo) = 0;
 
-    virtual AbstractSwInsertAbstractDlg * CreateSwInsertAbstractDlg(vcl::Window* pParent) = 0;
-    virtual AbstractSwAsciiFilterDlg*  CreateSwAsciiFilterDlg ( vcl::Window* pParent, SwDocShell& rDocSh,
+    virtual AbstractSwInsertAbstractDlg * CreateSwInsertAbstractDlg() = 0;
+    virtual AbstractSwAsciiFilterDlg*  CreateSwAsciiFilterDlg ( SwDocShell& rDocSh,
                                                                 SvStream* pStream ) = 0;
     virtual VclAbstractDialog * CreateSwInsertBookmarkDlg( vcl::Window *pParent, SwWrtShell &rSh, SfxRequest& rReq, int nResId ) = 0;
 
     virtual AbstractSwBreakDlg * CreateSwBreakDlg(vcl::Window *pParent, SwWrtShell &rSh) = 0;
     virtual VclAbstractDialog   * CreateSwChangeDBDlg(SwView& rVw) = 0;
     virtual SfxAbstractTabDialog *  CreateSwCharDlg(vcl::Window* pParent, SwView& pVw, const SfxItemSet& rCoreSet,
-        sal_uInt8 nDialogMode, const OUString* pFormatStr = nullptr) = 0;
+        SwCharDlgMode nDialogMode, const OUString* pFormatStr = nullptr) = 0;
     virtual AbstractSwConvertTableDlg* CreateSwConvertTableDlg(SwView& rView, bool bToTable) = 0;
     virtual VclAbstractDialog * CreateSwCaptionDialog ( vcl::Window *pParent, SwView &rV,int nResId) = 0;
 
@@ -347,11 +348,11 @@ public:
         const SwDBData& rData) = 0;
     virtual SfxAbstractTabDialog * CreateSwFootNoteOptionDlg(vcl::Window *pParent, SwWrtShell &rSh) = 0;
 
-    virtual AbstractDropDownFieldDialog * CreateDropDownFieldDialog(vcl::Window *pParent, SwWrtShell &rSh,
+    virtual AbstractDropDownFieldDialog * CreateDropDownFieldDialog(SwWrtShell &rSh,
         SwField* pField, bool bNextButton = false) = 0;
     virtual SfxAbstractTabDialog* CreateSwEnvDlg ( vcl::Window* pParent, const SfxItemSet& rSet, SwWrtShell* pWrtSh, Printer* pPrt, bool bInsert ) = 0;
 
-    virtual AbstractSwLabDlg* CreateSwLabDlg(vcl::Window* pParent, const SfxItemSet& rSet,
+    virtual AbstractSwLabDlg* CreateSwLabDlg(const SfxItemSet& rSet,
                                                      SwDBManager* pDBManager, bool bLabel) = 0;
 
     virtual SwLabDlgMethod GetSwLabDlgStaticMethod () =0;
@@ -359,12 +360,11 @@ public:
     virtual SfxAbstractTabDialog* CreateSwParaDlg ( vcl::Window *pParent,
                                                     SwView& rVw,
                                                     const SfxItemSet& rCoreSet,
-                                                    sal_uInt8 nDialogMode,
                                                     const OUString *pCollName = nullptr,
                                                     bool bDraw = false,
                                                     const OString& sDefPage = OString() ) = 0;
 
-    virtual AbstractSwSelGlossaryDlg * CreateSwSelGlossaryDlg(vcl::Window * pParent, const OUString &rShortName) = 0;
+    virtual AbstractSwSelGlossaryDlg * CreateSwSelGlossaryDlg(const OUString &rShortName) = 0;
 
     virtual VclAbstractDialog * CreateVclAbstractDialog ( vcl::Window * pParent, SwWrtShell &rSh, int nResId ) = 0;
     virtual AbstractSplitTableDialog * CreateSplitTableDialog ( vcl::Window * pParent, SwWrtShell &rSh ) = 0;
@@ -373,7 +373,7 @@ public:
                                                             bool bSetAutoFormat = true,
                                                             const SwTableAutoFormat* pSelFormat = nullptr ) = 0;
     virtual SfxAbstractDialog * CreateSwBorderDlg ( vcl::Window* pParent, SfxItemSet& rSet, SwBorderModes nType, int nResId ) = 0;
-    virtual SfxAbstractDialog * CreateSwWrapDlg ( vcl::Window* pParent, SfxItemSet& rSet, SwWrtShell* pSh, bool bDrawMode, int nResId ) = 0;
+    virtual SfxAbstractDialog * CreateSwWrapDlg ( vcl::Window* pParent, SfxItemSet& rSet, SwWrtShell* pSh, int nResId ) = 0;
 
     virtual VclAbstractDialog * CreateSwTableWidthDlg(vcl::Window *pParent, SwTableFUNC &rFnc) = 0;
     virtual SfxAbstractTabDialog* CreateSwTableTabDlg(vcl::Window* pParent, SfxItemPool& Pool,
@@ -391,16 +391,14 @@ public:
                                                 SfxViewFrame *pFrame, vcl::Window *pParent,
                                                 const SfxItemSet& rCoreSet,
                                                 bool bNewFrame = true,
-                                                bool bFormat = false,
                                                 const OString& sDefPage = OString(),
                                                 const OUString* pFormatStr = nullptr) = 0;
     /// @param nSlot
     /// Identifies optional Slot by which the creation of the Template (Style) dialog is triggered.
-    /// Currently used, if nRegion == SFX_STYLE_FAMILY_PAGE in order to activate certain dialog pane
+    /// Currently used, if nRegion == SfxStyleFamily::Page in order to activate certain dialog pane
     virtual SfxAbstractApplyTabDialog*  CreateTemplateDialog(
-                                                vcl::Window*             pParent,
                                                 SfxStyleSheetBase&  rBase,
-                                                sal_uInt16          nRegion,
+                                                SfxStyleFamily      nRegion,
                                                 const OString&      sPage = OString(),
                                                 SwWrtShell*         pActShell = nullptr,
                                                 bool                bNew = false) = 0;
@@ -442,14 +440,12 @@ public:
                                                        SfxBindings* pBindings,
                                                        SfxChildWindow* pChild,
                                                        vcl::Window *pParent,
-                                                       SfxChildWinInfo* pInfo,
-                                                       bool bNew=true) = 0;
+                                                       SfxChildWinInfo* pInfo) = 0;
     virtual AbstractMarkFloatDlg*       CreateAuthMarkFloatDlg(
                                                        SfxBindings* pBindings,
                                                        SfxChildWindow* pChild,
                                                        vcl::Window *pParent,
-                                                       SfxChildWinInfo* pInfo,
-                                                       bool bNew=true) = 0;
+                                                       SfxChildWinInfo* pInfo) = 0;
     virtual VclAbstractDialog *         CreateIndexMarkModalDlg(
                                                 vcl::Window *pParent, SwWrtShell& rSh, SwTOXMark* pCurTOXMark) = 0;
 
@@ -460,6 +456,10 @@ public:
 
     // for tabpage
     virtual CreateTabPage               GetTabPageCreatorFunc( sal_uInt16 nId ) = 0;
+
+    virtual void ExecuteMMResultSaveDialog() = 0;
+    virtual void ExecuteMMResultPrintDialog() = 0;
+    virtual void ExecuteMMResultEmailDialog() = 0;
 
 protected:
     ~SwAbstractDialogFactory() {}

@@ -86,23 +86,23 @@ css::uno::Any VCLXTopWindow_Base::getWindowHandle( const css::uno::Sequence< sal
         const SystemEnvData* pSysData = static_cast<SystemWindow *>(pWindow)->GetSystemData();
         if( pSysData )
         {
-#if (defined WNT)
+#if defined (_WIN32)
             if( SystemType == css::lang::SystemDependent::SYSTEM_WIN32 )
             {
                  aRet <<= reinterpret_cast<sal_IntPtr>(pSysData->hWnd);
             }
-#elif (defined MACOSX)
+#elif defined(MACOSX)
             if( SystemType == css::lang::SystemDependent::SYSTEM_MAC )
             {
                  aRet <<= reinterpret_cast<sal_IntPtr>(pSysData->mpNSView);
             }
-#elif (defined ANDROID)
+#elif defined(ANDROID)
             // Nothing
             (void) SystemType;
-#elif (defined IOS)
+#elif defined(IOS)
             // Nothing
             (void) SystemType;
-#elif (defined UNX)
+#elif defined(UNX)
             if( SystemType == css::lang::SystemDependent::SYSTEM_XWINDOW )
             {
                 css::awt::SystemDependentXWindow aSD;
@@ -169,7 +169,7 @@ sal_Bool SAL_CALL VCLXTopWindow_Base::getIsMaximized() throw (RuntimeException, 
 
     const WorkWindow* pWindow = dynamic_cast< const WorkWindow* >( GetWindowImpl() );
     if ( !pWindow )
-        return sal_False;
+        return false;
 
     return pWindow->IsMaximized();
 }
@@ -193,7 +193,7 @@ sal_Bool SAL_CALL VCLXTopWindow_Base::getIsMinimized() throw (RuntimeException, 
 
     const WorkWindow* pWindow = dynamic_cast< const WorkWindow* >( GetWindowImpl() );
     if ( !pWindow )
-        return sal_False;
+        return false;
 
     return pWindow->IsMinimized();
 }
@@ -260,7 +260,7 @@ vcl::Window* VCLXTopWindow::GetWindowImpl()
     return VCLXContainer::GetWindow();
 }
 
-::cppu::OInterfaceContainerHelper& VCLXTopWindow::GetTopWindowListenersImpl()
+::comphelper::OInterfaceContainerHelper2& VCLXTopWindow::GetTopWindowListenersImpl()
 {
     return GetTopWindowListeners();
 }

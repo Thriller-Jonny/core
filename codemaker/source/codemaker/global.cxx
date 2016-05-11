@@ -63,8 +63,7 @@ OString getTempDir(const OString& sFileName)
 OString createFileNameFromType( const OString& destination,
                                 const OString& typeName,
                                 const OString& postfix,
-                                bool bLowerCase,
-                                const OString& prefix )
+                                bool bLowerCase )
 {
     OString type(typeName.replace('.', '/'));
 
@@ -82,7 +81,7 @@ OString createFileNameFromType( const OString& destination,
         bWithPoint = true;
     }
 
-    length += prefix.getLength() + type.getLength() + postfix.getLength();
+    length += type.getLength() + postfix.getLength();
 
     bool bWithSeparator = false;
     if (!(destination.endsWith("\\") || destination.endsWith("/"))
@@ -102,13 +101,7 @@ OString createFileNameFromType( const OString& destination,
     if (bWithSeparator)
         fileNameBuf.append("/", 1);
 
-    OString tmpStr(type);
-    if (!prefix.isEmpty())
-    {
-        tmpStr = type.replaceAt(type.lastIndexOf('/')+1, 0, prefix);
-    }
-
-    fileNameBuf.append(tmpStr.getStr(), tmpStr.getLength());
+    fileNameBuf.append(type.getStr(), type.getLength());
     fileNameBuf.append(postfix.getStr(), postfix.getLength());
 
     OString fileName(fileNameBuf.makeStringAndClear());
@@ -153,7 +146,7 @@ OString createFileNameFromType( const OString& destination,
     OUString uSysFileName;
     OSL_VERIFY( FileBase::getSystemPathFromFileURL(
         convertToFileUrl(fileName), uSysFileName) == FileBase::E_None );
-    return OUStringToOString(uSysFileName, osl_getThreadTextEncoding());;
+    return OUStringToOString(uSysFileName, osl_getThreadTextEncoding());
 }
 
 bool fileExists(const OString& fileName)
@@ -265,7 +258,6 @@ OUString convertToFileUrl(const OString& fileName)
 
     return uUrlFileName;
 }
-
 
 
 // FileStream

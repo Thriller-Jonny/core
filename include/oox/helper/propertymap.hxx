@@ -20,13 +20,14 @@
 #ifndef INCLUDED_OOX_HELPER_PROPERTYMAP_HXX
 #define INCLUDED_OOX_HELPER_PROPERTYMAP_HXX
 
-#include <vector>
 #include <map>
+
 #include <com/sun/star/uno/Any.hxx>
+#include <com/sun/star/uno/Reference.hxx>
 #include <com/sun/star/uno/Sequence.hxx>
-#include <rtl/ustring.hxx>
-#include <oox/token/properties.hxx>
 #include <oox/dllapi.h>
+#include <rtl/ustring.hxx>
+#include <sal/types.h>
 
 namespace com { namespace sun { namespace star { namespace beans {
     struct PropertyValue;
@@ -36,7 +37,6 @@ namespace com { namespace sun { namespace star { namespace beans {
 namespace oox {
 
 struct PropertyNameVector;
-
 
 
 typedef ::std::map< sal_Int32, css::uno::Any > PropertyMapType;
@@ -105,10 +105,10 @@ public:
 
 #if OSL_DEBUG_LEVEL > 0
 #ifdef DBG_UTIL
-  static void dump( css::uno::Reference< css::beans::XPropertySet > rXPropSet);
+  static void dump( const css::uno::Reference< css::beans::XPropertySet >& rXPropSet);
 #endif
-  static void dumpCode( css::uno::Reference< css::beans::XPropertySet > rXPropSet);
-  static void dumpData(css::uno::Reference<css::beans::XPropertySet> rXPropSet);
+  static void dumpCode( const css::uno::Reference< css::beans::XPropertySet >& rXPropSet);
+  static void dumpData( const css::uno::Reference<css::beans::XPropertySet>& rXPropSet);
 #endif
 private:
     const PropertyNameVector* mpPropNames;
@@ -116,7 +116,6 @@ private:
 protected:
     PropertyMapType maProperties;
 };
-
 
 
 } // namespace oox

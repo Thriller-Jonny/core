@@ -96,7 +96,7 @@ void ScFormulaParserObj::SetCompilerFlags( ScCompiler& rCompiler ) const
         formula::FormulaGrammar::CONV_XL_OOX,     // <- AddressConvention::XL_OOX
         formula::FormulaGrammar::CONV_LOTUS_A1    // <- AddressConvention::LOTUS_A1
     };
-    static const sal_Int16 nConvMapCount = sizeof(aConvMap)/sizeof(aConvMap[0]);
+    static const sal_Int16 nConvMapCount = SAL_N_ELEMENTS(aConvMap);
 
     // If mxOpCodeMap is not empty it overrides mbEnglish, and vice versa. We
     // don't need to initialize things twice.
@@ -191,12 +191,11 @@ void SAL_CALL ScFormulaParserObj::setPropertyValue(
                         uno::RuntimeException, std::exception)
 {
     SolarMutexGuard aGuard;
-    OUString aString(aPropertyName);
-    if ( aString == SC_UNO_COMPILEFAP )
+    if ( aPropertyName == SC_UNO_COMPILEFAP )
     {
         aValue >>= mbCompileFAP;
     }
-    else if ( aString == SC_UNO_COMPILEENGLISH )
+    else if ( aPropertyName == SC_UNO_COMPILEENGLISH )
     {
         bool bOldEnglish = mbEnglish;
         if (aValue >>= mbEnglish)
@@ -215,15 +214,15 @@ void SAL_CALL ScFormulaParserObj::setPropertyValue(
         else
             throw lang::IllegalArgumentException();
     }
-    else if ( aString == SC_UNO_FORMULACONVENTION )
+    else if ( aPropertyName == SC_UNO_FORMULACONVENTION )
     {
         aValue >>= mnConv;
     }
-    else if ( aString == SC_UNO_IGNORELEADING )
+    else if ( aPropertyName == SC_UNO_IGNORELEADING )
     {
         aValue >>= mbIgnoreSpaces;
     }
-    else if ( aString == SC_UNO_OPCODEMAP )
+    else if ( aPropertyName == SC_UNO_OPCODEMAP )
     {
         if (aValue >>= maOpCodeMapping)
         {
@@ -235,7 +234,7 @@ void SAL_CALL ScFormulaParserObj::setPropertyValue(
         else
             throw lang::IllegalArgumentException();
     }
-    else if ( aString == SC_UNO_EXTERNALLINKS )
+    else if ( aPropertyName == SC_UNO_EXTERNALLINKS )
     {
         if (!(aValue >>= maExternalLinks))
             throw lang::IllegalArgumentException();
@@ -250,28 +249,27 @@ uno::Any SAL_CALL ScFormulaParserObj::getPropertyValue( const OUString& aPropert
 {
     SolarMutexGuard aGuard;
     uno::Any aRet;
-    OUString aString(aPropertyName);
-    if ( aString == SC_UNO_COMPILEFAP )
+    if ( aPropertyName == SC_UNO_COMPILEFAP )
     {
         aRet <<= mbCompileFAP;
     }
-    else if ( aString == SC_UNO_COMPILEENGLISH )
+    else if ( aPropertyName == SC_UNO_COMPILEENGLISH )
     {
         aRet <<= mbEnglish;
     }
-    else if ( aString == SC_UNO_FORMULACONVENTION )
+    else if ( aPropertyName == SC_UNO_FORMULACONVENTION )
     {
         aRet <<= mnConv;
     }
-    else if ( aString == SC_UNO_IGNORELEADING )
+    else if ( aPropertyName == SC_UNO_IGNORELEADING )
     {
         aRet <<= mbIgnoreSpaces;
     }
-    else if ( aString == SC_UNO_OPCODEMAP )
+    else if ( aPropertyName == SC_UNO_OPCODEMAP )
     {
         aRet <<= maOpCodeMapping;
     }
-    else if ( aString == SC_UNO_EXTERNALLINKS )
+    else if ( aPropertyName == SC_UNO_EXTERNALLINKS )
     {
         aRet <<= maExternalLinks;
     }
@@ -424,7 +422,7 @@ bool ScTokenConversion::ConvertToTokenSequence( const ScDocument& rDoc,
                     {
                         sheet::NameToken aNameToken;
                         aNameToken.Index = static_cast<sal_Int32>( rToken.GetIndex() );
-                        aNameToken.Global = rToken.IsGlobal();
+                        aNameToken.Sheet = rToken.GetSheet();
                         rAPI.Data <<= aNameToken;
                     }
                     break;
@@ -478,7 +476,7 @@ bool ScTokenConversion::ConvertToTokenSequence( const ScDocument& rDoc,
                     break;
                 default:
                     OSL_TRACE( "ScTokenConversion::ConvertToTokenSequence: unhandled token type SvStackVar %d", rToken.GetType());
-                    //fall-through
+                    SAL_FALLTHROUGH;
                 case svSep:     // occurs with ocSep, ocOpen, ocClose, ocArray*
                 case svJump:    // occurs with ocIf, ocChoose
                 case svMissing: // occurs with ocMissing

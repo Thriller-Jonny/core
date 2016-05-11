@@ -59,7 +59,6 @@ namespace chart
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::chart2;
 
-using ::com::sun::star::uno::Reference;
 using ::com::sun::star::uno::Sequence;
 
 RangeChooserTabPage::RangeChooserTabPage( vcl::Window* pParent
@@ -72,7 +71,6 @@ RangeChooserTabPage::RangeChooserTabPage( vcl::Window* pParent
         ,"modules/schart/ui/tp_RangeChooser.ui")
         , m_nChangingControlCalls(0)
         , m_bIsDirty(false)
-        , m_xDataProvider( nullptr )
         , m_aLastValidRangeString()
         , m_xCurrentChartTypeTemplate(nullptr)
         , m_pTemplateProvider(pTemplateProvider)
@@ -388,6 +386,7 @@ void RangeChooserTabPage::listeningFinished( const OUString & rNewRange )
 {
     //user has selected a new range
 
+    // rNewRange becomes invalid after removing the listener
     OUString aRange( rNewRange );
 
     m_rDialogModel.startControllerLockTimer();

@@ -111,8 +111,10 @@ public:
 class LibLBoxString : public SvLBoxString
 {
 public:
-    LibLBoxString( SvTreeListEntry* pEntry, sal_uInt16 nFlags, const OUString& rTxt ) :
-        SvLBoxString( pEntry, nFlags, rTxt ) {}
+    explicit LibLBoxString(const OUString& rTxt)
+        : SvLBoxString(rTxt)
+    {
+    }
 
     virtual void Paint(const Point& rPos, SvTreeListBox& rDev, vcl::RenderContext& rRenderContext,
                        const SvViewDataEntry* pView, const SvTreeListEntry& rEntry) override;
@@ -229,15 +231,15 @@ void CheckBox::CheckEntryPos( sal_uLong nPos )
     {
         SvTreeListEntry* pEntry = GetEntry( nPos );
 
-        if ( GetCheckButtonState( pEntry ) != SV_BUTTON_CHECKED )
-            SetCheckButtonState( pEntry, SvButtonState(SV_BUTTON_CHECKED) );
+        if ( GetCheckButtonState( pEntry ) != SvButtonState::Checked )
+            SetCheckButtonState( pEntry, SvButtonState::Checked );
     }
 }
 
 bool CheckBox::IsChecked( sal_uLong nPos ) const
 {
     if ( nPos < GetEntryCount() )
-        return GetCheckButtonState(GetEntry(nPos)) == SV_BUTTON_CHECKED;
+        return GetCheckButtonState(GetEntry(nPos)) == SvButtonState::Checked;
     return false;
 }
 
@@ -253,7 +255,7 @@ void CheckBox::InitEntry(SvTreeListEntry* pEntry, const OUString& rTxt,
         for ( sal_uInt16 nCol = 1; nCol < nCount; ++nCol )
         {
             SvLBoxString& rCol = static_cast<SvLBoxString&>(pEntry->GetItem( nCol ));
-            pEntry->ReplaceItem(o3tl::make_unique<LibLBoxString>( pEntry, 0, rCol.GetText() ), nCol);
+            pEntry->ReplaceItem(o3tl::make_unique<LibLBoxString>( rCol.GetText() ), nCol);
         }
     }
 }
@@ -631,9 +633,9 @@ IMPL_LINK_TYPED( LibPage, ButtonHdl, Button *, pButton, void )
         OUString aLibName( SvTabListBox::GetEntryText( pCurEntry, 0 ) );
         SfxStringItem aLibNameItem( SID_BASICIDE_ARG_LIBNAME, aLibName );
         if (SfxDispatcher* pDispatcher = GetDispatcher())
-            pDispatcher->Execute( SID_BASICIDE_LIBSELECTED,
-                                    SfxCallMode::ASYNCHRON, &aDocItem, &aLibNameItem, 0L );
-        EndTabDialog( 1 );
+            pDispatcher->ExecuteList( SID_BASICIDE_LIBSELECTED,
+                SfxCallMode::ASYNCHRON, { &aDocItem, &aLibNameItem });
+        EndTabDialog();
         return;
     }
     else if (pButton == m_pNewLibButton)
@@ -1009,8 +1011,7 @@ void LibPage::InsertLib()
                                                 {
                                                     try
                                                     {
-                                                        OUString _aPassword( aPassword );
-                                                        xPasswd->changeLibraryPassword( aLibName, OUString(), _aPassword );
+                                                        xPasswd->changeLibraryPassword( aLibName, OUString(), aPassword );
                                                     }
                                                     catch (...)
                                                     {
@@ -1099,16 +1100,15 @@ void LibPage::Export()
     OUString aLibName( SvTabListBox::GetEntryText( pCurEntry, 0 ) );
 
     // Password verification
-    OUString aOULibName( aLibName );
     Reference< script::XLibraryContainer2 > xModLibContainer( m_aCurDocument.getLibraryContainer( E_SCRIPTS ), UNO_QUERY );
 
-    if ( xModLibContainer.is() && xModLibContainer->hasByName( aOULibName ) && !xModLibContainer->isLibraryLoaded( aOULibName ) )
+    if ( xModLibContainer.is() && xModLibContainer->hasByName( aLibName ) && !xModLibContainer->isLibraryLoaded( aLibName ) )
     {
         bool bOK = true;
 
         // check password
         Reference< script::XLibraryContainerPassword > xPasswd( xModLibContainer, UNO_QUERY );
-        if ( xPasswd.is() && xPasswd->isLibraryPasswordProtected( aOULibName ) && !xPasswd->isLibraryPasswordVerified( aOULibName ) )
+        if ( xPasswd.is() && xPasswd->isLibraryPasswordProtected( aLibName ) && !xPasswd->isLibraryPasswordVerified( aLibName ) )
         {
             OUString aPassword;
             Reference< script::XLibraryContainer > xModLibContainer1( xModLibContainer, UNO_QUERY );
@@ -1137,22 +1137,21 @@ void LibPage::Export()
 void LibPage::implExportLib( const OUString& aLibName, const OUString& aTargetURL,
     const Reference< task::XInteractionHandler >& Handler )
 {
-    OUString aOULibName( aLibName );
     Reference< script::XLibraryContainerExport > xModLibContainerExport
         ( m_aCurDocument.getLibraryContainer( E_SCRIPTS ), UNO_QUERY );
     Reference< script::XLibraryContainerExport > xDlgLibContainerExport
         ( m_aCurDocument.getLibraryContainer( E_DIALOGS ), UNO_QUERY );
     if ( xModLibContainerExport.is() )
-        xModLibContainerExport->exportLibrary( aOULibName, aTargetURL, Handler );
+        xModLibContainerExport->exportLibrary( aLibName, aTargetURL, Handler );
 
     if (!xDlgLibContainerExport.is())
         return;
     Reference<container::XNameAccess> xNameAcc(xDlgLibContainerExport, UNO_QUERY);
     if (!xNameAcc.is())
         return;
-    if (!xNameAcc->hasByName(aOULibName))
+    if (!xNameAcc->hasByName(aLibName))
         return;
-    xDlgLibContainerExport->exportLibrary(aOULibName, aTargetURL, Handler);
+    xDlgLibContainerExport->exportLibrary(aLibName, aTargetURL, Handler);
 }
 
 // Implementation XCommandEnvironment
@@ -1229,7 +1228,7 @@ void LibPage::ExportAsPackage( const OUString& aLibName )
 
         OUString aTmpPath = SvtPathOptions().GetTempPath();
         INetURLObject aInetObj( aTmpPath );
-        aInetObj.insertName( aLibName, true, INetURLObject::LAST_SEGMENT, true, INetURLObject::ENCODE_ALL );
+        aInetObj.insertName( aLibName, true, INetURLObject::LAST_SEGMENT, INetURLObject::ENCODE_ALL );
         OUString aSourcePath = aInetObj.GetMainURL( INetURLObject::NO_DECODE );
         if( xSFA->exists( aSourcePath ) )
             xSFA->kill( aSourcePath );
@@ -1261,7 +1260,7 @@ void LibPage::ExportAsPackage( const OUString& aLibName )
 
         INetURLObject aMetaInfInetObj( aTmpPath );
         aMetaInfInetObj.insertName( "META-INF",
-            true, INetURLObject::LAST_SEGMENT, true, INetURLObject::ENCODE_ALL );
+            true, INetURLObject::LAST_SEGMENT, INetURLObject::ENCODE_ALL );
         OUString aMetaInfFolder = aMetaInfInetObj.GetMainURL( INetURLObject::NO_DECODE );
         if( xSFA->exists( aMetaInfFolder ) )
             xSFA->kill( aMetaInfFolder );
@@ -1288,7 +1287,7 @@ void LibPage::ExportAsPackage( const OUString& aLibName )
                 &manifest[ 0 ], manifest.size() ) );
 
         aMetaInfInetObj.insertName( "manifest.xml",
-            true, INetURLObject::LAST_SEGMENT, true, INetURLObject::ENCODE_ALL );
+            true, INetURLObject::LAST_SEGMENT, INetURLObject::ENCODE_ALL );
 
         // write buffered pipe data to content:
         ::ucbhelper::Content manifestContent( aMetaInfInetObj.GetMainURL( INetURLObject::NO_DECODE ), xCmdEnv, comphelper::getProcessComponentContext() );
@@ -1340,11 +1339,10 @@ void LibPage::DeleteCurrent()
 
     // check, if library is link
     bool bIsLibraryLink = false;
-    OUString aOULibName( aLibName );
     Reference< script::XLibraryContainer2 > xModLibContainer( m_aCurDocument.getLibraryContainer( E_SCRIPTS ), UNO_QUERY );
     Reference< script::XLibraryContainer2 > xDlgLibContainer( m_aCurDocument.getLibraryContainer( E_DIALOGS ), UNO_QUERY );
-    if ( ( xModLibContainer.is() && xModLibContainer->hasByName( aOULibName ) && xModLibContainer->isLibraryLink( aOULibName ) ) ||
-         ( xDlgLibContainer.is() && xDlgLibContainer->hasByName( aOULibName ) && xDlgLibContainer->isLibraryLink( aOULibName ) ) )
+    if ( ( xModLibContainer.is() && xModLibContainer->hasByName( aLibName ) && xModLibContainer->isLibraryLink( aLibName ) ) ||
+         ( xDlgLibContainer.is() && xDlgLibContainer->hasByName( aLibName ) && xDlgLibContainer->isLibraryLink( aLibName ) ) )
     {
         bIsLibraryLink = true;
     }
@@ -1355,25 +1353,25 @@ void LibPage::DeleteCurrent()
         SfxUsrAnyItem aDocItem( SID_BASICIDE_ARG_DOCUMENT_MODEL, makeAny( m_aCurDocument.getDocumentOrNull() ) );
         SfxStringItem aLibNameItem( SID_BASICIDE_ARG_LIBNAME, aLibName );
         if (SfxDispatcher* pDispatcher = GetDispatcher())
-            pDispatcher->Execute( SID_BASICIDE_LIBREMOVED,
-                                  SfxCallMode::SYNCHRON, &aDocItem, &aLibNameItem, 0L );
+            pDispatcher->ExecuteList(SID_BASICIDE_LIBREMOVED,
+                      SfxCallMode::SYNCHRON, { &aDocItem, &aLibNameItem });
 
         // remove library from module and dialog library containers
-        if ( xModLibContainer.is() && xModLibContainer->hasByName( aOULibName ) )
-            xModLibContainer->removeLibrary( aOULibName );
-        if ( xDlgLibContainer.is() && xDlgLibContainer->hasByName( aOULibName ) )
-            xDlgLibContainer->removeLibrary( aOULibName );
+        if ( xModLibContainer.is() && xModLibContainer->hasByName( aLibName ) )
+            xModLibContainer->removeLibrary( aLibName );
+        if ( xDlgLibContainer.is() && xDlgLibContainer->hasByName( aLibName ) )
+            xDlgLibContainer->removeLibrary( aLibName );
 
         static_cast<SvTreeListBox&>(*m_pLibBox).GetModel()->Remove( pCurEntry );
         MarkDocumentModified( m_aCurDocument );
     }
 }
 
-void LibPage::EndTabDialog( sal_uInt16 nRet )
+void LibPage::EndTabDialog()
 {
     DBG_ASSERT( pTabDlg, "TabDlg nicht gesetzt!" );
     if ( pTabDlg )
-        pTabDlg->EndDialog( nRet );
+        pTabDlg->EndDialog( 1 );
 }
 
 void LibPage::FillListBox()
@@ -1440,14 +1438,13 @@ SvTreeListEntry* LibPage::ImpInsertLibEntry( const OUString& rLibName, sal_uLong
 {
     // check, if library is password protected
     bool bProtected = false;
-    OUString aOULibName( rLibName );
     Reference< script::XLibraryContainer2 > xModLibContainer( m_aCurDocument.getLibraryContainer( E_SCRIPTS ), UNO_QUERY );
-    if ( xModLibContainer.is() && xModLibContainer->hasByName( aOULibName ) )
+    if ( xModLibContainer.is() && xModLibContainer->hasByName( rLibName ) )
     {
         Reference< script::XLibraryContainerPassword > xPasswd( xModLibContainer, UNO_QUERY );
         if ( xPasswd.is() )
         {
-            bProtected = xPasswd->isLibraryPasswordProtected( aOULibName );
+            bProtected = xPasswd->isLibraryPasswordProtected( rLibName );
         }
     }
 
@@ -1462,9 +1459,9 @@ SvTreeListEntry* LibPage::ImpInsertLibEntry( const OUString& rLibName, sal_uLong
     }
 
     // check, if library is link
-    if ( xModLibContainer.is() && xModLibContainer->hasByName( aOULibName ) && xModLibContainer->isLibraryLink( aOULibName ) )
+    if ( xModLibContainer.is() && xModLibContainer->hasByName( rLibName ) && xModLibContainer->isLibraryLink( rLibName ) )
     {
-        OUString aLinkURL = xModLibContainer->getLibraryLinkURL( aOULibName );
+        OUString aLinkURL = xModLibContainer->getLibraryLinkURL( rLibName );
         m_pLibBox->SetEntryText( aLinkURL, pNewEntry, 1 );
     }
 
@@ -1534,8 +1531,8 @@ void createLibImpl( vcl::Window* pWin, const ScriptDocument& rDocument,
 
                 SbxItem aSbxItem( SID_BASICIDE_ARG_SBX, rDocument, aLibName, aModName, TYPE_MODULE );
                 if (SfxDispatcher* pDispatcher = GetDispatcher())
-                    pDispatcher->Execute( SID_BASICIDE_SBXINSERTED,
-                                          SfxCallMode::SYNCHRON, &aSbxItem, 0L );
+                    pDispatcher->ExecuteList(SID_BASICIDE_SBXINSERTED,
+                                          SfxCallMode::SYNCHRON, { &aSbxItem });
 
                 if( pBasicBox )
                 {

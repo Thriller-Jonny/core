@@ -20,6 +20,7 @@
 #include "formulabase.hxx"
 
 #include <map>
+#include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/table/XCellRange.hpp>
 #include <com/sun/star/sheet/AddressConvention.hpp>
@@ -895,6 +896,30 @@ static const FunctionData saFuncTable2013[] =
     { "ERROR.TYPE",             "ERROR.TYPE",           NOID,   NOID,   1,  1,  V, { VR }, FUNCFLAG_MACROCALL_NEW }
 };
 
+/** Functions new in Excel 2016.
+
+    See https://support.office.com/en-us/article/Forecasting-functions-897a2fe9-6595-4680-a0b0-93e0308d5f6e?ui=en-US&rs=en-US&ad=US#_forecast.ets
+    and  https://support.office.com/en-us/article/What-s-New-and-Improved-in-Office-2016-for-Office-365-95c8d81d-08ba-42c1-914f-bca4603e1426?ui=en-US&rs=en-US&ad=US
+
+    @See sc/source/filter/excel/xlformula.cxx saFuncTable_2016
+ */
+/* FIXME: BIFF12 function identifiers available? Where to obtain? */
+static const FunctionData saFuncTable2016[] =
+{
+    { "COM.MICROSOFT.FORECAST.ETS",             "FORECAST.ETS",             NOID,   NOID,   3,  6,  V, { VR, VA, VR }, FUNCFLAG_MACROCALL_NEW },
+    { "COM.MICROSOFT.FORECAST.ETS.CONFINT",     "FORECAST.ETS.CONFINT",     NOID,   NOID,   4,  7,  V, { VR, VA, VR }, FUNCFLAG_MACROCALL_NEW },
+    { "COM.MICROSOFT.FORECAST.ETS.SEASONALITY", "FORECAST.ETS.SEASONALITY", NOID,   NOID,   2,  4,  V, { VR, VA, VR }, FUNCFLAG_MACROCALL_NEW },
+    { "COM.MICROSOFT.FORECAST.ETS.STAT",        "FORECAST.ETS.STAT",        NOID,   NOID,   3,  6,  V, { VR, VA, VR }, FUNCFLAG_MACROCALL_NEW },
+    { "COM.MICROSOFT.FORECAST.LINEAR",          "FORECAST.LINEAR",          NOID,   NOID,   3,  3,  V, { VR, VA }, FUNCFLAG_MACROCALL_NEW },
+    { "COM.MICROSOFT.CONCAT",                   "CONCAT",                   NOID,   NOID,   1,  MX, V, { VR }, FUNCFLAG_MACROCALL_NEW },
+    { "COM.MICROSOFT.TEXTJOIN",                 "TEXTJOIN",                 NOID,   NOID,   3,  MX, V, { VR }, FUNCFLAG_MACROCALL_NEW },
+    { "COM.MICROSOFT.IFS",                      "IFS",                      NOID,   NOID,   2,  MX, R, { VO, RO }, FUNCFLAG_MACROCALL_NEW },
+    { "COM.MICROSOFT.SWITCH",                   "SWITCH",                   NOID,   NOID,   3,  MX, R, { VO, RO }, FUNCFLAG_MACROCALL_NEW },
+    { "COM.MICROSOFT.MINIFS",                   "MINIFS",                   NOID,   NOID,   3,  MX, R, { VO, RO }, FUNCFLAG_MACROCALL_NEW },
+    { "COM.MICROSOFT.MAXIFS",                   "MAXIFS",                   NOID,   NOID,   3,  MX, R, { VO, RO }, FUNCFLAG_MACROCALL_NEW }
+};
+
+
 /** Functions defined by OpenFormula, but not supported by Calc or by Excel. */
 static const FunctionData saFuncTableOdf[] =
 {
@@ -925,7 +950,11 @@ static const FunctionData saFuncTableOOoLO[] =
     { "ORG.OPENOFFICE.ROT13",       "COM.SUN.STAR.SHEET.ADDIN.DATEFUNCTIONS.GETROT13",       NOID,   NOID,   1,  1,  V, { VR }, FUNCFLAG_IMPORTONLY | FUNCFLAG_EXTERNAL },
     // Other functions.
     { "ORG.OPENOFFICE.CONVERT",     "ORG.OPENOFFICE.CONVERT",   NOID,   NOID,   3,  3,  V, { VR }, FUNCFLAG_MACROCALL_NEW },
-    { "ORG.LIBREOFFICE.COLOR",      "ORG.LIBREOFFICE.COLOR",    NOID,   NOID,   3,  4,  V, { VR }, FUNCFLAG_MACROCALL_NEW }
+    { "ORG.LIBREOFFICE.COLOR",      "ORG.LIBREOFFICE.COLOR",    NOID,   NOID,   3,  4,  V, { VR }, FUNCFLAG_MACROCALL_NEW },
+    { "ORG.LIBREOFFICE.RAWSUBTRACT","ORG.LIBREOFFICE.RAWSUBTRACT",NOID, NOID,   1, MX,  V, { RX }, FUNCFLAG_MACROCALL_NEW },
+    { "ORG.LIBREOFFICE.FORECAST.ETS.MULT",      "ORG.LIBREOFFICE.FORECAST.ETS.MULT",      NOID,   NOID,   3,  6,  V, { VR, VA, VR }, FUNCFLAG_MACROCALL_NEW },
+    { "ORG.LIBREOFFICE.FORECAST.ETS.PI.MULT",   "ORG.LIBREOFFICE.FORECAST.ETS.PI.MULT",   NOID,   NOID,   4,  7,  V, { VR, VA, VR }, FUNCFLAG_MACROCALL_NEW },
+    { "ORG.LIBREOFFICE.FORECAST.ETS.STAT.MULT", "ORG.LIBREOFFICE.FORECAST.ETS.STAT.MULT", NOID,   NOID,   3,  6,  V, { VR, VA, VR }, FUNCFLAG_MACROCALL_NEW }
 };
 
 const sal_Unicode API_TOKEN_OPEN            = '(';
@@ -1032,20 +1061,21 @@ FunctionProviderImpl::FunctionProviderImpl( FilterType eFilter, BiffType eBiff, 
         tables from later BIFF versions may overwrite single functions from
         earlier tables. */
     if( eBiff >= BIFF2 )
-        initFuncs( saFuncTableBiff2, STATIC_ARRAY_END( saFuncTableBiff2 ), nMaxParam, bImportFilter, eFilter );
+        initFuncs( saFuncTableBiff2, ::std::end( saFuncTableBiff2 ), nMaxParam, bImportFilter, eFilter );
     if( eBiff >= BIFF3 )
-        initFuncs( saFuncTableBiff3, STATIC_ARRAY_END( saFuncTableBiff3 ), nMaxParam, bImportFilter, eFilter );
+        initFuncs( saFuncTableBiff3, ::std::end( saFuncTableBiff3 ), nMaxParam, bImportFilter, eFilter );
     if( eBiff >= BIFF4 )
-        initFuncs( saFuncTableBiff4, STATIC_ARRAY_END( saFuncTableBiff4 ), nMaxParam, bImportFilter, eFilter );
+        initFuncs( saFuncTableBiff4, ::std::end( saFuncTableBiff4 ), nMaxParam, bImportFilter, eFilter );
     if( eBiff >= BIFF5 )
-        initFuncs( saFuncTableBiff5, STATIC_ARRAY_END( saFuncTableBiff5 ), nMaxParam, bImportFilter, eFilter );
+        initFuncs( saFuncTableBiff5, ::std::end( saFuncTableBiff5 ), nMaxParam, bImportFilter, eFilter );
     if( eBiff >= BIFF8 )
-        initFuncs( saFuncTableBiff8, STATIC_ARRAY_END( saFuncTableBiff8 ), nMaxParam, bImportFilter, eFilter );
-    initFuncs( saFuncTableOox, STATIC_ARRAY_END( saFuncTableOox ), nMaxParam, bImportFilter, eFilter );
-    initFuncs( saFuncTable2010, STATIC_ARRAY_END( saFuncTable2010 ), nMaxParam, bImportFilter, eFilter );
-    initFuncs( saFuncTable2013, STATIC_ARRAY_END( saFuncTable2013 ), nMaxParam, bImportFilter, eFilter );
-    initFuncs( saFuncTableOdf, STATIC_ARRAY_END( saFuncTableOdf ), nMaxParam, bImportFilter, eFilter );
-    initFuncs( saFuncTableOOoLO, STATIC_ARRAY_END( saFuncTableOOoLO ), nMaxParam, bImportFilter, eFilter );
+        initFuncs( saFuncTableBiff8, ::std::end( saFuncTableBiff8 ), nMaxParam, bImportFilter, eFilter );
+    initFuncs( saFuncTableOox, ::std::end( saFuncTableOox ), nMaxParam, bImportFilter, eFilter );
+    initFuncs( saFuncTable2010, ::std::end( saFuncTable2010 ), nMaxParam, bImportFilter, eFilter );
+    initFuncs( saFuncTable2013, ::std::end( saFuncTable2013 ), nMaxParam, bImportFilter, eFilter );
+    initFuncs( saFuncTable2016, ::std::end( saFuncTable2016 ), nMaxParam, bImportFilter, eFilter );
+    initFuncs( saFuncTableOdf, ::std::end( saFuncTableOdf ), nMaxParam, bImportFilter, eFilter );
+    initFuncs( saFuncTableOOoLO, ::std::end( saFuncTableOOoLO ), nMaxParam, bImportFilter, eFilter );
 }
 
 void FunctionProviderImpl::initFunc( const FunctionData& rFuncData, sal_uInt8 nMaxParam )
@@ -1449,8 +1479,8 @@ bool OpCodeProviderImpl::initFuncOpCodes( const ApiTokenMap& rIntFuncTokenMap, c
 }
 
 OpCodeProvider::OpCodeProvider( const Reference< XMultiServiceFactory >& rxModelFactory,
-        FilterType eFilter, BiffType eBiff, bool bImportFilter, bool bCallerKnowsAboutMacroExport ) :
-    FunctionProvider( eFilter, eBiff, bImportFilter, bCallerKnowsAboutMacroExport ),
+        FilterType eFilter, BiffType eBiff, bool bImportFilter ) :
+    FunctionProvider( eFilter, eBiff, bImportFilter, true/*bCallerKnowsAboutMacroExport*/ ),
     mxOpCodeImpl( new OpCodeProviderImpl( getFuncs(), rxModelFactory ) )
 {
 }
@@ -1521,10 +1551,9 @@ ApiTokenSequence ApiParserWrapper::parseFormula( const OUString& rFormula, const
 
 namespace {
 
-bool lclConvertToCellAddress( CellAddress& orAddress, const SingleReference& rSingleRef, sal_Int32 nForbiddenFlags, sal_Int32 nFilterBySheet )
+bool lclConvertToCellAddress( ScAddress& orAddress, const SingleReference& rSingleRef, sal_Int32 nForbiddenFlags, sal_Int32 nFilterBySheet )
 {
-    orAddress = CellAddress( static_cast< sal_Int16 >( rSingleRef.Sheet ),
-        rSingleRef.Column, rSingleRef.Row );
+    orAddress = ScAddress( rSingleRef.Column, rSingleRef.Row, rSingleRef.Sheet );
     return
         !getFlag( rSingleRef.Flags, nForbiddenFlags ) &&
         ((nFilterBySheet < 0) || (nFilterBySheet == rSingleRef.Sheet));
@@ -1554,10 +1583,10 @@ TokenToRangeListState lclProcessRef( ApiCellRangeList& orRanges, const Any& rDat
     SingleReference aSingleRef;
     if( rData >>= aSingleRef )
     {
-        CellAddress aAddress;
+        ScAddress aAddress ( 0, 0, 0 );
         // ignore invalid addresses (with #REF! errors), but do not stop parsing
         if( lclConvertToCellAddress( aAddress, aSingleRef, nForbiddenFlags, nFilterBySheet ) )
-            orRanges.push_back( CellRangeAddress( aAddress.Sheet, aAddress.Column, aAddress.Row, aAddress.Column, aAddress.Row ) );
+            orRanges.push_back( CellRangeAddress( aAddress.Tab(), aAddress.Col(), aAddress.Row(), aAddress.Col(), aAddress.Row() ) );
         return STATE_REF;
     }
     ComplexReference aComplexRef;
@@ -1594,6 +1623,11 @@ FormulaProcessorBase::FormulaProcessorBase( const WorkbookHelper& rHelper ) :
 }
 
 OUString FormulaProcessorBase::generateAddress2dString( const CellAddress& rAddress, bool bAbsolute )
+{
+    return generateAddress2dString( BinAddress( rAddress ), bAbsolute );
+}
+
+OUString FormulaProcessorBase::generateAddress2dString( const ScAddress& rAddress, bool bAbsolute )
 {
     return generateAddress2dString( BinAddress( rAddress ), bAbsolute );
 }

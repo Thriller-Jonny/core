@@ -118,7 +118,6 @@ ImplConnectMarkerOverlay::~ImplConnectMarkerOverlay()
 }
 
 
-
 class ImpSdrCreateViewExtraData
 {
     // The OverlayObjects for XOR replacement
@@ -179,9 +178,7 @@ void ImpSdrCreateViewExtraData::HideOverlay()
 }
 
 
-
 // CreateView
-
 
 
 void SdrCreateView::ImpClearConnectMarker()
@@ -360,7 +357,8 @@ void SdrCreateView::SetCurrentObj(sal_uInt16 nIdent, sal_uInt32 nInvent)
     {
         nAktInvent=nInvent;
         nAktIdent=nIdent;
-        SdrObject* pObj = SdrObjFactory::MakeNewObject(nInvent,nIdent,nullptr);
+        SdrObject * pObj = (nIdent == OBJ_NONE) ? nullptr :
+            SdrObjFactory::MakeNewObject(nInvent, nIdent, nullptr);
 
         if(pObj)
         {
@@ -601,7 +599,7 @@ bool SdrCreateView::EndCreateObj(SdrCreateCmd eCmd)
 
     if (pAktCreate!=nullptr)
     {
-        sal_uIntPtr nCount=maDragStat.GetPointAnz();
+        sal_uIntPtr nCount=maDragStat.GetPointCount();
 
         if (nCount<=1 && eCmd==SDRCREATE_FORCEEND)
         {
@@ -710,7 +708,7 @@ void SdrCreateView::BckCreateObj()
 {
     if (pAktCreate!=nullptr)
     {
-        if (maDragStat.GetPointAnz()<=2 )
+        if (maDragStat.GetPointCount()<=2 )
         {
             BrkCreateObj();
         }
@@ -791,7 +789,7 @@ void SdrCreateView::ShowCreateObj(/*OutputDevice* pOut, sal_Bool bFull*/)
                 if(pCircObj && OBJ_CIRC != pCircObj->GetObjIdentifier())
                 {
                     // #i103058# Allow SolidDragging with four points
-                    if(maDragStat.GetPointAnz() < 4)
+                    if(maDragStat.GetPointCount() < 4)
                     {
                         bUseSolidDragging = false;
                     }
@@ -873,7 +871,6 @@ void SdrCreateView::HideCreateObj()
         maDragStat.SetShown(false);
     }
 }
-
 
 
 bool SdrCreateView::GetAttributes(SfxItemSet& rTargetSet, bool bOnlyHardAttr) const

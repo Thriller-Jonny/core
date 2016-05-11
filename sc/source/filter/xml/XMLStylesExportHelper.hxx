@@ -64,7 +64,7 @@ typedef std::vector<ScMyValidation>         ScMyValidationVec;
 class ScMyValidationsContainer
 {
 private:
-    ScMyValidationVec           aValidationVec;
+    ScMyValidationVec      aValidationVec;
     const OUString         sEmptyString;
     const OUString         sERRALSTY;
     const OUString         sIGNOREBL;
@@ -76,17 +76,11 @@ private:
     const OUString         sINPMESS;
     const OUString         sERRTITLE;
     const OUString         sERRMESS;
-    const OUString         sOnError;
-    const OUString         sEventType;
-    const OUString         sStarBasic;
-    const OUString         sScript;
-    const OUString         sLibrary;
-    const OUString         sMacroName;
 
 public:
                            ScMyValidationsContainer();
                            ~ScMyValidationsContainer();
-    bool                   AddValidation(const css::uno::Any& aAny,
+    void                   AddValidation(const css::uno::Any& aAny,
                                     sal_Int32& nValidationIndex);
     static OUString        GetCondition(ScXMLExport& rExport, const ScMyValidation& aValidation);
     static OUString        GetBaseCellAddress(ScDocument* pDoc, const css::table::CellAddress& aCell);
@@ -164,7 +158,6 @@ public:
     void Sort();
 };
 
-typedef std::vector<OUString*>     ScMyOUStringVec;
 
 struct ScMyFormatRange
 {
@@ -184,8 +177,8 @@ class ScFormatRangeStyles
     typedef std::vector<ScMyFormatRangeAddresses*>  ScMyFormatRangeListVec;
 
     ScMyFormatRangeListVec      aTables;
-    ScMyOUStringVec             aStyleNames;
-    ScMyOUStringVec             aAutoStyleNames;
+    std::vector<OUString*>      aStyleNames;
+    std::vector<OUString*>      aAutoStyleNames;
     const ScMyDefaultStyleList* pColDefaults;
 
 public:
@@ -212,7 +205,7 @@ public:
 
 class ScColumnRowStylesBase
 {
-    ScMyOUStringVec             aStyleNames;
+    std::vector<OUString*>   aStyleNames;
 
 public:
     ScColumnRowStylesBase();

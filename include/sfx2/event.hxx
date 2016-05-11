@@ -34,7 +34,6 @@
 class SfxObjectShell;
 
 
-
 class SFX2_DLLPUBLIC SfxEventHint : public SfxHint
 {
     SfxObjectShell*     pObjShell;
@@ -51,13 +50,12 @@ public:
     sal_uInt16              GetEventId() const
                         { return nEventId; }
 
-    OUString     GetEventName() const
+    const OUString&     GetEventName() const
                         { return aEventName; }
 
     SfxObjectShell*     GetObjShell() const
                         { return pObjShell; }
 };
-
 
 
 class SFX2_DLLPUBLIC SfxViewEventHint : public SfxEventHint
@@ -75,7 +73,7 @@ public:
                         , xViewController( xController )
                         {}
 
-    css::uno::Reference< css::frame::XController2 > GetController() const
+    const css::uno::Reference< css::frame::XController2 >& GetController() const
                         { return xViewController; }
 };
 

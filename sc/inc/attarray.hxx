@@ -44,6 +44,8 @@ namespace editeng { class SvxBorderLine; }
 
 #define SC_ATTRARRAY_DELTA      4
 
+#define DEBUG_SC_TESTATTRARRAY 0
+
 struct ScLineFlags
 {
     sal_uInt8   nLeft;
@@ -104,7 +106,7 @@ public:
 
     void    SetTab(SCTAB nNewTab)   { nTab = nNewTab; }
     void    SetCol(SCCOL nNewCol)   { nCol = nNewCol; }
-#if OSL_DEBUG_LEVEL > 1
+#if DEBUG_SC_TESTATTRARRAY
     void    TestData() const;
 #endif
     void    Reset( const ScPatternAttr* pPattern);
@@ -125,7 +127,7 @@ public:
     void    ApplyStyleArea( SCROW nStartRow, SCROW nEndRow, ScStyleSheet* pStyle );
     void    ApplyCacheArea( SCROW nStartRow, SCROW nEndRow, SfxItemPoolCache* pCache,
                             ScEditDataArray* pDataArray = nullptr );
-    bool    SetAttrEntries(ScAttrEntry* pNewData, SCSIZE nSize);
+    void    SetAttrEntries(ScAttrEntry* pNewData, SCSIZE nSize);
     void    ApplyLineStyleArea( SCROW nStartRow, SCROW nEndRow,
                                 const ::editeng::SvxBorderLine* pLine, bool bColorOnly );
 
@@ -154,11 +156,11 @@ public:
     bool    Search( SCROW nRow, SCSIZE& nIndex ) const;
 
     bool    HasAttrib( SCROW nRow1, SCROW nRow2, sal_uInt16 nMask ) const;
-    bool IsMerged( SCROW nRow ) const;
+    bool    IsMerged( SCROW nRow ) const;
     bool    ExtendMerge( SCCOL nThisCol, SCROW nStartRow, SCROW nEndRow,
                                 SCCOL& rPaintCol, SCROW& rPaintRow,
                                 bool bRefresh );
-    bool    RemoveAreaMerge( SCROW nStartRow, SCROW nEndRow );
+    void    RemoveAreaMerge( SCROW nStartRow, SCROW nEndRow );
 
     void    FindStyleSheet( const SfxStyleSheetBase* pStyleSheet, ScFlatBoolRowSegments& rUsedRows, bool bReset );
     bool    IsStyleSheetUsed( const ScStyleSheet& rStyle, bool bGatherAllStyles ) const;
@@ -171,7 +173,7 @@ public:
     bool    IsEmpty() const;
 
     bool    GetFirstVisibleAttr( SCROW& rFirstRow ) const;
-    bool    GetLastVisibleAttr( SCROW& rLastRow, SCROW nLastData, bool bFullFormattedArea = false ) const;
+    bool    GetLastVisibleAttr( SCROW& rLastRow, SCROW nLastData ) const;
     bool    HasVisibleAttrIn( SCROW nStartRow, SCROW nEndRow ) const;
     bool    IsVisibleEqual( const ScAttrArray& rOther,
                             SCROW nStartRow, SCROW nEndRow ) const;

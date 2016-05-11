@@ -65,7 +65,7 @@ public:
 
     ActivePackages();
 
-    ActivePackages(OUString const & url, bool readOnly);
+    explicit ActivePackages(OUString const & url);
 
     ~ActivePackages();
 

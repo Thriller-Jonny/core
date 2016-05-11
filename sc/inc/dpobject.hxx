@@ -33,8 +33,7 @@
 #include <memory>
 #include <set>
 #include <vector>
-
-#include <boost/ptr_container/ptr_map.hpp>
+#include <map>
 
 namespace com { namespace sun { namespace star {
 
@@ -194,12 +193,12 @@ public:
 
     void                ToggleDetails(const css::sheet::DataPilotTableHeaderData& rElemDesc, ScDPObject* pDestObj);
 
-    bool                FillOldParam(ScPivotParam& rParam) const;
-    bool                FillLabelData(sal_Int32 nDim, ScDPLabelData& Labels);
-    bool                FillLabelData(ScPivotParam& rParam);
+    void                FillOldParam(ScPivotParam& rParam) const;
+    void                FillLabelData(sal_Int32 nDim, ScDPLabelData& Labels);
+    void                FillLabelData(ScPivotParam& rParam);
 
     bool                GetHierarchiesNA( sal_Int32 nDim, css::uno::Reference< css::container::XNameAccess >& xHiers );
-    bool                GetHierarchies( sal_Int32 nDim, css::uno::Sequence< OUString >& rHiers );
+    void                GetHierarchies( sal_Int32 nDim, css::uno::Sequence< OUString >& rHiers );
 
     sal_Int32           GetUsedHierarchy( sal_Int32 nDim );
 
@@ -236,7 +235,7 @@ public:
     bool SyncAllDimensionMembers();
 
     static bool         HasRegisteredSources();
-    static css::uno::Sequence<OUString> GetRegisteredSources();
+    static std::vector<OUString> GetRegisteredSources();
     static css::uno::Reference<css::sheet::XDimensionsSupplier>
                         CreateSource( const ScDPServiceDesc& rDesc );
 
@@ -267,9 +266,9 @@ public:
     class SheetCaches
     {
         friend class ScDPCollection;
-        typedef boost::ptr_map<size_t, ScDPCache> CachesType;
+        typedef std::map<size_t, std::unique_ptr<ScDPCache>> CachesType;
         typedef std::vector<ScRange> RangeIndexType;
-        CachesType maCaches;
+        CachesType m_Caches;
         RangeIndexType maRanges;
         ScDocument* mpDoc;
     public:
@@ -296,8 +295,8 @@ public:
     class NameCaches
     {
         friend class ScDPCollection;
-        typedef ::boost::ptr_map<OUString, ScDPCache> CachesType;
-        CachesType maCaches;
+        typedef ::std::map<OUString, std::unique_ptr<ScDPCache>> CachesType;
+        CachesType m_Caches;
         ScDocument* mpDoc;
     public:
         NameCaches(ScDocument* pDoc);
@@ -336,8 +335,8 @@ public:
     class DBCaches
     {
         friend class ScDPCollection;
-        typedef ::boost::ptr_map<DBType, ScDPCache, DBType::less> CachesType;
-        CachesType maCaches;
+        typedef ::std::map<DBType, std::unique_ptr<ScDPCache>, DBType::less> CachesType;
+        CachesType m_Caches;
         ScDocument* mpDoc;
     public:
         DBCaches(ScDocument* pDoc);
@@ -381,14 +380,11 @@ public:
 
     /**
      * Create a new name that's not yet used by any existing data pilot
-     * objects.  All data pilot names are 'DataPilot' + <num>, and the nMin
-     * specifies the minimum number allowed.
-     *
-     * @param nMin minimum number allowed.
+     * objects.  All data pilot names are 'DataPilot' + <num>
      *
      * @return new name for data pilot object.
      */
-    OUString CreateNewName( sal_uInt16 nMin = 1 ) const;
+    OUString CreateNewName() const;
 
     void FreeTable(ScDPObject* pDPObj);
     SC_DLLPUBLIC bool InsertNewTable(ScDPObject* pDPObj);

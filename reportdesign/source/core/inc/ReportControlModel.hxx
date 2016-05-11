@@ -28,18 +28,11 @@
 #include <com/sun/star/lang/IndexOutOfBoundsException.hpp>
 #include <com/sun/star/lang/Locale.hpp>
 #include <comphelper/uno3.hxx>
-#include <cppuhelper/interfacecontainer.h>
+#include <comphelper/interfacecontainer2.hxx>
 
 
 namespace reportdesign
 {
-    bool operator==( const css::awt::FontDescriptor& _lhs, const css::awt::FontDescriptor& _rhs );
-
-    inline bool operator!=( const css::awt::FontDescriptor& _lhs, const css::awt::FontDescriptor& _rhs )
-    {
-        return !( _lhs == _rhs );
-    }
-
     struct OFormatProperties
     {
         ::sal_Int16                                         nAlign;
@@ -81,7 +74,7 @@ namespace reportdesign
         OReportControlModel(OReportControlModel&) = delete;
         void operator =(OReportControlModel&) = delete;
     public:
-        ::cppu::OInterfaceContainerHelper                   aContainerListeners;
+        ::comphelper::OInterfaceContainerHelper2                  aContainerListeners;
         OReportComponentProperties                          aComponent;
         OFormatProperties                                   aFormatProperties;
         css::container::XContainer*                         m_pOwner;

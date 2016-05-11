@@ -214,8 +214,7 @@ bool SwEditShell::IsTextToTableAvailable() const
 
 void SwEditShell::InsertDDETable( const SwInsertTableOptions& rInsTableOpts,
                                   SwDDEFieldType* pDDEType,
-                                  sal_uInt16 nRows, sal_uInt16 nCols,
-                                  sal_Int16 eAdj )
+                                  sal_uInt16 nRows, sal_uInt16 nCols )
 {
     SwPosition* pPos = GetCursor()->GetPoint();
 
@@ -231,7 +230,7 @@ void SwEditShell::InsertDDETable( const SwInsertTableOptions& rInsTableOpts,
     const SwInsertTableOptions aInsTableOpts( rInsTableOpts.mnInsMode | tabopts::DEFAULT_BORDER,
                                             rInsTableOpts.mnRowsToRepeat );
     SwTable* pTable = const_cast<SwTable*>(GetDoc()->InsertTable( aInsTableOpts, *pPos,
-                                                     nRows, nCols, eAdj ));
+                                                     nRows, nCols, css::text::HoriOrientation::FULL ));
 
     SwTableNode* pTableNode = const_cast<SwTableNode*>(pTable->GetTabSortBoxes()[ 0 ]->
                                                 GetSttNd()->FindTableNode());
@@ -448,7 +447,7 @@ bool SwEditShell::SplitTable( sal_uInt16 eMode )
     return bRet;
 }
 
-bool SwEditShell::MergeTable( bool bWithPrev, sal_uInt16 nMode )
+bool SwEditShell::MergeTable( bool bWithPrev )
 {
     bool bRet = false;
     SwPaM *pCursor = GetCursor();
@@ -457,7 +456,7 @@ bool SwEditShell::MergeTable( bool bWithPrev, sal_uInt16 nMode )
         StartAllAction();
         GetDoc()->GetIDocumentUndoRedo().StartUndo(UNDO_EMPTY, nullptr);
 
-        bRet = GetDoc()->MergeTable( *pCursor->GetPoint(), bWithPrev, nMode );
+        bRet = GetDoc()->MergeTable( *pCursor->GetPoint(), bWithPrev );
 
         GetDoc()->GetIDocumentUndoRedo().EndUndo(UNDO_EMPTY, nullptr);
         ClearFEShellTabCols();
@@ -482,13 +481,19 @@ bool SwEditShell::CanMergeTable( bool bWithPrev, bool* pChkNxtPrv ) const
                 bNew == pChkNd->GetTable().IsNewModel() &&
                 // Consider table in table case
                 pChkNd->EndOfSectionIndex() == pTableNd->GetIndex() - 1 )
-                *pChkNxtPrv = true, bRet = true;        // using Prev is possible
+            {
+                *pChkNxtPrv = true;
+                bRet = true;        // using Prev is possible
+            }
             else
             {
                 pChkNd = rNds[ pTableNd->EndOfSectionIndex() + 1 ]->GetTableNode();
                 if( pChkNd && dynamic_cast< const SwDDETable* >(&pChkNd->GetTable()) ==  nullptr &&
                     bNew == pChkNd->GetTable().IsNewModel() )
-                    *pChkNxtPrv = false, bRet = true;   // using Next is possible
+                {
+                    *pChkNxtPrv = false;
+                    bRet = true;   // using Next is possible
+                }
             }
         }
         else

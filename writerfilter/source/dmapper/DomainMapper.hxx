@@ -91,12 +91,12 @@ public:
     virtual void data(const sal_uInt8* buf, size_t len,
                       writerfilter::Reference<Properties>::Pointer_t ref) override;
 
-    void sprmWithProps( Sprm& sprm, ::std::shared_ptr<PropertyMap> pContext );
+    void sprmWithProps( Sprm& sprm, const ::std::shared_ptr<PropertyMap>& pContext );
 
-    void PushStyleSheetProperties( ::std::shared_ptr<PropertyMap> pStyleProperties, bool bAffectTableMngr = false );
+    void PushStyleSheetProperties( const ::std::shared_ptr<PropertyMap>& pStyleProperties, bool bAffectTableMngr = false );
     void PopStyleSheetProperties( bool bAffectTableMngr = false );
 
-    void PushListProperties( ::std::shared_ptr<PropertyMap> pListProperties );
+    void PushListProperties( const ::std::shared_ptr<PropertyMap>& pListProperties );
     void PopListProperties();
 
     bool IsOOXMLImport() const;
@@ -104,7 +104,7 @@ public:
     css::uno::Reference<css::lang::XMultiServiceFactory> GetTextFactory() const;
     css::uno::Reference<css::text::XTextRange> GetCurrentTextRange();
 
-    OUString getOrCreateCharStyle( PropertyValueVector_t& rCharProperties );
+    OUString getOrCreateCharStyle( PropertyValueVector_t& rCharProperties, bool bAlwaysCreate );
     std::shared_ptr< StyleSheetTable > GetStyleSheetTable( );
     GraphicZOrderHelper* graphicZOrderHelper();
 

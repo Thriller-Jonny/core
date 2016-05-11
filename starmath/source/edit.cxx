@@ -56,9 +56,6 @@
 
 using namespace com::sun::star::accessibility;
 using namespace com::sun::star;
-using namespace com::sun::star::uno;
-
-
 
 
 void SmGetLeftSelectionPart(const ESelection &rSel,
@@ -84,11 +81,12 @@ bool SmEditWindow::IsInlineEditEnabled()
 }
 
 
-
 SmEditWindow::SmEditWindow( SmCmdBoxWindow &rMyCmdBoxWin ) :
     Window              (&rMyCmdBoxWin),
     DropTargetHelper    ( this ),
-    rCmdBox             (rMyCmdBoxWin)
+    rCmdBox             (rMyCmdBoxWin),
+    aModifyIdle         ("SmEditWindow ModifyIdle"),
+    aCursorMoveIdle     ("SmEditWindow CursorMoveIdle")
 {
     SetHelpId(HID_SMA_COMMAND_WIN_EDIT);
     SetMapMode(MAP_PIXEL);
@@ -209,9 +207,6 @@ SfxItemPool * SmEditWindow::GetEditEngineItemPool()
 void SmEditWindow::ApplyColorConfigValues( const svtools::ColorConfig &rColorCfg )
 {
     // Note: SetBackground still done in SmEditWindow::DataChanged
-#if OSL_DEBUG_LEVEL > 1
-//   ColorData nVal = rColorCfg.GetColorValue(svtools::FONTCOLOR).nColor;
-#endif
     SetTextColor( rColorCfg.GetColorValue(svtools::FONTCOLOR).nColor );
     Invalidate();
 }
@@ -402,9 +397,9 @@ IMPL_LINK_TYPED( SmEditWindow, MenuSelectHdl, Menu *, pMenu, bool )
 {
     SmViewShell *pViewSh = rCmdBox.GetView();
     if (pViewSh)
-        pViewSh->GetViewFrame()->GetDispatcher()->Execute(
+        pViewSh->GetViewFrame()->GetDispatcher()->ExecuteList(
                 SID_INSERTCOMMAND, SfxCallMode::RECORD,
-                new SfxInt16Item(SID_INSERTCOMMAND, pMenu->GetCurItemId()), 0L);
+                { new SfxInt16Item(SID_INSERTCOMMAND, pMenu->GetCurItemId()) });
     return false;
 }
 
@@ -601,10 +596,10 @@ Rectangle SmEditWindow::AdjustScrollBars()
     if (pVScrollBar && pHScrollBar && pScrollBox)
     {
         const long nTmp = GetSettings().GetStyleSettings().GetScrollBarSize();
-        Point aPt( aRect.TopRight() ); aPt.X() -= nTmp -1L;
+        Point aPt( aRect.TopRight() ); aPt.X() -= nTmp -1;
         pVScrollBar->SetPosSizePixel( aPt, Size(nTmp, aOut.Height() - nTmp));
 
-        aPt = aRect.BottomLeft(); aPt.Y() -= nTmp - 1L;
+        aPt = aRect.BottomLeft(); aPt.Y() -= nTmp - 1;
         pHScrollBar->SetPosSizePixel( aPt, Size(aOut.Width() - nTmp, nTmp));
 
         aPt.X() = pHScrollBar->GetSizePixel().Width();
@@ -1026,6 +1021,11 @@ void SmEditWindow::InsertText(const OUString& rText)
         // callers
         OUString string(rText);
 
+        OUString selected(pEditView->GetSelected());
+        // if we have text selected, use it in the first placeholder
+        if (!selected.isEmpty())
+            string = string.replaceFirst("<?>", selected);
+
         // put a space before a new command if not in the beginning of a line
         if (aSelection.nStartPos > 0 && aCurrentFormula[nStartIndex - 1] != ' ')
             string = " " + string;
@@ -1072,9 +1072,9 @@ void SmEditWindow::Flush()
         SmViewShell *pViewSh = rCmdBox.GetView();
         if (pViewSh)
         {
-            pViewSh->GetViewFrame()->GetDispatcher()->Execute(
+            pViewSh->GetViewFrame()->GetDispatcher()->ExecuteList(
                     SID_TEXT, SfxCallMode::RECORD,
-                    new SfxStringItem(SID_TEXT, GetText()), 0L);
+                    { new SfxStringItem(SID_TEXT, GetText()) });
         }
     }
     if (aCursorMoveIdle.IsActive())

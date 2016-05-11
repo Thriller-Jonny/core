@@ -177,7 +177,6 @@ inline bool operator>( const Style& rL, const Style& rR ) { return rR < rL; }
 inline bool operator<=( const Style& rL, const Style& rR ) { return !(rR < rL); }
 
 
-
 /** Extends the Style struct with an angle for diagonal frame borders.
 
     The angle is specified in radian (a full circle is equivalent to 2*PI).
@@ -223,7 +222,6 @@ inline double GetHorDiagAngle( const Rectangle& rRect )
 { return GetHorDiagAngle( rRect.GetWidth(), rRect.GetHeight() ); }
 
 
-
 /** Returns the angle between vertical border of a rectangle and its diagonal.
 
     The returned values represents the inner angle between the diagonals and
@@ -240,7 +238,6 @@ inline double GetVerDiagAngle( long nWidth, long nHeight )
  */
 inline double GetVerDiagAngle( const Rectangle& rRect )
 { return GetVerDiagAngle( rRect.GetWidth(), rRect.GetHeight() ); }
-
 
 
 /** Returns an X coordinate for a diagonal frame border in the specified height.
@@ -323,9 +320,6 @@ long GetBLDiagOffset( long nVerOffs, long nDiagOffs, double fAngle );
     bottom-right diagonal frame border, connected to the right end of a
     horizontal frame border.
 
-    @param nVerOffs
-        The vertical position of the point to be calculated, relative to the Y
-        coordinate of the reference point.
     @param nDiagOffs
         The width offset across the diagonal frame border (0 = middle),
         regardless of the gradient of the diagonal frame border (always
@@ -335,7 +329,7 @@ long GetBLDiagOffset( long nVerOffs, long nDiagOffs, double fAngle );
     @param fAngle
         Inner (left) angle between diagonal and horizontal frame border.
  */
-long GetBRDiagOffset( long nVerOffs, long nDiagOffs, double fAngle );
+long GetBRDiagOffset( long nDiagOffs, double fAngle );
 
 /** Returns an X coordinate for a diagonal frame border in the specified height.
 
@@ -343,9 +337,6 @@ long GetBRDiagOffset( long nVerOffs, long nDiagOffs, double fAngle );
     top-right diagonal frame border, connected to the right end of a horizontal
     frame border.
 
-    @param nVerOffs
-        The vertical position of the point to be calculated, relative to the Y
-        coordinate of the reference point.
     @param nDiagOffs
         The width offset across the diagonal frame border (0 = middle),
         regardless of the gradient of the diagonal frame border (always
@@ -355,8 +346,7 @@ long GetBRDiagOffset( long nVerOffs, long nDiagOffs, double fAngle );
     @param fAngle
         Inner (left) angle between diagonal and horizontal frame border.
  */
-long GetTRDiagOffset( long nVerOffs, long nDiagOffs, double fAngle );
-
+long GetTRDiagOffset( long nDiagOffs, double fAngle );
 
 
 /** Checks whether two horizontal frame borders are "connectable".
@@ -457,8 +447,8 @@ SVX_DLLPUBLIC drawinglayer::primitive2d::Primitive2DContainer CreateBorderPrimit
     const DiagStyle&    rRFromBL,       /// Diagonal frame border from bottom-left to right end of rBorder.
 
     const Color*        pForceColor = nullptr,/// If specified, overrides frame border color.
-    const long&         rRotationT = 9000, /// Angle of the top slanted frames in 100th of degree
-    const long&         rRotationB = 9000  /// Angle of the bottom slanted frames in 100th of degree
+    const long          rRotationT = 9000, /// Angle of the top slanted frames in 100th of degree
+    const long          rRotationB = 9000  /// Angle of the bottom slanted frames in 100th of degree
 );
 
 SVX_DLLPUBLIC drawinglayer::primitive2d::Primitive2DContainer CreateBorderPrimitives(
@@ -475,8 +465,8 @@ SVX_DLLPUBLIC drawinglayer::primitive2d::Primitive2DContainer CreateBorderPrimit
     const Style&        rRFromB,        /// Vertical frame border from bottom to right end of rBorder.
 
     const Color*        pForceColor = nullptr,/// If specified, overrides frame border color.
-    const long&         rRotationT = 9000, /// Angle of the top slanted frame in 100th of degrees
-    const long&         rRotationB = 9000  /// Angle of the bottom slanted frame in 100th of degrees
+    const long          rRotationT = 9000, /// Angle of the top slanted frame in 100th of degrees
+    const long          rRotationB = 9000  /// Angle of the bottom slanted frame in 100th of degrees
 );
 
 SVX_DLLPUBLIC drawinglayer::primitive2d::Primitive2DContainer CreateClippedBorderPrimitives (
@@ -539,7 +529,6 @@ SVX_DLLPUBLIC void DrawHorFrameBorder(
 
     const Color*        pForceColor = nullptr /// If specified, overrides frame border color.
 );
-
 
 
 /** Draws a vertical frame border, regards all connected frame styles.
@@ -612,7 +601,6 @@ SVX_DLLPUBLIC void DrawVerFrameBorder(
 );
 
 
-
 /** Draws both diagonal frame borders, regards all connected frame styles.
 
     One or both passed diagonal frame styles may be invisible.
@@ -639,7 +627,6 @@ SVX_DLLPUBLIC void DrawDiagFrameBorders(
     const Color*        pForceColor = nullptr,        /// If specified, overrides frame border color.
     bool                bDiagDblClip = false    /// true = Use clipping for crossing double frame borders.
 );
-
 
 
 }

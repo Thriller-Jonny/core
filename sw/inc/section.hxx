@@ -90,7 +90,7 @@ public:
     SwSectionData & operator=(SwSectionData const&);
     bool operator==(SwSectionData const&) const;
 
-    OUString GetSectionName() const         { return m_sSectionName; }
+    const OUString& GetSectionName() const         { return m_sSectionName; }
     void SetSectionName(OUString const& rName){ m_sSectionName = rName; }
     SectionType GetType() const             { return m_eType; }
     void SetType(SectionType const eNew)    { m_eType = eNew; }
@@ -111,17 +111,16 @@ public:
     void SetCondHidden(bool const bFlag = true) { m_bCondHiddenFlag = bFlag; }
     bool IsCondHidden() const { return m_bCondHiddenFlag; }
 
-    OUString GetCondition() const           { return m_sCondition; }
+    const OUString& GetCondition() const           { return m_sCondition; }
     void SetCondition(OUString const& rNew) { m_sCondition = rNew; }
 
-    OUString GetLinkFileName() const        { return m_sLinkFileName; }
-    void SetLinkFileName(OUString const& rNew, OUString const* pPassWd = nullptr)
+    const OUString& GetLinkFileName() const        { return m_sLinkFileName; }
+    void SetLinkFileName(OUString const& rNew)
     {
         m_sLinkFileName = rNew;
-        if (pPassWd) { SetLinkFilePassword(*pPassWd); }
     }
 
-    OUString GetLinkFilePassword() const        { return m_sLinkFilePassword; }
+    const OUString& GetLinkFilePassword() const        { return m_sLinkFilePassword; }
     void SetLinkFilePassword(OUString const& rS){ m_sLinkFilePassword = rS; }
 
     css::uno::Sequence<sal_Int8> const& GetPassword() const
@@ -201,7 +200,7 @@ public:
     void SetCondition(OUString const& rNew) { m_Data.SetCondition(rNew); }
 
     OUString GetLinkFileName() const;
-    void SetLinkFileName(OUString const& rNew, OUString const*const pPassWd = nullptr);
+    void SetLinkFileName(OUString const& rNew);
     // Password of linked file (only valid during runtime!)
     OUString GetLinkFilePassword() const
         { return m_Data.GetLinkFilePassword(); }
@@ -315,10 +314,10 @@ public:
     // Query whether section is in Nodes-array or in UndoNodes-array.
     bool IsInNodesArr() const;
 
-          SwSectionNode* GetSectionNode(bool const bEvenIfInUndo = false);
-    const SwSectionNode* GetSectionNode(bool const bEvenIfInUndo = false) const
+          SwSectionNode* GetSectionNode();
+    const SwSectionNode* GetSectionNode() const
         { return const_cast<SwSectionFormat *>(this)
-                ->GetSectionNode(bEvenIfInUndo); }
+                ->GetSectionNode(); }
 
     // Is section a valid one for global document?
     const SwSection* GetGlobalDocSection() const;

@@ -20,20 +20,17 @@
 #ifndef INCLUDED_VCL_INC_SALINST_HXX
 #define INCLUDED_VCL_INC_SALINST_HXX
 
-#include "com/sun/star/uno/Reference.hxx"
-#include "com/sun/star/uno/XComponentContext.hpp"
-#include "com/sun/star/ui/dialogs/XFilePicker2.hpp"
-#include "com/sun/star/ui/dialogs/XFolderPicker2.hpp"
-
-#include "tools/solar.h"
-#include "displayconnectiondispatch.hxx"
-#include "vcl/dllapi.h"
-#include "vcl/salgtype.hxx"
 #include <sal/types.h>
+#include <rtl/ref.hxx>
+#include <tools/solar.h>
+#include <vcl/dllapi.h>
+#include <vcl/salgtype.hxx>
 
-#include "rtl/ref.hxx"
+#include "displayconnectiondispatch.hxx"
 
-#include <list>
+#include <com/sun/star/uno/XComponentContext.hpp>
+#include <com/sun/star/ui/dialogs/XFilePicker2.hpp>
+#include <com/sun/star/ui/dialogs/XFolderPicker2.hpp>
 
 namespace comphelper { class SolarMutex; }
 struct SystemParentData;
@@ -131,9 +128,9 @@ public:
     virtual bool            CheckYieldMutex() = 0;
 
     /**
-     * Wait for the next event (if @bWait) and dispatch it,
+     * Wait for the next event (if bWait) and dispatch it,
      * includes posted events, and timers.
-     * If @bHandleAllCurrentEvents - dispatch multiple posted
+     * If bHandleAllCurrentEvents - dispatch multiple posted
      * user events. Returns true if events needed processing.
      */
     virtual SalYieldResult  DoYield(bool bWait, bool bHandleAllCurrentEvents, sal_uLong nReleased) = 0;

@@ -33,7 +33,7 @@
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/lang/DisposedException.hpp>
 #include <cppuhelper/interfacecontainer.hxx>
-
+#include <comphelper/interfacecontainer2.hxx>
 
 
 class ContentResultSetWrapperListener;
@@ -132,7 +132,7 @@ private:
     bool                m_bDisposed; ///Dispose call ready.
     bool                m_bInDispose;///In dispose call
     osl::Mutex              m_aContainerMutex;
-    cppu::OInterfaceContainerHelper*
+    comphelper::OInterfaceContainerHelper2*
                             m_pDisposeEventListeners;
     PropertyChangeListenerContainer_Impl*
                             m_pPropertyChangeListeners;
@@ -142,10 +142,10 @@ private:
 
     //methods:
 private:
-    PropertyChangeListenerContainer_Impl* SAL_CALL
+    void SAL_CALL
     impl_getPropertyChangeListenerContainer();
 
-    PropertyChangeListenerContainer_Impl* SAL_CALL
+    void SAL_CALL
     impl_getVetoableChangeListenerContainer();
 
 protected:
@@ -486,7 +486,6 @@ public:
         throw( css::sdbc::SQLException,
                css::uno::RuntimeException, std::exception ) override;
 };
-
 
 
 class ContentResultSetWrapperListener

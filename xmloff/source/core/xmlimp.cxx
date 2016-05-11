@@ -72,38 +72,38 @@ using namespace ::com::sun::star::container;
 using namespace ::com::sun::star::document;
 using namespace ::xmloff::token;
 
-sal_Char const sXML_np__office[] = "_office";
-sal_Char const sXML_np__office_ext[] = "_office_ooo";
-sal_Char const sXML_np__ooo[] = "_ooo";
-sal_Char const sXML_np__ooow[] = "_ooow";
-sal_Char const sXML_np__oooc[] = "_oooc";
-sal_Char const sXML_np__of[] = "_of";
-sal_Char const sXML_np__style[] = "_style";
-sal_Char const sXML_np__text[] = "_text";
-sal_Char const sXML_np__table[] = "_table";
-sal_Char const sXML_np__table_ext[] = "_table_ooo";
-sal_Char const sXML_np__draw[] = "_draw";
-sal_Char const sXML_np__draw_ext[] = "_draw_ooo";
-sal_Char const sXML_np__dr3d[] = "_dr3d";
-sal_Char const sXML_np__fo[] = "_fo";
-sal_Char const sXML_np__xlink[] = "_xlink";
-sal_Char const sXML_np__dc[] = "_dc";
-sal_Char const sXML_np__dom[] = "_dom";
-sal_Char const sXML_np__meta[] = "_meta";
-sal_Char const sXML_np__number[] = "_number";
-sal_Char const sXML_np__svg[] = "_svg";
-sal_Char const sXML_np__chart[] = "_chart";
-sal_Char const sXML_np__math[] = "_math";
-sal_Char const sXML_np__form[] = "_form";
-sal_Char const sXML_np__script[] = "_script";
-sal_Char const sXML_np__config[] = "_config";
-sal_Char const sXML_np__xforms[] = "_xforms";
-sal_Char const sXML_np__formx[] = "_formx";
-sal_Char const sXML_np__xsd[] = "_xsd";
-sal_Char const sXML_np__xsi[] = "_xsi";
-sal_Char const sXML_np__field[] = "_field";
-sal_Char const sXML_np__xhtml[] = "_xhtml";
-sal_Char const sXML_np__css3text[] = "_css3text";
+sal_Char const sXML_np_office[] = "_office";
+sal_Char const sXML_np_office_ext[] = "_office_ooo";
+sal_Char const sXML_np_ooo[] = "_ooo";
+sal_Char const sXML_np_ooow[] = "_ooow";
+sal_Char const sXML_np_oooc[] = "_oooc";
+sal_Char const sXML_np_of[] = "_of";
+sal_Char const sXML_np_style[] = "_style";
+sal_Char const sXML_np_text[] = "_text";
+sal_Char const sXML_np_table[] = "_table";
+sal_Char const sXML_np_table_ext[] = "_table_ooo";
+sal_Char const sXML_np_draw[] = "_draw";
+sal_Char const sXML_np_draw_ext[] = "_draw_ooo";
+sal_Char const sXML_np_dr3d[] = "_dr3d";
+sal_Char const sXML_np_fo[] = "_fo";
+sal_Char const sXML_np_xlink[] = "_xlink";
+sal_Char const sXML_np_dc[] = "_dc";
+sal_Char const sXML_np_dom[] = "_dom";
+sal_Char const sXML_np_meta[] = "_meta";
+sal_Char const sXML_np_number[] = "_number";
+sal_Char const sXML_np_svg[] = "_svg";
+sal_Char const sXML_np_chart[] = "_chart";
+sal_Char const sXML_np_math[] = "_math";
+sal_Char const sXML_np_form[] = "_form";
+sal_Char const sXML_np_script[] = "_script";
+sal_Char const sXML_np_config[] = "_config";
+sal_Char const sXML_np_xforms[] = "_xforms";
+sal_Char const sXML_np_formx[] = "_formx";
+sal_Char const sXML_np_xsd[] = "_xsd";
+sal_Char const sXML_np_xsi[] = "_xsi";
+sal_Char const sXML_np_field[] = "_field";
+sal_Char const sXML_np_xhtml[] = "_xhtml";
+sal_Char const sXML_np_css3text[] = "_css3text";
 
 class SvXMLImportEventListener : public cppu::WeakImplHelper< css::lang::XEventListener >
 {
@@ -141,7 +141,7 @@ void SAL_CALL SvXMLImportEventListener::disposing( const lang::EventObject& )
 namespace
 {
 
-static OUString
+OUString
 getBuildIdsProperty(uno::Reference<beans::XPropertySet> const& xImportInfo)
 {
     if (xImportInfo.is())
@@ -166,110 +166,111 @@ getBuildIdsProperty(uno::Reference<beans::XPropertySet> const& xImportInfo)
     return OUString();
 }
 
-    class DocumentInfo
-    {
-        private:
-            sal_uInt16 mnGeneratorVersion;
+class DocumentInfo
+{
+private:
+    sal_uInt16 mnGeneratorVersion;
 
-        public:
-            explicit DocumentInfo( const SvXMLImport& rImport )
-                : mnGeneratorVersion( SvXMLImport::ProductVersionUnknown )
+public:
+    explicit DocumentInfo( const SvXMLImport& rImport )
+        : mnGeneratorVersion( SvXMLImport::ProductVersionUnknown )
+    {
+        OUString const buildIds(
+                getBuildIdsProperty(rImport.getImportInfo()));
+        if (!buildIds.isEmpty())
+        {
+            sal_Int32 const ix = buildIds.indexOf(';');
+            if (-1 != ix)
             {
-                OUString const buildIds(
-                        getBuildIdsProperty(rImport.getImportInfo()));
-                if (!buildIds.isEmpty())
+                OUString const loVersion(buildIds.copy(ix + 1));
+                if (!loVersion.isEmpty())
                 {
-                    sal_Int32 const ix = buildIds.indexOf(';');
-                    if (-1 != ix)
+                    if ('3' == loVersion[0])
                     {
-                        OUString const loVersion(buildIds.copy(ix + 1));
-                        if (!loVersion.isEmpty())
+                        mnGeneratorVersion = SvXMLImport::LO_3x;
+                    }
+                    else if ('4' == loVersion[0])
+                    {
+                        if (loVersion.getLength() > 1
+                            && (loVersion[1] == '0' || loVersion[1] == '1'))
                         {
-                            if ('3' == loVersion[0])
-                            {
-                                mnGeneratorVersion = SvXMLImport::LO_3x;
-                            }
-                            else if ('4' == loVersion[0])
-                            {
-                                if (loVersion.getLength() > 1
-                                    && (loVersion[1] == '0' || loVersion[1] == '1'))
-                                {
-                                    mnGeneratorVersion = SvXMLImport::LO_41x; // 4.0/4.1
-                                }
-                                else if (loVersion.getLength() > 1 && '2' == loVersion[1])
-                                {
-                                    mnGeneratorVersion = SvXMLImport::LO_42x; // 4.2
-                                }
-                                else if (loVersion.getLength() > 1 && '3' == loVersion[1])
-                                {
-                                    mnGeneratorVersion = SvXMLImport::LO_43x; // 4.3
-                                }
-                                else if (loVersion.getLength() > 1 && '4' == loVersion[1])
-                                {
-                                    mnGeneratorVersion = SvXMLImport::LO_44x; // 4.4
-                                }
-                            }
-                            else
-                            {
-                                SAL_INFO_IF('5' != loVersion[0], "xmloff.core", "unknown LO version: " << loVersion);
-                                mnGeneratorVersion = SvXMLImport::LO_5x;
-                            }
-                            return; // ignore buildIds
+                            mnGeneratorVersion = SvXMLImport::LO_41x; // 4.0/4.1
+                        }
+                        else if (loVersion.getLength() > 1 && '2' == loVersion[1])
+                        {
+                            mnGeneratorVersion = SvXMLImport::LO_42x; // 4.2
+                        }
+                        else if (loVersion.getLength() > 1 && '3' == loVersion[1])
+                        {
+                            mnGeneratorVersion = SvXMLImport::LO_43x; // 4.3
+                        }
+                        else if (loVersion.getLength() > 1 && '4' == loVersion[1])
+                        {
+                            mnGeneratorVersion = SvXMLImport::LO_44x; // 4.4
                         }
                     }
-                }
-                sal_Int32 nUPD, nBuild;
-                if ( rImport.getBuildIds( nUPD, nBuild ) )
-                {
-                    if ( nUPD >= 640 && nUPD <= 645 )
+                    else
                     {
-                        mnGeneratorVersion = SvXMLImport::OOo_1x;
+                        SAL_INFO_IF('5' != loVersion[0], "xmloff.core", "unknown LO version: " << loVersion);
+                        mnGeneratorVersion = SvXMLImport::LO_5x;
                     }
-                    else if ( nUPD == 680 )
-                    {
-                        mnGeneratorVersion = SvXMLImport::OOo_2x;
-                    }
-                    else if ( nUPD == 300 && nBuild <= 9379 )
-                    {
-                        mnGeneratorVersion = SvXMLImport::OOo_30x;
-                    }
-                    else if ( nUPD == 310 )
-                    {
-                        mnGeneratorVersion = SvXMLImport::OOo_31x;
-                    }
-                    else if ( nUPD == 320 )
-                    {
-                        mnGeneratorVersion = SvXMLImport::OOo_32x;
-                    }
-                    else if ( nUPD == 330 )
-                    {
-                        mnGeneratorVersion = SvXMLImport::OOo_33x;
-                    }
-                    else if ( nUPD == 340 )
-                    {
-                        mnGeneratorVersion = SvXMLImport::OOo_34x;
-                    }
-                    else if (nUPD == 400)
-                    {
-                        mnGeneratorVersion = SvXMLImport::AOO_40x;
-                    }
-                    else if (nUPD >= 410)
-                    {
-                        // effectively this means "latest", see use
-                        // in XMLGraphicsDefaultStyle::SetDefaults()!
-                        mnGeneratorVersion = SvXMLImport::AOO_4x;
-                    }
+                    return; // ignore buildIds
                 }
             }
-
-            ~DocumentInfo()
-            {}
-
-            sal_uInt16 getGeneratorVersion() const
+        }
+        sal_Int32 nUPD, nBuild;
+        if ( rImport.getBuildIds( nUPD, nBuild ) )
+        {
+            if ( nUPD >= 640 && nUPD <= 645 )
             {
-                return mnGeneratorVersion;
+                mnGeneratorVersion = SvXMLImport::OOo_1x;
             }
-    };
+            else if ( nUPD == 680 )
+            {
+                mnGeneratorVersion = SvXMLImport::OOo_2x;
+            }
+            else if ( nUPD == 300 && nBuild <= 9379 )
+            {
+                mnGeneratorVersion = SvXMLImport::OOo_30x;
+            }
+            else if ( nUPD == 310 )
+            {
+                mnGeneratorVersion = SvXMLImport::OOo_31x;
+            }
+            else if ( nUPD == 320 )
+            {
+                mnGeneratorVersion = SvXMLImport::OOo_32x;
+            }
+            else if ( nUPD == 330 )
+            {
+                mnGeneratorVersion = SvXMLImport::OOo_33x;
+            }
+            else if ( nUPD == 340 )
+            {
+                mnGeneratorVersion = SvXMLImport::OOo_34x;
+            }
+            else if (nUPD == 400)
+            {
+                mnGeneratorVersion = SvXMLImport::AOO_40x;
+            }
+            else if (nUPD >= 410)
+            {
+                // effectively this means "latest", see use
+                // in XMLGraphicsDefaultStyle::SetDefaults()!
+                mnGeneratorVersion = SvXMLImport::AOO_4x;
+            }
+        }
+    }
+
+    ~DocumentInfo()
+    {}
+
+    sal_uInt16 getGeneratorVersion() const
+    {
+        return mnGeneratorVersion;
+    }
+};
+
 }
 
 class SvXMLImport_Impl
@@ -358,44 +359,44 @@ SvXMLImportContext *SvXMLImport::CreateFastContext( sal_Int32 /*Element*/,
     return new SvXMLImportContext( *this );
 }
 
-void SvXMLImport::_InitCtor()
+void SvXMLImport::InitCtor_()
 {
     if( mnImportFlags != SvXMLImportFlags::NONE )
     {
         // implicit "xml" namespace prefix
         mpNamespaceMap->Add( GetXMLToken(XML_XML), GetXMLToken(XML_N_XML), XML_NAMESPACE_XML );
-        mpNamespaceMap->Add( sXML_np__office, GetXMLToken(XML_N_OFFICE), XML_NAMESPACE_OFFICE );
-        mpNamespaceMap->Add( sXML_np__office_ext, GetXMLToken(XML_N_OFFICE_EXT), XML_NAMESPACE_OFFICE_EXT );
-        mpNamespaceMap->Add( sXML_np__ooo, GetXMLToken(XML_N_OOO), XML_NAMESPACE_OOO );
-        mpNamespaceMap->Add( sXML_np__style, GetXMLToken(XML_N_STYLE), XML_NAMESPACE_STYLE );
-        mpNamespaceMap->Add( sXML_np__text, GetXMLToken(XML_N_TEXT), XML_NAMESPACE_TEXT );
-        mpNamespaceMap->Add( sXML_np__table, GetXMLToken(XML_N_TABLE), XML_NAMESPACE_TABLE );
-        mpNamespaceMap->Add( sXML_np__table_ext, GetXMLToken(XML_N_TABLE_EXT), XML_NAMESPACE_TABLE_EXT );
-        mpNamespaceMap->Add( sXML_np__draw, GetXMLToken(XML_N_DRAW), XML_NAMESPACE_DRAW );
-        mpNamespaceMap->Add( sXML_np__draw_ext, GetXMLToken(XML_N_DRAW_EXT), XML_NAMESPACE_DRAW_EXT );
-        mpNamespaceMap->Add( sXML_np__dr3d, GetXMLToken(XML_N_DR3D), XML_NAMESPACE_DR3D );
-        mpNamespaceMap->Add( sXML_np__fo, GetXMLToken(XML_N_FO_COMPAT), XML_NAMESPACE_FO );
-        mpNamespaceMap->Add( sXML_np__xlink, GetXMLToken(XML_N_XLINK), XML_NAMESPACE_XLINK );
-        mpNamespaceMap->Add( sXML_np__dc, GetXMLToken(XML_N_DC), XML_NAMESPACE_DC );
-        mpNamespaceMap->Add( sXML_np__dom, GetXMLToken(XML_N_DOM), XML_NAMESPACE_DOM );
-        mpNamespaceMap->Add( sXML_np__meta, GetXMLToken(XML_N_META), XML_NAMESPACE_META );
-        mpNamespaceMap->Add( sXML_np__number, GetXMLToken(XML_N_NUMBER), XML_NAMESPACE_NUMBER );
-        mpNamespaceMap->Add( sXML_np__svg, GetXMLToken(XML_N_SVG_COMPAT), XML_NAMESPACE_SVG );
-        mpNamespaceMap->Add( sXML_np__chart, GetXMLToken(XML_N_CHART), XML_NAMESPACE_CHART );
-        mpNamespaceMap->Add( sXML_np__math, GetXMLToken(XML_N_MATH), XML_NAMESPACE_MATH );
-        mpNamespaceMap->Add(sXML_np__form, GetXMLToken(XML_N_FORM), XML_NAMESPACE_FORM );
-        mpNamespaceMap->Add( sXML_np__script, GetXMLToken(XML_N_SCRIPT), XML_NAMESPACE_SCRIPT );
-        mpNamespaceMap->Add( sXML_np__config, GetXMLToken(XML_N_CONFIG), XML_NAMESPACE_CONFIG );
-        mpNamespaceMap->Add( sXML_np__xforms, GetXMLToken(XML_N_XFORMS_1_0), XML_NAMESPACE_XFORMS );
-        mpNamespaceMap->Add( sXML_np__formx, GetXMLToken( XML_N_FORMX ), XML_NAMESPACE_FORMX );
-        mpNamespaceMap->Add( sXML_np__xsd, GetXMLToken(XML_N_XSD), XML_NAMESPACE_XSD );
-        mpNamespaceMap->Add( sXML_np__xsi, GetXMLToken(XML_N_XSI), XML_NAMESPACE_XFORMS );
-        mpNamespaceMap->Add( sXML_np__ooow, GetXMLToken(XML_N_OOOW), XML_NAMESPACE_OOOW );
-        mpNamespaceMap->Add( sXML_np__oooc, GetXMLToken(XML_N_OOOC), XML_NAMESPACE_OOOC );
-        mpNamespaceMap->Add( sXML_np__field, GetXMLToken(XML_N_FIELD), XML_NAMESPACE_FIELD );
-        mpNamespaceMap->Add( sXML_np__of, GetXMLToken(XML_N_OF), XML_NAMESPACE_OF );
-        mpNamespaceMap->Add( sXML_np__xhtml, GetXMLToken(XML_N_XHTML), XML_NAMESPACE_XHTML );
-        mpNamespaceMap->Add( sXML_np__css3text, GetXMLToken(XML_N_CSS3TEXT), XML_NAMESPACE_CSS3TEXT );
+        mpNamespaceMap->Add( sXML_np_office, GetXMLToken(XML_N_OFFICE), XML_NAMESPACE_OFFICE );
+        mpNamespaceMap->Add( sXML_np_office_ext, GetXMLToken(XML_N_OFFICE_EXT), XML_NAMESPACE_OFFICE_EXT );
+        mpNamespaceMap->Add( sXML_np_ooo, GetXMLToken(XML_N_OOO), XML_NAMESPACE_OOO );
+        mpNamespaceMap->Add( sXML_np_style, GetXMLToken(XML_N_STYLE), XML_NAMESPACE_STYLE );
+        mpNamespaceMap->Add( sXML_np_text, GetXMLToken(XML_N_TEXT), XML_NAMESPACE_TEXT );
+        mpNamespaceMap->Add( sXML_np_table, GetXMLToken(XML_N_TABLE), XML_NAMESPACE_TABLE );
+        mpNamespaceMap->Add( sXML_np_table_ext, GetXMLToken(XML_N_TABLE_EXT), XML_NAMESPACE_TABLE_EXT );
+        mpNamespaceMap->Add( sXML_np_draw, GetXMLToken(XML_N_DRAW), XML_NAMESPACE_DRAW );
+        mpNamespaceMap->Add( sXML_np_draw_ext, GetXMLToken(XML_N_DRAW_EXT), XML_NAMESPACE_DRAW_EXT );
+        mpNamespaceMap->Add( sXML_np_dr3d, GetXMLToken(XML_N_DR3D), XML_NAMESPACE_DR3D );
+        mpNamespaceMap->Add( sXML_np_fo, GetXMLToken(XML_N_FO_COMPAT), XML_NAMESPACE_FO );
+        mpNamespaceMap->Add( sXML_np_xlink, GetXMLToken(XML_N_XLINK), XML_NAMESPACE_XLINK );
+        mpNamespaceMap->Add( sXML_np_dc, GetXMLToken(XML_N_DC), XML_NAMESPACE_DC );
+        mpNamespaceMap->Add( sXML_np_dom, GetXMLToken(XML_N_DOM), XML_NAMESPACE_DOM );
+        mpNamespaceMap->Add( sXML_np_meta, GetXMLToken(XML_N_META), XML_NAMESPACE_META );
+        mpNamespaceMap->Add( sXML_np_number, GetXMLToken(XML_N_NUMBER), XML_NAMESPACE_NUMBER );
+        mpNamespaceMap->Add( sXML_np_svg, GetXMLToken(XML_N_SVG_COMPAT), XML_NAMESPACE_SVG );
+        mpNamespaceMap->Add( sXML_np_chart, GetXMLToken(XML_N_CHART), XML_NAMESPACE_CHART );
+        mpNamespaceMap->Add( sXML_np_math, GetXMLToken(XML_N_MATH), XML_NAMESPACE_MATH );
+        mpNamespaceMap->Add(sXML_np_form, GetXMLToken(XML_N_FORM), XML_NAMESPACE_FORM );
+        mpNamespaceMap->Add( sXML_np_script, GetXMLToken(XML_N_SCRIPT), XML_NAMESPACE_SCRIPT );
+        mpNamespaceMap->Add( sXML_np_config, GetXMLToken(XML_N_CONFIG), XML_NAMESPACE_CONFIG );
+        mpNamespaceMap->Add( sXML_np_xforms, GetXMLToken(XML_N_XFORMS_1_0), XML_NAMESPACE_XFORMS );
+        mpNamespaceMap->Add( sXML_np_formx, GetXMLToken( XML_N_FORMX ), XML_NAMESPACE_FORMX );
+        mpNamespaceMap->Add( sXML_np_xsd, GetXMLToken(XML_N_XSD), XML_NAMESPACE_XSD );
+        mpNamespaceMap->Add( sXML_np_xsi, GetXMLToken(XML_N_XSI), XML_NAMESPACE_XFORMS );
+        mpNamespaceMap->Add( sXML_np_ooow, GetXMLToken(XML_N_OOOW), XML_NAMESPACE_OOOW );
+        mpNamespaceMap->Add( sXML_np_oooc, GetXMLToken(XML_N_OOOC), XML_NAMESPACE_OOOC );
+        mpNamespaceMap->Add( sXML_np_field, GetXMLToken(XML_N_FIELD), XML_NAMESPACE_FIELD );
+        mpNamespaceMap->Add( sXML_np_of, GetXMLToken(XML_N_OF), XML_NAMESPACE_OF );
+        mpNamespaceMap->Add( sXML_np_xhtml, GetXMLToken(XML_N_XHTML), XML_NAMESPACE_XHTML );
+        mpNamespaceMap->Add( sXML_np_css3text, GetXMLToken(XML_N_CSS3TEXT), XML_NAMESPACE_CSS3TEXT );
 
         mpNamespaceMap->Add( "_calc_libo", GetXMLToken(XML_N_CALC_EXT), XML_NAMESPACE_CALC_EXT);
         mpNamespaceMap->Add( "_office_libo",
@@ -412,9 +413,6 @@ void SvXMLImport::_InitCtor()
         mxEventListener.set(new SvXMLImportEventListener(this));
         mxModel->addEventListener(mxEventListener);
     }
-
-    ::comphelper::UnoInterfaceToUniqueIdentifierMapper  maInterfaceToIdentifierMapper;
-
 }
 
 SvXMLImport::SvXMLImport(
@@ -440,7 +438,7 @@ SvXMLImport::SvXMLImport(
     mbIsGraphicLoadOnDemandSupported( true )
 {
     SAL_WARN_IF( !xContext.is(), "xmloff.core", "got no service manager" );
-    _InitCtor();
+    InitCtor_();
 }
 
 SvXMLImport::~SvXMLImport() throw ()
@@ -544,6 +542,8 @@ void SAL_CALL SvXMLImport::endDocument()
     //  #i9518# All the stuff that accesses the document has to be done here, not in the dtor,
     //  because the SvXMLImport dtor might not be called until after the document has been closed.
 
+    GetTextImport()->MapCrossRefHeadingFieldsHorribly();
+
     if (mpImpl->mpRDFaHelper.get())
     {
         const uno::Reference<rdf::XRepositorySupplier> xRS(mxModel,
@@ -574,11 +574,8 @@ void SAL_CALL SvXMLImport::endDocument()
                 {
                     sal_Int32 nProgressMax(mpProgressBarHelper->GetReference());
                     sal_Int32 nProgressCurrent(mpProgressBarHelper->GetValue());
-                    uno::Any aAny;
-                    aAny <<= nProgressMax;
-                    mxImportInfo->setPropertyValue(sProgressMax, aAny);
-                    aAny <<= nProgressCurrent;
-                    mxImportInfo->setPropertyValue(sProgressCurrent, aAny);
+                    mxImportInfo->setPropertyValue(sProgressMax, uno::Any(nProgressMax));
+                    mxImportInfo->setPropertyValue(sProgressCurrent, uno::Any(nProgressCurrent));
                 }
                 if (xPropertySetInfo->hasPropertyByName(sRepeat))
                     mxImportInfo->setPropertyValue(sRepeat, css::uno::makeAny(mpProgressBarHelper->GetRepeat()));
@@ -587,9 +584,7 @@ void SAL_CALL SvXMLImport::endDocument()
             OUString sNumberStyles(XML_NUMBERSTYLES);
             if (mxNumberStyles.is() && xPropertySetInfo->hasPropertyByName(sNumberStyles))
             {
-                uno::Any aAny;
-                aAny <<= mxNumberStyles;
-                mxImportInfo->setPropertyValue(sNumberStyles, aAny);
+                mxImportInfo->setPropertyValue(sNumberStyles, Any(mxNumberStyles));
             }
         }
     }
@@ -731,7 +726,7 @@ void SAL_CALL SvXMLImport::startElement( const OUString& rName,
 
     // Remember old namespace map.
     if( pRewindMap )
-        pContext->SetRewindMap( pRewindMap );
+        pContext->PutRewindMap( pRewindMap );
 
     // Call a startElement at the new context.
     pContext->StartElement( xAttrList );
@@ -768,7 +763,7 @@ rName
         pContext->EndElement();
 
         // Get a namespace map to rewind.
-        SvXMLNamespaceMap *pRewindMap = pContext->GetRewindMap();
+        SvXMLNamespaceMap *pRewindMap = pContext->TakeRewindMap();
 
         // Delete the current context.
         pContext->ReleaseRef();
@@ -953,7 +948,7 @@ void SAL_CALL SvXMLImport::setTargetDocument( const uno::Reference< lang::XCompo
 sal_Bool SAL_CALL SvXMLImport::filter( const uno::Sequence< beans::PropertyValue >& )
     throw (uno::RuntimeException, std::exception)
 {
-    return sal_False;
+    return false;
 }
 
 void SAL_CALL SvXMLImport::cancel(  )
@@ -1424,9 +1419,7 @@ void SvXMLImport::AddStyleDisplayName( sal_uInt16 nFamily,
             {
                 Reference < XInterface > xIfc(
                         static_cast< XUnoTunnel *>( mpStyleMap ) );
-                Any aAny;
-                aAny <<= xIfc;
-                mxImportInfo->setPropertyValue( sPrivateData, aAny );
+                mxImportInfo->setPropertyValue( sPrivateData, Any(xIfc) );
             }
         }
     }
@@ -1522,11 +1515,9 @@ void SvXMLImport::AddNumberStyle(sal_Int32 nKey, const OUString& rName)
         mxNumberStyles.set( comphelper::NameContainer_createInstance( ::cppu::UnoType<sal_Int32>::get()) );
     if (mxNumberStyles.is())
     {
-        uno::Any aAny;
-        aAny <<= nKey;
         try
         {
-            mxNumberStyles->insertByName(rName, aAny);
+            mxNumberStyles->insertByName(rName, Any(nKey));
         }
         catch ( uno::Exception& )
         {
@@ -1547,10 +1538,10 @@ XMLEventImportHelper& SvXMLImport::GetEventImport()
         // construct event helper and register StarBasic handler and standard
         // event tables
         mpEventImportHelper = new XMLEventImportHelper();
-        OUString sStarBasic(GetXMLToken(XML_STARBASIC));
+        const OUString& sStarBasic(GetXMLToken(XML_STARBASIC));
         mpEventImportHelper->RegisterFactory(sStarBasic,
                                             new XMLStarBasicContextFactory());
-        OUString sScript(GetXMLToken(XML_SCRIPT));
+        const OUString& sScript(GetXMLToken(XML_SCRIPT));
         mpEventImportHelper->RegisterFactory(sScript,
                                             new XMLScriptContextFactory());
         mpEventImportHelper->AddTranslationTable(aStandardEventTable);
@@ -1716,7 +1707,7 @@ bool SvXMLImport::IsODFVersionConsistent( const OUString& aODFVersion )
     return bResult;
 }
 
-void SvXMLImport::_CreateNumberFormatsSupplier()
+void SvXMLImport::CreateNumberFormatsSupplier_()
 {
     SAL_WARN_IF( mxNumberFormatsSupplier.is(), "xmloff.core", "number formats supplier already exists!" );
     if(mxModel.is())
@@ -1724,7 +1715,7 @@ void SvXMLImport::_CreateNumberFormatsSupplier()
             uno::Reference< util::XNumberFormatsSupplier> (mxModel, uno::UNO_QUERY);
 }
 
-void SvXMLImport::_CreateDataStylesImport()
+void SvXMLImport::CreateDataStylesImport_()
 {
     SAL_WARN_IF( mpNumImport != nullptr, "xmloff.core", "data styles import already exists!" );
     uno::Reference<util::XNumberFormatsSupplier> xNum =
@@ -1968,7 +1959,7 @@ SvXMLImport::GetRDFaImportHelper()
 }
 
 void
-SvXMLImport::AddRDFa(uno::Reference<rdf::XMetadatable> i_xObject,
+SvXMLImport::AddRDFa(const uno::Reference<rdf::XMetadatable>& i_xObject,
     OUString const & i_rAbout,
     OUString const & i_rProperty,
     OUString const & i_rContent,

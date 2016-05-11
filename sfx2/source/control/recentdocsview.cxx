@@ -46,7 +46,7 @@ namespace {
 void SetMessageFont(vcl::RenderContext& rRenderContext)
 {
     vcl::Font aFont(rRenderContext.GetFont());
-    aFont.SetHeight(aFont.GetHeight() * 1.3);
+    aFont.SetFontHeight(aFont.GetFontHeight() * 1.3);
     rRenderContext.SetFont(aFont);
 }
 
@@ -326,6 +326,9 @@ IMPL_STATIC_LINK_TYPED( RecentDocsView, ExecuteHdl_Impl, void*, p, void )
     catch ( const Exception& )
     {
     }
+
+    if ( !pLoadRecentFile->pView->IsDisposed() )
+        pLoadRecentFile->pView->SetPointer( PointerStyle::Arrow );
 
     delete pLoadRecentFile;
 }

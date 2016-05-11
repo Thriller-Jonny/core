@@ -7,15 +7,16 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include <generic/gensys.h>
+#include <unx/gensys.h>
 #include <unx/screensaverinhibitor.hxx>
 
-#include <prex.h>
-#include <X11/Xatom.h>
 #include <X11/Xlib.h>
-#include <postx.h>
+#include <X11/Xutil.h>
+#include <X11/Xatom.h>
 
-#ifdef ENABLE_DBUS
+#include <config_dbus.h>
+
+#if ENABLE_DBUS
 #include <dbus/dbus-glib.h>
 
 #define FDO_DBUS_SERVICE        "org.freedesktop.ScreenSaver"
@@ -39,7 +40,7 @@
 #include <sal/log.hxx>
 
 void ScreenSaverInhibitor::inhibit( bool bInhibit, const OUString& sReason,
-                                    bool bIsX11, const boost::optional<unsigned int> xid, boost::optional<Display*> pDisplay )
+                                    bool bIsX11, const boost::optional<unsigned int>& xid, boost::optional<Display*> pDisplay )
 {
     const char* appname = SalGenericSystem::getFrameClassName();
     const OString aReason = OUStringToOString( sReason, RTL_TEXTENCODING_UTF8 );
@@ -64,11 +65,11 @@ void ScreenSaverInhibitor::inhibit( bool bInhibit, const OUString& sReason,
     }
 }
 
-#ifdef ENABLE_DBUS
+#if ENABLE_DBUS
 void dbusInhibit( bool bInhibit,
                   const gchar* service, const gchar* path, const gchar* interface,
-                  std::function<bool( DBusGProxy*, guint&, GError*& )> fInhibit,
-                  std::function<bool( DBusGProxy*, const guint, GError*& )> fUnInhibit,
+                  const std::function<bool( DBusGProxy*, guint&, GError*& )>& fInhibit,
+                  const std::function<bool( DBusGProxy*, const guint, GError*& )>& fUnInhibit,
                   boost::optional<guint>& rCookie )
 {
     if ( ( !bInhibit && ( rCookie == boost::none ) ) ||
@@ -135,7 +136,7 @@ void dbusInhibit( bool bInhibit,
 
 void ScreenSaverInhibitor::inhibitFDO( bool bInhibit, const char* appname, const char* reason )
 {
-#ifdef ENABLE_DBUS
+#if ENABLE_DBUS
     dbusInhibit( bInhibit,
                  FDO_DBUS_SERVICE, FDO_DBUS_PATH, FDO_DBUS_INTERFACE,
                  [appname, reason] ( DBusGProxy *proxy, guint& nCookie, GError*& error ) -> bool {
@@ -165,7 +166,7 @@ void ScreenSaverInhibitor::inhibitFDO( bool bInhibit, const char* appname, const
 
 void ScreenSaverInhibitor::inhibitFDOPM( bool bInhibit, const char* appname, const char* reason )
 {
-#ifdef ENABLE_DBUS
+#if ENABLE_DBUS
     dbusInhibit( bInhibit,
                  FDOPM_DBUS_SERVICE, FDOPM_DBUS_PATH, FDOPM_DBUS_INTERFACE,
                  [appname, reason] ( DBusGProxy *proxy, guint& nCookie, GError*& error ) -> bool {
@@ -195,7 +196,7 @@ void ScreenSaverInhibitor::inhibitFDOPM( bool bInhibit, const char* appname, con
 
 void ScreenSaverInhibitor::inhibitGSM( bool bInhibit, const char* appname, const char* reason, const unsigned int xid )
 {
-#ifdef ENABLE_DBUS
+#if ENABLE_DBUS
     dbusInhibit( bInhibit,
                  GSM_DBUS_SERVICE, GSM_DBUS_PATH, GSM_DBUS_INTERFACE,
                  [appname, reason, xid] ( DBusGProxy *proxy, guint& nCookie, GError*& error ) -> bool {
@@ -228,7 +229,7 @@ void ScreenSaverInhibitor::inhibitGSM( bool bInhibit, const char* appname, const
 
 void ScreenSaverInhibitor::inhibitMSM( bool bInhibit, const char* appname, const char* reason, const unsigned int xid )
 {
-#ifdef ENABLE_DBUS
+#if ENABLE_DBUS
     dbusInhibit( bInhibit,
                  MSM_DBUS_SERVICE, MSM_DBUS_PATH, MSM_DBUS_INTERFACE,
                  [appname, reason, xid] ( DBusGProxy *proxy, guint& nCookie, GError*& error ) -> bool {

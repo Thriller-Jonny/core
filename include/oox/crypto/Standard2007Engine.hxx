@@ -11,8 +11,14 @@
 #ifndef INCLUDED_OOX_CRYPTO_STANDARD2007ENGINE_HXX
 #define INCLUDED_OOX_CRYPTO_STANDARD2007ENGINE_HXX
 
-#include <oox/crypto/CryptTools.hxx>
 #include <oox/crypto/CryptoEngine.hxx>
+#include <rtl/ustring.hxx>
+#include <sal/types.h>
+
+namespace oox {
+    class BinaryXInputStream;
+    class BinaryXOutputStream;
+}
 
 namespace oox {
 namespace core {
@@ -94,7 +100,7 @@ public:
 
     virtual bool generateEncryptionKey(const OUString& rPassword) override;
 
-    virtual bool writeEncryptionInfo(
+    virtual void writeEncryptionInfo(
                     const OUString& rPassword,
                     BinaryXOutputStream& rStream) override;
 
@@ -102,7 +108,7 @@ public:
                     BinaryXInputStream& aInputStream,
                     BinaryXOutputStream& aOutputStream) override;
 
-    virtual bool encrypt(
+    virtual void encrypt(
                     BinaryXInputStream& aInputStream,
                     BinaryXOutputStream& aOutputStream) override;
 

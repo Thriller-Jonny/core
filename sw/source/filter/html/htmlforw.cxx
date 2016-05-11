@@ -641,7 +641,7 @@ const SdrObject *SwHTMLWriter::GetHTMLControl( const SwDrawFrameFormat& rFormat 
         return nullptr;
 
     const SdrUnoObj& rFormObj = dynamic_cast<const SdrUnoObj&>(*pObj);
-    uno::Reference< awt::XControlModel >  xControlModel =
+    const uno::Reference< awt::XControlModel >&  xControlModel =
             rFormObj.GetUnoControlModel();
 
     OSL_ENSURE( xControlModel.is(), "UNO-Control ohne Model" );
@@ -691,7 +691,7 @@ Writer& OutHTML_DrawFrameFormatAsControl( Writer& rWrt,
                                      const SdrUnoObj& rFormObj,
                                      bool bInCntnr )
 {
-    uno::Reference< awt::XControlModel > xControlModel =
+    const uno::Reference< awt::XControlModel >& xControlModel =
         rFormObj.GetUnoControlModel();
 
     OSL_ENSURE( xControlModel.is(), "UNO-Control ohne Model" );
@@ -1064,7 +1064,7 @@ Writer& OutHTML_DrawFrameFormatAsControl( Writer& rWrt,
 
             {
                 float nHeight = *static_cast<float const *>(aTmp.getValue());
-                if( nHeight > 0  && (!bEdit || nHeight != 10.) )
+                if( nHeight > 0  && (!bEdit || !rtl::math::approxEqual(nHeight, 10.0)) )
                     aItemSet.Put( SvxFontHeightItem( sal_Int16(nHeight * 20.), 100, RES_CHRATR_FONTSIZE ) );
             }
         }
@@ -1078,7 +1078,7 @@ Writer& OutHTML_DrawFrameFormatAsControl( Writer& rWrt,
                                     DefaultFontType::FIXED, LANGUAGE_ENGLISH_US,
                                     GetDefaultFontFlags::OnlyOne ) );
                 OUString aFName( *static_cast<OUString const *>(aTmp.getValue()) );
-                if( !bEdit || aFName != aFixedFont.GetName() )
+                if( !bEdit || aFName != aFixedFont.GetFamilyName() )
                 {
                     FontFamily eFamily = FAMILY_DONTKNOW;
                     if( xPropSetInfo->hasPropertyByName( "FontFamily" ) )
@@ -1113,15 +1113,15 @@ Writer& OutHTML_DrawFrameFormatAsControl( Writer& rWrt,
                     aItemSet.Put( SvxPostureItem( eItalic, RES_CHRATR_POSTURE ) );
             }
         }
-        if( xPropSetInfo->hasPropertyByName( "FontUnderline" ) )
+        if( xPropSetInfo->hasPropertyByName( "FontLineStyle" ) )
         {
-            aTmp = xPropSet->getPropertyValue( "FontUnderline" );
+            aTmp = xPropSet->getPropertyValue( "FontLineStyle" );
             if( aTmp.getValueType() == ::cppu::UnoType<sal_Int16>::get() )
             {
-                FontUnderline eUnderline =
-                    (FontUnderline)*static_cast<sal_Int16 const *>(aTmp.getValue());
-                if( eUnderline != UNDERLINE_DONTKNOW  &&
-                    eUnderline != UNDERLINE_NONE )
+                FontLineStyle eUnderline =
+                    (FontLineStyle)*static_cast<sal_Int16 const *>(aTmp.getValue());
+                if( eUnderline != LINESTYLE_DONTKNOW  &&
+                    eUnderline != LINESTYLE_NONE )
                     aItemSet.Put( SvxUnderlineItem( eUnderline, RES_CHRATR_UNDERLINE ) );
             }
         }
@@ -1280,7 +1280,7 @@ static void AddControl( HTMLControls& rControls,
                         const SdrUnoObj& rFormObj,
                         sal_uInt32 nNodeIdx )
 {
-    uno::Reference< awt::XControlModel > xControlModel =
+    const uno::Reference< awt::XControlModel >& xControlModel =
             rFormObj.GetUnoControlModel();
     if( !xControlModel.is() )
         return;

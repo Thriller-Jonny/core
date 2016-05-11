@@ -28,7 +28,7 @@ struct SwCursorMoveState;
 
 class SwNoTextFrame: public SwContentFrame
 {
-    friend void _FrameFinit();
+    friend void FrameFinit();
 
     const Size& GetSize() const;
 
@@ -53,7 +53,7 @@ public:
     virtual bool GetCursorOfst(SwPosition* pPos, Point& aPoint,
                      SwCursorMoveState* = nullptr, bool bTestBackground = false) const override;
 
-    void GetGrfArea( SwRect &rRect, SwRect * = nullptr, bool bMirror = true ) const;
+    void GetGrfArea( SwRect &rRect, SwRect * = nullptr ) const;
 
     bool IsTransparent() const;
 

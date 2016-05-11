@@ -21,7 +21,6 @@
 #include "chrdlg.hrc"
 #include "cmdid.h"
 #include "comcore.hrc"
-#include "crsskip.hxx"
 #include "doc.hxx"
 #include "docsh.hxx"
 #include "edtwin.hxx"
@@ -197,7 +196,7 @@ void SwSpellPopup::fillLangPopupMenu(
     for (it = aLangItems.begin(); it != aLangItems.end(); ++it)
     {
         OUString aEntryText( *it );
-        if (aEntryText != OUString( SvtLanguageTable::GetLanguageString( LANGUAGE_NONE ) )&&
+        if (aEntryText != SvtLanguageTable::GetLanguageString( LANGUAGE_NONE ) &&
             aEntryText != "*" && // multiple languages in current selection
             !aEntryText.isEmpty()) // 'no language found' from language guessing
         {
@@ -361,7 +360,7 @@ SwSpellPopup::SwSpellPopup(
         // words could be added.
         uno::Reference< linguistic2::XDictionary >  xDic( SvxGetOrCreatePosDic( xDicList ) );
         if (xDic.is())
-            xDic->setActive( sal_True );
+            xDic->setActive( true );
 
         m_aDics = xDicList->getDictionaries();
         const uno::Reference< linguistic2::XDictionary >  *pDic = m_aDics.getConstArray();
@@ -631,11 +630,10 @@ void SwSpellPopup::checkRedline()
     }
 }
 
-sal_uInt16  SwSpellPopup::Execute( const Rectangle& rWordPos, vcl::Window* pWin )
+void  SwSpellPopup::Execute( const Rectangle& rWordPos, vcl::Window* pWin )
 {
     sal_uInt16 nRet = PopupMenu::Execute(pWin, pWin->LogicToPixel(rWordPos));
     Execute( nRet );
-    return nRet;
 }
 
 void SwSpellPopup::Execute( sal_uInt16 nId )
@@ -746,8 +744,8 @@ void SwSpellPopup::Execute( sal_uInt16 nId )
                 if (pPaM)
                     SwEditShell::IgnoreGrammarErrorAt( *pPaM );
                 // refresh the layout of all paragraphs (workaround to launch a dictionary event)
-                xDictionary->setActive(sal_False);
-                xDictionary->setActive(sal_True);
+                xDictionary->setActive(false);
+                xDictionary->setActive(true);
             }
             catch( const uno::Exception& )
             {

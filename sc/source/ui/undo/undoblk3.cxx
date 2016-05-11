@@ -540,6 +540,12 @@ void ScUndoAutoFill::Undo()
         rDoc.DeleteAreaTab( aWorkRange, InsertDeleteFlags::AUTOFILL );
         pUndoDoc->CopyToDocument( aWorkRange, InsertDeleteFlags::AUTOFILL, false, &rDoc );
 
+        // Actually we'd only need to broadcast the cells inserted during
+        // CopyToDocument(), as DeleteAreaTab() broadcasts deleted cells. For
+        // this we'd need to either record the span sets or let
+        // CopyToDocument() broadcast.
+        BroadcastChanges( aWorkRange);
+
         rDoc.ExtendMerge( aWorkRange, true );
         pDocShell->PostPaint( aWorkRange, PAINT_GRID, nExtFlags );
     }
@@ -593,7 +599,7 @@ void ScUndoAutoFill::Redo()
         nProgCount = aSource.aEnd.Row() - aSource.aStart.Row() + 1;
     nProgCount *= nCount;
     ScProgress aProgress( rDoc.GetDocumentShell(),
-            ScGlobal::GetRscString(STR_FILL_SERIES_PROGRESS), nProgCount );
+            ScGlobal::GetRscString(STR_FILL_SERIES_PROGRESS), nProgCount, true );
 
     rDoc.Fill( aSource.aStart.Col(), aSource.aStart.Row(),
             aSource.aEnd.Col(), aSource.aEnd.Row(), &aProgress,
@@ -994,7 +1000,7 @@ void ScUndoReplace::Undo()
         pSearchItem->SetReplaceString(aTempStr);
         rDoc.ReplaceStyle( *pSearchItem,
                             aCursorPos.Col(), aCursorPos.Row(), aCursorPos.Tab(),
-                            aMarkData, true);
+                            aMarkData);
         pSearchItem->SetReplaceString(pSearchItem->GetSearchString());
         pSearchItem->SetSearchString(aTempStr);
         if (pViewShell)
@@ -1060,7 +1066,7 @@ void ScUndoReplace::Redo()
     {
         rDoc.ReplaceStyle( *pSearchItem,
                             aCursorPos.Col(), aCursorPos.Row(), aCursorPos.Tab(),
-                            aMarkData, true);
+                            aMarkData);
         pDocShell->PostPaintGridAll();
     }
     else
@@ -1413,7 +1419,7 @@ void ScUndoRefreshLink::Undo()
         }
 
     pDocShell->PostPaintGridAll();
-	pDocShell->PostPaintExtras();
+    pDocShell->PostPaintExtras();
 
     EndUndo();
 }
@@ -1444,7 +1450,7 @@ void ScUndoRefreshLink::Redo()
         }
 
     pDocShell->PostPaintGridAll();
-	pDocShell->PostPaintExtras();
+    pDocShell->PostPaintExtras();
 
     EndUndo();
 }

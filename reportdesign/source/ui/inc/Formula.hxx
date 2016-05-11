@@ -73,7 +73,7 @@ public:
     // IFormulaEditorHelper
     virtual void notifyChange() override;
     virtual void fill() override;
-    virtual bool calculateValue(const OUString& _sExpression, OUString& _rResult) override;
+    virtual bool calculateValue(const OUString& _sExpression, OUString& _rResult, bool bMatrixFormula) override;
     virtual void doClose(bool _bOk) override;
     virtual void insertEntryToLRUList(const formula::IFunctionDescription*  pDesc) override;
     virtual void showReference(const OUString& _sFormula) override;
@@ -99,7 +99,7 @@ public:
     // IControlReferenceHandler
     virtual void ShowReference(const OUString& _sRef) override;
     virtual void HideReference( bool bDoneRefMode = true ) override;
-    virtual void ReleaseFocus( formula::RefEdit* pEdit, formula::RefButton* pButton = nullptr ) override;
+    virtual void ReleaseFocus( formula::RefEdit* pEdit ) override;
     virtual void ToggleCollapsed( formula::RefEdit* pEdit, formula::RefButton* pButton = nullptr ) override;
 };
 

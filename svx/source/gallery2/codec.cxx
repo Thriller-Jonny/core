@@ -23,8 +23,6 @@
 #include "codec.hxx"
 #include <memory>
 
-// - GalleryCodec -
-
 
 GalleryCodec::GalleryCodec( SvStream& rIOStm ) :
     rStm( rIOStm )

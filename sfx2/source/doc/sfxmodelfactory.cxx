@@ -40,12 +40,9 @@ namespace sfx2
     using ::com::sun::star::uno::Reference;
     using ::com::sun::star::uno::XInterface;
     using ::com::sun::star::uno::UNO_QUERY;
-    using ::com::sun::star::uno::UNO_QUERY_THROW;
-    using ::com::sun::star::uno::UNO_SET_THROW;
     using ::com::sun::star::uno::Exception;
     using ::com::sun::star::uno::RuntimeException;
     using ::com::sun::star::uno::Any;
-    using ::com::sun::star::uno::makeAny;
     using ::com::sun::star::lang::XMultiServiceFactory;
     using ::com::sun::star::uno::Sequence;
     using ::com::sun::star::lang::XSingleServiceFactory;
@@ -157,9 +154,9 @@ namespace sfx2
     Reference< XInterface > SAL_CALL SfxModelFactory::createInstanceWithArguments( const Sequence< Any >& _rArguments ) throw (Exception, RuntimeException, std::exception)
     {
         ::comphelper::NamedValueCollection aArgs( _rArguments );
-        const bool bEmbeddedObject = aArgs.getOrDefault( "EmbeddedObject", sal_False );
-        const bool bScriptSupport = aArgs.getOrDefault( "EmbeddedScriptSupport", sal_True );
-        const bool bDocRecoverySupport = aArgs.getOrDefault( "DocumentRecoverySupport", sal_True );
+        const bool bEmbeddedObject = aArgs.getOrDefault( "EmbeddedObject", false );
+        const bool bScriptSupport = aArgs.getOrDefault( "EmbeddedScriptSupport", true );
+        const bool bDocRecoverySupport = aArgs.getOrDefault( "DocumentRecoverySupport", true );
 
         SfxModelFlags nCreationFlags =
                 ( bEmbeddedObject ? SfxModelFlags::EMBEDDED_OBJECT : SfxModelFlags::NONE )

@@ -19,14 +19,12 @@
 
 #include <pattern/window.hxx>
 #include <helper/persistentwindowstate.hxx>
-#include <services.h>
 
 #include <com/sun/star/awt/XWindow.hpp>
-
-#include <com/sun/star/lang/XServiceInfo.hpp>
 #include <com/sun/star/lang/IllegalArgumentException.hpp>
 #include <com/sun/star/frame/ModuleManager.hpp>
 
+#include <comphelper/lok.hxx>
 #include <comphelper/processfactory.hxx>
 #include <comphelper/configurationhelper.hxx>
 #include <vcl/window.hxx>
@@ -80,6 +78,10 @@ void SAL_CALL PersistentWindowState::initialize(const css::uno::Sequence< css::u
 void SAL_CALL PersistentWindowState::frameAction(const css::frame::FrameActionEvent& aEvent)
     throw(css::uno::RuntimeException, std::exception)
 {
+    // We don't want to do this stuff when being used through LibreOfficeKit
+    if( comphelper::LibreOfficeKit::isActive() )
+        return;
+
     css::uno::Reference< css::uno::XComponentContext >     xContext;
     css::uno::Reference< css::frame::XFrame >              xFrame;
     bool                                               bRestoreWindowState;
@@ -162,27 +164,18 @@ OUString PersistentWindowState::implst_identifyModule(const css::uno::Reference<
     return sModuleName;
 }
 
-OUString PersistentWindowState::implst_getWindowStateFromConfig(const css::uno::Reference< css::uno::XComponentContext >& rxContext,
-                                                                       const OUString&                                    sModuleName)
+OUString PersistentWindowState::implst_getWindowStateFromConfig(
+        const css::uno::Reference< css::uno::XComponentContext >& rxContext,
+        const OUString& sModuleName)
 {
     OUString sWindowState;
-
-    OUStringBuffer sRelPathBuf(256);
-    sRelPathBuf.append("Office/Factories/*[\"");
-    sRelPathBuf.append     (sModuleName            );
-    sRelPathBuf.append("\"]"                  );
-
-    OUString sPackage("org.openoffice.Setup/");
-    OUString sRelPath = sRelPathBuf.makeStringAndClear();
-    OUString sKey("ooSetupFactoryWindowAttributes");
-
     try
     {
         ::comphelper::ConfigurationHelper::readDirectKey(rxContext,
-                                                                                      sPackage,
-                                                                                      sRelPath,
-                                                                                      sKey,
-                                                                                      ::comphelper::ConfigurationHelper::E_READONLY) >>= sWindowState;
+            "org.openoffice.Setup/",
+            "Office/Factories/*[\"" + sModuleName + "\"]",
+            "ooSetupFactoryWindowAttributes",
+            ::comphelper::EConfigurationModes::ReadOnly) >>= sWindowState;
     }
     catch(const css::uno::RuntimeException&)
         { throw; }
@@ -192,27 +185,18 @@ OUString PersistentWindowState::implst_getWindowStateFromConfig(const css::uno::
     return sWindowState;
 }
 
-void PersistentWindowState::implst_setWindowStateOnConfig(const css::uno::Reference< css::uno::XComponentContext >& rxContext,
-                                                          const OUString&                                    sModuleName ,
-                                                          const OUString&                                    sWindowState)
+void PersistentWindowState::implst_setWindowStateOnConfig(
+        const css::uno::Reference< css::uno::XComponentContext >& rxContext,
+        const OUString& sModuleName, const OUString& sWindowState)
 {
-    OUStringBuffer sRelPathBuf(256);
-    sRelPathBuf.append("Office/Factories/*[\"");
-    sRelPathBuf.append     (sModuleName            );
-    sRelPathBuf.append("\"]"                  );
-
-    OUString sPackage("org.openoffice.Setup/");
-    OUString sRelPath = sRelPathBuf.makeStringAndClear();
-    OUString sKey("ooSetupFactoryWindowAttributes");
-
     try
     {
         ::comphelper::ConfigurationHelper::writeDirectKey(rxContext,
-                                                          sPackage,
-                                                          sRelPath,
-                                                          sKey,
-                                                          css::uno::makeAny(sWindowState),
-                                                          ::comphelper::ConfigurationHelper::E_STANDARD);
+            "org.openoffice.Setup/",
+            "Office/Factories/*[\"" + sModuleName + "\"]",
+            "ooSetupFactoryWindowAttributes",
+            css::uno::makeAny(sWindowState),
+            ::comphelper::EConfigurationModes::Standard);
     }
     catch(const css::uno::RuntimeException&)
         { throw; }
@@ -236,8 +220,7 @@ OUString PersistentWindowState::implst_getWindowStateFromWindow(const css::uno::
             (pWindow->IsSystemWindow())
            )
         {
-            sal_uLong nMask  =   WINDOWSTATE_MASK_ALL;
-                  nMask &= ~(WINDOWSTATE_MASK_MINIMIZED);
+            WindowStateMask nMask = WindowStateMask::All & ~(WindowStateMask::Minimized);
             sWindowState = OStringToOUString(
                             static_cast<SystemWindow*>(pWindow)->GetWindowState(nMask),
                             RTL_TEXTENCODING_UTF8);

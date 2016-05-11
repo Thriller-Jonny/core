@@ -74,7 +74,7 @@ public:
         if (!xInputStream.is())
         {
             OSL_ASSERT(false);
-            return sal_False;
+            return false;
         }
 
         // An XML import service: what we push sax messages to..
@@ -89,12 +89,12 @@ public:
 
         // OO Graphics Handler: abstract class to handle document SAX messages, concrete implementation here
         // writes to in-memory target doc
-        DocumentHandler xHandler(xInternalHandler);
+        DocumentHandler aHandler(xInternalHandler);
 
         WPXSvInputStream input(xInputStream);
 
         Generator exporter;
-        exporter.addDocumentHandler(&xHandler, ODF_FLAT_XML);
+        exporter.addDocumentHandler(&aHandler, ODF_FLAT_XML);
 
         this->doRegisterHandlers(exporter);
 
@@ -180,7 +180,6 @@ private:
     css::uno::Reference< css::uno::XComponentContext > mxContext;
     css::uno::Reference< css::lang::XComponent > mxDoc;
     OUString msFilterName;
-    css::uno::Reference< css::xml::sax::XDocumentHandler > mxHandler;
 };
 
 }

@@ -22,7 +22,6 @@
 
 #include <vcl/sysdata.hxx>
 #include <basegfx/range/b2ibox.hxx>
-#include <basebmp/bitmapdevice.hxx>
 
 #include <salframe.hxx>
 
@@ -44,9 +43,7 @@ class VCL_DLLPUBLIC SvpSalFrame : public SalFrame
     SalFrameStyleFlags                  m_nStyle;
     bool                                m_bVisible;
 #ifndef IOS
-    basebmp::BitmapDeviceSharedPtr      m_aFrame;
-    bool                                m_bDamageTracking;
-    basebmp::Format                     m_nScanlineFormat;
+    cairo_surface_t*                    m_pSurface;
 #endif
     long                                m_nMinWidth;
     long                                m_nMinHeight;
@@ -62,17 +59,12 @@ public:
     SvpSalFrame( SvpSalInstance* pInstance,
                  SalFrame* pParent,
                  SalFrameStyleFlags nSalFrameStyle,
-                 basebmp::Format nScanlineFormat,
                  SystemParentData* pSystemParent = nullptr );
     virtual ~SvpSalFrame();
 
     void GetFocus();
     void LoseFocus();
-    void PostPaint(bool bImmediate) const;
-
-#if defined ANDROID
-    const basebmp::BitmapDeviceSharedPtr& getDevice() const { return m_aFrame; }
-#endif
+    void PostPaint() const;
 
     // SalFrame
     virtual SalGraphics*        AcquireGraphics() override;
@@ -122,16 +114,9 @@ public:
     virtual void                UnionClipRegion( long nX, long nY, long nWidth, long nHeight ) override;
     virtual void                EndSetClipRegion() override;
 
-#ifdef ANDROID
-    // If enabled we can get damage notifications for regions immediately rendered to ...
-    void                        enableDamageTracker( bool bOn = true );
-#endif
-
     /*TODO: functional implementation */
     virtual void                SetScreenNumber( unsigned int nScreen ) override { (void)nScreen; }
     virtual void                SetApplicationID(const OUString &rApplicationID) override { (void) rApplicationID; }
-
-    static SvpSalFrame*         GetFocusFrame() { return s_pFocusFrame; }
 
 };
 

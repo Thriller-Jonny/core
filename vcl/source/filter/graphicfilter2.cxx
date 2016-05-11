@@ -292,7 +292,7 @@ bool GraphicDescriptor::ImpDetectJPG( SvStream& rStm,  bool bExtendedInfo )
                         bScanFinished = true;
                     break;
 
-                    // per default we assume marker segments conaining a length parameter
+                    // per default we assume marker segments containing a length parameter
                     default :
                     {
                         sal_uInt16 nLength = 0;
@@ -876,6 +876,7 @@ bool GraphicDescriptor::ImpDetectPSD( SvStream& rStm, bool bExtendedInfo )
                         case 4 :
                         case 3 :
                             nBitsPerPixel = 24;
+                            SAL_FALLTHROUGH;
                         case 2 :
                         case 1 :
                             aPixSize.Width() = nColumns;

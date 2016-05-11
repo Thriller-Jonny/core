@@ -23,8 +23,10 @@
 #include <math.h>
 #include <rtl/math.hxx>
 #include <rtl/ustring.hxx>
+#include <unotools/textsearch.hxx>
 #include <formula/errorcodes.hxx>
 #include <formula/tokenarray.hxx>
+#include <sfx2/linkmgr.hxx>
 #include "scdll.hxx"
 #include "scdllapi.h"
 #include "types.hxx"
@@ -98,7 +100,20 @@ enum ScIterFuncIfs
 {
     ifSUMIFS,     // Multi-Conditional sum
     ifAVERAGEIFS, // Multi-Conditional average
-    ifCOUNTIFS    // Multi-Conditional count
+    ifCOUNTIFS,   // Multi-Conditional count
+    ifMINIFS,     // Multi-Conditional minimum
+    ifMAXIFS      // Multi-Conditional maximum
+};
+
+enum ScETSType
+{
+    etsAdd,
+    etsMult,
+    etsSeason,
+    etsPIAdd,
+    etsPIMult,
+    etsStatAdd,
+    etsStatMult
 };
 
 struct FormulaTokenRef_less
@@ -130,7 +145,19 @@ public:
     /// If pDoc!=NULL the document options are taken into account and if
     /// RegularExpressions are disabled the function returns false regardless
     /// of the string content.
-    static bool MayBeRegExp( const OUString& rStr, const ScDocument* pDoc );
+    static bool MayBeRegExp( const OUString& rStr, const ScDocument* pDoc, bool bIgnoreWildcards = false );
+
+    /** Could string be a wildcard (*,?,~) expression?
+        If pDoc!=NULL the document options are taken into account and if
+        Wildcards are disabled the function returns false regardless of the
+        string content.
+     */
+    static bool MayBeWildcard( const OUString& rStr, const ScDocument* pDoc );
+
+    /** Detect if string should be used as regular expression or wildcard
+        expression or literal string.
+     */
+    static utl::SearchParam::SearchType DetectSearchType( const OUString& rStr, const ScDocument* pDoc );
 
     /// Fail safe division, returning an errDivisionByZero coded into a double
     /// if denominator is 0.0
@@ -158,6 +185,7 @@ private:
     ScAddress   aPos;
     ScTokenArray& rArr;
     ScDocument* pDok;
+    sfx2::LinkManager* mpLinkManager;
     svl::SharedStringPool& mrStrPool;
     formula::FormulaTokenRef  xResult;
     ScJumpMatrix*   pJumpMatrix;        // currently active array condition, if any
@@ -301,12 +329,10 @@ void PopDoubleRef( ScRange & rRange, short & rParam, size_t & rRefInList );
 void PopDoubleRef( ScRange&, bool bDontCheckForTableOp = false );
 void DoubleRefToVars( const formula::FormulaToken* p,
         SCCOL& rCol1, SCROW &rRow1, SCTAB& rTab1,
-        SCCOL& rCol2, SCROW &rRow2, SCTAB& rTab2,
-        bool bDontCheckForTableOp = false );
+        SCCOL& rCol2, SCROW &rRow2, SCTAB& rTab2 );
 ScDBRangeBase* PopDBDoubleRef();
 void PopDoubleRef(SCCOL& rCol1, SCROW &rRow1, SCTAB& rTab1,
-                          SCCOL& rCol2, SCROW &rRow2, SCTAB& rTab2,
-                          bool bDontCheckForTableOp = false );
+                          SCCOL& rCol2, SCROW &rRow2, SCTAB& rTab2 );
 void PopExternalSingleRef(sal_uInt16& rFileId, OUString& rTabName, ScSingleRefData& rRef);
 void PopExternalSingleRef(ScExternalRefCache::TokenRef& rToken, ScExternalRefCache::CellFormat* pFmt = nullptr);
 void PopExternalSingleRef(sal_uInt16& rFileId, OUString& rTabName, ScSingleRefData& rRef,
@@ -353,6 +379,8 @@ formula::StackVar GetStackType();
 // peek StackType of Parameter, Parameter 1 == TOS, 2 == TOS-1, ...
 formula::StackVar GetStackType( sal_uInt8 nParam );
 sal_uInt8 GetByte() { return cPar; }
+// reverse order of stack
+void ReverseStack( sal_uInt8 nParamCount );
 // generates a position-dependent SingleRef out of a DoubleRef
 bool DoubleRefToPosSingleRef( const ScRange& rRange, ScAddress& rAdr );
 double GetDoubleFromMatrix(const ScMatrixRef& pMat);
@@ -515,6 +543,7 @@ void ScVar( bool bTextAsZero = false );
 void ScVarP( bool bTextAsZero = false );
 void ScStDev( bool bTextAsZero = false );
 void ScStDevP( bool bTextAsZero = false );
+void ScRawSubtract();
 void ScColumns();
 void ScRows();
 void ScSheets();
@@ -577,6 +606,12 @@ void ScText();
 void ScSubstitute();
 void ScRept();
 void ScConcat();
+void ScConcat_MS();
+void ScTextJoin_MS();
+void ScIfs_MS();
+void ScSwitch_MS();
+void ScMinIfs_MS();
+void ScMaxIfs_MS();
 void ScExternal();
 void ScMissing();
 void ScMacro();
@@ -605,11 +640,9 @@ void ScDebugVar();
         If true, the date passed must be a valid Gregorian calendar date. No
         two-digit expanding or rollover is done.
 
-    @param bCheckGregorian
-        If true, date must be Gregorian, i.e. >= 1582-10-15.
-        If false, don't care, any valid date >= 0-1-1 will do.
+    Date must be Gregorian, i.e. >= 1582-10-15.
  */
-double GetDateSerial( sal_Int16 nYear, sal_Int16 nMonth, sal_Int16 nDay, bool bStrict, bool bCheckGregorian );
+double GetDateSerial( sal_Int16 nYear, sal_Int16 nMonth, sal_Int16 nDay, bool bStrict );
 
 void ScGetActDate();
 void ScGetActTime();
@@ -619,6 +652,7 @@ void ScGetDay();
 void ScGetDayOfWeek();
 void ScGetWeekOfYear();
 void ScGetIsoWeekOfYear();
+void ScWeeknumOOo();
 void ScEasterSunday();
 sal_uInt16 GetWeekendAndHolidayMasks( const sal_uInt8 nParamCount, const sal_uInt32 nNullDate,
         ::std::vector<double>& rSortArray, bool bWeekendMask[ 7 ] );
@@ -748,6 +782,7 @@ bool CheckMatrix(bool _bLOG,sal_uInt8& nCase,SCSIZE& nCX,SCSIZE& nCY,SCSIZE& nRX
 void ScLinest();
 void ScLogest();
 void ScForecast();
+void ScForecast_Ets( ScETSType eETSType );
 void ScNoName();
 void ScBadName();
 // Statistics:
@@ -758,6 +793,7 @@ public:
 static SC_DLLPUBLIC double phi(double x);
 static SC_DLLPUBLIC double integralPhi(double x);
 static SC_DLLPUBLIC double gaussinv(double x);
+static SC_DLLPUBLIC double GetPercentile( ::std::vector<double> & rArray, double fPercentile );
 
 private:
 double GetBetaDist(double x, double alpha, double beta);  //cumulative distribution function
@@ -827,7 +863,6 @@ void ScSkew();
 void ScSkewp();
 void ScMedian();
 double GetMedian( ::std::vector<double> & rArray );
-double GetPercentile( ::std::vector<double> & rArray, double fPercentile );
 double GetPercentileExclusive( ::std::vector<double> & rArray, double fPercentile );
 void GetNumberSequenceArray( sal_uInt8 nParamCount, ::std::vector<double>& rArray, bool bConvertTextInArray );
 void GetSortArray( sal_uInt8 nParamCount, ::std::vector<double>& rSortArray, ::std::vector<long>* pIndexOrder, bool bConvertTextInArray, bool bAllowEmptyArray );
@@ -899,11 +934,14 @@ public:
             { if (nError && !nGlobalError) nGlobalError = nError; }
     void AssertFormulaMatrix();
 
+    void SetLinkManager(sfx2::LinkManager* pLinkMgr)
+            { mpLinkManager = pLinkMgr; }
+
     sal_uInt16                  GetError() const            { return nGlobalError; }
     formula::StackVar           GetResultType() const       { return xResult->GetType(); }
     svl::SharedString GetStringResult() const;
     double                      GetNumResult() const        { return xResult->GetDouble(); }
-    formula::FormulaTokenRef    GetResultToken() const      { return xResult; }
+    const formula::FormulaTokenRef& GetResultToken() const      { return xResult; }
     short                       GetRetFormatType() const    { return nRetFmtType; }
     sal_uLong                   GetRetFormatIndex() const   { return nRetFmtIndex; }
 };
@@ -996,7 +1034,7 @@ inline bool ScInterpreter::CheckStringResultLen( OUString& rResult, const OUStri
 {
     if ( rResult.getLength() + rAdd.getLength() > SAL_MAX_UINT16 )
     {
-        SetError( errStringOverflow );
+        SetError( formula::errStringOverflow );
         rResult.clear();
         return false;
     }
@@ -1007,11 +1045,11 @@ inline void ScInterpreter::TreatDoubleError( double& rVal )
 {
     if ( !::rtl::math::isFinite( rVal ) )
     {
-        sal_uInt16 nErr = GetDoubleErrorValue( rVal );
+        sal_uInt16 nErr = formula::GetDoubleErrorValue( rVal );
         if ( nErr )
             SetError( nErr );
         else
-            SetError( errNoValue );
+            SetError( formula::errNoValue );
         rVal = 0.0;
     }
 }

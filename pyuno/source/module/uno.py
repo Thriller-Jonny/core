@@ -190,7 +190,7 @@ class Char:
 #    def __repr__(self):
 #        return "<ByteSequence instance %s>" % str.__repr__(self)
 
-    # for a little bit compatitbility; setting value is not possible as
+    # for a little bit compatibility; setting value is not possible as
     # strings are immutable
 #    def _get_value(self):
 #        return self
@@ -361,7 +361,10 @@ def _impl_getConstantGroupByName( module, group ):
     qualifiedName = module + '.' + group
     for td in tde:
         if td.Name == qualifiedName:
-            return _ConstantGroup({c.Name.split('.')[-1]: c.ConstantValue for c in td.Constants})
+            return_dict = dict()
+            for c in td.Constants:
+                return_dict.update({c.Name.split('.')[-1]: c.ConstantValue})
+            return _ConstantGroup(return_dict)
     else:
         raise ValueError
 

@@ -410,35 +410,9 @@ void SAL_CALL ScCellFieldsObj::refresh(  )
     if (mpRefreshListeners)
     {
         //  Call all listeners.
-        uno::Sequence< uno::Reference< uno::XInterface > > aListeners(mpRefreshListeners->getElements());
-        sal_uInt32 nLength(aListeners.getLength());
-        if (nLength)
-        {
-            const uno::Reference< uno::XInterface >* pInterfaces = aListeners.getConstArray();
-            if (pInterfaces)
-            {
-                lang::EventObject aEvent;
-                aEvent.Source.set(uno::Reference< util::XRefreshable >(this));
-                sal_uInt32 i(0);
-                while (i < nLength)
-                {
-                    try
-                    {
-                        while(i < nLength)
-                        {
-                            static_cast< util::XRefreshListener* >(pInterfaces->get())->refreshed(aEvent);
-                            ++pInterfaces;
-                            ++i;
-                        }
-                    }
-                    catch(uno::RuntimeException&)
-                    {
-                        ++pInterfaces;
-                        ++i;
-                    }
-                }
-            }
-        }
+        lang::EventObject aEvent;
+        aEvent.Source.set(uno::Reference< util::XRefreshable >(this));
+        mpRefreshListeners->notifyEach( &util::XRefreshListener::refreshed, aEvent );
     }
 }
 
@@ -449,7 +423,7 @@ void SAL_CALL ScCellFieldsObj::addRefreshListener( const uno::Reference< util::X
     {
         SolarMutexGuard aGuard;
         if (!mpRefreshListeners)
-            mpRefreshListeners = new cppu::OInterfaceContainerHelper(aMutex);
+            mpRefreshListeners = new comphelper::OInterfaceContainerHelper2(aMutex);
         mpRefreshListeners->addInterface(xListener);
     }
 }
@@ -507,13 +481,19 @@ uno::Reference<text::XTextField> ScHeaderFieldsObj::GetObjectByIndex_Impl(sal_In
     uno::Reference<text::XTextRange> xTextRange;
     rtl::Reference<ScHeaderFooterContentObj> rContentObj = mrData.GetContentObj();
     uno::Reference<text::XText> xText;
-    sal_uInt16 nPart = mrData.GetPart();
-    if (nPart == SC_HDFT_LEFT)
-        xText = rContentObj->getLeftText();
-    else if (nPart == SC_HDFT_CENTER)
-        xText = rContentObj->getCenterText();
-    else
-        xText = rContentObj->getRightText();
+
+    switch ( mrData.GetPart() )
+    {
+        case ScHeaderFooterPart::LEFT:
+            xText = rContentObj->getLeftText();
+        break;
+        case ScHeaderFooterPart::CENTER:
+            xText = rContentObj->getCenterText();
+        break;
+        case ScHeaderFooterPart::RIGHT:
+            xText = rContentObj->getRightText();
+        break;
+    }
 
     uno::Reference<text::XTextRange> xTemp(xText, uno::UNO_QUERY);
     xTextRange = xTemp;
@@ -590,35 +570,9 @@ void SAL_CALL ScHeaderFieldsObj::refresh(  )
     if (mpRefreshListeners)
     {
         //  Call all listeners.
-        uno::Sequence< uno::Reference< uno::XInterface > > aListeners(mpRefreshListeners->getElements());
-        sal_uInt32 nLength(aListeners.getLength());
-        if (nLength)
-        {
-            const uno::Reference< uno::XInterface >* pInterfaces = aListeners.getConstArray();
-            if (pInterfaces)
-            {
-                lang::EventObject aEvent;
-                aEvent.Source.set(uno::Reference< util::XRefreshable >(this));
-                sal_uInt32 i(0);
-                while (i < nLength)
-                {
-                    try
-                    {
-                        while(i < nLength)
-                        {
-                            static_cast< util::XRefreshListener* >(pInterfaces->get())->refreshed(aEvent);
-                            ++pInterfaces;
-                            ++i;
-                        }
-                    }
-                    catch(uno::RuntimeException&)
-                    {
-                        ++pInterfaces;
-                        ++i;
-                    }
-                }
-            }
-        }
+        lang::EventObject aEvent;
+        aEvent.Source.set(uno::Reference< util::XRefreshable >(this));
+        mpRefreshListeners->notifyEach( &util::XRefreshListener::refreshed, aEvent);
     }
 }
 
@@ -629,7 +583,7 @@ void SAL_CALL ScHeaderFieldsObj::addRefreshListener( const uno::Reference< util:
     {
         SolarMutexGuard aGuard;
         if (!mpRefreshListeners)
-            mpRefreshListeners = new cppu::OInterfaceContainerHelper(aMutex);
+            mpRefreshListeners = new comphelper::OInterfaceContainerHelper2(aMutex);
         mpRefreshListeners->addInterface(xListener);
     }
 }
@@ -903,7 +857,7 @@ void ScEditFieldObj::setPropertyValueDateTime(const OUString& rName, const uno::
                 }
                 else if (rName == SC_UNONAME_ISFIXED)
                 {
-                    SvxDateType eType = rVal.get<sal_Bool>() ? SVXDATETYPE_FIX : SVXDATETYPE_VAR;
+                    SvxDateType eType = rVal.get<bool>() ? SVXDATETYPE_FIX : SVXDATETYPE_VAR;
                     p->SetType(eType);
                 }
                 else if (rName == SC_UNONAME_DATETIME)
@@ -938,7 +892,7 @@ void ScEditFieldObj::setPropertyValueDateTime(const OUString& rName, const uno::
                 }
                 else if (rName == SC_UNONAME_ISFIXED)
                 {
-                    SvxTimeType eType = rVal.get<sal_Bool>() ? SVXTIMETYPE_FIX : SVXTIMETYPE_VAR;
+                    SvxTimeType eType = rVal.get<bool>() ? SVXTIMETYPE_FIX : SVXTIMETYPE_VAR;
                     p->SetType(eType);
                 }
                 else if (rName == SC_UNONAME_DATETIME)
@@ -963,9 +917,9 @@ void ScEditFieldObj::setPropertyValueDateTime(const OUString& rName, const uno::
     else
     {
         if (rName == SC_UNONAME_ISDATE)
-            mbIsDate = rVal.get<sal_Bool>();
+            mbIsDate = rVal.get<bool>();
         else if (rName == SC_UNONAME_ISFIXED)
-            mbIsFixed = rVal.get<sal_Bool>();
+            mbIsFixed = rVal.get<bool>();
         else if (rName == SC_UNONAME_DATETIME)
             maDateTime = rVal.get<util::DateTime>();
         else if (rName == SC_UNONAME_NUMFMT)
@@ -992,7 +946,7 @@ uno::Any ScEditFieldObj::getPropertyValueDateTime(const OUString& rName)
             {
                 SvxDateField* p = static_cast<SvxDateField*>(pField);
                 if (rName == SC_UNONAME_ISDATE)
-                    return uno::makeAny(sal_True);
+                    return uno::makeAny(true);
 
                 if (rName == SC_UNONAME_ISFIXED)
                     return uno::makeAny<sal_Bool>(p->GetType() == SVXDATETYPE_FIX);
@@ -1018,10 +972,10 @@ uno::Any ScEditFieldObj::getPropertyValueDateTime(const OUString& rName)
             {
                 // SvxTimeField doesn't have any attributes.
                 if (rName == SC_UNONAME_ISDATE)
-                    return uno::makeAny(sal_False);
+                    return uno::makeAny(false);
 
                 if (rName == SC_UNONAME_ISFIXED)
-                    return uno::makeAny(sal_False);
+                    return uno::makeAny(false);
 
                 if (rName == SC_UNONAME_DATETIME)
                     // This is the best we can do.
@@ -1036,7 +990,7 @@ uno::Any ScEditFieldObj::getPropertyValueDateTime(const OUString& rName)
             {
                 SvxExtTimeField* p = static_cast<SvxExtTimeField*>(pField);
                 if (rName == SC_UNONAME_ISDATE)
-                    return uno::makeAny(sal_False);
+                    return uno::makeAny(false);
 
                 if (rName == SC_UNONAME_ISFIXED)
                     return uno::makeAny<sal_Bool>(p->GetType() == SVXTIMETYPE_FIX);
@@ -1258,7 +1212,7 @@ void SAL_CALL ScEditFieldObj::attach( const uno::Reference<text::XTextRange>& xT
         uno::Reference<text::XText> xText(xTextRange->getText());
         if (xText.is())
         {
-            xText->insertTextContent( xTextRange, this, sal_True );
+            xText->insertTextContent( xTextRange, this, true );
         }
     }
 }

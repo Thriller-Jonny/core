@@ -20,7 +20,6 @@
 #ifndef INCLUDED_DBACCESS_SOURCE_INC_FLT_REGHELPER_HXX
 #define INCLUDED_DBACCESS_SOURCE_INC_FLT_REGHELPER_HXX
 
-#include <com/sun/star/uno/Sequence.hxx>
 #include <com/sun/star/registry/XRegistryKey.hpp>
 #include <com/sun/star/lang/XSingleServiceFactory.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
@@ -30,9 +29,9 @@
 namespace dbaxml
 {
 
-    #define _REGISTRATIONHELPER_INCLUDED_INDIRECTLY_
+    #define REGISTRATIONHELPER_INCLUDED_INDIRECTLY_
     #include "registrationhelper.hxx"
-    #undef _REGISTRATIONHELPER_INCLUDED_INDIRECTLY_
+    #undef REGISTRATIONHELPER_INCLUDED_INDIRECTLY_
 
 }
 

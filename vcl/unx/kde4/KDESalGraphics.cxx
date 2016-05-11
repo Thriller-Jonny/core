@@ -17,11 +17,11 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <QStyle>
-#include <QStyleOption>
-#include <QPainter>
-#include <QFrame>
-#include <QLabel>
+#include <QtGui/QStyle>
+#include <QtGui/QStyleOption>
+#include <QtGui/QPainter>
+#include <QtGui/QFrame>
+#include <QtGui/QLabel>
 
 #include <kapplication.h>
 #include <kdebug.h>
@@ -216,17 +216,6 @@ bool KDESalGraphics::drawNativeControl( ControlType type, ControlPart part,
     bool returnVal = true;
 
     QRect widgetRect = region2QRect(rControlRegion);
-    if( type == CTRL_SPINBOX && part == PART_ALL_BUTTONS )
-        type = CTRL_SPINBUTTONS;
-    if( type == CTRL_SPINBUTTONS )
-    {
-        OSL_ASSERT( value.getType() != CTRL_SPINBUTTONS );
-        const SpinbuttonValue* pSpinVal = static_cast<const SpinbuttonValue *>(&value);
-        Rectangle aButtonRect( pSpinVal->maUpperRect);
-        aButtonRect.Union( pSpinVal->maLowerRect );
-        widgetRect = QRect( aButtonRect.Left(), aButtonRect.Top(),
-                            aButtonRect.Right(), aButtonRect.Bottom() );
-    }
 
     //if no image, or resized, make a new image
     if (!m_image || m_image->size() != widgetRect.size())
@@ -705,6 +694,7 @@ bool KDESalGraphics::getNativeControlRegion( ControlType type, ControlPart part,
 
                 break;
             }
+            SAL_FALLTHROUGH;
         case CTRL_COMBOBOX:
         case CTRL_LISTBOX:
         {
@@ -914,6 +904,7 @@ bool KDESalGraphics::getNativeControlRegion( ControlType type, ControlPart part,
                 contentRect = boundingRect = rect;
                 retVal = true;
             }
+            break;
         }
         default:
             break;

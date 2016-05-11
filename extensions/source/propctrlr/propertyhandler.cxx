@@ -78,8 +78,8 @@ namespace pcr
             return;
 
         // remove all old property change listeners
-        ::std::unique_ptr< ::cppu::OInterfaceIteratorHelper > removeListener = m_aPropertyListeners.createIterator();
-        ::std::unique_ptr< ::cppu::OInterfaceIteratorHelper > readdListener = m_aPropertyListeners.createIterator();  // will copy the container as needed
+        ::std::unique_ptr< ::comphelper::OInterfaceIteratorHelper2 > removeListener = m_aPropertyListeners.createIterator();
+        ::std::unique_ptr< ::comphelper::OInterfaceIteratorHelper2 > readdListener = m_aPropertyListeners.createIterator();  // will copy the container as needed
         while ( removeListener->hasMoreElements() )
             removePropertyChangeListener( static_cast< XPropertyChangeListener* >( removeListener->next() ) );
         OSL_ENSURE( m_aPropertyListeners.empty(), "PropertyHandler::inspect: derived classes are expected to forward the removePropertyChangeListener call to their base class (me)!" );
@@ -239,7 +239,7 @@ namespace pcr
 
     sal_Bool SAL_CALL PropertyHandler::suspend( sal_Bool /*_bSuspend*/ ) throw (RuntimeException, std::exception)
     {
-        return sal_True;
+        return true;
     }
 
     IMPLEMENT_FORWARD_XCOMPONENT( PropertyHandler, PropertyHandler_Base )
@@ -335,7 +335,7 @@ namespace pcr
     {
         Reference< XModifiable > xModifiable( impl_getContextDocument_nothrow(), UNO_QUERY );
         if ( xModifiable.is() )
-            xModifiable->setModified( sal_True );
+            xModifiable->setModified( true );
     }
 
     bool PropertyHandler::impl_componentHasProperty_throw( const OUString& _rPropName ) const

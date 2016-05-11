@@ -190,8 +190,7 @@ struct TranslateInfo
 
 typedef std::unordered_map< OUString,
 std::list< TranslateInfo >,
-OUStringHash,
-::std::equal_to< OUString > > EventInfoHash;
+OUStringHash > EventInfoHash;
 
 
 struct TranslatePropMap
@@ -280,7 +279,7 @@ EventInfoHash& getEventTransInfo()
     {
         OUString sEventInfo;
         TranslatePropMap* pTransProp = aTranslatePropMap_Impl;
-        int nCount = sizeof(aTranslatePropMap_Impl) / sizeof(aTranslatePropMap_Impl[0]);
+        int nCount = SAL_N_ELEMENTS(aTranslatePropMap_Impl);
 
         int i = 0;
         while (i < nCount)
@@ -487,8 +486,7 @@ public:
     { return !m_hEvents.empty(); }
 private:
 
-typedef std::unordered_map< OUString, Any, OUStringHash,
-::std::equal_to< OUString > > EventSupplierHash;
+typedef std::unordered_map< OUString, Any, OUStringHash > EventSupplierHash;
 
     EventSupplierHash m_hEvents;
 };
@@ -528,8 +526,8 @@ ReadOnlyEventsNameContainer::hasByName( const OUString& aName ) throw (RuntimeEx
 {
     EventSupplierHash::const_iterator it = m_hEvents.find( aName );
     if ( it == m_hEvents.end() )
-        return sal_False;
-    return sal_True;
+        return false;
+    return true;
 }
 
 class ReadOnlyEventsSupplier : public ::cppu::WeakImplHelper< XScriptEventsSupplier >
@@ -557,7 +555,7 @@ class EventListener : public EventListener_BASE
 {
 
 public:
-    explicit EventListener( const Reference< XComponentContext >& rxContext );
+    EventListener();
     // XEventListener
     virtual void SAL_CALL disposing(const lang::EventObject& Source) throw( RuntimeException, std::exception ) override;
     using cppu::OPropertySetHelper::disposing;
@@ -636,15 +634,14 @@ private:
     void setShellFromModel();
     void firing_Impl( const  ScriptEvent& evt, Any *pSyncRet=nullptr ) throw( RuntimeException, std::exception );
 
-    Reference< XComponentContext > m_xContext;
     Reference< frame::XModel > m_xModel;
     bool m_bDocClosed;
     SfxObjectShell* mpShell;
     OUString msProject;
 };
 
-EventListener::EventListener( const Reference< XComponentContext >& rxContext ) :
-OPropertyContainer(GetBroadcastHelper()), m_xContext( rxContext ), m_bDocClosed(false), mpShell( nullptr )
+EventListener::EventListener() :
+OPropertyContainer(GetBroadcastHelper()), m_bDocClosed(false), mpShell( nullptr )
 {
     registerProperty( EVENTLSTNR_PROPERTY_MODEL, EVENTLSTNR_PROPERTY_ID_MODEL,
         beans::PropertyAttribute::TRANSIENT, &m_xModel, cppu::UnoType<decltype(m_xModel)>::get() );
@@ -1026,7 +1023,7 @@ typedef ::cppu::WeakImplHelper< XVBAToOOEventDescGen, css::lang::XServiceInfo > 
 class VBAToOOEventDescGen : public VBAToOOEventDescGen_BASE
 {
 public:
-    explicit VBAToOOEventDescGen(const Reference< XComponentContext >& rxContext);
+    VBAToOOEventDescGen();
 
     // XVBAToOOEventDescGen
     virtual Sequence< ScriptEventDescriptor > SAL_CALL getEventDescriptions( const OUString& sCtrlServiceName, const OUString& sCodeName ) throw (RuntimeException, std::exception) override;
@@ -1051,12 +1048,9 @@ public:
         return Sequence< OUString >( &strName, 1 );
     }
 
-private:
-    Reference< XComponentContext > m_xContext;
-
 };
 
-VBAToOOEventDescGen::VBAToOOEventDescGen( const Reference< XComponentContext >& rxContext ):m_xContext( rxContext ) {}
+VBAToOOEventDescGen::VBAToOOEventDescGen() {}
 
 Sequence< ScriptEventDescriptor > SAL_CALL
 VBAToOOEventDescGen::getEventDescriptions( const OUString& sCntrlServiceName, const OUString& sCodeName ) throw (RuntimeException, std::exception)
@@ -1076,18 +1070,18 @@ VBAToOOEventDescGen::getEventSupplier( const Reference< XInterface >& xControl, 
 }
 
 extern "C" SAL_DLLPUBLIC_EXPORT css::uno::XInterface* SAL_CALL
-ooo_vba_EventListener_get_implementation(css::uno::XComponentContext* context,
+ooo_vba_EventListener_get_implementation(css::uno::XComponentContext*,
                                          css::uno::Sequence<css::uno::Any> const &)
 {
-    return cppu::acquire(new EventListener(context));
+    return cppu::acquire(new EventListener);
 }
 
 
 extern "C" SAL_DLLPUBLIC_EXPORT css::uno::XInterface* SAL_CALL
-ooo_vba_VBAToOOEventDesc_get_implementation(css::uno::XComponentContext* context,
+ooo_vba_VBAToOOEventDesc_get_implementation(css::uno::XComponentContext*,
                                             css::uno::Sequence<css::uno::Any> const &)
 {
-    return cppu::acquire(new VBAToOOEventDescGen(context));
+    return cppu::acquire(new VBAToOOEventDescGen);
 }
 
 

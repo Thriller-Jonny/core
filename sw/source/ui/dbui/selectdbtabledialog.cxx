@@ -45,14 +45,14 @@ using namespace ::com::sun::star::beans;
 class SwAddressTable : public SvSimpleTable
 {
 public:
-    SwAddressTable(SvSimpleTableContainer& rParent, WinBits nBits = 0);
+    explicit SwAddressTable(SvSimpleTableContainer& rParent);
     void InsertHeaderItem(sal_uInt16 nColumn, const OUString& rText, HeaderBarItemBits nBits);
     virtual void Resize() override;
     void setColSizes();
 };
 
-SwAddressTable::SwAddressTable(SvSimpleTableContainer& rParent, WinBits nBits)
-    : SvSimpleTable(rParent, nBits)
+SwAddressTable::SwAddressTable(SvSimpleTableContainer& rParent)
+    : SvSimpleTable(rParent, 0)
 {
     SetSpaceBetweenEntries(3);
     SetSelectionMode(SINGLE_SELECTION);
@@ -182,9 +182,9 @@ IMPL_LINK_TYPED(SwSelectDBTableDialog, PreviewHdl, Button*, pButton, void)
         pProperties[2].Name = "CommandType";
         pProperties[2].Value <<= nCommandType;
         pProperties[3].Name = "ShowTreeView";
-        pProperties[3].Value <<= sal_False;
+        pProperties[3].Value <<= false;
         pProperties[4].Name = "ShowTreeViewButton";
-        pProperties[4].Value <<= sal_False;
+        pProperties[4].Value <<= false;
 
         VclPtrInstance< SwDBTablePreviewDialog > pDlg(pButton, aProperties);
         pDlg->Execute();

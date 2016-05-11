@@ -562,6 +562,30 @@ void TestLanguageTag::testAllTags()
         CPPUNIT_ASSERT( joker.getLanguageType() == LANGUAGE_USER_PRIV_JOKER );
     }
 
+    // 'C' locale shall map to 'en-US'
+    {
+        LanguageTag aTag( "C" );
+        CPPUNIT_ASSERT( aTag.getLanguage() == "en" );
+        CPPUNIT_ASSERT( aTag.getCountry() == "US" );
+        lang::Locale aLocale = aTag.getLocale();
+        CPPUNIT_ASSERT( aTag.getBcp47() == "en-US" );
+        CPPUNIT_ASSERT( aLocale.Language == "en" );
+        CPPUNIT_ASSERT( aLocale.Country == "US" );
+        CPPUNIT_ASSERT( aLocale.Variant.isEmpty() );
+        CPPUNIT_ASSERT( aTag.getLanguageType() == LANGUAGE_ENGLISH_US );
+    }
+    {
+        LanguageTag aTag( lang::Locale("C","","") );
+        CPPUNIT_ASSERT( aTag.getLanguage() == "en" );
+        CPPUNIT_ASSERT( aTag.getCountry() == "US" );
+        lang::Locale aLocale = aTag.getLocale();
+        CPPUNIT_ASSERT( aTag.getBcp47() == "en-US" );
+        CPPUNIT_ASSERT( aLocale.Language == "en" );
+        CPPUNIT_ASSERT( aLocale.Country == "US" );
+        CPPUNIT_ASSERT( aLocale.Variant.isEmpty() );
+        CPPUNIT_ASSERT( aTag.getLanguageType() == LANGUAGE_ENGLISH_US );
+    }
+
     // test reset() methods
     {
         LanguageTag aTag( LANGUAGE_DONTKNOW );
@@ -630,7 +654,7 @@ void TestLanguageTag::testAllTags()
     }
 }
 
-static bool checkMapping( const OUString& rStr1, const OUString& rStr2 )
+bool checkMapping( const OUString& rStr1, const OUString& rStr2 )
 {
     if (rStr1 == "la-Latn"     ) return rStr2 == "la";
     if (rStr1 == "tzm-Latn-DZ" ) return rStr2 == "kab-DZ";
@@ -684,6 +708,9 @@ static bool checkMapping( const OUString& rStr1, const OUString& rStr2 )
     if (rStr1 == "ku-SY"       ) return rStr2 == "kmr-Latn-SY";
     if (rStr1 == "ku-IQ"       ) return rStr2 == "ckb-IQ";
     if (rStr1 == "ku-IR"       ) return rStr2 == "ckb-IR";
+    if (rStr1 == "eu"          ) return rStr2 == "eu-ES";
+    if (rStr1 == "crk-Latn-CN" ) return rStr2 == "crk-Latn-CA";
+    if (rStr1 == "crk-Cans-CN" ) return rStr2 == "crk-Cans-CA";
     return rStr1 == rStr2;
 }
 

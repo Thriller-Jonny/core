@@ -86,7 +86,6 @@
 #include <app.hrc>
 #include <web.hrc>
 #include "paratr.hxx"
-#include <crsskip.hxx>
 #include <vcl/svapp.hxx>
 #include <sfx2/app.hxx>
 #include <breakit.hxx>
@@ -174,7 +173,7 @@ void sw_CharDialog( SwWrtShell &rWrtSh, bool bUseDialog, sal_uInt16 nSlot,const 
         SwAbstractDialogFactory* pFact = SwAbstractDialogFactory::Create();
         OSL_ENSURE(pFact, "SwAbstractDialogFactory fail!");
 
-        pDlg.reset(pFact->CreateSwCharDlg(rWrtSh.GetView().GetWindow(), rWrtSh.GetView(), aCoreSet, DLG_CHAR_STD));
+        pDlg.reset(pFact->CreateSwCharDlg(rWrtSh.GetView().GetWindow(), rWrtSh.GetView(), aCoreSet, SwCharDlgMode::Std));
         OSL_ENSURE(pDlg, "Dialog creation failed!");
         if( FN_INSERT_HYPERLINK == nSlot )
             pDlg->SetCurPageId("hyperlink");
@@ -802,7 +801,7 @@ void SwTextShell::Execute(SfxRequest &rReq)
                     else
                     {
                         SvNumberFormatter* pFormatter = rWrtSh.GetNumberFormatter();
-                        sal_uLong nSysNumFormat = pFormatter->GetFormatIndex( NF_NUMBER_STANDARD, LANGUAGE_SYSTEM);
+                        const sal_uInt32 nSysNumFormat = pFormatter->GetFormatIndex( NF_NUMBER_STANDARD, LANGUAGE_SYSTEM);
                         SwInsertField_Data aData(TYP_FORMELFLD, nsSwGetSetExpType::GSE_FORMULA, OUString(), sFormula, nSysNumFormat);
                         aFieldMgr.InsertField(aData);
                     }
@@ -862,7 +861,7 @@ void SwTextShell::Execute(SfxRequest &rReq)
             const sal_uInt16 nWhich = GetPool().GetWhich( nSlot );
             if ( pArgs && pArgs->GetItemState( nWhich ) == SfxItemState::SET )
                 bUseDialog = false;
-            // intentionally no break
+            SAL_FALLTHROUGH;
         }
         case SID_CHAR_DLG:
         case SID_CHAR_DLG_EFFECT:
@@ -895,8 +894,7 @@ void SwTextShell::Execute(SfxRequest &rReq)
             const sal_uInt16 nWhich = GetPool().GetWhich( nSlot );
             if ( pArgs && pArgs->GetItemState( nWhich ) == SfxItemState::SET )
                 bUseDialog = false;
-            // intentionally no break
-
+            SAL_FALLTHROUGH;
         }
         case SID_PARA_DLG:
         {
@@ -1006,7 +1004,7 @@ void SwTextShell::Execute(SfxRequest &rReq)
                 SwAbstractDialogFactory* pFact = SwAbstractDialogFactory::Create();
                 OSL_ENSURE(pFact, "SwAbstractDialogFactory fail!");
 
-                pDlg.reset(pFact->CreateSwParaDlg( GetView().GetWindow(),GetView(), aCoreSet, DLG_STD, nullptr, false, sDefPage ));
+                pDlg.reset(pFact->CreateSwParaDlg( GetView().GetWindow(),GetView(), aCoreSet, nullptr, false, sDefPage ));
                 OSL_ENSURE(pDlg, "Dialog creation failed!");
             }
             SfxItemSet* pSet = nullptr;
@@ -1120,12 +1118,12 @@ void SwTextShell::Execute(SfxRequest &rReq)
         {
             OUString sContinuedListId;
             const SwNumRule* pRule =
-                rWrtSh.SearchNumRule( false, true, false, -1, sContinuedListId );
+                rWrtSh.SearchNumRule( true, sContinuedListId );
             // #i86492#
             // Search also for bullet list
             if ( !pRule )
             {
-                pRule = rWrtSh.SearchNumRule( false, false, false, -1, sContinuedListId );
+                pRule = rWrtSh.SearchNumRule( false, sContinuedListId );
             }
             if ( pRule )
             {
@@ -1798,7 +1796,7 @@ void SwTextShell::GetState( SfxItemSet &rSet )
 
                      uno::Reference <frame::XController> xController = GetView().GetController();
                      const lang::Locale aLocale( SW_BREAKITER()->GetLocale( GetAppLanguageTag() ) );
-                     const OUString aApplicationName( rSmartTagMgr.GetApplicationName() );
+                     const OUString& aApplicationName( rSmartTagMgr.GetApplicationName() );
                      const OUString aRangeText = xRange->getString();
 
                      const SvxSmartTagItem aItem( nWhich,
@@ -1882,10 +1880,10 @@ void SwTextShell::GetState( SfxItemSet &rSet )
                     // Search also for bullet list
                     OUString aDummy;
                     const SwNumRule* pRule =
-                            rSh.SearchNumRule( false, true, false, -1, aDummy );
+                            rSh.SearchNumRule( true, aDummy );
                     if ( !pRule )
                     {
-                        pRule = rSh.SearchNumRule( false, false, false, -1, aDummy );
+                        pRule = rSh.SearchNumRule( false, aDummy );
                     }
                     if ( !pRule )
                         rSet.DisableItem(nWhich);

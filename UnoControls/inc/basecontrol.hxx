@@ -83,6 +83,7 @@
 #include <com/sun/star/awt/XView.hpp>
 #include <com/sun/star/lang/XServiceInfo.hpp>
 #include <osl/mutex.hxx>
+#include <tools/colordata.hxx>
 #include <cppuhelper/weak.hxx>
 #include <cppuhelper/component.hxx>
 
@@ -96,16 +97,11 @@ namespace com { namespace sun { namespace star { namespace uno {
 
 namespace unocontrols{
 
-//  macros
-
-#define TRGB_COLORDATA(TRANSPARENCE,RED,GREEN,BLUE) \
-        ((sal_Int32)(((sal_uInt32)((sal_uInt8)(BLUE))))|(((sal_uInt32)((sal_uInt8)(GREEN)))<<8)|(((sal_uInt32)((sal_uInt8)(RED)))<<16)|(((sal_uInt32)((sal_uInt8)(TRANSPARENCE)))<<24))
-
 //  structs
 
 struct IMPL_MutexContainer
 {
-    // Is necassery to initialize "BaseControl" and make this class thread-safe.
+    // Is necessary to initialize "BaseControl" and make this class thread-safe.
     ::osl::Mutex m_aMutex;
 };
 
@@ -365,11 +361,11 @@ public:
 protected:
     using OComponentHelper::disposing;
 
-    const css::uno::Reference< css::uno::XComponentContext > impl_getComponentContext() { return m_xComponentContext;}
+    const css::uno::Reference< css::uno::XComponentContext >& impl_getComponentContext() { return m_xComponentContext;}
 
-    const css::uno::Reference< css::awt::XWindow > impl_getPeerWindow() { return m_xPeerWindow;}
+    const css::uno::Reference< css::awt::XWindow >& impl_getPeerWindow() { return m_xPeerWindow;}
 
-    const css::uno::Reference< css::awt::XGraphics > impl_getGraphicsPeer() { return m_xGraphicsPeer;}
+    const css::uno::Reference< css::awt::XGraphics >& impl_getGraphicsPeer() { return m_xGraphicsPeer;}
 
     const sal_Int32& impl_getWidth() { return m_nWidth;}
 
@@ -385,7 +381,7 @@ protected:
 
     virtual void impl_recalcLayout( const css::awt::WindowEvent& aEvent );
 
-    css::uno::Reference< css::uno::XInterface > impl_getDelegator() { return m_xDelegator;}
+    const css::uno::Reference< css::uno::XInterface >& impl_getDelegator() { return m_xDelegator;}
 
 private:
 

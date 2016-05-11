@@ -30,22 +30,14 @@ using namespace com::sun::star::uno;
 using namespace ftp;
 
 
-
-
 // DynamicResultSet Implementation.
-
-
 
 
 DynamicResultSet::DynamicResultSet(
     const Reference< XComponentContext >& rxContext,
-    const rtl::Reference< FTPContent >& rxContent,
     const OpenCommandArgument2& rCommand,
-    const Reference< XCommandEnvironment >& rxEnv,
     ResultSetFactory* pFactory )
     : ResultSetImplHelper( rxContext, rCommand ),
-      m_xContent( rxContent ),
-      m_xEnv( rxEnv ),
       m_pFactory( pFactory )
 {
 }
@@ -56,9 +48,7 @@ DynamicResultSet::~DynamicResultSet()
 }
 
 
-
 // Non-interface methods.
-
 
 
 void DynamicResultSet::initStatic()
@@ -73,8 +63,6 @@ void DynamicResultSet::initDynamic()
 
     m_xResultSet2 = m_xResultSet1;
 }
-
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

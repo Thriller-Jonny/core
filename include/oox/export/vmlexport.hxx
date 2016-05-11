@@ -20,12 +20,36 @@
 #ifndef INCLUDED_OOX_EXPORT_VMLEXPORT_HXX
 #define INCLUDED_OOX_EXPORT_VMLEXPORT_HXX
 
-#include <oox/dllapi.h>
-#include <oox/export/drawingml.hxx>
-#include <sax/fshelper.hxx>
-#include <filter/msfilter/escherex.hxx>
+#include <com/sun/star/uno/Reference.hxx>
 #include <editeng/outlobj.hxx>
+#include <filter/msfilter/escherex.hxx>
+#include <oox/dllapi.h>
+#include <rtl/strbuf.hxx>
+#include <rtl/string.hxx>
+#include <rtl/ustring.hxx>
+#include <sal/types.h>
+#include <sax/fshelper.hxx>
+#include <vcl/checksum.hxx>
 
+namespace com { namespace sun { namespace star {
+    namespace drawing {
+        class XShape;
+    }
+}}}
+
+namespace oox {
+    namespace drawingml {
+        class DrawingML;
+    }
+}
+
+namespace sax_fastparser {
+    class FastAttributeList;
+}
+
+class Point;
+class Rectangle;
+class SdrObject;
 
 namespace oox {
 
@@ -84,15 +108,15 @@ public:
                         VMLExport( ::sax_fastparser::FSHelperPtr pSerializer, VMLTextExport* pTextExport = nullptr );
     virtual             ~VMLExport();
 
-    ::sax_fastparser::FSHelperPtr
+    const ::sax_fastparser::FSHelperPtr&
                         GetFS() { return m_pSerializer; }
 
-    void SetFS(::sax_fastparser::FSHelperPtr pSerializer);
+    void SetFS(const ::sax_fastparser::FSHelperPtr& pSerializer);
 
     /// Export the sdr object as VML.
     ///
     /// Call this when you need to export the object as VML.
-    sal_uInt32 AddSdrObject( const SdrObject& rObj, sal_Int16 eHOri = -1,
+    void AddSdrObject( const SdrObject& rObj, sal_Int16 eHOri = -1,
             sal_Int16 eVOri = -1, sal_Int16 eHRel = -1,
             sal_Int16 eVRel = -1, const Point* pNdTopLeft = nullptr, const bool bOOxmlExport = false );
     virtual void  AddSdrObjectVMLObject( const SdrObject& rObj) override;

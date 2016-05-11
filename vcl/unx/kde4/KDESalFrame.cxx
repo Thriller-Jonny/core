@@ -17,8 +17,10 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <QColor>
-#include <QStyle>
+#include <QtGui/QColor>
+#include <QtGui/QStyle>
+#include <QtCore/QDebug>
+#include <QtGui/QToolTip>
 
 #include <kconfig.h>
 #include <kglobal.h>
@@ -27,8 +29,6 @@
 #include <kmainwindow.h>
 #include <kapplication.h>
 #include <ktoolbar.h>
-#include <qdebug.h>
-#include <qtooltip.h>
 
 #undef Region
 
@@ -41,7 +41,7 @@
 #include <vcl/font.hxx>
 #include <vcl/settings.hxx>
 
-#include "fontmanager.hxx"
+#include "unx/fontmanager.hxx"
 
 #include <svdata.hxx>
 

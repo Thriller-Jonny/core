@@ -24,7 +24,6 @@
 #include "linedescriptor.hxx"
 #include "inspectorhelpwindow.hxx"
 
-#include <boost/noncopyable.hpp>
 #include <com/sun/star/lang/DisposedException.hpp>
 #include <com/sun/star/lang/XComponent.hpp>
 #include <com/sun/star/inspection/PropertyControlType.hpp>
@@ -54,7 +53,6 @@ namespace pcr
     using ::com::sun::star::lang::DisposedException;
     using ::com::sun::star::lang::XComponent;
     using ::com::sun::star::uno::UNO_QUERY;
-    using ::com::sun::star::graphic::XGraphic;
 
     namespace PropertyControlType = ::com::sun::star::inspection::PropertyControlType;
 
@@ -77,13 +75,15 @@ namespace pcr
         }
     };
 
-    class SharedNotifier: private boost::noncopyable
+    class SharedNotifier
     {
     private:
         static ::osl::Mutex&                                        getMutex();
         static ::rtl::Reference< ::comphelper::AsyncEventNotifier > s_pNotifier;
 
     public:
+        SharedNotifier(const SharedNotifier&) = delete;
+        SharedNotifier& operator=(const SharedNotifier&) = delete;
         static const ::rtl::Reference< ::comphelper::AsyncEventNotifier >&
             getNotifier();
     };
@@ -721,7 +721,7 @@ namespace pcr
     }
 
 
-    sal_uInt16 OBrowserListBox::InsertEntry(const OLineDescriptor& _rPropertyData, sal_uInt16 _nPos)
+    void OBrowserListBox::InsertEntry(const OLineDescriptor& _rPropertyData, sal_uInt16 _nPos)
     {
         // create a new line
         BrowserLinePointer pBrowserLine( new OBrowserLine( _rPropertyData.sName, m_aLinesPlayground.get() ) );
@@ -757,8 +757,6 @@ namespace pcr
         while ( nUpdatePos < m_aLines.size() )
             m_aOutOfDateLines.insert( nUpdatePos++ );
         UpdatePosNSize( );
-
-        return nInsertPos;
     }
 
 
@@ -1276,7 +1274,6 @@ namespace pcr
 
 
 } // namespace pcr
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -40,9 +40,9 @@ using namespace ::com::sun::star;
 
 void SvxUnoFontDescriptor::ConvertToFont( const awt::FontDescriptor& rDesc, vcl::Font& rFont )
 {
-    rFont.SetName( rDesc.Name );
+    rFont.SetFamilyName( rDesc.Name );
     rFont.SetStyleName( rDesc.StyleName );
-    rFont.SetSize( Size( rDesc.Width, rDesc.Height ) );
+    rFont.SetFontSize( Size( rDesc.Width, rDesc.Height ) );
     rFont.SetFamily( (FontFamily)rDesc.Family );
     rFont.SetCharSet( (rtl_TextEncoding)rDesc.CharSet );
     rFont.SetPitch( (FontPitch)rDesc.Pitch );
@@ -50,18 +50,18 @@ void SvxUnoFontDescriptor::ConvertToFont( const awt::FontDescriptor& rDesc, vcl:
     rFont.SetKerning( rDesc.Kerning ? FontKerning::FontSpecific : FontKerning::NONE );
     rFont.SetWeight( VCLUnoHelper::ConvertFontWeight(rDesc.Weight) );
     rFont.SetItalic( (FontItalic)rDesc.Slant );
-    rFont.SetUnderline( (FontUnderline)rDesc.Underline );
+    rFont.SetUnderline( (FontLineStyle)rDesc.Underline );
     rFont.SetStrikeout( (FontStrikeout)rDesc.Strikeout );
     rFont.SetWordLineMode( rDesc.WordLineMode );
 }
 
 void SvxUnoFontDescriptor::ConvertFromFont( const vcl::Font& rFont, awt::FontDescriptor& rDesc )
 {
-    rDesc.Name = rFont.GetName();
+    rDesc.Name = rFont.GetFamilyName();
     rDesc.StyleName = rFont.GetStyleName();
-    rDesc.Width = sal::static_int_cast< sal_Int16 >(rFont.GetSize().Width());
-    rDesc.Height = sal::static_int_cast< sal_Int16 >(rFont.GetSize().Height());
-    rDesc.Family = sal::static_int_cast< sal_Int16 >(rFont.GetFamily());
+    rDesc.Width = sal::static_int_cast< sal_Int16 >(rFont.GetFontSize().Width());
+    rDesc.Height = sal::static_int_cast< sal_Int16 >(rFont.GetFontSize().Height());
+    rDesc.Family = sal::static_int_cast< sal_Int16 >(rFont.GetFamilyType());
     rDesc.CharSet = rFont.GetCharSet();
     rDesc.Pitch = sal::static_int_cast< sal_Int16 >(rFont.GetPitch());
     rDesc.Orientation = static_cast< float >(rFont.GetOrientation() / 10);
@@ -102,7 +102,7 @@ void SvxUnoFontDescriptor::FillItemSet( const awt::FontDescriptor& rDesc, SfxIte
     }
 
     {
-        SvxUnderlineItem aUnderlineItem( (FontUnderline)0, EE_CHAR_UNDERLINE );
+        SvxUnderlineItem aUnderlineItem( (FontLineStyle)0, EE_CHAR_UNDERLINE );
         aTemp <<= (sal_Int16)rDesc.Underline;
         static_cast<SfxPoolItem*>(&aUnderlineItem)->PutValue( aTemp, MID_TL_STYLE );
         rSet.Put( aUnderlineItem );
@@ -225,7 +225,6 @@ uno::Any SvxUnoFontDescriptor::getPropertyDefault( SfxItemPool* pPool )
 
     return aAny;
 }
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

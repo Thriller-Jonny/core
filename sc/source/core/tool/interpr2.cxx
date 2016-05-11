@@ -45,6 +45,7 @@
 #include "postit.hxx"
 #include "tokenarray.hxx"
 #include "globalnames.hxx"
+#include "stlsheet.hxx"
 
 #include <com/sun/star/sheet/DataPilotFieldFilter.hpp>
 
@@ -60,7 +61,7 @@ using namespace formula;
 // Date and Time
 
 double ScInterpreter::GetDateSerial( sal_Int16 nYear, sal_Int16 nMonth, sal_Int16 nDay,
-        bool bStrict, bool bCheckGregorian )
+        bool bStrict )
 {
     if ( nYear < 100 && !bStrict )
         nYear = pFormatter->ExpandTwoDigitYear( nYear );
@@ -68,7 +69,11 @@ double ScInterpreter::GetDateSerial( sal_Int16 nYear, sal_Int16 nMonth, sal_Int1
     // performance penalty.
     sal_Int16 nY, nM, nD;
     if (bStrict)
-        nY = nYear, nM = nMonth, nD = nDay;
+    {
+        nY = nYear;
+        nM = nMonth;
+        nD = nDay;
+    }
     else
     {
         if (nMonth > 0)
@@ -86,7 +91,7 @@ double ScInterpreter::GetDateSerial( sal_Int16 nYear, sal_Int16 nMonth, sal_Int1
     Date aDate( nD, nM, nY);
     if (!bStrict)
         aDate += nDay - 1;
-    if ((!bCheckGregorian && aDate.IsValidDate()) || (bCheckGregorian && aDate.IsValidAndGregorian()))
+    if (aDate.IsValidAndGregorian())
         return (double) (aDate - *(pFormatter->GetNullDate()));
     else
     {
@@ -205,11 +210,24 @@ void ScInterpreter::ScGetDayOfWeek()
     }
 }
 
-void ScInterpreter::ScGetWeekOfYear()
+void ScInterpreter::ScWeeknumOOo()
 {
     if ( MustHaveParamCount( GetByte(), 2 ) )
     {
         short nFlag = (short) ::rtl::math::approxFloor(GetDouble());
+
+        Date aDate = *(pFormatter->GetNullDate());
+        aDate += (long)::rtl::math::approxFloor(GetDouble());
+        PushInt( (int) aDate.GetWeekOfYear( nFlag == 1 ? SUNDAY : MONDAY ));
+    }
+}
+
+void ScInterpreter::ScGetWeekOfYear()
+{
+    sal_uInt8 nParamCount = GetByte();
+    if ( MustHaveParamCount( nParamCount, 1, 2 ) )
+    {
+        short nFlag = (nParamCount == 1) ? 1 : (short) ::rtl::math::approxFloor(GetDouble());
 
         Date aDate = *(pFormatter->GetNullDate());
         aDate += (long)::rtl::math::approxFloor(GetDouble());
@@ -219,15 +237,21 @@ void ScInterpreter::ScGetWeekOfYear()
         switch ( nFlag )
         {
             case   1 :
-            case  11 :
+                eFirstDayOfWeek = SUNDAY;
+                nMinimumNumberOfDaysInWeek = 1;
+                break;
             case   2 :
+                eFirstDayOfWeek = MONDAY;
+                nMinimumNumberOfDaysInWeek = 1;
+                break;
+            case  11 :
             case  12 :
             case  13 :
             case  14 :
             case  15 :
             case  16 :
             case  17 :
-                eFirstDayOfWeek = (DayOfWeek) ( ( nFlag - 1 )  % 10 );
+                eFirstDayOfWeek = static_cast<DayOfWeek>( nFlag - 11 ); // MONDAY := 0
                 nMinimumNumberOfDaysInWeek = 1; //the week containing January 1 is week 1
                 break;
             case  21 :
@@ -280,7 +304,7 @@ void ScInterpreter::ScEasterSunday()
         O = H + L - 7 * M + 114;
         nDay = sal::static_int_cast<sal_Int16>( O % 31 + 1 );
         nMonth = sal::static_int_cast<sal_Int16>( int(O / 31) );
-        PushDouble( GetDateSerial( nYear, nMonth, nDay, true, true ) );
+        PushDouble( GetDateSerial( nYear, nMonth, nDay, true ) );
     }
 }
 
@@ -530,7 +554,7 @@ void ScInterpreter::ScGetDate()
             PushIllegalArgument();
         else
         {
-            PushDouble(GetDateSerial(nYear, nMonth, nDay, false, true));
+            PushDouble(GetDateSerial(nYear, nMonth, nDay, false));
         }
     }
 }
@@ -2135,7 +2159,8 @@ void ScInterpreter::ScIntersect()
                 xt[i]->GetRefList()->push_back( aRef);
             }
         }
-        x1 = xt[0], x2 = xt[1];
+        x1 = xt[0];
+        x2 = xt[1];
 
         ScTokenRef xRes = new ScRefListToken;
         ScRefList* pRefList = xRes->GetRefList();
@@ -2362,10 +2387,21 @@ void ScInterpreter::ScStyle()
             if (pShell)
             {
                 // notify object shell directly!
+                bool bNotify = true;
+                if (aStyle2.isEmpty())
+                {
+                    const ScStyleSheet* pStyle = pDok->GetStyle(aPos.Col(), aPos.Row(), aPos.Tab());
 
-                ScRange aRange(aPos);
-                ScAutoStyleHint aHint( aRange, aStyle1, nTimeOut, aStyle2 );
-                pShell->Broadcast( aHint );
+                    if (pStyle && pStyle->GetName() == aStyle1)
+                        bNotify = false;
+                }
+
+                if (bNotify)
+                {
+                    ScRange aRange(aPos);
+                    ScAutoStyleHint aHint( aRange, aStyle1, nTimeOut, aStyle2 );
+                    pShell->Broadcast( aHint );
+                }
             }
         }
 
@@ -2416,8 +2452,8 @@ void ScInterpreter::ScDde()
         //  temporary documents (ScFunctionAccess) have no DocShell
         //  and no LinkManager -> abort
 
-        sfx2::LinkManager* pLinkMgr = pDok->GetLinkManager();
-        if (!pLinkMgr)
+        //sfx2::LinkManager* pLinkMgr = pDok->GetLinkManager();
+        if (!mpLinkManager)
         {
             PushNoValue();
             return;
@@ -2435,7 +2471,7 @@ void ScInterpreter::ScDde()
 
             // Get/ Create link object
 
-        ScDdeLink* pLink = lcl_GetDdeLink( pLinkMgr, aAppl, aTopic, aItem, nMode );
+        ScDdeLink* pLink = lcl_GetDdeLink( mpLinkManager, aAppl, aTopic, aItem, nMode );
 
         //TODO: Save Dde-links (in addition) more efficient at document !!!!!
         //      ScDdeLink* pLink = pDok->GetDdeLink( aAppl, aTopic, aItem );
@@ -2445,8 +2481,8 @@ void ScInterpreter::ScDde()
         if (!pLink)
         {
             pLink = new ScDdeLink( pDok, aAppl, aTopic, aItem, nMode );
-            pLinkMgr->InsertDDELink( pLink, aAppl, aTopic, aItem );
-            if ( pLinkMgr->GetLinks().size() == 1 )                    // erster ?
+            mpLinkManager->InsertDDELink( pLink, aAppl, aTopic, aItem );
+            if ( mpLinkManager->GetLinks().size() == 1 )                    // erster ?
             {
                 SfxBindings* pBindings = pDok->GetViewBindings();
                 if (pBindings)
@@ -2494,7 +2530,7 @@ void ScInterpreter::ScDde()
             PushNA();
 
         pDok->EnableIdle(bOldEnabled);
-        pLinkMgr->CloseCachedComps();
+        mpLinkManager->CloseCachedComps();
     }
 }
 
@@ -2509,7 +2545,7 @@ void ScInterpreter::ScBase()
             'N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
             0
         };
-        static const int nDigits = (sizeof (pDigits)/sizeof(pDigits[0]))-1;
+        static const int nDigits = SAL_N_ELEMENTS(pDigits) - 1;
         sal_Int32 nMinLen;
         if ( nParamCount == 3 )
         {
@@ -2564,7 +2600,7 @@ void ScInterpreter::ScBase()
 // a little bit better:
                     double fInt = ::rtl::math::approxFloor( fVal / fBase );
                     double fMult = fInt * fBase;
-#if OSL_DEBUG_LEVEL > 1
+#if 0
                     // =BASIS(1e308;36) => GPF with
                     // nDig = (size_t) ::rtl::math::approxFloor( fVal - fMult );
                     // in spite off previous test if fVal >= fMult
@@ -2716,7 +2752,7 @@ void ScInterpreter::ScRoman()
         {
             static const sal_Unicode pChars[] = { 'M', 'D', 'C', 'L', 'X', 'V', 'I' };
             static const sal_uInt16 pValues[] = { 1000, 500, 100, 50, 10, 5, 1 };
-            static const sal_uInt16 nMaxIndex = (sal_uInt16)((sizeof(pValues)/sizeof(pValues[0])) - 1);
+            static const sal_uInt16 nMaxIndex = (sal_uInt16)(SAL_N_ELEMENTS(pValues) - 1);
 
             OUString aRoman;
             sal_uInt16 nVal = (sal_uInt16) fVal;
@@ -2966,12 +3002,11 @@ static bool lclConvertMoney( const OUString& aSearchUnit, double& rfRate, int& r
         { "LTL", 3.45280,  2 }
     };
 
-    static const size_t nConversionCount = sizeof( aConvertTable ) / sizeof( aConvertTable[0] );
-    for ( size_t i = 0; i < nConversionCount; ++i )
-        if ( aSearchUnit.equalsIgnoreAsciiCaseAscii( aConvertTable[i].pCurrText ) )
+    for (const auto & i : aConvertTable)
+        if ( aSearchUnit.equalsIgnoreAsciiCaseAscii( i.pCurrText ) )
         {
-            rfRate = aConvertTable[i].fRate;
-            rnDec  = aConvertTable[i].nDec;
+            rfRate = i.fRate;
+            rnDec  = i.nDec;
             return true;
         }
     return false;

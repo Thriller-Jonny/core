@@ -63,7 +63,7 @@
 #include <basegfx/polygon/b2dpolygonclipper.hxx>
 #include <svx/xbtmpit.hxx>
 #include <svx/xfltrit.hxx>
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 #include <svx/xflbmtit.hxx>
 #include <svx/xflbstit.hxx>
 #include <svx/svdpntv.hxx>
@@ -355,11 +355,8 @@ void ImpSdrGDIMetaFileImport::SetAttributes(SdrObject* pObj, bool bForceTextAttr
 
         switch(maLineJoin)
         {
-            default : // basegfx::B2DLineJoin::NONE
+            case basegfx::B2DLineJoin::NONE:
                 mpLineAttr->Put(XLineJointItem(css::drawing::LineJoint_NONE));
-                break;
-            case basegfx::B2DLineJoin::Middle:
-                mpLineAttr->Put(XLineJointItem(css::drawing::LineJoint_MIDDLE));
                 break;
             case basegfx::B2DLineJoin::Bevel:
                 mpLineAttr->Put(XLineJointItem(css::drawing::LineJoint_BEVEL));
@@ -409,11 +406,11 @@ void ImpSdrGDIMetaFileImport::SetAttributes(SdrObject* pObj, bool bForceTextAttr
     if(bText && mbFntDirty)
     {
         vcl::Font aFnt(mpVD->GetFont());
-        const sal_uInt32 nHeight(FRound(aFnt.GetSize().Height() * mfScaleY));
+        const sal_uInt32 nHeight(FRound(aFnt.GetFontSize().Height() * mfScaleY));
 
-        mpTextAttr->Put( SvxFontItem( aFnt.GetFamily(), aFnt.GetName(), aFnt.GetStyleName(), aFnt.GetPitch(), aFnt.GetCharSet(), EE_CHAR_FONTINFO ) );
-        mpTextAttr->Put( SvxFontItem( aFnt.GetFamily(), aFnt.GetName(), aFnt.GetStyleName(), aFnt.GetPitch(), aFnt.GetCharSet(), EE_CHAR_FONTINFO_CJK ) );
-        mpTextAttr->Put( SvxFontItem( aFnt.GetFamily(), aFnt.GetName(), aFnt.GetStyleName(), aFnt.GetPitch(), aFnt.GetCharSet(), EE_CHAR_FONTINFO_CTL ) );
+        mpTextAttr->Put( SvxFontItem( aFnt.GetFamilyType(), aFnt.GetFamilyName(), aFnt.GetStyleName(), aFnt.GetPitch(), aFnt.GetCharSet(), EE_CHAR_FONTINFO ) );
+        mpTextAttr->Put( SvxFontItem( aFnt.GetFamilyType(), aFnt.GetFamilyName(), aFnt.GetStyleName(), aFnt.GetPitch(), aFnt.GetCharSet(), EE_CHAR_FONTINFO_CJK ) );
+        mpTextAttr->Put( SvxFontItem( aFnt.GetFamilyType(), aFnt.GetFamilyName(), aFnt.GetStyleName(), aFnt.GetPitch(), aFnt.GetCharSet(), EE_CHAR_FONTINFO_CTL ) );
         mpTextAttr->Put(SvxPostureItem(aFnt.GetItalic(), EE_CHAR_ITALIC));
         mpTextAttr->Put(SvxWeightItem(aFnt.GetWeight(), EE_CHAR_WEIGHT));
         mpTextAttr->Put( SvxFontHeightItem( nHeight, 100, EE_CHAR_FONTHEIGHT ) );
@@ -987,7 +984,7 @@ void ImpSdrGDIMetaFileImport::ImportText( const Point& rPos, const OUString& rSt
 
     FontMetric aFontMetric( mpVD->GetFontMetric() );
     vcl::Font aFnt( mpVD->GetFont() );
-    FontAlign eAlg( aFnt.GetAlign() );
+    FontAlign eAlg( aFnt.GetAlignment() );
 
     sal_Int32 nTextWidth = (sal_Int32)( mpVD->GetTextWidth( rStr ) * mfScaleX );
     sal_Int32 nTextHeight = (sal_Int32)( mpVD->GetTextHeight() * mfScaleY );
@@ -1008,7 +1005,7 @@ void ImpSdrGDIMetaFileImport::ImportText( const Point& rPos, const OUString& rSt
     pText->SetMergedItem ( makeSdrTextRightDistItem (0));
     pText->SetMergedItem ( makeSdrTextLeftDistItem (0));
 
-    if ( aFnt.GetWidth() || ( rAct.GetType() == MetaActionType::STRETCHTEXT ) )
+    if ( aFnt.GetAverageFontWidth() || ( rAct.GetType() == MetaActionType::STRETCHTEXT ) )
     {
         pText->ClearMergedItem( SDRATTR_TEXT_AUTOGROWWIDTH );
         pText->SetMergedItem( makeSdrTextAutoGrowHeightItem( false ) );
@@ -1115,7 +1112,6 @@ void ImpSdrGDIMetaFileImport::DoAction(MetaBmpExScaleAction& rAct)
 }
 
 
-
 void ImpSdrGDIMetaFileImport::DoAction( MetaHatchAction& rAct )
 {
     // #i73407# reformulation to use new B2DPolygon classes
@@ -1136,13 +1132,13 @@ void ImpSdrGDIMetaFileImport::DoAction( MetaHatchAction& rAct )
 
             switch(rHatch.GetStyle())
             {
-                case(HATCH_TRIPLE) :
+                case HATCH_TRIPLE :
                 {
                     eStyle = css::drawing::HatchStyle_TRIPLE;
                     break;
                 }
 
-                case(HATCH_DOUBLE) :
+                case HATCH_DOUBLE :
                 {
                     eStyle = css::drawing::HatchStyle_DOUBLE;
                     break;
@@ -1164,7 +1160,6 @@ void ImpSdrGDIMetaFileImport::DoAction( MetaHatchAction& rAct )
         }
     }
 }
-
 
 
 void ImpSdrGDIMetaFileImport::DoAction(MetaLineColorAction& rAct)
@@ -1199,7 +1194,6 @@ void ImpSdrGDIMetaFileImport::MapScaling()
 
     mnMapScalingOfs = nCount;
 }
-
 
 
 void ImpSdrGDIMetaFileImport::DoAction( MetaCommentAction& rAct, GDIMetaFile& rMtf, sal_uLong& a) // GDIMetaFile* pMtf )

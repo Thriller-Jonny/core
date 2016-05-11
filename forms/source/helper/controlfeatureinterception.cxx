@@ -117,7 +117,7 @@ namespace frm
             // tell the interceptor it has a new (means no) predecessor
             xInterceptor->setMasterDispatchProvider( nullptr );
 
-            // ask for it's successor
+            // ask for its successor
             Reference< XDispatchProvider > xSlave = xInterceptor->getSlaveDispatchProvider();
             // and give it the new (means no) successoert
             xInterceptor->setSlaveDispatchProvider( nullptr );
@@ -127,18 +127,18 @@ namespace frm
         }
     }
 
-    Reference< XDispatch > ControlFeatureInterception::queryDispatch( const URL& _rURL, const OUString& _rTargetFrameName, ::sal_Int32 _nSearchFlags )
+    Reference< XDispatch > ControlFeatureInterception::queryDispatch( const URL& _rURL, const OUString& _rTargetFrameName )
     {
         Reference< XDispatch > xDispatcher;
         if ( m_xFirstDispatchInterceptor.is() )
-            xDispatcher = m_xFirstDispatchInterceptor->queryDispatch( _rURL, _rTargetFrameName, _nSearchFlags );
+            xDispatcher = m_xFirstDispatchInterceptor->queryDispatch( _rURL, _rTargetFrameName, 0 );
         return xDispatcher;
     }
 
 
     Reference< XDispatch > ControlFeatureInterception::queryDispatch( const URL& _rURL )
     {
-        return queryDispatch( _rURL, OUString(), 0 );
+        return queryDispatch( _rURL, OUString() );
     }
 
 

@@ -673,7 +673,7 @@ SAFEARRAY* OLEVariant::getUI1SAFEARRAYPtr() const
     {
         case VT_EMPTY:
         case VT_NULL:
-            aValue.setValue(NULL, Type());
+            aValue.setValue(nullptr, Type());
             break;
         case VT_I2:
             aValue.setValue( & iVal, cppu::UnoType<sal_Int16>::get());
@@ -706,15 +706,14 @@ SAFEARRAY* OLEVariant::getUI1SAFEARRAYPtr() const
         }
         case VT_BOOL:
         {
-            sal_Bool b= boolVal == VARIANT_TRUE;
-            aValue.setValue( &b, cppu::UnoType<decltype(b)>::get());
+            aValue <<= (boolVal == VARIANT_TRUE);
             break;
         }
         case VT_I1:
             aValue.setValue( & cVal, cppu::UnoType<sal_Int8>::get());
             break;
         case VT_UI1: // there is no unsigned char in UNO
-            aValue.setValue( & bVal, cppu::UnoType<sal_Int8>::get());
+            aValue <<= sal_Int8(bVal);
             break;
         case VT_UI2:
             aValue.setValue( & uiVal, cppu::UnoType<cppu::UnoUnsignedShortType>::get());
@@ -729,7 +728,7 @@ SAFEARRAY* OLEVariant::getUI1SAFEARRAYPtr() const
             aValue.setValue( & uintVal, cppu::UnoType<sal_uInt32>::get());
             break;
         case VT_VOID:
-            aValue.setValue( NULL, Type());
+            aValue.setValue( nullptr, Type());
             break;
          case VT_DECIMAL:
          {
@@ -748,8 +747,6 @@ SAFEARRAY* OLEVariant::getUI1SAFEARRAYPtr() const
     }
     return aValue;
 }
-
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

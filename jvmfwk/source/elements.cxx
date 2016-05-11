@@ -168,7 +168,6 @@ void createSettingsStructure(xmlDoc * document, bool * bNeedsSave)
 }
 
 
-
 VersionInfo::VersionInfo(): arVersions(nullptr)
 {
 }
@@ -273,15 +272,15 @@ void NodeJava::load()
             sNil = xmlGetNsProp(
                 cur, reinterpret_cast<xmlChar const *>("nil"), reinterpret_cast<xmlChar const *>(NS_SCHEMA_INSTANCE));
             if (sNil == nullptr)
-                throw FrameworkException(JFW_E_ERROR, sExcMsg);;
+                throw FrameworkException(JFW_E_ERROR, sExcMsg);
             if (xmlStrcmp(sNil, reinterpret_cast<xmlChar const *>("false")) == 0)
             {
                 CXmlCharPtr sEnabled( xmlNodeListGetString(
                     docUser, cur->children, 1));
                 if (xmlStrcmp(sEnabled, reinterpret_cast<xmlChar const *>("true")) == 0)
-                    m_enabled = boost::optional<sal_Bool>(sal_True);
+                    m_enabled = boost::optional<sal_Bool>(true);
                 else if (xmlStrcmp(sEnabled, reinterpret_cast<xmlChar const *>("false")) == 0)
-                    m_enabled = boost::optional<sal_Bool>(sal_False);
+                    m_enabled = boost::optional<sal_Bool>(false);
             }
         }
         else if (xmlStrcmp(cur->name, reinterpret_cast<xmlChar const *>("userClassPath")) == 0)
@@ -465,7 +464,7 @@ void NodeJava::write() const
                      reinterpret_cast<xmlChar const *>("nil"),
                      reinterpret_cast<xmlChar const *>("false"));
 
-        if (m_enabled == boost::optional<sal_Bool>(sal_True))
+        if (m_enabled == boost::optional<sal_Bool>(true))
             xmlNodeSetContent(nodeEnabled,reinterpret_cast<xmlChar const *>("true"));
         else
             xmlNodeSetContent(nodeEnabled,reinterpret_cast<xmlChar const *>("false"));
@@ -978,20 +977,14 @@ JavaInfo * CNodeJavaInfo::makeJavaInfo() const
 {
     if (bNil || m_bEmptyNode)
         return nullptr;
-    JavaInfo * pInfo = static_cast<JavaInfo*>(rtl_allocateMemory(sizeof(JavaInfo)));
-    if (pInfo == nullptr)
-        return nullptr;
+    JavaInfo * pInfo = new JavaInfo;
     memset(pInfo, 0, sizeof(JavaInfo));
-    pInfo->sVendor = sVendor.pData;
-    rtl_uString_acquire(pInfo->sVendor);
-    pInfo->sLocation = sLocation.pData;
-    rtl_uString_acquire(pInfo->sLocation);
-    pInfo->sVersion = sVersion.pData;
-    rtl_uString_acquire(pInfo->sVersion);
+    pInfo->sVendor = sVendor;
+    pInfo->sLocation = sLocation;
+    pInfo->sVersion = sVersion;
     pInfo->nFeatures = nFeatures;
     pInfo->nRequirements = nRequirements;
-    pInfo->arVendorData = arVendorData.getHandle();
-    rtl_byte_sequence_acquire(pInfo->arVendorData);
+    pInfo->arVendorData = arVendorData;
     return pInfo;
 }
 
@@ -1057,12 +1050,11 @@ void MergedSettings::merge(const NodeJava & share, const NodeJava & user)
 }
 
 
-
 JavaInfo * MergedSettings::createJavaInfo() const
 {
     return m_javaInfo.makeJavaInfo();
 }
-#ifdef WNT
+#ifdef _WIN32
 bool MergedSettings::getJavaInfoAttrAutoSelect() const
 {
     return m_javaInfo.bAutoSelect;

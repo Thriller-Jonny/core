@@ -254,22 +254,18 @@ RscTop * RscTypCont::SearchType( Atom nId )
     return nullptr;
 }
 
-sal_uInt32 RscTypCont::PutSysName( sal_uInt32 nRscTyp, char * pFileName,
-                                     sal_uInt32 nConst, sal_uInt32 nId, bool bFirst )
+sal_uInt32 RscTypCont::PutSysName( sal_uInt32 nRscTyp, char * pFileName )
 {
     RscSysEntry *pSysEntry;
     RscSysEntry *pFoundEntry = nullptr;
-    bool            bId1 = false;
 
     for ( size_t i = 0, n = aSysLst.size(); i < n; ++i )
     {
         pSysEntry = aSysLst[ i ];
-        if( pSysEntry->nKey == 1 )
-            bId1 = true;
         if( !strcmp( pSysEntry->aFileName.getStr(), pFileName ) )
             if(  pSysEntry->nRscTyp == nRscTyp &&
-                 pSysEntry->nTyp    == nConst &&
-                 pSysEntry->nRefId  == nId)
+                 pSysEntry->nTyp    == 0 &&
+                 pSysEntry->nRefId  == 0)
             {
                 pFoundEntry = pSysEntry;
                 break;
@@ -277,33 +273,27 @@ sal_uInt32 RscTypCont::PutSysName( sal_uInt32 nRscTyp, char * pFileName,
     }
     pSysEntry = pFoundEntry;
 
-    if ( !pSysEntry || (bFirst && !bId1) )
+    if ( !pSysEntry )
     {
         pSysEntry = new RscSysEntry;
         pSysEntry->nKey = nUniqueId++;
         pSysEntry->nRscTyp = nRscTyp;
-        pSysEntry->nTyp = nConst;
-        pSysEntry->nRefId = nId;
+        pSysEntry->nTyp = 0;
+        pSysEntry->nRefId = 0;
         pSysEntry->aFileName = pFileName;
-        if( bFirst && !bId1 )
-        {
-            pSysEntry->nKey = 1;
-            aSysLst.insert( aSysLst.begin(), pSysEntry );
-        }
-        else
-            aSysLst.push_back( pSysEntry );
+        aSysLst.push_back( pSysEntry );
     }
 
     return pSysEntry->nKey;
 }
 
-void RscTypCont::WriteInc( FILE * fOutput, sal_uLong lFileKey )
+void RscTypCont::WriteInc( FILE * fOutput, RscFileTab::Index lFileKey )
 {
 
-    if( NOFILE_INDEX == lFileKey )
+    if( lFileKey == RscFileTab::IndexNotFound )
     {
-        sal_uIntPtr aIndex = aFileTab.FirstIndex();
-        while( aIndex != UNIQUEINDEX_ENTRY_NOTFOUND )
+        RscFileTab::Index aIndex = aFileTab.FirstIndex();
+        while( aIndex != RscFileTab::IndexNotFound )
         {
             RscFile   * pFName = aFileTab.Get( aIndex );
             if( pFName->IsIncFile() )
@@ -352,12 +342,11 @@ private:
     DECL_LINK_TYPED( CallBackWriteRc, const NameNode&, void );
     DECL_LINK_TYPED( CallBackWriteSrc, const NameNode&, void );
 
-    ERRTYPE WriteRc( RscTop * pCl, ObjNode * pRoot )
+    void WriteRc( RscTop * pCl, ObjNode * pRoot )
     {
         pClass = pCl;
         if( pRoot )
             pRoot->EnumNodes( LINK( this, RscEnumerateObj, CallBackWriteRc ) );
-        return aError;
     }
     ERRTYPE WriteSrc( RscTop * pCl, ObjNode * pRoot ){
         pClass = pCl;
@@ -410,7 +399,7 @@ void RscEnumerateObj::WriteRcFile( RscWriteRc & rMem, FILE * fOut )
     sal_uInt32 nId = rMem.GetLong( 0 );
     sal_uInt32 nRT = rMem.GetLong( 4 );
 
-    // table is filled with with nId and nRT
+    // table is filled with nId and nRT
     pTypCont->PutTranslatorKey( (sal_uInt64(nRT) << 32) + sal_uInt64(nId) );
 
     if( nRT == RSC_VERSIONCONTROL )
@@ -504,8 +493,7 @@ ERRTYPE RscTypCont::WriteRc( WriteRcContext& rContext )
     return aError;
 }
 
-void RscTypCont::WriteSrc( FILE * fOutput, sal_uLong nFileKey,
-                             bool bName )
+void RscTypCont::WriteSrc( FILE * fOutput, RscFileTab::Index nFileKey )
 {
     RscEnumerateRef aEnumRef( this, pRoot, fOutput );
 
@@ -513,49 +501,19 @@ void RscTypCont::WriteSrc( FILE * fOutput, sal_uLong nFileKey,
     size_t nItems = SAL_N_ELEMENTS(aUTF8BOM);
     bool bSuccess = (nItems == fwrite(aUTF8BOM, 1, nItems, fOutput));
     SAL_WARN_IF(!bSuccess, "rsc", "short write");
-    if( bName )
+    RscId::SetNames( false );
+    if( nFileKey == RscFileTab::IndexNotFound )
     {
-        RscFile* pFName;
-        WriteInc( fOutput, nFileKey );
-
-        if( NOFILE_INDEX == nFileKey )
+        RscFileTab::Index aIndex = aFileTab.FirstIndex();
+        while( aIndex != RscFileTab::IndexNotFound )
         {
-            sal_uIntPtr aIndex = aFileTab.FirstIndex();
-            while( aIndex != UNIQUEINDEX_ENTRY_NOTFOUND )
-            {
-                pFName = aFileTab.Get( aIndex );
-                if( !pFName->IsIncFile() )
-                    pFName->aDefLst.WriteAll( fOutput );
-                aEnumRef.WriteSrc( aIndex );
-                aIndex = aFileTab.NextIndex( aIndex );
-            };
-        }
-        else
-        {
-            pFName = aFileTab.Get( nFileKey );
-            if( pFName )
-            {
-                pFName->aDefLst.WriteAll( fOutput );
-                aEnumRef.WriteSrc( nFileKey );
-            }
-        }
+            aEnumRef.WriteSrc( aIndex );
+            aIndex = aFileTab.NextIndex( aIndex );
+        };
     }
     else
-    {
-        RscId::SetNames( false );
-        if( NOFILE_INDEX == nFileKey )
-        {
-            sal_uIntPtr aIndex = aFileTab.FirstIndex();
-            while( aIndex != UNIQUEINDEX_ENTRY_NOTFOUND )
-            {
-                aEnumRef.WriteSrc( aIndex );
-                aIndex = aFileTab.NextIndex( aIndex );
-            };
-        }
-        else
-             aEnumRef.WriteSrc( nFileKey );
-        RscId::SetNames();
-    };
+         aEnumRef.WriteSrc( nFileKey );
+    RscId::SetNames();
 }
 
 class RscDel
@@ -580,7 +538,7 @@ IMPL_LINK_TYPED( RscDel, Delete, const NameNode&, r, void )
         pNode->pObjBiTree = pNode->GetObjNode()->DelObjNode( pNode, lFileKey );
 }
 
-void RscTypCont::Delete( sal_uLong lFileKey )
+void RscTypCont::Delete( RscFileTab::Index lFileKey )
 {
     // delete resource instance
     RscDel aDel( pRoot, lFileKey );
@@ -639,10 +597,10 @@ bool MakeConsistent( RscTop * pRscTop )
     return bRet;
 }
 
-sal_uInt32 RscTypCont::PutTranslatorKey( sal_uInt64 nKey )
+void RscTypCont::PutTranslatorKey( sal_uInt64 nKey )
 {
     aIdTranslator[ nKey ] = nFilePos;
-    return nPMId++;
+    nPMId++;
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

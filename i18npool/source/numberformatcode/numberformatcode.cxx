@@ -44,6 +44,7 @@ NumberFormatCodeMapper::getDefault( sal_Int16 formatType, sal_Int16 formatUsage,
     OUString elementType = mapElementTypeShortToString(formatType);
     OUString elementUsage = mapElementUsageShortToString(formatUsage);
 
+    osl::MutexGuard g(maMutex);
     getFormats( rLocale );
 
     for(sal_Int32 i = 0; i < aFormatSeq.getLength(); i++) {
@@ -55,7 +56,7 @@ NumberFormatCodeMapper::getDefault( sal_Int16 formatType, sal_Int16 formatUsage,
                                                                     aFormatSeq[i].formatName,
                                                                     aFormatSeq[i].formatKey,
                                                                     aFormatSeq[i].formatIndex,
-                                                                    sal_True);
+                                                                    true);
             return anumberFormatCode;
         }
     }
@@ -64,10 +65,10 @@ NumberFormatCodeMapper::getDefault( sal_Int16 formatType, sal_Int16 formatUsage,
 }
 
 
-
 css::i18n::NumberFormatCode SAL_CALL
 NumberFormatCodeMapper::getFormatCode( sal_Int16 formatIndex, const css::lang::Locale& rLocale ) throw(css::uno::RuntimeException, std::exception)
 {
+    osl::MutexGuard g(maMutex);
     getFormats( rLocale );
 
     for(sal_Int32 i = 0; i < aFormatSeq.getLength(); i++) {
@@ -88,10 +89,10 @@ NumberFormatCodeMapper::getFormatCode( sal_Int16 formatIndex, const css::lang::L
 }
 
 
-
 css::uno::Sequence< css::i18n::NumberFormatCode > SAL_CALL
 NumberFormatCodeMapper::getAllFormatCode( sal_Int16 formatUsage, const css::lang::Locale& rLocale ) throw(css::uno::RuntimeException, std::exception)
 {
+    osl::MutexGuard g(maMutex);
     getFormats( rLocale );
 
     sal_Int32 i, count;
@@ -125,6 +126,7 @@ NumberFormatCodeMapper::getAllFormatCode( sal_Int16 formatUsage, const css::lang
 css::uno::Sequence< css::i18n::NumberFormatCode > SAL_CALL
 NumberFormatCodeMapper::getAllFormatCodes( const css::lang::Locale& rLocale ) throw(css::uno::RuntimeException, std::exception)
 {
+    osl::MutexGuard g(maMutex);
     getFormats( rLocale );
 
     css::uno::Sequence<css::i18n::NumberFormatCode> seq(aFormatSeq.getLength());

@@ -34,8 +34,6 @@
 namespace chart
 {
 
-/**
-*/
 class ChartTypeTemplateProvider;
 class DialogModel;
 
@@ -101,14 +99,8 @@ protected: //member
     sal_Int32       m_nChangingControlCalls;
     bool            m_bIsDirty;
 
-    ::com::sun::star::uno::Reference<
-         ::com::sun::star::chart2::XChartDocument >         m_xChartDocument;
-    ::com::sun::star::uno::Reference<
-         ::com::sun::star::chart2::data::XDataProvider >    m_xDataProvider;
-
     OUString                                                m_aLastValidRangeString;
-    ::com::sun::star::uno::Reference<
-         ::com::sun::star::chart2::XChartTypeTemplate >     m_xCurrentChartTypeTemplate;
+    css::uno::Reference< css::chart2::XChartTypeTemplate >  m_xCurrentChartTypeTemplate;
     ChartTypeTemplateProvider*                              m_pTemplateProvider;
 
     DialogModel &                                           m_rDialogModel;

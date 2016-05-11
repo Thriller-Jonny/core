@@ -48,7 +48,6 @@
 
 #include <cstdlib>
 #include <limits>
-#include <boost/bind.hpp>
 #include <memory>
 
 
@@ -334,7 +333,7 @@ namespace pcr
         StyleSettings aStyleSettings( aAllSettings.GetStyleSettings() );
 
         vcl::Font aFieldFont( aStyleSettings.GetFieldFont() );
-        aFieldFont.SetUnderline( UNDERLINE_SINGLE );
+        aFieldFont.SetUnderline( LINESTYLE_SINGLE );
         aFieldFont.SetColor( aLinkColor.nColor );
         aStyleSettings.SetFieldFont( aFieldFont );
 
@@ -464,9 +463,8 @@ namespace pcr
     {
         ActionEvent aEvent( *this, OUString( "clicked" ) );
         m_aActionListeners.forEach< XActionListener >(
-            boost::bind(
-                &XActionListener::actionPerformed,
-                _1, boost::cref(aEvent) ) );
+            [this, &aEvent] (uno::Reference<awt::XActionListener> const& xListener)
+                { return xListener->actionPerformed(aEvent); });
     }
 
 
@@ -502,11 +500,11 @@ namespace pcr
 
     Optional< double > SAL_CALL ONumericControl::getMinValue() throw (RuntimeException, std::exception)
     {
-        Optional< double > aReturn( sal_True, 0 );
+        Optional< double > aReturn( true, 0 );
 
         sal_Int64 minValue = getTypedControlWindow()->GetMin();
         if ( minValue == ::std::numeric_limits< sal_Int64 >::min() )
-            aReturn.IsPresent = sal_False;
+            aReturn.IsPresent = false;
         else
             aReturn.Value = (double)minValue;
 
@@ -525,11 +523,11 @@ namespace pcr
 
     Optional< double > SAL_CALL ONumericControl::getMaxValue() throw (RuntimeException, std::exception)
     {
-        Optional< double > aReturn( sal_True, 0 );
+        Optional< double > aReturn( true, 0 );
 
         sal_Int64 maxValue = getTypedControlWindow()->GetMax();
         if ( maxValue == ::std::numeric_limits< sal_Int64 >::max() )
-            aReturn.IsPresent = sal_False;
+            aReturn.IsPresent = false;
         else
             aReturn.Value = (double)maxValue;
 
@@ -1205,7 +1203,7 @@ namespace pcr
 
 
     #define STD_HEIGHT  100
-    bool DropDownEditControl::ShowDropDown( bool bShow )
+    void DropDownEditControl::ShowDropDown( bool bShow )
     {
         if (bShow)
         {
@@ -1241,8 +1239,6 @@ namespace pcr
             m_bDropdown = false;
             m_pImplEdit->GrabFocus();
         }
-        return m_bDropdown;
-
     }
 
 

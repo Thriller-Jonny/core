@@ -478,7 +478,8 @@ void SdUnoDrawView::SetZoom( sal_Int16 nZoom )
         SfxDispatcher* pDispatcher = pViewFrame->GetDispatcher();
         if( pDispatcher )
         {
-            pDispatcher->Execute(SID_ATTR_ZOOM,SfxCallMode::SYNCHRON,&aZoomItem, 0L);
+            pDispatcher->ExecuteList(SID_ATTR_ZOOM, SfxCallMode::SYNCHRON,
+                    { &aZoomItem });
         }
     }
 }
@@ -487,7 +488,7 @@ void SdUnoDrawView::SetViewOffset(const awt::Point& rWinPos )
 {
     Point aWinPos( rWinPos.X, rWinPos.Y );
     aWinPos += mrDrawViewShell.GetViewOrigin();
-    mrDrawViewShell.SetWinViewPos( aWinPos, true );
+    mrDrawViewShell.SetWinViewPos( aWinPos );
 }
 
 awt::Point SdUnoDrawView::GetViewOffset() const
@@ -528,7 +529,8 @@ void SdUnoDrawView::SetZoomType ( sal_Int16 nType )
                     return;
             }
             SvxZoomItem aZoomItem( eZoomType );
-            pDispatcher->Execute(SID_ATTR_ZOOM,SfxCallMode::SYNCHRON,&aZoomItem, 0L);
+            pDispatcher->ExecuteList(SID_ATTR_ZOOM, SfxCallMode::SYNCHRON,
+                    { &aZoomItem });
         }
     }
 }

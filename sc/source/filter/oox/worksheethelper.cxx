@@ -45,6 +45,8 @@
 #include <rtl/ustrbuf.hxx>
 #include <oox/core/filterbase.hxx>
 #include <oox/helper/propertyset.hxx>
+#include <oox/token/properties.hxx>
+#include <oox/token/tokens.hxx>
 #include "addressconverter.hxx"
 #include "autofilterbuffer.hxx"
 #include "commentsbuffer.hxx"
@@ -225,6 +227,7 @@ public:
 
     /** Returns the XCell interface for the passed cell address. */
     Reference< XCell >  getCell( const CellAddress& rAddress ) const;
+    Reference< XCell >  getCell( const ScAddress& rAddress ) const;
     /** Returns the XCellRange interface for the passed cell range address. */
     Reference< XCellRange > getCellRange( const CellRangeAddress& rRange ) const;
     /** Returns the XSheetCellRanges interface for the passed cell range addresses. */
@@ -287,6 +290,8 @@ public:
 
     /** Extends the used area of this sheet by the passed cell position. */
     void                extendUsedArea( const CellAddress& rAddress );
+    void                extendUsedArea( const ScAddress& rAddress );
+
     /** Extends the used area of this sheet by the passed cell range. */
     void                extendUsedArea( const CellRangeAddress& rRange );
     /** Extends the shape bounding box by the position and size of the passed rectangle. */
@@ -375,7 +380,7 @@ private:
     typedef ::std::unique_ptr< BiffSheetDrawing > BiffSheetDrawingPtr;
 
     const OUString      maSheetCellRanges;  /// Service name for a SheetCellRanges object.
-    const CellAddress&  mrMaxApiPos;        /// Reference to maximum Calc cell address from address converter.
+    const ScAddress&    mrMaxApiPos;        /// Reference to maximum Calc cell address from address converter.
     CellRangeAddress    maUsedArea;         /// Used area of the sheet, and sheet index of the sheet.
     ColumnModel         maDefColModel;      /// Default column formatting.
     ColumnModelRangeMap maColModels;        /// Ranges of columns sorted by first column index.
@@ -480,6 +485,19 @@ Reference< XCell > WorksheetGlobals::getCell( const CellAddress& rAddress ) cons
     return xCell;
 }
 
+Reference< XCell > WorksheetGlobals::getCell( const ScAddress& rAddress ) const
+{
+    Reference< XCell > xCell;
+    if( mxSheet.is() ) try
+    {
+        xCell = mxSheet->getCellByPosition( rAddress.Col(), rAddress.Row() );
+    }
+    catch( Exception& )
+    {
+    }
+    return xCell;
+}
+
 Reference< XCellRange > WorksheetGlobals::getCellRange( const CellRangeAddress& rRange ) const
 {
     Reference< XCellRange > xRange;
@@ -500,7 +518,7 @@ Reference< XSheetCellRanges > WorksheetGlobals::getCellRangeList( const ApiCellR
     {
         xRanges.set( getBaseFilter().getModelFactory()->createInstance( maSheetCellRanges ), UNO_QUERY_THROW );
         Reference< XSheetCellRangeContainer > xRangeCont( xRanges, UNO_QUERY_THROW );
-        xRangeCont->addRangeAddresses( rRanges.toSequence(), sal_False );
+        xRangeCont->addRangeAddresses( rRanges.toSequence(), false );
     }
     catch( Exception& )
     {
@@ -650,8 +668,8 @@ CellAddress WorksheetGlobals::getCellAddressFromPosition( const awt::Point& rPos
     awt::Point aBegPos( 0, 0 );
 
     // end cell address and its position in drawing layer (bottom-right edge)
-    sal_Int32 nEndCol = mrMaxApiPos.Column + 1;
-    sal_Int32 nEndRow = mrMaxApiPos.Row + 1;
+    sal_Int32 nEndCol = mrMaxApiPos.Col() + 1;
+    sal_Int32 nEndRow = mrMaxApiPos.Row() + 1;
     awt::Point aEndPos( maDrawPageSize.Width, maDrawPageSize.Height );
 
     // starting point for interval search
@@ -735,6 +753,14 @@ void WorksheetGlobals::extendUsedArea( const CellAddress& rAddress )
     maUsedArea.EndRow      = ::std::max( maUsedArea.EndRow,      rAddress.Row );
 }
 
+void WorksheetGlobals::extendUsedArea( const ScAddress& rAddress )
+{
+    maUsedArea.StartColumn = ::std::min( maUsedArea.StartColumn, sal_Int32( rAddress.Col() ) );
+    maUsedArea.StartRow    = ::std::min( maUsedArea.StartRow,    sal_Int32( rAddress.Row() ) );
+    maUsedArea.EndColumn   = ::std::max( maUsedArea.EndColumn,   sal_Int32( rAddress.Col() ) );
+    maUsedArea.EndRow      = ::std::max( maUsedArea.EndRow,      sal_Int32( rAddress.Row() ) );
+}
+
 void WorksheetGlobals::extendUsedArea( const CellRangeAddress& rRange )
 {
     extendUsedArea( CellAddress( rRange.Sheet, rRange.StartColumn, rRange.StartRow ) );
@@ -790,7 +816,7 @@ void WorksheetGlobals::setColumnModel( const ColumnModel& rModel )
     {
         // validate last column index
         if( !getAddressConverter().checkCol( nLastCol, true ) )
-            nLastCol = mrMaxApiPos.Column;
+            nLastCol = mrMaxApiPos.Col();
         // try to find entry in column model map that is able to merge with the passed model
         bool bInsertModel = true;
         if( !maColModels.empty() )
@@ -831,14 +857,10 @@ void WorksheetGlobals::setColumnModel( const ColumnModel& rModel )
 
 void WorksheetGlobals::convertColumnFormat( sal_Int32 nFirstCol, sal_Int32 nLastCol, sal_Int32 nXfId )
 {
-    CellRangeAddress aRange( getSheetIndex(), nFirstCol, 0, nLastCol, mrMaxApiPos.Row );
+    CellRangeAddress aRange( getSheetIndex(), nFirstCol, 0, nLastCol, mrMaxApiPos.Row() );
     if( getAddressConverter().validateCellRange( aRange, true, false ) )
     {
         const StylesBuffer& rStyles = getStyles();
-
-        // Set cell styles via UNO API.  We should move these to the direct API.
-        PropertySet aPropSet( getCellRange( aRange ) );
-        rStyles.writeCellXfToPropertySet(aPropSet, nXfId);
 
         // Set cell styles via direct API - the preferred approach.
         ScDocumentImport& rDoc = getDocImport();
@@ -926,7 +948,7 @@ void WorksheetGlobals::initializeWorksheetImport()
 
     ScStyleSheet* pStyleSheet =
         static_cast<ScStyleSheet*>(rDoc.getDoc().GetStyleSheetPool()->Find(
-            getStyles().getDefaultStyleName(), SFX_STYLE_FAMILY_PARA));
+            getStyles().getDefaultStyleName(), SfxStyleFamily::Para));
 
     if (pStyleSheet)
         rDoc.setCellStyleToSheet(getSheetIndex(), *pStyleSheet);
@@ -1005,7 +1027,8 @@ OUString WorksheetGlobals::getHyperlinkUrl( const HyperlinkModel& rHyperlink ) c
             {
                 ScRange aRange;
                 if ((aRange.ParseAny( aUrl.copy( nSepPos + 1 ), nullptr,
-                                formula::FormulaGrammar::CONV_XL_R1C1) & SCA_VALID) != SCA_VALID)
+                                formula::FormulaGrammar::CONV_XL_R1C1)
+                      & ScRefFlags::VALID) == ScRefFlags::ZERO)
                     aUrl = aUrl.replaceAt( nSepPos, 1, OUString( '.' ) );
             }
             // #i66592# convert sheet names that have been renamed on import
@@ -1151,7 +1174,7 @@ void WorksheetGlobals::finalizeValidationRanges() const
 void WorksheetGlobals::convertColumns()
 {
     sal_Int32 nNextCol = 0;
-    sal_Int32 nMaxCol = mrMaxApiPos.Column;
+    sal_Int32 nMaxCol = mrMaxApiPos.Col();
     // stores first grouped column index for each level
     OutlineLevelVec aColLevels;
 
@@ -1229,7 +1252,7 @@ void WorksheetGlobals::convertColumns( OutlineLevelVec& orColLevels,
 void WorksheetGlobals::convertRows()
 {
     sal_Int32 nNextRow = 0;
-    sal_Int32 nMaxRow = mrMaxApiPos.Row;
+    sal_Int32 nMaxRow = mrMaxApiPos.Row();
     // stores first grouped row index for each level
     OutlineLevelVec aRowLevels;
 
@@ -1338,7 +1361,7 @@ void WorksheetGlobals::groupColumnsOrRows( sal_Int32 nFirstColRow, sal_Int32 nLa
 void WorksheetGlobals::finalizeDrawings()
 {
     // calculate the current drawing page size (after rows/columns are imported)
-    PropertySet aRangeProp( getCellRange( CellRangeAddress( getSheetIndex(), 0, 0, mrMaxApiPos.Column, mrMaxApiPos.Row ) ) );
+    PropertySet aRangeProp( getCellRange( CellRangeAddress( getSheetIndex(), 0, 0, mrMaxApiPos.Col(), mrMaxApiPos.Row() ) ) );
     aRangeProp.getProperty( maDrawPageSize, PROP_Size );
 
     switch( getFilterType() )
@@ -1425,6 +1448,11 @@ const Reference< XSpreadsheet >& WorksheetHelper::getSheet() const
 }
 
 Reference< XCell > WorksheetHelper::getCell( const CellAddress& rAddress ) const
+{
+    return mrSheetGlob.getCell( rAddress );
+}
+
+Reference< XCell > WorksheetHelper::getCell( const ScAddress& rAddress ) const
 {
     return mrSheetGlob.getCell( rAddress );
 }
@@ -1534,6 +1562,11 @@ void WorksheetHelper::extendUsedArea( const CellAddress& rAddress )
     mrSheetGlob.extendUsedArea( rAddress );
 }
 
+void WorksheetHelper::extendUsedArea( const ScAddress& rAddress )
+{
+    mrSheetGlob.extendUsedArea( rAddress );
+}
+
 void WorksheetHelper::extendUsedArea( const CellRangeAddress& rRange )
 {
     mrSheetGlob.extendUsedArea( rRange );
@@ -1576,8 +1609,19 @@ void WorksheetHelper::putValue( const CellAddress& rAddress, double fValue )
     getDocImport().setNumericCell(aAddress, fValue);
 }
 
+void WorksheetHelper::putValue( const ScAddress& rAddress, double fValue )
+{
+    getDocImport().setNumericCell(rAddress, fValue);
+}
+
 void WorksheetHelper::setCellFormulaValue(
     const css::table::CellAddress& rAddress, const OUString& rValueStr, sal_Int32 nCellType )
+{
+    getFormulaBuffer().setCellFormulaValue(rAddress, rValueStr, nCellType);
+}
+
+void WorksheetHelper::setCellFormulaValue(
+    const ScAddress& rAddress, const OUString& rValueStr, sal_Int32 nCellType )
 {
     getFormulaBuffer().setCellFormulaValue(rAddress, rValueStr, nCellType);
 }
@@ -1590,6 +1634,12 @@ void WorksheetHelper::putString( const CellAddress& rAddress, const OUString& rT
         getDocImport().setStringCell(aAddress, rText);
 }
 
+void WorksheetHelper::putString( const ScAddress& rAddress, const OUString& rText )
+{
+    if ( !rText.isEmpty() )
+        getDocImport().setStringCell(rAddress, rText);
+}
+
 void WorksheetHelper::putRichString( const CellAddress& rAddress, const RichString& rString, const oox::xls::Font* pFirstPortionFont )
 {
     ScEditEngineDefaulter& rEE = getEditEngine();
@@ -1600,6 +1650,14 @@ void WorksheetHelper::putRichString( const CellAddress& rAddress, const RichStri
     getDocImport().setEditCell(aAddress, rString.convert(rEE, pFirstPortionFont));
 }
 
+void WorksheetHelper::putRichString( const ScAddress& rAddress, const RichString& rString, const oox::xls::Font* pFirstPortionFont )
+{
+    ScEditEngineDefaulter& rEE = getEditEngine();
+
+    // The cell will own the text object instance returned from convert().
+    getDocImport().setEditCell(rAddress, rString.convert(rEE, pFirstPortionFont));
+}
+
 void WorksheetHelper::putFormulaTokens( const CellAddress& rAddress, const ApiTokenSequence& rTokens )
 {
     ScDocumentImport& rDoc = getDocImport();
@@ -1608,6 +1666,14 @@ void WorksheetHelper::putFormulaTokens( const CellAddress& rAddress, const ApiTo
     ScUnoConversion::FillScAddress( aCellPos, rAddress );
     ScTokenConversion::ConvertToTokenArray(rDoc.getDoc(), aTokenArray, rTokens);
     rDoc.setFormulaCell(aCellPos, new ScTokenArray(aTokenArray));
+}
+
+void WorksheetHelper::putFormulaTokens( const ScAddress& rAddress, const ApiTokenSequence& rTokens )
+{
+    ScDocumentImport& rDoc = getDocImport();
+    ScTokenArray aTokenArray;
+    ScTokenConversion::ConvertToTokenArray(rDoc.getDoc(), aTokenArray, rTokens);
+    rDoc.setFormulaCell(rAddress, new ScTokenArray(aTokenArray));
 }
 
 void WorksheetHelper::initializeWorksheetImport()
@@ -1630,8 +1696,20 @@ void WorksheetHelper::setCellFormula( const css::table::CellAddress& rTokenAddre
     getFormulaBuffer().setCellFormula( rTokenAddress,  rTokenStr );
 }
 
+void WorksheetHelper::setCellFormula( const ScAddress& rTokenAddress, const OUString& rTokenStr )
+{
+    getFormulaBuffer().setCellFormula( rTokenAddress,  rTokenStr );
+}
+
 void WorksheetHelper::setCellFormula(
     const css::table::CellAddress& rAddr, sal_Int32 nSharedId,
+    const OUString& rCellValue, sal_Int32 nValueType )
+{
+    getFormulaBuffer().setCellFormula(rAddr, nSharedId, rCellValue, nValueType);
+}
+
+void WorksheetHelper::setCellFormula(
+    const ScAddress& rAddr, sal_Int32 nSharedId,
     const OUString& rCellValue, sal_Int32 nValueType )
 {
     getFormulaBuffer().setCellFormula(rAddr, nSharedId, rCellValue, nValueType);
@@ -1642,8 +1720,19 @@ void WorksheetHelper::setCellArrayFormula( const css::table::CellRangeAddress& r
     getFormulaBuffer().setCellArrayFormula( rRangeAddress,  rTokenAddress, rTokenStr );
 }
 
+void WorksheetHelper::setCellArrayFormula( const css::table::CellRangeAddress& rRangeAddress, const ScAddress& rTokenAddress, const OUString& rTokenStr )
+{
+    getFormulaBuffer().setCellArrayFormula( rRangeAddress,  rTokenAddress, rTokenStr );
+}
+
 void WorksheetHelper::createSharedFormulaMapEntry(
     const table::CellAddress& rAddress, sal_Int32 nSharedId, const OUString& rTokens )
+{
+    getFormulaBuffer().createSharedFormulaMapEntry(rAddress, nSharedId, rTokens);
+}
+
+void WorksheetHelper::createSharedFormulaMapEntry(
+    const ScAddress& rAddress, sal_Int32 nSharedId, const OUString& rTokens )
 {
     getFormulaBuffer().createSharedFormulaMapEntry(rAddress, nSharedId, rTokens);
 }

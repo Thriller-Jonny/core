@@ -42,9 +42,12 @@ $(eval $(call gb_Module_add_check_targets,sc,\
 	Library_scqahelper \
 	$(if $(and $(filter $(COM),MSC),$(MERGELIBS)),, \
 		CppunitTest_sc_ucalc) \
+	CppunitTest_sc_bugfix_test \
 	CppunitTest_sc_filters_test \
 	CppunitTest_sc_rangelst_test \
+	CppunitTest_sc_mark_test \
 	CppunitTest_sc_core \
+	CppunitTest_sc_tiledrendering \
 ))
 
 $(eval $(call gb_Module_add_slowcheck_targets,sc, \
@@ -52,7 +55,6 @@ $(eval $(call gb_Module_add_slowcheck_targets,sc, \
 	CppunitTest_sc_new_cond_format_api \
 	CppunitTest_sc_subsequent_filters_test \
 	CppunitTest_sc_subsequent_export_test \
-	CppunitTest_sc_bugfix_test \
 	CppunitTest_sc_html_export_test \
 	CppunitTest_sc_opencl_test \
 	CppunitTest_sc_copypaste \
@@ -89,6 +91,10 @@ $(eval $(call gb_Module_add_subsequentcheck_targets,sc,\
 	CppunitTest_sc_editfieldobj_cell \
 	CppunitTest_sc_editfieldobj_header \
 	CppunitTest_sc_modelobj \
+	CppunitTest_sc_check_xcell_ranges_query \
+	CppunitTest_sc_check_data_pilot_field \
+	CppunitTest_sc_check_data_pilot_table \
+	CppunitTest_sc_viewpaneobj \
 ))
 
 $(eval $(call gb_Module_add_perfcheck_targets,sc,\

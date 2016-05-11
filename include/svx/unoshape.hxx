@@ -580,7 +580,7 @@ public:
 
     bool createObject( const SvGlobalName &aClassName );
 
-    bool createLink( const OUString& aLinkURL );
+    void createLink( const OUString& aLinkURL );
 
     // XInterface
     virtual css::uno::Any SAL_CALL queryAggregation( const css::uno::Type & rType ) throw(css::uno::RuntimeException, std::exception) override;
@@ -819,9 +819,6 @@ typedef ::cppu::WeakAggImplHelper1<
 
 class SVX_DLLPUBLIC SvxCustomShape : public SvxShapeText, public SvxShape_UnoImplHelper1
 {
-private:
-    rtl::Reference< SvxDrawPage > mxPage;
-
 protected:
     using SvxUnoTextRangeBase::setPropertyValue;
     using SvxUnoTextRangeBase::getPropertyValue;
@@ -899,7 +896,7 @@ public:
     SvxDummyShapeContainer( css::uno::Reference< css::drawing::XShapes > xWrappedObject );
     virtual ~SvxDummyShapeContainer() throw();
 
-    css::uno::Reference< css::drawing::XShapes > getWrappedShape()
+    const css::uno::Reference< css::drawing::XShapes >& getWrappedShape()
             { return m_xDummyObject; }
 
 };

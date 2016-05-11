@@ -11,7 +11,7 @@ from com.sun.star.util import XNumberFormats
 from com.sun.star.lang import Locale
 
 class CheckTable(unittest.TestCase):
-    _uno = None
+
     def _fill_table(self, xTable):
         for x in range(3):
             for y in range(3):
@@ -20,13 +20,33 @@ class CheckTable(unittest.TestCase):
         for x in range(3):
             for y in range(3):
                 self.assertEqual('Cell %d %d' % (x, y), xTable.getCellByPosition(x, y).String)
+
+
     @classmethod
     def setUpClass(cls):
         cls._uno = UnoInProcess()
         cls._uno.setUp()
+        cls.OOLineHairline = 2
+
     @classmethod
     def tearDownClass(cls):
         cls._uno.tearDown()
+
+    def __test_borderAsserts(self, xBorderLine, lineValid):
+        self.assertTrue(lineValid)
+        self.assertEqual(0, xBorderLine.InnerLineWidth)
+        self.assertEqual(self.OOLineHairline, xBorderLine.OuterLineWidth)
+        self.assertEqual(0, xBorderLine.LineDistance)
+        self.assertEqual(0, xBorderLine.Color)
+
+    def __test_borderAssertsWithLineStyle(self, xBorderLine, lineValid):
+        self.__test_borderAsserts(xBorderLine, lineValid)
+        self.assertEqual(self.OOLineHairline, xBorderLine.LineWidth)
+        self.assertEqual(SOLID, xBorderLine.LineStyle)
+
+    def __test_borderDistance(self, border):
+        self.assertTrue(border.IsDistanceValid)
+        self.assertEqual(97, border.Distance)
 
     def test_tableborder(self):
         xDoc = CheckTable._uno.openEmptyWriterDoc()
@@ -39,44 +59,15 @@ class CheckTable(unittest.TestCase):
 
         border = xTable.getPropertyValue("TableBorder")
 
-        self.assertTrue(border.IsTopLineValid)
-        self.assertEqual(0, border.TopLine.InnerLineWidth)
-        self.assertEqual(2, border.TopLine.OuterLineWidth)
-        self.assertEqual(0, border.TopLine.LineDistance)
-        self.assertEqual(0, border.TopLine.Color)
+        self.__test_borderAsserts(border.TopLine, border.IsTopLineValid)
+        self.__test_borderAsserts(border.BottomLine, border.IsBottomLineValid)
+        self.__test_borderAsserts(border.LeftLine, border.IsLeftLineValid)
+        self.__test_borderAsserts(border.RightLine, border.IsRightLineValid)
+        self.__test_borderAsserts(border.HorizontalLine, border.IsHorizontalLineValid)
+        self.__test_borderAsserts(border.VerticalLine, border.IsVerticalLineValid)
 
-        self.assertTrue(border.IsBottomLineValid)
-        self.assertEqual(0, border.BottomLine.InnerLineWidth)
-        self.assertEqual(2, border.BottomLine.OuterLineWidth)
-        self.assertEqual(0, border.BottomLine.LineDistance)
-        self.assertEqual(0, border.BottomLine.Color)
+        self.__test_borderDistance(border)
 
-        self.assertTrue(border.IsLeftLineValid)
-        self.assertEqual(0, border.LeftLine.InnerLineWidth)
-        self.assertEqual(2, border.LeftLine.OuterLineWidth)
-        self.assertEqual(0, border.LeftLine.LineDistance)
-        self.assertEqual(0, border.LeftLine.Color)
-
-        self.assertTrue(border.IsRightLineValid)
-        self.assertEqual(0, border.RightLine.InnerLineWidth)
-        self.assertEqual(2, border.RightLine.OuterLineWidth)
-        self.assertEqual(0, border.RightLine.LineDistance)
-        self.assertEqual(0, border.RightLine.Color)
-
-        self.assertTrue(border.IsHorizontalLineValid)
-        self.assertEqual(0, border.HorizontalLine.InnerLineWidth)
-        self.assertEqual(2, border.HorizontalLine.OuterLineWidth)
-        self.assertEqual(0, border.HorizontalLine.LineDistance)
-        self.assertEqual(0, border.HorizontalLine.Color)
-
-        self.assertTrue(border.IsVerticalLineValid)
-        self.assertEqual(0, border.VerticalLine.InnerLineWidth)
-        self.assertEqual(2, border.VerticalLine.OuterLineWidth)
-        self.assertEqual(0, border.VerticalLine.LineDistance)
-        self.assertEqual(0, border.VerticalLine.Color)
-
-        self.assertTrue(border.IsDistanceValid)
-        self.assertEqual(97, border.Distance)
     # set border
         border.TopLine        = BorderLine(0,      11, 19, 19)
         border.BottomLine     = BorderLine(0xFF,   00, 11, 00)
@@ -97,17 +88,10 @@ class CheckTable(unittest.TestCase):
         self.assertEqual(0, border.BottomLine.LineDistance)
         self.assertEqual(0xFF, border.BottomLine.Color)
 
-        self.assertTrue(border.IsLeftLineValid)
-        self.assertEqual(0, border.LeftLine.InnerLineWidth)
-        self.assertEqual(2, border.LeftLine.OuterLineWidth)
-        self.assertEqual(0, border.LeftLine.LineDistance)
-        self.assertEqual(0, border.LeftLine.Color)
+        self.__test_borderAsserts(border.LeftLine, border.IsLeftLineValid)
 
-        self.assertTrue(border.IsRightLineValid)
-        self.assertEqual(0, border.RightLine.InnerLineWidth)
-        self.assertEqual(2, border.RightLine.OuterLineWidth)
-        self.assertEqual(0, border.RightLine.LineDistance)
-        self.assertEqual(0, border.RightLine.Color)
+        self.__test_borderAsserts(border.RightLine, border.IsRightLineValid)
+
 
         self.assertTrue(border.IsHorizontalLineValid)
         self.assertEqual(0, border.HorizontalLine.InnerLineWidth)
@@ -115,14 +99,10 @@ class CheckTable(unittest.TestCase):
         self.assertEqual(0, border.HorizontalLine.LineDistance)
         self.assertEqual(0xFF00, border.HorizontalLine.Color)
 
-        self.assertTrue(border.IsVerticalLineValid)
-        self.assertEqual(0, border.VerticalLine.InnerLineWidth)
-        self.assertEqual(2, border.VerticalLine.OuterLineWidth)
-        self.assertEqual(0, border.VerticalLine.LineDistance)
-        self.assertEqual(0, border.VerticalLine.Color)
+        self.__test_borderAsserts(border.VerticalLine, border.IsVerticalLineValid)
 
-        self.assertTrue(border.IsDistanceValid)
-        self.assertEqual(97, border.Distance)
+
+        self.__test_borderDistance(border)
 
         border2 = xTable.getPropertyValue("TableBorder2")
         self.assertTrue(border2.IsTopLineValid)
@@ -141,21 +121,9 @@ class CheckTable(unittest.TestCase):
         self.assertEqual(SOLID, border2.BottomLine.LineStyle)
         self.assertEqual(11, border2.BottomLine.LineWidth)
 
-        self.assertTrue(border2.IsLeftLineValid)
-        self.assertEqual(0, border2.LeftLine.InnerLineWidth)
-        self.assertEqual(2, border2.LeftLine.OuterLineWidth)
-        self.assertEqual(0, border2.LeftLine.LineDistance)
-        self.assertEqual(0, border2.LeftLine.Color)
-        self.assertEqual(SOLID, border2.LeftLine.LineStyle)
-        self.assertEqual(2, border2.LeftLine.LineWidth)
+        self.__test_borderAssertsWithLineStyle(border2.LeftLine, border2.IsLeftLineValid)
 
-        self.assertTrue(border2.IsRightLineValid)
-        self.assertEqual(0, border2.RightLine.InnerLineWidth)
-        self.assertEqual(2, border2.RightLine.OuterLineWidth)
-        self.assertEqual(0, border2.RightLine.LineDistance)
-        self.assertEqual(0, border2.RightLine.Color)
-        self.assertEqual(SOLID, border2.RightLine.LineStyle)
-        self.assertEqual(2, border2.RightLine.LineWidth)
+        self.__test_borderAssertsWithLineStyle(border2.RightLine, border2.IsRightLineValid)
 
         self.assertTrue(border2.IsHorizontalLineValid)
         self.assertEqual(0, border2.HorizontalLine.InnerLineWidth)
@@ -165,16 +133,9 @@ class CheckTable(unittest.TestCase):
         self.assertEqual(SOLID, border2.HorizontalLine.LineStyle)
         self.assertEqual(90, border2.HorizontalLine.LineWidth)
 
-        self.assertTrue(border2.IsVerticalLineValid)
-        self.assertEqual(0, border2.VerticalLine.InnerLineWidth)
-        self.assertEqual(2, border2.VerticalLine.OuterLineWidth)
-        self.assertEqual(0, border2.VerticalLine.LineDistance)
-        self.assertEqual(0, border2.VerticalLine.Color)
-        self.assertEqual(SOLID, border2.VerticalLine.LineStyle)
-        self.assertEqual(2, border2.VerticalLine.LineWidth)
+        self.__test_borderAssertsWithLineStyle(border2.VerticalLine, border2.IsVerticalLineValid)
 
-        self.assertTrue(border2.IsDistanceValid)
-        self.assertEqual(97, border2.Distance)
+        self.__test_borderDistance(border2)
     # set border2
         border2.RightLine      = BorderLine2(0,      0, 0, 0, THICKTHIN_LARGEGAP, 120)
         border2.LeftLine       = BorderLine2(0,      0, 0, 0, EMBOSSED, 90)
@@ -232,8 +193,7 @@ class CheckTable(unittest.TestCase):
         self.assertEqual(DOTTED, border2.VerticalLine.LineStyle)
         self.assertEqual(90, border2.VerticalLine.LineWidth)
 
-        self.assertTrue(border2.IsDistanceValid)
-        self.assertEqual(97, border2.Distance)
+        self.__test_borderDistance(border2)
 
     # close document
         xDoc.dispose()
@@ -358,7 +318,7 @@ class CheckTable(unittest.TestCase):
         xTable.ChartRowAsLabel = False
         xTable.Data = ((1,2,3), (4,5,6), (7,8,9), (10,11,12))
         xRows = xTable.Rows
-        self.assertEquals(xRows.ImplementationName, 'SwXTableRows')
+        self.assertEqual(xRows.ImplementationName, 'SwXTableRows')
         self.assertTrue(xRows.supportsService('com.sun.star.text.TableRows'))
         self.assertFalse(xRows.supportsService('foo'))
         self.assertIn('com.sun.star.text.TableRows', xRows.SupportedServiceNames)
@@ -366,7 +326,7 @@ class CheckTable(unittest.TestCase):
         xRows.removeByIndex(1, 2)
         self.assertEqual( xTable.Data, ((1,2,3), (10,11,12)))
         xCols = xTable.Columns
-        self.assertEquals(xCols.ImplementationName, 'SwXTableColumns')
+        self.assertEqual(xCols.ImplementationName, 'SwXTableColumns')
         self.assertTrue(xCols.supportsService('com.sun.star.text.TableColumns'))
         self.assertFalse(xCols.supportsService('foo'))
         self.assertIn('com.sun.star.text.TableColumns', xCols.SupportedServiceNames)
@@ -429,7 +389,7 @@ class CheckTable(unittest.TestCase):
         self.assertTrue(xTable.Name == 'Table1')
         self.assertIn('com.sun.star.text.GenericTextDocument', xDoc.SupportedServiceNames)
         xChartdataprovider = xDoc.createInstance('com.sun.star.chart2.data.DataProvider')
-        self.assertEquals(xChartdataprovider.ImplementationName, 'SwChartDataProvider')
+        self.assertEqual(xChartdataprovider.ImplementationName, 'SwChartDataProvider')
         self.assertTrue(xChartdataprovider.supportsService('com.sun.star.chart2.data.DataProvider'))
         self.assertFalse(xChartdataprovider.supportsService('foo'))
         self.assertIn('com.sun.star.chart2.data.DataProvider', xChartdataprovider.SupportedServiceNames)
@@ -442,7 +402,7 @@ class CheckTable(unittest.TestCase):
         expectedCellrange = ('A1:A2', 'B1:B2', 'C1:C2')
         for col in range(3):
             xSeq = xDataSource.DataSequences[col].Values
-            self.assertEquals(xSeq.ImplementationName, 'SwChartDataSequence')
+            self.assertEqual(xSeq.ImplementationName, 'SwChartDataSequence')
             self.assertTrue(xSeq.supportsService('com.sun.star.chart2.data.DataSequence'))
             self.assertFalse(xSeq.supportsService('foo'))
             self.assertIn('com.sun.star.chart2.data.DataSequence', xSeq.SupportedServiceNames)
@@ -479,16 +439,16 @@ class CheckTable(unittest.TestCase):
                                    (PropertyValue('Text', 0, '3', 0),))
         xDispatcher.executeDispatch(xDocFrame, '.uno:JumpToNextCell', '', 0, ())
         # Check that the formatting we set up is not destroyed
-        self.assertEquals(xTable.getCellByPosition(0,0).getString(), '3.00 €')
-        self.assertEquals(xTable.getCellByPosition(0,0).getValue(), 3)
+        self.assertEqual(xTable.getCellByPosition(0,0).getString(), '3.00 €')
+        self.assertEqual(xTable.getCellByPosition(0,0).getValue(), 3)
         # Verify that it works with number recognition turned on as well
         xDispatcher.executeDispatch(xDocFrame, '.uno:TableNumberRecognition', '', 0,
                                    (PropertyValue('TableNumberRecognition', 0, True, 0),))
         xDispatcher.executeDispatch(xDocFrame, '.uno:InsertText', '', 0,
                                    (PropertyValue('Text', 0, '4', 0),))
         xDispatcher.executeDispatch(xDocFrame, '.uno:JumpToNextCell', '', 0, ())
-        self.assertEquals(xTable.getCellByPosition(0,1).getString(), '4.00 €')
-        self.assertEquals(xTable.getCellByPosition(0,1).getValue(), 4)
+        self.assertEqual(xTable.getCellByPosition(0,1).getString(), '4.00 €')
+        self.assertEqual(xTable.getCellByPosition(0,1).getValue(), 4)
         xDoc.dispose()
 
     def test_numberRecognition(self):
@@ -506,9 +466,9 @@ class CheckTable(unittest.TestCase):
         xDispatcher.executeDispatch(xDocFrame, '.uno:InsertText', '', 0,
                                    (PropertyValue('Text', 0, '15-10-30', 0),))
         xDispatcher.executeDispatch(xDocFrame, '.uno:JumpToNextCell', '', 0, ())
-        # Without number recognition 15-10-30 should not be interperated as a date
-        self.assertEquals(xTable.getCellByPosition(0,0).getString(), '15-10-30')
-        self.assertEquals(xTable.getCellByPosition(0,0).getValue(), 0)
+        # Without number recognition 15-10-30 should not be interpretated as a date
+        self.assertEqual(xTable.getCellByPosition(0,0).getString(), '15-10-30')
+        self.assertEqual(xTable.getCellByPosition(0,0).getValue(), 0)
         # Activate number recognition
         xDispatcher.executeDispatch(xDocFrame, '.uno:TableNumberRecognition', '', 0,
                                    (PropertyValue('TableNumberRecognition', 0, True, 0),))
@@ -517,8 +477,8 @@ class CheckTable(unittest.TestCase):
         xDispatcher.executeDispatch(xDocFrame, '.uno:JumpToNextCell', '', 0, ())
         # With number recognition it should now be a date, confirm by checking
         # the string and value of the cell.
-        self.assertEquals(xTable.getCellByPosition(0,1).getString(), '2015-10-30')
-        self.assertEquals(xTable.getCellByPosition(0,1).getValue(), 42307.0)
+        self.assertEqual(xTable.getCellByPosition(0,1).getString(), '2015-10-30')
+        self.assertEqual(xTable.getCellByPosition(0,1).getValue(), 42307.0)
         xDoc.dispose()
 
 if __name__ == '__main__':

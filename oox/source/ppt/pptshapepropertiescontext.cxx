@@ -32,6 +32,9 @@
 #include "oox/drawingml/drawingmltypes.hxx"
 #include "drawingml/customshapegeometry.hxx"
 #include "drawingml/textbodycontext.hxx"
+#include <oox/token/namespaces.hxx>
+#include <oox/token/properties.hxx>
+#include <oox/token/tokens.hxx>
 
 using namespace oox::core;
 using namespace ::com::sun::star;
@@ -54,7 +57,7 @@ ContextHandlerRef PPTShapePropertiesContext::onCreateContext( sal_Int32 aElement
     switch( aElementToken )
     {
         case A_TOKEN( xfrm ):
-            mrShape.getShapeProperties().setProperty( PROP_IsPlaceholderDependent, sal_False);
+            mrShape.getShapeProperties().setProperty( PROP_IsPlaceholderDependent, false);
             return ShapePropertiesContext::onCreateContext( aElementToken, rAttribs );
 
         default:

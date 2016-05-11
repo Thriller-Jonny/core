@@ -69,16 +69,12 @@ namespace connectivity
             bool operator <  (const ONDXKey& rKey) const;
             bool operator <= (const ONDXKey& rKey) const;
             bool operator >  (const ONDXKey& rKey) const;
-            bool operator >= (const ONDXKey& rKey) const;
 
             static bool IsText(sal_Int32 eType);
 
         private:
             int Compare(const ONDXKey& rKey) const;
         };
-
-
-
 
 
         class ONDXPage;
@@ -141,11 +137,11 @@ namespace connectivity
             bool    Delete(sal_uInt16);
             void    Remove(sal_uInt16);
             void    Release(bool bSave = true);
-            void    ReleaseFull(bool bSave = true);
+            void    ReleaseFull();
 
             // Split and merge
             ONDXNode Split(ONDXPage& rPage);
-            void Merge(sal_uInt16 nParentNodePos, ONDXPagePtr xPage);
+            void Merge(sal_uInt16 nParentNodePos, const ONDXPagePtr& xPage);
 
             // Access operators
             ONDXNode& operator[] (sal_uInt16 nPos);
@@ -162,7 +158,7 @@ namespace connectivity
             ONDXPagePtr& GetChild(ODbaseIndex* pIndex = nullptr);
 
             // Parent does not need to be reloaded
-            ONDXPagePtr GetParent();
+            const ONDXPagePtr& GetParent();
             ODbaseIndex& GetIndex() {return rIndex;}
             const ODbaseIndex& GetIndex() const {return rIndex;}
 
@@ -221,7 +217,7 @@ namespace connectivity
         inline bool ONDXPage::IsLeaf() const {return !aChild.HasPage();}
         inline bool ONDXPage::IsModified() const {return bModified;}
         inline bool ONDXPage::HasParent() {return aParent.Is();}
-        inline ONDXPagePtr ONDXPage::GetParent() {return aParent;}
+        inline const ONDXPagePtr& ONDXPage::GetParent() {return aParent;}
 
         inline void ONDXPage::SetParent(ONDXPagePtr aPa = ONDXPagePtr())
         {
@@ -310,10 +306,6 @@ namespace connectivity
         {
             return !operator > (rKey);
         }
-        inline bool ONDXKey::operator >= (const ONDXKey& rKey) const
-        {
-            return !operator< (rKey);
-        }
 
         inline void ONDXNode::SetChild(ONDXPagePtr aCh, ONDXPage* pParent)
         {
@@ -325,8 +317,6 @@ namespace connectivity
     }
 
 }
-
-
 
 
 #endif // INCLUDED_CONNECTIVITY_SOURCE_INC_DBASE_DINDEXNODE_HXX

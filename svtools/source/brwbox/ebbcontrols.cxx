@@ -28,13 +28,10 @@ namespace svt
 {
 
 
-
-
-
     //= ComboBoxControl
 
-    ComboBoxControl::ComboBoxControl(vcl::Window* pParent, WinBits nWinStyle)
-                   :ComboBox(pParent, nWinStyle|WB_DROPDOWN|WB_NOBORDER)
+    ComboBoxControl::ComboBoxControl(vcl::Window* pParent)
+                   :ComboBox(pParent, WB_DROPDOWN|WB_NOBORDER)
     {
         EnableAutoSize(false);
         EnableAutocomplete(true);
@@ -106,12 +103,13 @@ namespace svt
                 // drop down the list box
                 else if (rEvt.GetKeyCode().IsMod2() && rEvt.GetKeyCode().GetCode() == KEY_DOWN)
                     return false;
-                // fall-through
+                SAL_FALLTHROUGH;
             case KEY_PAGEUP:
             case KEY_PAGEDOWN:
             case KEY_RETURN:
                 if (rBox.IsInDropDown())
                     return false;
+                SAL_FALLTHROUGH;
             default:
                 return true;
         }
@@ -129,8 +127,8 @@ namespace svt
     }
 
     //= ListBoxControl
-    ListBoxControl::ListBoxControl(vcl::Window* pParent, WinBits nWinStyle)
-                  :ListBox(pParent, nWinStyle|WB_DROPDOWN|WB_NOBORDER)
+    ListBoxControl::ListBoxControl(vcl::Window* pParent)
+                  :ListBox(pParent, WB_DROPDOWN|WB_NOBORDER)
     {
         EnableAutoSize(false);
         EnableMultiSelection(false);
@@ -186,11 +184,12 @@ namespace svt
                 else
                     if (rEvt.GetKeyCode().IsMod2() && rEvt.GetKeyCode().GetCode() == KEY_DOWN)
                         return false;
-                // fall-through
+                SAL_FALLTHROUGH;
             case KEY_PAGEUP:
             case KEY_PAGEDOWN:
                 if (rBox.IsTravelSelect())
                     return false;
+                SAL_FALLTHROUGH;
             default:
                 return true;
         }
@@ -218,8 +217,8 @@ namespace svt
     //= CheckBoxControl
 
 
-    CheckBoxControl::CheckBoxControl(vcl::Window* pParent, WinBits nWinStyle)
-                   :Control(pParent, nWinStyle)
+    CheckBoxControl::CheckBoxControl(vcl::Window* pParent)
+                   :Control(pParent, 0)
     {
         const Wallpaper& rParentBackground = pParent->GetBackground();
         if ( (pParent->GetStyle() & WB_CLIPCHILDREN) || rParentBackground.IsFixed() )
@@ -594,7 +593,6 @@ namespace svt
 
 
 }   // namespace svt
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

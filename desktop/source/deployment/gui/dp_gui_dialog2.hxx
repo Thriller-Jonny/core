@@ -68,7 +68,7 @@ public:
 
     void            openWebBrowser( const OUString & sURL, const OUString & sTitle ) const;
     Dialog*         getWindow() const { return m_pVCLWindow; };
-    void            PostUserEvent( const Link<void*,void>& rLink, void* pCaller, bool bReferenceLink = false );
+    void            PostUserEvent( const Link<void*,void>& rLink, void* pCaller );
     void            clearEventID() { m_nEventID = nullptr; }
 
     virtual void    showProgress( bool bStart ) = 0;
@@ -77,7 +77,7 @@ public:
     virtual void    updateProgress( const long nProgress ) = 0;
 
     virtual void    updatePackageInfo( const css::uno::Reference< css::deployment::XPackage > &xPackage ) = 0;
-    virtual long    addPackageToList( const css::uno::Reference< css::deployment::XPackage > &xPackage,
+    virtual void    addPackageToList( const css::uno::Reference< css::deployment::XPackage > &xPackage,
                                       bool bLicenseMissing = false ) = 0;
 
     virtual void    prepareChecking() = 0;
@@ -156,7 +156,7 @@ public:
     virtual void    updatePackageInfo( const css::uno::Reference< css::deployment::XPackage > &xPackage ) override;
 
     void            setGetExtensionsURL( const OUString &rURL );
-    virtual long    addPackageToList( const css::uno::Reference< css::deployment::XPackage > &,
+    virtual void    addPackageToList( const css::uno::Reference< css::deployment::XPackage > &,
                                       bool bLicenseMissing = false ) override;
     bool enablePackage(const css::uno::Reference< css::deployment::XPackage > &xPackage,
                         bool bEnable );
@@ -224,9 +224,9 @@ public:
 
     virtual void    updatePackageInfo( const css::uno::Reference< css::deployment::XPackage > &xPackage ) override;
 
-    virtual long    addPackageToList( const css::uno::Reference< css::deployment::XPackage > &,
+    virtual void    addPackageToList( const css::uno::Reference< css::deployment::XPackage > &,
                                       bool bLicenseMissing = false ) override;
-    bool            enablePackage( const css::uno::Reference< css::deployment::XPackage > &xPackage, bool bEnable );
+    void            enablePackage( const css::uno::Reference< css::deployment::XPackage > &xPackage, bool bEnable );
 
     virtual void    prepareChecking() override;
     virtual void    checkEntries() override;
@@ -246,7 +246,6 @@ public:
 class UpdateRequiredDialogService : public ::cppu::WeakImplHelper< css::ui::dialogs::XExecutableDialog >
 {
     css::uno::Reference< css::uno::XComponentContext > const m_xComponentContext;
-    css::uno::Reference< css::awt::XWindow > m_xParent;
 public:
     UpdateRequiredDialogService( css::uno::Sequence< css::uno::Any > const & args,
                                  css::uno::Reference< css::uno::XComponentContext> const & xComponentContext );

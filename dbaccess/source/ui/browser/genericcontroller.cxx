@@ -486,7 +486,7 @@ void OGenericUnoController::ImplBroadcastFeatureState(const OUString& _rFeature,
         // m_arrStatusListener itself
         Dispatch aNotifyLoop( m_arrStatusListener );
         Dispatch::iterator iterSearch = aNotifyLoop.begin();
-        Dispatch::iterator iterEnd = aNotifyLoop.end();
+        Dispatch::const_iterator iterEnd = aNotifyLoop.end();
 
         while (iterSearch != iterEnd)
         {
@@ -504,7 +504,7 @@ void OGenericUnoController::ImplBroadcastFeatureState(const OUString& _rFeature,
 
 bool OGenericUnoController::isFeatureSupported( sal_Int32 _nId )
 {
-    SupportedFeatures::iterator aFeaturePos = ::std::find_if(
+    SupportedFeatures::const_iterator aFeaturePos = ::std::find_if(
         m_aSupportedFeatures.begin(),
         m_aSupportedFeatures.end(),
         ::std::bind2nd( CompareFeatureById(), _nId )
@@ -537,7 +537,7 @@ void OGenericUnoController::InvalidateFeature_Impl()
         }
         else
         {
-            SupportedFeatures::iterator aFeaturePos = ::std::find_if(
+            SupportedFeatures::const_iterator aFeaturePos = ::std::find_if(
                 m_aSupportedFeatures.begin(),
                 m_aSupportedFeatures.end(),
                 ::std::bind2nd( CompareFeatureById(), aNextFeature.nId )
@@ -574,7 +574,7 @@ void OGenericUnoController::ImplInvalidateFeature( sal_Int32 _nId, const Referen
 #if OSL_DEBUG_LEVEL > 0
     if ( _nId != -1 )
     {
-        SupportedFeatures::iterator aFeaturePos = ::std::find_if(
+        SupportedFeatures::const_iterator aFeaturePos = ::std::find_if(
             m_aSupportedFeatures.begin(),
             m_aSupportedFeatures.end(),
             ::std::bind2nd( CompareFeatureById(), _nId )
@@ -736,7 +736,7 @@ void OGenericUnoController::removeStatusListener(const Reference< XStatusListene
                 )
             )
         {
-            m_arrStatusListener.erase( iterSearch++ );
+            iterSearch = m_arrStatusListener.erase(iterSearch);
             if (!bRemoveForAll)
                 // remove the listener only for the given URL, so we can exit the loop after deletion
                 break;
@@ -752,7 +752,7 @@ void OGenericUnoController::removeStatusListener(const Reference< XStatusListene
     SupportedFeatures::const_iterator aIter = m_aSupportedFeatures.find(_rURL.Complete);
     if (aIter != m_aSupportedFeatures.end())
     {   // clear the cache for that feature
-        StateCache::iterator aCachePos = m_aStateCache.find( aIter->second.nFeatureId );
+        StateCache::const_iterator aCachePos = m_aStateCache.find( aIter->second.nFeatureId );
         if ( aCachePos != m_aStateCache.end() )
             m_aStateCache.erase( aCachePos );
     }
@@ -786,8 +786,8 @@ void OGenericUnoController::disposing()
         EventObject aDisposeEvent;
         aDisposeEvent.Source = static_cast<XWeak*>(this);
         Dispatch aStatusListener = m_arrStatusListener;
-        Dispatch::iterator aEnd = aStatusListener.end();
-        for (Dispatch::iterator aIter = aStatusListener.begin(); aIter != aEnd; ++aIter)
+        Dispatch::const_iterator aEnd = aStatusListener.end();
+        for (Dispatch::const_iterator aIter = aStatusListener.begin(); aIter != aEnd; ++aIter)
         {
             aIter->xListener->disposing(aDisposeEvent);
         }
@@ -1036,7 +1036,7 @@ IMPL_LINK_NOARG_TYPED(OGenericUnoController, OnAsyncCloseTask, void*, void)
         try
         {
             Reference< util::XCloseable > xCloseable( m_aCurrentFrame.getFrame(), UNO_QUERY_THROW );
-            xCloseable->close( sal_False ); // false - holds the owner ship for this frame inside this object!
+            xCloseable->close( false ); // false - holds the owner ship for this frame inside this object!
         }
         catch( const Exception& )
         {
@@ -1068,7 +1068,7 @@ Reference< XFrame > SAL_CALL OGenericUnoController::getFrame() throw( RuntimeExc
 sal_Bool SAL_CALL OGenericUnoController::attachModel(const Reference< XModel > & /*xModel*/) throw( RuntimeException, std::exception )
 {
     SAL_WARN("dbaccess.ui", "OGenericUnoController::attachModel: not supported!" );
-    return sal_False;
+    return false;
 }
 
 void OGenericUnoController::executeUnChecked(sal_uInt16 _nCommandId, const Sequence< PropertyValue >& aArgs)
@@ -1153,11 +1153,11 @@ namespace
                     "com.sun.star.formula.FormularProperties", "smath",
                     "com.sun.star.chart.ChartDocument", "schart"
                 };
-                OSL_ENSURE( ( sizeof( pTransTable ) / sizeof( pTransTable[0] ) ) % 2 == 0,
+                OSL_ENSURE( SAL_N_ELEMENTS( pTransTable ) % 2 == 0,
                     "lcl_getModuleHelpModuleName: odd size of translation table!" );
 
                 // loop through the table
-                sal_Int32 nTableEntries = ( sizeof( pTransTable ) / sizeof( pTransTable[0] ) ) / 2;
+                sal_Int32 nTableEntries = SAL_N_ELEMENTS( pTransTable ) / 2;
                 const sal_Char** pDocumentService = pTransTable;
                 const sal_Char** pHelpModuleName = pTransTable + 1;
                 for ( sal_Int32 j=0; j<nTableEntries; ++j )

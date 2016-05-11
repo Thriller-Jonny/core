@@ -55,6 +55,9 @@
 
 #include <PackageConstants.hxx>
 
+#include <algorithm>
+#include <thread>
+
 using namespace com::sun::star::packages::zip::ZipConstants;
 using namespace com::sun::star::packages::zip;
 using namespace com::sun::star::uno;
@@ -478,6 +481,7 @@ private:
             deflateZipEntry(mpEntry, mxInStream);
             mxInStream.clear();
             mpEntry->closeBufferFile();
+            mpEntry->setFinished();
         }
         catch (const uno::Exception&)
         {
@@ -816,13 +820,21 @@ bool ZipPackageStream::saveChild(
             }
             else
             {
-                bParallelDeflate = true;
+                // tdf#89236 Encrypting in parallel does not work
+                bParallelDeflate = !bToBeEncrypted;
                 // Do not deflate small streams in a thread
                 if (xSeek.is() && xSeek->getLength() < 100000)
                     bParallelDeflate = false;
 
                 if (bParallelDeflate)
                 {
+                    // tdf#93553 limit to a useful amount of threads. Taking number of available
+                    // cores and allow 4-times the amount for having the queue well filled. The
+                    // 2nd parameter is the time to wait between cleanups in 10th of a second.
+                    // Both values may be added to the configuration settings if needed.
+                    static sal_Int32 nAllowedThreads(std::max(std::thread::hardware_concurrency(), 1U) * 4);
+                    rZipOut.reduceScheduledThreadsToGivenNumberOrLess(nAllowedThreads, 1);
+
                     // Start a new thread deflating this zip entry
                     ZipOutputEntry *pZipEntry = new ZipOutputEntry(
                             m_xContext, *pTempEntry, this, bToBeEncrypted);
@@ -1327,41 +1339,33 @@ void SAL_CALL ZipPackageStream::setPropertyValue( const OUString& aPropertyName,
 Any SAL_CALL ZipPackageStream::getPropertyValue( const OUString& PropertyName )
         throw( beans::UnknownPropertyException, WrappedTargetException, RuntimeException, std::exception )
 {
-    Any aAny;
     if ( PropertyName == "MediaType" )
     {
-        aAny <<= msMediaType;
-        return aAny;
+        return Any(msMediaType);
     }
     else if ( PropertyName == "Size" )
     {
-        aAny <<= aEntry.nSize;
-        return aAny;
+        return Any(aEntry.nSize);
     }
     else if ( PropertyName == "Encrypted" )
     {
-        aAny <<= ((m_nStreamMode == PACKAGE_STREAM_RAW) || m_bToBeEncrypted);
-        return aAny;
+        return Any((m_nStreamMode == PACKAGE_STREAM_RAW) || m_bToBeEncrypted);
     }
     else if ( PropertyName == "WasEncrypted" )
     {
-        aAny <<= m_bIsEncrypted;
-        return aAny;
+        return Any(m_bIsEncrypted);
     }
     else if ( PropertyName == "Compressed" )
     {
-        aAny <<= m_bToBeCompressed;
-        return aAny;
+        return Any(m_bToBeCompressed);
     }
     else if ( PropertyName == ENCRYPTION_KEY_PROPERTY )
     {
-        aAny <<= m_aEncryptionKey;
-        return aAny;
+        return Any(m_aEncryptionKey);
     }
     else if ( PropertyName == STORAGE_ENCRYPTION_KEYS_PROPERTY )
     {
-        aAny <<= m_aStorageEncryptionKeys;
-        return aAny;
+        return Any(m_aStorageEncryptionKeys);
     }
     else
         throw beans::UnknownPropertyException(THROW_WHERE );

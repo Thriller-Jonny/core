@@ -59,7 +59,6 @@
 #include <com/sun/star/awt/XTopWindow.hpp>
 #include <com/sun/star/util/URLTransformer.hpp>
 #include <com/sun/star/util/XURLTransformer.hpp>
-#include <com/sun/star/util/XCloseable.hpp>
 #include <com/sun/star/frame/XDispatchProvider.hpp>
 #include <com/sun/star/lang/ServiceNotRegisteredException.hpp>
 #include <com/sun/star/configuration/MissingBootstrapFileException.hpp>
@@ -74,7 +73,6 @@
 #include <com/sun/star/frame/theUICommandDescription.hpp>
 #include <com/sun/star/ui/theUIElementFactoryManager.hpp>
 #include <com/sun/star/ui/theWindowStateConfiguration.hpp>
-#include <com/sun/star/frame/XUIControllerRegistration.hpp>
 #include <com/sun/star/frame/thePopupMenuControllerFactory.hpp>
 #include <com/sun/star/office/Quickstart.hpp>
 
@@ -105,6 +103,7 @@
 #include <svl/itemset.hxx>
 #include <svl/eitem.hxx>
 #include <basic/sbstar.hxx>
+#include <desktop/crashreport.hxx>
 
 #include <svtools/fontsubstconfig.hxx>
 #include <svtools/accessibilityoptions.hxx>
@@ -119,12 +118,16 @@
 #include <tubes/manager.hxx>
 #endif
 
+#if HAVE_FEATURE_BREAKPAD
+#include <fstream>
+#endif
+
 #if defined MACOSX
 #include <errno.h>
 #include <sys/wait.h>
 #endif
 
-#ifdef WNT
+#ifdef _WIN32
 #ifdef _MSC_VER
 #pragma warning(push, 1) /* disable warnings within system headers */
 #pragma warning (disable: 4005)
@@ -136,7 +139,7 @@
 #endif
 #endif //WNT
 
-#if defined WNT
+#if defined(_WIN32)
 #include <process.h>
 #define GETPID _getpid
 #else
@@ -194,7 +197,7 @@ namespace {
 // removed cache data is recreated.
 //
 // Multiple instances of soffice.bin can execute this code in parallel for a
-// single UserInstallation, as it is called before OfficeIPCThread is set up.
+// single UserInstallation, as it is called before RequestHandler is set up.
 // Therefore, any errors here only lead to SAL_WARNs.
 //
 // At least in theory, this function could be removed again once no
@@ -326,7 +329,6 @@ void DoRestartActionsIfNecessary(bool quickstart) {
 }
 
 }
-
 
 
 ResMgr* Desktop::GetDesktopResManager()
@@ -572,34 +574,26 @@ void Desktop::Init()
         const CommandLineArgs& rCmdLineArgs = GetCommandLineArgs();
 
         // start ipc thread only for non-remote offices
-        OfficeIPCThread::Status aStatus = OfficeIPCThread::EnableOfficeIPCThread();
-        if ( aStatus == OfficeIPCThread::IPC_STATUS_PIPE_ERROR )
+        RequestHandler::Status aStatus = RequestHandler::Enable(true);
+        if ( aStatus == RequestHandler::IPC_STATUS_PIPE_ERROR )
         {
-#if HAVE_FEATURE_MACOSX_SANDBOX
-            // In a sandboxed LO, on 10.8.2 at least, creating the
-            // Unix domain socket fails. Ignore that as hopefully
-            // people running a sandboxed LO won't attempt starting it
-            // from the command-line or otherwise in tricky ways, so
-            // the normal OS X mechanism that prevents multiple
-            // instances of an app from being started should work
-            // fine. I hope.
-#elif defined ANDROID
-            // Ignore crack pipe errors on Android, too
+#if defined ANDROID
+            // Ignore crack pipe errors on Android
 #else
             // Keep using this oddly named BE_PATHINFO_MISSING value
             // for pipe-related errors on other platforms. Of course
             // this crack with two (if not more) levels of our own
             // error codes hiding the actual system error code is
             // broken, but that is done all over the code, let's leave
-            // re-enginering that to another year.
+            // reengineering that to another year.
             SetBootstrapError( BE_PATHINFO_MISSING, OUString() );
 #endif
         }
-        else if ( aStatus == OfficeIPCThread::IPC_STATUS_BOOTSTRAP_ERROR )
+        else if ( aStatus == RequestHandler::IPC_STATUS_BOOTSTRAP_ERROR )
         {
             SetBootstrapError( BE_PATHINFO_MISSING, OUString() );
         }
-        else if ( aStatus == OfficeIPCThread::IPC_STATUS_2ND_OFFICE )
+        else if ( aStatus == RequestHandler::IPC_STATUS_2ND_OFFICE )
         {
             // 2nd office startup should terminate after sending cmdlineargs through pipe
             SetBootstrapStatus(BS_TERMINATE);
@@ -608,7 +602,7 @@ void Desktop::Init()
                   || rCmdLineArgs.IsHelp() || rCmdLineArgs.IsVersion() )
         {
             // disable IPC thread in an instance that is just showing a help message
-            OfficeIPCThread::DisableOfficeIPCThread();
+            RequestHandler::Disable();
         }
         pSignalHandler = osl_addSignalHandler(SalMainPipeExchangeSignal_impl, nullptr);
     }
@@ -637,7 +631,7 @@ void Desktop::DeInit()
         // clear lockfile
         m_xLockfile.reset();
 
-        OfficeIPCThread::DisableOfficeIPCThread();
+        RequestHandler::Disable();
         if( pSignalHandler )
             osl_removeSignalHandler( pSignalHandler );
     } catch (const RuntimeException&) {
@@ -673,9 +667,9 @@ bool Desktop::QueryExit()
         FlushConfiguration();
         try
         {
-            // it is no problem to call DisableOfficeIPCThread() more than once
+            // it is no problem to call RequestHandler::Disable() more than once
             // it also looks to be threadsafe
-            OfficeIPCThread::DisableOfficeIPCThread();
+            RequestHandler::Disable();
         }
         catch ( const RuntimeException& )
         {
@@ -1018,6 +1012,50 @@ bool Desktop::isUIOnSessionShutdownAllowed()
         ::get();
 }
 
+namespace {
+
+bool crashReportInfoExists()
+{
+#if HAVE_FEATURE_BREAKPAD
+    std::string path = CrashReporter::getIniFileName();
+    std::ifstream aFile(path);
+    while (aFile.good())
+    {
+        std::string line;
+        std::getline(aFile, line);
+        int sep = line.find('=');
+        if (sep >= 0)
+        {
+            std::string key = line.substr(0, sep);
+            std::string value = line.substr(sep + 1);
+            if (key == "DumpFile")
+                return true;
+        }
+    }
+#endif
+    return false;
+}
+
+#if HAVE_FEATURE_BREAKPAD
+void handleCrashReport()
+{
+    static const char SERVICENAME_CRASHREPORT[] = "com.sun.star.comp.svx.CrashReportUI";
+
+    css::uno::Reference< css::uno::XComponentContext > xContext = ::comphelper::getProcessComponentContext();
+
+    Reference< css::frame::XSynchronousDispatch > xRecoveryUI(
+        xContext->getServiceManager()->createInstanceWithContext(SERVICENAME_CRASHREPORT, xContext),
+        css::uno::UNO_QUERY_THROW);
+
+    Reference< css::util::XURLTransformer > xURLParser =
+        css::util::URLTransformer::create(::comphelper::getProcessComponentContext());
+
+    css::util::URL aURL;
+    css::uno::Any aRet = xRecoveryUI->dispatchWithReturnValue(aURL, css::uno::Sequence< css::beans::PropertyValue >());
+    bool bRet = false;
+    aRet >>= bRet;
+}
+#endif
 
 /** @short  check if recovery must be started or not.
 
@@ -1032,14 +1070,14 @@ bool Desktop::isUIOnSessionShutdownAllowed()
 
     @param  bSessionDataExists [boolean ... out!]
             there exists some session data.
-            Because the user may be logged out last time from it's
+            Because the user may be logged out last time from its
             unix session...
 */
 void impl_checkRecoveryState(bool& bCrashed           ,
                              bool& bRecoveryDataExists,
                              bool& bSessionDataExists )
 {
-    bCrashed = officecfg::Office::Recovery::RecoveryInfo::Crashed::get();
+    bCrashed = officecfg::Office::Recovery::RecoveryInfo::Crashed::get() || crashReportInfoExists();
     bool elements = officecfg::Office::Recovery::RecoveryList::get()->
         hasElements();
     bool session
@@ -1086,6 +1124,8 @@ bool impl_callRecoveryUI(bool bEmergencySave     ,
     return !bEmergencySave || bRet;
 }
 
+}
+
 /*
  * Save all open documents so they will be reopened
  * the next time the application is started
@@ -1093,7 +1133,6 @@ bool impl_callRecoveryUI(bool bEmergencySave     ,
  * returns sal_True if at least one document could be saved...
  *
  */
-
 bool Desktop::SaveTasks()
 {
     return impl_callRecoveryUI(
@@ -1105,7 +1144,7 @@ namespace {
 
 void restartOnMac(bool passArguments) {
 #if defined MACOSX
-    OfficeIPCThread::DisableOfficeIPCThread();
+    RequestHandler::Disable();
 #if HAVE_FEATURE_MACOSX_SANDBOX
     (void) passArguments; // avoid warnings
     ResMgr *resMgr = Desktop::GetDesktopResManager();
@@ -1184,7 +1223,7 @@ void restartOnMac(bool passArguments) {
 
 }
 
-sal_uInt16 Desktop::Exception(sal_uInt16 nError)
+void Desktop::Exception(sal_uInt16 nError)
 {
     // protect against recursive calls
     static bool bInException = false;
@@ -1207,7 +1246,7 @@ sal_uInt16 Desktop::Exception(sal_uInt16 nError)
     bool bAllowRecoveryAndSessionManagement = (
                                                     ( !rArgs.IsNoRestore()                    ) && // some use cases of office must work without recovery
                                                     ( !rArgs.IsHeadless()                     ) &&
-                                                    (( nError & EXC_MAJORTYPE ) != EXC_DISPLAY ) && // recovery can't work without UI ... but UI layer seems to be the reason for this crash
+                                                    (( nError & EXCEPTION_MAJORTYPE ) != EXCEPTION_DISPLAY ) && // recovery can't work without UI ... but UI layer seems to be the reason for this crash
                                                     ( Application::IsInExecute()               )    // crashes during startup and shutdown should be ignored (they indicates a corrupt installation ...)
                                                   );
     if ( bAllowRecoveryAndSessionManagement )
@@ -1215,9 +1254,9 @@ sal_uInt16 Desktop::Exception(sal_uInt16 nError)
 
     FlushConfiguration();
 
-    switch( nError & EXC_MAJORTYPE )
+    switch( nError & EXCEPTION_MAJORTYPE )
     {
-        case EXC_RSCNOTLOADED:
+        case EXCEPTION_RESOURCENOTLOADED:
         {
             OUString aResExceptionString;
             Application::Abort( aResExceptionString );
@@ -1230,7 +1269,7 @@ sal_uInt16 Desktop::Exception(sal_uInt16 nError)
 
             if( bRestart )
             {
-                OfficeIPCThread::DisableOfficeIPCThread();
+                RequestHandler::Disable();
                 if( pSignalHandler )
                     osl_removeSignalHandler( pSignalHandler );
 
@@ -1250,7 +1289,6 @@ sal_uInt16 Desktop::Exception(sal_uInt16 nError)
     }
 
     OSL_ASSERT(false); // unreachable
-    return 0;
 }
 
 void Desktop::AppEvent( const ApplicationEvent& rAppEvent )
@@ -1427,7 +1465,7 @@ int Desktop::Main()
 
         /* ensure existence of a default window that messages can be dispatched to
            This is for the benefit of testtool which uses PostUserEvent extensively
-           and else can deadlock while creating this window from another tread while
+           and else can deadlock while creating this window from another thread while
            the main thread is not yet in the event loop.
         */
         Application::GetDefaultDevice();
@@ -1565,7 +1603,7 @@ int Desktop::Main()
         try
         {
             if ( xDesktop.is() )
-                xDesktop->addTerminateListener( new OfficeIPCThreadController );
+                xDesktop->addTerminateListener( new RequestHandlerController );
             SetSplashScreenProgress(100);
         }
         catch ( const css::uno::Exception& e )
@@ -1611,27 +1649,27 @@ int Desktop::Main()
         }
         catch(const css::document::CorruptedFilterConfigurationException& exFilterCfg)
         {
-            OfficeIPCThread::SetDowning();
+            RequestHandler::SetDowning();
             FatalError( MakeStartupErrorMessage(exFilterCfg.Message) );
         }
         catch(const css::configuration::CorruptedConfigurationException& exAnyCfg)
         {
-            OfficeIPCThread::SetDowning();
+            RequestHandler::SetDowning();
             FatalError( MakeStartupErrorMessage(exAnyCfg.Message) );
         }
         catch( const css::uno::Exception& exUNO)
         {
-            OfficeIPCThread::SetDowning();
+            RequestHandler::SetDowning();
             FatalError( exUNO.Message);
         }
         catch( const std::exception& exSTD)
         {
-            OfficeIPCThread::SetDowning();
+            RequestHandler::SetDowning();
             FatalError( OUString::createFromAscii( exSTD.what()));
         }
         catch( ...)
         {
-            OfficeIPCThread::SetDowning();
+            RequestHandler::SetDowning();
             FatalError( "Caught Unknown Exception: Aborting!");
         }
     }
@@ -1663,7 +1701,8 @@ int Desktop::doShutdown()
         pExecGlobals->xGlobalBroadcaster->documentEventOccured(aEvent);
     }
 
-    delete pResMgr, pResMgr = nullptr;
+    delete pResMgr;
+    pResMgr = nullptr;
     // Restore old value
     const CommandLineArgs& rCmdLineArgs = GetCommandLineArgs();
     if ( rCmdLineArgs.IsHeadless() || rCmdLineArgs.IsEventTesting() )
@@ -1705,7 +1744,8 @@ int Desktop::doShutdown()
     pExecGlobals->pPathOptions.reset( nullptr );
 
     bool bRR = pExecGlobals->bRestartRequested;
-    delete pExecGlobals, pExecGlobals = nullptr;
+    delete pExecGlobals;
+    pExecGlobals = nullptr;
 
     if ( bRR )
     {
@@ -1874,7 +1914,6 @@ IMPL_STATIC_LINK_TYPED(Desktop, AsyncInitFirstRun, Timer *, /*unused*/, void)
 }
 
 
-
 class ExitTimer : public Timer
 {
   public:
@@ -1894,11 +1933,11 @@ IMPL_LINK_NOARG_TYPED(Desktop, OpenClients_Impl, void*, void)
     try {
         OpenClients();
 
-        OfficeIPCThread::SetReady();
+        RequestHandler::SetReady();
 
         CloseSplashScreen();
         CheckFirstRun( );
-#ifdef WNT
+#ifdef _WIN32
         // Registers a COM class factory of the service manager with the windows operating system.
         Reference< XMultiServiceFactory > xSMgr=  comphelper::getProcessServiceFactory();
         xSMgr->createInstance("com.sun.star.bridge.OleApplicationRegistration");
@@ -1917,211 +1956,6 @@ IMPL_LINK_NOARG_TYPED(Desktop, OpenClients_Impl, void*, void)
 IMPL_STATIC_LINK_NOARG_TYPED(Desktop, EnableAcceptors_Impl, void*, void)
 {
     enableAcceptors();
-}
-
-
-void Desktop::PreloadModuleData( const CommandLineArgs& rArgs )
-{
-    Sequence < css::beans::PropertyValue > args(1);
-    args[0].Name = "Hidden";
-    args[0].Value <<= sal_True;
-    Reference < XDesktop2 > xDesktop = css::frame::Desktop::create( ::comphelper::getProcessComponentContext() );
-
-    if ( rArgs.IsWriter() )
-    {
-        try
-        {
-            Reference < css::util::XCloseable > xDoc( xDesktop->loadComponentFromURL( "private:factory/swriter",
-                "_blank", 0, args ), UNO_QUERY_THROW );
-            xDoc->close( sal_False );
-        }
-        catch ( const css::uno::Exception& )
-        {
-        }
-    }
-    if ( rArgs.IsCalc() )
-    {
-        try
-        {
-            Reference < css::util::XCloseable > xDoc( xDesktop->loadComponentFromURL( "private:factory/scalc",
-                "_blank", 0, args ), UNO_QUERY_THROW );
-            xDoc->close( sal_False );
-        }
-        catch ( const css::uno::Exception& )
-        {
-        }
-    }
-    if ( rArgs.IsDraw() )
-    {
-        try
-        {
-            Reference < css::util::XCloseable > xDoc( xDesktop->loadComponentFromURL( "private:factory/sdraw",
-                "_blank", 0, args ), UNO_QUERY_THROW );
-            xDoc->close( sal_False );
-        }
-        catch ( const css::uno::Exception& )
-        {
-        }
-    }
-    if ( rArgs.IsImpress() )
-    {
-        try
-        {
-            Reference < css::util::XCloseable > xDoc( xDesktop->loadComponentFromURL( "private:factory/simpress",
-                "_blank", 0, args ), UNO_QUERY_THROW );
-            xDoc->close( sal_False );
-        }
-        catch ( const css::uno::Exception& )
-        {
-        }
-    }
-}
-
-void Desktop::PreloadConfigurationData()
-{
-    Reference< XComponentContext > xContext = ::comphelper::getProcessComponentContext();
-    Reference< XNameAccess > xNameAccess = css::frame::theUICommandDescription::get(xContext);
-
-    OUString aWriterDoc( "com.sun.star.text.TextDocument" );
-    OUString aCalcDoc( "com.sun.star.sheet.SpreadsheetDocument" );
-    OUString aDrawDoc( "com.sun.star.drawing.DrawingDocument" );
-    OUString aImpressDoc( "com.sun.star.presentation.PresentationDocument" );
-
-    // preload commands configuration
-    Any a;
-    Reference< XNameAccess > xCmdAccess;
-
-    try
-    {
-        a = xNameAccess->getByName( aWriterDoc );
-        a >>= xCmdAccess;
-        if ( xCmdAccess.is() )
-        {
-            xCmdAccess->getByName(".uno:BasicShapes");
-            xCmdAccess->getByName(".uno:EditGlossary");
-        }
-    }
-    catch ( const css::uno::Exception& )
-    {
-    }
-
-    try
-    {
-        a = xNameAccess->getByName( aCalcDoc );
-        a >>= xCmdAccess;
-        if ( xCmdAccess.is() )
-            xCmdAccess->getByName(".uno:InsertObjectStarMath");
-    }
-    catch ( const css::uno::Exception& )
-    {
-    }
-
-    try
-    {
-        // draw and impress share the same configuration file (DrawImpressCommands.xcu)
-        a = xNameAccess->getByName( aDrawDoc );
-        a >>= xCmdAccess;
-        if ( xCmdAccess.is() )
-            xCmdAccess->getByName(".uno:Polygon");
-    }
-    catch ( const css::uno::Exception& )
-    {
-    }
-
-    // preload window state configuration
-    xNameAccess = theWindowStateConfiguration::get( xContext );
-    Reference< XNameAccess > xWindowAccess;
-    try
-    {
-        a = xNameAccess->getByName( aWriterDoc );
-        a >>= xWindowAccess;
-        if ( xWindowAccess.is() )
-            xWindowAccess->getByName("private:resource/toolbar/standardbar");
-    }
-    catch ( const css::uno::Exception& )
-    {
-    }
-    try
-    {
-        a = xNameAccess->getByName( aCalcDoc );
-        a >>= xWindowAccess;
-        if ( xWindowAccess.is() )
-            xWindowAccess->getByName("private:resource/toolbar/standardbar");
-    }
-    catch ( const css::uno::Exception& )
-    {
-    }
-    try
-    {
-        a = xNameAccess->getByName( aDrawDoc );
-        a >>= xWindowAccess;
-        if ( xWindowAccess.is() )
-            xWindowAccess->getByName("private:resource/toolbar/standardbar");
-    }
-    catch ( const css::uno::Exception& )
-    {
-    }
-    try
-    {
-        a = xNameAccess->getByName( aImpressDoc );
-        a >>= xWindowAccess;
-        if ( xWindowAccess.is() )
-            xWindowAccess->getByName("private:resource/toolbar/standardbar");
-    }
-    catch ( const css::uno::Exception& )
-    {
-    }
-
-    // preload user interface element factories
-    Reference< XUIElementFactoryManager > xUIElementFactory = theUIElementFactoryManager::get( xContext );
-    try
-    {
-        xUIElementFactory->getRegisteredFactories();
-    }
-    catch ( const css::uno::Exception& )
-    {
-    }
-
-    // preload popup menu controller factories. As all controllers are in the same
-    // configuration file they also get preloaded!
-
-    Reference< css::frame::XUIControllerRegistration > xPopupMenuControllerFactory =
-    css::frame::thePopupMenuControllerFactory::get( xContext );
-    try
-    {
-        (void)xPopupMenuControllerFactory->hasController( ".uno:CharFontName", OUString() );
-    }
-    catch ( const css::uno::Exception& )
-    {
-    }
-
-    // preload filter configuration
-    xNameAccess.set(xContext->getServiceManager()->createInstanceWithContext("com.sun.star.document.FilterFactory", xContext),
-                    UNO_QUERY );
-    if ( xNameAccess.is() )
-    {
-        try
-        {
-             xNameAccess->getElementNames();
-        }
-        catch ( const css::uno::Exception& )
-        {
-        }
-    }
-
-    // preload type detection configuration
-    xNameAccess.set(xContext->getServiceManager()->createInstanceWithContext("com.sun.star.document.TypeDetection", xContext),
-                    UNO_QUERY );
-    if ( xNameAccess.is() )
-    {
-        try
-        {
-             xNameAccess->getElementNames();
-        }
-        catch ( const css::uno::Exception& )
-        {
-        }
-    }
 }
 
 void Desktop::OpenClients()
@@ -2173,51 +2007,20 @@ void Desktop::OpenClients()
             return;
         }
     }
-    else
-    {
-        OUString            aIniName;
-
-        osl_getExecutableFile( &aIniName.pData );
-        sal_uInt32     lastIndex = aIniName.lastIndexOf('/');
-        if ( lastIndex > 0 )
-        {
-            aIniName    = aIniName.copy( 0, lastIndex+1 );
-            aIniName    += "perftune";
-#if defined(WNT)
-            aIniName    += ".ini";
-#else
-            aIniName    += "rc";
-#endif
-        }
-
-        rtl::Bootstrap aPerfTuneIniFile( aIniName );
-
-        OUString aDefault( "0" );
-        OUString aPreloadData;
-
-        aPerfTuneIniFile.getFrom( "QuickstartPreloadConfiguration", aPreloadData, aDefault );
-        if ( aPreloadData == "1" )
-        {
-            if ( rArgs.IsWriter()  ||
-                 rArgs.IsCalc()    ||
-                 rArgs.IsDraw()    ||
-                 rArgs.IsImpress()    )
-            {
-                PreloadModuleData( rArgs );
-            }
-
-            PreloadConfigurationData();
-        }
-    }
 
     // Disable AutoSave feature in case "--norestore" or a similar command line switch is set on the command line.
     // The reason behind: AutoSave/EmergencySave/AutoRecovery share the same data.
     // But the require that all documents, which are saved as backup should exists inside
     // memory. May be this mechanism will be inconsistent if the configuration exists...
-    // but no document inside memory corrspond to this data.
+    // but no document inside memory corresponds to this data.
     // Further it's not acceptable to recover such documents without any UI. It can
-    // need some time, where the user wont see any results and wait for finishing the office startup...
+    // need some time, where the user won't see any results and wait for finishing the office startup...
     bool bAllowRecoveryAndSessionManagement = ( !rArgs.IsNoRestore() ) && ( !rArgs.IsHeadless()  );
+
+#if HAVE_FEATURE_BREAKPAD
+    if (crashReportInfoExists())
+        handleCrashReport();
+#endif
 
     if ( ! bAllowRecoveryAndSessionManagement )
     {
@@ -2293,12 +2096,13 @@ void Desktop::OpenClients()
             }
         }
     }
+#if HAVE_FEATURE_BREAKPAD
+    CrashReporter::writeCommonInfo();
+#endif
 
-    OfficeIPCThread::EnableRequests();
+    RequestHandler::EnableRequests();
 
     ProcessDocumentsRequest aRequest(rArgs.getCwdUrl());
-    aRequest.pcProcessed = nullptr;
-
     aRequest.aOpenList = rArgs.GetOpenList();
     aRequest.aViewList = rArgs.GetViewList();
     aRequest.aStartList = rArgs.GetStartList();
@@ -2352,7 +2156,7 @@ void Desktop::OpenClients()
         }
 
         // Process request
-        if ( OfficeIPCThread::ExecuteCmdLineRequests( aRequest ) )
+        if ( RequestHandler::ExecuteCmdLineRequests(aRequest, false) )
         {
             // Don't do anything if we have successfully called terminate at desktop:
             return;
@@ -2425,9 +2229,8 @@ void Desktop::OpenDefault()
     }
 
     ProcessDocumentsRequest aRequest(rArgs.getCwdUrl());
-    aRequest.pcProcessed = nullptr;
     aRequest.aOpenList.push_back(aName);
-    OfficeIPCThread::ExecuteCmdLineRequests( aRequest );
+    RequestHandler::ExecuteCmdLineRequests(aRequest, false);
 }
 
 
@@ -2526,7 +2329,7 @@ void Desktop::HandleAppEvent( const ApplicationEvent& rAppEvent )
                     // to true inside attachFrame(). But setComponent() reset this state every time ...
                     xBackingFrame->setComponent(xBackingWin, xStartModule);
                     xStartModule->attachFrame(xBackingFrame);
-                    xContainerWindow->setVisible(sal_True);
+                    xContainerWindow->setVisible(true);
 
                     vcl::Window* pCompWindow = VCLUnoHelper::GetWindow(xBackingFrame->getComponentWindow());
                     if (pCompWindow)
@@ -2546,15 +2349,11 @@ void Desktop::HandleAppEvent( const ApplicationEvent& rAppEvent )
             const CommandLineArgs& rCmdLine = GetCommandLineArgs();
             if ( !rCmdLine.IsInvisible() && !rCmdLine.IsTerminateAfterInit() )
             {
-                ProcessDocumentsRequest* pDocsRequest = new ProcessDocumentsRequest(
-                    rCmdLine.getCwdUrl());
+                ProcessDocumentsRequest docsRequest(rCmdLine.getCwdUrl());
                 std::vector<OUString> const & data(rAppEvent.GetStringsData());
-                pDocsRequest->aOpenList.insert(
-                    pDocsRequest->aOpenList.end(), data.begin(), data.end());
-                pDocsRequest->pcProcessed = nullptr;
-
-                OfficeIPCThread::ExecuteCmdLineRequests( *pDocsRequest );
-                delete pDocsRequest;
+                docsRequest.aOpenList.insert(
+                    docsRequest.aOpenList.end(), data.begin(), data.end());
+                RequestHandler::ExecuteCmdLineRequests(docsRequest, false);
             }
         }
         break;
@@ -2567,15 +2366,11 @@ void Desktop::HandleAppEvent( const ApplicationEvent& rAppEvent )
             const CommandLineArgs& rCmdLine = GetCommandLineArgs();
             if ( !rCmdLine.IsInvisible() && !rCmdLine.IsTerminateAfterInit() )
             {
-                ProcessDocumentsRequest* pDocsRequest = new ProcessDocumentsRequest(
-                    rCmdLine.getCwdUrl());
+                ProcessDocumentsRequest docsRequest(rCmdLine.getCwdUrl());
                 std::vector<OUString> const & data(rAppEvent.GetStringsData());
-                pDocsRequest->aPrintList.insert(
-                    pDocsRequest->aPrintList.end(), data.begin(), data.end());
-                pDocsRequest->pcProcessed = nullptr;
-
-                OfficeIPCThread::ExecuteCmdLineRequests( *pDocsRequest );
-                delete pDocsRequest;
+                docsRequest.aPrintList.insert(
+                    docsRequest.aPrintList.end(), data.begin(), data.end());
+                RequestHandler::ExecuteCmdLineRequests(docsRequest, false);
             }
         }
         break;
@@ -2772,7 +2567,7 @@ void Desktop::ShowBackingComponent(Desktop * progress)
         {
             progress->CloseSplashScreen();
         }
-        xContainerWindow->setVisible(sal_True);
+        xContainerWindow->setVisible(true);
     }
 }
 
@@ -2787,8 +2582,8 @@ void Desktop::CheckFirstRun( )
         m_firstRunTimer.SetTimeoutHdl(LINK(this, Desktop, AsyncInitFirstRun));
         m_firstRunTimer.Start();
 
-#ifdef WNT
-        // Check if Quckstarter should be started (on Windows only)
+#ifdef _WIN32
+        // Check if Quickstarter should be started (on Windows only)
         TCHAR szValue[8192];
         DWORD nValueSize = sizeof(szValue);
         HKEY hKey;

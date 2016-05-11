@@ -89,7 +89,7 @@ static SvtExtensionResIdMapping_Impl const ExtensionMap_Impl[] =
     { "jpeg",  true,  STR_DESCRIPTION_GRAPHIC_DOC,           IMG_JPG },
     { "jpg",   true,  STR_DESCRIPTION_GRAPHIC_DOC,           IMG_JPG },
     { "lha",   true,  STR_DESCRIPTION_ARCHIVFILE,            0 },
-#ifdef WNT
+#ifdef _WIN32
     { "lnk",   false, 0,                                     0 },
 #endif
     { "log",   true,  STR_DESCRIPTION_LOGFILE,               0 },
@@ -192,7 +192,6 @@ static SvtFactory2ExtensionMapping_Impl const Fac2ExtMap_Impl[] =
     { "sdatabase",              "odb" },
     { nullptr, nullptr }
 };
-
 
 
 static OUString GetImageExtensionByFactory_Impl( const OUString& rURL )
@@ -596,11 +595,11 @@ Image SvFileInformationManager::GetImage( const INetURLObject& rObject, bool bBi
     return GetImageFromList_Impl( nImage, bBig );
 }
 
-Image SvFileInformationManager::GetFileImage( const INetURLObject& rObject, bool bBig )
+Image SvFileInformationManager::GetFileImage( const INetURLObject& rObject )
 {
     sal_Int16 nImage = GetImageId_Impl( rObject, false );
     DBG_ASSERT( nImage, "invalid ImageId" );
-    return GetImageFromList_Impl( nImage, bBig );
+    return GetImageFromList_Impl( nImage, false/*bBig*/ );
 }
 
 Image SvFileInformationManager::GetImageNoDefault( const INetURLObject& rObject, bool bBig )
@@ -614,7 +613,7 @@ Image SvFileInformationManager::GetImageNoDefault( const INetURLObject& rObject,
     return GetImageFromList_Impl( nImage, bBig );
 }
 
-Image SvFileInformationManager::GetFolderImage( const svtools::VolumeInfo& rInfo, bool bBig )
+Image SvFileInformationManager::GetFolderImage( const svtools::VolumeInfo& rInfo )
 {
     sal_uInt16 nImage = IMG_FOLDER;
     DBG_ASSERT( nImage, "invalid ImageId" );
@@ -628,7 +627,7 @@ Image SvFileInformationManager::GetFolderImage( const svtools::VolumeInfo& rInfo
     else if ( rInfo.m_bIsVolume )
         nImage = IMG_FIXEDDEV;
 
-    return GetImageFromList_Impl( nImage, bBig );
+    return GetImageFromList_Impl( nImage, false/*bBig*/ );
 }
 
 OUString SvFileInformationManager::GetDescription( const INetURLObject& rObject )

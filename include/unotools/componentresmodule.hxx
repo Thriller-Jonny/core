@@ -57,7 +57,6 @@ namespace utl
 
     protected:
         // OModule overridables
-        virtual void onFirstClient() override;
         virtual void onLastClient() override;
     };
 
@@ -120,19 +119,6 @@ namespace utl
     \
     public: \
         OAutoRegistration() : BaseClass( ModuleClass::getInstance() ) \
-        { \
-        } \
-    }; \
-    \
-    /* -------------------------------------------------------------------- */ \
-    template < class TYPE > \
-    class OSingletonRegistration : public ::comphelper::OSingletonRegistration< TYPE > \
-    { \
-    private: \
-        typedef ::comphelper::OSingletonRegistration< TYPE >    BaseClass; \
-    \
-    public: \
-        OSingletonRegistration() : BaseClass( ModuleClass::getInstance() ) \
         { \
         } \
     };

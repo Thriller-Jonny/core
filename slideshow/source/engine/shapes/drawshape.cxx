@@ -49,6 +49,7 @@
 #include <boost/mem_fn.hpp>
 #include <cmath>
 #include <algorithm>
+#include <iterator>
 #include <functional>
 #include <limits>
 
@@ -75,7 +76,6 @@ namespace slideshow
 
 
         // Private methods
-
 
 
         GDIMetaFileSharedPtr DrawShape::forceScrollTextMetaFile()
@@ -512,9 +512,7 @@ namespace slideshow
         }
 
 
-
         // Public methods
-
 
 
         DrawShapeSharedPtr DrawShape::create(
@@ -681,10 +679,9 @@ namespace slideshow
             return true;
         }
 
-        bool DrawShape::clearAllViewLayers()
+        void DrawShape::clearAllViewLayers()
         {
             maViewShapes.clear();
-            return true;
         }
 
         bool DrawShape::update() const
@@ -836,9 +833,9 @@ namespace slideshow
             return (!maAnimationFrames.empty() || mbDrawingLayerAnim);
         }
 
-        bool DrawShape::setIntrinsicAnimationFrame( ::std::size_t nCurrFrame )
+        void DrawShape::setIntrinsicAnimationFrame( ::std::size_t nCurrFrame )
         {
-            ENSURE_OR_RETURN_FALSE( nCurrFrame < maAnimationFrames.size(),
+            ENSURE_OR_RETURN_VOID( nCurrFrame < maAnimationFrames.size(),
                                "DrawShape::setIntrinsicAnimationFrame(): frame index out of bounds" );
 
             if( mnCurrFrame != nCurrFrame )
@@ -847,8 +844,6 @@ namespace slideshow
                 mpCurrMtf     = maAnimationFrames[ mnCurrFrame ].mpMtf;
                 mbForceUpdate = true;
             }
-
-            return true;
         }
 
         // hyperlink support

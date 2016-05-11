@@ -54,9 +54,9 @@ FltError ScFormatFilterPluginImpl::ScImportHTML( SvStream &rStream, const OUStri
     return nErr;
 }
 
-ScEEAbsImport *ScFormatFilterPluginImpl::CreateHTMLImport( ScDocument* pDocP, const OUString& rBaseURL, const ScRange& rRange, bool bCalcWidthHeight )
+ScEEAbsImport *ScFormatFilterPluginImpl::CreateHTMLImport( ScDocument* pDocP, const OUString& rBaseURL, const ScRange& rRange )
 {
-    return new ScHTMLImport( pDocP, rBaseURL, rRange, bCalcWidthHeight );
+    return new ScHTMLImport( pDocP, rBaseURL, rRange, true/*bCalcWidthHeight*/ );
 }
 
 ScHTMLImport::ScHTMLImport( ScDocument* pDocP, const OUString& rBaseURL, const ScRange& rRange, bool bCalcWidthHeight ) :
@@ -66,7 +66,7 @@ ScHTMLImport::ScHTMLImport( ScDocument* pDocP, const OUString& rBaseURL, const S
     OutputDevice* pDefaultDev = Application::GetDefaultDevice();
     const OUString& aPageStyle = mpDoc->GetPageStyle( rRange.aStart.Tab() );
     ScStyleSheet* pStyleSheet = static_cast<ScStyleSheet*>(mpDoc->
-        GetStyleSheetPool()->Find( aPageStyle, SFX_STYLE_FAMILY_PAGE ));
+        GetStyleSheetPool()->Find( aPageStyle, SfxStyleFamily::Page ));
     if ( pStyleSheet )
     {
         const SfxItemSet& rSet = pStyleSheet->GetItemSet();

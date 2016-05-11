@@ -199,7 +199,9 @@ void SvxHyperlinkTabPageBase::InitStdControls ()
         get(mpEdIndication, "indication");
         get(mpEdText, "name");
         get(mpBtScript, "script");
-        mpBtScript->SetModeImage(Image(CUI_RES (RID_SVXBMP_SCRIPT)));
+        BitmapEx aBitmap = Image(CUI_RES (RID_SVXBMP_SCRIPT)).GetBitmapEx();
+        aBitmap.Scale(GetDPIScaleFactor(),GetDPIScaleFactor(),BmpScaleFlag::BestQuality );
+        mpBtScript->SetModeImage(Image(aBitmap));
 
         mpBtScript->SetClickHdl ( LINK ( this, SvxHyperlinkTabPageBase, ClickScriptHdl_Impl ) );
         mpBtScript->EnableTextDisplay (false);
@@ -214,7 +216,7 @@ bool SvxHyperlinkTabPageBase::MoveToExtraWnd( Point aNewPos, bool bDisConnectDlg
     bool bReturn =  mpMarkWnd->MoveTo ( aNewPos );
 
     if( bDisConnectDlg )
-        mpMarkWnd->ConnectToDialog( false );
+        mpMarkWnd->ConnectToDialog();
 
     return ( !bReturn && IsMarkWndVisible() );
 }
@@ -242,7 +244,7 @@ void SvxHyperlinkTabPageBase::ShowMarkWnd ()
         {
             // Pos Extrawindow anywhere
             MoveToExtraWnd( Point(10,10) );  // very unlikely
-            mpMarkWnd->ConnectToDialog( false );
+            mpMarkWnd->ConnectToDialog();
         }
         else
         {

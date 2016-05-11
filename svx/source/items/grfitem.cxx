@@ -56,7 +56,12 @@ SfxPoolItem* SvxGrfCrop::Create( SvStream& rStrm, sal_uInt16 nVersion ) const
     rStrm.ReadInt32( top ).ReadInt32( left ).ReadInt32( right ).ReadInt32( bottom );
 
     if( GRFCROP_VERSION_SWDEFAULT == nVersion )
-        top = -top, bottom = -bottom, left = -left, right = -right;
+    {
+        top = -top;
+        bottom = -bottom;
+        left = -left;
+        right = -right;
+    }
 
     SvxGrfCrop* pNew = static_cast<SvxGrfCrop*>(Clone());
     pNew->SetLeft( left );
@@ -72,13 +77,17 @@ SvStream& SvxGrfCrop::Store( SvStream& rStrm, sal_uInt16 nVersion ) const
     sal_Int32 left = GetLeft(), right = GetRight(),
             top = GetTop(), bottom = GetBottom();
     if( GRFCROP_VERSION_SWDEFAULT == nVersion )
-        top = -top, bottom = -bottom, left = -left, right = -right;
+    {
+        top = -top;
+        bottom = -bottom;
+        left = -left;
+        right = -right;
+    }
 
     rStrm.WriteInt32( top ).WriteInt32( left ).WriteInt32( right ).WriteInt32( bottom );
 
     return rStrm;
 }
-
 
 
 bool SvxGrfCrop::QueryValue( uno::Any& rVal, sal_uInt8 nMemberId ) const
@@ -147,8 +156,6 @@ bool SvxGrfCrop::GetPresentation(
         break;
     }
 }
-
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

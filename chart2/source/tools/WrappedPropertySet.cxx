@@ -105,9 +105,7 @@ void SAL_CALL WrappedPropertySet::setPropertyValue( const OUString& rPropertyNam
             xInnerPropertySet->setPropertyValue( rPropertyName, rValue );
         else
         {
-#if OSL_DEBUG_LEVEL > 1
-            OSL_FAIL("found no inner property set to map to");
-#endif
+            SAL_WARN("chart2.tools", "found no inner property set to map to");
         }
     }
     catch( const beans::UnknownPropertyException& )
@@ -154,9 +152,7 @@ Any SAL_CALL WrappedPropertySet::getPropertyValue( const OUString& rPropertyName
             aRet = xInnerPropertySet->getPropertyValue( rPropertyName );
         else
         {
-#if OSL_DEBUG_LEVEL > 1
-            OSL_FAIL("found no inner property set to map to");
-#endif
+            SAL_WARN("chart2.tools", "found no inner property set to map to");
         }
     }
     catch( const beans::UnknownPropertyException& )
@@ -427,7 +423,7 @@ Sequence< Any > SAL_CALL WrappedPropertySet::getPropertyDefaults( const Sequence
         p = m_pPropertyArrayHelper;
         if(!p)
         {
-            p = new ::cppu::OPropertyArrayHelper( getPropertySequence(), sal_True );
+            p = new ::cppu::OPropertyArrayHelper( getPropertySequence(), true );
             OSL_DOUBLE_CHECKED_LOCKING_MEMORY_BARRIER();
             m_pPropertyArrayHelper = p;
         }

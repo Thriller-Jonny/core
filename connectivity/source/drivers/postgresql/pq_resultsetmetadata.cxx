@@ -47,7 +47,6 @@
 
 #include <string.h>
 
-using osl::Mutex;
 using osl::MutexGuard;
 
 
@@ -55,10 +54,8 @@ using com::sun::star::uno::Any;
 using com::sun::star::uno::RuntimeException;
 using com::sun::star::uno::Exception;
 using com::sun::star::uno::Reference;
-using com::sun::star::uno::XInterface;
 using com::sun::star::uno::UNO_QUERY;
 
-using com::sun::star::lang::IllegalArgumentException;
 
 using com::sun::star::sdbc::SQLException;
 using com::sun::star::sdbc::XStatement;
@@ -301,13 +298,13 @@ sal_Bool ResultSetMetaData::isCaseSensitive( sal_Int32 column )
     throw (SQLException, RuntimeException, std::exception)
 {
     (void) column;
-    return sal_True; // ??? hmm, numeric types or
+    return true; // ??? hmm, numeric types or
 }
 
 sal_Bool ResultSetMetaData::isSearchable( sal_Int32 column ) throw (SQLException, RuntimeException, std::exception)
 {
     (void) column;
-    return sal_True; // mmm, what types are not searchable ?
+    return true; // mmm, what types are not searchable ?
 }
 
 sal_Bool ResultSetMetaData::isCurrency( sal_Int32 column ) throw (SQLException, RuntimeException, std::exception)
@@ -326,7 +323,7 @@ sal_Bool ResultSetMetaData::isSigned( sal_Int32 column )
     throw (SQLException, RuntimeException, std::exception)
 {
     (void) column;
-    return sal_True;
+    return true;
 }
 
 sal_Int32 ResultSetMetaData::getColumnDisplaySize( sal_Int32 column )
@@ -431,7 +428,7 @@ sal_Bool ResultSetMetaData::isReadOnly( sal_Int32 column )
     throw (SQLException, RuntimeException, std::exception)
 {
     (void) column;
-    return sal_False;
+    return false;
 }
 
 sal_Bool ResultSetMetaData::isWritable( sal_Int32 column )

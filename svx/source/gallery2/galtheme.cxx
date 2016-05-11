@@ -59,8 +59,6 @@
 
 using namespace ::com::sun::star;
 
-// - SgaTheme -
-
 
 GalleryTheme::GalleryTheme( Gallery* pGallery, GalleryThemeEntry* pThemeEntry )
     : m_bDestDirRelative(false)
@@ -169,11 +167,11 @@ SgaObject* GalleryTheme::ImplReadSgaObject( GalleryObject* pEntry )
 
                 switch( pEntry->eObjKind )
                 {
-                    case( SGA_OBJ_BMP ):    pSgaObj = new SgaObjectBmp(); break;
-                    case( SGA_OBJ_ANIM ):   pSgaObj = new SgaObjectAnim(); break;
-                    case( SGA_OBJ_INET ):   pSgaObj = new SgaObjectINet(); break;
-                    case( SGA_OBJ_SVDRAW ): pSgaObj = new SgaObjectSvDraw(); break;
-                    case( SGA_OBJ_SOUND ):  pSgaObj = new SgaObjectSound(); break;
+                    case SGA_OBJ_BMP:    pSgaObj = new SgaObjectBmp(); break;
+                    case SGA_OBJ_ANIM:   pSgaObj = new SgaObjectAnim(); break;
+                    case SGA_OBJ_INET:   pSgaObj = new SgaObjectINet(); break;
+                    case SGA_OBJ_SVDRAW: pSgaObj = new SgaObjectSvDraw(); break;
+                    case SGA_OBJ_SOUND:  pSgaObj = new SgaObjectSound(); break;
 
                     default:
                     break;
@@ -269,16 +267,16 @@ INetURLObject GalleryTheme::ImplCreateUniqueURL( SgaObjKind eObjKind, ConvertDat
     {
         switch( nFormat )
         {
-            case( ConvertDataFormat::BMP ): pExt = ".bmp"; break;
-            case( ConvertDataFormat::GIF ): pExt = ".gif"; break;
-            case( ConvertDataFormat::JPG ): pExt = ".jpg"; break;
-            case( ConvertDataFormat::MET ): pExt = ".met"; break;
-            case( ConvertDataFormat::PCT ): pExt = ".pct"; break;
-            case( ConvertDataFormat::PNG ): pExt = ".png"; break;
-            case( ConvertDataFormat::SVM ): pExt = ".svm"; break;
-            case( ConvertDataFormat::TIF ): pExt = ".tif"; break;
-            case( ConvertDataFormat::WMF ): pExt = ".wmf"; break;
-            case( ConvertDataFormat::EMF ): pExt = ".emf"; break;
+            case ConvertDataFormat::BMP: pExt = ".bmp"; break;
+            case ConvertDataFormat::GIF: pExt = ".gif"; break;
+            case ConvertDataFormat::JPG: pExt = ".jpg"; break;
+            case ConvertDataFormat::MET: pExt = ".met"; break;
+            case ConvertDataFormat::PCT: pExt = ".pct"; break;
+            case ConvertDataFormat::PNG: pExt = ".png"; break;
+            case ConvertDataFormat::SVM: pExt = ".svm"; break;
+            case ConvertDataFormat::TIF: pExt = ".tif"; break;
+            case ConvertDataFormat::WMF: pExt = ".wmf"; break;
+            case ConvertDataFormat::EMF: pExt = ".emf"; break;
 
             default:
                 pExt = ".grf";
@@ -357,12 +355,12 @@ bool GalleryTheme::UnlockTheme()
     return bRet;
 }
 
-void GalleryTheme::UnlockBroadcaster( sal_uIntPtr nUpdatePos )
+void GalleryTheme::UnlockBroadcaster()
 {
     DBG_ASSERT( mnBroadcasterLockCount, "Broadcaster is not locked" );
 
     if( mnBroadcasterLockCount && !--mnBroadcasterLockCount )
-        ImplBroadcast( nUpdatePos );
+        ImplBroadcast( 0 );
 }
 
 bool GalleryTheme::InsertObject( const SgaObject& rObj, sal_uIntPtr nInsertPos )
@@ -593,19 +591,16 @@ void GalleryTheme::Actualize( const Link<const INetURLObject&, void>& rActualize
         }
 
         // remove all entries with set flag
-        for ( size_t i = 0; i < aObjectList.size(); )
+        for ( GalleryObjectList::iterator it = aObjectList.begin(); it != aObjectList.end(); /* increment is in the body of loop */)
         {
-            pEntry = aObjectList[ i ];
-            if( pEntry->mbDelete )
+            if( (*it)->mbDelete )
             {
-                Broadcast( GalleryHint( GalleryHintType::CLOSE_OBJECT, GetName(), reinterpret_cast< sal_uIntPtr >( pEntry ) ) );
-                Broadcast( GalleryHint( GalleryHintType::OBJECT_REMOVED, GetName(), reinterpret_cast< sal_uLong >( pEntry ) ) );
-                GalleryObjectList::iterator it = aObjectList.begin();
-                ::std::advance( it, i );
-                aObjectList.erase( it );
-                delete pEntry;
+                Broadcast( GalleryHint( GalleryHintType::CLOSE_OBJECT, GetName(), reinterpret_cast< sal_uIntPtr >( *it ) ) );
+                Broadcast( GalleryHint( GalleryHintType::OBJECT_REMOVED, GetName(), reinterpret_cast< sal_uLong >( *it ) ) );
+                delete *it;
+                it = aObjectList.erase( it );
             }
-            else ++i;
+            else ++it;
         }
 
         // update theme
@@ -628,11 +623,11 @@ void GalleryTheme::Actualize( const Link<const INetURLObject&, void>& rActualize
 
                 switch( pEntry->eObjKind )
                 {
-                case( SGA_OBJ_BMP ):    pObj.reset(new SgaObjectBmp());      break;
-                case( SGA_OBJ_ANIM ):   pObj.reset(new SgaObjectAnim());     break;
-                case( SGA_OBJ_INET ):   pObj.reset(new SgaObjectINet());     break;
-                case( SGA_OBJ_SVDRAW ): pObj.reset(new SgaObjectSvDraw());   break;
-                case (SGA_OBJ_SOUND):   pObj.reset(new SgaObjectSound());    break;
+                case SGA_OBJ_BMP:    pObj.reset(new SgaObjectBmp());      break;
+                case SGA_OBJ_ANIM:   pObj.reset(new SgaObjectAnim());     break;
+                case SGA_OBJ_INET:   pObj.reset(new SgaObjectINet());     break;
+                case SGA_OBJ_SVDRAW: pObj.reset(new SgaObjectSvDraw());   break;
+                case SGA_OBJ_SOUND:   pObj.reset(new SgaObjectSound());    break;
 
                     default:
                     break;
@@ -747,8 +742,7 @@ GalleryThemeEntry* GalleryTheme::CreateThemeEntry( const INetURLObject& rURL, bo
                     }
                 }
 
-                INetURLObject aPathURL( rURL );
-                pRet = new GalleryThemeEntry( false, aPathURL, aThemeName,
+                pRet = new GalleryThemeEntry( false, rURL, aThemeName,
                                               bReadOnly, false, nThemeId,
                                               bThemeNameFromResource );
             }
@@ -784,16 +778,16 @@ bool GalleryTheme::GetGraphic( sal_uIntPtr nPos, Graphic& rGraphic, bool bProgre
 
         switch( pObject->eObjKind )
         {
-            case( SGA_OBJ_BMP ):
-            case( SGA_OBJ_ANIM ):
-            case( SGA_OBJ_INET ):
+            case SGA_OBJ_BMP:
+            case SGA_OBJ_ANIM:
+            case SGA_OBJ_INET:
             {
                 OUString aFilterDummy;
                 bRet = ( GalleryGraphicImport( aURL, rGraphic, aFilterDummy, bProgress ) != GalleryGraphicImportRet::IMPORT_NONE );
             }
             break;
 
-            case( SGA_OBJ_SVDRAW ):
+            case SGA_OBJ_SVDRAW:
             {
                 SvxGalleryDrawModel aModel;
 
@@ -822,7 +816,7 @@ bool GalleryTheme::GetGraphic( sal_uIntPtr nPos, Graphic& rGraphic, bool bProgre
             }
             break;
 
-            case( SGA_OBJ_SOUND ):
+            case SGA_OBJ_SOUND:
             {
                 SgaObject* pObj = AcquireObject( nPos );
 
@@ -859,20 +853,20 @@ bool GalleryTheme::InsertGraphic( const Graphic& rGraphic, sal_uIntPtr nInsertPo
         {
             switch( aGfxLink.GetType() )
             {
-                case( GFX_LINK_TYPE_EPS_BUFFER ): nExportFormat = ConvertDataFormat::SVM; break;
-                case( GFX_LINK_TYPE_NATIVE_GIF ): nExportFormat = ConvertDataFormat::GIF; break;
+                case GFX_LINK_TYPE_EPS_BUFFER: nExportFormat = ConvertDataFormat::SVM; break;
+                case GFX_LINK_TYPE_NATIVE_GIF: nExportFormat = ConvertDataFormat::GIF; break;
 
                 // #i15508# added BMP type
                 // could not find/trigger a call to this, but should do no harm
-                case( GFX_LINK_TYPE_NATIVE_BMP ): nExportFormat = ConvertDataFormat::BMP; break;
+                case GFX_LINK_TYPE_NATIVE_BMP: nExportFormat = ConvertDataFormat::BMP; break;
 
-                case( GFX_LINK_TYPE_NATIVE_JPG ): nExportFormat = ConvertDataFormat::JPG; break;
-                case( GFX_LINK_TYPE_NATIVE_PNG ): nExportFormat = ConvertDataFormat::PNG; break;
-                case( GFX_LINK_TYPE_NATIVE_TIF ): nExportFormat = ConvertDataFormat::TIF; break;
-                case( GFX_LINK_TYPE_NATIVE_WMF ): nExportFormat = ConvertDataFormat::WMF; break;
-                case( GFX_LINK_TYPE_NATIVE_MET ): nExportFormat = ConvertDataFormat::MET; break;
-                case( GFX_LINK_TYPE_NATIVE_PCT ): nExportFormat = ConvertDataFormat::PCT; break;
-                case( GFX_LINK_TYPE_NATIVE_SVG ): nExportFormat = ConvertDataFormat::SVG; break;
+                case GFX_LINK_TYPE_NATIVE_JPG: nExportFormat = ConvertDataFormat::JPG; break;
+                case GFX_LINK_TYPE_NATIVE_PNG: nExportFormat = ConvertDataFormat::PNG; break;
+                case GFX_LINK_TYPE_NATIVE_TIF: nExportFormat = ConvertDataFormat::TIF; break;
+                case GFX_LINK_TYPE_NATIVE_WMF: nExportFormat = ConvertDataFormat::WMF; break;
+                case GFX_LINK_TYPE_NATIVE_MET: nExportFormat = ConvertDataFormat::MET; break;
+                case GFX_LINK_TYPE_NATIVE_PCT: nExportFormat = ConvertDataFormat::PCT; break;
+                case GFX_LINK_TYPE_NATIVE_SVG: nExportFormat = ConvertDataFormat::SVG; break;
                 default:
                     break;
             }
@@ -1000,7 +994,7 @@ bool GalleryTheme::InsertModel( const FmFormModel& rModel, sal_uIntPtr nInsertPo
     return bRet;
 }
 
-bool GalleryTheme::GetModelStream( sal_uIntPtr nPos, tools::SvRef<SotStorageStream>& rxModelStream, bool )
+bool GalleryTheme::GetModelStream( sal_uIntPtr nPos, tools::SvRef<SotStorageStream>& rxModelStream )
 {
     const GalleryObject*    pObject = ImplGetGalleryObject( nPos );
     bool                    bRet = false;
@@ -1085,7 +1079,7 @@ bool GalleryTheme::InsertModelStream( const tools::SvRef<SotStorageStream>& rxMo
     return bRet;
 }
 
-bool GalleryTheme::GetURL( sal_uIntPtr nPos, INetURLObject& rURL, bool )
+bool GalleryTheme::GetURL( sal_uIntPtr nPos, INetURLObject& rURL )
 {
     const GalleryObject*    pObject = ImplGetGalleryObject( nPos );
     bool                    bRet = false;
@@ -1532,7 +1526,7 @@ bool GalleryTheme::IsReadOnly() const { return pThm->IsReadOnly(); }
 bool GalleryTheme::IsDefault() const { return pThm->IsDefault(); }
 bool GalleryTheme::IsModified() const { return pThm->IsModified(); }
 
-tools::SvRef<SotStorage> GalleryTheme::GetSvDrawStorage() const
+const tools::SvRef<SotStorage>& GalleryTheme::GetSvDrawStorage() const
 {
     return aSvDrawStorageRef;
 }

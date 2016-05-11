@@ -29,6 +29,7 @@ enum SbxBOOL ImpGetBool( const SbxValues* p )
     {
         case SbxNULL:
             SbxBase::SetError( ERRCODE_SBX_CONVERSION );
+            SAL_FALLTHROUGH;
         case SbxEMPTY:
             nRes = SbxFALSE; break;
         case SbxCHAR:
@@ -70,9 +71,9 @@ enum SbxBOOL ImpGetBool( const SbxValues* p )
             nRes = SbxFALSE;
             if ( p->pOUString )
             {
-                if( p->pOUString->equalsIgnoreAsciiCase( SbxRes( STRING_TRUE ) ) )
+                if( p->pOUString->equalsIgnoreAsciiCase( GetSbxRes( StringId::True ) ) )
                     nRes = SbxTRUE;
-                else if( !p->pOUString->equalsIgnoreAsciiCase( SbxRes( STRING_FALSE ) ) )
+                else if( !p->pOUString->equalsIgnoreAsciiCase( GetSbxRes( StringId::False ) ) )
                 {
                     // it can be convertible to a number
                     bool bError = true;
@@ -174,9 +175,9 @@ void ImpPutBool( SbxValues* p, sal_Int16 n )
         case SbxSTRING:
         case SbxLPSTR:
             if ( !p->pOUString )
-                p->pOUString = new OUString( SbxRes( n ? STRING_TRUE : STRING_FALSE ) );
+                p->pOUString = new OUString( GetSbxRes( n ? StringId::True : StringId::False ) );
             else
-                *p->pOUString = SbxRes( n ? STRING_TRUE : STRING_FALSE );
+                *p->pOUString = GetSbxRes( n ? StringId::True : StringId::False );
             break;
 
         case SbxOBJECT:

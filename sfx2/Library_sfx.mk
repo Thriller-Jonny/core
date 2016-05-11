@@ -192,8 +192,6 @@ $(eval $(call gb_Library_add_exception_objects,sfx,\
     sfx2/source/dialog/styfitem \
     sfx2/source/dialog/styledlg \
     sfx2/source/dialog/tabdlg \
-    sfx2/source/dialog/taskpane \
-    sfx2/source/dialog/templateinfodlg \
     sfx2/source/dialog/templdlg \
     sfx2/source/dialog/titledockwin \
     sfx2/source/dialog/tplcitem \
@@ -227,7 +225,6 @@ $(eval $(call gb_Library_add_exception_objects,sfx,\
     sfx2/source/doc/objxtor \
     sfx2/source/doc/oleprops \
     sfx2/source/doc/ownsubfilterservice \
-    sfx2/source/doc/plugin \
     sfx2/source/doc/printhelper \
     sfx2/source/doc/querytemplate \
     sfx2/source/doc/docundomanager \
@@ -239,10 +236,7 @@ $(eval $(call gb_Library_add_exception_objects,sfx,\
     sfx2/source/doc/templatedlg \
     sfx2/source/explorer/nochaos \
     sfx2/source/inet/inettbc \
-    sfx2/source/menu/mnuitem \
-    sfx2/source/menu/mnumgr \
-    sfx2/source/menu/thessubmenu \
-    sfx2/source/menu/virtmenu \
+    sfx2/source/notebookbar/SfxNotebookBar \
     sfx2/source/notify/eventsupplier \
     sfx2/source/notify/globalevents \
     sfx2/source/notify/hintpost \
@@ -292,6 +286,8 @@ $(eval $(call gb_Library_add_exception_objects,sfx,\
     sfx2/source/styles/StyleManager \
     sfx2/source/toolbox/imgmgr \
     sfx2/source/toolbox/tbxitem \
+    sfx2/source/view/classificationcontroller \
+    sfx2/source/view/classificationhelper \
     sfx2/source/view/frame \
     sfx2/source/view/frame2 \
     sfx2/source/view/frmload \

@@ -18,10 +18,7 @@
  */
 
 
-
-
 // Global header
-
 
 
 #include <limits.h>
@@ -48,7 +45,6 @@
 #include <vcl/unohelp.hxx>
 #include <sfx2/viewfrm.hxx>
 #include <sfx2/viewsh.hxx>
-
 
 
 // Project-local header
@@ -191,7 +187,7 @@ namespace accessibility
         // lock solar mutex before
         SvxViewForwarder& GetViewForwarder() const;
         // lock solar mutex before
-        SvxEditViewForwarder& GetEditViewForwarder( bool bCreate = false ) const;
+        SvxEditViewForwarder& GetEditViewForwarder() const;
 
         // are we in edit mode?
         bool IsActive() const;
@@ -310,29 +306,23 @@ namespace accessibility
             throw uno::RuntimeException("View forwarder is invalid, model might be dead", mxFrontEnd);
     }
 
-    SvxEditViewForwarder& AccessibleTextHelper_Impl::GetEditViewForwarder( bool bCreate ) const
+    SvxEditViewForwarder& AccessibleTextHelper_Impl::GetEditViewForwarder() const
     {
         if( !maEditSource.IsValid() )
             throw uno::RuntimeException("Unknown edit source", mxFrontEnd);
 
-        SvxEditViewForwarder* pViewForwarder = maEditSource.GetEditViewForwarder( bCreate );
+        SvxEditViewForwarder* pViewForwarder = maEditSource.GetEditViewForwarder();
 
         if( !pViewForwarder )
         {
-            if( bCreate )
-                throw uno::RuntimeException("Unable to fetch edit view forwarder, model might be dead", mxFrontEnd);
-            else
-                throw uno::RuntimeException("No edit view forwarder, object not in edit mode", mxFrontEnd);
+            throw uno::RuntimeException("No edit view forwarder, object not in edit mode", mxFrontEnd);
         }
 
         if( pViewForwarder->IsValid() )
             return *pViewForwarder;
         else
         {
-            if( bCreate )
-                throw uno::RuntimeException("View forwarder is invalid, model might be dead", mxFrontEnd);
-            else
-                throw uno::RuntimeException("View forwarder is invalid, object not in edit mode", mxFrontEnd);
+            throw uno::RuntimeException("View forwarder is invalid, object not in edit mode", mxFrontEnd);
         }
     }
 
@@ -502,7 +492,7 @@ namespace accessibility
                 {
                     sdr::table::CellRef xCell = pAccessibleCell->getCellRef();
                     if ( xCell.is() )
-                        return xCell->IsTextEditActive();
+                        return xCell->IsActiveCell();
                 }
             }
             if( pViewForwarder->IsValid() )
@@ -852,7 +842,7 @@ namespace accessibility
         ::accessibility::AccessibleParaManager::WeakChild operator()( const ::accessibility::AccessibleParaManager::WeakChild& rChild )
         {
             // retrieve hard reference from weak one
-            ::accessibility::AccessibleParaManager::WeakPara::HardRefType aHardRef( rChild.first.get() );
+            auto aHardRef( rChild.first.get() );
 
             if( aHardRef.is() )
             {
@@ -903,10 +893,10 @@ namespace accessibility
         void operator()( const ::accessibility::AccessibleParaManager::WeakChild& rPara )
         {
             // retrieve hard reference from weak one
-            ::accessibility::AccessibleParaManager::WeakPara::HardRefType aHardRef( rPara.first.get() );
+            auto aHardRef( rPara.first.get() );
 
             if( aHardRef.is() )
-                mrImpl.FireEvent(AccessibleEventId::CHILD, uno::Any(), uno::makeAny( aHardRef.getRef() ) );
+                mrImpl.FireEvent(AccessibleEventId::CHILD, uno::Any(), uno::makeAny<css::uno::Reference<css::accessibility::XAccessible>>(aHardRef.get()) );
         }
 
     private:
@@ -1130,10 +1120,7 @@ namespace accessibility
 
                 // #i61812# remember para to be removed for later notification
                 // AFTER the new state is applied (that after the para got removed)
-                ::uno::Reference< XAccessible > xPara;
-                ::accessibility::AccessibleParaManager::WeakPara::HardRefType aHardRef( begin->first.get() );
-                if( aHardRef.is() )
-                    xPara.set( aHardRef.getRef(), ::uno::UNO_QUERY );
+                ::uno::Reference< XAccessible > xPara(begin->first.get().get());
 
                 // release everything from the remove position until the end
                 maParaManager.Release(aFunctor.GetParaIndex(), nCurrParas);
@@ -1641,7 +1628,6 @@ namespace accessibility
     }
 
 
-
     // AccessibleTextHelper implementation (simply forwards to impl)
 
     AccessibleTextHelper::AccessibleTextHelper( ::std::unique_ptr< SvxEditSource > && pEditSource ) :
@@ -1900,7 +1886,6 @@ namespace accessibility
     }
 
 } // end of namespace accessibility
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

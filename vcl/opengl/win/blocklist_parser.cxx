@@ -7,7 +7,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include "blocklist_parser.hxx"
+#include "opengl/win/blocklist_parser.hxx"
 
 WinBlocklistParser::WinBlocklistParser(const OUString& rURL,
         std::vector<wgl::DriverInfo>& rDriverList)
@@ -230,7 +230,7 @@ void WinBlocklistParser::handleEntry(wgl::DriverInfo& rDriver, xmlreader::XmlRea
     {
         if (name.equals("os"))
         {
-            xmlreader::Span name = rReader.getAttributeValue(false);
+            name = rReader.getAttributeValue(false);
             OString sOS(name.begin, name.length);
             rDriver.meOperatingSystem = getOperatingSystem(sOS);
         }

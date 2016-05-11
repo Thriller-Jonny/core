@@ -210,12 +210,12 @@ namespace pcr
             float   nFontHeight             = aPropExtractor.getFloatFontProperty(PROPERTY_FONT_HEIGHT, (float)aDefaultFont.Height);
             float   nFontWeight             = aPropExtractor.getFloatFontProperty(PROPERTY_FONT_WEIGHT, aDefaultFont.Weight);
             css::awt::FontSlant nFontSlant  = static_cast<css::awt::FontSlant>(aPropExtractor.getInt16FontProperty(PROPERTY_FONT_SLANT, (sal_Int16)aDefaultFont.Slant));
-            sal_Int16 nFontUnderline        = aPropExtractor.getInt16FontProperty(PROPERTY_FONT_UNDERLINE, aDefaultFont.Underline);
+            sal_Int16 nFontLineStyle        = aPropExtractor.getInt16FontProperty(PROPERTY_FONT_UNDERLINE, aDefaultFont.Underline);
             sal_Int16 nFontStrikeout        = aPropExtractor.getInt16FontProperty(PROPERTY_FONT_STRIKEOUT, aDefaultFont.Strikeout);
 
             sal_Int32 nTextLineColor        = aPropExtractor.getInt32FontProperty(PROPERTY_TEXTLINECOLOR, COL_AUTO);
             sal_Int16 nFontRelief           = aPropExtractor.getInt16FontProperty(PROPERTY_FONT_RELIEF, (sal_Int16)aDefaultVCLFont.GetRelief());
-            sal_Int16 nFontEmphasisMark     = aPropExtractor.getInt16FontProperty(PROPERTY_FONT_EMPHASIS_MARK, aDefaultVCLFont.GetEmphasisMark());
+            sal_Int16 nFontEmphasisMark     = aPropExtractor.getInt16FontProperty(PROPERTY_FONT_EMPHASIS_MARK, (sal_uInt16)aDefaultVCLFont.GetEmphasisMark());
 
             Any aValue;
             bool bWordLineMode          = aPropExtractor.getCheckFontProperty(PROPERTY_WORDLINEMODE, aValue) ? aDefaultFont.WordLineMode : ::cppu::any2bool(aValue);
@@ -229,7 +229,7 @@ namespace pcr
 
             FontWeight      eWeight=VCLUnoHelper::ConvertFontWeight(nFontWeight);
             FontItalic      eItalic=VCLUnoHelper::ConvertFontSlant(nFontSlant);
-            FontUnderline   eUnderline=(FontUnderline)nFontUnderline;
+            FontLineStyle    eUnderline=(FontLineStyle)nFontLineStyle;
             FontStrikeout   eStrikeout=(FontStrikeout)nFontStrikeout;
 
             SvxWeightItem       aWeightItem(eWeight,CFID_WEIGHT);
@@ -264,7 +264,7 @@ namespace pcr
             aPropExtractor.invalidateItem(PROPERTY_FONT_HEIGHT, CFID_HEIGHT, *_pSet);
             aPropExtractor.invalidateItem(PROPERTY_FONT_WEIGHT, CFID_WEIGHT, *_pSet, css::awt::FontWeight::DONTKNOW == nFontWeight);
             aPropExtractor.invalidateItem(PROPERTY_FONT_SLANT, CFID_POSTURE, *_pSet, css::awt::FontSlant_DONTKNOW == nFontSlant);
-            aPropExtractor.invalidateItem(PROPERTY_FONT_UNDERLINE, CFID_UNDERLINE, *_pSet, css::awt::FontUnderline::DONTKNOW == nFontUnderline);
+            aPropExtractor.invalidateItem(PROPERTY_FONT_UNDERLINE, CFID_UNDERLINE, *_pSet, css::awt::FontUnderline::DONTKNOW == nFontLineStyle);
             aPropExtractor.invalidateItem(PROPERTY_FONT_STRIKEOUT, CFID_STRIKEOUT, *_pSet, css::awt::FontStrikeout::DONTKNOW == nFontStrikeout);
             aPropExtractor.invalidateItem(PROPERTY_WORDLINEMODE, CFID_WORDLINEMODE, *_pSet);
             aPropExtractor.invalidateItem(PROPERTY_TEXTCOLOR, CFID_CHARCOLOR, *_pSet);
@@ -291,17 +291,16 @@ namespace pcr
 
     namespace
     {
-        void lcl_pushBackPropertyValue( Sequence< NamedValue >& _out_properties, const OUString& _name, const Any& _value )
+        void lcl_pushBackPropertyValue( std::vector< NamedValue >& _out_properties, const OUString& _name, const Any& _value )
         {
-            _out_properties.realloc( _out_properties.getLength() + 1 );
-            _out_properties[ _out_properties.getLength() - 1 ] = NamedValue( _name, _value );
+            _out_properties.push_back( NamedValue( _name, _value ) );
         }
     }
 
 
-    void ControlCharacterDialog::translateItemsToProperties( const SfxItemSet& _rSet, Sequence< NamedValue >& _out_properties )
+    void ControlCharacterDialog::translateItemsToProperties( const SfxItemSet& _rSet, std::vector< NamedValue >& _out_properties )
     {
-        _out_properties.realloc( 0 );
+        _out_properties.clear();
 
         try
         {
@@ -396,7 +395,6 @@ namespace pcr
             }
 
 
-
             // font wordline mode
             eState = _rSet.GetItemState(CFID_WORDLINEMODE);
 
@@ -407,7 +405,6 @@ namespace pcr
 
                 lcl_pushBackPropertyValue( _out_properties, PROPERTY_WORDLINEMODE, css::uno::makeAny(rWordLineModeItem.GetValue()));
             }
-
 
 
             // text color
@@ -464,14 +461,12 @@ namespace pcr
         if ( !_rxModel.is())
             return;
 
-        Sequence< NamedValue > aPropertyValues;
+        std::vector< NamedValue > aPropertyValues;
         translateItemsToProperties( _rSet, aPropertyValues );
         try
         {
-            const NamedValue* propertyValue = aPropertyValues.getConstArray();
-            const NamedValue* propertyValueEnd = propertyValue + aPropertyValues.getLength();
-            for ( ; propertyValue != propertyValueEnd; ++propertyValue )
-                _rxModel->setPropertyValue( propertyValue->Name, propertyValue->Value );
+            for ( const NamedValue& rNV : aPropertyValues )
+                _rxModel->setPropertyValue( rNV.Name, rNV.Value );
         }
         catch( const Exception& )
         {
@@ -493,8 +488,8 @@ namespace pcr
         vcl::Font aDefaultVCLFont = Application::GetDefaultDevice()->GetSettings().GetStyleSettings().GetAppFont();
 
         SfxPoolItem** pCounter = _rppDefaults;  // want to modify this without affecting the out param _rppDefaults
-        *pCounter++ = new SvxFontItem(aDefaultVCLFont.GetFamily(), aDefaultVCLFont.GetName(), aDefaultVCLFont.GetStyleName(), aDefaultVCLFont.GetPitch(), aDefaultVCLFont.GetCharSet(), CFID_FONT);
-        *pCounter++ = new SvxFontHeightItem(aDefaultVCLFont.GetHeight(), 100, CFID_HEIGHT);
+        *pCounter++ = new SvxFontItem(aDefaultVCLFont.GetFamilyType(), aDefaultVCLFont.GetFamilyName(), aDefaultVCLFont.GetStyleName(), aDefaultVCLFont.GetPitch(), aDefaultVCLFont.GetCharSet(), CFID_FONT);
+        *pCounter++ = new SvxFontHeightItem(aDefaultVCLFont.GetFontHeight(), 100, CFID_HEIGHT);
         *pCounter++ = new SvxWeightItem(aDefaultVCLFont.GetWeight(), CFID_WEIGHT);
         *pCounter++ = new SvxPostureItem(aDefaultVCLFont.GetItalic(), CFID_POSTURE);
         *pCounter++ = new SvxLanguageItem(Application::GetSettings().GetUILanguageTag().getLanguageType(), CFID_LANGUAGE);
@@ -505,8 +500,8 @@ namespace pcr
         *pCounter++ = new SvxCharReliefItem(aDefaultVCLFont.GetRelief(), CFID_RELIEF);
         *pCounter++ = new SvxEmphasisMarkItem(aDefaultVCLFont.GetEmphasisMark(), CFID_EMPHASIS);
 
-        *pCounter++ = new SvxFontItem(aDefaultVCLFont.GetFamily(), aDefaultVCLFont.GetName(), aDefaultVCLFont.GetStyleName(), aDefaultVCLFont.GetPitch(), aDefaultVCLFont.GetCharSet(), CFID_CJK_FONT);
-        *pCounter++ = new SvxFontHeightItem(aDefaultVCLFont.GetHeight(), 100, CFID_CJK_HEIGHT);
+        *pCounter++ = new SvxFontItem(aDefaultVCLFont.GetFamilyType(), aDefaultVCLFont.GetFamilyName(), aDefaultVCLFont.GetStyleName(), aDefaultVCLFont.GetPitch(), aDefaultVCLFont.GetCharSet(), CFID_CJK_FONT);
+        *pCounter++ = new SvxFontHeightItem(aDefaultVCLFont.GetFontHeight(), 100, CFID_CJK_HEIGHT);
         *pCounter++ = new SvxWeightItem(aDefaultVCLFont.GetWeight(), CFID_CJK_WEIGHT);
         *pCounter++ = new SvxPostureItem(aDefaultVCLFont.GetItalic(), CFID_CJK_POSTURE);
         *pCounter++ = new SvxLanguageItem(Application::GetSettings().GetUILanguageTag().getLanguageType(), CFID_CJK_LANGUAGE);
@@ -520,26 +515,26 @@ namespace pcr
         // create the pool
         static SfxItemInfo const aItemInfos[CFID_LAST_ITEM_ID - CFID_FIRST_ITEM_ID + 1] =
         {
-            { SID_ATTR_CHAR_FONT,               SfxItemPoolFlags::NONE },
-            { SID_ATTR_CHAR_FONTHEIGHT,         SfxItemPoolFlags::NONE },
-            { SID_ATTR_CHAR_WEIGHT,             SfxItemPoolFlags::NONE },
-            { SID_ATTR_CHAR_POSTURE,            SfxItemPoolFlags::NONE },
-            { SID_ATTR_CHAR_LANGUAGE,           SfxItemPoolFlags::NONE },
-            { SID_ATTR_CHAR_UNDERLINE,          SfxItemPoolFlags::NONE },
-            { SID_ATTR_CHAR_STRIKEOUT,          SfxItemPoolFlags::NONE },
-            { SID_ATTR_CHAR_WORDLINEMODE,       SfxItemPoolFlags::NONE },
-            { SID_ATTR_CHAR_COLOR,              SfxItemPoolFlags::NONE },
-            { SID_ATTR_CHAR_RELIEF,             SfxItemPoolFlags::NONE },
-            { SID_ATTR_CHAR_EMPHASISMARK,       SfxItemPoolFlags::NONE },
-            { 0,                                SfxItemPoolFlags::NONE },
-            { 0,                                SfxItemPoolFlags::NONE },
-            { 0,                                SfxItemPoolFlags::NONE },
-            { 0,                                SfxItemPoolFlags::NONE },
-            { 0,                                SfxItemPoolFlags::NONE },
-            { 0,                                SfxItemPoolFlags::NONE },
-            { 0,                                SfxItemPoolFlags::NONE },
-            { 0,                                SfxItemPoolFlags::NONE },
-            { SID_ATTR_CHAR_FONTLIST,           SfxItemPoolFlags::NONE }
+            { SID_ATTR_CHAR_FONT,               false },
+            { SID_ATTR_CHAR_FONTHEIGHT,         false },
+            { SID_ATTR_CHAR_WEIGHT,             false },
+            { SID_ATTR_CHAR_POSTURE,            false },
+            { SID_ATTR_CHAR_LANGUAGE,           false },
+            { SID_ATTR_CHAR_UNDERLINE,          false },
+            { SID_ATTR_CHAR_STRIKEOUT,          false },
+            { SID_ATTR_CHAR_WORDLINEMODE,       false },
+            { SID_ATTR_CHAR_COLOR,              false },
+            { SID_ATTR_CHAR_RELIEF,             false },
+            { SID_ATTR_CHAR_EMPHASISMARK,       false },
+            { 0,                                false },
+            { 0,                                false },
+            { 0,                                false },
+            { 0,                                false },
+            { 0,                                false },
+            { 0,                                false },
+            { 0,                                false },
+            { 0,                                false },
+            { SID_ATTR_CHAR_FONTLIST,           false }
         };
 
         _rpPool = new SfxItemPool(OUString("PCRControlFontItemPool"), CFID_FIRST_ITEM_ID, CFID_LAST_ITEM_ID,

@@ -94,7 +94,6 @@ SchXMLImportHelper::SchXMLImportHelper() :
 
         mpChartAttrTokenMap( nullptr ),
         mpPlotAreaAttrTokenMap( nullptr ),
-        mpAutoStyleAttrTokenMap( nullptr ),
         mpCellAttrTokenMap( nullptr ),
         mpSeriesAttrTokenMap( nullptr ),
         mpPropMappingAttrTokenMap( nullptr ),
@@ -113,7 +112,6 @@ SchXMLImportHelper::~SchXMLImportHelper()
 
     delete mpChartAttrTokenMap;
     delete mpPlotAreaAttrTokenMap;
-    delete mpAutoStyleAttrTokenMap;
     delete mpCellAttrTokenMap;
     delete mpSeriesAttrTokenMap;
     delete mpPropMappingAttrTokenMap;
@@ -644,7 +642,7 @@ void SAL_CALL SchXMLImport::setTargetDocument( const uno::Reference< lang::XComp
 //             else we have no parent => we have our own data
 
             if( bHasOwnData && ! xChartDoc->hasInternalDataProvider() )
-                xChartDoc->createInternalDataProvider( sal_False );
+                xChartDoc->createInternalDataProvider( false );
         }
     }
     catch( const uno::Exception & rEx )

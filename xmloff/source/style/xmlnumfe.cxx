@@ -980,7 +980,7 @@ static bool lcl_IsDefaultDateFormat( const SvNumberformat& rFormat, bool bSystem
 void SvXMLNumFmtExport::ExportPart_Impl( const SvNumberformat& rFormat, sal_uInt32 nKey,
                                             sal_uInt16 nPart, bool bDefPart )
 {
-    //! for the default part, pass the coditions from the other parts!
+    //! for the default part, pass the conditions from the other parts!
 
     //  element name
 
@@ -1008,7 +1008,14 @@ void SvXMLNumFmtExport::ExportPart_Impl( const SvNumberformat& rFormat, sal_uInt
     XMLTokenEnum eType = XML_TOKEN_INVALID;
     switch ( nFmtType )
     {
-        // type is 0 if a format contains no recognized elements
+        // Type UNDEFINED likely is a crappy format string for that we could
+        // not decide on any format type (and maybe could try harder?), but the
+        // resulting XMLTokenEnum should be something valid, so make that
+        // number-style.
+        case css::util::NumberFormat::UNDEFINED:
+            SAL_WARN("xmloff.style","UNDEFINED number format: '" << rFormat.GetFormatstring() << "'");
+            SAL_FALLTHROUGH;
+        // Type is 0 if a format contains no recognized elements
         // (like text only) - this is handled as a number-style.
         case 0:
         case css::util::NumberFormat::EMPTY:
@@ -1178,6 +1185,7 @@ void SvXMLNumFmtExport::ExportPart_Impl( const SvNumberformat& rFormat, sal_uInt
         bool bCurrFound  = false;
         bool bInInteger  = true;
         bool bExpSign = true;
+        bool bDecAlign   = false;               // decimal alignment with "?"
         sal_Int32 nExpDigits = 0;
         sal_Int32 nIntegerSymbols = 0;          // for embedded-text, including "#"
         sal_Int32 nTrailingThousands = 0;       // thousands-separators after all digits
@@ -1206,9 +1214,17 @@ void SvXMLNumFmtExport::ExportPart_Impl( const SvNumberformat& rFormat, sal_uInt
                     }
                     else if ( !bInInteger && pElemStr )
                     {
-                        for ( sal_Int32 i = pElemStr->getLength()-1; i >= 0 && (*pElemStr)[i] == '#'; i-- )
+                        for ( sal_Int32 i = pElemStr->getLength()-1; i >= 0 ; i-- )
                         {
-                            nMinDecimals --;
+                            sal_Unicode aChar = (*pElemStr)[i];
+                            if ( aChar == '#' || aChar == '?' )
+                            {
+                                nMinDecimals --;
+                                if ( aChar == '?' )
+                                    bDecAlign = true;
+                            }
+                            else
+                                break;
                         }
                     }
                     if ( bInInteger && pElemStr )
@@ -1428,6 +1444,9 @@ void SvXMLNumFmtExport::ExportPart_Impl( const SvNumberformat& rFormat, sal_uInt
                                     OUStringBuffer sDashStr;
                                     if (bDecDashes && nPrecision > 0)
                                         comphelper::string::padToLength(sDashStr, nPrecision, '-');
+                                    // "?" in decimal part are replaced by space character
+                                    if (bDecAlign && nPrecision > 0)
+                                        sDashStr = " ";
 
                                     WriteNumberElement_Impl(nDecimals, nMinDecimals, nInteger, sDashStr.makeStringAndClear(),
                                         bThousand, nTrailingThousands, aEmbeddedEntries);
@@ -1444,15 +1463,17 @@ void SvXMLNumFmtExport::ExportPart_Impl( const SvNumberformat& rFormat, sal_uInt
                             case css::util::NumberFormat::FRACTION:
                                 {
                                     sal_Int32 nInteger = nLeading;
-                                    if ( pElemStr && (*pElemStr)[0] == '?' )
+                                    if ( rFormat.GetNumForNumberElementCount( nPart ) == 3 )
                                     {
-                                        //  If the first digit character is a question mark,
+                                        //  If there is only two numbers + fraction in format string
                                         //  the fraction doesn't have an integer part, and no
                                         //  min-integer-digits attribute must be written.
                                         nInteger = -1;
                                     }
-                                    sal_Int32 nDenominator = rFormat.GetForcedDenominatorForType( nPart );
-                                    WriteFractionElement_Impl( nInteger, bThousand, nPrecision, nPrecision, nDenominator );
+                                    OUString aDenominatorString = rFormat.GetDenominatorString( nPart );
+                                    sal_Int32 nDenominator = aDenominatorString.toInt32();
+                                    sal_Int32 nDenominatorLength = aDenominatorString.getLength();
+                                    WriteFractionElement_Impl( nInteger, bThousand, nPrecision, nDenominatorLength, nDenominator );
                                     bAnyContent = true;
                                 }
                                 break;

@@ -32,9 +32,9 @@
 #include <osl/security.h>
 #include <osl/conditn.h>
 
-#include <prex.h>
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
 #include <X11/Xatom.h>
-#include <postx.h>
 
 #include <unx/sm.hxx>
 #include <unx/saldata.hxx>
@@ -272,7 +272,7 @@ IMPL_STATIC_LINK_TYPED( SessionManagerClient, SaveYourselfHdl, void*, pStateVal,
 
     if( m_pSession )
     {
-        SalSessionSaveRequestEvent aEvent( shutdown, false );
+        SalSessionSaveRequestEvent aEvent( shutdown );
         m_pSession->CallCallback( &aEvent );
     }
     else
@@ -348,7 +348,7 @@ IMPL_STATIC_LINK_NOARG_TYPED( SessionManagerClient, ShutDownHdl, void*, void )
     const std::list< SalFrame* >& rFrames = vcl_sal::getSalDisplay(GetGenericData())->getFrames();
     SAL_INFO("vcl.sm", (!rFrames.empty() ? "shutdown on first frame" : "shutdown event but no frame"));
     if( !rFrames.empty() )
-        rFrames.front()->CallCallback( SALEVENT_SHUTDOWN, nullptr );
+        rFrames.front()->CallCallback( SalEvent::Shutdown, nullptr );
 }
 
 void SessionManagerClient::DieProc(
@@ -471,7 +471,7 @@ void SessionManagerClient::open(SalSession * pSession)
     }
 }
 
-OString SessionManagerClient::getSessionID()
+const OString& SessionManagerClient::getSessionID()
 {
     return m_aClientID;
 }

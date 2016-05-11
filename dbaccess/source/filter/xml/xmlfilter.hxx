@@ -41,8 +41,10 @@
 #include <map>
 #include <memory>
 
+
 namespace dbaxml
 {
+
 using namespace ::xmloff::token;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::container;
@@ -53,7 +55,7 @@ using namespace ::com::sun::star::text;
 using namespace ::com::sun::star::io;
 using namespace ::com::sun::star::xml::sax;
 
-// - ODBFilter -
+
 class ODBFilter : public SvXMLImport
 {
 public:
@@ -63,7 +65,6 @@ private:
     TPropertyNameMap                                m_aQuerySettings;
     TPropertyNameMap                                m_aTablesSettings;
     TInfoSequence                                   m_aInfoSequence;
-    Reference< XComponent >                         m_xSrcDoc;
 
     mutable ::std::unique_ptr<SvXMLTokenMap>          m_pDocElemTokenMap;
     mutable ::std::unique_ptr<SvXMLTokenMap>          m_pDatabaseElemTokenMap;
@@ -123,7 +124,7 @@ public:
     virtual void SetViewSettings(const css::uno::Sequence<css::beans::PropertyValue>& aViewProps) override;
     virtual void SetConfigurationSettings(const css::uno::Sequence<css::beans::PropertyValue>& aConfigProps) override;
 
-    inline Reference<XPropertySet> getDataSource() const { return m_xDataSource; }
+    const Reference<XPropertySet>& getDataSource() const { return m_xDataSource; }
 
     inline const TPropertyNameMap& getQuerySettings() const { return m_aQuerySettings;}
 
@@ -156,7 +157,7 @@ public:
     inline void setNewFormat(bool _bNewFormat) { m_bNewFormat = _bNewFormat; }
 };
 
-} // dbaxml
+} // namespace dbaxml
 #endif // INCLUDED_DBACCESS_SOURCE_FILTER_XML_XMLFILTER_HXX
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

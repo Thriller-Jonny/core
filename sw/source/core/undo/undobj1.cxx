@@ -171,7 +171,7 @@ void SwUndoFlyBase::DelFly( SwDoc* pDoc )
         const_cast<SwFormatContent&>(rContent).SetNewContentIdx( nullptr );
     }
     // OD 02.07.2003 #108784# - remove 'master' drawing object from drawing page
-    else if ( RES_DRAWFRMFMT == pFrameFormat->Which() )
+    else
     {
         SwDrawContact* pDrawContact =
             static_cast<SwDrawContact*>(pFrameFormat->FindContactObj());
@@ -645,7 +645,7 @@ void SwUndoSetFlyFormat::PutAttr( sal_uInt16 nWhich, const SfxPoolItem* pItem )
             case FLY_AS_CHAR:
             case FLY_AT_CHAR:
                 nOldContent = pAnchor->GetContentAnchor()->nContent.GetIndex();
-                //fall-through
+                SAL_FALLTHROUGH;
             case FLY_AT_PARA:
             case FLY_AT_FLY:
                 nOldNode = pAnchor->GetContentAnchor()->nNode.GetIndex();
@@ -661,7 +661,7 @@ void SwUndoSetFlyFormat::PutAttr( sal_uInt16 nWhich, const SfxPoolItem* pItem )
             case FLY_AS_CHAR:
             case FLY_AT_CHAR:
                 nNewContent = pAnchor->GetContentAnchor()->nContent.GetIndex();
-                //fall-through
+                SAL_FALLTHROUGH;
             case FLY_AT_PARA:
             case FLY_AT_FLY:
                 nNewNode = pAnchor->GetContentAnchor()->nNode.GetIndex();

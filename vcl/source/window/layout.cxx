@@ -324,7 +324,7 @@ bool VclBox::set_property(const OString &rKey, const OString &rValue)
 
 sal_uInt16 VclBox::getDefaultAccessibleRole() const
 {
-#if defined(WNT)
+#if defined(_WIN32)
     //fdo#74284 call Boxes Panels, keep then as "Filler" under
     //at least Linux seeing as that's what Gtk does for GtkBoxes
     return css::accessibility::AccessibleRole::PANEL;
@@ -603,7 +603,7 @@ void VclButtonBox::setAllocation(const Size &rAllocation)
             break;
         default:
             SAL_WARN("vcl.layout", "todo unimplemented layout style");
-            //fall-through
+            SAL_FALLTHROUGH;
         case VCL_BUTTONBOX_DEFAULT_STYLE:
         case VCL_BUTTONBOX_END:
             if (!aReq.m_aMainGroupDimensions.empty())
@@ -674,6 +674,7 @@ static int getButtonPriority(const OString &rType)
     const OUString &rEnv = Application::GetDesktopEnvironment();
 
     if (rEnv.equalsIgnoreAsciiCase("windows") ||
+        rEnv.equalsIgnoreAsciiCase("kde5") ||
         rEnv.equalsIgnoreAsciiCase("kde4") ||
         rEnv.equalsIgnoreAsciiCase("tde") ||
         rEnv.equalsIgnoreAsciiCase("kde"))
@@ -2126,7 +2127,7 @@ void MessageDialog::SetMessagesWidths(vcl::Window *pParent,
     {
         assert(pPrimaryMessage);
         vcl::Font aFont = pParent->GetSettings().GetStyleSettings().GetLabelFont();
-        aFont.SetSize(Size(0, aFont.GetSize().Height() * 1.2));
+        aFont.SetFontSize(Size(0, aFont.GetFontSize().Height() * 1.2));
         aFont.SetWeight(WEIGHT_BOLD);
         pPrimaryMessage->SetControlFont(aFont);
         pPrimaryMessage->SetMaxTextWidth(pPrimaryMessage->approximate_char_width() * 44);

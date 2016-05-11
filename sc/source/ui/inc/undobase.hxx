@@ -26,7 +26,8 @@
 #include "docsh.hxx"
 #include <columnspanset.hxx>
 
-#include <boost/ptr_container/ptr_map.hpp>
+#include <memory>
+#include <map>
 
 class ScDocument;
 class ScDocShell;
@@ -39,7 +40,7 @@ class ScSimpleUndo: public SfxUndoAction
     ScSimpleUndo(const ScSimpleUndo&) = delete;
 
 public:
-    typedef boost::ptr_map<SCTAB,sc::ColumnSpanSet> DataSpansType;
+    typedef std::map<SCTAB, std::unique_ptr<sc::ColumnSpanSet>> DataSpansType;
 
                     ScSimpleUndo( ScDocShell* pDocSh );
     virtual         ~ScSimpleUndo();
@@ -99,8 +100,7 @@ protected:
 class ScMultiBlockUndo: public ScSimpleUndo
 {
 public:
-    ScMultiBlockUndo(ScDocShell* pDocSh, const ScRangeList& rRanges,
-                     ScBlockUndoMode eBlockMode);
+    ScMultiBlockUndo(ScDocShell* pDocSh, const ScRangeList& rRanges);
     virtual ~ScMultiBlockUndo();
 
 protected:

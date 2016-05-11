@@ -282,7 +282,7 @@ DECLARE_ODFIMPORT_TEST(testPageStyleLayoutRight, "hello.odt")
 
 DECLARE_ODFIMPORT_TEST(testFdo61952, "hello.odt")
 {
-    uno::Reference<beans::XPropertySet> xPara(getParagraph(0), uno::UNO_QUERY);
+    uno::Reference<beans::XPropertySet> xPara(getParagraph(1), uno::UNO_QUERY);
     xPara->setPropertyValue("PageDescName", uno::makeAny(OUString("Left Page")));
     xPara->setPropertyValue("PageDescName", uno::makeAny(OUString("Right Page")));
     xPara->setPropertyValue("PageDescName", uno::makeAny(OUString("Left Page")));
@@ -291,7 +291,7 @@ DECLARE_ODFIMPORT_TEST(testFdo61952, "hello.odt")
 
 DECLARE_ODFIMPORT_TEST(testFdo60842, "fdo60842.odt")
 {
-    uno::Reference<text::XTextContent> const xTable(getParagraphOrTable(0));
+    uno::Reference<text::XTextContent> const xTable(getParagraphOrTable(1));
     getCell(xTable, "A1", "");
     getCell(xTable, "B1", "18/02/2012");
     getCell(xTable, "C1", "USD"); // this is the cell with office:string-value
@@ -308,7 +308,7 @@ DECLARE_ODFIMPORT_TEST(testFdo79269, "fdo79269.odt")
     CPPUNIT_ASSERT_EQUAL(sal_Int16(2), xCursor->getPage());
 
     // The problem was that the first-footer was shared.
-    uno::Reference<beans::XPropertySet> xPropSet(getStyles("PageStyles")->getByName(DEFAULT_STYLE), uno::UNO_QUERY);
+    uno::Reference<beans::XPropertySet> xPropSet(getStyles("PageStyles")->getByName("Standard"), uno::UNO_QUERY);
     CPPUNIT_ASSERT_EQUAL(false, getProperty<bool>(xPropSet, "FirstIsShared"));
 
     uno::Reference<text::XTextRange> xFooter1 = getProperty< uno::Reference<text::XTextRange> >(xPropSet, "FooterTextFirst");
@@ -325,7 +325,7 @@ DECLARE_ODFIMPORT_TEST(testFdo79269_header, "fdo79269_header.odt")
     xCursor->jumpToLastPage();
     CPPUNIT_ASSERT_EQUAL(sal_Int16(2), xCursor->getPage());
 
-    uno::Reference<beans::XPropertySet> xPropSet(getStyles("PageStyles")->getByName(DEFAULT_STYLE), uno::UNO_QUERY);
+    uno::Reference<beans::XPropertySet> xPropSet(getStyles("PageStyles")->getByName("Standard"), uno::UNO_QUERY);
     CPPUNIT_ASSERT_EQUAL(false, getProperty<bool>(xPropSet, "FirstIsShared"));
 
     uno::Reference<text::XTextRange> xFooter1 = getProperty< uno::Reference<text::XTextRange> >(xPropSet, "HeaderTextFirst");
@@ -498,7 +498,7 @@ DECLARE_ODFIMPORT_TEST(testFdo37606, "fdo37606.odt")
         CPPUNIT_ASSERT(!pContentNode->FindTableNode());
     }
 }
-#if !defined(WNT)
+#if !defined(_WIN32)
 DECLARE_ODFIMPORT_TEST(testFdo37606Copy, "fdo37606.odt")
 {
     SwXTextDocument* pTextDoc = dynamic_cast<SwXTextDocument *>(mxComponent.get());

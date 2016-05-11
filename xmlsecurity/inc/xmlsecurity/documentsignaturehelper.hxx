@@ -23,6 +23,7 @@
 #include <com/sun/star/uno/Reference.h>
 #include <rtl/ustring.hxx>
 #include "xmlsecurity/sigstruct.hxx"
+#include "xmlsecuritydllapi.h"
 
 #include <vector>
 
@@ -59,10 +60,17 @@ struct SignatureStreamHelper
 {
     css::uno::Reference < css::embed::XStorage >    xSignatureStorage;
     css::uno::Reference < css::io::XStream >        xSignatureStream;
+    /// If this is embed::StorageFormats::OFOPXML, then it's expected that xSignatureStream is an empty reference.
+    sal_Int32 nStorageFormat;
+
+    SignatureStreamHelper()
+        : nStorageFormat(0)
+    {
+    }
 };
 
 
-class DocumentSignatureHelper
+class XMLSECURITY_DLLPUBLIC DocumentSignatureHelper
 {
 public:
 
@@ -84,6 +92,8 @@ public:
     static OUString GetDocumentContentSignatureDefaultStreamName();
     static OUString GetScriptingContentSignatureDefaultStreamName();
     static OUString GetPackageSignatureDefaultStreamName();
+    /// In case the storage is OOXML, prepend a leading '/' and append content type to the element URIs.
+    static void AppendContentTypes(const css::uno::Reference<css::embed::XStorage>& xStorage, std::vector<OUString>& rElements);
 
 };
 

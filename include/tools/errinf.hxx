@@ -31,8 +31,8 @@
 // FIXME: horrible legacy dependency on VCL from tools.
 namespace vcl { class Window; }
 
-class EDcr_Impl;
-class ErrHdl_Impl;
+class DynamicErrorInfo_Impl;
+class ErrorHandler_Impl;
 
 class TOOLS_DLLPUBLIC ErrorInfo
 {
@@ -52,10 +52,10 @@ public:
 
 class TOOLS_DLLPUBLIC DynamicErrorInfo : public ErrorInfo
 {
-    friend class EDcr_Impl;
+    friend class DynamicErrorInfo_Impl;
 
 private:
-    std::unique_ptr<EDcr_Impl>   pImpl;
+    std::unique_ptr<DynamicErrorInfo_Impl>   pImpl;
 
 public:
 
@@ -75,7 +75,7 @@ public:
 
                             StringErrorInfo( sal_uIntPtr lUserId,
                                             const OUString& aStringP,
-                                            sal_uInt16 nFlags = 0);
+                                            sal_uInt16 nMask = 0);
     const OUString&         GetErrorString() const { return aString; }
 };
 
@@ -88,8 +88,8 @@ private:
 public:
 
     TwoStringErrorInfo(sal_uIntPtr nUserID, const OUString & rTheArg1,
-                       const OUString & rTheArg2, sal_uInt16 nFlags = 0):
-        DynamicErrorInfo(nUserID, nFlags), aArg1(rTheArg1), aArg2(rTheArg2) {}
+                       const OUString & rTheArg2, sal_uInt16 nMask = 0):
+        DynamicErrorInfo(nUserID, nMask), aArg1(rTheArg1), aArg2(rTheArg2) {}
 
     virtual ~TwoStringErrorInfo() {}
 
@@ -101,10 +101,10 @@ class TOOLS_DLLPUBLIC MessageInfo : public DynamicErrorInfo
 {
 public:
 
-    MessageInfo(sal_uIntPtr UserId, sal_uInt16 nFlags = 0) :
-        DynamicErrorInfo(UserId, nFlags) {}
-    MessageInfo(sal_uIntPtr UserId, const OUString &rArg, sal_uInt16 nFlags = 0 ) :
-        DynamicErrorInfo(UserId, nFlags), aArg(rArg) {}
+    MessageInfo(sal_uIntPtr UserId, sal_uInt16 nMask = 0) :
+        DynamicErrorInfo(UserId, nMask) {}
+    MessageInfo(sal_uIntPtr UserId, const OUString &rArg, sal_uInt16 nMask = 0 ) :
+        DynamicErrorInfo(UserId, nMask), aArg(rArg) {}
 
     const OUString&         GetMessageArg() const { return aArg; }
 
@@ -138,10 +138,10 @@ typedef void BasicDisplayErrorFunc(
 
 class TOOLS_DLLPUBLIC ErrorHandler
 {
-    friend class ErrHdl_Impl;
+    friend class ErrorHandler_Impl;
 
 private:
-    std::unique_ptr<ErrHdl_Impl>  pImpl;
+    std::unique_ptr<ErrorHandler_Impl>  pImpl;
 
     static sal_uInt16   HandleError_Impl( sal_uIntPtr lId,
                               sal_uInt16 nFlags,

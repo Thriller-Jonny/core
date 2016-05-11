@@ -45,7 +45,6 @@ public:
     ~XOBitmap();
 
     XOBitmap& operator=( const XOBitmap& rXOBitmap );
-    bool      operator==( const XOBitmap& rXOBitmap ) const;
 
     void Bitmap2Array();
     void Array2Bitmap();
@@ -56,7 +55,7 @@ public:
     void SetBackgroundColor( const Color& rColor )      { aBckgrColor = rColor; bGraphicDirty = true; }
 
     Bitmap                  GetBitmap() const;
-    Color                   GetBackgroundColor() const  { return aBckgrColor; }
+    const Color&            GetBackgroundColor() const  { return aBckgrColor; }
 };
 
 #endif

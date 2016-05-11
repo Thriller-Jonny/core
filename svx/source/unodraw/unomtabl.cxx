@@ -148,20 +148,20 @@ uno::Sequence< OUString > SAL_CALL SvxUnoMarkerTable::getSupportedServiceNames( 
 
 void SAL_CALL SvxUnoMarkerTable::ImplInsertByName( const OUString& aName, const uno::Any& aElement )
 {
-    SfxItemSet* mpInSet = new SfxItemSet( *mpModelPool, XATTR_LINESTART, XATTR_LINEEND );
-    maItemSetVector.push_back( mpInSet );
+    SfxItemSet* pInSet = new SfxItemSet( *mpModelPool, XATTR_LINESTART, XATTR_LINEEND );
+    maItemSetVector.push_back( pInSet );
 
     XLineEndItem aEndMarker;
     aEndMarker.SetName( aName );
     aEndMarker.PutValue( aElement, 0 );
 
-    mpInSet->Put( aEndMarker, XATTR_LINEEND );
+    pInSet->Put( aEndMarker, XATTR_LINEEND );
 
     XLineStartItem aStartMarker;
     aStartMarker.SetName( aName );
     aStartMarker.PutValue( aElement, 0 );
 
-    mpInSet->Put( aStartMarker, XATTR_LINESTART );
+    pInSet->Put( aStartMarker, XATTR_LINESTART );
 }
 
 // XNameContainer
@@ -191,17 +191,15 @@ void SAL_CALL SvxUnoMarkerTable::removeByName( const OUString& aApiName )
         return;
     }
 
-    OUString Name = SvxUnogetInternalNameForItem(XATTR_LINEEND, aApiName);
+    OUString aName = SvxUnogetInternalNameForItem(XATTR_LINEEND, aApiName);
 
     ItemPoolVector::iterator aIter = maItemSetVector.begin();
     const ItemPoolVector::iterator aEnd = maItemSetVector.end();
 
-    const OUString aSearchName( Name );
-
     while( aIter != aEnd )
     {
         const NameOrIndex *pItem = static_cast<const NameOrIndex *>(&((*aIter)->Get( XATTR_LINEEND ) ));
-        if( pItem->GetName() == aSearchName )
+        if( pItem->GetName() == aName )
         {
             delete (*aIter);
             maItemSetVector.erase( aIter );
@@ -210,7 +208,7 @@ void SAL_CALL SvxUnoMarkerTable::removeByName( const OUString& aApiName )
         ++aIter;
     }
 
-    if( !hasByName( Name ) )
+    if( !hasByName( aName ) )
         throw container::NoSuchElementException();
 }
 
@@ -220,27 +218,25 @@ void SAL_CALL SvxUnoMarkerTable::replaceByName( const OUString& aApiName, const 
 {
     SolarMutexGuard aGuard;
 
-    OUString aName = SvxUnogetInternalNameForItem(XATTR_LINEEND, aApiName);
+    const OUString aName = SvxUnogetInternalNameForItem(XATTR_LINEEND, aApiName);
 
     ItemPoolVector::iterator aIter = maItemSetVector.begin();
     const ItemPoolVector::iterator aEnd = maItemSetVector.end();
 
-    const OUString aSearchName( aName );
-
     while( aIter != aEnd )
     {
         const NameOrIndex *pItem = static_cast<const NameOrIndex *>(&((*aIter)->Get( XATTR_LINEEND ) ));
-        if( pItem->GetName() == aSearchName )
+        if( pItem->GetName() == aName )
         {
             XLineEndItem aEndMarker;
-            aEndMarker.SetName( aSearchName );
+            aEndMarker.SetName( aName );
             if( !aEndMarker.PutValue( aElement, 0 ) )
                 throw lang::IllegalArgumentException();
 
             (*aIter)->Put( aEndMarker, XATTR_LINEEND );
 
             XLineStartItem aStartMarker;
-            aStartMarker.SetName( aSearchName );
+            aStartMarker.SetName( aName );
             aStartMarker.PutValue( aElement, 0 );
 
             (*aIter)->Put( aStartMarker, XATTR_LINESTART );
@@ -257,7 +253,7 @@ void SAL_CALL SvxUnoMarkerTable::replaceByName( const OUString& aApiName, const 
     for( nSurrogate = 0; nSurrogate < nStartCount; nSurrogate++ )
     {
         NameOrIndex *pItem = const_cast<NameOrIndex*>(static_cast<const NameOrIndex*>(mpModelPool->GetItem2( XATTR_LINESTART, nSurrogate)));
-        if( pItem && pItem->GetName() == aSearchName )
+        if( pItem && pItem->GetName() == aName )
         {
             pItem->PutValue( aElement, 0 );
             bFound = true;
@@ -269,7 +265,7 @@ void SAL_CALL SvxUnoMarkerTable::replaceByName( const OUString& aApiName, const 
     for( nSurrogate = 0; nSurrogate < nEndCount; nSurrogate++ )
     {
         NameOrIndex *pItem = const_cast<NameOrIndex*>(static_cast<const NameOrIndex*>(mpModelPool->GetItem2( XATTR_LINEEND, nSurrogate)));
-        if( pItem && pItem->GetName() == aSearchName )
+        if( pItem && pItem->GetName() == aName )
         {
             pItem->PutValue( aElement, 0 );
             bFound = true;
@@ -366,7 +362,7 @@ sal_Bool SAL_CALL SvxUnoMarkerTable::hasByName( const OUString& aName )
     SolarMutexGuard aGuard;
 
     if( aName.isEmpty() )
-        return sal_False;
+        return false;
 
     OUString aSearchName;
 
@@ -379,7 +375,7 @@ sal_Bool SAL_CALL SvxUnoMarkerTable::hasByName( const OUString& aName )
     {
         pItem = static_cast<const NameOrIndex*>(mpModelPool->GetItem2( XATTR_LINESTART, nSurrogate));
         if( pItem && pItem->GetName() == aSearchName )
-            return sal_True;
+            return true;
     }
 
     aSearchName = SvxUnogetInternalNameForItem(XATTR_LINEEND, aName);
@@ -388,10 +384,10 @@ sal_Bool SAL_CALL SvxUnoMarkerTable::hasByName( const OUString& aName )
     {
         pItem = static_cast<const NameOrIndex*>(mpModelPool->GetItem2( XATTR_LINEEND, nSurrogate));
         if( pItem && pItem->GetName() == aSearchName )
-            return sal_True;
+            return true;
     }
 
-    return sal_False;
+    return false;
 }
 
 // XElementAccess
@@ -414,7 +410,7 @@ sal_Bool SAL_CALL SvxUnoMarkerTable::hasElements(  )
     {
         pItem = static_cast<const NameOrIndex*>(mpModelPool->GetItem2( XATTR_LINESTART, nSurrogate));
         if( pItem && !pItem->GetName().isEmpty() )
-            return sal_True;
+            return true;
     }
 
     const sal_uInt32 nEndCount = mpModelPool ? mpModelPool->GetItemCount2( XATTR_LINEEND ) : 0;
@@ -422,10 +418,10 @@ sal_Bool SAL_CALL SvxUnoMarkerTable::hasElements(  )
     {
         pItem = static_cast<const NameOrIndex*>(mpModelPool->GetItem2( XATTR_LINEEND, nSurrogate));
         if( pItem && !pItem->GetName().isEmpty() )
-            return sal_True;
+            return true;
     }
 
-    return sal_False;
+    return false;
 }
 
 /**
@@ -435,7 +431,6 @@ uno::Reference< uno::XInterface > SAL_CALL SvxUnoMarkerTable_createInstance( Sdr
 {
     return *new SvxUnoMarkerTable(pModel);
 }
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

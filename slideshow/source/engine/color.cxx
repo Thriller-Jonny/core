@@ -69,11 +69,11 @@ namespace slideshow
                         nDelta/(2.0-nMax-nMin) :
                         nDelta/(nMax + nMin);
 
-                    if( nRed == nMax )
+                    if( rtl::math::approxEqual(nRed, nMax) )
                         aRes.mnHue = (nGreen - nBlue)/nDelta;
-                    else if( nGreen == nMax )
+                    else if( rtl::math::approxEqual(nGreen, nMax) )
                         aRes.mnHue = 2.0 + (nBlue - nRed)/nDelta;
-                    else if( nBlue == nMax )
+                    else if( rtl::math::approxEqual(nBlue, nMax) )
                         aRes.mnHue = 4.0 + (nRed - nGreen)/nDelta;
 
                     aRes.mnHue *= 60.0;
@@ -152,7 +152,6 @@ namespace slideshow
         }
 
 
-
         // HSLColor
 
 
@@ -171,30 +170,21 @@ namespace slideshow
         }
 
         HSLColor::HSLColor() :
-            maHSLTriple( 0.0, 0.0, 0.0 ),
-            mnMagicValue( getMagic( maHSLTriple.mnLuminance,
-                                    maHSLTriple.mnSaturation ) )
+            maHSLTriple( 0.0, 0.0, 0.0 )
         {
         }
 
         HSLColor::HSLColor( double nHue, double nSaturation, double nLuminance ) :
-            maHSLTriple( nHue, nSaturation, nLuminance ),
-            mnMagicValue( getMagic( maHSLTriple.mnLuminance,
-                                    maHSLTriple.mnSaturation ) )
+            maHSLTriple( nHue, nSaturation, nLuminance )
         {
         }
 
         HSLColor::HSLColor( const RGBColor& rColor ) :
             maHSLTriple( rgb2hsl( truncateRangeStd( rColor.getRed() ),
                                   truncateRangeStd( rColor.getGreen() ),
-                                  truncateRangeStd( rColor.getBlue() ) ) ),
-            mnMagicValue( getMagic( maHSLTriple.mnLuminance,
-                                    maHSLTriple.mnSaturation ) )
+                                  truncateRangeStd( rColor.getBlue() ) ) )
         {
         }
-
-
-
 
 
         bool operator==( const HSLColor& rLHS, const HSLColor& rRHS )
@@ -265,9 +255,7 @@ namespace slideshow
         }
 
 
-
         // RGBColor
-
 
 
         RGBColor::RGBTriple::RGBTriple() :
@@ -307,8 +295,6 @@ namespace slideshow
                                   truncateRangeStd( rColor.getLuminance() ) ) )
         {
         }
-
-
 
 
         ::cppcanvas::Color::IntSRGBA RGBColor::getIntegerColor() const

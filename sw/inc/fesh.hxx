@@ -171,6 +171,8 @@ enum class SwPasteSdr
 #define SW_ADD_SELECT   1
 #define SW_ENTER_GROUP  2
 #define SW_LEAVE_FRAME  4
+/// Allow SwFEShell::SelectObj() to select the TextBox of a shape.
+#define SW_ALLOW_TEXTBOX  8
 
 enum class SwMove
 {
@@ -221,11 +223,11 @@ private:
     SAL_DLLPRIVATE const SwFrame *GetBox( const Point &rPt, bool* pbRow = nullptr, bool* pbCol = nullptr ) const;
 
     // 0 == not in any column.
-    SAL_DLLPRIVATE sal_uInt16 _GetCurColNum( const SwFrame *pFrame,
+    SAL_DLLPRIVATE sal_uInt16 GetCurColNum_( const SwFrame *pFrame,
                           SwGetCurColNumPara* pPara ) const;
 
-    SAL_DLLPRIVATE void _GetTabCols( SwTabCols &rToFill, const SwFrame *pBox ) const;
-    SAL_DLLPRIVATE void _GetTabRows( SwTabCols &rToFill, const SwFrame *pBox ) const;
+    SAL_DLLPRIVATE void GetTabCols_( SwTabCols &rToFill, const SwFrame *pBox ) const;
+    SAL_DLLPRIVATE void GetTabRows_( SwTabCols &rToFill, const SwFrame *pBox ) const;
 
     SAL_DLLPRIVATE bool ImpEndCreate();
 
@@ -238,7 +240,7 @@ private:
 
     /// Get list of marked SdrObjects;
     /// helper method for GetSelFrameType, IsSelContainsControl.
-    SAL_DLLPRIVATE const SdrMarkList* _GetMarkList() const;
+    SAL_DLLPRIVATE const SdrMarkList* GetMarkList_() const;
 
     SAL_DLLPRIVATE bool CheckHeadline( bool bRepeat ) const;
 
@@ -254,7 +256,7 @@ public:
 
     /// Copy and Paste methods for internal clipboard.
     bool Copy( SwDoc* pClpDoc, const OUString* pNewClpText = nullptr );
-    bool Paste( SwDoc* pClpDoc, bool bIncludingPageFrames = false);
+    bool Paste( SwDoc* pClpDoc );
 
     /// Paste some pages into another doc - used in mailmerge.
     bool PastePages( SwFEShell& rToFill, sal_uInt16 nStartPage, sal_uInt16 nEndPage);
@@ -263,7 +265,7 @@ public:
     bool Copy( SwFEShell*, const Point& rSttPt, const Point& rInsPt,
                bool bIsMove = false, bool bSelectInsert = true );
 
-    void SelectFlyFrame( SwFlyFrame& rFrame, bool bNew = false );
+    void SelectFlyFrame( SwFlyFrame& rFrame );
 
     /// Is selected frame within another frame?
     const SwFrameFormat* IsFlyInFly();
@@ -314,7 +316,7 @@ public:
     bool IsSelContainsControl() const;
 
     ObjCntType GetObjCntType( const Point &rPt, SdrObject *&rpObj ) const;
-    ObjCntType GetObjCntTypeOfSelection( SdrObject** ppObj = nullptr ) const;
+    ObjCntType GetObjCntTypeOfSelection() const;
 
     /// For adjustment of PosAttr when anchor changes.
     SwRect  GetObjRect() const;
@@ -341,7 +343,7 @@ public:
 
     long BeginDrag( const Point *pPt, bool bProp );
     long Drag     ( const Point *pPt, bool bProp );
-    long EndDrag  ( const Point *pPt, bool bProp );
+    void EndDrag  ( const Point *pPt );
     void BreakDrag();
 
     /// Methods for status line.
@@ -351,7 +353,7 @@ public:
 
     /// SS for envelopes: get all page-bound objects and set them to new page.
     void GetPageObjs( std::vector<SwFrameFormat*>& rFillArr );
-    void SetPageObjsNewPage( std::vector<SwFrameFormat*>& rFillArr, int nOffset = 1 );
+    void SetPageObjsNewPage( std::vector<SwFrameFormat*>& rFillArr );
 
     /// Show current selection (frame / draw object as required).
     virtual void MakeSelVisible() override;
@@ -380,14 +382,14 @@ public:
     bool GetFlyFrameAttr( SfxItemSet &rSet ) const;
     bool SetFlyFrameAttr( SfxItemSet &rSet );
     static SfxItemSet makeItemSetFromFormatAnchor(SfxItemPool& rPool, const SwFormatAnchor &rAnchor);
-    bool ResetFlyFrameAttr( sal_uInt16 nWhich, const SfxItemSet* pSet = nullptr );
+    bool ResetFlyFrameAttr( const SfxItemSet* pSet );
     const SwFrameFormat *NewFlyFrame( const SfxItemSet &rSet, bool bAnchValid = false,
                          SwFrameFormat *pParent = nullptr );
     void SetFlyPos( const Point &rAbsPos);
     Point FindAnchorPos( const Point &rAbsPos, bool bMoveIt = false );
 
     /** Determines whether a frame or its environment is vertically formatted and right-to-left.
-     also determines, if frame or its environmane is in mongolianlayout (vertical left-to-right)
+     also determines, if frame or its environment is in mongolianlayout (vertical left-to-right)
      - add output parameter <bVertL2R> */
     bool IsFrameVertical(const bool bEnvironment, bool& bRightToLeft, bool& bVertL2R) const;
 
@@ -401,7 +403,7 @@ public:
     SwFlyFrame* GetCurrFlyFrame(const bool bCalcFrame = true) const;
 
     // Get selected fly, but if none Get current fly in which the cursor is positioned
-    SwFlyFrame* GetSelectedOrCurrFlyFrame(const bool bCalcFrame = true) const;
+    SwFlyFrame* GetSelectedOrCurrFlyFrame() const;
 
     /// Find/delete fly containing the cursor.
     SwFrameFormat* WizardGetFly();
@@ -506,7 +508,7 @@ public:
     size_t IsObjSelected() const;   ///< @return object count, but doesn't count the objects in groups.
     bool IsObjSelected( const SdrObject& rObj ) const;
     bool IsObjSameLevelWithMarked(const SdrObject* pObj) const;
-    const SdrMarkList* GetMarkList() const{ return _GetMarkList(); };
+    const SdrMarkList* GetMarkList() const{ return GetMarkList_(); };
 
     void EndTextEdit();             ///< Deletes object if required.
 
@@ -579,7 +581,7 @@ public:
     // --> #i972#
     /** for starmath formulas anchored 'as char' it aligns it baseline to baseline
      changing the previous vertical orientation */
-    void AlignFormulaToBaseline( const css::uno::Reference < css::embed::XEmbeddedObject >& xObj, SwFlyFrame * pFly = nullptr );
+    void AlignFormulaToBaseline( const css::uno::Reference < css::embed::XEmbeddedObject >& xObj );
 
     /// aligns all formulas with anchor 'as char' to baseline
     void AlignAllFormulasToBaseline();
@@ -591,8 +593,8 @@ public:
     Point GetRelativePagePosition(const Point& rDocPos);
 
     /// Hide or show layout-selection and pass call to CursorSh.
-    void ShLooseFcs();
-    void ShGetFcs( bool bUpdate = true );
+    void ShellLoseFocus();
+    void ShellGetFocus();
 
     /// PageDescriptor-interface
     void   ChgCurPageDesc( const SwPageDesc& );
@@ -702,7 +704,7 @@ public:
 
     sal_uInt16 GetRowsToRepeat() const;
     void SetRowsToRepeat( sal_uInt16 nNumOfRows );
-    sal_uInt16 GetVirtPageNum( const bool bCalcFrame = true );
+    sal_uInt16 GetVirtPageNum();
 
     /** @return the number of table rows currently selected
     if the selection start at the top of the table. */
@@ -749,12 +751,12 @@ public:
 
     /// The ruler needs some information too.
     sal_uInt16 GetCurColNum( SwGetCurColNumPara* pPara = nullptr ) const; //0 == not in any column.
-    sal_uInt16 GetCurMouseColNum( const Point &rPt,
-                            SwGetCurColNumPara* pPara = nullptr ) const;
+    sal_uInt16 GetCurMouseColNum( const Point &rPt ) const;
     size_t GetCurTabColNum() const;     //0 == not in any table.
     size_t GetCurMouseTabColNum( const Point &rPt ) const;
-    sal_uInt16 GetCurOutColNum( SwGetCurColNumPara* pPara = nullptr ) const;  ///< Current outer column.
+    sal_uInt16 GetCurOutColNum() const;  ///< Current outer column.
 
+    bool IsColRightToLeft() const;
     bool IsTableRightToLeft() const;
     bool IsMouseTableRightToLeft( const Point &rPt ) const;
     bool IsTableVertical() const;

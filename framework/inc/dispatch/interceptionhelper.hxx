@@ -142,10 +142,6 @@ class InterceptionHelper : public  ::cppu::WeakImplHelper<
         /** @short contains all registered interceptor objects. */
         InterceptorList m_lInterceptionRegs;
 
-        /** @short it regulates, which interceptor is used first.
-                   The last or the first registered one. */
-        static bool m_bPreferrFirstInterceptor;
-
     // native interface
 
     public:
@@ -207,7 +203,7 @@ class InterceptionHelper : public  ::cppu::WeakImplHelper<
         /** @short implements an optimized queryDispatch() for remote.
 
             @descr It capsulate more than one queryDispatch() requests and return a lits of dispatch objects
-                   as result. Because both lists (in and out) coreespond together, it's not allowed to
+                   as result. Because both lists (in and out) correspond together, it's not allowed to
                    pack it - means suppress NULL references!
 
             @param lDescriptor

@@ -11,7 +11,6 @@
  * Corel Corporation or Corel Corporation Limited."
  */
 
-#include <com/sun/star/uno/Reference.h>
 #include <com/sun/star/uno/XComponentContext.hpp>
 #include <cppuhelper/supportsservice.hxx>
 
@@ -20,8 +19,6 @@
 
 #include "CDRImportFilter.hxx"
 
-using com::sun::star::uno::Reference;
-using com::sun::star::uno::Exception;
 using com::sun::star::uno::RuntimeException;
 using com::sun::star::uno::Sequence;
 using com::sun::star::uno::XComponentContext;
@@ -43,14 +40,21 @@ bool CDRImportFilter::doDetectFormat(librevenge::RVNGInputStream &rInput, OUStri
     return false;
 }
 
-OUString CDRImportFilter_getImplementationName()
-throw (RuntimeException)
+// XServiceInfo
+OUString SAL_CALL CDRImportFilter::getImplementationName()
+throw (RuntimeException, std::exception)
 {
     return OUString("com.sun.star.comp.Draw.CDRImportFilter");
 }
 
-Sequence< OUString > SAL_CALL CDRImportFilter_getSupportedServiceNames()
-throw (RuntimeException)
+sal_Bool SAL_CALL CDRImportFilter::supportsService(const OUString &rServiceName)
+throw (RuntimeException, std::exception)
+{
+    return cppu::supportsService(this, rServiceName);
+}
+
+Sequence< OUString > SAL_CALL CDRImportFilter::getSupportedServiceNames()
+throw (RuntimeException, std::exception)
 {
     Sequence < OUString > aRet(2);
     OUString *pArray = aRet.getArray();
@@ -59,27 +63,13 @@ throw (RuntimeException)
     return aRet;
 }
 
-Reference< XInterface > SAL_CALL CDRImportFilter_createInstance(const Reference< XComponentContext > &rContext)
-throw(Exception)
+extern "C"
+SAL_DLLPUBLIC_EXPORT css::uno::XInterface *SAL_CALL
+com_sun_star_comp_Draw_CDRImportFilter_get_implementation(
+    css::uno::XComponentContext *const context,
+    const css::uno::Sequence<css::uno::Any> &)
 {
-    return static_cast<cppu::OWeakObject *>(new CDRImportFilter(rContext));
-}
-
-// XServiceInfo
-OUString SAL_CALL CDRImportFilter::getImplementationName()
-throw (RuntimeException, std::exception)
-{
-    return CDRImportFilter_getImplementationName();
-}
-sal_Bool SAL_CALL CDRImportFilter::supportsService(const OUString &rServiceName)
-throw (RuntimeException, std::exception)
-{
-    return cppu::supportsService(this, rServiceName);
-}
-Sequence< OUString > SAL_CALL CDRImportFilter::getSupportedServiceNames()
-throw (RuntimeException, std::exception)
-{
-    return CDRImportFilter_getSupportedServiceNames();
+    return cppu::acquire(new CDRImportFilter(context));
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

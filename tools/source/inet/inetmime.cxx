@@ -162,7 +162,7 @@ inline bool startsWithLineFolding(const sal_Unicode * pBegin,
 
 inline rtl_TextEncoding translateToMIME(rtl_TextEncoding eEncoding)
 {
-#if defined WNT
+#if defined(_WIN32)
     return eEncoding == RTL_TEXTENCODING_MS_1252 ?
                RTL_TEXTENCODING_ISO_8859_1 : eEncoding;
 #else // WNT
@@ -173,7 +173,7 @@ inline rtl_TextEncoding translateToMIME(rtl_TextEncoding eEncoding)
 inline rtl_TextEncoding translateFromMIME(rtl_TextEncoding
                                                         eEncoding)
 {
-#if defined WNT
+#if defined(_WIN32)
     return eEncoding == RTL_TEXTENCODING_ISO_8859_1 ?
                RTL_TEXTENCODING_MS_1252 : eEncoding;
 #else
@@ -270,7 +270,7 @@ sal_Char * convertFromUnicode(const sal_Unicode * pBegin,
 inline sal_Unicode * putUTF32Character(sal_Unicode * pBuffer,
                                                  sal_uInt32 nUTF32)
 {
-    DBG_ASSERT(nUTF32 <= 0x10FFFF, "putUTF32Character(): Bad char");
+    DBG_ASSERT(rtl::isUnicodeCodePoint(nUTF32), "putUTF32Character(): Bad char");
     if (nUTF32 < 0x10000)
         *pBuffer++ = sal_Unicode(nUTF32);
     else
@@ -375,7 +375,7 @@ bool translateUTF8Char(const sal_Char *& rBegin,
         else
             return false;
 
-    if (nUCS4 < nMin || nUCS4 > 0x10FFFF)
+    if (!rtl::isUnicodeCodePoint(nUCS4) || nUCS4 < nMin)
         return false;
 
     if (eEncoding >= RTL_TEXTENCODING_UCS4)
@@ -431,8 +431,7 @@ class INetMIMECharsetList_Impl
         bool m_bDisabled;
         Node * m_pNext;
 
-        inline Node(const Charset & rTheCharset, bool bTheDisabled,
-                    Node * pTheNext);
+        inline Node(const Charset & rTheCharset, Node * pTheNext);
     };
 
     Node * m_pFirst;
@@ -443,7 +442,7 @@ public:
     ~INetMIMECharsetList_Impl();
 
     void prepend(const Charset & rCharset)
-    { m_pFirst = new Node(rCharset, false, m_pFirst); }
+    { m_pFirst = new Node(rCharset, m_pFirst); }
 
     void includes(sal_uInt32 nChar);
 
@@ -455,10 +454,9 @@ public:
 };
 
 inline INetMIMECharsetList_Impl::Node::Node(const Charset & rTheCharset,
-                                            bool bTheDisabled,
                                             Node * pTheNext):
     m_aCharset(rTheCharset),
-    m_bDisabled(bTheDisabled),
+    m_bDisabled(false),
     m_pNext(pTheNext)
 {}
 
@@ -684,9 +682,8 @@ bool parseParameters(ParameterList const & rInput,
                         break;
                 };
             }
-            auto const ret = pOutput->insert(
-                {p->m_aAttribute,
-                 {aValue}});
+            INetContentTypeParameter x {aValue}; // workaround ICE in VisualStudio2013
+            auto const ret = pOutput->insert({p->m_aAttribute, x });
             SAL_INFO_IF(!ret.second, "tools",
                 "INetMIME: dropping duplicate parameter: " << p->m_aAttribute);
             p = pNext;
@@ -831,7 +828,7 @@ createPreferredCharsetList(rtl_TextEncoding eEncoding)
         // <ftp://ftp.unicode.org/Public/MAPPINGS/VENDORS/MISC/KOI8-R.TXT>
         // version 1.0 of 18 August 1999
 
-#if defined WNT
+#if defined(_WIN32)
     static const sal_uInt32 aWindows1252Ranges[]
         = { 0, 0x7F, 0xA0, 0xFF, 0x152, 0x153, 0x160, 0x161, 0x178, 0x178,
             0x17D, 0x17E, 0x192, 0x192, 0x2C6, 0x2C6, 0x2DC, 0x2DC,
@@ -846,7 +843,7 @@ createPreferredCharsetList(rtl_TextEncoding eEncoding)
     switch (eEncoding)
     {
         case RTL_TEXTENCODING_MS_1252:
-#if defined WNT
+#if defined(_WIN32)
             pList->prepend(Charset(RTL_TEXTENCODING_MS_1252,
                                    aWindows1252Ranges));
 #endif // WNT
@@ -1003,7 +1000,7 @@ public:
 
     inline void write(const sal_Unicode * pBegin, const sal_Unicode * pEnd);
 
-    inline bool flush();
+    inline void flush();
 };
 
 inline INetMIMEEncodedWordOutputSink::INetMIMEEncodedWordOutputSink(
@@ -1024,7 +1021,6 @@ inline INetMIMEEncodedWordOutputSink::INetMIMEEncodedWordOutputSink(
 }
 
 
-
 inline void INetMIMEEncodedWordOutputSink::write(const sal_Unicode * pBegin,
                                                  const sal_Unicode * pEnd)
 {
@@ -1035,10 +1031,9 @@ inline void INetMIMEEncodedWordOutputSink::write(const sal_Unicode * pBegin,
         WriteUInt32(*pBegin++);
 }
 
-inline bool INetMIMEEncodedWordOutputSink::flush()
+inline void INetMIMEEncodedWordOutputSink::flush()
 {
     finish(true);
-    return m_ePrevCoding != CODING_NONE;
 }
 
 static const bool aEscape[128]
@@ -1198,8 +1193,8 @@ void INetMIMEEncodedWordOutputSink::finish(bool bWriteTrailer)
                     m_rSink << '_';
                 }
                 m_rSink << "?=";
+                SAL_FALLTHROUGH;
             }
-            //fall-through
             case CODING_ENCODED_TERMINATED:
                 m_rSink << ' ';
                 break;
@@ -1282,7 +1277,7 @@ void INetMIMEEncodedWordOutputSink::finish(bool bWriteTrailer)
                         if (bEscape)
                         {
                             DBG_ASSERT(
-                                nUTF32 < 0x10FFFF,
+                                rtl::isUnicodeCodePoint(nUTF32),
                                 "INetMIMEEncodedWordOutputSink::finish():"
                                     " Bad char");
                             if (nUTF32 < 0x80)
@@ -2049,7 +2044,7 @@ struct EncodingEntry
 // The source for the following table is <ftp://ftp.iana.org/in-notes/iana/
 // assignments/character-sets> as of Jan, 21 2000 12:46:00, unless  otherwise
 // noted:
-EncodingEntry const aEncodingMap[]
+static EncodingEntry const aEncodingMap[]
     = { { "US-ASCII", RTL_TEXTENCODING_ASCII_US },
         { "ANSI_X3.4-1968", RTL_TEXTENCODING_ASCII_US },
         { "ISO-IR-6", RTL_TEXTENCODING_ASCII_US },
@@ -2229,8 +2224,7 @@ EncodingEntry const aEncodingMap[]
 rtl_TextEncoding getCharsetEncoding(sal_Char const * pBegin,
                                               sal_Char const * pEnd)
 {
-    for (sal_Size i = 0; i < sizeof aEncodingMap / sizeof (EncodingEntry);
-         ++i)
+    for (sal_Size i = 0; i < SAL_N_ELEMENTS(aEncodingMap); ++i)
         if (equalIgnoreCase(pBegin, pEnd, aEncodingMap[i].m_aName))
             return aEncodingMap[i].m_eEncoding;
     return RTL_TEXTENCODING_DONTKNOW;
@@ -2736,11 +2730,10 @@ void INetMIMEOutputSink::writeSequence(const sal_Char * pBegin,
     m_aBuffer.append(pBegin, pEnd - pBegin);
 }
 
-sal_Size INetMIMEOutputSink::writeSequence(const sal_Char * pSequence)
+void INetMIMEOutputSink::writeSequence(const sal_Char * pSequence)
 {
     sal_Size nLength = rtl_str_getLength(pSequence);
     writeSequence(pSequence, pSequence + nLength);
-    return nLength;
 }
 
 void INetMIMEOutputSink::writeSequence(const sal_Unicode * pBegin,

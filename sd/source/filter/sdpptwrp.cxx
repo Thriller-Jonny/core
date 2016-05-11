@@ -32,7 +32,6 @@
 #include "DrawDocShell.hxx"
 #include <tools/urlobj.hxx>
 
-// - Namespaces -
 
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::beans;
@@ -61,10 +60,9 @@ extern "C" sal_Bool SaveVBA( SfxObjectShell&, SvMemoryStream*& );
 
 #endif
 
-// - SdPPTFilter -
 
-SdPPTFilter::SdPPTFilter( SfxMedium& rMedium, ::sd::DrawDocShell& rDocShell, bool bShowProgress ) :
-    SdFilter( rMedium, rDocShell, bShowProgress ),
+SdPPTFilter::SdPPTFilter( SfxMedium& rMedium, ::sd::DrawDocShell& rDocShell ) :
+    SdFilter( rMedium, rDocShell ),
     pBas    ( nullptr )
 {
 }
@@ -109,6 +107,8 @@ bool SdPPTFilter::Import()
 
                     if ( !bRet )
                         mrMedium.SetError( SVSTREAM_WRONGVERSION, OSL_LOG_PREFIX );
+                    pLibrary->release(); //TODO: let it get unloaded?
+                    delete pLibrary;
                 }
 #else
                 bRet = ImportPPT( &mrDocument, *pDocStream, *pStorage, mrMedium );
@@ -161,8 +161,7 @@ bool SdPPTFilter::Export()
 
                 mrDocument.SetSwapGraphicsMode( SdrSwapGraphicsMode::TEMP );
 
-                if( mbShowProgress )
-                    CreateStatusIndicator();
+                CreateStatusIndicator();
 
                 //OUString sBaseURI( "BaseURI");
                 std::vector< PropertyValue > aProperties;

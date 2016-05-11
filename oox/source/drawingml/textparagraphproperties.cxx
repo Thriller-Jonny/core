@@ -36,6 +36,8 @@
 #include "oox/helper/propertyset.hxx"
 #include "oox/core/xmlfilterbase.hxx"
 #include "oox/drawingml/drawingmltypes.hxx"
+#include <oox/token/properties.hxx>
+#include <oox/token/tokens.hxx>
 
 #if OSL_DEBUG_LEVEL > 0
 #include <vcl/unohelp.hxx>
@@ -436,7 +438,7 @@ void TextParagraphProperties::pushToPropSet( const ::oox::core::XmlFilterBase* p
             noFirstLineIndentation = boost::none;
         }
         if ( nNumberingType != NumberingType::BITMAP && !rioBulletMap.hasProperty( PROP_BulletColor ) && pFilterBase )
-            rioBulletMap.setProperty( PROP_BulletColor, static_cast< sal_Int32 >( maTextCharacterProperties.maCharColor.getColor( pFilterBase->getGraphicHelper())));
+            rioBulletMap.setProperty( PROP_BulletColor, static_cast< sal_Int32 >( maTextCharacterProperties.maFillProperties.getBestSolidColor().getColor( pFilterBase->getGraphicHelper())));
     }
 
     if ( bApplyBulletMap )
@@ -515,11 +517,11 @@ void TextParagraphProperties::dump() const
     xText->setString( sText );
     Reference< css::text::XTextCursor > xStart( xText->createTextCursor(), UNO_QUERY );
     Reference< css::text::XTextRange > xRange( xStart, UNO_QUERY );
-    xStart->gotoEnd( sal_True );
+    xStart->gotoEnd( true );
     Reference< XPropertySet > xPropSet( xRange, UNO_QUERY );
     pushToPropSet( nullptr, xPropSet, emptyMap, nullptr, false, 0 );
-    PropertySet pSet( xPropSet );
-    pSet.dump();
+    PropertySet aPropSet( xPropSet );
+    aPropSet.dump();
 }
 #endif
 } }

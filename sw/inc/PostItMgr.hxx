@@ -29,7 +29,7 @@
 #include <swrect.hxx>
 #include <unotools/configitem.hxx>
 #include <unotools/options.hxx>
-#include <com/sun/star/util/SearchOptions.hpp>
+#include <com/sun/star/util/SearchOptions2.hpp>
 #include <com/sun/star/uno/Any.hxx>
 #include <SidebarWindowsTypes.hxx>
 #include <svl/lstner.hxx>
@@ -62,6 +62,7 @@ class SwSidebarItem;
 class SwFrame;
 namespace vcl { class Window; }
 struct ImplSVEvent;
+class OutlinerSearchable;
 
 #define COL_NOTES_SIDEPANE_ARROW_ENABLED    RGB_COLORDATA(0,0,0)
 #define COL_NOTES_SIDEPANE_ARROW_DISABLED   RGB_COLORDATA(172,168,153)
@@ -203,8 +204,7 @@ class SwPostItMgr: public SfxListener
         void LayoutPostIts();
         bool CalcRects();
 
-        void MakeVisible( const sw::sidebarwindows::SwSidebarWin* pPostIt,
-                          long aPage = -1);
+        void MakeVisible( const sw::sidebarwindows::SwSidebarWin* pPostIt);
 
         bool ShowScrollbar(const unsigned long aPage) const;
         bool HasNotes() const ;
@@ -271,8 +271,8 @@ class SwPostItMgr: public SfxListener
         void CheckMetaText();
 
         sal_uInt16 Replace(SvxSearchItem* pItem);
-        sal_uInt16 SearchReplace(const SwFormatField &pField, const css::util::SearchOptions& rSearchOptions,bool bSrchForward);
-        sal_uInt16 FinishSearchReplace(const css::util::SearchOptions& rSearchOptions,bool bSrchForward);
+        sal_uInt16 SearchReplace(const SwFormatField &pField, const css::util::SearchOptions2& rSearchOptions,bool bSrchForward);
+        sal_uInt16 FinishSearchReplace(const css::util::SearchOptions2& rSearchOptions,bool bSrchForward);
 
         void AssureStdModeAtShell();
 
@@ -290,7 +290,7 @@ class SwPostItMgr: public SfxListener
         void DrawNotesForPage(OutputDevice *pOutDev, sal_uInt32 nPage);
         void PaintTile(OutputDevice& rRenderContext, const Rectangle& rRect);
         /// Informs already created annotations about a newly registered LOK callback.
-        void registerLibreOfficeKitCallback(LibreOfficeKitCallback pCallback, void* pData);
+        void registerLibreOfficeKitCallback(OutlinerSearchable* pSearchable);
 };
 
 #endif

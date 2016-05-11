@@ -354,7 +354,7 @@ OUString impl_getFilter( const OUString& _rURL )
             aDescr[ utl::MediaDescriptor::PROP_URL() ] <<= OUString( _rURL );
             css::uno::Sequence< css::beans::PropertyValue > aDescrList =
                 aDescr.getAsConstPropertyValueList();
-            OUString sType = xTypeDetection->queryTypeByDescriptor( aDescrList, sal_True );
+            OUString sType = xTypeDetection->queryTypeByDescriptor( aDescrList, true );
             if ( !sType.isEmpty() )
             {
                 // Honor a selected/detected filter.
@@ -558,7 +558,6 @@ bool SvFileObject::IsDataComplete() const
 }
 
 
-
 void SvFileObject::CancelTransfers()
 {
     // unsubscribe from the cache if in the middle of loading
@@ -576,10 +575,8 @@ void SvFileObject::SendStateChg_Impl( sfx2::LinkManager::LinkState nState )
 {
     if( !bStateChangeCalled && HasDataLinks() )
     {
-        css::uno::Any aAny;
-        aAny <<= OUString::number( nState );
         DataChanged( SotExchange::GetFormatName(
-                        sfx2::LinkManager::RegisterStatusInfoId()), aAny );
+                        sfx2::LinkManager::RegisterStatusInfoId()), css::uno::Any(OUString::number( nState )) );
         bStateChangeCalled = true;
     }
 }

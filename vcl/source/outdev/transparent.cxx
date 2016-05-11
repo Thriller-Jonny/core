@@ -24,7 +24,7 @@
 #include <basegfx/matrix/b2dhommatrixtools.hxx>
 #include <memory>
 
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 #include <vcl/outdev.hxx>
 #include <vcl/settings.hxx>
 #include <vcl/virdev.hxx>
@@ -256,7 +256,14 @@ void OutputDevice::DrawTransparent( const basegfx::B2DPolyPolygon& rB2DPolyPoly,
             for( int nPolyIdx = 0; nPolyIdx < nPolyCount; ++nPolyIdx )
             {
                 const basegfx::B2DPolygon aOnePoly = aB2DPolyPolygon.getB2DPolygon( nPolyIdx );
-                mpGraphics->DrawPolyLine( aOnePoly, fTransparency, aHairlineWidth, basegfx::B2DLineJoin::NONE, css::drawing::LineCap_BUTT, this );
+                mpGraphics->DrawPolyLine(
+                    aOnePoly,
+                    fTransparency,
+                    aHairlineWidth,
+                    basegfx::B2DLineJoin::NONE,
+                    css::drawing::LineCap_BUTT,
+                    15.0 * F_PI180, // not used with B2DLineJoin::NONE, but the correct default
+                    this );
             }
         }
 
@@ -303,7 +310,7 @@ bool OutputDevice::DrawTransparentNatively ( const tools::PolyPolygon& rPolyPoly
 #if defined UNX && ! defined MACOSX && ! defined IOS
         && GetBitCount() > 8
 #endif
-#ifdef WIN32
+#ifdef _WIN32
         // workaround bad dithering on remote displaying when using GDI+ with toolbar button highlighting
         && !rPolyPoly.IsRect()
 #endif
@@ -334,7 +341,7 @@ bool OutputDevice::DrawTransparentNatively ( const tools::PolyPolygon& rPolyPoly
             // CAUTION: Only non printing (pixel-renderer) VCL commands from OutputDevices
             // should be used when printing. Normally this is avoided by the printer being
             // non-AAed and thus e.g. on WIN GdiPlus calls are not used. It may be necessary
-            // to figure out a way of moving this code to it's own function that is
+            // to figure out a way of moving this code to its own function that is
             // overriden by the Print class, which will mean we deliberately override the
             // functionality and we use the fallback some lines below (which is not very good,
             // though. For now, WinSalGraphics::drawPolyPolygon will detect printer usage and
@@ -352,8 +359,14 @@ bool OutputDevice::DrawTransparentNatively ( const tools::PolyPolygon& rPolyPoly
             for( int nPolyIdx = 0; nPolyIdx < nPolyCount; ++nPolyIdx )
             {
                 const basegfx::B2DPolygon& rPolygon = aB2DPolyPolygon.getB2DPolygon( nPolyIdx );
-                bDrawn = mpGraphics->DrawPolyLine( rPolygon, fTransparency, aLineWidths,
-                                                   basegfx::B2DLineJoin::NONE, css::drawing::LineCap_BUTT, this );
+                bDrawn = mpGraphics->DrawPolyLine(
+                    rPolygon,
+                    fTransparency,
+                    aLineWidths,
+                    basegfx::B2DLineJoin::NONE,
+                    css::drawing::LineCap_BUTT,
+                    15.0 * F_PI180, // not used with B2DLineJoin::NONE, but the correct default
+                    this );
             }
             // prepare to restore the fill color
             mbInitFillColor = mbFillColor;
@@ -366,9 +379,6 @@ bool OutputDevice::DrawTransparentNatively ( const tools::PolyPolygon& rPolyPoly
 void OutputDevice::EmulateDrawTransparent ( const tools::PolyPolygon& rPolyPoly,
                                             sal_uInt16 nTransparencePercent )
 {
-    // debug helper:
-    static const char* pDisableNative = getenv( "SAL_DISABLE_NATIVE_ALPHA" );
-
     // #110958# Disable alpha VDev, we perform the necessary
     VirtualDevice* pOldAlphaVDev = mpAlphaVDev;
 
@@ -391,6 +401,9 @@ void OutputDevice::EmulateDrawTransparent ( const tools::PolyPolygon& rPolyPoly,
     if( !aDstRect.IsEmpty() )
     {
         bool bDrawn = false;
+
+        // debug helper:
+        static const char* pDisableNative = getenv( "SAL_DISABLE_NATIVE_ALPHA" );
 
         // #i66849# Added fast path for exactly rectangular
         // polygons

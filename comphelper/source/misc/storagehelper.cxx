@@ -46,8 +46,6 @@
 #include <comphelper/documentconstants.hxx>
 #include <comphelper/storagehelper.hxx>
 
-#include <boost/current_function.hpp>
-
 using namespace ::com::sun::star;
 
 namespace comphelper {
@@ -277,7 +275,7 @@ sal_Int32 OStorageHelper::GetXStorageFormat(
     else
     {
         // the mediatype is not known
-        OUString aMsg(BOOST_CURRENT_FUNCTION);
+        OUString aMsg(OSL_THIS_FUNC);
         aMsg += ":";
         aMsg += OUString::number(__LINE__);
         aMsg += ": unknown media type '";
@@ -294,19 +292,12 @@ uno::Reference< embed::XStorage > OStorageHelper::GetStorageOfFormatFromURL(
             const OUString& aFormat,
             const OUString& aURL,
             sal_Int32 nStorageMode,
-            const uno::Reference< uno::XComponentContext >& rxContext,
-            bool bRepairStorage )
+            const uno::Reference< uno::XComponentContext >& rxContext )
     throw ( uno::Exception )
 {
     uno::Sequence< beans::PropertyValue > aProps( 1 );
     aProps[0].Name = "StorageFormat";
     aProps[0].Value <<= aFormat;
-    if ( bRepairStorage )
-    {
-        aProps.realloc( 2 );
-        aProps[1].Name = "RepairPackage";
-        aProps[1].Value <<= bRepairStorage;
-    }
 
     uno::Sequence< uno::Any > aArgs( 3 );
     aArgs[0] <<= aURL;

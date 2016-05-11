@@ -79,7 +79,6 @@ css::uno::Sequence<OUString>  OFileControlModel::getSupportedServiceNames() thro
 }
 
 
-
 OFileControlModel::OFileControlModel(const Reference<XComponentContext>& _rxFactory)
                     :OControlModel(_rxFactory, VCL_CONTROLMODEL_FILECONTROL)
                     ,m_aResetListeners(m_aMutex)
@@ -238,7 +237,7 @@ void OFileControlModel::read(const Reference<css::io::XObjectInputStream>& _rxIn
 
 void SAL_CALL OFileControlModel::reset() throw ( css::uno::RuntimeException, std::exception)
 {
-    ::cppu::OInterfaceIteratorHelper aIter(m_aResetListeners);
+    ::comphelper::OInterfaceIteratorHelper2 aIter(m_aResetListeners);
     EventObject aEvt(static_cast<XWeak*>(this));
     bool bContinue = true;
     while (aIter.hasMoreElements() && bContinue)
@@ -247,7 +246,7 @@ void SAL_CALL OFileControlModel::reset() throw ( css::uno::RuntimeException, std
     if (bContinue)
     {
         {
-            // If Models are threadSave
+            // If Models are threadSafe
             ::osl::MutexGuard aGuard(m_aMutex);
             _reset();
         }

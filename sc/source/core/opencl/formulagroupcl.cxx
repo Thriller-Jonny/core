@@ -82,7 +82,7 @@ static const char* publicFunc =
  "double strequal(unsigned a, unsigned b) { return (a==b)?1.0:0; }\n"
  ;
 
-#ifdef WIN32
+#ifdef _WIN32
 #ifndef NAN
 namespace {
 
@@ -113,34 +113,32 @@ std::string StackVarEnumToString(StackVar const e)
 {
     switch (e)
     {
-#define CASE(x) case sv##x: return #x
-        CASE(Byte);
-        CASE(Double);
-        CASE(String);
-        CASE(SingleRef);
-        CASE(DoubleRef);
-        CASE(Matrix);
-        CASE(Index);
-        CASE(Jump);
-        CASE(External);
-        CASE(FAP);
-        CASE(JumpMatrix);
-        CASE(RefList);
-        CASE(EmptyCell);
-        CASE(MatrixCell);
-        CASE(HybridCell);
-        CASE(HybridValueCell);
-        CASE(ExternalSingleRef);
-        CASE(ExternalDoubleRef);
-        CASE(ExternalName);
-        CASE(SingleVectorRef);
-        CASE(DoubleVectorRef);
-        CASE(Subroutine);
-        CASE(Error);
-        CASE(Missing);
-        CASE(Sep);
-        CASE(Unknown);
-#undef CASE
+        case svByte:              return "Byte";
+        case svDouble:            return "Double";
+        case svString:            return "String";
+        case svSingleRef:         return "SingleRef";
+        case svDoubleRef:         return "DoubleRef";
+        case svMatrix:            return "Matrix";
+        case svIndex:             return "Index";
+        case svJump:              return "Jump";
+        case svExternal:          return "External";
+        case svFAP:               return "FAP";
+        case svJumpMatrix:        return "JumpMatrix";
+        case svRefList:           return "RefList";
+        case svEmptyCell:         return "EmptyCell";
+        case svMatrixCell:        return "MatrixCell";
+        case svHybridCell:        return "HybridCell";
+        case svHybridValueCell:   return "HybridValueCell";
+        case svExternalSingleRef: return "ExternalSingleRef";
+        case svExternalDoubleRef: return "ExternalDoubleRef";
+        case svExternalName:      return "ExternalName";
+        case svSingleVectorRef:   return "SingleVectorRef";
+        case svDoubleVectorRef:   return "DoubleVectorRef";
+        case svSubroutine:        return "Subroutine";
+        case svError:             return "Error";
+        case svMissing:           return "Missing";
+        case svSep:               return "Sep";
+        case svUnknown:           return "Unknown";
     }
     return std::to_string(static_cast<int>(e));
 }
@@ -2434,8 +2432,8 @@ public:
 
     virtual void GenSlidingWindowFunction( std::stringstream& ss ) override
     {
-        for (size_t i = 0; i < mvSubArguments.size(); i++)
-            mvSubArguments[i]->GenSlidingWindowFunction(ss);
+        for (DynamicKernelArgumentRef & rArg : mvSubArguments)
+            rArg->GenSlidingWindowFunction(ss);
         mpCodeGen->GenSlidingWindowFunction(ss, mSymName, mvSubArguments);
     }
     virtual void GenDeclRef( std::stringstream& ss ) const override
@@ -2461,9 +2459,9 @@ public:
     virtual size_t GetWindowSize() const override
     {
         size_t nCurWindowSize = 0;
-        for (size_t i = 0; i < mvSubArguments.size(); i++)
+        for (const auto & rSubArgument : mvSubArguments)
         {
-            size_t nCurChildWindowSize = mvSubArguments[i]->GetWindowSize();
+            size_t nCurChildWindowSize = rSubArgument->GetWindowSize();
             nCurWindowSize = (nCurWindowSize < nCurChildWindowSize) ?
                 nCurChildWindowSize : nCurWindowSize;
         }
@@ -2520,16 +2518,16 @@ public:
     virtual std::string DumpOpName() const override
     {
         std::string t = "_" + mpCodeGen->BinFuncName();
-        for (size_t i = 0; i < mvSubArguments.size(); i++)
-            t = t + mvSubArguments[i]->DumpOpName();
+        for (const auto & rSubArgument : mvSubArguments)
+            t = t + rSubArgument->DumpOpName();
         return t;
     }
     virtual void DumpInlineFun( std::set<std::string>& decls,
         std::set<std::string>& funs ) const override
     {
         mpCodeGen->BinInlineFun(decls, funs);
-        for (size_t i = 0; i < mvSubArguments.size(); i++)
-            mvSubArguments[i]->DumpInlineFun(decls, funs);
+        for (const auto & rSubArgument : mvSubArguments)
+            rSubArgument->DumpInlineFun(decls, funs);
     }
     virtual ~DynamicKernelSoPArguments()
     {
@@ -3792,9 +3790,9 @@ std::string DynamicKernel::GetMD5()
             mFullProgramSrc.c_str(),
             mFullProgramSrc.length(), result,
             RTL_DIGEST_LENGTH_MD5);
-        for (int i = 0; i < RTL_DIGEST_LENGTH_MD5; i++)
+        for (sal_uInt8 i : result)
         {
-            md5s << std::hex << (int)result[i];
+            md5s << std::hex << (int)i;
         }
         mKernelHash = md5s.str();
     }

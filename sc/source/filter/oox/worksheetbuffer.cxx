@@ -31,7 +31,9 @@
 #include <oox/helper/attributelist.hxx>
 #include <oox/helper/containerhelper.hxx>
 #include <oox/helper/propertyset.hxx>
+#include <oox/token/namespaces.hxx>
 #include <oox/token/properties.hxx>
+#include <oox/token/tokens.hxx>
 #include "biffinputstream.hxx"
 #include "excelhandlers.hxx"
 #include "document.hxx"
@@ -129,7 +131,7 @@ void WorksheetBuffer::convertSheetNameRef( OUString& sSheetNameRef ) const
             {
                 ScRange aRange;
                 if ((aRange.ParseAny( sSheetNameRef.copy( nSepPos + 1 ), nullptr,
-                                formula::FormulaGrammar::CONV_XL_R1C1) & SCA_VALID) != SCA_VALID)
+                                formula::FormulaGrammar::CONV_XL_R1C1) & ScRefFlags::VALID) == ScRefFlags::ZERO)
                     sSheetNameRef = sSheetNameRef.replaceAt( nSepPos, 1, OUString( '.' ) );
             }
             // #i66592# convert sheet names that have been renamed on import
@@ -234,7 +236,7 @@ void WorksheetBuffer::finalizeImport( sal_Int16 nActiveSheet )
 {
     ScDocument& rDoc = getScDocument();
 
-    for ( auto aSheetInfo: maSheetInfos )
+    for ( const auto& aSheetInfo: maSheetInfos )
     {
         // make sure at least 1 sheet (the active one) is visible
         if ( aSheetInfo->mnCalcSheet == nActiveSheet)

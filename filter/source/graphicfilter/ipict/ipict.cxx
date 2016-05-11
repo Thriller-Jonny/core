@@ -19,7 +19,7 @@
 
 #include <string.h>
 #include <osl/thread.h>
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 #include <vcl/graph.hxx>
 #include <tools/poly.hxx>
 #include <tools/fract.hxx>
@@ -38,11 +38,12 @@ namespace PictReaderInternal {
   class Pattern {
   public:
     //! constructor
-    Pattern() {
-      isColor = false; isRead = false;
-      penStyle=PEN_SOLID; brushStyle = BRUSH_SOLID;
-      nBitCount = 64;
-    }
+    Pattern() : penStyle(PEN_SOLID),
+                brushStyle(BRUSH_SOLID),
+                nBitCount(64),
+                isColor(false),
+                isRead(false)
+    {}
 
     //! reads black/white pattern from SvStream
     sal_uLong read(SvStream &stream);
@@ -90,10 +91,10 @@ namespace PictReaderInternal {
 
     // count the no of bits in pattern which are set to 1:
     nBitCount=0;
-    for (short ny=0; ny<8; ny++) {
-      stream.ReadChar( reinterpret_cast<char&>(nbyte[ny]) );
+    for (unsigned char & ny : nbyte) {
+      stream.ReadChar( reinterpret_cast<char&>(ny) );
       for (short nx=0; nx<8; nx++) {
-    if ( (nbyte[ny] & (1<<nx)) != 0 ) nBitCount++;
+    if ( (ny & (1<<nx)) != 0 ) nBitCount++;
       }
     }
 
@@ -258,7 +259,6 @@ public:
 };
 
 
-
 #define SETBYTE                                         \
     switch ( nPixelSize )                               \
     {                                                   \
@@ -297,7 +297,6 @@ public:
             pAcc->SetPixelIndex( ny, nx++, nDat );      \
             break;                                      \
     }
-
 
 
 #define BITMAPERROR                                     \
@@ -715,7 +714,7 @@ sal_uLong PictReader::ReadPixMapEtc( Bitmap &rBitmap, bool bBaseAddr, bool bColo
     // The calculation of nDataSize is considering the size of the whole data.
     nDataSize = 0;
 
-    // condionally skip BaseAddr
+    // conditionally skip BaseAddr
     if ( bBaseAddr )
     {
         pPict->SeekRel( 4 );
@@ -836,8 +835,19 @@ sal_uLong PictReader::ReadPixMapEtc( Bitmap &rBitmap, bool bBaseAddr, bool bColo
         if ( nRowBytes < nSrcBPL || nRowBytes > nDestBPL )
             BITMAPERROR;
 
-        if ( nRowBytes < 8 || nPackType == 1 ) {
+        if (nRowBytes < 8 || nPackType == 1)
+        {
             if (nHeight > pPict->remainingSize() / (sizeof(sal_uInt8) * nRowBytes))
+                BITMAPERROR;
+        }
+        else if (nRowBytes > 250)
+        {
+            if (nHeight > pPict->remainingSize() / sizeof(sal_uInt16))
+                BITMAPERROR;
+        }
+        else
+        {
+            if (nHeight > pPict->remainingSize() / sizeof(sal_uInt8))
                 BITMAPERROR;
         }
 
@@ -909,8 +919,19 @@ sal_uLong PictReader::ReadPixMapEtc( Bitmap &rBitmap, bool bBaseAddr, bool bColo
         if (nWidth > nRowBytes / 2)
             BITMAPERROR;
 
-        if ( nRowBytes < 8 || nPackType == 1 ) {
+        if (nRowBytes < 8 || nPackType == 1)
+        {
             if (nHeight > pPict->remainingSize() / (sizeof(sal_uInt16) * nWidth))
+                BITMAPERROR;
+        }
+        else if (nRowBytes > 250)
+        {
+            if (nHeight > pPict->remainingSize() / sizeof(sal_uInt16))
+                BITMAPERROR;
+        }
+        else
+        {
+            if (nHeight > pPict->remainingSize() / sizeof(sal_uInt8))
                 BITMAPERROR;
         }
 
@@ -1337,8 +1358,8 @@ sal_uLong PictReader::ReadData(sal_uInt16 nOpcode)
         else                     aActFont.SetWeight(WEIGHT_NORMAL);
         if ( (nFace & 0x02)!=0 ) aActFont.SetItalic(ITALIC_NORMAL);
         else                     aActFont.SetItalic(ITALIC_NONE);
-        if ( (nFace & 0x04)!=0 ) aActFont.SetUnderline(UNDERLINE_SINGLE);
-        else                     aActFont.SetUnderline(UNDERLINE_NONE);
+        if ( (nFace & 0x04)!=0 ) aActFont.SetUnderline(LINESTYLE_SINGLE);
+        else                     aActFont.SetUnderline(LINESTYLE_NONE);
         if ( (nFace & 0x08)!=0 ) aActFont.SetOutline(true);
         else                     aActFont.SetOutline(false);
         if ( (nFace & 0x10)!=0 ) aActFont.SetShadow(true);
@@ -1403,7 +1424,7 @@ sal_uLong PictReader::ReadData(sal_uInt16 nOpcode)
     case 0x000d:   // TxSize
     {
         pPict->ReadUInt16( nUSHORT );
-        aActFont.SetSize( Size( 0, (long)nUSHORT ) );
+        aActFont.SetFontSize( Size( 0, (long)nUSHORT ) );
         eActMethod=PDM_UNDEFINED;
         nDataSize=2;
     }
@@ -1571,7 +1592,7 @@ sal_uLong PictReader::ReadData(sal_uInt16 nOpcode)
         pPict->Read( &sFName, nLen );
         sFName[ nLen ] = 0;
         OUString aString( sFName, strlen(sFName), osl_getThreadTextEncoding() );
-        aActFont.SetName( aString );
+        aActFont.SetFamilyName( aString );
         eActMethod=PDM_UNDEFINED;
         break;
     }
@@ -1873,8 +1894,8 @@ void PictReader::ReadPict( SvStream & rStreamPict, GDIMetaFile & rGDIMetaFile )
 
     aActFont.SetCharSet( GetTextEncoding());
     aActFont.SetFamily(FAMILY_SWISS);
-    aActFont.SetSize(Size(0,12));
-    aActFont.SetAlign(ALIGN_BASELINE);
+    aActFont.SetFontSize(Size(0,12));
+    aActFont.SetAlignment(ALIGN_BASELINE);
 
     aHRes = aVRes = Fraction( 1, 1 );
 

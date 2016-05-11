@@ -17,15 +17,12 @@
  */
 
 interface TextList : BaseTextList
-[
-    uuid = "509E9100-111A-101D-9757-6E74207A7520"
-]
 {
     import TextSelection;
 }
 
 shell SwListShell : SwBaseShell
 {
-        import TextList[Automation];
+        import TextList;
 }
 

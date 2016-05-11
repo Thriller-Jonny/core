@@ -85,7 +85,7 @@ SfxDialogLibraryContainer::SfxDialogLibraryContainer( const uno::Reference< embe
 // Methods to get library instances of the correct type
 SfxLibrary* SfxDialogLibraryContainer::implCreateLibrary( const OUString& aName )
 {
-    SfxLibrary* pRet = new SfxDialogLibrary( maModifiable, aName, mxContext, mxSFI, this );
+    SfxLibrary* pRet = new SfxDialogLibrary( maModifiable, aName, mxSFI, this );
     return pRet;
 }
 
@@ -94,7 +94,7 @@ SfxLibrary* SfxDialogLibraryContainer::implCreateLibraryLink
       const OUString& StorageURL, bool ReadOnly )
 {
     SfxLibrary* pRet = new SfxDialogLibrary
-            ( maModifiable, aName, mxContext, mxSFI, aLibInfoFileURL, StorageURL, ReadOnly, this );
+            ( maModifiable, aName, mxSFI, aLibInfoFileURL, StorageURL, ReadOnly, this );
     return pRet;
 }
 
@@ -112,7 +112,7 @@ bool SAL_CALL SfxDialogLibraryContainer::isLibraryElementValid(const Any& rEleme
 }
 
 bool writeOasis2OOoLibraryElement(
-    Reference< XInputStream > xInput, Reference< XOutputStream > xOutput )
+    const Reference< XInputStream >& xInput, const Reference< XOutputStream >& xOutput )
 {
     Reference< XComponentContext > xContext(
         comphelper::getProcessComponentContext() );
@@ -443,7 +443,7 @@ void SfxDialogLibraryContainer::onNewRootStorage()
 sal_Bool SAL_CALL
 SfxDialogLibraryContainer:: HasExecutableCode( const OUString& /*Library*/ ) throw (uno::RuntimeException, std::exception)
 {
-    return sal_False; // dialog library has no executable code
+    return false; // dialog library has no executable code
 }
 
 // Service
@@ -467,10 +467,9 @@ Sequence< OUString > SAL_CALL SfxDialogLibraryContainer::getSupportedServiceName
 // Ctor
 SfxDialogLibrary::SfxDialogLibrary( ModifiableHelper& _rModifiable,
                                     const OUString& aName,
-                                    const Reference< XComponentContext >& xContext,
                                     const Reference< XSimpleFileAccess3 >& xSFI,
                                     SfxDialogLibraryContainer* pParent )
-    : SfxLibrary( _rModifiable, cppu::UnoType<XInputStreamProvider>::get(), xContext, xSFI )
+    : SfxLibrary( _rModifiable, cppu::UnoType<XInputStreamProvider>::get(), xSFI )
     , m_pParent( pParent )
     , m_aName( aName )
 {
@@ -478,14 +477,13 @@ SfxDialogLibrary::SfxDialogLibrary( ModifiableHelper& _rModifiable,
 
 SfxDialogLibrary::SfxDialogLibrary( ModifiableHelper& _rModifiable,
                                     const OUString& aName,
-                                    const Reference< XComponentContext >& xContext,
                                     const Reference< XSimpleFileAccess3 >& xSFI,
                                     const OUString& aLibInfoFileURL,
                                     const OUString& aStorageURL,
                                     bool ReadOnly,
                                     SfxDialogLibraryContainer* pParent )
     : SfxLibrary( _rModifiable, cppu::UnoType<XInputStreamProvider>::get(),
-                       xContext, xSFI, aLibInfoFileURL, aStorageURL, ReadOnly)
+                       xSFI, aLibInfoFileURL, aStorageURL, ReadOnly)
     , m_pParent( pParent )
     , m_aName( aName )
 {

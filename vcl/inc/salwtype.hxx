@@ -31,56 +31,59 @@ namespace vcl { class Window; }
 
 class FontSelectPattern;
 enum class InputContextFlags;
+enum class WindowStateMask;
+enum class WindowStateState;
 
-// - SalEvent -
-
-#define SALEVENT_MOUSEMOVE              ((sal_uInt16)1)
-#define SALEVENT_MOUSELEAVE             ((sal_uInt16)2)
-#define SALEVENT_MOUSEBUTTONDOWN        ((sal_uInt16)3)
-#define SALEVENT_MOUSEBUTTONUP          ((sal_uInt16)4)
-#define SALEVENT_KEYINPUT               ((sal_uInt16)5)
-#define SALEVENT_KEYUP                  ((sal_uInt16)6)
-#define SALEVENT_KEYMODCHANGE           ((sal_uInt16)7)
-#define SALEVENT_PAINT                  ((sal_uInt16)8)
-#define SALEVENT_RESIZE                 ((sal_uInt16)9)
-#define SALEVENT_GETFOCUS               ((sal_uInt16)10)
-#define SALEVENT_LOSEFOCUS              ((sal_uInt16)11)
-#define SALEVENT_CLOSE                  ((sal_uInt16)12)
-#define SALEVENT_SHUTDOWN               ((sal_uInt16)13)
-#define SALEVENT_SETTINGSCHANGED        ((sal_uInt16)14)
-#define SALEVENT_PRINTERCHANGED         ((sal_uInt16)16)
-#define SALEVENT_DISPLAYCHANGED         ((sal_uInt16)17)
-#define SALEVENT_FONTCHANGED            ((sal_uInt16)18)
-#define SALEVENT_WHEELMOUSE             ((sal_uInt16)21)
-#define SALEVENT_USEREVENT              ((sal_uInt16)22)
-#define SALEVENT_MOUSEACTIVATE          ((sal_uInt16)23)
-#define SALEVENT_EXTTEXTINPUT           ((sal_uInt16)24)
-#define SALEVENT_ENDEXTTEXTINPUT        ((sal_uInt16)25)
-#define SALEVENT_EXTTEXTINPUTPOS        ((sal_uInt16)26)
-#define SALEVENT_INPUTCONTEXTCHANGE     ((sal_uInt16)27)
-#define SALEVENT_MOVE                   ((sal_uInt16)28)
-#define SALEVENT_MOVERESIZE             ((sal_uInt16)29)
-#define SALEVENT_CLOSEPOPUPS            ((sal_uInt16)30)
-#define SALEVENT_EXTERNALKEYINPUT       ((sal_uInt16)31)
-#define SALEVENT_EXTERNALKEYUP          ((sal_uInt16)32)
-#define SALEVENT_MENUCOMMAND            ((sal_uInt16)33)
-#define SALEVENT_MENUHIGHLIGHT          ((sal_uInt16)34)
-#define SALEVENT_MENUACTIVATE           ((sal_uInt16)35)
-#define SALEVENT_MENUDEACTIVATE         ((sal_uInt16)36)
-#define SALEVENT_EXTERNALMOUSEMOVE      ((sal_uInt16)37)
-#define SALEVENT_EXTERNALMOUSEBUTTONDOWN ((sal_uInt16)38)
-#define SALEVENT_EXTERNALMOUSEBUTTONUP  ((sal_uInt16)39)
-#define SALEVENT_INPUTLANGUAGECHANGE    ((sal_uInt16)40)
-#define SALEVENT_SHOWDIALOG             ((sal_uInt16)41)
-#define SALEVENT_MENUBUTTONCOMMAND      ((sal_uInt16)42)
-#define SALEVENT_SURROUNDINGTEXTREQUEST ((sal_uInt16)43)
-#define SALEVENT_SURROUNDINGTEXTSELECTIONCHANGE ((sal_uInt16)44)
-#define SALEVENT_STARTRECONVERSION      ((sal_uInt16)45)
-#define SALEVENT_EXTERNALZOOM           ((sal_uInt16)46)
-#define SALEVENT_EXTERNALSCROLL         ((sal_uInt16)47)
-#define SALEVENT_QUERYCHARPOSITION      ((sal_uInt16)48)
-#define SALEVENT_SWIPE                  ((sal_uInt16)49)
-#define SALEVENT_LONGPRESS              ((sal_uInt16)50)
+enum class SalEvent {
+    NONE,
+    MouseMove,
+    MouseLeave,
+    MouseButtonDown,
+    MouseButtonUp,
+    KeyInput,
+    KeyUp,
+    KeyModChange,
+    Paint,
+    Resize,
+    GetFocus,
+    LoseFocus,
+    Close,
+    Shutdown,
+    SettingsChanged,
+    PrinterChanged,
+    DisplayChanged,
+    FontChanged,
+    WheelMouse,
+    UserEvent,
+    MouseActivate,
+    ExtTextInput,
+    EndExtTextInput,
+    ExtTextInputPos,
+    InputContextChange,
+    Move,
+    MoveResize,
+    ClosePopups,
+    ExternalKeyInput,
+    ExternalKeyUp,
+    MenuCommand,
+    MenuHighlight,
+    MenuActivate,
+    MenuDeactivate,
+    ExternalMouseMove,
+    ExternalMouseButtonDown,
+    ExternalMouseButtonUp,
+    InputLanguageChange,
+    ShowDialog,
+    MenuButtonCommand,
+    SurroundingTextRequest,
+    SurroundingTextSelectionChange,
+    StartReconversion,
+    ExternalZoom,
+    ExternalScroll,
+    QueryCharPosition,
+    Swipe,
+    LongPress
+};
 
 // MOUSELEAVE must send, when the pointer leave the client area and
 // the mouse is not captured
@@ -123,7 +126,6 @@ struct SalKeyModEvent
     sal_uInt16      mnModKeyCode;   // extended Modifier (MODKEY_LEFT,MODKEY_RIGHT,MODKEY_PRESS,MODKEY_RELEASE)
 };
 
-// PAINT
 struct SalPaintEvent
 {
     long            mnBoundX;           // BoundRect - X
@@ -139,10 +141,6 @@ struct SalPaintEvent
     {}
 };
 
-// USEREVENT
-// pEvent == pData
-
-// WHEELMOUSE
 #define SAL_WHEELMOUSE_EVENT_PAGESCROLL     ((sal_uLong)0xFFFFFFFF)
 struct SalWheelMouseEvent
 {
@@ -161,14 +159,6 @@ struct SalWheelMouseEvent
     {}
 };
 
-// MOUSEACTIVATE
-struct SalMouseActivateEvent
-{
-    long            mnX;            // X-Position (Pixel, TopLeft-Output)
-    long            mnY;            // Y-Position (Pixel, TopLeft-Output)
-};
-
-// EXTTEXTINPUT
 struct SalExtTextInputEvent
 {
     sal_uInt64          mnTime;         // Time in ms, when event is created
@@ -179,7 +169,6 @@ struct SalExtTextInputEvent
     bool                mbOnlyCursor;   // true: Only Cursor-Position has been changed
 };
 
-// EXTTEXTINPUTPOS
 struct SalExtTextInputPosEvent
 {
     long            mnX;            // Cursor-X-Position to upper left corner of frame
@@ -199,13 +188,11 @@ struct SalExtTextInputPosEvent
     }
 };
 
-// INPUTCONTEXTCHANGE
 struct SalInputContextChangeEvent
 {
     LanguageType    meLanguage;     // new language
 };
 
-// SURROUNDINGTEXTREQUEST
 struct SalSurroundingTextRequestEvent
 {
     OUString        maText;         // Text
@@ -213,14 +200,12 @@ struct SalSurroundingTextRequestEvent
     sal_uLong       mnEnd;          // The end index of selected range
 };
 
-// SURROUNDINGTEXTSELECTIONCHANGE
 struct SalSurroundingTextSelectionChangeEvent
 {
     sal_uLong       mnStart;        // The beginning index of selected range
     sal_uLong       mnEnd;          // The end index of selected range
 };
 
-// QUERYCHARPOSITION
 struct SalQueryCharPositionEvent
 {
     bool            mbValid;                // The data is valid or not.
@@ -232,28 +217,21 @@ struct SalQueryCharPositionEvent
     long            mnCursorBoundHeight;    // The cursor bounds corresponding to the character specified by mnCharPos - Height
 };
 
-// - SalFrame-Types -
+typedef bool (*SALFRAMEPROC)( vcl::Window* pInst, SalEvent nEvent, const void* pEvent );
 
-typedef bool (*SALFRAMEPROC)( vcl::Window* pInst, SalFrame* pFrame,
-                              sal_uInt16 nEvent, const void* pEvent );
-
-// - SalObject-Events -
-
-#define SALOBJ_EVENT_GETFOCUS           ((sal_uInt16)1)
-#define SALOBJ_EVENT_LOSEFOCUS          ((sal_uInt16)2)
-#define SALOBJ_EVENT_TOTOP              ((sal_uInt16)3)
-#define SALOBJ_EVENT_COUNT              ((sal_uInt16)4)
-
-// - SalObject-Types -
+enum class SalObjEvent {
+    GetFocus           = 1,
+    LoseFocus          = 2,
+    ToTop              = 3,
+    Count              = 4
+};
 
 typedef long (*SALOBJECTPROC)( void* pInst, SalObject* pObject,
-                               sal_uInt16 nEvent, const void* pEvent );
-
-// - SalFrameState -
+                               SalObjEvent nEvent, const void* pEvent );
 
 struct SalFrameState
 {
-    sal_uLong       mnMask;
+    WindowStateMask mnMask;
     long            mnX;
     long            mnY;
     long            mnWidth;
@@ -262,10 +240,8 @@ struct SalFrameState
     long            mnMaximizedY;
     long            mnMaximizedWidth;
     long            mnMaximizedHeight;
-    sal_uLong       mnState;
+    WindowStateState mnState;
 };
-
-// - SalInputContext -
 
 struct SalInputContext
 {

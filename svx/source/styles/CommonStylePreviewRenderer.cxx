@@ -96,7 +96,7 @@ bool CommonStylePreviewRenderer::recalculate()
     }
     if ((pItem = pItemSet->GetItem(SID_ATTR_CHAR_OVERLINE)) != nullptr)
     {
-        pFont->SetOverline(static_cast<FontUnderline>(static_cast<const SvxOverlineItem*>(pItem)->GetValue()));
+        pFont->SetOverline(static_cast<FontLineStyle>(static_cast<const SvxOverlineItem*>(pItem)->GetValue()));
     }
     if ((pItem = pItemSet->GetItem(SID_ATTR_CHAR_STRIKEOUT)) != nullptr)
     {
@@ -115,7 +115,7 @@ bool CommonStylePreviewRenderer::recalculate()
         maFontColor = Color(static_cast<const SvxColorItem*>(pItem)->GetValue());
     }
 
-    if (mpStyle->GetFamily() == SFX_STYLE_FAMILY_PARA)
+    if (mpStyle->GetFamily() == SfxStyleFamily::Para)
     {
         if ((pItem = pItemSet->GetItem(XATTR_FILLSTYLE)) != nullptr)
         {
@@ -133,7 +133,7 @@ bool CommonStylePreviewRenderer::recalculate()
     if ((pItem = pItemSet->GetItem(SID_ATTR_CHAR_FONT)) != nullptr)
     {
         const SvxFontItem* pFontItem = static_cast<const SvxFontItem*>(pItem);
-        pFont->SetName(pFontItem->GetFamilyName());
+        pFont->SetFamilyName(pFontItem->GetFamilyName());
         pFont->SetStyleName(pFontItem->GetStyleName());
     }
     else
@@ -146,7 +146,7 @@ bool CommonStylePreviewRenderer::recalculate()
         const SvxFontHeightItem* pFontHeightItem = static_cast<const SvxFontHeightItem*>(pItem);
         Size aFontSize(0, pFontHeightItem->GetHeight());
         maPixelSize = Size(mrOutputDev.LogicToPixel(aFontSize, mrShell.GetMapUnit()));
-        pFont->SetSize(maPixelSize);
+        pFont->SetFontSize(maPixelSize);
 
         vcl::Font aOldFont(mrOutputDev.GetFont());
 
@@ -158,7 +158,7 @@ bool CommonStylePreviewRenderer::recalculate()
             double ratio = double(mnMaxHeight) / aTextRect.Bottom();
             maPixelSize.Width() *= ratio;
             maPixelSize.Height() *= ratio;
-            pFont->SetSize(maPixelSize);
+            pFont->SetFontSize(maPixelSize);
         }
         mrOutputDev.SetFont(aOldFont);
     }
@@ -202,7 +202,7 @@ bool CommonStylePreviewRenderer::render(const Rectangle& aRectangle, RenderAlign
     if (maFontColor != COL_AUTO)
         mrOutputDev.SetTextColor(maFontColor);
 
-    Size aPixelSize((m_pFont) ? maPixelSize : mrOutputDev.GetFont().GetSize());
+    Size aPixelSize((m_pFont) ? maPixelSize : mrOutputDev.GetFont().GetFontSize());
 
     Point aFontDrawPosition = aRectangle.TopLeft();
     if (eRenderAlign == RenderAlign::CENTER)

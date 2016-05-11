@@ -103,7 +103,6 @@
 #include <fmtclds.hxx>
 #include <dcontact.hxx>
 #include <dflyobj.hxx>
-#include <crsskip.hxx>
 #include <vector>
 #include <sortedobjs.hxx>
 #include <sortopt.hxx>
@@ -516,7 +515,7 @@ struct SwXParagraphEnumerationImpl final : public SwXParagraphEnumeration
 
 SwXParagraphEnumeration* SwXParagraphEnumeration::Create(
     uno::Reference< text::XText > const& xParent,
-    ::std::shared_ptr<SwUnoCursor> pCursor,
+    const ::std::shared_ptr<SwUnoCursor>& pCursor,
     const CursorType eType,
     SwStartNode const*const pStartNode,
     SwTable const*const pTable)
@@ -811,7 +810,7 @@ throw (uno::RuntimeException)
     }
 
     const SwPosition aPos(GetDoc().GetNodes().GetEndOfContent());
-    SwCursor aCursor(aPos, nullptr, false);
+    SwCursor aCursor(aPos, nullptr);
     if (GetPositions(aCursor))
     {
         UnoActionContext aAction(& m_pImpl->m_rDoc);
@@ -827,7 +826,7 @@ throw (uno::RuntimeException)
                     m_pImpl->m_rDoc, aCursor, rText, bForceExpandHints);
 
             SwUnoCursorHelper::SelectPam(aCursor, true);
-            aCursor.Left(rText.getLength(), CRSR_SKIP_CHARS, false, false);
+            aCursor.Left(rText.getLength());
         }
         SetPositions(aCursor);
         m_pImpl->m_rDoc.GetIDocumentUndoRedo().EndUndo(UNDO_INSERT, nullptr);
@@ -869,8 +868,7 @@ static char const*const g_ServicesTextRange[] =
     "com.sun.star.style.ParagraphPropertiesComplex",
 };
 
-static const size_t g_nServicesTextRange(
-    sizeof(g_ServicesTextRange)/sizeof(g_ServicesTextRange[0]));
+static const size_t g_nServicesTextRange(SAL_N_ELEMENTS(g_ServicesTextRange));
 
 sal_Bool SAL_CALL SwXTextRange::supportsService(const OUString& rServiceName)
 throw (uno::RuntimeException, std::exception)
@@ -1038,7 +1036,7 @@ bool XTextRangeToSwPaM( SwUnoInternalPaM & rToFill,
     if (pText)
     {
         xTextCursor.set( pText->CreateCursor() );
-        xTextCursor->gotoEnd(sal_True);
+        xTextCursor->gotoEnd(true);
         const uno::Reference<lang::XUnoTunnel> xCursorTunnel(
                 xTextCursor, uno::UNO_QUERY);
         pCursor =
@@ -1293,7 +1291,7 @@ uno::Type SAL_CALL SwXTextRange::getElementType() throw (uno::RuntimeException, 
 
 sal_Bool SAL_CALL SwXTextRange::hasElements() throw (uno::RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 uno::Sequence< OUString > SAL_CALL
@@ -1590,7 +1588,7 @@ void SwUnoCursorHelper::SetString(SwCursor & rCursor, const OUString& rString)
         OSL_ENSURE( bSuccess, "DocInsertStringSplitCR" );
         (void) bSuccess;
         SwUnoCursorHelper::SelectPam(rCursor, true);
-        rCursor.Left(rString.getLength(), CRSR_SKIP_CHARS, false, false);
+        rCursor.Left(rString.getLength());
     }
     pDoc->GetIDocumentUndoRedo().EndUndo(UNDO_INSERT, nullptr);
 }
@@ -1638,7 +1636,6 @@ struct SwXParaFrameEnumerationImpl final : public SwXParaFrameEnumeration
     FrameClientList_t m_vFrames;
     ::sw::UnoCursorPointer m_pUnoCursor;
 };
-
 
 
 SwXParaFrameEnumeration* SwXParaFrameEnumeration::Create(const SwPaM& rPaM, const enum ParaFrameMode eParaFrameMode, SwFrameFormat* const pFormat)

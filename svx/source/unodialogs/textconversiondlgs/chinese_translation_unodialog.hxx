@@ -29,12 +29,12 @@
 #include <com/sun/star/ui/dialogs/XExecutableDialog.hpp>
 #include <com/sun/star/uno/XComponentContext.hpp>
 #include <cppuhelper/implbase.hxx>
+#include <comphelper/interfacecontainer2.hxx>
 #include <vcl/vclptr.hxx>
 
 
 namespace textconversiondlgs
 {
-
 
 
 /** This class provides the chinese translation dialog as an uno component.
@@ -68,8 +68,7 @@ class ChineseTranslation_UnoDialog : public ::cppu::WeakImplHelper <
                             >
 {
 public:
-    explicit ChineseTranslation_UnoDialog( const css::uno::Reference<
-        css::uno::XComponentContext >& xContext );
+    ChineseTranslation_UnoDialog();
     virtual ~ChineseTranslation_UnoDialog();
 
     // lang::XServiceInfo
@@ -81,9 +80,9 @@ public:
     static css::uno::Sequence< OUString > getSupportedServiceNames_Static();
 
     static css::uno::Reference< css::uno::XInterface > SAL_CALL
-            create( css::uno::Reference< css::uno::XComponentContext > const & xContext) throw(css::uno::Exception)
+            create( css::uno::Reference< css::uno::XComponentContext > const & ) throw(css::uno::Exception)
     {
-        return static_cast<cppu::OWeakObject *>(new ChineseTranslation_UnoDialog( xContext ));
+        return static_cast<cppu::OWeakObject *>( new ChineseTranslation_UnoDialog );
     }
 
     // lang::XInitialization
@@ -108,14 +107,10 @@ public:
     virtual void SAL_CALL removeEventListener( const css::uno::Reference< css::lang::XEventListener > & xListener ) throw (css::uno::RuntimeException, std::exception) override;
 
 private:
-    //no default constructor
-    ChineseTranslation_UnoDialog();
 
     void impl_DeleteDialog();
 
 private:
-    css::uno::Reference<
-        css::uno::XComponentContext>     m_xCC;
     css::uno::Reference<
         css::awt::XWindow >              m_xParentWindow;
 
@@ -124,7 +119,7 @@ private:
     bool m_bDisposed; ///Dispose call ready.
     bool m_bInDispose;///In dispose call
     osl::Mutex                      m_aContainerMutex;
-    cppu::OInterfaceContainerHelper m_aDisposeEventListeners;
+    comphelper::OInterfaceContainerHelper2 m_aDisposeEventListeners;
 };
 
 

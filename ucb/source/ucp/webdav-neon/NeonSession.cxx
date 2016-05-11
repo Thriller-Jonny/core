@@ -47,7 +47,6 @@ extern "C" {
 #include "rtl/ustrbuf.hxx"
 #include "comphelper/processfactory.hxx"
 #include "comphelper/sequence.hxx"
-#include <comphelper/stl_types.hxx>
 #include "ucbhelper/simplecertificatevalidationrequest.hxx"
 
 #include "DAVAuthListener.hxx"
@@ -60,6 +59,7 @@ extern "C" {
 #include "LinkSequence.hxx"
 #include "UCBDeadPropertyValue.hxx"
 
+#include <officecfg/Inet.hxx>
 #include <com/sun/star/xml/crypto/XSecurityEnvironment.hpp>
 #include <com/sun/star/security/XCertificate.hpp>
 #include <com/sun/star/security/CertificateValidity.hpp>
@@ -70,7 +70,6 @@ extern "C" {
 #include <com/sun/star/beans/NamedValue.hpp>
 #include <com/sun/star/xml/crypto/SEInitializer.hpp>
 
-#include <boost/bind.hpp>
 
 using namespace com::sun::star;
 using namespace webdav_ucp;
@@ -147,10 +146,8 @@ static bool noKeepAlive( const uno::Sequence< beans::NamedValue >& rFlags )
     const sal_Int32          nLen(rFlags.getLength());
     const beans::NamedValue* pValue(
         std::find_if(pAry,pAry+nLen,
-                     boost::bind(comphelper::TNamedValueEqualFunctor(),
-                                 _1,
-                                 OUString("KeepAlive"))));
-    if ( pValue != pAry+nLen && !pValue->Value.get<sal_Bool>() )
+            [] (beans::NamedValue const& rNV) { return rNV.Name == "KeepAlive"; } ));
+    if ( pValue != pAry+nLen && !pValue->Value.get<bool>() )
         return true;
 
     return false;
@@ -476,14 +473,14 @@ extern "C" int NeonSession_CertificationNotify( void *userdata,
                 if ( xApprove.is() )
                 {
                     xCertificateContainer->addCertificate(
-                        pSession->getHostName(), cert_subject,  sal_True );
+                        pSession->getHostName(), cert_subject,  true );
                     return 0;
                 }
                 else
                 {
                     // Don't trust cert
                     xCertificateContainer->addCertificate(
-                        pSession->getHostName(), cert_subject, sal_False );
+                        pSession->getHostName(), cert_subject, false );
                     return 1;
                 }
             }
@@ -492,7 +489,7 @@ extern "C" int NeonSession_CertificationNotify( void *userdata,
         {
             // Don't trust cert
             xCertificateContainer->addCertificate(
-                pSession->getHostName(), cert_subject, sal_False );
+                pSession->getHostName(), cert_subject, false );
             return 1;
         }
     }
@@ -691,6 +688,11 @@ void NeonSession::Init()
 
     if ( bCreateNewSession )
     {
+        const sal_Int32    nConnectTimeoutMax = 180;
+        const sal_Int32    nConnectTimeoutMin = 2;
+        const sal_Int32    nReadTimeoutMax = 180;
+        const sal_Int32    nReadTimeoutMin = 20;
+
         // @@@ For FTP over HTTP proxy inUserInfo is needed to be able to
         //     build the complete request URI (including user:pass), but
         //     currently (0.22.0) neon does not allow to pass the user info
@@ -790,6 +792,26 @@ void NeonSession::Init()
         ne_set_server_auth( m_pHttpSession, NeonSession_NeonAuth, this );
         ne_set_proxy_auth ( m_pHttpSession, NeonSession_NeonAuth, this );
 #endif
+        // set timeout to connect
+        // if connect_timeout is not set, neon returns NE_CONNECT when the TCP socket default
+        // timeout elapses
+        // with connect_timeout set neon returns NE_TIMEOUT if elapsed when the connection
+        // didn't succeed
+        // grab it from configuration
+        uno::Reference< uno::XComponentContext > rContext = m_xFactory->getComponentContext();
+
+        // set the timeout (in seconds) used when making a connection
+        sal_Int32 nConnectTimeout = officecfg::Inet::Settings::ConnectTimeout::get( rContext );
+        ne_set_connect_timeout( m_pHttpSession,
+                                (int) ( std::max( nConnectTimeoutMin,
+                                                  std::min( nConnectTimeout, nConnectTimeoutMax ) ) ) );
+
+        // provides a read time out facility as well
+        // set the timeout (in seconds) used when reading from a socket.
+        sal_Int32 nReadTimeout =  officecfg::Inet::Settings::ReadTimeout::get( rContext );
+        ne_set_read_timeout( m_pHttpSession,
+                             (int) ( std::max( nReadTimeoutMin,
+                                               std::min( nReadTimeout, nReadTimeoutMax ) ) ) );
     }
 }
 
@@ -834,7 +856,7 @@ void NeonSession::PROPFIND( const OUString & inPath,
          for(std::vector< OUString >::const_iterator it = inPropNames.begin();
              it < inPropNames.end(); ++it)
          {
-            SAL_INFO( "ucb.ucp.webdav", "PROFIND - property requested: " << *it );
+            SAL_INFO( "ucb.ucp.webdav", "PROPFIND - property requested: " << *it );
          }
     } //debug
 #endif
@@ -1539,7 +1561,7 @@ bool NeonSession::UNLOCK( NeonLock * pLock )
     }
     else
     {
-#if defined SAL_LOG_WARN
+#if defined SAL_LOG_INFO
     {
         char * p = ne_uri_unparse( &(pLock->uri) );
         SAL_INFO( "ucb.ucp.webdav", "UNLOCK (from store) - relative URL: <" << p << "> token: <" << pLock->token << "> failed!" );
@@ -1674,7 +1696,7 @@ void NeonSession::HandleError( int nError,
 
             sal_uInt16 code = makeStatusCode( aText );
 
-            SAL_WARN( "ucb.ucp.webdav", "Neon received http error: '" << aText << "'" );
+            SAL_WARN( "ucb.ucp.webdav", "Neon returned NE_ERROR, http response status code was: '" << aText << "'" );
             if ( code == SC_LOCKED )
             {
                 if ( m_aNeonLockStore.findByUri(
@@ -1720,6 +1742,7 @@ void NeonSession::HandleError( int nError,
                                     m_aProxyName, m_nProxyPort ) );
 
         case NE_CONNECT:      // Could not connect to server
+            SAL_WARN( "ucb.ucp.webdav", "DAVException::DAV_HTTP_CONNECT" );
             throw DAVException( DAVException::DAV_HTTP_CONNECT,
                                 NeonUri::makeConnectionEndPointString(
                                     m_aHostName, m_nPort ) );
@@ -1868,7 +1891,13 @@ int NeonSession::PUT( ne_session * sess,
     ne_request * req = ne_request_create( sess, "PUT", uri );
     int ret;
 
-    ne_lock_using_resource( req, uri, 0 );
+    // tdf#99246
+    // extract the path of uri
+    // ne_lock_using_resource below compares path, ignores all the rest.
+    // in case of Web proxy active, this function uri parameter is instead absolute
+    ne_uri aUri;
+    ne_uri_parse( uri, &aUri );
+    ne_lock_using_resource( req, aUri.path, 0 );
     ne_lock_using_parent( req, uri );
 
     ne_set_request_body_buffer( req, buffer, size );

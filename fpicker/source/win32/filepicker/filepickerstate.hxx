@@ -36,8 +36,6 @@
 #endif
 
 
-
-
 class CControlCommand;
 class CFileOpenDialog;
 
@@ -108,7 +106,7 @@ private:
 class CExecuteFilePickerState : public CFilePickerState
 {
 public:
-    CExecuteFilePickerState( HWND hwndDlg = NULL );
+    explicit CExecuteFilePickerState( HWND hwndDlg = NULL );
 
     virtual void SAL_CALL setValue( sal_Int16 aControlId, sal_Int16 aControlAction, const css::uno::Any& aValue );
 

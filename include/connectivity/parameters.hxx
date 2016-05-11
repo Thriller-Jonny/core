@@ -35,7 +35,7 @@
 #include <connectivity/dbtoolsdllapi.hxx>
 #include <connectivity/paramwrapper.hxx>
 #include <unotools/sharedunocomponent.hxx>
-#include <cppuhelper/interfacecontainer.hxx>
+#include <comphelper/interfacecontainer2.hxx>
 
 
 namespace dbtools
@@ -53,19 +53,19 @@ namespace dbtools
     {
     public:
         /// classifies the origin of the data to fill a parameter
-        enum ParameterClassification
+        enum class ParameterClassification
         {
             /** parameters which are filled from the master-detail relationship, where the detail
                 name is an explicit parameter name
             */
-            eLinkedByParamName,
+            LinkedByParamName,
             /** parameters which are filled from the master-detail relationship, where the detail
                 name is a column name, so an implicit parameter had to be generated for it
             */
-            eLinkedByColumnName,
+            LinkedByColumnName,
             /** parameters which are filled externally (i.e. by XParameters::setXXX, or by the parameter listeners)
             */
-            eFilledExternally
+            FilledExternally
         };
         /** meta data about an inner parameter
         */
@@ -82,13 +82,13 @@ namespace dbtools
 
             /// default ctor
             ParameterMetaData()
-                :eType( eFilledExternally )
+                :eType( ParameterClassification::FilledExternally )
             {
             }
 
             /// ctor with composer column
             ParameterMetaData( const css::uno::Reference< css::beans::XPropertySet >& _rxColumn )
-                :eType           ( eFilledExternally )
+                :eType           ( ParameterClassification::FilledExternally )
                 ,xComposerColumn ( _rxColumn         )
             {
             }
@@ -98,7 +98,7 @@ namespace dbtools
 
     private:
         ::osl::Mutex&                       m_rMutex;
-        ::cppu::OInterfaceContainerHelper   m_aParameterListeners;
+        ::comphelper::OInterfaceContainerHelper2  m_aParameterListeners;
 
         css::uno::Reference< css::uno::XComponentContext >
                                             m_xContext;
@@ -121,8 +121,8 @@ namespace dbtools
 
         ParameterInformation                m_aParameterInformation;
 
-        css::uno::Sequence< OUString >      m_aMasterFields;
-        css::uno::Sequence< OUString >      m_aDetailFields;
+        std::vector< OUString >             m_aMasterFields;
+        std::vector< OUString >             m_aDetailFields;
 
         OUString                            m_sIdentifierQuoteString;
         OUString                            m_sSpecialCharacters;

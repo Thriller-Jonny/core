@@ -29,10 +29,9 @@ using namespace ::com::sun::star;
 namespace apphelper
 {
 
-LifeTimeManager::LifeTimeManager( lang::XComponent* pComponent, bool bLongLastingCallsCancelable )
+LifeTimeManager::LifeTimeManager( lang::XComponent* pComponent )
     : m_aListenerContainer( m_aAccessMutex )
     , m_pComponent(pComponent)
-    , m_bLongLastingCallsCancelable(bLongLastingCallsCancelable)
 {
     impl_init();
 }
@@ -133,7 +132,7 @@ bool LifeTimeManager::dispose()
     //--do the disposing of listeners after calling this method
     {
         uno::Reference< lang::XComponent > xComponent =
-            uno::Reference< lang::XComponent >(m_pComponent);;
+            uno::Reference< lang::XComponent >(m_pComponent);
         if(xComponent.is())
         {
             // notify XCLoseListeners
@@ -161,10 +160,9 @@ bool LifeTimeManager::dispose()
     //--release all resources and references after calling this method successful
 }
 
-CloseableLifeTimeManager::CloseableLifeTimeManager( ::com::sun::star::util::XCloseable* pCloseable
-        , ::com::sun::star::lang::XComponent* pComponent
-        , bool bLongLastingCallsCancelable )
-        : LifeTimeManager( pComponent, bLongLastingCallsCancelable )
+CloseableLifeTimeManager::CloseableLifeTimeManager( css::util::XCloseable* pCloseable
+        , css::lang::XComponent* pComponent )
+        : LifeTimeManager( pComponent )
         , m_pCloseable(pCloseable)
 {
     impl_init();
@@ -222,12 +220,12 @@ bool CloseableLifeTimeManager::g_close_startTryClose(bool bDeliverOwnership)
     try
     {
         uno::Reference< util::XCloseable > xCloseable =
-            uno::Reference< util::XCloseable >(m_pCloseable);;
+            uno::Reference< util::XCloseable >(m_pCloseable);
         if(xCloseable.is())
         {
             //--call queryClosing on all registered close listeners
             ::cppu::OInterfaceContainerHelper* pIC = m_aListenerContainer.getContainer(
-                        cppu::UnoType<util::XCloseListener>::get());;
+                        cppu::UnoType<util::XCloseListener>::get());
             if( pIC )
             {
                 lang::EventObject aEvent( xCloseable );
@@ -276,9 +274,6 @@ bool CloseableLifeTimeManager::g_close_isNeedToCancelLongLastingCalls( bool bDel
     //this count cannot grow after try of close has started, because we wait in all those methods for end of try closing
     if( !m_nLongLastingCallCount )
         return false;
-
-      if(m_bLongLastingCallsCancelable)
-        return true;
 
     impl_setOwnership( bDeliverOwnership, true );
 
@@ -341,7 +336,7 @@ void CloseableLifeTimeManager::impl_doClose()
         {
             //--call notifyClosing on all registered close listeners
             ::cppu::OInterfaceContainerHelper* pIC = m_aListenerContainer.getContainer(
-                        cppu::UnoType<util::XCloseListener>::get());;
+                        cppu::UnoType<util::XCloseListener>::get());
             if( pIC )
             {
                 lang::EventObject aEvent( xCloseable );
@@ -373,18 +368,17 @@ void CloseableLifeTimeManager::impl_doClose()
     //mutex will be reacquired in destructor of aNegativeGuard
 }
 
-bool CloseableLifeTimeManager::g_addCloseListener( const uno::Reference< util::XCloseListener > & xListener )
+void CloseableLifeTimeManager::g_addCloseListener( const uno::Reference< util::XCloseListener > & xListener )
     throw(uno::RuntimeException)
 {
     osl::Guard< osl::Mutex > aGuard( m_aAccessMutex );
     //Mutex needs to be acquired exactly ones; will be released inbetween
     if( !impl_canStartApiCall() )
-        return false;
+        return;
     //mutex is acquired
 
     m_aListenerContainer.addInterface( cppu::UnoType<util::XCloseListener>::get(),xListener );
     m_bOwnership = false;
-    return true;
 }
 
 bool CloseableLifeTimeManager::impl_canStartApiCall()

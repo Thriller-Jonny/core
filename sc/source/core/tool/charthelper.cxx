@@ -179,7 +179,7 @@ void ScChartHelper::UpdateChartsOnDestinationPage( ScDocument* pDestDoc, const S
                 OUString aChartName = static_cast<SdrOle2Obj*>(pObject)->GetPersistName();
                 Reference< chart2::XChartDocument > xChartDoc( pDestDoc->GetChartByName( aChartName ) );
                 Reference< util::XModifiable > xModif(xChartDoc, uno::UNO_QUERY_THROW);
-                xModif->setModified( sal_True);
+                xModif->setModified( true);
             }
             pObject = aIter.Next();
         }
@@ -206,16 +206,15 @@ uno::Reference< chart2::XChartDocument > ScChartHelper::GetChartFromSdrObject( S
 }
 
 void ScChartHelper::GetChartRanges( const uno::Reference< chart2::XChartDocument >& xChartDoc,
-            uno::Sequence< OUString >& rRanges )
+            std::vector< OUString >& rRanges )
 {
-    rRanges.realloc(0);
+    rRanges.clear();
     uno::Reference< chart2::data::XDataSource > xDataSource( xChartDoc, uno::UNO_QUERY );
     if( !xDataSource.is() )
         return;
 
     uno::Sequence< uno::Reference< chart2::data::XLabeledDataSequence > > aLabeledDataSequences( xDataSource->getDataSequences() );
-    rRanges.realloc(2*aLabeledDataSequences.getLength());
-    sal_Int32 nRealCount=0;
+    rRanges.reserve(2*aLabeledDataSequences.getLength());
     for( sal_Int32 nN=0;nN<aLabeledDataSequences.getLength();nN++)
     {
         uno::Reference< chart2::data::XLabeledDataSequence > xLabeledSequence( aLabeledDataSequences[nN] );
@@ -224,12 +223,15 @@ void ScChartHelper::GetChartRanges( const uno::Reference< chart2::XChartDocument
         uno::Reference< chart2::data::XDataSequence > xLabel( xLabeledSequence->getLabel());
         uno::Reference< chart2::data::XDataSequence > xValues( xLabeledSequence->getValues());
 
-        if( xLabel.is())
-            rRanges[nRealCount++] = xLabel->getSourceRangeRepresentation();
-        if( xValues.is())
-            rRanges[nRealCount++] = xValues->getSourceRangeRepresentation();
+        if (xLabel.is())
+             rRanges.push_back( xLabel->getSourceRangeRepresentation() );
+         else
+             rRanges.push_back( OUString() );
+         if (xValues.is())
+             rRanges.push_back( xValues->getSourceRangeRepresentation() );
+         else
+             rRanges.push_back( OUString() );
     }
-    rRanges.realloc(nRealCount);
 }
 
 void ScChartHelper::SetChartRanges( const uno::Reference< chart2::XChartDocument >& xChartDoc,
@@ -420,9 +422,9 @@ void ScChartHelper::CreateProtectedChartListenersAndNotify( ScDocument* pDoc, Sd
                                 else
                                 {
                                     xProps->setPropertyValue("DisableDataTableDialog",
-                                        uno::makeAny( sal_False ) );
+                                        uno::makeAny( false ) );
                                     xProps->setPropertyValue("DisableComplexChartTypes",
-                                        uno::makeAny( sal_False ) );
+                                        uno::makeAny( false ) );
                                 }
                             }
                         }

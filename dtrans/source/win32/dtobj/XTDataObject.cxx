@@ -58,7 +58,7 @@ class CInvalidFormatEtcException
 {
 public:
     HRESULT m_hr;
-    CInvalidFormatEtcException( HRESULT hr ) : m_hr( hr ) {};
+    explicit CInvalidFormatEtcException( HRESULT hr ) : m_hr( hr ) {};
 };
 
 // ctor
@@ -137,7 +137,8 @@ STDMETHODIMP CXTDataObject::GetData( LPFORMATETC pFormatetc, LPSTGMEDIUM pmedium
     {
         HRESULT hr = DV_E_FORMATETC;
 
-        if ( m_FormatRegistrar.isSynthesizeableFormat( *pFormatetc ) )
+        CFormatEtc aFormatetc(*pFormatetc);
+        if (m_FormatRegistrar.isSynthesizeableFormat(aFormatetc))
             hr = renderSynthesizedFormatAndSetupStgMedium( *pFormatetc, *pmedium );
 
         return hr;
@@ -271,11 +272,11 @@ void SAL_CALL CXTDataObject::renderAnyDataAndSetupStgMedium(
 #ifdef DBG_UTIL
         if(CF_DIBV5 == fetc.cfFormat)
         {
-            OSL_ENSURE(clipDataStream.getLength( ) > (sizeof(BITMAPFILEHEADER) + sizeof(BITMAPV5HEADER)), "Wrong size on CF_DIBV5 data (!)");
+            OSL_ENSURE(sal_uInt32(clipDataStream.getLength()) > (sizeof(BITMAPFILEHEADER) + sizeof(BITMAPV5HEADER)), "Wrong size on CF_DIBV5 data (!)");
         }
         else // CF_DIB == fetc.cfFormat
         {
-            OSL_ENSURE(clipDataStream.getLength( ) > (sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER)), "Wrong size on CF_DIB data (!)");
+            OSL_ENSURE(sal_uInt32(clipDataStream.getLength()) > (sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER)), "Wrong size on CF_DIB data (!)");
         }
 #endif
 
@@ -479,7 +480,8 @@ STDMETHODIMP CXTDataObject::QueryGetData( LPFORMATETC pFormatetc )
 
     InitializeFormatEtcContainer( );
 
-    return m_FormatEtcContainer.hasFormatEtc( *pFormatetc ) ? S_OK : S_FALSE;
+    CFormatEtc aFormatetc(*pFormatetc);
+    return m_FormatEtcContainer.hasFormatEtc(aFormatetc) ? S_OK : S_FALSE;
 }
 
 // IDataObject->GetDataHere

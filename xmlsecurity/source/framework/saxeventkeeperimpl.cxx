@@ -34,8 +34,6 @@ namespace cssxs = com::sun::star::xml::sax;
 
 #define IMPLEMENTATION_NAME "com.sun.star.xml.security.framework.SAXEventKeeperImpl"
 
-#define _USECOMPRESSEDDOCUMENTHANDLER
-
 SAXEventKeeperImpl::SAXEventKeeperImpl( )
     :m_pRootBufferNode(nullptr),
      m_pCurrentBufferNode(nullptr),
@@ -97,13 +95,6 @@ void SAXEventKeeperImpl::setCurrentBufferNode(BufferNode* pBufferNode)
  *
  *   INPUTS
  *  pBufferNode - a BufferNode which will be the new active BufferNode
- *
- *   RESULT
- *  empty
- *
- *   AUTHOR
- *  Michael Mi
- *  Email: michael.mi@sun.com
  ******************************************************************************/
 {
     if (pBufferNode != m_pCurrentBufferNode)
@@ -111,7 +102,7 @@ void SAXEventKeeperImpl::setCurrentBufferNode(BufferNode* pBufferNode)
         if ( m_pCurrentBufferNode == m_pRootBufferNode &&
              m_xSAXEventKeeperStatusChangeListener.is())
         {
-            m_xSAXEventKeeperStatusChangeListener->collectionStatusChanged(sal_True);
+            m_xSAXEventKeeperStatusChangeListener->collectionStatusChanged(true);
         }
 
         if (pBufferNode->getParent() == nullptr)
@@ -139,16 +130,9 @@ BufferNode* SAXEventKeeperImpl::addNewElementMarkBuffers()
  *  current BufferNode doesn't exist, creates one.
  *  Clears up the new ElementCollector list and the new Blocker pointer.
  *
- *   INPUTS
- *  empty
- *
  *   RESULT
  *  pBufferNode - the BufferNode that has been connected with both new
  *                ElementCollectors and new Blocker.
- *
- *   AUTHOR
- *  Michael Mi
- *  Email: michael.mi@sun.com
  ******************************************************************************/
 {
     BufferNode* pBufferNode = nullptr;
@@ -186,7 +170,7 @@ BufferNode* SAXEventKeeperImpl::addNewElementMarkBuffers()
 
                 if (m_xSAXEventKeeperStatusChangeListener.is())
                 {
-                    m_xSAXEventKeeperStatusChangeListener->blockingStatusChanged(sal_True);
+                    m_xSAXEventKeeperStatusChangeListener->blockingStatusChanged(true);
                 }
             }
 
@@ -228,10 +212,6 @@ ElementMark* SAXEventKeeperImpl::findElementMarkBuffer(sal_Int32 nId) const
  *   RESULT
  *  pElementMark - the ElementMark with the particular Id, or NULL when
  *                 no such Id exists.
- *
- *   AUTHOR
- *  Michael Mi
- *  Email: michael.mi@sun.com
  ******************************************************************************/
 {
     ElementMark* pElementMark = nullptr;
@@ -264,13 +244,6 @@ void SAXEventKeeperImpl::removeElementMarkBuffer(sal_Int32 nId)
  *
  *   INPUTS
  *  nId - the Id of the ElementMark to be removed.
- *
- *   RESULT
- *  empty
- *
- *   AUTHOR
- *  Michael Mi
- *  Email: michael.mi@sun.com
  ******************************************************************************/
 {
     std::vector< const ElementMark* >::iterator ii = m_vElementMarkBuffers.begin();
@@ -339,10 +312,6 @@ OUString SAXEventKeeperImpl::printBufferNode(
  *
  *   RESULT
  *  info - the information string
- *
- *   AUTHOR
- *  Michael Mi
- *  Email: michael.mi@sun.com
  ******************************************************************************/
 {
     OUString rc;
@@ -403,18 +372,11 @@ cssu::Sequence< cssu::Reference< cssxw::XXMLElementWrapper > >
  *   SYNOPSIS
  *  list = collectChildWorkingElement( pBufferNode );
  *
- *   FUNCTION
- *  see NAME.
- *
  *   INPUTS
  *  pBufferNode - the BufferNode whose child Elements will be collected.
  *
  *   RESULT
  *  list - the child Elements list.
- *
- *   AUTHOR
- *  Michael Mi
- *  Email: michael.mi@sun.com
  ******************************************************************************/
 {
     std::vector< const BufferNode* >* vChildren = pBufferNode->getChildren();
@@ -458,9 +420,6 @@ void SAXEventKeeperImpl::smashBufferNode(
  *  pBufferNode -   the BufferNode to be removed
  *  bClearRoot -    whether the root element also needs to be cleared up.
  *
- *   RESULT
- *  empty
- *
  *   NOTES
  *  when removing a Blocker's BufferNode, the bClearRoot flag should be
  *  true. Because a Blocker can buffer many SAX events which are not used
@@ -469,10 +428,6 @@ void SAXEventKeeperImpl::smashBufferNode(
  *  cleared, with a stop flag seting at the next Blocking BufferNode. This
  *  operation can delete all useless bufferred SAX events which are only
  *  needed by the Blocker to be deleted.
- *
- *   AUTHOR
- *  Michael Mi
- *  Email: michael.mi@sun.com
  ******************************************************************************/
 {
     if (!pBufferNode->hasAnything())
@@ -601,9 +556,6 @@ BufferNode* SAXEventKeeperImpl::findNextBlockingBufferNode(
  *   SYNOPSIS
  *  pBufferNode = findNextBlockingBufferNode( pStartBufferNode );
  *
- *   FUNCTION
- *  see NAME.
- *
  *   INPUTS
  *  pStartBufferNode - the BufferNode from where to search the next
  *                     blocking BufferNode.
@@ -611,10 +563,6 @@ BufferNode* SAXEventKeeperImpl::findNextBlockingBufferNode(
  *   RESULT
  *  pBufferNode - the next blocking BufferNode, or NULL if no such
  *                BufferNode exists.
- *
- *   AUTHOR
- *  Michael Mi
- *  Email: michael.mi@sun.com
  ******************************************************************************/
 {
     BufferNode* pNext = nullptr;
@@ -652,13 +600,6 @@ void SAXEventKeeperImpl::diffuse(BufferNode* pBufferNode)
  *   INPUTS
  *  pBufferNode - the BufferNode from which the notification will be
  *                diffused.
- *
- *   RESULT
- *  empty
- *
- *   AUTHOR
- *  Michael Mi
- *  Email: michael.mi@sun.com
  ******************************************************************************/
 {
     BufferNode* pParent = pBufferNode;
@@ -683,16 +624,6 @@ void SAXEventKeeperImpl::releaseElementMarkBuffer()
  *  releases each ElementMark in the releasing list
  *  m_vReleasedElementMarkBuffers.
  *  The operation differs between an ElementCollector and a Blocker.
- *
- *   INPUTS
- *  empty
- *
- *   RESULT
- *  empty
- *
- *   AUTHOR
- *  Michael Mi
- *  Email: michael.mi@sun.com
  ******************************************************************************/
 {
     m_bIsReleasing = true;
@@ -793,7 +724,7 @@ void SAXEventKeeperImpl::releaseElementMarkBuffer()
                     if (m_pCurrentBlockingBufferNode == nullptr &&
                         m_xSAXEventKeeperStatusChangeListener.is())
                     {
-                        m_xSAXEventKeeperStatusChangeListener->blockingStatusChanged(sal_False);
+                        m_xSAXEventKeeperStatusChangeListener->blockingStatusChanged(false);
                     }
                 }
 
@@ -818,7 +749,7 @@ void SAXEventKeeperImpl::releaseElementMarkBuffer()
         !m_pRootBufferNode->hasChildren() &&
         m_xSAXEventKeeperStatusChangeListener.is())
     {
-        m_xSAXEventKeeperStatusChangeListener->bufferStatusChanged(sal_True);
+        m_xSAXEventKeeperStatusChangeListener->bufferStatusChanged(true);
     }
 }
 
@@ -838,13 +769,6 @@ void SAXEventKeeperImpl::markElementMarkBuffer(sal_Int32 nId)
  *
  *   INPUTS
  *  nId - the Id of the ElementMark which will be released
- *
- *   RESULT
- *  empty
- *
- *   AUTHOR
- *  Michael Mi
- *  Email: michael.mi@sun.com
  ******************************************************************************/
 {
     m_vReleasedElementMarkBuffers.push_back( nId );
@@ -855,7 +779,6 @@ void SAXEventKeeperImpl::markElementMarkBuffer(sal_Int32 nId)
 }
 
 sal_Int32 SAXEventKeeperImpl::createElementCollector(
-    sal_Int32 nSecurityId,
     cssxc::sax::ElementMarkPriority nPriority,
     bool bModifyElement,
     const cssu::Reference< cssxc::sax::XReferenceResolvedListener >& xReferenceResolvedListener)
@@ -875,18 +798,13 @@ sal_Int32 SAXEventKeeperImpl::createElementCollector(
  *  Add the new created ElementCollector to the new ElementCollecotor list.
  *
  *   INPUTS
- *  nSecurityId -   the security Id of the new ElementCollector
- *  nPriority -     the prirority of the new ElementCollector
+ *  nPriority -     the priority of the new ElementCollector
  *  bModifyElement -whether this BufferNode will modify the content of
  *                  the corresponding element it works on
  *  xReferenceResolvedListener - the listener for the new ElementCollector.
  *
  *   RESULT
  *  nId - the Id of the new ElementCollector
- *
- *   AUTHOR
- *  Michael Mi
- *  Email: michael.mi@sun.com
  ******************************************************************************/
 {
     sal_Int32 nId = m_nNextElementMarkId;
@@ -894,7 +812,7 @@ sal_Int32 SAXEventKeeperImpl::createElementCollector(
 
     ElementCollector* pElementCollector
         = new ElementCollector(
-            nSecurityId,
+            cssxc::sax::ConstOfSecurityId::UNDEFINEDSECURITYID,
             nId,
             nPriority,
             bModifyElement,
@@ -911,7 +829,7 @@ sal_Int32 SAXEventKeeperImpl::createElementCollector(
 }
 
 
-sal_Int32 SAXEventKeeperImpl::createBlocker(sal_Int32 nSecurityId)
+sal_Int32 SAXEventKeeperImpl::createBlocker()
 /****** SAXEventKeeperImpl/createBlocker *************************************
  *
  *   NAME
@@ -920,18 +838,8 @@ sal_Int32 SAXEventKeeperImpl::createBlocker(sal_Int32 nSecurityId)
  *   SYNOPSIS
  *  nId = createBlocker( nSecurityId );
  *
- *   FUNCTION
- *  see NAME.
- *
- *   INPUTS
- *  nSecurityId -   the security Id of the new Blocker
- *
  *   RESULT
  *  nId - the Id of the new Blocker
- *
- *   AUTHOR
- *  Michael Mi
- *  Email: michael.mi@sun.com
  ******************************************************************************/
 {
     sal_Int32 nId = m_nNextElementMarkId;
@@ -939,7 +847,7 @@ sal_Int32 SAXEventKeeperImpl::createBlocker(sal_Int32 nSecurityId)
 
     OSL_ASSERT(m_pNewBlocker == nullptr);
 
-    m_pNewBlocker = new ElementMark(nSecurityId, nId);
+    m_pNewBlocker = new ElementMark(cssxc::sax::ConstOfSecurityId::UNDEFINEDSECURITYID, nId);
     m_vElementMarkBuffers.push_back( m_pNewBlocker );
 
     return nId;
@@ -950,7 +858,6 @@ sal_Int32 SAL_CALL SAXEventKeeperImpl::addElementCollector(  )
     throw (cssu::RuntimeException, std::exception)
 {
     return createElementCollector(
-        cssxc::sax::ConstOfSecurityId::UNDEFINEDSECURITYID,
         cssxc::sax::ElementMarkPriority_AFTERMODIFY,
         false,
         nullptr);
@@ -965,7 +872,7 @@ void SAL_CALL SAXEventKeeperImpl::removeElementCollector( sal_Int32 id )
 sal_Int32 SAL_CALL SAXEventKeeperImpl::addBlocker(  )
     throw (cssu::RuntimeException, std::exception)
 {
-    return createBlocker(cssxc::sax::ConstOfSecurityId::UNDEFINEDSECURITYID);
+    return createBlocker();
 }
 
 void SAL_CALL SAXEventKeeperImpl::removeBlocker( sal_Int32 id )
@@ -1071,7 +978,6 @@ sal_Int32 SAL_CALL SAXEventKeeperImpl::addSecurityElementCollector(
     throw (cssu::RuntimeException, std::exception)
 {
     return createElementCollector(
-        cssxc::sax::ConstOfSecurityId::UNDEFINEDSECURITYID,
         priority,
         modifyElement,
         nullptr);
@@ -1191,15 +1097,11 @@ void SAL_CALL SAXEventKeeperImpl::startElement(
     {
         m_xNextHandler->startElement(aName, xAttribs);
     }
-
         /*
          * If not forwarding, buffer this startElement.
          */
            if (!m_bIsForwarding)
            {
-    #ifndef _USECOMPRESSEDDOCUMENTHANDLER
-        m_xDocumentHandler->startElement(aName, xAttribs);
-    #else
         sal_Int32 nLength = xAttribs->getLength();
         cssu::Sequence< cssxcsax::XMLAttribute > aAttributes (nLength);
 
@@ -1210,8 +1112,6 @@ void SAL_CALL SAXEventKeeperImpl::startElement(
         }
 
         m_xCompressedDocumentHandler->compressedStartElement(aName, aAttributes);
-    #endif
-
     }
 
     BufferNode* pBufferNode = addNewElementMarkBuffers();
@@ -1241,13 +1141,9 @@ void SAL_CALL SAXEventKeeperImpl::endElement( const OUString& aName )
         (m_pCurrentBufferNode != m_pRootBufferNode) ||
         (!m_xXMLDocument->isCurrentElementEmpty()))
     {
-            if (!m_bIsForwarding)
-            {
-        #ifndef _USECOMPRESSEDDOCUMENTHANDLER
-            m_xDocumentHandler->endElement(aName);
-        #else
+        if (!m_bIsForwarding)
+        {
             m_xCompressedDocumentHandler->compressedEndElement(aName);
-        #endif
         }
 
         /*
@@ -1265,7 +1161,7 @@ void SAL_CALL SAXEventKeeperImpl::endElement( const OUString& aName )
             if ((m_pCurrentBufferNode == m_pRootBufferNode) &&
                 m_xSAXEventKeeperStatusChangeListener.is())
             {
-                m_xSAXEventKeeperStatusChangeListener->collectionStatusChanged(sal_False);
+                m_xSAXEventKeeperStatusChangeListener->collectionStatusChanged(false);
             }
         }
     }
@@ -1291,13 +1187,9 @@ void SAL_CALL SAXEventKeeperImpl::characters( const OUString& aChars )
         if ((m_pCurrentBlockingBufferNode != nullptr) ||
             (m_pCurrentBufferNode != m_pRootBufferNode))
         {
-        #ifndef _USECOMPRESSEDDOCUMENTHANDLER
-                m_xDocumentHandler->characters(aChars);
-        #else
             m_xCompressedDocumentHandler->compressedCharacters(aChars);
-        #endif
-            }
         }
+    }
 }
 
 void SAL_CALL SAXEventKeeperImpl::ignorableWhitespace( const OUString& aWhitespaces )
@@ -1320,13 +1212,9 @@ void SAL_CALL SAXEventKeeperImpl::processingInstruction(
         if ((m_pCurrentBlockingBufferNode != nullptr) ||
             (m_pCurrentBufferNode != m_pRootBufferNode))
         {
-        #ifndef _USECOMPRESSEDDOCUMENTHANDLER
-            m_xDocumentHandler->processingInstruction(aTarget, aData);
-        #else
             m_xCompressedDocumentHandler->compressedProcessingInstruction(aTarget, aData);
-        #endif
-            }
         }
+    }
 }
 
 void SAL_CALL SAXEventKeeperImpl::setDocumentLocator( const cssu::Reference< cssxs::XLocator >&)

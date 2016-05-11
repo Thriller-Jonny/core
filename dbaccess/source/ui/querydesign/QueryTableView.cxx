@@ -123,7 +123,7 @@ namespace
         if( bOk )
         {
             pData->SetJoinType(aDlg->GetJoinType());
-            _pView->getDesignView()->getController().setModified(sal_True);
+            _pView->getDesignView()->getController().setModified(true);
         }
 
         return bOk;
@@ -232,7 +232,7 @@ sal_Int32 OQueryTableView::CountTableAlias(const OUString& rName, sal_Int32& rMa
 {
     sal_Int32 nRet = 0;
 
-    OTableWindowMap::iterator aIter = GetTabWinMap().find(rName);
+    OTableWindowMap::const_iterator aIter = GetTabWinMap().find(rName);
     while(aIter != GetTabWinMap().end())
     {
         OUString aNewName = rName + "_" + OUString::number(++nRet);
@@ -253,7 +253,7 @@ void OQueryTableView::ReSync()
     // I need a collection of all window names that cannot be created so that I do not initialize connections for them.
     ::std::vector<OUString> arrInvalidTables;
 
-    TTableWindowData::reverse_iterator aIter = rTabWinDataList.rbegin();
+    TTableWindowData::const_reverse_iterator aIter = rTabWinDataList.rbegin();
     // Create the window and add it
 
     for(;aIter != rTabWinDataList.rend();++aIter)
@@ -286,7 +286,7 @@ void OQueryTableView::ReSync()
 
     // Add the connections
     TTableConnectionData& rTabConnDataList = m_pView->getController().getTableConnectionData();
-    TTableConnectionData::reverse_iterator aConIter = rTabConnDataList.rbegin();
+    TTableConnectionData::const_reverse_iterator aConIter = rTabConnDataList.rbegin();
 
     for(;aConIter != rTabConnDataList.rend();++aConIter)
     {
@@ -315,7 +315,7 @@ void OQueryTableView::ClearAll()
     OJoinTableView::ClearAll();
 
     SetUpdateMode(true);
-    m_pView->getController().setModified(sal_True);
+    m_pView->getController().setModified(true);
 }
 
 VclPtr<OTableWindow> OQueryTableView::createWindow(const TTableWindowData::value_type& _pData)
@@ -388,7 +388,7 @@ void OQueryTableView::AddTabWin(const OUString& _rTableName, const OUString& _rA
                                     sCatalog,
                                     sSchema,
                                     sTable,
-                                    ::dbtools::eInDataManipulation);
+                                    ::dbtools::EComposeRule::InDataManipulation);
         OUString sRealName(sSchema);
         if (!sRealName.isEmpty())
             sRealName += ".";
@@ -442,8 +442,8 @@ void OQueryTableView::AddTabWin(const OUString& _rComposedName, const OUString& 
     bool bAppend = bNewTable;
     TTableWindowData::value_type pNewTabWinData;
     TTableWindowData& rWindowData = getDesignView()->getController().getTableWindowData();
-    TTableWindowData::iterator aWinIter = rWindowData.begin();
-    TTableWindowData::iterator aWinEnd = rWindowData.end();
+    TTableWindowData::const_iterator aWinIter = rWindowData.begin();
+    TTableWindowData::const_iterator aWinEnd = rWindowData.end();
     for(;aWinIter != aWinEnd;++aWinIter)
     {
         pNewTabWinData = *aWinIter;
@@ -720,8 +720,8 @@ bool OQueryTableView::ContainsTabWin(const OTableWindow& rTabWin)
 {
     OTableWindowMap& rTabWins = GetTabWinMap();
 
-    OTableWindowMap::iterator aIter = rTabWins.begin();
-    OTableWindowMap::iterator aEnd  = rTabWins.end();
+    OTableWindowMap::const_iterator aIter = rTabWins.begin();
+    OTableWindowMap::const_iterator aEnd  = rTabWins.end();
 
     for ( ;aIter != aEnd ; ++aIter )
     {
@@ -798,8 +798,8 @@ void OQueryTableView::HideTabWin( OQueryTableWindow* pTabWin, OQueryTabWinUndoAc
     getDesignView()->SaveTabWinUIConfig(pTabWin);
     // (I need to go via the parent, as only the parent knows the position of the scrollbars)
     // and then out of the TabWins list and hide
-    OTableWindowMap::iterator aIter = rTabWins.begin();
-    OTableWindowMap::iterator aEnd  = rTabWins.end();
+    OTableWindowMap::const_iterator aIter = rTabWins.begin();
+    OTableWindowMap::const_iterator aEnd  = rTabWins.end();
     for ( ;aIter != aEnd ; ++aIter )
         if ( aIter->second == pTabWin )
         {
@@ -853,7 +853,7 @@ void OQueryTableView::HideTabWin( OQueryTableWindow* pTabWin, OQueryTabWinUndoAc
     pUndoAction->SetOwnership(true);
 
     // by doing so, we have modified the document
-    m_pView->getController().setModified( sal_True );
+    m_pView->getController().setModified( true );
     m_pView->getController().InvalidateFeature(SID_BROWSER_CLEAR_QUERY);
 }
 
@@ -893,7 +893,7 @@ bool OQueryTableView::ShowTabWin( OQueryTableWindow* pTabWin, OQueryTabWinUndoAc
 
             // the Connections
             auto rTableCon = pUndoAction->GetTabConnList();
-            for(auto conn : rTableCon)
+            for(const auto& conn : rTableCon)
                 addConnection(conn); // add all connections from the undo action
 
             rTableCon.clear();
@@ -920,7 +920,7 @@ bool OQueryTableView::ShowTabWin( OQueryTableWindow* pTabWin, OQueryTabWinUndoAc
 
     // show that I have changed the document
     if(!m_pView->getController().isReadOnly())
-        m_pView->getController().setModified( sal_True );
+        m_pView->getController().setModified( true );
 
     m_pView->getController().InvalidateFeature(SID_BROWSER_CLEAR_QUERY);
 
@@ -935,7 +935,7 @@ void OQueryTableView::InsertField(const OTableFieldDescRef& rInfo)
 
 bool OQueryTableView::ExistsAVisitedConn(const OQueryTableWindow* pFrom) const
 {
-    for(auto conn : getTableConnections())
+    for(const auto& conn : getTableConnections())
     {
         OQueryTableConnection* pTemp = static_cast<OQueryTableConnection*>(conn.get());
         if (pTemp->IsVisited() &&
@@ -949,7 +949,7 @@ bool OQueryTableView::ExistsAVisitedConn(const OQueryTableWindow* pFrom) const
 void OQueryTableView::onNoColumns_throw()
 {
     OUString sError( ModuleRes( STR_STATEMENT_WITHOUT_RESULT_SET ) );
-    ::dbtools::throwSQLException( sError, ::dbtools::SQL_GENERAL_ERROR, nullptr );
+    ::dbtools::throwSQLException( sError, ::dbtools::StandardSQLState::GENERAL_ERROR, nullptr );
 }
 
 bool OQueryTableView::supressCrossNaturalJoin(const TTableConnectionData::value_type& _pData) const

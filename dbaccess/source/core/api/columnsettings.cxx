@@ -31,17 +31,11 @@ namespace dbaccess
 {
 
     using ::com::sun::star::uno::Reference;
-    using ::com::sun::star::uno::XInterface;
     using ::com::sun::star::uno::UNO_QUERY;
-    using ::com::sun::star::uno::UNO_QUERY_THROW;
     using ::com::sun::star::uno::UNO_SET_THROW;
     using ::com::sun::star::uno::Exception;
-    using ::com::sun::star::uno::RuntimeException;
     using ::com::sun::star::uno::Any;
-    using ::com::sun::star::uno::makeAny;
-    using ::com::sun::star::uno::Sequence;
     using ::com::sun::star::uno::Type;
-    using ::com::sun::star::lang::IllegalArgumentException;
     using ::com::sun::star::beans::XPropertySet;
     using ::com::sun::star::beans::XPropertySetInfo;
 
@@ -126,7 +120,7 @@ namespace dbaccess
                 OUString sName;
                 sal_Int32       nHandle;
             };
-            PropertyDescriptor aProps[] =
+            const PropertyDescriptor aProps[] =
             {
                 { OUString(PROPERTY_ALIGN),            PROPERTY_ID_ALIGN },
                 { OUString(PROPERTY_NUMBERFORMAT),     PROPERTY_ID_NUMBERFORMAT },
@@ -138,10 +132,10 @@ namespace dbaccess
                 { OUString(PROPERTY_HIDDEN),           PROPERTY_ID_HIDDEN }
             };
 
-            for ( size_t i=0; i < sizeof( aProps ) / sizeof( aProps[0] ); ++i )
+            for (const auto & aProp : aProps)
             {
-                if ( xPSI->hasPropertyByName( aProps[i].sName ) )
-                    if ( !isDefaulted( aProps[i].nHandle, _rxColumn->getPropertyValue( aProps[i].sName ) ) )
+                if ( xPSI->hasPropertyByName( aProp.sName ) )
+                    if ( !isDefaulted( aProp.nHandle, _rxColumn->getPropertyValue( aProp.sName ) ) )
                         return false;
             }
         }

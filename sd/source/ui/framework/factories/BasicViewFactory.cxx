@@ -41,7 +41,6 @@
 #include <vcl/wrkwin.hxx>
 #include <toolkit/helper/vclunohelper.hxx>
 
-#include <boost/bind.hpp>
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
@@ -197,7 +196,9 @@ void SAL_CALL BasicViewFactory::releaseResource (const Reference<XResource>& rxV
             ::std::find_if(
                 mpViewShellContainer->begin(),
                 mpViewShellContainer->end(),
-                ::boost::bind(&ViewDescriptor::CompareView, _1, rxView)));
+                [&] (std::shared_ptr<ViewDescriptor> const& pVD) {
+                    return ViewDescriptor::CompareView(pVD, rxView);
+                } ));
         if (iViewShell != mpViewShellContainer->end())
         {
             std::shared_ptr<ViewShell> pViewShell ((*iViewShell)->mpViewShell);
@@ -447,20 +448,20 @@ bool BasicViewFactory::IsCacheable (const std::shared_ptr<ViewDescriptor>& rpDes
     Reference<XRelocatableResource> xResource (rpDescriptor->mxView, UNO_QUERY);
     if (xResource.is())
     {
-        static ::std::vector<Reference<XResourceId> > maCacheableResources;
-        if (maCacheableResources.empty() )
+        static ::std::vector<Reference<XResourceId> > s_aCacheableResources;
+        if (s_aCacheableResources.empty() )
         {
             std::shared_ptr<FrameworkHelper> pHelper (FrameworkHelper::Instance(*mpBase));
 
             // The slide sorter and the task panel are cacheable and relocatable.
-            maCacheableResources.push_back(FrameworkHelper::CreateResourceId(
+            s_aCacheableResources.push_back(FrameworkHelper::CreateResourceId(
                 FrameworkHelper::msSlideSorterURL, FrameworkHelper::msLeftDrawPaneURL));
-            maCacheableResources.push_back(FrameworkHelper::CreateResourceId(
+            s_aCacheableResources.push_back(FrameworkHelper::CreateResourceId(
                 FrameworkHelper::msSlideSorterURL, FrameworkHelper::msLeftImpressPaneURL));
         }
 
         ::std::vector<Reference<XResourceId> >::const_iterator iId;
-        for (iId=maCacheableResources.begin(); iId!=maCacheableResources.end(); ++iId)
+        for (iId=s_aCacheableResources.begin(); iId!=s_aCacheableResources.end(); ++iId)
         {
             if ((*iId)->compareTo(rpDescriptor->mxViewId) == 0)
             {
@@ -538,7 +539,6 @@ com_sun_star_comp_Draw_framework_BasicViewFactory_get_implementation(css::uno::X
 {
     return cppu::acquire(new sd::framework::BasicViewFactory(context));
 }
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

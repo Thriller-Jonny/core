@@ -91,8 +91,8 @@ namespace dbaui
         svx::ODataAccessDescriptor    m_aDocumentDataSource;
             // if we're part of a document, this is the state of the DocumentDataSource slot
 
-        ::cppu::OInterfaceContainerHelper   m_aSelectionListeners;
-        ::cppu::OInterfaceContainerHelper   m_aContextMenuInterceptors;
+        ::comphelper::OInterfaceContainerHelper2   m_aSelectionListeners;
+        ::comphelper::OInterfaceContainerHelper2   m_aContextMenuInterceptors;
 
         OTableCopyHelper::DropDescriptor    m_aAsyncDrop;
         OTableCopyHelper                    m_aTableCopyHelper;
@@ -232,7 +232,7 @@ namespace dbaui
         // IContextMenuProvider
         virtual PopupMenu*      getContextMenu( Control& _rControl ) const override;
         virtual IController&    getCommandController() override;
-        virtual ::cppu::OInterfaceContainerHelper*
+        virtual ::comphelper::OInterfaceContainerHelper2*
                                 getContextMenuInterceptors() override;
         virtual css::uno::Any
                                 getCurrentSelection( Control& _rControl ) const override;
@@ -330,7 +330,7 @@ namespace dbaui
         void    implAdministrate( SvTreeListEntry* _pApplyTo );
 
         TransferableHelper*
-                implCopyObject( SvTreeListEntry* _pApplyTo, sal_Int32 _nCommandType, bool _bAllowConnection = true );
+                implCopyObject( SvTreeListEntry* _pApplyTo, sal_Int32 _nCommandType );
 
         EntryType getEntryType( const SvTreeListEntry* _pEntry ) const;
         EntryType   getChildType( SvTreeListEntry* _pEntry ) const;
@@ -389,12 +389,9 @@ namespace dbaui
                 If not <NULL/>, the data source tree entry will be returned here
             @param _ppContainerEntry
                 If not <NULL/>, the object container tree entry will be returned here
-            @param _bExpandAncestors
-                If <TRUE/>, all ancestor on the way to the entry will be expanded
         */
         SvTreeListEntry* getObjectEntry(const svx::ODataAccessDescriptor& _rDescriptor,
-            SvTreeListEntry** _ppDataSourceEntry = nullptr, SvTreeListEntry** _ppContainerEntry = nullptr,
-            bool _bExpandAncestors = true
+            SvTreeListEntry** _ppDataSourceEntry = nullptr, SvTreeListEntry** _ppContainerEntry = nullptr
         );
         /** retrieves the tree entry for the object described by data source name, command and command type
             @param _rDataSource

@@ -23,6 +23,7 @@
 #include <float.h>
 
 #include "chartarr.hxx"
+#include "cellvalue.hxx"
 #include "document.hxx"
 #include "rechead.hxx"
 #include "globstr.hrc"
@@ -64,8 +65,7 @@ ScChartArray::ScChartArray( ScDocument* pDoc, SCTAB nTab,
                     const OUString& rChartName ) :
         aName( rChartName ),
         pDocument( pDoc ),
-        aPositioner(pDoc, nTab, nStartColP, nStartRowP, nEndColP, nEndRowP),
-        bValid( true )
+        aPositioner(pDoc, nTab, nStartColP, nStartRowP, nEndColP, nEndRowP)
 {
 }
 
@@ -73,22 +73,14 @@ ScChartArray::ScChartArray(
     ScDocument* pDoc, const ScRangeListRef& rRangeList, const OUString& rChartName ) :
     aName( rChartName ),
     pDocument( pDoc ),
-    aPositioner(pDoc, rRangeList),
-    bValid( true ) {}
+    aPositioner(pDoc, rRangeList) {}
 
 ScChartArray::ScChartArray( const ScChartArray& rArr ) :
     aName(rArr.aName),
     pDocument(rArr.pDocument),
-    aPositioner(rArr.aPositioner),
-    bValid(rArr.bValid) {}
+    aPositioner(rArr.aPositioner) {}
 
 ScChartArray::~ScChartArray() {}
-
-bool ScChartArray::operator==(const ScChartArray& rCmp) const
-{
-    return aPositioner == rCmp.aPositioner
-        && aName == rCmp.aName;
-}
 
 ScMemChart* ScChartArray::CreateMemChart()
 {
@@ -114,12 +106,12 @@ double getCellValue( ScDocument& rDoc, const ScAddress& rPos, double fDefault, b
 {
     double fRet = fDefault;
 
-    CellType eType = rDoc.GetCellType(rPos);
-    switch (eType)
+    ScRefCellValue aCell(rDoc, rPos);
+    switch (aCell.meType)
     {
         case CELLTYPE_VALUE:
         {
-            fRet = rDoc.GetValue(rPos);
+            fRet = aCell.getValue();
             if (bCalcAsShown && fRet != 0.0)
             {
                 sal_uInt32 nFormat = rDoc.GetNumberFormat(rPos);
@@ -129,7 +121,7 @@ double getCellValue( ScDocument& rDoc, const ScAddress& rPos, double fDefault, b
         break;
         case CELLTYPE_FORMULA:
         {
-            ScFormulaCell* pFCell = rDoc.GetFormulaCell(rPos);
+            ScFormulaCell* pFCell = aCell.mpFormula;
             if (pFCell && !pFCell->GetErrCode() && pFCell->IsValue())
                 fRet = pFCell->GetValue();
         }
@@ -275,7 +267,7 @@ ScMemChart* ScChartArray::CreateMemChartSingle()
             aBuf.append(' ');
 
             ScAddress aPos( aCols[ nCol ], 0, 0 );
-            aBuf.append(aPos.Format(SCA_VALID_COL));
+            aBuf.append(aPos.Format(ScRefFlags::COL_VALID));
 
             aString = aBuf.makeStringAndClear();
         }
@@ -388,7 +380,7 @@ ScMemChart* ScChartArray::CreateMemChartMulti()
             else
                 nPosCol++;
             ScAddress aPos( nPosCol - 1, 0, 0 );
-            aBuf.append(aPos.Format(SCA_VALID_COL));
+            aBuf.append(aPos.Format(ScRefFlags::COL_VALID));
             aString = aBuf.makeStringAndClear();
         }
         pMemChart->SetColText( nCol, aString);
@@ -462,11 +454,6 @@ const ScChartArray* ScChartCollection::operator[](size_t nIndex) const
     if (m_Data.size() <= nIndex)
         return nullptr;
     return m_Data[nIndex].get();
-}
-
-bool ScChartCollection::operator==(const ScChartCollection& rCmp) const
-{
-    return ::comphelper::ContainerUniquePtrEquals(m_Data, rCmp.m_Data);
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

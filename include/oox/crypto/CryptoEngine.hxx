@@ -13,8 +13,13 @@
 
 #include <vector>
 
-#include <oox/helper/binaryinputstream.hxx>
-#include <oox/helper/binaryoutputstream.hxx>
+#include <rtl/ustring.hxx>
+#include <sal/types.h>
+
+namespace oox {
+    class BinaryXInputStream;
+    class BinaryXOutputStream;
+}
 
 namespace oox {
 namespace core {
@@ -31,7 +36,7 @@ public:
     virtual ~CryptoEngine()
     {}
 
-    virtual bool writeEncryptionInfo(
+    virtual void writeEncryptionInfo(
                     const OUString& rPassword,
                     BinaryXOutputStream& rStream) = 0;
 
@@ -41,7 +46,7 @@ public:
                     BinaryXInputStream& aInputStream,
                     BinaryXOutputStream& aOutputStream) = 0;
 
-    virtual bool encrypt(
+    virtual void encrypt(
                     BinaryXInputStream& aInputStream,
                     BinaryXOutputStream& aOutputStream) = 0;
 };

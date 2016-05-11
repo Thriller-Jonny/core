@@ -19,6 +19,7 @@
 
 #include <config_folders.h>
 #include "rtl/bootstrap.hxx"
+#include <oox/export/drawingml.hxx>
 #include <oox/export/vmlexport.hxx>
 
 #include <oox/token/tokens.hxx>
@@ -68,16 +69,19 @@ VMLExport::VMLExport( ::sax_fastparser::FSHelperPtr pSerializer, VMLTextExport* 
     memset( m_pShapeTypeWritten, 0, ESCHER_ShpInst_COUNT * sizeof( bool ) );
 }
 
-void VMLExport::SetFS( ::sax_fastparser::FSHelperPtr pSerializer )
+void VMLExport::SetFS( const ::sax_fastparser::FSHelperPtr& pSerializer )
 {
     m_pSerializer = pSerializer;
 }
 
 VMLExport::~VMLExport()
 {
-    delete mpOutStrm, mpOutStrm = nullptr;
-    delete m_pShapeStyle, m_pShapeStyle = nullptr;
-    delete[] m_pShapeTypeWritten, m_pShapeTypeWritten = nullptr;
+    delete mpOutStrm;
+    mpOutStrm = nullptr;
+    delete m_pShapeStyle;
+    m_pShapeStyle = nullptr;
+    delete[] m_pShapeTypeWritten;
+    m_pShapeTypeWritten = nullptr;
 }
 
 void VMLExport::OpenContainer( sal_uInt16 nEscherContainer, int nRecInstance )
@@ -885,7 +889,7 @@ void VMLExport::AddFlipXY( )
     {
         case SHAPEFLAG_FLIPH:   m_pShapeStyle->append( ";flip:x" );  break;
         case SHAPEFLAG_FLIPV:   m_pShapeStyle->append( ";flip:y" );  break;
-        case (nFlipHandV):      m_pShapeStyle->append( ";flip:xy" ); break;
+        case nFlipHandV:        m_pShapeStyle->append( ";flip:xy" ); break;
     }
 }
 
@@ -1205,7 +1209,7 @@ void VMLExport::EndShape( sal_Int32 nShapeElement )
     }
 }
 
-sal_uInt32 VMLExport::AddSdrObject( const SdrObject& rObj, sal_Int16 eHOri, sal_Int16 eVOri, sal_Int16 eHRel, sal_Int16 eVRel, const Point* pNdTopLeft, const bool bOOxmlExport )
+void VMLExport::AddSdrObject( const SdrObject& rObj, sal_Int16 eHOri, sal_Int16 eVOri, sal_Int16 eHRel, sal_Int16 eVRel, const Point* pNdTopLeft, const bool bOOxmlExport )
 {
     m_pSdrObject = &rObj;
     m_eHOri = eHOri;
@@ -1213,7 +1217,7 @@ sal_uInt32 VMLExport::AddSdrObject( const SdrObject& rObj, sal_Int16 eHOri, sal_
     m_eHRel = eHRel;
     m_eVRel = eVRel;
     m_pNdTopLeft = pNdTopLeft;
-    return EscherEx::AddSdrObject(rObj, bOOxmlExport);
+    EscherEx::AddSdrObject(rObj, bOOxmlExport);
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

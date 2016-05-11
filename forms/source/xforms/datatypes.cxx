@@ -35,8 +35,6 @@ namespace xforms
     using ::com::sun::star::uno::RuntimeException;
     using ::com::sun::star::uno::Any;
     using ::com::sun::star::uno::makeAny;
-    using ::com::sun::star::uno::Type;
-    using ::com::sun::star::uno::Sequence;
     using ::com::sun::star::uno::Exception;
     using ::com::sun::star::util::VetoException;
     using ::com::sun::star::util::Date;
@@ -153,7 +151,6 @@ namespace xforms
     }
 
 
-
     sal_Int16 SAL_CALL OXSDDataType::getTypeClass() throw (RuntimeException, std::exception)
     {
         return m_nTypeClass;
@@ -192,7 +189,7 @@ namespace xforms
 
     namespace
     {
-        static void lcl_initializePatternMatcher( ::std::unique_ptr< RegexMatcher >& _rpMatcher, const OUString& _rPattern )
+        void lcl_initializePatternMatcher( ::std::unique_ptr< RegexMatcher >& _rpMatcher, const OUString& _rPattern )
         {
             UErrorCode nMatchStatus = U_ZERO_ERROR;
             UnicodeString aIcuPattern( reinterpret_cast<const UChar *>(_rPattern.getStr()), _rPattern.getLength() );    // UChar != sal_Unicode in MinGW
@@ -201,7 +198,7 @@ namespace xforms
                 // if asserts, then something changed our pattern without going to convertFastPropertyValue/checkPropertySanity
         }
 
-        static bool lcl_matchString( RegexMatcher& _rMatcher, const OUString& _rText )
+        bool lcl_matchString( RegexMatcher& _rMatcher, const OUString& _rText )
         {
             UErrorCode nMatchStatus = U_ZERO_ERROR;
             UnicodeString aInput( reinterpret_cast<const UChar *>(_rText.getStr()), _rText.getLength() );   // UChar != sal_Unicode in MinGW
@@ -244,7 +241,7 @@ namespace xforms
     {
         // let the base class do the conversion
         if ( !OXSDDataType_PBase::convertFastPropertyValue( _rConvertedValue, _rOldValue, _nHandle, _rValue ) )
-            return sal_False;
+            return false;
 
         // sanity checks
         OUString sErrorMessage;
@@ -256,7 +253,7 @@ namespace xforms
             throw IllegalArgumentException( aException );
         }
 
-        return sal_True;
+        return true;
     }
 
 
@@ -656,7 +653,6 @@ namespace xforms
     }
 
 
-
     // validate decimals and return code for which facets failed
     // to be used by: ODecimalType::validate and ODecimalType::explainInvalid
     sal_uInt16 ODecimalType::_validate( const OUString& rValue )
@@ -747,7 +743,6 @@ namespace xforms
          classname##_Base::initializeClone( _rCloneSource );        \
         initializeTypedClone( static_cast< const classname& >( _rCloneSource ) ); \
     } \
-
 
 
     //= ODateType
@@ -940,7 +935,6 @@ namespace xforms
         OSL_VERIFY( _rValue >>= nValue );
         _rDoubleValue = nValue;
     }
-
 
 
 #define DATATYPES_INCLUDED_BY_MASTER_HEADER

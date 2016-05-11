@@ -52,7 +52,6 @@ using namespace com::sun::star::linguistic2;
 using namespace linguistic;
 
 
-
 static bool IsVers2OrNewer( const OUString& rFileURL, sal_uInt16& nLng, bool& bNeg );
 
 static void AddInternal( const uno::Reference< XDictionary > &rDic,
@@ -66,8 +65,8 @@ class DicEvtListenerHelper :
         XDictionaryEventListener
     >
 {
-    cppu::OInterfaceContainerHelper         aDicListEvtListeners;
-    uno::Sequence< DictionaryEvent >        aCollectDicEvt;
+    comphelper::OInterfaceContainerHelper2  aDicListEvtListeners;
+    std::vector< DictionaryEvent >          aCollectDicEvt;
     uno::Reference< XDictionaryList >       xMyDicList;
 
     sal_Int16                               nCondensedEvt;
@@ -199,9 +198,7 @@ void SAL_CALL DicEvtListenerHelper::processDictionaryEvent(
     // update list of collected events if needs to be
     if (nNumVerboseListeners > 0)
     {
-        sal_Int32 nColEvts = aCollectDicEvt.getLength();
-        aCollectDicEvt.realloc( nColEvts + 1 );
-        aCollectDicEvt.getArray()[ nColEvts ] = rDicEvent;
+        aCollectDicEvt.push_back(rDicEvent);
     }
 
     if (nNumCollectEvtListeners == 0 && nCondensedEvt != 0)
@@ -228,8 +225,6 @@ bool DicEvtListenerHelper::RemoveDicListEvtListener(
 }
 
 
-
-
 sal_Int16 DicEvtListenerHelper::EndCollectEvents()
 {
     DBG_ASSERT(nNumCollectEvtListeners > 0, "lng: mismatched function call");
@@ -250,27 +245,19 @@ sal_Int16 DicEvtListenerHelper::FlushEvents()
         // build DictionaryListEvent to pass on to listeners
         uno::Sequence< DictionaryEvent > aDicEvents;
         if (nNumVerboseListeners > 0)
-            aDicEvents = aCollectDicEvt;
+            aDicEvents = comphelper::containerToSequence(aCollectDicEvt);
         DictionaryListEvent aEvent( xMyDicList, nCondensedEvt, aDicEvents );
 
         // pass on event
-        cppu::OInterfaceIteratorHelper aIt( aDicListEvtListeners );
-        while (aIt.hasMoreElements())
-        {
-            uno::Reference< XDictionaryListEventListener > xRef( aIt.next(), UNO_QUERY );
-            if (xRef.is())
-                xRef->processDictionaryListEvent( aEvent );
-        }
+        aDicListEvtListeners.notifyEach( &XDictionaryListEventListener::processDictionaryListEvent, aEvent );
 
         // clear "list" of events
         nCondensedEvt = 0;
-        aCollectDicEvt.realloc( 0 );
+        aCollectDicEvt.clear();
     }
 
     return nNumCollectEvtListeners;
 }
-
-
 
 
 void DicList::MyAppExitListener::AtExit()
@@ -437,7 +424,7 @@ sal_Bool SAL_CALL DicList::addDictionary(
     osl::MutexGuard aGuard( GetLinguMutex() );
 
     if (bDisposing)
-        return sal_False;
+        return false;
 
     bool bRes = false;
     if (xDictionary.is())
@@ -459,7 +446,7 @@ sal_Bool SAL_CALL
     osl::MutexGuard aGuard( GetLinguMutex() );
 
     if (bDisposing)
-        return sal_False;
+        return false;
 
     bool  bRes = false;
     sal_Int32 nPos = GetDicPos( xDictionary );
@@ -472,7 +459,7 @@ sal_Bool SAL_CALL
         if (xDic.is())
         {
             // deactivate dictionary if not already done
-            xDic->setActive( sal_False );
+            xDic->setActive( false );
 
             xDic->removeDictionaryEventListener( xDicEvtLstnrHelper );
         }
@@ -492,7 +479,7 @@ sal_Bool SAL_CALL DicList::addDictionaryListEventListener(
     osl::MutexGuard aGuard( GetLinguMutex() );
 
     if (bDisposing)
-        return sal_False;
+        return false;
 
     DBG_ASSERT(!bReceiveVerbose, "lng : not yet supported");
 
@@ -512,7 +499,7 @@ sal_Bool SAL_CALL DicList::removeDictionaryListEventListener(
     osl::MutexGuard aGuard( GetLinguMutex() );
 
     if (bDisposing)
-        return sal_False;
+        return false;
 
     bool bRes = false;
     if(xListener.is())
@@ -632,18 +619,17 @@ void SAL_CALL
         aEvtListeners.removeInterface( rxListener );
 }
 
-void DicList::_CreateDicList()
+void DicList::CreateDicList()
 {
     bInCreation = true;
 
     // look for dictionaries
     const OUString aWriteablePath( GetDictionaryWriteablePath() );
-    uno::Sequence< OUString > aPaths( GetDictionaryPaths() );
-    const OUString *pPaths = aPaths.getConstArray();
-    for (sal_Int32 i = 0;  i < aPaths.getLength();  ++i)
+    std::vector< OUString > aPaths( GetDictionaryPaths() );
+    for (OUString & aPath : aPaths)
     {
-        const bool bIsWriteablePath = (pPaths[i] == aWriteablePath);
-        SearchForDictionaries( aDicList, pPaths[i], bIsWriteablePath );
+        const bool bIsWriteablePath = (aPath == aWriteablePath);
+        SearchForDictionaries( aDicList, aPath, bIsWriteablePath );
     }
 
     // create IgnoreAllList dictionary with empty URL (non persistent)
@@ -655,7 +641,7 @@ void DicList::_CreateDicList()
     if (xIgnAll.is())
     {
         AddUserData( xIgnAll );
-        xIgnAll->setActive( sal_True );
+        xIgnAll->setActive( true );
         addDictionary( xIgnAll );
     }
 
@@ -674,7 +660,7 @@ void DicList::_CreateDicList()
         {
             uno::Reference< XDictionary > xDic( getDictionaryByName( pActiveDic[i] ) );
             if (xDic.is())
-                xDic->setActive( sal_True );
+                xDic->setActive( true );
         }
     }
 
@@ -696,7 +682,7 @@ void DicList::SaveDics()
     {
         // save (modified) dictionaries
         DictionaryVec_t& rDicList = GetOrCreateDicList();
-        size_t nCount = rDicList.size();;
+        size_t nCount = rDicList.size();
         for (size_t i = 0;  i < nCount;  i++)
         {
             // save (modified) dictionaries
@@ -817,7 +803,7 @@ static void AddInternal(
         {
             if( !aToken.isEmpty()  &&  !IsNumeric( aToken ) )
             {
-                rDic->add( aToken, sal_False, OUString() );
+                rDic->add( aToken, false, OUString() );
             }
         }
     }

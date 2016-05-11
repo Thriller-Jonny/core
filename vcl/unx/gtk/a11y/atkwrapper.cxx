@@ -56,7 +56,6 @@
 
 #include <rtl/ref.hxx>
 #include <osl/diagnose.h>
-#include <sal/alloca.h>
 #include <cppuhelper/factory.hxx>
 #include <cppuhelper/queryinterface.hxx>
 
@@ -66,6 +65,7 @@
 #include "atktextattributes.hxx"
 
 #include <string.h>
+#include <vector>
 
 using namespace ::com::sun::star;
 
@@ -176,11 +176,12 @@ AtkStateType mapAtkState( sal_Int16 nState )
     return type;
 }
 
-static inline AtkRole registerRole( const gchar * name )
+static inline AtkRole getRoleForName( const gchar * name )
 {
     AtkRole ret = atk_role_for_name( name );
     if( ATK_ROLE_INVALID == ret )
     {
+        // this should only happen in old ATK versions
         SAL_WNODEPRECATED_DECLARATIONS_PUSH
         ret = atk_role_register( name );
         SAL_WNODEPRECATED_DECLARATIONS_POP
@@ -214,13 +215,13 @@ static AtkRole mapToAtkRole( sal_Int16 nRole )
         ATK_ROLE_FILLER,
         ATK_ROLE_FONT_CHOOSER,
         ATK_ROLE_FOOTER,
-        ATK_ROLE_TEXT,            // FOOTNOTE - registered below
+        ATK_ROLE_UNKNOWN,         // FOOTNOTE - registered below
         ATK_ROLE_FRAME,
         ATK_ROLE_GLASS_PANE,
         ATK_ROLE_IMAGE,           // GRAPHIC
         ATK_ROLE_UNKNOWN,         // GROUP_BOX - registered below
         ATK_ROLE_HEADER,
-        ATK_ROLE_HEADING,         // HEADING - registered below
+        ATK_ROLE_HEADING,
         ATK_ROLE_TEXT,            // HYPER_LINK - registered below
         ATK_ROLE_ICON,
         ATK_ROLE_INTERNAL_FRAME,
@@ -246,16 +247,16 @@ static AtkRole mapToAtkRole( sal_Int16 nRole )
         ATK_ROLE_ROOT_PANE,
         ATK_ROLE_SCROLL_BAR,
         ATK_ROLE_SCROLL_PANE,
-        ATK_ROLE_UNKNOWN,        // SHAPE - registered below
+        ATK_ROLE_PANEL,         // SHAPE
         ATK_ROLE_SEPARATOR,
         ATK_ROLE_SLIDER,
-        ATK_ROLE_SPIN_BUTTON,    // SPIN_BOX ?
+        ATK_ROLE_SPIN_BUTTON,   // SPIN_BOX ?
         ATK_ROLE_SPLIT_PANE,
         ATK_ROLE_STATUSBAR,
         ATK_ROLE_TABLE,
         ATK_ROLE_TABLE_CELL,
         ATK_ROLE_TEXT,
-        ATK_ROLE_INTERNAL_FRAME, // TEXT_FRAME - registered below
+        ATK_ROLE_PANEL,         // TEXT_FRAME
         ATK_ROLE_TOGGLE_BUTTON,
         ATK_ROLE_TOOL_BAR,
         ATK_ROLE_TOOL_TIP,
@@ -294,28 +295,24 @@ static AtkRole mapToAtkRole( sal_Int16 nRole )
 
     if( ! initialized )
     {
-        // re-use strings from ATK library
-        roleMap[accessibility::AccessibleRole::EDIT_BAR] = registerRole("editbar");
-        roleMap[accessibility::AccessibleRole::EMBEDDED_OBJECT] = registerRole("embedded");
-        roleMap[accessibility::AccessibleRole::CHART] = registerRole("chart");
-        roleMap[accessibility::AccessibleRole::CAPTION] = registerRole("caption");
-        roleMap[accessibility::AccessibleRole::DOCUMENT] = registerRole("document frame");
-        roleMap[accessibility::AccessibleRole::HEADING] = registerRole("heading");
-        roleMap[accessibility::AccessibleRole::PAGE] = registerRole("page");
-        roleMap[accessibility::AccessibleRole::SECTION] = registerRole("section");
-        roleMap[accessibility::AccessibleRole::FORM] = registerRole("form");
-        roleMap[accessibility::AccessibleRole::GROUP_BOX] = registerRole("grouping");
-        roleMap[accessibility::AccessibleRole::COMMENT] = registerRole("comment");
-        roleMap[accessibility::AccessibleRole::IMAGE_MAP] = registerRole("image map");
-        roleMap[accessibility::AccessibleRole::TREE_ITEM] = registerRole("tree item");
-        roleMap[accessibility::AccessibleRole::HYPER_LINK] = registerRole("link");
-
-        // these don't exist in ATK yet
-        roleMap[accessibility::AccessibleRole::END_NOTE] = registerRole("end note");
-        roleMap[accessibility::AccessibleRole::FOOTNOTE] = registerRole("foot note");
-        roleMap[accessibility::AccessibleRole::SHAPE] = registerRole("shape");
-        roleMap[accessibility::AccessibleRole::TEXT_FRAME] = registerRole("text frame");
-        roleMap[accessibility::AccessibleRole::NOTE] = registerRole("note");
+        // the accessible roles below were added to ATK in later versions,
+        // with role_for_name we will know if they exist in runtime.
+        roleMap[accessibility::AccessibleRole::EDIT_BAR] = getRoleForName("editbar");
+        roleMap[accessibility::AccessibleRole::EMBEDDED_OBJECT] = getRoleForName("embedded");
+        roleMap[accessibility::AccessibleRole::CHART] = getRoleForName("chart");
+        roleMap[accessibility::AccessibleRole::CAPTION] = getRoleForName("caption");
+        roleMap[accessibility::AccessibleRole::DOCUMENT] = getRoleForName("document frame");
+        roleMap[accessibility::AccessibleRole::PAGE] = getRoleForName("page");
+        roleMap[accessibility::AccessibleRole::SECTION] = getRoleForName("section");
+        roleMap[accessibility::AccessibleRole::FORM] = getRoleForName("form");
+        roleMap[accessibility::AccessibleRole::GROUP_BOX] = getRoleForName("grouping");
+        roleMap[accessibility::AccessibleRole::COMMENT] = getRoleForName("comment");
+        roleMap[accessibility::AccessibleRole::IMAGE_MAP] = getRoleForName("image map");
+        roleMap[accessibility::AccessibleRole::TREE_ITEM] = getRoleForName("tree item");
+        roleMap[accessibility::AccessibleRole::HYPER_LINK] = getRoleForName("link");
+        roleMap[accessibility::AccessibleRole::END_NOTE] = getRoleForName("comment");
+        roleMap[accessibility::AccessibleRole::FOOTNOTE] = getRoleForName("comment");
+        roleMap[accessibility::AccessibleRole::NOTE] = getRoleForName("comment");
 
         initialized = true;
     }
@@ -505,18 +502,19 @@ wrapper_ref_relation_set( AtkObject *atk_obj )
             {
                 accessibility::AccessibleRelation aRelation = xRelationSet->getRelation( n );
                 sal_uInt32 nTargetCount = aRelation.TargetSet.getLength();
-                AtkObject **pTargets = static_cast<AtkObject **>(alloca( nTargetCount * sizeof(AtkObject *) ));
 
-                for( sal_uInt32 i = 0; i < nTargetCount; i++ )
+                std::vector<AtkObject*> aTargets;
+
+                for (sal_uInt32 i = 0; i < nTargetCount; ++i)
                 {
                     uno::Reference< accessibility::XAccessible > xAccessible(
                             aRelation.TargetSet[i], uno::UNO_QUERY );
-                    pTargets[i] = atk_object_wrapper_ref( xAccessible );
+                    aTargets.push_back(atk_object_wrapper_ref(xAccessible));
                 }
 
                 AtkRelation *pRel =
                     atk_relation_new(
-                        pTargets, nTargetCount,
+                        aTargets.data(), nTargetCount,
                         mapRelationType( aRelation.RelationType )
                     );
                 atk_relation_set_add( pSet, pRel );

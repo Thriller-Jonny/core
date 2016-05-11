@@ -36,6 +36,7 @@
 #include <editeng/protitem.hxx>
 #include <svx/svdpage.hxx>
 #include <svx/svdpagv.hxx>
+#include <tools/globname.hxx>
 #include <IDocumentSettingAccess.hxx>
 #include <DocumentSettingManager.hxx>
 #include <IDocumentState.hxx>
@@ -228,19 +229,22 @@ bool SwFEShell::SelectObj( const Point& rPt, sal_uInt8 nFlag, SdrObject *pObj )
         }
     }
 
-    // If the fly frame is a textbox of a shape, then select the shape instead.
-    std::map<SwFrameFormat*, SwFrameFormat*> aTextBoxShapes = SwTextBoxHelper::findShapes(mpDoc);
-    for (size_t i = 0; i < rMrkList.GetMarkCount(); ++i)
+    if (!(nFlag & SW_ALLOW_TEXTBOX))
     {
-        SdrObject* pObject = rMrkList.GetMark(i)->GetMarkedSdrObj();
-        SwContact* pDrawContact = static_cast<SwContact*>(GetUserCall(pObject));
-        SwFrameFormat* pFormat = pDrawContact->GetFormat();
-        if (aTextBoxShapes.find(pFormat) != aTextBoxShapes.end())
+        // If the fly frame is a textbox of a shape, then select the shape instead.
+        std::map<SwFrameFormat*, SwFrameFormat*> aTextBoxShapes = SwTextBoxHelper::findShapes(mpDoc);
+        for (size_t i = 0; i < rMrkList.GetMarkCount(); ++i)
         {
-            SdrObject* pShape = aTextBoxShapes[pFormat]->FindSdrObject();
-            pDView->UnmarkAll();
-            pDView->MarkObj(pShape, Imp()->GetPageView(), bAddSelect, bEnterGroup);
-            break;
+            SdrObject* pObject = rMrkList.GetMark(i)->GetMarkedSdrObj();
+            SwContact* pDrawContact = static_cast<SwContact*>(GetUserCall(pObject));
+            SwFrameFormat* pFormat = pDrawContact->GetFormat();
+            if (aTextBoxShapes.find(pFormat) != aTextBoxShapes.end())
+            {
+                SdrObject* pShape = aTextBoxShapes[pFormat]->FindSdrObject();
+                pDView->UnmarkAll();
+                pDView->MarkObj(pShape, Imp()->GetPageView(), bAddSelect, bEnterGroup);
+                break;
+            }
         }
     }
 
@@ -385,7 +389,8 @@ bool SwFEShell::MoveAnchor( SwMove nDir )
                     if( pos != *aAnch.GetContentAnchor())
                         aAnch.SetAnchor( &pos );
                 }
-            } // no break!
+                SAL_FALLTHROUGH;
+            }
             case FLY_AT_PARA:
             {
                 OSL_ENSURE( pOld->IsContentFrame(), "Wrong anchor, page expected." );
@@ -532,7 +537,7 @@ bool SwFEShell::MoveAnchor( SwMove nDir )
     return bRet;
 }
 
-const SdrMarkList* SwFEShell::_GetMarkList() const
+const SdrMarkList* SwFEShell::GetMarkList_() const
 {
     const SdrMarkList* pMarkList = nullptr;
     if( Imp()->GetDrawView() != nullptr )
@@ -545,7 +550,7 @@ FrameTypeFlags SwFEShell::GetSelFrameType() const
     FrameTypeFlags eType;
 
     // get marked frame list, and check if anything is selected
-    const SdrMarkList* pMarkList = _GetMarkList();
+    const SdrMarkList* pMarkList = GetMarkList_();
     if( pMarkList == nullptr  ||  pMarkList->GetMarkCount() == 0 )
         eType = FrameTypeFlags::NONE;
     else
@@ -579,7 +584,7 @@ bool SwFEShell::IsSelContainsControl() const
 
     // basically, copy the mechanism from GetSelFrameType(), but call
     // CheckControl... if you get a drawing object
-    const SdrMarkList* pMarkList = _GetMarkList();
+    const SdrMarkList* pMarkList = GetMarkList_();
     if( pMarkList != nullptr  &&  pMarkList->GetMarkCount() == 1 )
     {
         // if we have one marked object, get the SdrObject and check
@@ -683,7 +688,7 @@ long SwFEShell::Drag( const Point *pPt, bool )
     return 0;
 }
 
-long SwFEShell::EndDrag( const Point *, bool )
+void SwFEShell::EndDrag( const Point * )
 {
     OSL_ENSURE( Imp()->HasDrawView(), "EndDrag without DrawView?" );
     SdrView *pView = Imp()->GetDrawView();
@@ -696,7 +701,7 @@ long SwFEShell::EndDrag( const Point *, bool )
 
         // #50778# Bug during dragging: In StartAction a HideShowXor is called.
         // In EndDragObj() this is reversed, for no reason and even wrong.
-        // To restore consistancy we should bring up the Xor again.
+        // To restore consistency we should bring up the Xor again.
 
         // Reanimation from the hack #50778 to fix bug #97057
         // May be not the best solution, but the one with lowest risc at the moment.
@@ -720,10 +725,7 @@ long SwFEShell::EndDrag( const Point *, bool )
 
         GetDoc()->getIDocumentState().SetModified();
         ::FrameNotify( this );
-
-        return 1;
     }
-    return 0;
 }
 
 void SwFEShell::BreakDrag()
@@ -2292,9 +2294,10 @@ bool SwFEShell::GotoFly( const OUString& rName, FlyCntType eType, bool bSelFrame
         {
             if( bSelFrame )
             {
-                SelectObj( pFrame->Frame().Pos(), 0, pFrame->GetVirtDrawObj() );
-                if( !ActionPend() )
+                // first make visible, to get a11y events in proper order
+                if (!ActionPend())
                     MakeVisible( pFrame->Frame() );
+                SelectObj( pFrame->Frame().Pos(), 0, pFrame->GetVirtDrawObj() );
             }
             else
             {
@@ -2748,6 +2751,7 @@ long SwFEShell::GetSectionWidth( SwFormat const & rFormat ) const
             switch(eSdrObjectKind)
             {
                 case OBJ_PATHLINE:
+                case OBJ_PATHFILL:
                 {
                     basegfx::B2DPolygon aInnerPoly;
 
@@ -2770,6 +2774,7 @@ long SwFEShell::GetSectionWidth( SwFormat const & rFormat ) const
                 }
                 break;
                 case OBJ_FREELINE:
+                case OBJ_FREEFILL:
                 {
                     basegfx::B2DPolygon aInnerPoly;
 

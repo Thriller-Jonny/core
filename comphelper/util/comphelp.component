@@ -19,39 +19,48 @@
 
 <component loader="com.sun.star.loader.SharedLibrary" environment="@CPPU_ENV@"
     prefix="comphelp" xmlns="http://openoffice.org/2010/uno-components">
-  <implementation name="AnyCompareFactory">
+  <implementation name="AnyCompareFactory"
+      constructor="AnyCompareFactory_get_implementation">
     <service name="com.sun.star.ucb.AnyCompareFactory"/>
   </implementation>
-  <implementation name="IndexedPropertyValuesContainer">
+  <implementation name="IndexedPropertyValuesContainer"
+      constructor="IndexedPropertyValuesContainer_get_implementation">
     <service name="com.sun.star.document.IndexedPropertyValues"/>
   </implementation>
-  <implementation name="NamedPropertyValuesContainer">
+  <implementation name="NamedPropertyValuesContainer"
+      constructor="NamedPropertyValuesContainer_get_implementation">
     <service name="com.sun.star.document.NamedPropertyValues"/>
   </implementation>
   <implementation name="com.sun.star.comp.MemoryStream">
     <service name="com.sun.star.comp.MemoryStream"/>
   </implementation>
-  <implementation name="com.sun.star.comp.SequenceInputStreamService">
+  <implementation name="com.sun.star.comp.SequenceInputStreamService"
+      constructor="com_sun_star_comp_SequenceInputStreamService">
     <service name="com.sun.star.io.SequenceInputStream"/>
   </implementation>
-  <implementation name="com.sun.star.comp.SequenceOutputStreamService">
+  <implementation name="com.sun.star.comp.SequenceOutputStreamService"
+      constructor="com_sun_star_comp_SequenceOutputStreamService">
     <service name="com.sun.star.io.SequenceOutputStream"/>
   </implementation>
   <implementation name="com.sun.star.comp.comphelper.OPropertyBag">
     <service name="com.sun.star.beans.PropertyBag"/>
   </implementation>
-  <implementation name="com.sun.star.comp.embed.InstanceLocker">
+  <implementation name="com.sun.star.comp.embed.InstanceLocker"
+      constructor="com_sun_star_comp_embed_InstanceLocker">
     <service name="com.sun.star.embed.InstanceLocker"/>
   </implementation>
-  <implementation name="com.sun.star.comp.logging.SimpleLogRing">
+  <implementation name="com.sun.star.comp.logging.SimpleLogRing"
+      constructor="com_sun_star_comp_logging_SimpleLogRing">
     <service name="com.sun.star.logging.SimpleLogRing"/>
     <singleton name="com.sun.star.logging.DocumentIOLogRing"/>
   </implementation>
-  <implementation name="com.sun.star.comp.task.OfficeRestartManager">
+  <implementation name="com.sun.star.comp.task.OfficeRestartManager"
+      constructor="com_sun_star_comp_task_OfficeRestartManager">
     <service name="com.sun.star.comp.task.OfficeRestartManager"/>
     <singleton name="com.sun.star.task.OfficeRestartManager"/>
   </implementation>
-  <implementation name="com.sun.star.comp.util.OfficeInstallationDirectories">
+  <implementation name="com.sun.star.comp.util.OfficeInstallationDirectories"
+      constructor="com_sun_star_comp_util_OfficeInstallationDirectories">
     <service name="com.sun.star.util.OfficeInstallationDirectories"/>
     <singleton name="com.sun.star.util.theOfficeInstallationDirectories"/>
   </implementation>

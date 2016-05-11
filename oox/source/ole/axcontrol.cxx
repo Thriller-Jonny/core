@@ -32,6 +32,7 @@
 #include <com/sun/star/awt/VisualEffect.hpp>
 #include <com/sun/star/awt/XControlModel.hpp>
 #include <com/sun/star/beans/NamedValue.hpp>
+#include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/container/XIndexContainer.hpp>
 #include <com/sun/star/form/XForm.hpp>
 #include <com/sun/star/form/XFormComponent.hpp>
@@ -55,6 +56,8 @@
 #include "oox/helper/graphichelper.hxx"
 #include "oox/helper/propertymap.hxx"
 #include "oox/ole/axbinarywriter.hxx"
+#include <oox/token/properties.hxx>
+#include <oox/token/tokens.hxx>
 namespace oox {
 namespace ole {
 
@@ -398,7 +401,7 @@ void ControlConverter::convertAxBackground( PropertyMap& rPropMap,
         break;
         case API_TRANSPARENCY_PAINTTRANSPARENT:
             rPropMap.setProperty( PROP_PaintTransparent, !bOpaque );
-            // run-through intended!
+            SAL_FALLTHROUGH;
         case API_TRANSPARENCY_VOID:
             // keep transparency by leaving the (void) default property value
             if( bOpaque )
@@ -430,6 +433,7 @@ void ControlConverter::convertToAxBorder( PropertySet& rPropSet,
             break;
         case API_BORDER_SUNKEN:
             nSpecialEffect =  AX_SPECIALEFFECT_SUNKEN;
+            break;
         case API_BORDER_NONE:
         default:
             break;
@@ -693,7 +697,7 @@ sal_uInt32 ComCtlModelBase::getDataPartId() const
         case COMCTL_VERSION_50: return mnDataPartId5;
         case COMCTL_VERSION_60: return mnDataPartId6;
     }
-    OSL_FAIL( "ComCtlObjectBase::getDataPartId - unxpected version" );
+    OSL_FAIL( "ComCtlObjectBase::getDataPartId - unexpected version" );
     return SAL_MAX_UINT32;
 }
 
@@ -2456,7 +2460,7 @@ ApiControlType AxMultiPageModel::getControlType() const
     return API_CONTROL_MULTIPAGE;
 }
 
-bool AxMultiPageModel::importPageAndMultiPageProperties( BinaryInputStream& rInStrm, sal_Int32 nPages )
+void AxMultiPageModel::importPageAndMultiPageProperties( BinaryInputStream& rInStrm, sal_Int32 nPages )
 {
     // PageProperties
     for ( sal_Int32 nPage = 0; nPage < nPages; ++nPage )
@@ -2478,7 +2482,6 @@ bool AxMultiPageModel::importPageAndMultiPageProperties( BinaryInputStream& rInS
     {
         mnIDs.push_back( rInStrm.readInt32() );
     }
-    return true;
 }
 
 void AxMultiPageModel::convertProperties( PropertyMap& rPropMap, const ControlConverter& rConv ) const
@@ -2617,23 +2620,21 @@ EmbeddedControl::~EmbeddedControl()
 
 ControlModelBase* EmbeddedControl::createModelFromGuid( const OUString& rClassId )
 {
-    OUString aClassId = rClassId;//.toAsciiUpperCase();
-
-    if( aClassId.equalsIgnoreAsciiCase( AX_GUID_COMMANDBUTTON ) )     return &createModel< AxCommandButtonModel >();
-    if( aClassId.equalsIgnoreAsciiCase( AX_GUID_LABEL ) )             return &createModel< AxLabelModel >();
-    if( aClassId.equalsIgnoreAsciiCase( AX_GUID_IMAGE ) )             return &createModel< AxImageModel >();
-    if( aClassId.equalsIgnoreAsciiCase( AX_GUID_TOGGLEBUTTON ) )      return &createModel< AxToggleButtonModel >();
-    if( aClassId.equalsIgnoreAsciiCase( AX_GUID_CHECKBOX ) )          return &createModel< AxCheckBoxModel >();
-    if( aClassId.equalsIgnoreAsciiCase( AX_GUID_OPTIONBUTTON ) )      return &createModel< AxOptionButtonModel >();
-    if( aClassId.equalsIgnoreAsciiCase( AX_GUID_TEXTBOX ) )           return &createModel< AxTextBoxModel >();
-    if( aClassId.equalsIgnoreAsciiCase( AX_GUID_LISTBOX ) )           return &createModel< AxListBoxModel >();
-    if( aClassId.equalsIgnoreAsciiCase( AX_GUID_COMBOBOX ) )          return &createModel< AxComboBoxModel >();
-    if( aClassId.equalsIgnoreAsciiCase( AX_GUID_SPINBUTTON ) )        return &createModel< AxSpinButtonModel >();
-    if( aClassId.equalsIgnoreAsciiCase( AX_GUID_SCROLLBAR ) )         return &createModel< AxScrollBarModel >();
-    if( aClassId.equalsIgnoreAsciiCase( AX_GUID_FRAME ) )             return &createModel< AxFrameModel >();
-    if( aClassId.equalsIgnoreAsciiCase( COMCTL_GUID_SCROLLBAR_60 ) )  return &createModel< ComCtlScrollBarModel >( COMCTL_VERSION_60 );
-    if( aClassId.equalsIgnoreAsciiCase( HTML_GUID_SELECT ) )  return &createModel< HtmlSelectModel >();
-    if( aClassId.equalsIgnoreAsciiCase( HTML_GUID_TEXTBOX ) ) return &createModel< HtmlTextBoxModel >();
+    if( rClassId.equalsIgnoreAsciiCase( AX_GUID_COMMANDBUTTON ) )     return &createModel< AxCommandButtonModel >();
+    if( rClassId.equalsIgnoreAsciiCase( AX_GUID_LABEL ) )             return &createModel< AxLabelModel >();
+    if( rClassId.equalsIgnoreAsciiCase( AX_GUID_IMAGE ) )             return &createModel< AxImageModel >();
+    if( rClassId.equalsIgnoreAsciiCase( AX_GUID_TOGGLEBUTTON ) )      return &createModel< AxToggleButtonModel >();
+    if( rClassId.equalsIgnoreAsciiCase( AX_GUID_CHECKBOX ) )          return &createModel< AxCheckBoxModel >();
+    if( rClassId.equalsIgnoreAsciiCase( AX_GUID_OPTIONBUTTON ) )      return &createModel< AxOptionButtonModel >();
+    if( rClassId.equalsIgnoreAsciiCase( AX_GUID_TEXTBOX ) )           return &createModel< AxTextBoxModel >();
+    if( rClassId.equalsIgnoreAsciiCase( AX_GUID_LISTBOX ) )           return &createModel< AxListBoxModel >();
+    if( rClassId.equalsIgnoreAsciiCase( AX_GUID_COMBOBOX ) )          return &createModel< AxComboBoxModel >();
+    if( rClassId.equalsIgnoreAsciiCase( AX_GUID_SPINBUTTON ) )        return &createModel< AxSpinButtonModel >();
+    if( rClassId.equalsIgnoreAsciiCase( AX_GUID_SCROLLBAR ) )         return &createModel< AxScrollBarModel >();
+    if( rClassId.equalsIgnoreAsciiCase( AX_GUID_FRAME ) )             return &createModel< AxFrameModel >();
+    if( rClassId.equalsIgnoreAsciiCase( COMCTL_GUID_SCROLLBAR_60 ) )  return &createModel< ComCtlScrollBarModel >( COMCTL_VERSION_60 );
+    if( rClassId.equalsIgnoreAsciiCase( HTML_GUID_SELECT ) )  return &createModel< HtmlSelectModel >();
+    if( rClassId.equalsIgnoreAsciiCase( HTML_GUID_TEXTBOX ) ) return &createModel< HtmlTextBoxModel >();
 
     mxModel.reset();
     return nullptr;
@@ -2666,16 +2667,14 @@ bool EmbeddedControl::convertProperties( const Reference< XControlModel >& rxCtr
     return false;
 }
 
-bool EmbeddedControl::convertFromProperties( const Reference< XControlModel >& rxCtrlModel, const ControlConverter& rConv )
+void EmbeddedControl::convertFromProperties( const Reference< XControlModel >& rxCtrlModel, const ControlConverter& rConv )
 {
     if( mxModel.get() && rxCtrlModel.is() && !maName.isEmpty() )
     {
         PropertySet aPropSet( rxCtrlModel );
         aPropSet.getProperty( maName, PROP_Name );
         mxModel->convertFromProperties( aPropSet, rConv );
-        return true;
     }
-    return false;
 }
 
 EmbeddedForm::EmbeddedForm( const Reference< XModel >& rxDocModel,

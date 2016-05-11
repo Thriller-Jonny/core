@@ -34,9 +34,9 @@
 #define USER_DATA_VERSION_1 "1"
 #define USER_DATA_VERSION USER_DATA_VERSION_1
 
-SwFieldDokPage::SwFieldDokPage(vcl::Window* pParent, const SfxItemSet& rCoreSet )
+SwFieldDokPage::SwFieldDokPage(vcl::Window* pParent, const SfxItemSet *const pCoreSet)
     : SwFieldPage(pParent, "FieldDocumentPage",
-        "modules/swriter/ui/flddocumentpage.ui", rCoreSet)
+        "modules/swriter/ui/flddocumentpage.ui", pCoreSet)
     , nOldSel(0)
     , nOldFormat(0)
 {
@@ -239,7 +239,7 @@ IMPL_LINK_NOARG_TYPED(SwFieldDokPage, TypeHdl, ListBox&, void)
             if (nTypeId != TYP_AUTHORFLD)
                 nCount = aLst.size();
             else
-                nCount = GetFieldMgr().GetFormatCount(nTypeId, false, IsFieldDlgHtmlMode());
+                nCount = GetFieldMgr().GetFormatCount(nTypeId, IsFieldDlgHtmlMode());
 
             size_t nPos;
 
@@ -498,7 +498,7 @@ sal_Int32 SwFieldDokPage::FillFormatLB(sal_uInt16 nTypeId)
     if (nTypeId == TYP_AUTHORFLD)
         return m_pFormatLB->GetEntryCount();
 
-    const sal_uInt16 nSize = GetFieldMgr().GetFormatCount(nTypeId, false, IsFieldDlgHtmlMode());
+    const sal_uInt16 nSize = GetFieldMgr().GetFormatCount(nTypeId, IsFieldDlgHtmlMode());
 
     for( sal_uInt16 i = 0; i < nSize; ++i )
     {
@@ -590,7 +590,7 @@ bool SwFieldDokPage::FillItemSet(SfxItemSet* )
         case TYP_AUTHORFLD:
             nFormat = nSubType;
             nSubType = 0;
-            // no break!
+            SAL_FALLTHROUGH;
         case TYP_EXTUSERFLD:
             nFormat |= m_pFixedCB->IsChecked() ? AF_FIXED : 0;
             break;
@@ -648,9 +648,9 @@ bool SwFieldDokPage::FillItemSet(SfxItemSet* )
 }
 
 VclPtr<SfxTabPage> SwFieldDokPage::Create( vcl::Window* pParent,
-                                         const SfxItemSet* rAttrSet )
+                                         const SfxItemSet *const pAttrSet)
 {
-    return VclPtr<SwFieldDokPage>::Create( pParent, *rAttrSet );
+    return VclPtr<SwFieldDokPage>::Create( pParent, pAttrSet );
 }
 
 sal_uInt16 SwFieldDokPage::GetGroup()

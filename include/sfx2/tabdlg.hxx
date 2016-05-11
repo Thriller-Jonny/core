@@ -78,13 +78,13 @@ friend class SfxTabDialogController;
     bool m_bOwnsResetBtn;
     bool m_bOwnsBaseFmtBtn;
 
-    SfxItemSet*         pSet;
-    SfxItemSet*         pOutSet;
-    TabDlg_Impl*        pImpl;
-    sal_uInt16*         pRanges;
-    sal_uInt16          nAppPageId;
-    bool                bItemsReset;
-    bool                bStandardPushed;
+    SfxItemSet*         m_pSet;
+    SfxItemSet*         m_pOutSet;
+    TabDlg_Impl*        m_pImpl;
+    sal_uInt16*         m_pRanges;
+    sal_uInt16          m_nAppPageId;
+    bool                m_bItemsReset;
+    bool                m_bStandardPushed;
 
     DECL_DLLPRIVATE_LINK_TYPED(ActivatePageHdl, TabControl*, void );
     DECL_DLLPRIVATE_LINK_TYPED(DeactivatePageHdl, TabControl*, bool );
@@ -104,7 +104,7 @@ protected:
     virtual void                PageCreated( sal_uInt16 nId, SfxTabPage &rPage );
 
     VclPtr<VclButtonBox>   m_pActionArea;
-    SfxItemSet*     pExampleSet;
+    SfxItemSet*     m_pExampleSet;
     SfxItemSet*     GetInputSetImpl();
     SfxTabPage*     GetTabPage( sal_uInt16 nPageId ) const;
 
@@ -127,8 +127,7 @@ public:
 
     sal_uInt16          AddTabPage( const OString& rName,           // Name of the label for the page in the notebook .ui
                                     CreateTabPage pCreateFunc,      // != 0
-                                    GetTabPageRanges pRangesFunc,   // can be 0
-                                    bool bItemsOnDemand = false);
+                                    GetTabPageRanges pRangesFunc);  // can be 0
 
     sal_uInt16          AddTabPage ( const OString &rName,          // Name of the label for the page in the notebook .ui
                                      sal_uInt16 nPageCreateId );    // Identifier of the Factory Method to create the page
@@ -137,24 +136,21 @@ public:
                                     const OUString &rRiderText,
                                     CreateTabPage pCreateFunc,      // != 0
                                     GetTabPageRanges pRangesFunc,   // can be 0
-                                    bool bItemsOnDemand = false,
                                     sal_uInt16 nPos = TAB_APPEND);
 
     void                AddTabPage( sal_uInt16 nId,
-                                    const OUString &rRiderText,
-                                    bool bItemsOnDemand = false,
-                                    sal_uInt16 nPos = TAB_APPEND);
+                                    const OUString &rRiderText);
 
     void                RemoveTabPage( const OString& rName ); // Name of the label for the page in the notebook .ui
     void                RemoveTabPage( sal_uInt16 nId );
 
     void                SetCurPageId(sal_uInt16 nId)
     {
-        nAppPageId = nId;
+        m_nAppPageId = nId;
     }
     void                SetCurPageId(const OString& rName)
     {
-        nAppPageId = m_pTabCtrl->GetPageId(rName);
+        m_nAppPageId = m_pTabCtrl->GetPageId(rName);
     }
     sal_uInt16          GetCurPageId() const
     {
@@ -176,7 +172,7 @@ public:
     // may provide local slots converted by Map
     const sal_uInt16*       GetInputRanges( const SfxItemPool& );
     void                SetInputSet( const SfxItemSet* pInSet );
-    const SfxItemSet*   GetOutputItemSet() const { return pOutSet; }
+    const SfxItemSet*   GetOutputItemSet() const { return m_pOutSet; }
 
     const PushButton&   GetOKButton() const { return *m_pOKBtn; }
     PushButton&         GetOKButton() { return *m_pOKBtn; }
@@ -190,10 +186,10 @@ public:
 
     short               Execute() override;
     void                StartExecuteModal( const Link<Dialog&,void>& rEndDialogHdl ) override;
-    void                Start( bool bShow = true );
+    void                Start();
 
-    const SfxItemSet*   GetExampleSet() const { return pExampleSet; }
-    SfxItemSet*         GetExampleSet() { return pExampleSet; }
+    const SfxItemSet*   GetExampleSet() const { return m_pExampleSet; }
+    SfxItemSet*         GetExampleSet() { return m_pExampleSet; }
 
     void                SetApplyHandler(const Link<Button*,void>& _rHdl);
 
@@ -236,8 +232,8 @@ public:
 
     bool                HasExchangeSupport() const
                             { return bHasExchangeSupport; }
-    void                SetExchangeSupport( bool bNew = true )
-                            { bHasExchangeSupport = bNew; }
+    void                SetExchangeSupport()
+                            { bHasExchangeSupport = true; }
 
     enum sfxpg {
       KEEP_PAGE = 0x0000,      // Error handling; page does not change
@@ -254,7 +250,7 @@ public:
     virtual sfxpg           DeactivatePage( SfxItemSet* pSet );
     void                    SetUserData(const OUString& rString)
                               { aUserString = rString; }
-    OUString                GetUserData() { return aUserString; }
+    const OUString&         GetUserData() { return aUserString; }
     virtual void            FillUserData();
     virtual bool            IsReadOnly() const;
     virtual void PageCreated (const SfxAllItemSet& aSet);

@@ -120,7 +120,7 @@ void PagePrimitiveExtractor::Invoke()
 drawinglayer::primitive2d::Primitive2DContainer PagePrimitiveExtractor::createPrimitive2DSequenceForPage(const DisplayInfo& /*rDisplayInfo*/)
 {
     drawinglayer::primitive2d::Primitive2DContainer xRetval;
-    const SdrPage* pStartPage = GetStartPage();
+    SdrPage* pStartPage = GetStartPage();
 
     if(pStartPage)
     {
@@ -138,7 +138,7 @@ drawinglayer::primitive2d::Primitive2DContainer PagePrimitiveExtractor::createPr
             // PagePreviewPrimitive2D::create2DDecomposition)
             basegfx::B2DRange(),
 
-            GetXDrawPageForSdrPage(const_cast< SdrPage* >(pStartPage)),
+            GetXDrawPageForSdrPage(pStartPage),
             0.0, // no time; page previews are not animated
             rOriginalViewInformation.getExtendedInformationSequence());
         updateViewInformation2D(aNewViewInformation2D);
@@ -230,7 +230,8 @@ drawinglayer::primitive2d::Primitive2DContainer ViewObjectContactOfPageObj::crea
             // Recursion is possible. Create a replacement primitive
             xPageContent.resize(2);
             const Color aDocColor(aColorConfig.GetColorValue(svtools::DOCCOLOR).nColor);
-            const Color aBorderColor(aColorConfig.GetColorValue(svtools::DOCBOUNDARIES).nColor);
+            svtools::ColorConfigValue aBorderConfig = aColorConfig.GetColorValue(svtools::DOCBOUNDARIES);
+            const Color aBorderColor = aBorderConfig.bIsVisible ? aBorderConfig.nColor : aDocColor;
             const basegfx::B2DRange aPageBound(0.0, 0.0, fPageWidth, fPageHeight);
             const basegfx::B2DPolygon aOutline(basegfx::tools::createPolygonFromRect(aPageBound));
 
@@ -279,7 +280,6 @@ drawinglayer::primitive2d::Primitive2DContainer ViewObjectContactOfPageObj::crea
         // on the handout page more simple, add hidden fill geometry
         const drawinglayer::primitive2d::Primitive2DReference xFrameHit(
             drawinglayer::primitive2d::createHiddenGeometryPrimitives2D(
-                false,
                 aPageObjectTransform));
         xRetval = drawinglayer::primitive2d::Primitive2DContainer { xFrameHit };
     }

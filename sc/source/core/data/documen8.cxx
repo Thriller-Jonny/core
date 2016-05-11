@@ -221,7 +221,7 @@ void ScDocument::ModifyStyleSheet( SfxStyleSheetBase& rStyleSheet,
 
     switch ( rStyleSheet.GetFamily() )
     {
-        case SFX_STYLE_FAMILY_PAGE:
+        case SfxStyleFamily::Page:
             {
                 const sal_uInt16 nOldScale = getScaleValue(rStyleSheet, ATTR_PAGE_SCALE);
                 const sal_uInt16 nOldScaleToPages = getScaleValue(rStyleSheet, ATTR_PAGE_SCALETOPAGES);
@@ -241,7 +241,7 @@ void ScDocument::ModifyStyleSheet( SfxStyleSheetBase& rStyleSheet,
             }
             break;
 
-        case SFX_STYLE_FAMILY_PARA:
+        case SfxStyleFamily::Para:
             {
                 bool bNumFormatChanged;
                 if ( ScGlobal::CheckWidthInvalidate( bNumFormatChanged,
@@ -367,7 +367,7 @@ sal_uInt8 ScDocument::GetEditTextDirection(SCTAB nTab) const
     EEHorizontalTextDirection eRet = EE_HTEXTDIR_DEFAULT;
 
     OUString aStyleName = GetPageStyle( nTab );
-    SfxStyleSheetBase* pStyle = xPoolHelper->GetStylePool()->Find( aStyleName, SFX_STYLE_FAMILY_PAGE );
+    SfxStyleSheetBase* pStyle = xPoolHelper->GetStylePool()->Find( aStyleName, SfxStyleFamily::Page );
     if ( pStyle )
     {
         SfxItemSet& rStyleSet = pStyle->GetItemSet();
@@ -392,7 +392,7 @@ ScMacroManager* ScDocument::GetMacroManager()
 }
 
 void ScDocument::FillMatrix(
-    ScMatrix& rMat, SCTAB nTab, SCCOL nCol1, SCROW nRow1, SCCOL nCol2, SCROW nRow2 ) const
+    ScMatrix& rMat, SCTAB nTab, SCCOL nCol1, SCROW nRow1, SCCOL nCol2, SCROW nRow2, svl::SharedStringPool* pPool ) const
 {
     const ScTable* pTab = FetchTable(nTab);
     if (!pTab)
@@ -406,7 +406,7 @@ void ScDocument::FillMatrix(
     if (static_cast<SCROW>(nR) != nRow2 - nRow1 + 1 || static_cast<SCCOL>(nC) != nCol2 - nCol1 + 1)
         return;
 
-    pTab->FillMatrix(rMat, nCol1, nRow1, nCol2, nRow2);
+    pTab->FillMatrix(rMat, nCol1, nRow1, nCol2, nRow2, pPool);
 }
 
 void ScDocument::SetFormulaResults( const ScAddress& rTopPos, const double* pResults, size_t nLen )
@@ -482,7 +482,7 @@ public:
         // the calls.
 
         mrDoc.EnableIdle(false);
-        mpStylePool->SetSearchMask(SFX_STYLE_FAMILY_PAGE);
+        mpStylePool->SetSearchMask(SfxStyleFamily::Page);
     }
 
     ~IdleCalcTextWidthScope()
@@ -506,7 +506,7 @@ public:
     void setCol(SCCOL nCol) { mrCalcPos.SetCol(nCol); }
     void setRow(SCROW nRow) { mrCalcPos.SetRow(nRow); }
 
-    void incTab(SCTAB nInc=1) { mrCalcPos.IncTab(nInc); }
+    void incTab() { mrCalcPos.IncTab(); }
     void incCol(SCCOL nInc=1) { mrCalcPos.IncCol(nInc); }
 
     void setOldMapMode(const MapMode& rOldMapMode) { maOldMapMode = rOldMapMode; }
@@ -553,7 +553,7 @@ bool ScDocument::IdleCalcTextWidth()            // true = try next again
         aScope.setTab(0);
 
     ScTable* pTab = maTabs[aScope.Tab()];
-    ScStyleSheet* pStyle = static_cast<ScStyleSheet*>(aScope.getStylePool()->Find(pTab->aPageStyle, SFX_STYLE_FAMILY_PAGE));
+    ScStyleSheet* pStyle = static_cast<ScStyleSheet*>(aScope.getStylePool()->Find(pTab->aPageStyle, SfxStyleFamily::Page));
     OSL_ENSURE( pStyle, "Missing StyleSheet :-/" );
 
     if (!pStyle || getScaleValue(*pStyle, ATTR_PAGE_SCALETOPAGES) == 0)
@@ -641,7 +641,7 @@ bool ScDocument::IdleCalcTextWidth()            // true = try next again
                 {
                     pTab = maTabs[aScope.Tab()];
                     pStyle = static_cast<ScStyleSheet*>(aScope.getStylePool()->Find(
-                        pTab->aPageStyle, SFX_STYLE_FAMILY_PAGE));
+                        pTab->aPageStyle, SfxStyleFamily::Page));
 
                     if ( pStyle )
                     {
@@ -816,7 +816,7 @@ void ScDocument::UpdateExternalRefLinks(vcl::Window* pWin)
     sc::WaitPointerSwitch aWaitSwitch(pWin);
 
     pExternalRefMgr->enableDocTimer(false);
-    ScProgress aProgress(GetDocumentShell(), ScResId(SCSTR_UPDATE_EXTDOCS).toString(), aRefLinks.size());
+    ScProgress aProgress(GetDocumentShell(), ScResId(SCSTR_UPDATE_EXTDOCS).toString(), aRefLinks.size(), true);
     for (size_t i = 0, n = aRefLinks.size(); i < n; ++i)
     {
         aProgress.SetState(i+1);
@@ -887,9 +887,9 @@ void ScDocument::CopyDdeLinks( ScDocument* pDestDoc ) const
         return;
 
     const sfx2::SvBaseLinks& rLinks = pMgr->GetLinks();
-    for (size_t i = 0, n = rLinks.size(); i < n; ++i)
+    for (const auto & rLink : rLinks)
     {
-        const sfx2::SvBaseLink* pBase = rLinks[i].get();
+        const sfx2::SvBaseLink* pBase = rLink.get();
         if (const ScDdeLink* p = dynamic_cast<const ScDdeLink*>(pBase))
         {
             ScDdeLink* pNew = new ScDdeLink(pDestDoc, *p);
@@ -992,7 +992,7 @@ const ScMatrix* ScDocument::GetDdeLinkResultMatrix( size_t nDdePos ) const
     return pDdeLink ? pDdeLink->GetResult() : nullptr;
 }
 
-bool ScDocument::CreateDdeLink( const OUString& rAppl, const OUString& rTopic, const OUString& rItem, sal_uInt8 nMode, ScMatrixRef pResults )
+bool ScDocument::CreateDdeLink( const OUString& rAppl, const OUString& rTopic, const OUString& rItem, sal_uInt8 nMode, const ScMatrixRef& pResults )
 {
     /*  Create a DDE link without updating it (i.e. for Excel import), to prevent
         unwanted connections. First try to find existing link. Set result array
@@ -1023,7 +1023,7 @@ bool ScDocument::CreateDdeLink( const OUString& rAppl, const OUString& rTopic, c
     return false;
 }
 
-bool ScDocument::SetDdeLinkResultMatrix( size_t nDdePos, ScMatrixRef pResults )
+bool ScDocument::SetDdeLinkResultMatrix( size_t nDdePos, const ScMatrixRef& pResults )
 {
     if( ScDdeLink* pDdeLink = lclGetDdeLink( GetLinkManager(), nDdePos ) )
     {
@@ -1055,9 +1055,9 @@ void ScDocument::UpdateAreaLinks()
         return;
 
     const ::sfx2::SvBaseLinks& rLinks = pMgr->GetLinks();
-    for (size_t i=0; i<rLinks.size(); i++)
+    for (const auto & rLink : rLinks)
     {
-        ::sfx2::SvBaseLink* pBase = rLinks[i].get();
+        ::sfx2::SvBaseLink* pBase = rLink.get();
         if (dynamic_cast<const ScAreaLink*>( pBase) !=  nullptr)
             pBase->Update();
     }

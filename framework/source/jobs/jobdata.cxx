@@ -97,7 +97,7 @@ JobData::~JobData()
 }
 
 /**
-    @short      initalize this instance as a job with configuration
+    @short      initialize this instance as a job with configuration
     @descr      They given alias can be used to address some configuration data.
                 We read it and fill our internal structures. Of course old information
                 will be lost doing so.
@@ -151,7 +151,7 @@ void JobData::setAlias( const OUString& sAlias )
         {
             css::uno::Sequence< OUString > lArgumentNames = xArgumentList->getElementNames();
             sal_Int32                             nCount         = lArgumentNames.getLength();
-            m_lArguments.realloc(nCount);
+            m_lArguments.resize(nCount);
             for (sal_Int32 i=0; i<nCount; ++i)
             {
                 m_lArguments[i].Name  = lArgumentNames[i];
@@ -164,7 +164,7 @@ void JobData::setAlias( const OUString& sAlias )
 }
 
 /**
-    @short      initalize this instance as a job without configuration
+    @short      initialize this instance as a job without configuration
     @descr      This job has no configuration data. We have to forget all old information
                 and set only some of them new, so this instance can work.
 
@@ -222,7 +222,7 @@ void JobData::setEvent( const OUString& sEvent ,
     @param      lArguments
                     list of arguments, which should be set for this job
  */
-void JobData::setJobConfig( const css::uno::Sequence< css::beans::NamedValue >& lArguments )
+void JobData::setJobConfig( const std::vector< css::beans::NamedValue >& lArguments )
 {
     SolarMutexGuard g;
 
@@ -246,7 +246,7 @@ void JobData::setJobConfig( const css::uno::Sequence< css::beans::NamedValue >& 
         css::uno::Reference< css::beans::XMultiHierarchicalPropertySet > xArgumentList(aConfig.cfg(), css::uno::UNO_QUERY);
         if (xArgumentList.is())
         {
-            sal_Int32                             nCount = m_lArguments.getLength();
+            sal_Int32                             nCount = m_lArguments.size();
             css::uno::Sequence< OUString > lNames (nCount);
             css::uno::Sequence< css::uno::Any >   lValues(nCount);
 
@@ -350,7 +350,7 @@ OUString JobData::getEvent() const
     return m_sEvent;
 }
 
-css::uno::Sequence< css::beans::NamedValue > JobData::getJobConfig() const
+std::vector< css::beans::NamedValue > JobData::getJobConfig() const
 {
     SolarMutexGuard g;
     return m_lArguments;
@@ -471,9 +471,9 @@ void JobData::appendEnabledJobsForEvent( const css::uno::Reference< css::uno::XC
                                          const OUString&                                                 sEvent ,
                                                ::std::vector< JobData::TJob2DocEventBinding >& lJobs  )
 {
-    css::uno::Sequence< OUString > lAdditionalJobs = JobData::getEnabledJobsForEvent(rxContext, sEvent);
-    sal_Int32                             c               = lAdditionalJobs.getLength();
-    sal_Int32                             i               = 0;
+    std::vector< OUString > lAdditionalJobs = JobData::getEnabledJobsForEvent(rxContext, sEvent);
+    sal_Int32                c               = lAdditionalJobs.size();
+    sal_Int32                i               = 0;
 
     for (i=0; i<c; ++i)
     {
@@ -505,35 +505,33 @@ bool JobData::hasCorrectContext(const OUString& rModuleIdent) const
     return false;
 }
 
-/**
- */
-css::uno::Sequence< OUString > JobData::getEnabledJobsForEvent( const css::uno::Reference< css::uno::XComponentContext >& rxContext,
+std::vector< OUString > JobData::getEnabledJobsForEvent( const css::uno::Reference< css::uno::XComponentContext >& rxContext,
                                                                        const OUString&                                    sEvent )
 {
     // create a config access to "/org.openoffice.Office.Jobs/Events"
     ConfigAccess aConfig(rxContext, "/org.openoffice.Office.Jobs/Events");
     aConfig.open(ConfigAccess::E_READONLY);
     if (aConfig.getMode()==ConfigAccess::E_CLOSED)
-        return css::uno::Sequence< OUString >();
+        return std::vector< OUString >();
 
     css::uno::Reference< css::container::XHierarchicalNameAccess > xEventRegistry(aConfig.cfg(), css::uno::UNO_QUERY);
     if (!xEventRegistry.is())
-        return css::uno::Sequence< OUString >();
+        return std::vector< OUString >();
 
     // check if the given event exist inside list of registered ones
     OUString sPath(sEvent + "/JobList");
     if (!xEventRegistry->hasByHierarchicalName(sPath))
-        return css::uno::Sequence< OUString >();
+        return std::vector< OUString >();
 
     // step to the job list, which is a child of the event node inside cfg
     // e.g. "/org.openoffice.Office.Jobs/Events/<event name>/JobList"
     css::uno::Any aJobList = xEventRegistry->getByHierarchicalName(sPath);
     css::uno::Reference< css::container::XNameAccess > xJobList;
     if (!(aJobList >>= xJobList) || !xJobList.is())
-        return css::uno::Sequence< OUString >();
+        return std::vector< OUString >();
 
     // get all alias names of jobs, which are part of this job list
-    // But Some of them can be disabled by it's time stamp values.
+    // But Some of them can be disabled by its time stamp values.
     // We create an additional job name list with the same size, then the original list ...
     // step over all job entries ... check her time stamps ... and put only job names to the
     // destination list, which represent an enabled job.
@@ -541,8 +539,7 @@ css::uno::Sequence< OUString > JobData::getEnabledJobsForEvent( const css::uno::
     OUString* pAllJobs = lAllJobs.getArray();
     sal_Int32 c = lAllJobs.getLength();
 
-    css::uno::Sequence< OUString > lEnabledJobs(c);
-    OUString* pEnabledJobs = lEnabledJobs.getArray();
+    std::vector< OUString > lEnabledJobs(c);
     sal_Int32 d = 0;
 
     for (sal_Int32 s=0; s<c; ++s)
@@ -565,10 +562,10 @@ css::uno::Sequence< OUString > JobData::getEnabledJobsForEvent( const css::uno::
         if (!isEnabled(sAdminTime, sUserTime))
             continue;
 
-        pEnabledJobs[d] = pAllJobs[s];
+        lEnabledJobs[d] = pAllJobs[s];
         ++d;
     }
-    lEnabledJobs.realloc(d);
+    lEnabledJobs.resize(d);
 
     aConfig.close();
 
@@ -595,7 +592,7 @@ void JobData::impl_reset()
     m_sService.clear();
     m_sContext.clear();
     m_sEvent.clear();
-    m_lArguments   = css::uno::Sequence< css::beans::NamedValue >();
+    m_lArguments.clear();
 }
 
 } // namespace framework

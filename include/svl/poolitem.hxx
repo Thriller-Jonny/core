@@ -177,7 +177,7 @@ public:
                                     const IntlWrapper * pIntlWrapper = nullptr ) const;
 
     virtual sal_uInt16       GetVersion( sal_uInt16 nFileFormatVersion ) const;
-    virtual bool             ScaleMetrics( long lMult, long lDiv );
+    virtual void             ScaleMetrics( long lMult, long lDiv );
     virtual bool             HasMetrics() const;
 
     virtual bool             QueryValue( css::uno::Any& rVal, sal_uInt8 nMemberId = 0 ) const;
@@ -247,7 +247,7 @@ inline bool IsInvalidItem(const SfxPoolItem *pItem)
     return pItem == reinterpret_cast<SfxPoolItem *>(-1);
 }
 
-class SVL_DLLPUBLIC SfxVoidItem: public SfxPoolItem
+class SVL_DLLPUBLIC SfxVoidItem final: public SfxPoolItem
 {
     SfxVoidItem & operator=( const SfxVoidItem& ) = delete;
 public:

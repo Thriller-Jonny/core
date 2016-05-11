@@ -99,7 +99,7 @@ using namespace ::svxform;
 
 namespace
 {
-    static bool lcl_shouldDisplayError( const Any& _rError )
+    bool lcl_shouldDisplayError( const Any& _rError )
     {
         SQLException aError;
         if ( !( _rError >>= aError ) )
@@ -154,9 +154,9 @@ void displayException(const css::sdb::SQLContext& _rExcept, vcl::Window* _pParen
 }
 
 
-void displayException(const css::sdb::SQLErrorEvent& _rEvent, vcl::Window* _pParent)
+void displayException(const css::sdb::SQLErrorEvent& _rEvent)
 {
-    displayException(_rEvent.Reason, _pParent);
+    displayException(_rEvent.Reason);
 }
 
 
@@ -299,11 +299,10 @@ void FmXDisposeListener::setAdapter(FmXDisposeMultiplexer* pAdapter)
 }
 
 
-
-FmXDisposeMultiplexer::FmXDisposeMultiplexer(FmXDisposeListener* _pListener, const Reference< css::lang::XComponent>& _rxObject, sal_Int16 _nId)
+FmXDisposeMultiplexer::FmXDisposeMultiplexer(FmXDisposeListener* _pListener, const Reference< css::lang::XComponent>& _rxObject)
     :m_xObject(_rxObject)
     ,m_pListener(_pListener)
-    ,m_nId(_nId)
+    ,m_nId(0)
 {
     m_pListener->setAdapter(this);
 
@@ -318,13 +317,13 @@ FmXDisposeMultiplexer::~FmXDisposeMultiplexer()
 
 // css::lang::XEventListener
 
-void FmXDisposeMultiplexer::disposing(const css::lang::EventObject& _Source) throw( RuntimeException, std::exception )
+void FmXDisposeMultiplexer::disposing(const css::lang::EventObject& Source) throw( RuntimeException, std::exception )
 {
     Reference< css::lang::XEventListener> xPreventDelete(this);
 
     if (m_pListener)
     {
-        m_pListener->disposing(_Source, m_nId);
+        m_pListener->disposing(Source, m_nId);
         m_pListener->setAdapter(nullptr);
         m_pListener = nullptr;
     }
@@ -345,7 +344,6 @@ void FmXDisposeMultiplexer::dispose()
         m_pListener = nullptr;
     }
 }
-
 
 
 sal_Int16 getControlTypeByObject(const Reference< css::lang::XServiceInfo>& _rxObject)

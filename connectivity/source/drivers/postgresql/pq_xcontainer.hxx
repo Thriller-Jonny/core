@@ -50,7 +50,6 @@
 #include <cppuhelper/compbase.hxx>
 
 #include <unordered_map>
-#include <vector>
 
 #include "pq_connection.hxx"
 #include "pq_statics.hxx"
@@ -90,8 +89,7 @@ typedef std::unordered_map
 <
    OUString,
    sal_Int32,
-   OUStringHash,
-   ::std::equal_to< OUString >
+   OUStringHash
 > String2IntMap;
 
 typedef ::cppu::WeakComponentImplHelper
@@ -113,7 +111,7 @@ protected:
     ConnectionSettings *m_pSettings;
     ::com::sun::star::uno::Reference< ::com::sun::star::sdbc::XConnection > m_origin;
     String2IntMap m_name2index;  // maps the element name to an index
-    ::com::sun::star::uno::Sequence< com::sun::star::uno::Any > m_values; // contains the real values
+    std::vector< com::sun::star::uno::Any > m_values; // contains the real values
     OUString m_type;
 
 public:

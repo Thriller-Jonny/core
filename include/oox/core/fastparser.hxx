@@ -20,8 +20,22 @@
 #ifndef INCLUDED_OOX_CORE_FASTPARSER_HXX
 #define INCLUDED_OOX_CORE_FASTPARSER_HXX
 
-#include <com/sun/star/uno/XComponentContext.hpp>
-#include <com/sun/star/xml/sax/XFastParser.hpp>
+#include <com/sun/star/io/IOException.hpp>
+#include <com/sun/star/lang/IllegalArgumentException.hpp>
+#include <com/sun/star/uno/Reference.hxx>
+#include <com/sun/star/uno/RuntimeException.hpp>
+#include <com/sun/star/xml/sax/SAXException.hpp>
+#include <rtl/ustring.hxx>
+#include <sal/types.h>
+
+namespace com { namespace sun { namespace star {
+    namespace io { class XInputStream; }
+    namespace uno { class XComponentContext; }
+    namespace xml { namespace sax { class XFastDocumentHandler; } }
+    namespace xml { namespace sax { class XFastParser; } }
+    namespace xml { namespace sax { class XFastTokenHandler; } }
+    namespace xml { namespace sax { struct InputSource; } }
+} } }
 
 namespace oox {
     struct NamespaceMap;
@@ -34,7 +48,6 @@ namespace sax_fastparser {
 
 namespace oox {
 namespace core {
-
 
 
 /** Wrapper for a fast SAX parser that works on automatically generated OOXML
@@ -67,22 +80,15 @@ public:
         @param bCloseStream  True = closes the passed stream after parsing. */
     void                parseStream(
                             const css::uno::Reference< css::io::XInputStream >& rxInStream,
-                            const OUString& rStreamName, bool bCloseStream = false )
+                            const OUString& rStreamName )
                             throw( css::xml::sax::SAXException, css::io::IOException, css::uno::RuntimeException );
 
     /** Parses a stream from the passed storage with the specified name.
         @param bCloseStream  True = closes the stream after parsing. */
-    void                parseStream( StorageBase& rStorage, const OUString& rStreamName, bool bCloseStream = false )
+    void                parseStream( StorageBase& rStorage, const OUString& rStreamName )
                             throw( css::xml::sax::SAXException, css::io::IOException, css::uno::RuntimeException );
 
-    OUString getNamespaceURL( const OUString& rPrefix )
-                        throw( css::lang::IllegalArgumentException, css::uno::RuntimeException );
-
-    bool hasNamespaceURL( const OUString& rPrefix ) const;
-
-    sal_Int32 getNamespaceId( const OUString& aUrl );
-
-    css::uno::Reference< css::xml::sax::XFastTokenHandler >
+    const css::uno::Reference< css::xml::sax::XFastTokenHandler >&
                getTokenHandler() const { return mxTokenHandler; }
 
 private:
@@ -94,7 +100,6 @@ private:
 
     sax_fastparser::FastSaxParser* mpParser;
 };
-
 
 
 } // namespace core

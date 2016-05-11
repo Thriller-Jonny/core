@@ -37,7 +37,9 @@ void ScTabView::HideTip()
 {
     if ( nTipVisible )
     {
-        Help::HideTip( nTipVisible );
+        ScSplitPos eWhich = aViewData.GetActivePart();
+        vcl::Window* pWin = pGridWin[eWhich];
+        Help::HidePopover(pWin, nTipVisible);
         nTipVisible = 0;
     }
 }
@@ -90,7 +92,7 @@ void ScTabView::ShowRefTip()
                 //! Test, ob geaendert ??
 
                 HideTip();
-                nTipVisible = Help::ShowTip( pWin, aRect, aHelp, nFlags );
+                nTipVisible = Help::ShowPopover(pWin, aRect, aHelp, nFlags);
                 bDone = true;
             }
         }
@@ -279,7 +281,7 @@ void ScTabView::UpdateRef( SCCOL nCurX, SCROW nCurY, SCTAB nCurZ )
     }
 }
 
-void ScTabView::InitRefMode( SCCOL nCurX, SCROW nCurY, SCTAB nCurZ, ScRefType eType, bool bPaint )
+void ScTabView::InitRefMode( SCCOL nCurX, SCROW nCurY, SCTAB nCurZ, ScRefType eType )
 {
     ScDocument* pDoc = aViewData.GetDocument();
     ScMarkData& rMark = aViewData.GetMarkData();
@@ -289,7 +291,7 @@ void ScTabView::InitRefMode( SCCOL nCurX, SCROW nCurY, SCTAB nCurZ, ScRefType eT
         aViewData.SetRefStart( nCurX, nCurY, nCurZ );
         aViewData.SetRefEnd( nCurX, nCurY, nCurZ );
 
-        if (nCurZ == aViewData.GetTabNo() && bPaint)
+        if (nCurZ == aViewData.GetTabNo())
         {
             SCCOL nStartX = nCurX;
             SCROW nStartY = nCurY;

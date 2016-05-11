@@ -23,7 +23,7 @@
 #undef _LINUX_SOURCE_COMPAT
 #endif
 
-#include <config_vclplug.h>
+#include <config_gio.h>
 
 #include <com/sun/star/awt/Toolkit.hpp>
 #include <com/sun/star/frame/Desktop.hpp>
@@ -303,19 +303,19 @@ void SAL_CALL SalGtkFilePicker::removeFilePickerListener( const uno::Reference<X
 
 // FilePicker Event functions
 
-void SalGtkFilePicker::impl_fileSelectionChanged( FilePickerEvent aEvent )
+void SalGtkFilePicker::impl_fileSelectionChanged( const FilePickerEvent& aEvent )
 {
     OSL_TRACE( "file selection changed");
     if (m_xListener.is()) m_xListener->fileSelectionChanged( aEvent );
 }
 
-void SalGtkFilePicker::impl_directoryChanged( FilePickerEvent aEvent )
+void SalGtkFilePicker::impl_directoryChanged( const FilePickerEvent& aEvent )
 {
     OSL_TRACE("directory changed");
     if (m_xListener.is()) m_xListener->directoryChanged( aEvent );
 }
 
-void SalGtkFilePicker::impl_controlStateChanged( FilePickerEvent aEvent )
+void SalGtkFilePicker::impl_controlStateChanged( const FilePickerEvent& aEvent )
 {
     OSL_TRACE("control state changed");
     if (m_xListener.is()) m_xListener->controlStateChanged( aEvent );
@@ -336,17 +336,15 @@ public:
     {
     }
 
-    OUString     getTitle() const { return m_sTitle; }
-    OUString     getFilter() const { return m_sFilter; }
+    const OUString& getTitle() const { return m_sTitle; }
+    const OUString& getFilter() const { return m_sFilter; }
 
     /// determines if the filter has sub filter (i.e., the filter is a filter group in real)
     bool        hasSubFilters( ) const;
 
     /** retrieves the filters belonging to the entry
-    @return
-        the number of sub filters
     */
-    sal_Int32       getSubFilters( css::uno::Sequence< css::beans::StringPair >& _rSubFilterList );
+    void       getSubFilters( css::uno::Sequence< css::beans::StringPair >& _rSubFilterList );
 
     // helpers for iterating the sub filters
     const css::beans::StringPair*   beginSubFilters() const { return m_aSubFilters.getConstArray(); }
@@ -358,10 +356,9 @@ bool FilterEntry::hasSubFilters() const
     return( 0 < m_aSubFilters.getLength() );
 }
 
-sal_Int32 FilterEntry::getSubFilters( css::uno::Sequence< css::beans::StringPair >& _rSubFilterList )
+void FilterEntry::getSubFilters( css::uno::Sequence< css::beans::StringPair >& _rSubFilterList )
 {
     _rSubFilterList = m_aSubFilters;
-    return m_aSubFilters.getLength();
 }
 
 static bool
@@ -707,7 +704,7 @@ uno::Sequence<OUString> SAL_CALL SalGtkFilePicker::getFiles() throw( uno::Runtim
     uno::Sequence< OUString > aFiles = getSelectedFiles();
     /*
       The previous multiselection API design was completely broken
-      and unimplementable for some hetrogenous pseudo-URIs eg. search:
+      and unimplementable for some heterogeneous pseudo-URIs eg. search:
       Thus crop unconditionally to a single selection.
     */
     aFiles.realloc (1);
@@ -925,7 +922,7 @@ sal_Int16 SAL_CALL SalGtkFilePicker::execute() throw( uno::RuntimeException, std
     GtkWindow *pParent = RunDialog::GetTransientFor();
     if (pParent)
         gtk_window_set_transient_for(GTK_WINDOW(m_pDialog), pParent);
-    RunDialog* pRunDialog = new RunDialog(m_pDialog, xToolkit, xDesktop);
+    RunDialog* pRunDialog = new RunDialog(m_pDialog, xToolkit);
     uno::Reference < awt::XTopWindowListener > xLifeCycle(pRunDialog);
     while( GTK_RESPONSE_NO == btn )
     {
@@ -1014,7 +1011,7 @@ sal_Int16 SAL_CALL SalGtkFilePicker::execute() throw( uno::RuntimeException, std
                                 RTL_TEXTENCODING_UTF8 ).getStr() );
                             if (pParent)
                                 gtk_window_set_transient_for(GTK_WINDOW(dlg), pParent);
-                            RunDialog* pAnotherDialog = new RunDialog(dlg, xToolkit, xDesktop);
+                            RunDialog* pAnotherDialog = new RunDialog(dlg, xToolkit);
                             uno::Reference < awt::XTopWindowListener > xAnotherLifeCycle(pAnotherDialog);
                             btn = pAnotherDialog->run();
 
@@ -1062,7 +1059,7 @@ sal_Int16 SAL_CALL SalGtkFilePicker::execute() throw( uno::RuntimeException, std
 GtkWidget *SalGtkFilePicker::getWidget( sal_Int16 nControlId, GType *pType )
 {
     OSL_TRACE("control id is %d", nControlId);
-    GType      tType = GTK_TYPE_TOGGLE_BUTTON; //prevent waring by initializing
+    GType      tType = GTK_TYPE_TOGGLE_BUTTON; //prevent warning by initializing
     GtkWidget *pWidget = nullptr;
 
 #define MAP_TOGGLE( elem ) \

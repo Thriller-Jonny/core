@@ -55,7 +55,6 @@ using mysqlc_sdbc_driver::getStringFromAny;
 static std::string wild("%");
 
 
-
 void lcl_setRows_throw(const Reference< XResultSet >& _xResultSet,sal_Int32 _nType,const std::vector< std::vector< Any > >& _rRows)
 {
     Reference< XInitialization> xIni(_xResultSet,UNO_QUERY);
@@ -97,12 +96,12 @@ ODatabaseMetaData::~ODatabaseMetaData()
     OSL_TRACE("ODatabaseMetaData::~ODatabaseMetaData");
 }
 
-rtl::OUString ODatabaseMetaData::impl_getStringMetaData(const sal_Char* _methodName, const std::string& (sql::DatabaseMetaData::*_Method)() )
+rtl::OUString ODatabaseMetaData::impl_getStringMetaData(const sal_Char* _methodName, const sql::SQLString& (sql::DatabaseMetaData::*Method)() )
 {
     OSL_TRACE( "mysqlc::ODatabaseMetaData::%s", _methodName);
     rtl::OUString stringMetaData;
     try {
-        stringMetaData = mysqlc_sdbc_driver::convert((meta->*_Method)(), m_rConnection.getConnectionEncoding());
+        stringMetaData = mysqlc_sdbc_driver::convert((meta->*Method)(), m_rConnection.getConnectionEncoding());
     } catch (const sql::MethodNotImplementedException &) {
         mysqlc_sdbc_driver::throwFeatureNotImplementedException(_methodName, *this);
     } catch (const sql::InvalidArgumentException &) {
@@ -113,12 +112,12 @@ rtl::OUString ODatabaseMetaData::impl_getStringMetaData(const sal_Char* _methodN
     return stringMetaData;
 }
 
-rtl::OUString ODatabaseMetaData::impl_getStringMetaData(const sal_Char* _methodName, std::string (sql::DatabaseMetaData::*_Method)() )
+rtl::OUString ODatabaseMetaData::impl_getStringMetaData(const sal_Char* _methodName, sql::SQLString (sql::DatabaseMetaData::*Method)() )
 {
     OSL_TRACE( "mysqlc::ODatabaseMetaData::%s", _methodName);
     rtl::OUString stringMetaData;
     try {
-        stringMetaData = mysqlc_sdbc_driver::convert((meta->*_Method)(), m_rConnection.getConnectionEncoding());
+        stringMetaData = mysqlc_sdbc_driver::convert((meta->*Method)(), m_rConnection.getConnectionEncoding());
     } catch (const sql::MethodNotImplementedException &) {
         mysqlc_sdbc_driver::throwFeatureNotImplementedException(_methodName, *this);
     } catch (const sql::InvalidArgumentException &) {
@@ -129,44 +128,12 @@ rtl::OUString ODatabaseMetaData::impl_getStringMetaData(const sal_Char* _methodN
     return stringMetaData;
 }
 
-rtl::OUString ODatabaseMetaData::impl_getStringMetaData(const sal_Char* _methodName, const sql::SQLString& (sql::DatabaseMetaData::*_Method)() )
-{
-    OSL_TRACE( "mysqlc::ODatabaseMetaData::%s", _methodName);
-    rtl::OUString stringMetaData;
-    try {
-        stringMetaData = mysqlc_sdbc_driver::convert((meta->*_Method)(), m_rConnection.getConnectionEncoding());
-    } catch (const sql::MethodNotImplementedException &) {
-        mysqlc_sdbc_driver::throwFeatureNotImplementedException(_methodName, *this);
-    } catch (const sql::InvalidArgumentException &) {
-        mysqlc_sdbc_driver::throwInvalidArgumentException(_methodName, *this);
-    } catch (const sql::SQLException& e) {
-        mysqlc_sdbc_driver::translateAndThrow(e, *this, m_rConnection.getConnectionEncoding());
-    }
-    return stringMetaData;
-}
-
-rtl::OUString ODatabaseMetaData::impl_getStringMetaData(const sal_Char* _methodName, sql::SQLString (sql::DatabaseMetaData::*_Method)() )
-{
-    OSL_TRACE( "mysqlc::ODatabaseMetaData::%s", _methodName);
-    rtl::OUString stringMetaData;
-    try {
-        stringMetaData = mysqlc_sdbc_driver::convert((meta->*_Method)(), m_rConnection.getConnectionEncoding());
-    } catch (const sql::MethodNotImplementedException &) {
-        mysqlc_sdbc_driver::throwFeatureNotImplementedException(_methodName, *this);
-    } catch (const sql::InvalidArgumentException &) {
-        mysqlc_sdbc_driver::throwInvalidArgumentException(_methodName, *this);
-    } catch (const sql::SQLException& e) {
-        mysqlc_sdbc_driver::translateAndThrow(e, *this, m_rConnection.getConnectionEncoding());
-    }
-    return stringMetaData;
-}
-
-sal_Int32 ODatabaseMetaData::impl_getInt32MetaData(const sal_Char* _methodName, unsigned int (sql::DatabaseMetaData::*_Method)() )
+sal_Int32 ODatabaseMetaData::impl_getInt32MetaData(const sal_Char* _methodName, unsigned int (sql::DatabaseMetaData::*Method)() )
 {
     OSL_TRACE( "mysqlc::ODatabaseMetaData::%s", _methodName);
     sal_Int32 int32MetaData(0);
     try {
-        int32MetaData = (meta->*_Method)();
+        int32MetaData = (meta->*Method)();
     } catch (const sql::MethodNotImplementedException &) {
         mysqlc_sdbc_driver::throwFeatureNotImplementedException(_methodName, *this);
     } catch (const sql::InvalidArgumentException &) {
@@ -177,12 +144,12 @@ sal_Int32 ODatabaseMetaData::impl_getInt32MetaData(const sal_Char* _methodName, 
     return int32MetaData;
 }
 
-bool ODatabaseMetaData::impl_getBoolMetaData(const sal_Char* _methodName, bool (sql::DatabaseMetaData::*_Method)() )
+bool ODatabaseMetaData::impl_getBoolMetaData(const sal_Char* _methodName, bool (sql::DatabaseMetaData::*Method)() )
 {
     OSL_TRACE( "mysqlc::ODatabaseMetaData::%s", _methodName);
     bool boolMetaData(false);
     try {
-        boolMetaData = (meta->*_Method)();
+        boolMetaData = (meta->*Method)();
     } catch (const sql::MethodNotImplementedException &) {
         mysqlc_sdbc_driver::throwFeatureNotImplementedException(_methodName, *this);
     } catch (const sql::InvalidArgumentException &) {
@@ -193,12 +160,12 @@ bool ODatabaseMetaData::impl_getBoolMetaData(const sal_Char* _methodName, bool (
     return boolMetaData;
 }
 
-bool ODatabaseMetaData::impl_getBoolMetaData(const sal_Char* _methodName, bool (sql::DatabaseMetaData::*_Method)(int), sal_Int32 _arg )
+bool ODatabaseMetaData::impl_getBoolMetaData(const sal_Char* _methodName, bool (sql::DatabaseMetaData::*Method)(int), sal_Int32 _arg )
 {
     OSL_TRACE( "mysqlc::ODatabaseMetaData::%s", _methodName);
     bool boolMetaData(false);
     try {
-        boolMetaData = (meta->*_Method)( _arg );
+        boolMetaData = (meta->*Method)( _arg );
     } catch (const sql::MethodNotImplementedException &) {
         mysqlc_sdbc_driver::throwFeatureNotImplementedException(_methodName, *this);
     } catch (const sql::InvalidArgumentException &) {
@@ -209,7 +176,7 @@ bool ODatabaseMetaData::impl_getBoolMetaData(const sal_Char* _methodName, bool (
     return boolMetaData;
 }
 
-bool ODatabaseMetaData::impl_getRSTypeMetaData(const sal_Char* _methodName, bool (sql::DatabaseMetaData::*_Method)(int), sal_Int32 _resultSetType )
+bool ODatabaseMetaData::impl_getRSTypeMetaData(const sal_Char* _methodName, bool (sql::DatabaseMetaData::*Method)(int), sal_Int32 _resultSetType )
 {
     int resultSetType(sql::ResultSet::TYPE_FORWARD_ONLY);
     switch ( _resultSetType ) {
@@ -217,7 +184,7 @@ bool ODatabaseMetaData::impl_getRSTypeMetaData(const sal_Char* _methodName, bool
         case ResultSetType::SCROLL_SENSITIVE:   resultSetType = sql::ResultSet::TYPE_SCROLL_SENSITIVE;      break;
     }
 
-    return impl_getBoolMetaData(_methodName, _Method, resultSetType);
+    return impl_getBoolMetaData(_methodName, Method, resultSetType);
 }
 
 rtl::OUString SAL_CALL ODatabaseMetaData::getCatalogSeparator()
@@ -628,7 +595,7 @@ sal_Bool SAL_CALL ODatabaseMetaData::supportsConvert(sal_Int32 /* fromType */, s
     } catch (const sql::SQLException& e) {
         mysqlc_sdbc_driver::translateAndThrow(e, *this, m_rConnection.getConnectionEncoding());
     }
-    return sal_False;
+    return false;
 }
 
 sal_Bool SAL_CALL ODatabaseMetaData::supportsExpressionsInOrderBy()
@@ -987,7 +954,7 @@ sal_Bool SAL_CALL ODatabaseMetaData::supportsResultSetConcurrency(sal_Int32 setT
     } catch (const sql::SQLException& e) {
         mysqlc_sdbc_driver::translateAndThrow(e, *this, m_rConnection.getConnectionEncoding());
     }
-    return sal_False;
+    return false;
 }
 
 sal_Bool SAL_CALL ODatabaseMetaData::ownUpdatesAreVisible(sal_Int32 setType)
@@ -1366,13 +1333,13 @@ Reference< XResultSet > SAL_CALL ODatabaseMetaData::getProcedures(
 
     std::string cat(catalog.hasValue()? rtl::OUStringToOString(getStringFromAny(catalog), m_rConnection.getConnectionEncoding()).getStr():""),
                 sPattern(rtl::OUStringToOString(schemaPattern, m_rConnection.getConnectionEncoding()).getStr()),
-                pNamePattern(rtl::OUStringToOString(procedureNamePattern, m_rConnection.getConnectionEncoding()).getStr());
+                procNamePattern(rtl::OUStringToOString(procedureNamePattern, m_rConnection.getConnectionEncoding()).getStr());
 
 
     try {
         boost::scoped_ptr< sql::ResultSet> rset( meta->getProcedures(cat,
                                                    sPattern.compare("")? sPattern:wild,
-                                                   pNamePattern.compare("")? pNamePattern:wild));
+                                                   procNamePattern.compare("")? procNamePattern:wild));
 
         rtl_TextEncoding encoding = m_rConnection.getConnectionEncoding();
         sql::ResultSetMetaData * rs_meta = rset->getMetaData();
@@ -1664,8 +1631,8 @@ Reference< XResultSet > SAL_CALL ODatabaseMetaData::getTablePrivileges(
 
 Reference< XResultSet > SAL_CALL ODatabaseMetaData::getCrossReference(
         const Any& primaryCatalog,
-        const rtl::OUString& primarySchema,
-        const rtl::OUString& primaryTable,
+        const rtl::OUString& primarySchema_,
+        const rtl::OUString& primaryTable_,
         const Any& foreignCatalog,
         const rtl::OUString& foreignSchema,
         const rtl::OUString& foreignTable)
@@ -1677,14 +1644,14 @@ Reference< XResultSet > SAL_CALL ODatabaseMetaData::getCrossReference(
 
     std::string primaryCat(primaryCatalog.hasValue()? rtl::OUStringToOString(getStringFromAny(primaryCatalog), m_rConnection.getConnectionEncoding()).getStr():""),
                 foreignCat(foreignCatalog.hasValue()? rtl::OUStringToOString(getStringFromAny(foreignCatalog), m_rConnection.getConnectionEncoding()).getStr():""),
-                pSchema(rtl::OUStringToOString(primarySchema, m_rConnection.getConnectionEncoding()).getStr()),
-                pTable(rtl::OUStringToOString(primaryTable, m_rConnection.getConnectionEncoding()).getStr()),
+                primarySchema(rtl::OUStringToOString(primarySchema_, m_rConnection.getConnectionEncoding()).getStr()),
+                primaryTable(rtl::OUStringToOString(primaryTable_, m_rConnection.getConnectionEncoding()).getStr()),
                 fSchema(rtl::OUStringToOString(foreignSchema, m_rConnection.getConnectionEncoding()).getStr()),
                 fTable(rtl::OUStringToOString(foreignTable, m_rConnection.getConnectionEncoding()).getStr());
 
     try {
         rtl_TextEncoding encoding = m_rConnection.getConnectionEncoding();
-        boost::scoped_ptr< sql::ResultSet> rset( meta->getCrossReference(primaryCat, pSchema, pTable, foreignCat, fSchema, fTable));
+        boost::scoped_ptr< sql::ResultSet> rset( meta->getCrossReference(primaryCat, primarySchema, primaryTable, foreignCat, fSchema, fTable));
         sql::ResultSetMetaData * rs_meta = rset->getMetaData();
         sal_uInt32 columns = rs_meta->getColumnCount();
         while (rset->next()) {

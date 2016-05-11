@@ -131,7 +131,7 @@ sal_Int32 createWildCardVector(Sequence< OUString >& _rTableFilter, ::std::vecto
 
             _io_tableInfo.sComposedName = OptionalString(
                 composeTableName( _metaData, *_io_tableInfo.sCatalog, *_io_tableInfo.sSchema, *_io_tableInfo.sName,
-                false, ::dbtools::eInDataManipulation )
+                false, ::dbtools::EComposeRule::InDataManipulation )
             );
         }
     }
@@ -405,7 +405,7 @@ sal_Int32 createWildCardVector(Sequence< OUString >& _rTableFilter, ::std::vecto
     OUString OFilteredContainer::getNameForObject(const ObjectType& _xObject)
     {
         OSL_ENSURE( _xObject.is(), "OFilteredContainer::getNameForObject: Object is NULL!" );
-        return ::dbtools::composeTableName( m_xMetaData, _xObject, ::dbtools::eInDataManipulation, false, false, false );
+        return ::dbtools::composeTableName( m_xMetaData, _xObject, ::dbtools::EComposeRule::InDataManipulation, false, false, false );
     }
 
     // multiple to obtain all tables from XDatabaseMetaData::getTables, via passing a particular
@@ -442,7 +442,7 @@ sal_Int32 createWildCardVector(Sequence< OUString >& _rTableFilter, ::std::vecto
         {
         default:
             SAL_WARN("dbaccess",  "OTableContainer::getAllTableTypeFilter: unknown TableTypeFilterMode!" );
-            /* Fall through */
+            SAL_FALLTHROUGH;
         case FILTER_MODE_MIX_ALL:
             _rFilter.realloc( 3 );
             _rFilter[0] = sView;

@@ -41,7 +41,7 @@
 #include <com/sun/star/form/XFormComponent.hpp>
 #include <com/sun/star/util/XCloneable.hpp>
 #include <osl/mutex.hxx>
-#include <cppuhelper/interfacecontainer.hxx>
+#include <comphelper/interfacecontainer2.hxx>
 #include <cppuhelper/component.hxx>
 #include <cppuhelper/implbase8.hxx>
 #include <unordered_map>
@@ -55,8 +55,6 @@ using namespace comphelper;
 
 namespace frm
 {
-
-
 
 
     struct ElementDescription
@@ -100,7 +98,7 @@ protected:
 
     OInterfaceArray                         m_aItems;
     OInterfaceMap                           m_aMap;
-    ::cppu::OInterfaceContainerHelper       m_aContainerListeners;
+    ::comphelper::OInterfaceContainerHelper2      m_aContainerListeners;
 
     const css::uno::Type                    m_aElementType;
 
@@ -186,7 +184,7 @@ public:
 protected:
     // helper
     virtual void SAL_CALL disposing();
-    void removeElementsNoEvents(sal_Int32 nIndex);
+    void removeElementsNoEvents();
 
     /** to be overridden if elements which are to be inserted into the container shall be checked
 

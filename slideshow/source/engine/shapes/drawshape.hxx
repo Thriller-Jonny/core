@@ -30,8 +30,6 @@
 #include "hyperlinkarea.hxx"
 
 #include <boost/optional.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/weak_ptr.hpp>
 #include <set>
 #include <vector>
 
@@ -45,7 +43,7 @@ namespace slideshow
         struct SlideShowContext;
         class  DrawShapeSubsetting;
         class  DrawShape;
-        typedef ::boost::shared_ptr< DrawShape > DrawShapeSharedPtr;
+        typedef ::std::shared_ptr< DrawShape > DrawShapeSharedPtr;
 
         /** This class is the representation of a draw document's
             XShape, and implements the Shape, AnimatableShape, and
@@ -125,7 +123,7 @@ namespace slideshow
             virtual void addViewLayer( const ViewLayerSharedPtr&    rNewLayer,
                                        bool                         bRedrawLayer ) override;
             virtual bool removeViewLayer( const ViewLayerSharedPtr& rNewLayer ) override;
-            virtual bool clearAllViewLayers() override;
+            virtual void clearAllViewLayers() override;
 
             // attribute methods
 
@@ -195,7 +193,7 @@ namespace slideshow
                 Used by IntrinsicAnimationActivity, to show the next
                 animation frame.
              */
-            bool setIntrinsicAnimationFrame( ::std::size_t nCurrFrame );
+            void setIntrinsicAnimationFrame( ::std::size_t nCurrFrame );
 
             /** forces the drawshape to load and return a specially
                 crafted metafile, usable to display drawing layer text
@@ -308,7 +306,7 @@ namespace slideshow
             ShapeAttributeLayerSharedPtr                                            mpAttributeLayer; // only created lazily
 
             // held here, to signal our destruction
-            boost::weak_ptr<Activity>                                               mpIntrinsicAnimationActivity;
+            std::weak_ptr<Activity>                                               mpIntrinsicAnimationActivity;
 
             // The attribute states, to detect attribute changes,
             // without buffering and querying each single attribute

@@ -328,7 +328,7 @@ void Connection::construct(const ::rtl::OUString& url, const Sequence< PropertyV
 void Connection::notifyDatabaseModified()
 {
     if (m_xParentDocument.is()) // Only true in embedded mode
-        m_xParentDocument->setModified(sal_True);
+        m_xParentDocument->setModified(true);
 }
 
 //----- XServiceInfo ---------------------------------------------------------
@@ -668,7 +668,7 @@ void SAL_CALL Connection::clearWarnings(  ) throw(SQLException, RuntimeException
 }
 
 // XDocumentEventListener
-void SAL_CALL Connection::documentEventOccured( const DocumentEvent& _Event )
+void SAL_CALL Connection::documentEventOccured( const DocumentEvent& Event )
                                                         throw(RuntimeException, std::exception)
 {
     MutexGuard aGuard(m_aMutex);
@@ -676,7 +676,7 @@ void SAL_CALL Connection::documentEventOccured( const DocumentEvent& _Event )
     if (!m_bIsEmbedded)
         return;
 
-    if (_Event.EventName == "OnSave" || _Event.EventName == "OnSaveAs")
+    if (Event.EventName == "OnSave" || Event.EventName == "OnSaveAs")
     {
         commit(); // Commit and close transaction
         if ( m_bIsEmbedded && m_xEmbeddedStorage.is() )
@@ -737,7 +737,6 @@ void Connection::buildTypeInfo() throw( SQLException)
         aInfo.nMinimumScale     = xRow->getShort    (14);
         aInfo.nMaximumScale     = xRow->getShort    (15);
         aInfo.nNumPrecRadix     = (sal_Int16)xRow->getInt(18);
-
 
 
         // Now that we have the type info, save it

@@ -23,6 +23,7 @@
 #include <com/sun/star/awt/KeyModifier.hpp>
 #include <com/sun/star/lang/XInitialization.hpp>
 
+#include <comphelper/lok.hxx>
 #include <cppuhelper/basemutex.hxx>
 
 #include <vcl/svapp.hxx>
@@ -127,7 +128,7 @@ void DrawViewShell::FuTable(SfxRequest& rReq)
         if( (nColumns == 0) || (nRows == 0) )
         {
             SvxAbstractDialogFactory* pFact = SvxAbstractDialogFactory::Create();
-            std::unique_ptr<SvxAbstractNewTableDialog> pDlg( pFact ? pFact->CreateSvxNewTableDialog( nullptr ) : nullptr);
+            std::unique_ptr<SvxAbstractNewTableDialog> pDlg( pFact ? pFact->CreateSvxNewTableDialog() : nullptr);
 
             if( !pDlg.get() || (pDlg->Execute() != RET_OK) )
                 break;
@@ -146,12 +147,41 @@ void DrawViewShell::FuTable(SfxRequest& rReq)
         }
         else
         {
-            Size aSize( 14100, 200 );
+            Size aSize( 14100, 2000 );
 
             Point aPos;
-            Rectangle aWinRect(aPos, GetActiveWindow()->GetOutputSizePixel() );
+            Rectangle aWinRect(aPos, GetActiveWindow()->GetOutputSizePixel());
+            aWinRect = GetActiveWindow()->PixelToLogic(aWinRect);
+
+            // make sure that the default size of the table fits on the paper and is inside the viewing area.
+            // if zoomed in close, don't make the table bigger than the viewing window.
+            Size aMaxSize = getCurrentPage()->GetSize();
+
+            if (comphelper::LibreOfficeKit::isActive())
+            {
+                // aWinRect is nonsensical in the LOK case
+                aWinRect = Rectangle(aPos, aMaxSize);
+            }
+            else
+            {
+                if( aMaxSize.Height() > aWinRect.getHeight() )
+                    aMaxSize.setHeight( aWinRect.getHeight() );
+                if( aMaxSize.Width() > aWinRect.getWidth() )
+                    aMaxSize.setWidth( aWinRect.getWidth() );
+            }
+
+            if( aSize.Width() > aMaxSize.getWidth() )
+                aSize.setWidth( aMaxSize.getWidth() );
+
+            // adjust height based on # of rows.
+            if( nRows > 0 )
+            {
+                aSize.setHeight( aSize.Height() * nRows );
+                if( aSize.Height() > aMaxSize.getHeight() )
+                    aSize.setHeight( aMaxSize.getHeight() );
+            }
+
             aPos = aWinRect.Center();
-            aPos = GetActiveWindow()->PixelToLogic(aPos);
             aPos.X() -= aSize.Width() / 2;
             aPos.Y() -= aSize.Height() / 2;
             aRect = Rectangle(aPos, aSize);
@@ -213,6 +243,7 @@ void DrawViewShell::FuTable(SfxRequest& rReq)
 
         Cancel();
         rReq.Done ();
+        break;
     }
     default:
         break;

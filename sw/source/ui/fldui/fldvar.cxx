@@ -39,9 +39,9 @@
 #define USER_DATA_VERSION_1 "1"
 #define USER_DATA_VERSION USER_DATA_VERSION_1
 
-SwFieldVarPage::SwFieldVarPage(vcl::Window* pParent, const SfxItemSet& rCoreSet )
+SwFieldVarPage::SwFieldVarPage(vcl::Window* pParent, const SfxItemSet *const pCoreSet )
     : SwFieldPage(pParent, "FieldVarPage",
-        "modules/swriter/ui/fldvarpage.ui", rCoreSet)
+        "modules/swriter/ui/fldvarpage.ui", pCoreSet)
     , nOldFormat(0)
     , bInit(true)
 {
@@ -700,7 +700,7 @@ void SwFieldVarPage::UpdateSubType()
     m_pSelectionLB->SetUpdateMode(true);
 }
 
-sal_Int32 SwFieldVarPage::FillFormatLB(sal_uInt16 nTypeId)
+void SwFieldVarPage::FillFormatLB(sal_uInt16 nTypeId)
 {
     OUString sOldSel;
     const sal_Int32 nFormatSel = m_pFormatLB->GetSelectEntryPos();
@@ -800,7 +800,7 @@ sal_Int32 SwFieldVarPage::FillFormatLB(sal_uInt16 nTypeId)
             m_pNumFormatLB->SelectEntry(sOldSel);
     }
 
-    const sal_uInt16 nSize = GetFieldMgr().GetFormatCount(nTypeId, false, IsFieldDlgHtmlMode());
+    const sal_uInt16 nSize = GetFieldMgr().GetFormatCount(nTypeId, IsFieldDlgHtmlMode());
 
     for (sal_uInt16 i = 0; i < nSize; i++)
     {
@@ -826,8 +826,6 @@ sal_Int32 SwFieldVarPage::FillFormatLB(sal_uInt16 nTypeId)
             }
         }
     }
-
-    return nSize;
 }
 
 // Modify
@@ -864,7 +862,7 @@ IMPL_LINK_NOARG_TYPED(SwFieldVarPage, ModifyHdl, Edit&, void)
     case TYP_DDEFLD:
         if( nLen )
         {
-            // is there already a corrensponding type
+            // is there already a corresponding type
             bInsert = bApply = true;
 
             SwFieldType* pType = GetFieldMgr().GetFieldType(RES_DDEFLD, sName);
@@ -939,7 +937,7 @@ IMPL_LINK_NOARG_TYPED(SwFieldVarPage, ModifyHdl, Edit&, void)
                 bInsert = false;
         }
 
-        if( !nLen && ( nTypeId == TYP_SETFLD ||
+        if (!nLen && (nTypeId == TYP_SETFLD || nTypeId == TYP_INPUTFLD ||
                         (!IsFieldEdit() && nTypeId == TYP_GETFLD ) ) )
             bInsert = false;
 
@@ -1242,9 +1240,9 @@ bool SwFieldVarPage::FillItemSet(SfxItemSet* )
 }
 
 VclPtr<SfxTabPage> SwFieldVarPage::Create( vcl::Window* pParent,
-                                         const SfxItemSet* rAttrSet )
+                                         const SfxItemSet *const pAttrSet)
 {
-    return VclPtr<SwFieldVarPage>::Create( pParent, *rAttrSet );
+    return VclPtr<SwFieldVarPage>::Create( pParent, pAttrSet );
 }
 
 sal_uInt16 SwFieldVarPage::GetGroup()

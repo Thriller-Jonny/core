@@ -971,7 +971,7 @@ void DocxAttributeOutput::EndParagraphProperties(const SfxItemSet& rParagraphMar
     // Call the 'Redline' function. This will add redline (change-tracking) information that regards to paragraph properties.
     // This includes changes like 'Bold', 'Underline', 'Strikethrough' etc.
 
-    // If there is RedlineData present, call WriteCollectedParagraphProperties() for writting pPr before calling Redline().
+    // If there is RedlineData present, call WriteCollectedParagraphProperties() for writing pPr before calling Redline().
     // As there will be another pPr for redline and LO might mix both.
     if(pRedlineData)
         WriteCollectedParagraphProperties();
@@ -1038,7 +1038,7 @@ void DocxAttributeOutput::EndParagraphProperties(const SfxItemSet& rParagraphMar
 
     // RDF metadata for this text node.
     SwTextNode* pTextNode = m_rExport.m_pCurPam->GetNode().GetTextNode();
-    std::map<OUString, OUString> aStatements = SwRDFHelper::getTextNodeStatements("urn:tscp:names:baf:1.1", *pTextNode);
+    std::map<OUString, OUString> aStatements = SwRDFHelper::getTextNodeStatements("urn:bails", *pTextNode);
     if (!aStatements.empty())
     {
         m_pSerializer->startElementNS(XML_w, XML_smartTag,
@@ -2355,10 +2355,9 @@ bool DocxAttributeOutput::StartURL( const OUString& rUrl, const OUString& rTarge
                     OUStringToOString( sMark, RTL_TEXTENCODING_UTF8 ).getStr( ) );
         }
 
-        OUString sTarget( rTarget );
-        if ( !sTarget.isEmpty() )
+        if ( !rTarget.isEmpty() )
         {
-            OString soTarget = OUStringToOString( sTarget, RTL_TEXTENCODING_UTF8 );
+            OString soTarget = OUStringToOString( rTarget, RTL_TEXTENCODING_UTF8 );
             m_pHyperlinkAttrList->add(FSNS( XML_w, XML_tgtFrame ), soTarget.getStr());
         }
     }
@@ -2554,6 +2553,7 @@ void DocxAttributeOutput::StartRedline( const SwRedlineData * pRedlineData )
 
         case nsRedlineType_t::REDLINE_FORMAT:
             OSL_TRACE( "TODO DocxAttributeOutput::StartRedline()" );
+            break;
         default:
             break;
     }
@@ -3926,7 +3926,7 @@ void DocxAttributeOutput::OutputDefaultItem(const SfxPoolItem& rHt)
             bMustWrite = static_cast< const SvxShadowedItem& >(rHt).GetValue();
             break;
         case RES_CHRATR_UNDERLINE:
-            bMustWrite = static_cast< const SvxUnderlineItem& >(rHt).GetLineStyle() != UNDERLINE_NONE;
+            bMustWrite = static_cast< const SvxUnderlineItem& >(rHt).GetLineStyle() != LINESTYLE_NONE;
             break;
         case RES_CHRATR_WEIGHT:
             bMustWrite = static_cast< const SvxWeightItem& >(rHt).GetWeight() != WEIGHT_NORMAL;
@@ -3983,7 +3983,7 @@ void DocxAttributeOutput::OutputDefaultItem(const SfxPoolItem& rHt)
             bMustWrite = static_cast< const SvxCharRotateItem& >(rHt).GetValue() != 0;
             break;
         case RES_CHRATR_EMPHASIS_MARK:
-            bMustWrite = static_cast< const SvxEmphasisMarkItem& >(rHt).GetValue() != EMPHASISMARK_NONE;
+            bMustWrite = static_cast< const SvxEmphasisMarkItem& >(rHt).GetEmphasisMark() != FontEmphasisMark::NONE;
             break;
         case RES_CHRATR_TWO_LINES:
             bMustWrite = static_cast< const SvxTwoLinesItem& >(rHt).GetValue();
@@ -4127,16 +4127,18 @@ void DocxAttributeOutput::WriteSrcRect(const SdrObject* pSdrObj )
 
     OUString sUrl;
     xPropSet->getPropertyValue("GraphicURL") >>= sUrl;
-    Size aOriginalSize( GraphicObject::CreateGraphicObjectFromURL( sUrl ).GetPrefSize() );
+    const GraphicObject aGrafObj(GraphicObject::CreateGraphicObjectFromURL(sUrl));
+
+    Size aOriginalSize(aGrafObj.GetPrefSize());
 
     css::text::GraphicCrop aGraphicCropStruct;
     xPropSet->getPropertyValue( "GraphicCrop" ) >>= aGraphicCropStruct;
 
     const MapMode aMap100mm( MAP_100TH_MM );
-    const MapMode& mapMode = GraphicObject::CreateGraphicObjectFromURL( sUrl ).GetPrefMapMode();
-    if( mapMode.GetMapUnit() == MAP_PIXEL )
+    const MapMode& rMapMode = aGrafObj.GetPrefMapMode();
+    if (rMapMode.GetMapUnit() == MAP_PIXEL)
     {
-        aOriginalSize = Application::GetDefaultDevice()->PixelToLogic(aOriginalSize, aMap100mm );
+        aOriginalSize = Application::GetDefaultDevice()->PixelToLogic(aOriginalSize, aMap100mm);
     }
 
     if ( (0 != aGraphicCropStruct.Left) || (0 != aGraphicCropStruct.Top) || (0 != aGraphicCropStruct.Right) || (0 != aGraphicCropStruct.Bottom) )
@@ -4522,8 +4524,15 @@ void DocxAttributeOutput::WritePostponedMath(const SwOLENode* pPostponedMath)
 {
     uno::Reference < embed::XEmbeddedObject > xObj(const_cast<SwOLENode*>(pPostponedMath)->GetOLEObj().GetOleRef());
     if (embed::EmbedStates::LOADED == xObj->getCurrentState())
-    {   // must be running so there is a Component
-        xObj->changeState(embed::EmbedStates::RUNNING);
+    {
+        // must be running so there is a Component
+        try
+        {
+            xObj->changeState(embed::EmbedStates::RUNNING);
+        }
+        catch (const uno::Exception&)
+        {
+        }
     }
     uno::Reference< uno::XInterface > xInterface( xObj->getComponent(), uno::UNO_QUERY );
     if (!xInterface.is())
@@ -4537,7 +4546,8 @@ void DocxAttributeOutput::WritePostponedMath(const SwOLENode* pPostponedMath)
     oox::FormulaExportBase* formulaexport = dynamic_cast<oox::FormulaExportBase*>(dynamic_cast<SfxBaseModel*>(xInterface.get()));
     assert( formulaexport != nullptr );
     if (formulaexport)
-        formulaexport->writeFormulaOoxml( m_pSerializer, GetExport().GetFilter().getVersion());
+        formulaexport->writeFormulaOoxml( m_pSerializer, GetExport().GetFilter().getVersion(),
+                oox::drawingml::DOCUMENT_DOCX);
 }
 
 void DocxAttributeOutput::WritePostponedFormControl(const SdrObject* pObject)
@@ -4735,9 +4745,8 @@ void DocxAttributeOutput::WriteOLE( SwOLENode& rNode, const Size& rSize, const S
 {
     // get interoperability information about embedded objects
     uno::Reference< beans::XPropertySet > xPropSet( m_rExport.m_pDoc->GetDocShell()->GetBaseModel(), uno::UNO_QUERY_THROW );
-    OUString pName = UNO_NAME_MISC_OBJ_INTEROPGRABBAG;
     uno::Sequence< beans::PropertyValue > aGrabBag, aObjectsInteropList,aObjectInteropAttributes;
-    xPropSet->getPropertyValue( pName ) >>= aGrabBag;
+    xPropSet->getPropertyValue( UNO_NAME_MISC_OBJ_INTEROPGRABBAG ) >>= aGrabBag;
     for( sal_Int32 i=0; i < aGrabBag.getLength(); ++i )
         if ( aGrabBag[i].Name == "EmbeddedObjects" )
         {
@@ -5031,12 +5040,12 @@ bool DocxAttributeOutput::IsDiagram( const SdrObject* sdrObject )
 
     // if the shape doesn't have the InteropGrabBag property, it's not a diagram
     uno::Reference< beans::XPropertySetInfo > xPropSetInfo = xPropSet->getPropertySetInfo();
-    OUString pName = UNO_NAME_MISC_OBJ_INTEROPGRABBAG;
-    if ( !xPropSetInfo->hasPropertyByName( pName ) )
+    OUString aName = UNO_NAME_MISC_OBJ_INTEROPGRABBAG;
+    if ( !xPropSetInfo->hasPropertyByName( aName ) )
         return false;
 
     uno::Sequence< beans::PropertyValue > propList;
-    xPropSet->getPropertyValue( pName ) >>= propList;
+    xPropSet->getPropertyValue( aName ) >>= propList;
     for ( sal_Int32 nProp=0; nProp < propList.getLength(); ++nProp )
     {
         // if we find any of the diagram components, it's a diagram
@@ -5171,24 +5180,17 @@ static bool lcl_guessQFormat(const OUString& rName, sal_uInt16 nWwId)
     if (nWwId == ww::stiUser)
         return true;
 
+    // Allow exported built-in styles UI language neutral
+    if ( nWwId == ww::stiNormal ||
+        ( nWwId>= ww::stiLev1 && nWwId <= ww::stiLev9 ) ||
+            nWwId == ww::stiCaption || nWwId == ww::stiTitle ||
+            nWwId == ww::stiSubtitle || nWwId == ww::stiStrong ||
+            nWwId == ww::stiEmphasis )
+        return true;
+
     static std::set<OUString, OUStringIgnoreCase> aWhitelist;
     if (aWhitelist.empty())
     {
-        aWhitelist.insert("Normal");
-        aWhitelist.insert("Heading 1");
-        aWhitelist.insert("Heading 2");
-        aWhitelist.insert("Heading 3");
-        aWhitelist.insert("Heading 4");
-        aWhitelist.insert("Heading 5");
-        aWhitelist.insert("Heading 6");
-        aWhitelist.insert("Heading 7");
-        aWhitelist.insert("Heading 8");
-        aWhitelist.insert("Heading 9");
-        aWhitelist.insert("Caption");
-        aWhitelist.insert("Title");
-        aWhitelist.insert("Subtitle");
-        aWhitelist.insert("Strong");
-        aWhitelist.insert("Emphasis");
         aWhitelist.insert("No Spacing");
         aWhitelist.insert("List Paragraph");
         aWhitelist.insert("Quote");
@@ -5240,17 +5242,23 @@ void DocxAttributeOutput::StartStyle( const OUString& rName, StyleType eType,
         else if (rGrabBag[i].Name == "locked")
             bLocked = true;
         else if (rGrabBag[i].Name == "default")
-            bDefault = rGrabBag[i].Value.get<sal_Bool>();
+            bDefault = rGrabBag[i].Value.get<bool>();
         else if (rGrabBag[i].Name == "customStyle")
-            bCustomStyle = rGrabBag[i].Value.get<sal_Bool>();
+            bCustomStyle = rGrabBag[i].Value.get<bool>();
         else
             SAL_WARN("sw.ww8", "Unhandled style property: " << rGrabBag[i].Name);
     }
 
+    // MSO exports English names and writerfilter only recognize them.
+    const sal_Char *pEnglishName = nullptr;
     const char* pType = nullptr;
     switch (eType)
     {
-        case STYLE_TYPE_PARA: pType = "paragraph"; break;
+        case STYLE_TYPE_PARA:
+            pType = "paragraph";
+            if ( nWwId < ww::stiMax)
+                pEnglishName = ww::GetEnglishNameFromSti( static_cast<ww::sti>(nWwId ) );
+            break;
         case STYLE_TYPE_CHAR: pType = "character"; break;
         case STYLE_TYPE_LIST: pType = "numbering"; break;
     }
@@ -5262,9 +5270,8 @@ void DocxAttributeOutput::StartStyle( const OUString& rName, StyleType eType,
         pStyleAttributeList->add(FSNS(XML_w, XML_customStyle), "1");
     XFastAttributeListRef xStyleAttributeList(pStyleAttributeList);
     m_pSerializer->startElementNS( XML_w, XML_style, xStyleAttributeList);
-
     m_pSerializer->singleElementNS( XML_w, XML_name,
-            FSNS( XML_w, XML_val ), OUStringToOString( OUString( rName ), RTL_TEXTENCODING_UTF8 ).getStr(),
+            FSNS( XML_w, XML_val ), pEnglishName ? pEnglishName : OUStringToOString( rName, RTL_TEXTENCODING_UTF8 ).getStr(),
             FSEND );
 
     if ( nBase != 0x0FFF && eType != STYLE_TYPE_LIST)
@@ -5619,7 +5626,7 @@ static OString impl_NumberingType( sal_uInt16 nNumberingType )
     return aType;
 }
 
-// Convertig Level Numbering Format Code to string
+// Converting Level Numbering Format Code to string
 static OString impl_LevelNFC( sal_uInt16 nNumberingType , const SfxItemSet *pOutSet)
 {
     OString aType;
@@ -5636,6 +5643,7 @@ static OString impl_LevelNFC( sal_uInt16 nNumberingType , const SfxItemSet *pOut
         case style::NumberingType::BITMAP:
         case style::NumberingType::CHAR_SPECIAL:
         case style::NumberingType::CHARS_HEBREW:
+        case style::NumberingType::NUMBER_NONE:
             return impl_NumberingType( nNumberingType );
         case style::NumberingType::FULLWIDTH_ARABIC: aType="decimalFullWidth"; break;
         case style::NumberingType::TIAN_GAN_ZH: aType="ideographTraditional"; break;
@@ -5662,8 +5670,39 @@ static OString impl_LevelNFC( sal_uInt16 nNumberingType , const SfxItemSet *pOut
         case style::NumberingType::HANGUL_JAMO_KO: aType="chosung";break;
         case style::NumberingType::NUMBER_HANGUL_KO: aType="koreanDigital";break;
         case style::NumberingType::NUMBER_UPPER_KO: aType="koreanLegal"; break;
+        case style::NumberingType::CIRCLE_NUMBER: aType="decimalEnclosedCircle"; break;
+        case style::NumberingType::CHARS_ARABIC: aType="arabicAlpha"; break;
+        case style::NumberingType::CHARS_THAI: aType="thaiLetters"; break;
+        case style::NumberingType::CHARS_PERSIAN: aType="hindiVowels"; break;
+/*
+        Fallback the rest to decimal.
+        case style::NumberingType::NATIVE_NUMBERING:
+        case style::NumberingType::HANGUL_CIRCLED_JAMO_KO:
+        case style::NumberingType::HANGUL_CIRCLED_SYLLABLE_KO:
+        case style::NumberingType::CHARS_GREEK_UPPER_LETTER:
+        case style::NumberingType::CHARS_GREEK_LOWER_LETTER:
+        case style::NumberingType::PAGE_DESCRIPTOR:
+        case style::NumberingType::TRANSLITERATION:
+        case style::NumberingType::CHARS_NEPALI:
+        case style::NumberingType::CHARS_KHMER:
+        case style::NumberingType::CHARS_LAO:
+        case style::NumberingType::CHARS_TIBETAN:
+        case style::NumberingType::CHARS_CYRILLIC_UPPER_LETTER_BG:
+        case style::NumberingType::CHARS_CYRILLIC_LOWER_LETTER_BG:
+        case style::NumberingType::CHARS_CYRILLIC_UPPER_LETTER_N_BG:
+        case style::NumberingType::CHARS_CYRILLIC_LOWER_LETTER_N_BG:
+        case style::NumberingType::CHARS_CYRILLIC_UPPER_LETTER_RU:
+        case style::NumberingType::CHARS_CYRILLIC_LOWER_LETTER_RU:
+        case style::NumberingType::CHARS_CYRILLIC_UPPER_LETTER_N_RU:
+        case style::NumberingType::CHARS_CYRILLIC_LOWER_LETTER_N_RU:
+        case style::NumberingType::CHARS_MYANMAR:
+        case style::NumberingType::CHARS_CYRILLIC_UPPER_LETTER_SR:
+        case style::NumberingType::CHARS_CYRILLIC_LOWER_LETTER_SR:
+        case style::NumberingType::CHARS_CYRILLIC_UPPER_LETTER_N_SR:
+        case style::NumberingType::CHARS_CYRILLIC_LOWER_LETTER_N_SR:
+*/
         default:
-            aType = "none";        break;
+            aType = "decimal";        break;
     }
     return aType;
 }
@@ -5952,6 +5991,8 @@ void DocxAttributeOutput::NumberingDefinition( sal_uInt16 nId, const SwNumRule &
 
 void DocxAttributeOutput::StartAbstractNumbering( sal_uInt16 nId )
 {
+    const SwNumRule* pRule = (*m_rExport.m_pUsedNumTable)[nId - 1];
+    m_bExportingOutline = pRule && pRule->IsOutlineRule();
     m_pSerializer->startElementNS( XML_w, XML_abstractNum,
             FSNS( XML_w, XML_abstractNumId ), OString::number( nId ).getStr(),
             FSEND );
@@ -5990,6 +6031,14 @@ void DocxAttributeOutput::NumberingLevel( sal_uInt8 nLevel,
                 FSEND );
     }
 
+    if (m_bExportingOutline)
+    {
+        sal_uInt16 nId = m_rExport.m_pStyles->GetHeadingParagraphStyleId( nLevel );
+        if ( nId != SAL_MAX_UINT16 )
+            m_pSerializer->singleElementNS( XML_w, XML_pStyle ,
+                FSNS( XML_w, XML_val ), m_rExport.m_pStyles->GetStyleId(nId).getStr(),
+                FSEND );
+    }
     // format
     OString aFormat( impl_LevelNFC( nNumberingType ,pOutSet) );
 
@@ -6012,12 +6061,11 @@ void DocxAttributeOutput::NumberingLevel( sal_uInt8 nLevel,
                 FSEND );
 
     // text
-    OUString aText( rNumberingString );
-    OUStringBuffer aBuffer( aText.getLength() + WW8ListManager::nMaxLevel );
+    OUStringBuffer aBuffer( rNumberingString.getLength() + WW8ListManager::nMaxLevel );
 
-    const sal_Unicode *pPrev = aText.getStr();
-    const sal_Unicode *pIt = aText.getStr();
-    while ( pIt < aText.getStr() + aText.getLength() )
+    const sal_Unicode *pPrev = rNumberingString.getStr();
+    const sal_Unicode *pIt = rNumberingString.getStr();
+    while ( pIt < rNumberingString.getStr() + rNumberingString.getLength() )
     {
         // convert the level values to %NUMBER form
         // (we don't use pNumLvlPos at all)
@@ -6036,7 +6084,7 @@ void DocxAttributeOutput::NumberingLevel( sal_uInt8 nLevel,
         aBuffer.append( pPrev, pIt - pPrev );
 
     // If bullet char is empty, set lvlText as empty
-    if ( aText.equals ( OUString(sal_Unicode(0)) ) && nNumberingType == SVX_NUM_CHAR_SPECIAL )
+    if ( rNumberingString.equals ( OUString(sal_Unicode(0)) ) && nNumberingType == SVX_NUM_CHAR_SPECIAL )
     {
         m_pSerializer->singleElementNS( XML_w, XML_lvlText, FSNS( XML_w, XML_val ), "", FSEND );
     }
@@ -6184,7 +6232,7 @@ void DocxAttributeOutput::CharCrossedOut( const SvxCrossedOutItem& rCrossedOut )
 void DocxAttributeOutput::CharEscapement( const SvxEscapementItem& rEscapement )
 {
     OString sIss;
-    short nEsc = rEscapement.GetEsc(), nProp = rEscapement.GetProp();
+    short nEsc = rEscapement.GetEsc(), nProp = rEscapement.GetProportionalHeight();
     if ( !nEsc )
     {
         sIss = OString( "baseline" );
@@ -6223,7 +6271,7 @@ void DocxAttributeOutput::CharEscapement( const SvxEscapementItem& rEscapement )
 void DocxAttributeOutput::CharFont( const SvxFontItem& rFont)
 {
     GetExport().GetId( rFont ); // ensure font info is written to fontTable.xml
-    OUString sFontName(rFont.GetFamilyName());
+    const OUString& sFontName(rFont.GetFamilyName());
     OString sFontNameUtf8 = OUStringToOString(sFontName, RTL_TEXTENCODING_UTF8);
     if (!sFontNameUtf8.isEmpty())
         AddToAttrList( m_pFontsAttrList, 2,
@@ -6295,23 +6343,23 @@ void DocxAttributeOutput::CharUnderline( const SvxUnderlineItem& rUnderline )
 
     switch ( rUnderline.GetLineStyle() )
     {
-        case UNDERLINE_SINGLE:         pUnderlineValue = "single";          break;
-        case UNDERLINE_BOLD:           pUnderlineValue = "thick";           break;
-        case UNDERLINE_DOUBLE:         pUnderlineValue = "double";          break;
-        case UNDERLINE_DOTTED:         pUnderlineValue = "dotted";          break;
-        case UNDERLINE_DASH:           pUnderlineValue = "dash";            break;
-        case UNDERLINE_DASHDOT:        pUnderlineValue = "dotDash";         break;
-        case UNDERLINE_DASHDOTDOT:     pUnderlineValue = "dotDotDash";      break;
-        case UNDERLINE_WAVE:           pUnderlineValue = "wave";            break;
-        case UNDERLINE_BOLDDOTTED:     pUnderlineValue = "dottedHeavy";     break;
-        case UNDERLINE_BOLDDASH:       pUnderlineValue = "dashedHeavy";     break;
-        case UNDERLINE_LONGDASH:       pUnderlineValue = "dashLongHeavy";   break;
-        case UNDERLINE_BOLDLONGDASH:   pUnderlineValue = "dashLongHeavy";   break;
-        case UNDERLINE_BOLDDASHDOT:    pUnderlineValue = "dashDotHeavy";    break;
-        case UNDERLINE_BOLDDASHDOTDOT: pUnderlineValue = "dashDotDotHeavy"; break;
-        case UNDERLINE_BOLDWAVE:       pUnderlineValue = "wavyHeavy";       break;
-        case UNDERLINE_DOUBLEWAVE:     pUnderlineValue = "wavyDouble";      break;
-        case UNDERLINE_NONE:           // fall through
+        case LINESTYLE_SINGLE:         pUnderlineValue = "single";          break;
+        case LINESTYLE_BOLD:           pUnderlineValue = "thick";           break;
+        case LINESTYLE_DOUBLE:         pUnderlineValue = "double";          break;
+        case LINESTYLE_DOTTED:         pUnderlineValue = "dotted";          break;
+        case LINESTYLE_DASH:           pUnderlineValue = "dash";            break;
+        case LINESTYLE_DASHDOT:        pUnderlineValue = "dotDash";         break;
+        case LINESTYLE_DASHDOTDOT:     pUnderlineValue = "dotDotDash";      break;
+        case LINESTYLE_WAVE:           pUnderlineValue = "wave";            break;
+        case LINESTYLE_BOLDDOTTED:     pUnderlineValue = "dottedHeavy";     break;
+        case LINESTYLE_BOLDDASH:       pUnderlineValue = "dashedHeavy";     break;
+        case LINESTYLE_LONGDASH:       pUnderlineValue = "dashLongHeavy";   break;
+        case LINESTYLE_BOLDLONGDASH:   pUnderlineValue = "dashLongHeavy";   break;
+        case LINESTYLE_BOLDDASHDOT:    pUnderlineValue = "dashDotHeavy";    break;
+        case LINESTYLE_BOLDDASHDOTDOT: pUnderlineValue = "dashDotDotHeavy"; break;
+        case LINESTYLE_BOLDWAVE:       pUnderlineValue = "wavyHeavy";       break;
+        case LINESTYLE_DOUBLEWAVE:     pUnderlineValue = "wavyDouble";      break;
+        case LINESTYLE_NONE:           // fall through
         default:                       pUnderlineValue = "none";            break;
     }
 
@@ -6379,7 +6427,7 @@ void DocxAttributeOutput::CharBackground( const SvxBrushItem& rBrush )
 
 void DocxAttributeOutput::CharFontCJK( const SvxFontItem& rFont )
 {
-    OUString sFontName(rFont.GetFamilyName());
+    const OUString& sFontName(rFont.GetFamilyName());
     OString sFontNameUtf8 = OUStringToOString(sFontName, RTL_TEXTENCODING_UTF8);
     AddToAttrList( m_pFontsAttrList, FSNS( XML_w, XML_eastAsia ), sFontNameUtf8.getStr() );
 }
@@ -6402,10 +6450,9 @@ void DocxAttributeOutput::CharWeightCJK( const SvxWeightItem& rWeight )
 
 void DocxAttributeOutput::CharFontCTL( const SvxFontItem& rFont )
 {
-    OUString sFontName(rFont.GetFamilyName());
+    const OUString& sFontName(rFont.GetFamilyName());
     OString sFontNameUtf8 = OUStringToOString(sFontName, RTL_TEXTENCODING_UTF8);
     AddToAttrList( m_pFontsAttrList, FSNS( XML_w, XML_cs ), sFontNameUtf8.getStr() );
-
 }
 
 void DocxAttributeOutput::CharPostureCTL( const SvxPostureItem& rPosture)
@@ -6447,26 +6494,18 @@ void DocxAttributeOutput::CharRotate( const SvxCharRotateItem& rRotate)
 void DocxAttributeOutput::CharEmphasisMark( const SvxEmphasisMarkItem& rEmphasisMark )
 {
     const char *pEmphasis;
+    const FontEmphasisMark v = rEmphasisMark.GetEmphasisMark();
 
-    switch ( rEmphasisMark.GetValue() )
-    {
-    default:
-    case EMPHASISMARK_NONE:
-        pEmphasis = "none";
-        break;
-    case EMPHASISMARK_DOT | EMPHASISMARK_POS_ABOVE:
+    if (v == (FontEmphasisMark::Dot | FontEmphasisMark::PosAbove))
         pEmphasis = "dot";
-        break;
-    case EMPHASISMARK_ACCENT | EMPHASISMARK_POS_ABOVE:
+    else if (v == (FontEmphasisMark::Accent | FontEmphasisMark::PosAbove))
         pEmphasis = "comma";
-        break;
-    case EMPHASISMARK_CIRCLE | EMPHASISMARK_POS_ABOVE:
+    else if (v == (FontEmphasisMark::Circle | FontEmphasisMark::PosAbove))
         pEmphasis = "circle";
-        break;
-    case EMPHASISMARK_DOT|EMPHASISMARK_POS_BELOW:
+    else if (v == (FontEmphasisMark::Dot|FontEmphasisMark::PosBelow))
         pEmphasis = "underDot";
-        break;
-    }
+    else
+        pEmphasis = "none";
 
     m_pSerializer->singleElementNS( XML_w, XML_em, FSNS( XML_w, XML_val ), pEmphasis, FSEND );
 }
@@ -8431,6 +8470,7 @@ DocxAttributeOutput::DocxAttributeOutput( DocxExport &rExport, FSHelperPtr pSeri
       m_startedHyperlink( false ),
       m_nHyperLinkCount(0),
       m_nFieldsInHyperlink( 0 ),
+      m_bExportingOutline(false),
       m_nChartCount(0),
       m_postponedChart( nullptr ),
       pendingPlaceholder( nullptr ),

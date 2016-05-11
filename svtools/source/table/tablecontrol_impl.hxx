@@ -52,8 +52,6 @@ namespace svt { namespace table
         void move( long const i_offset ) { nStartPixel += i_offset; nEndPixel += i_offset; }
 
         long getWidth() const { return nEndPixel - nStartPixel; }
-
-        ColumnMetrics const & operator()() { return *this; }
     };
 
     struct ColumnInfoPositionLess
@@ -136,7 +134,7 @@ namespace svt { namespace table
         IAccessibleTableControl*    m_pAccessibleTable;
 
     public:
-        void        setModel( PTableModel _pModel );
+        void        setModel( const PTableModel& _pModel );
 
         inline  const PTableInputHandler&   getInputHandler() const { return m_pInputHandler; }
 
@@ -177,10 +175,8 @@ namespace svt { namespace table
             @param _nRow
                 the row position which should be visibleMust be non-negative, and smaller
                 than the row count.
-            @param _bAcceptPartialVisibility
-                <TRUE/> if it's okay that the given cooordinate is only partially visible
         */
-        void    ensureVisible( ColPos _nColumn, RowPos _nRow, bool _bAcceptPartialVisibility );
+        void    ensureVisible( ColPos _nColumn, RowPos _nRow );
 
         /** retrieves the content of the given cell, converted to a string
         */
@@ -254,7 +250,7 @@ namespace svt { namespace table
         virtual PTableModel         getModel() const override;
         virtual ColPos              getCurrentColumn() const override;
         virtual RowPos              getCurrentRow() const override;
-        virtual bool                activateCell( ColPos const i_col, RowPos const i_row ) override;
+        virtual void                activateCell( ColPos const i_col, RowPos const i_row ) override;
         virtual ::Size              getTableSizePixel() const override;
         virtual void                setPointer( Pointer const & i_pointer ) override;
         virtual void                captureMouse() override;
@@ -475,7 +471,6 @@ namespace svt { namespace table
         virtual void DeselectAtPoint( const Point& rPoint ) override;
         virtual void DeselectAll() override;
     };
-
 
 
 } } // namespace svt::table

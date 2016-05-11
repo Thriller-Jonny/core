@@ -18,9 +18,8 @@
 #include <com/sun/star/text/XTextRangeCompare.hpp>
 #include <com/sun/star/text/WritingMode2.hpp>
 #include <oox/drawingml/drawingmltypes.hxx>
-
+#include <config_features.h>
 #include <string>
-
 class Test : public SwModelTestBase
 {
 public:
@@ -82,11 +81,14 @@ protected:
     }
 };
 
+//This test gives errors due to ATL
+#if HAVE_FEATURE_ATL
 DECLARE_OOXMLEXPORT_TEST(testfdo81381, "fdo81381.docx")
 {
     if (xmlDocPtr pXmlDoc = parseExport("word/document.xml"))
         assertXPath(pXmlDoc, "/w:document/w:body/w:p[1]/w:r[1]/w:object[1]/o:OLEObject[1]", "DrawAspect", "Icon");
 }
+#endif
 
 DECLARE_OOXMLEXPORT_TEST(testSdtAlias, "sdt-alias.docx")
 {
@@ -152,7 +154,6 @@ DECLARE_OOXMLEXPORT_TEST(testfdo80897 , "fdo80897.docx")
         return;
     assertXPath(pXmlDoc, "/w:document/w:body/w:p/w:r/mc:AlternateContent/mc:Choice/w:drawing/wp:anchor/a:graphic/a:graphicData/wps:wsp/wps:bodyPr/a:prstTxWarp", "prst", "textTriangle");
 }
-
 
 
 DECLARE_OOXMLEXPORT_TEST(testFdo80997, "fdo80997.docx")
@@ -486,7 +487,7 @@ DECLARE_OOXMLEXPORT_TEST(testMultiPageToc, "multi-page-toc.docx")
     uno::Reference<container::XNamed> xTextSection = getProperty< uno::Reference<container::XNamed> >(getParagraph(2), "TextSection");
     CPPUNIT_ASSERT_EQUAL(OUString("Table of Contents1"), xTextSection->getName());
     // There should be a field in the header as well.
-    uno::Reference<text::XText> xHeaderText = getProperty< uno::Reference<text::XText> >(getStyles("PageStyles")->getByName(DEFAULT_STYLE), "HeaderText");
+    uno::Reference<text::XText> xHeaderText = getProperty< uno::Reference<text::XText> >(getStyles("PageStyles")->getByName("Standard"), "HeaderText");
     CPPUNIT_ASSERT_EQUAL(OUString("TextFieldStart"), getProperty<OUString>(getRun(getParagraphOfText(1, xHeaderText), 1), "TextPortionType"));
 }
 
@@ -562,7 +563,7 @@ DECLARE_OOXMLEXPORT_TEST(testParagraphMark, "paragraph-mark.docx")
 DECLARE_OOXMLEXPORT_TEST(testParagraphMarkNonempty, "paragraph-mark-nonempty.odt")
 {
     if (xmlDocPtr pXmlDoc = parseExport())
-        // There were two <w:sz> elements, make sure the 40 one is is dropped and the 20 one is kept.
+        // There were two <w:sz> elements, make sure the 40 one is dropped and the 20 one is kept.
         assertXPath(pXmlDoc, "//w:p/w:pPr/w:rPr/w:sz", "val", "20");
 }
 
@@ -634,10 +635,36 @@ DECLARE_OOXMLEXPORT_TEST(testOoxmlNumListZHCN, "numlist-zhcn.odt")
     assertXPath ( pXmlDoc, "/w:numbering/w:abstractNum[1]/w:lvl[1]/w:numFmt","val","chineseCountingThousand" );
 }
 
-DECLARE_OOXMLEXPORT_TEST(testOOxmlOutlineNumNone, "outline-num-none.odt")
+DECLARE_OOXMLEXPORT_TEST(testOOxmlOutlineNumberTypes, "outline-number-types.odt")
 {
     if (xmlDocPtr pXmlDoc = parseExport("word/numbering.xml"))
+    {
+        assertXPath(pXmlDoc, "/w:numbering/w:abstractNum[1]/w:lvl[1]/w:pStyle", "val", "Heading1");
         assertXPath(pXmlDoc, "/w:numbering/w:abstractNum[1]/w:lvl[1]/w:numFmt", "val", "none");
+        assertXPath(pXmlDoc, "/w:numbering/w:abstractNum[1]/w:lvl[2]/w:numFmt", "val", "decimalEnclosedCircle");
+        assertXPath(pXmlDoc, "/w:numbering/w:abstractNum[1]/w:lvl[3]/w:numFmt", "val", "decimal"); // CHARS_GREEK_UPPER_LETTER fallback to decimal
+        assertXPath(pXmlDoc, "/w:numbering/w:abstractNum[1]/w:lvl[4]/w:numFmt", "val", "decimal"); // CHARS_GREEK_LOWER_LETTER fallback to decimal
+        assertXPath(pXmlDoc, "/w:numbering/w:abstractNum[1]/w:lvl[5]/w:numFmt", "val", "arabicAlpha");
+        assertXPath(pXmlDoc, "/w:numbering/w:abstractNum[1]/w:lvl[6]/w:numFmt", "val", "hindiVowels");
+        assertXPath(pXmlDoc, "/w:numbering/w:abstractNum[1]/w:lvl[7]/w:numFmt", "val", "thaiLetters");
+
+        assertXPath(pXmlDoc, "/w:numbering/w:abstractNum[2]/w:lvl[1]/w:numFmt", "val", "decimal");
+        assertXPath(pXmlDoc, "/w:numbering/w:abstractNum[2]/w:lvl[2]/w:numFmt", "val", "decimal");
+        assertXPath(pXmlDoc, "/w:numbering/w:abstractNum[2]/w:lvl[3]/w:numFmt", "val", "decimal");
+        assertXPath(pXmlDoc, "/w:numbering/w:abstractNum[2]/w:lvl[4]/w:numFmt", "val", "decimal");
+        assertXPath(pXmlDoc, "/w:numbering/w:abstractNum[2]/w:lvl[5]/w:numFmt", "val", "decimal");
+        assertXPath(pXmlDoc, "/w:numbering/w:abstractNum[2]/w:lvl[6]/w:numFmt", "val", "decimal");
+        assertXPath(pXmlDoc, "/w:numbering/w:abstractNum[2]/w:lvl[7]/w:numFmt", "val", "decimal");
+        assertXPath(pXmlDoc, "/w:numbering/w:abstractNum[2]/w:lvl[8]/w:numFmt", "val", "decimal");
+
+        assertXPath(pXmlDoc, "/w:numbering/w:abstractNum[3]/w:lvl[1]/w:numFmt", "val", "decimal");
+        assertXPath(pXmlDoc, "/w:numbering/w:abstractNum[3]/w:lvl[2]/w:numFmt", "val", "decimal");
+        assertXPath(pXmlDoc, "/w:numbering/w:abstractNum[3]/w:lvl[3]/w:numFmt", "val", "decimal");
+        assertXPath(pXmlDoc, "/w:numbering/w:abstractNum[3]/w:lvl[4]/w:numFmt", "val", "decimal");
+        assertXPath(pXmlDoc, "/w:numbering/w:abstractNum[3]/w:lvl[5]/w:numFmt", "val", "decimal");
+        assertXPath(pXmlDoc, "/w:numbering/w:abstractNum[3]/w:lvl[6]/w:numFmt", "val", "decimal");
+        assertXPath(pXmlDoc, "/w:numbering/w:abstractNum[3]/w:lvl[7]/w:numFmt", "val", "decimal");
+    }
 }
 
 DECLARE_OOXMLEXPORT_TEST(testNumParentStyle, "num-parent-style.docx")
@@ -766,6 +793,16 @@ DECLARE_OOXMLEXPORT_TEST(testTdf91594, "tdf91594.docx")
     CPPUNIT_ASSERT_EQUAL(OUString("Wingdings"), getProperty<OUString>(xRun, "CharFontNameAsian"));
     CPPUNIT_ASSERT_EQUAL(OUString("Wingdings"), getProperty<OUString>(xRun, "CharFontNameComplex"));
 }
+DECLARE_OOXMLEXPORT_TEST(testTDF99434, "protectedform.docx")
+{
+    css::uno::Reference<css::lang::XMultiServiceFactory> m_xTextFactory(mxComponent, uno::UNO_QUERY);
+    uno::Reference< beans::XPropertySet > xSettings(m_xTextFactory->createInstance("com.sun.star.document.Settings"), uno::UNO_QUERY);
+    uno::Any aProtect = xSettings->getPropertyValue("ProtectForm");
+    bool bProt = false;
+    aProtect >>= bProt;
+    CPPUNIT_ASSERT(bProt);
+}
+
 
 CPPUNIT_PLUGIN_IMPLEMENT();
 

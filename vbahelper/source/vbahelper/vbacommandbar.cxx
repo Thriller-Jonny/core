@@ -76,14 +76,14 @@ ScVbaCommandBar::setName( const OUString& _name ) throw (uno::RuntimeException, 
     uno::Reference< beans::XPropertySet > xPropertySet( m_xBarSettings, uno::UNO_QUERY_THROW );
     xPropertySet->setPropertyValue( "UIName" , uno::makeAny( _name ) );
 
-    pCBarHelper->ApplyChange( m_sResourceUrl, m_xBarSettings );
+    pCBarHelper->ApplyTempChange( m_sResourceUrl, m_xBarSettings );
 }
 sal_Bool SAL_CALL
 ScVbaCommandBar::getVisible() throw (uno::RuntimeException, std::exception)
 {
     // menu bar is always visible in OOo
     if( m_bIsMenu )
-        return sal_True;
+        return true;
 
     bool bVisible = false;
     try
@@ -217,7 +217,7 @@ void SAL_CALL VbaDummyCommandBar::setName( const OUString& _name ) throw (uno::R
 sal_Bool SAL_CALL VbaDummyCommandBar::getVisible() throw (uno::RuntimeException, std::exception)
 {
     // #STUB
-    return sal_True;
+    return true;
 }
 
 void SAL_CALL VbaDummyCommandBar::setVisible( sal_Bool /*_visible*/ ) throw (uno::RuntimeException, std::exception)

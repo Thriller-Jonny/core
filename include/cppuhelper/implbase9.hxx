@@ -42,7 +42,7 @@ namespace cppu
         {
             static class_data9 s_cd =
             {
-                9 +1, sal_False, sal_False,
+                9 +1, false, false,
                 { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
                 {
                     CPPUHELPER_DETAIL_TYPEENTRY(Ifc1),
@@ -87,8 +87,14 @@ namespace cppu
 
 #if !defined _MSC_VER // public -> protected changes mangled names there
     protected:
+#elif defined __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnon-virtual-dtor"
 #endif
         ~ImplHelper9() throw () {}
+#if defined _MSC_VER && defined __clang__
+#pragma clang diagnostic pop
+#endif
     };
     /** Implementation helper implementing interfaces css::lang::XTypeProvider and
         css::uno::XInterface which supports weak mechanism to be held weakly

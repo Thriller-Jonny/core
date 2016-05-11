@@ -51,9 +51,8 @@ public:
     // Inserts a Frame under every pUpper of the array
     void RestoreUpperFrames( SwNodes& rNds, sal_uLong nStt, sal_uLong nEnd );
 
-    SwFrame* GetFrame( const Point* pDocPos = nullptr,
-                    const SwPosition *pPos = nullptr,
-                    const bool bCalcFrame = true ) const;
+    SwFrame* GetFrame( const Point* pDocPos,
+                    const SwPosition *pPos ) const;
 };
 
 SwNode* GoNextWithFrame(const SwNodes& rNodes, SwNodeIndex *pIdx)
@@ -388,7 +387,7 @@ void SwNode2LayImpl::RestoreUpperFrames( SwNodes& rNds, sal_uLong nStt, sal_uLon
                     static_cast<SwSectionFrame*>(pNxt)->UnlockJoin();
                 pUp = static_cast<SwLayoutFrame*>((*pUpperFrames)[x++]);
                 OSL_ENSURE( pUp->GetUpper() || pUp->IsFlyFrame(), "Lost Upper" );
-                ::_InsertCnt( pUp, pDoc, pNd->GetIndex(), false, nStt+1, pNxt );
+                ::InsertCnt_( pUp, pDoc, pNd->GetIndex(), false, nStt+1, pNxt );
                 pNxt = pUp->GetLastLower();
                 (*pUpperFrames)[x-2] = pNxt;
             }
@@ -407,17 +406,16 @@ void SwNode2LayImpl::RestoreUpperFrames( SwNodes& rNds, sal_uLong nStt, sal_uLon
             // #i18103# - invalidate size of section in order to
             // assure, that the section is formatted, unless it was 'Collocked'
             // from its 'collection' until its 'restoration'.
-            pSctFrame->_InvalidateSize();
+            pSctFrame->InvalidateSize_();
         }
     }
 }
 
 SwFrame* SwNode2LayImpl::GetFrame( const Point* pDocPos,
-                                const SwPosition *pPos,
-                                const bool bCalcFrame ) const
+                                const SwPosition *pPos ) const
 {
     // test if change of member pIter -> pMod broke anything
-    return pMod ? ::GetFrameOfModify( nullptr, *pMod, USHRT_MAX, pDocPos, pPos, bCalcFrame ) : nullptr;
+    return pMod ? ::GetFrameOfModify( nullptr, *pMod, FRM_ALL, pDocPos, pPos ) : nullptr;
 }
 
 SwNode2Layout::SwNode2Layout( const SwNode& rNd, sal_uLong nIdx )
@@ -452,10 +450,9 @@ SwNode2Layout::~SwNode2Layout()
 }
 
 SwFrame* SwNode2Layout::GetFrame( const Point* pDocPos,
-                              const SwPosition *pPos,
-                              const bool bCalcFrame ) const
+                              const SwPosition *pPos ) const
 {
-    return pImpl->GetFrame( pDocPos, pPos, bCalcFrame );
+    return pImpl->GetFrame( pDocPos, pPos );
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

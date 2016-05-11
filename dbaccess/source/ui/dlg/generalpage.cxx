@@ -34,7 +34,6 @@
 #include <com/sun/star/sdbc/XDriverAccess.hpp>
 #include <com/sun/star/beans/PropertyValue.hpp>
 #include <com/sun/star/ui/dialogs/TemplateDescription.hpp>
-#include <com/sun/star/uno/Sequence.hxx>
 #include <com/sun/star/container/XNameAccess.hpp>
 #include "DriverSettings.hxx"
 #include "UITools.hxx"
@@ -719,7 +718,7 @@ namespace dbaui
         ::sfx2::FileDialogHelper aFileDlg(
                 ui::dialogs::TemplateDescription::FILEOPEN_READONLY_VERSION,
                 0, OUString("sdatabase") );
-        const SfxFilter* pFilter = getStandardDatabaseFilter();
+        std::shared_ptr<const SfxFilter> pFilter = getStandardDatabaseFilter();
         if ( pFilter )
         {
             aFileDlg.SetCurrentFilter(pFilter->GetUIName());

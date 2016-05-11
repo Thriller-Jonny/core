@@ -31,9 +31,8 @@
 
 using sdr::overlay::OverlayObject;
 using sdr::overlay::OverlayManager;
-using ::drawinglayer::primitive2d::Primitive2DSequence;
 
-#define DASH_UPDATE_INTERVAL 180    // in msec
+#define DASH_UPDATE_INTERVAL 500    // in msec
 
 ScOverlayDashedBorder::ScOverlayDashedBorder(const ::basegfx::B2DRange& rRange, const Color& rColor) :
     OverlayObject(rColor),

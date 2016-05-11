@@ -62,7 +62,7 @@ void ScAppOptions::SetDefaults()
     nZoom           = 100;
     eZoomType       = SvxZoomType::PERCENT;
     bSynchronizeZoom = true;
-    nStatusFunc     = SUBTOTAL_FUNC_SUM;
+    nStatusFunc     = ( 1 << SUBTOTAL_FUNC_SUM );
     bAutoComplete   = true;
     bDetectiveAuto  = true;
 
@@ -215,7 +215,8 @@ static void lcl_GetSortList( Any& rDest )
 #define SCLAYOUTOPT_ZOOMVAL         2
 #define SCLAYOUTOPT_ZOOMTYPE        3
 #define SCLAYOUTOPT_SYNCZOOM        4
-#define SCLAYOUTOPT_COUNT           5
+#define SCLAYOUTOPT_STATUSBARMULTI  5
+#define SCLAYOUTOPT_COUNT           6
 
 #define CFGPATH_INPUT       "Office.Calc/Input"
 
@@ -254,6 +255,24 @@ static void lcl_GetSortList( Any& rDest )
 #define SCCOMPATOPT_KEY_BINDING     0
 #define SCCOMPATOPT_COUNT           1
 
+// Default value of Layout/Other/StatusbarMultiFunction
+#define SCLAYOUTOPT_STATUSBARMULTI_DEFAULTVAL         514
+// Default value of Layout/Other/StatusbarFunction
+#define SCLAYOUTOPT_STATUSBAR_DEFAULTVAL              1
+// Legacy default value of Layout/Other/StatusbarFunction
+// prior to multiple statusbar functions feature addition
+#define SCLAYOUTOPT_STATUSBAR_DEFAULTVAL_LEGACY       9
+
+static sal_uInt32 lcl_ConvertStatusBarFuncSetToSingle( sal_uInt32 nFuncSet )
+{
+    if ( !nFuncSet )
+        return 0;
+    for ( sal_uInt32 nFunc = 1; nFunc < 32; ++nFunc )
+        if ( nFuncSet & ( 1 << nFunc ) )
+            return nFunc;
+    return 0;
+}
+
 Sequence<OUString> ScAppCfg::GetLayoutPropertyNames()
 {
     static const char* aPropNames[] =
@@ -262,7 +281,8 @@ Sequence<OUString> ScAppCfg::GetLayoutPropertyNames()
         "Other/StatusbarFunction",      // SCLAYOUTOPT_STATUSBAR
         "Zoom/Value",                   // SCLAYOUTOPT_ZOOMVAL
         "Zoom/Type",                    // SCLAYOUTOPT_ZOOMTYPE
-        "Zoom/Synchronize"              // SCLAYOUTOPT_SYNCZOOM
+        "Zoom/Synchronize",             // SCLAYOUTOPT_SYNCZOOM
+        "Other/StatusbarMultiFunction"  // SCLAYOUTOPT_STATUSBARMULTI
     };
     Sequence<OUString> aNames(SCLAYOUTOPT_COUNT);
     OUString* pNames = aNames.getArray();
@@ -389,6 +409,9 @@ ScAppCfg::ScAppCfg() :
     OSL_ENSURE(aValues.getLength() == aNames.getLength(), "GetProperties failed");
     if(aValues.getLength() == aNames.getLength())
     {
+        sal_uInt32 nStatusBarFuncSingle = 0;
+        sal_uInt32 nStatusBarFuncMulti = 0;
+        sal_uInt32 nUIntValTmp = 0;
         for(int nProp = 0; nProp < aNames.getLength(); nProp++)
         {
             OSL_ENSURE(pValues[nProp].hasValue(), "property value missing");
@@ -400,7 +423,12 @@ ScAppCfg::ScAppCfg() :
                         if (pValues[nProp] >>= nIntVal) SetAppMetric( (FieldUnit) nIntVal );
                         break;
                     case SCLAYOUTOPT_STATUSBAR:
-                        if (pValues[nProp] >>= nIntVal) SetStatusFunc( (sal_uInt16) nIntVal );
+                        if ( pValues[SCLAYOUTOPT_STATUSBAR] >>= nUIntValTmp )
+                            nStatusBarFuncSingle = nUIntValTmp;
+                        break;
+                    case SCLAYOUTOPT_STATUSBARMULTI:
+                        if ( pValues[SCLAYOUTOPT_STATUSBARMULTI] >>= nUIntValTmp )
+                            nStatusBarFuncMulti = nUIntValTmp;
                         break;
                     case SCLAYOUTOPT_ZOOMVAL:
                         if (pValues[nProp] >>= nIntVal) SetZoom( (sal_uInt16) nIntVal );
@@ -414,6 +442,19 @@ ScAppCfg::ScAppCfg() :
                 }
             }
         }
+
+        if ( nStatusBarFuncMulti != SCLAYOUTOPT_STATUSBARMULTI_DEFAULTVAL )
+            SetStatusFunc( nStatusBarFuncMulti );
+        else if ( nStatusBarFuncSingle != SCLAYOUTOPT_STATUSBAR_DEFAULTVAL &&
+                  nStatusBarFuncSingle != SCLAYOUTOPT_STATUSBAR_DEFAULTVAL_LEGACY )
+        {
+            if ( nStatusBarFuncSingle )
+                SetStatusFunc( 1 << nStatusBarFuncSingle );
+            else
+                SetStatusFunc( 0 );
+        }
+        else
+            SetStatusFunc( SCLAYOUTOPT_STATUSBARMULTI_DEFAULTVAL );
     }
     aLayoutItem.SetCommitLink( LINK( this, ScAppCfg, LayoutCommitHdl ) );
 
@@ -589,7 +630,7 @@ ScAppCfg::ScAppCfg() :
                 pValues[nProp] <<= (sal_Int32) GetAppMetric();
                 break;
             case SCLAYOUTOPT_STATUSBAR:
-                pValues[nProp] <<= (sal_Int32) GetStatusFunc();
+                pValues[nProp] <<= lcl_ConvertStatusBarFuncSetToSingle( GetStatusFunc() );
                 break;
             case SCLAYOUTOPT_ZOOMVAL:
                 pValues[nProp] <<= (sal_Int32) GetZoom();
@@ -598,7 +639,10 @@ ScAppCfg::ScAppCfg() :
                 pValues[nProp] <<= (sal_Int32) GetZoomType();
                 break;
             case SCLAYOUTOPT_SYNCZOOM:
-                ScUnoHelpFunctions::SetBoolInAny( pValues[nProp], GetSynchronizeZoom() );
+                pValues[nProp] <<= GetSynchronizeZoom();
+                break;
+            case SCLAYOUTOPT_STATUSBARMULTI:
+                pValues[nProp] <<= GetStatusFunc();
                 break;
         }
     }
@@ -619,10 +663,10 @@ IMPL_LINK_NOARG_TYPED(ScAppCfg, InputCommitHdl, ScLinkConfigItem&, void)
                 lcl_GetLastFunctions( pValues[nProp], *this );
                 break;
             case SCINPUTOPT_AUTOINPUT:
-                ScUnoHelpFunctions::SetBoolInAny( pValues[nProp], GetAutoComplete() );
+                pValues[nProp] <<= GetAutoComplete();
                 break;
             case SCINPUTOPT_DET_AUTO:
-                ScUnoHelpFunctions::SetBoolInAny( pValues[nProp], GetDetectiveAuto() );
+                pValues[nProp] <<= GetDetectiveAuto();
                 break;
         }
     }
@@ -709,7 +753,7 @@ IMPL_LINK_NOARG_TYPED(ScAppCfg, MiscCommitHdl, ScLinkConfigItem&, void)
                 pValues[nProp] <<= (sal_Int32) GetDefaultObjectSizeHeight();
                 break;
             case SCMISCOPT_SHOWSHAREDDOCWARN:
-                ScUnoHelpFunctions::SetBoolInAny( pValues[nProp], GetShowSharedDocumentWarning() );
+                pValues[nProp] <<= GetShowSharedDocumentWarning();
                 break;
         }
     }

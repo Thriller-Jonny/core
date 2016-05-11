@@ -26,8 +26,9 @@
 #include "root.hxx"
 #include "tokstack.hxx"
 
-#include <boost/ptr_container/ptr_map.hpp>
+#include <memory>
 #include <vector>
+#include <map>
 
 namespace svl {
 
@@ -57,25 +58,25 @@ enum FORMULA_TYPE
     FT_CondFormat
 };
 
-class _ScRangeListTabs
+class ScRangeListTabs
 {
     typedef ::std::vector<ScRange> RangeListType;
-    typedef ::boost::ptr_map<SCTAB, RangeListType> TabRangeType;
-    TabRangeType maTabRanges;
+    typedef ::std::map<SCTAB, std::unique_ptr<RangeListType>> TabRangeType;
+    TabRangeType m_TabRanges;
     RangeListType::const_iterator maItrCur;
     RangeListType::const_iterator maItrCurEnd;
 
 public:
-    _ScRangeListTabs ();
-    ~_ScRangeListTabs();
+    ScRangeListTabs ();
+    ~ScRangeListTabs();
 
-    void Append( const ScAddress& aSRD, SCTAB nTab, bool bLimit = true );
-    void Append( const ScRange& aCRD, SCTAB nTab, bool bLimit = true );
+    void Append( const ScAddress& aSRD, SCTAB nTab );
+    void Append( const ScRange& aCRD, SCTAB nTab );
 
     const ScRange* First ( SCTAB nTab = 0 );
     const ScRange* Next ();
 
-    bool HasRanges () const { return !maTabRanges.empty(); }
+    bool HasRanges () const { return !m_TabRanges.empty(); }
 };
 
 class ConverterBase
@@ -105,7 +106,7 @@ public:
 
     virtual ConvErr     Convert( const ScTokenArray*& rpErg, XclImpStream& rStrm, sal_Size nFormulaLen,
                                  bool bAllowArrays, const FORMULA_TYPE eFT = FT_CellFormula ) = 0;
-    virtual ConvErr     Convert( _ScRangeListTabs&, XclImpStream& rStrm, sal_Size nFormulaLen, SCsTAB nTab,
+    virtual ConvErr     Convert( ScRangeListTabs&, XclImpStream& rStrm, sal_Size nFormulaLen, SCsTAB nTab,
                                     const FORMULA_TYPE eFT = FT_CellFormula ) = 0;
 };
 
@@ -113,7 +114,7 @@ class LotusConverterBase : public ConverterBase
 {
 protected:
     SvStream&           aIn;
-    sal_Int32               nBytesLeft;
+    sal_Int32           nBytesLeft;
 
     inline void         Ignore( const long nSeekRel );
     inline void         Read( sal_uInt8& nByte );
@@ -128,8 +129,7 @@ protected:
 public:
     void                Reset( const ScAddress& rEingPos );
 
-    virtual ConvErr     Convert( const ScTokenArray*& rpErg, sal_Int32& nRest,
-                                    const FORMULA_TYPE eFT = FT_CellFormula ) = 0;
+    virtual void        Convert( const ScTokenArray*& rpErg, sal_Int32& nRest ) = 0;
 
 protected:
     using               ConverterBase::Reset;

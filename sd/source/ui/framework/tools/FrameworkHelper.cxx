@@ -39,7 +39,7 @@
 #include <sfx2/dispatch.hxx>
 
 #include "MutexOwner.hxx"
-#include "vcl/svapp.hxx"
+#include <vcl/svapp.hxx>
 #include <osl/doublecheckedlocking.h>
 #include <osl/getglobalmutex.hxx>
 #include <tools/diagnose_ex.h>
@@ -231,7 +231,7 @@ const OUString FrameworkHelper::msConfigurationControllerService("com.sun.star.d
 //----- helper ----------------------------------------------------------------
 namespace
 {
-    static ::std::shared_ptr< ViewShell > lcl_getViewShell( const Reference< XResource >& i_rViewShellWrapper )
+    ::std::shared_ptr< ViewShell > lcl_getViewShell( const Reference< XResource >& i_rViewShellWrapper )
     {
         ::std::shared_ptr< ViewShell > pViewShell;
         if ( !i_rViewShellWrapper.is() )

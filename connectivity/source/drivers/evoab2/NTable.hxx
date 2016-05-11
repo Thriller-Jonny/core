@@ -37,19 +37,19 @@ namespace connectivity
         public:
             OEvoabTable(    sdbcx::OCollection* _pTables,
                     OEvoabConnection* _pConnection,
-                    const OUString& _Name,
-                    const OUString& _Type,
-                    const OUString& _Description = OUString(),
-                    const OUString& _SchemaName = OUString(),
-                    const OUString& _CatalogName = OUString()
+                    const OUString& Name,
+                    const OUString& Type,
+                    const OUString& Description = OUString(),
+                    const OUString& SchemaName = OUString(),
+                    const OUString& CatalogName = OUString()
                 );
 
             OEvoabConnection* getConnection() { return m_pConnection;}
 
             virtual void refreshColumns() override;
 
-            OUString getTableName() const { return m_Name; }
-            OUString getSchema() const { return m_SchemaName; }
+            OUString const & getTableName() const { return m_Name; }
+            OUString const & getSchema() const { return m_SchemaName; }
         };
     }
 }

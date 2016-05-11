@@ -90,7 +90,6 @@
       <menu:menuitem menu:id=".uno:DeletePage"/>
       <menu:menuseparator/>
       <menu:menuitem menu:id=".uno:ManageLinks"/>
-      <menu:menuitem menu:id=".uno:PlugInsActive"/>
       <menu:menuitem menu:id=".uno:ImageMapDialog"/>
       <menu:menuitem menu:id=".uno:ObjectMenue"/>
       <menu:menuitem menu:id=".uno:EditHyperlink"/>
@@ -205,7 +204,6 @@
       <menu:menu menu:id=".uno:ObjectMenu">
         <menu:menupopup>
           <menu:menuitem menu:id=".uno:InsertObject"/>
-          <menu:menuitem menu:id=".uno:InsertPlugin"/>
           <menu:menuitem menu:id=".uno:InsertMath"/>
         </menu:menupopup>
       </menu:menu>

@@ -29,8 +29,7 @@
 #include <algorithm>
 
 #include <drawinglayer/processor2d/hittestprocessor2d.hxx>
-
-
+#include <comphelper/lok.hxx>
 
 namespace sdr
 {
@@ -77,7 +76,7 @@ namespace sdr
                             Size(DEFAULT_VALUE_FOR_HITTEST_PIXEL, DEFAULT_VALUE_FOR_HITTEST_PIXEL)));
 
                         // When tiled rendering, we always work in logic units, use the non-pixel default.
-                        if (pManager->getModel()->isTiledRendering())
+                        if (comphelper::LibreOfficeKit::isActive())
                         {
                             aSizeLogic = Size(DEFAULT_VALUE_FOR_HITTEST_TWIP, DEFAULT_VALUE_FOR_HITTEST_TWIP);
                             if (pManager->getOutputDevice().GetMapMode().GetMapUnit() == MAP_100TH_MM)
@@ -92,8 +91,7 @@ namespace sdr
                         aViewInformation2D,
                         rLogicPosition,
                         fLogicTolerance,
-                        false,
-                        pManager->getModel()->isTiledRendering());
+                        false);
 
                     for(; aStart != maVector.end(); ++aStart)
                     {
@@ -121,8 +119,9 @@ namespace sdr
             return false;
         }
 
-        bool OverlayObjectList::isHitPixel(const Point& rDiscretePosition, sal_uInt32 nDiscreteTolerance) const
+        bool OverlayObjectList::isHitPixel(const Point& rDiscretePosition) const
         {
+            sal_uInt32 nDiscreteTolerance = DEFAULT_VALUE_FOR_HITTEST_PIXEL;
             if(!maVector.empty())
             {
                 OverlayObjectVector::const_iterator aStart(maVector.begin());
@@ -134,15 +133,8 @@ namespace sdr
                     const Point aPosLogic(pManager->getOutputDevice().PixelToLogic(rDiscretePosition));
                     const basegfx::B2DPoint aPosition(aPosLogic.X(), aPosLogic.Y());
 
-                    if(nDiscreteTolerance)
-                    {
-                        const Size aSizeLogic(pManager->getOutputDevice().PixelToLogic(Size(nDiscreteTolerance, nDiscreteTolerance)));
-                        return isHitLogic(aPosition, (double)aSizeLogic.Width());
-                    }
-                    else
-                    {
-                        return isHitLogic(aPosition);
-                    }
+                    const Size aSizeLogic(pManager->getOutputDevice().PixelToLogic(Size(nDiscreteTolerance, nDiscreteTolerance)));
+                    return isHitLogic(aPosition, (double)aSizeLogic.Width());
                 }
             }
 

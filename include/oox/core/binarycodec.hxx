@@ -21,11 +21,14 @@
 #define INCLUDED_OOX_CORE_BINARYCODEC_HXX
 
 #include <com/sun/star/uno/Sequence.hxx>
-#include <com/sun/star/beans/NamedValue.hpp>
-
+#include <oox/dllapi.h>
 #include <rtl/cipher.h>
 #include <rtl/digest.h>
-#include <oox/dllapi.h>
+#include <sal/types.h>
+
+namespace com { namespace sun { namespace star {
+    namespace beans { struct NamedValue; }
+} } }
 
 namespace oox { class AttributeList; }
 
@@ -33,13 +36,11 @@ namespace oox {
 namespace core {
 
 
-
 namespace CodecHelper
 {
     /** Returns the password hash if it is in the required 16-bit limit. */
     OOX_DLLPUBLIC sal_uInt16   getPasswordHash( const AttributeList& rAttribs, sal_Int32 nElement );
 }
-
 
 
 /** Encodes and decodes data from/to protected MS Office documents.
@@ -131,11 +132,8 @@ public:
         @param nBytes
             Size of the passed data blocks. pnDestData and pnSrcData must be of
             this size.
-
-        @return
-            True = decoding was successful (no error occurred).
     */
-    bool                decode(
+    void                decode(
                             sal_uInt8* pnDestData,
                             const sal_uInt8* pnSrcData,
                             sal_Int32 nBytes );
@@ -164,7 +162,6 @@ private:
     sal_uInt16          mnBaseKey;          ///< Base key from password.
     sal_uInt16          mnHash;             ///< Hash value from password.
 };
-
 
 
 /** Encodes and decodes data from protected MSO 97+ documents.
@@ -284,11 +281,8 @@ public:
 
         @param nBytes
             Number of bytes to be skipped (cipher "seeks" forward).
-
-        @return
-            True = skip was successful (no error occurred).
      */
-    bool                skip( sal_Int32 nBytes );
+    void                skip( sal_Int32 nBytes );
 
 private:
     rtlCipher           mhCipher;
@@ -296,7 +290,6 @@ private:
     sal_uInt8           mpnDigestValue[ RTL_DIGEST_LENGTH_MD5 ];
     sal_uInt8           mpnUnique[16];
 };
-
 
 
 } // namespace core

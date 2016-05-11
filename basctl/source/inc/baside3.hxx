@@ -56,10 +56,10 @@ bool implImportDialog( vcl::Window* pWin, const OUString& rCurPath, const Script
 class DialogWindow: public BaseWindow
 {
 private:
-    DialogWindowLayout& rLayout;
-    std::unique_ptr<DlgEditor> pEditor;
-    std::unique_ptr<SfxUndoManager> pUndoMgr; // never nullptr
-    OUString            aCurPath;
+    DialogWindowLayout& m_rLayout;
+    std::unique_ptr<DlgEditor> m_pEditor;
+    std::unique_ptr<SfxUndoManager> m_pUndoMgr; // never nullptr
+    OUString            m_sCurPath;
 
 protected:
     virtual void        Paint(vcl::RenderContext& rRenderContext, const Rectangle& rRect) override;
@@ -77,7 +77,7 @@ protected:
     virtual void        DoInit() override;
     virtual void        DoScroll( ScrollBar* pCurScrollBar ) override;
     virtual void        DataChanged( const DataChangedEvent& rDCEvt ) override;
-    void                InitSettings(bool bFont, bool bForeground, bool bBackground);
+    void                InitSettings();
 
 public:
     DialogWindow (DialogWindowLayout* pParent, ScriptDocument const& rDocument, const OUString& aLibName, const OUString& aName, css::uno::Reference<css::container::XNameContainer> const& xDialogModel);
@@ -85,7 +85,7 @@ public:
 
     virtual void        ExecuteCommand( SfxRequest& rReq ) override;
     virtual void        GetState( SfxItemSet& ) override;
-    DlgEditor&          GetEditor() const   { return *pEditor; }
+    DlgEditor&          GetEditor() const   { return *m_pEditor; }
     css::uno::Reference< css::container::XNameContainer > GetDialog() const;
     DlgEdModel&         GetModel() const;
     DlgEdPage&          GetPage() const;
@@ -93,8 +93,8 @@ public:
     bool                RenameDialog( const OUString& rNewName );
     void                DisableBrowser();
     void                UpdateBrowser();
-    bool                SaveDialog();
-    bool                ImportDialog();
+    void                SaveDialog();
+    void                ImportDialog();
 
     virtual OUString             GetTitle() override;
     virtual EntryDescriptor      CreateEntryDescriptor() override;

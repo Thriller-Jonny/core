@@ -38,9 +38,7 @@ FormulaListBox::FormulaListBox( vcl::Window* pParent, WinBits nBits ):
 
 void FormulaListBox::KeyInput( const KeyEvent& rKEvt )
 {
-    KeyEvent aKEvt=rKEvt;
-
-    if(aKEvt.GetCharCode()==' ')
+    if(rKEvt.GetCharCode()==' ')
         DoubleClick();
 }
 
@@ -108,8 +106,9 @@ void FuncPage::impl_addFunctions(const IFunctionCategory* _pCategory)
     for(sal_uInt32 i = 0 ; i < nCount; ++i)
     {
         TFunctionDesc pDesc(_pCategory->getFunction(i));
-        m_pLbFunction->SetEntryData(
-            m_pLbFunction->InsertEntry(pDesc->getFunctionName() ),const_cast<IFunctionDescription *>(pDesc) );
+        if (!pDesc->isHidden())
+            m_pLbFunction->SetEntryData(
+                    m_pLbFunction->InsertEntry(pDesc->getFunctionName() ),const_cast<IFunctionDescription *>(pDesc) );
     }
 }
 
@@ -155,7 +154,9 @@ void FuncPage::UpdateFunctionList()
 
 
     m_pLbFunction->SetUpdateMode( true );
-    m_pLbFunction->SelectEntryPos(0);
+    // Ensure no function is selected so the Next button doesn't overwrite a
+    // function that is not in the list with an arbitrary selected one.
+    m_pLbFunction->SetNoSelection();
 
     if(IsVisible()) SelHdl(*m_pLbFunction);
 }
@@ -198,7 +199,10 @@ sal_Int32 FuncPage::GetFuncPos(const IFunctionDescription* _pDesc)
 
 void FuncPage::SetFunction(sal_Int32 nFunc)
 {
-    m_pLbFunction->SelectEntryPos(nFunc);
+    if (nFunc == LISTBOX_ENTRY_NOTFOUND)
+        m_pLbFunction->SetNoSelection();
+    else
+        m_pLbFunction->SelectEntryPos(nFunc);
 }
 
 void FuncPage::SetFocus()

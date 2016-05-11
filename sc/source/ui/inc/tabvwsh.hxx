@@ -93,7 +93,6 @@ enum ObjectSelectionType
 class SC_DLLPUBLIC ScTabViewShell: public SfxViewShell, public ScDBFunc
 {
 private:
-    SvxHtmlOptions          aHTMLOpt;
     ObjectSelectionType     eCurOST;
     sal_uInt16              nDrawSfxId;
     sal_uInt16              nFormSfxId;
@@ -205,8 +204,8 @@ protected:
 
     virtual void    WriteUserData(OUString &, bool bBrowse = false) override;
     virtual void    ReadUserData(const OUString &, bool bBrowse = false) override;
-    virtual void    WriteUserDataSequence (css::uno::Sequence < css::beans::PropertyValue >&, bool bBrowse = false ) override;
-    virtual void    ReadUserDataSequence (const css::uno::Sequence < css::beans::PropertyValue >&, bool bBrowse = false ) override;
+    virtual void    WriteUserDataSequence (css::uno::Sequence < css::beans::PropertyValue >& ) override;
+    virtual void    ReadUserDataSequence (const css::uno::Sequence < css::beans::PropertyValue >& ) override;
 
     virtual void    UIDeactivated( SfxInPlaceClient* pClient ) override;
 
@@ -323,13 +322,13 @@ public:
     // Drucken:
     virtual SfxPrinter*     GetPrinter( bool bCreate = false ) override;
     virtual sal_uInt16      SetPrinter( SfxPrinter* pNewPrinter,
-                                          SfxPrinterChangeFlags nDiffFlags = SFX_PRINTER_ALL, bool bIsApi=false ) override;
+                                          SfxPrinterChangeFlags nDiffFlags = SFX_PRINTER_ALL ) override;
 
     virtual bool            HasPrintOptionsPage() const override;
     virtual VclPtr<SfxTabPage> CreatePrintOptionsPage( vcl::Window *pParent, const SfxItemSet &rOptions ) override;
 
     void            ConnectObject( SdrOle2Obj* pObj );
-    bool            ActivateObject( SdrOle2Obj* pObj, long nVerb );
+    void            ActivateObject( SdrOle2Obj* pObj, long nVerb );
 
     void            DeactivateOle();
 

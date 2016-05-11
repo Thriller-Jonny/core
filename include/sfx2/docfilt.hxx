@@ -19,7 +19,6 @@
 #ifndef INCLUDED_SFX2_DOCFILT_HXX
 #define INCLUDED_SFX2_DOCFILT_HXX
 
-#include <com/sun/star/plugin/PluginDescription.hpp>
 #include <com/sun/star/embed/XStorage.hpp>
 #include <com/sun/star/beans/UnknownPropertyException.hpp>
 #include <com/sun/star/lang/WrappedTargetException.hpp>
@@ -31,6 +30,8 @@
 #include <sot/formats.hxx>
 #include <sfx2/dllapi.h>
 #include <tools/wldcrd.hxx>
+
+#include <memory>
 
 class SfxFilterContainer;
 class SotStorage;
@@ -77,6 +78,8 @@ public:
 
     bool IsAllowedAsTemplate() const { return bool(nFormatType & SfxFilterFlags::TEMPLATE); }
     bool IsOwnFormat() const { return bool(nFormatType & SfxFilterFlags::OWN); }
+    /// If the filter supports digital signatures.
+    bool GetSupportsSigning() const { return bool(nFormatType & SfxFilterFlags::SUPPORTSSIGNING); }
     bool IsOwnTemplateFormat() const { return bool(nFormatType & SfxFilterFlags::TEMPLATEPATH); }
     bool IsAlienFormat() const { return bool(nFormatType & SfxFilterFlags::ALIEN); }
     bool CanImport() const { return bool(nFormatType & SfxFilterFlags::IMPORT); }
@@ -103,14 +106,14 @@ public:
     const OUString& GetServiceName() const { return aServiceName; }
     const OUString& GetProviderName() const { return maProvider;}
 
-    static const SfxFilter* GetDefaultFilter( const OUString& rName );
-    static const SfxFilter* GetFilterByName( const OUString& rName );
-    static const SfxFilter* GetDefaultFilterFromFactory( const OUString& rServiceName );
+    static std::shared_ptr<const SfxFilter> GetDefaultFilter( const OUString& rName );
+    static std::shared_ptr<const SfxFilter> GetFilterByName( const OUString& rName );
+    static std::shared_ptr<const SfxFilter> GetDefaultFilterFromFactory( const OUString& rServiceName );
 
     static OUString GetTypeFromStorage( const SotStorage& rStg );
     static OUString GetTypeFromStorage(
         const css::uno::Reference<css::embed::XStorage>& xStorage,
-        bool bTemplate = false, OUString* pName = nullptr )
+        bool bTemplate = false )
             throw ( css::beans::UnknownPropertyException,
                     css::lang::WrappedTargetException,
                     css::uno::RuntimeException,

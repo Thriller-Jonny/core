@@ -18,32 +18,17 @@
  */
 
 
-#include <osl/diagnose.h>
-#include <comphelper/property.hxx>
-#include <comphelper/uno3.hxx>
-#include <osl/thread.h>
 #include <tools/diagnose_ex.h>
-#include <com/sun/star/sdbc/ResultSetConcurrency.hpp>
-#include <com/sun/star/sdbc/ResultSetType.hpp>
-#include <com/sun/star/sdbc/FetchDirection.hpp>
-#include <com/sun/star/lang/DisposedException.hpp>
-#include <comphelper/sequence.hxx>
 #include <cppuhelper/queryinterface.hxx>
-#include <cppuhelper/typeprovider.hxx>
 #include <comphelper/processfactory.hxx>
-#include <comphelper/extract.hxx>
-#include <comphelper/types.hxx>
 #include <connectivity/dbexception.hxx>
-#include <com/sun/star/container/XIndexAccess.hpp>
 
 #include <algorithm>
 
 #include "MDriver.hxx"
 #include "MStatement.hxx"
 #include "sqlbison.hxx"
-#include "MConnection.hxx"
 #include "MResultSet.hxx"
-#include "MDatabaseMetaData.hxx"
 
 #include "resource/mork_res.hrc"
 #include "resource/common_res.hrc"
@@ -138,7 +123,6 @@ void SAL_CALL OCommonStatement::close(  ) throw(SQLException, RuntimeException, 
 }
 
 
-
 OCommonStatement::StatementType OCommonStatement::parseSql( const OUString& sql , bool bAdjusted)
     throw ( SQLException, RuntimeException )
 {
@@ -156,16 +140,16 @@ OCommonStatement::StatementType OCommonStatement::parseSql( const OUString& sql 
     {
         m_pSQLIterator->setParseTree(m_pParseTree);
         m_pSQLIterator->traverseAll();
-        const OSQLTables& xTabs = m_pSQLIterator->getTables();
+        const OSQLTables& rTabs = m_pSQLIterator->getTables();
 
-        if (xTabs.empty())
+        if (rTabs.empty())
         {
             getOwnConnection()->throwSQLException( STR_QUERY_AT_LEAST_ONE_TABLES, *this );
         }
 
 #if OSL_DEBUG_LEVEL > 0
         OSQLTables::const_iterator citer;
-        for( citer = xTabs.begin(); citer != xTabs.end(); ++citer ) {
+        for( citer = rTabs.begin(); citer != rTabs.end(); ++citer ) {
             OSL_TRACE("SELECT Table : %s", OUtoCStr(citer->first) );
         }
 #endif
@@ -173,13 +157,13 @@ OCommonStatement::StatementType OCommonStatement::parseSql( const OUString& sql 
         Reference<XIndexAccess> xNames;
         switch(m_pSQLIterator->getStatementType())
         {
-        case SQL_STATEMENT_SELECT:
+        case OSQLStatementType::Select:
 
             // at this moment we support only one table per select statement
 
-            OSL_ENSURE( xTabs.begin() != xTabs.end(), "Need a Table");
+            OSL_ENSURE( rTabs.begin() != rTabs.end(), "Need a Table");
 
-            m_pTable = static_cast< OTable* > (xTabs.begin()->second.get());
+            m_pTable = static_cast< OTable* > (rTabs.begin()->second.get());
             m_xColNames     = m_pTable->getColumns();
             xNames.set(m_xColNames,UNO_QUERY);
             // set the binding of the resultrow
@@ -192,7 +176,7 @@ OCommonStatement::StatementType OCommonStatement::parseSql( const OUString& sql 
             analyseSQL();
             return eSelect;
 
-        case SQL_STATEMENT_CREATE_TABLE:
+        case OSQLStatementType::CreateTable:
             return eCreateTable;
 
         default:
@@ -317,7 +301,6 @@ Any SAL_CALL OCommonStatement::getWarnings(  ) throw(SQLException, RuntimeExcept
 
     return makeAny(m_aLastWarning);
 }
-
 
 
 void SAL_CALL OCommonStatement::clearWarnings(  ) throw(SQLException, RuntimeException, std::exception)

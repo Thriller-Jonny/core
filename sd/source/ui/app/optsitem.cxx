@@ -42,7 +42,6 @@ template< class T > T getSafeValue( const Any& rAny )
     return value;
 }
 
-// - SdOptionsItem -
 
 SdOptionsItem::SdOptionsItem( const SdOptionsGeneric& rParent, const OUString& rSubTree ) :
     ConfigItem  ( rSubTree ),
@@ -78,7 +77,6 @@ void SdOptionsItem::SetModified()
     ConfigItem::SetModified();
 }
 
-// - SdOptionsGeneric -
 SdOptionsGeneric::SdOptionsGeneric(sal_uInt16 nConfigId, const OUString& rSubTree)
     : maSubTree(rSubTree)
     , mpCfgItem( nullptr)
@@ -428,6 +426,7 @@ SdOptionsMisc::SdOptionsMisc( sal_uInt16 nConfigId, bool bUseConfig ) :
     bEnablePresenterScreen( true),
     bSolidDragging( true ),
     bSummationOfParagraphs( false ),
+    bTabBarVisible( true ),
     bShowUndoDeleteWarning( true ),
     bSlideshowRespectZOrder( true ),
     bShowComments( true ),
@@ -460,6 +459,7 @@ bool SdOptionsMisc::operator==( const SdOptionsMisc& rOpt ) const
             IsEnableSdremote() == rOpt.IsEnableSdremote() &&
             IsEnablePresenterScreen() == rOpt.IsEnablePresenterScreen()&&
             IsSummationOfParagraphs() == rOpt.IsSummationOfParagraphs() &&
+            IsTabBarVisible() == rOpt.IsTabBarVisible() &&
             IsSolidDragging() == rOpt.IsSolidDragging() &&
             IsShowUndoDeleteWarning() == rOpt.IsShowUndoDeleteWarning() &&
             IsSlideshowRespectZOrder() == rOpt.IsSlideshowRespectZOrder() &&
@@ -513,7 +513,8 @@ void SdOptionsMisc::GetPropNameArray( const char**& ppNames, sal_uLong& rCount )
         "PenColor",
         "PenWidth",
         "Start/EnableSdremote",
-        "Start/EnablePresenterScreen"
+        "Start/EnablePresenterScreen",
+        "TabBarVisible"
     };
 
     rCount = ( ( GetConfigId() == SDCFG_IMPRESS ) ? SAL_N_ELEMENTS(aPropNames) : 14 );
@@ -574,6 +575,10 @@ bool SdOptionsMisc::ReadData( const Any* pValues )
 
         if( pValues[25].hasValue() )
             SetEnablePresenterScreen( *static_cast<sal_Bool const *>(pValues[ 25 ].getValue()) );
+
+        if( pValues[26].hasValue() ) {
+            SetTabBarVisible( *static_cast<sal_Bool const *>(pValues[ 26 ].getValue()) );
+        }
     }
 
     return true;
@@ -615,6 +620,7 @@ bool SdOptionsMisc::WriteData( Any* pValues ) const
         pValues[ 23 ] <<= GetPresentationPenWidth();
         pValues[ 24 ] <<= IsEnableSdremote();
         pValues[ 25 ] <<= IsEnablePresenterScreen();
+        pValues[ 26 ] <<= IsTabBarVisible();
     }
 
     return true;
@@ -642,6 +648,7 @@ SdOptionsMiscItem::SdOptionsMiscItem( sal_uInt16 _nWhich, SdOptions* pOpts, ::sd
         maOptionsMisc.SetEnableSdremote( pOpts->IsEnableSdremote() );
         maOptionsMisc.SetEnablePresenterScreen( pOpts->IsEnablePresenterScreen() );
         maOptionsMisc.SetSummationOfParagraphs( pOpts->IsSummationOfParagraphs() );
+        maOptionsMisc.SetTabBarVisible( pOpts->IsTabBarVisible() );
         maOptionsMisc.SetShowUndoDeleteWarning( pOpts->IsShowUndoDeleteWarning() );
         maOptionsMisc.SetPrinterIndependentLayout( pOpts->GetPrinterIndependentLayout() );
         maOptionsMisc.SetDefaultObjectSizeWidth( pOpts->GetDefaultObjectSizeWidth() );
@@ -718,6 +725,8 @@ void SdOptionsMiscItem::SetOptions( SdOptions* pOpts ) const
         pOpts->SetEnableSdremote( maOptionsMisc.IsEnableSdremote() );
         pOpts->SetEnablePresenterScreen( maOptionsMisc.IsEnablePresenterScreen() );
         pOpts->SetSummationOfParagraphs( maOptionsMisc.IsSummationOfParagraphs() );
+        pOpts->SetTabBarVisible( maOptionsMisc.IsTabBarVisible() );
+
         pOpts->SetSolidDragging( maOptionsMisc.IsSolidDragging() );
         pOpts->SetShowUndoDeleteWarning( maOptionsMisc.IsShowUndoDeleteWarning() );
         pOpts->SetPrinterIndependentLayout( maOptionsMisc.GetPrinterIndependentLayout() );
@@ -908,8 +917,8 @@ void SdOptionsSnapItem::SetOptions( SdOptions* pOpts ) const
 |*
 \************************************************************************/
 
-SdOptionsZoom::SdOptionsZoom( sal_uInt16 nConfigId, bool bUseConfig ) :
-    SdOptionsGeneric( nConfigId, ( bUseConfig &&  ( SDCFG_DRAW == nConfigId ) ) ?
+SdOptionsZoom::SdOptionsZoom( sal_uInt16 nConfigId ) :
+    SdOptionsGeneric( nConfigId, ( SDCFG_DRAW == nConfigId ) ?
                                  OUString( "Office.Draw/Zoom" ) :
                                  OUString() ),
     nX( 1 ),
@@ -917,17 +926,6 @@ SdOptionsZoom::SdOptionsZoom( sal_uInt16 nConfigId, bool bUseConfig ) :
 
 {
     EnableModify( true );
-}
-
-bool SdOptionsZoom::operator==( const SdOptionsZoom& rOpt ) const
-{
-    sal_Int32 nX1, nX2, nY1, nY2;
-
-    GetScale( nX1, nY1 );
-    rOpt.GetScale( nX2, nY2 );
-
-    return( ( nX1 == nX2 ) &&
-            ( nY1 == nY2 ) );
 }
 
 void SdOptionsZoom::GetPropNameArray( const char**& ppNames, sal_uLong& rCount ) const
@@ -972,12 +970,12 @@ bool SdOptionsZoom::WriteData( Any* pValues ) const
 |*
 \************************************************************************/
 
-SdOptionsGrid::SdOptionsGrid( sal_uInt16 nConfigId, bool bUseConfig ) :
-    SdOptionsGeneric( nConfigId, bUseConfig ?
-                      ( ( SDCFG_DRAW == nConfigId ) ?
+SdOptionsGrid::SdOptionsGrid( sal_uInt16 nConfigId ) :
+    SdOptionsGeneric( nConfigId,
+                      ( SDCFG_DRAW == nConfigId ) ?
                         OUString( "Office.Draw/Grid" ) :
-                        OUString( "Office.Impress/Grid" ) ) :
-                      OUString() )
+                        OUString( "Office.Impress/Grid" )
+                    )
 {
     EnableModify( false );
     SetDefaults();
@@ -1002,20 +1000,6 @@ void SdOptionsGrid::SetDefaults()
     SetSynchronize( true );
     SetGridVisible( false );
     SetEqualGrid( true );
-}
-
-bool SdOptionsGrid::operator==( const SdOptionsGrid& rOpt ) const
-{
-    return( GetFieldDrawX() == rOpt.GetFieldDrawX() &&
-            GetFieldDivisionX() == rOpt.GetFieldDivisionX() &&
-            GetFieldDrawY() == rOpt.GetFieldDrawY() &&
-            GetFieldDivisionY() == rOpt.GetFieldDivisionY() &&
-            GetFieldSnapX() == rOpt.GetFieldSnapX() &&
-            GetFieldSnapY() == rOpt.GetFieldSnapY() &&
-            IsUseGridSnap() == rOpt.IsUseGridSnap() &&
-            IsSynchronize() == rOpt.IsSynchronize() &&
-            IsGridVisible() == rOpt.IsGridVisible() &&
-            IsEqualGrid() == rOpt.IsEqualGrid() );
 }
 
 void SdOptionsGrid::GetPropNameArray( const char**& ppNames, sal_uLong& rCount ) const
@@ -1415,8 +1399,8 @@ SdOptions::SdOptions( sal_uInt16 nConfigId ) :
     SdOptionsContents( nConfigId, true ),
     SdOptionsMisc( nConfigId, true ),
     SdOptionsSnap( nConfigId, true ),
-    SdOptionsZoom( nConfigId, true ),
-    SdOptionsGrid( nConfigId, true ),
+    SdOptionsZoom( nConfigId ),
+    SdOptionsGrid( nConfigId ),
     SdOptionsPrint( nConfigId, true )
 {
 }

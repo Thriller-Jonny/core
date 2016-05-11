@@ -41,7 +41,6 @@
 #include <usrpref.hxx>
 #include <pagedesc.hxx>
 #include <workctrl.hxx>
-#include <crsskip.hxx>
 #include <touch/touch.h>
 
 #include <PostItMgr.hxx>
@@ -49,6 +48,7 @@
 #include <IDocumentSettingAccess.hxx>
 
 #include <basegfx/tools/zoomtools.hxx>
+#include <comphelper/lok.hxx>
 
 // The SetVisArea of the DocShell must not be called from InnerResizePixel.
 // But our adjustments must take place.
@@ -87,7 +87,7 @@ static void lcl_GetPos(SwView* pView,
                 bool bBorder)
 {
     SwWrtShell &rSh = pView->GetWrtShell();
-    const Size m_aDocSz( rSh.GetDocSize() );
+    const Size aDocSz( rSh.GetDocSize() );
 
     const long lBorder = bBorder ? DOCUMENTBORDER : DOCUMENTBORDER * 2;
     const bool bHori = pScrollbar->IsHoriScroll();
@@ -96,7 +96,7 @@ static void lcl_GetPos(SwView* pView,
 
     long lDelta = lPos - (bHori ? rSh.VisArea().Pos().X() : rSh.VisArea().Pos().Y());
 
-    const long lSize = (bHori ? m_aDocSz.A() : m_aDocSz.B()) + lBorder;
+    const long lSize = (bHori ? aDocSz.A() : aDocSz.B()) + lBorder;
     // Should right or below are too much space,
     // then they must be subtracted out of the VisArea!
     long nTmp = pView->GetVisArea().Right()+lDelta;
@@ -212,7 +212,10 @@ m_aDocSz = rSz;
 
 void SwView::SetVisArea( const Rectangle &rRect, bool bUpdateScrollbar )
 {
-    const Size aOldSz( m_aVisArea.GetSize() );
+    Size aOldSz( m_aVisArea.GetSize() );
+    if (comphelper::LibreOfficeKit::isActive() && m_pWrtShell)
+        // If m_pWrtShell's visible area is the whole document, do the same here.
+        aOldSz = m_pWrtShell->VisArea().SSize();
 
     const Point aTopLeft(     AlignToPixel( rRect.TopLeft() ));
     const Point aBottomRight( AlignToPixel( rRect.BottomRight() ));
@@ -538,6 +541,11 @@ bool SwView::GetPageScrollUpOffset( SwTwips &rOff ) const
         rOff = rOff - m_aVisArea.Top();
     else if( GetWrtShell().GetCharRect().Top() < (m_aVisArea.Top() + nYScrl))
         rOff += nYScrl;
+
+    // in the LOK case, force the value set by the API
+    if (comphelper::LibreOfficeKit::isActive() && m_nLOKPageUpDownOffset > 0)
+        rOff = -m_nLOKPageUpDownOffset;
+
     return true;
 }
 
@@ -554,6 +562,11 @@ bool SwView::GetPageScrollDownOffset( SwTwips &rOff ) const
     else if( GetWrtShell().GetCharRect().Bottom() >
                                             ( m_aVisArea.Bottom() - nYScrl ))
         rOff -= nYScrl;
+
+    // in the LOK case, force the value set by the API
+    if (comphelper::LibreOfficeKit::isActive() && m_nLOKPageUpDownOffset > 0)
+        rOff = m_nLOKPageUpDownOffset;
+
     return rOff > 0;
 }
 
@@ -1104,7 +1117,7 @@ void SwView::OuterResizePixel( const Point &rOfst, const Size &rSize )
                             pDocSh->SfxInPlaceObject::GetVisArea() );*/
         if ( m_pWrtShell->GetViewOptions()->GetZoomType() != SvxZoomType::PERCENT &&
              !m_pWrtShell->GetViewOptions()->getBrowseMode() )
-            _SetZoom( aEditSz, (SvxZoomType)m_pWrtShell->GetViewOptions()->GetZoomType(), 100, true );
+            SetZoom_( aEditSz, (SvxZoomType)m_pWrtShell->GetViewOptions()->GetZoomType(), 100, true );
         m_pWrtShell->EndAction();
 
         bRepeat = bScroll1 != m_pVScrollbar->IsVisible(true);

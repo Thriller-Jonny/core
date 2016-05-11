@@ -44,7 +44,7 @@ class SbiParser : public SbiTokenizer
     bool        bSingleLineIf;
     bool        bCodeCompleting;
 
-    SbiSymDef*  VarDecl( SbiDimList**, bool, bool );
+    SbiSymDef*  VarDecl( SbiExprListPtr*, bool, bool );
     SbiProcDef* ProcDecl(bool bDecl);
     void DefStatic( bool bPrivate );
     void DefProc( bool bStatic, bool bPrivate ); // read in procedure
@@ -81,7 +81,7 @@ public:
 
     SbiParser( StarBASIC*, SbModule* );
     bool Parse();
-    void SetCodeCompleting( const bool& b );
+    void SetCodeCompleting( bool b );
     bool IsCodeCompleting() const { return bCodeCompleting;}
     SbiExprNode* GetWithVar();
 
@@ -92,7 +92,7 @@ public:
     bool HasGlobalCode();
 
     bool TestToken( SbiToken );
-    bool TestSymbol( bool bKwdOk=false );
+    bool TestSymbol();
     bool TestComma();
     void TestEoln();
 
@@ -139,10 +139,6 @@ public:
     void With();                    // WITH
     void Write();                   // WRITE
 };
-
-
-
-
 
 
 #endif

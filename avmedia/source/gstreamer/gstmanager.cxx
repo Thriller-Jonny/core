@@ -27,43 +27,24 @@
 #define AVMEDIA_GST_MANAGER_IMPLEMENTATIONNAME "com.sun.star.comp.avmedia.Manager_GStreamer"
 #define AVMEDIA_GST_MANAGER_SERVICENAME "com.sun.star.media.Manager"
 
-#if !defined DBG
-#if OSL_DEBUG_LEVEL > 2
-#define DBG OSL_TRACE
-#else
-#define DBG(...)
-#endif
-#endif
-
 using namespace ::com::sun::star;
 
 namespace avmedia { namespace gstreamer {
 
-// - Manager -
-
-
-Manager::Manager( const uno::Reference< lang::XMultiServiceFactory >& rxMgr ) :
-    mxMgr( rxMgr )
+Manager::Manager()
 {
-    DBG( "avmediagst: Manager::Manager" );
 }
-
-
 
 Manager::~Manager()
 {
 }
 
-
-
 uno::Reference< media::XPlayer > SAL_CALL Manager::createPlayer( const OUString& rURL )
     throw (uno::RuntimeException, std::exception)
 {
-    Player*                             pPlayer( new Player( mxMgr ) );
+    Player*                             pPlayer( new Player );
     uno::Reference< media::XPlayer >    xRet( pPlayer );
     const INetURLObject                 aURL( rURL );
-
-    DBG( "avmediagst: Manager::createPlayer" );
 
     if( !pPlayer->create( aURL.GetMainURL( INetURLObject::DECODE_UNAMBIGUOUS ) )  )
         xRet.clear();
@@ -71,23 +52,17 @@ uno::Reference< media::XPlayer > SAL_CALL Manager::createPlayer( const OUString&
     return xRet;
 }
 
-
-
 OUString SAL_CALL Manager::getImplementationName(  )
     throw (uno::RuntimeException, std::exception)
 {
     return OUString( AVMEDIA_GST_MANAGER_IMPLEMENTATIONNAME );
 }
 
-
-
 sal_Bool SAL_CALL Manager::supportsService( const OUString& ServiceName )
     throw (uno::RuntimeException, std::exception)
 {
     return cppu::supportsService(this, ServiceName);
 }
-
-
 
 uno::Sequence< OUString > SAL_CALL Manager::getSupportedServiceNames(  )
     throw (uno::RuntimeException, std::exception)

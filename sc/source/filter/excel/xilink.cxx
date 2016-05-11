@@ -71,7 +71,7 @@ public:
     /** Reads a CRN record (external referenced cell) at the specified address. */
     void                ReadCrn( XclImpStream& rStrm, const XclAddress& rXclPos );
 
-    void                LoadCachedValues(ScExternalRefCache::TableTypeRef pCacheTable);
+    void                LoadCachedValues(const ScExternalRefCache::TableTypeRef& pCacheTable);
 
 private:
     typedef std::shared_ptr< XclImpCrn > XclImpCrnRef;
@@ -282,7 +282,10 @@ XclImpExtName::MOper::MOper(svl::SharedStringPool& rPool, XclImpStream& rStrm) :
     {
         SAL_WARN("sc", "Parsing error: " << nMaxRows <<
                  " max possible rows, but " << nLastRow << " index claimed, truncating");
-        nLastRow = nMaxRows-1;
+        if (nMaxRows > 0)
+            nLastRow = nMaxRows-1;
+        else
+            return;
     }
 
     mxCached->Resize(nLastCol+1, nLastRow+1);
@@ -476,8 +479,8 @@ bool XclImpExtName::CreateOleData(ScDocument& rDoc, const OUString& rUrl,
         return false;
 
     ScRange aRange;
-    sal_uInt16 nRes = aRange.ParseAny(aRangeStr, &rDoc, formula::FormulaGrammar::CONV_XL_R1C1);
-    if ((nRes & SCA_VALID) != SCA_VALID)
+    ScRefFlags nRes = aRange.ParseAny(aRangeStr, &rDoc, formula::FormulaGrammar::CONV_XL_R1C1);
+    if ((nRes & ScRefFlags::VALID) == ScRefFlags::ZERO)
         return false;
 
     if (aRange.aStart.Tab() != aRange.aEnd.Tab())
@@ -571,7 +574,7 @@ void XclImpSupbookTab::ReadCrn( XclImpStream& rStrm, const XclAddress& rXclPos )
     maCrnList.push_back( crnRef );
 }
 
-void XclImpSupbookTab::LoadCachedValues(ScExternalRefCache::TableTypeRef pCacheTable)
+void XclImpSupbookTab::LoadCachedValues(const ScExternalRefCache::TableTypeRef& pCacheTable)
 {
     if (maCrnList.empty())
         return;

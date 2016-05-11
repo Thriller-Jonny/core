@@ -54,8 +54,6 @@ namespace utl
                     m_xReplaceAccess;       /// replacing child values
         css::uno::Reference< css::container::XNameContainer >
                     m_xContainerAccess;     /// modifying set nodes  (optional interface of our UNO object)
-        css::uno::Reference< css::uno::XInterface >
-                    m_xDummy;
         bool        m_bEscapeNames;         /// escape names before accessing children ?
 
         OUString    m_sCompletePath;
@@ -86,9 +84,6 @@ namespace utl
         /// returns the local name of the node
         OUString     getLocalName() const;
 
-        /// returns the fully qualified path of the node
-        OUString     getNodePath() const;
-
         /** open a sub node
             @param      _rPath      access path of the to-be-opened sub node. May be a hierarchical path.
         */
@@ -104,7 +99,7 @@ namespace utl
             If the object represents a set node, this method may be used to create a new child. For non-set-nodes, the
             method will fail.<br/>
             Unless the respective operations on the pure configuration API, the to-be-created node immediately
-            becomes a part of it's hierarchy, no explicit insertion is necessary.
+            becomes a part of its hierarchy, no explicit insertion is necessary.
             @param      _rName      name for the new child. Must be level-1-depth.
         */
         OConfigurationNode  createNode(const OUString& _rName) const throw();
@@ -284,7 +279,7 @@ namespace utl
             given node path does not exist) are still asserted.</p>
         */
         static OConfigurationTreeRoot tryCreateWithComponentContext( const css::uno::Reference< css::uno::XComponentContext >& rxContext,
-            const OUString& _rPath, sal_Int32 _nDepth = -1, CREATION_MODE _eMode = CM_UPDATABLE, bool _bLazyWrite = true );
+            const OUString& _rPath, sal_Int32 _nDepth = -1, CREATION_MODE _eMode = CM_UPDATABLE );
 
         /** commit all changes made on the subtree the object is the root for<p/>
             All changes made on any OConfigurationNode object retrieved (maybe indirect) from this root

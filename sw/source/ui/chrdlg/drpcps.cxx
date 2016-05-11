@@ -75,17 +75,17 @@ class SwDropCapsPict : public Control
     sal_uInt16      mnDistance;
     VclPtr<Printer> mpPrinter;
     bool            mbDelPrinter;
-    /// The _ScriptInfo structure holds information on where we change from one
+    /// The ScriptInfo structure holds information on where we change from one
     /// script to another.
-    struct _ScriptInfo
+    struct ScriptInfo
     {
         sal_uLong  textWidth;   ///< Physical width of this segment.
         sal_uInt16 scriptType;  ///< Script type (e.g. Latin, Asian, Complex)
         sal_Int32 changePos;   ///< Character position where the script changes.
-        _ScriptInfo(sal_uLong txtWidth, sal_uInt16 scrptType, sal_Int32 position)
+        ScriptInfo(sal_uLong txtWidth, sal_uInt16 scrptType, sal_Int32 position)
             : textWidth(txtWidth), scriptType(scrptType), changePos(position) {}
     };
-    std::vector<_ScriptInfo> maScriptChanges;
+    std::vector<ScriptInfo> maScriptChanges;
     SvxFont         maFont;
     SvxFont         maCJKFont;
     SvxFont         maCTLFont;
@@ -96,7 +96,7 @@ class SwDropCapsPict : public Control
     void            CheckScript();
     Size            CalcTextSize();
     inline void     InitPrinter();
-    void            _InitPrinter();
+    void            InitPrinter_();
     static void     GetFontSettings( const SwDropCapsPage& _rPage, vcl::Font& _rFont, sal_uInt16 _nWhich );
     void            GetFirstScriptSegment(sal_Int32 &start, sal_Int32 &end, sal_uInt16 &scriptType);
     bool            GetNextScriptSegment(size_t &nIdx, sal_Int32 &start, sal_Int32 &end, sal_uInt16 &scriptType);
@@ -176,7 +176,7 @@ void SwDropCapsPict::SetValues( const OUString& rText, sal_uInt8 nLines, sal_uIn
 void SwDropCapsPict::InitPrinter()
 {
     if( !mpPrinter )
-        _InitPrinter();
+        InitPrinter_();
 }
 
 // Create Default-String from character-count (A, AB, ABC, ...)
@@ -256,9 +256,9 @@ void SwDropCapsPict::GetFontSettings( const SwDropCapsPage& _rPage, vcl::Font& _
     _rPage.rSh.GetCurAttr(aSet);
     SvxFontItem aFormatFont(static_cast<const SvxFontItem &>( aSet.Get(_nWhich)));
 
-    _rFont.SetFamily (aFormatFont.GetFamily());
-    _rFont.SetName   (aFormatFont.GetFamilyName());
-    _rFont.SetPitch  (aFormatFont.GetPitch());
+    _rFont.SetFamily(aFormatFont.GetFamily());
+    _rFont.SetFamilyName(aFormatFont.GetFamilyName());
+    _rFont.SetPitch(aFormatFont.GetPitch());
     _rFont.SetCharSet(aFormatFont.GetCharSet());
 }
 
@@ -304,17 +304,17 @@ void SwDropCapsPict::UpdatePaintSettings()
             OSL_ENSURE(pFormat, "character style doesn't exist!");
             const SvxFontItem &rFormatFont = pFormat->GetFont();
 
-            aFont.SetFamily (rFormatFont.GetFamily());
-            aFont.SetName   (rFormatFont.GetFamilyName());
-            aFont.SetPitch  (rFormatFont.GetPitch());
+            aFont.SetFamily(rFormatFont.GetFamily());
+            aFont.SetFamilyName(rFormatFont.GetFamilyName());
+            aFont.SetPitch(rFormatFont.GetPitch());
             aFont.SetCharSet(rFormatFont.GetCharSet());
         }
     }
 
     mnTextH = mnLines * mnTotLineH;
-    aFont.SetSize(Size(0, mnTextH));
-    maCJKFont.SetSize(Size(0, mnTextH));
-    maCTLFont.SetSize(Size(0, mnTextH));
+    aFont.SetFontSize(Size(0, mnTextH));
+    maCJKFont.SetFontSize(Size(0, mnTextH));
+    maCTLFont.SetFontSize(Size(0, mnTextH));
 
     aFont.SetTransparent(true);
     maCJKFont.SetTransparent(true);
@@ -328,11 +328,11 @@ void SwDropCapsPict::UpdatePaintSettings()
     maCJKFont.SetFillColor(GetSettings().GetStyleSettings().GetWindowColor());
     maCTLFont.SetFillColor(GetSettings().GetStyleSettings().GetWindowColor());
 
-    maCJKFont.SetSize(Size(0, maCJKFont.GetSize().Height()));
-    maCTLFont.SetSize(Size(0, maCTLFont.GetSize().Height()));
+    maCJKFont.SetFontSize(Size(0, maCJKFont.GetFontSize().Height()));
+    maCTLFont.SetFontSize(Size(0, maCTLFont.GetFontSize().Height()));
 
     SetFont(aFont);
-    aFont.SetSize(Size(0, aFont.GetSize().Height()));
+    aFont.SetFontSize(Size(0, aFont.GetFontSize().Height()));
     SetFont(aFont);
     maFont = aFont;
 
@@ -446,7 +446,7 @@ void SwDropCapsPict::CheckScript()
     for(;;)
     {
         nChg = xBreak->endOfScript( maText, nChg, nScript );
-        maScriptChanges.push_back( _ScriptInfo(0, nScript, nChg) );
+        maScriptChanges.push_back( ScriptInfo(0, nScript, nChg) );
         if( nChg >= maText.getLength() || nChg < 0 )
             break;
         nScript = xBreak->getScriptType( maText, nChg );
@@ -516,7 +516,7 @@ Size SwDropCapsPict::CalcTextSize()
     return aTextSize;
 }
 
-void SwDropCapsPict::_InitPrinter()
+void SwDropCapsPict::InitPrinter_()
 {
     SfxViewShell* pSh = SfxViewShell::Current();
 

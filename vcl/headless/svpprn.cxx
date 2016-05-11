@@ -17,16 +17,16 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include "vcl/svapp.hxx"
-#include "vcl/timer.hxx"
-#include "vcl/printerinfomanager.hxx"
+#include <vcl/svapp.hxx>
+#include <vcl/timer.hxx>
+#include <vcl/printerinfomanager.hxx>
 
 #include "jobset.h"
 #include "print.h"
 #include "salptype.hxx"
 #include "saldatabasic.hxx"
 
-#include "generic/genpspgraphics.h"
+#include "unx/genpspgraphics.h"
 
 #include "headless/svpprn.hxx"
 #include "headless/svpinst.hxx"
@@ -139,7 +139,7 @@ static void copyJobDataToJobSetup( ImplJobSetup* pJobSetup, JobData& rData )
     if( pJobSetup->mpDriverData )
         rtl_freeMemory( pJobSetup->mpDriverData );
 
-    int nBytes;
+    sal_uInt32 nBytes;
     void* pBuffer = nullptr;
     if( rData.getStreamBuffer( pBuffer, nBytes ) )
     {
@@ -257,7 +257,7 @@ void SvpSalInstance::PostPrintersChanged()
     const std::list< SalFrame* >& rList = SvpSalInstance::s_pDefaultInstance->getFrames();
     for( std::list< SalFrame* >::const_iterator it = rList.begin();
          it != rList.end(); ++it )
-        SvpSalInstance::s_pDefaultInstance->PostEvent( *it, nullptr, SALEVENT_PRINTERCHANGED );
+        SvpSalInstance::s_pDefaultInstance->PostEvent( *it, nullptr, SalEvent::PrinterChanged );
 }
 
 GenPspGraphics *SvpSalInstance::CreatePrintGraphics()

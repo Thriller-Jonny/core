@@ -21,15 +21,16 @@
 #include <com/sun/star/linguistic2/XSearchableDictionaryList.hpp>
 
 #include <com/sun/star/linguistic2/SpellFailure.hpp>
+#include <comphelper/processfactory.hxx>
 #include <cppuhelper/factory.hxx>
 #include <cppuhelper/supportsservice.hxx>
 #include <com/sun/star/registry/XRegistryKey.hpp>
 #include <tools/debug.hxx>
 #include <osl/mutex.hxx>
+#include <com/sun/star/ucb/XSimpleFileAccess.hpp>
 
 #include <lingutil.hxx>
 #include <hunspell.hxx>
-#include <dictmgr.hxx>
 #include <sspellimp.hxx>
 
 #include <linguistic/lngprops.hxx>
@@ -41,6 +42,7 @@
 #include <osl/file.hxx>
 #include <rtl/ustrbuf.hxx>
 #include <rtl/textenc.h>
+#include <sal/log.hxx>
 
 #include <list>
 #include <set>
@@ -141,6 +143,8 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
 
         if (!aDics.empty())
         {
+            uno::Reference< lang::XMultiServiceFactory > xServiceFactory(comphelper::getProcessServiceFactory());
+            uno::Reference< ucb::XSimpleFileAccess > xAccess(xServiceFactory->createInstance("com.sun.star.ucb.SimpleFileAccess"), uno::UNO_QUERY);
             // get supported locales from the dictionaries-to-use...
             sal_Int32 k = 0;
             std::set< OUString, lt_rtl_OUString > aLocaleNamesSet;
@@ -148,10 +152,26 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
             for (aDictIt = aDics.begin();  aDictIt != aDics.end();  ++aDictIt)
             {
                 uno::Sequence< OUString > aLocaleNames( aDictIt->aLocaleNames );
-                sal_Int32 nLen2 = aLocaleNames.getLength();
-                for (k = 0;  k < nLen2;  ++k)
+                uno::Sequence< OUString > aLocations( aDictIt->aLocations );
+                SAL_WARN_IF(
+                    aLocaleNames.hasElements() && !aLocations.hasElements(),
+                    "lingucomponent", "no locations");
+                if (aLocations.hasElements())
                 {
-                    aLocaleNamesSet.insert( aLocaleNames[k] );
+                    if (xAccess.is() && xAccess->exists(aLocations[0]))
+                    {
+                        sal_Int32 nLen2 = aLocaleNames.getLength();
+                        for (k = 0;  k < nLen2;  ++k)
+                        {
+                            aLocaleNamesSet.insert( aLocaleNames[k] );
+                        }
+                    }
+                    else
+                    {
+                        SAL_WARN(
+                            "lingucomponent",
+                            "missing <" << aLocations[0] << ">");
+                    }
                 }
             }
             // ... and add them to the resulting sequence
@@ -189,7 +209,7 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
 
                     // currently only one language per dictionary is supported in the actual implementation...
                     // Thus here we work-around this by adding the same dictionary several times.
-                    // Once for each of it's supported locales.
+                    // Once for each of its supported locales.
                     for (sal_Int32 i = 0;  i < nLocales;  ++i)
                     {
                         aDicts[k]  = nullptr;
@@ -300,7 +320,7 @@ sal_Int16 SpellChecker::GetSpellFailure( const OUString &rWord, const Locale &rL
                     OUString aff;
                     osl::FileBase::getSystemPathFromFileURL(dicpath,dict);
                     osl::FileBase::getSystemPathFromFileURL(affpath,aff);
-#if defined(WNT)
+#if defined(_WIN32)
                     // workaround for Windows specific problem that the
                     // path length in calls to 'fopen' is limited to somewhat
                     // about 120+ characters which will usually be exceed when
@@ -336,22 +356,22 @@ sal_Int16 SpellChecker::GetSpellFailure( const OUString &rWord, const Locale &rL
                 int rVal = pMS->spell(aWrd.getStr());
                 if (rVal != 1) {
                     if (extrachar && (eEnc != RTL_TEXTENCODING_UTF8)) {
-                        OUStringBuffer mBuf(nWord);
-                        n = mBuf.getLength();
+                        OUStringBuffer aBuf(nWord);
+                        n = aBuf.getLength();
                         for (sal_Int32 ix=n-1; ix >= 0; ix--)
                         {
-                          switch (mBuf[ix]) {
-                            case 0xFB00: mBuf.remove(ix, 1); mBuf.insert(ix, "ff"); break;
-                            case 0xFB01: mBuf.remove(ix, 1); mBuf.insert(ix, "fi"); break;
-                            case 0xFB02: mBuf.remove(ix, 1); mBuf.insert(ix, "fl"); break;
-                            case 0xFB03: mBuf.remove(ix, 1); mBuf.insert(ix, "ffi"); break;
-                            case 0xFB04: mBuf.remove(ix, 1); mBuf.insert(ix, "ffl"); break;
+                          switch (aBuf[ix]) {
+                            case 0xFB00: aBuf.remove(ix, 1); aBuf.insert(ix, "ff"); break;
+                            case 0xFB01: aBuf.remove(ix, 1); aBuf.insert(ix, "fi"); break;
+                            case 0xFB02: aBuf.remove(ix, 1); aBuf.insert(ix, "fl"); break;
+                            case 0xFB03: aBuf.remove(ix, 1); aBuf.insert(ix, "ffi"); break;
+                            case 0xFB04: aBuf.remove(ix, 1); aBuf.insert(ix, "ffl"); break;
                             case 0x200C:
-                            case 0x200D: mBuf.remove(ix, 1); break;
+                            case 0x200D: aBuf.remove(ix, 1); break;
                           }
                         }
-                        OUString mWord(mBuf.makeStringAndClear());
-                        OString bWrd(OU2ENC(mWord, eEnc));
+                        OUString aWord(aBuf.makeStringAndClear());
+                        OString bWrd(OU2ENC(aWord, eEnc));
                         rVal = pMS->spell(bWrd.getStr());
                         if (rVal == 1) return -1;
                     }
@@ -374,13 +394,13 @@ sal_Bool SAL_CALL SpellChecker::isValid( const OUString& rWord, const Locale& rL
     MutexGuard  aGuard( GetLinguMutex() );
 
      if (rLocale == Locale()  ||  rWord.isEmpty())
-        return sal_True;
+        return true;
 
     if (!hasLocale( rLocale ))
-        return sal_True;
+        return true;
 
     // return sal_False to process SPELLML requests (they are longer than the header)
-    if (rWord.match(SPELLML_HEADER, 0) && (rWord.getLength() > 10)) return sal_False;
+    if (rWord.match(SPELLML_HEADER, 0) && (rWord.getLength() > 10)) return false;
 
     // Get property values to be used.
     // These are be the default values set in the SN_LINGU_PROPERTIES
@@ -473,8 +493,7 @@ Reference< XSpellAlternatives >
         }
 
         // now return an empty alternative for no suggestions or the list of alternatives if some found
-        OUString aTmp(rWord);
-        xRes = SpellAlternatives::CreateSpellAlternatives( aTmp, nLang, SpellFailure::SPELLING_ERROR, aStr );
+        xRes = SpellAlternatives::CreateSpellAlternatives( rWord, nLang, SpellFailure::SPELLING_ERROR, aStr );
         return xRes;
     }
     return xRes;

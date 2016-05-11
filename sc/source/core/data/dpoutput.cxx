@@ -65,7 +65,6 @@ using ::com::sun::star::uno::Reference;
 using ::com::sun::star::sheet::DataPilotTablePositionData;
 using ::com::sun::star::sheet::DataPilotTableResultData;
 using ::com::sun::star::uno::makeAny;
-using ::com::sun::star::uno::Any;
 
 #define SC_DP_FRAME_INNER_BOLD      20
 #define SC_DP_FRAME_OUTER_BOLD      40
@@ -287,12 +286,12 @@ void lcl_SetStyleById( ScDocument* pDoc, SCTAB nTab,
 
     OUString aStyleName = ScGlobal::GetRscString( nStrId );
     ScStyleSheetPool* pStlPool = pDoc->GetStyleSheetPool();
-    ScStyleSheet* pStyle = static_cast<ScStyleSheet*>( pStlPool->Find( aStyleName, SFX_STYLE_FAMILY_PARA ) );
+    ScStyleSheet* pStyle = static_cast<ScStyleSheet*>( pStlPool->Find( aStyleName, SfxStyleFamily::Para ) );
     if (!pStyle)
     {
         //  create new style (was in ScPivot::SetStyle)
 
-        pStyle = static_cast<ScStyleSheet*>( &pStlPool->Make( aStyleName, SFX_STYLE_FAMILY_PARA,
+        pStyle = static_cast<ScStyleSheet*>( &pStlPool->Make( aStyleName, SfxStyleFamily::Para,
                                                     SFXSTYLEBIT_USERDEF ) );
         pStyle->SetParent( ScGlobal::GetRscString(STR_STYLENAME_STANDARD) );
         SfxItemSet& rSet = pStyle->GetItemSet();
@@ -736,7 +735,7 @@ void ScDPOutput::DataCell( SCCOL nCol, SCROW nRow, SCTAB nTab, const sheet::Data
     long nFlags = rData.Flags;
     if ( nFlags & sheet::DataResultFlags::ERROR )
     {
-        pDoc->SetError( nCol, nRow, nTab, errNoValue );
+        pDoc->SetError( nCol, nRow, nTab, formula::errNoValue );
     }
     else if ( nFlags & sheet::DataResultFlags::HASDATA )
     {
@@ -1174,7 +1173,7 @@ ScRange ScDPOutput::GetOutputRange( sal_Int32 nRegionType )
     return ScRange(aStartPos.Col(), aStartPos.Row(), nTab, nTabEndCol, nTabEndRow, nTab);
 }
 
-ScRange ScDPOutput::GetOutputRange( sal_Int32 nRegionType ) const
+ScRange ScDPOutput::GetOutputRange() const
 {
     using namespace ::com::sun::star::sheet;
 
@@ -1182,16 +1181,6 @@ ScRange ScDPOutput::GetOutputRange( sal_Int32 nRegionType ) const
         return ScRange(ScAddress::INITIALIZE_INVALID);
 
     SCTAB nTab = aStartPos.Tab();
-    switch (nRegionType)
-    {
-        case DataPilotOutputRangeType::RESULT:
-            return ScRange(nDataStartCol, nDataStartRow, nTab, nTabEndCol, nTabEndRow, nTab);
-        case DataPilotOutputRangeType::TABLE:
-            return ScRange(aStartPos.Col(), nTabStartRow, nTab, nTabEndCol, nTabEndRow, nTab);
-        default:
-            OSL_ENSURE(nRegionType == DataPilotOutputRangeType::WHOLE, "ScDPOutput::GetOutputRange: unknown region type");
-        break;
-    }
     return ScRange(aStartPos.Col(), aStartPos.Row(), nTab, nTabEndCol, nTabEndRow, nTab);
 }
 
@@ -1407,7 +1396,7 @@ void ScDPOutput::GetPositionData(const ScAddress& rPos, DataPilotTablePositionDa
                 break;
 
             DataPilotTableHeaderData aHeaderData;
-            aHeaderData.MemberName = OUString(pArray[nItem].Name);
+            aHeaderData.MemberName = pArray[nItem].Name;
             aHeaderData.Flags = pArray[nItem].Flags;
             aHeaderData.Dimension = static_cast<sal_Int32>(pColFields[nField].nDim);
             aHeaderData.Hierarchy = static_cast<sal_Int32>(pColFields[nField].nHier);
@@ -1436,7 +1425,7 @@ void ScDPOutput::GetPositionData(const ScAddress& rPos, DataPilotTablePositionDa
                 break;
 
             DataPilotTableHeaderData aHeaderData;
-            aHeaderData.MemberName = OUString(pArray[nItem].Name);
+            aHeaderData.MemberName = pArray[nItem].Name;
             aHeaderData.Flags = pArray[nItem].Flags;
             aHeaderData.Dimension = static_cast<sal_Int32>(pRowFields[nField].nDim);
             aHeaderData.Hierarchy = static_cast<sal_Int32>(pRowFields[nField].nHier);

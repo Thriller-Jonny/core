@@ -119,16 +119,11 @@ bool ViewFilter_Application::operator () (const ThumbnailViewItem *pItem)
     return true;
 }
 
-bool ViewFilter_Keyword::operator ()(const ThumbnailViewItem *pItem)
-{
-    assert(pItem);
-
-    return pItem->maTitle.matchIgnoreAsciiCase(maKeyword);
-}
-
 TemplateAbstractView::TemplateAbstractView (vcl::Window *pParent, WinBits nWinStyle, bool bDisableTransientChildren)
     : ThumbnailView(pParent,nWinStyle,bDisableTransientChildren),
       mnCurRegionId(0),
+      mnThumbnailWidth(TEMPLATE_THUMBNAIL_MAX_WIDTH),
+      mnThumbnailHeight(TEMPLATE_THUMBNAIL_MAX_HEIGHT),
       maAllButton(VclPtr<PushButton>::Create(this, SfxResId(BTN_ALL_TEMPLATES))),
       maFTName(VclPtr<FixedText>::Create(this, SfxResId(FT_NAME)))
 {
@@ -141,6 +136,8 @@ TemplateAbstractView::TemplateAbstractView (vcl::Window *pParent, WinBits nWinSt
 TemplateAbstractView::TemplateAbstractView(vcl::Window *pParent)
     : ThumbnailView(pParent),
       mnCurRegionId(0),
+      mnThumbnailWidth(TEMPLATE_THUMBNAIL_MAX_WIDTH),
+      mnThumbnailHeight(TEMPLATE_THUMBNAIL_MAX_HEIGHT),
       maAllButton(VclPtr<PushButton>::Create(this, SfxResId(BTN_ALL_TEMPLATES))),
       maFTName(VclPtr<FixedText>::Create(this, SfxResId(FT_NAME)))
 {
@@ -212,8 +209,11 @@ void TemplateAbstractView::insertItems(const std::vector<TemplateItemProperties>
     updateItems(aItems);
 }
 
-
-
+void TemplateAbstractView::updateThumbnailDimensions(long itemMaxSize)
+{
+    mnThumbnailWidth = itemMaxSize;
+    mnThumbnailHeight = itemMaxSize;
+}
 
 void TemplateAbstractView::setOpenRegionHdl(const Link<void*,void> &rLink)
 {
@@ -310,10 +310,10 @@ void TemplateAbstractView::Paint(vcl::RenderContext& rRenderContext, const Recta
                                             maFillColor.getBColor()));
 
     const drawinglayer::geometry::ViewInformation2D aNewViewInfos;
-    std::unique_ptr<drawinglayer::processor2d::BaseProcessor2D> mpProcessor(
+    std::unique_ptr<drawinglayer::processor2d::BaseProcessor2D> pProcessor(
         drawinglayer::processor2d::createBaseProcessor2DFromOutputDevice(rRenderContext, aNewViewInfos));
 
-    mpProcessor->process(aSeq);
+    pProcessor->process(aSeq);
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

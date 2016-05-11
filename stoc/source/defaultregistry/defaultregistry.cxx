@@ -88,7 +88,7 @@ protected:
 };
 
 
-// class NestedKeyImpl the implenetation of interface XRegistryKey
+// class NestedKeyImpl the implementation of interface XRegistryKey
 
 class NestedKeyImpl : public WeakImplHelper< XRegistryKey >
 {
@@ -143,7 +143,6 @@ protected:
     Reference<XRegistryKey>     m_localKey;
     Reference<XRegistryKey>     m_defaultKey;
 };
-
 
 
 NestedKeyImpl::NestedKeyImpl( NestedRegistryImpl* pDefaultRegistry,
@@ -1106,7 +1105,6 @@ OUString SAL_CALL NestedKeyImpl::getResolvedName( const OUString& aKeyName )
 }
 
 
-
 // DefaultRegistry Implementation
 
 
@@ -1179,8 +1177,6 @@ sal_Bool SAL_CALL NestedRegistryImpl::hasElements(  ) throw (RuntimeException, s
 }
 
 
-
-
 OUString SAL_CALL NestedRegistryImpl::getImplementationName(  )
     throw(RuntimeException, std::exception)
 {
@@ -1248,13 +1244,13 @@ sal_Bool SAL_CALL NestedRegistryImpl::isValid(  ) throw(RuntimeException, std::e
     {
         if ( (m_localReg.is() && m_localReg->isValid()) ||
              (m_defaultReg.is() && m_defaultReg->isValid()) )
-            return sal_True;
+            return true;
     }
     catch(InvalidRegistryException& )
     {
     }
 
-    return sal_False;
+    return false;
 }
 
 
@@ -1325,7 +1321,7 @@ sal_Bool SAL_CALL NestedRegistryImpl::isReadOnly(  )
     {
     }
 
-    return sal_False;
+    return false;
 }
 
 

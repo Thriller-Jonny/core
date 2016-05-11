@@ -19,6 +19,7 @@
 
 #include <comphelper/propagg.hxx>
 #include <comphelper/property.hxx>
+#include <comphelper/sequence.hxx>
 #include <cppuhelper/queryinterface.hxx>
 #include <osl/diagnose.h>
 #include <com/sun/star/beans/PropertyAttribute.hpp>
@@ -30,6 +31,7 @@
 
 #include <algorithm>
 #include <set>
+#include <unordered_set>
 #include <memory>
 
 
@@ -46,108 +48,83 @@ namespace comphelper
 
     namespace
     {
-        const Property* lcl_findPropertyByName( const Sequence< Property >& _rProps, const OUString& _rName )
+        const Property* lcl_findPropertyByName( const std::vector< Property >& _rProps, const OUString& _rName )
         {
-            sal_Int32 nLen = _rProps.getLength();
-            const Property* pProperties = _rProps.getConstArray();
             Property aNameProp(_rName, 0, Type(), 0);
-            const Property* pResult = ::std::lower_bound(pProperties, pProperties + nLen, aNameProp, PropertyCompareByName());
-            if ( pResult && ( pResult == pProperties + nLen || pResult->Name != _rName) )
-                pResult = nullptr;
+            auto pResult = ::std::lower_bound(_rProps.begin(), _rProps.end(), aNameProp, PropertyCompareByName());
+            if ( pResult == _rProps.end() || pResult->Name != _rName )
+                return nullptr;
 
-            return pResult;
+            return &*pResult;
         }
     }
 
 OPropertyArrayAggregationHelper::OPropertyArrayAggregationHelper(
         const  Sequence< Property >& _rProperties, const  Sequence< Property >& _rAggProperties,
         IPropertyInfoService* _pInfoService, sal_Int32 _nFirstAggregateId )
-    :m_aProperties( _rProperties )
 {
-    sal_Int32 nDelegatorProps = _rProperties.getLength();
-    sal_Int32 nAggregateProps = _rAggProperties.getLength();
+    // if properties are present both at the delegatee and the aggregate, then the former are supposed to win
+    // merge and sort properties by name, delete duplicates (stable sort ensures delegator properties win)
+    m_aProperties.insert( m_aProperties.end(), _rProperties.begin(), _rProperties.end() );
+    m_aProperties.insert( m_aProperties.end(), _rAggProperties.begin(), _rAggProperties.end() );
+    ::std::stable_sort( m_aProperties.begin(), m_aProperties.end(), PropertyCompareByName() );
+    m_aProperties.erase( ::std::unique(m_aProperties.begin(), m_aProperties.end(),
+        []( const css::beans::Property& x, const css::beans::Property& y ) -> bool { return x.Name == y.Name; } ),
+        m_aProperties.end() );
+    m_aProperties.shrink_to_fit();
 
-    // make room for all properties
-    sal_Int32 nMergedProps = nDelegatorProps + nAggregateProps;
-    m_aProperties.realloc( nMergedProps );
-
-    const   Property* pAggregateProps   = _rAggProperties.getConstArray();
-    const   Property* pDelegateProps    = _rProperties.getConstArray();
-            Property* pMergedProps = m_aProperties.getArray();
-
-    // if properties are present both at the delegatee and the aggregate, then the former are supposed to win.
-    // So, we'll need an existence check.
-    ::std::set< OUString > aDelegatorProps;
-
-    // create the map for the delegator properties
-    sal_Int32 nMPLoop = 0;
-    for ( ; nMPLoop < nDelegatorProps; ++nMPLoop, ++pDelegateProps )
+    // fill aDelegatorProps with names from _rProperties for a fast existence check
+    // different kinds of properties are processed differently
+    ::std::unordered_set< OUString, OUStringHash > aDelegatorProps;
+    aDelegatorProps.reserve( _rProperties.getLength() );
+    for( auto &delegateProp: _rProperties )
     {
-        m_aPropertyAccessors[ pDelegateProps->Handle ] = OPropertyAccessor( -1, nMPLoop, false );
-        OSL_ENSURE( aDelegatorProps.find( pDelegateProps->Name ) == aDelegatorProps.end(),
+        const auto inserted = aDelegatorProps.insert( delegateProp.Name );
+        OSL_ENSURE( inserted.second,
             "OPropertyArrayAggregationHelper::OPropertyArrayAggregationHelper: duplicate delegatee property!" );
-        aDelegatorProps.insert( pDelegateProps->Name );
     }
 
-    // create the map for the aggregate properties
+    ::std::unordered_set< sal_Int32 > existingHandles;
+    existingHandles.reserve( m_aProperties.size() );
     sal_Int32 nAggregateHandle = _nFirstAggregateId;
-    pMergedProps += nDelegatorProps;
-    for ( ; nMPLoop < nMergedProps; ++pAggregateProps )
+    for ( sal_Int32 nMPLoop = 0; nMPLoop < static_cast< sal_Int32 >( m_aProperties.size() ); ++nMPLoop )
     {
-        // if the aggregate property is present at the delegatee already, ignore it
-        if ( aDelegatorProps.find( pAggregateProps->Name ) != aDelegatorProps.end() )
+        auto &prop = m_aProperties[ nMPLoop ];
+        if ( aDelegatorProps.find( prop.Name ) != aDelegatorProps.end() )
         {
-            --nMergedProps;
-            continue;
+            m_aPropertyAccessors[ prop.Handle ] = OPropertyAccessor( -1, nMPLoop, false );
+            existingHandles.insert( prop.Handle );
         }
-
-        // next aggregate property - remember it
-        *pMergedProps = *pAggregateProps;
-
-        // determine the handle for the property which we will expose to the outside world
-        sal_Int32 nHandle = -1;
-        // ask the info service first
-        if ( _pInfoService )
-            nHandle = _pInfoService->getPreferredPropertyId( pMergedProps->Name );
-
-        if ( -1 == nHandle )
-            // no handle from the info service -> default
-            nHandle = nAggregateHandle++;
         else
-        {   // check if we alread have a property with the given handle
-            const  Property* pPropsTilNow = m_aProperties.getConstArray();
-            for ( sal_Int32 nCheck = 0; nCheck < nMPLoop; ++nCheck, ++pPropsTilNow )
-                if ( pPropsTilNow->Handle == nHandle )
-                {   // conflicts -> use another one (which we don't check anymore, assuming _nFirstAggregateId was large enough)
-                    nHandle = nAggregateHandle++;
-                    break;
-                }
+        {
+            // determine the handle for the property which we will expose to the outside world
+            sal_Int32 nHandle = -1;
+            // ask the info service first
+            if ( _pInfoService )
+                nHandle = _pInfoService->getPreferredPropertyId( prop.Name );
+
+            if ( ( -1 == nHandle ) || ( existingHandles.find( nHandle ) != existingHandles.end() ) )
+            {
+                // 1. no handle from the info service -> default
+                // 2. conflicts -> use another one (which we don't check anymore, assuming _nFirstAggregateId was large enough)
+                nHandle = nAggregateHandle++;
+            }
+            else
+            {
+                existingHandles.insert( nHandle );
+            }
+
+            // remember the accessor for this property
+            m_aPropertyAccessors[ nHandle ] = OPropertyAccessor( prop.Handle, nMPLoop, true );
+            prop.Handle = nHandle;
         }
-
-        // remember the accessor for this property
-        m_aPropertyAccessors[ nHandle ] = OPropertyAccessor( pMergedProps->Handle, nMPLoop, true );
-        pMergedProps->Handle = nHandle;
-
-        ++nMPLoop;
-        ++pMergedProps;
     }
-    m_aProperties.realloc( nMergedProps );
-    pMergedProps = m_aProperties.getArray();    // reset, needed again below
-
-    // sort the properties by name
-    ::std::sort( pMergedProps, pMergedProps+nMergedProps, PropertyCompareByName());
-
-    pMergedProps = m_aProperties.getArray();
-
-    // sync the map positions
-    for ( nMPLoop = 0; nMPLoop < nMergedProps; ++nMPLoop, ++pMergedProps )
-        m_aPropertyAccessors[ pMergedProps->Handle ].nPos = nMPLoop;
 }
 
 
 OPropertyArrayAggregationHelper::PropertyOrigin OPropertyArrayAggregationHelper::classifyProperty( const OUString& _rName )
 {
-    PropertyOrigin eOrigin = UNKNOWN_PROPERTY;
+    PropertyOrigin eOrigin = PropertyOrigin::Unknown;
     // look up the name
     const Property* pPropertyDescriptor = lcl_findPropertyByName( m_aProperties, _rName );
     if ( pPropertyDescriptor )
@@ -157,7 +134,7 @@ OPropertyArrayAggregationHelper::PropertyOrigin OPropertyArrayAggregationHelper:
         OSL_ENSURE( m_aPropertyAccessors.end() != aPos, "OPropertyArrayAggregationHelper::classifyProperty: should have this handle in my map!" );
         if ( m_aPropertyAccessors.end() != aPos )
         {
-            eOrigin = aPos->second.bAggregate ? AGGREGATE_PROPERTY : DELEGATOR_PROPERTY;
+            eOrigin = aPos->second.bAggregate ? PropertyOrigin::Aggregate : PropertyOrigin::Delegator;
         }
     }
     return eOrigin;
@@ -201,7 +178,7 @@ sal_Bool OPropertyArrayAggregationHelper::fillPropertyMembersByHandle(
     bool bRet = i != m_aPropertyAccessors.end();
     if (bRet)
     {
-        const css::beans::Property& rProperty = m_aProperties.getConstArray()[(*i).second.nPos];
+        const css::beans::Property& rProperty = m_aProperties[(*i).second.nPos];
         if (_pPropName)
             *_pPropName = rProperty.Name;
         if (_pAttributes)
@@ -234,8 +211,8 @@ bool OPropertyArrayAggregationHelper::fillAggregatePropertyInfoByHandle(
             *_pOriginalHandle = (*i).second.nOriginalHandle;
         if (_pPropName)
         {
-            OSL_ENSURE((*i).second.nPos < m_aProperties.getLength(),"Invalid index for sequence!");
-            const css::beans::Property& rProperty = m_aProperties.getConstArray()[(*i).second.nPos];
+            OSL_ENSURE((*i).second.nPos < (sal_Int32)m_aProperties.size(),"Invalid index for sequence!");
+            const css::beans::Property& rProperty = m_aProperties[(*i).second.nPos];
             *_pPropName = rProperty.Name;
         }
     }
@@ -243,12 +220,10 @@ bool OPropertyArrayAggregationHelper::fillAggregatePropertyInfoByHandle(
 }
 
 
-
 css::uno::Sequence< css::beans::Property> OPropertyArrayAggregationHelper::getProperties()
 {
-    return m_aProperties;
+    return comphelper::containerToSequence(m_aProperties);
 }
-
 
 
 sal_Int32 OPropertyArrayAggregationHelper::fillHandles(
@@ -258,89 +233,15 @@ sal_Int32 OPropertyArrayAggregationHelper::fillHandles(
     const OUString* pReqProps = _rPropNames.getConstArray();
     sal_Int32 nReqLen = _rPropNames.getLength();
 
-#if OSL_DEBUG_LEVEL > 0
-    // assure that the sequence is sorted
-    {
-        const OUString* pLookup = _rPropNames.getConstArray();
-        const OUString* pEnd = _rPropNames.getConstArray() + _rPropNames.getLength() - 1;
-        for (; pLookup < pEnd; ++pLookup)
-        {
-            const OUString* pCompare = pLookup + 1;
-            const OUString* pCompareEnd = pEnd + 1;
-            for (; pCompare < pCompareEnd; ++pCompare)
-            {
-                OSL_ENSURE(pLookup->compareTo(*pCompare) < 0, "OPropertyArrayAggregationHelper::fillHandles : property names are not sorted!");
-            }
-        }
-    }
-#endif
-
-    const css::beans::Property* pCur = m_aProperties.getConstArray();
-    const css::beans::Property* pEnd = m_aProperties.getConstArray() + m_aProperties.getLength();
-
+    Property aNameProp;
     for( sal_Int32 i = 0; i < nReqLen; ++i )
     {
-        // determine the logarithm
-        sal_uInt32 n = (sal_uInt32)(pEnd - pCur);
-        sal_Int32 nLog = 0;
-        while( n )
+        aNameProp.Name = pReqProps[i];
+        auto findIter = ::std::lower_bound(m_aProperties.begin(), m_aProperties.end(), aNameProp, PropertyCompareByName());
+        if ( findIter != m_aProperties.end() )
         {
-            nLog += 1;
-            n = n >> 1;
-        }
-
-        // (Number of properties yet to be found) * (Log2 of properties yet to be searched)
-        if( (nReqLen - i) * nLog >= pEnd - pCur )
-        {
-            // linear search is better
-            while( pCur < pEnd && pReqProps[i] > pCur->Name )
-            {
-                pCur++;
-            }
-            if( pCur < pEnd && pReqProps[i] == pCur->Name )
-            {
-                _pHandles[i] = pCur->Handle;
-                nHitCount++;
-            }
-            else
-                _pHandles[i] = -1;
-        }
-        else
-        {
-            // binary search is better
-            sal_Int32   nCompVal = 1;
-            const css::beans::Property*  pOldEnd = pEnd--;
-            const css::beans::Property*  pMid = pCur;
-
-            while( nCompVal != 0 && pCur <= pEnd )
-            {
-                pMid = (pEnd - pCur) / 2 + pCur;
-
-                nCompVal = pReqProps[i].compareTo( pMid->Name );
-
-                if( nCompVal > 0 )
-                    pCur = pMid + 1;
-                else
-                    pEnd = pMid - 1;
-            }
-
-            if( nCompVal == 0 )
-            {
-                _pHandles[i] = pMid->Handle;
-                nHitCount++;
-                pCur = pMid +1;
-            }
-            else if( nCompVal > 0 )
-            {
-                _pHandles[i] = -1;
-                pCur = pMid + 1;
-            }
-            else
-            {
-                _pHandles[i] = -1;
-                pCur = pMid;
-            }
-            pEnd = pOldEnd;
+            _pHandles[i] = findIter->Handle;
+            nHitCount++;
         }
     }
     return nHitCount;
@@ -502,7 +403,7 @@ void SAL_CALL OPropertySetAggregationHelper::propertiesChange(const css::uno::Se
         // implementation)
 
         if ( ( nHandle != -1 ) && !isCurrentlyForwardingProperty( nHandle ) )
-            fire(&nHandle, &evt.NewValue, &evt.OldValue, 1, sal_False);
+            fire(&nHandle, &evt.NewValue, &evt.OldValue, 1, false);
     }
     else
     {
@@ -525,7 +426,7 @@ void SAL_CALL OPropertySetAggregationHelper::propertiesChange(const css::uno::Se
         }
 
         if (nDest)
-            fire(pHandles.get(), pNewValues.get(), pOldValues.get(), nDest, sal_False);
+            fire(pHandles.get(), pNewValues.get(), pOldValues.get(), nDest, false);
     }
 }
 
@@ -537,7 +438,7 @@ void SAL_CALL OPropertySetAggregationHelper::vetoableChange(const css::beans::Pr
     cppu::IPropertyArrayHelper& rPH = getInfoHelper();
 
     sal_Int32 nHandle = rPH.getHandleByName(_rEvent.PropertyName);
-    fire(&nHandle, &_rEvent.NewValue, &_rEvent.OldValue, 1, sal_True);
+    fire(&nHandle, &_rEvent.NewValue, &_rEvent.OldValue, 1, true);
 }
 
 
@@ -737,12 +638,12 @@ void SAL_CALL OPropertySetAggregationHelper::setPropertyValues(
         for ( sal_Int32 i = 0; i < nLen; ++i, ++pNames )
         {
             OPropertyArrayAggregationHelper::PropertyOrigin ePropOrg = rPH.classifyProperty( *pNames );
-            if ( OPropertyArrayAggregationHelper::UNKNOWN_PROPERTY == ePropOrg )
+            if ( OPropertyArrayAggregationHelper::PropertyOrigin::Unknown == ePropOrg )
                 throw WrappedTargetException( OUString(), static_cast< XMultiPropertySet* >( this ), makeAny( UnknownPropertyException( ) ) );
                 // due to a flaw in the API design, this method is not allowed to throw an UnknownPropertyException
                 // so we wrap it into a WrappedTargetException
 
-            if ( OPropertyArrayAggregationHelper::AGGREGATE_PROPERTY == ePropOrg )
+            if ( OPropertyArrayAggregationHelper::PropertyOrigin::Aggregate == ePropOrg )
                 ++nAggCount;
         }
 
@@ -782,7 +683,7 @@ void SAL_CALL OPropertySetAggregationHelper::setPropertyValues(
 
                 for ( sal_Int32 i = 0; i < nLen; ++i, ++pNames, ++pValues )
                 {
-                    if ( OPropertyArrayAggregationHelper::AGGREGATE_PROPERTY == rPH.classifyProperty( *pNames ) )
+                    if ( OPropertyArrayAggregationHelper::PropertyOrigin::Aggregate == rPH.classifyProperty( *pNames ) )
                     {
                         *pAggNames++ = *pNames;
                         *pAggValues++ = *pValues;
@@ -836,7 +737,7 @@ void SAL_CALL OPropertySetAggregationHelper::setPropertyValues(
                     }
 
                     // fire vetoable events
-                    fire( pHandles.get(), pConvertedValues.get(), pOldValues.get(), nHitCount, sal_True );
+                    fire( pHandles.get(), pConvertedValues.get(), pOldValues.get(), nHitCount, true );
 
                     // setting the agg Properties
                     m_xAggregateMultiSet->setPropertyValues(AggPropertyNames, AggValues);
@@ -854,7 +755,7 @@ void SAL_CALL OPropertySetAggregationHelper::setPropertyValues(
                     }
 
                     // fire change events
-                    fire( pHandles.get(), pConvertedValues.get(), pOldValues.get(), nHitCount, sal_False );
+                    fire( pHandles.get(), pConvertedValues.get(), pOldValues.get(), nHitCount, false );
                 }
                 else
                     m_xAggregateMultiSet->setPropertyValues(AggPropertyNames, AggValues);

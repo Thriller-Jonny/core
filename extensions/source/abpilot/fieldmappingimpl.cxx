@@ -58,7 +58,6 @@ namespace abp
     {
 
 
-
         bool invokeDialog( const Reference< XComponentContext >& _rxORB, class vcl::Window* _pParent,
             const Reference< XPropertySet >& _rxDataSource, AddressSettings& _rSettings )
         {
@@ -156,7 +155,7 @@ namespace abp
                     // but this list above is the intersection)
 
 
-                // access the configuration information which the driver uses for determining it's column names
+                // access the configuration information which the driver uses for determining its column names
                 OUString sDriverAliasesNodeName(
                     OUStringLiteral(sDriverSettingsNodeName)
                     + "/ColumnAliases");
@@ -212,7 +211,7 @@ namespace abp
             // want to have a non-const map for easier handling
             MapString2String aFieldAssignment( _rFieldAssignment );
 
-            // access the configuration information which the driver uses for determining it's column names
+            // access the configuration information which the driver uses for determining its column names
 
             // create a config node for this
             OConfigurationTreeRoot aAddressBookSettings = OConfigurationTreeRoot::createWithComponentContext(
@@ -230,13 +229,13 @@ namespace abp
 
             for ( ; pExistentFields != pExistentFieldsEnd; ++pExistentFields )
             {
-#ifdef DBG_UTIL
-                OUString sRedundantProgrammaticName;
-                aFields.openNode( *pExistentFields ).getNodeValue( sProgrammaticNodeName ) >>= sRedundantProgrammaticName;
-                DBG_ASSERT( sRedundantProgrammaticName == *pExistentFields,
-                    "fieldmapping::writeTemplateAddressFieldMapping: inconsistent config data!" );
+                SAL_WARN_IF(
+                    ((aFields.openNode(*pExistentFields)
+                      .getNodeValue(sProgrammaticNodeName).get<OUString>())
+                     != *pExistentFields),
+                    "extensions.abpilot",
+                    "fieldmapping::writeTemplateAddressFieldMapping: inconsistent config data!");
                     // there should be a redundancy in the config data .... if this asserts, there isn't anymore!
-#endif
 
                 // do we have a new alias for the programmatic?
                 MapString2String::iterator aPos = aFieldAssignment.find( *pExistentFields );
@@ -279,16 +278,14 @@ namespace abp
     }   // namespace fieldmapping
 
 
-
     namespace addressconfig
     {
-
 
 
         void writeTemplateAddressSource( const Reference< XComponentContext >& _rxContext,
             const OUString& _rDataSourceName, const OUString& _rTableName )
         {
-            // access the configuration information which the driver uses for determining it's column names
+            // access the configuration information which the driver uses for determining its column names
 
             // create a config node for this
             OConfigurationTreeRoot aAddressBookSettings = OConfigurationTreeRoot::createWithComponentContext(
@@ -305,7 +302,7 @@ namespace abp
 
         void markPilotSuccess( const Reference< XComponentContext >& _rxContext )
         {
-            // access the configuration information which the driver uses for determining it's column names
+            // access the configuration information which the driver uses for determining its column names
 
             // create a config node for this
             OConfigurationTreeRoot aAddressBookSettings = OConfigurationTreeRoot::createWithComponentContext(
@@ -320,7 +317,6 @@ namespace abp
 
 
     }   // namespace addressconfig
-
 
 
 }   // namespace abp

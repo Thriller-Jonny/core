@@ -43,14 +43,6 @@ void SetOfByte::operator&=(const SetOfByte& r2ndSet)
     }
 }
 
-void SetOfByte::operator|=(const SetOfByte& r2ndSet)
-{
-    for(sal_uInt16 i(0); i < 32; i++)
-    {
-        aData[i] |= r2ndSet.aData[i];
-    }
-}
-
 /** initialize this set with a uno sequence of sal_Int8
 */
 void SetOfByte::PutValue( const css::uno::Any & rAny )
@@ -105,12 +97,10 @@ SdrLayer::SdrLayer(SdrLayerID nNewID, const OUString& rNewName) :
 {
 }
 
-void SdrLayer::SetStandardLayer(bool bStd)
+void SdrLayer::SetStandardLayer()
 {
-    nType=(sal_uInt16)bStd;
-    if (bStd) {
-        maName = ImpGetResStr(STR_StandardLayerName);
-    }
+    nType=(sal_uInt16)true;
+    maName = ImpGetResStr(STR_StandardLayerName);
     if (pModel!=nullptr) {
         SdrHint aHint(HINT_LAYERCHG);
         pModel->Broadcast(aHint);
@@ -182,21 +172,6 @@ const SdrLayerAdmin& SdrLayerAdmin::operator=(const SdrLayerAdmin& rSrcLayerAdmi
     return *this;
 }
 
-bool SdrLayerAdmin::operator==(const SdrLayerAdmin& rCmpLayerAdmin) const
-{
-    if (pParent!=rCmpLayerAdmin.pParent ||
-        aLayer.size()!=rCmpLayerAdmin.aLayer.size())
-        return false;
-    bool bOk = true;
-    sal_uInt16 nCount=GetLayerCount();
-    sal_uInt16 i=0;
-    while (bOk && i<nCount) {
-        bOk=*GetLayer(i)==*rCmpLayerAdmin.GetLayer(i);
-        i++;
-    }
-    return bOk;
-}
-
 void SdrLayerAdmin::SetModel(SdrModel* pNewModel)
 {
     if (pNewModel!=pModel) {
@@ -239,7 +214,7 @@ SdrLayer* SdrLayerAdmin::NewLayer(const OUString& rName, sal_uInt16 nPos)
     return pLay;
 }
 
-SdrLayer* SdrLayerAdmin::NewStandardLayer(sal_uInt16 nPos)
+void SdrLayerAdmin::NewStandardLayer(sal_uInt16 nPos)
 {
     SdrLayerID nID=GetUniqueLayerID();
     SdrLayer* pLay=new SdrLayer(nID,OUString());
@@ -250,7 +225,6 @@ SdrLayer* SdrLayerAdmin::NewStandardLayer(sal_uInt16 nPos)
     else
         aLayer.insert(aLayer.begin() + nPos, pLay);
     Broadcast();
-    return pLay;
 }
 
 sal_uInt16 SdrLayerAdmin::GetLayerPos(SdrLayer* pLayer) const

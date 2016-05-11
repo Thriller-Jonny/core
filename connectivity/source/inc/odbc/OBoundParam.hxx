@@ -35,8 +35,6 @@ namespace connectivity
                 : binaryData(nullptr)
                 , paramLength(0)
                 , paramInputStreamLen(0)
-                , sqlType(::com::sun::star::sdbc::DataType::SQLNULL)
-                , outputParameter(false)
             {
             }
             ~OBoundParam()
@@ -89,7 +87,7 @@ namespace connectivity
             // getInputStream
             // Gets the input stream for the bound parameter
 
-            ::com::sun::star::uno::Reference< ::com::sun::star::io::XInputStream> getInputStream ()
+            const ::com::sun::star::uno::Reference< ::com::sun::star::io::XInputStream>& getInputStream ()
             {
                 return paramInputStream;
             }
@@ -125,12 +123,7 @@ namespace connectivity
                                         // until not needed anymore.
 
             sal_Int32 paramInputStreamLen;                // Length of input stream
-
-            sal_Int32 sqlType;                          // Java SQL type used to
-                                                            // register an OUT parameter
-
-            bool outputParameter;   // true for OUTPUT parameters
-        };
+       };
     }
 }
 #endif // INCLUDED_CONNECTIVITY_SOURCE_INC_ODBC_OBOUNDPARAM_HXX

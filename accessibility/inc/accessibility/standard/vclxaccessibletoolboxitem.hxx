@@ -75,7 +75,7 @@ protected:
     virtual css::lang::Locale                           implGetLocale() override;
     virtual void                                        implGetSelection( sal_Int32& nStartIndex, sal_Int32& nEndIndex ) override;
 
-    OUString GetText( bool _bAsName );
+    OUString GetText();
 
 public:
     VCLXAccessibleToolBoxItem( ToolBox* _pToolBox, sal_Int32 _nPos );
@@ -87,7 +87,7 @@ public:
     inline void         ReleaseToolBox() { m_pToolBox = nullptr; }
     void                NameChanged();
     void                SetChild( const css::uno::Reference< css::accessibility::XAccessible >& _xChild );
-    css::uno::Reference< css::accessibility::XAccessible >
+    const css::uno::Reference< css::accessibility::XAccessible >&
                         GetChild() const { return m_xChild; }
     void                NotifyChildEvent( const css::uno::Reference< css::accessibility::XAccessible >& _xChild, bool _bShow );
 

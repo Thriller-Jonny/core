@@ -14,7 +14,6 @@
 #include <com/sun/star/awt/XBitmap.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/graphic/XGraphic.hpp>
-#include <comphelper/InlineContainer.hxx>
 #include <com/sun/star/drawing/CircleKind.hpp>
 #include <com/sun/star/drawing/DoubleSequence.hpp>
 #include <com/sun/star/drawing/FlagSequence.hpp>
@@ -29,7 +28,6 @@
 #include <com/sun/star/drawing/TextFitToSizeType.hpp>
 #include <com/sun/star/drawing/TextureProjectionMode.hpp>
 #include <com/sun/star/text/XText.hpp>
-#include <com/sun/star/uno/Any.hxx>
 #include <editeng/unoprnms.hxx>
 #include <vcl/virdev.hxx>
 #include <vcl/dibtools.hxx>
@@ -330,9 +328,9 @@ OpenGLRender::OpenGLRender()
     , m_SymbolShapeID(0)
 {
     //TODO: moggi: use STL
-    for (size_t i = 0; i < sizeof(m_BackgroundColor) / sizeof(float); i++)
+    for (float & i : m_BackgroundColor)
     {
-        m_BackgroundColor[i] = 1.0;
+        i = 1.0;
     }
 }
 
@@ -622,7 +620,6 @@ int OpenGLRender::RenderRectangleShape(bool bBorder, bool bFill)
     m_fZStep += Z_STEP;
     return 0;
 }
-
 
 
 int OpenGLRender::CreateTextTexture(const BitmapEx& rBitmapEx, const awt::Point&, const awt::Size& aSize, long rotation,

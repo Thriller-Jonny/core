@@ -121,7 +121,7 @@ namespace frm
 
     FontControlModel::FontControlModel( bool _bToolkitCompatibleDefaults )
         :m_nFontRelief( css::awt::FontRelief::NONE )
-        ,m_nFontEmphasis( FontEmphasisMark::NONE )
+        ,m_nFontEmphasis( css::awt::FontEmphasisMark::NONE )
         ,m_bToolkitCompatibleDefaults( _bToolkitCompatibleDefaults )
     {
     }
@@ -500,7 +500,7 @@ namespace frm
             break;
 
         case PROPERTY_ID_FONTEMPHASISMARK:
-            aReturn <<= FontEmphasisMark::NONE;
+            aReturn <<= css::awt::FontEmphasisMark::NONE;
             bHandled = true;
             break;
 
@@ -527,7 +527,7 @@ namespace frm
             break;
 
         case PROPERTY_ID_FONT_WORDLINEMODE:
-            aReturn = makeBoolAny(false);
+            aReturn <<= false;
             break;
 
         case PROPERTY_ID_FONT_NAME:
@@ -544,7 +544,7 @@ namespace frm
             break;
 
         case PROPERTY_ID_FONT_KERNING:
-            aReturn = makeBoolAny(false);
+            aReturn <<= false;
             break;
 
         case PROPERTY_ID_FONT_PITCH:

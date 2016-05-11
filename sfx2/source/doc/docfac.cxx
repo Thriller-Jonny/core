@@ -40,7 +40,6 @@
 #include "arrdecl.hxx"
 #include <sfx2/app.hxx>
 #include <sfx2/module.hxx>
-#include <sfx2/mnumgr.hxx>
 #include <sfx2/sfxresid.hxx>
 #include <sfx2/sfxuno.hxx>
 #include "syspath.hxx"
@@ -49,11 +48,12 @@
 #include "doc.hrc"
 
 #include <rtl/strbuf.hxx>
+#include <tools/globname.hxx>
 
 #include <assert.h>
+#include <memory>
 
 using namespace ::com::sun::star;
-
 
 
 typedef std::vector<SfxViewFactory*> SfxViewFactoryArr_Impl;
@@ -75,12 +75,10 @@ struct SfxObjectFactory_Impl
 };
 
 
-
-SfxFilterContainer* SfxObjectFactory::GetFilterContainer( bool /*bForceLoad*/ ) const
+SfxFilterContainer* SfxObjectFactory::GetFilterContainer() const
 {
     return pImpl->pFilterContainer;
 }
-
 
 
 SfxObjectFactory::SfxObjectFactory
@@ -114,13 +112,11 @@ SfxObjectFactory::SfxObjectFactory
 }
 
 
-
 SfxObjectFactory::~SfxObjectFactory()
 {
     delete pImpl->pNameResId;
     delete pImpl->pFilterContainer;
 }
-
 
 
 void SfxObjectFactory::RegisterViewFactory
@@ -152,19 +148,16 @@ void SfxObjectFactory::RegisterViewFactory
 }
 
 
-
 sal_uInt16 SfxObjectFactory::GetViewFactoryCount() const
 {
     return pImpl->aViewFactoryArr.size();
 }
 
 
-
 SfxViewFactory& SfxObjectFactory::GetViewFactory(sal_uInt16 i) const
 {
     return *pImpl->aViewFactoryArr[i];
 }
-
 
 
 SfxModule* SfxObjectFactory::GetModule() const
@@ -204,7 +197,7 @@ void SfxObjectFactory::SetSystemTemplate( const OUString& rServiceName, const OU
         {
             uno::Reference< lang::XMultiServiceFactory > xFactory = ::comphelper::getProcessServiceFactory();
             uno::Reference< uno::XInterface > xConfig = ::comphelper::ConfigurationHelper::openConfig(
-                ::comphelper::getProcessComponentContext(), CONF_ROOT, ::comphelper::ConfigurationHelper::E_STANDARD );
+                ::comphelper::getProcessComponentContext(), CONF_ROOT, ::comphelper::EConfigurationModes::Standard );
 
             OUString aActualFilter;
             ::comphelper::ConfigurationHelper::readRelativeKey( xConfig, CONF_PATH, PROP_ACTUAL_FILTER ) >>= aActualFilter;
@@ -258,7 +251,7 @@ void SfxObjectFactory::SetSystemTemplate( const OUString& rServiceName, const OU
                 aArgs[0].Name = "FilterName";
                 aArgs[0].Value <<= aFilterName;
                 aArgs[1].Name = "AsTemplate";
-                aArgs[1].Value <<= sal_True;
+                aArgs[1].Value <<= true;
                 aArgs[2].Name = "URL";
                 aArgs[2].Value <<= OUString( rTemplateName );
 
@@ -267,11 +260,11 @@ void SfxObjectFactory::SetSystemTemplate( const OUString& rServiceName, const OU
 
                 aArgs.realloc( 2 );
                 aArgs[1].Name = "Overwrite";
-                aArgs[1].Value <<= sal_True;
+                aArgs[1].Value <<= true;
 
                 uno::Reference< frame::XStorable > xStorable( xLoadable, uno::UNO_QUERY );
                 xStorable->storeToURL( aUserTemplateURL, aArgs );
-                ::comphelper::ConfigurationHelper::writeRelativeKey( xConfig, CONF_PATH, PROP_DEF_TEMPL_CHANGED, uno::makeAny( sal_True ));
+                ::comphelper::ConfigurationHelper::writeRelativeKey( xConfig, CONF_PATH, PROP_DEF_TEMPL_CHANGED, uno::makeAny( true ));
                 ::comphelper::ConfigurationHelper::flush( xConfig );
             }
             else
@@ -280,7 +273,7 @@ void SfxObjectFactory::SetSystemTemplate( const OUString& rServiceName, const OU
 
                 xSimpleFileAccess->copy( aBackupURL, aUserTemplateURL );
                 xSimpleFileAccess->kill( aBackupURL );
-                ::comphelper::ConfigurationHelper::writeRelativeKey( xConfig, CONF_PATH, PROP_DEF_TEMPL_CHANGED, uno::makeAny( sal_False ));
+                ::comphelper::ConfigurationHelper::writeRelativeKey( xConfig, CONF_PATH, PROP_DEF_TEMPL_CHANGED, uno::makeAny( false ));
                 ::comphelper::ConfigurationHelper::flush( xConfig );
             }
         }
@@ -315,13 +308,13 @@ OUString SfxObjectFactory::GetStandardTemplate( const OUString& rServiceName )
     return sTemplate;
 }
 
-const SfxFilter* SfxObjectFactory::GetTemplateFilter() const
+std::shared_ptr<const SfxFilter> SfxObjectFactory::GetTemplateFilter() const
 {
     sal_uInt16 nVersion=0;
     SfxFilterMatcher aMatcher ( OUString::createFromAscii( pShortName ) );
     SfxFilterMatcherIter aIter( aMatcher );
-    const SfxFilter *pFilter = nullptr;
-    const SfxFilter *pTemp = aIter.First();
+    std::shared_ptr<const SfxFilter> pFilter;
+    std::shared_ptr<const SfxFilter> pTemp = aIter.First();
     while ( pTemp )
     {
         if( pTemp->IsOwnFormat() && pTemp->IsOwnTemplateFormat() && ( pTemp->GetVersion() > nVersion ) )

@@ -40,12 +40,10 @@ namespace xmloff { namespace token {
     }
 
 
-
-
 #if OSL_DEBUG_LEVEL > 0
     #define TOKEN( s, e ) { sizeof(s)-1, s, nullptr, e }
 #else
-    #define TOKEN( s, e ) { sizeof(s)-1, s, NULL }
+    #define TOKEN( s, e ) { sizeof(s)-1, s, nullptr }
 #endif
 
     struct XMLTokenEntry aTokenList[] =
@@ -53,7 +51,7 @@ namespace xmloff { namespace token {
 #if OSL_DEBUG_LEVEL > 0
         { 0, nullptr, nullptr, XML_TOKEN_START },
 #else
-        { 0, NULL, NULL },                            // XML_TOKEN_START
+        { 0, nullptr, nullptr },                            // XML_TOKEN_START
 #endif
 
         // common XML
@@ -1918,6 +1916,7 @@ namespace xmloff { namespace token {
         TOKEN( "true",                            XML_TRUE ),
         TOKEN( "truncate-on-overflow",            XML_TRUNCATE_ON_OVERFLOW ),
         TOKEN( "try-staggering-first",            XML_TRY_STAGGERING_FIRST ),
+        TOKEN( "tspan",                           XML_TSPAN ),
         TOKEN( "ttb",                             XML_TTB ),
         TOKEN( "type",                            XML_TYPE ),
         TOKEN( "dot-dash",                        XML_DOT_DASH ),
@@ -1935,6 +1934,7 @@ namespace xmloff { namespace token {
         TOKEN( "uplimit",                         XML_UPLIMIT ),
         TOKEN( "upright",                         XML_UPRIGHT ),
         TOKEN( "url",                             XML_URL ),
+        TOKEN( "use",                             XML_USE ),
         TOKEN( "use-caption",                     XML_USE_CAPTION ),
         TOKEN( "use-cell-protection",             XML_USE_CELL_PROTECTION ),
         TOKEN( "use-chart-objects",               XML_USE_CHART_OBJECTS ),
@@ -2056,6 +2056,7 @@ namespace xmloff { namespace token {
 
         TOKEN( "enable",                          XML_ENABLE ),
         TOKEN( "use-regular-expressions",         XML_USE_REGULAR_EXPRESSIONS ),
+        TOKEN( "use-wildcards",                   XML_USE_WILDCARDS ),
         TOKEN( "data-source-has-labels",          XML_DATA_SOURCE_HAS_LABELS ),
         TOKEN( "link-data-style-to-source",       XML_LINK_DATA_STYLE_TO_SOURCE ),
         TOKEN( "sort-algorithm",                  XML_SORT_ALGORITHM ),
@@ -3258,7 +3259,7 @@ namespace xmloff { namespace token {
 #if OSL_DEBUG_LEVEL > 0
         { 0, nullptr, nullptr,                       XML_TOKEN_END }
 #else
-        { 0, NULL, NULL                       /* XML_TOKEN_END */ }
+        { 0, nullptr, nullptr                       /* XML_TOKEN_END */ }
 #endif
     };
 
@@ -3280,7 +3281,8 @@ namespace xmloff { namespace token {
             {
                 assert(nPos == static_cast<sal_uInt16>(pEntry->eToken));
                     // "xmloff::GetXMLToken: inconsistency in the token list!"
-                ++pEntry, ++nPos;
+                ++pEntry;
+                ++nPos;
             }
             s_bChecked = true; // it's all static, checking once is enough
         }

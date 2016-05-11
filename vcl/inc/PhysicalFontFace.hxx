@@ -22,9 +22,11 @@
 
 #include <vcl/dllapi.h>
 
-#include "outfont.hxx"
+#include "fontinstance.hxx"
+#include "fontattributes.hxx"
+#include "fontselect.hxx"
 
-class ImplFontEntry;
+class LogicalFontInstance;
 struct FontMatchStatus;
 class FontSelectPattern;
 class PhysicalFontFamily;
@@ -38,7 +40,6 @@ public:
     const OUString*     mpTargetStyleName;
 };
 
-// - PhysicalFontFace -
 
 // TODO: no more direct access to members
 // TODO: add reference counting
@@ -46,39 +47,49 @@ public:
 // TODO: make cloning cheaper
 
 // abstract base class for physical font faces
-class VCL_PLUGIN_PUBLIC PhysicalFontFace : public ImplDevFontAttributes
+
+// Note about physical and logical fonts:
+//
+// A physical font is a concept we have taken from the Java world
+//
+// From https://docs.oracle.com/javase/tutorial/2d/text/fonts.html
+//
+//      There are two types of fonts: physical fonts and logical fonts.
+//      Physical fonts are the actual font libraries consisting of, for
+//      example, TrueType or PostScript Type 1 fonts. The physical fonts
+//      may be Time, Helvetica, Courier, or any number of other fonts,
+//      including international fonts. Logical fonts are the following
+//      five font families: Serif, SansSerif, Monospaced, Dialog, and
+//      DialogInput. These logical fonts are not actual font libraries.
+//      Instead, the logical font names are mapped to physical fonts by
+//      the Java runtime environment.
+
+class VCL_PLUGIN_PUBLIC PhysicalFontFace : public FontAttributes
 {
 public:
+    virtual                ~PhysicalFontFace() {}
+
     // by using an PhysicalFontFace object as a factory for its corresponding
-    // ImplFontEntry an ImplFontEntry can be extended to cache device and
-    // font instance specific data
-    virtual ImplFontEntry*  CreateFontInstance( FontSelectPattern& ) const = 0;
+    // LogicalFontInstance can be extended to cache device and font instance
+    // specific data
+    virtual LogicalFontInstance*  CreateFontInstance( FontSelectPattern& ) const = 0;
+    virtual PhysicalFontFace* Clone() const = 0;
 
     int                     GetHeight() const           { return mnHeight; }
     int                     GetWidth() const            { return mnWidth; }
     virtual sal_IntPtr      GetFontId() const = 0;
-    int                     GetFontMagic() const        { return mnMagic; }
     bool                    IsScalable() const          { return (mnHeight == 0); }
-    bool                    CheckMagic( int n ) const   { return (n == mnMagic); }
-    PhysicalFontFace*       GetNextFace() const         { return mpNext; }
 
     bool                    IsBetterMatch( const FontSelectPattern&, FontMatchStatus& ) const;
     sal_Int32               CompareWithSize( const PhysicalFontFace& ) const;
     sal_Int32               CompareIgnoreSize( const PhysicalFontFace& ) const;
-    virtual                ~PhysicalFontFace() {}
-    virtual PhysicalFontFace* Clone() const = 0;
 
 protected:
-    explicit                PhysicalFontFace( const ImplDevFontAttributes&, int nMagic );
+    explicit                PhysicalFontFace( const FontAttributes& );
     void                    SetBitmapSize( int nW, int nH ) { mnWidth=nW; mnHeight=nH; }
 
     long                    mnWidth;    // Width (in pixels)
     long                    mnHeight;   // Height (in pixels)
-
-private:
-friend class PhysicalFontFamily;
-    const int               mnMagic;    // poor man's RTTI
-    PhysicalFontFace*       mpNext;
 };
 
 #endif // INCLUDED_VCL_INC_PHYSICALFONTFACE_HXX

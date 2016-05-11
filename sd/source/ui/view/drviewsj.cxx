@@ -198,7 +198,7 @@ void DrawViewShell::GetMenuStateSel( SfxItemSet &rSet )
             }
 
             if ( nInv == E3dInventor                          ||
-                 (!mpDrawView->IsConvertToPathObjPossible(false) &&
+                 (!mpDrawView->IsConvertToPathObjPossible() &&
                   !mpDrawView->IsShearAllowed()                  &&
                   !mpDrawView->IsDistortAllowed()) )
             {
@@ -279,7 +279,7 @@ void DrawViewShell::GetMenuStateSel( SfxItemSet &rSet )
     // multi-selection
     else if( nMarkCount > 1 )
     {
-        // distribure dialog for 3+n objects
+        // distribute dialog for 3+n objects
         if(nMarkCount <= 2)
             rSet.DisableItem(SID_DISTRIBUTE_DLG);
 
@@ -365,8 +365,8 @@ void DrawViewShell::GetMenuStateSel( SfxItemSet &rSet )
             }
 
             if (b3dObj                                        ||
-                 (!mpDrawView->IsConvertToPathObjPossible(false) &&
-                  !mpDrawView->IsShearAllowed()                  &&
+                 (!mpDrawView->IsConvertToPathObjPossible() &&
+                  !mpDrawView->IsShearAllowed()             &&
                   !mpDrawView->IsDistortAllowed()) )
             {
                 rSet.DisableItem( SID_OBJECT_SHEAR );

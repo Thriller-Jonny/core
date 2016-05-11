@@ -55,6 +55,8 @@ protected:
 
     bool      bEndDragChangesAttributes;
     bool      bEndDragChangesGeoAndAttributes;
+    /// Table row drag: table will re-layout itself later.
+    bool      mbEndDragChangesLayout;
     bool      bMouseIsUp;
 
     bool      bShown;    // Xor visible?
@@ -84,14 +86,14 @@ public:
     SdrPageView* GetPageView() const                 { return pPageView; }
     void         SetPageView(SdrPageView* pPV)       { pPageView=pPV; }
     const Point& GetPoint(sal_uIntPtr nNum) const    { return *aPnts[nNum]; }
-    sal_uIntPtr        GetPointAnz() const           { return aPnts.size(); }
+    sal_uIntPtr        GetPointCount() const           { return aPnts.size(); }
     const Point& GetStart() const                    { return GetPoint(0); }
     Point&       Start()                             { return Pnt(0); }
-    const Point& GetPrev() const                     { return GetPoint(GetPointAnz()-(GetPointAnz()>=2 ? 2:1)); }
-    Point& Prev()                                    { return Pnt(GetPointAnz()-(GetPointAnz()>=2 ? 2:1)); }
+    const Point& GetPrev() const                     { return GetPoint(GetPointCount()-(GetPointCount()>=2 ? 2:1)); }
+    Point& Prev()                                    { return Pnt(GetPointCount()-(GetPointCount()>=2 ? 2:1)); }
     const Point& GetPos0() const                     { return aPos0;  }
-    const Point& GetNow() const                      { return GetPoint(GetPointAnz()-1); }
-    Point&       Now()                               { return Pnt(GetPointAnz()-1); }
+    const Point& GetNow() const                      { return GetPoint(GetPointCount()-1); }
+    Point&       Now()                               { return Pnt(GetPointCount()-1); }
     const Point& GetRealNow() const                  { return aRealNow; }
     Point&       RealNow()                           { return aRealNow; }
     const Point& GetRef1() const                     { return aRef1;  }
@@ -133,6 +135,8 @@ public:
     void         SetEndDragChangesAttributes(bool bOn) { bEndDragChangesAttributes=bOn; }
     bool         IsEndDragChangesGeoAndAttributes() const   { return bEndDragChangesGeoAndAttributes; }
     void         SetEndDragChangesGeoAndAttributes(bool bOn) { bEndDragChangesGeoAndAttributes=bOn; }
+    bool         IsEndDragChangesLayout() const   { return mbEndDragChangesLayout; }
+    void         SetEndDragChangesLayout(bool bOn) { mbEndDragChangesLayout=bOn; }
 
     // Is set by the view and can be evaluated by Obj
     bool         IsMouseDown() const                  { return !bMouseIsUp; }
@@ -141,7 +145,7 @@ public:
     static Point KorregPos(const Point& rNow, const Point& rPrev);
     void  Reset(const Point& rPnt);
     void  NextMove(const Point& rPnt);
-    void  NextPoint(bool bSaveReal=false);
+    void  NextPoint();
     void  PrevPoint();
     bool CheckMinMoved(const Point& rPnt);
     long  GetDX() const                     { return GetNow().X()-GetPrev().X(); }

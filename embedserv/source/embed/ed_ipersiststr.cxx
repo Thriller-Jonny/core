@@ -21,7 +21,6 @@
 #endif
 
 #include "embeddoc.hxx"
-#include <com/sun/star/uno/Any.h>
 #include <com/sun/star/uno/Exception.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/lang/XComponent.hpp>
@@ -153,7 +152,7 @@ HRESULT copyXTempOutToIStream( uno::Reference< io::XOutputStream > xTempOut, ISt
         }
 
         sal_uInt32 nWritten = 0;
-        HRESULT hr = pStream->Write( (void*)aBuffer.getArray(), nReadBytes, &nWritten );
+        hr = pStream->Write( (void*)aBuffer.getArray(), nReadBytes, &nWritten );
         if ( !SUCCEEDED( hr ) || nWritten != nReadBytes )
             return E_FAIL;
 
@@ -161,7 +160,6 @@ HRESULT copyXTempOutToIStream( uno::Reference< io::XOutputStream > xTempOut, ISt
 
     return S_OK;
 }
-
 
 
 // EmbedDocument_Impl
@@ -808,8 +806,8 @@ STDMETHODIMP EmbedDocument_Impl::Load( LPCOLESTR pszFileName, DWORD /*dwMode*/ )
 
         if ( hr == S_OK )
         {
-            OUString aCurType = getServiceNameFromGUID_Impl( &m_guid ); // ???
-            CLIPFORMAT cf = (CLIPFORMAT)RegisterClipboardFormatA( "Embedded Object" );
+            aCurType = getServiceNameFromGUID_Impl( &m_guid ); // ???
+            cf = (CLIPFORMAT)RegisterClipboardFormatA( "Embedded Object" );
             hr = WriteFmtUserTypeStg( m_pMasterStorage,
                                     cf,                         // ???
                                     reinterpret_cast<LPWSTR>(( sal_Unicode* )aCurType.getStr()) );
@@ -921,7 +919,6 @@ STDMETHODIMP EmbedDocument_Impl::GetCurFile( LPOLESTR *ppszFileName )
 }
 
 
-
 LockedEmbedDocument_Impl EmbeddedDocumentInstanceAccess_Impl::GetEmbedDocument()
 {
     ::osl::MutexGuard aGuard( m_aMutex );
@@ -933,7 +930,6 @@ void EmbeddedDocumentInstanceAccess_Impl::ClearEmbedDocument()
     ::osl::MutexGuard aGuard( m_aMutex );
     m_pEmbedDocument = NULL;
 }
-
 
 
 LockedEmbedDocument_Impl::LockedEmbedDocument_Impl()

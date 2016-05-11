@@ -25,7 +25,6 @@
 #pragma warning (pop)
 #endif
 
-
 #include "po.hxx"
 #include "helper.hxx"
 
@@ -37,7 +36,6 @@
 class GenPoEntry
 {
 private:
-
     OString    m_sExtractCom;
     OString    m_sReference;
     OString    m_sMsgCtxt;
@@ -47,15 +45,14 @@ private:
     bool       m_bNull;
 
 public:
-
                         GenPoEntry();
     virtual             ~GenPoEntry();
                         // Default copy constructor and copy operator work well
 
-    OString     getReference() const    { return m_sReference; }
-    OString     getMsgCtxt() const      { return m_sMsgCtxt; }
-    OString     getMsgId() const        { return m_sMsgId; }
-    OString     getMsgStr() const       { return m_sMsgStr; }
+    const OString& getReference() const    { return m_sReference; }
+    const OString& getMsgCtxt() const      { return m_sMsgCtxt; }
+    const OString& getMsgId() const        { return m_sMsgId; }
+    const OString& getMsgStr() const       { return m_sMsgStr; }
     bool        isFuzzy() const         { return m_bFuzzy; }
     bool        isNull() const          { return m_bNull; }
 
@@ -87,7 +84,7 @@ public:
 namespace
 {
     // Convert a normal string to msg/po output string
-    static OString lcl_GenMsgString(const OString& rString)
+    OString lcl_GenMsgString(const OString& rString)
     {
         if ( rString.isEmpty() )
             return "\"\"";
@@ -114,7 +111,7 @@ namespace
     }
 
     // Convert msg string to normal form
-    static OString lcl_GenNormString(const OString& rString)
+    OString lcl_GenNormString(const OString& rString)
     {
         return
             helper::unEscapeAll(
@@ -218,10 +215,6 @@ void GenPoEntry::readFromFile(std::ifstream& rIFStream)
         getline(rIFStream,sTemp);
     }
  }
-
-
-// Class PoEntry
-
 
 PoEntry::PoEntry()
     : m_bIsInitialized( false )
@@ -399,14 +392,10 @@ OString PoEntry::genKeyId(const OString& rGenerator)
     return OString(sKeyId);
 }
 
-
-// Class PoHeader
-
-
 namespace
 {
     // Get actual time in "YEAR-MO-DA HO:MI+ZONE" form
-    static OString lcl_GetTime()
+    OString lcl_GetTime()
     {
         time_t aNow = time(nullptr);
         struct tm* pNow = localtime(&aNow);
@@ -441,10 +430,6 @@ PoHeader::~PoHeader()
 {
     delete m_pGenPo;
 }
-
-
-// Class PoOfstream
-
 
 PoOfstream::PoOfstream()
     : m_aOutPut()
@@ -503,15 +488,11 @@ void PoOfstream::writeEntry( const PoEntry& rPoEntry )
     rPoEntry.m_pGenPo->writeToFile( m_aOutPut );
 }
 
-
-// Class PoIfstream
-
-
 namespace
 {
 
 // Check the validity of read entry
-static bool lcl_CheckInputEntry(const GenPoEntry& rEntry)
+bool lcl_CheckInputEntry(const GenPoEntry& rEntry)
 {
     const OString sMsgCtxt = rEntry.getMsgCtxt();
     const sal_Int32 nFirstEndLine = sMsgCtxt.indexOf('\n');
@@ -596,6 +577,7 @@ void PoIfstream::readEntry( PoEntry& rPoEntry )
         }
         else
         {
+            SAL_WARN("l10ntools", "Parse problem with entry: " << aGenPo.getMsgStr());
             throw PoIfstream::Exception();
         }
     }

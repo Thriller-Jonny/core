@@ -27,7 +27,6 @@ $(eval $(call gb_Module_add_moduledirs,libreoffice,\
 	apple_remote \
 	$(call gb_Helper_optional,AVMEDIA,avmedia) \
 	basctl \
-	basebmp \
 	basegfx \
 	basic \
 	bean \
@@ -35,7 +34,6 @@ $(eval $(call gb_Module_add_moduledirs,libreoffice,\
 	bridges \
 	canvas \
 	chart2 \
-	$(call gb_Helper_optional,OPENCL,clew) \
 	cli_ure \
 	$(call gb_Helper_optional,DESKTOP,codemaker) \
 	comphelper \

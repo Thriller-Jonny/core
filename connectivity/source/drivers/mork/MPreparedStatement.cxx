@@ -7,17 +7,10 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include <osl/diagnose.h>
 #include <connectivity/sdbcx/VColumn.hxx>
 #include "MPreparedStatement.hxx"
-#include <com/sun/star/sdbc/DataType.hpp>
 #include "MResultSetMetaData.hxx"
-#include <cppuhelper/typeprovider.hxx>
-#include <comphelper/sequence.hxx>
-#include <com/sun/star/lang/DisposedException.hpp>
-#include <connectivity/dbexception.hxx>
 #include <connectivity/dbtools.hxx>
-#include <comphelper/types.hxx>
 #include <com/sun/star/sdbc/ColumnValue.hpp>
 
 #if OSL_DEBUG_LEVEL > 0
@@ -30,12 +23,8 @@ using namespace ::comphelper;
 using namespace connectivity;
 using namespace connectivity::mork;
 using namespace com::sun::star::uno;
-using namespace com::sun::star::lang;
-using namespace com::sun::star::beans;
 using namespace com::sun::star::sdbc;
-using namespace com::sun::star::sdbcx;
 using namespace com::sun::star::container;
-using namespace com::sun::star::io;
 using namespace com::sun::star::util;
 
 IMPLEMENT_SERVICE_INFO(OPreparedStatement,"com.sun.star.sdbcx.mork.PreparedStatement","com.sun.star.sdbc.PreparedStatement");
@@ -223,7 +212,6 @@ void SAL_CALL OPreparedStatement::setDate( sal_Int32 /*parameterIndex*/, const D
 }
 
 
-
 void SAL_CALL OPreparedStatement::setTime( sal_Int32 /*parameterIndex*/, const css::util::Time& /*aVal*/ ) throw(SQLException, RuntimeException, std::exception)
 {
     ::dbtools::throwFeatureNotImplementedSQLException( "XParameters::setTime", *this );
@@ -240,7 +228,6 @@ void SAL_CALL OPreparedStatement::setDouble( sal_Int32 /*parameterIndex*/, doubl
 {
     ::dbtools::throwFeatureNotImplementedSQLException( "XParameters::setDouble", *this );
 }
-
 
 
 void SAL_CALL OPreparedStatement::setFloat( sal_Int32 /*parameterIndex*/, float /*x*/ ) throw(SQLException, RuntimeException, std::exception)
@@ -326,7 +313,6 @@ void SAL_CALL OPreparedStatement::setBytes( sal_Int32 /*parameterIndex*/, const 
 }
 
 
-
 void SAL_CALL OPreparedStatement::setCharacterStream( sal_Int32 /*parameterIndex*/, const Reference< ::com::sun::star::io::XInputStream >& /*x*/, sal_Int32 /*length*/ ) throw(SQLException, RuntimeException, std::exception)
 {
     ::dbtools::throwFeatureNotImplementedSQLException( "XParameters::setCharacterStream", *this );
@@ -387,11 +373,8 @@ ORowSetValue& x)
 }
 
 
-size_t OPreparedStatement::AddParameter(OSQLParseNode * pParameter, const Reference<XPropertySet>& _xCol)
+void OPreparedStatement::AddParameter(OSQLParseNode * pParameter, const Reference<XPropertySet>& _xCol)
 {
-    // Count of the newly added Parameters
-    size_t nParameter = m_xParamColumns->get().size()+1;
-
     OSL_ENSURE(SQL_ISRULE(pParameter,parameter),"OResultSet::AddParameter: Argument is not a Parameter");
     OSL_ENSURE(pParameter->count() > 0,"OResultSet: error in parse tree");
 
@@ -431,7 +414,6 @@ size_t OPreparedStatement::AddParameter(OSQLParseNode * pParameter, const Refere
                                                     ,OUString()
                                                     ,OUString());
     m_xParamColumns->get().push_back(xParaColumn);
-    return nParameter;
 }
 
 void OPreparedStatement::describeColumn(OSQLParseNode*
@@ -461,10 +443,10 @@ void OPreparedStatement::describeParameter()
     if(!aParseNodes.empty())
     {
         m_xParamColumns = new OSQLColumns();
-        const OSQLTables& xTabs = m_pSQLIterator->getTables();
-        if(xTabs.size())
+        const OSQLTables& rTabs = m_pSQLIterator->getTables();
+        if(rTabs.size())
         {
-            OSQLTable xTable = xTabs.begin()->second;
+            OSQLTable xTable = rTabs.begin()->second;
             ::std::vector< OSQLParseNode*>::const_iterator aIter =
 aParseNodes.begin();
             for (;aIter != aParseNodes.end();++aIter )
@@ -484,7 +466,7 @@ void OPreparedStatement::scanParameter(OSQLParseNode* pParseNode,::std::vector< 
     if (SQL_ISRULE(pParseNode,parameter))
     {
         OSL_ENSURE(pParseNode->count() >= 1,"OResultSet: Faulty Parse Tree");
-        OSL_ENSURE(pParseNode->getChild(0)->getNodeType() == SQL_NODE_PUNCTUATION,"OResultSet: Faulty Parse Tree");
+        OSL_ENSURE(pParseNode->getChild(0)->getNodeType() == SQLNodeType::Punctuation,"OResultSet: Faulty Parse Tree");
 
         _rParaNodes.push_back(pParseNode);
         // further search isn't necessary
@@ -508,9 +490,8 @@ sal_Int32 SAL_CALL OPreparedStatement::getUpdateCount(  ) throw(::com::sun::star
 
 sal_Bool SAL_CALL OPreparedStatement::getMoreResults(  ) throw(::com::sun::star::sdbc::SQLException, ::com::sun::star::uno::RuntimeException, std::exception)
 {
-    return sal_False;
+    return false;
 }
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

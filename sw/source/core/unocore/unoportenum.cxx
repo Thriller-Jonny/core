@@ -53,7 +53,6 @@
 #include <unoidx.hxx>
 #include <unocoll.hxx>
 #include <redline.hxx>
-#include <crsskip.hxx>
 #include <calbck.hxx>
 #include <docufld.hxx>
 #include <osl/mutex.hxx>
@@ -132,7 +131,7 @@ namespace
     typedef std::multiset < SwXBookmarkPortion_ImplSharedPtr, BookmarkCompareStruct > SwXBookmarkPortion_ImplList;
 
     /// Inserts pBkmk to rBkmArr in case it starts or ends at nOwnNode
-    static void lcl_FillBookmark(sw::mark::IMark* const pBkmk, const SwNodeIndex& nOwnNode, SwDoc& rDoc, SwXBookmarkPortion_ImplList& rBkmArr)
+    void lcl_FillBookmark(sw::mark::IMark* const pBkmk, const SwNodeIndex& nOwnNode, SwDoc& rDoc, SwXBookmarkPortion_ImplList& rBkmArr)
     {
         bool const hasOther = pBkmk->IsExpanded();
 
@@ -176,7 +175,7 @@ namespace
         }
     }
 
-    static void lcl_FillBookmarkArray(SwDoc& rDoc, SwUnoCursor& rUnoCursor, SwXBookmarkPortion_ImplList& rBkmArr)
+    void lcl_FillBookmarkArray(SwDoc& rDoc, SwUnoCursor& rUnoCursor, SwXBookmarkPortion_ImplList& rBkmArr)
     {
         IDocumentMarkAccess* const pMarkAccess = rDoc.getIDocumentMarkAccess();
         if(!pMarkAccess->getBookmarksCount())
@@ -261,7 +260,7 @@ namespace
     };
     typedef std::multiset < SwAnnotationStartPortion_ImplSharedPtr, AnnotationStartCompareStruct > SwAnnotationStartPortion_ImplList;
 
-    static void lcl_FillAnnotationStartArray(
+    void lcl_FillAnnotationStartArray(
         SwDoc& rDoc,
         SwUnoCursor& rUnoCursor,
         SwAnnotationStartPortion_ImplList& rAnnotationStartArr )
@@ -443,7 +442,7 @@ lcl_ExportFieldMark(
     OSL_ENSURE(pUnoCursor->End()->nContent.GetIndex() == start,
                "hmm --- why is this different");
 
-    pUnoCursor->Right(1, CRSR_SKIP_CHARS, false, false);
+    pUnoCursor->Right(1);
     if ( *pUnoCursor->GetMark() == *pUnoCursor->GetPoint() )
     {
         OSL_FAIL("cannot move cursor?");
@@ -617,7 +616,7 @@ static void lcl_ExportBookmark(
         SwXBookmarkPortion_ImplSharedPtr pPtr = (*aIter);
         if ( nIndex > pPtr->getIndex() )
         {
-            rBkmArr.erase( aIter++ );
+            aIter = rBkmArr.erase(aIter);
             continue;
         }
         if ( nIndex < pPtr->getIndex() )
@@ -641,7 +640,7 @@ static void lcl_ExportBookmark(
             rPortions.push_back(pPortion);
             pPortion->SetBookmark(pPtr->xBookmark);
         }
-        rBkmArr.erase( aIter++ );
+        aIter = rBkmArr.erase(aIter);
     }
 }
 
@@ -658,7 +657,7 @@ static void lcl_ExportSoftPageBreak(
     {
         if ( nIndex > *aIter )
         {
-            rBreakArr.erase( aIter++ );
+            aIter = rBreakArr.erase(aIter);
             continue;
         }
         if ( nIndex < *aIter )
@@ -666,7 +665,7 @@ static void lcl_ExportSoftPageBreak(
 
         rPortions.push_back(
             new SwXTextPortion(pUnoCursor, xParent, PORTION_SOFT_PAGEBREAK) );
-        rBreakArr.erase( aIter++ );
+        aIter = rBreakArr.erase(aIter);
     }
 }
 
@@ -822,7 +821,7 @@ lcl_ExportHints(
                 case RES_TXTATR_FIELD:
                    if(!bRightMoveForbidden)
                     {
-                        pUnoCursor->Right(1,CRSR_SKIP_CHARS,false,false);
+                        pUnoCursor->Right(1);
                         if( *pUnoCursor->GetMark() == *pUnoCursor->GetPoint() )
                             break;
                         SwXTextPortion* pPortion;
@@ -839,7 +838,7 @@ lcl_ExportHints(
                 case RES_TXTATR_ANNOTATION:
                     if(!bRightMoveForbidden)
                     {
-                        pUnoCursor->Right(1,CRSR_SKIP_CHARS,false,false);
+                        pUnoCursor->Right(1);
                         if( *pUnoCursor->GetMark() == *pUnoCursor->GetPoint() )
                             break;
 
@@ -869,10 +868,7 @@ lcl_ExportHints(
                     {
 
                         pUnoCursor->Right(
-                            pAttr->GetFormatField().GetField()->ExpandField( true ).getLength() + 2,
-                            CRSR_SKIP_CHARS,
-                            false,
-                            false );
+                            pAttr->GetFormatField().GetField()->ExpandField( true ).getLength() + 2 );
                         if( *pUnoCursor->GetMark() == *pUnoCursor->GetPoint() )
                             break;
                         SwXTextPortion* pPortion =
@@ -888,7 +884,7 @@ lcl_ExportHints(
                 case RES_TXTATR_FLYCNT:
                     if(!bRightMoveForbidden)
                     {
-                        pUnoCursor->Right(1,CRSR_SKIP_CHARS,false,false);
+                        pUnoCursor->Right(1);
                         if( *pUnoCursor->GetMark() == *pUnoCursor->GetPoint() )
                             break; // Robust #i81708 content in covered cells
 
@@ -905,7 +901,7 @@ lcl_ExportHints(
                     {
                         if(!bRightMoveForbidden)
                         {
-                            pUnoCursor->Right(1,CRSR_SKIP_CHARS,false,false);
+                            pUnoCursor->Right(1);
                             if( *pUnoCursor->GetMark() == *pUnoCursor->GetPoint() )
                                 break;
                             SwXTextPortion* pPortion;
@@ -926,7 +922,7 @@ lcl_ExportHints(
                     {
                         if (bIsPoint)
                         {
-                            pUnoCursor->Right(1,CRSR_SKIP_CHARS,false,false);
+                            pUnoCursor->Right(1);
                         }
                         Reference<XTextRange> xTmp =
                                 (RES_TXTATR_REFMARK == nAttrWhich)
@@ -961,7 +957,7 @@ lcl_ExportHints(
                     {
                         if (!bRightMoveForbidden)
                         {
-                            pUnoCursor->Right(1,CRSR_SKIP_CHARS,false,false);
+                            pUnoCursor->Right(1);
                             o_rbCursorMoved = true;
                             // only if the end is included in selection!
                             if ((i_nEndPos < 0) ||
@@ -1113,13 +1109,13 @@ static void lcl_ExportRedline(
         sal_Int32 nRealIndex = pPtr->getRealIndex();
         // MTG: 23/11/05: If there are elements before nIndex, remove them
         if ( nIndex > nRealIndex )
-            rRedlineArr.erase ( aIter++ );
+            aIter = rRedlineArr.erase(aIter);
         // MTG: 23/11/05: If the elements match, and them to the list
         else if ( nIndex == nRealIndex )
         {
             rPortions.push_back( new SwXRedlinePortion(
                         *pPtr->m_pRedline, pUnoCursor, xParent, pPtr->m_bStart));
-            rRedlineArr.erase ( aIter++ );
+            aIter = rRedlineArr.erase(aIter);
         }
         // MTG: 23/11/05: If we've iterated past nIndex, exit the loop
         else
@@ -1161,7 +1157,7 @@ static void lcl_ExportAnnotationStarts(
             SwAnnotationStartPortion_ImplSharedPtr pPtr = (*aIter);
             if ( nIndex > pPtr->getIndex() )
             {
-                rAnnotationStartArr.erase( aIter++ );
+                aIter = rAnnotationStartArr.erase(aIter);
                 continue;
             }
             if ( pPtr->getIndex() > nIndex )
@@ -1174,7 +1170,7 @@ static void lcl_ExportAnnotationStarts(
             pPortion->SetTextField( pPtr->mxAnnotationField );
             rPortions.push_back(pPortion);
 
-            rAnnotationStartArr.erase( aIter++ );
+            aIter = rAnnotationStartArr.erase(aIter);
         }
     }
 }
@@ -1255,8 +1251,7 @@ static void lcl_CreatePortions(
             (i_nStartPos <= pUnoCursor->Start()->nNode.GetNode().GetTextNode()->
                         GetText().getLength()), "Incorrect start position" );
         // ??? should this be i_nStartPos - current position ?
-        pUnoCursor->Right(static_cast<sal_Int32>(i_nStartPos),
-                CRSR_SKIP_CHARS, false, false);
+        pUnoCursor->Right(static_cast<sal_Int32>(i_nStartPos));
     }
 
     SwDoc * const pDoc = pUnoCursor->GetDoc();

@@ -22,6 +22,7 @@
 
 #include <basic/sbx.hxx>
 #include <basic/sbxobj.hxx>
+#include <basic/sbmod.hxx>
 #include <rtl/ustring.hxx>
 #include <osl/mutex.hxx>
 #include <tools/link.hxx>
@@ -32,7 +33,6 @@
 #include <com/sun/star/frame/XModel.hpp>
 #include <basic/basicdllapi.h>
 
-class SbModule;                     // completed module
 class SbiInstance;                  // runtime instance
 class SbiRuntime;                   // currently running procedure
 class SbiImage;                     // compiled image
@@ -49,7 +49,7 @@ class BASIC_DLLPUBLIC StarBASIC : public SbxObject
     friend class SbiRuntime;
     friend class DocBasicItem;
 
-    SbxArrayRef     pModules;               // List of all modules
+    SbModules       pModules;               // List of all modules
     SbxObjectRef    pRtl;               // Runtime Library
     SbxArrayRef     xUnoListeners;          // Listener handled by CreateUnoListener
 
@@ -71,7 +71,7 @@ class BASIC_DLLPUBLIC StarBASIC : public SbxObject
 protected:
     bool                                CError( SbError, const OUString&, sal_Int32, sal_Int32, sal_Int32 );
 private:
-    BASIC_DLLPRIVATE bool               RTError( SbError, sal_Int32, sal_Int32, sal_Int32 );
+    BASIC_DLLPRIVATE void               RTError( SbError, sal_Int32, sal_Int32, sal_Int32 );
     BASIC_DLLPRIVATE bool               RTError( SbError, const OUString& rMsg, sal_Int32, sal_Int32, sal_Int32 );
     BASIC_DLLPRIVATE sal_uInt16         BreakPoint( sal_Int32 nLine, sal_Int32 nCol1, sal_Int32 nCol2 );
     BASIC_DLLPRIVATE sal_uInt16         StepPoint( sal_Int32 nLine, sal_Int32 nCol1, sal_Int32 nCol2 );
@@ -93,9 +93,6 @@ public:
         // not delivered to Parent.
     virtual void SetModified( bool ) override;
 
-    void* operator  new( size_t );
-    void operator   delete( void* );
-
     virtual void    Insert( SbxVariable* ) override;
     using SbxObject::Remove;
     virtual void    Remove( SbxVariable* ) override;
@@ -103,9 +100,7 @@ public:
 
     // Compiler-Interface
     SbModule*       MakeModule( const OUString& rName, const OUString& rSrc );
-    SbModule*       MakeModule32( const OUString& rName, const OUString& rSrc );
-    SbModule*       MakeModule32( const OUString& rName, const css::script::ModuleInfo& mInfo, const OUString& rSrc );
-    static bool     Compile( SbModule* );
+    SbModule*       MakeModule( const OUString& rName, const css::script::ModuleInfo& mInfo, const OUString& rSrc );
     static void     Stop();
     static void     Error( SbError );
     static void     Error( SbError, const OUString& rMsg );
@@ -120,7 +115,7 @@ public:
     virtual SbxVariable* Find( const OUString&, SbxClassType ) override;
     virtual bool Call( const OUString&, SbxArray* = nullptr ) override;
 
-    SbxArray*       GetModules() { return pModules; }
+    SbModules&      GetModules() { return pModules; }
     SbxObject*      GetRtl()     { return pRtl;     }
     SbModule*       FindModule( const OUString& );
     // Run init code of all modules (including the inserted Doc-Basics)
@@ -157,10 +152,10 @@ public:
     void SetVBAEnabled( bool bEnabled );
     bool isVBAEnabled();
 
-    SbxObjectRef getRTL() { return pRtl; }
+    const SbxObjectRef& getRTL() { return pRtl; }
     bool IsDocBasic() { return bDocBasic; }
     SbxVariable* VBAFind( const OUString& rName, SbxClassType t );
-    bool GetUNOConstant( const sal_Char* _pAsciiName, css::uno::Any& aOut );
+    bool GetUNOConstant( const OUString& rName, css::uno::Any& aOut );
     void QuitAndExitApplication();
     bool IsQuitApplication() { return bQuit; };
 

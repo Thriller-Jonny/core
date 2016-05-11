@@ -176,8 +176,8 @@ public:
 
     bool        IsOverlayBuffer() const { return m_bOverlayBuffer;}
     bool        IsPaintBuffer() const { return m_bPaintBuffer;}
-    Color       GetStripeColorA() const { return m_bStripeColorA;}
-    Color       GetStripeColorB() const { return m_bStripeColorB;}
+    const Color& GetStripeColorA() const { return m_bStripeColorA;}
+    const Color& GetStripeColorB() const { return m_bStripeColorB;}
     sal_uInt16  GetStripeLength() const { return m_nStripeLength;}
 
     // #i73602#
@@ -681,17 +681,13 @@ void SvtOptionsDrawinglayer_Impl::Notify( const css::uno::Sequence<OUString>& )
 //  public method
 
 
+//  public method
+
 
 //  public method
 
 
-
 //  public method
-
-
-
-//  public method
-
 
 
 //  public method
@@ -700,16 +696,10 @@ void SvtOptionsDrawinglayer_Impl::Notify( const css::uno::Sequence<OUString>& )
 // #i73602#
 
 
-
 // #i74769#, #i75172#
 
 
-
 // #i4219#
-
-
-
-
 
 
 // helper
@@ -720,7 +710,7 @@ bool SvtOptionsDrawinglayer_Impl::IsAAPossibleOnThisSystem() const
         SvtOptionsDrawinglayer_Impl* pThat = const_cast< SvtOptionsDrawinglayer_Impl* >(this);
         pThat->m_bAllowAAChecked = true;
 
-#ifdef WIN32
+#ifdef _WIN32
         // WIN32 uses GDIPlus with VCL for the first incarnation; this will be enhanced
         // in the future to use canvases and the canvas renderer, thus a AA-abled
         // canvas needs to be checked here in the future.
@@ -738,11 +728,6 @@ bool SvtOptionsDrawinglayer_Impl::IsAAPossibleOnThisSystem() const
 }
 
 // primitives
-
-
-
-
-
 
 
 void SvtOptionsDrawinglayer_Impl::SetAntiAliasing( bool bState )

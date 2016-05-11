@@ -62,7 +62,6 @@
 #include <vcl/wrkwin.hxx>
 #include <vcl/settings.hxx>
 
-#include <fstream>
 #include <unotools/streamwrap.hxx>
 
 #include "unomodel.hxx"
@@ -75,10 +74,11 @@
 #include "cursor.hxx"
 #include "accessibility.hxx"
 #include "ElementsDockingWindow.hxx"
+#include <cassert>
 #include <memory>
 
-#define MINZOOM         25
-#define MAXZOOM         800
+#define MINZOOM sal_uInt16(25)
+#define MAXZOOM sal_uInt16(800)
 
 // space around the edit window, in pixels
 // fdo#69111: Increased border on the top so that the window is
@@ -94,7 +94,7 @@ using namespace css::accessibility;
 using namespace css::uno;
 
 SmGraphicWindow::SmGraphicWindow(SmViewShell* pShell)
-    : ScrollableWindow(&pShell->GetViewFrame()->GetWindow(), 0)
+    : ScrollableWindow(&pShell->GetViewFrame()->GetWindow())
     , pAccessible(nullptr)
     , pViewShell(pShell)
     , nZoom(100)
@@ -142,10 +142,7 @@ void SmGraphicWindow::ApplyColorConfigValues(const svtools::ColorConfig &rColorC
 {
     // Note: SetTextColor not necessary since the nodes that
     // get painted have the color information.
-#if OSL_DEBUG_LEVEL > 1
-//   ColorData nVal = rColorCfg.GetColorValue(svtools::DOCCOLOR).nColor;
-#endif
-    SetBackground(Color( (ColorData) rColorCfg.GetColorValue(svtools::DOCCOLOR).nColor));
+    SetBackground(Color(static_cast<ColorData>(rColorCfg.GetColorValue(svtools::DOCCOLOR).nColor)));
 }
 
 
@@ -354,7 +351,7 @@ void SmGraphicWindow::SetCursor(const Rectangle &rRect)
 }
 
 const SmNode * SmGraphicWindow::SetCursorPos(sal_uInt16 nRow, sal_uInt16 nCol)
-    // looks for a VISIBLE node in the formula tree with it's token at
+    // looks for a VISIBLE node in the formula tree with its token at
     // (or around) the position 'nRow', 'nCol' in the edit window
     // (row and column numbering starts with 1 there!).
     // If there is such a node the formula-cursor is set to cover that nodes
@@ -466,15 +463,6 @@ void SmGraphicWindow::KeyInput(const KeyEvent& rKEvt)
         {
             if(!rKEvt.GetKeyCode().IsShift())
                 rCursor.InsertRow();
-#ifdef DEBUG_ENABLE_DUMPASDOT
-            else {
-                SmNode *pTree = (SmNode*)pViewShell->GetDoc()->GetFormulaTree();
-                std::fstream file("/tmp/smath-dump.gv", std::fstream::out);
-                OUString label(pViewShell->GetDoc()->GetText());
-                pTree->DumpAsDot(file, &label);
-                file.close();
-            }
-#endif /* DEBUG_ENABLE_DUMPASDOT */
         }break;
         case KEY_DELETE:
         {
@@ -563,17 +551,13 @@ void SmGraphicWindow::Command(const CommandEvent& rCEvt)
             case CommandEventId::ContextMenu:
             {
                 GetParent()->ToTop();
-                SmResId aResId( RID_VIEWMENU );
-                std::unique_ptr<PopupMenu> xPopupMenu(new PopupMenu(aResId));
-                xPopupMenu->SetSelectHdl(LINK(this, SmGraphicWindow, MenuSelectHdl));
                 Point aPos(5, 5);
                 if (rCEvt.IsMouseEvent())
                     aPos = rCEvt.GetMousePosPixel();
                 SAL_WARN_IF( !pViewShell, "starmath", "view shell missing" );
 
                 // added for replaceability of context menus
-                pViewShell->GetViewFrame()->GetBindings().GetDispatcher()
-                        ->ExecutePopup( aResId, this, &aPos );
+                SfxDispatcher::ExecutePopup( this, &aPos );
 
                 bCallBase = false;
             }
@@ -585,7 +569,7 @@ void SmGraphicWindow::Command(const CommandEvent& rCEvt)
                 if  ( pWData && CommandWheelMode::ZOOM == pWData->GetMode() )
                 {
                     sal_uInt16 nTmpZoom = GetZoom();
-                    if( 0L > pWData->GetDelta() )
+                    if( 0 > pWData->GetDelta() )
                         nTmpZoom -= 10;
                     else
                         nTmpZoom += 10;
@@ -603,17 +587,9 @@ void SmGraphicWindow::Command(const CommandEvent& rCEvt)
 }
 
 
-IMPL_LINK_TYPED( SmGraphicWindow, MenuSelectHdl, Menu *, pMenu, bool )
-{
-    SmViewShell *pViewSh = GetView();
-    if (pViewSh)
-        pViewSh->GetViewFrame()->GetDispatcher()->Execute( pMenu->GetCurItemId() );
-    return false;
-}
-
 void SmGraphicWindow::SetZoom(sal_uInt16 Factor)
 {
-    nZoom = std::min(std::max((sal_uInt16) Factor, (sal_uInt16) MINZOOM), (sal_uInt16) MAXZOOM);
+    nZoom = std::min(std::max(Factor, MINZOOM), MAXZOOM);
     Fraction   aFraction (nZoom, 100);
     SetMapMode( MapMode(MAP_100TH_MM, Point(), aFraction, aFraction) );
     SetTotalSize();
@@ -686,12 +662,6 @@ SmEditController::SmEditController(SmEditWindow &rSmEdit,
 {
 }
 
-
-#if OSL_DEBUG_LEVEL > 1
-SmEditController::~SmEditController()
-{
-}
-#endif
 
 
 void SmEditController::StateChanged(sal_uInt16 nSID, SfxItemState eState, const SfxPoolItem* pState)
@@ -898,12 +868,6 @@ SmCmdBoxWrapper::SmCmdBoxWrapper(vcl::Window *pParentWindow, sal_uInt16 nId,
     static_cast<SfxDockingWindow *>(GetWindow())->Initialize(pInfo);
 }
 
-#if OSL_DEBUG_LEVEL > 1
-SmCmdBoxWrapper::~SmCmdBoxWrapper()
-{
-}
-#endif
-
 struct SmViewShell_Impl
 {
     std::unique_ptr<sfx2::DocumentInserter> pDocInserter;
@@ -920,7 +884,6 @@ void SmViewShell::InitInterface_Impl()
                                             RID_MATH_TOOLBOX);
     //Dummy-Objectbar, to avoid quiver while activating
 
-    GetStaticInterface()->RegisterChildWindow(SID_TASKPANE);
     GetStaticInterface()->RegisterChildWindow(SmCmdBoxWrapper::GetChildWindowId());
     GetStaticInterface()->RegisterChildWindow(SmElementsDockingWindowWrapper::GetChildWindowId());
 }
@@ -967,7 +930,7 @@ void SmViewShell::QueryObjAreaPixel( Rectangle& rRect ) const
 void SmViewShell::SetZoomFactor( const Fraction &rX, const Fraction &rY )
 {
     const Fraction &rFrac = rX < rY ? rX : rY;
-    GetGraphicWindow().SetZoom( (sal_uInt16) long(rFrac * Fraction( 100, 1 )) );
+    GetGraphicWindow().SetZoom(sal::static_int_cast<sal_uInt16>(long(rFrac * Fraction( 100, 1 ))));
 
     //To avoid rounding errors base class regulates crooked values too
     //if necessary
@@ -1160,16 +1123,16 @@ void SmViewShell::Impl_Print(OutputDevice &rOutDev, const SmPrintUIOptions &rPri
         Size aSize650 (0, 650);
         vcl::Font aFont(FAMILY_DONTKNOW, aSize600);
 
-        aFont.SetAlign(ALIGN_TOP);
+        aFont.SetAlignment(ALIGN_TOP);
         aFont.SetWeight(WEIGHT_BOLD);
-        aFont.SetSize(aSize650);
+        aFont.SetFontSize(aSize650);
         aFont.SetColor( Color(COL_BLACK) );
         rOutDev.SetFont(aFont);
 
         Size aTitleSize (GetTextSize(rOutDev, GetDoc()->GetTitle(), aOutRect.GetWidth() - 200));
 
         aFont.SetWeight(WEIGHT_NORMAL);
-        aFont.SetSize(aSize600);
+        aFont.SetFontSize(aSize600);
         rOutDev.SetFont(aFont);
 
         Size aDescSize (GetTextSize(rOutDev, GetDoc()->GetComment(), aOutRect.GetWidth() - 200));
@@ -1181,7 +1144,7 @@ void SmViewShell::Impl_Print(OutputDevice &rOutDev, const SmPrintUIOptions &rPri
 
         // output title
         aFont.SetWeight(WEIGHT_BOLD);
-        aFont.SetSize(aSize650);
+        aFont.SetFontSize(aSize650);
         rOutDev.SetFont(aFont);
         Point aPoint(aOutRect.Left() + (aOutRect.GetWidth() - aTitleSize.Width())  / 2,
                      aOutRect.Top());
@@ -1191,7 +1154,7 @@ void SmViewShell::Impl_Print(OutputDevice &rOutDev, const SmPrintUIOptions &rPri
 
         // output description
         aFont.SetWeight(WEIGHT_NORMAL);
-        aFont.SetSize(aSize600);
+        aFont.SetFontSize(aSize600);
         rOutDev.SetFont(aFont);
         aPoint.X() = aOutRect.Left() + (aOutRect.GetWidth()  - aDescSize.Width())  / 2;
         aPoint.Y() = aOutRect.Top();
@@ -1204,7 +1167,7 @@ void SmViewShell::Impl_Print(OutputDevice &rOutDev, const SmPrintUIOptions &rPri
     if (bIsPrintFormulaText)
     {
         vcl::Font aFont(FAMILY_DONTKNOW, Size(0, 600));
-        aFont.SetAlign(ALIGN_TOP);
+        aFont.SetAlignment(ALIGN_TOP);
         aFont.SetColor( Color(COL_BLACK) );
 
         // get size
@@ -1251,9 +1214,10 @@ void SmViewShell::Impl_Print(OutputDevice &rOutDev, const SmPrintUIOptions &rPri
                 Size     OutputSize (rOutDev.LogicToPixel(Size(aOutRect.GetWidth(),
                                                             aOutRect.GetHeight()), MapMode(MAP_100TH_MM)));
                 Size     GraphicSize (rOutDev.LogicToPixel(aSize, MapMode(MAP_100TH_MM)));
-                sal_uInt16   nZ = (sal_uInt16) std::min((long)Fraction(OutputSize.Width()  * 100L, GraphicSize.Width()),
-                                              (long)Fraction(OutputSize.Height() * 100L, GraphicSize.Height()));
-                Fraction aFraction ((sal_uInt16) std::max ((sal_uInt16) MINZOOM, std::min((sal_uInt16) MAXZOOM, (sal_uInt16) (nZ - 10))), (sal_uInt16) 100);
+                sal_uInt16 nZ = sal::static_int_cast<sal_uInt16>(std::min(long(Fraction(OutputSize.Width()  * 100L, GraphicSize.Width())),
+                                                                          long(Fraction(OutputSize.Height() * 100L, GraphicSize.Height()))));
+                nZ -= 10;
+                Fraction aFraction (std::max(MINZOOM, std::min(MAXZOOM, nZ)), 100);
 
                 OutputMapMode = MapMode(MAP_100TH_MM, aZeroPoint, aFraction, aFraction);
             }
@@ -1297,7 +1261,7 @@ SfxPrinter* SmViewShell::GetPrinter(bool bCreate)
     return nullptr;
 }
 
-sal_uInt16 SmViewShell::SetPrinter(SfxPrinter *pNewPrinter, SfxPrinterChangeFlags nDiffFlags, bool )
+sal_uInt16 SmViewShell::SetPrinter(SfxPrinter *pNewPrinter, SfxPrinterChangeFlags nDiffFlags )
 {
     SfxPrinter *pOld = GetDoc()->GetPrinter();
     if ( pOld && pOld->IsPrinting() )
@@ -1555,9 +1519,9 @@ void SmViewShell::Execute(SfxRequest& rReq)
             {
                 if (pWin->IsAllSelected())
                 {
-                    GetViewFrame()->GetDispatcher()->Execute(
+                    GetViewFrame()->GetDispatcher()->ExecuteList(
                                 SID_COPYOBJECT, SfxCallMode::RECORD,
-                                new SfxVoidItem(SID_COPYOBJECT), 0L);
+                                { new SfxVoidItem(SID_COPYOBJECT) });
                 }
                 else
                     pWin->Copy();
@@ -1581,9 +1545,9 @@ void SmViewShell::Execute(SfxRequest& rReq)
                 }
                 if( bCallExec )
                 {
-                    GetViewFrame()->GetDispatcher()->Execute(
+                    GetViewFrame()->GetDispatcher()->ExecuteList(
                             SID_PASTEOBJECT, SfxCallMode::RECORD,
-                            new SfxVoidItem(SID_PASTEOBJECT), 0L);
+                            { new SfxVoidItem(SID_PASTEOBJECT) });
                 }
             }
             break;
@@ -1664,7 +1628,7 @@ void SmViewShell::Execute(SfxRequest& rReq)
                     {
                         std::unique_ptr<SfxMedium> pClipboardMedium(new SfxMedium());
                         pClipboardMedium->GetItemSet(); //generate initial itemset, not sure if necessary
-                        const SfxFilter* pMathFilter =
+                        std::shared_ptr<const SfxFilter> pMathFilter =
                             SfxFilter::GetFilterByName(MATHML_XML);
                         pClipboardMedium->SetFilter(pMathFilter);
                         pClipboardMedium->setStreamToLoadFrom(xStrm, true /*bIsReadOnly*/);
@@ -1682,7 +1646,7 @@ void SmViewShell::Execute(SfxRequest& rReq)
                         {
                             std::unique_ptr<SfxMedium> pClipboardMedium(new SfxMedium());
                             pClipboardMedium->GetItemSet(); //generates initial itemset, not sure if necessary
-                            const SfxFilter* pMathFilter =
+                            std::shared_ptr<const SfxFilter> pMathFilter =
                                 SfxFilter::GetFilterByName(MATHML_XML);
                             pClipboardMedium->SetFilter(pMathFilter);
 
@@ -1781,7 +1745,7 @@ void SmViewShell::Execute(SfxRequest& rReq)
                     if(pFact)
                     {
                         xDlg.reset(pFact->CreateSvxZoomDialog(&GetViewFrame()->GetWindow(), aSet));
-                        SAL_WARN_IF( !xDlg, "starmath", "Dialog creation failed!" );
+                        assert(xDlg);
                         xDlg->SetLimits( MINZOOM, MAXZOOM );
                         if (xDlg->Execute() != RET_CANCEL)
                             pSet = xDlg->GetOutputItemSet();
@@ -1793,7 +1757,7 @@ void SmViewShell::Execute(SfxRequest& rReq)
                     switch( rZoom.GetType() )
                     {
                         case SvxZoomType::PERCENT:
-                            aGraphic->SetZoom((sal_uInt16)rZoom.GetValue ());
+                            aGraphic->SetZoom(sal::static_int_cast<sal_uInt16>(rZoom.GetValue ()));
                             break;
 
                         case SvxZoomType::OPTIMAL:
@@ -1810,8 +1774,8 @@ void SmViewShell::Execute(SfxRequest& rReq)
                             Size       OutputSize(pPrinter->LogicToPixel(Size(OutputRect.GetWidth(),
                                                                               OutputRect.GetHeight()), aMap));
                             Size       GraphicSize(pPrinter->LogicToPixel(GetDoc()->GetSize(), aMap));
-                            sal_uInt16     nZ = (sal_uInt16) std::min((long)Fraction(OutputSize.Width()  * 100L, GraphicSize.Width()),
-                                                         (long)Fraction(OutputSize.Height() * 100L, GraphicSize.Height()));
+                            sal_uInt16 nZ = sal::static_int_cast<sal_uInt16>(std::min(long(Fraction(OutputSize.Width()  * 100L, GraphicSize.Width())),
+                                                                                      long(Fraction(OutputSize.Height() * 100L, GraphicSize.Height()))));
                             aGraphic->SetZoom (nZ);
                             break;
                         }
@@ -1944,7 +1908,7 @@ void SmViewShell::GetState(SfxItemSet &rSet)
 
         case SID_ATTR_ZOOM:
             rSet.Put(SvxZoomItem( SvxZoomType::PERCENT, aGraphic->GetZoom()));
-            /* no break here */
+            SAL_FALLTHROUGH;
         case SID_ZOOMIN:
         case SID_ZOOMOUT:
         case SID_ZOOM_OPTIMAL:

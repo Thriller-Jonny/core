@@ -36,7 +36,6 @@ namespace vml {
 struct ShapeTypeModel;
 
 
-
 /// A text paragraph in a textbox.
 struct TextParagraphModel
 {
@@ -60,7 +59,6 @@ struct OOX_DLLPUBLIC TextFontModel
 };
 
 
-
 /** A text portion in a textbox with the same formatting for all characters. */
 struct TextPortionModel
 {
@@ -70,7 +68,6 @@ struct TextPortionModel
 
     explicit            TextPortionModel( const TextParagraphModel& rParagraph, const TextFontModel& rFont, const OUString& rText );
 };
-
 
 
 /** The textbox contains all text contents and properties. */
@@ -88,7 +85,7 @@ public:
     const TextFontModel* getFirstFont() const;
     /** Returns the entire text of all text portions. */
     OUString     getText() const;
-    void convert(css::uno::Reference<css::drawing::XShape> xShape) const;
+    void convert(const css::uno::Reference<css::drawing::XShape>& xShape) const;
 
     ShapeTypeModel&     mrTypeModel;
     /// Text distance from the border (inset attribute of v:textbox), valid only if set.
@@ -102,7 +99,6 @@ private:
 
     PortionVector       maPortions;
 };
-
 
 
 } // namespace vml

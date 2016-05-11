@@ -790,7 +790,7 @@ static Size lcl_GetDocPageSize( ScDocument* pDoc, SCTAB nTab )
 {
     OUString aName = pDoc->GetPageStyle( nTab );
     ScStyleSheetPool* pStylePool = pDoc->GetStyleSheetPool();
-    SfxStyleSheetBase* pStyleSheet = pStylePool->Find( aName, SFX_STYLE_FAMILY_PAGE );
+    SfxStyleSheetBase* pStyleSheet = pStylePool->Find( aName, SfxStyleFamily::Page );
     if ( pStyleSheet )
     {
         SfxItemSet& rStyleSet = pStyleSheet->GetItemSet();
@@ -1061,7 +1061,7 @@ void ScPreview::MouseButtonUp( const MouseEvent& rMEvt )
             OUString aOldName = rDoc.GetPageStyle( nTab );
             bool bUndo = rDoc.IsUndoEnabled();
             ScStyleSheetPool* pStylePool = rDoc.GetStyleSheetPool();
-            SfxStyleSheetBase* pStyleSheet = pStylePool->Find( aOldName, SFX_STYLE_FAMILY_PAGE );
+            SfxStyleSheetBase* pStyleSheet = pStylePool->Find( aOldName, SfxStyleFamily::Page );
 
             if ( pStyleSheet )
             {
@@ -1115,7 +1115,7 @@ void ScPreview::MouseButtonUp( const MouseEvent& rMEvt )
                     if( bUndo )
                     {
                         pDocShell->GetUndoManager()->AddUndoAction(
-                            new ScUndoModifyStyle( pDocShell, SFX_STYLE_FAMILY_PAGE,
+                            new ScUndoModifyStyle( pDocShell, SfxStyleFamily::Page,
                             aOldData, aNewData ) );
                     }
 
@@ -1156,7 +1156,7 @@ void ScPreview::MouseButtonUp( const MouseEvent& rMEvt )
                 ScDocument& rDoc = pDocShell->GetDocument();
                 bool bUndo = rDoc.IsUndoEnabled();
                 ScStyleSheetPool* pStylePool = rDoc.GetStyleSheetPool();
-                SfxStyleSheetBase* pStyleSheet = pStylePool->Find( rDoc.GetPageStyle( nTab ), SFX_STYLE_FAMILY_PAGE );
+                SfxStyleSheetBase* pStyleSheet = pStylePool->Find( rDoc.GetPageStyle( nTab ), SfxStyleFamily::Page );
                 OSL_ENSURE( pStyleSheet, "PageStyle not found" );
                 if ( pStyleSheet )
                 {
@@ -1186,8 +1186,8 @@ void ScPreview::MouseButtonUp( const MouseEvent& rMEvt )
                         const SfxPoolItem* pItem = nullptr;
                         if ( rStyleSet.GetItemState( ATTR_PAGE_HEADERSET, false, &pItem ) == SfxItemState::SET )
                         {
-                            const SfxItemSet& pHeaderSet = static_cast<const SvxSetItem*>(pItem)->GetItemSet();
-                            Size  aHeaderSize = static_cast<const SvxSizeItem&>(pHeaderSet.Get(ATTR_PAGE_SIZE)).GetSize();
+                            const SfxItemSet& rHeaderSet = static_cast<const SvxSetItem*>(pItem)->GetItemSet();
+                            Size  aHeaderSize = static_cast<const SvxSizeItem&>(rHeaderSet.Get(ATTR_PAGE_SIZE)).GetSize();
                             aHeaderSize.Height() = (long)( aButtonUpPt.Y() / HMM_PER_TWIPS + aOffset.Y() / HMM_PER_TWIPS - aULItem.GetUpper());
                             aHeaderSize.Height() = aHeaderSize.Height() * 100 / mnScale;
                             SvxSetItem  aNewHeader( static_cast<const SvxSetItem&>(rStyleSet.Get(ATTR_PAGE_HEADERSET)) );
@@ -1201,8 +1201,8 @@ void ScPreview::MouseButtonUp( const MouseEvent& rMEvt )
                         const SfxPoolItem* pItem = nullptr;
                         if( rStyleSet.GetItemState( ATTR_PAGE_FOOTERSET, false, &pItem ) == SfxItemState::SET )
                         {
-                            const SfxItemSet& pFooterSet = static_cast<const SvxSetItem*>(pItem)->GetItemSet();
-                            Size aFooterSize = static_cast<const SvxSizeItem&>(pFooterSet.Get(ATTR_PAGE_SIZE)).GetSize();
+                            const SfxItemSet& rFooterSet = static_cast<const SvxSetItem*>(pItem)->GetItemSet();
+                            Size aFooterSize = static_cast<const SvxSizeItem&>(rFooterSet.Get(ATTR_PAGE_SIZE)).GetSize();
                             aFooterSize.Height() = (long)( nHeight - aButtonUpPt.Y() / HMM_PER_TWIPS - aOffset.Y() / HMM_PER_TWIPS - aULItem.GetLower() );
                             aFooterSize.Height() = aFooterSize.Height() * 100 / mnScale;
                             SvxSetItem  aNewFooter( static_cast<const SvxSetItem&>(rStyleSet.Get(ATTR_PAGE_FOOTERSET)) );
@@ -1217,7 +1217,7 @@ void ScPreview::MouseButtonUp( const MouseEvent& rMEvt )
                     if( bUndo )
                     {
                         pDocShell->GetUndoManager()->AddUndoAction(
-                            new ScUndoModifyStyle( pDocShell, SFX_STYLE_FAMILY_PAGE,
+                            new ScUndoModifyStyle( pDocShell, SfxStyleFamily::Page,
                             aOldData, aNewData ) );
                     }
 
@@ -1502,13 +1502,13 @@ void ScPreview::GetFocus()
 {
     Window::GetFocus();
     if (pViewShell && pViewShell->HasAccessibilityObjects())
-        pViewShell->BroadcastAccessibility( ScAccWinFocusGotHint(GetAccessible()) );
+        pViewShell->BroadcastAccessibility( ScAccWinFocusGotHint() );
 }
 
 void ScPreview::LoseFocus()
 {
     if (pViewShell && pViewShell->HasAccessibilityObjects())
-        pViewShell->BroadcastAccessibility( ScAccWinFocusLostHint(GetAccessible()) );
+        pViewShell->BroadcastAccessibility( ScAccWinFocusLostHint() );
     Window::LoseFocus();
 }
 

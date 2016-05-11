@@ -63,8 +63,6 @@ namespace dbaui
         VclPtr< ::svt::ListBoxControl>              m_pTableCell;
         VclPtr< ::svt::ListBoxControl>              m_pOrderCell;
 
-        OTableFieldDescRef                  m_pEmptyEntry;              // default entry in the list may reference more than once
-
         sal_Int32                           m_nMaxColumns;              // maximum number of columns in a Select-Statement
 
         OUString                            m_aFunctionStrings;
@@ -84,9 +82,9 @@ namespace dbaui
         virtual void                dispose() override;
 
         void                        initialize();
-        OTableFieldDescRef          InsertField( const OJoinExchangeData& jxdSource, sal_uInt16 _nColumnPosition = BROWSER_INVALIDID, bool bVis=true, bool bActivate=true );
+        OTableFieldDescRef          InsertField( const OJoinExchangeData& jxdSource );
         OTableFieldDescRef          InsertField( const OTableFieldDescRef& rInfo, sal_uInt16 _nColumnPosition = BROWSER_INVALIDID, bool bVis=true, bool bActivate=true );
-        void                        InsertColumn( OTableFieldDescRef pEntry, sal_uInt16& _nColumnPosition );
+        void                        InsertColumn( const OTableFieldDescRef& pEntry, sal_uInt16& _nColumnPosition );
         void                        RemoveColumn( sal_uInt16 _nColumnId );
         void                        DeleteFields( const OUString& rAliasName );
 

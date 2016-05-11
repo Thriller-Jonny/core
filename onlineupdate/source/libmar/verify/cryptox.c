@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#ifdef WNT
+#ifdef _WIN32
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
@@ -143,7 +143,7 @@ CyprtoAPI_VerifySignature(HCRYPTHASH *hash,
 /**
  * Obtains the public key for the passed in cert data
  *
- * @param provider        The cryto provider
+ * @param provider        The crypto provider
  * @param certData        Data of the certificate to extract the public key from
  * @param sizeOfCertData  The size of the certData buffer
  * @param certStore       Pointer to the handle of the certificate store to use

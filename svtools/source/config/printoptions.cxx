@@ -22,7 +22,6 @@
 #include <unotools/configitem.hxx>
 #include <vcl/print.hxx>
 #include <com/sun/star/uno/Any.hxx>
-#include <com/sun/star/uno/Sequence.hxx>
 
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/container/XNameAccess.hpp>
@@ -124,7 +123,7 @@ SvtPrintOptions_Impl::SvtPrintOptions_Impl(const OUString& rConfigRoot)
             ::comphelper::ConfigurationHelper::openConfig(
                 comphelper::getProcessComponentContext(),
                 ROOTNODE_PRINTOPTION,
-                ::comphelper::ConfigurationHelper::E_STANDARD),
+                ::comphelper::EConfigurationModes::Standard),
             css::uno::UNO_QUERY);
 
         if (m_xCfg.is())

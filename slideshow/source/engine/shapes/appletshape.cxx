@@ -20,8 +20,6 @@
 
 #include <canvas/canvastools.hxx>
 
-#include <boost/shared_ptr.hpp>
-
 #include "appletshape.hxx"
 #include "externalshapebase.hxx"
 #include "vieweventhandler.hxx"
@@ -82,7 +80,7 @@ namespace slideshow
             virtual void addViewLayer( const ViewLayerSharedPtr&    rNewLayer,
                                        bool                         bRedrawLayer ) override;
             virtual bool removeViewLayer( const ViewLayerSharedPtr& rNewLayer ) override;
-            virtual bool clearAllViewLayers() override;
+            virtual void clearAllViewLayers() override;
 
 
             // ExternalShapeBase methods
@@ -93,7 +91,7 @@ namespace slideshow
             virtual void implViewsChanged() override;
             virtual bool implStartIntrinsicAnimation() override;
             virtual bool implEndIntrinsicAnimation() override;
-            virtual bool implPauseIntrinsicAnimation() override;
+            virtual void implPauseIntrinsicAnimation() override;
             virtual bool implIsIntrinsicAnimationPlaying() const override;
             virtual void implSetIntrinsicAnimationTime(double) override;
 
@@ -123,7 +121,6 @@ namespace slideshow
         }
 
 
-
         void AppletShape::implViewChanged( const UnoViewSharedPtr& rView )
         {
             const ::basegfx::B2DRectangle& rBounds = getBounds();
@@ -136,7 +133,6 @@ namespace slideshow
         }
 
 
-
         void AppletShape::implViewsChanged()
         {
             // resize all ViewShapes
@@ -144,7 +140,6 @@ namespace slideshow
             for( const auto& pViewAppletShape : maViewAppletShapes )
                 pViewAppletShape->resize( rBounds );
         }
-
 
 
         void AppletShape::addViewLayer( const ViewLayerSharedPtr& rNewLayer,
@@ -173,7 +168,6 @@ namespace slideshow
                 // the remaining content
             }
         }
-
 
 
         bool AppletShape::removeViewLayer( const ViewLayerSharedPtr& rLayer )
@@ -206,13 +200,10 @@ namespace slideshow
         }
 
 
-
-        bool AppletShape::clearAllViewLayers()
+        void AppletShape::clearAllViewLayers()
         {
             maViewAppletShapes.clear();
-            return true;
         }
-
 
 
         bool AppletShape::implRender( const ::basegfx::B2DRange& rCurrBounds ) const
@@ -234,7 +225,6 @@ namespace slideshow
         }
 
 
-
         bool AppletShape::implStartIntrinsicAnimation()
         {
             const ::basegfx::B2DRectangle& rBounds = getBounds();
@@ -245,7 +235,6 @@ namespace slideshow
 
             return true;
         }
-
 
 
         bool AppletShape::implEndIntrinsicAnimation()
@@ -259,14 +248,11 @@ namespace slideshow
         }
 
 
-
-        bool AppletShape::implPauseIntrinsicAnimation()
+        void AppletShape::implPauseIntrinsicAnimation()
         {
             // TODO(F1): any way of temporarily disabling/deactivating
             // applets?
-            return true;
         }
-
 
 
         bool AppletShape::implIsIntrinsicAnimationPlaying() const
@@ -275,13 +261,12 @@ namespace slideshow
         }
 
 
-
         void AppletShape::implSetIntrinsicAnimationTime(double)
         {
             // No way of doing this, or?
         }
 
-        boost::shared_ptr<Shape> createAppletShape(
+        std::shared_ptr<Shape> createAppletShape(
             const uno::Reference< drawing::XShape >& xShape,
             double                                   nPrio,
             const OUString&                   rServiceName,
@@ -289,7 +274,7 @@ namespace slideshow
             sal_Size                                 nNumPropEntries,
             const SlideShowContext&                  rContext )
         {
-            boost::shared_ptr< AppletShape > pAppletShape(
+            std::shared_ptr< AppletShape > pAppletShape(
                 new AppletShape(xShape,
                                 nPrio,
                                 rServiceName,

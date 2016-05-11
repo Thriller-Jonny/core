@@ -35,11 +35,9 @@
 #include "shapelistenereventhandler.hxx"
 #include "mouseeventhandler.hxx"
 
-#include <boost/shared_ptr.hpp>
-#include <boost/enable_shared_from_this.hpp>
-#include <boost/noncopyable.hpp>
 #include <set>
 #include <map>
+#include <memory>
 
 namespace slideshow {
 namespace internal {
@@ -54,8 +52,7 @@ class ShapeManagerImpl : public SubsettableShapeManager,
                          public ShapeListenerEventHandler,
                          public MouseEventHandler,
                          public ViewUpdate,
-                         public boost::enable_shared_from_this<ShapeManagerImpl>,
-                         private boost::noncopyable
+                         public std::enable_shared_from_this<ShapeManagerImpl>
 {
 public:
     /** Create a shape event broadcaster
@@ -70,15 +67,19 @@ public:
                       const ShapeEventListenerMap& rGlobalListenersMap,
                       const ShapeCursorMap&        rGlobalCursorMap );
 
+    /// Forbid copy construction
+    ShapeManagerImpl(const ShapeManagerImpl&) = delete;
+
+    /// Forbid copy assignment
+    ShapeManagerImpl& operator=(const ShapeManagerImpl&) = delete;
+
     /** Enables event listening.
 
-        @param bSlideBackgoundPainted
-        When true, the initial slide content on the background layer
+        The initial slide content on the background layer
         is already rendered (e.g. from a previous slide
-        transition). When false, slide renders initial content of
-        slide.
+        transition).
      */
-    void activate( bool bSlideBackgoundPainted );
+    void activate();
 
     /** Disables event listening.
      */
@@ -119,25 +120,25 @@ private:
     virtual void notifyShapeUpdate( const ShapeSharedPtr& rShape ) override;
     virtual ShapeSharedPtr lookupShape(
         css::uno::Reference< css::drawing::XShape > const & xShape ) const override;
-    virtual void addHyperlinkArea( const boost::shared_ptr<HyperlinkArea>& rArea ) override;
+    virtual void addHyperlinkArea( const std::shared_ptr<HyperlinkArea>& rArea ) override;
 
 
     // SubsettableShapeManager interface
 
 
-    virtual boost::shared_ptr<AttributableShape> getSubsetShape(
-        const boost::shared_ptr<AttributableShape>& rOrigShape,
+    virtual std::shared_ptr<AttributableShape> getSubsetShape(
+        const std::shared_ptr<AttributableShape>& rOrigShape,
         const DocTreeNode&                          rTreeNode ) override;
     virtual void revokeSubset(
-        const boost::shared_ptr<AttributableShape>& rOrigShape,
-        const boost::shared_ptr<AttributableShape>& rSubsetShape ) override;
+        const std::shared_ptr<AttributableShape>& rOrigShape,
+        const std::shared_ptr<AttributableShape>& rSubsetShape ) override;
 
     virtual void addIntrinsicAnimationHandler(
         const IntrinsicAnimationEventHandlerSharedPtr& rHandler ) override;
     virtual void removeIntrinsicAnimationHandler(
         const IntrinsicAnimationEventHandlerSharedPtr& rHandler ) override;
-    virtual bool notifyIntrinsicAnimationsEnabled() override;
-    virtual bool notifyIntrinsicAnimationsDisabled() override;
+    virtual void notifyIntrinsicAnimationsEnabled() override;
+    virtual void notifyIntrinsicAnimationsDisabled() override;
 
 
     // ShapeListenerEventHandler
@@ -149,7 +150,7 @@ private:
     virtual bool listenerRemoved( const css::uno::Reference< css::presentation::XShapeEventListener>& xListener,
                                   const css::uno::Reference< css::drawing::XShape>&                   xShape ) override;
 
-    bool cursorChanged( const css::uno::Reference< css::drawing::XShape>&   xShape,
+    void cursorChanged( const css::uno::Reference< css::drawing::XShape>&   xShape,
                               sal_Int16                                     nCursor );
 
 
@@ -157,7 +158,7 @@ private:
 
 
     typedef std::map<ShapeSharedPtr,
-                     boost::shared_ptr< ::cppu::OInterfaceContainerHelper >,
+                     std::shared_ptr< ::comphelper::OInterfaceContainerHelper2 >,
                      Shape::lessThanShape>        ShapeToListenersMap;
     typedef std::map<ShapeSharedPtr, sal_Int16,
                        Shape::lessThanShape>      ShapeToCursorMap;

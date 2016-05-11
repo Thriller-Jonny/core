@@ -127,7 +127,6 @@
       </menu:menu>
       <menu:menuitem menu:id=".uno:FieldDialog"/>
       <menu:menuitem menu:id=".uno:LinkDialog"/>
-      <menu:menuitem menu:id=".uno:PlugInsActive"/>
       <menu:menuitem menu:id=".uno:ImageMapDialog"/>
       <menu:menuitem menu:id=".uno:ObjectMenue"/>
       <menu:menuitem menu:id=".uno:ChangeDatabaseField"/>
@@ -223,7 +222,6 @@
         <menu:menupopup>
           <menu:menuitem menu:id=".uno:InsertObjectStarMath"/>
           <menu:menuitem menu:id=".uno:InsertObject"/>
-          <menu:menuitem menu:id=".uno:InsertPlugin"/>
         </menu:menupopup>
       </menu:menu>
       <menu:menu menu:id=".uno:ShapesMenu">
@@ -272,7 +270,7 @@
           <menu:menuitem menu:id=".uno:InsertRLM"/>
         </menu:menupopup>
       </menu:menu>
-      <menu:menuitem menu:id=".uno:StyleApply?Style:string=Horizontal Line&amp;FamilyName:string=ParagraphStyles"/>
+      <menu:menuitem menu:id=".uno:StyleApply?Style:string=Horizontal%20Line&amp;FamilyName:string=ParagraphStyles"/>
       <menu:menuseparator/>
       <menu:menu menu:id=".uno:InsertFootnotesMenu">
         <menu:menupopup>
@@ -290,19 +288,7 @@
       </menu:menu>
       <menu:menuseparator/>
       <menu:menuitem menu:id=".uno:InsertPageNumberField"/>
-      <menu:menu menu:id=".uno:FieldMenu">
-        <menu:menupopup>
-          <menu:menuitem menu:id=".uno:InsertPageNumberField"/>
-          <menu:menuitem menu:id=".uno:InsertPageCountField"/>
-          <menu:menuitem menu:id=".uno:InsertDateField"/>
-          <menu:menuitem menu:id=".uno:InsertTimeField"/>
-          <menu:menuitem menu:id=".uno:InsertTitleField"/>
-          <menu:menuitem menu:id=".uno:InsertAuthorField"/>
-          <menu:menuitem menu:id=".uno:InsertTopicField"/>
-          <menu:menuseparator/>
-          <menu:menuitem menu:id=".uno:InsertField"/>
-        </menu:menupopup>
-      </menu:menu>
+      <menu:menuitem menu:id=".uno:InsertFieldCtrl"/>
       <menu:menu menu:id=".uno:InsertHeaderFooterMenu">
         <menu:menupopup>
           <menu:menuitem menu:id=".uno:InsertPageHeader"/>
@@ -365,13 +351,15 @@
           <menu:menuitem menu:id=".uno:Grow"/>
           <menu:menuitem menu:id=".uno:Shrink"/>
           <menu:menuseparator/>
+          <menu:menuitem menu:id=".uno:ChangeCaseToUpper"/>
+          <menu:menuitem menu:id=".uno:ChangeCaseToLower"/>
+          <menu:menuseparator/>
           <menu:menu menu:id=".uno:TransliterateMenu">
             <menu:menupopup>
               <menu:menuitem menu:id=".uno:ChangeCaseToSentenceCase"/>
-              <menu:menuitem menu:id=".uno:ChangeCaseToLower"/>
-              <menu:menuitem menu:id=".uno:ChangeCaseToUpper"/>
               <menu:menuitem menu:id=".uno:ChangeCaseToTitleCase"/>
               <menu:menuitem menu:id=".uno:ChangeCaseToToggleCase"/>
+              <menu:menuseparator/>
               <menu:menuitem menu:id=".uno:ChangeCaseToHalfWidth"/>
               <menu:menuitem menu:id=".uno:ChangeCaseToFullWidth"/>
               <menu:menuitem menu:id=".uno:ChangeCaseToHiragana"/>
@@ -498,15 +486,7 @@
       <menu:menuitem menu:id=".uno:NameGroup"/>
       <menu:menuitem menu:id=".uno:ObjectTitleDescription"/>
       <menu:menuseparator/>
-      <menu:menu menu:id=".uno:AnchorMenu">
-        <menu:menupopup>
-          <menu:menuitem menu:id=".uno:SetAnchorToPage" menu:style="radio"/>
-          <menu:menuitem menu:id=".uno:SetAnchorToPara" menu:style="radio"/>
-          <menu:menuitem menu:id=".uno:SetAnchorAtChar" menu:style="radio"/>
-          <menu:menuitem menu:id=".uno:SetAnchorToChar" menu:style="radio"/>
-          <menu:menuitem menu:id=".uno:SetAnchorToFrame" menu:style="radio"/>
-        </menu:menupopup>
-      </menu:menu>
+      <menu:menuitem menu:id=".uno:AnchorMenu"/>
       <menu:menu menu:id=".uno:WrapMenu">
         <menu:menupopup>
           <menu:menuitem menu:id=".uno:WrapOff"/>
@@ -560,19 +540,19 @@
       <menu:menuitem menu:id=".uno:StyleApply?Style:string=Standard&amp;FamilyName:string=ParagraphStyles"/>
       <menu:menuitem menu:id=".uno:StyleApply?Style:string=Title&amp;FamilyName:string=ParagraphStyles"/>
       <menu:menuitem menu:id=".uno:StyleApply?Style:string=Subtitle&amp;FamilyName:string=ParagraphStyles"/>
-      <menu:menuitem menu:id=".uno:StyleApply?Style:string=Heading 1&amp;FamilyName:string=ParagraphStyles"/>
-      <menu:menuitem menu:id=".uno:StyleApply?Style:string=Heading 2&amp;FamilyName:string=ParagraphStyles"/>
-      <menu:menuitem menu:id=".uno:StyleApply?Style:string=Heading 3&amp;FamilyName:string=ParagraphStyles"/>
-      <menu:menuitem menu:id=".uno:StyleApply?Style:string=Heading 4&amp;FamilyName:string=ParagraphStyles"/>
-      <menu:menuitem menu:id=".uno:StyleApply?Style:string=Text body&amp;FamilyName:string=ParagraphStyles"/>
+      <menu:menuitem menu:id=".uno:StyleApply?Style:string=Heading%201&amp;FamilyName:string=ParagraphStyles"/>
+      <menu:menuitem menu:id=".uno:StyleApply?Style:string=Heading%202&amp;FamilyName:string=ParagraphStyles"/>
+      <menu:menuitem menu:id=".uno:StyleApply?Style:string=Heading%203&amp;FamilyName:string=ParagraphStyles"/>
+      <menu:menuitem menu:id=".uno:StyleApply?Style:string=Heading%204&amp;FamilyName:string=ParagraphStyles"/>
+      <menu:menuitem menu:id=".uno:StyleApply?Style:string=Text%20body&amp;FamilyName:string=ParagraphStyles"/>
       <menu:menuitem menu:id=".uno:StyleApply?Style:string=Quotations&amp;FamilyName:string=ParagraphStyles"/>
-      <menu:menuitem menu:id=".uno:StyleApply?Style:string=Preformatted Text&amp;FamilyName:string=ParagraphStyles"/>
+      <menu:menuitem menu:id=".uno:StyleApply?Style:string=Preformatted%20Text&amp;FamilyName:string=ParagraphStyles"/>
       <menu:menuseparator/>
-      <menu:menuitem menu:id=".uno:StyleApply?Style:string=Default Style&amp;FamilyName:string=CharacterStyles"/>
+      <menu:menuitem menu:id=".uno:StyleApply?Style:string=Default%20Style&amp;FamilyName:string=CharacterStyles"/>
       <menu:menuitem menu:id=".uno:StyleApply?Style:string=Emphasis&amp;FamilyName:string=CharacterStyles"/>
-      <menu:menuitem menu:id=".uno:StyleApply?Style:string=Strong Emphasis&amp;FamilyName:string=CharacterStyles"/>
+      <menu:menuitem menu:id=".uno:StyleApply?Style:string=Strong%20Emphasis&amp;FamilyName:string=CharacterStyles"/>
       <menu:menuitem menu:id=".uno:StyleApply?Style:string=Quotation&amp;FamilyName:string=CharacterStyles"/>
-      <menu:menuitem menu:id=".uno:StyleApply?Style:string=Source Text&amp;FamilyName:string=CharacterStyles"/>
+      <menu:menuitem menu:id=".uno:StyleApply?Style:string=Source%20Text&amp;FamilyName:string=CharacterStyles"/>
       <menu:menuseparator/>
       <menu:menuitem menu:id=".uno:EditStyle"/>
       <menu:menuitem menu:id=".uno:StyleUpdateByExample"/>

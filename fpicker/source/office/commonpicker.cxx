@@ -46,10 +46,9 @@ namespace svt
     using namespace     ::comphelper;
 
 
-    OCommonPicker::OCommonPicker( const css::uno::Reference< css::lang::XMultiServiceFactory >& _rxFactory )
+    OCommonPicker::OCommonPicker()
         :OCommonPicker_Base( m_aMutex )
         ,OPropertyContainer( GetBroadcastHelper() )
-        ,m_xORB( _rxFactory )
         ,m_pDlg( nullptr )
         ,m_nCancelEvent( nullptr )
         ,m_bExecuting( false )
@@ -196,13 +195,12 @@ namespace svt
     }
 
 
-
     bool OCommonPicker::createPicker()
     {
         if ( !m_pDlg )
         {
             m_pDlg.reset( implCreateDialog( VCLUnoHelper::GetWindow( m_xDialogParent ) ) );
-            DBG_ASSERT( m_pDlg, "OCommonPicker::createPicker: invalid dialog returned!" );
+            SAL_WARN_IF( !m_pDlg, "fpicker.office", "OCommonPicker::createPicker: invalid dialog returned!" );
 
             if ( m_pDlg )
             {
@@ -301,7 +299,7 @@ namespace svt
             return svt::OControlAccess::isControlSupported( aControlName );
         }
 
-        return sal_False;
+        return false;
     }
 
 
@@ -331,7 +329,7 @@ namespace svt
             return aAccess.isControlPropertySupported( aControlName, aControlProperty );
         }
 
-        return sal_False;
+        return false;
     }
 
 

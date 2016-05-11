@@ -36,7 +36,6 @@
 #include "screenupdater.hxx"
 #include "vieweventhandler.hxx"
 
-#include <boost/noncopyable.hpp>
 #include "slide.hxx"
 #include "cursormanager.hxx"
 
@@ -162,14 +161,14 @@ namespace slideshow
                     }
             }
 
-            bool eraseAllInkChanged( bool const& rEraseAllInk ) override
+            bool eraseAllInkChanged( bool bEraseAllInk ) override
             {
-                this->mbIsEraseAllModeActivated= rEraseAllInk;
+                this->mbIsEraseAllModeActivated = bEraseAllInk;
                 // if the erase all mode is activated it will remove all ink from slide,
                 // therefore destroy all the polygons stored
                 if(mbIsEraseAllModeActivated)
                 {
-                    // The Erase Mode should be desactivated
+                    // The Erase Mode should be deactivated
                     mbIsEraseModeActivated = false;
                     repaintWithoutPolygons();
                     maPolygons.clear();
@@ -225,7 +224,7 @@ namespace slideshow
             }
 
             //Retrieve all registered polygons.
-            PolyPolygonVector getPolygons()
+            const PolyPolygonVector& getPolygons()
             {
                 return maPolygons;
             }

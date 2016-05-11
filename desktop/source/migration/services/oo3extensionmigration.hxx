@@ -52,7 +52,6 @@ namespace migration
         css::uno::Reference< css::uno::XComponentContext > const & xContext );
 
 
-
     // class ExtensionMigration
 
 
@@ -79,7 +78,7 @@ namespace migration
             SCANRESULT_DONTMIGRATE_EXTENSION
         };
 
-        ::osl::FileBase::RC     checkAndCreateDirectory( INetURLObject& rDirURL );
+        void                    checkAndCreateDirectory( INetURLObject& rDirURL );
         ScanResult              scanExtensionFolder( const OUString& sExtFolder );
         void                    scanUserExtensions( const OUString& sSourceDir, TStringVector& aMigrateExtensions );
         bool                    scanDescriptionXml( const OUString& sDescriptionXmlFilePath );
@@ -114,8 +113,6 @@ namespace migration
                                           css::task::XInteractionHandler,
                                           css::ucb::XProgressHandler >
     {
-        css::uno::Reference< css::uno::XComponentContext > m_xContext;
-        css::uno::Reference< css::task::XInteractionHandler> m_forwardHandler;
     public:
         virtual ~TmpRepositoryCommandEnv();
         TmpRepositoryCommandEnv();

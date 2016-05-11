@@ -32,12 +32,12 @@ namespace dbaui
         VclPtr<vcl::Window>             m_pRight;
         bool                            m_bVertical;
 
-        void ImplInitSettings( bool bFont, bool bForeground, bool bBackground );
+        void ImplInitSettings();
         DECL_LINK_TYPED( SplitHdl, Splitter*, void );
     protected:
         virtual void DataChanged(const DataChangedEvent& rDCEvt) override;
     public:
-        OSplitterView(vcl::Window* _pParent,bool _bVertical = true);
+        OSplitterView(vcl::Window* _pParent);
         virtual ~OSplitterView();
         // Window overrides
         virtual void dispose() override;

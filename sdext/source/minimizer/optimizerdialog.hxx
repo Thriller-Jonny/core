@@ -55,8 +55,6 @@
 #define PAGE_WIDTH      OD_DIALOG_WIDTH - PAGE_POS_X
 
 
-// - OPTIMIZERDIALOG -
-
 class OptimizerDialog : public UnoDialog, public ConfigurationAccess
 {
 public:
@@ -65,7 +63,7 @@ public:
         css::uno::Reference< css::frame::XDispatch > rxStatusDispatcher );
     ~OptimizerDialog();
 
-    bool                execute();
+    void                execute();
 
     sal_Int16               mnCurrentStep;
     sal_Int16               mnTabIndex;
@@ -103,7 +101,7 @@ private:
 
     void ActivatePage( sal_Int16 nStep );
     void DeactivatePage( sal_Int16 nStep );
-    void InsertRoadmapItem( const sal_Int32 nIndex, const bool bEnabled, const OUString& rLabel, const sal_Int32 nItemID );
+    void InsertRoadmapItem( const sal_Int32 nIndex, const OUString& rLabel, const sal_Int32 nItemID );
 
 public:
 
@@ -127,7 +125,6 @@ public:
 };
 
 
-
 class ItemListener : public ::cppu::WeakImplHelper< css::awt::XItemListener >
 {
 public:
@@ -139,7 +136,6 @@ private:
 
     OptimizerDialog& mrOptimizerDialog;
 };
-
 
 
 class ActionListener : public ::cppu::WeakImplHelper< css::awt::XActionListener >
@@ -155,7 +151,6 @@ private:
 };
 
 
-
 class ActionListenerListBox0Pg0 : public ::cppu::WeakImplHelper< css::awt::XActionListener >
 {
 public:
@@ -167,7 +162,6 @@ private:
 
     OptimizerDialog& mrOptimizerDialog;
 };
-
 
 
 class TextListenerFormattedField0Pg1 : public ::cppu::WeakImplHelper< css::awt::XTextListener >
@@ -183,7 +177,6 @@ private:
 };
 
 
-
 class TextListenerComboBox0Pg1 : public ::cppu::WeakImplHelper< css::awt::XTextListener >
 {
 public:
@@ -195,7 +188,6 @@ private:
 
     OptimizerDialog& mrOptimizerDialog;
 };
-
 
 
 class SpinListenerFormattedField0Pg1 : public ::cppu::WeakImplHelper< css::awt::XSpinListener >

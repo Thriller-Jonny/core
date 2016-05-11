@@ -45,8 +45,6 @@
 #include "interpre.hxx"
 #include "columniterator.hxx"
 #include "types.hxx"
-#include "conditio.hxx"
-#include "colorscale.hxx"
 #include "fillinfo.hxx"
 #include "globstr.hrc"
 #include "tokenarray.hxx"
@@ -111,35 +109,6 @@ FormulaGrammarSwitch::~FormulaGrammarSwitch()
     mpDoc->SetGrammar(meOldGrammar);
 }
 
-class MeasureTimeSwitch
-{
-    double& mrDiff;
-    TimeValue maTimeBefore;
-public:
-    explicit MeasureTimeSwitch(double& rDiff) : mrDiff(rDiff)
-    {
-        mrDiff = 9999.0;
-        osl_getSystemTime(&maTimeBefore);
-    }
-
-    ~MeasureTimeSwitch()
-    {
-        TimeValue aTimeAfter;
-        osl_getSystemTime(&aTimeAfter);
-        mrDiff = getTimeDiff(aTimeAfter, maTimeBefore);
-    }
-
-    static double getTimeDiff(const TimeValue& t1, const TimeValue& t2)
-    {
-        double tv1 = t1.Seconds;
-        double tv2 = t2.Seconds;
-        tv1 += t1.Nanosec / 1000000000.0;
-        tv2 += t2.Nanosec / 1000000000.0;
-
-        return tv1 - tv2;
-    }
-};
-
 Test::Test() :
     m_pImpl(new TestImpl),
     m_pDoc(nullptr)
@@ -174,302 +143,6 @@ void Test::tearDown()
     m_pImpl->m_xDocShell->DoClose();
     m_pImpl->m_xDocShell.Clear();
     BootstrapFixture::tearDown();
-}
-
-#define PERF_ASSERT(df,scale,time,message) \
-    do { \
-        double dfscaled = df / scale; \
-        if ((dfscaled) >= (time)) \
-        { \
-            std::ostringstream os; \
-            os << message " took " << dfscaled << " pseudo-cycles (" << df << " real-time seconds), expected: " << time << " pseudo-cycles."; \
-            CPPUNIT_FAIL(os.str().c_str()); \
-        } \
-    } while (false)
-
-void Test::testPerf()
-{
-    CPPUNIT_ASSERT_MESSAGE ("failed to insert sheet", m_pDoc->InsertTab (0, "foo"));
-
-    // First do a set of simple operations to try to work out
-    // how fast (or not) this particular machine is:
-    double scale;
-    {
-        MeasureTimeSwitch aTime(scale);
-        for (int i = 0; i < 10000000; ++i)
-        {
-            // Bang on the allocator
-            volatile ScRange *pRange = new ScRange (ScAddress (0,0,0));
-            // Calc does quite a bit of string conversion
-            volatile double it = OUString::number ((double)i/253.0).toDouble();
-            // Do we have floating point math ?
-            volatile double another = rtl::math::sin (it);
-            (void)another;
-            delete pRange;
-        }
-    }
-    printf("CPU scale factor %g\n", scale);
-
-    // FIXME: we should check if this already took too long
-    // and if so not run the perf. tests to have pity on some
-    // slow ARM machines - I think.
-
-    // to make the numbers more round and helpful,
-    // but the calculation of scale reasonably precise.
-    scale /= 100000.0;
-
-    double diff;
-
-    // Clearing an already empty sheet should finish in a fraction of a
-    // second.  Flag failure if it takes more than one second.  Clearing 100
-    // columns should be large enough to flag if something goes wrong.
-    {
-        MeasureTimeSwitch aTime(diff);
-        clearRange(m_pDoc, ScRange(0,0,0,99,MAXROW,0));
-    }
-    PERF_ASSERT(diff, scale, 1.0, "Clearing an empty sheet");
-
-    {
-        // Switch to R1C1 to make it easier to input relative references in multiple cells.
-        FormulaGrammarSwitch aFGSwitch(m_pDoc, formula::FormulaGrammar::GRAM_ENGLISH_XL_R1C1);
-
-        // Insert formulas in B1:B100000. This shouldn't take long, but may take
-        // close to a second on a slower machine. We don't measure this yet, for
-        // now.
-        for (SCROW i = 0; i < 100000; ++i)
-            m_pDoc->SetString(ScAddress(1,i,0), "=RC[-1]");
-
-        // Now, Delete B2:B100000. This should complete in a fraction of a second
-        // (0.06 sec on my machine).
-        {
-            MeasureTimeSwitch aTime(diff);
-            clearRange(m_pDoc, ScRange(1,1,0,1,99999,0));
-        }
-        PERF_ASSERT(diff, scale, 2000, "Removal of a large array of formula cells");
-    }
-
-    clearRange(m_pDoc, ScRange(0,0,0,1,MAXROW,0)); // Clear columns A:B.
-    CPPUNIT_ASSERT_MESSAGE("Column A shouldn't have any broadcasters.", !m_pDoc->HasBroadcaster(0,0));
-    CPPUNIT_ASSERT_MESSAGE("Column B shouldn't have any broadcasters.", !m_pDoc->HasBroadcaster(0,1));
-
-    {
-        // Measure the performance of repeat-pasting a single cell to a large
-        // cell range, undoing it, and redoing it.
-
-        ScAddress aPos(0,0,0);
-        m_pDoc->SetString(aPos, "test");
-        ScMarkData aMark;
-        aMark.SelectOneTable(0);
-
-        // Copy cell A1 to clipboard.
-        ScDocument aClipDoc(SCDOCMODE_CLIP);
-        ScClipParam aParam(aPos, false);
-        m_pDoc->CopyToClip(aParam, &aClipDoc, &aMark);
-        CPPUNIT_ASSERT_EQUAL(m_pDoc->GetString(aPos), aClipDoc.GetString(aPos));
-
-        ScDocument* pUndoDoc = new ScDocument(SCDOCMODE_UNDO);
-        pUndoDoc->InitUndo(m_pDoc, 0, 0);
-        m_pDoc->CopyToDocument(ScRange(aPos), InsertDeleteFlags::CONTENTS, false, pUndoDoc, &aMark);
-
-        // Paste it to A2:A100000, and measure its duration.
-        ScRange aPasteRange(0,1,0,0,99999,0);
-        aMark.SetMarkArea(aPasteRange);
-
-        {
-            MeasureTimeSwitch aTime(diff);
-            m_pDoc->CopyFromClip(aPasteRange, aMark, InsertDeleteFlags::CONTENTS, pUndoDoc, &aClipDoc);
-        }
-        PERF_ASSERT(diff, scale, 1500.0, "Pasting a single cell to A2:A100000");
-
-        ScDocument* pRedoDoc = new ScDocument(SCDOCMODE_UNDO);
-        pRedoDoc->InitUndo(m_pDoc, 0, 0);
-        m_pDoc->CopyToDocument(aPasteRange, InsertDeleteFlags::CONTENTS, false, pRedoDoc, &aMark);
-
-        // Create an undo object for this.
-        ScRefUndoData* pRefUndoData = new ScRefUndoData(m_pDoc);
-        ScUndoPaste aUndo(&getDocShell(), aPasteRange, aMark, pUndoDoc, pRedoDoc, InsertDeleteFlags::CONTENTS, pRefUndoData);
-
-        // Make sure it did what it's supposed to do.
-        CPPUNIT_ASSERT_EQUAL(m_pDoc->GetString(aPos), m_pDoc->GetString(aPasteRange.aStart));
-        CPPUNIT_ASSERT_EQUAL(m_pDoc->GetString(aPos), m_pDoc->GetString(aPasteRange.aEnd));
-
-        {
-            MeasureTimeSwitch aTime(diff);
-            aUndo.Undo();
-        }
-        PERF_ASSERT(diff, scale, 500.0, "Undoing a pasting of a cell to A2:A100000");
-
-        // Make sure it's really undone.
-        CPPUNIT_ASSERT_EQUAL(CELLTYPE_STRING, m_pDoc->GetCellType(aPos));
-        CPPUNIT_ASSERT_EQUAL(CELLTYPE_NONE, m_pDoc->GetCellType(aPasteRange.aStart));
-        CPPUNIT_ASSERT_EQUAL(CELLTYPE_NONE, m_pDoc->GetCellType(aPasteRange.aEnd));
-
-        // Now redo.
-        {
-            MeasureTimeSwitch aTime(diff);
-            aUndo.Redo();
-        }
-        PERF_ASSERT(diff, scale, 1000.0, "Redoing a pasting of a cell to A2:A100000");
-
-        // Make sure it's really redone.
-        CPPUNIT_ASSERT_EQUAL(m_pDoc->GetString(aPos), m_pDoc->GetString(aPasteRange.aStart));
-        CPPUNIT_ASSERT_EQUAL(m_pDoc->GetString(aPos), m_pDoc->GetString(aPasteRange.aEnd));
-    }
-
-    clearRange(m_pDoc, ScRange(0,0,0,1,MAXROW,0)); // Clear columns A:B.
-    CPPUNIT_ASSERT_MESSAGE("Column A shouldn't have any broadcasters.", !m_pDoc->HasBroadcaster(0,0));
-    CPPUNIT_ASSERT_MESSAGE("Column B shouldn't have any broadcasters.", !m_pDoc->HasBroadcaster(0,1));
-
-    {
-        // Measure the performance of repeat-pasting 2 adjacent cells to a
-        // large cell range, undoing it, and redoing it.  The bottom one of
-        // the two source cells is empty.
-
-        ScRange aSrcRange(0,0,0,0,1,0); // A1:A2
-
-        ScAddress aPos(0,0,0);
-        m_pDoc->SetValue(aPos, 12);
-        ScMarkData aMark;
-        aMark.SetMarkArea(aSrcRange);
-
-        // Copy to clipboard.
-        ScDocument aClipDoc(SCDOCMODE_CLIP);
-        ScClipParam aParam(aSrcRange, false);
-        m_pDoc->CopyToClip(aParam, &aClipDoc, &aMark);
-        CPPUNIT_ASSERT_EQUAL(m_pDoc->GetString(aPos), aClipDoc.GetString(aPos));
-
-        ScDocument* pUndoDoc = new ScDocument(SCDOCMODE_UNDO);
-        pUndoDoc->InitUndo(m_pDoc, 0, 0);
-        m_pDoc->CopyToDocument(aSrcRange, InsertDeleteFlags::CONTENTS, false, pUndoDoc, &aMark);
-
-        // Paste it to A3:A100001, and measure its duration.
-        ScRange aPasteRange(0,2,0,0,100000,0);
-        aMark.SetMarkArea(aPasteRange);
-
-        {
-            MeasureTimeSwitch aTime(diff);
-            m_pDoc->CopyFromClip(aPasteRange, aMark, InsertDeleteFlags::CONTENTS, pUndoDoc, &aClipDoc);
-        }
-        PERF_ASSERT(diff, scale, 1000.0, "Pasting A1:A2 to A3:A100001");
-
-        ScDocument* pRedoDoc = new ScDocument(SCDOCMODE_UNDO);
-        pRedoDoc->InitUndo(m_pDoc, 0, 0);
-        m_pDoc->CopyToDocument(aPasteRange, InsertDeleteFlags::CONTENTS, false, pRedoDoc, &aMark);
-
-        // Create an undo object for this.
-        ScRefUndoData* pRefUndoData = new ScRefUndoData(m_pDoc);
-        ScUndoPaste aUndo(&getDocShell(), aPasteRange, aMark, pUndoDoc, pRedoDoc, InsertDeleteFlags::CONTENTS, pRefUndoData);
-
-        // Make sure it did what it's supposed to do.
-        CPPUNIT_ASSERT_EQUAL(m_pDoc->GetString(aPos), m_pDoc->GetString(aPasteRange.aStart));
-        CPPUNIT_ASSERT_EQUAL(m_pDoc->GetString(aPos), m_pDoc->GetString(aPasteRange.aEnd));
-        ScAddress aTmp = aPasteRange.aStart;
-        aTmp.IncRow();
-        CPPUNIT_ASSERT_EQUAL(CELLTYPE_NONE, m_pDoc->GetCellType(aTmp));
-
-        {
-            MeasureTimeSwitch aTime(diff);
-            aUndo.Undo();
-        }
-        PERF_ASSERT(diff, scale, 500.0, "Undoing");
-
-        // Make sure it's really undone.
-        CPPUNIT_ASSERT_EQUAL(CELLTYPE_VALUE, m_pDoc->GetCellType(aPos));
-        CPPUNIT_ASSERT_EQUAL(CELLTYPE_NONE, m_pDoc->GetCellType(aPasteRange.aStart));
-        CPPUNIT_ASSERT_EQUAL(CELLTYPE_NONE, m_pDoc->GetCellType(aPasteRange.aEnd));
-
-        // Now redo.
-        {
-            MeasureTimeSwitch aTime(diff);
-            aUndo.Redo();
-        }
-        PERF_ASSERT(diff, scale, 800.0, "Redoing");
-
-        // Make sure it's really redone.
-        CPPUNIT_ASSERT_EQUAL(m_pDoc->GetString(aPos), m_pDoc->GetString(aPasteRange.aStart));
-        CPPUNIT_ASSERT_EQUAL(m_pDoc->GetString(aPos), m_pDoc->GetString(aPasteRange.aEnd));
-    }
-
-    clearRange(m_pDoc, ScRange(0,0,0,1,MAXROW,0)); // Clear columns A:B.
-    CPPUNIT_ASSERT_MESSAGE("Column A shouldn't have any broadcasters.", !m_pDoc->HasBroadcaster(0,0));
-    CPPUNIT_ASSERT_MESSAGE("Column B shouldn't have any broadcasters.", !m_pDoc->HasBroadcaster(0,1));
-
-    {
-        // Measure the performance of repeat-pasting 2 adjacent cells to a
-        // large cell range, undoing it, and redoing it.  The bottom one of
-        // the two source cells is empty.  In this scenario, the non-empty
-        // cell is a formula cell referencing a cell to the right, which
-        // inserts a broadcaster to cell it references. So it has a higher
-        // overhead than the previous scenario.
-
-        ScRange aSrcRange(0,0,0,0,1,0); // A1:A2
-
-        ScAddress aPos(0,0,0);
-        m_pDoc->SetString(aPos, "=B1");
-        ScMarkData aMark;
-        aMark.SetMarkArea(aSrcRange);
-
-        // Copy to clipboard.
-        ScDocument aClipDoc(SCDOCMODE_CLIP);
-        ScClipParam aParam(aSrcRange, false);
-        m_pDoc->CopyToClip(aParam, &aClipDoc, &aMark);
-        CPPUNIT_ASSERT_EQUAL(m_pDoc->GetString(aPos), aClipDoc.GetString(aPos));
-
-        ScDocument* pUndoDoc = new ScDocument(SCDOCMODE_UNDO);
-        pUndoDoc->InitUndo(m_pDoc, 0, 0);
-        m_pDoc->CopyToDocument(aSrcRange, InsertDeleteFlags::CONTENTS, false, pUndoDoc, &aMark);
-
-        // Paste it to A3:A50001, and measure its duration.
-        ScRange aPasteRange(0,2,0,0,50000,0);
-        aMark.SetMarkArea(aPasteRange);
-
-        {
-            MeasureTimeSwitch aTime(diff);
-            m_pDoc->CopyFromClip(aPasteRange, aMark, InsertDeleteFlags::CONTENTS, pUndoDoc, &aClipDoc);
-        }
-        PERF_ASSERT(diff, scale, 2000.0, "Pasting");
-
-        ScDocument* pRedoDoc = new ScDocument(SCDOCMODE_UNDO);
-        pRedoDoc->InitUndo(m_pDoc, 0, 0);
-        m_pDoc->CopyToDocument(aPasteRange, InsertDeleteFlags::CONTENTS, false, pRedoDoc, &aMark);
-
-        // Create an undo object for this.
-        ScRefUndoData* pRefUndoData = new ScRefUndoData(m_pDoc);
-        ScUndoPaste aUndo(&getDocShell(), aPasteRange, aMark, pUndoDoc, pRedoDoc, InsertDeleteFlags::CONTENTS, pRefUndoData);
-
-        // Make sure it did what it's supposed to do.
-        CPPUNIT_ASSERT_EQUAL(CELLTYPE_FORMULA, m_pDoc->GetCellType(aPasteRange.aStart));
-        CPPUNIT_ASSERT_EQUAL(CELLTYPE_FORMULA, m_pDoc->GetCellType(aPasteRange.aEnd));
-        ScAddress aTmp = aPasteRange.aStart;
-        aTmp.IncRow();
-        CPPUNIT_ASSERT_EQUAL(CELLTYPE_NONE, m_pDoc->GetCellType(aTmp));
-
-#if 0 // TODO: Undo and redo of this scenario is currently not fast enough to be tested reliably.
-        {
-            MeasureTimeSwitch aTime(diff);
-            aUndo.Undo();
-        }
-        PERF_ASSERT(diff, scale, 1.0, "Undoing");
-
-        // Make sure it's really undone.
-        CPPUNIT_ASSERT_EQUAL(CELLTYPE_FORMULA, m_pDoc->GetCellType(aPos));
-        CPPUNIT_ASSERT_EQUAL(CELLTYPE_NONE, m_pDoc->GetCellType(aPasteRange.aStart));
-        CPPUNIT_ASSERT_EQUAL(CELLTYPE_NONE, m_pDoc->GetCellType(aPasteRange.aEnd));
-
-        // Now redo.
-        {
-            MeasureTimeSwitch aTime(diff);
-            aUndo.Redo();
-        }
-        PERF_ASSERT(diff, scale, 1.0, "Redoing");
-
-        // Make sure it's really redone.
-        CPPUNIT_ASSERT_EQUAL(CELLTYPE_FORMULA, m_pDoc->GetCellType(aPasteRange.aStart));
-        CPPUNIT_ASSERT_EQUAL(CELLTYPE_FORMULA, m_pDoc->GetCellType(aPasteRange.aEnd));
-#endif
-    }
-
-    m_pDoc->DeleteTab(0);
 }
 
 void Test::testCollator()
@@ -511,12 +184,12 @@ void Test::testSharedStringPool()
         aSS1 = m_pDoc->GetSharedString(ScAddress(0,2,0));
         aSS2 = m_pDoc->GetSharedString(ScAddress(0,4,0));
         CPPUNIT_ASSERT_MESSAGE("They must differ", aSS1.getData() != aSS2.getData());
-        CPPUNIT_ASSERT_MESSAGE("They must be equal when cases are ignored.", aSS1.getDataIgnoreCase() == aSS2.getDataIgnoreCase());
+        CPPUNIT_ASSERT_EQUAL_MESSAGE("They must be equal when cases are ignored.", aSS1.getDataIgnoreCase(), aSS2.getDataIgnoreCase());
 
         // A2 and A4 should be equal when ignoring cases.
         aSS1 = m_pDoc->GetSharedString(ScAddress(0,1,0));
         aSS2 = m_pDoc->GetSharedString(ScAddress(0,3,0));
-        CPPUNIT_ASSERT_MESSAGE("They must be equal when cases are ignored.", aSS1.getDataIgnoreCase() == aSS2.getDataIgnoreCase());
+        CPPUNIT_ASSERT_EQUAL_MESSAGE("They must be equal when cases are ignored.", aSS1.getDataIgnoreCase(), aSS2.getDataIgnoreCase());
     }
 
     // Check the string counts after purging. Purging shouldn't remove any strings in this case.
@@ -669,7 +342,7 @@ void Test::testRangeList()
 
     ScRangeList aRL;
     aRL.Append(ScRange(1,1,0,3,10,0));
-    CPPUNIT_ASSERT_MESSAGE("List should have one range.", aRL.size() == 1);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("List should have one range.", size_t(1), aRL.size());
     const ScRange* p = aRL[0];
     CPPUNIT_ASSERT_MESSAGE("Failed to get the range object.", p);
     CPPUNIT_ASSERT_MESSAGE("Wrong range.", p->aStart == ScAddress(1,1,0) && p->aEnd == ScAddress(3,10,0));
@@ -692,38 +365,38 @@ void Test::testMarkData()
     // Select B3:F7.
     aMarkData.SetMarkArea(ScRange(1,2,0,5,6,0));
     aSpans = aMarkData.GetMarkedRowSpans();
-    CPPUNIT_ASSERT_MESSAGE("There should be one selected row span.", aSpans.size() == 1);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("There should be one selected row span.", size_t(1), aSpans.size());
     CPPUNIT_ASSERT_EQUAL(static_cast<SCCOLROW>(2), aSpans[0].mnStart);
     CPPUNIT_ASSERT_EQUAL(static_cast<SCCOLROW>(6), aSpans[0].mnEnd);
 
     aSpans = aMarkData.GetMarkedColSpans();
-    CPPUNIT_ASSERT_MESSAGE("There should be one selected column span.", aSpans.size() == 1);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("There should be one selected column span.", size_t(1), aSpans.size());
     CPPUNIT_ASSERT_EQUAL(static_cast<SCCOLROW>(1), aSpans[0].mnStart);
     CPPUNIT_ASSERT_EQUAL(static_cast<SCCOLROW>(5), aSpans[0].mnEnd);
 
     // Select A11:B13.
     aMarkData.SetMultiMarkArea(ScRange(0,10,0,1,12,0));
     aSpans = aMarkData.GetMarkedRowSpans();
-    CPPUNIT_ASSERT_MESSAGE("There should be 2 selected row spans.", aSpans.size() == 2);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("There should be 2 selected row spans.", size_t(2), aSpans.size());
     CPPUNIT_ASSERT_EQUAL(static_cast<SCCOLROW>(2), aSpans[0].mnStart);
     CPPUNIT_ASSERT_EQUAL(static_cast<SCCOLROW>(6), aSpans[0].mnEnd);
     CPPUNIT_ASSERT_EQUAL(static_cast<SCCOLROW>(10), aSpans[1].mnStart);
     CPPUNIT_ASSERT_EQUAL(static_cast<SCCOLROW>(12), aSpans[1].mnEnd);
 
     aSpans = aMarkData.GetMarkedColSpans();
-    CPPUNIT_ASSERT_MESSAGE("There should be one selected column span.", aSpans.size() == 1);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("There should be one selected column span.", size_t(1), aSpans.size());
     CPPUNIT_ASSERT_EQUAL(static_cast<SCCOLROW>(0), aSpans[0].mnStart);
     CPPUNIT_ASSERT_EQUAL(static_cast<SCCOLROW>(5), aSpans[0].mnEnd);
 
     // Select C8:C10.
     aMarkData.SetMultiMarkArea(ScRange(2,7,0,2,9,0));
     aSpans = aMarkData.GetMarkedRowSpans();
-    CPPUNIT_ASSERT_MESSAGE("There should be one selected row span.", aSpans.size() == 1);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("There should be one selected row span.", size_t(1), aSpans.size());
     CPPUNIT_ASSERT_EQUAL(static_cast<SCCOLROW>(2), aSpans[0].mnStart);
     CPPUNIT_ASSERT_EQUAL(static_cast<SCCOLROW>(12), aSpans[0].mnEnd);
 
     aSpans = aMarkData.GetMarkedColSpans();
-    CPPUNIT_ASSERT_MESSAGE("There should be one selected column span.", aSpans.size() == 1);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("There should be one selected column span.", size_t(1), aSpans.size());
     CPPUNIT_ASSERT_EQUAL(static_cast<SCCOLROW>(0), aSpans[0].mnStart);
     CPPUNIT_ASSERT_EQUAL(static_cast<SCCOLROW>(5), aSpans[0].mnEnd);
 }
@@ -749,7 +422,7 @@ void Test::testInput()
     aParam.setTextInput();
     m_pDoc->SetString(0, 0, 0, "000123", &aParam);
     test = m_pDoc->GetString(0, 0, 0);
-    CPPUNIT_ASSERT_MESSAGE("Text content should have been treated as string, not number.", test == "000123");
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("Text content should have been treated as string, not number.", OUString("000123"), test);
 
     m_pDoc->DeleteTab(0);
 }
@@ -758,9 +431,11 @@ void Test::testDocStatistics()
 {
     SCTAB nStartTabs = m_pDoc->GetTableCount();
     m_pDoc->InsertTab(0, "Sheet1");
-    CPPUNIT_ASSERT_MESSAGE("Failed to increment sheet count.", m_pDoc->GetTableCount() == nStartTabs+1);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("Failed to increment sheet count.",
+                               static_cast<SCTAB>(nStartTabs+1), m_pDoc->GetTableCount());
     m_pDoc->InsertTab(1, "Sheet2");
-    CPPUNIT_ASSERT_MESSAGE("Failed to increment sheet count.", m_pDoc->GetTableCount() == nStartTabs+2);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("Failed to increment sheet count.",
+                               static_cast<SCTAB>(nStartTabs+2), m_pDoc->GetTableCount());
 
     CPPUNIT_ASSERT_EQUAL(static_cast<sal_uLong>(0), m_pDoc->GetCellCount());
     m_pDoc->SetValue(ScAddress(0,0,0), 2.0);
@@ -783,7 +458,8 @@ void Test::testDocStatistics()
     CPPUNIT_ASSERT_EQUAL(static_cast<sal_uLong>(4), m_pDoc->GetFormulaGroupCount());
 
     m_pDoc->DeleteTab(1);
-    CPPUNIT_ASSERT_MESSAGE("Failed to decrement sheet count.", m_pDoc->GetTableCount() == nStartTabs+1);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("Failed to decrement sheet count.",
+                               static_cast<SCTAB>(nStartTabs+1), m_pDoc->GetTableCount());
     m_pDoc->DeleteTab(0); // This may fail in case there is only one sheet in the document.
 }
 
@@ -797,7 +473,7 @@ void Test::testDataEntries()
     m_pDoc->SetString(ScAddress(0,10,0), "Andy");
 
     std::vector<ScTypedStrData> aEntries;
-    m_pDoc->GetDataEntries(0, 0, 0, true, aEntries); // Try at the very top.
+    m_pDoc->GetDataEntries(0, 0, 0, aEntries); // Try at the very top.
 
     // Entries are supposed to be sorted in ascending order, and are all unique.
     CPPUNIT_ASSERT_EQUAL(static_cast<size_t>(3), aEntries.size());
@@ -811,7 +487,7 @@ void Test::testDataEntries()
     CPPUNIT_ASSERT_MESSAGE("The entries should have ended here.", it == aEntries.end());
 
     aEntries.clear();
-    m_pDoc->GetDataEntries(0, MAXROW, 0, true, aEntries); // Try at the very bottom.
+    m_pDoc->GetDataEntries(0, MAXROW, 0, aEntries); // Try at the very bottom.
     CPPUNIT_ASSERT_EQUAL(static_cast<size_t>(3), aEntries.size());
 
     // Make sure we get the same set of suggestions.
@@ -1013,8 +689,8 @@ struct HoriIterCheck
     const char* pVal;
 };
 
-template<size_t _Size>
-bool checkHorizontalIterator(ScDocument* pDoc, const char* pData[][_Size], size_t nDataCount, const HoriIterCheck* pChecks, size_t nCheckCount)
+template<size_t Size>
+bool checkHorizontalIterator(ScDocument* pDoc, const char* pData[][Size], size_t nDataCount, const HoriIterCheck* pChecks, size_t nCheckCount)
 {
     ScAddress aPos(0,0,0);
     Test::insertRangeData(pDoc, aPos, pData, nDataCount);
@@ -1563,14 +1239,14 @@ void Test::testFuncParam()
     m_pDoc->CalcFormulaTree(false, false);
     double val;
     m_pDoc->GetValue(0, 0, 0, val);
-    CPPUNIT_ASSERT_MESSAGE("incorrect result", val == 2);
+    ASSERT_DOUBLES_EQUAL_MESSAGE("incorrect result", 2.0, val);
 
     // Now function with missing parameters.  Missing values should be treated
     // as zeros.
     m_pDoc->SetString(0, 0, 0, "=AVERAGE(1;;;)");
     m_pDoc->CalcFormulaTree(false, false);
     m_pDoc->GetValue(0, 0, 0, val);
-    CPPUNIT_ASSERT_MESSAGE("incorrect result", val == 0.25);
+    ASSERT_DOUBLES_EQUAL_MESSAGE("incorrect result", 0.25, val);
 
     // Conversion of string to numeric argument.
     m_pDoc->SetString(0, 0, 0, "=\"\"+3");    // empty string
@@ -1588,15 +1264,15 @@ void Test::testFuncParam()
     m_pDoc->SetCalcConfig(aConfig);
     m_pDoc->CalcAll();
     m_pDoc->GetValue(0, 0, 0, val);
-    CPPUNIT_ASSERT_MESSAGE("incorrect result", val == 3);
+    ASSERT_DOUBLES_EQUAL_MESSAGE("incorrect result", 3.0, val);
     m_pDoc->GetValue(0, 1, 0, val);
-    CPPUNIT_ASSERT_MESSAGE("incorrect result", val == 3);
+    ASSERT_DOUBLES_EQUAL_MESSAGE("incorrect result", 3.0, val);
     m_pDoc->GetValue(0, 2, 0, val);
-    CPPUNIT_ASSERT_MESSAGE("incorrect result", val == 7);
+    ASSERT_DOUBLES_EQUAL_MESSAGE("incorrect result", 7.0, val);
     aVal = m_pDoc->GetString( 0, 3, 0);
-    CPPUNIT_ASSERT_MESSAGE("incorrect result", aVal == "#VALUE!");
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("incorrect result", OUString("#VALUE!"), aVal);
     m_pDoc->GetValue(0, 4, 0, val);
-    CPPUNIT_ASSERT_MESSAGE("incorrect result", val == 7.4);
+    ASSERT_DOUBLES_EQUAL_MESSAGE("incorrect result", 7.4, val);
 
     // With "Convert also locale dependent" and "Empty string as zero"=False option.
     aConfig.meStringConversion = ScCalcConfig::StringConversion::LOCALE;
@@ -1604,15 +1280,15 @@ void Test::testFuncParam()
     m_pDoc->SetCalcConfig(aConfig);
     m_pDoc->CalcAll();
     aVal = m_pDoc->GetString( 0, 0, 0);
-    CPPUNIT_ASSERT_MESSAGE("incorrect result", aVal == "#VALUE!");
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("incorrect result", OUString("#VALUE!"), aVal);
     aVal = m_pDoc->GetString( 0, 1, 0);
-    CPPUNIT_ASSERT_MESSAGE("incorrect result", aVal == "#VALUE!");
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("incorrect result", OUString("#VALUE!"), aVal);
     m_pDoc->GetValue(0, 2, 0, val);
-    CPPUNIT_ASSERT_MESSAGE("incorrect result", val == 7);
+    ASSERT_DOUBLES_EQUAL_MESSAGE("incorrect result", 7.0, val);
     aVal = m_pDoc->GetString( 0, 3, 0);
-    CPPUNIT_ASSERT_MESSAGE("incorrect result", aVal == "#VALUE!");
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("incorrect result", OUString("#VALUE!"), aVal);
     m_pDoc->GetValue(0, 4, 0, val);
-    CPPUNIT_ASSERT_MESSAGE("incorrect result", val == 7.4);
+    ASSERT_DOUBLES_EQUAL_MESSAGE("incorrect result", 7.4, val);
 
     // With "Convert only unambiguous" and "Empty string as zero"=True option.
     aConfig.meStringConversion = ScCalcConfig::StringConversion::UNAMBIGUOUS;
@@ -1620,15 +1296,15 @@ void Test::testFuncParam()
     m_pDoc->SetCalcConfig(aConfig);
     m_pDoc->CalcAll();
     m_pDoc->GetValue(0, 0, 0, val);
-    CPPUNIT_ASSERT_MESSAGE("incorrect result", val == 3);
+    ASSERT_DOUBLES_EQUAL_MESSAGE("incorrect result", 3.0, val);
     m_pDoc->GetValue(0, 1, 0, val);
-    CPPUNIT_ASSERT_MESSAGE("incorrect result", val == 3);
+    ASSERT_DOUBLES_EQUAL_MESSAGE("incorrect result", 3.0, val);
     m_pDoc->GetValue(0, 2, 0, val);
-    CPPUNIT_ASSERT_MESSAGE("incorrect result", val == 7);
+    ASSERT_DOUBLES_EQUAL_MESSAGE("incorrect result", 7.0, val);
     aVal = m_pDoc->GetString( 0, 3, 0);
-    CPPUNIT_ASSERT_MESSAGE("incorrect result", aVal == "#VALUE!");
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("incorrect result", OUString("#VALUE!"), aVal);
     aVal = m_pDoc->GetString( 0, 4, 0);
-    CPPUNIT_ASSERT_MESSAGE("incorrect result", aVal == "#VALUE!");
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("incorrect result", OUString("#VALUE!"), aVal);
 
     // With "Convert only unambiguous" and "Empty string as zero"=False option.
     aConfig.meStringConversion = ScCalcConfig::StringConversion::UNAMBIGUOUS;
@@ -1636,15 +1312,15 @@ void Test::testFuncParam()
     m_pDoc->SetCalcConfig(aConfig);
     m_pDoc->CalcAll();
     aVal = m_pDoc->GetString( 0, 0, 0);
-    CPPUNIT_ASSERT_MESSAGE("incorrect result", aVal == "#VALUE!");
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("incorrect result", OUString("#VALUE!"), aVal);
     aVal = m_pDoc->GetString( 0, 1, 0);
-    CPPUNIT_ASSERT_MESSAGE("incorrect result", aVal == "#VALUE!");
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("incorrect result", OUString("#VALUE!"), aVal);
     m_pDoc->GetValue(0, 2, 0, val);
-    CPPUNIT_ASSERT_MESSAGE("incorrect result", val == 7);
+    ASSERT_DOUBLES_EQUAL_MESSAGE("incorrect result", 7.0, val);
     aVal = m_pDoc->GetString( 0, 3, 0);
-    CPPUNIT_ASSERT_MESSAGE("incorrect result", aVal == "#VALUE!");
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("incorrect result", OUString("#VALUE!"), aVal);
     aVal = m_pDoc->GetString( 0, 4, 0);
-    CPPUNIT_ASSERT_MESSAGE("incorrect result", aVal == "#VALUE!");
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("incorrect result", OUString("#VALUE!"), aVal);
 
     // With "Treat as zero" ("Empty string as zero" is ignored).
     aConfig.meStringConversion = ScCalcConfig::StringConversion::ZERO;
@@ -1652,15 +1328,15 @@ void Test::testFuncParam()
     m_pDoc->SetCalcConfig(aConfig);
     m_pDoc->CalcAll();
     m_pDoc->GetValue(0, 0, 0, val);
-    CPPUNIT_ASSERT_MESSAGE("incorrect result", val == 3);
+    ASSERT_DOUBLES_EQUAL_MESSAGE("incorrect result", 3.0, val);
     m_pDoc->GetValue(0, 1, 0, val);
-    CPPUNIT_ASSERT_MESSAGE("incorrect result", val == 3);
+    ASSERT_DOUBLES_EQUAL_MESSAGE("incorrect result", 3.0, val);
     m_pDoc->GetValue(0, 2, 0, val);
-    CPPUNIT_ASSERT_MESSAGE("incorrect result", val == 3);
+    ASSERT_DOUBLES_EQUAL_MESSAGE("incorrect result", 3.0, val);
     m_pDoc->GetValue(0, 3, 0, val);
-    CPPUNIT_ASSERT_MESSAGE("incorrect result", val == 3);
+    ASSERT_DOUBLES_EQUAL_MESSAGE("incorrect result", 3.0, val);
     m_pDoc->GetValue(0, 4, 0, val);
-    CPPUNIT_ASSERT_MESSAGE("incorrect result", val == 3);
+    ASSERT_DOUBLES_EQUAL_MESSAGE("incorrect result", 3.0, val);
 
     // With "Generate #VALUE! error" ("Empty string as zero" is ignored).
     aConfig.meStringConversion = ScCalcConfig::StringConversion::ILLEGAL;
@@ -1668,15 +1344,15 @@ void Test::testFuncParam()
     m_pDoc->SetCalcConfig(aConfig);
     m_pDoc->CalcAll();
     aVal = m_pDoc->GetString( 0, 0, 0);
-    CPPUNIT_ASSERT_MESSAGE("incorrect result", aVal == "#VALUE!");
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("incorrect result", OUString("#VALUE!"), aVal);
     aVal = m_pDoc->GetString( 0, 1, 0);
-    CPPUNIT_ASSERT_MESSAGE("incorrect result", aVal == "#VALUE!");
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("incorrect result", OUString("#VALUE!"), aVal);
     aVal = m_pDoc->GetString( 0, 2, 0);
-    CPPUNIT_ASSERT_MESSAGE("incorrect result", aVal == "#VALUE!");
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("incorrect result", OUString("#VALUE!"), aVal);
     aVal = m_pDoc->GetString( 0, 3, 0);
-    CPPUNIT_ASSERT_MESSAGE("incorrect result", aVal == "#VALUE!");
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("incorrect result", OUString("#VALUE!"), aVal);
     aVal = m_pDoc->GetString( 0, 4, 0);
-    CPPUNIT_ASSERT_MESSAGE("incorrect result", aVal == "#VALUE!");
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("incorrect result", OUString("#VALUE!"), aVal);
 
     m_pDoc->DeleteTab(0);
 }
@@ -1717,7 +1393,7 @@ void Test::testNamedRange()
 
     double result;
     m_pDoc->GetValue (1, 0, 0, result);
-    CPPUNIT_ASSERT_MESSAGE ("calculation failed", result == 1.0);
+    ASSERT_DOUBLES_EQUAL_MESSAGE ("calculation failed", 1.0, result);
 
     // Test copy-ability of range names.
     ScRangeName* pCopiedRanges = new ScRangeName(*pNewRanges);
@@ -1731,6 +1407,32 @@ void Test::testNamedRange()
         CPPUNIT_ASSERT_MESSAGE("wrong range name is retrieved with the copied instance.", aName.equalsAscii(aNames[i].mpName));
     }
 
+    // Test using an other-sheet-local name, scope Sheet1.
+    ScRangeData* pLocal1 = new ScRangeData( m_pDoc, "local1", ScAddress(0,0,0));
+    ScRangeData* pLocal2 = new ScRangeData( m_pDoc, "local2", "$Sheet1.$A$1");
+    ScRangeData* pLocal3 = new ScRangeData( m_pDoc, "local3", "Sheet1.$A$1");
+    ScRangeData* pLocal4 = new ScRangeData( m_pDoc, "local4", "$A$1"); // implicit relative sheet reference
+    ScRangeName* pLocalRangeName1 = new ScRangeName;
+    pLocalRangeName1->insert(pLocal1);
+    pLocalRangeName1->insert(pLocal2);
+    pLocalRangeName1->insert(pLocal3);
+    pLocalRangeName1->insert(pLocal4);
+    m_pDoc->SetRangeName(0, pLocalRangeName1);
+
+    CPPUNIT_ASSERT_MESSAGE ("failed to insert sheet", m_pDoc->InsertTab (1, "Sheet2"));
+
+    // Use other-sheet-local name of Sheet1 on Sheet2.
+    ScAddress aPos(1,0,1);
+    OUString aFormula("=Sheet1.local1+Sheet1.local2+Sheet1.local3+Sheet1.local4");
+    m_pDoc->SetString(aPos, aFormula);
+    OUString aString;
+    m_pDoc->GetFormula(1,0,1, aString);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("formula string should be equal", aFormula, aString);
+    double fValue = m_pDoc->GetValue(aPos);
+    ASSERT_DOUBLES_EQUAL_MESSAGE("value should be 4 times Sheet1.A1", 404.0, fValue);
+
+    m_pDoc->DeleteTab(1);
+    m_pDoc->SetRangeName(0,nullptr); // Delete the names.
     m_pDoc->SetRangeName(nullptr); // Delete the names.
     m_pDoc->DeleteTab(0);
 }
@@ -1788,7 +1490,9 @@ void Test::testCSV()
         { "1.0 ",      European, false, 0.0 },
         { "1.000",     European, true,  1000.0 },
         { "1137.999",  English,  true,  1137.999 },
-        { "1.000.00",  European, false, 0.0 }
+        { "1.000.00",  European, false, 0.0 },
+        { "+,123",     English,  false, 0.0 },
+        { "-,123",     English,  false, 0.0 }
     };
     for (sal_uInt32 i = 0; i < SAL_N_ELEMENTS(aTests); i++) {
         OUString aStr(aTests[i].pStr, strlen (aTests[i].pStr), RTL_TEXTENCODING_UTF8);
@@ -1797,8 +1501,8 @@ void Test::testCSV()
                 (aStr, aTests[i].eSep == English ? '.' : ',',
                  aTests[i].eSep == English ? ',' : '.',
                  nValue);
-        CPPUNIT_ASSERT_MESSAGE ("CSV numeric detection failure", bResult == aTests[i].bResult);
-        CPPUNIT_ASSERT_MESSAGE ("CSV numeric value failure", nValue == aTests[i].nValue);
+        CPPUNIT_ASSERT_EQUAL_MESSAGE ("CSV numeric detection failure", aTests[i].bResult, bResult);
+        CPPUNIT_ASSERT_EQUAL_MESSAGE ("CSV numeric value failure", aTests[i].nValue, nValue);
     }
 }
 
@@ -1821,8 +1525,8 @@ struct AllZeroMatrix
 {
     void operator() (SCSIZE /*nCol*/, SCSIZE /*nRow*/, const ScMatrixValue& rVal) const
     {
-        CPPUNIT_ASSERT_MESSAGE("element is not of numeric type", rVal.nType == SC_MATVAL_VALUE);
-        CPPUNIT_ASSERT_MESSAGE("element value must be zero", rVal.fVal == 0.0);
+        CPPUNIT_ASSERT_EQUAL_MESSAGE("element is not of numeric type", SC_MATVAL_VALUE, rVal.nType);
+        ASSERT_DOUBLES_EQUAL_MESSAGE("element value must be zero", 0.0, rVal.fVal);
     }
 };
 
@@ -1830,14 +1534,14 @@ struct PartiallyFilledZeroMatrix
 {
     void operator() (SCSIZE nCol, SCSIZE nRow, const ScMatrixValue& rVal) const
     {
-        CPPUNIT_ASSERT_MESSAGE("element is not of numeric type", rVal.nType == SC_MATVAL_VALUE);
+        CPPUNIT_ASSERT_EQUAL_MESSAGE("element is not of numeric type", SC_MATVAL_VALUE, rVal.nType);
         if (1 <= nCol && nCol <= 2 && 2 <= nRow && nRow <= 8)
         {
-            CPPUNIT_ASSERT_MESSAGE("element value must be 3.0", rVal.fVal == 3.0);
+            ASSERT_DOUBLES_EQUAL_MESSAGE("element value must be 3.0", 3.0, rVal.fVal);
         }
         else
         {
-            CPPUNIT_ASSERT_MESSAGE("element value must be zero", rVal.fVal == 0.0);
+            ASSERT_DOUBLES_EQUAL_MESSAGE("element value must be zero", 0.0, rVal.fVal);
         }
     }
 };
@@ -1846,8 +1550,8 @@ struct AllEmptyMatrix
 {
     void operator() (SCSIZE /*nCol*/, SCSIZE /*nRow*/, const ScMatrixValue& rVal) const
     {
-        CPPUNIT_ASSERT_MESSAGE("element is not of empty type", rVal.nType == SC_MATVAL_EMPTY);
-        CPPUNIT_ASSERT_MESSAGE("value of \"empty\" element is expected to be zero", rVal.fVal == 0.0);
+        CPPUNIT_ASSERT_EQUAL_MESSAGE("element is not of empty type", SC_MATVAL_EMPTY, rVal.nType);
+        ASSERT_DOUBLES_EQUAL_MESSAGE("value of \"empty\" element is expected to be zero", 0.0, rVal.fVal);
     }
 };
 
@@ -1857,28 +1561,28 @@ struct PartiallyFilledEmptyMatrix
     {
         if (nCol == 1 && nRow == 1)
         {
-            CPPUNIT_ASSERT_MESSAGE("element is not of boolean type", rVal.nType == SC_MATVAL_BOOLEAN);
-            CPPUNIT_ASSERT_MESSAGE("element value is not what is expected", rVal.fVal == 1.0);
+            CPPUNIT_ASSERT_EQUAL_MESSAGE("element is not of boolean type", SC_MATVAL_BOOLEAN, rVal.nType);
+            ASSERT_DOUBLES_EQUAL_MESSAGE("element value is not what is expected", 1.0, rVal.fVal);
         }
         else if (nCol == 4 && nRow == 5)
         {
-            CPPUNIT_ASSERT_MESSAGE("element is not of value type", rVal.nType == SC_MATVAL_VALUE);
-            CPPUNIT_ASSERT_MESSAGE("element value is not what is expected", rVal.fVal == -12.5);
+            CPPUNIT_ASSERT_EQUAL_MESSAGE("element is not of value type", SC_MATVAL_VALUE, rVal.nType);
+            ASSERT_DOUBLES_EQUAL_MESSAGE("element value is not what is expected", -12.5, rVal.fVal);
         }
         else if (nCol == 8 && nRow == 2)
         {
-            CPPUNIT_ASSERT_MESSAGE("element is not of value type", rVal.nType == SC_MATVAL_STRING);
-            CPPUNIT_ASSERT_MESSAGE("element value is not what is expected", rVal.aStr.getString() == "Test");
+            CPPUNIT_ASSERT_EQUAL_MESSAGE("element is not of value type", SC_MATVAL_STRING, rVal.nType);
+            CPPUNIT_ASSERT_EQUAL_MESSAGE("element value is not what is expected", OUString("Test"), rVal.aStr.getString());
         }
         else if (nCol == 8 && nRow == 11)
         {
-            CPPUNIT_ASSERT_MESSAGE("element is not of empty path type", rVal.nType == SC_MATVAL_EMPTYPATH);
-            CPPUNIT_ASSERT_MESSAGE("value of \"empty\" element is expected to be zero", rVal.fVal == 0.0);
+            CPPUNIT_ASSERT_EQUAL_MESSAGE("element is not of empty path type", SC_MATVAL_EMPTYPATH, rVal.nType);
+            ASSERT_DOUBLES_EQUAL_MESSAGE("value of \"empty\" element is expected to be zero", 0.0, rVal.fVal);
         }
         else
         {
-            CPPUNIT_ASSERT_MESSAGE("element is not of empty type", rVal.nType == SC_MATVAL_EMPTY);
-            CPPUNIT_ASSERT_MESSAGE("value of \"empty\" element is expected to be zero", rVal.fVal == 0.0);
+            CPPUNIT_ASSERT_EQUAL_MESSAGE("element is not of empty type", SC_MATVAL_EMPTY, rVal.nType);
+            ASSERT_DOUBLES_EQUAL_MESSAGE("value of \"empty\" element is expected to be zero", 0.0, rVal.fVal);
         }
     }
 };
@@ -2110,11 +1814,13 @@ void Test::testMatrixEditable()
     // Make sure A3:A4 is a matrix.
     ScFormulaCell* pFC = m_pDoc->GetFormulaCell(ScAddress(0,2,0));
     CPPUNIT_ASSERT(pFC);
-    CPPUNIT_ASSERT_MESSAGE("A3 should be matrix origin.", pFC->GetMatrixFlag() == MM_FORMULA);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("A3 should be matrix origin.",
+                               MM_FORMULA, static_cast<ScMatrixMode>(pFC->GetMatrixFlag()));
 
     pFC = m_pDoc->GetFormulaCell(ScAddress(0,3,0));
     CPPUNIT_ASSERT(pFC);
-    CPPUNIT_ASSERT_MESSAGE("A4 should be matrix reference.", pFC->GetMatrixFlag() == MM_REFERENCE);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("A4 should be matrix reference.",
+                               MM_REFERENCE, static_cast<ScMatrixMode>(pFC->GetMatrixFlag()));
 
     // Check to make sure A3:A4 combined is editable.
     ScEditableTester aTester;
@@ -2140,7 +1846,8 @@ void Test::testCellCopy()
 void Test::testSheetCopy()
 {
     m_pDoc->InsertTab(0, "TestTab");
-    CPPUNIT_ASSERT_MESSAGE("document should have one sheet to begin with.", m_pDoc->GetTableCount() == 1);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("document should have one sheet to begin with.",
+                               static_cast<SCTAB>(1), m_pDoc->GetTableCount());
 
     // Insert text in A1.
     m_pDoc->SetString(ScAddress(0,0,0), "copy me");
@@ -2165,7 +1872,9 @@ void Test::testSheetCopy()
 
     // Copy and test the result.
     m_pDoc->CopyTab(0, 1);
-    CPPUNIT_ASSERT_MESSAGE("document now should have two sheets.", m_pDoc->GetTableCount() == 2);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("document now should have two sheets.",
+                               static_cast<SCTAB>(2), m_pDoc->GetTableCount());
+
     bHidden = m_pDoc->RowHidden(0, 1, &nRow1, &nRow2);
     CPPUNIT_ASSERT_MESSAGE("copied sheet should also have all rows visible as the original.", !bHidden && nRow1 == 0 && nRow2 == MAXROW);
     CPPUNIT_ASSERT_MESSAGE("There should be note on A3 in new sheet", m_pDoc->HasNote(ScAddress(0,2,1)));
@@ -2194,7 +1903,8 @@ void Test::testSheetCopy()
 
     // Copy the sheet once again.
     m_pDoc->CopyTab(0, 1);
-    CPPUNIT_ASSERT_MESSAGE("document now should have two sheets.", m_pDoc->GetTableCount() == 2);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("document now should have two sheets.",
+                               static_cast<SCTAB>(2), m_pDoc->GetTableCount());
     bHidden = m_pDoc->RowHidden(0, 1, &nRow1, &nRow2);
     CPPUNIT_ASSERT_MESSAGE("rows 0 - 4 should be visible", !bHidden && nRow1 == 0 && nRow2 == 4);
     bHidden = m_pDoc->RowHidden(5, 1, &nRow1, &nRow2);
@@ -2208,25 +1918,25 @@ void Test::testSheetCopy()
 void Test::testSheetMove()
 {
     m_pDoc->InsertTab(0, "TestTab1");
-    CPPUNIT_ASSERT_EQUAL_MESSAGE("document should have one sheet to begin with.", m_pDoc->GetTableCount(), static_cast<SCTAB>(1));
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("document should have one sheet to begin with.", static_cast<SCTAB>(1), m_pDoc->GetTableCount());
     SCROW nRow1, nRow2;
     bool bHidden = m_pDoc->RowHidden(0, 0, &nRow1, &nRow2);
     CPPUNIT_ASSERT_MESSAGE("new sheet should have all rows visible", !bHidden && nRow1 == 0 && nRow2 == MAXROW);
 
     //test if inserting before another sheet works
     m_pDoc->InsertTab(0, "TestTab2");
-    CPPUNIT_ASSERT_EQUAL_MESSAGE("document should have two sheets", m_pDoc->GetTableCount(), static_cast<SCTAB>(2));
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("document should have two sheets", static_cast<SCTAB>(2), m_pDoc->GetTableCount());
     bHidden = m_pDoc->RowHidden(0, 0, &nRow1, &nRow2);
     CPPUNIT_ASSERT_MESSAGE("new sheet should have all rows visible", !bHidden && nRow1 == 0 && nRow2 == MAXROW);
 
     // Move and test the result.
     m_pDoc->MoveTab(0, 1);
-    CPPUNIT_ASSERT_EQUAL_MESSAGE("document now should have two sheets.", m_pDoc->GetTableCount(), static_cast<SCTAB>(2));
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("document now should have two sheets.", static_cast<SCTAB>(2), m_pDoc->GetTableCount());
     bHidden = m_pDoc->RowHidden(0, 1, &nRow1, &nRow2);
     CPPUNIT_ASSERT_MESSAGE("copied sheet should also have all rows visible as the original.", !bHidden && nRow1 == 0 && nRow2 == MAXROW);
     OUString aName;
     m_pDoc->GetName(0, aName);
-    CPPUNIT_ASSERT_MESSAGE( "sheets should have changed places", aName == "TestTab1" );
+    CPPUNIT_ASSERT_EQUAL_MESSAGE( "sheets should have changed places", OUString("TestTab1"), aName);
 
     m_pDoc->SetRowHidden(5, 10, 0, true);
     bHidden = m_pDoc->RowHidden(0, 0, &nRow1, &nRow2);
@@ -2238,7 +1948,7 @@ void Test::testSheetMove()
 
     // Move the sheet once again.
     m_pDoc->MoveTab(1, 0);
-    CPPUNIT_ASSERT_EQUAL_MESSAGE("document now should have two sheets.", m_pDoc->GetTableCount(), static_cast<SCTAB>(2));
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("document now should have two sheets.", static_cast<SCTAB>(2), m_pDoc->GetTableCount());
     bHidden = m_pDoc->RowHidden(0, 1, &nRow1, &nRow2);
     CPPUNIT_ASSERT_MESSAGE("rows 0 - 4 should be visible", !bHidden && nRow1 == 0 && nRow2 == 4);
     bHidden = m_pDoc->RowHidden(5, 1, &nRow1, &nRow2);
@@ -2246,7 +1956,7 @@ void Test::testSheetMove()
     bHidden = m_pDoc->RowHidden(11, 1, &nRow1, &nRow2);
     CPPUNIT_ASSERT_MESSAGE("rows 11 - maxrow should be visible", !bHidden && nRow1 == 11 && nRow2 == MAXROW);
     m_pDoc->GetName(0, aName);
-    CPPUNIT_ASSERT_MESSAGE( "sheets should have changed places", aName == "TestTab2" );
+    CPPUNIT_ASSERT_EQUAL_MESSAGE( "sheets should have changed places", OUString("TestTab2"), aName);
     m_pDoc->DeleteTab(1);
     m_pDoc->DeleteTab(0);
 }
@@ -2291,7 +2001,7 @@ void Test::testStreamValid()
     m_pDoc->InsertTab(1, "Sheet2");
     m_pDoc->InsertTab(2, "Sheet3");
     m_pDoc->InsertTab(3, "Sheet4");
-    CPPUNIT_ASSERT_EQUAL_MESSAGE("We should have 4 sheet instances.", m_pDoc->GetTableCount(), static_cast<SCTAB>(4));
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("We should have 4 sheet instances.", static_cast<SCTAB>(4), m_pDoc->GetTableCount());
 
     OUString a1("A1");
     OUString a2("A2");
@@ -2401,6 +2111,7 @@ void Test::testFunctionLists()
         "TODAY",
         "WEEKDAY",
         "WEEKNUM",
+        "WEEKNUM_OOO",
         "WEEKS",
         "WEEKSINYEAR",
         "WORKDAY.INTL",
@@ -2468,8 +2179,10 @@ void Test::testFunctionLists()
         "IF",
         "IFERROR",
         "IFNA",
+        "IFS",
         "NOT",
         "OR",
+        "SWITCH",
         "TRUE",
         "XOR",
         nullptr
@@ -2529,6 +2242,7 @@ void Test::testFunctionLists()
         "PRODUCT",
         "RADIANS",
         "RAND",
+        "RAWSUBTRACT",
         "ROUND",
         "ROUNDDOWN",
         "ROUNDUP",
@@ -2619,6 +2333,14 @@ void Test::testFunctionLists()
         "FISHER",
         "FISHERINV",
         "FORECAST",
+        "FORECAST.ETS.ADD",
+        "FORECAST.ETS.MULT",
+        "FORECAST.ETS.PI.ADD",
+        "FORECAST.ETS.PI.MULT",
+        "FORECAST.ETS.SEASONALITY",
+        "FORECAST.ETS.STAT.ADD",
+        "FORECAST.ETS.STAT.MULT",
+        "FORECAST.LINEAR",
         "FTEST",
         "GAMMA",
         "GAMMA.DIST",
@@ -2641,9 +2363,11 @@ void Test::testFunctionLists()
         "LOGNORMDIST",
         "MAX",
         "MAXA",
+        "MAXIFS",
         "MEDIAN",
         "MIN",
         "MINA",
+        "MINIFS",
         "MODE",
         "MODE.MULT",
         "MODE.SNGL",
@@ -2746,6 +2470,7 @@ void Test::testFunctionLists()
         "CHAR",
         "CLEAN",
         "CODE",
+        "CONCAT",
         "CONCATENATE",
         "DECIMAL",
         "DOLLAR",
@@ -2774,6 +2499,7 @@ void Test::testFunctionLists()
         "SUBSTITUTE",
         "T",
         "TEXT",
+        "TEXTJOIN",
         "TRIM",
         "UNICHAR",
         "UNICODE",
@@ -2818,7 +2544,8 @@ void Test::testFunctionLists()
 void Test::testGraphicsInGroup()
 {
     m_pDoc->InsertTab(0, "TestTab");
-    CPPUNIT_ASSERT_MESSAGE("document should have one sheet to begin with.", m_pDoc->GetTableCount() == 1);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("document should have one sheet to begin with.",
+                               static_cast<SCTAB>(1), m_pDoc->GetTableCount());
     SCROW nRow1, nRow2;
     bool bHidden = m_pDoc->RowHidden(0, 0, &nRow1, &nRow2);
     CPPUNIT_ASSERT_MESSAGE("new sheet should have all rows visible", !bHidden && nRow1 == 0 && nRow2 == MAXROW);
@@ -2835,20 +2562,24 @@ void Test::testGraphicsInGroup()
         SdrRectObj *pObj = new SdrRectObj(aOrigRect);
         pPage->InsertObject(pObj);
         const Rectangle &rNewRect = pObj->GetLogicRect();
-        CPPUNIT_ASSERT_MESSAGE("must have equal position and size", aOrigRect == rNewRect);
+        CPPUNIT_ASSERT_EQUAL_MESSAGE("must have equal position and size",
+                               static_cast<const Rectangle &>(aOrigRect), rNewRect);
 
         ScDrawLayer::SetPageAnchored(*pObj);
 
         //Use a range of rows guaranteed to include all of the square
         m_pDoc->ShowRows(0, 100, 0, false);
         m_pDoc->SetDrawPageSize(0);
-        CPPUNIT_ASSERT_MESSAGE("Should not change when page anchored", aOrigRect == rNewRect);
+        CPPUNIT_ASSERT_EQUAL_MESSAGE("Should not change when page anchored",
+                               static_cast<const Rectangle &>(aOrigRect), rNewRect);
         m_pDoc->ShowRows(0, 100, 0, true);
         m_pDoc->SetDrawPageSize(0);
-        CPPUNIT_ASSERT_MESSAGE("Should not change when page anchored", aOrigRect == rNewRect);
+        CPPUNIT_ASSERT_EQUAL_MESSAGE("Should not change when page anchored",
+                               static_cast<const Rectangle &>(aOrigRect), rNewRect);
 
         ScDrawLayer::SetCellAnchoredFromPosition(*pObj, *m_pDoc, 0);
-        CPPUNIT_ASSERT_MESSAGE("That shouldn't change size or positioning", aOrigRect == rNewRect);
+        CPPUNIT_ASSERT_EQUAL_MESSAGE("That shouldn't change size or positioning",
+                               static_cast<const Rectangle &>(aOrigRect), rNewRect);
 
         m_pDoc->ShowRows(0, 100, 0, false);
         m_pDoc->SetDrawPageSize(0);
@@ -2858,7 +2589,8 @@ void Test::testGraphicsInGroup()
             (rNewRect.Bottom() - rNewRect.Top()) <= 1);
         m_pDoc->ShowRows(0, 100, 0, true);
         m_pDoc->SetDrawPageSize(0);
-        CPPUNIT_ASSERT_MESSAGE("Should not change when page anchored", aOrigRect == rNewRect);
+        CPPUNIT_ASSERT_EQUAL_MESSAGE("Should not change when page anchored",
+                               static_cast<const Rectangle &>(aOrigRect), rNewRect);
     }
 
     {
@@ -2867,25 +2599,26 @@ void Test::testGraphicsInGroup()
         SdrCircObj* pObj = new SdrCircObj(OBJ_CIRC, aOrigRect);
         pPage->InsertObject(pObj);
         const Rectangle& rNewRect = pObj->GetLogicRect();
-        CPPUNIT_ASSERT_MESSAGE("Position and size of the circle shouldn't change when inserted into the page.",
-                               aOrigRect == rNewRect);
+        CPPUNIT_ASSERT_EQUAL_MESSAGE("Position and size of the circle shouldn't change when inserted into the page.",
+                               static_cast<const Rectangle &>(aOrigRect), rNewRect);
 
         ScDrawLayer::SetCellAnchoredFromPosition(*pObj, *m_pDoc, 0);
-        CPPUNIT_ASSERT_MESSAGE("Size changed when cell anchored. Not good.",
-                               aOrigRect == rNewRect);
+        CPPUNIT_ASSERT_EQUAL_MESSAGE("Size changed when cell anchored. Not good.",
+                               static_cast<const Rectangle &>(aOrigRect), rNewRect);
 
         // Insert 2 rows at the top.  This should push the circle object down.
         m_pDoc->InsertRow(0, 0, MAXCOL, 0, 0, 2);
         m_pDoc->SetDrawPageSize(0);
 
         // Make sure the size of the circle is still identical.
-        CPPUNIT_ASSERT_MESSAGE("Size of the circle has changed, but shouldn't!",
-                               aOrigRect.GetSize() == rNewRect.GetSize());
+        CPPUNIT_ASSERT_EQUAL_MESSAGE("Size of the circle has changed, but shouldn't!",
+                               aOrigRect.GetSize(), rNewRect.GetSize());
 
         // Delete 2 rows at the top.  This should bring the circle object to its original position.
         m_pDoc->DeleteRow(0, 0, MAXCOL, 0, 0, 2);
         m_pDoc->SetDrawPageSize(0);
-        CPPUNIT_ASSERT_MESSAGE("Failed to move back to its original position.", aOrigRect == rNewRect);
+        CPPUNIT_ASSERT_EQUAL_MESSAGE("Failed to move back to its original position.",
+                               static_cast<const Rectangle &>(aOrigRect), rNewRect);
     }
 
     {
@@ -2899,21 +2632,22 @@ void Test::testGraphicsInGroup()
         pObj->NbcSetLogicRect(aOrigRect);
         pPage->InsertObject(pObj);
         const Rectangle& rNewRect = pObj->GetLogicRect();
-        CPPUNIT_ASSERT_MESSAGE("Size differ.", aOrigRect == rNewRect);
+        CPPUNIT_ASSERT_EQUAL_MESSAGE("Size differ.",
+                               static_cast<const Rectangle &>(aOrigRect), rNewRect);
 
         ScDrawLayer::SetCellAnchoredFromPosition(*pObj, *m_pDoc, 0);
-        CPPUNIT_ASSERT_MESSAGE("Size changed when cell-anchored. Not good.",
-                               aOrigRect == rNewRect);
+        CPPUNIT_ASSERT_EQUAL_MESSAGE("Size changed when cell-anchored. Not good.",
+                               static_cast<const Rectangle &>(aOrigRect), rNewRect);
 
         // Insert 2 rows at the top and delete them immediately.
         m_pDoc->InsertRow(0, 0, MAXCOL, 0, 0, 2);
         m_pDoc->DeleteRow(0, 0, MAXCOL, 0, 0, 2);
         m_pDoc->SetDrawPageSize(0);
-        CPPUNIT_ASSERT_MESSAGE("Size of a line object changed after row insertion and removal.",
-                               aOrigRect == rNewRect);
+        CPPUNIT_ASSERT_EQUAL_MESSAGE("Size of a line object changed after row insertion and removal.",
+                               static_cast<const Rectangle &>(aOrigRect), rNewRect);
 
         sal_Int32 n = pObj->GetPointCount();
-        CPPUNIT_ASSERT_MESSAGE("There should be exactly 2 points in a line object.", n == 2);
+        CPPUNIT_ASSERT_EQUAL_MESSAGE("There should be exactly 2 points in a line object.", static_cast<sal_Int32>(2), n);
         CPPUNIT_ASSERT_MESSAGE("Line shape has changed.",
                                aStartPos == pObj->GetPoint(0) && aEndPos == pObj->GetPoint(1));
     }
@@ -2925,7 +2659,7 @@ void Test::testGraphicsOnSheetMove()
 {
     m_pDoc->InsertTab(0, "Tab1");
     m_pDoc->InsertTab(1, "Tab2");
-    CPPUNIT_ASSERT_MESSAGE("There should be only 2 sheets to begin with", m_pDoc->GetTableCount() == 2);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("There should be only 2 sheets to begin with", static_cast<SCTAB>(2), m_pDoc->GetTableCount());
 
     m_pDoc->InitDrawLayer();
     ScDrawLayer* pDrawLayer = m_pDoc->GetDrawLayer();
@@ -2939,7 +2673,7 @@ void Test::testGraphicsOnSheetMove()
     pPage->InsertObject(pObj);
     ScDrawLayer::SetCellAnchoredFromPosition(*pObj, *m_pDoc, 0);
 
-    CPPUNIT_ASSERT_EQUAL_MESSAGE("There should be one object on the 1st sheet.", pPage->GetObjCount(), static_cast<size_t>(1));
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("There should be one object on the 1st sheet.", static_cast<size_t>(1), pPage->GetObjCount());
 
     const ScDrawObjData* pData = ScDrawLayer::GetObjData(pObj);
     CPPUNIT_ASSERT_MESSAGE("Object meta-data doesn't exist.", pData);
@@ -2947,12 +2681,12 @@ void Test::testGraphicsOnSheetMove()
 
     pPage = pDrawLayer->GetPage(1);
     CPPUNIT_ASSERT_MESSAGE("No page instance for the 2nd sheet.", pPage);
-    CPPUNIT_ASSERT_EQUAL_MESSAGE("2nd sheet shouldn't have any object.", pPage->GetObjCount(), static_cast<size_t>(0));
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("2nd sheet shouldn't have any object.", static_cast<size_t>(0), pPage->GetObjCount());
 
     // Insert a new sheet at left-end, and make sure the object has moved to
     // the 2nd page.
     m_pDoc->InsertTab(0, "NewTab");
-    CPPUNIT_ASSERT_EQUAL_MESSAGE("There should be 3 sheets.", m_pDoc->GetTableCount(), static_cast<SCTAB>(3));
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("There should be 3 sheets.", static_cast<SCTAB>(3), m_pDoc->GetTableCount());
     pPage = pDrawLayer->GetPage(0);
     CPPUNIT_ASSERT_MESSAGE("1st sheet should have no object.", pPage && pPage->GetObjCount() == 0);
     pPage = pDrawLayer->GetPage(1);
@@ -2967,8 +2701,8 @@ void Test::testGraphicsOnSheetMove()
     m_pDoc->DeleteTab(0);
     pPage = pDrawLayer->GetPage(0);
     CPPUNIT_ASSERT_MESSAGE("1st sheet should have one object.", pPage && pPage->GetObjCount() == 1);
-    CPPUNIT_ASSERT_MESSAGE("Size and position of the object shouldn't change.",
-                           pObj->GetLogicRect() == aObjRect);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("Size and position of the object shouldn't change.",
+                           aObjRect, pObj->GetLogicRect());
 
     CPPUNIT_ASSERT_MESSAGE("Wrong sheet ID in cell anchor data!", pData->maStart.Tab() == 0 && pData->maEnd.Tab() == 0);
 
@@ -3016,22 +2750,22 @@ void Test::testToggleRefFlag()
         // column relative / row relative -> column absolute / row absolute
         aFinder.ToggleRel(0, aFormula.getLength());
         aFormula = aFinder.GetText();
-        CPPUNIT_ASSERT_MESSAGE( "Wrong conversion.", aFormula == "=$B$100" );
+        CPPUNIT_ASSERT_EQUAL_MESSAGE( "Wrong conversion.", OUString("=$B$100"), aFormula );
 
         // column absolute / row absolute -> column relative / row absolute
         aFinder.ToggleRel(0, aFormula.getLength());
         aFormula = aFinder.GetText();
-        CPPUNIT_ASSERT_MESSAGE( "Wrong conversion.", aFormula == "=B$100" );
+        CPPUNIT_ASSERT_EQUAL_MESSAGE( "Wrong conversion.", OUString("=B$100"), aFormula );
 
         // column relative / row absolute -> column absolute / row relative
         aFinder.ToggleRel(0, aFormula.getLength());
         aFormula = aFinder.GetText();
-        CPPUNIT_ASSERT_MESSAGE( "Wrong conversion.", aFormula == "=$B100" );
+        CPPUNIT_ASSERT_EQUAL_MESSAGE( "Wrong conversion.", OUString("=$B100"), aFormula );
 
         // column absolute / row relative -> column relative / row relative
         aFinder.ToggleRel(0, aFormula.getLength());
         aFormula = aFinder.GetText();
-        CPPUNIT_ASSERT_MESSAGE( "Wrong conversion.", aFormula == "=B100" );
+        CPPUNIT_ASSERT_EQUAL_MESSAGE( "Wrong conversion.", OUString("=B100"), aFormula );
     }
 
     {
@@ -3241,23 +2975,32 @@ void Test::testCopyPaste()
     ScAddress aAdr (0, 0, 0);
 
     //create some range names, local and global
-    ScRangeData* pLocal1 = new ScRangeData(m_pDoc, OUString("local1"), aAdr);
-    ScRangeData* pLocal2 = new ScRangeData(m_pDoc, OUString("local2"), aAdr);
-    ScRangeData* pGlobal = new ScRangeData(m_pDoc, OUString("global"), aAdr);
+    ScRangeData* pLocal1 = new ScRangeData( m_pDoc, "local1", aAdr);
+    ScRangeData* pLocal2 = new ScRangeData( m_pDoc, "local2", aAdr);
+    ScRangeData* pLocal3 = new ScRangeData( m_pDoc, "local3", "$Sheet1.$A$1");
+    ScRangeData* pLocal4 = new ScRangeData( m_pDoc, "local4", "Sheet1.$A$1");
+    ScRangeData* pLocal5 = new ScRangeData( m_pDoc, "local5", "$A$1"); // implicit relative sheet reference
+    ScRangeData* pGlobal = new ScRangeData( m_pDoc, "global", aAdr);
+    const OUString aGlobal2Symbol("$Sheet1.$A$1:$A$23");
+    ScRangeData* pGlobal2 = new ScRangeData( m_pDoc, "global2", aGlobal2Symbol);
     ScRangeName* pGlobalRangeName = new ScRangeName();
     pGlobalRangeName->insert(pGlobal);
+    pGlobalRangeName->insert(pGlobal2);
     ScRangeName* pLocalRangeName1 = new ScRangeName();
     pLocalRangeName1->insert(pLocal1);
     pLocalRangeName1->insert(pLocal2);
+    pLocalRangeName1->insert(pLocal3);
+    pLocalRangeName1->insert(pLocal4);
+    pLocalRangeName1->insert(pLocal5);
     m_pDoc->SetRangeName(pGlobalRangeName);
     m_pDoc->SetRangeName(0, pLocalRangeName1);
 
     // Add formula to B1.
-    OUString aFormulaString("=local1+global+SUM($C$1:$D$4)");
+    OUString aFormulaString("=local1+global+SUM($C$1:$D$4)+local3+local4+local5");
     m_pDoc->SetString(1, 0, 0, aFormulaString);
 
     double fValue = m_pDoc->GetValue(ScAddress(1,0,0));
-    ASSERT_DOUBLES_EQUAL_MESSAGE("formula should return 8", fValue, 8);
+    ASSERT_DOUBLES_EQUAL_MESSAGE("formula should return 11", fValue, 11);
 
     // add notes to A1:C1
     ScAddress aAdrA1 (0, 0, 0); // empty cell content
@@ -3288,33 +3031,59 @@ void Test::testCopyPaste()
 
     //check values after copying
     OUString aString;
-    fValue = m_pDoc->GetValue(ScAddress(1,1,1));
     m_pDoc->GetFormula(1,1,1, aString);
-    ASSERT_DOUBLES_EQUAL_MESSAGE("copied formula should return 2", fValue, 2);
-    CPPUNIT_ASSERT_MESSAGE("formula string was not copied correctly", aString == aFormulaString);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("formula string was not copied correctly", aString, aFormulaString);
+    // Only the global range points to Sheet1.A1, all copied sheet-local ranges
+    // to Sheet2.A1 that is empty, hence the result is 1, not 2.
+    fValue = m_pDoc->GetValue(ScAddress(1,1,1));
+    ASSERT_DOUBLES_EQUAL_MESSAGE("copied formula should return 1", 1.0, fValue);
     fValue = m_pDoc->GetValue(ScAddress(0,1,1));
-    CPPUNIT_ASSERT_MESSAGE("copied value should be 1", fValue == 1);
+    ASSERT_DOUBLES_EQUAL_MESSAGE("copied value should be 1", 1.0, fValue);
+
+    ScRange aSheet2A1(0,0,1,0,0,1);
 
     //check local range name after copying
     pLocal1 = m_pDoc->GetRangeName(1)->findByUpperName(OUString("LOCAL1"));
     CPPUNIT_ASSERT_MESSAGE("local range name 1 should be copied", pLocal1);
     ScRange aRangeLocal1;
-    bool bIsValidRef = pLocal1->IsValidReference(aRangeLocal1);
-    CPPUNIT_ASSERT_MESSAGE("local range name 1 should be valid", bIsValidRef);
-    CPPUNIT_ASSERT_MESSAGE("local range 1 should still point to Sheet1.A1",aRangeLocal1 == ScRange(0,0,0,0,0,0));
+    bool bIsValidRef1 = pLocal1->IsValidReference(aRangeLocal1);
+    CPPUNIT_ASSERT_MESSAGE("local range name 1 should be valid", bIsValidRef1);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("local range 1 should now point to Sheet2.A1", aSheet2A1, aRangeLocal1);
+
     pLocal2 = m_pDoc->GetRangeName(1)->findByUpperName(OUString("LOCAL2"));
     CPPUNIT_ASSERT_MESSAGE("local2 should not be copied", pLocal2 == nullptr);
+
+    pLocal3 = m_pDoc->GetRangeName(1)->findByUpperName(OUString("LOCAL3"));
+    CPPUNIT_ASSERT_MESSAGE("local range name 3 should be copied", pLocal3);
+    ScRange aRangeLocal3;
+    bool bIsValidRef3 = pLocal3->IsValidReference(aRangeLocal3);
+    CPPUNIT_ASSERT_MESSAGE("local range name 3 should be valid", bIsValidRef3);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("local range 3 should now point to Sheet2.A1", aSheet2A1, aRangeLocal3);
+
+    pLocal4 = m_pDoc->GetRangeName(1)->findByUpperName(OUString("LOCAL4"));
+    CPPUNIT_ASSERT_MESSAGE("local range name 4 should be copied", pLocal4);
+    ScRange aRangeLocal4;
+    bool bIsValidRef4 = pLocal4->IsValidReference(aRangeLocal4);
+    CPPUNIT_ASSERT_MESSAGE("local range name 4 should be valid", bIsValidRef4);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("local range 4 should now point to Sheet2.A1", aSheet2A1, aRangeLocal4);
+
+    pLocal5 = m_pDoc->GetRangeName(1)->findByUpperName(OUString("LOCAL5"));
+    CPPUNIT_ASSERT_MESSAGE("local range name 5 should be copied", pLocal5);
+    ScRange aRangeLocal5;
+    bool bIsValidRef5 = pLocal5->IsValidReference(aRangeLocal5);
+    CPPUNIT_ASSERT_MESSAGE("local range name 5 should be valid", bIsValidRef5);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("local range 5 should now point to Sheet2.A1", aSheet2A1, aRangeLocal5);
 
     // check notes after copying
     CPPUNIT_ASSERT_MESSAGE("There should be a note on Sheet2.A2", m_pDoc->HasNote(ScAddress(0, 1, 1)));
     CPPUNIT_ASSERT_MESSAGE("There should be a note on Sheet2.B2", m_pDoc->HasNote(ScAddress(1, 1, 1)));
     CPPUNIT_ASSERT_MESSAGE("There should be a note on Sheet2.C2", m_pDoc->HasNote(ScAddress(2, 1, 1)));
-    CPPUNIT_ASSERT_MESSAGE("Note content on Sheet1.A1 not copied to Sheet2.A2, empty cell content",
-            m_pDoc->GetNote(ScAddress(0, 0, 0))->GetText() == m_pDoc->GetNote(ScAddress(0, 1, 1))->GetText());
-    CPPUNIT_ASSERT_MESSAGE("Note content on Sheet1.B1 not copied to Sheet2.B2, formula cell content",
-            m_pDoc->GetNote(ScAddress(1, 0, 0))->GetText() == m_pDoc->GetNote(ScAddress(1, 1, 1))->GetText());
-    CPPUNIT_ASSERT_MESSAGE("Note content on Sheet1.C1 not copied to Sheet2.C2, string cell content",
-            m_pDoc->GetNote(ScAddress(2, 0, 0))->GetText() == m_pDoc->GetNote(ScAddress(2, 1, 1))->GetText());
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("Note content on Sheet1.A1 not copied to Sheet2.A2, empty cell content",
+            m_pDoc->GetNote(ScAddress(0, 0, 0))->GetText(), m_pDoc->GetNote(ScAddress(0, 1, 1))->GetText());
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("Note content on Sheet1.B1 not copied to Sheet2.B2, formula cell content",
+            m_pDoc->GetNote(ScAddress(1, 0, 0))->GetText(), m_pDoc->GetNote(ScAddress(1, 1, 1))->GetText());
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("Note content on Sheet1.C1 not copied to Sheet2.C2, string cell content",
+            m_pDoc->GetNote(ScAddress(2, 0, 0))->GetText(), m_pDoc->GetNote(ScAddress(2, 1, 1))->GetText());
 
     //check undo and redo
     pUndo->Undo();
@@ -3328,21 +3097,39 @@ void Test::testCopyPaste()
 
     pUndo->Redo();
     fValue = m_pDoc->GetValue(ScAddress(1,1,1));
-    ASSERT_DOUBLES_EQUAL_MESSAGE("formula should return 2 after redo", fValue, 2);
+    ASSERT_DOUBLES_EQUAL_MESSAGE("formula should return 1 after redo", 1.0, fValue);
     aString = m_pDoc->GetString(2, 1, 1);
-    CPPUNIT_ASSERT_MESSAGE("Cell Sheet2.C2 should contain: test", aString == "test");
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("Cell Sheet2.C2 should contain: test", OUString("test"), aString);
     m_pDoc->GetFormula(1,1,1, aString);
-    CPPUNIT_ASSERT_MESSAGE("Formula should be correct again", aString == aFormulaString);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("Formula should be correct again", aFormulaString, aString);
 
     CPPUNIT_ASSERT_MESSAGE("After Redo, there should be a note on Sheet2.A2", m_pDoc->HasNote(ScAddress(0, 1, 1)));
     CPPUNIT_ASSERT_MESSAGE("After Redo, there should be a note on Sheet2.B2", m_pDoc->HasNote(ScAddress(1, 1, 1)));
     CPPUNIT_ASSERT_MESSAGE("After Redo, there should be a note on Sheet2.C2", m_pDoc->HasNote(ScAddress(2, 1, 1)));
-    CPPUNIT_ASSERT_MESSAGE("After Redo, note again on Sheet2.A2, empty cell content",
-            m_pDoc->GetNote(ScAddress(0, 0, 0))->GetText() == m_pDoc->GetNote(ScAddress(0, 1, 1))->GetText());
-    CPPUNIT_ASSERT_MESSAGE("After Redo, note again on Sheet2.B2, formula cell content",
-            m_pDoc->GetNote(ScAddress(1, 0, 0))->GetText() == m_pDoc->GetNote(ScAddress(1, 1, 1))->GetText());
-    CPPUNIT_ASSERT_MESSAGE("After Redo, note again on Sheet2.C2, string cell content",
-            m_pDoc->GetNote(ScAddress(2, 0, 0))->GetText() == m_pDoc->GetNote(ScAddress(2, 1, 1))->GetText());
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("After Redo, note again on Sheet2.A2, empty cell content",
+            m_pDoc->GetNote(ScAddress(0, 0, 0))->GetText(), m_pDoc->GetNote(ScAddress(0, 1, 1))->GetText());
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("After Redo, note again on Sheet2.B2, formula cell content",
+            m_pDoc->GetNote(ScAddress(1, 0, 0))->GetText(), m_pDoc->GetNote(ScAddress(1, 1, 1))->GetText());
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("After Redo, note again on Sheet2.C2, string cell content",
+            m_pDoc->GetNote(ScAddress(2, 0, 0))->GetText(), m_pDoc->GetNote(ScAddress(2, 1, 1))->GetText());
+
+
+    // Copy Sheet1.A11:A13 to Sheet1.A7:A9, both within global2 range.
+    aRange = ScRange(0,10,0,0,12,0);
+    ScDocument aClipDoc2(SCDOCMODE_CLIP);
+    copyToClip(m_pDoc, aRange, &aClipDoc2);
+
+    aRange = ScRange(0,6,0,0,8,0);
+    aMark.SetMarkArea(aRange);
+    m_pDoc->CopyFromClip(aRange, aMark, InsertDeleteFlags::ALL, nullptr, &aClipDoc2);
+
+    // The global2 range must not have changed.
+    pGlobal2 = m_pDoc->GetRangeName()->findByUpperName("GLOBAL2");
+    CPPUNIT_ASSERT_MESSAGE("GLOBAL2 name not found", pGlobal2);
+    OUString aSymbol;
+    pGlobal2->GetSymbol(aSymbol);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("GLOBAL2 named range changed", aGlobal2Symbol, aSymbol);
+
 
     m_pDoc->DeleteTab(1);
     m_pDoc->DeleteTab(0);
@@ -3416,36 +3203,35 @@ void Test::testCopyPasteTranspose()
     ScDocument aNewClipDoc(SCDOCMODE_CLIP);
     copyToClip(m_pDoc, aSrcRange, &aNewClipDoc);
 
-    ::std::unique_ptr<ScDocument> pTransClip;
-    pTransClip.reset(new ScDocument(SCDOCMODE_CLIP));
+    ::std::unique_ptr<ScDocument> pTransClip(new ScDocument(SCDOCMODE_CLIP));
     aNewClipDoc.TransposeClip(pTransClip.get(), InsertDeleteFlags::ALL, false);
-    ScDocument* pTransposedClip = pTransClip.release();
 
     ScRange aDestRange = ScRange(3,1,1,3,3,1);//target: Sheet2.D2:D4
     ScMarkData aMark;
     aMark.SetMarkArea(aDestRange);
-    m_pDoc->CopyFromClip(aDestRange, aMark, InsertDeleteFlags::ALL, nullptr, pTransposedClip);
+    m_pDoc->CopyFromClip(aDestRange, aMark, InsertDeleteFlags::ALL, nullptr, pTransClip.get());
+    pTransClip.reset();
 
     //check cell content after transposed copy/paste
     OUString aString = m_pDoc->GetString(3, 3, 1);
-    CPPUNIT_ASSERT_MESSAGE("Cell Sheet2.D4 should contain: test", aString == "test");
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("Cell Sheet2.D4 should contain: test", OUString("test"), aString);
     double fValue = m_pDoc->GetValue(ScAddress(3,1,1));
     ASSERT_DOUBLES_EQUAL_MESSAGE("transposed copied cell should return 1", fValue, 1);
     fValue = m_pDoc->GetValue(ScAddress(3,2,1));
     ASSERT_DOUBLES_EQUAL_MESSAGE("transposed copied formula should return 2", fValue, 2);
     m_pDoc->GetFormula(3, 2, 1, aString);
-    CPPUNIT_ASSERT_MESSAGE("transposed formula should point on Sheet2.D2", aString == "=D2+1");
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("transposed formula should point on Sheet2.D2", OUString("=D2+1"), aString);
 
     // check notes after transposed copy/paste
     CPPUNIT_ASSERT_MESSAGE("There should be a note on Sheet2.D2", m_pDoc->HasNote(ScAddress(3, 1, 1)));
     CPPUNIT_ASSERT_MESSAGE("There should be a note on Sheet2.D3", m_pDoc->HasNote(ScAddress(3, 2, 1)));
     CPPUNIT_ASSERT_MESSAGE("There should be a note on Sheet2.D4", m_pDoc->HasNote(ScAddress(3, 3, 1)));
-    CPPUNIT_ASSERT_MESSAGE("Content of cell note on Sheet2.D2",
-            m_pDoc->GetNote(ScAddress(3, 1, 1))->GetText() ==  m_pDoc->GetNote(ScAddress(0, 0, 0))->GetText());
-    CPPUNIT_ASSERT_MESSAGE("Content of cell note on Sheet2.D3",
-            m_pDoc->GetNote(ScAddress(3, 2, 1))->GetText() ==  m_pDoc->GetNote(ScAddress(1, 0, 0))->GetText());
-    CPPUNIT_ASSERT_MESSAGE("Content of cell note on Sheet2.D4",
-            m_pDoc->GetNote(ScAddress(3, 3, 1))->GetText() ==  m_pDoc->GetNote(ScAddress(2, 0, 0))->GetText());
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("Content of cell note on Sheet2.D2",
+            m_pDoc->GetNote(ScAddress(3, 1, 1))->GetText(),  m_pDoc->GetNote(ScAddress(0, 0, 0))->GetText());
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("Content of cell note on Sheet2.D3",
+            m_pDoc->GetNote(ScAddress(3, 2, 1))->GetText(),  m_pDoc->GetNote(ScAddress(1, 0, 0))->GetText());
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("Content of cell note on Sheet2.D4",
+            m_pDoc->GetNote(ScAddress(3, 3, 1))->GetText(),  m_pDoc->GetNote(ScAddress(2, 0, 0))->GetText());
 
     m_pDoc->DeleteTab(1);
     m_pDoc->DeleteTab(0);
@@ -3486,7 +3272,7 @@ void Test::testCopyPasteMultiRange()
     aClipParam.maRanges.Append(ScRange(0,3,0,1,3,0)); // A4:B4
     aClipParam.maRanges.Append(ScRange(0,5,0,1,5,0)); // A6:B6
     aClipParam.meDirection = ScClipParam::Row;
-    m_pDoc->CopyToClip(aClipParam, &aClipDoc, &aMark);
+    m_pDoc->CopyToClip(aClipParam, &aClipDoc, &aMark, false, false);
 
     // Paste to D9:E11, and make sure it won't crash (rhbz#1080196).
     m_pDoc->CopyMultiRangeFromClip(ScAddress(3,8,0), aMark, InsertDeleteFlags::CONTENTS, &aClipDoc);
@@ -3518,7 +3304,7 @@ void Test::testCopyPasteSkipEmpty()
         bool checkRange( const ScAddress& rPos, const Check* p, const Check* pEnd )
         {
             ScAddress aPos(rPos);
-            OUString aPosStr = aPos.Format(SCA_VALID);
+            OUString aPosStr = aPos.Format(ScRefFlags::VALID);
             for (; p != pEnd; ++p, aPos.IncRow())
             {
                 if (!mpDoc->GetString(aPos).equalsAscii(p->mpStr))
@@ -3714,76 +3500,9 @@ void Test::testCopyPasteSkipEmpty2()
     m_pDoc->CopyFromClip(aDestRange, aMark, InsertDeleteFlags::ALL, nullptr, &aClipDoc, false, false, true, true);
 
     CPPUNIT_ASSERT_EQUAL(OUString("A"), m_pDoc->GetString(ScAddress(0,2,0)));
-    CPPUNIT_ASSERT_MESSAGE("B3 should be empty.", m_pDoc->GetCellType(ScAddress(1,2,0)) == CELLTYPE_NONE);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("B3 should be empty.", CELLTYPE_NONE, m_pDoc->GetCellType(ScAddress(1,2,0)));
     CPPUNIT_ASSERT_EQUAL(OUString("C"), m_pDoc->GetString(ScAddress(2,2,0)));
 
-    m_pDoc->DeleteTab(0);
-}
-
-void Test::testCopyPasteSkipEmptyConditionalFormatting()
-{
-    m_pDoc->InsertTab(0, "Test");
-
-    ScRange aDestRange(0,0,0,1,2,0);
-    ScRange aSrcRange(3,3,0,5,4,0);
-
-    ScMarkData aMark;
-    aMark.SetMarkArea(aDestRange);
-
-    m_pDoc->SetValue(0,0,0,1);
-    m_pDoc->SetValue(1,0,0,1);
-    m_pDoc->SetValue(0,1,0,1);
-    m_pDoc->SetValue(0,2,0,1);
-    m_pDoc->SetValue(1,2,0,1);
-
-    //create conditional formatting for A1:B3
-    ScConditionalFormatList* pCondFormatList = new ScConditionalFormatList();
-    m_pDoc->SetCondFormList(pCondFormatList, 0);
-
-    ScConditionalFormat* pFormat = new ScConditionalFormat(1, m_pDoc);
-    pFormat->SetRange(aDestRange);
-    sal_uLong nCondFormatKey = m_pDoc->AddCondFormat(pFormat, 0);
-
-    // Prepare a clipboard content interleaved with empty cells.
-    ScDocument aClipDoc(SCDOCMODE_CLIP);
-    aClipDoc.ResetClip(m_pDoc, &aMark);
-    ScClipParam aParam(aSrcRange, false);
-    aClipDoc.SetClipParam(aParam);
-    aClipDoc.SetValue(3,3,0,2);
-    aClipDoc.SetValue(4,3,0,2);
-    aClipDoc.SetValue(4,4,0,2);
-    aClipDoc.SetValue(3,5,0,2);
-    aClipDoc.SetValue(4,5,0,2);
-
-    ScConditionalFormat* pClipFormat = new ScConditionalFormat(2, &aClipDoc);
-    pClipFormat->SetRange(aSrcRange);
-    aClipDoc.AddCondFormat(pClipFormat, 0);
-
-    // Create undo document.
-    ScDocument* pUndoDoc = new ScDocument(SCDOCMODE_UNDO);
-    pUndoDoc->InitUndo(m_pDoc, 0, 0);
-    m_pDoc->CopyToDocument(aDestRange, InsertDeleteFlags::CONTENTS, false, pUndoDoc, &aMark);
-
-    // Paste clipboard content onto A1:A5 but skip empty cells.
-    bool bSkipEmpty = true;
-    m_pDoc->CopyFromClip(aDestRange, aMark, InsertDeleteFlags::CONTENTS, pUndoDoc, &aClipDoc, true, false, false, bSkipEmpty);
-
-    ScConditionalFormatList* pList = m_pDoc->GetCondFormList(0);
-    CPPUNIT_ASSERT_EQUAL(size_t(2), pList->size());
-    CPPUNIT_ASSERT(m_pDoc->GetCondFormat(1,1,0));
-    // empty cell in copy area does not overwrite conditional formatting
-    CPPUNIT_ASSERT_EQUAL(sal_uInt32(nCondFormatKey), m_pDoc->GetCondFormat(1,1,0)->GetKey());
-    for(SCCOL nCol = 0; nCol <= 1; ++nCol)
-    {
-        for(SCROW nRow = 0; nRow <= 2; ++nRow)
-        {
-            if(nRow == 1 && nCol == 1)
-                continue;
-
-            CPPUNIT_ASSERT(m_pDoc->GetCondFormat(nCol, nRow, 0));
-            CPPUNIT_ASSERT(nCondFormatKey != m_pDoc->GetCondFormat(nCol, nRow, 0)->GetKey());
-        }
-    }
     m_pDoc->DeleteTab(0);
 }
 
@@ -3863,9 +3582,9 @@ void Test::testMoveRefBetweenSheets()
     bool bMoved = rFunc.MoveBlock(ScRange(0,1,0,0,2,0), ScAddress(0,1,1), true, true, false, true);
     CPPUNIT_ASSERT(bMoved);
 
-    CPPUNIT_ASSERT_MESSAGE("This cell should be empty after the move.", m_pDoc->GetCellType(ScAddress(0,1,0)) == CELLTYPE_NONE);
-    CPPUNIT_ASSERT_EQUAL(12.0, m_pDoc->GetValue(ScAddress(0,1,1)));
-    CPPUNIT_ASSERT_EQUAL(30.0, m_pDoc->GetValue(ScAddress(0,2,1)));
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("This cell should be empty after the move.", CELLTYPE_NONE, m_pDoc->GetCellType(ScAddress(0,1,0)));
+    ASSERT_DOUBLES_EQUAL(12.0, m_pDoc->GetValue(ScAddress(0,1,1)));
+    ASSERT_DOUBLES_EQUAL(30.0, m_pDoc->GetValue(ScAddress(0,2,1)));
 
     // The reference in the pasted formula should display sheet name after the move.
     if (!checkFormula(*m_pDoc, ScAddress(0,1,1), "Test1.A1"))
@@ -3902,9 +3621,9 @@ void Test::testUndoCut()
     ScDocument* pUndoDoc = new ScDocument(SCDOCMODE_UNDO);
     pUndoDoc->InitUndo(m_pDoc, 0 ,0);
     m_pDoc->CopyToDocument(aRange, InsertDeleteFlags::ALL, false, pUndoDoc);
-    CPPUNIT_ASSERT_EQUAL(  1.0, pUndoDoc->GetValue(ScAddress(0,0,0)));
-    CPPUNIT_ASSERT_EQUAL( 10.0, pUndoDoc->GetValue(ScAddress(0,1,0)));
-    CPPUNIT_ASSERT_EQUAL(100.0, pUndoDoc->GetValue(ScAddress(0,2,0)));
+    ASSERT_DOUBLES_EQUAL(  1.0, pUndoDoc->GetValue(ScAddress(0,0,0)));
+    ASSERT_DOUBLES_EQUAL( 10.0, pUndoDoc->GetValue(ScAddress(0,1,0)));
+    ASSERT_DOUBLES_EQUAL(100.0, pUndoDoc->GetValue(ScAddress(0,2,0)));
     ScUndoCut aUndo(&getDocShell(), aRange, aRange.aEnd, aMark, pUndoDoc);
 
     // "Cut" the selection.
@@ -3913,18 +3632,18 @@ void Test::testUndoCut()
 
     // Undo it, and check the result.
     aUndo.Undo();
-    CPPUNIT_ASSERT_EQUAL(  1.0, m_pDoc->GetValue(ScAddress(0,0,0)));
-    CPPUNIT_ASSERT_EQUAL( 10.0, m_pDoc->GetValue(ScAddress(0,1,0)));
-    CPPUNIT_ASSERT_EQUAL(100.0, m_pDoc->GetValue(ScAddress(0,2,0)));
-    CPPUNIT_ASSERT_EQUAL(111.0, m_pDoc->GetValue(0,3,0)); // The SUM value should be back to the original.
+    ASSERT_DOUBLES_EQUAL(  1.0, m_pDoc->GetValue(ScAddress(0,0,0)));
+    ASSERT_DOUBLES_EQUAL( 10.0, m_pDoc->GetValue(ScAddress(0,1,0)));
+    ASSERT_DOUBLES_EQUAL(100.0, m_pDoc->GetValue(ScAddress(0,2,0)));
+    ASSERT_DOUBLES_EQUAL(111.0, m_pDoc->GetValue(0,3,0)); // The SUM value should be back to the original.
 
     // Redo it and check.
     aUndo.Redo();
-    CPPUNIT_ASSERT_EQUAL(0.0, m_pDoc->GetValue(0,3,0));
+    ASSERT_DOUBLES_EQUAL(0.0, m_pDoc->GetValue(0,3,0));
 
     // Undo again.
     aUndo.Undo();
-    CPPUNIT_ASSERT_EQUAL(111.0, m_pDoc->GetValue(0,3,0));
+    ASSERT_DOUBLES_EQUAL(111.0, m_pDoc->GetValue(0,3,0));
 
     m_pDoc->DeleteTab(0);
 }
@@ -3964,9 +3683,9 @@ void Test::testMoveBlock()
 
     //check cell content
     OUString aString = m_pDoc->GetString(3, 0, 0);
-    CPPUNIT_ASSERT_MESSAGE("Cell D1 should contain: test", aString == "test");
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("Cell D1 should contain: test", OUString("test"), aString);
     m_pDoc->GetFormula(2, 0, 0, aString);
-    CPPUNIT_ASSERT_MESSAGE("Cell C1 should contain an updated formula", aString == "=B1+1");
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("Cell C1 should contain an updated formula", OUString("=B1+1"), aString);
     double fValue = m_pDoc->GetValue(aAddrB1);
     ASSERT_DOUBLES_EQUAL_MESSAGE("Cell B1 should contain 1", fValue, 1);
 
@@ -4008,7 +3727,7 @@ void Test::testCopyPasteRelativeFormula()
     ScMarkData aMark;
     aMark.SetMarkArea(aRange);
     ScDocument aClipDoc(SCDOCMODE_CLIP);
-    m_pDoc->CopyToClip(aClipParam, &aClipDoc, &aMark);
+    m_pDoc->CopyToClip(aClipParam, &aClipDoc, &aMark, false, false);
 
     // Paste it to B1:B2.
     InsertDeleteFlags nFlags = InsertDeleteFlags::ALL;
@@ -4031,7 +3750,7 @@ void Test::testCopyPasteRelativeFormula()
 
     // Copy A1 to clipboard.
     aClipParam = ScClipParam(ScAddress(0,0,0), false);
-    m_pDoc->CopyToClip(aClipParam, &aClipDoc, &aMark);
+    m_pDoc->CopyToClip(aClipParam, &aClipDoc, &aMark, false, false);
 
     pFC = aClipDoc.GetFormulaCell(ScAddress(0,0,0));
     CPPUNIT_ASSERT(pFC);
@@ -4048,7 +3767,7 @@ void Test::testCopyPasteRelativeFormula()
 
     // Delete A3 and make sure it doesn't crash (see fdo#76132).
     clearRange(m_pDoc, ScAddress(0,2,0));
-    CPPUNIT_ASSERT(m_pDoc->GetCellType(ScAddress(0,2,0)) == CELLTYPE_NONE);
+    CPPUNIT_ASSERT_EQUAL(CELLTYPE_NONE, m_pDoc->GetCellType(ScAddress(0,2,0)));
 
     m_pDoc->DeleteTab(0);
 }
@@ -4091,7 +3810,7 @@ void Test::testCopyPasteRepeatOneFormula()
     // Copy C1 to clipboard.
     ScClipParam aClipParam(aPos, false);
     aMark.SetMarkArea(aPos);
-    m_pDoc->CopyToClip(aClipParam, &aClipDoc, &aMark);
+    m_pDoc->CopyToClip(aClipParam, &aClipDoc, &aMark, false, false);
 
     // Paste it to C2:C10.
     InsertDeleteFlags nFlags = InsertDeleteFlags::CONTENTS;
@@ -4128,7 +3847,7 @@ void Test::testCopyPasteRepeatOneFormula()
     ScDocFunc& rFunc = getDocShell().GetDocFunc();
     rFunc.InsertCells(aRowOne, &aMark, INS_INSROWS_BEFORE, true, true);
 
-    CPPUNIT_ASSERT_MESSAGE("C1 should be empty.", m_pDoc->GetCellType(ScAddress(2,0,0)) == CELLTYPE_NONE);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("C1 should be empty.", CELLTYPE_NONE, m_pDoc->GetCellType(ScAddress(2,0,0)));
 
     // This check makes only sense if group listeners are activated.
 #if !defined(USE_FORMULA_GROUP_LISTENER) || USE_FORMULA_GROUP_LISTENER
@@ -4148,7 +3867,7 @@ void Test::testCopyPasteRepeatOneFormula()
     }
 
     // Delete row at row 1 to shift the cells up.
-    rFunc.DeleteCells(aRowOne, &aMark, DEL_DELROWS, true, true);
+    rFunc.DeleteCells(aRowOne, &aMark, DEL_DELROWS, true);
 
     // Check the formula results again.
     for (SCROW i = 0; i < 10; ++i)
@@ -4247,7 +3966,7 @@ void Test::testRenameTable()
     getDocShell().GetDocFunc().RenameTable(0,nameToSet,false,true);
     OUString nameJustSet;
     m_pDoc->GetName(0,nameJustSet);
-    CPPUNIT_ASSERT_MESSAGE("table not renamed", nameToSet == nameJustSet);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("table not renamed", nameToSet, nameJustSet);
 
     //test case 3 , rename again
     OUString anOldName;
@@ -4256,17 +3975,18 @@ void Test::testRenameTable()
     nameToSet = "test2";
     rDocFunc.RenameTable(0,nameToSet,false,true);
     m_pDoc->GetName(0,nameJustSet);
-    CPPUNIT_ASSERT_MESSAGE("table not renamed", nameToSet == nameJustSet);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("table not renamed", nameToSet, nameJustSet);
 
     //test case 4 , check if  undo works
     SfxUndoAction* pUndo = new ScUndoRenameTab(&getDocShell(),0,anOldName,nameToSet);
     pUndo->Undo();
     m_pDoc->GetName(0,nameJustSet);
-    CPPUNIT_ASSERT_MESSAGE("the correct name is not set after undo", nameJustSet == anOldName);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("the correct name is not set after undo", nameJustSet, anOldName);
 
     pUndo->Redo();
     m_pDoc->GetName(0,nameJustSet);
-    CPPUNIT_ASSERT_MESSAGE("the correct color is not set after redo", nameJustSet == nameToSet);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("the correct color is not set after redo", nameJustSet, nameToSet);
+    delete pUndo;
 
     m_pDoc->DeleteTab(0);
     m_pDoc->DeleteTab(1);
@@ -4283,21 +4003,22 @@ void Test::testSetBackgroundColor()
      //test yellow
     aColor=Color(COL_YELLOW);
     getDocShell().GetDocFunc().SetTabBgColor(0,aColor,false, true);
-    CPPUNIT_ASSERT_MESSAGE("the correct color is not set",
-                           m_pDoc->GetTabBgColor(0) == aColor);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("the correct color is not set",
+                           aColor, m_pDoc->GetTabBgColor(0));
 
     Color aOldTabBgColor=m_pDoc->GetTabBgColor(0);
     aColor.SetColor(COL_BLUE);//set BLUE
     getDocShell().GetDocFunc().SetTabBgColor(0,aColor,false, true);
-    CPPUNIT_ASSERT_MESSAGE("the correct color is not set the second time",
-                           m_pDoc->GetTabBgColor(0) == aColor);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("the correct color is not set the second time",
+                           aColor, m_pDoc->GetTabBgColor(0));
 
     //now check for undo
     SfxUndoAction* pUndo = new ScUndoTabColor(&getDocShell(), 0, aOldTabBgColor, aColor);
     pUndo->Undo();
-    CPPUNIT_ASSERT_MESSAGE("the correct color is not set after undo", m_pDoc->GetTabBgColor(0)== aOldTabBgColor);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("the correct color is not set after undo", aOldTabBgColor, m_pDoc->GetTabBgColor(0));
     pUndo->Redo();
-    CPPUNIT_ASSERT_MESSAGE("the correct color is not set after undo", m_pDoc->GetTabBgColor(0)== aColor);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("the correct color is not set after undo", aColor, m_pDoc->GetTabBgColor(0));
+    delete pUndo;
     m_pDoc->DeleteTab(0);
 }
 
@@ -4358,7 +4079,7 @@ void Test::testUpdateReference()
     std::vector<OUString> aSheets;
     aSheets.push_back("Sheet1");
     aSheets.push_back("Sheet2");
-    m_pDoc->InsertTabs(0, aSheets, false, true);
+    m_pDoc->InsertTabs(0, aSheets, true);
     m_pDoc->GetValue(2, 0, 2, aValue);
     OUString aFormula;
     m_pDoc->GetFormula(2,0,2, aFormula);
@@ -4398,7 +4119,7 @@ void Test::testSearchCells()
     bool bSuccess = m_pDoc->SearchAndReplace(aItem, nCol, nRow, nTab, aMarkData, aMatchedRanges, aUndoStr);
 
     CPPUNIT_ASSERT_MESSAGE("Search And Replace should succeed", bSuccess);
-    CPPUNIT_ASSERT_MESSAGE("There should be exactly 3 matching cells.", aMatchedRanges.size() == 3);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("There should be exactly 3 matching cells.", size_t(3), aMatchedRanges.size());
     ScAddress aHit(0,0,0);
     CPPUNIT_ASSERT_MESSAGE("A1 should be inside the matched range.", aMatchedRanges.In(aHit));
     aHit.SetRow(2);
@@ -4599,7 +4320,7 @@ void Test::testAutoFill()
     m_pDoc->SetValue(ScAddress(0,0,0), 1.0);
     ScRange aRange(0,0,0,0,5,0);
     aMarkData.SetMarkArea(aRange);
-    rFunc.FillSeries(aRange, &aMarkData, FILL_TO_BOTTOM, FILL_AUTO, FILL_DAY, MAXDOUBLE, 1.0, MAXDOUBLE, true, true);
+    rFunc.FillSeries(aRange, &aMarkData, FILL_TO_BOTTOM, FILL_AUTO, FILL_DAY, MAXDOUBLE, 1.0, MAXDOUBLE, true);
     CPPUNIT_ASSERT_EQUAL(1.0, m_pDoc->GetValue(ScAddress(0,0,0)));
     CPPUNIT_ASSERT_EQUAL(2.0, m_pDoc->GetValue(ScAddress(0,1,0)));
     CPPUNIT_ASSERT_EQUAL(3.0, m_pDoc->GetValue(ScAddress(0,2,0)));
@@ -4614,7 +4335,7 @@ void Test::testAutoFill()
 
     CPPUNIT_ASSERT_EQUAL(1.0, m_pDoc->GetValue(ScAddress(0,0,0)));
     for (SCROW i = 1; i <= 5; ++i)
-        CPPUNIT_ASSERT(m_pDoc->GetCellType(ScAddress(0,i,0)) == CELLTYPE_NONE);
+        CPPUNIT_ASSERT_EQUAL(CELLTYPE_NONE, m_pDoc->GetCellType(ScAddress(0,i,0)));
 
     // Redo should put the serial values back in.
     pUndoMgr->Redo();
@@ -4741,14 +4462,14 @@ void Test::testCopyPasteFormulasExternalDoc()
     ScClipParam aClipParam(aRange, false);
     ScMarkData aMark;
     aMark.SetMarkArea(aRange);
-    ScDocument* pClipDoc = new ScDocument(SCDOCMODE_CLIP);
-    m_pDoc->CopyToClip(aClipParam, pClipDoc, &aMark);
+    ScDocument aClipDoc(SCDOCMODE_CLIP);
+    m_pDoc->CopyToClip(aClipParam, &aClipDoc, &aMark, false, false);
 
     InsertDeleteFlags nFlags = InsertDeleteFlags::ALL;
     aRange = ScRange(1,1,1,1,6,1);
     ScMarkData aMarkData2;
     aMarkData2.SetMarkArea(aRange);
-    rExtDoc.CopyFromClip(aRange, aMarkData2, nFlags, nullptr, pClipDoc);
+    rExtDoc.CopyFromClip(aRange, aMarkData2, nFlags, nullptr, &aClipDoc);
 
     OUString aFormula;
     rExtDoc.GetFormula(1,1,1, aFormula);
@@ -4786,7 +4507,7 @@ void Test::testFindAreaPosVertical()
     clearRange( m_pDoc, ScRange(0, 0, 0, 1, SAL_N_ELEMENTS(aData), 0));
     ScAddress aPos(0,0,0);
     ScRange aDataRange = insertRangeData( m_pDoc, aPos, aData, SAL_N_ELEMENTS(aData));
-    CPPUNIT_ASSERT_MESSAGE("failed to insert range data at correct position", aDataRange.aStart == aPos);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("failed to insert range data at correct position", aPos, aDataRange.aStart);
 
     m_pDoc->SetRowHidden(4,4,0,true);
     bool bHidden = m_pDoc->RowHidden(4,0);
@@ -4851,7 +4572,7 @@ void Test::testFindAreaPosColRight()
     clearRange( m_pDoc, ScRange(0, 0, 0, 7, SAL_N_ELEMENTS(aData), 0));
     ScAddress aPos(0,0,0);
     ScRange aDataRange = insertRangeData( m_pDoc, aPos, aData, SAL_N_ELEMENTS(aData));
-    CPPUNIT_ASSERT_MESSAGE("failed to insert range data at correct position", aDataRange.aStart == aPos);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("failed to insert range data at correct position", aPos, aDataRange.aStart);
 
     m_pDoc->SetColHidden(4,4,0,true);
     bool bHidden = m_pDoc->ColHidden(4,0);
@@ -4919,7 +4640,7 @@ void Test::testShiftCells()
     // Insert cell at D5. This should shift the string cell to right.
     m_pDoc->InsertCol(3, 0, 3, 0, 3, 1);
     OUString aStr = m_pDoc->GetString(5, 3, 0);
-    CPPUNIT_ASSERT_MESSAGE("We should have a string cell here.", aStr == aTestVal);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("We should have a string cell here.", aTestVal, aStr);
     CPPUNIT_ASSERT_MESSAGE("D5 is supposed to be blank.", m_pDoc->IsBlockEmpty(0, 3, 4, 3, 4));
 
     CPPUNIT_ASSERT_MESSAGE("there should be NO note", !m_pDoc->HasNote(4, 3, 0));
@@ -4928,7 +4649,7 @@ void Test::testShiftCells()
     // Delete cell D5, to shift the text cell back into D5.
     m_pDoc->DeleteCol(3, 0, 3, 0, 3, 1);
     aStr = m_pDoc->GetString(4, 3, 0);
-    CPPUNIT_ASSERT_MESSAGE("We should have a string cell here.", aStr == aTestVal);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("We should have a string cell here.", aTestVal, aStr);
     CPPUNIT_ASSERT_MESSAGE("E5 is supposed to be blank.", m_pDoc->IsBlockEmpty(0, 4, 4, 4, 4));
 
     CPPUNIT_ASSERT_MESSAGE("there should be NO note", !m_pDoc->HasNote(5, 3, 0));
@@ -4957,7 +4678,7 @@ void Test::testNoteBasic()
     pNote->SetAuthor("Jim Bob");
 
     ScPostIt *pGetNote = m_pDoc->GetNote(aAddr);
-    CPPUNIT_ASSERT_MESSAGE("note should be itself", pGetNote == pNote);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("note should be itself", pNote, pGetNote);
 
     // Insert one row at row 1.
     bool bInsertRow = m_pDoc->InsertRow(0, 0, MAXCOL, 0, 1, 1);
@@ -4965,7 +4686,7 @@ void Test::testNoteBasic()
 
     CPPUNIT_ASSERT_MESSAGE("note hasn't moved", m_pDoc->GetNote(aAddr) == nullptr);
     aAddr.IncRow(); // cell C4
-    CPPUNIT_ASSERT_MESSAGE("note not there", m_pDoc->GetNote(aAddr) == pNote);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("note not there", pNote, m_pDoc->GetNote(aAddr));
 
     // Insert column at column A.
     bool bInsertCol = m_pDoc->InsertCol(0, 0, MAXROW, 0, 1, 1);
@@ -4973,36 +4694,36 @@ void Test::testNoteBasic()
 
     CPPUNIT_ASSERT_MESSAGE("note hasn't moved", m_pDoc->GetNote(aAddr) == nullptr);
     aAddr.IncCol(); // cell D4
-    CPPUNIT_ASSERT_MESSAGE("note not there", m_pDoc->GetNote(aAddr) == pNote);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("note not there", pNote, m_pDoc->GetNote(aAddr));
 
     // Insert a new sheet to shift the current sheet to the right.
     m_pDoc->InsertTab(0, "Table2");
     CPPUNIT_ASSERT_MESSAGE("note hasn't moved", m_pDoc->GetNote(aAddr) == nullptr);
     aAddr.IncTab(); // Move to the next sheet.
-    CPPUNIT_ASSERT_MESSAGE("note not there", m_pDoc->GetNote(aAddr) == pNote);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("note not there", pNote, m_pDoc->GetNote(aAddr));
 
     m_pDoc->DeleteTab(0);
     aAddr.IncTab(-1);
-    CPPUNIT_ASSERT_MESSAGE("note not there", m_pDoc->GetNote(aAddr) == pNote);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("note not there", pNote, m_pDoc->GetNote(aAddr));
 
     // Insert cell at C4.  This should NOT shift the note position.
     bInsertRow = m_pDoc->InsertRow(2, 0, 2, 0, 3, 1);
     CPPUNIT_ASSERT_MESSAGE("Failed to insert cell at C4.", bInsertRow);
-    CPPUNIT_ASSERT_MESSAGE("Note shouldn't have moved but it has.", m_pDoc->GetNote(aAddr) == pNote);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("Note shouldn't have moved but it has.", pNote, m_pDoc->GetNote(aAddr));
 
     // Delete cell at C4.  Again, this should NOT shift the note position.
     m_pDoc->DeleteRow(2, 0, 2, 0, 3, 1);
-    CPPUNIT_ASSERT_MESSAGE("Note shouldn't have moved but it has.", m_pDoc->GetNote(aAddr) == pNote);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("Note shouldn't have moved but it has.", pNote, m_pDoc->GetNote(aAddr));
 
     // Now, with the note at D4, delete cell D3. This should shift the note one cell up.
     m_pDoc->DeleteRow(3, 0, 3, 0, 2, 1);
     aAddr.IncRow(-1); // cell D3
-    CPPUNIT_ASSERT_MESSAGE("Note at D4 should have shifted up to D3.", m_pDoc->GetNote(aAddr) == pNote);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("Note at D4 should have shifted up to D3.", pNote, m_pDoc->GetNote(aAddr));
 
     // Delete column C. This should shift the note one cell left.
     m_pDoc->DeleteCol(0, 0, MAXROW, 0, 2, 1);
     aAddr.IncCol(-1); // cell C3
-    CPPUNIT_ASSERT_MESSAGE("Note at D3 should have shifted left to C3.", m_pDoc->GetNote(aAddr) == pNote);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("Note at D3 should have shifted left to C3.", pNote, m_pDoc->GetNote(aAddr));
 
     // Insert a text where the note is.
     m_pDoc->SetString(aAddr, "Note is here.");
@@ -5010,7 +4731,7 @@ void Test::testNoteBasic()
     // Delete row 1. This should shift the note from C3 to C2.
     m_pDoc->DeleteRow(0, 0, MAXCOL, 0, 0, 1);
     aAddr.IncRow(-1); // C2
-    CPPUNIT_ASSERT_MESSAGE("Note at C3 should have shifted up to C2.", m_pDoc->GetNote(aAddr) == pNote);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("Note at C3 should have shifted up to C2.", pNote, m_pDoc->GetNote(aAddr));
 
     m_pDoc->DeleteTab(0);
 }
@@ -5054,7 +4775,7 @@ void Test::testNoteDeleteRow()
     ScDocFunc& rDocFunc = getDocShell().GetDocFunc();
     ScMarkData aMark;
     aMark.SelectOneTable(0);
-    rDocFunc.DeleteCells(ScRange(0,1,0,MAXCOL,1,0), &aMark, DEL_CELLSUP, true, true);
+    rDocFunc.DeleteCells(ScRange(0,1,0,MAXCOL,1,0), &aMark, DEL_CELLSUP, true);
 
     // Check to make sure the notes have shifted upward.
     pNote = m_pDoc->GetNote(ScAddress(1,1,0));
@@ -5083,7 +4804,7 @@ void Test::testNoteDeleteRow()
     CPPUNIT_ASSERT_EQUAL(OUString("Second Note"), pNote->GetText());
 
     // Delete row 3.
-    rDocFunc.DeleteCells(ScRange(0,2,0,MAXCOL,2,0), &aMark, DEL_CELLSUP, true, true);
+    rDocFunc.DeleteCells(ScRange(0,2,0,MAXCOL,2,0), &aMark, DEL_CELLSUP, true);
 
     pNote = m_pDoc->GetNote(ScAddress(1,2,0));
     CPPUNIT_ASSERT_MESSAGE("B3 should have a note.", pNote);
@@ -5135,7 +4856,7 @@ void Test::testNoteLifeCycle()
 
     pNote->SetText(aPos, "New note");
     ScPostIt* pNote2 = m_pDoc->ReleaseNote(aPos);
-    CPPUNIT_ASSERT_MESSAGE("This note instance is expected to be identical to the original.", pNote == pNote2);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("This note instance is expected to be identical to the original.", pNote, pNote2);
     CPPUNIT_ASSERT_MESSAGE("The note shouldn't be here after it's been released.", !m_pDoc->HasNote(aPos));
 
     // Modify the internal state of the note instance to make sure it's really
@@ -5155,7 +4876,7 @@ void Test::testNoteLifeCycle()
     ScDocument aClipDoc(SCDOCMODE_CLIP);
     ScMarkData aMarkData;
     aMarkData.SelectOneTable(0);
-    m_pDoc->CopyToClip(aClipParam, &aClipDoc, &aMarkData, false, false, true);
+    m_pDoc->CopyToClip(aClipParam, &aClipDoc, &aMarkData, false, true);
 
     ScPostIt* pClipNote = aClipDoc.GetNote(aPos);
     CPPUNIT_ASSERT_MESSAGE("Failed to copy note to the clipboard.", pClipNote);
@@ -5235,7 +4956,7 @@ void Test::testNoteCopyPaste()
     ScDocument aClipDoc(SCDOCMODE_CLIP);
     aClipDoc.ResetClip(m_pDoc, &aMark);
     ScClipParam aClipParam(aCopyRange, false);
-    m_pDoc->CopyToClip(aClipParam, &aClipDoc, &aMark);
+    m_pDoc->CopyToClip(aClipParam, &aClipDoc, &aMark, false, false);
 
     // Make sure the notes are in the clipboard.
     pNote = aClipDoc.GetNote(ScAddress(1,1,0));
@@ -5284,21 +5005,21 @@ void Test::testAreasWithNotes()
     dataFound = rDoc.GetDataStart(0,col,row);
 
     CPPUNIT_ASSERT_MESSAGE("No DataStart found", dataFound);
-    CPPUNIT_ASSERT_MESSAGE("DataStart wrong col for notes", col == 1);
-    CPPUNIT_ASSERT_MESSAGE("DataStart wrong row for notes", row == 2);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("DataStart wrong col for notes", static_cast<SCCOL>(1), col);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("DataStart wrong row for notes", static_cast<SCROW>(2), row);
 
     dataFound = rDoc.GetCellArea(0,col,row);
 
     CPPUNIT_ASSERT_MESSAGE("No CellArea found", dataFound);
-    CPPUNIT_ASSERT_MESSAGE("CellArea wrong col for notes", col == 2);
-    CPPUNIT_ASSERT_MESSAGE("CellArea wrong row for notes", row == 5);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("CellArea wrong col for notes", static_cast<SCCOL>(2), col);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("CellArea wrong row for notes", static_cast<SCROW>(5), row);
 
     bool bNotes = true;
     dataFound = rDoc.GetPrintArea(0,col,row, bNotes);
 
     CPPUNIT_ASSERT_MESSAGE("No PrintArea found", dataFound);
-    CPPUNIT_ASSERT_MESSAGE("PrintArea wrong col for notes", col == 2);
-    CPPUNIT_ASSERT_MESSAGE("PrintArea wrong row for notes", row == 5);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("PrintArea wrong col for notes", static_cast<SCCOL>(2), col);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("PrintArea wrong row for notes", static_cast<SCROW>(5), row);
 
     bNotes = false;
     dataFound = rDoc.GetPrintArea(0,col,row, bNotes);
@@ -5307,11 +5028,11 @@ void Test::testAreasWithNotes()
     bNotes = true;
     dataFound = rDoc.GetPrintAreaVer(0,0,1,row, bNotes); // cols 0 & 1
     CPPUNIT_ASSERT_MESSAGE("No PrintAreaVer found", dataFound);
-    CPPUNIT_ASSERT_MESSAGE("PrintAreaVer wrong row for notes", row == 5);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("PrintAreaVer wrong row for notes", static_cast<SCROW>(5), row);
 
     dataFound = rDoc.GetPrintAreaVer(0,2,3,row, bNotes); // cols 2 & 3
     CPPUNIT_ASSERT_MESSAGE("No PrintAreaVer found", dataFound);
-    CPPUNIT_ASSERT_MESSAGE("PrintAreaVer wrong row for notes", row == 2);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("PrintAreaVer wrong row for notes", static_cast<SCROW>(2), row);
 
     bNotes = false;
     dataFound = rDoc.GetPrintAreaVer(0,0,1,row, bNotes); // col 0 & 1
@@ -5325,41 +5046,41 @@ void Test::testAreasWithNotes()
     dataFound = rDoc.GetDataStart(0,col,row);
 
     CPPUNIT_ASSERT_MESSAGE("No DataStart found", dataFound);
-    CPPUNIT_ASSERT_MESSAGE("DataStart wrong col", col == 0);
-    CPPUNIT_ASSERT_MESSAGE("DataStart wrong row", row == 2);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("DataStart wrong col", static_cast<SCCOL>(0), col);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("DataStart wrong row", static_cast<SCROW>(2), row);
 
     dataFound = rDoc.GetCellArea(0,col,row);
 
     CPPUNIT_ASSERT_MESSAGE("No CellArea found", dataFound);
-    CPPUNIT_ASSERT_MESSAGE("CellArea wrong col", col == 3);
-    CPPUNIT_ASSERT_MESSAGE("CellArea wrong row", row == 5);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("CellArea wrong col", static_cast<SCCOL>(3), col);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("CellArea wrong row", static_cast<SCROW>(5), row);
 
     bNotes = true;
     dataFound = rDoc.GetPrintArea(0,col,row, bNotes);
 
     CPPUNIT_ASSERT_MESSAGE("No PrintArea found", dataFound);
-    CPPUNIT_ASSERT_MESSAGE("PrintArea wrong col", col == 3);
-    CPPUNIT_ASSERT_MESSAGE("PrintArea wrong row", row == 5);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("PrintArea wrong col", static_cast<SCCOL>(3), col);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("PrintArea wrong row", static_cast<SCROW>(5), row);
 
     bNotes = false;
     dataFound = rDoc.GetPrintArea(0,col,row, bNotes);
     CPPUNIT_ASSERT_MESSAGE("No PrintArea found", dataFound);
-    CPPUNIT_ASSERT_MESSAGE("PrintArea wrong col", col == 3);
-    CPPUNIT_ASSERT_MESSAGE("PrintArea wrong row", row == 3);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("PrintArea wrong col", static_cast<SCCOL>(3), col);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("PrintArea wrong row", static_cast<SCROW>(3), row);
 
     bNotes = true;
     dataFound = rDoc.GetPrintAreaVer(0,0,1,row, bNotes); // cols 0 & 1
     CPPUNIT_ASSERT_MESSAGE("No PrintAreaVer found", dataFound);
-    CPPUNIT_ASSERT_MESSAGE("PrintAreaVer wrong row", row == 5);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("PrintAreaVer wrong row", static_cast<SCROW>(5), row);
 
     dataFound = rDoc.GetPrintAreaVer(0,2,3,row, bNotes); // cols 2 & 3
     CPPUNIT_ASSERT_MESSAGE("No PrintAreaVer found", dataFound);
-    CPPUNIT_ASSERT_MESSAGE("PrintAreaVer wrong row", row == 3);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("PrintAreaVer wrong row", static_cast<SCROW>(3), row);
 
     bNotes = false;
     dataFound = rDoc.GetPrintAreaVer(0,0,1,row, bNotes); // cols 0 & 1
     CPPUNIT_ASSERT_MESSAGE("No PrintAreaVer found", dataFound);
-    CPPUNIT_ASSERT_MESSAGE("PrintAreaVer wrong row", row == 3);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("PrintAreaVer wrong row", static_cast<SCROW>(3), row);
 
     rDoc.DeleteTab(0);
 }
@@ -5620,544 +5341,6 @@ void Test::testEditTextIterator()
     m_pDoc->DeleteTab(0);
 }
 
-void Test::testCondFormatINSDEL()
-{
-    // fdo#62206
-    m_pDoc->InsertTab(0, "Test");
-    ScConditionalFormatList* pList = m_pDoc->GetCondFormList(0);
-
-    ScConditionalFormat* pFormat = new ScConditionalFormat(1, m_pDoc);
-    ScRangeList aRangeList(ScRange(0,0,0,0,3,0));
-    pFormat->SetRange(aRangeList);
-    ScCondFormatEntry* pEntry = new ScCondFormatEntry(SC_COND_DIRECT,"=B2","",m_pDoc,ScAddress(0,0,0),ScGlobal::GetRscString(STR_STYLENAME_RESULT));
-    pFormat->AddEntry(pEntry);
-
-    m_pDoc->AddCondFormatData(pFormat->GetRange(), 0, 1);
-    pList->InsertNew(pFormat);
-
-    m_pDoc->InsertCol(0,0,MAXROW,0,0,2);
-    const ScRangeList& rRange = pFormat->GetRange();
-    CPPUNIT_ASSERT(rRange == ScRange(2,0,0,2,3,0));
-
-    OUString aExpr = pEntry->GetExpression(ScAddress(2,0,0), 0);
-    CPPUNIT_ASSERT_EQUAL(aExpr, OUString("D2"));
-
-    m_pDoc->DeleteTab(0);
-}
-
-void Test::testCondFormatInsertCol()
-{
-    m_pDoc->InsertTab(0, "Test");
-    ScConditionalFormatList* pList = m_pDoc->GetCondFormList(0);
-
-    ScConditionalFormat* pFormat = new ScConditionalFormat(1, m_pDoc);
-    ScRangeList aRangeList(ScRange(0,0,0,3,3,0));
-    pFormat->SetRange(aRangeList);
-
-    ScCondFormatEntry* pEntry = new ScCondFormatEntry(SC_COND_DIRECT,"=B2","",m_pDoc,ScAddress(0,0,0),ScGlobal::GetRscString(STR_STYLENAME_RESULT));
-    pFormat->AddEntry(pEntry);
-
-    m_pDoc->AddCondFormatData(pFormat->GetRange(), 0, 1);
-    pList->InsertNew(pFormat);
-
-    m_pDoc->InsertCol(0,0,MAXROW,0,4,2);
-    const ScRangeList& rRange = pFormat->GetRange();
-    CPPUNIT_ASSERT_EQUAL(ScRangeList(ScRange(0,0,0,5,3,0)), rRange);
-
-    m_pDoc->DeleteTab(0);
-}
-
-void Test::testCondFormatInsertRow()
-{
-    m_pDoc->InsertTab(0, "Test");
-    ScConditionalFormatList* pList = m_pDoc->GetCondFormList(0);
-
-    ScConditionalFormat* pFormat = new ScConditionalFormat(1, m_pDoc);
-    ScRangeList aRangeList(ScRange(0,0,0,3,3,0));
-    pFormat->SetRange(aRangeList);
-
-    ScCondFormatEntry* pEntry = new ScCondFormatEntry(SC_COND_DIRECT,"=B2","",m_pDoc,ScAddress(0,0,0),ScGlobal::GetRscString(STR_STYLENAME_RESULT));
-    pFormat->AddEntry(pEntry);
-
-    m_pDoc->AddCondFormatData(pFormat->GetRange(), 0, 1);
-    pList->InsertNew(pFormat);
-
-    m_pDoc->InsertRow(0,0,MAXCOL,0,4,2);
-    const ScRangeList& rRange = pFormat->GetRange();
-    CPPUNIT_ASSERT_EQUAL(ScRangeList(ScRange(0,0,0,3,5,0)), rRange);
-
-    m_pDoc->DeleteTab(0);
-}
-
-void Test::testCondFormatInsertDeleteSheets()
-{
-    m_pDoc->InsertTab(0, "Test");
-
-    // Add a conditional format to B2:B4.
-    ScConditionalFormat* pFormat = new ScConditionalFormat(1, m_pDoc);
-    pFormat->SetRange(ScRange(1,1,0,1,3,0));
-
-    sal_uLong nKey = m_pDoc->AddCondFormat(pFormat, 0);
-
-    // Add condition in which if the value equals 2, set the "Result" style.
-    ScCondFormatEntry* pEntry = new ScCondFormatEntry(
-        SC_COND_EQUAL, "=2", "" , m_pDoc, ScAddress(0,0,0), ScGlobal::GetRscString(STR_STYLENAME_RESULT));
-    pFormat->AddEntry(pEntry);
-
-    // Apply the format to the range.
-    m_pDoc->AddCondFormatData(pFormat->GetRange(), 0, nKey);
-
-    // Make sure this conditional format entry is really there.
-    ScConditionalFormatList* pList = m_pDoc->GetCondFormList(0);
-    CPPUNIT_ASSERT(pList);
-    const ScConditionalFormat* pCheck = pList->GetFormat(nKey);
-    CPPUNIT_ASSERT_MESSAGE("Wrong condntional format instance.", pCheck == pFormat);
-
-    // ... and its range is B2:B4.
-    ScRangeList aCheckRange = pCheck->GetRange();
-    CPPUNIT_ASSERT_MESSAGE("This should be a single range.", aCheckRange.size() == 1);
-    const ScRange* pRange = aCheckRange[0];
-    CPPUNIT_ASSERT(pRange);
-    CPPUNIT_ASSERT_MESSAGE("Format should be applied to B2:B4.", *pRange == ScRange(1,1,0,1,3,0));
-
-    ScDocFunc& rFunc = getDocShell().GetDocFunc();
-
-    // Insert a new sheet at the left.
-    bool bInserted = rFunc.InsertTable(0, "Inserted", true, true);
-    CPPUNIT_ASSERT(bInserted);
-
-    pList = m_pDoc->GetCondFormList(1);
-    CPPUNIT_ASSERT(pList);
-    pCheck = pList->GetFormat(nKey);
-    CPPUNIT_ASSERT(pCheck);
-
-    // Make sure the range also got shifted.
-    aCheckRange = pCheck->GetRange();
-    CPPUNIT_ASSERT_MESSAGE("This should be a single range.", aCheckRange.size() == 1);
-    pRange = aCheckRange[0];
-    CPPUNIT_ASSERT(pRange);
-    CPPUNIT_ASSERT_MESSAGE("Format should be applied to B2:B4 on the 2nd sheet after the sheet insertion.", *pRange == ScRange(1,1,1,1,3,1));
-
-    // Delete the sheet to the left.
-    bool bDeleted = rFunc.DeleteTable(0, true, true);
-    CPPUNIT_ASSERT(bDeleted);
-
-    pList = m_pDoc->GetCondFormList(0);
-    CPPUNIT_ASSERT(pList);
-    pCheck = pList->GetFormat(nKey);
-    CPPUNIT_ASSERT(pCheck);
-
-    // Make sure the range got shifted back.
-    aCheckRange = pCheck->GetRange();
-    CPPUNIT_ASSERT_MESSAGE("This should be a single range.", aCheckRange.size() == 1);
-    pRange = aCheckRange[0];
-    CPPUNIT_ASSERT(pRange);
-    CPPUNIT_ASSERT_MESSAGE("Format should be applied to B2:B4 on the 1st sheet after the sheet removal.", *pRange == ScRange(1,1,0,1,3,0));
-
-    SfxUndoManager* pUndoMgr = m_pDoc->GetUndoManager();
-    CPPUNIT_ASSERT(pUndoMgr);
-
-    // Undo and re-check.
-    pUndoMgr->Undo();
-
-    pList = m_pDoc->GetCondFormList(1);
-    CPPUNIT_ASSERT(pList);
-    pCheck = pList->GetFormat(nKey);
-    CPPUNIT_ASSERT(pCheck);
-
-    aCheckRange = pCheck->GetRange();
-    CPPUNIT_ASSERT_MESSAGE("This should be a single range.", aCheckRange.size() == 1);
-    pRange = aCheckRange[0];
-    CPPUNIT_ASSERT(pRange);
-    CPPUNIT_ASSERT_MESSAGE("Format should be applied to B2:B4 on the 2nd sheet after the undo of the sheet removal.", *pRange == ScRange(1,1,1,1,3,1));
-
-#if 0 // TODO : Undo of sheet insertion currently depends on the presence of
-      // view shell, and crashes when executed during cppunit run.
-
-    // Undo again and re-check.
-    pUndoMgr->Undo();
-
-    pList = m_pDoc->GetCondFormList(0);
-    CPPUNIT_ASSERT(pList);
-    pCheck = pList->GetFormat(nKey);
-    CPPUNIT_ASSERT(pCheck);
-
-    // Make sure the range got shifted back.
-    aCheckRange = pCheck->GetRange();
-    CPPUNIT_ASSERT_MESSAGE("This should be a single range.", aCheckRange.size() == 1);
-    pRange = aCheckRange[0];
-    CPPUNIT_ASSERT(pRange);
-    CPPUNIT_ASSERT_MESSAGE("Format should be applied to B2:B4 on the 1st sheet after the undo of sheet insertion.", *pRange == ScRange(1,1,0,1,3,0));
-#else
-    m_pDoc->DeleteTab(1);
-#endif
-
-    m_pDoc->DeleteTab(0);
-}
-
-void Test::testCondCopyPaste()
-{
-    m_pDoc->InsertTab(0, "Test");
-
-    ScConditionalFormat* pFormat = new ScConditionalFormat(1, m_pDoc);
-    ScRange aCondFormatRange(0,0,0,3,3,0);
-    ScRangeList aRangeList(aCondFormatRange);
-    pFormat->SetRange(aRangeList);
-
-    ScCondFormatEntry* pEntry = new ScCondFormatEntry(SC_COND_DIRECT,"=B2","",m_pDoc,ScAddress(0,0,0),ScGlobal::GetRscString(STR_STYLENAME_RESULT));
-    pFormat->AddEntry(pEntry);
-    sal_uLong nIndex = m_pDoc->AddCondFormat(pFormat, 0);
-
-    ScDocument aClipDoc(SCDOCMODE_CLIP);
-    copyToClip(m_pDoc, aCondFormatRange, &aClipDoc);
-
-    ScRange aTargetRange(4,4,0,7,7,0);
-    pasteFromClip(m_pDoc, aTargetRange, &aClipDoc);
-
-    ScConditionalFormat* pPastedFormat = m_pDoc->GetCondFormat(7,7,0);
-    CPPUNIT_ASSERT(pPastedFormat);
-
-    CPPUNIT_ASSERT_EQUAL(ScRangeList(aTargetRange), pPastedFormat->GetRange());
-    CPPUNIT_ASSERT( nIndex != pPastedFormat->GetKey());
-    const SfxPoolItem* pItem = m_pDoc->GetAttr( 7, 7, 0, ATTR_CONDITIONAL );
-    const ScCondFormatItem* pCondFormatItem = static_cast<const ScCondFormatItem*>(pItem);
-
-    CPPUNIT_ASSERT(pCondFormatItem);
-    CPPUNIT_ASSERT_EQUAL(size_t(1), pCondFormatItem->GetCondFormatData().size());
-    CPPUNIT_ASSERT( nIndex != pCondFormatItem->GetCondFormatData().at(0) );
-
-    m_pDoc->DeleteTab(0);
-}
-
-void Test::testCondCopyPasteSingleCell()
-{
-    m_pDoc->InsertTab(0, "Test");
-
-    ScConditionalFormat* pFormat = new ScConditionalFormat(1, m_pDoc);
-    ScRange aCondFormatRange(0,0,0,3,3,0);
-    ScRangeList aRangeList(aCondFormatRange);
-    pFormat->SetRange(aRangeList);
-
-    ScCondFormatEntry* pEntry = new ScCondFormatEntry(SC_COND_DIRECT,"=B2","",m_pDoc,ScAddress(0,0,0),ScGlobal::GetRscString(STR_STYLENAME_RESULT));
-    pFormat->AddEntry(pEntry);
-    sal_uLong nIndex = m_pDoc->AddCondFormat(pFormat, 0);
-
-    ScDocument aClipDoc(SCDOCMODE_CLIP);
-    copyToClip(m_pDoc, ScRange(0,0,0,0,0,0), &aClipDoc);
-
-    ScRange aTargetRange(4,4,0,4,4,0);
-    pasteFromClip(m_pDoc, aTargetRange, &aClipDoc);
-
-    ScConditionalFormat* pPastedFormat = m_pDoc->GetCondFormat(4,4,0);
-    CPPUNIT_ASSERT(pPastedFormat);
-
-    CPPUNIT_ASSERT_EQUAL(ScRangeList(aTargetRange), pPastedFormat->GetRange());
-    CPPUNIT_ASSERT( nIndex != pPastedFormat->GetKey());
-    const SfxPoolItem* pItem = m_pDoc->GetAttr( 4, 4, 0, ATTR_CONDITIONAL );
-    const ScCondFormatItem* pCondFormatItem = static_cast<const ScCondFormatItem*>(pItem);
-
-    CPPUNIT_ASSERT(pCondFormatItem);
-    CPPUNIT_ASSERT_EQUAL(size_t(1), pCondFormatItem->GetCondFormatData().size());
-    CPPUNIT_ASSERT( nIndex != pCondFormatItem->GetCondFormatData().at(0) );
-
-    m_pDoc->DeleteTab(0);
-}
-
-void Test::testCondCopyPasteSingleCellToRange()
-{
-    m_pDoc->InsertTab(0, "Test");
-
-    ScConditionalFormat* pFormat = new ScConditionalFormat(1, m_pDoc);
-    ScRange aCondFormatRange(0,0,0,3,3,0);
-    ScRangeList aRangeList(aCondFormatRange);
-    pFormat->SetRange(aRangeList);
-
-    ScCondFormatEntry* pEntry = new ScCondFormatEntry(SC_COND_DIRECT,"=B2","",m_pDoc,ScAddress(0,0,0),ScGlobal::GetRscString(STR_STYLENAME_RESULT));
-    pFormat->AddEntry(pEntry);
-    sal_uLong nIndex = m_pDoc->AddCondFormat(pFormat, 0);
-
-    ScDocument aClipDoc(SCDOCMODE_CLIP);
-    copyToClip(m_pDoc, ScRange(0,0,0,0,0,0), &aClipDoc);
-
-    ScRange aTargetRange(4,4,0,4,8,0);
-    pasteFromClip(m_pDoc, aTargetRange, &aClipDoc);
-
-    std::set<sal_uLong> aCondFormatIndices;
-    for(SCROW nRow = 4; nRow <= 8; ++nRow)
-    {
-        ScConditionalFormat* pPastedFormat = m_pDoc->GetCondFormat(4, nRow, 0);
-        CPPUNIT_ASSERT(pPastedFormat);
-
-        CPPUNIT_ASSERT_EQUAL(ScRangeList(ScRange(4, nRow, 0)), pPastedFormat->GetRange());
-        sal_uLong nPastedKey = pPastedFormat->GetKey();
-        CPPUNIT_ASSERT( nIndex != nPastedKey);
-        const SfxPoolItem* pItem = m_pDoc->GetAttr( 4, nRow, 0, ATTR_CONDITIONAL );
-        const ScCondFormatItem* pCondFormatItem = static_cast<const ScCondFormatItem*>(pItem);
-
-        CPPUNIT_ASSERT(pCondFormatItem);
-        CPPUNIT_ASSERT_EQUAL(size_t(1), pCondFormatItem->GetCondFormatData().size());
-        CPPUNIT_ASSERT( nIndex != pCondFormatItem->GetCondFormatData().at(0) );
-        auto itr = aCondFormatIndices.find(nPastedKey);
-        CPPUNIT_ASSERT(itr == aCondFormatIndices.end());
-        aCondFormatIndices.insert(nPastedKey);
-    }
-
-    m_pDoc->DeleteTab(0);
-}
-
-void Test::testCondCopyPasteSheetBetweenDoc()
-{
-    m_pDoc->InsertTab(0, "Test");
-
-    ScConditionalFormat* pFormat = new ScConditionalFormat(1, m_pDoc);
-    ScRange aCondFormatRange(0,0,0,3,3,0);
-    ScRangeList aRangeList(aCondFormatRange);
-    pFormat->SetRange(aRangeList);
-
-    ScCondFormatEntry* pEntry = new ScCondFormatEntry(SC_COND_DIRECT,"=B2","",m_pDoc,ScAddress(0,0,0),ScGlobal::GetRscString(STR_STYLENAME_RESULT));
-    pFormat->AddEntry(pEntry);
-    m_pDoc->AddCondFormat(pFormat, 0);
-
-    ScDocument aDoc;
-    aDoc.TransferTab(m_pDoc, 0, 0);
-
-    ScConditionalFormatList* pList = aDoc.GetCondFormList(0);
-    CPPUNIT_ASSERT_EQUAL(size_t(1), pList->size());
-
-    m_pDoc->DeleteTab(0);
-}
-
-void Test::testCondCopyPasteSheet()
-{
-    m_pDoc->InsertTab(0, "Test");
-
-    ScConditionalFormat* pFormat = new ScConditionalFormat(1, m_pDoc);
-    ScRange aCondFormatRange(0,0,0,3,3,0);
-    ScRangeList aRangeList(aCondFormatRange);
-    pFormat->SetRange(aRangeList);
-
-    ScCondFormatEntry* pEntry = new ScCondFormatEntry(SC_COND_DIRECT,"=B2","",m_pDoc,ScAddress(0,0,0),ScGlobal::GetRscString(STR_STYLENAME_RESULT));
-    pFormat->AddEntry(pEntry);
-    m_pDoc->AddCondFormat(pFormat, 0);
-
-    m_pDoc->CopyTab(0, SC_TAB_APPEND);
-
-    ScConditionalFormatList* pList = m_pDoc->GetCondFormList(1);
-    CPPUNIT_ASSERT_EQUAL(size_t(1), pList->size());
-
-    ScConditionalFormat& rFormat = **pList->begin();
-    const ScRangeList& rRange = rFormat.GetRange();
-    CPPUNIT_ASSERT_EQUAL(ScRangeList(ScRange(0,0,1,3,3,1)), rRange);
-    sal_uInt32 nKey = rFormat.GetKey();
-    const SfxPoolItem* pItem = m_pDoc->GetAttr( 2, 2, 1, ATTR_CONDITIONAL );
-    const ScCondFormatItem* pCondFormatItem = static_cast<const ScCondFormatItem*>(pItem);
-
-    CPPUNIT_ASSERT(pCondFormatItem);
-    CPPUNIT_ASSERT_EQUAL(size_t(1), pCondFormatItem->GetCondFormatData().size());
-    CPPUNIT_ASSERT( nKey == pCondFormatItem->GetCondFormatData().at(0) );
-
-    m_pDoc->DeleteTab(1);
-    m_pDoc->DeleteTab(0);
-}
-
-void Test::testIconSet()
-{
-    m_pDoc->InsertTab(0, "Test");
-    ScConditionalFormatList* pList = m_pDoc->GetCondFormList(0);
-
-    ScConditionalFormat* pFormat = new ScConditionalFormat(1, m_pDoc);
-    ScRangeList aRangeList(ScRange(0,0,0,0,0,0));
-    pFormat->SetRange(aRangeList);
-
-    ScIconSetFormat* pEntry = new ScIconSetFormat(m_pDoc);
-    ScIconSetFormatData* pData = new ScIconSetFormatData;
-    pData->m_Entries.push_back(o3tl::make_unique<ScColorScaleEntry>(0, COL_BLUE));
-    pData->m_Entries.push_back(o3tl::make_unique<ScColorScaleEntry>(1, COL_GREEN));
-    pData->m_Entries.push_back(o3tl::make_unique<ScColorScaleEntry>(2, COL_RED));
-    pEntry->SetIconSetData(pData);
-
-    m_pDoc->AddCondFormatData(pFormat->GetRange(), 0, 1);
-    pList->InsertNew(pFormat);
-
-    struct {
-        double nVal; sal_Int32 nIndex;
-    } aTests[] = {
-        { -1.0, 0 },
-        { 0.0, 0 },
-        { 1.0, 1 },
-        { 2.0, 2 },
-        { 3.0, 2 }
-    };
-    for(size_t i = 0; i < SAL_N_ELEMENTS(aTests); ++i)
-    {
-        m_pDoc->SetValue(0,0,0,aTests[i].nVal);
-        ScIconSetInfo* pInfo = pEntry->GetIconSetInfo(ScAddress(0,0,0));
-        CPPUNIT_ASSERT_EQUAL(aTests[i].nIndex, pInfo->nIconIndex);
-        delete pInfo;
-    }
-
-    delete pEntry;
-    m_pDoc->DeleteTab(0);
-}
-
-namespace {
-
-struct ScDataBarLengthData
-{
-    double nVal;
-    double nLength;
-};
-
-void testDataBarLengthImpl(ScDocument* pDoc, ScDataBarLengthData* pData, const ScRange& rRange,
-        double nMinVal, ScColorScaleEntryType eMinType,
-        double nMaxVal, ScColorScaleEntryType eMaxType,
-        double nZeroPos, databar::ScAxisPosition eAxisPos)
-{
-    std::unique_ptr<ScConditionalFormat> pFormat(new ScConditionalFormat(1, pDoc));
-    ScRangeList aRangeList(rRange);
-    pFormat->SetRange(aRangeList);
-
-    SCCOL nCol = rRange.aStart.Col();
-
-    ScDataBarFormat* pDatabar = new ScDataBarFormat(pDoc);
-    pFormat->AddEntry(pDatabar);
-
-    ScDataBarFormatData* pFormatData = new ScDataBarFormatData();
-    pFormatData->meAxisPosition = eAxisPos;
-
-    pFormatData->mpLowerLimit.reset(new ScColorScaleEntry());
-    pFormatData->mpLowerLimit->SetValue(nMinVal);
-    pFormatData->mpLowerLimit->SetType(eMinType);
-    pFormatData->mpUpperLimit.reset(new ScColorScaleEntry());
-    pFormatData->mpUpperLimit->SetValue(nMaxVal);
-    pFormatData->mpUpperLimit->SetType(eMaxType);
-    pDatabar->SetDataBarData(pFormatData);
-
-    for (size_t i = 0; pData[i].nLength != -200; ++i)
-    {
-        pDoc->SetValue(nCol, i, 0, pData[i].nVal);
-    }
-
-    for (size_t i = 0; pData[i].nLength != -200; ++i)
-    {
-        std::unique_ptr<ScDataBarInfo> xInfo(pDatabar->GetDataBarInfo(ScAddress(nCol, i, 0)));
-        CPPUNIT_ASSERT(xInfo.get());
-        ASSERT_DOUBLES_EQUAL(pData[i].nLength, xInfo->mnLength);
-        ASSERT_DOUBLES_EQUAL(nZeroPos, xInfo->mnZero);
-    }
-}
-
-}
-
-void Test::testDataBarLengthAutomaticAxis()
-{
-    m_pDoc->InsertTab(0, "Test");
-
-    ScDataBarLengthData aValues[] = {
-        { 2, 0 },
-        { 3, 0 },
-        { 4, 25.0 },
-        { 5, 50.0 },
-        { 6, 75.0 },
-        { 7, 100.0 },
-        { 8, 100.0 },
-        { 9, 100.0 },
-        { 0, -200 }
-    };
-
-    testDataBarLengthImpl(m_pDoc, aValues, ScRange(0,0,0,0,7,0),
-            3, COLORSCALE_VALUE, 7, COLORSCALE_VALUE, 0.0, databar::AUTOMATIC);
-
-    ScDataBarLengthData aValues2[] = {
-        { -6, -100 },
-        { -5, -100 },
-        { -4, -100 },
-        { -3, -75.0 },
-        { -2, -50.0 },
-        { -1, -25.0 },
-        { 0, 0.0 },
-        { 1, 12.5 },
-        { 2, 25.0 },
-        { 3, 37.5 },
-        { 4, 50.0 },
-        { 5, 62.5 },
-        { 6, 75.0 },
-        { 7, 87.5 },
-        { 8, 100.0 },
-        { 9, 100.0 },
-        { 0, -200 }
-    };
-    testDataBarLengthImpl(m_pDoc, aValues2, ScRange(1,0,0,1,15,0),
-            -4, COLORSCALE_VALUE, 8, COLORSCALE_VALUE, 1.0/3.0 * 100, databar::AUTOMATIC);
-
-    ScDataBarLengthData aValues3[] = {
-        { 2, 0.0 },
-        { 3, 25.0 },
-        { 4, 50.0 },
-        { 6, 100.0 },
-        { 0, -200 }
-    };
-    testDataBarLengthImpl(m_pDoc, aValues3, ScRange(2,0,0,2,3,0),
-            0, COLORSCALE_MIN, 0, COLORSCALE_MAX, 0, databar::AUTOMATIC);
-
-    ScDataBarLengthData aValues4[] = {
-        { 2, 40.0 },
-        { 3, 60.0 },
-        { 4, 80.0 },
-        { 5, 100.0 },
-        { 0, -200 }
-    };
-    testDataBarLengthImpl(m_pDoc, aValues4, ScRange(3,0,0,3,3,0),
-            0, COLORSCALE_AUTO, 0, COLORSCALE_AUTO, 0, databar::AUTOMATIC);
-
-    m_pDoc->DeleteTab(0);
-}
-
-void Test::testDataBarLengthMiddleAxis()
-{
-    m_pDoc->InsertTab(0, "Test");
-
-    ScDataBarLengthData aValues[] = {
-        { 1, 25.0 },
-        { 2, 25.0 },
-        { 3, 37.5 },
-        { 4, 50.0 },
-        { 5, 62.5 },
-        { 6, 75.0 },
-        { 7, 87.5 },
-        { 8, 100.0 },
-        { 9, 100.0 },
-        { 0, -200 }
-    };
-
-    testDataBarLengthImpl(m_pDoc, aValues, ScRange(0,0,0,0,8,0),
-            2, COLORSCALE_VALUE, 8, COLORSCALE_VALUE, 50.0, databar::MIDDLE);
-
-    ScDataBarLengthData aValues2[] = {
-        { -6, -50 },
-        { -5, -50 },
-        { -4, -50 },
-        { -3, -37.5 },
-        { -2, -25.0 },
-        { -1, -12.5 },
-        { 0, 0.0 },
-        { 1, 12.5 },
-        { 2, 25.0 },
-        { 3, 37.5 },
-        { 4, 50.0 },
-        { 5, 62.5 },
-        { 6, 75.0 },
-        { 7, 87.5 },
-        { 8, 100.0 },
-        { 9, 100.0 },
-        { 0, -200 }
-    };
-    testDataBarLengthImpl(m_pDoc, aValues2, ScRange(1,0,0,1,15,0),
-            -4, COLORSCALE_VALUE, 8, COLORSCALE_VALUE, 50.0, databar::MIDDLE);
-
-    m_pDoc->DeleteTab(0);
-}
-
 void Test::testImportStream()
 {
     sc::AutoCalcSwitch aAC(*m_pDoc, true); // turn on auto calc.
@@ -6267,7 +5450,7 @@ void Test::testTransliterateText()
     aMark.SetMarkArea(ScRange(0,0,0,0,2,0));
     ScDocFunc& rFunc = getDocShell().GetDocFunc();
     rFunc.TransliterateText(
-        aMark, i18n::TransliterationModules_LOWERCASE_UPPERCASE, true, true);
+        aMark, i18n::TransliterationModules_LOWERCASE_UPPERCASE, true);
 
     CPPUNIT_ASSERT_EQUAL(OUString("MIKE"), m_pDoc->GetString(ScAddress(0,0,0)));
     CPPUNIT_ASSERT_EQUAL(OUString("NOAH"), m_pDoc->GetString(ScAddress(0,1,0)));
@@ -6308,7 +5491,7 @@ void Test::testFormulaToValue()
 
     ScAddress aPos(1,2,0); // B3
     ScRange aDataRange = insertRangeData(m_pDoc, aPos, aData, SAL_N_ELEMENTS(aData));
-    CPPUNIT_ASSERT_MESSAGE("failed to insert range data at correct position", aDataRange.aStart == aPos);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("failed to insert range data at correct position", aPos, aDataRange.aStart);
 
     {
         // Expected output table content.  0 = empty cell
@@ -6328,7 +5511,7 @@ void Test::testFormulaToValue()
     // Convert B5:C6 to static values, and check the result.
     ScDocFunc& rFunc = getDocShell().GetDocFunc();
     ScRange aConvRange(1,4,0,2,5,0); // B5:C6
-    rFunc.ConvertFormulaToValue(aConvRange, true, false);
+    rFunc.ConvertFormulaToValue(aConvRange, false);
 
     {
         // Expected output table content.  0 = empty cell
@@ -6346,26 +5529,26 @@ void Test::testFormulaToValue()
     }
 
     // Make sure that B3:B4 and B7:B8 are formula cells.
-    CPPUNIT_ASSERT(m_pDoc->GetCellType(ScAddress(1,2,0)) == CELLTYPE_FORMULA);
-    CPPUNIT_ASSERT(m_pDoc->GetCellType(ScAddress(1,3,0)) == CELLTYPE_FORMULA);
-    CPPUNIT_ASSERT(m_pDoc->GetCellType(ScAddress(1,6,0)) == CELLTYPE_FORMULA);
-    CPPUNIT_ASSERT(m_pDoc->GetCellType(ScAddress(1,7,0)) == CELLTYPE_FORMULA);
+    CPPUNIT_ASSERT_EQUAL(CELLTYPE_FORMULA, m_pDoc->GetCellType(ScAddress(1,2,0)));
+    CPPUNIT_ASSERT_EQUAL(CELLTYPE_FORMULA, m_pDoc->GetCellType(ScAddress(1,3,0)));
+    CPPUNIT_ASSERT_EQUAL(CELLTYPE_FORMULA, m_pDoc->GetCellType(ScAddress(1,6,0)));
+    CPPUNIT_ASSERT_EQUAL(CELLTYPE_FORMULA, m_pDoc->GetCellType(ScAddress(1,7,0)));
 
     // Make sure that B5:C6 are numeric cells.
-    CPPUNIT_ASSERT(m_pDoc->GetCellType(ScAddress(1,4,0)) == CELLTYPE_VALUE);
-    CPPUNIT_ASSERT(m_pDoc->GetCellType(ScAddress(1,5,0)) == CELLTYPE_VALUE);
-    CPPUNIT_ASSERT(m_pDoc->GetCellType(ScAddress(2,4,0)) == CELLTYPE_VALUE);
-    CPPUNIT_ASSERT(m_pDoc->GetCellType(ScAddress(2,5,0)) == CELLTYPE_VALUE);
+    CPPUNIT_ASSERT_EQUAL(CELLTYPE_VALUE, m_pDoc->GetCellType(ScAddress(1,4,0)));
+    CPPUNIT_ASSERT_EQUAL(CELLTYPE_VALUE, m_pDoc->GetCellType(ScAddress(1,5,0)));
+    CPPUNIT_ASSERT_EQUAL(CELLTYPE_VALUE, m_pDoc->GetCellType(ScAddress(2,4,0)));
+    CPPUNIT_ASSERT_EQUAL(CELLTYPE_VALUE, m_pDoc->GetCellType(ScAddress(2,5,0)));
 
     // Make sure that formula cells in C3:C4 and C7:C8 are grouped.
     const ScFormulaCell* pFC = m_pDoc->GetFormulaCell(ScAddress(2,2,0));
     CPPUNIT_ASSERT(pFC);
-    CPPUNIT_ASSERT(pFC->GetSharedTopRow() == 2);
-    CPPUNIT_ASSERT(pFC->GetSharedLength() == 2);
+    CPPUNIT_ASSERT_EQUAL(static_cast<SCROW>(2), pFC->GetSharedTopRow());
+    CPPUNIT_ASSERT_EQUAL(static_cast<SCROW>(2), pFC->GetSharedLength());
     pFC = m_pDoc->GetFormulaCell(ScAddress(2,6,0));
     CPPUNIT_ASSERT(pFC);
-    CPPUNIT_ASSERT(pFC->GetSharedTopRow() == 6);
-    CPPUNIT_ASSERT(pFC->GetSharedLength() == 2);
+    CPPUNIT_ASSERT_EQUAL(static_cast<SCROW>(6), pFC->GetSharedTopRow());
+    CPPUNIT_ASSERT_EQUAL(static_cast<SCROW>(2), pFC->GetSharedLength());
 
     // Undo and check.
     SfxUndoManager* pUndoMgr = m_pDoc->GetUndoManager();
@@ -6398,8 +5581,8 @@ void Test::testFormulaToValue()
     // C3:C8 should be shared formula cells.
     pFC = m_pDoc->GetFormulaCell(ScAddress(2,2,0));
     CPPUNIT_ASSERT(pFC);
-    CPPUNIT_ASSERT(pFC->GetSharedTopRow() == 2);
-    CPPUNIT_ASSERT(pFC->GetSharedLength() == 6);
+    CPPUNIT_ASSERT_EQUAL(static_cast<SCROW>(2), pFC->GetSharedTopRow());
+    CPPUNIT_ASSERT_EQUAL(static_cast<SCROW>(6), pFC->GetSharedLength());
 
     // Redo and check.
     pUndoMgr->Redo();
@@ -6419,26 +5602,26 @@ void Test::testFormulaToValue()
     }
 
     // Make sure that B3:B4 and B7:B8 are formula cells.
-    CPPUNIT_ASSERT(m_pDoc->GetCellType(ScAddress(1,2,0)) == CELLTYPE_FORMULA);
-    CPPUNIT_ASSERT(m_pDoc->GetCellType(ScAddress(1,3,0)) == CELLTYPE_FORMULA);
-    CPPUNIT_ASSERT(m_pDoc->GetCellType(ScAddress(1,6,0)) == CELLTYPE_FORMULA);
-    CPPUNIT_ASSERT(m_pDoc->GetCellType(ScAddress(1,7,0)) == CELLTYPE_FORMULA);
+    CPPUNIT_ASSERT_EQUAL(CELLTYPE_FORMULA, m_pDoc->GetCellType(ScAddress(1,2,0)));
+    CPPUNIT_ASSERT_EQUAL(CELLTYPE_FORMULA, m_pDoc->GetCellType(ScAddress(1,3,0)));
+    CPPUNIT_ASSERT_EQUAL(CELLTYPE_FORMULA, m_pDoc->GetCellType(ScAddress(1,6,0)));
+    CPPUNIT_ASSERT_EQUAL(CELLTYPE_FORMULA, m_pDoc->GetCellType(ScAddress(1,7,0)));
 
     // Make sure that B5:C6 are numeric cells.
-    CPPUNIT_ASSERT(m_pDoc->GetCellType(ScAddress(1,4,0)) == CELLTYPE_VALUE);
-    CPPUNIT_ASSERT(m_pDoc->GetCellType(ScAddress(1,5,0)) == CELLTYPE_VALUE);
-    CPPUNIT_ASSERT(m_pDoc->GetCellType(ScAddress(2,4,0)) == CELLTYPE_VALUE);
-    CPPUNIT_ASSERT(m_pDoc->GetCellType(ScAddress(2,5,0)) == CELLTYPE_VALUE);
+    CPPUNIT_ASSERT_EQUAL(CELLTYPE_VALUE, m_pDoc->GetCellType(ScAddress(1,4,0)));
+    CPPUNIT_ASSERT_EQUAL(CELLTYPE_VALUE, m_pDoc->GetCellType(ScAddress(1,5,0)));
+    CPPUNIT_ASSERT_EQUAL(CELLTYPE_VALUE, m_pDoc->GetCellType(ScAddress(2,4,0)));
+    CPPUNIT_ASSERT_EQUAL(CELLTYPE_VALUE, m_pDoc->GetCellType(ScAddress(2,5,0)));
 
     // Make sure that formula cells in C3:C4 and C7:C8 are grouped.
     pFC = m_pDoc->GetFormulaCell(ScAddress(2,2,0));
     CPPUNIT_ASSERT(pFC);
-    CPPUNIT_ASSERT(pFC->GetSharedTopRow() == 2);
-    CPPUNIT_ASSERT(pFC->GetSharedLength() == 2);
+    CPPUNIT_ASSERT_EQUAL(static_cast<SCROW>(2), pFC->GetSharedTopRow());
+    CPPUNIT_ASSERT_EQUAL(static_cast<SCROW>(2), pFC->GetSharedLength());
     pFC = m_pDoc->GetFormulaCell(ScAddress(2,6,0));
     CPPUNIT_ASSERT(pFC);
-    CPPUNIT_ASSERT(pFC->GetSharedTopRow() == 6);
-    CPPUNIT_ASSERT(pFC->GetSharedLength() == 2);
+    CPPUNIT_ASSERT_EQUAL(static_cast<SCROW>(6), pFC->GetSharedTopRow());
+    CPPUNIT_ASSERT_EQUAL(static_cast<SCROW>(2), pFC->GetSharedLength());
 
     // Undo again and make sure the recovered formulas in C5:C6 still track B5:B6.
     pUndoMgr->Undo();
@@ -6468,7 +5651,7 @@ void Test::testFormulaToValue2()
     // Insert data into B2:C6.
     ScAddress aPos(1,1,0); // B2
     ScRange aDataRange = insertRangeData(m_pDoc, aPos, aData, SAL_N_ELEMENTS(aData));
-    CPPUNIT_ASSERT_MESSAGE("failed to insert range data at correct position", aDataRange.aStart == aPos);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("failed to insert range data at correct position", aPos, aDataRange.aStart);
 
     {
         // Expected output table content.  0 = empty cell
@@ -6487,7 +5670,7 @@ void Test::testFormulaToValue2()
     // Convert B3:B5 to a value.
     ScDocFunc& rFunc = getDocShell().GetDocFunc();
     ScRange aConvRange(1,2,0,1,4,0); // B3:B5
-    rFunc.ConvertFormulaToValue(aConvRange, true, false);
+    rFunc.ConvertFormulaToValue(aConvRange, false);
 
     {
         // Expected output table content.  0 = empty cell
@@ -6556,7 +5739,7 @@ void Test::testMixData()
     m_pDoc->SetValue(ScAddress(0,0,0), 15.0);
     m_pDoc->SetValue(ScAddress(0,1,0), 16.0);
     m_pDoc->SetValue(ScAddress(1,0,0), 12.0);
-    CPPUNIT_ASSERT_MESSAGE("B2 should be empty.", m_pDoc->GetCellType(ScAddress(1,1,0)) == CELLTYPE_NONE);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("B2 should be empty.", CELLTYPE_NONE, m_pDoc->GetCellType(ScAddress(1,1,0)));
 
     // Copy A1:A2 and paste it onto B1:B2 with subtraction operation.
     copyToClip(m_pDoc, ScRange(0,0,0,0,1,0), &aClipDoc);
@@ -6584,18 +5767,18 @@ void Test::testFormulaWizardSubformula()
     m_pDoc->SetString(ScAddress(1,1,0), "=1/0");        // B2
     m_pDoc->SetString(ScAddress(1,2,0), "=gibberish");  // B3
 
-    ScSimpleFormulaCalculator pFCell1( m_pDoc, ScAddress(0,0,0), "=B1:B3" );
-    sal_uInt16 nErrCode = pFCell1.GetErrCode();
-    CPPUNIT_ASSERT( nErrCode == 0 || pFCell1.IsMatrix() );
-    CPPUNIT_ASSERT_EQUAL( OUString("{1;#DIV/0!;#NAME?}"), pFCell1.GetString().getString() );
+    ScSimpleFormulaCalculator aFCell1( m_pDoc, ScAddress(0,0,0), "=B1:B3", true );
+    sal_uInt16 nErrCode = aFCell1.GetErrCode();
+    CPPUNIT_ASSERT( nErrCode == 0 || aFCell1.IsMatrix() );
+    CPPUNIT_ASSERT_EQUAL( OUString("{1;#DIV/0!;#NAME?}"), aFCell1.GetString().getString() );
 
     m_pDoc->SetString(ScAddress(1,0,0), "=NA()");       // B1
     m_pDoc->SetString(ScAddress(1,1,0), "2");           // B2
     m_pDoc->SetString(ScAddress(1,2,0), "=1+2");        // B3
-    ScSimpleFormulaCalculator pFCell2( m_pDoc, ScAddress(0,0,0), "=B1:B3" );
-    nErrCode = pFCell2.GetErrCode();
-    CPPUNIT_ASSERT( nErrCode == 0 || pFCell2.IsMatrix() );
-    CPPUNIT_ASSERT_EQUAL( OUString("{#N/A;2;3}"), pFCell2.GetString().getString() );
+    ScSimpleFormulaCalculator aFCell2( m_pDoc, ScAddress(0,0,0), "=B1:B3", true );
+    nErrCode = aFCell2.GetErrCode();
+    CPPUNIT_ASSERT( nErrCode == 0 || aFCell2.IsMatrix() );
+    CPPUNIT_ASSERT_EQUAL( OUString("{#N/A;2;3}"), aFCell2.GetString().getString() );
 
     m_pDoc->DeleteTab(0);
 }
@@ -6648,7 +5831,7 @@ void Test::testCopyPasteMatrixFormula()
     ScAddress aPos(0,0,0);  // A1
     ScDocument aClipDoc(SCDOCMODE_CLIP);
     ScClipParam aParam(aPos, false);
-    m_pDoc->CopyToClip(aParam, &aClipDoc, &aMark);
+    m_pDoc->CopyToClip(aParam, &aClipDoc, &aMark, false, false);
     // Formula string should be equal.
     CPPUNIT_ASSERT_EQUAL(m_pDoc->GetString(aPos), aClipDoc.GetString(aPos));
 
@@ -6687,7 +5870,8 @@ void Test::testCopyPasteMatrixFormula()
 void Test::testUndoDataAnchor()
 {
     m_pDoc->InsertTab(0, "Tab1");
-    CPPUNIT_ASSERT_MESSAGE("There should be only 1 sheets to begin with", m_pDoc->GetTableCount() == 1);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("There should be only 1 sheets to begin with",
+                               static_cast<SCTAB>(1), m_pDoc->GetTableCount());
 
     m_pDoc->InitDrawLayer();
     ScDrawLayer* pDrawLayer = m_pDoc->GetDrawLayer();
@@ -6747,7 +5931,7 @@ void Test::testUndoDataAnchor()
 
     // Check state
     ScAnchorType oldType = ScDrawLayer::GetAnchorType(*pObj);
-    CPPUNIT_ASSERT_MESSAGE( "Failed to check state SCA_CELL.", oldType == SCA_CELL );
+    CPPUNIT_ASSERT_EQUAL_MESSAGE( "Failed to check state SCA_CELL.", SCA_CELL, oldType);
 
     // Get anchor data
     pData = ScDrawLayer::GetObjData(pObj);
@@ -6811,7 +5995,8 @@ bool Test::insertRangeNames(
             pDoc,
             OUString::createFromAscii(p->mpName),
             OUString::createFromAscii(p->mpExpr),
-            aA1, 0, formula::FormulaGrammar::GRAM_ENGLISH);
+            aA1, ScRangeData::Type::Name,
+            formula::FormulaGrammar::GRAM_ENGLISH);
         pNew->SetIndex(p->mnIndex);
         bool bSuccess = pNames->insert(pNew);
         if (!bSuccess)
@@ -6860,7 +6045,7 @@ void Test::copyToClip(ScDocument* pSrcDoc, const ScRange& rRange, ScDocument* pC
     ScClipParam aClipParam(rRange, false);
     ScMarkData aMark;
     aMark.SetMarkArea(rRange);
-    pSrcDoc->CopyToClip(aClipParam, pClipDoc, &aMark);
+    pSrcDoc->CopyToClip(aClipParam, pClipDoc, &aMark, false, false);
 }
 
 void Test::pasteFromClip(ScDocument* pDestDoc, const ScRange& rDestRange, ScDocument* pClipDoc)

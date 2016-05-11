@@ -31,7 +31,7 @@ private:
 public:
     UnoTunnelIdInit() : m_aSeq(16)
     {
-        rtl_createUuid( reinterpret_cast<sal_uInt8*>(m_aSeq.getArray()), nullptr, sal_True );
+        rtl_createUuid( reinterpret_cast<sal_uInt8*>(m_aSeq.getArray()), nullptr, true );
     }
     const css::uno::Sequence< sal_Int8 >& getSeq() const { return m_aSeq; }
 };
@@ -45,7 +45,7 @@ public:
 
     Usage:
         Put a UNO3_GETIMPLEMENTATION_DECL( classname ) inside your class
-        definitian and UNO3_GETIMPLEMENTATION_IMPL( classname ) inside
+        definition and UNO3_GETIMPLEMENTATION_IMPL( classname ) inside
         your cxx file. Your class must inherit css::lang::XUnoTunnel
         and export it with queryInterface. Implementation of XUnoTunnel is
         done by this macro.

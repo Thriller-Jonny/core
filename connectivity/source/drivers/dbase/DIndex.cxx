@@ -172,11 +172,10 @@ bool ODbaseIndex::openIndexFile()
     return m_pFileStream != nullptr;
 }
 
-OIndexIterator* ODbaseIndex::createIterator(OBoolOperator* pOp,
-                                            const OOperand* pOperand)
+OIndexIterator* ODbaseIndex::createIterator()
 {
     openIndexFile();
-    return new OIndexIterator(this, pOp, pOperand);
+    return new OIndexIterator(this, nullptr, nullptr);
 }
 
 bool ODbaseIndex::ConvertToKey(ONDXKey* rKey, sal_uInt32 nRec, const ORowSetValue& rValue)
@@ -285,7 +284,7 @@ void ODbaseIndex::Collect(ONDXPage* pPage)
 
 void ODbaseIndex::Release(bool bSave)
 {
-    // Release the Index-recources
+    // Release the Index-resources
     m_bUseCollector = false;
 
     if (m_aCurLeaf.Is())
@@ -301,8 +300,8 @@ void ODbaseIndex::Release(bool bSave)
         m_aRoot.Clear();
     }
     // Release all references, before the FileStream will be closed
-    for (sal_uIntPtr i = 0; i < m_aCollector.size(); i++)
-        m_aCollector[i]->QueryDelete();
+    for (auto& i : m_aCollector)
+        i->QueryDelete();
 
     m_aCollector.clear();
 
@@ -613,8 +612,6 @@ void SAL_CALL ODbaseIndex::release() throw()
 {
     ODbaseIndex_BASE::release();
 }
-
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

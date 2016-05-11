@@ -6,7 +6,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+
+#if !defined _CRT_RAND_S
 #define _CRT_RAND_S
+#endif
 
 #include <stdlib.h>
 #include <memory.h>
@@ -16,7 +19,7 @@ int osl_get_system_random_data(char* buffer, size_t desired_len)
     unsigned int val;
 
     /* if unaligned fill to alignment */
-    if((int)buffer & 3)
+    if((uintptr_t)buffer & 3)
     {
         size_t len = 4 - ((size_t)(buffer) & 3);
 

@@ -27,6 +27,7 @@
 
 #include <com/sun/star/drawing/XDrawPagesSupplier.hpp>
 #include <drawinglayer/XShapeDumper.hxx>
+#include <com/sun/star/text/XTextField.hpp>
 
 using namespace ::com::sun::star;
 
@@ -49,6 +50,7 @@ struct FileFormat
 #define HTML_FORMAT_TYPE ( SfxFilterFlags::EXPORT | SfxFilterFlags::ALIEN )
 #define PDF_FORMAT_TYPE  ( SfxFilterFlags::STARONEFILTER | SfxFilterFlags::ALIEN | SfxFilterFlags::IMPORT | SfxFilterFlags::PREFERED )
 #define FODG_FORMAT_TYPE  (SfxFilterFlags::STARONEFILTER | SfxFilterFlags::OWN | SfxFilterFlags::IMPORT | SfxFilterFlags::EXPORT)
+#define FODP_FORMAT_TYPE  (SfxFilterFlags::STARONEFILTER | SfxFilterFlags::OWN | SfxFilterFlags::IMPORT | SfxFilterFlags::EXPORT)
 
 /** List of file formats we support in Impress unit tests.
 
@@ -66,6 +68,7 @@ FileFormat aFileFormats[] =
     { "html", "graphic_HTML", "graphic_HTML", "", HTML_FORMAT_TYPE },
     { "pdf",  "draw_pdf_import", "pdf_Portable_Document_Format", "", PDF_FORMAT_TYPE },
     { "fodg",  "OpenDocument Drawing Flat XML", "Flat XML ODF Drawing", "", FODG_FORMAT_TYPE },
+    { "fodp",  "OpenDocument Presentation Flat XML", "Flat XML ODF Presentation", "", FODP_FORMAT_TYPE },
     { nullptr, nullptr, nullptr, nullptr, SfxFilterFlags::NONE }
 };
 
@@ -75,6 +78,7 @@ FileFormat aFileFormats[] =
 #define HTML 3
 #define PDF  4
 #define FODG 5
+#define FODP 6
 
 /// Base class for filter tests loading or roundtriping a document, and asserting the document model.
 class SdModelTestBase : public test::BootstrapFixture, public unotest::MacrosTest
@@ -112,17 +116,18 @@ protected:
         SotClipboardFormatId nOptions = SotClipboardFormatId::NONE;
         if (pFmt->nFormatType != SfxFilterFlags::NONE)
             nOptions = SotClipboardFormatId::STARCALC_8;
-        SfxFilter* aFilter = new SfxFilter(
+        SfxFilter* pFilter = new SfxFilter(
             OUString::createFromAscii( pFmt->pFilterName ),
             OUString(), pFmt->nFormatType, nOptions,
             OUString::createFromAscii( pFmt->pTypeName ),
             0, OUString(),
             OUString::createFromAscii( pFmt->pUserData ),
             OUString("private:factory/simpress*") );
-        aFilter->SetVersion(SOFFICE_FILEFORMAT_CURRENT);
+        pFilter->SetVersion(SOFFICE_FILEFORMAT_CURRENT);
+        std::shared_ptr<const SfxFilter> pFilt(pFilter);
 
         ::sd::DrawDocShellRef xDocShRef = new ::sd::DrawDocShell();
-        SfxMedium* pSrcMed = new SfxMedium(rURL, STREAM_STD_READ, aFilter, pParams);
+        SfxMedium* pSrcMed = new SfxMedium(rURL, STREAM_STD_READ, pFilt, pParams);
         if ( !xDocShRef->DoLoad(pSrcMed) || !xDocShRef.Is() )
         {
             if (xDocShRef.Is())
@@ -148,14 +153,14 @@ protected:
         SotClipboardFormatId nExportFormat = SotClipboardFormatId::NONE;
         if (pFormat->nFormatType == ODP_FORMAT_TYPE)
             nExportFormat = SotClipboardFormatId::STARCALC_8;
-        SfxFilter* pExportFilter = new SfxFilter(
+        std::shared_ptr<const SfxFilter> pExportFilter(new SfxFilter(
                                         OUString::createFromAscii(pFormat->pFilterName),
                                         OUString(), pFormat->nFormatType, nExportFormat,
                                         OUString::createFromAscii(pFormat->pTypeName),
                                         0, OUString(),
                                         OUString::createFromAscii(pFormat->pUserData),
-                                        OUString("private:factory/simpress*") );
-        pExportFilter->SetVersion(SOFFICE_FILEFORMAT_CURRENT);
+                                        OUString("private:factory/simpress*") ));
+        const_cast<SfxFilter*>(pExportFilter.get())->SetVersion(SOFFICE_FILEFORMAT_CURRENT);
         aStoreMedium.SetFilter(pExportFilter);
         pShell->ConvertTo(aStoreMedium);
         pShell->DoClose();
@@ -167,34 +172,40 @@ protected:
         SotClipboardFormatId nExportFormat = SotClipboardFormatId::NONE;
         if (pFormat->nFormatType == ODP_FORMAT_TYPE)
             nExportFormat = SotClipboardFormatId::STARCHART_8;
-        SfxFilter* pExportFilter = new SfxFilter(
+        std::shared_ptr<const SfxFilter> pExportFilter(new SfxFilter(
                                         OUString::createFromAscii(pFormat->pFilterName),
                                         OUString(), pFormat->nFormatType, nExportFormat,
                                         OUString::createFromAscii(pFormat->pTypeName),
                                         0, OUString(),
                                         OUString::createFromAscii(pFormat->pUserData),
-                                        OUString("private:factory/simpress*") );
-        pExportFilter->SetVersion(SOFFICE_FILEFORMAT_CURRENT);
+                                        OUString("private:factory/simpress*") ));
+        const_cast<SfxFilter*>(pExportFilter.get())->SetVersion(SOFFICE_FILEFORMAT_CURRENT);
         aStoreMedium.SetFilter(pExportFilter);
         pShell->DoSaveAs(aStoreMedium);
         pShell->DoClose();
     }
 
-    sd::DrawDocShellRef saveAndReload(sd::DrawDocShell *pShell, sal_Int32 nExportType)
+    sd::DrawDocShellRef saveAndReload(sd::DrawDocShell *pShell, sal_Int32 nExportType,
+            utl::TempFile * pTempFile = nullptr)
     {
         FileFormat* pFormat = getFormat(nExportType);
-        utl::TempFile aTempFile;
-        save(pShell, pFormat, aTempFile);
+        std::unique_ptr<utl::TempFile> pNewTempFile;
+        if (!pTempFile)
+        {
+            pNewTempFile.reset(new utl::TempFile);
+            pTempFile = pNewTempFile.get();
+        }
+        save(pShell, pFormat, *pTempFile);
         if(nExportType == ODP)
         {
-            // BootstrapFixture::validate(aTempFile.GetFileName(), test::ODF);
+            // BootstrapFixture::validate(pTempFile->GetFileName(), test::ODF);
         }
         else if(nExportType == PPTX)
         {
-            BootstrapFixture::validate(aTempFile.GetFileName(), test::OOXML);
+            BootstrapFixture::validate(pTempFile->GetFileName(), test::OOXML);
         }
-        aTempFile.EnableKillingFile();
-        return loadURL(aTempFile.GetURL(), nExportType);
+        pTempFile->EnableKillingFile();
+        return loadURL(pTempFile->GetURL(), nExportType);
     }
 
     /** Dump shapes in xDocShRef, and compare the dump against content of pShapesDumpFileNameBase<number>.xml.
@@ -213,7 +224,7 @@ protected:
         uno::Reference< drawing::XDrawPages > xDrawPages = xDrawPagesSupplier->getDrawPages();
         CPPUNIT_ASSERT(xDrawPages.is());
 
-        XShapeDumper xShapeDumper;
+        XShapeDumper aShapeDumper;
         sal_Int32 nLength = xDrawPages->getCount();
         for (sal_Int32 i = 0; i < nLength; ++i)
         {
@@ -241,7 +252,7 @@ protected:
                         OUStringToOString(aString, RTL_TEXTENCODING_UTF8).getStr(),
                         static_cast<int>(aString.getLength()),
                         OUStringToOString(
-                            getPathFromSrc("/sd/qa/unit/data/tolerance.xml"),
+                            m_directories.getPathFromSrc("/sd/qa/unit/data/tolerance.xml"),
                             RTL_TEXTENCODING_UTF8).getStr());
             }
         }
@@ -320,6 +331,24 @@ protected:
         uno::Reference< text::XTextRange > xRun( runEnum->nextElement(), uno::UNO_QUERY);
 
         return xRun;
+    }
+
+    uno::Reference<text::XTextField> getTextFieldFromPage(int nRun, int nPara, int nShape, int nPage, sd::DrawDocShellRef xDocShRef)
+    {
+        // get TextShape 1 from the first page
+        uno::Reference< beans::XPropertySet > xShape( getShapeFromPage( nShape, nPage, xDocShRef ) );
+
+        // Get first paragraph
+        uno::Reference<text::XTextRange> xParagraph( getParagraphFromShape( nPara, xShape ) );
+
+        // first chunk of text
+        uno::Reference<text::XTextRange> xRun( getRunFromParagraph( nRun, xParagraph ) );
+
+        uno::Reference< beans::XPropertySet > xPropSet( xRun, uno::UNO_QUERY_THROW );
+
+        uno::Reference<text::XTextField> xField;
+        xPropSet->getPropertyValue("TextField") >>= xField;
+        return xField;
     }
 };
 

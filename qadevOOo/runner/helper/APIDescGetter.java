@@ -361,9 +361,12 @@ public class APIDescGetter extends DescGetter
             {
                 parent.hasErrorMsg = true;
                 parent.ErrorMsg = "IOException while reading the description";
-
-                return null;
+                break;
             }
+        }
+
+        if (ifcDesc == null) {
+            return null;
         }
 
         ifcDesc.SubEntries = getDescArray(meth_names.toArray());
@@ -392,7 +395,6 @@ public class APIDescGetter extends DescGetter
     private static String createClassName(String _ifc_name)
     {
         StringTokenizer st = new StringTokenizer(_ifc_name, ":");
-        String className = "";
 
         int count = 3;
 
@@ -400,6 +402,8 @@ public class APIDescGetter extends DescGetter
         {
             count = 4;
         }
+
+        StringBuilder className = new StringBuilder();
 
         for (int i = 0; st.hasMoreTokens(); i++)
         {
@@ -414,10 +418,10 @@ public class APIDescGetter extends DescGetter
                     token = "_" + token;
                 }
 
-                className += ("." + token);
+                className.append(".").append(token);
             }
         }
-        return className;
+        return className.toString();
     }
 
     private static String entryType;
@@ -624,8 +628,17 @@ public class APIDescGetter extends DescGetter
 
         DescEntry[] subEntries = getSubEntries(csvFile, theEntry);
 
-        theEntry.SubEntryCount = subEntries.length;
+        theEntry.SubEntryCount = subEntries != null ? subEntries.length : 0;
         theEntry.SubEntries = subEntries;
+
+        try
+        {
+            csvFile.close();
+        }
+        catch (java.io.IOException ioe)
+        {
+            System.out.println("Exception while closing csvFile");
+        }
 
         return theEntry;
     }
@@ -711,7 +724,16 @@ public class APIDescGetter extends DescGetter
 
         DescEntry[] subEntries = getSubEntries(csvFile, aEntry);
 
-        aEntry.SubEntryCount = subEntries.length;
+        try
+        {
+            csvFile.close();
+        }
+        catch (java.io.IOException ioe)
+        {
+            System.out.println("Exception while closing csvFile");
+        }
+
+        aEntry.SubEntryCount = subEntries != null ? subEntries.length : 0;
         aEntry.SubEntries = subEntries;
 
         return aEntry;
@@ -798,7 +820,9 @@ public class APIDescGetter extends DescGetter
             }
         }
 
-        for (int i = 0; i < modules.length; i++)
+        int moduleLength = modules != null ? modules.length : 0;
+
+        for (int i = 0; i < moduleLength; ++i)
         {
             if (!isUnusedModule(modules[i]))
             {

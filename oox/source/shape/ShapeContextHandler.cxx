@@ -17,6 +17,8 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
+#include <com/sun/star/beans/XPropertySet.hpp>
+#include <com/sun/star/xml/dom/XDocument.hpp>
 #include <com/sun/star/xml/sax/XFastSAXSerializable.hpp>
 
 #include "ShapeContextHandler.hxx"
@@ -25,8 +27,11 @@
 #include "WpsContext.hxx"
 #include "WpgContext.hxx"
 #include "services.hxx"
+#include <basegfx/matrix/b2dhommatrix.hxx>
 #include "oox/vml/vmldrawingfragment.hxx"
 #include "oox/vml/vmlshape.hxx"
+#include <oox/token/namespaces.hxx>
+#include <oox/token/tokens.hxx>
 #include "oox/drawingml/themefragmenthandler.hxx"
 #include <cppuhelper/supportsservice.hxx>
 #include <memory>
@@ -56,9 +61,8 @@ ShapeContextHandler_createInstance( const uno::Reference< uno::XComponentContext
     return static_cast< ::cppu::OWeakObject* >( new ShapeContextHandler(context) );
 }
 
-ShapeContextHandler::ShapeContextHandler
-(uno::Reference< uno::XComponentContext > const & context) :
-mnStartToken(0), m_xContext(context)
+ShapeContextHandler::ShapeContextHandler(uno::Reference< uno::XComponentContext > const & context) :
+  mnStartToken(0)
 {
     try
     {
@@ -273,13 +277,7 @@ void SAL_CALL ShapeContextHandler::startFastElement
  const uno::Reference< xml::sax::XFastAttributeList > & Attribs)
     throw (uno::RuntimeException, xml::sax::SAXException, std::exception)
 {
-    static const OUString sInputStream
-        ("InputStream");
-
-    uno::Sequence<beans::PropertyValue> aSeq(1);
-    aSeq[0].Name = sInputStream;
-    aSeq[0].Value <<= mxInputStream;
-    mxFilterBase->filter(aSeq);
+    mxFilterBase->filter(maMediaDescriptor);
 
     mpThemePtr.reset(new Theme());
 
@@ -574,19 +572,6 @@ void SAL_CALL ShapeContextHandler::setModel
     mxFilterBase->setTargetDocument(xComp);
 }
 
-uno::Reference< io::XInputStream > SAL_CALL
-ShapeContextHandler::getInputStream() throw (uno::RuntimeException, std::exception)
-{
-    return mxInputStream;
-}
-
-void SAL_CALL ShapeContextHandler::setInputStream
-(const uno::Reference< io::XInputStream > & the_value)
-    throw (uno::RuntimeException, std::exception)
-{
-    mxInputStream = the_value;
-}
-
 OUString SAL_CALL ShapeContextHandler::getRelationFragmentPath()
     throw (uno::RuntimeException, std::exception)
 {
@@ -630,6 +615,18 @@ uno::Reference<document::XDocumentProperties> SAL_CALL ShapeContextHandler::getD
     throw (css::uno::RuntimeException, std::exception)
 {
     return mxDocumentProperties;
+}
+
+uno::Sequence<beans::PropertyValue> SAL_CALL ShapeContextHandler::getMediaDescriptor()
+    throw (uno::RuntimeException, std::exception)
+{
+    return maMediaDescriptor;
+}
+
+void SAL_CALL ShapeContextHandler::setMediaDescriptor(const uno::Sequence<beans::PropertyValue>& rMediaDescriptor)
+    throw (uno::RuntimeException, std::exception)
+{
+    maMediaDescriptor = rMediaDescriptor;
 }
 
 OUString ShapeContextHandler::getImplementationName()

@@ -154,7 +154,7 @@ static bool lcl_CopyData( ScDocument* pSrcDoc, const ScRange& rSrcRange,
     aSourceMark.SelectOneTable( nSrcTab );      // for CopyToClip
     aSourceMark.SetMarkArea( rSrcRange );
     ScClipParam aClipParam(rSrcRange, false);
-    pSrcDoc->CopyToClip(aClipParam, pClipDoc.get(), &aSourceMark);
+    pSrcDoc->CopyToClip(aClipParam, pClipDoc.get(), &aSourceMark, false, false);
 
     if ( pClipDoc->HasAttrib( 0,0,nSrcTab, MAXCOL,MAXROW,nSrcTab,
                                 HASATTR_MERGED | HASATTR_OVERLAPPED ) )
@@ -519,7 +519,7 @@ uno::Any SAL_CALL ScFunctionAccess::callFunction( const OUString& aName,
         const uno::Any& rArg = pArgArr[nPos];
 
         uno::TypeClass eClass = rArg.getValueTypeClass();
-        uno::Type aType = rArg.getValueType();
+        const uno::Type& aType = rArg.getValueType();
         if ( eClass == uno::TypeClass_BYTE ||
              eClass == uno::TypeClass_BOOLEAN ||
              eClass == uno::TypeClass_SHORT ||
@@ -621,7 +621,7 @@ uno::Any SAL_CALL ScFunctionAccess::callFunction( const OUString& aName,
         //  if there is no matrix result
 
         const ScMatrix* pMat = (mbArray && pFormula) ? pFormula->GetMatrix() : nullptr;
-        sal_uInt16 nErrCode = pFormula ? pFormula->GetErrCode() : errIllegalArgument;
+        sal_uInt16 nErrCode = pFormula ? pFormula->GetErrCode() : formula::errIllegalArgument;
         if ( nErrCode == 0 )
         {
             if ( pMat )
@@ -641,7 +641,7 @@ uno::Any SAL_CALL ScFunctionAccess::callFunction( const OUString& aName,
                 aRet <<= aStrVal;
             }
         }
-        else if ( nErrCode == NOTAVAILABLE )
+        else if ( nErrCode == formula::NOTAVAILABLE )
         {
             // #N/A: leave result empty, no exception
         }

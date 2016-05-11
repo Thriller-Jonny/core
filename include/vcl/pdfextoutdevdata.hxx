@@ -86,6 +86,8 @@ class VCL_DLLPUBLIC PDFExtOutDevData : public ExtOutDevData
     bool                        mbExportNDests; //i56629
     sal_Int32                   mnFormsFormat;
     sal_Int32                   mnPage;
+    sal_Int32                   mnCompressionQuality;
+    sal_Int32                   mnMaxImageResolution;
     css::lang::Locale           maDocLocale;
 
     PageSyncData*               mpPageSyncData;
@@ -102,8 +104,6 @@ public:
     void ResetSyncData();
 
     void PlayGlobalActions( PDFWriter& rWriter );
-
-
 
     bool    GetIsExportNotes() const { return mbExportNotes;}
     void        SetIsExportNotes( const bool bExportNotes );
@@ -135,16 +135,24 @@ public:
     sal_Int32   GetCurrentPageNumber() const { return mnPage;}
     void        SetCurrentPageNumber( const sal_Int32 nPage );
 
-    bool    GetIsLosslessCompression() const { return mbUseLosslessCompression;}
+    bool        GetIsLosslessCompression() const { return mbUseLosslessCompression;}
     void        SetIsLosslessCompression( const bool bLosslessCompression );
 
-    bool    GetIsReduceImageResolution() const { return mbReduceImageResolution;}
+    sal_Int32   GetCompressionQuality() const { return mnCompressionQuality; }
+    void        SetCompressionQuality( const sal_Int32 nQuality );
+
+    sal_Int32   GetMaxImageResolution() const { return mnMaxImageResolution; }
+    void        SetMaxImageResolution( const sal_Int32 nQuality );
+
+    bool        GetIsReduceImageResolution() const { return mbReduceImageResolution;}
     void        SetIsReduceImageResolution( const bool bReduceImageResolution );
 
     const css::lang::Locale& GetDocumentLocale() const { return maDocLocale;}
     void        SetDocumentLocale( const css::lang::Locale& rLoc );
 
     std::vector< PDFExtOutDevBookmarkEntry >& GetBookmarks() { return maBookmarks;}
+
+    const Graphic& GetCurrentGraphic() const;
 
     /** Start a new group of render output
 
@@ -176,9 +184,15 @@ public:
         rOutputRect, e.g. for cropped graphics.
      */
     void        EndGroup( const Graphic&    rGraphic,
-                          sal_uInt8             nTransparency,
+                          sal_uInt8         nTransparency,
                           const Rectangle&  rOutputRect,
                           const Rectangle&  rVisibleOutputRect );
+
+    /// Detect if stream is compressed enough to avoid de-compress / scale & re-compress
+    bool        HasAdequateCompression( const Graphic &rGraphic,
+                                        const Rectangle &rOutputRect,
+                                        const Rectangle &rVisibleOutputRect ) const;
+
 //--->i56629
     /** Create a new named destination to be used in a link to this document from another PDF document
  (see PDF spec 1.4, 8.2.1)
@@ -193,14 +207,11 @@ public:
     number of page the dest is on (as returned by NewPage)
     or -1 in which case the current page is used
 
-    @param eType
-    what dest type to use
-
     @returns
     the destination id (to be used in SetLinkDest) or
     -1 if page id does not exist
     */
-    sal_Int32 CreateNamedDest( const OUString& sDestName,  const Rectangle& rRect, sal_Int32 nPageNr = -1, PDFWriter::DestAreaType eType = PDFWriter::XYZ );
+    sal_Int32 CreateNamedDest( const OUString& sDestName,  const Rectangle& rRect, sal_Int32 nPageNr = -1 );
 
     /** registers a destination for which a destinatin ID needs to be known immediately, instead of later on setting it via
         SetLinkDest.
@@ -465,11 +476,8 @@ public:
     @param nMilliSec
     the duration of the transitional effect in milliseconds;
     set 0 to disable transitional effects
-
-    @param nPageNr
-    the page number to apply the effect to; -1 denotes the current page
     */
-    void SetPageTransition( PDFWriter::PageTransition eType, sal_uInt32 nMilliSec, sal_Int32 nPageNr = -1 );
+    void SetPageTransition( PDFWriter::PageTransition eType, sal_uInt32 nMilliSec );
 
     /** create a new form control
 
@@ -479,11 +487,8 @@ public:
 
     @param rControlType
     a descendant of AnyWidget determining the control's properties
-
-    @param nPageNr
-    the page number to apply the effect to; -1 denotes the current page
      */
-    void    CreateControl( const PDFWriter::AnyWidget& rControlType, sal_Int32 nPageNr = -1 );
+    void    CreateControl( const PDFWriter::AnyWidget& rControlType );
 };
 
 }

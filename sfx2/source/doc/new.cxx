@@ -223,7 +223,7 @@ IMPL_LINK_NOARG_TYPED(SfxNewFileDialog_Impl, Update, Idle*, void)
             SfxItemSet* pSet = new SfxAllItemSet(pSfxApp->GetPool());
             pSet->Put(SfxBoolItem(SID_TEMPLATE, true));
             pSet->Put(SfxBoolItem(SID_PREVIEW, true));
-            lErr = pSfxApp->LoadTemplate(xDocShell, aFileName, true, pSet);
+            lErr = pSfxApp->LoadTemplate(xDocShell, aFileName, pSet);
             if (lErr)
                 ErrorHandler::HandleError(lErr);
             Application::SetDefDialogParent(pParent);
@@ -342,7 +342,6 @@ void    SfxNewFileDialog_Impl::SetTemplateFlags(SfxTemplateFlags nSet)
     m_pNumStyleCB->Check(   bool(nSet & SfxTemplateFlags::LOAD_NUM_STYLES  ));
     m_pMergeStyleCB->Check( bool(nSet & SfxTemplateFlags::MERGE_STYLES     ));
 }
-
 
 
 SfxNewFileDialog_Impl::SfxNewFileDialog_Impl(

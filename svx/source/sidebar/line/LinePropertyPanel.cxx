@@ -17,7 +17,6 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 #include <sfx2/sidebar/ResourceDefinitions.hrc>
-#include <sfx2/sidebar/Theme.hxx>
 #include <sfx2/sidebar/ControlFactory.hxx>
 #include <LinePropertyPanel.hxx>
 #include <LinePropertyPanel.hrc>
@@ -48,12 +47,9 @@
 #include <svx/xlinjoit.hxx>
 #include "svx/sidebar/PopupContainer.hxx"
 #include "svx/sidebar/PopupControl.hxx"
-#include "LineWidthControl.hxx"
-#include <boost/bind.hpp>
 
 using namespace css;
 using namespace css::uno;
-using sfx2::sidebar::Theme;
 
 namespace svx { namespace sidebar {
 
@@ -72,7 +68,8 @@ LinePropertyPanel::LinePropertyPanel(
     maTransControl(SID_ATTR_LINE_TRANSPARENCE, *pBindings, *this),
     maEdgeStyle(SID_ATTR_LINE_JOINT, *pBindings, *this),
     maCapStyle(SID_ATTR_LINE_CAP, *pBindings, *this),
-    mpBindings(pBindings)
+    mpBindings(pBindings),
+    maContext()
 {
     Initialize();
 }
@@ -186,44 +183,76 @@ void LinePropertyPanel::NotifyItemUpdate(
     ActivateControls();
 }
 
+void LinePropertyPanel::HandleContextChange(
+    const sfx2::sidebar::EnumContext& rContext)
+{
+    if(maContext == rContext)
+    {
+        // Nothing to do
+        return;
+    }
+
+    maContext = rContext;
+    bool bShowArrows = false;
+
+    switch(maContext.GetCombinedContext_DI())
+    {
+        case CombinedEnumContext(Application_Calc, Context_DrawLine):
+        case CombinedEnumContext(Application_DrawImpress, Context_DrawLine):
+            bShowArrows = true;
+            break;
+    }
+
+    if(!bShowArrows)
+        disableArrowHead();
+}
+
 void LinePropertyPanel::setLineStyle(const XLineStyleItem& rItem)
 {
-    GetBindings()->GetDispatcher()->Execute(SID_ATTR_LINE_STYLE, SfxCallMode::RECORD, &rItem, 0L);
+    GetBindings()->GetDispatcher()->ExecuteList(SID_ATTR_LINE_STYLE,
+            SfxCallMode::RECORD, { &rItem });
 }
 
 void LinePropertyPanel::setLineDash(const XLineDashItem& rItem)
 {
-    GetBindings()->GetDispatcher()->Execute(SID_ATTR_LINE_DASH, SfxCallMode::RECORD, &rItem, 0L);
+    GetBindings()->GetDispatcher()->ExecuteList(SID_ATTR_LINE_DASH,
+            SfxCallMode::RECORD, { &rItem });
 }
 
 void LinePropertyPanel::setLineEndStyle(const XLineEndItem* pItem)
 {
-    GetBindings()->GetDispatcher()->Execute(SID_ATTR_LINEEND_STYLE, SfxCallMode::RECORD, pItem,  0L);
+    GetBindings()->GetDispatcher()->ExecuteList(SID_ATTR_LINEEND_STYLE,
+            SfxCallMode::RECORD, { pItem });
 }
 
 void LinePropertyPanel::setLineStartStyle(const XLineStartItem* pItem)
 {
-    GetBindings()->GetDispatcher()->Execute(SID_ATTR_LINEEND_STYLE, SfxCallMode::RECORD, pItem,  0L);
+    GetBindings()->GetDispatcher()->ExecuteList(SID_ATTR_LINEEND_STYLE,
+            SfxCallMode::RECORD, { pItem });
 }
 
 void LinePropertyPanel::setLineJoint(const XLineJointItem* pItem)
 {
-    GetBindings()->GetDispatcher()->Execute(SID_ATTR_LINE_JOINT, SfxCallMode::RECORD, pItem,  0L);
+    GetBindings()->GetDispatcher()->ExecuteList(SID_ATTR_LINE_JOINT,
+            SfxCallMode::RECORD, { pItem });
 }
 
 void LinePropertyPanel::setLineCap(const XLineCapItem* pItem)
 {
-    GetBindings()->GetDispatcher()->Execute(SID_ATTR_LINE_CAP, SfxCallMode::RECORD, pItem,  0L);
+    GetBindings()->GetDispatcher()->ExecuteList(SID_ATTR_LINE_CAP,
+            SfxCallMode::RECORD, { pItem });
 }
 
 void LinePropertyPanel::setLineTransparency(const XLineTransparenceItem& rItem)
 {
-    GetBindings()->GetDispatcher()->Execute(SID_ATTR_LINE_STYLE, SfxCallMode::RECORD, &rItem, 0L);
+    GetBindings()->GetDispatcher()->ExecuteList(SID_ATTR_LINE_STYLE,
+            SfxCallMode::RECORD, { &rItem });
 }
 
 void LinePropertyPanel::setLineWidth(const XLineWidthItem& rItem)
 {
-    GetBindings()->GetDispatcher()->Execute(SID_ATTR_LINE_WIDTH, SfxCallMode::RECORD, &rItem, 0L);
+    GetBindings()->GetDispatcher()->ExecuteList(SID_ATTR_LINE_WIDTH,
+            SfxCallMode::RECORD, { &rItem });
 }
 
 }} // end of namespace svx::sidebar

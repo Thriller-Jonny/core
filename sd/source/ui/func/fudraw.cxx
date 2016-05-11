@@ -17,10 +17,10 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <sot/object.hxx>
+#include <sal/config.h>
+
 #include <editeng/eeitem.hxx>
 #include <vcl/waitobj.hxx>
-
 #include <editeng/flditem.hxx>
 #include <svx/svdogrp.hxx>
 #include <svx/svdoole2.hxx>
@@ -36,7 +36,6 @@
 #include <svx/svxids.hrc>
 #include <svx/obj3d.hxx>
 #include <svx/polysc3d.hxx>
-
 #include <sfx2/viewfrm.hxx>
 
 #include "anminfo.hxx"
@@ -79,7 +78,6 @@ FuDraw::FuDraw(ViewShell* pViewSh, ::sd::Window* pWin, ::sd::View* pView,
     , bDragHelpLine(false)
     , nHelpLine(0)
     , bPermanent(false)
-    , bIsImageSelected(false)
 {
 }
 
@@ -155,23 +153,6 @@ bool FuDraw::MouseButtonDown(const MouseEvent& rMEvt)
     bool bReturn = false;
     bDragHelpLine = false;
     aMDPos = mpWindow->PixelToLogic( rMEvt.GetPosPixel() );
-
-    // Check whether an image is selected
-    bIsImageSelected = false;
-    if (mpView->AreObjectsMarked())
-    {
-        const SdrMarkList& rMarkList = mpView->GetMarkedObjectList();
-        if (rMarkList.GetMarkCount() == 1)
-        {
-            SdrMark* pMark = rMarkList.GetMark(0);
-            // tdf#89758 Extra check to avoid interactive crop preview from being
-            // proportionally scaled by default.
-            if (mpView->GetDragMode() != SDRDRAG_CROP)
-            {
-                bIsImageSelected = pMark->GetMarkedSdrObj()->GetObjIdentifier() == OBJ_GRAF;
-            }
-        }
-    }
 
     if ( rMEvt.IsLeft() )
     {
@@ -260,7 +241,7 @@ bool FuDraw::MouseMove(const MouseEvent& rMEvt)
     if (mpView->IsAction())
     {
         // #i33136# and fdo#88339
-        if(bRestricted && (bIsImageSelected || doConstructOrthogonal()))
+        if(bRestricted && doConstructOrthogonal())
         {
             // Scale proportionally by default:
             // rectangle->quadrat, ellipse->circle, Images etc.
@@ -740,9 +721,10 @@ void FuDraw::DoubleClick(const MouseEvent& rMEvt)
                       !mpDocSh->IsReadOnly())
             {
                 SfxUInt16Item aItem(SID_TEXTEDIT, 2);
-                mpViewShell->GetViewFrame()->GetDispatcher()->
-                                 Execute(SID_TEXTEDIT, SfxCallMode::ASYNCHRON |
-                                         SfxCallMode::RECORD, &aItem, 0L);
+                mpViewShell->GetViewFrame()->GetDispatcher()->ExecuteList(
+                        SID_TEXTEDIT,
+                        SfxCallMode::ASYNCHRON | SfxCallMode::RECORD,
+                        { &aItem });
             }
             else if (nInv == SdrInventor &&  nSdrObjKind == OBJ_GRUP)
             {

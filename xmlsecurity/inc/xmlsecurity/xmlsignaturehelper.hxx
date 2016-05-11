@@ -25,6 +25,7 @@
 #include <tools/link.hxx>
 #include <rtl/ustring.hxx>
 #include <xmlsecurity/sigstruct.hxx>
+#include <xmlsecuritydllapi.h>
 
 #include <com/sun/star/uno/XComponentContext.hpp>
 #include <com/sun/star/xml/sax/XWriter.hpp>
@@ -51,9 +52,9 @@ namespace embed {
 struct XMLSignatureCreationResult
 {
     sal_Int32 nSecurityId;
-    com::sun::star::xml::crypto::SecurityOperationStatus nSignatureCreationResult;
+    css::xml::crypto::SecurityOperationStatus nSignatureCreationResult;
 
-    XMLSignatureCreationResult( sal_Int32 nId, com::sun::star::xml::crypto::SecurityOperationStatus nResult )
+    XMLSignatureCreationResult( sal_Int32 nId, css::xml::crypto::SecurityOperationStatus nResult )
     {
         nSecurityId = nId;
         nSignatureCreationResult = nResult;
@@ -63,15 +64,14 @@ struct XMLSignatureCreationResult
 struct XMLSignatureVerifyResult
 {
     sal_Int32 nSecurityId;
-    com::sun::star::xml::crypto::SecurityOperationStatus nSignatureVerifyResult;
+    css::xml::crypto::SecurityOperationStatus nSignatureVerifyResult;
 
-    XMLSignatureVerifyResult( sal_Int32 nId, com::sun::star::xml::crypto::SecurityOperationStatus nResult )
+    XMLSignatureVerifyResult( sal_Int32 nId, css::xml::crypto::SecurityOperationStatus nResult )
     {
         nSecurityId = nId;
         nSignatureVerifyResult = nResult;
     }
 };
-
 
 
 /**********************************************************
@@ -87,15 +87,15 @@ struct XMLSignatureVerifyResult
 
  **********************************************************/
 
-class XMLSignatureHelper
+class XMLSECURITY_DLLPUBLIC XMLSignatureHelper
 {
 private:
-    ::com::sun::star::uno::Reference< com::sun::star::uno::XComponentContext > mxCtx;
-    ::com::sun::star::uno::Reference< com::sun::star::xml::crypto::sax::XSecurityController > mxSecurityController;
-    ::com::sun::star::uno::Reference< com::sun::star::xml::crypto::XUriBinding > mxUriBinding;
+    css::uno::Reference< css::uno::XComponentContext > mxCtx;
+    css::uno::Reference< css::xml::crypto::sax::XSecurityController > mxSecurityController;
+    css::uno::Reference< css::xml::crypto::XUriBinding > mxUriBinding;
 
-    ::com::sun::star::uno::Reference< com::sun::star::xml::crypto::XSEInitializer > mxSEInitializer;
-    ::com::sun::star::uno::Reference< com::sun::star::xml::crypto::XXMLSecurityContext > mxSecurityContext;
+    css::uno::Reference< css::xml::crypto::XSEInitializer > mxSEInitializer;
+    css::uno::Reference< css::xml::crypto::XXMLSecurityContext > mxSecurityContext;
 
     std::vector<XMLSignatureCreationResult>
                                 maCreationResults;
@@ -114,7 +114,7 @@ private:
     XMLSignatureHelper(const XMLSignatureHelper&) = delete;
 
 public:
-    XMLSignatureHelper(const com::sun::star::uno::Reference< com::sun::star::uno::XComponentContext >& mrCtx );
+    XMLSignatureHelper(const css::uno::Reference< css::uno::XComponentContext >& mrCtx );
     ~XMLSignatureHelper();
 
     // Initialize the security context with default crypto token.
@@ -124,7 +124,7 @@ public:
     // Set the storage which should be used by the default UriBinding
     // Must be set before StatrtMission().
     //sODFVersion indicates  the ODF version
-    void        SetStorage( const com::sun::star::uno::Reference < com::sun::star::embed::XStorage >& rxStorage, const OUString& sODFVersion );
+    void        SetStorage( const css::uno::Reference < css::embed::XStorage >& rxStorage, const OUString& sODFVersion );
 
                 // Argument for the Link is a uno::Reference< xml::sax::XAttributeList >*
                 // Return 1 to verify, 0 to skip.
@@ -132,9 +132,9 @@ public:
     void        SetStartVerifySignatureHdl( const Link<LinkParamNone*,bool>& rLink );
 
                 // Get the security environment
-    ::com::sun::star::uno::Reference< ::com::sun::star::xml::crypto::XSecurityEnvironment > GetSecurityEnvironment();
+    css::uno::Reference< css::xml::crypto::XSecurityEnvironment > GetSecurityEnvironment();
 
-                // After signing/veryfieng, get information about signatures
+                // After signing/verifying, get information about signatures
     SignatureInformation  GetSignatureInformation( sal_Int32 nSecurityId ) const;
     SignatureInformations GetSignatureInformations() const;
 
@@ -161,20 +161,36 @@ public:
         certificate.
      */
     void SetX509Certificate(sal_Int32 nSecurityId, const OUString& ouX509IssuerName,
-        const OUString& ouX509SerialNumber, const OUString& ouX509Cert);
+        const OUString& ouX509SerialNumber, const OUString& ouX509Cert, const OUString& ouX509CertDigest);
 
     void        SetDateTime( sal_Int32 nSecurityId, const Date& rDate, const tools::Time& rTime );
+    void SetDescription(sal_Int32 nSecurityId, const OUString& rDescription);
 
     void        AddForSigning( sal_Int32 securityId, const OUString& uri, const OUString& objectURL, bool bBinary );
-    bool        CreateAndWriteSignature( const com::sun::star::uno::Reference< com::sun::star::xml::sax::XDocumentHandler >& xDocumentHandler );
-    bool        ReadAndVerifySignature( const com::sun::star::uno::Reference< com::sun::star::io::XInputStream >& xInputStream );
+    bool        CreateAndWriteSignature( const css::uno::Reference< css::xml::sax::XDocumentHandler >& xDocumentHandler );
+    bool        ReadAndVerifySignature( const css::uno::Reference< css::io::XInputStream >& xInputStream );
 
     // MT: ??? I think only for adding/removing, not for new signatures...
     // MM: Yes, but if you want to insert a new signature into an existing signature file, those function
     //     will be very useful, see Mission 3 in the new "multisigdemo" program   :-)
-    ::com::sun::star::uno::Reference< ::com::sun::star::xml::sax::XWriter> CreateDocumentHandlerWithHeader( const com::sun::star::uno::Reference< com::sun::star::io::XOutputStream >& xOutputStream );
-    static void CloseDocumentHandler( const ::com::sun::star::uno::Reference< com::sun::star::xml::sax::XDocumentHandler>& xDocumentHandler );
-    static void ExportSignature( const com::sun::star::uno::Reference< com::sun::star::xml::sax::XDocumentHandler >& xDocumentHandler, const SignatureInformation& signatureInfo );
+    css::uno::Reference< css::xml::sax::XWriter> CreateDocumentHandlerWithHeader( const css::uno::Reference< css::io::XOutputStream >& xOutputStream );
+    static void CloseDocumentHandler( const css::uno::Reference< css::xml::sax::XDocumentHandler>& xDocumentHandler );
+    static void ExportSignature( const css::uno::Reference< css::xml::sax::XDocumentHandler >& xDocumentHandler, const SignatureInformation& signatureInfo );
+
+    /// Read and verify OOXML signatures.
+    bool ReadAndVerifySignatureStorage(const css::uno::Reference<css::embed::XStorage>& xStorage, bool bCacheLastSignature = true);
+    /// Read and verify a single OOXML signature.
+    bool ReadAndVerifySignatureStorageStream(const css::uno::Reference<css::io::XInputStream>& xInputStream);
+    /// Adds or removes an OOXML digital signature relation to _rels/.rels if there wasn't any before.
+    void EnsureSignaturesRelation(const css::uno::Reference<css::embed::XStorage>& xStorage, bool bAdd);
+    /// Given that xStorage is an OOXML _xmlsignatures storage, create origin.sigs and its relations.
+    void ExportSignatureRelations(const css::uno::Reference<css::embed::XStorage>& xStorage, int nSignatureCount);
+    /// Given that xSignatureStorage is an OOXML _xmlsignatures storage, create and write a new signature.
+    bool CreateAndWriteOOXMLSignature(const css::uno::Reference<css::embed::XStorage>& xRootStorage, const css::uno::Reference<css::embed::XStorage>& xSignatureStorage, int nSignatureIndex);
+    /// Similar to CreateAndWriteOOXMLSignature(), but used to write the signature to the persistent storage, not the temporary one.
+    void ExportOOXMLSignature(const css::uno::Reference<css::embed::XStorage>& xRootStorage, const css::uno::Reference<css::embed::XStorage>& xSignatureStorage, const SignatureInformation& rInformation, int nSignatureIndex);
+    /// Given that xStorage is an OOXML root storage, advertise signatures in its [Content_Types].xml stream.
+    void ExportSignatureContentTypes(const css::uno::Reference<css::embed::XStorage>& xStorage, int nSignatureCount);
 };
 
 #endif // INCLUDED_XMLSECURITY_INC_XMLSECURITY_XMLSIGNATUREHELPER_HXX

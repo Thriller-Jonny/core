@@ -132,21 +132,6 @@ namespace utl
         return sLocalName;
     }
 
-    OUString OConfigurationNode::getNodePath() const
-    {
-        OUString sNodePath;
-        try
-        {
-            Reference< XHierarchicalName > xNamed( m_xDirectAccess, UNO_QUERY_THROW );
-            sNodePath = xNamed->getHierarchicalName();
-        }
-        catch( const Exception& )
-        {
-            DBG_UNHANDLED_EXCEPTION();
-        }
-        return sNodePath;
-    }
-
     OUString OConfigurationNode::normalizeName(const OUString& _rName, NAMEORIGIN _eOrigin) const
     {
         OUString sName(_rName);
@@ -566,13 +551,13 @@ namespace utl
     }
 
     OConfigurationTreeRoot OConfigurationTreeRoot::tryCreateWithComponentContext( const Reference< XComponentContext >& rxContext,
-        const OUString& _rPath, sal_Int32 _nDepth , CREATION_MODE _eMode , bool _bLazyWrite )
+        const OUString& _rPath, sal_Int32 _nDepth , CREATION_MODE _eMode )
     {
         OSL_ENSURE( rxContext.is(), "OConfigurationTreeRoot::tryCreateWithComponentContext: invalid XComponentContext!" );
         try
         {
             Reference< XMultiServiceFactory > xConfigFactory = theDefaultProvider::get( rxContext );
-            return createWithProvider( xConfigFactory, _rPath, _nDepth, _eMode, _bLazyWrite );
+            return createWithProvider( xConfigFactory, _rPath, _nDepth, _eMode );
         }
         catch(const Exception&)
         {

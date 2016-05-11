@@ -25,7 +25,7 @@
 #include <editeng/scripttypeitem.hxx>
 
 #include <vcl/keycodes.hxx>
-#include <vcl/cmdevt.hxx>
+#include <vcl/commandevent.hxx>
 
 #include <hintids.hxx>
 #include <extinput.hxx>
@@ -148,7 +148,7 @@ void SwExtTextInput::SetInputData( const CommandExtTextInputData& rData )
         }
 
         SwIndex aIdx( pTNd, nSttCnt );
-        const OUString rNewStr = rData.GetText();
+        const OUString& rNewStr = rData.GetText();
 
         if( bIsOverwriteCursor && !sOverwriteText.isEmpty() )
         {

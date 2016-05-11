@@ -31,12 +31,12 @@
 #include <fmtcntnt.hxx>
 #include <frmatr.hxx>
 #include <swtable.hxx>
-#include <crsskip.hxx>
 #include <flyfrm.hxx>
 #include <fmteiro.hxx>
 #include <section.hxx>
 #include <sectfrm.hxx>
 #include <ndtxt.hxx>
+#include <swcrsr.hxx>
 
 #include <IMark.hxx>
 #include <DocumentSettingManager.hxx>
@@ -529,7 +529,7 @@ SwPaM* SwPaM::MakeRegion( SwMoveFn fnMove, const SwPaM * pOrigRg )
     return pPam;
 }
 
-SwPaM & SwPaM::Normalize(bool bPointFirst)
+void SwPaM::Normalize(bool bPointFirst)
 {
     if (HasMark())
         if ( ( bPointFirst && *m_pPoint > *m_pMark) ||
@@ -537,7 +537,6 @@ SwPaM & SwPaM::Normalize(bool bPointFirst)
         {
             Exchange();
         }
-    return *this;
 }
 
 /// return page number at cursor (for reader and page bound frames)

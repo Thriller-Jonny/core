@@ -1,3 +1,4 @@
+/* -*- Mode: Java; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /*
  * This file is part of the LibreOffice project.
  *
@@ -102,7 +103,7 @@ public class PipedConnection implements XConnection {
     }
 
     /**
-     * This is a private method, used to cummunicate internal in the pipe.
+     * This is a private method, used to communicate internal in the pipe.
      */
     private synchronized void receive(byte aData[]) throws com.sun.star.io.IOException {
         int bytesWritten = 0;
@@ -255,3 +256,4 @@ public class PipedConnection implements XConnection {
 
 }
 
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -39,7 +39,6 @@
 #include <drawinglayer/primitive2d/transformprimitive2d.hxx>
 #include <drawinglayer/primitive2d/markerarrayprimitive2d.hxx>
 #include <drawinglayer/primitive2d/pointarrayprimitive2d.hxx>
-#include <drawinglayer/primitive2d/wrongspellprimitive2d.hxx>
 #include <drawinglayer/primitive2d/pagepreviewprimitive2d.hxx>
 #include <tools/diagnose_ex.h>
 #include <rtl/ustrbuf.hxx>
@@ -55,16 +54,11 @@
 
 // control support
 
-#include <com/sun/star/awt/XWindow2.hpp>
-#include <com/sun/star/awt/PosSize.hpp>
-#include <com/sun/star/awt/XView.hpp>
 #include <drawinglayer/primitive2d/controlprimitive2d.hxx>
 #include <drawinglayer/primitive2d/textlayoutdevice.hxx>
 
-// for test, can be removed again
 #include <basegfx/polygon/b2dpolygonclipper.hxx>
 #include <basegfx/polygon/b2dtrapezoid.hxx>
-// <- for test
 
 using namespace com::sun::star;
 
@@ -98,16 +92,6 @@ namespace drawinglayer
 {
     namespace processor2d
     {
-        // UNO class usages
-        using ::com::sun::star::uno::Reference;
-        using ::com::sun::star::uno::UNO_QUERY;
-        using ::com::sun::star::uno::UNO_QUERY_THROW;
-        using ::com::sun::star::uno::Exception;
-        using ::com::sun::star::awt::XView;
-        using ::com::sun::star::awt::XGraphics;
-        using ::com::sun::star::awt::XWindow;
-        using ::com::sun::star::awt::PosSize::POSSIZE;
-
         // rendering support
 
         // directdraw of text simple portion or decorated portion primitive. When decorated, all the extra
@@ -153,7 +137,7 @@ namespace drawinglayer
                     }
 
                     // Don't draw fonts without height
-                    if( aFont.GetHeight() <= 0 )
+                    if( aFont.GetFontHeight() <= 0 )
                         return;
 
                     // handle additional font attributes
@@ -168,8 +152,8 @@ namespace drawinglayer
                         mpOutputDevice->SetTextLineColor( Color(aTextlineColor) );
 
                         // set Overline attribute
-                        const FontUnderline eFontOverline(primitive2d::mapTextLineToFontUnderline( pTCPP->getFontOverline() ));
-                        if( eFontOverline != UNDERLINE_NONE )
+                        const FontLineStyle eFontOverline(primitive2d::mapTextLineToFontLineStyle( pTCPP->getFontOverline() ));
+                        if( eFontOverline != LINESTYLE_NONE )
                         {
                             aFont.SetOverline( eFontOverline );
                             const basegfx::BColor aOverlineColor = maBColorModifierStack.getModifiedColor(pTCPP->getOverlineColor());
@@ -179,10 +163,10 @@ namespace drawinglayer
                         }
 
                         // set Underline attribute
-                        const FontUnderline eFontUnderline(primitive2d::mapTextLineToFontUnderline( pTCPP->getFontUnderline() ));
-                        if( eFontUnderline != UNDERLINE_NONE )
+                        const FontLineStyle eFontLineStyle(primitive2d::mapTextLineToFontLineStyle( pTCPP->getFontUnderline() ));
+                        if( eFontLineStyle != LINESTYLE_NONE )
                         {
-                            aFont.SetUnderline( eFontUnderline );
+                            aFont.SetUnderline( eFontLineStyle );
                             if( pTCPP->getWordLineMode() )
                                 aFont.SetWordLineMode( true );
                         }
@@ -195,27 +179,27 @@ namespace drawinglayer
 
 
                         // set EmphasisMark attribute
-                        FontEmphasisMark eFontEmphasisMark = EMPHASISMARK_NONE;
+                        FontEmphasisMark eFontEmphasisMark = FontEmphasisMark::NONE;
                         switch( pTCPP->getTextEmphasisMark() )
                         {
                             default:
                                 SAL_WARN("drawinglayer", "Unknown EmphasisMark style " << pTCPP->getTextEmphasisMark() );
-                                // fall through
-                            case primitive2d::TEXT_EMPHASISMARK_NONE:   eFontEmphasisMark = EMPHASISMARK_NONE; break;
-                            case primitive2d::TEXT_EMPHASISMARK_DOT:    eFontEmphasisMark = EMPHASISMARK_DOT; break;
-                            case primitive2d::TEXT_EMPHASISMARK_CIRCLE: eFontEmphasisMark = EMPHASISMARK_CIRCLE; break;
-                            case primitive2d::TEXT_EMPHASISMARK_DISC:   eFontEmphasisMark = EMPHASISMARK_DISC; break;
-                            case primitive2d::TEXT_EMPHASISMARK_ACCENT: eFontEmphasisMark = EMPHASISMARK_ACCENT; break;
+                                SAL_FALLTHROUGH;
+                            case primitive2d::TEXT_FONT_EMPHASIS_MARK_NONE:   eFontEmphasisMark = FontEmphasisMark::NONE; break;
+                            case primitive2d::TEXT_FONT_EMPHASIS_MARK_DOT:    eFontEmphasisMark = FontEmphasisMark::Dot; break;
+                            case primitive2d::TEXT_FONT_EMPHASIS_MARK_CIRCLE: eFontEmphasisMark = FontEmphasisMark::Circle; break;
+                            case primitive2d::TEXT_FONT_EMPHASIS_MARK_DISC:   eFontEmphasisMark = FontEmphasisMark::Disc; break;
+                            case primitive2d::TEXT_FONT_EMPHASIS_MARK_ACCENT: eFontEmphasisMark = FontEmphasisMark::Accent; break;
                         }
 
-                        if( eFontEmphasisMark != EMPHASISMARK_NONE )
+                        if( eFontEmphasisMark != FontEmphasisMark::NONE )
                         {
                             DBG_ASSERT( (pTCPP->getEmphasisMarkAbove() != pTCPP->getEmphasisMarkBelow()),
                                 "DrawingLayer: Bad EmphasisMark position!" );
                             if( pTCPP->getEmphasisMarkAbove() )
-                                eFontEmphasisMark |= EMPHASISMARK_POS_ABOVE;
+                                eFontEmphasisMark |= FontEmphasisMark::PosAbove;
                             else
-                                eFontEmphasisMark |= EMPHASISMARK_POS_BELOW;
+                                eFontEmphasisMark |= FontEmphasisMark::PosBelow;
                             aFont.SetEmphasisMark( eFontEmphasisMark );
                         }
 
@@ -225,7 +209,7 @@ namespace drawinglayer
                         {
                             default:
                                 SAL_WARN( "drawinglayer", "Unknown Relief style " << pTCPP->getTextRelief() );
-                                // fall through
+                                SAL_FALLTHROUGH;
                             case primitive2d::TEXT_RELIEF_NONE:     eFontRelief = RELIEF_NONE; break;
                             case primitive2d::TEXT_RELIEF_EMBOSSED: eFontRelief = RELIEF_EMBOSSED; break;
                             case primitive2d::TEXT_RELIEF_ENGRAVED: eFontRelief = RELIEF_ENGRAVED; break;
@@ -797,7 +781,7 @@ namespace drawinglayer
             // to primitives) it is necessary to reduce maximum pixel size by 1 in X and Y and to use
             // the inner pixel bounds accordingly (ceil resp. floor). This will also be done for logic
             // units e.g. when creating a new MetaFile, but since much huger value ranges are used
-            // there typically will be okay for this compromize.
+            // there typically will be okay for this compromise.
             Rectangle aDestRectView(
                 // !!CAUTION!! Here, ceil and floor are exchanged BY PURPOSE, do NOT copy when
                 // looking for a standard conversion to rectangle (!)
@@ -872,7 +856,7 @@ namespace drawinglayer
                 {
                     aMask.transform(maCurrentTransformation);
                     const basegfx::B2DRange aRange(basegfx::tools::getRange(aMask));
-                    impBufferDevice aBufferDevice(*mpOutputDevice, aRange, true);
+                    impBufferDevice aBufferDevice(*mpOutputDevice, aRange);
 
                     if(aBufferDevice.isVisible())
                     {
@@ -949,7 +933,7 @@ namespace drawinglayer
                         // transparence is in visible range
                         basegfx::B2DRange aRange(rTransCandidate.getChildren().getB2DRange(getViewInformation2D()));
                         aRange.transform(maCurrentTransformation);
-                        impBufferDevice aBufferDevice(*mpOutputDevice, aRange, true);
+                        impBufferDevice aBufferDevice(*mpOutputDevice, aRange);
 
                         if(aBufferDevice.isVisible())
                         {
@@ -978,7 +962,7 @@ namespace drawinglayer
             {
                 basegfx::B2DRange aRange(rTransCandidate.getChildren().getB2DRange(getViewInformation2D()));
                 aRange.transform(maCurrentTransformation);
-                impBufferDevice aBufferDevice(*mpOutputDevice, aRange, true);
+                impBufferDevice aBufferDevice(*mpOutputDevice, aRange);
 
                 if(aBufferDevice.isVisible())
                 {
@@ -1317,7 +1301,8 @@ namespace drawinglayer
                                 aHairlinePolyPolygon.getB2DPolygon(a),
                                 fDiscreteLineWidth,
                                 rLineAttribute.getLineJoin(),
-                                rLineAttribute.getLineCap());
+                                rLineAttribute.getLineCap(),
+                                rLineAttribute.getMiterMinimumAngle());
                         }
 
                         bDone = true;

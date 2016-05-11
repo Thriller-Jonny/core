@@ -98,6 +98,7 @@ void SwView::InitInterface_Impl()
     GetStaticInterface()->RegisterChildWindow(SID_NAVIGATOR, true);
 
     GetStaticInterface()->RegisterChildWindow(::sfx2::sidebar::SidebarChildWindow::GetChildWindowId());
+
     GetStaticInterface()->RegisterChildWindow(SfxInfoBarContainerChild::GetChildWindowId());
     GetStaticInterface()->RegisterChildWindow(SvxSearchDialogWrapper::GetChildWindowId());
     GetStaticInterface()->RegisterChildWindow(SwSpellDialogChildWindow::GetChildWindowId());
@@ -110,7 +111,6 @@ void SwView::InitInterface_Impl()
     GetStaticInterface()->RegisterChildWindow(FN_INSERT_FIELD_DATA_ONLY);
 
     GetStaticInterface()->RegisterChildWindow(FN_SYNC_LABELS, false, CHILDWIN_LABEL);
-    GetStaticInterface()->RegisterChildWindow(FN_MAILMERGE_CHILDWINDOW, false, CHILDWIN_MAILMERGE);
 
     GetStaticInterface()->RegisterObjectBar(SFX_OBJECTBAR_TOOLS|SFX_VISIBILITY_STANDARD|SFX_VISIBILITY_SERVER,
                                             RID_TOOLS_TOOLBOX);
@@ -330,7 +330,8 @@ void SwView::StateViewOptions(SfxItemSet &rSet)
                     nWhich = 0;
                 }
                 else
-                    aBool.SetValue( IsHScrollbarVisible() ); break;
+                    aBool.SetValue( IsHScrollbarVisible() );
+                break;
             case FN_VSCROLLBAR:
                 aBool.SetValue( IsVScrollbarVisible() ); break;
             case SID_AUTOSPELL_CHECK:
@@ -590,7 +591,7 @@ void SwView::ExecViewOptions(SfxRequest &rReq)
     if( !bModified )
         rSh.ResetModified();
 
-    pModule->ApplyUsrPref( *pOpt, this, bWebView ? VIEWOPT_DEST_WEB : VIEWOPT_DEST_TEXT );
+    pModule->ApplyUsrPref( *pOpt, this, bWebView ? SvViewOpt::DestWeb : SvViewOpt::DestText );
 
     // #i6193# let postits know about new spellcheck setting
     if ( nSlot == SID_AUTOSPELL_CHECK )

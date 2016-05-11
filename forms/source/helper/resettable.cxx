@@ -27,16 +27,6 @@ namespace frm
 
 
     using ::com::sun::star::uno::Reference;
-    using ::com::sun::star::uno::XInterface;
-    using ::com::sun::star::uno::UNO_QUERY;
-    using ::com::sun::star::uno::UNO_QUERY_THROW;
-    using ::com::sun::star::uno::UNO_SET_THROW;
-    using ::com::sun::star::uno::Exception;
-    using ::com::sun::star::uno::RuntimeException;
-    using ::com::sun::star::uno::Any;
-    using ::com::sun::star::uno::makeAny;
-    using ::com::sun::star::uno::Sequence;
-    using ::com::sun::star::uno::Type;
     using ::com::sun::star::form::XResetListener;
     using ::com::sun::star::lang::EventObject;
 
@@ -58,7 +48,7 @@ namespace frm
 
     bool ResetHelper::approveReset()
     {
-        ::cppu::OInterfaceIteratorHelper aIter( m_aResetListeners );
+        ::comphelper::OInterfaceIteratorHelper2 aIter( m_aResetListeners );
         EventObject aResetEvent( m_rParent );
 
         bool bContinue = true;

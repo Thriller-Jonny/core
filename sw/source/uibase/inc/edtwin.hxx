@@ -158,7 +158,7 @@ friend void     PageNumNotify(  SwViewShell* pVwSh,
     SotExchangeDest GetDropDestination( const Point& rPixPnt,
                                         SdrObject ** ppObj = nullptr );
     //select the object/cursor at the mouse position of the context menu request
-    bool            SelectMenuPosition(SwWrtShell& rSh, const Point& rMousePos );
+    void            SelectMenuPosition(SwWrtShell& rSh, const Point& rMousePos );
 
     /*
      * handler for scrolling on when the mousepointer
@@ -196,8 +196,6 @@ protected:
     virtual void    MouseButtonDown(const MouseEvent& rMEvt) override;
     virtual void    MouseButtonUp(const MouseEvent& rMEvt) override;
     virtual void    RequestHelp(const HelpEvent& rEvt) override;
-
-    virtual void    Command( const CommandEvent& rCEvt ) override;
 
                                 // Drag & Drop Interface
     virtual sal_Int8    AcceptDrop( const AcceptDropEvent& rEvt ) override;
@@ -250,11 +248,11 @@ public:
     void            StartExecuteDrag();
     void            DragFinished();
 
-    static Color    GetWaterCanTextColor() { return m_aWaterCanTextColor; }
+    static const Color& GetWaterCanTextColor() { return m_aWaterCanTextColor; }
 
     static void     SetWaterCanTextColor(const Color& rCol ) { m_aWaterCanTextColor = rCol; }
 
-    static Color    GetWaterCanTextBackColor()
+    static const Color& GetWaterCanTextBackColor()
                                             { return m_aWaterCanTextBackColor; }
     static void     SetWaterCanTextBackColor(const Color& rCol )
                                             { m_aWaterCanTextBackColor = rCol; }
@@ -268,8 +266,8 @@ public:
     static inline long GetDDStartPosX() { return m_nDDStartPosX; }
     static inline long GetDDStartPosY() { return m_nDDStartPosY; }
 
-    static void _InitStaticData();
-    static void _FinitStaticData();
+    static void InitStaticData();
+    static void FinitStaticData();
 
     //#i3370# remove quick help to prevent saving of autocorrection suggestions
     void StopQuickHelp();
@@ -294,6 +292,8 @@ public:
     SwEditWin(vcl::Window *pParent, SwView &);
     virtual ~SwEditWin();
     virtual void dispose() override;
+
+    virtual void    Command( const CommandEvent& rCEvt ) override;
 
     /// @see OutputDevice::LogicInvalidate().
     void LogicInvalidate(const Rectangle* pRectangle) override;

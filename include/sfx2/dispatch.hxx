@@ -23,11 +23,11 @@
 #include <sfx2/dllapi.h>
 #include <sal/types.h>
 
-#include <stdarg.h>
-
 #include <sfx2/bindings.hxx>
 #include <sfx2/viewfrm.hxx>
 #include <o3tl/typed_flags_set.hxx>
+
+#include <initializer_list>
 
 class SfxSlotServer;
 class SfxShell;
@@ -82,7 +82,7 @@ class SFX2_DLLPUBLIC SfxDispatcher
 
 private:
     // Search for temporary evaluated Todos
-    SAL_DLLPRIVATE bool CheckVirtualStack( const SfxShell& rShell, bool bDeep );
+    SAL_DLLPRIVATE bool CheckVirtualStack( const SfxShell& rShell );
 
 friend class SfxApplication;
 friend class SfxViewFrame;
@@ -91,7 +91,7 @@ friend class SfxViewFrame;
     DECL_DLLPRIVATE_LINK_TYPED( PostMsgHandler, SfxRequest *, void );
 
     SAL_DLLPRIVATE void Call_Impl( SfxShell& rShell, const SfxSlot &rSlot, SfxRequest &rReq, bool bRecord );
-    SAL_DLLPRIVATE void _Update_Impl( bool,bool,bool,SfxWorkWindow*);
+    SAL_DLLPRIVATE void Update_Impl_( bool,bool,bool,SfxWorkWindow*);
 
 protected:
 friend class SfxBindings;
@@ -99,10 +99,10 @@ friend class SfxStateCache;
 friend class SfxPopupMenuManager;
 friend class SfxHelp;
 
-    bool                _FindServer( sal_uInt16 nId, SfxSlotServer &rServer, bool bModal );
-    bool                _FillState( const SfxSlotServer &rServer,
+    bool                FindServer_( sal_uInt16 nId, SfxSlotServer &rServer, bool bModal );
+    bool                FillState_( const SfxSlotServer &rServer,
                                     SfxItemSet &rState, const SfxSlot *pRealSlot );
-    void                _Execute( SfxShell &rShell, const SfxSlot &rSlot,
+    void                Execute_( SfxShell &rShell, const SfxSlot &rSlot,
                                   SfxRequest &rReq,
                                   SfxCallMode eCall = SfxCallMode::RECORD);
 
@@ -129,17 +129,12 @@ public:
                                  SfxItemSet* pInternalArgs,
                                  sal_uInt16 nModi = 0);
 
-    const SfxPoolItem*  Execute( sal_uInt16 nSlot,
+    const SfxPoolItem*  ExecuteList( sal_uInt16 nSlot,
                                  SfxCallMode nCall,
-                                 const SfxPoolItem *pArg1, ... );
+                                 std::initializer_list<SfxPoolItem const*> args);
 
     const SfxPoolItem*  Execute( sal_uInt16 nSlot,
                                  SfxCallMode nCall,
-                                 const SfxItemSet &rArgs );
-
-    const SfxPoolItem*  Execute( sal_uInt16 nSlot,
-                                 SfxCallMode nCall,
-                                 sal_uInt16 nModi,
                                  const SfxItemSet &rArgs );
 
     const SfxSlot*      GetSlot( const OUString& rCommand );
@@ -154,13 +149,9 @@ public:
     SfxShell*           GetShell(sal_uInt16 nIdx) const;
     SfxViewFrame*       GetFrame() const;
     SfxModule*          GetModule() const;
-    // caller has to clean up the Manager on his own
-    static SfxPopupMenuManager* Popup( sal_uInt16 nConfigId, vcl::Window *pWin, const Point *pPos );
 
-    void                ExecutePopup( const ResId &rId,
-                              vcl::Window *pWin = nullptr, const Point *pPosPixel = nullptr );
-    static void         ExecutePopup( sal_uInt16 nConfigId = 0,
-                              vcl::Window *pWin = nullptr, const Point *pPosPixel = nullptr );
+    void                ExecutePopup( const OUString &rResName, vcl::Window *pWin = nullptr, const Point *pPos = nullptr );
+    static void         ExecutePopup( vcl::Window *pWin = nullptr, const Point *pPosPixel = nullptr );
 
     bool                IsAppDispatcher() const;
     bool                IsFlushed() const;

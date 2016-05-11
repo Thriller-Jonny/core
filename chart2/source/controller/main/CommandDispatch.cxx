@@ -86,7 +86,7 @@ void SAL_CALL CommandDispatch::addStatusListener( const Reference< frame::XStatu
     {
         aIt = m_aListeners.insert(
             m_aListeners.begin(),
-            tListenerMap::value_type( URL.Complete, new ::cppu::OInterfaceContainerHelper( m_aMutex )));
+            tListenerMap::value_type( URL.Complete, new ::comphelper::OInterfaceContainerHelper2( m_aMutex )));
     }
     OSL_ASSERT( aIt != m_aListeners.end());
 
@@ -115,7 +115,7 @@ void SAL_CALL CommandDispatch::disposing( const lang::EventObject& /* Source */ 
 {}
 
 void CommandDispatch::fireAllStatusEvents(
-    const ::com::sun::star::uno::Reference< ::com::sun::star::frame::XStatusListener > & xSingleListener )
+    const css::uno::Reference< css::frame::XStatusListener > & xSingleListener )
 {
     fireStatusEvent( OUString(), xSingleListener );
 }
@@ -155,7 +155,7 @@ void CommandDispatch::fireStatusEventForURL(
         {
             if( aIt->second )
             {
-                ::cppu::OInterfaceIteratorHelper aIntfIt( *((*aIt).second) );
+                ::comphelper::OInterfaceIteratorHelper2 aIntfIt( *((*aIt).second) );
 
                 while( aIntfIt.hasMoreElements())
                 {

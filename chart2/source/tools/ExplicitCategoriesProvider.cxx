@@ -221,9 +221,8 @@ class SplitCategoriesProvider_ForLabeledDataSequences : public SplitCategoriesPr
 public:
 
     explicit SplitCategoriesProvider_ForLabeledDataSequences(
-        const ::com::sun::star::uno::Sequence<
-            ::com::sun::star::uno::Reference<
-                ::com::sun::star::chart2::data::XLabeledDataSequence> >& rSplitCategoriesList
+        const css::uno::Sequence<
+            css::uno::Reference< css::chart2::data::XLabeledDataSequence> >& rSplitCategoriesList
         , ChartModel& rModel )
         : m_rSplitCategoriesList( rSplitCategoriesList )
         , mrModel( rModel )
@@ -235,8 +234,8 @@ public:
     virtual uno::Sequence< OUString > getStringsForLevel( sal_Int32 nIndex ) const override;
 
 private:
-    const ::com::sun::star::uno::Sequence< ::com::sun::star::uno::Reference<
-        ::com::sun::star::chart2::data::XLabeledDataSequence> >& m_rSplitCategoriesList;
+    const css::uno::Sequence< css::uno::Reference<
+        css::chart2::data::XLabeledDataSequence> >& m_rSplitCategoriesList;
 
     ChartModel& mrModel;
 };
@@ -400,16 +399,7 @@ Sequence< OUString > ExplicitCategoriesProvider::getExplicitSimpleCategories(
     return lcl_getExplicitSimpleCategories( rSplitCategoriesProvider, aComplexCats );
 }
 
-struct DatePlusIndexComparator
-{
-    inline bool operator() ( const DatePlusIndex& aFirst,
-                             const DatePlusIndex& aSecond ) const
-    {
-        return ( aFirst.fValue < aSecond.fValue );
-    }
-};
-
-bool lcl_fillDateCategories( const uno::Reference< data::XDataSequence >& xDataSequence, std::vector< DatePlusIndex >& rDateCategories, bool bIsAutoDate, ChartModel& rModel )
+bool lcl_fillDateCategories( const uno::Reference< data::XDataSequence >& xDataSequence, std::vector< double >& rDateCategories, bool bIsAutoDate, ChartModel& rModel )
 {
     bool bOnlyDatesFound = true;
     bool bAnyDataFound = false;
@@ -468,18 +458,18 @@ bool lcl_fillDateCategories( const uno::Reference< data::XDataSequence >& xDataS
                 if( !bContainsEmptyString && !bContainsNan )
                     bAnyDataFound = true;
             }
-            DatePlusIndex aDatePlusIndex( 1.0, nN );
-            if( bIsDate && (aAny >>= aDatePlusIndex.fValue) )
-                rDateCategories.push_back( aDatePlusIndex );
+            double aDate( 1.0 );
+            if( bIsDate && (aAny >>= aDate) )
+                rDateCategories.push_back( aDate );
             else
             {
                 if( aAny.hasValue() && !bContainsEmptyString )//empty string does not count as non date value!
                     bOnlyDatesFound=false;
-                ::rtl::math::setNan( &aDatePlusIndex.fValue );
-                rDateCategories.push_back( aDatePlusIndex );
+                ::rtl::math::setNan( &aDate );
+                rDateCategories.push_back( aDate );
             }
         }
-        ::std::sort( rDateCategories.begin(), rDateCategories.end(), DatePlusIndexComparator() );
+        ::std::sort( rDateCategories.begin(), rDateCategories.end() );
     }
 
     return bAnyDataFound && bOnlyDatesFound;
@@ -572,7 +562,7 @@ bool ExplicitCategoriesProvider::isDateAxis()
     return m_bIsDateAxis;
 }
 
-const std::vector< DatePlusIndex >&  ExplicitCategoriesProvider::getDateCategories()
+const std::vector< double >&  ExplicitCategoriesProvider::getDateCategories()
 {
     init();
     return m_aDateCategories;

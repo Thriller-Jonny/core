@@ -36,7 +36,6 @@ namespace frm
 {
 
 
-
 // OImageControlModel
 
 typedef ::cppu::ImplHelper2 <   css::form::XImageProducerSupplier
@@ -150,7 +149,7 @@ class OImageControlControl  : public OBoundControl
                             , public OImageControlControl_Base
 {
 private:
-    ::cppu::OInterfaceContainerHelper   m_aModifyListeners;
+    ::comphelper::OInterfaceContainerHelper2   m_aModifyListeners;
 
     // XTypeProvider
     virtual css::uno::Sequence< css::uno::Type> _getTypes() override;

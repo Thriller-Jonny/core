@@ -41,7 +41,7 @@ using namespace ::xmloff::token;
 
 namespace
 {
-    static void lcl_exportDataStyle( SvXMLExport& _rExport, const rtl::Reference< XMLPropertySetMapper >& _rxMapper,
+    void lcl_exportDataStyle( SvXMLExport& _rExport, const rtl::Reference< XMLPropertySetMapper >& _rxMapper,
         const XMLPropertyState& _rProperty )
     {
         assert(_rxMapper.is());
@@ -69,7 +69,7 @@ void SvXMLAutoStylePoolP::exportStyleAttributes(
 {
     if ( XML_STYLE_FAMILY_CONTROL_ID == nFamily )
     {   // it's a control-related style
-        rtl::Reference< XMLPropertySetMapper > aPropertyMapper = rPropExp.getPropertySetMapper();
+        const rtl::Reference< XMLPropertySetMapper >& aPropertyMapper = rPropExp.getPropertySetMapper();
 
         for (   vector< XMLPropertyState >::const_iterator pProp = rProperties.begin();
                 pProp != rProperties.end();
@@ -87,7 +87,7 @@ void SvXMLAutoStylePoolP::exportStyleAttributes(
 
     if( (XML_STYLE_FAMILY_SD_GRAPHICS_ID == nFamily) || (XML_STYLE_FAMILY_SD_PRESENTATION_ID == nFamily) )
     {   // it's a graphics style
-        rtl::Reference< XMLPropertySetMapper > aPropertyMapper = rPropExp.getPropertySetMapper();
+        const rtl::Reference< XMLPropertySetMapper >& aPropertyMapper = rPropExp.getPropertySetMapper();
         assert(aPropertyMapper.is());
 
         bool bFoundControlShapeDataStyle = false;
@@ -150,7 +150,7 @@ void SvXMLAutoStylePoolP::exportStyleAttributes(
         {
             if (pProp->mnIndex > -1)
             {
-                rtl::Reference< XMLPropertySetMapper > aPropMapper = rPropExp.getPropertySetMapper();
+                const rtl::Reference< XMLPropertySetMapper >& aPropMapper = rPropExp.getPropertySetMapper();
                 sal_Int32 nIndex = pProp->mnIndex;
                 sal_Int16 nContextID = aPropMapper->GetEntryContextId( nIndex );
                 switch( nContextID )
@@ -194,7 +194,7 @@ void SvXMLAutoStylePoolP::exportStyleContent(
         bool        bFooterStartIndex(false);
         bool        bFooterEndIndex(false);
 
-        rtl::Reference< XMLPropertySetMapper > aPropMapper = rPropExp.getPropertySetMapper();
+        const rtl::Reference< XMLPropertySetMapper >& aPropMapper = rPropExp.getPropertySetMapper();
 
         sal_Int32 nIndex(0);
         while(nIndex < aPropMapper->GetEntryCount())
@@ -280,11 +280,10 @@ void SvXMLAutoStylePoolP::AddFamily(
         sal_Int32 nFamily,
         const OUString& rStrName,
         SvXMLExportPropertyMapper* pMapper,
-        const OUString& aStrPrefix,
-        bool bAsFamily )
+        const OUString& aStrPrefix )
 {
     rtl::Reference <SvXMLExportPropertyMapper> xTmp = pMapper;
-    AddFamily( nFamily, rStrName, xTmp, aStrPrefix, bAsFamily );
+    AddFamily( nFamily, rStrName, xTmp, aStrPrefix );
 }
 
 void SvXMLAutoStylePoolP::AddFamily(

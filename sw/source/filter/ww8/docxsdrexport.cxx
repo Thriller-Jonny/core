@@ -15,7 +15,6 @@
 #include <editeng/unoprnms.hxx>
 #include <editeng/charrotateitem.hxx>
 #include <svx/svdogrp.hxx>
-#include <oox/export/utils.hxx>
 #include <oox/token/properties.hxx>
 #include <textboxhelper.hxx>
 #include <fmtanchr.hxx>
@@ -29,6 +28,7 @@
 #include <docxexportfilter.hxx>
 #include <comphelper/seqstream.hxx>
 #include <comphelper/sequence.hxx>
+#include <comphelper/sequenceashashmap.hxx>
 
 #include <IDocumentDrawModelAccess.hxx>
 
@@ -38,7 +38,7 @@ using namespace oox;
 namespace
 {
 
-uno::Sequence<beans::PropertyValue> lclGetProperty(uno::Reference<drawing::XShape> rShape, const OUString& rPropName)
+uno::Sequence<beans::PropertyValue> lclGetProperty(const uno::Reference<drawing::XShape>& rShape, const OUString& rPropName)
 {
     uno::Sequence<beans::PropertyValue> aResult;
     uno::Reference<beans::XPropertySet> xPropertySet(rShape, uno::UNO_QUERY);
@@ -177,7 +177,7 @@ struct DocxSdrExport::Impl
     /// Writes wp wrapper code around an SdrObject, which itself is written using drawingML syntax.
 
     void textFrameShadow(const SwFrameFormat& rFrameFormat);
-    static bool isSupportedDMLShape(uno::Reference<drawing::XShape> xShape);
+    static bool isSupportedDMLShape(const uno::Reference<drawing::XShape>& xShape);
     /// Undo the text direction mangling done by the frame btLr handler in writerfilter::dmapper::DomainMapper::lcl_startCharacterGroup()
     bool checkFrameBtlr(SwNode* pStartNode, bool bDML);
 };
@@ -191,7 +191,7 @@ DocxSdrExport::~DocxSdrExport()
 {
 }
 
-void DocxSdrExport::setSerializer(sax_fastparser::FSHelperPtr pSerializer)
+void DocxSdrExport::setSerializer(const sax_fastparser::FSHelperPtr& pSerializer)
 {
     m_pImpl->m_pSerializer = pSerializer;
 }
@@ -287,8 +287,8 @@ void DocxSdrExport::startDMLAnchorInline(const SwFrameFormat* pFrameFormat, cons
     m_pImpl->m_bParagraphHasDrawing = true;
     m_pImpl->m_pSerializer->startElementNS(XML_w, XML_drawing, FSEND);
 
-    const SvxLRSpaceItem pLRSpaceItem = pFrameFormat->GetLRSpace(false);
-    const SvxULSpaceItem pULSpaceItem = pFrameFormat->GetULSpace(false);
+    const SvxLRSpaceItem aLRSpaceItem = pFrameFormat->GetLRSpace(false);
+    const SvxULSpaceItem aULSpaceItem = pFrameFormat->GetULSpace(false);
 
     bool isAnchor;
 
@@ -364,10 +364,10 @@ void DocxSdrExport::startDMLAnchorInline(const SwFrameFormat* pFrameFormat, cons
             lclMovePositionWithRotation(aPos, rSize, pObj->GetRotateAngle());
         }
         attrList->add(XML_behindDoc, bOpaque ? "0" : "1");
-        attrList->add(XML_distT, OString::number(TwipsToEMU(pULSpaceItem.GetUpper()) - nTopExt).getStr());
-        attrList->add(XML_distB, OString::number(TwipsToEMU(pULSpaceItem.GetLower()) - nBottomExt).getStr());
-        attrList->add(XML_distL, OString::number(TwipsToEMU(pLRSpaceItem.GetLeft()) - nLeftExt).getStr());
-        attrList->add(XML_distR, OString::number(TwipsToEMU(pLRSpaceItem.GetRight()) - nRightExt).getStr());
+        attrList->add(XML_distT, OString::number(TwipsToEMU(aULSpaceItem.GetUpper()) - nTopExt).getStr());
+        attrList->add(XML_distB, OString::number(TwipsToEMU(aULSpaceItem.GetLower()) - nBottomExt).getStr());
+        attrList->add(XML_distL, OString::number(TwipsToEMU(aLRSpaceItem.GetLeft()) - nLeftExt).getStr());
+        attrList->add(XML_distR, OString::number(TwipsToEMU(aLRSpaceItem.GetRight()) - nRightExt).getStr());
         attrList->add(XML_simplePos, "0");
         attrList->add(XML_locked, "0");
         attrList->add(XML_layoutInCell, "1");
@@ -556,10 +556,10 @@ void DocxSdrExport::startDMLAnchorInline(const SwFrameFormat* pFrameFormat, cons
     else
     {
         sax_fastparser::FastAttributeList* aAttrList = sax_fastparser::FastSerializerHelper::createAttrList();
-        aAttrList->add(XML_distT, OString::number(TwipsToEMU(pULSpaceItem.GetUpper())).getStr());
-        aAttrList->add(XML_distB, OString::number(TwipsToEMU(pULSpaceItem.GetLower())).getStr());
-        aAttrList->add(XML_distL, OString::number(TwipsToEMU(pLRSpaceItem.GetLeft())).getStr());
-        aAttrList->add(XML_distR, OString::number(TwipsToEMU(pLRSpaceItem.GetRight())).getStr());
+        aAttrList->add(XML_distT, OString::number(TwipsToEMU(aULSpaceItem.GetUpper())).getStr());
+        aAttrList->add(XML_distB, OString::number(TwipsToEMU(aULSpaceItem.GetLower())).getStr());
+        aAttrList->add(XML_distL, OString::number(TwipsToEMU(aLRSpaceItem.GetLeft())).getStr());
+        aAttrList->add(XML_distR, OString::number(TwipsToEMU(aLRSpaceItem.GetRight())).getStr());
         const SdrObject* pObj = pFrameFormat->FindRealSdrObject();
         if (pObj != nullptr)
         {
@@ -771,8 +771,8 @@ void DocxSdrExport::writeVMLDrawing(const SdrObject* sdrObj, const SwFrameFormat
     m_pImpl->m_pDrawingML->SetFS(m_pImpl->m_pSerializer);
     // See WinwordAnchoring::SetAnchoring(), these are not part of the SdrObject, have to be passed around manually.
 
-    SwFormatHoriOrient rHoriOri = (rFrameFormat).GetHoriOrient();
-    SwFormatVertOrient rVertOri = (rFrameFormat).GetVertOrient();
+    const SwFormatHoriOrient& rHoriOri = rFrameFormat.GetHoriOrient();
+    const SwFormatVertOrient& rVertOri = rFrameFormat.GetVertOrient();
     m_pImpl->m_rExport.VMLExporter().AddSdrObject(*(sdrObj),
             rHoriOri.GetHoriOrient(), rVertOri.GetVertOrient(),
             rHoriOri.GetRelationOrient(),
@@ -783,7 +783,7 @@ void DocxSdrExport::writeVMLDrawing(const SdrObject* sdrObj, const SwFrameFormat
         const_cast< SdrObject* >(sdrObj)->SetPage(nullptr);
 }
 
-bool lcl_isLockedCanvas(uno::Reference<drawing::XShape> xShape)
+bool lcl_isLockedCanvas(const uno::Reference<drawing::XShape>& xShape)
 {
     bool bRet = false;
     uno::Sequence< beans::PropertyValue > propList =
@@ -880,7 +880,7 @@ void DocxSdrExport::writeDMLDrawing(const SdrObject* pSdrObject, const SwFrameFo
 
 void DocxSdrExport::Impl::textFrameShadow(const SwFrameFormat& rFrameFormat)
 {
-    SvxShadowItem aShadowItem = rFrameFormat.GetShadow();
+    const SvxShadowItem& aShadowItem = rFrameFormat.GetShadow();
     if (aShadowItem.GetLocation() == SVX_SHADOW_NONE)
         return;
 
@@ -915,7 +915,7 @@ void DocxSdrExport::Impl::textFrameShadow(const SwFrameFormat& rFrameFormat)
                                    FSEND);
 }
 
-bool DocxSdrExport::Impl::isSupportedDMLShape(uno::Reference<drawing::XShape> xShape)
+bool DocxSdrExport::Impl::isSupportedDMLShape(const uno::Reference<drawing::XShape>& xShape)
 {
     bool supported = true;
 
@@ -981,7 +981,7 @@ OString lcl_ConvertTransparency(const Color& rColor)
 
 void DocxSdrExport::writeDMLEffectLst(const SwFrameFormat& rFrameFormat)
 {
-    SvxShadowItem aShadowItem = rFrameFormat.GetShadow();
+    const SvxShadowItem& aShadowItem = rFrameFormat.GetShadow();
 
     // Output effects
     if (aShadowItem.GetLocation() != SVX_SHADOW_NONE)
@@ -1031,9 +1031,9 @@ void DocxSdrExport::writeDMLEffectLst(const SwFrameFormat& rFrameFormat)
 
 }
 
-void DocxSdrExport::writeDiagramRels(uno::Reference<xml::dom::XDocument> xDom,
+void DocxSdrExport::writeDiagramRels(const uno::Reference<xml::dom::XDocument>& xDom,
                                      const uno::Sequence< uno::Sequence< uno::Any > >& xRelSeq,
-                                     uno::Reference< io::XOutputStream > xOutStream, const OUString& sGrabBagProperyName,
+                                     const uno::Reference<io::XOutputStream>& xOutStream, const OUString& sGrabBagProperyName,
                                      int nAnchorId)
 {
     // add image relationships of OOXData, OOXDiagram
@@ -1120,9 +1120,8 @@ void DocxSdrExport::writeDiagram(const SdrObject* sdrObject, const SwFrameFormat
     uno::Sequence< uno::Any > diagramDrawing;
 
     // retrieve the doms from the GrabBag
-    OUString pName = UNO_NAME_MISC_OBJ_INTEROPGRABBAG;
     uno::Sequence< beans::PropertyValue > propList;
-    xPropSet->getPropertyValue(pName) >>= propList;
+    xPropSet->getPropertyValue(UNO_NAME_MISC_OBJ_INTEROPGRABBAG) >>= propList;
     for (sal_Int32 nProp=0; nProp < propList.getLength(); ++nProp)
     {
         OUString propName = propList[nProp].Name;

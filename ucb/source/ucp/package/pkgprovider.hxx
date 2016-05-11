@@ -30,7 +30,6 @@ namespace com { namespace sun { namespace star { namespace container {
 namespace package_ucp {
 
 
-
 // UCB Content Type.
 #define PACKAGE_FOLDER_CONTENT_TYPE \
                 "application/" PACKAGE_URL_SCHEME "-folder"
@@ -40,7 +39,6 @@ namespace package_ucp {
                 "application/" PACKAGE_ZIP_URL_SCHEME "-folder"
 #define PACKAGE_ZIP_STREAM_CONTENT_TYPE \
                 "application/" PACKAGE_ZIP_URL_SCHEME "-stream"
-
 
 
 class Packages;
@@ -89,16 +87,12 @@ public:
                css::uno::RuntimeException, std::exception ) override;
 
 
-    // Additional interfaces
-
-
-
     // Non-interface methods.
 
 
     css::uno::Reference< css::container::XHierarchicalNameAccess >
     createPackage( const PackageUri & rParam );
-    bool
+    void
     removePackage( const OUString & rName );
 };
 

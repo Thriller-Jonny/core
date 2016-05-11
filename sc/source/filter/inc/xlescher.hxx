@@ -166,7 +166,7 @@ const sal_uInt16 EXC_OBJ_BUTTON_HELP        = 0x0002;
 const sal_uInt16 EXC_OBJ_BUTTON_CANCEL      = 0x0004;
 const sal_uInt16 EXC_OBJ_BUTTON_CLOSE       = 0x0008;
 
-// BIFF5 checkboxs, radio buttons
+// BIFF5 checkboxes, radio buttons
 const sal_uInt16 EXC_OBJ_CHECKBOX_UNCHECKED = 0;
 const sal_uInt16 EXC_OBJ_CHECKBOX_CHECKED   = 1;
 const sal_uInt16 EXC_OBJ_CHECKBOX_TRISTATE  = 2;
@@ -300,7 +300,7 @@ struct XclObjAnchor : public XclRange
 
     /** Initializes the anchor coordinates for an embedded draw page. */
     void                SetRect( const Size& rPageSize, sal_Int32 nScaleX, sal_Int32 nScaleY,
-                            const Rectangle& rRect, MapUnit eMapUnit, bool bDffAnchor );
+                            const Rectangle& rRect, MapUnit eMapUnit );
 };
 
 inline SvStream& operator>>( SvStream& rStrm, XclObjAnchor& rAnchor )

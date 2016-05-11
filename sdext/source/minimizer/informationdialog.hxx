@@ -26,7 +26,6 @@
 #include <com/sun/star/lang/XServiceInfo.hpp>
 #include <com/sun/star/awt/XItemListener.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
-#include <com/sun/star/uno/Sequence.h>
 #include <com/sun/star/text/XTextRange.hpp>
 #include <com/sun/star/drawing/XShapes.hpp>
 #include <com/sun/star/container/XIndexAccess.hpp>
@@ -41,23 +40,18 @@
 #include <cppuhelper/implbase.hxx>
 
 
-// - InformationDialog -
-
 class InformationDialog : public UnoDialog, public ConfigurationAccess
 {
 public:
 
     InformationDialog( const css::uno::Reference< css::uno::XComponentContext >& rxContext,
             css::uno::Reference< css::frame::XFrame >& rxFrame, const OUString& rSaveAsURL,
-                bool& bOpenNewDocument, const sal_Int64& nSourceSize, const sal_Int64& nDestSize, const sal_Int64& nApproxDest );
+                bool& bOpenNewDocument, sal_Int64 nSourceSize, sal_Int64 nDestSize, sal_Int64 nApproxDest );
     ~InformationDialog();
 
-    bool                execute();
+    void                execute();
 
 private:
-
-    css::uno::Reference< css::frame::XFrame >         mxFrame;
-    css::uno::Reference< css::io::XStream >           mxTempFile;
 
     css::uno::Reference< css::awt::XActionListener >  mxActionListener;
 

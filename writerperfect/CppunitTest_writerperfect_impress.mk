@@ -24,6 +24,7 @@ $(eval $(call gb_CppunitTest_use_libraries,writerperfect_impress,\
 	cppuhelper \
 	sal \
 	test \
+	tl \
 	ucbhelper \
 	unotest \
 	$(gb_UWINAPI) \
@@ -43,5 +44,8 @@ $(eval $(call gb_CppunitTest_use_configuration,writerperfect_impress))
 $(eval $(call gb_CppunitTest_add_exception_objects,writerperfect_impress,\
 	writerperfect/qa/unit/WpftImpressFilterTest \
 ))
+
+$(call gb_CppunitTest_get_target,writerperfect_impress): \
+    $(call gb_AllLangResTarget_get_target,sd)
 
 # vim: set noet sw=4 ts=4:

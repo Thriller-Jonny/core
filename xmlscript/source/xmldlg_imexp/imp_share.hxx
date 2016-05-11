@@ -67,12 +67,12 @@ inline bool getBoolAttr(
     {
         if ( aValue == "true" )
         {
-            *pRet = sal_True;
+            *pRet = true;
             return true;
         }
         else if ( aValue == "false" )
         {
-            *pRet = sal_False;
+            *pRet = false;
             return true;
         }
         else
@@ -124,7 +124,6 @@ struct DialogImport
     css::uno::Reference< css::container::XNameContainer > _xDialogModel;
     css::uno::Reference< css::lang::XMultiServiceFactory > _xDialogModelFactory;
     css::uno::Reference< css::frame::XModel > _xDoc;
-    css::uno::Reference< css::script::XLibraryContainer > _xScriptLibraryContainer;
 
     sal_Int32 XMLNS_DIALOGS_UID, XMLNS_SCRIPT_UID;
 
@@ -177,7 +176,7 @@ public:
 
     virtual ~DialogImport();
 
-    inline css::uno::Reference< css::frame::XModel > getDocOwner() { return _xDoc; }
+    const css::uno::Reference< css::frame::XModel >& getDocOwner() { return _xDoc; }
 
     // XRoot
     virtual void SAL_CALL startDocument(
@@ -291,19 +290,19 @@ public:
     virtual void SAL_CALL endElement()
         throw (css::xml::sax::SAXException, css::uno::RuntimeException, std::exception) override;
 
-    bool importTextColorStyle(
+    void importTextColorStyle(
         css::uno::Reference< css::beans::XPropertySet > const & xProps );
-    bool importTextLineColorStyle(
+    void importTextLineColorStyle(
         css::uno::Reference< css::beans::XPropertySet > const & xProps );
-    bool importFillColorStyle(
+    void importFillColorStyle(
         css::uno::Reference< css::beans::XPropertySet > const & xProps );
-    bool importBackgroundColorStyle(
+    void importBackgroundColorStyle(
         css::uno::Reference< css::beans::XPropertySet > const & xProps );
-    bool importFontStyle(
+    void importFontStyle(
         css::uno::Reference< css::beans::XPropertySet > const & xProps );
-    bool importBorderStyle(
+    void importBorderStyle(
         css::uno::Reference< css::beans::XPropertySet > const & xProps );
-    bool importVisualEffectStyle(
+    void importVisualEffectStyle(
         css::uno::Reference< css::beans::XPropertySet > const & xProps );
 
     StyleElement(
@@ -395,7 +394,7 @@ public:
           _aId( id )
         { OSL_ASSERT( _xControlModel.is() ); }
 
-    inline css::uno::Reference< css::beans::XPropertySet > getControlModel() const
+    const css::uno::Reference< css::beans::XPropertySet >& getControlModel() const
         { return _xControlModel; }
 
     void importScollableSettings( css::uno::Reference< css::xml::input::XAttributes > const & xAttributes );

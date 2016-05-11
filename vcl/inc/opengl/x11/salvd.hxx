@@ -10,8 +10,8 @@
 #ifndef INCLUDED_VCL_INC_OPENGL_X11_SALVD_H
 #define INCLUDED_VCL_INC_OPENGL_X11_SALVD_H
 
-#include <prex.h>
-#include <postx.h>
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
 
 #include <unx/saltype.h>
 #include <salvd.hxx>
@@ -43,7 +43,7 @@ public:
     virtual long GetHeight() const override { return mnHeight; }
 
     SalDisplay *            GetDisplay() const { return mpDisplay; }
-    SalX11Screen            GetXScreenNumber() const { return mnXScreen; }
+    const SalX11Screen&     GetXScreenNumber() const { return mnXScreen; }
 
     virtual SalGraphics*    AcquireGraphics() override;
     virtual void            ReleaseGraphics( SalGraphics* pGraphics ) override;

@@ -19,7 +19,7 @@
 
 #include <sal/config.h>
 
-#include <boost/tuple/tuple.hpp>
+#include <tuple>
 
 #include <basegfx/matrix/b2dhommatrix.hxx>
 #include <basegfx/numeric/ftools.hxx>
@@ -43,7 +43,7 @@
 #include <tools/diagnose_ex.h>
 #include <tools/poly.hxx>
 #include <vcl/bitmapex.hxx>
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 #include <vcl/canvastools.hxx>
 #include <vcl/virdev.hxx>
 #include <vcl/window.hxx>
@@ -205,7 +205,7 @@ namespace vclcanvas
             {
                 std::ptrdiff_t nIndex;
                 double fAlpha;
-                boost::tuples::tie(nIndex,fAlpha)=aLerper.lerp(double(i)/nStepCount);
+                std::tie(nIndex,fAlpha)=aLerper.lerp(double(i)/nStepCount);
 
                 rOutDev.SetFillColor(
                     Color( (sal_uInt8)(basegfx::tools::lerp(rColors[nIndex].GetRed(),rColors[nIndex+1].GetRed(),fAlpha)),
@@ -371,7 +371,7 @@ namespace vclcanvas
 
                     std::ptrdiff_t nIndex;
                     double fAlpha;
-                    boost::tuples::tie(nIndex,fAlpha)=aLerper.lerp(fT);
+                    std::tie(nIndex,fAlpha)=aLerper.lerp(fT);
 
                     // lerp color
                     rOutDev.SetFillColor(
@@ -429,7 +429,7 @@ namespace vclcanvas
 
                     std::ptrdiff_t nIndex;
                     double fAlpha;
-                    boost::tuples::tie(nIndex,fAlpha)=aLerper.lerp(fT);
+                    std::tie(nIndex,fAlpha)=aLerper.lerp(fT);
 
                     // lerp color
                     rOutDev.SetFillColor(
@@ -437,7 +437,7 @@ namespace vclcanvas
                                (sal_uInt8)(basegfx::tools::lerp(rColors[nIndex].GetGreen(),rColors[nIndex+1].GetGreen(),fAlpha)),
                                (sal_uInt8)(basegfx::tools::lerp(rColors[nIndex].GetBlue(),rColors[nIndex+1].GetBlue(),fAlpha)) ));
 
-#if OSL_DEBUG_LEVEL > 2
+#if OSL_DEBUG_LEVEL > 0
                     if( i && !(i % 10) )
                         rOutDev.SetFillColor( COL_RED );
 #endif
@@ -494,7 +494,7 @@ namespace vclcanvas
         {
             switch( rValues.meType )
             {
-                case ::canvas::ParametricPolyPolygon::GRADIENT_LINEAR:
+                case ::canvas::ParametricPolyPolygon::GradientType::Linear:
                     fillLinearGradient( rOutDev,
                                         rTextureTransform,
                                         rBounds,
@@ -503,9 +503,9 @@ namespace vclcanvas
                                         rColors );
                     break;
 
-                case ::canvas::ParametricPolyPolygon::GRADIENT_ELLIPTICAL:
+                case ::canvas::ParametricPolyPolygon::GradientType::Elliptical:
                     // FALLTHROUGH intended
-                case ::canvas::ParametricPolyPolygon::GRADIENT_RECTANGULAR:
+                case ::canvas::ParametricPolyPolygon::GradientType::Rectangular:
                     fillPolygonalGradient( rOutDev,
                                            rTextureTransform,
                                            rBounds,
@@ -626,7 +626,7 @@ namespace vclcanvas
                 }
             }
 
-#if OSL_DEBUG_LEVEL > 3
+#ifdef DEBUG_CANVAS_CANVASHELPER_TEXTUREFILL
             // extra-verbosity
             {
                 ::basegfx::B2DRectangle aRect(0.0, 0.0, 1.0, 1.0);

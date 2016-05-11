@@ -177,13 +177,13 @@ namespace extensions { namespace resource
         :m_aLocale( _rLocale )
         ,m_pResourceManager( nullptr )
     {
-        OUString sBaseName( _rBaseName );
-        m_pResourceManager = new SimpleResMgr( OUStringToOString( sBaseName, RTL_TEXTENCODING_UTF8 ).getStr(),
+        m_pResourceManager = new SimpleResMgr( OUStringToOString( _rBaseName, RTL_TEXTENCODING_UTF8 ).getStr(),
                 LanguageTag( m_aLocale) );
 
         if ( !m_pResourceManager->IsValid() )
         {
-            delete m_pResourceManager, m_pResourceManager = nullptr;
+            delete m_pResourceManager;
+            m_pResourceManager = nullptr;
             throw MissingResourceException();
         }
 
@@ -290,12 +290,12 @@ namespace extensions { namespace resource
         ResourceTypePtr resourceType;
         sal_Int32 resourceId( 0 );
         if ( !impl_getResourceTypeAndId_nothrow( _key, resourceType, resourceId ) )
-            return sal_False;
+            return false;
 
         if ( !m_pResourceManager->IsAvailable( StringResourceAccess::getResourceType(), resourceId ) )
-            return sal_False;
+            return false;
 
-        return sal_True;
+        return true;
     }
 
     Type SAL_CALL OpenOfficeResourceBundle::getElementType(  ) throw (RuntimeException, std::exception)

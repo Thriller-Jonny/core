@@ -34,7 +34,6 @@ namespace oox {
 namespace ole {
 
 
-
 /** Common properties for all controls that are part of a VBA user form or of
     another container control in a VBA user form. */
 class VbaSiteModel
@@ -73,8 +72,8 @@ public:
                             const ControlConverter& rConv,
                             ApiControlType eCtrlType,
                             sal_Int32 nCtrlIndex ) const;
-    ::rtl::OUString getControlSource() { return  maControlSource; }
-    ::rtl::OUString getRowSource() { return  maRowSource; }
+    const OUString& getControlSource() { return  maControlSource; }
+    const OUString& getRowSource() { return  maRowSource; }
 protected:
     OUString     maName;             ///< Name of the control.
     OUString     maTag;              ///< User defined tag.
@@ -93,7 +92,6 @@ protected:
 };
 
 typedef std::shared_ptr< VbaSiteModel > VbaSiteModelRef;
-
 
 
 /** A control that is embedded in a VBA user form or in another container
@@ -149,7 +147,7 @@ private:
     bool                importSiteModel( BinaryInputStream& rInStrm );
 
     /** Imports the site models of all embedded controls from the 'f' stream. */
-    bool                importEmbeddedSiteModels( BinaryInputStream& rInStrm );
+    void                importEmbeddedSiteModels( BinaryInputStream& rInStrm );
     /*  Final processing of all embedded controls after import. */
     void                finalizeEmbeddedControls();
 
@@ -170,7 +168,6 @@ private:
     VbaFormControlVector maControls;        ///< All embedded form controls.
     AxClassTable         maClassTable;      ///< Class identifiers for exotic embedded controls.
 };
-
 
 
 class VbaUserForm : public VbaFormControl
@@ -195,7 +192,6 @@ private:
     css::uno::Reference< css::frame::XModel >          mxDocModel;
     ControlConverter                                   maConverter;
 };
-
 
 
 } // namespace ole

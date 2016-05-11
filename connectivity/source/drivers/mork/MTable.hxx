@@ -21,7 +21,6 @@
 #define INCLUDED_CONNECTIVITY_SOURCE_DRIVERS_MORK_MTABLE_HXX
 
 #include <connectivity/TTableHelper.hxx>
-#include <com/sun/star/sdbc/XDatabaseMetaData.hpp>
 #include "MConnection.hxx"
 
 namespace connectivity
@@ -37,16 +36,16 @@ namespace connectivity
         public:
             OTable( sdbcx::OCollection* _pTables,
                     OConnection* _pConnection,
-                    const OUString& _Name,
-                    const OUString& _Type,
-                    const OUString& _Description );
+                    const OUString& Name,
+                    const OUString& Type,
+                    const OUString& Description );
 
             OConnection* getConnection() { return m_pConnection;}
 
             static bool isReadOnly() { return false; }
 
-            OUString getTableName() const { return m_Name; }
-            OUString getSchema() const { return m_SchemaName; }
+            const OUString& getTableName() const { return m_Name; }
+            const OUString& getSchema() const { return m_SchemaName; }
 
             // OTableHelper overridables
             virtual sdbcx::OCollection* createColumns( const TStringVector& _rNames ) override;

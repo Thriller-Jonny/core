@@ -294,7 +294,6 @@ void XMLFilterTestDialog::initDialog()
     m_pFTExportXSLTFile->SetText( getFileNameFromURL( m_pFilterInfo->maExportXSLT ) );
 
 
-
     m_pImport->Enable(bImport);
     m_pFTImportTemplate->Enable(bImport && !m_pFilterInfo->maImportTemplate.isEmpty());
     m_pFTImportTemplateFile->Enable(bImport && !m_pFilterInfo->maImportTemplate.isEmpty());
@@ -442,7 +441,7 @@ void XMLFilterTestDialog::onExportCurrentDocument()
     doExport( getFrontMostDocument( m_pFilterInfo->maDocumentService ) );
 }
 
-void XMLFilterTestDialog::doExport( Reference< XComponent > xComp )
+void XMLFilterTestDialog::doExport( const Reference< XComponent >& xComp )
 {
     try
     {

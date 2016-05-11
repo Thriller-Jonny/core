@@ -152,7 +152,7 @@ static const struct {
     { "sr_CS",  lcl_DATA_EURO },
     { "hr_HR",  lcl_DATA_EURO },
     { "bs_BA",  lcl_DATA_EURO },
-    { "eu",     lcl_DATA_EURO },
+    { "eu_ES",  lcl_DATA_EURO },
     { "fo_FO",  lcl_DATA_EURO },
     { "ga_IE",  lcl_DATA_EURO },
     { "gd_GB",  lcl_DATA_EURO },
@@ -484,26 +484,25 @@ oslGenericFunction SAL_CALL lcl_LookupTableHelper::getFunctionSymbolByName(
             aFallback = LocaleDataImpl::getFirstLocaleServiceName( aFbLocale);
     }
 
-    for ( sal_Int16 i = 0; i < nbOfLocales; i++)
+    for (const auto & i : aLibTable)
     {
-        if (localeName.equalsAscii(aLibTable[i].pLocale) ||
-                (bFallback && aFallback.equalsAscii(aLibTable[i].pLocale)))
+        if (localeName.equalsAscii(i.pLocale) ||
+                (bFallback && aFallback.equalsAscii(i.pLocale)))
         {
 #ifndef DISABLE_DYNLOADING
             OUStringBuffer aBuf(sal::static_int_cast<int>(
-                        strlen(aLibTable[i].pLocale) + 1 + strlen(pFunction)));
+                        strlen(i.pLocale) + 1 + strlen(pFunction)));
             {
                 ::osl::MutexGuard aGuard( maMutex );
-                for (size_t l = 0; l < maLookupTable.size(); l++)
+                for (LocaleDataLookupTableItem* pCurrent : maLookupTable)
                 {
-                    LocaleDataLookupTableItem* pCurrent = maLookupTable[l];
-                    if (pCurrent->dllName == aLibTable[i].pLib)
+                    if (pCurrent->dllName == i.pLib)
                     {
                         OSL_ASSERT( pOutCachedItem );
                         if( pOutCachedItem )
                         {
                             (*pOutCachedItem) = new LocaleDataLookupTableItem( *pCurrent );
-                            (*pOutCachedItem)->localeName = aLibTable[i].pLocale;
+                            (*pOutCachedItem)->localeName = i.pLocale;
                             return (*pOutCachedItem)->module->getFunctionSymbol(
                                     aBuf.appendAscii( pFunction).append( cUnder).
                                     appendAscii( (*pOutCachedItem)->localeName).makeStringAndClear());
@@ -515,17 +514,17 @@ oslGenericFunction SAL_CALL lcl_LookupTableHelper::getFunctionSymbolByName(
             }
             // Library not loaded, load it and add it to the list.
 #ifdef SAL_DLLPREFIX
-            aBuf.ensureCapacity(strlen(aLibTable[i].pLib) + 6);    // mostly "lib*.so"
-            aBuf.append( SAL_DLLPREFIX ).appendAscii(aLibTable[i].pLib).append( SAL_DLLEXTENSION );
+            aBuf.ensureCapacity(strlen(i.pLib) + 6);    // mostly "lib*.so"
+            aBuf.append( SAL_DLLPREFIX ).appendAscii(i.pLib).append( SAL_DLLEXTENSION );
 #else
-            aBuf.ensureCapacity(strlen(aLibTable[i].pLib) + 4);    // mostly "*.dll"
-            aBuf.appendAscii(aLibTable[i].pLib).appendAscii( SAL_DLLEXTENSION );
+            aBuf.ensureCapacity(strlen(i.pLib) + 4);    // mostly "*.dll"
+            aBuf.appendAscii(i.pLib).appendAscii( SAL_DLLEXTENSION );
 #endif
             osl::Module *module = new osl::Module();
             if ( module->loadRelative(&thisModule, aBuf.makeStringAndClear()) )
             {
                 ::osl::MutexGuard aGuard( maMutex );
-                LocaleDataLookupTableItem* pNewItem = new LocaleDataLookupTableItem(aLibTable[i].pLib, module, aLibTable[i].pLocale);
+                LocaleDataLookupTableItem* pNewItem = new LocaleDataLookupTableItem(i.pLib, module, i.pLocale);
                 maLookupTable.push_back(pNewItem);
                 OSL_ASSERT( pOutCachedItem );
                 if( pOutCachedItem )
@@ -544,43 +543,43 @@ oslGenericFunction SAL_CALL lcl_LookupTableHelper::getFunctionSymbolByName(
             (void) pOutCachedItem;
 
             if( strcmp(pFunction, "getAllCalendars") == 0 )
-                return aLibTable[i].getAllCalendars;
+                return i.getAllCalendars;
             else if( strcmp(pFunction, "getAllCurrencies") == 0 )
-                return aLibTable[i].getAllCurrencies;
+                return i.getAllCurrencies;
             else if( strcmp(pFunction, "getAllFormats0") == 0 )
-                return aLibTable[i].getAllFormats0;
+                return i.getAllFormats0;
             else if( strcmp(pFunction, "getBreakIteratorRules") == 0 )
-                return aLibTable[i].getBreakIteratorRules;
+                return i.getBreakIteratorRules;
             else if( strcmp(pFunction, "getCollationOptions") == 0 )
-                return aLibTable[i].getCollationOptions;
+                return i.getCollationOptions;
             else if( strcmp(pFunction, "getCollatorImplementation") == 0 )
-                return aLibTable[i].getCollatorImplementation;
+                return i.getCollatorImplementation;
             else if( strcmp(pFunction, "getContinuousNumberingLevels") == 0 )
-                return aLibTable[i].getContinuousNumberingLevels;
+                return i.getContinuousNumberingLevels;
             else if( strcmp(pFunction, "getDateAcceptancePatterns") == 0 )
-                return aLibTable[i].getDateAcceptancePatterns;
+                return i.getDateAcceptancePatterns;
             else if( strcmp(pFunction, "getFollowPageWords") == 0 )
-                return aLibTable[i].getFollowPageWords;
+                return i.getFollowPageWords;
             else if( strcmp(pFunction, "getForbiddenCharacters") == 0 )
-                return aLibTable[i].getForbiddenCharacters;
+                return i.getForbiddenCharacters;
             else if( strcmp(pFunction, "getIndexAlgorithm") == 0 )
-                return aLibTable[i].getIndexAlgorithm;
+                return i.getIndexAlgorithm;
             else if( strcmp(pFunction, "getLCInfo") == 0 )
-                return aLibTable[i].getLCInfo;
+                return i.getLCInfo;
             else if( strcmp(pFunction, "getLocaleItem") == 0 )
-                return aLibTable[i].getLocaleItem;
+                return i.getLocaleItem;
             else if( strcmp(pFunction, "getOutlineNumberingLevels") == 0 )
-                return aLibTable[i].getOutlineNumberingLevels;
+                return i.getOutlineNumberingLevels;
             else if( strcmp(pFunction, "getReservedWords") == 0 )
-                return aLibTable[i].getReservedWords;
+                return i.getReservedWords;
             else if( strcmp(pFunction, "getSearchOptions") == 0 )
-                return aLibTable[i].getSearchOptions;
+                return i.getSearchOptions;
             else if( strcmp(pFunction, "getTransliterations") == 0 )
-                return aLibTable[i].getTransliterations;
+                return i.getTransliterations;
             else if( strcmp(pFunction, "getUnicodeScripts") == 0 )
-                return aLibTable[i].getUnicodeScripts;
+                return i.getUnicodeScripts;
             else if( strcmp(pFunction, "getAllFormats1") == 0 )
-                return aLibTable[i].getAllFormats1;
+                return i.getAllFormats1;
 #endif
         }
     }
@@ -650,7 +649,7 @@ Sequence< CalendarItem2 > &LocaleDataImpl::getCalendarItemByName(const OUString&
             return ref_cal.PartitiveMonths;
         default:
             OSL_FAIL( "LocaleDataImpl::getCalendarItemByName: unhandled REF_* case");
-            // fallthru
+            SAL_FALLTHROUGH;
         case REF_ERAS:
             return ref_cal.Eras;
     }
@@ -816,40 +815,6 @@ LocaleDataImpl::getAllCurrencies( const Locale& rLocale ) throw(RuntimeException
 }
 
 
-// return a static (!) string resulting from replacing all occurrences of
-// 'oldStr' string in 'formatCode' string with 'newStr' string
-static const sal_Unicode * replace( sal_Unicode const * const formatCode, sal_Unicode const * const oldStr, sal_Unicode const * const newStr)
-{
-    // make reasonable assumption of maximum length of formatCode.
-#define MAX_FORMATCODE_LENTH 512
-    static sal_Unicode str[MAX_FORMATCODE_LENTH];
-
-    if (oldStr[0] == 0) // no replacement requires
-        return formatCode;
-
-    sal_Int32 i = 0, k = 0;
-    while (formatCode[i] > 0 && k < MAX_FORMATCODE_LENTH) {
-        sal_Int32 j = 0, last = k;
-        // search oldStr in formatCode
-        while (formatCode[i] > 0 && oldStr[j] > 0 && k < MAX_FORMATCODE_LENTH) {
-            str[k++] = formatCode[i];
-            if (formatCode[i++] != oldStr[j++])
-                break;
-        }
-        if (oldStr[j] == 0) {
-            // matched string found, do replacement
-            k = last; j = 0;
-            while (newStr[j] > 0 && k < MAX_FORMATCODE_LENTH)
-                str[k++] = newStr[j++];
-        }
-    }
-    if (k >= MAX_FORMATCODE_LENTH) // could not complete replacement, return original formatCode
-        return formatCode;
-
-    str[k] = 0;
-    return str;
-}
-
 Sequence< FormatElement > SAL_CALL
 LocaleDataImpl::getAllFormats( const Locale& rLocale ) throw(RuntimeException, std::exception)
 {
@@ -878,15 +843,15 @@ LocaleDataImpl::getAllFormats( const Locale& rLocale ) throw(RuntimeException, s
 
     Sequence< FormatElement > seq(formatCount);
     sal_Int32 f = 0;
-    for (int s = 0; s < SECTIONS; ++s)
+    for (FormatSection & s : section)
     {
-        sal_Unicode const * const * const formatArray = section[s].formatArray;
+        sal_Unicode const * const * const formatArray = s.formatArray;
         if ( formatArray )
         {
-            for (int i = 0, nOff = 0; i < section[s].formatCount; ++i, nOff += 7, ++f)
+            for (int i = 0, nOff = 0; i < s.formatCount; ++i, nOff += 7, ++f)
             {
                 FormatElement elem(
-                        replace( formatArray[nOff], section[s].from, section[s].to),
+                        OUString(formatArray[nOff]).replaceAll(s.from, s.to),
                         formatArray[nOff + 1],
                         formatArray[nOff + 2],
                         formatArray[nOff + 3],
@@ -1502,8 +1467,8 @@ LocaleDataImpl::getAllInstalledLocaleNames() throw(RuntimeException, std::except
     Sequence< lang::Locale > seq( nbOfLocales );
     sal_Int16 nInstalled = 0;
 
-    for( sal_Int16 i=0; i<nbOfLocales; i++ ) {
-        OUString name = OUString::createFromAscii( aLibTable[i].pLocale );
+    for(const auto & i : aLibTable) {
+        OUString name = OUString::createFromAscii( i.pLocale );
 
         // Check if the locale is really available and not just in the table,
         // don't allow fall backs.

@@ -21,7 +21,7 @@
 #define INCLUDED_SLIDESHOW_SOURCE_INC_SLIDESHOWCONTEXT_HXX
 
 #include <com/sun/star/uno/Reference.hxx>
-#include <boost/shared_ptr.hpp>
+#include <memory>
 
 namespace com{ namespace sun{ namespace star{ namespace uno
 {
@@ -46,7 +46,7 @@ namespace slideshow
         /** Common arguments for slideshow objects.
 
             This struct combines a number of object references
-            ubiquituously needed throughout the slideshow.
+            ubiquitously needed throughout the slideshow.
          */
         struct SlideShowContext
         {
@@ -81,7 +81,7 @@ namespace slideshow
                 @param rComponentContext
                 To create UNO services from
             */
-            SlideShowContext( boost::shared_ptr<SubsettableShapeManager>&       rSubsettableShapeManager,
+            SlideShowContext( std::shared_ptr<SubsettableShapeManager>&       rSubsettableShapeManager,
                               EventQueue&                                       rEventQueue,
                               EventMultiplexer&                                 rEventMultiplexer,
                               ScreenUpdater&                                    rScreenUpdater,
@@ -92,7 +92,7 @@ namespace slideshow
                               const css::uno::Reference< css::uno::XComponentContext>&    rComponentContext );
             void dispose();
 
-            boost::shared_ptr<SubsettableShapeManager>&     mpSubsettableShapeManager;
+            std::shared_ptr<SubsettableShapeManager>&     mpSubsettableShapeManager;
             EventQueue&                                     mrEventQueue;
             EventMultiplexer&                               mrEventMultiplexer;
             ScreenUpdater&                                  mrScreenUpdater;

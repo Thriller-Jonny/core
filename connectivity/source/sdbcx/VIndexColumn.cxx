@@ -55,37 +55,37 @@ OIndexColumn::OIndexColumn(bool _bCase) : OColumn(_bCase),  m_IsAscending(true)
 }
 
 
-OIndexColumn::OIndexColumn( bool             _IsAscending,
-                            const OUString&  _Name,
-                            const OUString&  _TypeName,
-                            const OUString&  _DefaultValue,
-                            sal_Int32        _IsNullable,
-                            sal_Int32        _Precision,
-                            sal_Int32        _Scale,
-                            sal_Int32        _Type,
-                            bool             _IsAutoIncrement,
-                            bool             _IsRowVersion,
-                            bool             _IsCurrency,
+OIndexColumn::OIndexColumn( bool             IsAscending,
+                            const OUString&  Name,
+                            const OUString&  TypeName,
+                            const OUString&  DefaultValue,
+                            sal_Int32        IsNullable,
+                            sal_Int32        Precision,
+                            sal_Int32        Scale,
+                            sal_Int32        Type,
+                            bool             IsAutoIncrement,
+                            bool             IsRowVersion,
+                            bool             IsCurrency,
                             bool             _bCase,
-                            const OUString&  _CatalogName,
-                            const OUString&  _SchemaName,
-                            const OUString&  _TableName
-                        ) : OColumn(_Name,
-                            _TypeName,
-                            _DefaultValue,
+                            const OUString&  CatalogName,
+                            const OUString&  SchemaName,
+                            const OUString&  TableName
+                        ) : OColumn(Name,
+                            TypeName,
+                            DefaultValue,
                             OUString(),
-                            _IsNullable,
-                            _Precision,
-                            _Scale,
-                            _Type,
-                            _IsAutoIncrement,
-                            _IsRowVersion,
-                            _IsCurrency,
+                            IsNullable,
+                            Precision,
+                            Scale,
+                            Type,
+                            IsAutoIncrement,
+                            IsRowVersion,
+                            IsCurrency,
                             _bCase,
-                            _CatalogName,
-                            _SchemaName,
-                            _TableName)
-                        ,   m_IsAscending(_IsAscending)
+                            CatalogName,
+                            SchemaName,
+                            TableName)
+                        ,   m_IsAscending(IsAscending)
 {
     construct();
 }
@@ -105,8 +105,6 @@ void OIndexColumn::construct()
     sal_Int32 nAttrib = isNew() ? 0 : PropertyAttribute::READONLY;
     registerProperty(OMetaConnection::getPropMap().getNameByIndex(PROPERTY_ID_ISASCENDING), PROPERTY_ID_ISASCENDING,    nAttrib,&m_IsAscending, cppu::UnoType<bool>::get());
 }
-
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -39,10 +39,10 @@ public:
     virtual ~TimerManager();
 
     /// register timer
-    bool SAL_CALL registerTimer(salhelper::Timer* pTimer);
+    void SAL_CALL registerTimer(salhelper::Timer* pTimer);
 
     /// unregister timer
-    bool SAL_CALL unregisterTimer(salhelper::Timer* pTimer);
+    void SAL_CALL unregisterTimer(salhelper::Timer* pTimer);
 
     /// lookup timer
     bool SAL_CALL lookupTimer(const salhelper::Timer* pTimer);
@@ -73,7 +73,6 @@ protected:
     static salhelper::TimerManager* m_pManager;
 
 };
-
 
 
 // Timer class
@@ -147,7 +146,7 @@ sal_Bool Timer::isTicking() const
     if (pManager)
         return pManager->lookupTimer(this);
     else
-        return sal_False;
+        return false;
 
 }
 
@@ -170,7 +169,7 @@ sal_Bool Timer::expiresBefore(const Timer* pTimer) const
     }
     else
     {
-        return sal_False;
+        return false;
     }
 }
 
@@ -232,8 +231,6 @@ TTimeValue Timer::getRemainingTime() const
 }
 
 
-
-
 // Timer manager
 
 namespace
@@ -283,13 +280,13 @@ TimerManager* TimerManager::getTimerManager()
     return m_pManager;
 }
 
-bool TimerManager::registerTimer(Timer* pTimer)
+void TimerManager::registerTimer(Timer* pTimer)
 {
     OSL_ASSERT(pTimer);
 
     if ( pTimer == nullptr )
     {
-        return false;
+        return;
     }
 
     osl::MutexGuard Guard(m_Lock);
@@ -320,17 +317,15 @@ bool TimerManager::registerTimer(Timer* pTimer)
         // signal it to TimerManager Thread
         m_notEmpty.set();
     }
-
-    return true;
 }
 
-bool TimerManager::unregisterTimer(Timer* pTimer)
+void TimerManager::unregisterTimer(Timer* pTimer)
 {
     OSL_ASSERT(pTimer);
 
     if ( pTimer == nullptr )
     {
-        return false;
+        return;
     }
 
     // lock access
@@ -344,12 +339,10 @@ bool TimerManager::unregisterTimer(Timer* pTimer)
         {
             // remove timer from list
             *ppIter = (*ppIter)->m_pNext;
-            return true;
+            return;
         }
         ppIter= &((*ppIter)->m_pNext);
     }
-
-    return false;
 }
 
 bool TimerManager::lookupTimer(const Timer* pTimer)
@@ -461,8 +454,6 @@ void TimerManager::run()
     }
 
 }
-
-
 
 
 // Timer manager cleanup

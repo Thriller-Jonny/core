@@ -61,14 +61,13 @@
 #include "xfbase64.hxx"
 
 XFBGImage::XFBGImage()
-{
-    m_bUserFileLink = false;
-    m_bRepeate = false;
-    m_bStretch = false;
-    m_bPosition = true;
-    m_eHoriAlign = enumXFAlignCenter;
-    m_eVertAlign = enumXFAlignCenter;
-}
+    : m_bUserFileLink(false)
+    , m_bRepeate(false)
+    , m_bStretch(false)
+    , m_bPosition(true)
+    , m_eHoriAlign(enumXFAlignCenter)
+    , m_eVertAlign(enumXFAlignCenter)
+{}
 
 void XFBGImage::SetImageData(sal_uInt8 *buf, int len)
 {
@@ -136,7 +135,7 @@ bool operator==(XFBGImage& img1, XFBGImage& img2)
     }
     else
     {
-        //I'll not compare the content of the two buffer,it's time comsuming.
+        //I'll not compare the content of the two buffer,it's time consuming.
         return false;
     }
     if( img1.m_bPosition != img2.m_bPosition )

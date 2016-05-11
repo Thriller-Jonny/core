@@ -109,8 +109,9 @@ void SwModelessRedlineAcceptDlg::Activate()
 
         bool bMod = pSh->IsModified();
         SfxBoolItem aShow(FN_REDLINE_SHOW, true);
-        pSh->GetView().GetViewFrame()->GetDispatcher()->Execute(
-            FN_REDLINE_SHOW, SfxCallMode::SYNCHRON|SfxCallMode::RECORD, &aShow, 0L);
+        pSh->GetView().GetViewFrame()->GetDispatcher()->ExecuteList(
+            FN_REDLINE_SHOW, SfxCallMode::SYNCHRON|SfxCallMode::RECORD,
+            { &aShow });
         if (!bMod)
             pSh->ResetModified();
         pImplDlg->Init();
@@ -165,8 +166,7 @@ SwRedlineAcceptDlg::SwRedlineAcceptDlg(vcl::Window *pParent, VclBuilderContainer
     m_aDeleted        (SW_RES(IMG_REDLINE_DELETED)),
     m_aFormated       (SW_RES(IMG_REDLINE_FORMATED)),
     m_aTableChgd      (SW_RES(IMG_REDLINE_TABLECHG)),
-    m_aFormatCollSet  (SW_RES(IMG_REDLINE_FMTCOLLSET)),
-    m_aAutoFormat     (SW_RES(IMG_REDLINE_AUTOFMT))
+    m_aFormatCollSet  (SW_RES(IMG_REDLINE_FMTCOLLSET))
 
 {
     m_aTabPagesCTRL->SetHelpId(HID_REDLINE_CTRL);
@@ -467,7 +467,7 @@ void SwRedlineAcceptDlg::Activate()
             if (pParent->pTLBParent)
             {
                 // update only comment
-                OUString sComment(rRedln.GetComment());
+                const OUString& sComment(rRedln.GetComment());
                 m_pTable->SetEntryText(sComment.replace('\n', ' '), pParent->pTLBParent, 3);
             }
             pParent->sComment = rRedln.GetComment();
@@ -757,7 +757,7 @@ void SwRedlineAcceptDlg::InsertParents(sal_uInt16 nStart, sal_uInt16 nEnd)
         pRedlineParent = new SwRedlineDataParent;
         pRedlineParent->pData    = pRedlineData;
         pRedlineParent->pNext    = nullptr;
-        OUString sComment(rRedln.GetComment());
+        const OUString& sComment(rRedln.GetComment());
         pRedlineParent->sComment = sComment.replace('\n', ' ');
         m_RedlineParents.insert(m_RedlineParents.begin() + i,
                 std::unique_ptr<SwRedlineDataParent>(pRedlineParent));

@@ -24,20 +24,18 @@
 #include <IDocumentMarkAccess.hxx>
 #include <unordered_set>
 #include <unordered_map>
-#include <boost/noncopyable.hpp>
 
 namespace sw {
     namespace mark {
     typedef std::unordered_map<OUString, sal_Int32, OUStringHash> MarkBasenameMapUniqueOffset_t;
 
     class MarkManager
-        : private ::boost::noncopyable
-        , virtual public IDocumentMarkAccess
+        : virtual public IDocumentMarkAccess
     {
         public:
             MarkManager(/*[in/out]*/ SwDoc& rDoc);
             // IDocumentMarkAccess
-            virtual ::sw::mark::IMark* makeMark(const SwPaM& rPaM, const OUString& rName, IDocumentMarkAccess::MarkType eMark, bool = false) override;
+            virtual ::sw::mark::IMark* makeMark(const SwPaM& rPaM, const OUString& rName, IDocumentMarkAccess::MarkType eMark) override;
 
             virtual sw::mark::IFieldmark* makeFieldBookmark( const SwPaM& rPaM,
                 const OUString& rName,
@@ -97,6 +95,10 @@ namespace sw {
             virtual void assureSortedMarkContainers() const override;
 
         private:
+
+            MarkManager(MarkManager const&) = delete;
+            MarkManager& operator=(MarkManager const&) = delete;
+
             // make names
             OUString getUniqueMarkName(const OUString& rName) const;
             void sortMarks();

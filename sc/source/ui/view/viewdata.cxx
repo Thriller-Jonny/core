@@ -61,6 +61,7 @@
 #include <boost/checked_delete.hpp>
 #include <comphelper/processfactory.hxx>
 #include <comphelper/string.hxx>
+#include <comphelper/lok.hxx>
 
 #include <com/sun/star/container/XNameContainer.hpp>
 #include <com/sun/star/document/NamedPropertyValues.hpp>
@@ -92,6 +93,8 @@ ScViewDataTable::ScViewDataTable() :
                 nCurY( 0 ),
                 nOldCurX( 0 ),
                 nOldCurY( 0 ),
+                nMaxTiledCol( 20 ),
+                nMaxTiledRow( 50 ),
                 bShowGrid( true ),
                 mbOldCursorValid( false )
 {
@@ -171,6 +174,7 @@ void ScViewDataTable::ReadUserDataSequence(const uno::Sequence <beans::PropertyV
     sal_Int32 nTempPosHTw(0);
     bool bHasVSplitInTwips = false;
     bool bHasHSplitInTwips = false;
+    bool bIsTiledRendering = comphelper::LibreOfficeKit::isActive();
     for (sal_Int32 i = 0; i < nCount; i++)
     {
         OUString sName(aSettings[i].Name);
@@ -222,22 +226,26 @@ void ScViewDataTable::ReadUserDataSequence(const uno::Sequence <beans::PropertyV
         else if (sName == SC_POSITIONLEFT)
         {
             aSettings[i].Value >>= nTemp32;
-            nPosX[SC_SPLIT_LEFT] = SanitizeCol( static_cast<SCCOL>(nTemp32));
+            nPosX[SC_SPLIT_LEFT] = bIsTiledRendering ? 0 :
+                                   SanitizeCol( static_cast<SCCOL>(nTemp32));
         }
         else if (sName == SC_POSITIONRIGHT)
         {
             aSettings[i].Value >>= nTemp32;
-            nPosX[SC_SPLIT_RIGHT] = SanitizeCol( static_cast<SCCOL>(nTemp32));
+            nPosX[SC_SPLIT_RIGHT] = bIsTiledRendering ? 0 :
+                                    SanitizeCol( static_cast<SCCOL>(nTemp32));
         }
         else if (sName == SC_POSITIONTOP)
         {
             aSettings[i].Value >>= nTemp32;
-            nPosY[SC_SPLIT_TOP] = SanitizeRow( static_cast<SCROW>(nTemp32));
+            nPosY[SC_SPLIT_TOP] = bIsTiledRendering ? 0 :
+                                  SanitizeRow( static_cast<SCROW>(nTemp32));
         }
         else if (sName == SC_POSITIONBOTTOM)
         {
             aSettings[i].Value >>= nTemp32;
-            nPosY[SC_SPLIT_BOTTOM] = SanitizeRow( static_cast<SCROW>(nTemp32));
+            nPosY[SC_SPLIT_BOTTOM] = bIsTiledRendering ? 0 :
+                                     SanitizeRow( static_cast<SCROW>(nTemp32));
         }
         else if (sName == SC_ZOOMTYPE)
         {
@@ -937,11 +945,9 @@ void ScViewData::SetEditEngine( ScSplitPos eWhich,
     {
         pEditView[eWhich] = new EditView( pNewEngine, pWin );
 
-        if (pDoc->GetDrawLayer() && pDoc->GetDrawLayer()->isTiledRendering())
+        if (pDoc->GetDrawLayer() && comphelper::LibreOfficeKit::isActive())
         {
-            pEditView[eWhich]->registerLibreOfficeKitCallback(pDoc->GetDrawLayer()->getLibreOfficeKitCallback(),
-                                                              pDoc->GetDrawLayer()->getLibreOfficeKitData());
-            pEditView[eWhich]->setTiledRendering(true);
+            pEditView[eWhich]->registerLibreOfficeKitCallback(pDoc->GetDrawLayer());
         }
     }
 
@@ -1518,8 +1524,7 @@ Point ScViewData::GetScrPos( SCCOL nWhereX, SCROW nWhereY, ScSplitPos eWhich,
     }
 
     sal_uInt16 nTSize;
-    ScDrawLayer* pModel = GetDocument()->GetDrawLayer();
-    bool bIsTiledRendering = pModel && pModel->isTiledRendering();
+    bool bIsTiledRendering = comphelper::LibreOfficeKit::isActive();
 
     SCCOL   nPosX = GetPosX(eWhichX);
     SCCOL   nX;
@@ -1739,9 +1744,9 @@ bool ScViewData::GetMergeSizePixel( SCCOL nX, SCROW nY, long& rSizeXPix, long& r
     }
 }
 
-bool ScViewData::GetPosFromPixel( long nClickX, long nClickY, ScSplitPos eWhich,
+void ScViewData::GetPosFromPixel( long nClickX, long nClickY, ScSplitPos eWhich,
                                         SCsCOL& rPosX, SCsROW& rPosY,
-                                        bool bTestMerge, bool bRepair, bool bNextIfLarge )
+                                        bool bTestMerge, bool bRepair )
 {
     //  special handling of 0 is now in ScViewFunctionSet::SetCursorAtPoint
 
@@ -1793,22 +1798,20 @@ bool ScViewData::GetPosFromPixel( long nClickX, long nClickY, ScSplitPos eWhich,
         }
     }
 
-    if (bNextIfLarge)       //  cells to big?
+    //  cells to big?
+    if ( rPosX == nStartPosX && nClickX > 0 )
     {
-        if ( rPosX == nStartPosX && nClickX > 0 )
-        {
-            if (pView)
-                aScrSize.Width() = pView->GetGridWidth(eHWhich);
-            if ( nClickX > aScrSize.Width() )
-                ++rPosX;
-        }
-        if ( rPosY == nStartPosY && nClickY > 0 )
-        {
-            if (pView)
-                aScrSize.Height() = pView->GetGridHeight(eVWhich);
-            if ( nClickY > aScrSize.Height() )
-                ++rPosY;
-        }
+         if (pView)
+            aScrSize.Width() = pView->GetGridWidth(eHWhich);
+         if ( nClickX > aScrSize.Width() )
+            ++rPosX;
+    }
+    if ( rPosY == nStartPosY && nClickY > 0 )
+    {
+        if (pView)
+            aScrSize.Height() = pView->GetGridHeight(eVWhich);
+        if ( nClickY > aScrSize.Height() )
+            ++rPosY;
     }
 
     if (rPosX<0) rPosX=0;
@@ -1843,8 +1846,6 @@ bool ScViewData::GetPosFromPixel( long nClickX, long nClickY, ScSplitPos eWhich,
             }
         }
     }
-
-    return false;
 }
 
 void ScViewData::GetMouseQuadrant( const Point& rClickPos, ScSplitPos eWhich,
@@ -1864,8 +1865,7 @@ void ScViewData::GetMouseQuadrant( const Point& rClickPos, ScSplitPos eWhich,
 void ScViewData::SetPosX( ScHSplitPos eWhich, SCCOL nNewPosX )
 {
     // in the tiled rendering case, nPosX [the leftmost visible column] must be 0
-    ScDrawLayer* pModel = GetDocument()->GetDrawLayer();
-    bool bIsTiledRendering = pModel && pModel->isTiledRendering();
+    bool bIsTiledRendering = comphelper::LibreOfficeKit::isActive();
     if (nNewPosX != 0 && !bIsTiledRendering)
     {
         SCCOL nOldPosX = pThisTab->nPosX[eWhich];
@@ -1904,8 +1904,7 @@ void ScViewData::SetPosX( ScHSplitPos eWhich, SCCOL nNewPosX )
 void ScViewData::SetPosY( ScVSplitPos eWhich, SCROW nNewPosY )
 {
     // in the tiled rendering case, nPosY [the topmost visible row] must be 0
-    ScDrawLayer* pModel = GetDocument()->GetDrawLayer();
-    bool bIsTiledRendering = pModel && pModel->isTiledRendering();
+    bool bIsTiledRendering = comphelper::LibreOfficeKit::isActive();
     if (nNewPosY != 0 && !bIsTiledRendering)
     {
         SCROW nOldPosY = pThisTab->nPosY[eWhich];
@@ -2654,11 +2653,9 @@ void ScViewData::WriteUserDataSequence(uno::Sequence <beans::PropertyValue>& rSe
                 maTabData[nTab]->WriteUserDataSequence(aTableViewSettings, *this, nTab);
                 OUString sTabName;
                 GetDocument()->GetName( nTab, sTabName );
-                uno::Any aAny;
-                aAny <<= aTableViewSettings;
                 try
                 {
-                    xNameContainer->insertByName(sTabName, aAny);
+                    xNameContainer->insertByName(sTabName, uno::Any(aTableViewSettings));
                 }
                 //#101739#; two tables with the same name are possible
                 catch ( container::ElementExistException& )
@@ -2689,36 +2686,36 @@ void ScViewData::WriteUserDataSequence(uno::Sequence <beans::PropertyValue>& rSe
         pSettings[SC_PAGE_VIEW_ZOOM_VALUE].Name = SC_PAGEVIEWZOOMVALUE;
         pSettings[SC_PAGE_VIEW_ZOOM_VALUE].Value <<= nPageZoomValue;
         pSettings[SC_PAGE_BREAK_PREVIEW].Name = SC_SHOWPAGEBREAKPREVIEW;
-        ScUnoHelpFunctions::SetBoolInAny( pSettings[SC_PAGE_BREAK_PREVIEW].Value, bPagebreak);
+        pSettings[SC_PAGE_BREAK_PREVIEW].Value <<= bPagebreak;
 
         if (pOptions)
         {
             pSettings[SC_SHOWZERO].Name = SC_UNO_SHOWZERO;
-            ScUnoHelpFunctions::SetBoolInAny( pSettings[SC_SHOWZERO].Value, pOptions->GetOption( VOPT_NULLVALS ) );
+            pSettings[SC_SHOWZERO].Value <<= pOptions->GetOption( VOPT_NULLVALS );
             pSettings[SC_SHOWNOTES].Name = SC_UNO_SHOWNOTES;
-            ScUnoHelpFunctions::SetBoolInAny( pSettings[SC_SHOWNOTES].Value, pOptions->GetOption( VOPT_NOTES ) );
+            pSettings[SC_SHOWNOTES].Value <<= pOptions->GetOption( VOPT_NOTES );
             pSettings[SC_SHOWGRID].Name = SC_UNO_SHOWGRID;
-            ScUnoHelpFunctions::SetBoolInAny( pSettings[SC_SHOWGRID].Value, pOptions->GetOption( VOPT_GRID ) );
+            pSettings[SC_SHOWGRID].Value <<= pOptions->GetOption( VOPT_GRID );
             pSettings[SC_GRIDCOLOR].Name = SC_UNO_GRIDCOLOR;
             OUString aColorName;
             Color aColor = pOptions->GetGridColor(&aColorName);
             pSettings[SC_GRIDCOLOR].Value <<= static_cast<sal_Int64>(aColor.GetColor());
             pSettings[SC_SHOWPAGEBR].Name = SC_UNO_SHOWPAGEBR;
-            ScUnoHelpFunctions::SetBoolInAny( pSettings[SC_SHOWPAGEBR].Value, pOptions->GetOption( VOPT_PAGEBREAKS ) );
+            pSettings[SC_SHOWPAGEBR].Value <<= pOptions->GetOption( VOPT_PAGEBREAKS );
             pSettings[SC_COLROWHDR].Name = SC_UNO_COLROWHDR;
-            ScUnoHelpFunctions::SetBoolInAny( pSettings[SC_COLROWHDR].Value, pOptions->GetOption( VOPT_HEADER ) );
+            pSettings[SC_COLROWHDR].Value <<= pOptions->GetOption( VOPT_HEADER );
             pSettings[SC_SHEETTABS].Name = SC_UNO_SHEETTABS;
-            ScUnoHelpFunctions::SetBoolInAny( pSettings[SC_SHEETTABS].Value, pOptions->GetOption( VOPT_TABCONTROLS ) );
+            pSettings[SC_SHEETTABS].Value <<= pOptions->GetOption( VOPT_TABCONTROLS );
             pSettings[SC_OUTLSYMB].Name = SC_UNO_OUTLSYMB;
-            ScUnoHelpFunctions::SetBoolInAny( pSettings[SC_OUTLSYMB].Value, pOptions->GetOption( VOPT_OUTLINER ) );
+            pSettings[SC_OUTLSYMB].Value <<= pOptions->GetOption( VOPT_OUTLINER );
             pSettings[SC_VALUE_HIGHLIGHTING].Name = rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( SC_UNO_VALUEHIGH ) );
-            ScUnoHelpFunctions::SetBoolInAny( pSettings[SC_VALUE_HIGHLIGHTING].Value, pOptions->GetOption( VOPT_SYNTAX ) );
+            pSettings[SC_VALUE_HIGHLIGHTING].Value <<= pOptions->GetOption( VOPT_SYNTAX );
 
             const ScGridOptions& aGridOpt = pOptions->GetGridOptions();
             pSettings[SC_SNAPTORASTER].Name = SC_UNO_SNAPTORASTER;
-            ScUnoHelpFunctions::SetBoolInAny( pSettings[SC_SNAPTORASTER].Value, aGridOpt.GetUseGridSnap() );
+            pSettings[SC_SNAPTORASTER].Value <<= aGridOpt.GetUseGridSnap();
             pSettings[SC_RASTERVIS].Name = SC_UNO_RASTERVIS;
-            ScUnoHelpFunctions::SetBoolInAny( pSettings[SC_RASTERVIS].Value, aGridOpt.GetGridVisible() );
+            pSettings[SC_RASTERVIS].Value <<= aGridOpt.GetGridVisible();
             pSettings[SC_RASTERRESX].Name = SC_UNO_RASTERRESX;
             pSettings[SC_RASTERRESX].Value <<= static_cast<sal_Int32> ( aGridOpt.GetFieldDrawX() );
             pSettings[SC_RASTERRESY].Name = SC_UNO_RASTERRESY;
@@ -2728,7 +2725,7 @@ void ScViewData::WriteUserDataSequence(uno::Sequence <beans::PropertyValue>& rSe
             pSettings[SC_RASTERSUBY].Name = SC_UNO_RASTERSUBY;
             pSettings[SC_RASTERSUBY].Value <<= static_cast<sal_Int32> ( aGridOpt.GetFieldDivisionY() );
             pSettings[SC_RASTERSYNC].Name = SC_UNO_RASTERSYNC;
-            ScUnoHelpFunctions::SetBoolInAny( pSettings[SC_RASTERSYNC].Value, aGridOpt.GetSynchronize() );
+            pSettings[SC_RASTERSYNC].Value <<= aGridOpt.GetSynchronize();
         }
     }
 }
@@ -2778,10 +2775,9 @@ void ScViewData::ReadUserDataSequence(const uno::Sequence <beans::PropertyValue>
         }
         else if (sName == SC_ACTIVETABLE)
         {
-            OUString sValue;
-            if(rSettings[i].Value >>= sValue)
+            OUString sTabName;
+            if(rSettings[i].Value >>= sTabName)
             {
-                OUString sTabName(sValue);
                 SCTAB nTab(0);
                 if (GetDocument()->GetTable(sTabName, nTab))
                     nTabNo = nTab;
@@ -2932,10 +2928,10 @@ Point ScViewData::GetMousePosPixel()
     return pView->GetMousePosPixel();
 }
 
-void ScViewData::UpdateInputHandler( bool bForce, bool bStopEditing )
+void ScViewData::UpdateInputHandler( bool bForce )
 {
     if (pViewShell)
-        pViewShell->UpdateInputHandler( bForce, bStopEditing );
+        pViewShell->UpdateInputHandler( bForce );
 }
 
 bool ScViewData::IsOle()

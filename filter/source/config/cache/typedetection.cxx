@@ -58,11 +58,9 @@ TypeDetection::TypeDetection(const css::uno::Reference< css::uno::XComponentCont
 }
 
 
-
 TypeDetection::~TypeDetection()
 {
 }
-
 
 
 OUString SAL_CALL TypeDetection::queryTypeByURL(const OUString& sURL)
@@ -81,16 +79,17 @@ OUString SAL_CALL TypeDetection::queryTypeByURL(const OUString& sURL)
     // set std types as minimum requirement first!
     // Only in case no type was found for given URL,
     // use optional types too ...
+    auto & cache = TheFilterCache::get();
     FlatDetection lFlatTypes;
-    m_rCache->detectFlatForURL(aURL, lFlatTypes);
+    cache.detectFlatForURL(aURL, lFlatTypes);
 
     if (
         (lFlatTypes.size() < 1                                ) &&
-        (!m_rCache->isFillState(FilterCache::E_CONTAINS_TYPES))
+        (!cache.isFillState(FilterCache::E_CONTAINS_TYPES))
        )
     {
-        m_rCache->load(FilterCache::E_CONTAINS_TYPES);
-        m_rCache->detectFlatForURL(aURL, lFlatTypes);
+        cache.load(FilterCache::E_CONTAINS_TYPES);
+        cache.detectFlatForURL(aURL, lFlatTypes);
     }
 
     // first item is guaranteed as "preferred" one!
@@ -339,7 +338,7 @@ struct EqualByType : public std::binary_function<FlatDetectionInfo, FlatDetectio
     }
 };
 
-class FindByType : std::unary_function<FlatDetectionInfo, bool>
+class FindByType : public std::unary_function<FlatDetectionInfo, bool>
 {
     OUString maType;
 public:
@@ -431,7 +430,7 @@ OUString SAL_CALL TypeDetection::queryTypeByDescriptor(css::uno::Sequence< css::
         // flat detection failed
         // pure deep detection failed
         // => ask might existing InteractionHandler
-        // means: ask user for it's decision
+        // means: ask user for its decision
         if (sType.isEmpty())
             sType = impl_askUserForTypeAndFilterIfAllowed(stlDescriptor);
 
@@ -467,7 +466,6 @@ OUString SAL_CALL TypeDetection::queryTypeByDescriptor(css::uno::Sequence< css::
 }
 
 
-
 void TypeDetection::impl_checkResultsAndAddBestFilter(utl::MediaDescriptor& rDescriptor,
                                                       OUString&               sType      )
 {
@@ -478,6 +476,8 @@ void TypeDetection::impl_checkResultsAndAddBestFilter(utl::MediaDescriptor& rDes
                                 OUString());
     if (!sFilter.isEmpty())
         return;
+
+    auto & cache = TheFilterCache::get();
 
     // b)
     // check a preselected document service too.
@@ -497,12 +497,12 @@ void TypeDetection::impl_checkResultsAndAddBestFilter(utl::MediaDescriptor& rDes
             // Attention: For executing next lines of code, We must be sure that
             // all filters already loaded :-(
             // That can disturb our "load on demand feature". But we have no other chance!
-            m_rCache->load(FilterCache::E_CONTAINS_FILTERS);
+            cache.load(FilterCache::E_CONTAINS_FILTERS);
 
             CacheItem lIProps;
             lIProps[PROPNAME_DOCUMENTSERVICE] <<= sDocumentService;
             lIProps[PROPNAME_TYPE           ] <<= sRealType;
-            OUStringList lFilters = m_rCache->getMatchingItemsByProps(FilterCache::E_FILTER, lIProps);
+            OUStringList lFilters = cache.getMatchingItemsByProps(FilterCache::E_FILTER, lIProps);
 
             aLock.clear();
             // <- SAFE
@@ -514,7 +514,7 @@ void TypeDetection::impl_checkResultsAndAddBestFilter(utl::MediaDescriptor& rDes
                 aLock.reset();
                 try
                 {
-                    CacheItem aFilter = m_rCache->getItem(FilterCache::E_FILTER, *pIt);
+                    CacheItem aFilter = cache.getItem(FilterCache::E_FILTER, *pIt);
                     sal_Int32 nFlags  = 0;
                     aFilter[PROPNAME_FLAGS] >>= nFlags;
 
@@ -553,9 +553,9 @@ void TypeDetection::impl_checkResultsAndAddBestFilter(utl::MediaDescriptor& rDes
         // SAFE ->
         ::osl::ResettableMutexGuard aLock(m_aLock);
 
-        CacheItem aType = m_rCache->getItem(FilterCache::E_TYPE, sType);
+        CacheItem aType = cache.getItem(FilterCache::E_TYPE, sType);
         aType[PROPNAME_PREFERREDFILTER] >>= sFilter;
-        CacheItem aFilter = m_rCache->getItem(FilterCache::E_FILTER, sFilter);
+        CacheItem aFilter = cache.getItem(FilterCache::E_FILTER, sFilter);
 
         aLock.clear();
         // <- SAFE
@@ -579,11 +579,11 @@ void TypeDetection::impl_checkResultsAndAddBestFilter(utl::MediaDescriptor& rDes
         // Attention: For executing next lines of code, We must be sure that
         // all filters already loaded :-(
         // That can disturb our "load on demand feature". But we have no other chance!
-        m_rCache->load(FilterCache::E_CONTAINS_FILTERS);
+        cache.load(FilterCache::E_CONTAINS_FILTERS);
 
         CacheItem lIProps;
         lIProps[PROPNAME_TYPE] <<= sType;
-        OUStringList lFilters = m_rCache->getMatchingItemsByProps(FilterCache::E_FILTER, lIProps);
+        OUStringList lFilters = cache.getMatchingItemsByProps(FilterCache::E_FILTER, lIProps);
 
         aLock.clear();
         // <- SAFE
@@ -599,7 +599,7 @@ void TypeDetection::impl_checkResultsAndAddBestFilter(utl::MediaDescriptor& rDes
             aLock.reset();
             try
             {
-                CacheItem aFilter = m_rCache->getItem(FilterCache::E_FILTER, sFilter);
+                CacheItem aFilter = cache.getItem(FilterCache::E_FILTER, sFilter);
                 sal_Int32 nFlags  = 0;
                 aFilter[PROPNAME_FLAGS] >>= nFlags;
 
@@ -626,7 +626,6 @@ void TypeDetection::impl_checkResultsAndAddBestFilter(utl::MediaDescriptor& rDes
 }
 
 
-
 bool TypeDetection::impl_getPreselectionForType(
     const OUString& sPreSelType, const util::URL& aParsedURL, FlatDetection& rFlatTypes, bool bDocService)
 {
@@ -637,11 +636,11 @@ bool TypeDetection::impl_getPreselectionForType(
     bool bBreakDetection = false;
 
     // Further we must know if it matches by pattern
-    // Every flat detected type by pattern wont be detected deep!
+    // Every flat detected type by pattern won't be detected deep!
     bool bMatchByPattern = false;
 
     // And we must know if a preselection must be preferred, because
-    // it matches by it's extension too.
+    // it matches by its extension too.
     bool bMatchByExtension = false;
 
     // validate type
@@ -651,7 +650,7 @@ bool TypeDetection::impl_getPreselectionForType(
     {
         // SAFE -> --------------------------
         ::osl::ResettableMutexGuard aLock(m_aLock);
-        aType = m_rCache->getItem(FilterCache::E_TYPE, sType);
+        aType = TheFilterCache::get().getItem(FilterCache::E_TYPE, sType);
         aLock.clear();
         // <- SAFE --------------------------
     }
@@ -746,11 +745,12 @@ bool TypeDetection::impl_getPreselectionForDocumentService(
         // Attention: For executing next lines of code, We must be sure that
         // all filters already loaded :-(
         // That can disturb our "load on demand feature". But we have no other chance!
-        m_rCache->load(FilterCache::E_CONTAINS_FILTERS);
+        auto & cache = TheFilterCache::get();
+        cache.load(FilterCache::E_CONTAINS_FILTERS);
 
         CacheItem lIProps;
         lIProps[PROPNAME_DOCUMENTSERVICE] <<= sPreSelDocumentService;
-        lFilters = m_rCache->getMatchingItemsByProps(FilterCache::E_FILTER, lIProps);
+        lFilters = cache.getMatchingItemsByProps(FilterCache::E_FILTER, lIProps);
 
         aLock.clear();
         // <- SAFE --------------------------
@@ -785,7 +785,7 @@ OUString TypeDetection::impl_getTypeFromFilter(const OUString& rFilterName)
     try
     {
         osl::MutexGuard aLock(m_aLock);
-        aFilter = m_rCache->getItem(FilterCache::E_FILTER, rFilterName);
+        aFilter = TheFilterCache::get().getItem(FilterCache::E_FILTER, rFilterName);
     }
     catch (const container::NoSuchElementException&)
     {
@@ -807,8 +807,9 @@ void TypeDetection::impl_getAllFormatTypes(
     try
     {
         osl::MutexGuard aLock(m_aLock);
-        m_rCache->load(FilterCache::E_CONTAINS_FILTERS);
-        aFilterNames = m_rCache->getItemNames(FilterCache::E_FILTER);
+        auto & cache = TheFilterCache::get();
+        cache.load(FilterCache::E_CONTAINS_FILTERS);
+        aFilterNames = cache.getItemNames(FilterCache::E_FILTER);
     }
     catch (const container::NoSuchElementException&)
     {
@@ -831,7 +832,7 @@ void TypeDetection::impl_getAllFormatTypes(
     {
         // Get all types that match the URL alone.
         FlatDetection aFlatByURL;
-        m_rCache->detectFlatForURL(aParsedURL, aFlatByURL);
+        TheFilterCache::get().detectFlatForURL(aParsedURL, aFlatByURL);
         FlatDetection::const_iterator it = aFlatByURL.begin(), itEnd = aFlatByURL.end();
         for (; it != itEnd; ++it)
         {
@@ -868,7 +869,6 @@ void TypeDetection::impl_getAllFormatTypes(
     if (!sSelectedDoc.isEmpty())
         impl_getPreselectionForDocumentService(sSelectedDoc, aParsedURL, rFlatTypes);
 }
-
 
 
 OUString TypeDetection::impl_detectTypeFlatAndDeep(      utl::MediaDescriptor& rDescriptor   ,
@@ -920,7 +920,7 @@ OUString TypeDetection::impl_detectTypeFlatAndDeep(      utl::MediaDescriptor& r
         {
             // SAFE -> ----------------------------------
             ::osl::ResettableMutexGuard aLock(m_aLock);
-            CacheItem aType = m_rCache->getItem(FilterCache::E_TYPE, sFlatType);
+            CacheItem aType = TheFilterCache::get().getItem(FilterCache::E_TYPE, sFlatType);
             aLock.clear();
 
             OUString sDetectService;
@@ -1068,7 +1068,6 @@ OUString TypeDetection::impl_askDetectService(const OUString&               sDet
 }
 
 
-
 OUString TypeDetection::impl_askUserForTypeAndFilterIfAllowed(utl::MediaDescriptor& rDescriptor)
 {
     css::uno::Reference< css::task::XInteractionHandler > xInteraction =
@@ -1100,7 +1099,7 @@ OUString TypeDetection::impl_askUserForTypeAndFilterIfAllowed(utl::MediaDescript
 
     try
     {
-        // create a new request to ask user for it's decision about the usable filter
+        // create a new request to ask user for its decision about the usable filter
         ::framework::RequestFilterSelect aRequest(sURL);
         xInteraction->handle(aRequest.GetRequest());
 
@@ -1127,7 +1126,6 @@ OUString TypeDetection::impl_askUserForTypeAndFilterIfAllowed(utl::MediaDescript
 
     return OUString();
 }
-
 
 
 void TypeDetection::impl_openStream(utl::MediaDescriptor& rDescriptor)
@@ -1160,7 +1158,6 @@ void TypeDetection::impl_openStream(utl::MediaDescriptor& rDescriptor)
 }
 
 
-
 void TypeDetection::impl_removeTypeFilterFromDescriptor(utl::MediaDescriptor& rDescriptor)
 {
     utl::MediaDescriptor::iterator pItType   = rDescriptor.find(utl::MediaDescriptor::PROP_TYPENAME()  );
@@ -1172,13 +1169,12 @@ void TypeDetection::impl_removeTypeFilterFromDescriptor(utl::MediaDescriptor& rD
 }
 
 
-
 bool TypeDetection::impl_validateAndSetTypeOnDescriptor(      utl::MediaDescriptor& rDescriptor,
                                                             const OUString&               sType      )
 {
     // SAFE ->
     ::osl::ResettableMutexGuard aLock(m_aLock);
-    if (m_rCache->hasItem(FilterCache::E_TYPE, sType))
+    if (TheFilterCache::get().hasItem(FilterCache::E_TYPE, sType))
     {
         rDescriptor[utl::MediaDescriptor::PROP_TYPENAME()] <<= sType;
         return true;
@@ -1192,7 +1188,6 @@ bool TypeDetection::impl_validateAndSetTypeOnDescriptor(      utl::MediaDescript
 }
 
 
-
 bool TypeDetection::impl_validateAndSetFilterOnDescriptor(      utl::MediaDescriptor& rDescriptor,
                                                               const OUString&               sFilter    )
 {
@@ -1201,10 +1196,11 @@ bool TypeDetection::impl_validateAndSetFilterOnDescriptor(      utl::MediaDescri
         // SAFE ->
         ::osl::ResettableMutexGuard aLock(m_aLock);
 
-        CacheItem aFilter = m_rCache->getItem(FilterCache::E_FILTER, sFilter);
+        auto & cache = TheFilterCache::get();
+        CacheItem aFilter = cache.getItem(FilterCache::E_FILTER, sFilter);
         OUString sType;
         aFilter[PROPNAME_TYPE] >>= sType;
-        CacheItem aType = m_rCache->getItem(FilterCache::E_TYPE, sType);
+        CacheItem aType = cache.getItem(FilterCache::E_TYPE, sType);
 
         aLock.clear();
         // <- SAFE
@@ -1222,20 +1218,16 @@ bool TypeDetection::impl_validateAndSetFilterOnDescriptor(      utl::MediaDescri
 }
 
 
-
 OUString TypeDetection::impl_getImplementationName()
 {
     return OUString( "com.sun.star.comp.filter.config.TypeDetection" );
 }
 
 
-
 css::uno::Sequence< OUString > TypeDetection::impl_getSupportedServiceNames()
 {
-    css::uno::Sequence< OUString > lServiceNames { "com.sun.star.document.TypeDetection" };
-    return lServiceNames;
+    return { "com.sun.star.document.TypeDetection" };
 }
-
 
 
 css::uno::Reference< css::uno::XInterface > SAL_CALL TypeDetection::impl_createInstance(const css::uno::Reference< css::lang::XMultiServiceFactory >& xSMGR)

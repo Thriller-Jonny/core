@@ -65,8 +65,8 @@ struct ConnectionHint
 
 struct XShapeCompareHelper
 {
-  bool operator()(css::uno::Reference < css::drawing::XShape > x1,
-                  css::uno::Reference < css::drawing::XShape > x2 ) const
+  bool operator()(const css::uno::Reference < css::drawing::XShape >& x1,
+                  const css::uno::Reference < css::drawing::XShape >& x2 ) const
   {
     return x1.get() < x2.get();
   }
@@ -95,9 +95,6 @@ struct XMLShapeImportHelperImpl
     // context for sorting shapes
     ShapeSortContext*           mpSortContext;
 
-    std::map<sal_Int32, css::uno::Reference< css::drawing::XShape >, ltint32>
-                                maShapeIds;
-
     std::vector<ConnectionHint> maConnections;
 
     // #88546# possibility to switch progress bar handling on/off
@@ -113,7 +110,6 @@ XMLShapeImportHelper::XMLShapeImportHelper(
         SvXMLImportPropertyMapper *pExtMapper )
 :   mpImpl( new XMLShapeImportHelperImpl() ),
     mpPageContext(nullptr),
-    mxModel(rModel),
 
     mpPropertySetMapper(nullptr),
     mpPresPagePropsMapper(nullptr),
@@ -126,10 +122,7 @@ XMLShapeImportHelper::XMLShapeImportHelper(
     mp3DPolygonBasedAttrTokenMap(nullptr),
     mp3DCubeObjectAttrTokenMap(nullptr),
     mp3DSphereObjectAttrTokenMap(nullptr),
-    mp3DSceneShapeAttrTokenMap(nullptr),
     mp3DLightAttrTokenMap(nullptr),
-    mpPathShapeAttrTokenMap(nullptr),
-    mpPolygonShapeAttrTokenMap(nullptr),
     msStartShape("StartShape"),
     msEndShape("EndShape"),
     msStartGluePointIndex("StartGluePointIndex"),
@@ -202,14 +195,11 @@ XMLShapeImportHelper::~XMLShapeImportHelper()
     delete mpGroupShapeElemTokenMap;
     delete mpFrameShapeElemTokenMap;
 
-    delete mpPolygonShapeAttrTokenMap;
-    delete mpPathShapeAttrTokenMap;
     delete mp3DSceneShapeElemTokenMap;
     delete mp3DObjectAttrTokenMap;
     delete mp3DPolygonBasedAttrTokenMap;
     delete mp3DCubeObjectAttrTokenMap;
     delete mp3DSphereObjectAttrTokenMap;
-    delete mp3DSceneShapeAttrTokenMap;
     delete mp3DLightAttrTokenMap;
 
     // Styles or AutoStyles context?
@@ -419,25 +409,25 @@ SvXMLShapeContext* XMLShapeImportHelper::Create3DSceneChildContext(
             case XML_TOK_3DSCENE_3DCUBE:
             {
                 // dr3d:3dcube inside dr3d:3dscene context
-                pContext = new SdXML3DCubeObjectShapeContext( rImport, p_nPrefix, rLocalName, xAttrList, rShapes, false);
+                pContext = new SdXML3DCubeObjectShapeContext( rImport, p_nPrefix, rLocalName, xAttrList, rShapes);
                 break;
             }
             case XML_TOK_3DSCENE_3DSPHERE:
             {
                 // dr3d:3dsphere inside dr3d:3dscene context
-                pContext = new SdXML3DSphereObjectShapeContext( rImport, p_nPrefix, rLocalName, xAttrList, rShapes, false);
+                pContext = new SdXML3DSphereObjectShapeContext( rImport, p_nPrefix, rLocalName, xAttrList, rShapes);
                 break;
             }
             case XML_TOK_3DSCENE_3DLATHE:
             {
                 // dr3d:3dlathe inside dr3d:3dscene context
-                pContext = new SdXML3DLatheObjectShapeContext( rImport, p_nPrefix, rLocalName, xAttrList, rShapes, false);
+                pContext = new SdXML3DLatheObjectShapeContext( rImport, p_nPrefix, rLocalName, xAttrList, rShapes);
                 break;
             }
             case XML_TOK_3DSCENE_3DEXTRUDE:
             {
                 // dr3d:3dextrude inside dr3d:3dscene context
-                pContext = new SdXML3DExtrudeObjectShapeContext( rImport, p_nPrefix, rLocalName, xAttrList, rShapes, false);
+                pContext = new SdXML3DExtrudeObjectShapeContext( rImport, p_nPrefix, rLocalName, xAttrList, rShapes);
                 break;
             }
         }
@@ -578,7 +568,7 @@ SvXMLShapeContext* XMLShapeImportHelper::CreateGroupChildContext(
         case XML_TOK_GROUP_CUSTOM_SHAPE:
         {
             // draw:customshape
-            pContext = new SdXMLCustomShapeContext( rImport, p_nPrefix, rLocalName, xAttrList, rShapes, false );
+            pContext = new SdXMLCustomShapeContext( rImport, p_nPrefix, rLocalName, xAttrList, rShapes );
             break;
         }
          case XML_TOK_GROUP_A:
@@ -627,20 +617,20 @@ SvXMLShapeContext* XMLShapeImportHelper::CreateFrameChildContext(
         case XML_TOK_FRAME_TEXT_BOX:
         {
             // text:text-box inside group context
-            pContext = new SdXMLTextBoxShapeContext( rImport, p_nPrefix, rLocalName, xAttrList, rShapes, false );
+            pContext = new SdXMLTextBoxShapeContext( rImport, p_nPrefix, rLocalName, xAttrList, rShapes );
             break;
         }
         case XML_TOK_FRAME_IMAGE:
         {
             // office:image inside group context
-            pContext = new SdXMLGraphicObjectShapeContext( rImport, p_nPrefix, rLocalName, xAttrList, rShapes, false );
+            pContext = new SdXMLGraphicObjectShapeContext( rImport, p_nPrefix, rLocalName, xAttrList, rShapes );
             break;
         }
         case XML_TOK_FRAME_OBJECT:
         case XML_TOK_FRAME_OBJECT_OLE:
         {
             // draw:object or draw:object_ole
-            pContext = new SdXMLObjectShapeContext( rImport, p_nPrefix, rLocalName, xAttrList, rShapes, false );
+            pContext = new SdXMLObjectShapeContext( rImport, p_nPrefix, rLocalName, xAttrList, rShapes );
             break;
         }
         case XML_TOK_FRAME_TABLE:
@@ -654,19 +644,19 @@ SvXMLShapeContext* XMLShapeImportHelper::CreateFrameChildContext(
         case XML_TOK_FRAME_PLUGIN:
         {
             // draw:plugin
-            pContext = new SdXMLPluginShapeContext( rImport, p_nPrefix, rLocalName, xAttrList, rShapes, false );
+            pContext = new SdXMLPluginShapeContext( rImport, p_nPrefix, rLocalName, xAttrList, rShapes );
             break;
         }
         case XML_TOK_FRAME_FLOATING_FRAME:
         {
             // draw:floating-frame
-            pContext = new SdXMLFloatingFrameShapeContext( rImport, p_nPrefix, rLocalName, xAttrList, rShapes, false );
+            pContext = new SdXMLFloatingFrameShapeContext( rImport, p_nPrefix, rLocalName, xAttrList, rShapes );
             break;
         }
         case XML_TOK_FRAME_APPLET:
         {
             // draw:applet
-            pContext = new SdXMLAppletShapeContext( rImport, p_nPrefix, rLocalName, xAttrList, rShapes, false );
+            pContext = new SdXMLAppletShapeContext( rImport, p_nPrefix, rLocalName, xAttrList, rShapes );
             break;
         }
         // add other shapes here...
@@ -796,8 +786,7 @@ void ShapeSortContext::moveShape( sal_Int32 nSourcePos, sal_Int32 nDestPos )
 
     if( xPropSet.is() && xPropSet->getPropertySetInfo()->hasPropertyByName( "ZOrder" ) )
     {
-        aAny <<= nDestPos;
-        xPropSet->setPropertyValue( "ZOrder", aAny );
+        xPropSet->setPropertyValue( "ZOrder", uno::Any(nDestPos) );
 
         for( ZOrderHint& rHint : maZOrderList )
         {
@@ -950,8 +939,6 @@ void XMLShapeImportHelper::restoreConnections()
 {
     if( !mpImpl->maConnections.empty() )
     {
-        uno::Any aAny;
-
         const vector<ConnectionHint>::size_type nCount = mpImpl->maConnections.size();
         for( vector<ConnectionHint>::size_type i = 0; i < nCount; i++ )
         {
@@ -977,12 +964,10 @@ void XMLShapeImportHelper::restoreConnections()
                     mrImporter.getInterfaceToIdentifierMapper().getReference( rHint.aDestShapeId ), uno::UNO_QUERY );
                 if( xShape.is() )
                 {
-                    aAny <<= xShape;
-                    xConnector->setPropertyValue( rHint.bStart ? msStartShape : msEndShape, aAny );
+                    xConnector->setPropertyValue( rHint.bStart ? msStartShape : msEndShape, uno::Any(xShape) );
 
                     sal_Int32 nGlueId = rHint.nDestGlueId < 4 ? rHint.nDestGlueId : getGluePointId( xShape, rHint.nDestGlueId );
-                    aAny <<= nGlueId;
-                    xConnector->setPropertyValue( rHint.bStart ? msStartGluePointIndex : msEndGluePointIndex, aAny );
+                    xConnector->setPropertyValue( rHint.bStart ? msStartGluePointIndex : msEndGluePointIndex, uno::Any(nGlueId) );
                 }
 
                 // #86637# restore line deltas
@@ -1106,9 +1091,9 @@ void XMLShapeImportHelper::endPage( css::uno::Reference< css::drawing::XShapes >
 }
 
 /** defines if the import should increment the progress bar or not */
-void XMLShapeImportHelper::enableHandleProgressBar( bool bEnable )
+void XMLShapeImportHelper::enableHandleProgressBar()
 {
-    mpImpl->mbHandleProgressBar = bEnable;
+    mpImpl->mbHandleProgressBar = true;
 }
 
 bool XMLShapeImportHelper::IsHandleProgressBarEnabled() const

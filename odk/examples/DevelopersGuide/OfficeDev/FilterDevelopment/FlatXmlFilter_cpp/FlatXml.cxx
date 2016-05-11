@@ -42,9 +42,6 @@
 
 #include <com/sun/star/lang/XComponent.hpp>
 
-#include <com/sun/star/uno/Any.hxx>
-#include <com/sun/star/uno/Type.hxx>
-
 #include <com/sun/star/beans/PropertyValue.hpp>
 
 #include <com/sun/star/xml/sax/XParser.hpp>
@@ -196,7 +193,7 @@ sal_Bool XFlatXml::exporter(
     // read source data
     // we are especially interested in the output stream
     // since that is where our xml-writer will push the data
-    // from it's data-source interface
+    // from its data-source interface
     OUString aName, sURL;
     Reference<XOutputStream> rOutputStream;
     sal_Int32 nLength = aSourceData.getLength();

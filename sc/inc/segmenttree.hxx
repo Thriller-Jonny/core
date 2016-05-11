@@ -68,12 +68,12 @@ public:
 
     bool setTrue(SCROW nRow1, SCROW nRow2);
     bool setFalse(SCROW nRow1, SCROW nRow2);
-    bool getRangeData(SCROW nRow, RangeData& rData);
+    bool getRangeData(SCROW nRow, RangeData& rData) const;
     bool getRangeDataLeaf(SCROW nRow, RangeData& rData);
     void removeSegment(SCROW nRow1, SCROW nRow2);
-    void insertSegment(SCROW nRow, SCROW nSize, bool bSkipStartBoundary);
+    void insertSegment(SCROW nRow, SCROW nSize);
 
-    SCROW findLastNotOf(bool bValue) const;
+    SCROW findLastTrue() const;
 
 private:
     ::std::unique_ptr<ScFlatBoolSegmentsImpl> mpImpl;
@@ -96,7 +96,7 @@ public:
     bool setFalse(SCCOL nCol1, SCCOL nCol2);
     bool getRangeData(SCCOL nCol, RangeData& rData);
     void removeSegment(SCCOL nCol1, SCCOL nCol2);
-    void insertSegment(SCCOL nCol, SCCOL nSize, bool bSkipStartBoundary);
+    void insertSegment(SCCOL nCol, SCCOL nSize);
 
 private:
     ::std::unique_ptr<ScFlatBoolSegmentsImpl> mpImpl;
@@ -139,9 +139,9 @@ public:
     sal_uInt32 getSumValue(SCROW nRow1, SCROW nRow2);
     bool getRangeData(SCROW nRow, RangeData& rData);
     void removeSegment(SCROW nRow1, SCROW nRow2);
-    void insertSegment(SCROW nRow, SCROW nSize, bool bSkipStartBoundary);
+    void insertSegment(SCROW nRow, SCROW nSize);
 
-    SCROW findLastNotOf(sal_uInt16 nValue) const;
+    SCROW findLastTrue(sal_uInt16 nValue) const;
 
     void enableTreeSearch(bool bEnable);
 

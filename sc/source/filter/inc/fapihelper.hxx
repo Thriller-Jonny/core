@@ -132,7 +132,7 @@ public:
     inline bool         Is() const { return mxPropSet.is(); }
 
     /** Returns the contained XPropertySet interface. */
-    inline css::uno::Reference< css::beans::XPropertySet > GetApiPropertySet() const { return mxPropSet; }
+    const css::uno::Reference< css::beans::XPropertySet >& GetApiPropertySet() const { return mxPropSet; }
 
     /** Returns the service name provided via the XServiceName interface, or an empty string on error. */
     OUString     GetServiceName() const;
@@ -180,7 +180,7 @@ public:
 
     /** Puts the passed Boolean value into the property set. */
     inline void         SetBoolProperty( const OUString& rPropName, bool bValue )
-                            { SetAnyProperty( rPropName, ::comphelper::makeBoolAny( bValue ) ); }
+                            { SetAnyProperty( rPropName, css::uno::Any( bValue ) ); }
 
     /** Puts the passed string into the property set. */
     inline void         SetStringProperty( const OUString& rPropName, const OUString& rValue )
@@ -231,14 +231,14 @@ public:
     /** Reads an Any from the value sequence. */
     bool                ReadValue( css::uno::Any& rAny );
     /** Reads a color value from the value sequence. */
-    bool                ReadValue( Color& rColor );
+    void                ReadValue( Color& rColor );
     /** Reads a C++ boolean value from the value sequence. */
-    bool                ReadValue( bool& rbValue );
+    void                ReadValue( bool& rbValue );
 
     // write properties -------------------------------------------------------
 
     /** Must be called before reading or storing property values in the helper. */
-    void                InitializeWrite( bool bClearAllAnys = false );
+    void                InitializeWrite();
 
     /** Writes the next value to the value sequence. */
     template< typename Type >
@@ -249,7 +249,7 @@ public:
     inline void         WriteValue( const Color& rColor )
                             { WriteValue( ScfApiHelper::ConvertToApiColor( rColor ) ); }
     /** Writes a C++ boolean value to the value sequence. */
-    void                WriteValue( const bool& rbValue );
+    void                WriteValue( bool rbValue );
 
     /** Writes all values to the passed property set. */
     void                WriteToPropertySet( ScfPropertySet& rPropSet ) const;

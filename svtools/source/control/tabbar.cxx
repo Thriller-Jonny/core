@@ -428,7 +428,7 @@ bool TabBarEdit::PreNotify( NotifyEvent& rNEvt )
             {
                 if ( !mbPostEvt )
                 {
-                    if ( PostUserEvent( LINK( this, TabBarEdit, ImplEndEditHdl ), reinterpret_cast<void*>(sal_False), true ) )
+                    if ( PostUserEvent( LINK( this, TabBarEdit, ImplEndEditHdl ), reinterpret_cast<void*>(false), true ) )
                         mbPostEvt = true;
                 }
                 return true;
@@ -437,7 +437,7 @@ bool TabBarEdit::PreNotify( NotifyEvent& rNEvt )
             {
                 if ( !mbPostEvt )
                 {
-                    if ( PostUserEvent( LINK( this, TabBarEdit, ImplEndEditHdl ), reinterpret_cast<void*>(sal_True), true ) )
+                    if ( PostUserEvent( LINK( this, TabBarEdit, ImplEndEditHdl ), reinterpret_cast<void*>(true), true ) )
                         mbPostEvt = true;
                 }
                 return true;
@@ -452,7 +452,7 @@ void TabBarEdit::LoseFocus()
 {
     if ( !mbPostEvt )
     {
-        if ( PostUserEvent( LINK( this, TabBarEdit, ImplEndEditHdl ), reinterpret_cast<void*>(sal_False), true ) )
+        if ( PostUserEvent( LINK( this, TabBarEdit, ImplEndEditHdl ), reinterpret_cast<void*>(false), true ) )
             mbPostEvt = true;
     }
 
@@ -638,9 +638,9 @@ void TabBar::ImplInitSettings( bool bFont, bool bBackground )
         while (GetTextHeight() > (GetOutputSizePixel().Height() - 1))
         {
             vcl::Font aFont = GetFont();
-            if (aFont.GetHeight() <= 6)
+            if (aFont.GetFontHeight() <= 6)
                 break;
-            aFont.SetHeight(aFont.GetHeight() - 1);
+            aFont.SetFontHeight(aFont.GetFontHeight() - 1);
             SetFont(aFont);
         }
     }
@@ -723,7 +723,7 @@ bool TabBar::ImplCalcWidth()
         }
 
         // Padding is dependent on font height - bigger font = bigger padding
-        long nFontWidth = aFont.GetHeight();
+        long nFontWidth = aFont.GetFontHeight();
         nNewWidth += nFontWidth * 2;
 
         if (pItem->mnWidth != nNewWidth)
@@ -2510,9 +2510,8 @@ void TabBar::HideDropPos()
     }
 }
 
-bool TabBar::SwitchPage(const Point& rPos)
+void TabBar::SwitchPage(const Point& rPos)
 {
-    bool bSwitch = false;
     sal_uInt16 nSwitchId = GetPageId(rPos);
     if (!nSwitchId)
         EndSwitchPage();
@@ -2537,15 +2536,12 @@ bool TabBar::SwitchPage(const Point& rPos)
                         Update();
                         ImplActivatePage();
                         ImplSelect();
-                        bSwitch = true;
                     }
                     mbInSwitching = false;
                 }
             }
         }
     }
-
-    return bSwitch;
 }
 
 void TabBar::EndSwitchPage()

@@ -166,7 +166,7 @@ namespace calc
         const Type* pTypesEnd = aSupportedTypes.getConstArray() + aSupportedTypes.getLength();
         while ( pTypes != pTypesEnd )
             if ( aType.equals( *pTypes++ ) )
-                return sal_True;
+                return true;
 
         return false;
     }
@@ -451,7 +451,7 @@ namespace calc
         EventObject aEvent;
         aEvent.Source.set(*this);
 
-        ::cppu::OInterfaceIteratorHelper aIter( m_aModifyListeners );
+        ::comphelper::OInterfaceIteratorHelper2 aIter( m_aModifyListeners );
         while ( aIter.hasMoreElements() )
         {
             try

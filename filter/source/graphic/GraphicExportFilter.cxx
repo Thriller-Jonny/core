@@ -23,9 +23,8 @@
 #include <svl/outstrm.hxx>
 #include <svtools/DocumentToGraphicRenderer.hxx>
 
-GraphicExportFilter::GraphicExportFilter( const Reference<XComponentContext>& rxContext )
-    : mxContext( rxContext )
-    , mExportSelection(false)
+GraphicExportFilter::GraphicExportFilter( const Reference<XComponentContext>&  )
+    : mExportSelection(false)
     , mTargetWidth(0)
     , mTargetHeight(0)
 {}
@@ -48,6 +47,7 @@ void GraphicExportFilter::gatherProperties( const Sequence<PropertyValue>& rProp
             aInternalFilterName = aInternalFilterName.replaceFirst("impress_", "");
             aInternalFilterName = aInternalFilterName.replaceFirst("calc_", "");
             aInternalFilterName = aInternalFilterName.replaceFirst("writer_", "");
+            aInternalFilterName = aInternalFilterName.replaceFirst("web_", "");
         }
         else if ( aProperty.Name == "FilterData" )
         {

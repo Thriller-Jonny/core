@@ -51,7 +51,7 @@ class UniqueColumnValue
     /** extracts the name of the table a form is based on.
 
         <p>This method works for forms based directly on tables, and for forms based on statements, which
-        themself are based on one table.<br/>
+        themself are based on one table.<br>
         Everything else (especially forms based on queries) is not yet implemented.</p>
     */
     private String extractTableName( XPropertySet xForm ) throws com.sun.star.uno.Exception
@@ -97,7 +97,7 @@ class UniqueColumnValue
 
         @returns
             a String which can be used as statement to retrieve a unique value for the given column.
-            The result set resulting from such a execution contains the value in it's first column.
+            The result set resulting from such a execution contains the value in its first column.
     */
     private String composeUniqueyKeyStatement( XPropertySet xForm, String sFieldName ) throws com.sun.star.uno.Exception
     {

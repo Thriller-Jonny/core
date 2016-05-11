@@ -384,8 +384,7 @@ private:
 
 typedef std::unordered_map< OUString,
                          css::beans::PropertyValue,
-                         OUStringHash,
-                         ::std::equal_to< OUString > > tPropValMap;
+                         OUStringHash > tPropValMap;
 
 class Document: public ::VCLXAccessibleComponent, public ::SfxListener
 {
@@ -393,7 +392,7 @@ public:
     Document(::VCLXWindow * pVclXWindow, ::TextEngine & rEngine,
              ::TextView & rView);
 
-    inline css::uno::Reference< css::accessibility::XAccessible >
+    const css::uno::Reference< css::accessibility::XAccessible >&
     getAccessible() { return m_xAccessible; }
 
     // Must be called only after init has been called.

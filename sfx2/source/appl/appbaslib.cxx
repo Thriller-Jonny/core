@@ -34,8 +34,6 @@ using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::script;
 using namespace ::com::sun::star::embed;
-using ::osl::MutexGuard;
-using ::osl::Mutex;
 
 
 SfxBasicManagerHolder::SfxBasicManagerHolder()
@@ -156,7 +154,7 @@ void SfxBasicManagerHolder::impl_releaseContainers()
     mxDialogContainer.clear();
 }
 
-bool SfxBasicManagerHolder::LegacyPsswdBinaryLimitExceeded( Sequence< OUString >& sModules )
+bool SfxBasicManagerHolder::LegacyPsswdBinaryLimitExceeded( std::vector< OUString >& sModules )
 {
 #if !HAVE_FEATURE_SCRIPTING
     (void) sModules;

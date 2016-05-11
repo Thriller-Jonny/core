@@ -20,23 +20,22 @@
 #ifndef INCLUDED_OOX_HELPER_CONTAINERHELPER_HXX
 #define INCLUDED_OOX_HELPER_CONTAINERHELPER_HXX
 
-#include <map>
+#include <cstddef>
 #include <vector>
-#include <com/sun/star/uno/Reference.h>
-#include <com/sun/star/uno/Sequence.h>
-#include <oox/dllapi.h>
 
+#include <com/sun/star/uno/Reference.hxx>
+#include <com/sun/star/uno/Sequence.hxx>
+#include <oox/dllapi.h>
+#include <rtl/ustring.hxx>
+#include <sal/types.h>
 
 namespace com { namespace sun { namespace star {
-    namespace container { class XIndexAccess; }
-    namespace container { class XIndexContainer; }
     namespace container { class XNameAccess; }
     namespace container { class XNameContainer; }
-    namespace uno { class XComponentContext; }
+    namespace uno { class Any; }
 } } }
 
 namespace oox {
-
 
 
 /** A range of signed 32-bit integer values. */
@@ -55,9 +54,7 @@ struct ValueRange
 };
 
 
-
 typedef ::std::vector< ValueRange > ValueRangeVector;
-
 
 
 /** An ordered list of value ranges. The insertion operation will merge
@@ -77,7 +74,6 @@ public:
 private:
     ValueRangeVector    maRanges;
 };
-
 
 
 /** Template for a 2-dimensional array of objects.
@@ -136,7 +132,6 @@ private:
 };
 
 
-
 /** Static helper functions for improved API container handling. */
 class OOX_DLLPUBLIC ContainerHelper
 {
@@ -155,8 +150,7 @@ public:
     static OUString getUnusedName(
                             const css::uno::Reference< css::container::XNameAccess >& rxNameAccess,
                             const OUString& rSuggestedName,
-                            sal_Unicode cSeparator,
-                            sal_Int32 nFirstIndexToAppend = 1 );
+                            sal_Unicode cSeparator );
 
     /** Inserts an object into a name container.
 
@@ -172,8 +166,7 @@ public:
     static bool         insertByName(
                             const css::uno::Reference< css::container::XNameContainer >& rxNameContainer,
                             const OUString& rName,
-                            const css::uno::Any& rObject,
-                            bool bReplaceOldExisting = true );
+                            const css::uno::Any& rObject );
 
     /** Inserts an object into a name container.
 
@@ -189,13 +182,9 @@ public:
 
         @param rObject  The object to be inserted.
 
-        @param bRenameOldExisting  Specifies behaviour if an object with the
-            suggested name already exists. If false (default), the new object
-            will be inserted with a name not yet extant in the container (this
-            is done by appending a numerical index to the suggested name). If
-            true, the existing object will be removed and inserted with an
-            unused name, and the new object will be inserted with the suggested
-            name.
+        The new object
+        will be inserted with a name not yet extant in the container (this
+        is done by appending a numerical index to the suggested name).
 
         @return  The final name the object is inserted with. Will always be
             equal to the suggested name, if parameter bRenameOldExisting is
@@ -205,8 +194,7 @@ public:
                             const css::uno::Reference< css::container::XNameContainer >& rxNameContainer,
                             const OUString& rSuggestedName,
                             sal_Unicode cSeparator,
-                            const css::uno::Any& rObject,
-                            bool bRenameOldExisting = false );
+                            const css::uno::Any& rObject );
 
     // std::vector and std::map element access --------------------------------
 
@@ -267,7 +255,6 @@ public:
 };
 
 
-
 template< typename VectorType >
 /*static*/ const typename VectorType::value_type* ContainerHelper::getVectorElement( const VectorType& rVector, sal_Int32 nIndex )
 {
@@ -323,7 +310,6 @@ template< typename MatrixType >
     }
     return aSeq;
 }
-
 
 
 } // namespace oox

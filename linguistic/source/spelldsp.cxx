@@ -19,7 +19,6 @@
 
 #include <sal/config.h>
 
-#include <boost/noncopyable.hpp>
 #include <com/sun/star/uno/Reference.h>
 #include <com/sun/star/linguistic2/XSearchableDictionaryList.hpp>
 #include <com/sun/star/linguistic2/SpellFailure.hpp>
@@ -28,6 +27,7 @@
 #include <cppuhelper/factory.hxx>
 #include <unotools/localedatawrapper.hxx>
 #include <comphelper/processfactory.hxx>
+#include <comphelper/sequence.hxx>
 #include <tools/debug.hxx>
 #include <svl/lngmisc.hxx>
 #include <osl/mutex.hxx>
@@ -49,13 +49,13 @@ using namespace linguistic;
 
 
 // ProposalList: list of proposals for misspelled words
-//   The order of strings in the array should be left unchanged because the
+// The order of strings in the array should be left unchanged because the
 // spellchecker should have put the more likely suggestions at the top.
 // New entries will be added to the end but duplicates are to be avoided.
 // Removing entries is done by assigning the empty string.
 // The sequence is constructed from all non empty strings in the original
 // while maintaining the order.
-class ProposalList: private boost::noncopyable
+class ProposalList
 {
     std::vector< OUString > aVec;
 
@@ -63,13 +63,15 @@ class ProposalList: private boost::noncopyable
 
 public:
     ProposalList()  {}
+    ProposalList(const ProposalList&) = delete;
+    ProposalList& operator=(const ProposalList&) = delete;
 
     size_t  Count() const;
     void    Prepend( const OUString &rText );
     void    Append( const OUString &rNew );
     void    Append( const std::vector< OUString > &rNew );
     void    Append( const Sequence< OUString > &rNew );
-    Sequence< OUString >    GetSequence() const;
+    std::vector< OUString > GetVector() const;
 };
 
 
@@ -134,19 +136,18 @@ size_t ProposalList::Count() const
     return nRes;
 }
 
-Sequence< OUString > ProposalList::GetSequence() const
+std::vector< OUString > ProposalList::GetVector() const
 {
     sal_Int32 nCount = Count();
     sal_Int32 nIdx = 0;
-    Sequence< OUString > aRes( nCount );
-    OUString *pRes = aRes.getArray();
+    std::vector< OUString > aRes( nCount );
     sal_Int32 nLen = aVec.size();
     for (sal_Int32 i = 0;  i < nLen;  ++i)
     {
         const OUString &rText = aVec[i];
-        DBG_ASSERT( nIdx < nCount, "index our of range" );
+        DBG_ASSERT( nIdx < nCount, "index out of range" );
         if (nIdx < nCount && !rText.isEmpty())
-            pRes[ nIdx++ ] = rText;
+            aRes[ nIdx++ ] = rText;
     }
     return aRes;
 }
@@ -228,7 +229,7 @@ sal_Bool SAL_CALL
         throw(IllegalArgumentException, RuntimeException, std::exception)
 {
     MutexGuard  aGuard( GetLinguMutex() );
-    return isValid_Impl( rWord, LinguLocaleToLanguage( rLocale ), rProperties, true );
+    return isValid_Impl( rWord, LinguLocaleToLanguage( rLocale ), rProperties );
 }
 
 
@@ -238,7 +239,7 @@ Reference< XSpellAlternatives > SAL_CALL
         throw(IllegalArgumentException, RuntimeException, std::exception)
 {
     MutexGuard  aGuard( GetLinguMutex() );
-    return spell_Impl( rWord, LinguLocaleToLanguage( rLocale ), rProperties, true );
+    return spell_Impl( rWord, LinguLocaleToLanguage( rLocale ), rProperties );
 }
 
 
@@ -279,8 +280,7 @@ static Reference< XDictionaryEntry > lcl_GetRulingDictionaryEntry(
 bool SpellCheckerDispatcher::isValid_Impl(
             const OUString& rWord,
             LanguageType nLanguage,
-            const PropertyValues& rProperties,
-            bool bCheckDics)
+            const PropertyValues& rProperties)
         throw( RuntimeException, IllegalArgumentException, std::exception )
 {
     MutexGuard  aGuard( GetLinguMutex() );
@@ -419,8 +419,7 @@ bool SpellCheckerDispatcher::isValid_Impl(
         }
 
         // cross-check against results from dictionaries which have precedence!
-        if (bCheckDics  &&
-            GetDicList().is()  &&  IsUseDicList( rProperties, GetPropSet() ))
+        if (GetDicList().is()  &&  IsUseDicList( rProperties, GetPropSet() ))
         {
             Reference< XDictionaryEntry > xTmp( lcl_GetRulingDictionaryEntry( aChkWord, nLanguage ) );
             if (xTmp.is()) {
@@ -445,8 +444,7 @@ bool SpellCheckerDispatcher::isValid_Impl(
 Reference< XSpellAlternatives > SpellCheckerDispatcher::spell_Impl(
             const OUString& rWord,
             LanguageType nLanguage,
-            const PropertyValues& rProperties,
-            bool bCheckDics )
+            const PropertyValues& rProperties )
         throw(IllegalArgumentException, RuntimeException, std::exception)
 {
     MutexGuard  aGuard( GetLinguMutex() );
@@ -642,7 +640,7 @@ Reference< XSpellAlternatives > SpellCheckerDispatcher::spell_Impl(
             xDList = GetDicList();
 
         // cross-check against results from user-dictionaries which have precedence!
-        if (bCheckDics  &&  xDList.is())
+        if (xDList.is())
         {
             Reference< XDictionaryEntry > xTmp( lcl_GetRulingDictionaryEntry( aChkWord, nLanguage ) );
             if (xTmp.is())
@@ -718,17 +716,17 @@ Reference< XSpellAlternatives > SpellCheckerDispatcher::spell_Impl(
             std::vector< OUString > aDicListProps;   // list of proposals from user-dictionaries
             SearchSimilarText( aChkWord, nLanguage, xDList, aDicListProps );
             aProposalList.Append( aDicListProps );
-            Sequence< OUString > aProposals = aProposalList.GetSequence();
+            std::vector< OUString > aProposals = aProposalList.GetVector();
 
             // remove entries listed in negative dictionaries
             // (we don't want to display suggestions that will be regarded as misspelled later on)
-            if (bCheckDics  &&  xDList.is())
+            if (xDList.is())
                 SeqRemoveNegEntries( aProposals, xDList, nLanguage );
 
             uno::Reference< linguistic2::XSetSpellAlternatives > xSetAlt( xRes, uno::UNO_QUERY );
             if (xSetAlt.is())
             {
-                xSetAlt->setAlternatives( aProposals );
+                xSetAlt->setAlternatives( comphelper::containerToSequence(aProposals) );
                 xSetAlt->setFailureType( eFailureType );
             }
             else
@@ -737,12 +735,12 @@ Reference< XSpellAlternatives > SpellCheckerDispatcher::spell_Impl(
                 {
                     DBG_ASSERT( false, "XSetSpellAlternatives not implemented!" );
                 }
-                else if (aProposals.getLength() > 0)
+                else if (!aProposals.empty())
                 {
                     // no xRes but Proposals found from the user-dictionaries.
                     // Thus we need to create an xRes...
                     xRes = new linguistic::SpellAlternatives( rWord, nLanguage,
-                            SpellFailure::IS_NEGATIVE_WORD, aProposals );
+                            SpellFailure::IS_NEGATIVE_WORD, comphelper::containerToSequence(aProposals) );
                 }
             }
         }
@@ -856,7 +854,6 @@ void SpellCheckerDispatcher::setCharClass(const LanguageTag& rLanguageTag)
         pCharClass = new CharClass(rLanguageTag);
     pCharClass->setLanguageTag(rLanguageTag);
 }
-
 
 
 OUString SAL_CALL SpellCheckerDispatcher::makeLowerCase(const OUString& aTerm, CharClass * pCC)

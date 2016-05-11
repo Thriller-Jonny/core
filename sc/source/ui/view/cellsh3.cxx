@@ -53,7 +53,6 @@
 #define IS_EDITMODE() GetViewData()->HasEditView( GetViewData()->GetActivePart() )
 
 using sc::HMMToTwips;
-using sc::TwipsToHMM;
 using sc::TwipsToEvenHMM;
 
 void ScCellShell::Execute( SfxRequest& rReq )
@@ -78,7 +77,7 @@ void ScCellShell::Execute( SfxRequest& rReq )
                     //! cannot always be switched ????
                     if (!pTabViewShell->GetViewFrame()->GetFrame().IsInPlace())
                         pTabViewShell->SetDontSwitch(true);         // do not switch off EditShell
-                    // no break
+                    SAL_FALLTHROUGH;
 
             case FID_CELL_FORMAT:
             case SID_ENABLE_HYPHENATION:
@@ -345,7 +344,7 @@ void ScCellShell::Execute( SfxRequest& rReq )
 
                     rReq.Done();
                 }
-                else if ( pReqArgs == nullptr )
+                else
                 {
                     pTabViewShell->ExecuteCellFormatDlg( rReq );
                 }
@@ -749,7 +748,7 @@ void ScCellShell::Execute( SfxRequest& rReq )
                         bMoveContents = static_cast<const SfxBoolItem*>(pItem)->GetValue();
                     }
 
-                    if (pTabViewShell->MergeCells( bApi, bMoveContents, true, bCenter ))
+                    if (pTabViewShell->MergeCells( bApi, bMoveContents, bCenter ))
                     {
                         if (!bApi && bMoveContents)             // "yes" clicked in dialog
                             rReq.AppendItem( SfxBoolItem( nSlot, bMoveContents ) );

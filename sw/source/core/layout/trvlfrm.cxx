@@ -214,7 +214,7 @@ bool SwPageFrame::GetCursorOfst( SwPosition *pPos, Point &rPoint,
                 static_cast<SwCursorMoveState*>(pCMS)->m_bStop = true;
                 return false;
             }
-            const SwContentFrame *pCnt = GetContentPos( aPoint, false, false, false, pCMS, false );
+            const SwContentFrame *pCnt = GetContentPos( aPoint, false, false, pCMS, false );
             if ( pCMS && pCMS->m_bStop )
                 return false;
 
@@ -267,7 +267,7 @@ bool SwPageFrame::GetCursorOfst( SwPosition *pPos, Point &rPoint,
         else
         {
             /* In order to provide a selection as accurable as possible when we have both
-             * text and brackground object, then we compute the distance between both
+             * text and background object, then we compute the distance between both
              * would-be positions and the click point. The shortest distance wins.
              */
             double nTextDistance = 0;
@@ -592,7 +592,7 @@ bool SwFlyFrame::GetCursorOfst( SwPosition *pPos, Point &rPoint,
         {
             const bool bFill = pCMS && pCMS->m_pFill;
             Point aPoint( rPoint );
-            const SwContentFrame *pCnt = GetContentPos( rPoint, true, false, false, pCMS );
+            const SwContentFrame *pCnt = GetContentPos( rPoint, true, false, pCMS );
             if ( pCMS && pCMS->m_bStop )
                 return false;
             if( bFill && pCnt->IsTextFrame() )
@@ -1178,11 +1178,9 @@ static const SwLayoutFrame* lcl_Inside( const SwContentFrame *pCnt, Point& rPt )
 const SwContentFrame *SwLayoutFrame::GetContentPos( Point& rPoint,
                                             const bool bDontLeave,
                                             const bool bBodyOnly,
-                                            const bool bCalc,
                                             const SwCursorMoveState *pCMS,
                                             const bool bDefaultExpand ) const
 {
-    vcl::RenderContext* pRenderContext = getRootFrame()->GetCurrShell()->GetOut();
     //Determine the first ContentFrame.
     const SwLayoutFrame *pStart = (!bDontLeave && bDefaultExpand && GetPrev()) ?
                                     static_cast<const SwLayoutFrame*>(GetPrev()) : this;
@@ -1207,7 +1205,7 @@ const SwContentFrame *SwLayoutFrame::GetContentPos( Point& rPoint,
                 ((!bDontLeave || IsAnLower( pContent )) &&
                 (pContent->GetPhyPageNum() <= nMaxPage)) )
         {
-            if ( ( bCalc || pContent->Frame().Width() ) &&
+            if ( pContent->Frame().Width() &&
                  ( !bBodyOnly || pContent->IsInDocBody() ) )
             {
                 //If the Content lies in a protected area (cell, Footnote, section),
@@ -1220,9 +1218,6 @@ const SwContentFrame *SwLayoutFrame::GetContentPos( Point& rPoint,
 
                 if ( !pContent->IsTextFrame() || !static_cast<const SwTextFrame*>(pContent)->IsHiddenNow() )
                 {
-                    if ( bCalc )
-                        pContent->Calc(pRenderContext);
-
                     SwRect aContentFrame( pContent->UnionFrame() );
                     if ( aContentFrame.IsInside( rPoint ) )
                     {
@@ -1361,8 +1356,6 @@ const SwContentFrame *SwLayoutFrame::GetContentPos( Point& rPoint,
     }
 
     //Bring the Point in to the PrtArea
-    if ( bCalc )
-        pActual->Calc(pRenderContext);
     const SwRect aRect( pActual->Frame().Pos() + pActual->Prt().Pos(),
                         aActualSize );
     if ( aPoint.Y() < aRect.Top() )
@@ -2065,7 +2058,7 @@ void SwRootFrame::CalcFrameRects(SwShellCursor &rCursor)
     // allowed (header/footer/table-headline) for two pages.
     do {    // middle check loop
         const SwLayoutFrame* pSttLFrame = pStartFrame->GetUpper();
-        const sal_uInt16 cHdFtTableHd = FRM_HEADER | FRM_FOOTER | FRM_TAB;
+        const SwFrameType cHdFtTableHd = SwFrameType::Header | SwFrameType::Footer | SwFrameType::Tab;
         while( pSttLFrame &&
             ! (cHdFtTableHd & pSttLFrame->GetType() ))
             pSttLFrame = pSttLFrame->GetUpper();
@@ -2082,8 +2075,8 @@ void SwRootFrame::CalcFrameRects(SwShellCursor &rCursor)
             "Selection over different content" );
         switch( pSttLFrame->GetType() )
         {
-        case FRM_HEADER:
-        case FRM_FOOTER:
+        case SwFrameType::Header:
+        case SwFrameType::Footer:
             // On different pages? Then always on the start-page
             if( pEndLFrame->FindPageFrame() != pSttLFrame->FindPageFrame() )
             {
@@ -2094,7 +2087,7 @@ void SwRootFrame::CalcFrameRects(SwShellCursor &rCursor)
                     pStartFrame = pEndFrame;
             }
             break;
-        case FRM_TAB:
+        case SwFrameType::Tab:
             // On different pages? Then check for table-headline
             {
                 const SwTabFrame* pTabFrame = static_cast<const SwTabFrame*>(pSttLFrame);
@@ -2113,6 +2106,7 @@ void SwRootFrame::CalcFrameRects(SwShellCursor &rCursor)
                 }
             }
             break;
+        default: break;
         }
     } while( false );
 

@@ -39,7 +39,6 @@ namespace hierarchy_ucp
 {
 
 
-
 class HierarchyEntryData
 {
 public:
@@ -70,7 +69,6 @@ private:
     OUString m_aTargetURL; // Target URL ( links only )
     Type          m_aType;      // Type
 };
-
 
 
 class HierarchyContentProvider;
@@ -104,7 +102,7 @@ public:
 
     bool getData( HierarchyEntryData& rData );
 
-    bool setData( const HierarchyEntryData& rData, bool bCreate );
+    bool setData( const HierarchyEntryData& rData );
 
     bool move( const OUString& rNewURL,
                    const HierarchyEntryData& rData );

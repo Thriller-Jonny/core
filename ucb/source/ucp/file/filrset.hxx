@@ -22,7 +22,7 @@
 #include <vector>
 #include <osl/file.hxx>
 
-#include <cppuhelper/interfacecontainer.hxx>
+#include <comphelper/interfacecontainer2.hxx>
 #include <com/sun/star/ucb/XContentAccess.hpp>
 #include <com/sun/star/sdbc/XCloseable.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
@@ -582,17 +582,12 @@ class XResultSet_impl : public Notifier,
 
     private:
 
-        // Members
-        //  const uno::Reference< lang::XMultiServiceFactory > m_xMSF;
-        //  const uno::Reference< ucb::XContentProvider > m_xProvider;
-
         shell*                              m_pMyShell;
-        css::uno::Reference< css::ucb::XContentProvider >  m_xProvider;
-        bool                            m_nIsOpen;
+        bool                                m_nIsOpen;
         sal_Int32                           m_nRow;
-        bool                            m_nWasNull;
+        bool                                m_nWasNull;
         sal_Int32                           m_nOpenMode;
-        bool                            m_bRowCountFinal;
+        bool                                m_bRowCountFinal;
 
         typedef std::vector< css::uno::Reference< css::ucb::XContentIdentifier > > IdentSet;
         typedef std::vector< css::uno::Reference< css::sdbc::XRow > >         ItemSet;
@@ -609,10 +604,10 @@ class XResultSet_impl : public Notifier,
 
         osl::Mutex                          m_aMutex;
         osl::Mutex                          m_aEventListenerMutex;
-        cppu::OInterfaceContainerHelper*    m_pDisposeEventListeners;
+        comphelper::OInterfaceContainerHelper2*   m_pDisposeEventListeners;
 
-        cppu::OInterfaceContainerHelper*    m_pRowCountListeners;
-        cppu::OInterfaceContainerHelper*    m_pIsFinalListeners;
+        comphelper::OInterfaceContainerHelper2*   m_pRowCountListeners;
+        comphelper::OInterfaceContainerHelper2*   m_pIsFinalListeners;
 
         css::uno::Reference< css::ucb::XDynamicResultSetListener >       m_xListener;
         bool                            m_bStatic;

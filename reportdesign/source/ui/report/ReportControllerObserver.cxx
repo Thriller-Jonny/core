@@ -23,7 +23,6 @@
 
 #include <ReportControllerObserver.hxx>
 #include <ReportController.hxx>
-#include <boost/noncopyable.hpp>
 #include <svl/smplhint.hxx>
 #include <osl/mutex.hxx>
 #include <vcl/svapp.hxx>
@@ -48,7 +47,7 @@ namespace rptui
 typedef std::map<OUString, bool> AllProperties;
 typedef std::map<uno::Reference< beans::XPropertySet >, AllProperties> PropertySetInfoCache;
 
-class OXReportControllerObserverImpl: private boost::noncopyable
+class OXReportControllerObserverImpl
 {
 public:
     ::std::vector< uno::Reference< container::XChild> > m_aSections;
@@ -57,8 +56,9 @@ public:
     bool                                                m_bReadOnly;
 
     explicit OXReportControllerObserverImpl();
+    OXReportControllerObserverImpl(const OXReportControllerObserverImpl&) = delete;
+    OXReportControllerObserverImpl& operator=(const OXReportControllerObserverImpl&) = delete;
 };
-
 
 
     OXReportControllerObserverImpl::OXReportControllerObserverImpl()
@@ -66,10 +66,6 @@ public:
             ,m_bReadOnly(false)
     {
     }
-
-
-
-
 
 
     OXReportControllerObserver::OXReportControllerObserver(const OReportController& _rController)
@@ -246,7 +242,6 @@ void OXReportControllerObserver::TogglePropertyListening(const uno::Reference< u
 }
 
 
-
 void OXReportControllerObserver::switchListening( const uno::Reference< container::XIndexAccess >& _rxContainer, bool _bStartListening )
 {
     OSL_PRECOND( _rxContainer.is(), "OXReportControllerObserver::switchListening: invalid container!" );
@@ -406,7 +401,6 @@ void SAL_CALL OXReportControllerObserver::elementRemoved(const container::Contai
 
 
 } // namespace rptui
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

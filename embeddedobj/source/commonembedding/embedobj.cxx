@@ -38,6 +38,7 @@
 
 #include <com/sun/star/embed/EmbedMisc.hpp>
 #include <comphelper/processfactory.hxx>
+#include <cppuhelper/interfacecontainer.hxx>
 
 #include <vcl/svapp.hxx>
 
@@ -109,7 +110,7 @@ void OCommonEmbeddedObject::Deactivate()
 
     m_pDocHolder->CloseFrame();
 
-    xClientSite->visibilityChanged( sal_False );
+    xClientSite->visibilityChanged( false );
 }
 
 
@@ -153,7 +154,7 @@ void OCommonEmbeddedObject::StateChangeNotification_Impl( bool bBeforeChange, sa
 
 void OCommonEmbeddedObject::SwitchStateTo_Impl( sal_Int32 nNextState )
 {
-    // TODO: may be needs interaction handler to detect wherether the object state
+    // TODO: may be needs interaction handler to detect whether the object state
     //         can be changed even after errors
 
     if ( m_nObjectState == embed::EmbedStates::LOADED )
@@ -268,7 +269,7 @@ void OCommonEmbeddedObject::SwitchStateTo_Impl( sal_Int32 nNextState )
                 // create frame and load document in the frame
                 m_pDocHolder->Show();
 
-                m_xClientSite->visibilityChanged( sal_True );
+                m_xClientSite->visibilityChanged( true );
                 m_nObjectState = nNextState;
             }
             else
@@ -286,7 +287,7 @@ void OCommonEmbeddedObject::SwitchStateTo_Impl( sal_Int32 nNextState )
             if ( !xInplaceClient.is() )
                 throw uno::RuntimeException();
 
-            m_xClientSite->visibilityChanged( sal_True );
+            m_xClientSite->visibilityChanged( true );
 
             xInplaceClient->deactivatedInplace();
             Deactivate();
@@ -446,7 +447,7 @@ void SAL_CALL OCommonEmbeddedObject::changeState( sal_Int32 nNewState )
             // in case the object is already in requested state
             if ( m_nObjectState == nNewState )
             {
-                // if active object is activated again, bring it's window to top
+                // if active object is activated again, bring its window to top
                 if ( m_nObjectState == embed::EmbedStates::ACTIVE )
                     m_pDocHolder->Show();
 

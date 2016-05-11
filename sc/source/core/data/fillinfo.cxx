@@ -135,7 +135,7 @@ class RowInfoFiller
     SCTAB mnTab;
     RowInfo* mpRowInfo;
     SCCOL mnArrX;
-    SCSIZE& mrArrY;
+    SCSIZE mnArrY;
     SCROW mnHiddenEndRow;
     bool mbHiddenRow;
 
@@ -149,25 +149,25 @@ class RowInfoFiller
 
     void alignArray(size_t nRow)
     {
-        while (mpRowInfo[mrArrY].nRowNo < static_cast<SCROW>(nRow))
-            ++mrArrY;
+        while (mpRowInfo[mnArrY].nRowNo < static_cast<SCROW>(nRow))
+            ++mnArrY;
     }
 
     void setInfo(size_t nRow, const ScRefCellValue& rCell)
     {
         alignArray(nRow);
 
-        RowInfo* pThisRowInfo = &mpRowInfo[mrArrY];
-        CellInfo* pInfo = &pThisRowInfo->pCellInfo[mnArrX];
-        pInfo->maCell = rCell;
-        pThisRowInfo->bEmptyText = false;
-        pInfo->bEmptyCellText = false;
-        ++mrArrY;
+        RowInfo& rThisRowInfo = mpRowInfo[mnArrY];
+        CellInfo& rInfo = rThisRowInfo.pCellInfo[mnArrX];
+        rInfo.maCell = rCell;
+        rThisRowInfo.bEmptyText = false;
+        rInfo.bEmptyCellText = false;
+        ++mnArrY;
     }
 
 public:
     RowInfoFiller(ScDocument& rDoc, SCTAB nTab, RowInfo* pRowInfo, SCCOL nArrX, SCSIZE& rArrY) :
-        mrDoc(rDoc), mnTab(nTab), mpRowInfo(pRowInfo), mnArrX(nArrX), mrArrY(rArrY),
+        mrDoc(rDoc), mnTab(nTab), mpRowInfo(pRowInfo), mnArrX(nArrX), mnArrY(rArrY),
         mnHiddenEndRow(-1), mbHiddenRow(false) {}
 
     void operator() (size_t nRow, double fVal)
@@ -195,6 +195,185 @@ public:
     }
 };
 
+bool isRotateItemUsed(ScDocumentPool *pPool)
+{
+    sal_uInt32 nRotCount = pPool->GetItemCount2( ATTR_ROTATE_VALUE );
+    for (sal_uInt32 nItem=0; nItem<nRotCount; nItem++)
+    {
+        if (pPool->GetItem2( ATTR_ROTATE_VALUE, nItem ))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void initRowInfo(ScDocument* pDoc, RowInfo* pRowInfo,
+        double fRowScale, SCROW nRow1, SCTAB nTab, SCROW& rYExtra, SCSIZE& rArrRow, SCROW& rRow2)
+{
+    sal_uInt16 nDocHeight = ScGlobal::nStdRowHeight;
+    SCROW nDocHeightEndRow = -1;
+    for (SCsROW nSignedY=((SCsROW)nRow1)-1; nSignedY<=(SCsROW)rYExtra; nSignedY++)
+    {
+        SCROW nY;
+        if (nSignedY >= 0)
+            nY = (SCROW) nSignedY;
+        else
+            nY = MAXROW+1;          // invalid
+
+        if (nY > nDocHeightEndRow)
+        {
+            if (ValidRow(nY))
+                nDocHeight = pDoc->GetRowHeight( nY, nTab, nullptr, &nDocHeightEndRow );
+            else
+                nDocHeight = ScGlobal::nStdRowHeight;
+        }
+
+        if ( rArrRow==0 || nDocHeight || nY > MAXROW )
+        {
+            RowInfo* pThisRowInfo = &pRowInfo[rArrRow];
+            pThisRowInfo->pCellInfo = nullptr;                 // is loaded below
+
+            sal_uInt16 nHeight = (sal_uInt16) ( nDocHeight * fRowScale );
+            if (!nHeight)
+                nHeight = 1;
+
+            pThisRowInfo->nRowNo        = nY;               //TODO: case < 0 ?
+            pThisRowInfo->nHeight       = nHeight;
+            pThisRowInfo->bEmptyBack    = true;
+            pThisRowInfo->bEmptyText    = true;
+            pThisRowInfo->bChanged      = true;
+            pThisRowInfo->bAutoFilter   = false;
+            pThisRowInfo->bPivotButton  = false;
+            pThisRowInfo->nRotMaxCol    = SC_ROTMAX_NONE;
+
+            ++rArrRow;
+            if (rArrRow >= ROWINFO_MAX)
+            {
+                OSL_FAIL("FillInfo: Range too big" );
+                rYExtra = nSignedY;                         // End
+                rRow2 = rYExtra - 1;                        // Adjust range
+            }
+        }
+        else
+            if (nSignedY==(SCsROW) rYExtra)                 // hidden additional line?
+                ++rYExtra;
+    }
+}
+
+void initCellInfo(RowInfo* pRowInfo, SCSIZE nArrCount, SCCOL nRotMax, bool bPaintMarks,
+        const SvxShadowItem* pDefShadow, SCROW nBlockStartY, SCROW nBlockEndY,
+        SCCOL nBlockStartX, SCCOL nBlockEndX)
+{
+    for (SCSIZE nArrRow = 0; nArrRow < nArrCount; ++nArrRow)
+    {
+        RowInfo& rThisRowInfo = pRowInfo[nArrRow];
+        SCROW nY = rThisRowInfo.nRowNo;
+        rThisRowInfo.pCellInfo = new CellInfo[nRotMax + 1 + 2];  // to delete the caller!
+
+        for (SCCOL nArrCol = 0; nArrCol <= nRotMax+2; ++nArrCol) // Preassign cell info
+        {
+            CellInfo& rInfo = rThisRowInfo.pCellInfo[nArrCol];
+            if (bPaintMarks)
+            {
+                SCCOL nX;
+                if (nArrCol>0)
+                    nX = nArrCol-1;
+                else
+                    nX = MAXCOL+1;      // invalid
+                rInfo.bMarked = (nX >= nBlockStartX && nX <= nBlockEndX &&
+                                 nY >= nBlockStartY && nY <= nBlockEndY);
+            }
+            rInfo.bEmptyCellText = true;
+            rInfo.pShadowAttr    = pDefShadow;
+        }
+    }
+}
+
+void initColWidths(RowInfo* pRowInfo, ScDocument* pDoc, double fColScale, SCTAB nTab, SCCOL nCol2, SCCOL nRotMax)
+{
+    for (SCCOL nArrCol=nCol2+3; nArrCol<=nRotMax+2; nArrCol++)    // Add remaining widths
+    {
+        SCCOL nX = nArrCol-1;
+        if ( ValidCol(nX) )
+        {
+            if (!pDoc->ColHidden(nX, nTab))
+            {
+                sal_uInt16 nThisWidth = (sal_uInt16) (pDoc->GetColWidth( nX, nTab ) * fColScale);
+                if (!nThisWidth)
+                    nThisWidth = 1;
+
+                pRowInfo[0].pCellInfo[nArrCol].nWidth = nThisWidth;
+            }
+        }
+    }
+}
+
+bool handleConditionalFormat(ScConditionalFormatList* pCondFormList, const std::vector<sal_uInt32>& rCondFormats,
+        CellInfo* pInfo, ScStyleSheetPool* pStlPool,
+        const ScAddress& rAddr, bool& bHidden, bool& bHideFormula, bool bTabProtect)
+{
+    bool bFound = false;
+    bool bAnyCondition = false;
+    for(std::vector<sal_uInt32>::const_iterator itr = rCondFormats.begin();
+            itr != rCondFormats.end() && !bFound; ++itr)
+    {
+        ScConditionalFormat* pCondForm = pCondFormList->GetFormat(*itr);
+        if(!pCondForm)
+            continue;
+
+        ScCondFormatData aData = pCondForm->GetData(
+                pInfo->maCell, rAddr);
+        if (!aData.aStyleName.isEmpty())
+        {
+            SfxStyleSheetBase* pStyleSheet =
+                pStlPool->Find( aData.aStyleName, SfxStyleFamily::Para );
+            if ( pStyleSheet )
+            {
+                //TODO: cache Style-Sets !!!
+                pInfo->pConditionSet = &pStyleSheet->GetItemSet();
+                bAnyCondition = true;
+
+                // TODO: moggi: looks like there is a but around bHidden and bHideFormula
+                //              They are normally for the whole pattern and not for a single cell
+                // we need to check already here for protected cells
+                const SfxPoolItem* pItem;
+                if ( bTabProtect && pInfo->pConditionSet->GetItemState( ATTR_PROTECTION, true, &pItem ) == SfxItemState::SET )
+                {
+                    const ScProtectionAttr* pProtAttr = static_cast<const ScProtectionAttr*>(pItem);
+                    bHidden = pProtAttr->GetHideCell();
+                    bHideFormula = pProtAttr->GetHideFormula();
+
+                }
+                bFound = true;
+
+            }
+            // if style is not there, treat like no condition
+        }
+
+        if(aData.pColorScale)
+        {
+            pInfo->pColorScale.reset(aData.pColorScale);
+            bFound = true;
+        }
+
+        if(aData.pDataBar)
+        {
+            pInfo->pDataBar.reset(aData.pDataBar);
+            bFound = true;
+        }
+
+        if(aData.pIconSet)
+        {
+            pInfo->pIconSet.reset(aData.pIconSet);
+            bFound = true;
+        }
+    }
+
+    return bAnyCondition;
+}
+
 }
 
 void ScDocument::FillInfo(
@@ -218,11 +397,6 @@ void ScDocument::FillInfo(
     const SvxShadowItem* pDefShadow =
             static_cast<const SvxShadowItem*>( &pPool->GetDefaultItem( ATTR_SHADOW ) );
 
-    SCROW nThisRow;
-    SCCOL nX;
-    SCROW nY;
-    SCsROW nSignedY;
-    SCCOL nArrCol;
     SCSIZE nArrRow;
     SCSIZE nArrCount;
     bool bAnyMerged = false;
@@ -260,69 +434,17 @@ void ScDocument::FillInfo(
 
     nArrRow=0;
     SCROW nYExtra = nRow2+1;
-    sal_uInt16 nDocHeight = ScGlobal::nStdRowHeight;
-    SCROW nDocHeightEndRow = -1;
-    for (nSignedY=((SCsROW)nRow1)-1; nSignedY<=(SCsROW)nYExtra; nSignedY++)
-    {
-        if (nSignedY >= 0)
-            nY = (SCROW) nSignedY;
-        else
-            nY = MAXROW+1;          // invalid
-
-        if (nY > nDocHeightEndRow)
-        {
-            if (ValidRow(nY))
-                nDocHeight = GetRowHeight( nY, nTab, nullptr, &nDocHeightEndRow );
-            else
-                nDocHeight = ScGlobal::nStdRowHeight;
-        }
-
-        if ( nArrRow==0 || nDocHeight || nY > MAXROW )
-        {
-            RowInfo* pThisRowInfo = &pRowInfo[nArrRow];
-            pThisRowInfo->pCellInfo = nullptr;                 // is loaded below
-
-            sal_uInt16 nHeight = (sal_uInt16) ( nDocHeight * fRowScale );
-            if (!nHeight)
-                nHeight = 1;
-
-            pThisRowInfo->nRowNo        = nY;               //TODO: case < 0 ?
-            pThisRowInfo->nHeight       = nHeight;
-            pThisRowInfo->bEmptyBack    = true;
-            pThisRowInfo->bEmptyText    = true;
-            pThisRowInfo->bChanged      = true;
-            pThisRowInfo->bAutoFilter   = false;
-            pThisRowInfo->bPivotButton  = false;
-            pThisRowInfo->nRotMaxCol    = SC_ROTMAX_NONE;
-
-            ++nArrRow;
-            if (nArrRow >= ROWINFO_MAX)
-            {
-                OSL_FAIL("FillInfo: Range too big" );
-                nYExtra = nSignedY;                         // End
-                nRow2 = nYExtra - 1;                        // Adjust range
-            }
-        }
-        else
-            if (nSignedY==(SCsROW) nYExtra)                 // hidden additional line?
-                ++nYExtra;
-    }
+    initRowInfo(this, pRowInfo, fRowScale, nRow1,
+            nTab, nYExtra, nArrRow, nRow2);
     nArrCount = nArrRow;                                      // incl. Dummys
 
     // Rotated text...
 
     // Is Attribute really used in document?
-    bool bAnyItem = false;
-    sal_uInt32 nRotCount = pPool->GetItemCount2( ATTR_ROTATE_VALUE );
-    for (sal_uInt32 nItem=0; nItem<nRotCount; nItem++)
-        if (pPool->GetItem2( ATTR_ROTATE_VALUE, nItem ))
-        {
-            bAnyItem = true;
-            break;
-        }
+    bool bAnyItem = isRotateItemUsed(pPool);
 
     SCCOL nRotMax = nCol2;
-    if ( bAnyItem && HasAttrib( 0,nRow1,nTab, MAXCOL,nRow2+1,nTab,
+    if ( bAnyItem && HasAttrib( 0, nRow1, nTab, MAXCOL, nRow2+1, nTab,
                                 HASATTR_ROTATE | HASATTR_CONDITIONAL ) )
     {
         //TODO: check Conditionals also for HASATTR_ROTATE ????
@@ -338,81 +460,18 @@ void ScDocument::FillInfo(
 
     //  Allocate cell information only after the test rotation
     //  to nRotMax due to nRotateDir Flag
+    initCellInfo(pRowInfo, nArrCount, nRotMax, bPaintMarks, pDefShadow,
+            nBlockStartY, nBlockEndY, nBlockStartX, nBlockEndX);
 
-    for (nArrRow=0; nArrRow<nArrCount; nArrRow++)
-    {
-        RowInfo* pThisRowInfo = &pRowInfo[nArrRow];
-        nY = pThisRowInfo->nRowNo;
-        pThisRowInfo->pCellInfo = new CellInfo[ nRotMax+1+2 ];  // to delete the caller!
-
-        for (nArrCol=0; nArrCol<=nRotMax+2; nArrCol++)          // Preassign cell info
-        {
-            if (nArrCol>0)
-                nX = nArrCol-1;
-            else
-                nX = MAXCOL+1;      // invalid
-
-            CellInfo* pInfo = &pThisRowInfo->pCellInfo[nArrCol];
-            pInfo->bEmptyCellText = true;
-            pInfo->maCell.clear();
-            if (bPaintMarks)
-                pInfo->bMarked = ( nX >= nBlockStartX && nX <= nBlockEndX
-                                && nY >= nBlockStartY && nY <= nBlockEndY );
-            else
-                pInfo->bMarked = false;
-            pInfo->nWidth = 0;
-
-            pInfo->nClipMark    = SC_CLIPMARK_NONE;
-            pInfo->bMerged      = false;
-            pInfo->bHOverlapped = false;
-            pInfo->bVOverlapped = false;
-            pInfo->bAutoFilter  = false;
-            pInfo->bPivotButton  = false;
-            pInfo->bPivotPopupButton = false;
-            pInfo->bFilterActive = false;
-            pInfo->nRotateDir   = SC_ROTDIR_NONE;
-
-            pInfo->bPrinted     = false;                    //  view-internal
-            pInfo->bHideGrid    = false;                    //  view-internal
-            pInfo->bEditEngine  = false;                    //  view-internal
-
-            pInfo->pBackground  = nullptr;                     //TODO: omit?
-            pInfo->pPatternAttr = nullptr;
-            pInfo->pConditionSet= nullptr;
-
-            pInfo->pLinesAttr   = nullptr;
-            pInfo->mpTLBRLine   = nullptr;
-            pInfo->mpBLTRLine   = nullptr;
-
-            pInfo->pShadowAttr    = pDefShadow;
-            pInfo->pHShadowOrigin = nullptr;
-            pInfo->pVShadowOrigin = nullptr;
-        }
-    }
-
-    for (nArrCol=nCol2+3; nArrCol<=nRotMax+2; nArrCol++)    // Add remaining widths
-    {
-        nX = nArrCol-1;
-        if ( ValidCol(nX) )
-        {
-            if (!ColHidden(nX, nTab))
-            {
-                sal_uInt16 nThisWidth = (sal_uInt16) (GetColWidth( nX, nTab ) * fColScale);
-                if (!nThisWidth)
-                    nThisWidth = 1;
-
-                pRowInfo[0].pCellInfo[nArrCol].nWidth = nThisWidth;
-            }
-        }
-    }
+    initColWidths(pRowInfo, this, fColScale, nTab, nCol2, nRotMax);
 
     ScConditionalFormatList* pCondFormList = GetCondFormList(nTab);
     if(pCondFormList)
         pCondFormList->startRendering();
 
-    for (nArrCol=0; nArrCol<=nCol2+2; nArrCol++)                    // left & right + 1
+    for (SCCOL nArrCol=0; nArrCol<=nCol2+2; nArrCol++)                    // left & right + 1
     {
-        nX = (nArrCol>0) ? nArrCol-1 : MAXCOL+1;                    // negative -> invalid
+        SCCOL nX = (nArrCol>0) ? nArrCol-1 : MAXCOL+1;                    // negative -> invalid
 
         if ( ValidCol(nX) )
         {
@@ -440,22 +499,22 @@ void ScDocument::FillInfo(
                 if (nX+1 >= nCol1)                                // Attribute/Blockmark from nX1-1
                 {
                     ScAttrArray* pThisAttrArr = pThisCol->pAttrArray;       // Attribute
-
                     nArrRow = 0;
-                    const ScPatternAttr* pPattern;
+
                     SCROW nCurRow=nRow1;                  // single rows
                     if (nCurRow>0)
                         --nCurRow;                      // 1 more on top
                     else
                         nArrRow = 1;
-                    nThisRow=nCurRow;                   // end of range
-                    SCSIZE  nIndex;
+
+                    SCROW nThisRow = nCurRow;                   // end of range
+                    SCSIZE nIndex;
                     (void) pThisAttrArr->Search( nCurRow, nIndex );
 
                     do
                     {
                         nThisRow=pThisAttrArr->pData[nIndex].nRow;              // End of range
-                        pPattern=pThisAttrArr->pData[nIndex].pPattern;
+                        const ScPatternAttr* pPattern=pThisAttrArr->pData[nIndex].pPattern;
 
                         const SvxBrushItem* pBackground = static_cast<const SvxBrushItem*>(
                                                         &pPattern->GetItem(ATTR_BACKGROUND));
@@ -541,59 +600,10 @@ void ScDocument::FillInfo(
                                     pThisRowInfo->bEmptyBack = false;
                                 }
 
-                                if ( bContainsCondFormat )
+                                if (bContainsCondFormat)
                                 {
-                                    bool bFound = false;
-                                    for(std::vector<sal_uInt32>::const_iterator itr = rCondFormats.begin();
-                                            itr != rCondFormats.end() && !bFound; ++itr)
-                                    {
-                                        ScConditionalFormat* pCondForm = pCondFormList->GetFormat(*itr);
-                                        if(!pCondForm)
-                                            continue;
-
-                                        ScCondFormatData aData = pCondForm->GetData(
-                                            pInfo->maCell, ScAddress(nX, nCurRow, nTab));
-                                        if (!aData.aStyleName.isEmpty())
-                                        {
-                                            SfxStyleSheetBase* pStyleSheet =
-                                                pStlPool->Find( aData.aStyleName, SFX_STYLE_FAMILY_PARA );
-                                            if ( pStyleSheet )
-                                            {
-                                                //TODO: cache Style-Sets !!!
-                                                pInfo->pConditionSet = &pStyleSheet->GetItemSet();
-                                                bAnyCondition = true;
-
-                                                // we need to check already here for protected cells
-                                                const SfxPoolItem* pItem;
-                                                if ( bTabProtect && pInfo->pConditionSet->GetItemState( ATTR_PROTECTION, true, &pItem ) == SfxItemState::SET )
-                                                {
-                                                    const ScProtectionAttr* pProtAttr = static_cast<const ScProtectionAttr*>(pItem);
-                                                    bHidden = pProtAttr->GetHideCell();
-                                                    bHideFormula = pProtAttr->GetHideFormula();
-
-                                                }
-                                                bFound = true;
-
-                                            }
-                                            // if style is not there, treat like no condition
-                                        }
-                                        if(aData.pColorScale)
-                                        {
-                                            pInfo->pColorScale.reset(aData.pColorScale);
-                                            bFound = true;
-                                        }
-
-                                        if(aData.pDataBar)
-                                        {
-                                            pInfo->pDataBar.reset(aData.pDataBar);
-                                            bFound = true;
-                                        }
-                                        if(aData.pIconSet)
-                                        {
-                                            pInfo->pIconSet.reset(aData.pIconSet);
-                                            bFound = true;
-                                        }
-                                    }
+                                    bAnyCondition |= handleConditionalFormat(pCondFormList, rCondFormats, pInfo, pStlPool, ScAddress(nX, nCurRow, nTab),
+                                            bHidden, bHideFormula, bTabProtect);
                                 }
 
                                 if (bHidden || (bFormulaMode && bHideFormula && pInfo->maCell.meType == CELLTYPE_FORMULA))
@@ -617,17 +627,17 @@ void ScDocument::FillInfo(
                     if (pMarkData && pMarkData->IsMultiMarked())
                     {
                         //  Block marks
-                        const ScMarkArray* pThisMarkArr = pMarkData->GetArray()+nX;
+                        ScMarkArray aThisMarkArr(pMarkData->GetMarkArray( nX ));
                         nArrRow = 1;
                         nCurRow = nRow1;                                      // single rows
                         nThisRow = nRow1;                                     // End of range
 
-                        if ( pThisMarkArr->Search( nRow1, nIndex ) )
+                        if ( aThisMarkArr.Search( nRow1, nIndex ) )
                         {
                             do
                             {
-                                nThisRow=pThisMarkArr->pData[nIndex].nRow;      // End of range
-                                const bool bThisMarked=pThisMarkArr->pData[nIndex].bMarked;
+                                nThisRow=aThisMarkArr.pData[nIndex].nRow;      // End of range
+                                const bool bThisMarked=aThisMarkArr.pData[nIndex].bMarked;
 
                                 do
                                 {
@@ -654,7 +664,7 @@ void ScDocument::FillInfo(
                                 while (nCurRow <= nThisRow && nCurRow <= nRow2);
                                 ++nIndex;
                             }
-                            while ( nIndex < pThisMarkArr->nCount && nThisRow < nRow2 );
+                            while ( nIndex < aThisMarkArr.nCount && nThisRow < nRow2 );
                         }
                     }
                 }
@@ -685,7 +695,7 @@ void ScDocument::FillInfo(
     {
         for (nArrRow=0; nArrRow<nArrCount; nArrRow++)
         {
-            for (nArrCol=nCol1; nArrCol<=nCol2+2; nArrCol++)                  // 1 more left and right
+            for (SCCOL nArrCol=nCol1; nArrCol<=nCol2+2; nArrCol++)                  // 1 more left and right
             {
                 CellInfo* pInfo = &pRowInfo[nArrRow].pCellInfo[nArrCol];
                 SCCOL nCol = (nArrCol>0) ? nArrCol-1 : MAXCOL+1;
@@ -748,9 +758,9 @@ void ScDocument::FillInfo(
         for (nArrRow=0; nArrRow<nArrCount; nArrRow++)
         {
             RowInfo* pThisRowInfo = &pRowInfo[nArrRow];
-            nSignedY = nArrRow ? pThisRowInfo->nRowNo : ((SCsROW)nRow1)-1;
+            SCsROW nSignedY = nArrRow ? pThisRowInfo->nRowNo : ((SCsROW)nRow1)-1;
 
-            for (nArrCol=nCol1; nArrCol<=nCol2+2; nArrCol++)                  // 1 more left and right
+            for (SCCOL nArrCol=nCol1; nArrCol<=nCol2+2; nArrCol++)                  // 1 more left and right
             {
                 SCsCOL nSignedX = ((SCsCOL) nArrCol) - 1;
                 CellInfo* pInfo = &pThisRowInfo->pCellInfo[nArrCol];
@@ -794,10 +804,10 @@ void ScDocument::FillInfo(
                                     && nStartY <= (SCsROW) nBlockEndY );
                     if (pMarkData && pMarkData->IsMultiMarked() && !bCellMarked)
                     {
-                        const ScMarkArray* pThisMarkArr = pMarkData->GetArray()+nStartX;
+                        ScMarkArray aThisMarkArr(pMarkData->GetMarkArray( nStartX ));
                         SCSIZE nIndex;
-                        if ( pThisMarkArr->Search( nStartY, nIndex ) )
-                            bCellMarked=pThisMarkArr->pData[nIndex].bMarked;
+                        if ( aThisMarkArr.Search( nStartY, nIndex ) )
+                            bCellMarked=aThisMarkArr.pData[nIndex].bMarked;
                     }
 
                     pInfo->bMarked = bCellMarked;
@@ -813,7 +823,7 @@ void ScDocument::FillInfo(
             bool bTop = ( nArrRow == 0 );
             bool bBottom = ( nArrRow+1 == nArrCount );
 
-            for (nArrCol=nCol1; nArrCol<=nCol2+2; nArrCol++)                  // 1 more left and right
+            for (SCCOL nArrCol=nCol1; nArrCol<=nCol2+2; nArrCol++)                  // 1 more left and right
             {
                 bool bLeft = ( nArrCol == nCol1 );
                 bool bRight = ( nArrCol == nCol2+2 );
@@ -1110,12 +1120,9 @@ void ScDocument::FillInfo(
         }
     }
 
-    /*  Mirror the entire frame array.
-        1st param = Mirror the vertical double line styles as well.
-        2nd param = Do not swap diagonal lines.
-     */
+    /*  Mirror the entire frame array. */
     if( bLayoutRTL )
-        rArray.MirrorSelfX( true, false );
+        rArray.MirrorSelfX();
 }
 
 ScTableInfo::ScTableInfo()

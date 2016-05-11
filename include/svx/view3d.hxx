@@ -98,8 +98,7 @@ public:
     // On Paste: We need to insert the objects of the Scene, but not the Scene itself
     using SdrView::Paste;
     virtual bool Paste(
-        const SdrModel& rMod, const Point& rPos, SdrObjList* pLst, SdrInsertFlags nOptions,
-        const OUString& rSrcShellID, const OUString& rDestShellID ) override;
+        const SdrModel& rMod, const Point& rPos, SdrObjList* pLst, SdrInsertFlags nOptions) override;
 
     // #83403# Service routine used from local Clone() and from SdrCreateView::EndCreateObj(...)
     bool ImpCloneAll3DObjectsToDestScene(E3dScene* pSrcScene, E3dScene* pDstScene, Point aOffset);
@@ -109,7 +108,7 @@ public:
 
     // Means to create all Extrudes in a certain depth order.
     static void DoDepthArrange(E3dScene* pScene, double fDepth);
-    void ConvertMarkedToPolyObj(bool bLineToArea);
+    void ConvertMarkedToPolyObj();
     E3dScene* SetCurrent3DObj(E3dObject* p3DObj);
     void Start3DCreation();
 
@@ -127,8 +126,8 @@ public:
     bool IsBreak3DObjPossible() const;
     void Break3DObj();
 
-    SfxItemSet Get3DAttributes(E3dScene* pInScene = nullptr, bool bOnly3DAttr=false) const;
-    void Set3DAttributes(const SfxItemSet& rAttr, E3dScene* pInScene = nullptr, bool bOnly3DAttr=false);
+    SfxItemSet Get3DAttributes() const;
+    void Set3DAttributes(const SfxItemSet& rAttr);
 };
 
 #endif // INCLUDED_SVX_VIEW3D_HXX

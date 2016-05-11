@@ -589,6 +589,10 @@ Resource RID_GLOBSTR
     {
         Text [ en-US ] = "$1 rows, $2 columns selected";
     };
+    String STR_FILTER_SELCOUNT
+    {
+        Text [ en-US ] = "$1 of $2 records found";
+    };
     String STR_COLUMN
     {
         Text [ en-US ] = "Column" ;
@@ -905,6 +909,10 @@ Resource RID_GLOBSTR
     String STR_LONG_ERR_STACK_OVF
     {
         Text [ en-US ] = "Error: Internal overflow" ;
+    };
+    String STR_LONG_ERR_MATRIX_SIZE
+    {
+        Text [ en-US ] = "Error: Array or matrix size" ;
     };
     String STR_LONG_ERR_CIRC_REF
     {
@@ -1387,7 +1395,7 @@ Resource RID_GLOBSTR
     };
     String STR_ERR_NOREF
     {
-        Text [ en-US ] = "No references found." ;
+        Text [ en-US ] = "No cell references are found in the selected cells." ;
     };
     String STR_ERR_LINKOVERLAP
     {
@@ -2096,6 +2104,10 @@ Resource RID_GLOBSTR
     String STR_TABLE_COUNT
     {
         Text [ en-US ] = "Sheet %1 of %2";
+    };
+    String STR_FUNCTIONS_FOUND
+    {
+        Text [ en-US ] = "%1 and %2 more";
     };
 };
 

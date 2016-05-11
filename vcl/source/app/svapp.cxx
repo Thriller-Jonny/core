@@ -19,39 +19,41 @@
 
 #include <config_features.h>
 
-#include "comphelper/processfactory.hxx"
+#include <comphelper/processfactory.hxx>
 
-#include "osl/module.h"
-#include "osl/file.hxx"
-#include "osl/thread.h"
+#include <osl/module.h>
+#include <osl/file.hxx>
+#include <osl/thread.h>
 
-#include "rtl/tencinfo.h"
-#include "rtl/instance.hxx"
+#include <rtl/tencinfo.h>
+#include <rtl/instance.hxx>
 
-#include "tools/debug.hxx"
-#include "tools/time.hxx"
+#include <tools/debug.hxx>
+#include <tools/time.hxx>
 
-#include "i18nlangtag/mslangid.hxx"
+#include <i18nlangtag/mslangid.hxx>
 
 #include <unotools/configmgr.hxx>
 #include <unotools/syslocaleoptions.hxx>
 
-#include "vcl/dialog.hxx"
-#include "vcl/floatwin.hxx"
-#include "vcl/settings.hxx"
-#include "vcl/keycod.hxx"
-#include "vcl/event.hxx"
-#include "vcl/vclevent.hxx"
-#include "vcl/virdev.hxx"
-#include "vcl/wrkwin.hxx"
-#include "vcl/svapp.hxx"
-#include "vcl/cvtgrf.hxx"
-#include "vcl/unowrap.hxx"
-#include "vcl/timer.hxx"
-#include "vcl/scheduler.hxx"
-#include "vcl/unohelp.hxx"
-#include "vcl/lazydelete.hxx"
-#include "vcl/opengl/OpenGLWrapper.hxx"
+#include <vcl/dialog.hxx>
+#include <vcl/floatwin.hxx>
+#include <vcl/settings.hxx>
+#include <vcl/keycod.hxx>
+#include <vcl/event.hxx>
+#include <vcl/vclevent.hxx>
+#include <vcl/virdev.hxx>
+#include <vcl/wrkwin.hxx>
+#include <vcl/svapp.hxx>
+#include <vcl/cvtgrf.hxx>
+#include <vcl/unowrap.hxx>
+#include <vcl/timer.hxx>
+#include <vcl/scheduler.hxx>
+#include <vcl/unohelp.hxx>
+#include <vcl/lazydelete.hxx>
+#if HAVE_FEATURE_OPENGL
+#include <vcl/opengl/OpenGLWrapper.hxx>
+#endif
 
 #include "salinst.hxx"
 #include "salframe.hxx"
@@ -64,14 +66,14 @@
 #include "idlemgr.hxx"
 #include "svids.hrc"
 
-#include "com/sun/star/uno/Reference.h"
-#include "com/sun/star/awt/XToolkit.hpp"
+#include <com/sun/star/uno/Reference.h>
+#include <com/sun/star/awt/XToolkit.hpp>
 #include <com/sun/star/frame/Desktop.hpp>
-#include "com/sun/star/uno/XNamingService.hpp"
+#include <com/sun/star/uno/XNamingService.hpp>
 #include <com/sun/star/util/XModifiable.hpp>
-#include "com/sun/star/lang/XMultiServiceFactory.hpp"
-#include "comphelper/solarmutex.hxx"
-#include "osl/process.h"
+#include <com/sun/star/lang/XMultiServiceFactory.hpp>
+#include <comphelper/solarmutex.hxx>
+#include <osl/process.h>
 
 #include <cassert>
 #include <utility>
@@ -88,9 +90,10 @@ void InitSettings(ImplSVData* pSVData);
 class ImplReservedKey
 {
 public:
-    ImplReservedKey( vcl::KeyCode aKeyCode ) :
-      mKeyCode(aKeyCode)
-     {}
+    explicit ImplReservedKey( vcl::KeyCode aKeyCode )
+        : mKeyCode(aKeyCode)
+    {
+    }
 
     vcl::KeyCode mKeyCode;
 };
@@ -276,20 +279,17 @@ OUString Application::GetAppFileName()
     return aAppFileName;
 }
 
-sal_uInt16 Application::Exception( sal_uInt16 nError )
+void Application::Exception( sal_uInt16 nError )
 {
-    switch ( nError & EXC_MAJORTYPE )
+    switch ( nError & EXCEPTION_MAJORTYPE )
     {
         // System has precedence (so do nothing)
-        case EXC_SYSTEM:
-            return 0;
-
-        case EXC_DISPLAY:
-        case EXC_REMOTE:
-            return 0;
+        case EXCEPTION_SYSTEM:
+        case EXCEPTION_DISPLAY:
+            break;
 
 #ifdef DBG_UTIL
-        case EXC_RSCNOTLOADED:
+        case EXCEPTION_RESOURCENOTLOADED:
             Abort("Resource not loaded");
             break;
         default:
@@ -301,8 +301,6 @@ sal_uInt16 Application::Exception( sal_uInt16 nError )
             break;
 #endif
     }
-
-    return 0;
 }
 
 void Application::Abort( const OUString& rErrorText )
@@ -477,7 +475,7 @@ void Application::Execute()
     pSVData->maAppData.mbInAppExecute = false;
 }
 
-inline void ImplYield(bool i_bWait, bool i_bAllEvents, sal_uLong const nReleased)
+inline bool ImplYield(bool i_bWait, bool i_bAllEvents, sal_uLong const nReleased)
 {
     ImplSVData* pSVData = ImplGetSVData();
 
@@ -512,26 +510,45 @@ inline void ImplYield(bool i_bWait, bool i_bAllEvents, sal_uLong const nReleased
             i_bWait && !pSVData->maAppData.mbAppQuit,
             i_bAllEvents, nReleased);
 
-    SAL_INFO("vcl.schedule", "DoYield with " << (bHasActiveIdles ? "active idles" : "no ides") <<
+    SAL_INFO("vcl.schedule", "DoYield with " << (bHasActiveIdles ? "active idles" : "no idles") <<
              " returns: " << (eResult == SalYieldResult::EVENT ? "processed event" : "timeout"));
 
     pSVData->maAppData.mnDispatchLevel--;
 
     DBG_TESTSOLARMUTEX(); // must be locked on return from Yield
 
-    // Process all Tasks
-    Scheduler::ProcessTaskScheduling(eResult == SalYieldResult::EVENT);
+    if (nReleased == 0) // tdf#99383 don't run stuff from ReAcquireSolarMutex
+    {
+        // Process all Tasks
+        Scheduler::ProcessTaskScheduling(eResult == SalYieldResult::EVENT);
+    }
 
     // flush lazy deleted objects
     if( pSVData->maAppData.mnDispatchLevel == 0 )
         vcl::LazyDelete::flush();
 
     SAL_INFO("vcl.schedule", "Leave ImplYield");
+
+    return bHasActiveIdles || eResult == SalYieldResult::EVENT;
 }
 
 void Application::Reschedule( bool i_bAllEvents )
 {
     ImplYield(false, i_bAllEvents, 0);
+}
+
+void Scheduler::ProcessEventsToIdle()
+{
+    int nSanity = 1000;
+    while(Scheduler::ProcessTaskScheduling(false) ||
+          ImplYield(false, false, 0))
+    {
+        if (nSanity-- < 0)
+        {
+            SAL_WARN("vcl.schedule", "Unexpected volume of events to process");
+            break;
+        }
+    }
 }
 
 void Application::Yield()
@@ -544,7 +561,7 @@ void Application::ReAcquireSolarMutex(sal_uLong const nReleased)
     // 0 would mean that events/timers will be handled without locking
     // SolarMutex (racy)
     SAL_WARN_IF(nReleased == 0, "vcl", "SolarMutexReleaser without SolarMutex");
-#ifdef WNT
+#ifdef _WIN32
     if (nReleased == 0 || ImplGetSVData()->mbDeInit) //do not Yield in DeInitVCL
         AcquireSolarMutex(nReleased);
     else
@@ -949,54 +966,54 @@ IMPL_STATIC_LINK_TYPED( Application, PostEventHandler, void*, pCallData, void )
     const SolarMutexGuard aGuard;
     ImplPostEventData*  pData = static_cast< ImplPostEventData * >( pCallData );
     const void*         pEventData;
-    sal_uLong           nEvent;
+    SalEvent            nEvent;
     ImplSVEvent * const nEventId = pData->mnEventId;
 
     switch( pData->mnEvent )
     {
         case VCLEVENT_WINDOW_MOUSEMOVE:
-            nEvent = SALEVENT_EXTERNALMOUSEMOVE;
+            nEvent = SalEvent::ExternalMouseMove;
             pEventData = &pData->maMouseEvent;
         break;
 
         case VCLEVENT_WINDOW_MOUSEBUTTONDOWN:
-            nEvent = SALEVENT_EXTERNALMOUSEBUTTONDOWN;
+            nEvent = SalEvent::ExternalMouseButtonDown;
             pEventData = &pData->maMouseEvent;
         break;
 
         case VCLEVENT_WINDOW_MOUSEBUTTONUP:
-            nEvent = SALEVENT_EXTERNALMOUSEBUTTONUP;
+            nEvent = SalEvent::ExternalMouseButtonUp;
             pEventData = &pData->maMouseEvent;
         break;
 
         case VCLEVENT_WINDOW_KEYINPUT:
-            nEvent = SALEVENT_EXTERNALKEYINPUT;
+            nEvent = SalEvent::ExternalKeyInput;
             pEventData = &pData->maKeyEvent;
         break;
 
         case VCLEVENT_WINDOW_KEYUP:
-            nEvent = SALEVENT_EXTERNALKEYUP;
+            nEvent = SalEvent::ExternalKeyUp;
             pEventData = &pData->maKeyEvent;
         break;
 
         case VCLEVENT_WINDOW_ZOOM:
-            nEvent = SALEVENT_EXTERNALZOOM;
+            nEvent = SalEvent::ExternalZoom;
             pEventData = &pData->maZoomEvent;
         break;
 
         case VCLEVENT_WINDOW_SCROLL:
-            nEvent = SALEVENT_EXTERNALSCROLL;
+            nEvent = SalEvent::ExternalScroll;
             pEventData = &pData->maScrollEvent;
         break;
 
         default:
-            nEvent = 0;
+            nEvent = SalEvent::NONE;
             pEventData = nullptr;
         break;
     };
 
     if( pData->mpWin && pData->mpWin.get()->mpWindowImpl->mpFrameWindow.get() && pEventData )
-        ImplWindowFrameProc( pData->mpWin.get()->mpWindowImpl->mpFrameWindow.get(), nullptr, (sal_uInt16) nEvent, pEventData );
+        ImplWindowFrameProc( pData->mpWin.get()->mpWindowImpl->mpFrameWindow.get(), nEvent, pEventData );
 
     // remove this event from list of posted events, watch for destruction of internal data
     ::std::list< ImplPostEventPair >::iterator aIter( aPostedEventList.begin() );
@@ -1071,12 +1088,7 @@ void Application::RemoveUserEvent( ImplSVEvent * nUserEvent )
         DBG_ASSERT( nUserEvent->mbCall,
                     "Application::RemoveUserEvent(): Event is already removed" );
 
-        if ( nUserEvent->mpWindow )
-        {
-            if( ! nUserEvent->maDelData.IsDead() )
-                nUserEvent->mpWindow->ImplRemoveDel( &(nUserEvent->maDelData) );
-            nUserEvent->mpWindow.clear();
-        }
+        nUserEvent->mpWindow.clear();
         nUserEvent->mpInstanceRef.clear();
         nUserEvent->mbCall = false;
     }
@@ -1197,7 +1209,7 @@ OUString Application::GetHWOSConfInfo()
     ImplSVData* pSVData = ImplGetSVData();
     OUStringBuffer aDetails;
 
-    aDetails.append( "CPU Threads: " );
+    aDetails.append( VclResId(SV_APP_CPUTHREADS).toString() );
     aDetails.append( (sal_Int32)
         std::thread::hardware_concurrency() );
     aDetails.append( "; " );
@@ -1208,15 +1220,17 @@ OUString Application::GetHWOSConfInfo()
     else
         aVersion = "-";
 
-    aDetails.append( "OS Version: " );
+    aDetails.append( VclResId(SV_APP_OSVERSION).toString() );
     aDetails.append( aVersion );
     aDetails.append( "; " );
 
-    aDetails.append( "UI Render: " );
+    aDetails.append( VclResId(SV_APP_UIRENDER).toString() );
+#if HAVE_FEATURE_OPENGL
     if ( OpenGLWrapper::isVCLOpenGLEnabled() )
-        aDetails.append( "GL" );
+        aDetails.append( VclResId(SV_APP_GL).toString() );
     else
-        aDetails.append( "default" );
+#endif
+        aDetails.append( VclResId(SV_APP_DEFAULT).toString() );
     aDetails.append( "; " );
 
     return aDetails.makeStringAndClear();
@@ -1375,9 +1389,9 @@ Help* Application::GetHelp()
     return ImplGetSVData()->maAppData.mpHelp;
 }
 
-void Application::EnableAutoHelpId( bool bEnabled )
+void Application::EnableAutoHelpId()
 {
-    ImplGetSVData()->maHelpData.mbAutoHelpId = bEnabled;
+    ImplGetSVData()->maHelpData.mbAutoHelpId = true;
 }
 
 bool Application::IsAutoHelpIdEnabled()
@@ -1406,6 +1420,15 @@ void Application::SetDialogScaleX( short nScale )
     pSVData->maGDIData.mnAppFontX = pSVData->maGDIData.mnRealAppFontX;
     if ( nScale )
         pSVData->maGDIData.mnAppFontX += (pSVData->maGDIData.mnAppFontX*nScale)/100;
+}
+
+OUString Application::GetToolkitName()
+{
+    ImplSVData* pSVData = ImplGetSVData();
+    if ( pSVData->maAppData.mpToolkitName )
+        return *(pSVData->maAppData.mpToolkitName);
+    else
+        return OUString();
 }
 
 void Application::SetDefDialogParent( vcl::Window* pWindow )
@@ -1681,11 +1704,9 @@ void Application::EnableEventTestingMode()
 void Application::ShowNativeErrorBox(const OUString& sTitle  ,
                                      const OUString& sMessage)
 {
-    int btn = ImplGetSalSystem()->ShowNativeMessageBox (
+    int btn = ImplGetSalSystem()->ShowNativeMessageBox(
             sTitle,
-            sMessage,
-            SALSYSTEM_SHOWNATIVEMSGBOX_BTNCOMBI_OK,
-            SALSYSTEM_SHOWNATIVEMSGBOX_BTN_OK, false);
+            sMessage);
     if (btn != SALSYSTEM_SHOWNATIVEMSGBOX_BTN_OK) {
         OSL_TRACE("ShowNativeMessageBox returned %d", btn);
     }
@@ -1790,39 +1811,5 @@ void Application::setDeInitHook(Link<LinkParamNone*,void> const & hook) {
     // postprocess/CppunitTest_services.mk:
     pSVData->maAppData.mbInAppMain = true;
 }
-
-ImplDelData::ImplDelData( vcl::Window* pWindow ) :
-                             mpNext( nullptr ),
-                             mpWindow( nullptr ),
-                             mbDel( false )
-{
-    if( pWindow ) AttachToWindow( pWindow );
-}
-
-// helper method to allow inline constructor even for pWindow!=NULL case
-void ImplDelData::AttachToWindow( const vcl::Window* pWindow )
-{
-    if( pWindow )
-    {
-        if( pWindow->IsDisposed() )
-            mbDel = true;
-        else
-            const_cast<vcl::Window*>(pWindow)->ImplAddDel( this );
-    }
-}
-
-// define dtor for ImplDelData
-ImplDelData::~ImplDelData()
-{
-    // #112873# auto remove of ImplDelData
-    // due to this code actively calling ImplRemoveDel() is not mandatory anymore
-    if( !mbDel && mpWindow )
-    {
-        // the window still exists but we were not removed
-        mpWindow.get()->ImplRemoveDel( this );
-        mpWindow = nullptr;
-    }
-}
-
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

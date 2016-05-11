@@ -45,9 +45,8 @@ using namespace reportdesign;
 using namespace com::sun::star;
 
 
-
 OReportModel::OReportModel(::reportdesign::OReportDefinition* _pReportDefinition) :
-    SdrModel(SvtPathOptions().GetPalettePath(),nullptr,_pReportDefinition, false, false)
+    SdrModel(SvtPathOptions().GetPalettePath(),nullptr,_pReportDefinition, false)
     ,m_pController(nullptr)
     ,m_pReportDefinition(_pReportDefinition)
 {
@@ -79,14 +78,11 @@ SdrPage* OReportModel::AllocPage(bool /*bMasterPage*/)
 }
 
 
-
 void OReportModel::SetChanged( bool bChanged )
 {
     SdrModel::SetChanged( bChanged );
     SetModified( bChanged );
 }
-
-
 
 
 void OReportModel::SetModified(bool _bModified)

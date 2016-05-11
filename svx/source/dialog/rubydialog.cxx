@@ -95,7 +95,7 @@ public:
     SvxRubyData_Impl();
     virtual ~SvxRubyData_Impl();
 
-    void SetController(Reference<XController> xCtrl);
+    void SetController(const Reference<XController>& xCtrl);
     Reference<XModel> GetModel()
     {
         if (!xController.is())
@@ -143,7 +143,7 @@ SvxRubyData_Impl::~SvxRubyData_Impl()
 {
 }
 
-void SvxRubyData_Impl::SetController(Reference<XController> xCtrl)
+void SvxRubyData_Impl::SetController(const Reference<XController>& xCtrl)
 {
     if (xCtrl.get() != xController.get())
     {
@@ -628,8 +628,7 @@ IMPL_LINK_TYPED(SvxRubyDialog, AdjustHdl_Impl, ListBox&, rBox, void)
 IMPL_LINK_TYPED(SvxRubyDialog, PositionHdl_Impl, ListBox&, rBox, void)
 {
     AssertOneEntry();
-    sal_Bool bAbove = !rBox.GetSelectEntryPos();
-    const Type& rType = cppu::UnoType<bool>::get();
+    bool bAbove = !rBox.GetSelectEntryPos();
     Sequence<PropertyValues>&  aRubyValues = pImpl->GetRubyValues();
     for (sal_Int32 nRuby = 0; nRuby < aRubyValues.getLength(); nRuby++)
     {
@@ -638,7 +637,7 @@ IMPL_LINK_TYPED(SvxRubyDialog, PositionHdl_Impl, ListBox&, rBox, void)
         for (sal_Int32 nProp = 0; nProp < rProps.getLength(); nProp++)
         {
             if (pProps[nProp].Name == cRubyIsAbove)
-                pProps[nProp].Value.setValue(&bAbove, rType);
+                pProps[nProp].Value <<= bAbove;
         }
         SetModified(true);
     }
@@ -803,7 +802,7 @@ void RubyPreview::Paint(vcl::RenderContext& rRenderContext, const Rectangle& /*r
     Size aWinSize = rRenderContext.GetOutputSize();
 
     vcl::Font aSaveFont = rRenderContext.GetFont();
-    aSaveFont.SetHeight(aWinSize.Height() / 4);
+    aSaveFont.SetFontHeight(aWinSize.Height() / 4);
     rRenderContext.SetFont(aSaveFont);
 
     Rectangle aRect(Point(0, 0), aWinSize);
@@ -818,7 +817,7 @@ void RubyPreview::Paint(vcl::RenderContext& rRenderContext, const Rectangle& /*r
     long nBaseWidth = rRenderContext.GetTextWidth(sBaseText);
 
     vcl::Font aRubyFont(aSaveFont);
-    aRubyFont.SetHeight(aRubyFont.GetHeight() * 70 / 100);
+    aRubyFont.SetFontHeight(aRubyFont.GetFontHeight() * 70 / 100);
     rRenderContext.SetFont(aRubyFont);
     long nRubyWidth = rRenderContext.GetTextWidth(sRubyText);
     rRenderContext.SetFont(aSaveFont);
@@ -886,8 +885,8 @@ void RubyPreview::Paint(vcl::RenderContext& rRenderContext, const Rectangle& /*r
                 nLeftStart += nCharWidth;
                 nRightEnd -= nCharWidth;
             }
+            SAL_FALLTHROUGH;
         }
-        // no break!
         case RubyAdjust_BLOCK:
         {
             if (sOutputText.getLength() > 1)
@@ -903,8 +902,8 @@ void RubyPreview::Paint(vcl::RenderContext& rRenderContext, const Rectangle& /*r
                 }
                 break;
             }
+            SAL_FALLTHROUGH;
         }
-        //no break;
         case RubyAdjust_CENTER:
             rRenderContext.DrawText(Point(nCenter - nOutTextWidth / 2 , nYOutput),  sOutputText);
         break;

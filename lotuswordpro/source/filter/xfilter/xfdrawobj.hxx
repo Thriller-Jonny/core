@@ -86,11 +86,11 @@ public:
     /**
      * @descr   Set drawing object rotate.
      */
-    void SetRotate(double degree, const XFPoint& rRotatePoint=XFPoint(0,0))
+    void SetRotate(double degree)
     {
         m_nFlag |= XFDRAWOBJECT_FLAG_ROTATE;
         m_fRotate = degree*2*PI/360;
-        m_aRotatePoint = rRotatePoint;
+        m_aRotatePoint = XFPoint(0,0);
     }
 
     void    ContentToXml(IXFStream *pStrm);
@@ -98,7 +98,6 @@ public:
     virtual void    ToXml(IXFStream *pStrm) override;
 
 protected:
-    rtl::Reference<XFContentContainer>  m_aContents;
     double          m_fRotate;
     XFPoint         m_aRotatePoint;
     double          m_fScaleX;

@@ -37,6 +37,8 @@
 #include <editeng/colritem.hxx>
 #include <editeng/crossedoutitem.hxx>
 #include "stringutil.hxx"
+#include "cellform.hxx"
+#include "cellvalue.hxx"
 #include "document.hxx"
 #include "editutil.hxx"
 #include "formulacell.hxx"
@@ -163,23 +165,27 @@ void lclInsertUrl( XclImpRoot& rRoot, const OUString& rUrl, SCCOL nScCol, SCROW 
 {
     ScDocumentImport& rDoc = rRoot.GetDocImport();
     ScAddress aScPos( nScCol, nScRow, nScTab );
-    CellType eCellType = rDoc.getDoc().GetCellType(aScPos);
-    switch( eCellType )
+    ScRefCellValue aCell(rDoc.getDoc(), aScPos);
+    switch( aCell.meType )
     {
         // #i54261# hyperlinks in string cells
         case CELLTYPE_STRING:
         case CELLTYPE_EDIT:
         {
-            OUString aDisplText = rDoc.getDoc().GetString(nScCol, nScRow, nScTab);
+            sal_uLong nNumFmt = rDoc.getDoc().GetNumberFormat(aScPos);
+            SvNumberFormatter* pFormatter = rDoc.getDoc().GetFormatTable();
+            Color* pColor;
+            OUString aDisplText;
+            ScCellFormat::GetString(aCell, nNumFmt, aDisplText, &pColor, *pFormatter, &rDoc.getDoc());
             if (aDisplText.isEmpty())
                 aDisplText = rUrl;
 
             ScEditEngineDefaulter& rEE = rRoot.GetEditEngine();
             SvxURLField aUrlField( rUrl, aDisplText, SVXURLFORMAT_APPDEFAULT );
 
-            const EditTextObject* pEditObj = rDoc.getDoc().GetEditText(aScPos);
-            if( pEditObj )
+            if( aCell.meType == CELLTYPE_EDIT )
             {
+                const EditTextObject* pEditObj = aCell.mpEditText;
                 rEE.SetText( *pEditObj );
                 rEE.QuickInsertField( SvxFieldItem( aUrlField, EE_FEATURE_FIELD ), ESelection( 0, 0, EE_PARA_ALL, 0 ) );
             }
@@ -344,8 +350,8 @@ OUString XclImpHyperlink::ReadEmbeddedData( XclImpStream& rStrm )
                     if (nSepPos < xTextMark->getLength() - 1)
                     {
                         ScRange aRange;
-                        if ((aRange.ParseAny( xTextMark->copy( nSepPos + 1 ), nullptr,
-                                        formula::FormulaGrammar::CONV_XL_R1C1) & SCA_VALID) != SCA_VALID)
+                        if ((aRange.ParseAny( xTextMark->copy( nSepPos + 1 ), nullptr, formula::FormulaGrammar::CONV_XL_R1C1)
+                                        & ScRefFlags::VALID) == ScRefFlags::ZERO)
                             xTextMark.reset( new OUString( xTextMark->replaceAt( nSepPos, 1, OUString( '.' ))));
                     }
                 }
@@ -783,34 +789,21 @@ void XclImpValidationManager::ReadDV( XclImpStream& rStrm )
     rStrm.SetNulSubstChar( '\n' );
     ::std::unique_ptr< ScTokenArray > xTokArr1;
 
-    sal_uInt16 nLen = 0;
-    nLen = rStrm.ReaduInt16();
+    // We can't import the formula directly because we need the range
+    sal_uInt16 nLenFormula1 = rStrm.ReaduInt16();
     rStrm.Ignore( 2 );
-    if( nLen > 0 )
-    {
-        const ScTokenArray* pTokArr = nullptr;
-        rFmlaConv.Reset();
-            rFmlaConv.Convert( pTokArr, rStrm, nLen, false, FT_CondFormat );
-        // formula converter owns pTokArr -> create a copy of the token array
-        if( pTokArr )
-            xTokArr1.reset( pTokArr->Clone() );
-    }
-    rStrm.SetNulSubstChar();    // back to default
+    XclImpStreamPos aPosFormula1;
+    rStrm.StorePosition(aPosFormula1);
+    rStrm.Ignore(nLenFormula1);
 
     // second formula
     ::std::unique_ptr< ScTokenArray > xTokArr2;
 
-    nLen = rStrm.ReaduInt16();
+    sal_uInt16 nLenFormula2 = rStrm.ReaduInt16();
     rStrm.Ignore( 2 );
-    if( nLen > 0 )
-    {
-        const ScTokenArray* pTokArr = nullptr;
-        rFmlaConv.Reset();
-            rFmlaConv.Convert( pTokArr, rStrm, nLen, false, FT_CondFormat );
-        // formula converter owns pTokArr -> create a copy of the token array
-        if( pTokArr )
-            xTokArr2.reset( pTokArr->Clone() );
-    }
+    XclImpStreamPos aPosFormula2;
+    rStrm.StorePosition(aPosFormula2);
+    rStrm.Ignore(nLenFormula2);
 
     // read all cell ranges
     XclRangeList aXclRanges;
@@ -823,6 +816,34 @@ void XclImpValidationManager::ReadDV( XclImpStream& rStrm )
     // only continue if there are valid ranges
     if ( aScRanges.empty() )
         return;
+
+    ScRange aCombinedRange = aScRanges.Combine();
+
+    XclImpStreamPos aCurrentPos;
+    rStrm.StorePosition(aCurrentPos);
+    rStrm.RestorePosition(aPosFormula1);
+    if( nLenFormula1 > 0 )
+    {
+        const ScTokenArray* pTokArr = nullptr;
+        rFmlaConv.Reset(aCombinedRange.aStart);
+        rFmlaConv.Convert( pTokArr, rStrm, nLenFormula1, false, FT_CondFormat );
+        // formula converter owns pTokArr -> create a copy of the token array
+        if( pTokArr )
+            xTokArr1.reset( pTokArr->Clone() );
+    }
+    rStrm.SetNulSubstChar();    // back to default
+    if (nLenFormula2 > 0)
+    {
+        rStrm.RestorePosition(aPosFormula2);
+        const ScTokenArray* pTokArr = nullptr;
+        rFmlaConv.Reset(aCombinedRange.aStart);
+        rFmlaConv.Convert( pTokArr, rStrm, nLenFormula2, false, FT_CondFormat );
+        // formula converter owns pTokArr -> create a copy of the token array
+        if( pTokArr )
+            xTokArr2.reset( pTokArr->Clone() );
+    }
+
+    rStrm.RestorePosition(aCurrentPos);
 
     bool bIsValid = true;   // valid settings in flags field
 
@@ -1212,7 +1233,7 @@ void XclImpDocProtectBuffer::Apply() const
 
     if (mnPassHash)
     {
-        // 16-bit password pash.
+        // 16-bit password hash.
         Sequence<sal_Int8> aPass(2);
         aPass[0] = (mnPassHash >> 8) & 0xFF;
         aPass[1] = mnPassHash & 0xFF;

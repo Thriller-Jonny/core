@@ -82,17 +82,20 @@ long ZCodec::EndCompression()
 {
     long retvalue = 0;
 
-    if (mbStatus && meState != STATE_INIT)
+    if (meState != STATE_INIT)
     {
         if (meState == STATE_COMPRESS)
         {
-            do
+            if (mbStatus)
             {
+                do
+                {
+                    ImplWriteBack();
+                }
+                while ( deflate( PZSTREAM, Z_FINISH ) != Z_STREAM_END );
+
                 ImplWriteBack();
             }
-            while ( deflate( PZSTREAM, Z_FINISH ) != Z_STREAM_END );
-
-            ImplWriteBack();
 
             retvalue = PZSTREAM->total_in;
             deflateEnd( PZSTREAM );
@@ -109,10 +112,8 @@ long ZCodec::EndCompression()
     return mbStatus ? retvalue : -1;
 }
 
-long ZCodec::Compress( SvStream& rIStm, SvStream& rOStm )
+void ZCodec::Compress( SvStream& rIStm, SvStream& rOStm )
 {
-    long nOldTotal_In = PZSTREAM->total_in;
-
     assert(meState == STATE_INIT);
     mpOStm = &rOStm;
     InitCompress();
@@ -127,7 +128,6 @@ long ZCodec::Compress( SvStream& rIStm, SvStream& rOStm )
             break;
         }
     };
-    return ( mbStatus ) ? (long)(PZSTREAM->total_in - nOldTotal_In) : -1;
 }
 
 long ZCodec::Decompress( SvStream& rIStm, SvStream& rOStm )
@@ -167,7 +167,7 @@ long ZCodec::Decompress( SvStream& rIStm, SvStream& rOStm )
     return ( mbStatus ) ? (long)(PZSTREAM->total_out - nOldTotal_Out) : -1;
 }
 
-long ZCodec::Write( SvStream& rOStm, const sal_uInt8* pData, sal_uIntPtr nSize )
+void ZCodec::Write( SvStream& rOStm, const sal_uInt8* pData, sal_uIntPtr nSize )
 {
     if (meState == STATE_INIT)
     {
@@ -190,7 +190,6 @@ long ZCodec::Write( SvStream& rOStm, const sal_uInt8* pData, sal_uIntPtr nSize )
             break;
         }
     }
-    return ( mbStatus ) ? (long)nSize : -1;
 }
 
 long ZCodec::Read( SvStream& rIStm, sal_uInt8* pData, sal_uIntPtr nSize )
@@ -394,11 +393,11 @@ void ZCodec::UpdateCRC ( sal_uInt8* pSource, long nDatSize)
     mnCRC = rtl_crc32( mnCRC, pSource, nDatSize );
 }
 
-bool ZCodec::AttemptDecompression(SvStream& rIStm, SvStream& rOStm, bool updateCrc, bool gzLib)
+bool ZCodec::AttemptDecompression(SvStream& rIStm, SvStream& rOStm)
 {
     assert(meState == STATE_INIT);
     sal_uLong nStreamPos = rIStm.Tell();
-    BeginCompression(ZCODEC_DEFAULT_COMPRESSION, updateCrc, gzLib);
+    BeginCompression(ZCODEC_DEFAULT_COMPRESSION, false/*updateCrc*/, true/*gzLib*/);
     InitDecompress(rIStm);
     EndCompression();
     if ( !mbStatus || rIStm.GetError() )
@@ -407,7 +406,7 @@ bool ZCodec::AttemptDecompression(SvStream& rIStm, SvStream& rOStm, bool updateC
         return false;
     }
     rIStm.Seek(nStreamPos);
-    BeginCompression(ZCODEC_DEFAULT_COMPRESSION, updateCrc, gzLib);
+    BeginCompression(ZCODEC_DEFAULT_COMPRESSION, false/*updateCrc*/, true/*gzLib*/);
     Decompress(rIStm, rOStm);
     EndCompression();
     if( !mbStatus || rIStm.GetError() || rOStm.GetError() )

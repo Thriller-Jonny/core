@@ -58,8 +58,8 @@ extern Color *pWaveCol;
 class SwFntObj : public SwCacheObj
 {
     friend class SwFntAccess;
-    friend void _InitCore();
-    friend void _FinitCore();
+    friend void InitCore();
+    friend void FinitCore();
 
     vcl::Font aFont;
     vcl::Font *pScrFont;
@@ -78,7 +78,6 @@ class SwFntObj : public SwCacheObj
 
     static long nPixWidth;
     static MapMode *pPixMap;
-    static VclPtr<OutputDevice> pPixOut;
 
 public:
     DECL_FIXEDMEMPOOL_NEWDEL(SwFntObj)
@@ -93,7 +92,7 @@ public:
     inline const vcl::Font& GetFont() const  { return aFont; }
 
     inline sal_uInt16 GetGuessedLeading() const  { return nGuessedLeading; }
-    inline sal_uInt16 GetExtLeading() const  { return nExtLeading; }
+    inline sal_uInt16 GetExternalLeading() const  { return nExtLeading; }
 
     sal_uInt16 GetFontAscent( const SwViewShell *pSh, const OutputDevice& rOut );
     sal_uInt16 GetFontHeight( const SwViewShell *pSh, const OutputDevice& rOut );

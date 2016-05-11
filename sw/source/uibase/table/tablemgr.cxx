@@ -22,6 +22,7 @@
 #include <com/sun/star/chart2/data/XDataReceiver.hpp>
 #include <com/sun/star/chart2/XChartDocument.hpp>
 #include <com/sun/star/beans/PropertyState.hpp>
+#include <com/sun/star/embed/EmbedVerbs.hpp>
 
 #include <sot/storage.hxx>
 #include <comphelper/classids.hxx>
@@ -165,10 +166,10 @@ void SwTableFUNC::InitTabCols()
         pSh->GetTabCols( aCols );
 }
 
-SwTableFUNC::SwTableFUNC(SwWrtShell *pShell, bool bCopyFormat)
+SwTableFUNC::SwTableFUNC(SwWrtShell *pShell)
     : pFormat(pShell->GetTableFormat()),
       pSh(pShell),
-      bCopy(bCopyFormat)
+      bCopy(false)
 {
     // if applicable copy the format for edit
     if( pFormat && bCopy )
@@ -267,7 +268,7 @@ uno::Reference< frame::XModel > SwTableFUNC::InsertChart(
         pSh->CalcAndSetScale( aEmbObjRef );
         //#50270# We don't need to handle errors,
         //this does the DoVerb in the SfxViewShell.
-        ErrCode nErr = pClient->DoVerb( SVVERB_SHOW );
+        ErrCode nErr = pClient->DoVerb(embed::EmbedVerbs::MS_OLEVERB_SHOW);
         (void) nErr;
 
         // #i121334#

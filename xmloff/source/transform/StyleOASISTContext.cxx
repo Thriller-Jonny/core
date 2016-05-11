@@ -263,7 +263,7 @@ void XMLPropertiesTContext_Impl::StartElement(
                         }
                         else
                         {
-                            OUString aAttrValue( GetXMLToken( bWordMode
+                            const OUString& aAttrValue( GetXMLToken( bWordMode
                                         ? XML_FALSE
                                         : XML_TRUE ) );
                             pAttrList->AddAttribute( aAttrQName, aAttrValue );
@@ -272,7 +272,7 @@ void XMLPropertiesTContext_Impl::StartElement(
                     break;
                 case XML_OPTACTION_KEEP_WITH_NEXT:
                     {
-                        OUString aAttrValue( GetXMLToken(
+                        const OUString& aAttrValue( GetXMLToken(
                                         IsXMLToken( rAttrValue, XML_ALWAYS )
                                                     ? XML_TRUE
                                                     : XML_FALSE) );
@@ -517,7 +517,7 @@ void XMLPropertiesTContext_Impl::StartElement(
                         pAttrList->AddAttribute( rAttrName, aNewAttrValue );
 
                         // create old draw:mirror for drawing graphic objects
-                        OUString aAttrValue( GetXMLToken( IsXMLToken( rAttrValue, XML_HORIZONTAL ) ? XML_TRUE : XML_FALSE ) );
+                        const OUString& aAttrValue( GetXMLToken( IsXMLToken( rAttrValue, XML_HORIZONTAL ) ? XML_TRUE : XML_FALSE ) );
                         pAttrList->AddAttribute( GetTransformer().GetNamespaceMap().GetQNameByKey(
                                     XML_NAMESPACE_DRAW,
                                     GetXMLToken( XML_MIRROR )), aAttrValue );
@@ -759,13 +759,13 @@ XMLStyleOASISTContext::~XMLStyleOASISTContext()
 {
 }
 
-XMLTransformerContext *XMLStyleOASISTContext::CreateChildContext(
+rtl::Reference<XMLTransformerContext> XMLStyleOASISTContext::CreateChildContext(
             sal_uInt16 nPrefix,
             const OUString& rLocalName,
             const OUString& rQName,
             const Reference< XAttributeList >& rAttrList )
 {
-    XMLTransformerContext *pContext = nullptr;
+    rtl::Reference<XMLTransformerContext> pContext;
 
     if( XML_NAMESPACE_STYLE == nPrefix || XML_NAMESPACE_LO_EXT == nPrefix )
     {
@@ -779,10 +779,10 @@ XMLTransformerContext *XMLStyleOASISTContext::CreateChildContext(
                     GetTransformer(), rQName, ePropType, m_aStyleFamily, m_bControlStyle );
             else
                 m_xPropContext->SetQNameAndPropType( rQName, ePropType );
-            pContext = m_xPropContext.get();
+            pContext.set(m_xPropContext.get());
         }
     }
-    if( !pContext )
+    if( !pContext.is() )
     {
         // if a properties context exist close it
         if( m_xPropContext.is() && !m_bPersistent )
@@ -858,7 +858,7 @@ void XMLStyleOASISTContext::StartElement(
                 break;
             case XML_ATACTION_DECODE_STYLE_NAME:
                 m_bControlStyle = rAttrValue.startsWith( "ctrl" );
-                // fall-through
+                SAL_FALLTHROUGH;
             case XML_ATACTION_DECODE_STYLE_NAME_REF:
                 {
                     OUString aAttrValue( rAttrValue );

@@ -153,8 +153,7 @@ class SVT_DLLPUBLIC ToolboxController :
 
         typedef std::unordered_map< OUString,
                                     css::uno::Reference< css::frame::XDispatch >,
-                                    OUStringHash,
-                                    std::equal_to< OUString > > URLToDispatchMap;
+                                    OUStringHash > URLToDispatchMap;
 
         // methods to support status forwarder, known by the old sfx2 toolbox controller implementation
         void addStatusListener( const OUString& aCommandURL );
@@ -163,9 +162,9 @@ class SVT_DLLPUBLIC ToolboxController :
         void unbindListener();
         bool isBound() const;
         // TODO remove
-        css::uno::Reference< css::util::XURLTransformer > getURLTransformer() const { return m_xUrlTransformer;}
+        const css::uno::Reference< css::util::XURLTransformer >& getURLTransformer() const { return m_xUrlTransformer;}
         // TODO remove
-        css::uno::Reference< css::awt::XWindow > getParent() const { return m_xParentWindow;}
+        const css::uno::Reference< css::awt::XWindow >& getParent() const { return m_xParentWindow;}
 
         bool                                                      m_bInitialized : 1,
                                                                   m_bDisposed : 1;

@@ -143,7 +143,7 @@ namespace dbaui
         bool        isDistinct()            const { return m_bDistinct; }
         sal_Int64       getLimit()              const { return m_nLimit; }
 
-        OUString getStatement()          const { return m_sStatement; }
+        const OUString& getStatement()          const { return m_sStatement; }
         sal_Int32       getSplitPos()           const { return m_nSplitPos;}
         sal_Int32       getVisibleRows()        const { return m_nVisibleRows; }
 
@@ -219,7 +219,7 @@ namespace dbaui
 
         /** switches to the graphical or SQL view mode, as determined by m_bGraphicalDesign
         */
-        bool    impl_setViewMode( ::dbtools::SQLExceptionInfo* _pErrorInfo );
+        void    impl_setViewMode( ::dbtools::SQLExceptionInfo* _pErrorInfo );
 
         /// sets m_sStatement, and notifies our respective property change listeners
         void    setStatement_fireEvent( const OUString& _rNewStatement, bool _bFireStatementChange = true );

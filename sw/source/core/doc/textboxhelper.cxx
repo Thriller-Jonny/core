@@ -27,6 +27,7 @@
 #include <mvsave.hxx>
 #include <sortedobjs.hxx>
 #include <cntfrm.hxx>
+#include <fmtsrnd.hxx>
 
 #include <editeng/unoprnms.hxx>
 #include <editeng/charrotateitem.hxx>
@@ -161,7 +162,7 @@ std::set<const SwFrameFormat*> SwTextBoxHelper::findTextBoxes(const SwNode& rNod
         const SwSortedObjs* pSortedObjs = pContentFrame->GetDrawObjs();
         if (pSortedObjs)
         {
-            for (size_t i = 0; i < pSortedObjs->size(); ++i)
+            for (std::size_t i = 0; i < pSortedObjs->size(); ++i)
             {
                 SwAnchoredObject* pAnchoredObject = (*pSortedObjs)[i];
                 SwFrameFormat* pTextBox = findTextBox(&pAnchoredObject->GetFrameFormat());
@@ -211,7 +212,7 @@ bool SwTextBoxHelper::isTextBox(const SdrObject* pObject)
 sal_Int32 SwTextBoxHelper::getCount(SdrPage* pPage, std::set<const SwFrameFormat*>& rTextBoxes)
 {
     sal_Int32 nRet = 0;
-    for (size_t i = 0; i < pPage->GetObjCount(); ++i)
+    for (std::size_t i = 0; i < pPage->GetObjCount(); ++i)
     {
         if (lcl_isTextBox(pPage->GetObj(i), rTextBoxes))
             continue;
@@ -227,7 +228,7 @@ uno::Any SwTextBoxHelper::getByIndex(SdrPage* pPage, sal_Int32 nIndex, std::set<
 
     SdrObject* pRet = nullptr;
     sal_Int32 nCount = 0; // Current logical index.
-    for (size_t i = 0; i < pPage->GetObjCount(); ++i)
+    for (std::size_t i = 0; i < pPage->GetObjCount(); ++i)
     {
         if (lcl_isTextBox(pPage->GetObj(i), rTextBoxes))
             continue;
@@ -250,7 +251,7 @@ sal_Int32 SwTextBoxHelper::getOrdNum(const SdrObject* pObject, std::set<const Sw
     if (const SdrPage* pPage = pObject->GetPage())
     {
         sal_Int32 nOrder = 0; // Current logical order.
-        for (size_t i = 0; i < pPage->GetObjCount(); ++i)
+        for (std::size_t i = 0; i < pPage->GetObjCount(); ++i)
         {
             if (lcl_isTextBox(pPage->GetObj(i), rTextBoxes))
                 continue;
@@ -264,7 +265,16 @@ sal_Int32 SwTextBoxHelper::getOrdNum(const SdrObject* pObject, std::set<const Sw
     return pObject->GetOrdNum();
 }
 
-SwFrameFormat* SwTextBoxHelper::findTextBox(uno::Reference<drawing::XShape> xShape)
+void SwTextBoxHelper::getShapeWrapThrough(const SwFrameFormat* pTextBox, bool& rWrapThrough)
+{
+    std::map<SwFrameFormat*, SwFrameFormat*> aMap = findShapes(pTextBox->GetDoc());
+    std::map<SwFrameFormat*, SwFrameFormat*>::iterator it = aMap.find(const_cast<SwFrameFormat*>(pTextBox));
+    if (it != aMap.end())
+        // pTextBox is indeed a TextBox, it->second is its shape.
+        rWrapThrough = it->second->GetSurround().GetSurround() == SURROUND_THROUGHT;
+}
+
+SwFrameFormat* SwTextBoxHelper::findTextBox(const uno::Reference<drawing::XShape>& xShape)
 {
     SwXShape* pShape = dynamic_cast<SwXShape*>(xShape.get());
     if (!pShape)
@@ -580,7 +590,7 @@ void SwTextBoxHelper::syncProperty(SwFrameFormat* pShape, sal_uInt16 nWID, sal_u
 
 void SwTextBoxHelper::saveLinks(const SwFrameFormats& rFormats, std::map<const SwFrameFormat*, const SwFrameFormat*>& rLinks)
 {
-    for (size_t i = 0; i < rFormats.size(); ++i)
+    for (std::size_t i = 0; i < rFormats.size(); ++i)
     {
         const SwFrameFormat* pFormat = rFormats[i];
         if (pFormat->Which() != RES_DRAWFRMFMT)
@@ -600,16 +610,16 @@ void SwTextBoxHelper::resetLink(SwFrameFormat* pShape, std::map<const SwFrameFor
     }
 }
 
-void SwTextBoxHelper::restoreLinks(std::set<_ZSortFly>& rOld, std::vector<SwFrameFormat*>& rNew, SavedLink& rSavedLinks, SavedContent& rOldContent)
+void SwTextBoxHelper::restoreLinks(std::set<ZSortFly>& rOld, std::vector<SwFrameFormat*>& rNew, SavedLink& rSavedLinks, SavedContent& rOldContent)
 {
-    size_t i = 0;
-    for (std::set<_ZSortFly>::iterator aSetIt = rOld.begin(); aSetIt != rOld.end(); ++aSetIt, ++i)
+    std::size_t i = 0;
+    for (std::set<ZSortFly>::iterator aSetIt = rOld.begin(); aSetIt != rOld.end(); ++aSetIt, ++i)
     {
         SavedLink::iterator aTextBoxIt = rSavedLinks.find(aSetIt->GetFormat());
         if (aTextBoxIt != rSavedLinks.end())
         {
-            size_t j = 0;
-            for (std::set<_ZSortFly>::iterator aSetJt = rOld.begin(); aSetJt != rOld.end(); ++aSetJt, ++j)
+            std::size_t j = 0;
+            for (std::set<ZSortFly>::iterator aSetJt = rOld.begin(); aSetJt != rOld.end(); ++aSetJt, ++j)
             {
                 if (aSetJt->GetFormat() == aTextBoxIt->second)
                     rNew[i]->SetFormatAttr(rNew[j]->GetContent());
@@ -643,7 +653,7 @@ void SwTextBoxHelper::syncFlyFrameAttr(SwFrameFormat& rShape, SfxItemSet& rSet)
 
                 aTextBoxSet.Put(aOrient);
 
-                // restore height (shrinked for extending beyond the page bottom - tdf#91260)
+                // restore height (shrunk for extending beyond the page bottom - tdf#91260)
                 SwFormatFrameSize aSize(pFormat->GetFrameSize());
                 if (!aRect.IsEmpty())
                 {

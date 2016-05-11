@@ -29,6 +29,7 @@
 #include "types.hxx"
 #include <formula/grammar.hxx>
 
+#include <o3tl/typed_flags_set.hxx>
 #include <com/sun/star/uno/Sequence.hxx>
 
 namespace com { namespace sun { namespace star {
@@ -140,35 +141,51 @@ SAL_WARN_UNUSED_RESULT inline SCTAB SanitizeTab( SCTAB nTab )
 // not using gcc -fno-strict-aliasing
 
 // The result of ConvertRef() is a bit group of the following:
+enum class ScRefFlags : sal_uInt16
+{
+    ZERO          = 0x0000,
+    COL_ABS       = 0x0001,
+    ROW_ABS       = 0x0002,
+    TAB_ABS       = 0x0004,
+    TAB_3D        = 0x0008,
+    COL2_ABS      = 0x0010,
+    ROW2_ABS      = 0x0020,
+    TAB2_ABS      = 0x0040,
+    TAB2_3D       = 0x0080,
+    ROW_VALID     = 0x0100,
+    COL_VALID     = 0x0200,
+    TAB_VALID     = 0x0400,
+    // BITS for convience
+    BITS          = COL_ABS | ROW_ABS | TAB_ABS | TAB_3D \
+                    | ROW_VALID | COL_VALID | TAB_VALID,
+    // somewhat cheesy kludge to force the display of the document name even for
+    // local references.  Requires TAB_3D to be valid
+    FORCE_DOC     = 0x0800,
+    ROW2_VALID    = 0x1000,
+    COL2_VALID    = 0x2000,
+    TAB2_VALID    = 0x4000,
+    VALID         = 0x8000,
 
-#define SCA_COL_ABSOLUTE    0x01
-#define SCA_ROW_ABSOLUTE    0x02
-#define SCA_TAB_ABSOLUTE    0x04
-#define SCA_TAB_3D          0x08
-#define SCA_COL2_ABSOLUTE   0x10
-#define SCA_ROW2_ABSOLUTE   0x20
-#define SCA_TAB2_ABSOLUTE   0x40
-#define SCA_TAB2_3D         0x80
-#define SCA_VALID_ROW       0x0100
-#define SCA_VALID_COL       0x0200
-#define SCA_VALID_TAB       0x0400
-// SCA_BITS is a convience for
-// (SCA_VALID_TAB | SCA_VALID_COL | SCA_VALID_ROW | SCA_TAB_3D | SCA_TAB_ABSOLUTE | SCA_ROW_ABSOLUTE | SCA_COL_ABSOLUTE)
-#define SCA_BITS            0x070F
-// somewhat cheesy kludge to force the display of the document name even for
-// local references.  Requires TAB_3D to be valid
-#define SCA_FORCE_DOC       0x0800
-#define SCA_VALID_ROW2      0x1000
-#define SCA_VALID_COL2      0x2000
-#define SCA_VALID_TAB2      0x4000
-#define SCA_VALID           0x8000
+    ADDR_ABS      = VALID | COL_ABS | ROW_ABS | TAB_ABS,
 
-#define SCA_ABS    SCA_VALID | SCA_COL_ABSOLUTE | SCA_ROW_ABSOLUTE | SCA_TAB_ABSOLUTE
+    RANGE_ABS     = ADDR_ABS | COL2_ABS | ROW2_ABS | TAB2_ABS,
 
-#define SCR_ABS    SCA_ABS | SCA_COL2_ABSOLUTE | SCA_ROW2_ABSOLUTE | SCA_TAB2_ABSOLUTE
+    ADDR_ABS_3D   = ADDR_ABS | TAB_3D,
+    RANGE_ABS_3D  = RANGE_ABS | TAB_3D
+};
 
-#define SCA_ABS_3D SCA_ABS | SCA_TAB_3D
-#define SCR_ABS_3D SCR_ABS | SCA_TAB_3D
+namespace o3tl
+{
+    template<> struct typed_flags<ScRefFlags> : is_typed_flags<ScRefFlags, 0xffff> {};
+}
+inline void applyStartToEndFlags(ScRefFlags &target,const ScRefFlags source)
+{
+    target |= ScRefFlags((std::underlying_type<ScRefFlags>::type)source << 4);
+}
+inline void applyStartToEndFlags(ScRefFlags &target)
+{
+    target |= ScRefFlags((std::underlying_type<ScRefFlags>::type)target << 4);
+}
 
 //  ScAddress
 class ScAddress
@@ -291,17 +308,25 @@ public:
         nTabP = nTab;
     }
 
-    SC_DLLPUBLIC sal_uInt16 Parse(
+    /**
+        @param  pSheetEndPos
+                If given and Parse() sucessfully parsed a sheet name it returns
+                the end position (exclusive) behind the sheet name AND a
+                following sheet name separator. This independent of whether the
+                resulting reference is fully valid or not.
+     */
+    SC_DLLPUBLIC ScRefFlags Parse(
                     const OUString&, ScDocument* = nullptr,
                     const Details& rDetails = detailsOOOa1,
                     ExternalInfo* pExtInfo = nullptr,
-                    const css::uno::Sequence<css::sheet::ExternalLinkInfo>* pExternalLinks = nullptr );
+                    const css::uno::Sequence<css::sheet::ExternalLinkInfo>* pExternalLinks = nullptr,
+                    sal_Int32* pSheetEndPos = nullptr );
 
-    SC_DLLPUBLIC void Format( OStringBuffer& r, sal_uInt16 nFlags = 0,
+    SC_DLLPUBLIC void Format( OStringBuffer& r, ScRefFlags nFlags = ScRefFlags::ZERO,
                                   const ScDocument* pDocument = nullptr,
                                   const Details& rDetails = detailsOOOa1) const;
 
-    SC_DLLPUBLIC OUString Format( sal_uInt16 nFlags = 0,
+    SC_DLLPUBLIC OUString Format( ScRefFlags nFlags = ScRefFlags::ZERO,
                                   const ScDocument* pDocument = nullptr,
                                   const Details& rDetails = detailsOOOa1) const;
 
@@ -319,14 +344,11 @@ public:
     inline bool operator!=( const ScAddress& rAddress ) const;
     inline bool operator<( const ScAddress& rAddress ) const;
     inline bool operator<=( const ScAddress& rAddress ) const;
-    inline bool operator>( const ScAddress& rAddress ) const;
-    inline bool operator>=( const ScAddress& rAddress ) const;
 
     inline size_t hash() const;
 
     /// "A1" or "$A$1" or R1C1 or R[1]C[1]
-    OUString GetColRowString( bool bAbsolute = false,
-                              const Details& rDetails = detailsOOOa1) const;
+    OUString GetColRowString() const;
 };
 
 inline void ScAddress::PutInOrder( ScAddress& rAddress )
@@ -396,16 +418,6 @@ inline bool ScAddress::operator<=( const ScAddress& rAddress ) const
     return operator<( rAddress ) || operator==( rAddress );
 }
 
-inline bool ScAddress::operator>( const ScAddress& rAddress ) const
-{
-    return !operator<=( rAddress );
-}
-
-inline bool ScAddress::operator>=( const ScAddress& rAddress ) const
-{
-    return !operator<( rAddress );
-}
-
 inline size_t ScAddress::hash() const
 {
     // Assume that there are not that many addresses with row > 2^16 AND column
@@ -423,14 +435,6 @@ struct ScAddressHashFunctor
     size_t operator()( const ScAddress & rAddress ) const
     {
         return rAddress.hash();
-    }
-};
-
-struct ScAddressEqualFunctor
-{
-    bool operator()( const ScAddress & rAdr1, const ScAddress & rAdr2 ) const
-    {
-        return rAdr1 == rAdr2;
     }
 };
 
@@ -497,16 +501,16 @@ public:
     inline bool In( const ScAddress& ) const;   ///< is Address& in Range?
     inline bool In( const ScRange& ) const;     ///< is Range& in Range?
 
-    SC_DLLPUBLIC sal_uInt16 Parse( const OUString&, ScDocument* = nullptr,
+    SC_DLLPUBLIC ScRefFlags Parse( const OUString&, ScDocument* = nullptr,
                                    const ScAddress::Details& rDetails = ScAddress::detailsOOOa1,
                                    ScAddress::ExternalInfo* pExtInfo = nullptr,
                                    const css::uno::Sequence<css::sheet::ExternalLinkInfo>* pExternalLinks = nullptr );
 
-    SC_DLLPUBLIC sal_uInt16 ParseAny( const OUString&, ScDocument* = nullptr,
+    SC_DLLPUBLIC ScRefFlags ParseAny( const OUString&, ScDocument* = nullptr,
                                       const ScAddress::Details& rDetails = ScAddress::detailsOOOa1 );
-    SC_DLLPUBLIC sal_uInt16 ParseCols( const OUString&, ScDocument* = nullptr,
+    SC_DLLPUBLIC ScRefFlags ParseCols( const OUString&, ScDocument* = nullptr,
                                        const ScAddress::Details& rDetails = ScAddress::detailsOOOa1 );
-    SC_DLLPUBLIC sal_uInt16 ParseRows( const OUString&, ScDocument* = nullptr,
+    SC_DLLPUBLIC void ParseRows( const OUString&, ScDocument* = nullptr,
                                        const ScAddress::Details& rDetails = ScAddress::detailsOOOa1 );
 
     /** Parse an Excel style reference up to and including the sheet name
@@ -523,7 +527,7 @@ public:
         @returns
             Pointer to the position after '!' if successfully parsed, and
             rExternDocName, rStartTabName and/or rEndTabName filled if
-            applicable. SCA_... flags set in nFlags.
+            applicable. ScRefFlags::... flags set in nFlags.
             Or if no valid document and/or sheet header could be parsed the start
             position passed with pString.
             Or NULL if a 3D sheet header could be parsed but
@@ -531,11 +535,11 @@ public:
      */
     const sal_Unicode* Parse_XL_Header( const sal_Unicode* pString, const ScDocument* pDocument,
                                         OUString& rExternDocName, OUString& rStartTabName,
-                                        OUString& rEndTabName, sal_uInt16& nFlags,
+                                        OUString& rEndTabName, ScRefFlags& nFlags,
                                         bool bOnlyAcceptSingle,
                                         const css::uno::Sequence<css::sheet::ExternalLinkInfo>* pExternalLinks = nullptr );
 
-    SC_DLLPUBLIC OUString Format(sal_uInt16 nFlags= 0, const ScDocument* pDocument = nullptr,
+    SC_DLLPUBLIC OUString Format(ScRefFlags nFlags = ScRefFlags::ZERO, const ScDocument* pDocument = nullptr,
                                  const ScAddress::Details& rDetails = ScAddress::detailsOOOa1) const;
 
     inline void GetVars( SCCOL& nCol1, SCROW& nRow1, SCTAB& nTab1,
@@ -554,7 +558,7 @@ public:
 
     /** Same as Move() but with sticky end col/row anchors. */
     SC_DLLPUBLIC SAL_WARN_UNUSED_RESULT bool MoveSticky( SCsCOL aDeltaX, SCsROW aDeltaY, SCsTAB aDeltaZ,
-            ScRange& rErrorRange, ScDocument* pDocument = nullptr );
+            ScRange& rErrorRange );
 
     SC_DLLPUBLIC void ExtendTo( const ScRange& rRange );
     SC_DLLPUBLIC bool Intersects( const ScRange& rRange ) const;    // do two ranges intersect?
@@ -580,8 +584,6 @@ public:
     inline bool operator!=( const ScRange& rRange ) const;
     inline bool operator<( const ScRange& rRange ) const;
     inline bool operator<=( const ScRange& rRange ) const;
-    inline bool operator>( const ScRange& rRange ) const;
-    inline bool operator>=( const ScRange& rRange ) const;
 
     /// Hash 2D area ignoring table number.
     inline size_t hashArea() const;
@@ -629,16 +631,6 @@ inline bool ScRange::operator<=( const ScRange& rRange ) const
     return operator<( rRange ) || operator==( rRange );
 }
 
-inline bool ScRange::operator>( const ScRange& rRange ) const
-{
-    return !operator<=( rRange );
-}
-
-inline bool ScRange::operator>=( const ScRange& rRange ) const
-{
-    return !operator<( rRange );
-}
-
 inline bool ScRange::In( const ScAddress& rAddress ) const
 {
     return
@@ -682,22 +674,6 @@ inline size_t ScRange::hashStartColumn() const
          static_cast<size_t>(aEnd.Row());
 }
 
-struct ScRangeHashAreaFunctor
-{
-    size_t operator()( const ScRange & rRange ) const
-    {
-        return rRange.hashArea();
-    }
-};
-
-struct ScRangeEqualFunctor
-{
-    bool operator()( const ScRange & rRange1, const ScRange & rRange2 ) const
-    {
-        return rRange1 == rRange2;
-    }
-};
-
 inline bool ValidRange( const ScRange& rRange )
 {
     return ValidAddress(rRange.aStart) && ValidAddress(rRange.aEnd);
@@ -732,8 +708,6 @@ public:
     {
         return aRange[n];
     }
-    inline bool operator==( const ScRangePair& ) const;
-    inline bool operator!=( const ScRangePair& ) const;
 };
 
 inline ScRangePair& ScRangePair::operator= ( const ScRangePair& rRange )
@@ -741,17 +715,6 @@ inline ScRangePair& ScRangePair::operator= ( const ScRangePair& rRange )
     aRange[0] = rRange.aRange[0];
     aRange[1] = rRange.aRange[1];
     return *this;
-}
-
-inline bool ScRangePair::operator==( const ScRangePair& rRange ) const
-{
-    return (aRange[0] == rRange.aRange[0]) &&
-           (aRange[1] == rRange.aRange[1]);
-}
-
-inline bool ScRangePair::operator!=( const ScRangePair& rRange ) const
-{
-    return !operator==( rRange );
 }
 
 //  ScRefAddress
@@ -833,10 +796,6 @@ public:
     }
 
     inline bool operator == ( const ScRefAddress& r ) const;
-    inline bool operator != ( const ScRefAddress& r ) const
-    {
-        return !(operator==(r));
-    }
 
     OUString  GetRefString( ScDocument* pDocument, SCTAB nActTab,
                             const ScAddress::Details& rDetails = ScAddress::detailsOOOa1) const;

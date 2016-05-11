@@ -83,10 +83,9 @@ T lcl_getProperty(
     T aResult;
     if( rMediaDescriptor.getLength())
     {
-        OUString aPropName( rPropName );
         const beans::PropertyValue * pIt = rMediaDescriptor.getConstArray();
         const beans::PropertyValue * pEndIt = pIt +  + rMediaDescriptor.getLength();
-        pIt = ::std::find_if( pIt, pEndIt, lcl_PropNameEquals( aPropName ));
+        pIt = ::std::find_if( pIt, pEndIt, lcl_PropNameEquals( rPropName ));
         if( pIt != pEndIt )
             (*pIt).Value >>= aResult;
     }
@@ -115,7 +114,7 @@ Reference< embed::XStorage > lcl_createStorage(
     try
     {
         Reference< io::XStream > xStream(
-            ::ucbhelper::Content( rURL, Reference< ::com::sun::star::ucb::XCommandEnvironment >(), comphelper::getProcessComponentContext()).openStream(),
+            ::ucbhelper::Content( rURL, Reference< css::ucb::XCommandEnvironment >(), comphelper::getProcessComponentContext()).openStream(),
             uno::UNO_QUERY );
 
         Reference< lang::XSingleServiceFactory > xStorageFact( embed::StorageFactory::create( xContext ) );
@@ -362,7 +361,7 @@ void ChartModel::impl_store(
         OSL_FAIL( "No filter" );
     }
 
-    setModified( sal_False );
+    setModified( false );
 
     //#i66865#
     //for data change notification during chart is not loaded:
@@ -387,7 +386,7 @@ void ChartModel::impl_store(
 void ChartModel::insertDefaultChart()
 {
     lockControllers();
-    createInternalDataProvider( sal_False );
+    createInternalDataProvider( false );
     try
     {
         // create default chart
@@ -438,7 +437,7 @@ void ChartModel::insertDefaultChart()
                 Reference< beans::XPropertySet > xDiagramProperties( xDiagram, uno::UNO_QUERY );
                 if( xDiagramProperties.is() )
                 {
-                    xDiagramProperties->setPropertyValue( "RightAngledAxes", uno::makeAny( sal_True ));
+                    xDiagramProperties->setPropertyValue( "RightAngledAxes", uno::makeAny( true ));
                     xDiagramProperties->setPropertyValue( "D3DScenePerspective", uno::makeAny( drawing::ProjectionMode_PARALLEL ));
                     ThreeDHelper::setScheme( xDiagram, ThreeDLookScheme_Realistic );
                 }
@@ -476,7 +475,7 @@ void ChartModel::insertDefaultChart()
     {
         ASSERT_EXCEPTION( ex );
     }
-    setModified( sal_False );
+    setModified( false );
     unlockControllers();
 }
 
@@ -589,7 +588,7 @@ void ChartModel::impl_load(
     if( xStorage.is() )
         impl_loadGraphics( xStorage );
 
-    setModified( sal_False );
+    setModified( false );
 
     // switchToStorage without notifying listeners (which shouldn't exist at
     // this time, anyway)
@@ -733,7 +732,7 @@ void SAL_CALL ChartModel::modified( const lang::EventObject& )
     throw (uno::RuntimeException, std::exception)
 {
     if( m_nInLoad == 0 )
-        setModified( sal_True );
+        setModified( true );
 }
 
 // lang::XEventListener (base of util::XModifyListener)

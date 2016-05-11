@@ -23,6 +23,9 @@
 #include <com/sun/star/text/WritingMode.hpp>
 #include <com/sun/star/document/PrinterIndependentLayout.hpp>
 #include <com/sun/star/i18n/ScriptType.hpp>
+#include <com/sun/star/beans/XPropertyContainer.hpp>
+#include <com/sun/star/beans/PropertyAttribute.hpp>
+#include <com/sun/star/document/XDocumentProperties.hpp>
 #include <editeng/forbiddencharacterstable.hxx>
 
 #include <svx/svxids.hrc>
@@ -95,6 +98,7 @@
 #include "../ui/inc/ViewShell.hxx"
 #include "../ui/inc/optsitem.hxx"
 #include "../ui/inc/FrameView.hxx"
+#include <undo/undomanager.hxx>
 
 #include <tools/tenccvt.hxx>
 #include <vcl/settings.hxx>
@@ -109,7 +113,6 @@ using namespace ::com::sun::star::linguistic2;
 using namespace com::sun::star::xml::dom;
 using ::com::sun::star::uno::Reference;
 using ::com::sun::star::lang::XMultiServiceFactory;
-using ::com::sun::star::beans::PropertyValue;
 
 
 SdDrawDocument* SdDrawDocument::s_pDocLockedInsertingLinks = nullptr;
@@ -126,8 +129,7 @@ PresentationSettings::PresentationSettings()
     mbFullScreen( true ),
     mbAnimationAllowed( true ),
     mnPauseTimeout( 10 ),
-    mbShowPauseLogo( false ),
-    mbStartWithNavigator(false)
+    mbShowPauseLogo( false )
 {
 }
 
@@ -144,8 +146,7 @@ PresentationSettings::PresentationSettings( const PresentationSettings& r )
     mbFullScreen( r.mbFullScreen ),
     mbAnimationAllowed( r.mbAnimationAllowed ),
     mnPauseTimeout( r.mnPauseTimeout ),
-    mbShowPauseLogo( r.mbShowPauseLogo ),
-    mbStartWithNavigator( r.mbStartWithNavigator )
+    mbShowPauseLogo( r.mbShowPauseLogo )
 {
 }
 
@@ -440,6 +441,33 @@ SdrModel* SdDrawDocument::AllocModel() const
     return AllocSdDrawDocument();
 }
 
+namespace
+{
+
+/// Copies all user-defined properties from pSource to pDestination.
+void lcl_copyUserDefinedProperties(SfxObjectShell* pSource, SfxObjectShell* pDestination)
+{
+    if (!pSource || !pDestination)
+        return;
+
+    uno::Reference<document::XDocumentProperties> xSource = pSource->getDocProperties();
+    uno::Reference<document::XDocumentProperties> xDestination = pDestination->getDocProperties();
+    uno::Reference<beans::XPropertyContainer> xSourcePropertyContainer = xSource->getUserDefinedProperties();
+    uno::Reference<beans::XPropertyContainer> xDestinationPropertyContainer = xDestination->getUserDefinedProperties();
+    uno::Reference<beans::XPropertySet> xSourcePropertySet(xSourcePropertyContainer, uno::UNO_QUERY);
+    uno::Sequence<beans::Property> aProperties = xSourcePropertySet->getPropertySetInfo()->getProperties();
+
+    for (const beans::Property& rProperty : aProperties)
+    {
+        const OUString& rKey = rProperty.Name;
+        uno::Any aValue = xSourcePropertySet->getPropertyValue(rKey);
+        // We know that pDestination was just created, so has no properties: addProperty() will never throw.
+        xDestinationPropertyContainer->addProperty(rKey, beans::PropertyAttribute::REMOVABLE, aValue);
+    }
+}
+
+}
+
 // This method creates a new document (SdDrawDocument) and returns a pointer to
 // said document. The drawing engine uses this method to put the document (or
 // parts of it) into the clipboard/DragServer.
@@ -482,6 +510,8 @@ SdDrawDocument* SdDrawDocument::AllocSdDrawDocument() const
             SdStyleSheetVector aCreatedSheets;
             pNewStylePool->CopyLayoutSheets(aOldLayoutName, *pOldStylePool, aCreatedSheets );
         }
+
+        lcl_copyUserDefinedProperties(GetDocSh(), pNewDocSh);
 
         pNewModel->NewOrLoadCompleted( DOC_LOADED );  // loaded from source document
     }
@@ -734,8 +764,8 @@ void SdDrawDocument::NewOrLoadCompleted( SdPage* pPage, SdStyleSheetPool* pSPool
 
                 if (nId == OBJ_TITLETEXT)
                 {
-                    if( pOPO && pOPO->GetOutlinerMode() == OUTLINERMODE_DONTKNOW )
-                        pOPO->SetOutlinerMode( OUTLINERMODE_TITLEOBJECT );
+                    if( pOPO && pOPO->GetOutlinerMode() == OutlinerMode::DontKnow )
+                        pOPO->SetOutlinerMode( OutlinerMode::TitleObject );
 
                     // sal_True: don't delete "hard" attributes when doing this.
                     if (pTitleSheet)
@@ -743,8 +773,8 @@ void SdDrawDocument::NewOrLoadCompleted( SdPage* pPage, SdStyleSheetPool* pSPool
                 }
                 else if (nId == OBJ_OUTLINETEXT)
                 {
-                    if( pOPO && pOPO->GetOutlinerMode() == OUTLINERMODE_DONTKNOW )
-                        pOPO->SetOutlinerMode( OUTLINERMODE_OUTLINEOBJECT );
+                    if( pOPO && pOPO->GetOutlinerMode() == OutlinerMode::DontKnow )
+                        pOPO->SetOutlinerMode( OutlinerMode::OutlineObject );
 
                     std::vector<SfxStyleSheetBase*>::iterator iter;
                     for (iter = aOutlineList.begin(); iter != aOutlineList.end(); ++iter)
@@ -786,7 +816,7 @@ void SdDrawDocument::NewOrLoadCompleted( SdPage* pPage, SdStyleSheetPool* pSPool
 {
     if (!mpOutliner && bCreateOutliner)
     {
-        mpOutliner = new ::sd::Outliner( this, OUTLINERMODE_TEXTOBJECT );
+        mpOutliner = new ::sd::Outliner( this, OutlinerMode::TextObject );
 
         if (mpDocSh)
             mpOutliner->SetRefDevice( SD_MOD()->GetRefDevice( *mpDocSh ) );
@@ -804,7 +834,7 @@ void SdDrawDocument::NewOrLoadCompleted( SdPage* pPage, SdStyleSheetPool* pSPool
 {
     if ( !mpInternalOutliner && bCreateOutliner )
     {
-        mpInternalOutliner = new ::sd::Outliner( this, OUTLINERMODE_TEXTOBJECT );
+        mpInternalOutliner = new ::sd::Outliner( this, OutlinerMode::TextObject );
 
         // This outliner is only used to create special text objects. As no
         // information about portions is saved in this outliner, the update mode
@@ -1069,7 +1099,14 @@ void SdDrawDocument::dumpAsXml(xmlTextWriterPtr pWriter) const
         xmlTextWriterStartDocument(pWriter, nullptr, nullptr, nullptr);
         bOwns = true;
     }
+    xmlTextWriterStartElement(pWriter, BAD_CAST("sdDrawDocument"));
+    xmlTextWriterWriteFormatAttribute(pWriter, BAD_CAST("ptr"), "%p", this);
+
     FmFormModel::dumpAsXml(pWriter);
+    if (GetUndoManager())
+        GetUndoManager()->dumpAsXml(pWriter);
+
+    xmlTextWriterEndElement(pWriter);
     if (bOwns)
     {
         xmlTextWriterEndDocument(pWriter);

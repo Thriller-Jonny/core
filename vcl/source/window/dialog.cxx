@@ -42,6 +42,8 @@
 #include <vcl/button.hxx>
 #include <vcl/mnemonic.hxx>
 #include <vcl/dialog.hxx>
+#include <vcl/tabctrl.hxx>
+#include <vcl/tabpage.hxx>
 #include <vcl/decoview.hxx>
 #include <vcl/msgbox.hxx>
 #include <vcl/unowrap.hxx>
@@ -236,6 +238,16 @@ void ImplWindowAutoMnemonic( vcl::Window* pWindow )
     }
 }
 
+void ImplHandleControlAccelerator( vcl::Window* pWindow, bool bShow )
+{
+    Control *pControl = dynamic_cast<Control*>(pWindow->ImplGetWindow());
+    if (pControl && pControl->GetText().indexOf('~') != -1)
+    {
+        pControl->SetShowAccelerator( bShow );
+        pControl->Invalidate(InvalidateFlags::Update);
+    }
+}
+
 static VclButtonBox* getActionArea(Dialog *pDialog)
 {
     VclButtonBox *pButtonBox = nullptr;
@@ -345,7 +357,6 @@ void Dialog::ImplInitDialogData()
     mpWindowImpl->mbDialog  = true;
     mpPrevExecuteDlg        = nullptr;
     mbInExecute             = false;
-    mbOldSaveBack           = false;
     mbInClose               = false;
     mbModalMode             = false;
     mpContentArea.clear();
@@ -590,19 +601,27 @@ bool Dialog::ImplHandleCmdEvent( const CommandEvent& rCEvent )
     if (rCEvent.GetCommand() == CommandEventId::ModKeyChange)
     {
         const CommandModKeyData *pCData = rCEvent.GetModKeyData ();
+        bool bShowAccel =  pCData && pCData->IsMod2();
 
         Window *pGetChild = firstLogicalChildOfParent(this);
         while (pGetChild)
         {
-            Control *pControl = dynamic_cast<Control*>(pGetChild->ImplGetWindow());
-            if (pControl && pControl->GetText().indexOf('~') != -1)
+            if ( pGetChild->GetType() == WINDOW_TABCONTROL )
             {
-                if (pCData && pCData->IsMod2())
-                    pControl->SetShowAccelerator(true);
-                else
-                    pControl->SetShowAccelerator(false);
-                pControl->Invalidate(InvalidateFlags::Update);
+                 // find currently shown tab page
+                 TabControl* pTabControl = static_cast<TabControl*>( pGetChild );
+                 TabPage* pTabPage = pTabControl->GetTabPage( pTabControl->GetCurPageId() );
+                 vcl::Window* pTabPageChild =  firstLogicalChildOfParent( pTabPage );
+
+                 // and go through its children
+                 while ( pTabPageChild )
+                 {
+                     ImplHandleControlAccelerator(pTabPageChild, bShowAccel);
+                     pTabPageChild = nextLogicalChildOfParent(pTabPage, pTabPageChild);
+                 }
             }
+
+            ImplHandleControlAccelerator( pGetChild, bShowAccel );
             pGetChild = nextLogicalChildOfParent(this, pGetChild);
         }
         return true;
@@ -629,7 +648,7 @@ bool Dialog::Notify( NotifyEvent& rNEvt )
                 // like e.g. SfxModelessDialog which destroy themselves inside Close()
                 // post this Close asynchronous so we can leave our key handler before
                 // we get destroyed
-                PostUserEvent( LINK( this, Dialog, ImplAsyncCloseHdl ), this, true);
+                PostUserEvent( LINK( this, Dialog, ImplAsyncCloseHdl ), nullptr, true);
                 return true;
             }
         }
@@ -640,7 +659,6 @@ bool Dialog::Notify( NotifyEvent& rNEvt )
             // have re-enabled input for our parent
             if( mbInExecute && mbModalMode )
             {
-                // do not change modal counter (pSVData->maAppData.mnModalDialog)
                 SetModalInputMode( false );
                 SetModalInputMode( true );
 
@@ -728,12 +746,10 @@ void Dialog::DataChanged( const DataChangedEvent& rDCEvt )
 
 bool Dialog::Close()
 {
-    ImplDelData aDelData;
-    ImplAddDel( &aDelData );
+    VclPtr<vcl::Window> xWindow = this;
     CallEventListeners( VCLEVENT_WINDOW_CLOSE );
-    if ( aDelData.IsDead() )
+    if ( xWindow->IsDisposed() )
         return false;
-    ImplRemoveDel( &aDelData );
 
     if ( mpWindowImpl->mxWindowPeer.is() && IsCreatedWithToolkit() && !IsInExecute() )
         return false;
@@ -743,7 +759,6 @@ bool Dialog::Close()
     if ( !(GetStyle() & WB_CLOSEABLE) )
     {
         bool bRet = true;
-        ImplAddDel( &aDelData );
         PushButton* pButton = ImplGetCancelButton( this );
         if ( pButton )
             pButton->Click();
@@ -755,9 +770,8 @@ bool Dialog::Close()
             else
                 bRet = false;
         }
-        if ( aDelData.IsDead() )
+        if ( xWindow->IsDisposed() )
             return true;
-        ImplRemoveDel( &aDelData );
         return bRet;
     }
 
@@ -839,8 +853,6 @@ bool Dialog::ImplStartExecuteModal()
     }
     mbInExecute = true;
     SetModalInputMode( true );
-    mbOldSaveBack = IsSaveBackgroundEnabled();
-    EnableSaveBackground();
 
     // FIXME: no layouting, workaround some clipping issues
     ImplAdjustNWFSizes();
@@ -867,34 +879,20 @@ short Dialog::Execute()
     if ( !ImplStartExecuteModal() )
         return 0;
 
-    ImplDelData aDelData;
-    ImplAddDel( &aDelData );
-
-#ifdef DBG_UTIL
-    ImplDelData aParentDelData;
-    vcl::Window* pDialogParent = mpDialogParent;
-    if( pDialogParent )
-        pDialogParent->ImplAddDel( &aParentDelData );
-#endif
+    VclPtr<vcl::Window> xWindow = this;
 
     // Yield util EndDialog is called or dialog gets destroyed
     // (the latter should not happen, but better safe than sorry
-    while ( !aDelData.IsDead() && mbInExecute )
+    while ( !xWindow->IsDisposed() && mbInExecute )
         Application::Yield();
 
     ImplEndExecuteModal();
 
 #ifdef DBG_UTIL
-    if( pDialogParent  )
-    {
-        if( ! aParentDelData.IsDead() )
-            pDialogParent->ImplRemoveDel( &aParentDelData );
-        else
-            OSL_FAIL( "Dialog::Execute() - Parent of dialog destroyed in Execute()" );
-    }
+    assert (!mpDialogParent || !mpDialogParent->IsDisposed());
 #endif
-    if ( !aDelData.IsDead() )
-        ImplRemoveDel( &aDelData );
+    if ( !xWindow->IsDisposed() )
+        xWindow.clear();
 #ifdef DBG_UTIL
     else
     {
@@ -960,7 +958,6 @@ void Dialog::EndDialog( long nResult )
         mpPrevExecuteDlg = nullptr;
 
         Hide();
-        EnableSaveBackground( mbOldSaveBack );
         if ( GetParent() )
         {
             NotifyEvent aNEvt( MouseNotifyEvent::ENDEXECUTEDIALOG, this );
@@ -1011,17 +1008,14 @@ void Dialog::SetModalInputMode( bool bModal )
     if ( bModal == mbModalMode )
         return;
 
-    ImplSVData* pSVData = ImplGetSVData();
     mbModalMode = bModal;
     if ( bModal )
     {
-        pSVData->maAppData.mnModalDialog++;
-
         // Disable the prev Modal Dialog, because our dialog must close at first,
         // before the other dialog can be closed (because the other dialog
         // is on stack since our dialog returns)
         if ( mpPrevExecuteDlg && !mpPrevExecuteDlg->IsWindowOrChild( this, true ) )
-            mpPrevExecuteDlg->EnableInput( false, true, true, this );
+            mpPrevExecuteDlg->EnableInput( false, this );
 
         // determine next overlap dialog parent
         vcl::Window* pParent = GetParent();
@@ -1036,8 +1030,6 @@ void Dialog::SetModalInputMode( bool bModal )
     }
     else
     {
-        pSVData->maAppData.mnModalDialog--;
-
         if ( mpDialogParent )
         {
             // #115933# re-enable the whole frame hierarchy again (see above)
@@ -1049,7 +1041,7 @@ void Dialog::SetModalInputMode( bool bModal )
         // Enable the prev Modal Dialog
         if ( mpPrevExecuteDlg && !mpPrevExecuteDlg->IsWindowOrChild( this, true ) )
         {
-            mpPrevExecuteDlg->EnableInput( true, true, true, this );
+            mpPrevExecuteDlg->EnableInput( true, this );
             // ensure continued modality of prev dialog
             // do not change modality counter
 

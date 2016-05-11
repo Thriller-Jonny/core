@@ -64,22 +64,6 @@ charp_to_ustr( const char *pStr )
     return pOut;
 }
 
-/* Easier debugging of rtl_uString values. */
-#if OSL_DEBUG_LEVEL > 1
-static void
-ustr_debug( const char *pMessage, rtl_uString *pStr )
-{
-    rtl_String *pOut = ustr_to_str( pStr );
-
-    fprintf( stderr, "%s: %s\n", pMessage, rtl_string_getStr( pOut ) );
-
-    rtl_string_release( pOut );
-    return;
-}
-#else
-#define ustr_debug( a, b ) {}
-#endif
-
 typedef struct {
     int        status_fd;
     oslProcess child;
@@ -159,7 +143,6 @@ child_spawn ( Args *args, sal_Bool bAllArgs, sal_Bool bWithStatus )
     if ( nError != osl_Process_E_None )
     {
         fprintf( stderr, "ERROR %d forking process\n", nError );
-        ustr_debug( "", pApp );
         rtl_uString_release( pApp );
         _exit (1);
     }
@@ -237,18 +220,9 @@ get_md5hash( rtl_uString *pText )
     sal_uInt32 md5_key_len = 0;
     sal_uInt8* md5_buf = NULL;
     sal_uInt32 i = 0;
-#if OSL_DEBUG_LEVEL > 1
-    rtl_String *pOut;
-#endif
 
     if ( !pText )
         return NULL;
-
-#if OSL_DEBUG_LEVEL > 1
-    pOut = ustr_to_str( pText );
-    fprintf (stderr, "Generate pipe md5 for '%s'\n", pOut->buffer);
-    rtl_string_release( pOut );
-#endif
 
     pData = (unsigned char *)rtl_uString_getStr( pText );
     nSize = rtl_uString_getLength( pText ) * sizeof( sal_Unicode );
@@ -302,8 +276,6 @@ get_pipe_path( rtl_uString *pAppPath )
     rtl_uString_newFromAscii( &pTmp, SAL_CONFIGFILE( "bootstrap" ) );
     rtl_uString_newConcat( &pPath, pPath, pTmp );
 
-    ustr_debug( "bootstap", pPath );
-
     /* read userinstallation value */
     handle = rtl_bootstrap_args_open( pPath );
 
@@ -318,15 +290,19 @@ get_pipe_path( rtl_uString *pAppPath )
         rtl_uString_newFromString (&pAbsUserInstallation, pUserInstallation);
 
     /* create the pipe name */
-    ustr_debug( "user installation", pAbsUserInstallation );
     pMd5hash = get_md5hash( pAbsUserInstallation );
     if ( !pMd5hash )
         rtl_uString_new( &pMd5hash );
 
-    if ( access( PIPEDEFAULTPATH, R_OK|W_OK ) == 0 )
+    if ( access( PIPEDEFAULTPATH, W_OK ) == 0 )
         rtl_uString_newFromAscii( &pResult, PIPEDEFAULTPATH );
-    else
+    else if ( access( PIPEALTERNATEPATH, W_OK ) == 0 )
         rtl_uString_newFromAscii( &pResult, PIPEALTERNATEPATH );
+    else
+    {
+        fprintf( stderr, "ERROR: no valid pipe path found.\n" );
+        exit( 1 );
+    }
 
     rtl_uString_newFromAscii( &pTmp, "/OSL_PIPE_" );
     rtl_uString_newConcat( &pResult, pResult, pTmp );
@@ -339,8 +315,6 @@ get_pipe_path( rtl_uString *pAppPath )
     rtl_uString_newConcat( &pResult, pResult, pTmp );
 
     rtl_uString_newConcat( &pResult, pResult, pMd5hash );
-
-    ustr_debug( "result", pResult );
 
     /* cleanup */
     rtl_uString_release( pMd5hash );
@@ -489,8 +463,6 @@ send_args( int fd, rtl_uString *pCwdPath )
         rtl_uString_release( pEscapedTmp );
     }
 
-    ustr_debug( "Pass args", pBuffer );
-
     if ( !rtl_convertUStringToString(
              &pOut, rtl_uString_getStr( pBuffer ),
              rtl_uString_getLength( pBuffer ), RTL_TEXTENCODING_UTF8,
@@ -570,9 +542,6 @@ read_percent( ChildInfo *info, int *pPercent )
         }
     }
 
-#if OSL_DEBUG_LEVEL > 1
-    fprintf( stderr, "Got status: %s\n", pBegin );
-#endif
     if ( !strncasecmp( pBegin, "end", 3 ) )
         return ProgressExit;
     else if ( !strncasecmp( pBegin, "restart", 7 ) )
@@ -725,9 +694,6 @@ exec_javaldx (Args *args)
             *chomp = '\0';
     }
 
-#if OSL_DEBUG_LEVEL > 1
-    fprintf (stderr, "Adding javaldx path of '%s'\n", newpath);
-#endif
     extend_library_path (newpath);
 
     if (javaldx)
@@ -781,7 +747,6 @@ SAL_IMPLEMENT_MAIN_WITH_ARGS( argc, argv )
         fprintf( stderr, "ERROR: Can't read app link\n" );
         exit( 1 );
     }
-    ustr_debug( "App path", args->pAppPath );
 
 #ifndef ENABLE_QUICKSTART_LIBPNG
     /* we can't load and render it anyway */
@@ -792,7 +757,7 @@ SAL_IMPLEMENT_MAIN_WITH_ARGS( argc, argv )
     if ( pUsePlugin && !strcmp(pUsePlugin, "svp") )
         args->bInhibitSplash = sal_True;
 
-    if ( !args->bInhibitPipe )
+    if ( !args->bInhibitPipe && getenv("LIBO_XDGAPP") == NULL )
     {
         int fd = 0;
         pPipePath = get_pipe_path( args->pAppPath );
@@ -815,10 +780,6 @@ SAL_IMPLEMENT_MAIN_WITH_ARGS( argc, argv )
 
             close( fd );
         }
-#if OSL_DEBUG_LEVEL > 1
-        else
-            ustr_debug( "Failed to connect to pipe", pPipePath );
-#endif
     }
 
     if ( !bSentArgs )
@@ -872,31 +833,17 @@ SAL_IMPLEMENT_MAIN_WITH_ARGS( argc, argv )
                     bShortWait = sal_False;
                 }
 
-#if OSL_DEBUG_LEVEL > 1
-                fprintf( stderr, "Polling, result is %s\n",
-                         ( eResult == ProgressContinue )? "continue" :
-                         ( ( eResult == ProgressRestart )? "restart" : "exit" ) );
-#endif
             }
 
-#if OSL_DEBUG_LEVEL > 1
-            fprintf (stderr, "Exited with code '%d'\n", child_get_exit_code (info));
-#endif
 
             status = child_get_exit_code(info);
             g_pProcess = NULL; // reset
             switch (status) {
             case EXITHELPER_CRASH_WITH_RESTART: // re-start with just -env: parameters
-#if OSL_DEBUG_LEVEL > 1
-                fprintf (stderr, "oosplash: re-start with just -env: params !\n");
-#endif
                 bRestart = sal_True;
                 bAllArgs = sal_False;
                 break;
             case EXITHELPER_NORMAL_RESTART: // re-start with all arguments
-#if OSL_DEBUG_LEVEL > 1
-                fprintf (stderr, "oosplash: re-start with all params !\n");
-#endif
                 bRestart = sal_True;
                 bAllArgs = sal_True;
                 break;

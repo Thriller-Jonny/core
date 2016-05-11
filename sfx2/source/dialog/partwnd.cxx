@@ -27,7 +27,6 @@
 #include <com/sun/star/lang/DisposedException.hpp>
 #include <com/sun/star/task/XStatusIndicator.hpp>
 #include <com/sun/star/uno/Reference.h>
-#include <com/sun/star/uno/Sequence.hxx>
 #include <com/sun/star/util/URL.hpp>
 #include <com/sun/star/util/XCloseable.hpp>
 #include <com/sun/star/util/CloseVetoException.hpp>
@@ -115,7 +114,7 @@ SfxPartDockWnd_Impl::SfxPartDockWnd_Impl
         css::uno::Reference< css::beans::XPropertySet > xLMPropSet( xFrame->getLayoutManager(), css::uno::UNO_QUERY_THROW );
 
         const OUString aAutomaticToolbars( "AutomaticToolbars" );
-        xLMPropSet->setPropertyValue( aAutomaticToolbars, css::uno::Any( sal_False ));
+        xLMPropSet->setPropertyValue( aAutomaticToolbars, css::uno::Any( false ));
     }
     catch( css::uno::RuntimeException& )
     {
@@ -139,7 +138,6 @@ SfxPartDockWnd_Impl::SfxPartDockWnd_Impl
 }
 
 
-
 void SfxPartDockWnd_Impl::Resize()
 
 /*  [Description]
@@ -150,7 +148,6 @@ void SfxPartDockWnd_Impl::Resize()
 {
     SfxDockingWindow::Resize();
 }
-
 
 
 bool SfxPartDockWnd_Impl::QueryClose()
@@ -164,13 +161,12 @@ bool SfxPartDockWnd_Impl::QueryClose()
         {
             css::uno::Reference< css::frame::XController >  xCtrl = xFrame->getController();
             if( xCtrl.is() )
-                bClose = xCtrl->suspend( sal_True );
+                bClose = xCtrl->suspend( true );
         }
     }
 
     return bClose;
 }
-
 
 
 bool SfxPartDockWnd_Impl::Notify( NotifyEvent& rEvt )

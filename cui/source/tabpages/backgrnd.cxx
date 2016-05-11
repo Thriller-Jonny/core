@@ -951,7 +951,7 @@ void SvxBackgroundTabPage::ShowSelector()
         m_pBtnPosition->SetClickHdl( HDL(RadioClickHdl_Impl) );
 
         // delayed loading via timer (because of UI-Update)
-        pPageImpl->pLoadIdle = new Idle;
+        pPageImpl->pLoadIdle = new Idle("DelayedLoad");
         pPageImpl->pLoadIdle->SetPriority( SchedulerPriority::LOWEST );
         pPageImpl->pLoadIdle->SetIdleHdl(
             LINK( this, SvxBackgroundTabPage, LoadIdleHdl_Impl ) );
@@ -1443,8 +1443,8 @@ void SvxBackgroundTabPage::FillControls_Impl( const SvxBrushItem& rBgdAttr,
     }
     else
     {
-        const OUString  aStrLink   = rBgdAttr.GetGraphicLink();
-        const OUString  aStrFilter = rBgdAttr.GetGraphicFilter();
+        const OUString&  aStrLink   = rBgdAttr.GetGraphicLink();
+        const OUString&  aStrFilter = rBgdAttr.GetGraphicFilter();
 
         lcl_setFillStyle(m_pLbSelect, drawing::FillStyle_BITMAP);
         ShowBitmapUI_Impl();

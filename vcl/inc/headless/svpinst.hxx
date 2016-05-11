@@ -25,9 +25,8 @@
 #include <salinst.hxx>
 #include <salwtype.hxx>
 #include <saltimer.hxx>
-#include <generic/geninst.h>
-#include <generic/genprn.h>
-#include <basebmp/scanlineformats.hxx>
+#include <unx/geninst.h>
+#include <unx/genprn.h>
 
 #include <list>
 
@@ -69,16 +68,16 @@ class VCL_DLLPUBLIC SvpSalInstance : public SalGenericInstance
     {
         const SalFrame*     m_pFrame;
         ImplSVEvent*        m_pData;
-        sal_uInt16          m_nEvent;
+        SalEvent            m_nEvent;
 
-        SalUserEvent( const SalFrame* pFrame, ImplSVEvent* pData, sal_uInt16 nEvent = SALEVENT_USEREVENT )
+        SalUserEvent( const SalFrame* pFrame, ImplSVEvent* pData, SalEvent nEvent = SalEvent::UserEvent )
                 : m_pFrame( pFrame ),
                   m_pData( pData ),
                   m_nEvent( nEvent )
         {}
     };
 
-    oslMutex                m_aEventGuard;
+    osl::Mutex              m_aEventGuard;
     std::list< SalUserEvent > m_aUserEvents;
 
     std::list< SalFrame* >  m_aFrames;
@@ -93,7 +92,10 @@ public:
     SvpSalInstance( SalYieldMutex *pMutex );
     virtual ~SvpSalInstance();
 
-    void                    PostEvent(const SalFrame* pFrame, ImplSVEvent* pData, sal_uInt16 nEvent);
+    void                    CloseWakeupPipe(bool log);
+    void                    CreateWakeupPipe(bool log);
+
+    void                    PostEvent(const SalFrame* pFrame, ImplSVEvent* pData, SalEvent nEvent);
 
 #ifdef ANDROID
     bool                    PostedEventsInQueue();
@@ -166,9 +168,6 @@ public:
     virtual void            AddToRecentDocumentList(const OUString& rFileUrl, const OUString& rMimeType, const OUString& rDocumentService) override;
 
     virtual GenPspGraphics *CreatePrintGraphics() override;
-
-    static ::basebmp::Format getBaseBmpFormatForBitCount(sal_uInt16);
-    static ::basebmp::Format getBaseBmpFormatForDeviceFormat(DeviceFormat);
 };
 
 #endif // INCLUDED_VCL_INC_HEADLESS_SVPINST_HXX

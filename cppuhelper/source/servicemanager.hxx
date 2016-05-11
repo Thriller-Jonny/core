@@ -17,12 +17,12 @@
 #include <memory>
 #include <vector>
 
-#include <boost/noncopyable.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/beans/XPropertySetInfo.hpp>
 #include <com/sun/star/container/XContentEnumerationAccess.hpp>
 #include <com/sun/star/container/XSet.hpp>
 #include <com/sun/star/lang/XEventListener.hpp>
+#include <com/sun/star/lang/XInitialization.hpp>
 #include <com/sun/star/lang/XMultiComponentFactory.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/lang/XServiceInfo.hpp>
@@ -30,7 +30,7 @@
 #include <com/sun/star/uno/XComponentContext.hpp>
 #include <com/sun/star/uno/Reference.hxx>
 #include <cppuhelper/basemutex.hxx>
-#include <cppuhelper/compbase8.hxx>
+#include <cppuhelper/compbase.hxx>
 #include <osl/mutex.hxx>
 #include <registry/registry.hxx>
 #include <rtl/ustring.hxx>
@@ -50,20 +50,24 @@ typedef css::uno::XInterface * SAL_CALL ImplementationConstructorFn(
 
 }
 
-typedef cppu::WeakComponentImplHelper8<
+typedef cppu::WeakComponentImplHelper<
     css::lang::XServiceInfo, css::lang::XMultiServiceFactory,
     css::lang::XMultiComponentFactory, css::container::XSet,
     css::container::XContentEnumerationAccess, css::beans::XPropertySet,
-    css::beans::XPropertySetInfo, css::lang::XEventListener >
+    css::beans::XPropertySetInfo, css::lang::XEventListener,
+    css::lang::XInitialization>
 ServiceManagerBase;
 
 class ServiceManager:
-    private cppu::BaseMutex, public ServiceManagerBase,
-    private boost::noncopyable
+    private cppu::BaseMutex, public ServiceManagerBase
 {
 public:
-    struct Data: private boost::noncopyable {
-        struct ImplementationInfo: private boost::noncopyable {
+    struct Data {
+        Data() = default;
+        Data(const Data&) = delete;
+        const Data& operator=(const Data&) = delete;
+
+        struct ImplementationInfo {
             ImplementationInfo(
                 rtl::OUString const & theName, rtl::OUString const & theLoader,
                 rtl::OUString const & theUri,
@@ -82,6 +86,9 @@ public:
             explicit ImplementationInfo(rtl::OUString const & theName):
                 name(theName) {}
 
+            ImplementationInfo(const ImplementationInfo&) = delete;
+            const ImplementationInfo& operator=(const ImplementationInfo&) = delete;
+
             rtl::OUString const name;
             rtl::OUString const loader;
             rtl::OUString const uri;
@@ -95,7 +102,7 @@ public:
             std::vector< rtl::OUString > singletons;
         };
 
-        struct Implementation: private boost::noncopyable {
+        struct Implementation {
             Implementation(
                 rtl::OUString const & name, rtl::OUString const & loader,
                 rtl::OUString const & uri, rtl::OUString const & environment,
@@ -123,6 +130,9 @@ public:
                 factory1(theFactory1), factory2(theFactory2),
                 component(theComponent), status(STATUS_LOADED), dispose(true)
             { assert(theFactory1.is() || theFactory2.is()); }
+
+            Implementation(const Implementation&) = delete;
+            const Implementation& operator=(const Implementation&) = delete;
 
             css::uno::Reference<css::uno::XInterface> createInstance(
                 css::uno::Reference<css::uno::XComponentContext> const &
@@ -177,6 +187,9 @@ public:
     };
 
     ServiceManager(): ServiceManagerBase(m_aMutex) {}
+
+    ServiceManager(const ServiceManager&) = delete;
+    const ServiceManager& operator=(const ServiceManager&) = delete;
 
     using ServiceManagerBase::acquire;
     using ServiceManagerBase::release;
@@ -331,6 +344,11 @@ private:
     virtual void SAL_CALL disposing(css::lang::EventObject const & Source)
         throw (css::uno::RuntimeException, std::exception) override;
 
+    virtual void SAL_CALL initialize(
+        css::uno::Sequence<css::uno::Any> const & aArguments)
+        throw (css::uno::Exception, css::uno::RuntimeException, std::exception)
+        override;
+
     // needs to be called with rBHelper.rMutex locked:
     bool isDisposed() { return rBHelper.bDisposed || rBHelper.bInDispose; }
 
@@ -374,6 +392,8 @@ private:
     std::shared_ptr< Data::Implementation > findServiceImplementation(
         css::uno::Reference< css::uno::XComponentContext > const & context,
         rtl::OUString const & specifier);
+
+    void preloadImplementations();
 
     css::uno::Reference< css::uno::XComponentContext > context_;
     Data data_;

@@ -26,7 +26,6 @@
 #include "prov.hxx"
 
 
-
 using namespace fileaccess;
 using namespace com::sun::star;
 using namespace com::sun::star::ucb;
@@ -35,7 +34,7 @@ using namespace com::sun::star::ucb;
 ContentEventNotifier::ContentEventNotifier( shell* pMyShell,
                                             const uno::Reference< XContent >& xCreatorContent,
                                             const uno::Reference< XContentIdentifier >& xCreatorId,
-                                            const uno::Sequence< uno::Reference< uno::XInterface > >& sListeners )
+                                            const std::vector< uno::Reference< uno::XInterface > >& sListeners )
     : m_pMyShell( pMyShell ),
       m_xCreatorContent( xCreatorContent ),
       m_xCreatorId( xCreatorId ),
@@ -48,7 +47,7 @@ ContentEventNotifier::ContentEventNotifier( shell* pMyShell,
                                             const uno::Reference< XContent >& xCreatorContent,
                                             const uno::Reference< XContentIdentifier >& xCreatorId,
                                             const uno::Reference< XContentIdentifier >& xOldId,
-                                            const uno::Sequence< uno::Reference< uno::XInterface > >& sListeners )
+                                            const std::vector< uno::Reference< uno::XInterface > >& sListeners )
     : m_pMyShell( pMyShell ),
       m_xCreatorContent( xCreatorContent ),
       m_xCreatorId( xCreatorId ),
@@ -56,7 +55,6 @@ ContentEventNotifier::ContentEventNotifier( shell* pMyShell,
       m_sListeners( sListeners )
 {
 }
-
 
 
 void ContentEventNotifier::notifyChildInserted( const OUString& aChildName )
@@ -71,9 +69,9 @@ void ContentEventNotifier::notifyChildInserted( const OUString& aChildName )
                        xChildContent,
                        m_xCreatorId );
 
-    for( sal_Int32 i = 0; i < m_sListeners.getLength(); ++i )
+    for( const auto& r : m_sListeners )
     {
-        uno::Reference< XContentEventListener > ref( m_sListeners[i],uno::UNO_QUERY );
+        uno::Reference< XContentEventListener > ref( r, uno::UNO_QUERY );
         if( ref.is() )
             ref->contentEvent( aEvt );
     }
@@ -88,14 +86,13 @@ void ContentEventNotifier::notifyDeleted()
                        m_xCreatorId );
 
 
-    for( sal_Int32 i = 0; i < m_sListeners.getLength(); ++i )
+    for( const auto& r : m_sListeners )
     {
-        uno::Reference< XContentEventListener > ref( m_sListeners[i],uno::UNO_QUERY );
+        uno::Reference< XContentEventListener > ref( r, uno::UNO_QUERY );
         if( ref.is() )
             ref->contentEvent( aEvt );
     }
 }
-
 
 
 void ContentEventNotifier::notifyRemoved( const OUString& aChildName )
@@ -117,9 +114,9 @@ void ContentEventNotifier::notifyRemoved( const OUString& aChildName )
                        xDeletedContent,
                        m_xCreatorId );
 
-    for( sal_Int32 i = 0; i < m_sListeners.getLength(); ++i )
+    for( const auto& r : m_sListeners )
     {
-        uno::Reference< XContentEventListener > ref( m_sListeners[i],uno::UNO_QUERY );
+        uno::Reference< XContentEventListener > ref( r, uno::UNO_QUERY );
         if( ref.is() )
             ref->contentEvent( aEvt );
     }
@@ -132,9 +129,9 @@ void ContentEventNotifier::notifyExchanged()
                        m_xCreatorContent,
                        m_xOldId );
 
-    for( sal_Int32 i = 0; i < m_sListeners.getLength(); ++i )
+    for( const auto& r : m_sListeners )
     {
-        uno::Reference< XContentEventListener > ref( m_sListeners[i],uno::UNO_QUERY );
+        uno::Reference< XContentEventListener > ref( r, uno::UNO_QUERY );
         if( ref.is() )
             ref->contentEvent( aEvt );
     }
@@ -149,10 +146,8 @@ void ContentEventNotifier::notifyExchanged()
 
 PropertySetInfoChangeNotifier::PropertySetInfoChangeNotifier(
     const uno::Reference< XContent >& xCreatorContent,
-    const uno::Reference< XContentIdentifier >& xCreatorId,
-    const uno::Sequence< uno::Reference< uno::XInterface > >& sListeners )
+    const std::vector< uno::Reference< uno::XInterface > >& sListeners )
     : m_xCreatorContent( xCreatorContent ),
-      m_xCreatorId( xCreatorId ),
       m_sListeners( sListeners )
 {
 
@@ -167,9 +162,9 @@ PropertySetInfoChangeNotifier::notifyPropertyAdded( const OUString & aPropertyNa
                                             -1,
                                             beans::PropertySetInfoChange::PROPERTY_INSERTED );
 
-    for( sal_Int32 i = 0; i < m_sListeners.getLength(); ++i )
+    for( const auto& r : m_sListeners )
     {
-        uno::Reference< beans::XPropertySetInfoChangeListener > ref( m_sListeners[i],uno::UNO_QUERY );
+        uno::Reference< beans::XPropertySetInfoChangeListener > ref( r, uno::UNO_QUERY );
         if( ref.is() )
             ref->propertySetInfoChange( aEvt );
     }
@@ -184,9 +179,9 @@ PropertySetInfoChangeNotifier::notifyPropertyRemoved( const OUString & aProperty
                                             -1,
                                             beans::PropertySetInfoChange::PROPERTY_REMOVED );
 
-    for( sal_Int32 i = 0; i < m_sListeners.getLength(); ++i )
+    for( const auto& r : m_sListeners )
     {
-        uno::Reference< beans::XPropertySetInfoChangeListener > ref( m_sListeners[i],uno::UNO_QUERY );
+        uno::Reference< beans::XPropertySetInfoChangeListener > ref( r, uno::UNO_QUERY );
         if( ref.is() )
             ref->propertySetInfoChange( aEvt );
     }
@@ -202,10 +197,8 @@ PropertySetInfoChangeNotifier::notifyPropertyRemoved( const OUString & aProperty
 
 PropertyChangeNotifier::PropertyChangeNotifier(
     const css::uno::Reference< XContent >& xCreatorContent,
-    const css::uno::Reference< css::ucb::XContentIdentifier >& xCreatorId,
     ListenerMap* pListeners )
     : m_xCreatorContent( xCreatorContent ),
-      m_xCreatorId( xCreatorId ),
       m_pListeners( pListeners )
 {
 }
@@ -218,10 +211,10 @@ PropertyChangeNotifier::~PropertyChangeNotifier()
 
 
 void PropertyChangeNotifier::notifyPropertyChanged(
-    const uno::Sequence< beans::PropertyChangeEvent >& _Changes )
+    const uno::Sequence< beans::PropertyChangeEvent >& Changes_ )
 {
     sal_Int32 j;
-    uno::Sequence< beans::PropertyChangeEvent > Changes  = _Changes;
+    uno::Sequence< beans::PropertyChangeEvent > Changes  = Changes_;
 
     for( j = 0; j < Changes.getLength(); ++j )
         Changes[j].Source = m_xCreatorContent;

@@ -38,12 +38,12 @@ public:
     ScRangeList& operator=(const ScRangeList& rList);
     void Append( const ScRange& rRange );
 
-    sal_uInt16 Parse( const OUString&, ScDocument* = nullptr,
-                      sal_uInt16 nMask = SCA_VALID,
+    ScRefFlags Parse( const OUString&, ScDocument* = nullptr,
+                      ScRefFlags nMask = ScRefFlags::VALID,
                       formula::FormulaGrammar::AddressConvention eConv = formula::FormulaGrammar::CONV_OOO,
                       SCTAB nDefaultTab = 0, sal_Unicode cDelimiter = 0 );
 
-    void            Format( OUString&, sal_uInt16 nFlags = 0, ScDocument* = nullptr,
+    void            Format( OUString&, ScRefFlags nFlags = ScRefFlags::ZERO, ScDocument* = nullptr,
                             formula::FormulaGrammar::AddressConvention eConv = formula::FormulaGrammar::CONV_OOO,
                             sal_Unicode cDelimiter = 0 ) const;
 
@@ -115,16 +115,15 @@ public:
                             maPairs.push_back( pR );
                         }
     void                Join( const ScRangePair&, bool bIsInList = false );
-    bool                UpdateReference( UpdateRefMode, ScDocument*,
+    void                UpdateReference( UpdateRefMode, ScDocument*,
                                     const ScRange& rWhere,
                                     SCsCOL nDx, SCsROW nDy, SCsTAB nDz );
     void                DeleteOnTab( SCTAB nTab );
     ScRangePair*        Find( const ScAddress& ) const;
     ScRangePair*        Find( const ScRange& ) const;
     ScRangePair**       CreateNameSortedArray( size_t& nCount, ScDocument* ) const;
-    bool                operator==( const ScRangePairList& ) const;
 
-    ScRangePair*        Remove(size_t nPos);
+    void                Remove(size_t nPos);
     ScRangePair*        Remove(ScRangePair* pAdr);
 
     size_t              size() const;

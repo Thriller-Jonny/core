@@ -50,11 +50,6 @@
 #include <com/sun/star/awt/Size.hpp>
 
 
-// - UnoDialog -
-
-
-
-
 class UnoDialog
 {
 public:
@@ -74,7 +69,7 @@ public:
     void setVisible( const OUString& rName, bool bVisible );
 
     css::uno::Reference< css::awt::XButton > insertButton( const OUString& rName,
-        css::uno::Reference< css::awt::XActionListener > xActionListener, const css::uno::Sequence< OUString >& rPropertyNames,
+        const css::uno::Reference< css::awt::XActionListener >& xActionListener, const css::uno::Sequence< OUString >& rPropertyNames,
             const css::uno::Sequence< css::uno::Any >& rPropertyValues );
 
     css::uno::Reference< css::awt::XFixedText > insertFixedText( const OUString& rName,
@@ -110,7 +105,6 @@ public:
 
     css::uno::Reference< css::uno::XInterface >               mxDialogModel;
     css::uno::Reference< css::beans::XMultiPropertySet >      mxDialogModelMultiPropertySet;
-    css::uno::Reference< css::beans::XPropertySet >           mxDialogModelPropertySet;
     css::uno::Reference< css::lang::XMultiServiceFactory >    mxDialogModelMSF;
     css::uno::Reference< css::container::XNameContainer >     mxDialogModelNameContainer;
     css::uno::Reference< css::container::XNameAccess >        mxDialogModelNameAccess;

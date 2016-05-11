@@ -19,7 +19,6 @@
 
 #include "UriReference.hxx"
 
-#include <boost/noncopyable.hpp>
 #include <com/sun/star/lang/IllegalArgumentException.hpp>
 #include <com/sun/star/lang/XServiceInfo.hpp>
 #include <com/sun/star/uno/Reference.hxx>
@@ -34,6 +33,7 @@
 #include <cppuhelper/supportsservice.hxx>
 #include <cppuhelper/weak.hxx>
 #include <osl/mutex.hxx>
+#include <rtl/character.hxx>
 #include <rtl/uri.hxx>
 #include <rtl/ustrbuf.hxx>
 #include <rtl/ustring.hxx>
@@ -110,9 +110,8 @@ OUString parsePart(
                     }
                     encoded |= (n & 0x3F) << shift;
                 }
-                if (!utf8 || encoded < min
-                    || (encoded >= 0xD800 && encoded <= 0xDFFF)
-                    || encoded > 0x10FFFF)
+                if (!utf8 || !rtl::isUnicodeCodePoint(encoded) || encoded < min
+                    || (encoded >= 0xD800 && encoded <= 0xDFFF))
                 {
                     break;
                 }
@@ -138,7 +137,7 @@ OUString parsePart(
 
 namespace
 {
-    static OUString encodeNameOrParamFragment( OUString const & fragment )
+    OUString encodeNameOrParamFragment( OUString const & fragment )
     {
         static sal_Bool const aCharClass[] =
         { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* NameOrParamFragment */
@@ -188,14 +187,16 @@ bool parseSchemeSpecificPart(OUString const & part) {
 }
 
 class UrlReference:
-    public cppu::WeakImplHelper<css::uri::XVndSunStarScriptUrlReference>,
-    private boost::noncopyable
+    public cppu::WeakImplHelper<css::uri::XVndSunStarScriptUrlReference>
 {
 public:
     UrlReference(OUString const & scheme, OUString const & path):
         m_base(
             scheme, false, false, OUString(), path, false, OUString())
     {}
+
+    UrlReference(const UrlReference&) = delete;
+    UrlReference& operator=(const UrlReference&) = delete;
 
     virtual OUString SAL_CALL getUriReference()
         throw (css::uno::RuntimeException, std::exception) override
@@ -374,11 +375,13 @@ sal_Int32 UrlReference::findParameter(OUString const & key) {
 
 class Parser:
     public cppu::WeakImplHelper<
-        css::lang::XServiceInfo, css::uri::XUriSchemeParser>,
-    private boost::noncopyable
+        css::lang::XServiceInfo, css::uri::XUriSchemeParser>
 {
 public:
     Parser() {}
+
+    Parser(const Parser&) = delete;
+    Parser& operator=(const Parser&) = delete;
 
     virtual OUString SAL_CALL getImplementationName()
         throw (css::uno::RuntimeException, std::exception) override;

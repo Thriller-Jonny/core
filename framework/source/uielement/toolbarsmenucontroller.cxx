@@ -24,7 +24,6 @@
 #include "services.h"
 #include <classes/resource.hrc>
 #include <classes/fwkresid.hxx>
-#include <framework/imageproducer.hxx>
 #include <framework/sfxhelperfunctions.hxx>
 #include <uiconfiguration/windowstateproperties.hxx>
 
@@ -48,9 +47,11 @@
 #include <vcl/i18nhelp.hxx>
 #include <vcl/image.hxx>
 #include <vcl/settings.hxx>
+#include <vcl/commandinfoprovider.hxx>
 #include <rtl/ustrbuf.hxx>
 #include <toolkit/helper/vclunohelper.hxx>
 #include <vcl/window.hxx>
+#include <vcl/commandinfoprovider.hxx>
 #include <svtools/menuoptions.hxx>
 #include <unotools/cmdoptions.hxx>
 #include <svtools/miscopt.hxx>
@@ -82,7 +83,7 @@ static const char STATIC_INTERNAL_CMD_PART[]    = ".cmd:";
 namespace framework
 {
 
-typedef std::unordered_map< OUString, OUString, OUStringHash, std::equal_to< OUString > > ToolbarHashMap;
+typedef std::unordered_map< OUString, OUString, OUStringHash > ToolbarHashMap;
 
 struct ToolBarEntry
 {
@@ -138,7 +139,6 @@ ToolbarsMenuController::ToolbarsMenuController( const css::uno::Reference< css::
     m_xContext( xContext ),
     m_aPropUIName( "UIName" ),
     m_aPropResourceURL( "ResourceURL" ),
-    m_bModuleIdentified( false ),
     m_bResetActive( false ),
     m_aIntlWrapper( xContext, Application::GetSettings().GetLanguageTag() )
 {
@@ -155,7 +155,7 @@ void ToolbarsMenuController::addCommand(
 
     OUString aLabel;
     if ( rLabel.isEmpty() )
-        aLabel = getUINameFromCommand( rCommandURL );
+        aLabel = vcl::CommandInfoProvider::Instance().GetMenuLabelForCommand( rCommandURL, m_xFrame );
     else
         aLabel = rLabel;
 
@@ -166,7 +166,7 @@ void ToolbarsMenuController::addCommand(
     if ( !bInternal )
     {
         if ( !getDispatchFromCommandURL( rCommandURL ).is() )
-            m_xPopupMenu->enableItem( nItemId, sal_False );
+            m_xPopupMenu->enableItem( nItemId, false );
     }
 
     SolarMutexGuard aSolarMutexGuard;
@@ -175,7 +175,7 @@ void ToolbarsMenuController::addCommand(
     const StyleSettings& rSettings = Application::GetSettings().GetStyleSettings();
 
     if ( rSettings.GetUseImagesInMenus() )
-        aImage = GetImageFromURL( m_xFrame, rCommandURL, false );
+        aImage = vcl::CommandInfoProvider::Instance().GetImageForCommand( rCommandURL, false, m_xFrame );
 
     VCLXPopupMenu* pPopupMenu = static_cast<VCLXPopupMenu *>(VCLXPopupMenu::GetImplementation( rPopupMenu ));
     if ( pPopupMenu )
@@ -207,52 +207,6 @@ Reference< XDispatch > ToolbarsMenuController::getDispatchFromCommandURL( const 
         return xDispatchProvider->queryDispatch( aTargetURL, OUString(), 0 );
     else
         return Reference< XDispatch >();
-}
-
-// private function
-OUString ToolbarsMenuController::getUINameFromCommand( const OUString& rCommandURL )
-{
-    OUString aLabel;
-
-    if ( !m_bModuleIdentified  )
-    {
-        try
-        {
-            Reference< XModuleManager2 > xModuleManager = ModuleManager::create( m_xContext );
-            m_aModuleIdentifier = xModuleManager->identify( m_xFrame );
-            Reference< XNameAccess > xNameAccess = frame::theUICommandDescription::get( m_xContext );
-            xNameAccess->getByName( m_aModuleIdentifier ) >>= m_xUICommandDescription;
-        }
-        catch ( const Exception& )
-        {
-        }
-    }
-
-    if ( m_xUICommandDescription.is() )
-    {
-        try
-        {
-            Sequence< PropertyValue > aPropSeq;
-            OUString             aStr;
-            if ( m_xUICommandDescription->getByName( rCommandURL ) >>= aPropSeq )
-            {
-                for ( sal_Int32 i = 0; i < aPropSeq.getLength(); i++ )
-                {
-                    if ( aPropSeq[i].Name == "Label" )
-                    {
-                        aPropSeq[i].Value >>= aStr;
-                        break;
-                    }
-                }
-            }
-            aLabel = aStr;
-        }
-        catch ( const Exception& )
-        {
-        }
-    }
-
-    return aLabel;
 }
 
 static void fillHashMap( const Sequence< Sequence< css::beans::PropertyValue > >& rSeqToolBars,
@@ -437,7 +391,7 @@ void ToolbarsMenuController::fillPopupMenu( Reference< css::awt::XPopupMenu >& r
             sal_uInt16 nItemCount = m_xPopupMenu->getItemCount();
             m_xPopupMenu->insertItem( nIndex, aSortedTbs[i].aUIName, css::awt::MenuItemStyle::CHECKABLE, nItemCount );
             if ( aSortedTbs[i].bVisible )
-                m_xPopupMenu->checkItem( nIndex, sal_True );
+                m_xPopupMenu->checkItem( nIndex, true );
 
             {
                 SolarMutexGuard aGuard;
@@ -445,7 +399,7 @@ void ToolbarsMenuController::fillPopupMenu( Reference< css::awt::XPopupMenu >& r
                 PopupMenu* pVCLPopupMenu = pXPopupMenu ? static_cast<PopupMenu *>(pXPopupMenu->GetMenu()) : nullptr;
                 assert(pVCLPopupMenu);
                 if (pVCLPopupMenu)
-                    pVCLPopupMenu->SetUserValue( nIndex, sal_uIntPtr( aSortedTbs[i].bContextSensitive ? 1L : 0L ));
+                    pVCLPopupMenu->SetUserValue( nIndex, sal_uLong( aSortedTbs[i].bContextSensitive ? 1L : 0L ));
             }
 
             // use VCL popup menu pointer to set vital information that are not part of the awt implementation
@@ -653,7 +607,7 @@ void SAL_CALL ToolbarsMenuController::itemSelected( const css::awt::MenuEvent& r
                                     if ( !bVisible && bContextSensitive && nVisibleIndex >= 0 )
                                     {
                                         // Default is: Every context sensitive toolbar is visible
-                                        aWindowState[nVisibleIndex].Value <<= sal_True;
+                                        aWindowState[nVisibleIndex].Value <<= true;
                                         xNameReplace->replaceByName( aElementName, makeAny( aWindowState ));
                                         bRefreshToolbars = true;
                                     }
@@ -674,7 +628,7 @@ void SAL_CALL ToolbarsMenuController::itemSelected( const css::awt::MenuEvent& r
                                 {
                                     try
                                     {
-                                        xPropSet->setPropertyValue("RefreshContextToolbarVisibility", makeAny( sal_True ));
+                                        xPropSet->setPropertyValue("RefreshContextToolbarVisibility", makeAny( true ));
                                     }
                                     catch ( const RuntimeException& )
                                     {

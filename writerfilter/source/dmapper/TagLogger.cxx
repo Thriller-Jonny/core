@@ -17,7 +17,6 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <libxml/xmlstring.h>
 #include <string.h>
 #include "TagLogger.hxx"
 #include <ooxml/QNameToString.hxx>
@@ -106,7 +105,7 @@ struct TheTagLogger:
         endElement();
     }
 
-    void TagLogger::unoPropertySet(uno::Reference<beans::XPropertySet> rPropSet)
+    void TagLogger::unoPropertySet(const uno::Reference<beans::XPropertySet>& rPropSet)
     {
         uno::Reference<beans::XPropertySetInfo> xPropSetInfo(rPropSet->getPropertySetInfo());
         uno::Sequence<beans::Property> aProps(xPropSetInfo->getProperties());
@@ -176,7 +175,7 @@ struct TheTagLogger:
         xmlFree( xmlName );
     }
 
-    void TagLogger::attribute(const std::string & name, const uno::Any aAny)
+    void TagLogger::attribute(const std::string & name, const uno::Any& aAny)
     {
         if (!pWriter)
             return;

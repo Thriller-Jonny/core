@@ -37,7 +37,6 @@
 #include <rtl/ustrbuf.hxx>
 
 #include <com/sun/star/sdbc/XRow.hpp>
-#include <com/sun/star/sdbc/XParameters.hpp>
 #include <com/sun/star/sdbcx/Privilege.hpp>
 #include <com/sun/star/sdbcx/KeyType.hpp>
 #include <com/sun/star/sdbc/KeyRule.hpp>
@@ -56,27 +55,19 @@ using com::sun::star::beans::XPropertySet;
 using com::sun::star::uno::Any;
 using com::sun::star::uno::makeAny;
 using com::sun::star::uno::UNO_QUERY;
-using com::sun::star::uno::Type;
-using com::sun::star::uno::XInterface;
 using com::sun::star::uno::Reference;
 using com::sun::star::uno::Sequence;
 using com::sun::star::uno::RuntimeException;
 
-using com::sun::star::container::NoSuchElementException;
 using com::sun::star::container::XEnumerationAccess;
 using com::sun::star::container::XEnumeration;
-using com::sun::star::lang::WrappedTargetException;
 
 using com::sun::star::sdbc::XRow;
-using com::sun::star::sdbc::XCloseable;
 using com::sun::star::sdbc::XStatement;
 using com::sun::star::sdbc::XResultSet;
-using com::sun::star::sdbc::XParameters;
-using com::sun::star::sdbc::XPreparedStatement;
 using com::sun::star::sdbc::XDatabaseMetaData;
 using com::sun::star::sdbcx::XColumnsSupplier;
 using com::sun::star::sdbcx::XKeysSupplier;
-using com::sun::star::sdbcx::XViewsSupplier;
 
 namespace pq_sdbc_driver
 {
@@ -107,7 +98,7 @@ void Tables::refresh()
 
         String2IntMap map;
 
-        m_values = Sequence< com::sun::star::uno::Any > ();
+        m_values.clear();
         sal_Int32 tableIndex = 0;
         while( rs->next() )
         {
@@ -141,13 +132,11 @@ void Tables::refresh()
                            com::sun::star::sdbcx::Privilege::DROP ) ) );
 
             {
-                const int currentTableIndex = tableIndex++;
-                assert(currentTableIndex  == m_values.getLength());
-                m_values.realloc( tableIndex );
-                m_values[currentTableIndex] = makeAny( prop );
+                m_values.push_back( makeAny( prop ) );
                 OUStringBuffer buf( name.getLength() + schema.getLength() + 1);
                 buf.append( schema + "." + name );
-                map[ buf.makeStringAndClear() ] = currentTableIndex;
+                map[ buf.makeStringAndClear() ] = tableIndex;
+                ++tableIndex;
             }
         }
         m_name2index.swap( map );
@@ -329,10 +318,10 @@ void Tables::dropByIndex( sal_Int32 index )
            ::com::sun::star::uno::RuntimeException, std::exception)
 {
     osl::MutexGuard guard( m_refMutex->mutex );
-    if( index < 0 ||  index >= m_values.getLength() )
+    if( index < 0 ||  index >= (sal_Int32)m_values.size() )
     {
         OUStringBuffer buf( 128 );
-        buf.append( "TABLES: Index out of range (allowed 0 to " + OUString::number(m_values.getLength() -1) +
+        buf.append( "TABLES: Index out of range (allowed 0 to " + OUString::number(m_values.size() -1) +
                     ", got " + OUString::number( index ) + ")" );
         throw com::sun::star::lang::IndexOutOfBoundsException( buf.makeStringAndClear(), *this );
     }

@@ -27,6 +27,7 @@
 #include "effectproperties.hxx"
 #include "oox/drawingml/shapepropertymap.hxx"
 #include "drawingml/textbody.hxx"
+#include <drawingml/textparagraph.hxx>
 #include <drawingml/ThemeOverrideFragmentHandler.hxx>
 #include "drawingml/table/tableproperties.hxx"
 #include "oox/drawingml/chart/chartconverter.hxx"
@@ -40,8 +41,13 @@
 #include "oox/helper/graphichelper.hxx"
 #include "oox/helper/propertyset.hxx"
 #include "oox/helper/modelobjecthelper.hxx"
+#include <oox/mathml/importutils.hxx>
+#include <oox/mathml/import.hxx>
+#include <oox/token/properties.hxx>
 
+#include <comphelper/classids.hxx>
 #include <tools/gen.hxx>
+#include <tools/globname.hxx>
 #include <tools/mapunit.hxx>
 #include <editeng/unoprnms.hxx>
 #include <com/sun/star/awt/Size.hpp>
@@ -55,6 +61,7 @@
 #include <com/sun/star/drawing/HomogenMatrix3.hpp>
 #include <com/sun/star/drawing/TextVerticalAdjust.hpp>
 #include <com/sun/star/drawing/GraphicExportFilter.hpp>
+#include <com/sun/star/embed/XEmbeddedObject.hpp>
 #include <com/sun/star/text/XText.hpp>
 #include <com/sun/star/table/BorderLine2.hpp>
 #include <com/sun/star/table/ShadowFormat.hpp>
@@ -93,8 +100,7 @@ namespace oox { namespace drawingml {
     aProperties[nPos].Value = Any( aPropValue );
 
 Shape::Shape( const sal_Char* pServiceName, bool bDefaultHeight )
-: mbIsChild( false )
-, mpLinePropertiesPtr( new LineProperties )
+: mpLinePropertiesPtr( new LineProperties )
 , mpShapeRefLinePropPtr( new LineProperties )
 , mpFillPropertiesPtr( new FillProperties )
 , mpShapeRefFillPropPtr( new FillProperties )
@@ -124,7 +130,6 @@ Shape::Shape( const sal_Char* pServiceName, bool bDefaultHeight )
 
 Shape::Shape( const ShapePtr& pSourceShape )
 : maChildren()
-, mbIsChild( pSourceShape->mbIsChild )
 , mpTextBody(pSourceShape->mpTextBody)
 , mpLinePropertiesPtr( pSourceShape->mpLinePropertiesPtr )
 , mpShapeRefLinePropPtr( pSourceShape->mpShapeRefLinePropPtr )
@@ -303,7 +308,6 @@ void Shape::applyShapeReference( const Shape& rReferencedShape, bool bUseText )
     mpTablePropertiesPtr = table::TablePropertiesPtr( rReferencedShape.mpTablePropertiesPtr.get() ? new table::TableProperties( *rReferencedShape.mpTablePropertiesPtr.get() ) : nullptr );
     mpShapeRefEffectPropPtr = EffectPropertiesPtr( new EffectProperties( *rReferencedShape.mpEffectPropertiesPtr.get() ) );
     mpMasterTextListStyle = TextListStylePtr( new TextListStyle( *rReferencedShape.mpMasterTextListStyle.get() ) );
-    maShapeStyleRefs = rReferencedShape.maShapeStyleRefs;
     maSize = rReferencedShape.maSize;
     maPosition = rReferencedShape.maPosition;
     mnRotation = rReferencedShape.mnRotation;
@@ -407,6 +411,25 @@ Reference< XShape > Shape::createAndInsert(
     bool bIsEmbMedia = false;
     SAL_INFO("oox.drawingml", OSL_THIS_FUNC << " id: " << msId);
 
+    formulaimport::XmlStreamBuilder * pMathXml(nullptr);
+    if (mpTextBody.get())
+    {
+        for (auto const& it : mpTextBody->getParagraphs())
+        {
+            if (it->HasMathXml())
+            {
+                if (!mpTextBody->isEmpty() || pMathXml != nullptr)
+                {
+                    SAL_WARN("oox.drawingml", "losing a Math object...");
+                }
+                else
+                {
+                    pMathXml = &it->GetMathXml();
+                }
+            }
+        }
+    }
+
     // tdf#90403 PowerPoint ignores a:ext cx and cy values of p:xfrm, and uses real table width and height
     if ( mpTablePropertiesPtr.get() && rServiceName == "com.sun.star.drawing.TableShape" )
     {
@@ -427,7 +450,15 @@ Reference< XShape > Shape::createAndInsert(
     awt::Rectangle aShapeRectHmm( maPosition.X / EMU_PER_HMM, maPosition.Y / EMU_PER_HMM, maSize.Width / EMU_PER_HMM, maSize.Height / EMU_PER_HMM );
 
     OUString aServiceName;
-    if( rServiceName == "com.sun.star.drawing.GraphicObjectShape" &&
+    if (pMathXml)
+    {
+        // convert this shape to OLE
+        aServiceName = "com.sun.star.drawing.OLE2Shape";
+        msServiceName = aServiceName;
+        meFrameType = FRAMETYPE_GENERIC; // not OLEOBJECT, no stream in package
+        mnSubType = 0;
+    }
+    else if (rServiceName == "com.sun.star.drawing.GraphicObjectShape" &&
         mpGraphicPropertiesPtr && !mpGraphicPropertiesPtr->m_sMediaPackageURL.isEmpty())
     {
         aServiceName = finalizeServiceName( rFilterBase, "com.sun.star.presentation.MediaShape", aShapeRectHmm );
@@ -510,7 +541,18 @@ Reference< XShape > Shape::createAndInsert(
         bool bIsWriter = xModelInfo->supportsService("com.sun.star.text.TextDocument");
         for( i = 0; i < nNumPoints; ++i )
         {
-            const ::basegfx::B2DPoint aPoint( aPoly.getB2DPoint( i ) );
+            basegfx::B2DPoint aPoint( aPoly.getB2DPoint( i ) );
+
+            // Guard against zero width or height.
+            if (i)
+            {
+                const basegfx::B2DPoint& rPreviousPoint = aPoly.getB2DPoint(i - 1);
+                if (aPoint.getX() - rPreviousPoint.getX() == 0)
+                    aPoint.setX(aPoint.getX() + 1);
+                if (aPoint.getY() - rPreviousPoint.getY() == 0)
+                    aPoint.setY(aPoint.getY() + 1);
+            }
+
             if (bIsWriter && bInGroup)
                 // Writer's draw page is in twips, and these points get passed
                 // to core without any unit conversion when Writer
@@ -579,7 +621,7 @@ Reference< XShape > Shape::createAndInsert(
         {
             SAL_INFO("oox.drawingml", OSL_THIS_FUNC << "invisible shape with id: " << msId);
             const OUString sVisible( "Visible" );
-            xSet->setPropertyValue( sVisible, Any( sal_False ) );
+            xSet->setPropertyValue( sVisible, Any( false ) );
         }
 
         ActionLockGuard const alg(mxShape);
@@ -592,6 +634,22 @@ Reference< XShape > Shape::createAndInsert(
             {
                 xText->setString( "" );
             }
+        }
+
+        if (pMathXml)
+        {
+            // the "EmbeddedObject" property is read-only, so we have to create
+            // the shape first, and it can be read only after the shape is
+            // inserted into the document, so delay the actual import until here
+            SvGlobalName name(SO3_SM_CLASSID);
+            xSet->setPropertyValue("CLSID", uno::makeAny(name.GetHexName()));
+            uno::Reference<embed::XEmbeddedObject> const xObj(
+                xSet->getPropertyValue("EmbeddedObject"), uno::UNO_QUERY);
+            uno::Reference<uno::XInterface> const xMathModel(xObj->getComponent());
+            oox::FormulaImportBase *const pMagic(
+                    dynamic_cast<oox::FormulaImportBase*>(xMathModel.get()));
+            assert(pMagic);
+            pMagic->readFormulaOoxml(*pMathXml);
         }
 
         const GraphicHelper& rGraphicHelper = rFilterBase.getGraphicHelper();
@@ -776,13 +834,13 @@ Reference< XShape > Shape::createAndInsert(
                     {
                         PROP_TopBorder, PROP_LeftBorder, PROP_BottomBorder, PROP_RightBorder
                     };
-                    for (unsigned int i = 0; i < SAL_N_ELEMENTS(aBorders); ++i)
+                    for (sal_Int32 nBorder : aBorders)
                     {
-                        css::table::BorderLine2 aBorderLine = xPropertySet->getPropertyValue(PropertyMap::getPropertyName(aBorders[i])).get<css::table::BorderLine2>();
+                        css::table::BorderLine2 aBorderLine = xPropertySet->getPropertyValue(PropertyMap::getPropertyName(nBorder)).get<css::table::BorderLine2>();
                         aBorderLine.Color = aShapeProps.getProperty(PROP_LineColor).get<sal_Int32>();
                         if (aLineProperties.moLineWidth.has())
                             aBorderLine.LineWidth = convertEmuToHmm(aLineProperties.moLineWidth.get());
-                        aShapeProps.setProperty(aBorders[i], uno::makeAny(aBorderLine));
+                        aShapeProps.setProperty(nBorder, uno::makeAny(aBorderLine));
                     }
                     aShapeProps.erase(PROP_LineColor);
                 }
@@ -1075,7 +1133,11 @@ Reference< XShape > Shape::createAndInsert(
                             if( const TextCharacterProperties* pCharProps = pTheme->getFontStyle( pFontRef->mnThemedIdx ) )
                                 aCharStyleProperties.assignUsed( *pCharProps );
                         SAL_INFO("oox.drawingml", OSL_THIS_FUNC << "use font color");
-                        aCharStyleProperties.maCharColor.assignIfUsed( pFontRef->maPhClr );
+                        if ( pFontRef->maPhClr.isUsed() )
+                        {
+                            aCharStyleProperties.maFillProperties.maFillColor = pFontRef->maPhClr;
+                            aCharStyleProperties.maFillProperties.moFillType.set(XML_solidFill);;
+                        }
                     }
                 }
 
@@ -1133,8 +1195,8 @@ void Shape::keepDiagramCompatibilityInfo( XmlFilterBase& rFilterBase )
         } else
             xSet->setPropertyValue( aGrabBagPropName, Any( maDiagramDoms ) );
 
-        xSet->setPropertyValue( "MoveProtect", Any( sal_True ) );
-        xSet->setPropertyValue( "SizeProtect", Any( sal_True ) );
+        xSet->setPropertyValue( "MoveProtect", Any( true ) );
+        xSet->setPropertyValue( "SizeProtect", Any( true ) );
 
         // Replace existing shapes with a new Graphic Object rendered
         // from them
@@ -1160,8 +1222,8 @@ Reference < XShape > Shape::renderDiagramToGraphic( XmlFilterBase& rFilterBase )
             return xShape;
 
         // Stream in which to place the rendered shape
-        SvMemoryStream mpTempStream;
-        Reference < io::XStream > xStream( new utl::OStreamWrapper( mpTempStream ) );
+        SvMemoryStream aTempStream;
+        Reference < io::XStream > xStream( new utl::OStreamWrapper( aTempStream ) );
         Reference < io::XOutputStream > xOutputStream( xStream->getOutputStream() );
 
         // Rendering format
@@ -1197,11 +1259,11 @@ Reference < XShape > Shape::renderDiagramToGraphic( XmlFilterBase& rFilterBase )
         xGraphicExporter->setSourceDocument( xSourceDoc );
         xGraphicExporter->filter( aDescriptor );
 
-        mpTempStream.Seek( STREAM_SEEK_TO_BEGIN );
+        aTempStream.Seek( STREAM_SEEK_TO_BEGIN );
 
         Graphic aGraphic;
         GraphicFilter aFilter( false );
-        if ( aFilter.ImportGraphic( aGraphic, "", mpTempStream, GRFILTER_FORMAT_NOTFOUND, nullptr, GraphicFilterImportFlags::NONE, static_cast < Sequence < PropertyValue >* > ( nullptr ) ) != GRFILTER_OK )
+        if ( aFilter.ImportGraphic( aGraphic, "", aTempStream, GRFILTER_FORMAT_NOTFOUND, nullptr, GraphicFilterImportFlags::NONE, static_cast < Sequence < PropertyValue >* > ( nullptr ) ) != GRFILTER_OK )
         {
             SAL_WARN( "oox.drawingml", OSL_THIS_FUNC
                       << "Unable to import rendered stream into graphic object" );
@@ -1213,8 +1275,8 @@ Reference < XShape > Shape::renderDiagramToGraphic( XmlFilterBase& rFilterBase )
         xShape.set( xServiceFact->createInstance( "com.sun.star.drawing.GraphicObjectShape" ), UNO_QUERY_THROW );
         Reference < XPropertySet > xPropSet( xShape, UNO_QUERY_THROW );
         xPropSet->setPropertyValue(  "Graphic", Any( xGraphic ) );
-        xPropSet->setPropertyValue(  "MoveProtect", Any( sal_True ) );
-        xPropSet->setPropertyValue(  "SizeProtect", Any( sal_True ) );
+        xPropSet->setPropertyValue(  "MoveProtect", Any( true ) );
+        xPropSet->setPropertyValue(  "SizeProtect", Any( true ) );
         xPropSet->setPropertyValue(  "Name", Any( OUString( "RenderedShapes" ) ) );
     }
     catch( const Exception& e )
@@ -1348,17 +1410,17 @@ void Shape::finalizeXShape( XmlFilterBase& rFilter, const Reference< XShapes >& 
 
 void Shape::putPropertyToGrabBag( const OUString& sPropertyName, const Any& aPropertyValue )
 {
-    PropertyValue pNewProperty;
-    pNewProperty.Name = sPropertyName;
-    pNewProperty.Value = aPropertyValue;
-    putPropertyToGrabBag( pNewProperty );
+    PropertyValue aNewProperty;
+    aNewProperty.Name = sPropertyName;
+    aNewProperty.Value = aPropertyValue;
+    putPropertyToGrabBag( aNewProperty );
 }
 
 void Shape::putPropertyToGrabBag( const PropertyValue& pProperty )
 {
     Reference< XPropertySet > xSet( mxShape, UNO_QUERY );
     Reference< XPropertySetInfo > xSetInfo( xSet->getPropertySetInfo() );
-    const OUString& aGrabBagPropName = OUString( UNO_NAME_MISC_OBJ_INTEROPGRABBAG );
+    const OUString aGrabBagPropName = UNO_NAME_MISC_OBJ_INTEROPGRABBAG;
     if( mxShape.is() && xSet.is() && xSetInfo.is() && xSetInfo->hasPropertyByName( aGrabBagPropName ) )
     {
         Sequence< PropertyValue > aGrabBag;
@@ -1376,7 +1438,7 @@ void Shape::putPropertiesToGrabBag( const Sequence< PropertyValue >& aProperties
 {
     Reference< XPropertySet > xSet( mxShape, UNO_QUERY );
     Reference< XPropertySetInfo > xSetInfo( xSet->getPropertySetInfo() );
-    const OUString& aGrabBagPropName = OUString( UNO_NAME_MISC_OBJ_INTEROPGRABBAG );
+    const OUString aGrabBagPropName = UNO_NAME_MISC_OBJ_INTEROPGRABBAG;
     if( mxShape.is() && xSet.is() && xSetInfo.is() && xSetInfo->hasPropertyByName( aGrabBagPropName ) )
     {
         // get existing grab bag

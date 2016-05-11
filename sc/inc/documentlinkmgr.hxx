@@ -10,7 +10,6 @@
 #ifndef INCLUDED_SC_INC_DOCUMENTLINKMGR_HXX
 #define INCLUDED_SC_INC_DOCUMENTLINKMGR_HXX
 
-#include <boost/noncopyable.hpp>
 #include <rtl/ustring.hxx>
 #include <memory>
 
@@ -29,12 +28,14 @@ namespace sc {
 class DataStream;
 struct DocumentLinkManagerImpl;
 
-class DocumentLinkManager : boost::noncopyable
+class DocumentLinkManager
 {
     std::unique_ptr<DocumentLinkManagerImpl> mpImpl;
 
 public:
     DocumentLinkManager( SfxObjectShell* pShell );
+    DocumentLinkManager(const DocumentLinkManager&) = delete;
+    const DocumentLinkManager& operator=(const DocumentLinkManager&) = delete;
     ~DocumentLinkManager();
 
     void setDataStream( DataStream* p );
@@ -57,7 +58,7 @@ public:
 
     bool updateDdeLinks( vcl::Window* pWin );
 
-    bool updateDdeLink( const OUString& rAppl, const OUString& rTopic, const OUString& rItem );
+    void updateDdeLink( const OUString& rAppl, const OUString& rTopic, const OUString& rItem );
 
     size_t getDdeLinkCount() const;
 

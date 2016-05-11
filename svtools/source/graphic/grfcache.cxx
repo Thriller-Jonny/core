@@ -69,7 +69,7 @@ GraphicID::GraphicID( const GraphicObject& rObj )
 
     switch( rGraphic.GetType() )
     {
-        case( GRAPHIC_BITMAP ):
+        case GRAPHIC_BITMAP:
         {
             if(rGraphic.getSvgData().get())
             {
@@ -79,7 +79,7 @@ GraphicID::GraphicID( const GraphicObject& rObj )
                 mnID1 |= rSvgDataPtr->getSvgDataArrayLength();
                 mnID2 = basegfx::fround(rRange.getWidth());
                 mnID3 = basegfx::fround(rRange.getHeight());
-                mnID4 = vcl_get_checksum(0, rSvgDataPtr->getSvgDataArray().get(), rSvgDataPtr->getSvgDataArrayLength());
+                mnID4 = vcl_get_checksum(0, rSvgDataPtr->getSvgDataArray().getConstArray(), rSvgDataPtr->getSvgDataArrayLength());
             }
             else if( rGraphic.IsAnimated() )
             {
@@ -102,7 +102,7 @@ GraphicID::GraphicID( const GraphicObject& rObj )
         }
         break;
 
-        case( GRAPHIC_GDIMETAFILE ):
+        case GRAPHIC_GDIMETAFILE:
         {
             const GDIMetaFile& rMtf = rGraphic.GetGDIMetaFile();
 
@@ -208,17 +208,26 @@ bool GraphicCacheEntry::ImplInit( const GraphicObject& rObj )
         const Graphic& rGraphic = rObj.GetGraphic();
 
         if( mpBmpEx )
-            delete mpBmpEx, mpBmpEx = nullptr;
+        {
+            delete mpBmpEx;
+            mpBmpEx = nullptr;
+        }
 
         if( mpMtf )
-            delete mpMtf, mpMtf = nullptr;
+        {
+            delete mpMtf;
+            mpMtf = nullptr;
+        }
 
         if( mpAnimation )
-            delete mpAnimation, mpAnimation = nullptr;
+        {
+            delete mpAnimation;
+            mpAnimation = nullptr;
+        }
 
         switch( rGraphic.GetType() )
         {
-            case( GRAPHIC_BITMAP ):
+            case GRAPHIC_BITMAP:
             {
                 if(rGraphic.getSvgData().get())
                 {
@@ -235,7 +244,7 @@ bool GraphicCacheEntry::ImplInit( const GraphicObject& rObj )
             }
             break;
 
-            case( GRAPHIC_GDIMETAFILE ):
+            case GRAPHIC_GDIMETAFILE:
             {
                 mpMtf = new GDIMetaFile( rGraphic.GetGDIMetaFile() );
             }
@@ -361,9 +370,12 @@ void GraphicCacheEntry::GraphicObjectWasSwappedOut( const GraphicObject& /*rObj*
 
     if( mbSwappedAll )
     {
-        delete mpBmpEx, mpBmpEx = nullptr;
-        delete mpMtf, mpMtf = nullptr;
-        delete mpAnimation, mpAnimation = nullptr;
+        delete mpBmpEx;
+        mpBmpEx = nullptr;
+        delete mpMtf;
+        mpMtf = nullptr;
+        delete mpAnimation;
+        mpAnimation = nullptr;
 
         // #119176# also reset SvgData
         maSvgData.reset();
@@ -504,7 +516,7 @@ bool GraphicDisplayCacheEntry::IsCacheableAsBitmap( const GDIMetaFile& rMtf,
     bool        bNonBitmapActionEncountered(false);
     if( aNewSize.Width() && aNewSize.Height() && rSz.Width() && rSz.Height() )
     {
-        const MapMode rPrefMapMode( rMtf.GetPrefMapMode() );
+        const MapMode& rPrefMapMode( rMtf.GetPrefMapMode() );
         const Size rSizePix( pOut->LogicToPixel( aNewSize, rPrefMapMode ) );
 
         sal_uInt32  nCurPos;
@@ -658,79 +670,79 @@ bool GraphicDisplayCacheEntry::IsCacheableAsBitmap( const GDIMetaFile& rMtf,
                 case MetaActionType::RASTEROP:
                     if( static_cast<MetaRasterOpAction*>(pAct)->GetRasterOp() == ROP_OVERPAINT )
                         break;
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::PIXEL:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::POINT:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::LINE:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::RECT:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::ROUNDRECT:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::ELLIPSE:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::ARC:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::PIE:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::CHORD:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::POLYLINE:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::POLYGON:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::POLYPOLYGON:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
 
                 case MetaActionType::TEXT:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::TEXTARRAY:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::STRETCHTEXT:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::TEXTRECT:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
 
                 case MetaActionType::MASK:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::MASKSCALE:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::MASKSCALEPART:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
 
                 case MetaActionType::GRADIENT:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::HATCH:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::WALLPAPER:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
 
                 case MetaActionType::Transparent:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::EPS:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::FLOATTRANSPARENT:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::GRADIENTEX:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
 
                     // OutDev state changes that _do_ affect bitmap
                     // output
                 case MetaActionType::CLIPREGION:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::ISECTRECTCLIPREGION:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::ISECTREGIONCLIPREGION:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::MOVECLIPREGION:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
 
                 case MetaActionType::MAPMODE:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 case MetaActionType::REFPOINT:
-                    // FALLTHROUGH intended
+                    SAL_FALLTHROUGH;
                 default:
                     bNonBitmapActionEncountered = true;
                     break;
@@ -999,9 +1011,9 @@ void GraphicCache::SetMaxDisplayCacheSize( sal_uLong nNewCacheSize )
         ImplFreeDisplayCacheSpace( GetUsedDisplayCacheSize() - GetMaxDisplayCacheSize() );
 }
 
-void GraphicCache::SetMaxObjDisplayCacheSize( sal_uLong nNewMaxObjSize, bool bDestroyGreaterCached )
+void GraphicCache::SetMaxObjDisplayCacheSize( sal_uLong nNewMaxObjSize )
 {
-    const bool bDestroy = ( bDestroyGreaterCached && ( nNewMaxObjSize < mnMaxObjDisplaySize ) );
+    const bool bDestroy = nNewMaxObjSize < mnMaxObjDisplaySize;
 
     mnMaxObjDisplaySize = std::min( nNewMaxObjSize, mnMaxDisplaySize );
 

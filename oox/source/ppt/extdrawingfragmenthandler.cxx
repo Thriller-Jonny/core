@@ -9,6 +9,9 @@
 
 #include "extdrawingfragmenthandler.hxx"
 
+#include <oox/token/namespaces.hxx>
+#include <oox/token/tokens.hxx>
+
 using namespace ::oox::core;
 using namespace ::com::sun::star::xml::sax;
 using namespace ::com::sun::star::uno;
@@ -19,14 +22,12 @@ ExtDrawingFragmentHandler::ExtDrawingFragmentHandler( XmlFilterBase& rFilter,
                                                         const OUString& rFragmentPath,
         const oox::ppt::SlidePersistPtr& rSlidePersistPtr,
         const oox::ppt::ShapeLocation   eShapeLocation,
-        oox::drawingml::ShapePtr        pMasterShapePtr,
         oox::drawingml::ShapePtr        pGroupShapePtr,
         oox::drawingml::ShapePtr        pShapePtr)
     throw( )
     : FragmentHandler2( rFilter, rFragmentPath ),
      mpSlidePersistPtr (rSlidePersistPtr ),
      meShapeLocation( eShapeLocation ),
-     mpMasterShapePtr( pMasterShapePtr ),
      mpGroupShapePtr( pGroupShapePtr ),
      mpOrgShapePtr( pShapePtr )
 {

@@ -167,7 +167,7 @@ class OCommandEnvironment : public cppu::WeakImplHelper< XCommandEnvironment >
     Reference< XInteractionHandler > mxInteraction;
 
 public:
-    void setHandler( Reference< XInteractionHandler > xInteraction_ )
+    void setHandler( const Reference< XInteractionHandler >& xInteraction_ )
     {
         mxInteraction = xInteraction_;
     }
@@ -347,9 +347,7 @@ void OFileAccess::setReadOnly( const OUString& FileURL, sal_Bool bReadOnly )
 {
     INetURLObject aURLObj( FileURL, INetProtocol::File );
     ucbhelper::Content aCnt( aURLObj.GetMainURL( INetURLObject::NO_DECODE ), mxEnvironment, comphelper::getProcessComponentContext() );
-    Any aAny;
-    aAny <<= bReadOnly;
-    aCnt.setPropertyValue("IsReadOnly", aAny );
+    aCnt.setPropertyValue("IsReadOnly", Any(bReadOnly) );
 }
 
 void OFileAccess::createFolder( const OUString& NewFolderURL )
@@ -607,7 +605,7 @@ Reference< XStream > OFileAccess::openFileReadWrite( const OUString& FileURL )
             Reference< XInputStream > xInput( pInput );
             InsertCommandArgument aInsertArg;
             aInsertArg.Data = xInput;
-            aInsertArg.ReplaceExisting = sal_False;
+            aInsertArg.ReplaceExisting = false;
 
             aCmdArg <<= aInsertArg;
             aCnt.executeCommand( "insert", aCmdArg );
@@ -759,9 +757,7 @@ void OFileAccess::setHidden( const OUString& FileURL, sal_Bool bHidden )
 {
     INetURLObject aURLObj( FileURL, INetProtocol::File );
     ucbhelper::Content aCnt( aURLObj.GetMainURL( INetURLObject::NO_DECODE ), mxEnvironment, comphelper::getProcessComponentContext() );
-    Any aAny;
-    aAny <<= bHidden;
-    aCnt.setPropertyValue("IsHidden", aAny );
+    aCnt.setPropertyValue("IsHidden", Any(bHidden) );
 }
 
 }; // namespace end

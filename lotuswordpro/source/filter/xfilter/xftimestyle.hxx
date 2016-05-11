@@ -68,10 +68,9 @@ class XFDateTimePart : public XFStyle
 {
 public:
     XFDateTimePart()
-    {
-        m_ePart = enumXFDateUnknown;
-        m_bLongFmt = false;
-    }
+        : m_ePart(enumXFDateUnknown)
+        , m_bLongFmt(false)
+    {}
 
     virtual ~XFDateTimePart(){}
 public:
@@ -115,7 +114,7 @@ public:
 
     void    AddMinute( bool bLongFmt = true );
 
-    void    AddSecond( bool bLongFmt = true, sal_Int16 nDecimalPos = 2);
+    void    AddSecond( bool bLongFmt = true );
 
     void    SetAmPm(bool bAmPm);
 
@@ -170,12 +169,12 @@ inline void XFTimeStyle::AddMinute( bool bLongFmt )
     m_aParts.push_back(part);
 }
 
-inline void XFTimeStyle::AddSecond( bool bLongFmt, sal_Int16 pos)
+inline void XFTimeStyle::AddSecond( bool bLongFmt )
 {
     XFTimePart  part;
     part.SetPartType(enumXFDateSecond);
     part.SetLongFmt(bLongFmt);
-    part.SetDecimalPos(pos);
+    part.SetDecimalPos(0);
     m_aParts.push_back(part);
 }
 

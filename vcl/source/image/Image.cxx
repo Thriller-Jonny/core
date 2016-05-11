@@ -31,6 +31,7 @@
 #include <vcl/image.hxx>
 #include <vcl/imagerepository.hxx>
 #include <vcl/implimagetree.hxx>
+#include <sal/types.h>
 #include <image.h>
 
 #include <vcl/BitmapProcessor.hxx>
@@ -38,8 +39,6 @@
 #if OSL_DEBUG_LEVEL > 0
 #include <rtl/strbuf.hxx>
 #endif
-
-using namespace ::com::sun::star;
 
 Image::Image() :
     mpImplData( nullptr )
@@ -132,7 +131,7 @@ Image::Image( const Bitmap& rBitmap, const Color& rColor ) :
     ImplInit( aBmpEx );
 }
 
-Image::Image( const uno::Reference< graphic::XGraphic >& rxGraphic ) :
+Image::Image( const css::uno::Reference< css::graphic::XGraphic >& rxGraphic ) :
     mpImplData( nullptr )
 {
 
@@ -192,7 +191,7 @@ BitmapEx Image::GetBitmapEx() const
     return aRet;
 }
 
-uno::Reference< graphic::XGraphic > Image::GetXGraphic() const
+css::uno::Reference< css::graphic::XGraphic > Image::GetXGraphic() const
 {
     const Graphic aGraphic( GetBitmapEx() );
 
@@ -229,7 +228,8 @@ bool Image::operator==(const Image& rImage) const
 
 void Image::Draw(OutputDevice* pOutDev, const Point& rPos, DrawImageFlags nStyle, const Size* pSize)
 {
-    if (mpImplData == nullptr || !mpImplData->mpBitmapEx || !pOutDev->IsDeviceOutputNecessary())
+    if (mpImplData == nullptr || !mpImplData->mpBitmapEx ||
+        (!pOutDev->IsDeviceOutputNecessary() && pOutDev->GetConnectMetaFile() == nullptr))
         return;
 
     const Point aSrcPos(0, 0);

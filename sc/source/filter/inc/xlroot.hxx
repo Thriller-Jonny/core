@@ -81,7 +81,6 @@ struct XclRootData
     SfxMedium&          mrMedium;           /// The medium to import from.
     tools::SvRef<SotStorage>       mxRootStrg;         /// The root OLE storage of imported/exported file.
     ScDocument&         mrDoc;              /// The source or destination document.
-    ScDocumentImport    maDocImport;
     OUString            maDocUrl;           /// Document URL of imported/exported file.
     OUString            maBasePath;         /// Base path of imported/exported file (path of maDocUrl).
     OUString            maUserName;         /// Current user name.
@@ -186,7 +185,7 @@ public:
 
     /** Returns the OLE2 root storage of the imported/exported file.
         @return  Pointer to root storage or 0, if the file is a simple stream. */
-    inline tools::SvRef<SotStorage> GetRootStorage() const { return mrData.mxRootStrg; }
+    const tools::SvRef<SotStorage>& GetRootStorage() const { return mrData.mxRootStrg; }
     /** Returns true, if the document contains a VBA storage. */
     bool                HasVbaStorage() const;
 

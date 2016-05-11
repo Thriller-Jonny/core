@@ -17,8 +17,8 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include "vcl/svapp.hxx"
-#include "vcl/settings.hxx"
+#include <vcl/svapp.hxx>
+#include <vcl/settings.hxx>
 #include "PresenterToolBar.hxx"
 
 #include "PresenterBitmapContainer.hxx"
@@ -50,7 +50,6 @@
 #include <com/sun/star/util/XURLTransformer.hpp>
 #include <rtl/ustrbuf.hxx>
 #include <boost/bind.hpp>
-#include <boost/noncopyable.hpp>
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
@@ -73,8 +72,8 @@ namespace {
             const PresenterTheme::SharedFontDescriptor& rpFont);
 
         void SetText (const OUString& rsText);
-        OUString GetText() const;
-        PresenterTheme::SharedFontDescriptor GetFont() const;
+        const OUString& GetText() const;
+        const PresenterTheme::SharedFontDescriptor& GetFont() const;
 
         void Paint (
             const Reference<rendering::XCanvas>& rxCanvas,
@@ -91,10 +90,11 @@ namespace {
     };
 
     class ElementMode
-        : private ::boost::noncopyable
     {
     public:
         ElementMode();
+        ElementMode(const ElementMode&) = delete;
+        ElementMode& operator=(const ElementMode&) = delete;
 
         SharedBitmapDescriptor mpIcon;
         OUString msAction;
@@ -111,9 +111,11 @@ namespace {
 }  // end of anonymous namespace
 
 class PresenterToolBar::Context
-    : private ::boost::noncopyable
 {
 public:
+    Context() = default;
+    Context(const Context&) = delete;
+    Context& operator=(const Context&) = delete;
     Reference<drawing::XPresenterHelper> mxPresenterHelper;
     css::uno::Reference<css::rendering::XCanvas> mxCanvas;
 };
@@ -128,12 +130,13 @@ namespace {
 
     class Element
         : private ::cppu::BaseMutex,
-          private ::boost::noncopyable,
           public ElementInterfaceBase
     {
     public:
         explicit Element (const ::rtl::Reference<PresenterToolBar>& rpToolBar);
         virtual ~Element();
+        Element(const Element&) = delete;
+        Element& operator=(const Element&) = delete;
 
         virtual void SAL_CALL disposing() override;
 
@@ -400,7 +403,7 @@ void PresenterToolBar::Initialize (
             if (xPeer.is())
                 xPeer->setBackground(util::Color(0xff000000));
 
-            mxWindow->setVisible(sal_True);
+            mxWindow->setVisible(true);
         }
 
         mxSlideShowController = mpPresenterController->GetSlideShowController();
@@ -486,12 +489,12 @@ geometry::RealSize2D PresenterToolBar::GetMinimalSize()
     return maMinimalSize;
 }
 
-::rtl::Reference<PresenterController> PresenterToolBar::GetPresenterController() const
+const ::rtl::Reference<PresenterController>& PresenterToolBar::GetPresenterController() const
 {
     return mpPresenterController;
 }
 
-Reference<XComponentContext> PresenterToolBar::GetComponentContext() const
+const Reference<XComponentContext>& PresenterToolBar::GetComponentContext() const
 {
     return mxComponentContext;
 }
@@ -555,7 +558,7 @@ void SAL_CALL PresenterToolBar::windowPaint (const css::awt::PaintEvent& rEvent)
     // Make the back buffer visible.
     Reference<rendering::XSpriteCanvas> xSpriteCanvas (mxCanvas, UNO_QUERY);
     if (xSpriteCanvas.is())
-        xSpriteCanvas->updateScreen(sal_False);
+        xSpriteCanvas->updateScreen(false);
 }
 
 //----- XMouseListener --------------------------------------------------------
@@ -620,7 +623,6 @@ Reference<drawing::XDrawPage> SAL_CALL PresenterToolBar::getCurrentPage()
 {
     return mxCurrentSlide;
 }
-
 
 
 void PresenterToolBar::CreateControls (
@@ -1107,7 +1109,7 @@ PresenterToolBarView::PresenterToolBarView (
             if (xPeer.is())
                 xPeer->setBackground(util::Color(0xff000000));
 
-            mxWindow->setVisible(sal_True);
+            mxWindow->setVisible(true);
         }
     }
     catch (RuntimeException&)
@@ -1141,7 +1143,7 @@ void SAL_CALL PresenterToolBarView::disposing()
 
 }
 
-::rtl::Reference<PresenterToolBar> PresenterToolBarView::GetPresenterToolBar() const
+const ::rtl::Reference<PresenterToolBar>& PresenterToolBarView::GetPresenterToolBar() const
 {
     return mpToolBar;
 }
@@ -1718,12 +1720,12 @@ void Text::SetText (const OUString& rsText)
     msText = rsText;
 }
 
-OUString Text::GetText() const
+const OUString& Text::GetText() const
 {
     return msText;
 }
 
-PresenterTheme::SharedFontDescriptor Text::GetFont() const
+const PresenterTheme::SharedFontDescriptor& Text::GetFont() const
 {
     return mpFont;
 }

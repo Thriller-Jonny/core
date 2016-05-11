@@ -19,27 +19,26 @@
 
 #ifndef IOS
 
-#include <vcl/svpforlokit.hxx>
-
 #include "headless/svpbmp.hxx"
 #include "headless/svpinst.hxx"
 #include "headless/svpvd.hxx"
 #include "headless/svpgdi.hxx"
 
 #include <basegfx/vector/b2ivector.hxx>
-#include <basebmp/scanlineformats.hxx>
+
+#include <cairo.h>
 
 using namespace basegfx;
-using namespace basebmp;
 
 SvpSalVirtualDevice::~SvpSalVirtualDevice()
 {
+    cairo_surface_destroy(m_pSurface);
 }
 
 SalGraphics* SvpSalVirtualDevice::AcquireGraphics()
 {
     SvpSalGraphics* pGraphics = new SvpSalGraphics();
-    pGraphics->setDevice( m_aDevice );
+    pGraphics->setSurface(m_pSurface);
     m_aGraphics.push_back( pGraphics );
     return pGraphics;
 }
@@ -52,43 +51,62 @@ void SvpSalVirtualDevice::ReleaseGraphics( SalGraphics* pGraphics )
 
 bool SvpSalVirtualDevice::SetSize( long nNewDX, long nNewDY )
 {
-    return SetSizeUsingBuffer(nNewDX, nNewDY, basebmp::RawMemorySharedArray());
+    return SetSizeUsingBuffer(nNewDX, nNewDY, nullptr);
 }
 
 bool SvpSalVirtualDevice::SetSizeUsingBuffer( long nNewDX, long nNewDY,
-                                              const basebmp::RawMemorySharedArray &pBuffer )
+        sal_uInt8 *const pBuffer)
 {
     B2IVector aDevSize( nNewDX, nNewDY );
     if( aDevSize.getX() == 0 )
         aDevSize.setX( 1 );
     if( aDevSize.getY() == 0 )
         aDevSize.setY( 1 );
-    if( ! m_aDevice.get() || m_aDevice->getSize() != aDevSize )
+
+    if (!m_pSurface || cairo_image_surface_get_width(m_pSurface) != aDevSize.getX() ||
+                       cairo_image_surface_get_height(m_pSurface) != aDevSize.getY() )
     {
-        basebmp::Format nFormat = SvpSalInstance::getBaseBmpFormatForDeviceFormat(m_eFormat);
+        if (m_pSurface)
+        {
+            cairo_surface_destroy(m_pSurface);
+        }
 
         if (m_eFormat == DeviceFormat::BITMASK)
         {
-            std::vector< basebmp::Color > aDevPal(2);
-            aDevPal[0] = basebmp::Color( 0, 0, 0 );
-            aDevPal[1] = basebmp::Color( 0xff, 0xff, 0xff );
-            m_aDevice = createBitmapDevice( aDevSize, true, nFormat,
-                                            PaletteMemorySharedVector( new std::vector< basebmp::Color >(aDevPal) ) );
+            m_pSurface = cairo_image_surface_create(CAIRO_FORMAT_A1,
+                                aDevSize.getX(),
+                                aDevSize.getY());
         }
         else
         {
-            m_aDevice = pBuffer ?
-                          createBitmapDevice( aDevSize, true, nFormat, pBuffer, PaletteMemorySharedVector() )
-                        : createBitmapDevice( aDevSize, true, nFormat );
+            m_pSurface = pBuffer ?
+                             cairo_image_surface_create_for_data(pBuffer, CAIRO_FORMAT_ARGB32,
+                                   aDevSize.getX(),
+                                   aDevSize.getY(),
+                                   cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, aDevSize.getX()))
+                                 :
+                             cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
+                                   aDevSize.getX(),
+                                   aDevSize.getY());
         }
 
         // update device in existing graphics
         for( std::list< SvpSalGraphics* >::iterator it = m_aGraphics.begin();
              it != m_aGraphics.end(); ++it )
-             (*it)->setDevice( m_aDevice );
+            (*it)->setSurface(m_pSurface);
 
     }
     return true;
+}
+
+long SvpSalVirtualDevice::GetWidth() const
+{
+    return m_pSurface ? cairo_image_surface_get_width(m_pSurface) : 0;
+}
+
+long SvpSalVirtualDevice::GetHeight() const
+{
+    return m_pSurface ? cairo_image_surface_get_height(m_pSurface) : 0;
 }
 
 #endif

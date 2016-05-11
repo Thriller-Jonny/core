@@ -92,11 +92,9 @@ SwXMLExport::SwXMLExport(
     bBlock( false ),
     bShowProgress( true ),
     bSavedShowChanges( false ),
-    doc( nullptr ),
-    sNumberFormat("NumberFormat"),
-    sIsProtected("IsProtected")
+    doc( nullptr )
 {
-    _InitItemExport();
+    InitItemExport();
 }
 
 void SwXMLExport::setBlockMode()
@@ -133,13 +131,12 @@ sal_uInt32 SwXMLExport::exportDoc( enum XMLTokenEnum eClass )
 
     SwDoc *pDoc = getDoc();
 
-    bool bExtended = false;
     if( getExportFlags() & (SvXMLExportFlags::FONTDECLS|SvXMLExportFlags::STYLES|
                             SvXMLExportFlags::MASTERSTYLES|SvXMLExportFlags::CONTENT))
     {
         if( getDefaultVersion() > SvtSaveOptions::ODFVER_012 )
         {
-            _GetNamespaceMap().Add(
+            GetNamespaceMap_().Add(
                 GetXMLToken(XML_NP_OFFICE_EXT),
                 GetXMLToken(XML_N_OFFICE_EXT),
                 XML_NAMESPACE_OFFICE_EXT);
@@ -172,11 +169,10 @@ sal_uInt32 SwXMLExport::exportDoc( enum XMLTokenEnum eClass )
                         sal_uInt16 nIdx = pUnknown->GetFirstNamespaceIndex();
                         while( USHRT_MAX != nIdx )
                         {
-                            _GetNamespaceMap().Add( pUnknown->GetPrefix( nIdx ),
+                            GetNamespaceMap_().Add( pUnknown->GetPrefix( nIdx ),
                                                 pUnknown->GetNamespace( nIdx ) );
                             nIdx = pUnknown->GetNextNamespaceIndex( nIdx );
                         }
-                        bExtended = true;
                     }
                 }
             }
@@ -190,8 +186,6 @@ sal_uInt32 SwXMLExport::exportDoc( enum XMLTokenEnum eClass )
         GetMM100UnitConverter().SetXMLMeasureUnit( eUnit );
         pTwipUnitConv->SetXMLMeasureUnit( eUnit );
     }
-
-    SetExtended( bExtended );
 
     if( getExportFlags() & SvXMLExportFlags::META)
     {
@@ -336,13 +330,13 @@ XMLShapeExport* SwXMLExport::CreateShapeExport()
 SwXMLExport::~SwXMLExport()
 {
     DeleteTableLines();
-    _FinitItemExport();
+    FinitItemExport();
 }
 
-void SwXMLExport::_ExportFontDecls()
+void SwXMLExport::ExportFontDecls_()
 {
     GetFontAutoStylePool(); // make sure the pool is created
-    SvXMLExport::_ExportFontDecls();
+    SvXMLExport::ExportFontDecls_();
 }
 
 #define NUM_EXPORTED_VIEW_SETTINGS 11
@@ -445,7 +439,7 @@ void SwXMLExport::SetBodyAttributes()
     }
 }
 
-void SwXMLExport::_ExportContent()
+void SwXMLExport::ExportContent_()
 {
     // export forms
     Reference<XDrawPageSupplier> xDrawPageSupplier(GetModel(), UNO_QUERY);

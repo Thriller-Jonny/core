@@ -170,6 +170,7 @@
 #include "undolayer.hxx"
 #include "unmodpg.hxx"
 #include <sfx2/sidebar/Sidebar.hxx>
+#include <sfx2/classificationhelper.hxx>
 
 #include "ViewShellBase.hxx"
 #include <memory>
@@ -641,7 +642,7 @@ void DrawViewShell::FuTemporary(SfxRequest& rReq)
                     else
                     {
                         WaitObject aWait( GetActiveWindow() );
-                        mpDrawView->ConvertMarkedToPolyObj(false);
+                        mpDrawView->ConvertMarkedToPolyObj();
                     }
                 }
 
@@ -801,7 +802,7 @@ void DrawViewShell::FuTemporary(SfxRequest& rReq)
                 ::Outliner* pOutl = mpDrawView->GetTextEditOutliner();
                 if (pOutl)
                 {
-                    pOutl->RemoveFields(true, checkSvxFieldData<SvxURLField>);
+                    pOutl->RemoveFields(checkSvxFieldData<SvxURLField>);
                 }
 
                 pSet.reset(new SfxItemSet( GetPool(), EE_ITEMS_START, EE_ITEMS_END ));
@@ -1048,7 +1049,8 @@ void DrawViewShell::FuTemporary(SfxRequest& rReq)
         {
             // The value (sal_uInt16)0xFFFF means set bullet on/off.
             SfxUInt16Item aItem(FN_SVX_SET_BULLET, (sal_uInt16)0xFFFF);
-            GetViewFrame()->GetDispatcher()->Execute( FN_SVX_SET_BULLET, SfxCallMode::RECORD, &aItem, 0L );
+            GetViewFrame()->GetDispatcher()->ExecuteList(FN_SVX_SET_BULLET,
+                    SfxCallMode::RECORD, { &aItem });
         }
         break;
 
@@ -1056,7 +1058,8 @@ void DrawViewShell::FuTemporary(SfxRequest& rReq)
         {
             // The value (sal_uInt16)0xFFFF means set bullet on/off.
             SfxUInt16Item aItem(FN_SVX_SET_NUMBER, (sal_uInt16)0xFFFF);
-            GetViewFrame()->GetDispatcher()->Execute( FN_SVX_SET_NUMBER, SfxCallMode::RECORD, &aItem, 0L );
+            GetViewFrame()->GetDispatcher()->ExecuteList(FN_SVX_SET_NUMBER,
+                    SfxCallMode::RECORD, { &aItem });
         }
         break;
 
@@ -1117,9 +1120,6 @@ void DrawViewShell::FuTemporary(SfxRequest& rReq)
         break;
 
         case SID_INSERT_OBJECT:
-        case SID_INSERT_PLUGIN:
-        case SID_INSERT_SOUND:
-        case SID_INSERT_VIDEO:
         case SID_INSERT_FLOATINGFRAME:
         case SID_INSERT_MATH:
         case SID_INSERT_DIAGRAM:
@@ -1144,6 +1144,29 @@ void DrawViewShell::FuTemporary(SfxRequest& rReq)
         }
         break;
 #endif
+        case SID_CLASSIFICATION_APPLY:
+        {
+            const SfxItemSet* pArgs = rReq.GetArgs();
+            const SfxPoolItem* pItem = nullptr;
+            if (pArgs && pArgs->GetItemState(nSId, false, &pItem) == SfxItemState::SET)
+            {
+                const OUString& rName = static_cast<const SfxStringItem*>(pItem)->GetValue();
+                if (SfxViewFrame* pViewFrame = GetViewFrame())
+                {
+                    if (SfxObjectShell* pObjectShell = pViewFrame->GetObjectShell())
+                    {
+                        SfxClassificationHelper aHelper(pObjectShell->getDocProperties());
+                        aHelper.SetBACName(rName);
+                    }
+                }
+            }
+            else
+                SAL_WARN("sd.ui", "missing parameter for SID_CLASSIFICATION_APPLY");
+
+            Cancel();
+            rReq.Ignore();
+        }
+        break;
 
         case SID_COPYOBJECTS:
         {
@@ -1177,7 +1200,8 @@ void DrawViewShell::FuTemporary(SfxRequest& rReq)
         break;
 
         case SID_SELECT_BACKGROUND:
-        case SID_SAVE_BACKGROUND:
+        case SID_ATTR_PAGE_SIZE:
+        case SID_ATTR_PAGE:
         case SID_PAGESETUP:  // BASIC ??
         {
             SetCurrentFunction( FuPage::Create( this, GetActiveWindow(), mpDrawView, GetDoc(), rReq ) );
@@ -1220,7 +1244,7 @@ void DrawViewShell::FuTemporary(SfxRequest& rReq)
         case SID_CAPTUREPOINT:
             // negative value to signal call from menu
             maMousePos = Point(-1,-1);
-            // fall-through
+            SAL_FALLTHROUGH;
         case SID_SET_SNAPITEM:
         {
             SetCurrentFunction( FuSnapLine::Create(this, GetActiveWindow(), mpDrawView, GetDoc(), rReq) );
@@ -1392,7 +1416,7 @@ void DrawViewShell::FuTemporary(SfxRequest& rReq)
                 aNewAttr.Put( SdAttrLayerThisPage() );
 
                 SdAbstractDialogFactory* pFact = SdAbstractDialogFactory::Create();
-                std::unique_ptr<AbstractSdInsertLayerDlg> pDlg(pFact ? pFact->CreateSdInsertLayerDlg(nullptr, aNewAttr, true, SD_RESSTR(STR_INSERTLAYER)) : nullptr);
+                std::unique_ptr<AbstractSdInsertLayerDlg> pDlg(pFact ? pFact->CreateSdInsertLayerDlg(aNewAttr, true, SD_RESSTR(STR_INSERTLAYER)) : nullptr);
                 if( pDlg )
                 {
                     pDlg->SetHelpId( SD_MOD()->GetSlotPool()->GetSlot( SID_INSERTLAYER )->GetCommand() );
@@ -1560,7 +1584,7 @@ void DrawViewShell::FuTemporary(SfxRequest& rReq)
                 aNewAttr.Put( SdAttrLayerThisPage() );
 
                 SdAbstractDialogFactory* pFact = SdAbstractDialogFactory::Create();
-                std::unique_ptr<AbstractSdInsertLayerDlg> pDlg(pFact ? pFact->CreateSdInsertLayerDlg(nullptr, aNewAttr, bDelete, SD_RESSTR(STR_MODIFYLAYER)) : nullptr);
+                std::unique_ptr<AbstractSdInsertLayerDlg> pDlg(pFact ? pFact->CreateSdInsertLayerDlg(aNewAttr, bDelete, SD_RESSTR(STR_MODIFYLAYER)) : nullptr);
                 if( pDlg )
                 {
                     pDlg->SetHelpId( SD_MOD()->GetSlotPool()->GetSlot( SID_MODIFYLAYER )->GetCommand() );
@@ -1714,12 +1738,12 @@ void DrawViewShell::FuTemporary(SfxRequest& rReq)
 
                         SfxViewFrame* pViewFrm = SfxViewFrame::Current();
                         if (pViewFrm)
-                            pViewFrm->GetDispatcher()->Execute( SID_OPENDOC,
-                                                        SfxCallMode::ASYNCHRON | SfxCallMode::RECORD,
-                                                        &aUrl, &aTarget,
-                                                        &aFrm, &aReferer,
-                                                        &aNewView, &aBrowsing,
-                                                        0L );
+                        {
+                            pViewFrm->GetDispatcher()->ExecuteList(SID_OPENDOC,
+                                SfxCallMode::ASYNCHRON | SfxCallMode::RECORD,
+                                { &aUrl, &aTarget, &aFrm, &aReferer,
+                                  &aNewView, &aBrowsing });
+                        }
                     }
                 }
             }
@@ -1919,8 +1943,8 @@ void DrawViewShell::FuTemporary(SfxRequest& rReq)
             else
             {
                 Outliner* pOutl = GetDoc()->GetInternalOutliner();
-                pOutl->Init( OUTLINERMODE_TEXTOBJECT );
-                sal_uInt16 nOutlMode = pOutl->GetMode();
+                pOutl->Init( OutlinerMode::TextObject );
+                OutlinerMode nOutlMode = pOutl->GetMode();
                 pOutl->SetStyleSheet( 0, nullptr );
                 pOutl->QuickInsertField( *pFieldItem, ESelection() );
                 OutlinerParaObject* pOutlParaObject = pOutl->CreateParaObject();
@@ -2079,7 +2103,7 @@ void DrawViewShell::FuTemporary(SfxRequest& rReq)
 
                 SvxAbstractDialogFactory* pFact = SvxAbstractDialogFactory::Create();
                 OSL_ENSURE(pFact, "Dialog creation failed!");
-                std::unique_ptr<AbstractSvxObjectNameDialog> pDlg(pFact->CreateSvxObjectNameDialog(nullptr, aName));
+                std::unique_ptr<AbstractSvxObjectNameDialog> pDlg(pFact->CreateSvxObjectNameDialog(aName));
                 OSL_ENSURE(pDlg, "Dialog creation failed!");
 
                 pDlg->SetCheckNameHdl(LINK(this, DrawViewShell, NameObjectHdl));
@@ -2112,7 +2136,7 @@ void DrawViewShell::FuTemporary(SfxRequest& rReq)
 
                 SvxAbstractDialogFactory* pFact = SvxAbstractDialogFactory::Create();
                 OSL_ENSURE(pFact, "Dialog creation failed!");
-                std::unique_ptr<AbstractSvxObjectTitleDescDialog> pDlg(pFact->CreateSvxObjectTitleDescDialog(nullptr, aTitle, aDescription));
+                std::unique_ptr<AbstractSvxObjectTitleDescDialog> pDlg(pFact->CreateSvxObjectTitleDescDialog(aTitle, aDescription));
                 OSL_ENSURE(pDlg, "Dialog creation failed!");
 
                 if(RET_OK == pDlg->Execute())
@@ -2975,8 +2999,8 @@ void DrawViewShell::ExecChar( SfxRequest &rReq )
             }
             else
             {
-                FontUnderline eFU = static_cast<const SvxUnderlineItem&>( aEditAttr.Get( EE_CHAR_UNDERLINE ) ).GetLineStyle();
-                aNewAttr.Put( SvxUnderlineItem( eFU != UNDERLINE_NONE ?UNDERLINE_NONE : UNDERLINE_SINGLE,  EE_CHAR_UNDERLINE ) );
+                FontLineStyle eFU = static_cast<const SvxUnderlineItem&>( aEditAttr.Get( EE_CHAR_UNDERLINE ) ).GetLineStyle();
+                aNewAttr.Put( SvxUnderlineItem( eFU != LINESTYLE_NONE ?LINESTYLE_NONE : LINESTYLE_SINGLE,  EE_CHAR_UNDERLINE ) );
             }//aNewAttr.Put( (const SvxUnderlineItem&)aEditAttr.Get( EE_CHAR_UNDERLINE ) );
         }
         break;
@@ -3064,9 +3088,10 @@ void DrawViewShell::ExecChar( SfxRequest &rReq )
                 FuText::ChangeFontSize( nSId == SID_GROW_FONT_SIZE, nullptr, pFontList, mpView );
                 GetViewFrame()->GetBindings().Invalidate( SID_ATTR_CHAR_FONTHEIGHT );
             }
+            break;
         }
     default:
-        ;
+        break;
     }
 
     mpDrawView->SetAttributes(aNewAttr);

@@ -34,16 +34,13 @@ public:
     HtmlWriter(SvStream& rStream);
     virtual ~HtmlWriter();
 
-    void prettyPrint(bool bChoice);
+    void prettyPrint(bool b);
 
     void start(const OString& aElement);
 
     void end();
 
     void flushStack();
-    void flushStack(const OString& aElement);
-
-    void write(const OString& aContent);
 
     void attribute(const OString& aAttribute, const char* aValue);
     void attribute(const OString& aAttribute, sal_Int32 aValue);

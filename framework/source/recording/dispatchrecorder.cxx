@@ -110,7 +110,7 @@ void SAL_CALL DispatchRecorder::recordDispatch( const css::util::URL& aURL,
 {
     OUString aTarget;
 
-    css::frame::DispatchStatement aStatement( aURL.Complete, aTarget, lArguments, 0, sal_False );
+    css::frame::DispatchStatement aStatement( aURL.Complete, aTarget, lArguments, 0, false );
     m_aStatements.push_back( aStatement );
 }
 
@@ -120,7 +120,7 @@ void SAL_CALL  DispatchRecorder::recordDispatchAsComment( const css::util::URL& 
     OUString aTarget;
 
     // last parameter must be set to true -> it's a comment
-    css::frame::DispatchStatement aStatement( aURL.Complete, aTarget, lArguments, 0, sal_True );
+    css::frame::DispatchStatement aStatement( aURL.Complete, aTarget, lArguments, 0, true );
     m_aStatements.push_back( aStatement );
 }
 
@@ -157,7 +157,7 @@ OUString SAL_CALL DispatchRecorder::getRecordedMacro() throw( css::uno::RuntimeE
     return sScript;
 }
 
-void SAL_CALL DispatchRecorder::AppendToBuffer( css::uno::Any aValue, OUStringBuffer& aArgumentBuffer )
+void SAL_CALL DispatchRecorder::AppendToBuffer( const css::uno::Any& aValue, OUStringBuffer& aArgumentBuffer )
 {
     // if value == bool
     if (aValue.getValueTypeClass() == css::uno::TypeClass_STRUCT )

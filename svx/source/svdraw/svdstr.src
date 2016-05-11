@@ -21,24 +21,24 @@
 
 String STR_ObjNameSingulNONE
 {
-    Text [ en-US ] = "draw object" ;
+    Text [ en-US ] = "Drawing object" ;
 };
 String STR_ObjNamePluralNONE
 {
-    Text [ en-US ] = "draw objects" ;
+    Text [ en-US ] = "Drawing objects" ;
 };
 
 String STR_ObjNameSingulGRUP
 {
-    Text [ en-US ] = "group object" ;
+    Text [ en-US ] = "Group object" ;
 };
 String STR_ObjNamePluralGRUP
 {
-    Text [ en-US ] = "group objects" ;
+    Text [ en-US ] = "Group objects" ;
 };
 String STR_ObjNameSingulGRUPEMPTY
 {
-    Text [ en-US ] = "blank group object" ;
+    Text [ en-US ] = "Blank group object" ;
 };
 String STR_ObjNamePluralGRUPEMPTY
 {
@@ -51,7 +51,7 @@ String STR_ObjNameSingulLINE
 };
 String STR_ObjNameSingulLINE_Hori
 {
-    Text [ en-US ] = "horizontal line" ;
+    Text [ en-US ] = "Horizontal line" ;
 };
 String STR_ObjNameSingulLINE_Vert
 {
@@ -59,7 +59,7 @@ String STR_ObjNameSingulLINE_Vert
 };
 String STR_ObjNameSingulLINE_Diag
 {
-    Text [ en-US ] = "diagonal line" ;
+    Text [ en-US ] = "Diagonal line" ;
 };
 String STR_ObjNamePluralLINE
 {
@@ -200,7 +200,7 @@ String STR_ObjNameSingulPOLY
 {
     Text [ en-US ] = "Polygon" ;
 };
-String STR_ObjNameSingulPOLY_PntAnz
+String STR_ObjNameSingulPOLY_PointCount
 {
     Text [ en-US ] = "Polygon %2 corners" ;
 };
@@ -212,7 +212,7 @@ String STR_ObjNameSingulPLIN
 {
     Text [ en-US ] = "Polyline" ;
 };
-String STR_ObjNameSingulPLIN_PntAnz
+String STR_ObjNameSingulPLIN_PointCount
 {
     Text [ en-US ] = "Polyline with %2 corners" ;
 };
@@ -337,35 +337,35 @@ String STR_ObjNamePluralOUTLINETEXT
 
 String STR_ObjNameSingulGRAF
 {
-    Text [ en-US ] = "graphic" ;
+    Text [ en-US ] = "Image" ;
 };
 String STR_ObjNamePluralGRAF
 {
-    Text [ en-US ] = "graphics" ;
+    Text [ en-US ] = "Images" ;
 };
 String STR_ObjNameSingulGRAFLNK
 {
-    Text [ en-US ] = "Linked graphic" ;
+    Text [ en-US ] = "Linked image" ;
 };
 String STR_ObjNamePluralGRAFLNK
 {
-    Text [ en-US ] = "Linked graphics" ;
+    Text [ en-US ] = "Linked images" ;
 };
 String STR_ObjNameSingulGRAFNONE
 {
-    Text [ en-US ] = "Blank graphic object" ;
+    Text [ en-US ] = "Blank image object" ;
 };
 String STR_ObjNamePluralGRAFNONE
 {
-    Text [ en-US ] = "Blank graphic objects" ;
+    Text [ en-US ] = "Blank image objects" ;
 };
 String STR_ObjNameSingulGRAFNONELNK
 {
-    Text [ en-US ] = "Blank linked graphic" ;
+    Text [ en-US ] = "Blank linked image" ;
 };
 String STR_ObjNamePluralGRAFNONELNK
 {
-    Text [ en-US ] = "Blank linked graphics" ;
+    Text [ en-US ] = "Blank linked images" ;
 };
 String STR_ObjNameSingulGRAFMTF
 {
@@ -385,35 +385,35 @@ String STR_ObjNamePluralGRAFMTFLNK
 };
 String STR_ObjNameSingulGRAFBMP
 {
-    Text [ en-US ] = "Bitmap" ;
+    Text [ en-US ] = "Image" ;
 };
 String STR_ObjNameSingulGRAFBMPTRANS
 {
-    Text [ en-US ] = "Bitmap with transparency" ;
+    Text [ en-US ] = "Image with transparency" ;
 };
 String STR_ObjNameSingulGRAFBMPLNK
 {
-    Text [ en-US ] = "Linked Bitmap" ;
+    Text [ en-US ] = "Linked Image" ;
 };
 String STR_ObjNameSingulGRAFBMPTRANSLNK
 {
-    Text [ en-US ] = "Linked bitmap with transparency" ;
+    Text [ en-US ] = "Linked image with transparency" ;
 };
 String STR_ObjNamePluralGRAFBMP
 {
-    Text [ en-US ] = "Bitmaps" ;
+    Text [ en-US ] = "Images" ;
 };
 String STR_ObjNamePluralGRAFBMPTRANS
 {
-    Text [ en-US ] = "Bitmaps with transparency" ;
+    Text [ en-US ] = "Images with transparency" ;
 };
 String STR_ObjNamePluralGRAFBMPLNK
 {
-    Text [ en-US ] = "Linked bitmaps" ;
+    Text [ en-US ] = "Linked images" ;
 };
 String STR_ObjNamePluralGRAFBMPTRANSLNK
 {
-    Text [ en-US ] = "Linked bitmaps with transparency" ;
+    Text [ en-US ] = "Linked images with transparency" ;
 };
 String STR_ObjNameSingulCUSTOMSHAPE
 {
@@ -528,7 +528,7 @@ String STR_ObjNamePluralMEASURE
 };
 String STR_ObjNamePlural
 {
-    Text [ en-US ] = "draw objects" ;
+    Text [ en-US ] = "Drawing objects" ;
 };
 String STR_ObjNameNoObj
 {
@@ -540,7 +540,7 @@ String STR_ObjNameAnd
 };
 String STR_ObjNameSingulPlural
 {
-    Text [ en-US ] = "draw object(s)" ;
+    Text [ en-US ] = "Draw object(s)" ;
 };
 
 // New in 537: names for 3D objects
@@ -576,12 +576,12 @@ String STR_ObjNamePluralLabel3d
 
 String STR_ObjNameSingulLathe3d
 {
-    Text [ en-US ] = "rotation object";
+    Text [ en-US ] = "Rotation object";
 };
 
 String STR_ObjNamePluralLathe3d
 {
-    Text [ en-US ] = "rotation objects";
+    Text [ en-US ] = "Rotation objects";
 };
 
 String STR_ObjNameSingulObj3d
@@ -611,12 +611,12 @@ String STR_ObjNamePluralScene3d
 
 String STR_ObjNameSingulSphere3d
 {
-    Text [ en-US ] = "sphere";
+    Text [ en-US ] = "Sphere";
 };
 
 String STR_ObjNamePluralSphere3d
 {
-    Text [ en-US ] = "spheres";
+    Text [ en-US ] = "Spheres";
 };
 
 String STR_EditWithCopy
@@ -706,10 +706,6 @@ String STR_EditSetPointsSmooth
 String STR_EditSetSegmentsKind
 {
     Text [ en-US ] = "Modify bézier properties of %1" ;
-};
-String STR_EditShut
-{
-    Text [ en-US ] = "Close %1" ;
 };
 String STR_EditSetGlueEscDir
 {
@@ -847,18 +843,6 @@ String STR_EditImportMtf
 {
     Text [ en-US ] = "Split %1" ;
 };
-String STR_EditImportSGV
-{
-    Text = "StarDraw Dos Zeichnung importieren" ;
-};
-String STR_EditImportHPGL
-{
-    Text = "HPGL importieren" ;
-};
-String STR_EditImportDXF
-{
-    Text = "DXF importieren" ;
-};
 String STR_ExchangePaste
 {
     Text [ en-US ] = "Insert object(s)" ;
@@ -866,18 +850,6 @@ String STR_ExchangePaste
 String STR_ExchangeClpCut
 {
     Text [ en-US ] = "Cut %1" ;
-};
-String STR_ExchangeClpPaste
-{
-    Text [ en-US ] = "Paste Clipboard" ;
-};
-String STR_ExchangeDD
-{
-    Text [ en-US ] = "Drag and Drop %1" ;
-};
-String STR_ExchangeDDPaste
-{
-    Text [ en-US ] = "Insert Drag and Drop" ;
 };
 String STR_DragInsertPoint
 {
@@ -2815,11 +2787,11 @@ Bitmap SIP_SA_CROP_MARKERS
 
 String STR_ObjNameSingulFONTWORK
 {
-    Text [ en-US ] = "font work" ;
+    Text [ en-US ] = "Font work" ;
 };
 String STR_ObjNamePluralFONTWORK
 {
-    Text [ en-US ] = "font works" ;
+    Text [ en-US ] = "Font works" ;
 };
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

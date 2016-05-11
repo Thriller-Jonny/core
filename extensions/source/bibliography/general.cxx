@@ -57,11 +57,11 @@ static OUString lcl_GetColumnName( const Mapping* pMapping, sal_uInt16 nIndexPos
     BibConfig* pBibConfig = BibModul::GetConfig();
     OUString sRet = pBibConfig->GetDefColumnName(nIndexPos);
     if(pMapping)
-        for(sal_uInt16 i = 0; i < COLUMN_COUNT; i++)
+        for(const auto & aColumnPair : pMapping->aColumnPairs)
         {
-            if(pMapping->aColumnPairs[i].sLogicalColumnName == sRet)
+            if(aColumnPair.sLogicalColumnName == sRet)
             {
-                sRet = pMapping->aColumnPairs[i].sRealColumnName;
+                sRet = aColumnPair.sRealColumnName;
                 break;
             }
         }
@@ -108,11 +108,11 @@ void BibPosListener::cursorMoved(const lang::EventObject& /*aEvent*/) throw( uno
             OUString sTypeMapping = pBibConfig->GetDefColumnName(AUTHORITYTYPE_POS);
             if(pMapping)
             {
-                for(sal_uInt16 nEntry = 0; nEntry < COLUMN_COUNT; nEntry++)
+                for(const auto & aColumnPair : pMapping->aColumnPairs)
                 {
-                    if(pMapping->aColumnPairs[nEntry].sLogicalColumnName == sTypeMapping)
+                    if(aColumnPair.sLogicalColumnName == sTypeMapping)
                     {
-                        sTypeMapping = pMapping->aColumnPairs[nEntry].sRealColumnName;
+                        sTypeMapping = aColumnPair.sRealColumnName;
                         break;
                     }
                 }
@@ -393,13 +393,13 @@ void BibGeneralPage::dispose()
 
 void BibGeneralPage::RemoveListeners()
 {
-    for(sal_uInt16 i = 0; i < FIELD_COUNT; i++)
+    for(uno::Reference<awt::XWindow> & aControl : aControls)
     {
-        if(aControls[i].is())
+        if(aControl.is())
         {
-            uno::Reference< awt::XWindow > xCtrWin(aControls[i], uno::UNO_QUERY );
+            uno::Reference< awt::XWindow > xCtrWin(aControl, uno::UNO_QUERY );
             xCtrWin->removeFocusListener( mxBibGeneralPageFocusListener.get() );
-            aControls[i] = nullptr;
+            aControl = nullptr;
         }
     }
 }
@@ -499,8 +499,8 @@ uno::Reference< awt::XControlModel >  BibGeneralPage::AddXControl(
                             break;
                         }
                     // initially switch on the design mode - switch it off _after_ loading the form
-                    xCtrWin->setVisible( sal_True );
-                    xControl->setDesignMode( sal_True );
+                    xCtrWin->setVisible( true );
+                    xControl->setDesignMode( true );
 
                     vcl::Window* pWindow = VCLUnoHelper::GetWindow(xControl->getPeer());
                     pWindow->set_grid_top_attach(rLabel.get_grid_top_attach());

@@ -230,7 +230,7 @@ SwHTMLTextCollOutputInfo::~SwHTMLTextCollOutputInfo()
 SwHTMLFormatInfo::SwHTMLFormatInfo( const SwFormat *pF, SwDoc *pDoc, SwDoc *pTemplate,
                               bool bOutStyles,
                               LanguageType eDfltLang,
-                              sal_uInt16 nCSS1Script, bool bHardDrop )
+                              sal_uInt16 nCSS1Script )
     : pFormat(pF)
     , pItemSet(nullptr)
     , nLeftMargin(0)
@@ -372,33 +372,6 @@ SwHTMLFormatInfo::SwHTMLFormatInfo( const SwFormat *pF, SwDoc *pDoc, SwDoc *pTem
             }
         }
 
-        // Ggf. noch ein DropCap-Attribut uebernehmen
-        if( bOutStyles && bHardDrop && nDeep != 0 )
-        {
-            const SfxPoolItem *pItem;
-            if( SfxItemState::SET==pFormat->GetAttrSet().GetItemState(
-                                    RES_PARATR_DROP, true, &pItem ) )
-            {
-                bool bPut = true;
-                if( pTemplate )
-                {
-                    pReferenceFormat = SwHTMLWriter::GetTemplateFormat( nRefPoolId, &pTemplate->getIDocumentStylePoolAccess() );
-                    const SfxPoolItem *pRefItem;
-                    bool bRefItemSet =
-                        SfxItemState::SET==pReferenceFormat->GetAttrSet().GetItemState(
-                                        RES_PARATR_DROP, true, &pRefItem );
-                    bPut = !bRefItemSet || *pItem!=*pRefItem;
-                }
-                if( bPut )
-                {
-                    if( !pItemSet )
-                        pItemSet = new SfxItemSet( *pFormat->GetAttrSet().GetPool(),
-                                                   pFormat->GetAttrSet().GetRanges() );
-                    pItemSet->Put( *pItem );
-                }
-            }
-        }
-
         // Die diversen default-Abstaende aus der Vorlage oder der
         // Vergleischs-Vorlage merken
         const SvxLRSpaceItem &rLRSpace =
@@ -533,8 +506,7 @@ void OutHTML_SwFormat( Writer& rWrt, const SwFormat& rFormat,
     {
         pFormatInfo = new SwHTMLFormatInfo( &rFormat, rWrt.pDoc, rHWrt.m_pTemplate,
                                       rHWrt.m_bCfgOutStyles, rHWrt.m_eLang,
-                                      rHWrt.m_nCSS1Script,
-                                      false );
+                                      rHWrt.m_nCSS1Script );
         rHWrt.m_TextCollInfos.insert(std::unique_ptr<SwHTMLFormatInfo>(pFormatInfo));
         if( rHWrt.m_aScriptParaStyles.count( rFormat.GetName() ) )
             pFormatInfo->bScriptDependent = true;
@@ -981,7 +953,8 @@ void OutHTML_SwFormat( Writer& rWrt, const SwFormat& rFormat,
         OSL_ENSURE( aNumInfo.GetNumRule(), "Wo ist die Numerierung geblieben???" );
         OSL_ENSURE( nBulletGrfLvl < MAXLEVEL, "So viele Ebenen gibt's nicht" );
         const SwNumFormat& rNumFormat = aNumInfo.GetNumRule()->Get(nBulletGrfLvl);
-        OutHTML_BulletImage( rWrt, OOO_STRING_SVTOOLS_HTML_image, rNumFormat.GetBrush() );
+        OutHTML_BulletImage( rWrt, OOO_STRING_SVTOOLS_HTML_image, rNumFormat.GetBrush(),
+                rHWrt.m_aBulletGrfs[nBulletGrfLvl]);
     }
 
     rHWrt.GetNumInfo() = aNumInfo;
@@ -1122,8 +1095,8 @@ class HTMLEndPosLst
 
     // Eine SttEndPos in die Start- und Ende-Listen eintragen bzw. aus
     // ihnen loeschen, wobei die Ende-Position bekannt ist
-    void _InsertItem( HTMLStartEndPos *pPos, HTMLStartEndPositions::size_type nEndPos );
-    void _RemoveItem( HTMLStartEndPositions::size_type nEndPos );
+    void InsertItem_( HTMLStartEndPos *pPos, HTMLStartEndPositions::size_type nEndPos );
+    void RemoveItem_( HTMLStartEndPositions::size_type nEndPos );
 
     // die "Art" es Attributs ermitteln
     HTMLOnOffState GetHTMLItemState( const SfxPoolItem& rItem );
@@ -1183,7 +1156,7 @@ public:
     bool IsHTMLMode( sal_uLong nMode ) const { return (nHTMLMode & nMode) != 0; }
 };
 
-void HTMLEndPosLst::_InsertItem( HTMLStartEndPos *pPos, HTMLStartEndPositions::size_type nEndPos )
+void HTMLEndPosLst::InsertItem_( HTMLStartEndPos *pPos, HTMLStartEndPositions::size_type nEndPos )
 {
     // In der Start-Liste das Attribut hinter allen vorher und an
     // der gleichen Position gestarteten Attributen einfuegen
@@ -1198,7 +1171,7 @@ void HTMLEndPosLst::_InsertItem( HTMLStartEndPos *pPos, HTMLStartEndPositions::s
     aEndLst.insert( aEndLst.begin() + nEndPos, pPos );
 }
 
-void HTMLEndPosLst::_RemoveItem( HTMLStartEndPositions::size_type nEndPos )
+void HTMLEndPosLst::RemoveItem_( HTMLStartEndPositions::size_type nEndPos )
 {
     HTMLStartEndPos *pPos = aEndLst[nEndPos];
 
@@ -1271,10 +1244,10 @@ HTMLOnOffState HTMLEndPosLst::GetHTMLItemState( const SfxPoolItem& rItem )
     case RES_CHRATR_UNDERLINE:
         switch( static_cast<const SvxUnderlineItem&>(rItem).GetLineStyle() )
         {
-        case UNDERLINE_SINGLE:
+        case LINESTYLE_SINGLE:
             eState = HTML_ON_VALUE;
             break;
-        case UNDERLINE_NONE:
+        case LINESTYLE_NONE:
             eState = HTML_OFF_VALUE;
             break;
         default:
@@ -1503,7 +1476,7 @@ void HTMLEndPosLst::InsertItem( const SfxPoolItem& rItem, sal_Int32 nStart,
             {
                 // das Test-Attribut endet, bevor das neue endet. Das
                 // neue Attribut muss deshalb aufgesplittet werden
-                _InsertItem( new HTMLStartEndPos( rItem, nStart, nTestEnd ), i );
+                InsertItem_( new HTMLStartEndPos( rItem, nStart, nTestEnd ), i );
                 nStart = nTestEnd;
             }
         }
@@ -1516,7 +1489,7 @@ void HTMLEndPosLst::InsertItem( const SfxPoolItem& rItem, sal_Int32 nStart,
     }
 
     // ein Attribut muss noch eingefuegt werden
-    _InsertItem( new HTMLStartEndPos( rItem, nStart, nEnd ), i );
+    InsertItem_( new HTMLStartEndPos( rItem, nStart, nEnd ), i );
 }
 
 void HTMLEndPosLst::SplitItem( const SfxPoolItem& rItem, sal_Int32 nStart,
@@ -1706,7 +1679,7 @@ void HTMLEndPosLst::InsertNoScript( const SfxPoolItem& rItem,
         case HTML_AUTOFMT_VALUE:
             {
                 const SwFormatAutoFormat& rAutoFormat = static_cast<const SwFormatAutoFormat&>(rItem);
-                const std::shared_ptr<SfxItemSet> pSet = rAutoFormat.GetStyleHandle();
+                const std::shared_ptr<SfxItemSet>& pSet = rAutoFormat.GetStyleHandle();
                 if( pSet.get() )
                     Insert( *pSet.get(), nStart, nEnd, rFormatInfos, true, bParaAttrs );
             }
@@ -2021,7 +1994,7 @@ void HTMLEndPosLst::OutEndAttrs( SwHTMLWriter& rHWrt, sal_Int32 nPos,
             {
                 Out( aHTMLAttrFnTab, *pPos->GetItem(), rHWrt );
             }
-            _RemoveItem( i );
+            RemoveItem_( i );
         }
         else if( nEnd > nPos )
         {
@@ -2878,8 +2851,8 @@ static Writer& OutHTML_SwUnderline( Writer& rWrt, const SfxPoolItem& rHt )
     if( rHTMLWrt.m_bOutOpts )
         return rWrt;
 
-    const FontUnderline eUnder = static_cast<const SvxUnderlineItem&>(rHt).GetLineStyle();
-    if( UNDERLINE_NONE != eUnder )
+    const FontLineStyle eUnder = static_cast<const SvxUnderlineItem&>(rHt).GetLineStyle();
+    if( LINESTYLE_NONE != eUnder )
     {
         HTMLOutFuncs::Out_AsciiTag( rWrt.Strm(), OOO_STRING_SVTOOLS_HTML_underline, rHTMLWrt.m_bTagOn );
     }

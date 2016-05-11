@@ -26,6 +26,7 @@
 namespace com { namespace sun { namespace star {
     namespace awt { struct Size; }
     namespace document { class XEmbeddedObjectResolver; }
+    namespace frame { class XModel; }
     namespace lang { class XMultiServiceFactory; }
 } } }
 
@@ -33,7 +34,6 @@ namespace oox { class PropertyMap; }
 
 namespace oox {
 namespace ole {
-
 
 
 /** Contains generic information about an OLE object. */
@@ -50,13 +50,13 @@ struct OOX_DLLPUBLIC OleObjectInfo
 };
 
 
-
 /** Helper for OLE object handling. */
 class OleObjectHelper
 {
 public:
     explicit            OleObjectHelper(
-                            const css::uno::Reference< css::lang::XMultiServiceFactory >& rxModelFactory );
+                            const css::uno::Reference<css::lang::XMultiServiceFactory>& rxModelFactory,
+                            const css::uno::Reference<css::frame::XModel>& xModel);
                         ~OleObjectHelper();
 
     bool                importOleObject(
@@ -65,11 +65,16 @@ public:
                             const css::awt::Size& rObjSize );
 
 private:
+    css::uno::Reference<css::frame::XModel> m_xModel;
     css::uno::Reference< css::document::XEmbeddedObjectResolver > mxResolver;
-    const OUString                                                maEmbeddedObjScheme;
     sal_Int32                                                     mnObjectId;
 };
 
+
+OOX_DLLPUBLIC void SaveInteropProperties(
+       css::uno::Reference<css::frame::XModel> const& xModel,
+       OUString const& rObjectName, OUString const* pOldObjectName,
+       OUString const& rProgId, OUString const& rDrawAspect);
 
 
 } // namespace ole

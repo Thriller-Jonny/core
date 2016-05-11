@@ -171,6 +171,7 @@ cmd/lc_optionstreedialog.png cmd/lc_controlproperties.png
 cmd/sc_optionstreedialog.png cmd/sc_controlproperties.png
 
 # Formatmenu
+cmd/lc_anchormenu.png cmd/lc_toggleanchortype.png
 cmd/lc_conditionalformatmenu.png cmd/lc_conditionalformatdialog.png
 cmd/sc_conditionalformatmenu.png cmd/sc_conditionalformatdialog.png
 
@@ -461,6 +462,18 @@ cmd/lc_xlinestyle.png cmd/lc_linestyle.png
 cmd/lc_hfixedline.png cmd/lc_line.png
 cmd/sc_xlinestyle.png cmd/sc_linestyle.png
 cmd/sc_hfixedline.png cmd/sc_line.png
+
+# Mail merge
+cmd/lc_mailmergewizard.png cmd/lc_dsbformletter.png
+cmd/sc_mailmergewizard.png cmd/sc_dsbformletter.png
+cmd/lc_mailmergefirstentry.png cmd/lc_firstrecord.png
+cmd/sc_mailmergefirstentry.png cmd/sc_firstrecord.png
+cmd/lc_mailmergelastentry.png cmd/lc_lastrecord.png
+cmd/sc_mailmergelastentry.png cmd/sc_lastrecord.png
+cmd/lc_mailmergenextentry.png cmd/lc_nextrecord.png
+cmd/sc_mailmergenextentry.png cmd/sc_nextrecord.png
+cmd/lc_mailmergepreventry.png cmd/lc_prevrecord.png
+cmd/sc_mailmergepreventry.png cmd/sc_prevrecord.png
 
 # Arrows
 cmd/lc_arrowstoolbox.png cmd/lc_linearrowend.png
@@ -813,6 +826,36 @@ cmd/sc_showgraphics.png cmd/sc_graphic.png
 cmd/lc_dsbrowserexplorer.png cmd/lc_showfmexplorer.png
 cmd/sc_dsbrowserexplorer.png cmd/sc_showfmexplorer.png
 
+cmd/lc_savesimple.png cmd/lc_save.png
+cmd/sc_savesimple.png cmd/sc_save.png
+
+# Slide command aliases
+cmd/lc_insertslide.png cmd/lc_insertpage.png
+cmd/lc_duplicateslide.png cmd/lc_duplicatepage.png
+cmd/lc_deleteslide.png cmd/lc_deletepage.png
+cmd/lc_moveslidefirst.png cmd/lc_movepagefirst.png
+cmd/lc_moveslidelast.png cmd/lc_movepagelast.png
+cmd/lc_moveslideup.png cmd/lc_upsearch.png
+cmd/lc_moveslidedown.png cmd/lc_downsearch.png
+cmd/lc_firstslide.png cmd/lc_firstpage.png
+cmd/lc_lastslide.png cmd/lc_lastrecord.png
+cmd/lc_previousslide.png cmd/lc_prevrecord.png
+cmd/lc_nextslide.png cmd/lc_nextrecord.png
+cmd/lc_slidesetup.png cmd/lc_pagesetup.png
+
+cmd/sc_insertslide.png cmd/sc_insertpage.png
+cmd/sc_duplicateslide.png cmd/sc_duplicatepage.png
+cmd/sc_deleteslide.png cmd/sc_deletepage.png
+cmd/sc_moveslidefirst.png cmd/sc_movepagefirst.png
+cmd/sc_moveslidelast.png cmd/sc_movepagelast.png
+cmd/sc_moveslideup.png cmd/sc_upsearch.png
+cmd/sc_moveslidedown.png cmd/sc_downsearch.png
+cmd/sc_firstslide.png cmd/sc_firstpage.png
+cmd/sc_lastslide.png cmd/sc_lastrecord.png
+cmd/sc_previousslide.png cmd/sc_prevrecord.png
+cmd/sc_nextslide.png cmd/sc_nextrecord.png
+cmd/sc_slidesetup.png cmd/sc_pagesetup.png
+
 # database
 # ==============================================
 database/linked_text_table.png cmd/sc_dataimport.png
@@ -1067,7 +1110,7 @@ sfx2/imglst/actionview028.png cmd/lc_save.png
 sfx2/imglst/actionview030.png cmd/lc_open.png
 
 sfx2/res/closedoc.png vcl/res/closedoc.png
-sfx2/res/deleterow.png cmd/sc_deleterows.png
+sfx2/res/deleterow.png cmd/sc_cancel.png
 sfx2/res/favourite.png cmd/sc_insertbookmark.png
 sfx2/res/favourite_big.png cmd/lc_insertbookmark.png
 sfx2/res/hlpdoc.png cmd/sc_helpindex.png

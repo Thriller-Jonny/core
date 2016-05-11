@@ -132,11 +132,11 @@ namespace frm
         void    impl_notifyAll_nothrow();
 
     private:
-        OControlModel&                                     m_rModel;
-        bool                                               m_bLocked;
-        css::uno::Sequence< sal_Int32 >                    m_aHandles;
-        css::uno::Sequence< css::uno::Any >                m_aOldValues;
-        css::uno::Sequence< css::uno::Any >                m_aNewValues;
+        OControlModel&                              m_rModel;
+        bool                                        m_bLocked;
+        std::vector< sal_Int32 >                    m_aHandles;
+        std::vector< css::uno::Any >                m_aOldValues;
+        std::vector< css::uno::Any >                m_aNewValues;
 
     private:
         ControlModelLock( const ControlModelLock& ) = delete;
@@ -496,6 +496,12 @@ public:
     oslInterlockedCount unlockInstance( LockAccess );
 
     void                firePropertyChanges(
+                            const std::vector< sal_Int32 >& _rHandles,
+                            const std::vector< css::uno::Any >& _rOldValues,
+                            const std::vector< css::uno::Any >& _rNewValues,
+                            LockAccess
+                        );
+    void                firePropertyChanges(
                             const css::uno::Sequence< sal_Int32 >& _rHandles,
                             const css::uno::Sequence< css::uno::Any >& _rOldValues,
                             const css::uno::Sequence< css::uno::Any >& _rNewValues,
@@ -587,8 +593,8 @@ private:
     bool                                m_bValuePropertyMayBeVoid;
 
     ResetHelper                         m_aResetHelper;
-    ::cppu::OInterfaceContainerHelper   m_aUpdateListeners;
-    ::cppu::OInterfaceContainerHelper   m_aFormComponentListeners;
+    ::comphelper::OInterfaceContainerHelper2   m_aUpdateListeners;
+    ::comphelper::OInterfaceContainerHelper2   m_aFormComponentListeners;
 
     css::uno::Reference< css::form::binding::XValueBinding >
                                         m_xExternalBinding;
@@ -1106,7 +1112,7 @@ protected:
     void        initFromField( const css::uno::Reference< css::sdbc::XRowSet>& _rxForm );
 
 private:
-    bool    connectToField( const css::uno::Reference< css::sdbc::XRowSet>& _rxForm );
+    void        connectToField( const css::uno::Reference< css::sdbc::XRowSet>& _rxForm );
     void        resetField();
 
     /** does a new validation of the control value
@@ -1171,7 +1177,7 @@ private:
 
     /** connects to an external value binding
 
-        <p>Note that by definition, external data bindings superseede the SQL data binding which
+        <p>Note that by definition, external data bindings supersede the SQL data binding which
         is defined by our RowSet-column-related properties. This means that in case we're currently
         connected to a database column when this is called, this connection is suspended.</p>
 

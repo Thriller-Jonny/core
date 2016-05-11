@@ -215,9 +215,9 @@ void DrawXmlEmitter::fillFrameProps( DrawElement&       rElem,
         if (rElem.MirrorVertical)
         {
             basegfx::B2DHomMatrix mat2;
-            mat2.translate(-0.5, -0.5);
-            mat2.scale(-1, -1);
-            mat2.translate(0.5, 0.5);
+            mat2.translate(0, -0.5);
+            mat2.scale(1, -1);
+            mat2.translate(0, 0.5);
             mat = mat * mat2;
         }
 
@@ -381,7 +381,6 @@ void DrawXmlEmitter::visit( DocumentElement& elem, const std::list< Element* >::
     m_rEmitContext.rEmitter.endTag( m_bWriteDrawDocument ? "office:drawing" : "office:presentation" );
     m_rEmitContext.rEmitter.endTag( "office:body" );
 }
-
 
 
 void DrawXmlOptimizer::visit( HyperlinkElement&, const std::list< Element* >::const_iterator& )
@@ -663,12 +662,11 @@ bool isSpaces(TextElement* pTextElem)
 
 bool notTransformed(const GraphicsContext& GC)
 {
-    return (
-        GC.Transformation.get(0,0) ==  100.00 &&
-        GC.Transformation.get(1,0) ==    0.00 &&
-        GC.Transformation.get(0,1) ==    0.00 &&
-        GC.Transformation.get(1,1) == -100.00
-       );
+    return
+        rtl::math::approxEqual(GC.Transformation.get(0,0), 100.00) &&
+        GC.Transformation.get(1,0) == 0.00 &&
+        GC.Transformation.get(0,1) == 0.00 &&
+        rtl::math::approxEqual(GC.Transformation.get(1,1), -100.00);
 }
 
 void DrawXmlOptimizer::optimizeTextElements(Element& rParent)
@@ -949,13 +947,6 @@ void DrawXmlFinalizer::visit( FrameElement& elem, const std::list< Element* >::c
     aGCProps[ "fo:padding-right" ]               = "0cm";
     aGCProps[ "fo:padding-bottom" ]              = "0cm";
 
-    // remark: vertical mirroring is done in current OOO by
-    // mirroring horzontally and rotating 180 degrees
-    // this is quaint, but unfortunately it seems
-    // mirror=vertical is defined but not implemented in current code
-    if( elem.MirrorVertical )
-        aGCProps[ "style:mirror" ] = "horizontal";
-
     StyleContainer::Style style1( "style:style", props1 );
     StyleContainer::Style subStyle1( "style:graphic-properties", aGCProps );
     style1.SubStyles.push_back(&subStyle1);
@@ -992,7 +983,10 @@ void DrawXmlFinalizer::visit( PageElement& elem, const std::list< Element* >::co
     double page_width = convPx2mm( elem.w ), page_height = convPx2mm( elem.h );
 
     // calculate page margins out of the relevant children (paragraphs)
-    elem.TopMargin = elem.h, elem.BottomMargin = 0, elem.LeftMargin = elem.w, elem.RightMargin = 0;
+    elem.TopMargin = elem.h;
+    elem.BottomMargin = 0;
+    elem.LeftMargin = elem.w;
+    elem.RightMargin = 0;
 
     for( std::list< Element* >::const_iterator it = elem.Children.begin(); it != elem.Children.end(); ++it )
     {

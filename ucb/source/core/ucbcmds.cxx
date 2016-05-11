@@ -64,9 +64,7 @@ namespace
 {
 
 
-
 // struct TransferCommandContext.
-
 
 
 struct TransferCommandContext
@@ -88,9 +86,7 @@ struct TransferCommandContext
 };
 
 
-
 // class InteractionHandlerProxy.
-
 
 
 class InteractionHandlerProxy :
@@ -162,9 +158,7 @@ void SAL_CALL InteractionHandlerProxy::handle(
 }
 
 
-
 // class ActiveDataSink.
-
 
 
 class ActiveDataSink : public cppu::WeakImplHelper< io::XActiveDataSink >
@@ -198,9 +192,7 @@ uno::Reference< io::XInputStream > SAL_CALL ActiveDataSink::getInputStream()
 }
 
 
-
 // class CommandProcessorInfo.
-
 
 
 class CommandProcessorInfo :
@@ -304,10 +296,10 @@ sal_Bool SAL_CALL CommandProcessorInfo::hasCommandByName(
     for ( sal_Int32 n = 0; n < m_pInfo->getLength(); ++n )
     {
         if ( (*m_pInfo)[ n ].Name == Name )
-            return sal_True;
+            return true;
     }
 
-    return sal_False;
+    return false;
 }
 
 
@@ -318,14 +310,11 @@ sal_Bool SAL_CALL CommandProcessorInfo::hasCommandByHandle( sal_Int32 Handle )
     for ( sal_Int32 n = 0; n < m_pInfo->getLength(); ++n )
     {
         if ( (*m_pInfo)[ n ].Handle == Handle )
-            return sal_True;
+            return true;
     }
 
-    return sal_False;
+    return false;
 }
-
-
-
 
 
 OUString createDesiredName(
@@ -403,8 +392,7 @@ NameClashContinuation interactiveNameClashResolve(
         new ucbhelper::SimpleNameClashResolveRequest(
             rTargetURL,  // target folder URL
             rClashingName,   // clashing name
-            OUString(), // no proposal for new name
-            true /* bSupportsOverwriteData */ ) );
+            OUString() ) ); // no proposal for new name
 
     rException = xRequest->getRequest();
     if ( xEnv.is() )
@@ -526,7 +514,6 @@ uno::Reference< ucb::XContent > createNew(
     // (1) Obtain creatable types from target.
 
 
-
     // First, try it using "CreatabeleContentsInfo" property and
     // "createNewContent" command -> the "new" way.
 
@@ -622,9 +609,7 @@ uno::Reference< ucb::XContent > createNew(
     }
 
 
-
     // (2) Try to find a matching target type for the source object.
-
 
 
     uno::Reference< ucb::XContent > xNew;
@@ -694,7 +679,6 @@ uno::Reference< ucb::XContent > createNew(
 
 
             // (3) Create a new, empty object of matched type.
-
 
 
             if ( !xCreator.is() )
@@ -909,9 +893,7 @@ uno::Reference< io::XInputStream > getInputStream(
     uno::Reference< io::XInputStream > xInputStream;
 
 
-
     // (1) Try to get data as XInputStream via XActiveDataSink.
-
 
 
     try
@@ -946,7 +928,6 @@ uno::Reference< io::XInputStream > getInputStream(
 
 
         // (2) Try to get data via XOutputStream.
-
 
 
         try
@@ -1165,7 +1146,7 @@ void handleNameClashRename(
 
             ucb::InsertCommandArgument2 aArg;
             aArg.Data = xInputStream;
-            aArg.ReplaceExisting = sal_False;
+            aArg.ReplaceExisting = false;
 
             ucb::Command aInsertCommand(
                         OUString("insert"),
@@ -1238,10 +1219,8 @@ void globalTransfer_(
     bool bSourceIsLink = !xSourceProps->getString( 3 ).isEmpty();
 
 
-
     // (1) Try to find a matching target type for the source object and
     //     create a new, empty object of that type.
-
 
 
     uno::Reference< ucb::XContent > xNew = createNew( rContext,
@@ -1267,9 +1246,7 @@ void globalTransfer_(
     }
 
 
-
     // (2) Transfer property values from source to new object.
-
 
 
     uno::Reference< ucb::XCommandProcessor > xCommandProcessorN(
@@ -1317,9 +1294,7 @@ void globalTransfer_(
     transferProperties( rContext, xCommandProcessorS, xCommandProcessorN );
 
 
-
     // (3) Try to obtain a data stream from source.
-
 
 
     uno::Reference< io::XInputStream > xInputStream;
@@ -1329,9 +1304,7 @@ void globalTransfer_(
         xInputStream = getInputStream( rContext, xCommandProcessorS );
 
 
-
     // (4) Try to obtain a resultset (children) from source.
-
 
 
     uno::Reference< sdbc::XResultSet > xResultSet;
@@ -1341,9 +1314,7 @@ void globalTransfer_(
         xResultSet = getResultSet( rContext, xCommandProcessorS );
 
 
-
     // (5) Insert (store) new content.
-
 
 
     ucb::InsertCommandArgument2 aArg;
@@ -1354,18 +1325,18 @@ void globalTransfer_(
     switch ( rContext.aArg.NameClash )
     {
         case ucb::NameClash::OVERWRITE:
-            aArg.ReplaceExisting = sal_True;
+            aArg.ReplaceExisting = true;
             break;
 
         case ucb::NameClash::ERROR:
         case ucb::NameClash::RENAME:
         case ucb::NameClash::KEEP: // deprecated
         case ucb::NameClash::ASK:
-            aArg.ReplaceExisting = sal_False;
+            aArg.ReplaceExisting = false;
             break;
 
         default:
-            aArg.ReplaceExisting = sal_False;
+            aArg.ReplaceExisting = false;
             OSL_FAIL( "Unknown nameclash directive!" );
             break;
     }
@@ -1432,7 +1403,7 @@ void globalTransfer_(
                                 rContext.xProcessor,
                                 rContext.aArg.NameClash ) ),
                         rContext.xOrigEnv );
-                    // Unreachable
+                    SAL_FALLTHROUGH; // Unreachable
                 }
 
                 case ucb::NameClash::ERROR:
@@ -1466,7 +1437,7 @@ void globalTransfer_(
                             case NOT_HANDLED:
                                 // Not handled.
                                 cppu::throwException( aExc );
-    //                            break;
+                                SAL_FALLTHROUGH; // break;
 
                             case UNKNOWN:
                                 // Handled, but not clear, how...
@@ -1485,7 +1456,7 @@ void globalTransfer_(
                                 OSL_ENSURE( !aArg.ReplaceExisting,
                                             "Hu? ReplaceExisting already true?"
                                           );
-                                aArg.ReplaceExisting = sal_True;
+                                aArg.ReplaceExisting = true;
                                 bRetry = true;
                                 break;
 
@@ -1538,9 +1509,7 @@ void globalTransfer_(
     while ( bRetry );
 
 
-
     // (6) Process children of source.
-
 
 
     if ( xResultSet.is() )
@@ -1668,9 +1637,7 @@ void globalTransfer_(
 } /* namescpace */
 
 
-
 // UniversalContentBroker implementation ( XCommandProcessor commands ).
-
 
 
 uno::Reference< ucb::XCommandInfo >
@@ -1698,9 +1665,7 @@ void UniversalContentBroker::globalTransfer(
     }
 
 
-
     // (1) Try to transfer the content using 'transfer' command.
-
 
 
     uno::Reference< ucb::XContent > xTarget;
@@ -1845,7 +1810,7 @@ void UniversalContentBroker::globalTransfer(
                             case NOT_HANDLED:
                                 // Not handled.
                                 cppu::throwException( aExc );
-//                                break;
+                                SAL_FALLTHROUGH; // break;
 
                             case UNKNOWN:
                                 // Handled, but not clear, how...
@@ -1885,9 +1850,7 @@ void UniversalContentBroker::globalTransfer(
     }
 
 
-
     // (2) Try to transfer the content "manually".
-
 
 
     uno::Reference< ucb::XContent > xSource;
@@ -1995,9 +1958,7 @@ void UniversalContentBroker::globalTransfer(
     globalTransfer_( aTransferCtx, xSource, xTarget, xRow );
 
 
-
     // (3) Delete source, if operation is MOVE.
-
 
 
     if ( rArg.Operation == ucb::TransferCommandOperation_MOVE )

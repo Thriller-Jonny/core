@@ -34,7 +34,8 @@
 #include <tools/link.hxx>
 #include <tools/solar.h>
 #include <vcl/dllapi.h>
-#include <vcl/apptypes.hxx>
+#include <vcl/inputtypes.hxx>
+#include <vcl/exceptiontypes.hxx>
 #include <vcl/keycod.hxx>
 #include <vcl/vclevent.hxx>
 #include <vcl/metric.hxx>
@@ -159,7 +160,7 @@ public:
         aData.push_back(data);
     }
 
-    /** Constructor for ApplicationEvnet, accepts an array of strings for
+    /** Constructor for ApplicationEvent, accepts an array of strings for
      the data associated with the event.
 
      @attention TYPE_OPEN and TYPE_PRINT can apply to multiple documents,
@@ -424,16 +425,14 @@ public:
 
      @remark This is not actually an exception. It merely takes an
         error code, then in most cases aborts. The list of exception
-        identifiers can be found at include/vcl/apptypes.hxx - each
+        identifiers can be found at include/vcl/inputtypes.hxx - each
         one starts with EXC_*
 
      @param nError      The error code identifier
 
-     @returns sal_uInt16 value - if it is 0, then the error wasn't handled.
-
      @see Abort
     */
-    virtual sal_uInt16          Exception( sal_uInt16 nError );
+    virtual void          Exception( sal_uInt16 nError );
 
     /** Ends the program prematurely with an error message.
 
@@ -577,7 +576,7 @@ public:
 
     /** Determine if there are any pending input events.
 
-     @param     nType   input identifier, defined in include/vcl/apptypes.hxx
+     @param     nType   input identifier, defined in include/vcl/inputtypes.hxx
                         The default is VCL_INPUT_ANY.
 
      @returns   true if there are pending events, false if not.
@@ -735,7 +734,7 @@ public:
 
     /** Send event to all VCL application event listeners
 
-     @param     pEvent          Pointer to VclSimpleEvent
+     @param     rEvent          Reference to VclSimpleEvent
 
      @see ImplCallEventListeners(sal_uLong nEvent, Windows* pWin, void* pData);
     */
@@ -765,7 +764,7 @@ public:
 
      @param     nEvent          Event ID for mouse event
      @param     pWin            Pointer to window to which the event is sent
-     @param     pKeyEvent       Mouse event to send
+     @param     pMouseEvent     Mouse event to send
     */
     static ImplSVEvent *        PostMouseEvent( sal_uLong nEvent, vcl::Window *pWin, MouseEvent* pMouseEvent );
 
@@ -780,7 +779,7 @@ public:
 
     /** Post a user event to the default window.
 
-     User events allow for the deferral of work to later in the main-loop - at idle.
+     User events allow for the deferreal of work to later in the main-loop - at idle.
 
      @param     rLink           Link to event callback function
      @param     pCaller         Pointer to data sent to the event by the caller. Optional.
@@ -802,7 +801,7 @@ public:
      If the idle event manager doesn't exist, then initialize it.
 
      @param     rLink           const reference to the idle handler
-     @param     nPrio           The priority of the idle handler - idle handlers of a higher
+     @param     nPriority       The priority of the idle handler - idle handlers of a higher
                                 priority will be processed before this handler.
 
      @return true if the handler was inserted successfully, false if it couldn't be inserted.
@@ -982,6 +981,12 @@ public:
     */
     static OUString             GetDisplayName();
 
+    /** Get the toolkit's name. e.g. gtk3
+
+     @returns The toolkit name.
+    */
+    static OUString             GetToolkitName();
+
     /** Get the number of screens available for the display.
 
      @returns The number of screens available.
@@ -1138,11 +1143,9 @@ public:
     /** Turns on "auto-help" (hover mouse above UI element and a tooltip with an
      explanation pops up.
 
-     @param     bEnabled        Enables/disables auto-help.
-
      @see EnableAutoHelpId
     */
-    static void                 EnableAutoHelpId( bool bEnabled = true );
+    static void                 EnableAutoHelpId();
 
     /** Determines if auto-help is enabled or disabled.
 
@@ -1398,6 +1401,9 @@ public:
      @param     rMimeType       The mime content type of the document specified by aFileUrl.
                                 If an empty string will be provided "application/octet-stream"
                                 will be used.
+
+     @param     rDocumentService The app (or "document service") you will be adding the file to
+                                e.g. com.sun.star.text.TextDocument
     */
     static void                 AddToRecentDocumentList(const OUString& rFileUrl, const OUString& rMimeType, const OUString& rDocumentService);
 
@@ -1549,7 +1555,7 @@ public:
         }
     }
 
-    /** Releases mutex. */
+    /** Re-acquires mutex. */
     void SAL_CALL reset()
     {
         if( m_bCleared)

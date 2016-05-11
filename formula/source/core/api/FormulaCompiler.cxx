@@ -150,7 +150,7 @@ public:
 
 private:
     bool getOpCodeString( OUString& rStr, sal_uInt16 nOp );
-    void putDefaultOpCode( FormulaCompiler::NonConstOpCodeMapPtr xMap, sal_uInt16 nOp, const CharClass* pCharClass );
+    void putDefaultOpCode( const FormulaCompiler::NonConstOpCodeMapPtr& xMap, sal_uInt16 nOp, const CharClass* pCharClass );
 
 private:
     FormulaCompiler::SeparatorType meSepType;
@@ -236,7 +236,7 @@ bool OpCodeList::getOpCodeString( OUString& rStr, sal_uInt16 nOp )
     return false;
 }
 
-void OpCodeList::putDefaultOpCode( FormulaCompiler::NonConstOpCodeMapPtr xMap, sal_uInt16 nOp,
+void OpCodeList::putDefaultOpCode( const FormulaCompiler::NonConstOpCodeMapPtr& xMap, sal_uInt16 nOp,
         const CharClass* pCharClass )
 {
     ResId aRes( nOp, *ResourceManager::getResManager());
@@ -264,6 +264,109 @@ struct OpCodeMapData
     FormulaCompiler::NonConstOpCodeMapPtr mxSymbolMap;
     osl::Mutex maMtx;
 };
+
+
+bool isPotentialRangeLeftOp( OpCode eOp )
+{
+    switch (eOp)
+    {
+        case ocClose:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool isRangeResultFunction( OpCode eOp )
+{
+    switch (eOp)
+    {
+        case ocIndirect:
+        case ocOffset:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool isRangeResultOpCode( OpCode eOp )
+{
+    switch (eOp)
+    {
+        case ocRange:
+        case ocUnion:
+        case ocIntersect:
+        case ocIndirect:
+        case ocOffset:
+            return true;
+        default:
+            return false;
+    }
+}
+
+/**
+    @param  pToken
+            MUST be a valid token, caller has to ensure.
+
+    @param  bRight
+            If bRPN==false, bRight==false means opcodes for left side are
+            checked, bRight==true means opcodes for right side. If bRPN==true
+            it doesn't matter.
+ */
+bool isPotentialRangeType( FormulaToken* pToken, bool bRPN, bool bRight )
+{
+    switch (pToken->GetType())
+    {
+        case svByte:                // could be range result, but only a few
+            if (bRPN)
+                return isRangeResultOpCode( pToken->GetOpCode());
+            else if (bRight)
+                return isRangeResultFunction( pToken->GetOpCode());
+            else
+                return isPotentialRangeLeftOp( pToken->GetOpCode());
+        case svSingleRef:
+        case svDoubleRef:
+        case svIndex:               // could be range
+        //case svRefList:           // um..what?
+        case svExternalSingleRef:
+        case svExternalDoubleRef:
+        case svExternalName:        // could be range
+            return true;
+        default:
+            // Separators are not part of RPN and right opcodes need to be
+            // other StackVarEnum types or functions and thus svByte.
+            return !bRPN && !bRight && isPotentialRangeLeftOp( pToken->GetOpCode());
+    }
+}
+
+bool isIntersectable( FormulaToken** pCode1, FormulaToken** pCode2 )
+{
+    FormulaToken* pToken1 = *pCode1;
+    FormulaToken* pToken2 = *pCode2;
+    if (pToken1 && pToken2)
+        return isPotentialRangeType( pToken1, true, false) && isPotentialRangeType( pToken2, true, true);
+    return false;
+}
+
+bool isAdjacentRpnEnd( sal_uInt16 nPC,
+        FormulaToken const * const * const pCode,
+        FormulaToken const * const * const pCode1,
+        FormulaToken const * const * const pCode2 )
+{
+    return nPC >= 2 && pCode1 && pCode2 &&
+            (pCode2 - pCode1 == 1) && (pCode - pCode2 == 1) &&
+            (*pCode1 != nullptr) && (*pCode2 != nullptr);
+}
+
+bool isAdjacentOrGapRpnEnd( sal_uInt16 nPC,
+        FormulaToken const * const * const pCode,
+        FormulaToken const * const * const pCode1,
+        FormulaToken const * const * const pCode2 )
+{
+    return nPC >= 2 && pCode1 && pCode2 &&
+            (pCode2 > pCode1) && (pCode - pCode2 == 1) &&
+            (*pCode1 != nullptr) && (*pCode2 != nullptr);
+}
 
 
 } // namespace
@@ -365,7 +468,7 @@ uno::Sequence< sheet::FormulaOpCodeMapEntry > FormulaCompiler::OpCodeMap::create
             { FormulaMapGroupSpecialOffset::MACRO             , ocMacro }          ,
             { FormulaMapGroupSpecialOffset::COL_ROW_NAME      , ocColRowName }
         };
-        const size_t nCount = sizeof(aMap)/sizeof(aMap[0]);
+        const size_t nCount = SAL_N_ELEMENTS(aMap);
         // Preallocate vector elements.
         if (aVec.size() < nCount)
         {
@@ -375,9 +478,9 @@ uno::Sequence< sheet::FormulaOpCodeMapEntry > FormulaCompiler::OpCodeMap::create
         } // if (aVec.size() < nCount)
 
         FormulaOpCodeMapEntry aEntry;
-        for (size_t i=0; i < nCount; ++i)
+        for (auto& i : aMap)
         {
-            size_t nIndex = static_cast< size_t >( aMap[i].nOff );
+            size_t nIndex = static_cast< size_t >( i.nOff );
             if (aVec.size() <= nIndex)
             {
                 // The offsets really should be aligned with the size, so if
@@ -387,7 +490,7 @@ uno::Sequence< sheet::FormulaOpCodeMapEntry > FormulaCompiler::OpCodeMap::create
                 aEntry.Token.OpCode = getOpCodeUnknown();
                 aVec.resize( nIndex + 1, aEntry );
             }
-            aEntry.Token.OpCode = aMap[i].eOp;
+            aEntry.Token.OpCode = i.eOp;
             aVec[nIndex] = aEntry;
         }
     }
@@ -405,7 +508,7 @@ uno::Sequence< sheet::FormulaOpCodeMapEntry > FormulaCompiler::OpCodeMap::create
                 SC_OPCODE_CLOSE,
                 SC_OPCODE_SEP,
             };
-            lclPushOpCodeMapEntries( aVec, mpTable, aOpCodes, sizeof(aOpCodes)/sizeof(aOpCodes[0]) );
+            lclPushOpCodeMapEntries( aVec, mpTable, aOpCodes, SAL_N_ELEMENTS(aOpCodes) );
         }
         if ((nGroups & FormulaMapGroup::ARRAY_SEPARATORS) != 0)
         {
@@ -415,7 +518,7 @@ uno::Sequence< sheet::FormulaOpCodeMapEntry > FormulaCompiler::OpCodeMap::create
                 SC_OPCODE_ARRAY_ROW_SEP,
                 SC_OPCODE_ARRAY_COL_SEP
             };
-            lclPushOpCodeMapEntries( aVec, mpTable, aOpCodes, sizeof(aOpCodes)/sizeof(aOpCodes[0]) );
+            lclPushOpCodeMapEntries( aVec, mpTable, aOpCodes, SAL_N_ELEMENTS(aOpCodes) );
         }
         if ((nGroups & FormulaMapGroup::UNARY_OPERATORS) != 0)
         {
@@ -475,7 +578,7 @@ uno::Sequence< sheet::FormulaOpCodeMapEntry > FormulaCompiler::OpCodeMap::create
                 SC_OPCODE_NOT,
                 SC_OPCODE_NEG
             };
-            lclPushOpCodeMapEntries( aVec, mpTable, aOpCodes, sizeof(aOpCodes)/sizeof(aOpCodes[0]) );
+            lclPushOpCodeMapEntries( aVec, mpTable, aOpCodes, SAL_N_ELEMENTS(aOpCodes) );
             // functions with 2 or more parameters.
             for (sal_uInt16 nOp = SC_OPCODE_START_2_PAR; nOp < SC_OPCODE_STOP_2_PAR && nOp < mnSymbols; ++nOp)
             {
@@ -512,7 +615,6 @@ uno::Sequence< sheet::FormulaOpCodeMapEntry > FormulaCompiler::OpCodeMap::create
 
 void FormulaCompiler::OpCodeMap::putOpCode( const OUString & rStr, const OpCode eOp, const CharClass* pCharClass )
 {
-    DBG_ASSERT( 0 < eOp && sal_uInt16(eOp) < mnSymbols, "OpCodeMap::putOpCode: OpCode out of range");
     if (0 < eOp && sal_uInt16(eOp) < mnSymbols)
     {
         SAL_WARN_IF( !(mpTable[eOp].isEmpty() || (mpTable[eOp] == rStr) ||
@@ -525,6 +627,10 @@ void FormulaCompiler::OpCodeMap::putOpCode( const OUString & rStr, const OpCode 
         mpTable[eOp] = rStr;
         OUString aUpper( pCharClass ? pCharClass->uppercase( rStr) : rStr.toAsciiUpperCase());
         mpHashMap->insert( OpCodeHashMap::value_type( aUpper, eOp));
+    }
+    else
+    {
+        SAL_WARN( "formula.core", "OpCodeMap::putOpCode: OpCode out of range");
     }
 }
 
@@ -764,15 +870,15 @@ void FormulaCompiler::loadSymbols( sal_uInt16 nSymbols, FormulaGrammar::Grammar 
     }
 }
 
-void FormulaCompiler::fillFromAddInCollectionUpperName( NonConstOpCodeMapPtr /*xMap */) const
+void FormulaCompiler::fillFromAddInCollectionUpperName( const NonConstOpCodeMapPtr& /*xMap */) const
 {
 }
 
-void FormulaCompiler::fillFromAddInCollectionEnglishName( NonConstOpCodeMapPtr /*xMap */) const
+void FormulaCompiler::fillFromAddInCollectionEnglishName( const NonConstOpCodeMapPtr& /*xMap */) const
 {
 }
 
-void FormulaCompiler::fillFromAddInMap( NonConstOpCodeMapPtr /*xMap*/, FormulaGrammar::Grammar /*_eGrammar */) const
+void FormulaCompiler::fillFromAddInMap( const NonConstOpCodeMapPtr& /*xMap*/, FormulaGrammar::Grammar /*_eGrammar */) const
 {
 }
 
@@ -897,7 +1003,7 @@ void FormulaCompiler::OpCodeMap::putCopyOpCode( const OUString& rSymbol, OpCode 
     }
 }
 
-void FormulaCompiler::OpCodeMap::copyFrom( const OpCodeMap& r, bool bOverrideKnownBad )
+void FormulaCompiler::OpCodeMap::copyFrom( const OpCodeMap& r )
 {
     delete mpHashMap;
     mpHashMap = new OpCodeHashMap( mnSymbols);
@@ -916,7 +1022,7 @@ void FormulaCompiler::OpCodeMap::copyFrom( const OpCodeMap& r, bool bOverrideKno
     // For bOverrideKnownBad when copying from the English core map (ODF 1.1
     // and API) to the native map (UI "use English function names") replace the
     // known bad legacy function names with correct ones.
-    if (bOverrideKnownBad && r.mbCore &&
+    if (r.mbCore &&
             FormulaGrammar::extractFormulaLanguage( meGrammar) == sheet::FormulaLanguage::NATIVE &&
             FormulaGrammar::extractFormulaLanguage( r.meGrammar) == sheet::FormulaLanguage::ENGLISH)
     {
@@ -1058,15 +1164,19 @@ bool FormulaCompiler::GetToken()
         bStop = true;
     else
     {
+        FormulaTokenRef pCurrToken = mpToken;
+        FormulaTokenRef pSpacesToken;
         short nWasColRowName;
-        if ( pArr->nIndex
-          && pArr->pCode[ pArr->nIndex-1 ]->GetOpCode() == ocColRowName )
+        if ( pArr->nIndex > 0 && pArr->pCode[ pArr->nIndex-1 ]->GetOpCode() == ocColRowName )
              nWasColRowName = 1;
         else
              nWasColRowName = 0;
         mpToken = pArr->Next();
         while( mpToken && mpToken->GetOpCode() == ocSpaces )
         {
+            // For significant whitespace remember last ocSpaces token. Usually
+            // there's only one even for multiple spaces.
+            pSpacesToken = mpToken;
             if ( nWasColRowName )
                 nWasColRowName++;
             if ( bAutoCorrect && !pStack )
@@ -1092,6 +1202,17 @@ bool FormulaCompiler::GetToken()
                 mpToken = new FormulaByteToken( ocIntersect );
                 pArr->nIndex--;     // we advanced to the second ocColRowName, step back
             }
+            else if (pSpacesToken && FormulaGrammar::isExcelSyntax( meGrammar) &&
+                    pCurrToken && mpToken &&
+                    isPotentialRangeType( pCurrToken.get(), false, false) &&
+                    isPotentialRangeType( mpToken.get(), false, true))
+            {
+                // Let IntersectionLine() <- Factor() decide how to treat this,
+                // once the actual arguments are determined in RPN.
+                mpToken = pSpacesToken;
+                pArr->nIndex--;     // step back from next non-spaces token
+                return true;
+            }
         }
     }
     if( bStop )
@@ -1099,28 +1220,29 @@ bool FormulaCompiler::GetToken()
         mpToken = new FormulaByteToken( ocStop );
         return false;
     }
-    if ( mpToken->GetOpCode() == ocSubTotal ||
-         mpToken->GetOpCode() == ocAggregate )
-        glSubTotal = true;
-    else if ( mpToken->IsExternalRef() )
+    if ( mpToken->IsExternalRef() )
     {
         return HandleExternalReference(*mpToken);
     }
-    else if( mpToken->GetOpCode() == ocName )
+    else
     {
-        return HandleRange();
-    }
-    else if( mpToken->GetOpCode() == ocColRowName )
-    {
-        return HandleColRowName();
-    }
-    else if( mpToken->GetOpCode() == ocDBArea )
-    {
-        return HandleDbData();
-    }
-    else if( mpToken->GetOpCode() == ocTableRef )
-    {
-        return HandleTableRef();
+        switch (mpToken->GetOpCode())
+        {
+            case ocSubTotal:
+            case ocAggregate:
+                glSubTotal = true;
+                break;
+            case ocName:
+                return HandleRange();
+            case ocColRowName:
+                return HandleColRowName();
+            case ocDBArea:
+                return HandleDbData();
+            case ocTableRef:
+                return HandleTableRef();
+            default:
+                ;   // nothing
+        }
     }
     return true;
 }
@@ -1253,7 +1375,7 @@ void FormulaCompiler::Factor()
             if (eOp == ocIsoWeeknum && FormulaGrammar::isODFF( meGrammar ))
             {
                 // tdf#50950 ocIsoWeeknum can have 2 arguments when saved by older versions of Calc;
-                // the opcode then has to be changed to ocWeek for backward compatibilty
+                // the opcode then has to be changed to ocWeek for backward compatibility
                 pFacToken = mpToken;
                 eOp = NextToken();
                 bool bNoParam = false;
@@ -1271,6 +1393,7 @@ void FormulaCompiler::Factor()
                 else
                     SetError( errPairExpected);
                 sal_uInt8 nSepCount = 0;
+                const sal_uInt16 nSepPos = pArr->nIndex - 1;    // separator position, if any
                 if( !bNoParam )
                 {
                     nSepCount++;
@@ -1289,7 +1412,39 @@ void FormulaCompiler::Factor()
                 pFacToken->SetByte( nSepCount );
                 if (nSepCount == 2)
                 {
-                    pFacToken->NewOpCode( ocWeek, FormulaToken::PrivateAccess());
+                    /* XXX TODO FIXME: activate this conversion to ISOWEEKNUM
+                     * when at least two releases can actually handle the real
+                     * ISOWEEKNUM with one parameter, i.e. for 5.3 or 5.2 if
+                     * 5.0.5 is patched. Until then unconditionally use the
+                     * WEEKNUM_OOO compatibility function. */
+#if 0
+                    // An old mode!=1 indicates ISO week, remove argument if
+                    // literal double value and keep function. Anything else
+                    // can not be resolved, there exists no "like ISO but week
+                    // starts on Sunday" mode in WEEKNUM and for an expression
+                    // we can't determine.
+                    if (pc >= 2 && pArr->nIndex == nSepPos + 3 &&
+                            pArr->pCode[nSepPos+1]->GetType() == svDouble &&
+                            pArr->pCode[nSepPos+1]->GetDouble() != 1.0 &&
+                            pArr->RemoveToken( nSepPos, 2) == 2)
+                    {
+                        // Remove the ocPush/svDouble just removed also from
+                        // the compiler local RPN array.
+                        --pCode, --pc;
+                        (*pCode)->DecRef(); // may be dead now
+                        pFacToken->SetByte( nSepCount - 1 );
+                    }
+                    else
+                    {
+                        // For the remaining two arguments cases use the
+                        // compatibility function.
+                        pFacToken->NewOpCode( ocWeeknumOOo, FormulaToken::PrivateAccess());
+                    }
+#else
+                    (void) nSepPos;
+                    // Use compatibility function.
+                    pFacToken->NewOpCode( ocWeeknumOOo, FormulaToken::PrivateAccess());
+#endif
                 }
                 PutCode( pFacToken );
             }
@@ -1454,7 +1609,7 @@ void FormulaCompiler::Factor()
                         bLimitOk = (nJumpCount <= 3);
                         break;
                     case ocChoose:
-                        bLimitOk = (nJumpCount < FORMULA_MAXJUMPCOUNT); /* TODO: check, really <, not <=? */
+                        bLimitOk = (nJumpCount < FORMULA_MAXJUMPCOUNT);
                         break;
                     case ocIfError:
                     case ocIfNA:
@@ -1529,12 +1684,33 @@ void FormulaCompiler::RangeLine()
 void FormulaCompiler::IntersectionLine()
 {
     RangeLine();
-    while (mpToken->GetOpCode() == ocIntersect)
+    while (mpToken->GetOpCode() == ocIntersect || mpToken->GetOpCode() == ocSpaces)
     {
+        sal_uInt16 nCodeIndex = pArr->nIndex - 1;
+        FormulaToken** pCode1 = pCode - 1;
         FormulaTokenRef p = mpToken;
         NextToken();
         RangeLine();
-        PutCode(p);
+        FormulaToken** pCode2 = pCode - 1;
+        if (p->GetOpCode() == ocSpaces)
+        {
+            // Convert to intersection if both left and right are references or
+            // functions (potentially returning references, if not then a space
+            // or no space would be a syntax error anyway), not other operators
+            // or operands. Else discard.
+            if (isAdjacentOrGapRpnEnd( pc, pCode, pCode1, pCode2) && isIntersectable( pCode1, pCode2))
+            {
+                FormulaTokenRef pIntersect( new FormulaByteToken( ocIntersect));
+                // Replace ocSpaces with ocIntersect so that when switching
+                // formula syntax the correct operator string is created.
+                pArr->ReplaceToken( nCodeIndex, pIntersect.get(), FormulaTokenArray::ReplaceMode::CODE_ONLY);
+                PutCode( pIntersect);
+            }
+        }
+        else
+        {
+            PutCode(p);
+        }
     }
 }
 
@@ -1674,21 +1850,18 @@ void FormulaCompiler::SetError( sal_uInt16 /*nError*/ )
 {
 }
 
-FormulaTokenRef FormulaCompiler::ExtendRangeReference( FormulaToken & /*rTok1*/, FormulaToken & /*rTok2*/,
-        bool /*bReuseDoubleRef*/ )
+FormulaTokenRef FormulaCompiler::ExtendRangeReference( FormulaToken & /*rTok1*/, FormulaToken & /*rTok2*/ )
 {
     return FormulaTokenRef();
 }
 
 bool FormulaCompiler::MergeRangeReference( FormulaToken * * const pCode1, FormulaToken * const * const pCode2 )
 {
-    FormulaToken *p1, *p2;
-    if (pc < 2 || !pCode1 || !pCode2 ||
-            (pCode2 - pCode1 != 1) || (pCode - pCode2 != 1) ||
-            ((p1 = *pCode1) == nullptr) || ((p2 = *pCode2) == nullptr) )
+    if (!isAdjacentRpnEnd( pc, pCode, pCode1, pCode2))
         return false;
 
-    FormulaTokenRef p = ExtendRangeReference( *p1, *p2, true);
+    FormulaToken *p1 = *pCode1, *p2 = *pCode2;
+    FormulaTokenRef p = ExtendRangeReference( *p1, *p2);
     if (!p)
         return false;
 
@@ -1696,7 +1869,8 @@ bool FormulaCompiler::MergeRangeReference( FormulaToken * * const pCode1, Formul
     p1->DecRef();
     p2->DecRef();
     *pCode1 = p.get();
-    --pCode, --pc;
+    --pCode;
+    --pc;
 
     return true;
 }
@@ -1829,11 +2003,10 @@ void FormulaCompiler::CreateStringFromTokenArray( OUStringBuffer& rBuffer )
     }
 }
 
-const FormulaToken* FormulaCompiler::CreateStringFromToken( OUString& rFormula, const FormulaToken* pTokenP,
-        bool bAllowArrAdvance )
+const FormulaToken* FormulaCompiler::CreateStringFromToken( OUString& rFormula, const FormulaToken* pTokenP )
 {
     OUStringBuffer aBuffer;
-    const FormulaToken* p = CreateStringFromToken( aBuffer, pTokenP, bAllowArrAdvance );
+    const FormulaToken* p = CreateStringFromToken( aBuffer, pTokenP );
     rFormula += aBuffer.makeStringAndClear();
     return p;
 }
@@ -1885,6 +2058,14 @@ const FormulaToken* FormulaCompiler::CreateStringFromToken( OUStringBuffer& rBuf
     }
     else if( eOp >= ocInternalBegin && eOp <= ocInternalEnd )
         rBuffer.appendAscii( pInternal[ eOp - ocInternalBegin ] );
+    else if (eOp == ocIntersect)
+    {
+        // Nasty, ugly, horrific, terrifying..
+        if (FormulaGrammar::isExcelSyntax( meGrammar))
+            rBuffer.append(' ');
+        else
+            rBuffer.append( mxSymbols->getSymbol( eOp));
+    }
     else if( (sal_uInt16) eOp < mxSymbols->getSymbolCount())        // Keyword:
         rBuffer.append( mxSymbols->getSymbol( eOp));
     else
@@ -2079,7 +2260,7 @@ void FormulaCompiler::SetNativeSymbols( const OpCodeMapPtr& xMap )
 {
     NonConstOpCodeMapPtr xSymbolsNative;
     lcl_fillNativeSymbols( xSymbolsNative);
-    xSymbolsNative->copyFrom( *xMap, true);
+    xSymbolsNative->copyFrom( *xMap );
 }
 
 
@@ -2173,10 +2354,29 @@ OpCode FormulaCompiler::NextToken()
                 }
             }
         }
-        eLastOp = eOp;
+        // Nasty, ugly, horrific, terrifying.. significant whitespace..
+        if (eOp == ocSpaces && FormulaGrammar::isExcelSyntax( meGrammar))
+        {
+            // Fake an intersection op as last op for the next round, but at
+            // least roughly check if it could make sense at all.
+            FormulaToken* pPrev = pArr->PeekPrevNoSpaces();
+            if (pPrev && isPotentialRangeType( pPrev, false, false))
+            {
+                FormulaToken* pNext = pArr->PeekNextNoSpaces();
+                if (pNext && isPotentialRangeType( pNext, false, true))
+                    eLastOp = ocIntersect;
+                else
+                    eLastOp = eOp;
+            }
+            else
+                eLastOp = eOp;
+        }
+        else
+            eLastOp = eOp;
     }
     return eOp;
 }
+
 void FormulaCompiler::PutCode( FormulaTokenRef& p )
 {
     if( pc >= FORMULA_MAXTOKENS - 1 )

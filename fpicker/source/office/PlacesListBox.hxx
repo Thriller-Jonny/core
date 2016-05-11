@@ -53,7 +53,7 @@ class PlacesListBox : public Control
         virtual ~PlacesListBox( );
         virtual void dispose() override;
 
-        void AppendPlace( PlacePtr pPlace );
+        void AppendPlace( const PlacePtr& pPlace );
         void RemovePlace( sal_uInt16 nPos );
         void RemoveSelectedPlace();
         sal_Int32 GetNbEditablePlaces() { return mnNbEditables;}
@@ -66,15 +66,15 @@ class PlacesListBox : public Control
         void SetSizePixel( const Size& rNewSize ) override;
         void updateView( );
 
-        VclPtr<PushButton> GetAddButton() const { return mpAddBtn; }
-        VclPtr<PushButton> GetDeleteButton() const { return mpDelBtn; }
-        VclPtr<PlacesListBox_Impl> GetPlacesListBox() const { return mpImpl; }
+        const VclPtr<PushButton>& GetAddButton() const { return mpAddBtn; }
+        const VclPtr<PushButton>& GetDeleteButton() const { return mpDelBtn; }
+        const VclPtr<PlacesListBox_Impl>& GetPlacesListBox() const { return mpImpl; }
 
         virtual bool Notify( NotifyEvent& rNEvt ) override;
 
     private:
 
-        Image getEntryIcon( PlacePtr pPlace );
+        Image getEntryIcon( const PlacePtr& pPlace );
 
         DECL_LINK_TYPED( Selection, SvTreeListBox*, void );
         DECL_LINK_TYPED( DoubleClick, SvTreeListBox*, bool );

@@ -22,16 +22,12 @@
 #include "svgfilter.hxx"
 #include "svgwriter.hxx"
 
-
 #include <vcl/unohelp.hxx>
 #include <vcl/font.hxx>
 #include <vcl/outdev.hxx>
 #include <vcl/settings.hxx>
 
 static const sal_Int32 nFontEM = 2048;
-
-
-// - SVGFontExport -
 
 
 SVGFontExport::SVGFontExport( SVGExport& rExport, const ::std::vector< ObjectRepresentation >& rObjects ) :
@@ -42,18 +38,16 @@ SVGFontExport::SVGFontExport( SVGExport& rExport, const ::std::vector< ObjectRep
 }
 
 
-
 SVGFontExport::~SVGFontExport()
 {
 }
-
 
 
 SVGFontExport::GlyphSet& SVGFontExport::implGetGlyphSet( const vcl::Font& rFont )
 {
     FontWeight      eWeight( WEIGHT_NORMAL );
     FontItalic      eItalic( ITALIC_NONE );
-    OUString aFontName( rFont.GetName() );
+    const OUString& aFontName( rFont.GetFamilyName() );
     sal_Int32       nNextTokenPos( 0 );
 
     switch( rFont.GetWeight() )
@@ -75,11 +69,10 @@ SVGFontExport::GlyphSet& SVGFontExport::implGetGlyphSet( const vcl::Font& rFont 
 }
 
 
-
 void SVGFontExport::implCollectGlyphs()
 {
     ScopedVclPtrInstance< VirtualDevice > pVDev;
-    ObjectVector::const_iterator    aIter( maObjects.begin() );
+    ObjectVector::const_iterator aIter( maObjects.begin() );
 
     pVDev->EnableOutput( false );
 
@@ -176,7 +169,6 @@ void SVGFontExport::implCollectGlyphs()
 }
 
 
-
 void SVGFontExport::implEmbedFont( const vcl::Font& rFont )
 {
     if( mrExport.IsEmbedFonts() )
@@ -195,8 +187,8 @@ void SVGFontExport::implEmbedFont( const vcl::Font& rFont )
                 ScopedVclPtrInstance< VirtualDevice > pVDev;
                 vcl::Font           aFont( rFont );
 
-                aFont.SetSize( Size( 0, nFontEM ) );
-                aFont.SetAlign( ALIGN_BASELINE );
+                aFont.SetFontSize( Size( 0, nFontEM ) );
+                aFont.SetAlignment( ALIGN_BASELINE );
 
                 pVDev->SetMapMode( MAP_100TH_MM );
                 pVDev->SetFont( aFont );
@@ -222,7 +214,7 @@ void SVGFontExport::implEmbedFont( const vcl::Font& rFont )
                     else
                         aFontStyle = "normal";
 
-                    mrExport.AddAttribute( XML_NAMESPACE_NONE, "font-family", GetMappedFontName( rFont.GetName() ) );
+                    mrExport.AddAttribute( XML_NAMESPACE_NONE, "font-family", GetMappedFontName( rFont.GetFamilyName() ) );
                     mrExport.AddAttribute( XML_NAMESPACE_NONE, "units-per-em", aUnitsPerEM );
                     mrExport.AddAttribute( XML_NAMESPACE_NONE, "font-weight", aFontWeight );
                     mrExport.AddAttribute( XML_NAMESPACE_NONE, "font-style", aFontStyle );
@@ -256,7 +248,6 @@ void SVGFontExport::implEmbedFont( const vcl::Font& rFont )
         }
     }
 }
-
 
 
 void SVGFontExport::implEmbedGlyph( OutputDevice& rOut, const OUString& rCellStr )
@@ -293,7 +284,6 @@ void SVGFontExport::implEmbedGlyph( OutputDevice& rOut, const OUString& rCellStr
 }
 
 
-
 void SVGFontExport::EmbedFonts()
 {
     implCollectGlyphs();
@@ -314,7 +304,7 @@ void SVGFontExport::EmbedFonts()
             {
                 vcl::Font aFont;
 
-                aFont.SetName( (*aGlyphTreeIter).first );
+                aFont.SetFamilyName( (*aGlyphTreeIter).first );
                 aFont.SetWeight( (*aFontWeightIter).first );
                 aFont.SetItalic( (*aFontItalicIter).first );
 
@@ -329,7 +319,6 @@ void SVGFontExport::EmbedFonts()
         ++aGlyphTreeIter;
     }
 }
-
 
 
 OUString SVGFontExport::GetMappedFontName( const OUString& rFontName ) const

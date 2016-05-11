@@ -62,7 +62,6 @@ using namespace ::osl;
 using namespace ::utl;
 
 
-
 OQueryComposer::OQueryComposer(const Reference< XConnection>& _xConnection)
  : OSubComponent(m_aMutex,_xConnection)
 {
@@ -186,7 +185,7 @@ void SAL_CALL OQueryComposer::appendFilterByColumn( const Reference< XPropertySe
 
     m_xComposerHelper->setQuery(getQuery());
     m_xComposerHelper->setFilter(OUString());
-    m_xComposerHelper->appendFilterByColumn(column, sal_True, SQLFilterOperator::EQUAL);
+    m_xComposerHelper->appendFilterByColumn(column, true, SQLFilterOperator::EQUAL);
 
     FilterCreator aFilterCreator;
     aFilterCreator.append(getFilter());

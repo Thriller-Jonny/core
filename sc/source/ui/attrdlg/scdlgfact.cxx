@@ -55,7 +55,6 @@
 #include "styledlg.hxx"
 #include "subtdlg.hxx"
 #include "textdlgs.hxx"
-#include "validate.hxx"
 #include "sortdlg.hxx"
 #include "textimportoptions.hxx"
 #include "opredlin.hxx"
@@ -434,10 +433,9 @@ ScConditionalFormat* AbstractScCondFormatManagerDlg_Impl::GetCondFormatSelected(
     return pDlg->GetCondFormatSelected();
 }
 
-long AbstractScMetricInputDlg_Impl::GetInputValue( FieldUnit eUnit ) const
+long AbstractScMetricInputDlg_Impl::GetInputValue() const
 {
-
-    return pDlg->GetInputValue( eUnit );
+    return pDlg->GetInputValue();
 }
 
 sal_uInt16 AbstractScMoveTableDlg_Impl::GetSelectedDocument() const
@@ -595,16 +593,16 @@ bool AbstractScTextImportOptionsDlg_Impl::IsDateConversionSet() const
 }
 
 // =========================Factories  for createdialog ===================
-AbstractScImportAsciiDlg * ScAbstractDialogFactory_Impl::CreateScImportAsciiDlg ( vcl::Window* pParent, const OUString& aDatName,
+AbstractScImportAsciiDlg * ScAbstractDialogFactory_Impl::CreateScImportAsciiDlg ( const OUString& aDatName,
                                                     SvStream* pInStream, ScImportAsciiCall eCall )
 {
-    VclPtr<ScImportAsciiDlg> pDlg = VclPtr<ScImportAsciiDlg>::Create( pParent, aDatName,pInStream, eCall );
+    VclPtr<ScImportAsciiDlg> pDlg = VclPtr<ScImportAsciiDlg>::Create( nullptr, aDatName,pInStream, eCall );
     return new AbstractScImportAsciiDlg_Impl( pDlg );
 }
 
-AbstractScTextImportOptionsDlg * ScAbstractDialogFactory_Impl::CreateScTextImportOptionsDlg(vcl::Window* pParent)
+AbstractScTextImportOptionsDlg * ScAbstractDialogFactory_Impl::CreateScTextImportOptionsDlg()
 {
-    VclPtr<ScTextImportOptionsDlg> pDlg = VclPtr<ScTextImportOptionsDlg>::Create(pParent);
+    VclPtr<ScTextImportOptionsDlg> pDlg = VclPtr<ScTextImportOptionsDlg>::Create(nullptr);
     return new AbstractScTextImportOptionsDlg_Impl(pDlg);
 }
 
@@ -663,7 +661,7 @@ AbstractScDataPilotSourceTypeDlg* ScAbstractDialogFactory_Impl::CreateScDataPilo
 }
 
 AbstractScDataPilotServiceDlg* ScAbstractDialogFactory_Impl::CreateScDataPilotServiceDlg( vcl::Window* pParent,
-                                                                        const css::uno::Sequence<OUString>& rServices,
+                                                                        const std::vector<OUString>& rServices,
                                                             int nId )
 {
     VclPtr<ScDataPilotServiceDlg> pDlg;
@@ -695,10 +693,9 @@ AbstractScDataFormDlg* ScAbstractDialogFactory_Impl::CreateScDataFormDlg(vcl::Wi
     return new AbstractScDataFormDlg_Impl(pDlg);
 }
 
-AbstractScDeleteContentsDlg* ScAbstractDialogFactory_Impl::CreateScDeleteContentsDlg(vcl::Window* pParent,
-                                                                                     InsertDeleteFlags nCheckDefaults)
+AbstractScDeleteContentsDlg* ScAbstractDialogFactory_Impl::CreateScDeleteContentsDlg(vcl::Window* pParent)
 {
-    VclPtr<ScDeleteContentsDlg> pDlg = VclPtr<ScDeleteContentsDlg>::Create(pParent, nCheckDefaults);
+    VclPtr<ScDeleteContentsDlg> pDlg = VclPtr<ScDeleteContentsDlg>::Create(pParent, InsertDeleteFlags::NONE);
     return new AbstractScDeleteContentsDlg_Impl( pDlg );
 }
 
@@ -717,10 +714,9 @@ AbstractScFillSeriesDlg* ScAbstractDialogFactory_Impl::CreateScFillSeriesDlg( vc
 }
 
 AbstractScGroupDlg* ScAbstractDialogFactory_Impl::CreateAbstractScGroupDlg( vcl::Window* pParent,
-                                                            bool bUnGroup,
-                                                            bool bRows )
+                                                            bool bUnGroup )
 {
-    VclPtr<ScGroupDlg> pDlg = VclPtr<ScGroupDlg>::Create( pParent, bUnGroup, bRows);
+    VclPtr<ScGroupDlg> pDlg = VclPtr<ScGroupDlg>::Create( pParent, bUnGroup, true/*bRows*/);
     return new AbstractScGroupDlg_Impl( pDlg );
 }
 
@@ -744,10 +740,9 @@ AbstractScInsertCellDlg * ScAbstractDialogFactory_Impl::CreateScInsertCellDlg( v
 }
 
 AbstractScInsertContentsDlg * ScAbstractDialogFactory_Impl::CreateScInsertContentsDlg( vcl::Window*      pParent,
-                                                                                    InsertDeleteFlags nCheckDefaults,
                                                                                     const OUString* pStrTitle )
 {
-    VclPtr<ScInsertContentsDlg> pDlg = VclPtr<ScInsertContentsDlg>::Create(pParent, nCheckDefaults, pStrTitle);
+    VclPtr<ScInsertContentsDlg> pDlg = VclPtr<ScInsertContentsDlg>::Create(pParent, InsertDeleteFlags::NONE, pStrTitle);
     return new AbstractScInsertContentsDlg_Impl( pDlg );
 }
 
@@ -826,10 +821,9 @@ AbstractScDPSubtotalDlg * ScAbstractDialogFactory_Impl::CreateScDPSubtotalDlg ( 
                                                                 ScDPObject& rDPObj,
                                                                 const ScDPLabelData& rLabelData,
                                                                 const ScPivotFuncData& rFuncData,
-                                                                const ScDPNameVec& rDataFields,
-                                                                bool bEnableLayout )
+                                                                const ScDPNameVec& rDataFields )
 {
-    VclPtr<ScDPSubtotalDlg> pDlg = VclPtr<ScDPSubtotalDlg>::Create( pParent, rDPObj, rLabelData, rFuncData, rDataFields, bEnableLayout );
+    VclPtr<ScDPSubtotalDlg> pDlg = VclPtr<ScDPSubtotalDlg>::Create( pParent, rDPObj, rLabelData, rFuncData, rDataFields, true/*bEnableLayout*/ );
     return new AbstractScDPSubtotalDlg_Impl( pDlg );
 }
 
@@ -892,7 +886,7 @@ AbstractScTabBgColorDlg * ScAbstractDialogFactory_Impl::CreateScTabBgColorDlg(
     return new AbstractScTabBgColorDlg_Impl( pDlg );
 }
 
-AbstractScImportOptionsDlg * ScAbstractDialogFactory_Impl::CreateScImportOptionsDlg ( vcl::Window*               pParent,
+AbstractScImportOptionsDlg * ScAbstractDialogFactory_Impl::CreateScImportOptionsDlg (
                                                                     bool                    bAscii,
                                                                     const ScImportOptions*  pOptions,
                                                                     const OUString*         pStrTitle,
@@ -900,7 +894,7 @@ AbstractScImportOptionsDlg * ScAbstractDialogFactory_Impl::CreateScImportOptions
                                                                     bool                    bOnlyDbtoolsEncodings,
                                                                     bool                    bImport )
 {
-    VclPtr<ScImportOptionsDlg> pDlg = VclPtr<ScImportOptionsDlg>::Create( pParent, bAscii, pOptions,pStrTitle, bMultiByte,bOnlyDbtoolsEncodings, bImport );
+    VclPtr<ScImportOptionsDlg> pDlg = VclPtr<ScImportOptionsDlg>::Create( nullptr, bAscii, pOptions,pStrTitle, bMultiByte,bOnlyDbtoolsEncodings, bImport );
     return new AbstractScImportOptionsDlg_Impl( pDlg );
 }
 
@@ -998,13 +992,6 @@ SfxAbstractTabDialog * ScAbstractDialogFactory_Impl::CreateScParagraphDlg(
     return new ScAbstractTabDialog_Impl(pDlg);
 }
 
-SfxAbstractTabDialog * ScAbstractDialogFactory_Impl::CreateScValidationDlg(vcl::Window* pParent,
-    const SfxItemSet* pArgSet, ScTabViewShell *pTabVwSh)
-{
-    VclPtr<SfxTabDialog> pDlg = VclPtr<ScValidationDlg>::Create(pParent, pArgSet, pTabVwSh);
-    return new ScAbstractTabDialog_Impl(pDlg);
-}
-
 SfxAbstractTabDialog * ScAbstractDialogFactory_Impl::CreateScSortDlg(vcl::Window* pParent, const SfxItemSet* pArgSet)
 {
     VclPtr<SfxTabDialog> pDlg = VclPtr<ScSortDlg>::Create( pParent, pArgSet );
@@ -1041,11 +1028,6 @@ CreateTabPage ScAbstractDialogFactory_Impl::GetTabPageCreatorFunc( sal_uInt16 nI
     }
 
     return nullptr;
-}
-
-GetTabPageRanges ScAbstractDialogFactory_Impl::GetTabPageRangesFunc()
-{
-    return ScTPValidationValue::GetRanges;
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

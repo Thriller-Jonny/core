@@ -31,7 +31,6 @@
 #define CTF_RPT_NUMBERFORMAT                    (XML_DB_CTF_START + 1)
 
 
-
 class SvXMLStylesContext;
 class SvXMLTokenMap;
 namespace rptxml
@@ -40,9 +39,6 @@ namespace rptxml
     {
         OPropertyHandlerFactory(const OPropertyHandlerFactory&) = delete;
         void operator =(const OPropertyHandlerFactory&) = delete;
-    protected:
-        mutable ::std::unique_ptr<XMLConstantsPropertyHandler>    m_pDisplayHandler;
-        mutable ::std::unique_ptr<XMLPropertyHandler>             m_pTextAlignHandler;
     public:
         OPropertyHandlerFactory();
         virtual ~OPropertyHandlerFactory();

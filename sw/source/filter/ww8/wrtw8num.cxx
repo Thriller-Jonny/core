@@ -424,8 +424,8 @@ void MSWordExportBase::AbstractNumberingDefinitions()
                 }
 
                 eChrSet = pBulletFont->GetCharSet();
-                sFontName = pBulletFont->GetName();
-                eFamily = pBulletFont->GetFamily();
+                sFontName = pBulletFont->GetFamilyName();
+                eFamily = pBulletFont->GetFamilyType();
 
                 if ( IsStarSymbol(sFontName) )
                     SubstituteBullet( sNumStr, eChrSet, sFontName );
@@ -498,7 +498,7 @@ void MSWordExportBase::AbstractNumberingDefinitions()
                     aSet.ClearItem( RES_CHRATR_FONT );
 
                     if ( sFontName.isEmpty() )
-                        sFontName = pBulletFont->GetName();
+                        sFontName = pBulletFont->GetFamilyName();
 
                     pPseudoFont = new wwFont( sFontName, pBulletFont->GetPitch(),
                         eFamily, eChrSet);

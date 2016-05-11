@@ -38,6 +38,8 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#elif defined( WNT )
+#include <process.h>
 #endif
 
 using namespace osl;
@@ -227,7 +229,7 @@ OUString lcl_createName(
     const OUString& rLeadingChars, Tokens & tokens, const OUString* pExtension,
     const OUString* pParent, bool bDirectory, bool bKeep, bool bLock)
 {
-    OUString aName = ConstructTempDir_Impl( pParent ) + rLeadingChars;;
+    OUString aName = ConstructTempDir_Impl( pParent ) + rLeadingChars;
     OUString token;
     while (tokens.next(&token))
     {
@@ -298,6 +300,10 @@ OUString CreateTempName_Impl( const OUString* pParent, bool bKeep, bool bDir = t
     static const OUString aPidString = OUString::number(pid);
     aEyeCatcher += aPidString;
 #endif
+#elif defined(WNT)
+    static const int pid = _getpid();
+    static const OUString aPidString = OUString::number(pid);
+    aEyeCatcher += aPidString;
 #endif
     UniqueTokens t;
     return lcl_createName(aEyeCatcher, t, nullptr, pParent, bDir, bKeep, false);
@@ -322,13 +328,13 @@ TempFile::TempFile( const OUString* pParent, bool bDirectory )
     aName = CreateTempName_Impl( pParent, true, bDirectory );
 }
 
-TempFile::TempFile( const OUString& rLeadingChars, bool _bStartWithZero, const OUString* pExtension, const OUString* pParent, bool bDirectory)
+TempFile::TempFile( const OUString& rLeadingChars, bool _bStartWithZero, const OUString* pExtension, const OUString* pParent)
     : pStream( nullptr )
-    , bIsDirectory( bDirectory )
+    , bIsDirectory( false )
     , bKillingFileEnabled( false )
 {
     SequentialTokens t(_bStartWithZero);
-    aName = lcl_createName(rLeadingChars, t, pExtension, pParent, bDirectory, true, true);
+    aName = lcl_createName(rLeadingChars, t, pExtension, pParent, false/*bDirectory*/, true, true);
 }
 
 TempFile::~TempFile()

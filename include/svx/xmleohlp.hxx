@@ -29,30 +29,21 @@
 #include <com/sun/star/embed/XEmbeddedObject.hpp>
 #include <svx/svxdllapi.h>
 
-
-// - SvXMLEmbeddedObjectHelper -
-
-
 enum SvXMLEmbeddedObjectHelperMode
 {
     EMBEDDEDOBJECTHELPER_MODE_READ = 0,
     EMBEDDEDOBJECTHELPER_MODE_WRITE = 1
 };
 
+namespace comphelper { class IEmbeddedHelper; }
 
-// - SvXMLEmbeddedObjectHelper -
-
-
-namespace comphelper {
-class IEmbeddedHelper;
-}
 class SvGlobalName;
 struct OUStringLess;
 class OutputStorageWrapper_Impl;
 
-class SVX_DLLPUBLIC SvXMLEmbeddedObjectHelper : public ::cppu::WeakComponentImplHelper2<
-    css::document::XEmbeddedObjectResolver,
-    css::container::XNameAccess >
+
+class SVX_DLLPUBLIC SvXMLEmbeddedObjectHelper :
+    public ::cppu::WeakComponentImplHelper2< css::document::XEmbeddedObjectResolver, css::container::XNameAccess >
 {
     typedef ::std::map< OUString, OutputStorageWrapper_Impl*,
                          OUStringLess > SvXMLEmbeddedObjectHelper_Impl;
@@ -84,7 +75,7 @@ private:
     SVX_DLLPRIVATE css::uno::Reference < css::embed::XStorage > ImplGetContainerStorage(
                                     const OUString& rStorageName );
 
-    SVX_DLLPRIVATE bool                 ImplReadObject(
+    SVX_DLLPRIVATE void                 ImplReadObject(
                                     const OUString& rContainerStorageName,
                                     OUString& rObjName,
                                     const SvGlobalName *pClassId,
@@ -141,6 +132,6 @@ public:
         OUString& rObjectStorageName);
 };
 
-#endif
+#endif // INCLUDED_SVX_XMLEOHLP_HXX
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

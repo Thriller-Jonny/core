@@ -103,7 +103,7 @@ void Svx3DPreviewControl::Construct()
     SetObjectType(SvxPreviewObjectType::SPHERE);
 
     // camera and perspective
-    Camera3D& rCamera  = (Camera3D&) mpScene->GetCamera();
+    Camera3D rCamera  = mpScene->GetCamera();
     const basegfx::B3DRange& rVolume = mpScene->GetBoundVolume();
     double fW = rVolume.getWidth();
     double fH = rVolume.getHeight();
@@ -243,7 +243,6 @@ void Svx3DPreviewControl::Set3DAttributes( const SfxItemSet& rAttr )
 }
 
 
-
 #define RADIUS_LAMP_PREVIEW_SIZE    (4500.0)
 #define RADIUS_LAMP_SMALL           (600.0)
 #define RADIUS_LAMP_BIG             (1000.0)
@@ -311,8 +310,7 @@ void Svx3DLightControl::Construct2()
         // create object for it
         mpLampBottomObject = new E3dPolygonObj(
             mp3DView->Get3DDefaultAttributes(),
-            basegfx::B3DPolyPolygon(a3DCircle),
-            true);
+            basegfx::B3DPolyPolygon(a3DCircle));
         mpScene->Insert3DObj( mpLampBottomObject );
 
         // half circle with stand
@@ -326,8 +324,7 @@ void Svx3DLightControl::Construct2()
         // create object for it
         mpLampShaftObject = new E3dPolygonObj(
             mp3DView->Get3DDefaultAttributes(),
-            basegfx::B3DPolyPolygon(a3DHalfCircle),
-            true);
+            basegfx::B3DPolyPolygon(a3DHalfCircle));
         mpScene->Insert3DObj( mpLampShaftObject );
 
         // initially invisible
@@ -341,7 +338,7 @@ void Svx3DLightControl::Construct2()
 
     {
         // change camera settings
-        Camera3D& rCamera  = (Camera3D&) mpScene->GetCamera();
+        Camera3D rCamera  = mpScene->GetCamera();
         const basegfx::B3DRange& rVolume = mpScene->GetBoundVolume();
         double fW = rVolume.getWidth();
         double fH = rVolume.getHeight();
@@ -591,7 +588,7 @@ void Svx3DLightControl::Tracking( const TrackingEvent& rTEvt )
 
             if(mbMouseMoved)
             {
-                // was change dinteractively
+                // was change interactively
             }
             else
             {

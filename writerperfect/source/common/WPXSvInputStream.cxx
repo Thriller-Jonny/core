@@ -10,7 +10,6 @@
 #include <WPXSvInputStream.hxx>
 
 #include <com/sun/star/packages/zip/XZipFileAccess2.hpp>
-#include <com/sun/star/uno/Any.hxx>
 
 #include <comphelper/processfactory.hxx>
 #include <comphelper/seekableinput.hxx>
@@ -23,7 +22,6 @@
 #include <unotools/streamwrap.hxx>
 #include <unotools/ucbstreamhelper.hxx>
 
-#include <boost/noncopyable.hpp>
 #include <limits>
 #include <memory>
 #include <unordered_map>
@@ -42,11 +40,13 @@ namespace packages = com::sun::star::packages;
 namespace
 {
 
-class PositionHolder : boost::noncopyable
+class PositionHolder
 {
 public:
     explicit PositionHolder(const Reference<XSeekable> &rxSeekable);
     ~PositionHolder();
+    PositionHolder(const PositionHolder&) = delete;
+    PositionHolder& operator=(const PositionHolder&) = delete;
 
 private:
     const Reference<XSeekable> mxSeekable;
@@ -227,12 +227,12 @@ void OLEStorageImpl::traverse(const tools::SvRef<SotStorage> &rStorage, const rt
         else if (aIt->IsStorage())
         {
             const rtl::OUString aPath = concatPath(rPath, aIt->GetName());
-            SotStorageRefWrapper xStorage;
-            xStorage.ref = rStorage->OpenSotStorage(aIt->GetName(), STREAM_STD_READ);
-            maStorageMap[aPath] = xStorage;
+            SotStorageRefWrapper aStorage;
+            aStorage.ref = rStorage->OpenSotStorage(aIt->GetName(), STREAM_STD_READ);
+            maStorageMap[aPath] = aStorage;
 
             // deep-first traversal
-            traverse(xStorage.ref, aPath);
+            traverse(aStorage.ref, aPath);
         }
         else
         {

@@ -25,7 +25,6 @@
 #include "graphic/GraphicPropertyPanel.hxx"
 #include "line/LinePropertyPanel.hxx"
 #include "possize/PosSizePropertyPanel.hxx"
-#include "insert/InsertPropertyPanel.hxx"
 #include "GalleryControl.hxx"
 #include "EmptyPanel.hxx"
 #include <sfx2/sidebar/SidebarPanelBase.hxx>
@@ -43,9 +42,6 @@
 #include <com/sun/star/ui/XSidebar.hpp>
 #include <com/sun/star/ui/XUIElementFactory.hpp>
 
-#include <boost/bind.hpp>
-#include <boost/noncopyable.hpp>
-
 using namespace css;
 using namespace css::uno;
 using namespace svx::sidebar;
@@ -62,13 +58,14 @@ typedef ::cppu::WeakComponentImplHelper< css::ui::XUIElementFactory, css::lang::
     PanelFactoryInterfaceBase;
 
 class PanelFactory
-    : private ::boost::noncopyable,
-      private ::cppu::BaseMutex,
+    : private ::cppu::BaseMutex,
       public PanelFactoryInterfaceBase
 {
 public:
     PanelFactory();
     virtual ~PanelFactory();
+    PanelFactory(const PanelFactory&) = delete;
+    PanelFactory& operator=(const PanelFactory&) = delete;
 
     // XUIElementFactory
     css::uno::Reference<css::ui::XUIElement> SAL_CALL createUIElement (
@@ -98,13 +95,9 @@ PanelFactory::PanelFactory()
 }
 
 
-
-
 PanelFactory::~PanelFactory()
 {
 }
-
-
 
 
 Reference<ui::XUIElement> SAL_CALL PanelFactory::createUIElement (
@@ -173,10 +166,6 @@ Reference<ui::XUIElement> SAL_CALL PanelFactory::createUIElement (
     else if (rsResourceURL.endsWith("/PosSizePropertyPanel"))
     {
         pControl = PosSizePropertyPanel::Create(pParentWindow, xFrame, pBindings, xSidebar);
-    }
-    else if (rsResourceURL.endsWith("/InsertPropertyPanel"))
-    {
-        pControl.reset(VclPtr<InsertPropertyPanel>::Create(pParentWindow, xFrame));
     }
     else if (rsResourceURL.endsWith("/GalleryPanel"))
     {

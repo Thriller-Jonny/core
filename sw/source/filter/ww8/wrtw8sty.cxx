@@ -20,7 +20,6 @@
 #include <algorithm>
 #include <functional>
 
-#include <boost/noncopyable.hpp>
 #include <memory>
 
 #include <com/sun/star/i18n/ScriptType.hpp>
@@ -70,6 +69,7 @@
 #include "ww8attributeoutput.hxx"
 #include "docxattributeoutput.hxx"
 #include "rtfattributeoutput.hxx"
+#include <IDocumentSettingAccess.hxx>
 
 #include <unordered_set>
 
@@ -100,11 +100,14 @@ struct WW8_SED
 
 // class WW8_WrPlc0 is only used for header and footer positioning
 // ie there is no content support structure
-class WW8_WrPlc0: private boost::noncopyable
+class WW8_WrPlc0
 {
 private:
     std::vector<sal_uLong> aPos;      // PTRARR of CPs / FCs
     sal_uLong nOfs;
+
+    WW8_WrPlc0(WW8_WrPlc0 const&) = delete;
+    WW8_WrPlc0& operator=(WW8_WrPlc0 const&) = delete;
 
 public:
     explicit WW8_WrPlc0( sal_uLong nOffset );
@@ -154,6 +157,7 @@ MSWordStyles::MSWordStyles( MSWordExportBase& rExport, bool bListStyles )
     // somewhat generous ( free for up to 15 )
     m_pFormatA = new SwFormat*[ nAlloc ];
     memset( m_pFormatA, 0, nAlloc * sizeof( SwFormat* ) );
+    memset( m_aHeadingParagraphStyles, -1 , MAXLEVEL * sizeof( sal_uInt16));
 
     BuildStylesTable();
     BuildStyleIds();
@@ -289,7 +293,14 @@ void MSWordStyles::BuildStylesTable()
     for( size_t n = 1; n < rArr2.size(); n++ )
     {
         SwTextFormatColl* pFormat = rArr2[n];
-        m_pFormatA[ BuildGetSlot( *pFormat ) ] = pFormat;
+        sal_uInt16 nId = BuildGetSlot( *pFormat ) ;
+        m_pFormatA[ nId ] = pFormat;
+        if ( pFormat->IsAssignedToListLevelOfOutlineStyle() )
+        {
+            int nLvl = pFormat->GetAssignedOutlineStyleLevel() ;
+            if (nLvl >= 0 && nLvl < MAXLEVEL)
+                m_aHeadingParagraphStyles[nLvl] = nId ;
+        }
     }
 
     if (!m_bListStyles)
@@ -437,9 +448,15 @@ void MSWordStyles::SetStyleDefaults( const SwFormat& rFormat, bool bPap )
     bool aFlags[ static_cast< sal_uInt16 >(RES_FRMATR_END) - RES_CHRATR_BEGIN ];
     sal_uInt16 nStt, nEnd, n;
     if( bPap )
-       nStt = RES_PARATR_BEGIN, nEnd = RES_FRMATR_END;
+    {
+       nStt = RES_PARATR_BEGIN;
+       nEnd = RES_FRMATR_END;
+    }
     else
-       nStt = RES_CHRATR_BEGIN, nEnd = RES_TXTATR_END;
+    {
+       nStt = RES_CHRATR_BEGIN;
+       nEnd = RES_TXTATR_END;
+    }
 
     // dynamic defaults
     const SfxItemPool& rPool = *rFormat.GetAttrSet().GetPool();
@@ -636,7 +653,7 @@ void WW8AttributeOutput::StartStyles()
         ++nCurPos;
     }
     rFib.fcStshfOrig = rFib.fcStshf = nCurPos;
-    m_nStyAnzPos = nCurPos + 2;     // Anzahl wird nachgetragen
+    m_nStyleCountPos = nCurPos + 2;     // Anzahl wird nachgetragen
 
     static sal_uInt8 aStShi[] = {
         0x12, 0x00,
@@ -652,7 +669,7 @@ void WW8AttributeOutput::EndStyles( sal_uInt16 nNumberOfStyles )
     WW8Fib& rFib = *m_rWW8Export.pFib;
 
     rFib.lcbStshfOrig = rFib.lcbStshf = m_rWW8Export.pTableStrm->Tell() - rFib.fcStshf;
-    SwWW8Writer::WriteShort( *m_rWW8Export.pTableStrm, m_nStyAnzPos, nNumberOfStyles );
+    SwWW8Writer::WriteShort( *m_rWW8Export.pTableStrm, m_nStyleCountPos, nNumberOfStyles );
 }
 
 void MSWordStyles::OutputStylesTable()
@@ -761,7 +778,7 @@ wwFont::wwFont(const OUString &rFamilyName, FontPitch ePitch, FontFamily eFamily
         maWW8_FFN[5] = static_cast< sal_uInt8 >(msFamilyNm.getLength() + 1);
 }
 
-bool wwFont::Write(SvStream *pTableStrm) const
+void wwFont::Write(SvStream *pTableStrm) const
 {
     pTableStrm->Write(maWW8_FFN, sizeof(maWW8_FFN));    // fixed part
     // ab Ver8 sind folgende beiden Felder eingeschoben,
@@ -772,7 +789,6 @@ bool wwFont::Write(SvStream *pTableStrm) const
     SwWW8Writer::WriteString16(*pTableStrm, msFamilyNm, true);
     if (mbAlt)
         SwWW8Writer::WriteString16(*pTableStrm, msAltNm, true);
-    return true;
 }
 
 void wwFont::WriteDocx( DocxAttributeOutput* rAttrOutput ) const
@@ -1512,7 +1528,9 @@ void MSWordExportBase::SectionProperties( const WW8_SepInfo& rSepInfo, WW8_PdAtt
     AttrOutput().SectFootnoteEndnotePr();
 
     // forms
-    AttrOutput().SectionFormProtection( rSepInfo.IsProtected() );
+    bool formProtection = m_pDoc->getIDocumentSettingAccess().get( DocumentSettingId::PROTECT_FORM );
+    formProtection |= rSepInfo.IsProtected();
+    AttrOutput().SectionFormProtection( formProtection );
 
     // line numbers
     const SwLineNumberInfo& rLnNumInfo = m_pDoc->GetLineNumberInfo();
@@ -1795,7 +1813,10 @@ bool WW8_WrPlcSepx::WriteKFText( WW8Export& rWrt )
         rWrt.pFib->ccpHdr = nCpEnd - nCpStart;
     }
     else
-        delete pTextPos, pTextPos = nullptr;
+    {
+        delete pTextPos;
+        pTextPos = nullptr;
+    }
 
     return rWrt.pFib->ccpHdr != 0;
 }

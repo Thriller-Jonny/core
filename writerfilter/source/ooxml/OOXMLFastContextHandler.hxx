@@ -20,27 +20,22 @@
 #ifndef INCLUDED_WRITERFILTER_SOURCE_OOXML_OOXMLFASTCONTEXTHANDLER_HXX
 #define INCLUDED_WRITERFILTER_SOURCE_OOXML_OOXMLFASTCONTEXTHANDLER_HXX
 
-#include <com/sun/star/xml/sax/XFastShapeContextHandler.hpp>
-
 #include <string>
 #include <set>
-#include "sal/config.h"
-#include "com/sun/star/uno/XComponentContext.hpp"
-#include "cppuhelper/implbase.hxx"
-#include "com/sun/star/xml/sax/XFastContextHandler.hpp"
-#include "OOXMLParserState.hxx"
-#include "OOXMLPropertySet.hxx"
-#include "OOXMLDocumentImpl.hxx"
-#include <oox/token/tokens.hxx>
-#include <svtools/embedhlp.hxx>
-
+#include <cppuhelper/implbase.hxx>
+#include <com/sun/star/uno/XComponentContext.hpp>
+#include <com/sun/star/xml/sax/XFastContextHandler.hpp>
+#include <com/sun/star/xml/sax/XFastShapeContextHandler.hpp>
 #include <oox/mathml/import.hxx>
 #include <oox/mathml/importutils.hxx>
+#include <svtools/embedhlp.hxx>
+#include "OOXMLParserState.hxx"
+#include "OOXMLPropertySet.hxx"
 
 namespace writerfilter {
 namespace ooxml
 {
-
+class OOXMLDocumentImpl;
 
 class OOXMLFastContextHandler: public ::cppu::WeakImplHelper<css::xml::sax::XFastContextHandler>
 {
@@ -104,8 +99,8 @@ public:
 
     virtual void attributes(const css::uno::Reference< css::xml::sax::XFastAttributeList > & Attribs) throw (css::uno::RuntimeException, css::xml::sax::SAXException);
 
-    virtual void newProperty(const Id & rId, OOXMLValue::Pointer_t pVal);
-    virtual void setPropertySet(OOXMLPropertySet::Pointer_t pPropertySet);
+    virtual void newProperty(Id aId, const OOXMLValue::Pointer_t& pVal);
+    virtual void setPropertySet(const OOXMLPropertySet::Pointer_t& pPropertySet);
     virtual OOXMLPropertySet::Pointer_t getPropertySet() const;
 
     virtual void setToken(Token_t nToken);
@@ -125,7 +120,7 @@ public:
 
     void setDocument(OOXMLDocumentImpl* pDocument);
     OOXMLDocumentImpl* getDocument();
-    void setXNoteId(OOXMLValue::Pointer_t pValue);
+    void setXNoteId(const OOXMLValue::Pointer_t& pValue);
     void setXNoteId(const sal_Int32 nId);
     sal_Int32 getXNoteId() const;
     void setForwardEvents(bool bForwardEvents);
@@ -137,7 +132,7 @@ public:
     void setDefine(Id nDefine);
     Id getDefine() const { return mnDefine;}
 
-    OOXMLParserState::Pointer_t getParserState() const { return mpParserState;}
+    const OOXMLParserState::Pointer_t& getParserState() const { return mpParserState;}
 
     void sendTableDepth() const;
     void setHandle();
@@ -176,11 +171,11 @@ public:
     void startTxbxContent();
     void endTxbxContent();
     void propagateCharacterProperties();
-    void propagateCharacterPropertiesAsSet(const Id & rId);
+    void propagateCharacterPropertiesAsSet(Id nId);
     void propagateTableProperties();
     void propagateRowProperties();
     void propagateCellProperties();
-    void sendPropertiesWithId(const Id & rId);
+    void sendPropertiesWithId(Id nId);
     void sendPropertiesToParent();
     void sendCellProperties();
     void sendRowProperties();
@@ -225,7 +220,7 @@ protected:
     void startAction(Token_t Element);
     void endAction(Token_t Element);
 
-    css::uno::Reference< css::uno::XComponentContext > getComponentContext() { return m_xContext;}
+    const css::uno::Reference< css::uno::XComponentContext >& getComponentContext() { return m_xContext;}
 
     bool inPositionV;
 
@@ -250,9 +245,9 @@ public:
 
     virtual ResourceEnum_t getResource() const override { return STREAM; }
 
-    OOXMLPropertySet::Pointer_t getPropertySetAttrs() const { return mpPropertySetAttrs;}
+    const OOXMLPropertySet::Pointer_t& getPropertySetAttrs() const { return mpPropertySetAttrs;}
 
-    virtual void newProperty(const Id & rId, OOXMLValue::Pointer_t pVal) override;
+    virtual void newProperty(Id aId, const OOXMLValue::Pointer_t& pVal) override;
     void sendProperty(Id nId);
     virtual OOXMLPropertySet::Pointer_t getPropertySet() const override;
 
@@ -271,7 +266,7 @@ public:
     virtual OOXMLValue::Pointer_t getValue() const override;
     virtual ResourceEnum_t getResource() const override { return PROPERTIES; }
 
-    virtual void newProperty(const Id & nId, OOXMLValue::Pointer_t pVal) override;
+    virtual void newProperty(Id nId, const OOXMLValue::Pointer_t& pVal) override;
 
     void handleXNotes();
     void handleHdrFtr();
@@ -281,7 +276,7 @@ public:
     void handleOLE();
     void handleFontRel();
 
-    virtual void setPropertySet(OOXMLPropertySet::Pointer_t pPropertySet) override;
+    virtual void setPropertySet(const OOXMLPropertySet::Pointer_t& pPropertySet) override;
     virtual OOXMLPropertySet::Pointer_t getPropertySet() const override;
 
 protected:
@@ -318,7 +313,7 @@ public:
     explicit OOXMLFastContextHandlerValue(OOXMLFastContextHandler * pContext);
     virtual ~OOXMLFastContextHandlerValue();
 
-    void setValue(OOXMLValue::Pointer_t pValue);
+    void setValue(const OOXMLValue::Pointer_t& pValue);
     virtual OOXMLValue::Pointer_t getValue() const override;
 
     virtual void lcl_endFastElement(Token_t Element)
@@ -366,9 +361,9 @@ public:
     explicit OOXMLFastContextHandlerXNote(OOXMLFastContextHandler * pContext);
     virtual ~OOXMLFastContextHandlerXNote();
 
-    void checkId(OOXMLValue::Pointer_t pValue);
+    void checkId(const OOXMLValue::Pointer_t& pValue);
 
-    void checkType(OOXMLValue::Pointer_t pValue);
+    void checkType(const OOXMLValue::Pointer_t& pValue);
 
     virtual std::string getType() const override { return "XNote"; }
 
@@ -408,7 +403,7 @@ public:
 
     static void startRow();
     void endRow();
-    void handleGridBefore( OOXMLValue::Pointer_t val );
+    void handleGridBefore( const OOXMLValue::Pointer_t& val );
 private:
     static OOXMLProperty::Pointer_t fakeNoBorder( Id id );
 };
@@ -505,11 +500,11 @@ public:
 
     virtual ResourceEnum_t getResource() const override;
 
-    void addNamespace(const Id & nId);
+    void addNamespace(Id nId);
     void addToken( Token_t Element );
 
-    virtual void newProperty(const Id & rId, OOXMLValue::Pointer_t pVal) override;
-    virtual void setPropertySet(OOXMLPropertySet::Pointer_t pPropertySet) override;
+    virtual void newProperty(Id nId, const OOXMLValue::Pointer_t& pVal) override;
+    virtual void setPropertySet(const OOXMLPropertySet::Pointer_t& pPropertySet) override;
     virtual OOXMLPropertySet::Pointer_t getPropertySet() const override;
 
     virtual std::string getType() const override;

@@ -58,8 +58,7 @@ class StorageHolder
         /** @short  TODO */
         typedef std::unordered_map< OUString                    ,
                                     TStorageInfo                       ,
-                                    OUStringHash                ,
-                                    std::equal_to< OUString > > TPath2StorageInfo;
+                                    OUStringHash > TPath2StorageInfo;
 
     // member
     private:
@@ -184,7 +183,7 @@ class StorageHolder
 
             /** @short  TODO
              */
-            static OUStringList impl_st_parsePath(const OUString& sPath);
+            static std::vector<OUString> impl_st_parsePath(const OUString& sPath);
 };
 
 } // namespace framework

@@ -126,7 +126,10 @@ GraphicObject::~GraphicObject()
         mpMgr->ImplUnregisterObj( *this );
 
         if( ( mpMgr == mpGlobalMgr ) && !mpGlobalMgr->ImplHasObjects() )
-            delete mpGlobalMgr, mpGlobalMgr = nullptr;
+        {
+            delete mpGlobalMgr;
+            mpGlobalMgr = nullptr;
+        }
     }
 
     delete mpSwapOutTimer;
@@ -177,7 +180,10 @@ void GraphicObject::ImplSetGraphicManager( const GraphicManager* pMgr, const OSt
                 mpMgr->ImplUnregisterObj( *this );
 
                 if( ( mpMgr == mpGlobalMgr ) && !mpGlobalMgr->ImplHasObjects() )
-                    delete mpGlobalMgr, mpGlobalMgr = nullptr;
+                {
+                    delete mpGlobalMgr;
+                    mpGlobalMgr = nullptr;
+                }
             }
 
             if( !pMgr )
@@ -350,7 +356,8 @@ GraphicObject& GraphicObject::operator=( const GraphicObject& rGraphicObj )
         mpMgr->ImplUnregisterObj( *this );
 
         maSwapStreamHdl = Link<const GraphicObject*, SvStream*>();
-        delete mpSimpleCache, mpSimpleCache = nullptr;
+        delete mpSimpleCache;
+        mpSimpleCache = nullptr;
 
         maGraphic = rGraphicObj.GetGraphic();
         maAttr = rGraphicObj.maAttr;
@@ -400,7 +407,10 @@ void GraphicObject::SetAttr( const GraphicAttr& rAttr )
     maAttr = rAttr;
 
     if( mpSimpleCache && ( mpSimpleCache->maAttr != rAttr ) )
-        delete mpSimpleCache, mpSimpleCache = nullptr;
+    {
+        delete mpSimpleCache;
+        mpSimpleCache = nullptr;
+    }
 }
 
 void GraphicObject::SetLink()
@@ -446,7 +456,7 @@ void GraphicObject::SetSwapStreamHdl(const Link<const GraphicObject*, SvStream*>
     {
         if( !mpSwapOutTimer )
         {
-            mpSwapOutTimer = new Timer;
+            mpSwapOutTimer = new Timer("SwapOutTimer");
             mpSwapOutTimer->SetTimeoutHdl( LINK( this, GraphicObject, ImplAutoSwapOutHdl ) );
         }
 
@@ -454,7 +464,10 @@ void GraphicObject::SetSwapStreamHdl(const Link<const GraphicObject*, SvStream*>
         mpSwapOutTimer->Start();
     }
     else
-        delete mpSwapOutTimer, mpSwapOutTimer = nullptr;
+    {
+        delete mpSwapOutTimer;
+        mpSwapOutTimer = nullptr;
+    }
 }
 
 void GraphicObject::FireSwapInRequest()
@@ -574,11 +587,11 @@ bool GraphicObject::Draw( OutputDevice* pOut, const Point& rPt, const Size& rSz,
     return bRet;
 }
 
-bool GraphicObject::DrawTiled( OutputDevice* pOut, const Rectangle& rArea, const Size& rSize,
+void GraphicObject::DrawTiled( OutputDevice* pOut, const Rectangle& rArea, const Size& rSize,
                                const Size& rOffset, const GraphicAttr* pAttr, GraphicManagerDrawFlags nFlags, int nTileCacheSize1D )
 {
     if( pOut == nullptr || rSize.Width() == 0 || rSize.Height() == 0 )
-        return false;
+        return;
 
     const MapMode   aOutMapMode( pOut->GetMapMode() );
     const MapMode   aMapMode( aOutMapMode.GetMapUnit(), Point(), aOutMapMode.GetScaleX(), aOutMapMode.GetScaleY() );
@@ -593,7 +606,7 @@ bool GraphicObject::DrawTiled( OutputDevice* pOut, const Rectangle& rArea, const
     while (((sal_Int64)rSize.Height() * nTileCacheSize1D) > SAL_MAX_UINT16)
         nTileCacheSize1D /= 2;
 
-    return ImplDrawTiled( pOut, rArea, aOutTileSize, rOffset, pAttr, nFlags, nTileCacheSize1D );
+    ImplDrawTiled( pOut, rArea, aOutTileSize, rOffset, pAttr, nFlags, nTileCacheSize1D );
 }
 
 bool GraphicObject::StartAnimation( OutputDevice* pOut, const Point& rPt, const Size& rSz,
@@ -684,7 +697,8 @@ void GraphicObject::SetGraphic( const Graphic& rGraphic, const GraphicObject* pC
     mbAutoSwapped = false;
     ImplAssignGraphicData();
     maLink.clear();
-    delete mpSimpleCache, mpSimpleCache = nullptr;
+    delete mpSimpleCache;
+    mpSimpleCache = nullptr;
 
     mpMgr->ImplRegisterObj( *this, maGraphic, nullptr, pCopyObj);
 
@@ -823,7 +837,7 @@ Graphic GraphicObject::GetTransformedGraphic( const Size& rDestSize, const MapMo
                 && aSrcSizePixel.Width())
             {
                 // the size in pixels calculated from Graphic's internal MapMode (aTransGraphic.GetPrefMapMode())
-                // and it's internal size (aTransGraphic.GetPrefSize()) is different from it's real pixel size.
+                // and it's internal size (aTransGraphic.GetPrefSize()) is different from its real pixel size.
                 // This can be interpreted as this values to be set wrong, but needs to be corrected since e.g.
                 // existing cropping is calculated based on this logic values already.
                 // aBitmapEx.Scale(aSrcSizePixel);
@@ -1078,8 +1092,8 @@ IMPL_LINK_NOARG_TYPED(GraphicObject, ImplAutoSwapOutHdl, Timer *, void)
 
 GraphicObject GraphicObject::CreateGraphicObjectFromURL( const OUString &rURL )
 {
-    const OUString aURL( rURL ), aPrefix( UNO_NAME_GRAPHOBJ_URLPREFIX );
-    if( aURL.startsWith( aPrefix ) )
+    const OUString aPrefix( UNO_NAME_GRAPHOBJ_URLPREFIX );
+    if( rURL.startsWith( aPrefix ) )
     {
         // graphic manager url
         OString aUniqueID(OUStringToOString(rURL.copy(sizeof(UNO_NAME_GRAPHOBJ_URLPREFIX) - 1), RTL_TEXTENCODING_UTF8));
@@ -1088,9 +1102,9 @@ GraphicObject GraphicObject::CreateGraphicObjectFromURL( const OUString &rURL )
     else
     {
         Graphic     aGraphic;
-        if ( !aURL.isEmpty() )
+        if ( !rURL.isEmpty() )
         {
-            std::unique_ptr<SvStream> pStream(utl::UcbStreamHelper::CreateStream( aURL, StreamMode::READ ));
+            std::unique_ptr<SvStream> pStream(utl::UcbStreamHelper::CreateStream( rURL, StreamMode::READ ));
             if( pStream )
                 GraphicConverter::Import( *pStream, aGraphic );
         }

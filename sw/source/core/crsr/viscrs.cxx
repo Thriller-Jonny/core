@@ -93,7 +93,7 @@ void SwVisibleCursor::Show()
 
         // display at all?
         if( m_pCursorShell->VisArea().IsOver( m_pCursorShell->m_aCharRect ) || comphelper::LibreOfficeKit::isActive() )
-            _SetPosAndShow();
+            SetPosAndShow();
     }
 }
 
@@ -108,7 +108,7 @@ void SwVisibleCursor::Hide()
     }
 }
 
-void SwVisibleCursor::_SetPosAndShow()
+void SwVisibleCursor::SetPosAndShow()
 {
     SwRect aRect;
     long nTmpY = m_pCursorShell->m_aCursorHeight.getY();
@@ -132,7 +132,7 @@ void SwVisibleCursor::_SetPosAndShow()
 
     // check if cursor should show the current cursor bidi level
     m_aTextCursor.SetDirection();
-    const SwCursor* pTmpCursor = m_pCursorShell->_GetCursor();
+    const SwCursor* pTmpCursor = m_pCursorShell->GetCursor_();
 
     if ( pTmpCursor && !m_pCursorShell->IsOverwriteCursor() )
     {
@@ -364,7 +364,8 @@ void SwSelPaintRects::Show(std::vector<OString>* pSelectionRectangles)
         // being edited.
         if (comphelper::LibreOfficeKit::isActive() && !pView->GetTextEditObject())
         {
-            if (!empty())
+            // If pSelectionRectangles is set, we're just collecting the text selections -> don't emit start/end.
+            if (!empty() && !pSelectionRectangles)
             {
                 // The selection may be a complex polygon, emit the logical
                 // start/end cursor rectangle of the selection as separate
@@ -539,7 +540,7 @@ void SwSelPaintRects::Get1PixelInLogic( const SwViewShell& rSh,
 SwShellCursor::SwShellCursor(
     const SwCursorShell& rCShell,
     const SwPosition &rPos )
-    : SwCursor(rPos,nullptr,false)
+    : SwCursor(rPos,nullptr)
     , SwSelPaintRects(rCShell)
     , m_pInitialPoint(SwPaM::GetPoint())
 {}
@@ -549,7 +550,7 @@ SwShellCursor::SwShellCursor(
     const SwPosition &rPos,
     const Point& rPtPos,
     SwPaM* pRing )
-    : SwCursor(rPos, pRing, false)
+    : SwCursor(rPos, pRing)
     , SwSelPaintRects(rCShell)
     , m_MarkPt(rPtPos)
     , m_PointPt(rPtPos)
@@ -714,14 +715,14 @@ bool SwShellCursor::IsAtValidPos( bool bPoint ) const
 
 SwShellTableCursor::SwShellTableCursor( const SwCursorShell& rCursorSh,
                                     const SwPosition& rPos )
-    : SwCursor(rPos,nullptr,false), SwShellCursor(rCursorSh, rPos), SwTableCursor(rPos)
+    : SwCursor(rPos,nullptr), SwShellCursor(rCursorSh, rPos), SwTableCursor(rPos)
 {
 }
 
 SwShellTableCursor::SwShellTableCursor( const SwCursorShell& rCursorSh,
                     const SwPosition& rMkPos, const Point& rMkPt,
                     const SwPosition& rPtPos, const Point& rPtPt )
-    : SwCursor(rPtPos,nullptr,false), SwShellCursor(rCursorSh, rPtPos), SwTableCursor(rPtPos)
+    : SwCursor(rPtPos,nullptr), SwShellCursor(rCursorSh, rPtPos), SwTableCursor(rPtPos)
 {
     SetMark();
     *GetMark() = rMkPos;

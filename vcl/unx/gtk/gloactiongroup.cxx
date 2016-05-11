@@ -23,7 +23,7 @@
 #define G_LO_ACTION(inst)                               (G_TYPE_CHECK_INSTANCE_CAST ((inst),                     \
                                                          G_TYPE_LO_ACTION, GLOAction))
 
-struct _GLOAction
+struct GLOAction
 {
     GObject         parent_instance;
 
@@ -37,7 +37,6 @@ struct _GLOAction
 };
 
 typedef GObjectClass GLOActionClass;
-typedef struct _GLOAction GLOAction;
 
 #ifdef __GNUC__
 #pragma GCC diagnostic push
@@ -98,10 +97,10 @@ g_lo_action_class_init (GLOActionClass *klass)
  * GLOActionGroup
  */
 
-struct _GLOActionGroupPrivate
+struct GLOActionGroupPrivate
 {
-    GHashTable  *table;  /* string -> GLOAction */
-    GtkSalFrame *frame;  /* Frame to which GActionGroup is associated. */
+    GHashTable  *table;    /* string -> GLOAction */
+    GtkSalFrame *frame;    /* Frame to which GActionGroup is associated. */
 };
 
 static void g_lo_action_group_iface_init (GActionGroupInterface *);
@@ -150,19 +149,13 @@ g_lo_action_group_query_action (GActionGroup        *group,
 {
     //SAL_INFO("vcl.unity", "g_lo_action_group_query_action on " << group);
     GLOActionGroup *lo_group = G_LO_ACTION_GROUP (group);
-    GLOAction* action;
-
-    action = G_LO_ACTION (g_hash_table_lookup (lo_group->priv->table, action_name));
+    GLOAction* action = G_LO_ACTION (g_hash_table_lookup (lo_group->priv->table, action_name));
 
     if (action == nullptr)
         return FALSE;
 
     if (enabled)
     {
-        GtkSalFrame* pFrame = lo_group->priv->frame;
-        if (pFrame) {
-            pFrame->EnsureDbusMenuSynced();
-        }
         *enabled = action->enabled;
     }
 
@@ -186,25 +179,13 @@ g_lo_action_group_perform_submenu_action (GLOActionGroup *group,
                                           const gchar    *action_name,
                                           GVariant       *state)
 {
+    gboolean bState = g_variant_get_boolean (state);
+    SAL_INFO("vcl.unity", "g_lo_action_group_perform_submenu_action on " << group << " to " << bState);
 
-    GtkSalFrame* pFrame = group->priv->frame;
-    SAL_INFO("vcl.unity", "g_lo_action_group_perform_submenu_action on " << group << " for frame " << pFrame);
-
-    if (pFrame == nullptr)
-        return;
-
-    GtkSalMenu* pSalMenu = static_cast<GtkSalMenu*> (pFrame->GetMenu());
-    SAL_INFO("vcl.unity", "g_lo_action_group_perform_submenu_action on " << group << " for menu " << pSalMenu);
-
-    if (pSalMenu != nullptr) {
-        gboolean bState = g_variant_get_boolean (state);
-        SAL_INFO("vcl.unity", "g_lo_action_group_perform_submenu_action on " << group << " to " << bState);
-
-        if (bState)
-            pSalMenu->Activate();
-        else
-            pSalMenu->Deactivate (action_name);
-    }
+    if (bState)
+        GtkSalMenu::Activate(action_name);
+    else
+        GtkSalMenu::Deactivate(action_name);
 }
 
 static void
@@ -262,25 +243,9 @@ g_lo_action_group_activate (GActionGroup *group,
                             const gchar  *action_name,
                             GVariant     *parameter)
 {
-    GLOActionGroup *lo_group = G_LO_ACTION_GROUP (group);
-    GtkSalFrame *pFrame = lo_group->priv->frame;
-    SAL_INFO("vcl.unity", "g_lo_action_group_activate on group " << group << " for frame " << pFrame << " with parameter " << parameter);
-
-    if ( parameter != nullptr )
-        g_action_group_change_action_state( group, action_name, parameter );
-
-    if ( pFrame != nullptr )
-    {
-        GtkSalMenu* pSalMenu = static_cast< GtkSalMenu* >( pFrame->GetMenu() );
-        SAL_INFO("vcl.unity", "g_lo_action_group_activate for menu " << pSalMenu);
-
-        if ( pSalMenu != nullptr )
-        {
-            GLOAction* action = G_LO_ACTION (g_hash_table_lookup (lo_group->priv->table, action_name));
-            SAL_INFO("vcl.unity", "g_lo_action_group_activate dispatching action " << action << " named " << action_name << " on menu " << pSalMenu);
-            pSalMenu->DispatchCommand( action->item_id, action_name );
-        }
-    }
+    if (parameter != nullptr)
+        g_action_group_change_action_state(group, action_name, parameter);
+    GtkSalMenu::DispatchCommand(action_name);
 }
 
 void
@@ -310,7 +275,6 @@ g_lo_action_group_insert_stateful (GLOActionGroup     *group,
     {
         if (old_action != nullptr)
             g_lo_action_group_remove (group, action_name);
-//            g_action_group_action_removed (G_ACTION_GROUP (group), action_name);
 
         GLOAction* action = g_lo_action_new();
 

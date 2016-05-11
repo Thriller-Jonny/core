@@ -47,8 +47,6 @@ void SAL_CALL XInteractionApproveImpl::select()
 }
 
 
-
-
 // XInteractionDisapproveImpl
 
 XInteractionDisapproveImpl::XInteractionDisapproveImpl()
@@ -69,14 +67,12 @@ XInteractionRequestImpl::XInteractionRequestImpl()
     : p1( new XInteractionApproveImpl )
     , p2( new XInteractionDisapproveImpl )
 {
-    uno::Sequence<uno::Reference<task::XInteractionContinuation>> continuations{
+    std::vector<uno::Reference<task::XInteractionContinuation>> continuations{
         Reference<XInteractionContinuation>(p1),
         Reference<XInteractionContinuation>(p2) };
-    Any aAny;
     UnsupportedNameClashException excep;
     excep.NameClash = NameClash::ERROR;
-    aAny <<= excep;
-    m_xRequest.set(new ::comphelper::OInteractionRequest(aAny, continuations));
+    m_xRequest.set(new ::comphelper::OInteractionRequest(Any(excep), continuations));
 }
 
 bool XInteractionRequestImpl::approved() const

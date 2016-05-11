@@ -273,16 +273,16 @@ bool CreateDir( const INetURLObject& rURL )
         try
         {
             uno::Reference< ucb::XCommandEnvironment >  aCmdEnv;
-            INetURLObject                           aNewFolderURL( rURL );
-            INetURLObject                           aParentURL( aNewFolderURL ); aParentURL.removeSegment();
+            INetURLObject                           aParentURL( rURL );
+            aParentURL.removeSegment();
             ::ucbhelper::Content                    aParent( aParentURL.GetMainURL( INetURLObject::NO_DECODE ), aCmdEnv, comphelper::getProcessComponentContext() );
             uno::Sequence< OUString >               aProps( 1 );
             uno::Sequence< uno::Any >               aValues( 1 );
 
             aProps[0] = "Title";
-            aValues[0] = uno::makeAny( OUString( aNewFolderURL.GetName() ) );
+            aValues[0] = uno::makeAny( OUString( rURL.GetName() ) );
 
-        ::ucbhelper::Content aContent( aNewFolderURL.GetMainURL( INetURLObject::NO_DECODE ), aCmdEnv, comphelper::getProcessComponentContext() );
+        ::ucbhelper::Content aContent( rURL.GetMainURL( INetURLObject::NO_DECODE ), aCmdEnv, comphelper::getProcessComponentContext() );
         bRet = aParent.insertNewContent( "application/vnd.sun.staroffice.fsys-folder", aProps, aValues, aContent );
         }
         catch( const ucb::ContentCreationException& )
@@ -308,7 +308,7 @@ bool CopyFile(  const INetURLObject& rSrcURL, const INetURLObject& rDstURL )
         ::ucbhelper::Content aDestPath( rDstURL.GetMainURL( INetURLObject::NO_DECODE ), uno::Reference< ucb::XCommandEnvironment >(), comphelper::getProcessComponentContext() );
 
         aDestPath.executeCommand( "transfer",
-                                  uno::makeAny( ucb::TransferInfo( sal_False, rSrcURL.GetMainURL( INetURLObject::NO_DECODE ),
+                                  uno::makeAny( ucb::TransferInfo( false, rSrcURL.GetMainURL( INetURLObject::NO_DECODE ),
                                                 rDstURL.GetName(), ucb::NameClash::OVERWRITE ) ) );
         bRet = true;
     }
@@ -381,7 +381,7 @@ GalleryProgress::GalleryProgress( GraphicFilter* pFilter ) :
             else
                 aProgressText = "Gallery";
 
-            xMonitor->addText( "Gallery", aProgressText, sal_False ) ;
+            xMonitor->addText( "Gallery", aProgressText, false ) ;
             mxProgressBar->setRange( 0, GALLERY_PROGRESS_RANGE );
         }
     }
@@ -418,7 +418,7 @@ void GalleryTransferable::InitData( bool bLazy )
 {
     switch( meObjectKind )
     {
-        case( SGA_OBJ_SVDRAW ):
+        case SGA_OBJ_SVDRAW:
         {
             if( !bLazy )
             {
@@ -444,17 +444,20 @@ void GalleryTransferable::InitData( bool bLazy )
         }
         break;
 
-        case( SGA_OBJ_ANIM ):
-        case( SGA_OBJ_BMP ):
-        case( SGA_OBJ_INET ):
-        case( SGA_OBJ_SOUND ):
+        case SGA_OBJ_ANIM:
+        case SGA_OBJ_BMP:
+        case SGA_OBJ_INET:
+        case SGA_OBJ_SOUND:
         {
             if( !mpURL )
             {
                 mpURL = new INetURLObject;
 
                 if( !mpTheme->GetURL( mnObjectPos, *mpURL ) )
-                    delete mpURL, mpURL = nullptr;
+                {
+                    delete mpURL;
+                    mpURL = nullptr;
+                }
             }
 
             if( ( SGA_OBJ_SOUND != meObjectKind ) && !mpGraphicObject )
@@ -570,9 +573,12 @@ void GalleryTransferable::DragFinished( sal_Int8 nDropAction )
 void GalleryTransferable::ObjectReleased()
 {
     mxModelStream.Clear();
-    delete mpGraphicObject, mpGraphicObject = nullptr;
-    delete mpImageMap, mpImageMap = nullptr;
-    delete mpURL, mpURL = nullptr;
+    delete mpGraphicObject;
+    mpGraphicObject = nullptr;
+    delete mpImageMap;
+    mpImageMap = nullptr;
+    delete mpURL;
+    mpURL = nullptr;
 }
 
 void GalleryTransferable::CopyToClipboard( vcl::Window* pWindow )
@@ -580,8 +586,7 @@ void GalleryTransferable::CopyToClipboard( vcl::Window* pWindow )
     TransferableHelper::CopyToClipboard( pWindow );
 }
 
-void GalleryTransferable::StartDrag( vcl::Window* pWindow, sal_Int8 nDragSourceActions,
-                                     sal_Int32 nDragPointer, sal_Int32 nDragImage )
+void GalleryTransferable::StartDrag( vcl::Window* pWindow, sal_Int8 nDragSourceActions )
 {
     INetURLObject aURL;
 
@@ -589,7 +594,7 @@ void GalleryTransferable::StartDrag( vcl::Window* pWindow, sal_Int8 nDragSourceA
     {
         mpTheme->SetDragging( true );
         mpTheme->SetDragPos( mnObjectPos );
-        TransferableHelper::StartDrag( pWindow, nDragSourceActions, nDragPointer, nDragImage );
+        TransferableHelper::StartDrag( pWindow, nDragSourceActions );
     }
 }
 

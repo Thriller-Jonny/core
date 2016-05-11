@@ -9,6 +9,7 @@
 
 #include <rtfsdrimport.hxx>
 #include <com/sun/star/container/XNamed.hpp>
+#include <com/sun/star/drawing/FillStyle.hpp>
 #include <com/sun/star/drawing/XEnhancedCustomShapeDefaulter.hpp>
 #include <com/sun/star/drawing/XDrawPageSupplier.hpp>
 #include <com/sun/star/drawing/LineStyle.hpp>
@@ -33,6 +34,7 @@
 #include <oox/drawingml/shapepropertymap.hxx>
 #include <oox/helper/propertyset.hxx>
 #include <boost/logic/tribool.hpp>
+#include <basegfx/matrix/b2dhommatrix.hxx>
 
 using namespace com::sun::star;
 
@@ -296,11 +298,11 @@ int RTFSdrImport::initShape(uno::Reference<drawing::XShape>& o_xShape,
             createShape("com.sun.star.text.TextFrame", o_xShape, o_xPropSet);
             m_bTextFrame = true;
             std::vector<beans::PropertyValue> aDefaults = getTextFrameDefaults(true);
-            for (size_t j = 0; j < aDefaults.size(); ++j)
+            for (std::size_t j = 0; j < aDefaults.size(); ++j)
                 o_xPropSet->setPropertyValue(aDefaults[j].Name, aDefaults[j].Value);
             break;
         }
-    // fall-through intended
+        SAL_FALLTHROUGH;
     default:
         createShape("com.sun.star.drawing.CustomShape", o_xShape, o_xPropSet);
         o_rIsCustomShape = true;
@@ -346,6 +348,7 @@ void RTFSdrImport::resolve(RTFShape& rShape, bool bClose, ShapeOrPict const shap
     boost::optional<sal_Int16> oRelativeWidth, oRelativeHeight;
     sal_Int16 nRelativeWidthRelation = text::RelOrientation::PAGE_FRAME;
     sal_Int16 nRelativeHeightRelation = text::RelOrientation::PAGE_FRAME;
+    boost::logic::tribool obRelFlipV(boost::logic::indeterminate);
 
     bool bCustom(false);
     int const nType = initShape(xShape, xPropertySet, bCustom, rShape, bClose, shapeOrPict);
@@ -402,8 +405,7 @@ void RTFSdrImport::resolve(RTFShape& rShape, bool bClose, ShapeOrPict const shap
         else if (i->first == "fillOpacity" && xPropertySet.is())
         {
             int opacity = 100 - (i->second.toInt32())*100/65536;
-            aAny <<= uno::makeAny(sal_uInt32(opacity));
-            xPropertySet->setPropertyValue("FillTransparence", aAny);
+            xPropertySet->setPropertyValue("FillTransparence", uno::Any(sal_uInt32(opacity)));
         }
         else if (i->first == "lineWidth")
             aLineWidth <<= i->second.toInt32()/360;
@@ -778,6 +780,8 @@ void RTFSdrImport::resolve(RTFShape& rShape, bool bClose, ShapeOrPict const shap
             while (nCharIndex >= 0);
             rShape.aWrapPolygonSprms = aPolygonSprms;
         }
+        else if (i->first == "fRelFlipV")
+            obRelFlipV = i->second.toInt32() == 1;
         else
             SAL_INFO("writerfilter", "TODO handle shape property '" << i->first << "':'" << i->second << "'");
     }
@@ -836,6 +840,33 @@ void RTFSdrImport::resolve(RTFShape& rShape, bool bClose, ShapeOrPict const shap
     }
     if (!aGeometry.empty() && xPropertySet.is() && !m_bTextFrame)
         xPropertySet->setPropertyValue("CustomShapeGeometry", uno::Any(comphelper::containerToSequence(aGeometry)));
+    if (!boost::logic::indeterminate(obRelFlipV) && xPropertySet.is())
+    {
+        if (nType == ESCHER_ShpInst_Line)
+        {
+            // Line shape inside group shape: get the polygon sequence and transform it.
+            uno::Sequence< uno::Sequence<awt::Point> > aPolyPolySequence;
+            if ((xPropertySet->getPropertyValue("PolyPolygon") >>= aPolyPolySequence) && aPolyPolySequence.hasElements())
+            {
+                uno::Sequence<awt::Point>& rPolygon = aPolyPolySequence[0];
+                basegfx::B2DPolygon aPoly;
+                for (sal_Int32 i = 0; i < rPolygon.getLength(); ++i)
+                {
+                    const awt::Point& rPoint = rPolygon[i];
+                    aPoly.insert(i, basegfx::B2DPoint(rPoint.X, rPoint.Y));
+                }
+                basegfx::B2DHomMatrix aTransformation;
+                aTransformation.scale(1.0, obRelFlipV ? -1.0 : 1.0);
+                aPoly.transform(aTransformation);
+                for (sal_Int32 i = 0; i < rPolygon.getLength(); ++i)
+                {
+                    basegfx::B2DPoint aPoint(aPoly.getB2DPoint(i));
+                    rPolygon[i] = awt::Point(static_cast<sal_Int32>(convertMm100ToTwip(aPoint.getX())), static_cast<sal_Int32>(convertMm100ToTwip(aPoint.getY())));
+                }
+                xPropertySet->setPropertyValue("PolyPolygon", uno::makeAny(aPolyPolySequence));
+            }
+        }
+    }
 
     // Set position and size
     if (xShape.is())

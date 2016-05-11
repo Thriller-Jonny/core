@@ -20,9 +20,7 @@
 #ifndef INCLUDED_VCL_INC_SALVD_HXX
 #define INCLUDED_VCL_INC_SALVD_HXX
 
-#include <basebmp/bitmapdevice.hxx>
-#include <vcl/dllapi.h>
-#include <salgeom.hxx>
+#include "salgeom.hxx"
 
 class SalGraphics;
 
@@ -47,7 +45,7 @@ public:
 
     // Set new size using a buffer at the given address
     virtual bool            SetSizeUsingBuffer( long nNewDX, long nNewDY,
-                                                const basebmp::RawMemorySharedArray & /* pBuffer */ )
+                                                sal_uInt8 * /* pBuffer */)
         {
             // Only the headless virtual device has an implementation that uses
             // pBuffer (and bTopDown).

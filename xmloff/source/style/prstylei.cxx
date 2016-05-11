@@ -248,8 +248,6 @@ Reference < XStyle > XMLPropStyleContext::Create()
     return xNewStyle;
 }
 
-typedef ::std::set < OUString > PropertyNameSet;
-
 void XMLPropStyleContext::CreateAndInsert( bool bOverwrite )
 {
     SvXMLStylesContext* pSvXMLStylesContext = static_cast< SvXMLStylesContext* >(&mxStyles);
@@ -306,7 +304,17 @@ void XMLPropStyleContext::CreateAndInsert( bool bOverwrite )
                     pProps->Name = "ParaStyleName";
                     OUString sParent( GetParentName() );
                     if( !sParent.isEmpty() )
+                    {
                         sParent = GetImport().GetStyleDisplayName( GetFamily(), sParent );
+                        Reference < XNameContainer > xFamilies = pSvXMLStylesContext->GetStylesContainer( GetFamily() );
+                        if(xFamilies.is() && xFamilies->hasByName( sParent ) )
+                        {
+                            css::uno::Reference< css::style::XStyle > xStyle;
+                            Any aAny = xFamilies->getByName( sParent );
+                            aAny >>= xStyle;
+                            sParent = xStyle->getName() ;
+                        }
+                    }
                     else
                         sParent = "Standard";
                     pProps->Value <<= sParent;
@@ -355,9 +363,7 @@ void XMLPropStyleContext::CreateAndInsert( bool bOverwrite )
             if( !mxStyle.is() )
                 return;
 
-            Any aAny;
-            aAny <<= mxStyle;
-            xFamilies->insertByName( rName, aAny );
+            xFamilies->insertByName( rName, Any(mxStyle) );
             bNew = true;
         }
 
@@ -391,7 +397,7 @@ void XMLPropStyleContext::CreateAndInsert( bool bOverwrite )
                 }
                 else
                 {
-                    PropertyNameSet aNameSet;
+                    std::set < OUString > aNameSet;
                     sal_Int32 nCount = xPrMap->GetEntryCount();
                     sal_Int32 i;
                     for( i = 0; i < nCount; i++ )
@@ -448,7 +454,7 @@ void XMLPropStyleContext::Finish( bool bOverwrite )
         if( sParent != mxStyle->getParentStyle() )
         {
             // this may except if setting the parent style forms a
-            // circle in the style depencies; especially if the parent
+            // circle in the style dependencies; especially if the parent
             // style is the same as the current style
             try
             {
@@ -493,8 +499,7 @@ void XMLPropStyleContext::Finish( bool bOverwrite )
             aAny >>= sCurrFollow;
             if( sCurrFollow != sFollow )
             {
-                aAny <<= sFollow;
-                xPropSet->setPropertyValue( msFollowStyle, aAny );
+                xPropSet->setPropertyValue( msFollowStyle, Any(sFollow) );
             }
         }
 
@@ -553,11 +558,9 @@ bool XMLPropStyleContext::doNewDrawingLayerFillStyleDefinitionsExist(
 }
 
 //UUUU
-bool XMLPropStyleContext::deactivateOldFillStyleDefinitions(
+void XMLPropStyleContext::deactivateOldFillStyleDefinitions(
     const OldFillStyleDefinitionSet& rHashSetOfTags)
 {
-    bool bRetval(false);
-
     if(!rHashSetOfTags.empty() && maProperties.size())
     {
         const rtl::Reference< XMLPropertySetMapper >& rMapper = GetStyles()->GetImportPropertyMapper(GetFamily())->getPropertySetMapper();
@@ -574,21 +577,16 @@ bool XMLPropStyleContext::deactivateOldFillStyleDefinitions(
                     {
                         // mark entry as inactive
                         a->mnIndex = -1;
-                        bRetval = true;
                     }
                 }
             }
         }
     }
-
-    return bRetval;
 }
 
 //UUUU
-bool XMLPropStyleContext::translateNameBasedDrawingLayerFillStyleDefinitionsToStyleDisplayNames()
+void XMLPropStyleContext::translateNameBasedDrawingLayerFillStyleDefinitionsToStyleDisplayNames()
 {
-    bool bRetval(false);
-
     if(maProperties.size())
     {
         const rtl::Reference< XMLPropertySetMapper >& rMapper = GetStyles()->GetImportPropertyMapper(GetFamily())->getPropertySetMapper();
@@ -627,14 +625,11 @@ bool XMLPropStyleContext::translateNameBasedDrawingLayerFillStyleDefinitionsToSt
                         a->maValue >>= sStyleName;
                         sStyleName = GetImport().GetStyleDisplayName( aStyleFamily, sStyleName );
                         a->maValue <<= sStyleName;
-                        bRetval = true;
                     }
                 }
             }
         }
     }
-
-    return bRetval;
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

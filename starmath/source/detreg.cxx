@@ -19,12 +19,10 @@
 
 #include <com/sun/star/lang/XServiceInfo.hpp>
 #include <com/sun/star/registry/XRegistryKey.hpp>
-#include <com/sun/star/uno/Sequence.h>
 #include <rtl/ustring.hxx>
 
 #include "smdetect.hxx"
 
-using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::lang;
 
@@ -66,7 +64,6 @@ SAL_DLLPUBLIC_EXPORT void* SAL_CALL smd_component_getFactory( const sal_Char* pI
     return pReturn ;
 }
 } // extern "C"
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

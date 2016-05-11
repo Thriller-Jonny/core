@@ -62,7 +62,7 @@ namespace dbaui
                 <TRUE/> when successful
         */
         bool ImplGetGraphicCenterRect( const Graphic& rGraphic, Rectangle& rResultRect ) const;
-        void ImplInitSettings( bool bFont, bool bForeground, bool bBackground );
+        void ImplInitSettings();
     protected:
         virtual void DataChanged(const DataChangedEvent& rDCEvt) override;
     public:
@@ -90,8 +90,6 @@ namespace dbaui
         PreviewMode               m_ePreviewMode;
         css::uno::Reference < css::frame::XFrame2 >
                                   m_xFrame;
-        css::uno::Reference < css::io::XPersist >
-                                  m_xDocInfo;
         css::uno::Reference< css::awt::XWindow >
                                   m_xWindow;
 

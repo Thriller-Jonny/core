@@ -35,7 +35,6 @@
 #include <com/sun/star/lang/WrappedTargetRuntimeException.hpp>
 #include <comphelper/namedvaluecollection.hxx>
 #include <cppuhelper/supportsservice.hxx>
-#include <boost/bind.hpp>
 
 using namespace css;
 using namespace css::uno;
@@ -99,7 +98,7 @@ Reference<ui::XUIElement> SAL_CALL ScPanelFactory::createUIElement (
         }
         else if (rsResourceURL.endsWith("/FunctionsPanel"))
         {
-            pPanel = VclPtr<ScFunctionDockWin>::Create(pBindings, nullptr, pParentWindow, ScResId(FID_FUNCTION_BOX));
+            pPanel = VclPtr<ScFunctionWin>::Create(pBindings, pParentWindow, ScResId(FID_FUNCTION_BOX));
             nMinimumSize = 0;
         }
 

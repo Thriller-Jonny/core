@@ -82,7 +82,7 @@ protected:
                         m_xDlgClosedListener;
 
 public:
-                       SvtFilePicker( const css::uno::Reference < css::lang::XMultiServiceFactory >& xFactory );
+                       SvtFilePicker();
     virtual           ~SvtFilePicker();
 
 
@@ -163,7 +163,6 @@ public:
     virtual void SAL_CALL           appendFilterGroup( const OUString& sGroupTitle, const css::uno::Sequence< css::beans::StringPair >& aFilters ) throw (css::lang::IllegalArgumentException, css::uno::RuntimeException, std::exception) override;
 
 
-
     // these methods are here because they're ambiguous
 
     virtual void SAL_CALL           cancel() throw( css::uno::RuntimeException, std::exception ) override
@@ -231,7 +230,7 @@ protected:
 class SvtRemoteFilePicker : public SvtFilePicker
 {
 public:
-    SvtRemoteFilePicker( const css::uno::Reference < css::lang::XMultiServiceFactory >& xFactory );
+    SvtRemoteFilePicker();
 
     virtual VclPtr<SvtFileDialog_Base> implCreateDialog( vcl::Window* _pParent ) override;
 

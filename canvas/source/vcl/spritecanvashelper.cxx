@@ -103,7 +103,7 @@ namespace vclcanvas
                              const Point&           rPos )
         {
             vcl::Font aVCLFont;
-            aVCLFont.SetHeight( 20 );
+            aVCLFont.SetFontHeight( 20 );
             aVCLFont.SetColor( Color( INFO_COLOR ) );
 
             rOutDev.SetTextAlign(ALIGN_TOP);
@@ -124,7 +124,7 @@ namespace vclcanvas
         mbShowSpriteBounds( false ),
         mbIsUnsafeScrolling( false )
     {
-#if OSL_DEBUG_LEVEL > 2
+#if OSL_DEBUG_LEVEL > 0
         // inverse defaults for verbose debug mode
         mbShowSpriteBounds = mbShowFrameInfo = true;
 #endif
@@ -290,11 +290,11 @@ namespace vclcanvas
             renderMemUsage( rOutDev );
         }
 
-#if OSL_DEBUG_LEVEL > 2
+#if OSL_DEBUG_LEVEL > 0
         static ::canvas::tools::ElapsedTime aElapsedTime;
 
         // log time immediately after surface flip
-        OSL_TRACE( "SpriteCanvasHelper::updateScreen(): flip done at %f",
+        SAL_INFO("canvas.vcl", "SpriteCanvasHelper::updateScreen(): flip done at " <<
                    aElapsedTime.getElapsedTime() );
 #endif
 
@@ -375,7 +375,7 @@ namespace vclcanvas
             // opaque sprite content)
 
             // repaint all affected sprites directly to output device
-            for( const auto rComponent : rUpdateArea.maComponentList )
+            for( const auto& rComponent : rUpdateArea.maComponentList )
             {
                 const ::canvas::Sprite::Reference& rSprite( rComponent.second.getSprite() );
 

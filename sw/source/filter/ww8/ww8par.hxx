@@ -54,7 +54,6 @@
 #include <editeng/lrspitem.hxx>
 #include <oox/ole/olehelper.hxx>
 
-#include <boost/noncopyable.hpp>
 
 class SwDoc;
 class SwPaM;
@@ -558,7 +557,7 @@ namespace sw
             explicit Position(const SwPosition &rPos);
             Position(const Position &rPos);
             operator SwPosition() const;
-            SwNodeIndex GetPtNode() { return maPtNode; };
+            const SwNodeIndex& GetPtNode() { return maPtNode; };
             sal_Int32 GetPtContent() { return mnPtContent; };
         };
     }
@@ -584,8 +583,8 @@ class WW8FieldEntry
         SwNodeIndex GetPtNode() { return maStartPos.GetPtNode(); };
         sal_Int32 GetPtContent() { return maStartPos.GetPtContent(); };
 
-        OUString GetBookmarkName() { return msBookmarkName;}
-        OUString GetBookmarkCode() { return msMarkCode;}
+        const OUString& GetBookmarkName() { return msBookmarkName;}
+        const OUString& GetBookmarkCode() { return msMarkCode;}
         void SetBookmarkName(const OUString& bookmarkName);
         void SetBookmarkType(const OUString& bookmarkType);
         void SetBookmarkCode(const OUString& bookmarkCode);
@@ -653,10 +652,14 @@ enum SwWw8ControlType
     WW8_CT_DROPDOWN
 };
 
-class WW8FormulaControl : private ::boost::noncopyable
+class WW8FormulaControl
 {
 protected:
     SwWW8ImplReader &mrRdr;
+
+    WW8FormulaControl(WW8FormulaControl const&) = delete;
+    WW8FormulaControl& operator=(WW8FormulaControl const&) = delete;
+
 public:
     WW8FormulaControl(const OUString& rN, SwWW8ImplReader &rRdr)
         : mrRdr(rRdr), mfUnknown(0), mfDropdownIndex(0),
@@ -738,11 +741,11 @@ class SwMSConvertControls: public oox::ole::MSConvertOCXControls
 {
 public:
     SwMSConvertControls( SfxObjectShell *pDSh,SwPaM *pP );
-    bool InsertFormula( WW8FormulaControl &rFormula);
+    void InsertFormula( WW8FormulaControl &rFormula);
     virtual bool InsertControl(const css::uno::Reference< css::form::XFormComponent >& rFComp,
         const css::awt::Size& rSize,
         css::uno::Reference<  css::drawing::XShape > *pShape, bool bFloatingCtrl) override;
-    bool ExportControl(WW8Export &rWrt, const SdrUnoObj& rFormObj);
+    void ExportControl(WW8Export &rWrt, const SdrUnoObj& rFormObj);
     bool ReadOCXStream( tools::SvRef<SotStorage>& rSrc1,
         css::uno::Reference< css::drawing::XShape > *pShapeRef=nullptr,
         bool bFloatingCtrl=false );
@@ -915,7 +918,7 @@ public:
 //Safest thing is to not delete SwTextNodes from a document during import, and
 //remove these extraneous paragraphs at the end after all SwFltControlStack are
 //destroyed.
-class wwExtraneousParas : private ::boost::noncopyable
+class wwExtraneousParas
 {
 private:
     /*
@@ -923,6 +926,10 @@ private:
     */
     std::set<SwTextNode*, SwWW8::ltnode> m_aTextNodes;
     SwDoc& m_rDoc;
+
+    wwExtraneousParas(wwExtraneousParas const&) = delete;
+    wwExtraneousParas& operator=(wwExtraneousParas const&) = delete;
+
 public:
     explicit wwExtraneousParas(SwDoc &rDoc) : m_rDoc(rDoc) {}
     ~wwExtraneousParas() { delete_all_from_doc(); }
@@ -930,12 +937,16 @@ public:
     void delete_all_from_doc();
 };
 
-class wwFrameNamer : private ::boost::noncopyable
+class wwFrameNamer
 {
 private:
     OUString msSeed;
     sal_Int32 mnImportedGraphicsCount;
     bool mbIsDisabled;
+
+    wwFrameNamer(wwFrameNamer const&) = delete;
+    wwFrameNamer& operator=(wwFrameNamer const&) = delete;
+
 public:
     void SetUniqueGraphName(SwFrameFormat *pFrameFormat, const OUString &rFixedPart);
     wwFrameNamer(bool bIsDisabled, const OUString &rSeed)
@@ -1131,7 +1142,7 @@ private:
     as they are encountered, and so their end point is normally unimportant.
     But hyperlink fields need to be applied as attributes to text and it is
     far easier and safer to set the end point of an attribute when we
-    encounter the end marker of the field instead of caculating in advance
+    encounter the end marker of the field instead of calculating in advance
     where the end point will fall, to do so fully correctly duplicates the
     main logic of the filter itself.
     */
@@ -1583,7 +1594,7 @@ private:
         sal_uInt16 nSequence);
     sal_Int32 GetRangeAsDrawingString(OUString& rString, long StartCp, long nEndCp, ManTypes eType);
     OutlinerParaObject* ImportAsOutliner(OUString &rString, WW8_CP nStartCp, WW8_CP nEndCp, ManTypes eType);
-    SwFrameFormat* InsertTxbxText(SdrTextObj* pTextObj, Size* pObjSiz,
+    void InsertTxbxText(SdrTextObj* pTextObj, Size* pObjSiz,
         sal_uInt16 nTxBxS, sal_uInt16 nSequence, long nPosCp, SwFrameFormat* pFlyFormat,
         bool bMakeSdrGrafObj, bool& rbEraseTextObj,
         bool* pbTestTxbxContainsText = nullptr, long* pnStartCp = nullptr,
@@ -1645,22 +1656,22 @@ private:
     // interfaces for the toggle attributes
     void SetToggleAttr(sal_uInt8 nAttrId, bool bOn);
     void SetToggleBiDiAttr(sal_uInt8 nAttrId, bool bOn);
-    void _ChkToggleAttr( sal_uInt16 nOldStyle81Mask, sal_uInt16 nNewStyle81Mask );
+    void ChkToggleAttr_( sal_uInt16 nOldStyle81Mask, sal_uInt16 nNewStyle81Mask );
 
     void ChkToggleAttr( sal_uInt16 nOldStyle81Mask, sal_uInt16 nNewStyle81Mask )
     {
         if( nOldStyle81Mask != nNewStyle81Mask &&
             m_pCtrlStck->GetToggleAttrFlags() )
-            _ChkToggleAttr( nOldStyle81Mask, nNewStyle81Mask );
+            ChkToggleAttr_( nOldStyle81Mask, nNewStyle81Mask );
     }
 
-    void _ChkToggleBiDiAttr( sal_uInt16 nOldStyle81Mask, sal_uInt16 nNewStyle81Mask );
+    void ChkToggleBiDiAttr_( sal_uInt16 nOldStyle81Mask, sal_uInt16 nNewStyle81Mask );
 
     void ChkToggleBiDiAttr( sal_uInt16 nOldStyle81Mask, sal_uInt16 nNewStyle81Mask )
     {
         if( nOldStyle81Mask != nNewStyle81Mask &&
             m_pCtrlStck->GetToggleBiDiAttrFlags() )
-            _ChkToggleBiDiAttr( nOldStyle81Mask, nNewStyle81Mask );
+            ChkToggleBiDiAttr_( nOldStyle81Mask, nNewStyle81Mask );
     }
 
     void PopTableDesc();
@@ -1682,7 +1693,7 @@ private:
     // #i84783#
     // determine object attribute "Layout in Table Cell"
     bool IsObjectLayoutInTableCell( const sal_uInt32 nLayoutInTableCell ) const;
-    bool ReadGlobalTemplateSettings( const OUString& sCreatedFrom, const css::uno::Reference< css::container::XNameContainer >& xPrjNameMap );
+    void ReadGlobalTemplateSettings( const OUString& sCreatedFrom, const css::uno::Reference< css::container::XNameContainer >& xPrjNameMap );
     SwWW8ImplReader(const SwWW8ImplReader &) = delete;
     SwWW8ImplReader& operator=(const SwWW8ImplReader&) = delete;
 public:     // really private, but can only be done public
@@ -1829,7 +1840,7 @@ public:     // really private, but can only be done public
     bool ForceFieldLanguage(SwField &rField, sal_uInt16 nLang);
     eF_ResT Read_F_DateTime( WW8FieldDesc*, OUString& rStr );
     eF_ResT Read_F_FileName( WW8FieldDesc*, OUString& rStr);
-    eF_ResT Read_F_Anz( WW8FieldDesc* pF, OUString& );
+    eF_ResT Read_F_Num( WW8FieldDesc* pF, OUString& );
     eF_ResT Read_F_CurPage( WW8FieldDesc*, OUString& );
     eF_ResT Read_F_Ref( WW8FieldDesc* pF, OUString& );
 
@@ -1855,6 +1866,8 @@ public:     // really private, but can only be done public
     eF_ResT Read_F_IncludePicture( WW8FieldDesc*, OUString& rStr );
     eF_ResT Read_F_IncludeText(    WW8FieldDesc*, OUString& rStr );
     eF_ResT Read_F_Seq( WW8FieldDesc*, OUString& rStr );
+    /// Reads a STYLEREF field.
+    eF_ResT Read_F_Styleref(WW8FieldDesc*, OUString& rStr);
 
     eF_ResT Read_F_OCX(WW8FieldDesc*, OUString&);
     eF_ResT Read_F_Hyperlink(WW8FieldDesc*, OUString& rStr);

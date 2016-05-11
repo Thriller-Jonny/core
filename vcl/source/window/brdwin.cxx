@@ -22,6 +22,7 @@
 #include <brdwin.hxx>
 #include <window.h>
 
+#include <vcl/textrectinfo.hxx>
 #include <vcl/event.hxx>
 #include <vcl/decoview.hxx>
 #include <vcl/syswin.hxx>
@@ -128,7 +129,7 @@ static void ImplDrawBrdWinSymbolButton( vcl::RenderContext* pDev,
             pDev->SetLineColor();
             pDev->DrawRect( rRect );
             pWin->DrawSelectionBackground( rRect, 2, bool(nState & DrawButtonFlags::Pressed),
-                                            true, false );
+                                            true );
         }
         aTempRect = rRect;
         aTempRect.Left()+=3;
@@ -144,7 +145,6 @@ static void ImplDrawBrdWinSymbolButton( vcl::RenderContext* pDev,
     ImplDrawBrdWinSymbol( pDev, aTempRect, eSymbol );
 }
 
-// - ImplBorderWindowView -
 
 ImplBorderWindowView::~ImplBorderWindowView()
 {
@@ -409,7 +409,6 @@ long ImplBorderWindowView::ImplCalcTitleWidth( const ImplBorderFrameData* pData 
     return nTitleWidth;
 }
 
-// - ImplNoBorderWindowView -
 
 ImplNoBorderWindowView::ImplNoBorderWindowView( ImplBorderWindow* )
 {
@@ -437,7 +436,6 @@ void ImplNoBorderWindowView::DrawWindow(vcl::RenderContext&, sal_uInt16, const P
 {
 }
 
-// - ImplSmallBorderWindowView -
 ImplSmallBorderWindowView::ImplSmallBorderWindowView( ImplBorderWindow* pBorderWindow )
     : mpBorderWindow(pBorderWindow)
     , mpOutDev(nullptr)
@@ -787,7 +785,6 @@ void ImplSmallBorderWindowView::DrawWindow(vcl::RenderContext& rRenderContext, s
     }
 }
 
-// - ImplStdBorderWindowView -
 
 ImplStdBorderWindowView::ImplStdBorderWindowView( ImplBorderWindow* pBorderWindow )
 {
@@ -926,7 +923,10 @@ bool ImplStdBorderWindowView::MouseButtonDown( const MouseEvent& rMEvt )
                 maFrameData.mbDragFull = false;
                 if ( nDragFullTest != DragFullOptions::NONE )
                     maFrameData.mbDragFull = true;   // always fulldrag for proper docking, ignore system settings
-                pBorderWindow->StartTracking();
+                StartTrackingFlags eFlags = maFrameData.mbDragFull ?
+                    StartTrackingFlags::UseToolKitDrag :
+                    StartTrackingFlags::NONE;
+                pBorderWindow->StartTracking(eFlags);
             }
             else if ( bHitTest )
                 maFrameData.mnHitTest = 0;
@@ -957,9 +957,9 @@ bool ImplStdBorderWindowView::Tracking( const TrackingEvent& rTEvt )
                 {
                     // dispatch to correct window type (why is Close() not virtual ??? )
                     // TODO: make Close() virtual
-                    vcl::Window *pWin = pBorderWindow->ImplGetClientWindow()->ImplGetWindow();
-                    SystemWindow  *pSysWin  = dynamic_cast<SystemWindow* >(pWin);
-                    DockingWindow *pDockWin = dynamic_cast<DockingWindow*>(pWin);
+                    VclPtr<vcl::Window> pWin = pBorderWindow->ImplGetClientWindow()->ImplGetWindow();
+                    SystemWindow  *pSysWin  = dynamic_cast<SystemWindow* >(pWin.get());
+                    DockingWindow *pDockWin = dynamic_cast<DockingWindow*>(pWin.get());
                     if ( pSysWin )
                         pSysWin->Close();
                     else if ( pDockWin )
@@ -1243,7 +1243,7 @@ bool ImplStdBorderWindowView::Tracking( const TrackingEvent& rTEvt )
                 aPos.Y() += aMousePos.Y();
                 if ( maFrameData.mbDragFull )
                 {
-                    pBorderWindow->MoveToByDrag(aPos);
+                    pBorderWindow->SetPosPixel( aPos );
                     pBorderWindow->ImplUpdateAll();
                     pBorderWindow->ImplGetFrameWindow()->ImplUpdateAll();
                 }
@@ -1736,7 +1736,7 @@ void ImplBorderWindow::ImplInit( vcl::Window* pParent,
 {
     // remove all unwanted WindowBits
     WinBits nOrgStyle = nStyle;
-    WinBits nTestStyle = (WB_MOVEABLE | WB_SIZEABLE | WB_ROLLABLE | WB_PINABLE | WB_CLOSEABLE | WB_STANDALONE | WB_DIALOGCONTROL | WB_NODIALOGCONTROL | WB_SYSTEMFLOATWIN | WB_INTROWIN | WB_DEFAULTWIN | WB_TOOLTIPWIN | WB_NOSHADOW | WB_OWNERDRAWDECORATION | WB_SYSTEMCHILDWINDOW  | WB_NEEDSFOCUS | WB_POPUP);
+    WinBits nTestStyle = (WB_MOVEABLE | WB_SIZEABLE | WB_ROLLABLE | WB_PINABLE | WB_CLOSEABLE | WB_STANDALONE | WB_DIALOGCONTROL | WB_NODIALOGCONTROL | WB_SYSTEMFLOATWIN | WB_INTROWIN | WB_DEFAULTWIN | WB_TOOLTIPWIN | WB_NOSHADOW | WB_OWNERDRAWDECORATION | WB_SYSTEMCHILDWINDOW  | WB_POPUP);
     if ( nTypeStyle & BORDERWINDOW_STYLE_APP )
         nTestStyle |= WB_APP;
     nStyle &= nTestStyle;
@@ -1832,6 +1832,7 @@ void ImplBorderWindow::dispose()
     delete mpBorderView;
     mpBorderView = nullptr;
     mpMenuBarWindow.clear();
+    mpNotebookBar.disposeAndClear();
     vcl::Window::dispose();
 }
 
@@ -1912,12 +1913,14 @@ void ImplBorderWindow::Resize()
     {
         vcl::Window* pClientWindow = ImplGetClientWindow();
 
-        if ( mpMenuBarWindow )
+        sal_Int32 nLeftBorder;
+        sal_Int32 nTopBorder;
+        sal_Int32 nRightBorder;
+        sal_Int32 nBottomBorder;
+        mpBorderView->GetBorder( nLeftBorder, nTopBorder, nRightBorder, nBottomBorder );
+
+        if (mpMenuBarWindow)
         {
-            sal_Int32 nLeftBorder;
-            sal_Int32 nTopBorder;
-            sal_Int32 nRightBorder;
-            sal_Int32 nBottomBorder;
             long nMenuHeight = mpMenuBarWindow->GetSizePixel().Height();
             if ( mbMenuHide )
             {
@@ -1930,11 +1933,22 @@ void ImplBorderWindow::Resize()
                 if ( !nMenuHeight )
                     nMenuHeight = mnOrgMenuHeight;
             }
-            mpBorderView->GetBorder( nLeftBorder, nTopBorder, nRightBorder, nBottomBorder );
-            mpMenuBarWindow->setPosSizePixel( nLeftBorder,
-                                              nTopBorder,
-                                              aSize.Width()-nLeftBorder-nRightBorder,
-                                              nMenuHeight);
+            mpMenuBarWindow->setPosSizePixel(
+                    nLeftBorder, nTopBorder,
+                    aSize.Width()-nLeftBorder-nRightBorder,
+                    nMenuHeight);
+
+            // shift the notebookbar down accordingly
+            nTopBorder += nMenuHeight;
+        }
+
+        if (mpNotebookBar)
+        {
+            long nNotebookBarHeight = mpNotebookBar->GetSizePixel().Height();
+            mpNotebookBar->setPosSizePixel(
+                    nLeftBorder, nTopBorder,
+                    aSize.Width() - nLeftBorder - nRightBorder,
+                    nNotebookBarHeight);
         }
 
         GetBorder( pClientWindow->mpWindowImpl->mnLeftBorder, pClientWindow->mpWindowImpl->mnTopBorder,
@@ -2161,12 +2175,22 @@ void ImplBorderWindow::SetMenuBarMode( bool bHide )
     UpdateMenuHeight();
 }
 
+void ImplBorderWindow::SetNotebookBar(const OUString& rUIXMLDescription, const css::uno::Reference<css::frame::XFrame>& rFrame)
+{
+    mpNotebookBar = VclPtr<NotebookBar>::Create(this, "NotebookBar", rUIXMLDescription, rFrame);
+    Resize();
+}
+
 void ImplBorderWindow::GetBorder( sal_Int32& rLeftBorder, sal_Int32& rTopBorder,
                                   sal_Int32& rRightBorder, sal_Int32& rBottomBorder ) const
 {
-    mpBorderView->GetBorder( rLeftBorder, rTopBorder, rRightBorder, rBottomBorder );
-    if ( mpMenuBarWindow && !mbMenuHide )
+    mpBorderView->GetBorder(rLeftBorder, rTopBorder, rRightBorder, rBottomBorder);
+
+    if (mpMenuBarWindow && !mbMenuHide)
         rTopBorder += mpMenuBarWindow->GetSizePixel().Height();
+
+    if (mpNotebookBar && mpNotebookBar->IsVisible())
+        rTopBorder += mpNotebookBar->GetSizePixel().Height();
 }
 
 long ImplBorderWindow::CalcTitleWidth() const
@@ -2177,11 +2201,6 @@ long ImplBorderWindow::CalcTitleWidth() const
 Rectangle ImplBorderWindow::GetMenuRect() const
 {
     return mpBorderView->GetMenuRect();
-}
-
-void ImplBorderWindow::MoveToByDrag(const Point& rNewPos)
-{
-    setPosSizePixel(rNewPos.X(), rNewPos.Y(), 0, 0, PosSizeFlags::Pos | PosSizeFlags::ByDrag);
 }
 
 Size ImplBorderWindow::GetOptimalSize() const

@@ -29,7 +29,6 @@ namespace cppu
 //#### construction ################################################################################
 
 
-
 void defaultConstructStruct(
     void * pMem,
     typelib_CompoundTypeDescription * pCompType );
@@ -65,7 +64,7 @@ inline void _defaultConstructData(
         *static_cast<sal_Unicode *>(pMem) = '\0';
         break;
     case typelib_TypeClass_BOOLEAN:
-        *static_cast<sal_Bool *>(pMem) = sal_False;
+        *static_cast<sal_Bool *>(pMem) = false;
         break;
     case typelib_TypeClass_BYTE:
         *static_cast<sal_Int8 *>(pMem) = 0;

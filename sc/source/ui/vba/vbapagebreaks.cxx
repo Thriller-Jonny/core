@@ -85,7 +85,7 @@ public:
     }
     virtual sal_Bool SAL_CALL hasElements(  ) throw (uno::RuntimeException, std::exception) override
     {
-        return sal_True;
+        return true;
     }
 };
 
@@ -170,9 +170,9 @@ uno::Any RangePageBreaks::Add( const css::uno::Any& Before ) throw ( css::script
     sal_Int32 nAPIRowColIndex = getAPIStartofRange( xRange );
     uno::Reference< container::XIndexAccess > xIndexAccess = getRowColContainer();
     uno::Reference< beans::XPropertySet > xRowColPropertySet( xIndexAccess->getByIndex(nAPIRowColIndex), uno::UNO_QUERY_THROW );
-    xRowColPropertySet->setPropertyValue("IsStartOfNewPage", uno::makeAny(sal_True));
+    xRowColPropertySet->setPropertyValue("IsStartOfNewPage", uno::makeAny(true));
     sheet::TablePageBreakData aTablePageBreakData;
-    aTablePageBreakData.ManualBreak = sal_True;
+    aTablePageBreakData.ManualBreak = true;
     aTablePageBreakData.Position = nAPIRowColIndex;
     if( m_bColumn )
         return uno::makeAny( uno::Reference< excel::XVPageBreak >( new ScVbaVPageBreak( mxParent, mxContext, xRowColPropertySet, aTablePageBreakData) ));
@@ -201,8 +201,7 @@ public:
 ScVbaHPageBreaks::ScVbaHPageBreaks( const uno::Reference< XHelperInterface >& xParent,
                                     const uno::Reference< uno::XComponentContext >& xContext,
                                     uno::Reference< sheet::XSheetPageBreak >& xSheetPageBreak) throw (uno::RuntimeException):
-                          ScVbaHPageBreaks_BASE( xParent,xContext, new RangePageBreaks( xParent, xContext, xSheetPageBreak, false )),
-                          mxSheetPageBreak( xSheetPageBreak )
+                          ScVbaHPageBreaks_BASE( xParent,xContext, new RangePageBreaks( xParent, xContext, xSheetPageBreak, false ))
 {
 }
 
@@ -256,8 +255,7 @@ ScVbaHPageBreaks::getServiceNames()
 ScVbaVPageBreaks::ScVbaVPageBreaks( const uno::Reference< XHelperInterface >& xParent,
                                     const uno::Reference< uno::XComponentContext >& xContext,
                                     uno::Reference< sheet::XSheetPageBreak >& xSheetPageBreak ) throw ( uno::RuntimeException )
-:   ScVbaVPageBreaks_BASE( xParent, xContext, new RangePageBreaks( xParent, xContext, xSheetPageBreak, true ) ),
-    mxSheetPageBreak( xSheetPageBreak )
+:   ScVbaVPageBreaks_BASE( xParent, xContext, new RangePageBreaks( xParent, xContext, xSheetPageBreak, true ) )
 {
 }
 

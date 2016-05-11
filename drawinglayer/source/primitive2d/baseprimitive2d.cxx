@@ -19,6 +19,7 @@
 
 #include <sal/config.h>
 
+#include <iterator>
 #include <utility>
 
 #include <drawinglayer/primitive2d/baseprimitive2d.hxx>
@@ -28,9 +29,7 @@
 #include <comphelper/sequence.hxx>
 
 
-
 using namespace com::sun::star;
-
 
 
 namespace drawinglayer
@@ -74,7 +73,6 @@ namespace drawinglayer
         }
     } // end of namespace primitive2d
 } // end of namespace drawinglayer
-
 
 
 namespace drawinglayer
@@ -209,38 +207,6 @@ namespace drawinglayer
             return (pA->operator==(*pB));
         }
 
-        bool arePrimitive2DSequencesEqual(const Primitive2DSequence& rA, const Primitive2DSequence& rB)
-        {
-            const bool bAHasElements(rA.hasElements());
-
-            if(bAHasElements != rB.hasElements())
-            {
-                return false;
-            }
-
-            if(!bAHasElements)
-            {
-                return true;
-            }
-
-            const sal_Int32 nCount(rA.getLength());
-
-            if(nCount != rB.getLength())
-            {
-                return false;
-            }
-
-            for(sal_Int32 a(0L); a < nCount; a++)
-            {
-                if(!arePrimitive2DReferencesEqual(rA[a], rB[a]))
-                {
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
         bool Primitive2DContainer::operator==(const Primitive2DContainer& rB) const
         {
             const bool bAHasElements(!empty());
@@ -273,45 +239,6 @@ namespace drawinglayer
             return true;
         }
 
-        // concatenate sequence
-        void appendPrimitive2DSequenceToPrimitive2DSequence(Primitive2DSequence& rDest, const Primitive2DSequence& rSource)
-        {
-            if(rSource.hasElements())
-            {
-                if(rDest.hasElements())
-                {
-                    const sal_Int32 nSourceCount(rSource.getLength());
-                    const sal_Int32 nDestCount(rDest.getLength());
-                    const sal_Int32 nTargetCount(nSourceCount + nDestCount);
-                    sal_Int32 nInsertPos(nDestCount);
-
-                    rDest.realloc(nTargetCount);
-
-                    for(sal_Int32 a(0L); a < nSourceCount; a++)
-                    {
-                        if(rSource[a].is())
-                        {
-                            rDest[nInsertPos++] = rSource[a];
-                        }
-                    }
-
-                    if(nInsertPos != nTargetCount)
-                    {
-                        rDest.realloc(nInsertPos);
-                    }
-                }
-                else
-                {
-                    rDest = rSource;
-                }
-            }
-        }
-
-        void appendPrimitive2DSequenceToPrimitive2DSequence(Primitive2DSequence& rDest, const Primitive2DContainer& rSource)
-        {
-            appendPrimitive2DSequenceToPrimitive2DSequence(rDest, comphelper::containerToSequence(rSource));
-        }
-
         void Primitive2DContainer::append(const Primitive2DContainer& rSource)
         {
             insert(end(), rSource.begin(), rSource.end());
@@ -330,17 +257,6 @@ namespace drawinglayer
         void Primitive2DContainer::append(const Primitive2DSequence& rSource)
         {
             std::copy(rSource.begin(), rSource.end(), std::back_inserter(*this));
-        }
-
-        // concatenate single Primitive2D
-        void appendPrimitive2DReferenceToPrimitive2DSequence(Primitive2DSequence& rDest, const Primitive2DReference& rSource)
-        {
-            if(rSource.is())
-            {
-                const sal_Int32 nDestCount(rDest.getLength());
-                rDest.realloc(nDestCount + 1L);
-                rDest[nDestCount] = rSource;
-            }
         }
 
         OUString idToString(sal_uInt32 nId)

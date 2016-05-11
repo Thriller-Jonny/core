@@ -44,7 +44,7 @@
 
 #include <svx/sdrpagewindow.hxx>
 #include <svx/sdrpaintwindow.hxx>
-
+#include <comphelper/lok.hxx>
 
 using namespace ::com::sun::star;
 
@@ -135,7 +135,6 @@ SdrPageWindow* SdrPageView::RemovePageWindow(SdrPageWindow& rOld)
 }
 
 
-
 SdrPageView::SdrPageView(SdrPage* pPage1, SdrView& rNewView)
 :   mrView(rNewView),
     // col_auto color lets the view takes the default SvxColorConfig entry
@@ -172,12 +171,10 @@ SdrPageView::~SdrPageView()
     ClearPageWindows();
 }
 
-SdrPageWindow& SdrPageView::CreateNewPageWindowEntry(SdrPaintWindow& rPaintWindow)
+void SdrPageView::CreateNewPageWindowEntry(SdrPaintWindow& rPaintWindow)
 {
     SdrPageWindow& rWindow = *(new SdrPageWindow(*this, rPaintWindow));
     AppendPageWindow(rWindow);
-
-    return rWindow;
 }
 
 void SdrPageView::AddPaintWindowToPageView(SdrPaintWindow& rPaintWindow)
@@ -241,7 +238,7 @@ void SdrPageView::Hide()
 {
     if(IsVisible())
     {
-        if (!GetView().GetModel()->isTiledRendering())
+        if (!comphelper::LibreOfficeKit::isActive())
         {
             InvalidateAllWin();
         }
@@ -265,7 +262,6 @@ void SdrPageView::InvalidateAllWin()
         GetView().InvalidateAllWin(aRect);
     }
 }
-
 
 
 void SdrPageView::PrePaint()
@@ -416,7 +412,6 @@ void SdrPageView::SetDesignMode( bool _bDesignMode ) const
         rPageViewWindow.SetDesignMode( _bDesignMode );
     }
 }
-
 
 
 void SdrPageView::DrawPageViewGrid(OutputDevice& rOut, const Rectangle& rRect, Color aColor)
@@ -772,10 +767,9 @@ void SdrPageView::DeleteHelpLine(sal_uInt16 nNum)
     }
 }
 
-void SdrPageView::InsertHelpLine(const SdrHelpLine& rHL, sal_uInt16 nNum)
+void SdrPageView::InsertHelpLine(const SdrHelpLine& rHL)
 {
-    if (nNum > aHelpLines.GetCount())
-        nNum = aHelpLines.GetCount();
+    sal_uInt16 nNum = aHelpLines.GetCount();
     aHelpLines.Insert(rHL,nNum);
     if (GetView().IsHlplVisible())
         ImpInvalidateHelpLineArea(nNum);
@@ -959,7 +953,6 @@ void SdrPageView::SetApplicationDocumentColor(Color aDocumentColor)
 {
     maDocumentColor = aDocumentColor;
 }
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

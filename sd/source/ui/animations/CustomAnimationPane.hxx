@@ -24,14 +24,15 @@
 #include <com/sun/star/frame/XModel.hpp>
 #include <vcl/dialog.hxx>
 #include <vcl/layout.hxx>
+#include <vcl/field.hxx>
 #include <svx/sidebar/PanelLayout.hxx>
 #include <sfx2/sidebar/ControlFactory.hxx>
 #include "CustomAnimationPreset.hxx"
 #include "CustomAnimationList.hxx"
-#include "CustomAnimationCreateDialog.hxx"
-
+#include "CategoryListBox.hxx"
 #include "motionpathtag.hxx"
 #include "misc/scopelock.hxx"
+#include "CustomAnimationPreset.hxx"
 
 #include <vector>
 
@@ -41,6 +42,8 @@ class FixedText;
 class ListBox;
 class ComboBox;
 class CheckBox;
+
+enum class PathKind { NONE, CURVE, POLYGON, FREEFORM };
 
 namespace com { namespace sun { namespace star { namespace animations {
     class XAnimationNode;
@@ -69,7 +72,8 @@ public:
     // callbacks
     void onSelectionChanged();
     void onChangeCurrentPage();
-    void onChange( bool bCreate );
+    void onAdd();
+    void animationChange();
     void onRemove();
     void onChangeStart();
     void onChangeStart( sal_Int16 nNodeType );
@@ -94,6 +98,7 @@ public:
 
     void addUndo();
 
+    double getDuration();
     void updatePathFromMotionPathTag( const rtl::Reference< MotionPathTag >& xTag );
 
 private:
@@ -107,20 +112,22 @@ private:
     void moveSelection( bool bUp );
     void onPreview( bool bForcePreview );
 
-    void createPath( PathKind eKind, std::vector< css::uno::Any >& rTargets, double fDuration );
-
     STLPropertySet* createSelectionSet();
     void changeSelection( STLPropertySet* pResultSet, STLPropertySet* pOldSet );
 
-    static css::uno::Any getProperty1Value( sal_Int32 nType, CustomAnimationEffectPtr pEffect );
-    bool setProperty1Value( sal_Int32 nType, CustomAnimationEffectPtr pEffect, const css::uno::Any& rValue );
+    static css::uno::Any getProperty1Value( sal_Int32 nType, const CustomAnimationEffectPtr& pEffect );
+    bool setProperty1Value( sal_Int32 nType, const CustomAnimationEffectPtr& pEffect, const css::uno::Any& rValue );
     void UpdateLook();
+    sal_uInt32 fillAnimationLB();
 
     DECL_LINK_TYPED( implControlListBoxHdl, ListBox&, void );
     DECL_LINK_TYPED( implClickHdl, Button*, void );
     DECL_LINK_TYPED( implPropertyHdl, LinkParamNone*, void );
     DECL_LINK_TYPED( EventMultiplexerListener, tools::EventMultiplexerEvent&, void );
     DECL_LINK_TYPED( lateInitCallback, Timer *, void );
+    DECL_LINK_TYPED( DurationModifiedHdl, Edit&, void );
+    DECL_LINK_TYPED( UpdateAnimationLB, ListBox&, void );
+    DECL_LINK_TYPED( AnimationSelectHdl, ListBox&, void );
     void implControlHdl(Control*);
 
 private:
@@ -129,7 +136,6 @@ private:
     const CustomAnimationPresets* mpCustomAnimationPresets;
 
     VclPtr<PushButton> mpPBAddEffect;
-    VclPtr<PushButton> mpPBChangeEffect;
     VclPtr<PushButton> mpPBRemoveEffect;
     VclPtr<FixedText>  mpFTEffect;
     VclPtr<FixedText>  mpFTStart;
@@ -138,18 +144,25 @@ private:
     VclPtr<VclHBox>    mpPlaceholderBox;
     VclPtr<PropertyControl>    mpLBProperty;
     VclPtr<PushButton> mpPBPropertyMore;
-    VclPtr<FixedText>  mpFTSpeed;
-    VclPtr<ListBox>   mpCBSpeed;
+    VclPtr<FixedText>  mpFTDuration;
+    VclPtr<MetricBox>   mpCBXDuration;
     VclPtr<CustomAnimationList>    mpCustomAnimationList;
     VclPtr<PushButton> mpPBMoveUp;
     VclPtr<PushButton> mpPBMoveDown;
     VclPtr<PushButton> mpPBPlay;
     VclPtr<CheckBox>   mpCBAutoPreview;
+    VclPtr<FixedText> mpFTCategory;
+    VclPtr<ListBox>    mpLBCategory;
+    VclPtr<FixedText> mpFTAnimation;
+    VclPtr<CategoryListBox> mpLBAnimation;
 
     OUString    maStrModify;
     OUString    maStrProperty;
 
     sal_Int32   mnPropertyType;
+    sal_Int32   mnCurvePathPos;
+    sal_Int32   mnPolygonPathPos;
+    sal_Int32   mnFreeformPathPos;
 
     EffectSequence  maListSelection;
     css::uno::Any   maViewSelection;
@@ -158,7 +171,6 @@ private:
 
     css::uno::Reference< css::drawing::XDrawPage > mxCurrentPage;
     css::uno::Reference< css::drawing::XDrawView > mxView;
-    css::uno::Reference< css::frame::XModel > mxModel;
 
     /** The mpCustomAnimationPresets is initialized either on demand or
         after a short time after the construction of a new object of this
@@ -177,8 +189,6 @@ private:
 };
 
 void fillRepeatComboBox( ListBox* pBox );
-
-void fillDurationComboBox( ListBox* pBox );
 
 }
 

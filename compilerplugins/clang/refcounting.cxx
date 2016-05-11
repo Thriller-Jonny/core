@@ -83,7 +83,7 @@ bool isDerivedFrom(const CXXRecordDecl *decl, const char *pString) {
         !decl->hasAnyDependentBases() &&
         !compat::forallBases(
             *decl,
-#if __clang_major__ == 3 && __clang_minor__ <= 7
+#if CLANG_VERSION < 30800
             BaseCheckNotSubclass,
 #else
             [pString](const CXXRecordDecl *BaseDefinition) -> bool
@@ -110,10 +110,8 @@ static std::vector<std::string> PROBABLY_GOOD_TEMPLATES = {
     "com::sun::star::uno::Reference",
     "com::sun::star::uno::WeakReference",
     "com::sun::star::uno::Sequence",
-    "accessibility::HardCppRef",
     "accessibility::WeakCppRef",
     "dba::OAutoRegistration",
-    "dba::OSingletonRegistration",
     "dbp::OMultiInstanceAutoRegistration",
     "dbaui::OMultiInstanceAutoRegistration",
     "dbaxml::OMultiInstanceAutoRegistration",
@@ -121,7 +119,6 @@ static std::vector<std::string> PROBABLY_GOOD_TEMPLATES = {
     "io_acceptor::ReferenceHash",
     "comphelper::OAutoRegistration",
     "comphelper::OInterfaceCompare",
-    "comphelper::module::OSingletonRegistration",
     "comphelper::WeakBag",
     "comphelper::service_decl::class_",
     "comphelper::service_decl::vba_service_class_",
@@ -132,7 +129,6 @@ static std::vector<std::string> PROBABLY_GOOD_TEMPLATES = {
     "dbmm::OAutoRegistration",
     "pcr::OAutoRegistration",
     "logging::ComponentMethodGuard",
-    "logging::OSingletonRegistration",
     "logging::OAutoRegistration",
     "rtl::Reference",
     "sdbtools::OAutoRegistration",
@@ -159,7 +155,7 @@ bool containsXInterfaceSubclass(const Type* pType0) {
     const CXXRecordDecl* pRecordDecl = pType->getAsCXXRecordDecl();
     if (pRecordDecl) {
         pRecordDecl = pRecordDecl->getCanonicalDecl();
-        // these classes override acquire/release and forwards to it's parent
+        // these classes override acquire/release and forwards to its parent
         if (isDerivedFrom(pRecordDecl, "ListenerMultiplexerBase")) { // module UnoTools
             return false;
         }

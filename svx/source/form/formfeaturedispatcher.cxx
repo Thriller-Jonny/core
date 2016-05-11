@@ -56,7 +56,7 @@ namespace svx
 
         _rState.FeatureURL = m_aFeatureURL;
         _rState.IsEnabled = aState.Enabled;
-        _rState.Requery = sal_False;
+        _rState.Requery = false;
         _rState.State = aState.State;
     }
 
@@ -97,7 +97,7 @@ namespace svx
         }
         else
         {
-            ::cppu::OInterfaceIteratorHelper aIter( m_aStatusListeners );
+            ::comphelper::OInterfaceIteratorHelper2 aIter( m_aStatusListeners );
             _rFreeForNotification.clear();
 
             while ( aIter.hasMoreElements() )

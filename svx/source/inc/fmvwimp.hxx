@@ -109,10 +109,10 @@ public:
 
     // XIndexAccess
     virtual sal_Int32 SAL_CALL getCount() throw(css::uno::RuntimeException, std::exception) override;
-    virtual css::uno::Any SAL_CALL getByIndex(sal_Int32 _Index) throw(css::lang::IndexOutOfBoundsException, css::lang::WrappedTargetException, css::uno::RuntimeException, std::exception) override;
+    virtual css::uno::Any SAL_CALL getByIndex(sal_Int32 Index) throw(css::lang::IndexOutOfBoundsException, css::lang::WrappedTargetException, css::uno::RuntimeException, std::exception) override;
 
     // XFormControllerContext
-    virtual void SAL_CALL makeVisible( const css::uno::Reference< css::awt::XControl >& _Control ) throw (css::uno::RuntimeException, std::exception) override;
+    virtual void SAL_CALL makeVisible( const css::uno::Reference< css::awt::XControl >& Control ) throw (css::uno::RuntimeException, std::exception) override;
 
     const ::std::vector< css::uno::Reference< css::form::runtime::XFormController > >& GetList() {return m_aControllerList;}
 
@@ -121,7 +121,7 @@ protected:
     void setController(
             const css::uno::Reference< css::form::XForm >& xForm,
             const css::uno::Reference< css::form::runtime::XFormController >& _rxParentController );
-    css::uno::Reference< css::awt::XControlContainer >  getControlContainer() const { return m_xControlContainer; }
+    const css::uno::Reference< css::awt::XControlContainer >&  getControlContainer() const { return m_xControlContainer; }
     void updateTabOrder( const css::uno::Reference< css::form::XForm >& _rxForm );
     void dispose();
     vcl::Window* getWindow() const {return m_pWindow;}
@@ -183,7 +183,7 @@ protected:
     FmXFormView( FmFormView* _pView );
     virtual ~FmXFormView();
 
-    void    saveMarkList( bool _bSmartUnmark = true );
+    void    saveMarkList();
     void    restoreMarkList( SdrMarkList& _rRestoredMarkList );
     void    stopMarkListWatching();
     void    startMarkListWatching();
@@ -292,7 +292,7 @@ private:
     void cancelEvents();
 
     /// the auto focus to the first (in terms of the tab order) control
-    void AutoFocus( bool _bSync = false );
+    void AutoFocus();
     DECL_LINK_TYPED( OnActivate, void*, void );
     DECL_LINK_TYPED( OnAutoFocus, void*, void );
     DECL_LINK_TYPED( OnDelayedErrorMessage, void*, void );
@@ -301,7 +301,6 @@ private:
 private:
     ::svxform::DocumentType impl_getDocumentType() const;
 };
-
 
 
 #endif // INCLUDED_SVX_SOURCE_INC_FMVWIMP_HXX

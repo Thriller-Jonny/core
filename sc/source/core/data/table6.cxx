@@ -35,8 +35,6 @@
 #include "postit.hxx"
 #include "stringutil.hxx"
 
-using ::com::sun::star::util::SearchOptions;
-
 namespace {
 
 bool lcl_GetTextWithBreaks( const EditTextObject& rData, ScDocument* pDoc, OUString& rVal )
@@ -292,7 +290,7 @@ bool ScTable::Search(const SvxSearchItem& rSearchItem, SCCOL& rCol, SCROW& rRow,
 }
 
 bool ScTable::Search(const SvxSearchItem& rSearchItem, SCCOL& rCol, SCROW& rRow,
-                     const SCCOL& nLastCol, const SCROW& nLastRow,
+                     SCCOL nLastCol, SCROW nLastRow,
                      const ScMarkData& rMark, OUString& rUndoStr, ScDocument* pUndoDoc)
 {
     bool bFound = false;
@@ -530,7 +528,7 @@ bool ScTable::SearchStyle(const SvxSearchItem& rSearchItem, SCCOL& rCol, SCROW& 
 {
     const ScStyleSheet* pSearchStyle = static_cast<const ScStyleSheet*>(
                                         pDocument->GetStyleSheetPool()->Find(
-                                        rSearchItem.GetSearchString(), SFX_STYLE_FAMILY_PARA ));
+                                        rSearchItem.GetSearchString(), SfxStyleFamily::Para ));
 
     SCsCOL nCol = rCol;
     SCsROW nRow = rRow;
@@ -622,7 +620,7 @@ bool ScTable::ReplaceStyle(const SvxSearchItem& rSearchItem, SCCOL& rCol, SCROW&
     {
         const ScStyleSheet* pReplaceStyle = static_cast<const ScStyleSheet*>(
                                         pDocument->GetStyleSheetPool()->Find(
-                                        rSearchItem.GetReplaceString(), SFX_STYLE_FAMILY_PARA ));
+                                        rSearchItem.GetReplaceString(), SfxStyleFamily::Para ));
 
         if (pReplaceStyle)
             ApplyStyle( rCol, rRow, *pReplaceStyle );
@@ -640,7 +638,7 @@ bool ScTable::SearchAllStyle(
 {
     const ScStyleSheet* pSearchStyle = static_cast<const ScStyleSheet*>(
                                         pDocument->GetStyleSheetPool()->Find(
-                                        rSearchItem.GetSearchString(), SFX_STYLE_FAMILY_PARA ));
+                                        rSearchItem.GetSearchString(), SfxStyleFamily::Para ));
     bool bSelect = rSearchItem.GetSelection();
     bool bBack = rSearchItem.GetBackward();
     bool bEverFound = false;
@@ -680,7 +678,7 @@ bool ScTable::ReplaceAllStyle(
     {
         const ScStyleSheet* pReplaceStyle = static_cast<const ScStyleSheet*>(
                                         pDocument->GetStyleSheetPool()->Find(
-                                        rSearchItem.GetReplaceString(), SFX_STYLE_FAMILY_PARA ));
+                                        rSearchItem.GetReplaceString(), SfxStyleFamily::Para ));
 
         if (pReplaceStyle)
         {
@@ -727,10 +725,10 @@ bool ScTable::SearchAndReplace(
         else
         {
             //  SearchParam no longer needed - SearchOptions contains all settings
-            css::util::SearchOptions aSearchOptions = rSearchItem.GetSearchOptions();
+            css::util::SearchOptions2 aSearchOptions = rSearchItem.GetSearchOptions();
             aSearchOptions.Locale = *ScGlobal::GetLocale();
 
-            if (aSearchOptions.searchString.isEmpty())
+            if (aSearchOptions.searchString.isEmpty() || ( rSearchItem.GetRegExp() && aSearchOptions.searchString == "^$" ) )
             {
                 // Search for empty cells.
                 return SearchAndReplaceEmptyCells(rSearchItem, rCol, rRow, rMark, rMatchedRanges, rUndoStr, pUndoDoc);
@@ -786,15 +784,15 @@ bool ScTable::SearchAndReplaceEmptyCells(
         for ( size_t i = 0, n = aMarkedRanges.size(); i < n; ++i )
         {
             ScRange* p = aMarkedRanges[ i ];
-            if (p->aStart.Col() > nColEnd || p->aStart.Row() > nRowEnd)
+            if (p->aStart.Col() > nColEnd || p->aStart.Row() > nRowEnd || p->aEnd.Col() < nColStart || p->aEnd.Row() < nRowStart)
                 // This range is outside the data area.  Skip it.
                 continue;
 
             // Shrink the range into data area only.
             if (p->aStart.Col() < nColStart)
-                p->aStart.SetCol(rCol);
+                p->aStart.SetCol(nColStart);
             if (p->aStart.Row() < nRowStart)
-                p->aStart.SetRow(rRow);
+                p->aStart.SetRow(nRowStart);
 
             if (p->aEnd.Col() > nColEnd)
                 p->aEnd.SetCol(nColEnd);

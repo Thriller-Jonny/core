@@ -122,7 +122,7 @@ void ParaWin::UpdateArgDesc( sal_uInt16 nArg )
 
         if ( nArgs < VAR_ARGS )
         {
-            sal_uInt16 nRealArg = (aVisibleArgMapping.size() < nArg) ? aVisibleArgMapping[nArg] : nArg;
+            sal_uInt16 nRealArg = (nArg < aVisibleArgMapping.size()) ? aVisibleArgMapping[nArg] : nArg;
             aArgDesc  = pFuncDesc->getParameterDescription(nRealArg);
             aArgName  = pFuncDesc->getParameterName(nRealArg);
             aArgName += " ";
@@ -136,8 +136,9 @@ void ParaWin::UpdateArgDesc( sal_uInt16 nArg )
                     aVisibleArgMapping[nPos] : aVisibleArgMapping.back());
             aArgDesc  = pFuncDesc->getParameterDescription(nRealArg);
             aArgName  = pFuncDesc->getParameterName(nRealArg);
-            if ( nArg >= nFix )
-                aArgName += OUString::number( nArg-nFix+1 );
+            sal_uInt16 nVarArgsStart = pFuncDesc->getVarArgsStart();
+            if ( nArg >= nVarArgsStart )
+                aArgName += OUString::number( nArg-nVarArgsStart+1 );
             aArgName += " ";
 
             aArgName += (nArg > nFix || pFuncDesc->isParameterOptional(nRealArg)) ? m_sOptional : m_sRequired ;
@@ -154,8 +155,9 @@ void ParaWin::UpdateArgDesc( sal_uInt16 nArg )
                     aVisibleArgMapping[nPos] : aVisibleArgMapping.back());
             aArgDesc  = pFuncDesc->getParameterDescription(nRealArg);
             aArgName  = pFuncDesc->getParameterName(nRealArg);
-            if ( nArg >= nFix )
-                aArgName += OUString::number( (nArg-nFix)/2 + 1 );
+            sal_uInt16 nVarArgsStart = pFuncDesc->getVarArgsStart();
+            if ( nArg >= nVarArgsStart )
+                aArgName += OUString::number( (nArg-nVarArgsStart)/2 + 1 );
             aArgName += " ";
 
             aArgName += (nArg > (nFix+1) || pFuncDesc->isParameterOptional(nRealArg)) ? m_sOptional : m_sRequired ;
@@ -188,10 +190,11 @@ void ParaWin::UpdateArgInput( sal_uInt16 nOffset, sal_uInt16 i )
         SetArgNameFont( i,
                 (nArg > nFix || pFuncDesc->isParameterOptional(nRealArg)) ?
                 aFntLight : aFntBold );
-        if ( nArg >= nFix )
+        sal_uInt16 nVarArgsStart = pFuncDesc->getVarArgsStart();
+        if ( nArg >= nVarArgsStart )
         {
             OUString aArgName( pFuncDesc->getParameterName(nRealArg) );
-            aArgName += OUString::number(nArg-nFix+1);
+            aArgName += OUString::number(nArg-nVarArgsStart+1);
             SetArgName( i, aArgName );
         }
         else
@@ -210,10 +213,11 @@ void ParaWin::UpdateArgInput( sal_uInt16 nOffset, sal_uInt16 i )
         SetArgNameFont( i,
                 (nArg > (nFix+1) || pFuncDesc->isParameterOptional(nRealArg)) ?
                 aFntLight : aFntBold );
-        if ( nArg >= nFix )
+        sal_uInt16 nVarArgsStart = pFuncDesc->getVarArgsStart();
+        if ( nArg >= nVarArgsStart )
         {
             OUString aArgName( pFuncDesc->getParameterName(nRealArg) );
-            aArgName += OUString::number( (nArg-nFix)/2 + 1 );
+            aArgName += OUString::number( (nArg-nVarArgsStart)/2 + 1 );
             SetArgName( i, aArgName );
         }
         else
@@ -416,11 +420,11 @@ void ParaWin::ShowParaLine(sal_uInt16 no)
     aArgInput[no].Show();
 }
 
-void ParaWin::SetEdFocus(sal_uInt16 no)
+void ParaWin::SetEdFocus()
 {
-    UpdateArgDesc(no);
-    if(no<4 && no<aParaArray.size())
-        aArgInput[no].GetArgEdPtr()->GrabFocus();
+    UpdateArgDesc(0);
+    if(0<aParaArray.size())
+        aArgInput[0].GetArgEdPtr()->GrabFocus();
 }
 
 
@@ -594,7 +598,6 @@ IMPL_LINK_TYPED( ParaWin, GetFxFocusHdl, ArgInput&, rPtr, void )
 }
 
 
-
 IMPL_LINK_TYPED( ParaWin, GetEdFocusHdl, ArgInput&, rPtr, void )
 {
     sal_uInt16 nOffset = GetSliderPos();
@@ -638,14 +641,22 @@ IMPL_LINK_TYPED( ParaWin, ModifyHdl, ArgInput&, rPtr, void )
     }
     if(nEdFocus!=NOT_FOUND)
     {
-        aParaArray[nEdFocus+nOffset] = aArgInput[nEdFocus].GetArgVal();
+        size_t nPara = nEdFocus + nOffset;
+        if (nPara < aParaArray.size())
+            aParaArray[nPara] = aArgInput[nEdFocus].GetArgVal();
+        else
+        {
+            SAL_WARN("formula.ui","ParaWin::ModifyHdl - shot in foot: nPara " <<
+                    nPara << " >= aParaArray.size() " << aParaArray.size() <<
+                    " with nEdFocus " << nEdFocus <<
+                    " and aArgInput[nEdFocus].GetArgVal() '" << aArgInput[nEdFocus].GetArgVal() << "'");
+        }
         UpdateArgDesc( nEdFocus);
-        nActiveLine=nEdFocus+nOffset;
+        nActiveLine = static_cast<sal_uInt16>(nPara);
     }
 
     ArgumentModified();
 }
-
 
 
 } // formula

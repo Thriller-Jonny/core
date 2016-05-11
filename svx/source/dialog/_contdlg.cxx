@@ -17,8 +17,9 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
+#include <sal/config.h>
+
 #include <vcl/wrkwin.hxx>
-#include <sot/factory.hxx>
 #include <tools/helpers.hxx>
 #include <vcl/msgbox.hxx>
 #include <svl/eitem.hxx>
@@ -194,7 +195,7 @@ bool SvxContourDlg::IsGraphicChanged() const
 
 tools::PolyPolygon SvxContourDlg::GetPolyPolygon()
 {
-    return pSuperClass->GetPolyPolygon(true);
+    return pSuperClass->GetPolyPolygon();
 }
 
 const void* SvxContourDlg::GetEditingObject() const
@@ -211,6 +212,8 @@ void SvxContourDlg::Update( const Graphic& rGraphic, bool bGraphicLinked,
 SvxSuperContourDlg::SvxSuperContourDlg(SfxBindings *_pBindings, SfxChildWindow *pCW,
                                        vcl::Window* _pParent) :
         SvxContourDlg       ( _pBindings, pCW, _pParent ),
+        aUpdateIdle         ( "SvxSuperContourDlg UpdateIdle" ),
+        aCreateIdle         ( "SvxSuperContourDlg CreateIdle" ),
         pUpdateEditingObject( nullptr ),
         pCheckObj           ( nullptr ),
         aContourItem        ( SID_CONTOUR_EXEC, *this, *_pBindings ),
@@ -276,7 +279,7 @@ SvxSuperContourDlg::SvxSuperContourDlg(SfxBindings *_pBindings, SfxChildWindow *
 
     SetMinOutputSizePixel( aLastSize = GetOutputSizePixel() );
 
-    m_pStbStatus->InsertItem( 1, 130, SIB_LEFT | SIB_IN | SIB_AUTOSIZE );
+    m_pStbStatus->InsertItem( 1, 130, StatusBarItemBits::Left | StatusBarItemBits::In | StatusBarItemBits::AutoSize );
     m_pStbStatus->InsertItem( 2, 10 + GetTextWidth( " 9999,99 cm / 9999,99 cm " ) );
     m_pStbStatus->InsertItem( 3, 10 + GetTextWidth( " 9999,99 cm x 9999,99 cm " ) );
     m_pStbStatus->InsertItem( 4, 20 );
@@ -321,8 +324,9 @@ bool SvxSuperContourDlg::Close()
         if ( nRet == RET_YES )
         {
             SfxBoolItem aBoolItem( SID_CONTOUR_EXEC, true );
-            GetBindings().GetDispatcher()->Execute(
-                SID_CONTOUR_EXEC, SfxCallMode::SYNCHRON | SfxCallMode::RECORD, &aBoolItem, 0L );
+            GetBindings().GetDispatcher()->ExecuteList(
+                SID_CONTOUR_EXEC, SfxCallMode::SYNCHRON | SfxCallMode::RECORD,
+                { &aBoolItem });
         }
         else if ( nRet == RET_CANCEL )
             bRet = false;
@@ -375,30 +379,27 @@ void SvxSuperContourDlg::SetPolyPolygon( const tools::PolyPolygon& rPolyPoly )
     m_pContourWnd->GetSdrModel()->SetChanged();
 }
 
-tools::PolyPolygon SvxSuperContourDlg::GetPolyPolygon( bool bRescaleToGraphic )
+tools::PolyPolygon SvxSuperContourDlg::GetPolyPolygon()
 {
     tools::PolyPolygon aRetPolyPoly( m_pContourWnd->GetPolyPolygon() );
 
-    if ( bRescaleToGraphic )
+    const MapMode   aMap100( MAP_100TH_MM );
+    const MapMode   aGrfMap( aGraphic.GetPrefMapMode() );
+    OutputDevice*   pOutDev = Application::GetDefaultDevice();
+    bool            bPixelMap = aGrfMap.GetMapUnit() == MAP_PIXEL;
+
+    for ( sal_uInt16 j = 0, nPolyCount = aRetPolyPoly.Count(); j < nPolyCount; j++ )
     {
-        const MapMode   aMap100( MAP_100TH_MM );
-        const MapMode   aGrfMap( aGraphic.GetPrefMapMode() );
-        OutputDevice*   pOutDev = Application::GetDefaultDevice();
-        bool            bPixelMap = aGrfMap.GetMapUnit() == MAP_PIXEL;
+        tools::Polygon& rPoly = aRetPolyPoly[ j ];
 
-        for ( sal_uInt16 j = 0, nPolyCount = aRetPolyPoly.Count(); j < nPolyCount; j++ )
+        for ( sal_uInt16 i = 0, nCount = rPoly.GetSize(); i < nCount; i++ )
         {
-            tools::Polygon& rPoly = aRetPolyPoly[ j ];
+            Point& rPt = rPoly[ i ];
 
-            for ( sal_uInt16 i = 0, nCount = rPoly.GetSize(); i < nCount; i++ )
-            {
-                Point& rPt = rPoly[ i ];
+            rPt = pOutDev->LogicToPixel( rPt, aMap100  );
 
-                rPt = pOutDev->LogicToPixel( rPt, aMap100  );
-
-                if ( !bPixelMap )
-                    rPt = pOutDev->PixelToLogic( rPt, aGrfMap  );
-            }
+            if ( !bPixelMap )
+                rPt = pOutDev->PixelToLogic( rPt, aGrfMap  );
         }
     }
 
@@ -440,8 +441,9 @@ IMPL_LINK_TYPED( SvxSuperContourDlg, Tbx1ClickHdl, ToolBox*, pTbx, void )
     if (nId == mnApplyId)
     {
         SfxBoolItem aBoolItem( SID_CONTOUR_EXEC, true );
-        GetBindings().GetDispatcher()->Execute(
-            SID_CONTOUR_EXEC, SfxCallMode::ASYNCHRON | SfxCallMode::RECORD, &aBoolItem, 0L );
+        GetBindings().GetDispatcher()->ExecuteList(
+            SID_CONTOUR_EXEC, SfxCallMode::ASYNCHRON | SfxCallMode::RECORD,
+            { &aBoolItem });
     }
     else if (nId == mnWorkSpaceId)
     {
@@ -639,8 +641,8 @@ IMPL_LINK_TYPED( SvxSuperContourDlg, StateHdl, GraphCtrl*, pWnd, void )
 
         switch( pWnd->GetPolyEditMode() )
         {
-            case( SID_BEZIER_MOVE ): nId = mnPolyMoveId; break;
-            case( SID_BEZIER_INSERT ): nId = mnPolyInsertId; break;
+            case SID_BEZIER_MOVE: nId = mnPolyMoveId; break;
+            case SID_BEZIER_INSERT: nId = mnPolyInsertId; break;
 
             default:
             break;

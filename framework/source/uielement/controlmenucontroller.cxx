@@ -221,8 +221,7 @@ private:
 
     class UrlToDispatchMap : public std::unordered_map< OUString,
                                                         uno::Reference< frame::XDispatch >,
-                                                        OUStringHash,
-                                                        std::equal_to< OUString > >
+                                                        OUStringHash >
     {
         public:
             inline void free()
@@ -262,7 +261,7 @@ void ControlMenuController::updateImagesPopupMenu( PopupMenu* pPopupMenu )
     if ( pResMgr->IsAvailable( aResId ))
     {
         ImageList aImageList( aResId );
-        for ( sal_uInt32 i=0; i < sizeof(nConvertSlots)/sizeof(nConvertSlots[0]); ++i )
+        for ( sal_uInt32 i=0; i < SAL_N_ELEMENTS(nConvertSlots); ++i )
         {
             // das entsprechende Image dran
             if ( m_bShowMenuImages )
@@ -310,7 +309,7 @@ void SAL_CALL ControlMenuController::statusChanged( const FeatureStateEvent& Eve
     osl::ResettableMutexGuard aLock( m_aMutex );
 
     sal_uInt16 nMenuId = 0;
-    for (sal_uInt32 i=0; i < sizeof(aCommands) / sizeof (aCommands[0]); ++i)
+    for (sal_uInt32 i=0; i < SAL_N_ELEMENTS(aCommands); ++i)
     {
         if ( Event.FeatureURL.Complete.equalsAscii( aCommands[i] ))
         {
@@ -419,9 +418,9 @@ void SAL_CALL ControlMenuController::updatePopupMenu() throw (css::uno::RuntimeE
         fillPopupMenu( m_xPopupMenu );
         m_aURLToDispatchMap.free();
 
-        for (sal_uInt32 i=0; i<sizeof(aCommands)/sizeof(aCommands[0]); ++i)
+        for (const char* aCommand : aCommands)
         {
-            aTargetURL.Complete = OUString::createFromAscii( aCommands[i] );
+            aTargetURL.Complete = OUString::createFromAscii( aCommand );
             m_xURLTransformer->parseStrict( aTargetURL );
 
             Reference< XDispatch > xDispatch = xDispatchProvider->queryDispatch( aTargetURL, OUString(), 0 );

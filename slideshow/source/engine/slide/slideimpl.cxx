@@ -68,7 +68,6 @@
 using namespace ::com::sun::star;
 
 
-
 namespace slideshow
 {
 namespace internal
@@ -108,8 +107,8 @@ public:
     // Slide interface
 
 
-    virtual bool prefetch() override;
-    virtual bool show( bool ) override;
+    virtual void prefetch() override;
+    virtual void show( bool ) override;
     virtual void hide() override;
 
     virtual basegfx::B2ISize getSlideSize() const override;
@@ -220,8 +219,8 @@ private:
     uno::Reference< animations::XAnimationNode >        mxRootNode;
 
     LayerManagerSharedPtr                               mpLayerManager;
-    boost::shared_ptr<ShapeManagerImpl>                 mpShapeManager;
-    boost::shared_ptr<SubsettableShapeManager>          mpSubsettableShapeManager;
+    std::shared_ptr<ShapeManagerImpl>                 mpShapeManager;
+    std::shared_ptr<SubsettableShapeManager>          mpSubsettableShapeManager;
 
     /// Contains common objects needed throughout the slideshow
     SlideShowContext                                    maContext;
@@ -285,9 +284,6 @@ private:
 };
 
 
-
-
-
 void slideRenderer( SlideImpl* pSlide, const UnoViewSharedPtr& rView )
 {
     // fully clear view content to background color
@@ -312,9 +308,6 @@ void slideRenderer( SlideImpl* pSlide, const UnoViewSharedPtr& rView )
     pBitmap->clip( ::basegfx::B2DPolyPolygon() );
     pBitmap->draw( pDevicePixelCanvas );
 }
-
-
-
 
 
 SlideImpl::SlideImpl( const uno::Reference< drawing::XDrawPage >&           xDrawPage,
@@ -410,32 +403,26 @@ SlideImpl::~SlideImpl()
     }
 }
 
-bool SlideImpl::prefetch()
+void SlideImpl::prefetch()
 {
     if( !mxRootNode.is() )
-        return false;
+        return;
 
-    return applyInitialShapeAttributes(mxRootNode);
+    applyInitialShapeAttributes(mxRootNode);
 }
 
-bool SlideImpl::show( bool bSlideBackgoundPainted )
+void SlideImpl::show( bool bSlideBackgoundPainted )
 {
-
-
     if( mbActive )
-        return true; // already active
+        return; // already active
 
     if( !mpShapeManager || !mpLayerManager )
-        return false; // disposed
-
-
+        return; // disposed
 
     // set initial shape attributes (e.g. hide shapes that have
     // 'appear' effect set)
     if( !applyInitialShapeAttributes(mxRootNode) )
-        return false;
-
-
+        return;
 
     // activate and take over view - clears view, if necessary
     mbActive = true;
@@ -445,8 +432,7 @@ bool SlideImpl::show( bool bSlideBackgoundPainted )
     // slide. Also enables LayerManager to record updates. Currently,
     // never let LayerManager render initial slide content, use
     // buffered slide bitmaps instead.
-    mpShapeManager->activate( true );
-
+    mpShapeManager->activate();
 
 
     // render slide to screen, if requested
@@ -457,7 +443,6 @@ bool SlideImpl::show( bool bSlideBackgoundPainted )
 
         maContext.mrScreenUpdater.notifyUpdate();
     }
-
 
 
     // fire up animations
@@ -486,17 +471,12 @@ bool SlideImpl::show( bool bSlideBackgoundPainted )
     if( mbIntrinsicAnimationsAllowed )
         startIntrinsicAnimations();
 
-
-
     // enable paint overlay, if maUserPaintColor is valid
     activatePaintOverlay();
 
 
-
     // from now on, animations might be showing
     meAnimationState = SHOWING_STATE;
-
-    return true;
 }
 
 void SlideImpl::hide()
@@ -505,10 +485,8 @@ void SlideImpl::hide()
         return; // already hidden/disposed
 
 
-
     // from now on, all animations are stopped
     meAnimationState = FINAL_STATE;
-
 
 
     // disable user paint overlay under all circumstances,
@@ -516,13 +494,11 @@ void SlideImpl::hide()
     deactivatePaintOverlay();
 
 
-
     // switch off all shape-intrinsic animations.
     endIntrinsicAnimations();
 
     // force-end all SMIL animations, too
     maAnimations.end();
-
 
 
     // disable shape management & event broadcasting for shapes of this
@@ -612,7 +588,6 @@ SlideBitmapSharedPtr SlideImpl::getCurrentSlideBitmap( const UnoViewSharedPtr& r
 
 
 // private methods
-
 
 
 void SlideImpl::viewAdded( const UnoViewSharedPtr& rView )
@@ -746,7 +721,7 @@ namespace
             }
         }
 
-        uno::Reference< animations::XAnimationNode > getMainSequence() const
+        const uno::Reference< animations::XAnimationNode >& getMainSequence() const
         {
             return maMainSequence;
         }
@@ -942,7 +917,7 @@ void SlideImpl::applyShapeAttributes(
             }
 
             AttributableShapeSharedPtr pAttrShape(
-                ::boost::dynamic_pointer_cast< AttributableShape >( pShape ) );
+                ::std::dynamic_pointer_cast< AttributableShape >( pShape ) );
 
             if( !pAttrShape )
             {
@@ -1181,7 +1156,7 @@ SlideSharedPtr createSlide( const uno::Reference< drawing::XDrawPage >&         
                             bool                                                bIntrinsicAnimationsAllowed,
                             bool                                                bDisableAnimationZOrder )
 {
-    boost::shared_ptr<SlideImpl> pRet( new SlideImpl( xDrawPage, xDrawPages, xRootNode, rEventQueue,
+    std::shared_ptr<SlideImpl> pRet( new SlideImpl( xDrawPage, xDrawPages, xRootNode, rEventQueue,
                                                       rEventMultiplexer, rScreenUpdater,
                                                       rActivitiesQueue, rUserEventQueue,
                                                       rCursorManager, rViewContainer,

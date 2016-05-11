@@ -43,14 +43,11 @@ using ::com::sun::star::uno::Sequence;
 using ::com::sun::star::uno::Exception;
 using ::com::sun::star::uno::UNO_QUERY;
 using ::com::sun::star::uno::UNO_QUERY_THROW;
-using ::com::sun::star::uno::UNO_SET_THROW;
-using ::com::sun::star::uno::TypeClass_BOOLEAN;
 using ::com::sun::star::uno::XInterface;
 using ::com::sun::star::beans::XPropertySet;
 using ::com::sun::star::beans::XPropertyState;
 using ::com::sun::star::lang::XServiceName;
 using ::com::sun::star::lang::XMultiServiceFactory;
-using ::com::sun::star::task::PasswordRequestMode_PASSWORD_ENTER;
 
 using namespace ::com::sun::star;
 
@@ -117,7 +114,7 @@ uno::Sequence< beans::NamedValue > ScfApiHelper::QueryEncryptionDataForMedium( S
     bool bIsDefaultPassword = false;
     aEncryptionData = ::comphelper::DocPasswordHelper::requestAndVerifyDocPassword(
         rVerifier, aEncryptionData, aPassword, rMedium.GetInteractionHandler(), rMedium.GetOrigURL(),
-        ::comphelper::DocPasswordRequestType_MS, pDefaultPasswords, &bIsDefaultPassword );
+        ::comphelper::DocPasswordRequestType::MS, pDefaultPasswords, &bIsDefaultPassword );
 
     rMedium.GetItemSet()->ClearItem( SID_PASSWORD );
     rMedium.GetItemSet()->ClearItem( SID_ENCRYPTIONDATA );
@@ -323,30 +320,25 @@ bool ScfPropSetHelper::ReadValue( Any& rAny )
     return pAny != nullptr;
 }
 
-bool ScfPropSetHelper::ReadValue( Color& rColor )
+void ScfPropSetHelper::ReadValue( Color& rColor )
 {
     sal_Int32 nApiColor(0);
-    bool bRet = ReadValue( nApiColor );
+    ReadValue( nApiColor );
     rColor = ScfApiHelper::ConvertFromApiColor( nApiColor );
-    return bRet;
 }
 
-bool ScfPropSetHelper::ReadValue( bool& rbValue )
+void ScfPropSetHelper::ReadValue( bool& rbValue )
 {
     Any aAny;
-    bool bRet = ReadValue( aAny );
+    ReadValue( aAny );
     rbValue = ScUnoHelpFunctions::GetBoolFromAny( aAny );
-    return bRet;
 }
 
 // write properties -----------------------------------------------------------
 
-void ScfPropSetHelper::InitializeWrite( bool bClearAllAnys )
+void ScfPropSetHelper::InitializeWrite()
 {
     mnNextIdx = 0;
-    if( bClearAllAnys )
-        for( sal_Int32 nIdx = 0, nLen = maValueSeq.getLength(); nIdx < nLen; ++nIdx )
-            maValueSeq[ nIdx ].clear();
 }
 
 void ScfPropSetHelper::WriteValue( const Any& rAny )
@@ -355,10 +347,10 @@ void ScfPropSetHelper::WriteValue( const Any& rAny )
         *pAny = rAny;
 }
 
-void ScfPropSetHelper::WriteValue( const bool& rbValue )
+void ScfPropSetHelper::WriteValue( bool rbValue )
 {
     if( Any* pAny = GetNextAny() )
-        ScUnoHelpFunctions::SetBoolInAny( *pAny, rbValue );
+        *pAny <<= rbValue;
 }
 
 void ScfPropSetHelper::WriteToPropertySet( ScfPropertySet& rPropSet ) const

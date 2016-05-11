@@ -90,11 +90,16 @@ void SwSortElement::Init( SwDoc* pD, const SwSortOptions& rOpt,
 
 void SwSortElement::Finit()
 {
-    delete pOptions, pOptions = nullptr;
-    delete pLocale, pLocale = nullptr;
-    delete pLastAlgorithm, pLastAlgorithm = nullptr;
-    delete pSortCollator, pSortCollator = nullptr;
-    delete pLclData, pLclData = nullptr;
+    delete pOptions;
+    pOptions = nullptr;
+    delete pLocale;
+    pLocale = nullptr;
+    delete pLastAlgorithm;
+    pLastAlgorithm = nullptr;
+    delete pSortCollator;
+    pSortCollator = nullptr;
+    delete pLclData;
+    pLclData = nullptr;
     pDoc = nullptr;
     pBox = nullptr;
 }
@@ -128,9 +133,15 @@ int SwSortElement::keycompare(const SwSortElement& rCmp, sal_uInt16 nKey) const
 
     const SwSortKey* pSrtKey = pOptions->aKeys[ nKey ];
     if( pSrtKey->eSortOrder == SRT_ASCENDING )
-        pOrig = this, pCmp = &rCmp;
+    {
+        pOrig = this;
+        pCmp = &rCmp;
+    }
     else
-        pOrig = &rCmp, pCmp = this;
+    {
+        pOrig = &rCmp;
+        pCmp = this;
+    }
 
     if( pSrtKey->bIsNumeric )
     {
@@ -156,11 +167,6 @@ int SwSortElement::keycompare(const SwSortElement& rCmp, sal_uInt16 nKey) const
                     pOrig->GetKey( nKey ), pCmp->GetKey( nKey ));
     }
     return nCmp;
-}
-
-bool SwSortElement::operator==(const SwSortElement& ) const
-{
-    return false;
 }
 
 bool SwSortElement::operator<(const SwSortElement& rCmp) const
@@ -236,7 +242,7 @@ SwSortBoxElement::~SwSortBoxElement()
 /// Get Key for a cell
 OUString SwSortBoxElement::GetKey(sal_uInt16 nKey) const
 {
-    const _FndBox* pFndBox;
+    const FndBox_* pFndBox;
     sal_uInt16 nCol = pOptions->aKeys[nKey]->nColumnId-1;
 
     if( SRT_ROWS == pOptions->eDirection )
@@ -265,7 +271,7 @@ OUString SwSortBoxElement::GetKey(sal_uInt16 nKey) const
 
 double SwSortBoxElement::GetValue( sal_uInt16 nKey ) const
 {
-    const _FndBox* pFndBox;
+    const FndBox_* pFndBox;
     sal_uInt16 nCol = pOptions->aKeys[nKey]->nColumnId-1;
 
     if( SRT_ROWS == pOptions->eDirection )
@@ -343,7 +349,7 @@ bool SwDoc::SortText(const SwPaM& rPaM, const SwSortOptions& rOpt)
             // First copy the range
             SwNodeIndex aEndIdx( pEnd->nNode, 1 );
             SwNodeRange aRg( pStart->nNode, aEndIdx );
-            GetNodes()._Copy( aRg, aEndIdx );
+            GetNodes().Copy_( aRg, aEndIdx );
 
             // range is new from pEnd->nNode+1 to aEndIdx
             getIDocumentRedlineAccess().DeleteRedline( *pRedlPam, true, USHRT_MAX );
@@ -369,7 +375,8 @@ bool SwDoc::SortText(const SwPaM& rPaM, const SwSortOptions& rOpt)
         else
         {
             getIDocumentRedlineAccess().DeleteRedline( *pRedlPam, true, USHRT_MAX );
-            delete pRedlPam, pRedlPam = nullptr;
+            delete pRedlPam;
+            pRedlPam = nullptr;
         }
     }
 
@@ -460,7 +467,8 @@ bool SwDoc::SortText(const SwPaM& rPaM, const SwSortOptions& rOpt)
         if( pRedlUndo )
             pRedlUndo->SetOffset( aSttIdx );
 
-        delete pRedlPam, pRedlPam = nullptr;
+        delete pRedlPam;
+        pRedlPam = nullptr;
     }
     GetIDocumentUndoRedo().DoUndo( bUndo );
     if( bUndo )
@@ -482,9 +490,9 @@ bool SwDoc::SortTable(const SwSelBoxes& rBoxes, const SwSortOptions& rOpt)
 
     // We begin sorting
     // Find all Boxes/Lines
-    _FndBox aFndBox( nullptr, nullptr );
+    FndBox_ aFndBox( nullptr, nullptr );
     {
-        _FndPara aPara( rBoxes, &aFndBox );
+        FndPara aPara( rBoxes, &aFndBox );
         ForEach_FndLineCopyCol( pTableNd->GetTable().GetTabLines(), &aPara );
     }
 
@@ -603,10 +611,10 @@ void MoveRow(SwDoc* pDoc, const FlatFndBox& rBox, sal_uInt16 nS, sal_uInt16 nT,
 {
     for( sal_uInt16 i=0; i < rBox.GetCols(); ++i )
     {   // Get old cell position and remember it
-        const _FndBox* pSource = rBox.GetBox(i, nS);
+        const FndBox_* pSource = rBox.GetBox(i, nS);
 
         // new cell position
-        const _FndBox* pTarget = rBox.GetBox(i, nT);
+        const FndBox_* pTarget = rBox.GetBox(i, nT);
 
         const SwTableBox* pT = pTarget->GetBox();
         const SwTableBox* pS = pSource->GetBox();
@@ -647,10 +655,10 @@ void MoveCol(SwDoc* pDoc, const FlatFndBox& rBox, sal_uInt16 nS, sal_uInt16 nT,
 {
     for(sal_uInt16 i=0; i < rBox.GetRows(); ++i)
     {   // Get old cell position and remember it
-        const _FndBox* pSource = rBox.GetBox(nS, i);
+        const FndBox_* pSource = rBox.GetBox(nS, i);
 
         // new cell position
-        const _FndBox* pTarget = rBox.GetBox(nT, i);
+        const FndBox_* pTarget = rBox.GetBox(nT, i);
 
         // and move it
         const SwTableBox* pT = pTarget->GetBox();
@@ -739,7 +747,7 @@ void MoveCell(SwDoc* pDoc, const SwTableBox* pSource, const SwTableBox* pTar,
 }
 
 /// Generate two-dimensional array of FndBoxes
-FlatFndBox::FlatFndBox(SwDoc* pDocPtr, const _FndBox& rBox) :
+FlatFndBox::FlatFndBox(SwDoc* pDocPtr, const FndBox_& rBox) :
     pDoc(pDocPtr),
     rBoxRef(rBox),
     pArr(nullptr),
@@ -755,9 +763,9 @@ FlatFndBox::FlatFndBox(SwDoc* pDocPtr, const _FndBox& rBox) :
 
         // Create linear array
         size_t nCount = static_cast<size_t>(nRows) * nCols;
-        pArr = new const _FndBox*[nCount];
-        _FndBox** ppTmp = const_cast<_FndBox**>(pArr);
-        memset(ppTmp, 0, sizeof(const _FndBox*) * nCount);
+        pArr = new const FndBox_*[nCount];
+        FndBox_** ppTmp = const_cast<FndBox_**>(pArr);
+        memset(ppTmp, 0, sizeof(const FndBox_*) * nCount);
 
         FillFlat( rBoxRef );
     }
@@ -765,7 +773,7 @@ FlatFndBox::FlatFndBox(SwDoc* pDocPtr, const _FndBox& rBox) :
 
 FlatFndBox::~FlatFndBox()
 {
-    _FndBox** ppTmp = const_cast<_FndBox**>(pArr);
+    FndBox_** ppTmp = const_cast<FndBox_**>(pArr);
     delete [] ppTmp;
 
     if( ppItemSets )
@@ -773,14 +781,14 @@ FlatFndBox::~FlatFndBox()
 }
 
 /// All Lines of a Box need to have same number of Boxes
-bool FlatFndBox::CheckLineSymmetry(const _FndBox& rBox)
+bool FlatFndBox::CheckLineSymmetry(const FndBox_& rBox)
 {
     const FndLines_t &rLines = rBox.GetLines();
     FndBoxes_t::size_type nBoxes {0};
 
     for (FndLines_t::size_type i=0; i < rLines.size(); ++i)
     {
-        const _FndLine* pLn = rLines[i].get();
+        const FndLine_* pLn = rLines[i].get();
         const FndBoxes_t& rBoxes = pLn->GetBoxes();
 
         // Number of Boxes of all Lines is unequal -> no symmetry
@@ -795,14 +803,14 @@ bool FlatFndBox::CheckLineSymmetry(const _FndBox& rBox)
 }
 
 /// Check Box for symmetry (All Boxes of a Line need to have same number of Lines)
-bool FlatFndBox::CheckBoxSymmetry(const _FndLine& rLn)
+bool FlatFndBox::CheckBoxSymmetry(const FndLine_& rLn)
 {
     const FndBoxes_t &rBoxes = rLn.GetBoxes();
     FndLines_t::size_type nLines {0};
 
     for (FndBoxes_t::size_type i = 0; i < rBoxes.size(); ++i)
     {
-        _FndBox const*const pBox = rBoxes[i].get();
+        FndBox_ const*const pBox = rBoxes[i].get();
         const FndLines_t& rLines = pBox->GetLines();
 
         // Number of Lines of all Boxes is unequal -> no symmetry
@@ -817,7 +825,7 @@ bool FlatFndBox::CheckBoxSymmetry(const _FndLine& rLn)
 }
 
 /// Maximum count of Columns (Boxes)
-sal_uInt16 FlatFndBox::GetColCount(const _FndBox& rBox)
+sal_uInt16 FlatFndBox::GetColCount(const FndBox_& rBox)
 {
     const FndLines_t& rLines = rBox.GetLines();
     // Iterate over Lines
@@ -842,7 +850,7 @@ sal_uInt16 FlatFndBox::GetColCount(const _FndBox& rBox)
 }
 
 /// Maximum count of Rows (Lines)
-sal_uInt16 FlatFndBox::GetRowCount(const _FndBox& rBox)
+sal_uInt16 FlatFndBox::GetRowCount(const FndBox_& rBox)
 {
     const FndLines_t& rLines = rBox.GetLines();
     if( rLines.empty() )
@@ -867,7 +875,7 @@ sal_uInt16 FlatFndBox::GetRowCount(const _FndBox& rBox)
 }
 
 /// Create a linear array of atomic FndBoxes
-void FlatFndBox::FillFlat(const _FndBox& rBox, bool bLastBox)
+void FlatFndBox::FillFlat(const FndBox_& rBox, bool bLastBox)
 {
     bool bModRow = false;
     const FndLines_t& rLines = rBox.GetLines();
@@ -882,7 +890,7 @@ void FlatFndBox::FillFlat(const _FndBox& rBox, bool bLastBox)
         for( FndBoxes_t::size_type j = 0; j < rBoxes.size(); ++j )
         {
             // Check the Box if it's an atomic one
-            const _FndBox *const pBox = rBoxes[j].get();
+            const FndBox_ *const pBox = rBoxes[j].get();
 
             if( pBox->GetLines().empty() )
             {
@@ -927,10 +935,10 @@ void FlatFndBox::FillFlat(const _FndBox& rBox, bool bLastBox)
 }
 
 /// Access a specific Cell
-const _FndBox* FlatFndBox::GetBox(sal_uInt16 n_Col, sal_uInt16 n_Row) const
+const FndBox_* FlatFndBox::GetBox(sal_uInt16 n_Col, sal_uInt16 n_Row) const
 {
     sal_uInt16 nOff = n_Row * nCols + n_Col;
-    const _FndBox* pTmp = *(pArr + nOff);
+    const FndBox_* pTmp = *(pArr + nOff);
 
     OSL_ENSURE(n_Col < nCols && n_Row < nRows && pTmp, "invalid array access");
     return pTmp;

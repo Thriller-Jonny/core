@@ -9,7 +9,7 @@
 
 #include <swmodeltestbase.hxx>
 
-#if !defined(WNT)
+#if !defined(_WIN32)
 
 #include <com/sun/star/drawing/EnhancedCustomShapeParameterPair.hpp>
 #include <com/sun/star/drawing/EnhancedCustomShapeSegment.hpp>
@@ -116,7 +116,7 @@ DECLARE_OOXMLEXPORT_TEST(testDMLSolidfillAlpha, "dml-solidfill-alpha.docx")
 {
     // Problem was that the transparency was not exported (a:alpha).
     // RGB color (a:srgbClr)
-    uno::Reference<beans::XPropertySet> xShape(getShape(1), uno::UNO_QUERY);;
+    uno::Reference<beans::XPropertySet> xShape(getShape(1), uno::UNO_QUERY);
     CPPUNIT_ASSERT_EQUAL(sal_Int16(70), getProperty<sal_Int16>(xShape, "FillTransparence"));
 
     // Theme color (a:schemeClr)

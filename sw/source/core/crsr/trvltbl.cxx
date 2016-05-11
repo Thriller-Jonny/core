@@ -128,7 +128,7 @@ static const SwFrame* lcl_FindMostUpperCellFrame( const SwFrame* pFrame )
     return pFrame;
 }
 
-bool SwCursorShell::_SelTableRowOrCol( bool bRow, bool bRowSimple )
+bool SwCursorShell::SelTableRowOrCol( bool bRow, bool bRowSimple )
 {
     // check if the current cursor's SPoint/Mark are in a table
     SwFrame *pFrame = GetCurrFrame();
@@ -165,7 +165,7 @@ bool SwCursorShell::_SelTableRowOrCol( bool bRow, bool bRowSimple )
     // #i32329# Enhanced table selection
     else if ( pTable->IsNewModel() )
     {
-        const SwShellCursor *pCursor = _GetCursor();
+        const SwShellCursor *pCursor = GetCursor_();
         SwTable::SearchType eSearchType = bRow ? SwTable::SEARCH_ROW : SwTable::SEARCH_COL;
         pTable->CreateSelection( *pCursor, aBoxes, eSearchType, bCheckProtected );
         if( aBoxes.empty() )
@@ -176,7 +176,7 @@ bool SwCursorShell::_SelTableRowOrCol( bool bRow, bool bRowSimple )
     }
     else
     {
-        const SwShellCursor *pCursor = _GetCursor();
+        const SwShellCursor *pCursor = GetCursor_();
         const SwFrame* pStartFrame = pFrame;
         const SwContentNode *pCNd = pCursor->GetContentNode( false );
         const SwFrame* pEndFrame   = pCNd ? pCNd->getLayoutFrame( GetLayout(), &pCursor->GetMkPos() ) : nullptr;
@@ -629,9 +629,9 @@ bool GotoCurrTable( SwPaM& rCurrentCursor, SwPosTable fnPosTable,
 bool SwCursor::MoveTable( SwWhichTable fnWhichTable, SwPosTable fnPosTable )
 {
     bool bRet = false;
-    SwTableCursor* m_pTableCursor = dynamic_cast<SwTableCursor*>(this);
+    SwTableCursor* pTableCursor = dynamic_cast<SwTableCursor*>(this);
 
-    if( m_pTableCursor || !HasMark() )
+    if( pTableCursor || !HasMark() )
     {
         SwCursorSaveState aSaveState( *this );
         bRet = (*fnWhichTable)( *this, fnPosTable, IsReadOnlyAvailable() ) &&
@@ -871,7 +871,8 @@ void SwCursorShell::SaveTableBoxContent( const SwPosition* pPos )
 
 void SwCursorShell::ClearTableBoxContent()
 {
-    delete m_pBoxIdx, m_pBoxIdx = nullptr;
+    delete m_pBoxIdx;
+    m_pBoxIdx = nullptr;
     m_pBoxPtr = nullptr;
 }
 

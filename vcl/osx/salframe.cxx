@@ -24,9 +24,9 @@
 
 #include "osl/file.h"
 
-#include "vcl/svapp.hxx"
-#include "vcl/window.hxx"
-#include "vcl/syswin.hxx"
+#include <vcl/svapp.hxx>
+#include <vcl/window.hxx>
+#include <vcl/syswin.hxx>
 #include <vcl/settings.hxx>
 
 #include "osx/saldata.hxx"
@@ -256,7 +256,7 @@ void AquaSalFrame::screenParametersChanged()
 
     if( mpGraphics )
         mpGraphics->updateResolution();
-    CallCallback( SALEVENT_DISPLAYCHANGED, nullptr );
+    CallCallback( SalEvent::DisplayChanged, nullptr );
 }
 
 SalGraphics* AquaSalFrame::AcquireGraphics()
@@ -283,7 +283,7 @@ void AquaSalFrame::ReleaseGraphics( SalGraphics *pGraphics )
 
 bool AquaSalFrame::PostEvent(ImplSVEvent* pData)
 {
-    GetSalData()->mpFirstInstance->PostUserEvent( this, SALEVENT_USEREVENT, pData );
+    GetSalData()->mpFirstInstance->PostUserEvent( this, SalEvent::UserEvent, pData );
     return TRUE;
 }
 
@@ -400,7 +400,7 @@ void AquaSalFrame::SendPaintEvent( const Rectangle* pRect )
         aPaintEvt.mnBoundHeight = pRect->GetHeight();
     }
 
-    CallCallback(SALEVENT_PAINT, &aPaintEvt);
+    CallCallback(SalEvent::Paint, &aPaintEvt);
 }
 
 void AquaSalFrame::Show(bool bVisible, bool bNoActivate)
@@ -417,7 +417,7 @@ void AquaSalFrame::Show(bool bVisible, bool bNoActivate)
         if( mbInitShow )
             initShow();
 
-        CallCallback(SALEVENT_RESIZE, nullptr);
+        CallCallback(SalEvent::Resize, nullptr);
         // trigger filling our backbuffer
         SendPaintEvent();
 
@@ -539,19 +539,19 @@ void AquaSalFrame::SetWindowState( const SalFrameState* pState )
     NSRect aStateRect = [mpNSWindow frame];
     aStateRect = [NSWindow contentRectForFrameRect: aStateRect styleMask: mnStyleMask];
     CocoaToVCL( aStateRect );
-    if( pState->mnMask & WINDOWSTATE_MASK_X )
+    if( pState->mnMask & WindowStateMask::X )
         aStateRect.origin.x = float(pState->mnX);
-    if( pState->mnMask & WINDOWSTATE_MASK_Y )
+    if( pState->mnMask & WindowStateMask::Y )
         aStateRect.origin.y = float(pState->mnY);
-    if( pState->mnMask & WINDOWSTATE_MASK_WIDTH )
+    if( pState->mnMask & WindowStateMask::Width )
         aStateRect.size.width = float(pState->mnWidth);
-    if( pState->mnMask & WINDOWSTATE_MASK_HEIGHT )
+    if( pState->mnMask & WindowStateMask::Height )
         aStateRect.size.height = float(pState->mnHeight);
     VCLToCocoa( aStateRect );
     aStateRect = [NSWindow frameRectForContentRect: aStateRect styleMask: mnStyleMask];
 
     [mpNSWindow setFrame: aStateRect display: NO];
-    if( pState->mnState == WINDOWSTATE_STATE_MINIMIZED )
+    if( pState->mnState == WindowStateState::Minimized )
         [mpNSWindow miniaturize: NSApp];
     else if( [mpNSWindow isMiniaturized] )
         [mpNSWindow deminiaturize: NSApp];
@@ -560,7 +560,7 @@ void AquaSalFrame::SetWindowState( const SalFrameState* pState )
        the program specified one), but comes closest since the default behavior is
        "maximized" if the user did not intervene
     */
-    if( pState->mnState == WINDOWSTATE_STATE_MAXIMIZED )
+    if( pState->mnState == WindowStateState::Maximized )
     {
         if(! [mpNSWindow isZoomed])
             [mpNSWindow zoom: NSApp];
@@ -575,20 +575,20 @@ void AquaSalFrame::SetWindowState( const SalFrameState* pState )
     // get new geometry
     UpdateFrameGeometry();
 
-    sal_uInt16 nEvent = 0;
-    if( pState->mnMask & (WINDOWSTATE_MASK_X | WINDOWSTATE_MASK_Y) )
+    SalEvent nEvent = SalEvent::NONE;
+    if( pState->mnMask & (WindowStateMask::X | WindowStateMask::Y) )
     {
         mbPositioned = true;
-        nEvent = SALEVENT_MOVE;
+        nEvent = SalEvent::Move;
     }
 
-    if( pState->mnMask & (WINDOWSTATE_MASK_WIDTH | WINDOWSTATE_MASK_HEIGHT) )
+    if( pState->mnMask & (WindowStateMask::Width | WindowStateMask::Height) )
     {
         mbSized = true;
-        nEvent = (nEvent == SALEVENT_MOVE) ? SALEVENT_MOVERESIZE : SALEVENT_RESIZE;
+        nEvent = (nEvent == SalEvent::Move) ? SalEvent::MoveResize : SalEvent::Resize;
     }
     // send event that we were moved/sized
-    if( nEvent )
+    if( nEvent != SalEvent::NONE )
         CallCallback( nEvent, nullptr );
 
     if( mbShown && mpNSWindow )
@@ -609,11 +609,11 @@ bool AquaSalFrame::GetWindowState( SalFrameState* pState )
     // #i113170# may not be the main thread if called from UNO API
     SalData::ensureThreadAutoreleasePool();
 
-    pState->mnMask = WINDOWSTATE_MASK_X                 |
-                     WINDOWSTATE_MASK_Y                 |
-                     WINDOWSTATE_MASK_WIDTH             |
-                     WINDOWSTATE_MASK_HEIGHT            |
-                     WINDOWSTATE_MASK_STATE;
+    pState->mnMask = WindowStateMask::X                 |
+                     WindowStateMask::Y                 |
+                     WindowStateMask::Width             |
+                     WindowStateMask::Height            |
+                     WindowStateMask::State;
 
     NSRect aStateRect = [mpNSWindow frame];
     aStateRect = [NSWindow contentRectForFrameRect: aStateRect styleMask: mnStyleMask];
@@ -624,11 +624,11 @@ bool AquaSalFrame::GetWindowState( SalFrameState* pState )
     pState->mnHeight    = long(aStateRect.size.height);
 
     if( [mpNSWindow isMiniaturized] )
-        pState->mnState = WINDOWSTATE_STATE_MINIMIZED;
+        pState->mnState = WindowStateState::Minimized;
     else if( ! [mpNSWindow isZoomed] )
-        pState->mnState = WINDOWSTATE_STATE_NORMAL;
+        pState->mnState = WindowStateState::Normal;
     else
-        pState->mnState = WINDOWSTATE_STATE_MAXIMIZED;
+        pState->mnState = WindowStateState::Maximized;
 
     return TRUE;
 }
@@ -746,7 +746,7 @@ void AquaSalFrame::ShowFullScreen( bool bFullScreen, sal_Int32 nDisplay )
         UpdateFrameGeometry();
 
         if( mbShown )
-            CallCallback( SALEVENT_MOVERESIZE, nullptr );
+            CallCallback( SalEvent::MoveResize, nullptr );
     }
     else
     {
@@ -756,7 +756,7 @@ void AquaSalFrame::ShowFullScreen( bool bFullScreen, sal_Int32 nDisplay )
         UpdateFrameGeometry();
 
         if( mbShown )
-            CallCallback( SALEVENT_MOVERESIZE, nullptr );
+            CallCallback( SalEvent::MoveResize, nullptr );
 
         // show the dock and the menubar
         [NSMenu setMenuBarVisible:YES];
@@ -1101,8 +1101,8 @@ static vcl::Font getFont( NSFont* pFont, long nDPIY, const vcl::Font& rDefault )
     vcl::Font aResult( rDefault );
     if( pFont )
     {
-        aResult.SetName( GetOUString( [pFont familyName] ) );
-        aResult.SetHeight( static_cast<int>(([pFont pointSize] * 72.0 / (float)nDPIY)+0.5) );
+        aResult.SetFamilyName( GetOUString( [pFont familyName] ) );
+        aResult.SetFontHeight( static_cast<int>(([pFont pointSize] * 72.0 / (float)nDPIY)+0.5) );
         aResult.SetItalic( ([pFont italicAngle] != 0.0) ? ITALIC_NORMAL : ITALIC_NONE );
         // FIMXE: bold ?
     }
@@ -1245,7 +1245,7 @@ void AquaSalFrame::SetPosSize(long nX, long nY, long nWidth, long nHeight, sal_u
     // #i113170# may not be the main thread if called from UNO API
     SalData::ensureThreadAutoreleasePool();
 
-    sal_uInt16 nEvent = 0;
+    SalEvent nEvent = SalEvent::NONE;
 
     if( [mpNSWindow isMiniaturized] )
         [mpNSWindow deminiaturize: NSApp]; // expand the window
@@ -1253,13 +1253,13 @@ void AquaSalFrame::SetPosSize(long nX, long nY, long nWidth, long nHeight, sal_u
     if (nFlags & (SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y))
     {
         mbPositioned = true;
-        nEvent = SALEVENT_MOVE;
+        nEvent = SalEvent::Move;
     }
 
     if (nFlags & (SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT))
     {
         mbSized = true;
-        nEvent = (nEvent == SALEVENT_MOVE) ? SALEVENT_MOVERESIZE : SALEVENT_RESIZE;
+        nEvent = (nEvent == SalEvent::Move) ? SalEvent::MoveResize : SalEvent::Resize;
     }
 
     NSRect aFrameRect = [mpNSWindow frame];
@@ -1314,7 +1314,7 @@ void AquaSalFrame::SetPosSize(long nX, long nY, long nWidth, long nHeight, sal_u
 
     UpdateFrameGeometry();
 
-    if (nEvent)
+    if (nEvent != SalEvent::NONE)
         CallCallback(nEvent, nullptr);
 
     if( mbShown && bPaint )

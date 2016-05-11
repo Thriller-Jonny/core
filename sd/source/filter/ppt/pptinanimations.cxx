@@ -74,7 +74,6 @@ using ::std::map;
 using ::com::sun::star::beans::NamedValue;
 using ::com::sun::star::container::XEnumerationAccess;
 using ::com::sun::star::container::XEnumeration;
-using ::com::sun::star::lang::XMultiServiceFactory;
 
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::drawing;
@@ -1715,7 +1714,7 @@ void AnimationImporter::importAnimateSetContainer( const Atom* pAtom, const Refe
                 sal_Int32 nU1, nU2;
                 mrStCtrl.ReadInt32( nU1 ).ReadInt32( nU2 );
 
-                dump( " set_1=\"%ld\"", nU1 ),
+                dump( " set_1=\"%ld\"", nU1 );
                 dump( " set_2=\"%ld\"", nU2 );
             }
             break;
@@ -2265,7 +2264,7 @@ void AnimationImporter::importAnimateRotationContainer( const Atom* pAtom, const
     }
 }
 
-bool AnimationImporter::importAttributeNamesContainer( const Atom* pAtom, OUString& rAttributeNames )
+void AnimationImporter::importAttributeNamesContainer( const Atom* pAtom, OUString& rAttributeNames )
 {
     OUStringBuffer aNames;
 
@@ -2298,7 +2297,6 @@ bool AnimationImporter::importAttributeNamesContainer( const Atom* pAtom, OUStri
     }
 
     rAttributeNames = aNames.makeStringAndClear();
-    return true;
 }
 
 void AnimationImporter::importAnimationValues( const Atom* pAtom, const Reference< XAnimationNode >& xNode )
@@ -2735,7 +2733,7 @@ void AnimationImporter::importAnimationActions( const Atom* pAtom, const Referen
     }
 }
 
-sal_Int32 AnimationImporter::importTargetElementContainer( const Atom* pAtom, Any& rTarget, sal_Int16& rSubType )
+void AnimationImporter::importTargetElementContainer( const Atom* pAtom, Any& rTarget, sal_Int16& rSubType )
 {
     rSubType = ShapeAnimationSubType::AS_WHOLE;
     sal_Int32 nRefMode = -1;
@@ -2852,8 +2850,6 @@ sal_Int32 AnimationImporter::importTargetElementContainer( const Atom* pAtom, An
 
         }
     }
-
-    return nRefMode;
 }
 
 void AnimationImporter::importPropertySetContainer( const Atom* pAtom, PropertySet& rSet )

@@ -22,7 +22,6 @@
 #include "handlerhelper.hxx"
 #include "pcrservices.hxx"
 
-#include <boost/noncopyable.hpp>
 #include <com/sun/star/container/XHierarchicalNameAccess.hpp>
 #include <com/sun/star/reflection/XEnumTypeDescription.hpp>
 #include <com/sun/star/beans/theIntrospection.hpp>
@@ -63,8 +62,7 @@ namespace pcr
     using ::com::sun::star::awt::XActionListener;
     using ::com::sun::star::awt::ActionEvent;
 
-    class EnumRepresentation:
-        public IPropertyEnumRepresentation, private boost::noncopyable
+    class EnumRepresentation : public IPropertyEnumRepresentation
     {
     private:
         Reference< XEnumTypeDescription >   m_xTypeDescription;
@@ -72,6 +70,8 @@ namespace pcr
 
     public:
         EnumRepresentation( const Reference< XComponentContext >& _rxContext, const Type& _rEnumType );
+        EnumRepresentation(const EnumRepresentation&) = delete;
+        EnumRepresentation& operator=(const EnumRepresentation&) = delete;
 
         // IPropertyEnumRepresentation implementqation
         virtual ::std::vector< OUString >
@@ -305,8 +305,8 @@ namespace pcr
             throw NullPointerException();
 
         // revoke old property change listeners
-        ::cppu::OInterfaceIteratorHelper iterRemove( m_aPropertyListeners );
-        ::cppu::OInterfaceIteratorHelper iterReAdd( m_aPropertyListeners ); // this holds a copy of the container ...
+        ::comphelper::OInterfaceIteratorHelper2 iterRemove( m_aPropertyListeners );
+        ::comphelper::OInterfaceIteratorHelper2 iterReAdd( m_aPropertyListeners ); // this holds a copy of the container ...
         while ( iterRemove.hasMoreElements() )
             m_xComponent->removePropertyChangeListener( OUString(), static_cast< XPropertyChangeListener* >( iterRemove.next() ) );
 
@@ -597,7 +597,7 @@ namespace pcr
 
     sal_Bool SAL_CALL GenericPropertyHandler::isComposable( const OUString& /*_rPropertyName*/ ) throw (UnknownPropertyException, RuntimeException, std::exception)
     {
-        return sal_False;
+        return false;
     }
 
     InteractiveSelectionResult SAL_CALL GenericPropertyHandler::onInteractivePropertySelection( const OUString& /*_rPropertyName*/, sal_Bool /*_bPrimary*/, Any& /*_rData*/, const Reference< XObjectInspectorUI >& /*_rxInspectorUI*/ ) throw (UnknownPropertyException, NullPointerException, RuntimeException, std::exception)
@@ -613,7 +613,7 @@ namespace pcr
 
     sal_Bool SAL_CALL GenericPropertyHandler::suspend( sal_Bool /*_bSuspend*/ ) throw (RuntimeException, std::exception)
     {
-        return sal_True;
+        return true;
     }
 
     void SAL_CALL GenericPropertyHandler::disposing()

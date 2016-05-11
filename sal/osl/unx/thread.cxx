@@ -273,7 +273,7 @@ static oslThread osl_thread_create_Impl (
 
 #if defined OPENBSD || ((defined MACOSX || defined LINUX) && !ENABLE_RUNTIME_OPTIMIZATIONS)
     if (pthread_attr_init(&attr) != 0)
-        return 0;
+        return nullptr;
 
 #if defined OPENBSD
     stacksize = 262144;
@@ -284,7 +284,7 @@ static oslThread osl_thread_create_Impl (
 #endif
     if (pthread_attr_setstacksize(&attr, stacksize) != 0) {
         pthread_attr_destroy(&attr);
-        return 0;
+        return nullptr;
     }
 #endif
 
@@ -416,7 +416,7 @@ sal_Bool SAL_CALL osl_isThreadRunning(const oslThread Thread)
     Thread_Impl* pImpl= static_cast<Thread_Impl*>(Thread);
 
     if (!pImpl)
-        return sal_False;
+        return false;
 
     pthread_mutex_lock (&(pImpl->m_Lock));
     active = ((pImpl->m_Flags & THREADIMPL_FLAGS_ACTIVE) > 0);
@@ -490,13 +490,13 @@ sal_Bool SAL_CALL osl_scheduleThread(oslThread Thread)
     if (!pImpl)
     {
         SAL_WARN("sal.osl", "invalid osl_scheduleThread(nullptr) call");
-        return sal_False; /* EINVAL */
+        return false; /* EINVAL */
     }
 
     if (!(pthread_equal (pthread_self(), pImpl->m_hThread)))
     {
         SAL_WARN("sal.osl", "invalid osl_scheduleThread(non-self) call");
-        return sal_False; /* EINVAL */
+        return false; /* EINVAL */
     }
 
     pthread_mutex_lock (&(pImpl->m_Lock));
@@ -556,12 +556,12 @@ void SAL_CALL osl_setThreadName(char const * name) {
 
 #define HASHID(x) ((unsigned long)PTHREAD_VALUE(x) % HashSize)
 
-typedef struct _HashEntry
+struct HashEntry
 {
     pthread_t         Handle;
     sal_uInt16        Ident;
-    struct _HashEntry *Next;
-} HashEntry;
+    HashEntry *       Next;
+};
 
 static HashEntry* HashTable[31];
 static int HashSize = SAL_N_ELEMENTS(HashTable);
@@ -935,11 +935,11 @@ oslThreadPriority SAL_CALL osl_getThreadPriority(const oslThread Thread)
     return Priority;
 }
 
-typedef struct _wrapper_pthread_key
+struct wrapper_pthread_key
 {
     pthread_key_t m_key;
     oslThreadKeyCallbackFunction pfnCallback;
-} wrapper_pthread_key;
+};
 
 oslThreadKey SAL_CALL osl_createThreadKey( oslThreadKeyCallbackFunction pCallback )
 {
@@ -981,7 +981,7 @@ sal_Bool SAL_CALL osl_setThreadKeyData(oslThreadKey Key, void *pData)
     void *pOldData = nullptr;
     wrapper_pthread_key *pKey = static_cast<wrapper_pthread_key*>(Key);
     if (!pKey)
-        return sal_False;
+        return false;
 
     if (pKey->pfnCallback)
         pOldData = pthread_getspecific(pKey->m_key);

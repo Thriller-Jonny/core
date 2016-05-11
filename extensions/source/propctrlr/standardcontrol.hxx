@@ -44,7 +44,6 @@ namespace pcr
 {
 
 
-
     //= ListLikeControlWithModifyHandler
 
     /** Very small helper class which adds a SetModifyHdl to a ListBox-derived class,
@@ -178,7 +177,7 @@ namespace pcr
     class OHyperlinkControl : public OHyperlinkControl_Base
     {
     private:
-        ::cppu::OInterfaceContainerHelper   m_aActionListeners;
+        ::comphelper::OInterfaceContainerHelper2   m_aActionListeners;
 
     public:
         OHyperlinkControl( vcl::Window* _pParent, WinBits _nWinStyle );
@@ -391,7 +390,7 @@ namespace pcr
         DECL_LINK_TYPED( ReturnHdl, FloatingWindow*, void );
         DECL_LINK_TYPED( DropDownHdl, Button*, void );
 
-        bool ShowDropDown( bool bShow );
+        void ShowDropDown( bool bShow );
     };
 
 

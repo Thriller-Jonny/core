@@ -93,11 +93,11 @@ namespace pdfi
         /// Union element geometry with given element
         void updateGeometryWith( const Element* pMergeFrom );
 
-#if OSL_DEBUG_LEVEL > 1
+#if OSL_DEBUG_LEVEL > 0
         // xxx refac TODO: move code to visitor
         virtual void emitStructure( int nLevel );
 #endif
-        /** el must be a valid dereferencable iterator of el->Parent->Children
+        /** el must be a valid dereferenceable iterator of el->Parent->Children
             pNewParent must not be NULL
         */
         static void setParent( std::list<Element*>::iterator& el, Element* pNewParent );
@@ -217,8 +217,8 @@ namespace pdfi
 
         void updateGeometry();
 
-#if OSL_DEBUG_LEVEL > 1
-        virtual void emitStructure( int nLevel );
+#if OSL_DEBUG_LEVEL > 0
+        virtual void emitStructure( int nLevel ) override;
 #endif
 
         basegfx::B2DPolyPolygon PolyPoly;
@@ -249,7 +249,7 @@ namespace pdfi
         {}
     private:
         // helper method for resolveHyperlinks
-        bool resolveHyperlink( std::list<Element*>::iterator link_it, std::list<Element*>& rElements );
+        bool resolveHyperlink( const std::list<Element*>::iterator& link_it, std::list<Element*>& rElements );
     public:
         virtual ~PageElement();
 

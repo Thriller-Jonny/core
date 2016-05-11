@@ -33,8 +33,6 @@
 using namespace ::xmloff::token;
 using namespace com::sun::star;
 
-using com::sun::star::uno::Reference;
-
 namespace
 {
 
@@ -97,7 +95,7 @@ void SchXMLLegendContext::StartElement( const uno::Reference< xml::sax::XAttribu
     {
         try
         {
-            xDocProp->setPropertyValue("HasLegend", uno::makeAny( sal_True ) );
+            xDocProp->setPropertyValue("HasLegend", uno::makeAny( true ) );
         }
         catch(const beans::UnknownPropertyException&)
         {

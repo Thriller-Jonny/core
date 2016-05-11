@@ -29,24 +29,14 @@
 
 class SfxObjectShell;
 
-#ifndef SFX_DECL_OBJECTSHELL_DEFINED
-#define SFX_DECL_OBJECTSHELL_DEFINED
-typedef tools::SvRef<SfxObjectShell> SfxObjectShellRef;
-#endif
-
 class SfxDocTemplate_Impl;
-
-#ifndef SFX_DECL_DOCTEMPLATES_DEFINED
-#define SFX_DECL_DOCTEMPLATES_DEFINED
-typedef tools::SvRef<SfxDocTemplate_Impl> SfxDocTemplate_ImplRef;
-#endif
 
 // class SfxDocumentTemplates --------------------------------------------
 
 class SFX2_DLLPUBLIC SfxDocumentTemplates
 {
 private:
-    SfxDocTemplate_ImplRef  pImp;
+    tools::SvRef<SfxDocTemplate_Impl> pImp;
 
     SAL_DLLPRIVATE bool CopyOrMove( sal_uInt16 nTargetRegion, sal_uInt16 nTargetIdx,
                                     sal_uInt16 nSourceRegion, sal_uInt16 nSourceIdx, bool bMove );
@@ -60,11 +50,11 @@ public:
     void                ReInitFromComponent();
 
     sal_uInt16          GetRegionCount() const;
-    const OUString&     GetRegionName(sal_uInt16 nIdx) const;                   //dv!
+    OUString            GetRegionName(sal_uInt16 nIdx) const;                   //dv!
     OUString            GetFullRegionName(sal_uInt16 nIdx) const;
 
     sal_uInt16          GetCount(sal_uInt16 nRegion) const;
-    const OUString&     GetName(sal_uInt16 nRegion, sal_uInt16 nIdx) const;         //dv!
+    OUString            GetName(sal_uInt16 nRegion, sal_uInt16 nIdx) const;         //dv!
     OUString            GetPath(sal_uInt16 nRegion, sal_uInt16 nIdx) const;
 
     // Allows to retrieve the target template URL from the UCB
@@ -118,16 +108,8 @@ public:
         configuration. This means that just by copying files into OOo's template directories, this
         change is not reflected in the SfxDocumentTemplates - 'cause the configuration is not synchronous with
         the file system. This can be enforced with this method.</p>
-
-    @param _bSmart
-        The update of the configuration is rather expensive - nothing you want to do regulary if you don't really
-        need it. So you have the possibility to do a smart update - it first checks if the update if necessary.
-        In case the update is needed, the additional check made it somewhat more expensive. In case it's not
-        necessary (which should be the usual case), the check alone is (much) less expensive than the real update.
-        <br/>
-        So set <arg>_bSmart</arg> to <TRUE/> to do a check for necessity first.
     */
-    void            Update( bool _bSmart = true );
+    void            Update();
 };
 
 #endif // INCLUDED_SFX2_DOCTEMPL_HXX

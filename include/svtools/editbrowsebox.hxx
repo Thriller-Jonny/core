@@ -283,7 +283,7 @@ namespace svt
         Link<LinkParamNone*,void>    m_aModifyLink;
 
     public:
-        CheckBoxControl(vcl::Window* pParent, WinBits nWinStyle = 0);
+        CheckBoxControl(vcl::Window* pParent);
         virtual ~CheckBoxControl();
         virtual void dispose() override;
 
@@ -332,7 +332,7 @@ namespace svt
         friend class ComboBoxCellController;
 
     public:
-        ComboBoxControl(vcl::Window* pParent, WinBits nWinStyle = 0);
+        ComboBoxControl(vcl::Window* pParent);
 
     protected:
         virtual bool PreNotify( NotifyEvent& rNEvt ) override;
@@ -365,7 +365,7 @@ namespace svt
         friend class ListBoxCellController;
 
     public:
-        ListBoxControl(vcl::Window* pParent, WinBits nWinStyle = 0);
+        ListBoxControl(vcl::Window* pParent);
 
     protected:
         virtual bool PreNotify( NotifyEvent& rNEvt ) override;
@@ -466,7 +466,6 @@ namespace svt
             bool Is() const {return pEvent != nullptr;}
             bool IsDown() const {return bDown;}
             const BrowserMouseEvent* operator->() const {return pEvent;}
-            const BrowserMouseEvent& operator*() const {return *pEvent;}
 
             SVT_DLLPUBLIC void Clear();
             void Set(const BrowserMouseEvent* pEvt, bool bIsDown);
@@ -601,7 +600,7 @@ namespace svt
         virtual void RemoveRows();
         virtual void Dispatch(sal_uInt16 nId);
 
-        CellControllerRef Controller() const { return aController; }
+        const CellControllerRef& Controller() const { return aController; }
         EditBrowseBoxFlags  GetBrowserFlags() const { return m_nBrowserFlags; }
         void                SetBrowserFlags(EditBrowseBoxFlags nFlags);
 

@@ -24,7 +24,6 @@
 #include <tools/solar.h>
 #include <osl/diagnose.h>
 
-#include <com/sun/star/uno/Any.hxx>
 #include <com/sun/star/uno/Sequence.hxx>
 
 using namespace utl;
@@ -94,18 +93,8 @@ SvtAppFilterOptions_Impl::~SvtAppFilterOptions_Impl()
 
 void    SvtAppFilterOptions_Impl::ImplCommit()
 {
-    Sequence<OUString> aNames(2);
-    OUString* pNames = aNames.getArray();
-    pNames[0] = "Load";
-    pNames[1] = "Save";
-    Sequence<Any> aValues(aNames.getLength());
-    Any* pValues = aValues.getArray();
-
-    const Type& rType = cppu::UnoType<bool>::get();
-    pValues[0].setValue(&bLoadVBA, rType);
-    pValues[1].setValue(&bSaveVBA, rType);
-
-    PutProperties(aNames, aValues);
+    PutProperties(
+        {"Load", "Save"}, {css::uno::Any(bLoadVBA), css::uno::Any(bSaveVBA)});
 }
 
 void SvtAppFilterOptions_Impl::Notify( const Sequence< OUString >&  )
@@ -382,12 +371,10 @@ void SvtFilterOptions::ImplCommit()
     Sequence<Any> aValues(aNames.getLength());
     Any* pValues = aValues.getArray();
 
-    const Type& rType = cppu::UnoType<bool>::get();
     for(int nProp = 0; nProp < aNames.getLength(); nProp++)
     {
         sal_uLong nFlag = lcl_GetFlag(nProp);
-        sal_Bool bVal = pImp->IsFlag( nFlag);
-        pValues[nProp].setValue(&bVal, rType);
+        pValues[nProp] <<= pImp->IsFlag(nFlag);
 
     }
     PutProperties(aNames, aValues);

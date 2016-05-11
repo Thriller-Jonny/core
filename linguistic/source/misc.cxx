@@ -610,11 +610,10 @@ CapType SAL_CALL capitalType(const OUString& aTerm, CharClass * pCC)
         sal_Int32 tlen = aTerm.getLength();
         if ((pCC) && (tlen))
         {
-            OUString aStr(aTerm);
             sal_Int32 nc = 0;
             for (sal_Int32 tindex = 0; tindex < tlen; ++tindex)
             {
-                if (pCC->getCharacterType(aStr,tindex) &
+                if (pCC->getCharacterType(aTerm,tindex) &
                    css::i18n::KCharacterType::UPPER) nc++;
             }
 
@@ -622,7 +621,7 @@ CapType SAL_CALL capitalType(const OUString& aTerm, CharClass * pCC)
                 return CapType::NOCAP;
             if (nc == tlen)
                 return CapType::ALLCAP;
-            if ((nc == 1) && (pCC->getCharacterType(aStr,0) &
+            if ((nc == 1) && (pCC->getCharacterType(aTerm,0) &
                   css::i18n::KCharacterType::UPPER))
                 return CapType::INITCAP;
 
@@ -681,16 +680,14 @@ static const sal_uInt32 the_aDigitZeroes [] =
 
 bool HasDigits( const OUString &rText )
 {
-    static const int nNumDigitZeroes = sizeof(the_aDigitZeroes) / sizeof(the_aDigitZeroes[0]);
     const sal_Int32 nLen = rText.getLength();
 
     sal_Int32 i = 0;
     while (i < nLen) // for all characters ...
     {
         const sal_uInt32 nCodePoint = rText.iterateCodePoints( &i );    // handle unicode surrogates correctly...
-        for (int j = 0; j < nNumDigitZeroes; ++j)   // ... check in all 0..9 ranges
+        for (unsigned int nDigitZero : the_aDigitZeroes)   // ... check in all 0..9 ranges
         {
-            sal_uInt32 nDigitZero = the_aDigitZeroes[ j ];
             if (nDigitZero > nCodePoint)
                 break;
             if (/*nDigitZero <= nCodePoint &&*/ nCodePoint <= nDigitZero + 9)
@@ -753,7 +750,7 @@ uno::Reference< XDictionary > GetIgnoreAllList()
 AppExitListener::AppExitListener()
 {
     // add object to Desktop EventListeners in order to properly call
-    // the AtExit function at appliction exit.
+    // the AtExit function at application exit.
     uno::Reference< XComponentContext > xContext( comphelper::getProcessComponentContext() );
 
     try

@@ -72,7 +72,7 @@ public:
 
     void            SetWelcomeScreen( bool b )          { bWelcomeScreen = b; SetModified(); }
     bool            IsWelcomeScreen() const                 { return bWelcomeScreen; }
-    OUString        GetSystem() const                       { return aSystem; }
+    const OUString& GetSystem() const                       { return aSystem; }
 
     const OUString& GetHelpStyleSheet()const{return sHelpStyleSheet;}
     void            SetHelpStyleSheet(const OUString& rStyleSheet){sHelpStyleSheet = rStyleSheet; SetModified();}
@@ -117,8 +117,6 @@ Sequence< OUString > SvtHelpOptions_Impl::GetPropertyNames()
 }
 
 
-
-
 SvtHelpOptions_Impl::SvtHelpOptions_Impl()
     : ConfigItem( OUString( "Office.Common/Help" ) )
     , bExtendedHelp( false )
@@ -152,9 +150,7 @@ void  SvtHelpOptions_Impl::Load(const uno::Sequence< OUString>& rPropertyNames)
     {
         for ( int nProp = 0; nProp < rPropertyNames.getLength(); nProp++ )
         {
-#if OSL_DEBUG_LEVEL > 1
-            DBG_ASSERT( pValues[nProp].hasValue(), "property value missing" );
-#endif
+            assert(pValues[nProp].hasValue() && "property value missing");
             if ( pValues[nProp].hasValue() )
             {
                 bool bTmp;
@@ -212,7 +208,6 @@ void  SvtHelpOptions_Impl::Load(const uno::Sequence< OUString>& rPropertyNames)
 }
 
 
-
 void SvtHelpOptions_Impl::ImplCommit()
 {
     Sequence< OUString > aNames = GetPropertyNames();
@@ -248,7 +243,6 @@ void SvtHelpOptions_Impl::ImplCommit()
 }
 
 
-
 void SvtHelpOptions_Impl::Notify( const Sequence<OUString>& aPropertyNames )
 {
     Load( aPropertyNames );
@@ -267,7 +261,6 @@ SvtHelpOptions::SvtHelpOptions()
     }
     pImp = pOptions;
 }
-
 
 
 SvtHelpOptions::~SvtHelpOptions()
@@ -301,7 +294,6 @@ bool SvtHelpOptions::IsHelpTips() const
 {
     return pImp->IsHelpTips();
 }
-
 
 
 void SvtHelpOptions::SetWelcomeScreen( bool b )

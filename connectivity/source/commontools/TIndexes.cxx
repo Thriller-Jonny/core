@@ -71,7 +71,7 @@ sdbcx::ObjectType OIndexesHelper::createObject(const OUString& _rName)
     m_pTable->getPropertyValue(rPropMap.getNameByIndex(PROPERTY_ID_NAME))       >>= aTable;
 
     Any aCatalog = m_pTable->getPropertyValue(rPropMap.getNameByIndex(PROPERTY_ID_CATALOGNAME));
-    Reference< XResultSet > xResult = m_pTable->getMetaData()->getIndexInfo(aCatalog,aSchema,aTable,sal_False,sal_False);
+    Reference< XResultSet > xResult = m_pTable->getMetaData()->getIndexInfo(aCatalog,aSchema,aTable,false,false);
 
     if ( xResult.is() )
     {
@@ -146,10 +146,10 @@ sdbcx::ObjectType OIndexesHelper::appendObject( const OUString& _rForName, const
 
 
         OUString aCatalog,aSchema,aTable;
-        dbtools::qualifiedNameComponents(m_pTable->getMetaData(),m_pTable->getName(),aCatalog,aSchema,aTable,::dbtools::eInDataManipulation);
+        dbtools::qualifiedNameComponents(m_pTable->getMetaData(),m_pTable->getName(),aCatalog,aSchema,aTable,::dbtools::EComposeRule::InDataManipulation);
         OUString aComposedName;
 
-        aComposedName = dbtools::composeTableName(m_pTable->getMetaData(),aCatalog,aSchema,aTable, true, ::dbtools::eInIndexDefinitions);
+        aComposedName = dbtools::composeTableName(m_pTable->getMetaData(),aCatalog,aSchema,aTable, true, ::dbtools::EComposeRule::InIndexDefinitions);
         if (!_rForName.isEmpty() )
         {
             aSql.append( ::dbtools::quoteName( aQuote, _rForName ) );
@@ -228,9 +228,9 @@ void OIndexesHelper::dropObject(sal_Int32 /*_nPos*/,const OUString& _sElementNam
 
             OUString aSql( "DROP INDEX " );
 
-            OUString aComposedName = dbtools::composeTableName( m_pTable->getMetaData(), m_pTable, ::dbtools::eInIndexDefinitions, false, false, true );
+            OUString aComposedName = dbtools::composeTableName( m_pTable->getMetaData(), m_pTable, ::dbtools::EComposeRule::InIndexDefinitions, false, false, true );
             OUString sIndexName,sTemp;
-            sIndexName = dbtools::composeTableName( m_pTable->getMetaData(), sTemp, aSchema, aName, true, ::dbtools::eInIndexDefinitions );
+            sIndexName = dbtools::composeTableName( m_pTable->getMetaData(), sTemp, aSchema, aName, true, ::dbtools::EComposeRule::InIndexDefinitions );
 
             aSql += sIndexName + " ON " + aComposedName;
 
@@ -243,8 +243,6 @@ void OIndexesHelper::dropObject(sal_Int32 /*_nPos*/,const OUString& _sElementNam
         }
     }
 }
-
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

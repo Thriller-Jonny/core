@@ -849,7 +849,7 @@ const UHashMapImpl& GetUHashImpl()
             { RTL_CONSTASCII_STRINGPARAM("com.sun.star.drawing.Shape3DPolygonObject"), E3D_POLYGONOBJ_ID | E3D_INVENTOR_FLAG },
         };
 
-        for (sal_uInt32 i = 0; i < sizeof(aInit)/sizeof(aInit[0]); i++)
+        for (sal_uInt32 i = 0; i < SAL_N_ELEMENTS(aInit); i++)
             aImpl[OUString( aInit[i].name, aInit[i].length, RTL_TEXTENCODING_ASCII_US ) ] = aInit[i].id;
         bInited = true;
     }
@@ -899,7 +899,6 @@ SvxUnoPropertyMapProvider& getSvxMapProvider()
 }
 
 
-
 SvxUnoPropertyMapProvider::SvxUnoPropertyMapProvider()
 {
     for(sal_uInt16 i=0;i<SVXMAP_END; i++)
@@ -914,7 +913,6 @@ SvxUnoPropertyMapProvider::~SvxUnoPropertyMapProvider()
     for(sal_uInt16 i=0;i<SVXMAP_END; i++)
         delete aSetArr[i];
 }
-
 
 
 const SfxItemPropertyMapEntry* SvxUnoPropertyMapProvider::GetMap(sal_uInt16 nPropertyId)
@@ -1179,7 +1177,7 @@ bool SvxUnoConvertResourceString( int nSourceResIds, int nDestResIds, int nCount
 //   these have to be in front of others
 
 // It would be nice to:
-// - evtl. organize these in a single array with 2-dimensional inner to elliminate
+// - evtl. organize these in a single array with 2-dimensional inner to eliminate
 //   the possibility to define it wrong
 // - change the compare to also work when a shorter name is in front of a longer one
 
@@ -1270,7 +1268,6 @@ static const sal_uInt16 SvxUnoColorNameResId[] =
     RID_SVXSTR_COLOR_TANGO_SCARLET_RED,
     RID_SVXSTR_COLOR_TANGO_ALUMINIUM
 };
-
 
 
 bool SvxUnoConvertResourceString( const sal_uInt16* pSourceResIds, const sal_uInt16* pDestResIds, int nCount, OUString& rString ) throw (std::exception)
@@ -1366,7 +1363,6 @@ OUString SvxUnogetInternalNameForItem(const sal_Int16 nWhich, const OUString& rA
     // just use previous name, if nothing else was found.
     return rApiName;
 }
-
 
 
 comphelper::PropertySetInfo* SvxPropertySetInfoPool::getOrCreate( sal_Int32 nServiceId ) throw()

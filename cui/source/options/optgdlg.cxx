@@ -17,6 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
+#include <config_features.h>
 #include <svl/zforlist.hxx>
 #include <svl/currencytable.hxx>
 #include <svtools/grfmgr.hxx>
@@ -89,12 +90,15 @@
 #include <vcl/svapp.hxx>
 #include <vcl/settings.hxx>
 #include <vcl/IconThemeInfo.hxx>
+#if HAVE_FEATURE_OPENGL
 #include <vcl/opengl/OpenGLWrapper.hxx>
-
+#endif
 #include "optgdlg.hxx"
 #include <svx/ofaitem.hxx>
 #include <svtools/apearcfg.hxx>
 #include <svtools/optionsdrawinglayer.hxx>
+#include <svtools/restartdialog.hxx>
+#include <comphelper/solarmutex.hxx>
 
 #include <config_vclplug.h>
 
@@ -194,7 +198,7 @@ SvxGeneralTabPage::sfxpg OfaMiscTabPage::DeactivatePage( SfxItemSet* pSet_ )
 
 namespace
 {
-        static OUString impl_SystemFileOpenServiceName()
+        OUString impl_SystemFileOpenServiceName()
         {
             const OUString &rDesktopEnvironment = Application::GetDesktopEnvironment();
 
@@ -214,7 +218,7 @@ namespace
                 return OUString();
                 #endif
             }
-            #if defined WNT
+            #if defined(_WIN32)
             return OUString("com.sun.star.ui.dialogs.SystemFilePicker");
             #elif defined MACOSX
             return OUString("com.sun.star.ui.dialogs.AquaFilePicker");
@@ -223,7 +227,7 @@ namespace
             #endif
         }
 
-        static bool lcl_HasSystemFilePicker()
+        bool lcl_HasSystemFilePicker()
         {
             if( Application::hasNativeFileSelection() )
                 return true;
@@ -273,7 +277,6 @@ OfaMiscTabPage::OfaMiscTabPage(vcl::Window* pParent, const SfxItemSet& rSet)
     get(m_pFileDlgROImage, "lockimage");
     get(m_pPrintDlgCB, "printdlg");
     get(m_pDocStatusCB, "docstatus");
-    get(m_pSaveAlwaysCB, "savealways");
     get(m_pYearFrame, "yearframe");
     get(m_pYearValueField, "year");
     get(m_pToYearFT, "toyear");
@@ -309,7 +312,6 @@ void OfaMiscTabPage::dispose()
     m_pFileDlgCB.clear();
     m_pPrintDlgCB.clear();
     m_pDocStatusCB.clear();
-    m_pSaveAlwaysCB.clear();
     m_pYearFrame.clear();
     m_pYearValueField.clear();
     m_pToYearFT.clear();
@@ -352,13 +354,6 @@ bool OfaMiscTabPage::FillItemSet( SfxItemSet* rSet )
         bModified = true;
     }
 
-    if ( m_pSaveAlwaysCB->IsValueChangedFromSaved() )
-    {
-        SvtMiscOptions aMiscOpt;
-        aMiscOpt.SetSaveAlwaysAllowed( m_pSaveAlwaysCB->IsChecked() );
-        bModified = true;
-    }
-
     const SfxUInt16Item* pUInt16Item = dynamic_cast< const SfxUInt16Item* >( GetOldItem( *rSet, SID_ATTR_YEAR2000 ) );
     sal_uInt16 nNum = (sal_uInt16)m_pYearValueField->GetText().toInt32();
     if ( pUInt16Item && pUInt16Item->GetValue() != nNum )
@@ -389,8 +384,6 @@ void OfaMiscTabPage::Reset( const SfxItemSet* rSet )
     m_pFileDlgCB->SaveValue();
     m_pPrintDlgCB->Check( !aMiscOpt.UseSystemPrintDialog() );
     m_pPrintDlgCB->SaveValue();
-    m_pSaveAlwaysCB->Check( aMiscOpt.IsSaveAlwaysAllowed() );
-    m_pSaveAlwaysCB->SaveValue();
 
     SvtPrintWarningOptions aPrintOptions;
     m_pDocStatusCB->Check(aPrintOptions.IsModifyDocumentOnPrintingAllowed());
@@ -522,10 +515,13 @@ CanvasSettings::CanvasSettings() :
 
 bool CanvasSettings::IsHardwareAccelerationAvailable() const
 {
+#if HAVE_FEATURE_OPENGL
     if( OpenGLWrapper::isVCLOpenGLEnabled() )
         mbHWAccelAvailable = false;
 
-    else if( !mbHWAccelChecked )
+    else
+#endif
+        if( !mbHWAccelChecked )
     {
         mbHWAccelChecked = true;
 
@@ -639,6 +635,14 @@ OfaViewTabPage::OfaViewTabPage(vcl::Window* pParent, const SfxItemSet& rSet)
     get(m_pOpenGLStatusDisabled, "opengldisabled");
     get(m_pMousePosLB, "mousepos");
     get(m_pMouseMiddleLB, "mousemiddle");
+
+    if (Application::GetToolkitName() == "gtk3")
+    {
+        m_pUseOpenGL->Hide();
+        m_pForceOpenGL->Hide();
+        m_pOpenGLStatusEnabled->Hide();
+        m_pOpenGLStatusDisabled->Hide();
+    }
 
 #if defined( UNX )
     m_pFontAntiAliasing->SetToggleHdl( LINK( this, OfaViewTabPage, OnAntialiasingToggled ) );
@@ -980,8 +984,14 @@ void OfaViewTabPage::Reset( const SfxItemSet* )
 
 void OfaViewTabPage::UpdateOGLStatus()
 {
+    if (Application::GetToolkitName() == "gtk3")
+        return;
     // Easier than a custom translation string.
+#if HAVE_FEATURE_OPENGL
     bool bEnabled = OpenGLWrapper::isVCLOpenGLEnabled();
+#else
+    bool bEnabled = false;
+#endif
     m_pOpenGLStatusEnabled->Show(bEnabled);
     m_pOpenGLStatusDisabled->Show(!bEnabled);
 }
@@ -1106,7 +1116,7 @@ OfaLanguagesTabPage::OfaLanguagesTabPage(vcl::Window* pParent, const SfxItemSet&
     }
     catch (const Exception &e)
     {
-        // we'll just leave the box in it's default setting and won't
+        // we'll just leave the box in its default setting and won't
         // even give it event handler...
         SAL_WARN("cui.options", "ignoring Exception \"" << e.Message << "\"");
     }
@@ -1277,8 +1287,10 @@ bool OfaLanguagesTabPage::FillItemSet( SfxItemSet* rSet )
             xProp->setPropertyValue(sUserLocaleKey, makeAny(aLangString));
             Reference< XChangesBatch >(xProp, UNO_QUERY_THROW)->commitChanges();
             // display info
-            ScopedVclPtrInstance< MessageDialog > aBox(this, CUI_RES(RID_SVXSTR_LANGUAGE_RESTART), VCL_MESSAGE_INFO);
-            aBox->Execute();
+            SolarMutexGuard aGuard;
+            svtools::executeRestartDialog(
+                comphelper::getProcessComponentContext(), nullptr,
+                svtools::RESTART_REASON_LANGUAGE_CHANGE);
 
             // tell quickstarter to stop being a veto listener
 
@@ -1289,7 +1301,7 @@ bool OfaLanguagesTabPage::FillItemSet( SfxItemSet* rSet )
     }
     catch (const Exception& e)
     {
-        // we'll just leave the box in it's default setting and won't
+        // we'll just leave the box in its default setting and won't
         // even give it event handler...
         SAL_WARN("cui.options", "ignoring Exception \"" << e.Message << "\"");
     }
@@ -1599,7 +1611,6 @@ void OfaLanguagesTabPage::Reset( const SfxItemSet* rSet )
     bool bEnable = !pLangConfig->aLinguConfig.IsReadOnly( "DefaultLocale" );
     m_pWesternLanguageFT->Enable( bEnable );
     m_pWesternLanguageLB->Enable( bEnable );
-
 
 
     // #i15812# controls for CJK/CTL already enabled/disabled from LocaleSettingHdl

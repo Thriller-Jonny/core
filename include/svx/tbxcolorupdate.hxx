@@ -34,7 +34,6 @@ namespace svx
 {
 
 
-
     //= ToolboxButtonColorUpdater
 
     /** helper class to update a color in a toolbox button image
@@ -52,6 +51,9 @@ namespace svx
         void        Update( const Color& rColor, bool bForceUpdate = false );
 
     private:
+        ToolboxButtonColorUpdater(ToolboxButtonColorUpdater &) = delete;
+        void operator =(ToolboxButtonColorUpdater) = delete;
+
         sal_uInt16      mnBtnId;
         sal_uInt16      mnSlotId;
         VclPtr<ToolBox> mpTbx;

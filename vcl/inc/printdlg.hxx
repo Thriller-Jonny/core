@@ -22,22 +22,15 @@
 
 #include <vcl/dllapi.h>
 
-#include "print.h"
-
-#include "vcl/print.hxx"
-#include "vcl/dialog.hxx"
-#include "vcl/fixed.hxx"
-#include "vcl/button.hxx"
-#include "vcl/gdimtf.hxx"
-#include "vcl/lstbox.hxx"
-#include "vcl/prgsbar.hxx"
-#include "vcl/field.hxx"
-#include "vcl/tabctrl.hxx"
-#include "vcl/tabpage.hxx"
-#include "vcl/virdev.hxx"
-
-#include <memory>
-#include <map>
+#include <vcl/print.hxx>
+#include <vcl/dialog.hxx>
+#include <vcl/fixed.hxx>
+#include <vcl/button.hxx>
+#include <vcl/prgsbar.hxx>
+#include <vcl/field.hxx>
+#include <vcl/tabctrl.hxx>
+#include <vcl/tabpage.hxx>
+#include <vcl/virdev.hxx>
 
 namespace vcl
 {
@@ -150,7 +143,6 @@ namespace vcl
 
             VclPtr<PushButton>                      mpSetupButton;
 
-            VclPtr<FixedLine>                       mpCopySpacer;
             VclPtr<NumericField>                    mpCopyCountField;
             VclPtr<CheckBox>                        mpCollateBox;
             VclPtr<FixedImage>                      mpCollateImage;
@@ -170,7 +162,6 @@ namespace vcl
         class OutputOptPage
         {
         public:
-            VclPtr<CheckBox>                    mpToFileBox;
             VclPtr<CheckBox>                    mpCollateSingleJobsBox;
             VclPtr<CheckBox>                    mpPapersizeFromSetup;
 
@@ -282,7 +273,7 @@ namespace vcl
         virtual ~PrintProgressDialog();
         virtual void dispose() override;
         bool isCanceled() const { return mbCanceled; }
-        void setProgress( int i_nCurrent, int i_nMax = -1 );
+        void setProgress( int i_nCurrent );
         void tick();
         void reset();
     };

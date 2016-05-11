@@ -61,5 +61,4 @@ $(eval $(call gb_Module_add_targets,avmedia,\
 ))
 endif
 
-
 # vim: set noet sw=4 ts=4:

@@ -87,7 +87,7 @@ private:
 
 public:
     /**
-     * @param ppConnection The piece of memory, pConnection points to, is accessisble
+     * @param ppConnection The piece of memory, pConnection points to, is accessible
      *                     as long as a reference to paramenter con is held.
      */
     Statement( const rtl::Reference< RefCountedMutex > & refMutex,
@@ -176,7 +176,7 @@ public: // XResultSetMetaDataSupplier (is required by framework (see
 
 private:
     void checkClosed() throw (com::sun::star::sdbc::SQLException, com::sun::star::uno::RuntimeException);
-    void raiseSQLException( const OUString & sql, const char * errorMsg, const char *errorType = nullptr )
+    void raiseSQLException( const OUString & sql, const char * errorMsg )
         throw ( com::sun::star::sdbc::SQLException );
 };
 

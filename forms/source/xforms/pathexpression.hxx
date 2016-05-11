@@ -35,7 +35,6 @@ namespace com { namespace sun { namespace star
 } } }
 
 
-
 namespace xforms
 {
 
@@ -65,12 +64,12 @@ public:
 
 
     /// evaluate the expression relative to the content node.
-    bool evaluate( const xforms::EvaluationContext& rContext );
+    void evaluate( const xforms::EvaluationContext& rContext );
 
 
     // get the result of this expression as node/node list/...
     css::uno::Reference<css::xml::dom::XNode> getNode() const;
-    const NodeVector_t getNodeList() const { return maNodes;}
+    const NodeVector_t& getNodeList() const { return maNodes;}
     css::uno::Reference<css::xml::dom::XNodeList> getXNodeList() const;
 
 };

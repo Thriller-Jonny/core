@@ -19,7 +19,6 @@
 
 #include "CNodes.hxx"
 
-#include <boost/noncopyable.hpp>
 #include <cppuhelper/implbase.hxx>
 #include <cppuhelper/supportsservice.hxx>
 #include <com/sun/star/lang/XServiceInfo.hpp>
@@ -37,11 +36,10 @@ class CURI:
     public ::cppu::WeakImplHelper<
         css::lang::XServiceInfo,
         css::lang::XInitialization,
-        css::rdf::XURI>,
-    private boost::noncopyable
+        css::rdf::XURI>
 {
 public:
-    explicit CURI(css::uno::Reference< css::uno::XComponentContext > const & context);
+    explicit CURI();
     virtual ~CURI() {}
 
     // css::lang::XServiceInfo:
@@ -60,17 +58,18 @@ public:
     virtual OUString SAL_CALL getNamespace() throw (css::uno::RuntimeException, std::exception) override;
 
 private:
+    CURI(CURI const&) = delete;
+    CURI& operator=(CURI const&) = delete;
+
     /// handle css.rdf.URIs
     void SAL_CALL initFromConstant(const sal_Int16 i_Constant);
-
-    css::uno::Reference< css::uno::XComponentContext > m_xContext;
 
     OUString m_Namespace;
     OUString m_LocalName;
 };
 
-CURI::CURI(css::uno::Reference< css::uno::XComponentContext > const & context) :
-    m_xContext(context), m_Namespace(), m_LocalName()
+CURI::CURI() :
+    m_Namespace(), m_LocalName()
 {}
 
 // com.sun.star.uno.XServiceInfo:
@@ -804,7 +803,6 @@ OUString SAL_CALL CURI::getLocalName() throw (css::uno::RuntimeException, std::e
 } // closing anonymous implementation namespace
 
 
-
 // component helper namespace
 namespace comp_CURI {
 
@@ -820,9 +818,9 @@ css::uno::Sequence< OUString > SAL_CALL _getSupportedServiceNames()
 }
 
 css::uno::Reference< css::uno::XInterface > SAL_CALL _create(
-    const css::uno::Reference< css::uno::XComponentContext > & context)
+    const css::uno::Reference< css::uno::XComponentContext > & )
 {
-    return static_cast< ::cppu::OWeakObject * >(new CURI(context));
+    return static_cast< ::cppu::OWeakObject * >(new CURI);
 }
 
 } // closing component helper namespace

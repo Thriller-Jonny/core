@@ -25,7 +25,7 @@
 #include <typeinfo>
 
 
-#if OSL_DEBUG_LEVEL > 1
+#if OSL_DEBUG_LEVEL > 0
 static sal_uLong nItemCount = 0;
 
 const char* pw1 = "Wow! 10.000 items!";
@@ -41,32 +41,32 @@ SfxPoolItem::SfxPoolItem(sal_uInt16 const nWhich)
     , m_nKind(SFX_ITEMS_NONE)
 {
     DBG_ASSERT(nWhich <= SHRT_MAX, "invalid WhichId");
-#if OSL_DEBUG_LEVEL > 1
+#if OSL_DEBUG_LEVEL > 0
     ++nItemCount;
     if ( pw1 && nItemCount>=10000 )
     {
         SAL_INFO( "svl", pw1 );
-        pw1 = NULL;
+        pw1 = nullptr;
     }
     if ( pw2 && nItemCount>=100000 )
     {
         SAL_INFO( "svl", pw2 );
-        pw2 = NULL;
+        pw2 = nullptr;
     }
     if ( pw3 && nItemCount>=1000000 )
     {
         SAL_INFO( "svl", pw3 );
-        pw3 = NULL;
+        pw3 = nullptr;
     }
     if ( pw4 && nItemCount>=5000000 )
     {
         SAL_INFO( "svl", pw4 );
-        pw4 = NULL;
+        pw4 = nullptr;
     }
     if ( pw5 && nItemCount>=10000000 )
     {
         SAL_INFO( "svl", pw5 );
-        pw5 = NULL;
+        pw5 = nullptr;
     }
 #endif
 }
@@ -77,32 +77,32 @@ SfxPoolItem::SfxPoolItem( const SfxPoolItem& rCpy )
     , m_nWhich(rCpy.Which()) // call function because of ChkThis() (WTF does that mean?)
     , m_nKind( SFX_ITEMS_NONE )
 {
-#if OSL_DEBUG_LEVEL > 1
+#if OSL_DEBUG_LEVEL > 0
     ++nItemCount;
     if ( pw1 && nItemCount>=10000 )
     {
         SAL_INFO( "svl", pw1 );
-        pw1 = NULL;
+        pw1 = nullptr;
     }
     if ( pw2 && nItemCount>=100000 )
     {
         SAL_INFO( "svl", pw2 );
-        pw2 = NULL;
+        pw2 = nullptr;
     }
     if ( pw3 && nItemCount>=1000000 )
     {
         SAL_INFO( "svl", pw3 );
-        pw3 = NULL;
+        pw3 = nullptr;
     }
     if ( pw4 && nItemCount>=5000000 )
     {
         SAL_INFO( "svl", pw4 );
-        pw4 = NULL;
+        pw4 = nullptr;
     }
     if ( pw5 && nItemCount>=10000000 )
     {
         SAL_INFO( "svl", pw5 );
-        pw5 = NULL;
+        pw5 = nullptr;
     }
 #endif
 }
@@ -112,7 +112,7 @@ SfxPoolItem::~SfxPoolItem()
 {
     DBG_ASSERT(m_nRefCount == 0 || m_nRefCount > SFX_ITEMS_MAXREF,
             "destroying item in use");
-#if OSL_DEBUG_LEVEL > 1
+#if OSL_DEBUG_LEVEL > 0
     --nItemCount;
 #endif
 }
@@ -237,9 +237,8 @@ SfxPoolItem* SfxVoidItem::Clone(SfxItemPool *) const
     return new SfxVoidItem(*this);
 }
 
-bool SfxPoolItem::ScaleMetrics( long /*lMult*/, long /*lDiv*/ )
+void SfxPoolItem::ScaleMetrics( long /*lMult*/, long /*lDiv*/ )
 {
-    return false;
 }
 
 
@@ -249,13 +248,11 @@ bool SfxPoolItem::HasMetrics() const
 }
 
 
-
 bool SfxPoolItem::QueryValue( css::uno::Any&, sal_uInt8 ) const
 {
     OSL_FAIL("There is no implementation for QueryValue for this item!");
     return false;
 }
-
 
 
 bool SfxPoolItem::PutValue( const css::uno::Any&, sal_uInt8 )

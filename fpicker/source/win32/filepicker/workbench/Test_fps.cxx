@@ -47,7 +47,7 @@
 #include "..\FPServiceInfo.hxx"
 
 
-//  namesapces
+//  namespaces
 
 
 using namespace ::cppu                  ;
@@ -203,11 +203,11 @@ void SAL_CALL FilePickerListener::controlStateChanged( const css::ui::dialogs::F
         aValue <<= lbString;
         rFPCtrlAccess->setValue( LISTBOX_VERSION, ADD_ITEM, aValue );
 
-        lbString = OUString( L"Ein Eintrag 2" );
+        lbString = L"Ein Eintrag 2";
         aValue <<= lbString;
         rFPCtrlAccess->setValue( LISTBOX_VERSION, ADD_ITEM, aValue );
 
-        lbString = OUString( L"Ein Eintrag 3" );
+        lbString =  L"Ein Eintrag 3";
         aValue <<= lbString;
         rFPCtrlAccess->setValue( LISTBOX_VERSION, ADD_ITEM, aValue );
 
@@ -233,7 +233,6 @@ void SAL_CALL FilePickerListener::dialogSizeChanged( )
 //  main
 
 
-
 int SAL_CALL main(int nArgc, char* Argv[], char* Env[]  )
 {
     printf("Starting test of FPS-Service\n");
@@ -243,8 +242,7 @@ int SAL_CALL main(int nArgc, char* Argv[], char* Env[]  )
 
 
     // Get global factory for uno services.
-    OUString rdbName = OUString( RDB_SYSPATH );
-    Reference< XMultiServiceFactory > g_xFactory( createRegistryServiceFactory( rdbName ) );
+    Reference< XMultiServiceFactory > g_xFactory( createRegistryServiceFactory( RDB_SYSPATH ) );
 
     // Print a message if an error occurred.
     if ( g_xFactory.is() == sal_False )

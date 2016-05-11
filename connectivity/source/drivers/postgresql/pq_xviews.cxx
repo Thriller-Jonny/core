@@ -37,8 +37,6 @@
 #include <rtl/ustrbuf.hxx>
 
 #include <com/sun/star/sdbc/XRow.hpp>
-#include <com/sun/star/sdbc/XParameters.hpp>
-#include <com/sun/star/sdbcx/Privilege.hpp>
 
 #include "pq_xviews.hxx"
 #include "pq_xview.hxx"
@@ -48,30 +46,19 @@
 
 using osl::MutexGuard;
 
-
 using com::sun::star::beans::XPropertySet;
 
-using com::sun::star::uno::Any;
 using com::sun::star::uno::makeAny;
 using com::sun::star::uno::UNO_QUERY;
-using com::sun::star::uno::Type;
-using com::sun::star::uno::XInterface;
 using com::sun::star::uno::Reference;
-using com::sun::star::uno::Sequence;
 using com::sun::star::uno::RuntimeException;
 
 using com::sun::star::container::NoSuchElementException;
-using com::sun::star::lang::WrappedTargetException;
 
 using com::sun::star::sdbc::XRow;
-using com::sun::star::sdbc::XCloseable;
 using com::sun::star::sdbc::XStatement;
 using com::sun::star::sdbc::XResultSet;
-using com::sun::star::sdbc::XParameters;
-using com::sun::star::sdbc::XPreparedStatement;
-using com::sun::star::sdbc::XDatabaseMetaData;
 
-//  using com::sun::star::sdbcx::Privilege;
 
 namespace pq_sdbc_driver
 {
@@ -107,7 +94,7 @@ void Views::refresh()
 
         Reference< XRow > xRow( rs , UNO_QUERY );
 
-        m_values = Sequence< com::sun::star::uno::Any > ();
+        m_values.clear();
         String2IntMap map;
         sal_Int32 viewIndex = 0;
 
@@ -126,13 +113,11 @@ void Views::refresh()
             pView->setPropertyValue_NoBroadcast_public(st.COMMAND, makeAny(command) );
 
             {
-                const int currentViewIndex = viewIndex++;
-                assert(currentViewIndex  == m_values.getLength());
-                m_values.realloc( viewIndex );
-                m_values[currentViewIndex] = makeAny( prop );
+                m_values.push_back( makeAny( prop ) );
                 OUStringBuffer buf( table.getLength() + schema.getLength() + 1);
                 buf.append( schema + "." + table );
-                map[ buf.makeStringAndClear() ] = currentViewIndex;
+                map[ buf.makeStringAndClear() ] = viewIndex;
+                ++viewIndex;
             }
         }
         m_name2index.swap( map );
@@ -199,10 +184,10 @@ void Views::dropByIndex( sal_Int32 index )
            ::com::sun::star::uno::RuntimeException, std::exception)
 {
     osl::MutexGuard guard( m_refMutex->mutex );
-    if( index < 0 ||  index >= m_values.getLength() )
+    if( index < 0 ||  index >= (sal_Int32)m_values.size() )
     {
         OUStringBuffer buf( 128 );
-        buf.append( "VIEWS: Index out of range (allowed 0 to " + OUString::number(m_values.getLength() -1) +
+        buf.append( "VIEWS: Index out of range (allowed 0 to " + OUString::number(m_values.size() -1) +
                     ", got " + OUString::number( index ) + ")");
         throw com::sun::star::lang::IndexOutOfBoundsException(
             buf.makeStringAndClear(), *this );
@@ -247,7 +232,6 @@ void Views::disposing()
 {
     Container::disposing();
 }
-
 
 
 };

@@ -45,17 +45,16 @@
 #include "ShapeFactory.hxx"
 
 using namespace com::sun::star;
-using ::com::sun::star::uno::Reference;
 
 namespace chart {
 
 namespace {
 
-typedef opengl::OpenglShapeFactory* (*__getOpenglShapeFactory)(void);
+typedef opengl::OpenglShapeFactory* (*getOpenglShapeFactory_)(void);
 
 #ifndef DISABLE_DYNLOADING
 
-static void SAL_CALL thisModule() {}
+void SAL_CALL thisModule() {}
 
 osl::Module* getOpenGLModule()
 {
@@ -80,7 +79,7 @@ osl::Module* getOpenGLModule()
 extern "C" opengl::OpenglShapeFactory* getOpenglShapeFactory();
 #endif
 
-AbstractShapeFactory* AbstractShapeFactory::getOrCreateShapeFactory(uno::Reference< lang::XMultiServiceFactory> xFactory)
+AbstractShapeFactory* AbstractShapeFactory::getOrCreateShapeFactory(const uno::Reference< lang::XMultiServiceFactory>& xFactory)
 {
     static AbstractShapeFactory* pShapeFactory = nullptr;
 
@@ -97,7 +96,7 @@ AbstractShapeFactory* AbstractShapeFactory::getOrCreateShapeFactory(uno::Referen
             if(fn)
             {
 
-                pShapeFactory = reinterpret_cast<__getOpenglShapeFactory>(fn)();
+                pShapeFactory = reinterpret_cast<getOpenglShapeFactory_>(fn)();
                 pShapeFactory->setShapeFactory(xFactory);
             }
         }

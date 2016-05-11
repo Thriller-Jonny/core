@@ -252,13 +252,11 @@ public:
 
 private:
     SdrPathObj* mpPathObj;
-    rtl::Reference< MotionPathTag > mxTag;
 };
 
 SdPathHdl::SdPathHdl( const SmartTagReference& xTag, SdrPathObj* pPathObj )
 : SmartHdl( xTag, pPathObj->GetCurrentBoundRect().TopLeft() )
 , mpPathObj( pPathObj )
-, mxTag( dynamic_cast< MotionPathTag* >( xTag.get() ) )
 {
 }
 
@@ -465,7 +463,7 @@ bool MotionPathTag::MouseButtonDown( const MouseEvent& rMEvt, SmartHdl& rHdl )
 
                 bool bClosed0(mpPathObj->IsClosedObj());
 
-                sal_uInt32 nInsPointNum = mpPathObj->NbcInsPointOld(aPt, bNewObj, true);
+                sal_uInt32 nInsPointNum = mpPathObj->NbcInsPointOld(aPt, bNewObj);
 
                 if(bClosed0 != mpPathObj->IsClosedObj())
                 {

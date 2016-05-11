@@ -21,8 +21,6 @@
 #define INCLUDED_VCL_INC_IMPBMP_HXX
 
 #include <vcl/salbtype.hxx>
-#include <tools/gen.hxx>
-#include <tools/solar.h>
 
 extern const sal_uLong nVCLRLut[ 6 ];
 extern const sal_uLong nVCLGLut[ 6 ];
@@ -39,7 +37,6 @@ class Bitmap;
 class ImpBitmap
 {
 private:
-    sal_uLong           mnRefCount;
     SalBitmap*          mpSalBitmap;
 
 public:
@@ -54,10 +51,10 @@ public:
 
     SalBitmap*          ImplGetSalBitmap() const { return mpSalBitmap; }
 
-    bool            ImplCreate( const Size& rSize, sal_uInt16 nBitCount, const BitmapPalette& rPal );
-    bool            ImplCreate( const ImpBitmap& rImpBitmap );
-    bool            ImplCreate( const ImpBitmap& rImpBitmap, SalGraphics* pGraphics );
-    bool            ImplCreate( const ImpBitmap& rImpBitmap, sal_uInt16 nNewBitCount );
+    bool                ImplCreate( const Size& rSize, sal_uInt16 nBitCount, const BitmapPalette& rPal );
+    bool                ImplCreate( const ImpBitmap& rImpBitmap );
+    bool                ImplCreate( const ImpBitmap& rImpBitmap, SalGraphics* pGraphics );
+    bool                ImplCreate( const ImpBitmap& rImpBitmap, sal_uInt16 nNewBitCount );
 
     Size                ImplGetSize() const;
     sal_uInt16          ImplGetBitCount() const;
@@ -65,15 +62,12 @@ public:
     BitmapBuffer*       ImplAcquireBuffer( BitmapAccessMode nMode );
     void                ImplReleaseBuffer( BitmapBuffer* pBuffer, BitmapAccessMode nMode );
 
-    sal_uLong           ImplGetRefCount() const { return mnRefCount; }
-    void                ImplIncRefCount() { mnRefCount++; }
-    void                ImplDecRefCount() { mnRefCount--; }
-
     BitmapChecksum      ImplGetChecksum() const;
     void                ImplInvalidateChecksum();
 
     bool                ImplScale( const double& rScaleX, const double& rScaleY, BmpScaleFlag nScaleFlag );
     bool                ImplReplace( const Color& rSearchColor, const Color& rReplaceColor, sal_uLong nTol );
+    bool                ImplConvert( BmpConversion eConversion );
 };
 
 #endif // INCLUDED_VCL_INC_IMPBMP_HXX

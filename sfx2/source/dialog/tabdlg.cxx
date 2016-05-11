@@ -60,18 +60,16 @@ struct Data_Impl
     CreateTabPage fnCreatePage;   // Pointer to Factory
     GetTabPageRanges fnGetRanges; // Pointer to Ranges-Function
     VclPtr<SfxTabPage> pTabPage;         // The TabPage itself
-    bool bOnDemand;              // Flag: ItemSet onDemand
     bool bRefresh;                // Flag: Page must be re-initialized
 
     // Constructor
     Data_Impl( sal_uInt16 Id, CreateTabPage fnPage,
-               GetTabPageRanges fnRanges, bool bDemand ) :
+               GetTabPageRanges fnRanges ) :
 
         nId         ( Id ),
         fnCreatePage( fnPage ),
         fnGetRanges ( fnRanges ),
         pTabPage    ( nullptr ),
-        bOnDemand   ( bDemand ),
         bRefresh    ( false )
     {
         if ( !fnCreatePage  )
@@ -188,8 +186,8 @@ bool SfxTabPage::FillItemSet( SfxItemSet* rSet )
 
 void SfxTabPage::Reset( const SfxItemSet* rSet )
 {
-    pImpl->maItemConn.DoApplyFlags( *rSet );
-    pImpl->maItemConn.DoReset( *rSet );
+    pImpl->maItemConn.DoApplyFlags( rSet );
+    pImpl->maItemConn.DoReset( rSet );
 }
 
 void SfxTabPage::ActivatePage( const SfxItemSet& )
@@ -224,7 +222,6 @@ SfxTabPage::sfxpg SfxTabPage::DeactivatePage( SfxItemSet* )
 }
 
 
-
 void SfxTabPage::FillUserData()
 
 /*  [Description]
@@ -238,12 +235,10 @@ void SfxTabPage::FillUserData()
 }
 
 
-
 bool SfxTabPage::IsReadOnly() const
 {
     return false;
 }
-
 
 
 const SfxPoolItem* SfxTabPage::GetItem( const SfxItemSet& rSet, sal_uInt16 nSlot, bool bDeep )
@@ -264,7 +259,6 @@ const SfxPoolItem* SfxTabPage::GetItem( const SfxItemSet& rSet, sal_uInt16 nSlot
         pItem = &pPool->GetDefaultItem( nWh );
     return pItem;
 }
-
 
 
 const SfxPoolItem* SfxTabPage::GetOldItem( const SfxItemSet& rSet,
@@ -310,7 +304,6 @@ SfxTabDialog* SfxTabPage::GetTabDialog() const
 }
 
 
-
 SfxTabDialog::SfxTabDialog
 
 /*  [Description]
@@ -326,17 +319,16 @@ SfxTabDialog::SfxTabDialog
     bool bEditFmt                 // when yes -> additional Button for standard
 )
     : TabDialog(pParent, rID, rUIXMLDescription)
-    , pSet(pItemSet ? new SfxItemSet(*pItemSet) : nullptr)
-    , pOutSet(nullptr)
-    , pRanges(nullptr)
-    , nAppPageId(USHRT_MAX)
-    , bItemsReset(false)
-    , bStandardPushed(false)
-    , pExampleSet(nullptr)
+    , m_pSet(pItemSet ? new SfxItemSet(*pItemSet) : nullptr)
+    , m_pOutSet(nullptr)
+    , m_pRanges(nullptr)
+    , m_nAppPageId(USHRT_MAX)
+    , m_bItemsReset(false)
+    , m_bStandardPushed(false)
+    , m_pExampleSet(nullptr)
 {
     Init_Impl(bEditFmt);
 }
-
 
 
 SfxTabDialog::~SfxTabDialog()
@@ -348,7 +340,7 @@ void SfxTabDialog::dispose()
 {
     SavePosAndId();
 
-    for ( SfxTabDlgData_Impl::const_iterator it = pImpl->aData.begin(); it != pImpl->aData.end(); ++it )
+    for ( SfxTabDlgData_Impl::const_iterator it = m_pImpl->aData.begin(); it != m_pImpl->aData.end(); ++it )
     {
         Data_Impl* pDataObject = *it;
 
@@ -372,24 +364,22 @@ void SfxTabDialog::dispose()
                 aPageOpt.SetUserItem( USERITEM_NAME, makeAny( OUString( aPageData ) ) );
             }
 
-            if ( pDataObject->bOnDemand )
-                delete &pDataObject->pTabPage->GetItemSet();
             pDataObject->pTabPage.disposeAndClear();
         }
         delete pDataObject;
         pDataObject = nullptr;
     }
 
-    delete pImpl;
-    pImpl = nullptr;
-    delete pSet;
-    pSet = nullptr;
-    delete pOutSet;
-    pOutSet = nullptr;
-    delete pExampleSet;
-    pExampleSet = nullptr;
-    delete [] pRanges;
-    pRanges = nullptr;
+    delete m_pImpl;
+    m_pImpl = nullptr;
+    delete m_pSet;
+    m_pSet = nullptr;
+    delete m_pOutSet;
+    m_pOutSet = nullptr;
+    delete m_pExampleSet;
+    m_pExampleSet = nullptr;
+    delete [] m_pRanges;
+    m_pRanges = nullptr;
 
     if (m_bOwnsBaseFmtBtn)
         m_pBaseFmtBtn.disposeAndClear();
@@ -425,7 +415,7 @@ void SfxTabDialog::Init_Impl(bool bFmtFlag)
     assert(m_pBox);
     m_pUIBuilder->get(m_pTabCtrl, "tabcontrol");
 
-    pImpl = new TabDlg_Impl(m_pTabCtrl->GetPageCount());
+    m_pImpl = new TabDlg_Impl(m_pTabCtrl->GetPageCount());
 
     m_pActionArea = get_action_area();
     assert(m_pActionArea);
@@ -452,7 +442,7 @@ void SfxTabDialog::Init_Impl(bool bFmtFlag)
     if (m_bOwnsResetBtn)
         m_pResetBtn = VclPtr<PushButton>::Create(m_pActionArea.get());
     else
-        pImpl->bHideResetBtn = !m_pResetBtn->IsVisible();
+        m_pImpl->bHideResetBtn = !m_pResetBtn->IsVisible();
 
     m_pBaseFmtBtn = m_pUIBuilder->get<PushButton>("standard");
     m_bOwnsBaseFmtBtn = m_pBaseFmtBtn == nullptr;
@@ -490,17 +480,17 @@ void SfxTabDialog::Init_Impl(bool bFmtFlag)
         m_pBaseFmtBtn->Show();
     }
 
-    if ( pSet )
+    if ( m_pSet )
     {
-        pExampleSet = new SfxItemSet( *pSet );
-        pOutSet = new SfxItemSet( *pSet->GetPool(), pSet->GetRanges() );
+        m_pExampleSet = new SfxItemSet( *m_pSet );
+        m_pOutSet = new SfxItemSet( *m_pSet->GetPool(), m_pSet->GetRanges() );
     }
 }
 
 void SfxTabDialog::RemoveResetButton()
 {
     m_pResetBtn->Hide();
-    pImpl->bHideResetBtn = true;
+    m_pImpl->bHideResetBtn = true;
 }
 
 void SfxTabDialog::RemoveStandardButton()
@@ -517,7 +507,6 @@ short SfxTabDialog::Execute()
 }
 
 
-
 void SfxTabDialog::StartExecuteModal( const Link<Dialog&,void>& rEndDialogHdl )
 {
     if ( !m_pTabCtrl->GetPageCount() )
@@ -527,19 +516,16 @@ void SfxTabDialog::StartExecuteModal( const Link<Dialog&,void>& rEndDialogHdl )
 }
 
 
-
-void SfxTabDialog::Start( bool bShow )
+void SfxTabDialog::Start()
 {
-    pImpl->bModal = false;
+    m_pImpl->bModal = false;
     Start_Impl();
 
-    if ( bShow )
-        Show();
+    Show();
 
     if ( IsVisible() && ( !HasChildPathFocus() || HasFocus() ) )
         GrabFocusToFirstControl();
 }
-
 
 
 void SfxTabDialog::SetApplyHandler(const Link<Button*, void>& _rHdl)
@@ -550,10 +536,9 @@ void SfxTabDialog::SetApplyHandler(const Link<Button*, void>& _rHdl)
 }
 
 
-
 void SfxTabDialog::Start_Impl()
 {
-    assert(pImpl->aData.size() == m_pTabCtrl->GetPageCount()
+    assert(m_pImpl->aData.size() == m_pTabCtrl->GetPageCount()
             && "not all pages registered");
     sal_uInt16 nActPage = m_pTabCtrl->GetPageId( 0 );
 
@@ -566,8 +551,8 @@ void SfxTabDialog::Start_Impl()
         // initial TabPage from Program/Help/config
         nActPage = (sal_uInt16)aDlgOpt.GetPageID();
 
-        if ( USHRT_MAX != nAppPageId )
-            nActPage = nAppPageId;
+        if ( USHRT_MAX != m_nAppPageId )
+            nActPage = m_nAppPageId;
         else
         {
             sal_uInt16 nAutoTabPageId = SfxGetpApp()->Get_Impl()->nAutoTabPageId;
@@ -578,16 +563,16 @@ void SfxTabDialog::Start_Impl()
         if ( TAB_PAGE_NOTFOUND == m_pTabCtrl->GetPagePos( nActPage ) )
             nActPage = m_pTabCtrl->GetPageId( 0 );
     }
-    else if ( USHRT_MAX != nAppPageId && TAB_PAGE_NOTFOUND != m_pTabCtrl->GetPagePos( nAppPageId ) )
-        nActPage = nAppPageId;
+    else if ( USHRT_MAX != m_nAppPageId && TAB_PAGE_NOTFOUND != m_pTabCtrl->GetPagePos( m_nAppPageId ) )
+        nActPage = m_nAppPageId;
 
     m_pTabCtrl->SetCurPageId( nActPage );
     ActivatePageHdl( m_pTabCtrl );
 }
 
-void SfxTabDialog::AddTabPage( sal_uInt16 nId, const OUString &rRiderText, bool bItemsOnDemand, sal_uInt16 nPos )
+void SfxTabDialog::AddTabPage( sal_uInt16 nId, const OUString &rRiderText )
 {
-    AddTabPage( nId, rRiderText, nullptr, nullptr, bItemsOnDemand, nPos );
+    AddTabPage( nId, rRiderText, nullptr, nullptr );
 }
 
 /*
@@ -598,15 +583,13 @@ sal_uInt16 SfxTabDialog::AddTabPage
 (
     const OString &rName,          // Page ID
     CreateTabPage pCreateFunc,     // Pointer to the Factory Method
-    GetTabPageRanges pRangesFunc,  // Pointer to the Method for quering
+    GetTabPageRanges pRangesFunc   // Pointer to the Method for quering
                                    // Ranges onDemand
-    bool bItemsOnDemand            // indicates whether the set of this page is
-                                   // requested when created
 )
 {
     sal_uInt16 nId = m_pTabCtrl->GetPageId(rName);
-    pImpl->aData.push_back(
-        new Data_Impl( nId, pCreateFunc, pRangesFunc, bItemsOnDemand ) );
+    m_pImpl->aData.push_back(
+        new Data_Impl( nId, pCreateFunc, pRangesFunc ) );
     return nId;
 }
 
@@ -626,10 +609,9 @@ sal_uInt16 SfxTabDialog::AddTabPage
     assert(pCreateFunc);
     GetTabPageRanges pRangesFunc = pFact->GetTabPageRangesFunc(nPageCreateId);
     sal_uInt16 nPageId = m_pTabCtrl->GetPageId(rName);
-    pImpl->aData.push_back(new Data_Impl(nPageId, pCreateFunc, pRangesFunc, false));
+    m_pImpl->aData.push_back(new Data_Impl(nPageId, pCreateFunc, pRangesFunc));
     return nPageId;
 }
-
 
 
 void SfxTabDialog::AddTabPage
@@ -645,15 +627,13 @@ void SfxTabDialog::AddTabPage
     const OUString& rRiderText,
     CreateTabPage pCreateFunc,
     GetTabPageRanges pRangesFunc,
-    bool bItemsOnDemand,
     sal_uInt16 nPos
 )
 {
     DBG_ASSERT( TAB_PAGE_NOTFOUND == m_pTabCtrl->GetPagePos( nId ),
                 "Double Page-Ids in the Tabpage" );
     m_pTabCtrl->InsertPage( nId, rRiderText, nPos );
-    pImpl->aData.push_back(
-        new Data_Impl( nId, pCreateFunc, pRangesFunc, bItemsOnDemand ) );
+    m_pImpl->aData.push_back( new Data_Impl( nId, pCreateFunc, pRangesFunc ) );
 }
 
 void SfxTabDialog::RemoveTabPage( sal_uInt16 nId )
@@ -666,7 +646,7 @@ void SfxTabDialog::RemoveTabPage( sal_uInt16 nId )
 {
     sal_uInt16 nPos = 0;
     m_pTabCtrl->RemovePage( nId );
-    Data_Impl* pDataObject = Find( pImpl->aData, nId, &nPos );
+    Data_Impl* pDataObject = Find( m_pImpl->aData, nId, &nPos );
 
     if ( pDataObject )
     {
@@ -689,13 +669,11 @@ void SfxTabDialog::RemoveTabPage( sal_uInt16 nId )
                 aPageOpt.SetUserItem( USERITEM_NAME, makeAny( OUString( aPageData ) ) );
             }
 
-            if ( pDataObject->bOnDemand )
-                delete &pDataObject->pTabPage->GetItemSet();
             pDataObject->pTabPage.disposeAndClear();
         }
 
         delete pDataObject;
-        pImpl->aData.erase( pImpl->aData.begin() + nPos );
+        m_pImpl->aData.erase( m_pImpl->aData.begin() + nPos );
     }
     else
     {
@@ -707,7 +685,6 @@ void SfxTabDialog::RemoveTabPage(const OString &rName)
 {
     RemoveTabPage(m_pTabCtrl->GetPageId(rName));
 }
-
 
 
 void SfxTabDialog::PageCreated
@@ -727,7 +704,6 @@ void SfxTabDialog::PageCreated
 }
 
 
-
 SfxItemSet* SfxTabDialog::GetInputSetImpl()
 
 /*  [Description]
@@ -737,9 +713,8 @@ SfxItemSet* SfxTabDialog::GetInputSetImpl()
 */
 
 {
-    return pSet;
+    return m_pSet;
 }
-
 
 
 SfxTabPage* SfxTabDialog::GetTabPage( sal_uInt16 nPageId ) const
@@ -751,7 +726,7 @@ SfxTabPage* SfxTabDialog::GetTabPage( sal_uInt16 nPageId ) const
 
 {
     sal_uInt16 nPos = 0;
-    Data_Impl* pDataObject = Find( pImpl->aData, nPageId, &nPos );
+    Data_Impl* pDataObject = Find( m_pImpl->aData, nPageId, &nPos );
 
     if ( pDataObject )
         return pDataObject->pTabPage;
@@ -762,11 +737,10 @@ void SfxTabDialog::SavePosAndId()
 {
     // save settings (screen position and current page)
     SvtViewOptions aDlgOpt(E_TABDIALOG, OStringToOUString(GetHelpId(),RTL_TEXTENCODING_UTF8));
-    aDlgOpt.SetWindowState(OStringToOUString(GetWindowState(WINDOWSTATE_MASK_POS),RTL_TEXTENCODING_ASCII_US));
+    aDlgOpt.SetWindowState(OStringToOUString(GetWindowState(WindowStateMask::Pos),RTL_TEXTENCODING_ASCII_US));
     // to-do replace with name of page when all pages are converted to .ui
     aDlgOpt.SetPageID( m_pTabCtrl->GetCurPageId() );
 }
-
 
 
 short SfxTabDialog::Ok()
@@ -790,47 +764,41 @@ short SfxTabDialog::Ok()
 {
     SavePosAndId(); //See fdo#38828 "Apply" resetting window position
 
-    if ( !pOutSet )
+    if ( !m_pOutSet )
     {
-        if ( !pExampleSet && pSet )
-            pOutSet = pSet->Clone( false );  // without Items
-        else if ( pExampleSet )
-            pOutSet = new SfxItemSet( *pExampleSet );
+        if ( !m_pExampleSet && m_pSet )
+            m_pOutSet = m_pSet->Clone( false );  // without Items
+        else if ( m_pExampleSet )
+            m_pOutSet = new SfxItemSet( *m_pExampleSet );
     }
     bool bModified = false;
 
-    for ( SfxTabDlgData_Impl::const_iterator it = pImpl->aData.begin(); it != pImpl->aData.end(); ++it )
+    for ( SfxTabDlgData_Impl::const_iterator it = m_pImpl->aData.begin(); it != m_pImpl->aData.end(); ++it )
     {
         Data_Impl* pDataObject = *it;
         SfxTabPage* pTabPage = pDataObject->pTabPage;
 
         if ( pTabPage )
         {
-            if ( pDataObject->bOnDemand )
+            if ( m_pSet && !pTabPage->HasExchangeSupport() )
             {
-                SfxItemSet& rSet = (SfxItemSet&)pTabPage->GetItemSet();
-                rSet.ClearItem();
-                bModified |= pTabPage->FillItemSet( &rSet );
-            }
-            else if ( pSet && !pTabPage->HasExchangeSupport() )
-            {
-                SfxItemSet aTmp( *pSet->GetPool(), pSet->GetRanges() );
+                SfxItemSet aTmp( *m_pSet->GetPool(), m_pSet->GetRanges() );
 
                 if ( pTabPage->FillItemSet( &aTmp ) )
                 {
                     bModified = true;
-                    if (pExampleSet)
-                        pExampleSet->Put( aTmp );
-                    pOutSet->Put( aTmp );
+                    if (m_pExampleSet)
+                        m_pExampleSet->Put( aTmp );
+                    m_pOutSet->Put( aTmp );
                 }
             }
         }
     }
 
-    if ( pImpl->bModified || ( pOutSet && pOutSet->Count() > 0 ) )
+    if ( m_pImpl->bModified || ( m_pOutSet && m_pOutSet->Count() > 0 ) )
         bModified = true;
 
-    if (bStandardPushed)
+    if (m_bStandardPushed)
         bModified = true;
     return bModified ? RET_OK : RET_CANCEL;
 }
@@ -839,7 +807,6 @@ IMPL_LINK_NOARG_TYPED(SfxTabDialog, CancelHdl, Button*, void)
 {
     EndDialog( RET_USER_CANCEL );
 }
-
 
 
 SfxItemSet* SfxTabDialog::CreateInputItemSet( sal_uInt16 )
@@ -856,7 +823,6 @@ SfxItemSet* SfxTabDialog::CreateInputItemSet( sal_uInt16 )
 }
 
 
-
 void SfxTabDialog::RefreshInputSet()
 
 /*  [Description]
@@ -869,7 +835,6 @@ void SfxTabDialog::RefreshInputSet()
 {
     SAL_INFO ( "sfx.dialog", "RefreshInputSet not implemented" );
 }
-
 
 
 IMPL_LINK_NOARG_TYPED(SfxTabDialog, OkHdl, Button*, void)
@@ -885,7 +850,7 @@ IMPL_LINK_NOARG_TYPED(SfxTabDialog, OkHdl, Button*, void)
 {
     if (PrepareLeaveCurrentPage())
     {
-        if ( pImpl->bModal )
+        if ( m_pImpl->bModal )
             EndDialog( Ok() );
         else
         {
@@ -915,7 +880,6 @@ bool SfxTabDialog::Apply()
 }
 
 
-
 bool SfxTabDialog::PrepareLeaveCurrentPage()
 {
     sal_uInt16 const nId = m_pTabCtrl->GetCurPageId();
@@ -925,9 +889,9 @@ bool SfxTabDialog::PrepareLeaveCurrentPage()
     if ( pPage )
     {
         int nRet = SfxTabPage::LEAVE_PAGE;
-        if ( pSet )
+        if ( m_pSet )
         {
-            SfxItemSet aTmp( *pSet->GetPool(), pSet->GetRanges() );
+            SfxItemSet aTmp( *m_pSet->GetPool(), m_pSet->GetRanges() );
 
             if ( pPage->HasExchangeSupport() )
                 nRet = pPage->DeactivatePage( &aTmp );
@@ -937,8 +901,8 @@ bool SfxTabDialog::PrepareLeaveCurrentPage()
             if ( ( SfxTabPage::LEAVE_PAGE & nRet ) == SfxTabPage::LEAVE_PAGE
                  && aTmp.Count() )
             {
-                pExampleSet->Put( aTmp );
-                pOutSet->Put( aTmp );
+                m_pExampleSet->Put( aTmp );
+                m_pOutSet->Put( aTmp );
             }
         }
         else
@@ -948,8 +912,6 @@ bool SfxTabDialog::PrepareLeaveCurrentPage()
 
     return bEnd;
 }
-
-
 
 
 IMPL_LINK_NOARG_TYPED(SfxTabDialog, UserHdl, Button*, void)
@@ -976,7 +938,6 @@ IMPL_LINK_NOARG_TYPED(SfxTabDialog, UserHdl, Button*, void)
 }
 
 
-
 IMPL_LINK_NOARG_TYPED(SfxTabDialog, ResetHdl, Button*, void)
 
 /*  [Description]
@@ -988,19 +949,11 @@ IMPL_LINK_NOARG_TYPED(SfxTabDialog, ResetHdl, Button*, void)
 
 {
     const sal_uInt16 nId = m_pTabCtrl->GetCurPageId();
-    Data_Impl* pDataObject = Find( pImpl->aData, nId );
+    Data_Impl* pDataObject = Find( m_pImpl->aData, nId );
     DBG_ASSERT( pDataObject, "Id not known" );
 
-    if ( pDataObject->bOnDemand )
-    {
-        // CSet on AIS has problems here, thus separated
-        const SfxItemSet* pItemSet = &pDataObject->pTabPage->GetItemSet();
-        pDataObject->pTabPage->Reset( pItemSet );
-    }
-    else
-        pDataObject->pTabPage->Reset( pSet );
+    pDataObject->pTabPage->Reset( m_pSet );
 }
-
 
 
 IMPL_LINK_NOARG_TYPED(SfxTabDialog, BaseFmtHdl, Button*, void)
@@ -1013,20 +966,20 @@ IMPL_LINK_NOARG_TYPED(SfxTabDialog, BaseFmtHdl, Button*, void)
 */
 
 {
-    bStandardPushed = true;
+    m_bStandardPushed = true;
 
     const sal_uInt16 nId = m_pTabCtrl->GetCurPageId();
-    Data_Impl* pDataObject = Find( pImpl->aData, nId );
+    Data_Impl* pDataObject = Find( m_pImpl->aData, nId );
     DBG_ASSERT( pDataObject, "Id not known" );
 
     if ( pDataObject->fnGetRanges )
     {
-        if ( !pExampleSet )
-            pExampleSet = new SfxItemSet( *pSet );
+        if ( !m_pExampleSet )
+            m_pExampleSet = new SfxItemSet( *m_pSet );
 
-        const SfxItemPool* pPool = pSet->GetPool();
+        const SfxItemPool* pPool = m_pSet->GetPool();
         const sal_uInt16* pTmpRanges = (pDataObject->fnGetRanges)();
-        SfxItemSet aTmpSet( *pExampleSet );
+        SfxItemSet aTmpSet( *m_pExampleSet );
 
         while ( *pTmpRanges )
         {
@@ -1036,11 +989,11 @@ IMPL_LINK_NOARG_TYPED(SfxTabDialog, BaseFmtHdl, Button*, void)
             {
                 // Range which two identical values -> only set one Item
                 sal_uInt16 nWh = pPool->GetWhich( *pTmpRanges );
-                pExampleSet->ClearItem( nWh );
+                m_pExampleSet->ClearItem( nWh );
                 aTmpSet.ClearItem( nWh );
                 // At the Outset of InvalidateItem,
                 // so that the change takes effect
-                pOutSet->InvalidateItem( nWh );
+                m_pOutSet->InvalidateItem( nWh );
             }
             else
             {
@@ -1060,11 +1013,11 @@ IMPL_LINK_NOARG_TYPED(SfxTabDialog, BaseFmtHdl, Button*, void)
                 {
                     // Iterate over the Range and set the Items
                     sal_uInt16 nWh = pPool->GetWhich( nTmp );
-                    pExampleSet->ClearItem( nWh );
+                    m_pExampleSet->ClearItem( nWh );
                     aTmpSet.ClearItem( nWh );
                     // At the Outset of InvalidateItem,
                     // so that the change takes effect
-                    pOutSet->InvalidateItem( nWh );
+                    m_pOutSet->InvalidateItem( nWh );
                     nTmp++;
                 }
             }
@@ -1077,7 +1030,6 @@ IMPL_LINK_NOARG_TYPED(SfxTabDialog, BaseFmtHdl, Button*, void)
         pDataObject->pTabPage->pImpl->mbStandard = true;
     }
 }
-
 
 
 IMPL_LINK_TYPED( SfxTabDialog, ActivatePageHdl, TabControl *, pTabCtrl, void )
@@ -1094,12 +1046,12 @@ IMPL_LINK_TYPED( SfxTabDialog, ActivatePageHdl, TabControl *, pTabCtrl, void )
 {
     sal_uInt16 nId = pTabCtrl->GetCurPageId();
 
-    DBG_ASSERT( pImpl->aData.size(), "no Pages registered" );
+    DBG_ASSERT( m_pImpl->aData.size(), "no Pages registered" );
     SfxGetpApp();
 
     // Tab Page schon da?
     VclPtr<SfxTabPage> pTabPage = dynamic_cast<SfxTabPage*> (pTabCtrl->GetTabPage( nId ));
-    Data_Impl* pDataObject = Find( pImpl->aData, nId );
+    Data_Impl* pDataObject = Find( m_pImpl->aData, nId );
 
     //UUUU fallback to 1st page when requested one does not exist
     if(!pDataObject && pTabCtrl->GetPageCount())
@@ -1107,7 +1059,7 @@ IMPL_LINK_TYPED( SfxTabDialog, ActivatePageHdl, TabControl *, pTabCtrl, void )
         pTabCtrl->SetCurPageId(pTabCtrl->GetPageId(0));
         nId = pTabCtrl->GetCurPageId();
         pTabPage = dynamic_cast< SfxTabPage* >(pTabCtrl->GetTabPage(nId));
-        pDataObject = Find(pImpl->aData, nId);
+        pDataObject = Find(m_pImpl->aData, nId);
     }
 
     if (!pDataObject)
@@ -1121,15 +1073,15 @@ IMPL_LINK_TYPED( SfxTabDialog, ActivatePageHdl, TabControl *, pTabCtrl, void )
     {
         const SfxItemSet* pTmpSet = nullptr;
 
-        if ( pSet )
+        if ( m_pSet )
         {
-            if ( bItemsReset && pSet->GetParent() )
-                pTmpSet = pSet->GetParent();
+            if ( m_bItemsReset && m_pSet->GetParent() )
+                pTmpSet = m_pSet->GetParent();
             else
-                pTmpSet = pSet;
+                pTmpSet = m_pSet;
         }
 
-        if ( pTmpSet && !pDataObject->bOnDemand )
+        if ( pTmpSet )
             pTabPage = (pDataObject->fnCreatePage)( pTabCtrl, pTmpSet );
         else
             pTabPage = (pDataObject->fnCreatePage)
@@ -1162,26 +1114,22 @@ IMPL_LINK_TYPED( SfxTabDialog, ActivatePageHdl, TabControl *, pTabCtrl, void )
 
         PageCreated( nId, *pTabPage );
 
-        if ( pDataObject->bOnDemand )
-            pTabPage->Reset( &pTabPage->GetItemSet() );
-        else
-            pTabPage->Reset( pSet );
+        pTabPage->Reset( m_pSet );
 
         pTabCtrl->SetTabPage( nId, pTabPage );
     }
     else if ( pDataObject->bRefresh )
-        pTabPage->Reset( pSet );
+        pTabPage->Reset( m_pSet );
     pDataObject->bRefresh = false;
 
-    if ( pExampleSet )
-        pTabPage->ActivatePage( *pExampleSet );
+    if ( m_pExampleSet )
+        pTabPage->ActivatePage( *m_pExampleSet );
 
-    if ( pTabPage->IsReadOnly() || pImpl->bHideResetBtn )
+    if ( pTabPage->IsReadOnly() || m_pImpl->bHideResetBtn )
         m_pResetBtn->Hide();
     else
         m_pResetBtn->Show();
 }
-
 
 
 IMPL_LINK_TYPED( SfxTabDialog, DeactivatePageHdl, TabControl *, pTabCtrl, bool )
@@ -1203,22 +1151,18 @@ IMPL_LINK_TYPED( SfxTabDialog, DeactivatePageHdl, TabControl *, pTabCtrl, bool )
     if (!pPage)
         return false;
 #ifdef DBG_UTIL
-    Data_Impl* pDataObject = Find( pImpl->aData, pTabCtrl->GetCurPageId() );
+    Data_Impl* pDataObject = Find( m_pImpl->aData, pTabCtrl->GetCurPageId() );
     DBG_ASSERT( pDataObject, "no Data structure for current page" );
-    if ( pPage->HasExchangeSupport() && pDataObject->bOnDemand )
-    {
-        SAL_INFO( "sfx.config", "Data exchange in ItemsOnDemand is not desired!" );
-    }
 #endif
 
     int nRet = SfxTabPage::LEAVE_PAGE;
 
-    if ( !pExampleSet && pPage->HasExchangeSupport() && pSet )
-        pExampleSet = new SfxItemSet( *pSet->GetPool(), pSet->GetRanges() );
+    if ( !m_pExampleSet && pPage->HasExchangeSupport() && m_pSet )
+        m_pExampleSet = new SfxItemSet( *m_pSet->GetPool(), m_pSet->GetRanges() );
 
-    if ( pSet )
+    if ( m_pSet )
     {
-        SfxItemSet aTmp( *pSet->GetPool(), pSet->GetRanges() );
+        SfxItemSet aTmp( *m_pSet->GetPool(), m_pSet->GetRanges() );
 
         if ( pPage->HasExchangeSupport() )
             nRet = pPage->DeactivatePage( &aTmp );
@@ -1227,21 +1171,21 @@ IMPL_LINK_TYPED( SfxTabDialog, DeactivatePageHdl, TabControl *, pTabCtrl, bool )
         if ( ( SfxTabPage::LEAVE_PAGE & nRet ) == SfxTabPage::LEAVE_PAGE &&
              aTmp.Count() )
         {
-            pExampleSet->Put( aTmp );
-            pOutSet->Put( aTmp );
+            m_pExampleSet->Put( aTmp );
+            m_pOutSet->Put( aTmp );
         }
     }
     else
     {
         if ( pPage->HasExchangeSupport() ) //!!!
         {
-            if ( !pExampleSet )
+            if ( !m_pExampleSet )
             {
                 SfxItemPool* pPool = pPage->GetItemSet().GetPool();
-                pExampleSet =
+                m_pExampleSet =
                     new SfxItemSet( *pPool, GetInputRanges( *pPool ) );
             }
-            nRet = pPage->DeactivatePage( pExampleSet );
+            nRet = pPage->DeactivatePage( m_pExampleSet );
         }
         else
             nRet = pPage->DeactivatePage( nullptr );
@@ -1252,7 +1196,7 @@ IMPL_LINK_TYPED( SfxTabDialog, DeactivatePageHdl, TabControl *, pTabCtrl, bool )
         RefreshInputSet();
         // Flag all Pages as to be initialized as new
 
-        for ( SfxTabDlgData_Impl::const_iterator it = pImpl->aData.begin(); it != pImpl->aData.end(); ++it )
+        for ( SfxTabDlgData_Impl::const_iterator it = m_pImpl->aData.begin(); it != m_pImpl->aData.end(); ++it )
         {
             Data_Impl* pObj = *it;
 
@@ -1269,7 +1213,6 @@ IMPL_LINK_TYPED( SfxTabDialog, DeactivatePageHdl, TabControl *, pTabCtrl, bool )
 }
 
 
-
 void SfxTabDialog::ShowPage( sal_uInt16 nId )
 
 /*  [Description]
@@ -1281,7 +1224,6 @@ void SfxTabDialog::ShowPage( sal_uInt16 nId )
     m_pTabCtrl->SetCurPageId( nId );
     ActivatePageHdl( m_pTabCtrl );
 }
-
 
 
 const sal_uInt16* SfxTabDialog::GetInputRanges( const SfxItemPool& rPool )
@@ -1305,17 +1247,17 @@ const sal_uInt16* SfxTabDialog::GetInputRanges( const SfxItemPool& rPool )
 */
 
 {
-    if ( pSet )
+    if ( m_pSet )
     {
         SAL_WARN( "sfx.dialog", "Set already exists!" );
-        return pSet->GetRanges();
+        return m_pSet->GetRanges();
     }
 
-    if ( pRanges )
-        return pRanges;
+    if ( m_pRanges )
+        return m_pRanges;
     std::vector<sal_uInt16> aUS;
 
-    for ( SfxTabDlgData_Impl::const_iterator it = pImpl->aData.begin(); it != pImpl->aData.end(); ++it )
+    for ( SfxTabDlgData_Impl::const_iterator it = m_pImpl->aData.begin(); it != m_pImpl->aData.end(); ++it )
     {
         Data_Impl* pDataObject = *it;
 
@@ -1344,12 +1286,11 @@ const sal_uInt16* SfxTabDialog::GetInputRanges( const SfxItemPool& rPool )
         std::sort( aUS.begin(), aUS.end() );
     }
 
-    pRanges = new sal_uInt16[aUS.size() + 1];
-    std::copy( aUS.begin(), aUS.end(), pRanges );
-    pRanges[aUS.size()] = 0;
-    return pRanges;
+    m_pRanges = new sal_uInt16[aUS.size() + 1];
+    std::copy( aUS.begin(), aUS.end(), m_pRanges );
+    m_pRanges[aUS.size()] = 0;
+    return m_pRanges;
 }
-
 
 
 void SfxTabDialog::SetInputSet( const SfxItemSet* pInSet )
@@ -1360,14 +1301,14 @@ void SfxTabDialog::SetInputSet( const SfxItemSet* pInSet )
 */
 
 {
-    bool bSet = ( pSet != nullptr );
-    delete pSet;
-    pSet = pInSet ? new SfxItemSet(*pInSet) : nullptr;
+    bool bSet = ( m_pSet != nullptr );
+    delete m_pSet;
+    m_pSet = pInSet ? new SfxItemSet(*pInSet) : nullptr;
 
-    if (!bSet && !pExampleSet && !pOutSet && pSet)
+    if (!bSet && !m_pExampleSet && !m_pOutSet && m_pSet)
     {
-        pExampleSet = new SfxItemSet( *pSet );
-        pOutSet = new SfxItemSet( *pSet->GetPool(), pSet->GetRanges() );
+        m_pExampleSet = new SfxItemSet( *m_pSet );
+        m_pOutSet = new SfxItemSet( *m_pSet->GetPool(), m_pSet->GetRanges() );
     }
 }
 

@@ -35,9 +35,9 @@ class SwListImpl
                     const SwNodes& rNodes );
         ~SwListImpl();
 
-        const OUString GetListId() const { return msListId;}
+        const OUString& GetListId() const { return msListId;}
 
-        const OUString GetDefaultListStyleName() const { return msDefaultListStyleName;}
+        const OUString& GetDefaultListStyleName() const { return msDefaultListStyleName;}
 
         void InsertListItem( SwNodeNum& rNodeNum,
                              const int nLevel );
@@ -51,7 +51,6 @@ class SwListImpl
 
         bool IsListLevelMarked( const int nListLevel ) const;
 
-    private:
         // unique identifier of the list
         const OUString msListId;
         // default list style for the list items, identified by the list style name
@@ -109,7 +108,6 @@ SwListImpl::~SwListImpl()
         delete (*aNumberTreeIter).second;
     }
 }
-
 
 
 void SwListImpl::InsertListItem( SwNodeNum& rNodeNum,
@@ -231,6 +229,11 @@ const OUString SwList::GetListId() const
 const OUString SwList::GetDefaultListStyleName() const
 {
     return mpListImpl->GetDefaultListStyleName();
+}
+
+void SwList::SetDefaultListStyleName(OUString const& rNew)
+{
+    mpListImpl->msDefaultListStyleName = rNew;
 }
 
 void SwList::InsertListItem( SwNodeNum& rNodeNum,

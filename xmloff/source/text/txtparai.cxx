@@ -68,8 +68,28 @@ using namespace ::xmloff::token;
 using ::com::sun::star::container::XEnumerationAccess;
 using ::com::sun::star::container::XEnumeration;
 
-class XMLHints_Impl : public std::vector<std::unique_ptr<XMLHint_Impl>> {};
+class XMLHints_Impl
+{
+private:
+    std::vector<std::unique_ptr<XMLHint_Impl>> m_Hints;
+    uno::Reference<uno::XInterface> m_xCrossRefHeadingBookmark;
 
+public:
+    void push_back(std::unique_ptr<XMLHint_Impl> pHint)
+    {
+        m_Hints.push_back(std::move(pHint));
+    }
+
+    std::vector<std::unique_ptr<XMLHint_Impl>> const& GetHints()
+    {
+        return m_Hints;
+    }
+
+    uno::Reference<uno::XInterface> & GetCrossRefHeadingBookmark()
+    {
+        return m_xCrossRefHeadingBookmark;
+    }
+};
 
 XMLCharContext::XMLCharContext(
         SvXMLImport& rImport,
@@ -253,10 +273,10 @@ XMLEndReferenceContext_Impl::XMLEndReferenceContext_Impl(
     if (XMLStartReferenceContext_Impl::FindName(GetImport(), xAttrList, sName))
     {
         // search for reference start
-        sal_uInt16 nCount = rHints.size();
+        sal_uInt16 nCount = rHints.GetHints().size();
         for(sal_uInt16 nPos = 0; nPos < nCount; nPos++)
         {
-            XMLHint_Impl *const pHint = rHints[nPos].get();
+            XMLHint_Impl *const pHint = rHints.GetHints()[nPos].get();
             if ( pHint->IsReference() &&
                  sName.equals( static_cast<XMLReferenceHint_Impl *>(pHint)->GetRefName()) )
             {
@@ -631,7 +651,7 @@ XMLImpRubyContext_Impl::~XMLImpRubyContext_Impl()
     const Reference < XTextCursor > xAttrCursor(
         xTextImport->GetText()->createTextCursorByRange( m_xStart ));
     xAttrCursor->gotoRange(xTextImport->GetCursorAsRange()->getStart(),
-            sal_True);
+            true);
     xTextImport->SetRuby( GetImport(), xAttrCursor,
          m_sStyleName, m_sTextStyleName, m_sText );
 }
@@ -755,7 +775,7 @@ void XMLMetaImportContextBase::EndElement()
     const Reference<XTextCursor> xInsertionCursor(
         GetImport().GetTextImport()->GetText()->createTextCursorByRange(
             xEndRange) );
-    xInsertionCursor->gotoRange(m_xStart, sal_True);
+    xInsertionCursor->gotoRange(m_xStart, true);
 
     InsertMeta(xInsertionCursor);
 }
@@ -955,17 +975,13 @@ void XMLMetaFieldImportContext::InsertMeta(
 
             if (-1 != nKey)
             {
-                static OUString sPropertyIsFixedLanguage(
-                    OUString("IsFixedLanguage") );
-                Any any;
-                any <<= nKey;
-                xPropertySet->setPropertyValue("NumberFormat", any);
+                OUString sPropertyIsFixedLanguage("IsFixedLanguage");
+                xPropertySet->setPropertyValue("NumberFormat", Any(nKey));
                 if ( xPropertySet->getPropertySetInfo()->
                         hasPropertyByName( sPropertyIsFixedLanguage ) )
                 {
-                    any <<= static_cast<bool>(!isDefaultLanguage);
                     xPropertySet->setPropertyValue( sPropertyIsFixedLanguage,
-                        any );
+                        Any(!isDefaultLanguage) );
                 }
             }
         }
@@ -1102,10 +1118,10 @@ void XMLIndexMarkImportContext_Impl::StartElement(
             if (!sID.isEmpty())
             {
                 // if we have an ID, find the hint and set the end position
-                sal_uInt16 nCount = m_rHints.size();
+                sal_uInt16 nCount = m_rHints.GetHints().size();
                 for(sal_uInt16 nPos = 0; nPos < nCount; nPos++)
                 {
-                    XMLHint_Impl *const pHint = m_rHints[nPos].get();
+                    XMLHint_Impl *const pHint = m_rHints.GetHints()[nPos].get();
                     if ( pHint->IsIndexMark() &&
                          sID.equals(
                              static_cast<XMLIndexMarkHint_Impl *>(pHint)->GetID()) )
@@ -1629,6 +1645,7 @@ SvXMLImportContext *XMLImpSpanContext_Impl::CreateChildContext(
     case XML_TOK_TEXT_BOOKMARK_END:
         pContext = new XMLTextMarkImportContext( rImport,
                                                  *rImport.GetTextImport().get(),
+                                                 rHints.GetCrossRefHeadingBookmark(),
                                                  nPrefix, rLocalName );
         break;
 
@@ -1637,6 +1654,7 @@ SvXMLImportContext *XMLImpSpanContext_Impl::CreateChildContext(
     case XML_TOK_TEXT_FIELDMARK_END:
         pContext = new XMLTextMarkImportContext( rImport,
                                                  *rImport.GetTextImport().get(),
+                                                 rHints.GetCrossRefHeadingBookmark(),
                                                  nPrefix, rLocalName );
         break;
 
@@ -1930,7 +1948,7 @@ XMLParaContext::~XMLParaContext()
         Reference < XTextCursor > xIdCursor( xTxtImport->GetText()->createTextCursorByRange( xStart ) );
         if( xIdCursor.is() )
         {
-            xIdCursor->gotoRange( xEnd, sal_True );
+            xIdCursor->gotoRange( xEnd, true );
             GetImport().getInterfaceToIdentifierMapper().registerReference(
                 m_sXmlId, Reference<XInterface>( xIdCursor, UNO_QUERY ));
         }
@@ -1950,7 +1968,7 @@ XMLParaContext::~XMLParaContext()
         // though it just means 'we were unable to create the cursor'
         return;
     }
-    xAttrCursor->gotoRange( xEnd, sal_True );
+    xAttrCursor->gotoRange( xEnd, true );
 
     // xml:id for RDF metadata
     if (!m_sXmlId.isEmpty() || m_bHaveAbout || !m_sProperty.isEmpty())
@@ -2045,13 +2063,13 @@ XMLParaContext::~XMLParaContext()
         }
     }
 
-    if( pHints && !pHints->empty() )
+    if (pHints && !pHints->GetHints().empty())
     {
-        for( size_t i=0; i<pHints->size(); i++ )
+        for (size_t i = 0; i < pHints->GetHints().size(); ++i)
         {
-            XMLHint_Impl *const pHint = (*pHints)[i].get();
-            xAttrCursor->gotoRange( pHint->GetStart(), sal_False );
-            xAttrCursor->gotoRange( pHint->GetEnd(), sal_True );
+            XMLHint_Impl *const pHint = pHints->GetHints()[i].get();
+            xAttrCursor->gotoRange( pHint->GetStart(), false );
+            xAttrCursor->gotoRange( pHint->GetEnd(), true );
             switch( pHint->GetType() )
             {
             case XML_HINT_STYLE:
@@ -2103,7 +2121,7 @@ XMLParaContext::~XMLParaContext()
                         static_cast<const XMLIndexMarkHint_Impl *>(pHint)->GetMark());
                     Reference<XTextContent> xContent(xMark, UNO_QUERY);
                     xTxtImport->GetText()->insertTextContent(
-                        xAttrCursor, xContent, sal_True );
+                        xAttrCursor, xContent, true );
                 }
                 break;
             case XML_HINT_TEXT_FRAME:
@@ -2144,10 +2162,7 @@ XMLParaContext::~XMLParaContext()
                             {
                                 // set anchor position for at-character anchored objects
                                 Reference<XTextRange> xRange(xAttrCursor, UNO_QUERY);
-                                Any aPos;
-                                aPos <<= xRange;
-                                OUString sTextRange( "TextRange"  );
-                                xPropSet->setPropertyValue(sTextRange, aPos);
+                                xPropSet->setPropertyValue("TextRange", Any(xRange));
                             }
                         }
                     }
@@ -2176,10 +2191,7 @@ XMLParaContext::~XMLParaContext()
                         {
                             // set anchor position for at-character anchored objects
                             Reference<XTextRange> xRange(xAttrCursor, UNO_QUERY);
-                            Any aPos;
-                            aPos <<= xRange;
-                            OUString sTextRange( "TextRange"  );
-                            xPropSet->setPropertyValue(sTextRange, aPos);
+                            xPropSet->setPropertyValue("TextRange", Any(xRange));
                         }
                     }
                 }
@@ -2268,7 +2280,7 @@ XMLNumberedParaContext::XMLNumberedParaContext(
                 break;
             case XML_TOK_TEXT_NUMBERED_PARAGRAPH_CONTINUE_NUMBERING:
                 // this attribute is deprecated
-//                ContinuteNumbering = IsXMLToken(rValue, XML_TRUE);
+//                ContinueNumbering = IsXMLToken(rValue, XML_TRUE);
                 break;
             case XML_TOK_TEXT_NUMBERED_PARAGRAPH_START_VALUE:
                 {

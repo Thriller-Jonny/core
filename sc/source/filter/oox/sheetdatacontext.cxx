@@ -25,6 +25,8 @@
 #include <com/sun/star/text/XText.hpp>
 #include <oox/helper/attributelist.hxx>
 #include <oox/helper/propertyset.hxx>
+#include <oox/token/namespaces.hxx>
+#include <oox/token/tokens.hxx>
 #include "addressconverter.hxx"
 #include "biffinputstream.hxx"
 #include "formulaparser.hxx"
@@ -294,7 +296,7 @@ void SheetDataContext::importRow( const AttributeList& rAttribs )
 
     // decode the column spans (space-separated list of colon-separated integer pairs)
     OUString aColSpansText = rAttribs.getString( XML_spans, OUString() );
-    sal_Int32 nMaxCol = mrAddressConv.getMaxApiAddress().Column;
+    sal_Int32 nMaxCol = mrAddressConv.getMaxApiAddress().Col();
     sal_Int32 nIndex = 0;
     while( nIndex >= 0 )
     {
@@ -320,12 +322,12 @@ bool SheetDataContext::importCell( const AttributeList& rAttribs )
     if (!p)
     {
         ++mnCol;
-        maCellData.maCellAddr = CellAddress( mnSheet, mnCol, mnRow );
+        maCellData.maCellAddr = ScAddress( mnCol, mnRow, mnSheet );
     }
     else
     {
         bValid = mrAddressConv.convertToCellAddress(maCellData.maCellAddr, p, mnSheet, true);
-        mnCol = maCellData.maCellAddr.Column;
+        mnCol = maCellData.maCellAddr.Col();
     }
 
     if( bValid )
@@ -394,7 +396,7 @@ void SheetDataContext::importRow( SequenceInputStream& rStrm )
     aModel.mbThickBottom  = getFlag( nFlags1, BIFF12_ROW_THICKBOTTOM );
 
     // read the column spans
-    sal_Int32 nMaxCol = mrAddressConv.getMaxApiAddress().Column;
+    sal_Int32 nMaxCol = mrAddressConv.getMaxApiAddress().Col();
     for( sal_Int32 nSpanIdx = 0; (nSpanIdx < nSpanCount) && !rStrm.isEof(); ++nSpanIdx )
     {
         sal_Int32 nFirstCol, nLastCol;

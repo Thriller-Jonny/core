@@ -23,8 +23,7 @@
 #include <basegfx/range/b2drectangle.hxx>
 #include <com/sun/star/awt/Point.hpp>
 
-#include <boost/noncopyable.hpp>
-#include <boost/shared_ptr.hpp>
+#include <memory>
 
 #include "viewlayer.hxx"
 
@@ -50,7 +49,7 @@ namespace slideshow
             The class is able to render the associated applet on View
             implementations.
          */
-        class ViewAppletShape : private boost::noncopyable
+        class ViewAppletShape
         {
         public:
             /** Create a ViewAppletShape for the given View
@@ -83,9 +82,14 @@ namespace slideshow
              */
             virtual ~ViewAppletShape();
 
+            /// Forbid copy construction
+            ViewAppletShape(const ViewAppletShape&) = delete;
+            /// Forbid copy assignment
+            ViewAppletShape& operator=(const ViewAppletShape&) = delete;
+
             /** Query the associated view layer of this shape
              */
-            ViewLayerSharedPtr getViewLayer() const;
+            const ViewLayerSharedPtr& getViewLayer() const;
 
             // animation methods
 
@@ -98,10 +102,8 @@ namespace slideshow
 
                 @param rBounds
                 The current applet shape bounds
-
-                @return whether the mode change finished successfully.
              */
-            bool startApplet( const ::basegfx::B2DRectangle& rBounds );
+            void startApplet( const ::basegfx::B2DRectangle& rBounds );
 
             /** Notify the ViewShape that it is no longer animated
 
@@ -151,7 +153,7 @@ namespace slideshow
                 css::uno::XComponentContext>         mxComponentContext;
         };
 
-        typedef ::boost::shared_ptr< ViewAppletShape > ViewAppletShapeSharedPtr;
+        typedef ::std::shared_ptr< ViewAppletShape > ViewAppletShapeSharedPtr;
 
     }
 }

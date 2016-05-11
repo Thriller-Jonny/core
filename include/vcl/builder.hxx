@@ -47,7 +47,7 @@ class VCL_DLLPUBLIC VclBuilder
 {
 public:
     typedef std::map<OString, OString> stringmap;
-    /// These functions create a new widget with parent @pParent and return it in @rRet
+    /// These functions create a new widget with parent pParent and return it in rRet
     typedef void (*customMakeWidget)(VclPtr<vcl::Window> &rRet, VclPtr<vcl::Window> &pParent, stringmap &rVec);
 
 public:
@@ -106,20 +106,7 @@ public:
     static void     reorderWithinParent(std::vector< vcl::Window*>& rChilds, bool bIsButtonBox);
     static void     reorderWithinParent(vcl::Window &rWindow, sal_uInt16 nNewPosition);
 
-    /// Get label of the command (like of .uno:Save) from the description service
-    static OUString getCommandProperty(const OUString& rProperty, const OUString& rCommand,
-                                       const css::uno::Reference<css::uno::XComponentContext>& rContext,
-                                       const OUString& rModuleId);
-
-    /// Get image of the command (like of .uno:Save) from the description service
-    static Image    getCommandImage(
-                        const OUString& rCommand,
-                        bool bLarge,
-                        const css::uno::Reference<css::uno::XComponentContext>& rContext,
-                        const css::uno::Reference<css::frame::XFrame>& rFrame,
-                        const OUString& rModuleId );
-
-    css::uno::Reference<css::frame::XFrame> getFrame() { return m_xFrame; }
+    const css::uno::Reference<css::frame::XFrame>& getFrame() { return m_xFrame; }
 
 private:
     VclBuilder(const VclBuilder&) = delete;
@@ -143,9 +130,9 @@ private:
     {
         bool m_bVerticalOrient;
         sal_Int32 m_nPosition;
-        PackingData(bool bVerticalOrient = false, sal_Int32 nPosition = -1)
+        PackingData(bool bVerticalOrient = false)
             : m_bVerticalOrient(bVerticalOrient)
-            , m_nPosition(nPosition)
+            , m_nPosition(-1)
         {
         }
     };
@@ -317,7 +304,7 @@ private:
     bool        m_bToplevelHasDeferredInit;
     bool        m_bToplevelHasDeferredProperties;
     bool        m_bToplevelParentFound;
-    ParserState *m_pParserState;
+    std::unique_ptr<ParserState> m_pParserState;
 
     vcl::Window *get_by_name(const OString& sID);
     void        delete_by_name(const OString& sID);
@@ -427,7 +414,6 @@ inline T* VclBuilder::get(const OString& sID)
     assert(!w || dynamic_cast<T*>(w));
     return static_cast<T*>(w);
 }
-
 
 
 //helper baseclass to ease retro fitting dialogs/tabpages that load a resource

@@ -72,9 +72,8 @@ LinkManager::LinkManager(SfxObjectShell* p)
 
 LinkManager::~LinkManager()
 {
-    for( size_t n = 0; n < aLinkTbl.size(); ++n)
+    for(tools::SvRef<SvBaseLink> & rTmp : aLinkTbl)
     {
-        tools::SvRef<SvBaseLink>& rTmp = aLinkTbl[ n ];
         if( rTmp.Is() )
         {
             rTmp->Disconnect();
@@ -101,7 +100,6 @@ void LinkManager::CloseCachedComps()
     }
     maCachedComps.clear();
 }
-
 
 
 void LinkManager::Remove( SvBaseLink *pLink )
@@ -186,33 +184,33 @@ bool LinkManager::InsertLink( SvBaseLink * pLink,
 }
 
 
-bool LinkManager::InsertDDELink( SvBaseLink * pLink,
+void LinkManager::InsertDDELink( SvBaseLink * pLink,
                                     const OUString& rServer,
                                     const OUString& rTopic,
                                     const OUString& rItem )
 {
     if( !( OBJECT_CLIENT_SO & pLink->GetObjType() ) )
-        return false;
+        return;
 
     OUString sCmd;
     ::sfx2::MakeLnkName( sCmd, &rServer, rTopic, rItem );
 
     pLink->SetObjType( OBJECT_CLIENT_DDE );
     pLink->SetName( sCmd );
-    return Insert( pLink );
+    Insert( pLink );
 }
 
 
-bool LinkManager::InsertDDELink( SvBaseLink * pLink )
+void LinkManager::InsertDDELink( SvBaseLink * pLink )
 {
     DBG_ASSERT( OBJECT_CLIENT_SO & pLink->GetObjType(), "no OBJECT_CLIENT_SO" );
     if( !( OBJECT_CLIENT_SO & pLink->GetObjType() ) )
-        return false;
+        return;
 
     if( pLink->GetObjType() == OBJECT_CLIENT_SO )
         pLink->SetObjType( OBJECT_CLIENT_DDE );
 
-    return Insert( pLink );
+    Insert( pLink );
 }
 
 
@@ -258,16 +256,15 @@ bool LinkManager::GetDisplayNames( const SvBaseLink * pLink,
             case OBJECT_CLIENT_DDE:
                 {
                     sal_Int32 nTmp = 0;
-                    OUString sCmd( sLNm );
-                    OUString sServer( sCmd.getToken( 0, cTokenSeparator, nTmp ) );
-                    OUString sTopic( sCmd.getToken( 0, cTokenSeparator, nTmp ) );
+                    OUString sServer( sLNm.getToken( 0, cTokenSeparator, nTmp ) );
+                    OUString sTopic( sLNm.getToken( 0, cTokenSeparator, nTmp ) );
 
                     if( pType )
                         *pType = sServer;
                     if( pFile )
                         *pFile = sTopic;
                     if( pLinkStr )
-                        *pLinkStr = nTmp != -1 ? sCmd.copy(nTmp) : OUString();
+                        *pLinkStr = nTmp != -1 ? sLNm.copy(nTmp) : OUString();
                     bRet = true;
                 }
                 break;
@@ -299,14 +296,12 @@ void LinkManager::UpdateAllLinks(
         aTmpArr.push_back( rLink.get() );
     }
 
-    for( size_t n = 0; n < aTmpArr.size(); ++n )
+    for(SvBaseLink* pLink : aTmpArr)
     {
-        SvBaseLink* pLink = aTmpArr[ n ];
-
         // search first in the array after the entry
         bool bFound = false;
-        for( size_t i = 0; i < aLinkTbl.size(); ++i )
-            if( pLink == aLinkTbl[ i ].get() )
+        for(tools::SvRef<SvBaseLink> & i : aLinkTbl)
+            if( pLink == i.get() )
             {
                 bFound = true;
                 break;
@@ -342,7 +337,6 @@ void LinkManager::UpdateAllLinks(
     }
     CloseCachedComps();
 }
-
 
 
 SvLinkSourceRef LinkManager::CreateObj( SvBaseLink * pLink )
@@ -510,7 +504,6 @@ SotClipboardFormatId LinkManager::RegisterStatusInfoId()
 }
 
 
-
 bool LinkManager::GetGraphicFromAny( const OUString& rMimeType,
                                 const css::uno::Any & rValue,
                                 Graphic& rGrf )
@@ -552,7 +545,6 @@ bool LinkManager::GetGraphicFromAny( const OUString& rMimeType,
     }
     return bRet;
 }
-
 
 
 OUString lcl_DDE_RelToAbs( const OUString& rTopic, const OUString& rBaseURL )
@@ -692,7 +684,6 @@ bool SvxInternalLink::Connect( sfx2::SvBaseLink* pLink )
 
 
 }
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

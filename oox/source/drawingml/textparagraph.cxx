@@ -22,10 +22,12 @@
 #include "drawingml/textcharacterproperties.hxx"
 
 #include <rtl/ustring.hxx>
+#include <oox/mathml/importutils.hxx>
 #include "oox/helper/propertyset.hxx"
 #include <com/sun/star/text/XText.hpp>
 #include <com/sun/star/text/XTextCursor.hpp>
 #include <com/sun/star/text/ControlCharacter.hpp>
+#include <oox/token/properties.hxx>
 
 using namespace ::com::sun::star::text;
 using namespace ::com::sun::star::uno;
@@ -71,8 +73,8 @@ void TextParagraph::insertAt(
 
         if( !bFirst )
         {
-            xText->insertControlCharacter( xAt, ControlCharacter::APPEND_PARAGRAPH, sal_False );
-            xAt->gotoEnd( sal_True );
+            xText->insertControlCharacter( xAt, ControlCharacter::APPEND_PARAGRAPH, false );
+            xAt->gotoEnd( true );
         }
 
         sal_Int32 nCharHeight = 0;
@@ -99,7 +101,7 @@ void TextParagraph::insertAt(
                 nParagraphSize += nLen;
             }
         }
-        xAt->gotoEnd( sal_True );
+        xAt->gotoEnd( true );
 
         PropertyMap aioBulletList;
         Reference< XPropertySet > xProps( xAt, UNO_QUERY);
@@ -111,10 +113,10 @@ void TextParagraph::insertAt(
 
             // bullets have same color as following texts by default
             if( !aioBulletList.hasProperty( PROP_BulletColor ) && maRuns.size() > 0
-                && (*maRuns.begin())->getTextCharacterProperties().maCharColor.isUsed() )
-                aioBulletList.setProperty( PROP_BulletColor, (*maRuns.begin())->getTextCharacterProperties().maCharColor.getColor( rFilterBase.getGraphicHelper() ));
-            if( !aioBulletList.hasProperty( PROP_BulletColor ) && aTextCharacterStyle.maCharColor.isUsed() )
-                aioBulletList.setProperty( PROP_BulletColor, aTextCharacterStyle.maCharColor.getColor( rFilterBase.getGraphicHelper() ));
+                && (*maRuns.begin())->getTextCharacterProperties().maFillProperties.moFillType.has() )
+                aioBulletList.setProperty( PROP_BulletColor, (*maRuns.begin())->getTextCharacterProperties().maFillProperties.getBestSolidColor().getColor( rFilterBase.getGraphicHelper() ));
+            if( !aioBulletList.hasProperty( PROP_BulletColor ) && aTextCharacterStyle.maFillProperties.moFillType.has() )
+                aioBulletList.setProperty( PROP_BulletColor, aTextCharacterStyle.maFillProperties.getBestSolidColor().getColor( rFilterBase.getGraphicHelper() ));
 
             float fCharacterSize = nCharHeight > 0 ? GetFontHeight ( nCharHeight ) : pTextParagraphStyle->getCharHeightPoints( 12 );
             aParaProp.pushToPropSet( &rFilterBase, xProps, aioBulletList, &pTextParagraphStyle->getBulletList(), true, fCharacterSize, true );
@@ -136,6 +138,15 @@ void TextParagraph::insertAt(
     {
         SAL_INFO("oox", "exception in TextParagraph::insertAt");
     }
+}
+
+formulaimport::XmlStreamBuilder & TextParagraph::GetMathXml()
+{
+    if (!m_pMathXml)
+    {
+        m_pMathXml.reset(new formulaimport::XmlStreamBuilder);
+    }
+    return *m_pMathXml;
 }
 
 } }

@@ -96,7 +96,7 @@ SwMailMergeLayoutPage::SwMailMergeLayoutPage( SwMailMergeWizard* _pParent) :
     m_pExampleContainerWIN->set_height_request(aSize.Height());
     get(m_pZoomLB, "zoom");
 
-    const SfxFilter *pSfxFlt = SwIoSystem::GetFilterOfFormat(
+    std::shared_ptr<const SfxFilter> pSfxFlt = SwIoSystem::GetFilterOfFormat(
             FILTER_XML,
             SwDocShell::Factory().GetFilterContainer() );
     //save the current document into a temporary file
@@ -230,11 +230,11 @@ void SwMailMergeLayoutPage::ActivatePage()
     }
 }
 
-bool SwMailMergeLayoutPage::commitPage( ::svt::WizardTypes::CommitPageReason _eReason )
+bool SwMailMergeLayoutPage::commitPage(::svt::WizardTypes::CommitPageReason eReason)
 {
     //now insert the frame and the greeting
     SwMailMergeConfigItem& rConfigItem = m_pWizard->GetConfigItem();
-    if(::svt::WizardTypes::eTravelForward == _eReason)
+    if (eReason == ::svt::WizardTypes::eTravelForward || eReason == ::svt::WizardTypes::eFinish)
     {
         long nLeft = static_cast< long >(m_pLeftMF->Denormalize(m_pLeftMF->GetValue(FUNIT_TWIP)));
         long nTop  = static_cast< long >(m_pTopMF->Denormalize(m_pTopMF->GetValue(FUNIT_TWIP)));

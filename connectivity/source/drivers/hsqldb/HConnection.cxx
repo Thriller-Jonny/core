@@ -24,10 +24,8 @@
 
 #include <connectivity/dbtools.hxx>
 
-#include <com/sun/star/beans/NamedValue.hpp>
 #include <com/sun/star/container/XNameAccess.hpp>
 #include <com/sun/star/sdbcx/XDataDefinitionSupplier.hpp>
-#include <com/sun/star/lang/ServiceNotRegisteredException.hpp>
 #include <com/sun/star/sdbc/XRow.hpp>
 #include <com/sun/star/graphic/GraphicProvider.hpp>
 #include <com/sun/star/graphic/XGraphicProvider.hpp>
@@ -59,19 +57,14 @@ using ::com::sun::star::sdbcx::XDataDefinitionSupplier;
 using ::com::sun::star::sdbcx::XTablesSupplier;
 using ::com::sun::star::container::XNameAccess;
 using ::com::sun::star::uno::Sequence;
-using ::com::sun::star::beans::NamedValue;
 using ::com::sun::star::lang::WrappedTargetException;
-using ::com::sun::star::lang::ServiceNotRegisteredException;
 using ::com::sun::star::sdbc::XDriver;
-using ::com::sun::star::lang::XMultiServiceFactory;
 using ::com::sun::star::graphic::XGraphic;
 using ::com::sun::star::graphic::GraphicProvider;
 using ::com::sun::star::graphic::XGraphicProvider;
 using ::com::sun::star::uno::XInterface;
 using ::com::sun::star::lang::IllegalArgumentException;
 using ::com::sun::star::ui::dialogs::XExecutableDialog;
-using ::com::sun::star::uno::Any;
-using ::com::sun::star::uno::makeAny;
 using ::com::sun::star::sdbc::XResultSet;
 using ::com::sun::star::sdbc::XDatabaseMetaData;
 using ::com::sun::star::sdbc::XDatabaseMetaData2;
@@ -188,27 +181,27 @@ namespace connectivity { namespace hsqldb
     }
 
 
-    Reference< XGraphic > SAL_CALL OHsqlConnection::getTableIcon( const OUString& _TableName, ::sal_Int32 /*_ColorMode*/ ) throw (RuntimeException, std::exception)
+    Reference< XGraphic > SAL_CALL OHsqlConnection::getTableIcon( const OUString& TableName, ::sal_Int32 /*_ColorMode*/ ) throw (RuntimeException, std::exception)
     {
         MethodGuard aGuard( *this );
 
-        impl_checkExistingTable_throw( _TableName );
-        if ( !impl_isTextTable_nothrow( _TableName ) )
+        impl_checkExistingTable_throw( TableName );
+        if ( !impl_isTextTable_nothrow( TableName ) )
             return nullptr;
 
         return impl_getTextTableIcon_nothrow();
     }
 
 
-    Reference< XInterface > SAL_CALL OHsqlConnection::getTableEditor( const Reference< XDatabaseDocumentUI >& _DocumentUI, const OUString& _TableName ) throw (IllegalArgumentException, WrappedTargetException, RuntimeException, std::exception)
+    Reference< XInterface > SAL_CALL OHsqlConnection::getTableEditor( const Reference< XDatabaseDocumentUI >& DocumentUI, const OUString& TableName ) throw (IllegalArgumentException, WrappedTargetException, RuntimeException, std::exception)
     {
         MethodGuard aGuard( *this );
 
-        impl_checkExistingTable_throw( _TableName );
-        if ( !impl_isTextTable_nothrow( _TableName ) )
+        impl_checkExistingTable_throw( TableName );
+        if ( !impl_isTextTable_nothrow( TableName ) )
             return nullptr;
 
-        if ( !_DocumentUI.is() )
+        if ( !DocumentUI.is() )
         {
             ::connectivity::SharedResources aResources;
             const OUString sError( aResources.getResourceString(STR_NO_DOCUMENTUI));
@@ -289,7 +282,7 @@ namespace connectivity { namespace hsqldb
             // split the fully qualified name
             Reference< XDatabaseMetaData > xMetaData( xMe->getMetaData(), UNO_QUERY_THROW );
             OUString sCatalog, sSchema, sName;
-            ::dbtools::qualifiedNameComponents( xMetaData, _rTableName, sCatalog, sSchema, sName, ::dbtools::eComplete );
+            ::dbtools::qualifiedNameComponents( xMetaData, _rTableName, sCatalog, sSchema, sName, ::dbtools::EComposeRule::Complete );
 
             // get the table information
             OUStringBuffer sSQL;

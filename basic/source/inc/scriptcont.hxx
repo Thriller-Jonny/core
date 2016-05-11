@@ -29,7 +29,6 @@ namespace basic
 {
 
 
-
 class SfxScriptLibraryContainer : public SfxLibraryContainer, public OldBasicPassword
 {
     OUString maScriptLanguage;
@@ -121,7 +120,7 @@ public:
 };
 
 
-typedef std::unordered_map< OUString, css::script::ModuleInfo, OUStringHash, ::std::equal_to< OUString > > ModuleInfoMap;
+typedef std::unordered_map< OUString, css::script::ModuleInfo, OUStringHash > ModuleInfoMap;
 
 typedef ::cppu::ImplHelper1< css::script::vba::XVBAModuleInfo > SfxScriptLibrary_BASE;
 
@@ -133,7 +132,7 @@ class SfxScriptLibrary : public SfxLibrary, public SfxScriptLibrary_BASE
 
     bool mbLoadedSource;
     bool mbLoadedBinary;
-    ModuleInfoMap mModuleInfos;
+    ModuleInfoMap mModuleInfo;
 
     // Provide modify state including resources
     virtual bool isModified() override;
@@ -148,14 +147,12 @@ public:
     SfxScriptLibrary
     (
         ModifiableHelper& _rModifiable,
-        const css::uno::Reference< css::uno::XComponentContext >& xContext,
         const css::uno::Reference< css::ucb::XSimpleFileAccess3 >& xSFI
     );
 
     SfxScriptLibrary
     (
         ModifiableHelper& _rModifiable,
-        const css::uno::Reference< css::uno::XComponentContext >& xContext,
         const css::uno::Reference< css::ucb::XSimpleFileAccess3 >& xSFI,
         const OUString& aLibInfoFileURL, const OUString& aStorageURL, bool ReadOnly
     );
@@ -174,7 +171,6 @@ public:
 protected:
     virtual bool SAL_CALL isLibraryElementValid(const css::uno::Any& rElement) const override;
 };
-
 
 
 }   // namespace basic

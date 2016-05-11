@@ -40,6 +40,7 @@ OUString ImpGetString( const SbxValues* p )
     {
         case SbxNULL:
             SbxBase::SetError( ERRCODE_SBX_CONVERSION );
+            SAL_FALLTHROUGH;
         case SbxEMPTY:
             break;
         case SbxCHAR:
@@ -102,8 +103,8 @@ OUString ImpGetString( const SbxValues* p )
         }
         case SbxERROR:
             // Here the String "Error n" is generated
-            aRes = SbxRes( STRING_ERRORMSG );
-            aRes += OUString::number(p->nUShort); break;
+            aRes = GetSbxRes( StringId::ErrorMsg ) + OUString::number(p->nUShort);
+            break;
         case SbxDATE:
             ImpPutDate( &aTmp, p->nDouble ); break;
 
@@ -214,7 +215,10 @@ void ImpPutString( SbxValues* p, const OUString* n )
                     *p->pOUString = *n;
             }
             else
-                delete p->pOUString, p->pOUString = nullptr;
+            {
+                delete p->pOUString;
+                p->pOUString = nullptr;
+            }
             break;
         case SbxOBJECT:
         {

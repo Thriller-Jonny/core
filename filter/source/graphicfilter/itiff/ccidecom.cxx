@@ -564,8 +564,6 @@ const CCIHuffmanTableEntry CCIUncompTableSave[CCIUncompTableSize]={
 };
 
 
-
-
 CCIDecompressor::CCIDecompressor( sal_uLong nOpts, sal_uInt32 nImageWidth ) :
     bTableBad   ( false ),
     bStatus     ( false ),
@@ -771,7 +769,7 @@ bool CCIDecompressor::ReadEOL( sal_uInt32 /*nMaxFillBits*/ )
     // or there exist some nasty export filter who always do align.
     // In addition files were found in which more than the necessary maximum of 7 filling
     // bits were found. Therefore we now generally accept up to 32 nonsense bits in front of the EOL-Code:
-    // And I found a file in which up to ??? nonsense bits are written. Furthemore the byte order is switched in it. (SJ)
+    // And I found a file in which up to ??? nonsense bits are written. Furthermore the byte order is switched in it. (SJ)
 
     sal_uInt32 nMaxPos = pIStream->Tell();
     nMaxPos += nWidth >> 3;
@@ -1013,7 +1011,6 @@ void CCIDecompressor::Read1DScanlineData(sal_uInt8 * pTarget, sal_uInt16 nTarget
 
     } while (nTargetBits>0 || !bTerminatingCode);
 }
-
 
 
 void CCIDecompressor::Read2DScanlineData(sal_uInt8 * pTarget, sal_uInt16 nTargetBits)

@@ -131,14 +131,13 @@ const sal_Char ScHTMLExport::sIndentSource[nIndentMax+1] =
 
 #define GLOBSTR(id) ScGlobal::GetRscString( id )
 
-FltError ScFormatFilterPluginImpl::ScExportHTML( SvStream& rStrm, const OUString& rBaseURL, ScDocument* pDoc,
+void ScFormatFilterPluginImpl::ScExportHTML( SvStream& rStrm, const OUString& rBaseURL, ScDocument* pDoc,
         const ScRange& rRange, const rtl_TextEncoding /*eNach*/, bool bAll,
         const OUString& rStreamPath, OUString& rNonConvertibleChars, const OUString& rFilterOptions )
 {
     ScHTMLExport aEx( rStrm, rBaseURL, pDoc, rRange, bAll, rStreamPath, rFilterOptions );
-    FltError nErr = aEx.Write();
+    aEx.Write();
     rNonConvertibleChars = aEx.GetNonConvertibleChars();
-    return nErr;
 }
 
 static OString lcl_getColGroupString(sal_Int32 nSpan, sal_Int32 nWidth)
@@ -316,7 +315,7 @@ Size ScHTMLExport::MMToPixel( const Size& rSize )
     return aSize;
 }
 
-sal_uLong ScHTMLExport::Write()
+void ScHTMLExport::Write()
 {
     if (!mbSkipHeaderFooter)
     {
@@ -330,8 +329,6 @@ sal_uLong ScHTMLExport::Write()
     OUT_LF();
     if (!mbSkipHeaderFooter)
         TAG_OFF_LF( OOO_STRING_SVTOOLS_HTML_html );
-
-    return rStrm.GetError();
 }
 
 void ScHTMLExport::WriteHeader()
@@ -476,10 +473,10 @@ const SfxItemSet& ScHTMLExport::PageDefaults( SCTAB nTab )
     // remember defaults for compare in WriteCell
     if ( !aHTMLStyle.bInitialized )
     {
-        pStylePool->SetSearchMask( SFX_STYLE_FAMILY_PARA );
+        pStylePool->SetSearchMask( SfxStyleFamily::Para );
         pStyleSheet = pStylePool->Find(
                 ScGlobal::GetRscString(STR_STYLENAME_STANDARD),
-                SFX_STYLE_FAMILY_PARA );
+                SfxStyleFamily::Para );
         OSL_ENSURE( pStyleSheet, "ParaStyle not found! :-(" );
         if (!pStyleSheet)
             pStyleSheet = pStylePool->First();
@@ -499,8 +496,8 @@ const SfxItemSet& ScHTMLExport::PageDefaults( SCTAB nTab )
 
     // Page style sheet printer settings, e.g. for background graphics.
     // There's only one background graphic in HTML!
-    pStylePool->SetSearchMask( SFX_STYLE_FAMILY_PAGE );
-    pStyleSheet = pStylePool->Find( pDoc->GetPageStyle( nTab ), SFX_STYLE_FAMILY_PAGE );
+    pStylePool->SetSearchMask( SfxStyleFamily::Page );
+    pStyleSheet = pStylePool->Find( pDoc->GetPageStyle( nTab ), SfxStyleFamily::Page );
     OSL_ENSURE( pStyleSheet, "PageStyle not found! :-(" );
     if (!pStyleSheet)
         pStyleSheet = pStylePool->First();
@@ -1019,7 +1016,7 @@ void ScHTMLExport::WriteCell( SCCOL nCol, SCROW nRow, SCTAB nTab )
 
     bool bBold          = ( WEIGHT_BOLD     <= rWeightItem.GetWeight() );
     bool bItalic        = ( ITALIC_NONE     != rPostureItem.GetPosture() );
-    bool bUnderline     = ( UNDERLINE_NONE  != rUnderlineItem.GetLineStyle() );
+    bool bUnderline     = ( LINESTYLE_NONE  != rUnderlineItem.GetLineStyle() );
     bool bSetFontColor  = ( COL_AUTO        != rColorItem.GetValue().GetColor() );  // default is AUTO now
     bool bSetFontName   = ( aHTMLStyle.aFontFamilyName  != rFontItem.GetFamilyName() );
     sal_uInt16 nSetFontSizeNumber = 0;
@@ -1181,7 +1178,7 @@ void ScHTMLExport::WriteCell( SCCOL nCol, SCROW nRow, SCTAB nTab )
             bFieldText = WriteFieldText(aCell.mpEditText);
             if ( bFieldText )
                 break;
-            //! else: fallthru
+            SAL_FALLTHROUGH;
         default:
             ScCellFormat::GetString(aCell, nFormat, aStrOut, &pColor, *pFormatter, pDoc);
     }
@@ -1194,8 +1191,7 @@ void ScHTMLExport::WriteCell( SCCOL nCol, SCROW nRow, SCTAB nTab )
         }
         else
         {
-            OUString aStr = aStrOut;
-            sal_Int32 nPos = aStr.indexOf( '\n' );
+            sal_Int32 nPos = aStrOut.indexOf( '\n' );
             if ( nPos == -1 )
             {
                 OUT_STR( aStrOut );
@@ -1205,13 +1201,13 @@ void ScHTMLExport::WriteCell( SCCOL nCol, SCROW nRow, SCTAB nTab )
                 sal_Int32 nStartPos = 0;
                 do
                 {
-                    OUString aSingleLine = aStr.copy( nStartPos, nPos - nStartPos );
+                    OUString aSingleLine = aStrOut.copy( nStartPos, nPos - nStartPos );
                     OUT_STR( aSingleLine );
                     TAG_ON( OOO_STRING_SVTOOLS_HTML_linebreak );
                     nStartPos = nPos + 1;
                 }
-                while( ( nPos = aStr.indexOf( '\n', nStartPos ) ) != -1 );
-                OUString aSingleLine = aStr.copy( nStartPos, aStr.getLength() - nStartPos );
+                while( ( nPos = aStrOut.indexOf( '\n', nStartPos ) ) != -1 );
+                OUString aSingleLine = aStrOut.copy( nStartPos, aStrOut.getLength() - nStartPos );
                 OUT_STR( aSingleLine );
             }
         }
@@ -1287,18 +1283,16 @@ bool ScHTMLExport::WriteFieldText( const EditTextObject* pData )
     return bFields;
 }
 
-bool ScHTMLExport::CopyLocalFileToINet( OUString& rFileNm,
-        const OUString& rTargetNm, bool bFileToFile )
+void ScHTMLExport::CopyLocalFileToINet( OUString& rFileNm,
+        const OUString& rTargetNm )
 {
-    bool bRet = false;
     INetURLObject aFileUrl, aTargetUrl;
     aFileUrl.SetSmartURL( rFileNm );
     aTargetUrl.SetSmartURL( rTargetNm );
     if( INetProtocol::File == aFileUrl.GetProtocol() &&
-        ( (bFileToFile && INetProtocol::File == aTargetUrl.GetProtocol()) ||
-          (!bFileToFile && INetProtocol::File != aTargetUrl.GetProtocol() &&
-                           INetProtocol::Ftp <= aTargetUrl.GetProtocol() &&
-                           INetProtocol::Javascript >= aTargetUrl.GetProtocol()) ) )
+        ( INetProtocol::File != aTargetUrl.GetProtocol() &&
+          INetProtocol::Ftp <= aTargetUrl.GetProtocol() &&
+          INetProtocol::Javascript >= aTargetUrl.GetProtocol())  )
     {
         if( pFileNameMap )
         {
@@ -1307,7 +1301,7 @@ bool ScHTMLExport::CopyLocalFileToINet( OUString& rFileNm,
             if( it != pFileNameMap->end() )
             {
                 rFileNm = it->second;
-                return true;
+                return;
             }
         }
         else
@@ -1315,36 +1309,25 @@ bool ScHTMLExport::CopyLocalFileToINet( OUString& rFileNm,
             pFileNameMap.reset( new std::map<OUString, OUString>() );
         }
 
+        bool bRet = false;
         SvFileStream aTmp( aFileUrl.PathToFileName(), StreamMode::READ );
 
         OUString aSrc = rFileNm;
         OUString aDest = aTargetUrl.GetPartBeforeLastName();
         aDest += aFileUrl.GetName();
 
-        if( bFileToFile )
+        SfxMedium aMedium( aDest, StreamMode::WRITE | StreamMode::SHARE_DENYNONE );
+
         {
-            INetURLObject aCpyURL( aDest );
-            SvFileStream aCpy( aCpyURL.PathToFileName(), StreamMode::WRITE );
+            SvFileStream aCpy( aMedium.GetPhysicalName(), StreamMode::WRITE );
             aCpy.WriteStream( aTmp );
-
-            aCpy.Close();
-            bRet = SVSTREAM_OK == aCpy.GetError();
         }
-        else
-        {
-            SfxMedium aMedium( aDest, StreamMode::WRITE | StreamMode::SHARE_DENYNONE );
 
-            {
-                SvFileStream aCpy( aMedium.GetPhysicalName(), StreamMode::WRITE );
-                aCpy.WriteStream( aTmp );
-            }
+        // Take over
+        aMedium.Close();
+        aMedium.Commit();
 
-            // Take over
-            aMedium.Close();
-            aMedium.Commit();
-
-            bRet = 0 == aMedium.GetError();
-        }
+        bRet = 0 == aMedium.GetError();
 
         if( bRet )
         {
@@ -1352,8 +1335,6 @@ bool ScHTMLExport::CopyLocalFileToINet( OUString& rFileNm,
             rFileNm = aDest;
         }
     }
-
-    return bRet;
 }
 
 void ScHTMLExport::MakeCIdURL( OUString& rURL )

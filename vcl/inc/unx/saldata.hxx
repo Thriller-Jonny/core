@@ -20,15 +20,15 @@
 #ifndef INCLUDED_VCL_INC_UNX_SALDATA_HXX
 #define INCLUDED_VCL_INC_UNX_SALDATA_HXX
 
-#include <prex.h>
-#include <postx.h>
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
 
 #include <unx/saldisp.hxx>
 #include <unx/salunx.h>
 #include <vcl/salgtype.hxx>
 #include <salframe.hxx>
 #include <unx/salinst.h>
-#include <generic/gendata.hxx>
+#include <unx/gendata.hxx>
 #include <osl/module.h>
 #include <vclpluginapi.h>
 

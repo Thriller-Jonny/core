@@ -47,8 +47,6 @@
 using namespace ::com::sun::star;
 
 
-
-
 namespace dxcanvas
 {
     TextLayoutDrawHelper::TextLayoutDrawHelper(
@@ -112,7 +110,7 @@ namespace dxcanvas
                 rFontRequest.FontDescription.StyleName,
                 Size( 0, ::basegfx::fround(rFontRequest.CellSize)));
 
-            aFont.SetAlign( ALIGN_BASELINE );
+            aFont.SetAlignment( ALIGN_BASELINE );
             aFont.SetCharSet( (rFontRequest.FontDescription.IsSymbolFont==css::util::TriState_YES) ? RTL_TEXTENCODING_SYMBOL : RTL_TEXTENCODING_UNICODE );
             aFont.SetVertical( (rFontRequest.FontDescription.IsVertical==css::util::TriState_YES) ? sal_True : sal_False );
             aFont.SetWeight( static_cast<FontWeight>(rFontRequest.FontDescription.FontDescription.Weight) );
@@ -130,7 +128,7 @@ namespace dxcanvas
             // adjust to stretched font
             if(!::rtl::math::approxEqual(rFontMatrix.m00, rFontMatrix.m11))
             {
-                const Size aSize = xVirtualDevice->GetFontMetric( aFont ).GetSize();
+                const Size aSize = xVirtualDevice->GetFontMetric( aFont ).GetFontSize();
                 const double fDividend( rFontMatrix.m10 + rFontMatrix.m11 );
                 double fStretch = (rFontMatrix.m00 + rFontMatrix.m01);
 
@@ -139,7 +137,7 @@ namespace dxcanvas
 
                 const sal_Int32 nNewWidth = ::basegfx::fround( aSize.Width() * fStretch );
 
-                aFont.SetWidth( nNewWidth );
+                aFont.SetAverageFontWidth( nNewWidth );
             }
 
             // set font
@@ -247,7 +245,7 @@ namespace dxcanvas
             rFontRequest.FontDescription.StyleName,
             Size( 0, ::basegfx::fround(rFontRequest.CellSize)));
 
-        aFont.SetAlign( ALIGN_BASELINE );
+        aFont.SetAlignment( ALIGN_BASELINE );
         aFont.SetCharSet( (rFontRequest.FontDescription.IsSymbolFont==css::util::TriState_YES) ? RTL_TEXTENCODING_SYMBOL : RTL_TEXTENCODING_UNICODE );
         aFont.SetVertical( (rFontRequest.FontDescription.IsVertical==css::util::TriState_YES) ? sal_True : sal_False );
         aFont.SetWeight( static_cast<FontWeight>(rFontRequest.FontDescription.FontDescription.Weight) );
@@ -259,7 +257,7 @@ namespace dxcanvas
         // adjust to stretched font
         if(!::rtl::math::approxEqual(rFontMatrix.m00, rFontMatrix.m11))
         {
-            const Size aSize = xVirtualDevice->GetFontMetric( aFont ).GetSize();
+            const Size aSize = xVirtualDevice->GetFontMetric( aFont ).GetFontSize();
             const double fDividend( rFontMatrix.m10 + rFontMatrix.m11 );
             double fStretch = (rFontMatrix.m00 + rFontMatrix.m01);
 
@@ -268,7 +266,7 @@ namespace dxcanvas
 
             const sal_Int32 nNewWidth = ::basegfx::fround( aSize.Width() * fStretch );
 
-            aFont.SetWidth( nNewWidth );
+            aFont.SetAverageFontWidth( nNewWidth );
         }
 
         // set font
@@ -278,7 +276,7 @@ namespace dxcanvas
         // relative to baseline
         const ::FontMetric& aMetric( xVirtualDevice->GetFontMetric() );
 
-        const sal_Int32 nAboveBaseline( -aMetric.GetIntLeading() - aMetric.GetAscent() );
+        const sal_Int32 nAboveBaseline( -aMetric.GetInternalLeading() - aMetric.GetAscent() );
         const sal_Int32 nBelowBaseline( aMetric.GetDescent() );
 
         if( rLogicalAdvancements.getLength() )

@@ -132,47 +132,39 @@ public:
 
 // load Default-settings
 SdPublishingDesign::SdPublishingDesign()
-    : m_bCreated(false)
+    : m_eMode(PUBLISH_HTML)
+    , m_eScript(SCRIPT_ASP)
+    , m_bAutoSlide(true)
+    , m_nSlideDuration(15)
+    , m_bEndless(true)
+    , m_bContentPage(true)
+    , m_bNotes(true)
+    , m_nResolution(PUB_LOWRES_WIDTH)
+    , m_eFormat(FORMAT_PNG)
+    , m_bSlideSound(true)
+    , m_bHiddenSlides(false)
+    , m_bDownload(false)
+    , m_bCreated(false)
+    , m_nButtonThema(-1)
+    , m_bUserAttr(false)
+    , m_aBackColor(COL_WHITE)
+    , m_aTextColor(COL_BLACK)
+    , m_aLinkColor(COL_BLUE)
+    , m_aVLinkColor(COL_LIGHTGRAY)
+    , m_aALinkColor(COL_GRAY)
+    , m_bUseAttribs(true)
+    , m_bUseColor(true)
 {
-    m_eMode = PUBLISH_HTML;
-    m_bContentPage = true;
-    m_bNotes = true;
-
-    m_eFormat = FORMAT_PNG;
-
     FilterConfigItem aFilterConfigItem("Office.Common/Filter/Graphic/Export/JPG");
     sal_Int32 nCompression = aFilterConfigItem.ReadInt32( KEY_QUALITY, 75 );
     m_aCompression = OUString::number(nCompression) + "%";
 
     SvtUserOptions aUserOptions;
-
-    m_nResolution   = PUB_LOWRES_WIDTH;
     m_aAuthor       = aUserOptions.GetFirstName();
     if (!m_aAuthor.isEmpty() && !aUserOptions.GetLastName().isEmpty())
         m_aAuthor += " ";
     m_aAuthor      += aUserOptions.GetLastName();
     m_aEMail        = aUserOptions.GetEmail();
-    m_bDownload     = false;
-    m_nButtonThema  = -1;
-
-    m_bUserAttr     = false;
-    m_bUseAttribs   = true;
-    m_bUseColor     = true;
-
-    m_aBackColor    = COL_WHITE;
-    m_aTextColor    = COL_BLACK;
-    m_aLinkColor    = COL_BLUE;
-    m_aVLinkColor   = COL_LIGHTBLUE;
-    m_aALinkColor   = COL_GRAY;
-
-    m_eScript       = SCRIPT_ASP;
-
-    m_bAutoSlide     = true;
-    m_nSlideDuration = 15;
-    m_bEndless       = true;
-
-    m_bSlideSound    = true;
-    m_bHiddenSlides  = false;
 }
 
 // Compares the values without paying attention to the name
@@ -1337,8 +1329,8 @@ void SdPublishingDlg::LoadPreviewButtons()
         };
 
         std::vector< OUString > aButtonNames;
-        for( int i = 0; i < nButtonCount; ++i )
-            aButtonNames.push_back( OUString::createFromAscii( pButtonNames[i] ) );
+        for(const char * p : pButtonNames)
+            aButtonNames.push_back( OUString::createFromAscii( p ) );
 
         int nSetCount = mpButtonSet->getCount();
 
@@ -1512,7 +1504,7 @@ IMPL_LINK_NOARG_TYPED(SdPublishingDlg, LastPageHdl, Button*, void)
 }
 
 // Load Designs
-bool SdPublishingDlg::Load()
+void SdPublishingDlg::Load()
 {
     m_bDesignListDirty = false;
 
@@ -1529,7 +1521,7 @@ bool SdPublishingDlg::Load()
         delete pIStm;
 
         if( !bOk )
-            return false;
+            return;
     }
 
     SfxMedium aMedium( aURL.GetMainURL( INetURLObject::NO_DECODE ), StreamMode::READ | StreamMode::NOCREATE );
@@ -1537,13 +1529,13 @@ bool SdPublishingDlg::Load()
     SvStream* pStream = aMedium.GetInStream();
 
     if( !pStream )
-        return false;
+        return;
 
     sal_uInt16 aCheck;
     pStream->ReadUInt16( aCheck );
 
     if(aCheck != nMagic)
-        return false;
+        return;
 
     SdIOCompat aIO(*pStream, StreamMode::READ);
 
@@ -1559,8 +1551,6 @@ bool SdPublishingDlg::Load()
 
         m_aDesignList.push_back(aDesign);
     }
-
-    return( pStream->GetError() == SVSTREAM_OK );
 }
 
 // Save Designs
@@ -1578,7 +1568,7 @@ bool SdPublishingDlg::Save()
     sal_uInt16 aCheck = nMagic;
     pStream->WriteUInt16( aCheck );
 
-    // Destroys the SdIOCompat before the Stream is being destributed
+    // Destroys the SdIOCompat before the Stream is being distributed
     {
         SdIOCompat aIO(*pStream, StreamMode::WRITE, 0);
 

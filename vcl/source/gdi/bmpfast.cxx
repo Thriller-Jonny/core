@@ -19,7 +19,7 @@
 
 #include <bmpfast.hxx>
 #include <tools/debug.hxx>
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 
 #define FAST_ARGB_BGRA
 
@@ -50,7 +50,6 @@ public:
 
     void    SetColor( PIXBYTE r, PIXBYTE g, PIXBYTE b ) const;
     void    SetAlpha( PIXBYTE a ) const;
-    void    operator++(int);
 };
 
 // template specializations for truecolor pixel formats

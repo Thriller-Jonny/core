@@ -37,8 +37,8 @@
 #include <editeng/frmdiritem.hxx>
 #include <svx/swframevalidation.hxx>
 #include <comphelper/classids.hxx>
-
 #include <sfx2/viewfrm.hxx>
+#include <tools/globname.hxx>
 #include <fmturl.hxx>
 #include <fmteiro.hxx>
 #include <fmtcnct.hxx>
@@ -1446,7 +1446,7 @@ sal_Int32 SwFramePage::FillPosLB(const FrameMap* _pMap,
     return GetMapPos(_pMap, _rLB);
 }
 
-sal_uLong SwFramePage::FillRelLB( const FrameMap* _pMap,
+void SwFramePage::FillRelLB( const FrameMap* _pMap,
                             const sal_uInt16 _nLBSelPos,
                             const sal_Int16 _nAlign,
                             const sal_Int16 _nRel,
@@ -1622,8 +1622,6 @@ sal_uLong SwFramePage::FillRelLB( const FrameMap* _pMap,
     _rFT.Enable( bEnable );
 
     RelHdl(_rLB);
-
-    return nLBRelations;
 }
 
 sal_Int16 SwFramePage::GetRelation(FrameMap * /*pMap*/, ListBox &rRelationLB)
@@ -2165,7 +2163,7 @@ void SwFramePage::Init(const SfxItemSet& rSet, bool bReset)
             // disable width and height for math objects
             const SvGlobalName& rFactNm( pSh->GetOLEObject()->getClassID() );
 
-            struct _GlobalNameId {
+            struct GlobalNameId {
                 sal_uInt32 n1;
                 sal_uInt16 n2, n3;
                 sal_uInt8 b8, b9, b10, b11, b12, b13, b14, b15;
@@ -2173,7 +2171,7 @@ void SwFramePage::Init(const SfxItemSet& rSet, bool bReset)
                                { SO3_SM_CLASSID_40 }, { SO3_SM_CLASSID_30 } };
 
             for ( int i = 0; i < 4; ++i ) {
-                const _GlobalNameId& rId = aGlbNmIds[ i ];
+                const GlobalNameId& rId = aGlbNmIds[ i ];
 
                 SvGlobalName aGlbNm( rId.n1, rId.n2, rId.n3,
                                      rId.b8, rId.b9, rId.b10, rId.b11,
@@ -2280,7 +2278,7 @@ void SwFramePage::Init(const SfxItemSet& rSet, bool bReset)
         const SwFormatVertOrient& rVert = static_cast<const SwFormatVertOrient&>(rSet.Get(RES_VERT_ORIENT));
         m_nOldH    = rHori.GetHoriOrient();
         m_nOldHRel = rHori.GetRelationOrient();
-        m_nOldV    = rVert.GetVertOrient(),
+        m_nOldV    = rVert.GetVertOrient();
         m_nOldVRel = rVert.GetRelationOrient();
 
         if (eAnchorId == FLY_AT_PAGE)

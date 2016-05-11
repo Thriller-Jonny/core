@@ -157,7 +157,7 @@ protected:
     /// get helper
     inline XMLTextImportHelper& GetImportHelper() { return rTextImportHelper; }
 
-    inline OUString GetServiceName() { return sServiceName; }
+    const OUString& GetServiceName() { return sServiceName; }
     inline void SetServiceName(const OUString& sStr) { sServiceName = sStr; }
 
     OUString GetContent();
@@ -1341,8 +1341,6 @@ public:
 
 class XMLCustomPropertyFieldImportContext : public XMLTextFieldImportContext
 {
-    css::uno::Any aValue;
-
 public:
 
     XMLCustomPropertyFieldImportContext (SvXMLImport& rImport,

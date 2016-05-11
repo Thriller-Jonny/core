@@ -74,7 +74,6 @@ namespace connectivity
             OConnection*                    m_pConnection;// The owning Connection object
             SQLHANDLE                       m_aStatementHandle;
             SQLUSMALLINT*                   m_pRowStatusArray;
-            ::cppu::OBroadcastHelper&       rBHelper;
 
         protected:
 
@@ -88,7 +87,7 @@ namespace connectivity
             OUString getCursorName()     const;
             bool isUsingBookmarks()         const;
             bool getEscapeProcessing()      const;
-            template < typename T, SQLINTEGER BufferLength > T getStmtOption (SQLINTEGER fOption, T dflt = 0) const;
+            template < typename T, SQLINTEGER BufferLength > T getStmtOption (SQLINTEGER fOption) const;
 
             void setQueryTimeOut(sal_Int64 _par0)           ;
             void setMaxFieldSize(sal_Int64 _par0)           ;

@@ -29,7 +29,6 @@ using namespace ::com::sun::star;
 using namespace ::ooo::vba;
 
 
-
 VbaEventsHelperBase::VbaEventsHelperBase( const uno::Sequence< uno::Any >& rArgs, const uno::Reference< uno::XComponentContext >& /*xContext*/ ) :
     mpShell( nullptr ),
     mbDisposed( true )
@@ -243,7 +242,7 @@ sal_Bool SAL_CALL VbaEventsHelperBase::hasVbaEventHandler( sal_Int32 nEventId, c
 {
     EventHandlerInfoMap::const_iterator aIt = maEventInfos.find( nEventId );
     if( aIt == maEventInfos.end() )
-        return sal_False; // throwing a lot of exceptions is slow.
+        return false; // throwing a lot of exceptions is slow.
     else // getEventHandlerPath() searches for the macro in the document
         return !getEventHandlerPath( aIt->second, rArgs ).isEmpty();
 }
@@ -342,7 +341,6 @@ VbaEventsHelperBase::ModulePathMap& VbaEventsHelperBase::updateModulePathMap( co
     }
     return rPathMap;
 }
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

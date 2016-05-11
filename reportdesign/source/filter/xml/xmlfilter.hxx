@@ -44,7 +44,7 @@
 
 namespace rptui
 {
-    class OReportModel;
+class OReportModel;
 }
 namespace rptxml
 {
@@ -60,8 +60,6 @@ using namespace ::com::sun::star::report;
 using namespace ::com::sun::star::xml::sax;
 
 
-// - ORptFilter -
-
 class ORptFilter : public SvXMLImport
 {
 public:
@@ -70,7 +68,6 @@ public:
 private:
 
     TGroupFunctionMap                               m_aFunctions;
-    Reference< XComponent >                         m_xSrcDoc;
 
     mutable ::std::unique_ptr<SvXMLTokenMap>        m_pDocElemTokenMap;
     mutable ::std::unique_ptr<SvXMLTokenMap>        m_pReportElemTokenMap;
@@ -97,16 +94,16 @@ private:
     bool                            implImport( const Sequence< PropertyValue >& rDescriptor ) throw (RuntimeException, std::exception);
 
     SvXMLImportContext* CreateStylesContext(const OUString& rLocalName,
-                                     const Reference< XAttributeList>& xAttrList, bool bIsAutoStyle );
+                                            const Reference< XAttributeList>& xAttrList, bool bIsAutoStyle );
     SvXMLImportContext* CreateMetaContext(const OUString& rLocalName,
-            const css::uno::Reference< css::xml::sax::XAttributeList > & xAttrList );
+                                          const css::uno::Reference< css::xml::sax::XAttributeList > & xAttrList );
     SvXMLImportContext* CreateFontDeclsContext(const OUString& rLocalName,
             const css::uno::Reference< css::xml::sax::XAttributeList > & xAttrList );
 protected:
     // SvXMLImport
     virtual SvXMLImportContext *CreateContext( sal_uInt16 nPrefix,
-                                      const OUString& rLocalName,
-                                      const css::uno::Reference< css::xml::sax::XAttributeList >& xAttrList ) override;
+            const OUString& rLocalName,
+            const css::uno::Reference< css::xml::sax::XAttributeList >& xAttrList ) override;
 
     virtual XMLShapeImportHelper* CreateShapeImport() override;
 
@@ -121,15 +118,17 @@ public:
     static css::uno::Sequence< OUString > getSupportedServiceNames_Static() throw( css::uno::RuntimeException );
     static OUString getImplementationName_Static() throw( css::uno::RuntimeException );
     static css::uno::Reference< css::uno::XInterface > SAL_CALL
-        create(css::uno::Reference< css::uno::XComponentContext > const & xContext);
+    create(css::uno::Reference< css::uno::XComponentContext > const & xContext);
 
-    inline Reference<XReportDefinition> getReportDefinition() const { return m_xReportDefinition; }
+    const Reference<XReportDefinition>& getReportDefinition() const {
+        return m_xReportDefinition;
+    }
     void FinishStyles();
 
     virtual void SAL_CALL startDocument()
-        throw( css::xml::sax::SAXException, css::uno::RuntimeException, std::exception ) override;
+    throw( css::xml::sax::SAXException, css::uno::RuntimeException, std::exception ) override;
     virtual void SAL_CALL endDocument()
-        throw( css::xml::sax::SAXException, css::uno::RuntimeException, std::exception ) override;
+    throw( css::xml::sax::SAXException, css::uno::RuntimeException, std::exception ) override;
 
     const SvXMLTokenMap& GetDocElemTokenMap() const;
     const SvXMLTokenMap& GetReportElemTokenMap() const;
@@ -145,17 +144,25 @@ public:
     const SvXMLTokenMap& GetColumnTokenMap() const;
     const SvXMLTokenMap& GetCellElemTokenMap() const;
 
-    inline rtl::Reference < XMLPropertySetMapper > GetCellStylesPropertySetMapper()      const   { return m_xCellStylesPropertySetMapper;    }
-    inline rtl::Reference < XMLPropertySetMapper > GetColumnStylesPropertySetMapper()    const   { return m_xColumnStylesPropertySetMapper;  }
-    inline rtl::Reference < XMLPropertySetMapper > GetRowStylesPropertySetMapper()       const   { return m_xRowStylesPropertySetMapper;     }
-    static OUString convertFormula(const OUString& _sFormula);
+    const rtl::Reference< XMLPropertySetMapper >& GetCellStylesPropertySetMapper()      const   {
+        return m_xCellStylesPropertySetMapper;
+    }
+    const rtl::Reference< XMLPropertySetMapper >& GetColumnStylesPropertySetMapper()    const   {
+        return m_xColumnStylesPropertySetMapper;
+    }
+    const rtl::Reference< XMLPropertySetMapper >& GetRowStylesPropertySetMapper()       const   {
+        return m_xRowStylesPropertySetMapper;
+    }
+    static const OUString& convertFormula(const OUString& _sFormula);
     /** inserts a new function
     *
     * \param _xFunction
     */
     void insertFunction(const css::uno::Reference< css::report::XFunction > & _xFunction);
     void removeFunction(const OUString& _sFunctionName);
-    inline const TGroupFunctionMap& getFunctions() const { return m_aFunctions; }
+    inline const TGroupFunctionMap& getFunctions() const {
+        return m_aFunctions;
+    }
 
     bool                        isOldFormat() const;
 };
@@ -170,7 +177,7 @@ public:
     static OUString getImplementationName_Static(  ) throw (css::uno::RuntimeException);
     static Sequence< OUString > getSupportedServiceNames_Static(  ) throw(css::uno::RuntimeException);
     static css::uno::Reference< css::uno::XInterface > SAL_CALL
-        create(css::uno::Reference< css::uno::XComponentContext > const & xContext);
+    create(css::uno::Reference< css::uno::XComponentContext > const & xContext);
 };
 
 /** Imports only content
@@ -183,7 +190,7 @@ public:
     static OUString getImplementationName_Static(  ) throw (css::uno::RuntimeException);
     static Sequence< OUString > getSupportedServiceNames_Static(  ) throw(css::uno::RuntimeException);
     static css::uno::Reference< css::uno::XInterface > SAL_CALL
-        create(css::uno::Reference< css::uno::XComponentContext > const & xContext);
+    create(css::uno::Reference< css::uno::XComponentContext > const & xContext);
 };
 
 /** Imports only styles
@@ -196,7 +203,7 @@ public:
     static OUString getImplementationName_Static(  ) throw (css::uno::RuntimeException);
     static Sequence< OUString > getSupportedServiceNames_Static(  ) throw(css::uno::RuntimeException);
     static css::uno::Reference< css::uno::XInterface > SAL_CALL
-        create(css::uno::Reference< css::uno::XComponentContext > const & xContext);
+    create(css::uno::Reference< css::uno::XComponentContext > const & xContext);
 };
 
 /** Imports only meta data
@@ -209,7 +216,7 @@ public:
     static OUString getImplementationName_Static(  ) throw (css::uno::RuntimeException);
     static Sequence< OUString > getSupportedServiceNames_Static(  ) throw(css::uno::RuntimeException);
     static css::uno::Reference< css::uno::XInterface > SAL_CALL
-        create(css::uno::Reference< css::uno::XComponentContext > const & xContext);
+    create(css::uno::Reference< css::uno::XComponentContext > const & xContext);
 };
 
 

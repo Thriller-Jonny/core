@@ -72,7 +72,6 @@
 #include <authfld.hxx>
 #include <flddat.hxx>
 #include <fldmgr.hxx>
-#include <crsskip.hxx>
 #include <flddropdown.hxx>
 #include <fldui.hrc>
 #include <tox.hxx>
@@ -257,11 +256,11 @@ void SwFieldMgr::RemoveFieldType(sal_uInt16 nResId, const OUString& rName )
         pSh->RemoveFieldType(nResId, rName);
 }
 
-size_t SwFieldMgr::GetFieldTypeCount(sal_uInt16 nResId) const
+size_t SwFieldMgr::GetFieldTypeCount() const
 {
     SwWrtShell * pSh = pWrtShell ? pWrtShell : lcl_GetShell();
     OSL_ENSURE(pSh, "no SwWrtShell found");
-    return pSh ? pSh->GetFieldTypeCount(nResId) : 0;
+    return pSh ? pSh->GetFieldTypeCount() : 0;
 }
 
 SwFieldType* SwFieldMgr::GetFieldType(sal_uInt16 nResId, size_t nField) const
@@ -346,7 +345,7 @@ static SwFieldGroupRgn const aWebRanges[] =
 }
 
 // determine GroupId
-sal_uInt16 SwFieldMgr::GetGroup(bool bHtmlMode, sal_uInt16 nTypeId, sal_uInt16 nSubType)
+sal_uInt16 SwFieldMgr::GetGroup(sal_uInt16 nTypeId, sal_uInt16 nSubType)
 {
     if (nTypeId == TYP_SETINPFLD)
         nTypeId = TYP_SETFLD;
@@ -362,7 +361,7 @@ sal_uInt16 SwFieldMgr::GetGroup(bool bHtmlMode, sal_uInt16 nTypeId, sal_uInt16 n
 
     for (sal_uInt16 i = GRP_DOC; i <= GRP_VAR; i++)
     {
-        const SwFieldGroupRgn& rRange = GetGroupRange(bHtmlMode, i);
+        const SwFieldGroupRgn& rRange = GetGroupRange(false/*bHtmlMode*/, i);
         for (sal_uInt16 nPos = rRange.nStart; nPos < rRange.nEnd; nPos++)
         {
             if (aSwFields[nPos].nTypeId == nTypeId)
@@ -420,9 +419,8 @@ sal_uInt16 SwFieldMgr::GetPos(sal_uInt16 nTypeId)
 }
 
 // localise subtypes of a field
-bool SwFieldMgr::GetSubTypes(sal_uInt16 nTypeId, std::vector<OUString>& rToFill)
+void SwFieldMgr::GetSubTypes(sal_uInt16 nTypeId, std::vector<OUString>& rToFill)
 {
-    bool bRet = false;
     SwWrtShell *pSh = pWrtShell ? pWrtShell : lcl_GetShell();
     OSL_ENSURE(pSh, "no SwWrtShell found");
     if(pSh)
@@ -445,7 +443,7 @@ bool SwFieldMgr::GetSubTypes(sal_uInt16 nTypeId, std::vector<OUString>& rToFill)
             case TYP_INPUTFLD:
             {
                 rToFill.push_back(SW_RES(aSwFields[nPos].nSubTypeStart));
-                // move on at generic types
+                SAL_FALLTHROUGH; // move on at generic types
             }
             case TYP_DDEFLD:
             case TYP_SEQFLD:
@@ -519,14 +517,12 @@ bool SwFieldMgr::GetSubTypes(sal_uInt16 nTypeId, std::vector<OUString>& rToFill)
                 }
             }
         }
-        bRet = true;
     }
-    return bRet;
 }
 
 // determine format
 //  ACCESS over TYP_....
-sal_uInt16 SwFieldMgr::GetFormatCount(sal_uInt16 nTypeId, bool bIsText, bool bHtmlMode) const
+sal_uInt16 SwFieldMgr::GetFormatCount(sal_uInt16 nTypeId, bool bHtmlMode) const
 {
     OSL_ENSURE(nTypeId < TYP_END, "forbidden TypeId");
     {
@@ -537,9 +533,6 @@ sal_uInt16 SwFieldMgr::GetFormatCount(sal_uInt16 nTypeId, bool bIsText, bool bHt
 
         sal_uLong nStart = aSwFields[nPos].nFormatBegin;
         sal_uLong nEnd   = aSwFields[nPos].nFormatEnd;
-
-        if (bIsText && nEnd - nStart >= 2)
-            return 2;
 
         if (nTypeId == TYP_FILENAMEFLD)
             nEnd -= 2;  // no range or template
@@ -1035,7 +1028,7 @@ bool SwFieldMgr::InsertField(
             pField = new SwDBField(pTyp);
             pField->SetSubType(nSubType);
 
-            if( !(nSubType & nsSwExtendedSubType::SUB_OWN_FMT) ) // determinee database format
+            if( !(nSubType & nsSwExtendedSubType::SUB_OWN_FMT) ) // determine database format
             {
                 Reference< XDataSource> xSource;
                 rData.m_aDBDataSource >>= xSource;
@@ -1165,7 +1158,7 @@ bool SwFieldMgr::InsertField(
                 SwSetExpFieldType* pTyp = static_cast<SwSetExpFieldType*>(
                     pCurShell->GetFieldType(RES_SETEXPFLD, rData.m_sPar1) );
 
-                // no Experssion Type with this name existing -> create
+                // no Expression Type with this name existing -> create
                 if(pTyp)
                 {
                     SwSetExpField* pExpField =
@@ -1192,9 +1185,6 @@ bool SwFieldMgr::InsertField(
                     new SwInputField( pTyp, rData.m_sPar1, rData.m_sPar2, nSubType|nsSwExtendedSubType::SUB_INVISIBLE, nFormatId);
                 pField = pInpField;
             }
-
-            // start dialog
-            pCurShell->StartInputFieldDlg(pField, false, rData.m_pParent);
             break;
         }
 
@@ -1229,7 +1219,6 @@ bool SwFieldMgr::InsertField(
             SwSetExpField* pExpField = new SwSetExpField(pTyp, rData.m_sPar2, nFormatId);
             bExp = true;
             pField = pExpField;
-            nSubType = nsSwGetSetExpType::GSE_SEQ;
             break;
         }
 
@@ -1265,7 +1254,8 @@ bool SwFieldMgr::InsertField(
                 {
                     SfxStringItem aFormat(FN_NUMBER_FORMAT, pEntry->GetFormatstring());
                     pCurShell->GetView().GetViewFrame()->GetDispatcher()->
-                        Execute(FN_NUMBER_FORMAT, SfxCallMode::SYNCHRON, &aFormat, 0L);
+                        ExecuteList(FN_NUMBER_FORMAT, SfxCallMode::SYNCHRON,
+                                { &aFormat });
                 }
 
                 SfxItemSet aBoxSet( pCurShell->GetAttrPool(),
@@ -1336,6 +1326,14 @@ bool SwFieldMgr::InsertField(
 
     pCurShell->Insert( *pField );
 
+    if (TYP_INPUTFLD == rData.m_nTypeId)
+    {
+        // start dialog, not before the field is inserted tdf#99529
+        pCurShell->Left(CRSR_SKIP_CHARS,
+                false, (INP_VAR == (nSubType & 0xff)) ? 1 : 2, false );
+        pCurShell->StartInputFieldDlg(pField, false, rData.m_pParent);
+    }
+
     if(bExp && bEvalExp)
         pCurShell->UpdateExpFields(true);
 
@@ -1389,7 +1387,6 @@ void SwFieldMgr::UpdateCurField(sal_uLong nFormat,
 
     bool bSetPar2 = true;
     bool bSetPar1 = true;
-    OUString sPar1( rPar1 );
     OUString sPar2( rPar2 );
 
     // Order to Format
@@ -1478,7 +1475,7 @@ void SwFieldMgr::UpdateCurField(sal_uLong nFormat,
             for(sal_Int32 nToken = 0; nToken < nTokenCount; nToken++)
                 pArray[nToken] = sPar2.getToken(nToken, DB_DELIM);
             static_cast<SwDropDownField*>(pTmpField)->SetItems(aEntries);
-            static_cast<SwDropDownField*>(pTmpField)->SetName(sPar1);
+            static_cast<SwDropDownField*>(pTmpField)->SetName(rPar1);
             bSetPar1 = bSetPar2 = false;
         }
         break;
@@ -1509,8 +1506,8 @@ void SwFieldMgr::UpdateCurField(sal_uLong nFormat,
     // setup format before SetPar2 because of NumberFormatter!
     pTmpField->ChangeFormat(nFormat);
 
-    if(bSetPar1)
-        pTmpField->SetPar1( sPar1 );
+    if( bSetPar1 )
+        pTmpField->SetPar1( rPar1 );
     if( bSetPar2 )
         pTmpField->SetPar2( sPar2 );
 
@@ -1555,7 +1552,7 @@ sal_uInt16 SwFieldMgr::GetCurrLanguage() const
     return SvtSysLocale().GetLanguageTag().getLanguageType();
 }
 
-void SwFieldType::_GetFieldName()
+void SwFieldType::GetFieldName_()
 {
     static const sal_uInt16 coFieldNms[] = {
         FLD_DATE_STD,
@@ -1654,9 +1651,8 @@ void SwFieldMgr::SetMacroPath(const OUString& rPath)
     }
 }
 
-sal_uLong SwFieldMgr::GetDefaultFormat(sal_uInt16 nTypeId, bool bIsText, SvNumberFormatter* pFormatter, double* pVal)
+sal_uLong SwFieldMgr::GetDefaultFormat(sal_uInt16 nTypeId, bool bIsText, SvNumberFormatter* pFormatter)
 {
-    double fValue;
     short  nDefFormat;
 
     switch (nTypeId)
@@ -1664,18 +1660,6 @@ sal_uLong SwFieldMgr::GetDefaultFormat(sal_uInt16 nTypeId, bool bIsText, SvNumbe
         case TYP_TIMEFLD:
         case TYP_DATEFLD:
         {
-            Date aDate( Date::SYSTEM );
-            Date* pNullDate = pFormatter->GetNullDate();
-
-            fValue = aDate - *pNullDate;
-
-            tools::Time aTime( tools::Time::SYSTEM );
-
-            sal_uLong nNumFormatTime = (sal_uLong)aTime.GetSec() + (sal_uLong)aTime.GetMin() * 60L +
-                          (sal_uLong)aTime.GetHour() * 3600L;
-
-            fValue += (double)nNumFormatTime / 86400.0;
-
             nDefFormat = (nTypeId == TYP_DATEFLD) ? css::util::NumberFormat::DATE : css::util::NumberFormat::TIME;
         }
         break;
@@ -1683,19 +1667,14 @@ sal_uLong SwFieldMgr::GetDefaultFormat(sal_uInt16 nTypeId, bool bIsText, SvNumbe
         default:
             if (bIsText)
             {
-                fValue = 0.0;
                 nDefFormat = css::util::NumberFormat::TEXT;
             }
             else
             {
-                fValue = 0.0;
                 nDefFormat = css::util::NumberFormat::ALL;
             }
             break;
     }
-
-    if (pVal)
-        *pVal = fValue;
 
     return pFormatter->GetStandardFormat(nDefFormat, GetCurrLanguage());
 }

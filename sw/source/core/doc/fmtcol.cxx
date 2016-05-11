@@ -35,7 +35,7 @@
 #include <calbck.hxx>
 #include <svl/intitem.hxx>
 
-
+#include <o3tl/make_unique.hxx>
 namespace TextFormatCollFunc
 {
     // #i71574#
@@ -275,8 +275,7 @@ void SwTextFormatColl::Modify( const SfxPoolItem* pOld, const SfxPoolItem* pNew 
             bContinue = pNewChgSet->GetTheChgdSet() == &GetAttrSet();
     }
 
-    for( int nC = 0, nArrLen = sizeof(aFontSizeArr) / sizeof( aFontSizeArr[0]);
-            nC < nArrLen; ++nC )
+    for( int nC = 0, nArrLen = SAL_N_ELEMENTS(aFontSizeArr); nC < nArrLen; ++nC )
     {
         const SvxFontHeightItem *pFSize = aFontSizeArr[ nC ], *pOldFSize;
         if( pFSize && SfxItemState::SET == GetItemState(
@@ -582,8 +581,7 @@ void SwConditionTextFormatColl::InsertCondition( const SwCollCondition& rCond )
     }
 
     // Not found -> so insert it
-    std::unique_ptr<SwCollCondition> pNew(new SwCollCondition( rCond ));
-    m_CondColls.push_back( std::move(pNew) );
+    m_CondColls.push_back( o3tl::make_unique<SwCollCondition> (rCond) );
 }
 
 bool SwConditionTextFormatColl::RemoveCondition( const SwCollCondition& rCond )
@@ -669,14 +667,10 @@ void SwTextFormatColl::AssignToListLevelOfOutlineStyle(const int nAssignedListLe
     }
 }
 
-void SwTextFormatColl::DeleteAssignmentToListLevelOfOutlineStyle(
-    const bool bResetOutlineLevel)
+void SwTextFormatColl::DeleteAssignmentToListLevelOfOutlineStyle()
 {
     mbAssignedToOutlineStyle = false;
-    if (bResetOutlineLevel)
-    {
-        ResetFormatAttr(RES_PARATR_OUTLINELEVEL);
-    }
+    ResetFormatAttr(RES_PARATR_OUTLINELEVEL);
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

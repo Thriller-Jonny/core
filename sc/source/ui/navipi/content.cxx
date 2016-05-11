@@ -60,7 +60,7 @@
 #include "drawview.hxx"
 #include "clipparam.hxx"
 #include "markdata.hxx"
-
+#include <o3tl/make_unique.hxx>
 using namespace com::sun::star;
 
 //  Reihenfolge der Kategorien im Navigator -------------------------------------
@@ -338,7 +338,7 @@ static OUString lcl_GetDBAreaRange( ScDocument* pDoc, const OUString& rDBName )
         {
             ScRange aRange;
             pData->GetArea(aRange);
-            aRet = aRange.Format(SCR_ABS_3D, pDoc);
+            aRet = aRange.Format(ScRefFlags::RANGE_ABS_3D, pDoc);
         }
     }
     return aRet;
@@ -404,7 +404,7 @@ IMPL_LINK_NOARG_TYPED(ScContentTree, ContentDoubleClickHdl, SvTreeListBox*, bool
                 {
                     ScRange aRange = pLink->GetDestArea();
                     ScDocument* pSrcDoc = GetSourceDocument();
-                    OUString aRangeStr(aRange.Format(SCR_ABS_3D, pSrcDoc, pSrcDoc->GetAddressConvention()));
+                    OUString aRangeStr(aRange.Format(ScRefFlags::RANGE_ABS_3D, pSrcDoc, pSrcDoc->GetAddressConvention()));
                     pParentWindow->SetCurrentCellStr( aRangeStr );
                 }
             }
@@ -1269,7 +1269,7 @@ static void lcl_DoDragCells( ScDocShell* pSrcShell, const ScRange& rRange, sal_u
     {
         ScDocument* pClipDoc = new ScDocument( SCDOCMODE_CLIP );
         ScClipParam aClipParam(rRange, false);
-        rSrcDoc.CopyToClip(aClipParam, pClipDoc, &aMark);
+        rSrcDoc.CopyToClip(aClipParam, pClipDoc, &aMark, false, false);
         // pClipDoc->ExtendMerge( rRange, sal_True );
 
         TransferableObjectDescriptor aObjDesc;
@@ -1674,8 +1674,7 @@ void ScContentTree::InitEntry(SvTreeListEntry* pEntry,
     sal_uInt16 nColToHilite = 1; //0==Bitmap;1=="Spalte1";2=="Spalte2"
     SvTreeListBox::InitEntry( pEntry, rStr, rImg1, rImg2, eButtonKind );
     SvLBoxString& rCol = static_cast<SvLBoxString&>(pEntry->GetItem( nColToHilite ));
-    std::unique_ptr<SvLBoxString> pStr(new SvLBoxString(pEntry, 0, rCol.GetText()));
-    pEntry->ReplaceItem(std::move(pStr), nColToHilite);
+    pEntry->ReplaceItem(o3tl::make_unique<SvLBoxString>(rCol.GetText()), nColToHilite);
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

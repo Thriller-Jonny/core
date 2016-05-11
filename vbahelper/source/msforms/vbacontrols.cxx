@@ -38,8 +38,7 @@ using namespace com::sun::star;
 using namespace ooo::vba;
 
 
-typedef  std::unordered_map< OUString, sal_Int32, OUStringHash,
-                             std::equal_to< OUString >  > ControlIndexMap;
+typedef  std::unordered_map< OUString, sal_Int32, OUStringHash > ControlIndexMap;
 typedef  std::vector< uno::Reference< awt::XControl > > ControlVec;
 
 class ControlArrayWrapper : public ::cppu::WeakImplHelper< container::XNameAccess, container::XIndexAccess >
@@ -157,7 +156,6 @@ public:
 
 class ControlsEnumWrapper : public EnumerationHelper_BASE
 {
-    uno::Reference<XHelperInterface > m_xParent;
     uno::Reference<uno::XComponentContext > m_xContext;
     uno::Reference<container::XIndexAccess > m_xIndexAccess;
     uno::Reference<awt::XControl > m_xDlg;
@@ -169,13 +167,11 @@ class ControlsEnumWrapper : public EnumerationHelper_BASE
 public:
 
     ControlsEnumWrapper(
-        const uno::Reference< XHelperInterface >& xParent,
         const uno::Reference< uno::XComponentContext >& xContext,
         const uno::Reference< container::XIndexAccess >& xIndexAccess,
         const uno::Reference< awt::XControl >& xDlg,
         const uno::Reference< frame::XModel >& xModel,
         double fOffsetX, double fOffsetY ) :
-    m_xParent( xParent ),
     m_xContext( xContext),
     m_xIndexAccess( xIndexAccess ),
     m_xDlg( xDlg ),
@@ -230,7 +226,7 @@ ScVbaControls::ScVbaControls(
 uno::Reference< container::XEnumeration >
 ScVbaControls::createEnumeration() throw (uno::RuntimeException)
 {
-    uno::Reference< container::XEnumeration > xEnum( new ControlsEnumWrapper( mxParent, mxContext, m_xIndexAccess, mxDialog, mxModel, mfOffsetX, mfOffsetY ) );
+    uno::Reference< container::XEnumeration > xEnum( new ControlsEnumWrapper( mxContext, m_xIndexAccess, mxDialog, mxModel, mfOffsetX, mfOffsetY ) );
     if ( !xEnum.is() )
         throw uno::RuntimeException();
     return xEnum;

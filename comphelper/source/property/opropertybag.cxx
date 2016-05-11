@@ -37,7 +37,6 @@
 #include <iterator>
 
 
-
 using namespace ::com::sun::star;
 
 void createRegistryInfo_OPropertyBag()
@@ -224,7 +223,7 @@ namespace comphelper
     {
         // XSet is only a workaround for addProperty not being able to add default-void properties.
         // So, everything of XSet except insert is implemented empty
-        return sal_False;
+        return false;
     }
 
 
@@ -251,7 +250,7 @@ namespace comphelper
         m_pArrayHelper.reset();
 
         g.clear();
-        setModified(sal_True);
+        setModified(true);
     }
 
 
@@ -261,7 +260,6 @@ namespace comphelper
         // So, everything of XSet except insert is implemented empty
         throw NoSuchElementException( OUString(), *this );
     }
-
 
 
     Reference< XEnumeration > SAL_CALL OPropertyBag::createEnumeration(  ) throw (RuntimeException, std::exception)
@@ -284,7 +282,7 @@ namespace comphelper
     {
         // XSet is only a workaround for addProperty not being able to add default-void properties.
         // So, everything of XSet except insert is implemented empty
-        return sal_False;
+        return false;
     }
 
 
@@ -345,7 +343,7 @@ namespace comphelper
 
         // check whether the type is allowed, everything else will be checked
         // by m_aDynamicProperties
-        Type aPropertyType = _rInitialValue.getValueType();
+        const Type& aPropertyType = _rInitialValue.getValueType();
         if  (   _rInitialValue.hasValue()
             &&  !m_aAllowedTypes.empty()
             &&  m_aAllowedTypes.find( aPropertyType ) == m_aAllowedTypes.end()
@@ -358,7 +356,7 @@ namespace comphelper
         m_pArrayHelper.reset();
 
         g.clear();
-        setModified(sal_True);
+        setModified(true);
     }
 
 
@@ -372,7 +370,7 @@ namespace comphelper
         m_pArrayHelper.reset();
 
         g.clear();
-        setModified(sal_True);
+        setModified(true);
     }
 
 

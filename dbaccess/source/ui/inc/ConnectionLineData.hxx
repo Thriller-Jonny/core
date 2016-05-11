@@ -36,7 +36,7 @@ namespace dbaui
 
     /**
         the class OConnectionLineData contains the data of a connection
-        e.g. the source and the destanation field
+        e.g. the source and the destination field
     **/
     class OConnectionLineData : public ::salhelper::SimpleReferenceObject
     {
@@ -66,11 +66,11 @@ namespace dbaui
         void SetDestFieldName( const OUString& rDestFieldName ){ SetFieldName(JTCS_TO, rDestFieldName); }
 
         // member access (read)
-        OUString GetFieldName(EConnectionSide nWhich) const { return (nWhich == JTCS_FROM) ? m_aSourceFieldName : m_aDestFieldName; }
+        const OUString& GetFieldName(EConnectionSide nWhich) const { return (nWhich == JTCS_FROM) ? m_aSourceFieldName : m_aDestFieldName; }
         OUString GetSourceFieldName() const { return GetFieldName(JTCS_FROM); }
         OUString GetDestFieldName() const { return GetFieldName(JTCS_TO); }
 
-        bool Reset();
+        void Reset();
         OConnectionLineData& operator=( const OConnectionLineData& rConnLineData );
     };
 

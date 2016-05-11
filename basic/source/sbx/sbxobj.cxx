@@ -34,15 +34,14 @@ static OUString pParentProp;        // Parent-Property
 static sal_uInt16 nNameHash = 0, nParentHash = 0;
 
 
-
 SbxObject::SbxObject( const OUString& rClass )
          : SbxVariable( SbxOBJECT ), aClassName( rClass )
 {
     aData.pObj = this;
     if( !nNameHash )
     {
-        pNameProp = OUString::createFromAscii(GetSbxRes( STRING_NAMEPROP ));
-        pParentProp = OUString::createFromAscii(GetSbxRes( STRING_PARENTPROP ));
+        pNameProp = GetSbxRes( StringId::NameProp );
+        pParentProp = GetSbxRes( StringId::ParentProp );
         nNameHash = MakeHashCode( pNameProp );
         nParentHash = MakeHashCode( pParentProp );
     }
@@ -137,7 +136,7 @@ void SbxObject::Notify( SfxBroadcaster&, const SfxHint& rHint )
     const SbxHint* p = dynamic_cast<const SbxHint*>(&rHint);
     if( p )
     {
-        sal_uLong nId = p->GetId();
+        const sal_uInt32 nId = p->GetId();
         bool bRead  = ( nId == SBX_HINT_DATAWANTED );
         bool bWrite = ( nId == SBX_HINT_DATACHANGED );
         SbxVariable* pVar = p->GetVar();

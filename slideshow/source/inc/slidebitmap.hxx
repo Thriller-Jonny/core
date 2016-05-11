@@ -27,8 +27,7 @@
 #include <basegfx/point/b2dpoint.hxx>
 #include <basegfx/polygon/b2dpolypolygon.hxx>
 
-#include <boost/shared_ptr.hpp>
-#include <boost/noncopyable.hpp>
+#include <memory>
 
 namespace com { namespace sun { namespace star { namespace rendering
 {
@@ -57,17 +56,19 @@ namespace slideshow
             Slide::getFinalSlideBitmap must also be adapted (they no
             longer need a Canvas ptr, which is actually a hack now).
          */
-        class SlideBitmap : private boost::noncopyable
+        class SlideBitmap
         {
         public:
-            SlideBitmap( const ::cppcanvas::BitmapSharedPtr& rBitmap );
+            explicit SlideBitmap( const ::cppcanvas::BitmapSharedPtr& rBitmap );
+            SlideBitmap(const SlideBitmap&) = delete;
+            SlideBitmap& operator=(const SlideBitmap&) = delete;
 
             bool                draw( const ::cppcanvas::CanvasSharedPtr& rCanvas ) const;
             ::basegfx::B2ISize  getSize() const;
             void                move( const ::basegfx::B2DPoint& rNewPos );
             void                clip( const ::basegfx::B2DPolyPolygon& rClipPoly );
 
-            css::uno::Reference< css::rendering::XBitmap >    getXBitmap();
+            const css::uno::Reference< css::rendering::XBitmap >&  getXBitmap();
 
         private:
             ::basegfx::B2DPoint                                     maOutputPos;
@@ -77,7 +78,7 @@ namespace slideshow
             css::uno::Reference< css::rendering::XBitmap >          mxBitmap;
         };
 
-        typedef ::boost::shared_ptr< SlideBitmap > SlideBitmapSharedPtr;
+        typedef ::std::shared_ptr< SlideBitmap > SlideBitmapSharedPtr;
     }
 }
 

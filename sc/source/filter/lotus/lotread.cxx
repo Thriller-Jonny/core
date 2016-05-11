@@ -248,7 +248,7 @@ FltError ImportLotus::Read(SvStream& rIn)
     {
         pIn->ReadUInt16( nOp ).ReadUInt16( nRecLen );
 
-		if( pIn->IsEof() || nNextRec > SAL_MAX_UINT32 - nRecLen - 4 )
+        if( pIn->IsEof() || nNextRec > SAL_MAX_UINT32 - nRecLen - 4 )
             bRead = false;
         else
         {
@@ -289,7 +289,7 @@ FltError ImportLotus::Read(SvStream& rIn)
                     nExtTab++;
                     break;
                 case 197:
-                    _Row( nRecLen );
+                    Row_( nRecLen );
                 break;
             }
 

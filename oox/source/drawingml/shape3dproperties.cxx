@@ -37,11 +37,6 @@ using namespace ::com::sun::star;
 using namespace ::com::sun::star::drawing;
 using namespace ::com::sun::star::graphic;
 
-using ::com::sun::star::uno::Reference;
-using ::com::sun::star::uno::Exception;
-using ::com::sun::star::uno::UNO_QUERY;
-using ::com::sun::star::uno::UNO_QUERY_THROW;
-using ::oox::core::XmlFilterBase;
 
 namespace oox {
 namespace drawingml {
@@ -328,7 +323,7 @@ css::uno::Sequence< css::beans::PropertyValue > Shape3DProperties::getColorAttri
         const Color& rColor, const GraphicHelper& rGraphicHelper, sal_Int32 rPhClr )
 {
     css::uno::Sequence<css::beans::PropertyValue> aSeq(2);
-    OUString sColorScheme = rColor.getSchemeName();
+    const OUString& sColorScheme = rColor.getSchemeName();
     if( sColorScheme.isEmpty() )
     {
         // RGB color and transparency value

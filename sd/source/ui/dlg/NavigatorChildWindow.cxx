@@ -25,7 +25,6 @@
 #include <sfx2/bindings.hxx>
 #include <sfx2/dispatch.hxx>
 #include <svl/eitem.hxx>
-#include <boost/bind.hpp>
 
 namespace sd {
 
@@ -37,11 +36,10 @@ void RequestNavigatorUpdate (SfxBindings* pBindings)
         && pBindings->GetDispatcher() != nullptr)
     {
         SfxBoolItem aItem (SID_NAVIGATOR_INIT, true);
-        pBindings->GetDispatcher()->Execute(
+        pBindings->GetDispatcher()->ExecuteList(
             SID_NAVIGATOR_INIT,
             SfxCallMode::ASYNCHRON | SfxCallMode::RECORD,
-            &aItem,
-            0L);
+            { &aItem });
     }
 }
 
@@ -58,7 +56,7 @@ NavigatorChildWindow::NavigatorChildWindow (
         pBindings);
 
     pNavWin->SetUpdateRequestFunctor(
-        ::boost::bind(RequestNavigatorUpdate, pBindings));
+        [pBindings] () { return RequestNavigatorUpdate(pBindings); });
 
     SetWindow( pNavWin );
 }

@@ -42,10 +42,8 @@
 #include "tablelayouter.hxx"
 
 
-
 using editeng::SvxBorderLine;
 using namespace com::sun::star;
-
 
 
 namespace drawinglayer
@@ -148,7 +146,6 @@ namespace drawinglayer
 } // end of namespace drawinglayer
 
 
-
 namespace drawinglayer
 {
     namespace primitive2d
@@ -201,8 +198,7 @@ namespace drawinglayer
                 bool bLeftIsOutside,
                 bool bBottomIsOutside,
                 bool bRightIsOutside,
-                bool bTopIsOutside,
-                bool bInTwips)
+                bool bTopIsOutside)
             :   BufferedDecompositionPrimitive2D(),
                 maTransform(rTransform),
                 maLeftLine(rLeftLine),
@@ -221,7 +217,7 @@ namespace drawinglayer
                 mbBottomIsOutside(bBottomIsOutside),
                 mbRightIsOutside(bRightIsOutside),
                 mbTopIsOutside(bTopIsOutside),
-                mbInTwips(bInTwips)
+                mbInTwips(true)
             {
             }
 
@@ -471,7 +467,6 @@ namespace drawinglayer
 } // end of namespace drawinglayer
 
 
-
 namespace sdr
 {
     namespace contact
@@ -669,8 +664,7 @@ namespace sdr
                                             bIsRTL ? nX == nColCount : 0 == nX,
                                             nRowCount == nYBottom,
                                             bIsRTL ? 0 == nXRight : nXRight == nColCount,
-                                            0 == nY,
-                                            true));
+                                            0 == nY));
                                 }
                             }
                         }
@@ -719,7 +713,6 @@ namespace sdr
                 // created an invisible outline for the cases where no visible content exists
                 const drawinglayer::primitive2d::Primitive2DReference xReference(
                     drawinglayer::primitive2d::createHiddenGeometryPrimitives2D(
-                        false,
                         aObjectMatrix));
 
                 return drawinglayer::primitive2d::Primitive2DContainer { xReference };

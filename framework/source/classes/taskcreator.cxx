@@ -57,8 +57,7 @@ TaskCreator::~TaskCreator()
 /*-****************************************************************************************************
     TODO document me
 *//*-*****************************************************************************************************/
-css::uno::Reference< css::frame::XFrame > TaskCreator::createTask( const OUString& sName    ,
-                                                                         bool         bVisible )
+css::uno::Reference< css::frame::XFrame > TaskCreator::createTask( const OUString& sName )
 {
     css::uno::Reference< css::lang::XSingleServiceFactory > xCreator;
     OUString sCreator = IMPLEMENTATIONNAME_FWK_TASKCREATOR;
@@ -95,15 +94,15 @@ css::uno::Reference< css::frame::XFrame > TaskCreator::createTask( const OUStrin
     lArgs[0]   <<= aArg;
 
     aArg.Name    = ARGUMENT_CREATETOPWINDOW;
-    aArg.Value <<= sal_True;
+    aArg.Value <<= true;
     lArgs[1]   <<= aArg;
 
     aArg.Name    = ARGUMENT_MAKEVISIBLE;
-    aArg.Value <<= bVisible;
+    aArg.Value <<= false;
     lArgs[2]   <<= aArg;
 
     aArg.Name    = ARGUMENT_SUPPORTPERSISTENTWINDOWSTATE;
-    aArg.Value <<= sal_True;
+    aArg.Value <<= true;
     lArgs[3]   <<= aArg;
 
     aArg.Name    = ARGUMENT_FRAMENAME;

@@ -24,7 +24,6 @@ import java.util.Iterator;
 
 import org.openoffice.xmerge.ConvertData;
 import org.openoffice.xmerge.ConvertException;
-import org.openoffice.xmerge.Document;
 import org.openoffice.xmerge.DocumentSerializer;
 import org.openoffice.xmerge.converter.xml.OfficeConstants;
 import org.openoffice.xmerge.converter.xml.StyleCatalog;
@@ -366,7 +365,7 @@ public abstract class SxcDocumentSerializer implements OfficeConstants,
                                         SxcConstants.ROW_STYLE_FAMILY, null,
                                         RowStyle.class);
 
-                int rowHeight = rStyle.getRowHeight();
+                int rowHeight = rStyle != null ? rStyle.getRowHeight() : 0;
 
                 Debug.log(Debug.TRACE, "traverseTableRow() Row Height : " + rowHeight);
                 ColumnRowInfo ri = new ColumnRowInfo(   rowHeight,
@@ -469,15 +468,20 @@ public abstract class SxcDocumentSerializer implements OfficeConstants,
             Debug.log(Debug.TRACE, "traverseColumn() default-cell-style : " + cellStyleName);
         }
 
+        CellStyle cellStyle = null;
+
         if(cellStyleName.equalsIgnoreCase("Default") || cellStyleName.length()==0) {
 
             Debug.log(Debug.TRACE, "No default cell Style Attribute was found");
 
         } else {
 
-            CellStyle cellStyle = (CellStyle)styleCat.lookup(cellStyleName,
+            cellStyle = (CellStyle)styleCat.lookup(cellStyleName,
                                 SxcConstants.TABLE_CELL_STYLE_FAMILY, null,
                                 CellStyle.class);
+        }
+
+        if (cellStyle != null) {
             Format defaultFmt = new Format(cellStyle.getFormat());
             col.setFormat(defaultFmt);
         }
@@ -498,7 +502,7 @@ public abstract class SxcDocumentSerializer implements OfficeConstants,
                                 SxcConstants.COLUMN_STYLE_FAMILY, null,
                                 ColumnStyle.class);
 
-            columnWidth = cStyle.getColWidth();
+            columnWidth = cStyle != null ? cStyle.getColWidth() : 0;
             col.setSize(columnWidth);
             Debug.log(Debug.TRACE, "traverseColumn() Column Width : " + columnWidth);
 
@@ -537,16 +541,20 @@ public abstract class SxcDocumentSerializer implements OfficeConstants,
             styleName = tableStyleNode.getNodeValue();
         }
 
+        CellStyle cStyle = null;
+
         if(styleName.equalsIgnoreCase("Default")) {
 
             Debug.log(Debug.TRACE, "No defined Style Attribute was found");
 
         } else if(styleName.length()!=0) {
 
-            CellStyle cStyle = (CellStyle)styleCat.lookup(styleName,
+            cStyle = (CellStyle)styleCat.lookup(styleName,
                                 SxcConstants.TABLE_CELL_STYLE_FAMILY, null,
                                 CellStyle.class);
+        }
 
+        if (cStyle != null) {
             Format definedFormat = cStyle.getFormat();
             fmt = new Format(definedFormat);
         }

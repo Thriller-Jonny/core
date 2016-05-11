@@ -351,7 +351,7 @@ void SwGetExpField::ChangeExpansion( const SwFrame& rFrame, const SwTextField& r
         }
     }
 
-    _SetGetExpField aEndField( aPos.nNode, &rField, &aPos.nContent );
+    SetGetExpField aEndField( aPos.nNode, &rField, &aPos.nContent );
     if(GetSubType() & nsSwGetSetExpType::GSE_STRING)
     {
         SwHash** ppHashTable;
@@ -532,10 +532,10 @@ sal_uLong SwSetExpFieldType::GetSeqFormat()
     return pField->GetFormat();
 }
 
-sal_uInt16 SwSetExpFieldType::SetSeqRefNo( SwSetExpField& rField )
+void SwSetExpFieldType::SetSeqRefNo( SwSetExpField& rField )
 {
     if( !HasWriterListeners() || !(nsSwGetSetExpType::GSE_SEQ & nType) )
-        return USHRT_MAX;
+        return;
 
     std::vector<sal_uInt16> aArr;
 
@@ -563,7 +563,7 @@ sal_uInt16 SwSetExpFieldType::SetSeqRefNo( SwSetExpField& rField )
                 break;
 
         if( n == aArr.size() || aArr[ n ] > nNum )
-            return nNum;            // no -> use it
+            return;            // no -> use it
     }
 
     // flagged all numbers, so determine the right number
@@ -578,7 +578,6 @@ sal_uInt16 SwSetExpFieldType::SetSeqRefNo( SwSetExpField& rField )
     }
 
     rField.SetSeqNumber( n );
-    return n;
 }
 
 size_t SwSetExpFieldType::GetSeqFieldList( SwSeqFieldList& rList )
@@ -593,7 +592,7 @@ size_t SwSetExpFieldType::GetSeqFieldList( SwSeqFieldList& rList )
             nullptr != ( pNd = pF->GetTextField()->GetpTextNode() ) &&
             pNd->GetNodes().IsDocNodes() )
         {
-            _SeqFieldLstElem* pNew = new _SeqFieldLstElem(
+            SeqFieldLstElem* pNew = new SeqFieldLstElem(
                     pNd->GetExpandText(),
                     static_cast<SwSetExpField*>(pF->GetField())->GetSeqNumber() );
             rList.InsertSort( pNew );
@@ -693,7 +692,7 @@ bool SwSetExpFieldType::PutValue( const uno::Any& rAny, sal_uInt16 nWhichId )
     return true;
 }
 
-bool SwSeqFieldList::InsertSort( _SeqFieldLstElem* pNew )
+bool SwSeqFieldList::InsertSort( SeqFieldLstElem* pNew )
 {
     OUStringBuffer aBuf(pNew->sDlgEntry);
     const sal_Int32 nLen = aBuf.getLength();
@@ -713,7 +712,7 @@ bool SwSeqFieldList::InsertSort( _SeqFieldLstElem* pNew )
     return bRet;
 }
 
-bool SwSeqFieldList::SeekEntry( const _SeqFieldLstElem& rNew, size_t* pP ) const
+bool SwSeqFieldList::SeekEntry( const SeqFieldLstElem& rNew, size_t* pP ) const
 {
     size_t nO = maData.size();
     size_t nU = 0;
@@ -1146,7 +1145,6 @@ void SwInputField::SetFormatField( SwFormatField& rFormatField )
 }
 
 
-
 void SwInputField::LockNotifyContentChange()
 {
     if ( GetFormatField() != nullptr )
@@ -1318,7 +1316,7 @@ void SwInputField::SetHelp(const OUString & rStr)
     aHelp = rStr;
 }
 
-OUString SwInputField::GetHelp() const
+const OUString& SwInputField::GetHelp() const
 {
     return aHelp;
 }
@@ -1328,7 +1326,7 @@ void SwInputField::SetToolTip(const OUString & rStr)
     aToolTip = rStr;
 }
 
-OUString SwInputField::GetToolTip() const
+const OUString& SwInputField::GetToolTip() const
 {
     return aToolTip;
 }

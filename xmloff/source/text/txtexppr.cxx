@@ -330,9 +330,9 @@ void XMLTextExportPropertySetMapper::ContextFontHeightFilter(
 namespace {
 
 // helper method; implementation below
-static bool lcl_IsOutlineStyle(const SvXMLExport&, const OUString&);
+bool lcl_IsOutlineStyle(const SvXMLExport&, const OUString&);
 
-static void
+void
 lcl_checkMultiProperty(XMLPropertyState *const pState,
                        XMLPropertyState *const pRelState)
 {
@@ -358,7 +358,7 @@ lcl_checkMultiProperty(XMLPropertyState *const pState,
  * Compress border attributes. If one of groupable attributes (border type, border width, padding)
  * is equal for all four side then just one general attribute will be exported.
 **/
-static void lcl_FilterBorders(
+void lcl_FilterBorders(
     XMLPropertyState* pAllBorderWidthState, XMLPropertyState* pLeftBorderWidthState,
     XMLPropertyState* pRightBorderWidthState, XMLPropertyState* pTopBorderWidthState,
     XMLPropertyState* pBottomBorderWidthState, XMLPropertyState* pAllBorderDistanceState,
@@ -498,7 +498,7 @@ static void lcl_FilterBorders(
 void XMLTextExportPropertySetMapper::ContextFilter(
     bool bEnableFoFontFamily,
     ::std::vector< XMLPropertyState >& rProperties,
-    Reference< XPropertySet > rPropSet ) const
+    const Reference< XPropertySet >& rPropSet ) const
 {
     // filter font
     XMLPropertyState *pFontNameState = nullptr;
@@ -669,6 +669,7 @@ void XMLTextExportPropertySetMapper::ContextFilter(
 
     // character background and highlight
     XMLPropertyState* pCharBackground = nullptr;
+    XMLPropertyState* pCharBackgroundTransparency = nullptr;
     XMLPropertyState* pCharHighlight = nullptr;
 
     bool bNeedsAnchor = false;
@@ -831,6 +832,7 @@ void XMLTextExportPropertySetMapper::ContextFilter(
             break;
 
         case CTF_CHAR_BACKGROUND: pCharBackground = propertyState; break;
+        case CTF_CHAR_BACKGROUND_TRANSPARENCY: pCharBackgroundTransparency = propertyState; break;
         case CTF_CHAR_HIGHLIGHT: pCharHighlight = propertyState; break;
         }
     }
@@ -991,7 +993,7 @@ void XMLTextExportPropertySetMapper::ContextFilter(
             // no wrapping: disable para-only and contour
             if( pWrapParagraphOnlyState )
                 pWrapParagraphOnlyState->mnIndex = -1;
-            // no break
+            SAL_FALLTHROUGH;
         case WrapTextMode_THROUGHT:
             // wrap through: disable only contour
             if( pWrapContourState )
@@ -1137,12 +1139,20 @@ void XMLTextExportPropertySetMapper::ContextFilter(
     // When both background attributes are available export the visible one
     if( pCharHighlight && pCharBackground )
     {
+        assert(pCharBackgroundTransparency); // always together
         sal_uInt32 nColor = COL_TRANSPARENT;
         pCharHighlight->maValue >>= nColor;
         if( nColor == COL_TRANSPARENT )
+        {
+            // actually this would not be exported as transparent anyway
+            // and we'd need another property CharHighlightTransparent for that
             pCharHighlight->mnIndex = -1;
+        }
         else
+        {
             pCharBackground->mnIndex = -1;
+            pCharBackgroundTransparency->mnIndex = -1;
+        }
     }
 
     SvXMLExportPropertyMapper::ContextFilter(bEnableFoFontFamily, rProperties, rPropSet);
@@ -1150,7 +1160,7 @@ void XMLTextExportPropertySetMapper::ContextFilter(
 
 namespace {
 
-static bool lcl_IsOutlineStyle(const SvXMLExport &rExport, const OUString & rName)
+bool lcl_IsOutlineStyle(const SvXMLExport &rExport, const OUString & rName)
 {
     Reference< XChapterNumberingSupplier >
         xCNSupplier(rExport.GetModel(), UNO_QUERY);

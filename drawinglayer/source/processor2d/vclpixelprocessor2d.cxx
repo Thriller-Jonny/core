@@ -57,7 +57,6 @@
 #include <com/sun/star/table/BorderLineStyle.hpp>
 
 
-
 using namespace com::sun::star;
 
 namespace {
@@ -260,7 +259,9 @@ namespace drawinglayer
                         fLineWidth,
                         fTransparency,
                         rSource.getLineAttribute().getLineJoin(),
-                        rSource.getLineAttribute().getLineCap()))
+                        rSource.getLineAttribute().getLineCap(),
+                        rSource.getLineAttribute().getMiterMinimumAngle()
+                        /* false bBypassAACheck, default*/))
                     {
                         bTryWorked = true;
                     }
@@ -867,7 +868,7 @@ namespace drawinglayer
                     // Detect if a single PolyPolygonColorPrimitive2D is contained; in that case,
                     // use the faster OutputDevice::DrawTransparent method
                     const primitive2d::UnifiedTransparencePrimitive2D& rUniTransparenceCandidate = static_cast< const primitive2d::UnifiedTransparencePrimitive2D& >(rCandidate);
-                    const primitive2d::Primitive2DContainer rContent = rUniTransparenceCandidate.getChildren();
+                    const primitive2d::Primitive2DContainer& rContent = rUniTransparenceCandidate.getChildren();
 
                     if(!rContent.empty())
                     {
@@ -1233,7 +1234,12 @@ namespace drawinglayer
                         static_cast<const drawinglayer::primitive2d::BorderLinePrimitive2D&>(rCandidate);
 
                     if (!tryDrawBorderLinePrimitive2DDirect(rBorder))
-                        process(rCandidate.get2DDecomposition(getViewInformation2D()));
+                    {
+                        if (rBorder.getStyle() == table::BorderLineStyle::DOUBLE)
+                            process(rBorder.createDecomposition(getViewInformation2D(), true));
+                        else
+                            process(rCandidate.get2DDecomposition(getViewInformation2D()));
+                    }
 
                     mpOutputDevice->SetAntialiasing(nAntiAliasing);
                     break;

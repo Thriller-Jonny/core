@@ -38,8 +38,8 @@ struct XclAddress
 
     inline void         Set( sal_uInt16 nCol, sal_uInt32 nRow ) { mnCol = nCol; mnRow = nRow; }
 
-    void                Read( XclImpStream& rStrm, bool bCol16Bit = true );
-    void                Write( XclExpStream& rStrm, bool bCol16Bit = true ) const;
+    void                Read( XclImpStream& rStrm );
+    void                Write( XclExpStream& rStrm ) const;
 };
 
 inline XclImpStream& operator>>( XclImpStream& rStrm, XclAddress& rXclPos )
@@ -146,10 +146,10 @@ public:
 
     /** Checks if the passed sheet index is valid.
         @param nScTab  The sheet index to check.
-        @param bWarn  true = Sets the internal flag that produces a warning box
+        Sets the internal flag that produces a warning box
             after loading/saving the file, if the sheet index is not valid.
-        @return  true = Sheet index in nScTab is valid. */
-    bool                CheckScTab( SCTAB nScTab, bool bWarn );
+    */
+    void                CheckScTab( SCTAB nScTab );
 
 protected:
     XclTracer&          mrTracer;       /// Tracer for invalid addresses.

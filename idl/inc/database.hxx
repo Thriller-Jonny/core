@@ -28,6 +28,7 @@
 
 #include <rtl/ustring.hxx>
 #include <set>
+#include <exception>
 
 class SvCommand;
 
@@ -42,15 +43,26 @@ public:
                 : nLine(nL), nColumn(nC) {}
 
     const OString&  GetText() const { return aText; }
-    void SetText( const OString& rT ) { aText = rT; }
+    void            SetText( const OString& rT ) { aText = rT; }
     bool            IsError() const { return nLine != 0; }
     SvIdlError &    operator = ( const SvIdlError & rRef )
-    { aText   = rRef.aText;
-      nLine   = rRef.nLine;
-      nColumn = rRef.nColumn;
-      return *this;
-    }
+                    {
+                        aText   = rRef.aText;
+                        nLine   = rRef.nLine;
+                        nColumn = rRef.nColumn;
+                        return *this;
+                    }
 };
+
+class SvParseException : public std::exception
+{
+public:
+    SvIdlError aError;
+    SvParseException( SvTokenStream & rInStm, const OString& rError );
+    SvParseException( const OString& rError, SvToken& rTok );
+};
+
+
 
 class SvIdlDataBase
 {
@@ -61,15 +73,14 @@ class SvIdlDataBase
     StringList                  aIdFileList;
     SvStringHashTable *         pIdTable;
 
-    SvMetaTypeMemberList        aTypeList;
-    SvMetaClassMemberList       aClassList;
-    SvMetaModuleMemberList      aModuleList;
-    SvMetaAttributeMemberList   aAttrList;
-    SvMetaTypeMemberList        aTmpTypeList; // not persistent
+    SvRefMemberList<SvMetaType *>      aTypeList;
+    SvRefMemberList<SvMetaClass *>     aClassList;
+    SvRefMemberList<SvMetaModule *>    aModuleList;
+    SvRefMemberList<SvMetaSlot *>      aSlotList;
+    SvRefMemberList<SvMetaObject *>    aContextStack;
 
 protected:
-    ::std::set< OUString > m_DepFiles;
-    SvMetaObjectMemberStack     aContextStack;
+    ::std::set< OUString >      m_DepFiles;
     OUString                    aPath;
     SvIdlError                  aError;
     void WriteReset()
@@ -83,58 +94,54 @@ public:
                 explicit SvIdlDataBase( const SvCommand& rCmd );
                 ~SvIdlDataBase();
 
-    SvMetaAttributeMemberList&  GetAttrList() { return aAttrList; }
-    SvMetaTypeMemberList &      GetTypeList();
-    SvMetaClassMemberList &     GetClassList()  { return aClassList; }
-    SvMetaModuleMemberList &    GetModuleList() { return aModuleList; }
-    SvMetaModule *              GetModule( const OString& rName );
+    SvRefMemberList<SvMetaSlot *>&     GetSlotList() { return aSlotList; }
+    SvRefMemberList<SvMetaType *>&     GetTypeList();
+    SvRefMemberList<SvMetaClass *>&    GetClassList()  { return aClassList; }
+    SvRefMemberList<SvMetaModule *>&   GetModuleList() { return aModuleList; }
 
     // list of used types while writing
-    SvMetaTypeMemberList    aUsedTypes;
-    OString                 aIFaceName;
+    SvRefMemberList<SvMetaType *>    aUsedTypes;
+    OString                          aIFaceName;
 
     void                    StartNewFile( const OUString& rName );
     void                    SetExportFile( const OUString& rName )
                             { aExportFile = rName; }
-    void                    AppendAttr( SvMetaAttribute *pSlot );
+    void                    AppendSlot( SvMetaSlot *pSlot );
     const SvIdlError &      GetError() const { return aError; }
     void                    SetError( const SvIdlError & r )
                             { aError = r; }
 
     const OUString &        GetPath() const { return aPath; }
-    SvMetaObjectMemberStack & GetStack()      { return aContextStack; }
+    void                    SetPath(const OUString &s) { aPath = s; }
+    SvRefMemberList<SvMetaObject *>& GetStack() { return aContextStack; }
 
     void                    Write(const OString& rText);
-    static void             WriteError(const OString& rErrWrn,
-                                    const OString& rFileName,
-                                    const OString& rErrorText,
-                                    sal_uLong nRow = 0, sal_uLong nColumn = 0 );
     void                    WriteError( SvTokenStream & rInStm );
     void                    SetError( const OString& rError, SvToken& rTok );
+    void                    SetAndWriteError( SvTokenStream & rInStm, const OString& rError );
     void                    Push( SvMetaObject * pObj );
     sal_uInt32              GetUniqueId() { return ++nUniqueId; }
     bool                    FindId( const OString& rIdName, sal_uLong * pVal );
     bool                    InsertId( const OString& rIdName, sal_uLong nVal );
-    bool                    ReadIdFile( const OUString & rFileName );
+    bool                    ReadIdFile( const OString& rFileName );
 
     SvMetaType *            FindType( const OString& rName );
-    static SvMetaType *     FindType( const SvMetaType *, SvMetaTypeMemberList & );
+    static SvMetaType *     FindType( const SvMetaType *, SvRefMemberList<SvMetaType *>& );
 
     SvMetaType *            ReadKnownType( SvTokenStream & rInStm );
     SvMetaAttribute *       ReadKnownAttr( SvTokenStream & rInStm,
                                             SvMetaType * pType = nullptr );
-    SvMetaAttribute *       SearchKnownAttr( const SvIdentifier& );
+    SvMetaAttribute *       FindKnownAttr( const SvIdentifier& );
     SvMetaClass *           ReadKnownClass( SvTokenStream & rInStm );
+    SvMetaClass *           FindKnownClass( const OString& aName );
     void AddDepFile(OUString const& rFileName);
-    bool WriteDepFile(SvFileStream & rStream, OUString const& rTarget);
+    void WriteDepFile(SvFileStream & rStream, OUString const& rTarget);
 };
 
 class SvIdlWorkingBase : public SvIdlDataBase
 {
 public:
                 explicit SvIdlWorkingBase( const SvCommand& rCmd );
-
-    bool        ReadSvIdl( SvTokenStream &, bool bImported, const OUString & rPath );
 
     bool        WriteSfx( SvStream & );
 };

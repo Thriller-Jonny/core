@@ -85,7 +85,7 @@ public:
 
     void                    CompleteRedraw( OutputDevice* pOutDev, const vcl::Region& rReg, sdr::contact::ViewObjectContactRedirector* pRedirector = nullptr) override;
 
-    virtual bool            GetAttributes( SfxItemSet& rTargetSet, bool bOnlyHardAttr = false ) const;
+    virtual void            GetAttributes( SfxItemSet& rTargetSet, bool bOnlyHardAttr = false ) const;
     virtual bool            SetAttributes(const SfxItemSet& rSet, bool bReplaceAll = false);
     virtual void            MarkListHasChanged() override;
     virtual void            ModelHasChanged() override;
@@ -142,22 +142,18 @@ public:
     bool                    InsertMetaFile( TransferableDataHelper& rDataHelper,
                                             const Point& rInsertPos,
                                             ImageMap* pImageMap, bool bOptimize );
-
     SdrGrafObj*             InsertGraphic( const Graphic& rGraphic,
                                            sal_Int8& rAction, const Point& rPos,
                                            SdrObject* pSelectedObj, ImageMap* pImageMap );
-    SdrMediaObj*            InsertMediaURL( const OUString& rMediaURL, sal_Int8& rAction,
+    void                    InsertMediaURL( const OUString& rMediaURL, sal_Int8& rAction,
                                             const Point& rPos, const Size& rSize,
                                             bool const bLink );
-
-    SdrMediaObj*            Insert3DModelURL( const OUString& rModelURL, sal_Int8& rAction,
-                                              const Point& rPos, const Size& rSize,
-                                              bool const bLink );
-
+    void                    Insert3DModelURL( const OUString& rModelURL, sal_Int8& rAction,
+                                              const Point& rPos, const Size& rSize );
     SdrMediaObj*            InsertMediaObj( const OUString& rURL, const OUString& rMimeType, sal_Int8& rAction,
                                             const Point& rPos, const Size& rSize );
 
-    bool PasteRTFTable( ::tools::SvRef<SotStorageStream> xStm, SdrPage* pPage, SdrInsertFlags nPasteOptions );
+    bool PasteRTFTable( const ::tools::SvRef<SotStorageStream>& xStm, SdrPage* pPage, SdrInsertFlags nPasteOptions );
 
     bool                    IsPresObjSelected(bool bOnPage = true, bool bOnMasterPage = true, bool bCheckPresObjListOnly = false, bool bCheckLayoutOnly = false) const;
 
@@ -183,8 +179,7 @@ public:
 
     virtual SdrModel*   GetMarkedObjModel() const override;
     virtual bool Paste(
-        const SdrModel& rMod, const Point& rPos, SdrObjList* pLst, SdrInsertFlags nOptions,
-        const OUString& rSrcShellID, const OUString& rDestShellID ) override;
+        const SdrModel& rMod, const Point& rPos, SdrObjList* pLst, SdrInsertFlags nOptions) override;
 
     using SdrExchangeView::Paste;
 
@@ -243,8 +238,8 @@ protected:
     DECL_LINK_TYPED( OnParagraphInsertedHdl, ::Outliner *, void );
     DECL_LINK_TYPED( OnParagraphRemovingHdl, ::Outliner *, void );
 
-    virtual void OnBeginPasteOrDrop( PasteOrDropInfos* pInfos ) override;
-    virtual void OnEndPasteOrDrop( PasteOrDropInfos* pInfos ) override;
+    virtual void OnBeginPasteOrDrop( PasteOrDropInfos* pInfo ) override;
+    virtual void OnEndPasteOrDrop( PasteOrDropInfos* pInfo ) override;
 
     SdDrawDocument&         mrDoc;
     DrawDocShell*           mpDocSh;

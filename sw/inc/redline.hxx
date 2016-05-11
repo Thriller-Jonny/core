@@ -27,7 +27,6 @@
 
 #include <IDocumentRedlineAccess.hxx>
 
-#include <boost/noncopyable.hpp>
 #include <svl/smplhint.hxx>
 #include <vector>
 
@@ -198,10 +197,10 @@ public:
     SwRangeRedline( const SwRedlineData& rData, const SwPaM& rPam );
     SwRangeRedline( const SwRedlineData& rData, const SwPosition& rPos );
     // For sw3io: pData is taken over!
-    SwRangeRedline(SwRedlineData* pData, const SwPosition& rPos, bool bVsbl,
-               bool bDelLP, bool bIsPD) :
+    SwRangeRedline(SwRedlineData* pData, const SwPosition& rPos,
+               bool bDelLP) :
         SwPaM( rPos ), pRedlineData( pData ), pContentSect( nullptr ),
-        bDelLastPara( bDelLP ), bIsLastParaDelete( bIsPD ), bIsVisible( bVsbl )
+        bDelLastPara( bDelLP ), bIsLastParaDelete( false ), bIsVisible( true )
     {}
     SwRangeRedline( const SwRangeRedline& );
     virtual ~SwRangeRedline();
@@ -227,8 +226,6 @@ public:
     bool HasValidRange() const;
 
     const SwRedlineData& GetRedlineData(sal_uInt16 nPos = 0) const;
-    bool operator==( const SwRedlineData& rCmp ) const
-        { return *pRedlineData == rCmp; }
     bool operator!=( const SwRedlineData& rCmp ) const
         { return *pRedlineData != rCmp; }
     void SetAutoFormatFlag()               { pRedlineData->SetAutoFormatFlag(); }
@@ -261,7 +258,7 @@ public:
     // hide the Del-Redlines via Copy and Delete.
     // Otherwise at Move the attribution would be handled incorrectly.
     // All other callers must always give 0.
-    void CallDisplayFunc(sal_uInt16 nLoop, size_t nMyPos);
+    void CallDisplayFunc(size_t nMyPos);
     void Show(sal_uInt16 nLoop , size_t nMyPos);
     void Hide(sal_uInt16 nLoop , size_t nMyPos);
     void ShowOriginal(sal_uInt16 nLoop, size_t nMyPos);
@@ -280,27 +277,28 @@ public:
     bool PopData();
 
     /**
-       Returns textual description of this a redline data element of
+       Returns textual description of a redline data element of
        this redline.
-
-       @param nPos index of the redline data element to describe
 
        The textual description of the selected element contains the
        kind of redline and the possibly shortened text of the redline.
 
        @return textual description of the selected redline data element
      */
-    OUString GetDescr(sal_uInt16 nPos = 0);
+    OUString GetDescr();
 
-    bool operator==( const SwRangeRedline& ) const;
     bool operator<( const SwRangeRedline& ) const;
     void dumpAsXml(struct _xmlTextWriter* pWriter) const;
 };
 
 /// Base object for 'Redlines' that are not of 'Ranged' type (like table row insert\delete)
-class SW_DLLPUBLIC SwExtraRedline : private boost::noncopyable
+class SW_DLLPUBLIC SwExtraRedline
 {
+private:
+    SwExtraRedline(SwExtraRedline const&) = delete;
+    SwExtraRedline& operator=(SwExtraRedline const&) = delete;
 public:
+    SwExtraRedline() = default;
     virtual ~SwExtraRedline();
 };
 

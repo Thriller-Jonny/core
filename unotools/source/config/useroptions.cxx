@@ -24,7 +24,6 @@
 #include <unotools/syslocale.hxx>
 #include <unotools/configmgr.hxx>
 #include <com/sun/star/uno/Any.hxx>
-#include <com/sun/star/uno/Sequence.hxx>
 #include <osl/mutex.hxx>
 #include <rtl/instance.hxx>
 #include "itemholder1.hxx"
@@ -130,7 +129,7 @@ SvtUserOptions::Impl::Impl() :
             comphelper::ConfigurationHelper::openConfig(
                 comphelper::getProcessComponentContext(),
                 "org.openoffice.UserProfile/Data",
-                comphelper::ConfigurationHelper::E_STANDARD
+                comphelper::EConfigurationModes::Standard
             ),
             uno::UNO_QUERY
         );

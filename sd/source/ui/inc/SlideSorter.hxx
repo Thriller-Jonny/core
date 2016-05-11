@@ -25,8 +25,6 @@
 #include <com/sun/star/frame/XController.hpp>
 #include <cppuhelper/weakref.hxx>
 #include <sfx2/viewfrm.hxx>
-#include <boost/noncopyable.hpp>
-#include <boost/current_function.hpp>
 #include <vcl/scrbar.hxx>
 #include "sddllapi.h"
 #include <memory>
@@ -67,11 +65,14 @@ namespace sd { namespace slidesorter {
     Note that this class is not in its final state.
 */
 class SlideSorter
-    : private ::boost::noncopyable
 {
     friend class controller::SlotManager;
 public:
     virtual ~SlideSorter();
+
+    /// Forbid copy construction and copy assignment
+    SlideSorter(const SlideSorter&) = delete;
+    SlideSorter& operator=(const SlideSorter&) = delete;
 
     /** Return whether the called SlideSorter object is valid and calling
         its Get(Model,View,Controller) methods is safe.  When <FALSE/> is
@@ -119,21 +120,21 @@ public:
 
     /** Return the control of the vertical scroll bar.
     */
-    VclPtr<ScrollBar> GetVerticalScrollBar() const { return mpVerticalScrollBar;}
+    const VclPtr<ScrollBar>& GetVerticalScrollBar() const { return mpVerticalScrollBar;}
 
     /** Return the control of the horizontal scroll bar.
     */
-    VclPtr<ScrollBar> GetHorizontalScrollBar() const { return mpHorizontalScrollBar;}
+    const VclPtr<ScrollBar>& GetHorizontalScrollBar() const { return mpHorizontalScrollBar;}
 
     /** Return the scroll bar filler that paints the little square that is
         enclosed by the two scroll bars.
     */
-    VclPtr<ScrollBarBox> GetScrollBarFiller (void) const { return mpScrollBarBox;}
+    const VclPtr<ScrollBarBox>& GetScrollBarFiller (void) const { return mpScrollBarBox;}
 
     /** Return the content window.  This is a sibling and is geometrically
         enclosed by the scroll bars.
     */
-    VclPtr<sd::Window> GetContentWindow() const { return mpContentWindow;}
+    const VclPtr<sd::Window>& GetContentWindow() const { return mpContentWindow;}
 
     model::SlideSorterModel& GetModel() const;
 

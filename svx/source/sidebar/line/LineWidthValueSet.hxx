@@ -28,17 +28,19 @@ class LineWidthValueSet
     : public ValueSet
 {
 public:
-    LineWidthValueSet (vcl::Window* pParent, const ResId& rResId);
+    explicit LineWidthValueSet(vcl::Window* pParent);
     virtual ~LineWidthValueSet();
     virtual void dispose() override;
 
     void SetUnit(OUString* str);
     void SetSelItem(sal_uInt16 nSel);
     sal_uInt16 GetSelItem() { return nSelItem;}
-    void SetImage(Image img);
+    void SetImage(const Image& img);
     void SetCusEnable(bool bEnable);
 
     virtual void    UserDraw( const UserDrawEvent& rUDEvt ) override;
+    virtual void    Resize() override;
+    virtual Size    GetOptimalSize() const override;
 
 protected:
     VclPtr<VirtualDevice> pVDev;

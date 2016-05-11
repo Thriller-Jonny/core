@@ -86,6 +86,7 @@ enum SwDocumentSettingsPropertyHandles
     HANDLE_PRINTER_INDEPENDENT_LAYOUT,
     HANDLE_IS_LABEL_DOC,
     HANDLE_IS_ADD_FLY_OFFSET,
+    HANDLE_IS_ADD_VERTICAL_FLY_OFFSET,
     HANDLE_IS_ADD_EXTERNAL_LEADING,
     HANDLE_OLD_NUMBERING,
     HANDLE_OUTLINELEVEL_YIELDS_NUMBERING,
@@ -130,6 +131,7 @@ enum SwDocumentSettingsPropertyHandles
     HANDLE_APPLY_PARAGRAPH_MARK_FORMAT_TO_NUMBERING,
     HANDLE_PROP_LINE_SPACING_SHRINKS_FIRST_LINE,
     HANDLE_SUBTRACT_FLYS,
+    HANDLE_BROWSE_MODE,
 };
 
 static MasterPropertySetInfo * lcl_createSettingsInfo()
@@ -159,6 +161,7 @@ static MasterPropertySetInfo * lcl_createSettingsInfo()
         { OUString("PrinterIndependentLayout"),   HANDLE_PRINTER_INDEPENDENT_LAYOUT,      cppu::UnoType<sal_Int16>::get(),             0},
         { OUString("IsLabelDocument"),            HANDLE_IS_LABEL_DOC,                    cppu::UnoType<bool>::get(),           0},
         { OUString("AddFrameOffsets"),            HANDLE_IS_ADD_FLY_OFFSET,               cppu::UnoType<bool>::get(),           0},
+        { OUString("AddVerticalFrameOffsets"),    HANDLE_IS_ADD_VERTICAL_FLY_OFFSET,      cppu::UnoType<bool>::get(),           0},
         { OUString("AddExternalLeading"),         HANDLE_IS_ADD_EXTERNAL_LEADING,         cppu::UnoType<bool>::get(),           0},
         { OUString("UseOldNumbering"),            HANDLE_OLD_NUMBERING,                   cppu::UnoType<bool>::get(),           0},
         { OUString("OutlineLevelYieldsNumbering"), HANDLE_OUTLINELEVEL_YIELDS_NUMBERING, cppu::UnoType<bool>::get(),           0},
@@ -203,6 +206,7 @@ static MasterPropertySetInfo * lcl_createSettingsInfo()
         { OUString("ApplyParagraphMarkFormatToNumbering"), HANDLE_APPLY_PARAGRAPH_MARK_FORMAT_TO_NUMBERING, cppu::UnoType<bool>::get(), 0},
         { OUString("PropLineSpacingShrinksFirstLine"),       HANDLE_PROP_LINE_SPACING_SHRINKS_FIRST_LINE,         cppu::UnoType<bool>::get(),           0},
         { OUString("SubtractFlysAnchoredAtFlys"),       HANDLE_SUBTRACT_FLYS,         cppu::UnoType<bool>::get(),           0},
+        { OUString("InBrowseMode"), HANDLE_BROWSE_MODE, cppu::UnoType<bool>::get(), 0},
 /*
  * As OS said, we don't have a view when we need to set this, so I have to
  * find another solution before adding them to this property set - MTG
@@ -235,7 +239,6 @@ static MasterPropertySetInfo * lcl_createSettingsInfo()
 SwXDocumentSettings::SwXDocumentSettings ( SwXTextDocument * pModel )
 : MasterPropertySet ( lcl_createSettingsInfo (),
                       &Application::GetSolarMutex () )
-, mxModel ( pModel )
 , mpModel ( pModel )
 , mpDocSh ( nullptr )
 , mpDoc ( nullptr )
@@ -553,6 +556,12 @@ void SwXDocumentSettings::_setSingleValue( const comphelper::PropertyInfo & rInf
             mpDoc->getIDocumentSettingAccess().set(DocumentSettingId::ADD_FLY_OFFSETS, bTmp);
         }
         break;
+        case HANDLE_IS_ADD_VERTICAL_FLY_OFFSET:
+        {
+            bool bTmp = *static_cast<sal_Bool const *>(rValue.getValue());
+            mpDoc->getIDocumentSettingAccess().set(DocumentSettingId::ADD_VERTICAL_FLY_OFFSETS, bTmp);
+        }
+        break;
         case HANDLE_IS_ADD_EXTERNAL_LEADING:
         {
             bool bTmp = *static_cast<sal_Bool const *>(rValue.getValue());
@@ -837,6 +846,15 @@ void SwXDocumentSettings::_setSingleValue( const comphelper::PropertyInfo & rInf
             }
         }
         break;
+        case HANDLE_BROWSE_MODE:
+        {
+            bool bTmp;
+            if (rValue >>= bTmp)
+            {
+                mpDoc->getIDocumentSettingAccess().set(DocumentSettingId::BROWSE_MODE, bTmp);
+            }
+        }
+        break;
         default:
             throw UnknownPropertyException();
     }
@@ -1019,6 +1037,11 @@ void SwXDocumentSettings::_getSingleValue( const comphelper::PropertyInfo & rInf
         case HANDLE_IS_ADD_FLY_OFFSET:
         {
             rValue <<= mpDoc->getIDocumentSettingAccess().get(DocumentSettingId::ADD_FLY_OFFSETS);
+        }
+        break;
+        case HANDLE_IS_ADD_VERTICAL_FLY_OFFSET:
+        {
+            rValue <<= mpDoc->getIDocumentSettingAccess().get(DocumentSettingId::ADD_VERTICAL_FLY_OFFSETS);
         }
         break;
         case HANDLE_IS_ADD_EXTERNAL_LEADING:
@@ -1234,6 +1257,11 @@ void SwXDocumentSettings::_getSingleValue( const comphelper::PropertyInfo & rInf
         case HANDLE_SUBTRACT_FLYS:
         {
             rValue <<= mpDoc->getIDocumentSettingAccess().get(DocumentSettingId::SUBTRACT_FLYS);
+        }
+        break;
+        case HANDLE_BROWSE_MODE:
+        {
+            rValue <<= mpDoc->getIDocumentSettingAccess().get(DocumentSettingId::BROWSE_MODE);
         }
         break;
         default:

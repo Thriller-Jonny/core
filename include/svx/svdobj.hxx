@@ -187,7 +187,6 @@ class SVX_DLLPUBLIC SdrObjUserData
 protected:
     sal_uInt32                      nInventor;
     sal_uInt16                      nIdentifier;
-    sal_uInt16                      nVersion;
 
 private:
     void operator=(const SdrObjUserData& rData) = delete;
@@ -195,7 +194,7 @@ private:
     bool operator!=(const SdrObjUserData& rData) const = delete;
 
 public:
-    SdrObjUserData(sal_uInt32 nInv, sal_uInt16 nId, sal_uInt16 nVer);
+    SdrObjUserData(sal_uInt32 nInv, sal_uInt16 nId);
     SdrObjUserData(const SdrObjUserData& rData);
     virtual ~SdrObjUserData();
 
@@ -302,7 +301,7 @@ protected:
     SdrPage*                    pPage;
     SdrModel*                   pModel;
     SdrObjUserCall*             pUserCall;
-    SdrObjPlusData*             pPlusData;    // Broadcaster, UserData, connektors, ... (this is the Bitsack)
+    SdrObjPlusData*             pPlusData;    // Broadcaster, UserData, connectors, ... (this is the Bitsack)
 
     sal_uInt32                  nOrdNum;      // order number of the object in the list
 
@@ -370,18 +369,18 @@ public:
     const double* GetRelativeHeight() const;
     sal_Int16 GetRelativeHeightRelation() const;
     // evil calc grid/shape drawlayer syncing
-    Point GetGridOffset() const { return aGridOffset; }
+    const Point& GetGridOffset() const { return aGridOffset; }
     void SetGridOffset( const Point& rGridOffset ){ aGridOffset = rGridOffset; }
 protected:
     Rectangle ImpDragCalcRect(const SdrDragStat& rDrag) const;
 
     // for GetDragComment
-    void ImpTakeDescriptionStr(sal_uInt16 nStrCacheID, OUString& rStr, sal_uInt16 nVal=0) const;
+    void ImpTakeDescriptionStr(sal_uInt16 nStrCacheID, OUString& rStr) const;
 
     void ImpForcePlusData();
 
-    OUString GetAngleStr(long nAngle, bool bNoDegChar = false) const;
-    OUString GetMetrStr(long nVal, MapUnit eWantMap=MAP_MM, bool bNoUnitChars = false) const;
+    OUString GetAngleStr(long nAngle) const;
+    OUString GetMetrStr(long nVal) const;
 
     /// @param bNotMyself = true: set only ObjList to dirty, don't mark this object as dirty.
     ///
@@ -522,15 +521,13 @@ public:
 
     // Tooling for painting a single object to a OutputDevice. This will be needed as long
     // as not all painting is changed to use DrawContact objects.
-    bool SingleObjectPainter(OutputDevice& rOut) const;
+    void SingleObjectPainter(OutputDevice& rOut) const;
     bool LineGeometryUsageIsNecessary() const;
 
     // Returns a copy of the object. Every inherited class must reimplement this (in class Foo
     // it should be sufficient to do "virtual Foo* Clone() const { return CloneHelper< Foo >(); }".
     // Note that this function uses operator= internally.
     virtual SdrObject* Clone() const;
-
-    virtual SdrObject* CloneWithShellIDs( const OUString& rSrcShellID, const OUString& rDestShellID ) const;
 
     // implemented mainly for the purposes of Clone()
     SdrObject& operator=(const SdrObject& rObj);
@@ -711,7 +708,7 @@ public:
     void SetMergedItemSetAndBroadcast(const SfxItemSet& rSet, bool bClearAllItems = false);
 
     // NotPersistAttr for Layer, ObjName, geometrical transformations etc.
-    void TakeNotPersistAttr(SfxItemSet& rAttr, bool bMerge) const;
+    void TakeNotPersistAttr(SfxItemSet& rAttr) const;
     void ApplyNotPersistAttr(const SfxItemSet& rAttr);
     void NbcApplyNotPersistAttr(const SfxItemSet& rAttr);
 
@@ -878,7 +875,7 @@ public:
 
     // access to the UNO representation of the shape
     virtual css::uno::Reference< css::uno::XInterface > getUnoShape();
-    css::uno::WeakReference< css::uno::XInterface > getWeakUnoShape() const { return maWeakUnoShape; }
+    const css::uno::WeakReference< css::uno::XInterface >& getWeakUnoShape() const { return maWeakUnoShape; }
 
     static SdrObject* getSdrObjectFromXShape( const css::uno::Reference< css::uno::XInterface >& xInt );
 
@@ -932,7 +929,7 @@ public:
     // the following methods are used to control it;
     // usually this data makes no sense after the import is finished, since the object
     // might be resized
-    Rectangle GetBLIPSizeRectangle() const { return maBLIPSizeRectangle;}
+    const Rectangle& GetBLIPSizeRectangle() const { return maBLIPSizeRectangle;}
     void SetBLIPSizeRectangle( const Rectangle& aRect );
 
     /// @see mbDoNotInsertIntoPageAutomatically

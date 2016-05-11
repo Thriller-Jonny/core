@@ -44,7 +44,6 @@ namespace rptui
     class OSectionView;
 
 
-
     struct RectangleLess : public ::std::binary_function< Rectangle, Rectangle, bool>
     {
         enum CompareMode { POS_LEFT,POS_RIGHT,POS_UPPER,POS_DOWN,POS_CENTER_HORIZONTAL,POS_CENTER_VERTICAL };
@@ -120,7 +119,7 @@ namespace rptui
         /** returns the iterator at pos _nPos or the end()
         */
         TSectionsMap::iterator getIteratorAtPos(sal_uInt16 _nPos);
-        void collectRectangles(TRectangleMap& _rMap,bool _bBoundRects);
+        void collectRectangles(TRectangleMap& _rMap);
         static void collectBoundResizeRect(const TRectangleMap& _rSortRectangles,sal_Int32 _nControlModification,bool _bAlignAtSection,bool _bBoundRects,Rectangle& _rBound,Rectangle& _rResize);
         void impl_resizeSectionWindow(OSectionWindow& _rSectionWindow,Point& _rStartPoint,bool _bSet);
 
@@ -184,7 +183,7 @@ namespace rptui
         inline bool     empty() const { return m_aSections.empty(); }
         void            SetMode( DlgEdMode m_eMode );
         void            SetInsertObj( sal_uInt16 eObj,const OUString& _sShapeType = OUString());
-        OUString   GetInsertObjString() const { return m_sShapeType;}
+        const OUString& GetInsertObjString() const { return m_sShapeType;}
         /** copies the current selection in this section
         */
         void Copy();
@@ -243,7 +242,7 @@ namespace rptui
 
         /** align all marked objects in all sections
         */
-        void alignMarkedObjects(sal_Int32 _nControlModification,bool _bAlignAtSection, bool bBoundRects = false);
+        void alignMarkedObjects(sal_Int32 _nControlModification,bool _bAlignAtSection);
 
         /** creates a default object
         *
@@ -258,7 +257,7 @@ namespace rptui
         *
         * \return \member m_sShapeType
         */
-        inline OUString getShapeType() const { return m_sShapeType; }
+        const OUString& getShapeType() const { return m_sShapeType; }
 
         /** returns the current position in the list
         */

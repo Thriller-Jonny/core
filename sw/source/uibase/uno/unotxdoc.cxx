@@ -38,6 +38,8 @@
 #include <viewsh.hxx>
 #include <pvprtdat.hxx>
 #include <printdata.hxx>
+#include <pagefrm.hxx>
+#include <rootfrm.hxx>
 #include <svl/stritem.hxx>
 #include <unotxdoc.hxx>
 #include <svl/numuno.hxx>
@@ -72,7 +74,7 @@
 #include <globals.hrc>
 #include <unomid.h>
 #include <unotools/printwarningoptions.hxx>
-#include <com/sun/star/util/SearchOptions.hpp>
+#include <com/sun/star/util/SearchOptions2.hpp>
 #include <com/sun/star/lang/ServiceNotRegisteredException.hpp>
 #include <com/sun/star/lang/DisposedException.hpp>
 #include <com/sun/star/util/XNumberFormatsSupplier.hpp>
@@ -114,6 +116,7 @@
 #include <osl/file.hxx>
 #include <comphelper/storagehelper.hxx>
 #include <cppuhelper/supportsservice.hxx>
+#include <unotools/saveopt.hxx>
 
 #include <EnhancedPDFExportHelper.hxx>
 #include <numrule.hxx>
@@ -137,7 +140,6 @@
 #include <PostItMgr.hxx>
 
 #include <svtools/langtab.hxx>
-#include <svtools/miscopt.hxx>
 #include <map>
 #include <set>
 #include <vector>
@@ -188,18 +190,36 @@ static SwPrintUIOptions * lcl_GetPrintUIOptions(
 
     // Get current page number
     sal_uInt16 nCurrentPage = 1;
-    SwWrtShell* pSh = pDocShell->GetWrtShell();
+    const SwWrtShell* pSh = pDocShell->GetWrtShell();
+    const SwRootFrame *pFrame = nullptr;
     if (pSh)
     {
         SwPaM* pShellCursor = pSh->GetCursor();
         nCurrentPage = pShellCursor->GetPageNum();
+        pFrame = pSh->GetLayout();
     }
     else if (!bSwSrcView)
     {
         const SwPagePreview* pPreview = dynamic_cast< const SwPagePreview* >(pView);
         OSL_ENSURE(pPreview, "Unexpected type of the view shell");
         if (pPreview)
+        {
             nCurrentPage = pPreview->GetSelectedPage();
+            pFrame = pPreview->GetViewShell()->GetLayout();
+        }
+    }
+
+    // If blanks are skipped, account for them in initial page range value
+    if (pFrame && !rPrintData.IsPrintEmptyPages())
+    {
+        sal_uInt16 nMax = nCurrentPage;
+        const SwPageFrame *pPage = dynamic_cast<const SwPageFrame*>(pFrame->Lower());
+        for ( ; nMax-- > 0; )
+        {
+            if (pPage->Frame().Height() == 0)
+                nCurrentPage--;
+            pPage = static_cast<const SwPageFrame*>(pPage->GetNext());
+        }
     }
     return new SwPrintUIOptions( nCurrentPage, bWebDoc, bSwSrcView, bHasSelection, bHasPostIts, rPrintData );
 }
@@ -235,10 +255,10 @@ static void lcl_DisposeView( SfxViewFrame* pToClose, SwDocShell* pDocShell )
 class SwXTextDocument::Impl
 {
 private:
-    ::osl::Mutex m_Mutex; // just for OInterfaceContainerHelper
+    ::osl::Mutex m_Mutex; // just for OInterfaceContainerHelper2
 
 public:
-    ::cppu::OInterfaceContainerHelper m_RefreshListeners;
+    ::comphelper::OInterfaceContainerHelper2 m_RefreshListeners;
 
     Impl() : m_RefreshListeners(m_Mutex) { }
 
@@ -735,7 +755,7 @@ sal_Int32 SwXTextDocument::replaceAll(const Reference< util::XSearchDescriptor >
 
     int eRanges(FND_IN_BODY|FND_IN_SELALL);
 
-    util::SearchOptions aSearchOpt;
+    util::SearchOptions2 aSearchOpt;
     pSearch->FillSearchOptions( aSearchOpt );
 
     SwDocPositions eStart = pSearch->bBack ? DOCPOS_END : DOCPOS_START;
@@ -858,7 +878,7 @@ SwUnoCursor* SwXTextDocument::FindAny(const Reference< util::XSearchDescriptor >
                             rRangeNode.FindFooterStartNode() ;
     }
 
-    util::SearchOptions aSearchOpt;
+    util::SearchOptions2 aSearchOpt;
     pSearch->FillSearchOptions( aSearchOpt );
 
 /**
@@ -2764,7 +2784,7 @@ uno::Sequence< beans::PropertyValue > SAL_CALL SwXTextDocument::getRenderer(
         aRenderer[0].Name  = "PageSize";
         aRenderer[0].Value <<= aPageSize;
         aRenderer[1].Name  = "PageIncludesNonprintableArea";
-        aRenderer[1].Value <<= sal_True;
+        aRenderer[1].Value <<= true;
         if (aPreferredPageSize.Width && aPreferredPageSize.Height)
         {
             ++nLen;
@@ -2959,7 +2979,7 @@ void SAL_CALL SwXTextDocument::render(
 
                 if(pVwSh && pOut && m_pRenderData->HasSwPrtOptions())
                 {
-                    const OUString aPageRange  = m_pPrintUIOptions->getStringValue( "PageRange", OUString() );
+                    const OUString aPageRange  = m_pPrintUIOptions->getStringValue( "PageRange" );
                     const bool bFirstPage           = m_pPrintUIOptions->getBoolValue( "IsFirstPage" );
                     bool bIsSkipEmptyPages          = !m_pPrintUIOptions->IsPrintEmptyPages( bIsPDFExport );
 
@@ -3076,7 +3096,7 @@ uno::Reference< util::XCloneable > SwXTextDocument::createClone(  ) throw (uno::
     // SfxObjectShellRef is used here, since the model should control object lifetime after creation
     // and thus SfxObjectShellLock is not allowed here
     // the model holds reference to the shell, so the shell will not destructed at the end of method
-    SfxObjectShellRef pShell = pDocShell->GetDoc()->CreateCopy(false);
+    SfxObjectShellRef pShell = pDocShell->GetDoc()->CreateCopy(false, false);
     uno::Reference< frame::XModel > xNewModel = pShell->GetModel();
     uno::Reference< embed::XStorage > xNewStorage = ::comphelper::OStorageHelper::GetTemporaryStorage( );
     uno::Sequence< beans::PropertyValue > aTempMediaDescriptor;
@@ -3166,6 +3186,16 @@ bool SwXTextDocument::isMimeTypeSupported()
     return aDataHelper.GetXTransferable().is() && SwTransferable::IsPaste(*pWrtShell, aDataHelper);
 }
 
+void SwXTextDocument::setClientVisibleArea(const Rectangle& rRectangle)
+{
+    SwView* pView = pDocShell->GetView();
+    if (!pView)
+        return;
+
+    // set the PgUp/PgDown offset
+    pView->ForcePageUpDownOffset(2 * rRectangle.GetHeight() / 3);
+}
+
 Pointer SwXTextDocument::getPointer()
 {
     SolarMutexGuard aGuard;
@@ -3199,15 +3229,20 @@ OUString SwXTextDocument::getPartName(int nPart)
     return OUString(SW_RES(STR_PAGE)) + OUString::number(nPart + 1);
 }
 
+OUString SwXTextDocument::getPartHash(int nPart)
+{
+    SolarMutexGuard aGuard;
+    OUString sPart(OUString(SW_RES(STR_PAGE)) + OUString::number(nPart + 1));
+
+    return OUString::number(sPart.hashCode());
+}
+
 void SwXTextDocument::initializeForTiledRendering(const css::uno::Sequence<css::beans::PropertyValue>& rArguments)
 {
     SolarMutexGuard aGuard;
 
-    // Call setTiledRendering() first, so that when we change the view layout,
-    // we already don't center the pages.
     SwDoc* pDoc = pDocShell->GetDoc();
     SwViewShell* pViewShell = pDoc->getIDocumentLayoutAccess().GetCurrentViewShell();
-    pViewShell->setTiledRendering(true);
 
     bool      bBookMode = false;
     sal_Int16 nColumns = 1;
@@ -3226,6 +3261,8 @@ void SwXTextDocument::initializeForTiledRendering(const css::uno::Sequence<css::
         const beans::PropertyValue& rValue = rArguments[i];
         if (rValue.Name == ".uno:HideWhitespace" && rValue.Value.has<bool>())
             aViewOption.SetHideWhitespaceMode(rValue.Value.get<bool>());
+        else if (rValue.Name == ".uno:ShowBorderShadow" && rValue.Value.has<bool>())
+            SwViewOption::SetAppearanceFlag(VIEWOPT_SHADOW , rValue.Value.get<bool>());
     }
     pViewShell->ApplyViewOptions(aViewOption);
 
@@ -3233,9 +3270,12 @@ void SwXTextDocument::initializeForTiledRendering(const css::uno::Sequence<css::
     // directly in twips.
     SwEditWin& rEditWin = pDocShell->GetView()->GetEditWin();
     rEditWin.EnableMapMode(false);
-    // tdf#93154: in tiled rendering LO doesn't always detect changes
-    SvtMiscOptions aMiscOpt;
-    aMiscOpt.SetSaveAlwaysAllowed(true);
+
+    // when the "This document may contain formatting or content that cannot
+    // be saved..." dialog appears, it is auto-cancelled with tiled rendering,
+    // causing 'Save' being disabled; so let's always save to the original
+    // format
+    SvtSaveOptions().SetWarnAlienFormat(false);
 }
 
 void SwXTextDocument::registerCallback(LibreOfficeKitCallback pCallback, void* pData)
@@ -3273,12 +3313,19 @@ void SwXTextDocument::postMouseEvent(int nType, int nX, int nY, int nCount, int 
     SolarMutexGuard aGuard;
 
     SwEditWin& rEditWin = pDocShell->GetView()->GetEditWin();
-    MouseEvent aEvent(Point(nX, nY), nCount, MouseEventModifiers::SIMPLECLICK, nButtons, nModifier);
+    Point aPos(nX , nY);
+    MouseEvent aEvent(aPos, nCount, MouseEventModifiers::SIMPLECLICK, nButtons, nModifier);
 
     switch (nType)
     {
     case LOK_MOUSEEVENT_MOUSEBUTTONDOWN:
         rEditWin.LogicMouseButtonDown(aEvent);
+
+        if (nButtons & MOUSE_RIGHT)
+        {
+            const CommandEvent aCEvt(aPos, CommandEventId::ContextMenu, true, nullptr);
+            rEditWin.Command(aCEvt);
+        }
         break;
     case LOK_MOUSEEVENT_MOUSEBUTTONUP:
         rEditWin.LogicMouseButtonUp(aEvent);
@@ -3421,7 +3468,7 @@ void SAL_CALL SwXTextDocument::paintTile( const ::css::uno::Any& Parent, ::sal_I
 {
     SystemGraphicsData aData;
     aData.nSize = sizeof(SystemGraphicsData);
-    #if defined WNT
+    #if defined(_WIN32)
     sal_Int64 nWindowHandle;
     Parent >>= nWindowHandle;
     aData.hWnd = (HWND) nWindowHandle;
@@ -3668,62 +3715,61 @@ Any SwXLinkTargetSupplier::getByName(const OUString& rName)
     Any aRet;
     if(!pxDoc)
         throw RuntimeException();
-    OUString sToCompare(rName);
     OUString sSuffix("|");
-    if(sToCompare == sTables)
+    if(rName == sTables)
     {
         sSuffix += "table";
 
         Reference< XNameAccess >  xTables = new SwXLinkNameAccessWrapper(
-                                        pxDoc->getTextTables(), sToCompare, sSuffix );
+                                        pxDoc->getTextTables(), rName, sSuffix );
         Reference< XPropertySet >  xRet(xTables, UNO_QUERY);
         aRet.setValue(&xRet, cppu::UnoType<XPropertySet>::get());
     }
-    else if(sToCompare == sFrames)
+    else if(rName == sFrames)
     {
         sSuffix += "frame";
         Reference< XNameAccess >  xTables = new SwXLinkNameAccessWrapper(
-                                        pxDoc->getTextFrames(), sToCompare, sSuffix );
+                                        pxDoc->getTextFrames(), rName, sSuffix );
         Reference< XPropertySet >  xRet(xTables, UNO_QUERY);
         aRet.setValue(&xRet, cppu::UnoType<XPropertySet>::get());
     }
-    else if(sToCompare == sSections)
+    else if(rName == sSections)
     {
         sSuffix += "region";
         Reference< XNameAccess >  xTables = new SwXLinkNameAccessWrapper(
-                                        pxDoc->getTextSections(), sToCompare, sSuffix );
+                                        pxDoc->getTextSections(), rName, sSuffix );
         Reference< XPropertySet >  xRet(xTables, UNO_QUERY);
         aRet.setValue(&xRet, cppu::UnoType<XPropertySet>::get());
     }
-    else if(sToCompare == sGraphics)
+    else if(rName == sGraphics)
     {
         sSuffix += "graphic";
         Reference< XNameAccess >  xTables = new SwXLinkNameAccessWrapper(
-                                        pxDoc->getGraphicObjects(), sToCompare, sSuffix );
+                                        pxDoc->getGraphicObjects(), rName, sSuffix );
         Reference< XPropertySet >  xRet(xTables, UNO_QUERY);
         aRet.setValue(&xRet, cppu::UnoType<XPropertySet>::get());
     }
-    else if(sToCompare == sOLEs)
+    else if(rName == sOLEs)
     {
         sSuffix += "ole";
         Reference< XNameAccess >  xTables = new SwXLinkNameAccessWrapper(
-                                        pxDoc->getEmbeddedObjects(), sToCompare, sSuffix );
+                                        pxDoc->getEmbeddedObjects(), rName, sSuffix );
         Reference< XPropertySet >  xRet(xTables, UNO_QUERY);
         aRet.setValue(&xRet, cppu::UnoType<XPropertySet>::get());
     }
-    else if(sToCompare == sOutlines)
+    else if(rName == sOutlines)
     {
         sSuffix += "outline";
         Reference< XNameAccess >  xTables = new SwXLinkNameAccessWrapper(
-                                        *pxDoc, sToCompare, sSuffix );
+                                        *pxDoc, rName, sSuffix );
         Reference< XPropertySet >  xRet(xTables, UNO_QUERY);
         aRet.setValue(&xRet, cppu::UnoType<XPropertySet>::get());
     }
-    else if(sToCompare == sBookmarks)
+    else if(rName == sBookmarks)
     {
         sSuffix.clear();
         Reference< XNameAccess >  xBkms = new SwXLinkNameAccessWrapper(
-                                        pxDoc->getBookmarks(), sToCompare, sSuffix );
+                                        pxDoc->getBookmarks(), rName, sSuffix );
         Reference< XPropertySet >  xRet(xBkms, UNO_QUERY);
         aRet.setValue(&xRet, cppu::UnoType<XPropertySet>::get());
     }
@@ -3750,16 +3796,15 @@ Sequence< OUString > SwXLinkTargetSupplier::getElementNames()
 sal_Bool SwXLinkTargetSupplier::hasByName(const OUString& rName)
                                     throw( RuntimeException, std::exception )
 {
-    OUString sToCompare(rName);
-    if( sToCompare == sTables  ||
-        sToCompare == sFrames  ||
-        sToCompare == sGraphics||
-        sToCompare == sOLEs   ||
-        sToCompare == sSections ||
-        sToCompare == sOutlines ||
-        sToCompare == sBookmarks    )
-        return sal_True;
-    return sal_False;
+    if( rName == sTables  ||
+        rName == sFrames  ||
+        rName == sGraphics||
+        rName == sOLEs   ||
+        rName == sSections ||
+        rName == sOutlines ||
+        rName == sBookmarks    )
+        return true;
+    return false;
 }
 
 uno::Type  SwXLinkTargetSupplier::getElementType()
@@ -3807,7 +3852,6 @@ SwXLinkNameAccessWrapper::SwXLinkNameAccessWrapper(SwXTextDocument& rxDoc,
     pPropSet(aSwMapProvider.GetPropertySet(PROPERTY_MAP_LINK_TARGET)),
     sLinkSuffix(sSuffix),
     sLinkDisplayName(rLinkDisplayName),
-    xDoc(&rxDoc),
     pxDoc(&rxDoc)
 {
 }

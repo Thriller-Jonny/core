@@ -27,15 +27,12 @@ using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
 
 
-
 namespace migration
 {
 
 
-
     static const char sSourceSubDir[] = "/user/wordbook";
     static const char sTargetSubDir[] = "/user/wordbook";
-
 
 
     // component operations
@@ -45,7 +42,6 @@ namespace migration
     {
         return OUString( "com.sun.star.comp.desktop.migration.Wordbooks" );
     }
-
 
 
     Sequence< OUString > WordbookMigration_getSupportedServiceNames()
@@ -62,11 +58,9 @@ namespace migration
     }
 
 
-
     WordbookMigration::~WordbookMigration()
     {
     }
-
 
 
     TStringVectorPtr WordbookMigration::getFiles( const OUString& rBaseURL ) const
@@ -105,8 +99,7 @@ namespace migration
     }
 
 
-
-    ::osl::FileBase::RC WordbookMigration::checkAndCreateDirectory( INetURLObject& rDirURL )
+    void WordbookMigration::checkAndCreateDirectory( INetURLObject& rDirURL )
     {
         ::osl::FileBase::RC aResult = ::osl::Directory::create( rDirURL.GetMainURL( INetURLObject::DECODE_TO_IURI ) );
         if ( aResult == ::osl::FileBase::E_NOENT )
@@ -114,11 +107,7 @@ namespace migration
             INetURLObject aBaseURL( rDirURL );
             aBaseURL.removeSegment();
             checkAndCreateDirectory( aBaseURL );
-            return ::osl::Directory::create( rDirURL.GetMainURL( INetURLObject::DECODE_TO_IURI ) );
-        }
-        else
-        {
-            return aResult;
+            ::osl::Directory::create( rDirURL.GetMainURL( INetURLObject::DECODE_TO_IURI ) );
         }
     }
 
@@ -159,8 +148,6 @@ bool IsUserWordbook( const OUString& rFile )
     delete pStream;
     return bRet;
 }
-
-
 
 
     void WordbookMigration::copyFiles()
@@ -209,13 +196,11 @@ bool IsUserWordbook( const OUString& rFile )
     }
 
 
-
     sal_Bool WordbookMigration::supportsService(OUString const & ServiceName)
         throw (css::uno::RuntimeException, std::exception)
     {
         return cppu::supportsService(this, ServiceName);
     }
-
 
 
     Sequence< OUString > WordbookMigration::getSupportedServiceNames() throw (RuntimeException, std::exception)
@@ -272,8 +257,6 @@ bool IsUserWordbook( const OUString& rFile )
     {
         return static_cast< lang::XTypeProvider * >( new WordbookMigration() );
     }
-
-
 
 
 }   // namespace migration

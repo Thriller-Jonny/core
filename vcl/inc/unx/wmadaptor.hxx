@@ -22,11 +22,10 @@
 
 #include <rtl/ustring.hxx>
 #include <tools/gen.hxx>
-#ifndef _PREX_H
-#include <prex.h>
+
 #include <X11/Xlib.h>
-#include <postx.h>
-#endif
+#include <X11/Xutil.h>
+
 #include <vclpluginapi.h>
 #include <vector>
 
@@ -201,9 +200,8 @@ public:
 
     /*
      * attempt to switch the desktop to a certain workarea (ie. virtual desktops)
-     * if bConsiderWM is true, then on some WMs the call will not result in any action
      */
-    void switchToWorkArea( int nWorkArea, bool bConsiderWM = true ) const;
+    void switchToWorkArea( int nWorkArea ) const;
 
     /*
      *  sets window title

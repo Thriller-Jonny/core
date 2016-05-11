@@ -47,7 +47,7 @@ using ::com::sun::star::xml::crypto::XXMLSecurityContext ;
 using ::com::sun::star::xml::crypto::XUriBinding ;
 using ::com::sun::star::xml::crypto::XMLSignatureException ;
 
-XMLSignature_NssImpl::XMLSignature_NssImpl( const Reference< XMultiServiceFactory >& aFactory ) : m_xServiceManager( aFactory ) {
+XMLSignature_NssImpl::XMLSignature_NssImpl() {
 }
 
 XMLSignature_NssImpl::~XMLSignature_NssImpl() {
@@ -58,9 +58,9 @@ Reference< XXMLSignatureTemplate >
 SAL_CALL XMLSignature_NssImpl::generate(
     const Reference< XXMLSignatureTemplate >& aTemplate ,
     const Reference< XSecurityEnvironment >& aEnvironment
-) throw( com::sun::star::xml::crypto::XMLSignatureException,
-         com::sun::star::uno::SecurityException,
-         com::sun::star::uno::RuntimeException, std::exception )
+) throw( css::xml::crypto::XMLSignatureException,
+         css::uno::SecurityException,
+         css::uno::RuntimeException, std::exception )
 {
     xmlSecKeysMngrPtr pMngr = nullptr ;
     xmlSecDSigCtxPtr pDsigCtx = nullptr ;
@@ -137,13 +137,13 @@ SAL_CALL XMLSignature_NssImpl::generate(
     if( xmlSecDSigCtxSign( pDsigCtx , pNode ) == 0 )
     {
         if (pDsigCtx->status == xmlSecDSigStatusSucceeded)
-            aTemplate->setStatus(com::sun::star::xml::crypto::SecurityOperationStatus_OPERATION_SUCCEEDED);
+            aTemplate->setStatus(css::xml::crypto::SecurityOperationStatus_OPERATION_SUCCEEDED);
         else
-            aTemplate->setStatus(com::sun::star::xml::crypto::SecurityOperationStatus_UNKNOWN);
+            aTemplate->setStatus(css::xml::crypto::SecurityOperationStatus_UNKNOWN);
     }
     else
     {
-        aTemplate->setStatus(com::sun::star::xml::crypto::SecurityOperationStatus_UNKNOWN);
+        aTemplate->setStatus(css::xml::crypto::SecurityOperationStatus_UNKNOWN);
     }
 
 
@@ -163,9 +163,9 @@ Reference< XXMLSignatureTemplate >
 SAL_CALL XMLSignature_NssImpl::validate(
     const Reference< XXMLSignatureTemplate >& aTemplate ,
     const Reference< XXMLSecurityContext >& aSecurityCtx
-) throw( com::sun::star::uno::RuntimeException,
-         com::sun::star::uno::SecurityException,
-         com::sun::star::xml::crypto::XMLSignatureException, std::exception ) {
+) throw( css::uno::RuntimeException,
+         css::uno::SecurityException,
+         css::xml::crypto::XMLSignatureException, std::exception ) {
     xmlSecKeysMngrPtr pMngr = nullptr ;
     xmlSecDSigCtxPtr pDsigCtx = nullptr ;
     xmlNodePtr pNode = nullptr ;
@@ -244,23 +244,34 @@ SAL_CALL XMLSignature_NssImpl::validate(
         //Verify signature
         int rs = xmlSecDSigCtxVerify( pDsigCtx , pNode );
 
-
-        if (rs == 0 &&
-            pDsigCtx->status == xmlSecDSigStatusSucceeded)
+        // Also verify manifest: this is empty for ODF, but contains everything (except signature metadata) for OOXML.
+        xmlSecSize nReferenceCount = xmlSecPtrListGetSize(&pDsigCtx->manifestReferences);
+        // Require that all manifest references are also good.
+        xmlSecSize nReferenceGood = 0;
+        for (xmlSecSize nReference = 0; nReference < nReferenceCount; ++nReference)
         {
-            aTemplate->setStatus(com::sun::star::xml::crypto::SecurityOperationStatus_OPERATION_SUCCEEDED);
+            xmlSecDSigReferenceCtxPtr pReference = static_cast<xmlSecDSigReferenceCtxPtr>(xmlSecPtrListGetItem(&pDsigCtx->manifestReferences, nReference));
+            if (pReference)
+            {
+                if (pReference->status == xmlSecDSigStatusSucceeded)
+                    ++nReferenceGood;
+            }
+        }
+
+        if (rs == 0 && pDsigCtx->status == xmlSecDSigStatusSucceeded && nReferenceCount == nReferenceGood)
+        {
+            aTemplate->setStatus(css::xml::crypto::SecurityOperationStatus_OPERATION_SUCCEEDED);
             xmlSecDSigCtxDestroy( pDsigCtx ) ;
             SecurityEnvironment_NssImpl::destroyKeysManager( pMngr );
             break;
         }
         else
         {
-            aTemplate->setStatus(com::sun::star::xml::crypto::SecurityOperationStatus_UNKNOWN);
+            aTemplate->setStatus(css::xml::crypto::SecurityOperationStatus_UNKNOWN);
         }
         xmlSecDSigCtxDestroy( pDsigCtx ) ;
         SecurityEnvironment_NssImpl::destroyKeysManager( pMngr );
     }
-
 
 
     //Unregistered the stream/URI binding
@@ -283,9 +294,9 @@ sal_Bool SAL_CALL XMLSignature_NssImpl::supportsService( const OUString& service
     const OUString* pArray = seqServiceNames.getConstArray() ;
     for( sal_Int32 i = 0 ; i < seqServiceNames.getLength() ; i ++ ) {
         if( *( pArray + i ) == serviceName )
-            return sal_True ;
+            return true ;
     }
-    return sal_False ;
+    return false ;
 }
 
 /* XServiceInfo */
@@ -305,8 +316,8 @@ OUString XMLSignature_NssImpl::impl_getImplementationName() throw( RuntimeExcept
 }
 
 //Helper for registry
-Reference< XInterface > SAL_CALL XMLSignature_NssImpl::impl_createInstance( const Reference< XMultiServiceFactory >& aServiceManager ) throw( RuntimeException ) {
-    return Reference< XInterface >( *new XMLSignature_NssImpl( aServiceManager ) ) ;
+Reference< XInterface > SAL_CALL XMLSignature_NssImpl::impl_createInstance( const Reference< XMultiServiceFactory >& ) throw( RuntimeException ) {
+    return Reference< XInterface >( *new XMLSignature_NssImpl ) ;
 }
 
 Reference< XSingleServiceFactory > XMLSignature_NssImpl::impl_createFactory( const Reference< XMultiServiceFactory >& aServiceManager ) {

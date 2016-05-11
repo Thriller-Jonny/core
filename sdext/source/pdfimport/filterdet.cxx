@@ -181,9 +181,6 @@ unsigned int FileEmitContext::readOrigBytes( unsigned int nOrigOffset, unsigned 
 }
 
 
-
-
-
 PDFDetector::PDFDetector( const uno::Reference< uno::XComponentContext >& xContext) :
     PDFDetectorBase( m_aMutex ),
     m_xContext( xContext )
@@ -207,13 +204,10 @@ OUString SAL_CALL PDFDetector::detect( uno::Sequence< beans::PropertyValue >& rF
     sal_Int32 nPwdPos = -1;
     for( sal_Int32 i = 0; i < nAttribs; i++ )
     {
-#if OSL_DEBUG_LEVEL > 1
         OUString aVal( "<no string>" );
         pAttribs[i].Value >>= aVal;
-        OSL_TRACE( "doDetection: Attrib: %s = %s\n",
-                   OUStringToOString( pAttribs[i].Name, RTL_TEXTENCODING_UTF8 ).getStr(),
-                   OUStringToOString( aVal, RTL_TEXTENCODING_UTF8 ).getStr() );
-#endif
+        SAL_INFO( "sdext.pdfimport", "doDetection: Attrib: " + pAttribs[i].Name + " = " + aVal);
+
         if ( pAttribs[i].Name == "InputStream" )
             pAttribs[i].Value >>= xInput;
         else if ( pAttribs[i].Name == "URL" )
@@ -267,13 +261,11 @@ OUString SAL_CALL PDFDetector::detect( uno::Sequence< beans::PropertyValue >& rF
                 }
                 else
                 {
-#if OSL_DEBUG_LEVEL > 1
-                    OSL_TRACE( "created temp file %s\n",
-                               OUStringToOString( aURL, RTL_TEXTENCODING_UTF8 ).getStr() );
-#endif
+                    SAL_INFO( "sdext.pdfimport", "created temp file " + aURL );
+
                     osl_writeFile( aFile, aBuf.getConstArray(), nBytes, &nWritten );
 
-                    OSL_ENSURE( nWritten == nBytes, "writing of header bytes failed" );
+                    SAL_WARN_IF( nWritten != nBytes, "sdext.pdfimport", "writing of header bytes failed" );
 
                     if( nWritten == nBytes )
                     {
@@ -383,7 +375,7 @@ OUString SAL_CALL PDFDetector::detect( uno::Sequence< beans::PropertyValue >& rF
                     break;
 
                 default:
-                    OSL_FAIL("Unexpected case");
+                    assert(!"Unexpected case");
             }
 
             aOutTypeName = "pdf_Portable_Document_Format";
@@ -428,7 +420,7 @@ bool checkDocChecksum( const OUString& rInPDFFileURL,
     // prepare checksum to test
     sal_uInt8 nTestChecksum[ RTL_DIGEST_LENGTH_MD5 ];
     const sal_Unicode* pChar = rChkSum.getStr();
-    for( unsigned int i = 0; i < RTL_DIGEST_LENGTH_MD5; i++ )
+    for(sal_uInt8 & rn : nTestChecksum)
     {
         sal_uInt8 nByte = sal_uInt8( ( (*pChar >= '0' && *pChar <= '9') ? *pChar - '0' :
                           ( (*pChar >= 'A' && *pChar <= 'F') ? *pChar - 'A' + 10 :
@@ -441,7 +433,7 @@ bool checkDocChecksum( const OUString& rInPDFFileURL,
                  ( (*pChar >= 'a' && *pChar <= 'f') ? *pChar - 'a' + 10 :
                  0 ) ) );
         pChar++;
-        nTestChecksum[i] = nByte;
+        rn = nByte;
     }
 
     // open file and calculate actual checksum up to index nBytes
@@ -476,14 +468,16 @@ bool checkDocChecksum( const OUString& rInPDFFileURL,
 
     // compare the contents
     bRet = (0 == memcmp( nActualChecksum, nTestChecksum, sizeof( nActualChecksum ) ));
-#if OSL_DEBUG_LEVEL > 1
+#if OSL_DEBUG_LEVEL > 0
     OSL_TRACE( "test checksum: " );
-    for( unsigned int i = 0; i < sizeof(nTestChecksum); i++ )
-        OSL_TRACE( "%.2X", int(nTestChecksum[i]) );
+    for(sal_uInt8 i : nTestChecksum) {
+        OSL_TRACE( "%.2X", int(i) );
+    }
     OSL_TRACE( "\n" );
     OSL_TRACE( "file checksum: " );
-    for( unsigned int i = 0; i < sizeof(nActualChecksum); i++ )
-        OSL_TRACE( "%.2X", int(nActualChecksum[i]) );
+    for(sal_uInt8 i : nActualChecksum) {
+        OSL_TRACE( "%.2X", int(i) );
+    }
     OSL_TRACE( "\n" );
 #endif
     return bRet;
@@ -523,13 +517,13 @@ uno::Reference< io::XStream > getAdditionalStream( const OUString&              
                     chk = pTrailer->m_pDict->m_aMap.find( "DocChecksum" );
                     if( chk == pTrailer->m_pDict->m_aMap.end() )
                     {
-                        OSL_TRACE( "no DocChecksum entry" );
+                        SAL_INFO( "sdext.pdfimport", "no DocChecksum entry" );
                         continue;
                     }
                     pdfparse::PDFName* pChkSumName = dynamic_cast<pdfparse::PDFName*>(chk->second);
                     if( pChkSumName == nullptr )
                     {
-                        OSL_TRACE( "no name for DocChecksum entry" );
+                        SAL_INFO( "sdext.pdfimport", "no name for DocChecksum entry" );
                         continue;
                     }
 
@@ -540,13 +534,13 @@ uno::Reference< io::XStream > getAdditionalStream( const OUString&              
                     add_stream = pTrailer->m_pDict->m_aMap.find( "AdditionalStreams" );
                     if( add_stream == pTrailer->m_pDict->m_aMap.end() )
                     {
-                        OSL_TRACE( "no AdditionalStreams entry" );
+                        SAL_INFO( "sdext.pdfimport", "no AdditionalStreams entry" );
                         continue;
                     }
                     pdfparse::PDFArray* pStreams = dynamic_cast<pdfparse::PDFArray*>(add_stream->second);
                     if( ! pStreams || pStreams->m_aSubElements.size() < 2 )
                     {
-                        OSL_TRACE( "AdditionalStreams array too small" );
+                        SAL_INFO( "sdext.pdfimport", "AdditionalStreams array too small" );
                         continue;
                     }
 
@@ -559,13 +553,13 @@ uno::Reference< io::XStream > getAdditionalStream( const OUString&              
                     pdfparse::PDFName* pMimeType = dynamic_cast<pdfparse::PDFName*>(pStreams->m_aSubElements[0]);
                     pdfparse::PDFObjectRef* pStreamRef = dynamic_cast<pdfparse::PDFObjectRef*>(pStreams->m_aSubElements[1]);
 
-                    OSL_ENSURE( pMimeType, "error: no mimetype element\n" );
-                    OSL_ENSURE( pStreamRef, "error: no stream ref element\n" );
+                    SAL_WARN_IF( !pMimeType, "sdext.pdfimport", "error: no mimetype element" );
+                    SAL_WARN_IF( !pStreamRef, "sdext.pdfimport", "error: no stream ref element" );
 
                     if( pMimeType && pStreamRef )
                     {
                         pdfparse::PDFObject* pObject = pPDFFile->findObject( pStreamRef->m_nNumber, pStreamRef->m_nGeneration );
-                        OSL_ENSURE( pObject, "object not found\n" );
+                        SAL_WARN_IF( !pObject, "sdext.pdfimport", "object not found" );
                         if( pObject )
                         {
                             if( pPDFFile->isEncrypted() )

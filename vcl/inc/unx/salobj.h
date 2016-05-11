@@ -39,8 +39,6 @@ public:
         return ClipRectangleList;   }
     void        ResetClipRegion()   {
         numClipRectangles = 0;      }
-    sal_uInt16      GetClipRegionType() {
-        return nClipRegionType;     }
     int         GetRectangleCount() {
         return numClipRectangles;   }
 
@@ -49,7 +47,6 @@ private:
     XRectangle* ClipRectangleList;
     int         numClipRectangles;
     int         maxClipRectangles;
-    sal_uInt16      nClipRegionType;
 };
 
 class VCLPLUG_GEN_PUBLIC X11SalObject : public SalObject
@@ -70,8 +67,7 @@ public:
     virtual ~X11SalObject();
 
     // override all pure virtual methods
-     virtual void                   ResetClipRegion() override;
-    virtual sal_uInt16                  GetClipRegionType() override;
+    virtual void                    ResetClipRegion() override;
     virtual void                    BeginSetClipRegion( sal_uIntPtr nRects ) override;
     virtual void                    UnionClipRegion( long nX, long nY, long nWidth, long nHeight ) override;
     virtual void                    EndSetClipRegion() override;

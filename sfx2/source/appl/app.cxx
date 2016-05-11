@@ -19,15 +19,6 @@
 
 #include <config_features.h>
 
-#if defined UNX
-#include <limits.h>
-#else // UNX
-#include <stdlib.h>
-#ifndef PATH_MAX
-#define PATH_MAX _MAX_PATH
-#endif
-#endif // UNX
-
 #include <sfx2/app.hxx>
 #include <sfx2/frame.hxx>
 #include <basic/basrdll.hxx>
@@ -45,8 +36,6 @@
 #include <unotools/configmgr.hxx>
 #include <unotools/tempfile.hxx>
 #include <osl/file.hxx>
-#include <com/sun/star/uno/Sequence.hxx>
-#include <com/sun/star/uno/Any.hxx>
 #include <com/sun/star/lang/XInitialization.hpp>
 #include <com/sun/star/frame/XFrameActionListener.hpp>
 #include <com/sun/star/frame/XComponentLoader.hpp>
@@ -54,7 +43,6 @@
 #include <com/sun/star/frame/FrameActionEvent.hpp>
 #include <com/sun/star/frame/FrameAction.hpp>
 #include <com/sun/star/loader/XImplementationLoader.hpp>
-#include <com/sun/star/mozilla/XPluginInstance.hpp>
 #include <com/sun/star/frame/XFramesSupplier.hpp>
 #include <com/sun/star/container/XIndexAccess.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
@@ -82,7 +70,6 @@
 #include "appdata.hxx"
 #include "openflag.hxx"
 #include "app.hrc"
-#include "virtmenu.hxx"
 #include <sfx2/module.hxx>
 #include <sfx2/event.hxx>
 #include "imestatuswindow.hxx"
@@ -94,10 +81,6 @@
 #include "eventsupplier.hxx"
 #include <sfx2/dockwin.hxx>
 #include "shellimpl.hxx"
-
-#ifdef DBG_UTIL
-#include <sfx2/mnuitem.hxx>
-#endif
 
 #include <unotools/saveopt.hxx>
 #include <svtools/helpopt.hxx>
@@ -137,7 +120,6 @@ namespace
         : public rtl::Static<osl::Mutex, theApplicationMutex> {};
 }
 
-#include <framework/imageproducer.hxx>
 #include <framework/sfxhelperfunctions.hxx>
 #include <sfx2/imagemgr.hxx>
 #include "fwkhelper.hxx"
@@ -162,13 +144,11 @@ SfxApplication* SfxApplication::GetOrCreate()
         // a fault will be moved outside the SFX
         g_pSfxApplication->Initialize_Impl();
 
-        ::framework::SetImageProducer( GetImage );
         ::framework::SetRefreshToolbars( RefreshToolbars );
         ::framework::SetToolBoxControllerCreator( SfxToolBoxControllerFactory );
         ::framework::SetStatusBarControllerCreator( SfxStatusBarControllerFactory );
         ::framework::SetDockingWindowCreator( SfxDockingWindowFactory );
         ::framework::SetIsDockingWindowVisible( IsDockingWindowVisible );
-        ::framework::SetActivateToolPanel( &SfxViewFrame::ActivateToolPanel );
 #if HAVE_FEATURE_DESKTOP
         Application::SetHelp( pSfxHelp );
         if (!utl::ConfigManager::IsAvoidConfig() && SvtHelpOptions().IsHelpTips())
@@ -252,7 +232,6 @@ SfxApplication::~SfxApplication()
 }
 
 
-
 const OUString& SfxApplication::GetLastDir_Impl() const
 
 /*  [Description]
@@ -286,7 +265,6 @@ const OUString& SfxApplication::GetLastSaveDirectory() const
 }
 
 
-
 void SfxApplication::SetLastDir_Impl
 (
     const OUString&   rNewDir     /* Complete directory path as a string */
@@ -306,12 +284,10 @@ void SfxApplication::SetLastDir_Impl
 }
 
 
-
 void SfxApplication::ResetLastDir()
 {
     pAppData_Impl->aLastDir.clear();
 }
-
 
 
 SfxDispatcher* SfxApplication::GetDispatcher_Impl()
@@ -391,7 +367,6 @@ ResMgr* SfxApplication::GetSfxResManager()
 }
 
 
-
 void SfxApplication::SetProgress_Impl
 (
     SfxProgress *pProgress
@@ -413,19 +388,16 @@ void SfxApplication::SetProgress_Impl
 }
 
 
-
 sal_uInt16 SfxApplication::GetFreeIndex()
 {
     return pAppData_Impl->aIndexBitSet.GetFreeIndex()+1;
 }
 
 
-
 void SfxApplication::ReleaseIndex(sal_uInt16 i)
 {
     pAppData_Impl->aIndexBitSet.ReleaseIndex(i-1);
 }
-
 
 
 vcl::Window* SfxApplication::GetTopWindow() const
@@ -442,11 +414,6 @@ SfxTbxCtrlFactArr_Impl&     SfxApplication::GetTbxCtrlFactories_Impl() const
 SfxStbCtrlFactArr_Impl&     SfxApplication::GetStbCtrlFactories_Impl() const
 {
     return *pAppData_Impl->pStbCtrlFac;
-}
-
-SfxMenuCtrlFactArr_Impl&    SfxApplication::GetMenuCtrlFactories_Impl() const
-{
-    return *pAppData_Impl->pMenuCtrlFac;
 }
 
 SfxViewFrameArr_Impl&       SfxApplication::GetViewFrames_Impl() const
@@ -566,7 +533,7 @@ SfxApplication::ChooseScript()
         uno::Reference< frame::XFrame > xFrame( pFrame ? pFrame->GetFrameInterface() : uno::Reference< frame::XFrame >() );
 
         std::unique_ptr<AbstractScriptSelectorDialog> pDlg(
-            pFact->CreateScriptSelectorDialog( nullptr, false, xFrame ));
+            pFact->CreateScriptSelectorDialog( nullptr, xFrame ));
 
         SAL_INFO( "sfx.appl", "done, now exec it");
 

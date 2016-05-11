@@ -21,12 +21,12 @@
 #include <cppuhelper/implbase.hxx>
 #include <cppuhelper/supportsservice.hxx>
 #include <cppuhelper/weakref.hxx>
-#include <framework/imageproducer.hxx>
 #include <svtools/toolboxcontroller.hxx>
 #include <toolkit/helper/vclunohelper.hxx>
 #include <tools/gen.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/toolbox.hxx>
+#include <vcl/commandinfoprovider.hxx>
 
 #include <com/sun/star/awt/XDockableWindow.hpp>
 #include <com/sun/star/frame/XSubToolbarController.hpp>
@@ -49,6 +49,9 @@ class SubToolBarController : public ToolBarBase
 public:
     explicit SubToolBarController( const css::uno::Sequence< css::uno::Any >& rxArgs );
     virtual ~SubToolBarController();
+
+    // XInitialization
+    virtual void SAL_CALL initialize( const css::uno::Sequence< css::uno::Any >& rxArgs ) throw ( css::uno::Exception, css::uno::RuntimeException, std::exception ) override;
 
     // XStatusListener
     virtual void SAL_CALL statusChanged( const css::frame::FeatureStateEvent& Event ) throw ( css::uno::RuntimeException, std::exception ) override;
@@ -74,9 +77,6 @@ public:
 
     // XEventListener
     virtual void SAL_CALL disposing( const css::lang::EventObject& e ) throw ( css::uno::RuntimeException, std::exception ) override;
-
-    // XUpdatable
-    virtual void SAL_CALL update() throw ( css::uno::RuntimeException, std::exception ) override;
 
     // XComponent
     virtual void SAL_CALL dispose() throw ( css::uno::RuntimeException, std::exception ) override;
@@ -147,7 +147,7 @@ void SubToolBarController::statusChanged( const css::frame::FeatureStateEvent& E
             {
                 // Enum command, such as the current custom shape,
                 // toggle checked state.
-                if ( m_aLastCommand == OUString( m_aCommandURL + "." + aStrValue ) )
+                if ( m_aLastCommand == ( m_aCommandURL + "." + aStrValue ) )
                 {
                     eTri = TRISTATE_TRUE;
                     nItemBits |= ToolBoxItemBits::CHECKABLE;
@@ -234,7 +234,7 @@ css::uno::Reference< css::awt::XWindow > SubToolBarController::createPopupWindow
                 css::uno::Reference< css::awt::XDockableWindow > xDockWindow( xSubToolBar, css::uno::UNO_QUERY );
                 xDockWindow->addDockableWindowListener( css::uno::Reference< css::awt::XDockableWindowListener >(
                                                         static_cast< OWeakObject * >( this ), css::uno::UNO_QUERY ) );
-                xDockWindow->enableDocking( sal_True );
+                xDockWindow->enableDocking( true );
 
                 // keep reference to UIElement to avoid its destruction
                 disposeUIElement();
@@ -291,7 +291,7 @@ void SubToolBarController::updateImage()
         sal_uInt16 nId = 0;
         if ( getToolboxId( nId, &pToolBox ) )
         {
-            Image aImage = framework::GetImageFromURL( getFrameInterface(), m_aLastCommand, pToolBox->GetToolboxButtonSize() == TOOLBOX_BUTTONSIZE_LARGE );
+            Image aImage = vcl::CommandInfoProvider::Instance().GetImageForCommand( m_aLastCommand, pToolBox->GetToolboxButtonSize() == TOOLBOX_BUTTONSIZE_LARGE, getFrameInterface() );
             if ( !!aImage )
                 pToolBox->SetItemImage( nId, aImage );
         }
@@ -317,7 +317,7 @@ void SubToolBarController::endDocking( const css::awt::EndDockingEvent& )
 sal_Bool SubToolBarController::prepareToggleFloatingMode( const css::lang::EventObject& )
     throw ( css::uno::RuntimeException, std::exception )
 {
-    return sal_False;
+    return false;
 }
 
 void SubToolBarController::toggleFloatingMode( const css::lang::EventObject& )
@@ -407,10 +407,10 @@ void SubToolBarController::disposing( const css::lang::EventObject& e )
     svt::ToolboxController::disposing( e );
 }
 
-void SubToolBarController::update()
-    throw ( css::uno::RuntimeException, std::exception )
+void SubToolBarController::initialize( const css::uno::Sequence< css::uno::Any >& rxArgs )
+    throw ( css::uno::Exception, css::uno::RuntimeException, std::exception )
 {
-    svt::ToolboxController::update();
+    svt::ToolboxController::initialize( rxArgs );
 
     ToolBox* pToolBox = nullptr;
     sal_uInt16 nId = 0;

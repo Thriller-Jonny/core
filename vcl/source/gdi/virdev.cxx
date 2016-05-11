@@ -17,20 +17,12 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <tools/debug.hxx>
-
-#include <vcl/settings.hxx>
-#include <vcl/svapp.hxx>
-#include <vcl/wrkwin.hxx>
-#include <vcl/virdev.hxx>
-
-#include <salinst.hxx>
-#include <salgdi.hxx>
-#include <salframe.hxx>
-#include <salvd.hxx>
-#include <outdev.h>
+#include "salinst.hxx"
+#include "salgdi.hxx"
+#include "salvd.hxx"
+#include "outdev.h"
 #include "PhysicalFontCollection.hxx"
-#include <svdata.hxx>
+#include "svdata.hxx"
 
 #include <vcl/ITiledRenderable.hxx>
 
@@ -288,7 +280,7 @@ void VirtualDevice::dispose()
 }
 
 bool VirtualDevice::InnerImplSetOutputSizePixel( const Size& rNewSize, bool bErase,
-                                                 const basebmp::RawMemorySharedArray &pBuffer )
+                                                 sal_uInt8 *const pBuffer)
 {
     SAL_INFO( "vcl.gdi",
               "VirtualDevice::InnerImplSetOutputSizePixel( " << rNewSize.Width() << ", "
@@ -394,7 +386,7 @@ void VirtualDevice::ImplFillOpaqueRectangle( const Rectangle& rRect )
 }
 
 bool VirtualDevice::ImplSetOutputSizePixel( const Size& rNewSize, bool bErase,
-                                            const basebmp::RawMemorySharedArray &pBuffer )
+                                            sal_uInt8 *const pBuffer)
 {
     if( InnerImplSetOutputSizePixel(rNewSize, bErase, pBuffer) )
     {
@@ -409,8 +401,7 @@ bool VirtualDevice::ImplSetOutputSizePixel( const Size& rNewSize, bool bErase,
             if( !mpAlphaVDev )
             {
                 mpAlphaVDev = VclPtr<VirtualDevice>::Create(*this, meAlphaFormat);
-                mpAlphaVDev->InnerImplSetOutputSizePixel(rNewSize, bErase,
-                                                         basebmp::RawMemorySharedArray());
+                mpAlphaVDev->InnerImplSetOutputSizePixel(rNewSize, bErase, nullptr);
             }
 
             // TODO: copy full outdev state to new one, here. Also needed in outdev2.cxx:DrawOutDev
@@ -443,12 +434,12 @@ void VirtualDevice::EnableRTL( bool bEnable )
 
 bool VirtualDevice::SetOutputSizePixel( const Size& rNewSize, bool bErase )
 {
-    return ImplSetOutputSizePixel(rNewSize, bErase, basebmp::RawMemorySharedArray());
+    return ImplSetOutputSizePixel(rNewSize, bErase, nullptr);
 }
 
 bool VirtualDevice::SetOutputSizePixelScaleOffsetAndBuffer(
     const Size& rNewSize, const Fraction& rScale, const Point& rNewOffset,
-    const basebmp::RawMemorySharedArray &pBuffer )
+    sal_uInt8 *const pBuffer)
 {
     if (pBuffer) {
         MapMode mm = GetMapMode();
@@ -509,20 +500,20 @@ void VirtualDevice::ImplSetReferenceDevice( RefDevMode i_eRefDevMode, sal_Int32 
 
     // the reference device should have only scalable fonts
     // => clean up the original font lists before getting new ones
-    if ( mpFontEntry )
+    if ( mpFontInstance )
     {
-        mpFontCache->Release( mpFontEntry );
-        mpFontEntry = nullptr;
+        mpFontCache->Release( mpFontInstance );
+        mpFontInstance = nullptr;
     }
-    if ( mpGetDevFontList )
+    if ( mpDeviceFontList )
     {
-        delete mpGetDevFontList;
-        mpGetDevFontList = nullptr;
+        delete mpDeviceFontList;
+        mpDeviceFontList = nullptr;
     }
-    if ( mpGetDevSizeList )
+    if ( mpDeviceFontSizeList )
     {
-        delete mpGetDevSizeList;
-        mpGetDevSizeList = nullptr;
+        delete mpDeviceFontSizeList;
+        mpDeviceFontSizeList = nullptr;
     }
 
     // preserve global font lists
@@ -534,7 +525,7 @@ void VirtualDevice::ImplSetReferenceDevice( RefDevMode i_eRefDevMode, sal_Int32 
 
     // get font list with scalable fonts only
     AcquireGraphics();
-    mpFontCollection = pSVData->maGDIData.mpScreenFontList->Clone( true, false );
+    mpFontCollection = pSVData->maGDIData.mpScreenFontList->Clone( false );
 
     // prepare to use new font lists
     mpFontCache = new ImplFontCache();
@@ -563,10 +554,7 @@ long VirtualDevice::GetFontExtLeading() const
         return 0;
 #endif
 
-    ImplFontEntry*      pEntry = mpFontEntry;
-    ImplFontMetricData* pMetric = &(pEntry->maMetric);
-
-    return pMetric->mnExtLeading;
+    return mpFontInstance->mxFontMetric->GetExternalLeading();
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -9,6 +9,7 @@
 #include <officecfg/Office/Common.hxx>
 #include "sdmodeltestbase.hxx"
 #include "Outliner.hxx"
+#include <test/xmltesttools.hxx>
 #include <comphelper/processfactory.hxx>
 #include <comphelper/propertysequence.hxx>
 #include <svl/stritem.hxx>
@@ -40,6 +41,7 @@
 #include <svx/xflclit.hxx>
 #include <animations/animationnodehelper.hxx>
 #include <unotools/mediadescriptor.hxx>
+#include <unotools/ucbstreamhelper.hxx>
 #include <rtl/ustring.hxx>
 
 #include <com/sun/star/drawing/XDrawPage.hpp>
@@ -64,7 +66,7 @@
 #include <com/sun/star/frame/XStorable.hpp>
 #include <com/sun/star/drawing/EnhancedCustomShapeParameterPair.hpp>
 #include <com/sun/star/drawing/FillStyle.hpp>
-#include <com/sun/star/text/XTextField.hpp>
+#include <com/sun/star/packages/zip/ZipFileAccess.hpp>
 #include <com/sun/star/text/WritingMode2.hpp>
 #include <com/sun/star/style/XStyleFamiliesSupplier.hpp>
 #include <com/sun/star/table/BorderLine2.hpp>
@@ -73,7 +75,6 @@
 
 
 #include <svx/svdotable.hxx>
-
 #include <config_features.h>
 #include <com/sun/star/document/XDocumentPropertiesSupplier.hpp>
 
@@ -99,7 +100,7 @@ CPPUNIT_NS_END
 using namespace css;
 using namespace css::animations;
 
-class SdExportTest : public SdModelTestBase
+class SdExportTest : public SdModelTestBase, public XmlTestTools
 {
 public:
     void testN821567();
@@ -134,14 +135,26 @@ public:
     void testParaMarginAndindentation();
     void testTransparentBackground();
     void testExportTransitionsPPTX();
+    void testDatetimeFieldNumberFormat();
+    void testDatetimeFieldNumberFormatPPTX();
+    void testSlideNumberField();
+    void testSlideNumberFieldPPTX();
+    void testSlideCountField();
+    void testSlideNameField();
+    void testExtFileField();
+    void testAuthorField();
 
     void testFdo90607();
     void testTdf91378();
-#if !defined WNT
+//This test gives errors due to ATL
+#if HAVE_FEATURE_ATL
     void testBnc822341();
 #endif
+    void testMathObject();
+    void testMathObjectPPT2010();
     void testTdf80224();
     void testTdf92527();
+    void testTdf99224();
 
     CPPUNIT_TEST_SUITE(SdExportTest);
     CPPUNIT_TEST(testFdo90607);
@@ -177,22 +190,87 @@ public:
     CPPUNIT_TEST(testParaMarginAndindentation);
     CPPUNIT_TEST(testTransparentBackground);
     CPPUNIT_TEST(testTdf91378);
-
-#if !defined WNT
+//This test gives errors due to ATL
+#if HAVE_FEATURE_ATL
     CPPUNIT_TEST(testBnc822341);
 #endif
+    CPPUNIT_TEST(testMathObject);
+    CPPUNIT_TEST(testMathObjectPPT2010);
     CPPUNIT_TEST(testTdf80224);
 
     CPPUNIT_TEST(testExportTransitionsPPTX);
     CPPUNIT_TEST(testTdf92527);
+    CPPUNIT_TEST(testDatetimeFieldNumberFormat);
+    CPPUNIT_TEST(testDatetimeFieldNumberFormatPPTX);
+    CPPUNIT_TEST(testSlideNumberField);
+    CPPUNIT_TEST(testSlideNumberFieldPPTX);
+    CPPUNIT_TEST(testSlideCountField);
+    CPPUNIT_TEST(testSlideNameField);
+    CPPUNIT_TEST(testExtFileField);
+    CPPUNIT_TEST(testAuthorField);
+    CPPUNIT_TEST(testTdf99224);
 
     CPPUNIT_TEST_SUITE_END();
+
+    virtual void registerNamespaces(xmlXPathContextPtr& pXmlXPathCtx) override
+    {
+        struct { char const * pPrefix; char const * pURI; } namespaces[] =
+        {
+            // ODF
+            { "draw", "urn:oasis:names:tc:opendocument:xmlns:drawing:1.0" },
+            { "fo", "urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0" },
+            { "number", "urn:oasis:names:tc:opendocument:xmlns:datastyle:1.0" },
+            { "office", "urn:oasis:names:tc:opendocument:xmlns:office:1.0" },
+            { "style", "urn:oasis:names:tc:opendocument:xmlns:style:1.0" },
+            { "svg", "urn:oasis:names:tc:opendocument:xmlns:svg-compatible:1.0" },
+            { "table", "urn:oasis:names:tc:opendocument:xmlns:table:1.0" },
+            { "text", "urn:oasis:names:tc:opendocument:xmlns:text:1.0" },
+            { "xlink", "http://www.w3c.org/1999/xlink" },
+            // OOXML
+            { "ContentType", "http://schemas.openxmlformats.org/package/2006/content-types" },
+            { "rels", "http://schemas.openxmlformats.org/package/2006/relationships" },
+            { "mc", "http://schemas.openxmlformats.org/markup-compatibility/2006" },
+            { "v", "urn:schemas-microsoft-com:vml" },
+            { "a", "http://schemas.openxmlformats.org/drawingml/2006/main" },
+            { "c", "http://schemas.openxmlformats.org/drawingml/2006/chart" },
+            { "m", "http://schemas.openxmlformats.org/officeDocument/2006/math" },
+            { "pic", "http://schemas.openxmlformats.org/drawingml/2006/picture" },
+            { "wp", "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" },
+            { "p", "http://schemas.openxmlformats.org/presentationml/2006/main" },
+            { "w", "http://schemas.openxmlformats.org/wordprocessingml/2006/main" },
+            { "a14", "http://schemas.microsoft.com/office/drawing/2010/main" },
+            { "wps", "http://schemas.microsoft.com/office/word/2010/wordprocessingShape" },
+            { "wpg", "http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" },
+        };
+        for (size_t i = 0; i < SAL_N_ELEMENTS(namespaces); ++i)
+        {
+            xmlXPathRegisterNs(pXmlXPathCtx,
+                reinterpret_cast<xmlChar const *>(namespaces[i].pPrefix),
+                reinterpret_cast<xmlChar const *>(namespaces[i].pURI));
+        }
+    }
+
+    xmlDocPtr parseExport(utl::TempFile & rTempFile, OUString const& rStreamName)
+    {
+        OUString const url(rTempFile.GetURL());
+        uno::Reference<packages::zip::XZipFileAccess2> const xZipNames(
+            packages::zip::ZipFileAccess::createWithURL(
+                comphelper::getComponentContext(m_xSFactory), url));
+        uno::Reference<io::XInputStream> const xInputStream(
+            xZipNames->getByName(rStreamName), uno::UNO_QUERY);
+        std::unique_ptr<SvStream> const pStream(
+            utl::UcbStreamHelper::CreateStream(xInputStream, true));
+        xmlDocPtr const pXmlDoc = parseXmlStream(pStream.get());
+        pXmlDoc->name = reinterpret_cast<char *>(xmlStrdup(
+            reinterpret_cast<xmlChar const *>(OUStringToOString(url, RTL_TEXTENCODING_UTF8).getStr())));
+        return pXmlDoc;
+    }
 };
 
 void SdExportTest::testN821567()
 {
     OUString bgImage;
-    ::sd::DrawDocShellRef xDocShRef = loadURL( getURLFromSrc("/sd/qa/unit/data/pptx/n821567.pptx"), PPTX );
+    ::sd::DrawDocShellRef xDocShRef = loadURL( m_directories.getURLFromSrc("/sd/qa/unit/data/pptx/n821567.pptx"), PPTX );
 
     xDocShRef = saveAndReload( xDocShRef, ODP );
     uno::Reference< drawing::XDrawPagesSupplier > xDoc(
@@ -237,12 +315,12 @@ void checkFontAttributes( const SdrTextObj* pObj, ItemValue nVal)
 
 void SdExportTest::testBnc870233_1()
 {
-    ::sd::DrawDocShellRef xDocShRef = loadURL(getURLFromSrc("/sd/qa/unit/data/pptx/bnc870233_1.pptx"), PPTX);
+    ::sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/pptx/bnc870233_1.pptx"), PPTX);
     xDocShRef = saveAndReload( xDocShRef, PPTX );
 
     const SdrPage *pPage = GetPage( 1, xDocShRef );
 
-    // The problem was all shapes had the same font (the last parsed font attribues overwrote all previous ones)
+    // The problem was all shapes had the same font (the last parsed font attributes overwrote all previous ones)
 
     // First shape has red, bold font
     {
@@ -263,7 +341,7 @@ void SdExportTest::testBnc870233_1()
 
 void SdExportTest::testBnc870233_2()
 {
-    ::sd::DrawDocShellRef xDocShRef = loadURL(getURLFromSrc("/sd/qa/unit/data/pptx/bnc870233_2.pptx"), PPTX);
+    ::sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/pptx/bnc870233_2.pptx"), PPTX);
     xDocShRef = saveAndReload( xDocShRef, PPTX );
 
     const SdrPage *pPage = GetPage( 1, xDocShRef );
@@ -294,7 +372,7 @@ void SdExportTest::testBnc870233_2()
 void SdExportTest::testN828390_4()
 {
     bool bPassed = false;
-    ::sd::DrawDocShellRef xDocShRef = loadURL( getURLFromSrc("/sd/qa/unit/data/n828390_4.odp"), ODP );
+    ::sd::DrawDocShellRef xDocShRef = loadURL( m_directories.getURLFromSrc("/sd/qa/unit/data/n828390_4.odp"), ODP );
 
     xDocShRef = saveAndReload( xDocShRef, PPTX );
 
@@ -329,7 +407,7 @@ void SdExportTest::testN828390_4()
 
 void SdExportTest::testN828390_5()
 {
-    ::sd::DrawDocShellRef xDocShRef = loadURL( getURLFromSrc("/sd/qa/unit/data/n828390_5.odp"), ODP );
+    ::sd::DrawDocShellRef xDocShRef = loadURL( m_directories.getURLFromSrc("/sd/qa/unit/data/n828390_5.odp"), ODP );
 
     xDocShRef = saveAndReload( xDocShRef, PPTX );
 
@@ -349,7 +427,7 @@ void SdExportTest::testN828390_5()
 
 void SdExportTest::testTransparentBackground()
 {
-   ::sd::DrawDocShellRef xDocShRef = loadURL(getURLFromSrc("/sd/qa/unit/data/odp/transparent_background.odp"), ODP);
+   ::sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/odp/transparent_background.odp"), ODP);
     xDocShRef = saveAndReload( xDocShRef, ODP );
 
     const SdrPage *pPage = GetPage( 1, xDocShRef );
@@ -359,11 +437,13 @@ void SdExportTest::testTransparentBackground()
 
     const SdrTextObj *pObj2 = dynamic_cast<SdrTextObj *>( pPage->GetObj( 1 ) );
     checkFontAttributes<Color, SvxBackgroundColorItem>( pObj2, Color(COL_YELLOW));
+
+    xDocShRef->DoClose();
 }
 
 void SdExportTest::testMediaEmbedding()
 {
-    ::sd::DrawDocShellRef xDocShRef = loadURL(getURLFromSrc("/sd/qa/unit/data/media_embedding.odp"), ODP);
+    ::sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/media_embedding.odp"), ODP);
 
 #if HAVE_FEATURE_GLTF
     xDocShRef = saveAndReload( xDocShRef, ODP );
@@ -395,18 +475,20 @@ void SdExportTest::testMediaEmbedding()
 
 void SdExportTest::testFdo84043()
 {
-    ::sd::DrawDocShellRef xDocShRef = loadURL(getURLFromSrc("/sd/qa/unit/data/fdo84043.odp"), ODP);
+    ::sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/fdo84043.odp"), ODP);
     xDocShRef = saveAndReload( xDocShRef, ODP );
 
     // the bug was duplicate attributes, causing crash in a build with asserts
     const SdrPage *pPage = GetPage( 1, xDocShRef );
     SdrObject const* pShape = pPage->GetObj(1);
     CPPUNIT_ASSERT_MESSAGE("no shape", pShape != nullptr);
+
+    xDocShRef->DoClose();
 }
 
 void SdExportTest::testFdo71961()
 {
-    ::sd::DrawDocShellRef xDocShRef = loadURL(getURLFromSrc("/sd/qa/unit/data/fdo71961.odp"), ODP);
+    ::sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/fdo71961.odp"), ODP);
 
     xDocShRef = saveAndReload( xDocShRef, PPTX );
     const SdrPage *pPage = GetPage( 1, xDocShRef );
@@ -434,7 +516,7 @@ void SdExportTest::testFdo71961()
 void SdExportTest::testN828390()
 {
     bool bPassed = false;
-    ::sd::DrawDocShellRef xDocShRef = loadURL( getURLFromSrc("/sd/qa/unit/data/pptx/n828390.pptx"), PPTX );
+    ::sd::DrawDocShellRef xDocShRef = loadURL( m_directories.getURLFromSrc("/sd/qa/unit/data/pptx/n828390.pptx"), PPTX );
 
     xDocShRef = saveAndReload( xDocShRef, PPTX );
 
@@ -467,7 +549,7 @@ void SdExportTest::testN828390()
 
 void SdExportTest::testBnc880763()
 {
-    ::sd::DrawDocShellRef xDocShRef = loadURL(getURLFromSrc("/sd/qa/unit/data/pptx/bnc880763.pptx"), PPTX);
+    ::sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/pptx/bnc880763.pptx"), PPTX);
     xDocShRef = saveAndReload( xDocShRef, PPTX );
 
     const SdrPage *pPage = GetPage( 1, xDocShRef );
@@ -488,7 +570,7 @@ void SdExportTest::testBnc880763()
 
 void SdExportTest::testBnc862510_5()
 {
-    ::sd::DrawDocShellRef xDocShRef = loadURL(getURLFromSrc("/sd/qa/unit/data/pptx/bnc862510_5.pptx"), PPTX);
+    ::sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/pptx/bnc862510_5.pptx"), PPTX);
     xDocShRef = saveAndReload( xDocShRef, PPTX );
 
     const SdrPage *pPage = GetPage( 1, xDocShRef );
@@ -509,7 +591,7 @@ void SdExportTest::testBnc862510_5()
 // not written into the file.
 void SdExportTest::testBnc822347_EmptyBullet()
 {
-    sd::DrawDocShellRef xDocShRef = loadURL(getURLFromSrc("/sd/qa/unit/data/bnc822347_EmptyBullet.odp"), ODP);
+    sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/bnc822347_EmptyBullet.odp"), ODP);
     xDocShRef = saveAndReload(xDocShRef, PPTX);
 
     SdDrawDocument* pDoc = xDocShRef->GetDoc();
@@ -538,7 +620,7 @@ void SdExportTest::testBnc822347_EmptyBullet()
 //Bullets not having  any text following them are not getting exported to pptx correctly.
 void SdExportTest::testFdo90607()
 {
-    sd::DrawDocShellRef xDocShRef = loadURL(getURLFromSrc("/sd/qa/unit/data/fdo90607.pptx"), PPTX);
+    sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/fdo90607.pptx"), PPTX);
     xDocShRef = saveAndReload(xDocShRef, PPTX);
 
     const SdrPage *pPage = GetPage( 1, xDocShRef );
@@ -552,7 +634,7 @@ void SdExportTest::testFdo90607()
 
 void SdExportTest::testFdo83751()
 {
-    ::sd::DrawDocShellRef xDocShRef = loadURL(getURLFromSrc("/sd/qa/unit/data/pptx/fdo83751.pptx"), PPTX);
+    ::sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/pptx/fdo83751.pptx"), PPTX);
     xDocShRef = saveAndReload( xDocShRef, PPTX );
 
     SdDrawDocument *pDoc = xDocShRef->GetDoc();
@@ -569,7 +651,7 @@ void SdExportTest::testFdo83751()
 
 void SdExportTest::testFdo79731()
 {
-    ::sd::DrawDocShellRef xDocShRef = loadURL(getURLFromSrc("/sd/qa/unit/data/fdo79731.odp"), ODP);
+    ::sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/fdo79731.odp"), ODP);
     xDocShRef = saveAndReload(xDocShRef, PPTX);
     SdDrawDocument *pDoc = xDocShRef->GetDoc();
     CPPUNIT_ASSERT(pDoc);
@@ -593,7 +675,7 @@ void SdExportTest::testSwappedOutImageExport()
     for( size_t nExportFormat = 0; nExportFormat < SAL_N_ELEMENTS(vFormats); ++nExportFormat )
     {
         // Load the original file with one image
-        ::sd::DrawDocShellRef xDocShRef = loadURL(getURLFromSrc("/sd/qa/unit/data/odp/document_with_two_images.odp"), ODP);
+        ::sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/odp/document_with_two_images.odp"), ODP);
         const OString sFailedMessage = OString("Failed on filter: ") + OString(aFileFormats[vFormats[nExportFormat]].pFilterName);
 
         // Export the document and import again for a check
@@ -657,7 +739,7 @@ void SdExportTest::testSwappedOutImageExport()
 
 void SdExportTest::testTdf80020()
 {
-    ::sd::DrawDocShellRef xDocShRef = loadURL(getURLFromSrc("/sd/qa/unit/data/odp/tdf80020.odp"), ODP);
+    ::sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/odp/tdf80020.odp"), ODP);
     {
         uno::Reference<style::XStyleFamiliesSupplier> xStyleFamiliesSupplier(xDocShRef->GetModel(), uno::UNO_QUERY);
         uno::Reference<container::XNameAccess> xStyleFamilies(xStyleFamiliesSupplier->getStyleFamilies(), uno::UNO_QUERY);
@@ -671,6 +753,8 @@ void SdExportTest::testTdf80020()
     uno::Reference<container::XNameAccess> xStyleFamily(xStyleFamilies->getByName("graphics"), uno::UNO_QUERY);
     uno::Reference<style::XStyle> xStyle(xStyleFamily->getByName("Test Style"), uno::UNO_QUERY);
     CPPUNIT_ASSERT_EQUAL(OUString("text"), xStyle->getParentStyle());
+
+    xDocShRef->DoClose();
 }
 
 void SdExportTest::testLinkedGraphicRT()
@@ -685,7 +769,7 @@ void SdExportTest::testLinkedGraphicRT()
     for( size_t nExportFormat = 0; nExportFormat < SAL_N_ELEMENTS(vFormats); ++nExportFormat )
     {
         // Load the original file with one image
-        ::sd::DrawDocShellRef xDocShRef = loadURL(getURLFromSrc("/sd/qa/unit/data/odp/document_with_linked_graphic.odp"), ODP);
+        ::sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/odp/document_with_linked_graphic.odp"), ODP);
         const OString sFailedMessage = OString("Failed on filter: ") + OString(aFileFormats[vFormats[nExportFormat]].pFilterName);
 
         // Export the document and import again for a check
@@ -737,7 +821,7 @@ void SdExportTest::testImageWithSpecialID()
     for( size_t nExportFormat = 0; nExportFormat < SAL_N_ELEMENTS(vFormats); ++nExportFormat )
     {
         // Load the original file
-        ::sd::DrawDocShellRef xDocShRef = loadURL(getURLFromSrc("/sd/qa/unit/data/odp/images_with_special_IDs.odp"), ODP);
+        ::sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/odp/images_with_special_IDs.odp"), ODP);
         const OString sFailedMessage = OString("Failed on filter: ") + OString(aFileFormats[vFormats[nExportFormat]].pFilterName);
 
         // Export the document and import again for a check
@@ -805,7 +889,7 @@ void SdExportTest::testTableCellFillProperties()
     batch->commit();
 
     // Load the original file
-    ::sd::DrawDocShellRef xDocShRef = loadURL(getURLFromSrc("/sd/qa/unit/data/odp/Table_with_Cell_Fill.odp"), ODP);
+    ::sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/odp/Table_with_Cell_Fill.odp"), ODP);
 
     // Export the document and import again for a check
     uno::Reference< lang::XComponent > xComponent(xDocShRef->GetModel(), uno::UNO_QUERY);
@@ -849,7 +933,7 @@ void SdExportTest::testTableCellFillProperties()
 
 void SdExportTest::testBulletStartNumber()
 {
-    ::sd::DrawDocShellRef xDocShRef = loadURL( getURLFromSrc("/sd/qa/unit/data/pptx/n90255.pptx"), PPTX );
+    ::sd::DrawDocShellRef xDocShRef = loadURL( m_directories.getURLFromSrc("/sd/qa/unit/data/pptx/n90255.pptx"), PPTX );
     xDocShRef = saveAndReload( xDocShRef, PPTX );
 
     const SdrPage *pPage = GetPage( 1, xDocShRef );
@@ -864,7 +948,7 @@ void SdExportTest::testBulletStartNumber()
 
 void SdExportTest::testLineStyle()
 {
-    ::sd::DrawDocShellRef xDocShRef = loadURL(getURLFromSrc("sd/qa/unit/data/pptx/lineStyle.pptx"), PPTX);
+    ::sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("sd/qa/unit/data/pptx/lineStyle.pptx"), PPTX);
      xDocShRef = saveAndReload( xDocShRef, PPTX );
 
     const SdrPage *pPage = GetPage( 1, xDocShRef );
@@ -880,7 +964,7 @@ void SdExportTest::testLineStyle()
 
 void SdExportTest::testRightToLeftParaghraph()
 {
-    ::sd::DrawDocShellRef xDocShRef = loadURL(getURLFromSrc("/sd/qa/unit/data/pptx/rightToLeftParagraph.pptx"), PPTX);
+    ::sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/pptx/rightToLeftParagraph.pptx"), PPTX);
 
     xDocShRef = saveAndReload( xDocShRef, PPTX );
     uno::Reference< beans::XPropertySet > xShape( getShapeFromPage( 0, 0, xDocShRef ) );
@@ -898,7 +982,7 @@ void SdExportTest::testRightToLeftParaghraph()
 
 void SdExportTest::testTextboxWithHyperlink()
 {
-    ::sd::DrawDocShellRef xDocShRef = loadURL(getURLFromSrc("/sd/qa/unit/data/pptx/hyperlinktest.pptx"), PPTX);
+    ::sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/pptx/hyperlinktest.pptx"), PPTX);
 
     xDocShRef = saveAndReload( xDocShRef, PPTX );
     uno::Reference< beans::XPropertySet > xShape( getShapeFromPage( 0, 0, xDocShRef ) );
@@ -924,7 +1008,7 @@ void SdExportTest::testTextboxWithHyperlink()
 
 void SdExportTest::testBulletColor()
 {
-    ::sd::DrawDocShellRef xDocShRef = loadURL( getURLFromSrc("/sd/qa/unit/data/pptx/bulletColor.pptx"), PPTX );
+    ::sd::DrawDocShellRef xDocShRef = loadURL( m_directories.getURLFromSrc("/sd/qa/unit/data/pptx/bulletColor.pptx"), PPTX );
 
     xDocShRef = saveAndReload( xDocShRef, PPTX );
 
@@ -937,11 +1021,13 @@ void SdExportTest::testBulletColor()
     const SvxNumBulletItem *pNumFmt = dynamic_cast<const SvxNumBulletItem *>(aEdit.GetParaAttribs(0).GetItem(EE_PARA_NUMBULLET));
     CPPUNIT_ASSERT(pNumFmt);
     CPPUNIT_ASSERT_EQUAL_MESSAGE( "Bullet's color is wrong!", sal_uInt32(0xff0000),pNumFmt->GetNumRule()->GetLevel(0).GetBulletColor().GetColor());
+
+    xDocShRef->DoClose();
 }
 
 void SdExportTest::testTdf62176()
 {
-    ::sd::DrawDocShellRef xDocShRef = loadURL(getURLFromSrc("/sd/qa/unit/data/odp/Tdf62176.odp"), ODP);
+    ::sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/odp/Tdf62176.odp"), ODP);
     uno::Reference<drawing::XDrawPage> xPage( getPage( 0, xDocShRef ) );
 
     //there should be only *one* shape
@@ -980,11 +1066,13 @@ void SdExportTest::testTdf62176()
     //Checking the *Text* in TextBox
     uno::Reference<text::XTextRange> xParagraph2( getParagraphFromShape( 0, xShape2 ) );
     CPPUNIT_ASSERT_EQUAL(OUString("Hello World"), xParagraph2->getString());
+
+    xDocShRef->DoClose();
 }
 
 void SdExportTest::testBulletCharAndFont()
 {
-    ::sd::DrawDocShellRef xDocShRef = loadURL( getURLFromSrc("/sd/qa/unit/data/odp/bulletCharAndFont.odp"), ODP);
+    ::sd::DrawDocShellRef xDocShRef = loadURL( m_directories.getURLFromSrc("/sd/qa/unit/data/odp/bulletCharAndFont.odp"), ODP);
     xDocShRef = saveAndReload( xDocShRef, PPTX );
 
     uno::Reference< beans::XPropertySet > xShape( getShapeFromPage( 0, 0, xDocShRef ) );
@@ -1014,7 +1102,7 @@ void SdExportTest::testTdf91378()
 {
 
     //Check For Import and Export Both
-    ::sd::DrawDocShellRef xDocShRef = loadURL(getURLFromSrc("/sd/qa/unit/data/pptx/tdf91378.pptx"), PPTX);
+    ::sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/pptx/tdf91378.pptx"), PPTX);
     for( sal_uInt32 i=0;i<2;i++)
     {
       SdDrawDocument *pDoc = xDocShRef->GetDoc();
@@ -1030,16 +1118,35 @@ void SdExportTest::testTdf91378()
     xDocShRef->DoClose();
 }
 
-#if !defined WNT
-
+//This test gives errors due to ATL
+#if HAVE_FEATURE_ATL
 void SdExportTest::testBnc822341()
 {
     // Check import / export of embedded text document
-    ::sd::DrawDocShellRef xDocShRef = loadURL(getURLFromSrc("sd/qa/unit/data/odp/bnc822341.odp"), ODP);
-    xDocShRef = saveAndReload( xDocShRef, PPTX );
+    ::sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("sd/qa/unit/data/odp/bnc822341.odp"), ODP);
+    utl::TempFile tempFile1;
+    xDocShRef = saveAndReload( xDocShRef, PPTX, &tempFile1 );
 
     // Export an LO specific ole object (imported from an ODP document)
     {
+        xmlDocPtr pXmlDocCT = parseExport(tempFile1, "[Content_Types].xml");
+        assertXPath(pXmlDocCT,
+                    "/ContentType:Types/ContentType:Override[@ContentType='application/vnd.openxmlformats-officedocument.wordprocessingml.document']",
+                    "PartName",
+                    "/ppt/embeddings/oleObject1.docx");
+
+        xmlDocPtr pXmlDocRels = parseExport(tempFile1, "ppt/slides/_rels/slide1.xml.rels");
+        assertXPath(pXmlDocRels,
+            "/rels:Relationships/rels:Relationship[@Target='../embeddings/oleObject1.docx']",
+            "Type",
+            "http://schemas.openxmlformats.org/officeDocument/2006/relationships/package");
+
+        xmlDocPtr pXmlDocContent = parseExport(tempFile1, "ppt/slides/slide1.xml");
+        assertXPath(pXmlDocContent,
+            "/p:sld/p:cSld/p:spTree/p:graphicFrame/a:graphic/a:graphicData/p:oleObj",
+            "progId",
+            "Word.Document.12");
+
         const SdrPage *pPage = GetPage( 1, xDocShRef );
 
         const SdrObject* pObj = dynamic_cast<SdrObject*>( pPage->GetObj(0) );
@@ -1047,10 +1154,29 @@ void SdExportTest::testBnc822341()
         CPPUNIT_ASSERT_EQUAL( static_cast<sal_uInt16>(OBJ_OLE2), pObj->GetObjIdentifier() );
     }
 
-    xDocShRef = saveAndReload( xDocShRef, PPTX );
+    utl::TempFile tempFile2;
+    xDocShRef = saveAndReload( xDocShRef, PPTX, &tempFile2 );
 
     // Export an MS specific ole object (imported from a PPTX document)
     {
+        xmlDocPtr pXmlDocCT = parseExport(tempFile2, "[Content_Types].xml");
+        assertXPath(pXmlDocCT,
+                    "/ContentType:Types/ContentType:Override[@ContentType='application/vnd.openxmlformats-officedocument.wordprocessingml.document']",
+                    "PartName",
+                    "/ppt/embeddings/oleObject1.docx");
+
+        xmlDocPtr pXmlDocRels = parseExport(tempFile2, "ppt/slides/_rels/slide1.xml.rels");
+        assertXPath(pXmlDocRels,
+            "/rels:Relationships/rels:Relationship[@Target='../embeddings/oleObject1.docx']",
+            "Type",
+            "http://schemas.openxmlformats.org/officeDocument/2006/relationships/package");
+
+        xmlDocPtr pXmlDocContent = parseExport(tempFile2, "ppt/slides/slide1.xml");
+        assertXPath(pXmlDocContent,
+            "/p:sld/p:cSld/p:spTree/p:graphicFrame/a:graphic/a:graphicData/p:oleObj",
+            "progId",
+            "Word.Document.12");
+
         SdDrawDocument *pDoc = xDocShRef->GetDoc();
         CPPUNIT_ASSERT_MESSAGE( "no document", pDoc != nullptr );
         const SdrPage *pPage = pDoc->GetPage(1);
@@ -1063,12 +1189,85 @@ void SdExportTest::testBnc822341()
 
     xDocShRef->DoClose();
 }
-
 #endif
+
+void SdExportTest::testMathObject()
+{
+    // Check import / export of math object
+    ::sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("sd/qa/unit/data/odp/math.odp"), ODP);
+    utl::TempFile tempFile1;
+    xDocShRef = saveAndReload(xDocShRef, PPTX, &tempFile1);
+
+    // Export an LO specific ole object (imported from an ODP document)
+    {
+        xmlDocPtr pXmlDocContent = parseExport(tempFile1, "ppt/slides/slide1.xml");
+        assertXPath(pXmlDocContent,
+            "/p:sld/p:cSld/p:spTree/mc:AlternateContent/mc:Choice",
+            "Requires",
+            "a14");
+        assertXPathContent(pXmlDocContent,
+            "/p:sld/p:cSld/p:spTree/mc:AlternateContent/mc:Choice/p:sp/p:txBody/a:p/a14:m/m:oMath/m:r[1]/m:t",
+            "a");
+
+        const SdrPage *pPage = GetPage(1, xDocShRef);
+        const SdrObject* pObj = dynamic_cast<SdrObject*>(pPage->GetObj(0));
+        CPPUNIT_ASSERT_MESSAGE("no object", pObj != nullptr);
+        CPPUNIT_ASSERT_EQUAL(static_cast<sal_uInt16>(OBJ_OLE2), pObj->GetObjIdentifier());
+    }
+
+    utl::TempFile tempFile2;
+    xDocShRef = saveAndReload( xDocShRef, PPTX, &tempFile2 );
+
+    // Export an MS specific ole object (imported from a PPTX document)
+    {
+        xmlDocPtr pXmlDocContent = parseExport(tempFile1, "ppt/slides/slide1.xml");
+        assertXPath(pXmlDocContent,
+            "/p:sld/p:cSld/p:spTree/mc:AlternateContent/mc:Choice",
+            "Requires",
+            "a14");
+        assertXPathContent(pXmlDocContent,
+            "/p:sld/p:cSld/p:spTree/mc:AlternateContent/mc:Choice/p:sp/p:txBody/a:p/a14:m/m:oMath/m:r[1]/m:t",
+            "a");
+
+        const SdrPage *pPage = GetPage(1, xDocShRef);
+        const SdrObject* pObj = dynamic_cast<SdrObject*>(pPage->GetObj(0));
+        CPPUNIT_ASSERT_MESSAGE("no object", pObj != nullptr);
+        CPPUNIT_ASSERT_EQUAL(static_cast<sal_uInt16>(OBJ_OLE2), pObj->GetObjIdentifier());
+    }
+
+    xDocShRef->DoClose();
+}
+
+void SdExportTest::testMathObjectPPT2010()
+{
+    // Check import / export of math object
+    ::sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("sd/qa/unit/data/pptx/Math.pptx"), PPTX);
+    utl::TempFile tempFile1;
+    xDocShRef = saveAndReload(xDocShRef, PPTX, &tempFile1);
+
+    // Export an MS specific ole object (imported from a PPTX document)
+    {
+        xmlDocPtr pXmlDocContent = parseExport(tempFile1, "ppt/slides/slide1.xml");
+        assertXPath(pXmlDocContent,
+            "/p:sld/p:cSld/p:spTree/mc:AlternateContent/mc:Choice",
+            "Requires",
+            "a14");
+        assertXPathContent(pXmlDocContent,
+            "/p:sld/p:cSld/p:spTree/mc:AlternateContent/mc:Choice/p:sp/p:txBody/a:p/a14:m/m:oMath/m:sSup/m:e/m:r[1]/m:t",
+            OUString::fromUtf8("\xf0\x9d\x91\x8e")); // non-BMP char
+
+        const SdrPage *pPage = GetPage(1, xDocShRef);
+        const SdrObject* pObj = dynamic_cast<SdrObject*>(pPage->GetObj(0));
+        CPPUNIT_ASSERT_MESSAGE("no object", pObj != nullptr);
+        CPPUNIT_ASSERT_EQUAL(static_cast<sal_uInt16>(OBJ_OLE2), pObj->GetObjIdentifier());
+    }
+
+    xDocShRef->DoClose();
+}
 
 void SdExportTest::testBulletMarginAndIndentation()
 {
-    ::sd::DrawDocShellRef xDocShRef = loadURL( getURLFromSrc("/sd/qa/unit/data/pptx/bulletMarginAndIndent.pptx"), PPTX );
+    ::sd::DrawDocShellRef xDocShRef = loadURL( m_directories.getURLFromSrc("/sd/qa/unit/data/pptx/bulletMarginAndIndent.pptx"), PPTX );
     xDocShRef = saveAndReload( xDocShRef, PPTX );
 
     const SdrPage *pPage = GetPage( 1, xDocShRef );
@@ -1082,11 +1281,13 @@ void SdExportTest::testBulletMarginAndIndentation()
 
     CPPUNIT_ASSERT_EQUAL_MESSAGE( "Bullet's left margin is wrong!", sal_uInt32(1000),sal_uInt32(pNumFmt->GetNumRule()->GetLevel(0).GetAbsLSpace()) ); // left margin is 0.79 cm
     CPPUNIT_ASSERT_EQUAL_MESSAGE( "Bullet's indentation is wrong!", sal_Int32(-998),sal_Int32(pNumFmt->GetNumRule()->GetLevel(0). GetFirstLineOffset()));
+
+    xDocShRef->DoClose();
 }
 
 void SdExportTest::testParaMarginAndindentation()
 {
-    ::sd::DrawDocShellRef xDocShRef = loadURL(getURLFromSrc("/sd/qa/unit/data/pptx/paraMarginAndIndentation.pptx"), PPTX);
+    ::sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/pptx/paraMarginAndIndentation.pptx"), PPTX);
 
     xDocShRef = saveAndReload( xDocShRef, PPTX );
     uno::Reference< beans::XPropertySet > xShape( getShapeFromPage( 0, 0, xDocShRef ) );
@@ -1108,7 +1309,7 @@ void SdExportTest::testParaMarginAndindentation()
 
 void SdExportTest::testCellLeftAndRightMargin()
 {
-    ::sd::DrawDocShellRef xDocShRef = loadURL(getURLFromSrc("sd/qa/unit/data/pptx/n90223.pptx"), PPTX);
+    ::sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("sd/qa/unit/data/pptx/n90223.pptx"), PPTX);
     xDocShRef = saveAndReload( xDocShRef, PPTX );
     sal_Int32 nLeftMargin, nRightMargin;
 
@@ -1139,7 +1340,7 @@ void SdExportTest::testCellLeftAndRightMargin()
 
 void SdExportTest::testTableCellBorder()
 {
-    ::sd::DrawDocShellRef xDocShRef = loadURL(getURLFromSrc("sd/qa/unit/data/pptx/n90190.pptx"), PPTX);
+    ::sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("sd/qa/unit/data/pptx/n90190.pptx"), PPTX);
     xDocShRef = saveAndReload( xDocShRef, PPTX );
 
     const SdrPage *pPage = GetPage( 1, xDocShRef );
@@ -1189,7 +1390,7 @@ void SdExportTest::testTableCellBorder()
 
 void SdExportTest::testTdf80224()
 {
-    ::sd::DrawDocShellRef xDocShRef = loadURL( getURLFromSrc("/sd/qa/unit/data/odp/tdf80224.odp"), ODP);
+    ::sd::DrawDocShellRef xDocShRef = loadURL( m_directories.getURLFromSrc("/sd/qa/unit/data/odp/tdf80224.odp"), ODP);
     xDocShRef = saveAndReload( xDocShRef, PPTX );
     uno::Reference< beans::XPropertySet > xShape( getShapeFromPage( 0, 0, xDocShRef ) );
 
@@ -1245,7 +1446,7 @@ bool checkTransitionOnPage(uno::Reference<drawing::XDrawPagesSupplier> xDoc, sal
 
 void SdExportTest::testExportTransitionsPPTX()
 {
-    sd::DrawDocShellRef xDocShRef = loadURL(getURLFromSrc("/sd/qa/unit/data/AllTransitions.odp"), ODP);
+    sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/AllTransitions.odp"), ODP);
     xDocShRef = saveAndReload(xDocShRef, PPTX);
     uno::Reference<drawing::XDrawPagesSupplier> xDoc(xDocShRef->GetDoc()->getUnoModel(), uno::UNO_QUERY_THROW);
 
@@ -1284,6 +1485,8 @@ void SdExportTest::testExportTransitionsPPTX()
 
     // NEWSFLASH
     CPPUNIT_ASSERT(checkTransitionOnPage(xDoc, 74, TransitionType::ZOOM, TransitionSubType::ROTATEIN));
+
+    xDocShRef->DoClose();
 }
 
 void SdExportTest::testTdf92527()
@@ -1291,7 +1494,7 @@ void SdExportTest::testTdf92527()
     // We draw a diamond in an empty document. A newly created diamond shape does not have
     // CustomShapeGeometry - Path - Segments property, and previously DrawingML exporter
     // did not export custom shapes which did not have CustomShapeGeometry - Path - Segments property.
-    sd::DrawDocShellRef xDocShRef = loadURL(getURLFromSrc("/sd/qa/unit/data/empty.fodp"), FODG );
+    sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/empty.fodp"), FODG );
     uno::Reference<css::lang::XMultiServiceFactory> xFactory(xDocShRef->GetDoc()->getUnoModel(), uno::UNO_QUERY);
     uno::Reference<drawing::XShape> xShape1(xFactory->createInstance("com.sun.star.drawing.CustomShape"), uno::UNO_QUERY);
     uno::Reference<drawing::XDrawPagesSupplier> xDoc1(xDocShRef->GetDoc()->getUnoModel(), uno::UNO_QUERY_THROW);
@@ -1332,6 +1535,171 @@ void SdExportTest::testTdf92527()
     // 5 coordinate pairs, 1 MoveTo, 4 LineTo
     CPPUNIT_ASSERT_EQUAL(sal_Int32(5), aCoordinates.getLength());
     xDocShRef->DoClose();
+}
+
+namespace {
+
+void matchNumberFormat( int nPage, uno::Reference< text::XTextField > xField)
+{
+    uno::Reference< beans::XPropertySet > xPropSet( xField, uno::UNO_QUERY_THROW );
+    sal_Int32 nNumFmt;
+    xPropSet->getPropertyValue("NumberFormat") >>= nNumFmt;
+    switch( nPage )
+    {
+        case 0:     // 13/02/96
+                    CPPUNIT_ASSERT_EQUAL_MESSAGE("Number formats of Date fields don't match", sal_Int32(2), nNumFmt);
+                    break;
+        case 1:     // 13/02/1996
+                    CPPUNIT_ASSERT_EQUAL_MESSAGE("Number formats of Date fields don't match", sal_Int32(5), nNumFmt);
+                    break;
+        case 2:     // 13 February 1996
+                    CPPUNIT_ASSERT_EQUAL_MESSAGE("Number formats of Date fields don't match", sal_Int32(3), nNumFmt);
+                    break;
+        case 3:     // 13:49:38
+                    CPPUNIT_ASSERT_EQUAL_MESSAGE("Number formats of Time fields don't match", sal_Int32(2), nNumFmt);
+                    break;
+        case 4:     // 13:49
+                    CPPUNIT_ASSERT_EQUAL_MESSAGE("Number formats of Time fields don't match", sal_Int32(3), nNumFmt);
+                    break;
+        case 5:     // 01:49 PM
+                    CPPUNIT_ASSERT_EQUAL_MESSAGE("Number formats of Time fields don't match", sal_Int32(6), nNumFmt);
+                    break;
+        case 6:     // 01:49:38 PM
+                    CPPUNIT_ASSERT_EQUAL_MESSAGE("Number formats of Time fields don't match", sal_Int32(7), nNumFmt);
+    }
+}
+
+}
+
+void SdExportTest::testDatetimeFieldNumberFormat()
+{
+    ::sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/odp/numfmt.odp"), ODP);
+
+    xDocShRef = saveAndReload( xDocShRef, PPTX );
+
+    for(sal_uInt16 i = 0; i <= 6; ++i)
+    {
+        matchNumberFormat( i, getTextFieldFromPage(0, 0, 0, i, xDocShRef) );
+    }
+
+    xDocShRef->DoClose();
+}
+
+void SdExportTest::testDatetimeFieldNumberFormatPPTX()
+{
+    ::sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/pptx/numfmt.pptx"), PPTX);
+
+    xDocShRef = saveAndReload( xDocShRef, PPTX );
+
+    for(sal_uInt16 i = 0; i <= 6; ++i)
+    {
+        matchNumberFormat( i, getTextFieldFromPage(0, 0, 0, i, xDocShRef) );
+    }
+
+    xDocShRef->DoClose();
+}
+
+void SdExportTest::testSlideNumberField()
+{
+    ::sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/odp/slidenum_field.odp"), ODP);
+
+    xDocShRef = saveAndReload( xDocShRef, PPTX );
+
+    uno::Reference< text::XTextField > xField = getTextFieldFromPage(0, 0, 0, 0, xDocShRef);
+    CPPUNIT_ASSERT_MESSAGE("Where is the text field?", xField.is() );
+
+    xDocShRef->DoClose();
+}
+
+void SdExportTest::testSlideNumberFieldPPTX()
+{
+    ::sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/pptx/slidenum_field.pptx"), PPTX);
+
+    xDocShRef = saveAndReload( xDocShRef, PPTX );
+
+    uno::Reference< text::XTextField > xField = getTextFieldFromPage(0, 0, 0, 0, xDocShRef);
+    CPPUNIT_ASSERT_MESSAGE("Where is the text field?", xField.is() );
+
+    xDocShRef->DoClose();
+}
+
+void SdExportTest::testSlideCountField()
+{
+    ::sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/odp/slidecount_field.odp"), ODP);
+
+    xDocShRef = saveAndReload( xDocShRef, PPTX );
+
+    uno::Reference< text::XTextField > xField = getTextFieldFromPage(0, 0, 0, 0, xDocShRef);
+    CPPUNIT_ASSERT_MESSAGE("Where is the text field?", xField.is() );
+
+    xDocShRef->DoClose();
+}
+
+void SdExportTest::testSlideNameField()
+{
+    ::sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/odp/slidename_field.odp"), ODP);
+
+    xDocShRef = saveAndReload( xDocShRef, PPTX );
+
+    uno::Reference< text::XTextField > xField = getTextFieldFromPage(0, 0, 0, 0, xDocShRef);
+    CPPUNIT_ASSERT_MESSAGE("Where is the text field?", xField.is() );
+
+    xDocShRef->DoClose();
+}
+
+void SdExportTest::testExtFileField()
+{
+    ::sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/odp/extfile_field.odp"), ODP);
+
+    xDocShRef = saveAndReload( xDocShRef, PPTX );
+
+    for(sal_uInt16 i = 0; i <= 3; ++i)
+    {
+        uno::Reference< text::XTextField > xField = getTextFieldFromPage(0, 0, i, 0, xDocShRef);
+        CPPUNIT_ASSERT_MESSAGE("Where is the text field?", xField.is() );
+
+        uno::Reference< beans::XPropertySet > xPropSet( xField, uno::UNO_QUERY_THROW );
+        sal_Int32 nNumFmt;
+        xPropSet->getPropertyValue("FileFormat") >>= nNumFmt;
+        switch( i )
+        {
+            case 0:     // Path/File name
+                        CPPUNIT_ASSERT_EQUAL_MESSAGE("File formats don't match", sal_Int32(0), nNumFmt);
+                        break;
+            case 1:     // Path
+                        CPPUNIT_ASSERT_EQUAL_MESSAGE("File formats don't match", sal_Int32(1), nNumFmt);
+                        break;
+            case 2:     // File name without extension
+                        CPPUNIT_ASSERT_EQUAL_MESSAGE("File formats don't match", sal_Int32(2), nNumFmt);
+                        break;
+            case 3:     // File name with extension
+                        CPPUNIT_ASSERT_EQUAL_MESSAGE("File formats don't match", sal_Int32(3), nNumFmt);
+        }
+    }
+
+    xDocShRef->DoClose();
+}
+
+void SdExportTest::testAuthorField()
+{
+    ::sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/odp/author_field.odp"), ODP);
+
+    xDocShRef = saveAndReload( xDocShRef, PPTX );
+
+    uno::Reference< text::XTextField > xField = getTextFieldFromPage(0, 0, 0, 0, xDocShRef);
+    CPPUNIT_ASSERT_MESSAGE("Where is the text field?", xField.is() );
+
+    xDocShRef->DoClose();
+}
+
+void SdExportTest::testTdf99224()
+{
+    sd::DrawDocShellRef xShell = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/odp/tdf99224.odp"), ODP);
+    xShell = saveAndReload(xShell, PPTX);
+    uno::Reference<drawing::XDrawPage> xPage = getPage(0, xShell);
+    // This was 0: the image with text was lost on export.
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(1), xPage->getCount());
+    xShell->DoClose();
 }
 
 CPPUNIT_TEST_SUITE_REGISTRATION(SdExportTest);

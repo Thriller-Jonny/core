@@ -34,13 +34,13 @@
 #include <graphite_layout.hxx>
 #endif
 
-class ImplWinFontEntry;
+class WinFontInstance;
 struct VisualItem;
 
 class WinLayout : public SalLayout
 {
 public:
-                        WinLayout(HDC, const ImplWinFontData&, ImplWinFontEntry&, bool bUseOpenGL);
+                        WinLayout(HDC, const WinFontFace&, WinFontInstance&, bool bUseOpenGL);
     virtual             ~WinLayout();
     virtual void        InitFont() const override;
     void                SetFontScale( float f ) { mfFontScale = f; }
@@ -53,7 +53,7 @@ public:
     virtual void        DrawText(SalGraphics&) const override;
 
     /// Draw to the provided HDC.
-    virtual void        DrawTextImpl(HDC hDC) const = 0;
+    virtual bool        DrawTextImpl(HDC hDC, const Rectangle* pRectToErase, Point* pPos, int* pGetNextGlypInfo) const = 0;
 
     virtual bool        CacheGlyphs(SalGraphics& rGraphics) const = 0;
     virtual bool        DrawCachedGlyphs(SalGraphics& rGraphics) const = 0;
@@ -64,18 +64,62 @@ public:
     float               mfFontScale;        // allows metrics emulation of huge font sizes
     bool                mbUseOpenGL;        ///< We need to render via OpenGL
 
-    const ImplWinFontData& mrWinFontData;
-    ImplWinFontEntry&   mrWinFontEntry;
+    const WinFontFace& mrWinFontData;
+    WinFontInstance&   mrWinFontEntry;
+};
+
+class SimpleWinLayout : public WinLayout
+{
+public:
+                    SimpleWinLayout(HDC, const WinFontFace&, WinFontInstance&, bool bUseOpenGL);
+    virtual         ~SimpleWinLayout();
+
+    virtual bool    LayoutText( ImplLayoutArgs& ) override;
+    virtual void    AdjustLayout( ImplLayoutArgs& ) override;
+    virtual bool    DrawTextImpl(HDC hDC, const Rectangle* pRectToErase, Point* pPos, int* pGetNextGlypInfo) const override;
+
+    virtual bool    CacheGlyphs(SalGraphics& rGraphics) const override;
+    virtual bool    DrawCachedGlyphs(SalGraphics& rGraphics) const override;
+    virtual int     GetNextGlyphs( int nLen, sal_GlyphId* pGlyphs, Point& rPos, int&,
+                                   DeviceCoordinate* pGlyphAdvances, int* pCharIndexes,
+                                   const PhysicalFontFace** pFallbackFonts = NULL ) const override;
+
+    virtual DeviceCoordinate FillDXArray( DeviceCoordinate* pDXArray ) const override;
+    virtual sal_Int32 GetTextBreak(DeviceCoordinate nMaxWidth, DeviceCoordinate nCharExtra, int nFactor) const override;
+    virtual void    GetCaretPositions( int nArraySize, long* pCaretXArray ) const override;
+
+    // for glyph+font+script fallback
+    virtual void    MoveGlyph( int nStart, long nNewXPos ) override;
+    virtual void    DropGlyph( int nStart ) override;
+    virtual void    Simplify( bool bIsBase ) override;
+
+protected:
+    void            Justify( DeviceCoordinate nNewWidth );
+    void            ApplyDXArray( const ImplLayoutArgs& );
+
+private:
+    int             mnGlyphCount;
+    int             mnCharCount;
+    WCHAR*          mpOutGlyphs;
+    int*            mpGlyphAdvances;    // if possible this is shared with mpGlyphAdvances[]
+    int*            mpGlyphOrigAdvs;
+    int*            mpCharWidths;       // map rel char pos to char width
+    int*            mpChars2Glyphs;     // map rel char pos to abs glyph pos
+    int*            mpGlyphs2Chars;     // map abs glyph pos to abs char pos
+    bool*           mpGlyphRTLFlags;    // BiDi status for glyphs: true=>RTL
+    mutable long    mnWidth;
+
+    int             mnNotdefWidth;
 };
 
 class UniscribeLayout : public WinLayout
 {
 public:
-                    UniscribeLayout(HDC, const ImplWinFontData&, ImplWinFontEntry&, bool bUseOpenGL);
+                    UniscribeLayout(HDC, const WinFontFace&, WinFontInstance&, bool bUseOpenGL);
 
     virtual bool    LayoutText( ImplLayoutArgs& ) override;
     virtual void    AdjustLayout( ImplLayoutArgs& ) override;
-    virtual void    DrawTextImpl(HDC hDC) const override;
+    virtual bool    DrawTextImpl(HDC hDC, const Rectangle* pRectToErase, Point* pPos, int* pGetNextGlypInfo) const override;
     virtual bool    CacheGlyphs(SalGraphics& rGraphics) const override;
     virtual bool    DrawCachedGlyphs(SalGraphics& rGraphics) const override;
     virtual int     GetNextGlyphs( int nLen, sal_GlyphId* pGlyphs, Point& rPos, int&,
@@ -145,13 +189,13 @@ private:
 class GraphiteLayoutWinImpl : public GraphiteLayout
 {
 public:
-    GraphiteLayoutWinImpl(const gr_face * pFace, ImplWinFontEntry & rFont)
+    GraphiteLayoutWinImpl(const gr_face * pFace, WinFontInstance & rFont)
         throw()
     : GraphiteLayout(pFace), mrFont(rFont) {};
     virtual ~GraphiteLayoutWinImpl() throw() {};
     virtual sal_GlyphId getKashidaGlyph(int & rWidth) override;
 private:
-    ImplWinFontEntry & mrFont;
+    WinFontInstance & mrFont;
 };
 
 /// This class uses the SIL Graphite engine to provide complex text layout services to the VCL
@@ -162,13 +206,13 @@ private:
     grutils::GrFeatureParser * mpFeatures;
     mutable GraphiteLayoutWinImpl maImpl;
 public:
-    GraphiteWinLayout(HDC hDC, const ImplWinFontData& rWFD, ImplWinFontEntry& rWFE, bool bUseOpenGL) throw();
+    GraphiteWinLayout(HDC hDC, const WinFontFace& rWFD, WinFontInstance& rWFE, bool bUseOpenGL) throw();
     virtual ~GraphiteWinLayout();
 
     // used by upper layers
     virtual bool  LayoutText( ImplLayoutArgs& ) override;    // first step of layout
     virtual void  AdjustLayout( ImplLayoutArgs& ) override;  // adjusting after fallback etc.
-    virtual void  DrawTextImpl(HDC hDC) const override;
+    virtual bool  DrawTextImpl(HDC hDC, const Rectangle* pRectToErase, Point* pPos, int* pGetNextGlypInfo) const override;
     virtual bool  CacheGlyphs(SalGraphics& rGraphics) const override;
     virtual bool  DrawCachedGlyphs(SalGraphics& rGraphics) const override;
 

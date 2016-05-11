@@ -147,7 +147,7 @@ SdNavigatorWin::SdNavigatorWin(
 void SdNavigatorWin::SetUpdateRequestFunctor(const UpdateRequestFunctor& rUpdateRequest)
 {
     mpNavigatorCtrlItem = new SdNavigatorControllerItem( SID_NAVIGATOR_STATE, this, mpBindings, rUpdateRequest);
-    mpPageNameCtrlItem = new SdPageNameControllerItem( SID_NAVIGATOR_PAGENAME, this, mpBindings, rUpdateRequest);
+    mpPageNameCtrlItem = new SdPageNameControllerItem( SID_NAVIGATOR_PAGENAME, this, mpBindings);
 
     // InitTlb; is initiated over Slot
     if (rUpdateRequest)
@@ -266,49 +266,22 @@ sd::DrawDocShell* SdNavigatorWin::GetDrawDocShell( const SdDrawDocument* pDoc )
 IMPL_LINK_NOARG_TYPED(SdNavigatorWin, SelectToolboxHdl, ToolBox *, void)
 {
     sal_uInt16 nId = maToolbox->GetCurItemId();
-    sal_uInt16 nSId = 0;
     PageJump ePage = PAGE_NONE;
 
-    switch( nId )
+    if( nId == TBI_FIRST )
+        ePage = PAGE_FIRST;
+    else if( nId == TBI_PREVIOUS )
+        ePage = PAGE_PREVIOUS;
+    else if( nId == TBI_NEXT )
+        ePage = PAGE_NEXT;
+    else if( nId == TBI_LAST )
+        ePage = PAGE_LAST;
+
+    if( ePage != PAGE_NONE )
     {
-        case TBI_PEN:
-        {
-            if( nId == TBI_PEN )
-            {
-                nSId = SID_NAVIGATOR_PEN;
-            }
-
-            if( nSId > 0 )
-            {
-                SfxBoolItem aItem( nSId, true );
-                mpBindings->GetDispatcher()->Execute(
-                    nSId, SfxCallMode::SLOT |SfxCallMode::RECORD, &aItem, 0L );
-            }
-        }
-        break;
-
-        case TBI_FIRST:
-        case TBI_PREVIOUS:
-        case TBI_NEXT:
-        case TBI_LAST:
-        {
-            if( nId == TBI_FIRST )
-                ePage = PAGE_FIRST;
-            else if( nId == TBI_PREVIOUS )
-                ePage = PAGE_PREVIOUS;
-            else if( nId == TBI_NEXT )
-                ePage = PAGE_NEXT;
-            else if( nId == TBI_LAST )
-                ePage = PAGE_LAST;
-
-            if( ePage != PAGE_NONE )
-            {
-                SfxUInt16Item aItem( SID_NAVIGATOR_PAGE, (sal_uInt16)ePage );
-                mpBindings->GetDispatcher()->Execute(
-                    SID_NAVIGATOR_PAGE, SfxCallMode::SLOT | SfxCallMode::RECORD, &aItem, 0L );
-            }
-        }
-        break;
+        SfxUInt16Item aItem( SID_NAVIGATOR_PAGE, (sal_uInt16)ePage );
+        mpBindings->GetDispatcher()->ExecuteList(SID_NAVIGATOR_PAGE,
+                SfxCallMode::SLOT | SfxCallMode::RECORD, { &aItem });
     }
 }
 
@@ -401,8 +374,9 @@ IMPL_LINK_NOARG_TYPED(SdNavigatorWin, ClickObjectHdl, SvTreeListBox*, bool)
             if( !aStr.isEmpty() )
             {
                 SfxStringItem aItem( SID_NAVIGATOR_OBJECT, aStr );
-                mpBindings->GetDispatcher()->Execute(
-                    SID_NAVIGATOR_OBJECT, SfxCallMode::SLOT | SfxCallMode::RECORD, &aItem, 0L );
+                mpBindings->GetDispatcher()->ExecuteList(
+                    SID_NAVIGATOR_OBJECT,
+                    SfxCallMode::SLOT | SfxCallMode::RECORD, { &aItem });
                 //set sign variable
                 maTlbObjects->MarkCurEntry(aStr);
 
@@ -606,7 +580,7 @@ bool SdNavigatorWin::InsertFile(const OUString& rFileName)
     else
     {
         // show dragged-in document
-        const SfxFilter* pFilter = nullptr;
+        std::shared_ptr<const SfxFilter> pFilter;
         ErrCode nErr = 0;
 
         if (aFileName != maDropFileName)
@@ -614,7 +588,7 @@ bool SdNavigatorWin::InsertFile(const OUString& rFileName)
             SfxMedium aMed(aFileName, (StreamMode::READ | StreamMode::SHARE_DENYNONE));
             SfxFilterMatcher aMatch( OUString("simpress") );
             aMed.UseInteractionHandler( true );
-            nErr = aMatch.GuessFilter(aMed, &pFilter);
+            nErr = aMatch.GuessFilter(aMed, pFilter);
         }
 
         if ((pFilter && !nErr) || aFileName == maDropFileName)
@@ -764,7 +738,7 @@ NavDocInfo* SdNavigatorWin::GetDocInfo()
 bool SdNavigatorWin::Notify(NotifyEvent& rNEvt)
 {
     const KeyEvent* pKEvt = rNEvt.GetKeyEvent();
-    bool            nOK = false;
+    bool            bOK = false;
 
     if( pKEvt )
     {
@@ -773,7 +747,7 @@ bool SdNavigatorWin::Notify(NotifyEvent& rNEvt)
             if( SdPageObjsTLB::IsInDrag() )
             {
                 // during drag'n'drop we just stop the drag but do not close the navigator
-                nOK = true;
+                bOK = true;
             }
             else
             {
@@ -791,10 +765,10 @@ bool SdNavigatorWin::Notify(NotifyEvent& rNEvt)
         }
     }
 
-    if( !nOK )
-        nOK = Window::Notify( rNEvt );
+    if( !bOK )
+        bOK = Window::Notify( rNEvt );
 
-    return nOK;
+    return bOK;
 }
 
 /**
@@ -871,17 +845,6 @@ void SdNavigatorControllerItem::StateChanged( sal_uInt16 nSId,
         const SfxUInt32Item& rStateItem = dynamic_cast<const SfxUInt32Item&>(*pItem);
         sal_uInt32 nState = rStateItem.GetValue();
 
-        // pen
-        if( nState & NAVBTN_PEN_DISABLED &&
-            pNavigatorWin->maToolbox->IsItemEnabled( TBI_PEN ) )
-            pNavigatorWin->maToolbox->EnableItem( TBI_PEN, false );
-        if( nState & NAVBTN_PEN_CHECKED &&
-            !pNavigatorWin->maToolbox->IsItemChecked( TBI_PEN ) )
-            pNavigatorWin->maToolbox->CheckItem( TBI_PEN );
-        if( nState & NAVBTN_PEN_UNCHECKED &&
-            pNavigatorWin->maToolbox->IsItemChecked( TBI_PEN ) )
-            pNavigatorWin->maToolbox->CheckItem( TBI_PEN, false );
-
         // only if doc in LB is the active
         NavDocInfo* pInfo = pNavigatorWin->GetDocInfo();
         if( pInfo && pInfo->IsActive() )
@@ -934,11 +897,9 @@ void SdNavigatorControllerItem::StateChanged( sal_uInt16 nSId,
 SdPageNameControllerItem::SdPageNameControllerItem(
     sal_uInt16 _nId,
     SdNavigatorWin* pNavWin,
-    SfxBindings*    _pBindings,
-    const SdNavigatorWin::UpdateRequestFunctor& rUpdateRequest)
+    SfxBindings*    _pBindings)
     : SfxControllerItem( _nId, *_pBindings ),
-      pNavigatorWin( pNavWin ),
-      maUpdateRequest(rUpdateRequest)
+      pNavigatorWin( pNavWin )
 {
 }
 
@@ -952,7 +913,7 @@ void SdPageNameControllerItem::StateChanged( sal_uInt16 nSId,
         if( pInfo && pInfo->IsActive() )
         {
             const SfxStringItem& rStateItem = dynamic_cast<const SfxStringItem&>(*pItem);
-            OUString aPageName = rStateItem.GetValue();
+            const OUString& aPageName = rStateItem.GetValue();
 
             if( !pNavigatorWin->maTlbObjects->HasSelectedChildren( aPageName ) )
             {

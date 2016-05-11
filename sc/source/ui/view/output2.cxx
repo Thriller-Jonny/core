@@ -235,9 +235,9 @@ void ScDrawStringsVars::SetShrinkScale( long nScale, SvtScriptType nScript )
         aFraction *= pOutput->aZoomY;
     vcl::Font aTmpFont;
     pPattern->GetFont( aTmpFont, SC_AUTOCOL_RAW, pFmtDevice, &aFraction, pCondSet, nScript );
-    long nNewHeight = aTmpFont.GetHeight();
+    long nNewHeight = aTmpFont.GetFontHeight();
     if ( nNewHeight > 0 )
-        aFont.SetHeight( nNewHeight );
+        aFont.SetFontHeight( nNewHeight );
 
     // set font and dependent variables as in SetPattern
 
@@ -246,7 +246,7 @@ void ScDrawStringsVars::SetShrinkScale( long nScale, SvtScriptType nScript )
         pFmtDevice->SetFont( aFont );
 
     aMetric = pFmtDevice->GetFontMetric();
-    if ( pFmtDevice->GetOutDevType() == OUTDEV_PRINTER && aMetric.GetIntLeading() == 0 )
+    if ( pFmtDevice->GetOutDevType() == OUTDEV_PRINTER && aMetric.GetInternalLeading() == 0 )
     {
         OutputDevice* pDefaultDev = Application::GetDefaultDevice();
         MapMode aOld = pDefaultDev->GetMapMode();
@@ -264,11 +264,11 @@ void ScDrawStringsVars::SetShrinkScale( long nScale, SvtScriptType nScript )
 
 namespace {
 
-template<typename _ItemType, typename _EnumType>
-_EnumType lcl_GetValue(const ScPatternAttr& rPattern, sal_uInt16 nWhich, const SfxItemSet* pCondSet)
+template<typename ItemType, typename EnumType>
+EnumType lcl_GetValue(const ScPatternAttr& rPattern, sal_uInt16 nWhich, const SfxItemSet* pCondSet)
 {
-    const _ItemType& rItem = static_cast<const _ItemType&>(rPattern.GetItem(nWhich, pCondSet));
-    return static_cast<_EnumType>(rItem.GetValue());
+    const ItemType& rItem = static_cast<const ItemType&>(rPattern.GetItem(nWhich, pCondSet));
+    return static_cast<EnumType>(rItem.GetValue());
 }
 
 bool lcl_GetBoolValue(const ScPatternAttr& rPattern, sal_uInt16 nWhich, const SfxItemSet* pCondSet)
@@ -276,6 +276,14 @@ bool lcl_GetBoolValue(const ScPatternAttr& rPattern, sal_uInt16 nWhich, const Sf
     return lcl_GetValue<SfxBoolItem, bool>(rPattern, nWhich, pCondSet);
 }
 
+}
+
+bool lcl_isNumberFormatText(const ScDocument* pDoc, SCCOL nCellX, SCROW nCellY, SCTAB nTab )
+{
+    sal_uInt32 nCurrentNumberFormat;
+    pDoc->GetNumberFormat( nCellX, nCellY, nTab, nCurrentNumberFormat);
+    SvNumberFormatter* pNumberFormatter = pDoc->GetFormatTable();
+    return pNumberFormatter->GetType( nCurrentNumberFormat ) == css::util::NumberFormat::TEXT;
 }
 
 void ScDrawStringsVars::SetPattern(
@@ -315,7 +323,7 @@ void ScDrawStringsVars::SetPattern(
     else
         pPattern->GetFont( aFont, eColorMode, pFmtDevice, &pOutput->aZoomY, pCondSet, nScript,
                             &aBackConfigColor, &aTextConfigColor );
-    aFont.SetAlign(ALIGN_BASELINE);
+    aFont.SetAlignment(ALIGN_BASELINE);
 
     // orientation
 
@@ -392,7 +400,7 @@ void ScDrawStringsVars::SetPattern(
 
     // if there is the leading 0 on a printer device, we have problems
     // -> take metric from the screen (as for EditEngine!)
-    if ( pFmtDevice->GetOutDevType() == OUTDEV_PRINTER && aMetric.GetIntLeading() == 0 )
+    if ( pFmtDevice->GetOutDevType() == OUTDEV_PRINTER && aMetric.GetInternalLeading() == 0 )
     {
         OutputDevice* pDefaultDev = Application::GetDefaultDevice();
         MapMode aOld = pDefaultDev->GetMapMode();
@@ -1391,7 +1399,7 @@ bool beginsWithRTLCharacter(const OUString& rStr)
 static SvxCellHorJustify getAlignmentFromContext( SvxCellHorJustify eInHorJust,
         bool bCellIsValue, const OUString& rText,
         const ScPatternAttr& rPattern, const SfxItemSet* pCondSet,
-        const ScDocument* pDoc, SCTAB nTab )
+        const ScDocument* pDoc, SCTAB nTab, const bool  bNumberFormatIsText )
 {
     SvxCellHorJustify eHorJustContext = eInHorJust;
     bool bUseWritingDirection = false;
@@ -1399,10 +1407,15 @@ static SvxCellHorJustify getAlignmentFromContext( SvxCellHorJustify eInHorJust,
     {
         // fdo#32530: Default alignment depends on value vs
         // string, and the direction of the 1st letter.
-        if (beginsWithRTLCharacter( rText))
-            eHorJustContext = bCellIsValue ? SVX_HOR_JUSTIFY_LEFT : SVX_HOR_JUSTIFY_RIGHT;
-        else if (bCellIsValue)
-            eHorJustContext = SVX_HOR_JUSTIFY_RIGHT;
+        if (beginsWithRTLCharacter( rText)) //If language is RTL
+        {
+            if (bCellIsValue)
+               eHorJustContext = bNumberFormatIsText ? SVX_HOR_JUSTIFY_RIGHT : SVX_HOR_JUSTIFY_LEFT;
+            else
+                eHorJustContext = SVX_HOR_JUSTIFY_RIGHT;
+        }
+        else if (bCellIsValue) //If language is not RTL
+            eHorJustContext = bNumberFormatIsText ? SVX_HOR_JUSTIFY_LEFT : SVX_HOR_JUSTIFY_RIGHT;
         else
             bUseWritingDirection = true;
     }
@@ -1693,8 +1706,9 @@ Rectangle ScOutputData::LayoutStrings(bool bPixelToLogic, bool bPaint, const ScA
                         bCellIsValue = pFCell->IsRunning() || pFCell->IsValue();
                     }
 
+                    const bool bNumberFormatIsText = lcl_isNumberFormatText( mpDoc, nCellX, nCellY, nTab );
                     eOutHorJust = getAlignmentFromContext( aVars.GetHorJust(), bCellIsValue, aVars.GetString(),
-                            *pPattern, pCondSet, mpDoc, nTab);
+                            *pPattern, pCondSet, mpDoc, nTab, bNumberFormatIsText );
 
                     bool bBreak = ( aVars.GetLineBreak() || aVars.GetHorJust() == SVX_HOR_JUSTIFY_BLOCK );
                     // #i111387# #o11817313# disable automatic line breaks only for "General" number format
@@ -3505,6 +3519,7 @@ void ScOutputData::DrawEditBottomTop(DrawEditParam& rParam)
             case SVX_VER_JUSTIFY_TOP:
                 // align to top
                 aLogicStart.Y() -= nGap;
+            break;
             default:
                 ;
         }
@@ -4571,8 +4586,9 @@ void ScOutputData::DrawEdit(bool bPixelToLogic)
                         OUString aStr = mpDoc->GetString(nCellX, nCellY, nTab);
 
                         DrawEditParam aParam(pPattern, pCondSet, lcl_SafeIsValue(aCell));
+                        const bool bNumberFormatIsText = lcl_isNumberFormatText( mpDoc, nCellX, nCellY, nTab );
                         aParam.meHorJustContext = getAlignmentFromContext( aParam.meHorJustAttr,
-                                aParam.mbCellIsValue, aStr, *pPattern, pCondSet, mpDoc, nTab);
+                                aParam.mbCellIsValue, aStr, *pPattern, pCondSet, mpDoc, nTab, bNumberFormatIsText);
                         aParam.meHorJustResult = (aParam.meHorJustAttr == SVX_HOR_JUSTIFY_BLOCK) ?
                                 SVX_HOR_JUSTIFY_BLOCK : aParam.meHorJustContext;
                         aParam.mbPixelToLogic = bPixelToLogic;

@@ -107,8 +107,7 @@ class RscContWriteSrc : public RscBaseCont
 {
 public:
                     RscContWriteSrc( Atom nId, sal_uInt32 nTypId,
-                                     RscTop * pSuper = nullptr,
-                                     bool bNoId = true );
+                                     RscTop * pSuper = nullptr );
     void            WriteSrc( const RSCINST & rInst, FILE * fOutput,
                               RscTypCont * pTC, sal_uInt32 nTab, const char * ) override;
 };
@@ -117,8 +116,7 @@ class RscCont : public RscContWriteSrc
 {
 public:
                     RscCont( Atom nId, sal_uInt32 nTypId,
-                             RscTop * pSuper = nullptr,
-                             bool bNoId = true );
+                             RscTop * pSuper = nullptr );
     ERRTYPE         WriteRc( const RSCINST & rInst, RscWriteRc & aMem,
                              RscTypCont * pTC, sal_uInt32, bool bExtra ) override;
 };
@@ -127,8 +125,7 @@ class RscContExtraData : public RscContWriteSrc
 {
 public:
                     RscContExtraData( Atom nId, sal_uInt32 nTypId,
-                                      RscTop * pSuper = nullptr,
-                                      bool bNoId = true );
+                                      RscTop * pSuper = nullptr );
     ERRTYPE         WriteRc( const RSCINST & rInst, RscWriteRc & aMem,
                              RscTypCont * pTC, sal_uInt32, bool bExtra ) override;
 };

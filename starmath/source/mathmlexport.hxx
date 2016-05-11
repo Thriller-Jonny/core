@@ -36,8 +36,6 @@ namespace com { namespace sun { namespace star {
 } } }
 
 
-
-
 class SmXMLExportWrapper
 {
     css::uno::Reference<css::frame::XModel> xModel;
@@ -51,21 +49,20 @@ public:
     void SetFlat(bool bIn) {bFlat = bIn;}
 
     static bool WriteThroughComponent(
-        css::uno::Reference< css::io::XOutputStream >   xOutputStream,
-        css::uno::Reference< css::lang::XComponent >    xComponent,
+        const css::uno::Reference< css::io::XOutputStream >&   xOutputStream,
+        const css::uno::Reference< css::lang::XComponent >&    xComponent,
         css::uno::Reference< css::uno::XComponentContext > & rxContext,
         css::uno::Reference< css::beans::XPropertySet > & rPropSet,
         const sal_Char* pComponentName );
 
     static bool WriteThroughComponent(
         const css::uno::Reference< css::embed::XStorage >& xStor,
-        css::uno::Reference< css::lang::XComponent > xComponent,
+        const css::uno::Reference< css::lang::XComponent >& xComponent,
         const sal_Char* pStreamName,
         css::uno::Reference< css::uno::XComponentContext > & rxContext,
         css::uno::Reference< css::beans::XPropertySet > & rPropSet,
         const sal_Char* pComponentName );
 };
-
 
 
 class SmXMLExport : public SvXMLExport
@@ -106,9 +103,9 @@ public:
     sal_Int64 SAL_CALL getSomething( const css::uno::Sequence< sal_Int8 >& rId ) throw(css::uno::RuntimeException, std::exception) override;
     static const css::uno::Sequence< sal_Int8 > & getUnoTunnelId() throw();
 
-    void _ExportAutoStyles() override {}
-    void _ExportMasterStyles() override {}
-    void _ExportContent() override;
+    void ExportAutoStyles_() override {}
+    void ExportMasterStyles_() override {}
+    void ExportContent_() override;
     sal_uInt32 exportDoc(enum ::xmloff::token::XMLTokenEnum eClass) override;
 
     virtual void GetViewSettings(css::uno::Sequence<css::beans::PropertyValue>& aProps) override;
@@ -116,7 +113,6 @@ public:
 
     bool GetSuccess() {return bSuccess;}
 };
-
 
 
 #endif

@@ -845,7 +845,7 @@ private:
                                           LanguageType eLnge );
 
     // Create builtin formats for language/country if necessary, return CLOffset
-    SVL_DLLPRIVATE sal_uInt32 ImpGenerateCL( LanguageType eLnge, bool bNoAdditionalFormats = false );
+    SVL_DLLPRIVATE sal_uInt32 ImpGenerateCL( LanguageType eLnge );
 
     // Build negative currency format, old compatibility style
     SVL_DLLPRIVATE void ImpGetNegCurrFormat(OUStringBuffer& sNegStr, const OUString& rCurrSymbol);
@@ -876,11 +876,10 @@ private:
     // Adjust a sequence of format codes to contain only one (THE) default
     // instead of multiple defaults for short/medium/long types.
     // If there is no medium but a short and a long default the long is taken.
-    // Return the default index in the sequence.
     // Non-PRODUCT version may check locale data for matching defaults in one
     // FormatElement group.
-    SVL_DLLPRIVATE sal_Int32 ImpAdjustFormatCodeDefault( css::i18n::NumberFormatCode * pFormatArr,
-                                                         sal_Int32 nCount, bool bCheckCorrectness = true );
+    SVL_DLLPRIVATE void ImpAdjustFormatCodeDefault( css::i18n::NumberFormatCode * pFormatArr,
+                                                         sal_Int32 nCount );
 
     // Obtain the format entry for a given key index.
     SVL_DLLPRIVATE       SvNumberformat* GetFormatEntry( sal_uInt32 nKey );
@@ -915,7 +914,7 @@ public:
     // new format codes are appended.
     void ReplaceSystemCL( LanguageType eOldLanguage );
 
-    css::uno::Reference<css::uno::XComponentContext> GetComponentContext() const;
+    const css::uno::Reference<css::uno::XComponentContext>& GetComponentContext() const;
 
     //! The following method is not to be used from outside but must be
     //! public for the InputScanner.

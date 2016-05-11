@@ -35,10 +35,11 @@
 #include <vcl/threadex.hxx>
 #include <vcl/builderfactory.hxx>
 
-#include <boost/bind.hpp>
 #include "dp_gui_shared.hxx"
 #include "license_dialog.hxx"
 #include "dp_gui.hrc"
+
+#include <functional>
 
 using namespace ::dp_misc;
 namespace cssu = ::com::sun::star::uno;
@@ -75,7 +76,6 @@ protected:
 
 struct LicenseDialogImpl : public ModalDialog
 {
-    cssu::Reference<cssu::XComponentContext> m_xComponentContext;
     VclPtr<FixedText> m_pFtHead;
     VclPtr<FixedImage> m_pArrow1;
     VclPtr<FixedImage> m_pArrow2;
@@ -95,7 +95,6 @@ struct LicenseDialogImpl : public ModalDialog
 
     LicenseDialogImpl(
         vcl::Window * pParent,
-        css::uno::Reference< css::uno::XComponentContext > const & xContext,
         const OUString & sExtensionName,
         const OUString & sLicenseText);
     virtual ~LicenseDialogImpl() { disposeOnce(); }
@@ -179,7 +178,7 @@ void LicenseView::Notify( SfxBroadcaster&, const SfxHint& rHint )
     if ( pTextHint )
     {
         bool    bLastVal = EndReached();
-        sal_uLong   nId = pTextHint->GetId();
+        const sal_uInt32 nId = pTextHint->GetId();
 
         if ( nId == TEXT_HINT_PARAINSERTED )
         {
@@ -201,14 +200,11 @@ void LicenseView::Notify( SfxBroadcaster&, const SfxHint& rHint )
 }
 
 
-
 LicenseDialogImpl::LicenseDialogImpl(
     vcl::Window * pParent,
-    cssu::Reference< cssu::XComponentContext > const & xContext,
     const OUString & sExtensionName,
     const OUString & sLicenseText)
     : ModalDialog(pParent, "LicenseDialog", "desktop/ui/licensedialog.ui")
-    , m_xComponentContext(xContext)
     , m_bLicenseRead(false)
 {
     get(m_pFtHead, "head");
@@ -294,13 +290,8 @@ IMPL_LINK_NOARG_TYPED(LicenseDialogImpl, EndReachedHdl, LicenseView&, void)
 }
 
 
-
-
-
-
 LicenseDialog::LicenseDialog( Sequence<Any> const& args,
-                          Reference<XComponentContext> const& xComponentContext)
-    : m_xComponentContext(xComponentContext)
+                          Reference<XComponentContext> const& )
 {
     comphelper::unwrapArgs( args, m_parent, m_sExtensionName, m_sLicenseText );
 }
@@ -316,16 +307,13 @@ void LicenseDialog::setTitle( OUString const & ) throw (RuntimeException, std::e
 sal_Int16 LicenseDialog::execute() throw (RuntimeException, std::exception)
 {
     return vcl::solarthread::syncExecute(
-        boost::bind( &LicenseDialog::solar_execute, this));
+        std::bind(&LicenseDialog::solar_execute, this));
 }
 
 sal_Int16 LicenseDialog::solar_execute()
 {
-    VclPtr<LicenseDialogImpl> dlg(
-        VclPtr<LicenseDialogImpl>::Create(
-
-            VCLUnoHelper::GetWindow(m_parent),
-            m_xComponentContext, m_sExtensionName, m_sLicenseText));
+    ScopedVclPtrInstance<LicenseDialogImpl> dlg(
+            VCLUnoHelper::GetWindow(m_parent), m_sExtensionName, m_sLicenseText);
 
     return dlg->Execute();
 }

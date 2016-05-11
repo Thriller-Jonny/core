@@ -60,7 +60,7 @@ protected:
     virtual SwTwips ShrinkFrame( SwTwips, bool bTst = false, bool bInfo = false ) override;
     virtual SwTwips GrowFrame  ( SwTwips, bool bTst = false, bool bInfo = false ) override;
 
-    long CalcRel( const SwFormatFrameSize &rSz, bool bWidth ) const;
+    long CalcRel( const SwFormatFrameSize &rSz ) const;
 
 public:
     // --> #i28701#
@@ -95,7 +95,6 @@ public:
      */
     const SwContentFrame* GetContentPos( Point &rPoint, const bool bDontLeave,
                                    const bool bBodyOnly = false,
-                                   const bool bCalc = false,
                                    const SwCursorMoveState *pCMS = nullptr,
                                    const bool bDefaultExpand = true ) const;
 
@@ -213,12 +212,12 @@ inline SwFrame* SwLayoutFrame::ContainsAny( const bool _bInvestigateFootnoteForS
  */
 inline bool SwFrame::IsColBodyFrame() const
 {
-    return mnFrameType == FRM_BODY && GetUpper()->IsColumnFrame();
+    return mnFrameType == SwFrameType::Body && GetUpper()->IsColumnFrame();
 }
 
 inline bool SwFrame::IsPageBodyFrame() const
 {
-    return mnFrameType == FRM_BODY && GetUpper()->IsPageFrame();
+    return mnFrameType == SwFrameType::Body && GetUpper()->IsPageFrame();
 }
 
 inline SwFrame* SwLayoutFrame::GetLastLower()

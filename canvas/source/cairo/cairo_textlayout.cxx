@@ -168,7 +168,7 @@ namespace cairocanvas
 
         setupLayoutMode( *pVDev.get(), mnTextDirection );
 
-        const sal_Int32 nAboveBaseline( -aMetric.GetIntLeading() - aMetric.GetAscent() );
+        const sal_Int32 nAboveBaseline( -aMetric.GetInternalLeading() - aMetric.GetAscent() );
         const sal_Int32 nBelowBaseline( aMetric.GetDescent() );
 
         if( maLogicalAdvancements.getLength() )
@@ -349,8 +349,7 @@ namespace cairocanvas
 
         //Pull all the fonts we need to render the text
         typedef std::pair<SystemFontData,int> FontLevel;
-        typedef std::vector<FontLevel> FontLevelVector;
-        FontLevelVector aFontData;
+        std::vector<FontLevel> aFontData;
         SystemGlyphDataVector::const_iterator aGlyphIter=aSysLayoutData.rGlyphData.begin();
         const SystemGlyphDataVector::const_iterator aGlyphEnd=aSysLayoutData.rGlyphData.end();
         for( ; aGlyphIter != aGlyphEnd; ++aGlyphIter )
@@ -402,8 +401,8 @@ namespace cairocanvas
          **/
 
         // Loop through the fonts used and render the matching glyphs for each
-        FontLevelVector::const_iterator aFontDataIter = aFontData.begin();
-        const FontLevelVector::const_iterator aFontDataEnd = aFontData.end();
+        std::vector<FontLevel>::const_iterator aFontDataIter = aFontData.begin();
+        const std::vector<FontLevel>::const_iterator aFontDataEnd = aFontData.end();
         for( ; aFontDataIter != aFontDataEnd; ++aFontDataIter )
         {
             const SystemFontData &rSysFontData = aFontDataIter->first;
@@ -427,6 +426,14 @@ namespace cairocanvas
             }
 
             if (cairo_glyphs.empty())
+                continue;
+
+            vcl::Font aFont = rOutDev.GetFont();
+            long nWidth = aFont.GetAverageFontWidth();
+            long nHeight = aFont.GetFontHeight();
+            if (nWidth == 0)
+                nWidth = nHeight;
+            if (nWidth == 0 || nHeight == 0)
                 continue;
 
             /**
@@ -455,25 +462,20 @@ namespace cairocanvas
             cairo_set_font_options( pSCairo.get(), options);
 
             // Font color
-            Color mTextColor = rOutDev.GetTextColor();
+            Color aTextColor = rOutDev.GetTextColor();
             cairo_set_source_rgb(pSCairo.get(),
-                                 mTextColor.GetRed()/255.0,
-                                 mTextColor.GetGreen()/255.0,
-                                 mTextColor.GetBlue()/255.0);
+                                 aTextColor.GetRed()/255.0,
+                                 aTextColor.GetGreen()/255.0,
+                                 aTextColor.GetBlue()/255.0);
 
             // Font rotation and scaling
             cairo_matrix_t m;
-            vcl::Font aFont = rOutDev.GetFont();
 
             cairo_matrix_init_identity(&m);
 
             if (aSysLayoutData.orientation)
                 cairo_matrix_rotate(&m, (3600 - aSysLayoutData.orientation) * M_PI / 1800.0);
 
-            long nWidth = aFont.GetWidth();
-            long nHeight = aFont.GetHeight();
-            if (nWidth == 0)
-                nWidth = nHeight;
             cairo_matrix_scale(&m, nWidth, nHeight);
 
             //faux italics
@@ -484,7 +486,7 @@ namespace cairocanvas
 
             SAL_INFO(
                 "canvas.cairo",
-                "Size:(" << aFont.GetWidth() << "," << aFont.GetHeight()
+                "Size:(" << aFont.GetAverageFontWidth() << "," << aFont.GetFontHeight()
                     << "), Pos (" << rOutpos.X() << "," << rOutpos.Y()
                     << "), G("
                     << (cairo_glyphs.size() > 0 ? cairo_glyphs[0].index : -1)
@@ -496,7 +498,7 @@ namespace cairocanvas
                     << (rSysFontData.bAntialias ? "AA " : "")
                     << (rSysFontData.bFakeBold ? "FB " : "")
                     << (rSysFontData.bFakeItalic ? "FI " : "") << " || Name:"
-                    << aFont.GetName() << " - "
+                    << aFont.GetFamilyName() << " - "
                     << maText.Text.copy(maText.StartPosition, maText.Length));
 
             cairo_show_glyphs(pSCairo.get(), &cairo_glyphs[0], cairo_glyphs.size());
@@ -504,16 +506,16 @@ namespace cairocanvas
             //faux bold
             if (rSysFontData.bFakeBold)
             {
-                double bold_dx = 0.5 * sqrt( 0.7 * aFont.GetHeight() );
+                double bold_dx = 0.5 * sqrt( 0.7 * aFont.GetFontHeight() );
                 int total_steps = 1 * ((int) (bold_dx + 0.5));
 
                 // loop to draw the text for every half pixel of displacement
                 for (int nSteps = 0; nSteps < total_steps; nSteps++)
                 {
-                    for(int nGlyphIdx = 0; nGlyphIdx < (int) cairo_glyphs.size(); nGlyphIdx++)
+                    for(cairo_glyph_t & cairo_glyph : cairo_glyphs)
                     {
-                        cairo_glyphs[nGlyphIdx].x += (bold_dx * nSteps / total_steps) / 4;
-                        cairo_glyphs[nGlyphIdx].y -= (bold_dx * nSteps / total_steps) / 4;
+                        cairo_glyph.x += (bold_dx * nSteps / total_steps) / 4;
+                        cairo_glyph.y -= (bold_dx * nSteps / total_steps) / 4;
                     }
                     cairo_show_glyphs(pSCairo.get(), &cairo_glyphs[0], cairo_glyphs.size());
                 }

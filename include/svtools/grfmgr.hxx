@@ -394,12 +394,12 @@ public:
     bool                    HasLink() const { return !maLink.isEmpty(); }
     void                    SetLink();
     void                    SetLink( const OUString& rLink );
-    OUString                GetLink() const { return maLink; }
+    const OUString&         GetLink() const { return maLink; }
 
     bool                    HasUserData() const { return !maUserData.isEmpty(); }
     void                    SetUserData();
     void                    SetUserData( const OUString& rUserData );
-    OUString                GetUserData() const { return maUserData; }
+    const OUString&         GetUserData() const { return maUserData; }
 
     OString                 GetUniqueID() const;
 
@@ -459,10 +459,8 @@ public:
         tile bitmap is smaller. Otherwise, the tile is drawn as
         is. This is useful if e.g. you want only a few, very large
         bitmap drawings appear on the outdev.
-
-        @return sal_True, if drawing completed successfully
      */
-    bool                    DrawTiled(
+    void                    DrawTiled(
                                 OutputDevice* pOut,
                                 const Rectangle& rArea,
                                 const Size& rSize,
@@ -487,7 +485,7 @@ public:
     static GraphicObject    CreateGraphicObjectFromURL( const OUString &rURL );
     // will inspect an object ( e.g. a control ) for any 'ImageURL'
     // properties and return these in a vector. Note: this implementation
-    // will cater for XNameContainer objects and deepinspect any containees
+    // will cater for XNameContainer objects and deep inspect any containers
     // if they exist
     static void InspectForGraphicObjectImageURL( const css::uno::Reference< css::uno::XInterface >& rxIf, std::vector< OUString >& rvEmbedImgUrls );
 
@@ -608,10 +606,7 @@ public:
     void                SetMaxCacheSize( sal_uLong nNewCacheSize );
     sal_uLong           GetMaxCacheSize() const;
 
-    void                SetMaxObjCacheSize(
-                            sal_uLong nNewMaxObjSize,
-                            bool bDestroyGreaterCached = false
-                        );
+    void                SetMaxObjCacheSize( sal_uLong nNewMaxObjSize );
 
     void                SetCacheTimeout( sal_uLong nTimeoutSeconds );
 

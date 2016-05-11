@@ -63,7 +63,7 @@ ScEditUtil::ScEditUtil( ScDocument* pDocument, SCCOL nX, SCROW nY, SCTAB nZ,
 OUString ScEditUtil::ModifyDelimiters( const OUString& rOld )
 {
     // underscore is used in function argument names
-    OUString aRet = OUString( comphelper::string::remove(rOld, '_') ) +
+    OUString aRet = comphelper::string::remove(rOld, '_') +
         "=()+-*/^&<>" +
         ScCompiler::GetNativeSymbol(ocSep); // argument separator is localized.
     return aRet;
@@ -144,7 +144,7 @@ EditTextObject* ScEditUtil::CreateURLObjectFromURL( ScDocument& rDoc, const OUSt
 
 void ScEditUtil::RemoveCharAttribs( EditTextObject& rEditText, const ScPatternAttr& rAttr )
 {
-    const struct {
+    static const struct {
         sal_uInt16 nAttrType;
         sal_uInt16 nCharType;
     } AttrTypeMap[] = {
@@ -153,7 +153,7 @@ void ScEditUtil::RemoveCharAttribs( EditTextObject& rEditText, const ScPatternAt
         { ATTR_FONT_WEIGHT, EE_CHAR_WEIGHT },
         { ATTR_FONT_COLOR,  EE_CHAR_COLOR }
     };
-    sal_uInt16 nMapCount = sizeof (AttrTypeMap) / sizeof (AttrTypeMap[0]);
+    sal_uInt16 nMapCount = SAL_N_ELEMENTS(AttrTypeMap);
 
     const SfxItemSet& rSet = rAttr.GetItemSet();
     const SfxPoolItem* pItem;
@@ -199,7 +199,7 @@ OUString ScEditUtil::GetCellFieldValue(
         case text::textfield::Type::URL:
         {
             const SvxURLField& rField = static_cast<const SvxURLField&>(rFieldData);
-            OUString aURL = rField.GetURL();
+            const OUString& aURL = rField.GetURL();
 
             switch (rField.GetFormat())
             {
@@ -507,12 +507,12 @@ void ScEditEngineDefaulter::SetDefaults( const SfxItemSet& rSet, bool bRememberC
         EnableUndo( true );
 }
 
-void ScEditEngineDefaulter::SetDefaults( SfxItemSet* pSet, bool bTakeOwnership )
+void ScEditEngineDefaulter::SetDefaults( SfxItemSet* pSet )
 {
     if ( bDeleteDefaults )
         delete pDefaults;
     pDefaults = pSet;
-    bDeleteDefaults = bTakeOwnership;
+    bDeleteDefaults = true;
     if ( pDefaults )
         SetDefaults( *pDefaults, false );
 }
@@ -563,13 +563,13 @@ void ScEditEngineDefaulter::SetTextNewDefaults( const EditTextObject& rTextObjec
 }
 
 void ScEditEngineDefaulter::SetTextNewDefaults( const EditTextObject& rTextObject,
-            SfxItemSet* pSet, bool bTakeOwnership )
+            SfxItemSet* pSet )
 {
     bool bUpdateMode = GetUpdateMode();
     if ( bUpdateMode )
         SetUpdateMode( false );
     EditEngine::SetText( rTextObject );
-    SetDefaults( pSet, bTakeOwnership );
+    SetDefaults( pSet );
     if ( bUpdateMode )
         SetUpdateMode( true );
 }
@@ -587,25 +587,25 @@ void ScEditEngineDefaulter::SetText( const OUString& rText )
 }
 
 void ScEditEngineDefaulter::SetTextNewDefaults( const OUString& rText,
-            const SfxItemSet& rSet, bool bRememberCopy )
+            const SfxItemSet& rSet )
 {
     bool bUpdateMode = GetUpdateMode();
     if ( bUpdateMode )
         SetUpdateMode( false );
     EditEngine::SetText( rText );
-    SetDefaults( rSet, bRememberCopy );
+    SetDefaults( rSet );
     if ( bUpdateMode )
         SetUpdateMode( true );
 }
 
 void ScEditEngineDefaulter::SetTextNewDefaults( const OUString& rText,
-            SfxItemSet* pSet, bool bTakeOwnership )
+            SfxItemSet* pSet )
 {
     bool bUpdateMode = GetUpdateMode();
     if ( bUpdateMode )
         SetUpdateMode( false );
     EditEngine::SetText( rText );
-    SetDefaults( pSet, bTakeOwnership );
+    SetDefaults( pSet );
     if ( bUpdateMode )
         SetUpdateMode( true );
 }
@@ -791,8 +791,8 @@ ScHeaderFieldData::ScHeaderFieldData()
     eNumType = SVX_ARABIC;
 }
 
-ScHeaderEditEngine::ScHeaderEditEngine( SfxItemPool* pEnginePoolP, bool bDeleteEnginePoolP )
-        : ScEditEngineDefaulter( pEnginePoolP, bDeleteEnginePoolP )
+ScHeaderEditEngine::ScHeaderEditEngine( SfxItemPool* pEnginePoolP )
+        : ScEditEngineDefaulter( pEnginePoolP,true/*bDeleteEnginePoolP*/ )
 {
 }
 
@@ -883,8 +883,8 @@ void ScFieldEditEngine::FieldClicked( const SvxFieldItem& rField, sal_Int32, sal
 }
 
 ScNoteEditEngine::ScNoteEditEngine( SfxItemPool* pEnginePoolP,
-            SfxItemPool* pTextObjectPool, bool bDeleteEnginePoolP ) :
-    ScEditEngineDefaulter( pEnginePoolP, bDeleteEnginePoolP )
+            SfxItemPool* pTextObjectPool ) :
+    ScEditEngineDefaulter( pEnginePoolP, false/*bDeleteEnginePoolP*/ )
 {
     if ( pTextObjectPool )
         SetEditTextObjectPool( pTextObjectPool );

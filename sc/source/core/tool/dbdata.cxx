@@ -79,7 +79,8 @@ ScDBData::ScDBData( const OUString& rName,
     nIndex      (0),
     bAutoFilter (false),
     bModified   (false),
-    mbTableColumnNamesDirty(true)
+    mbTableColumnNamesDirty(true),
+    nFilteredRowCount(0)
 {
     aUpper = ScGlobal::pCharClass->uppercase(aUpper);
 }
@@ -113,7 +114,8 @@ ScDBData::ScDBData( const ScDBData& rData ) :
     bAutoFilter         (rData.bAutoFilter),
     bModified           (rData.bModified),
     maTableColumnNames  (rData.maTableColumnNames),
-    mbTableColumnNamesDirty(rData.mbTableColumnNamesDirty)
+    mbTableColumnNamesDirty(rData.mbTableColumnNamesDirty),
+    nFilteredRowCount   (rData.nFilteredRowCount)
 {
 }
 
@@ -146,7 +148,8 @@ ScDBData::ScDBData( const OUString& rName, const ScDBData& rData ) :
     bAutoFilter         (rData.bAutoFilter),
     bModified           (rData.bModified),
     maTableColumnNames  (rData.maTableColumnNames),
-    mbTableColumnNamesDirty (rData.mbTableColumnNamesDirty)
+    mbTableColumnNamesDirty (rData.mbTableColumnNamesDirty),
+    nFilteredRowCount   (rData.nFilteredRowCount)
 {
     aUpper = ScGlobal::pCharClass->uppercase(aUpper);
 }
@@ -185,6 +188,7 @@ ScDBData& ScDBData::operator= (const ScDBData& rData)
     bDBSelection        = rData.bDBSelection;
     nIndex              = rData.nIndex;
     bAutoFilter         = rData.bAutoFilter;
+    nFilteredRowCount   = rData.nFilteredRowCount;
 
     if (bHeaderRangeDiffers)
         InvalidateTableColumnNames( true);
@@ -888,8 +892,7 @@ void ScDBData::Notify( const SfxHint& rHint )
     if (!pScHint)
         return;
 
-    sal_uLong nHint = pScHint->GetId();
-    if (nHint & SC_HINT_DATACHANGED)
+    if (pScHint->GetId() & SC_HINT_DATACHANGED)
     {
         mbTableColumnNamesDirty = true;
         if (!mpContainer)
@@ -914,6 +917,22 @@ void ScDBData::Notify( const SfxHint& rHint )
 
     // Do not refresh column names here, which might trigger unwanted
     // recalculation.
+}
+
+void ScDBData::CalcSaveFilteredCount( SCSIZE nNonFilteredRowCount )
+{
+    SCSIZE nTotal = nEndRow - nStartRow + 1;
+    if ( bHasHeader )
+        nTotal -= 1;
+    nFilteredRowCount = nTotal - nNonFilteredRowCount;
+}
+
+void ScDBData::GetFilterSelCount( SCSIZE& nSelected, SCSIZE& nTotal )
+{
+    nTotal = nEndRow - nStartRow + 1;
+    if ( bHasHeader )
+        nTotal -= 1;
+    nSelected = nTotal - nFilteredRowCount;
 }
 
 namespace {
@@ -1154,7 +1173,7 @@ bool ScDBCollection::NamedDBs::insert(ScDBData* p)
     return r.second;
 }
 
-void ScDBCollection::NamedDBs::erase(iterator itr)
+void ScDBCollection::NamedDBs::erase(const iterator& itr)
 {
     m_DBs.erase(itr);
 }

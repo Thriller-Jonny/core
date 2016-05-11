@@ -87,6 +87,20 @@ gb_LinkTarget_LDFLAGS += -fprofile-arcs -lgcov
 gb_COMPILEROPTFLAGS := -O0
 endif
 
+ifeq ($(shell expr '$(GCC_VERSION)' '>=' 600),1)
+gb_CFLAGS_COMMON += \
+    -Wduplicated-cond \
+    -Wlogical-op \
+    -Wnull-dereference \
+    -Wshift-overflow=2
+gb_CXXFLAGS_COMMON += \
+    -Wduplicated-cond \
+    -Wlogical-op \
+    -Wnull-dereference \
+    -Wshift-overflow=2 \
+    -Wunused-const-variable=1
+endif
+
 
 ifeq ($(HAVE_GCC_VISIBILITY_FEATURE),TRUE)
 gb_VISIBILITY_FLAGS := -DHAVE_GCC_VISIBILITY_FEATURE
@@ -112,6 +126,13 @@ gb_CXXFLAGS_COMMON += -fstack-protector-strong
 gb_LinkTarget_LDFLAGS += -fstack-protector-strong
 endif
 
+ifeq ($(ENABLE_PCH),TRUE)
+ifneq ($(COM_IS_CLANG),TRUE)
+gb_CFLAGS_COMMON += -fpch-preprocess -Winvalid-pch
+gb_CXXFLAGS_COMMON += -fpch-preprocess -Winvalid-pch
+endif
+endif
+
 gb_CFLAGS_WERROR := $(if $(ENABLE_WERROR),-Werror)
 
 # This is the default in non-C++11 mode
@@ -130,6 +151,7 @@ gb_CFLAGS_COMMON += -std=gnu89
 ifeq ($(ENABLE_LTO),TRUE)
 ifeq ($(COM_IS_CLANG),TRUE)
 gb_LTOFLAGS := -flto
+gb_LTOPLUGINFLAGS := --plugin LLVMgold.so
 else
 gb_LTOFLAGS := -flto=$(PARALLELISM) -fuse-linker-plugin -O2
 endif
@@ -194,9 +216,12 @@ endif
 endif
 # extra EF variable to make the command line shorter (just like is done with $(SRCDIR) etc.)
 gb_COMPILER_PLUGINS_SETUP := EF=$(SRCDIR)/include/sal/log-areas.dox && ICECC_EXTRAFILES=$$EF CCACHE_EXTRAFILES=$$EF
+gb_COMPILER_PLUGINS_WARNINGS_AS_ERRORS := \
+    -Xclang -plugin-arg-loplugin -Xclang --warnings-as-errors
 else
 gb_COMPILER_PLUGINS :=
 gb_COMPILER_PLUGINS_SETUP :=
+gb_COMPILER_PLUGINS_WARNINGS_AS_ERRORS :=
 endif
 
 # Executable class

@@ -92,7 +92,6 @@ Svx3DWin::Svx3DWin(SfxBindings* pInBindings, SfxChildWindow *pCW, vcl::Window* p
     , eViewType(VIEWTYPE_GEO)
     , pModel(nullptr)
     , pVDev(nullptr)
-    , p3DView(nullptr)
     , pBindings(pInBindings)
     , pControllerItem(nullptr)
     , pConvertTo3DItem(nullptr)
@@ -309,8 +308,8 @@ Svx3DWin::Svx3DWin(SfxBindings* pInBindings, SfxChildWindow *pCW, vcl::Window* p
     if (pDispatcher != nullptr)
     {
         SfxBoolItem aItem( SID_3D_INIT, true );
-        pDispatcher->Execute(
-            SID_3D_INIT, SfxCallMode::ASYNCHRON | SfxCallMode::RECORD, &aItem, 0L );
+        pDispatcher->ExecuteList(SID_3D_INIT,
+                SfxCallMode::ASYNCHRON | SfxCallMode::RECORD, { &aItem });
     }
 
     Reset();
@@ -328,7 +327,6 @@ Svx3DWin::~Svx3DWin()
 
 void Svx3DWin::dispose()
 {
-    delete p3DView;
     pVDev.disposeAndClear();
     delete pModel;
 
@@ -2151,8 +2149,8 @@ IMPL_LINK_NOARG_TYPED(Svx3DWin, ClickUpdateHdl, Button*, void)
         if (pDispatcher != nullptr)
         {
             SfxBoolItem aItem( SID_3D_STATE, true );
-            pDispatcher->Execute(
-                SID_3D_STATE, SfxCallMode::ASYNCHRON | SfxCallMode::RECORD, &aItem, 0L );
+            pDispatcher->ExecuteList(SID_3D_STATE,
+                SfxCallMode::ASYNCHRON | SfxCallMode::RECORD, { &aItem });
         }
     }
     else
@@ -2168,11 +2166,10 @@ IMPL_LINK_NOARG_TYPED(Svx3DWin, ClickAssignHdl, Button*, void)
     if (pDispatcher != nullptr)
     {
         SfxBoolItem aItem( SID_3D_ASSIGN, true );
-        pDispatcher->Execute(
-            SID_3D_ASSIGN, SfxCallMode::ASYNCHRON | SfxCallMode::RECORD, &aItem, 0L );
+        pDispatcher->ExecuteList(SID_3D_ASSIGN,
+            SfxCallMode::ASYNCHRON | SfxCallMode::RECORD, { &aItem });
     }
 }
-
 
 
 IMPL_LINK_TYPED( Svx3DWin, ClickViewTypeHdl, Button*, pBtn, void )
@@ -2431,15 +2428,14 @@ IMPL_LINK_TYPED( Svx3DWin, ClickHdl, Button *, pButton, void )
             if (pDispatcher != nullptr)
             {
                 SfxBoolItem aItem( nSId, true );
-                pDispatcher->Execute(
-                    nSId, SfxCallMode::ASYNCHRON | SfxCallMode::RECORD, &aItem, 0L );
+                pDispatcher->ExecuteList(nSId,
+                    SfxCallMode::ASYNCHRON | SfxCallMode::RECORD, { &aItem });
             }
         }
         else if( bUpdatePreview )
             UpdatePreview();
     }
 }
-
 
 
 IMPL_LINK_TYPED( Svx3DWin, ClickColorHdl, Button *, pBtn, void)
@@ -2594,7 +2590,6 @@ IMPL_LINK_TYPED( Svx3DWin, ModifyHdl, Edit&, rField, void )
 }
 
 
-
 void Svx3DWin::ClickLight(PushButton& rBtn)
 {
     sal_uInt16 nLightSource = GetLightSource( &rBtn );
@@ -2620,7 +2615,6 @@ void Svx3DWin::ClickLight(PushButton& rBtn)
     m_pCtlLightPreview->GetSvx3DLightControl().SelectLight(nLightSource);
     m_pCtlLightPreview->CheckSelection();
 }
-
 
 
 IMPL_LINK_NOARG_TYPED(Svx3DWin, ChangeSelectionCallbackHdl, SvxLightCtl3D*, void)
@@ -2732,8 +2726,8 @@ void Svx3DWin::UpdatePreview()
         if (pDispatcher != nullptr)
         {
             SfxBoolItem aItem( SID_3D_STATE, true );
-            pDispatcher->Execute(
-                SID_3D_STATE, SfxCallMode::SYNCHRON | SfxCallMode::RECORD, &aItem, 0L );
+            pDispatcher->ExecuteList(SID_3D_STATE,
+                SfxCallMode::SYNCHRON | SfxCallMode::RECORD, { &aItem });
         }
         // Reset Flag
         bOnly3DChanged = false;
@@ -2925,8 +2919,8 @@ void SvxConvertTo3DItem::StateChanged(sal_uInt16 /*_nId*/, SfxItemState eState, 
         if (pDispatcher != nullptr)
         {
             SfxBoolItem aItem( SID_3D_STATE, true );
-            pDispatcher->Execute(
-                SID_3D_STATE, SfxCallMode::ASYNCHRON|SfxCallMode::RECORD, &aItem, 0L);
+            pDispatcher->ExecuteList(SID_3D_STATE,
+                    SfxCallMode::ASYNCHRON|SfxCallMode::RECORD, { &aItem });
         }
     }
 }

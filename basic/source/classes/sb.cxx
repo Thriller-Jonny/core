@@ -21,7 +21,7 @@
 #include <tools/rcid.h>
 #include <tools/stream.hxx>
 #include <tools/errinf.hxx>
-#include <tools/solarmutex.hxx>
+#include <comphelper/solarmutex.hxx>
 #include <basic/sbx.hxx>
 #include <tools/rc.hxx>
 #include <vcl/svapp.hxx>
@@ -63,7 +63,6 @@ using com::sun::star::uno::UNO_QUERY;
 using com::sun::star::lang::XMultiServiceFactory;
 
 
-
 class DocBasicItem : public ::cppu::WeakImplHelper< util::XCloseListener >
 {
 public:
@@ -95,7 +94,6 @@ private:
 };
 
 
-
 DocBasicItem::DocBasicItem( StarBASIC& rDocBasic ) :
     mrDocBasic( rDocBasic ),
     mxClassModules( new SbxObject( OUString() ) ),
@@ -109,7 +107,9 @@ DocBasicItem::~DocBasicItem()
     // tdf#90969 HACK: don't use SolarMutexGuard - there is a horrible global
     // map GaDocBasicItems holding instances, and these get deleted from exit
     // handlers, when the SolarMutex is already dead
-    tools::SolarMutex::Acquire();
+    comphelper::SolarMutex *pSolarMutex = comphelper::SolarMutex::get();
+    if ( pSolarMutex )
+        pSolarMutex->acquire();
 
     try
     {
@@ -121,7 +121,9 @@ DocBasicItem::~DocBasicItem()
         assert(false);
     }
 
-    tools::SolarMutex::Release();
+    pSolarMutex = comphelper::SolarMutex::get();
+    if ( pSolarMutex )
+        pSolarMutex->release();
 }
 
 void DocBasicItem::clearDependingVarsOnDelete( StarBASIC& rDeletedBasic )
@@ -170,7 +172,6 @@ void SAL_CALL DocBasicItem::disposing( const lang::EventObject& /*rEvent*/ ) thr
 {
     stopListening();
 }
-
 
 
 namespace {
@@ -227,7 +228,6 @@ StarBASIC* lclGetDocBasicForModule( SbModule* pModule )
 }
 
 } // namespace
-
 
 
 SbxObject* StarBASIC::getVBAGlobals( )
@@ -485,7 +485,6 @@ SbxObject* SbOLEFactory::CreateObject( const OUString& rClassName )
 }
 
 
-
 // SbFormFactory, show user forms by: dim as new <user form name>
 
 class SbFormFactory : public SbxFactory
@@ -527,7 +526,6 @@ SbxObject* SbFormFactory::CreateObject( const OUString& rClassName )
     }
     return nullptr;
 }
-
 
 
 // SbTypeFactory
@@ -625,7 +623,6 @@ SbxObject* createUserTypeImpl( const OUString& rClassName )
     SbxObject* pRetObj = GetSbData()->pTypeFac->CreateObject( rClassName );
     return pRetObj;
 }
-
 
 
 SbClassModuleObject::SbClassModuleObject( SbModule* pClassModule )
@@ -924,7 +921,6 @@ StarBASIC::StarBASIC( StarBASIC* p, bool bIsDocBasic  )
     pLibInfo = nullptr;
     bNoRtl = bBreak = false;
     bVBAEnabled = false;
-    pModules = new SbxArray;
 
     if( !GetSbData()->nInst++ )
     {
@@ -1014,29 +1010,13 @@ StarBASIC::~StarBASIC()
     clearUnoMethodsForBasic( this );
 }
 
-// Override new() operator, so that everyone can create a new instance
-void* StarBASIC::operator new( size_t n )
-{
-    if( n < sizeof( StarBASIC ) )
-    {
-        n = sizeof( StarBASIC );
-    }
-    return ::operator new( n );
-}
-
-void StarBASIC::operator delete( void* p )
-{
-    ::operator delete( p );
-}
-
 void StarBASIC::implClearDependingVarsOnDelete( StarBASIC* pDeletedBasic )
 {
     if( this != pDeletedBasic )
     {
-        for( sal_uInt16 i = 0; i < pModules->Count(); i++ )
+        for( const auto& pModule: pModules)
         {
-            SbModule* p = static_cast<SbModule*>(pModules->Get( i ));
-            p->ClearVarsDependingOnDeletedBasic( pDeletedBasic );
+            pModule->ClearVarsDependingOnDeletedBasic( pDeletedBasic );
         }
     }
 
@@ -1060,16 +1040,11 @@ void StarBASIC::implClearDependingVarsOnDelete( StarBASIC* pDeletedBasic )
 
 SbModule* StarBASIC::MakeModule( const OUString& rName, const OUString& rSrc )
 {
-    return MakeModule32( rName, rSrc );
+    ModuleInfo aInfo;
+    aInfo.ModuleType = ModuleType::NORMAL;
+    return MakeModule(  rName, aInfo, rSrc );
 }
-
-SbModule* StarBASIC::MakeModule32( const OUString& rName, const OUString& rSrc )
-{
-    ModuleInfo mInfo;
-    mInfo.ModuleType = ModuleType::NORMAL;
-    return MakeModule32(  rName, mInfo, rSrc );
-}
-SbModule* StarBASIC::MakeModule32( const OUString& rName, const ModuleInfo& mInfo, const OUString& rSrc )
+SbModule* StarBASIC::MakeModule( const OUString& rName, const ModuleInfo& mInfo, const OUString& rSrc )
 {
 
     SAL_INFO(
@@ -1097,7 +1072,7 @@ SbModule* StarBASIC::MakeModule32( const OUString& rName, const ModuleInfo& mInf
     }
     p->SetSource32( rSrc );
     p->SetParent( this );
-    pModules->Insert( p, pModules->Count() );
+    pModules.push_back(p);
     SetModified( true );
     return p;
 }
@@ -1106,7 +1081,7 @@ void StarBASIC::Insert( SbxVariable* pVar )
 {
     if( dynamic_cast<const SbModule*>(pVar) != nullptr)
     {
-        pModules->Insert( pVar, pModules->Count() );
+        pModules.push_back(static_cast<SbModule*>(pVar));
         pVar->SetParent( this );
         StartListening( pVar->GetBroadcaster(), true );
     }
@@ -1127,7 +1102,7 @@ void StarBASIC::Remove( SbxVariable* pVar )
     {
         // #87540 Can be last reference!
         SbxVariableRef xVar = pVar;
-        pModules->Remove( pVar );
+        pModules.erase(std::remove(pModules.begin(), pModules.end(), pVar));
         pVar->SetParent( nullptr );
         EndListening( pVar->GetBroadcaster() );
     }
@@ -1137,27 +1112,18 @@ void StarBASIC::Remove( SbxVariable* pVar )
     }
 }
 
-bool StarBASIC::Compile( SbModule* pMod )
-{
-    return pMod && pMod->Compile();
-}
-
 void StarBASIC::Clear()
 {
-    while( pModules->Count() )
-    {
-        pModules->Remove( pModules->Count() - 1 );
-    }
+    pModules.clear();
 }
 
 SbModule* StarBASIC::FindModule( const OUString& rName )
 {
-    for( sal_uInt16 i = 0; i < pModules->Count(); i++ )
+    for (const auto& pModule: pModules)
     {
-        SbModule* p = static_cast<SbModule*>( pModules->Get( i ) );
-        if( p->GetName().equalsIgnoreAsciiCase( rName ) )
+        if( pModule->GetName().equalsIgnoreAsciiCase( rName ) )
         {
-            return p;
+            return pModule.get();
         }
     }
     return nullptr;
@@ -1186,7 +1152,7 @@ struct ClassModuleRunInitItem
 // to allow forward declaration in sbmod.hxx
 class ModuleInitDependencyMap : public
     std::unordered_map< OUString, ClassModuleRunInitItem,
-                          OUStringHash, ::std::equal_to< OUString > >
+                          OUStringHash >
 {};
 
 void SbModule::implProcessModuleRunInit( ModuleInitDependencyMap& rMap, ClassModuleRunInitItem& rItem )
@@ -1233,13 +1199,9 @@ void StarBASIC::InitAllModules( StarBASIC* pBasicNotToInit )
     SolarMutexGuard guard;
 
     // Init own modules
-    for ( sal_uInt16 nMod = 0; nMod < pModules->Count(); nMod++ )
+    for (const auto& pModule: pModules)
     {
-        SbModule* pModule = static_cast<SbModule*>( pModules->Get( nMod ) );
-        if( !pModule->IsCompiled() )
-        {
-            pModule->Compile();
-        }
+        pModule->Compile();
     }
     // compile modules first then RunInit ( otherwise there is
     // can be order dependency, e.g. classmodule A has a member
@@ -1248,13 +1210,12 @@ void StarBASIC::InitAllModules( StarBASIC* pBasicNotToInit )
     // Consider required types to init in right order. Class modules
     // that are required by other modules have to be initialized first.
     ModuleInitDependencyMap aMIDMap;
-    for ( sal_uInt16 nMod = 0; nMod < pModules->Count(); nMod++ )
+    for (const auto& pModule: pModules)
     {
-        SbModule* pModule = static_cast<SbModule*>(pModules->Get( nMod ));
         OUString aModuleName = pModule->GetName();
         if( pModule->isProxyModule() )
         {
-            aMIDMap[aModuleName] = ClassModuleRunInitItem( pModule );
+            aMIDMap[aModuleName] = ClassModuleRunInitItem( pModule.get() );
         }
     }
 
@@ -1266,9 +1227,8 @@ void StarBASIC::InitAllModules( StarBASIC* pBasicNotToInit )
     }
 
     // Call RunInit on standard modules
-    for ( sal_uInt16 nMod = 0; nMod < pModules->Count(); nMod++ )
+    for (const auto& pModule: pModules)
     {
-        SbModule* pModule = static_cast<SbModule*>(pModules->Get( nMod ));
         if( !pModule->isProxyModule() )
         {
             pModule->RunInit();
@@ -1293,10 +1253,9 @@ void StarBASIC::InitAllModules( StarBASIC* pBasicNotToInit )
 void StarBASIC::DeInitAllModules()
 {
     // Deinit own modules
-    for ( sal_uInt16 nMod = 0; nMod < pModules->Count(); nMod++ )
+    for (const auto& pModule: pModules)
     {
-        SbModule* pModule = static_cast<SbModule*>(pModules->Get( nMod ));
-        if( pModule->pImage && !pModule->isProxyModule() && nullptr == dynamic_cast<const SbObjModule*>( pModule) )
+        if( pModule->pImage && !pModule->isProxyModule() && nullptr == dynamic_cast<SbObjModule*>( pModule.get()) )
         {
             pModule->pImage->bInit = false;
         }
@@ -1346,34 +1305,33 @@ SbxVariable* StarBASIC::Find( const OUString& rName, SbxClassType t )
     // Search module
     if( !pRes )
     {
-        for( sal_uInt16 i = 0; i < pModules->Count(); i++ )
+        for (const auto& pModule: pModules)
         {
-            SbModule* p = static_cast<SbModule*>( pModules->Get( i ) );
-            if( p->IsVisible() )
+            if( pModule->IsVisible() )
             {
                 // Remember modul fpr Main() call
                 // or is the name equal?!?
-                if( p->GetName().equalsIgnoreAsciiCase( rName ) )
+                if( pModule->GetName().equalsIgnoreAsciiCase( rName ) )
                 {
                     if( t == SbxCLASS_OBJECT || t == SbxCLASS_DONTCARE )
                     {
-                        pRes = p; break;
+                        pRes = pModule.get(); break;
                     }
-                    pNamed = p;
+                    pNamed = pModule.get();
                 }
                 // Only variables qualified by the Module Name e.g. Sheet1.foo
                 // should work for Document && Class type Modules
-                sal_Int32 nType = p->GetModuleType();
+                sal_Int32 nType = pModule->GetModuleType();
                 if ( nType == ModuleType::DOCUMENT || nType == ModuleType::FORM )
                 {
                     continue;
                 }
                 // otherwise check if the element is available
                 // unset GBLSEARCH-Flag (due to Rekursion)
-                SbxFlagBits nGblFlag = p->GetFlags() & SbxFlagBits::GlobalSearch;
-                p->ResetFlag( SbxFlagBits::GlobalSearch );
-                pRes = p->Find( rName, t );
-                p->SetFlag( nGblFlag );
+                SbxFlagBits nGblFlag = pModule->GetFlags() & SbxFlagBits::GlobalSearch;
+                pModule->ResetFlag( SbxFlagBits::GlobalSearch );
+                pRes = pModule->Find( rName, t );
+                pModule->SetFlag( nGblFlag );
                 if( pRes )
                 {
                     break;
@@ -1651,7 +1609,7 @@ void StarBASIC::MakeErrorText( SbError nId, const OUString& aMsg )
     SolarMutexGuard aSolarGuard;
     sal_uInt16 nOldID = GetVBErrorCode( nId );
 
-    // intantiate the help class
+    // instantiate the help class
     BasResId aId( RID_BASIC_START );
     BasicStringList_Impl aMyStringList( aId, sal_uInt16(nId & ERRCODE_RES_MASK) );
 
@@ -1708,7 +1666,7 @@ bool StarBASIC::CError( SbError code, const OUString& rMsg,
     // Implementation of the code for the string transport to SFX-Error
     if( !rMsg.isEmpty() )
     {
-        code = (sal_uIntPtr)*new StringErrorInfo( code, rMsg );
+        code = (SbError)*new StringErrorInfo( code, rMsg );
     }
     SetErrorData( code, l, c1, c2 );
     GetSbData()->bCompiler = true;
@@ -1725,9 +1683,9 @@ bool StarBASIC::CError( SbError code, const OUString& rMsg,
     return bRet;
 }
 
-bool StarBASIC::RTError( SbError code, sal_Int32 l, sal_Int32 c1, sal_Int32 c2 )
+void StarBASIC::RTError( SbError code, sal_Int32 l, sal_Int32 c1, sal_Int32 c2 )
 {
-    return RTError( code, OUString(), l, c1, c2 );
+    RTError( code, OUString(), l, c1, c2 );
 }
 
 bool StarBASIC::RTError( SbError code, const OUString& rMsg, sal_Int32 l, sal_Int32 c1, sal_Int32 c2 )
@@ -1752,11 +1710,11 @@ bool StarBASIC::RTError( SbError code, const OUString& rMsg, sal_Int32 l, sal_In
         {
             OUString aTmp = "\'" + OUString::number(SbxErrObject::getUnoErrObject()->getNumber()) +
                             "\'\n" + OUString(!GetSbData()->aErrMsg.isEmpty() ? GetSbData()->aErrMsg : rMsg);
-            code = (sal_uIntPtr)*new StringErrorInfo( code, aTmp );
+            code = (SbError)*new StringErrorInfo( code, aTmp );
         }
         else
         {
-            code = (sal_uIntPtr)*new StringErrorInfo( code, rMsg );
+            code = (SbError)*new StringErrorInfo( code, rMsg );
         }
     }
 
@@ -1902,7 +1860,7 @@ bool StarBASIC::LoadData( SvStream& r, sal_uInt16 nVer )
     ppDeleteTab.reset();
 
     sal_uInt16 nMod(0);
-    pModules->Clear();
+    pModules.clear();
     r.ReadUInt16( nMod );
     const size_t nMinSbxSize(14);
     const size_t nMaxPossibleEntries = r.remainingSize() / nMinSbxSize;
@@ -1928,7 +1886,7 @@ bool StarBASIC::LoadData( SvStream& r, sal_uInt16 nVer )
         else
         {
             pMod->SetParent( this );
-            pModules->Put( pMod, i );
+            pModules.push_back( pMod );
         }
     }
     // HACK for SFX-Bullshit!
@@ -1955,11 +1913,11 @@ bool StarBASIC::StoreData( SvStream& r ) const
     {
         return false;
     }
-    r.WriteUInt16( pModules->Count() );
-    for( sal_uInt16 i = 0; i < pModules->Count(); i++ )
+    assert(pModules.size() < SAL_MAX_UINT16);
+    r.WriteUInt16( static_cast<sal_uInt16>(pModules.size()));
+    for( const auto& rpModule: pModules )
     {
-        SbModule* p = static_cast<SbModule*>( pModules->Get( i ) );
-        if( !p->Store( r ) )
+        if( !rpModule->Store( r ) )
         {
             return false;
         }
@@ -1967,11 +1925,10 @@ bool StarBASIC::StoreData( SvStream& r ) const
     return true;
 }
 
-bool StarBASIC::GetUNOConstant( const sal_Char* _pAsciiName, css::uno::Any& aOut )
+bool StarBASIC::GetUNOConstant( const OUString& rName, css::uno::Any& aOut )
 {
     bool bRes = false;
-    OUString sVarName( OUString::createFromAscii( _pAsciiName ) );
-    SbUnoObject* pGlobs = dynamic_cast<SbUnoObject*>( Find( sVarName, SbxCLASS_DONTCARE ) );
+    SbUnoObject* pGlobs = dynamic_cast<SbUnoObject*>( Find( rName, SbxCLASS_DONTCARE ) );
     if ( pGlobs )
     {
         aOut = pGlobs->getUnoAny();
@@ -2107,18 +2064,12 @@ void BasicCollection::Initialize()
     }
 }
 
-SbxVariable* BasicCollection::Find( const OUString& rName, SbxClassType t )
-{
-    SbxVariable* pFind = SbxObject::Find( rName, t );
-    return pFind;
-}
-
 void BasicCollection::Notify( SfxBroadcaster& rCst, const SfxHint& rHint )
 {
     const SbxHint* p = dynamic_cast<const SbxHint*>(&rHint);
     if( p )
     {
-        sal_uIntPtr nId = p->GetId();
+        const sal_uInt32 nId = p->GetId();
         bool bRead  = nId == SBX_HINT_DATAWANTED;
         bool bWrite = nId == SBX_HINT_DATACHANGED;
         bool bRequestInfo = nId == SBX_HINT_INFOWANTED;
@@ -2250,7 +2201,7 @@ void BasicCollection::CollAdd( SbxArray* pPar_ )
             }
         }
 
-        SbxVariableRef pNewItem = new SbxVariable( *pItem );
+        auto pNewItem = tools::make_ref<SbxVariable>( *pItem );
         if( nCount >= 3 )
         {
             SbxVariable* pKey = pPar_->Get(2);

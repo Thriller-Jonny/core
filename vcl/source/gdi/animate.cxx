@@ -23,8 +23,9 @@
 #include <rtl/crc.h>
 #include <vcl/virdev.hxx>
 #include <vcl/window.hxx>
-#include <impanmvw.hxx>
 #include <vcl/dibtools.hxx>
+
+#include "impanmvw.hxx"
 
 #define MIN_TIMEOUT 2L
 #define INC_TIMEOUT 0L
@@ -557,7 +558,7 @@ bool Animation::Convert( BmpConversion eConversion )
     return bRet;
 }
 
-bool Animation::ReduceColors( sal_uInt16 nNewColorCount, BmpReduce eReduce )
+bool Animation::ReduceColors( sal_uInt16 nNewColorCount )
 {
     DBG_ASSERT( !IsInAnimation(), "Animation modified while it is animated" );
 
@@ -568,9 +569,9 @@ bool Animation::ReduceColors( sal_uInt16 nNewColorCount, BmpReduce eReduce )
         bRet = true;
 
         for( size_t i = 0, n = maList.size(); ( i < n ) && bRet; ++i )
-            bRet = maList[ i ]->aBmpEx.ReduceColors( nNewColorCount, eReduce );
+            bRet = maList[ i ]->aBmpEx.ReduceColors( nNewColorCount );
 
-        maBitmapEx.ReduceColors( nNewColorCount, eReduce );
+        maBitmapEx.ReduceColors( nNewColorCount );
     }
     else
         bRet = false;

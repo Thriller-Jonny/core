@@ -135,8 +135,8 @@ static OUString lcl_getFlatURL( uno::Reference<beans::XPropertySet>& xSourceProp
 class SwAddrSourceLB : public SvSimpleTable
 {
 public:
-    SwAddrSourceLB(SvSimpleTableContainer& rParent, WinBits nBits = 0)
-        : SvSimpleTable(rParent, nBits)
+    explicit SwAddrSourceLB(SvSimpleTableContainer& rParent)
+        : SvSimpleTable(rParent, 0)
     {
     }
     virtual void Resize() override;
@@ -386,12 +386,10 @@ IMPL_LINK_TYPED(SwAddressListDialog, CreateHdl_Impl, Button*, pButton, void)
             aTempURL.removeSegment();
             aTempURL.removeFinalSlash();
             const OUString sDBURL("sdbc:flat:" + aTempURL.GetMainURL(INetURLObject::NO_DECODE));
-            Any aAny(&sDBURL, cppu::UnoType<decltype(sDBURL)>::get());
-            xDataProperties->setPropertyValue("URL", aAny);
+            xDataProperties->setPropertyValue("URL", Any(sDBURL));
             //set the filter to the file name without extension
             uno::Sequence<OUString> aFilters { sNewName };
-            aAny <<= aFilters;
-            xDataProperties->setPropertyValue("TableFilter", aAny);
+            xDataProperties->setPropertyValue("TableFilter", Any(aFilters));
 
             uno::Sequence<PropertyValue> aInfo(4);
             PropertyValue* pInfo = aInfo.getArray();
@@ -403,8 +401,7 @@ IMPL_LINK_TYPED(SwAddressListDialog, CreateHdl_Impl, Button*, pButton, void)
             pInfo[2].Value <<= aURL.getExtension();//"csv";
             pInfo[3].Name = "CharSet";
             pInfo[3].Value <<= OUString("UTF-8");
-            aAny <<= aInfo;
-            xDataProperties->setPropertyValue("Info", aAny);
+            xDataProperties->setPropertyValue("Info", Any(aInfo));
 
             uno::Reference<sdb::XDocumentDataSource> xDS(xNewInstance, UNO_QUERY_THROW);
             uno::Reference<frame::XStorable> xStore(xDS->getDatabaseDocument(), UNO_QUERY_THROW);

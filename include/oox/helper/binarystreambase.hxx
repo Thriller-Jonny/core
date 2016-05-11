@@ -20,10 +20,10 @@
 #ifndef INCLUDED_OOX_HELPER_BINARYSTREAMBASE_HXX
 #define INCLUDED_OOX_HELPER_BINARYSTREAMBASE_HXX
 
+#include <com/sun/star/uno/Reference.hxx>
 #include <com/sun/star/uno/Sequence.hxx>
-#include <oox/helper/helper.hxx>
 #include <oox/dllapi.h>
-#include <memory>
+#include <sal/types.h>
 
 namespace com { namespace sun { namespace star {
     namespace io { class XSeekable; }
@@ -32,7 +32,6 @@ namespace com { namespace sun { namespace star {
 namespace oox {
 
 typedef css::uno::Sequence< sal_Int8 > StreamDataSequence;
-
 
 
 /** Base class for binary stream classes.
@@ -118,7 +117,6 @@ private:
 };
 
 
-
 /** Base class for binary input and output streams wrapping a UNO stream,
     seekable via the com.sun.star.io.XSeekable interface.
  */
@@ -144,7 +142,6 @@ private:
     css::uno::Reference< css::io::XSeekable >
                         mxSeekable;     ///< Stream seeking interface.
 };
-
 
 
 /** Base class for binary input and output streams wrapping a
@@ -173,7 +170,6 @@ protected:
     const StreamDataSequence* mpData;   ///< Wrapped data sequence.
     sal_Int32           mnPos;          ///< Current position in the sequence.
 };
-
 
 
 } // namespace oox

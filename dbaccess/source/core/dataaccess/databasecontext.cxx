@@ -27,7 +27,6 @@
 #include "databaseregistrations.hxx"
 #include "datasource.hxx"
 #include "dbastrings.hrc"
-#include "module_dba.hxx"
 
 #include <com/sun/star/beans/NamedValue.hpp>
 #include <com/sun/star/beans/PropertyAttribute.hpp>
@@ -144,7 +143,7 @@ namespace dbaccess
                     {
                         Reference< util::XCloseable > xClose( xMod,
                                                               UNO_QUERY_THROW );
-                        xClose->close( sal_False );
+                        xClose->close( false );
                     }
                 }
                 catch( const CloseVetoException& )
@@ -272,8 +271,8 @@ void ODatabaseContext::disposing()
     // dispose the data sources
     // disposing seems to remove elements, so work on copy for valid iterators
     ObjectCache objCopy(m_aDatabaseObjects);
-    ObjectCache::iterator const aEnd = objCopy.end();
-    for (   ObjectCache::iterator aIter = objCopy.begin();
+    ObjectCache::const_iterator const aEnd = objCopy.end();
+    for (   ObjectCache::const_iterator aIter = objCopy.begin();
             aIter != aEnd;
             ++aIter
         )
@@ -355,7 +354,7 @@ Reference< XInterface > ODatabaseContext::loadObjectFromURL(const OUString& _rNa
     {
         pModelImpl.set( new ODatabaseModelImpl( _rName, m_aContext, *this ) );
 
-        Reference< XModel > xModel( pModelImpl->createNewModel_deliverOwnership( false ), UNO_SET_THROW );
+        Reference< XModel > xModel( pModelImpl->createNewModel_deliverOwnership(), UNO_SET_THROW );
         Reference< XLoadable > xLoad( xModel, UNO_QUERY_THROW );
 
         ::comphelper::NamedValueCollection aArgs;
@@ -531,7 +530,7 @@ void ODatabaseContext::revokeObject(const OUString& _rName) throw( Exception, Ru
     }
 
     // check if URL is already loaded
-    ObjectCache::iterator aExistent = m_aDatabaseObjects.find( sURL );
+    ObjectCache::const_iterator aExistent = m_aDatabaseObjects.find( sURL );
     if ( aExistent != m_aDatabaseObjects.end() )
         m_aDatabaseObjects.erase( aExistent );
 
@@ -541,9 +540,9 @@ void ODatabaseContext::revokeObject(const OUString& _rName) throw( Exception, Ru
     m_aContainerListeners.notifyEach( &XContainerListener::elementRemoved, aEvent );
 }
 
-sal_Bool SAL_CALL ODatabaseContext::hasRegisteredDatabase( const OUString& _Name ) throw (IllegalArgumentException, RuntimeException, std::exception)
+sal_Bool SAL_CALL ODatabaseContext::hasRegisteredDatabase( const OUString& Name ) throw (IllegalArgumentException, RuntimeException, std::exception)
 {
-    return m_xDatabaseRegistrations->hasRegisteredDatabase( _Name );
+    return m_xDatabaseRegistrations->hasRegisteredDatabase( Name );
 }
 
 Sequence< OUString > SAL_CALL ODatabaseContext::getRegistrationNames() throw (RuntimeException, std::exception)
@@ -551,39 +550,39 @@ Sequence< OUString > SAL_CALL ODatabaseContext::getRegistrationNames() throw (Ru
     return m_xDatabaseRegistrations->getRegistrationNames();
 }
 
-OUString SAL_CALL ODatabaseContext::getDatabaseLocation( const OUString& _Name ) throw (IllegalArgumentException, NoSuchElementException, RuntimeException, std::exception)
+OUString SAL_CALL ODatabaseContext::getDatabaseLocation( const OUString& Name ) throw (IllegalArgumentException, NoSuchElementException, RuntimeException, std::exception)
 {
-    return m_xDatabaseRegistrations->getDatabaseLocation( _Name );
+    return m_xDatabaseRegistrations->getDatabaseLocation( Name );
 }
 
-void SAL_CALL ODatabaseContext::registerDatabaseLocation( const OUString& _Name, const OUString& _Location ) throw (IllegalArgumentException, ElementExistException, RuntimeException, std::exception)
+void SAL_CALL ODatabaseContext::registerDatabaseLocation( const OUString& Name, const OUString& Location ) throw (IllegalArgumentException, ElementExistException, RuntimeException, std::exception)
 {
-    m_xDatabaseRegistrations->registerDatabaseLocation( _Name, _Location );
+    m_xDatabaseRegistrations->registerDatabaseLocation( Name, Location );
 }
 
-void SAL_CALL ODatabaseContext::revokeDatabaseLocation( const OUString& _Name ) throw (IllegalArgumentException, NoSuchElementException, IllegalAccessException, RuntimeException, std::exception)
+void SAL_CALL ODatabaseContext::revokeDatabaseLocation( const OUString& Name ) throw (IllegalArgumentException, NoSuchElementException, IllegalAccessException, RuntimeException, std::exception)
 {
-    m_xDatabaseRegistrations->revokeDatabaseLocation( _Name );
+    m_xDatabaseRegistrations->revokeDatabaseLocation( Name );
 }
 
-void SAL_CALL ODatabaseContext::changeDatabaseLocation( const OUString& _Name, const OUString& _NewLocation ) throw (IllegalArgumentException, NoSuchElementException, IllegalAccessException, RuntimeException, std::exception)
+void SAL_CALL ODatabaseContext::changeDatabaseLocation( const OUString& Name, const OUString& NewLocation ) throw (IllegalArgumentException, NoSuchElementException, IllegalAccessException, RuntimeException, std::exception)
 {
-    m_xDatabaseRegistrations->changeDatabaseLocation( _Name, _NewLocation );
+    m_xDatabaseRegistrations->changeDatabaseLocation( Name, NewLocation );
 }
 
-sal_Bool SAL_CALL ODatabaseContext::isDatabaseRegistrationReadOnly( const OUString& _Name ) throw (IllegalArgumentException, NoSuchElementException, RuntimeException, std::exception)
+sal_Bool SAL_CALL ODatabaseContext::isDatabaseRegistrationReadOnly( const OUString& Name ) throw (IllegalArgumentException, NoSuchElementException, RuntimeException, std::exception)
 {
-    return m_xDatabaseRegistrations->isDatabaseRegistrationReadOnly( _Name );
+    return m_xDatabaseRegistrations->isDatabaseRegistrationReadOnly( Name );
 }
 
-void SAL_CALL ODatabaseContext::addDatabaseRegistrationsListener( const Reference< XDatabaseRegistrationsListener >& _Listener ) throw (RuntimeException, std::exception)
+void SAL_CALL ODatabaseContext::addDatabaseRegistrationsListener( const Reference< XDatabaseRegistrationsListener >& Listener ) throw (RuntimeException, std::exception)
 {
-    m_xDatabaseRegistrations->addDatabaseRegistrationsListener( _Listener );
+    m_xDatabaseRegistrations->addDatabaseRegistrationsListener( Listener );
 }
 
-void SAL_CALL ODatabaseContext::removeDatabaseRegistrationsListener( const Reference< XDatabaseRegistrationsListener >& _Listener ) throw (RuntimeException, std::exception)
+void SAL_CALL ODatabaseContext::removeDatabaseRegistrationsListener( const Reference< XDatabaseRegistrationsListener >& Listener ) throw (RuntimeException, std::exception)
 {
-    m_xDatabaseRegistrations->removeDatabaseRegistrationsListener( _Listener );
+    m_xDatabaseRegistrations->removeDatabaseRegistrationsListener( Listener );
 }
 
 // css::container::XElementAccess
@@ -676,7 +675,7 @@ sal_Bool ODatabaseContext::hasByName(const OUString& _rName) throw( RuntimeExcep
 
 Reference< XInterface > ODatabaseContext::getObject( const OUString& _rURL )
 {
-    ObjectCache::iterator aFind = m_aDatabaseObjects.find( _rURL );
+    ObjectCache::const_iterator aFind = m_aDatabaseObjects.find( _rURL );
     Reference< XInterface > xExistent;
     if ( aFind != m_aDatabaseObjects.end() )
         xExistent = aFind->second->getOrCreateDataSource();
@@ -686,9 +685,7 @@ Reference< XInterface > ODatabaseContext::getObject( const OUString& _rURL )
 void ODatabaseContext::registerDatabaseDocument( ODatabaseModelImpl& _rModelImpl )
 {
     OUString sURL( _rModelImpl.getURL() );
-#if OSL_DEBUG_LEVEL > 1
-    OSL_TRACE( "DatabaseContext: registering %s", OUStringToOString( sURL, RTL_TEXTENCODING_UTF8 ).getStr() );
-#endif
+    SAL_INFO("dbaccess.core", "DatabaseContext: registering " << sURL);
     if ( m_aDatabaseObjects.find( sURL ) == m_aDatabaseObjects.end() )
     {
         m_aDatabaseObjects[ sURL ] = &_rModelImpl;
@@ -700,23 +697,18 @@ void ODatabaseContext::registerDatabaseDocument( ODatabaseModelImpl& _rModelImpl
 
 void ODatabaseContext::revokeDatabaseDocument( const ODatabaseModelImpl& _rModelImpl )
 {
-    OUString sURL( _rModelImpl.getURL() );
-#if OSL_DEBUG_LEVEL > 1
-    OSL_TRACE( "DatabaseContext: deregistering %s", OUStringToOString( sURL, RTL_TEXTENCODING_UTF8 ).getStr() );
-#endif
+    const OUString& sURL( _rModelImpl.getURL() );
+    SAL_INFO("dbaccess.core", "DatabaseContext: deregistering " << sURL);
     m_aDatabaseObjects.erase( sURL );
 }
 
 void ODatabaseContext::databaseDocumentURLChange( const OUString& _rOldURL, const OUString& _rNewURL )
 {
-#if OSL_DEBUG_LEVEL > 1
-    OSL_TRACE( "DatabaseContext: changing registration from %s to %s",
-        OUStringToOString( _rOldURL, RTL_TEXTENCODING_UTF8 ).getStr(),
-        OUStringToOString( _rNewURL, RTL_TEXTENCODING_UTF8 ).getStr() );
-#endif
-    ObjectCache::iterator oldPos = m_aDatabaseObjects.find( _rOldURL );
+    SAL_INFO("dbaccess.core", "DatabaseContext: changing registrations from " << _rOldURL <<
+             " to " << _rNewURL);
+    ObjectCache::const_iterator oldPos = m_aDatabaseObjects.find( _rOldURL );
     ENSURE_OR_THROW( oldPos != m_aDatabaseObjects.end(), "illegal old database document URL" );
-    ObjectCache::iterator newPos = m_aDatabaseObjects.find( _rNewURL );
+    ObjectCache::const_iterator newPos = m_aDatabaseObjects.find( _rNewURL );
     ENSURE_OR_THROW( newPos == m_aDatabaseObjects.end(), "illegal new database document URL" );
 
     m_aDatabaseObjects[ _rNewURL ] = oldPos->second;

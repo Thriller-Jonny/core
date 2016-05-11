@@ -26,10 +26,10 @@
 #include "rect.hxx"
 #include "format.hxx"
 
+#include <cassert>
 #include <memory>
 #include <vector>
 #include <deque>
-#include <ostream>
 
 #define ATTR_BOLD       0x0001
 #define ATTR_ITALIC     0x0002
@@ -52,8 +52,6 @@ enum class FontSizeType {
 #define FLG_VISIBLE     0x0020
 #define FLG_HORALIGN    0x0040
 
-
-extern SmFormat *pActiveFormat;
 
 class SmVisitor;
 class SmDocShell;
@@ -87,9 +85,6 @@ enum SmNodeType
 };
 
 
-
-
-
 class SmNode : public SmRect
 {
     SmFace      maFace;
@@ -110,6 +105,9 @@ protected:
     sal_Int32       mnAccIndex;
 
 public:
+    SmNode(const SmNode&) = delete;
+    SmNode& operator=(const SmNode&) = delete;
+
     virtual             ~SmNode();
 
     virtual bool        IsVisible() const;
@@ -147,8 +145,6 @@ public:
     virtual void Prepare(const SmFormat &rFormat, const SmDocShell &rDocShell);
     void PrepareAttributes();
 
-    sal_uInt16 FindIndex() const;
-
     void         SetRectHorAlign(RectHorAlign eHorAlign, bool bApplyToSubTree = true );
     RectHorAlign GetRectHorAlign() const { return meRectHorAlign; }
 
@@ -157,21 +153,21 @@ public:
 
     void Move(const Point &rPosition);
     void MoveTo(const Point &rPosition) { Move(rPosition - GetTopLeft()); }
-    virtual void Arrange(const OutputDevice &rDev, const SmFormat &rFormat);
+    virtual void Arrange(OutputDevice &rDev, const SmFormat &rFormat);
     virtual void CreateTextFromNode(OUString &rText);
 
-    virtual void    GetAccessibleText( OUStringBuffer &rText ) const;
+    virtual void    GetAccessibleText( OUStringBuffer &rText ) const = 0;
     sal_Int32       GetAccessibleIndex() const { return mnAccIndex; }
     const SmNode *  FindNodeWithAccessibleIndex(sal_Int32 nAccIndex) const;
 
-    sal_uInt16  GetRow() const    { return (sal_uInt16)maNodeToken.nRow; }
-    sal_uInt16  GetColumn() const { return (sal_uInt16)maNodeToken.nCol; }
+    sal_uInt16  GetRow() const    { return sal::static_int_cast<sal_uInt16>(maNodeToken.nRow); }
+    sal_uInt16  GetColumn() const { return sal::static_int_cast<sal_uInt16>(maNodeToken.nCol); }
 
     SmScaleMode     GetScaleMode() const { return meScaleMode; }
     void            SetScaleMode(SmScaleMode eMode) { meScaleMode = eMode; }
 
-    virtual void AdaptToX(const OutputDevice &rDev, sal_uLong nWidth);
-    virtual void AdaptToY(const OutputDevice &rDev, sal_uLong nHeight);
+    virtual void AdaptToX(OutputDevice &rDev, sal_uLong nWidth);
+    virtual void AdaptToY(OutputDevice &rDev, sal_uLong nHeight);
 
     SmNodeType      GetType() const  { return meType; }
     const SmToken & GetToken() const { return maNodeToken; }
@@ -184,21 +180,11 @@ public:
     /** Accept a visitor
      * Calls the method for this class on the visitor
      */
-    virtual void Accept(SmVisitor* pVisitor);
+    virtual void Accept(SmVisitor* pVisitor) = 0;
 
     /** True if this node is selected */
     bool IsSelected() const {return mbIsSelected;}
     void SetSelected(bool Selected = true) {mbIsSelected = Selected;}
-
-#ifdef DEBUG_ENABLE_DUMPASDOT
-    /** The tree as dot graph for graphviz, usable for debugging
-     * Convert the output to a image using $ dot graph.gv -Tpng > graph.png
-     */
-    inline void DumpAsDot(std::ostream &out, OUString* label = NULL) const{
-        int id = 0;
-        DumpAsDot(out, label, -1, id, -1);
-    }
-#endif /* DEBUG_ENABLE_DUMPASDOT */
 
     /** Get the parent node of this node */
     SmStructureNode* GetParent(){ return mpParentNode; }
@@ -227,7 +213,6 @@ public:
 private:
     SmStructureNode* mpParentNode;
 };
-
 
 
 /** A simple auxiliary iterator class for SmNode
@@ -288,7 +273,6 @@ private:
 };
 
 
-
 /** Abstract baseclass for all composite node
  *
  * Subclasses of this class can have subnodes. Nodes that doesn't derivate from
@@ -304,7 +288,6 @@ protected:
     {}
 
 public:
-            SmStructureNode( const SmStructureNode &rNode );
     virtual ~SmStructureNode();
 
     virtual bool        IsVisible() const override;
@@ -316,8 +299,6 @@ public:
     virtual SmNode *    GetSubNode(sal_uInt16 nIndex) override;
             void SetSubNodes(SmNode *pFirst, SmNode *pSecond, SmNode *pThird = nullptr);
             void SetSubNodes(const SmNodeArray &rNodeArray);
-
-    SmStructureNode & operator = ( const SmStructureNode &rNode );
 
     virtual void  GetAccessibleText( OUStringBuffer &rText ) const override;
 
@@ -363,9 +344,6 @@ public:
 };
 
 
-
-
-
 class SmGraphicNode : public SmVisibleNode
 {
 protected:
@@ -377,8 +355,6 @@ public:
 
     virtual void  GetAccessibleText( OUStringBuffer &rText ) const override;
 };
-
-
 
 
 /** Draws a rectangle
@@ -394,16 +370,14 @@ public:
     :   SmGraphicNode(NRECTANGLE, rNodeToken)
     {}
 
-    virtual void AdaptToX(const OutputDevice &rDev, sal_uLong nWidth) override;
-    virtual void AdaptToY(const OutputDevice &rDev, sal_uLong nHeight) override;
+    virtual void AdaptToX(OutputDevice &rDev, sal_uLong nWidth) override;
+    virtual void AdaptToY(OutputDevice &rDev, sal_uLong nHeight) override;
 
-    virtual void Arrange(const OutputDevice &rDev, const SmFormat &rFormat) override;
+    virtual void Arrange(OutputDevice &rDev, const SmFormat &rFormat) override;
 
     void CreateTextFromNode(OUString &rText) override;
     void Accept(SmVisitor* pVisitor) override;
 };
-
-
 
 
 /** Polygon line node
@@ -422,15 +396,13 @@ public:
     long         GetWidth() const { return nWidth; }
     tools::Polygon &GetPolygon() { return aPoly; }
 
-    virtual void AdaptToX(const OutputDevice &rDev, sal_uLong nWidth) override;
-    virtual void AdaptToY(const OutputDevice &rDev, sal_uLong nHeight) override;
+    virtual void AdaptToX(OutputDevice &rDev, sal_uLong nWidth) override;
+    virtual void AdaptToY(OutputDevice &rDev, sal_uLong nHeight) override;
 
-    virtual void Arrange(const OutputDevice &rDev, const SmFormat &rFormat) override;
+    virtual void Arrange(OutputDevice &rDev, const SmFormat &rFormat) override;
 
     void Accept(SmVisitor* pVisitor) override;
 };
-
-
 
 
 /** Text node
@@ -483,7 +455,7 @@ public:
     void                SetSelectionEnd(sal_Int32 index) {nSelectionEnd = index;}
 
     virtual void Prepare(const SmFormat &rFormat, const SmDocShell &rDocShell) override;
-    virtual void Arrange(const OutputDevice &rDev, const SmFormat &rFormat) override;
+    virtual void Arrange(OutputDevice &rDev, const SmFormat &rFormat) override;
     virtual void CreateTextFromNode(OUString &rText) override;
 
     virtual void  GetAccessibleText( OUStringBuffer &rText ) const override;
@@ -494,8 +466,6 @@ public:
     */
     static sal_Unicode ConvertSymbolToUnicode(sal_Unicode nIn);
 };
-
-
 
 
 /** Special node for user defined characters
@@ -516,19 +486,17 @@ public:
     SmSpecialNode(const SmToken &rNodeToken);
 
     virtual void Prepare(const SmFormat &rFormat, const SmDocShell &rDocShell) override;
-    virtual void Arrange(const OutputDevice &rDev, const SmFormat &rFormat) override;
+    virtual void Arrange(OutputDevice &rDev, const SmFormat &rFormat) override;
 
     void Accept(SmVisitor* pVisitor) override;
 };
-
-
 
 
 /** Glyph node for custom operators
  *
  * This node is used with commands: oper, uoper and boper.
  * E.g. in "A boper op B", "op" will be an instance of SmGlyphSpecialNode.
- * "boper" simply inteprets "op", the following token, as an binary operator.
+ * "boper" simply interprets "op", the following token, as an binary operator.
  * The command "uoper" interprets the following token as unary operator.
  * For these commands an instance of SmGlyphSpecialNode is used for the
  * operator token, following the command.
@@ -540,11 +508,9 @@ public:
     :   SmSpecialNode(NGLYPH_SPECIAL, rNodeToken, FNT_MATH)
     {}
 
-    virtual void Arrange(const OutputDevice &rDev, const SmFormat &rFormat) override;
+    virtual void Arrange(OutputDevice &rDev, const SmFormat &rFormat) override;
     void Accept(SmVisitor* pVisitor) override;
 };
-
-
 
 
 /** Math symbol node
@@ -558,22 +524,21 @@ protected:
     :   SmSpecialNode(eNodeType, rNodeToken, FNT_MATH)
     {
         sal_Unicode cChar = GetToken().cMathChar;
-        if ((sal_Unicode) '\0' != cChar)
+        if (sal_Unicode('\0') != cChar)
             SetText(OUString(cChar));
     }
 
 public:
     SmMathSymbolNode(const SmToken &rNodeToken);
 
-    virtual void AdaptToX(const OutputDevice &rDev, sal_uLong nWidth) override;
-    virtual void AdaptToY(const OutputDevice &rDev, sal_uLong nHeight) override;
+    virtual void AdaptToX(OutputDevice &rDev, sal_uLong nWidth) override;
+    virtual void AdaptToY(OutputDevice &rDev, sal_uLong nHeight) override;
 
     virtual void Prepare(const SmFormat &rFormat, const SmDocShell &rDocShell) override;
-    virtual void Arrange(const OutputDevice &rDev, const SmFormat &rFormat) override;
+    virtual void Arrange(OutputDevice &rDev, const SmFormat &rFormat) override;
     void CreateTextFromNode(OUString &rText) override;
     void Accept(SmVisitor* pVisitor) override;
 };
-
 
 
 /** Math Identifier
@@ -588,7 +553,6 @@ public:
     SmMathIdentifierNode(const SmToken &rNodeToken)
     :   SmMathSymbolNode(NMATHIDENT, rNodeToken) {}
 };
-
 
 
 /** Root symbol node
@@ -609,8 +573,8 @@ public:
     }
 
     sal_uLong GetBodyWidth() const {return nBodyWidth;};
-    virtual void AdaptToX(const OutputDevice &rDev, sal_uLong nHeight) override;
-    virtual void AdaptToY(const OutputDevice &rDev, sal_uLong nHeight) override;
+    virtual void AdaptToX(OutputDevice &rDev, sal_uLong nHeight) override;
+    virtual void AdaptToY(OutputDevice &rDev, sal_uLong nHeight) override;
 
     void Accept(SmVisitor* pVisitor) override;
 };
@@ -633,12 +597,10 @@ public:
     :   SmMathSymbolNode(NDYNINTSYMBOL, rNodeToken)
     {}
 
-    virtual void AdaptToY(const OutputDevice &rDev, sal_uLong nHeight) override;
+    virtual void AdaptToY(OutputDevice &rDev, sal_uLong nHeight) override;
 
     void Accept(SmVisitor* pVisitor) override;
 };
-
-
 
 
 /** Place node
@@ -657,11 +619,9 @@ public:
     SmPlaceNode() : SmMathSymbolNode(NPLACE, SmToken(TPLACE, MS_PLACE, "<?>")) {};
 
     virtual void Prepare(const SmFormat &rFormat, const SmDocShell &rDocShell) override;
-    virtual void Arrange(const OutputDevice &rDev, const SmFormat &rFormat) override;
+    virtual void Arrange(OutputDevice &rDev, const SmFormat &rFormat) override;
     void Accept(SmVisitor* pVisitor) override;
 };
-
-
 
 
 /** Error node, for parsing errors
@@ -679,11 +639,9 @@ public:
     }
 
     virtual void Prepare(const SmFormat &rFormat, const SmDocShell &rDocShell) override;
-    virtual void Arrange(const OutputDevice &rDev, const SmFormat &rFormat) override;
+    virtual void Arrange(OutputDevice &rDev, const SmFormat &rFormat) override;
     void Accept(SmVisitor* pVisitor) override;
 };
-
-
 
 
 /** Table node
@@ -706,13 +664,11 @@ public:
     using   SmNode::GetLeftMost;
     virtual SmNode * GetLeftMost() override;
 
-    virtual void Arrange(const OutputDevice &rDev, const SmFormat &rFormat) override;
+    virtual void Arrange(OutputDevice &rDev, const SmFormat &rFormat) override;
     virtual long GetFormulaBaseline() const override;
 
     void Accept(SmVisitor* pVisitor) override;
 };
-
-
 
 
 /** A line
@@ -742,11 +698,9 @@ public:
     bool  IsUseExtraSpaces() const { return bUseExtraSpaces; };
 
     virtual void Prepare(const SmFormat &rFormat, const SmDocShell &rDocShell) override;
-    virtual void Arrange(const OutputDevice &rDev, const SmFormat &rFormat) override;
+    virtual void Arrange(OutputDevice &rDev, const SmFormat &rFormat) override;
     void Accept(SmVisitor* pVisitor) override;
 };
-
-
 
 
 /** Expression node
@@ -762,12 +716,10 @@ public:
     :   SmLineNode(NEXPRESSION, rNodeToken)
     {}
 
-    virtual void Arrange(const OutputDevice &rDev, const SmFormat &rFormat) override;
+    virtual void Arrange(OutputDevice &rDev, const SmFormat &rFormat) override;
     void CreateTextFromNode(OUString &rText) override;
     void Accept(SmVisitor* pVisitor) override;
 };
-
-
 
 
 /** Unary horizontal node
@@ -783,11 +735,9 @@ public:
         SetNumSubNodes(2);
     }
 
-    virtual void Arrange(const OutputDevice &rDev, const SmFormat &rFormat) override;
+    virtual void Arrange(OutputDevice &rDev, const SmFormat &rFormat) override;
     void Accept(SmVisitor* pVisitor) override;
 };
-
-
 
 
 /** Root node
@@ -815,7 +765,7 @@ public:
         SetNumSubNodes(3);
     }
 
-    virtual void Arrange(const OutputDevice &rDev, const SmFormat &rFormat) override;
+    virtual void Arrange(OutputDevice &rDev, const SmFormat &rFormat) override;
     void CreateTextFromNode(OUString &rText) override;
     void Accept(SmVisitor* pVisitor) override;
 
@@ -845,7 +795,7 @@ public:
         SetNumSubNodes(2);
     }
 
-    virtual void Arrange(const OutputDevice &rDev, const SmFormat &rFormat) override;
+    virtual void Arrange(OutputDevice &rDev, const SmFormat &rFormat) override;
     void CreateTextFromNode(OUString &rText) override;
     void Accept(SmVisitor* pVisitor) override;
 
@@ -854,8 +804,6 @@ public:
     SmNode* Body();
     const SmNode* Body() const;
 };
-
-
 
 
 /** Binary horizontal node
@@ -878,7 +826,7 @@ public:
         SetNumSubNodes(3);
     }
 
-    virtual void Arrange(const OutputDevice &rDev, const SmFormat &rFormat) override;
+    virtual void Arrange(OutputDevice &rDev, const SmFormat &rFormat) override;
     void Accept(SmVisitor* pVisitor) override;
 
     SmMathSymbolNode* Symbol();
@@ -888,8 +836,6 @@ public:
     SmNode* RightOperand();
     const SmNode* RightOperand() const;
 };
-
-
 
 
 /** Binary horizontal node
@@ -916,12 +862,10 @@ public:
     using   SmNode::GetLeftMost;
     virtual SmNode * GetLeftMost() override;
 
-    virtual void Arrange(const OutputDevice &rDev, const SmFormat &rFormat) override;
+    virtual void Arrange(OutputDevice &rDev, const SmFormat &rFormat) override;
     void CreateTextFromNode(OUString &rText) override;
     void Accept(SmVisitor* pVisitor) override;
 };
-
-
 
 
 /** Binary diagonal node
@@ -947,12 +891,9 @@ public:
     bool    IsAscending() const { return bAscending; }
     void    SetAscending(bool bVal)  { bAscending = bVal; }
 
-    virtual void Arrange(const OutputDevice &rDev, const SmFormat &rFormat) override;
+    virtual void Arrange(OutputDevice &rDev, const SmFormat &rFormat) override;
     void Accept(SmVisitor* pVisitor) override;
 };
-
-
-
 
 
 /** Enum used to index sub-/supscripts in the 'aSubNodes' array
@@ -1028,13 +969,11 @@ public:
     void SetBody(SmNode* pBody) { SetSubNode(0, pBody); }
     void SetSubSup(SmSubSup eSubSup, SmNode* pScript) { SetSubNode( 1 + eSubSup, pScript); }
 
-    virtual void Arrange(const OutputDevice &rDev, const SmFormat &rFormat) override;
+    virtual void Arrange(OutputDevice &rDev, const SmFormat &rFormat) override;
     void CreateTextFromNode(OUString &rText) override;
     void Accept(SmVisitor* pVisitor) override;
 
 };
-
-
 
 
 /** Node for brace construction
@@ -1066,12 +1005,10 @@ public:
     SmMathSymbolNode* ClosingBrace();
     const SmMathSymbolNode* ClosingBrace() const;
 
-    virtual void Arrange(const OutputDevice &rDev, const SmFormat &rFormat) override;
+    virtual void Arrange(OutputDevice &rDev, const SmFormat &rFormat) override;
     void CreateTextFromNode(OUString &rText) override;
     void Accept(SmVisitor* pVisitor) override;
 };
-
-
 
 
 /** Body of an SmBraceNode
@@ -1090,7 +1027,7 @@ class SmBracebodyNode : public SmStructureNode
 public:
     inline SmBracebodyNode(const SmToken &rNodeToken);
 
-    virtual void    Arrange(const OutputDevice &rDev, const SmFormat &rFormat) override;
+    virtual void    Arrange(OutputDevice &rDev, const SmFormat &rFormat) override;
     long            GetBodyHeight() const { return nBodyHeight; }
     void Accept(SmVisitor* pVisitor) override;
 };
@@ -1101,8 +1038,6 @@ inline SmBracebodyNode::SmBracebodyNode(const SmToken &rNodeToken) :
 {
     nBodyHeight = 0;
 }
-
-
 
 
 /** Node for vertical brace construction
@@ -1129,7 +1064,7 @@ public:
     SmNode* Script();
     const SmNode* Script() const;
 
-    virtual void    Arrange(const OutputDevice &rDev, const SmFormat &rFormat) override;
+    virtual void    Arrange(OutputDevice &rDev, const SmFormat &rFormat) override;
     void Accept(SmVisitor* pVisitor) override;
 };
 
@@ -1139,9 +1074,6 @@ inline SmVerticalBraceNode::SmVerticalBraceNode(const SmToken &rNodeToken) :
 {
     SetNumSubNodes(3);
 }
-
-
-
 
 
 /** Operation Node
@@ -1171,11 +1103,9 @@ public:
 
     long CalcSymbolHeight(const SmNode &rSymbol, const SmFormat &rFormat) const;
 
-    virtual void Arrange(const OutputDevice &rDev, const SmFormat &rFormat) override;
+    virtual void Arrange(OutputDevice &rDev, const SmFormat &rFormat) override;
     void Accept(SmVisitor* pVisitor) override;
 };
-
-
 
 
 /** Node used for alignment
@@ -1189,11 +1119,9 @@ public:
     :   SmStructureNode(NALIGN, rNodeToken)
     {}
 
-    virtual void Arrange(const OutputDevice &rDev, const SmFormat &rFormat) override;
+    virtual void Arrange(OutputDevice &rDev, const SmFormat &rFormat) override;
     void Accept(SmVisitor* pVisitor) override;
 };
-
-
 
 
 /** Attribute node
@@ -1213,7 +1141,7 @@ public:
     :   SmStructureNode(NATTRIBUT, rNodeToken)
     {}
 
-    virtual void Arrange(const OutputDevice &rDev, const SmFormat &rFormat) override;
+    virtual void Arrange(OutputDevice &rDev, const SmFormat &rFormat) override;
     void CreateTextFromNode(OUString &rText) override;
     void Accept(SmVisitor* pVisitor) override;
 
@@ -1222,8 +1150,6 @@ public:
     SmNode* Body();
     const SmNode* Body() const;
 };
-
-
 
 
 /** Font node
@@ -1248,12 +1174,10 @@ public:
     const FontSizeType& GetSizeType() const {return nSizeType;}
 
     virtual void Prepare(const SmFormat &rFormat, const SmDocShell &rDocShell) override;
-    virtual void Arrange(const OutputDevice &rDev, const SmFormat &rFormat) override;
+    virtual void Arrange(OutputDevice &rDev, const SmFormat &rFormat) override;
     void CreateTextFromNode(OUString &rText) override;
     void Accept(SmVisitor* pVisitor) override;
 };
-
-
 
 
 /** Matrix node
@@ -1280,12 +1204,10 @@ public:
     using   SmNode::GetLeftMost;
     virtual SmNode * GetLeftMost() override;
 
-    virtual void Arrange(const OutputDevice &rDev, const SmFormat &rFormat) override;
+    virtual void Arrange(OutputDevice &rDev, const SmFormat &rFormat) override;
     void CreateTextFromNode(OUString &rText) override;
     void Accept(SmVisitor* pVisitor) override;
 };
-
-
 
 
 /** Node for whitespace
@@ -1309,17 +1231,14 @@ public:
     void         SetBlankNum(sal_uInt16 nNumber) { nNum = nNumber; }
 
     virtual void Prepare(const SmFormat &rFormat, const SmDocShell &rDocShell) override;
-    virtual void Arrange(const OutputDevice &rDev, const SmFormat &rFormat) override;
+    virtual void Arrange(OutputDevice &rDev, const SmFormat &rFormat) override;
     void Accept(SmVisitor* pVisitor) override;
 };
 
 
-
-
-
 inline SmNode* SmRootNode::Argument()
 {
-    OSL_ASSERT( GetNumSubNodes() > 0 );
+    assert( GetNumSubNodes() == 3 );
     return GetSubNode( 0 );
 }
 inline const SmNode* SmRootNode::Argument() const
@@ -1328,7 +1247,8 @@ inline const SmNode* SmRootNode::Argument() const
 }
 inline SmRootSymbolNode* SmRootNode::Symbol()
 {
-    OSL_ASSERT( GetNumSubNodes() > 1 && GetSubNode( 1 )->GetType() == NROOTSYMBOL );
+    assert( GetNumSubNodes() == 3 );
+    OSL_ASSERT( GetSubNode( 1 )->GetType() == NROOTSYMBOL );
     return static_cast< SmRootSymbolNode* >( GetSubNode( 1 ));
 }
 inline const SmRootSymbolNode* SmRootNode::Symbol() const
@@ -1337,14 +1257,13 @@ inline const SmRootSymbolNode* SmRootNode::Symbol() const
 }
 inline SmNode* SmRootNode::Body()
 {
-    OSL_ASSERT( GetNumSubNodes() > 2 );
+    assert( GetNumSubNodes() == 3 );
     return GetSubNode( 2 );
 }
 inline const SmNode* SmRootNode::Body() const
 {
     return const_cast< SmRootNode* >( this )->Body();
 }
-
 
 
 inline SmDynIntegralSymbolNode* SmDynIntegralNode::Symbol()

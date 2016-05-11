@@ -271,7 +271,7 @@ void SAL_CALL ActionTriggerPropertySet::getFastPropertyValue(
             // Define static member to give structure of properties to baseclass "OPropertySetHelper".
             // "impl_getStaticPropertyDescriptor" is a non exported and static function, who will define a static propertytable.
             // "sal_True" say: Table is sorted by name.
-            static OPropertyArrayHelper aInfoHelper( impl_getStaticPropertyDescriptor(), sal_True );
+            static OPropertyArrayHelper aInfoHelper( impl_getStaticPropertyDescriptor(), true );
             pInfoHelper = &aInfoHelper;
         }
     }
@@ -357,7 +357,7 @@ throw( IllegalArgumentException )
 }
 
 bool ActionTriggerPropertySet::impl_tryToChangeProperty(
-    const Reference< XBitmap >  aCurrentValue   ,
+    const Reference< XBitmap >&  aCurrentValue   ,
     const Any&                  aNewValue       ,
     Any&                        aOldValue       ,
     Any&                        aConvertedValue )
@@ -392,7 +392,7 @@ throw( IllegalArgumentException )
 }
 
 bool ActionTriggerPropertySet::impl_tryToChangeProperty(
-    const Reference< XInterface >   aCurrentValue   ,
+    const Reference< XInterface >&   aCurrentValue   ,
     const Any&                      aNewValue       ,
     Any&                            aOldValue       ,
     Any&                            aConvertedValue )

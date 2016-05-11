@@ -19,7 +19,6 @@
 
 #include "sal/config.h"
 
-#include "boost/noncopyable.hpp"
 #include "osl/time.h"
 
 #include <com/sun/star/uno/XComponentContext.hpp>
@@ -51,11 +50,12 @@ namespace sd {
 
 class Annotation : private ::cppu::BaseMutex,
                    public ::cppu::WeakComponentImplHelper< XAnnotation>,
-                   public ::cppu::PropertySetMixin< XAnnotation >,
-                   private boost::noncopyable
+                   public ::cppu::PropertySetMixin< XAnnotation >
 {
 public:
     explicit Annotation( const Reference< XComponentContext >& context, SdPage* pPage );
+    Annotation(const Annotation&) = delete;
+    Annotation& operator=(const Annotation&) = delete;
 
     SdPage* GetPage() const { return mpPage; }
     SdrModel* GetModel() { return (mpPage != nullptr) ? mpPage->GetModel() : nullptr; }
@@ -82,6 +82,8 @@ public:
     virtual void SAL_CALL setSize( const css::geometry::RealSize2D& _size ) throw (css::uno::RuntimeException, std::exception) override;
     virtual OUString SAL_CALL getAuthor() throw (RuntimeException, std::exception) override;
     virtual void SAL_CALL setAuthor(const OUString & the_value) throw (RuntimeException, std::exception) override;
+    virtual OUString SAL_CALL getInitials() throw (RuntimeException, std::exception) override;
+    virtual void SAL_CALL setInitials(const OUString & the_value) throw (RuntimeException, std::exception) override;
     virtual util::DateTime SAL_CALL getDateTime() throw (RuntimeException, std::exception) override;
     virtual void SAL_CALL setDateTime(const util::DateTime & the_value) throw (RuntimeException, std::exception) override;
     virtual Reference< XText > SAL_CALL getTextRange() throw (RuntimeException, std::exception) override;
@@ -98,11 +100,11 @@ private:
     virtual void SAL_CALL disposing() override;
 
     SdPage* mpPage;
-    Reference< XComponentContext > m_xContext;
     mutable ::osl::Mutex m_aMutex;
     RealPoint2D m_Position;
     RealSize2D m_Size;
     OUString m_Author;
+    OUString m_Initials;
     util::DateTime m_DateTime;
     rtl::Reference< TextApiObject > m_TextRange;
 };
@@ -126,6 +128,7 @@ struct AnnotationData
     RealPoint2D m_Position;
     RealSize2D m_Size;
     OUString m_Author;
+    OUString m_Initials;
     util::DateTime m_DateTime;
 
     void get( const rtl::Reference< Annotation >& xAnnotation )
@@ -133,6 +136,7 @@ struct AnnotationData
         m_Position = xAnnotation->getPosition();
         m_Size = xAnnotation->getSize();
         m_Author = xAnnotation->getAuthor();
+        m_Initials = xAnnotation->getInitials();
         m_DateTime = xAnnotation->getDateTime();
     }
 
@@ -141,6 +145,7 @@ struct AnnotationData
         xAnnotation->setPosition(m_Position);
         xAnnotation->setSize(m_Size);
         xAnnotation->setAuthor(m_Author);
+        xAnnotation->setInitials(m_Initials);
         xAnnotation->setDateTime(m_DateTime);
     }
 };
@@ -287,6 +292,22 @@ void SAL_CALL Annotation::setAuthor(const OUString & the_value) throw (RuntimeEx
         osl::MutexGuard g(m_aMutex);
         createChangeUndo();
         m_Author = the_value;
+    }
+}
+
+OUString SAL_CALL Annotation::getInitials() throw (RuntimeException, std::exception)
+{
+    osl::MutexGuard g(m_aMutex);
+    return m_Initials;
+}
+
+void SAL_CALL Annotation::setInitials(const OUString & the_value) throw (RuntimeException, std::exception)
+{
+    prepareSet("Initials", Any(), Any(), nullptr);
+    {
+        osl::MutexGuard g(m_aMutex);
+        createChangeUndo();
+        m_Initials = the_value;
     }
 }
 

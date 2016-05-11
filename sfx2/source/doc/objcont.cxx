@@ -84,7 +84,6 @@ using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
 
 
-
 static
 bool operator> (const util::DateTime& i_rLeft, const util::DateTime& i_rRight)
 {
@@ -176,7 +175,6 @@ SfxObjectShell::CreatePreviewMetaFile_Impl( bool bFullContent ) const
 }
 
 
-
 void SfxObjectShell::UpdateDocInfoForSave()
 {
     uno::Reference<document::XDocumentProperties> xDocProps(getDocProperties());
@@ -213,7 +211,6 @@ void SfxObjectShell::UpdateDocInfoForSave()
 }
 
 
-
 static void
 lcl_add(util::Duration & rDur, tools::Time const& rTime)
 {
@@ -230,7 +227,7 @@ void SfxObjectShell::UpdateTime_Impl(
 {
     // Get old time from documentinfo
     const sal_Int32 secs = i_xDocProps->getEditingDuration();
-    util::Duration editDuration(sal_False, 0, 0, 0,
+    util::Duration editDuration(false, 0, 0, 0,
             secs/3600, (secs%3600)/60, secs%60, 0);
 
     // Initialize some local member! Its necessary for follow operations!
@@ -285,17 +282,13 @@ void SfxObjectShell::UpdateTime_Impl(
 }
 
 
-
 VclPtr<SfxDocumentInfoDialog> SfxObjectShell::CreateDocumentInfoDialog
 (
-    vcl::Window*             pParent,
     const SfxItemSet&   rSet
 )
 {
-    return VclPtr<SfxDocumentInfoDialog>::Create(pParent, rSet);
+    return VclPtr<SfxDocumentInfoDialog>::Create(nullptr, rSet);
 }
-
-
 
 
 std::set<Color> SfxObjectShell::GetDocColors()
@@ -334,7 +327,7 @@ void SfxObjectShell::LoadStyles
     DBG_ASSERT(pSourcePool, "Source-DocumentShell ohne StyleSheetPool");
     SfxStyleSheetBasePool *pMyPool = GetStyleSheetPool();
     DBG_ASSERT(pMyPool, "Dest-DocumentShell ohne StyleSheetPool");
-    pSourcePool->SetSearchMask(SFX_STYLE_FAMILY_ALL);
+    pSourcePool->SetSearchMask(SfxStyleFamily::All);
     std::unique_ptr<Styles_Impl[]> pFound(new Styles_Impl[pSourcePool->Count()]);
     sal_uInt16 nFound = 0;
 
@@ -514,7 +507,7 @@ void SfxObjectShell::UpdateFromTemplate_Impl(  )
 
 bool SfxObjectShell::IsHelpDocument() const
 {
-    const SfxFilter* pFilter = GetMedium()->GetFilter();
+    std::shared_ptr<const SfxFilter> pFilter = GetMedium()->GetFilter();
     return (pFilter && pFilter->GetFilterName() == "writer_web_HTML_help");
 }
 
@@ -629,7 +622,7 @@ bool SfxObjectShell::SetModifyPasswordHash( sal_uInt32 nHash )
     return false;
 }
 
-uno::Sequence< beans::PropertyValue > SfxObjectShell::GetModifyPasswordInfo() const
+const uno::Sequence< beans::PropertyValue >& SfxObjectShell::GetModifyPasswordInfo() const
 {
     return pImp->m_aModifyPasswordInfo;
 }
@@ -661,12 +654,6 @@ bool SfxObjectShell::IsModifyPasswordEntered()
 void SfxObjectShell::libreOfficeKitCallback(int /*nType*/, const char* /*pPayload*/) const
 {
     SAL_INFO("sfx.tiledrendering", "SfxObjectShell::libreOfficeKitCallback interface not overridden for SfxObjectShell subclass typeId: " << typeid(*this).name());
-}
-
-bool SfxObjectShell::isTiledRendering() const
-{
-    SAL_INFO("sfx.tiledrendering", "SfxObjectShell::isTiledRendering interface not overridden for SfxObjectShell subclass typeId: " << typeid(*this).name());
-    return false;
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

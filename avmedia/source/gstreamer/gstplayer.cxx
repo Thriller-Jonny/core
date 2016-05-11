@@ -53,17 +53,10 @@
 #include <gst/pbutils/missing-plugins.h>
 #include <gst/pbutils/pbutils.h>
 
-#if !defined DBG
-# if OSL_DEBUG_LEVEL > 2
 #ifdef AVMEDIA_GST_0_10
 #  define AVVERSION "gst 0.10: "
 #else
 #  define AVVERSION "gst 1.0: "
-#endif
-#define DBG(...) do { fprintf (stderr, "%s", AVVERSION); fprintf (stderr, __VA_ARGS__); fprintf (stderr, "\n"); } while (0);
-# else
-#define DBG(...)
-# endif
 #endif
 
 using namespace ::com::sun::star;
@@ -89,6 +82,7 @@ public:
 private:
     void execute() override;
 };
+
 
 class MissingPluginInstaller {
     friend class MissingPluginInstallerThread;
@@ -120,11 +114,13 @@ private:
     bool inCleanUp_;
 };
 
+
 MissingPluginInstaller::~MissingPluginInstaller() {
     osl::MutexGuard g(mutex_);
     SAL_WARN_IF(currentThread_.is(), "avmedia.gstreamer", "unjoined thread");
     inCleanUp_ = true;
 }
+
 
 void MissingPluginInstaller::report(
     rtl::Reference<Player> const & source, GstMessage * message)
@@ -176,6 +172,7 @@ void MissingPluginInstaller::report(
         LINK(this, MissingPluginInstaller, launchUi), launch.get());
 }
 
+
 void eraseSource(std::set<rtl::Reference<Player>> & set, Player const * source)
 {
     auto i = std::find_if(
@@ -187,6 +184,7 @@ void eraseSource(std::set<rtl::Reference<Player>> & set, Player const * source)
         set.erase(i);
     }
 }
+
 
 void MissingPluginInstaller::detach(Player const * source) {
     rtl::Reference<MissingPluginInstallerThread> join;
@@ -219,10 +217,11 @@ void MissingPluginInstaller::detach(Player const * source) {
         }
     }
     if (join.is()) {
-        // missing cancelability of gst_install_plugins_sync
+        // missing cancellability of gst_install_plugins_sync
         join->join();
     }
 }
+
 
 void MissingPluginInstaller::processQueue() {
     assert(!queued_.empty());
@@ -234,6 +233,7 @@ void MissingPluginInstaller::processQueue() {
     }
     queued_.clear();
 }
+
 
 IMPL_STATIC_LINK_TYPED(MissingPluginInstaller, launchUi, void *, p, void)
 {
@@ -250,9 +250,11 @@ IMPL_STATIC_LINK_TYPED(MissingPluginInstaller, launchUi, void *, p, void)
     ref->launch();
 }
 
+
 struct TheMissingPluginInstaller:
     public rtl::Static<MissingPluginInstaller, TheMissingPluginInstaller>
 {};
+
 
 void MissingPluginInstallerThread::execute() {
     MissingPluginInstaller & inst = TheMissingPluginInstaller::get();
@@ -280,15 +282,17 @@ void MissingPluginInstallerThread::execute() {
     }
 }
 
-}
-
-// - Player -
+} // end anonymous namespace
 
 
-Player::Player( const uno::Reference< lang::XMultiServiceFactory >& rxMgr ) :
+Player::Player() :
     GstPlayer_BASE( m_aMutex ),
-    mxMgr( rxMgr ),
     mpPlaybin( nullptr ),
+    mpVolumeControl( nullptr ),
+#if defined(ENABLE_GTKSINK)
+    mpGtkWidget( nullptr ),
+#endif
+    mbUseGtkSink( false ),
     mbFakeVideo (false ),
     mnUnmutedVolume( 0 ),
     mbPlayPending ( false ),
@@ -312,24 +316,24 @@ Player::Player( const uno::Reference< lang::XMultiServiceFactory >& rxMgr ) :
 
     mbInitialized = gst_init_check( &argc, &argv, &pError );
 
-    DBG( "%p Player::Player", this );
+    SAL_INFO( "avmedia.gstreamer", AVVERSION << this << " Player::Player" );
 
     if (pError != nullptr)
     {
         // TODO: throw an exception?
-        DBG( "%p Player::Player error '%s'", this, pError->message );
+        SAL_INFO( "avmedia.gstreamer", AVVERSION << this << " Player::Player error '" << pError->message << "'" );
         g_error_free (pError);
     }
 }
 
 
-
 Player::~Player()
 {
-    DBG( "%p Player::~Player", this );
+    SAL_INFO( "avmedia.gstreamer", AVVERSION << this << " Player::~Player" );
     if( mbInitialized )
         disposing();
 }
+
 
 void SAL_CALL Player::disposing()
 {
@@ -339,17 +343,26 @@ void SAL_CALL Player::disposing()
 
     stop();
 
-    DBG( "%p Player::disposing", this );
+    SAL_INFO( "avmedia.gstreamer", AVVERSION << this << " Player::disposing" );
 
     // Release the elements and pipeline
     if( mbInitialized )
     {
+#if defined(ENABLE_GTKSINK)
+        if (mpGtkWidget)
+        {
+            gtk_widget_destroy(mpGtkWidget);
+            mpGtkWidget = nullptr;
+        }
+#endif
+
         if( mpPlaybin )
         {
             gst_element_set_state( mpPlaybin, GST_STATE_NULL );
             g_object_unref( G_OBJECT( mpPlaybin ) );
 
             mpPlaybin = nullptr;
+            mpVolumeControl = nullptr;
         }
 
         if( mpXOverlay ) {
@@ -365,6 +378,7 @@ void SAL_CALL Player::disposing()
     }
 }
 
+
 static gboolean pipeline_bus_callback( GstBus *, GstMessage *message, gpointer data )
 {
     Player* pPlayer = static_cast<Player*>(data);
@@ -374,12 +388,14 @@ static gboolean pipeline_bus_callback( GstBus *, GstMessage *message, gpointer d
     return TRUE;
 }
 
+
 static GstBusSyncReply pipeline_bus_sync_handler( GstBus *, GstMessage * message, gpointer data )
 {
     Player* pPlayer = static_cast<Player*>(data);
 
     return pPlayer->processSyncMessage( message );
 }
+
 
 void Player::processMessage( GstMessage *message )
 {
@@ -391,48 +407,52 @@ void Player::processMessage( GstMessage *message )
             start();
         break;
     case GST_MESSAGE_STATE_CHANGED:
-        if( message->src == GST_OBJECT( mpPlaybin ) ) {
+        if (message->src == GST_OBJECT(mpPlaybin))
+        {
             GstState newstate, pendingstate;
 
             gst_message_parse_state_changed (message, nullptr, &newstate, &pendingstate);
 
-            if( newstate == GST_STATE_PAUSED &&
-                pendingstate == GST_STATE_VOID_PENDING &&
-                mpXOverlay )
-                gst_video_overlay_expose( mpXOverlay );
+            if (!mbUseGtkSink && newstate == GST_STATE_PAUSED &&
+                pendingstate == GST_STATE_VOID_PENDING && mpXOverlay)
+            {
+                gst_video_overlay_expose(mpXOverlay);
+            }
 
-        if (mbPlayPending)
-            mbPlayPending = ((newstate == GST_STATE_READY) || (newstate == GST_STATE_PAUSED));
+            if (mbPlayPending)
+                mbPlayPending = ((newstate == GST_STATE_READY) || (newstate == GST_STATE_PAUSED));
         }
+        break;
     default:
         break;
     }
 }
 
+
 static gboolean wrap_element_query_position (GstElement *element, GstFormat format, gint64 *cur)
 {
 #ifdef AVMEDIA_GST_0_10
     GstFormat my_format = format;
-    return gst_element_query_position( element, &my_format, cur) && my_format == format && *cur > 0L;
+    return gst_element_query_position( element, &my_format, cur) && my_format == format && *cur > 0;
 #else
     return gst_element_query_position( element, format, cur );
 #endif
 }
 
+
 static gboolean wrap_element_query_duration (GstElement *element, GstFormat format, gint64 *duration)
 {
 #ifdef AVMEDIA_GST_0_10
     GstFormat my_format = format;
-    return gst_element_query_duration( element, &my_format, duration) && my_format == format && *duration > 0L;
+    return gst_element_query_duration( element, &my_format, duration) && my_format == format && *duration > 0;
 #else
     return gst_element_query_duration( element, format, duration );
 #endif
 }
 
+
 GstBusSyncReply Player::processSyncMessage( GstMessage *message )
 {
-//    DBG( "%p processSyncMessage has handle: %s", this, GST_MESSAGE_TYPE_NAME( message ) );
-
 #if OSL_DEBUG_LEVEL > 0
     if ( GST_MESSAGE_TYPE( message ) == GST_MESSAGE_ERROR )
     {
@@ -441,29 +461,32 @@ GstBusSyncReply Player::processSyncMessage( GstMessage *message )
 
         gst_message_parse_error( message, &error, &error_debug );
         SAL_WARN(
-            "avmedia",
-            "gstreamer error: '" << error->message << "' debug: '"
+            "avmedia.gstreamer",
+            "error: '" << error->message << "' debug: '"
                 << error_debug << "'");
     }
 #endif
 
-#ifdef AVMEDIA_GST_0_10
-    if (message->structure &&
-        !strcmp( gst_structure_get_name( message->structure ), "prepare-xwindow-id" ) )
-#else
-    if (gst_is_video_overlay_prepare_window_handle_message (message) )
-#endif
+    if (!mbUseGtkSink)
     {
-        DBG( "%p processSyncMessage prepare window id: %s %d", this,
-             GST_MESSAGE_TYPE_NAME( message ), (int)mnWindowID );
-        if( mpXOverlay )
-            g_object_unref( G_OBJECT ( mpXOverlay ) );
-        g_object_set( GST_MESSAGE_SRC( message ), "force-aspect-ratio", FALSE, nullptr );
-        mpXOverlay = GST_VIDEO_OVERLAY( GST_MESSAGE_SRC( message ) );
-        g_object_ref( G_OBJECT ( mpXOverlay ) );
-        if ( mnWindowID != 0 )
-            gst_video_overlay_set_window_handle( mpXOverlay, mnWindowID );
-        return GST_BUS_DROP;
+#ifdef AVMEDIA_GST_0_10
+        if (message->structure &&
+            !strcmp( gst_structure_get_name( message->structure ), "prepare-xwindow-id" ) )
+#else
+        if (gst_is_video_overlay_prepare_window_handle_message (message) )
+#endif
+        {
+            SAL_INFO( "avmedia.gstreamer", AVVERSION << this << " processSyncMessage prepare window id: " <<
+                      GST_MESSAGE_TYPE_NAME( message ) << " " << (int)mnWindowID );
+            if( mpXOverlay )
+                g_object_unref( G_OBJECT ( mpXOverlay ) );
+            g_object_set( GST_MESSAGE_SRC( message ), "force-aspect-ratio", FALSE, nullptr );
+            mpXOverlay = GST_VIDEO_OVERLAY( GST_MESSAGE_SRC( message ) );
+            g_object_ref( G_OBJECT ( mpXOverlay ) );
+            if ( mnWindowID != 0 )
+                gst_video_overlay_set_window_handle( mpXOverlay, mnWindowID );
+            return GST_BUS_DROP;
+        }
     }
 
 #ifdef AVMEDIA_GST_0_10
@@ -473,15 +496,14 @@ GstBusSyncReply Player::processSyncMessage( GstMessage *message )
 
             gst_message_parse_state_changed (message, nullptr, &newstate, &pendingstate);
 
-            DBG( "%p state change received, new state %d pending %d", this,
-                 (int)newstate, (int)pendingstate );
+            SAL_INFO( "avmedia.gstreamer", AVVERSION << this << " state change received, new state " << (int)newstate << " pending " << (int)pendingstate );
             if( newstate == GST_STATE_PAUSED &&
                 pendingstate == GST_STATE_VOID_PENDING ) {
 
-                DBG( "%p change to paused received", this );
+                SAL_INFO( "avmedia.gstreamer", AVVERSION << this << " change to paused received" );
 
                 if( mnDuration == 0) {
-                    gint64 gst_duration = 0L;
+                    gint64 gst_duration = 0;
                     if( wrap_element_query_duration( mpPlaybin, GST_FORMAT_TIME, &gst_duration) )
                         mnDuration = gst_duration;
                 }
@@ -511,7 +533,7 @@ GstBusSyncReply Player::processSyncMessage( GstMessage *message )
                             if( pStructure ) {
                                 gst_structure_get_int( pStructure, "width", &mnWidth );
                                 gst_structure_get_int( pStructure, "height", &mnHeight );
-                                DBG( "queried size: %d x %d", mnWidth, mnHeight );
+                                SAL_INFO( "avmedia.gstreamer", AVVERSION "queried size: " << mnWidth << "x" << mnHeight );
                             }
                             g_object_unref (pPad);
                         }
@@ -525,7 +547,7 @@ GstBusSyncReply Player::processSyncMessage( GstMessage *message )
     // We get to use the exciting new playbin2 ! (now known as playbin)
     if( GST_MESSAGE_TYPE( message ) == GST_MESSAGE_ASYNC_DONE ) {
         if( mnDuration == 0) {
-            gint64 gst_duration = 0L;
+            gint64 gst_duration = 0;
             if( wrap_element_query_duration( mpPlaybin, GST_FORMAT_TIME, &gst_duration) )
                 mnDuration = gst_duration;
         }
@@ -546,15 +568,16 @@ GstBusSyncReply Player::processSyncMessage( GstMessage *message )
                     mnWidth = w;
                     mnHeight = h;
 
-                    DBG( "queried size: %d x %d", mnWidth, mnHeight );
+                    SAL_INFO( "avmedia.gstreamer", AVVERSION "queried size: " << mnWidth << "x" << mnHeight );
 
-                    maSizeCondition.set();
                 }
                 gst_caps_unref( caps );
                 g_object_unref( pad );
             }
+
+            maSizeCondition.set();
         }
-#endif
+#endif // AVMEDIA_GST_0_10
     } else if (gst_is_missing_plugin_message(message)) {
         TheMissingPluginInstaller::get().report(this, message);
         if( mnWidth == 0 ) {
@@ -562,7 +585,6 @@ GstBusSyncReply Player::processSyncMessage( GstMessage *message )
             maSizeCondition.set();
         }
     } else if( GST_MESSAGE_TYPE( message ) == GST_MESSAGE_ERROR ) {
-        DBG( "Error !\n" );
         if( mnWidth == 0 ) {
             // an error occurred, set condition so that OOo thread doesn't wait for us
             maSizeCondition.set();
@@ -574,42 +596,64 @@ GstBusSyncReply Player::processSyncMessage( GstMessage *message )
 
 void Player::preparePlaybin( const OUString& rURL, GstElement *pSink )
 {
-        GstBus *pBus;
-
-        if( mpPlaybin != nullptr ) {
-            gst_element_set_state( mpPlaybin, GST_STATE_NULL );
-            mbPlayPending = false;
-            g_object_unref( mpPlaybin );
-        }
-
-        mpPlaybin = gst_element_factory_make( "playbin", nullptr );
-        if( pSink != nullptr ) // used for getting preferred size etc.
-        {
-            g_object_set( G_OBJECT( mpPlaybin ), "video-sink", pSink, nullptr );
-            mbFakeVideo = true;
-        }
-        else
-            mbFakeVideo = false;
-
-        OString ascURL = OUStringToOString( rURL, RTL_TEXTENCODING_UTF8 );
-        g_object_set( G_OBJECT( mpPlaybin ), "uri", ascURL.getStr() , nullptr );
-
-        pBus = gst_element_get_bus( mpPlaybin );
-        if (mbWatchID)
-        {
-            g_source_remove(mnWatchID);
-            mbWatchID = false;
-        }
-        mnWatchID = gst_bus_add_watch( pBus, pipeline_bus_callback, this );
-        mbWatchID = true;
-        DBG( "%p set sync handler", this );
-#ifdef AVMEDIA_GST_0_10
-        gst_bus_set_sync_handler( pBus, pipeline_bus_sync_handler, this );
-#else
-        gst_bus_set_sync_handler( pBus, pipeline_bus_sync_handler, this, nullptr );
+#if defined(ENABLE_GTKSINK)
+    if (mpGtkWidget)
+    {
+        gtk_widget_destroy(mpGtkWidget);
+        mpGtkWidget = nullptr;
+    }
 #endif
-        g_object_unref( pBus );
+
+    if (mpPlaybin != nullptr)
+    {
+        gst_element_set_state( mpPlaybin, GST_STATE_NULL );
+        mbPlayPending = false;
+        g_object_unref( mpPlaybin );
+    }
+
+    mpPlaybin = gst_element_factory_make( "playbin", nullptr );
+
+    //tdf#96989 on systems with flat-volumes setting the volume directly on the
+    //playbin to 100% results in setting the global volums to 100% of the
+    //maximum. We expect to set as % of the current volume.
+    mpVolumeControl = gst_element_factory_make( "volume", nullptr );
+    GstElement *pAudioSink = gst_element_factory_make( "autoaudiosink", nullptr );
+    GstElement* pAudioOutput = gst_bin_new("audio-output-bin");
+    gst_bin_add_many(GST_BIN(pAudioOutput), mpVolumeControl, pAudioSink, nullptr);
+    gst_element_link(mpVolumeControl, pAudioSink);
+    GstPad *pPad = gst_element_get_static_pad(mpVolumeControl, "sink");
+    gst_element_add_pad(GST_ELEMENT(pAudioOutput), gst_ghost_pad_new("sink", pPad));
+    gst_object_unref(GST_OBJECT(pPad));
+    g_object_set(G_OBJECT(mpPlaybin), "audio-sink", pAudioOutput, nullptr);
+
+    if( pSink != nullptr ) // used for getting preferred size etc.
+    {
+        g_object_set( G_OBJECT( mpPlaybin ), "video-sink", pSink, nullptr );
+        mbFakeVideo = true;
+    }
+    else
+        mbFakeVideo = false;
+
+    OString ascURL = OUStringToOString( rURL, RTL_TEXTENCODING_UTF8 );
+    g_object_set( G_OBJECT( mpPlaybin ), "uri", ascURL.getStr() , nullptr );
+
+    GstBus *pBus = gst_element_get_bus( mpPlaybin );
+    if (mbWatchID)
+    {
+        g_source_remove(mnWatchID);
+        mbWatchID = false;
+    }
+    mnWatchID = gst_bus_add_watch( pBus, pipeline_bus_callback, this );
+    mbWatchID = true;
+    SAL_INFO( "avmedia.gstreamer", AVVERSION << this << " set sync handler" );
+#ifdef AVMEDIA_GST_0_10
+    gst_bus_set_sync_handler( pBus, pipeline_bus_sync_handler, this );
+#else
+    gst_bus_set_sync_handler( pBus, pipeline_bus_sync_handler, this, nullptr );
+#endif
+    g_object_unref( pBus );
 }
+
 
 bool Player::create( const OUString& rURL )
 {
@@ -617,7 +661,7 @@ bool Player::create( const OUString& rURL )
 
     // create all the elements and link them
 
-    DBG("create player, URL: %s", OUStringToOString( rURL, RTL_TEXTENCODING_UTF8 ).getStr());
+    SAL_INFO( "avmedia.gstreamer", "create player, URL: '" << rURL << "'" );
 
     if( mbInitialized && !rURL.isEmpty() )
     {
@@ -639,7 +683,6 @@ bool Player::create( const OUString& rURL )
 }
 
 
-
 void SAL_CALL Player::start()
     throw (uno::RuntimeException, std::exception)
 {
@@ -654,7 +697,6 @@ void SAL_CALL Player::start()
 }
 
 
-
 void SAL_CALL Player::stop()
     throw (uno::RuntimeException, std::exception)
 {
@@ -665,9 +707,8 @@ void SAL_CALL Player::stop()
         gst_element_set_state( mpPlaybin, GST_STATE_PAUSED );
 
     mbPlayPending = false;
-    DBG( "stop %p", mpPlaybin );
+    SAL_INFO( "avmedia.gstreamer", AVVERSION "stop " << mpPlaybin );
 }
-
 
 
 sal_Bool SAL_CALL Player::isPlaying()
@@ -683,11 +724,10 @@ sal_Bool SAL_CALL Player::isPlaying()
         bRet = GST_STATE_PLAYING == GST_STATE( mpPlaybin );
     }
 
-    DBG( "isPlaying %d", bRet );
+    SAL_INFO( "avmedia.gstreamer", AVVERSION "isPlaying " << bRet );
 
     return bRet;
 }
-
 
 
 double SAL_CALL Player::getDuration()
@@ -706,7 +746,6 @@ double SAL_CALL Player::getDuration()
 }
 
 
-
 void SAL_CALL Player::setMediaTime( double fTime )
     throw (uno::RuntimeException, std::exception)
 {
@@ -723,10 +762,9 @@ void SAL_CALL Player::setMediaTime( double fTime )
         if( !isPlaying() )
             gst_element_set_state( mpPlaybin, GST_STATE_PAUSED );
 
-        DBG( "seek to: %" SAL_PRIdINT64 " ns original: %lf s", gst_position, fTime );
+        SAL_INFO( "avmedia.gstreamer", AVVERSION "seek to: " << gst_position << " ns original: " << fTime << " s" );
     }
 }
-
 
 
 double SAL_CALL Player::getMediaTime()
@@ -746,6 +784,7 @@ double SAL_CALL Player::getMediaTime()
     return position;
 }
 
+
 void SAL_CALL Player::setPlaybackLoop( sal_Bool bSet )
     throw (uno::RuntimeException, std::exception)
 {
@@ -753,7 +792,6 @@ void SAL_CALL Player::setPlaybackLoop( sal_Bool bSet )
     // TODO check how to do with GST
     mbLooping = bSet;
 }
-
 
 
 sal_Bool SAL_CALL Player::isPlaybackLoop()
@@ -765,13 +803,12 @@ sal_Bool SAL_CALL Player::isPlaybackLoop()
 }
 
 
-
 void SAL_CALL Player::setMute( sal_Bool bSet )
     throw (uno::RuntimeException, std::exception)
 {
     ::osl::MutexGuard aGuard(m_aMutex);
 
-    DBG( "set mute: %d muted: %d unmuted volume: %lf", bSet, mbMuted, mnUnmutedVolume );
+    SAL_INFO( "avmedia.gstreamer", AVVERSION "set mute: " << bSet << " muted: " << mbMuted << " unmuted volume: " << mnUnmutedVolume );
 
     // change the volume to 0 or the unmuted volume
     if(  mpPlaybin && mbMuted != bool(bSet) )
@@ -782,12 +819,11 @@ void SAL_CALL Player::setMute( sal_Bool bSet )
             nVolume = 0.0;
         }
 
-        g_object_set( G_OBJECT( mpPlaybin ), "volume", nVolume, nullptr );
+        g_object_set( G_OBJECT( mpVolumeControl ), "volume", nVolume, nullptr );
 
         mbMuted = bSet;
     }
 }
-
 
 
 sal_Bool SAL_CALL Player::isMute()
@@ -799,7 +835,6 @@ sal_Bool SAL_CALL Player::isMute()
 }
 
 
-
 void SAL_CALL Player::setVolumeDB( sal_Int16 nVolumeDB )
     throw (uno::RuntimeException, std::exception)
 {
@@ -807,15 +842,14 @@ void SAL_CALL Player::setVolumeDB( sal_Int16 nVolumeDB )
 
     mnUnmutedVolume = pow( 10.0, nVolumeDB / 20.0 );
 
-    DBG( "set volume: %d gst volume: %lf", nVolumeDB, mnUnmutedVolume );
+    SAL_INFO( "avmedia.gstreamer", AVVERSION "set volume: " << nVolumeDB << " gst volume: " << mnUnmutedVolume );
 
     // change volume
-     if( !mbMuted && mpPlaybin )
-     {
-         g_object_set( G_OBJECT( mpPlaybin ), "volume", (gdouble) mnUnmutedVolume, nullptr );
-     }
+    if( !mbMuted && mpPlaybin )
+    {
+        g_object_set( G_OBJECT( mpVolumeControl ), "volume", mnUnmutedVolume, nullptr );
+    }
 }
-
 
 
 sal_Int16 SAL_CALL Player::getVolumeDB()
@@ -828,14 +862,13 @@ sal_Int16 SAL_CALL Player::getVolumeDB()
     if( mpPlaybin ) {
         double nGstVolume = 0.0;
 
-        g_object_get( G_OBJECT( mpPlaybin ), "volume", &nGstVolume, nullptr );
+        g_object_get( G_OBJECT( mpVolumeControl ), "volume", &nGstVolume, nullptr );
 
         nVolumeDB = (sal_Int16) ( 20.0*log10 ( nGstVolume ) );
     }
 
     return nVolumeDB;
 }
-
 
 
 awt::Size SAL_CALL Player::getPreferredPlayerWindowSize()
@@ -847,18 +880,15 @@ awt::Size SAL_CALL Player::getPreferredPlayerWindowSize()
 
     if( maURL.isEmpty() )
     {
-        DBG( "%p Player::getPreferredPlayerWindowSize - empty URL => 0x0", this );
+        SAL_INFO( "avmedia.gstreamer", AVVERSION << this << " Player::getPreferredPlayerWindowSize - empty URL => 0x0" );
         return aSize;
     }
 
-    DBG( "%p pre-Player::getPreferredPlayerWindowSize, member %d x %d", this, mnWidth, mnHeight );
+    SAL_INFO( "avmedia.gstreamer", AVVERSION << this << " pre-Player::getPreferredPlayerWindowSize, member " << mnWidth << "x" << mnHeight );
 
-#if OSL_DEBUG_LEVEL > 2
-    osl::Condition::Result aResult =
-#endif
-                                 maSizeCondition.wait( std::chrono::seconds(10) );
+    osl::Condition::Result aResult = maSizeCondition.wait( std::chrono::seconds(10) );
 
-    DBG( "%p Player::getPreferredPlayerWindowSize after waitCondition %d, member %d x %d", this, aResult, mnWidth, mnHeight );
+    SAL_INFO( "avmedia.gstreamer", AVVERSION << this << " Player::getPreferredPlayerWindowSize after waitCondition " << aResult << ", member " << mnWidth << "x" << mnHeight );
 
     if( mnWidth != 0 && mnHeight != 0 ) {
         aSize.Width = mnWidth;
@@ -867,7 +897,6 @@ awt::Size SAL_CALL Player::getPreferredPlayerWindowSize()
 
     return aSize;
 }
-
 
 
 uno::Reference< ::media::XPlayerWindow > SAL_CALL Player::createPlayerWindow( const uno::Sequence< uno::Any >& rArguments )
@@ -881,11 +910,11 @@ uno::Reference< ::media::XPlayerWindow > SAL_CALL Player::createPlayerWindow( co
     if( mbFakeVideo )
         preparePlaybin( maURL, nullptr );
 
-    DBG( "Player::createPlayerWindow %d %d length: %d", aSize.Width, aSize.Height, rArguments.getLength() );
+    SAL_INFO( "avmedia.gstreamer", AVVERSION "Player::createPlayerWindow " << aSize.Width << "x" << aSize.Height << " length: " << rArguments.getLength() );
 
     if( aSize.Width > 0 && aSize.Height > 0 )
     {
-        ::avmedia::gstreamer::Window* pWindow = new ::avmedia::gstreamer::Window( mxMgr );
+        ::avmedia::gstreamer::Window* pWindow = new ::avmedia::gstreamer::Window;
 
         xRet = pWindow;
 
@@ -898,18 +927,38 @@ uno::Reference< ::media::XPlayerWindow > SAL_CALL Player::createPlayerWindow( co
             OSL_ASSERT(pEnvData);
             if (pEnvData)
             {
-                mnWindowID = pEnvData->aWindow;
-                DBG( "set window id to %d XOverlay %p\n", (int)mnWindowID, mpXOverlay);
-                gst_element_set_state( mpPlaybin, GST_STATE_PAUSED );
-                if ( mpXOverlay != nullptr )
-                    gst_video_overlay_set_window_handle( mpXOverlay, mnWindowID );
+#if defined(ENABLE_GTKSINK)
+                GstElement *pVideosink = g_strcmp0(pEnvData->pToolkit, "gtk3") == 0 ?
+                                           gst_element_factory_make("gtksink", "gtksink") : nullptr;
+                if (pVideosink)
+                {
+                    mbUseGtkSink = true;
+                    g_object_get(pVideosink, "widget", &mpGtkWidget, nullptr);
+                    GtkWidget *pParent = static_cast<GtkWidget*>(pEnvData->pWidget);
+                    gtk_container_add (GTK_CONTAINER(pParent), mpGtkWidget);
+
+                    g_object_set( G_OBJECT( mpPlaybin ), "video-sink", pVideosink, nullptr);
+                    g_object_set( G_OBJECT( mpPlaybin ), "force-aspect-ratio", FALSE, nullptr);
+
+                    gtk_widget_show_all (pParent);
+                }
+                else
+#endif
+                {
+                    mbUseGtkSink = false;
+                    mnWindowID = pEnvData->aWindow;
+                    SAL_INFO( "avmedia.gstreamer", AVVERSION "set window id to " << (int)mnWindowID << " XOverlay " << mpXOverlay);
+                    gst_element_set_state( mpPlaybin, GST_STATE_PAUSED );
+                    if ( mpXOverlay != nullptr )
+                        gst_video_overlay_set_window_handle( mpXOverlay, mnWindowID );
+                }
+
             }
         }
     }
 
     return xRet;
 }
-
 
 
 uno::Reference< media::XFrameGrabber > SAL_CALL Player::createFrameGrabber()
@@ -921,11 +970,10 @@ uno::Reference< media::XFrameGrabber > SAL_CALL Player::createFrameGrabber()
 
     if( ( aPrefSize.Width > 0 ) && ( aPrefSize.Height > 0 ) )
         pFrameGrabber = FrameGrabber::create( maURL );
-    DBG( "created FrameGrabber %p", pFrameGrabber );
+    SAL_INFO( "avmedia.gstreamer", AVVERSION "created FrameGrabber " << pFrameGrabber );
 
     return pFrameGrabber;
 }
-
 
 
 OUString SAL_CALL Player::getImplementationName()
@@ -935,13 +983,11 @@ OUString SAL_CALL Player::getImplementationName()
 }
 
 
-
 sal_Bool SAL_CALL Player::supportsService( const OUString& ServiceName )
     throw (uno::RuntimeException, std::exception)
 {
     return cppu::supportsService(this, ServiceName);
 }
-
 
 
 uno::Sequence< OUString > SAL_CALL Player::getSupportedServiceNames()

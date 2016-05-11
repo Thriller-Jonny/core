@@ -43,6 +43,7 @@
 #include <sfx2/request.hxx>
 #include <sfx2/dispatch.hxx>
 #include <sfx2/new.hxx>
+#include <sfx2/notebookbar/SfxNotebookBar.hxx>
 #include <sfx2/filedlghelper.hxx>
 #include <sfx2/printer.hxx>
 #include <sfx2/evntconf.hxx>
@@ -134,10 +135,9 @@ using namespace ::com::sun::star;
 using namespace ::sfx2;
 
 // create DocInfo (virtual)
-VclPtr<SfxDocumentInfoDialog> SwDocShell::CreateDocumentInfoDialog(
-                                vcl::Window *pParent, const SfxItemSet &rSet)
+VclPtr<SfxDocumentInfoDialog> SwDocShell::CreateDocumentInfoDialog(const SfxItemSet &rSet)
 {
-    VclPtr<SfxDocumentInfoDialog> pDlg = VclPtr<SfxDocumentInfoDialog>::Create(pParent, rSet);
+    VclPtr<SfxDocumentInfoDialog> pDlg = VclPtr<SfxDocumentInfoDialog>::Create(nullptr, rSet);
     //only with statistics, when this document is being shown, not
     //from within the Doc-Manager
     SwDocShell* pDocSh = static_cast<SwDocShell*>( SfxObjectShell::Current());
@@ -511,7 +511,7 @@ void SwDocShell::Execute(SfxRequest& rReq)
                         SfxFilterMatcher aMatcher( OUString::createFromAscii(rFact.GetShortName()) );
                         SfxFilterMatcherIter aIter( aMatcher );
                         uno::Reference<XFilterManager> xFltMgr(xFP, UNO_QUERY);
-                        const SfxFilter* pFlt = aIter.First();
+                        std::shared_ptr<const SfxFilter> pFlt = aIter.First();
                         while( pFlt )
                         {
                             // --> OD #i117339#
@@ -525,7 +525,7 @@ void SwDocShell::Execute(SfxRequest& rReq)
                             pFlt = aIter.Next();
                         }
                         bool bWeb = dynamic_cast< SwWebDocShell *>( this ) !=  nullptr;
-                        const SfxFilter *pOwnFlt =
+                        std::shared_ptr<const SfxFilter> pOwnFlt =
                                 SwDocShell::Factory().GetFilterContainer()->
                                 GetFilter4FilterName("writer8");
 
@@ -592,7 +592,7 @@ void SwDocShell::Execute(SfxRequest& rReq)
                     // 1 - file unsaved -> save as HTML
                     // 2 - file modified and HTML filter active -> save
                     // 3 - file saved in non-HTML -> QueryBox to save as HTML
-                    const SfxFilter* pHtmlFlt =
+                    std::shared_ptr<const SfxFilter> pHtmlFlt =
                                     SwIoSystem::GetFilterOfFormat(
                                         "HTML",
                                         SwWebDocShell::Factory().GetFilterContainer() );
@@ -600,7 +600,7 @@ void SwDocShell::Execute(SfxRequest& rReq)
                     if(bLocalHasName)
                     {
                         //check for filter type
-                        const SfxFilter* pFlt = GetMedium()->GetFilter();
+                        std::shared_ptr<const SfxFilter> pFlt = GetMedium()->GetFilter();
                         if(!pFlt || pFlt->GetUserData() != pHtmlFlt->GetUserData())
                         {
                             ScopedVclPtrInstance<MessageDialog> aQuery(&pViewFrame->GetWindow(),
@@ -625,8 +625,9 @@ void SwDocShell::Execute(SfxRequest& rReq)
                         SfxStringItem aName(SID_FILE_NAME, sPath);
                         SfxStringItem aFilter(SID_FILTER_NAME, pHtmlFlt->GetName());
                         const SfxBoolItem* pBool = static_cast<const SfxBoolItem*>(
-                                pViewFrame->GetDispatcher()->Execute(
-                                        SID_SAVEASDOC, SfxCallMode::SYNCHRON, &aName, &aFilter, 0L ));
+                                pViewFrame->GetDispatcher()->ExecuteList(
+                                        SID_SAVEASDOC, SfxCallMode::SYNCHRON,
+                                        { &aName, &aFilter }));
                         if(!pBool || !pBool->GetValue())
                             break;
                     }
@@ -692,7 +693,7 @@ void SwDocShell::Execute(SfxRequest& rReq)
             SwAbstractDialogFactory* pFact = SwAbstractDialogFactory::Create();
             OSL_ENSURE(pFact, "SwAbstractDialogFactory fail!");
 
-            std::unique_ptr<AbstractSwInsertAbstractDlg> pDlg(pFact->CreateSwInsertAbstractDlg(nullptr));
+            std::unique_ptr<AbstractSwInsertAbstractDlg> pDlg(pFact->CreateSwInsertAbstractDlg());
             OSL_ENSURE(pDlg, "Dialog creation failed!");
             if(RET_OK == pDlg->Execute())
             {
@@ -832,7 +833,7 @@ void SwDocShell::Execute(SfxRequest& rReq)
             //pWrtShell is not set in page preview
             if (m_pWrtShell)
                 m_pWrtShell->StartAllAction();
-            m_pDoc->getIDocumentFieldsAccess().UpdateFields( nullptr, false );
+            m_pDoc->getIDocumentFieldsAccess().UpdateFields( false );
             m_pDoc->getIDocumentLinksAdministration().EmbedAllLinks();
             m_IsRemovedInvisibleContent
                 = officecfg::Office::Security::HiddenContent::RemoveHiddenContent::get();
@@ -916,7 +917,7 @@ void SwDocShell::Execute(SfxRequest& rReq)
                     aDlgHelper.SetControlHelpIds( nControlIds, pHelpIds );
                     uno::Reference < XFilePicker2 > xFP = aDlgHelper.GetFilePicker();
 
-                    const SfxFilter* pFlt;
+                    std::shared_ptr<const SfxFilter> pFlt;
                     sal_uInt16 nStrId;
 
                     if( bCreateHtml )
@@ -1077,12 +1078,9 @@ void SwDocShell::Execute(SfxRequest& rReq)
                                     std::unique_ptr<SfxFrameItem> pFrameItem(new SfxFrameItem( SID_DOCFRAME,
                                                         pViewShell->GetViewFrame() ));
                                     SfxDispatcher* pDispatch = pViewShell->GetDispatcher();
-                                    pDispatch->Execute(
-                                            SID_OPENDOC,
-                                            SfxCallMode::ASYNCHRON,
-                                            &aName,
-                                            &aReferer,
-                                            pFrameItem.get(), 0L );
+                                    pDispatch->ExecuteList(SID_OPENDOC,
+                                        SfxCallMode::ASYNCHRON,
+                                        { &aName, &aReferer, pFrameItem.get() });
                                     break;
                                 }
                                 pViewShell = SfxViewShell::GetNext(*pViewShell);
@@ -1136,8 +1134,27 @@ void SwDocShell::Execute(SfxRequest& rReq)
 
             SfxStringItem aApp(SID_DOC_SERVICE, OUString("com.sun.star.text.TextDocument"));
             SfxStringItem aTarget(SID_TARGETNAME, OUString("_blank"));
-            pViewShell->GetDispatcher()->Execute(
-                SID_OPENDOC, SfxCallMode::API|SfxCallMode::SYNCHRON, &aApp, &aTarget, 0L);
+            pViewShell->GetDispatcher()->ExecuteList(SID_OPENDOC,
+                SfxCallMode::API|SfxCallMode::SYNCHRON,
+                { &aApp, &aTarget });
+        }
+        break;
+        case SID_CLASSIFICATION_APPLY:
+        {
+            if (pArgs && pArgs->GetItemState(nWhich, false, &pItem) == SfxItemState::SET)
+            {
+                SwWrtShell* pSh = GetWrtShell();
+                const OUString& rValue = static_cast<const SfxStringItem*>(pItem)->GetValue();
+                pSh->SetClassification(rValue);
+            }
+            else
+                SAL_WARN("sw.ui", "missing parameter for SID_CLASSIFICATION_APPLY");
+        }
+        break;
+        case SID_NOTEBOOKBAR:
+        {
+            SfxViewShell* pViewShell = GetView()? GetView(): SfxViewShell::Current();
+            sfx2::SfxNotebookBar::ExecMethod(pViewShell->GetViewFrame()->GetBindings());
         }
         break;
 
@@ -1145,7 +1162,7 @@ void SwDocShell::Execute(SfxRequest& rReq)
     }
 }
 
-#if defined WNT
+#if defined(_WIN32)
 bool SwDocShell::DdeGetData( const OUString& rItem, const OUString& rMimeType,
                              uno::Any & rValue )
 {
@@ -1297,10 +1314,10 @@ void SwDocShell::ReloadFromHtml( const OUString& rStreamName, SwSrcView* pSrcVie
                     SfxUsrAnyItem aShellItem( SID_BASICIDE_ARG_DOCUMENT_MODEL, makeAny( GetModel() ) );
                     OUString aLibName( pBasic->GetName() );
                     SfxStringItem aLibNameItem( SID_BASICIDE_ARG_LIBNAME, aLibName );
-                    pSrcView->GetViewFrame()->GetDispatcher()->Execute(
+                    pSrcView->GetViewFrame()->GetDispatcher()->ExecuteList(
                                             SID_BASICIDE_LIBREMOVED,
                                             SfxCallMode::SYNCHRON,
-                                            &aShellItem, &aLibNameItem, 0L );
+                                            { &aShellItem, &aLibNameItem });
 
                     // Only the modules are deleted from the standard-lib
                     if( nLibCount )
@@ -1382,13 +1399,13 @@ sal_uLong SwDocShell::LoadStylesFromFile( const OUString& rURL,
 
     // search for filter in WebDocShell, too
     SfxMedium aMed( rURL, STREAM_STD_READ );
-    const SfxFilter* pFlt = nullptr;
-    aMatcher.DetectFilter( aMed, &pFlt, false );
+    std::shared_ptr<const SfxFilter> pFlt;
+    aMatcher.DetectFilter( aMed, pFlt );
     if(!pFlt)
     {
         OUString sWebFactory(OUString::createFromAscii(SwWebDocShell::Factory().GetShortName()));
         SfxFilterMatcher aWebMatcher( sWebFactory );
-        aWebMatcher.DetectFilter( aMed, &pFlt, false );
+        aWebMatcher.DetectFilter( aMed, pFlt );
     }
     // --> OD #i117339# - trigger import only for own formats
     bool bImport( false );
@@ -1539,7 +1556,7 @@ int SwFindDocShell( SfxObjectShellRef& xDocSh,
     if( INetProtocol::File == aTmpObj.GetProtocol() )
         xMed->Download(); // Touch the medium (download it)
 
-    const SfxFilter* pSfxFlt = nullptr;
+    std::shared_ptr<const SfxFilter> pSfxFlt;
     if (!xMed->GetError())
     {
         SfxFilterMatcher aMatcher( OUString::createFromAscii(SwDocShell::Factory().GetShortName()) );
@@ -1557,7 +1574,7 @@ int SwFindDocShell( SfxObjectShellRef& xDocSh,
             xMed->GetItemSet()->Put( SfxStringItem( SID_PASSWORD, rPasswd ));
 
         if( !pSfxFlt )
-            aMatcher.DetectFilter( *xMed, &pSfxFlt, false );
+            aMatcher.DetectFilter( *xMed, pSfxFlt );
 
         if( pSfxFlt )
         {

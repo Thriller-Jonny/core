@@ -102,8 +102,7 @@ OUString lcl_GetSelectedRole( const SvTabListBox & rRoleListBox, bool bUITransla
     OUString aResult;
     SvTreeListEntry * pEntry = rRoleListBox.FirstSelected();
     if( pEntry )
-        aResult = OUString( SvTabListBox::GetEntryText( pEntry,
-                                                       bUITranslated ? 1 : 0 ));
+        aResult = SvTabListBox::GetEntryText( pEntry, bUITranslated ? 1 : 0 );
     return aResult;
 }
 
@@ -112,7 +111,7 @@ OUString lcl_GetSelectedRolesRange( const SvTabListBox & rRoleListBox )
     OUString aResult;
     SvTreeListEntry * pEntry = rRoleListBox.FirstSelected();
     if( pEntry )
-        aResult = OUString( SvTabListBox::GetEntryText( pEntry, 2 ));
+        aResult = SvTabListBox::GetEntryText( pEntry, 2 );
     return aResult;
 }
 
@@ -219,7 +218,7 @@ DataSourceTabPage::DataSourceTabPage(
 
     m_pFT_CAPTION->Show(!bHideDescription);
 
-    m_aFixedTextRange = OUString( m_pFT_RANGE->GetText() );
+    m_aFixedTextRange = m_pFT_RANGE->GetText();
     this->SetText( SCH_RESSTR( STR_OBJECT_DATASERIES_PLURAL ) );
 
     // set handlers
@@ -248,7 +247,7 @@ DataSourceTabPage::DataSourceTabPage(
     // set symbol font for arrows
     // note: StarSymbol is substituted to OpenSymbol for OOo
     vcl::Font aSymbolFont( m_pBTN_UP->GetFont());
-    aSymbolFont.SetName( "StarSymbol" );
+    aSymbolFont.SetFamilyName( "StarSymbol" );
     m_pBTN_UP->SetControlFont( aSymbolFont );
     m_pBTN_DOWN->SetControlFont( aSymbolFont );
 
@@ -425,9 +424,9 @@ void DataSourceTabPage::fillSeriesListBox()
                 const OUString aReplacementStr( "%NUMBER" );
                 sal_Int32 nIndex = aResString.indexOf( aReplacementStr );
                 if( nIndex != -1 )
-                    aLabel = OUString( aResString.replaceAt(
+                    aLabel = aResString.replaceAt(
                                          nIndex, aReplacementStr.getLength(),
-                                         OUString::number(nUnnamedSeriesIndex)));
+                                         OUString::number(nUnnamedSeriesIndex));
             }
             if( aLabel.isEmpty() )
                 aLabel = ::chart::SchResId( STR_DATA_UNNAMED_SERIES ).toString();
@@ -837,7 +836,7 @@ bool DataSourceTabPage::updateModelFromControl( Edit * pField )
                 // create or change categories
                 if( !xLabeledSeq.is())
                 {
-                    xLabeledSeq.set( DataSourceHelper::createLabeledDataSequence( Reference< uno::XComponentContext >(nullptr)));
+                    xLabeledSeq.set( DataSourceHelper::createLabeledDataSequence() );
                     m_rDialogModel.setCategories( xLabeledSeq );
                 }
                 try
@@ -892,7 +891,7 @@ bool DataSourceTabPage::updateModelFromControl( Edit * pField )
                             if( ! xLabeledSeq.is())
                             {
                                 // no corresponding labeled data sequence for label found
-                                xLabeledSeq.set( DataSourceHelper::createLabeledDataSequence( Reference< uno::XComponentContext >(nullptr)));
+                                xLabeledSeq.set( DataSourceHelper::createLabeledDataSequence() );
                                 lcl_addLSequenceToDataSource( xLabeledSeq, xSource );
                             }
                         }
@@ -956,7 +955,7 @@ bool DataSourceTabPage::updateModelFromControl( Edit * pField )
                                         xLabeledSeq.set( lcl_findLSequenceWithOnlyLabel( xSource ));
                                     if( ! xLabeledSeq.is())
                                     {
-                                        xLabeledSeq.set( DataSourceHelper::createLabeledDataSequence( Reference< uno::XComponentContext >(nullptr)));
+                                        xLabeledSeq.set( DataSourceHelper::createLabeledDataSequence() );
                                         lcl_addLSequenceToDataSource( xLabeledSeq, xSource );
                                     }
                                 }
@@ -984,7 +983,7 @@ bool DataSourceTabPage::updateModelFromControl( Edit * pField )
         {
             Reference< util::XModifiable > xModifiable( m_rDialogModel.getChartModel(), uno::UNO_QUERY );
             if( xModifiable.is() )
-                xModifiable->setModified( sal_True );
+                xModifiable->setModified( true );
             const DialogModelTimeBasedInfo& rInfo = m_rDialogModel.getTimeBasedInfo();
             if(rInfo.bTimeBased)
             {

@@ -492,6 +492,10 @@ static void lcl_ConvertSdrOle2ObjsToSdrGrafObjs(SwDoc& _rDoc)
 
 sal_uLong XMLReader::Read( SwDoc &rDoc, const OUString& rBaseURL, SwPaM &rPaM, const OUString & rName )
 {
+    // needed for relative URLs, but in clipboard copy/paste there may be none
+    // and also there is the SwXMLTextBlocks special case
+    SAL_INFO_IF(rBaseURL.isEmpty(), "sw.filter", "sw::XMLReader: no base URL");
+
     // Get service factory
     uno::Reference< uno::XComponentContext > xContext =
             comphelper::getProcessComponentContext();
@@ -699,19 +703,19 @@ sal_uLong XMLReader::Read( SwDoc &rDoc, const OUString& rBaseURL, SwPaM &rPaM, c
         Sequence< OUString> aFamiliesSeq( nCount );
         OUString *pSeq = aFamiliesSeq.getArray();
         if( aOpt.IsFrameFormats() )
-            // SFX_STYLE_FAMILY_FRAME;
+            // SfxStyleFamily::Frame;
             *pSeq++ = "FrameStyles";
         if( aOpt.IsPageDescs() )
-            // SFX_STYLE_FAMILY_PAGE;
+            // SfxStyleFamily::Page;
             *pSeq++ = "PageStyles";
         if( aOpt.IsTextFormats() )
         {
-            // (SFX_STYLE_FAMILY_CHAR|SFX_STYLE_FAMILY_PARA);
+            // (SfxStyleFamily::Char|SfxStyleFamily::Para);
             *pSeq++ = "CharacterStyles";
             *pSeq++ = "ParagraphStyles";
         }
         if( aOpt.IsNumRules() )
-            // SFX_STYLE_FAMILY_PSEUDO;
+            // SfxStyleFamily::Pseudo;
             *pSeq++ = "NumberingStyles";
 
         xInfoSet->setPropertyValue( "StyleInsertModeFamilies",
@@ -916,7 +920,7 @@ sal_uLong XMLReader::Read( SwDoc &rDoc, const OUString& rBaseURL, SwPaM &rPaM, c
 
     // ... restore redline mode
     // (First set bogus mode to make sure the mode in getIDocumentRedlineAccess().SetRedlineMode()
-    //  is different from it's previous mode.)
+    //  is different from its previous mode.)
     rDoc.getIDocumentRedlineAccess().SetRedlineMode_intern((RedlineMode_t)( ~nRedlineMode ));
     rDoc.getIDocumentRedlineAccess().SetRedlineMode( (RedlineMode_t)( nRedlineMode ));
 

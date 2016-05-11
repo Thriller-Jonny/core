@@ -51,11 +51,11 @@ public:
     sal_Int32 GetAccessTime() const { return mnLastAccessTime; }
     void SetAccessTime (sal_Int32 nAccessTime) { mnLastAccessTime = nAccessTime; }
 
-    Bitmap GetPreview() const { return maPreview; }
+    const Bitmap& GetPreview() const { return maPreview; }
     inline void SetPreview (const Bitmap& rPreview);
     bool HasPreview() const;
 
-    Bitmap GetMarkedPreview() const { return maMarkedPreview; }
+    const Bitmap& GetMarkedPreview() const { return maMarkedPreview; }
     inline void SetMarkedPreview (const Bitmap& rMarkePreview);
 
     bool HasReplacement() const { return (mpReplacement.get() != nullptr); }
@@ -69,14 +69,12 @@ private:
     Bitmap maMarkedPreview;
     std::shared_ptr<BitmapReplacement> mpReplacement;
     std::shared_ptr<BitmapCompressor> mpCompressor;
-    Size maBitmapSize;
     bool mbIsUpToDate;
     sal_Int32 mnLastAccessTime;
     // When this flag is set then the bitmap is not modified by a cache
     // compactor.
     bool mbIsPrecious;
 };
-class CacheEntry;
 
 class CacheHash {
 public:
@@ -116,7 +114,7 @@ typedef ::std::vector<
 
 //=====  BitmapCache  =========================================================
 
-BitmapCache::BitmapCache (const sal_Int32 nMaximalNormalCacheSize)
+BitmapCache::BitmapCache ()
     : maMutex(),
       mpBitmapContainer(new CacheBitmapContainer()),
       mnNormalCacheSize(0),
@@ -126,14 +124,9 @@ BitmapCache::BitmapCache (const sal_Int32 nMaximalNormalCacheSize)
       mpCacheCompactor(),
       mbIsFull(false)
 {
-    if (nMaximalNormalCacheSize > 0)
-        mnMaximalNormalCacheSize = nMaximalNormalCacheSize;
-    else
-    {
-        Any aCacheSize (CacheConfiguration::Instance()->GetValue("CacheSize"));
-        if (aCacheSize.has<sal_Int32>())
-            aCacheSize >>= mnMaximalNormalCacheSize;
-    }
+    Any aCacheSize (CacheConfiguration::Instance()->GetValue("CacheSize"));
+    if (aCacheSize.has<sal_Int32>())
+        aCacheSize >>= mnMaximalNormalCacheSize;
 
     mpCacheCompactor = CacheCompactor::Create(*this,mnMaximalNormalCacheSize);
 }
@@ -376,9 +369,7 @@ void BitmapCache::Recycle (const BitmapCache& rCache)
     }
 }
 
-::std::unique_ptr<BitmapCache::CacheIndex> BitmapCache::GetCacheIndex (
-    bool bIncludePrecious,
-    bool bIncludeNoPreview) const
+::std::unique_ptr<BitmapCache::CacheIndex> BitmapCache::GetCacheIndex() const
 {
     ::osl::MutexGuard aGuard (maMutex);
 
@@ -390,10 +381,10 @@ void BitmapCache::Recycle (const BitmapCache& rCache)
     CacheBitmapContainer::iterator iEntry;
     for (iEntry=mpBitmapContainer->begin(); iEntry!=mpBitmapContainer->end(); ++iEntry)
     {
-        if ( ! bIncludePrecious && iEntry->second.IsPrecious())
+        if ( iEntry->second.IsPrecious())
             continue;
 
-        if ( ! bIncludeNoPreview && ! iEntry->second.HasPreview())
+        if ( ! iEntry->second.HasPreview())
             continue;
 
         aSortedContainer.push_back(SortableBitmapContainer::value_type(
@@ -512,7 +503,7 @@ void BitmapCache::CacheEntry::Compress (const std::shared_ptr<BitmapCompressor>&
         {
             mpReplacement = rpCompressor->Compress(maPreview);
 
-#if OSL_DEBUG_LEVEL > 2
+#ifdef DEBUG_SD_SLSBITMAPCACHE
             sal_uInt32 nOldSize (maPreview.GetSizeBytes());
             sal_uInt32 nNewSize (mpReplacement.get()!=NULL ? mpReplacement->GetMemorySize() : 0);
             if (nOldSize == 0)

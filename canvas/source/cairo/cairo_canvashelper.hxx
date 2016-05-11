@@ -30,7 +30,6 @@
 
 #include <vcl/vclptr.hxx>
 #include <vcl/virdev.hxx>
-#include <boost/noncopyable.hpp>
 
 #include <vcl/cairo.hxx>
 #include "cairo_surfaceprovider.hxx"
@@ -51,9 +50,13 @@ namespace cairocanvas
         Clip
     };
 
-    class CanvasHelper : private ::boost::noncopyable
+    class CanvasHelper
     {
     public:
+        /// make noncopyable
+        CanvasHelper(const CanvasHelper&) = delete;
+        const CanvasHelper& operator=(const CanvasHelper&) = delete;
+
         CanvasHelper();
 
         /// Release all references
@@ -272,7 +275,7 @@ namespace cairocanvas
     };
 
     /// also needed from SpriteHelper
-    void doPolyPolygonImplementation( ::basegfx::B2DPolyPolygon aPolyPolygon,
+    void doPolyPolygonImplementation( const ::basegfx::B2DPolyPolygon& aPolyPolygon,
                                       Operation aOperation,
                                       cairo_t* pCairo,
                                       const css::uno::Sequence< css::rendering::Texture >* pTextures,

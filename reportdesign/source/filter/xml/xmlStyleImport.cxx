@@ -48,7 +48,6 @@ using namespace ::com::sun::star::container;
 using namespace xmloff::token;
 
 
-
 class OSpecialHanldeXMLImportPropertyMapper : public SvXMLImportPropertyMapper
 {
 public:
@@ -72,8 +71,8 @@ public:
 OControlStyleContext::OControlStyleContext( ORptFilter& rImport,
         sal_uInt16 nPrfx, const OUString& rLName,
         const Reference< XAttributeList > & xAttrList,
-        SvXMLStylesContext& rStyles, sal_uInt16 nFamily, bool bDefaultStyle ) :
-    XMLPropStyleContext( rImport, nPrfx, rLName, xAttrList, rStyles, nFamily, bDefaultStyle ),
+        SvXMLStylesContext& rStyles, sal_uInt16 nFamily ) :
+    XMLPropStyleContext( rImport, nPrfx, rLName, xAttrList, rStyles, nFamily, false/*bDefaultStyle*/ ),
     pStyles(&rStyles),
     m_nNumberFormat(-1),
     m_rImport(rImport)
@@ -144,7 +143,6 @@ void OControlStyleContext::SetAttribute( sal_uInt16 nPrefixKey,
     else
         XMLPropStyleContext::SetAttribute( nPrefixKey, rLocalName, rValue );
 }
-
 
 
 OReportStylesContext::OReportStylesContext( ORptFilter& rImport,

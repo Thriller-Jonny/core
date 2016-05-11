@@ -47,8 +47,7 @@ namespace filter{
  */
 class QueryTokenizer : public std::unordered_map< OUString                    ,
                                                   OUString                    ,
-                                                  OUStringHash                ,
-                                                  std::equal_to< OUString > >
+                                                  OUStringHash >
 {
 
     // member
@@ -81,11 +80,9 @@ class QueryTokenizer : public std::unordered_map< OUString                    ,
         explicit QueryTokenizer(const OUString& sQuery);
 
 
-
         /** @short  destruct an instance of this class.
          */
         virtual ~QueryTokenizer();
-
 
 
         /** @short  can be used to check if analyzing of given query

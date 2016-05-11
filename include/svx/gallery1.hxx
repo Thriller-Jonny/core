@@ -28,11 +28,8 @@
 #include <cstdio>
 #include <vector>
 
-
-// - GalleryThemeEntry -
-
-
 class SvStream;
+
 
 class GalleryThemeEntry
 {
@@ -48,11 +45,9 @@ private:
     bool                    bModified;
     bool                    bThemeNameFromResource;
 
-                            GalleryThemeEntry();
     static INetURLObject    ImplGetURLIgnoreCase( const INetURLObject& rURL );
 
 public:
-
                             GalleryThemeEntry( bool bCreateUniqueURL,
                                                const INetURLObject& rBaseURL,
                                                const OUString& rName,
@@ -86,13 +81,10 @@ public:
 
 typedef ::std::vector< GalleryThemeEntry* > GalleryThemeList;
 
-
-// - Gallery -
-
-
 class SfxListener;
 class GalleryTheme;
 class GalleryThemeCacheEntry;
+
 
 class SVX_DLLPUBLIC Gallery : public SfxBroadcaster
 {
@@ -134,7 +126,7 @@ public:
     SAL_DLLPRIVATE OUString     GetThemeName( sal_uIntPtr nThemeId ) const;
 
     bool                        CreateTheme( const OUString& rThemeName );
-    SAL_DLLPRIVATE bool         RenameTheme( const OUString& rOldName, const OUString& rNewName );
+    SAL_DLLPRIVATE void         RenameTheme( const OUString& rOldName, const OUString& rNewName );
     bool                        RemoveTheme( const OUString& rThemeName );
 
     GalleryTheme*               AcquireTheme( const OUString& rThemeName, SfxListener& rListener );

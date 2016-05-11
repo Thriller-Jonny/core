@@ -52,7 +52,6 @@
 using namespace com::sun::star;
 using namespace xmloff::token;
 using ::com::sun::star::uno::Reference;
-using ::com::sun::star::uno::Sequence;
 using ::com::sun::star::uno::UNO_QUERY;
 using ::com::sun::star::xml::sax::XAttributeList;
 
@@ -408,7 +407,7 @@ void ScXMLTableContext::EndElement()
     }
 
     rTables.DeleteTable();
-    rImport.ProgressBarIncrement(false);
+    rImport.ProgressBarIncrement();
 
     // store stream positions
     if (!pExternalRefInfo.get() && nStartOffset >= 0 /* && nEndOffset >= 0 */)

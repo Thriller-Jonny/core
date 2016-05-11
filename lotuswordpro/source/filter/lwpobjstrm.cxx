@@ -191,25 +191,21 @@ void LwpObjectStream::SeekRel(sal_uInt16 pos)
 /**
  * @descr  Seek to pos in object buffer/buffer
  */
-bool LwpObjectStream::Seek( sal_uInt16 pos)
+void LwpObjectStream::Seek( sal_uInt16 pos)
 {
     if (pos < m_nBufSize)
     {
         m_nReadPos = pos;
-        return true;
     }
-    return false;
 }
 
 /**
  * @descr  Quick read sal_Bool
  */
-bool LwpObjectStream::QuickReadBool(bool *pFailure)
+bool LwpObjectStream::QuickReadBool()
 {
     SVBT16 aValue = {0};
-    sal_uInt16 nRead = QuickRead(aValue, sizeof(aValue));
-    if (pFailure)
-        *pFailure = (nRead != sizeof(aValue));
+    QuickRead(aValue, sizeof(aValue));
     return static_cast<bool>(SVBT16ToShort(aValue));
 }
 /**
@@ -237,23 +233,19 @@ sal_uInt16 LwpObjectStream::QuickReaduInt16(bool *pFailure)
 /**
  * @descr  Quick read sal_Int32
  */
-sal_Int32 LwpObjectStream::QuickReadInt32(bool *pFailure)
+sal_Int32 LwpObjectStream::QuickReadInt32()
 {
     SVBT32 aValue = {0};
-    sal_uInt16 nRead = QuickRead(aValue, sizeof(aValue));
-    if (pFailure)
-        *pFailure = (nRead != sizeof(aValue));
+    QuickRead(aValue, sizeof(aValue));
     return static_cast<sal_Int32>(SVBT32ToUInt32(aValue));
 }
 /**
  * @descr  Quick read sal_Int16
  */
-sal_Int16 LwpObjectStream::QuickReadInt16(bool *pFailure)
+sal_Int16 LwpObjectStream::QuickReadInt16()
 {
     SVBT16 aValue = {0};
-    sal_uInt16 nRead = QuickRead(aValue, sizeof(aValue));
-    if (pFailure)
-        *pFailure = (nRead != sizeof(aValue));
+    QuickRead(aValue, sizeof(aValue));
 
     return static_cast<sal_Int16>(SVBT16ToShort(aValue));
 }
@@ -271,7 +263,7 @@ sal_uInt8 LwpObjectStream::QuickReaduInt8(bool *pFailure)
 /**
  * @descr  Quick read double
  */
-double LwpObjectStream::QuickReadDouble(bool *pFailure)
+double LwpObjectStream::QuickReadDouble()
 {
     union
     {
@@ -279,9 +271,7 @@ double LwpObjectStream::QuickReadDouble(bool *pFailure)
         sal_uInt8 c[8];
     } s;
     memset(s.c, 0, sizeof(s.c));
-    sal_uInt16 nRead = QuickRead(s.c, sizeof(s.c));
-    if (pFailure)
-        *pFailure = (nRead != sizeof(s.c));
+    QuickRead(s.c, sizeof(s.c));
 #if defined(OSL_BIGENDIAN)
     for (size_t i = 0; i < 4; ++i)
         std::swap(s.c[i], s.c[7-i]);
@@ -363,7 +353,7 @@ sal_uInt16 LwpObjectStream::DecompressBuffer(sal_uInt8* pDst, sal_uInt8* pSrc, s
 
                 *pDst++ = 0;
                 DstSize++;
-                // fall through into next case!
+                SAL_FALLTHROUGH;
 
             case 0xC0:
                 // 1 - 64 bytes of non-zero

@@ -73,7 +73,7 @@ static oslPipeError osl_PipeErrorFromNative(int nativeType)
     return PipeError[i].error;
 }
 
-oslPipe __osl_createPipeImpl()
+static oslPipe createPipeImpl()
 {
     oslPipe pPipeImpl;
 
@@ -82,14 +82,14 @@ oslPipe __osl_createPipeImpl()
         return nullptr;
     pPipeImpl->m_nRefCount =1;
     pPipeImpl->m_bClosed = false;
-#if defined(LINUX)
+#if defined(CLOSESOCKET_DOESNT_WAKE_UP_ACCEPT)
     pPipeImpl->m_bIsInShutdown = false;
     pPipeImpl->m_bIsAccepting = false;
 #endif
     return pPipeImpl;
 }
 
-void __osl_destroyPipeImpl(oslPipe pImpl)
+static void destroyPipeImpl(oslPipe pImpl)
 {
     if (pImpl != nullptr)
         free(pImpl);
@@ -166,11 +166,11 @@ oslPipe SAL_CALL osl_psz_createPipe(const sal_Char *pszPipeName, oslPipeOptions 
     bool bNameTooLong = false;
     oslPipe  pPipe;
 
-    if (access(PIPEDEFAULTPATH, R_OK|W_OK) == 0)
+    if (access(PIPEDEFAULTPATH, W_OK) == 0)
     {
         strncpy(name, PIPEDEFAULTPATH, sizeof(name));
     }
-    else if (access(PIPEALTERNATEPATH, R_OK|W_OK) == 0)
+    else if (access(PIPEALTERNATEPATH, W_OK) == 0)
     {
         strncpy(name, PIPEALTERNATEPATH, sizeof(name));
     }
@@ -214,7 +214,7 @@ oslPipe SAL_CALL osl_psz_createPipe(const sal_Char *pszPipeName, oslPipeOptions 
     }
 
     /* alloc memory */
-    pPipe = __osl_createPipeImpl();
+    pPipe = createPipeImpl();
 
     if (pPipe == nullptr)
         return nullptr;
@@ -224,7 +224,7 @@ oslPipe SAL_CALL osl_psz_createPipe(const sal_Char *pszPipeName, oslPipeOptions 
     if ( pPipe->m_Socket < 0 )
     {
         SAL_WARN("sal.osl.pipe", "socket() failed: " << strerror(errno));
-        __osl_destroyPipeImpl(pPipe);
+        destroyPipeImpl(pPipe);
         return nullptr;
     }
 
@@ -261,7 +261,7 @@ oslPipe SAL_CALL osl_psz_createPipe(const sal_Char *pszPipeName, oslPipeOptions 
             if ( connect(pPipe->m_Socket, reinterpret_cast<sockaddr *>(&addr), len) >= 0 )
             {
                 close (pPipe->m_Socket);
-                __osl_destroyPipeImpl(pPipe);
+                destroyPipeImpl(pPipe);
                 return nullptr;
             }
 
@@ -273,7 +273,7 @@ oslPipe SAL_CALL osl_psz_createPipe(const sal_Char *pszPipeName, oslPipeOptions 
         {
             SAL_WARN("sal.osl.pipe", "bind() failed: " << strerror(errno));
             close (pPipe->m_Socket);
-            __osl_destroyPipeImpl(pPipe);
+            destroyPipeImpl(pPipe);
             return nullptr;
         }
 
@@ -294,7 +294,7 @@ oslPipe SAL_CALL osl_psz_createPipe(const sal_Char *pszPipeName, oslPipeOptions 
             // that point in time:
             unlink(name);   /* remove filesystem entry */
             close (pPipe->m_Socket);
-            __osl_destroyPipeImpl(pPipe);
+            destroyPipeImpl(pPipe);
             return nullptr;
         }
 
@@ -313,7 +313,7 @@ oslPipe SAL_CALL osl_psz_createPipe(const sal_Char *pszPipeName, oslPipeOptions 
         }
 
         close (pPipe->m_Socket);
-        __osl_destroyPipeImpl(pPipe);
+        destroyPipeImpl(pPipe);
         return nullptr;
     }
 }
@@ -334,7 +334,7 @@ void SAL_CALL osl_releasePipe( oslPipe pPipe )
         if( ! pPipe->m_bClosed )
             osl_closePipe( pPipe );
 
-        __osl_destroyPipeImpl( pPipe );
+        destroyPipeImpl( pPipe );
     }
 }
 
@@ -359,7 +359,7 @@ void SAL_CALL osl_closePipe( oslPipe pPipe )
       Thread does not return from accept on linux, so
       connect to the accepting pipe
      */
-#if defined(LINUX)
+#if defined(CLOSESOCKET_DOESNT_WAKE_UP_ACCEPT)
     struct sockaddr_un addr;
 
     if ( pPipe->m_bIsAccepting )
@@ -387,7 +387,7 @@ void SAL_CALL osl_closePipe( oslPipe pPipe )
         }
         close(fd);
     }
-#endif /* LINUX */
+#endif /* CLOSESOCKET_DOESNT_WAKE_UP_ACCEPT */
 
     nRet = shutdown(ConnFD, 2);
     if ( nRet < 0 )
@@ -421,13 +421,13 @@ oslPipe SAL_CALL osl_acceptPipe(oslPipe pPipe)
 
     OSL_ASSERT(strlen(pPipe->m_Name) > 0);
 
-#if defined(LINUX)
+#if defined(CLOSESOCKET_DOESNT_WAKE_UP_ACCEPT)
     pPipe->m_bIsAccepting = true;
 #endif
 
     s = accept(pPipe->m_Socket, nullptr, nullptr);
 
-#if defined(LINUX)
+#if defined(CLOSESOCKET_DOESNT_WAKE_UP_ACCEPT)
     pPipe->m_bIsAccepting = false;
 #endif
 
@@ -437,17 +437,17 @@ oslPipe SAL_CALL osl_acceptPipe(oslPipe pPipe)
         return nullptr;
     }
 
-#if defined(LINUX)
+#if defined(CLOSESOCKET_DOESNT_WAKE_UP_ACCEPT)
     if ( pPipe->m_bIsInShutdown  )
     {
         close(s);
         return nullptr;
     }
-#endif /* LINUX */
+#endif /* CLOSESOCKET_DOESNT_WAKE_UP_ACCEPT */
     else
     {
         /* alloc memory */
-        pAcceptedPipe = __osl_createPipeImpl();
+        pAcceptedPipe = createPipeImpl();
 
         OSL_ASSERT(pAcceptedPipe);
         if(pAcceptedPipe==nullptr)

@@ -56,7 +56,7 @@ using namespace ::com::sun::star::ui::dialogs;
 FileOpenDialog::FileOpenDialog( const Reference< XComponentContext >& rxContext )
 {
     mxFilePicker = FilePicker::createWithMode( rxContext, TemplateDescription::FILESAVE_AUTOEXTENSION);
-    mxFilePicker->setMultiSelectionMode( sal_False );
+    mxFilePicker->setMultiSelectionMode( false );
 
     Reference< XFilePickerControlAccess > xAccess( mxFilePicker, UNO_QUERY );
     if ( xAccess.is() )
@@ -97,7 +97,7 @@ FileOpenDialog::FileOpenDialog( const Reference< XComponentContext >& rxContext 
                                 j = aFilterProperties.getLength();
                         }
                         break;
-                        case TK_Name :      rProperty.Value >>= aFilterEntry.maName; break;
+                        case TK_Name :      rProperty.Value >>= aFilterEntry.maFilterEntryName; break;
                         case TK_UIName :    rProperty.Value >>= aFilterEntry.maUIName; break;
                         case TK_Type :      rProperty.Value >>= aFilterEntry.maType; break;
                         case TK_Flags :     rProperty.Value >>= aFilterEntry.maFlags; break;
@@ -177,7 +177,7 @@ OUString FileOpenDialog::getFilterName() const
     {
         if ( aIter->maUIName == aUIName )
         {
-            aFilterName = aIter->maName;
+            aFilterName = aIter->maFilterEntryName;
             break;
         }
     }

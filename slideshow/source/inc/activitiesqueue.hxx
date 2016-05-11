@@ -27,8 +27,7 @@
 
 #include <canvas/elapsedtime.hxx>
 
-#include <boost/shared_ptr.hpp>
-#include <boost/noncopyable.hpp>
+#include <memory>
 
 
 /* Definition of ActivitiesQueue class */
@@ -42,7 +41,7 @@ namespace slideshow
             activity objects to this class, which are called in a
             round-robin fashion.
         */
-        class ActivitiesQueue : private ::boost::noncopyable
+        class ActivitiesQueue
         {
         public:
             /** Create an ActivitiesQueue.
@@ -51,9 +50,11 @@ namespace slideshow
                 Pointer to global presentation timer. Used for
                 adjusting and holding global presentation time.
              */
-            ActivitiesQueue(
+            explicit ActivitiesQueue(
                 const std::shared_ptr< ::canvas::tools::ElapsedTime >&  pPresTimer );
             ~ActivitiesQueue();
+            ActivitiesQueue(const ActivitiesQueue&) = delete;
+            ActivitiesQueue& operator=(const ActivitiesQueue&) = delete;
 
             /** Add the given activity to the queue.
              */

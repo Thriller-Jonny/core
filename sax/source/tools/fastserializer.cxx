@@ -33,9 +33,7 @@
 #endif
 
 using ::std::vector;
-using ::com::sun::star::uno::Reference;
 using ::com::sun::star::uno::Sequence;
-using ::com::sun::star::xml::Attribute;
 using ::com::sun::star::io::XOutputStream;
 
 #define HAS_NAMESPACE(x) ((x & 0xffff0000) != 0)
@@ -84,7 +82,7 @@ namespace sax_fastparser {
         rtl_math_doubleToString(
             &mpDoubleStr, &mnDoubleStrCapacity, 0, value, rtl_math_StringFormat_G,
             RTL_STR_MAX_VALUEOFDOUBLE - RTL_CONSTASCII_LENGTH("-x.E-xxx"), '.', nullptr,
-            0, sal_True);
+            0, true);
 
         write(mpDoubleStr->buffer, mpDoubleStr->length);
         // and "clear" the string
@@ -94,29 +92,8 @@ namespace sax_fastparser {
 
     void FastSaxSerializer::write( const OUString& sOutput, bool bEscape )
     {
-        const sal_Int32 nLength = sOutput.getLength();
-        for (sal_Int32 i = 0; i < nLength; ++i)
-        {
-            const sal_Unicode cUnicode = sOutput[ i ];
-            const char cChar = cUnicode;
-            if (cUnicode & 0xff80)
-            {
-                write( OString(&cUnicode, 1, RTL_TEXTENCODING_UTF8) );
-            }
-            else if(bEscape) switch( cChar )
-            {
-                case '<':   writeBytes( "&lt;", 4 );     break;
-                case '>':   writeBytes( "&gt;", 4 );     break;
-                case '&':   writeBytes( "&amp;", 5 );    break;
-                case '\'':  writeBytes( "&apos;", 6 );   break;
-                case '"':   writeBytes( "&quot;", 6 );   break;
-                case '\n':  writeBytes( "&#10;", 5 );    break;
-                case '\r':  writeBytes( "&#13;", 5 );    break;
-                default:    writeBytes( &cChar, 1 );     break;
-            }
-            else
-                writeBytes( &cChar, 1 );
-        }
+        write( OUStringToOString(sOutput, RTL_TEXTENCODING_UTF8), bEscape );
+
     }
 
     void FastSaxSerializer::write( const OString& sOutput, bool bEscape )
@@ -278,11 +255,11 @@ namespace sax_fastparser {
 #ifdef DBG_UTIL
         ::std::set<OString> DebugAttributes;
 #endif
-        for (size_t j = 0; j < maTokenValues.size(); j++)
+        for (const TokenValue & rTokenValue : maTokenValues)
         {
             writeBytes(sSpace, N_CHARS(sSpace));
 
-            sal_Int32 nToken = maTokenValues[j].nToken;
+            sal_Int32 nToken = rTokenValue.nToken;
             writeId(nToken);
 
 #ifdef DBG_UTIL
@@ -294,7 +271,7 @@ namespace sax_fastparser {
 
             writeBytes(sEqualSignAndQuote, N_CHARS(sEqualSignAndQuote));
 
-            write(maTokenValues[j].pValue, -1, true);
+            write(rTokenValue.pValue, -1, true);
 
             writeBytes(sQuote, N_CHARS(sQuote));
         }

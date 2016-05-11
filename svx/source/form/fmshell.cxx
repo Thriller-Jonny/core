@@ -274,7 +274,7 @@ bool FmFormShell::PrepareClose(bool bUI)
                         {
                             case RET_YES:
                                 bResult = rController->commitCurrentRecord( );
-                                // fallthrough to next case
+                                SAL_FALLTHROUGH;
                             case RET_NO:
                                 GetImpl()->didPrepareClose( true );
                                 break;
@@ -520,8 +520,9 @@ void FmFormShell::Execute(SfxRequest &rReq)
                 // reusing the SID_FM_TOGGLECONTROLFOCUS is somewhat hacky ... which it wouldn't if it would have another
                 // name, so I do not really have a big problem with this ....
                 SfxBoolItem aGrabFocusIndicatorItem( SID_FM_TOGGLECONTROLFOCUS, true );
-                GetViewShell()->GetViewFrame()->GetDispatcher()->Execute( nSlot, SfxCallMode::ASYNCHRON,
-                                          &aGrabFocusIndicatorItem, nullptr );
+                GetViewShell()->GetViewFrame()->GetDispatcher()->ExecuteList(
+                        nSlot, SfxCallMode::ASYNCHRON,
+                        { &aGrabFocusIndicatorItem });
             }
 
             rReq.Done();
@@ -750,7 +751,7 @@ void FmFormShell::Execute(SfxRequest &rReq)
                 DBG_ASSERT( pFact, "no dialog factory!" );
                 if ( pFact )
                 {
-                    std::unique_ptr< AbstractFmInputRecordNoDialog > dlg( pFact->CreateFmInputRecordNoDialog( nullptr ) );
+                    std::unique_ptr< AbstractFmInputRecordNoDialog > dlg( pFact->CreateFmInputRecordNoDialog() );
                     DBG_ASSERT( dlg.get(), "Dialog creation failed!" );
                     dlg->SetValue( rController->getCursor()->getRow() );
                     if ( dlg->Execute() == RET_OK )
@@ -815,8 +816,9 @@ void FmFormShell::Execute(SfxRequest &rReq)
 
             // initially open the filter navigator, the whole form based filter is pretty useless without it
             SfxBoolItem aIdentifierItem( SID_FM_FILTER_NAVIGATOR, true );
-            GetViewShell()->GetViewFrame()->GetDispatcher()->Execute( SID_FM_FILTER_NAVIGATOR, SfxCallMode::ASYNCHRON,
-                &aIdentifierItem, nullptr );
+            GetViewShell()->GetViewFrame()->GetDispatcher()->ExecuteList(
+                    SID_FM_FILTER_NAVIGATOR, SfxCallMode::ASYNCHRON,
+                    { &aIdentifierItem });
         }   break;
     }
 }
@@ -872,7 +874,7 @@ void FmFormShell::GetState(SfxItemSet &rSet)
                     rSet.Put( SfxVisibilityItem( nWhich, false ) );
                     break;
                 }
-                // NO break!
+                SAL_FALLTHROUGH;
 
             case SID_FM_SCROLLBAR:
             case SID_FM_IMAGECONTROL:
@@ -959,7 +961,7 @@ void FmFormShell::GetState(SfxItemSet &rSet)
                 // der Impl eventuell die Moeglichjkeit geben, ihre an der aktuellen MarkList ausgerichteten Objekte
                 // auf den neuesten Stand zu bringen
                 if (GetImpl()->IsSelectionUpdatePending())
-                    GetImpl()->ForceUpdateSelection(false);
+                    GetImpl()->ForceUpdateSelection();
 
                 if ( !m_pFormView || !m_bDesignMode || !GetImpl()->onlyControlsAreMarked() )
                     rSet.DisableItem( nWhich );
@@ -978,7 +980,7 @@ void FmFormShell::GetState(SfxItemSet &rSet)
                 // der Impl eventuell die Moeglichjkeit geben, ihre an der aktuellen MarkList ausgerichteten Objekte
                 // auf den neuesten Stand zu bringen
                 if (GetImpl()->IsSelectionUpdatePending())
-                    GetImpl()->ForceUpdateSelection(false);
+                    GetImpl()->ForceUpdateSelection();
 
                 if ( !m_pFormView || !m_bDesignMode || !GetImpl()->getCurrentForm().is() )
                     rSet.DisableItem( nWhich );
@@ -992,7 +994,7 @@ void FmFormShell::GetState(SfxItemSet &rSet)
                 // der Impl eventuell die Moeglichjkeit geben, ihre an der aktuellen MarkList ausgerichteten Objekte
                 // auf den neuesten Stand zu bringen
                 if (GetImpl()->IsSelectionUpdatePending())
-                    GetImpl()->ForceUpdateSelection(false);
+                    GetImpl()->ForceUpdateSelection();
 
                 if (!m_pFormView || !m_bDesignMode || !GetImpl()->getCurrentForm().is() )
                     rSet.DisableItem( nWhich );

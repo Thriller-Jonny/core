@@ -56,10 +56,10 @@ public:
     bool ImplGetPropertyValue( const sal_Unicode* pString );
     bool ImplGetPropertyValue( const OUString& rString ) { return ImplGetPropertyValue(rString.getStr()); }
 
-    sal_Int32 ImplGetInt32PropertyValue( const sal_Unicode* pStr, sal_uInt32 nDef = 0 )
-    { return ImplGetPropertyValue( pStr ) ? *static_cast<sal_Int32 const *>(mAny.getValue()) : nDef; }
-    sal_Int32 ImplGetInt32PropertyValue( const OUString& rStr, sal_uInt32 nDef = 0 )
-    { return ImplGetInt32PropertyValue(rStr.getStr(), nDef); }
+    sal_Int32 ImplGetInt32PropertyValue( const sal_Unicode* pStr )
+    { return ImplGetPropertyValue( pStr ) ? *static_cast<sal_Int32 const *>(mAny.getValue()) : 0; }
+    sal_Int32 ImplGetInt32PropertyValue( const OUString& rStr )
+    { return ImplGetInt32PropertyValue(rStr.getStr()); }
 
     const css::uno::Reference< css::drawing::XShape >&    GetShapeRef() const     { return mXShape; }
     const css::uno::Any&       GetUsrAny() const       { return mAny; }
@@ -87,8 +87,6 @@ public:
     bool                GetOOXML() const { return mbOOXML;}
     void                SetOOXML(bool bOOXML);
 };
-
-
 
 
 // fractions of the Draw PPTWriter
@@ -142,13 +140,11 @@ protected:
     bool                ImplInitPageValues();
 
     void                ImplWritePage(
-                            EscherSolverContainer& rSolver,
-                            ImplEESdrPageType ePageType,
-                            bool bBackGround = false );
+                            EscherSolverContainer& rSolver );
 
     sal_uInt32          ImplWriteShape( ImplEESdrObject& rObj,
                             EscherSolverContainer& rSolver,
-                            ImplEESdrPageType ePageType, const bool bOOxmlExport = false );  // returns ShapeID
+                            const bool bOOxmlExport = false );  // returns ShapeID
 
     static void         ImplFlipBoundingBox( ImplEESdrObject& rObj, EscherPropertyContainer& rPropOpt );
     void                ImplWriteAdditionalText(
@@ -187,7 +183,6 @@ public:
     void                ImplExitPage();
     void                ImplFlushSolverContainer();
 };
-
 
 
 #endif // INCLUDED_FILTER_SOURCE_MSFILTER_ESCHESDO_HXX

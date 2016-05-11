@@ -22,7 +22,6 @@
 #include <outact.hxx>
 
 
-
 #define ImplSetUnderlineMode()                                  \
                                                                 \
     sal_uInt32 nMode = ImplGetUI16();                               \
@@ -35,7 +34,6 @@
         default: pElement->eUnderlineMode = UM_OFF; break;      \
     }                                                           \
     pElement->nUnderlineColor = ImplGetBitmapColor();
-
 
 
 void CGM::ImplDoClass6()
@@ -198,7 +196,6 @@ void CGM::ImplDoClass6()
 };
 
 
-
 void CGM::ImplDoClass8()
 {
     switch ( mnElementID )
@@ -217,25 +214,23 @@ void CGM::ImplDoClass8()
 };
 
 
-
 void CGM::ImplDoClass9()
 {
     switch ( mnElementID )
     {
-        case 0x01 : /*Pixel Array */break;                  // NS
-        case 0x02 : /*Create Bitmap */break;                    // NS
-        case 0x03 : /*Delete Bitmap */break;                    // NS
-        case 0x04 : /*Select Drawing Bitmap */break;            // NS
-        case 0x05 : /*Display Bitmap */break;               // NS
+        case 0x01 : /*Pixel Array */break;                    // NS
+        case 0x02 : /*Create Bitmap */break;                  // NS
+        case 0x03 : /*Delete Bitmap */break;                  // NS
+        case 0x04 : /*Select Drawing Bitmap */break;          // NS
+        case 0x05 : /*Display Bitmap */break;                 // NS
         case 0x06 : /*Drawing Mode */break;
-        case 0x07 : /*Mapped Bitmap ForeGrnd Color */break; // NS
-        case 0x08 : /*Fill Bitmap */break;                  // NS
-        case 0x09 : /*Two Operand BitBlt */break;           // NS
-        case 0x0a : /*Three Operand BitBlt */break;         // NS
+        case 0x07 : /*Mapped Bitmap ForeGround Color */break; // NS
+        case 0x08 : /*Fill Bitmap */break;                    // NS
+        case 0x09 : /*Two Operand BitBlt */break;             // NS
+        case 0x0a : /*Three Operand BitBlt */break;           // NS
         default: break;
     }
 };
-
 
 
 void CGM::ImplDoClass15()
@@ -248,7 +243,6 @@ void CGM::ImplDoClass15()
         default: break;
     }
 };
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -26,7 +26,6 @@
 #include <svx/svxdllapi.h>
 
 
-
 /** A list box string item which stores its text and font. */
 class SAL_WARN_UNUSED SvLBoxFontString : public SvLBoxString
 {
@@ -37,8 +36,6 @@ private:
 public:
                                 SvLBoxFontString();
                                 SvLBoxFontString(
-                                    SvTreeListEntry* pEntry,
-                                    sal_uInt16 nFlags,
                                     const OUString& rString,
                                     const vcl::Font& rFont,
                                     const Color* pColor = nullptr );
@@ -54,8 +51,6 @@ public:
     virtual void Paint(const Point& rPos, SvTreeListBox& rOutDev, vcl::RenderContext& rRenderContext,
                        const SvViewDataEntry* pView, const SvTreeListEntry& rEntry) override;
 };
-
-
 
 
 /** A list box supporting formatted string entries. */
@@ -77,8 +72,8 @@ public:
     void                        InsertFontEntry(
                                     const OUString& rString, const vcl::Font& rFont, const Color* pColor = nullptr );
 
-    /** Selects/deselects an entry specified by its position in the list box. */
-    void                        SelectEntryPos( sal_uLong nPos, bool bSelect = true );
+    /** Selects an entry specified by its position in the list box. */
+    void                        SelectEntryPos( sal_uLong nPos );
     /** Removes a selection. */
     void                        SetNoSelection();
 

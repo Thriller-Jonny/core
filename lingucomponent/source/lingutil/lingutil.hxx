@@ -41,14 +41,7 @@ struct lt_rtl_OUString
     }
 };
 
-inline bool operator == ( const css::lang::Locale &rL1, const css::lang::Locale &rL2 )
-{
-    return  rL1.Language ==  rL2.Language   &&
-            rL1.Country  ==  rL2.Country    &&
-            rL1.Variant  ==  rL2.Variant;
-}
-
-#if defined(WNT)
+#if defined(_WIN32)
 
 // to be use to get a path name with long path prefix
 // under Windows for Hunspell, Hyphen and MyThes libraries

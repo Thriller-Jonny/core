@@ -37,13 +37,13 @@ public:
 
     inline sal_uInt16       GetMode() const     { return nMode; }
     inline sal_Int32        GetFStart() const   { return nFStart; }
-    inline sal_uInt16       GetCatSel() const   { return nCatSel; }
-    inline sal_uInt16       GetFuncSel() const  { return nFuncSel; }
+    inline sal_Int32        GetCatSel() const   { return nCatSel; }
+    inline sal_Int32        GetFuncSel() const  { return nFuncSel; }
     inline sal_uInt16       GetOffset() const   { return nOffset; }
     inline sal_uInt16       GetEdFocus() const  { return nEdFocus; }
     inline const OUString&  GetUndoStr() const  { return aUndoStr; }
     inline bool             GetMatrixFlag()const{ return bMatrix;}
-    inline OString     GetUniqueId()const  { return aUniqueId;}
+    const OString&          GetUniqueId()const  { return aUniqueId;}
     inline const Selection& GetSelection()const { return aSelection;}
 
     inline void             SetMode( sal_uInt16 nNew )                  { nMode = nNew; }
@@ -63,8 +63,8 @@ protected:
 private:
     sal_uInt16          nMode;              // enum ScFormulaDlgMode
     sal_Int32           nFStart;
-    sal_uInt16          nCatSel;
-    sal_uInt16          nFuncSel;
+    sal_Int32           nCatSel;
+    sal_Int32           nFuncSel;
     sal_uInt16          nOffset;
     sal_uInt16          nEdFocus;
     OUString            aUndoStr;

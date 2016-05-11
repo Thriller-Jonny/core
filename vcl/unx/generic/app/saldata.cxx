@@ -48,7 +48,11 @@
 #include "unx/sm.hxx"
 #include "unx/i18n_im.hxx"
 #include "unx/i18n_xkb.hxx"
-#include "unx/x11/x11display.hxx"
+
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
+#include <X11/Xproto.h>
+
 #include "salinst.hxx"
 
 #include <osl/signal.h>
@@ -105,8 +109,8 @@ static int XIOErrorHdl( Display * )
 
 }
 
-static const struct timeval noyield__ = { 0, 0 };
-static const struct timeval yield__   = { 0, 10000 };
+static const struct timeval noyield_ = { 0, 0 };
+static const struct timeval yield_   = { 0, 10000 };
 
 static const char* XRequest[] = {
     // see /usr/lib/X11/XErrorDB, /usr/openwin/lib/XErrorDB ...
@@ -372,6 +376,58 @@ SalXLib::~SalXLib()
     // close 'wakeup' pipe.
     close (m_pTimeoutFDS[0]);
     close (m_pTimeoutFDS[1]);
+}
+
+static Display *OpenX11Display(OString& rDisplay)
+{
+    /*
+     * open connection to X11 Display
+     * try in this order:
+     *  o  -display command line parameter,
+     *  o  $DISPLAY environment variable
+     *  o  default display
+     */
+
+    Display *pDisp = nullptr;
+
+    // is there a -display command line parameter?
+
+    sal_uInt32 nParams = osl_getCommandArgCount();
+    OUString aParam;
+    for (sal_uInt32 i=0; i<nParams; i++)
+    {
+        osl_getCommandArg(i, &aParam.pData);
+        if ( aParam == "-display" )
+        {
+            osl_getCommandArg(i+1, &aParam.pData);
+            rDisplay = OUStringToOString(
+                   aParam, osl_getThreadTextEncoding());
+
+            if ((pDisp = XOpenDisplay(rDisplay.getStr()))!=nullptr)
+            {
+                /*
+                 * if a -display switch was used, we need
+                 * to set the environment accordingly since
+                 * the clipboard build another connection
+                 * to the xserver using $DISPLAY
+                 */
+                OUString envVar("DISPLAY");
+                osl_setEnvironment(envVar.pData, aParam.pData);
+            }
+            break;
+        }
+    }
+
+    if (!pDisp && rDisplay.isEmpty())
+    {
+        // Open $DISPLAY or default...
+        char *pDisplay = getenv("DISPLAY");
+        if (pDisplay != nullptr)
+            rDisplay = OString(pDisplay);
+        pDisp  = XOpenDisplay(pDisplay);
+    }
+
+    return pDisp;
 }
 
 void SalXLib::Init()
@@ -642,7 +698,7 @@ SalXLib::Yield( bool bWait, bool bHandleAllCurrentEvents )
     fd_set   ExceptionFDS = aExceptionFDS_;
     int      nFound       = 0;
 
-    timeval  Timeout      = noyield__;
+    timeval  Timeout      = noyield_;
     timeval *pTimeout     = &Timeout;
 
     bool bHandledEvent = false;
@@ -655,10 +711,10 @@ SalXLib::Yield( bool bWait, bool bHandleAllCurrentEvents )
             // determine remaining timeout.
             gettimeofday (&Timeout, nullptr);
             Timeout = m_aTimeout - Timeout;
-            if (yield__ >= Timeout)
+            if (yield_ >= Timeout)
             {
                 // guard against micro timeout.
-                Timeout = yield__;
+                Timeout = yield_;
             }
             pTimeout = &Timeout;
         }

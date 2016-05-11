@@ -33,7 +33,6 @@
 #include "model/SlsPageDescriptor.hxx"
 
 #include <com/sun/star/drawing/framework/XPane.hpp>
-#include <com/sun/star/lang/DisposedException.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
 
 #include <toolkit/helper/vclunohelper.hxx>
@@ -49,8 +48,6 @@ using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::drawing::framework;
 
 using ::com::sun::star::awt::XWindow;
-using ::com::sun::star::rendering::XCanvas;
-using ::com::sun::star::lang::DisposedException;
 
 namespace sd { namespace framework {
 
@@ -95,11 +92,8 @@ uno::Any SAL_CALL ViewShellWrapper::queryInterface( const uno::Type & rType ) th
     if( mpSlideSorterViewShell &&
         rType == cppu::UnoType<view::XSelectionSupplier>::get() )
     {
-        uno::Any aAny;
         uno::Reference<view::XSelectionSupplier> xSupplier( this );
-        aAny <<= xSupplier;
-
-        return aAny;
+        return Any(xSupplier);
     }
     else
         return ViewShellWrapperInterfaceBase::queryInterface( rType );

@@ -19,8 +19,6 @@
 
 #include "lotattr.hxx"
 
-#include <boost/bind.hpp>
-
 #include <editeng/boxitem.hxx>
 #include <editeng/brushitem.hxx>
 #include <editeng/justifyitem.hxx>
@@ -75,8 +73,8 @@ LotAttrCache::LotAttrCache (LOTUS_ROOT* pLotRoot)
 
 LotAttrCache::~LotAttrCache()
 {
-    for( sal_uInt16 nCnt = 0 ; nCnt < 6 ; nCnt++ )
-        delete ppColorItems[ nCnt ];
+    for(SvxColorItem* p : ppColorItems)
+        delete p;
 
     delete pBlack;
     delete pWhite;
@@ -174,7 +172,7 @@ void LotAttrCache::LotusToScBorderLine( sal_uInt8 nLine, ::editeng::SvxBorderLin
 const SvxColorItem& LotAttrCache::GetColorItem( const sal_uInt8 nLotIndex ) const
 {
     OSL_ENSURE( nLotIndex > 0 && nLotIndex < 7,
-		"-LotAttrCache::GetColorItem(): caller hast to check index!" );
+        "-LotAttrCache::GetColorItem(): caller hast to check index!" );
 
     return *ppColorItems[ nLotIndex - 1 ];
 }
@@ -182,7 +180,7 @@ const SvxColorItem& LotAttrCache::GetColorItem( const sal_uInt8 nLotIndex ) cons
 const Color& LotAttrCache::GetColor( const sal_uInt8 nLotIndex ) const
 {
     // color <-> index fits background, but not for fonts (0 <-> 7)!
-	OSL_ENSURE( nLotIndex < 8, "*LotAttrCache::GetColor(): Index > 7, caller hast to check index!" );
+    OSL_ENSURE( nLotIndex < 8, "*LotAttrCache::GetColor(): Index > 7, caller hast to check index!" );
 
     return pColTab[ nLotIndex ];
 }

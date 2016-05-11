@@ -114,7 +114,7 @@ void MenuButton::MouseButtonDown( const MouseEvent& rMEvt )
         {
             if ( !mpMenuTimer )
             {
-                mpMenuTimer = new Timer;
+                mpMenuTimer = new Timer("MenuTimer");
                 mpMenuTimer->SetTimeoutHdl( LINK( this, MenuButton, ImplMenuTimeoutHdl ) );
             }
 
@@ -158,12 +158,6 @@ void MenuButton::Activate()
 void MenuButton::Select()
 {
     maSelectHdl.Call( this );
-}
-
-void MenuButton::SetMenuMode( sal_uInt16 nMode )
-{
-    // FIXME: It's better to not inline this for 5.1; in 6.0 we can make it inline, however
-    mnMenuMode = nMode;
 }
 
 void MenuButton::SetPopupMenu( PopupMenu* pNewMenu )

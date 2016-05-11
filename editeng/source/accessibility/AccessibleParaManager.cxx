@@ -18,8 +18,6 @@
  */
 
 
-
-
 // Global header
 
 
@@ -30,9 +28,7 @@
 #include <com/sun/star/accessibility/AccessibleStateType.hpp>
 
 
-
 // Project-local header
-
 
 
 #include <editeng/unoedhlp.hxx>
@@ -44,7 +40,6 @@
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::accessibility;
-
 
 
 namespace accessibility
@@ -100,22 +95,21 @@ namespace accessibility
     }
 
     void AccessibleParaManager::FireEvent( sal_Int32 nPara,
-                                           const sal_Int16 nEventId,
-                                           const uno::Any& rNewValue,
-                                           const uno::Any& rOldValue ) const
+                                           const sal_Int16 nEventId ) const
     {
         DBG_ASSERT( 0 <= nPara && maChildren.size() > static_cast<size_t>(nPara),
                 "AccessibleParaManager::FireEvent: invalid index" );
 
         if( 0 <= nPara && maChildren.size() > static_cast<size_t>(nPara) )
         {
-            WeakPara::HardRefType maChild( GetChild( nPara ).first.get() );
-            if( maChild.is() )
-                maChild->FireEvent( nEventId, rNewValue, rOldValue );
+            auto aChild( GetChild( nPara ).first.get() );
+            if( aChild.is() )
+                aChild->FireEvent( nEventId );
         }
     }
 
-    bool AccessibleParaManager::IsReferencable( WeakPara::HardRefType aChild )
+    bool AccessibleParaManager::IsReferencable(
+        rtl::Reference<AccessibleEditableTextPara> const & aChild)
     {
         return aChild.is();
     }
@@ -162,26 +156,20 @@ namespace accessibility
         if( 0 <= nParagraphIndex && maChildren.size() > static_cast<size_t>(nParagraphIndex) )
         {
             // retrieve hard reference from weak one
-            WeakPara::HardRefType aChild( GetChild( nParagraphIndex ).first.get() );
+            auto aChild( GetChild( nParagraphIndex ).first.get() );
 
             if( !IsReferencable( nParagraphIndex ) )
             {
                 // there is no hard reference available, create object then
                 // #i27138#
-                AccessibleEditableTextPara* pChild = new AccessibleEditableTextPara( xFrontEnd, this );
-                uno::Reference< XAccessible > xChild( static_cast< ::cppu::OWeakObject* > (pChild), uno::UNO_QUERY );
-
-                if( !xChild.is() )
-                    throw uno::RuntimeException("Child creation failed", xFrontEnd);
-
-                aChild = WeakPara::HardRefType( xChild, pChild );
+                aChild = new AccessibleEditableTextPara(xFrontEnd, this);
 
                 InitChild( *aChild, rEditSource, nChild, nParagraphIndex );
 
-                maChildren[ nParagraphIndex ] = WeakChild( aChild, pChild->getBounds() );
+                maChildren[ nParagraphIndex ] = WeakChild( aChild, aChild->getBounds() );
             }
 
-            return Child( aChild.getRef(), GetChild( nParagraphIndex ).second );
+            return Child( aChild.get(), GetChild( nParagraphIndex ).second );
         }
         else
         {
@@ -330,7 +318,6 @@ namespace accessibility
                     nEndPara >= nStartPara, "AccessibleParaManager::FireEvent: invalid index" );
 
 
-
         if( 0 <= nStartPara && 0 <= nEndPara &&
                 maChildren.size() > static_cast<size_t>(nStartPara) &&
                 maChildren.size() >= static_cast<size_t>(nEndPara) &&
@@ -383,14 +370,13 @@ namespace accessibility
 
     void AccessibleParaManager::ShutdownPara( const WeakChild& rChild )
     {
-        WeakPara::HardRefType aChild( rChild.first.get() );
+        auto aChild( rChild.first.get() );
 
         if( IsReferencable( aChild ) )
             aChild->SetEditSource( nullptr );
     }
 
 }
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -48,30 +48,28 @@ class SelectorListBox : public ListBox
 
         virtual void Select() override;
         virtual bool Notify( NotifyEvent& rNEvt ) override;
-        virtual ::com::sun::star::uno::Reference< ::com::sun::star::accessibility::XAccessible > CreateAccessible() override;
+        virtual css::uno::Reference< css::accessibility::XAccessible > CreateAccessible() override;
 
         void ReleaseFocus_Impl();
 
-        void SetChartController( const ::com::sun::star::uno::Reference< ::com::sun::star::frame::XController >& xChartController );
+        void SetChartController( const css::uno::Reference< css::frame::XController >& xChartController );
         void UpdateChartElementsListAndSelection();
 
     private:
-        ::com::sun::star::uno::WeakReference<
-            ::com::sun::star::frame::XController >   m_xChartController;
+        css::uno::WeakReference< css::frame::XController >   m_xChartController;
 
         ::std::vector< ListBoxEntryData > m_aEntries;
 
         bool m_bReleaseFocus;
 };
 
-typedef ::cppu::ImplHelper1 < ::com::sun::star::lang::XServiceInfo> ElementSelectorToolbarController_BASE;
+typedef ::cppu::ImplHelper1 < css::lang::XServiceInfo> ElementSelectorToolbarController_BASE;
 
 class ElementSelectorToolbarController : public ::svt::ToolboxController
-                                                , ElementSelectorToolbarController_BASE
+                                                , public ElementSelectorToolbarController_BASE
 {
 public:
-    explicit ElementSelectorToolbarController( ::com::sun::star::uno::Reference<
-               ::com::sun::star::uno::XComponentContext > const & xContext );
+    explicit ElementSelectorToolbarController();
     virtual ~ElementSelectorToolbarController();
 
     // XServiceInfo
@@ -86,23 +84,18 @@ public:
     static css::uno::Sequence< OUString > getSupportedServiceNames_Static();
 
     // XInterface
-     virtual ::com::sun::star::uno::Any SAL_CALL queryInterface( const ::com::sun::star::uno::Type& aType ) throw (::com::sun::star::uno::RuntimeException, std::exception) override;
+     virtual css::uno::Any SAL_CALL queryInterface( const css::uno::Type& aType ) throw (css::uno::RuntimeException, std::exception) override;
      virtual void SAL_CALL acquire() throw () override;
      virtual void SAL_CALL release() throw () override;
 
      // XInitialization
-     virtual void SAL_CALL initialize( const ::com::sun::star::uno::Sequence< ::com::sun::star::uno::Any >& aArguments ) throw (::com::sun::star::uno::Exception, ::com::sun::star::uno::RuntimeException, std::exception) override;
+     virtual void SAL_CALL initialize( const css::uno::Sequence< css::uno::Any >& aArguments ) throw (css::uno::Exception, css::uno::RuntimeException, std::exception) override;
      // XStatusListener
-     virtual void SAL_CALL statusChanged( const ::com::sun::star::frame::FeatureStateEvent& Event ) throw ( ::com::sun::star::uno::RuntimeException, std::exception ) override;
+     virtual void SAL_CALL statusChanged( const css::frame::FeatureStateEvent& Event ) throw ( css::uno::RuntimeException, std::exception ) override;
      // XToolbarController
-     virtual ::com::sun::star::uno::Reference< ::com::sun::star::awt::XWindow > SAL_CALL createItemWindow( const ::com::sun::star::uno::Reference< ::com::sun::star::awt::XWindow >& Parent ) throw (::com::sun::star::uno::RuntimeException, std::exception) override;
+     virtual css::uno::Reference< css::awt::XWindow > SAL_CALL createItemWindow( const css::uno::Reference< css::awt::XWindow >& Parent ) throw (css::uno::RuntimeException, std::exception) override;
 
 private:
-    //no default constructor
-    ElementSelectorToolbarController(){}
-
-private:
-    ::com::sun::star::uno::Reference< ::com::sun::star::uno::XComponentContext>        m_xCC;
     VclPtr< SelectorListBox > m_apSelectorListBox;
 };
 

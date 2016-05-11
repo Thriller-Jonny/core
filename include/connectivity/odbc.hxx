@@ -21,7 +21,7 @@
 #ifndef INCLUDED_CONNECTIVITY_SOURCE_INC_ODBC_OFUNCTIONDEFS_HXX
 #define INCLUDED_CONNECTIVITY_SOURCE_INC_ODBC_OFUNCTIONDEFS_HXX
 
-#if defined(WNT)
+#if defined(_WIN32)
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -61,7 +61,6 @@
 #endif
 
 
-
 #ifdef UNX
 
 #ifndef ODBC_UNX
@@ -78,7 +77,6 @@
 #define SDB_ODBC_CHAR UCHAR
 
 #endif // UNX
-
 
 
 #ifndef SQL_WCHAR

@@ -27,7 +27,7 @@
 #if defined _MSC_VER
 #pragma warning(pop)
 #endif
-#include "../misc/WinClip.hxx"
+#include "WinClip.hxx"
 
 #define AUTO_INIT                 TRUE
 
@@ -43,7 +43,7 @@ public:
     {
     public:
         HRESULT m_hr;
-        CStgTransferException( HRESULT hr ) : m_hr( hr ) {};
+        explicit CStgTransferException( HRESULT hr ) : m_hr( hr ) {};
     };
 
 public:
@@ -95,7 +95,7 @@ public:
 
     // ctor
 
-    CRawHGlobalPtr( HGLOBAL hGlob ) :
+    explicit CRawHGlobalPtr( HGLOBAL hGlob ) :
         m_hGlob( hGlob ),
         m_bIsLocked( FALSE ),
         m_pGlobMem( NULL )
@@ -104,7 +104,7 @@ public:
 
     // ctor
 
-    CRawHGlobalPtr( const CStgTransferHelper& theHGlobalHelper ) :
+    explicit CRawHGlobalPtr( const CStgTransferHelper& theHGlobalHelper ) :
         m_hGlob( theHGlobalHelper.getHGlobal( ) ),
         m_bIsLocked( FALSE ),
         m_pGlobMem( NULL )

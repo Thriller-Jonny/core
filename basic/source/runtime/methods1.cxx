@@ -284,7 +284,7 @@ RTLFUNC(CDec)
     (void)pBasic;
     (void)bWrite;
 
-#ifdef WNT
+#ifdef _WIN32
     SbxDecimal* pDec = NULL;
     if ( rPar.Count() == 2 )
     {
@@ -525,9 +525,9 @@ RTLFUNC(GetGUIType)
     else
     {
         // 17.7.2000 Make simple solution for testtool / fat office
-#if defined (WNT)
+#if   defined(_WIN32)
         rPar.Get(0)->PutInteger( 1 );
-#elif defined UNX
+#elif defined(UNX)
         rPar.Get(0)->PutInteger( 4 );
 #else
         rPar.Get(0)->PutInteger( -1 );
@@ -896,7 +896,7 @@ RTLFUNC(DimArray)
 /*
  * FindObject and FindPropertyObject make it possible to
  * address objects and properties of the type Object with
- * their name as string-pararmeters at the runtime.
+ * their name as string-parameters at the runtime.
  *
  * Example:
  * MyObj.Prop1.Bla = 5
@@ -982,7 +982,6 @@ RTLFUNC(FindPropertyObject)
     SbxVariableRef refVar = rPar.Get(0);
     refVar->PutObject( pFindObj );
 }
-
 
 
 static bool lcl_WriteSbxVariable( const SbxVariable& rVar, SvStream* pStrm,
@@ -2539,7 +2538,7 @@ RTLFUNC(FormatDateTime)
             }
 
             LanguageType eLangType = Application::GetSettings().GetLanguageTag().getLanguageType();
-            sal_uIntPtr nIndex = pFormatter->GetFormatIndex( NF_DATE_SYSTEM_LONG, eLangType );
+            const sal_uInt32 nIndex = pFormatter->GetFormatIndex( NF_DATE_SYSTEM_LONG, eLangType );
             Color* pCol;
             pFormatter->GetOutputString( dDate, nIndex, aRetStr, &pCol );
 

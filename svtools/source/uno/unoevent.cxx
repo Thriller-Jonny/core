@@ -31,23 +31,210 @@ using css::container::NoSuchElementException;
 using css::container::XNameReplace;
 using css::lang::IllegalArgumentException;
 using css::lang::WrappedTargetException;
-using css::lang::XServiceInfo;
 using css::beans::PropertyValue;
 
 
-const sal_Char sAPI_ServiceName[] = "com.sun.star.container.XNameReplace";
-const sal_Char sAPI_SvDetachedEventDescriptor[] = "SvDetachedEventDescriptor";
+static const char sAPI_ServiceName[] = "com.sun.star.container.XNameReplace";
+static const char sAPI_SvDetachedEventDescriptor[] = "SvDetachedEventDescriptor";
+static const char sEventType[] = "EventType";
+static const char sMacroName[] = "MacroName";
+static const char sLibrary[] = "Library";
+static const char sStarBasic[] = "StarBasic";
+static const char sJavaScript[] = "JavaScript";
+static const char sScript[] = "Script";
+static const char sNone[] = "None";
 
+namespace {
+
+void getAnyFromMacro(Any& rAny, const SvxMacro& rMacro)
+{
+    bool bRetValueOK = false;   // do we have a ret value?
+
+    if (rMacro.HasMacro())
+    {
+        switch (rMacro.GetScriptType())
+        {
+            case STARBASIC:
+            {
+                // create sequence
+                Sequence<PropertyValue> aSequence(3);
+                Any aTmp;
+
+                // create type
+                PropertyValue aTypeValue;
+                aTypeValue.Name = sEventType;
+                aTmp <<= OUString(sStarBasic);
+                aTypeValue.Value = aTmp;
+                aSequence[0] = aTypeValue;
+
+                // macro name
+                PropertyValue aNameValue;
+                aNameValue.Name = sMacroName;
+                const OUString& sNameTmp(rMacro.GetMacName());
+                aTmp <<= sNameTmp;
+                aNameValue.Value = aTmp;
+                aSequence[1] = aNameValue;
+
+                // library name
+                PropertyValue aLibValue;
+                aLibValue.Name = sLibrary;
+                const OUString& sLibTmp(rMacro.GetLibName());
+                aTmp <<= sLibTmp;
+                aLibValue.Value = aTmp;
+                aSequence[2] = aLibValue;
+
+                rAny <<= aSequence;
+                bRetValueOK = true;
+                break;
+            }
+            case EXTENDED_STYPE:
+            {
+                // create sequence
+                Sequence<PropertyValue> aSequence(2);
+                Any aTmp;
+
+                // create type
+                PropertyValue aTypeValue;
+                aTypeValue.Name = sEventType;
+                aTmp <<= OUString(sScript);
+                aTypeValue.Value = aTmp;
+                aSequence[0] = aTypeValue;
+
+                // macro name
+                PropertyValue aNameValue;
+                aNameValue.Name = sScript;
+                const OUString& sNameTmp(rMacro.GetMacName());
+                aTmp <<= sNameTmp;
+                aNameValue.Value = aTmp;
+                aSequence[1] = aNameValue;
+
+                rAny <<= aSequence;
+                bRetValueOK = true;
+                break;
+            }
+            case JAVASCRIPT:
+            default:
+                OSL_FAIL("not implemented");
+        }
+    }
+    // else: bRetValueOK not set
+
+    // if we don't have a return value, make an empty one
+    if (! bRetValueOK)
+    {
+        // create "None" macro
+        Sequence<PropertyValue> aSequence(1);
+
+        PropertyValue aKindValue;
+        aKindValue.Name = sEventType;
+        Any aTmp;
+        aTmp <<= OUString(sNone);
+        aKindValue.Value = aTmp;
+        aSequence[0] = aKindValue;
+
+        rAny <<= aSequence;
+    }
+}
+
+void getMacroFromAny(
+    SvxMacro& rMacro,
+    const Any& rAny)
+        throw ( IllegalArgumentException )
+{
+    // get sequence
+    Sequence<PropertyValue> aSequence;
+    rAny >>= aSequence;
+
+    // process ...
+    bool bTypeOK = false;
+    bool bNone = false;     // true if EventType=="None"
+    enum ScriptType eType = EXTENDED_STYPE;
+    OUString sScriptVal;
+    OUString sMacroVal;
+    OUString sLibVal;
+    sal_Int32 nCount = aSequence.getLength();
+    for (sal_Int32 i = 0; i < nCount; i++)
+    {
+        PropertyValue& aValue = aSequence[i];
+        if (aValue.Name == sEventType)
+        {
+            OUString sTmp;
+            aValue.Value >>= sTmp;
+            if (sTmp == sStarBasic)
+            {
+                eType = STARBASIC;
+                bTypeOK = true;
+            }
+            else if (sTmp == sJavaScript)
+            {
+                eType = JAVASCRIPT;
+                bTypeOK = true;
+            }
+            else if (sTmp == sScript)
+            {
+                eType = EXTENDED_STYPE;
+                bTypeOK = true;
+            }
+            else if (sTmp == sNone)
+            {
+                bNone = true;
+                bTypeOK = true;
+            }
+            // else: unknown script type
+        }
+        else if (aValue.Name == sMacroName)
+        {
+            aValue.Value >>= sMacroVal;
+        }
+        else if (aValue.Name == sLibrary)
+        {
+            aValue.Value >>= sLibVal;
+        }
+        else if (aValue.Name == sScript)
+        {
+            aValue.Value >>= sScriptVal;
+        }
+        // else: unknown PropertyValue -> ignore
+    }
+
+    if (bTypeOK)
+    {
+        if (bNone)
+        {
+            // return empty macro
+            rMacro = SvxMacro( "", "" );
+        }
+        else
+        {
+            if (eType == STARBASIC)
+            {
+                // create macro and return
+                SvxMacro aMacro(sMacroVal, sLibVal, eType);
+                rMacro = aMacro;
+            }
+            else if (eType == EXTENDED_STYPE)
+            {
+                SvxMacro aMacro(sScriptVal, sScript);
+                rMacro = aMacro;
+            }
+            else
+            {
+                // we can't process type: abort
+                // TODO: JavaScript macros
+                throw IllegalArgumentException();
+            }
+        }
+    }
+    else
+    {
+        // no valid type: abort
+        throw IllegalArgumentException();
+    }
+}
+
+}
 
 SvBaseEventDescriptor::SvBaseEventDescriptor( const SvEventDescription* pSupportedMacroItems ) :
-        sEventType("EventType"),
-        sMacroName("MacroName"),
-        sLibrary("Library"),
-        sStarBasic("StarBasic"),
-        sJavaScript("JavaScript"),
-        sScript("Script"),
-        sNone("None"),
-        sServiceName(sAPI_ServiceName),
         mpSupportedMacroItems(pSupportedMacroItems),
         mnMacroItems(0)
 {
@@ -151,7 +338,7 @@ sal_Bool SvBaseEventDescriptor::supportsService(const OUString& rServiceName)
 Sequence<OUString> SvBaseEventDescriptor::getSupportedServiceNames()
     throw(RuntimeException, std::exception)
 {
-    Sequence<OUString> aSequence { sServiceName };
+    Sequence<OUString> aSequence { sAPI_ServiceName };
 
     return aSequence;
 }
@@ -175,195 +362,6 @@ sal_uInt16 SvBaseEventDescriptor::getMacroID(const OUString& rName) const
 {
     return mapNameToEventID(rName);
 }
-
-void SvBaseEventDescriptor::getAnyFromMacro(Any& rAny,
-                                       const SvxMacro& rMacro)
-{
-    bool bRetValueOK = false;   // do we have a ret value?
-
-    if (rMacro.HasMacro())
-    {
-        switch (rMacro.GetScriptType())
-        {
-            case STARBASIC:
-            {
-                // create sequence
-                Sequence<PropertyValue> aSequence(3);
-                Any aTmp;
-
-                // create type
-                PropertyValue aTypeValue;
-                aTypeValue.Name = sEventType;
-                aTmp <<= sStarBasic;
-                aTypeValue.Value = aTmp;
-                aSequence[0] = aTypeValue;
-
-                // macro name
-                PropertyValue aNameValue;
-                aNameValue.Name = sMacroName;
-                OUString sNameTmp(rMacro.GetMacName());
-                aTmp <<= sNameTmp;
-                aNameValue.Value = aTmp;
-                aSequence[1] = aNameValue;
-
-                // library name
-                PropertyValue aLibValue;
-                aLibValue.Name = sLibrary;
-                OUString sLibTmp(rMacro.GetLibName());
-                aTmp <<= sLibTmp;
-                aLibValue.Value = aTmp;
-                aSequence[2] = aLibValue;
-
-                rAny <<= aSequence;
-                bRetValueOK = true;
-                break;
-            }
-            case EXTENDED_STYPE:
-            {
-                // create sequence
-                Sequence<PropertyValue> aSequence(2);
-                Any aTmp;
-
-                // create type
-                PropertyValue aTypeValue;
-                aTypeValue.Name = sEventType;
-                aTmp <<= sScript;
-                aTypeValue.Value = aTmp;
-                aSequence[0] = aTypeValue;
-
-                // macro name
-                PropertyValue aNameValue;
-                aNameValue.Name = sScript;
-                OUString sNameTmp(rMacro.GetMacName());
-                aTmp <<= sNameTmp;
-                aNameValue.Value = aTmp;
-                aSequence[1] = aNameValue;
-
-                rAny <<= aSequence;
-                bRetValueOK = true;
-                break;
-            }
-            case JAVASCRIPT:
-            default:
-                OSL_FAIL("not implemented");
-        }
-    }
-    // else: bRetValueOK not set
-
-    // if we don't have a return value, make an empty one
-    if (! bRetValueOK)
-    {
-        // create "None" macro
-        Sequence<PropertyValue> aSequence(1);
-
-        PropertyValue aKindValue;
-        aKindValue.Name = sEventType;
-        Any aTmp;
-        aTmp <<= sNone;
-        aKindValue.Value = aTmp;
-        aSequence[0] = aKindValue;
-
-        rAny <<= aSequence;
-    }
-}
-
-
-void SvBaseEventDescriptor::getMacroFromAny(
-    SvxMacro& rMacro,
-    const Any& rAny)
-        throw ( IllegalArgumentException )
-{
-    // get sequence
-    Sequence<PropertyValue> aSequence;
-    rAny >>= aSequence;
-
-    // process ...
-    bool bTypeOK = false;
-    bool bNone = false;     // true if EventType=="None"
-    enum ScriptType eType = EXTENDED_STYPE;
-    OUString sScriptVal;
-    OUString sMacroVal;
-    OUString sLibVal;
-    sal_Int32 nCount = aSequence.getLength();
-    for (sal_Int32 i = 0; i < nCount; i++)
-    {
-        PropertyValue& aValue = aSequence[i];
-        if (aValue.Name.equals(sEventType))
-        {
-            OUString sTmp;
-            aValue.Value >>= sTmp;
-            if (sTmp.equals(sStarBasic))
-            {
-                eType = STARBASIC;
-                bTypeOK = true;
-            }
-            else if (sTmp.equals(sJavaScript))
-            {
-                eType = JAVASCRIPT;
-                bTypeOK = true;
-            }
-            else if (sTmp.equals(sScript))
-            {
-                eType = EXTENDED_STYPE;
-                bTypeOK = true;
-            }
-            else if (sTmp.equals(sNone))
-            {
-                bNone = true;
-                bTypeOK = true;
-            }
-            // else: unknown script type
-        }
-        else if (aValue.Name.equals(sMacroName))
-        {
-            aValue.Value >>= sMacroVal;
-        }
-        else if (aValue.Name.equals(sLibrary))
-        {
-            aValue.Value >>= sLibVal;
-        }
-        else if (aValue.Name.equals(sScript))
-        {
-            aValue.Value >>= sScriptVal;
-        }
-        // else: unknown PropertyValue -> ignore
-    }
-
-    if (bTypeOK)
-    {
-        if (bNone)
-        {
-            // return empty macro
-            rMacro = SvxMacro( "", "" );
-        }
-        else
-        {
-            if (eType == STARBASIC)
-            {
-                // create macro and return
-                SvxMacro aMacro(sMacroVal, sLibVal, eType);
-                rMacro = aMacro;
-            }
-            else if (eType == EXTENDED_STYPE)
-            {
-                SvxMacro aMacro(sScriptVal, sScript);
-                rMacro = aMacro;
-            }
-            else
-            {
-                // we can't process type: abort
-                // TODO: JavaScript macros
-                throw IllegalArgumentException();
-            }
-        }
-    }
-    else
-    {
-        // no valid type: abort
-        throw IllegalArgumentException();
-    }
-}
-
 
 SvEventDescriptor::SvEventDescriptor(
     XInterface& rParent,
@@ -548,7 +546,6 @@ void SvMacroTableEventDescriptor::copyMacrosIntoTable(
         }
     }
 }
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

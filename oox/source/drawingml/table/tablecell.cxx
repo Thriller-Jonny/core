@@ -25,11 +25,15 @@
 #include "oox/drawingml/theme.hxx"
 #include "oox/core/xmlfilterbase.hxx"
 #include "oox/helper/propertyset.hxx"
+#include <oox/token/namespaces.hxx>
+#include <oox/token/properties.hxx>
+#include <oox/token/tokens.hxx>
 #include <tools/color.hxx>
 #include <com/sun/star/container/XNameContainer.hpp>
 #include <com/sun/star/beans/XMultiPropertySet.hpp>
 #include <com/sun/star/table/XTable.hpp>
 #include <com/sun/star/table/XMergeableCellRange.hpp>
+#include <com/sun/star/table/BorderLineStyle.hpp>
 #include <com/sun/star/table/BorderLine2.hpp>
 #include <com/sun/star/drawing/LineStyle.hpp>
 #include <com/sun/star/drawing/TextVerticalAdjust.hpp>
@@ -70,7 +74,7 @@ void applyLineAttributes( const ::oox::core::XmlFilterBase& rFilterBase,
         sal_Int32 nPropId )
 {
     BorderLine2 aBorderLine;
-    if( rLineProperties.maLineFill.moFillType.differsFrom( XML_noFill ))
+    if ( rLineProperties.maLineFill.moFillType.differsFrom( XML_noFill ))
     {
         Color aColor = rLineProperties.maLineFill.getBestSolidColor();
         aBorderLine.Color = aColor.getColor( rFilterBase.getGraphicHelper() );
@@ -87,6 +91,45 @@ void applyLineAttributes( const ::oox::core::XmlFilterBase& rFilterBase,
         aBorderLine.InnerLineWidth = static_cast< sal_Int16 >( GetCoordinate( rLineProperties.moLineWidth.get( 0 ) ) / 4 );
         aBorderLine.LineWidth = static_cast< sal_Int16 >( GetCoordinate( rLineProperties.moLineWidth.get( 0 ) ) / 2 );
         aBorderLine.LineDistance = 0;
+    }
+
+    if ( rLineProperties.moPresetDash.has() )
+    {
+        switch ( rLineProperties.moPresetDash.get() )
+        {
+        case XML_dot:
+        case XML_sysDot:
+            aBorderLine.LineStyle = ::table::BorderLineStyle::DOTTED;
+            break;
+        case XML_dash:
+        case XML_lgDash:
+        case XML_sysDash:
+            aBorderLine.LineStyle = ::table::BorderLineStyle::DASHED;
+            break;
+        case XML_dashDot:
+        case XML_lgDashDot:
+        case XML_sysDashDot:
+            aBorderLine.LineStyle = ::table::BorderLineStyle::DASH_DOT;
+            break;
+        case XML_lgDashDotDot:
+        case XML_sysDashDotDot:
+            aBorderLine.LineStyle = ::table::BorderLineStyle::DASH_DOT_DOT;
+            break;
+        case XML_solid:
+            aBorderLine.LineStyle = ::table::BorderLineStyle::SOLID;
+            break;
+        default:
+            aBorderLine.LineStyle = ::table::BorderLineStyle::DASHED;
+            break;
+        }
+    }
+    else if ( !rLineProperties.maCustomDash.empty() )
+    {
+        aBorderLine.LineStyle = ::table::BorderLineStyle::DASHED;
+    }
+    else
+    {
+        aBorderLine.LineStyle = ::table::BorderLineStyle::NONE;
     }
 
     PropertySet aPropSet( rxPropSet );
@@ -148,8 +191,11 @@ void applyTableStylePart( const ::oox::core::XmlFilterBase& rFilterBase,
     aTextCharProps.maAsianFont = rTableStylePart.getAsianFont();
     aTextCharProps.maComplexFont = rTableStylePart.getComplexFont();
     aTextCharProps.maSymbolFont = rTableStylePart.getSymbolFont();
-    if (rTableStylePart.getTextColor().isUsed())
-        aTextCharProps.maCharColor = rTableStylePart.getTextColor();
+    if ( rTableStylePart.getTextColor().isUsed() )
+    {
+        aTextCharProps.maFillProperties.maFillColor = rTableStylePart.getTextColor();
+        aTextCharProps.maFillProperties.moFillType.set(XML_solidFill);
+    }
     if( rTableStylePart.getTextBoldStyle().is_initialized() )
         aTextCharProps.moBold = *rTableStylePart.getTextBoldStyle();
     if( rTableStylePart.getTextItalicStyle().is_initialized() )
@@ -177,9 +223,9 @@ void applyTableCellProperties( const Reference < css::table::XCell >& rxCell, co
     xPropSet->setPropertyValue( "TextVerticalAdjust", Any( eVA ) );
 }
 
-void TableCell::pushToXCell( const ::oox::core::XmlFilterBase& rFilterBase, ::oox::drawingml::TextListStylePtr pMasterTextListStyle,
+void TableCell::pushToXCell( const ::oox::core::XmlFilterBase& rFilterBase, const ::oox::drawingml::TextListStylePtr& pMasterTextListStyle,
     const css::uno::Reference < css::table::XCell >& rxCell, const TableProperties& rTableProperties,
-        const TableStyle& rTableStyle, sal_Int32 nColumn, sal_Int32 nMaxColumn, sal_Int32 nRow, sal_Int32 nMaxRow )
+    const TableStyle& rTableStyle, sal_Int32 nColumn, sal_Int32 nMaxColumn, sal_Int32 nRow, sal_Int32 nMaxRow )
 {
     TableStyle& rTable( const_cast< TableStyle& >( rTableStyle ) );
     TableProperties& rProperties( const_cast< TableProperties& >( rTableProperties ) );
@@ -189,9 +235,9 @@ void TableCell::pushToXCell( const ::oox::core::XmlFilterBase& rFilterBase, ::oo
 
     applyTableCellProperties( rxCell, *this );
     TextCharacterProperties aTextStyleProps;
-    xAt->gotoStart( sal_True );
+    xAt->gotoStart( true );
     Reference< text::XTextRange > xStart( xAt, UNO_QUERY );
-    xAt->gotoEnd( sal_True );
+    xAt->gotoEnd( true );
 
     Reference< XPropertySet > xPropSet( rxCell, UNO_QUERY_THROW );
     oox::drawingml::FillProperties aFillProperties;
@@ -408,6 +454,8 @@ void TableCell::pushToXCell( const ::oox::core::XmlFilterBase& rFilterBase, ::oo
         aFillProperties.maFillColor.setSrgbClr(aResult.GetRGBColor());
         aFillProperties.moFillType.set(XML_solidFill);
     }
+    if (!aFillProperties.moFillType.has())
+        aFillProperties.moFillType.set(XML_noFill);
 
     // TODO: phClr?
     aFillProperties.pushToPropMap( aPropMap, rFilterBase.getGraphicHelper() );

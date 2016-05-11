@@ -74,7 +74,7 @@ namespace
         return aTime;
     }
 
-    static css::util::Date lcl_getDate( double _nValue )
+    css::util::Date lcl_getDate( double _nValue )
     {
         Date aToolsDate((sal_uInt32)_nValue);
         css::util::Date aDate;
@@ -120,7 +120,7 @@ Any PropertyConversion::convertString( const css::uno::Type& _rExpectedType,
                 break;
             }
             bEnumAsInt = true;
-            // NO BREAK! handle it as enum
+            SAL_FALLTHROUGH;
         case TypeClass_ENUM:
         {
             sal_uInt16 nEnumValue(0);

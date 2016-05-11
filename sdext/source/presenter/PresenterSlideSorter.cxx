@@ -17,8 +17,8 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include "vcl/svapp.hxx"
-#include "vcl/settings.hxx"
+#include <vcl/svapp.hxx>
+#include <vcl/settings.hxx>
 
 #include "PresenterSlideSorter.hxx"
 #include "PresenterButton.hxx"
@@ -45,7 +45,6 @@
 #include <algorithm>
 #include <math.h>
 #include <boost/bind.hpp>
-#include <boost/noncopyable.hpp>
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
@@ -92,8 +91,7 @@ public:
     bool IsScrollBarNeeded (const sal_Int32 nSlideCount);
     geometry::RealPoint2D GetLocalPosition (const geometry::RealPoint2D& rWindowPoint) const;
     geometry::RealPoint2D GetWindowPosition(const geometry::RealPoint2D& rLocalPoint) const;
-    sal_Int32 GetColumn (const geometry::RealPoint2D& rLocalPoint,
-        const bool bReturnInvalidValue = false) const;
+    sal_Int32 GetColumn (const geometry::RealPoint2D& rLocalPoint) const;
     sal_Int32 GetRow (const geometry::RealPoint2D& rLocalPoint,
         const bool bReturnInvalidValue = false) const;
     sal_Int32 GetSlideIndexForPosition (const css::geometry::RealPoint2D& rPoint) const;
@@ -135,7 +133,6 @@ private:
 //==== PresenterSlideSorter::MouseOverManager =================================
 
 class PresenterSlideSorter::MouseOverManager
-    : ::boost::noncopyable
 {
 public:
     MouseOverManager (
@@ -144,6 +141,8 @@ public:
         const Reference<awt::XWindow>& rxInvalidateTarget,
         const std::shared_ptr<PresenterPaintManager>& rpPaintManager);
     ~MouseOverManager();
+    MouseOverManager(const MouseOverManager&) = delete;
+    MouseOverManager& operator=(const MouseOverManager&) = delete;
 
     void Paint (
         const sal_Int32 nSlideIndex,
@@ -293,7 +292,7 @@ PresenterSlideSorter::PresenterSlideSorter (
         mxWindow->addPaintListener(this);
         mxWindow->addMouseListener(this);
         mxWindow->addMouseMotionListener(this);
-        mxWindow->setVisible(sal_True);
+        mxWindow->setVisible(true);
 
         // Remember the current slide.
         mnCurrentSlideIndex = mxSlideShowController->getCurrentSlideIndex();
@@ -501,7 +500,7 @@ void SAL_CALL PresenterSlideSorter::windowPaint (const css::awt::PaintEvent& rEv
 
     Reference<rendering::XSpriteCanvas> xSpriteCanvas (mxCanvas, UNO_QUERY);
     if (xSpriteCanvas.is())
-        xSpriteCanvas->updateScreen(sal_False);
+        xSpriteCanvas->updateScreen(false);
 }
 
 //----- XMouseListener --------------------------------------------------------
@@ -679,7 +678,6 @@ Reference<drawing::XDrawPage> SAL_CALL PresenterSlideSorter::getCurrentPage()
     ThrowIfDisposed();
     return nullptr;
 }
-
 
 
 void PresenterSlideSorter::UpdateLayout()
@@ -1059,7 +1057,7 @@ void PresenterSlideSorter::Paint (const awt::Rectangle& rUpdateBox)
 
     Reference<rendering::XSpriteCanvas> xSpriteCanvas (mxCanvas, UNO_QUERY);
     if (xSpriteCanvas.is())
-        xSpriteCanvas->updateScreen(sal_False);
+        xSpriteCanvas->updateScreen(false);
 }
 
 void PresenterSlideSorter::SetHorizontalOffset (const double nXOffset)
@@ -1297,13 +1295,11 @@ geometry::RealPoint2D PresenterSlideSorter::Layout::GetWindowPosition(
 }
 
 sal_Int32 PresenterSlideSorter::Layout::GetColumn (
-    const css::geometry::RealPoint2D& rLocalPoint,
-    const bool bReturnInvalidValue) const
+    const css::geometry::RealPoint2D& rLocalPoint) const
 {
     const sal_Int32 nColumn(floor(
         (rLocalPoint.X + mnHorizontalGap/2.0) / (maPreviewSize.Width+mnHorizontalGap)));
-    if (bReturnInvalidValue
-        || (nColumn>=mnFirstVisibleColumn && nColumn<=mnLastVisibleColumn))
+    if (nColumn>=mnFirstVisibleColumn && nColumn<=mnLastVisibleColumn)
     {
         return nColumn;
     }

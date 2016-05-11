@@ -89,7 +89,6 @@ typedef struct tagMYITEM
 } MYITEM;
 
 
-
 static void addMenuItem( HMENU hMenu, UINT id, UINT iconId, const OUString& text, int& pos, int bOwnerdraw, const OUString& module )
 {
     MENUITEMINFOW mi;
@@ -132,7 +131,6 @@ static void addMenuItem( HMENU hMenu, UINT id, UINT iconId, const OUString& text
 
     InsertMenuItemW( hMenu, pos++, TRUE, &mi );
 }
-
 
 
 static HMENU createSystrayMenu( )
@@ -182,7 +180,7 @@ static HMENU createSystrayMenu( )
     };
 
     // insert the menu entries for launching the applications
-    for ( size_t i = 0; i < sizeof( aMenuItems ) / sizeof( aMenuItems[0] ); ++i )
+    for ( size_t i = 0; i < SAL_N_ELEMENTS(aMenuItems); ++i )
     {
         if ( !aModuleOptions.IsModuleInstalled( aMenuItems[i].eModuleIdentifier ) )
             // the complete application is not even installed
@@ -200,7 +198,6 @@ static HMENU createSystrayMenu( )
     }
 
 
-
     // insert the remaining menu entries
     addMenuItem( hMenu, IDM_TEMPLATE, ICON_TEMPLATE,
         pShutdownIcon->GetResString( STR_QUICKSTART_FROMTEMPLATE ), pos, true, "");
@@ -216,7 +213,6 @@ static HMENU createSystrayMenu( )
 
     return hMenu;
 }
-
 
 
 static void deleteSystrayMenu( HMENU hMenu )
@@ -243,7 +239,6 @@ static void deleteSystrayMenu( HMENU hMenu )
 }
 
 
-
 static void addTaskbarIcon( HWND hWnd )
 {
     OUString strTip;
@@ -266,7 +261,6 @@ static void addTaskbarIcon( HWND hWnd )
 
     Shell_NotifyIconW(NIM_ADD, &nid);
 }
-
 
 
 LRESULT CALLBACK listenerWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -311,8 +305,11 @@ LRESULT CALLBACK listenerWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
             switch( lParam )
             {
                 case WM_LBUTTONDBLCLK:
-                    PostMessage( aExecuterWindow, WM_COMMAND, IDM_TEMPLATE, (LPARAM)hWnd );
+                {
+                    BOOL const ret = PostMessage(aExecuterWindow, WM_COMMAND, IDM_TEMPLATE, (LPARAM)hWnd);
+                    SAL_WARN_IF(0 == ret, "sfx.appl", "ERROR: PostMessage() failed!");
                     break;
+                }
 
                 case WM_RBUTTONDOWN:
                 {
@@ -328,7 +325,8 @@ LRESULT CALLBACK listenerWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
                     EnableMenuItem( popupMenu, IDM_TEMPLATE, MF_BYCOMMAND | (ShutdownIcon::bModalMode ? MF_GRAYED : MF_ENABLED) );
                     int m = TrackPopupMenuEx( popupMenu, TPM_RETURNCMD|TPM_LEFTALIGN|TPM_RIGHTBUTTON,
                                               pt.x, pt.y, hWnd, NULL );
-                    PostMessage( hWnd, 0, 0, 0 );
+                    BOOL const ret = PostMessage( hWnd, 0, 0, 0 );
+                    SAL_WARN_IF(0 == ret, "sfx.appl", "ERROR: PostMessage() failed!");
                     switch( m )
                     {
                         case IDM_OPEN:
@@ -353,7 +351,8 @@ LRESULT CALLBACK listenerWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
                             break;
                     }
 
-                    PostMessage( aExecuterWindow, WM_COMMAND, m, (LPARAM)hWnd );
+                    BOOL const ret2 = PostMessage(aExecuterWindow, WM_COMMAND, m, (LPARAM)hWnd);
+                    SAL_WARN_IF(0 == ret2, "sfx.appl", "ERROR: PostMessage() failed!");
                 }
                 break;
             }
@@ -378,14 +377,14 @@ LRESULT CALLBACK listenerWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
                 nid.uID = ID_QUICKSTART;
                 Shell_NotifyIconA(NIM_DELETE, &nid);
 
-                PostMessage( aExecuterWindow, WM_COMMAND, IDM_EXIT, (LPARAM)hWnd );
+                BOOL const ret = PostMessage(aExecuterWindow, WM_COMMAND, IDM_EXIT, (LPARAM)hWnd);
+                SAL_WARN_IF(0 == ret, "sfx.appl", "ERROR: PostMessage() failed!");
             }
             else
                 return DefWindowProc(hWnd, uMsg, wParam, lParam);
     }
     return 0;
 }
-
 
 
 LRESULT CALLBACK executerWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -445,8 +444,6 @@ LRESULT CALLBACK executerWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
 }
 
 
-
-
 DWORD WINAPI SystrayThread( LPVOID /*lpParam*/ )
 {
     osl_setThreadName("SystrayThread");
@@ -475,7 +472,6 @@ DWORD WINAPI SystrayThread( LPVOID /*lpParam*/ )
 
     return msg.wParam; // Exit code of WM_QUIT
 }
-
 
 
 void win32_init_sys_tray()
@@ -534,7 +530,6 @@ void win32_init_sys_tray()
 }
 
 
-
 void win32_shutdown_sys_tray()
 {
     if ( ShutdownIcon::IsQuickstarterInstalled() )
@@ -550,9 +545,6 @@ void win32_shutdown_sys_tray()
         UnregisterClassA( EXECUTER_WINDOWCLASS, GetModuleHandle( NULL ) );
     }
 }
-
-
-
 
 
 void OnMeasureItem(HWND hwnd, LPMEASUREITEMSTRUCT lpmis)

@@ -37,9 +37,9 @@ namespace basegfx
             return 0.0;
         }
 
-        template < unsigned int _RowSize > class ImplMatLine
+        template < unsigned int RowSize_ > class ImplMatLine
         {
-            enum { RowSize = _RowSize };
+            enum { RowSize = RowSize_ };
 
             double                                          mfValue[RowSize];
 
@@ -48,7 +48,7 @@ namespace basegfx
             {
             }
 
-            explicit ImplMatLine(sal_uInt16 nRow, ImplMatLine< RowSize >* pToBeCopied = 0L)
+            explicit ImplMatLine(sal_uInt16 nRow, ImplMatLine< RowSize >* pToBeCopied = nullptr)
             {
                 if(pToBeCopied)
                 {
@@ -74,9 +74,9 @@ namespace basegfx
             }
         };
 
-        template < unsigned int _RowSize > class ImplHomMatrixTemplate
+        template < unsigned int RowSize_ > class ImplHomMatrixTemplate
         {
-            enum { RowSize = _RowSize };
+            enum { RowSize = RowSize_ };
 
             ImplMatLine< RowSize >                          maLine[RowSize - 1];
             ImplMatLine< RowSize >*                         mpLine;
@@ -101,13 +101,13 @@ namespace basegfx
 
                 // reset last line, it equals default
                 delete const_cast<ImplHomMatrixTemplate< RowSize >*>(this)->mpLine;
-                const_cast<ImplHomMatrixTemplate< RowSize >*>(this)->mpLine = 0L;
+                const_cast<ImplHomMatrixTemplate< RowSize >*>(this)->mpLine = nullptr;
 
                 return true;
             }
 
             ImplHomMatrixTemplate()
-                :   mpLine(0L)
+                :   mpLine(nullptr)
             {
                 // complete initialization with identity matrix, all lines
                 // were initialized with a trailing 1 followed by 0's.
@@ -119,7 +119,7 @@ namespace basegfx
             }
 
             ImplHomMatrixTemplate(const ImplHomMatrixTemplate& rToBeCopied)
-                :   mpLine(0L)
+                :   mpLine(nullptr)
             {
                 // complete initialization using copy
                 for(sal_uInt16 a(0); a < (RowSize - 1); a++)
@@ -174,7 +174,7 @@ namespace basegfx
 
                     if(!::basegfx::fTools::equal(fDefault, rValue))
                     {
-                        mpLine = new ImplMatLine< RowSize >((RowSize - 1), 0L);
+                        mpLine = new ImplMatLine< RowSize >((RowSize - 1), nullptr);
                         mpLine->set(nColumn, rValue);
                     }
                 }
@@ -205,7 +205,7 @@ namespace basegfx
                 }
             }
 
-            // Left-upper decompositon
+            // Left-upper decomposition
             bool ludcmp(sal_uInt16 nIndex[], sal_Int16& nParity)
             {
                 double fBig, fSum, fDum;

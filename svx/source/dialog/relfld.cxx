@@ -18,7 +18,7 @@
  */
 
 #include "svx/relfld.hxx"
-#include "vcl/builderfactory.hxx"
+#include <vcl/builderfactory.hxx>
 
 SvxRelativeField::SvxRelativeField(
         vcl::Window *const pParent, WinBits const nBits, FieldUnit const eUnit)
@@ -85,7 +85,6 @@ void SvxRelativeField::Modify()
 }
 
 
-
 void SvxRelativeField::EnableRelativeMode( sal_uInt16 nMin,
                                            sal_uInt16 nMax, sal_uInt16 nStep )
 {
@@ -95,7 +94,6 @@ void SvxRelativeField::EnableRelativeMode( sal_uInt16 nMin,
     nRelStep      = nStep;
     SetUnit( FUNIT_CM );
 }
-
 
 
 void SvxRelativeField::SetRelative( bool bNewRelative )

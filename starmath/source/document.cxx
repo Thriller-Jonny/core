@@ -98,8 +98,6 @@
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::accessibility;
-using namespace ::com::sun::star::lang;
-using namespace ::com::sun::star::ucb;
 using namespace ::com::sun::star::uno;
 
 #define SmDocShell
@@ -110,8 +108,7 @@ SFX_IMPL_SUPERCLASS_INTERFACE(SmDocShell, SfxObjectShell)
 
 void SmDocShell::InitInterface_Impl()
 {
-    GetStaticInterface()->RegisterPopupMenu(SmResId(RID_VIEWMENU));
-    GetStaticInterface()->RegisterPopupMenu(SmResId(RID_COMMANDMENU));
+    GetStaticInterface()->RegisterPopupMenu("view");
 }
 
 SFX_IMPL_OBJECTFACTORY(SmDocShell, SvGlobalName(SO3_SM_CLASSID), SfxObjectShellFlags::STD_NORMAL, "smath" )
@@ -255,12 +252,7 @@ void SmDocShell::ArrangeFormula()
     SmPrinterAccess  aPrtAcc(*this);
     OutputDevice* pOutDev = aPrtAcc.GetRefDev();
 
-    if (!pOutDev)
-    {
-#if OSL_DEBUG_LEVEL > 1
-        SAL_WARN( "starmath", "!! SmDocShell::ArrangeFormula: reference device missing !!");
-#endif
-    }
+    SAL_WARN_IF( !pOutDev, "starmath", "!! SmDocShell::ArrangeFormula: reference device missing !!");
 
     // if necessary get another OutputDevice for which we format
     if (!pOutDev)
@@ -336,7 +328,7 @@ void SetEditEngineDefaultFonts(SfxItemPool &rEditEngineItemPool)
             vcl::Font aFont = OutputDevice::GetDefaultFont(
                         rFntDta.nFontType, nLang, GetDefaultFontFlags::OnlyOne );
             rEditEngineItemPool.SetPoolDefaultItem(
-                    SvxFontItem( aFont.GetFamily(), aFont.GetName(),
+                    SvxFontItem( aFont.GetFamilyType(), aFont.GetFamilyName(),
                         aFont.GetStyleName(), aFont.GetPitch(), aFont.GetCharSet(),
                         rFntDta.nFontInfoId ) );
         }
@@ -489,17 +481,19 @@ Size SmDocShell::GetSize()
 }
 
 void SmDocShell::InvalidateCursor(){
-    delete pCursor;
-    pCursor = nullptr;
+    pCursor.reset();
 }
 
 SmCursor& SmDocShell::GetCursor(){
     if(!pCursor)
-        pCursor = new SmCursor(pTree, this);
+        pCursor.reset(new SmCursor(pTree, this));
     return *pCursor;
 }
 
-
+bool SmDocShell::HasCursor()
+{
+    return pCursor.get() != nullptr;
+}
 
 SmPrinterAccess::SmPrinterAccess( SmDocShell &rDocShell )
 {
@@ -511,7 +505,7 @@ SmPrinterAccess::SmPrinterAccess( SmDocShell &rDocShell )
         {
             // if it is an embedded object (without it's own printer)
             // we change the MapMode temporarily.
-            //!If it is a document with it's own printer the MapMode should
+            //!If it is a document with its own printer the MapMode should
             //!be set correct (once) elsewhere(!), in order to avoid numerous
             //!superfluous pushing and poping of the MapMode when using
             //!this class.
@@ -536,7 +530,7 @@ SmPrinterAccess::SmPrinterAccess( SmDocShell &rDocShell )
         {
             // if it is an embedded object (without it's own printer)
             // we change the MapMode temporarily.
-            //!If it is a document with it's own printer the MapMode should
+            //!If it is a document with its own printer the MapMode should
             //!be set correct (once) elsewhere(!), in order to avoid numerous
             //!superfluous pushing and poping of the MapMode when using
             //!this class.
@@ -656,8 +650,6 @@ SmDocShell::SmDocShell( SfxModelFlags i_nSfxCreationFlags )
     , nModifyCount(0)
     , bIsFormulaArranged(false)
 {
-    pCursor = nullptr;
-
     SetPool(&SfxGetpApp()->GetPool());
 
     SmModule *pp = SM_MOD();
@@ -676,10 +668,7 @@ SmDocShell::~SmDocShell()
     EndListening(aFormat);
     EndListening(*pp->GetConfig());
 
-
-    delete pCursor;
-    pCursor = nullptr;
-
+    pCursor.reset();
     delete pEditEngine;
     SfxItemPool::Free(pEditEngineItemPool);
     delete pTree;
@@ -703,7 +692,7 @@ bool SmDocShell::ConvertFrom(SfxMedium &rMedium)
         }
         Reference<css::frame::XModel> xModel(GetModel());
         SmXMLImportWrapper aEquation(xModel);
-        bSuccess = 0 == aEquation.Import(rMedium);
+        bSuccess = ( ERRCODE_NONE == aEquation.Import(rMedium) );
     }
     else
     {
@@ -717,7 +706,8 @@ bool SmDocShell::ConvertFrom(SfxMedium &rMedium)
                 {
                     // is this a MathType Storage?
                     MathType aEquation( aText );
-                    if ( (bSuccess = (1 == aEquation.Parse( aStorage )) ))
+                    bSuccess = aEquation.Parse( aStorage );
+                    if ( bSuccess )
                         Parse();
                 }
             }
@@ -785,7 +775,6 @@ bool SmDocShell::Load( SfxMedium& rMedium )
 }
 
 
-
 bool SmDocShell::Save()
 {
     //! apply latest changes if necessary
@@ -810,7 +799,7 @@ bool SmDocShell::Save()
 /*
  * replace bad characters that can not be saved. (#i74144)
  * */
-bool SmDocShell::ReplaceBadChars()
+void SmDocShell::ReplaceBadChars()
 {
     bool bReplace = false;
 
@@ -830,8 +819,6 @@ bool SmDocShell::ReplaceBadChars()
         if (bReplace)
             aText = aBuf.makeStringAndClear();
     }
-
-    return bReplace;
 }
 
 
@@ -871,7 +858,7 @@ bool SmDocShell::SaveAs( SfxMedium& rMedium )
 bool SmDocShell::ConvertTo( SfxMedium &rMedium )
 {
     bool bRet = false;
-    const SfxFilter* pFlt = rMedium.GetFilter();
+    std::shared_ptr<const SfxFilter> pFlt = rMedium.GetFilter();
     if( pFlt )
     {
         if( !pTree )
@@ -900,13 +887,16 @@ bool SmDocShell::ConvertTo( SfxMedium &rMedium )
     return bRet;
 }
 
-bool SmDocShell::writeFormulaOoxml( ::sax_fastparser::FSHelperPtr pSerializer, oox::core::OoxmlVersion version )
+bool SmDocShell::writeFormulaOoxml(
+        ::sax_fastparser::FSHelperPtr const& pSerializer,
+        oox::core::OoxmlVersion const version,
+        oox::drawingml::DocumentType const documentType)
 {
     if( !pTree )
         Parse();
     if( pTree && !IsFormulaArranged() )
         ArrangeFormula();
-    SmOoxmlExport aEquation( pTree, version );
+    SmOoxmlExport aEquation(pTree, version, documentType);
     return aEquation.ConvertFromStarMath( pSerializer );
 }
 
@@ -1342,9 +1332,7 @@ void SmDocShell::SetModified(bool bModified)
 bool SmDocShell::WriteAsMathType3( SfxMedium& rMedium )
 {
     MathType aEquation( aText, pTree );
-
-    bool bRet = 0 != aEquation.ConvertFromStarMath( rMedium );
-    return bRet;
+    return aEquation.ConvertFromStarMath( rMedium );
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

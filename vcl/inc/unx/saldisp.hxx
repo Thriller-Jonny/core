@@ -25,6 +25,10 @@ class   SalColormap;
 class   SalVisual;
 class   SalXLib;
 
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
+#include <X11/extensions/Xrender.h>
+
 #include <unx/salunx.h>
 #include <unx/saltype.h>
 #include <vcl/salgtype.hxx>
@@ -36,11 +40,14 @@ class   SalXLib;
 #include <vector>
 #include <tools/gen.hxx>
 #include <salwtype.hxx>
-#include <generic/gendata.hxx>
-#include <generic/gendisp.hxx>
+#include <unx/gendata.hxx>
+#include <unx/gendisp.hxx>
 #include <o3tl/enumarray.hxx>
 
 #include <vclpluginapi.h>
+
+/* From <X11/Intrinsic.h> */
+typedef unsigned long Pixel;
 
 class   BitmapPalette;
 class   SalFrame;
@@ -267,7 +274,7 @@ protected:
     void            InitXinerama();
     void            InitRandR( ::Window aRoot ) const;
     void            DeInitRandR();
-    int             processRandREvent( XEvent* );
+    void            processRandREvent( XEvent* );
 
     void            doDestruct();
     void            addXineramaScreenUnique( int i, long i_nX, long i_nY, long i_nWidth, long i_nHeight );
@@ -317,7 +324,7 @@ public:
 
     ::Window         GetDrawable( SalX11Screen nXScreen ) const { return getDataForScreen( nXScreen ).m_aRefWindow; }
     Display        *GetDisplay() const { return pDisp_; }
-    SalX11Screen    GetDefaultXScreen() const { return m_nXDefaultScreen; }
+    const SalX11Screen& GetDefaultXScreen() const { return m_nXDefaultScreen; }
     const Size&     GetScreenSize( SalX11Screen nXScreen ) const { return getDataForScreen( nXScreen ).m_aSize; }
     srv_vendor_t    GetServerVendor() const { return meServerVendor; }
     void            SetServerVendor() { meServerVendor = sal_GetServerVendor(pDisp_); }
@@ -331,7 +338,7 @@ public:
     sal_uLong       GetMaxRequestSize() const { return nMaxRequestSize_; }
     Time            GetLastUserEventTime( bool bAlwaysReget = false ) const;
 
-    bool            XIfEventWithTimeout( XEvent*, XPointer, X_if_predicate, long i_nTimeout = 1000 ) const;
+    bool            XIfEventWithTimeout( XEvent*, XPointer, X_if_predicate ) const;
     SalXLib*        GetXLib() const { return pXLib_; }
 
     SalI18N_InputMethod*        GetInputMethod()  const { return mpInputMethod;  }
@@ -365,7 +372,7 @@ public:
     virtual ~SalX11Display();
 
     virtual bool        Dispatch( XEvent *pEvent ) override;
-    virtual bool        Yield();
+    virtual void        Yield();
     virtual void        PostUserEvent() override;
 
     bool                IsEvent();

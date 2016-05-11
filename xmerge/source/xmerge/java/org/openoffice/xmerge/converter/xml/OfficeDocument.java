@@ -274,7 +274,7 @@ public abstract class OfficeDocument
             // Need to read the manifest file and construct a list of objects
             NodeList nl = manifestDoc.getElementsByTagName(TAG_MANIFEST_FILE);
 
-            // Dont create the HashMap if there are no embedded objects
+            // Don't create the HashMap if there are no embedded objects
             int len = nl.getLength();
             for (int i = 0; i < len; i++) {
                 Node n = nl.item(i);
@@ -313,6 +313,10 @@ public abstract class OfficeDocument
                     embeddedObjects.put(path, new EmbeddedBinaryObject(path, type, zip));
                 }
             }
+        }
+
+        if (embeddedObjects == null) {
+            return null;
         }
 
         return embeddedObjects.values().iterator();
@@ -566,11 +570,13 @@ public abstract class OfficeDocument
 
         // The EmbeddedObjects come first.
         Iterator<EmbeddedObject> embObjs = getEmbeddedObjects();
-        while (embObjs.hasNext()) {
-            EmbeddedObject obj = embObjs.next();
-            obj.writeManifestData(manifestDoc);
+        if (embObjs != null) {
+            while (embObjs.hasNext()) {
+                EmbeddedObject obj = embObjs.next();
+                obj.writeManifestData(manifestDoc);
 
-            obj.write(zip);
+                obj.write(zip);
+            }
         }
 
         // Add in the entry for the Pictures directory.  Always present.

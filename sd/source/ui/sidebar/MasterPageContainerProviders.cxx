@@ -58,8 +58,7 @@ Image PagePreviewProvider::operator () (
         aPreview = rRenderer.RenderPage(
             pPage,
             nWidth,
-            OUString(),
-            false);
+            OUString());
     }
 
     return aPreview;
@@ -155,7 +154,7 @@ SdPage* TemplatePageObjectProvider::operator() (SdDrawDocument* pContainerDocume
     SfxItemSet* pSet = new SfxAllItemSet (pSfxApp->GetPool());
     pSet->Put (SfxBoolItem (SID_TEMPLATE, true));
     pSet->Put (SfxBoolItem (SID_PREVIEW, true));
-    if (pSfxApp->LoadTemplate (mxDocumentShell, sFileName, true, pSet))
+    if (pSfxApp->LoadTemplate (mxDocumentShell, sFileName, pSet))
     {
         mxDocumentShell = nullptr;
     }
@@ -166,16 +165,6 @@ SdPage* TemplatePageObjectProvider::operator() (SdDrawDocument* pContainerDocume
 int TemplatePageObjectProvider::GetCostIndex()
 {
     return 20;
-}
-
-bool TemplatePageObjectProvider::operator== (const PageObjectProvider& rProvider)
-{
-    const TemplatePageObjectProvider* pTemplatePageObjectProvider
-        = dynamic_cast<const TemplatePageObjectProvider*>(&rProvider);
-    if (pTemplatePageObjectProvider != nullptr)
-        return (msURL == pTemplatePageObjectProvider->msURL);
-    else
-        return false;
 }
 
 //===== DefaultPageObjectProvider ==============================================
@@ -208,11 +197,6 @@ int DefaultPageObjectProvider::GetCostIndex()
     return 15;
 }
 
-bool DefaultPageObjectProvider::operator== (const PageObjectProvider& rProvider)
-{
-    return (dynamic_cast<const DefaultPageObjectProvider*>(&rProvider) != nullptr);
-}
-
 //===== ExistingPageProvider ==================================================
 
 ExistingPageProvider::ExistingPageProvider (SdPage* pPage)
@@ -230,16 +214,6 @@ SdPage* ExistingPageProvider::operator() (SdDrawDocument* pDocument)
 int ExistingPageProvider::GetCostIndex()
 {
     return 0;
-}
-
-bool ExistingPageProvider::operator== (const PageObjectProvider& rProvider)
-{
-    const ExistingPageProvider* pExistingPageProvider
-        = dynamic_cast<const ExistingPageProvider*>(&rProvider);
-    if (pExistingPageProvider != nullptr)
-        return (mpPage == pExistingPageProvider->mpPage);
-    else
-        return false;
 }
 
 } } // end of namespace sd::sidebar

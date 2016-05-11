@@ -37,10 +37,7 @@ using namespace ::xmloff::token;
 
 using ::com::sun::star::beans::XPropertySet;
 using ::com::sun::star::uno::Reference;
-using ::com::sun::star::uno::Any;
 using ::com::sun::star::xml::sax::XAttributeList;
-
-
 
 
 XMLIndexBibliographySourceContext::XMLIndexBibliographySourceContext(

@@ -29,7 +29,6 @@ using namespace com::sun::star;
 using namespace com::sun::star::uno;
 using namespace com::sun::star::lang;
 
-using ::rtl::OUString;
 using ::rtl::OString;
 using ::rtl::OUStringToOString;
 
@@ -143,20 +142,20 @@ void OComponentHelper::dispose()
 {
     // An frequently programming error is to release the last
     // reference to this object in the disposing message.
-    // Make it rubust, hold a self Reference.
+    // Make it robust, hold a self Reference.
     Reference<XComponent > xSelf( this );
 
-    // Guard dispose against multible threading
+    // Guard dispose against multiple threading
     // Remark: It is an error to call dispose more than once
     bool bDoDispose = false;
     {
-    MutexGuard aGuard( rBHelper.rMutex );
-    if( !rBHelper.bDisposed && !rBHelper.bInDispose )
-    {
-        // only one call go into this section
-        rBHelper.bInDispose = sal_True;
-        bDoDispose = true;
-    }
+        MutexGuard aGuard( rBHelper.rMutex );
+        if( !rBHelper.bDisposed && !rBHelper.bInDispose )
+        {
+            // only one call go into this section
+            rBHelper.bInDispose = true;
+            bDoDispose = true;
+        }
     }
 
     // Do not hold the mutex because we are broadcasting
@@ -181,14 +180,14 @@ void OComponentHelper::dispose()
             {
                 MutexGuard aGuard( rBHelper.rMutex );
                 // bDispose and bInDisposing must be set in this order:
-                rBHelper.bDisposed = sal_True;
-                rBHelper.bInDispose = sal_False;
+                rBHelper.bDisposed = true;
+                rBHelper.bInDispose = false;
                 throw;
             }
             MutexGuard aGuard( rBHelper.rMutex );
             // bDispose and bInDisposing must be set in this order:
-            rBHelper.bDisposed = sal_True;
-            rBHelper.bInDispose = sal_False;
+            rBHelper.bDisposed = true;
+            rBHelper.bInDispose = false;
         }
         catch (RuntimeException &)
         {

@@ -23,7 +23,7 @@
 #include <com/sun/star/awt/MouseButton.hpp>
 #include <com/sun/star/awt/KeyModifier.hpp>
 
-#include <cppuhelper/interfacecontainer.hxx>
+#include <comphelper/interfacecontainer2.hxx>
 #include <cppuhelper/weak.hxx>
 #include <vcl/event.hxx>
 #include <vcl/window.hxx>
@@ -35,13 +35,8 @@ namespace sfx2
 
     using ::com::sun::star::uno::Reference;
     using ::com::sun::star::uno::XInterface;
-    using ::com::sun::star::uno::UNO_QUERY;
-    using ::com::sun::star::uno::UNO_QUERY_THROW;
-    using ::com::sun::star::uno::UNO_SET_THROW;
     using ::com::sun::star::uno::Exception;
     using ::com::sun::star::uno::RuntimeException;
-    using ::com::sun::star::uno::Any;
-    using ::com::sun::star::uno::makeAny;
     using ::com::sun::star::awt::MouseEvent;
     using ::com::sun::star::awt::KeyEvent;
     using ::com::sun::star::awt::InputEvent;
@@ -56,8 +51,8 @@ namespace sfx2
     {
     public:
         ::cppu::OWeakObject&                m_rControllerImpl;
-        ::cppu::OInterfaceContainerHelper   m_aKeyHandlers;
-        ::cppu::OInterfaceContainerHelper   m_aMouseClickHandlers;
+        ::comphelper::OInterfaceContainerHelper2   m_aKeyHandlers;
+        ::comphelper::OInterfaceContainerHelper2   m_aMouseClickHandlers;
 
     public:
         UserInputInterception_Data( ::cppu::OWeakObject& _rControllerImpl, ::osl::Mutex& _rMutex )
@@ -109,7 +104,7 @@ namespace sfx2
             rEvent.X = rEvt.GetPosPixel().X();
             rEvent.Y = rEvt.GetPosPixel().Y();
             rEvent.ClickCount = rEvt.GetClicks();
-            rEvent.PopupTrigger = sal_False;
+            rEvent.PopupTrigger = false;
         }
 
     }
@@ -184,7 +179,7 @@ namespace sfx2
                 if ( _rEvent.GetWindow() )
                     aEvent.Source = _rEvent.GetWindow()->GetComponentInterface();
 
-                ::cppu::OInterfaceIteratorHelper aIterator( m_pData->m_aKeyHandlers );
+                ::comphelper::OInterfaceIteratorHelper2 aIterator( m_pData->m_aKeyHandlers );
                 while ( aIterator.hasMoreElements() )
                 {
                     Reference< XKeyHandler > xHandler( static_cast< XKeyHandler* >( aIterator.next() ) );
@@ -222,7 +217,7 @@ namespace sfx2
                 if ( _rEvent.GetWindow() )
                     aEvent.Source = _rEvent.GetWindow()->GetComponentInterface();
 
-                ::cppu::OInterfaceIteratorHelper aIterator( m_pData->m_aMouseClickHandlers );
+                ::comphelper::OInterfaceIteratorHelper2 aIterator( m_pData->m_aMouseClickHandlers );
                 while ( aIterator.hasMoreElements() )
                 {
                     Reference< XMouseClickHandler > xHandler( static_cast< XMouseClickHandler* >( aIterator.next() ) );

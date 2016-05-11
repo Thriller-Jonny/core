@@ -20,7 +20,6 @@
 #include <sal/config.h>
 
 #include <utility>
-#include <boost/noncopyable.hpp>
 
 #include "chart2uno.hxx"
 #include "miscuno.hxx"
@@ -139,11 +138,21 @@ uno::Reference< frame::XModel > lcl_GetXModel( ScDocument * pDoc )
     return xModel;
 }
 
-struct TokenTable : boost::noncopyable
+struct TokenTable
 {
     SCROW mnRowCount;
     SCCOL mnColCount;
     vector<FormulaToken*> maTokens;
+
+    // noncopyable
+    TokenTable(const TokenTable&) = delete;
+    const TokenTable& operator=(const TokenTable&) = delete;
+
+    TokenTable()
+        : mnRowCount(0)
+        , mnColCount(0)
+    {
+    }
 
     void init( SCCOL nColCount, SCROW nRowCount )
     {
@@ -426,7 +435,7 @@ vector<ScTokenRef> Chart2PositionMap::getDataRowRanges(SCROW nRow) const
  * Designed to be a drop-in replacement for ScChartPositioner, in order to
  * handle external references.
  */
-class Chart2Positioner : boost::noncopyable
+class Chart2Positioner
 {
     enum GlueType
     {
@@ -438,6 +447,9 @@ class Chart2Positioner : boost::noncopyable
     };
 
 public:
+    Chart2Positioner(const Chart2Positioner&) = delete;
+    const Chart2Positioner& operator=(const Chart2Positioner&) = delete;
+
     Chart2Positioner(ScDocument* pDoc, const vector<ScTokenRef>& rRefTokens) :
         mrRefTokens(rRefTokens),
         mpPositionMap(nullptr),
@@ -1357,7 +1369,7 @@ bool lcl_addUpperLeftCornerIfMissing(vector<ScTokenRef>& rRefTokens,
 
 #define SHRINK_RANGE_THRESHOLD 10000
 
-class ShrinkRefTokenToDataRange : std::unary_function<ScTokenRef, void>
+class ShrinkRefTokenToDataRange : public std::unary_function<ScTokenRef, void>
 {
     ScDocument* mpDoc;
 public:
@@ -1762,6 +1774,17 @@ bool RangeAnalyzer::inSameSingleColumn( RangeAnalyzer& rOther )
     return false;
 }
 
+std::pair<OUString, OUString> constructKey(const uno::Reference< chart2::data::XLabeledDataSequence>& xNew)
+{
+    std::pair<OUString, OUString> aKey;
+    if( xNew->getLabel().is() )
+        aKey.first = xNew->getLabel()->getSourceRangeRepresentation();
+    if( xNew->getValues().is() )
+        aKey.second = xNew->getValues()->getSourceRangeRepresentation();
+    return aKey;
+}
+
+
 } //end anonymous namespace
 
 uno::Sequence< beans::PropertyValue > SAL_CALL ScChart2DataProvider::detectArguments(
@@ -1983,48 +2006,37 @@ uno::Sequence< beans::PropertyValue > SAL_CALL ScChart2DataProvider::detectArgum
 
         if( xDataSource.is() && xCompareDataSource.is() )
         {
-            uno::Sequence< uno::Reference< chart2::data::XLabeledDataSequence> > aOldSequences(
-                xCompareDataSource->getDataSequences() );
-            uno::Sequence< uno::Reference< chart2::data::XLabeledDataSequence > > aNewSequences(
-                xDataSource->getDataSequences());
+            const uno::Sequence< uno::Reference< chart2::data::XLabeledDataSequence> >& aOldSequences =
+                xCompareDataSource->getDataSequences();
+            const uno::Sequence< uno::Reference< chart2::data::XLabeledDataSequence> >& aNewSequences =
+                xDataSource->getDataSequences();
 
-            OUString aOldLabel;
-            OUString aNewLabel;
-            OUString aOldValues;
-            OUString aNewValues;
-
-            for( sal_Int32 nNewIndex = 0; nNewIndex < aNewSequences.getLength(); nNewIndex++ )
+            std::map<std::pair<OUString, OUString>,sal_Int32> aOldEntryToIndex;
+            for( sal_Int32 nIndex = 0, n = aOldSequences.getLength(); nIndex < n; nIndex++ )
             {
-                uno::Reference< chart2::data::XLabeledDataSequence> xNew( aNewSequences[nNewIndex] );
-                for( sal_Int32 nOldIndex = 0; nOldIndex < aOldSequences.getLength(); nOldIndex++ )
+                const uno::Reference< chart2::data::XLabeledDataSequence>& xOld( aOldSequences[nIndex] );
+                if( xOld.is() )
                 {
-                    uno::Reference< chart2::data::XLabeledDataSequence> xOld( aOldSequences[nOldIndex] );
-
-                    if( xOld.is() && xNew.is() )
-                    {
-                        aOldLabel.clear();
-                        aNewLabel.clear();
-                        aOldValues.clear();
-                        aNewValues.clear();
-                        if( xOld.is() && xOld->getLabel().is() )
-                            aOldLabel = xOld->getLabel()->getSourceRangeRepresentation();
-                        if( xNew.is() && xNew->getLabel().is() )
-                            aNewLabel = xNew->getLabel()->getSourceRangeRepresentation();
-                        if( xOld.is() && xOld->getValues().is() )
-                            aOldValues = xOld->getValues()->getSourceRangeRepresentation();
-                        if( xNew.is() && xNew->getValues().is() )
-                            aNewValues = xNew->getValues()->getSourceRangeRepresentation();
-
-                        if( aOldLabel.equals(aNewLabel)
-                            && ( aOldValues.equals(aNewValues) ) )
-                        {
-                            if( nOldIndex!=nNewIndex )
-                                bDifferentIndexes = true;
-                            aSequenceMappingVector.push_back(nOldIndex);
-                            break;
-                        }
-                    }
+                    std::pair<OUString, OUString> aKey = constructKey(xOld);
+                    aOldEntryToIndex[aKey] = nIndex;
                 }
+            }
+
+            for( sal_Int32 nNewIndex = 0, n = aNewSequences.getLength(); nNewIndex < n; nNewIndex++ )
+            {
+                const uno::Reference< chart2::data::XLabeledDataSequence>& xNew( aNewSequences[nNewIndex] );
+                if( !xNew.is() )
+                    continue;
+
+                std::pair<OUString, OUString> aKey = constructKey(xNew);
+                if (aOldEntryToIndex.find(aKey) == aOldEntryToIndex.end())
+                    continue;
+
+                sal_Int32 nOldIndex = aOldEntryToIndex[aKey];
+                if( nOldIndex != nNewIndex )
+                    bDifferentIndexes = true;
+
+                aSequenceMappingVector.push_back(nOldIndex);
             }
         }
 
@@ -2468,7 +2480,7 @@ ScChart2DataSequence::ScChart2DataSequence( ScDocument* pDoc,
 
     // BM: don't use names of named ranges but the UI range strings
 //  String  aStr;
-//  rRangeList->Format( aStr, SCR_ABS_3D, m_pDocument );
+//  rRangeList->Format( aStr, ScRefFlags::RANGE_ABS_3D, m_pDocument );
 //    m_aIdentifier = aStr;
 
 //      m_aIdentifier = "ID_";
@@ -2578,17 +2590,16 @@ void ScChart2DataSequence::BuildDataCache()
                         ScAddress aAdr(nCol, nRow, nTab);
                         aItem.maString = m_pDocument->GetString(aAdr);
 
-                        switch (m_pDocument->GetCellType(aAdr))
+                        ScRefCellValue aCell(*m_pDocument, aAdr);
+                        switch (aCell.meType)
                         {
                             case CELLTYPE_VALUE:
-                                aItem.mfValue = m_pDocument->GetValue(aAdr);
+                                aItem.mfValue = aCell.getValue();
                                 aItem.mbIsValue = true;
                             break;
                             case CELLTYPE_FORMULA:
                             {
-                                ScFormulaCell* pFCell = m_pDocument->GetFormulaCell(aAdr);
-                                if (!pFCell)
-                                    break;
+                                ScFormulaCell* pFCell = aCell.mpFormula;
                                 sal_uInt16 nErr = pFCell->GetErrCode();
                                 if (nErr)
                                     break;
@@ -2806,7 +2817,7 @@ void ScChart2DataSequence::Notify( SfxBroadcaster& /*rBC*/, const SfxHint& rHint
     const SfxSimpleHint* pSimpleHint = dynamic_cast<const SfxSimpleHint*>(&rHint);
     if ( pSimpleHint )
     {
-        sal_uLong nId = pSimpleHint->GetId();
+        const sal_uInt32 nId = pSimpleHint->GetId();
         if ( nId ==SFX_HINT_DYING )
         {
             m_pDocument = nullptr;
@@ -2823,8 +2834,8 @@ void ScChart2DataSequence::Notify( SfxBroadcaster& /*rBC*/, const SfxHint& rHint
 
                 if( m_pDocument )
                 {
-                    for ( size_t n=0; n<m_aValueListeners.size(); n++ )
-                        m_pDocument->AddUnoListenerCall( m_aValueListeners[n], aEvent );
+                    for (uno::Reference<util::XModifyListener> & xListener: m_aValueListeners)
+                        m_pDocument->AddUnoListenerCall( xListener, aEvent );
                 }
 
                 m_bGotDataChangedHint = false;
@@ -3140,7 +3151,7 @@ public:
                     OUString aString = ScGlobal::GetRscString(STR_COLUMN);
                     aString += " ";
                     ScAddress aPos( nCol, 0, 0 );
-                    OUString aColStr(aPos.Format(SCA_VALID_COL));
+                    OUString aColStr(aPos.Format(ScRefFlags::COL_VALID));
                     aString += aColStr;
                     pArr[mnCount] = aString;
                 }
@@ -3502,7 +3513,7 @@ sal_Bool ScChart2DataSequence::switchToNext(sal_Bool bWrap)
     throw (uno::RuntimeException, std::exception)
 {
     if(!mbTimeBased)
-        return sal_True;
+        return true;
 
     if(mnCurrentTab >= mnTimeBasedEnd)
     {
@@ -3529,7 +3540,7 @@ sal_Bool ScChart2DataSequence::switchToNext(sal_Bool bWrap)
 
     RebuildDataCache();
 
-    return sal_True;
+    return true;
 }
 
 void ScChart2DataSequence::setRange(sal_Int32 nStart, sal_Int32 nEnd)
@@ -3565,7 +3576,7 @@ sal_Bool ScChart2DataSequence::setToPointInTime(sal_Int32 nPoint)
 
     RebuildDataCache();
 
-    return sal_True;
+    return true;
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -40,7 +40,7 @@
 #include <com/sun/star/script/XEventAttacherManager.hpp>
 #include <com/sun/star/script/XScriptListener.hpp>
 #include <cppuhelper/weak.hxx>
-#include <cppuhelper/interfacecontainer.hxx>
+#include <comphelper/interfacecontainer2.hxx>
 #include <cppuhelper/implbase.hxx>
 
 #include <deque>
@@ -64,7 +64,7 @@ namespace comphelper
 struct AttachedObject_Impl
 {
     Reference< XInterface >                 xTarget;
-    Sequence< Reference< XEventListener > > aAttachedListenerSeq;
+    std::vector< Reference< XEventListener > > aAttachedListenerSeq;
     Any                                     aHelper;
 };
 
@@ -82,12 +82,11 @@ class ImplEventAttacherManager
     ::std::deque< AttacherIndex_Impl >  aIndex;
     Mutex aLock;
     // Container for the ScriptListener
-    OInterfaceContainerHelper           aScriptListeners;
+    OInterfaceContainerHelper2          aScriptListeners;
     // Instance of EventAttacher
     Reference< XEventAttacher2 >        xAttacher;
     Reference< XComponentContext >      mxContext;
     Reference< XIdlReflection >         mxCoreReflection;
-    Reference< XIntrospection >         mxIntrospection;
     Reference< XTypeConverter >         xConverter;
     sal_Int16                           nVersion;
 public:
@@ -137,10 +136,6 @@ private:
 };
 
 
-
-
-
-
 // Implementation of an EventAttacher-subclass 'AllListeners', which
 // only passes individual events of the general AllListeners.
 class AttacherAllListener_Impl : public WeakImplHelper< XAllListener >
@@ -179,7 +174,6 @@ AttacherAllListener_Impl::AttacherAllListener_Impl
 }
 
 
-
 // Methods of XAllListener
 void SAL_CALL AttacherAllListener_Impl::firing(const AllEventObject& Event)
     throw( RuntimeException, std::exception )
@@ -194,7 +188,7 @@ void SAL_CALL AttacherAllListener_Impl::firing(const AllEventObject& Event)
     aScriptEvent.ScriptCode     = aScriptCode;
 
     // Iterate over all listeners and pass events.
-    OInterfaceIteratorHelper aIt( mpManager->aScriptListeners );
+    OInterfaceIteratorHelper2 aIt( mpManager->aScriptListeners );
     while( aIt.hasMoreElements() )
         static_cast<XScriptListener *>(aIt.next())->firing( aScriptEvent );
 }
@@ -216,7 +210,7 @@ void AttacherAllListener_Impl::convertToEventReturn( Any & rRet, const Type & rR
                 break;
 
             case TypeClass_BOOLEAN:
-                rRet <<= sal_True;
+                rRet <<= true;
                 break;
 
             case TypeClass_STRING:
@@ -260,7 +254,7 @@ Any SAL_CALL AttacherAllListener_Impl::approveFiring( const AllEventObject& Even
 
     Any aRet;
     // Iterate over all listeners and pass events.
-    OInterfaceIteratorHelper aIt( mpManager->aScriptListeners );
+    OInterfaceIteratorHelper2 aIt( mpManager->aScriptListeners );
     while( aIt.hasMoreElements() )
     {
         aRet = static_cast<XScriptListener *>(aIt.next())->approveFiring( aScriptEvent );
@@ -361,7 +355,6 @@ ImplEventAttacherManager::ImplEventAttacherManager( const Reference< XIntrospect
                                                     const Reference< XComponentContext >& rContext )
     : aScriptListeners( aLock )
     , mxContext( rContext )
-    , mxIntrospection( rIntrospection )
     , nVersion(0)
 {
     if ( rContext.is() )
@@ -401,19 +394,12 @@ Reference< XIdlReflection > ImplEventAttacherManager::getReflection() throw( Exc
 }
 
 
-
-::std::deque<AttacherIndex_Impl>::iterator ImplEventAttacherManager::implCheckIndex( sal_Int32 _nIndex )
+::std::deque< AttacherIndex_Impl >::iterator ImplEventAttacherManager::implCheckIndex( sal_Int32 _nIndex )
 {
-    if (_nIndex < 0)
+    if ( (_nIndex < 0) || (static_cast<sal_uInt32>(_nIndex) >= aIndex.size()) )
         throw IllegalArgumentException();
 
-    ::std::deque<AttacherIndex_Impl>::iterator aIt = aIndex.begin();
-    for ( sal_Int32 i = 0; (i < _nIndex) && (aIt != aIndex.end()); ++i, ++aIt )
-        ;
-
-    if( aIt == aIndex.end() )
-        throw IllegalArgumentException();
-
+    ::std::deque<AttacherIndex_Impl>::iterator aIt = aIndex.begin() + _nIndex;
     return aIt;
 }
 
@@ -441,17 +427,13 @@ void SAL_CALL ImplEventAttacherManager::registerScriptEvent
     // register new new Event
     for( auto& rObj : aIt->aObjList )
     {
-        // resize
-        sal_Int32 nPos = rObj.aAttachedListenerSeq.getLength();
-        rObj.aAttachedListenerSeq.realloc( nPos + 1 );
-        Reference< XEventListener >* pArray = rObj.aAttachedListenerSeq.getArray();
         Reference< XAllListener > xAll =
             new AttacherAllListener_Impl( this, ScriptEvent.ScriptType, ScriptEvent.ScriptCode );
         try
         {
-        pArray[nPos] = xAttacher->attachSingleEventListener( rObj.xTarget, xAll,
+            rObj.aAttachedListenerSeq.push_back( xAttacher->attachSingleEventListener( rObj.xTarget, xAll,
                         rObj.aHelper, ScriptEvent.ListenerType,
-                        ScriptEvent.AddListenerParam, ScriptEvent.EventMethod );
+                        ScriptEvent.AddListenerParam, ScriptEvent.EventMethod ) );
         }
         catch( Exception& )
         {
@@ -606,7 +588,7 @@ void SAL_CALL ImplEventAttacherManager::attach(sal_Int32 nIndex, const Reference
     aCurrentPosition->aObjList.push_back( aTmp );
 
     AttachedObject_Impl & rCurObj = aCurrentPosition->aObjList.back();
-    rCurObj.aAttachedListenerSeq = Sequence< Reference< XEventListener > >( aCurrentPosition->aEventList.size() );
+    rCurObj.aAttachedListenerSeq = std::vector< Reference< XEventListener > >( aCurrentPosition->aEventList.size() );
 
     if (aCurrentPosition->aEventList.empty())
         return;
@@ -630,8 +612,8 @@ void SAL_CALL ImplEventAttacherManager::attach(sal_Int32 nIndex, const Reference
 
     try
     {
-        rCurObj.aAttachedListenerSeq =
-            xAttacher->attachMultipleEventListeners(rCurObj.xTarget, aEvents);
+        rCurObj.aAttachedListenerSeq = comphelper::sequenceToContainer<std::vector<Reference< XEventListener >>>(
+            xAttacher->attachMultipleEventListeners(rCurObj.xTarget, aEvents));
     }
     catch (const Exception&)
     {
@@ -656,17 +638,15 @@ void SAL_CALL ImplEventAttacherManager::detach(sal_Int32 nIndex, const Reference
     {
         if( aObjIt->xTarget == xObject )
         {
-            Reference< XEventListener > * pArray = aObjIt->aAttachedListenerSeq.getArray();
-
             sal_Int32 i = 0;
             for( const auto& rEvt : aCurrentPosition->aEventList )
             {
-                if( pArray[i].is() )
+                if( aObjIt->aAttachedListenerSeq[i].is() )
                 {
                     try
                     {
-                    xAttacher->removeListener( aObjIt->xTarget, rEvt.ListenerType,
-                                               rEvt.AddListenerParam, pArray[i] );
+                        xAttacher->removeListener( aObjIt->xTarget, rEvt.ListenerType,
+                                               rEvt.AddListenerParam, aObjIt->aAttachedListenerSeq[i] );
                     }
                     catch( Exception& )
                     {
@@ -806,7 +786,7 @@ void SAL_CALL ImplEventAttacherManager::read(const Reference< XObjectInputStream
     xMarkStream->deleteMark( nObjLenMark );
 }
 
-} // namesapce comphelper
+} // namespace comphelper
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

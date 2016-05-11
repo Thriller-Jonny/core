@@ -46,8 +46,6 @@ namespace pcr
     using ::com::sun::star::uno::XInterface;
     using ::com::sun::star::lang::IllegalArgumentException;
     using ::com::sun::star::ucb::AlreadyInitializedException;
-    using ::com::sun::star::beans::XPropertySetInfo;
-    using ::com::sun::star::uno::makeAny;
 
 
     //= ObjectInspectorModel
@@ -218,7 +216,6 @@ namespace pcr
 
 
 } // namespace pcr
-
 
 
 extern "C" void SAL_CALL createRegistryInfo_ObjectInspectorModel()

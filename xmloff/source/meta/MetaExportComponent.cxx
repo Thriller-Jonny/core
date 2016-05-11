@@ -53,7 +53,7 @@ XMLMetaExportComponent::~XMLMetaExportComponent()
 {
 }
 
-void SAL_CALL XMLMetaExportComponent::setSourceDocument( const css::uno::Reference< css::lang::XComponent >& xDoc ) throw(css::lang::IllegalArgumentException, css::uno::RuntimeException, std::exception)
+void SAL_CALL XMLMetaExportComponent::setSourceDocument( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XComponent >& xDoc ) throw(::com::sun::star::lang::IllegalArgumentException, ::com::sun::star::uno::RuntimeException, std::exception)
 {
     try
     {
@@ -90,9 +90,7 @@ sal_uInt32 XMLMetaExportComponent::exportDoc( enum XMLTokenEnum )
                 ::comphelper::GenericPropertySet_CreateInstance(
                         new ::comphelper::PropertySetInfo( aInfoMap ) ) );
 
-            uno::Any aAny;
-            aAny <<= GetXMLToken( XML_TEXT );
-            xConvPropSet->setPropertyValue("Class", aAny );
+            xConvPropSet->setPropertyValue("Class", uno::Any(GetXMLToken( XML_TEXT )) );
 
             uno::Reference< beans::XPropertySet > xPropSet =
                 getExportInfo().is()
@@ -155,13 +153,13 @@ sal_uInt32 XMLMetaExportComponent::exportDoc( enum XMLTokenEnum )
                     true, true );
 
         // NB: office:meta is now written by _ExportMeta
-        _ExportMeta();
+        ExportMeta_();
     }
     xDocHandler->endDocument();
     return 0;
 }
 
-void XMLMetaExportComponent::_ExportMeta()
+void XMLMetaExportComponent::ExportMeta_()
 {
     if (mxDocProps.is()) {
         OUString generator( ::utl::DocInfoHelper::GetGeneratorString() );
@@ -171,38 +169,27 @@ void XMLMetaExportComponent::_ExportMeta()
         uno::Reference<xml::sax::XDocumentHandler> xMeta(pMeta);
         pMeta->Export();
     } else {
-        SvXMLExport::_ExportMeta();
+        SvXMLExport::ExportMeta_();
     }
 }
 
 // methods without content:
-void XMLMetaExportComponent::_ExportAutoStyles() {}
-void XMLMetaExportComponent::_ExportMasterStyles() {}
-void XMLMetaExportComponent::_ExportContent() {}
-
-
-uno::Sequence< OUString > SAL_CALL XMLMetaExportComponent_getSupportedServiceNames()
-    throw()
-{
-    return uno::Sequence< OUString > { "com.sun.star.document.XMLOasisMetaExporter" };
-}
-
-OUString SAL_CALL XMLMetaExportComponent_getImplementationName() throw()
-{
-    return OUString( "XMLMetaExportComponent" );
-}
-
-uno::Reference< uno::XInterface > SAL_CALL XMLMetaExportComponent_createInstance(
-        const uno::Reference< lang::XMultiServiceFactory > & rSMgr)
-    throw( uno::Exception )
-{
-    return static_cast<cppu::OWeakObject*>(new XMLMetaExportComponent( comphelper::getComponentContext(rSMgr), XMLMetaExportComponent_getImplementationName(), SvXMLExportFlags::META|SvXMLExportFlags::OASIS));
-}
+void XMLMetaExportComponent::ExportAutoStyles_() {}
+void XMLMetaExportComponent::ExportMasterStyles_() {}
+void XMLMetaExportComponent::ExportContent_() {}
 
 uno::Sequence< OUString > SAL_CALL XMLMetaExportOOO_getSupportedServiceNames()
     throw()
 {
     return uno::Sequence< OUString > { "com.sun.star.document.XMLMetaExporter" };
+}
+
+extern "C" SAL_DLLPUBLIC_EXPORT css::uno::XInterface * SAL_CALL
+XMLMetaExportComponent_get_implementation(
+    css::uno::XComponentContext *context,
+    css::uno::Sequence<css::uno::Any> const &)
+{
+    return cppu::acquire(new XMLMetaExportComponent(context, "XMLMetaExportComponent", SvXMLExportFlags::META|SvXMLExportFlags::OASIS));
 }
 
 OUString SAL_CALL XMLMetaExportOOO_getImplementationName() throw()

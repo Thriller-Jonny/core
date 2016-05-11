@@ -43,7 +43,6 @@
 #include <svl/smplhint.hxx>
 
 
-
 namespace sdr
 {
     namespace properties
@@ -289,7 +288,7 @@ namespace sdr
                             SfxStyleSheet* pNewStyleSheet = dynamic_cast<SfxStyleSheet*>(
                                 pNewModel->GetStyleSheetPool()->Find(
                                     pStySheet->GetName(),
-                                    SFX_STYLE_FAMILY_ALL));
+                                    SfxStyleFamily::All));
                             if (pNewStyleSheet == nullptr
                                 || &pNewStyleSheet->GetPool().GetPool() != pDestPool)
                             {
@@ -363,8 +362,8 @@ namespace sdr
                             SfxStyleSheetBase* pLastSheet = nullptr;
                             SfxStyleSheetBase* pForThisObject = nullptr;
 
-                            std::vector<SfxStyleSheetBase*>::iterator iter;
-                            for (iter = aStyleList.begin(); iter != aStyleList.end(); ++iter)
+                            for (std::vector<SfxStyleSheetBase*>::const_iterator iter = aStyleList.begin(), aEnd = aStyleList.end()
+                                ; iter != aEnd; ++iter)
                             {
                                 pNewSheet = &pNewPool->Make((*iter)->GetName(), (*iter)->GetFamily(), (*iter)->GetMask());
                                 pNewSheet->GetItemSet().Put((*iter)->GetItemSet(), false);

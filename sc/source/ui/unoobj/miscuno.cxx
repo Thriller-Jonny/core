@@ -63,9 +63,9 @@ bool ScUnoHelpFunctions::GetBoolProperty( const uno::Reference<beans::XPropertyS
 }
 
 sal_Int32 ScUnoHelpFunctions::GetLongProperty( const uno::Reference<beans::XPropertySet>& xProp,
-                                            const OUString& rName, long nDefault )
+                                            const OUString& rName )
 {
-    sal_Int32 nRet = nDefault;
+    sal_Int32 nRet = 0;
     if ( xProp.is() )
     {
         try
@@ -160,12 +160,6 @@ sal_Int32 ScUnoHelpFunctions::GetEnumFromAny( const uno::Any& aAny )
     else
         aAny >>= nRet;
     return nRet;
-}
-
-void ScUnoHelpFunctions::SetBoolInAny( uno::Any& rAny, bool bValue )
-{
-    sal_Bool bTemp = bValue ? 1 : 0;
-    rAny.setValue( &bTemp, cppu::UnoType<bool>::get() );
 }
 
 void ScUnoHelpFunctions::SetOptionalPropertyValue(

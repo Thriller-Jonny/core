@@ -191,7 +191,6 @@ AccObject::~AccObject()
 }
 
 
-
 /**
    * Insert a child element.
    * @param pChild Child element that should be inserted into child list.
@@ -211,7 +210,7 @@ void AccObject::InsertChild( AccObject* pChild,short pos )
     }
     else
     {
-        std::vector<AccObject*>::iterator iter=m_childrenList.begin()+pos;
+        iter=m_childrenList.begin()+pos;
         m_childrenList.insert(iter,pChild);
     }
 
@@ -800,8 +799,8 @@ void AccObject::UpdateRole()
 
     XAccessibleContext* pContext  = m_xAccContextRef.get();
     m_pIMAcc->Put_XAccRole( ROLE_SYSTEM_WINDOW  );
-    short iRoleIndex = pContext->getAccessibleRole();
-    if ((0 <= iRoleIndex) && (iRoleIndex < SAL_N_ELEMENTS(ROLE_TABLE)))
+    sal_Int16 iRoleIndex = pContext->getAccessibleRole();
+    if ((0 <= iRoleIndex) && (sal_uInt16(iRoleIndex) < SAL_N_ELEMENTS(ROLE_TABLE)))
     {
         short iIA2Role = ROLE_TABLE[iRoleIndex][1] ;
         m_pIMAcc->Put_XAccRole( iIA2Role  );

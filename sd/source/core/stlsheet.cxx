@@ -24,7 +24,7 @@
 #include <osl/mutex.hxx>
 #include <vcl/svapp.hxx>
 #include <cppuhelper/supportsservice.hxx>
-#include <boost/bind.hpp>
+#include <cppuhelper/interfacecontainer.hxx>
 
 #include <editeng/outliner.hxx>
 #include <editeng/eeitem.hxx>
@@ -58,7 +58,6 @@
 
 using ::osl::MutexGuard;
 using ::osl::ClearableMutexGuard;
-using ::cppu::OInterfaceContainerHelper;
 using ::com::sun::star::table::BorderLine;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::util;
@@ -345,7 +344,7 @@ bool SdStyleSheet::IsUsed() const
     {
         MutexGuard aGuard( mrBHelper.rMutex );
 
-        OInterfaceContainerHelper * pContainer = mrBHelper.getContainer( cppu::UnoType<XModifyListener>::get() );
+        cppu::OInterfaceContainerHelper * pContainer = mrBHelper.getContainer( cppu::UnoType<XModifyListener>::get() );
         if( pContainer )
         {
             Sequence< Reference< XInterface > > aModifyListeners( pContainer->getElements() );
@@ -527,10 +526,13 @@ void SdStyleSheet::Notify(SfxBroadcaster& rBC, const SfxHint& rHint)
     // first, base class functionality
     SfxStyleSheet::Notify(rBC, rHint);
 
+    if (nFamily != SD_STYLE_FAMILY_PSEUDO)
+        return;
+
     /* if the dummy gets a notify about a changed attribute, he takes care that
        the actual ment style sheet sends broadcasts. */
     const SfxSimpleHint* pSimple = dynamic_cast<const SfxSimpleHint*>(&rHint);
-    if (pSimple && pSimple->GetId() == SFX_HINT_DATACHANGED && nFamily == SD_STYLE_FAMILY_PSEUDO)
+    if (pSimple && pSimple->GetId() == SFX_HINT_DATACHANGED)
     {
         SdStyleSheet* pRealStyle = GetRealStyleSheet();
         if (pRealStyle)
@@ -683,6 +685,7 @@ OUString SdStyleSheet::GetFamilyString( SfxStyleFamily eFamily )
         return OUString( "cell" );
     default:
         OSL_FAIL( "SdStyleSheet::GetFamilyString(), illegal family!" );
+        SAL_FALLTHROUGH;
     case SD_STYLE_FAMILY_GRAPHICS:
         return OUString( "graphics" );
     }
@@ -739,7 +742,7 @@ void SAL_CALL SdStyleSheet::dispose(  ) throw (RuntimeException, std::exception)
     ClearableMutexGuard aGuard( mrBHelper.rMutex );
     if (!mrBHelper.bDisposed && !mrBHelper.bInDispose)
     {
-        mrBHelper.bInDispose = sal_True;
+        mrBHelper.bInDispose = true;
         aGuard.clear();
         try
         {
@@ -754,14 +757,14 @@ void SAL_CALL SdStyleSheet::dispose(  ) throw (RuntimeException, std::exception)
             {
                 MutexGuard aGuard2( mrBHelper.rMutex );
                 // bDisposed and bInDispose must be set in this order:
-                mrBHelper.bDisposed = sal_True;
-                mrBHelper.bInDispose = sal_False;
+                mrBHelper.bDisposed = true;
+                mrBHelper.bInDispose = false;
                 throw;
             }
             MutexGuard aGuard2( mrBHelper.rMutex );
             // bDisposed and bInDispose must be set in this order:
-            mrBHelper.bDisposed = sal_True;
-            mrBHelper.bInDispose = sal_False;
+            mrBHelper.bDisposed = true;
+            mrBHelper.bInDispose = false;
         }
         catch (RuntimeException &)
         {
@@ -834,11 +837,14 @@ void SdStyleSheet::notifyModifyListener()
 {
     MutexGuard aGuard( mrBHelper.rMutex );
 
-    OInterfaceContainerHelper * pContainer = mrBHelper.getContainer( cppu::UnoType<XModifyListener>::get() );
+    cppu::OInterfaceContainerHelper * pContainer = mrBHelper.getContainer( cppu::UnoType<XModifyListener>::get() );
     if( pContainer )
     {
         EventObject aEvt( static_cast< OWeakObject * >( this ) );
-        pContainer->forEach<XModifyListener>( boost::bind( &XModifyListener::modified, _1, boost::cref( aEvt ) ) );
+        pContainer->forEach<XModifyListener>(
+            [&] (Reference<XModifyListener> const& xListener) {
+                return xListener->modified(aEvt);
+            } );
     }
 }
 
@@ -1086,11 +1092,22 @@ Any SAL_CALL SdStyleSheet::getPropertyValue( const OUString& PropertyName ) thro
         }
         else if( pEntry->nWID == WID_STYLE_DISPNAME )
         {
-            aAny <<= maDisplayName;
+            OUString aDisplayName;
+            if ( nFamily == SD_STYLE_FAMILY_MASTERPAGE )
+            {
+                const SdStyleSheet* pStyleSheet = GetPseudoStyleSheet();
+                if (pStyleSheet != nullptr)
+                    aDisplayName = pStyleSheet->GetDisplayName();
+            }
+
+            if (aDisplayName.isEmpty())
+                aDisplayName = GetDisplayName();
+
+            aAny <<= aDisplayName;
         }
         else if( pEntry->nWID == SDRATTR_TEXTDIRECTION )
         {
-            aAny <<= sal_False;
+            aAny <<= false;
         }
         else if( pEntry->nWID == OWN_ATTR_FILLBMP_MODE )
         {
@@ -1129,7 +1146,7 @@ Any SAL_CALL SdStyleSheet::getPropertyValue( const OUString& PropertyName ) thro
             if(SvxUnoTextRangeBase::GetPropertyValueHelper( aSet, pEntry, aAny ))
                 return aAny;
 
-            // Hole Wert aus ItemSet
+            // Get value of ItemSet
             aAny = SvxItemPropertySet_getPropertyValue( pEntry, aSet );
         }
 
@@ -1294,7 +1311,7 @@ Any SAL_CALL SdStyleSheet::getPropertyDefault( const OUString& aPropertyName ) t
     }
     else if( pEntry->nWID == SDRATTR_TEXTDIRECTION )
     {
-        aRet <<= sal_False;
+        aRet <<= false;
     }
     else if( pEntry->nWID == OWN_ATTR_FILLBMP_MODE )
     {

@@ -506,7 +506,6 @@ bool executeMacro( SfxObjectShell* pShell, const OUString& sMacroName, uno::Sequ
 }
 
 
-
 uno::Sequence< OUString > VBAMacroResolver_getSupportedServiceNames()
 {
     uno::Sequence<OUString> aServiceNames { "com.sun.star.script.vba.VBAMacroResolver" };
@@ -522,7 +521,6 @@ uno::Reference< uno::XInterface > SAL_CALL VBAMacroResolver_createInstance( cons
 {
     return static_cast< ::cppu::OWeakObject* >( new VBAMacroResolver );
 }
-
 
 
 VBAMacroResolver::VBAMacroResolver() :
@@ -694,12 +692,12 @@ KeyCodeEntry aMSKeyCodesData[] = {
 
 awt::KeyEvent parseKeyEvent( const OUString& Key ) throw ( uno::RuntimeException )
 {
-    static MSKeyCodeMap msKeyCodes;
-    if ( msKeyCodes.empty() )
+    static MSKeyCodeMap s_KeyCodes;
+    if ( s_KeyCodes.empty() )
     {
-        for ( unsigned int i = 0; i < SAL_N_ELEMENTS( aMSKeyCodesData ); ++i )
+        for (KeyCodeEntry & i : aMSKeyCodesData)
         {
-            msKeyCodes[ OUString::createFromAscii( aMSKeyCodesData[ i ].sName ) ] = aMSKeyCodesData[ i ].nCode;
+            s_KeyCodes[ OUString::createFromAscii( i.sName ) ] = i.nCode;
         }
     }
     OUString sKeyCode;
@@ -733,8 +731,8 @@ awt::KeyEvent parseKeyEvent( const OUString& Key ) throw ( uno::RuntimeException
             nVclKey |= parseChar( (char)( sKeyCode[ 0 ] ) );
         else
         {
-            MSKeyCodeMap::iterator it = msKeyCodes.find( sKeyCode );
-            if ( it == msKeyCodes.end() ) // unknown or unsupported
+            MSKeyCodeMap::iterator it = s_KeyCodes.find( sKeyCode );
+            if ( it == s_KeyCodes.end() ) // unknown or unsupported
                 throw uno::RuntimeException();
             nVclKey |= it->second;
         }

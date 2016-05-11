@@ -168,7 +168,7 @@ void SbaXFormAdapter::AttachForm(const Reference< css::sdbc::XRowSet >& xNewMast
         if (xLoadable->isLoaded())
         {
             css::lang::EventObject aEvt(*this);
-            ::cppu::OInterfaceIteratorHelper aIt(m_aLoadListeners);
+            ::comphelper::OInterfaceIteratorHelper2 aIt(m_aLoadListeners);
             while (aIt.hasMoreElements())
                 static_cast< css::form::XLoadListener*>(aIt.next())->unloaded(aEvt);
         }
@@ -185,7 +185,7 @@ void SbaXFormAdapter::AttachForm(const Reference< css::sdbc::XRowSet >& xNewMast
         if (xLoadable->isLoaded())
         {
             css::lang::EventObject aEvt(*this);
-            ::cppu::OInterfaceIteratorHelper aIt(m_aLoadListeners);
+            ::comphelper::OInterfaceIteratorHelper2 aIt(m_aLoadListeners);
             while (aIt.hasMoreElements())
                 static_cast< css::form::XLoadListener*>(aIt.next())->loaded(aEvt);
         }
@@ -239,7 +239,7 @@ sal_Bool SAL_CALL SbaXFormAdapter::wasNull() throw( css::sdbc::SQLException, Run
     Reference< css::sdbc::XRow >  xIface(m_xMainForm, UNO_QUERY);
     if (xIface.is())
         return xIface->wasNull();
-    return sal_True;
+    return true;
 }
 
 OUString SAL_CALL SbaXFormAdapter::getString(sal_Int32 columnIndex) throw( css::sdbc::SQLException, RuntimeException, std::exception )
@@ -255,7 +255,7 @@ sal_Bool SAL_CALL SbaXFormAdapter::getBoolean(sal_Int32 columnIndex) throw( css:
     Reference< css::sdbc::XRow >  xIface(m_xMainForm, UNO_QUERY);
     if (xIface.is())
         return xIface->getBoolean(columnIndex);
-    return sal_False;
+    return false;
 }
 
 sal_Int8 SAL_CALL SbaXFormAdapter::getByte(sal_Int32 columnIndex) throw( css::sdbc::SQLException, RuntimeException, std::exception )
@@ -409,7 +409,7 @@ sal_Bool SAL_CALL SbaXFormAdapter::moveToBookmark(const Any& bookmark) throw( cs
     Reference< css::sdbcx::XRowLocate >  xIface(m_xMainForm, UNO_QUERY);
     if (xIface.is())
         return xIface->moveToBookmark(bookmark);
-    return sal_False;
+    return false;
 }
 
 sal_Bool SAL_CALL SbaXFormAdapter::moveRelativeToBookmark(const Any& bookmark, sal_Int32 rows) throw( css::sdbc::SQLException, RuntimeException, std::exception )
@@ -417,7 +417,7 @@ sal_Bool SAL_CALL SbaXFormAdapter::moveRelativeToBookmark(const Any& bookmark, s
     Reference< css::sdbcx::XRowLocate >  xIface(m_xMainForm, UNO_QUERY);
     if (xIface.is())
         return xIface->moveRelativeToBookmark(bookmark,rows);
-    return sal_False;
+    return false;
 }
 
 sal_Int32 SAL_CALL SbaXFormAdapter::compareBookmarks(const Any& _first, const Any& _second) throw( css::sdbc::SQLException, RuntimeException, std::exception )
@@ -433,7 +433,7 @@ sal_Bool SAL_CALL SbaXFormAdapter::hasOrderedBookmarks() throw( css::sdbc::SQLEx
     Reference< css::sdbcx::XRowLocate >  xIface(m_xMainForm, UNO_QUERY);
     if (xIface.is())
         return xIface->hasOrderedBookmarks();
-    return sal_False;
+    return false;
 }
 
 sal_Int32 SAL_CALL SbaXFormAdapter::hashBookmark(const Any& bookmark) throw( css::sdbc::SQLException, RuntimeException, std::exception )
@@ -569,35 +569,35 @@ sal_Bool SAL_CALL SbaXFormAdapter::next() throw( css::sdbc::SQLException, Runtim
 {
     if (m_xMainForm.is())
         return m_xMainForm->next();
-    return sal_False;
+    return false;
 }
 
 sal_Bool SAL_CALL SbaXFormAdapter::isBeforeFirst() throw( css::sdbc::SQLException, RuntimeException, std::exception )
 {
     if (m_xMainForm.is())
         return m_xMainForm->isBeforeFirst();
-    return sal_False;
+    return false;
 }
 
 sal_Bool SAL_CALL SbaXFormAdapter::isAfterLast() throw( css::sdbc::SQLException, RuntimeException, std::exception )
 {
     if (m_xMainForm.is())
         return m_xMainForm->isAfterLast();
-    return sal_False;
+    return false;
 }
 
 sal_Bool SAL_CALL SbaXFormAdapter::isFirst() throw( css::sdbc::SQLException, RuntimeException, std::exception )
 {
     if (m_xMainForm.is())
         return m_xMainForm->isFirst();
-    return sal_False;
+    return false;
 }
 
 sal_Bool SAL_CALL SbaXFormAdapter::isLast() throw( css::sdbc::SQLException, RuntimeException, std::exception )
 {
     if (m_xMainForm.is())
         return m_xMainForm->isLast();
-    return sal_False;
+    return false;
 }
 
 void SAL_CALL SbaXFormAdapter::beforeFirst() throw( css::sdbc::SQLException, RuntimeException, std::exception )
@@ -616,14 +616,14 @@ sal_Bool SAL_CALL SbaXFormAdapter::first() throw( css::sdbc::SQLException, Runti
 {
     if (m_xMainForm.is())
         return m_xMainForm->first();
-    return sal_False;
+    return false;
 }
 
 sal_Bool SAL_CALL SbaXFormAdapter::last() throw( css::sdbc::SQLException, RuntimeException, std::exception )
 {
     if (m_xMainForm.is())
         return m_xMainForm->last();
-    return sal_False;
+    return false;
 }
 
 sal_Int32 SAL_CALL SbaXFormAdapter::getRow() throw( css::sdbc::SQLException, RuntimeException, std::exception )
@@ -637,21 +637,21 @@ sal_Bool SAL_CALL SbaXFormAdapter::absolute(sal_Int32 row) throw( css::sdbc::SQL
 {
     if (m_xMainForm.is())
         return m_xMainForm->absolute(row);
-    return sal_False;
+    return false;
 }
 
 sal_Bool SAL_CALL SbaXFormAdapter::relative(sal_Int32 rows) throw( css::sdbc::SQLException, RuntimeException, std::exception )
 {
     if (m_xMainForm.is())
         return m_xMainForm->relative(rows);
-    return sal_False;
+    return false;
 }
 
 sal_Bool SAL_CALL SbaXFormAdapter::previous() throw( css::sdbc::SQLException, RuntimeException, std::exception )
 {
     if (m_xMainForm.is())
         return m_xMainForm->previous();
-    return sal_False;
+    return false;
 }
 
 void SAL_CALL SbaXFormAdapter::refreshRow() throw( css::sdbc::SQLException, RuntimeException, std::exception )
@@ -664,21 +664,21 @@ sal_Bool SAL_CALL SbaXFormAdapter::rowUpdated() throw( css::sdbc::SQLException, 
 {
     if (m_xMainForm.is())
         return m_xMainForm->rowUpdated();
-    return sal_False;
+    return false;
 }
 
 sal_Bool SAL_CALL SbaXFormAdapter::rowInserted() throw( css::sdbc::SQLException, RuntimeException, std::exception )
 {
     if (m_xMainForm.is())
         return m_xMainForm->rowInserted();
-    return sal_False;
+    return false;
 }
 
 sal_Bool SAL_CALL SbaXFormAdapter::rowDeleted() throw( css::sdbc::SQLException, RuntimeException, std::exception )
 {
     if (m_xMainForm.is())
         return m_xMainForm->rowDeleted();
-    return sal_False;
+    return false;
 }
 
 Reference< XInterface > SAL_CALL SbaXFormAdapter::getStatement() throw( css::sdbc::SQLException, RuntimeException, std::exception )
@@ -807,7 +807,7 @@ sal_Bool SAL_CALL SbaXFormAdapter::isLoaded() throw( RuntimeException, std::exce
     Reference< css::form::XLoadable >  xIface(m_xMainForm, UNO_QUERY);
     if (xIface.is())
         return xIface->isLoaded();
-    return sal_False;
+    return false;
 }
 
 IMPLEMENT_LISTENER_ADMINISTRATION(SbaXFormAdapter, form, LoadListener, m_aLoadListeners, css::form::XLoadable, m_xMainForm)
@@ -1022,7 +1022,7 @@ IMPLEMENT_LISTENER_ADMINISTRATION(SbaXFormAdapter, form, SubmitListener, m_aSubm
 sal_Bool SAL_CALL SbaXFormAdapter::getGroupControl() throw( RuntimeException, std::exception )
 {
     OSL_FAIL("SAL_CALL SbaXFormAdapter::getGroupControl : not supported !");
-    return sal_False;
+    return false;
 }
 
 void SAL_CALL SbaXFormAdapter::setGroupControl(sal_Bool /*GroupControl*/) throw( RuntimeException, std::exception )
@@ -1086,7 +1086,7 @@ void SAL_CALL SbaXFormAdapter::dispose() throw( RuntimeException, std::exception
     m_aContainerListeners.disposeAndClear(aEvt);
 
     // dispose all children
-    for (   ::std::vector< Reference< css::form::XFormComponent > >::iterator aIter = m_aChildren.begin();
+    for (   ::std::vector< Reference< css::form::XFormComponent > >::const_iterator aIter = m_aChildren.begin();
             aIter != m_aChildren.end();
             ++aIter
         )
@@ -1421,14 +1421,14 @@ void SbaXFormAdapter::implInsert(const Any& aElement, sal_Int32 nIndex, const OU
     aEvt.Source = *this;
     aEvt.Accessor <<= nIndex;
     aEvt.Element <<= xElement;
-    ::cppu::OInterfaceIteratorHelper aIt(m_aContainerListeners);
+    ::comphelper::OInterfaceIteratorHelper2 aIt(m_aContainerListeners);
     while (aIt.hasMoreElements())
         static_cast< css::container::XContainerListener*>(aIt.next())->elementInserted(aEvt);
 }
 
 sal_Int32 SbaXFormAdapter::implGetPos(const OUString& rName)
 {
-    ::std::vector< OUString>::iterator aIter = ::std::find_if(   m_aChildNames.begin(),
+    ::std::vector< OUString>::const_iterator aIter = ::std::find_if(   m_aChildNames.begin(),
                                                                 m_aChildNames.end(),
                                                                 ::std::bind2nd(::std::equal_to< OUString>(),rName));
 
@@ -1526,7 +1526,7 @@ void SAL_CALL SbaXFormAdapter::removeByIndex(sal_Int32 _rIndex) throw( css::lang
     css::container::ContainerEvent aEvt;
     aEvt.Source = *this;
     aEvt.Element <<= xAffected;
-    ::cppu::OInterfaceIteratorHelper aIt(m_aContainerListeners);
+    ::comphelper::OInterfaceIteratorHelper2 aIt(m_aContainerListeners);
     while (aIt.hasMoreElements())
         static_cast< css::container::XContainerListener*>(aIt.next())->elementRemoved(aEvt);
 
@@ -1589,7 +1589,7 @@ void SAL_CALL SbaXFormAdapter::replaceByIndex(sal_Int32 _rIndex, const Any& Elem
     aEvt.Element <<= xElement;
     aEvt.ReplacedElement <<= xOld;
 
-    ::cppu::OInterfaceIteratorHelper aIt(m_aContainerListeners);
+    ::comphelper::OInterfaceIteratorHelper2 aIt(m_aContainerListeners);
     while (aIt.hasMoreElements())
         static_cast< css::container::XContainerListener*>(aIt.next())->elementReplaced(aEvt);
 }
@@ -1631,7 +1631,7 @@ void SAL_CALL SbaXFormAdapter::propertyChange(const css::beans::PropertyChangeEv
 {
     if (evt.PropertyName == PROPERTY_NAME)
     {
-        ::std::vector<  css::uno::Reference< css::form::XFormComponent > >::iterator aIter = ::std::find_if(  m_aChildren.begin(),
+        ::std::vector<  css::uno::Reference< css::form::XFormComponent > >::const_iterator aIter = ::std::find_if(  m_aChildren.begin(),
                                                                 m_aChildren.end(),
                                                                 ::std::bind2nd(::std::equal_to< css::uno::Reference< css::uno::XInterface > >(),evt.Source));
 
@@ -1651,7 +1651,7 @@ void SAL_CALL SbaXFormAdapter::disposing(const css::lang::EventObject& Source) t
     if (Source.Source == m_xMainForm)
         dispose();
 
-    ::std::vector<  css::uno::Reference< css::form::XFormComponent > >::iterator aIter = ::std::find_if(  m_aChildren.begin(),
+    ::std::vector<  css::uno::Reference< css::form::XFormComponent > >::const_iterator aIter = ::std::find_if(  m_aChildren.begin(),
                                                                 m_aChildren.end(),
                                                                 ::std::bind2nd(::std::equal_to< css::uno::Reference< css::uno::XInterface > >(),Source.Source));
     if(aIter != m_aChildren.end())

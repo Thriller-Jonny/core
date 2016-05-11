@@ -22,7 +22,6 @@
 #include <editeng/editview.hxx>
 #include <editeng/outliner.hxx>
 #include <svl/srchitem.hxx>
-#include <crsskip.hxx>
 #include <drawdoc.hxx>
 #include <ndtxt.hxx>
 #include <wrtsh.hxx>
@@ -47,6 +46,9 @@ public:
     void testSearchTextFrameWrapAround();
     void testDocumentSizeChanged();
     void testSearchAll();
+    void testSearchAllNotifications();
+    void testPageDownInvalidation();
+    void testPartHash();
 
     CPPUNIT_TEST_SUITE(SwTiledRenderingTest);
     CPPUNIT_TEST(testRegisterCallback);
@@ -62,6 +64,9 @@ public:
     CPPUNIT_TEST(testSearchTextFrameWrapAround);
     CPPUNIT_TEST(testDocumentSizeChanged);
     CPPUNIT_TEST(testSearchAll);
+    CPPUNIT_TEST(testSearchAllNotifications);
+    CPPUNIT_TEST(testPageDownInvalidation);
+    CPPUNIT_TEST(testPartHash);
     CPPUNIT_TEST_SUITE_END();
 
 private:
@@ -74,10 +79,16 @@ private:
     bool m_bFound;
     std::vector<OString> m_aSearchResultSelection;
     std::vector<int> m_aSearchResultPart;
+    int m_nSelectionBeforeSearchResult;
+    int m_nSelectionAfterSearchResult;
+    int m_nInvalidations;
 };
 
 SwTiledRenderingTest::SwTiledRenderingTest()
-    : m_bFound(true)
+    : m_bFound(true),
+      m_nSelectionBeforeSearchResult(0),
+      m_nSelectionAfterSearchResult(0),
+      m_nInvalidations(0)
 {
 }
 
@@ -113,6 +124,7 @@ void SwTiledRenderingTest::callbackImpl(int nType, const char* pPayload)
             m_aInvalidation.setWidth(aSeq[2].toInt32());
             m_aInvalidation.setHeight(aSeq[3].toInt32());
         }
+        ++m_nInvalidations;
     }
     break;
     case LOK_CALLBACK_DOCUMENT_SIZE_CHANGED:
@@ -126,6 +138,10 @@ void SwTiledRenderingTest::callbackImpl(int nType, const char* pPayload)
     case LOK_CALLBACK_TEXT_SELECTION:
     {
         m_aTextSelection = pPayload;
+        if (m_aSearchResultSelection.empty())
+            ++m_nSelectionBeforeSearchResult;
+        else
+            ++m_nSelectionAfterSearchResult;
     }
     break;
     case LOK_CALLBACK_SEARCH_NOT_FOUND:
@@ -325,12 +341,12 @@ void SwTiledRenderingTest::testSearch()
     SwXTextDocument* pXTextDocument = createDoc("search.odt");
     pXTextDocument->registerCallback(&SwTiledRenderingTest::callback, this);
     SwWrtShell* pWrtShell = pXTextDocument->GetDocShell()->GetWrtShell();
-    size_t nNode = pWrtShell->getShellCursor(false)->Start()->nNode.GetNode().GetIndex();
+    std::size_t nNode = pWrtShell->getShellCursor(false)->Start()->nNode.GetNode().GetIndex();
 
     // First hit, in the second paragraph, before the shape.
     lcl_search(false);
     CPPUNIT_ASSERT(!pWrtShell->GetDrawView()->GetTextEditObject());
-    size_t nActual = pWrtShell->getShellCursor(false)->Start()->nNode.GetNode().GetIndex();
+    std::size_t nActual = pWrtShell->getShellCursor(false)->Start()->nNode.GetNode().GetIndex();
     CPPUNIT_ASSERT_EQUAL(nNode + 1, nActual);
     /// Make sure we get search result selection for normal find as well, not only find all.
     CPPUNIT_ASSERT(!m_aSearchResultSelection.empty());
@@ -454,9 +470,64 @@ void SwTiledRenderingTest::testSearchAll()
     }));
     comphelper::dispatchCommand(".uno:ExecuteSearch", aPropertyValues);
     // This was 0; should be 2 results in the body text.
-    CPPUNIT_ASSERT_EQUAL(static_cast<size_t>(2), m_aSearchResultSelection.size());
+    CPPUNIT_ASSERT_EQUAL(static_cast<std::size_t>(2), m_aSearchResultSelection.size());
     // Writer documents are always a single part.
     CPPUNIT_ASSERT_EQUAL(0, m_aSearchResultPart[0]);
+
+    comphelper::LibreOfficeKit::setActive(false);
+}
+
+void SwTiledRenderingTest::testSearchAllNotifications()
+{
+    comphelper::LibreOfficeKit::setActive();
+    SwXTextDocument* pXTextDocument = createDoc("search.odt");
+    pXTextDocument->registerCallback(&SwTiledRenderingTest::callback, this);
+    uno::Sequence<beans::PropertyValue> aPropertyValues(comphelper::InitPropertySequence(
+    {
+        {"SearchItem.SearchString", uno::makeAny(OUString("shape"))},
+        {"SearchItem.Backward", uno::makeAny(false)},
+        {"SearchItem.Command", uno::makeAny(static_cast<sal_uInt16>(SvxSearchCmd::FIND_ALL))},
+    }));
+    comphelper::dispatchCommand(".uno:ExecuteSearch", aPropertyValues);
+    Scheduler::ProcessEventsToIdle();
+
+    // This was 5, make sure that we get no notifications about selection changes during search.
+    CPPUNIT_ASSERT_EQUAL(0, m_nSelectionBeforeSearchResult);
+    // But we do get the selection afterwards.
+    CPPUNIT_ASSERT(m_nSelectionAfterSearchResult > 0);
+
+    comphelper::LibreOfficeKit::setActive(false);
+}
+
+void SwTiledRenderingTest::testPageDownInvalidation()
+{
+    comphelper::LibreOfficeKit::setActive();
+
+    SwXTextDocument* pXTextDocument = createDoc("pagedown-invalidation.odt");
+    uno::Sequence<beans::PropertyValue> aPropertyValues(comphelper::InitPropertySequence(
+    {
+        {".uno:HideWhitespace", uno::makeAny(true)},
+    }));
+    pXTextDocument->initializeForTiledRendering(aPropertyValues);
+    pXTextDocument->registerCallback(&SwTiledRenderingTest::callback, this);
+    comphelper::dispatchCommand(".uno:PageDown", uno::Sequence<beans::PropertyValue>());
+
+    // This was 2.
+    CPPUNIT_ASSERT_EQUAL(0, m_nInvalidations);
+
+    comphelper::LibreOfficeKit::setActive(false);
+}
+
+void SwTiledRenderingTest::testPartHash()
+{
+    comphelper::LibreOfficeKit::setActive();
+
+    SwXTextDocument* pXTextDocument = createDoc("pagedown-invalidation.odt");
+    int nParts = pXTextDocument->getParts();
+    for (int it = 0; it < nParts; it++)
+    {
+        CPPUNIT_ASSERT(!pXTextDocument->getPartHash(it).isEmpty());
+    }
 
     comphelper::LibreOfficeKit::setActive(false);
 }

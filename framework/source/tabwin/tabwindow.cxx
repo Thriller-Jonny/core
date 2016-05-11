@@ -254,7 +254,7 @@ IMPL_LINK_TYPED( TabWindow, Deactivate, TabControl*, pTabControl, bool )
     return true;
 }
 
-// XInitilization
+// XInitialization
 
 void SAL_CALL TabWindow::initialize( const css::uno::Sequence< css::uno::Any >& aArguments )
 throw (css::uno::Exception, css::uno::RuntimeException, std::exception)
@@ -859,7 +859,7 @@ void SAL_CALL TabWindow::getFastPropertyValue( css::uno::Any& aValue  ,
             // Define static member to give structure of properties to baseclass "OPropertySetHelper".
             // "impl_getStaticPropertyDescriptor" is a non exported and static function, who will define a static propertytable.
             // "sal_True" say: Table is sorted by name.
-            static ::cppu::OPropertyArrayHelper aInfoHelper( impl_getStaticPropertyDescriptor(), sal_True );
+            static ::cppu::OPropertyArrayHelper aInfoHelper( impl_getStaticPropertyDescriptor(), true );
             pInfoHelper = &aInfoHelper;
         }
     }

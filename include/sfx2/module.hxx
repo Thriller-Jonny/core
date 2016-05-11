@@ -17,8 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 #ifndef INCLUDED_SFX2_MODULE_HXX
-#define INCLUDED_SFX2_MODULE_HXX  // internal
-#define _SFXMOD_HXX     // external
+#define INCLUDED_SFX2_MODULE_HXX
 
 #include <sal/config.h>
 #include <sfx2/app.hxx>
@@ -41,7 +40,6 @@ class SfxModule_Impl;
 class SfxSlotPool;
 struct SfxChildWinContextFactory;
 struct SfxChildWinFactory;
-struct SfxMenuCtrlFactory;
 struct SfxStbCtrlFactory;
 struct SfxTbxCtrlFactory;
 class SfxTabPage;
@@ -80,14 +78,11 @@ public:
     void                        RegisterToolBoxControl(const SfxTbxCtrlFactory&);
     void                        RegisterChildWindow(SfxChildWinFactory*);
     void                        RegisterStatusBarControl(const SfxStbCtrlFactory&);
-    void                        RegisterMenuControl(const SfxMenuCtrlFactory&);
 
     virtual VclPtr<SfxTabPage>  CreateTabPage( sal_uInt16 nId,
                                                vcl::Window* pParent,
                                                const SfxItemSet& rSet );
     virtual void                Invalidate(sal_uInt16 nId = 0) override;
-
-    bool                        IsChildWindowAvailable( const sal_uInt16 i_nId, const SfxViewFrame* i_pViewFrame ) const;
 
     static SfxModule*           GetActiveModule( SfxViewFrame* pFrame=nullptr );
     static FieldUnit            GetCurrentFieldUnit();

@@ -8,14 +8,16 @@
  */
 
 #include <config_opengl.h>
+#include <chrono>
 
 #include <vcl/opengl/OpenGLContext.hxx>
 #include <vcl/opengl/OpenGLHelper.hxx>
+#include <vcl/opengl/OpenGLWrapper.hxx>
 #include <vcl/syschild.hxx>
 #include <vcl/sysdata.hxx>
 
 #include <vcl/pngwrite.hxx>
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 #include <vcl/graph.hxx>
 
 #include <osl/thread.hxx>
@@ -27,16 +29,19 @@
 #include <postmac.h>
 #endif
 
-#if defined( WNT )
+#if defined(_WIN32)
 #include <win/saldata.hxx>
 #endif
 
 #include "svdata.hxx"
+#include "salgdi.hxx"
 
 #include <opengl/framebuffer.hxx>
 #include <opengl/program.hxx>
 #include <opengl/texture.hxx>
 #include <opengl/zone.hxx>
+
+#include "opengl/RenderState.hxx"
 
 using namespace com::sun::star;
 
@@ -48,6 +53,8 @@ static std::vector<GLXContext> g_vShareList;
 #elif defined(WNT)
 static std::vector<HGLRC> g_vShareList;
 #endif
+
+static sal_Int64 nBufferSwapCounter = 0;
 
 GLWindow::~GLWindow()
 {
@@ -69,6 +76,7 @@ OpenGLContext::OpenGLContext():
     mpFirstFramebuffer(nullptr),
     mpLastFramebuffer(nullptr),
     mpCurrentProgram(nullptr),
+    mpRenderState(new RenderState),
     mnPainting(0),
     mpPrevContext(nullptr),
     mpNextContext(nullptr)
@@ -264,8 +272,8 @@ bool InitMultisample(const PIXELFORMATDESCRIPTOR& pfd, int& rPixelFormat,
         return false;
     }
     // Get our pixel format
-    PFNWGLCHOOSEPIXELFORMATARBPROC wglChoosePixelFormatARB = (PFNWGLCHOOSEPIXELFORMATARBPROC)wglGetProcAddress("wglChoosePixelFormatARB");
-    if (!wglChoosePixelFormatARB)
+    PFNWGLCHOOSEPIXELFORMATARBPROC fn_wglChoosePixelFormatARB = (PFNWGLCHOOSEPIXELFORMATARBPROC)wglGetProcAddress("wglChoosePixelFormatARB");
+    if (!fn_wglChoosePixelFormatARB)
     {
         return false;
     }
@@ -313,7 +321,7 @@ bool InitMultisample(const PIXELFORMATDESCRIPTOR& pfd, int& rPixelFormat,
     bool bArbMultisampleSupported = false;
 
     // First we check to see if we can get a pixel format for 8 samples
-    valid = wglChoosePixelFormatARB(hDC, iAttributes, fAttributes, 1, &pixelFormat, &numFormats);
+    valid = fn_wglChoosePixelFormatARB(hDC, iAttributes, fAttributes, 1, &pixelFormat, &numFormats);
     // If we returned true, and our format count is greater than 1
     if (valid && numFormats >= 1)
     {
@@ -328,7 +336,7 @@ bool InitMultisample(const PIXELFORMATDESCRIPTOR& pfd, int& rPixelFormat,
     // Our pixel format with 8 samples failed, test for 2 samples
     assert(iAttributes[18] == WGL_SAMPLES_ARB);
     iAttributes[19] = 2;
-    valid = wglChoosePixelFormatARB(hDC, iAttributes, fAttributes, 1, &pixelFormat, &numFormats);
+    valid = fn_wglChoosePixelFormatARB(hDC, iAttributes, fAttributes, 1, &pixelFormat, &numFormats);
     if (valid && numFormats >= 1)
     {
         bArbMultisampleSupported = true;
@@ -727,10 +735,8 @@ bool OpenGLContext::ImplInit()
     {
         int best_fbc = -1;
         GLXFBConfig* pFBC = getFBConfig(m_aGLWin.dpy, m_aGLWin.win, best_fbc, mbUseDoubleBufferedRendering, false);
-        if (!pFBC)
-            return false;
 
-        if (best_fbc != -1)
+        if (pFBC && best_fbc != -1)
         {
             int pContextAttribs[] =
             {
@@ -787,8 +793,8 @@ bool OpenGLContext::ImplInit()
     m_aGLWin.GLExtensions = glGetString( GL_EXTENSIONS );
     SAL_INFO("vcl.opengl", "available GL  extensions: " << m_aGLWin.GLExtensions);
 
-    XWindowAttributes xWinAttr;
-    if( !XGetWindowAttributes( m_aGLWin.dpy, m_aGLWin.win, &xWinAttr ) )
+    XWindowAttributes aWinAttr;
+    if( !XGetWindowAttributes( m_aGLWin.dpy, m_aGLWin.win, &aWinAttr ) )
     {
         SAL_WARN("vcl.opengl", "Failed to get window attributes on " << m_aGLWin.win);
         m_aGLWin.Width = 0;
@@ -796,8 +802,8 @@ bool OpenGLContext::ImplInit()
     }
     else
     {
-        m_aGLWin.Width = xWinAttr.width;
-        m_aGLWin.Height = xWinAttr.height;
+        m_aGLWin.Width = aWinAttr.width;
+        m_aGLWin.Height = aWinAttr.height;
     }
 
     if( m_aGLWin.HasGLXExtension("GLX_SGI_swap_control" ) )
@@ -1043,11 +1049,19 @@ void OpenGLContext::InitGLEWDebugging()
         {
             glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
             glDebugMessageCallbackARB(&debug_callback, nullptr);
+
+#ifdef GL_DEBUG_SEVERITY_NOTIFICATION_ARB
+            // Ignore i965’s shader compiler notification flood.
+            glDebugMessageControlARB(GL_DEBUG_SOURCE_SHADER_COMPILER_ARB, GL_DEBUG_TYPE_OTHER_ARB, GL_DEBUG_SEVERITY_NOTIFICATION_ARB, 0, nullptr, true);
+#endif
         }
         else if ( glDebugMessageCallback )
         {
             glEnable(GL_DEBUG_OUTPUT);
             glDebugMessageCallback(&debug_callback, nullptr);
+
+            // Ignore i965’s shader compiler notification flood.
+            glDebugMessageControl(GL_DEBUG_SOURCE_SHADER_COMPILER, GL_DEBUG_TYPE_OTHER, GL_DEBUG_SEVERITY_NOTIFICATION, 0, nullptr, true);
         }
     }
 
@@ -1079,8 +1093,7 @@ void OpenGLContext::setWinSize(const Size& rSize)
 }
 
 
-
-#if defined( WNT )
+#if defined(_WIN32)
 
 bool OpenGLContext::initWindow()
 {
@@ -1181,10 +1194,10 @@ void OpenGLContext::initGLWindow(Visual* pVisual)
         XVisualInfo aTemplate;
         aTemplate.visualid = XVisualIDFromVisual( pVisual );
         int nVisuals = 0;
-        XVisualInfo* pInfos = XGetVisualInfo( m_aGLWin.dpy, VisualIDMask, &aTemplate, &nVisuals );
+        XVisualInfo* pInfo = XGetVisualInfo( m_aGLWin.dpy, VisualIDMask, &aTemplate, &nVisuals );
         if( nVisuals != 1 )
             SAL_WARN( "vcl.opengl", "match count for visual id is not 1" );
-        m_aGLWin.vi = pInfos;
+        m_aGLWin.vi = pInfo;
     }
 
     // Check multisample support
@@ -1213,6 +1226,7 @@ void OpenGLContext::reset()
 
     // reset the clip region
     maClipRegion.SetEmpty();
+    mpRenderState.reset(new RenderState);
 
     // destroy all framebuffers
     if( mpLastFramebuffer )
@@ -1243,7 +1257,7 @@ void OpenGLContext::reset()
     mbInitialized = false;
 
     // destroy the context itself
-#if defined( WNT )
+#if defined(_WIN32)
     if (m_aGLWin.hRC)
     {
         std::vector<HGLRC>::iterator itr = std::remove(g_vShareList.begin(), g_vShareList.end(), m_aGLWin.hRC);
@@ -1278,7 +1292,7 @@ void OpenGLContext::reset()
 #endif
 }
 
-#if defined( WNT ) || defined( MACOSX ) || defined( IOS ) || defined( ANDROID )
+#if defined(_WIN32) || defined( MACOSX ) || defined( IOS ) || defined( ANDROID )
 
 SystemWindowData OpenGLContext::generateWinData(vcl::Window* /*pParent*/, bool bRequestLegacyContext)
 {
@@ -1341,7 +1355,7 @@ bool OpenGLContext::isCurrent()
 {
     OpenGLZone aZone;
 
-#if defined( WNT )
+#if defined(_WIN32)
     return wglGetCurrentContext() == m_aGLWin.hRC &&
            wglGetCurrentDC() == m_aGLWin.hDC;
 #elif defined( MACOSX )
@@ -1357,7 +1371,7 @@ bool OpenGLContext::isCurrent()
 
 bool OpenGLContext::hasCurrent()
 {
-#if defined( WNT )
+#if defined(_WIN32)
     return wglGetCurrentContext() != NULL;
 #elif defined( MACOSX ) || defined( IOS ) || defined( ANDROID ) || defined(LIBO_HEADLESS)
     return false;
@@ -1405,7 +1419,7 @@ void OpenGLContext::makeCurrent()
 
     clearCurrent();
 
-#if defined( WNT )
+#if defined(_WIN32)
     if (!wglMakeCurrent(m_aGLWin.hDC, m_aGLWin.hRC))
     {
         SAL_WARN("vcl.opengl", "OpenGLContext::makeCurrent(): wglMakeCurrent failed: " << GetLastError());
@@ -1433,6 +1447,43 @@ void OpenGLContext::makeCurrent()
 #endif
 
     registerAsCurrent();
+}
+
+rtl::Reference<OpenGLContext> OpenGLContext::getVCLContext(bool bMakeIfNecessary)
+{
+    ImplSVData* pSVData = ImplGetSVData();
+    OpenGLContext *pContext = pSVData->maGDIData.mpLastContext;
+    while( pContext )
+    {
+        // check if this context is usable
+        if( pContext->isInitialized() && pContext->isVCLOnly() )
+            break;
+        pContext = pContext->mpPrevContext;
+    }
+    rtl::Reference<OpenGLContext> xContext;
+    if( !pContext && bMakeIfNecessary )
+    {
+        // create our magic fallback window context.
+        xContext = ImplGetDefaultContextWindow()->GetGraphics()->GetOpenGLContext();
+        assert(xContext.is());
+    }
+    else
+        xContext = pContext;
+
+    if( xContext.is() )
+        xContext->makeCurrent();
+
+    return xContext;
+}
+
+/*
+ * We don't care what context we have, but we want one that is live,
+ * ie. not reset underneath us, and is setup for VCL usage - ideally
+ * not swapping context at all.
+ */
+void OpenGLContext::makeVCLCurrent()
+{
+    getVCLContext();
 }
 
 void OpenGLContext::registerAsCurrent()
@@ -1463,7 +1514,7 @@ void OpenGLContext::resetCurrent()
 
     OpenGLZone aZone;
 
-#if defined( WNT )
+#if defined(_WIN32)
     wglMakeCurrent(NULL, NULL);
 #elif defined( MACOSX )
     (void) this; // loplugin:staticmethods
@@ -1480,7 +1531,7 @@ void OpenGLContext::swapBuffers()
 {
     OpenGLZone aZone;
 
-#if defined( WNT )
+#if defined(_WIN32)
     SwapBuffers(m_aGLWin.hDC);
 #elif defined( MACOSX )
     NSOpenGLView* pView = getOpenGLView();
@@ -1491,20 +1542,26 @@ void OpenGLContext::swapBuffers()
     glXSwapBuffers(m_aGLWin.dpy, m_aGLWin.win);
 #endif
 
+    nBufferSwapCounter++;
+
     static bool bSleep = getenv("SAL_GL_SLEEP_ON_SWAP");
     if (bSleep)
     {
         // half a second.
-        TimeValue aSleep( 0, 500*1000*1000 );
-        osl::Thread::wait( aSleep );
+        osl::Thread::wait( std::chrono::milliseconds(500) );
     }
+}
+
+sal_Int64 OpenGLWrapper::getBufferSwapCounter()
+{
+    return nBufferSwapCounter;
 }
 
 void OpenGLContext::sync()
 {
     OpenGLZone aZone;
 
-#if defined( WNT )
+#if defined(_WIN32)
     // nothing
 #elif defined( MACOSX ) || defined( IOS ) || defined( ANDROID ) || defined(LIBO_HEADLESS)
     (void) this; // loplugin:staticmethods
@@ -1605,7 +1662,6 @@ OpenGLFramebuffer* OpenGLContext::AcquireFramebuffer( const OpenGLTexture& rText
         if( mpLastFramebuffer )
         {
             pFramebuffer->mpPrevFramebuffer = mpLastFramebuffer;
-            mpLastFramebuffer->mpNextFramebuffer = pFramebuffer;
             mpLastFramebuffer = pFramebuffer;
         }
         else
@@ -1623,8 +1679,8 @@ OpenGLFramebuffer* OpenGLContext::AcquireFramebuffer( const OpenGLTexture& rText
     assert( pFramebuffer );
     BindFramebuffer( pFramebuffer );
     pFramebuffer->AttachTexture( rTexture );
-    glViewport( 0, 0, rTexture.GetWidth(), rTexture.GetHeight() );
-    CHECK_GL_ERROR();
+
+    state()->viewport(Rectangle(Point(), Size(rTexture.GetWidth(), rTexture.GetHeight())));
 
     return pFramebuffer;
 }
@@ -1647,6 +1703,27 @@ void OpenGLContext::UnbindTextureFromFramebuffers( GLuint nTexture )
         }
         pFramebuffer = pFramebuffer->mpPrevFramebuffer;
     }
+
+    // Lets just check that no other context has a framebuffer
+    // with this texture - that would be bad ...
+    assert( !IsTextureAttachedAnywhere( nTexture ) );
+}
+
+/// Method for debugging; check texture is not already attached.
+bool OpenGLContext::IsTextureAttachedAnywhere( GLuint nTexture )
+{
+    ImplSVData* pSVData = ImplGetSVData();
+    for( auto *pCheck = pSVData->maGDIData.mpLastContext; pCheck;
+               pCheck = pCheck->mpPrevContext )
+    {
+        for( auto pBuffer = pCheck->mpLastFramebuffer; pBuffer;
+                  pBuffer = pBuffer->mpPrevFramebuffer )
+        {
+            if( pBuffer->IsAttached( nTexture ) )
+                return true;
+        }
+    }
+    return false;
 }
 
 void OpenGLContext::ReleaseFramebuffer( OpenGLFramebuffer* pFramebuffer )

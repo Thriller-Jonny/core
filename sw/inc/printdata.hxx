@@ -32,7 +32,7 @@
 
 class SwDoc;
 class SwDocShell;
-class _SetGetExpFields;
+class SetGetExpFields;
 class SwViewOption;
 class OutputDevice;
 class SwViewOptionAdjust_Impl;
@@ -153,7 +153,7 @@ public:
     bool IsPrintBlackFont() const           { return m_bPrintBlackFont; }
     bool IsPrintSingleJobs() const          { return m_bPrintSingleJobs; }
     SwPostItMode GetPrintPostIts() const           { return m_nPrintPostIts; }
-    const OUString GetFaxName() const      { return m_sFaxName; }
+    const OUString& GetFaxName() const      { return m_sFaxName; }
     bool IsPrintHiddenText() const          { return m_bPrintHiddenText; }
     bool IsPrintTextPlaceholder() const     { return m_bPrintTextPlaceholder; }
 
@@ -242,8 +242,8 @@ class SwRenderData
 public:
 
     // PostIt relevant data
-    /// an array of "_SetGetExpField *" sorted by page and line numbers
-    std::unique_ptr<_SetGetExpFields> m_pPostItFields;
+    /// an array of "SetGetExpField *" sorted by page and line numbers
+    std::unique_ptr<SetGetExpFields> m_pPostItFields;
     /// this contains a SwDoc with the post-it content
     std::unique_ptr<SwViewShell>      m_pPostItShell;
 
@@ -290,7 +290,7 @@ public:
     PagePairsVec_t &                    GetPagePairsForProspectPrinting()           { return m_aPagePairs; }
     const PagePairsVec_t &              GetPagePairsForProspectPrinting() const     { return m_aPagePairs; }
 
-    OUString   GetPageRange() const                            { return m_aPageRange; }
+    const OUString& GetPageRange() const                            { return m_aPageRange; }
     void            SetPageRange( const OUString &rRange )     { m_aPageRange = rRange; }
 };
 

@@ -46,7 +46,6 @@
 #include "nodemap.hxx"
 #include "parsemanager.hxx"
 #include "partial.hxx"
-#include "path.hxx"
 #include "propertynode.hxx"
 #include "setnode.hxx"
 #include "xcuparser.hxx"
@@ -646,7 +645,7 @@ void XcuParser::handleUnknownGroupProp(
             recordModification(false);
             break;
         }
-        // fall through
+        SAL_FALLTHROUGH;
     default:
         SAL_WARN(
             "configmgr",

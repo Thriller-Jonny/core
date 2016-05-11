@@ -91,6 +91,9 @@
 #include "certpath.hxx"
 #include "tsaurls.hxx"
 
+#include <svtools/restartdialog.hxx>
+#include <comphelper/solarmutex.hxx>
+
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
 using namespace ::sfx2;
@@ -119,7 +122,6 @@ void SvxNoSpaceEdit::KeyInput( const KeyEvent& rKEvent )
 }
 
 
-
 void SvxNoSpaceEdit::Modify()
 {
     Edit::Modify();
@@ -144,6 +146,15 @@ bool SvxNoSpaceEdit::set_property(const OString &rKey, const OString &rValue)
 }
 
 
+static const char g_aProxyModePN[] = "ooInetProxyType";
+static const char g_aHttpProxyPN[] = "ooInetHTTPProxyName";
+static const char g_aHttpPortPN[] = "ooInetHTTPProxyPort";
+static const char g_aHttpsProxyPN[] = "ooInetHTTPSProxyName";
+static const char g_aHttpsPortPN[] = "ooInetHTTPSProxyPort";
+static const char g_aFtpProxyPN[] = "ooInetFTPProxyName";
+static const char g_aFtpPortPN[] = "ooInetFTPProxyPort";
+static const char g_aNoProxyDescPN[] = "ooInetNoProxy";
+
 /********************************************************************/
 /*                                                                  */
 /*  SvxProxyTabPage                                                 */
@@ -152,14 +163,6 @@ bool SvxNoSpaceEdit::set_property(const OString &rKey, const OString &rValue)
 
 SvxProxyTabPage::SvxProxyTabPage(vcl::Window* pParent, const SfxItemSet& rSet)
     : SfxTabPage(pParent, "OptProxyPage","cui/ui/optproxypage.ui", &rSet)
-    , aProxyModePN("ooInetProxyType")
-    , aHttpProxyPN("ooInetHTTPProxyName")
-    , aHttpPortPN("ooInetHTTPProxyPort")
-    , aHttpsProxyPN("ooInetHTTPSProxyName")
-    , aHttpsPortPN("ooInetHTTPSProxyPort")
-    , aFtpProxyPN("ooInetFTPProxyName")
-    , aFtpPortPN("ooInetFTPProxyPort")
-    , aNoProxyDescPN("ooInetNoProxy")
 {
     get(m_pProxyModeLB, "proxymode");
 
@@ -247,42 +250,42 @@ void SvxProxyTabPage::ReadConfigData_Impl()
         sal_Int32 nIntValue = 0;
         OUString  aStringValue;
 
-        if( xNameAccess->getByName(aProxyModePN) >>= nIntValue )
+        if( xNameAccess->getByName(g_aProxyModePN) >>= nIntValue )
         {
             m_pProxyModeLB->SelectEntryPos( nIntValue );
         }
 
-        if( xNameAccess->getByName(aHttpProxyPN) >>= aStringValue )
+        if( xNameAccess->getByName(g_aHttpProxyPN) >>= aStringValue )
         {
             m_pHttpProxyED->SetText( aStringValue );
         }
 
-        if( xNameAccess->getByName(aHttpPortPN) >>= nIntValue )
+        if( xNameAccess->getByName(g_aHttpPortPN) >>= nIntValue )
         {
             m_pHttpPortED->SetText( OUString::number( nIntValue ));
         }
 
-        if( xNameAccess->getByName(aHttpsProxyPN) >>= aStringValue )
+        if( xNameAccess->getByName(g_aHttpsProxyPN) >>= aStringValue )
         {
             m_pHttpsProxyED->SetText( aStringValue );
         }
 
-        if( xNameAccess->getByName(aHttpsPortPN) >>= nIntValue )
+        if( xNameAccess->getByName(g_aHttpsPortPN) >>= nIntValue )
         {
             m_pHttpsPortED->SetText( OUString::number( nIntValue ));
         }
 
-        if( xNameAccess->getByName(aFtpProxyPN) >>= aStringValue )
+        if( xNameAccess->getByName(g_aFtpProxyPN) >>= aStringValue )
         {
             m_pFtpProxyED->SetText( aStringValue );
         }
 
-        if( xNameAccess->getByName(aFtpPortPN) >>= nIntValue )
+        if( xNameAccess->getByName(g_aFtpPortPN) >>= nIntValue )
         {
             m_pFtpPortED->SetText( OUString::number( nIntValue ));
         }
 
-        if( xNameAccess->getByName(aNoProxyDescPN) >>= aStringValue )
+        if( xNameAccess->getByName(g_aNoProxyDescPN) >>= aStringValue )
         {
             m_pNoProxyForED->SetText( aStringValue );
         }
@@ -311,37 +314,37 @@ void SvxProxyTabPage::ReadConfigDefaults_Impl()
         sal_Int32 nIntValue = 0;
         OUString  aStringValue;
 
-        if( xPropertyState->getPropertyDefault(aHttpProxyPN) >>= aStringValue )
+        if( xPropertyState->getPropertyDefault(g_aHttpProxyPN) >>= aStringValue )
         {
             m_pHttpProxyED->SetText( aStringValue );
         }
 
-        if( xPropertyState->getPropertyDefault(aHttpPortPN) >>= nIntValue )
+        if( xPropertyState->getPropertyDefault(g_aHttpPortPN) >>= nIntValue )
         {
             m_pHttpPortED->SetText( OUString::number( nIntValue ));
         }
 
-        if( xPropertyState->getPropertyDefault(aHttpsProxyPN) >>= aStringValue )
+        if( xPropertyState->getPropertyDefault(g_aHttpsProxyPN) >>= aStringValue )
         {
             m_pHttpsProxyED->SetText( aStringValue );
         }
 
-        if( xPropertyState->getPropertyDefault(aHttpsPortPN) >>= nIntValue )
+        if( xPropertyState->getPropertyDefault(g_aHttpsPortPN) >>= nIntValue )
         {
             m_pHttpsPortED->SetText( OUString::number( nIntValue ));
         }
 
-        if( xPropertyState->getPropertyDefault(aFtpProxyPN) >>= aStringValue )
+        if( xPropertyState->getPropertyDefault(g_aFtpProxyPN) >>= aStringValue )
         {
             m_pFtpProxyED->SetText( aStringValue );
         }
 
-        if( xPropertyState->getPropertyDefault(aFtpPortPN) >>= nIntValue )
+        if( xPropertyState->getPropertyDefault(g_aFtpPortPN) >>= nIntValue )
         {
             m_pFtpPortED->SetText( OUString::number( nIntValue ));
         }
 
-        if( xPropertyState->getPropertyDefault(aNoProxyDescPN) >>= aStringValue )
+        if( xPropertyState->getPropertyDefault(g_aNoProxyDescPN) >>= aStringValue )
         {
             m_pNoProxyForED->SetText( aStringValue );
         }
@@ -367,14 +370,14 @@ void SvxProxyTabPage::RestoreConfigDefaults_Impl()
     {
         Reference< beans::XPropertyState > xPropertyState(m_xConfigurationUpdateAccess, UNO_QUERY_THROW);
 
-        xPropertyState->setPropertyToDefault(aProxyModePN);
-        xPropertyState->setPropertyToDefault(aHttpProxyPN);
-        xPropertyState->setPropertyToDefault(aHttpPortPN);
-        xPropertyState->setPropertyToDefault(aHttpsProxyPN);
-        xPropertyState->setPropertyToDefault(aHttpsPortPN);
-        xPropertyState->setPropertyToDefault(aFtpProxyPN);
-        xPropertyState->setPropertyToDefault(aFtpPortPN);
-        xPropertyState->setPropertyToDefault(aNoProxyDescPN);
+        xPropertyState->setPropertyToDefault(g_aProxyModePN);
+        xPropertyState->setPropertyToDefault(g_aHttpProxyPN);
+        xPropertyState->setPropertyToDefault(g_aHttpPortPN);
+        xPropertyState->setPropertyToDefault(g_aHttpsProxyPN);
+        xPropertyState->setPropertyToDefault(g_aHttpsPortPN);
+        xPropertyState->setPropertyToDefault(g_aFtpProxyPN);
+        xPropertyState->setPropertyToDefault(g_aFtpPortPN);
+        xPropertyState->setPropertyToDefault(g_aNoProxyDescPN);
 
         Reference< util::XChangesBatch > xChangesBatch(m_xConfigurationUpdateAccess, UNO_QUERY_THROW);
         xChangesBatch->commitChanges();
@@ -427,50 +430,50 @@ bool SvxProxyTabPage::FillItemSet(SfxItemSet* )
                 return true;
             }
 
-            xPropertySet->setPropertyValue(aProxyModePN,
+            xPropertySet->setPropertyValue(g_aProxyModePN,
                 makeAny((sal_Int32) nSelPos));
             bModified = true;
         }
 
         if(m_pHttpProxyED->IsValueChangedFromSaved())
         {
-            xPropertySet->setPropertyValue( aHttpProxyPN, makeAny(m_pHttpProxyED->GetText()));
+            xPropertySet->setPropertyValue( g_aHttpProxyPN, makeAny(m_pHttpProxyED->GetText()));
             bModified = true;
         }
 
         if ( m_pHttpPortED->IsValueChangedFromSaved())
         {
-            xPropertySet->setPropertyValue( aHttpPortPN, makeAny(m_pHttpPortED->GetText().toInt32()));
+            xPropertySet->setPropertyValue( g_aHttpPortPN, makeAny(m_pHttpPortED->GetText().toInt32()));
             bModified = true;
         }
 
         if( m_pHttpsProxyED->IsValueChangedFromSaved() )
         {
-            xPropertySet->setPropertyValue( aHttpsProxyPN, makeAny(m_pHttpsProxyED->GetText()) );
+            xPropertySet->setPropertyValue( g_aHttpsProxyPN, makeAny(m_pHttpsProxyED->GetText()) );
             bModified = true;
         }
 
         if ( m_pHttpsPortED->IsValueChangedFromSaved() )
         {
-            xPropertySet->setPropertyValue( aHttpsPortPN, makeAny(m_pHttpsPortED->GetText().toInt32()) );
+            xPropertySet->setPropertyValue( g_aHttpsPortPN, makeAny(m_pHttpsPortED->GetText().toInt32()) );
             bModified = true;
         }
 
         if( m_pFtpProxyED->IsValueChangedFromSaved())
         {
-            xPropertySet->setPropertyValue( aFtpProxyPN, makeAny(m_pFtpProxyED->GetText()) );
+            xPropertySet->setPropertyValue( g_aFtpProxyPN, makeAny(m_pFtpProxyED->GetText()) );
             bModified = true;
         }
 
         if ( m_pFtpPortED->IsValueChangedFromSaved() )
         {
-            xPropertySet->setPropertyValue( aFtpPortPN, makeAny(m_pFtpPortED->GetText().toInt32()));
+            xPropertySet->setPropertyValue( g_aFtpPortPN, makeAny(m_pFtpPortED->GetText().toInt32()));
             bModified = true;
         }
 
         if ( m_pNoProxyForED->IsValueChangedFromSaved() )
         {
-            xPropertySet->setPropertyValue( aNoProxyDescPN, makeAny( m_pNoProxyForED->GetText()));
+            xPropertySet->setPropertyValue( g_aNoProxyDescPN, makeAny( m_pNoProxyForED->GetText()));
             bModified = true;
         }
 
@@ -524,7 +527,6 @@ void SvxProxyTabPage::EnableControls_Impl(bool bEnable)
 }
 
 
-
 IMPL_LINK_TYPED( SvxProxyTabPage, ProxyHdl_Impl, ListBox&, rBox, void )
 {
     sal_Int32 nPos = rBox.GetSelectEntryPos();
@@ -539,7 +541,6 @@ IMPL_LINK_TYPED( SvxProxyTabPage, ProxyHdl_Impl, ListBox&, rBox, void )
 }
 
 
-
 IMPL_STATIC_LINK_TYPED( SvxProxyTabPage, LoseFocusHdl_Impl, Control&, rControl, void )
 {
     Edit* pEdit = static_cast<Edit*>(&rControl);
@@ -548,7 +549,6 @@ IMPL_STATIC_LINK_TYPED( SvxProxyTabPage, LoseFocusHdl_Impl, Control&, rControl, 
     if ( !comphelper::string::isdigitAsciiString(aValue) || (long)aValue.toInt32() > USHRT_MAX )
         pEdit->SetText( OUString('0') );
 }
-
 
 
 void SvxScriptExecListBox::RequestHelp( const HelpEvent& rHEvt )
@@ -680,7 +680,7 @@ IMPL_LINK_NOARG_TYPED(SvxSecurityTabPage, SavePasswordHdl, Button*, void)
 
         if ( m_pSavePasswordsCB->IsChecked() )
         {
-            bool bOldValue = xMasterPasswd->allowPersistentStoring( sal_True );
+            bool bOldValue = xMasterPasswd->allowPersistentStoring( true );
             xMasterPasswd->removeMasterPassword();
             if ( xMasterPasswd->changeMasterPassword( Reference< task::XInteractionHandler >() ) )
             {
@@ -703,7 +703,7 @@ IMPL_LINK_NOARG_TYPED(SvxSecurityTabPage, SavePasswordHdl, Button*, void)
 
             if( RET_YES == nRet )
             {
-                xMasterPasswd->allowPersistentStoring( sal_False );
+                xMasterPasswd->allowPersistentStoring( false );
                 m_pMasterPasswordCB->Check();
                 m_pMasterPasswordPB->Enable( false );
                 m_pMasterPasswordCB->Enable( false );
@@ -807,8 +807,8 @@ IMPL_LINK_NOARG_TYPED(SvxSecurityTabPage, CertPathPBHdl, Button*, void)
 
     if (nRet == RET_OK && sOrig != mpCertPathDlg->getDirectory())
     {
-        ScopedVclPtrInstance< MessageDialog > aWarnBox(this, CUI_RES(RID_SVXSTR_OPTIONS_RESTART), VCL_MESSAGE_INFO);
-        aWarnBox->Execute();
+        SolarMutexGuard aGuard;
+        svtools::executeRestartDialog(comphelper::getProcessComponentContext(), nullptr, svtools::RESTART_REASON_ADDING_PATH);
     }
 }
 
@@ -1089,7 +1089,6 @@ IMPL_LINK_TYPED(  SvxEMailTabPage, FileDialogHdl_Impl, Button*, pButton, void )
         }
     }
 }
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -38,7 +38,7 @@ public:
     sal_Int32
     GetPositionInStrippedString(sal_Int32 pos) const;
 
-    OUString
+    const OUString&
     GetStrippedString() const { return mStripped;}
 
 private:
@@ -47,7 +47,6 @@ private:
 };
 
 } // end namespace sw
-
 
 
 #endif /* TOXWHITESPACESTRIPPER_HXX_ */

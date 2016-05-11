@@ -31,8 +31,8 @@
 #include <unx/gtk/gtksalmenu.hxx>
 #include <headless/svpvd.hxx>
 #include <headless/svpbmp.hxx>
-#include <vcl/apptypes.hxx>
-#include <generic/genpspgraphics.h>
+#include <vcl/inputtypes.hxx>
+#include <unx/genpspgraphics.h>
 #include <rtl/strbuf.hxx>
 #include <rtl/uri.hxx>
 
@@ -42,7 +42,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include "gtkprintwrapper.hxx"
+#include "unx/gtk/gtkprintwrapper.hxx"
 
 extern "C"
 {
@@ -186,6 +186,14 @@ void GtkInstance::EnsureInit()
 
     InitAtkBridge();
 
+    ImplSVData* pSVData = ImplGetSVData();
+    delete pSVData->maAppData.mpToolkitName;
+#if GTK_CHECK_VERSION(3,0,0)
+    pSVData->maAppData.mpToolkitName = new OUString("gtk3");
+#else
+    pSVData->maAppData.mpToolkitName = new OUString("gtk2");
+#endif
+
     bNeedsInit = false;
 }
 
@@ -288,29 +296,24 @@ SalPrinter* GtkInstance::CreatePrinter( SalInfoPrinter* pInfoPrinter )
  * for each pair, so we can accurately restore
  * it later.
  */
+thread_local sal_uIntPtr GtkYieldMutex::yieldCount;
+
 void GtkYieldMutex::ThreadsEnter()
 {
     acquire();
-    if( !aYieldStack.empty() )
-    { /* Previously called ThreadsLeave() */
-        sal_uLong nCount = aYieldStack.front();
-        aYieldStack.pop_front();
-        while( nCount-- > 1 )
-            acquire();
+    for (; yieldCount != 0; --yieldCount) {
+        acquire();
     }
 }
 
 void GtkYieldMutex::ThreadsLeave()
 {
-    aYieldStack.push_front( mnCount );
-
-    SAL_WARN_IF(
-        mnThreadId && mnThreadId != osl::Thread::getCurrentIdentifier(),
-        "vcl.gtk", "other thread " << mnThreadId << " owns the mutex");
-
-    while( mnCount > 1 )
+    assert(mnCount != 0);
+    assert(yieldCount == 0);
+    yieldCount = mnCount - 1;
+    for (sal_uIntPtr i = 0; i != yieldCount + 1; ++i) {
         release();
-    release();
+    }
 }
 
 SalVirtualDevice* GtkInstance::CreateVirtualDevice( SalGraphics *pG,

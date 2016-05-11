@@ -68,7 +68,7 @@ using namespace std;
 
 namespace {
 
-static Sequence< OUString > retrieveAsciiValueList(
+Sequence< OUString > retrieveAsciiValueList(
     const Reference< XSimpleRegistry > &xReg, const OUString &keyName )
 {
     Reference< XEnumerationAccess > xAccess( xReg, UNO_QUERY );
@@ -234,9 +234,9 @@ sal_Bool PropertySetInfo_Impl::hasPropertyByName( OUString const & name )
     for ( sal_Int32 nPos = m_properties.getLength(); nPos--; )
     {
         if (p[ nPos ].Name.equals( name ))
-            return sal_True;
+            return true;
     }
-    return sal_False;
+    return false;
 }
 
 
@@ -262,7 +262,6 @@ private:
     Mutex                           aMutex;
     HashSet_Ref                     aImplementationMap;
     HashSet_Ref::iterator           aIt;
-    Reference<XInterface >          xNext;
 };
 
 ImplementationEnumeration_Impl::~ImplementationEnumeration_Impl() {}
@@ -467,7 +466,6 @@ private:
 };
 
 
-
 inline bool OServiceManager::is_disposed() const
 {
     // ought to be guarded by m_mutex:
@@ -484,9 +482,6 @@ inline void OServiceManager::check_undisposed() const
             static_cast<OWeakObject *>(const_cast<OServiceManager *>(this)) );
     }
 }
-
-
-
 
 
 typedef WeakComponentImplHelper<
@@ -660,9 +655,6 @@ OServiceManagerWrapper::OServiceManagerWrapper(
 }
 
 
-
-
-
 /**
  * Create a ServiceManager
  */
@@ -706,12 +698,7 @@ void OServiceManager::disposing()
         }
         catch (const RuntimeException & exc)
         {
-#if OSL_DEBUG_LEVEL > 1
-            OString str( OUStringToOString( exc.Message, RTL_TEXTENCODING_ASCII_US ) );
-            OSL_TRACE( "### RuntimeException occurred upon disposing factory: %s", str.getStr() );
-#else
-            (void) exc; // unused
-#endif
+            SAL_INFO("stoc", "RuntimeException occurred upon disposing factory: " << exc.Message);
         }
     }
 
@@ -904,10 +891,7 @@ Reference< XInterface > OServiceManager::createInstanceWithContext(
                     Reference< XSingleServiceFactory > xFac2( xFactory, UNO_QUERY );
                     if (xFac2.is())
                     {
-#if OSL_DEBUG_LEVEL > 1
-                        OString aStr( OUStringToOString( rServiceSpecifier, RTL_TEXTENCODING_ASCII_US ) );
-                        OSL_TRACE( "### ignoring given context raising service %s !!!", aStr.getStr() );
-#endif
+                        SAL_INFO("stoc", "ignoring given context raising service " << rServiceSpecifier << "!!!");
                         return xFac2->createInstance();
                     }
                 }
@@ -915,12 +899,7 @@ Reference< XInterface > OServiceManager::createInstanceWithContext(
         }
         catch (const lang::DisposedException & exc)
         {
-#if OSL_DEBUG_LEVEL > 1
-            OString str( OUStringToOString( exc.Message, RTL_TEXTENCODING_ASCII_US ) );
-            OSL_TRACE( "### DisposedException occurred: %s", str.getStr() );
-#else
-            (void) exc; // unused
-#endif
+            SAL_INFO("stoc", "DisposedException occurred: " << exc.Message);
         }
     }
 
@@ -967,10 +946,7 @@ Reference< XInterface > OServiceManager::createInstanceWithArgumentsAndContext(
                     Reference< XSingleServiceFactory > xFac2( xFactory, UNO_QUERY );
                     if (xFac2.is())
                     {
-#if OSL_DEBUG_LEVEL > 1
-                        OString aStr( OUStringToOString( rServiceSpecifier, RTL_TEXTENCODING_ASCII_US ) );
-                        OSL_TRACE( "### ignoring given context raising service %s !!!", aStr.getStr() );
-#endif
+                        SAL_INFO("stoc", "ignoring given context raising service " << rServiceSpecifier << "!!!");
                         return xFac2->createInstanceWithArguments( rArguments );
                     }
                 }
@@ -978,12 +954,7 @@ Reference< XInterface > OServiceManager::createInstanceWithArgumentsAndContext(
         }
         catch (const lang::DisposedException & exc)
         {
-#if OSL_DEBUG_LEVEL > 1
-            OString str( OUStringToOString( exc.Message, RTL_TEXTENCODING_ASCII_US ) );
-            OSL_TRACE( "### DisposedException occurred: %s", str.getStr() );
-#else
-            (void) exc; // unused
-#endif
+            SAL_INFO("stoc", "DisposedException occurred: " << exc.Message);
         }
     }
 
@@ -1148,7 +1119,7 @@ sal_Bool OServiceManager::has( const Any & Element )
         return m_ImplementationNameMap.find( implName ) !=
             m_ImplementationNameMap.end();
     }
-    return sal_False;
+    return false;
 }
 
 // XSet

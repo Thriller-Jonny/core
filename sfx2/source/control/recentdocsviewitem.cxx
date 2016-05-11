@@ -214,13 +214,14 @@ void RecentDocsViewItem::OpenDocument()
 
     if (xDispatch.is())
     {
-        // Call dispatch asychronously as we can be destroyed while dispatch is
+        // Call dispatch asynchronously as we can be destroyed while dispatch is
         // executed. VCL is not able to survive this as it wants to call listeners
         // after select!!!
         LoadRecentFile* pLoadRecentFile = new LoadRecentFile;
         pLoadRecentFile->xDispatch = xDispatch;
         pLoadRecentFile->aTargetURL = aTargetURL;
         pLoadRecentFile->aArgSeq = aArgsList;
+        pLoadRecentFile->pView.set(&mrParent);
 
         Application::PostUserEvent(LINK(nullptr, RecentDocsView, ExecuteHdl_Impl), pLoadRecentFile, true);
     }

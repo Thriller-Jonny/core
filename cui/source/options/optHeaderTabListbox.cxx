@@ -23,7 +23,7 @@
 #include <svtools/headbar.hxx>
 #include <svtools/svlbitm.hxx>
 #include <svtools/treelistentry.hxx>
-
+#include <o3tl/make_unique.hxx>
 namespace svx
 {
 // class OptLBoxString_Impl ----------------------------------------------
@@ -31,13 +31,14 @@ namespace svx
 class OptLBoxString_Impl : public SvLBoxString
 {
 public:
-    OptLBoxString_Impl( SvTreeListEntry* pEntry, sal_uInt16 nFlags, const OUString& rTxt ) :
-        SvLBoxString( pEntry, nFlags, rTxt ) {}
+    explicit OptLBoxString_Impl(const OUString& rTxt)
+        : SvLBoxString(rTxt)
+    {
+    }
 
     virtual void Paint(const Point& rPos, SvTreeListBox& rDev, vcl::RenderContext& rRenderContext,
                        const SvViewDataEntry* pView, const SvTreeListEntry& rEntry) override;
 };
-
 
 
 void OptLBoxString_Impl::Paint(const Point& rPos, SvTreeListBox& /*rDev*/, vcl::RenderContext& rRenderContext,
@@ -71,9 +72,7 @@ void OptHeaderTabListBox::InitEntry( SvTreeListEntry* pEntry, const OUString& rT
     {
         // initialize all columns with own class (column 0 == Bitmap)
         SvLBoxString& rCol = static_cast<SvLBoxString&>(pEntry->GetItem( nCol ));
-        std::unique_ptr<OptLBoxString_Impl> pStr(
-                new OptLBoxString_Impl(pEntry, 0, rCol.GetText()));
-        pEntry->ReplaceItem(std::move(pStr), nCol);
+        pEntry->ReplaceItem(o3tl::make_unique<OptLBoxString_Impl>(rCol.GetText()), nCol);
     }
 }
 

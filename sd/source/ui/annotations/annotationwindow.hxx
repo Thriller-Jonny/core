@@ -88,6 +88,7 @@ class AnnotationWindow : public FloatingWindow
         bool                    mbReadonly;
         bool                    mbProtected;
         bool                    mbMouseOverButton;
+        bool                    mbPopupMenuActive;
         VclPtr<AnnotationTextWindow>   mpTextWindow;
         VclPtr<MultiLineEdit>   mpMeta;
         Rectangle               maRectMetaButton;
@@ -107,7 +108,7 @@ class AnnotationWindow : public FloatingWindow
 
         SvxLanguageItem GetLanguage();
 
-        void setAnnotation( const css::uno::Reference< css::office::XAnnotation >& xAnnotation, bool bGrabFocus = false );
+        void setAnnotation( const css::uno::Reference< css::office::XAnnotation >& xAnnotation );
 
         void ExecuteSlot( sal_uInt16 nSID );
 
@@ -132,6 +133,10 @@ class AnnotationWindow : public FloatingWindow
         static sal_Int32 GetScrollbarWidth() { return 16; }
 
         void            ToggleInsMode();
+
+        // tdf#99388 flag to transport if the PopupMenu is active
+        bool getPopupMenuActive() const { return mbPopupMenuActive; }
+        void setPopupMenuActive(bool bNew) { mbPopupMenuActive = bNew; }
 
         virtual void    Deactivate() override;
         virtual void    Paint( vcl::RenderContext& /*rRenderContext*/, const Rectangle& rRect) override;

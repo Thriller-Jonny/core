@@ -16,8 +16,8 @@
  *   except in compliance with the License. You may obtain a copy of
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
-#include "vcl/svapp.hxx"
-#include "vcl/settings.hxx"
+#include <vcl/svapp.hxx>
+#include <vcl/settings.hxx>
 #include "PresenterHelpView.hxx"
 #include "PresenterButton.hxx"
 #include "PresenterCanvasHelper.hxx"
@@ -34,7 +34,6 @@
 #include <algorithm>
 #include <vector>
 #include <boost/bind.hpp>
-#include <boost/noncopyable.hpp>
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
@@ -96,7 +95,7 @@ namespace {
             const sal_Int32 nMaximalWidth);
     };
 
-    class Block: private boost::noncopyable
+    class Block
     {
     public:
         Block (
@@ -104,6 +103,8 @@ namespace {
             const OUString& rsRightText,
             const css::uno::Reference<css::rendering::XCanvasFont>& rxFont,
             const sal_Int32 nMaximalWidth);
+        Block(const Block&) = delete;
+        Block& operator=(const Block&) = delete;
         void Update (
             const css::uno::Reference<css::rendering::XCanvasFont>& rxFont,
             const sal_Int32 nMaximalWidth);
@@ -151,7 +152,7 @@ PresenterHelpView::PresenterHelpView (
         Reference<awt::XWindowPeer> xPeer (mxWindow, UNO_QUERY);
         if (xPeer.is())
             xPeer->setBackground(util::Color(0xff000000));
-        mxWindow->setVisible(sal_True);
+        mxWindow->setVisible(true);
 
         if (mpPresenterController.is())
         {
@@ -350,7 +351,7 @@ void PresenterHelpView::Paint (const awt::Rectangle& rUpdateBox)
 
     Reference<rendering::XSpriteCanvas> xSpriteCanvas (mxCanvas, UNO_QUERY);
     if (xSpriteCanvas.is())
-        xSpriteCanvas->updateScreen(sal_False);
+        xSpriteCanvas->updateScreen(false);
 }
 
 void PresenterHelpView::ReadHelpStrings()
@@ -461,7 +462,6 @@ sal_Bool SAL_CALL PresenterHelpView::isAnchorOnly()
 {
     return false;
 }
-
 
 
 void PresenterHelpView::ProvideCanvas()

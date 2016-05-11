@@ -158,8 +158,7 @@ OUString CommandInfoProvider::GetPopupLabelForCommand (
 
 OUString CommandInfoProvider::GetTooltipForCommand (
     const OUString& rsCommandName,
-    const Reference<frame::XFrame>& rxFrame,
-    bool bIncludeShortcut)
+    const Reference<frame::XFrame>& rxFrame)
 {
     SetFrame(rxFrame);
 
@@ -167,11 +166,12 @@ OUString CommandInfoProvider::GetTooltipForCommand (
     if (sLabel.isEmpty())
         sLabel = GetCommandProperty("Name", rsCommandName);
 
-    if (bIncludeShortcut) {
-        const OUString sShortCut(GetCommandShortcut(rsCommandName, rxFrame));
-        if (!sShortCut.isEmpty())
-            return sLabel + " (" + sShortCut + ")";
-    }
+    // Command can be just an alias to another command,
+    // so need to get the shortcut of the "real" command.
+    const OUString sRealCommand(GetRealCommandForCommand(rsCommandName, rxFrame));
+    const OUString sShortCut(GetCommandShortcut(!sRealCommand.isEmpty() ? sRealCommand : rsCommandName, rxFrame));
+    if (!sShortCut.isEmpty())
+        return sLabel + " (" + sShortCut + ")";
     return sLabel;
 }
 
@@ -195,6 +195,14 @@ OUString CommandInfoProvider::GetCommandShortcut (const OUString& rsCommandName,
         return sShortcut;
 
     return OUString();
+}
+
+OUString CommandInfoProvider::GetRealCommandForCommand(const OUString& rCommandName,
+                                                       const css::uno::Reference<frame::XFrame>& rxFrame)
+{
+    SetFrame(rxFrame);
+
+    return GetCommandProperty("TargetURL", rCommandName);
 }
 
 Image CommandInfoProvider::GetImageForCommand(const OUString& rsCommandName, bool bLarge,
@@ -468,6 +476,38 @@ OUString CommandInfoProvider::GetCommandProperty(const OUString& rsProperty, con
             aProperties[nIndex].Value >>= sLabel;
             return sLabel;
         }
+    }
+    return OUString();
+}
+
+OUString CommandInfoProvider::GetCommandPropertyFromModule( const OUString& rCommandName, const OUString& rModuleName )
+{
+    OUString sLabel;
+    if ( rCommandName.isEmpty() )
+        return sLabel;
+
+    Sequence<beans::PropertyValue> aProperties;
+    try
+    {
+        if( rModuleName.getLength() > 0)
+        {
+            Reference<container::XNameAccess> xNameAccess  = frame::theUICommandDescription::get(mxContext);
+            Reference<container::XNameAccess> xUICommandLabels;
+            if (xNameAccess->getByName( rModuleName ) >>= xUICommandLabels )
+                xUICommandLabels->getByName(rCommandName) >>= aProperties;
+
+            for (sal_Int32 nIndex=0; nIndex<aProperties.getLength(); ++nIndex)
+            {
+                if(aProperties[nIndex].Name == "Label")
+                {
+                    aProperties[nIndex].Value >>= sLabel;
+                    return sLabel;
+                }
+            }
+        }
+    }
+    catch (Exception&)
+    {
     }
     return OUString();
 }

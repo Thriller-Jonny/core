@@ -43,7 +43,7 @@
 
 namespace
 {
-    static void lcl_setWinBits( vcl::Window* _pWindow, WinBits _nBits, bool _bSet )
+    void lcl_setWinBits( vcl::Window* _pWindow, WinBits _nBits, bool _bSet )
     {
         WinBits nStyle = _pWindow->GetStyle();
         if ( _bSet )
@@ -514,7 +514,7 @@ void SAL_CALL VCLXMultiLineEdit::setFocus(  ) throw(css::uno::RuntimeException, 
     SolarMutexGuard aGuard;
 
     // don't grab the focus if we already have it. Reason is that the only thing which the edit
-    // does is forwarding the focus to it's text window. This text window then does a "select all".
+    // does is forwarding the focus to its text window. This text window then does a "select all".
     // So if the text window already has the focus, and we give the focus to the multi line
     // edit, then all which happens is that everything is selected.
     // #i27072#
@@ -806,7 +806,6 @@ void VCLXFileControl::ImplGetPropertyIds( std::list< sal_uInt16 > &rIds )
 }
 
 
-
 //  class SVTXFormattedField
 
 
@@ -907,7 +906,7 @@ void SVTXFormattedField::setProperty( const OUString& PropertyName, const css::u
                         // no double
                         if (Value.hasValue())
                         {   // but a value
-                            // try if it is something converitble
+                            // try if it is something convertible
                             sal_Int32 nValue = 0;
                             if (!(Value >>= nValue))
                                 throw css::lang::IllegalArgumentException();
@@ -1296,8 +1295,6 @@ void SVTXFormattedField::SetValue(const css::uno::Any& rValue)
 }
 
 
-
-
 void SVTXFormattedField::setFormatsSupplier(const css::uno::Reference< css::util::XNumberFormatsSupplier > & xSupplier)
 {
     FormattedField* pField = GetAs< FormattedField >();
@@ -1399,7 +1396,6 @@ void SVTXFormattedField::ImplGetPropertyIds( std::list< sal_uInt16 > &rIds )
     VCLXWindow::ImplGetPropertyIds( rIds, true );
     VCLXSpinField::ImplGetPropertyIds( rIds );
 }
-
 
 
 //  class SVTXRoadmap
@@ -1553,8 +1549,6 @@ void SVTXRoadmap::elementReplaced( const css::container::ContainerEvent& _rEvent
 }
 
 
-
-
 void SVTXRoadmap::setProperty( const OUString& PropertyName, const css::uno::Any& Value) throw(css::uno::RuntimeException, std::exception)
 {
     SolarMutexGuard aGuard;
@@ -1607,7 +1601,6 @@ void SVTXRoadmap::setProperty( const OUString& PropertyName, const css::uno::Any
     else
         SVTXRoadmap_Base::setProperty( PropertyName, Value );
 }
-
 
 
 css::uno::Any SVTXRoadmap::getProperty( const OUString& PropertyName ) throw(css::uno::RuntimeException, std::exception)
@@ -2058,7 +2051,6 @@ void SVTXCurrencyField::ImplGetPropertyIds( std::list< sal_uInt16 > &rIds )
 }
 
 
-
 //  class VCLXProgressBar
 
 
@@ -2304,7 +2296,6 @@ void VCLXProgressBar::ImplGetPropertyIds( std::list< sal_uInt16 > &rIds )
                      0);
     VCLXWindow::ImplGetPropertyIds( rIds, true );
 }
-
 
 
 //  class SVTXDateField

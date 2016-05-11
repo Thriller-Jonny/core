@@ -33,7 +33,6 @@
 #include <com/sun/star/document/XEmbeddedScripts.hpp>
 #include <com/sun/star/awt/XWindow2.hpp>
 
-#include <boost/noncopyable.hpp>
 #include <filter/msfilter/msvbahelper.hxx>
 #include <tools/datetime.hxx>
 
@@ -57,7 +56,7 @@ using namespace ::ooo::vba;
 typedef ::std::pair< OUString, ::std::pair< double, double > > VbaTimerInfo;
 
 // ====VbaTimer==================================
-class VbaTimer: private boost::noncopyable
+class VbaTimer
 {
     Timer m_aTimer;
     VbaTimerInfo m_aTimerInfo;
@@ -71,6 +70,9 @@ public:
     {
         m_aTimer.Stop();
     }
+
+    VbaTimer(const VbaTimer&) = delete;
+    VbaTimer& operator=(const VbaTimer&) = delete;
 
     static double GetNow()
     {
@@ -126,7 +128,7 @@ IMPL_LINK_NOARG_TYPED(VbaTimer, MacroCallHdl, Timer *, void)
     // mast be the last call in the method since it deletes the timer
     try
     {
-        m_xBase->OnTime( uno::makeAny( m_aTimerInfo.second.first ), m_aTimerInfo.first, uno::makeAny( m_aTimerInfo.second.second ), uno::makeAny( sal_False ) );
+        m_xBase->OnTime( uno::makeAny( m_aTimerInfo.second.first ), m_aTimerInfo.first, uno::makeAny( m_aTimerInfo.second.second ), uno::makeAny( false ) );
     } catch( uno::Exception& )
     {}
 }
@@ -143,7 +145,7 @@ struct VbaTimerInfoHash
 };
 
 // ====VbaTimerHashMap==================================
-typedef std::unordered_map< VbaTimerInfo, VbaTimer*, VbaTimerInfoHash, std::equal_to< VbaTimerInfo > > VbaTimerHashMap;
+typedef std::unordered_map< VbaTimerInfo, VbaTimer*, VbaTimerInfoHash > VbaTimerHashMap;
 
 // ====VbaApplicationBase_Impl==================================
 struct VbaApplicationBase_Impl
@@ -203,10 +205,10 @@ VbaApplicationBase::getDisplayStatusBar() throw (uno::RuntimeException, std::exc
         uno::Reference< frame::XLayoutManager > xLayoutManager( xProps->getPropertyValue( "LayoutManager"), uno::UNO_QUERY_THROW );
         OUString url( "private:resource/statusbar/statusbar" );
         if( xLayoutManager.is() && xLayoutManager->isElementVisible( url ) ){
-            return sal_True;
+            return true;
         }
     }
-    return sal_False;
+    return false;
 }
 
 void SAL_CALL
@@ -324,7 +326,7 @@ uno::Any SAL_CALL VbaApplicationBase::Run( const OUString& MacroName, const uno:
         // handle the arguments
         const uno::Any* aArgsPtrArray[] = { &varg1, &varg2, &varg3, &varg4, &varg5, &varg6, &varg7, &varg8, &varg9, &varg10, &varg11, &varg12, &varg13, &varg14, &varg15, &varg16, &varg17, &varg18, &varg19, &varg20, &varg21, &varg22, &varg23, &varg24, &varg25, &varg26, &varg27, &varg28, &varg29, &varg30 };
 
-        int nArg = sizeof( aArgsPtrArray ) / sizeof( aArgsPtrArray[0] );
+        int nArg = SAL_N_ELEMENTS( aArgsPtrArray );
         uno::Sequence< uno::Any > aArgs( nArg );
 
         const uno::Any** pArg = aArgsPtrArray;
@@ -383,11 +385,11 @@ void SAL_CALL VbaApplicationBase::OnTime( const uno::Any& aEarliestTime, const O
     }
 }
 
-float SAL_CALL VbaApplicationBase::CentimetersToPoints( float _Centimeters ) throw (uno::RuntimeException, std::exception)
+float SAL_CALL VbaApplicationBase::CentimetersToPoints( float Centimeters ) throw (uno::RuntimeException, std::exception)
 {
     // i cm = 28.35 points
     static const float rate = 28.35f;
-    return ( _Centimeters * rate );
+    return ( Centimeters * rate );
 }
 
 uno::Any SAL_CALL VbaApplicationBase::getVBE() throw (uno::RuntimeException, std::exception)

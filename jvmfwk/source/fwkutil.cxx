@@ -18,7 +18,7 @@
  */
 
 
-#if defined WNT
+#if defined(_WIN32)
 #if defined _MSC_VER
 #pragma warning(push, 1)
 #endif
@@ -61,7 +61,7 @@ bool isAccessibilitySupportDesired()
         sValue == "1" )
         return false;
 
-#ifdef WNT
+#ifdef _WIN32
     bool retVal = false;
     HKEY    hKey = 0;
     if (RegOpenKeyEx(HKEY_CURRENT_USER,
@@ -82,10 +82,8 @@ bool isAccessibilitySupportDesired()
                 else if (strcmp((char*) arData, "false") == 0
                          || strcmp((char*) arData, "0") == 0)
                     retVal = false;
-#if OSL_DEBUG_LEVEL > 1
                 else
-                    OSL_ASSERT(0);
-#endif
+                    SAL_WARN("jfw", "bad registry value " << arData);
             }
             else if (dwType == REG_DWORD)
             {
@@ -93,10 +91,9 @@ bool isAccessibilitySupportDesired()
                     retVal = true;
                 else if (arData[0] == 0)
                     retVal = false;
-#if OSL_DEBUG_LEVEL > 1
                 else
-                    OSL_ASSERT(0);
-#endif
+                    SAL_WARN(
+                        "jfw", "bad registry value " << unsigned(arData[0]));
             }
         }
     }

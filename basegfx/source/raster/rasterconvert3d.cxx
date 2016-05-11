@@ -61,7 +61,7 @@ namespace basegfx
             OSL_ENSURE(nStopLine >= nStartLine, "nStopLine is bigger than nStartLine (!)");
 
             // sort global entries by Y, X once. After this, the vector
-            // is seen as frozen. Pointers to it's entries will be used in the following code.
+            // is seen as frozen. Pointers to its entries will be used in the following code.
             ::std::sort(maLineEntries.begin(), maLineEntries.end());
 
             // local parameters
@@ -285,7 +285,7 @@ namespace basegfx
                 const sal_uInt32 nYDelta(static_cast<sal_uInt32>(nYEnd - nYStart));
                 const double fInvYDelta(1.0 / nYDelta);
 
-                // non-horizontal line, create two parallell entries. These will be sorted by
+                // non-horizontal line, create two parallel entries. These will be sorted by
                 // X anyways, so no need to distinguish the case here
                 maLineEntries.push_back(RasterConversionLineEntry3D(
                     aStart.getX(), (aEnd.getX() - aStart.getX()) * fInvYDelta,

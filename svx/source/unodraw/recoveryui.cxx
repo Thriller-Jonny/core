@@ -71,10 +71,6 @@ class RecoveryUI : public ::cppu::WeakImplHelper< css::lang::XServiceInfo       
         /** @short TODO */
         RecoveryUI::EJob m_eJob;
 
-        /** @short TODO */
-        css::uno::Reference< css::task::XStatusIndicatorFactory > m_xProgressFactory;
-
-
     // interface
     public:
 
@@ -180,11 +176,10 @@ css::uno::Any SAL_CALL RecoveryUI::dispatchWithReturnValue(const css::util::URL&
 }
 
 
-
-static OUString GetCrashConfigDir()
+OUString GetCrashConfigDir()
 {
 
-#if defined(WNT)
+#if defined(_WIN32)
     OUString    ustrValue = "${$BRAND_BASE_DIR/" LIBO_ETC_FOLDER "/bootstrap.ini:UserInstallation}";
 #elif defined(MACOSX)
     OUString    ustrValue = "~";
@@ -193,30 +188,28 @@ static OUString GetCrashConfigDir()
 #endif
     rtl::Bootstrap::expandMacros( ustrValue );
 
-#if defined(WNT)
+#if defined(_WIN32)
     ustrValue += "/user/crashdata";
 #endif
     return ustrValue;
 }
 
 
-
-#if defined(WNT)
+#if defined(_WIN32)
 #define LCKFILE "crashdat.lck"
 #else
 #define LCKFILE ".crash_report_unsent"
 #endif
 
 
-static OUString GetUnsentURL()
+OUString GetUnsentURL()
 {
     OUString aURL = GetCrashConfigDir() + "/" LCKFILE;
     return aURL;
 }
 
 
-
-static bool delete_pending_crash()
+bool delete_pending_crash()
 {
     OUString    aUnsentURL = GetUnsentURL();
     return ( FileBase::E_None == File::remove( aUnsentURL ) );
@@ -291,7 +284,7 @@ void RecoveryUI::impl_showAllRecoveredDocs()
             if (!xWindow.is())
                 continue;
 
-            xWindow->setVisible(sal_True);
+            xWindow->setVisible(true);
         }
         catch(const css::uno::RuntimeException&)
             { throw; }

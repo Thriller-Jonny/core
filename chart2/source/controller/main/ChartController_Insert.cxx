@@ -108,11 +108,11 @@ void ChartController::executeDispatch_InsertAxes()
 
             InsertAxisOrGridDialogData aDialogOutput;
             aDlg->getResult( aDialogOutput );
-            std::unique_ptr< ReferenceSizeProvider > mpRefSizeProvider(
+            std::unique_ptr< ReferenceSizeProvider > pRefSizeProvider(
                 impl_createReferenceSizeProvider());
             bool bChanged = AxisHelper::changeVisibilityOfAxes( xDiagram
                 , aDialogInput.aExistenceList, aDialogOutput.aExistenceList, m_xCC
-                , mpRefSizeProvider.get() );
+                , pRefSizeProvider.get() );
             if( bChanged )
                 aUndoGuard.commit();
         }
@@ -430,7 +430,7 @@ void ChartController::executeDispatch_InsertErrorBars( bool bYError )
         // add error bars with standard deviation
         uno::Reference< beans::XPropertySet > xErrorBarProp(
             StatisticsHelper::addErrorBars( xSeries, m_xCC,
-                                            ::com::sun::star::chart::ErrorBarStyle::STANDARD_DEVIATION,
+                                            css::chart::ErrorBarStyle::STANDARD_DEVIATION,
                                             bYError));
 
         // get an appropriate item converter

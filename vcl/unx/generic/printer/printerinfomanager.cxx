@@ -21,8 +21,8 @@
 #include <sys/wait.h>
 #include <signal.h>
 
-#include "cupsmgr.hxx"
-#include "vcl/strhelper.hxx"
+#include "unx/cupsmgr.hxx"
+#include <vcl/strhelper.hxx>
 
 #include "unx/saldata.hxx"
 
@@ -555,7 +555,7 @@ void PrinterInfoManager::changePrinterInfo( const OUString& rPrinter, const Prin
 {
     std::unordered_map< OUString, Printer, OUStringHash >::iterator it = m_aPrinters.find( rPrinter );
 
-    DBG_ASSERT( it != m_aPrinters.end(), "Do not change nonexistant printers" );
+    DBG_ASSERT( it != m_aPrinters.end(), "Do not change nonexistent printers" );
 
     if( it != m_aPrinters.end() )
     {
@@ -840,7 +840,8 @@ const std::list< PrinterInfoManager::SystemPrintQueue >& PrinterInfoManager::get
     {
         m_aSystemPrintCommand = m_pQueueInfo->getCommand();
         m_pQueueInfo->getSystemQueues( m_aSystemPrintQueues );
-        delete m_pQueueInfo, m_pQueueInfo = nullptr;
+        delete m_pQueueInfo;
+        m_pQueueInfo = nullptr;
     }
 
     return m_aSystemPrintQueues;
@@ -931,21 +932,6 @@ void PrinterInfoManager::setDefaultPaper( PPDContext& rContext ) const
         fprintf( stderr, "-> got paper %s\n", OUStringToOString( pPaperVal->m_aOption, RTL_TEXTENCODING_ISO_8859_1 ).getStr() );
         #endif
     }
-}
-
-bool PrinterInfoManager::startBatchPrint()
-{
-    return false; // not implemented
-}
-
-bool PrinterInfoManager::supportsBatchPrint() const
-{
-    return false;
-}
-
-bool PrinterInfoManager::flushBatchPrint()
-{
-    return false;
 }
 
 SystemQueueInfo::SystemQueueInfo() :

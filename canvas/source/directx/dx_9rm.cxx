@@ -21,8 +21,6 @@
 
 #include <string.h>
 
-#include <boost/noncopyable.hpp>
-
 #include <basegfx/numeric/ftools.hxx>
 #include <basegfx/point/b2ipoint.hxx>
 #include <basegfx/range/b2irectangle.hxx>
@@ -46,8 +44,6 @@
 #include "dx_impltools.hxx"
 #include "dx_rendermodule.hxx"
 
-
-#define MAX_TEXTURE_SIZE (2048)
 #define MIN_TEXTURE_SIZE (32)
 //#define FAKE_MAX_NUMBER_TEXTURES (2)
 //#define FAKE_MAX_TEXTURE_SIZE (4096)
@@ -143,9 +139,13 @@ namespace dxcanvas
 
         private:
             /// Guard local methods against concurrent access to RenderModule
-            class ImplRenderModuleGuard : private ::boost::noncopyable
+            class ImplRenderModuleGuard
             {
             public:
+                /// make noncopyable
+                ImplRenderModuleGuard(const ImplRenderModuleGuard&) = delete;
+                const ImplRenderModuleGuard& operator=(const ImplRenderModuleGuard&) = delete;
+
                 explicit inline ImplRenderModuleGuard( DXRenderModule& rRenderModule );
                 inline ~ImplRenderModuleGuard();
 
@@ -158,7 +158,6 @@ namespace dxcanvas
 
             ::basegfx::B2IVector             maSize;
         };
-
 
 
         // DXRenderModule
@@ -382,7 +381,7 @@ namespace dxcanvas
                 {
                     switch( rSource.getFormat() )
                     {
-                        case ::canvas::IColorBuffer::FMT_A8R8G8B8:
+                        case ::canvas::IColorBuffer::Format::A8R8G8B8:
                         {
                             const std::size_t nSourceBytesPerPixel(4);
                             const std::size_t nSourcePitchInBytes(rSource.getStride());
@@ -423,7 +422,7 @@ namespace dxcanvas
                         }
                         break;
 
-                        case ::canvas::IColorBuffer::FMT_X8R8G8B8:
+                        case ::canvas::IColorBuffer::Format::X8R8G8B8:
                         {
                             const std::size_t nSourceBytesPerPixel(4);
                             const std::size_t nSourcePitchInBytes(rSource.getStride());
@@ -502,7 +501,7 @@ namespace dxcanvas
             mnBeginSceneCount(0),
             mbCanUseDynamicTextures(false),
             mbError( false ),
-            meType( PRIMITIVE_TYPE_UNKNOWN ),
+            meType( PrimitiveType::Unknown ),
             maPageSize(),
             mad3dpp(),
             maNumVertices( VERTEX_BUFFER_SIZE ),
@@ -700,7 +699,6 @@ namespace dxcanvas
         }
 
 
-
         // DXRenderModule::createDevice
 
 
@@ -731,7 +729,7 @@ namespace dxcanvas
 
             // we need to use D3DSWAPEFFECT_COPY here since the canvas-api has
             // basically nothing to do with efficient resource handling. it tries
-            // to avoid drawing whenevery possible, which is simply not the most
+            // to avoid drawing whenever possible, which is simply not the most
             // efficient way we could leverage the hardware in this case. it would
             // be far better to redraw the backbuffer each time we would like to
             // display the content of the backbuffer, but we need to face reality
@@ -1040,8 +1038,8 @@ namespace dxcanvas
                 return;
 
             --mnBeginSceneCount;
-            meType=PRIMITIVE_TYPE_UNKNOWN;
-            mnCount=0;
+            meType = PrimitiveType::Unknown;
+            mnCount = 0;
         }
 
 
@@ -1058,7 +1056,7 @@ namespace dxcanvas
 
             switch(meType)
             {
-                case PRIMITIVE_TYPE_TRIANGLE:
+                case PrimitiveType::Triangle:
                 {
                     maVertexCache.push_back(vertex);
                     ++mnCount;
@@ -1066,7 +1064,7 @@ namespace dxcanvas
                     break;
                 }
 
-                case PRIMITIVE_TYPE_QUAD:
+                case PrimitiveType::Quad:
                 {
                     if(mnCount == 3)
                     {

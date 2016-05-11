@@ -121,7 +121,7 @@ SvParserState OHTMLReader::CallParser()
 
 void OHTMLReader::NextToken( int nToken )
 {
-    if(m_bError || !m_nRows) // if there is an error or no more rows to check, return immediatelly
+    if(m_bError || !m_nRows) // if there is an error or no more rows to check, return immediately
         return;
     if ( nToken ==  HTML_META )
         setTextEncoding();
@@ -134,9 +134,8 @@ void OHTMLReader::NextToken( int nToken )
                 ++m_nTableCount;
                 {   // can also be TD or TH, if there was no TABLE before
                     const HTMLOptions& rHtmlOptions = GetOptions();
-                    for (size_t i = 0, n = rHtmlOptions.size(); i < n; ++i)
+                    for (const auto & rOption : rHtmlOptions)
                     {
-                        const HTMLOption& rOption = rHtmlOptions[i];
                         switch( rOption.GetToken() )
                         {
                             case HTML_O_WIDTH:
@@ -147,7 +146,7 @@ void OHTMLReader::NextToken( int nToken )
                         }
                     }
                 }
-                //fall-through
+                SAL_FALLTHROUGH;
             case HTML_THEAD_ON:
             case HTML_TBODY_ON:
                 {
@@ -291,9 +290,8 @@ void OHTMLReader::fetchOptions()
 {
     m_bInTbl = true;
     const HTMLOptions& options = GetOptions();
-    for (size_t i = 0, n = options.size(); i < n; ++i)
+    for (const auto & rOption : options)
     {
-        const HTMLOption& rOption = options[i];
         switch( rOption.GetToken() )
         {
             case HTML_O_SDVAL:
@@ -312,9 +310,8 @@ void OHTMLReader::fetchOptions()
 void OHTMLReader::TableDataOn(SvxCellHorJustify& eVal)
 {
     const HTMLOptions& rHtmlOptions = GetOptions();
-    for (size_t i = 0, n = rHtmlOptions.size(); i < n; ++i)
+    for (const auto & rOption : rHtmlOptions)
     {
-        const HTMLOption& rOption = rHtmlOptions[i];
         switch( rOption.GetToken() )
         {
             case HTML_O_ALIGN:
@@ -340,9 +337,8 @@ void OHTMLReader::TableDataOn(SvxCellHorJustify& eVal)
 void OHTMLReader::TableFontOn(FontDescriptor& _rFont,sal_Int32 &_rTextColor)
 {
     const HTMLOptions& rHtmlOptions = GetOptions();
-    for (size_t i = 0, n = rHtmlOptions.size(); i < n; ++i)
+    for (const auto & rOption : rHtmlOptions)
     {
-        const HTMLOption& rOption = rHtmlOptions[i];
         switch( rOption.GetToken() )
         {
         case HTML_O_COLOR:

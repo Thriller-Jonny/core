@@ -31,7 +31,6 @@
 #include <xmloff/xmltoken.hxx>
 
 
-
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::text;
@@ -77,9 +76,7 @@ void XMLCalculationSettingsContext::EndElement()
         {
             Reference < XPropertySet > xPropSet ( xTextDoc, UNO_QUERY );
             OUString sTwoDigitYear ( "TwoDigitYear" );
-            Any aAny;
-            aAny <<= nYear;
-            xPropSet->setPropertyValue ( sTwoDigitYear, aAny );
+            xPropSet->setPropertyValue ( sTwoDigitYear, Any(nYear) );
         }
     }
 }

@@ -51,7 +51,7 @@ static const char *aCH[] =
     UPN_IS_USE_DICTIONARY_LIST,
 };
 
-static const int nCHCount = sizeof(aCH) / sizeof(aCH[0]);
+static const int nCHCount = SAL_N_ELEMENTS(aCH);
 
 
 PropertyChgHelper::PropertyChgHelper(
@@ -254,13 +254,7 @@ void PropertyChgHelper::RemoveAsPropListener()
 
 void PropertyChgHelper::LaunchEvent( const LinguServiceEvent &rEvt )
 {
-    cppu::OInterfaceIteratorHelper aIt( aLngSvcEvtListeners );
-    while (aIt.hasMoreElements())
-    {
-        Reference< XLinguServiceEventListener > xRef( aIt.next(), UNO_QUERY );
-        if (xRef.is())
-            xRef->processLinguServiceEvent( rEvt );
-    }
+    aLngSvcEvtListeners.notifyEach( &XLinguServiceEventListener::processLinguServiceEvent, rEvt );
 }
 
 
@@ -311,7 +305,6 @@ sal_Bool SAL_CALL
 }
 
 
-
 PropertyHelper_Thes::PropertyHelper_Thes(
         const Reference< XInterface > &rxSource,
         Reference< XLinguProperties > &rxPropSet ) :
@@ -336,7 +329,6 @@ void SAL_CALL
 }
 
 
-
 // list of properties from the property set to be used
 // and listened to
 static const char *aSP[] =
@@ -352,7 +344,7 @@ PropertyHelper_Spell::PropertyHelper_Spell(
         Reference< XLinguProperties > &rxPropSet ) :
     PropertyChgHelper   ( rxSource, rxPropSet, AE_SPELLCHECKER )
 {
-    AddPropNames( aSP, sizeof(aSP) / sizeof(aSP[0]) );
+    AddPropNames( aSP, SAL_N_ELEMENTS(aSP) );
     SetDefaultValues();
     GetCurrentValues();
 
@@ -534,7 +526,7 @@ PropertyHelper_Hyphen::PropertyHelper_Hyphen(
         Reference< XLinguProperties > &rxPropSet ) :
     PropertyChgHelper   ( rxSource, rxPropSet, AE_HYPHENATOR )
 {
-    AddPropNames( aHP, sizeof(aHP) / sizeof(aHP[0]) );
+    AddPropNames( aHP, SAL_N_ELEMENTS(aHP) );
     SetDefaultValues();
     GetCurrentValues();
 }

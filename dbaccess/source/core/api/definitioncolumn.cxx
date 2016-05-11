@@ -193,17 +193,17 @@ OQueryColumn::OQueryColumn( const Reference< XPropertySet >& _rxParserColumn, co
         OUString sName;
         sal_Int32       nHandle;
     };
-    PropertyDescriptor aProps[] =
+    const PropertyDescriptor aProps[] =
     {
         { OUString(PROPERTY_CATALOGNAME),      PROPERTY_ID_CATALOGNAME },
         { OUString(PROPERTY_SCHEMANAME),       PROPERTY_ID_SCHEMANAME },
         { OUString(PROPERTY_TABLENAME),        PROPERTY_ID_TABLENAME },
         { OUString(PROPERTY_REALNAME),         PROPERTY_ID_REALNAME }
     };
-    for ( size_t i=0; i < sizeof( aProps ) / sizeof( aProps[0] ); ++i )
+    for (const auto & aProp : aProps)
     {
-        if ( xPSI->hasPropertyByName( aProps[i].sName ) )
-            setFastPropertyValue_NoBroadcast( aProps[i].nHandle, _rxParserColumn->getPropertyValue( aProps[i].sName ) );
+        if ( xPSI->hasPropertyByName( aProp.sName ) )
+            setFastPropertyValue_NoBroadcast( aProp.nHandle, _rxParserColumn->getPropertyValue( aProp.sName ) );
     }
 
     // determine the table column we're based on
@@ -237,7 +237,7 @@ Reference< XPropertySet > OQueryColumn::impl_determineOriginalTableColumn( const
             return nullptr;
 
         OUString sComposedTableName = ::dbtools::composeTableName(
-            _rxConnection->getMetaData(), sCatalog, sSchema, sTable, false, ::dbtools::eComplete );
+            _rxConnection->getMetaData(), sCatalog, sSchema, sTable, false, ::dbtools::EComposeRule::Complete );
 
         // retrieve the table in question
         Reference< XTablesSupplier > xSuppTables( _rxConnection, UNO_QUERY_THROW );
@@ -488,7 +488,7 @@ Sequence< OUString > OTableColumnDescriptorWrapper::getSupportedServiceNames(  )
     describeProperties( aBaseProperties );
 
     Sequence< Property > aAllProperties( ::comphelper::concatSequences( aDescriptor, aBaseProperties ) );
-    return new ::cppu::OPropertyArrayHelper( aAllProperties, sal_False );
+    return new ::cppu::OPropertyArrayHelper( aAllProperties, false );
 }
 
 // cppu::OPropertySetHelper

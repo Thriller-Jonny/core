@@ -57,7 +57,6 @@
 #include <rtl/ref.hxx>
 #include <LibreOfficeKit/LibreOfficeKitTypes.h>
 
-#include <boost/noncopyable.hpp>
 #include <memory>
 #include <vector>
 
@@ -79,6 +78,7 @@
 
 class EditView;
 class EditEngine;
+class OutlinerSearchable;
 
 class SvxSearchItem;
 class SvxLRSpaceItem;
@@ -221,9 +221,7 @@ private:
     EditView*           pEditView;
     vcl::Cursor*        pCursor;
     Color*              pBackgroundColor;
-    bool                mbTiledRendering;
-    LibreOfficeKitCallback mpLibreOfficeKitCallback;
-    void* mpLibreOfficeKitData;
+    OutlinerSearchable* mpLibreOfficeKitSearchable;
     EditEngine*         pEditEngine;
     VclPtr<vcl::Window> pOutWin;
     Pointer*            pPointer;
@@ -348,7 +346,7 @@ public:
     void            CalcAnchorPoint();
     void            RecalcOutputArea();
 
-    void            ShowCursor( bool bGotoCursor, bool bForceVisCursor, sal_uInt16 nShowCursorFlags = 0 );
+    void            ShowCursor( bool bGotoCursor, bool bForceVisCursor );
     Pair            Scroll( long ndX, long ndY, ScrollRangeCheck nRangeCheck = ScrollRangeCheck::NoNegative );
 
     void        SetInsertMode( bool bInsert );
@@ -368,15 +366,13 @@ public:
     const Color&    GetBackgroundColor() const {
                         return ( pBackgroundColor ? *pBackgroundColor : pOutWin->GetBackground().GetColor() ); }
 
-    void            setTiledRendering(bool bTiledRendering);
-    bool            isTiledRendering() const;
     /// @see vcl::ITiledRenderable::registerCallback().
-    void registerLibreOfficeKitCallback(LibreOfficeKitCallback pCallback, void* pLibreOfficeKitData);
+    void registerLibreOfficeKitCallback(OutlinerSearchable* pSearchable);
     /// Invokes the registered callback, if there are any.
     void libreOfficeKitCallback(int nType, const char* pPayload) const;
 
     bool            IsWrongSpelledWord( const EditPaM& rPaM, bool bMarkIfWrong );
-    OUString        SpellIgnoreOrAddWord( bool bAdd );
+    OUString        SpellIgnoreWord();
 
     const SvxFieldItem* GetField( const Point& rPos, sal_Int32* pPara, sal_Int32* pPos ) const;
     void            DeleteSelected();
@@ -390,7 +386,7 @@ public:
 //  ImpEditEngine
 
 
-class ImpEditEngine : public SfxListener, boost::noncopyable
+class ImpEditEngine : public SfxListener
 {
     friend class EditEngine;
     friend class EditDbg;
@@ -549,7 +545,7 @@ private:
 
     void                CheckPageOverflow();
 
-    EditPaM             Clear();
+    void                Clear();
     EditPaM             RemoveText();
     bool                CreateLines( sal_Int32 nPara, sal_uInt32 nStartPosY );
     void                CreateAndInsertEmptyLine( ParaPortion* pParaPortion, sal_uInt32 nStartPosY );
@@ -557,7 +553,7 @@ private:
     void                CreateTextPortions( ParaPortion* pParaPortion, sal_Int32& rStartPos /*, sal_Bool bCreateBlockPortions */ );
     void                RecalcTextPortion( ParaPortion* pParaPortion, sal_Int32 nStartPos, sal_Int32 nNewChars );
     sal_Int32           SplitTextPortion( ParaPortion* pParaPortion, sal_Int32 nPos,  EditLine* pCurLine = nullptr );
-    void                SeekCursor( ContentNode* pNode, sal_Int32 nPos, SvxFont& rFont, OutputDevice* pOut = nullptr, sal_uInt16 nIgnoreWhich = 0 );
+    void                SeekCursor( ContentNode* pNode, sal_Int32 nPos, SvxFont& rFont, OutputDevice* pOut = nullptr );
     void                RecalcFormatterFontMetrics( FormatterFontMetric& rCurMetrics, SvxFont& rFont );
     void                CheckAutoPageSize();
 
@@ -566,10 +562,10 @@ private:
     EditPaM             ImpConnectParagraphs( ContentNode* pLeft, ContentNode* pRight, bool bBackward = false );
     EditPaM             ImpDeleteSelection(const EditSelection& rCurSel);
     EditPaM             ImpInsertParaBreak( EditPaM& rPaM, bool bKeepEndingAttribs = true );
-    EditPaM             ImpInsertParaBreak( const EditSelection& rEditSelection, bool bKeepEndingAttribs = true );
+    EditPaM             ImpInsertParaBreak( const EditSelection& rEditSelection );
     EditPaM             ImpInsertText(const EditSelection& aCurEditSelection, const OUString& rStr);
     EditPaM             ImpInsertFeature(const EditSelection& rCurSel, const SfxPoolItem& rItem);
-    void                ImpRemoveChars( const EditPaM& rPaM, sal_Int32 nChars, EditUndoRemoveChars* pCurUndo = nullptr );
+    void                ImpRemoveChars( const EditPaM& rPaM, sal_Int32 nChars );
     void                ImpRemoveParagraph( sal_Int32 nPara );
     EditSelection       ImpMoveParagraphs( Range aParagraphs, sal_Int32 nNewPos );
 
@@ -600,10 +596,10 @@ private:
     static EditPaM      CursorEndOfParagraph( const EditPaM& rPaM );
     EditPaM             CursorStartOfDoc();
     EditPaM             CursorEndOfDoc();
-    EditPaM             WordLeft( const EditPaM& rPaM, sal_Int16 nWordType = css::i18n::WordType::ANYWORD_IGNOREWHITESPACES );
+    EditPaM             WordLeft( const EditPaM& rPaM );
     EditPaM             WordRight( const EditPaM& rPaM, sal_Int16 nWordType = css::i18n::WordType::ANYWORD_IGNOREWHITESPACES );
-    EditPaM             StartOfWord( const EditPaM& rPaM, sal_Int16 nWordType = css::i18n::WordType::ANYWORD_IGNOREWHITESPACES );
-    EditPaM             EndOfWord( const EditPaM& rPaM, sal_Int16 nWordType = css::i18n::WordType::ANYWORD_IGNOREWHITESPACES );
+    EditPaM             StartOfWord( const EditPaM& rPaM );
+    EditPaM             EndOfWord( const EditPaM& rPaM );
     EditSelection       SelectWord( const EditSelection& rCurSelection, sal_Int16 nWordType = css::i18n::WordType::ANYWORD_IGNOREWHITESPACES, bool bAcceptStartOfWord = true );
     EditSelection       SelectSentence( const EditSelection& rCurSel ) const;
     EditPaM             CursorVisualLeftRight( EditView* pEditView, const EditPaM& rPaM, sal_uInt16 nCharacterIteratorMode, bool bToLeft );
@@ -654,7 +650,7 @@ private:
     const ParaPortion*  GetNextVisPortion( const ParaPortion* pCurPortion ) const;
 
     void                SetBackgroundColor( const Color& rColor ) { maBackgroundColor = rColor; }
-    Color               GetBackgroundColor() const { return maBackgroundColor; }
+    const Color&        GetBackgroundColor() const { return maBackgroundColor; }
 
     long                CalcVertLineSpacing(Point& rStartPos) const;
 
@@ -703,6 +699,8 @@ protected:
 
 public:
                             virtual ~ImpEditEngine();
+                            ImpEditEngine(const ImpEditEngine&) = delete;
+    ImpEditEngine&          operator=(const ImpEditEngine&) = delete;
 
     inline EditUndoManager& GetUndoManager();
     inline ::svl::IUndoManager* SetUndoManager(::svl::IUndoManager* pNew);
@@ -745,7 +743,7 @@ public:
     void                    FormatDoc();
     void                    FormatFullDoc();
     void                    UpdateViews( EditView* pCurView = nullptr );
-    void                    Paint( ImpEditView* pView, const Rectangle& rRect, OutputDevice* pTargetDevice = nullptr, bool bUseVirtDev = false );
+    void                    Paint( ImpEditView* pView, const Rectangle& rRect, OutputDevice* pTargetDevice = nullptr );
     void                    Paint( OutputDevice* pOutDev, Rectangle aClipRect, Point aStartPos, bool bStripOnly = false, short nOrientation = 0 );
 
     bool                MouseButtonUp( const MouseEvent& rMouseEvent, EditView* pView );
@@ -755,7 +753,7 @@ public:
     void                    Command( const CommandEvent& rCEvt, EditView* pView );
 
     EditSelectionEngine&    GetSelEngine() { return aSelEngine; }
-    OUString                GetSelected( const EditSelection& rSel, const LineEnd eParaSep = LINEEND_LF ) const;
+    OUString                GetSelected( const EditSelection& rSel ) const;
 
     const SfxItemSet&       GetEmptyItemSet();
 
@@ -781,7 +779,7 @@ public:
 
     void            SetText(const OUString& rText);
     EditPaM         DeleteSelected(const EditSelection& rEditSelection);
-    EditPaM         InsertText( const EditSelection& rCurEditSelection, sal_Unicode c, bool bOverwrite, bool bIsUserInput = false );
+    EditPaM         InsertTextUserInput( const EditSelection& rCurEditSelection, sal_Unicode c, bool bOverwrite );
     EditPaM         InsertText(const EditSelection& aCurEditSelection, const OUString& rStr);
     EditPaM         AutoCorrect( const EditSelection& rCurEditSelection, sal_Unicode c, bool bOverwrite, vcl::Window* pFrameWin = nullptr );
     EditPaM         DeleteLeftOrRight( const EditSelection& rEditSelection, sal_uInt8 nMode, sal_uInt8 nDelMode = DELMODE_SIMPLE );
@@ -834,15 +832,15 @@ public:
     bool            IsModified() const      { return aEditDoc.IsModified(); }
     void            SetModifyFlag( bool b ) { aEditDoc.SetModified( b ); }
     void            SetModifyHdl( const Link<LinkParamNone*,void>& rLink ) { aModifyHdl = rLink; }
-    Link<LinkParamNone*,void> GetModifyHdl() const { return aModifyHdl; }
+    const Link<LinkParamNone*,void>& GetModifyHdl() const { return aModifyHdl; }
 
     bool            IsInSelectionMode() { return bInSelection; }
 
     void            IndentBlock( EditView* pView, bool bRight );
 
 //  For Undo/Redo
-    bool            Undo( EditView* pView );
-    bool            Redo( EditView* pView );
+    void            Undo( EditView* pView );
+    void            Redo( EditView* pView );
 
 //  OV-Special
     void            InvalidateFromParagraph( sal_Int32 nFirstInvPara );
@@ -850,10 +848,10 @@ public:
     EditSelection*  SelectParagraph( sal_Int32 nPara );
 
     void            SetStatusEventHdl( const Link<EditStatus&, void>& rLink ) { aStatusHdlLink = rLink; }
-    Link<EditStatus&,void> GetStatusEventHdl() const               { return aStatusHdlLink; }
+    const Link<EditStatus&,void>& GetStatusEventHdl() const               { return aStatusHdlLink; }
 
     void            SetNotifyHdl( const Link<EENotify&,void>& rLink )     { aNotifyHdl = rLink; }
-    Link<EENotify&,void>   GetNotifyHdl() const            { return aNotifyHdl; }
+    const Link<EENotify&,void>&   GetNotifyHdl() const            { return aNotifyHdl; }
 
     void            FormatAndUpdate( EditView* pCurView = nullptr );
     inline void     IdleFormatAndUpdate( EditView* pCurView = nullptr );
@@ -904,7 +902,7 @@ public:
                         GetSpeller();
     void                SetSpeller( css::uno::Reference< css::linguistic2::XSpellChecker1 >  &xSpl )
                             { xSpeller = xSpl; }
-    css::uno::Reference< css::linguistic2::XHyphenator >
+    const css::uno::Reference< css::linguistic2::XHyphenator >&
                         GetHyphenator() const { return xHyphenator; }
     void                SetHyphenator( css::uno::Reference< css::linguistic2::XHyphenator >  &xHyph )
                             { xHyphenator = xHyph; }
@@ -920,7 +918,7 @@ public:
     LanguageType        GetLanguage( const EditPaM& rPaM, sal_Int32* pEndPos = nullptr ) const;
     css::lang::Locale   GetLocale( const EditPaM& rPaM ) const;
 
-    void DoOnlineSpelling( ContentNode* pThisNodeOnly = nullptr, bool bSpellAtCursorPos = false, bool bInteruptable = true );
+    void DoOnlineSpelling( ContentNode* pThisNodeOnly = nullptr, bool bSpellAtCursorPos = false, bool bInterruptible = true );
     EESpellState        Spell( EditView* pEditView, bool bMultipleDoc );
     EESpellState        HasSpellErrors();
     void                ClearSpellErrors();
@@ -954,14 +952,14 @@ public:
     void                AddPortionIterated(
                           EditView& rEditView,
                           const EditSelection &rSel,
-                          css::uno::Reference< css::linguistic2::XSpellAlternatives > xAlt,
+                          const css::uno::Reference< css::linguistic2::XSpellAlternatives >& xAlt,
                           svx::SpellPortions& rToFill);
     //adds one portion to the SpellPortions
-    void            AddPortion(
-                        const EditSelection &rSel,
-                        css::uno::Reference< css::linguistic2::XSpellAlternatives > xAlt,
-                        svx::SpellPortions& rToFill,
-                        bool bIsField );
+    void                AddPortion(
+                            const EditSelection &rSel,
+                            const css::uno::Reference< css::linguistic2::XSpellAlternatives >& xAlt,
+                            svx::SpellPortions& rToFill,
+                            bool bIsField );
 
     bool                    Search( const SvxSearchItem& rSearchItem, EditView* pView );
     bool                    ImpSearch( const SvxSearchItem& rSearchItem, const EditSelection& rSearchSelection, const EditPaM& rStartPos, EditSelection& rFoundSel );
@@ -1009,16 +1007,16 @@ public:
     void                SetAddExtLeading( bool b );
     bool                IsAddExtLeading() const { return bAddExtLeading; }
 
-    rtl::Reference<SvxForbiddenCharactersTable> GetForbiddenCharsTable( bool bGetInternal = true ) const;
-    static void         SetForbiddenCharsTable( rtl::Reference<SvxForbiddenCharactersTable> xForbiddenChars );
+    rtl::Reference<SvxForbiddenCharactersTable> GetForbiddenCharsTable() const;
+    static void         SetForbiddenCharsTable( const rtl::Reference<SvxForbiddenCharactersTable>& xForbiddenChars );
 
     /** sets a link that is called at the beginning of a drag operation at an edit view */
     void                SetBeginDropHdl( const Link<EditView*,void>& rLink ) { maBeginDropHdl = rLink; }
-    Link<EditView*,void>  GetBeginDropHdl() const { return maBeginDropHdl; }
+    const Link<EditView*,void>&  GetBeginDropHdl() const { return maBeginDropHdl; }
 
     /** sets a link that is called at the end of a drag operation at an edit view */
     void            SetEndDropHdl( const Link<EditView*,void>& rLink ) { maEndDropHdl = rLink; }
-    Link<EditView*,void>  GetEndDropHdl() const { return maEndDropHdl; }
+    const Link<EditView*,void>&  GetEndDropHdl() const { return maEndDropHdl; }
 
     /// specifies if auto-correction should capitalize the first word or not (default is on)
     void            SetFirstWordCapitalization( bool bCapitalize )  { bFirstWordCapitalization = bCapitalize; }
@@ -1143,7 +1141,6 @@ inline short ImpEditEngine::GetXValue( short nXValue ) const
 
     return (short) ((long)nXValue*nStretchX/100);
 }
-
 
 
 inline long ImpEditEngine::GetXValue( long nXValue ) const

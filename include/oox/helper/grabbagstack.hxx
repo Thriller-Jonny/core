@@ -11,18 +11,23 @@
 #ifndef INCLUDED_OOX_HELPER_GRABBAGSTACK_HXX
 #define INCLUDED_OOX_HELPER_GRABBAGSTACK_HXX
 
+#include <stack>
+#include <vector>
+
+#include <com/sun/star/beans/PropertyValue.hpp>
 #include <oox/dllapi.h>
 #include <rtl/ustring.hxx>
-#include <com/sun/star/beans/PropertyValue.hpp>
+#include <sal/types.h>
 
-#include <vector>
-#include <stack>
+namespace com { namespace sun { namespace star {
+    namespace uno { class Any; }
+} } }
 
 namespace oox {
 
 struct GrabBagStackElement
 {
-    OUString maName;
+    OUString maElementName;
     std::vector<css::beans::PropertyValue> maPropertyList;
 };
 
@@ -34,15 +39,15 @@ private:
     GrabBagStackElement mCurrentElement;
 
 public:
-    GrabBagStack(const OUString& aName);
+    GrabBagStack(const OUString& aElementName);
 
     virtual ~GrabBagStack();
 
-    OUString getCurrentName() { return mCurrentElement.maName;}
+    const OUString& getCurrentName() { return mCurrentElement.maElementName;}
 
     css::beans::PropertyValue getRootProperty();
 
-    void appendElement(const OUString& aName, css::uno::Any aAny);
+    void appendElement(const OUString& aName, const css::uno::Any& aAny);
     void push(const OUString& aKey);
     void pop();
     void addInt32(const OUString& aElementName, sal_Int32 aIntValue);

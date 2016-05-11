@@ -41,7 +41,6 @@ namespace frm
 {
 
 
-
     //= FormOperations
 
     typedef ::cppu::WeakComponentImplHelper    <   css::form::runtime::XFormOperations
@@ -254,7 +253,7 @@ namespace frm
             @precond
                 canMoveLeft()
         */
-        bool        impl_moveLeft_throw() const;
+        void        impl_moveLeft_throw() const;
 
         /** moves our cursor one position to the right, caring for different possible
             cursor states.
@@ -264,7 +263,7 @@ namespace frm
             @precond
                 canMoveRight()
         */
-        bool        impl_moveRight_throw( ) const;
+        void        impl_moveRight_throw( ) const;
 
         /** impl-version of commitCurrentRecord, which can be called without caring for
             an output parameter, and within const-contexts
@@ -298,7 +297,7 @@ namespace frm
             and rethrows them
 
             @param f
-                a fuctionoid with no arguments to do the work
+                a functionoid with no arguments to do the work
             @param _nErrorResourceId
                 the id of the resources string to use as error message
         */
@@ -334,7 +333,7 @@ namespace frm
                 , m_xField(xField)
             {};
 
-            void operator()() { m_pFO->m_xParser->appendFilterByColumn( m_xField, sal_True, css::sdb::SQLFilterOperator::EQUAL ); }
+            void operator()() { m_pFO->m_xParser->appendFilterByColumn( m_xField, true, css::sdb::SQLFilterOperator::EQUAL ); }
         private:
             const FormOperations *m_pFO;
             css::uno::Reference< css::beans::XPropertySet > m_xField;

@@ -70,7 +70,6 @@
 
 #include <unomid.h>
 
-#include <boost/noncopyable.hpp>
 #include <memory>
 
 using namespace ::com::sun::star;
@@ -113,7 +112,7 @@ static CloseResult CloseModelAndDocSh(
         {
             //! 'sal_True' -> transfer ownership to vetoing object if vetoed!
             //! I.e. now that object is responsible for closing the model and doc shell.
-            xClose->close( sal_True );
+            xClose->close( true );
         }
         catch (const util::CloseVetoException&)
         {
@@ -184,8 +183,7 @@ static bool LoadFromURL_impl(
 
 namespace
 {
-    class DelayedFileDeletion : public ::cppu::WeakImplHelper< util::XCloseListener >,
-                                private boost::noncopyable
+    class DelayedFileDeletion : public ::cppu::WeakImplHelper<util::XCloseListener>
     {
     protected:
         ::osl::Mutex                    m_aMutex;
@@ -193,6 +191,9 @@ namespace
         Timer                           m_aDeleteTimer;
         OUString                        m_sTemporaryFile;
         sal_Int32                       m_nPendingDeleteAttempts;
+
+        DelayedFileDeletion(DelayedFileDeletion const&) = delete;
+        DelayedFileDeletion& operator=(DelayedFileDeletion const&) = delete;
 
     public:
         DelayedFileDeletion( const Reference< XModel >& _rxModel,
@@ -409,7 +410,8 @@ SwXMailMerge::~SwXMailMerge()
 }
 
 // Guarantee object consistence in case of an exception
-class MailMergeExecuteFinalizer: private boost::noncopyable {
+class MailMergeExecuteFinalizer
+{
 public:
     explicit MailMergeExecuteFinalizer(SwXMailMerge *mailmerge)
         : m_pMailMerge(mailmerge)
@@ -418,11 +420,14 @@ public:
     }
     ~MailMergeExecuteFinalizer()
     {
-        osl::MutexGuard pMgrGuard( GetMailMergeMutex() );
+        osl::MutexGuard aMgrGuard( GetMailMergeMutex() );
         m_pMailMerge->m_pMgr = nullptr;
     }
 
 private:
+    MailMergeExecuteFinalizer(MailMergeExecuteFinalizer const&) = delete;
+    MailMergeExecuteFinalizer& operator=(MailMergeExecuteFinalizer const&) = delete;
+
     SwXMailMerge *m_pMailMerge;
 };
 
@@ -547,8 +552,8 @@ uno::Any SAL_CALL SwXMailMerge::execute(
             throw IllegalArgumentException("Property type mismatch or property not set: " + rName, static_cast < cppu::OWeakObject * > ( this ), 0 );
     }
 
-    // need to translate the selection: the API here requires a sequence of bookmarks, but the MergeNew
-    // method we will call below requires a sequence of indicies.
+    // need to translate the selection: the API here requires a sequence of bookmarks, but the Merge
+    // method we will call below requires a sequence of indices.
     if ( aCurSelection.getLength() )
     {
         Sequence< Any > aTranslated( aCurSelection.getLength() );
@@ -700,7 +705,6 @@ uno::Any SAL_CALL SwXMailMerge::execute(
         aMergeDesc.pMailMergeConfigItem = pMMConfigItem.get();
         break;
     case MailMergeType::FILE:
-    case MailMergeType::MAIL:
         {
             INetURLObject aURLObj;
             aURLObj.SetSmartProtocol( INetProtocol::File );
@@ -731,23 +735,22 @@ uno::Any SAL_CALL SwXMailMerge::execute(
             if (!aPath.isEmpty() && !aPath.endsWith(aDelim))
                 aPath += aDelim;
             if (bCurFileNameFromColumn)
-                pMgr->SetEMailColumn( aCurFileNamePrefix );
+                aMergeDesc.sDBcolumn = aCurFileNamePrefix;
             else
             {
                 aPath += aCurFileNamePrefix;
-                pMgr->SetEMailColumn( OUString() );
             }
-            pMgr->SetSubject( aPath );
-            if(MailMergeType::FILE == nCurOutputType)
+
+            aMergeDesc.sPath = aPath;
+            aMergeDesc.sSaveToFilter = m_sSaveFilter;
+            aMergeDesc.sSaveToFilterOptions = m_sSaveFilterOptions;
+            aMergeDesc.aSaveToFilterData = m_aSaveFilterData;
+            aMergeDesc.bCreateSingleFile = m_bSaveAsSingleFile;
+        }
+        break;
+    case MailMergeType::MAIL:
             {
-                aMergeDesc.sSaveToFilter = m_sSaveFilter;
-                aMergeDesc.sSaveToFilterOptions = m_sSaveFilterOptions;
-                aMergeDesc.aSaveToFilterData = m_aSaveFilterData;
-                aMergeDesc.bCreateSingleFile = m_bSaveAsSingleFile;
-            }
-            else
-            {
-                pMgr->SetEMailColumn( m_sAddressFromColumn );
+                aMergeDesc.sDBcolumn = m_sAddressFromColumn;
                 if(m_sAddressFromColumn.isEmpty())
                     throw RuntimeException("Mail address column not set.", static_cast < cppu::OWeakObject * > ( this ) );
                 aMergeDesc.sSaveToFilter     = m_sAttachmentFilter;
@@ -769,12 +772,11 @@ uno::Any SAL_CALL SwXMailMerge::execute(
                 if( !aMergeDesc.xSmtpServer.is() || !aMergeDesc.xSmtpServer->isConnected())
                     throw RuntimeException("Failed to connect to mail server.", static_cast < cppu::OWeakObject * > ( this ) );
             }
-        }
         break;
     }
 
     // save document with temporary filename
-    const SfxFilter *pSfxFlt = SwIoSystem::GetFilterOfFormat(
+    std::shared_ptr<const SfxFilter> pSfxFlt = SwIoSystem::GetFilterOfFormat(
             FILTER_XML,
             SwDocShell::Factory().GetFilterContainer() );
     OUString aExtension(comphelper::string::stripStart(pSfxFlt->GetDefaultExtension(), '*'));
@@ -803,7 +805,7 @@ uno::Any SAL_CALL SwXMailMerge::execute(
     pMgr->SetMailMergeEvtSrc( this );   // launch events for listeners
 
     SfxGetpApp()->NotifyEvent(SfxEventHint(SW_EVENT_MAIL_MERGE, SwDocShell::GetEventName(STR_SW_EVENT_MAIL_MERGE), xCurDocSh));
-    bool bSucc = pMgr->MergeNew( aMergeDesc );
+    bool bSucc = pMgr->Merge( aMergeDesc );
     SfxGetpApp()->NotifyEvent(SfxEventHint(SW_EVENT_MAIL_MERGE_END, SwDocShell::GetEventName(STR_SW_EVENT_MAIL_MERGE_END), xCurDocSh));
 
     pMgr->SetMailMergeEvtSrc( pOldSrc );
@@ -836,14 +838,14 @@ void SAL_CALL SwXMailMerge::cancel() throw (css::uno::RuntimeException, std::exc
 {
     // Cancel may be called from a second thread, so this protects from m_pMgr
     /// cleanup in the execute function.
-    osl::MutexGuard pMgrGuard( GetMailMergeMutex() );
+    osl::MutexGuard aMgrGuard( GetMailMergeMutex() );
     if (m_pMgr)
         m_pMgr->MergeCancel();
 }
 
 void SwXMailMerge::LaunchMailMergeEvent( const MailMergeEvent &rEvt ) const
 {
-    cppu::OInterfaceIteratorHelper aIt( const_cast<SwXMailMerge *>(this)->m_aMergeListeners );
+    comphelper::OInterfaceIteratorHelper2 aIt( const_cast<SwXMailMerge *>(this)->m_aMergeListeners );
     while (aIt.hasMoreElements())
     {
         Reference< XMailMergeListener > xRef( aIt.next(), UNO_QUERY );
@@ -1024,7 +1026,7 @@ void SAL_CALL SwXMailMerge::setPropertyValue(
         if (bChanged)
         {
             PropertyChangeEvent aChgEvt( static_cast<XPropertySet *>(this), rPropertyName,
-                    sal_False, pCur->nWID, aOld, rValue );
+                    false, pCur->nWID, aOld, rValue );
             launchEvent( aChgEvt );
         }
     }

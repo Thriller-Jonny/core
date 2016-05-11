@@ -152,10 +152,14 @@ void SdTransferable::CreateObjectReplacement( SdrObject* pObj )
 {
     if( pObj )
     {
-        delete mpOLEDataHelper, mpOLEDataHelper = nullptr;
-        delete mpGraphic, mpGraphic = nullptr;
-        delete mpBookmark, mpBookmark = nullptr;
-        delete mpImageMap, mpImageMap = nullptr;
+        delete mpOLEDataHelper;
+        mpOLEDataHelper = nullptr;
+        delete mpGraphic;
+        mpGraphic = nullptr;
+        delete mpBookmark;
+        mpBookmark = nullptr;
+        delete mpImageMap;
+        mpImageMap = nullptr;
 
         if( nullptr!= dynamic_cast< const SdrOle2Obj* >( pObj ) )
         {
@@ -591,7 +595,7 @@ bool SdTransferable::WriteObject( tools::SvRef<SotStorageStream>& rxOStm, void* 
 
     switch( nObjectType )
     {
-        case( SDTRANSFER_OBJECTTYPE_DRAWMODEL ):
+        case SDTRANSFER_OBJECTTYPE_DRAWMODEL:
         {
             try
             {
@@ -621,7 +625,7 @@ bool SdTransferable::WriteObject( tools::SvRef<SotStorageStream>& rxOStm, void* 
         }
         break;
 
-        case( SDTRANSFER_OBJECTTYPE_DRAWOLE ):
+        case SDTRANSFER_OBJECTTYPE_DRAWOLE:
         {
             SfxObjectShell*   pEmbObj = static_cast<SfxObjectShell*>(pObject);
             ::utl::TempFile     aTempFile;

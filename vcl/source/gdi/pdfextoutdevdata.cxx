@@ -17,10 +17,10 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include "vcl/pdfextoutdevdata.hxx"
-#include "vcl/graph.hxx"
-#include "vcl/outdev.hxx"
-#include "vcl/gfxlink.hxx"
+#include <vcl/pdfextoutdevdata.hxx>
+#include <vcl/graph.hxx>
+#include <vcl/outdev.hxx>
+#include <vcl/gfxlink.hxx>
 #include "vcl/dllapi.h"
 #include "basegfx/polygon/b2dpolygon.hxx"
 #include "basegfx/polygon/b2dpolygontools.hxx"
@@ -294,17 +294,22 @@ struct PageSyncData
     std::deque< PDFWriter::StructAttribute >        mParaStructAttributes;
     std::deque< PDFWriter::StructAttributeValue >   mParaStructAttributeValues;
     std::deque< Graphic >                           mGraphics;
+    Graphic                                         mCurrentGraphic;
     std::deque< std::shared_ptr< PDFWriter::AnyWidget > >
                                                     mControls;
     GlobalSyncData*                                 mpGlobalData;
 
     bool                                        mbGroupIgnoreGDIMtfActions;
 
-    explicit PageSyncData( GlobalSyncData* pGlobal ) : mbGroupIgnoreGDIMtfActions ( false ) { mpGlobalData = pGlobal; }
+
+    explicit PageSyncData( GlobalSyncData* pGlobal )
+        : mbGroupIgnoreGDIMtfActions ( false )
+    { mpGlobalData = pGlobal; }
 
     void PushAction( const OutputDevice& rOutDev, const PDFExtOutDevDataSync::Action eAct );
     bool PlaySyncPageAct( PDFWriter& rWriter, sal_uInt32& rCurGDIMtfAction, const PDFExtOutDevData& rOutDevData );
 };
+
 void PageSyncData::PushAction( const OutputDevice& rOutDev, const PDFExtOutDevDataSync::Action eAct )
 {
     GDIMetaFile* pMtf = rOutDev.GetConnectMetaFile();
@@ -403,12 +408,21 @@ bool PageSyncData::PlaySyncPageAct( PDFWriter& rWriter, sal_uInt32& rCurGDIMtfAc
                     }
                     else if ( aBeg->eAct == PDFExtOutDevDataSync::EndGroupGfxLink )
                     {
-                        if ( rOutDevData.GetIsLosslessCompression() && !rOutDevData.GetIsReduceImageResolution() )
+                        Graphic& rGraphic = mGraphics.front();
+                        if ( rGraphic.IsLink() )
                         {
-                            Graphic& rGraphic = mGraphics.front();
-                            if ( rGraphic.IsLink() && rGraphic.GetLink().GetType() == GFX_LINK_TYPE_NATIVE_JPG )
+                            GfxLinkType eType = rGraphic.GetLink().GetType();
+                            if ( eType == GFX_LINK_TYPE_NATIVE_JPG && mParaRects.size() >= 2 )
                             {
-                                mbGroupIgnoreGDIMtfActions = true;
+                                mbGroupIgnoreGDIMtfActions =
+                                rOutDevData.HasAdequateCompression(
+                                        rGraphic, mParaRects[0], mParaRects[1]);
+                                if ( !mbGroupIgnoreGDIMtfActions )
+                                    mCurrentGraphic = rGraphic;
+                            }
+                            else if ( eType == GFX_LINK_TYPE_NATIVE_PNG )
+                            {
+                                mCurrentGraphic = rGraphic;
                             }
                         }
                         break;
@@ -464,6 +478,7 @@ bool PageSyncData::PlaySyncPageAct( PDFWriter& rWriter, sal_uInt32& rCurGDIMtfAc
                     }
                     mbGroupIgnoreGDIMtfActions = false;
                 }
+                mCurrentGraphic.Clear();
             }
             break;
             case PDFExtOutDevDataSync::CreateNamedDest:
@@ -504,6 +519,8 @@ PDFExtOutDevData::PDFExtOutDevData( const OutputDevice& rOutDev ) :
     mbExportNDests          ( false ),
     mnFormsFormat           ( 0 ),
     mnPage                  ( -1 ),
+    mnCompressionQuality    ( 90 ),
+    mnMaxImageResolution    ( 300 ),
     mpPageSyncData          ( nullptr ),
     mpGlobalSyncData        ( new GlobalSyncData() )
 {
@@ -514,6 +531,11 @@ PDFExtOutDevData::~PDFExtOutDevData()
 {
     delete mpPageSyncData;
     delete mpGlobalSyncData;
+}
+
+const Graphic& PDFExtOutDevData::GetCurrentGraphic() const
+{
+    return mpPageSyncData->mCurrentGraphic;
 }
 
 void PDFExtOutDevData::SetDocumentLocale( const css::lang::Locale& rLoc )
@@ -527,6 +549,14 @@ void PDFExtOutDevData::SetCurrentPageNumber( const sal_Int32 nPage )
 void PDFExtOutDevData::SetIsLosslessCompression( const bool bUseLosslessCompression )
 {
     mbUseLosslessCompression = bUseLosslessCompression;
+}
+void PDFExtOutDevData::SetCompressionQuality( const sal_Int32 nQuality )
+{
+    mnCompressionQuality = nQuality;
+}
+void PDFExtOutDevData::SetMaxImageResolution( const sal_Int32 nMaxImageResolution )
+{
+    mnMaxImageResolution = nMaxImageResolution;
 }
 void PDFExtOutDevData::SetIsReduceImageResolution( const bool bReduceImageResolution )
 {
@@ -585,14 +615,14 @@ void PDFExtOutDevData::PlayGlobalActions( PDFWriter& rWriter )
    all actions will be played after the last page was recorded
 */
 //--->i56629
-sal_Int32 PDFExtOutDevData::CreateNamedDest(const OUString& sDestName,  const Rectangle& rRect, sal_Int32 nPageNr, PDFWriter::DestAreaType eType )
+sal_Int32 PDFExtOutDevData::CreateNamedDest(const OUString& sDestName,  const Rectangle& rRect, sal_Int32 nPageNr )
 {
     mpGlobalSyncData->mActions.push_back( PDFExtOutDevDataSync::CreateNamedDest );
     mpGlobalSyncData->mParaOUStrings.push_back( sDestName );
     mpGlobalSyncData->mParaRects.push_back( rRect );
     mpGlobalSyncData->mParaMapModes.push_back( mrOutDev.GetMapMode() );
     mpGlobalSyncData->mParaInts.push_back( nPageNr == -1 ? mnPage : nPageNr );
-    mpGlobalSyncData->mParaDestAreaTypes.push_back( eType );
+    mpGlobalSyncData->mParaDestAreaTypes.push_back( PDFWriter::XYZ );
 
     return mpGlobalSyncData->mCurId++;
 }
@@ -662,15 +692,15 @@ void PDFExtOutDevData::CreateNote( const Rectangle& rRect, const PDFNote& rNote,
     mpGlobalSyncData->mParaPDFNotes.push_back( rNote );
     mpGlobalSyncData->mParaInts.push_back( nPageNr == -1 ? mnPage : nPageNr );
 }
-void PDFExtOutDevData::SetPageTransition( PDFWriter::PageTransition eType, sal_uInt32 nMilliSec, sal_Int32 nPageNr )
+void PDFExtOutDevData::SetPageTransition( PDFWriter::PageTransition eType, sal_uInt32 nMilliSec )
 {
     mpGlobalSyncData->mActions.push_back( PDFExtOutDevDataSync::SetPageTransition );
     mpGlobalSyncData->mParaPageTransitions.push_back( eType );
     mpGlobalSyncData->mParauInts.push_back( nMilliSec );
-    mpGlobalSyncData->mParaInts.push_back( nPageNr == -1 ? mnPage : nPageNr );
+    mpGlobalSyncData->mParaInts.push_back( mnPage );
 }
 
-/* local (page), actions have to be played synchroniously to the actions of
+/* local (page), actions have to be played synchronously to the actions of
    of the recorded metafile (created by each xRenderable->render()) */
    sal_Int32 PDFExtOutDevData::BeginStructureElement( PDFWriter::StructElement eType, const OUString& rAlias )
 {
@@ -734,7 +764,7 @@ void PDFExtOutDevData::SetAlternateText( const OUString& rText )
     mpPageSyncData->mParaOUStrings.push_back( rText );
 }
 
-void PDFExtOutDevData::CreateControl( const PDFWriter::AnyWidget& rControlType, sal_Int32 /*nPageNr*/ )
+void PDFExtOutDevData::CreateControl( const PDFWriter::AnyWidget& rControlType )
 {
     mpPageSyncData->PushAction( mrOutDev, PDFExtOutDevDataSync::CreateControl );
 
@@ -748,7 +778,7 @@ void PDFExtOutDevData::BeginGroup()
 }
 
 void PDFExtOutDevData::EndGroup( const Graphic&     rGraphic,
-                                 sal_uInt8              nTransparency,
+                                 sal_uInt8          nTransparency,
                                  const Rectangle&   rOutputRect,
                                  const Rectangle&   rVisibleOutputRect )
 {
@@ -757,6 +787,49 @@ void PDFExtOutDevData::EndGroup( const Graphic&     rGraphic,
     mpPageSyncData->mParaInts.push_back( nTransparency );
     mpPageSyncData->mParaRects.push_back( rOutputRect );
     mpPageSyncData->mParaRects.push_back( rVisibleOutputRect );
+}
+
+// Avoids expensive de-compression and re-compression of large images.
+bool PDFExtOutDevData::HasAdequateCompression( const Graphic &rGraphic,
+                                               const Rectangle & /* rOutputRect */,
+                                               const Rectangle & /* rVisibleOutputRect */ ) const
+{
+    bool bReduceResolution = false;
+
+    assert( rGraphic.IsLink() && rGraphic.GetLink().GetType() == GFX_LINK_TYPE_NATIVE_JPG );
+
+    // small items better off as PNG anyway
+    if ( rGraphic.GetSizePixel().Width() < 32 &&
+         rGraphic.GetSizePixel().Height() < 32 )
+        return false;
+
+    // FIXME: ideally we'd also pre-empt the DPI related scaling too.
+
+    Size aSize = rGraphic.GetSizePixel();
+    sal_Int32 nCurrentRatio = (100 * aSize.Width() * aSize.Height() * 4) /
+                               rGraphic.GetLink().GetDataSize();
+
+    if ( GetIsLosslessCompression() )
+        return !bReduceResolution && !GetIsReduceImageResolution();
+    else
+    {
+        static const struct {
+            sal_Int32 mnQuality;
+            sal_Int32 mnRatio;
+        } aRatios[] = { // minium tolerable compression ratios
+            { 100, 400 }, { 95, 700 }, { 90, 1000 }, { 85, 1200 },
+            { 80, 1500 }, { 75, 1700 }
+        };
+        sal_Int32 nTargetRatio = 10000;
+        for ( size_t i = 0 ; i < SAL_N_ELEMENTS( aRatios ); ++i )
+        {
+            if ( mnCompressionQuality > aRatios[i].mnQuality )
+                break;
+            nTargetRatio = aRatios[i].mnRatio;
+        }
+
+        return nCurrentRatio > nTargetRatio;
+    }
 }
 
 }

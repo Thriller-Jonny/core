@@ -42,6 +42,7 @@
 #include <oox/helper/containerhelper.hxx>
 #include <oox/helper/propertyset.hxx>
 #include <oox/token/properties.hxx>
+#include <oox/token/tokens.hxx>
 #include "addressconverter.hxx"
 #include "biffinputstream.hxx"
 
@@ -669,7 +670,7 @@ Reference< XDataPilotField > PivotTableField::convertRowColPageField( sal_Int32 
             if( maModel.mbAutoShow )
             {
                 DataPilotFieldAutoShowInfo aAutoShowInfo;
-                aAutoShowInfo.IsEnabled = sal_True;
+                aAutoShowInfo.IsEnabled = true;
                 aAutoShowInfo.ShowItemsMode = maModel.mbTopAutoShow ? DataPilotFieldShowItemsMode::FROM_TOP : DataPilotFieldShowItemsMode::FROM_BOTTOM;
                 aAutoShowInfo.ItemCount = maModel.mnAutoShowItems;
                 if( const PivotCacheField* pCacheField = mrPivotTable.getCacheFieldOfDataField( maModel.mnAutoShowRankBy ) )
@@ -846,7 +847,7 @@ void PivotTableFilter::finalizeImport()
         {
             using namespace ::com::sun::star::sheet;
             DataPilotFieldAutoShowInfo aAutoShowInfo;
-            aAutoShowInfo.IsEnabled = sal_True;
+            aAutoShowInfo.IsEnabled = true;
             aAutoShowInfo.ShowItemsMode = maModel.mbTopFilter ? DataPilotFieldShowItemsMode::FROM_TOP : DataPilotFieldShowItemsMode::FROM_BOTTOM;
             aAutoShowInfo.ItemCount = getLimitedValue< sal_Int32, double >( maModel.mfValue, 0, SAL_MAX_INT32 );
             if( const PivotCacheField* pCacheField = mrPivotTable.getCacheFieldOfDataField( maModel.mnMeasureField ) )
@@ -1189,7 +1190,7 @@ void PivotTable::finalizeImport()
                 aDescProp.setProperty( PROP_DrillDownOnDoubleClick, maDefModel.mbEnableDrill );
 
                 // finalize all fields, this finds field names and creates grouping fields
-                maFields.forEachMem( &PivotTableField::finalizeImport, ::boost::cref( mxDPDescriptor ) );
+                maFields.forEachMem(&PivotTableField::finalizeImport, ::std::cref(mxDPDescriptor));
 
                 // all row fields
                 for( IndexVector::iterator aIt = maRowFields.begin(), aEnd = maRowFields.end(); aIt != aEnd; ++aIt )
@@ -1252,7 +1253,7 @@ void PivotTable::finalizeImport()
 void PivotTable::finalizeDateGroupingImport( const Reference< XDataPilotField >& rxBaseDPField, sal_Int32 nBaseFieldIdx )
 {
     // process all fields, there is no chaining information in the cache fields
-    maFields.forEachMem( &PivotTableField::finalizeDateGroupingImport, ::boost::cref( rxBaseDPField ), nBaseFieldIdx );
+    maFields.forEachMem( &PivotTableField::finalizeDateGroupingImport, ::std::cref(rxBaseDPField), nBaseFieldIdx );
 }
 
 void PivotTable::finalizeParentGroupingImport( const Reference< XDataPilotField >& rxBaseDPField,

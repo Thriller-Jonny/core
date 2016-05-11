@@ -23,7 +23,7 @@
 #include "scdllapi.h"
 #include "address.hxx"
 
-#include <boost/ptr_container/ptr_map.hpp>
+#include <map>
 
 #define SC_OL_MAXDEPTH      7
 
@@ -63,8 +63,8 @@ public:
 
 class ScOutlineCollection
 {
-    typedef boost::ptr_map<SCCOLROW, ScOutlineEntry> MapType;
-    MapType maEntries;
+    typedef std::map<SCCOLROW, ScOutlineEntry> MapType;
+    MapType m_Entries;
 
 public:
     typedef MapType::iterator iterator;
@@ -74,12 +74,12 @@ public:
 
     size_t size() const;
     void clear();
-    void insert(ScOutlineEntry* pEntry);
+    void insert(ScOutlineEntry const& rEntry);
     iterator begin();
     iterator end();
     const_iterator begin() const;
     const_iterator end() const;
-    void erase(iterator pos);
+    void erase(const iterator& pos);
     bool empty() const;
 
     iterator FindStart(SCCOLROW nMinStart);
@@ -111,7 +111,7 @@ public:
         SCCOLROW nBlockStart, SCCOLROW nBlockEnd, size_t& rFindLevel) const;
 
     bool Insert( SCCOLROW nStartPos, SCCOLROW nEndPos, bool& rSizeChanged,
-                 bool bHidden = false, bool bVisible = true );
+                 bool bHidden = false );
     bool Remove( SCCOLROW nBlockStart, SCCOLROW nBlockEnd, bool& rSizeChanged );
 
     ScOutlineEntry* GetEntry(size_t nLevel, size_t nIndex);
@@ -135,6 +135,8 @@ public:
 
     bool ManualAction(
         SCCOLROW nStartPos, SCCOLROW nEndPos, bool bShow, const ScTable& rTable, bool bCol);
+
+    void finalizeImport(ScTable& rTable);
 
     void RemoveAll();
 };

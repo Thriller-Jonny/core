@@ -25,6 +25,8 @@
 #include "oox/helper/helper.hxx"
 #include "oox/helper/attributelist.hxx"
 #include "oox/helper/propertymap.hxx"
+#include <oox/token/namespaces.hxx>
+#include <oox/token/tokens.hxx>
 #include <unordered_map>
 
 using namespace ::oox::core;
@@ -223,18 +225,24 @@ static EnhancedCustomShapeParameter GetAdjCoordinate( CustomShapeProperties& rCu
             }
             break;
 
-            case XML_hd10 :   // !!PASSTHROUGH INTENDED
+            case XML_hd10 :
                 nIntVal += 2; // */ h 1.0 10.0
+                SAL_FALLTHROUGH;
             case XML_hd8 :    // */ h 1.0 8.0
                 nIntVal += 2;
+                SAL_FALLTHROUGH;
             case XML_hd6 :    // */ h 1.0 6.0
                 nIntVal++;
+                SAL_FALLTHROUGH;
             case XML_hd5 :    // */ h 1.0 5.0
                 nIntVal++;
+                SAL_FALLTHROUGH;
             case XML_hd4 :    // */ h 1.0 4.0
                 nIntVal++;
+                SAL_FALLTHROUGH;
             case XML_hd3 :    // */ h 1.0 3.0
                 nIntVal++;
+                SAL_FALLTHROUGH;
             case XML_hd2 :    // */ h 1.0 2.0
             case XML_vc :     // */ h 1.0 2.0
             {
@@ -279,14 +287,19 @@ static EnhancedCustomShapeParameter GetAdjCoordinate( CustomShapeProperties& rCu
             break;
             case XML_ssd32 : // */ ss 1.0 32.0
                 nIntVal += 16;
+                SAL_FALLTHROUGH;
             case XML_ssd16 : // */ ss 1.0 16.0
                 nIntVal += 8;
+                SAL_FALLTHROUGH;
             case XML_ssd8 :  // */ ss 1.0 8.0
                 nIntVal += 2;
+                SAL_FALLTHROUGH;
             case XML_ssd6 :  // */ ss 1.0 6.0
                 nIntVal += 2;
+                SAL_FALLTHROUGH;
             case XML_ssd4 :  // */ ss 1.0 4.0
                 nIntVal += 2;
+                SAL_FALLTHROUGH;
             case XML_ssd2 :  // */ ss 1.0 2.0
             {
                 nIntVal += 2;
@@ -319,20 +332,28 @@ static EnhancedCustomShapeParameter GetAdjCoordinate( CustomShapeProperties& rCu
 
             case XML_wd32 : // */ w 1.0 32.0
                 nIntVal += 20;
+                SAL_FALLTHROUGH;
             case XML_wd12 : // */ w 1.0 12.0
                 nIntVal += 2;
+                SAL_FALLTHROUGH;
             case XML_wd10 : // */ w 1.0 10.0
                 nIntVal += 2;
+                SAL_FALLTHROUGH;
             case XML_wd8 :  // */ w 1.0 8.0
                 nIntVal += 2;
+                SAL_FALLTHROUGH;
             case XML_wd6 :  // */ w 1.0 6.0
                 nIntVal++;
+                SAL_FALLTHROUGH;
             case XML_wd5 :  // */ w 1.0 5.0
                 nIntVal++;
+                SAL_FALLTHROUGH;
             case XML_wd4 :  // */ w 1.0 4.0
                 nIntVal++;
+                SAL_FALLTHROUGH;
             case XML_wd3 :  // */ w 1.0 3.0
                 nIntVal++;
+                SAL_FALLTHROUGH;
             case XML_hc :   // */ w 1.0 2.0
             case XML_wd2 :  // */ w 1.0 2.0
             {
@@ -423,8 +444,8 @@ static OUString convertToOOEquation( CustomShapeProperties& rCustomShapeProperti
     if ( !pCommandHashMap )
     {
         FormulaCommandHMap* pHM = new FormulaCommandHMap();
-        for( sal_Int32 i = 0; i < FC_LAST; i++ )
-            (*pHM)[ OUString::createFromAscii( pFormularCommandNameTable[ i ].pS ) ] =  pFormularCommandNameTable[ i ].pE;
+        for(const FormularCommandNameTable& i : pFormularCommandNameTable)
+            (*pHM)[ OUString::createFromAscii( i.pS ) ] =  i.pE;
         pCommandHashMap = pHM;
     }
 
@@ -596,7 +617,7 @@ ContextHandlerRef GeomGuideListContext::onCreateContext( sal_Int32 aElementToken
     return this;
 }
 
-static const OUString GetGeomGuideName( const OUString& rValue )
+static const OUString& GetGeomGuideName( const OUString& rValue )
 {
     return rValue;
 }

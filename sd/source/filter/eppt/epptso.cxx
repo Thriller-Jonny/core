@@ -27,7 +27,7 @@
 #include "epptdef.hxx"
 #include "escherex.hxx"
 #include <tools/poly.hxx>
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 #include <vcl/gradient.hxx>
 #include <vcl/gfxlink.hxx>
 #include <tools/stream.hxx>
@@ -97,7 +97,7 @@ using namespace ::com::sun::star;
 
 PPTExBulletProvider::PPTExBulletProvider()
 {
-    pGraphicProv = new EscherGraphicProvider( _E_GRAPH_PROV_USE_INSTANCES  | _E_GRAPH_PROV_DO_NOT_ROTATE_METAFILES );
+    pGraphicProv = new EscherGraphicProvider( E_GRAPH_PROV_USE_INSTANCES  | E_GRAPH_PROV_DO_NOT_ROTATE_METAFILES );
 }
 
 PPTExBulletProvider::~PPTExBulletProvider()
@@ -820,7 +820,7 @@ void PPTWriter::ImplWritePortions( SvStream& rOut, TextObj& rTextObj )
             {
                 sal_uInt32 nBackgroundColor = 0xffffff;
 
-                if ( !nCharColor )          // special threatment for
+                if ( !nCharColor )          // special treatment for
                     nCharColor = 0xffffff;  // black fontcolor
 
                 css::uno::Any aAny;
@@ -1935,16 +1935,16 @@ void PPTWriter::ImplWriteClickAction( SvStream& rSt, css::presentation::ClickAct
     {
         case css::presentation::ClickAction_STOPPRESENTATION :
             nJump += 2;
-            //fall-through
+            SAL_FALLTHROUGH;
         case css::presentation::ClickAction_LASTPAGE :
             nJump++;
-            //fall-through
+            SAL_FALLTHROUGH;
         case css::presentation::ClickAction_FIRSTPAGE :
             nJump++;
-            //fall-through
+            SAL_FALLTHROUGH;
         case css::presentation::ClickAction_PREVPAGE :
             nJump++;
-            //fall-through
+            SAL_FALLTHROUGH;
         case css::presentation::ClickAction_NEXTPAGE :
         {
             nJump++;
@@ -3006,7 +3006,7 @@ void PPTWriter::ImplWritePage( const PHLayout& rLayout, EscherSolverContainer& a
                     mpExEmbed->WriteUInt32( EPP_ExEmbedAtom << 16 )
                                .WriteUInt32( 8 )
                                .WriteUInt32( 0 )    // follow colorscheme : 0->do not follow
-                                                    //                      1->follow collorscheme
+                                                    //                      1->follow colorscheme
                                                     //                      2->follow text and background scheme
                                .WriteUChar( 1 )     // (bool)set if embedded server can not be locked
                                .WriteUChar( 0 )     // (bool)do not need to send dimension
@@ -3318,7 +3318,8 @@ void PPTWriter::ImplWritePage( const PHLayout& rLayout, EscherSolverContainer& a
                         if ( pOut )
                         {
                             pClientTextBox->Write( pOut->GetData(), pOut->Tell() );
-                            delete pOut, aTextRule.pOut = nullptr;
+                            delete pOut;
+                            aTextRule.pOut = nullptr;
                         }
                         if ( aExtBu.Tell() )
                         {
@@ -3381,7 +3382,8 @@ void PPTWriter::ImplWritePage( const PHLayout& rLayout, EscherSolverContainer& a
                        .WriteUInt32( pClientData->Tell() );
 
                 mpStrm->Write( pClientData->GetData(), pClientData->Tell() );
-                delete pClientData, pClientData = nullptr;
+                delete pClientData;
+                pClientData = nullptr;
             }
             if ( pClientTextBox )
             {
@@ -3389,7 +3391,8 @@ void PPTWriter::ImplWritePage( const PHLayout& rLayout, EscherSolverContainer& a
                        .WriteUInt32( pClientTextBox->Tell() );
 
                 mpStrm->Write( pClientTextBox->GetData(), pClientTextBox->Tell() );
-                delete pClientTextBox, pClientTextBox = nullptr;
+                delete pClientTextBox;
+                pClientTextBox = nullptr;
             }
             mpPptEscherEx->CloseContainer();      // ESCHER_SpContainer
         }
@@ -3454,7 +3457,8 @@ void PPTWriter::ImplWritePage( const PHLayout& rLayout, EscherSolverContainer& a
                    .WriteUInt32( pClientTextBox->Tell() );
 
             mpStrm->Write( pClientTextBox->GetData(), pClientTextBox->Tell() );
-            delete pClientTextBox, pClientTextBox = nullptr;
+            delete pClientTextBox;
+            pClientTextBox = nullptr;
 
             mpPptEscherEx->CloseContainer();  // ESCHER_SpContainer
 
@@ -3701,7 +3705,8 @@ void PPTWriter::ImplCreateTable( uno::Reference< drawing::XShape >& rXShape, Esc
                                .WriteUInt32( pClientData->Tell() );
 
                             mpStrm->Write( pClientData->GetData(), pClientData->Tell() );
-                            delete pClientData, pClientData = nullptr;
+                            delete pClientData;
+                            pClientData = nullptr;
                         }
 
                         aPropOptSp.Commit( *mpStrm );

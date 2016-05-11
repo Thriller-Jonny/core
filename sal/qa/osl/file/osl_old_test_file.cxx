@@ -26,9 +26,6 @@
 #include <string.h>
 #include <sys/stat.h>
 #define TEST_VOLUME ""
-#else
-// WINDOWS
-#define TEST_VOLUME "c:/"
 #endif
 
 #include <cppunit/TestFixture.h>
@@ -52,7 +49,7 @@ public:
     CPPUNIT_TEST_SUITE_END( );
 };
 
-#ifndef WIN32
+#ifndef _WIN32
 const char * const aSource1[] =
 {
     "a"    , "file:///" TEST_VOLUME "bla/a",
@@ -82,12 +79,10 @@ const char * const aSource2[ ] =
 #endif
 
 using ::rtl::OUString;
-using ::rtl::OUStringToOString;
-using ::rtl::OString;
 
 void oldtestfile::test_file_001()
 {
-#ifndef WIN32
+#ifndef _WIN32
     OUString base1( "file:///" TEST_VOLUME "bla" );
     int i;
     for( i = 0 ; aSource1[i] ; i +=2 )
@@ -106,7 +101,7 @@ void oldtestfile::test_file_001()
 
 void oldtestfile::test_file_002()
 {
-#ifndef WIN32
+#ifndef _WIN32
     OUString base2( "file:///" TEST_VOLUME "bla/blubs/schnubbel" );
     int i;
     for(  i = 0 ; aSource2[i] ; i +=2 )
@@ -125,7 +120,7 @@ void oldtestfile::test_file_002()
 
 void oldtestfile::test_file_004()
 {
-#ifndef WIN32
+#ifndef _WIN32
     OUString base4( "file:///" TEST_VOLUME "bla/" );
     int i;
     for( i = 0 ; aSource1[i] ; i +=2 )

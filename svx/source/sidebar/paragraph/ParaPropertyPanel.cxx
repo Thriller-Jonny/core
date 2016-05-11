@@ -32,7 +32,7 @@
 #include "svx/dialmgr.hxx"
 #include <sfx2/objsh.hxx>
 #include <svtools/unitconv.hxx>
-#include <boost/bind.hpp>
+
 using namespace css;
 using namespace css::uno;
 
@@ -94,12 +94,6 @@ void ParaPropertyPanel::HandleContextChange (
         case CombinedEnumContext(Application_DrawImpress, Context_Draw):
         case CombinedEnumContext(Application_DrawImpress, Context_TextObject):
         case CombinedEnumContext(Application_DrawImpress, Context_Graphic):
-            mpTBxVertAlign->Hide();
-            mpTBxBackColor->Hide();
-            mpTBxNumBullet->Show();
-            ReSize(true);
-            break;
-
         case CombinedEnumContext(Application_DrawImpress, Context_DrawText):
         case CombinedEnumContext(Application_DrawImpress, Context_Table):
             mpTBxVertAlign->Show();
@@ -215,8 +209,8 @@ IMPL_LINK_NOARG_TYPED( ParaPropertyPanel, ModifyIndentHdl_Impl, Edit&, void)
     aMargin.SetRight( (const long)GetCoreValue( *mpRightIndent, m_eLRSpaceUnit ) );
     aMargin.SetTextFirstLineOfst( (const short)GetCoreValue( *mpFLineIndent, m_eLRSpaceUnit ) );
 
-    GetBindings()->GetDispatcher()->Execute(
-        SID_ATTR_PARA_LRSPACE, SfxCallMode::RECORD, &aMargin, 0L);
+    GetBindings()->GetDispatcher()->ExecuteList(
+        SID_ATTR_PARA_LRSPACE, SfxCallMode::RECORD, { &aMargin });
 }
 
 IMPL_LINK_TYPED(ParaPropertyPanel, ClickIndent_IncDec_Hdl_Impl, ToolBox *, pControl, void)
@@ -232,8 +226,8 @@ IMPL_LINK_TYPED(ParaPropertyPanel, ClickIndent_IncDec_Hdl_Impl, ToolBox *, pCont
             case CombinedEnumContext(Application_WriterVariants, Context_Table):
                 {
                     SfxBoolItem aMargin( SID_INC_INDENT, true );
-                    GetBindings()->GetDispatcher()->Execute(
-                        SID_INC_INDENT, SfxCallMode::RECORD, &aMargin, 0L);
+                    GetBindings()->GetDispatcher()->ExecuteList(
+                        SID_INC_INDENT, SfxCallMode::RECORD, { &aMargin });
                 }
                 break;
             default:
@@ -247,8 +241,8 @@ IMPL_LINK_TYPED(ParaPropertyPanel, ClickIndent_IncDec_Hdl_Impl, ToolBox *, pCont
                     aMargin.SetRight( (const long)GetCoreValue( *mpRightIndent, m_eLRSpaceUnit ) );
                     aMargin.SetTextFirstLineOfst( (const short)GetCoreValue( *mpFLineIndent, m_eLRSpaceUnit ) );
 
-                    GetBindings()->GetDispatcher()->Execute(
-                        SID_ATTR_PARA_LRSPACE, SfxCallMode::RECORD, &aMargin, 0L);
+                    GetBindings()->GetDispatcher()->ExecuteList(
+                        SID_ATTR_PARA_LRSPACE, SfxCallMode::RECORD, { &aMargin });
                 }
             }
         }
@@ -261,8 +255,8 @@ IMPL_LINK_TYPED(ParaPropertyPanel, ClickIndent_IncDec_Hdl_Impl, ToolBox *, pCont
             case CombinedEnumContext(Application_WriterVariants, Context_Table):
                 {
                     SfxBoolItem aMargin( SID_DEC_INDENT, true );
-                    GetBindings()->GetDispatcher()->Execute(
-                        SID_DEC_INDENT, SfxCallMode::RECORD, &aMargin, 0L);
+                    GetBindings()->GetDispatcher()->ExecuteList(
+                        SID_DEC_INDENT, SfxCallMode::RECORD, { &aMargin });
                 }
                 break;
             default:
@@ -281,8 +275,8 @@ IMPL_LINK_TYPED(ParaPropertyPanel, ClickIndent_IncDec_Hdl_Impl, ToolBox *, pCont
                     aMargin.SetRight( (const long)GetCoreValue( *mpRightIndent, m_eLRSpaceUnit ) );
                     aMargin.SetTextFirstLineOfst( (const short)GetCoreValue( *mpFLineIndent, m_eLRSpaceUnit ) );
 
-                    GetBindings()->GetDispatcher()->Execute(
-                        SID_ATTR_PARA_LRSPACE, SfxCallMode::RECORD, &aMargin, 0L);
+                    GetBindings()->GetDispatcher()->ExecuteList(
+                        SID_ATTR_PARA_LRSPACE, SfxCallMode::RECORD, { &aMargin });
                 }
             }
         }
@@ -293,8 +287,8 @@ IMPL_LINK_TYPED(ParaPropertyPanel, ClickIndent_IncDec_Hdl_Impl, ToolBox *, pCont
             aMargin.SetRight( (const long)GetCoreValue( *mpRightIndent, m_eLRSpaceUnit ) );
             aMargin.SetTextFirstLineOfst( ((const short)GetCoreValue( *mpFLineIndent, m_eLRSpaceUnit ))*(-1) );
 
-            GetBindings()->GetDispatcher()->Execute(
-                SID_ATTR_PARA_LRSPACE, SfxCallMode::RECORD, &aMargin, 0L);
+            GetBindings()->GetDispatcher()->ExecuteList(
+                SID_ATTR_PARA_LRSPACE, SfxCallMode::RECORD, { &aMargin });
         }
 }
 
@@ -305,8 +299,8 @@ IMPL_LINK_NOARG_TYPED( ParaPropertyPanel, ULSpaceHdl_Impl, Edit&, void)
     aMargin.SetUpper( (sal_uInt16)GetCoreValue( *mpTopDist, m_eULSpaceUnit ) );
     aMargin.SetLower( (sal_uInt16)GetCoreValue( *mpBottomDist, m_eULSpaceUnit ) );
 
-    GetBindings()->GetDispatcher()->Execute(
-        SID_ATTR_PARA_ULSPACE, SfxCallMode::RECORD, &aMargin, 0L);
+    GetBindings()->GetDispatcher()->ExecuteList(
+        SID_ATTR_PARA_ULSPACE, SfxCallMode::RECORD, { &aMargin });
 }
 
 // for Paragraph State change
@@ -573,7 +567,6 @@ ParaPropertyPanel::ParaPropertyPanel(vcl::Window* pParent,
     const css::uno::Reference<css::ui::XSidebar>& rxSidebar)
     : PanelLayout(pParent, "ParaPropertyPanel", "svx/ui/sidebarparagraph.ui", rxFrame),
 
-      maSpace3 (SVX_RES(IMG_SPACE3)),
       maIndHang (SVX_RES(IMG_INDENT_HANG)),
       maTxtLeft (0),
       maUpper (0),
@@ -587,7 +580,6 @@ ParaPropertyPanel::ParaPropertyPanel(vcl::Window* pParent,
       maDecIndentControl(SID_DEC_INDENT, *pBindings,*this, OUString("DecrementIndent"), rxFrame),
       maIncIndentControl(SID_INC_INDENT, *pBindings,*this, OUString("IncrementIndent"), rxFrame),
       m_aMetricCtl (SID_ATTR_METRIC, *pBindings,*this),
-      mxFrame(rxFrame),
       maContext(),
       mpBindings(pBindings),
       mxSidebar(rxSidebar)

@@ -20,10 +20,8 @@
 #ifndef INCLUDED_FRAMEWORK_INC_THREADHELP_TRANSACTIONMANAGER_HXX
 #define INCLUDED_FRAMEWORK_INC_THREADHELP_TRANSACTIONMANAGER_HXX
 
-#include <boost/noncopyable.hpp>
 #include <threadhelp/gate.hxx>
 
-#include <com/sun/star/uno/Reference.hxx>
 #include <com/sun/star/uno/XInterface.hpp>
 #include <com/sun/star/uno/RuntimeException.hpp>
 #include <com/sun/star/lang/DisposedException.hpp>
@@ -49,18 +47,6 @@ enum EWorkingMode
     E_WORK       ,   // Object is ready for working -> all calls are accepted
     E_BEFORECLOSE,   // We stand in a close method  -> some calls are accepted - some one are rejected
     E_CLOSE          // Object is dead!             -> all calls are rejected!
-};
-
-/*-************************************************************************************************************
-    @descr          If a request was refused by a transaction manager (internal state different E_WORK ...)
-                    user can check the reason by using this enum values.
-*//*-*************************************************************************************************************/
-enum ERejectReason
-{
-    E_UNINITIALIZED ,
-    E_NOREASON      ,
-    E_INCLOSE       ,
-    E_CLOSED
 };
 
 /*-************************************************************************************************************
@@ -109,7 +95,7 @@ enum EExceptionMode
 
     @devstatus      draft
 *//*-*************************************************************************************************************/
-class FWI_DLLPUBLIC TransactionManager: private boost::noncopyable
+class FWI_DLLPUBLIC TransactionManager
 {
 
     //  public methods
@@ -118,19 +104,12 @@ class FWI_DLLPUBLIC TransactionManager: private boost::noncopyable
 
                                    TransactionManager           (                                              );
                                    ~TransactionManager          (                                              );
+                                   TransactionManager(const TransactionManager&) = delete;
+        TransactionManager&        operator=(const TransactionManager&) = delete;
         void               setWorkingMode               ( EWorkingMode eMode                           );
         EWorkingMode       getWorkingMode               (                                              ) const;
-        bool               isCallRejected               ( ERejectReason& eReason                       ) const;
-        void               registerTransaction          ( EExceptionMode eMode, ERejectReason& eReason ) throw( css::uno::RuntimeException, css::lang::DisposedException );
+        void               registerTransaction          ( EExceptionMode eMode ) throw( css::uno::RuntimeException, css::lang::DisposedException );
         void               unregisterTransaction        (                                              ) throw( css::uno::RuntimeException, css::lang::DisposedException );
-
-    //  private methods
-
-    private:
-
-        void impl_throwExceptions( EExceptionMode eMode, ERejectReason eReason ) const throw( css::uno::RuntimeException, css::lang::DisposedException );
-
-    //  private member
 
     private:
 

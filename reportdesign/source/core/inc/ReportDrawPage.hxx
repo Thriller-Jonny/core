@@ -31,9 +31,9 @@ namespace reportdesign
         OReportDrawPage(const OReportDrawPage&) = delete;
         void operator =(const OReportDrawPage&) = delete;
     protected:
-        virtual SdrObject *_CreateSdrObject( const css::uno::Reference< css::drawing::XShape > & xShape )
+        virtual SdrObject *CreateSdrObject_( const css::uno::Reference< css::drawing::XShape > & xShape )
             throw (css::uno::RuntimeException, std::exception) override;
-        virtual css::uno::Reference< css::drawing::XShape >  _CreateShape( SdrObject *pObj ) const throw (css::uno::RuntimeException, std::exception) override;
+        virtual css::uno::Reference< css::drawing::XShape >  CreateShape( SdrObject *pObj ) const throw (css::uno::RuntimeException, std::exception) override;
     public:
         OReportDrawPage(SdrPage* pPage,const css::uno::Reference< css::report::XSection >& _xSection);
         virtual ~OReportDrawPage() throw(){}

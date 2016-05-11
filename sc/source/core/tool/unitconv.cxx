@@ -17,7 +17,6 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <com/sun/star/uno/Any.hxx>
 #include <com/sun/star/uno/Sequence.hxx>
 
 #include "unitconv.hxx"
@@ -103,9 +102,9 @@ ScUnitConverter::ScUnitConverter()
                 pProperties[nIndex++] >>= sToUnit;
                 pProperties[nIndex++] >>= fFactor;
 
-                ScUnitConverterData* pNew = new ScUnitConverterData( sFromUnit, sToUnit, fFactor );
-                OUString aIndex  = pNew->GetIndexString();
-                maData.insert(aIndex, pNew);
+                ScUnitConverterData aNew(sFromUnit, sToUnit, fFactor);
+                OUString const aIndex = aNew.GetIndexString();
+                maData.insert(std::make_pair(aIndex, aNew));
             }
         }
     }
@@ -124,7 +123,7 @@ bool ScUnitConverter::GetValue(
         return false;
     }
 
-    fValue = it->second->GetValue();
+    fValue = it->second.GetValue();
     return true;
 }
 

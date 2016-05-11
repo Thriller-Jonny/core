@@ -23,13 +23,14 @@
 #include "oox/core/xmlfilterbase.hxx"
 #include "oox/drawingml/drawingmltypes.hxx"
 #include "oox/drawingml/fillproperties.hxx"
+#include <oox/token/namespaces.hxx>
+#include <oox/token/tokens.hxx>
 #include <sfx2/docfile.hxx>
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::xml::sax;
 using ::oox::core::ContextHandler2;
-using ::oox::core::XmlFilterBase;
 using ::oox::core::ContextHandlerRef;
 
 namespace oox {
@@ -158,9 +159,9 @@ BlipContext::BlipContext( ContextHandler2Helper& rParent,
         // code rework.
         OUString aRelId = rAttribs.getString( R_TOKEN( link ), OUString() );
         OUString aTargetLink = getFilter().getAbsoluteUrl( getRelations().getExternalTargetFromRelId( aRelId ) );
-        SfxMedium xMed( aTargetLink, STREAM_STD_READ );
-        xMed.Download();
-        Reference< io::XInputStream > xInStrm = xMed.GetInputStream();
+        SfxMedium aMed( aTargetLink, STREAM_STD_READ );
+        aMed.Download();
+        Reference< io::XInputStream > xInStrm = aMed.GetInputStream();
         if ( xInStrm.is() )
             mrBlipProps.mxGraphic = getFilter().getGraphicHelper().importGraphic( xInStrm );
     }
@@ -361,13 +362,13 @@ ContextHandlerRef ArtisticEffectContext::onCreateContext(
             XML_size, XML_brushSize, XML_scaling, XML_detail, XML_bright, XML_contrast,
             XML_colorTemp, XML_sat, XML_amount
     };
-    for( sal_Int32 i=0; i<19; ++i )
+    for(sal_Int32 nAttrib : aAttribs)
     {
-        if( rAttribs.hasAttribute( aAttribs[i] ) )
+        if( rAttribs.hasAttribute( nAttrib ) )
         {
-            OUString sName = ArtisticEffectProperties::getEffectString( aAttribs[i] );
+            OUString sName = ArtisticEffectProperties::getEffectString( nAttrib );
             if( !sName.isEmpty() )
-                maEffect.maAttribs[sName] = uno::makeAny( rAttribs.getInteger( aAttribs[i], 0 ) );
+                maEffect.maAttribs[sName] = uno::makeAny( rAttribs.getInteger( nAttrib, 0 ) );
         }
     }
 

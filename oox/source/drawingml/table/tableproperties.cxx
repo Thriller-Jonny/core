@@ -29,6 +29,7 @@
 #include <rtl/instance.hxx>
 #include "oox/core/xmlfilterbase.hxx"
 #include "oox/helper/propertyset.hxx"
+#include <oox/token/tokens.hxx>
 
 using namespace ::oox::core;
 using namespace ::com::sun::star;
@@ -52,7 +53,7 @@ TableProperties::~TableProperties()
 {
 }
 
-void CreateTableRows( uno::Reference< XTableRows > xTableRows, const std::vector< TableRow >& rvTableRows )
+void CreateTableRows( const uno::Reference< XTableRows >& xTableRows, const std::vector< TableRow >& rvTableRows )
 {
     if ( rvTableRows.size() > 1 )
         xTableRows->insertByIndex( 0, rvTableRows.size() - 1 );
@@ -66,7 +67,7 @@ void CreateTableRows( uno::Reference< XTableRows > xTableRows, const std::vector
     }
 }
 
-void CreateTableColumns( Reference< XTableColumns > xTableColumns, const std::vector< sal_Int32 >& rvTableGrid )
+void CreateTableColumns( const Reference< XTableColumns >& xTableColumns, const std::vector< sal_Int32 >& rvTableGrid )
 {
     if ( rvTableGrid.size() > 1 )
         xTableColumns->insertByIndex( 0, rvTableGrid.size() - 1 );
@@ -134,7 +135,7 @@ static void SetTableStyleProperties(TableStyle* &pTableStyle , const sal_Int32& 
     pTableStyle->getBand1V().getFillProperties() = pBand1HFillProperties;
 
     //tet bold for 1st row/last row/column
-    ::boost::optional< sal_Bool > textBoldStyle(sal_True);
+    ::boost::optional< sal_Bool > textBoldStyle(true);
     pTableStyle->getFirstRow().getTextBoldStyle() = textBoldStyle;
     pTableStyle->getLastRow().getTextBoldStyle() = textBoldStyle;
     pTableStyle->getFirstCol().getTextBoldStyle() = textBoldStyle;
@@ -226,10 +227,11 @@ const TableStyle& TableProperties::getUsedTableStyle( const ::oox::core::XmlFilt
     TableStyle* pTableStyle = nullptr;
     if ( mpTableStyle )
         pTableStyle = &*mpTableStyle;
-    else if ( rBase.getTableStyles() )
+    else if ( !getStyleId().isEmpty() && rBase.getTableStyles() )
     {
         const std::vector< TableStyle >& rTableStyles( rBase.getTableStyles()->getTableStyles() );
-        const OUString aStyleId( getStyleId().isEmpty() ? rBase.getTableStyles()->getDefaultStyleId() : getStyleId() );
+        const OUString aStyleId( getStyleId() );
+
         std::vector< TableStyle >::const_iterator aIter( rTableStyles.begin() );
         while( aIter != rTableStyles.end() )
         {
@@ -255,7 +257,7 @@ const TableStyle& TableProperties::getUsedTableStyle( const ::oox::core::XmlFilt
 }
 
 void TableProperties::pushToPropSet( const ::oox::core::XmlFilterBase& rFilterBase,
-    const Reference < XPropertySet >& xPropSet, TextListStylePtr pMasterTextListStyle )
+    const Reference < XPropertySet >& xPropSet, const TextListStylePtr& pMasterTextListStyle )
 {
     uno::Reference< XColumnRowRange > xColumnRowRange(
          xPropSet->getPropertyValue("Model"), uno::UNO_QUERY_THROW );

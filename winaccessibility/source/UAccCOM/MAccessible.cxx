@@ -18,10 +18,20 @@
  */
 
 #include "stdafx.h"
-#include "UAccCOM.h"
 #include "MAccessible.h"
 
+#if defined __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnon-virtual-dtor"
+#endif
+#include  "UAccCOM.h"
+#if defined __clang__
+#pragma clang diagnostic pop
+#endif
+
 #include <algorithm>
+#include <cstddef>
+
 #include "AccAction.h"
 #include "AccRelation.h"
 #include "AccComponent.h"
@@ -127,7 +137,6 @@ short UNO_STATES[] =
 };
 
 using namespace com::sun::star::accessibility::AccessibleRole;
-
 
 
 #define QUERYXINTERFACE(ainterface) \
@@ -1163,7 +1172,6 @@ STDMETHODIMP CMAccessible::SetState(DWORD pXSate)
     m_dState = pXSate;
     return S_OK;
 }
-
 
 
 /**
@@ -3063,7 +3071,7 @@ STDMETHODIMP CMAccessible:: get_states(AccessibleStates __RPC_FAR *states )
     *states = 0x0;
     for( int i = 0; i < count; i++  )
     {
-        for( int j = 0; j < SAL_N_ELEMENTS(UNO_STATES); j++ )
+        for( std::size_t j = 0; j < SAL_N_ELEMENTS(UNO_STATES); j++ )
         {
             if( pStates[i] == UNO_STATES[j] )
             {

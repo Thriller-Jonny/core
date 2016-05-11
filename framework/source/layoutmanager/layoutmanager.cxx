@@ -80,7 +80,6 @@
 #include <rtl/strbuf.hxx>
 
 #include <algorithm>
-#include <boost/noncopyable.hpp>
 
 //      using namespace
 using namespace ::com::sun::star;
@@ -135,7 +134,7 @@ LayoutManager::LayoutManager( const Reference< XComponentContext >& xContext ) :
         , m_xToolbarManager( nullptr )
 {
     // Initialize statusbar member
-    const sal_Bool bRefreshVisibility = sal_False;
+    const sal_Bool bRefreshVisibility = false;
     m_aStatusBarElement.m_aType = "statusbar";
     m_aStatusBarElement.m_aName = STATUS_BAR_ALIAS;
 
@@ -210,12 +209,18 @@ void LayoutManager::impl_clearUpMenuBar()
     }
 
     // reset inplace menubar manager
-    m_pInplaceMenuBar = nullptr;
+    Menu *pMenuBar = nullptr;
+    if (m_pInplaceMenuBar)
+    {
+        pMenuBar = m_pInplaceMenuBar->GetMenuBar();
+        m_pInplaceMenuBar = nullptr;
+    }
     if ( m_xInplaceMenuBar.is() )
     {
         m_xInplaceMenuBar->dispose();
         m_xInplaceMenuBar.clear();
     }
+    delete pMenuBar;
 
     Reference< XComponent > xComp( m_xMenuBar, UNO_QUERY );
     if ( xComp.is() )
@@ -485,15 +490,11 @@ bool LayoutManager::readWindowStateData( const OUString& aName, UIElement& rElem
         GlobalSettings* &rGlobalSettings, bool &bInGlobalSettings,
         const Reference< XComponentContext > &rComponentContext )
 {
-    bool bGetSettingsState( false );
-
-    SolarMutexResettableGuard aWriteLock;
-    Reference< XNameAccess > xPersistentWindowState( rPersistentWindowState );
-    aWriteLock.clear();
-
-    if ( xPersistentWindowState.is() )
+    if ( rPersistentWindowState.is() )
     {
-        aWriteLock.reset();
+        bool bGetSettingsState( false );
+
+        SolarMutexResettableGuard aWriteLock;
         bool bGlobalSettings( bInGlobalSettings );
         GlobalSettings* pGlobalSettings( nullptr );
         if ( rGlobalSettings == nullptr )
@@ -507,7 +508,7 @@ bool LayoutManager::readWindowStateData( const OUString& aName, UIElement& rElem
         try
         {
             Sequence< PropertyValue > aWindowState;
-            if ( xPersistentWindowState->hasByName( aName ) && (xPersistentWindowState->getByName( aName ) >>= aWindowState) )
+            if ( rPersistentWindowState->hasByName( aName ) && (rPersistentWindowState->getByName( aName ) >>= aWindowState) )
             {
                 bool bValue( false );
                 for ( sal_Int32 n = 0; n < aWindowState.getLength(); n++ )
@@ -724,7 +725,7 @@ Reference< XUIElement > LayoutManager::implts_createElement( const OUString& aNa
     aPropSeq[0].Name = "Frame";
     aPropSeq[0].Value <<= m_xFrame;
     aPropSeq[1].Name = "Persistent";
-    aPropSeq[1].Value <<= sal_True;
+    aPropSeq[1].Value <<= true;
 
     try
     {
@@ -782,7 +783,9 @@ void LayoutManager::implts_updateUIElementsVisibleState( bool bSetVisible )
         if ( pSysWindow )
         {
             if ( bSetVisible )
+            {
                 pSysWindow->SetMenuBar(pMenuBar);
+            }
             else
                 pSysWindow->SetMenuBar( nullptr );
         }
@@ -1148,10 +1151,19 @@ throw (uno::RuntimeException, std::exception)
         SolarMutexGuard aGuard;
 
         // Reset old inplace menubar!
-        m_pInplaceMenuBar = nullptr;
-        if ( m_xInplaceMenuBar.is() )
+        Menu *pOldMenuBar = nullptr;
+        if (m_pInplaceMenuBar)
+        {
+            pOldMenuBar = m_pInplaceMenuBar->GetMenuBar();
+            m_pInplaceMenuBar = nullptr;
+        }
+        if (m_xInplaceMenuBar.is())
+        {
             m_xInplaceMenuBar->dispose();
-        m_xInplaceMenuBar.clear();
+            m_xInplaceMenuBar.clear();
+        }
+        delete pOldMenuBar;
+
         m_bInplaceMenuSet = false;
 
         if ( m_xFrame.is() && m_xContainerWindow.is() )
@@ -1199,10 +1211,18 @@ throw (uno::RuntimeException)
     }
 
     // Remove inplace menu bar
-    m_pInplaceMenuBar = nullptr;
-    if ( m_xInplaceMenuBar.is() )
+    Menu *pMenuBar = nullptr;
+    if (m_pInplaceMenuBar)
+    {
+        pMenuBar = m_pInplaceMenuBar->GetMenuBar();
+        m_pInplaceMenuBar = nullptr;
+    }
+    if (m_xInplaceMenuBar.is())
+    {
         m_xInplaceMenuBar->dispose();
-    m_xInplaceMenuBar.clear();
+        m_xInplaceMenuBar.clear();
+    }
+    delete pMenuBar;
 }
 
 void SAL_CALL LayoutManager::attachFrame( const Reference< XFrame >& xFrame )
@@ -1228,7 +1248,7 @@ throw (uno::RuntimeException, std::exception)
 
     uno::Any a;
     implts_notifyListeners( frame::LayoutManagerEvents::MERGEDMENUBAR, a );
-    return sal_True;
+    return true;
 }
 
 void SAL_CALL LayoutManager::removeMergedMenuBar()
@@ -1812,13 +1832,6 @@ throw (RuntimeException, std::exception)
 
         impl_setDockingWindowVisibility( xContext, xFrame, aElementName, true );
     }
-    else if ( aElementType.equalsIgnoreAsciiCase("toolpanel"))
-    {
-        SolarMutexClearableGuard aReadGuard;
-        uno::Reference< frame::XFrame > xFrame( m_xFrame );
-        aReadGuard.clear();
-        ActivateToolPanel( m_xFrame, aName );
-    }
 
     if ( bMustLayout )
         doLayout();
@@ -1911,7 +1924,7 @@ throw (RuntimeException, std::exception)
     if ( bNotify )
         implts_notifyListeners( frame::LayoutManagerEvents::UIELEMENT_INVISIBLE, uno::makeAny( aName ) );
 
-    return sal_False;
+    return false;
 }
 
 sal_Bool SAL_CALL LayoutManager::dockWindow( const OUString& aName, DockingArea DockingArea, const awt::Point& Pos )
@@ -1934,7 +1947,7 @@ throw (RuntimeException, std::exception)
                 doLayout();
         }
     }
-    return sal_False;
+    return false;
 }
 
 sal_Bool SAL_CALL LayoutManager::dockAllWindows( ::sal_Int16 /*nElementType*/ ) throw (uno::RuntimeException, std::exception)
@@ -2088,7 +2101,7 @@ throw (RuntimeException, std::exception)
             {
                 MenuBar* pMenuBar = pSysWindow->GetMenuBar();
                 if ( pMenuBar && pMenuBar->IsDisplayable() )
-                    return sal_True;
+                    return true;
             }
             else
             {
@@ -2109,9 +2122,9 @@ throw (RuntimeException, std::exception)
                 SolarMutexGuard g;
                 vcl::Window* pWindow = VCLUnoHelper::GetWindow( xWindow );
                 if ( pWindow && pWindow->IsVisible() )
-                    return sal_True;
+                    return true;
                 else
-                    return sal_False;
+                    return false;
             }
         }
     }
@@ -2139,7 +2152,7 @@ throw (RuntimeException, std::exception)
         return IsDockingWindowVisible( xFrame, aElementName );
     }
 
-    return sal_False;
+    return false;
 }
 
 sal_Bool SAL_CALL LayoutManager::isElementFloating( const OUString& aName )
@@ -2155,7 +2168,7 @@ throw (RuntimeException, std::exception)
             return pToolbarManager->isToolbarFloating( aName );
     }
 
-    return sal_False;
+    return false;
 }
 
 sal_Bool SAL_CALL LayoutManager::isElementDocked( const OUString& aName )
@@ -2171,7 +2184,7 @@ throw (RuntimeException, std::exception)
             return pToolbarManager->isToolbarDocked( aName );
     }
 
-    return sal_False;
+    return false;
 }
 
 sal_Bool SAL_CALL LayoutManager::isElementLocked( const OUString& aName )
@@ -2187,7 +2200,7 @@ throw (uno::RuntimeException, std::exception)
             return pToolbarManager->isToolbarLocked( aName );
     }
 
-    return sal_False;
+    return false;
 }
 
 awt::Size SAL_CALL LayoutManager::getElementSize( const OUString& aName )
@@ -2283,10 +2296,9 @@ throw (RuntimeException, std::exception)
 
 //  ILayoutNotifications
 
-void LayoutManager::requestLayout( Hint eHint )
+void LayoutManager::requestLayout()
 {
-    if ( eHint == HINT_TOOLBARSPACE_HAS_CHANGED )
-        doLayout();
+    doLayout();
 }
 
 void LayoutManager::implts_doLayout_notify( bool bOuterResize )
@@ -2312,7 +2324,19 @@ bool LayoutManager::implts_doLayout( bool bForceRequestBorderSpace, bool bOuterR
     awt::Rectangle aCurrBorderSpace( m_aDockingArea );
     Reference< awt::XWindow > xContainerWindow( m_xContainerWindow );
     Reference< awt::XTopWindow2 > xContainerTopWindow( m_xContainerTopWindow );
-    Reference< awt::XWindow > xComponentWindow( m_xFrame->getComponentWindow() );
+    Reference< awt::XWindow > xComponentWindow;
+    try {
+        xComponentWindow = m_xFrame->getComponentWindow();
+    } catch (css::lang::DisposedException &) {
+        // There can be a race between one thread calling Frame::dispose
+        // (framework/source/services/frame.cxx) -> Frame::disableLayoutManager
+        // -> LayoutManager::attachFrame(null) setting m_xFrame to null, and
+        // the main thread firing the timer-triggered
+        // LayoutManager::AsyncLayoutHdl -> LayoutManager::implts_doLayout and
+        // calling into the in-dispose m_xFrame here, so silently ignore a
+        // DisposedException here:
+        return false;
+    }
     Reference< XDockingAreaAcceptor > xDockingAreaAcceptor( m_xDockingAreaAcceptor );
     aReadLock.clear();
     /* SAFE AREA ----------------------------------------------------------------------------------------------- */
@@ -2803,16 +2827,22 @@ throw( RuntimeException, std::exception )
 
         setDockingAreaAcceptor( Reference< ui::XDockingAreaAcceptor >() );
 
-        // destroy all elements, it's possible that dettaching is NOT called!
+        // destroy all elements, it's possible that detaching is NOT called!
         implts_destroyElements();
         impl_clearUpMenuBar();
         m_xMenuBar.clear();
-        if ( m_xInplaceMenuBar.is() )
+        Menu *pMenuBar = nullptr;
+        if (m_pInplaceMenuBar)
         {
+            pMenuBar = m_pInplaceMenuBar->GetMenuBar();
             m_pInplaceMenuBar = nullptr;
-            m_xInplaceMenuBar->dispose();
         }
-        m_xInplaceMenuBar.clear();
+        if (m_xInplaceMenuBar.is())
+        {
+            m_xInplaceMenuBar->dispose();
+            m_xInplaceMenuBar.clear();
+        }
+        delete pMenuBar;
         m_xContainerWindow.clear();
         m_xContainerTopWindow.clear();
 
@@ -2865,12 +2895,18 @@ throw( RuntimeException, std::exception )
         }
         impl_clearUpMenuBar();
         m_xMenuBar.clear();
-        if ( m_xInplaceMenuBar.is() )
+        Menu *pMenuBar = nullptr;
+        if (m_pInplaceMenuBar)
         {
+            pMenuBar = m_pInplaceMenuBar->GetMenuBar();
             m_pInplaceMenuBar = nullptr;
-            m_xInplaceMenuBar->dispose();
         }
-        m_xInplaceMenuBar.clear();
+        if (m_xInplaceMenuBar.is())
+        {
+            m_xInplaceMenuBar->dispose();
+            m_xInplaceMenuBar.clear();
+        }
+        delete pMenuBar;
         m_xContainerWindow.clear();
         m_xContainerTopWindow.clear();
     }
@@ -3127,21 +3163,23 @@ void SAL_CALL LayoutManager::getFastPropertyValue( uno::Any& aValue, sal_Int32 n
 
 namespace detail
 {
-    class InfoHelperBuilder : private ::boost::noncopyable
+    class InfoHelperBuilder
     {
     private:
         ::cppu::OPropertyArrayHelper *m_pInfoHelper;
     public:
-        InfoHelperBuilder(const LayoutManager &rManager)
+        explicit InfoHelperBuilder(const LayoutManager &rManager)
         {
             uno::Sequence< beans::Property > aProperties;
             rManager.describeProperties(aProperties);
-            m_pInfoHelper = new ::cppu::OPropertyArrayHelper(aProperties, sal_True);
+            m_pInfoHelper = new ::cppu::OPropertyArrayHelper(aProperties, true);
         }
         ~InfoHelperBuilder()
         {
             delete m_pInfoHelper;
         }
+        InfoHelperBuilder(const InfoHelperBuilder&) = delete;
+        InfoHelperBuilder& operator=(const InfoHelperBuilder&) = delete;
 
         ::cppu::OPropertyArrayHelper& getHelper() { return *m_pInfoHelper; }
     };

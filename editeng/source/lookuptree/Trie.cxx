@@ -41,9 +41,9 @@ TrieNode::TrieNode(sal_Unicode aCharacter) :
     mCharacter(aCharacter),
     mMarker(false)
 {
-    for (int i=0; i<LATIN_ARRAY_SIZE; i++)
+    for (TrieNode* & i : mLatinArray)
     {
-        mLatinArray[i] = nullptr;
+        i = nullptr;
     }
 }
 
@@ -55,9 +55,9 @@ TrieNode::~TrieNode()
         delete *iNode;
     }
 
-    for (int i=0; i<LATIN_ARRAY_SIZE; i++)
+    for (TrieNode* i : mLatinArray)
     {
-        delete mLatinArray[i];
+        delete i;
     }
 }
 
@@ -102,9 +102,8 @@ TrieNode* TrieNode::findChild(sal_Unicode aInputCharacter)
 void TrieNode::collectSuggestions(const OUString& sPath, vector<OUString>& rSuggestionList)
 {
     // first traverse nodes for alphabet characters
-    for (int i=0; i<LATIN_ARRAY_SIZE; i++)
+    for (TrieNode* pCurrent : mLatinArray)
     {
-        TrieNode* pCurrent = mLatinArray[i];
         if (pCurrent != nullptr)
             collectSuggestionsForCurrentNode(pCurrent, sPath, rSuggestionList);
     }
@@ -196,12 +195,13 @@ void Trie::findSuggestions(const OUString& sWordPart, vector<OUString>& rSuggest
     }
 }
 
-void Trie::getAllEntries(std::vector<OUString>& entries)
+size_t Trie::size() const
 {
-    if (mRoot)
-    {
-        mRoot->collectSuggestions(OUString(), entries);
-    }
+    if (!mRoot)
+        return 0;
+    std::vector<OUString> entries;
+    mRoot->collectSuggestions(OUString(), entries);
+    return entries.size();
 }
 
 }

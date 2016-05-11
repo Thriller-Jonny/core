@@ -143,7 +143,7 @@ public:
     bool                IsTmpCurrencyFormat( const OUString& rFmtString );
     bool                FindEntry( const OUString& rFmtString, sal_uInt32* pAt = nullptr );
 
-    void                ValidateNewEntries( bool bValidate = true ) { bUndoAddList = !bValidate; }
+    void                ValidateNewEntries() { bUndoAddList = false; }
     size_t              GetUpdateDataCount() const;
     void                GetUpdateData( sal_uInt32* pDelArray, const sal_uInt32 nSize );
 
@@ -170,7 +170,6 @@ public:
     short               GetListPos4Entry( const OUString& rFmtString );
 
     void                GetCurrencySymbols(std::vector<OUString>& rList, sal_uInt16* pPos );
-    void                GetCurrencySymbols(std::vector<OUString>& rList, bool bFlag );
 
     sal_uInt16          FindCurrencyTableEntry( const OUString& rFmtString, bool &bTestBanking );
     bool                IsInTable(sal_uInt16 nPos, bool bTmpBanking,

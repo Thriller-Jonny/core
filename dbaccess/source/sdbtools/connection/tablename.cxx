@@ -22,7 +22,6 @@
 #include "module_sdbt.hxx"
 #include "sdbtstrings.hrc"
 
-#include <com/sun/star/lang/NullPointerException.hpp>
 #include <com/sun/star/sdb/tools/CompositionType.hpp>
 #include <com/sun/star/sdbcx/XTablesSupplier.hpp>
 
@@ -34,7 +33,6 @@ namespace sdbtools
 
     using ::com::sun::star::uno::Reference;
     using ::com::sun::star::sdbc::XConnection;
-    using ::com::sun::star::lang::NullPointerException;
     using ::com::sun::star::uno::RuntimeException;
     using ::com::sun::star::lang::IllegalArgumentException;
     using ::com::sun::star::beans::XPropertySet;
@@ -126,7 +124,7 @@ namespace sdbtools
         Reference< XPropertySet > xTable;
         try
         {
-            xTable.set( xTables->getByName( getComposedName( CompositionType::Complete, sal_False ) ), UNO_QUERY_THROW );
+            xTable.set( xTables->getByName( getComposedName( CompositionType::Complete, false ) ), UNO_QUERY_THROW );
         }
         catch( const WrappedTargetException& )
         {
@@ -180,23 +178,23 @@ namespace sdbtools
         */
         EComposeRule lcl_translateCompositionType_throw( sal_Int32 _nType )
         {
-            struct
+            const struct
             {
                 sal_Int32       nCompositionType;
                 EComposeRule    eComposeRule;
             }   TypeTable[] =
             {
-                { CompositionType::ForTableDefinitions,      eInTableDefinitions },
-                { CompositionType::ForIndexDefinitions,      eInIndexDefinitions },
-                { CompositionType::ForDataManipulation,      eInDataManipulation },
-                { CompositionType::ForProcedureCalls,        eInProcedureCalls },
-                { CompositionType::ForPrivilegeDefinitions,  eInPrivilegeDefinitions },
-                { CompositionType::ForPrivilegeDefinitions,  eComplete }
+                { CompositionType::ForTableDefinitions,      EComposeRule::InTableDefinitions },
+                { CompositionType::ForIndexDefinitions,      EComposeRule::InIndexDefinitions },
+                { CompositionType::ForDataManipulation,      EComposeRule::InDataManipulation },
+                { CompositionType::ForProcedureCalls,        EComposeRule::InProcedureCalls },
+                { CompositionType::ForPrivilegeDefinitions,  EComposeRule::InPrivilegeDefinitions },
+                { CompositionType::ForPrivilegeDefinitions,  EComposeRule::Complete }
             };
 
             bool found = false;
             size_t i = 0;
-            for ( ; ( i < sizeof( TypeTable ) / sizeof( TypeTable[0] ) ) && !found; ++i )
+            for ( ; i < SAL_N_ELEMENTS( TypeTable ) && !found; ++i )
                 if ( TypeTable[i].nCompositionType == _nType )
                     found = true;
             if ( !found )
@@ -210,25 +208,25 @@ namespace sdbtools
         }
     }
 
-    OUString SAL_CALL TableName::getComposedName( ::sal_Int32 _Type, sal_Bool _Quote ) throw (IllegalArgumentException, RuntimeException, std::exception)
+    OUString SAL_CALL TableName::getComposedName( ::sal_Int32 Type, sal_Bool Quote ) throw (IllegalArgumentException, RuntimeException, std::exception)
     {
         EntryGuard aGuard( *this );
 
         return composeTableName(
             getConnection()->getMetaData(),
-            m_pImpl->sCatalog, m_pImpl->sSchema, m_pImpl->sName, _Quote,
-            lcl_translateCompositionType_throw( _Type ) );
+            m_pImpl->sCatalog, m_pImpl->sSchema, m_pImpl->sName, Quote,
+            lcl_translateCompositionType_throw( Type ) );
     }
 
-    void SAL_CALL TableName::setComposedName( const OUString& _ComposedName, ::sal_Int32 _Type ) throw (RuntimeException, std::exception)
+    void SAL_CALL TableName::setComposedName( const OUString& ComposedName, ::sal_Int32 Type ) throw (RuntimeException, std::exception)
     {
         EntryGuard aGuard( *this );
 
         qualifiedNameComponents(
             getConnection()->getMetaData(),
-            _ComposedName,
+            ComposedName,
             m_pImpl->sCatalog, m_pImpl->sSchema, m_pImpl->sName,
-            lcl_translateCompositionType_throw( _Type ) );
+            lcl_translateCompositionType_throw( Type ) );
     }
 
 } // namespace sdbtools

@@ -26,6 +26,7 @@
 #include <tools/color.hxx>
 #include <com/sun/star/uno/Sequence.hxx>
 #include "column.hxx"
+#include "colcontainer.hxx"
 #include "sortparam.hxx"
 #include "compressedarray.hxx"
 #include "postit.hxx"
@@ -37,7 +38,6 @@
 #include <set>
 #include <map>
 #include <memory>
-#include <boost/noncopyable.hpp>
 
 namespace utl {
     class TextSearch;
@@ -114,12 +114,12 @@ class ScDBData;
 class ScDocumentImport;
 class ScHint;
 
-class ScTable : boost::noncopyable
+class ScTable
 {
 private:
     typedef ::std::vector< ScRange > ScRangeVec;
 
-    ScColumn        aCol[MAXCOLCOUNT];
+    ScColContainer  aCol;
 
     OUString aName;
     OUString aCodeName;
@@ -227,6 +227,8 @@ public:
                 ScTable( ScDocument* pDoc, SCTAB nNewTab, const OUString& rNewName,
                          bool bColInfo = true, bool bRowInfo = true );
                 ~ScTable();
+                ScTable(const ScTable&) = delete;
+    ScTable&    operator=(const ScTable&) = delete;
 
     ScDocument& GetDoc() { return *pDocument;}
     const ScDocument& GetDoc() const { return *pDocument;}
@@ -292,6 +294,8 @@ public:
 
     void        SetLink( ScLinkMode nMode, const OUString& rDoc, const OUString& rFlt,
                         const OUString& rOpt, const OUString& rTab, sal_uLong nRefreshDelay );
+
+    sal_Int64   GetHashCode () const;
 
     void        GetName( OUString& rName ) const;
     void        SetName( const OUString& rNewName );
@@ -428,7 +432,7 @@ public:
         sc::CopyFromClipContext& rCxt, const ScTable& rClipTab, sc::ColumnSpanSet& rBroadcastSpans );
 
     void CopyOneCellFromClip(
-        sc::CopyFromClipContext& rCxt, SCCOL nCol1, SCROW nRow1, SCCOL nCol2, SCROW nRow2 );
+        sc::CopyFromClipContext& rCxt, SCCOL nCol1, SCROW nRow1, SCCOL nCol2, SCROW nRow2, SCROW nSrcRow, ScTable* pSrcTab );
 
     void CopyFromClip(
         sc::CopyFromClipContext& rCxt, SCCOL nCol1, SCROW nRow1, SCCOL nCol2, SCROW nRow2,
@@ -444,11 +448,12 @@ public:
     void CopyToTable(
         sc::CopyToDocContext& rCxt, SCCOL nCol1, SCROW nRow1, SCCOL nCol2, SCROW nRow2,
         InsertDeleteFlags nFlags, bool bMarked, ScTable* pDestTab,
-        const ScMarkData* pMarkData = nullptr, bool bAsLink = false, bool bColRowFlags = true );
+        const ScMarkData* pMarkData = nullptr, bool bAsLink = false, bool bColRowFlags = true,
+        bool bGlobalNamesToLocal = false );
 
     void UndoToTable(
         sc::CopyToDocContext& rCxt, SCCOL nCol1, SCROW nRow1, SCCOL nCol2, SCROW nRow2,
-        InsertDeleteFlags nFlags, bool bMarked, ScTable* pDestTab, const ScMarkData* pMarkData = nullptr );
+        InsertDeleteFlags nFlags, bool bMarked, ScTable* pDestTab );
 
     void        CopyConditionalFormat( SCCOL nCol1, SCROW nRow1, SCCOL nCol2, SCROW nRow2,
                             SCsCOL nDx, SCsROW nDy, ScTable* pTable);
@@ -482,7 +487,7 @@ public:
 
     bool        GetCellArea( SCCOL& rEndCol, SCROW& rEndRow ) const;            // FALSE = empty
     bool        GetTableArea( SCCOL& rEndCol, SCROW& rEndRow ) const;
-    bool        GetPrintArea( SCCOL& rEndCol, SCROW& rEndRow, bool bNotes, bool bFullFormattedArea = false ) const;
+    bool        GetPrintArea( SCCOL& rEndCol, SCROW& rEndRow, bool bNotes ) const;
     bool        GetPrintAreaHor( SCROW nStartRow, SCROW nEndRow,
                                 SCCOL& rEndCol, bool bNotes ) const;
     bool        GetPrintAreaVer( SCCOL nStartCol, SCCOL nEndCol,
@@ -564,7 +569,7 @@ public:
     void        UpdateCompile( bool bForceIfNameInUse = false );
     void        SetTabNo(SCTAB nNewTab);
     void        FindRangeNamesInUse(SCCOL nCol1, SCROW nRow1, SCCOL nCol2, SCROW nRow2,
-                                 std::set<sal_uInt16>& rIndexes) const;
+                                 sc::UpdatedRangeNames& rIndexes) const;
     void        Fill( SCCOL nCol1, SCROW nRow1, SCCOL nCol2, SCROW nRow2,
                         sal_uLong nFillCount, FillDir eFillDir, FillCmd eFillCmd, FillDateCmd eFillDateCmd,
                         double nStepValue, double nMaxValue, ScProgress* pProgress);
@@ -615,12 +620,12 @@ public:
     void        ApplyPatternArea( SCCOL nStartCol, SCROW nStartRow, SCCOL nEndCol, SCROW nEndRow,
                                   const ScPatternAttr& rAttr, ScEditDataArray* pDataArray = nullptr );
 
-    void        SetPattern( const ScAddress& rPos, const ScPatternAttr& rAttr, bool bPutToPool = false )
+    void        SetPattern( const ScAddress& rPos, const ScPatternAttr& rAttr )
                     {
                         if (ValidColRow(rPos.Col(),rPos.Row()))
-                            aCol[rPos.Col()].SetPattern( rPos.Row(), rAttr, bPutToPool );
+                            aCol[rPos.Col()].SetPattern( rPos.Row(), rAttr );
                     }
-    void        SetPattern( SCCOL nCol, SCROW nRow, const ScPatternAttr& rAttr, bool bPutToPool = false );
+    void        SetPattern( SCCOL nCol, SCROW nRow, const ScPatternAttr& rAttr );
     void        ApplyPatternIfNumberformatIncompatible( const ScRange& rRange,
                             const ScPatternAttr& rPattern, short nNewType );
     void        AddCondFormatData( const ScRangeList& rRange, sal_uInt32 nIndex );
@@ -642,7 +647,7 @@ public:
                                     double nPPTX, double nPPTY,
                                     const Fraction& rZoomX, const Fraction& rZoomY );
 
-    bool        IsStyleSheetUsed( const ScStyleSheet& rStyle, bool bGatherAllStyles ) const;
+    bool        IsStyleSheetUsed( const ScStyleSheet& rStyle ) const;
 
     bool        ApplyFlags( SCCOL nStartCol, SCROW nStartRow, SCCOL nEndCol, SCROW nEndRow, sal_Int16 nFlags );
     bool        RemoveFlags( SCCOL nStartCol, SCROW nStartRow, SCCOL nEndCol, SCROW nEndRow, sal_Int16 nFlags );
@@ -710,7 +715,7 @@ public:
     void        SetManualHeight( SCROW nStartRow, SCROW nEndRow, bool bManual );
 
     sal_uInt16      GetColWidth( SCCOL nCol, bool bHiddenAsZero = true ) const;
-    sal_uLong GetColWidth( SCCOL nStartCol, SCCOL nEndCol, bool bHiddenAsZero = true ) const;
+    sal_uLong GetColWidth( SCCOL nStartCol, SCCOL nEndCol ) const;
     SC_DLLPUBLIC sal_uInt16 GetRowHeight( SCROW nRow, SCROW* pStartRow = nullptr, SCROW* pEndRow = nullptr, bool bHiddenAsZero = true ) const;
     sal_uLong       GetRowHeight( SCROW nStartRow, SCROW nEndRow, bool bHiddenAsZero = true ) const;
     sal_uLong       GetScaledRowHeight( SCROW nStartRow, SCROW nEndRow, double fScale ) const;
@@ -801,7 +806,7 @@ public:
     bool        HasHiddenRows(SCROW nStartRow, SCROW nEndRow) const;
     bool        ColHidden(SCCOL nCol, SCCOL* pFirstCol = nullptr, SCCOL* pLastCol = nullptr) const;
     bool        SetRowHidden(SCROW nStartRow, SCROW nEndRow, bool bHidden);
-    bool        SetColHidden(SCCOL nStartCol, SCCOL nEndCol, bool bHidden);
+    void        SetColHidden(SCCOL nStartCol, SCCOL nEndCol, bool bHidden);
     void        CopyColHidden(ScTable& rTable, SCCOL nStartCol, SCCOL nEndCol);
     void        CopyRowHidden(ScTable& rTable, SCROW nStartRow, SCROW nEndRow);
     void        CopyRowHeight(ScTable& rSrcTable, SCROW nStartRow, SCROW nEndRow, SCROW nSrcOffset);
@@ -908,7 +913,7 @@ public:
     void DeleteBroadcasters( sc::ColumnBlockPosition& rBlockPos, SCCOL nCol, SCROW nRow1, SCROW nRow2 );
     bool HasBroadcaster( SCCOL nCol ) const;
 
-    void FillMatrix( ScMatrix& rMat, SCCOL nCol1, SCROW nRow1, SCCOL nCol2, SCROW nRow2 ) const;
+    void FillMatrix( ScMatrix& rMat, SCCOL nCol1, SCROW nRow1, SCCOL nCol2, SCROW nRow2, svl::SharedStringPool* pPool = nullptr ) const;
 
     void InterpretDirtyCells( SCCOL nCol1, SCROW nRow1, SCCOL nCol2, SCROW nRow2 );
 
@@ -952,6 +957,8 @@ public:
 
     void SwapNonEmpty(
         sc::TableValues& rValues, sc::StartListeningContext& rStartCxt, sc::EndListeningContext& rEndCxt );
+
+    void finalizeOutlineImport();
 
 #if DEBUG_COLUMN_STORAGE
     void DumpFormulaGroups( SCCOL nCol ) const;
@@ -1007,7 +1014,7 @@ private:
     bool        Search(const SvxSearchItem& rSearchItem, SCCOL& rCol, SCROW& rRow,
                        const ScMarkData& rMark, OUString& rUndoStr, ScDocument* pUndoDoc);
     bool        Search(const SvxSearchItem& rSearchItem, SCCOL& rCol, SCROW& rRow,
-                       const SCCOL& nLastCol, const SCROW& nLastRow,
+                       SCCOL nLastCol, SCROW nLastRow,
                        const ScMarkData& rMark, OUString& rUndoStr, ScDocument* pUndoDoc);
     bool        SearchAll(const SvxSearchItem& rSearchItem, const ScMarkData& rMark,
                           ScRangeList& rMatchedRanges, OUString& rUndoStr, ScDocument* pUndoDoc);
@@ -1071,7 +1078,7 @@ private:
     bool        GetNextSpellingCell(SCCOL& rCol, SCROW& rRow, bool bInSel,
                                     const ScMarkData& rMark) const;
     bool        GetNextMarkedCell( SCCOL& rCol, SCROW& rRow, const ScMarkData& rMark ) const;
-    bool        TestTabRefAbs(SCTAB nTable) const;
+    void        TestTabRefAbs(SCTAB nTable) const;
     void CompileDBFormula( sc::CompileFormulaContext& rCxt );
     void CompileColRowNameFormula( sc::CompileFormulaContext& rCxt );
 

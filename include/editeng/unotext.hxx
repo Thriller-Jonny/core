@@ -43,7 +43,7 @@
 #include <com/sun/star/style/LineSpacing.hpp>
 #include <com/sun/star/style/TabStop.hpp>
 #include <com/sun/star/lang/XUnoTunnel.hpp>
-#include <cppuhelper/interfacecontainer.h>
+#include <comphelper/interfacecontainer2.hxx>
 #include <cppuhelper/weak.hxx>
 #include <cppuhelper/weakagg.hxx>
 #include <osl/diagnose.hxx>
@@ -182,7 +182,7 @@ public:
     virtual SfxItemSet      GetAttribs( const ESelection& rSel, EditEngineAttribs nOnlyHardAttrib = EditEngineAttribs_All ) const override;
     virtual SfxItemSet      GetParaAttribs( sal_Int32 nPara ) const override;
     virtual void            SetParaAttribs( sal_Int32 nPara, const SfxItemSet& rSet ) override;
-    virtual void            RemoveAttribs( const ESelection& rSelection, bool bRemoveParaAttribs, sal_uInt16 nWhich ) override;
+    virtual void            RemoveAttribs( const ESelection& rSelection ) override;
     virtual void            GetPortions( sal_Int32 nPara, std::vector<sal_Int32>& rList ) const override;
 
     SfxItemState            GetItemState( const ESelection& rSel, sal_uInt16 nWhich ) const override;
@@ -351,7 +351,6 @@ public:
 };
 
 
-
 class SvxUnoTextBase;
 class EDITENG_DLLPUBLIC SvxUnoTextRange : public SvxUnoTextRangeBase,
                         public css::lang::XTypeProvider,
@@ -483,7 +482,6 @@ public:
 };
 
 
-
 class SvxUnoTextContentEnumeration : public ::cppu::WeakAggImplHelper1< css::container::XEnumeration >
 {
 private:
@@ -518,7 +516,7 @@ private:
 
     // for xComponent
     ::osl::Mutex maDisposeContainerMutex;
-    ::cppu::OInterfaceContainerHelper maDisposeListeners;
+    ::comphelper::OInterfaceContainerHelper2 maDisposeListeners;
     bool mbDisposing;
 
 protected:
@@ -578,7 +576,6 @@ public:
 };
 
 
-
 class SvxUnoTextRangeEnumeration : public ::cppu::WeakAggImplHelper1< css::container::XEnumeration >
 {
 private:
@@ -597,7 +594,6 @@ public:
     virtual sal_Bool SAL_CALL hasMoreElements(  ) throw(css::uno::RuntimeException, std::exception) override;
     virtual css::uno::Any SAL_CALL nextElement(  ) throw(css::container::NoSuchElementException, css::lang::WrappedTargetException, css::uno::RuntimeException, std::exception) override;
 };
-
 
 
 class EDITENG_DLLPUBLIC SvxUnoTextCursor : public SvxUnoTextRangeBase,

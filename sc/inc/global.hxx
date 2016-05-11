@@ -241,6 +241,10 @@ const int SC_CLONECELL_NOCAPTION        = 0x0004;
 /** If set, absolute refs will not transformed to external references */
 const int SC_CLONECELL_NOMAKEABS_EXTERNAL = 0x0008;
 
+/** If set, global named expressions will be converted to sheet-local named
+    expressions. */
+const int SC_CLONECELL_NAMES_TO_LOCAL   = 0x0010;
+
 #ifndef DELETEZ
 #define DELETEZ(pPtr) { delete pPtr; pPtr = 0; }
 #endif
@@ -535,8 +539,7 @@ public:
                                                 SfxObjectShell* pShell );
     SC_DLLPUBLIC static OUString            GetDocTabName( const OUString& rFileName,
                                                 const OUString& rTabName );
-    SC_DLLPUBLIC static sal_uLong               GetStandardFormat( SvNumberFormatter&,
-                                    sal_uLong nFormat, short nType );
+    SC_DLLPUBLIC static sal_uInt32 GetStandardFormat( SvNumberFormatter&, sal_uInt32 nFormat, short nType );
 
     SC_DLLPUBLIC static sal_uInt16 GetStandardRowHeight();
     SC_DLLPUBLIC static double              nScreenPPTX;
@@ -630,7 +633,7 @@ SC_DLLPUBLIC    static sal_Int32       FindUnquoted( const OUString& rString, sa
         semantics as FindUnquoted( const String&, ...)
         @returns: pointer to cChar if found, else NULL
      */
-SC_DLLPUBLIC    static const sal_Unicode* FindUnquoted( const sal_Unicode* pString, sal_Unicode cChar, sal_Unicode cQuote = '\'' );
+SC_DLLPUBLIC    static const sal_Unicode* FindUnquoted( const sal_Unicode* pString, sal_Unicode cChar );
 
     static  rtl_TextEncoding GetCharsetValue( const OUString& rCharSet );
     static  OUString        GetCharsetString( rtl_TextEncoding eVal );

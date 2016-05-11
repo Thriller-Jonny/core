@@ -18,10 +18,7 @@
  */
 
 
-
-
 // Global header
-
 
 
 #include <limits.h>
@@ -56,9 +53,7 @@
 #include <svl/intitem.hxx>
 
 
-
 // Project-local header
-
 
 
 #include <com/sun/star/beans/PropertyState.hpp>
@@ -80,9 +75,7 @@ using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::accessibility;
 
 
-
 // AccessibleEditableTextPara implementation
-
 
 
 namespace accessibility
@@ -265,7 +258,7 @@ namespace accessibility
 
         mnParagraphIndex = nIndex;
 
-        WeakBullet::HardRefType aChild( maImageBullet.get() );
+        auto aChild( maImageBullet.get() );
         if( aChild.is() )
             aChild->SetParagraphIndex(mnParagraphIndex);
 
@@ -325,7 +318,7 @@ namespace accessibility
 
     void AccessibleEditableTextPara::SetEditSource( SvxEditSourceAdapter* pEditSource )
     {
-        WeakBullet::HardRefType aChild( maImageBullet.get() );
+        auto aChild( maImageBullet.get() );
         if( aChild.is() )
             aChild->SetEditSource(pEditSource);
 
@@ -568,7 +561,7 @@ namespace accessibility
 
     void AccessibleEditableTextPara::SetEEOffset( const Point& rOffset )
     {
-        WeakBullet::HardRefType aChild( maImageBullet.get() );
+        auto aChild( maImageBullet.get() );
         if( aChild.is() )
             aChild->SetEEOffset(rOffset);
 
@@ -707,20 +700,12 @@ namespace accessibility
                                                   uno::Reference< uno::XInterface >
                                                   ( static_cast< ::cppu::OWeakObject* > (this) ) ); // static_cast: disambiguate hierarchy
 
-        WeakBullet::HardRefType aChild( maImageBullet.get() );
+        auto aChild( maImageBullet.get() );
 
         if( !aChild.is() )
         {
             // there is no hard reference available, create object then
-            AccessibleImageBullet* pChild = new AccessibleImageBullet( uno::Reference< XAccessible >( this ) );
-            uno::Reference< XAccessible > xChild( static_cast< ::cppu::OWeakObject* > (pChild), uno::UNO_QUERY );
-
-            if( !xChild.is() )
-                throw uno::RuntimeException("Child creation failed",
-                                            uno::Reference< uno::XInterface >
-                                            ( static_cast< ::cppu::OWeakObject* > (this) ) );
-
-            aChild = WeakBullet::HardRefType( xChild, pChild );
+            aChild = new AccessibleImageBullet(this);
 
             aChild->SetEditSource( &GetEditSource() );
             aChild->SetParagraphIndex( GetParagraphIndex() );
@@ -729,7 +714,7 @@ namespace accessibility
             maImageBullet = aChild;
         }
 
-        return aChild.getRef();
+        return aChild.get();
     }
 
     uno::Reference< XAccessible > SAL_CALL AccessibleEditableTextPara::getAccessibleParent() throw (uno::RuntimeException, std::exception)
@@ -824,7 +809,7 @@ namespace accessibility
                  mpParaManager->IsReferencable( nMyParaIndex - 1 ) )
             {
                 uno::Sequence<uno::Reference<XInterface> > aSequence
-                    { mpParaManager->GetChild( nMyParaIndex - 1 ).first.get().getRef() };
+                    { static_cast<cppu::OWeakObject *>(mpParaManager->GetChild( nMyParaIndex - 1 ).first.get().get()) };
                 AccessibleRelation aAccRel( AccessibleRelationType::CONTENT_FLOWS_FROM,
                                             aSequence );
                 pAccRelSetHelper->AddRelation( aAccRel );
@@ -835,7 +820,7 @@ namespace accessibility
                  mpParaManager->IsReferencable( nMyParaIndex + 1 ) )
             {
                 uno::Sequence<uno::Reference<XInterface> > aSequence
-                    { mpParaManager->GetChild( nMyParaIndex + 1 ).first.get().getRef() };
+                    { static_cast<cppu::OWeakObject *>(mpParaManager->GetChild( nMyParaIndex + 1 ).first.get().get()) };
                 AccessibleRelation aAccRel( AccessibleRelationType::CONTENT_FLOWS_TO,
                                             aSequence );
                 pAccRelSetHelper->AddRelation( aAccRel );
@@ -979,6 +964,7 @@ namespace accessibility
         case text::textfield::Type::EXTENDED_FILE:
         case text::textfield::Type::DOCINFO_TITLE:
             strFldType = "file name";
+            break;
         default:
             break;
         }
@@ -1489,7 +1475,7 @@ namespace accessibility
         }
         catch (const uno::RuntimeException&)
         {
-            return sal_False;
+            return false;
         }
     }
 
@@ -1681,7 +1667,7 @@ namespace accessibility
         }
         return nIndex;
     }
-    bool AccessibleEditableTextPara::ExtendByField( css::accessibility::TextSegment& Segment )
+    void AccessibleEditableTextPara::ExtendByField( css::accessibility::TextSegment& Segment )
     {
         sal_Int32 nParaIndex = GetParagraphIndex();
         SvxAccessibleTextAdapter& rCacheTF = GetTextForwarder();
@@ -1711,9 +1697,9 @@ namespace accessibility
                 }
             }
         }
-        bool bExtend = false;
         if( nFoundFieldIndex >= 0 )
         {
+            bool bExtend = false;
             if( Segment.SegmentEnd < reeEnd )
             {
                 Segment.SegmentEnd  = reeEnd;
@@ -1744,7 +1730,6 @@ namespace accessibility
                     Segment.SegmentText = GetTextRange(Segment.SegmentStart, Segment.SegmentEnd);
             }
         }
-        return bExtend;
     }
 
     css::accessibility::TextSegment SAL_CALL AccessibleEditableTextPara::getTextAtIndex( sal_Int32 nIndex, sal_Int16 aTextType ) throw (css::lang::IndexOutOfBoundsException, css::lang::IllegalArgumentException, css::uno::RuntimeException, std::exception)
@@ -1922,7 +1907,7 @@ namespace accessibility
                 //the text value doesn't contain the bullet characters. all of the bullet and numbering info are exposed
                 //by the IAText::attributes(). So here must do special support for bullet line.
                 sal_Int32 nCurIndex=0, nLastIndex=0, nCurLineLen=0;
-                sal_Int32 nLastLineLen = 0, nBulletLen = 0;;
+                sal_Int32 nLastLineLen = 0, nBulletLen = 0;
                 // get the line before the line the index points into
                 for( nLine=0, nCurIndex=0, nLastIndex=0; nLine<nLineCount; ++nLine )
                 {
@@ -2190,7 +2175,7 @@ namespace accessibility
         }
         catch (const uno::RuntimeException&)
         {
-            return sal_False;
+            return false;
         }
     }
 
@@ -2218,7 +2203,7 @@ namespace accessibility
             ESelection aSelection = MakeSelection (nStartIndex + nBulletLen, nEndIndex + nBulletLen);
             //if( !rCacheTF.IsEditable( MakeSelection(nStartIndex, nEndIndex) ) )
             if( !rCacheTF.IsEditable( aSelection ) )
-                return sal_False; // non-editable area selected
+                return false; // non-editable area selected
 
             // don't save selection, might become invalid after cut!
             //rCacheVF.SetSelection( MakeSelection(nStartIndex, nEndIndex) );
@@ -2228,7 +2213,7 @@ namespace accessibility
         }
         catch (const uno::RuntimeException&)
         {
-            return sal_False;
+            return false;
         }
     }
 
@@ -2253,7 +2238,7 @@ namespace accessibility
             if( aBulletInfo.nParagraph != EE_PARA_NOT_FOUND && aBulletInfo.bVisible )
                         nBulletLen = aBulletInfo.aText.getLength();
             if( !rCacheTF.IsEditable( MakeSelection(nIndex + nBulletLen) ) )
-                return sal_False; // non-editable area selected
+                return false; // non-editable area selected
 
             // #104400# set empty selection (=> cursor) to given index
             //rCacheVF.SetSelection( MakeCursor(nIndex) );
@@ -2263,7 +2248,7 @@ namespace accessibility
         }
         catch (const uno::RuntimeException&)
         {
-            return sal_False;
+            return false;
         }
     }
 
@@ -2293,7 +2278,7 @@ namespace accessibility
 
             //if( !rCacheTF.IsEditable( MakeSelection(nStartIndex, nEndIndex) ) )
             if( !rCacheTF.IsEditable( aSelection ) )
-                return sal_False; // non-editable area selected
+                return false; // non-editable area selected
 
             //sal_Bool bRet = rCacheTF.Delete( MakeSelection(nStartIndex, nEndIndex) );
             bool bRet = rCacheTF.Delete( aSelection );
@@ -2304,7 +2289,7 @@ namespace accessibility
         }
         catch (const uno::RuntimeException&)
         {
-            return sal_False;
+            return false;
         }
     }
 
@@ -2332,7 +2317,7 @@ namespace accessibility
                         nBulletLen = aBulletInfo.aText.getLength();
 
             if( !rCacheTF.IsEditable( MakeSelection(nIndex + nBulletLen) ) )
-                return sal_False; // non-editable area selected
+                return false; // non-editable area selected
 
             // #104400# insert given text at empty selection (=> cursor)
             bool bRet = rCacheTF.InsertText( sText, MakeCursor(nIndex + nBulletLen) );
@@ -2344,7 +2329,7 @@ namespace accessibility
         }
         catch (const uno::RuntimeException&)
         {
-            return sal_False;
+            return false;
         }
     }
 
@@ -2374,7 +2359,7 @@ namespace accessibility
 
             //if( !rCacheTF.IsEditable( MakeSelection(nStartIndex, nEndIndex) ) )
             if( !rCacheTF.IsEditable( aSelection ) )
-                return sal_False; // non-editable area selected
+                return false; // non-editable area selected
 
             // insert given text into given range => replace
             //sal_Bool bRet = rCacheTF.InsertText( sReplacement, MakeSelection(nStartIndex, nEndIndex) );
@@ -2387,7 +2372,7 @@ namespace accessibility
         }
         catch (const uno::RuntimeException&)
         {
-            return sal_False;
+            return false;
         }
     }
 
@@ -2410,7 +2395,7 @@ namespace accessibility
             CheckRange(nStartIndex, nEndIndex);
 
             if( !rCacheTF.IsEditable( MakeSelection(nStartIndex, nEndIndex) ) )
-                return sal_False; // non-editable area selected
+                return false; // non-editable area selected
 
             // do the indices span the whole paragraph? Then use the outliner map
             // TODO: hold it as a member?
@@ -2442,11 +2427,11 @@ namespace accessibility
             rCacheTF.QuickFormatDoc();
             GetEditSource().UpdateData();
 
-            return sal_True;
+            return true;
         }
         catch (const uno::RuntimeException&)
         {
-            return sal_False;
+            return false;
         }
     }
 
@@ -2839,7 +2824,6 @@ namespace accessibility
     }
 
 }  // end of namespace accessibility
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

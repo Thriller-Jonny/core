@@ -179,7 +179,7 @@ Sequence< sal_Int8 > SAL_CALL java_sql_ResultSet::getBytes( sal_Int32 columnInde
     jbyteArray out = static_cast<jbyteArray>(callObjectMethodWithIntArg(t.pEnv,"getBytes","(I)[B", mID, columnIndex));
     if (out)
     {
-        jboolean p = sal_False;
+        jboolean p = false;
         aSeq.realloc(t.pEnv->GetArrayLength(out));
         memcpy(aSeq.getArray(),t.pEnv->GetByteArrayElements(out,&p),aSeq.getLength());
         t.pEnv->DeleteLocalRef(out);
@@ -242,7 +242,7 @@ sal_Int64 SAL_CALL java_sql_ResultSet::getLong( sal_Int32 columnIndex ) throw(SQ
     static jmethodID mID(nullptr);
     jobject out = callObjectMethod(t.pEnv,"getMetaData","()Ljava/sql/ResultSetMetaData;", mID);
 
-    return out==nullptr ? nullptr : new java_sql_ResultSetMetaData( t.pEnv, out, m_aLogger,*m_pConnection );
+    return out==nullptr ? nullptr : new java_sql_ResultSetMetaData( t.pEnv, out, *m_pConnection );
 }
 
 Reference< XArray > SAL_CALL java_sql_ResultSet::getArray( sal_Int32 columnIndex ) throw(SQLException, RuntimeException, std::exception)
@@ -355,13 +355,11 @@ sal_Int16 SAL_CALL java_sql_ResultSet::getShort( sal_Int32 columnIndex ) throw(S
 }
 
 
-
 OUString SAL_CALL java_sql_ResultSet::getString( sal_Int32 columnIndex ) throw(SQLException, RuntimeException, std::exception)
 {
     static jmethodID mID(nullptr);
     return callStringMethodWithIntArg("getString",mID,columnIndex);
 }
-
 
 
 ::com::sun::star::util::Time SAL_CALL java_sql_ResultSet::getTime( sal_Int32 columnIndex ) throw(SQLException, RuntimeException, std::exception)
@@ -372,7 +370,6 @@ OUString SAL_CALL java_sql_ResultSet::getString( sal_Int32 columnIndex ) throw(S
     // WARNING: the caller becomes the owner of the returned pointer
     return out ? static_cast <com::sun::star::util::Time> (java_sql_Time( t.pEnv, out )) : ::com::sun::star::util::Time();
 }
-
 
 
 ::com::sun::star::util::DateTime SAL_CALL java_sql_ResultSet::getTimestamp( sal_Int32 columnIndex ) throw(SQLException, RuntimeException, std::exception)
@@ -606,7 +603,6 @@ void SAL_CALL java_sql_ResultSet::updateLong( sal_Int32 columnIndex, sal_Int64 x
 }
 
 
-
 void SAL_CALL java_sql_ResultSet::updateFloat( sal_Int32 columnIndex, float x ) throw(::com::sun::star::sdbc::SQLException, ::com::sun::star::uno::RuntimeException, std::exception)
 {
     static jmethodID mID(nullptr);
@@ -665,7 +661,7 @@ void SAL_CALL java_sql_ResultSet::updateBytes( sal_Int32 columnIndex, const ::co
 
         {
             jbyteArray aArray = t.pEnv->NewByteArray(x.getLength());
-            jbyte * xData = reinterpret_cast<jbyte *>(
+            jbyte * pData = reinterpret_cast<jbyte *>(
                 const_cast<sal_Int8 *>(x.getConstArray()));
             // 4th param of Set*ArrayRegion changed from pointer to non-const to
             // pointer to const between <http://docs.oracle.com/javase/6/docs/
@@ -673,7 +669,7 @@ void SAL_CALL java_sql_ResultSet::updateBytes( sal_Int32 columnIndex, const ::co
             // <http://docs.oracle.com/javase/7/docs/technotes/guides/jni/spec/
             // functions.html#wp22933>; work around that difference in a way
             // that doesn't trigger loplugin:redundantcast
-            t.pEnv->SetByteArrayRegion(aArray,0,x.getLength(),xData);
+            t.pEnv->SetByteArrayRegion(aArray,0,x.getLength(),pData);
             // convert parameter
             t.pEnv->CallVoidMethod( object, mID,columnIndex,aArray);
             t.pEnv->DeleteLocalRef(aArray);
@@ -921,8 +917,9 @@ sal_Bool java_sql_ResultSet::convertFastPropertyValue(
             break;
         case PROPERTY_ID_FETCHSIZE:
             bRet = ::comphelper::tryPropertyValue(rConvertedValue, rOldValue, rValue, getFetchSize());
+            break;
         default:
-            ;
+            break;
     }
     return bRet;
 }
@@ -996,8 +993,6 @@ void SAL_CALL java_sql_ResultSet::release() throw()
 {
     return ::cppu::OPropertySetHelper::createPropertySetInfo(getInfoHelper());
 }
-
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

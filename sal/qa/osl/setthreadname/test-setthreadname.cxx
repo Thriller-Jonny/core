@@ -22,7 +22,6 @@
 #include <limits>
 
 #include <sal/types.h>
-#include "boost/noncopyable.hpp"
 #include "cppunit/TestAssert.h"
 #include "cppunit/TestFixture.h"
 #include "cppunit/extensions/HelperMacros.h"
@@ -31,13 +30,17 @@
 
 namespace {
 
-class TestThread: public osl::Thread, private boost::noncopyable {
+class TestThread: public osl::Thread {
 private:
     virtual void SAL_CALL run() override;
+public:
+    TestThread() = default;
+    TestThread(const TestThread&) = delete;
+    TestThread& operator=(const TestThread&) = delete;
 };
 
 void TestThread::run() {
-#if defined WNT
+#if defined(_WIN32)
     if (std::getenv("URE_TEST_SETTHREADNAME") != 0) {
         // On Windows, setting thread names appears to only take effect when the
         // process is being debugged, so attach a debugger now:

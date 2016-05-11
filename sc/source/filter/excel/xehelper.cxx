@@ -365,14 +365,13 @@ XclExpStringRef lclCreateFormattedString(
     const SfxItemSet& rItemSet = pCellAttr ? pCellAttr->GetItemSet() : rRoot.GetDoc().GetDefPattern()->GetItemSet();
 
     // process all script portions
-    OUString aOUText( rText );
     sal_Int32 nPortionPos = 0;
-    sal_Int32 nTextLen = aOUText.getLength();
+    sal_Int32 nTextLen = rText.getLength();
     while( nPortionPos < nTextLen )
     {
         // get script type and end position of next script portion
-        sal_Int16 nScript = xBreakIt->getScriptType( aOUText, nPortionPos );
-        sal_Int32 nPortionEnd = xBreakIt->endOfScript( aOUText, nPortionPos, nScript );
+        sal_Int16 nScript = xBreakIt->getScriptType( rText, nPortionPos );
+        sal_Int32 nPortionEnd = xBreakIt->endOfScript( rText, nPortionPos, nScript );
 
         // reuse previous script for following weak portions
         if( nScript == ApiScriptType::WEAK )
@@ -384,7 +383,7 @@ XclExpStringRef lclCreateFormattedString(
         // Excel start position of this portion
         sal_Int32 nXclPortionStart = xString->Len();
         // add portion text to Excel string
-        XclExpStringHelper::AppendString( *xString, rRoot, aOUText.copy( nPortionPos, nPortionEnd - nPortionPos ) );
+        XclExpStringHelper::AppendString( *xString, rRoot, rText.copy( nPortionPos, nPortionEnd - nPortionPos ) );
         if( nXclPortionStart < xString->Len() )
         {
             // insert font into buffer
@@ -589,7 +588,7 @@ XclExpStringRef XclExpStringHelper::CreateCellString(
 
 XclExpStringRef XclExpStringHelper::CreateString(
         const XclExpRoot& rRoot, const SdrTextObj& rTextObj,
-        XclStrFlags nFlags, sal_uInt16 nMaxLen )
+        XclStrFlags nFlags )
 {
     XclExpStringRef xString;
     if( const OutlinerParaObject* pParaObj = rTextObj.GetOutlinerParaObject() )
@@ -599,7 +598,7 @@ XclExpStringRef XclExpStringHelper::CreateString(
         rEE.SetUpdateMode( true );
         // create the string
         rEE.SetText( pParaObj->GetTextObject() );
-        xString = lclCreateFormattedString( rRoot, rEE, nullptr, nFlags, nMaxLen );
+        xString = lclCreateFormattedString( rRoot, rEE, nullptr, nFlags, EXC_STR_MAXLEN );
         rEE.SetUpdateMode( bOldUpdateMode );
         // limit formats - TODO: BIFF dependent
         if( !xString->IsEmpty() )
@@ -612,21 +611,21 @@ XclExpStringRef XclExpStringHelper::CreateString(
     {
         OSL_FAIL( "XclExpStringHelper::CreateString - textbox without para object" );
         // create BIFF dependent empty Excel string
-        xString = CreateString( rRoot, EMPTY_OUSTRING, nFlags, nMaxLen );
+        xString = CreateString( rRoot, EMPTY_OUSTRING, nFlags );
     }
     return xString;
 }
 
 XclExpStringRef XclExpStringHelper::CreateString(
         const XclExpRoot& rRoot, const EditTextObject& rEditObj,
-        XclStrFlags nFlags, sal_uInt16 nMaxLen )
+        XclStrFlags nFlags )
 {
     XclExpStringRef xString;
     EditEngine& rEE = rRoot.GetDrawEditEngine();
     bool bOldUpdateMode = rEE.GetUpdateMode();
     rEE.SetUpdateMode( true );
     rEE.SetText( rEditObj );
-    xString = lclCreateFormattedString( rRoot, rEE, nullptr, nFlags, nMaxLen );
+    xString = lclCreateFormattedString( rRoot, rEE, nullptr, nFlags, EXC_STR_MAXLEN );
     rEE.SetUpdateMode( bOldUpdateMode );
     // limit formats - TODO: BIFF dependent
     if( !xString->IsEmpty() )
@@ -641,14 +640,13 @@ sal_Int16 XclExpStringHelper::GetLeadingScriptType( const XclExpRoot& rRoot, con
 {
     namespace ApiScriptType = ::com::sun::star::i18n::ScriptType;
     Reference< XBreakIterator > xBreakIt = rRoot.GetDoc().GetBreakIterator();
-    OUString aOUString( rString );
     sal_Int32 nStrPos = 0;
-    sal_Int32 nStrLen = aOUString.getLength();
+    sal_Int32 nStrLen = rString.getLength();
     sal_Int16 nScript = ApiScriptType::WEAK;
     while( (nStrPos < nStrLen) && (nScript == ApiScriptType::WEAK) )
     {
-        nScript = xBreakIt->getScriptType( aOUString, nStrPos );
-        nStrPos = xBreakIt->endOfScript( aOUString, nStrPos, nScript );
+        nScript = xBreakIt->getScriptType( rString, nStrPos );
+        nStrPos = xBreakIt->endOfScript( rString, nStrPos, nScript );
     }
     return (nScript == ApiScriptType::WEAK) ? rRoot.GetDefApiScript() : nScript;
 }
@@ -729,7 +727,7 @@ void XclExpHFConverter::AppendPortion( const EditTextObject* pTextObj, sal_Unico
                 ScPatternAttr::GetFont( aFont, aItemSet, SC_AUTOCOL_RAW );
 
                 // font name and style
-                aNewData.maName = XclTools::GetXclFontName( aFont.GetName() );
+                aNewData.maName = XclTools::GetXclFontName( aFont.GetFamilyName() );
                 aNewData.mnWeight = (aFont.GetWeight() > WEIGHT_NORMAL) ? EXC_FONTWGHT_BOLD : EXC_FONTWGHT_NORMAL;
                 aNewData.mbItalic = (aFont.GetItalic() != ITALIC_NONE);
                 bool bNewFont = !(aFontData.maName == aNewData.maName);
@@ -740,11 +738,11 @@ void XclExpHFConverter::AppendPortion( const EditTextObject* pTextObj, sal_Unico
                     aParaText = "&\"" + OUString(aNewData.maName);
                     if( pFontList )
                     {
-                        vcl::FontInfo aFontInfo( pFontList->Get(
+                        FontMetric aFontMetric( pFontList->Get(
                             aNewData.maName,
                             (aNewData.mnWeight > EXC_FONTWGHT_NORMAL) ? WEIGHT_BOLD : WEIGHT_NORMAL,
                             aNewData.mbItalic ? ITALIC_NORMAL : ITALIC_NONE ) );
-                        aNewData.maStyle = pFontList->GetStyleName( aFontInfo );
+                        aNewData.maStyle = pFontList->GetStyleName( aFontMetric );
                         if( !aNewData.maStyle.isEmpty() )
                             aParaText += "," + aNewData.maStyle;
                     }
@@ -766,9 +764,9 @@ void XclExpHFConverter::AppendPortion( const EditTextObject* pTextObj, sal_Unico
                 aNewData.mnUnderline = EXC_FONTUNDERL_NONE;
                 switch( aFont.GetUnderline() )
                 {
-                    case UNDERLINE_NONE:    aNewData.mnUnderline = EXC_FONTUNDERL_NONE;    break;
-                    case UNDERLINE_SINGLE:  aNewData.mnUnderline = EXC_FONTUNDERL_SINGLE;  break;
-                    case UNDERLINE_DOUBLE:  aNewData.mnUnderline = EXC_FONTUNDERL_DOUBLE;  break;
+                    case LINESTYLE_NONE:    aNewData.mnUnderline = EXC_FONTUNDERL_NONE;    break;
+                    case LINESTYLE_SINGLE:  aNewData.mnUnderline = EXC_FONTUNDERL_SINGLE;  break;
+                    case LINESTYLE_DOUBLE:  aNewData.mnUnderline = EXC_FONTUNDERL_DOUBLE;  break;
                     default:                aNewData.mnUnderline = EXC_FONTUNDERL_SINGLE;
                 }
                 if( aFontData.mnUnderline != aNewData.mnUnderline )

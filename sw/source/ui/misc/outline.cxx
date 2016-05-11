@@ -720,9 +720,9 @@ IMPL_LINK_NOARG_TYPED(SwOutlineSettingsTabPage, CharFormatHdl, ListBox&, void)
         {
             SfxStyleSheetBasePool* pPool = pSh->GetView().GetDocShell()->GetStyleSheetPool();
             SfxStyleSheetBase* pBase;
-            pBase = pPool->Find(sEntry, SFX_STYLE_FAMILY_CHAR);
+            pBase = pPool->Find(sEntry, SfxStyleFamily::Char);
             if(!pBase)
-                pBase = &pPool->Make(sEntry, SFX_STYLE_FAMILY_PAGE);
+                pBase = &pPool->Make(sEntry, SfxStyleFamily::Page);
             pFormat = static_cast<SwDocStyleSheet*>(pBase)->GetCharFormat();
 
         }
@@ -870,7 +870,7 @@ static long lcl_DrawBullet(vcl::RenderContext* pVDev, const SwNumFormat& rFormat
     vcl::Font aTmpFont(pVDev->GetFont());
 
     vcl::Font aFont(*rFormat.GetBulletFont());
-    aFont.SetSize(rSize);
+    aFont.SetFontSize(rSize);
     aFont.SetTransparent(true);
     pVDev->SetFont(aFont);
     OUString aText(rFormat.GetBulletChar());
@@ -938,7 +938,7 @@ void NumberingPreview::Paint(vcl::RenderContext& rRenderContext, const Rectangle
         aStdFont.SetColor(SwViewOption::GetFontColor());
 
         const long nFontHeight = nYStep * ( bPosition ? 15 : 6 ) / 10;
-        aStdFont.SetSize(Size( 0, nFontHeight ));
+        aStdFont.SetFontSize(Size( 0, nFontHeight ));
 
         long nPreNum = pActNum->Get(0).GetStart();
 
@@ -990,7 +990,7 @@ void NumberingPreview::Paint(vcl::RenderContext& rRenderContext, const Rectangle
                 else if (SVX_NUM_CHAR_SPECIAL == rFormat.GetNumberingType())
                 {
                     nBulletWidth = lcl_DrawBullet(pVDev.get(), rFormat, nNumberXPos,
-                                                  nYStart, aStdFont.GetSize());
+                                                  nYStart, aStdFont.GetFontSize());
                 }
                 else
                 {
@@ -1081,7 +1081,7 @@ void NumberingPreview::Paint(vcl::RenderContext& rRenderContext, const Rectangle
                 }
                 else if (SVX_NUM_CHAR_SPECIAL == rFormat.GetNumberingType())
                 {
-                    nTextOffset =  lcl_DrawBullet(pVDev.get(), rFormat, nXStart, nYStart, aStdFont.GetSize());
+                    nTextOffset =  lcl_DrawBullet(pVDev.get(), rFormat, nXStart, nYStart, aStdFont.GetFontSize());
                     nTextOffset += nXStep;
                 }
                 else

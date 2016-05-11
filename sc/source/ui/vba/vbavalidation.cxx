@@ -196,9 +196,9 @@ ScVbaValidation::Delete(  ) throw (uno::RuntimeException, std::exception)
     OUString sBlank;
     uno::Reference< beans::XPropertySet > xProps( lcl_getValidationProps( m_xRange ) );
     uno::Reference< sheet::XSheetCondition > xCond( xProps, uno::UNO_QUERY_THROW );
-    xProps->setPropertyValue( SC_UNONAME_IGNOREBL, uno::makeAny( sal_True ) );
-    xProps->setPropertyValue( SC_UNONAME_SHOWINP, uno::makeAny( sal_True ) );
-    xProps->setPropertyValue( SC_UNONAME_SHOWERR, uno::makeAny( sal_True ) );
+    xProps->setPropertyValue( SC_UNONAME_IGNOREBL, uno::makeAny( true ) );
+    xProps->setPropertyValue( SC_UNONAME_SHOWINP, uno::makeAny( true ) );
+    xProps->setPropertyValue( SC_UNONAME_SHOWERR, uno::makeAny( true ) );
     xProps->setPropertyValue( SC_UNONAME_ERRTITLE, uno::makeAny( sBlank ) );
     xProps->setPropertyValue( SC_UNONAME_INPMESS, uno::makeAny( sBlank) );
     xProps->setPropertyValue( SC_UNONAME_ERRALSTY, uno::makeAny( sheet::ValidationAlertStyle_STOP) );
@@ -299,7 +299,7 @@ ScVbaValidation::getFormula1() throw (uno::RuntimeException, std::exception)
     uno::Reference< sheet::XSheetCondition > xCond( lcl_getValidationProps( m_xRange ), uno::UNO_QUERY_THROW );
     OUString sString = xCond->getFormula1();
 
-    sal_uInt16 nFlags = 0;
+    ScRefFlags nFlags = ScRefFlags::ZERO;
     ScRangeList aCellRanges;
     formula::FormulaGrammar::AddressConvention eConv = formula::FormulaGrammar::CONV_XL_A1;
 

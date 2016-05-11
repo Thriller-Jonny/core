@@ -19,7 +19,6 @@
 
 #include "composeduiupdate.hxx"
 
-#include <boost/noncopyable.hpp>
 #include <com/sun/star/inspection/XObjectInspectorUI.hpp>
 #include <com/sun/star/lang/DisposedException.hpp>
 #include <com/sun/star/inspection/PropertyLineElement.hpp>
@@ -34,7 +33,6 @@ namespace pcr
 {
 
 
-    using ::com::sun::star::uno::Exception;
     using ::com::sun::star::lang::DisposedException;
     using ::com::sun::star::lang::NullPointerException;
     using ::com::sun::star::inspection::XPropertyHandler;
@@ -72,8 +70,7 @@ namespace pcr
 
     typedef ::cppu::WeakImplHelper <   css::inspection::XObjectInspectorUI
                                     >   CachedInspectorUI_Base;
-    struct CachedInspectorUI:
-        public CachedInspectorUI_Base, private boost::noncopyable
+    struct CachedInspectorUI : public CachedInspectorUI_Base
     {
     private:
         ::osl::Mutex            m_aMutex;
@@ -129,6 +126,8 @@ namespace pcr
 
     public:
         CachedInspectorUI( ComposedPropertyUIUpdate& _rMaster, FNotifySingleUIChange _pUIChangeNotification );
+        CachedInspectorUI(const CachedInspectorUI&) = delete;
+        CachedInspectorUI& operator=(const CachedInspectorUI&) = delete;
 
         /// disposes the instance
         void dispose();
@@ -143,7 +142,7 @@ namespace pcr
         virtual Reference< XPropertyControl > SAL_CALL getPropertyControl( const OUString& _rPropertyName ) throw (RuntimeException, std::exception) override;
         virtual void SAL_CALL registerControlObserver( const Reference< XPropertyControlObserver >& Observer ) throw (RuntimeException, std::exception) override;
         virtual void SAL_CALL revokeControlObserver( const Reference< XPropertyControlObserver >& Observer ) throw (RuntimeException, std::exception) override;
-        virtual void SAL_CALL setHelpSectionText( const OUString& _HelpText ) throw (NoSupportException, RuntimeException, std::exception) override;
+        virtual void SAL_CALL setHelpSectionText( const OUString& HelpText ) throw (NoSupportException, RuntimeException, std::exception) override;
 
         // UNOCompatibleNonUNOReference overridables
         virtual void SAL_CALL acquire() throw() override;
@@ -221,7 +220,6 @@ namespace pcr
         if ( 0 == osl_atomic_decrement( &m_refCount ) )
             delete this;
     }
-
 
 
     void CachedInspectorUI::checkDisposed() const
@@ -348,27 +346,27 @@ namespace pcr
     }
 
 
-    void SAL_CALL CachedInspectorUI::registerControlObserver( const Reference< XPropertyControlObserver >& _Observer ) throw (RuntimeException, std::exception)
+    void SAL_CALL CachedInspectorUI::registerControlObserver( const Reference< XPropertyControlObserver >& Observer ) throw (RuntimeException, std::exception)
     {
         OSL_FAIL( "CachedInspectorUI::registerControlObserver: not expected to be called!" );
             // CachedInspectorUI is used as context for the controls, and we don't expect them to
             // register listeners themself
-        m_rMaster.getDelegatorUI()->registerControlObserver( _Observer );
+        m_rMaster.getDelegatorUI()->registerControlObserver( Observer );
     }
 
 
-    void SAL_CALL CachedInspectorUI::revokeControlObserver( const Reference< XPropertyControlObserver >& _Observer ) throw (RuntimeException, std::exception)
+    void SAL_CALL CachedInspectorUI::revokeControlObserver( const Reference< XPropertyControlObserver >& Observer ) throw (RuntimeException, std::exception)
     {
         OSL_FAIL( "CachedInspectorUI::revokeControlObserver: not expected to be called!" );
             // CachedInspectorUI is used as context for the controls, and we don't expect them to
             // register listeners themself
-        m_rMaster.getDelegatorUI()->revokeControlObserver( _Observer );
+        m_rMaster.getDelegatorUI()->revokeControlObserver( Observer );
     }
 
 
-    void SAL_CALL CachedInspectorUI::setHelpSectionText( const OUString& _HelpText ) throw (NoSupportException, RuntimeException, std::exception)
+    void SAL_CALL CachedInspectorUI::setHelpSectionText( const OUString& HelpText ) throw (NoSupportException, RuntimeException, std::exception)
     {
-        m_rMaster.getDelegatorUI()->setHelpSectionText( _HelpText );
+        m_rMaster.getDelegatorUI()->setHelpSectionText( HelpText );
     }
 
 

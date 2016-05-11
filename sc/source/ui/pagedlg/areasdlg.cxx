@@ -61,28 +61,28 @@ static void lcl_GetRepeatRangeString( const ScRange* pRange, ScDocument* pDoc, b
 
 #if 0
 // this method is useful when debugging address flags.
-static void printAddressFlags(sal_uInt16 nFlag)
+static void printAddressFlags(ScRefFlags nFlag)
 {
-    if ((nFlag & SCA_COL_ABSOLUTE  ) == SCA_COL_ABSOLUTE  )  printf("SCA_COL_ABSOLUTE \n");
-    if ((nFlag & SCA_ROW_ABSOLUTE  ) == SCA_ROW_ABSOLUTE  )  printf("SCA_ROW_ABSOLUTE \n");
-    if ((nFlag & SCA_TAB_ABSOLUTE  ) == SCA_TAB_ABSOLUTE  )  printf("SCA_TAB_ABSOLUTE \n");
-    if ((nFlag & SCA_TAB_3D        ) == SCA_TAB_3D        )  printf("SCA_TAB_3D       \n");
-    if ((nFlag & SCA_COL2_ABSOLUTE ) == SCA_COL2_ABSOLUTE )  printf("SCA_COL2_ABSOLUTE\n");
-    if ((nFlag & SCA_ROW2_ABSOLUTE ) == SCA_ROW2_ABSOLUTE )  printf("SCA_ROW2_ABSOLUTE\n");
-    if ((nFlag & SCA_TAB2_ABSOLUTE ) == SCA_TAB2_ABSOLUTE )  printf("SCA_TAB2_ABSOLUTE\n");
-    if ((nFlag & SCA_TAB2_3D       ) == SCA_TAB2_3D       )  printf("SCA_TAB2_3D      \n");
-    if ((nFlag & SCA_VALID_ROW     ) == SCA_VALID_ROW     )  printf("SCA_VALID_ROW    \n");
-    if ((nFlag & SCA_VALID_COL     ) == SCA_VALID_COL     )  printf("SCA_VALID_COL    \n");
-    if ((nFlag & SCA_VALID_TAB     ) == SCA_VALID_TAB     )  printf("SCA_VALID_TAB    \n");
-    if ((nFlag & SCA_FORCE_DOC     ) == SCA_FORCE_DOC     )  printf("SCA_FORCE_DOC    \n");
-    if ((nFlag & SCA_VALID_ROW2    ) == SCA_VALID_ROW2    )  printf("SCA_VALID_ROW2   \n");
-    if ((nFlag & SCA_VALID_COL2    ) == SCA_VALID_COL2    )  printf("SCA_VALID_COL2   \n");
-    if ((nFlag & SCA_VALID_TAB2    ) == SCA_VALID_TAB2    )  printf("SCA_VALID_TAB2   \n");
-    if ((nFlag & SCA_VALID         ) == SCA_VALID         )  printf("SCA_VALID        \n");
-    if ((nFlag & SCA_ABS           ) == SCA_ABS           )  printf("SCA_ABS          \n");
-    if ((nFlag & SCR_ABS           ) == SCR_ABS           )  printf("SCR_ABS          \n");
-    if ((nFlag & SCA_ABS_3D        ) == SCA_ABS_3D        )  printf("SCA_ABS_3D       \n");
-    if ((nFlag & SCR_ABS_3D        ) == SCR_ABS_3D        )  printf("SCR_ABS_3D       \n");
+    if ((nFlag & ScRefFlags::COL_ABS      ) == ScRefFlags::COL_ABS      ) printf("ScRefFlags::COL_ABS      \n");
+    if ((nFlag & ScRefFlags::ROW_ABS      ) == ScRefFlags::ROW_ABS      ) printf("ScRefFlags::ROW_ABS      \n");
+    if ((nFlag & ScRefFlags::TAB_ABS      ) == ScRefFlags::TAB_ABS      ) printf("ScRefFlags::TAB_ABS      \n");
+    if ((nFlag & ScRefFlags::TAB_3D       ) == ScRefFlags::TAB_3D       ) printf("ScRefFlags::TAB_3D       \n");
+    if ((nFlag & ScRefFlags::COL2_ABS     ) == ScRefFlags::COL2_ABS     ) printf("ScRefFlags::COL2_ABS     \n");
+    if ((nFlag & ScRefFlags::ROW2_ABS     ) == ScRefFlags::ROW2_ABS     ) printf("ScRefFlags::ROW2_ABS     \n");
+    if ((nFlag & ScRefFlags::TAB2_ABS     ) == ScRefFlags::TAB2_ABS     ) printf("ScRefFlags::TAB2_ABS     \n");
+    if ((nFlag & ScRefFlags::TAB2_3D      ) == ScRefFlags::TAB2_3D      ) printf("ScRefFlags::TAB2_3D      \n");
+    if ((nFlag & ScRefFlags::ROW_VALID    ) == ScRefFlags::ROW_VALID    ) printf("ScRefFlags::ROW_VALID    \n");
+    if ((nFlag & ScRefFlags::COL_VALID    ) == ScRefFlags::COL_VALID    ) printf("ScRefFlags::COL_VALID    \n");
+    if ((nFlag & ScRefFlags::TAB_VALID    ) == ScRefFlags::TAB_VALID    ) printf("ScRefFlags::TAB_VALID    \n");
+    if ((nFlag & ScRefFlags::FORCE_DOC    ) == ScRefFlags::FORCE_DOC    ) printf("ScRefFlags::FORCE_DOC    \n");
+    if ((nFlag & ScRefFlags::ROW2_VALID   ) == ScRefFlags::ROW2_VALID   ) printf("ScRefFlags::ROW2_VALID   \n");
+    if ((nFlag & ScRefFlags::COL2_VALID   ) == ScRefFlags::COL2_VALID   ) printf("ScRefFlags::COL2_VALID   \n");
+    if ((nFlag & ScRefFlags::TAB2_VALID   ) == ScRefFlags::TAB2_VALID   ) printf("ScRefFlags::TAB2_VALID   \n");
+    if ((nFlag & ScRefFlags::VALID        ) == ScRefFlags::VALID        ) printf("ScRefFlags::VALID        \n");
+    if ((nFlag & ScRefFlags::ADDR_ABS     ) == ScRefFlags::ADDR_ABS     ) printf("ScRefFlags::ADDR_ABS     \n");
+    if ((nFlag & ScRefFlags::RANGE_ABS    ) == ScRefFlags::RANGE_ABS    ) printf("ScRefFlags::RANGE_ABS    \n");
+    if ((nFlag & ScRefFlags::ADDR_ABS_3D  ) == ScRefFlags::ADDR_ABS_3D  ) printf("ScRefFlags::ADDR_ABS_3D  \n");
+    if ((nFlag & ScRefFlags::RANGE_ABS_3D ) == ScRefFlags::RANGE_ABS_3D ) printf("ScRefFlags::RANGE_ABS_3D \n");
 }
 #endif
 
@@ -146,11 +146,11 @@ void ScPrintAreasDlg::dispose()
     // Extra-Data an ListBox-Entries abraeumen
     ListBox* aLb[3] = { pLbPrintArea, pLbRepeatRow, pLbRepeatCol };
 
-    for (sal_uInt16 i = 0; i < SAL_N_ELEMENTS(aLb); ++i)
+    for (ListBox* pBox : aLb)
     {
-        const sal_Int32 nCount = aLb[i]->GetEntryCount();
+        const sal_Int32 nCount = pBox->GetEntryCount();
         for ( sal_Int32 j=0; j<nCount; j++ )
-            delete static_cast<OUString*>(aLb[i]->GetEntryData(j));
+            delete static_cast<OUString*>(pBox->GetEntryData(j));
     }
     pLbPrintArea.clear();
     pEdPrintArea.clear();
@@ -192,7 +192,7 @@ void ScPrintAreasDlg::SetReference( const ScRange& rRef, ScDocument* /* pDoc */ 
 
         if ( pEdPrintArea == pRefInputEdit )
         {
-            aStr = rRef.Format(SCR_ABS, pDoc, eConv);
+            aStr = rRef.Format(ScRefFlags::RANGE_ABS, pDoc, eConv);
             OUString aVal = pEdPrintArea->GetText();
             Selection aSel = pEdPrintArea->GetSelection();
             aSel.Justify();
@@ -287,7 +287,7 @@ void ScPrintAreasDlg::Impl_Reset()
         {
             if ( !aStrRange.isEmpty() )
                 aStrRange += OUString(sep);
-            aOne = pPrintRange->Format(SCR_ABS, pDoc, eConv);
+            aOne = pPrintRange->Format(ScRefFlags::RANGE_ABS, pDoc, eConv);
             aStrRange += aOne;
         }
     }
@@ -324,7 +324,7 @@ bool ScPrintAreasDlg::Impl_GetItem( Edit* pEd, SfxStringItem& rItem )
         ScRange aRange;
         const formula::FormulaGrammar::AddressConvention eConv = pDoc->GetAddressConvention();
         lcl_CheckRepeatString(aRangeStr, pDoc, pEdRepeatRow == pEd, &aRange);
-        aRangeStr = aRange.Format(SCR_ABS, pDoc, eConv);
+        aRangeStr = aRange.Format(ScRefFlags::RANGE_ABS, pDoc, eConv);
     }
 
     rItem.SetValue( aRangeStr );
@@ -342,8 +342,8 @@ bool ScPrintAreasDlg::Impl_CheckRefStrings()
     bool bPrintAreaOk = true;
     if ( !aStrPrintArea.isEmpty() )
     {
-        const sal_uInt16 nValidAddr  = SCA_VALID | SCA_VALID_ROW | SCA_VALID_COL;
-        const sal_uInt16 nValidRange = nValidAddr | SCA_VALID_ROW2 | SCA_VALID_COL2;
+        const ScRefFlags nValidAddr  = ScRefFlags::VALID | ScRefFlags::ROW_VALID | ScRefFlags::COL_VALID;
+        const ScRefFlags nValidRange = nValidAddr | ScRefFlags::ROW2_VALID | ScRefFlags::COL2_VALID;
         const formula::FormulaGrammar::AddressConvention eConv = pDoc->GetAddressConvention();
         const sal_Unicode sep  = ScCompiler::GetNativeSymbolChar(ocSep);
 
@@ -353,10 +353,10 @@ bool ScPrintAreasDlg::Impl_CheckRefStrings()
         for ( sal_Int32 i = 0; i < nSepCount && bPrintAreaOk; ++i )
         {
             OUString aOne = aStrPrintArea.getToken(i, sep);
-            sal_uInt16 nResult = aRange.Parse( aOne, pDoc, eConv );
+            ScRefFlags nResult = aRange.Parse( aOne, pDoc, eConv );
             if ((nResult & nValidRange) != nValidRange)
             {
-                sal_uInt16 nAddrResult = aAddr.Parse( aOne, pDoc, eConv );
+                ScRefFlags nAddrResult = aAddr.Parse( aOne, pDoc, eConv );
                 if ((nAddrResult & nValidAddr) != nValidAddr)
                     bPrintAreaOk = false;
             }
@@ -409,12 +409,12 @@ void ScPrintAreasDlg::Impl_FillLists()
     formula::FormulaGrammar::AddressConvention eConv = pDoc->GetAddressConvention();
 
     if ( bSimple )
-        aStrRange = aRange.Format(SCR_ABS, pDoc, eConv);
+        aStrRange = aRange.Format(ScRefFlags::RANGE_ABS, pDoc, eConv);
     else
     {
         ScRangeListRef aList( new ScRangeList );
         pViewData->GetMarkData().FillRangeListWithMarks( aList, false );
-        aList->Format(aStrRange, SCR_ABS, pDoc, eConv);
+        aList->Format(aStrRange, ScRefFlags::RANGE_ABS, pDoc, eConv);
     }
 
     pLbPrintArea->SetEntryData( SC_AREASDLG_PR_SELECT, new OUString( aStrRange ) );
@@ -430,23 +430,25 @@ void ScPrintAreasDlg::Impl_FillLists()
     ScRangeName::const_iterator itr = pRangeNames->begin(), itrEnd = pRangeNames->end();
     for (; itr != itrEnd; ++itr)
     {
-        if (!itr->second->HasType(RT_ABSAREA) && !itr->second->HasType(RT_REFAREA) && !itr->second->HasType(RT_ABSPOS))
+        if (!itr->second->HasType(ScRangeData::Type::AbsArea   )
+            && !itr->second->HasType(ScRangeData::Type::RefArea)
+            && !itr->second->HasType(ScRangeData::Type::AbsPos ))
             continue;
 
         OUString aName = itr->second->GetName();
         OUString aSymbol;
         itr->second->GetSymbol(aSymbol);
-        if (aRange.ParseAny(aSymbol, pDoc, eConv) & SCA_VALID)
+        if (aRange.ParseAny(aSymbol, pDoc, eConv) & ScRefFlags::VALID)
         {
-            if (itr->second->HasType(RT_PRINTAREA))
+            if (itr->second->HasType(ScRangeData::Type::PrintArea))
             {
-                aSymbol = aRange.Format(SCR_ABS, pDoc, eConv);
+                aSymbol = aRange.Format(ScRefFlags::RANGE_ABS, pDoc, eConv);
                 pLbPrintArea->SetEntryData(
                     pLbPrintArea->InsertEntry(aName),
                     new OUString(aSymbol) );
             }
 
-            if (itr->second->HasType(RT_ROWHEADER))
+            if (itr->second->HasType(ScRangeData::Type::RowHeader))
             {
                 lcl_GetRepeatRangeString(&aRange, pDoc, true, aSymbol);
                 pLbRepeatRow->SetEntryData(
@@ -454,7 +456,7 @@ void ScPrintAreasDlg::Impl_FillLists()
                     new OUString(aSymbol) );
             }
 
-            if (itr->second->HasType(RT_COLHEADER))
+            if (itr->second->HasType(ScRangeData::Type::ColHeader))
             {
                 lcl_GetRepeatRangeString(&aRange, pDoc, false, aSymbol);
                 pLbRepeatCol->SetEntryData(
@@ -503,9 +505,9 @@ IMPL_LINK_TYPED( ScPrintAreasDlg, Impl_BtnHdl, Button*, pBtn, void )
             {
                 SetDispatcherLock( false );
                 SwitchToDocument();
-                GetBindings().GetDispatcher()->Execute( SID_CHANGE_PRINTAREA,
-                                          SfxCallMode::SLOT | SfxCallMode::RECORD,
-                                          &aPrintArea, &aRepeatRow, &aRepeatCol, &aEntireSheet, 0L );
+                GetBindings().GetDispatcher()->ExecuteList(SID_CHANGE_PRINTAREA,
+                      SfxCallMode::SLOT | SfxCallMode::RECORD,
+                      { &aPrintArea, &aRepeatRow, &aRepeatCol, &aEntireSheet });
             }
 
             Close();
@@ -808,7 +810,9 @@ static void lcl_GetRepeatRangeString( const ScRange* pRange, ScDocument* pDoc, b
     const ScAddress& rStart = pRange->aStart;
     const ScAddress& rEnd   = pRange->aEnd;
 
-    const sal_uInt16 nFmt = bIsRow ? (SCA_VALID_ROW | SCA_ROW_ABSOLUTE) : (SCA_VALID_COL | SCA_COL_ABSOLUTE);
+    const ScRefFlags nFmt = bIsRow
+                            ? (ScRefFlags::ROW_VALID | ScRefFlags::ROW_ABS)
+                            : (ScRefFlags::COL_VALID | ScRefFlags::COL_ABS);
     rStr += rStart.Format(nFmt, pDoc, eConv);
     if ((bIsRow && rStart.Row() != rEnd.Row()) || (!bIsRow && rStart.Col() != rEnd.Col()))
     {

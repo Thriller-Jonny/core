@@ -246,7 +246,7 @@ const wwSprmSearcher *wwSprmParser::GetWW2SprmSearcher()
         {164, { 4, L_FIX} }, // "sprmTSetShd", tap.rgshd complex 4 bytes
     };
 
-    static wwSprmSearcher aSprmSrch(aSprms, sizeof(aSprms) / sizeof(aSprms[0]));
+    static wwSprmSearcher aSprmSrch(aSprms, SAL_N_ELEMENTS(aSprms));
     return &aSprmSrch;
 };
 
@@ -429,7 +429,7 @@ const wwSprmSearcher *wwSprmParser::GetWW6SprmSearcher()
         {207, { 0, L_VAR} }  // rtl property ?
     };
 
-    static wwSprmSearcher aSprmSrch(aSprms, sizeof(aSprms) / sizeof(aSprms[0]));
+    static wwSprmSearcher aSprmSrch(aSprms, SAL_N_ELEMENTS(aSprms));
     return &aSprmSrch;
 };
 
@@ -769,7 +769,7 @@ const wwSprmSearcher *wwSprmParser::GetWW8SprmSearcher()
         {0x246D, { 1, L_FIX} }
     };
 
-    static wwSprmSearcher aSprmSrch(aSprms, sizeof(aSprms) / sizeof(aSprms[0]));
+    static wwSprmSearcher aSprmSrch(aSprms, SAL_N_ELEMENTS(aSprms));
     return &aSprmSrch;
 };
 
@@ -1304,6 +1304,7 @@ short WW8_BRCVer9::DetermineBorderProperties(short *pSpace) const
         case 5:
         case 22:
             OSL_FAIL("Can't create these from the menus, please report");
+            break;
         default:
         case 23:    //Only 3pt in the menus, but honours the size setting.
             break;
@@ -1839,7 +1840,7 @@ static bool WW8GetFieldPara(WW8PLCFspecial& rPLCF, WW8FieldDesc& rF)
         }
         rF.nLen = rF.nLRes - rF.nSCode + 2;         // nLRes is still the final position
         rF.nLRes -= rF.nSRes;                       // now: nLRes = length
-        rF.nSRes++;                                 // Endpos encluding Markers
+        rF.nSRes++;                                 // Endpos including Markers
         rF.nLRes--;
     }else{
         rF.nLRes = 0;                               // no result found
@@ -2707,14 +2708,12 @@ sal_uInt8* WW8PLCFx_Fc_FKP::WW8Fkp::Get(WW8_FC& rStart, WW8_FC& rEnd, sal_Int32&
     return pSprms;
 }
 
-bool WW8PLCFx_Fc_FKP::WW8Fkp::SetIdx(sal_uInt8 nI)
+void WW8PLCFx_Fc_FKP::WW8Fkp::SetIdx(sal_uInt8 nI)
 {
     if (nI < mnIMax)
     {
         mnIdx = nI;
-        return true;
     }
-    return false;
 }
 
 sal_uInt8* WW8PLCFx_Fc_FKP::WW8Fkp::GetLenAndIStdAndSprms(sal_Int32& rLen) const
@@ -2735,11 +2734,11 @@ const sal_uInt8* WW8PLCFx_Fc_FKP::WW8Fkp::HasSprm( sal_uInt16 nId )
     return aIter.FindSprm(nId);
 }
 
-bool WW8PLCFx_Fc_FKP::WW8Fkp::HasSprm(sal_uInt16 nId,
+void WW8PLCFx_Fc_FKP::WW8Fkp::HasSprm(sal_uInt16 nId,
     std::vector<const sal_uInt8 *> &rResult)
 {
     if (mnIdx >= mnIMax)
-       return false;
+       return;
 
     sal_Int32 nLen;
     sal_uInt8* pSprms = GetLenAndIStdAndSprms( nLen );
@@ -2752,7 +2751,6 @@ bool WW8PLCFx_Fc_FKP::WW8Fkp::HasSprm(sal_uInt16 nId,
             rResult.push_back(aIter.GetAktParams());
         aIter.advance();
     };
-    return !rResult.empty();
 }
 
 void WW8PLCFx::GetSprms( WW8PLCFxDesc* p )
@@ -4180,12 +4178,10 @@ OUString WW8PLCFx_Book::GetUniqueBookmarkName(const OUString &rSuggestedName)
     return aRet;
 }
 
-bool WW8PLCFx_Book::MapName(OUString& rName)
+void WW8PLCFx_Book::MapName(OUString& rName)
 {
     if( !pBook[0] || !pBook[1] )
-        return false;
-
-    bool bFound = false;
+        return;
 
     size_t i = 0;
     while (i < aBookNames.size())
@@ -4193,12 +4189,10 @@ bool WW8PLCFx_Book::MapName(OUString& rName)
         if (rName.equalsIgnoreAsciiCase(aBookNames[i]))
         {
             rName = aBookNames[i];
-            bFound = true;
             break;
         }
         ++i;
     }
-    return bFound;
 }
 
 const OUString* WW8PLCFx_Book::GetName() const
@@ -4614,7 +4608,7 @@ WW8PLCFMan::WW8PLCFMan(WW8ScannerBase* pBase, ManTypes nType, long nStartCp,
     if( MAN_MAINTEXT == nType )
     {
         // search order of the attributes
-        nPLCF = MAN_ANZ_PLCF;
+        nPLCF = MAN_PLCF_COUNT;
         pField = &aD[0];
         pBkm = &aD[1];
         pEdn = &aD[2];
@@ -4970,7 +4964,7 @@ void WW8PLCFMan::GetNoSprmEnd( short nIdx, WW8PLCFManResult* pRes ) const
         pRes->nSprmId = 0;
 }
 
-bool WW8PLCFMan::TransferOpenSprms(std::stack<sal_uInt16> &rStack)
+void WW8PLCFMan::TransferOpenSprms(std::stack<sal_uInt16> &rStack)
 {
     for (sal_uInt16 i = 0; i < nPLCF; ++i)
     {
@@ -4983,7 +4977,6 @@ bool WW8PLCFMan::TransferOpenSprms(std::stack<sal_uInt16> &rStack)
             p->pIdStack->pop();
         }
     }
-    return rStack.empty();
 }
 
 void WW8PLCFMan::AdvSprm(short nIdx, bool bStart)
@@ -5239,10 +5232,10 @@ const sal_uInt8* WW8PLCFMan::HasCharSprm( sal_uInt16 nId ) const
     return static_cast<WW8PLCFx_Cp_FKP*>(pChp->pPLCFx)->HasSprm( nId );
 }
 
-bool WW8PLCFMan::HasCharSprm(sal_uInt16 nId,
+void WW8PLCFMan::HasCharSprm(sal_uInt16 nId,
     std::vector<const sal_uInt8 *> &rResult) const
 {
-    return static_cast<WW8PLCFx_Cp_FKP*>(pChp->pPLCFx)->HasSprm(nId, rResult);
+    static_cast<WW8PLCFx_Cp_FKP*>(pChp->pPLCFx)->HasSprm(nId, rResult);
 }
 
 void WW8PLCFx::Save( WW8PLCFxSave1& rSave ) const
@@ -5365,19 +5358,19 @@ bool WW8Fib::GetBaseCp(ManTypes nType, WW8_CP * cp) const
         default:
         case MAN_TXBX_HDFT:
             nOffset = ccpTxbx;
-            // fall through
+            SAL_FALLTHROUGH;
         case MAN_TXBX:
             if (ccpEdn > std::numeric_limits<WW8_CP>::max() - nOffset) {
                 return false;
             }
             nOffset += ccpEdn;
-            // fall through
+            SAL_FALLTHROUGH;
         case MAN_EDN:
             if (ccpAtn > std::numeric_limits<WW8_CP>::max() - nOffset) {
                 return false;
             }
             nOffset += ccpAtn;
-            // fall through
+            SAL_FALLTHROUGH;
         case MAN_AND:
             if (ccpMcr > std::numeric_limits<WW8_CP>::max() - nOffset) {
                 return false;
@@ -5396,19 +5389,19 @@ bool WW8Fib::GetBaseCp(ManTypes nType, WW8_CP * cp) const
                 return false;
             }
             nOffset += ccpHdr;
-            // fall through
+            SAL_FALLTHROUGH;
         case MAN_HDFT:
             if (ccpFootnote > std::numeric_limits<WW8_CP>::max() - nOffset) {
                 return false;
             }
             nOffset += ccpFootnote;
-            // fall through
+            SAL_FALLTHROUGH;
         case MAN_FTN:
             if (ccpText > std::numeric_limits<WW8_CP>::max() - nOffset) {
                 return false;
             }
             nOffset += ccpText;
-            // fall through
+            SAL_FALLTHROUGH;
         case MAN_MAINTEXT:
             break;
     }
@@ -5899,6 +5892,7 @@ WW8Fib::WW8Fib(sal_uInt8 nVer, bool bDot)
         fExtChar = true;
         fWord97Saved = fWord2000Saved = true;
 
+        // Just a fancy way to write 'Caolan80'.
         wMagicCreated = 0x6143;
         wMagicRevised = 0x6C6F;
         wMagicCreatedPrivate = 0x6E61;
@@ -5931,7 +5925,7 @@ WW8Fib::WW8Fib(sal_uInt8 nVer, bool bDot)
 }
 
 
-bool WW8Fib::WriteHeader(SvStream& rStrm)
+void WW8Fib::WriteHeader(SvStream& rStrm)
 {
     bool bVer8 = 8 == nVersion;
 
@@ -6014,10 +6008,9 @@ bool WW8Fib::WriteHeader(SvStream& rStrm)
 
     rStrm.Write( pDataPtr, nUnencryptedHdr );
     delete[] pDataPtr;
-    return 0 == rStrm.GetError();
 }
 
-bool WW8Fib::Write(SvStream& rStrm)
+void WW8Fib::Write(SvStream& rStrm)
 {
     bool bVer8 = 8 == nVersion;
 
@@ -6259,7 +6252,6 @@ bool WW8Fib::Write(SvStream& rStrm)
 
     rStrm.Write( pDataPtr, fcMin - nUnencryptedHdr );
     delete[] pDataPtr;
-    return 0 == rStrm.GetError();
 }
 
 rtl_TextEncoding WW8Fib::GetFIBCharset(sal_uInt16 chs, sal_uInt16 nLidLocale)
@@ -6856,7 +6848,7 @@ WW8Fonts::WW8Fonts( SvStream& rSt, WW8Fib& rFib )
         nMax = nCalcMax;
     else
     {
-        //newer versions include purportive count of fonts, so take min of that
+        //newer versions include supportive count of fonts, so take min of that
         //and calced max
         nMax = std::min(nMax, nCalcMax);
     }
@@ -7145,7 +7137,7 @@ bool WW8PLCF_HdFt::GetTextPos(sal_uInt8 grpfIhdt, sal_uInt8 nWhich, WW8_CP& rSta
     return true;
 }
 
-bool WW8PLCF_HdFt::GetTextPosExact(short nIdx, WW8_CP& rStart, WW8_CP& rLen)
+void WW8PLCF_HdFt::GetTextPosExact(short nIdx, WW8_CP& rStart, WW8_CP& rLen)
 {
     WW8_CP nEnd;
     void* pData;
@@ -7155,11 +7147,9 @@ bool WW8PLCF_HdFt::GetTextPosExact(short nIdx, WW8_CP& rStart, WW8_CP& rLen)
     if (nEnd < rStart)
     {
         SAL_WARN("sw.ww8", "End " << nEnd << " before Start " << rStart);
-        return false;
+        return;
     }
     rLen = nEnd - rStart;
-
-    return true;
 }
 
 void WW8PLCF_HdFt::UpdateIndex( sal_uInt8 grpfIhdt )
@@ -7593,7 +7583,7 @@ sal_uInt32 WW8Dop::GetCompatibilityOptions2() const
     return a32Bit;
 }
 
-bool WW8Dop::Write(SvStream& rStrm, WW8Fib& rFib) const
+void WW8Dop::Write(SvStream& rStrm, WW8Fib& rFib) const
 {
     const int nMaxDopLen = 610;
     sal_uInt32 nLen = 8 == rFib.nVersion ? nMaxDopLen : 84;
@@ -7793,7 +7783,6 @@ bool WW8Dop::Write(SvStream& rStrm, WW8Fib& rFib) const
         Set_UInt16(pData, a16Bit);
     }
     rStrm.Write( aData, nLen );
-    return 0 == rStrm.GetError();
 }
 
 void WW8DopTypography::ReadFromMem(sal_uInt8 *&pData)

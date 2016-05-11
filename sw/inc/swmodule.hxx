@@ -54,10 +54,13 @@ class SvtCTLOptions;
 class SvtUserOptions;
 
 struct SwDBData;
-#define VIEWOPT_DEST_VIEW       0
-#define VIEWOPT_DEST_TEXT       1
-#define VIEWOPT_DEST_WEB        2
-#define VIEWOPT_DEST_VIEW_ONLY  3 //ViewOptions are set only at View, not at the appl.
+
+enum class SvViewOpt {
+    DestView,
+    DestText,
+    DestWeb,
+    DestViewOnly   //ViewOptions are set only at View, not at the appl.
+};
 
 namespace com{ namespace sun{ namespace star{ namespace scanner{
     class XScannerManager2;
@@ -145,7 +148,7 @@ public:
     const SwMasterUsrPref *GetUsrPref(bool bWeb) const;
     const SwViewOption* GetViewOption(bool bWeb);
     void                ApplyUsrPref(const SwViewOption &, SwView*,
-                                     sal_uInt16 nDest = VIEWOPT_DEST_VIEW );
+                                     SvViewOpt nDest = SvViewOpt::DestView );
     void ApplyUserMetric( FieldUnit eMetric, bool bWeb );
     void ApplyRulerMetric( FieldUnit eMetric, bool bHorizontal, bool bWeb );
     void ApplyFieldUpdateFlags(SwFieldUpdateFlags eFieldFlags);
@@ -177,7 +180,7 @@ public:
     bool IsEmbeddedLoadSave() const         { return m_bEmbeddedLoadSave; }
     void SetEmbeddedLoadSave( bool bFlag )  { m_bEmbeddedLoadSave = bFlag; }
 
-    static void ShowDBObj( SwView& rView, const SwDBData& rData, bool bOnlyIfAvailable = false);
+    static void ShowDBObj( SwView& rView, const SwDBData& rData);
 
     // Table modi.
     bool            IsInsTableFormatNum(bool bHTML) const;
@@ -226,7 +229,7 @@ public:
     static void  CheckSpellChanges( bool bOnlineSpelling,
                     bool bIsSpellWrongAgain, bool bIsSpellAllAgain, bool bSmartTags );
 
-    inline css::uno::Reference< css::linguistic2::XLinguServiceEventListener >
+    inline const css::uno::Reference< css::linguistic2::XLinguServiceEventListener >&
             GetLngSvcEvtListener();
     void    CreateLngSvcEvtListener();
 
@@ -237,7 +240,7 @@ public:
             GetLanguageGuesser();
 };
 
-inline css::uno::Reference< css::linguistic2::XLinguServiceEventListener >
+inline const css::uno::Reference< css::linguistic2::XLinguServiceEventListener >&
         SwModule::GetLngSvcEvtListener()
 {
     return m_xLinguServiceEventListener;

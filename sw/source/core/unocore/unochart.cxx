@@ -73,7 +73,7 @@ void SwChartHelper::DoUpdateAllCharts( SwDoc* pDoc )
                 try
                 {
                     uno::Reference< util::XModifiable > xModif( xIP->getComponent(), uno::UNO_QUERY_THROW );
-                    xModif->setModified( sal_True );
+                    xModif->setModified( true );
                 }
                 catch ( uno::Exception& )
                 {
@@ -172,11 +172,11 @@ static osl::Mutex &    GetChartMutex()
 }
 
 static void LaunchModifiedEvent(
-        ::cppu::OInterfaceContainerHelper &rICH,
+        ::comphelper::OInterfaceContainerHelper2 &rICH,
         const uno::Reference< uno::XInterface > &rxI )
 {
     lang::EventObject aEvtObj( rxI );
-    cppu::OInterfaceIteratorHelper aIt( rICH );
+    comphelper::OInterfaceIteratorHelper2 aIt( rICH );
     while (aIt.hasMoreElements())
     {
         uno::Reference< util::XModifyListener > xRef( aIt.next(), uno::UNO_QUERY );
@@ -1527,7 +1527,7 @@ void SwChartDataProvider::InvalidateTable( const SwTable *pTable )
             if (xRef.is())
             {
                 // mark the sequence as 'dirty' and notify listeners
-                xRef->setModified( sal_True );
+                xRef->setModified( true );
             }
             ++aIt;
         }
@@ -1624,7 +1624,7 @@ void SwChartDataProvider::DisposeAllDataSequences( const SwTable *pTable )
  * SwChartDataProvider::AddRowCols tries to notify charts of added columns
  * or rows and extends the value sequence respectively (if possible).
  * If those can be added to the end of existing value data-sequences those
- * sequences get mofdified accordingly and will send a modification
+ * sequences get modified accordingly and will send a modification
  * notification (calling 'setModified
  *
  * Since this function is a work-around for non existent Writer core functionality
@@ -1910,7 +1910,7 @@ SwChartDataSequence::SwChartDataSequence(
     }
     catch (uno::RuntimeException &)
     {
-        // TODO: shouldnt there be a call to release() here?
+        // TODO: shouldn't there be a call to release() here?
         throw;
     }
     catch (uno::Exception &)
@@ -1958,7 +1958,7 @@ SwChartDataSequence::SwChartDataSequence( const SwChartDataSequence &rObj ) :
     }
     catch (uno::RuntimeException &)
     {
-        // TODO: shouldnt there be a call to release() here?
+        // TODO: shouldn't there be a call to release() here?
         throw;
     }
     catch (uno::Exception &)
@@ -2146,7 +2146,7 @@ std::vector< css::uno::Reference< css::table::XCell > > SwChartDataSequence::Get
     SwRangeDescriptor aDesc;
     if(!FillRangeDescriptor(aDesc, GetCellRangeName(*pTableFormat, *m_pTableCursor)))
         return std::vector< css::uno::Reference< css::table::XCell > >();
-    return SwXCellRange(m_pTableCursor, *pTableFormat, aDesc).GetCells();
+    return SwXCellRange::CreateXCellRange(m_pTableCursor, *pTableFormat, aDesc)->GetCells();
 }
 
 uno::Sequence< OUString > SAL_CALL SwChartDataSequence::getTextualData()
@@ -2308,7 +2308,7 @@ void SwChartDataSequence::Modify( const SfxPoolItem* pOld, const SfxPoolItem *pN
     }
     else
     {
-        setModified( sal_True );
+        setModified( true );
     }
 }
 
@@ -2319,7 +2319,7 @@ sal_Bool SAL_CALL SwChartDataSequence::isModified(  )
     if (m_bDisposed)
         throw lang::DisposedException();
 
-    return sal_True;
+    return true;
 }
 
 void SAL_CALL SwChartDataSequence::setModified(

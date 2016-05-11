@@ -90,17 +90,14 @@ public:
     // Window
     virtual void Resize() override;
 
-    /// @return old state
-    bool SetReadOnly( bool bNewState );
+    void SetReadOnly( bool bNewState );
     bool IsReadOnly() const { return m_bIsReadOnly;}
 
     /// reset the dirty status, if changes have been saved
     void SetClean();
 
-    void SetDataFromModel( const ::com::sun::star::uno::Reference<
-                               ::com::sun::star::chart2::XChartDocument > & xChartDoc,
-                           const ::com::sun::star::uno::Reference<
-                               ::com::sun::star::uno::XComponentContext > & xContext );
+    void SetDataFromModel( const css::uno::Reference< css::chart2::XChartDocument > & xChartDoc,
+                           const css::uno::Reference< css::uno::XComponentContext > & xContext );
 
     // predicates to determine what actions are possible at the current cursor
     // position.  This depends on the implementation of the according mutators
@@ -146,8 +143,7 @@ public:
     void RenewSeriesHeaders();
 
 private:
-    ::com::sun::star::uno::Reference<
-            ::com::sun::star::chart2::XChartDocument > m_xChartDoc;
+    css::uno::Reference< css::chart2::XChartDocument > m_xChartDoc;
     std::unique_ptr< DataBrowserModel > m_apDataBrowserModel;
 
     typedef ::std::vector< std::shared_ptr< impl::SeriesHeader > > tSeriesHeaderContainer;

@@ -38,7 +38,7 @@
 #elif defined(MACOSX)
 #define OPENCL_DLL_NAME nullptr
 #else
-#define OPENCL_DLL_NAME "libOpenCL.so"
+#define OPENCL_DLL_NAME "libOpenCL.so.1"
 #endif
 
 #define DEVICE_NAME_LENGTH 1024
@@ -71,9 +71,8 @@ OString generateMD5(const void* pData, size_t length)
 
     OStringBuffer aBuffer;
     const char* pString = "0123456789ABCDEF";
-    for(size_t i = 0; i < RTL_DIGEST_LENGTH_MD5; ++i)
+    for(sal_uInt8 val : pBuffer)
     {
-        sal_uInt8 val = pBuffer[i];
         aBuffer.append(pString[val/16]);
         aBuffer.append(pString[val%16]);
     }
@@ -272,12 +271,12 @@ void releaseOpenCLEnv( GPUEnv *gpuInfo )
         return;
     }
 
-    for (int i = 0; i < OPENCL_CMDQUEUE_SIZE; ++i)
+    for (_cl_command_queue* & i : gpuEnv.mpCmdQueue)
     {
-        if (gpuEnv.mpCmdQueue[i])
+        if (i)
         {
-            clReleaseCommandQueue(gpuEnv.mpCmdQueue[i]);
-            gpuEnv.mpCmdQueue[i] = nullptr;
+            clReleaseCommandQueue(i);
+            i = nullptr;
         }
     }
     gpuEnv.mnCmdQueuePos = 0;
@@ -703,9 +702,8 @@ bool switchOpenCLDevice(const OUString* pDevice, bool bAutoSelect, bool bForceEv
         rtl::Bootstrap::expandMacros(url);
         OUString path;
         osl::FileBase::getSystemPathFromFileURL(url,path);
-        OString dsFileName = rtl::OUStringToOString(path, RTL_TEXTENCODING_UTF8);
-        ds_device pSelectedDevice = getDeviceSelection(dsFileName.getStr(), bForceEvaluation);
-        pDeviceId = pSelectedDevice.oclDeviceID;
+        ds_device aSelectedDevice = getDeviceSelection(path, bForceEvaluation);
+        pDeviceId = aSelectedDevice.aDeviceID;
 
     }
 

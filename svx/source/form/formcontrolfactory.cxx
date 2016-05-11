@@ -38,7 +38,6 @@
 #include <com/sun/star/util/XNumberFormatTypes.hpp>
 #include <com/sun/star/sdbc/ColumnValue.hpp>
 #include <com/sun/star/text/WritingMode2.hpp>
-#include <com/sun/star/awt/FontDescriptor.hpp>
 
 #include <comphelper/numbers.hxx>
 #include <comphelper/processfactory.hxx>
@@ -56,19 +55,16 @@ namespace svxform
 
 
     using ::com::sun::star::uno::Reference;
-    using ::com::sun::star::uno::XInterface;
     using ::com::sun::star::uno::UNO_QUERY;
     using ::com::sun::star::uno::UNO_QUERY_THROW;
     using ::com::sun::star::uno::UNO_SET_THROW;
     using ::com::sun::star::uno::Exception;
-    using ::com::sun::star::uno::RuntimeException;
     using ::com::sun::star::uno::Any;
     using ::com::sun::star::uno::makeAny;
     using ::com::sun::star::uno::Sequence;
     using ::com::sun::star::uno::Type;
     using ::com::sun::star::uno::XComponentContext;
     using ::com::sun::star::beans::XPropertySet;
-    using ::com::sun::star::awt::XControlModel;
     using ::com::sun::star::form::XFormComponent;
     using ::com::sun::star::container::XIndexAccess;
     using ::com::sun::star::beans::XPropertySetInfo;
@@ -81,8 +77,6 @@ namespace svxform
     using ::com::sun::star::uno::TypeClass_LONG;
     using ::com::sun::star::util::XNumberFormats;
     using ::com::sun::star::util::XNumberFormatTypes;
-    using ::com::sun::star::awt::FontDescriptor;
-    using ::com::sun::star::lang::Locale;
     using ::com::sun::star::lang::XServiceInfo;
     using ::com::sun::star::container::XNameAccess;
 
@@ -131,9 +125,9 @@ namespace svxform
     }
 
 
-    sal_Int16 FormControlFactory::initializeControlModel( const DocumentType _eDocType, const Reference< XPropertySet >& _rxControlModel )
+    void FormControlFactory::initializeControlModel( const DocumentType _eDocType, const Reference< XPropertySet >& _rxControlModel )
     {
-        return initializeControlModel(
+        initializeControlModel(
             _eDocType, _rxControlModel, Rectangle()
         );
     }
@@ -142,7 +136,7 @@ namespace svxform
     namespace
     {
 
-        static OUString lcl_getUniqueLabel_nothrow( const Reference< XPropertySet >& _rxControlModel, const OUString& _rBaseLabel )
+        OUString lcl_getUniqueLabel_nothrow( const Reference< XPropertySet >& _rxControlModel, const OUString& _rBaseLabel )
         {
             OUString sLabel( _rBaseLabel );
             try
@@ -186,7 +180,7 @@ namespace svxform
         }
 
 
-        static Sequence< PropertyValue > lcl_getDataSourceIndirectProperties( const Reference< XPropertySet >& _rxControlModel,
+        Sequence< PropertyValue > lcl_getDataSourceIndirectProperties( const Reference< XPropertySet >& _rxControlModel,
             const Reference<XComponentContext>& _rContext )
         {
             OSL_PRECOND( _rxControlModel.is(), "lcl_getDataSourceIndirectProperties: invalid model!" );
@@ -356,7 +350,7 @@ namespace svxform
         };
 
 
-        static void lcl_initializeCharacterAttributes( const Reference< XPropertySet >& _rxModel )
+        void lcl_initializeCharacterAttributes( const Reference< XPropertySet >& _rxModel )
         {
             try
             {
@@ -405,7 +399,7 @@ namespace svxform
             {
                 case FormComponentType::SCROLLBAR:
                     _rxControlModel->setPropertyValue("LiveScroll", makeAny( true ) );
-                    // NO break!
+                    SAL_FALLTHROUGH;
                 case FormComponentType::SPINBUTTON:
                 {
                     sal_Int32 eOrientation = ScrollBarOrientation::HORIZONTAL;

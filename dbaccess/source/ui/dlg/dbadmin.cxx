@@ -72,7 +72,7 @@ ODbAdminDialog::~ODbAdminDialog()
 void ODbAdminDialog::dispose()
 {
     SetInputSet(nullptr);
-    DELETEZ(pExampleSet);
+    DELETEZ(m_pExampleSet);
     SfxTabDialog::dispose();
 }
 
@@ -159,7 +159,7 @@ void ODbAdminDialog::impl_selectDataSource(const css::uno::Any& _aDataSourceName
         case  ::dbaccess::DST_USERDEFINE10:
             {
                 OUString aTitle(ModuleRes(STR_PAGETITLE_ADVANCED));
-                AddTabPage(PAGE_USERDRIVER, aTitle, ODriversSettings::CreateUser, nullptr, false, 1);
+                AddTabPage(PAGE_USERDRIVER, aTitle, ODriversSettings::CreateUser, nullptr, 1);
                 m_aCurrentDetailPages.push(PAGE_USERDRIVER);
             }
             break;
@@ -195,14 +195,14 @@ void ODbAdminDialog::impl_resetPages(const Reference< XPropertySet >& _rxDatasou
     m_pImpl->translateProperties(_rxDatasource, *GetInputSetImpl());
 
     // reset the example set
-    delete pExampleSet;
-    pExampleSet = new SfxItemSet(*GetInputSetImpl());
+    delete m_pExampleSet;
+    m_pExampleSet = new SfxItemSet(*GetInputSetImpl());
 
     // special case: MySQL Native does not have the generic "advanced" page
 
     const DbuTypeCollectionItem& rCollectionItem = dynamic_cast<const DbuTypeCollectionItem&>(*getOutputSet()->GetItem(DSID_TYPECOLLECTION));
     ::dbaccess::ODsnTypeCollection* pCollection = rCollectionItem.getCollection();
-    if ( pCollection->determineType(getDatasourceType( *pExampleSet )) == ::dbaccess::DST_MYSQL_NATIVE )
+    if ( pCollection->determineType(getDatasourceType( *m_pExampleSet )) == ::dbaccess::DST_MYSQL_NATIVE )
     {
         AddTabPage( PAGE_MYSQL_NATIVE, OUString( ModuleRes( STR_PAGETITLE_CONNECTION ) ), ODriversSettings::CreateMySQLNATIVE, nullptr );
         RemoveTabPage("advanced");
@@ -229,9 +229,9 @@ void ODbAdminDialog::enableConfirmSettings( bool _bEnable )
     (void)_bEnable;
 }
 
-bool ODbAdminDialog::saveDatasource()
+void ODbAdminDialog::saveDatasource()
 {
-    return PrepareLeaveCurrentPage();
+    PrepareLeaveCurrentPage();
 }
 
 ODbAdminDialog::ApplyResult ODbAdminDialog::implApplyChanges()
@@ -241,7 +241,7 @@ ODbAdminDialog::ApplyResult ODbAdminDialog::implApplyChanges()
         return AR_KEEP;
     }
 
-    if ( !m_pImpl->saveChanges(*pExampleSet) )
+    if ( !m_pImpl->saveChanges(*m_pExampleSet) )
         return AR_KEEP;
 
     if ( isUIEnabled() )
@@ -267,7 +267,7 @@ const SfxItemSet* ODbAdminDialog::getOutputSet() const
 
 SfxItemSet* ODbAdminDialog::getWriteOutputSet()
 {
-    return pExampleSet;
+    return m_pExampleSet;
 }
 
 ::std::pair< Reference<XConnection>,sal_Bool> ODbAdminDialog::createConnection()
@@ -371,70 +371,70 @@ SfxItemSet* ODbAdminDialog::createItemSet(SfxItemSet*& _rpSet, SfxItemPool*& _rp
     // create the pool
     static SfxItemInfo const aItemInfos[DSID_LAST_ITEM_ID - DSID_FIRST_ITEM_ID + 1] =
     {
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE},
-        {0,SfxItemPoolFlags::NONE}
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false},
+        {0,false}
     };
 
-    OSL_ENSURE(sizeof(aItemInfos)/sizeof(aItemInfos[0]) == DSID_LAST_ITEM_ID,"Invalid Ids!");
+    OSL_ENSURE(SAL_N_ELEMENTS(aItemInfos) == DSID_LAST_ITEM_ID,"Invalid Ids!");
     _rpPool = new SfxItemPool(OUString("DSAItemPool"), DSID_FIRST_ITEM_ID, DSID_LAST_ITEM_ID,
         aItemInfos, _rppDefaults);
     _rpPool->FreezeIdRanges();

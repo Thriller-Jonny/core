@@ -98,8 +98,8 @@ protected:
     void MarkToResetSettings(bool bUpdateForeground, bool bUpdateBackground);
 
     RECT_POINT          GetRPFromPoint( Point, bool bRTL = false ) const;
-    Point               GetPointFromRP( RECT_POINT ) const;
-    void                SetFocusRect( const Rectangle* pRect = nullptr );      // pRect == NULL -> calculate rectangle in method
+    const Point&        GetPointFromRP( RECT_POINT ) const;
+    void                SetFocusRect();
     Point               SetActualRPWithoutInvalidate( RECT_POINT eNewRP );  // returns the last point
 
     virtual void        GetFocus() override;
@@ -108,9 +108,9 @@ protected:
     Point               GetApproxLogPtFromPixPt( const Point& rRoughPixelPoint ) const;
 public:
     SvxRectCtl( vcl::Window* pParent, RECT_POINT eRpt = RP_MM,
-                sal_uInt16 nBorder = 200, sal_uInt16 nCircle = 80, CTL_STYLE eStyle = CS_RECT );
+                sal_uInt16 nBorder = 200, sal_uInt16 nCircle = 80 );
     void SetControlSettings(RECT_POINT eRpt = RP_MM, sal_uInt16 nBorder = 200,
-        sal_uInt16 nCircle = 80, CTL_STYLE eStyle = CS_RECT);
+        sal_uInt16 nCircle = 80);
     virtual ~SvxRectCtl();
     virtual void dispose() override;
 
@@ -272,7 +272,7 @@ public:
     void    Append( const XGradientEntry& rEntry, const Bitmap& rBitmap );
     void    Modify( const XGradientEntry& rEntry, sal_Int32 nPos, const Bitmap& rBitmap );
     void    SelectEntryByList( const XGradientListRef &pList, const OUString& rStr,
-                               const XGradient& rXGradient, sal_uInt16 nDist = 0 );
+                               const XGradient& rXGradient );
 };
 
 /************************************************************************/
@@ -351,8 +351,8 @@ public:
 
     void Fill( const XLineEndListRef &pList, bool bStart = true );
 
-    void    Append( const XLineEndEntry& rEntry, const Bitmap& rBitmap, bool bStart = true );
-    void    Modify( const XLineEndEntry& rEntry, sal_Int32 nPos, const Bitmap& rBitmap, bool bStart = true );
+    void    Append( const XLineEndEntry& rEntry, const Bitmap& rBitmap );
+    void    Modify( const XLineEndEntry& rEntry, sal_Int32 nPos, const Bitmap& rBitmap );
 };
 
 

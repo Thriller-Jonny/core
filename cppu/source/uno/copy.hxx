@@ -30,7 +30,6 @@ namespace cppu
 //#### copy construction ###########################################################################
 
 
-
 inline uno_Sequence * allocSeq(
     sal_Int32 nElementSize, sal_Int32 nElements )
 {
@@ -117,7 +116,7 @@ inline void _copyConstructAnyFromData(
         break;
     case typelib_TypeClass_BOOLEAN:
         pDestAny->pData = &pDestAny->pReserved;
-        *static_cast<sal_Bool *>(pDestAny->pData) = (*static_cast<sal_Bool *>(pSource) != sal_False);
+        *static_cast<sal_Bool *>(pDestAny->pData) = bool(*static_cast<sal_Bool *>(pSource));
         break;
     case typelib_TypeClass_BYTE:
         pDestAny->pData = &pDestAny->pReserved;
@@ -276,7 +275,7 @@ inline void _copyConstructAny(
                 break;
             case typelib_TypeClass_BOOLEAN:
                 pDestAny->pData = &pDestAny->pReserved;
-                *static_cast<sal_Bool *>(pDestAny->pData) = sal_False;
+                *static_cast<sal_Bool *>(pDestAny->pData) = false;
                 break;
             case typelib_TypeClass_BYTE:
                 pDestAny->pData = &pDestAny->pReserved;
@@ -499,7 +498,7 @@ inline uno_Sequence * icopyConstructSequence(
                 break;
             }
             default:
-                OSL_FAIL( "### unexepcted sequence element type!" );
+                OSL_FAIL( "### unexpected sequence element type!" );
                 pDest = nullptr;
                 break;
             }
@@ -525,7 +524,7 @@ inline void _copyConstructData(
         *static_cast<sal_Unicode *>(pDest) = *static_cast<sal_Unicode *>(pSource);
         break;
     case typelib_TypeClass_BOOLEAN:
-        *static_cast<sal_Bool *>(pDest) = (*static_cast<sal_Bool *>(pSource) != sal_False);
+        *static_cast<sal_Bool *>(pDest) = bool(*static_cast<sal_Bool *>(pSource));
         break;
     case typelib_TypeClass_BYTE:
         *static_cast<sal_Int8 *>(pDest) = *static_cast<sal_Int8 *>(pSource);

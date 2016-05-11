@@ -23,33 +23,17 @@
 #include <cppuhelper/queryinterface.hxx>
 #include <memory>
 
-#if OSL_DEBUG_LEVEL > 1
-#include <stdio.h>
-#endif
 
 BitmapTransporter::BitmapTransporter()
 {
-#if OSL_DEBUG_LEVEL > 1
-    fprintf( stderr, "BitmapTransporter\n" );
-#endif
+    SAL_INFO("extensions.scanner", "BitmapTransporter");
 }
+
 
 BitmapTransporter::~BitmapTransporter()
 {
-#if OSL_DEBUG_LEVEL > 1
-    fprintf( stderr, "~BitmapTransporter\n" );
-#endif
+    SAL_INFO("extensions.scanner", "~BitmapTransporter");
 }
-
-
-
-Any SAL_CALL BitmapTransporter::queryInterface( const Type& rType ) throw( RuntimeException, std::exception )
-{
-    const Any aRet( cppu::queryInterface( rType, static_cast< css::awt::XBitmap* >( this ) ) );
-
-    return( aRet.hasValue() ? aRet : OWeakObject::queryInterface( rType ) );
-}
-
 
 
 css::awt::Size BitmapTransporter::getSize() throw(std::exception)
@@ -75,7 +59,6 @@ css::awt::Size BitmapTransporter::getSize() throw(std::exception)
 }
 
 
-
 Sequence< sal_Int8 > BitmapTransporter::getDIB() throw(std::exception)
 {
     osl::MutexGuard aGuard( m_aProtector );
@@ -94,9 +77,6 @@ Sequence< sal_Int8 > BitmapTransporter::getDIB() throw(std::exception)
 }
 
 
-// - SaneHolder -
-
-
 struct SaneHolder
 {
     Sane                m_aSane;
@@ -107,6 +87,7 @@ struct SaneHolder
 
     SaneHolder() : m_nError(ScanError_ScanErrorNone), m_bBusy(false) {}
 };
+
 
 namespace
 {
@@ -141,9 +122,6 @@ namespace
 }
 
 
-// - ScannerThread -
-
-
 class ScannerThread : public osl::Thread
 {
     std::shared_ptr<SaneHolder>               m_pHolder;
@@ -161,24 +139,21 @@ public:
 };
 
 
-
 ScannerThread::ScannerThread(
                              std::shared_ptr<SaneHolder> pHolder,
                              const Reference< css::lang::XEventListener >& listener,
                              ScannerManager* pManager )
         : m_pHolder( pHolder ), m_xListener( listener ), m_pManager( pManager )
 {
-#if OSL_DEBUG_LEVEL > 1
-    fprintf( stderr, "ScannerThread\n" );
-#endif
+    SAL_INFO("extensions.scanner", "ScannerThread");
 }
+
 
 ScannerThread::~ScannerThread()
 {
-#if OSL_DEBUG_LEVEL > 1
-    fprintf( stderr, "~ScannerThread\n" );
-#endif
+    SAL_INFO("extensions.scanner", "~ScannerThread");
 }
+
 
 void ScannerThread::run()
 {
@@ -211,21 +186,18 @@ void ScannerThread::run()
 }
 
 
-// - ScannerManager -
-
-
 void ScannerManager::AcquireData()
 {
     osl::MutexGuard aGuard( theSaneProtector::get() );
     theSanes::get().acquire();
 }
 
+
 void ScannerManager::ReleaseData()
 {
     osl::MutexGuard aGuard( theSaneProtector::get() );
     theSanes::get().release();
 }
-
 
 
 css::awt::Size ScannerManager::getSize() throw(std::exception)
@@ -236,12 +208,10 @@ css::awt::Size ScannerManager::getSize() throw(std::exception)
 }
 
 
-
 Sequence< sal_Int8 > ScannerManager::getDIB() throw(std::exception)
 {
     return Sequence< sal_Int8 >();
 }
-
 
 
 Sequence< ScannerContext > ScannerManager::getAvailableScanners() throw(std::exception)
@@ -268,7 +238,6 @@ Sequence< ScannerContext > ScannerManager::getAvailableScanners() throw(std::exc
 }
 
 
-
 sal_Bool ScannerManager::configureScannerAndScan( ScannerContext& scanner_context,
                                                   const Reference< css::lang::XEventListener >& listener )
     throw (ScannerException, RuntimeException, std::exception)
@@ -279,9 +248,7 @@ sal_Bool ScannerManager::configureScannerAndScan( ScannerContext& scanner_contex
         osl::MutexGuard aGuard( theSaneProtector::get() );
         sanevec &rSanes = theSanes::get().m_aSanes;
 
-#if OSL_DEBUG_LEVEL > 1
-        fprintf( stderr, "ScannerManager::configureScanner\n" );
-#endif
+        SAL_INFO("extensions.scanner", "ScannerManager::configureScanner");
 
         if( scanner_context.InternalData < 0 || (sal_uLong)scanner_context.InternalData >= rSanes.size() )
             throw ScannerException(
@@ -311,16 +278,13 @@ sal_Bool ScannerManager::configureScannerAndScan( ScannerContext& scanner_contex
 }
 
 
-
 void ScannerManager::startScan( const ScannerContext& scanner_context,
                                 const Reference< css::lang::XEventListener >& listener ) throw( ScannerException, std::exception )
 {
     osl::MutexGuard aGuard( theSaneProtector::get() );
     sanevec &rSanes = theSanes::get().m_aSanes;
 
-#if OSL_DEBUG_LEVEL > 1
-    fprintf( stderr, "ScannerManager::startScan\n" );
-#endif
+    SAL_INFO("extensions.scanner", "ScannerManager::startScan");
 
     if( scanner_context.InternalData < 0 || (sal_uLong)scanner_context.InternalData >= rSanes.size() )
         throw ScannerException(
@@ -342,7 +306,6 @@ void ScannerManager::startScan( const ScannerContext& scanner_context,
 }
 
 
-
 ScanError ScannerManager::getError( const ScannerContext& scanner_context ) throw( ScannerException, std::exception )
 {
     osl::MutexGuard aGuard( theSaneProtector::get() );
@@ -359,7 +322,6 @@ ScanError ScannerManager::getError( const ScannerContext& scanner_context ) thro
 
     return pHolder->m_nError;
 }
-
 
 
 Reference< css::awt::XBitmap > ScannerManager::getBitmap( const ScannerContext& scanner_context ) throw( ScannerException, std::exception )

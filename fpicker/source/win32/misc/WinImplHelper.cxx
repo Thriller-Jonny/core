@@ -38,9 +38,6 @@ using ::com::sun::star::uno::Any;
 using ::com::sun::star::uno::Sequence;
 
 
-
-
-
 const OUString TILDE( "~" );
 const sal_Unicode   TILDE_SIGN = L'~';
 const OUString AMPERSAND( "&" );
@@ -58,7 +55,6 @@ const sal_Unicode   AMPERSAND_SIGN = L'&';
 // Windows 95       VER_PLATFORM_WIN32_WINDOWS  4       0
 // Windows 98       VER_PLATFORM_WIN32_WINDOWS  4       10
 // Windows ME       VER_PLATFORM_WIN32_WINDOWS  4       90
-
 
 
 // determine if we are running under Vista or newer OS
@@ -88,9 +84,6 @@ bool SAL_CALL IsWindowsVistaOrNewer()
 }
 
 
-
-
-
 void SAL_CALL ListboxAddString( HWND hwnd, const OUString& aString )
 {
     LRESULT rc = SendMessageW(
@@ -98,9 +91,6 @@ void SAL_CALL ListboxAddString( HWND hwnd, const OUString& aString )
     (void) rc; // avoid warning
     OSL_ASSERT( (CB_ERR != rc) && (CB_ERRSPACE != rc) );
 }
-
-
-
 
 
 OUString SAL_CALL ListboxGetString( HWND hwnd, sal_Int32 aPosition )
@@ -135,9 +125,6 @@ OUString SAL_CALL ListboxGetString( HWND hwnd, sal_Int32 aPosition )
 }
 
 
-
-
-
 void SAL_CALL ListboxAddItem( HWND hwnd, const Any& aItem, const Reference< XInterface >& rXInterface, sal_Int16 aArgPos )
     throw( IllegalArgumentException )
 {
@@ -155,9 +142,6 @@ void SAL_CALL ListboxAddItem( HWND hwnd, const Any& aItem, const Reference< XInt
 
     ListboxAddString( hwnd, cbItem );
 }
-
-
-
 
 
 void SAL_CALL ListboxAddItems( HWND hwnd, const Any& aItemList, const Reference< XInterface >& rXInterface, sal_Int16 aArgPos )
@@ -181,9 +165,6 @@ void SAL_CALL ListboxAddItems( HWND hwnd, const Any& aItemList, const Reference<
         ListboxAddString( hwnd, aStringList[i] );
     }
 }
-
-
-
 
 
 void SAL_CALL ListboxDeleteItem( HWND hwnd, const Any& aPosition, const Reference< XInterface >& rXInterface, sal_Int16 aArgPos )
@@ -215,9 +196,6 @@ void SAL_CALL ListboxDeleteItem( HWND hwnd, const Any& aPosition, const Referenc
 }
 
 
-
-
-
 void SAL_CALL ListboxDeleteItems( HWND hwnd, const Any&, const Reference< XInterface >&, sal_Int16 )
     throw( IllegalArgumentException )
 {
@@ -233,9 +211,6 @@ void SAL_CALL ListboxDeleteItems( HWND hwnd, const Any&, const Reference< XInter
     }
     while ( (lRet != CB_ERR) && (lRet > 0) );
 }
-
-
-
 
 
 void SAL_CALL ListboxSetSelectedItem( HWND hwnd, const Any& aPosition, const Reference< XInterface >& rXInterface, sal_Int16 aArgPos )
@@ -271,9 +246,6 @@ void SAL_CALL ListboxSetSelectedItem( HWND hwnd, const Any& aPosition, const Ref
 }
 
 
-
-
-
 Any SAL_CALL ListboxGetItems( HWND hwnd )
 {
     OSL_ASSERT( IsWindow( hwnd ) );
@@ -292,14 +264,8 @@ Any SAL_CALL ListboxGetItems( HWND hwnd )
         }
     }
 
-    Any aAny;
-    aAny <<= aItemList;
-
-    return aAny;
+    return Any(aItemList);
 }
-
-
-
 
 
 Any SAL_CALL ListboxGetSelectedItem( HWND hwnd )
@@ -308,14 +274,8 @@ Any SAL_CALL ListboxGetSelectedItem( HWND hwnd )
 
     LRESULT idxItem = SendMessageW( hwnd, CB_GETCURSEL, 0, 0 );
 
-    Any aAny;
-    aAny <<= ListboxGetString( hwnd, idxItem );
-
-    return aAny;
+    return Any( ListboxGetString( hwnd, idxItem ) );
 }
-
-
-
 
 
 Any SAL_CALL ListboxGetSelectedItemIndex( HWND hwnd )
@@ -324,14 +284,8 @@ Any SAL_CALL ListboxGetSelectedItemIndex( HWND hwnd )
 
     LRESULT idxItem = SendMessageW( hwnd, CB_GETCURSEL, 0, 0 );
 
-    Any aAny;
-    aAny <<= static_cast< sal_Int32 >( idxItem );
-
-    return aAny;
+    return Any( static_cast< sal_Int32 >( idxItem ) );
 }
-
-
-
 
 
 Any SAL_CALL CheckboxGetState( HWND hwnd )
@@ -339,14 +293,9 @@ Any SAL_CALL CheckboxGetState( HWND hwnd )
     OSL_ASSERT( IsWindow( hwnd ) );
 
     LRESULT lChkState = SendMessageW( hwnd, BM_GETCHECK, 0, 0 );
-    sal_Bool bChkState = (lChkState == BST_CHECKED) ? sal_True : sal_False;
-    Any aAny;
-    aAny.setValue( &bChkState, cppu::UnoType<sal_Bool>::get());
-    return aAny;
+    bool bChkState = (lChkState == BST_CHECKED);
+    return Any(bChkState);
 }
-
-
-
 
 
 void SAL_CALL CheckboxSetState(
@@ -368,9 +317,6 @@ void SAL_CALL CheckboxSetState(
 }
 
 
-
-
-
 sal_uInt32 SAL_CALL _wcslenex( const sal_Unicode* pStr )
 {
     if ( !pStr )
@@ -386,9 +332,6 @@ sal_uInt32 SAL_CALL _wcslenex( const sal_Unicode* pStr )
 
     return strLen;
 }
-
-
-
 
 
 void Replace( const OUString& aLabel, sal_Unicode OldChar, sal_Unicode NewChar, OUStringBuffer& aBuffer )

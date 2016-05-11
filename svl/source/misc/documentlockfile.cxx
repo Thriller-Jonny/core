@@ -63,7 +63,7 @@ DocumentLockFile::~DocumentLockFile()
 }
 
 
-void DocumentLockFile::WriteEntryToStream( const LockFileEntry& aEntry, uno::Reference< io::XOutputStream > xOutput )
+void DocumentLockFile::WriteEntryToStream( const LockFileEntry& aEntry, const uno::Reference< io::XOutputStream >& xOutput )
 {
     ::osl::MutexGuard aGuard( m_aMutex );
 
@@ -112,14 +112,14 @@ bool DocumentLockFile::CreateOwnLockFile()
 
         ucb::InsertCommandArgument aInsertArg;
         aInsertArg.Data = xInput;
-        aInsertArg.ReplaceExisting = sal_False;
+        aInsertArg.ReplaceExisting = false;
         uno::Any aCmdArg;
         aCmdArg <<= aInsertArg;
         aTargetContent.executeCommand( "insert", aCmdArg );
 
         // try to let the file be hidden if possible
         try {
-            aTargetContent.setPropertyValue("IsHidden", uno::makeAny( sal_True ) );
+            aTargetContent.setPropertyValue("IsHidden", uno::makeAny( true ) );
         } catch( uno::Exception& ) {}
     }
     catch( ucb::NameClashException& )

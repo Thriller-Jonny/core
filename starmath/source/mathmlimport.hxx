@@ -37,7 +37,6 @@ namespace com { namespace sun { namespace star {
 } } }
 
 
-
 class SmXMLImportWrapper
 {
     css::uno::Reference<css::frame::XModel> xModel;
@@ -49,8 +48,8 @@ public:
     sal_uLong Import(SfxMedium &rMedium);
 
     static sal_uLong ReadThroughComponent(
-        css::uno::Reference< css::io::XInputStream > xInputStream,
-        css::uno::Reference< css::lang::XComponent > xModelComponent,
+        const css::uno::Reference< css::io::XInputStream >& xInputStream,
+        const css::uno::Reference< css::lang::XComponent >& xModelComponent,
         css::uno::Reference< css::uno::XComponentContext > & rxContext,
         css::uno::Reference< css::beans::XPropertySet > & rPropSet,
         const sal_Char* pFilterName,
@@ -58,14 +57,13 @@ public:
 
     static sal_uLong ReadThroughComponent(
         const css::uno::Reference< css::embed::XStorage >& xStorage,
-        css::uno::Reference< css::lang::XComponent > xModelComponent,
+        const css::uno::Reference< css::lang::XComponent >& xModelComponent,
         const sal_Char* pStreamName,
         const sal_Char* pCompatibilityStreamName,
         css::uno::Reference< css::uno::XComponentContext > & rxContext,
         css::uno::Reference< css::beans::XPropertySet > & rPropSet,
         const sal_Char* pFilterName );
 };
-
 
 
 class SmXMLImport : public SvXMLImport
@@ -246,13 +244,12 @@ public:
     }
 
     bool GetSuccess()              { return bSuccess; }
-    SAL_WARN_UNUSED_RESULT OUString GetText() { return aText; }
+    SAL_WARN_UNUSED_RESULT const OUString& GetText() { return aText; }
     void SetText(const OUString &rStr) { aText = rStr; }
 
     virtual void SetViewSettings(const css::uno::Sequence<css::beans::PropertyValue>& aViewProps) override;
     virtual void SetConfigurationSettings(const css::uno::Sequence<css::beans::PropertyValue>& aViewProps) override;
 };
-
 
 
 enum SmXMLMathElemTokenMap

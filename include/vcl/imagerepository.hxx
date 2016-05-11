@@ -30,7 +30,6 @@ namespace vcl
 {
 
 
-
     //= ImageRepository
 
     // provides access to the application's image repository (image.zip)
@@ -50,8 +49,7 @@ namespace vcl
         static bool loadImage(
             const OUString& _rName,
             BitmapEx& _out_rImage,
-            bool bSearchLanguageDependent,
-            bool loadMissing = false
+            bool bSearchLanguageDependent
         );
 
         static bool loadDefaultImage(

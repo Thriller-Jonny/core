@@ -22,7 +22,7 @@
 #include "WrappedPropertySet.hxx"
 #include <cppuhelper/implbase.hxx>
 #include <comphelper/uno3.hxx>
-#include <cppuhelper/interfacecontainer.hxx>
+#include <comphelper/interfacecontainer2.hxx>
 #include <com/sun/star/drawing/XShape.hpp>
 #include <com/sun/star/lang/XComponent.hpp>
 #include <com/sun/star/lang/XServiceInfo.hpp>
@@ -40,8 +40,8 @@ class Chart2ModelContact;
 
 class GridWrapper : public ::cppu::ImplInheritanceHelper<
                       WrappedPropertySet
-                    , com::sun::star::lang::XComponent
-                    , com::sun::star::lang::XServiceInfo
+                    , css::lang::XComponent
+                    , css::lang::XServiceInfo
                     >
 {
 public:
@@ -73,23 +73,21 @@ public:
 
     // ____ XComponent ____
     virtual void SAL_CALL dispose()
-        throw (::com::sun::star::uno::RuntimeException, std::exception) override;
-    virtual void SAL_CALL addEventListener( const ::com::sun::star::uno::Reference<
-                                            ::com::sun::star::lang::XEventListener >& xListener )
-        throw (::com::sun::star::uno::RuntimeException, std::exception) override;
-    virtual void SAL_CALL removeEventListener( const ::com::sun::star::uno::Reference<
-                                               ::com::sun::star::lang::XEventListener >& aListener )
-        throw (::com::sun::star::uno::RuntimeException, std::exception) override;
+        throw (css::uno::RuntimeException, std::exception) override;
+    virtual void SAL_CALL addEventListener( const css::uno::Reference< css::lang::XEventListener >& xListener )
+        throw (css::uno::RuntimeException, std::exception) override;
+    virtual void SAL_CALL removeEventListener( const css::uno::Reference< css::lang::XEventListener >& aListener )
+        throw (css::uno::RuntimeException, std::exception) override;
 
 protected:
     // ____ WrappedPropertySet ____
-    virtual const ::com::sun::star::uno::Sequence< ::com::sun::star::beans::Property >& getPropertySequence() override;
+    virtual const css::uno::Sequence< css::beans::Property >& getPropertySequence() override;
     virtual const std::vector< WrappedProperty* > createWrappedProperties() override;
-    virtual ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet > getInnerPropertySet() override;
+    virtual css::uno::Reference< css::beans::XPropertySet > getInnerPropertySet() override;
 
 private:
     std::shared_ptr< Chart2ModelContact >   m_spChart2ModelContact;
-    ::cppu::OInterfaceContainerHelper           m_aEventListenerContainer;
+    ::comphelper::OInterfaceContainerHelper2      m_aEventListenerContainer;
 
     tGridType           m_eType;
 };

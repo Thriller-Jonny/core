@@ -81,6 +81,7 @@
 
 #include "scabstdlg.hxx"
 #include <editeng/fontitem.hxx>
+#include <sfx2/classificationhelper.hxx>
 
 #include <memory>
 
@@ -195,7 +196,7 @@ void ScFormatShell::GetStyleState( SfxItemSet& rSet )
                 SCTAB           nCurTab     = GetViewData()->GetTabNo();
                 OUString        aPageStyle  = pDoc->GetPageStyle( nCurTab );
                 SfxStyleSheet*  pStyleSheet = pStylePool ? static_cast<SfxStyleSheet*>(pStylePool->
-                                    Find( aPageStyle, SFX_STYLE_FAMILY_PAGE )) : nullptr;
+                                    Find( aPageStyle, SfxStyleFamily::Page )) : nullptr;
 
                 if ( pStyleSheet )
                     rSet.Put( SfxTemplateItem( nSlotId, aPageStyle ) );
@@ -216,7 +217,7 @@ void ScFormatShell::GetStyleState( SfxItemSet& rSet )
                 pTabViewShell->GetViewFrame()->GetBindings().QueryState(SID_STYLE_FAMILY, pItem);
                 SfxUInt16Item* pFamilyItem = dynamic_cast<SfxUInt16Item*>(pItem.get());
 
-                bool bPage = pFamilyItem && SFX_STYLE_FAMILY_PAGE == SfxTemplate::NIdToSfxFamilyId(pFamilyItem->GetValue());
+                bool bPage = pFamilyItem && SfxStyleFamily::Page == SfxTemplate::NIdToSfxFamilyId(pFamilyItem->GetValue());
 
                 if ( bProtected || bPage )
                     rSet.DisableItem( nSlotId );
@@ -231,7 +232,7 @@ void ScFormatShell::GetStyleState( SfxItemSet& rSet )
                 std::unique_ptr<SfxPoolItem> pItem;
                 pTabViewShell->GetViewFrame()->GetBindings().QueryState(SID_STYLE_FAMILY, pItem);
                 SfxUInt16Item* pFamilyItem = dynamic_cast<SfxUInt16Item*>(pItem.get());
-                bool bPage = pFamilyItem && SFX_STYLE_FAMILY_PAGE == SfxTemplate::NIdToSfxFamilyId(pFamilyItem->GetValue());
+                bool bPage = pFamilyItem && SfxStyleFamily::Page == SfxTemplate::NIdToSfxFamilyId(pFamilyItem->GetValue());
 
                 if ( bProtected && !bPage )
                     rSet.DisableItem( nSlotId );
@@ -273,7 +274,7 @@ void ScFormatShell::ExecuteStyle( SfxRequest& rReq )
     {
         if (nSlotId == SID_STYLE_PREVIEW)
         {
-            SfxStyleFamily eFamily = SFX_STYLE_FAMILY_PARA;
+            SfxStyleFamily eFamily = SfxStyleFamily::Para;
             const SfxPoolItem* pFamItem;
             if ( pArgs && SfxItemState::SET == pArgs->GetItemState( SID_STYLE_FAMILY, true, &pFamItem ) )
                 eFamily = (SfxStyleFamily) static_cast<const SfxUInt16Item*>(pFamItem)->GetValue();
@@ -281,7 +282,7 @@ void ScFormatShell::ExecuteStyle( SfxRequest& rReq )
             OUString aStyleName;
             if (pArgs && SfxItemState::SET == pArgs->GetItemState( nSlotId, true, &pNameItem ))
                 aStyleName = static_cast<const SfxStringItem*>(pNameItem)->GetValue();
-            if ( eFamily == SFX_STYLE_FAMILY_PARA ) // CellStyles
+            if ( eFamily == SfxStyleFamily::Para ) // CellStyles
             {
                 ScMarkData aFuncMark( pViewData->GetMarkData() );
                 ScViewUtil::UnmarkFiltered( aFuncMark, &rDoc );
@@ -353,7 +354,7 @@ void ScFormatShell::ExecuteStyle( SfxRequest& rReq )
         ScStyleSaveData aOldData;       // for undo/redo
         ScStyleSaveData aNewData;
 
-        SfxStyleFamily eFamily = SFX_STYLE_FAMILY_PARA;
+        SfxStyleFamily eFamily = SfxStyleFamily::Para;
         const SfxPoolItem* pFamItem;
         if ( pArgs && SfxItemState::SET == pArgs->GetItemState( SID_STYLE_FAMILY, true, &pFamItem ) )
             eFamily = (SfxStyleFamily) static_cast<const SfxUInt16Item*>(pFamItem)->GetValue();
@@ -361,9 +362,9 @@ void ScFormatShell::ExecuteStyle( SfxRequest& rReq )
         {
             OUString sFamily = static_cast<const SfxStringItem*>(pFamItem)->GetValue();
             if (sFamily == "CellStyles")
-                eFamily = SFX_STYLE_FAMILY_PARA;
+                eFamily = SfxStyleFamily::Para;
             else if (sFamily == "PageStyles")
-                eFamily = SFX_STYLE_FAMILY_PAGE;
+                eFamily = SfxStyleFamily::Page;
         }
 
         OUString                aStyleName;
@@ -417,8 +418,8 @@ void ScFormatShell::ExecuteStyle( SfxRequest& rReq )
                     {
                     }
                 }
+                SAL_FALLTHROUGH;
             }
-            //fall-through
             case SID_STYLE_EDIT:
             case SID_STYLE_DELETE:
             case SID_STYLE_HIDE:
@@ -494,7 +495,7 @@ void ScFormatShell::ExecuteStyle( SfxRequest& rReq )
 
         switch ( eFamily )
         {
-            case SFX_STYLE_FAMILY_PARA:
+            case SfxStyleFamily::Para:
             {
                 switch ( nSlotId )
                 {
@@ -651,10 +652,10 @@ void ScFormatShell::ExecuteStyle( SfxRequest& rReq )
                     default:
                         break;
                 }
-            } // case SFX_STYLE_FAMILY_PARA:
+            } // case SfxStyleFamily::Para:
             break;
 
-            case SFX_STYLE_FAMILY_PAGE:
+            case SfxStyleFamily::Page:
             {
                 switch ( nSlotId )
                 {
@@ -763,7 +764,7 @@ void ScFormatShell::ExecuteStyle( SfxRequest& rReq )
                     default:
                         break;
                 } // switch ( nSlotId )
-            } // case SFX_STYLE_FAMILY_PAGE:
+            } // case SfxStyleFamily::Page:
             break;
 
             default:
@@ -785,11 +786,11 @@ void ScFormatShell::ExecuteStyle( SfxRequest& rReq )
 
                 switch ( eFam )
                 {
-                    case SFX_STYLE_FAMILY_PAGE:
+                    case SfxStyleFamily::Page:
                         nRsc = RID_SCDLG_STYLES_PAGE;
                         break;
 
-                    case SFX_STYLE_FAMILY_PARA:
+                    case SfxStyleFamily::Para:
                     default:
                         {
                             SfxItemSet& rSet = pStyleSheet->GetItemSet();
@@ -875,7 +876,7 @@ void ScFormatShell::ExecuteStyle( SfxRequest& rReq )
 
                         // Attribute comparisons (earlier in ModifyStyleSheet) now here
                         // with the old values (the style is already changed)
-                        if ( SFX_STYLE_FAMILY_PARA == eFam )
+                        if ( SfxStyleFamily::Para == eFam )
                         {
                             SfxItemSet& rNewSet = pStyleSheet->GetItemSet();
                             bool bNumFormatChanged;
@@ -922,7 +923,7 @@ void ScFormatShell::ExecuteStyle( SfxRequest& rReq )
 
                         pDocSh->SetDocumentModified();
 
-                        if ( SFX_STYLE_FAMILY_PARA == eFam )
+                        if ( SfxStyleFamily::Para == eFam )
                         {
                             ScTabViewShell::UpdateNumberFormatter(
                                 static_cast<const SvxNumberInfoItem&>(
@@ -967,6 +968,18 @@ void ScFormatShell::ExecuteStyle( SfxRequest& rReq )
         if ( bListAction )
             pDocSh->GetUndoManager()->LeaveListAction();
     }
+    else if (nSlotId == SID_CLASSIFICATION_APPLY)
+    {
+        const SfxPoolItem* pItem = nullptr;
+        if (pArgs && pArgs->GetItemState(nSlotId, false, &pItem) == SfxItemState::SET)
+        {
+            const OUString& rName = static_cast<const SfxStringItem*>(pItem)->GetValue();
+            SfxClassificationHelper aHelper(pDocSh->getDocProperties());
+            aHelper.SetBACName(rName);
+        }
+        else
+            SAL_WARN("sc.ui", "missing parameter for SID_CLASSIFICATION_APPLY");
+    }
     else
     {
         OSL_FAIL( "Unknown slot (ScViewShell::ExecuteStyle)" );
@@ -975,11 +988,11 @@ void ScFormatShell::ExecuteStyle( SfxRequest& rReq )
 
 void ScFormatShell::ExecuteNumFormat( SfxRequest& rReq )
 {
-    ScModule*           pScMod      = SC_MOD();
-    ScTabViewShell* pTabViewShell   = GetViewData()->GetViewShell();
-    const SfxItemSet*   pReqArgs    = rReq.GetArgs();
-    sal_uInt16              nSlot   = rReq.GetSlot();
-    SfxBindings& rBindings          = pTabViewShell->GetViewFrame()->GetBindings();
+    ScModule*           pScMod          = SC_MOD();
+    ScTabViewShell*     pTabViewShell   = GetViewData()->GetViewShell();
+    const SfxItemSet*   pReqArgs        = rReq.GetArgs();
+    sal_uInt16          nSlot           = rReq.GetSlot();
+    SfxBindings&        rBindings       = pTabViewShell->GetViewFrame()->GetBindings();
 
     pTabViewShell->HideListBox();                   // Autofilter-DropDown-Listbox
 
@@ -1049,11 +1062,43 @@ void ScFormatShell::ExecuteNumFormat( SfxRequest& rReq )
             rReq.Done();
             break;
         case SID_NUMBER_CURRENCY:
-            if ((nType & css::util::NumberFormat::CURRENCY))
-                pTabViewShell->SetNumberFormat( css::util::NumberFormat::NUMBER );
+            if(pReqArgs)
+            {
+                const SfxPoolItem* pItem;
+                if ( pReqArgs->HasItem( SID_NUMBER_CURRENCY, &pItem ) )
+                {
+                    sal_uInt32 nNewFormat = static_cast<const SfxUInt32Item*>(pItem)->GetValue();
+                    ScDocument* pDoc = pViewData->GetDocument();
+                    SvNumberFormatter* pFormatter = pDoc->GetFormatTable();
+                    const SfxItemSet& rOldSet = pTabViewShell->GetSelectionPattern()->GetItemSet();
+
+                    LanguageType eOldLang = static_cast<const SvxLanguageItem&>(
+                                            rOldSet.Get( ATTR_LANGUAGE_FORMAT ) ).GetLanguage();
+                    sal_uInt32 nOldFormat = static_cast<const SfxUInt32Item&>(
+                                            rOldSet.Get( ATTR_VALUE_FORMAT ) ).GetValue();
+
+                    if ( nOldFormat != nNewFormat )
+                    {
+                        const SvNumberformat* pNewEntry = pFormatter->GetEntry( nNewFormat );
+                        ScPatternAttr aNewAttrs( pDoc->GetPool() );
+                        SfxItemSet& rSet = aNewAttrs.GetItemSet();
+                        LanguageType eNewLang = pNewEntry ? pNewEntry->GetLanguage() : LANGUAGE_DONTKNOW;
+                        if ( eNewLang != eOldLang && eNewLang != LANGUAGE_DONTKNOW )
+                            rSet.Put( SvxLanguageItem( eNewLang, ATTR_LANGUAGE_FORMAT ) );
+                        rSet.Put( SfxUInt32Item( ATTR_VALUE_FORMAT, nNewFormat ) );
+                        pTabViewShell->ApplySelectionPattern( aNewAttrs );
+                    }
+                    else
+                        pTabViewShell->SetNumberFormat( css::util::NumberFormat::NUMBER );
+                }
+            }
             else
-                pTabViewShell->SetNumberFormat( css::util::NumberFormat::CURRENCY );
-            aSet.Put( SfxBoolItem(nSlot, !(nType & css::util::NumberFormat::CURRENCY)) );
+            {
+                if ( ( nType & css::util::NumberFormat::CURRENCY ) )
+                    pTabViewShell->SetNumberFormat( css::util::NumberFormat::NUMBER );
+                else
+                    pTabViewShell->SetNumberFormat( css::util::NumberFormat::CURRENCY );
+            }
             rBindings.Invalidate( nSlot );
             rReq.Done();
             break;
@@ -1410,7 +1455,7 @@ void ScFormatShell::ExecuteTextAttr( SfxRequest& rReq )
 
             case SID_ATTR_CHAR_UNDERLINE:
                 {
-                    FontUnderline       eUnderline;
+                    FontLineStyle       eUnderline;
 
                     if( pSet )
                     {
@@ -1436,9 +1481,9 @@ void ScFormatShell::ExecuteTextAttr( SfxRequest& rReq )
                         SvxUnderlineItem aUnderline( static_cast<const SvxUnderlineItem&>(
                                                         pAttrs->GetItem(
                                                             ATTR_FONT_UNDERLINE ) ) );
-                        eUnderline = (UNDERLINE_NONE != aUnderline.GetLineStyle())
-                                    ? UNDERLINE_NONE
-                                    : UNDERLINE_SINGLE;
+                        eUnderline = (LINESTYLE_NONE != aUnderline.GetLineStyle())
+                                    ? LINESTYLE_NONE
+                                    : LINESTYLE_SINGLE;
                         aUnderline.SetLineStyle( eUnderline );
                         pTabViewShell->ApplyAttr( aUnderline );
                         pNewSet->Put( aUnderline,aUnderline.Which() );
@@ -1447,25 +1492,25 @@ void ScFormatShell::ExecuteTextAttr( SfxRequest& rReq )
                 break;
 
             case SID_ULINE_VAL_NONE:
-                pTabViewShell->ApplyAttr( SvxUnderlineItem( UNDERLINE_NONE, ATTR_FONT_UNDERLINE ) );
+                pTabViewShell->ApplyAttr( SvxUnderlineItem( LINESTYLE_NONE, ATTR_FONT_UNDERLINE ) );
                 break;
             case SID_ULINE_VAL_SINGLE:      // Toggles
             case SID_ULINE_VAL_DOUBLE:
             case SID_ULINE_VAL_DOTTED:
                 {
-                    FontUnderline eOld = static_cast<const SvxUnderlineItem&>(
+                    FontLineStyle eOld = static_cast<const SvxUnderlineItem&>(
                                             pAttrs->GetItem(ATTR_FONT_UNDERLINE)).GetLineStyle();
-                    FontUnderline eNew = eOld;
+                    FontLineStyle eNew = eOld;
                     switch (nSlot)
                     {
                         case SID_ULINE_VAL_SINGLE:
-                            eNew = ( eOld == UNDERLINE_SINGLE ) ? UNDERLINE_NONE : UNDERLINE_SINGLE;
+                            eNew = ( eOld == LINESTYLE_SINGLE ) ? LINESTYLE_NONE : LINESTYLE_SINGLE;
                             break;
                         case SID_ULINE_VAL_DOUBLE:
-                            eNew = ( eOld == UNDERLINE_DOUBLE ) ? UNDERLINE_NONE : UNDERLINE_DOUBLE;
+                            eNew = ( eOld == LINESTYLE_DOUBLE ) ? LINESTYLE_NONE : LINESTYLE_DOUBLE;
                             break;
                         case SID_ULINE_VAL_DOTTED:
-                            eNew = ( eOld == UNDERLINE_DOTTED ) ? UNDERLINE_NONE : UNDERLINE_DOTTED;
+                            eNew = ( eOld == LINESTYLE_DOTTED ) ? LINESTYLE_NONE : LINESTYLE_DOTTED;
                             break;
                     }
                     pTabViewShell->ApplyAttr( SvxUnderlineItem( eNew, ATTR_FONT_UNDERLINE ) );
@@ -1962,7 +2007,6 @@ void ScFormatShell::GetAttrState( SfxItemSet& rSet )
             case SID_BACKGROUND_COLOR:
             {
                 rSet.Put( SvxColorItem( rBrushItem.GetColor(), SID_BACKGROUND_COLOR ) );
-
                 if(SfxItemState::DONTCARE == rAttrSet.GetItemState(ATTR_BACKGROUND))
                 {
                     rSet.InvalidateItem(SID_BACKGROUND_COLOR);
@@ -1974,7 +2018,7 @@ void ScFormatShell::GetAttrState( SfxItemSet& rSet )
             {
                 // handled together because both need the cell border information for decisions
                 Color aCol = 0;
-                editeng::SvxBorderLine aLine(nullptr,0,0,false);
+                editeng::SvxBorderLine aLine(nullptr,0,0);
                 bool bCol = false;
                 bool bColDisable = false, bStyleDisable = false;
                 SvxBoxItem aBoxItem(ATTR_BORDER);
@@ -2182,14 +2226,14 @@ void ScFormatShell::GetTextAttrState( SfxItemSet& rSet )
     }
     else
     {
-        FontUnderline eUnderline = static_cast<const SvxUnderlineItem&>(
+        FontLineStyle eUnderline = static_cast<const SvxUnderlineItem&>(
                     rAttrSet.Get(ATTR_FONT_UNDERLINE)).GetLineStyle();
         sal_uInt16 nId = SID_ULINE_VAL_NONE;
         switch (eUnderline)
         {
-            case UNDERLINE_SINGLE:  nId = SID_ULINE_VAL_SINGLE; break;
-            case UNDERLINE_DOUBLE:  nId = SID_ULINE_VAL_DOUBLE; break;
-            case UNDERLINE_DOTTED:  nId = SID_ULINE_VAL_DOTTED; break;
+            case LINESTYLE_SINGLE:  nId = SID_ULINE_VAL_SINGLE; break;
+            case LINESTYLE_DOUBLE:  nId = SID_ULINE_VAL_DOUBLE; break;
+            case LINESTYLE_DOTTED:  nId = SID_ULINE_VAL_DOTTED; break;
             default:
                 break;
         }
@@ -2531,14 +2575,24 @@ void ScFormatShell::GetNumFormatState( SfxItemSet& rSet )
 
                 }
                 break;
+            case SID_NUMBER_CURRENCY:
+                {
+                    const SfxItemSet& rAttrSet = pTabViewShell->GetSelectionPattern()->GetItemSet();
+                    if( SfxItemState::DONTCARE != rAttrSet.GetItemState( ATTR_VALUE_FORMAT ) )
+                    {
+                        sal_uInt32 nNumberFormat = static_cast<const SfxUInt32Item&>(
+                                                   rAttrSet.Get( ATTR_VALUE_FORMAT ) ).GetValue();
+                        rSet.Put( SfxUInt32Item( nWhich, nNumberFormat ) );
+                    }
+                    else
+                        rSet.InvalidateItem( nWhich );
+                }
+                break;
             case SID_NUMBER_SCIENTIFIC:
                 rSet.Put( SfxBoolItem(nWhich, (nType & css::util::NumberFormat::SCIENTIFIC)) );
                 break;
             case SID_NUMBER_DATE:
                 rSet.Put( SfxBoolItem(nWhich, (nType & css::util::NumberFormat::DATE)) );
-                break;
-            case SID_NUMBER_CURRENCY:
-                rSet.Put( SfxBoolItem(nWhich, (nType & css::util::NumberFormat::CURRENCY)) );
                 break;
             case SID_NUMBER_PERCENT:
                 rSet.Put( SfxBoolItem(nWhich, (nType & css::util::NumberFormat::PERCENT)) );
@@ -2716,21 +2770,18 @@ short ScFormatShell::GetCurrentNumberFormatType()
         ScRange aRange;
         aMark.GetMultiMarkArea(aRange);
 
-        const ScMarkArray* pArray = aMark.GetArray();
-        if (!pArray)
-            return nType;
+        const ScMultiSel& rMultiSel = aMark.GetMultiSelData();
 
         short nComboType = css::util::NumberFormat::ALL;
         bool bFirstItem = true;
         for (SCCOL nCol = aRange.aStart.Col(); nCol <= aRange.aEnd.Col(); ++nCol)
         {
-            const ScMarkArray& rColArray = pArray[nCol];
-            if (!rColArray.HasMarks())
+            if (!rMultiSel.HasMarks(nCol))
                 continue;
 
             SCROW nRow1, nRow2;
-            ScMarkArrayIter aMarkIter(&rColArray);
-            while (aMarkIter.Next(nRow1, nRow2))
+            ScMultiSelIter aMultiIter(rMultiSel, nCol);
+            while (aMultiIter.Next(nRow1, nRow2))
             {
                 ScRange aColRange(nCol, nRow1, aRange.aStart.Tab());
                 aColRange.aEnd.SetRow(nRow2);

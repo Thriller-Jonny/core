@@ -37,7 +37,7 @@ using namespace com::sun::star::sdbc;
 
 
 OAdoIndex::OAdoIndex(sal_Bool _bCase,OConnection* _pConnection,ADOIndex* _pIndex)
-    : OIndex_ADO(OUString(),OUString(),sal_False,sal_False,sal_False,_bCase)
+    : sdbcx::OIndex(OUString(),OUString(),sal_False,sal_False,sal_False,_bCase)
     ,m_pConnection(_pConnection)
 {
     construct();
@@ -46,13 +46,12 @@ OAdoIndex::OAdoIndex(sal_Bool _bCase,OConnection* _pConnection,ADOIndex* _pIndex
 }
 
 OAdoIndex::OAdoIndex(sal_Bool _bCase,OConnection* _pConnection)
-    : OIndex_ADO(_bCase)
+    : sdbcx::OIndex(_bCase)
     ,m_pConnection(_pConnection)
 {
     construct();
     m_aIndex.Create();
 }
-
 
 
 void OAdoIndex::refreshColumns()
@@ -94,7 +93,7 @@ sal_Int64 OAdoIndex::getSomething( const Sequence< sal_Int8 > & rId ) throw (Run
 {
     return (rId.getLength() == 16 && 0 == memcmp(getUnoTunnelImplementationId().getConstArray(),  rId.getConstArray(), 16 ) )
                 ? reinterpret_cast< sal_Int64 >( this )
-                : OIndex_ADO::getSomething(rId);
+                : sdbcx::OIndex::getSomething(rId);
 }
 
 void SAL_CALL OAdoIndex::setFastPropertyValue_NoBroadcast(sal_Int32 nHandle,const Any& rValue)throw (Exception)
@@ -128,21 +127,18 @@ void SAL_CALL OAdoIndex::setFastPropertyValue_NoBroadcast(sal_Int32 nHandle,cons
                 break;
         }
     }
-    OIndex_ADO::setFastPropertyValue_NoBroadcast(nHandle,rValue);
+    sdbcx::OIndex::setFastPropertyValue_NoBroadcast(nHandle,rValue);
 }
 
 void SAL_CALL OAdoIndex::acquire() throw()
 {
-    OIndex_ADO::acquire();
+    sdbcx::OIndex::acquire();
 }
 
 void SAL_CALL OAdoIndex::release() throw()
 {
-    OIndex_ADO::release();
+    sdbcx::OIndex::release();
 }
-
-
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

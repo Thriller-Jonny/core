@@ -252,7 +252,7 @@ void EMFWriter::ImplWritePlusEOF()
     ImplEndCommentRecord();
 }
 
-void EMFWriter::ImplWritePlusColor( const Color& rColor, const sal_uInt32& nTrans )
+void EMFWriter::ImplWritePlusColor( const Color& rColor, sal_uInt32 nTrans )
 {
     sal_uInt32 nAlpha = ((100-nTrans)*0xFF)/100;
     sal_uInt32 nCol = rColor.GetBlue();
@@ -270,7 +270,7 @@ void EMFWriter::ImplWritePlusPoint( const Point& rPoint )
     m_rStm.WriteUInt16( aPoint.X() ).WriteUInt16( aPoint.Y() );
 }
 
-void EMFWriter::ImplWritePlusFillPolygonRecord( const tools::Polygon& rPoly, const sal_uInt32& nTrans )
+void EMFWriter::ImplWritePlusFillPolygonRecord( const tools::Polygon& rPoly, sal_uInt32 nTrans )
 {
     ImplBeginCommentRecord( WIN_EMR_COMMENT_EMFPLUS );
     if( rPoly.GetSize() )
@@ -291,10 +291,9 @@ bool EMFWriter::WriteEMF(const GDIMetaFile& rMtf)
 
     maVDev->EnableOutput( false );
     maVDev->SetMapMode( rMtf.GetPrefMapMode() );
-    // don't work with pixel as destination map mode -> higher resolution preferrable
+    // don't work with pixel as destination map mode -> higher resolution preferable
     maDestMapMode.SetMapUnit( MAP_100TH_MM );
-    mpHandlesUsed = new bool[ MAXHANDLES ];
-    memset( mpHandlesUsed, 0, MAXHANDLES * sizeof( bool ) );
+    mHandlesUsed = std::vector<bool>(MAXHANDLES, false);
     mnHandleCount = mnRecordCount = mnRecordPos = mnRecordPlusPos = 0;
     mbRecordOpen = mbRecordPlusOpen = false;
     mbLineChanged = mbFillChanged = mbTextChanged = false;
@@ -365,7 +364,7 @@ bool EMFWriter::WriteEMF(const GDIMetaFile& rMtf)
             .WriteInt32( aMtfSizeLog.Width() * 10 ).WriteInt32( aMtfSizeLog.Height() * 10 ); //use [MS-EMF 2.2.11] HeaderExtension2 Object
 
     m_rStm.Seek( nEndPos );
-    delete[] mpHandlesUsed;
+    mHandlesUsed.clear();
 
     return( m_rStm.GetError() == ERRCODE_NONE );
 }
@@ -374,11 +373,11 @@ sal_uLong EMFWriter::ImplAcquireHandle()
 {
     sal_uLong nHandle = HANDLE_INVALID;
 
-    for( sal_uLong i = 0; i < MAXHANDLES && ( HANDLE_INVALID == nHandle ); i++ )
+    for( sal_uLong i = 0; i < mHandlesUsed.size() && ( HANDLE_INVALID == nHandle ); i++ )
     {
-        if( !mpHandlesUsed[ i ] )
+        if( !mHandlesUsed[ i ] )
         {
-            mpHandlesUsed[ i ] = true;
+            mHandlesUsed[ i ] = true;
 
             if( ( nHandle = i ) == mnHandleCount )
                 mnHandleCount++;
@@ -391,8 +390,8 @@ sal_uLong EMFWriter::ImplAcquireHandle()
 
 void EMFWriter::ImplReleaseHandle( sal_uLong nHandle )
 {
-    DBG_ASSERT( nHandle && ( nHandle < MAXHANDLES ), "Handle out of range" );
-    mpHandlesUsed[ nHandle - 1 ] = false;
+    DBG_ASSERT( nHandle && ( nHandle < mHandlesUsed.size() ), "Handle out of range" );
+    mHandlesUsed[ nHandle - 1 ] = false;
 }
 
 void EMFWriter::ImplBeginRecord( sal_uInt32 nType )
@@ -504,15 +503,15 @@ void EMFWriter::ImplCheckTextAttr()
     if( mbTextChanged && ImplPrepareHandleSelect( mnTextHandle, TEXT_SELECT ) )
     {
         const vcl::Font& rFont = maVDev->GetFont();
-        OUString         aFontName( rFont.GetName() );
+        const OUString&  aFontName( rFont.GetFamilyName() );
         sal_Int32        nWeight;
         sal_uInt16       i;
         sal_uInt8        nPitchAndFamily;
 
         ImplBeginRecord( WIN_EMR_EXTCREATEFONTINDIRECTW );
         m_rStm.WriteUInt32( mnTextHandle );
-        ImplWriteExtent( -rFont.GetSize().Height() );
-        ImplWriteExtent( rFont.GetSize().Width() );
+        ImplWriteExtent( -rFont.GetFontSize().Height() );
+        ImplWriteExtent( rFont.GetFontSize().Width() );
         m_rStm.WriteInt32( rFont.GetOrientation() ).WriteInt32( rFont.GetOrientation() );
 
         switch( rFont.GetWeight() )
@@ -532,7 +531,7 @@ void EMFWriter::ImplCheckTextAttr()
 
         m_rStm.WriteInt32( nWeight );
         m_rStm.WriteUChar( ( ITALIC_NONE == rFont.GetItalic() ) ? 0 : 1 );
-        m_rStm.WriteUChar( ( UNDERLINE_NONE == rFont.GetUnderline() ) ? 0 : 1 );
+        m_rStm.WriteUChar( ( LINESTYLE_NONE == rFont.GetUnderline() ) ? 0 : 1 );
         m_rStm.WriteUChar( ( STRIKEOUT_NONE == rFont.GetStrikeout() ) ? 0 : 1 );
         m_rStm.WriteUChar( ( RTL_TEXTENCODING_SYMBOL == rFont.GetCharSet() ) ? 2 : 0 );
         m_rStm.WriteUChar( 0 ).WriteUChar( 0 ).WriteUChar( 0 );
@@ -544,7 +543,7 @@ void EMFWriter::ImplCheckTextAttr()
             default:             nPitchAndFamily = 0x00; break;
         }
 
-        switch( rFont.GetFamily() )
+        switch( rFont.GetFamilyType() )
         {
             case FAMILY_DECORATIVE: nPitchAndFamily |= 0x50; break;
             case FAMILY_MODERN:     nPitchAndFamily |= 0x30; break;
@@ -587,7 +586,7 @@ void EMFWriter::ImplCheckTextAttr()
         // TextAlign
         sal_uInt32 nTextAlign;
 
-        switch( rFont.GetAlign() )
+        switch( rFont.GetAlignment() )
         {
             case ALIGN_TOP:    nTextAlign = TA_TOP; break;
             case ALIGN_BOTTOM: nTextAlign = TA_BOTTOM; break;
@@ -1237,10 +1236,12 @@ void EMFWriter::ImplWrite( const GDIMetaFile& rMtf )
                 if( fScaleX != 1.0 || fScaleY != 1.0 )
                 {
                     aTmpMtf.Scale( fScaleX, fScaleY );
-                    aSrcPt.X() = FRound( aSrcPt.X() * fScaleX ), aSrcPt.Y() = FRound( aSrcPt.Y() * fScaleY );
+                    aSrcPt.X() = FRound( aSrcPt.X() * fScaleX );
+                    aSrcPt.Y() = FRound( aSrcPt.Y() * fScaleY );
                 }
 
-                nMoveX = aDestPt.X() - aSrcPt.X(), nMoveY = aDestPt.Y() - aSrcPt.Y();
+                nMoveX = aDestPt.X() - aSrcPt.X();
+                nMoveY = aDestPt.Y() - aSrcPt.Y();
 
                 if( nMoveX || nMoveY )
                     aTmpMtf.Move( nMoveX, nMoveY );

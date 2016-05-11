@@ -110,7 +110,7 @@ void FontSizeMenuController::setCurHeight( long nHeight, Reference< css::awt::XP
 
         if ( m_pHeightArray[i] == nHeight )
         {
-            rPopupMenu->checkItem( nItemId, sal_True );
+            rPopupMenu->checkItem( nItemId, true );
             return;
         }
 
@@ -119,7 +119,7 @@ void FontSizeMenuController::setCurHeight( long nHeight, Reference< css::awt::XP
     }
 
     if ( nChecked )
-        rPopupMenu->checkItem( nChecked, sal_False );
+        rPopupMenu->checkItem( nChecked, false );
 }
 
 // private function
@@ -152,13 +152,13 @@ void FontSizeMenuController::fillPopupMenu( Reference< css::awt::XPopupMenu >& r
         if ( !pFontList )
             pFontList.reset(new FontList( Application::GetDefaultDevice() ));
 
-        vcl::FontInfo aFntInfo = pFontList->Get( m_aFontDescriptor.Name, m_aFontDescriptor.StyleName );
+        FontMetric aFontMetric = pFontList->Get( m_aFontDescriptor.Name, m_aFontDescriptor.StyleName );
 
         // setup font size array
         delete m_pHeightArray;
 
         const sal_IntPtr* pTempAry;
-        const sal_IntPtr* pAry = pFontList->GetSizeAry( aFntInfo );
+        const sal_IntPtr* pAry = pFontList->GetSizeAry( aFontMetric );
         sal_uInt16 nSizeCount = 0;
         while ( pAry[nSizeCount] )
             nSizeCount++;

@@ -18,9 +18,6 @@
 
 
 interface TableSelection
-[
-    uuid = "BA338A41-064E-11d0-89CB-008029E4B0B1" ;
-]
 {
     SID_DELETE_PRINTAREA        [ ExecMethod = Execute; StateMethod = GetState; ]
     SID_OPENDLG_EDIT_PRINTAREA  [ ExecMethod = Execute; StateMethod = GetState; ]
@@ -32,12 +29,7 @@ interface TableSelection
         INT16   Column      SID_SC_CELLS,
         INT32   Row         FN_PARAM_1
     )
-    [
-    ]
-    UINT16 Index FID_TAB_INDEX
-    [
-        Readonly ;
-    ]
+    UINT16 Index FID_TAB_INDEX ()
     FID_PROTECT_TABLE       [ ExecMethod = Execute; StateMethod = GetState; ]
     FID_PROTECT_DOC         [ ExecMethod = Execute; StateMethod = GetState; ]
 
@@ -60,9 +52,6 @@ interface TableSelection
 
 
 interface TableDocument
-[
-    uuid = "BA338A42-064E-11d0-89CB-008029E4B0B1" ;
-]
 {
     SID_OPEN_CALC   [ ExecMethod = Execute; StateMethod = GetState; ]
     SID_SBA_IMPORT  [ ExecMethod = Execute; StateMethod = GetState; ]
@@ -78,11 +67,6 @@ interface TableDocument
     SID_PIVOT_GET       [ StateMethod = GetSbxState; ]
     SID_SC_ACTIVEOBJECT [ StateMethod = GetDrawObjState; ]
     SID_ATTR_YEAR2000   [ StateMethod = GetState; ExecMethod = Execute; ]
-    SbxObject OLEObjects
-    [
-        Readonly ;
-        IsCollection ;
-    ]
     SID_CHART_SOURCE    [ ExecMethod = Execute; ]
     SID_CHART_ADDSOURCE [ ExecMethod = Execute; ]
     FID_AUTO_CALC   [ ExecMethod = Execute; StateMethod = GetState; ]
@@ -108,9 +92,6 @@ interface TableDocument
 
 
 shell ScDocShell
-[
-    uuid ( "3F543FA0-B6A6-101B-9961-04021C007002" )
-]
 {
-        import TableDocument[Automation];
+        import TableDocument;
 }

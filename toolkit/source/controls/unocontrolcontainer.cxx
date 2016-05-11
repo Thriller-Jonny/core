@@ -90,16 +90,12 @@ public:
     inline bool         empty() const { return maControls.empty(); }
 
     /** retrieves all controls currently in the list
-        @return
-            the number of controls in the list
     */
-    size_t  getControls( uno::Sequence< uno::Reference< awt::XControl > >& _out_rControls ) const;
+    void  getControls( uno::Sequence< uno::Reference< awt::XControl > >& _out_rControls ) const;
 
     /** retrieves all identifiers of all controls currently in the list
-        @return
-            the number of controls in the list
     */
-    size_t  getIdentifiers( uno::Sequence< sal_Int32 >& _out_rIdentifiers ) const;
+    void  getIdentifiers( uno::Sequence< sal_Int32 >& _out_rIdentifiers ) const;
 
     /** returns the first control which is registered under the given name
     */
@@ -180,7 +176,7 @@ UnoControlHolderList::ControlIdentifier UnoControlHolderList::addControl( const 
 }
 
 
-size_t UnoControlHolderList::getControls( uno::Sequence< uno::Reference< awt::XControl > >& _out_rControls ) const
+void UnoControlHolderList::getControls( uno::Sequence< uno::Reference< awt::XControl > >& _out_rControls ) const
 {
     _out_rControls.realloc( maControls.size() );
     uno::Reference< awt::XControl >* pControls = _out_rControls.getArray();
@@ -189,11 +185,10 @@ size_t UnoControlHolderList::getControls( uno::Sequence< uno::Reference< awt::XC
             ++loop, ++pControls
         )
         *pControls = loop->second->getControl();
-    return maControls.size();
 }
 
 
-size_t UnoControlHolderList::getIdentifiers( uno::Sequence< sal_Int32 >& _out_rIdentifiers ) const
+void UnoControlHolderList::getIdentifiers( uno::Sequence< sal_Int32 >& _out_rIdentifiers ) const
 {
     _out_rIdentifiers.realloc( maControls.size() );
     sal_Int32* pIndentifiers = _out_rIdentifiers.getArray();
@@ -202,7 +197,6 @@ size_t UnoControlHolderList::getIdentifiers( uno::Sequence< sal_Int32 >& _out_rI
             ++loop, ++pIndentifiers
         )
         *pIndentifiers = loop->first;
-    return maControls.size();
 }
 
 
@@ -314,7 +308,7 @@ OUString UnoControlHolderList::impl_getFreeName_throw()
 void implUpdateVisibility
 (
     sal_Int32 nDialogStep,
-    uno::Reference< awt::XControlContainer > xControlContainer
+    const uno::Reference< awt::XControlContainer >& xControlContainer
 )
 {
     uno::Sequence< uno::Reference< awt::XControl > >
@@ -350,7 +344,6 @@ void implUpdateVisibility
             xWindow->setVisible( bVisible );
     }
 }
-
 
 
 //  class DialogStepChangedListener
@@ -706,7 +699,6 @@ void UnoControlContainer::removeControl( const uno::Reference< awt::XControl >& 
 }
 
 
-
 // awt::XUnoControlContainer
 void UnoControlContainer::setTabControllers( const uno::Sequence< uno::Reference< awt::XTabController > >& TabControllers ) throw(uno::RuntimeException, std::exception)
 {
@@ -756,7 +748,7 @@ void UnoControlContainer::createPeer( const uno::Reference< awt::XToolkit >& rxT
     {
         bool bVis = maComponentInfos.bVisible;
         if( bVis )
-            UnoControl::setVisible( sal_False );
+            UnoControl::setVisible( false );
 
         uno::Reference< beans::XPropertySet > xTmpPropSet
                 ( getModel(), uno::UNO_QUERY );
@@ -796,12 +788,12 @@ void UnoControlContainer::createPeer( const uno::Reference< awt::XToolkit >& rxT
 
             uno::Reference< awt::XVclContainerPeer >  xC( getPeer(), uno::UNO_QUERY );
             if ( xC.is() )
-                xC->enableDialogControl( sal_True );
+                xC->enableDialogControl( true );
             ImplActivateTabControllers();
         }
 
         if( bVis && !isDesignMode() )
-            UnoControl::setVisible( sal_True );
+            UnoControl::setVisible( true );
     }
 }
 

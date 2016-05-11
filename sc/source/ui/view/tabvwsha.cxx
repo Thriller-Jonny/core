@@ -28,6 +28,7 @@
 #include <svl/int64item.hxx>
 #include <svx/zoomslideritem.hxx>
 #include <sfx2/bindings.hxx>
+#include <sfx2/sidebar/Sidebar.hxx>
 #include <sfx2/viewfrm.hxx>
 #include <sfx2/dispatch.hxx>
 #include <sfx2/request.hxx>
@@ -36,6 +37,7 @@
 #include "global.hxx"
 #include "attrib.hxx"
 #include "patattr.hxx"
+#include "cellform.hxx"
 #include "document.hxx"
 #include "formulacell.hxx"
 #include "globstr.hrc"
@@ -65,75 +67,86 @@ bool ScTabViewShell::GetFunction( OUString& rFuncStr, sal_uInt16 nErrCode )
 {
     OUString aStr;
 
-    ScSubTotalFunc eFunc = (ScSubTotalFunc) SC_MOD()->GetAppOptions().GetStatusFunc();
+    sal_uInt32 nFuncs = SC_MOD()->GetAppOptions().GetStatusFunc();
     ScViewData& rViewData   = GetViewData();
     ScMarkData& rMark       = rViewData.GetMarkData();
     bool bIgnoreError = (rMark.IsMarked() || rMark.IsMultiMarked());
-
-    if (bIgnoreError && (eFunc == SUBTOTAL_FUNC_CNT || eFunc == SUBTOTAL_FUNC_CNT2))
-        nErrCode = 0;
-
-    if (nErrCode)
+    bool bFirst = true;
+    for ( sal_uInt16 nFunc = 0; nFunc < 32; nFunc++ )
     {
-        rFuncStr = ScGlobal::GetLongErrorString(nErrCode);
-        return true;
-    }
+        if ( !(nFuncs & (1 << nFunc)) )
+            continue;
+        ScSubTotalFunc eFunc = (ScSubTotalFunc)nFunc;
 
-    sal_uInt16 nGlobStrId = 0;
-    switch (eFunc)
-    {
-        case SUBTOTAL_FUNC_AVE:  nGlobStrId = STR_FUN_TEXT_AVG; break;
-        case SUBTOTAL_FUNC_CNT:  nGlobStrId = STR_FUN_TEXT_COUNT; break;
-        case SUBTOTAL_FUNC_CNT2: nGlobStrId = STR_FUN_TEXT_COUNT2; break;
-        case SUBTOTAL_FUNC_MAX:  nGlobStrId = STR_FUN_TEXT_MAX; break;
-        case SUBTOTAL_FUNC_MIN:  nGlobStrId = STR_FUN_TEXT_MIN; break;
-        case SUBTOTAL_FUNC_SUM:  nGlobStrId = STR_FUN_TEXT_SUM; break;
-        case SUBTOTAL_FUNC_SELECTION_COUNT: nGlobStrId = STR_FUN_TEXT_SELECTION_COUNT; break;
+        if (bIgnoreError && (eFunc == SUBTOTAL_FUNC_CNT || eFunc == SUBTOTAL_FUNC_CNT2))
+            nErrCode = 0;
 
-        default:
+        if (nErrCode)
         {
-            // added to avoid warnings
+            rFuncStr = ScGlobal::GetLongErrorString(nErrCode);
+            return true;
         }
-    }
-    if (nGlobStrId)
-    {
-        ScDocument* pDoc        = rViewData.GetDocument();
-        SCCOL       nPosX       = rViewData.GetCurX();
-        SCROW       nPosY       = rViewData.GetCurY();
-        SCTAB       nTab        = rViewData.GetTabNo();
 
-        aStr = ScGlobal::GetRscString(nGlobStrId);
-        aStr += "=";
-
-        ScAddress aCursor( nPosX, nPosY, nTab );
-        double nVal;
-        if ( pDoc->GetSelectionFunction( eFunc, aCursor, rMark, nVal ) )
+        sal_uInt16 nGlobStrId = 0;
+        switch (eFunc)
         {
-            if ( nVal == 0.0 )
-                aStr += "0";
-            else
-            {
-                // Number in the standard format, the other on the cursor position
-                SvNumberFormatter* pFormatter = pDoc->GetFormatTable();
-                sal_uInt32 nNumFmt = 0;
-                if ( eFunc != SUBTOTAL_FUNC_CNT && eFunc != SUBTOTAL_FUNC_CNT2 && eFunc != SUBTOTAL_FUNC_SELECTION_COUNT)
-                {
-                    // number format from attributes or formula
-                    pDoc->GetNumberFormat( nPosX, nPosY, nTab, nNumFmt );
-                }
+            case SUBTOTAL_FUNC_AVE:  nGlobStrId = STR_FUN_TEXT_AVG; break;
+            case SUBTOTAL_FUNC_CNT:  nGlobStrId = STR_FUN_TEXT_COUNT; break;
+            case SUBTOTAL_FUNC_CNT2: nGlobStrId = STR_FUN_TEXT_COUNT2; break;
+            case SUBTOTAL_FUNC_MAX:  nGlobStrId = STR_FUN_TEXT_MAX; break;
+            case SUBTOTAL_FUNC_MIN:  nGlobStrId = STR_FUN_TEXT_MIN; break;
+            case SUBTOTAL_FUNC_SUM:  nGlobStrId = STR_FUN_TEXT_SUM; break;
+            case SUBTOTAL_FUNC_SELECTION_COUNT: nGlobStrId = STR_FUN_TEXT_SELECTION_COUNT; break;
 
-                OUString aValStr;
-                Color* pDummy;
-                pFormatter->GetOutputString( nVal, nNumFmt, aValStr, &pDummy );
-                aStr += aValStr;
+            default:
+            {
+                // added to avoid warnings
             }
         }
+        if (nGlobStrId)
+        {
+            ScDocument* pDoc        = rViewData.GetDocument();
+            SCCOL       nPosX       = rViewData.GetCurX();
+            SCROW       nPosY       = rViewData.GetCurY();
+            SCTAB       nTab        = rViewData.GetTabNo();
 
-        rFuncStr = aStr;
-        return true;
+            aStr = ScGlobal::GetRscString(nGlobStrId);
+            aStr += ": ";
+
+            ScAddress aCursor( nPosX, nPosY, nTab );
+            double nVal;
+            if ( pDoc->GetSelectionFunction( eFunc, aCursor, rMark, nVal ) )
+            {
+                if ( nVal == 0.0 )
+                    aStr += "0";
+                else
+                {
+                    // Number in the standard format, the other on the cursor position
+                    SvNumberFormatter* pFormatter = pDoc->GetFormatTable();
+                    sal_uInt32 nNumFmt = 0;
+                    if ( eFunc != SUBTOTAL_FUNC_CNT && eFunc != SUBTOTAL_FUNC_CNT2 && eFunc != SUBTOTAL_FUNC_SELECTION_COUNT)
+                    {
+                        // number format from attributes or formula
+                        pDoc->GetNumberFormat( nPosX, nPosY, nTab, nNumFmt );
+                    }
+
+                    OUString aValStr;
+                    Color* pDummy;
+                    pFormatter->GetOutputString( nVal, nNumFmt, aValStr, &pDummy );
+                    aStr += aValStr;
+                }
+            }
+            if ( bFirst )
+            {
+                rFuncStr += aStr;
+                bFirst = false;
+            }
+            else
+                rFuncStr += ("; " + aStr);
+        }
     }
 
-    return false;
+    return !rFuncStr.isEmpty();
 }
 
 //  Functions that are disabled, depending on the selection
@@ -223,7 +236,7 @@ void ScTabViewShell::GetState( SfxItemSet& rSet )
             case SID_CURRENTCELL:
                 {
                     ScAddress aScAddress( GetViewData().GetCurX(), GetViewData().GetCurY(), 0 );
-                    OUString  aAddr(aScAddress.Format(SCA_ABS, nullptr, pDoc->GetAddressConvention()));
+                    OUString  aAddr(aScAddress.Format(ScRefFlags::ADDR_ABS, nullptr, pDoc->GetAddressConvention()));
                     SfxStringItem   aPosItem( SID_CURRENTCELL, aAddr );
 
                     rSet.Put( aPosItem );
@@ -265,7 +278,7 @@ void ScTabViewShell::GetState( SfxItemSet& rSet )
                     OUString aStyleName = pDoc->GetPageStyle( nTab );
                     ScStyleSheetPool* pStylePool = pDoc->GetStyleSheetPool();
                     SfxStyleSheetBase* pStyleSheet = pStylePool->Find( aStyleName,
-                                                    SFX_STYLE_FAMILY_PAGE );
+                                                    SfxStyleFamily::Page );
                     OSL_ENSURE( pStyleSheet, "PageStyle not found" );
                     if ( pStyleSheet )
                     {
@@ -311,6 +324,14 @@ void ScTabViewShell::GetState( SfxItemSet& rSet )
                     }
                 }
                 break;
+
+            case FID_FUNCTION_BOX:
+            {
+                const bool bBoxOpen = ::sfx2::sidebar::Sidebar::IsPanelVisible("ScFunctionsPanel",
+                                                    pThisFrame->GetFrame().GetFrameInterface());
+                rSet.Put(SfxBoolItem(nWhich, bBoxOpen));
+                break;
+            }
 
             case FID_TOGGLESYNTAX:
                 rSet.Put(SfxBoolItem(nWhich, GetViewData().IsSyntaxMode()));
@@ -605,7 +626,6 @@ void ScTabViewShell::UpdateInputHandler( bool bForce /* = sal_False */, bool bSt
         const EditTextObject*   pObject     = nullptr;
         ScViewData&             rViewData   = GetViewData();
         ScDocument*             pDoc        = rViewData.GetDocument();
-        CellType                eType;
         SCCOL                   nPosX       = rViewData.GetCurX();
         SCROW                   nPosY       = rViewData.GetCurY();
         SCTAB                   nTab        = rViewData.GetTabNo();
@@ -638,28 +658,28 @@ void ScTabViewShell::UpdateInputHandler( bool bForce /* = sal_False */, bool bSt
 
         if (!bHideAll)
         {
-            eType = pDoc->GetCellType(aPos);
-            if (eType == CELLTYPE_FORMULA)
+            ScRefCellValue rCell(*pDoc, aPos);
+            if (rCell.meType == CELLTYPE_FORMULA)
             {
                 if (!bHideFormula)
-                    pDoc->GetFormula( nPosX, nPosY, nTab, aString );
+                    rCell.mpFormula->GetFormula(aString);
             }
-            else if (eType == CELLTYPE_EDIT)
+            else if (rCell.meType == CELLTYPE_EDIT)
             {
-                pObject = pDoc->GetEditText(aPos);
+                pObject = rCell.mpEditText;
             }
             else
             {
-                pDoc->GetInputString( nPosX, nPosY, nTab, aString );
-                if (eType == CELLTYPE_STRING)
+                SvNumberFormatter* pFormatter = pDoc->GetFormatTable();
+                sal_uInt32 nNumFmt = pDoc->GetNumberFormat( aPos );
+
+                ScCellFormat::GetInputString( rCell, nNumFmt, aString, *pFormatter, pDoc );
+                if (rCell.meType == CELLTYPE_STRING)
                 {
                     // Put a ' in front if necessary, so that the string is not
                     // unintentionally interpreted as a number, and to show the
                     // user that it is a string (#35060#).
                     //! also for numberformat "Text"? -> then remove when editing
-                    SvNumberFormatter* pFormatter = pDoc->GetFormatTable();
-                    sal_uInt32 nNumFmt;
-                    pDoc->GetNumberFormat( nPosX, nPosY, nTab, nNumFmt );
                     double fDummy;
                     if ( pFormatter->IsNumberFormat(aString, nNumFmt, fDummy) )
                         aString = "'" + aString;

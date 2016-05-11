@@ -17,8 +17,6 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <com/sun/star/uno/Sequence.hxx>
-#include <com/sun/star/uno/Any.hxx>
 #include <com/sun/star/view/XRenderable.hpp>
 
 #include <hintids.hxx>
@@ -322,7 +320,7 @@ void SwViewShell::CalcPagesForPrint( sal_uInt16 nMax )
     pMyLayout->EndAllAction();
 }
 
-SwDoc * SwViewShell::FillPrtDoc( SwDoc *pPrtDoc, const SfxPrinter* pPrt)
+void SwViewShell::FillPrtDoc( SwDoc *pPrtDoc, const SfxPrinter* pPrt)
 {
     OSL_ENSURE( dynamic_cast<const SwFEShell*>( this) !=  nullptr,"SwViewShell::Prt for FEShell only");
     SwFEShell* pFESh = static_cast<SwFEShell*>(this);
@@ -346,7 +344,7 @@ SwDoc * SwViewShell::FillPrtDoc( SwDoc *pPrtDoc, const SfxPrinter* pPrt)
     //                              the PrintDoc - will be replaced!
     pPrtDoc->ReplaceStyles( *GetDoc() );
 
-    SwShellCursor *pActCursor = pFESh->_GetCursor();
+    SwShellCursor *pActCursor = pFESh->GetCursor_();
     SwShellCursor *pFirstCursor = dynamic_cast<SwShellCursor*>(pActCursor->GetNext());
     if( !pActCursor->HasMark() ) // with a multi-selection the current cursor might be empty
     {
@@ -422,7 +420,6 @@ SwDoc * SwViewShell::FillPrtDoc( SwDoc *pPrtDoc, const SfxPrinter* pPrt)
             }
         }
     }
-    return pPrtDoc;
 }
 
 // TODO: there is already a GetPageByPageNum, but it checks some physical page

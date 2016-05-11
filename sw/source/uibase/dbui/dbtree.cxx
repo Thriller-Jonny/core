@@ -61,11 +61,6 @@ using namespace ::com::sun::star::sdbcx;
 using namespace ::com::sun::star::task;
 using namespace ::com::sun::star::beans;
 
-struct SwConnectionData
-{
-    Reference<XConnection>  xConnection;
-};
-
 class SwDBTreeList_Impl : public cppu::WeakImplHelper < XContainerListener >
 {
     Reference< XDatabaseContext > m_xDatabaseContext;
@@ -86,7 +81,7 @@ class SwDBTreeList_Impl : public cppu::WeakImplHelper < XContainerListener >
     bool                        HasContext();
     SwWrtShell*                 GetWrtShell() { return m_pWrtShell;}
     void                        SetWrtShell(SwWrtShell& rSh) { m_pWrtShell = &rSh;}
-    Reference<XDatabaseContext>    GetContext() const {return m_xDatabaseContext;}
+    const Reference<XDatabaseContext>& GetContext() const {return m_xDatabaseContext;}
     Reference<XConnection>      GetConnection(const OUString& rSourceName);
 };
 
@@ -473,7 +468,6 @@ void SwDBTreeList::StartDrag( sal_Int8 /*nAction*/, const Point& /*rPosPixel*/ )
             uno::Reference< svx::OColumnTransferable > xColTransfer( new svx::OColumnTransferable(
                             sDBName,
                             OUString(),
-                            sdb::CommandType::TABLE,
                             sTableName,
                             sColumnName,
                             (ColumnTransferFormatFlags::FIELD_DESCRIPTOR|ColumnTransferFormatFlags::COLUMN_DESCRIPTOR) ) );

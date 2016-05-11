@@ -101,8 +101,7 @@ XclExpExtCfvo::XclExpExtCfvo( const XclExpRoot& rRoot, const ScColorScaleEntry& 
         OUString aFormula;
         if(pArr)
         {
-            aFormula = XclXmlUtils::ToOUString( GetCompileFormulaContext(), rSrcPos,
-                    pArr->Clone());
+            aFormula = XclXmlUtils::ToOUString( GetCompileFormulaContext(), rSrcPos, pArr);
         }
         maValue = OUStringToOString(aFormula, RTL_TEXTENCODING_UTF8 );
     }
@@ -277,6 +276,7 @@ XclExpExtCfRule::XclExpExtCfRule( const XclExpRoot& rRoot, const ScFormatEntry& 
             mxEntry.reset(new XclExpExtIconSet(*this, rIconSet, rPos));
             pType = "iconSet";
         }
+        break;
         default:
         break;
     }
@@ -430,7 +430,7 @@ void XclExpExtCondFormat::SaveXml( XclExpXmlStream& rStrm )
     rWorksheet->endElement( XML_ext );
 }
 
-void XclExpExtCondFormat::AddRecord( XclExpExtConditionalFormattingRef aEntry )
+void XclExpExtCondFormat::AddRecord( const XclExpExtConditionalFormattingRef& aEntry )
 {
     maCF.AppendRecord( aEntry );
 }
@@ -449,7 +449,7 @@ void XclExtLst::SaveXml( XclExpXmlStream& rStrm )
     rWorksheet->endElement( XML_extLst );
 }
 
-void XclExtLst::AddRecord( XclExpExtRef aEntry )
+void XclExtLst::AddRecord( const XclExpExtRef& aEntry )
 {
     maExtEntries.AppendRecord( aEntry );
 }

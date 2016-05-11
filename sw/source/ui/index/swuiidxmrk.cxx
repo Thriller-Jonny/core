@@ -27,7 +27,8 @@
 #include <com/sun/star/frame/Bibliography.hpp>
 #include <com/sun/star/i18n/TransliterationModules.hpp>
 #include <com/sun/star/i18n/IndexEntrySupplier.hpp>
-#include <com/sun/star/util/SearchOptions.hpp>
+#include <com/sun/star/util/SearchOptions2.hpp>
+#include <com/sun/star/util/SearchAlgorithms2.hpp>
 #include <com/sun/star/util/SearchFlags.hpp>
 #include <svl/stritem.hxx>
 #include <vcl/layout.hxx>
@@ -173,7 +174,7 @@ void SwIndexMarkPane::InitControls()
 {
     OSL_ENSURE(pSh && pTOXMgr, "no shell?");
     // contents index
-    const SwTOXType* pType = pTOXMgr->GetTOXType(TOX_CONTENT, 0);
+    const SwTOXType* pType = pTOXMgr->GetTOXType(TOX_CONTENT);
     OSL_ENSURE(pType, "Kein Verzeichnistyp !!");
     OUString sTmpTypeSelection;
     if(m_pTypeDCB->GetSelectEntryCount())
@@ -182,7 +183,7 @@ void SwIndexMarkPane::InitControls()
     m_pTypeDCB->InsertEntry(pType->GetTypeName());
 
     // keyword index
-    pType = pTOXMgr->GetTOXType(TOX_INDEX, 0);
+    pType = pTOXMgr->GetTOXType(TOX_INDEX);
     OSL_ENSURE(pType, "Kein Verzeichnistyp !!");
     m_pTypeDCB->InsertEntry(pType->GetTypeName());
 
@@ -193,13 +194,13 @@ void SwIndexMarkPane::InitControls()
 
     // read keywords primary
     std::vector<OUString> aArr;
-    nCount = pSh->GetTOIKeys( TOI_PRIMARY, aArr );
+    pSh->GetTOIKeys( TOI_PRIMARY, aArr );
     std::sort(aArr.begin(), aArr.end());
     for (std::vector<OUString>::iterator it = aArr.begin(); it != aArr.end(); ++it)
         m_pKey1DCB->InsertEntry( *it );
 
     // read keywords secondary
-    nCount = pSh->GetTOIKeys( TOI_SECONDARY, aArr );
+    pSh->GetTOIKeys( TOI_SECONDARY, aArr );
     std::sort(aArr.begin(), aArr.end());
     for (std::vector<OUString>::iterator it = aArr.begin(); it != aArr.end(); ++it)
         m_pKey2DCB->InsertEntry( *it );
@@ -221,11 +222,17 @@ void SwIndexMarkPane::InitControls()
 
         pMoveMark = &pSh->GotoTOXMark( *pMark, TOX_PRV );
         if( pMoveMark != pMark )
-            pSh->GotoTOXMark( *pMoveMark, TOX_NXT ), bShow = true;
+        {
+            pSh->GotoTOXMark( *pMoveMark, TOX_NXT );
+            bShow = true;
+        }
         m_pPrevBT->Enable( pMoveMark != pMark );
         pMoveMark = &pSh->GotoTOXMark( *pMark, TOX_NXT );
         if( pMoveMark != pMark )
-            pSh->GotoTOXMark( *pMoveMark, TOX_PRV ), bShow = true;
+        {
+            pSh->GotoTOXMark( *pMoveMark, TOX_PRV );
+            bShow = true;
+        }
         m_pNextBT->Enable( pMoveMark != pMark );
         if( bShow )
         {
@@ -236,11 +243,17 @@ void SwIndexMarkPane::InitControls()
 
         pMoveMark = &pSh->GotoTOXMark( *pMark, TOX_SAME_PRV );
         if( pMoveMark != pMark )
-            pSh->GotoTOXMark( *pMoveMark, TOX_SAME_NXT ), bShow = true;
+        {
+            pSh->GotoTOXMark( *pMoveMark, TOX_SAME_NXT );
+            bShow = true;
+        }
         m_pPrevSameBT->Enable( pMoveMark != pMark );
         pMoveMark = &pSh->GotoTOXMark( *pMark, TOX_SAME_NXT );
         if( pMoveMark != pMark )
-            pSh->GotoTOXMark( *pMoveMark, TOX_SAME_PRV ), bShow = true;
+        {
+            pSh->GotoTOXMark( *pMoveMark, TOX_SAME_PRV );
+            bShow = true;
+        }
         m_pNextSameBT->Enable( pMoveMark != pMark );
         if( bShow )
         {
@@ -415,7 +428,7 @@ static void lcl_SelectSameStrings(SwWrtShell& rSh, bool bWordOnly, bool bCaseSen
 {
     rSh.Push();
 
-    SearchOptions aSearchOpt(
+    SearchOptions2 aSearchOpt(
                         SearchAlgorithms_ABSOLUTE,
                         ( bWordOnly ? SearchFlags::NORM_WORD_ONLY : 0 ),
                         rSh.GetSelText(), OUString(),
@@ -423,7 +436,9 @@ static void lcl_SelectSameStrings(SwWrtShell& rSh, bool bWordOnly, bool bCaseSen
                         0, 0, 0,
                         (bCaseSensitive
                             ? 0
-                            : static_cast<int>(TransliterationModules_IGNORE_CASE)) );
+                            : static_cast<int>(TransliterationModules_IGNORE_CASE)),
+                        SearchAlgorithms2::ABSOLUTE,
+                        '\\' );
 
     rSh.ClearMark();
     bool bCancel;

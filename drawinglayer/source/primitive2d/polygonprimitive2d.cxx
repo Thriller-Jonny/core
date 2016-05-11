@@ -87,7 +87,6 @@ namespace drawinglayer
 } // end of namespace drawinglayer
 
 
-
 namespace drawinglayer
 {
     namespace primitive2d
@@ -253,6 +252,7 @@ namespace drawinglayer
                     const basegfx::B2DLineJoin aLineJoin(getLineAttribute().getLineJoin());
                     const css::drawing::LineCap aLineCap(getLineAttribute().getLineCap());
                     basegfx::B2DPolyPolygon aAreaPolyPolygon;
+                    const double fMiterMinimumAngle(getLineAttribute().getMiterMinimumAngle());
 
                     for(sal_uInt32 a(0L); a < nCount; a++)
                     {
@@ -261,7 +261,10 @@ namespace drawinglayer
                             aHairLinePolyPolygon.getB2DPolygon(a),
                             fHalfLineWidth,
                             aLineJoin,
-                            aLineCap));
+                            aLineCap,
+                            12.5 * F_PI180 /* default fMaxAllowedAngle*/ ,
+                            0.4 /* default fMaxPartOfEdge*/ ,
+                            fMiterMinimumAngle));
                     }
 
                     // prepare return value
@@ -357,7 +360,7 @@ namespace drawinglayer
                     // range by half line width will not work, so use decomposition. Interestingly,
                     // the grow method below works perfectly for LineCap_ROUND since the grow is in
                     // all directions and the rounded cap needs the same grow in all directions independent
-                    // from it's orientation. Unfortunately this is not the case for drawing::LineCap_SQUARE
+                    // from its orientation. Unfortunately this is not the case for drawing::LineCap_SQUARE
                     bUseDecomposition = true;
                 }
 
@@ -401,7 +404,6 @@ namespace drawinglayer
 
     } // end of namespace primitive2d
 } // end of namespace drawinglayer
-
 
 
 namespace drawinglayer
@@ -514,7 +516,6 @@ namespace drawinglayer
 
     } // end of namespace primitive2d
 } // end of namespace drawinglayer
-
 
 
 namespace drawinglayer

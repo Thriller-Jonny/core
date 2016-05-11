@@ -20,9 +20,18 @@
 #ifndef INCLUDED_OOX_HELPER_BINARYINPUTSTREAM_HXX
 #define INCLUDED_OOX_HELPER_BINARYINPUTSTREAM_HXX
 
+#include <cstddef>
+#include <memory>
 #include <vector>
-#include <com/sun/star/io/XInputStream.hpp>
+
+#include <com/sun/star/uno/Reference.hxx>
+#include <oox/dllapi.h>
 #include <oox/helper/binarystreambase.hxx>
+#include <oox/helper/helper.hxx>
+#include <rtl/string.hxx>
+#include <rtl/textenc.h>
+#include <rtl/ustring.hxx>
+#include <sal/types.h>
 
 namespace com { namespace sun { namespace star {
     namespace io { class XInputStream; }
@@ -31,7 +40,6 @@ namespace com { namespace sun { namespace star {
 namespace oox {
 
 class BinaryOutputStream;
-
 
 
 /** Interface for binary input stream classes.
@@ -187,14 +195,21 @@ public:
      */
     OUString     readCompressedUnicodeArray( sal_Int32 nChars, bool bCompressed, bool bAllowNulChars = false );
 
-    /** Copies nBytes bytes from the current position to the passed output stream.
+    /** Copies bytes from the current position to the passed output stream.
      */
-    void         copyToStream( BinaryOutputStream& rOutStrm, sal_Int64 nBytes = SAL_MAX_INT64, sal_Int32 nAtomSize = 1 );
+    void         copyToStream( BinaryOutputStream& rOutStrm );
 
 protected:
     /** This dummy default c'tor will never call the c'tor of the virtual base
         class BinaryStreamBase as this class cannot be instantiated directly. */
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning( disable : 4702)
+#endif
     BinaryInputStream() : BinaryStreamBase( false ) {}
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 private:
     BinaryInputStream( BinaryInputStream const& ) = delete;
@@ -204,11 +219,10 @@ private:
 typedef std::shared_ptr< BinaryInputStream > BinaryInputStreamRef;
 
 
-
 template< typename Type >
 Type BinaryInputStream::readValue()
 {
-    Type ornValue;
+    Type ornValue = Type();
     readMemory( &ornValue, static_cast< sal_Int32 >( sizeof( Type ) ), sizeof( Type ) );
     ByteOrderConverter::convertLittleEndian( ornValue );
     return ornValue;
@@ -233,7 +247,6 @@ sal_Int32 BinaryInputStream::readArray( ::std::vector< Type >& orVector, sal_Int
     orVector.resize( static_cast< size_t >( nElemCount ) );
     return orVector.empty() ? 0 : readArray( &orVector.front(), nElemCount );
 }
-
 
 
 /** Wraps a UNO input stream and provides convenient access functions.
@@ -283,7 +296,6 @@ private:
 };
 
 
-
 /** Wraps a StreamDataSequence and provides convenient access functions.
 
     The binary data in the stream is assumed to be in little-endian format.
@@ -317,7 +329,6 @@ private:
     sal_Int32    getMaxBytes( sal_Int32 nBytes ) const
                             { return getLimitedValue< sal_Int32, sal_Int32 >( nBytes, 0, mpData->getLength() - mnPos ); }
 };
-
 
 
 /** Wraps a BinaryInputStream and provides access to a specific part of the
@@ -384,7 +395,6 @@ private:
     sal_Int64           mnRelPos;
     sal_Int64           mnSize;
 };
-
 
 
 } // namespace oox

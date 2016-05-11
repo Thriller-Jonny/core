@@ -17,9 +17,9 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include "vcl/printerinfomanager.hxx"
+#include <vcl/printerinfomanager.hxx>
 
-#include "generic/gendata.hxx"
+#include "unx/gendata.hxx"
 
 using namespace psp;
 using namespace osl;
@@ -129,21 +129,6 @@ void PrinterInfoManager::setupJobContextData( JobData& /* rData */ )
 void PrinterInfoManager::setDefaultPaper( PPDContext& /* rContext */ ) const
 {
 
-}
-
-bool PrinterInfoManager::startBatchPrint()
-{
-    return false;
-}
-
-bool PrinterInfoManager::flushBatchPrint()
-{
-    return false;
-}
-
-bool PrinterInfoManager::supportsBatchPrint() const
-{
-    return false;
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

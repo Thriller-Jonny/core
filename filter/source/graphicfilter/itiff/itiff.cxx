@@ -21,7 +21,7 @@
 
 #include <vcl/FilterConfigItem.hxx>
 #include <vcl/graph.hxx>
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 #include <vcl/animate.hxx>
 #include <tools/fract.hxx>
 #include "lzwdecom.hxx"
@@ -345,7 +345,7 @@ void TIFFReader::ReadTagData( sal_uInt16 nTagType, sal_uInt32 nDataLen)
             SAL_INFO("filter.tiff","Compression: " << nCompression);
             break;
 
-        case 0x0106:   // Photometric Interpreation
+        case 0x0106:   // Photometric Interpretation
             nPhotometricInterpretation = ReadIntData();
             SAL_INFO("filter.tiff","PhotometricInterpretation: " << nPhotometricInterpretation);
             break;
@@ -535,7 +535,6 @@ void TIFFReader::ReadTagData( sal_uInt16 nTagType, sal_uInt32 nDataLen)
     if ( pTIFF->GetError() )
         bStatus = false;
 }
-
 
 
 bool TIFFReader::ReadMap()
@@ -785,7 +784,6 @@ sal_uLong TIFFReader::GetBits( const sal_uInt8 * pSrc, sal_uLong nBitsPos, sal_u
     }
     return nRes;
 }
-
 
 
 bool TIFFReader::ConvertScanline(sal_Int32 nY)
@@ -1092,7 +1090,6 @@ bool TIFFReader::ConvertScanline(sal_Int32 nY)
 }
 
 
-
 void TIFFReader::MakePalCol()
 {
     if ( nDstBitsPerPixel <= 8 )
@@ -1143,7 +1140,6 @@ void TIFFReader::MakePalCol()
 }
 
 
-
 void TIFFReader::ReadHeader()
 {
     sal_uInt8 nbyte1(0), nbyte2(0);
@@ -1171,7 +1167,6 @@ bool TIFFReader::HasAlphaChannel() const
              nPhotometricInterpretation == 2
            );
 }
-
 
 
 bool TIFFReader::ReadTIFF(SvStream & rTIFF, Graphic & rGraphic )
@@ -1374,15 +1369,15 @@ bool TIFFReader::ReadTIFF(SvStream & rTIFF, Graphic & rGraphic )
                     {
                         nBytesPerRow = ( nImageWidth * nSamplesPerPixel / nPlanes * nBitsPerSample + 7 ) >> 3;
 
-                        for ( sal_uLong j = 0; j < 4; j++ )
+                        for (sal_uInt8*& j : pMap)
                         {
                             try
                             {
-                                pMap[ j ] = new sal_uInt8[ nBytesPerRow ];
+                                j = new sal_uInt8[ nBytesPerRow ];
                             }
                             catch (const std::bad_alloc &)
                             {
-                                pMap[ j ] = nullptr;
+                                j = nullptr;
                                 bStatus = false;
                                 break;
                             }

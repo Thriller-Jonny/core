@@ -42,7 +42,6 @@ namespace dbaui
 {
 
 
-
     //= DBSubComponentController
 
     class DBSubComponentController;
@@ -77,7 +76,6 @@ namespace dbaui
         virtual void     impl_onModifyChanged();
 
     public:
-
         bool            isReadOnly()            const;
         bool            isEditable()            const;
         void            setEditable(bool _bEditable);
@@ -106,11 +104,7 @@ namespace dbaui
 
         /** appends an error in the current environment.
         */
-        void appendError(
-                        const OUString& _rErrorMessage,
-                        const ::dbtools::StandardSQLState _eSQLState = ::dbtools::SQL_GENERAL_ERROR,
-                        const sal_Int32 _nErrorCode = 1000
-                     );
+        void appendError( const OUString& _rErrorMessage );
 
         /** clears the error state.
         */
@@ -168,7 +162,10 @@ namespace dbaui
 
         void                disconnect();
         virtual void        reconnect( bool _bUI );
-                bool        ensureConnected( bool _bUI )    { if ( !isConnected() ) reconnect( _bUI ); return isConnected(); }
+                bool        ensureConnected() {
+                    if ( !isConnected() ) reconnect( false );
+                    return isConnected();
+                }
 
         /** called when our connection is being disposed
             <p>The default implementation does a reconnect</p>
@@ -190,9 +187,6 @@ namespace dbaui
 
     protected:
         sal_Int32 getCurrentStartNumber() const;
-
-    private:
-        DBSubComponentController();    // never implemented
     };
 
 

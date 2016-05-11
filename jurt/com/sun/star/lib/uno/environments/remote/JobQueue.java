@@ -1,3 +1,4 @@
+/* -*- Mode: Java; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /*
  * This file is part of the LibreOffice project.
  *
@@ -31,7 +32,7 @@ import com.sun.star.lang.DisposedException;
  * (put by <code>putjob</code>) into the async queue, which is only
  * known by the sync queue.</p>
  *
- * @see         com.sun.star.lib.uno.environments.remote.ThreadPool
+ * @see         com.sun.star.lib.uno.environments.remote.IThreadPool
  * @see         com.sun.star.lib.uno.environments.remote.Job
  * @see         com.sun.star.lib.uno.environments.remote.ThreadId
  * @since       UDK1.0
@@ -360,7 +361,7 @@ public class JobQueue {
     }
 
     /**
-     * If the given disposeId is registered, interrups the worker thread.
+     * If the given disposeId is registered, interrupts the worker thread.
      *
      * @param disposeId    the dispose id.
      */
@@ -377,3 +378,4 @@ public class JobQueue {
     }
 }
 
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

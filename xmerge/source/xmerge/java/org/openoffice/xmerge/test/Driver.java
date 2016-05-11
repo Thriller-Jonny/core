@@ -100,6 +100,15 @@ public final class Driver {
         }
     }
 
+    private static void close(FileOutputStream c) {
+        if (c == null) return;
+        try {
+            c.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     /**
      * Gets a {@code Convert} object using the {@code ConverterFactory} and does
      * the conversion using this object.
@@ -153,15 +162,17 @@ public final class Driver {
                 while (docEnum.hasNext()) {
                     Document docOut      = (Document)docEnum.next();
                     String fileName      = docOut.getFileName();
+                    FileOutputStream fos = null;
                     try {
-                        FileOutputStream fos = new FileOutputStream(fileName);
+                        fos = new FileOutputStream(fileName);
                         docOut.write(fos);
                         fos.flush();
-                        fos.close();
                     } catch (Exception writeExcept) {
                         System.out.println("\nThere was an writing out file <" +
                             fileName + ">");
                         writeExcept.printStackTrace();
+                    } finally {
+                        close(fos);
                     }
                 }
             } else {
@@ -173,12 +184,16 @@ public final class Driver {
                     Document convertedFile = (Document)mergeDocEnum.next();
 
                     merger.merge(convertedFile);
-              mergeIS.close();
+                    mergeIS.close();
 
-                    FileOutputStream fos = new FileOutputStream(mergeFile);
-                    mergeDoc.write(fos);
-                    fos.flush();
-                    fos.close();
+                    FileOutputStream fos = null;
+                    try {
+                        fos = new FileOutputStream(mergeFile);
+                        mergeDoc.write(fos);
+                        fos.flush();
+                    } finally {
+                        close(fos);
+                    }
                 } catch (Exception mergeExcept) {
                     System.out.println("\nThere was an error in the merge");
                     mergeExcept.printStackTrace();

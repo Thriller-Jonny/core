@@ -305,7 +305,7 @@ public class ParcelContainer implements XNameAccess {
 
     public String getParcelContainerDir() {
         // If this container does not represent an uno-package
-        // then then it is a document, user or share
+        // then it is a document, user or share
         // in each case the convention is to have a Scripts/[language]
         // dir where scripts reside
         if (!isUnoPkg()) {
@@ -644,7 +644,7 @@ public class ParcelContainer implements XNameAccess {
         com.sun.star.lang.WrappedTargetException {
 
         Parcel p = (Parcel)getByName(parsedUri.parcel);
-        ScriptMetaData scriptData = (ScriptMetaData)p.getByName(parsedUri.function);
+        ScriptMetaData scriptData = p.getByName(parsedUri.function);
 
         LogUtils.DEBUG("** found script data for " +  parsedUri.function + " script is "
                        + scriptData);

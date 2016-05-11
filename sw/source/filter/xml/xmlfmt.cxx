@@ -362,31 +362,23 @@ SvXMLImportContext *SwXMLTextStyleContext_Impl::CreateChildContext(
 void SwXMLTextStyleContext_Impl::Finish( bool bOverwrite )
 {
     XMLTextStyleContext::Finish( bOverwrite );
-
-    if( !pConditions || XML_STYLE_FAMILY_TEXT_PARAGRAPH != GetFamily() )
+    if(!pConditions || XML_STYLE_FAMILY_TEXT_PARAGRAPH != GetFamily())
         return;
-
-    uno::Reference < style::XStyle > xStyle = GetStyle();
-    if( !xStyle.is() )
+    uno::Reference<style::XStyle> xStyle = GetStyle();
+    if(!xStyle.is())
         return;
-
-    const SwXStyle* pStyle = nullptr;
-    uno::Reference<lang::XUnoTunnel> xStyleTunnel( xStyle, uno::UNO_QUERY);
-    if( xStyleTunnel.is() )
-    {
-        pStyle = reinterpret_cast< SwXStyle * >(
-                sal::static_int_cast< sal_IntPtr >( xStyleTunnel->getSomething( SwXStyle::getUnoTunnelId() )));
-    }
-    if( !pStyle )
+    uno::Reference<lang::XUnoTunnel> xStyleTunnel(xStyle, uno::UNO_QUERY);
+    if(!xStyleTunnel.is())
         return;
-
-    const SwDoc *pDoc = pStyle->GetDoc();
-
-    SwTextFormatColl *pColl = pDoc->FindTextFormatCollByName( pStyle->GetStyleName() );
+    sw::ICoreParagraphStyle* pCoreParagraphStyle(reinterpret_cast<sw::ICoreParagraphStyle*>(
+            xStyleTunnel->getSomething(sw::ICoreParagraphStyle::getUnoTunnelId())));
+    if(!pCoreParagraphStyle)
+        return;
+    SwTextFormatColl* pColl = const_cast<SwTextFormatColl*>(pCoreParagraphStyle->GetFormatColl());
     OSL_ENSURE( pColl, "Text collection not found" );
     if( !pColl || RES_CONDTXTFMTCOLL != pColl->Which() )
         return;
-
+    SwDoc *pDoc = SwImport::GetDocFromXMLImport(GetImport());
     const size_t nCount = pConditions->size();
     OUString sName;
     for( size_t i = 0; i < nCount; i++ )
@@ -726,7 +718,7 @@ public:
 
 
     SwXMLStylesContext_Impl(
-            SwXMLImport& rImport, sal_uInt16 nPrfx,
+            SwXMLImport& rImport,
             const OUString& rLName ,
             const uno::Reference< xml::sax::XAttributeList > & xAttrList,
             bool bAuto );
@@ -806,10 +798,10 @@ SvXMLStyleContext *SwXMLStylesContext_Impl::CreateDefaultStyleStyleChildContext(
 }
 
 SwXMLStylesContext_Impl::SwXMLStylesContext_Impl(
-        SwXMLImport& rImport, sal_uInt16 nPrfx, const OUString& rLName,
+        SwXMLImport& rImport, const OUString& rLName,
         const uno::Reference< xml::sax::XAttributeList > & xAttrList,
         bool bAuto ) :
-    SvXMLStylesContext( rImport, nPrfx, rLName, xAttrList, bAuto )
+    SvXMLStylesContext( rImport, XML_NAMESPACE_OFFICE, rLName, xAttrList, bAuto )
 {
 }
 
@@ -820,22 +812,22 @@ SwXMLStylesContext_Impl::~SwXMLStylesContext_Impl()
 bool SwXMLStylesContext_Impl::InsertStyleFamily( sal_uInt16 nFamily ) const
 {
     const SwXMLImport& rSwImport = GetSwImport();
-    const sal_uInt16 nStyleFamilyMask = rSwImport.GetStyleFamilyMask();
+    const SfxStyleFamily nStyleFamilyMask = rSwImport.GetStyleFamilyMask();
 
     bool bIns = true;
     switch( nFamily )
     {
     case XML_STYLE_FAMILY_TEXT_PARAGRAPH:
-        bIns = (nStyleFamilyMask & SFX_STYLE_FAMILY_PARA) != 0;
+        bIns = bool(nStyleFamilyMask & SfxStyleFamily::Para);
         break;
     case XML_STYLE_FAMILY_TEXT_TEXT:
-        bIns = (nStyleFamilyMask & SFX_STYLE_FAMILY_CHAR) != 0;
+        bIns = bool(nStyleFamilyMask & SfxStyleFamily::Char);
         break;
     case XML_STYLE_FAMILY_SD_GRAPHICS_ID:
-        bIns = (nStyleFamilyMask & SFX_STYLE_FAMILY_FRAME) != 0;
+        bIns = bool(nStyleFamilyMask & SfxStyleFamily::Frame);
         break;
     case XML_STYLE_FAMILY_TEXT_LIST:
-        bIns = (nStyleFamilyMask & SFX_STYLE_FAMILY_PSEUDO) != 0;
+        bIns = bool(nStyleFamilyMask & SfxStyleFamily::Pseudo);
         break;
     case XML_STYLE_FAMILY_TEXT_OUTLINE:
     case XML_STYLE_FAMILY_TEXT_FOOTNOTECONFIG:
@@ -906,7 +898,7 @@ public:
 
 
     SwXMLMasterStylesContext_Impl(
-            SwXMLImport& rImport, sal_uInt16 nPrfx,
+            SwXMLImport& rImport,
             const OUString& rLName ,
             const uno::Reference< xml::sax::XAttributeList > & xAttrList );
     virtual ~SwXMLMasterStylesContext_Impl();
@@ -915,10 +907,10 @@ public:
 
 
 SwXMLMasterStylesContext_Impl::SwXMLMasterStylesContext_Impl(
-        SwXMLImport& rImport, sal_uInt16 nPrfx,
+        SwXMLImport& rImport,
         const OUString& rLName ,
         const uno::Reference< xml::sax::XAttributeList > & xAttrList ) :
-    XMLTextMasterStylesContext( rImport, nPrfx, rLName, xAttrList )
+    XMLTextMasterStylesContext( rImport, XML_NAMESPACE_OFFICE, rLName, xAttrList )
 {
 }
 
@@ -931,9 +923,9 @@ bool SwXMLMasterStylesContext_Impl::InsertStyleFamily( sal_uInt16 nFamily ) cons
     bool bIns;
 
     const SwXMLImport& rSwImport = GetSwImport();
-    const sal_uInt16 nStyleFamilyMask = rSwImport.GetStyleFamilyMask();
+    const SfxStyleFamily nStyleFamilyMask = rSwImport.GetStyleFamilyMask();
     if( XML_STYLE_FAMILY_MASTER_PAGE == nFamily )
-        bIns = (nStyleFamilyMask & SFX_STYLE_FAMILY_PAGE) != 0;
+        bIns = bool(nStyleFamilyMask & SfxStyleFamily::Page);
     else
         bIns = XMLTextMasterStylesContext::InsertStyleFamily( nFamily );
 
@@ -952,7 +944,7 @@ SvXMLImportContext *SwXMLImport::CreateStylesContext(
         bool bAuto )
 {
     SvXMLStylesContext *pContext =
-        new SwXMLStylesContext_Impl( *this, XML_NAMESPACE_OFFICE, rLocalName,
+        new SwXMLStylesContext_Impl( *this, rLocalName,
                                        xAttrList, bAuto );
     if( bAuto )
         SetAutoStyles( pContext );
@@ -967,8 +959,7 @@ SvXMLImportContext *SwXMLImport::CreateMasterStylesContext(
         const uno::Reference< xml::sax::XAttributeList > & xAttrList )
 {
     SvXMLStylesContext *pContext =
-        new SwXMLMasterStylesContext_Impl( *this, XML_NAMESPACE_OFFICE, rLocalName,
-                                          xAttrList );
+        new SwXMLMasterStylesContext_Impl( *this, rLocalName, xAttrList );
     SetMasterStyles( pContext );
 
     return pContext;

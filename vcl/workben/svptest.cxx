@@ -32,7 +32,7 @@
 #include <vcl/gradient.hxx>
 #include <vcl/lineinfo.hxx>
 #include <vcl/bitmap.hxx>
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 #include <vcl/metric.hxx>
 #include <vcl/vclptr.hxx>
 
@@ -256,8 +256,8 @@ void MyWin::Paint(vcl::RenderContext& rRenderContext, const Rectangle& rRect)
     for (int i = 0; i < nFontSamples; ++i)
     {
 
-        vcl::FontInfo aFont = rRenderContext.GetDevFont((i * nFontCount) / nFontSamples);
-        aFont.SetHeight(400 + (i % 7) * 100);
+        FontMetric aFont = rRenderContext.GetDevFont((i * nFontCount) / nFontSamples);
+        aFont.SetFontHeight(400 + (i % 7) * 100);
         aFont.SetOrientation(i * (3600 / nFontSamples));
         rRenderContext.SetFont(aFont);
 

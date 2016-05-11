@@ -81,7 +81,6 @@ REG_DLLPUBLIC Registry_Api* REGISTRY_CALLTYPE initRegistry_Api();
 class RegistryKey;
 
 
-
 /** The Registry provides the functionality to read and write information in a registry file.
 
     The class is implemented inline and use a C-Api.
@@ -93,7 +92,7 @@ public:
      */
     inline Registry();
 
-    /// Copy constructcor
+    /// Copy constructor
     inline Registry(const Registry& toCopy);
 
     /// Destructor. The Destructor close the registry if it is open.
@@ -144,7 +143,7 @@ public:
     /** destroys a registry.
 
         @param registryName specifies a registry name, if the name is an empty string the registry
-                            itselfs will be destroyed.
+                            itself will be destroyed.
         @return RegError::NO_ERROR if succeeds else an error code.
     */
     inline RegError destroy(const rtl::OUString& registryName);
@@ -183,8 +182,6 @@ protected:
     /// stores the handle of the underlying registry file on which most of the functions work.
     RegHandle                                    m_hImpl;
 };
-
-
 
 
 /** RegistryKeyArray represents an array of open keys.
@@ -263,7 +260,6 @@ protected:
 };
 
 
-
 /** RegistryValueList represents a value list of the specified type.
 
     RegistryValueList is a helper class to work with a list value.
@@ -335,7 +331,6 @@ protected:
     */
     Registry        m_registry;
 };
-
 
 
 /** RegistryKey reads or writes information of the underlying key in a registry.
@@ -563,12 +558,10 @@ public:
 
         @param[in]  keyName specifies the name of the key which will be resolved relative to this key.
                         The resolved name will be prefixed with the name of this key.
-        @param[in]  firstLinkOnly ignored
         @param[out] rResolvedName the resolved name.
         @return RegError::NO_ERROR if succeeds else an error code.
      */
     inline RegError getResolvedKeyName(const rtl::OUString& keyName,
-                                       bool firstLinkOnly,
                                            rtl::OUString& rResolvedName) const;
 
     /// returns the name of the registry in which the key is defined.
@@ -597,8 +590,6 @@ protected:
     /// stores the current key handle of this key
     RegKeyHandle    m_hImpl;
 };
-
-
 
 
 inline RegistryKeyArray::RegistryKeyArray()
@@ -835,7 +826,8 @@ inline void RegistryKey::releaseKey()
 {
     if (m_registry.isValid() && (m_hImpl != nullptr))
     {
-        m_registry.m_pApi->releaseKey(m_hImpl), m_hImpl = nullptr;
+        m_registry.m_pApi->releaseKey(m_hImpl);
+        m_hImpl = nullptr;
     }
 }
 
@@ -1000,13 +992,12 @@ inline RegError RegistryKey::getLinkTarget(const rtl::OUString& ,
 
 
 inline RegError RegistryKey::getResolvedKeyName(const rtl::OUString& keyName,
-                                                bool firstLinkOnly,
-                                                       rtl::OUString& rResolvedName) const
+                                                      rtl::OUString& rResolvedName) const
     {
         if (m_registry.isValid())
             return m_registry.m_pApi->getResolvedKeyName(m_hImpl,
                                                          keyName.pData,
-                                                         firstLinkOnly,
+                                                         true,
                                                          &rResolvedName.pData);
         else
             return RegError::INVALID_KEY;
@@ -1020,7 +1011,6 @@ inline rtl::OUString RegistryKey::getRegistryName()
         } else
             return rtl::OUString();
     }
-
 
 
 inline Registry::Registry()

@@ -29,7 +29,6 @@
 #include <com/sun/star/beans/PropertyValue.hpp>
 
 
-
 using namespace cppu;
 using namespace com::sun::star;
 using namespace com::sun::star::uno;
@@ -53,7 +52,7 @@ XInteractionRequestImpl::XInteractionRequestImpl(
 {
     if( pShell )
         pShell->retrieveError(CommandId,m_nErrorCode,m_nMinorError);
-    uno::Sequence<uno::Reference<task::XInteractionContinuation>> continuations{
+    std::vector<uno::Reference<task::XInteractionContinuation>> continuations{
         Reference<XInteractionContinuation>(p1),
         Reference<XInteractionContinuation>(p2) };
     Any aAny;

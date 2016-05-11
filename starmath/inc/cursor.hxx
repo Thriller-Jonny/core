@@ -12,6 +12,7 @@
 #include "node.hxx"
 #include "caret.hxx"
 
+#include <cassert>
 #include <list>
 #include <memory>
 
@@ -97,7 +98,7 @@ public:
     }
 
     /** Get position */
-    SmCaretPos GetPosition() const { return mpPosition->CaretPos; }
+    const SmCaretPos& GetPosition() const { return mpPosition->CaretPos; }
 
     /** True, if the cursor has a selection */
     bool HasSelection() { return mpAnchor != mpPosition; }
@@ -163,11 +164,11 @@ public:
      * This method only work if the caret is inside an SmOperNode, or to the right of one.
      * Notice also that this method ignores any selection made.
      *
-     * @param bMoveCaret If true that caret will be moved into the limit.
+     * The caret will be moved into the limit.
      *
      * @returns True, if the caret was in a context where this operation was possible.
      */
-    bool InsertLimit(SmSubSup eSubSup, bool bMoveCaret = true);
+    bool InsertLimit(SmSubSup eSubSup);
 
     /** Insert a new row or newline
      *
@@ -216,7 +217,7 @@ public:
     void Draw(OutputDevice& pDev, Point Offset, bool isCaretVisible);
 
     bool IsAtTailOfBracket(SmBracketType eBracketType, SmBraceNode** ppBraceNode = nullptr) const;
-    void MoveAfterBracket(SmBraceNode* pBraceNode, bool bMoveAnchor = true);
+    void MoveAfterBracket(SmBraceNode* pBraceNode);
 
 private:
     friend class SmDocShell;
@@ -268,8 +269,8 @@ private:
         SmNode* pNode = rpNode;
         if(rpNode && rpNode->GetParent()){    //Don't remove this, correctness relies on it
             int index = rpNode->GetParent()->IndexOfSubNode(rpNode);
-            if(index != -1)
-                rpNode->GetParent()->SetSubNode(index, nullptr);
+            assert(index >= 0);
+            rpNode->GetParent()->SetSubNode(index, nullptr);
         }
         rpNode = nullptr;
         //Create line from node
@@ -298,7 +299,7 @@ private:
      *
      * @returns false on failure to find the position in pGraph.
      */
-    bool SetCaretPosition(SmCaretPos pos, bool moveAnchor = false);
+    bool SetCaretPosition(SmCaretPos pos);
 
     /** Set selected on nodes of the tree */
     void AnnotateSelection();
@@ -328,7 +329,7 @@ private:
     /** Patch a line list after modification, merge SmTextNode, remove SmPlaceNode etc.
      *
      * @param pLineList The line list to patch
-     * @param aIter     Iterator pointing to the element that needs to be patched with it's previous.
+     * @param aIter     Iterator pointing to the element that needs to be patched with its previous.
      *
      * When the list is patched text nodes before and after aIter will be merged.
      * If there's an, in the context, inappropriate SmPlaceNode before or after aIter it will also be
@@ -413,11 +414,11 @@ public:
     SmNodeListParser(){
         pList = nullptr;
     }
-    /** Parse a list of nodes to an expression
+    /** Parse a list of nodes to an expression.
      *
-     * If bDeleteErrorNodes is true, old error nodes will be deleted.
+     * Old error nodes will be deleted.
      */
-    SmNode* Parse(SmNodeList* list, bool bDeleteErrorNodes = true);
+    SmNode* Parse(SmNodeList* list);
     /** True, if the token is an operator */
     static bool IsOperator(const SmToken &token);
     /** True, if the token is a relation operator */

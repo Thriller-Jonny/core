@@ -97,12 +97,8 @@ static CDE_RESULT cmpDicEntry_Impl( const OUString &rText1, const OUString &rTex
 
 // class SvxNewDictionaryDialog -------------------------------------------
 
-SvxNewDictionaryDialog::SvxNewDictionaryDialog( vcl::Window* pParent,
-        Reference< XSpellChecker1 >  &xSpl ) :
-
-    ModalDialog( pParent, "OptNewDictionaryDialog" , "cui/ui/optnewdictionarydialog.ui" ),
-
-    xSpell( xSpl )
+SvxNewDictionaryDialog::SvxNewDictionaryDialog( vcl::Window* pParent ) :
+    ModalDialog( pParent, "OptNewDictionaryDialog" , "cui/ui/optnewdictionarydialog.ui" )
 {
     get(pNameEdit,"nameedit");
     get(pLanguageLB,"language");
@@ -173,7 +169,7 @@ IMPL_LINK_NOARG_TYPED(SvxNewDictionaryDialog, OKHdl_Impl, Button*, void)
             lang::Locale aLocale( LanguageTag::convertToLocale(nLang) );
             OUString aURL( linguistic::GetWritableDictionaryURL( sDict ) );
             xNewDic.set( xDicList->createDictionary( sDict, aLocale, eType, aURL ) , UNO_QUERY );
-            xNewDic->setActive( sal_True );
+            xNewDic->setActive( true );
         }
         DBG_ASSERT(xNewDic.is(), "NULL pointer");
     }
@@ -204,7 +200,6 @@ IMPL_LINK_NOARG_TYPED(SvxNewDictionaryDialog, OKHdl_Impl, Button*, void)
 }
 
 
-
 IMPL_LINK_NOARG_TYPED(SvxNewDictionaryDialog, ModifyHdl_Impl, Edit&, void)
 {
     if ( !pNameEdit->GetText().isEmpty() )
@@ -219,14 +214,11 @@ VCL_BUILDER_FACTORY_ARGS(SvxDictEdit, WB_LEFT|WB_VCENTER|WB_BORDER|WB_3DLOOK)
 
 SvxEditDictionaryDialog::SvxEditDictionaryDialog(
             vcl::Window* pParent,
-            const OUString& rName,
-            Reference< XSpellChecker1 >  &xSpl ) :
+            const OUString& rName ) :
 
     ModalDialog( pParent, "EditDictionaryDialog" ,"cui/ui/editdictionarydialog.ui" ),
 
     sModify         (CUI_RESSTR(STR_MODIFY)),
-    aDecoView       ( this),
-    xSpell          ( xSpl ),
     nOld            ( NOACTDICT ),
     bFirstSelect    (true),
     bDoNothing      (false),
@@ -383,7 +375,6 @@ void SvxEditDictionaryDialog::SetDicReadonly_Impl(
 }
 
 
-
 void SvxEditDictionaryDialog::SetLanguage_Impl( util::Language nLanguage )
 {
     // select language
@@ -430,7 +421,6 @@ void SvxEditDictionaryDialog::RemoveDictEntry(SvTreeListEntry* pEntry)
 }
 
 
-
 IMPL_LINK_NOARG_TYPED(SvxEditDictionaryDialog, SelectBookHdl_Impl, ListBox&, void)
 {
     sal_Int32 nPos = pAllDictsLB->GetSelectEntryPos();
@@ -452,7 +442,6 @@ IMPL_LINK_NOARG_TYPED(SvxEditDictionaryDialog, SelectBookHdl_Impl, ListBox&, voi
         pLangLB->Enable( bEnable );
     }
 }
-
 
 
 IMPL_LINK_NOARG_TYPED(SvxEditDictionaryDialog, SelectLangHdl_Impl, ListBox&, void)
@@ -486,7 +475,6 @@ IMPL_LINK_NOARG_TYPED(SvxEditDictionaryDialog, SelectLangHdl_Impl, ListBox&, voi
             SetLanguage_Impl( nOldLang );
     }
 }
-
 
 
 void SvxEditDictionaryDialog::ShowWords_Impl( sal_uInt16 nId )
@@ -560,7 +548,6 @@ void SvxEditDictionaryDialog::ShowWords_Impl( sal_uInt16 nId )
 }
 
 
-
 IMPL_LINK_TYPED(SvxEditDictionaryDialog, SelectHdl, SvTreeListBox*, pBox, void)
 {
     if(!bDoNothing)
@@ -584,7 +571,6 @@ IMPL_LINK_TYPED(SvxEditDictionaryDialog, SelectHdl, SvTreeListBox*, pBox, void)
         pDeletePB->Enable( true && !IsDicReadonly_Impl() );
     }
 };
-
 
 
 IMPL_LINK_TYPED(SvxEditDictionaryDialog, NewDelButtonHdl, Button*, pBtn, void)
@@ -691,7 +677,6 @@ bool SvxEditDictionaryDialog::NewDelHdl(void* pBtn)
     ModifyHdl(*pWordED);
     return true;
 }
-
 
 
 IMPL_LINK_TYPED(SvxEditDictionaryDialog, ModifyHdl, Edit&, rEdt, void)

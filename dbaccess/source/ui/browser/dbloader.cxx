@@ -152,11 +152,11 @@ void SAL_CALL DBContentLoader::load(const Reference< XFrame > & rFrame, const OU
     m_aURL      = rURL;
     m_aArgs     = rArgs;
 
-    struct ServiceNameToImplName
+    const struct ServiceNameToImplName
     {
-        const sal_Char*     pAsciiServiceName;
-        const sal_Char*     pAsciiImplementationName;
-        ServiceNameToImplName( const sal_Char* _pService, const sal_Char* _pImpl )
+        const char*     pAsciiServiceName;
+        const char*     pAsciiImplementationName;
+        ServiceNameToImplName( const char* _pService, const char* _pImpl )
             :pAsciiServiceName( _pService )
             ,pAsciiImplementationName( _pImpl )
         {
@@ -174,12 +174,12 @@ void SAL_CALL DBContentLoader::load(const Reference< XFrame > & rFrame, const OU
     Reference< XController2 > xController;
 
     const OUString sComponentURL( aParser.GetMainURL( INetURLObject::DECODE_TO_IURI ) );
-    for ( size_t i=0; i < sizeof( aImplementations ) / sizeof( aImplementations[0] ); ++i )
+    for (const ServiceNameToImplName& aImplementation : aImplementations)
     {
-        if ( sComponentURL.equalsAscii( aImplementations[i].pAsciiServiceName ) )
+        if ( sComponentURL.equalsAscii( aImplementation.pAsciiServiceName ) )
         {
             xController.set( m_xContext->getServiceManager()->
-               createInstanceWithContext( OUString::createFromAscii( aImplementations[i].pAsciiImplementationName ), m_xContext), UNO_QUERY_THROW );
+               createInstanceWithContext( OUString::createFromAscii( aImplementation.pAsciiImplementationName ), m_xContext), UNO_QUERY_THROW );
             break;
         }
     }
@@ -191,8 +191,8 @@ void SAL_CALL DBContentLoader::load(const Reference< XFrame > & rFrame, const OU
 
     if  ( sComponentURL == URL_COMPONENT_DATASOURCEBROWSER )
     {
-        bool bDisableBrowser =  !aLoadArgs.getOrDefault( "ShowTreeViewButton", sal_True )   // compatibility name
-                                ||  !aLoadArgs.getOrDefault( PROPERTY_ENABLE_BROWSER, sal_True );
+        bool bDisableBrowser =  !aLoadArgs.getOrDefault( "ShowTreeViewButton", true )   // compatibility name
+                                ||  !aLoadArgs.getOrDefault( PROPERTY_ENABLE_BROWSER, true );
 
         if ( bDisableBrowser )
         {
@@ -210,7 +210,7 @@ void SAL_CALL DBContentLoader::load(const Reference< XFrame > & rFrame, const OU
 
     if ( sComponentURL == URL_COMPONENT_REPORTDESIGN )
     {
-        bool bPreview = aLoadArgs.getOrDefault( "Preview", sal_False );
+        bool bPreview = aLoadArgs.getOrDefault( "Preview", false );
         if ( bPreview )
         {   // report designs cannot be previewed
             if ( rListener.is() )

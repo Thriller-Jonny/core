@@ -58,7 +58,6 @@
 #include "sdresid.hxx"
 #include "sdgrffilter.hxx"
 #include "../../ui/inc/ViewShellBase.hxx"
-#include <com/sun/star/uno/Sequence.h>
 #include <com/sun/star/beans/PropertyValue.hpp>
 #include <com/sun/star/beans/PropertyValues.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
@@ -121,10 +120,9 @@ void SdGRFFilter_ImplInteractionHdl::handle( const css::uno::Reference< css::tas
         m_xInter->handle( xRequest );
 }
 
-// - SdPPTFilter -
 
 SdGRFFilter::SdGRFFilter( SfxMedium& rMedium, ::sd::DrawDocShell& rDocShell ) :
-    SdFilter( rMedium, rDocShell, true )
+    SdFilter( rMedium, rDocShell )
 {
 }
 
@@ -189,7 +187,7 @@ bool SdGRFFilter::Import()
             HandleGraphicFilterError( nReturn, rGraphicFilter.GetLastError().nStreamError );
         else
         {
-            if( mrDocument.GetPageCount() == 0L )
+            if( mrDocument.GetPageCount() == 0 )
                 mrDocument.CreateFirstPages();
 
             SdPage*     pPage = mrDocument.GetSdPage( 0, PK_STANDARD );
@@ -270,7 +268,7 @@ bool SdGRFFilter::Export()
                 const sal_uInt16 nFilter = rGraphicFilter.GetExportFormatNumberForTypeName( aTypeName );
                 if ( nFilter != GRFILTER_FORMAT_NOTFOUND )
                 {
-                    uno::Reference< task::XInteractionHandler > mXInteractionHandler;
+                    uno::Reference< task::XInteractionHandler > xInteractionHandler;
 
                     beans::PropertyValues aArgs;
                     TransformItems( SID_SAVEASDOC, *pSet, aArgs );
@@ -295,8 +293,8 @@ bool SdGRFFilter::Export()
                             uno::Reference< task::XInteractionHandler > xHdl;
                             if ( aArgs[ i ].Value >>= xHdl )
                             {
-                                mXInteractionHandler = new SdGRFFilter_ImplInteractionHdl( xHdl );
-                                aArgs[ i ].Value <<= mXInteractionHandler;
+                                xInteractionHandler = new SdGRFFilter_ImplInteractionHdl( xHdl );
+                                aArgs[ i ].Value <<= xInteractionHandler;
                             }
                         }
                     }
@@ -324,9 +322,9 @@ bool SdGRFFilter::Export()
                     }
                     xExporter->setSourceDocument( xSource );
                     bRet = xExporter->filter( aArgs );
-                    if ( !bRet && mXInteractionHandler.is() )
+                    if ( !bRet && xInteractionHandler.is() )
                         SdGRFFilter::HandleGraphicFilterError(
-                            static_cast< SdGRFFilter_ImplInteractionHdl* >( mXInteractionHandler.get() )->GetErrorCode(),
+                            static_cast< SdGRFFilter_ImplInteractionHdl* >( xInteractionHandler.get() )->GetErrorCode(),
                                             rGraphicFilter.GetLastError().nStreamError );
                 }
              }

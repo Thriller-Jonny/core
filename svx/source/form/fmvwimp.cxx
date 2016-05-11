@@ -44,8 +44,6 @@
 #include "svx/xmlexchg.hxx"
 
 #include <com/sun/star/ui/dialogs/XExecutableDialog.hpp>
-#include <com/sun/star/style/VerticalAlignment.hpp>
-#include <com/sun/star/lang/XInitialization.hpp>
 #include <com/sun/star/sdbc/XRowSet.hpp>
 #include <com/sun/star/form/XLoadable.hpp>
 #include <com/sun/star/awt/VisualEffect.hpp>
@@ -66,7 +64,6 @@
 #include <com/sun/star/awt/XTabController.hpp>
 #include <com/sun/star/container/XIndexAccess.hpp>
 #include <com/sun/star/awt/XControl.hpp>
-#include <com/sun/star/lang/XUnoTunnel.hpp>
 #include <com/sun/star/sdbcx/XTablesSupplier.hpp>
 #include <com/sun/star/sdbc/XPreparedStatement.hpp>
 #include <com/sun/star/sdb/XQueriesSupplier.hpp>
@@ -106,7 +103,6 @@ using namespace ::dbtools;
     using ::com::sun::star::uno::Any;
     using ::com::sun::star::uno::makeAny;
     using ::com::sun::star::uno::XComponentContext;
-    using ::com::sun::star::style::VerticalAlignment_MIDDLE;
     using ::com::sun::star::form::FormButtonType_SUBMIT;
     using ::com::sun::star::form::binding::XValueBinding;
     using ::com::sun::star::form::binding::XBindableValue;
@@ -117,11 +113,8 @@ using namespace ::dbtools;
     using ::com::sun::star::script::XEventAttacherManager;
     using ::com::sun::star::awt::XTabControllerModel;
     using ::com::sun::star::container::XChild;
-    using ::com::sun::star::container::XEnumeration;
     using ::com::sun::star::task::XInteractionHandler;
-    using ::com::sun::star::lang::XInitialization;
     using ::com::sun::star::awt::XTabController;
-    using ::com::sun::star::lang::XUnoTunnel;
     using ::com::sun::star::awt::XControlContainer;
     using ::com::sun::star::awt::XControl;
     using ::com::sun::star::form::XFormComponent;
@@ -131,7 +124,6 @@ using namespace ::dbtools;
     using ::com::sun::star::container::XContainer;
     using ::com::sun::star::container::ContainerEvent;
     using ::com::sun::star::lang::EventObject;
-    using ::com::sun::star::beans::NamedValue;
     using ::com::sun::star::sdb::SQLErrorEvent;
     using ::com::sun::star::sdbc::XRowSet;
     using ::com::sun::star::beans::XPropertySet;
@@ -143,8 +135,6 @@ using namespace ::dbtools;
     using ::com::sun::star::container::XIndexContainer;
     using ::com::sun::star::sdbc::XConnection;
     using ::com::sun::star::container::XNameAccess;
-    using ::com::sun::star::sdb::SQLContext;
-    using ::com::sun::star::sdbc::SQLWarning;
     using ::com::sun::star::sdbc::SQLException;
     using ::com::sun::star::util::XNumberFormatsSupplier;
     using ::com::sun::star::util::XNumberFormats;
@@ -256,11 +246,11 @@ Any SAL_CALL FormViewPageWindowAdapter::getByIndex(sal_Int32 nIndex) throw( Inde
     return aElement;
 }
 
-void SAL_CALL FormViewPageWindowAdapter::makeVisible( const Reference< XControl >& _Control ) throw (RuntimeException, std::exception)
+void SAL_CALL FormViewPageWindowAdapter::makeVisible( const Reference< XControl >& Control ) throw (RuntimeException, std::exception)
 {
     SolarMutexGuard aSolarGuard;
 
-    Reference< XWindow >  xWindow( _Control, UNO_QUERY );
+    Reference< XWindow >  xWindow( Control, UNO_QUERY );
     if ( xWindow.is() && m_pViewImpl->getView() && m_pWindow )
     {
         awt::Rectangle aRect = xWindow->getPosSize();
@@ -680,7 +670,7 @@ namespace
 
     public:
 
-        explicit find_active_databaseform( const Reference< XFormController > _xActiveController )
+        explicit find_active_databaseform( const Reference< XFormController >& _xActiveController )
             : xActiveController(_xActiveController )
         {}
 
@@ -813,15 +803,12 @@ FmFormShell* FmXFormView::GetFormShell() const
     return m_pView ? m_pView->GetFormShell() : nullptr;
 }
 
-void FmXFormView::AutoFocus( bool _bSync )
+void FmXFormView::AutoFocus()
 {
     if (m_nAutoFocusEvent)
         Application::RemoveUserEvent(m_nAutoFocusEvent);
 
-    if ( _bSync )
-        OnAutoFocus( nullptr );
-    else
-        m_nAutoFocusEvent = Application::PostUserEvent(LINK(this, FmXFormView, OnAutoFocus));
+    m_nAutoFocusEvent = Application::PostUserEvent(LINK(this, FmXFormView, OnAutoFocus));
 }
 
 
@@ -957,7 +944,7 @@ IMPL_LINK_NOARG_TYPED(FmXFormView, OnAutoFocus, void*, void)
 {
     m_nAutoFocusEvent = nullptr;
 
-    // go to the first form of our page, examine it's TabController, go to it's first (in terms of the tab order)
+    // go to the first form of our page, examine it's TabController, go to its first (in terms of the tab order)
     // control, give it the focus
 
     SdrPageView *pPageView = m_pView ? m_pView->GetSdrPageView() : nullptr;
@@ -1110,7 +1097,7 @@ IMPL_LINK_NOARG_TYPED( FmXFormView, OnStartControlWizard, void*, void )
         try
         {
             Reference<XComponentContext> xContext = comphelper::getProcessComponentContext();
-            xWizard.set( xContext->getServiceManager()->createInstanceWithArgumentsAndContext( OUString::createFromAscii(pWizardAsciiName), aWizardArgs.getWrappedPropertyValues(), xContext ), UNO_QUERY);;
+            xWizard.set( xContext->getServiceManager()->createInstanceWithArgumentsAndContext( OUString::createFromAscii(pWizardAsciiName), aWizardArgs.getWrappedPropertyValues(), xContext ), UNO_QUERY);
         }
         catch (const Exception&)
         {
@@ -1331,7 +1318,7 @@ SdrObject* FmXFormView::implCreateFieldControl( const svx::ODataAccessDescriptor
                 case DataType::TIMESTAMP:
                     bDateNTimeField = true;
                     sLabelPostfix = SVX_RESSTR(RID_STR_POSTFIX_DATE);
-                    // DON'T break !
+                    SAL_FALLTHROUGH;
                 case DataType::DATE:
                     nOBJID = OBJ_FM_DATEFIELD;
                     break;
@@ -1769,40 +1756,37 @@ void FmXFormView::startMarkListWatching()
 }
 
 
-void FmXFormView::saveMarkList( bool _bSmartUnmark )
+void FmXFormView::saveMarkList()
 {
     if ( m_pView )
     {
         m_aMark = m_pView->GetMarkedObjectList();
-        if ( _bSmartUnmark )
+        const size_t nCount = m_aMark.GetMarkCount( );
+        for ( size_t i = 0; i < nCount; ++i )
         {
-            const size_t nCount = m_aMark.GetMarkCount( );
-            for ( size_t i = 0; i < nCount; ++i )
+            SdrMark*   pMark = m_aMark.GetMark(i);
+            SdrObject* pObj  = pMark->GetMarkedSdrObj();
+
+            if ( m_pView->IsObjMarked( pObj ) )
             {
-                SdrMark*   pMark = m_aMark.GetMark(i);
-                SdrObject* pObj  = pMark->GetMarkedSdrObj();
-
-                if ( m_pView->IsObjMarked( pObj ) )
+                if ( pObj->IsGroupObject() )
                 {
-                    if ( pObj->IsGroupObject() )
-                    {
-                        SdrObjListIter aIter( *pObj->GetSubList() );
-                        bool bMixed = false;
-                        while ( aIter.IsMore() && !bMixed )
-                            bMixed = ( aIter.Next()->GetObjInventor() != FmFormInventor );
+                    SdrObjListIter aIter( *pObj->GetSubList() );
+                    bool bMixed = false;
+                    while ( aIter.IsMore() && !bMixed )
+                        bMixed = ( aIter.Next()->GetObjInventor() != FmFormInventor );
 
-                        if ( !bMixed )
-                        {
-                            // all objects in the group are form objects
-                            m_pView->MarkObj( pMark->GetMarkedSdrObj(), pMark->GetPageView(), true /* unmark! */ );
-                        }
-                    }
-                    else
+                    if ( !bMixed )
                     {
-                        if ( pObj->GetObjInventor() == FmFormInventor )
-                        {   // this is a form layer object
-                            m_pView->MarkObj( pMark->GetMarkedSdrObj(), pMark->GetPageView(), true /* unmark! */ );
-                        }
+                        // all objects in the group are form objects
+                        m_pView->MarkObj( pMark->GetMarkedSdrObj(), pMark->GetPageView(), true /* unmark! */ );
+                    }
+                }
+                else
+                {
+                    if ( pObj->GetObjInventor() == FmFormInventor )
+                    {   // this is a form layer object
+                        m_pView->MarkObj( pMark->GetMarkedSdrObj(), pMark->GetPageView(), true /* unmark! */ );
                     }
                 }
             }

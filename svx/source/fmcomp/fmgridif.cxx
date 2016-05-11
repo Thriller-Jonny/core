@@ -78,15 +78,14 @@ using ::com::sun::star::sdb::XRowSetSupplier;
 using ::com::sun::star::awt::XVclWindowPeer;
 
 
-
 css::awt::FontDescriptor ImplCreateFontDescriptor( const vcl::Font& rFont )
 {
     css::awt::FontDescriptor aFD;
-    aFD.Name = rFont.GetName();
+    aFD.Name = rFont.GetFamilyName();
     aFD.StyleName = rFont.GetStyleName();
-    aFD.Height = (sal_Int16)rFont.GetSize().Height();
-    aFD.Width = (sal_Int16)rFont.GetSize().Width();
-    aFD.Family = (sal_Int16)rFont.GetFamily();
+    aFD.Height = (sal_Int16)rFont.GetFontSize().Height();
+    aFD.Width = (sal_Int16)rFont.GetFontSize().Width();
+    aFD.Family = (sal_Int16)rFont.GetFamilyType();
     aFD.CharSet = rFont.GetCharSet();
     aFD.Pitch = (sal_Int16)rFont.GetPitch();
     aFD.CharacterWidth = VCLUnoHelper::ConvertFontWidth( rFont.GetWidthType() );
@@ -105,16 +104,16 @@ css::awt::FontDescriptor ImplCreateFontDescriptor( const vcl::Font& rFont )
 vcl::Font ImplCreateFont( const css::awt::FontDescriptor& rDescr )
 {
     vcl::Font aFont;
-    aFont.SetName( rDescr.Name );
+    aFont.SetFamilyName( rDescr.Name );
     aFont.SetStyleName( rDescr.StyleName );
-    aFont.SetSize( ::Size( rDescr.Width, rDescr.Height ) );
+    aFont.SetFontSize( ::Size( rDescr.Width, rDescr.Height ) );
     aFont.SetFamily( (FontFamily)rDescr.Family );
     aFont.SetCharSet( (rtl_TextEncoding)rDescr.CharSet );
     aFont.SetPitch( (FontPitch)rDescr.Pitch );
     aFont.SetWidthType( VCLUnoHelper::ConvertFontWidth( rDescr.CharacterWidth ) );
     aFont.SetWeight( VCLUnoHelper::ConvertFontWeight( rDescr.Weight ) );
     aFont.SetItalic( (FontItalic)rDescr.Slant );
-    aFont.SetUnderline( (::FontUnderline)rDescr.Underline );
+    aFont.SetUnderline( (::FontLineStyle)rDescr.Underline );
     aFont.SetStrikeout( (::FontStrikeout)rDescr.Strikeout );
     aFont.SetOrientation( (sal_Int16)rDescr.Orientation );
     aFont.SetKerning( static_cast<FontKerning>(rDescr.Kerning) );
@@ -124,7 +123,7 @@ vcl::Font ImplCreateFont( const css::awt::FontDescriptor& rDescr )
 
 FmXModifyMultiplexer::FmXModifyMultiplexer( ::cppu::OWeakObject& rSource, ::osl::Mutex& _rMutex )
                     :OWeakSubObject( rSource )
-                    ,OInterfaceContainerHelper( _rMutex )
+                    ,OInterfaceContainerHelper2( _rMutex )
 {
 }
 
@@ -158,7 +157,7 @@ void FmXModifyMultiplexer::modified(const EventObject& e) throw( RuntimeExceptio
 
 FmXUpdateMultiplexer::FmXUpdateMultiplexer( ::cppu::OWeakObject& rSource, ::osl::Mutex& _rMutex )
                     :OWeakSubObject( rSource )
-                    ,OInterfaceContainerHelper( _rMutex )
+                    ,OInterfaceContainerHelper2( _rMutex )
 {
 }
 
@@ -191,7 +190,7 @@ sal_Bool FmXUpdateMultiplexer::approveUpdate(const EventObject &e) throw( Runtim
     bool bResult = true;
     if (getLength())
     {
-        ::cppu::OInterfaceIteratorHelper aIter(*this);
+        ::comphelper::OInterfaceIteratorHelper2 aIter(*this);
         while ( bResult && aIter.hasMoreElements() )
             bResult = static_cast< XUpdateListener* >( aIter.next() )->approveUpdate( aMulti );
     }
@@ -209,7 +208,7 @@ void FmXUpdateMultiplexer::updated(const EventObject &e) throw( RuntimeException
 
 FmXSelectionMultiplexer::FmXSelectionMultiplexer( ::cppu::OWeakObject& rSource, ::osl::Mutex& _rMutex )
     :OWeakSubObject( rSource )
-    ,OInterfaceContainerHelper( _rMutex )
+    ,OInterfaceContainerHelper2( _rMutex )
 {
 }
 
@@ -243,7 +242,7 @@ void SAL_CALL FmXSelectionMultiplexer::selectionChanged( const EventObject& _rEv
 
 FmXContainerMultiplexer::FmXContainerMultiplexer( ::cppu::OWeakObject& rSource, ::osl::Mutex& _rMutex )
                         :OWeakSubObject( rSource )
-                        ,OInterfaceContainerHelper( _rMutex )
+                        ,OInterfaceContainerHelper2( _rMutex )
 {
 }
 
@@ -283,7 +282,6 @@ void FmXContainerMultiplexer::elementRemoved(const ContainerEvent& e) throw( Run
 }
 
 
-
 void FmXContainerMultiplexer::elementReplaced(const ContainerEvent& e) throw( RuntimeException, std::exception )
 {
     ContainerEvent aMulti( e );
@@ -293,7 +291,7 @@ void FmXContainerMultiplexer::elementReplaced(const ContainerEvent& e) throw( Ru
 
 FmXGridControlMultiplexer::FmXGridControlMultiplexer( ::cppu::OWeakObject& rSource, ::osl::Mutex& _rMutex )
     :OWeakSubObject( rSource )
-    ,OInterfaceContainerHelper( _rMutex )
+    ,OInterfaceContainerHelper2( _rMutex )
 {
 }
 
@@ -326,7 +324,6 @@ void SAL_CALL FmXGridControlMultiplexer::columnChanged( const EventObject& _even
 
 
 //= FmXGridControl
-
 
 
 Reference< XInterface > SAL_CALL FmXGridControl_NewInstance_Impl(const Reference< XMultiServiceFactory>& _rxFactory)
@@ -420,7 +417,7 @@ sal_Bool SAL_CALL FmXGridControl::setModel(const Reference< css::awt::XControlMo
     SolarMutexGuard aGuard;
 
     if (!UnoControl::setModel(rModel))
-        return sal_False;
+        return false;
 
     Reference< XGridPeer > xGridPeer(getPeer(), UNO_QUERY);
     if (xGridPeer.is())
@@ -428,7 +425,7 @@ sal_Bool SAL_CALL FmXGridControl::setModel(const Reference< css::awt::XControlMo
         Reference< XIndexContainer > xCols(mxModel, UNO_QUERY);
         xGridPeer->setColumns(xCols);
     }
-    return sal_True;
+    return true;
 }
 
 
@@ -495,7 +492,7 @@ void SAL_CALL FmXGridControl::createPeer(const Reference< css::awt::XToolkit >& 
 
         // consider the following ugly scenario: updateFromModel leads to a propertiesChanges on the Control,
         // which determines, dat a "critical" property has changed (e.g. "Border") and therefore starts a new
-        // Peer, which lands again here in createPeerm we also start a second FmXGridPeer and initialise it.
+        // Peer, which lands again here in createPeer we also start a second FmXGridPeer and initialise it.
         // Then we exit from the first incarnation's updateFromModel and continue working with the pPeer,
         // that is in fact now already obsolete (as another peer is being started in the second incarnation).
         // Therefore the effort with the PeerCreationLevel, which ensures that we really use the Peer
@@ -512,10 +509,10 @@ void SAL_CALL FmXGridControl::createPeer(const Reference< css::awt::XToolkit >& 
                 pPeer->setColumns(xColumns);
 
             if (maComponentInfos.bVisible)
-                pPeer->setVisible(sal_True);
+                pPeer->setVisible(true);
 
             if (!maComponentInfos.bEnable)
-                pPeer->setEnable(sal_False);
+                pPeer->setEnable(false);
 
             if (maWindowListeners.getLength())
                 pPeer->addWindowListener( &maWindowListeners );
@@ -789,7 +786,7 @@ sal_Bool SAL_CALL FmXGridControl::commit() throw( RuntimeException, std::excepti
     if (xBound.is())
         return xBound->commit();
     else
-        return sal_True;
+        return true;
 }
 
 // XContainer
@@ -1186,27 +1183,27 @@ void FmXGridPeer::removeModifyListener(const Reference< css::util::XModifyListen
 Sequence< sal_Bool > SAL_CALL FmXGridPeer::queryFieldDataType( const Type& xType ) throw(RuntimeException, std::exception)
 {
     // eine 'Konvertierungstabelle'
-    static const sal_Bool bCanConvert[LAST_KNOWN_TYPE][4] =
+    static const bool bCanConvert[LAST_KNOWN_TYPE][4] =
     {
-        { sal_False, sal_False, sal_False, sal_False }, //  FormComponentType::CONTROL
-        { sal_False, sal_False, sal_False, sal_False }, //  FormComponentType::COMMANDBUTTON
-        { sal_False, sal_False, sal_False, sal_False }, //  FormComponentType::RADIOBUTTON
-        { sal_False, sal_False, sal_False, sal_False }, //  FormComponentType::IMAGEBUTTON
-        { sal_False, sal_False, sal_False, sal_True  }, //  FormComponentType::CHECKBOX
-        { sal_False, sal_False, sal_False, sal_False }, //  FormComponentType::LISTBOX
-        { sal_False, sal_False, sal_False, sal_False }, //  FormComponentType::COMBOBOX
-        { sal_False, sal_False, sal_False, sal_False }, //  FormComponentType::GROUPBOX
-        { sal_True , sal_False, sal_False, sal_False }, //  FormComponentType::TEXTFIELD
-        { sal_False, sal_False, sal_False, sal_False }, //  FormComponentType::FIXEDTEXT
-        { sal_False, sal_False, sal_False, sal_False }, //  FormComponentType::GRIDCONTROL
-        { sal_False, sal_False, sal_False, sal_False }, //  FormComponentType::FILECONTROL
-        { sal_False, sal_False, sal_False, sal_False }, //  FormComponentType::HIDDENCONTROL
-        { sal_False, sal_False, sal_False, sal_False }, //  FormComponentType::IMAGECONTROL
-        { sal_True , sal_True , sal_True , sal_False }, //  FormComponentType::DATEFIELD
-        { sal_True , sal_True , sal_False, sal_False }, //  FormComponentType::TIMEFIELD
-        { sal_True , sal_True , sal_False, sal_False }, //  FormComponentType::NUMERICFIELD
-        { sal_True , sal_True , sal_False, sal_False }, //  FormComponentType::CURRENCYFIELD
-        { sal_True , sal_False, sal_False, sal_False }  //  FormComponentType::PATTERNFIELD
+        { false, false, false, false }, //  FormComponentType::CONTROL
+        { false, false, false, false }, //  FormComponentType::COMMANDBUTTON
+        { false, false, false, false }, //  FormComponentType::RADIOBUTTON
+        { false, false, false, false }, //  FormComponentType::IMAGEBUTTON
+        { false, false, false, true  }, //  FormComponentType::CHECKBOX
+        { false, false, false, false }, //  FormComponentType::LISTBOX
+        { false, false, false, false }, //  FormComponentType::COMBOBOX
+        { false, false, false, false }, //  FormComponentType::GROUPBOX
+        { true , false, false, false }, //  FormComponentType::TEXTFIELD
+        { false, false, false, false }, //  FormComponentType::FIXEDTEXT
+        { false, false, false, false }, //  FormComponentType::GRIDCONTROL
+        { false, false, false, false }, //  FormComponentType::FILECONTROL
+        { false, false, false, false }, //  FormComponentType::HIDDENCONTROL
+        { false, false, false, false }, //  FormComponentType::IMAGECONTROL
+        { true , true , true , false }, //  FormComponentType::DATEFIELD
+        { true , true , false, false }, //  FormComponentType::TIMEFIELD
+        { true , true , false, false }, //  FormComponentType::NUMERICFIELD
+        { true , true , false, false }, //  FormComponentType::CURRENCYFIELD
+        { true , false, false, false }  //  FormComponentType::PATTERNFIELD
     };
 
 
@@ -1244,11 +1241,11 @@ Sequence< sal_Bool > SAL_CALL FmXGridPeer::queryFieldDataType( const Type& xType
     {
         if (bRequestedAsAny)
         {
-            pReturnArray[i] = sal_True;
+            pReturnArray[i] = true;
             continue;
         }
 
-        pReturnArray[i] = sal_False;
+        pReturnArray[i] = false;
 
         sal_uInt16 nModelPos = pGrid->GetModelColumnPos(pGrid->GetColumnIdFromViewPos((sal_uInt16)i));
         DBG_ASSERT(nModelPos != (sal_uInt16)-1, "FmXGridPeer::queryFieldDataType : no model pos !");
@@ -1346,7 +1343,7 @@ Sequence< Any > SAL_CALL FmXGridPeer::queryFieldData( sal_Int32 nRow, const Type
                 case TypeClass_LONG             : pReturnArray[i] <<= (sal_Int32)xFieldContent->getLong(); break;
                 case TypeClass_UNSIGNED_SHORT   : pReturnArray[i] <<= (sal_uInt16)xFieldContent->getShort(); break;
                 case TypeClass_UNSIGNED_LONG    : pReturnArray[i] <<= (sal_uInt32)xFieldContent->getLong(); break;
-                case TypeClass_BOOLEAN          : ::comphelper::setBOOL(pReturnArray[i],xFieldContent->getBoolean()); break;
+                case TypeClass_BOOLEAN          : pReturnArray[i] <<= xFieldContent->getBoolean(); break;
                 default:
                 {
                     throw IllegalArgumentException();
@@ -1496,10 +1493,10 @@ sal_Bool FmXGridPeer::commit() throw( RuntimeException, std::exception )
 {
     VclPtr< FmGridControl > pGrid = GetAs< FmGridControl >();
     if (!m_xCursor.is() || !pGrid)
-        return sal_True;
+        return true;
 
     EventObject aEvt(static_cast< ::cppu::OWeakObject* >(this));
-    ::cppu::OInterfaceIteratorHelper aIter(m_aUpdateListeners);
+    ::comphelper::OInterfaceIteratorHelper2 aIter(m_aUpdateListeners);
     bool bCancel = false;
     while (aIter.hasMoreElements() && !bCancel)
         if ( !static_cast< XUpdateListener* >( aIter.next() )->approveUpdate( aEvt ) )
@@ -1512,7 +1509,6 @@ sal_Bool FmXGridPeer::commit() throw( RuntimeException, std::exception )
         m_aUpdateListeners.notifyEach( &XUpdateListener::updated, aEvt );
     return !bCancel;
 }
-
 
 
 void FmXGridPeer::cursorMoved(const EventObject& _rEvent) throw( RuntimeException, std::exception )
@@ -1597,7 +1593,7 @@ void FmXGridPeer::addColumnListeners(const Reference< XPropertySet >& xCol)
     Reference< XPropertySetInfo > xInfo = xCol->getPropertySetInfo();
     Property aPropDesc;
     const OUString* pProps = aPropsListenedTo;
-    const OUString* pPropsEnd = pProps + sizeof( aPropsListenedTo ) / sizeof( aPropsListenedTo[ 0 ] );
+    const OUString* pPropsEnd = pProps + SAL_N_ELEMENTS( aPropsListenedTo );
     for (; pProps != pPropsEnd; ++pProps)
     {
         if ( xInfo->hasPropertyByName( *pProps ) )
@@ -1614,13 +1610,13 @@ void FmXGridPeer::removeColumnListeners(const Reference< XPropertySet >& xCol)
 {
     // the same props as in addColumnListeners ... linux has problems with global static UStrings, so
     // we have to do it this way ....
-    static OUString aPropsListenedTo[] =
+    static const OUString aPropsListenedTo[] =
     {
         OUString(FM_PROP_LABEL), OUString(FM_PROP_WIDTH), OUString(FM_PROP_HIDDEN), OUString(FM_PROP_ALIGN), OUString(FM_PROP_FORMATKEY)
     };
 
     Reference< XPropertySetInfo >  xInfo = xCol->getPropertySetInfo();
-    for (sal_uInt16 i=0; i<sizeof(aPropsListenedTo)/sizeof(aPropsListenedTo[0]); ++i)
+    for (sal_uInt16 i=0; i<SAL_N_ELEMENTS(aPropsListenedTo); ++i)
         if (xInfo->hasPropertyByName(aPropsListenedTo[i]))
             xCol->removePropertyChangeListener(aPropsListenedTo[i], this);
 }
@@ -1692,8 +1688,6 @@ void FmXGridPeer::setDesignMode(sal_Bool bOn) throw( RuntimeException, std::exce
             static_cast<FmGridControl*>(pWin)->SetDesignMode(bOn);
     }
 
-    setVisible(!bOn);
-
     if (bOn)
         DisConnectFromDispatcher();
     else
@@ -1707,7 +1701,7 @@ sal_Bool FmXGridPeer::isDesignMode() throw( RuntimeException, std::exception )
     if (pWin)
         return static_cast<FmGridControl*>(pWin)->IsDesignMode();
     else
-        return sal_False;
+        return false;
 }
 
 
@@ -1720,10 +1714,9 @@ void FmXGridPeer::elementInserted(const ContainerEvent& evt) throw( RuntimeExcep
     if (!pGrid || !m_xColumns.is() || pGrid->IsInColumnMove() || m_xColumns->getCount() == ((sal_Int32)pGrid->GetModelColCount()))
         return;
 
-    Reference< XPropertySet >  xSet(evt.Element, css::uno::UNO_QUERY);
-    addColumnListeners(xSet);
+    Reference< XPropertySet >  xNewColumn(evt.Element, css::uno::UNO_QUERY);
+    addColumnListeners(xNewColumn);
 
-    Reference< XPropertySet >  xNewColumn(xSet);
     OUString aName = ::comphelper::getString(xNewColumn->getPropertyValue(FM_PROP_LABEL));
     Any aWidth = xNewColumn->getPropertyValue(FM_PROP_WIDTH);
     sal_Int32 nWidth = 0;
@@ -1778,7 +1771,7 @@ void FmXGridPeer::elementReplaced(const ContainerEvent& evt) throw( RuntimeExcep
     // set the model of the new column
     DbGridColumn* pCol = pGrid->GetColumns().at( nNewPos );
 
-    // for initializong this grid column, we need the fields of the grid's data source
+    // for initializing this grid column, we need the fields of the grid's data source
     Reference< XColumnsSupplier > xSuppColumns;
     CursorWrapper* pGridDataSource = pGrid->getDataSource();
     if ( pGridDataSource )
@@ -1860,7 +1853,7 @@ void FmXGridPeer::setProperty( const OUString& PropertyName, const Any& Value) t
     {
         vcl::Font aGridFont = pGrid->GetControlFont();
         sal_Int16 nValue = ::comphelper::getINT16(Value);
-        aGridFont.SetEmphasisMark( nValue );
+        aGridFont.SetEmphasisMark( (FontEmphasisMark)nValue );
         pGrid->SetControlFont( aGridFont );
     }
     else if ( PropertyName == FM_PROP_FONTRELIEF )
@@ -1908,7 +1901,7 @@ void FmXGridPeer::setProperty( const OUString& PropertyName, const Any& Value) t
             if (Value >>= aFont)
             {
                 vcl::Font aNewVclFont;
-                if (::comphelper::operator!=(aFont, ::comphelper::getDefaultFont()))    // ist das der Default
+                if (aFont != ::comphelper::getDefaultFont())    // ist das der Default
                     aNewVclFont = ImplCreateFont( aFont );
 
                 // need to add relief and emphasis (they're stored in a VCL-Font, but not in a FontDescriptor
@@ -2095,7 +2088,7 @@ void FmXGridPeer::dispose() throw( RuntimeException, std::exception )
         // tell the interceptor it has a new (means no) predecessor
         xInterceptor->setMasterDispatchProvider( nullptr );
 
-        // ask for it's successor
+        // ask for its successor
         Reference< XDispatchProvider > xSlave = xInterceptor->getSlaveDispatchProvider();
         // and give it the new (means no) successoert
         xInterceptor->setSlaveDispatchProvider( nullptr );
@@ -2399,9 +2392,9 @@ sal_Bool FmXGridPeer::supportsMode(const OUString& Mode) throw( RuntimeException
     for (sal_Int32 i = aModes.getLength(); i > 0; )
     {
         if (pModes[--i] == Mode)
-            return sal_True;
+            return true;
     }
-    return sal_False;
+    return false;
 }
 
 
@@ -2589,7 +2582,7 @@ void FmXGridPeer::statusChanged(const css::frame::FeatureStateEvent& Event) thro
 
 sal_Bool FmXGridPeer::approveReset(const EventObject& /*rEvent*/) throw( RuntimeException, std::exception )
 {
-    return sal_True;
+    return true;
 }
 
 
@@ -2656,7 +2649,7 @@ Sequence<sal_uInt16>& FmXGridPeer::getSupportedGridSlots()
     static Sequence<sal_uInt16> aSupported;
     if (aSupported.getLength() == 0)
     {
-        sal_uInt16 nSupported[] = {
+        const sal_uInt16 nSupported[] = {
             DbGridControl::NavigationBar::RECORD_FIRST,
             DbGridControl::NavigationBar::RECORD_PREV,
             DbGridControl::NavigationBar::RECORD_NEXT,
@@ -2664,7 +2657,7 @@ Sequence<sal_uInt16>& FmXGridPeer::getSupportedGridSlots()
             DbGridControl::NavigationBar::RECORD_NEW,
             SID_FM_RECORD_UNDO
         };
-        aSupported.realloc(sizeof(nSupported)/sizeof(nSupported[0]));
+        aSupported.realloc(SAL_N_ELEMENTS(nSupported));
         sal_uInt16* pSupported = aSupported.getArray();
         for (sal_Int32 i=0; i<aSupported.getLength(); ++i, ++pSupported)
             *pSupported = nSupported[i];
@@ -2686,7 +2679,7 @@ Sequence< css::util::URL>& FmXGridPeer::getSupportedURLs()
             FMURL_RECORD_MOVETONEW,
             FMURL_RECORD_UNDO
         };
-        aSupported.realloc(sizeof(sSupported)/sizeof(sSupported[0]));
+        aSupported.realloc(SAL_N_ELEMENTS(sSupported));
         css::util::URL* pSupported = aSupported.getArray();
         sal_uInt16 i;
 

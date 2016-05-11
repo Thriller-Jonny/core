@@ -69,21 +69,16 @@ using namespace ::com::sun::star::style;
 using namespace ::com::sun::star::svg;
 using namespace ::com::sun::star::xml::sax;
 
-
-
 #define SVG_DTD_STRING          "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">"
 
 #define SVGWRITER_WRITE_FILL        0x00000001
 #define SVGWRITER_WRITE_TEXT        0x00000002
 #define SVGWRITER_NO_SHAPE_COMMENTS 0x01000000
 
-
-// - SVGAttributeWriter -
-
-
 class SVGActionWriter;
 class SVGExport;
 class SVGFontExport;
+
 
 class SVGAttributeWriter
 {
@@ -93,11 +88,10 @@ private:
     SVGExport&                 mrExport;
     SVGFontExport&             mrFontExport;
     SvXMLElementExport*        mpElemFont;
-    SvXMLElementExport*        mpElemPaint;
 
                              SVGAttributeWriter();
 
-    static double            ImplRound( double fVal, sal_Int32 nDecs = 3 );
+    static double            ImplRound( double fVal );
 
 public:
 
@@ -131,7 +125,6 @@ struct SVGShapeDescriptor
     css::drawing::LineCap       maLineCap;
 
 
-
     SVGShapeDescriptor() :
         maShapeFillColor( Color( COL_TRANSPARENT ) ),
         maShapeLineColor( Color( COL_TRANSPARENT ) ),
@@ -143,14 +136,10 @@ struct SVGShapeDescriptor
 };
 
 
-
 class SVGAttributeWriter;
 class SVGExport;
 class GDIMetaFile;
 
-
-
-// - BulletListItemInfo -
 
 struct BulletListItemInfo
 {
@@ -160,9 +149,6 @@ struct BulletListItemInfo
     sal_Unicode cBulletChar;
 };
 
-
-
-// - SVGTextWriter -
 
 class SVGTextWriter
 {
@@ -211,7 +197,7 @@ class SVGTextWriter
     void setTextProperties( const GDIMetaFile& rMtf, sal_uLong nCurAction );
     void addFontAttributes( bool bIsTextContainer );
 
-    bool createParagraphEnumeration();
+    void createParagraphEnumeration();
     bool nextParagraph();
     bool nextTextPortion();
 
@@ -227,10 +213,9 @@ class SVGTextWriter
     template< typename MetaBitmapActionType >
     void writeBitmapPlaceholder( const MetaBitmapActionType* pAction );
     void implWriteEmbeddedBitmaps();
-    void writeTextPortion( const Point& rPos, const OUString& rText,
-                           bool bApplyMapping = true );
+    void writeTextPortion( const Point& rPos, const OUString& rText );
     void implWriteTextPortion( const Point& rPos, const OUString& rText,
-                               Color aTextColor, bool bApplyMapping );
+                               Color aTextColor );
 
     void setVirtualDevice( VirtualDevice* pVDev, MapMode& rTargetMapMode )
     {
@@ -270,9 +255,6 @@ class SVGTextWriter
 };
 
 
-// - SVGActionWriter -
-
-
 class SVGActionWriter
 {
 private:
@@ -293,11 +275,10 @@ private:
     bool                                    mbIsPlaceholderShape;
 
 
-    SVGAttributeWriter*     ImplAcquireContext()
+    void                    ImplAcquireContext()
     {
         maContextStack.push( mpContext = new SVGAttributeWriter( mrExport, mrFontExport ) );
         maTextWriter.setContext( mpContext );
-        return mpContext;
     }
     void                    ImplReleaseContext()
     {
@@ -317,28 +298,23 @@ private:
     tools::Polygon&         ImplMap( const tools::Polygon& rPoly, tools::Polygon& rDstPoly ) const;
     tools::PolyPolygon&     ImplMap( const tools::PolyPolygon& rPolyPoly, tools::PolyPolygon& rDstPolyPoly ) const;
 
-    void                    ImplWriteLine( const Point& rPt1, const Point& rPt2, const Color* pLineColor = nullptr,
-                                           bool bApplyMapping = true );
-    void                    ImplWriteRect( const Rectangle& rRect, long nRadX = 0, long nRadY = 0,
-                                           bool bApplyMapping = true );
-    void                    ImplWriteEllipse( const Point& rCenter, long nRadX, long nRadY,
-                                              bool bApplyMapping = true );
+    void                    ImplWriteLine( const Point& rPt1, const Point& rPt2, const Color* pLineColor = nullptr );
+    void                    ImplWriteRect( const Rectangle& rRect, long nRadX = 0, long nRadY = 0 );
+    void                    ImplWriteEllipse( const Point& rCenter, long nRadX, long nRadY );
     void                    ImplWritePattern( const tools::PolyPolygon& rPolyPoly, const Hatch* pHatch, const Gradient* pGradient, sal_uInt32 nWriteFlags );
-    void                    ImplAddLineAttr( const LineInfo &rAttrs,
-                                             bool bApplyMapping = true );
+    void                    ImplAddLineAttr( const LineInfo &rAttrs );
     void                    ImplWritePolyPolygon( const tools::PolyPolygon& rPolyPoly, bool bLineOnly,
                                                   bool bApplyMapping = true );
-    void                    ImplWriteShape( const SVGShapeDescriptor& rShape, bool bApplyMapping = true );
+    void                    ImplWriteShape( const SVGShapeDescriptor& rShape );
     void                    ImplWriteGradientEx( const tools::PolyPolygon& rPolyPoly, const Gradient& rGradient, sal_uInt32 nWriteFlags);
     void                    ImplWriteGradientLinear( const tools::PolyPolygon& rPolyPoly, const Gradient& rGradient );
     void                    ImplWriteGradientStop( const Color& rColor, double fOffset );
     static Color            ImplGetColorWithIntensity( const Color& rColor, sal_uInt16 nIntensity );
     static Color            ImplGetGradientColor( const Color& rStartColor, const Color& rEndColor, double fOffset );
     void                    ImplWriteMask( GDIMetaFile& rMtf, const Point& rDestPt, const Size& rDestSize, const Gradient& rGradient, sal_uInt32 nWriteFlags );
-    void                    ImplWriteText( const Point& rPos, const OUString& rText, const long* pDXArray, long nWidth, bool bApplyMapping = true );
-    void                    ImplWriteText( const Point& rPos, const OUString& rText, const long* pDXArray, long nWidth, Color aTextColor, bool bApplyMapping );
-    void                    ImplWriteBmp( const BitmapEx& rBmpEx, const Point& rPt, const Size& rSz, const Point& rSrcPt, const Size& rSrcSz,
-                                          bool bApplyMapping = true );
+    void                    ImplWriteText( const Point& rPos, const OUString& rText, const long* pDXArray, long nWidth );
+    void                    ImplWriteText( const Point& rPos, const OUString& rText, const long* pDXArray, long nWidth, Color aTextColor );
+    void                    ImplWriteBmp( const BitmapEx& rBmpEx, const Point& rPt, const Size& rSz, const Point& rSrcPt, const Size& rSrcSz );
 
     void                    ImplWriteActions( const GDIMetaFile& rMtf,
                                               sal_uInt32 nWriteFlags,
@@ -367,6 +343,7 @@ public:
                                            const GDIMetaFile* pTextEmbeddedBitmapMtf = nullptr );
 };
 
+
 class SVGWriter : public cppu::WeakImplHelper< XSVGWriter >
 {
 private:
@@ -384,6 +361,6 @@ public:
         const Sequence<sal_Int8>& rMtfSeq ) throw( RuntimeException, std::exception ) override;
 };
 
-#endif
+#endif // INCLUDED_FILTER_SOURCE_SVG_SVGWRITER_HXX
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

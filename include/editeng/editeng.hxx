@@ -111,7 +111,6 @@ class DeletedNodeInfo;
 class ParaPortionList;
 
 
-
 /** values for:
        SfxItemSet GetAttribs( const ESelection& rSel, EditEngineAttribs nOnlyHardAttrib = EditEngineAttribs_All );
 */
@@ -176,15 +175,13 @@ private:
         css::uno::Reference<css::datatransfer::XTransferable >& rxDataObj,
         const OUString& rBaseURL, const EditPaM& rPaM, bool bUseSpecial);
 
-    EDITENG_DLLPRIVATE EditPaM EndOfWord(
-        const EditPaM& rPaM, sal_Int16 nWordType = css::i18n::WordType::ANYWORD_IGNOREWHITESPACES);
+    EDITENG_DLLPRIVATE EditPaM EndOfWord(const EditPaM& rPaM);
 
     EDITENG_DLLPRIVATE EditPaM GetPaM(const Point& aDocPos, bool bSmart = true);
 
     EDITENG_DLLPRIVATE EditSelection SelectWord(
         const EditSelection& rCurSelection,
-        sal_Int16 nWordType = css::i18n::WordType::ANYWORD_IGNOREWHITESPACES,
-        bool bAcceptStartOfWord = true);
+        sal_Int16 nWordType = css::i18n::WordType::ANYWORD_IGNOREWHITESPACES);
 
     EDITENG_DLLPRIVATE long GetXPos(
         const ParaPortion* pParaPortion, const EditLine* pLine, sal_Int32 nIndex, bool bPreferPortionStart = false) const;
@@ -230,7 +227,7 @@ public:
 
     void            InsertView(EditView* pEditView, size_t nIndex = EE_APPEND);
     EditView*       RemoveView( EditView* pEditView );
-    EditView*       RemoveView(size_t nIndex = EE_APPEND);
+    void            RemoveView(size_t nIndex = EE_APPEND);
     EditView*       GetView(size_t nIndex = 0) const;
     size_t          GetViewCount() const;
     bool            HasView( EditView* pView ) const;
@@ -272,7 +269,7 @@ public:
     void            SetMaxAutoPaperSize( const Size& rSz );
 
     OUString        GetText( LineEnd eEnd = LINEEND_LF ) const;
-    OUString        GetText( const ESelection& rSelection, const LineEnd eEnd = LINEEND_LF ) const;
+    OUString        GetText( const ESelection& rSelection ) const;
     sal_uInt32      GetTextLen() const;
     sal_uInt32      GetTextHeight() const;
     sal_uInt32      GetTextHeightNTP() const;
@@ -288,7 +285,7 @@ public:
     sal_Int32       GetLineLen( sal_Int32 nParagraph, sal_Int32 nLine ) const;
     void            GetLineBoundaries( /*out*/sal_Int32& rStart, /*out*/sal_Int32& rEnd, sal_Int32 nParagraph, sal_Int32 nLine ) const;
     sal_Int32       GetLineNumberAtIndex( sal_Int32 nPara, sal_Int32 nIndex ) const;
-    sal_uInt32      GetLineHeight( sal_Int32 nParagraph, sal_Int32 nLine = 0 );
+    sal_uInt32      GetLineHeight( sal_Int32 nParagraph );
     ParagraphInfos  GetParagraphInfos( sal_Int32 nPara );
     sal_Int32       FindParagraph( long nDocPosY );
     EPosition       FindDocPosition( const Point& rDocPos ) const;
@@ -371,7 +368,7 @@ public:
 
 //  sal_uInt32: Error code of the stream.
     sal_uLong       Read( SvStream& rInput, const OUString& rBaseURL, EETextFormat, SvKeyValueIterator* pHTTPHeaderAttrs = nullptr );
-    sal_uLong       Write( SvStream& rOutput, EETextFormat );
+    void            Write( SvStream& rOutput, EETextFormat );
 
     void            SetStatusEventHdl( const Link<EditStatus&,void>& rLink );
     Link<EditStatus&,void> GetStatusEventHdl() const;
@@ -380,7 +377,7 @@ public:
     Link<EENotify&,void>  GetNotifyHdl() const;
 
     void            SetImportHdl( const Link<ImportInfo&,void>& rLink );
-    Link<ImportInfo&,void> GetImportHdl() const;
+    const Link<ImportInfo&,void>& GetImportHdl() const;
 
     // Do not evaluate font formatting => For Outliner
     bool            IsFlatMode() const;
@@ -413,7 +410,7 @@ public:
     SfxStyleSheet* GetStyleSheet( sal_Int32 nPara );
 
     void            SetWordDelimiters( const OUString& rDelimiters );
-    OUString        GetWordDelimiters() const;
+    const OUString& GetWordDelimiters() const;
 
     void            EraseVirtualDevice();
 
@@ -428,7 +425,7 @@ public:
     void GetAllMisspellRanges( std::vector<editeng::MisspellRanges>& rRanges ) const;
     void SetAllMisspellRanges( const std::vector<editeng::MisspellRanges>& rRanges );
 
-    static void     SetForbiddenCharsTable( rtl::Reference<SvxForbiddenCharactersTable> xForbiddenChars );
+    static void     SetForbiddenCharsTable( const rtl::Reference<SvxForbiddenCharactersTable>& xForbiddenChars );
 
     void            SetDefaultLanguage( LanguageType eLang );
     LanguageType    GetDefaultLanguage() const;
@@ -454,9 +451,9 @@ public:
     bool            HasConvertibleTextPortion( LanguageType nLang );
     virtual bool    ConvertNextDocument();
 
-    bool UpdateFields();
-    bool UpdateFieldsOnly();
-    void            RemoveFields( bool bKeepFieldText, std::function<bool ( const SvxFieldData* )> isFieldData = [] (const SvxFieldData* ){return true;} );
+    bool            UpdateFields();
+    bool            UpdateFieldsOnly();
+    void            RemoveFields( const std::function<bool ( const SvxFieldData* )>& isFieldData = [] (const SvxFieldData* ){return true;} );
 
     sal_uInt16      GetFieldCount( sal_Int32 nPara ) const;
     EFieldInfo      GetFieldInfo( sal_Int32 nPara, sal_uInt16 nField ) const;
@@ -483,18 +480,17 @@ public:
     virtual void DrawingText( const Point& rStartPos, const OUString& rText,
                               sal_Int32 nTextStart, sal_Int32 nTextLen,
                               const long* pDXArray, const SvxFont& rFont,
-                              sal_Int32 nPara, sal_Int32 nIndex, sal_uInt8 nRightToLeft,
+                              sal_Int32 nPara, sal_uInt8 nRightToLeft,
                               const EEngineData::WrongSpellVector* pWrongSpellVector,
                               const SvxFieldData* pFieldData,
                               bool bEndOfLine,
                               bool bEndOfParagraph,
-                              bool bEndOfBullet,
                               const css::lang::Locale* pLocale,
                               const Color& rOverlineColor,
                               const Color& rTextLineColor);
 
     virtual void DrawingTab( const Point& rStartPos, long nWidth, const OUString& rChar,
-                             const SvxFont& rFont, sal_Int32 nPara, sal_Int32 nIndex, sal_uInt8 nRightToLeft,
+                             const SvxFont& rFont, sal_Int32 nPara, sal_uInt8 nRightToLeft,
                              bool bEndOfLine,
                              bool bEndOfParagraph,
                              const Color& rOverlineColor,
@@ -552,8 +548,7 @@ public:
     EditPaM InsertField(const EditSelection& rEditSelection, const SvxFieldItem& rFld);
     EditPaM InsertText(const EditSelection& aCurEditSelection, const OUString& rStr);
     EditSelection InsertText(const EditTextObject& rTextObject, const EditSelection& rSel);
-    EditPaM InsertParaBreak(
-        const EditSelection& rEditSelection, bool bKeepEndingAttribs = true);
+    EditPaM InsertParaBreak(const EditSelection& rEditSelection);
     EditPaM InsertLineBreak(const EditSelection& rEditSelection);
 
     EditPaM CursorLeft(
@@ -561,8 +556,7 @@ public:
     EditPaM CursorRight(
         const EditPaM& rPaM, sal_uInt16 nCharacterIteratorMode = css::i18n::CharacterIteratorMode::SKIPCELL);
 
-    void SeekCursor(
-        ContentNode* pNode, sal_Int32 nPos, SvxFont& rFont, OutputDevice* pOut = nullptr, sal_uInt16 nIgnoreWhich = 0);
+    void SeekCursor(ContentNode* pNode, sal_Int32 nPos, SvxFont& rFont);
 
     EditPaM DeleteSelection(const EditSelection& rSel);
 
@@ -573,7 +567,7 @@ public:
     void SetParaAttribsOnly(sal_Int32 nPara, const SfxItemSet& rSet);
     void SetAttribs(const EditSelection& rSel, const SfxItemSet& rSet, sal_uInt8 nSpecial = 0);
 
-    OUString GetSelected(const EditSelection& rSel, const LineEnd eParaSep = LINEEND_LF) const;
+    OUString GetSelected(const EditSelection& rSel) const;
     EditPaM DeleteSelected(const EditSelection& rSel);
 
     SvtScriptType GetScriptType(const EditSelection& rSel) const;
@@ -590,7 +584,7 @@ public:
     EditPaM SplitContent(sal_Int32 nNode, sal_Int32 nSepPos);
     EditPaM ConnectContents(sal_Int32 nLeftNode, bool bBackward);
 
-    EditPaM InsertFeature(const EditSelection& rEditSelection, const SfxPoolItem& rItem);
+    void InsertFeature(const EditSelection& rEditSelection, const SfxPoolItem& rItem);
 
     EditSelection MoveParagraphs(const Range& rParagraphs, sal_Int32 nNewPos, EditView* pCurView);
 
@@ -603,8 +597,8 @@ public:
     void SetUndoMode(bool b);
     void FormatAndUpdate(EditView* pCurView = nullptr);
 
-    bool Undo(EditView* pView);
-    bool Redo(EditView* pView);
+    void Undo(EditView* pView);
+    void Redo(EditView* pView);
 
     sal_Int32 GetOverflowingParaNum() const;
     sal_Int32 GetOverflowingLineNum() const;

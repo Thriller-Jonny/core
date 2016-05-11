@@ -31,8 +31,6 @@ using namespace ::com::sun::star;
 
 using ::com::sun::star::uno::Reference;
 using ::com::sun::star::uno::Sequence;
-using ::com::sun::star::uno::Any;
-using ::osl::MutexGuard;
 
 namespace chart
 {
@@ -97,7 +95,7 @@ sal_Bool SAL_CALL NetChartTypeTemplate::matchesTemplate(
     {
         //filled net chart?:
         if( m_bHasFilledArea )
-            return sal_True;
+            return true;
 
         // check symbol-style
         // for a template with symbols it is ok, if there is at least one series

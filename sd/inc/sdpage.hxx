@@ -172,13 +172,14 @@ public:
 
     void EnsureMasterPageDefaultBackground();
     SdrObject*      CreatePresObj(PresObjKind eObjKind, bool bVertical, const Rectangle& rRect, bool bInsert=false);
-    SdrObject*      CreateDefaultPresObj(PresObjKind eObjKind, bool bInsert);
+    SdrObject*      CreateDefaultPresObj(PresObjKind eObjKind);
     void            DestroyDefaultPresObj(PresObjKind eObjKind);
     SdrObject*      GetPresObj(PresObjKind eObjKind, int nIndex = 1, bool bFuzzySearch = false );
     PresObjKind     GetPresObjKind(SdrObject* pObj) const;
     OUString        GetPresObjText(PresObjKind eObjKind) const;
     SfxStyleSheet* GetStyleSheetForMasterPageBackground() const;
     SfxStyleSheet*  GetStyleSheetForPresObj(PresObjKind eObjKind) const;
+    sal_Int64       GetHashCode() const;
     bool            RestoreDefaultText( SdrObject* pObj );
 
     /** @return true if the given SdrObject is inside the presentation object list */
@@ -231,7 +232,7 @@ public:
     bool        IsScaleObjects() const              { return mbScaleObjects; }
 
     void        SetSoundFile(const OUString& rStr)    { maSoundFile = rStr; }
-    OUString    GetSoundFile() const                { return maSoundFile; }
+    const OUString& GetSoundFile() const                { return maSoundFile; }
 
     void        SetLoopSound( bool bLoopSound ) { mbLoopSound = bLoopSound; }
     bool        IsLoopSound() const                 { return mbLoopSound; }
@@ -261,9 +262,9 @@ public:
     virtual OUString GetLayoutName() const override       { return maLayoutName; }
 
     void            SetFileName(const OUString& aName) { maFileName = aName; }
-    OUString        GetFileName() const       { return maFileName; }
+    const OUString& GetFileName() const       { return maFileName; }
     void            SetBookmarkName(const OUString& aName) { maBookmarkName = aName; }
-    OUString        GetBookmarkName() const       { return maBookmarkName; }
+    const OUString& GetBookmarkName() const       { return maBookmarkName; }
 
     void            ConnectLink();
     void            DisconnectLink();
@@ -371,7 +372,6 @@ public:
     void addAnnotation( const css::uno::Reference< css::office::XAnnotation >& xAnnotation, int nIndex = -1 );
     void removeAnnotation( const css::uno::Reference< css::office::XAnnotation >& xAnnotation );
     const sd::AnnotationVector& getAnnotations() const { return maAnnotations; }
-    sal_Int32 getHash() const;
     OString stringify() const;
     virtual void dumpAsXml(struct _xmlTextWriter* pWriter) const override;
 

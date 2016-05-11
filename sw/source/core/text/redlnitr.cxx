@@ -32,7 +32,7 @@
 #include <rootfrm.hxx>
 #include <breakit.hxx>
 #include <vcl/keycodes.hxx>
-#include <vcl/cmdevt.hxx>
+#include <vcl/commandevent.hxx>
 #include <vcl/settings.hxx>
 #include <txtfrm.hxx>
 #include <vcl/svapp.hxx>
@@ -82,7 +82,7 @@ void SwAttrIter::CtorInitAttrIter( SwTextNode& rTextNode, SwScriptInfo& rScrInf,
     aAttrHandler.Init( aFontAccess.Get()->GetDefault(), pAttrSet,
                        *rTextNode.getIDocumentSettingAccess(), pShell, *pFnt, bVertLayout );
 
-    aMagicNo[SW_LATIN] = aMagicNo[SW_CJK] = aMagicNo[SW_CTL] = nullptr;
+    aMagicNo[SwFontScript::Latin] = aMagicNo[SwFontScript::CJK] = aMagicNo[SwFontScript::CTL] = nullptr;
 
     // determine script changes if not already done for current paragraph
     OSL_ENSURE( pScriptInfo, "No script info available");
@@ -101,14 +101,16 @@ void SwAttrIter::CtorInitAttrIter( SwTextNode& rTextNode, SwScriptInfo& rScrInf,
             if ( nCnt >= pScriptInfo->CountScriptChg() )
                 break;
             nChg = pScriptInfo->GetScriptChg( nCnt );
-            int nTmp = SW_SCRIPTS;
+            SwFontScript nTmp = SW_SCRIPTS;
             switch ( pScriptInfo->GetScriptType( nCnt++ ) ) {
                 case i18n::ScriptType::ASIAN :
-                    if( !aMagicNo[SW_CJK] ) nTmp = SW_CJK; break;
+                    if( !aMagicNo[SwFontScript::CJK] ) nTmp = SwFontScript::CJK;
+                    break;
                 case i18n::ScriptType::COMPLEX :
-                    if( !aMagicNo[SW_CTL] ) nTmp = SW_CTL; break;
+                    if( !aMagicNo[SwFontScript::CTL] ) nTmp = SwFontScript::CTL;
+                    break;
                 default:
-                    if( !aMagicNo[SW_LATIN ] ) nTmp = SW_LATIN;
+                    if( !aMagicNo[SwFontScript::Latin ] ) nTmp = SwFontScript::Latin;
             }
             if( nTmp < SW_SCRIPTS )
             {
@@ -119,8 +121,8 @@ void SwAttrIter::CtorInitAttrIter( SwTextNode& rTextNode, SwScriptInfo& rScrInf,
     }
     else
     {
-        pFnt->ChkMagic( pShell, SW_LATIN );
-        pFnt->GetMagic( aMagicNo[ SW_LATIN ], aFntIdx[ SW_LATIN ], SW_LATIN );
+        pFnt->ChkMagic( pShell, SwFontScript::Latin );
+        pFnt->GetMagic( aMagicNo[ SwFontScript::Latin ], aFntIdx[ SwFontScript::Latin ], SwFontScript::Latin );
     }
 
     nStartIndex = nEndIndex = nPos = nChgCnt = 0;
@@ -189,7 +191,7 @@ SwRedlineItr::~SwRedlineItr()
 
 // The return value of SwRedlineItr::Seek tells you if the current font
 // has been manipulated by leaving (-1) or accessing (+1) of a section
-short SwRedlineItr::_Seek(SwFont& rFnt, sal_Int32 nNew, sal_Int32 nOld)
+short SwRedlineItr::Seek_(SwFont& rFnt, sal_Int32 nNew, sal_Int32 nOld)
 {
     short nRet = 0;
     if( ExtOn() )
@@ -202,13 +204,13 @@ short SwRedlineItr::_Seek(SwFont& rFnt, sal_Int32 nNew, sal_Int32 nOld)
             if( nNew >= nEnd )
             {
                 --nRet;
-                _Clear( &rFnt );    // We go behind the current section
+                Clear_( &rFnt );    // We go behind the current section
                 ++nAct;             // and check the next one
             }
             else if( nNew < nStart )
             {
                 --nRet;
-                _Clear( &rFnt );    // We go in front of the current section
+                Clear_( &rFnt );    // We go in front of the current section
                 if( nAct > nFirst )
                     nAct = nFirst;  // the test has to run from the beginning
                 else
@@ -318,7 +320,7 @@ void SwRedlineItr::ChangeTextAttr( SwFont* pFnt, SwTextAttr &rHt, bool bChg )
     }
 }
 
-void SwRedlineItr::_Clear( SwFont* pFnt )
+void SwRedlineItr::Clear_( SwFont* pFnt )
 {
     OSL_ENSURE( bOn, "SwRedlineItr::Clear: Off?" );
     bOn = false;
@@ -336,7 +338,7 @@ void SwRedlineItr::_Clear( SwFont* pFnt )
         pFnt->SetNoCol( false );
 }
 
-sal_Int32 SwRedlineItr::_GetNextRedln( sal_Int32 nNext )
+sal_Int32 SwRedlineItr::GetNextRedln_( sal_Int32 nNext )
 {
     nNext = NextExtend( nNext );
     if( !bShow || COMPLETE_STRING == nFirst )
@@ -356,7 +358,7 @@ sal_Int32 SwRedlineItr::_GetNextRedln( sal_Int32 nNext )
     return nNext;
 }
 
-bool SwRedlineItr::_ChkSpecialUnderline() const
+bool SwRedlineItr::ChkSpecialUnderline_() const
 {
     // If the underlining or the escapement is caused by redlining,
     // we always apply the SpecialUnderlining, i.e. the underlining
@@ -403,13 +405,13 @@ bool SwRedlineItr::CheckLine( sal_Int32 nChkStart, sal_Int32 nChkEnd )
 void SwExtend::ActualizeFont( SwFont &rFnt, sal_uInt16 nAttr )
 {
     if ( nAttr & EXTTEXTINPUT_ATTR_UNDERLINE )
-        rFnt.SetUnderline( UNDERLINE_SINGLE );
+        rFnt.SetUnderline( LINESTYLE_SINGLE );
     else if ( nAttr & EXTTEXTINPUT_ATTR_BOLDUNDERLINE )
-        rFnt.SetUnderline( UNDERLINE_BOLD );
+        rFnt.SetUnderline( LINESTYLE_BOLD );
     else if ( nAttr & EXTTEXTINPUT_ATTR_DOTTEDUNDERLINE )
-        rFnt.SetUnderline( UNDERLINE_DOTTED );
+        rFnt.SetUnderline( LINESTYLE_DOTTED );
     else if ( nAttr & EXTTEXTINPUT_ATTR_DASHDOTUNDERLINE )
-        rFnt.SetUnderline( UNDERLINE_DOTTED );
+        rFnt.SetUnderline( LINESTYLE_DOTTED );
 
     if ( nAttr & EXTTEXTINPUT_ATTR_REDTEXT )
         rFnt.SetColor( Color( COL_RED ) );
@@ -438,7 +440,7 @@ short SwExtend::Enter(SwFont& rFnt, sal_Int32 nNew)
     return 0;
 }
 
-bool SwExtend::_Leave(SwFont& rFnt, sal_Int32 nNew)
+bool SwExtend::Leave_(SwFont& rFnt, sal_Int32 nNew)
 {
     OSL_ENSURE( Inside(), "SwExtend: Leave without Enter" );
     const sal_uInt16 nOldAttr = rArr[ nPos - nStart ];

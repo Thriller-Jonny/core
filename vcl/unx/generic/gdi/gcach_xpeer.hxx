@@ -20,19 +20,13 @@
 #ifndef INCLUDED_VCL_UNX_GENERIC_GDI_GCACH_XPEER_HXX
 #define INCLUDED_VCL_UNX_GENERIC_GDI_GCACH_XPEER_HXX
 
-#include "generic/glyphcache.hxx"
-
-class X11GlyphPeer : public GlyphCachePeer
-{
-public:
-    X11GlyphPeer();
-    virtual ~X11GlyphPeer();
-};
+#include "unx/glyphcache.hxx"
 
 class X11GlyphCache : public GlyphCache
 {
 public:
-    explicit X11GlyphCache( X11GlyphPeer& );
+    explicit X11GlyphCache();
+    virtual ~X11GlyphCache();
     static X11GlyphCache& GetInstance();
     static void  KillInstance();
 };

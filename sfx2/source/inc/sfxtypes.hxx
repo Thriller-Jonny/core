@@ -69,7 +69,6 @@ public:
 #endif
 
 
-
 struct StringList_Impl : private Resource
 {
 
@@ -78,8 +77,6 @@ struct StringList_Impl : private Resource
     StringList_Impl( const ResId& rErrIdP,  sal_uInt16 nId)
         : Resource( rErrIdP ), aResId(nId, *rErrIdP.GetResMgr()) {}
     ~StringList_Impl() { FreeResource(); }
-
-    operator bool()      { return IsAvailableRes(aResId.SetRT(RSC_STRING)); }
 
 };
 

@@ -240,7 +240,7 @@ bool ScPreviewShell::GetPageSize( Size& aPageSize )
 
     ScStyleSheetPool*   pStylePool  = rDoc.GetStyleSheetPool();
     SfxStyleSheetBase*  pStyleSheet = pStylePool->Find( rDoc.GetPageStyle( nTab ),
-                                                        SFX_STYLE_FAMILY_PAGE );
+                                                        SfxStyleFamily::Page );
     OSL_ENSURE(pStyleSheet,"No style sheet");
     if (!pStyleSheet) return false;
     const SfxItemSet* pParamSet = &pStyleSheet->GetItemSet();
@@ -287,18 +287,14 @@ void ScPreviewShell::UpdateNeededScrollBars( bool bFromZoom )
             aWindowSize.Height() += aWidthOffSet;
         }
     }
-    // recalculate any needed scrollbars
-    bHori = false;
-    bVert = false;
 
+    // recalculate any needed scrollbars
     long nMaxWidthPos = aPageSize.Width() - aWindowSize.Width();
     if ( nMaxWidthPos<0 )
         bHori = false;
     else
         bHori = true;
-
     long nMaxHeightPos = aPageSize.Height() - aWindowSize.Height();
-
     if ( nMaxHeightPos < 0 )
         bVert = false;
     else
@@ -491,7 +487,7 @@ bool ScPreviewShell::ScrollCommand( const CommandEvent& rCEvt )
     if ( pData && pData->GetMode() == CommandWheelMode::ZOOM )
     {
         long nOld = pPreview->GetZoom();
-        long nNew = nOld;
+        long nNew;
         if ( pData->GetDelta() < 0 )
             nNew = std::max( (long) MINZOOM, basegfx::zoomtools::zoomOut( nOld ));
         else
@@ -518,7 +514,7 @@ SfxPrinter* ScPreviewShell::GetPrinter( bool bCreate )
     return pDocShell->GetPrinter(bCreate);
 }
 
-sal_uInt16 ScPreviewShell::SetPrinter( SfxPrinter *pNewPrinter, SfxPrinterChangeFlags nDiffFlags, bool )
+sal_uInt16 ScPreviewShell::SetPrinter( SfxPrinter *pNewPrinter, SfxPrinterChangeFlags nDiffFlags )
 {
     return pDocShell->SetPrinter( pNewPrinter, nDiffFlags );
 }
@@ -731,7 +727,7 @@ void ScPreviewShell::Execute( SfxRequest& rReq )
                 SCTAB nTab                      = pPreview->GetTab();
                 OUString aOldName               = pDocShell->GetDocument().GetPageStyle( pPreview->GetTab() );
                 ScStyleSheetPool* pStylePool    = pDocShell->GetDocument().GetStyleSheetPool();
-                SfxStyleSheetBase* pStyleSheet  = pStylePool->Find( aOldName, SFX_STYLE_FAMILY_PAGE );
+                SfxStyleSheetBase* pStyleSheet  = pStylePool->Find( aOldName, SfxStyleFamily::Page );
                 OSL_ENSURE( pStyleSheet, "PageStyle not found! :-/" );
 
                 if ( pReqArgs && pStyleSheet && SfxItemState::SET == pReqArgs->GetItemState( SID_PREVIEW_SCALINGFACTOR, true, &pItem ) )
@@ -845,7 +841,7 @@ void ScPreviewShell::GetState( SfxItemSet& rSet )
                     {
                         OUString aOldName               = pDocShell->GetDocument().GetPageStyle( pPreview->GetTab() );
                         ScStyleSheetPool* pStylePool    = pDocShell->GetDocument().GetStyleSheetPool();
-                        SfxStyleSheetBase* pStyleSheet  = pStylePool->Find( aOldName, SFX_STYLE_FAMILY_PAGE );
+                        SfxStyleSheetBase* pStyleSheet  = pStylePool->Find( aOldName, SfxStyleFamily::Page );
                         OSL_ENSURE( pStyleSheet, "PageStyle not found! :-/" );
 
                         if ( pStyleSheet )
@@ -934,7 +930,7 @@ void ScPreviewShell::ReadUserData(const OUString& rData, bool /* bBrowse */)
     }
 }
 
-void ScPreviewShell::WriteUserDataSequence(uno::Sequence < beans::PropertyValue >& rSeq, bool /* bBrowse */)
+void ScPreviewShell::WriteUserDataSequence(uno::Sequence < beans::PropertyValue >& rSeq)
 {
     rSeq.realloc(3);
     beans::PropertyValue* pSeq = rSeq.getArray();
@@ -953,7 +949,7 @@ void ScPreviewShell::WriteUserDataSequence(uno::Sequence < beans::PropertyValue 
     }
 }
 
-void ScPreviewShell::ReadUserDataSequence(const uno::Sequence < beans::PropertyValue >& rSeq, bool /* bBrowse */)
+void ScPreviewShell::ReadUserDataSequence(const uno::Sequence < beans::PropertyValue >& rSeq)
 {
     sal_Int32 nCount(rSeq.getLength());
     if (nCount)

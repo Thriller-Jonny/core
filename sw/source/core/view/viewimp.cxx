@@ -57,8 +57,7 @@ void SwViewShellImp::Init( const SwViewOption *pNewOpt )
             pRoot->GetDrawPage()->SetSize( pRoot->Frame().SSize() );
 
         m_pSdrPageView = m_pDrawView->ShowSdrPage( pRoot->GetDrawPage());
-        // OD 26.06.2003 #108784# - notify drawing page view about invisible
-        // layers.
+        // Notify drawing page view about invisible layers
         rIDDMA.NotifyInvisibleLayers( *m_pSdrPageView );
     }
     m_pDrawView->SetDragStripes( pNewOpt->IsCrossHair() );
@@ -101,7 +100,6 @@ SwViewShellImp::SwViewShellImp( SwViewShell *pParent ) :
     m_bSmoothUpdate( false ),
     m_bStopSmooth( false ),
     m_nRestoreActions( 0 ),
-    // OD 12.12.2002 #103492#
     m_pPagePreviewLayout( nullptr )
 {
 }
@@ -110,10 +108,9 @@ SwViewShellImp::~SwViewShellImp()
 {
     delete m_pAccessibleMap;
 
-    // OD 12.12.2002 #103492#
     delete m_pPagePreviewLayout;
 
-    //JP 29.03.96: after ShowSdrPage  HideSdrPage must also be executed!!!
+    // Make sure HideSdrPage is also executed after ShowSdrPage.
     if( m_pDrawView )
          m_pDrawView->HideSdrPage();
 
@@ -209,11 +206,11 @@ void SwViewShellImp::MakeDrawView()
 {
     IDocumentDrawModelAccess& rIDDMA = GetShell()->getIDocumentDrawModelAccess();
 
-    // the else here is not an error, _MakeDrawModel() calls this method again
+    // the else here is not an error, MakeDrawModel_() calls this method again
     // after the DrawModel is created to create DrawViews for all shells...
     if( !rIDDMA.GetDrawModel() )
     {
-        rIDDMA._MakeDrawModel();
+        rIDDMA.MakeDrawModel_();
     }
     else
     {
@@ -351,12 +348,12 @@ void SwViewShellImp::InvalidateAccessibleEditableState( bool bAllShells,
         for(SwViewShell& rTmp : GetShell()->GetRingContainer())
         {
             if( rTmp.Imp()->IsAccessible() )
-                rTmp.Imp()->GetAccessibleMap().InvalidateStates( AccessibleStates::EDITABLE, pFrame );
+                rTmp.Imp()->GetAccessibleMap().InvalidateEditableStates( pFrame );
         }
     }
     else if( IsAccessible() )
     {
-        GetAccessibleMap().InvalidateStates( AccessibleStates::EDITABLE, pFrame );
+        GetAccessibleMap().InvalidateEditableStates( pFrame );
     }
 }
 
@@ -372,7 +369,7 @@ void SwViewShellImp::InvalidateAccessibleRelationSet( const SwFlyFrame *pMaster,
 }
 
 /// invalidate CONTENT_FLOWS_FROM/_TO relation for paragraphs
-void SwViewShellImp::_InvalidateAccessibleParaFlowRelation( const SwTextFrame* _pFromTextFrame,
+void SwViewShellImp::InvalidateAccessibleParaFlowRelation_( const SwTextFrame* _pFromTextFrame,
                                                        const SwTextFrame* _pToTextFrame )
 {
     if ( !_pFromTextFrame && !_pToTextFrame )
@@ -400,7 +397,7 @@ void SwViewShellImp::_InvalidateAccessibleParaFlowRelation( const SwTextFrame* _
 }
 
 /// invalidate text selection for paragraphs
-void SwViewShellImp::_InvalidateAccessibleParaTextSelection()
+void SwViewShellImp::InvalidateAccessibleParaTextSelection_()
 {
     for(SwViewShell& rTmp : GetShell()->GetRingContainer())
     {
@@ -412,7 +409,7 @@ void SwViewShellImp::_InvalidateAccessibleParaTextSelection()
 }
 
 /// invalidate attributes for paragraphs
-void SwViewShellImp::_InvalidateAccessibleParaAttrs( const SwTextFrame& rTextFrame )
+void SwViewShellImp::InvalidateAccessibleParaAttrs_( const SwTextFrame& rTextFrame )
 {
     for(SwViewShell& rTmp : GetShell()->GetRingContainer())
     {
@@ -423,7 +420,6 @@ void SwViewShellImp::_InvalidateAccessibleParaAttrs( const SwTextFrame& rTextFra
     }
 }
 
-// OD 15.01.2003 #103492# - method signature change due to new page preview functionality
 void SwViewShellImp::UpdateAccessiblePreview( const std::vector<PreviewPage*>& _rPreviewPages,
                                          const Fraction&  _rScale,
                                          const SwPageFrame* _pSelectedPageFrame,

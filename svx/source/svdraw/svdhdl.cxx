@@ -29,7 +29,7 @@
 #include <vcl/settings.hxx>
 #include <vcl/virdev.hxx>
 #include <tools/poly.hxx>
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 
 #include <svx/sxekitm.hxx>
 #include "svx/svdstr.hrc"
@@ -134,7 +134,7 @@ const BitmapEx& SdrHdlBitmapSet::GetBitmapEx(BitmapMarkerKind eKindOfMarker, sal
         default:
         {
             OSL_FAIL( "Unknown kind of marker." );
-            // no break here, return Rect_9x9 as default
+            SAL_FALLTHROUGH; // return Rect_9x9 as default
         }
         case Rect_9x9:
         {
@@ -266,7 +266,6 @@ const BitmapEx& SdrHdlBitmapSet::GetBitmapEx(BitmapMarkerKind eKindOfMarker, sal
         }
     }
 }
-
 
 
 SdrHdl::SdrHdl():
@@ -1308,7 +1307,6 @@ void SdrHdlGradient::FromIAOToItem(SdrObject* _pObj, bool bSetItemOnObject, bool
 }
 
 
-
 SdrHdlLine::~SdrHdlLine() {}
 
 void SdrHdlLine::CreateB2dIAObject()
@@ -1362,7 +1360,6 @@ Pointer SdrHdlLine::GetPointer() const
 {
     return Pointer(PointerStyle::RefHand);
 }
-
 
 
 SdrHdlBezWgt::~SdrHdlBezWgt() {}
@@ -1421,7 +1418,6 @@ void SdrHdlBezWgt::CreateB2dIAObject()
 }
 
 
-
 E3dVolumeMarker::E3dVolumeMarker(const basegfx::B2DPolyPolygon& rWireframePoly)
 {
     aWireframePoly = rWireframePoly;
@@ -1465,7 +1461,6 @@ void E3dVolumeMarker::CreateB2dIAObject()
         }
     }
 }
-
 
 
 ImpEdgeHdl::~ImpEdgeHdl()
@@ -1592,7 +1587,6 @@ bool ImpEdgeHdl::IsHorzDrag() const
 }
 
 
-
 ImpMeasureHdl::~ImpMeasureHdl()
 {
 }
@@ -1668,7 +1662,6 @@ Pointer ImpMeasureHdl::GetPointer() const
 }
 
 
-
 ImpTextframeHdl::ImpTextframeHdl(const Rectangle& rRect) :
     SdrHdl(rRect.TopLeft(),HDL_MOVE),
     maRect(rRect)
@@ -1727,7 +1720,6 @@ void ImpTextframeHdl::CreateB2dIAObject()
         }
     }
 }
-
 
 
 static bool ImpSdrHdlListSorter(SdrHdl* const& lhs, SdrHdl* const& rhs)
@@ -1872,7 +1864,6 @@ extern "C" int SAL_CALL ImplSortHdlFunc( const void* pVoid1, const void* pVoid2 
         return 1;
     }
 }
-
 
 
 void SdrHdlList::TravelFocusHdl(bool bForward)
@@ -2051,7 +2042,6 @@ void SdrHdlList::ResetFocusHdl()
 }
 
 
-
 SdrHdlList::SdrHdlList(SdrMarkView* pV)
 :   mnFocusIndex(SAL_MAX_SIZE),
     pView(pV),
@@ -2181,44 +2171,26 @@ size_t SdrHdlList::GetHdlNum(const SdrHdl* pHdl) const
     return it - aList.begin();
 }
 
-void SdrHdlList::AddHdl(SdrHdl* pHdl, bool bAtBegin)
+void SdrHdlList::AddHdl(SdrHdl* pHdl)
 {
     if (pHdl!=nullptr)
     {
-        if (bAtBegin)
-        {
-            aList.push_front(pHdl);
-        }
-        else
-        {
-            aList.push_back(pHdl);
-        }
+        aList.push_back(pHdl);
         pHdl->SetHdlList(this);
     }
 }
 
-SdrHdl* SdrHdlList::IsHdlListHit(const Point& rPnt, bool bBack, bool bNext, SdrHdl* pHdl0) const
+SdrHdl* SdrHdlList::IsHdlListHit(const Point& rPnt) const
 {
     SdrHdl* pRet=nullptr;
     const size_t nCount=GetHdlCount();
-    size_t nNum=bBack ? 0 : nCount;
-    while ((bBack ? nNum<nCount : nNum>0) && pRet==nullptr)
+    size_t nNum=nCount;
+    while (nNum>0 && pRet==nullptr)
     {
-        if (!bBack)
-            nNum--;
+        nNum--;
         SdrHdl* pHdl=GetHdl(nNum);
-        if (bNext)
-        {
-            if (pHdl==pHdl0)
-                bNext=false;
-        }
-        else
-        {
-            if (pHdl->IsHdlHit(rPnt))
-                pRet=pHdl;
-        }
-        if (bBack)
-            nNum++;
+        if (pHdl->IsHdlHit(rPnt))
+            pRet=pHdl;
     }
     return pRet;
 }
@@ -2247,12 +2219,10 @@ SdrCropHdl::SdrCropHdl(
 }
 
 
-
 BitmapEx SdrCropHdl::GetHandlesBitmap()
 {
     return BitmapEx(ResId(SIP_SA_CROP_MARKERS, *ImpGetResMgr()));
 }
-
 
 
 BitmapEx SdrCropHdl::GetBitmapForHandle( const BitmapEx& rBitmap, int nSize )
@@ -2294,7 +2264,6 @@ BitmapEx SdrCropHdl::GetBitmapForHandle( const BitmapEx& rBitmap, int nSize )
     aRetval.Crop(aSourceRect);
     return aRetval;
 }
-
 
 
 void SdrCropHdl::CreateB2dIAObject()

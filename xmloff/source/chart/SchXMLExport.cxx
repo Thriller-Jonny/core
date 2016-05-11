@@ -19,7 +19,6 @@
 
 #include <sal/config.h>
 
-#include <boost/noncopyable.hpp>
 #include <sax/tools/converter.hxx>
 
 #include <xmloff/xmlprmap.hxx>
@@ -118,7 +117,7 @@ using ::std::vector;
 
 // class SchXMLExportHelper_Impl
 
-class SchXMLExportHelper_Impl: private boost::noncopyable
+class SchXMLExportHelper_Impl
 {
 public:
     // first: data sequence for label, second: data sequence for values.
@@ -131,6 +130,9 @@ public:
                         SvXMLAutoStylePoolP& rASPool );
 
     virtual ~SchXMLExportHelper_Impl();
+
+    SchXMLExportHelper_Impl(const SchXMLExportHelper_Impl&) = delete;
+    SchXMLExportHelper_Impl& operator=(const SchXMLExportHelper_Impl&) = delete;
 
     // auto-styles
     /// parse chart and collect all auto-styles used in current pool
@@ -153,7 +155,7 @@ public:
     void exportChart( css::uno::Reference< css::chart::XChartDocument > rChartDoc,
                       bool bIncludeTable );
 
-    rtl::Reference<XMLPropertySetMapper> GetPropertySetMapper() const;
+    const rtl::Reference<XMLPropertySetMapper>& GetPropertySetMapper() const;
 
     void SetChartRangeAddress( const OUString& rAddress )
         { msChartAddress = rAddress; }
@@ -184,8 +186,8 @@ public:
                         bool bIncludeTable = false );
     void exportTable();
     void exportPlotArea(
-        css::uno::Reference< css::chart::XDiagram > xDiagram,
-        css::uno::Reference< css::chart2::XDiagram > xNewDiagram,
+        const css::uno::Reference< css::chart::XDiagram >& xDiagram,
+        const css::uno::Reference< css::chart2::XDiagram >& xNewDiagram,
         const css::awt::Size & rPageSize,
         bool bExportContent,
         bool bIncludeTable );
@@ -234,12 +236,12 @@ public:
 
     /// add svg position as attribute for current element
     void addPosition( const css::awt::Point & rPosition );
-    void addPosition( css::uno::Reference< css::drawing::XShape > xShape );
+    void addPosition( const css::uno::Reference< css::drawing::XShape >& xShape );
     /// add svg size as attribute for current element
     void addSize( const css::awt::Size & rSize, bool bIsOOoNamespace = false );
-    void addSize( css::uno::Reference< css::drawing::XShape > xShape, bool bIsOOoNamespace = false  );
+    void addSize( const css::uno::Reference< css::drawing::XShape >& xShape );
     /// exports a string as a paragraph element
-    void exportText( const OUString& rText, bool bConvertTabsLFs = false );
+    void exportText( const OUString& rText );
 
 public:
     SvXMLExport& mrExport;
@@ -631,7 +633,7 @@ uno::Sequence< OUString > lcl_DataSequenceToStringSequence(
             }
             if(!bHasValue)
             {
-                //no double value is countained
+                //no double value is contained
                 //is there any text?
                 uno::Sequence< OUString > aStrings( lcl_DataSequenceToStringSequence( xSeq ) );
                 sal_Int32 nTextCount = aStrings.getLength();
@@ -991,7 +993,7 @@ void SchXMLExportHelper::SetDestinationShellID( const OUString& rShellID )
     m_pImpl->maDestShellID = rShellID;
 }
 
-rtl::Reference< XMLPropertySetMapper > SchXMLExportHelper_Impl::GetPropertySetMapper() const
+const rtl::Reference< XMLPropertySetMapper >& SchXMLExportHelper_Impl::GetPropertySetMapper() const
 {
     return mxPropertySetMapper;
 }
@@ -1818,8 +1820,8 @@ Reference< chart2::XAxis > lcl_getAxis( const Reference< chart2::XCoordinateSyst
 }
 
 void SchXMLExportHelper_Impl::exportPlotArea(
-    Reference< chart::XDiagram > xDiagram,
-    Reference< chart2::XDiagram > xNewDiagram,
+    const Reference< chart::XDiagram >& xDiagram,
+    const Reference< chart2::XDiagram >& xNewDiagram,
     const awt::Size & rPageSize,
     bool bExportContent,
     bool bIncludeTable )
@@ -1831,8 +1833,6 @@ void SchXMLExportHelper_Impl::exportPlotArea(
     // variables for autostyles
     Reference< beans::XPropertySet > xPropSet;
     std::vector< XMLPropertyState > aPropertyStates;
-
-    bool bIs3DChart = false;
 
     msStringBuffer.setLength( 0 );
 
@@ -1901,6 +1901,8 @@ void SchXMLExportHelper_Impl::exportPlotArea(
             addPosition( xShape );
             addSize( xShape );
         }
+
+        bool bIs3DChart = false;
 
         if( xPropSet.is())
         {
@@ -3025,7 +3027,7 @@ void SchXMLExportHelper_Impl::exportErrorBar( const Reference<beans::XPropertySe
 
     const SvtSaveOptions::ODFDefaultVersion nCurrentVersion( SvtSaveOptions().GetODFDefaultVersion() );
 
-    /// Dont export X ErrorBars for older ODF versions.
+    /// Don't export X ErrorBars for older ODF versions.
     if ( !bYError && nCurrentVersion < SvtSaveOptions::ODFVER_012 )
         return;
 
@@ -3457,7 +3459,7 @@ void SchXMLExportHelper_Impl::addPosition( const awt::Point & rPosition )
     mrExport.AddAttribute( XML_NAMESPACE_SVG, XML_Y, msString );
 }
 
-void SchXMLExportHelper_Impl::addPosition( Reference< drawing::XShape > xShape )
+void SchXMLExportHelper_Impl::addPosition( const Reference< drawing::XShape >& xShape )
 {
     if( xShape.is())
         addPosition( xShape->getPosition());
@@ -3476,10 +3478,10 @@ void SchXMLExportHelper_Impl::addSize( const awt::Size & rSize, bool bIsOOoNames
     mrExport.AddAttribute( bIsOOoNamespace ? XML_NAMESPACE_CHART_EXT : XML_NAMESPACE_SVG, XML_HEIGHT, msString );
 }
 
-void SchXMLExportHelper_Impl::addSize( Reference< drawing::XShape > xShape, bool bIsOOoNamespace )
+void SchXMLExportHelper_Impl::addSize( const Reference< drawing::XShape >& xShape )
 {
     if( xShape.is())
-        addSize( xShape->getSize(), bIsOOoNamespace );
+        addSize( xShape->getSize() );
 }
 
 awt::Size SchXMLExportHelper_Impl::getPageSize( const Reference< chart2::XChartDocument > & xChartDoc )
@@ -3510,9 +3512,9 @@ void SchXMLExportHelper_Impl::AddAutoStyleAttribute( const std::vector< XMLPrope
     }
 }
 
-void SchXMLExportHelper_Impl::exportText( const OUString& rText, bool bConvertTabsLFs )
+void SchXMLExportHelper_Impl::exportText( const OUString& rText )
 {
-    SchXMLTools::exportText( mrExport, rText, bConvertTabsLFs );
+    SchXMLTools::exportText( mrExport, rText, false/*bConvertTabsLFs*/ );
 }
 
 // class SchXMLExport
@@ -3526,7 +3528,7 @@ SchXMLExport::SchXMLExport(
     maExportHelper( new SchXMLExportHelper(*this, *maAutoStylePool.get()) )
 {
     if( getDefaultVersion() > SvtSaveOptions::ODFVER_012 )
-        _GetNamespaceMap().Add( GetXMLToken(XML_NP_CHART_EXT), GetXMLToken(XML_N_CHART_EXT), XML_NAMESPACE_CHART_EXT);
+        GetNamespaceMap_().Add( GetXMLToken(XML_NP_CHART_EXT), GetXMLToken(XML_N_CHART_EXT), XML_NAMESPACE_CHART_EXT);
 }
 
 SchXMLExport::~SchXMLExport()
@@ -3549,18 +3551,18 @@ sal_uInt32 SchXMLExport::exportDoc( enum ::xmloff::token::XMLTokenEnum eClass )
     return SvXMLExport::exportDoc( eClass );
 }
 
-void SchXMLExport::_ExportStyles( bool bUsed )
+void SchXMLExport::ExportStyles_( bool bUsed )
 {
-    SvXMLExport::_ExportStyles( bUsed );
+    SvXMLExport::ExportStyles_( bUsed );
 }
 
-void SchXMLExport::_ExportMasterStyles()
+void SchXMLExport::ExportMasterStyles_()
 {
     // not available in chart
     SAL_INFO("xmloff.chart", "Master Style Export requested. Not available for Chart" );
 }
 
-void SchXMLExport::_ExportAutoStyles()
+void SchXMLExport::ExportAutoStyles_()
 {
     // there are no styles that require their own autostyles
     if( getExportFlags() & SvXMLExportFlags::CONTENT )
@@ -3578,7 +3580,7 @@ void SchXMLExport::_ExportAutoStyles()
     }
 }
 
-void SchXMLExport::_ExportContent()
+void SchXMLExport::ExportContent_()
 {
     Reference< chart::XChartDocument > xChartDoc( GetModel(), uno::UNO_QUERY );
     if( xChartDoc.is())

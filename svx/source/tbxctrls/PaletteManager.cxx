@@ -219,7 +219,7 @@ void PaletteManager::SetBtnUpdater(svx::ToolboxButtonColorUpdater* pBtnUpdater)
     mpBtnUpdater = pBtnUpdater;
 }
 
-void PaletteManager::SetColorSelectFunction(std::function<void(const OUString&, const Color&)> aColorSelectFunction)
+void PaletteManager::SetColorSelectFunction(const std::function<void(const OUString&, const Color&)>& aColorSelectFunction)
 {
     maColorSelectFunction = aColorSelectFunction;
 }
@@ -227,7 +227,7 @@ void PaletteManager::SetColorSelectFunction(std::function<void(const OUString&, 
 void PaletteManager::PopupColorPicker(const OUString& aCommand)
 {
     // The calling object goes away during aColorDlg.Execute(), so we must copy this
-    OUString aCommandCopy = aCommand;
+    const OUString& aCommandCopy = aCommand;
     SvColorDialog aColorDlg( nullptr );
     aColorDlg.SetColor ( mLastColor );
     aColorDlg.SetMode( svtools::ColorPickerMode_MODIFY );

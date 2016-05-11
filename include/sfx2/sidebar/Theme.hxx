@@ -33,7 +33,6 @@
 
 #include <map>
 #include <unordered_map>
-#include <boost/optional.hpp>
 
 class SvBorder;
 
@@ -61,21 +60,20 @@ class SFX2_DLLPUBLIC Theme
 public:
     enum ThemeItem
     {
-        __Begin,
-        __Pre_Image = __Begin,
+        Begin_,
+        Pre_Image_ = Begin_,
 
-        __AnyItem = __Pre_Image,
+        AnyItem_ = Pre_Image_,
 
         Image_Grip,
         Image_Expand,
         Image_Collapse,
         Image_TabBarMenu,
         Image_PanelMenu,
-        Image_ToolBoxItemSeparator,
         Image_Closer,
         Image_CloseIndicator,
 
-        __Image_Color,
+        Image_Color_,
 
         Color_DeckTitleFont,
         Color_PanelTitleFont,
@@ -85,7 +83,7 @@ public:
         Color_Highlight,
         Color_HighlightText,
 
-        __Color_Paint,
+        Color_Paint_,
 
         Paint_DeckBackground,
         Paint_DeckTitleBarBackground,
@@ -102,7 +100,7 @@ public:
         Paint_ToolBoxBorderBottomRight,
         Paint_DropDownBackground,
 
-        __Paint_Int,
+        Paint_Int_,
 
         Int_DeckTitleBarHeight,
         Int_DeckBorderSize,
@@ -122,19 +120,18 @@ public:
         Int_TabBarBottomPadding,
         Int_ButtonCornerRadius,
 
-        __Int_Bool,
+        Int_Bool_,
 
         Bool_UseSystemColors,
-        Bool_UseToolBoxItemSeparator,
         Bool_IsHighContrastModeActive,
 
-        __Bool_Rect,
+        Bool_Rect_,
 
         Rect_ToolBoxPadding,
         Rect_ToolBoxBorder,
 
-        __Post_Rect,
-        __End=__Post_Rect
+        Post_Rect_,
+        End_=Post_Rect_
     };
 
     static Image GetImage (const ThemeItem eItem);
@@ -269,7 +266,6 @@ private:
         const ThemeItem eItem,
         const PropertyType eType);
 };
-
 
 
 } } // end of namespace sfx2::sidebar

@@ -59,7 +59,6 @@ aDbgStyleSheetReferences;
 #endif
 
 
-
 SfxStyleSheetHintExtended::SfxStyleSheetHintExtended
 (
     sal_uInt16          nAction,        // SfxStyleSheetHintId::... (see above)
@@ -373,7 +372,7 @@ SfxStyleFamily SfxStyleSheetIterator::GetSearchFamily() const
 inline bool SfxStyleSheetIterator::IsTrivialSearch()
 {
     return (( nMask & SFXSTYLEBIT_ALL_VISIBLE ) == SFXSTYLEBIT_ALL_VISIBLE) &&
-        (GetSearchFamily() == SFX_STYLE_FAMILY_ALL);
+        (GetSearchFamily() == SfxStyleFamily::All);
 }
 
 namespace {
@@ -386,7 +385,7 @@ struct DoesStyleMatchStyleSheetPredicate final : public svl::StyleSheetPredicate
     bool
     Check(const SfxStyleSheetBase& styleSheet) override
     {
-        bool bMatchFamily = ((mIterator->GetSearchFamily() == SFX_STYLE_FAMILY_ALL) ||
+        bool bMatchFamily = ((mIterator->GetSearchFamily() == SfxStyleFamily::All) ||
                 ( styleSheet.GetFamily() == mIterator->GetSearchFamily() ));
 
         bool bUsed = mIterator->SearchUsed() && styleSheet.IsUsed( );
@@ -578,7 +577,7 @@ SfxStyleSheetBasePool::SfxStyleSheetBasePool( SfxItemPool& r ) :
     pImp(new SfxStyleSheetBasePool_Impl),
     aAppName(r.GetName()),
     rPool(r),
-    nSearchFamily(SFX_STYLE_FAMILY_PARA),
+    nSearchFamily(SfxStyleFamily::Para),
     nMask(SFXSTYLEBIT_ALL)
 {
 #ifdef DBG_UTIL
@@ -657,7 +656,7 @@ SfxStyleSheetBase* SfxStyleSheetBasePool::Create( const SfxStyleSheetBase& r )
 
 SfxStyleSheetBase& SfxStyleSheetBasePool::Make( const OUString& rName, SfxStyleFamily eFam, sal_uInt16 mask)
 {
-    OSL_ENSURE( eFam != SFX_STYLE_FAMILY_ALL, "svl::SfxStyleSheetBasePool::Make(), FamilyAll is not a allowed Familie" );
+    OSL_ENSURE( eFam != SfxStyleFamily::All, "svl::SfxStyleSheetBasePool::Make(), FamilyAll is not a allowed Familie" );
 
     SfxStyleSheetIterator aIter(this, eFam, mask);
     rtl::Reference< SfxStyleSheetBase > xStyle( aIter.Find( rName ) );
@@ -676,7 +675,7 @@ SfxStyleSheetBase& SfxStyleSheetBasePool::Make( const OUString& rName, SfxStyleF
  * Helper function: If a template with this name exists it is created
  * anew. All templates that have this template as a parent are reconnected.
  */
-SfxStyleSheetBase& SfxStyleSheetBasePool::Add( const SfxStyleSheetBase& rSheet )
+void SfxStyleSheetBasePool::Add( const SfxStyleSheetBase& rSheet )
 {
     SfxStyleSheetIterator aIter(this, rSheet.GetFamily(), nMask);
     SfxStyleSheetBase* pOld = aIter.Find( rSheet.GetName() );
@@ -686,7 +685,6 @@ SfxStyleSheetBase& SfxStyleSheetBasePool::Add( const SfxStyleSheetBase& rSheet )
     rtl::Reference< SfxStyleSheetBase > xNew( Create( rSheet ) );
     pImp->mxIndexedStyleSheets->AddStyleSheet(xNew);
     Broadcast( SfxStyleSheetHint( SfxStyleSheetHintId::CHANGED, *xNew.get() ) );
-    return *xNew.get();
 }
 
 SfxStyleSheetBasePool& SfxStyleSheetBasePool::operator=( const SfxStyleSheetBasePool& r )
@@ -967,7 +965,7 @@ SfxUnoStyleSheet* SfxUnoStyleSheet::getUnoStyleSheet( const css::uno::Reference<
 }
 
 void
-SfxStyleSheetBasePool::StoreStyleSheet(rtl::Reference< SfxStyleSheetBase > xStyle)
+SfxStyleSheetBasePool::StoreStyleSheet(const rtl::Reference< SfxStyleSheetBase >& xStyle)
 {
     pImp->mxIndexedStyleSheets->AddStyleSheet(xStyle);
 }

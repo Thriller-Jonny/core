@@ -13,11 +13,11 @@
  manual changes will be rewritten by the next run of update_pch.sh (which presumably
  also fixes all possible problems, so it's usually better to use it).
 
- Generated on 2015-12-02 12:42:58 using:
+ Generated on 2016-03-01 08:26:50 using:
  ./bin/update_pch xmlsecurity xsec_xmlsec --cutoff=2 --exclude:system --include:module --include:local
 
  If after updating build fails, use the following command to locate conflicting headers:
- ./bin/update_pch_bisect ./xmlsecurity/inc/pch/precompiled_xsec_xmlsec.hxx "/opt/lo/bin/make xmlsecurity.build" --find-conflicts
+ ./bin/update_pch_bisect ./xmlsecurity/inc/pch/precompiled_xsec_xmlsec.hxx "make xmlsecurity.build" --find-conflicts
 */
 
 #include <cassert>
@@ -35,7 +35,6 @@
 #include <string.h>
 #include <string>
 #include <utility>
-#include <boost/noncopyable.hpp>
 #include <osl/diagnose.h>
 #include <osl/doublecheckedlocking.h>
 #include <osl/file.h>
@@ -116,10 +115,9 @@
 #include <uno/sequence2.h>
 #include <xmloff/dllapi.h>
 #include <xmlsecurity/biginteger.hxx>
-#include <xmlsecurity/xmlsec-wrapper.h>
 
 // Cleanup windows header macro pollution.
-#ifdef WNT
+#if defined(_WIN32) && defined(WINAPI)
 #   include <postwin.h>
 #   undef RGB
 #endif

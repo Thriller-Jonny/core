@@ -39,6 +39,7 @@ class SfxStyleSheetPool;
 class SvxFieldItem;
 class SvxFieldData;
 class SvStream;
+enum class OutlinerMode;
 
 namespace editeng {
 
@@ -65,10 +66,6 @@ class EDITENG_DLLPUBLIC EditTextObject : public SfxItemPoolUser
 
     std::unique_ptr<EditTextObjectImpl> mpImpl;
 
-    EditTextObject&      operator=( const EditTextObject& ) = delete;
-
-    EditTextObject(); // disabled
-
     EditTextObject( SfxItemPool* pPool );
 
     void StoreData( SvStream& rStrm ) const;
@@ -77,6 +74,7 @@ class EDITENG_DLLPUBLIC EditTextObject : public SfxItemPoolUser
 public:
     EditTextObject( const EditTextObject& r );
     virtual ~EditTextObject();
+    EditTextObject&      operator=( const EditTextObject& ) = delete;
 
     /**
      * Set paragraph strings to the shared string pool.
@@ -88,8 +86,8 @@ public:
     std::vector<svl::SharedString> GetSharedStrings() const;
 
     const SfxItemPool* GetPool() const;
-    sal_uInt16 GetUserType() const;    // For OutlinerMode, it can however not save in compatible format
-    void SetUserType( sal_uInt16 n );
+    OutlinerMode GetUserType() const;    // For OutlinerMode, it can however not save in compatible format
+    void SetUserType( OutlinerMode n );
 
     bool IsVertical() const;
     void SetVertical( bool bVertical );
@@ -98,10 +96,9 @@ public:
 
     EditTextObject* Clone() const;
 
-    bool Store( SvStream& rOStream ) const;
+    void Store( SvStream& rOStream ) const;
 
-    static EditTextObject* Create(
-        SvStream& rIStream, SfxItemPool* pGlobalTextObjectPool = nullptr );
+    static EditTextObject* Create( SvStream& rIStream );
 
     sal_Int32 GetParagraphCount() const;
 

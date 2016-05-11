@@ -534,14 +534,8 @@ bool EnhancedCustomShape2d::ConvertSequenceToEnhancedCustomShape2dHandle(
     return bRetValue;
 }
 
-const sal_Int32* EnhancedCustomShape2d::ApplyShapeAttributes( const SdrCustomShapeGeometryItem& rGeometryItem )
+void EnhancedCustomShape2d::ApplyShapeAttributes( const SdrCustomShapeGeometryItem& rGeometryItem )
 {
-    const sal_Int32* pDefData = nullptr;
-    const mso_CustomShape* pDefCustomShape = GetCustomShapeContent( eSpType );
-    if ( pDefCustomShape )
-        pDefData = pDefCustomShape->pDefData;
-
-
     // AdjustmentValues
     const Any* pAny = ((SdrCustomShapeGeometryItem&)rGeometryItem).GetPropertyValueByName( "AdjustmentValues" );
     if ( pAny )
@@ -621,8 +615,6 @@ const sal_Int32* EnhancedCustomShape2d::ApplyShapeAttributes( const SdrCustomSha
     pAny = ((SdrCustomShapeGeometryItem&)rGeometryItem).GetPropertyValueByName( "Handles" );
     if ( pAny )
         *pAny >>= seqHandles;
-
-    return pDefData;
 }
 
 EnhancedCustomShape2d::~EnhancedCustomShape2d()
@@ -708,8 +700,8 @@ EnhancedCustomShape2d::EnhancedCustomShape2d( SdrObject* pAObj ) :
 
     ClearItem( SDRATTR_TEXTDIRECTION ); //SJ: vertical writing is not required, by removing this item no outliner is created
 
-    // #i105323# For 2D AtoShapes, the shadow attribute does not need to be applied to any
-    // of the constucted helper SdrObjects. This would lead to problems since the shadow
+    // #i105323# For 2D AutoShapes, the shadow attribute does not need to be applied to any
+    // of the constructed helper SdrObjects. This would lead to problems since the shadow
     // of one helper object would fall on one helper object behind it (e.g. with the
     // eyes of the smiley shape). This is not wanted; instead a single shadow 'behind'
     // the AutoShape visualisation is wanted. This is done with primitive functionailty
@@ -858,13 +850,13 @@ double EnhancedCustomShape2d::GetAdjustValueAsDouble( const sal_Int32 nIndex ) c
 double EnhancedCustomShape2d::GetEquationValueAsDouble( const sal_Int32 nIndex ) const
 {
     double fNumber = 0.0;
-#if OSL_DEBUG_LEVEL > 1
+#if OSL_DEBUG_LEVEL > 0
     static sal_uInt32 nLevel = 0;
 #endif
     if ( nIndex < (sal_Int32)vNodesSharedPtr.size() )
     {
         if ( vNodesSharedPtr[ nIndex ].get() ) {
-#if OSL_DEBUG_LEVEL > 1
+#if OSL_DEBUG_LEVEL > 0
             nLevel ++;
 #endif
             try
@@ -881,10 +873,9 @@ double EnhancedCustomShape2d::GetEquationValueAsDouble( const sal_Int32 nIndex )
 
                     if ( !rtl::math::isFinite( fNumber ) )
                         fNumber = 0.0;
-#if OSL_DEBUG_LEVEL > 1
-                    OSL_TRACE("equation %d (level: %d): %s --> %f (angle: %f)", nIndex,
-                              nLevel, OUStringToOString( seqEquations[ nIndex ],
-                                                         RTL_TEXTENCODING_ASCII_US ).getStr(), fNumber, 180.0*fNumber/10800000.0);
+#if OSL_DEBUG_LEVEL > 0
+                    SAL_INFO("svx", "equation " << nLevel << " (level: " << seqEquations[nIndex] << "): "
+                             << fNumber << " --> " << 180.0*fNumber/10800000.0);
 #endif
                 }
             }
@@ -892,7 +883,7 @@ double EnhancedCustomShape2d::GetEquationValueAsDouble( const sal_Int32 nIndex )
             {
                 OSL_TRACE("error: EnhancedCustomShape2d::GetEquationValueAsDouble failed");
             }
-#if OSL_DEBUG_LEVEL > 1
+#if OSL_DEBUG_LEVEL > 0
         nLevel --;
 #endif
         }
@@ -954,11 +945,10 @@ Point EnhancedCustomShape2d::GetPoint( const css::drawing::EnhancedCustomShapePa
     return aRetValue;
 }
 
-bool EnhancedCustomShape2d::GetParameter( double& rRetValue, const EnhancedCustomShapeParameter& rParameter,
+void EnhancedCustomShape2d::GetParameter( double& rRetValue, const EnhancedCustomShapeParameter& rParameter,
                                               const bool bReplaceGeoWidth, const bool bReplaceGeoHeight ) const
 {
     rRetValue = 0.0;
-    bool bRetValue = false;
     switch ( rParameter.Type )
     {
         case EnhancedCustomShapeParameterType::ADJUSTMENT :
@@ -967,7 +957,6 @@ bool EnhancedCustomShape2d::GetParameter( double& rRetValue, const EnhancedCusto
             if ( rParameter.Value >>= nAdjustmentIndex )
             {
                 rRetValue = GetAdjustValueAsDouble( nAdjustmentIndex );
-                bRetValue = true;
             }
         }
         break;
@@ -977,7 +966,6 @@ bool EnhancedCustomShape2d::GetParameter( double& rRetValue, const EnhancedCusto
             if ( rParameter.Value >>= nEquationIndex )
             {
                 rRetValue = GetEquationValueAsDouble( nEquationIndex );
-                bRetValue = true;
             }
         }
         break;
@@ -989,7 +977,6 @@ bool EnhancedCustomShape2d::GetParameter( double& rRetValue, const EnhancedCusto
                 if ( rParameter.Value >>= fValue )
                 {
                     rRetValue = fValue;
-                    bRetValue = true;
                 }
             }
             else
@@ -998,7 +985,6 @@ bool EnhancedCustomShape2d::GetParameter( double& rRetValue, const EnhancedCusto
                 if ( rParameter.Value >>= nValue )
                 {
                     rRetValue = nValue;
-                    bRetValue = true;
                     if ( bReplaceGeoWidth && ( nValue == nCoordWidth ) )
                         rRetValue *= fXRatio;
                     else if ( bReplaceGeoHeight && ( nValue == nCoordHeight ) )
@@ -1010,29 +996,24 @@ bool EnhancedCustomShape2d::GetParameter( double& rRetValue, const EnhancedCusto
         case EnhancedCustomShapeParameterType::LEFT :
         {
             rRetValue  = 0.0;
-            bRetValue = true;
         }
         break;
         case EnhancedCustomShapeParameterType::TOP :
         {
             rRetValue  = 0.0;
-            bRetValue = true;
         }
         break;
         case EnhancedCustomShapeParameterType::RIGHT :
         {
             rRetValue = nCoordWidth;
-            bRetValue = true;
         }
         break;
         case EnhancedCustomShapeParameterType::BOTTOM :
         {
             rRetValue = nCoordHeight;
-            bRetValue = true;
         }
         break;
     }
-    return bRetValue;
 }
 
 // nLumDat 28-31 = number of luminance entries in nLumDat
@@ -1517,6 +1498,7 @@ void EnhancedCustomShape2d::CreateSubPath( sal_uInt16& rSrcPt, sal_uInt16& rSegm
                         }
                         aNewB2DPolygon.clear();
                     }
+                    SAL_FALLTHROUGH;
                 }
                 case ANGLEELLIPSETO :
                 {
@@ -1534,15 +1516,15 @@ void EnhancedCustomShape2d::CreateSubPath( sal_uInt16& rSrcPt, sal_uInt16& rSegm
                             && ( nCoordHeight == pDefCustomShape->nCoordHeight ) )
                             bIsDefaultViewBox = true;
                         sal_Int32 j, nCount = pDefCustomShape->nVertices;//==3
-                        css::uno::Sequence< css::drawing::EnhancedCustomShapeParameterPair> seqCoordinates1, seqCoordinates2;
+                        std::vector< css::drawing::EnhancedCustomShapeParameterPair> seqCoordinates1, seqCoordinates2;
 
-                        seqCoordinates1.realloc( nCount );
+                        seqCoordinates1.resize( nCount );
                         for ( j = 0; j < nCount; j++ )
                         {
                             seqCoordinates1[j] = seqCoordinates[ rSrcPt + j];
                         }
 
-                        seqCoordinates2.realloc( nCount );
+                        seqCoordinates2.resize( nCount );
                         for ( j = 0; j < nCount; j++ )
                         {
                             EnhancedCustomShape2d::SetEnhancedCustomShapeParameter( seqCoordinates2[ j ].First, pDefCustomShape->pVertices[ j ].nValA );
@@ -1723,6 +1705,8 @@ void EnhancedCustomShape2d::CreateSubPath( sal_uInt16& rSrcPt, sal_uInt16& rSegm
                     }
 
                     aNewB2DPolygon.clear();
+
+                    SAL_FALLTHROUGH;
                 }
                 case ARCTO :
                 case CLOCKWISEARCTO :
@@ -2037,7 +2021,7 @@ void CorrectCalloutArrows( MSO_SPT eSpType, sal_uInt32 nLineObjectCount, std::ve
         case mso_sptAccentCallout2 :
         case mso_sptAccentBorderCallout2 :
             bAccent = true;
-            //fall-through
+            SAL_FALLTHROUGH;
         case mso_sptCallout2 :
         case mso_sptBorderCallout2 :
         {

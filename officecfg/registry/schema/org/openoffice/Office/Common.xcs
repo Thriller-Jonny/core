@@ -1478,29 +1478,29 @@
       <group oor:name="GraphicManager">
         <info>
           <desc>Specifies a group of graphic manager cache options.</desc>
-          <label>Graphic Manager Cache</label>
+          <label>Image Manager Cache</label>
         </info>
         <prop oor:name="TotalCacheSize" oor:type="xs:int" oor:nillable="false">
           <info>
             <desc>Specifies the maximum cache size for all graphical display
             objects.</desc>
-            <label>Total Graphic Cache Size</label>
+            <label>Total Image Cache Size</label>
           </info>
-          <value>22000000</value>
+          <value>67110000</value>
         </prop>
         <prop oor:name="ObjectCacheSize" oor:type="xs:int" oor:nillable="false">
           <info>
             <desc>Specifies the maximum cache size for a single graphic display
             object.</desc>
-            <label>Graphic Object Cache Size</label>
+            <label>Image Object Cache Size</label>
           </info>
-          <value>5500000</value>
+          <value>12600000</value>
         </prop>
         <prop oor:name="ObjectReleaseTime" oor:type="xs:int" oor:nillable="false">
           <info>
             <desc>Specifies the time in seconds after which a cached object is
             freed from the cache.</desc>
-            <label>Graphic Object Release Timeout</label>
+            <label>Image Object Release Timeout</label>
           </info>
           <value>600</value>
         </prop>
@@ -1619,7 +1619,7 @@
         <prop oor:name="Graphic" oor:type="xs:string">
           <info>
             <desc>Specifies the directory that is displayed when the dialog for
-            opening a graphic or for saving a new graphic is called.</desc>
+            opening an image or for saving a new image is called.</desc>
           </info>
           <value>$(userurl)/gallery</value>
         </prop>
@@ -1782,6 +1782,12 @@
           </info>
           <value>$(insturl)/@LIBO_SHARE_FOLDER@/config</value>
         </prop>
+        <prop oor:name="Classification" oor:type="xs:string" oor:nillable="false">
+          <info>
+            <desc>Contains the URL of the default TSCP BAF policy file.</desc>
+          </info>
+          <value>$(insturl)/@LIBO_SHARE_FOLDER@/classification/example.xml</value>
+        </prop>
         <prop oor:name="Dictionary" oor:type="xs:string" oor:nillable="false">
           <info>
             <desc>Specifies the default directory where the provided
@@ -1816,7 +1822,7 @@
         <prop oor:name="Graphic" oor:type="xs:string" oor:nillable="false">
           <info>
             <desc>Specifies the default directory used by the dialog for opening
-            a graphic or for saving a new graphic.</desc>
+            an image or for saving a new image.</desc>
           </info>
           <value>$(userurl)/gallery</value>
         </prop>
@@ -2293,7 +2299,7 @@
       </group>
       <group oor:name="Graphic">
         <info>
-          <desc>Contains settings on how graphics contained in a document should
+          <desc>Contains settings on how images contained in a document should
           be saved.</desc>
         </info>
         <prop oor:name="Format" oor:type="xs:int" oor:nillable="false">
@@ -2302,9 +2308,9 @@
           <!-- UIHints: Tools  Options - General  Save - [Section] Save
                graphics -->
           <info>
-            <desc>Specifies how graphics contained in a document are
+            <desc>Specifies how images contained in a document are
             saved.</desc>
-            <label>Save graphics Normal/Compressed/Original format</label>
+            <label>Save images Normal/Compressed/Original format</label>
           </info>
           <constraints>
             <enumeration oor:value="0">
@@ -2530,7 +2536,7 @@
             <desc>Contains the path to the users NSS certificate directory.</desc>
           </info>
         </prop>
-        <prop oor:name="TSAURLs" oor:type="oor:string-list" oor:nillable="false">
+        <prop oor:name="TSAURLs" oor:type="oor:string-list">
           <info>
             <desc>Contains the URLs or Time Stamping Authority servers.</desc>
           </info>
@@ -4986,9 +4992,9 @@
             <!-- OldLocation: soffice.cfg -->
             <!-- UIHints: Tools  Options - Browser  HTML [Section] Export -->
             <info>
-              <desc>Specifies if graphics are copied to the Internet server when
+              <desc>Specifies whether images are copied to the Internet server when
               uploading via FTP.</desc>
-              <label>Copy local graphics to Internet</label>
+              <label>Copy local images to Internet</label>
             </info>
             <value>true</value>
           </prop>
@@ -5138,6 +5144,13 @@
           <prop oor:name="ExportNotesPages" oor:type="xs:boolean" oor:nillable="false">
             <info>
               <desc>Specifies if notes pages are exported to PDF. (Notes pages
+              are available in Impress documents only).</desc>
+            </info>
+            <value>false</value>
+          </prop>
+          <prop oor:name="ExportOnlyNotesPages" oor:type="xs:boolean" oor:nillable="false">
+            <info>
+              <desc>Specifies if only notes pages (i.e., not slides) are exported to PDF. (Notes pages
               are available in Impress documents only).</desc>
             </info>
             <value>false</value>
@@ -5587,7 +5600,7 @@
         <info>
           <desc>Determines if a warning dialog should be
           displayed when a user checks the link checkbox in
-          the insert graphics dialog.</desc>
+          the insert images dialog.</desc>
         </info>
         <value>true</value>
       </prop>
@@ -5603,13 +5616,6 @@
       <prop oor:name="DisableUICustomization" oor:type="xs:boolean" oor:nillable="false">
         <info>
           <desc>Disables the customization of the UI elements.</desc>
-        </info>
-        <value>false</value>
-      </prop>
-      <prop oor:name="AlwaysAllowSave" oor:type="xs:boolean" oor:nillable="false">
-        <info>
-          <desc>Determines if the user can save the document even when it's not
-          modified.</desc>
         </info>
         <value>false</value>
       </prop>
@@ -5640,7 +5646,7 @@
         <info>
           <desc>Combinations of (OS, OS version, OpenCL platform vendor, OpenCL device name, OpenCL driver version) that are known to be bad. Each entry is a string consisting of five parts separated by slashes. An empty part matches anything. In case a slash, percent or semicolon occurs inside a part, it is replaced by a percent followed by the corresponding number as two hex digits. The parts except OS can contain regular expressions. Inside these regular expressions the usual characters .*()[]\ are special and should be quoted with a backslash to be interpreted literally. OS should be just one of "Linux", "OS X" (including the space) or "Windows" (without quotes). Has higher priority than OpenCLWhiteList.</desc>
         </info>
-	<value oor:separator=";">Windows//Intel\(R\) Corporation//9\.17\.10\.2884;Windows//Intel\(R\) Corporation//4\.2\.0\.99</value>
+  <value oor:separator=";">Windows//Intel\(R\) Corporation//9\.17\.10\.2884;Windows//Intel\(R\) Corporation//4\.2\.0\.99;Windows//Intel\(R\) Corporation//5\.2\.0\.10049;Windows//Intel\(R\) Corporation//3\.0\.1\.10891</value>
       </prop>
       <prop oor:name="OpenCLWhiteList" oor:type="oor:string-list" oor:nillable="false">
         <!-- UIHints: Tools - Options General OpenCL  -->
@@ -5763,12 +5769,12 @@
       </prop>
       <prop oor:name="TemplateRepositoryUrls" oor:type="oor:string-list" oor:nillable="false">
         <info>
-          <desc>List of template repositories URLs bookmarked in the template manager dialog.</desc>
+          <desc>List of template repositories URLs bookmarked in the Templates dialog.</desc>
         </info>
       </prop>
       <prop oor:name="TemplateRepositoryNames" oor:type="oor:string-list" oor:nillable="false">
         <info>
-          <desc>List of template repositories names bookmarked in the template manager dialog.</desc>
+          <desc>List of template repositories names bookmarked in the Templates dialog.</desc>
         </info>
       </prop>
       <prop oor:name="FilePickerPlacesUrls" oor:type="oor:string-list" oor:nillable="false">
@@ -5940,6 +5946,15 @@
         <!-- UIHints: Edit/Find & Replace -->
         <info>
           <desc>Specifies search backwards.</desc>
+        </info>
+        <value>false</value>
+      </prop>
+      <prop oor:name="IsUseWildcard" oor:type="xs:boolean" oor:nillable="false">
+        <!-- OldPath: -->
+        <!-- OldLocation: -->
+        <!-- UIHints: Edit/Find & Replace -->
+        <info>
+          <desc>Specifies search with the use of wildcards.</desc>
         </info>
         <value>false</value>
       </prop>
@@ -6287,8 +6302,8 @@
           <desc>Indicates whether to allow the graphical animation in all SO/OO
           applications (i.e. animated GIFs and objects in Impress during
           presentation, animated graphical previews (Gallery,
-          Insert-Graphics-From File, Animation Tool in Impress.)</desc>
-          <label>Allow animated graphics</label>
+          Insert-Image, Animation Tool in Impress.)</desc>
+          <label>Allow animated images</label>
         </info>
         <value>true</value>
       </prop>
@@ -6368,7 +6383,7 @@
           <desc>
             This option allows to make previews (e.g. UI previews for object attributes) show the content with a checkered
             background to allow simple identification and better preview of transparent content, e.g. when a draw object
-            is filled with a transparent graphic (SVG or bitmap) the preview will show the checkered background shine
+            is filled with a transparent image (SVG or bitmap) the preview will show the checkered background shine
             through, so the user can identify that the fill has transparency with a single look.
           </desc>
           <label>Shows previews with shining through checkered background to visualize transparency.</label>

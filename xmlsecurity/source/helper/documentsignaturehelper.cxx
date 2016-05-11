@@ -20,18 +20,25 @@
 
 #include <xmlsecurity/documentsignaturehelper.hxx>
 
+#include <algorithm>
+
 #include <com/sun/star/container/XNameAccess.hpp>
 #include <com/sun/star/lang/XComponent.hpp>
 #include <com/sun/star/lang/DisposedException.hpp>
 #include <com/sun/star/embed/XStorage.hpp>
+#include <com/sun/star/embed/StorageFormats.hpp>
 #include <com/sun/star/embed/ElementModes.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
+#include <com/sun/star/beans/StringPair.hpp>
 
 #include <comphelper/documentconstants.hxx>
+#include <comphelper/ofopxmlhelper.hxx>
+#include <comphelper/processfactory.hxx>
 #include <tools/debug.hxx>
 #include <osl/diagnose.h>
 #include <rtl/uri.hxx>
 
+using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
 
 namespace
@@ -43,7 +50,6 @@ OUString getElement(OUString const & version, ::sal_Int32 * index)
     }
     return version.getToken(0, '.', *index);
 }
-
 
 
 // Return 1 if version1 is greater then version 2, 0 if they are equal
@@ -87,6 +93,10 @@ void ImplFillElementList(
 
     for ( sal_Int32 n = 0; n < nElements; n++ )
     {
+        if (pNames[n] == "[Content_Types].xml")
+            // OOXML
+            continue;
+
         if (mode != OOo3_2Document
             && (pNames[n] == "META-INF" || pNames[n] == "mimetype"))
         {
@@ -230,7 +240,7 @@ DocumentSignatureHelper::CreateElementList(
                         }
                     }
                 }
-                catch( com::sun::star::io::IOException& )
+                catch( css::io::IOException& )
                 {
                     ; // Doesn't have to exist...
                 }
@@ -251,7 +261,7 @@ DocumentSignatureHelper::CreateElementList(
                 Reference < css::embed::XStorage > xSubStore = rxStore->openStorageElement( aSubStorageName, css::embed::ElementModes::READ );
                 ImplFillElementList(aElements, xSubStore, aSubStorageName+aSep, true, mode);
             }
-            catch( com::sun::star::io::IOException& )
+            catch( css::io::IOException& )
             {
                 ; // Doesn't have to exist...
             }
@@ -263,7 +273,7 @@ DocumentSignatureHelper::CreateElementList(
                 Reference < css::embed::XStorage > xSubStore = rxStore->openStorageElement( aSubStorageName, css::embed::ElementModes::READ );
                 ImplFillElementList(aElements, xSubStore, aSubStorageName+aSep, true, mode);
             }
-            catch( com::sun::star::io::IOException& )
+            catch( css::io::IOException& )
             {
                 ; // Doesn't have to exist...
             }
@@ -291,6 +301,53 @@ DocumentSignatureHelper::CreateElementList(
     return aElements;
 }
 
+void DocumentSignatureHelper::AppendContentTypes(const uno::Reference<embed::XStorage>& xStorage, std::vector<OUString>& rElements)
+{
+    uno::Reference<container::XNameAccess> xNameAccess(xStorage, uno::UNO_QUERY);
+    if (!xNameAccess.is() || !xNameAccess->hasByName("[Content_Types].xml"))
+        // ODF
+        return;
+
+    sal_Int32 nOpenMode = embed::ElementModes::READ;
+    uno::Reference<io::XInputStream> xRelStream(xStorage->openStreamElement("[Content_Types].xml", nOpenMode), uno::UNO_QUERY);
+    uno::Sequence< uno::Sequence<beans::StringPair> > aContentTypeInfo = comphelper::OFOPXMLHelper::ReadContentTypeSequence(xRelStream, comphelper::getProcessComponentContext());
+    if (aContentTypeInfo.getLength() < 2)
+    {
+        SAL_WARN("xmlsecurity.helper", "no defaults or overrides in aContentTypeInfo");
+        return;
+    }
+    uno::Sequence<beans::StringPair>& rDefaults = aContentTypeInfo[0];
+    uno::Sequence<beans::StringPair>& rOverrides = aContentTypeInfo[1];
+
+    for (OUString& rElement : rElements)
+    {
+        auto it = std::find_if(rOverrides.begin(), rOverrides.end(), [&](const beans::StringPair& rPair)
+        {
+            return rPair.First == "/" + rElement;
+        });
+
+        if (it != rOverrides.end())
+        {
+            rElement = "/" + rElement + "?ContentType=" + it->Second;
+            continue;
+        }
+
+        it = std::find_if(rDefaults.begin(), rDefaults.end(), [&](const beans::StringPair& rPair)
+        {
+            return rElement.endsWith("." + rPair.First);
+        });
+
+        if (it != rDefaults.end())
+        {
+            rElement = "/" + rElement + "?ContentType=" + it->Second;
+            continue;
+        }
+        SAL_WARN("xmlsecurity.helper", "found no content type for " << rElement);
+    }
+
+    std::sort(rElements.begin(), rElements.end());
+}
+
 SignatureStreamHelper DocumentSignatureHelper::OpenSignatureStream(
     const Reference < css::embed::XStorage >& rxStore, sal_Int32 nOpenMode, DocumentSignatureMode eDocSigMode )
 {
@@ -300,27 +357,50 @@ SignatureStreamHelper DocumentSignatureHelper::OpenSignatureStream(
 
     SignatureStreamHelper aHelper;
 
-    try
-    {
-        OUString aSIGStoreName(  "META-INF"  );
-        aHelper.xSignatureStorage = rxStore->openStorageElement( aSIGStoreName, nSubStorageOpenMode );
-        if ( aHelper.xSignatureStorage.is() )
-        {
-            OUString aSIGStreamName;
-            if ( eDocSigMode == SignatureModeDocumentContent )
-                aSIGStreamName = DocumentSignatureHelper::GetDocumentContentSignatureDefaultStreamName();
-            else if ( eDocSigMode == SignatureModeMacros )
-                aSIGStreamName = DocumentSignatureHelper::GetScriptingContentSignatureDefaultStreamName();
-            else
-                aSIGStreamName = DocumentSignatureHelper::GetPackageSignatureDefaultStreamName();
+    uno::Reference<container::XNameAccess> xNameAccess(rxStore, uno::UNO_QUERY);
+    if (!xNameAccess.is())
+        return aHelper;
 
-            aHelper.xSignatureStream = aHelper.xSignatureStorage->openStreamElement( aSIGStreamName, nOpenMode );
+    if (xNameAccess->hasByName("META-INF"))
+    {
+        try
+        {
+            OUString aSIGStoreName(  "META-INF"  );
+            aHelper.xSignatureStorage = rxStore->openStorageElement( aSIGStoreName, nSubStorageOpenMode );
+            if ( aHelper.xSignatureStorage.is() )
+            {
+                OUString aSIGStreamName;
+                if ( eDocSigMode == SignatureModeDocumentContent )
+                    aSIGStreamName = DocumentSignatureHelper::GetDocumentContentSignatureDefaultStreamName();
+                else if ( eDocSigMode == SignatureModeMacros )
+                    aSIGStreamName = DocumentSignatureHelper::GetScriptingContentSignatureDefaultStreamName();
+                else
+                    aSIGStreamName = DocumentSignatureHelper::GetPackageSignatureDefaultStreamName();
+
+                aHelper.xSignatureStream = aHelper.xSignatureStorage->openStreamElement( aSIGStreamName, nOpenMode );
+            }
+        }
+        catch(css::io::IOException& )
+        {
+            // Doesn't have to exist...
+            DBG_ASSERT( nOpenMode == css::embed::ElementModes::READ, "Error creating signature stream..." );
         }
     }
-    catch(css::io::IOException& )
+    else if(xNameAccess->hasByName("[Content_Types].xml"))
     {
-        // Doesn't have to exist...
-        DBG_ASSERT( nOpenMode == css::embed::ElementModes::READ, "Error creating signature stream..." );
+        try
+        {
+            if (xNameAccess->hasByName("_xmlsignatures") && (nOpenMode & embed::ElementModes::TRUNCATE))
+                // Truncate, then all signatures will be written -> remove previous ones.
+                rxStore->removeElement("_xmlsignatures");
+
+            aHelper.xSignatureStorage = rxStore->openStorageElement("_xmlsignatures", nSubStorageOpenMode);
+            aHelper.nStorageFormat = embed::StorageFormats::OFOPXML;
+        }
+        catch (const io::IOException& rException)
+        {
+            SAL_WARN_IF(nOpenMode != css::embed::ElementModes::READ, "xmlsecurity.helper", "DocumentSignatureHelper::OpenSignatureStream: " << rException.Message);
+        }
     }
 
     return aHelper;
@@ -341,8 +421,8 @@ bool DocumentSignatureHelper::checkIfAllFilesAreSigned(
     for ( int i = sigInfo.vSignatureReferenceInfors.size(); i; )
     {
         const SignatureReferenceInformation& rInf = sigInfo.vSignatureReferenceInfors[--i];
-        // There is also an extra entry of type TYPE_SAMEDOCUMENT_REFERENCE because of signature date.
-        if ( ( rInf.nType == TYPE_BINARYSTREAM_REFERENCE ) || ( rInf.nType == TYPE_XMLSTREAM_REFERENCE ) )
+        // There is also an extra entry of type SignatureReferenceType::SAMEDOCUMENT because of signature date.
+        if ( ( rInf.nType == SignatureReferenceType::BINARYSTREAM ) || ( rInf.nType == SignatureReferenceType::XMLSTREAM ) )
         {
             OUString sReferenceURI = rInf.ouURI;
             if (alg == OOo2Document)

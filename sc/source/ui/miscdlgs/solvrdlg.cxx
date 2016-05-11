@@ -59,7 +59,7 @@ ScSolverDlg::ScSolverDlg( SfxBindings* pB, SfxChildWindow* pCW, vcl::Window* pPa
     get(m_pEdFormulaCell, "formulaedit");
     m_pEdFormulaCell->SetReferences(this, m_pFtFormulaCell);
     get(m_pRBFormulaCell, "formulabutton");
-    m_pRBFormulaCell->SetReferences(this, m_pEdFormulaCell),
+    m_pRBFormulaCell->SetReferences(this, m_pEdFormulaCell);
     get(m_pEdTargetVal, "target");
     get(m_pFtVariableCell, "vartext");
     get(m_pEdVariableCell, "varedit");
@@ -109,7 +109,7 @@ void ScSolverDlg::Init()
     m_pEdVariableCell->SetLoseFocusHdl ( aLink );
     m_pRBVariableCell->SetLoseFocusHdl ( aLink );
 
-    OUString aStr(theFormulaCell.Format(SCA_ABS, nullptr, pDoc->GetAddressConvention()));
+    OUString aStr(theFormulaCell.Format(ScRefFlags::ADDR_ABS, nullptr, pDoc->GetAddressConvention()));
 
     m_pEdFormulaCell->SetText( aStr );
     m_pEdFormulaCell->GrabFocus();
@@ -144,9 +144,9 @@ void ScSolverDlg::SetReference( const ScRange& rRef, ScDocument* pDocP )
             RefInputStart(pEdActive);
 
         ScAddress   aAdr = rRef.aStart;
-        sal_uInt16      nFmt = ( aAdr.Tab() == nCurTab )
-                                ? SCA_ABS
-                                : SCA_ABS_3D;
+        ScRefFlags      nFmt = ( aAdr.Tab() == nCurTab )
+                                ? ScRefFlags::ADDR_ABS
+                                : ScRefFlags::ADDR_ABS_3D;
 
         OUString aStr(aAdr.Format(nFmt, pDocP, pDocP->GetAddressConvention()));
         pEdActive->SetRefString( aStr );
@@ -211,12 +211,12 @@ IMPL_LINK_TYPED( ScSolverDlg, BtnHdl, Button*, pBtn, void )
         // 3. has a valid target value been entered?
 
         const formula::FormulaGrammar::AddressConvention eConv = pDoc->GetAddressConvention();
-        sal_uInt16  nRes1 = theFormulaCell .Parse( m_pEdFormulaCell->GetText(),  pDoc, eConv );
-        sal_uInt16  nRes2 = theVariableCell.Parse( m_pEdVariableCell->GetText(), pDoc, eConv );
+        ScRefFlags  nRes1 = theFormulaCell .Parse( m_pEdFormulaCell->GetText(),  pDoc, eConv );
+        ScRefFlags  nRes2 = theVariableCell.Parse( m_pEdVariableCell->GetText(), pDoc, eConv );
 
-        if ( SCA_VALID == ( nRes1 & SCA_VALID ) )
+        if ( (nRes1 & ScRefFlags::VALID) == ScRefFlags::VALID )
         {
-            if ( SCA_VALID == ( nRes2 & SCA_VALID ) )
+            if ( (nRes2 & ScRefFlags::VALID) == ScRefFlags::VALID )
             {
                 if ( CheckTargetValue( theTargetValStr ) )
                 {
@@ -236,9 +236,9 @@ IMPL_LINK_TYPED( ScSolverDlg, BtnHdl, Button*, pBtn, void )
                         SetDispatcherLock( false );
 
                         SwitchToDocument();
-                        GetBindings().GetDispatcher()->Execute( SID_SOLVE,
+                        GetBindings().GetDispatcher()->ExecuteList(SID_SOLVE,
                                                   SfxCallMode::SLOT | SfxCallMode::RECORD,
-                                                  &aOutItem, 0L, 0L );
+                                                  { &aOutItem });
                         Close();
                     }
                     else RaiseError( SOLVERR_NOFORMULA );

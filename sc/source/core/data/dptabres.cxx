@@ -258,7 +258,7 @@ void ScDPInitState::AddMember( long nSourceIndex, SCROW nMember )
 
 void ScDPInitState::RemoveMember()
 {
-    OSL_ENSURE(!maMembers.empty(), "ScDPInitState::RemoveMember: Attempt to remmove member while empty.");
+    OSL_ENSURE(!maMembers.empty(), "ScDPInitState::RemoveMember: Attempt to remove member while empty.");
     if (!maMembers.empty())
         maMembers.pop_back();
 }
@@ -890,7 +890,8 @@ ResultMembers* ScDPResultData::GetDimResultMembers(long nDim, ScDPDimension* pDi
     if (nDim < static_cast<long>(maDimMembers.size()) && maDimMembers[nDim])
         return maDimMembers[nDim];
 
-    maDimMembers.resize(nDim+1, nullptr);
+    if (nDim >= static_cast<long>(maDimMembers.size()))
+        maDimMembers.resize(nDim+1, nullptr);
 
     ResultMembers* pResultMembers = new ResultMembers();
     // global order is used to initialize aMembers, so it doesn't have to be looked at later
@@ -914,13 +915,13 @@ ResultMembers* ScDPResultData::GetDimResultMembers(long nDim, ScDPDimension* pDi
 }
 
 ScDPResultMember::ScDPResultMember(
-    const ScDPResultData* pData, const ScDPParentDimData& rParentDimData, bool bForceSub ) :
+    const ScDPResultData* pData, const ScDPParentDimData& rParentDimData ) :
     pResultData( pData ),
        aParentDimData( rParentDimData ),
     pChildDimension( nullptr ),
     pDataRoot( nullptr ),
     bHasElements( false ),
-    bForceSubTotal( bForceSub ),
+    bForceSubTotal( false ),
     bHasHiddenDetails( false ),
     bInitialized( false ),
     bAutoHidden( false ),
@@ -2880,11 +2881,9 @@ void ScDPResultDimension::LateInitFrom(
     {
         ResultMembers* pMembers = pResultData->GetDimResultMembers(nDimSource, pThisDim, pThisLevel);
         bLateInitAllMembers = pMembers->IsHasHideDetailsMembers();
-#if OSL_DEBUG_LEVEL > 1
-        OSL_TRACE( "%s", OUStringToOString(aDimensionName, RTL_TEXTENCODING_UTF8).getStr() );
-        if ( pMembers->IsHasHideDetailsMembers() )
-            OSL_TRACE( "HasHideDetailsMembers" );
-#endif
+
+        SAL_INFO("sc.core", aDimensionName << (pMembers->IsHasHideDetailsMembers() ? " HasHideDetailsMembers" : ""));
+
         pMembers->SetHasHideDetailsMembers( false );
     }
 
@@ -2979,10 +2978,8 @@ bool ScDPResultDimension::IsValidEntry( const vector< SCROW >& aMembers ) const
     const ScDPResultMember* pMember = FindMember( aMembers[0] );
     if ( nullptr != pMember )
         return pMember->IsValidEntry( aMembers );
-#if OSL_DEBUG_LEVEL > 1
-    OStringBuffer strTemp("IsValidEntry: Member not found, DimName = ");
-    strTemp.append(OUStringToOString(GetName(), RTL_TEXTENCODING_UTF8));
-    OSL_TRACE("%s", strTemp.getStr());
+#if OSL_DEBUG_LEVEL > 0
+    SAL_INFO("sc.core", "IsValidEntry: Member not found, DimNam = "  << GetName());
 #endif
     return false;
 }
@@ -3956,7 +3953,7 @@ SCROW ScDPResultMember::GetDataId( ) const
 
 ScDPResultMember* ScDPResultDimension::AddMember(const ScDPParentDimData &aData )
 {
-    ScDPResultMember* pMember = new ScDPResultMember( pResultData, aData, false );
+    ScDPResultMember* pMember = new ScDPResultMember( pResultData, aData );
     SCROW   nDataIndex = pMember->GetDataId();
     maMemberArray.push_back( pMember );
 
@@ -3970,7 +3967,7 @@ ScDPResultMember* ScDPResultDimension::InsertMember(ScDPParentDimData *pMemberDa
     SCROW  nInsert = 0;
     if ( !lcl_SearchMember( maMemberArray, pMemberData->mnOrder , nInsert ) )
     {
-        ScDPResultMember* pNew = new ScDPResultMember( pResultData, *pMemberData, false );
+        ScDPResultMember* pNew = new ScDPResultMember( pResultData, *pMemberData );
         maMemberArray.insert( maMemberArray.begin()+nInsert, pNew );
 
         SCROW   nDataIndex = pMemberData->mpMemberDesc->GetItemDataId();
@@ -4054,12 +4051,12 @@ ResultMembers::~ResultMembers()
 }
 
 LateInitParams::LateInitParams(
-    const vector<ScDPDimension*>& ppDim, const vector<ScDPLevel*>& ppLev, bool bRow, bool bInitChild, bool bAllChildren ) :
+    const vector<ScDPDimension*>& ppDim, const vector<ScDPLevel*>& ppLev, bool bRow ) :
     mppDim( ppDim ),
     mppLev( ppLev ),
     mbRow( bRow ),
-    mbInitChild( bInitChild ),
-    mbAllChildren( bAllChildren )
+    mbInitChild( true ),
+    mbAllChildren( false )
 {
 }
 

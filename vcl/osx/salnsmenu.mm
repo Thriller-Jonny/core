@@ -49,11 +49,26 @@
             aMenuEvt.mpMenu = mpMenu->mpVCLMenu;
             if( aMenuEvt.mpMenu )
             {
-                pFrame->CallCallback(SALEVENT_MENUACTIVATE, &aMenuEvt);
-                pFrame->CallCallback(SALEVENT_MENUDEACTIVATE, &aMenuEvt);
+                pFrame->CallCallback(SalEvent::MenuActivate, &aMenuEvt);
+                pFrame->CallCallback(SalEvent::MenuDeactivate, &aMenuEvt);
             }
             else
                 OSL_FAIL( "unconnected menu" );
+        }
+        else if( mpMenu->mpVCLMenu )
+        {
+            mpMenu->mpVCLMenu->Activate();
+
+            // Hide disabled items
+            NSArray* elements = [pMenu itemArray];
+            NSEnumerator* it = [elements objectEnumerator];
+            id element;
+            while ( ( element = [it nextObject] ) != nil )
+            {
+                NSMenuItem* item = static_cast< NSMenuItem* >( element );
+                if( ![item isSeparatorItem] )
+                    [item setHidden: ![item isEnabled]];
+            }
         }
     }
 }
@@ -79,11 +94,31 @@
     (void)aSender;
     SolarMutexGuard aGuard;
 
+    // tdf#49853 Keyboard shortcuts are also handled by the menu bar, but at least some of them
+    // must still end up in the view. This is necessary to handle common edit actions in docked
+    // windows (e.g. in toolbar fields).
+    NSEvent* pEvent = [NSApp currentEvent];
+    if( pEvent && [pEvent type] == NSKeyDown )
+    {
+        unsigned int nModMask = ([pEvent modifierFlags] & (NSShiftKeyMask|NSControlKeyMask|NSAlternateKeyMask|NSCommandKeyMask));
+        NSString* charactersIgnoringModifiers = [pEvent charactersIgnoringModifiers];
+        if( nModMask == NSCommandKeyMask &&
+          ( [charactersIgnoringModifiers isEqualToString: @"v"] ||
+            [charactersIgnoringModifiers isEqualToString: @"c"] ||
+            [charactersIgnoringModifiers isEqualToString: @"x"] ||
+            [charactersIgnoringModifiers isEqualToString: @"a"] ||
+            [charactersIgnoringModifiers isEqualToString: @"z"] ) )
+        {
+            [[[NSApp keyWindow] contentView] keyDown: pEvent];
+            return;
+        }
+    }
+
     const AquaSalFrame* pFrame = mpMenuItem->mpParentMenu ? mpMenuItem->mpParentMenu->getFrame() : nullptr;
     if( pFrame && AquaSalFrame::isAlive( pFrame ) && ! pFrame->GetWindow()->IsInModalMode() )
     {
         SalMenuEvent aMenuEvt( mpMenuItem->mnId, mpMenuItem->mpVCLMenu );
-        pFrame->CallCallback(SALEVENT_MENUCOMMAND, &aMenuEvt);
+        pFrame->CallCallback(SalEvent::MenuCommand, &aMenuEvt);
     }
     else if( mpMenuItem->mpVCLMenu )
     {
@@ -165,7 +200,7 @@
                 if( AquaSalMenu::pCurrentMenuBar->mpFrame && AquaSalFrame::isAlive( AquaSalMenu::pCurrentMenuBar->mpFrame ) )
                 {
                     SalMenuEvent aMenuEvt( rButtons[i].maButton.mnId, AquaSalMenu::pCurrentMenuBar->mpVCLMenu );
-                    AquaSalMenu::pCurrentMenuBar->mpFrame->CallCallback(SALEVENT_MENUBUTTONCOMMAND, &aMenuEvt);
+                    AquaSalMenu::pCurrentMenuBar->mpFrame->CallCallback(SalEvent::MenuButtonCommand, &aMenuEvt);
                 }
                 return;
             }

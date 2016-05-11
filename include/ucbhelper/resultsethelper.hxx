@@ -38,9 +38,7 @@ namespace cppu {
 namespace ucbhelper {
 
 
-
 #define DYNAMICRESULTSET_SERVICE_NAME "com.sun.star.ucb.DynamicResultSet"
-
 
 
 /**
@@ -114,7 +112,7 @@ private:
 
 public:
     /**
-      * Construtor.
+      * Constructor.
       *
       * @param rxContext is a Service Manager.
       * @param rCommand is the parameter for the open command that produces

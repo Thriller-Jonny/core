@@ -157,8 +157,7 @@ const struct SvEventDescription aAutotextEvents[] =
 };
 
 sal_uLong SwXMLTextBlocks::GetMacroTable( sal_uInt16 nIdx,
-                                      SvxMacroTableDtor& rMacroTable,
-                                      bool bFileAlreadyOpen )
+                                      SvxMacroTableDtor& rMacroTable )
 {
     // set current auto text
     aShort = aNames[nIdx]->aShort;
@@ -168,11 +167,8 @@ sal_uLong SwXMLTextBlocks::GetMacroTable( sal_uInt16 nIdx,
     sal_uLong nRet = 0;
 
     // open stream in proper sub-storage
-    if( !bFileAlreadyOpen )
-    {
-        CloseFile();
-        nRet = OpenFile();
-    }
+    CloseFile();
+    nRet = OpenFile();
     if ( 0 == nRet )
     {
         try
@@ -349,8 +345,7 @@ sal_uLong SwXMLTextBlocks::PutBlockText( const OUString& rShort, const OUString&
         xBlkRoot->Commit ( );
     }
     */
-    OUString aFolderName( rPackageName );
-    OUString aStreamName = aFolderName + ".xml";
+    OUString aStreamName = rPackageName + ".xml";
 
     uno::Reference< uno::XComponentContext > xContext =
         comphelper::getProcessComponentContext();
@@ -360,15 +355,13 @@ sal_uLong SwXMLTextBlocks::PutBlockText( const OUString& rShort, const OUString&
 
     try
     {
-    xRoot = xBlkRoot->openStorageElement( aFolderName, embed::ElementModes::WRITE );
+    xRoot = xBlkRoot->openStorageElement( rPackageName, embed::ElementModes::WRITE );
     uno::Reference < io::XStream > xDocStream = xRoot->openStreamElement( aStreamName,
                 embed::ElementModes::WRITE | embed::ElementModes::TRUNCATE );
 
     uno::Reference < beans::XPropertySet > xSet( xDocStream, uno::UNO_QUERY );
     OUString aMime ( "text/xml" );
-    Any aAny;
-    aAny <<= aMime;
-    xSet->setPropertyValue("MediaType", aAny );
+    xSet->setPropertyValue("MediaType", Any(aMime) );
     uno::Reference < io::XOutputStream > xOut = xDocStream->getOutputStream();
        uno::Reference<io::XActiveDataSource> xSrc(xWriter, uno::UNO_QUERY);
        xSrc->setOutputStream(xOut);
@@ -488,9 +481,7 @@ void SwXMLTextBlocks::WriteInfo()
 
         uno::Reference < beans::XPropertySet > xSet( xDocStream, uno::UNO_QUERY );
         OUString aMime ( "text/xml" );
-        Any aAny;
-        aAny <<= aMime;
-        xSet->setPropertyValue("MediaType", aAny );
+        xSet->setPropertyValue("MediaType", Any(aMime) );
         uno::Reference < io::XOutputStream > xOut = xDocStream->getOutputStream();
         uno::Reference<io::XActiveDataSource> xSrc(xWriter, uno::UNO_QUERY);
         xSrc->setOutputStream(xOut);
@@ -516,8 +507,7 @@ void SwXMLTextBlocks::WriteInfo()
 
 sal_uLong SwXMLTextBlocks::SetMacroTable(
     sal_uInt16 nIdx,
-    const SvxMacroTableDtor& rMacroTable,
-    bool bFileAlreadyOpen )
+    const SvxMacroTableDtor& rMacroTable )
 {
     // set current autotext
     aShort = aNames[nIdx]->aShort;
@@ -538,11 +528,8 @@ sal_uLong SwXMLTextBlocks::SetMacroTable(
         return ERR_SWG_WRITE_ERROR;
 
     // open stream in proper sub-storage
-    if( !bFileAlreadyOpen )
-    {
-        CloseFile(); // close (it may be open in read-only-mode)
-        nRes = OpenFile ( false );
-    }
+    CloseFile(); // close (it may be open in read-only-mode)
+    nRes = OpenFile ( false );
 
     if ( 0 == nRes )
     {
@@ -557,9 +544,7 @@ sal_uLong SwXMLTextBlocks::SetMacroTable(
 
             uno::Reference < beans::XPropertySet > xSet( xDocStream, uno::UNO_QUERY );
             OUString aMime( "text/xml" );
-            Any aAny;
-            aAny <<= aMime;
-            xSet->setPropertyValue("MediaType", aAny );
+            xSet->setPropertyValue("MediaType", Any(aMime) );
             uno::Reference < io::XOutputStream > xOutputStream = xDocStream->getOutputStream();
 
             // get XML writer
@@ -608,12 +593,9 @@ sal_uLong SwXMLTextBlocks::SetMacroTable(
             if ( xTmpTrans.is() )
                 xTmpTrans->commit();
 
-            if ( !bFileAlreadyOpen )
-            {
-                uno::Reference < embed::XTransactedObject > xTrans( xBlkRoot, uno::UNO_QUERY );
-                if ( xTrans.is() )
-                    xTrans->commit();
-            }
+            uno::Reference < embed::XTransactedObject > xTrans( xBlkRoot, uno::UNO_QUERY );
+            if ( xTrans.is() )
+                xTrans->commit();
 
             xRoot = nullptr;
         }
@@ -622,8 +604,7 @@ sal_uLong SwXMLTextBlocks::SetMacroTable(
             nRes = ERR_SWG_WRITE_ERROR;
         }
 
-        if( !bFileAlreadyOpen )
-            CloseFile();
+        CloseFile();
     }
     else
         nRes = ERR_SWG_WRITE_ERROR;

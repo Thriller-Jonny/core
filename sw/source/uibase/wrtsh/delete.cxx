@@ -18,7 +18,6 @@
  */
 
 #include <wrtsh.hxx>
-#include <crsskip.hxx>
 #include <swcrsr.hxx>
 #include <editeng/lrspitem.hxx>
 #include <view.hxx>
@@ -83,7 +82,7 @@ bool SwWrtShell::TryRemoveIndent()
 
 /** Description: Erase the line. */
 
-long SwWrtShell::DelLine()
+void SwWrtShell::DelLine()
 {
     SwActContext aActContext(this);
     ResetCursorStack();
@@ -98,25 +97,22 @@ long SwWrtShell::DelLine()
     Pop(false);
     if( nRet )
         UpdateAttr();
-    return nRet;
 }
 
-long SwWrtShell::DelToStartOfLine()
+void SwWrtShell::DelToStartOfLine()
 {
     OpenMark();
     SwCursorShell::LeftMargin();
     long nRet = Delete();
     CloseMark( 0 != nRet );
-    return nRet;
 }
 
-long SwWrtShell::DelToEndOfLine()
+void SwWrtShell::DelToEndOfLine()
 {
     OpenMark();
     SwCursorShell::RightMargin();
     long nRet = Delete();
     CloseMark( 0 != nRet );
-    return 1;
 }
 
 long SwWrtShell::DelLeft()
@@ -392,7 +388,7 @@ long SwWrtShell::DelRight()
     return nRet;
 }
 
-long SwWrtShell::DelToEndOfPara()
+void SwWrtShell::DelToEndOfPara()
 {
     SwActContext aActContext(this);
     ResetCursorStack();
@@ -401,16 +397,15 @@ long SwWrtShell::DelToEndOfPara()
     if( !MovePara(fnParaCurr,fnParaEnd))
     {
         Pop(false);
-        return 0;
+        return;
     }
     long nRet = Delete();
     Pop(false);
     if( nRet )
         UpdateAttr();
-    return nRet;
 }
 
-long SwWrtShell::DelToStartOfPara()
+void SwWrtShell::DelToStartOfPara()
 {
     SwActContext aActContext(this);
     ResetCursorStack();
@@ -419,27 +414,25 @@ long SwWrtShell::DelToStartOfPara()
     if( !MovePara(fnParaCurr,fnParaStart))
     {
         Pop(false);
-        return 0;
+        return;
     }
     long nRet = Delete();
     Pop(false);
     if( nRet )
         UpdateAttr();
-    return nRet;
 }
 
 // All erase operations should work with Find instead with
 // Nxt-/PrvDelim, because the latter works with Wrap Around
 // -- that's probably not wished.
 
-long SwWrtShell::DelToStartOfSentence()
+void SwWrtShell::DelToStartOfSentence()
 {
     if(IsStartOfDoc())
-        return 0;
+        return;
     OpenMark();
-    long nRet = _BwdSentence() ? Delete() : 0;
+    long nRet = BwdSentence_() ? Delete() : 0;
     CloseMark( 0 != nRet );
-    return nRet;
 }
 
 long SwWrtShell::DelToEndOfSentence()
@@ -470,26 +463,26 @@ long SwWrtShell::DelToEndOfSentence()
     }
     else
     {
-        nRet = _FwdSentence() ? Delete() : 0;
+        nRet = FwdSentence_() ? Delete() : 0;
     }
     CloseMark( 0 != nRet );
     return nRet;
 }
 
-long SwWrtShell::DelNxtWord()
+void SwWrtShell::DelNxtWord()
 {
     if(IsEndOfDoc())
-        return 0;
+        return;
     SwActContext aActContext(this);
     ResetCursorStack();
     EnterStdMode();
     SetMark();
     if(IsEndWrd() && !IsStartWord())
-        _NxtWrdForDelete(); // #i92468#
+        NxtWrdForDelete(); // #i92468#
     if(IsStartWord() || IsEndPara())
-        _NxtWrdForDelete(); // #i92468#
+        NxtWrdForDelete(); // #i92468#
     else
-        _EndWrd();
+        EndWrd();
 
     long nRet = Delete();
     if( nRet )
@@ -497,24 +490,23 @@ long SwWrtShell::DelNxtWord()
     else
         SwapPam();
     ClearMark();
-    return nRet;
 }
 
-long SwWrtShell::DelPrvWord()
+void SwWrtShell::DelPrvWord()
 {
     if(IsStartOfDoc())
-        return 0;
+        return;
     SwActContext aActContext(this);
     ResetCursorStack();
     EnterStdMode();
     SetMark();
     if ( !IsStartWord() ||
-         !_PrvWrdForDelete() ) // #i92468#
+         !PrvWrdForDelete() ) // #i92468#
     {
         if (IsEndWrd() || IsSttPara())
-            _PrvWrdForDelete(); // #i92468#
+            PrvWrdForDelete(); // #i92468#
         else
-            _SttWrd();
+            SttWrd();
     }
     long nRet = Delete();
     if( nRet )
@@ -522,7 +514,6 @@ long SwWrtShell::DelPrvWord()
     else
         SwapPam();
     ClearMark();
-    return nRet;
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

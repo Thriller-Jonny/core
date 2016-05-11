@@ -53,7 +53,6 @@ namespace toolkit
                                 >   UnoControlRoadmapModel_IBase;
 
 
-
     typedef UnoControlBase  UnoControlRoadmap_Base;
     typedef ::cppu::ImplHelper4 <   css::awt::XItemEventBroadcaster
                                 ,   css::container::XContainerListener
@@ -62,11 +61,8 @@ namespace toolkit
                                 >   UnoControlRoadmap_IBase;
 
 
-
-
     typedef ::cppu::ImplHelper2< css::container::XContainerListener,
                                  css::awt::XItemEventBroadcaster>    SVTXRoadmap_Base;
-
 
 
     // = UnoControlRoadmapModel
@@ -83,10 +79,10 @@ namespace toolkit
         ContainerListenerMultiplexer        maContainerListeners;
         RoadmapItemHolderList               maRoadmapItems;
 
-        void                                MakeRMItemValidation( sal_Int32 Index, css::uno::Reference< XInterface > xRoadmapItem );
-        css::container::ContainerEvent      GetContainerEvent(sal_Int32 Index, css::uno::Reference< XInterface > );
-        void                                SetRMItemDefaultProperties( const sal_Int32 _Index, css::uno::Reference< XInterface > );
-        static sal_Int16                    GetCurrentItemID( css::uno::Reference< css::beans::XPropertySet > xPropertySet );
+        void                                MakeRMItemValidation( sal_Int32 Index, const css::uno::Reference< XInterface >& xRoadmapItem );
+        css::container::ContainerEvent      GetContainerEvent(sal_Int32 Index, const css::uno::Reference< XInterface >& );
+        void                                SetRMItemDefaultProperties( const sal_Int32 Index, const css::uno::Reference< XInterface >& );
+        static sal_Int16                    GetCurrentItemID( const css::uno::Reference< css::beans::XPropertySet >& xPropertySet );
         sal_Int32                           GetUniqueID();
 
 
@@ -120,9 +116,9 @@ namespace toolkit
     sal_Int32 SAL_CALL getCount() throw (css::uno::RuntimeException, std::exception) override;
     virtual css::uno::Any SAL_CALL getByIndex( sal_Int32 Index ) throw (css::lang::IndexOutOfBoundsException, css::lang::WrappedTargetException, css::uno::RuntimeException, std::exception ) override;
 
-    virtual void SAL_CALL insertByIndex( sal_Int32 Index, const css::uno::Any & _Element) throw    (css::lang::IllegalArgumentException, css::lang::IndexOutOfBoundsException, css::lang::WrappedTargetException, css::uno::RuntimeException, std::exception ) override;
+    virtual void SAL_CALL insertByIndex( sal_Int32 Index, const css::uno::Any & Element) throw    (css::lang::IllegalArgumentException, css::lang::IndexOutOfBoundsException, css::lang::WrappedTargetException, css::uno::RuntimeException, std::exception ) override;
     virtual void SAL_CALL removeByIndex( sal_Int32 Index ) throw (css::lang::IndexOutOfBoundsException, css::lang::WrappedTargetException, css::uno::RuntimeException, std::exception ) override;
-    virtual void SAL_CALL replaceByIndex( sal_Int32 Index, const css::uno::Any & _Element) throw (css::lang::IllegalArgumentException, css::lang::IndexOutOfBoundsException, css::lang::WrappedTargetException, css::uno::RuntimeException, std::exception ) override;
+    virtual void SAL_CALL replaceByIndex( sal_Int32 Index, const css::uno::Any & Element) throw (css::lang::IllegalArgumentException, css::lang::IndexOutOfBoundsException, css::lang::WrappedTargetException, css::uno::RuntimeException, std::exception ) override;
 
     virtual void SAL_CALL addContainerListener( const css::uno::Reference< css::container::XContainerListener >& xListener ) throw (css::uno::RuntimeException, std::exception) override;
     virtual void SAL_CALL removeContainerListener( const css::uno::Reference< css::container::XContainerListener >& xListener ) throw (css::uno::RuntimeException, std::exception) override;
@@ -145,7 +141,6 @@ namespace toolkit
     virtual sal_Bool SAL_CALL hasElements() throw (css::uno::RuntimeException, std::exception) override;
 
     };
-
 
 
     // = UnoRoadmapControl
@@ -192,8 +187,6 @@ namespace toolkit
 
 
 } // toolkit
-
-
 
 
 #endif // _ INCLUDED_TOOLKIT_CONTROLS_ROADMAPCONTROL_HXX

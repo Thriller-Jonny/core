@@ -43,6 +43,8 @@
 #include <comphelper/sequence.hxx>
 #include <comphelper/processfactory.hxx>
 
+#include <o3tl/make_unique.hxx>
+
 #include <unotools/configpaths.hxx>
 #include <rtl/ustrbuf.hxx>
 #include <rtl/uri.hxx>
@@ -116,15 +118,14 @@ FilterCache::~FilterCache()
 }
 
 
-
-FilterCache* FilterCache::clone() const
+std::unique_ptr<FilterCache> FilterCache::clone() const
 {
     // SAFE -> ----------------------------------
     ::osl::ResettableMutexGuard aLock(m_aLock);
 
-    FilterCache* pClone = new FilterCache();
+    auto pClone = o3tl::make_unique<FilterCache>();
 
-    // Dont copy the configuration access points here.
+    // Don't copy the configuration access points here.
     // They will be created on demand inside the cloned instance,
     // if they are needed.
 
@@ -149,15 +150,14 @@ FilterCache* FilterCache::clone() const
 }
 
 
-
 void FilterCache::takeOver(const FilterCache& rClone)
 {
     // SAFE -> ----------------------------------
     ::osl::ResettableMutexGuard aLock(m_aLock);
 
     // a)
-    // Dont copy the configuration access points here!
-    // We must use our own ones ...
+    // Don't copy the configuration access points here!
+    // We must use our own ones...
 
     // b)
     // Further we can ignore the uno service manager.
@@ -199,7 +199,6 @@ void FilterCache::takeOver(const FilterCache& rClone)
 }
 
 
-
 void FilterCache::load(EFillState eRequired)
     throw(css::uno::Exception)
 {
@@ -225,7 +224,7 @@ void FilterCache::load(EFillState eRequired)
         impl_getDirectCFGValue(CFGDIRECTKEY_OFFICELOCALE) >>= m_sActLocale;
         if (m_sActLocale.isEmpty())
         {
-            _FILTER_CONFIG_LOG_1_("FilterCache::ctor() ... could not specify office locale => use default \"%s\"\n", _FILTER_CONFIG_TO_ASCII_(DEFAULT_OFFICELOCALE));
+            FILTER_CONFIG_LOG_1_("FilterCache::ctor() ... could not specify office locale => use default \"%s\"\n", _FILTER_CONFIG_TO_ASCII_(DEFAULT_OFFICELOCALE));
             m_sActLocale = DEFAULT_OFFICELOCALE;
         }
 
@@ -242,7 +241,6 @@ void FilterCache::load(EFillState eRequired)
 }
 
 
-
 bool FilterCache::isFillState(FilterCache::EFillState eState) const
     throw(css::uno::Exception)
 {
@@ -251,7 +249,6 @@ bool FilterCache::isFillState(FilterCache::EFillState eState) const
     return ((m_eFillState & eState) == eState);
     // <- SAFE
 }
-
 
 
 OUStringList FilterCache::getMatchingItemsByProps(      EItemType  eType  ,
@@ -275,8 +272,8 @@ OUStringList FilterCache::getMatchingItemsByProps(      EItemType  eType  ,
                                        pIt != rList.end()  ;
                                      ++pIt                 )
     {
-        _FILTER_CONFIG_LOG_1_("getMatchingProps for \"%s\"  ...\n",
-                              _FILTER_CONFIG_TO_ASCII_(pIt->first))
+        FILTER_CONFIG_LOG_1_("getMatchingProps for \"%s\"  ...\n",
+                              FILTER_CONFIG_TO_ASCII_(pIt->first))
         if (
             (pIt->second.haveProps(lIProps)    ) &&
             (pIt->second.dontHaveProps(lEProps))
@@ -289,7 +286,6 @@ OUStringList FilterCache::getMatchingItemsByProps(      EItemType  eType  ,
     return lKeys;
     // <- SAFE
 }
-
 
 
 bool FilterCache::hasItems(EItemType eType) const
@@ -306,7 +302,6 @@ bool FilterCache::hasItems(EItemType eType) const
     return !rList.empty();
     // <- SAFE
 }
-
 
 
 OUStringList FilterCache::getItemNames(EItemType eType) const
@@ -330,7 +325,6 @@ OUStringList FilterCache::getItemNames(EItemType eType) const
     return lKeys;
     // <- SAFE
 }
-
 
 
 bool FilterCache::hasItem(      EItemType        eType,
@@ -364,7 +358,6 @@ bool FilterCache::hasItem(      EItemType        eType,
     return false;
     // <- SAFE
 }
-
 
 
 CacheItem FilterCache::getItem(      EItemType        eType,
@@ -418,7 +411,6 @@ CacheItem FilterCache::getItem(      EItemType        eType,
 }
 
 
-
 void FilterCache::removeItem(      EItemType        eType,
                              const OUString& sItem)
     throw(css::uno::Exception)
@@ -438,7 +430,6 @@ void FilterCache::removeItem(      EItemType        eType,
 
     impl_addItem2FlushList(eType, sItem);
 }
-
 
 
 void FilterCache::setItem(      EItemType        eType ,
@@ -478,7 +469,6 @@ void FilterCache::refreshItem(      EItemType        eType,
     ::osl::ResettableMutexGuard aLock(m_aLock);
     impl_loadItemOnDemand(eType, sItem);
 }
-
 
 
 void FilterCache::addStatePropsToItem(      EItemType        eType,
@@ -526,8 +516,8 @@ void FilterCache::addStatePropsToItem(      EItemType        eType,
                     (sItem.equals(sDefaultFrameLoader)   )
                    )
                 {
-                    rItem[PROPNAME_FINALIZED] <<= sal_True;
-                    rItem[PROPNAME_MANDATORY] <<= sal_True;
+                    rItem[PROPNAME_FINALIZED] <<= true;
+                    rItem[PROPNAME_MANDATORY] <<= true;
                     return;
                 }
                 /* <-- HACK */
@@ -569,13 +559,12 @@ void FilterCache::addStatePropsToItem(      EItemType        eType,
 
             => mark item as FINALIZED / MANDATORY, we don't support writing to the old format
         */
-        rItem[PROPNAME_FINALIZED] <<= sal_True;
-        rItem[PROPNAME_MANDATORY] <<= sal_True;
+        rItem[PROPNAME_FINALIZED] <<= true;
+        rItem[PROPNAME_MANDATORY] <<= true;
     }
 
     // <- SAFE
 }
-
 
 
 void FilterCache::removeStatePropsFromItem(CacheItem& rItem)
@@ -589,7 +578,6 @@ void FilterCache::removeStatePropsFromItem(CacheItem& rItem)
     if (pIt != rItem.end())
         rItem.erase(pIt);
 }
-
 
 
 void FilterCache::flush()
@@ -627,7 +615,6 @@ void FilterCache::flush()
 
     /*TODO FrameLoader/ContentHandler must be flushed here too ... */
 }
-
 
 
 void FilterCache::impl_flushByList(const css::uno::Reference< css::container::XNameAccess >& xSet  ,
@@ -689,7 +676,6 @@ void FilterCache::impl_flushByList(const css::uno::Reference< css::container::XN
         }
     }
 }
-
 
 
 void FilterCache::detectFlatForURL(const css::util::URL& aURL      ,
@@ -925,7 +911,6 @@ css::uno::Any FilterCache::impl_getDirectCFGValue(const OUString& sDirectKey)
 }
 
 
-
 css::uno::Reference< css::uno::XInterface > FilterCache::impl_createConfigAccess(const OUString& sRoot       ,
                                                                                        bool         bReadOnly   ,
                                                                                        bool         bLocalesMode)
@@ -983,7 +968,6 @@ css::uno::Reference< css::uno::XInterface > FilterCache::impl_createConfigAccess
     return xCfg;
     // <- SAFE
 }
-
 
 
 void FilterCache::impl_validateAndOptimize()
@@ -1110,7 +1094,7 @@ void FilterCache::impl_validateAndOptimize()
 
 #if OSL_DEBUG_LEVEL > 0
 
-        // Dont check cross references between types and filters, if
+        // Don't check cross references between types and filters, if
         // not all filters read from disk!
         // OK - this cache can read single filters on demand too ...
         // but then the fill state of this cache should not be set to E_CONTAINS_FILTERS!
@@ -1419,7 +1403,6 @@ void FilterCache::impl_load(EFillState eRequiredState)
 }
 
 
-
 void FilterCache::impl_loadSet(const css::uno::Reference< css::container::XNameAccess >& xConfig,
                                      EItemType                                           eType  ,
                                      EReadOption                                         eOption,
@@ -1530,7 +1513,6 @@ void FilterCache::impl_loadSet(const css::uno::Reference< css::container::XNameA
 }
 
 
-
 void FilterCache::impl_readPatchUINames(const css::uno::Reference< css::container::XNameAccess >& xNode,
                                               CacheItem&                                          rItem)
     throw(css::uno::Exception)
@@ -1580,7 +1562,7 @@ void FilterCache::impl_readPatchUINames(const css::uno::Reference< css::containe
         OUString sMsg("Fallback scenario for filter or type '" + sName + "' and locale '" +
                       sActLocale + "' failed. Please check your filter configuration.");
 
-        OSL_FAIL(_FILTER_CONFIG_TO_ASCII_(sMsg));
+        OSL_FAIL(FILTER_CONFIG_TO_ASCII_(sMsg));
 #endif
         return;
     }
@@ -1590,7 +1572,6 @@ void FilterCache::impl_readPatchUINames(const css::uno::Reference< css::containe
     if (pUIName != lUINames.end())
         rItem[PROPNAME_UINAME] = pUIName->second;
 }
-
 
 
 void FilterCache::impl_savePatchUINames(const css::uno::Reference< css::container::XNameReplace >& xNode,
@@ -1731,7 +1712,6 @@ CacheItem FilterCache::impl_loadItem(const css::uno::Reference< css::container::
 }
 
 
-
 CacheItemList::iterator FilterCache::impl_loadItemOnDemand(      EItemType        eType,
                                                            const OUString& sItem)
     throw(css::uno::Exception)
@@ -1788,7 +1768,7 @@ CacheItemList::iterator FilterCache::impl_loadItemOnDemand(      EItemType      
     if (bItemInConfig)
     {
         (*pList)[sItem] = impl_loadItem(xSet, eType, sItem, E_READ_ALL);
-        _FILTER_CONFIG_LOG_2_("impl_loadItemOnDemand(%d, \"%s\") ... OK", (int)eType, _FILTER_CONFIG_TO_ASCII_(sItem).getStr())
+        FILTER_CONFIG_LOG_2_("impl_loadItemOnDemand(%d, \"%s\") ... OK", (int)eType, _FILTER_CONFIG_TO_ASCII_(sItem).getStr())
     }
     else
     {
@@ -1806,77 +1786,79 @@ CacheItemList::iterator FilterCache::impl_loadItemOnDemand(      EItemType      
 }
 
 
-
 void FilterCache::impl_saveItem(const css::uno::Reference< css::container::XNameReplace >& xItem,
                                       EItemType                                            eType,
-                                const CacheItem&                                           aItem)
+                                const CacheItem & aItem)
     throw(css::uno::Exception)
 {
+    // This function changes the properties of aItem one-by-one; but it also
+    // listens to the configuration changes and reloads the whole item from the
+    // configuration on change, so use a copy of aItem throughout:
+    CacheItem copiedItem(aItem);
+
     CacheItem::const_iterator pIt;
     switch(eType)
     {
 
         case E_TYPE :
         {
-            pIt = aItem.find(PROPNAME_PREFERREDFILTER);
-            if (pIt != aItem.end())
+            pIt = copiedItem.find(PROPNAME_PREFERREDFILTER);
+            if (pIt != copiedItem.end())
                 xItem->replaceByName(PROPNAME_PREFERREDFILTER, pIt->second);
-            pIt = aItem.find(PROPNAME_DETECTSERVICE);
-            if (pIt != aItem.end())
+            pIt = copiedItem.find(PROPNAME_DETECTSERVICE);
+            if (pIt != copiedItem.end())
                 xItem->replaceByName(PROPNAME_DETECTSERVICE, pIt->second);
-            pIt = aItem.find(PROPNAME_URLPATTERN);
-            if (pIt != aItem.end())
+            pIt = copiedItem.find(PROPNAME_URLPATTERN);
+            if (pIt != copiedItem.end())
                 xItem->replaceByName(PROPNAME_URLPATTERN, pIt->second);
-            pIt = aItem.find(PROPNAME_EXTENSIONS);
-            if (pIt != aItem.end())
+            pIt = copiedItem.find(PROPNAME_EXTENSIONS);
+            if (pIt != copiedItem.end())
                 xItem->replaceByName(PROPNAME_EXTENSIONS, pIt->second);
-            pIt = aItem.find(PROPNAME_PREFERRED);
-            if (pIt != aItem.end())
+            pIt = copiedItem.find(PROPNAME_PREFERRED);
+            if (pIt != copiedItem.end())
                 xItem->replaceByName(PROPNAME_PREFERRED, pIt->second);
-            pIt = aItem.find(PROPNAME_MEDIATYPE);
-            if (pIt != aItem.end())
+            pIt = copiedItem.find(PROPNAME_MEDIATYPE);
+            if (pIt != copiedItem.end())
                 xItem->replaceByName(PROPNAME_MEDIATYPE, pIt->second);
-            pIt = aItem.find(PROPNAME_CLIPBOARDFORMAT);
-            if (pIt != aItem.end())
+            pIt = copiedItem.find(PROPNAME_CLIPBOARDFORMAT);
+            if (pIt != copiedItem.end())
                 xItem->replaceByName(PROPNAME_CLIPBOARDFORMAT, pIt->second);
 
             css::uno::Reference< css::container::XNameReplace > xUIName;
             xItem->getByName(PROPNAME_UINAME) >>= xUIName;
-            impl_savePatchUINames(xUIName, aItem);
+            impl_savePatchUINames(xUIName, copiedItem);
         }
         break;
 
 
         case E_FILTER :
         {
-            pIt = aItem.find(PROPNAME_TYPE);
-            if (pIt != aItem.end())
+            pIt = copiedItem.find(PROPNAME_TYPE);
+            if (pIt != copiedItem.end())
                 xItem->replaceByName(PROPNAME_TYPE, pIt->second);
-            pIt = aItem.find(PROPNAME_FILEFORMATVERSION);
-            if (pIt != aItem.end())
+            pIt = copiedItem.find(PROPNAME_FILEFORMATVERSION);
+            if (pIt != copiedItem.end())
                 xItem->replaceByName(PROPNAME_FILEFORMATVERSION, pIt->second);
-            pIt = aItem.find(PROPNAME_UICOMPONENT);
-            if (pIt != aItem.end())
+            pIt = copiedItem.find(PROPNAME_UICOMPONENT);
+            if (pIt != copiedItem.end())
                 xItem->replaceByName(PROPNAME_UICOMPONENT, pIt->second);
-            pIt = aItem.find(PROPNAME_FILTERSERVICE);
-            if (pIt != aItem.end())
+            pIt = copiedItem.find(PROPNAME_FILTERSERVICE);
+            if (pIt != copiedItem.end())
                 xItem->replaceByName(PROPNAME_FILTERSERVICE, pIt->second);
-            pIt = aItem.find(PROPNAME_DOCUMENTSERVICE);
-            if (pIt != aItem.end())
+            pIt = copiedItem.find(PROPNAME_DOCUMENTSERVICE);
+            if (pIt != copiedItem.end())
                 xItem->replaceByName(PROPNAME_DOCUMENTSERVICE, pIt->second);
-            pIt = aItem.find(PROPNAME_USERDATA);
-            if (pIt != aItem.end())
+            pIt = copiedItem.find(PROPNAME_USERDATA);
+            if (pIt != copiedItem.end())
                 xItem->replaceByName(PROPNAME_USERDATA, pIt->second);
-            pIt = aItem.find(PROPNAME_TEMPLATENAME);
-            if (pIt != aItem.end())
+            pIt = copiedItem.find(PROPNAME_TEMPLATENAME);
+            if (pIt != copiedItem.end())
                 xItem->replaceByName(PROPNAME_TEMPLATENAME, pIt->second);
 
             // special handling for flags! Convert it from an integer flag field back
             // to a list of names ...
-            // But note: because we work directly on a reference to the cache item,
-            // its not allowed to change the value here. We must work on a copy!
-            pIt = aItem.find(PROPNAME_FLAGS);
-            if (pIt != aItem.end())
+            pIt = copiedItem.find(PROPNAME_FLAGS);
+            if (pIt != copiedItem.end())
             {
                 sal_Int32 nFlags = 0;
                 pIt->second >>= nFlags;
@@ -1890,7 +1872,7 @@ void FilterCache::impl_saveItem(const css::uno::Reference< css::container::XName
 #ifdef AS_ENABLE_FILTER_UINAMES
             css::uno::Reference< css::container::XNameReplace > xUIName;
             xItem->getByName(PROPNAME_UINAME) >>= xUIName;
-            impl_savePatchUINames(xUIName, aItem);
+            impl_savePatchUINames(xUIName, copiedItem);
 #endif //  AS_ENABLE_FILTER_UINAMES
         }
         break;
@@ -1899,8 +1881,8 @@ void FilterCache::impl_saveItem(const css::uno::Reference< css::container::XName
         case E_FRAMELOADER :
         case E_CONTENTHANDLER :
         {
-            pIt = aItem.find(PROPNAME_TYPES);
-            if (pIt != aItem.end())
+            pIt = copiedItem.find(PROPNAME_TYPES);
+            if (pIt != copiedItem.end())
                 xItem->replaceByName(PROPNAME_TYPES, pIt->second);
         }
         break;
@@ -1935,6 +1917,7 @@ css::uno::Sequence< OUString > FilterCache::impl_convertFlagField2FlagNames(SfxF
     if (nFlags & SfxFilterFlags::TEMPLATE         ) lFlagNames.push_back(FLAGNAME_TEMPLATE         );
     if (nFlags & SfxFilterFlags::TEMPLATEPATH     ) lFlagNames.push_back(FLAGNAME_TEMPLATEPATH     );
     if (nFlags & SfxFilterFlags::COMBINED         ) lFlagNames.push_back(FLAGNAME_COMBINED         );
+    if (nFlags & SfxFilterFlags::SUPPORTSSIGNING) lFlagNames.push_back(FLAGNAME_SUPPORTSSIGNING);
 
     return comphelper::containerToSequence(lFlagNames);
 }
@@ -2025,6 +2008,11 @@ SfxFilterFlags FilterCache::impl_convertFlagNames2FlagField(const css::uno::Sequ
             nField |= SfxFilterFlags::STARTPRESENTATION;
             continue;
         }
+        if (pNames[i] == FLAGNAME_SUPPORTSSIGNING)
+        {
+            nField |= SfxFilterFlags::SUPPORTSSIGNING;
+            continue;
+        }
         if (pNames[i] == FLAGNAME_READONLY)
         {
             nField |= SfxFilterFlags::OPENREADONLY;
@@ -2056,7 +2044,6 @@ SfxFilterFlags FilterCache::impl_convertFlagNames2FlagField(const css::uno::Sequ
 }
 
 
-
 void FilterCache::impl_interpretDataVal4Type(const OUString& sValue,
                                                    sal_Int32        nProp ,
                                                    CacheItem&       rItem )
@@ -2066,9 +2053,9 @@ void FilterCache::impl_interpretDataVal4Type(const OUString& sValue,
         // Preferred
         case 0:     {
                         if (sValue.toInt32() == 1)
-                            rItem[PROPNAME_PREFERRED] = css::uno::makeAny(sal_True);
+                            rItem[PROPNAME_PREFERRED] = css::uno::makeAny(true);
                         else
-                            rItem[PROPNAME_PREFERRED] = css::uno::makeAny(sal_False);
+                            rItem[PROPNAME_PREFERRED] = css::uno::makeAny(false);
                     }
                     break;
         // MediaType
@@ -2087,7 +2074,6 @@ void FilterCache::impl_interpretDataVal4Type(const OUString& sValue,
 }
 
 
-
 void FilterCache::impl_interpretDataVal4Filter(const OUString& sValue,
                                                      sal_Int32        nProp ,
                                                      CacheItem&       rItem )
@@ -2100,7 +2086,7 @@ void FilterCache::impl_interpretDataVal4Filter(const OUString& sValue,
                         if (nOrder > 0)
                         {
                             SAL_WARN( "filter.config", "FilterCache::impl_interpretDataVal4Filter()\nCan not move Order value from filter to type on demand!");
-                            _FILTER_CONFIG_LOG_2_("impl_interpretDataVal4Filter(%d, \"%s\") ... OK", (int)eType, _FILTER_CONFIG_TO_ASCII_(rItem).getStr())
+                            FILTER_CONFIG_LOG_2_("impl_interpretDataVal4Filter(%d, \"%s\") ... OK", (int)eType, _FILTER_CONFIG_TO_ASCII_(rItem).getStr())
                         }
                     }
                     break;
@@ -2171,7 +2157,7 @@ void FilterCache::impl_readOldFormat()
                 m_lFilters[pItems[i]] = impl_readOldItem(xSet, E_FILTER, pItems[i]);
         }
     }
-    /* corrupt filter addon ? because it's external (optional) code .. we can ignore it. Addon wont work then ...
+    /* corrupt filter addon? Because it's external (optional) code.. we can ignore it. Addon won't work then...
        but that seems to be acceptable.
        see #139088# for further information
     */
@@ -2236,7 +2222,6 @@ CacheItem FilterCache::impl_readOldItem(const css::uno::Reference< css::containe
 }
 
 
-
 OUStringList FilterCache::impl_tokenizeString(const OUString& sData     ,
                                                     sal_Unicode      cSeparator)
 {
@@ -2274,7 +2259,6 @@ OUString FilterCache::impl_searchFrameLoaderForType(const OUString& sType) const
 }
 
 
-
 OUString FilterCache::impl_searchContentHandlerForType(const OUString& sType) const
 {
     CacheItemList::const_iterator pIt;
@@ -2293,7 +2277,6 @@ OUString FilterCache::impl_searchContentHandlerForType(const OUString& sType) co
     return OUString();
 }
 #endif
-
 
 
 bool FilterCache::impl_isModuleInstalled(const OUString& sModule)

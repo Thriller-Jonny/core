@@ -32,9 +32,6 @@
 #include <vcl/vclptr.hxx>
 #include <com/sun/star/uno/Reference.h>
 
-// forward declare signals stuff - those headers are staggeringly expensive
-namespace boost { namespace signals2 { class connection; } }
-
 namespace com {
 namespace sun {
 namespace star {
@@ -47,7 +44,6 @@ struct DDInfo;
 struct Impl_IMEInfos;
 
 
-// - Edit-Types -
 #define EDIT_NOLIMIT                SAL_MAX_INT32
 #define EDIT_UPDATEDATA_TIMEOUT     350
 
@@ -70,13 +66,9 @@ enum AutocompleteAction{ AUTOCOMPLETE_KEYINPUT, AUTOCOMPLETE_TABFORWARD, AUTOCOM
 
 class Timer;
 
-// - Edit -
 class VCL_DLLPUBLIC Edit : public Control, public vcl::unohelper::DragAndDropClient
 {
 private:
-    struct Impl;
-    ::std::unique_ptr<Impl> m_pImpl;
-
     VclPtr<Edit>        mpSubEdit;
     Timer*              mpUpdateDataTimer;
     TextFilter*         mpFilterText;
@@ -104,6 +96,7 @@ private:
                         mbActivePopup:1;
     Link<Edit&,void>    maModifyHdl;
     Link<Edit&,void>    maUpdateDataHdl;
+    Link<Edit&,void>    maAutocompleteHdl;
 
     css::uno::Reference<css::i18n::XExtendedInputSequenceChecker> mxISC;
 
@@ -113,7 +106,7 @@ private:
     SAL_DLLPRIVATE void        ImplInitEditData();
     SAL_DLLPRIVATE void        ImplModified();
     SAL_DLLPRIVATE OUString    ImplGetText() const;
-    SAL_DLLPRIVATE void        ImplRepaint(vcl::RenderContext& rRenderContext, const Rectangle& rRectangle, bool bLayout = false);
+    SAL_DLLPRIVATE void        ImplRepaint(vcl::RenderContext& rRenderContext, const Rectangle& rRectangle);
     SAL_DLLPRIVATE void        ImplInvalidateOrRepaint();
     SAL_DLLPRIVATE void        ImplDelete( const Selection& rSelection, sal_uInt8 nDirection, sal_uInt8 nMode );
     SAL_DLLPRIVATE void        ImplSetText( const OUString& rStr, const Selection* pNewSelection = nullptr );
@@ -193,7 +186,6 @@ public:
     virtual void        Command( const CommandEvent& rCEvt ) override;
     virtual void        StateChanged( StateChangedType nType ) override;
     virtual void        DataChanged( const DataChangedEvent& rDCEvt ) override;
-    virtual vcl::Window*     GetPreferredKeyInputWindow() override;
 
     virtual void        Modify();
     virtual void        UpdateData();
@@ -239,6 +231,8 @@ public:
     virtual void        SetText( const OUString& rStr, const Selection& rNewSelection );
     virtual OUString    GetText() const override;
 
+    void                SetCursorAtLast();
+
     void                SetPlaceholderText( const OUString& rStr );
     OUString            GetPlaceholderText() const;
 
@@ -253,8 +247,8 @@ public:
     void                SetSubEdit( Edit* pEdit );
     Edit*               GetSubEdit() const { return mpSubEdit; }
 
-    void SignalConnectAutocomplete(::boost::signals2::connection * pConnection,
-            ::std::function<void (Edit *)>);
+    void                SetAutocompleteHdl( const Link<Edit&,void>& rLink ) { maAutocompleteHdl = rLink; }
+    const Link<Edit&,void>& GetAutocompleteHdl() const { return maAutocompleteHdl; }
     AutocompleteAction  GetAutocompleteAction() const { return meAutocompleteAction; }
 
     virtual Size        CalcMinimumSize() const;

@@ -22,6 +22,7 @@ $(eval $(call gb_UIConfig_add_uifiles,svx,\
 	svx/uiconfig/ui/chinesedictionary \
 	svx/uiconfig/ui/colorwindow \
 	svx/uiconfig/ui/compressgraphicdialog \
+	svx/uiconfig/ui/crashreportdlg \
 	svx/uiconfig/ui/datanavigator \
 	svx/uiconfig/ui/deleteheaderdialog \
 	svx/uiconfig/ui/deletefooterdialog \
@@ -35,6 +36,7 @@ $(eval $(call gb_UIConfig_add_uifiles,svx,\
 	svx/uiconfig/ui/extrustiondepthdialog \
 	svx/uiconfig/ui/findreplacedialog \
 	svx/uiconfig/ui/floatingcontour \
+	svx/uiconfig/ui/floatinglineproperty \
 	svx/uiconfig/ui/floatingundoredo \
 	svx/uiconfig/ui/fontworkgallerydialog \
 	svx/uiconfig/ui/fontworkspacingdialog \
@@ -61,14 +63,15 @@ $(eval $(call gb_UIConfig_add_uifiles,svx,\
 	svx/uiconfig/ui/sidebararea \
     svx/uiconfig/ui/sidebarshadow \
 	svx/uiconfig/ui/sidebargraphic \
-	svx/uiconfig/ui/sidebarinsert \
 	svx/uiconfig/ui/sidebarline \
 	svx/uiconfig/ui/sidebarparagraph \
 	svx/uiconfig/ui/sidebarpossize \
-        svx/uiconfig/ui/sidebarstylespanel \
+	svx/uiconfig/ui/sidebarstylespanel \
 	svx/uiconfig/ui/sidebartextpanel \
+	svx/uiconfig/ui/textcharacterspacingcontrol \
 	svx/uiconfig/ui/textcontrolchardialog \
 	svx/uiconfig/ui/textcontrolparadialog \
+	svx/uiconfig/ui/textunderlinecontrol \
 	svx/uiconfig/ui/xformspage \
 ))
 

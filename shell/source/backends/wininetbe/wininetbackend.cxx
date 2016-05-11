@@ -43,7 +43,7 @@ namespace {
 struct Library {
     HMODULE module;
 
-    Library(HMODULE theModule): module(theModule) {}
+    explicit Library(HMODULE theModule): module(theModule) {}
 
     ~Library() { if (module) FreeLibrary(module); }
 };
@@ -99,7 +99,6 @@ namespace // private
     }
 
 } // end private namespace
-
 
 
 WinInetBackend::WinInetBackend()
@@ -297,18 +296,15 @@ WinInetBackend::WinInetBackend()
 }
 
 
-
 WinInetBackend::~WinInetBackend()
 {
 }
-
 
 
 WinInetBackend* WinInetBackend::createInstance()
 {
     return new WinInetBackend;
 }
-
 
 
 void WinInetBackend::setPropertyValue(
@@ -361,11 +357,9 @@ css::uno::Any WinInetBackend::getPropertyValue(
 }
 
 
-
 OUString SAL_CALL WinInetBackend::getBackendName() {
     return OUString("com.sun.star.comp.configuration.backend.WinInetBackend") ;
 }
-
 
 
 OUString SAL_CALL WinInetBackend::getImplementationName()

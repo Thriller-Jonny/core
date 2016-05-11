@@ -145,9 +145,9 @@ SwHash* Find( const OUString& rSrch, SwHash* const * ppTable,
 
 void DeleteHashTable( SwHash** ppTable, sal_uInt16 nTableSize );
 
-// if _CalcOp != 0, this is a valid operator
-struct _CalcOp;
-_CalcOp* FindOperator( const OUString& rSearch );
+// if CalcOp != 0, this is a valid operator
+struct CalcOp;
+CalcOp* FindOperator( const OUString& rSearch );
 
 class SwCalc
 {
@@ -186,7 +186,7 @@ public:
         ~SwCalc();
 
     SwSbxValue  Calculate( const OUString &rStr );
-    OUString    GetStrResult( const SwSbxValue& rValue, bool bRound = true );
+    OUString    GetStrResult( const SwSbxValue& rValue );
     OUString    GetStrResult( double, bool bRound = true );
 
     SwCalcExp*  VarInsert( const OUString& r );
@@ -202,8 +202,7 @@ public:
     bool        IsCalcError() const                 { return 0 != eError; }
 
     static bool Str2Double( const OUString& rStr, sal_Int32& rPos,
-                                double& rVal,
-                                LocaleDataWrapper const*const pData = nullptr );
+                                double& rVal );
     static bool Str2Double( const OUString& rStr, sal_Int32& rPos,
                                 double& rVal, SwDoc *const pDoc );
 

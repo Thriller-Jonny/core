@@ -89,7 +89,7 @@ sdbcx::ObjectType OColumnsHelper::createObject(const OUString& _rName)
     bool bIsCurrency    = false;
     sal_Int32 nDataType     = DataType::OTHER;
 
-    ColumnInformationMap::iterator aFind = m_pImpl->m_aColumnInfo.find(_rName);
+    ColumnInformationMap::const_iterator aFind = m_pImpl->m_aColumnInfo.find(_rName);
     if ( aFind == m_pImpl->m_aColumnInfo.end() ) // we have to fill it
     {
         OUString sComposedName = ::dbtools::composeTableNameForSelect( xConnection, m_pTable );
@@ -178,7 +178,7 @@ sdbcx::ObjectType OColumnsHelper::appendObject( const OUString& _rForName, const
 
     Reference<XDatabaseMetaData> xMetaData = m_pTable->getConnection()->getMetaData();
     OUString aSql = "ALTER TABLE " +
-        ::dbtools::composeTableName( xMetaData, m_pTable, ::dbtools::eInTableDefinitions, false, false, true ) +
+        ::dbtools::composeTableName( xMetaData, m_pTable, ::dbtools::EComposeRule::InTableDefinitions, false, false, true ) +
         " ADD " +
         ::dbtools::createStandardColumnPart(descriptor,m_pTable->getConnection(),nullptr,m_pTable->getTypeCreatePattern());
 
@@ -200,7 +200,7 @@ void OColumnsHelper::dropObject(sal_Int32 /*_nPos*/, const OUString& _sElementNa
         Reference<XDatabaseMetaData> xMetaData = m_pTable->getConnection()->getMetaData();
         OUString aQuote  = xMetaData->getIdentifierQuoteString(  );
         OUString aSql = "ALTER TABLE " +
-            ::dbtools::composeTableName( xMetaData, m_pTable, ::dbtools::eInTableDefinitions, false, false, true ) +
+            ::dbtools::composeTableName( xMetaData, m_pTable, ::dbtools::EComposeRule::InTableDefinitions, false, false, true ) +
             " DROP " +
             ::dbtools::quoteName( aQuote,_sElementName);
 
@@ -212,8 +212,6 @@ void OColumnsHelper::dropObject(sal_Int32 /*_nPos*/, const OUString& _sElementNa
         }
     }
 }
-
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

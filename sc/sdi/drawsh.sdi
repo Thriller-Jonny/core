@@ -36,8 +36,6 @@ interface TableDraw
     SID_OPENDLG_EDIT_PRINTAREA  [ StateMethod = StateDisableItems; Export = FALSE; ]
      // andere:
     SID_DRAW_CHART              [ StateMethod = StateDisableItems; Export = FALSE; ]
-     //!    SID_STYLE_DESIGNER  [ StateMethod = StateDisableItems; Export = FALSE; ]
-     //!    SID_OPENDLG_FUNCTION[ StateMethod = StateDisableItems; Export = FALSE; ]
     SID_STYLE_FAMILY2           [ StateMethod = StateDisableItems; Export = FALSE; ]
     SID_STYLE_FAMILY4           [ StateMethod = StateDisableItems; Export = FALSE; ]
     SID_STYLE_APPLY             [ StateMethod = StateDisableItems; Export = FALSE; ]
@@ -120,14 +118,11 @@ interface TableDraw
      //!    PseudoSlots gibt Aerger mit Referenz-Dialogen ???
     SID_OBJECT_ALIGN
     [
-         //     PseudoSlots = TRUE;
         PseudoSlots = FALSE ;
         Export = FALSE ;
-         //     PseudoPrefix = SID_OBJECT_ALIGN;
         ExecMethod = ExecDrawFunc ;
         StateMethod = GetDrawFuncState ;
         GroupId = GID_FORMAT ;
-        FastCall , Cachable ;
         ToolBoxConfig ;
     ]
     SID_OBJECT_ALIGN_LEFT   [ ExecMethod = ExecDrawFunc; StateMethod = GetDrawFuncState; Export = FALSE; ]
@@ -159,17 +154,6 @@ interface TableDraw
      // !!! special
     SID_DELETE          [ExecMethod = ExecDrawFunc ;StateMethod = GetDrawFuncState; Export = FALSE ;]
 
-    /*
-    SfxVoidItem Delete SID_DELETE ( )
-    [
-        ExecMethod = ExecDrawFunc ;
-        StateMethod = GetDrawFuncState ;
-        Export = FALSE ;
-        GroupId = GID_EDIT ;
-        FastCall , Cachable ;
-        ToolBoxConfig , MenuConfig , AccelConfig ;
-    ]
-    */
     SID_DELETE_CONTENTS [ ExecMethod = ExecDrawFunc; StateMethod = GetDrawFuncState; Export = FALSE; ]
     SID_CUT             [ ExecMethod = ExecDrawFunc; StateMethod = GetDrawFuncState; Export = FALSE; ]
     SID_COPY            [ ExecMethod = ExecDrawFunc; StateMethod = GetDrawFuncState; Export = FALSE; ]
@@ -179,16 +163,6 @@ interface TableDraw
     SID_OBJECT_MIRROR   [ ExecMethod = ExecDrawFunc; StateMethod = GetState; Export = FALSE; ]
     SID_BEZIER_EDIT     [ ExecMethod = ExecDrawFunc; StateMethod = GetState; Export = FALSE; ]
     SID_MIRROR_HORIZONTAL[ ExecMethod = ExecDrawFunc;StateMethod = GetDrawFuncState; Export = FALSE; ]
-    /*
-    SfxVoidItem ObjectMirrorHorizontal SID_MIRROR_HORIZONTAL ( )
-    [
-        StateMethod = GetDrawFuncState ;
-        Export = FALSE ;
-        GroupId = GID_FORMAT ;
-        Cachable ;
-        MenuConfig ;  //FS
-    ]
-    */
     SID_MIRROR_VERTICAL     [ ExecMethod = ExecDrawFunc; StateMethod = GetDrawFuncState; Export = FALSE; ]
     SID_FLIP_HORIZONTAL     [ ExecMethod = ExecDrawFunc; StateMethod = GetDrawFuncState; Export = FALSE; ]
     SID_FLIP_VERTICAL       [ ExecMethod = ExecDrawFunc; StateMethod = GetDrawFuncState; Export = FALSE; ]

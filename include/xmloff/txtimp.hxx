@@ -707,12 +707,15 @@ public:
 
     // forwards to TextListHelper; these are used in many places
     /// push a list context on the list context stack
-    void PushListContext(XMLTextListBlockContext *i_pListBlock = nullptr);
+    void PushListContext();
     /// pop the list context stack
     void PopListContext();
 
     void SetCellParaStyleDefault(OUString const& rNewValue);
     OUString const& GetCellParaStyleDefault();
+
+    void AddCrossRefHeadingMapping(OUString const& rFrom, OUString const& rTo);
+    void MapCrossRefHeadingFieldsHorribly();
 };
 
 #endif

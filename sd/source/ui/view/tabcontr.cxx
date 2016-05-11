@@ -42,7 +42,6 @@
 
 namespace sd {
 
-// - SdTabControl::SdPageObjsTransferable -
 
 TabControl::TabControlTransferable::~TabControlTransferable()
 {
@@ -152,7 +151,7 @@ void TabControl::StartDrag( sal_Int8, const Point& )
 {
     bInternalMove = true;
 
-    // object is delete by reference mechanismn
+    // object is delete by reference mechanism
     ( new TabControl::TabControlTransferable( *this ) )->StartDrag( this, DND_ACTION_COPYMOVE );
 }
 
@@ -280,11 +279,8 @@ void TabControl::Command(const CommandEvent& rCEvt)
 {
     if ( rCEvt.GetCommand() == CommandEventId::ContextMenu )
     {
-        bool bGraphicShell = dynamic_cast< GraphicViewShell *>( pDrViewSh ) !=  nullptr;
-        sal_uInt16 nResId = bGraphicShell ? RID_GRAPHIC_PAGETAB_POPUP :
-                                        RID_DRAW_PAGETAB_POPUP;
         SfxDispatcher* pDispatcher = pDrViewSh->GetViewFrame()->GetDispatcher();
-        pDispatcher->ExecutePopup( SdResId( nResId ) );
+        pDispatcher->ExecutePopup("pagetab");
     }
 }
 

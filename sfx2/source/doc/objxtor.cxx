@@ -70,6 +70,7 @@
 #include <unotools/ucbhelper.hxx>
 #include <svtools/asynclink.hxx>
 #include <tools/diagnose_ex.h>
+#include <tools/globname.hxx>
 #include <comphelper/classids.hxx>
 
 #include <sfx2/app.hxx>
@@ -117,10 +118,10 @@ class theCurrentComponent : public rtl::Static< WeakReference< XInterface >, the
 #if HAVE_FEATURE_SCRIPTING
 
 // remember all registered components for VBA compatibility, to be able to remove them on disposing the model
-typedef ::std::map< XInterface*, OString > VBAConstantNameMap;
+typedef ::std::map< XInterface*, OUString > VBAConstantNameMap;
 static VBAConstantNameMap s_aRegisteredVBAConstants;
 
-OString lclGetVBAGlobalConstName( const Reference< XInterface >& rxComponent )
+OUString lclGetVBAGlobalConstName( const Reference< XInterface >& rxComponent )
 {
     OSL_ENSURE( rxComponent.is(), "lclGetVBAGlobalConstName - missing component" );
 
@@ -133,18 +134,17 @@ OString lclGetVBAGlobalConstName( const Reference< XInterface >& rxComponent )
     {
         OUString aConstName;
         xProps->getPropertyValue("VBAGlobalConstantName") >>= aConstName;
-        return OUStringToOString( aConstName, RTL_TEXTENCODING_ASCII_US );
+        return aConstName;
     }
     catch (const uno::Exception&) // not supported
     {
     }
-    return OString();
+    return OUString();
 }
 
 #endif
 
 } // namespace
-
 
 
 class SfxModelListener_Impl : public ::cppu::WeakImplHelper< css::util::XCloseListener >
@@ -190,7 +190,7 @@ void SAL_CALL SfxModelListener_Impl::disposing( const css::lang::EventObject& _r
         if ( aIt != s_aRegisteredVBAConstants.end() )
         {
             if ( BasicManager* pAppMgr = SfxApplication::GetBasicManager() )
-                pAppMgr->SetGlobalUNOConstant( aIt->second.getStr(), Any( Reference< XInterface >() ) );
+                pAppMgr->SetGlobalUNOConstant( aIt->second, Any( Reference< XInterface >() ) );
             s_aRegisteredVBAConstants.erase( aIt );
         }
     }
@@ -200,7 +200,6 @@ void SAL_CALL SfxModelListener_Impl::disposing( const css::lang::EventObject& _r
         // GCC crashes when already in the destructor, so first query the Flag
         mpDoc->DoClose();
 }
-
 
 
 SfxObjectShell_Impl::SfxObjectShell_Impl( SfxObjectShell& _rDocShell )
@@ -263,6 +262,7 @@ SfxObjectShell_Impl::SfxObjectShell_Impl( SfxObjectShell& _rDocShell )
     ,m_bIncomplEncrWarnShown( false )
     ,m_nModifyPasswordHash( 0 )
     ,m_bModifyPasswordEntered( false )
+    ,m_bSavingForSigning( false )
 {
     SfxObjectShell* pDoc = &_rDocShell;
     SfxObjectShellArr_Impl &rArr = SfxGetpApp()->GetObjectShells_Impl();
@@ -271,11 +271,9 @@ SfxObjectShell_Impl::SfxObjectShell_Impl( SfxObjectShell& _rDocShell )
 }
 
 
-
 SfxObjectShell_Impl::~SfxObjectShell_Impl()
 {
 }
-
 
 
 SfxObjectShell::SfxObjectShell( const SfxModelFlags i_nCreationFlags )
@@ -379,19 +377,16 @@ SfxObjectShell::~SfxObjectShell()
 }
 
 
-
 void SfxObjectShell::Stamp_SetPrintCancelState(bool bState)
 {
     pImp->bIsPrintJobCancelable = bState;
 }
 
 
-
 bool SfxObjectShell::Stamp_GetPrintCancelState() const
 {
     return pImp->bIsPrintJobCancelable;
 }
-
 
 
 // closes the Object and all its views
@@ -418,7 +413,7 @@ bool SfxObjectShell::CloseInternal()
         {
             try
             {
-                xCloseable->close( sal_True );
+                xCloseable->close( true );
             }
             catch (const Exception&)
             {
@@ -469,16 +464,15 @@ OUString SfxObjectShell::CreateShellID( const SfxObjectShell* pShell )
 
 SfxObjectShell* SfxObjectShell::GetFirst
 (
-    std::function<bool ( const SfxObjectShell* )> isObjectShell,
+    const std::function<bool ( const SfxObjectShell* )>& isObjectShell,
     bool          bOnlyVisible
 )
 {
     SfxObjectShellArr_Impl &rDocs = SfxGetpApp()->GetObjectShells_Impl();
 
     // search for a SfxDocument of the specified type
-    for ( size_t nPos = 0; nPos < rDocs.size(); ++nPos )
+    for (SfxObjectShell* pSh : rDocs)
     {
-        SfxObjectShell* pSh = rDocs[ nPos ];
         if ( bOnlyVisible && pSh->IsPreview() && pSh->IsReadOnly() )
             continue;
 
@@ -496,7 +490,7 @@ SfxObjectShell* SfxObjectShell::GetFirst
 SfxObjectShell* SfxObjectShell::GetNext
 (
     const SfxObjectShell&   rPrev,
-    std::function<bool ( const SfxObjectShell* )> isObjectShell,
+    const std::function<bool ( const SfxObjectShell* )>& isObjectShell,
     bool                    bOnlyVisible
 )
 {
@@ -523,7 +517,6 @@ SfxObjectShell* SfxObjectShell::GetNext
 }
 
 
-
 SfxObjectShell* SfxObjectShell::Current()
 {
     SfxViewFrame *pFrame = SfxViewFrame::Current();
@@ -531,12 +524,10 @@ SfxObjectShell* SfxObjectShell::Current()
 }
 
 
-
 bool SfxObjectShell::IsInPrepareClose() const
 {
     return pImp->bInPrepareClose;
 }
-
 
 
 struct BoolEnv_Impl
@@ -643,7 +634,7 @@ bool SfxObjectShell::PrepareClose
 #if HAVE_FEATURE_SCRIPTING
 namespace
 {
-    static BasicManager* lcl_getBasicManagerForDocument( const SfxObjectShell& _rDocument )
+    BasicManager* lcl_getBasicManagerForDocument( const SfxObjectShell& _rDocument )
     {
         if ( !_rDocument.Get_Impl()->m_bNoBasicCapabilities )
         {
@@ -855,19 +846,16 @@ void SfxObjectShell::InitBasicManager_Impl()
 }
 
 
-
 bool SfxObjectShell::DoClose()
 {
     return Close();
 }
 
 
-
 SfxObjectShell* SfxObjectShell::GetObjectShell()
 {
     return this;
 }
-
 
 
 uno::Sequence< OUString > SfxObjectShell::GetEventNames()
@@ -888,7 +876,6 @@ uno::Sequence< OUString > SfxObjectShell::GetEventNames()
 }
 
 
-
 css::uno::Reference< css::frame::XModel > SfxObjectShell::GetModel() const
 {
     return GetBaseModel();
@@ -903,7 +890,6 @@ void SfxObjectShell::SetBaseModel( SfxBaseModel* pModel )
         pImp->pBaseModel->addCloseListener( new SfxModelListener_Impl(this) );
     }
 }
-
 
 
 css::uno::Reference< css::frame::XModel > SfxObjectShell::GetBaseModel() const
@@ -946,20 +932,20 @@ void SfxObjectShell::SetCurrentComponent( const Reference< XInterface >& _rxComp
         // set new current component for VBA compatibility
         if ( _rxComponent.is() )
         {
-            OString aVBAConstName = lclGetVBAGlobalConstName( _rxComponent );
+            OUString aVBAConstName = lclGetVBAGlobalConstName( _rxComponent );
             if ( !aVBAConstName.isEmpty() )
             {
-                pAppMgr->SetGlobalUNOConstant( aVBAConstName.getStr(), Any( _rxComponent ) );
+                pAppMgr->SetGlobalUNOConstant( aVBAConstName, Any( _rxComponent ) );
                 s_aRegisteredVBAConstants[ _rxComponent.get() ] = aVBAConstName;
             }
         }
         // no new component passed -> remove last registered VBA component
         else if ( xOldCurrentComp.is() )
         {
-            OString aVBAConstName = lclGetVBAGlobalConstName( xOldCurrentComp );
+            OUString aVBAConstName = lclGetVBAGlobalConstName( xOldCurrentComp );
             if ( !aVBAConstName.isEmpty() )
             {
-                pAppMgr->SetGlobalUNOConstant( aVBAConstName.getStr(), Any( Reference< XInterface >() ) );
+                pAppMgr->SetGlobalUNOConstant( aVBAConstName, Any( Reference< XInterface >() ) );
                 s_aRegisteredVBAConstants.erase( xOldCurrentComp.get() );
             }
         }
@@ -1073,7 +1059,7 @@ SfxObjectShell* SfxObjectShell::CreateObject( const OUString& rServiceName, SfxO
     return nullptr;
 }
 
-Reference<lang::XComponent> SfxObjectShell::CreateAndLoadComponent( const SfxItemSet& rSet, SfxFrame* pFrame )
+Reference<lang::XComponent> SfxObjectShell::CreateAndLoadComponent( const SfxItemSet& rSet )
 {
     uno::Sequence < beans::PropertyValue > aProps;
     TransformItems( SID_OPENDOC, rSet, aProps );
@@ -1087,12 +1073,7 @@ Reference<lang::XComponent> SfxObjectShell::CreateAndLoadComponent( const SfxIte
         aTarget = pTargetItem->GetValue();
 
     uno::Reference < frame::XComponentLoader > xLoader;
-    if ( pFrame )
-    {
-        xLoader.set( pFrame->GetFrameInterface(), uno::UNO_QUERY );
-    }
-    else
-        xLoader.set( frame::Desktop::create(comphelper::getProcessComponentContext()), uno::UNO_QUERY );
+    xLoader.set( frame::Desktop::create(comphelper::getProcessComponentContext()), uno::UNO_QUERY );
 
     Reference <lang::XComponent> xComp;
     try
@@ -1165,11 +1146,10 @@ void SfxObjectShell::SetChangeRecording( bool /*bActivate*/ )
 }
 
 
-bool SfxObjectShell::SetProtectionPassword( const OUString & /*rPassword*/ )
+void SfxObjectShell::SetProtectionPassword( const OUString & /*rPassword*/ )
 {
     // currently this function needs to be overwritten by Writer and Calc only
     DBG_ASSERT( false, "function not implemented" );
-    return false;
 }
 
 

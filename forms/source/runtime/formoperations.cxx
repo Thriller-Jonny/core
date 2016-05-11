@@ -107,7 +107,6 @@ namespace frm
     using ::com::sun::star::beans::XMultiPropertySet;
     using ::com::sun::star::uno::makeAny;
     using ::com::sun::star::lang::WrappedTargetException;
-    using ::com::sun::star::beans::PropertyValue;
     using ::com::sun::star::ui::dialogs::XExecutableDialog;
     using ::com::sun::star::beans::NamedValue;
     using ::com::sun::star::util::XRefreshable;
@@ -169,9 +168,9 @@ namespace frm
         return getImplementationName_Static();
     }
 
-    sal_Bool SAL_CALL FormOperations::supportsService( const OUString& _ServiceName ) throw (RuntimeException, std::exception)
+    sal_Bool SAL_CALL FormOperations::supportsService( const OUString& ServiceName ) throw (RuntimeException, std::exception)
     {
-        return cppu::supportsService(this, _ServiceName);
+        return cppu::supportsService(this, ServiceName);
     }
 
     Sequence< OUString > SAL_CALL FormOperations::getSupportedServiceNames(  ) throw (RuntimeException, std::exception)
@@ -218,7 +217,7 @@ namespace frm
         MethodGuard aGuard( *this );
 
         FeatureState aState;
-        aState.Enabled = sal_False;
+        aState.Enabled = false;
 
         try
         {
@@ -249,7 +248,7 @@ namespace frm
             case FormFeature::DeleteRecord:
                 // already deleted ?
                 if ( m_xCursor->rowDeleted() )
-                    aState.Enabled = sal_False;
+                    aState.Enabled = false;
                 else
                 {
                     // allowed to delete the row ?
@@ -345,20 +344,20 @@ namespace frm
                         // can't insert records -> disabled
                         if ( !nCount && !::dbtools::canInsert( m_xCursorProperties ) )
                         {
-                            aState.Enabled = sal_False;
+                            aState.Enabled = false;
                         }
                         else
                         {
                             if ( bIsNew )
                                 nPosition = ++nCount;
                             aState.State <<= (sal_Int32)nPosition;
-                            aState.Enabled = sal_True;
+                            aState.Enabled = true;
                         }
                     }
                     else
                     {
                         aState.State <<= (sal_Int32)nPosition;
-                        aState.Enabled = sal_True;
+                        aState.Enabled = true;
                     }
                 }
             }
@@ -378,7 +377,7 @@ namespace frm
                     sValue += " *";
 
                 aState.State <<= sValue;
-                aState.Enabled = sal_True;
+                aState.Enabled = true;
             }
             break;
 
@@ -407,7 +406,7 @@ namespace frm
 
     namespace
     {
-        static bool lcl_needConfirmCommit( sal_Int32 _nFeature )
+        bool lcl_needConfirmCommit( sal_Int32 _nFeature )
         {
             return ( ( _nFeature == FormFeature::ReloadForm )
                   || ( _nFeature == FormFeature::RemoveFilterAndSort )
@@ -419,19 +418,19 @@ namespace frm
                   || ( _nFeature == FormFeature::InteractiveFilter )
                    );
         }
-        static bool lcl_requiresArguments( sal_Int32 _nFeature )
+        bool lcl_requiresArguments( sal_Int32 _nFeature )
         {
             return ( _nFeature == FormFeature::MoveAbsolute );
         }
-        static bool lcl_isExecutableFeature( sal_Int32 _nFeature )
+        bool lcl_isExecutableFeature( sal_Int32 _nFeature )
         {
             return ( _nFeature != FormFeature::TotalRecords );
         }
 
         template < typename TYPE >
-        TYPE lcl_safeGetPropertyValue_throw( const Reference< XPropertySet >& _rxProperties, const OUString& _rPropertyName, TYPE _Default )
+        TYPE lcl_safeGetPropertyValue_throw( const Reference< XPropertySet >& _rxProperties, const OUString& _rPropertyName, TYPE Default )
         {
-            TYPE value( _Default );
+            TYPE value( Default );
             OSL_PRECOND( _rxProperties.is(), "FormOperations::<foo>: no cursor (already disposed?)!" );
             if ( _rxProperties.is() )
                 OSL_VERIFY( _rxProperties->getPropertyValue( _rPropertyName ) >>= value );
@@ -449,7 +448,7 @@ namespace frm
                 {
                 case RET_NO:
                     shouldCommit = false;
-                    // no break on purpose: don't ask again!
+                    SAL_FALLTHROUGH; // don't ask again!
                 case RET_YES:
                     needConfirmation = false;
                     return true;
@@ -460,7 +459,7 @@ namespace frm
             return true;
         }
 
-        bool commit1Form(Reference< XFormController > xCntrl, bool &needConfirmation, bool &shouldCommit)
+        bool commit1Form(const Reference< XFormController >& xCntrl, bool &needConfirmation, bool &shouldCommit)
         {
             Reference< XFormOperations > xFrmOps(xCntrl->getFormOperations());
             if (!xFrmOps->commitCurrentControl())
@@ -477,7 +476,7 @@ namespace frm
             return true;
         }
 
-        bool commitFormAndSubforms(Reference< XFormController > xCntrl, bool needConfirmation)
+        bool commitFormAndSubforms(const Reference< XFormController >& xCntrl, bool needConfirmation)
         {
             bool shouldCommit(true);
             assert(xCntrl.is());
@@ -504,7 +503,7 @@ namespace frm
             return true;
         }
 
-        bool commit1Form(Reference< XForm > xFrm, bool &needConfirmation, bool &shouldCommit)
+        bool commit1Form(const Reference< XForm >& xFrm, bool &needConfirmation, bool &shouldCommit)
         {
             Reference< XPropertySet > xProps(xFrm, UNO_QUERY_THROW);
             // nothing to do if the record is not modified
@@ -525,7 +524,7 @@ namespace frm
             return true;
         }
 
-        bool commitFormAndSubforms(Reference< XForm > xFrm, bool needConfirmation)
+        bool commitFormAndSubforms(const Reference< XForm >& xFrm, bool needConfirmation)
         {
             // No control...  do what we can with the models
             bool shouldCommit(true);
@@ -869,7 +868,7 @@ namespace frm
     sal_Bool SAL_CALL FormOperations::commitCurrentRecord( sal_Bool& _out_rRecordInserted ) throw (RuntimeException, SQLException, std::exception)
     {
         MethodGuard aGuard( *this );
-        _out_rRecordInserted = sal_False;
+        _out_rRecordInserted = false;
 
         return impl_commitCurrentRecord_throw( &_out_rRecordInserted );
     }
@@ -893,7 +892,7 @@ namespace frm
             {
                 m_xUpdateCursor->insertRow();
                 if ( _pRecordInserted )
-                    *_pRecordInserted = sal_True;
+                    *_pRecordInserted = true;
             }
             else
                 m_xUpdateCursor->updateRow();
@@ -1448,17 +1447,17 @@ namespace frm
     }
 
 
-    bool FormOperations::impl_moveLeft_throw( ) const
+    void FormOperations::impl_moveLeft_throw( ) const
     {
         OSL_PRECOND( impl_hasCursor_nothrow(), "FormOperations::impl_moveLeft_throw: no cursor!" );
         if ( !impl_hasCursor_nothrow() )
-            return false;
+            return;
 
-        sal_Bool bRecordInserted = sal_False;
+        sal_Bool bRecordInserted = false;
         bool bSuccess = impl_commitCurrentRecord_throw( &bRecordInserted );
 
         if ( !bSuccess )
-            return false;
+            return;
 
         if ( bRecordInserted )
         {
@@ -1479,22 +1478,20 @@ namespace frm
             else
                 m_xCursor->previous();
         }
-
-        return true;
     }
 
 
-    bool FormOperations::impl_moveRight_throw( ) const
+    void FormOperations::impl_moveRight_throw( ) const
     {
         OSL_PRECOND( impl_hasCursor_nothrow(), "FormOperations::impl_moveRight_throw: no cursor!" );
         if ( !impl_hasCursor_nothrow() )
-            return false;
+            return;
 
-        sal_Bool bRecordInserted = sal_False;
+        sal_Bool bRecordInserted = false;
         bool bSuccess = impl_commitCurrentRecord_throw( &bRecordInserted );
 
         if ( !bSuccess )
-            return false;
+            return;
 
         if ( bRecordInserted )
         {
@@ -1508,8 +1505,6 @@ namespace frm
             else
                 (void)m_xCursor->next();
         }
-
-        return true;
     }
 
 
@@ -1590,7 +1585,7 @@ namespace frm
                 }
                 catch( const Exception& )
                 {
-                    OSL_FAIL( "FormOperations::impl_executeAutoSort_throw: could not reset the form to it's original state!" );
+                    OSL_FAIL( "FormOperations::impl_executeAutoSort_throw: could not reset the form to its original state!" );
                 }
 
             }
@@ -1659,7 +1654,7 @@ namespace frm
                 }
                 catch( const Exception& )
                 {
-                    OSL_FAIL( "FormOperations::impl_executeAutoFilter_throw: could not reset the form to it's original state!" );
+                    OSL_FAIL( "FormOperations::impl_executeAutoFilter_throw: could not reset the form to its original state!" );
                 }
 
             }

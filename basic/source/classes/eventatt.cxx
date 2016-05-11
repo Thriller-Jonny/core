@@ -532,7 +532,7 @@ void RTL_Impl_CreateUnoDialog( StarBASIC* pBasic, SbxArray& rPar, bool bWrite )
     Reference< XControl > xCntrl;
     try
     {
-       Reference< XDialogProvider >  xDlgProv;;
+       Reference< XDialogProvider >  xDlgProv;
        if( bDocDialog )
            xDlgProv = css::awt::DialogProvider::createWithModelAndScripting( xContext, xModel, xInput, aDlgLib, xScriptListener );
        else
@@ -558,8 +558,6 @@ void RTL_Impl_CreateUnoDialog( StarBASIC* pBasic, SbxArray& rPar, bool bWrite )
     SbxVariableRef refVar = rPar.Get(0);
     unoToSbxValue( static_cast<SbxVariable*>(refVar), aRetVal );
 }
-
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

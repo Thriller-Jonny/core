@@ -26,11 +26,11 @@
 
 #include "tools/rc.h"
 
-#include "vcl/dialog.hxx"
-#include "vcl/field.hxx"
-#include "vcl/event.hxx"
-#include "vcl/svapp.hxx"
-#include "vcl/settings.hxx"
+#include <vcl/dialog.hxx>
+#include <vcl/field.hxx>
+#include <vcl/event.hxx>
+#include <vcl/svapp.hxx>
+#include <vcl/settings.hxx>
 
 #include "svids.hrc"
 #include "svdata.hxx"
@@ -51,7 +51,7 @@ namespace
 #define FORMAT_METRIC        2
 #define FORMAT_CURRENCY      3
 
-static sal_Int64 ImplPower10( sal_uInt16 n )
+sal_Int64 ImplPower10( sal_uInt16 n )
 {
     sal_uInt16  i;
     sal_Int64   nValue = 1;
@@ -62,7 +62,7 @@ static sal_Int64 ImplPower10( sal_uInt16 n )
     return nValue;
 }
 
-static bool ImplNumericProcessKeyInput( Edit*, const KeyEvent& rKEvt,
+bool ImplNumericProcessKeyInput( Edit*, const KeyEvent& rKEvt,
                                         bool bStrictFormat, bool bThousandSep,
                                         const LocaleDataWrapper& rLocaleDataWrappper )
 {
@@ -85,7 +85,7 @@ static bool ImplNumericProcessKeyInput( Edit*, const KeyEvent& rKEvt,
     }
 }
 
-static bool ImplNumericGetValue( const OUString& rStr, sal_Int64& rValue,
+bool ImplNumericGetValue( const OUString& rStr, sal_Int64& rValue,
                                  sal_uInt16 nDecDigits, const LocaleDataWrapper& rLocaleDataWrappper,
                                  bool bCurrency = false )
 {
@@ -102,7 +102,6 @@ static bool ImplNumericGetValue( const OUString& rStr, sal_Int64& rValue,
 
     // remove leading and trailing spaces
     aStr = aStr.trim();
-
 
 
     // find position of decimal point
@@ -294,7 +293,7 @@ static bool ImplNumericGetValue( const OUString& rStr, sal_Int64& rValue,
     return true;
 }
 
-static void ImplUpdateSeparatorString( OUString& io_rText,
+void ImplUpdateSeparatorString( OUString& io_rText,
                                        const OUString& rOldDecSep, const OUString& rNewDecSep,
                                        const OUString& rOldThSep, const OUString& rNewThSep )
 {
@@ -330,7 +329,7 @@ static void ImplUpdateSeparatorString( OUString& io_rText,
     io_rText = aBuf.makeStringAndClear();
 }
 
-static void ImplUpdateSeparators( const OUString& rOldDecSep, const OUString& rNewDecSep,
+void ImplUpdateSeparators( const OUString& rOldDecSep, const OUString& rNewDecSep,
                                   const OUString& rOldThSep, const OUString& rNewThSep,
                                   Edit* pEdit )
 {
@@ -1068,7 +1067,7 @@ static OUString ImplMetricGetUnitText(const OUString& rStr)
     return aStr.makeStringAndClear();
 }
 
-// #104355# support localized mesaurements
+// #104355# support localized measurements
 
 static const OUString ImplMetricToString( FieldUnit rUnit )
 {
@@ -1561,11 +1560,11 @@ void MetricFormatter::SetBaseValue( sal_Int64 nNewBase, FieldUnit eInUnit )
                                              eInUnit, meUnit );
 }
 
-sal_Int64 MetricFormatter::GetBaseValue( FieldUnit eOutUnit ) const
+sal_Int64 MetricFormatter::GetBaseValue() const
 {
     // convert to requested units
     return MetricField::ConvertValue( mnBaseValue, mnBaseValue, GetDecimalDigits(),
-                                      meUnit, eOutUnit );
+                                      meUnit, FUNIT_NONE );
 }
 
 void MetricFormatter::Reformat()
@@ -1890,7 +1889,7 @@ void MetricBox::InsertValue( sal_Int64 nValue, FieldUnit eInUnit, sal_Int32 nPos
     ComboBox::InsertEntry( CreateFieldText( nValue ), nPos );
 }
 
-sal_Int64 MetricBox::GetValue( sal_Int32 nPos, FieldUnit eOutUnit ) const
+sal_Int64 MetricBox::GetValue( sal_Int32 nPos ) const
 {
     double nValue = 0;
     ImplMetricGetValue( ComboBox::GetEntry( nPos ), nValue, mnBaseValue,
@@ -1898,7 +1897,7 @@ sal_Int64 MetricBox::GetValue( sal_Int32 nPos, FieldUnit eOutUnit ) const
 
     // convert to previously configured units
     sal_Int64 nRetValue = MetricField::ConvertValue( (sal_Int64)nValue, mnBaseValue, GetDecimalDigits(),
-                                                     meUnit, eOutUnit );
+                                                     meUnit, FUNIT_NONE );
 
     return nRetValue;
 }

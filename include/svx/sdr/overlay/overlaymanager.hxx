@@ -59,7 +59,6 @@ namespace sdr
         protected:
             // the OutputDevice to work on, set on construction and not to be changed
             OutputDevice&                               mrOutputDevice;
-            const SdrModel*                             mpModel;
 
             // the vector of registered OverlayObjects
             OverlayObjectVector                         maOverlayObjects;
@@ -89,11 +88,11 @@ namespace sdr
             // ViewTransformation and evtl. correct mfDiscreteOne
             double getDiscreteOne() const;
 
-            OverlayManager(OutputDevice& rOutputDevice, const SdrModel* pModel);
+            OverlayManager(OutputDevice& rOutputDevice);
             virtual ~OverlayManager();
 
         public:
-            static rtl::Reference<OverlayManager> create(OutputDevice& rOutputDevice, const SdrModel* pModel);
+            static rtl::Reference<OverlayManager> create(OutputDevice& rOutputDevice);
 
             // access to current ViewInformation2D; this call checks and evtl. updates ViewInformation2D
             const drawinglayer::geometry::ViewInformation2D getCurrentViewInformation2D() const;
@@ -109,8 +108,6 @@ namespace sdr
 
             // get the OutputDevice
             OutputDevice& getOutputDevice() const { return mrOutputDevice; }
-            // Get the draw model.
-            const SdrModel* getModel() const { return mpModel; }
 
             // add and remove OverlayObjects
             void add(OverlayObject& rOverlayObject);
@@ -120,11 +117,11 @@ namespace sdr
             virtual void invalidateRange(const basegfx::B2DRange& rRange);
 
             // stripe support ColA
-            Color getStripeColorA() const { return maStripeColorA; }
+            const Color& getStripeColorA() const { return maStripeColorA; }
             void setStripeColorA(Color aNew= Color(COL_BLACK));
 
             // stripe support ColB
-            Color getStripeColorB() const { return maStripeColorB; }
+            const Color& getStripeColorB() const { return maStripeColorB; }
             void setStripeColorB(Color aNew = Color(COL_WHITE));
 
             // stripe support StripeLengthPixel

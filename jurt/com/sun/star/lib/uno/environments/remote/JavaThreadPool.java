@@ -1,3 +1,4 @@
+/* -*- Mode: Java; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /*
  * This file is part of the LibreOffice project.
  *
@@ -22,7 +23,7 @@ package com.sun.star.lib.uno.environments.remote;
  * This class implements a java thread pool.
  *
  * @see         com.sun.star.uno.UnoRuntime
- * @see         com.sun.star.lib.uno.environments.remote.ThreadPool
+ * @see         com.sun.star.lib.uno.environments.remote.NativeThreadPool
  * @see         com.sun.star.lib.uno.environments.remote.IThreadPool
  * @see         com.sun.star.lib.uno.environments.remote.Job
  * @see         com.sun.star.lib.uno.environments.remote.JobQueue
@@ -119,3 +120,5 @@ public class JavaThreadPool implements IThreadPool {
     public void destroy() {
     }
 }
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

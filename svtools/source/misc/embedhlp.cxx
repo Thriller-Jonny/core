@@ -86,33 +86,33 @@ public:
 
 EmbedEventListener_Impl* EmbedEventListener_Impl::Create( EmbeddedObjectRef* p )
 {
-    EmbedEventListener_Impl* xRet = new EmbedEventListener_Impl( p );
-    xRet->acquire();
+    EmbedEventListener_Impl* pRet = new EmbedEventListener_Impl( p );
+    pRet->acquire();
 
     if ( p->GetObject().is() )
     {
-        p->GetObject()->addStateChangeListener( xRet );
+        p->GetObject()->addStateChangeListener( pRet );
 
         uno::Reference < util::XCloseable > xClose( p->GetObject(), uno::UNO_QUERY );
         DBG_ASSERT( xClose.is(), "Object does not support XCloseable!" );
         if ( xClose.is() )
-            xClose->addCloseListener( xRet );
+            xClose->addCloseListener( pRet );
 
         uno::Reference < document::XEventBroadcaster > xBrd( p->GetObject(), uno::UNO_QUERY );
         if ( xBrd.is() )
-            xBrd->addEventListener( xRet );
+            xBrd->addEventListener( pRet );
 
-        xRet->nState = p->GetObject()->getCurrentState();
-        if ( xRet->nState == embed::EmbedStates::RUNNING )
+        pRet->nState = p->GetObject()->getCurrentState();
+        if ( pRet->nState == embed::EmbedStates::RUNNING )
         {
             uno::Reference < util::XModifiable > xMod( p->GetObject()->getComponent(), uno::UNO_QUERY );
             if ( xMod.is() )
                 // listen for changes in running state (update replacements in case of changes)
-                xMod->addModifyListener( xRet );
+                xMod->addModifyListener( pRet );
         }
     }
 
-    return xRet;
+    return pRet;
 }
 
 void SAL_CALL EmbedEventListener_Impl::changingState( const lang::EventObject&,
@@ -443,7 +443,7 @@ void EmbeddedObjectRef::GetReplacement( bool bUpdate )
     }
 }
 
-const Graphic* EmbeddedObjectRef::GetGraphic( OUString* pMediaType ) const
+const Graphic* EmbeddedObjectRef::GetGraphic() const
 {
     try
     {
@@ -458,8 +458,6 @@ const Graphic* EmbeddedObjectRef::GetGraphic( OUString* pMediaType ) const
         SAL_WARN("svtools.misc", "Something went wrong on getting the graphic: " << ex.Message);
     }
 
-    if ( mpImpl->pGraphic && pMediaType )
-        *pMediaType = mpImpl->aMediaType;
     return mpImpl->pGraphic;
 }
 
@@ -664,12 +662,20 @@ void EmbeddedObjectRef::DrawPaintReplacement( const Rectangle &rRect, const OUSt
         aPt.Y() = (rRect.GetHeight() - pOut->GetTextHeight()) / 2;
 
         bool bTiny = false;
-        if( aPt.X() < 0 ) bTiny = true, aPt.X() = 0;
-        if( aPt.Y() < 0 ) bTiny = true, aPt.Y() = 0;
+        if( aPt.X() < 0 )
+        {
+            bTiny = true;
+            aPt.X() = 0;
+        }
+        if( aPt.Y() < 0 )
+        {
+            bTiny = true;
+            aPt.Y() = 0;
+        }
         if( bTiny )
         {
             // decrease for small images
-            aFnt.SetSize( Size( 0, aAppFontSz.Height() * i / 8 ) );
+            aFnt.SetFontSize( Size( 0, aAppFontSz.Height() * i / 8 ) );
             pOut->SetFont( aFnt );
         }
         else

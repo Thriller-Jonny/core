@@ -52,13 +52,11 @@ class SVT_DLLPUBLIC ContextMenuHelper
     public:
         // create context menu helper
         // ARGS: xFrame = frame defines the context of the context menu
-        //       bAutoRefresh = specifies that the context will be constant or not
-        ContextMenuHelper( const css::uno::Reference< css::frame::XFrame >& xFrame, bool bAutoRefresh=true );
+        ContextMenuHelper( const css::uno::Reference< css::frame::XFrame >& xFrame );
         ~ContextMenuHelper();
 
-        // methods to complete a popup menu (set images, labels, enable/disable states)
+        // method to complete a popup menu (set images, labels, enable/disable states)
         // ATTENTION: The item ID's must be unique for the whole popup (inclusive the sub menus!)
-        void completeAndExecute( const Point& aPos, PopupMenu& aPopupMenu );
         void completeAndExecute( const Point& aPos, const css::uno::Reference< css::awt::XPopupMenu >& xPopupMenu );
 
     private:
@@ -85,7 +83,7 @@ class SVT_DLLPUBLIC ContextMenuHelper
 
         // creates an association between current module/controller bound to the
         // provided frame and their ui configuration managers.
-        bool            associateUIConfigurationManagers();
+        void            associateUIConfigurationManagers();
 
         // resets associations to create associations again on-demand.
         // Useful for implementations which recycle frames. Normal

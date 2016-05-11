@@ -178,16 +178,16 @@ void SwDrawTextShell::Execute( SfxRequest &rReq )
             }
             else
             {
-                FontUnderline eFU = static_cast<const SvxUnderlineItem&>(aEditAttr.Get(EE_CHAR_UNDERLINE)).GetLineStyle();
-                aNewAttr.Put( SvxUnderlineItem(eFU == UNDERLINE_SINGLE ? UNDERLINE_NONE : UNDERLINE_SINGLE, EE_CHAR_UNDERLINE) );
+                FontLineStyle eFU = static_cast<const SvxUnderlineItem&>(aEditAttr.Get(EE_CHAR_UNDERLINE)).GetLineStyle();
+                aNewAttr.Put( SvxUnderlineItem(eFU == LINESTYLE_SINGLE ? LINESTYLE_NONE : LINESTYLE_SINGLE, EE_CHAR_UNDERLINE) );
             }
         }
         break;
 
         case SID_ATTR_CHAR_OVERLINE:
         {
-             FontUnderline eFO = static_cast<const SvxOverlineItem&>(aEditAttr.Get(EE_CHAR_OVERLINE)).GetLineStyle();
-            aNewAttr.Put(SvxOverlineItem(eFO == UNDERLINE_SINGLE ? UNDERLINE_NONE : UNDERLINE_SINGLE, EE_CHAR_OVERLINE));
+            FontLineStyle eFO = static_cast<const SvxOverlineItem&>(aEditAttr.Get(EE_CHAR_OVERLINE)).GetLineStyle();
+            aNewAttr.Put(SvxOverlineItem(eFO == LINESTYLE_SINGLE ? LINESTYLE_NONE : LINESTYLE_SINGLE, EE_CHAR_OVERLINE));
         }
         break;
 
@@ -345,7 +345,7 @@ void SwDrawTextShell::Execute( SfxRequest &rReq )
                 SwAbstractDialogFactory* pFact = SwAbstractDialogFactory::Create();
                 assert(pFact && "SwAbstractDialogFactory fail!");
 
-                std::unique_ptr<SfxAbstractTabDialog> pDlg(pFact->CreateSwCharDlg(pView->GetWindow(), *pView, aDlgAttr, DLG_CHAR_DRAW));
+                std::unique_ptr<SfxAbstractTabDialog> pDlg(pFact->CreateSwCharDlg(pView->GetWindow(), *pView, aDlgAttr, SwCharDlgMode::Draw));
                 assert(pDlg && "Dialog creation failed!");
                 if (nSlot == SID_CHAR_DLG_EFFECT)
                 {
@@ -422,7 +422,7 @@ void SwDrawTextShell::Execute( SfxRequest &rReq )
                 SwAbstractDialogFactory* pFact = SwAbstractDialogFactory::Create();
                 assert(pFact && "SwAbstractDialogFactory fail!");
 
-                std::unique_ptr<SfxAbstractTabDialog> pDlg(pFact->CreateSwParaDlg( GetView().GetWindow(), GetView(), aDlgAttr,DLG_STD, nullptr, true ));
+                std::unique_ptr<SfxAbstractTabDialog> pDlg(pFact->CreateSwParaDlg( GetView().GetWindow(), GetView(), aDlgAttr, nullptr, true ));
                 assert(pDlg && "Dialog creation failed!");
                 sal_uInt16 nRet = pDlg->Execute();
                 if(RET_OK == nRet)
@@ -633,7 +633,10 @@ ASK_ADJUST:
                     aEditAttr.GetItemState( EE_PARA_JUST, false, &pAdjust);
 
                 if( !pAdjust || IsInvalidItem( pAdjust ))
-                    rSet.InvalidateItem( nSlotId ), nSlotId = 0;
+                {
+                    rSet.InvalidateItem( nSlotId );
+                    nSlotId = 0;
+                }
                 else
                     bFlag = eAdjust == static_cast<const SvxAdjustItem*>(pAdjust)->GetAdjust();
             }
@@ -703,7 +706,10 @@ ASK_LINESPACE:
                     aEditAttr.GetItemState( EE_PARA_SBL, false, &pLSpace );
 
                 if( !pLSpace || IsInvalidItem( pLSpace ))
-                    rSet.InvalidateItem( nSlotId ), nSlotId = 0;
+                {
+                    rSet.InvalidateItem( nSlotId );
+                    nSlotId = 0;
+                }
                 else if( nLSpace == static_cast<const SvxLineSpacingItem*>(pLSpace)->
                                                 GetPropLineSpace() )
                     bFlag = true;

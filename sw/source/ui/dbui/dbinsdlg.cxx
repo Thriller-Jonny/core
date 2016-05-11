@@ -74,7 +74,6 @@
 #include <modcfg.hxx>
 #include <swmodule.hxx>
 #include <poolfmt.hxx>
-#include <crsskip.hxx>
 #include <connectivity/dbtools.hxx>
 
 #include <dbui.hrc>
@@ -92,7 +91,6 @@
 
 #include <o3tl/make_unique.hxx>
 
-#include <boost/noncopyable.hpp>
 #include <memory>
 #include <swuiexp.hxx>
 
@@ -112,53 +110,48 @@ const char cDBFieldEnd    = '>';
 // Helper structure for adding database rows as fields or text
 struct DB_Column
 {
-    enum ColType { DB_FILLTEXT, DB_COL_FIELD, DB_COL_TEXT, DB_SPLITPARA } eColType;
+    const enum class Type { FILLTEXT, COL_FIELD, COL_TEXT, SPLITPARA } eColType;
 
     union {
         OUString* pText;
         SwField* pField;
         sal_uLong nFormat;
-    } DB_ColumnData;
+    };
     const SwInsDBColumn* pColInfo;
 
-    DB_Column()
-    {
-        pColInfo = nullptr;
-        DB_ColumnData.pText = nullptr;
-        eColType = DB_SPLITPARA;
-    }
+    DB_Column() : eColType(Type::SPLITPARA),
+                  pText(nullptr),
+                  pColInfo(nullptr)
+    {}
 
     explicit DB_Column( const OUString& rText )
-    {
-        pColInfo = nullptr;
-        DB_ColumnData.pText = new OUString( rText );
-        eColType = DB_FILLTEXT;
-    }
+                        : eColType(Type::FILLTEXT),
+                          pText(new OUString(rText)),
+                          pColInfo(nullptr)
+    {}
 
-    DB_Column( const SwInsDBColumn& rInfo, sal_uLong nFormat )
-    {
-        pColInfo = &rInfo;
-        DB_ColumnData.nFormat = nFormat;
-        eColType = DB_COL_TEXT;
-    }
+    DB_Column( const SwInsDBColumn& rInfo, sal_uLong nFormat_ )
+                        : eColType(Type::COL_TEXT),
+                          nFormat(nFormat_),
+                          pColInfo(&rInfo)
+    {}
 
     DB_Column( const SwInsDBColumn& rInfo, SwDBField& rField )
-    {
-        pColInfo = &rInfo;
-        DB_ColumnData.pField = &rField;
-        eColType = DB_COL_FIELD;
-    }
+                        : eColType(Type::COL_FIELD),
+                          pField(&rField),
+                          pColInfo(&rInfo)
+    {}
 
     ~DB_Column()
     {
-        if( DB_COL_FIELD == eColType )
-            delete DB_ColumnData.pField;
-        else if( DB_FILLTEXT == eColType )
-            delete DB_ColumnData.pText;
+        if( Type::COL_FIELD == eColType )
+            delete pField;
+        else if( Type::FILLTEXT == eColType )
+            delete pText;
     }
 };
 
-struct DB_ColumnConfigData: private boost::noncopyable
+struct DB_ColumnConfigData
 {
     SwInsDBColumns aDBColumns;
     OUString sSource;
@@ -171,6 +164,9 @@ struct DB_ColumnConfigData: private boost::noncopyable
          bIsField : 1,
          bIsHeadlineOn : 1,
          bIsEmptyHeadln : 1;
+
+    DB_ColumnConfigData(DB_ColumnConfigData const&) = delete;
+    DB_ColumnConfigData& operator=(DB_ColumnConfigData const&) = delete;
 
     DB_ColumnConfigData()
     {
@@ -306,7 +302,7 @@ SwInsertDBColAutoPilot::SwInsertDBColAutoPilot( SwView& rView,
                                 aFormatVal >>= sFormat;
                                 lang::Locale aLoc;
                                 aLocale >>= aLoc;
-                                long nKey = xDocNumberFormats->queryKey( sFormat, aLoc, sal_True);
+                                long nKey = xDocNumberFormats->queryKey( sFormat, aLoc, true);
                                 if(nKey < 0)
                                 {
                                     nKey = xDocNumberFormats->addNew( sFormat, aLoc );
@@ -339,7 +335,7 @@ SwInsertDBColAutoPilot::SwInsertDBColAutoPilot( SwView& rView,
     // fill paragraph templates-ListBox
     {
         SfxStyleSheetBasePool* pPool = pView->GetDocShell()->GetStyleSheetPool();
-        pPool->SetSearchMask( SFX_STYLE_FAMILY_PARA );
+        pPool->SetSearchMask( SfxStyleFamily::Para );
         m_pLbDbParaColl->InsertEntry( sNoTmpl );
 
         const SfxStyleSheetBase* pBase = pPool->First();
@@ -769,8 +765,10 @@ IMPL_LINK_TYPED( SwInsertDBColAutoPilot, TableFormatHdl, Button*, pButton, void 
         pTableSet->Put( *pDlg->GetOutputItemSet() );
     else if( bNewSet )
     {
-        delete pTableSet, pTableSet = nullptr;
-        delete pRep, pRep = nullptr;
+        delete pTableSet;
+        pTableSet = nullptr;
+        delete pRep;
+        pRep = nullptr;
     }
 }
 
@@ -933,7 +931,7 @@ bool SwInsertDBColAutoPilot::SplitTextToColArr( const OUString& rText,
                             static_cast<SwDBFieldType*>(rSh.InsertFieldType( aFieldType )),
                                                             nFormat ) );
                     if( nSubType )
-                        pNew->DB_ColumnData.pField->SetSubType( nSubType );
+                        pNew->pField->SetSubType( nSubType );
                 }
                 else
                     pNew = new DB_Column( rFndCol, nFormat );
@@ -1278,11 +1276,11 @@ void SwInsertDBColAutoPilot::DataToDoc( const Sequence<Any>& rSelection,
                     OUString sIns;
                     switch( pDBCol->eColType )
                     {
-                    case DB_Column::DB_FILLTEXT:
-                        sIns =  *pDBCol->DB_ColumnData.pText;
+                    case DB_Column::Type::FILLTEXT:
+                        sIns =  *pDBCol->pText;
                         break;
 
-                    case DB_Column::DB_SPLITPARA:
+                    case DB_Column::Type::SPLITPARA:
                         rSh.SplitNode();
                         // when the template is not the same as the follow template,
                         // the selected has to be set newly
@@ -1290,10 +1288,10 @@ void SwInsertDBColAutoPilot::DataToDoc( const Sequence<Any>& rSelection,
                             rSh.SetTextFormatColl( pColl );
                         break;
 
-                    case DB_Column::DB_COL_FIELD:
+                    case DB_Column::Type::COL_FIELD:
                         {
                             std::unique_ptr<SwDBField> pField(static_cast<SwDBField *>(
-                                pDBCol->DB_ColumnData.pField->CopyField()));
+                                pDBCol->pField->CopyField()));
                             double nValue = DBL_MAX;
 
                             Reference< XPropertySet > xColumnProps;
@@ -1327,7 +1325,7 @@ void SwInsertDBColAutoPilot::DataToDoc( const Sequence<Any>& rSelection,
                         }
                         break;
 
-                    case DB_Column::DB_COL_TEXT:
+                    case DB_Column::Type::COL_TEXT:
                         {
                             double nValue = DBL_MAX;
                             Reference< XPropertySet > xColumnProps;
@@ -1336,18 +1334,18 @@ void SwInsertDBColAutoPilot::DataToDoc( const Sequence<Any>& rSelection,
                                                 xColumnProps,
                                                 aDBFormatData,
                                                 &nValue );
-                            if( pDBCol->DB_ColumnData.nFormat &&
+                            if( pDBCol->nFormat &&
                                 DBL_MAX != nValue )
                             {
                                 Color* pCol;
-                                if(rNumFormatr.GetType(pDBCol->DB_ColumnData.nFormat) & css::util::NumberFormat::DATE)
+                                if(rNumFormatr.GetType(pDBCol->nFormat) & css::util::NumberFormat::DATE)
                                 {
                                     ::Date aStandard(1,1,1900);
                                     if (*rNumFormatr.GetNullDate() != aStandard)
                                         nValue += (aStandard - *rNumFormatr.GetNullDate());
                                 }
                                 rNumFormatr.GetOutputString( nValue,
-                                            pDBCol->DB_ColumnData.nFormat,
+                                            pDBCol->nFormat,
                                             sIns, &pCol );
                             }
                         }
@@ -1753,7 +1751,8 @@ void SwInsertDBColAutoPilot::Load()
             else
                 m_pLbDbParaColl->SelectEntryPos( 0 );
 
-            delete pTAutoFormat, pTAutoFormat = nullptr;
+            delete pTAutoFormat;
+            pTAutoFormat = nullptr;
             sTmp = pNewData->sTAutoFormatNm;
             if( !sTmp.isEmpty() )
             {

@@ -51,7 +51,6 @@
 #include <editeng/scripttypeitem.hxx>
 #include <vcl/graphicfilter.hxx>
 #include <sfx2/htmlmode.hxx>
-#include <svx/pfiledlg.hxx>
 #include <svtools/htmlcfg.hxx>
 #include <com/sun/star/i18n/TransliterationModules.hpp>
 #include <com/sun/star/i18n/TransliterationModulesExtra.hpp>
@@ -87,7 +86,6 @@
 #include <idxmrk.hxx>
 #include <poolfmt.hxx>
 #include <breakit.hxx>
-#include <crsskip.hxx>
 #include <modcfg.hxx>
 #include <column.hxx>
 #include <edtwin.hxx>
@@ -121,7 +119,7 @@ SFX_IMPL_INTERFACE(SwTextShell, SwBaseShell)
 
 void SwTextShell::InitInterface_Impl()
 {
-    GetStaticInterface()->RegisterPopupMenu(SW_RES(MN_TEXT_POPUPMENU));
+    GetStaticInterface()->RegisterPopupMenu("text");
 
     GetStaticInterface()->RegisterObjectBar(SFX_OBJECTBAR_OBJECT, RID_TEXT_TOOLBOX);
 
@@ -236,50 +234,9 @@ void SwTextShell::ExecInsert(SfxRequest &rReq)
     case SID_INSERT_AVMEDIA:
         rReq.SetReturnValue(SfxBoolItem(nSlot, InsertMediaDlg( rReq )));
         break;
-
-    case  SID_INSERT_SOUND:
-    case  SID_INSERT_VIDEO:
-    {
-        SvxPluginFileDlg aDlg( &GetView().GetViewFrame()->GetWindow(), nSlot );
-        aDlg.SetContext( nSlot == SID_INSERT_SOUND? sfx2::FileDialogHelper::SW_INSERT_SOUND : sfx2::FileDialogHelper::SW_INSERT_VIDEO );
-
-        if ( ERRCODE_NONE == aDlg.Execute() )
-        {
-            // Determine URL
-            OUString aStrURL( aDlg.GetPath() );
-            aStrURL = URIHelper::SmartRel2Abs(
-                INetURLObject(), aStrURL, URIHelper::GetMaybeFileHdl() );
-
-            INetURLObject url;
-            url.SetSmartProtocol( INetProtocol::File );
-
-            if ( url.SetURL( aStrURL ) )
-            {
-                OUString aName;
-                comphelper::EmbeddedObjectContainer aCnt;
-                svt::EmbeddedObjectRef xObj( aCnt.CreateEmbeddedObject( SvGlobalName( SO3_PLUGIN_CLASSID ).GetByteSequence(), aName ), embed::Aspects::MSOLE_CONTENT );
-                if ( xObj.is() )
-                {
-                    svt::EmbeddedObjectRef::TryRunningState( xObj.GetObject() );
-
-                    // set properties from dialog
-                    uno::Reference < beans::XPropertySet > xSet( xObj->getComponent(), uno::UNO_QUERY );
-                    if ( xSet.is() )
-                    {
-                        xSet->setPropertyValue("PluginURL",
-                                uno::makeAny( OUString( url.GetMainURL( INetURLObject::NO_DECODE ) ) ) );
-                    }
-                }
-
-                rSh.InsertObject( xObj, nullptr, true, nSlot);
-            }
-        }
-    }
-    break;
 #endif
 
     case SID_INSERT_OBJECT:
-    case SID_INSERT_PLUGIN:
     {
         const SfxGlobalNameItem* pNameItem = rReq.GetArg<SfxGlobalNameItem>(SID_INSERT_OBJECT);
         SvGlobalName *pName = nullptr;
@@ -290,63 +247,9 @@ void SwTextShell::ExecInsert(SfxRequest &rReq)
             pName = &aName;
         }
 
-        const SfxStringItem* pClassLocationItem = rReq.GetArg<SfxStringItem>(FN_PARAM_2);
-        const SfxStringItem* pCommandsItem = rReq.GetArg<SfxStringItem>(FN_PARAM_3);
-        //TODO/LATER: recording currently not working, need code for Commandlist
         svt::EmbeddedObjectRef xObj;
-        if( nSlot == SID_INSERT_PLUGIN && ( pClassLocationItem || pCommandsItem ) )
-        {
-            OUString sClassLocation;
-            if(pClassLocationItem)
-                sClassLocation = pClassLocationItem->GetValue();
-
-            SvCommandList aCommandList;
-            if(pCommandsItem)
-            {
-                sal_Int32 nTemp;
-                aCommandList.AppendCommands( pCommandsItem->GetValue(), &nTemp );
-            }
-
-            {
-                comphelper::EmbeddedObjectContainer aCnt;
-                OUString sName;
-                xObj.Assign( aCnt.CreateEmbeddedObject( SvGlobalName( SO3_PLUGIN_CLASSID ).GetByteSequence(), sName ),
-                            embed::Aspects::MSOLE_CONTENT );
-                svt::EmbeddedObjectRef::TryRunningState( xObj.GetObject() );
-                uno::Reference < beans::XPropertySet > xSet( xObj->getComponent(), uno::UNO_QUERY );
-                if ( xSet.is() )
-                {
-                    try
-                    {
-                        if ( !sClassLocation.isEmpty() )
-                            xSet->setPropertyValue("PluginURL",
-                                uno::makeAny(
-                                    OUString(
-                                        URIHelper::SmartRel2Abs(
-                                            INetURLObject(), sClassLocation,
-                                            URIHelper::GetMaybeFileHdl()) ) ) );
-                        uno::Sequence< beans::PropertyValue > aSeq;
-                        if ( aCommandList.size() )
-                        {
-                            aCommandList.FillSequence( aSeq );
-                            xSet->setPropertyValue("PluginCommands", uno::makeAny( aSeq ) );
-                        }
-                    }
-                    catch (const uno::Exception&)
-                    {
-                    }
-                }
-            }
-
-            if(xObj.is())
-                rSh.InsertOleObject( xObj );
-        }
-        else
-        {
-            OSL_ENSURE( !pNameItem || nSlot == SID_INSERT_OBJECT, "Superfluous argument!" );
-            rSh.InsertObject( xObj, pName, true, nSlot);
-            rReq.Done();
-        }
+        rSh.InsertObject( xObj, pName, nSlot);
+        rReq.Done();
         break;
     }
     case SID_INSERT_FLOATINGFRAME:
@@ -412,7 +315,7 @@ void SwTextShell::ExecInsert(SfxRequest &rReq)
         }
         else
         {
-            rSh.InsertObject( xObj, nullptr, true, nSlot);
+            rSh.InsertObject( xObj, nullptr, nSlot);
             rReq.Done();
         }
     }
@@ -444,7 +347,7 @@ void SwTextShell::ExecInsert(SfxRequest &rReq)
                 else
                     bFillWithData = false;  // will create chart with only it's default image
 
-                SwTableFUNC( &rSh, false ).InsertChart( xDataProvider, bFillWithData, aRangeString );
+                SwTableFUNC( &rSh ).InsertChart( xDataProvider, bFillWithData, aRangeString );
                 rSh.LaunchOLEObj();
 
                 svt::EmbeddedObjectRef& xObj = rSh.GetOLEObject();
@@ -504,7 +407,7 @@ void SwTextShell::ExecInsert(SfxRequest &rReq)
             Size aSize(16 * MM50, 8 * MM50);
             GetShell().LockPaint();
             GetShell().StartAllAction();
-            SwFlyFrameAttrMgr aMgr( true, GetShellPtr(), FRMMGR_TYPE_TEXT );
+            SwFlyFrameAttrMgr aMgr( true, GetShellPtr(), Frmmgr_Type::TEXT );
             if(nCols > 1)
             {
                 SwFormatCol aCol;
@@ -535,7 +438,7 @@ void SwTextShell::ExecInsert(SfxRequest &rReq)
 
         }
         // Create new border
-        SwFlyFrameAttrMgr aMgr( true, GetShellPtr(), FRMMGR_TYPE_TEXT );
+        SwFlyFrameAttrMgr aMgr( true, GetShellPtr(), Frmmgr_Type::TEXT );
         if(pArgs)
         {
             Size aSize(aMgr.GetSize());
@@ -672,8 +575,6 @@ void SwTextShell::StateInsert( SfxItemSet &rSet )
         switch ( nWhich )
         {
         case SID_INSERT_AVMEDIA:
-        case SID_INSERT_SOUND:
-        case SID_INSERT_VIDEO:
             if ( GetShell().IsSelFrameMode()
                  || GetShell().CursorInsideInputField()
                  || SfxObjectCreateMode::EMBEDDED == eCreateMode
@@ -705,7 +606,6 @@ void SwTextShell::StateInsert( SfxItemSet &rSet )
 
             case SID_INSERT_FLOATINGFRAME:
             case SID_INSERT_OBJECT:
-            case SID_INSERT_PLUGIN:
                 {
                     if( eCreateMode == SfxObjectCreateMode::EMBEDDED || bCursorInHidden )
                     {
@@ -1045,7 +945,7 @@ void SwTextShell::InsertSymbol( SfxRequest& rReq )
             const SvxFontItem* pFontItem = SfxItemSet::GetItem<SvxFontItem>(pDlg->GetOutputItemSet(), SID_ATTR_CHAR_FONT, false);
             if ( pFontItem )
             {
-                aNewFont.SetName( pFontItem->GetFamilyName() );
+                aNewFont.SetFamilyName( pFontItem->GetFamilyName() );
                 aNewFont.SetStyleName( pFontItem->GetStyleName() );
                 aNewFont.SetCharSet( pFontItem->GetCharSet() );
                 aNewFont.SetPitch( pFontItem->GetPitch() );
@@ -1054,7 +954,7 @@ void SwTextShell::InsertSymbol( SfxRequest& rReq )
             if ( pCItem )
             {
                 aChars  = pCItem->GetValue();
-                aOpt.SetSymbolFont(aNewFont.GetName());
+                aOpt.SetSymbolFont(aNewFont.GetFamilyName());
                 SW_MOD()->ApplyUsrPref(aOpt, &GetView());
             }
         }
@@ -1090,11 +990,11 @@ void SwTextShell::InsertSymbol( SfxRequest& rReq )
         rSh.Insert( aChars );
 
         // #108876# a font attribute has to be set always due to a guessed script type
-        if( !aNewFont.GetName().isEmpty() )
+        if( !aNewFont.GetFamilyName().isEmpty() )
         {
             SvxFontItem aNewFontItem( aFont );
-            aNewFontItem.SetFamilyName( aNewFont.GetName());
-            aNewFontItem.SetFamily(  aNewFont.GetFamily());
+            aNewFontItem.SetFamilyName( aNewFont.GetFamilyName() );
+            aNewFontItem.SetFamily(  aNewFont.GetFamilyType());
             aNewFontItem.SetPitch(   aNewFont.GetPitch());
             aNewFontItem.SetCharSet( aNewFont.GetCharSet() );
 
@@ -1144,7 +1044,7 @@ void SwTextShell::InsertSymbol( SfxRequest& rReq )
         if ( !aChars.isEmpty() )
         {
             rReq.AppendItem( SfxStringItem( GetPool().GetWhich(SID_CHARMAP), aChars ) );
-            rReq.AppendItem( SfxStringItem( SID_ATTR_SPECIALCHAR, aNewFont.GetName() ) );
+            rReq.AppendItem( SfxStringItem( SID_ATTR_SPECIALCHAR, aNewFont.GetFamilyName() ) );
             rReq.Done();
         }
     }

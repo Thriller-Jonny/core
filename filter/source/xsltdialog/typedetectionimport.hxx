@@ -64,7 +64,7 @@ public:
     TypeDetectionImporter();
     virtual ~TypeDetectionImporter();
 
-    static void doImport( const css::uno::Reference< css::uno::XComponentContext >& rxContext, css::uno::Reference < css::io::XInputStream > xOS, XMLFilterVector& rFilters );
+    static void doImport( const css::uno::Reference< css::uno::XComponentContext >& rxContext, const css::uno::Reference < css::io::XInputStream >& xOS, XMLFilterVector& rFilters );
 
     virtual void SAL_CALL startDocument(  )
         throw(css::xml::sax::SAXException, css::uno::RuntimeException, std::exception) override;
@@ -97,18 +97,6 @@ private:
     OUString maValue;
     OUString maNodeName;
     OUString maPropertyName;
-
-    const OUString sRootNode;
-    const OUString sNode;
-    const OUString sName;
-    const OUString sProp;
-    const OUString sValue;
-    const OUString sUIName;
-    const OUString sData;
-    const OUString sFilters;
-    const OUString sTypes;
-    const OUString sFilterAdaptorService;
-    const OUString sXSLTFilterService;
 };
 #endif
 

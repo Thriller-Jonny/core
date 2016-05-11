@@ -85,13 +85,11 @@ private:
 };
 
 
-
 PackageInformationProvider::PackageInformationProvider( uno::Reference< uno::XComponentContext > const& xContext) :
     mxContext( xContext ),
     mxUpdateInformation( deployment::UpdateInformationProvider::create( xContext ) )
 {
 }
-
 
 
 PackageInformationProvider::~PackageInformationProvider()
@@ -132,7 +130,6 @@ OUString PackageInformationProvider::getPackageLocation(
 
     return aLocationURL;
 }
-
 
 
 OUString SAL_CALL
@@ -307,7 +304,7 @@ uno::Sequence< uno::Sequence< OUString > > SAL_CALL PackageInformationProvider::
         OSL_ASSERT(cExt == 3);
         for (sal_Int32 j = 0; j < cExt; j++)
         {
-            //ToDo according to the old code the first found extenions is used
+            //ToDo according to the old code the first found extension is used
             //even if another one with the same id has a better version.
             uno::Reference< deployment::XPackage > const & xExtension( seqExtension[j] );
             if (xExtension.is())
@@ -322,8 +319,6 @@ uno::Sequence< uno::Sequence< OUString > > SAL_CALL PackageInformationProvider::
     }
     return retList;
 }
-
-
 
 
 namespace sdecl = comphelper::service_decl;

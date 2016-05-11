@@ -20,28 +20,33 @@
 #ifndef INCLUDED_COMPHELPER_ATTRIBUTELIST_HXX
 #define INCLUDED_COMPHELPER_ATTRIBUTELIST_HXX
 
+#include <sal/config.h>
+
+#include <memory>
+
+#include <com/sun/star/util/XCloneable.hpp>
 #include <com/sun/star/xml/sax/XAttributeList.hpp>
 #include <cppuhelper/implbase.hxx>
 #include <comphelper/comphelperdllapi.h>
-
 
 namespace comphelper
 {
 
 struct AttributeList_Impl;
 
-class COMPHELPER_DLLPUBLIC AttributeList : public ::cppu::WeakImplHelper
-<
-    css::xml::sax::XAttributeList
->
+class COMPHELPER_DLLPUBLIC AttributeList :
+    public ::cppu::WeakImplHelper<css::xml::sax::XAttributeList, css::util::XCloneable>
 {
-    AttributeList_Impl *m_pImpl;
+    std::unique_ptr<AttributeList_Impl> m_pImpl;
 public:
     AttributeList();
+    AttributeList(const AttributeList &r);
+
     virtual ~AttributeList();
 
     // methods that are not contained in any interface
-    void AddAttribute( const OUString &sName , const OUString &sType , const OUString &sValue );
+    void AddAttribute(const OUString &sName , const OUString &sType , const OUString &sValue);
+    void Clear();
 
     // css::xml::sax::XAttributeList
     virtual sal_Int16 SAL_CALL getLength()
@@ -57,6 +62,9 @@ public:
     virtual OUString SAL_CALL getValueByName(const OUString& aName)
         throw( css::uno::RuntimeException, std::exception ) override;
 
+    // css::util::XCloneable
+    virtual css::uno::Reference< XCloneable > SAL_CALL
+        createClone()   throw(css::uno::RuntimeException, std::exception) override;
 };
 
 } // namespace comphelper

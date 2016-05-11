@@ -30,6 +30,7 @@
 #include <vcl/mapmod.hxx>
 #include <vcl/print.hxx>
 #include <vcl/vclptr.hxx>
+#include <vcl/lazydelete.hxx>
 
 #include <LibreOfficeKit/LibreOfficeKitTypes.h>
 
@@ -124,7 +125,7 @@ class SW_DLLPUBLIC SwViewShell : public sw::Ring<SwViewShell>
 
     VclPtr<vcl::Window>   mpWin;     ///< = 0 during printing or pdf export
     VclPtr<OutputDevice>  mpOut;     ///< Window, Printer, VirtDev, ...
-    VclPtr<OutputDevice>  mpTmpRef;  // Temporariy reference device. Is used
+    VclPtr<OutputDevice>  mpTmpRef;  // Temporary reference device. Is used
                                      // during (printer depending) prospect
                                      // and page preview printing
                                      // (because a scaling has to be set at
@@ -169,7 +170,7 @@ class SW_DLLPUBLIC SwViewShell : public sw::Ring<SwViewShell>
     SAL_DLLPRIVATE void PaintDesktop(vcl::RenderContext& rRenderContext, const SwRect&);  // Collect values for painting of desktop
                                                         // and calling.
     // PaintDesktop split. This pars is also used by PreviewPage.
-    SAL_DLLPRIVATE void _PaintDesktop(vcl::RenderContext& rRenderContext, const SwRegionRects &rRegion);
+    SAL_DLLPRIVATE void PaintDesktop_(vcl::RenderContext& rRenderContext, const SwRegionRects &rRegion);
 
     SAL_DLLPRIVATE bool CheckInvalidForPaint( const SwRect & );  // Direct Paint or rather
                                                                     // trigger an action.
@@ -180,7 +181,7 @@ class SW_DLLPUBLIC SwViewShell : public sw::Ring<SwViewShell>
 
 protected:
     static ShellResource*      mpShellRes;      ///< Resources for the Shell.
-    static VclPtr<vcl::Window> mpCareWindow;    ///< Avoid this window.
+    static vcl::DeleteOnDeinit< VclPtr<vcl::Window> > mpCareWindow;    ///< Avoid this window.
 
     SwRect                  maVisArea;       ///< The modern version of VisArea.
     SwDoc                   *mpDoc;          ///< The document; never 0.
@@ -370,7 +371,7 @@ public:
                          vcl::RenderContext& rRenderContext, const Rectangle& rRect );
 
     // Fill temporary doc with selected text for Print or PDF export.
-    SwDoc * FillPrtDoc( SwDoc* pPrtDoc, const SfxPrinter* pPrt );
+    void FillPrtDoc( SwDoc* pPrtDoc, const SfxPrinter* pPrt );
 
     // Called internally for Shell. Formats pages.
     void CalcPagesForPrint( sal_uInt16 nMax );
@@ -416,6 +417,8 @@ public:
 
     void SetDoNotJustifyLinesWithManualBreak( bool _bDoNotJustifyLinesWithManualBreak );
 
+    void SetProtectForm( bool _bProtectForm );
+
     // DOCUMENT COMPATIBILITY FLAGS END
 
     // Calls Idle-formatter of Layout.
@@ -436,7 +439,7 @@ public:
 
     static void           SetCareWin( vcl::Window* pNew );
     static vcl::Window*   GetCareWin(SwViewShell& rVSh)
-                          { return mpCareWindow ? mpCareWindow.get() : CareChildWin(rVSh); }
+                          { return (*mpCareWindow.get()) ? mpCareWindow.get()->get() : CareChildWin(rVSh); }
     static vcl::Window*   CareChildWin(SwViewShell& rVSh);
 
     inline SfxViewShell   *GetSfxViewShell() const { return mpSfxViewShell; }
@@ -572,8 +575,6 @@ public:
     void registerLibreOfficeKitCallback(LibreOfficeKitCallback pCallback, void* pLibreOfficeKitData);
     /// Invokes the registered callback, if there are any.
     void libreOfficeKitCallback(int nType, const char* pPayload) const;
-    /// Set if we are doing tiled rendering.
-    void setTiledRendering(bool bTiledRendering);
 
     void setOutputToWindow(bool bOutputToWindow);
     bool isOutputToWindow() const;
@@ -594,7 +595,7 @@ public:
 
 inline void SwViewShell::ResetInvalidRect()
 {
-   maInvalidRect.Clear();
+    maInvalidRect.Clear();
 }
 
 inline void SwViewShell::StartAction()

@@ -112,8 +112,8 @@ ODatabaseExport::ODatabaseExport(sal_Int32 nRows,
 {
     m_nRows += nRows;
     sal_Int32 nCount = 0;
-    for(sal_Int32 j=0;j < (sal_Int32)m_vColumns.size();++j)
-        if ( m_vColumns[j].first != COLUMN_POSITION_NOT_FOUND )
+    for(const std::pair<sal_Int32,sal_Int32> & rPair : m_vColumns)
+        if ( rPair.first != COLUMN_POSITION_NOT_FOUND )
             ++nCount;
 
     m_vColumnSize.resize(nCount);
@@ -196,7 +196,7 @@ ODatabaseExport::ODatabaseExport(const SharedConnection& _rxConnection,
                 aTypes.reserve(nCount+1);
                 aNullable.reserve(nCount+1);
                 aTypes.push_back(-1);
-                aNullable.push_back(sal_False);
+                aNullable.push_back(false);
                 for (sal_Int32 j = 1; j <= nCount ; ++j)
                 {
                     aNullable.push_back(xResultSetMetaData->isNullable(j) != ColumnValue::NO_NULLS );
@@ -285,8 +285,8 @@ ODatabaseExport::ODatabaseExport(const SharedConnection& _rxConnection,
 ODatabaseExport::~ODatabaseExport()
 {
     m_pFormatter = nullptr;
-    ODatabaseExport::TColumns::iterator aIter = m_aDestColumns.begin();
-    ODatabaseExport::TColumns::iterator aEnd  = m_aDestColumns.end();
+    ODatabaseExport::TColumns::const_iterator aIter = m_aDestColumns.begin();
+    ODatabaseExport::TColumns::const_iterator aEnd  = m_aDestColumns.end();
 
     for(;aIter != aEnd;++aIter)
         delete aIter->second;
@@ -337,7 +337,7 @@ void ODatabaseExport::insertValueIntoColumn()
                             {
                                 Reference< XNumberFormatsSupplier >  xSupplier = m_xFormatter->getNumberFormatsSupplier();
                                 Reference<XNumberFormatTypes> xNumType(xSupplier->getNumberFormats(),UNO_QUERY);
-                                sal_Int16 nFormats[] = {
+                                const sal_Int16 nFormats[] = {
                                     NumberFormat::DATETIME
                                     ,NumberFormat::DATE
                                     ,NumberFormat::TIME
@@ -345,11 +345,11 @@ void ODatabaseExport::insertValueIntoColumn()
                                     ,NumberFormat::NUMBER
                                     ,NumberFormat::LOGICAL
                                 };
-                                for (size_t i = 0; i < sizeof(nFormats)/sizeof(nFormats[0]); ++i)
+                                for (short nFormat : nFormats)
                                 {
                                     try
                                     {
-                                        nNumberFormat = m_xFormatter->detectNumberFormat(xNumType->getStandardFormat(nFormats[i],m_aLocale),m_sTextToken);
+                                        nNumberFormat = m_xFormatter->detectNumberFormat(xNumType->getStandardFormat(nFormat,m_aLocale),m_sTextToken);
                                         break;
                                     }
                                     catch(Exception&)
@@ -664,7 +664,7 @@ void ODatabaseExport::CreateDefaultColumn(const OUString& _rColumnName)
     pField->SetPrimaryKey(false);
     pField->SetCurrency(false);
 
-    TColumns::iterator aFind = m_aDestColumns.find( aAlias );
+    TColumns::const_iterator aFind = m_aDestColumns.find( aAlias );
     if ( aFind != m_aDestColumns.end() )
     {
         delete aFind->second;
@@ -808,7 +808,7 @@ Reference< XPreparedStatement > ODatabaseExport::createPreparedStatment( const R
                                                        ,const TPositions& _rvColumns)
 {
     OUString aSql("INSERT INTO ");
-    OUString sComposedTableName = ::dbtools::composeTableName( _xMetaData, _xDestTable, ::dbtools::eInDataManipulation, false, false, true );
+    OUString sComposedTableName = ::dbtools::composeTableName( _xMetaData, _xDestTable, ::dbtools::EComposeRule::InDataManipulation, false, false, true );
 
     aSql += sComposedTableName;
     aSql += " ( ";
@@ -830,22 +830,21 @@ Reference< XPreparedStatement > ODatabaseExport::createPreparedStatment( const R
     const OUString* pIter = aDestColumnNames.getConstArray();
     ::std::vector< OUString> aInsertList;
     aInsertList.resize(aDestColumnNames.getLength()+1);
-    sal_Int32 i = 0;
-    for(size_t j=0; j < aInsertList.size() ;++i,++j)
+    for(size_t j=0; j < aInsertList.size(); ++j)
     {
         ODatabaseExport::TPositions::const_iterator aFind = ::std::find_if(_rvColumns.begin(),_rvColumns.end(),
-            [i] (const ODatabaseExport::TPositions::value_type& tPos) { return tPos.second == i+1; });
+            [j] (const ODatabaseExport::TPositions::value_type& tPos)
+                { return tPos.second == (sal_Int32)(j+1); });
         if ( _rvColumns.end() != aFind && aFind->second != sal::static_int_cast< long >(CONTAINER_ENTRY_NOTFOUND) && aFind->first != sal::static_int_cast< long >(CONTAINER_ENTRY_NOTFOUND) )
         {
             OSL_ENSURE((aFind->first) < static_cast<sal_Int32>(aInsertList.size()),"aInsertList: Illegal index for vector");
-            aInsertList[aFind->first] = ::dbtools::quoteName( aQuote,*(pIter+i));
+            aInsertList[aFind->first] = ::dbtools::quoteName( aQuote,*(pIter+j));
         }
     }
 
-    i = 1;
     // create the sql string
-    ::std::vector< OUString>::iterator aInsertEnd = aInsertList.end();
-    for (::std::vector< OUString>::iterator aInsertIter = aInsertList.begin(); aInsertIter != aInsertEnd; ++aInsertIter)
+    ::std::vector< OUString>::const_iterator aInsertEnd = aInsertList.end();
+    for (::std::vector< OUString>::const_iterator aInsertIter = aInsertList.begin(); aInsertIter != aInsertEnd; ++aInsertIter)
     {
         if ( !aInsertIter->isEmpty() )
         {

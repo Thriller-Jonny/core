@@ -228,7 +228,7 @@ void SwHTMLParser::SetAnchorAndAdjustment( sal_Int16 eVertOri,
             // hier auch geweohnlich attributiert !!!
             sal_uInt16 nUpper=0, nLower=0;
             GetULSpaceFromContext( nUpper, nLower );
-            InsertAttr( SvxULSpaceItem( nUpper, 0, RES_UL_SPACE ), false, true );
+            InsertAttr( SvxULSpaceItem( nUpper, 0, RES_UL_SPACE ), true );
 
             AppendTextNode( AM_NOSPACE );
 
@@ -390,21 +390,21 @@ void SwHTMLParser::InsertImage()
 
             case HTML_O_SDONLOAD:
                 eScriptType2 = STARBASIC;
-                //fallthrough
+                SAL_FALLTHROUGH;
             case HTML_O_ONLOAD:
                 nEvent = SVX_EVENT_IMAGE_LOAD;
                 goto IMAGE_SETEVENT;
 
             case HTML_O_SDONABORT:
                 eScriptType2 = STARBASIC;
-                //fallthrough
+                SAL_FALLTHROUGH;
             case HTML_O_ONABORT:
                 nEvent = SVX_EVENT_IMAGE_ABORT;
                 goto IMAGE_SETEVENT;
 
             case HTML_O_SDONERROR:
                 eScriptType2 = STARBASIC;
-                //fallthrough
+                SAL_FALLTHROUGH;
             case HTML_O_ONERROR:
                 nEvent = SVX_EVENT_IMAGE_ERROR;
                 goto IMAGE_SETEVENT;
@@ -874,7 +874,7 @@ void SwHTMLParser::InsertBodyOptions()
 
             case HTML_O_SDONLOAD:
                 eScriptType2 = STARBASIC;
-                //fallthrough
+                SAL_FALLTHROUGH;
             case HTML_O_ONLOAD:
                 aEvent = GlobalEventConfig::GetEventName( GlobalEventId::OPENDOC );
                 bSetEvent = true;
@@ -882,7 +882,7 @@ void SwHTMLParser::InsertBodyOptions()
 
             case HTML_O_SDONUNLOAD:
                 eScriptType2 = STARBASIC;
-                //fallthrough
+                SAL_FALLTHROUGH;
             case HTML_O_ONUNLOAD:
                 aEvent = GlobalEventConfig::GetEventName( GlobalEventId::PREPARECLOSEDOC );
                 bSetEvent = true;
@@ -890,7 +890,7 @@ void SwHTMLParser::InsertBodyOptions()
 
             case HTML_O_SDONFOCUS:
                 eScriptType2 = STARBASIC;
-                //fallthrough
+                SAL_FALLTHROUGH;
             case HTML_O_ONFOCUS:
                 aEvent = GlobalEventConfig::GetEventName( GlobalEventId::ACTIVATEDOC );
                 bSetEvent = true;
@@ -898,7 +898,7 @@ void SwHTMLParser::InsertBodyOptions()
 
             case HTML_O_SDONBLUR:
                 eScriptType2 = STARBASIC;
-                //fallthrough
+                SAL_FALLTHROUGH;
             case HTML_O_ONBLUR:
                 aEvent = GlobalEventConfig::GetEventName( GlobalEventId::DEACTIVATEDOC );
                 bSetEvent = true;
@@ -1060,7 +1060,7 @@ void SwHTMLParser::InsertBodyOptions()
 void SwHTMLParser::NewAnchor()
 {
     // den voherigen Link beenden, falls es einen gab
-    _HTMLAttrContext *pOldCntxt = PopContext( HTML_ANCHOR_ON );
+    HTMLAttrContext *pOldCntxt = PopContext( HTML_ANCHOR_ON );
     if( pOldCntxt )
     {
         // und ggf. die Attribute beenden
@@ -1118,21 +1118,21 @@ void SwHTMLParser::NewAnchor()
 
             case HTML_O_SDONCLICK:
                 eScriptType2 = STARBASIC;
-                //fall-through
+                SAL_FALLTHROUGH;
             case HTML_O_ONCLICK:
                 nEvent = SFX_EVENT_MOUSECLICK_OBJECT;
                 goto ANCHOR_SETEVENT;
 
             case HTML_O_SDONMOUSEOVER:
                 eScriptType2 = STARBASIC;
-                //fall-through
+                SAL_FALLTHROUGH;
             case HTML_O_ONMOUSEOVER:
                 nEvent = SFX_EVENT_MOUSEOVER_OBJECT;
                 goto ANCHOR_SETEVENT;
 
             case HTML_O_SDONMOUSEOUT:
                 eScriptType2 = STARBASIC;
-                //fall-through
+                SAL_FALLTHROUGH;
             case HTML_O_ONMOUSEOUT:
                 nEvent = SFX_EVENT_MOUSEOUT_OBJECT;
                 goto ANCHOR_SETEVENT;
@@ -1181,7 +1181,7 @@ ANCHOR_SETEVENT:
     }
 
     // einen neuen Kontext anlegen
-    _HTMLAttrContext *pCntxt = new _HTMLAttrContext( HTML_ANCHOR_ON );
+    HTMLAttrContext *pCntxt = new HTMLAttrContext( HTML_ANCHOR_ON );
 
     bool bEnAnchor = false, bFootnoteAnchor = false, bFootnoteEnSymbol = false;
     OUString aFootnoteName;
@@ -1280,7 +1280,7 @@ void SwHTMLParser::EndAnchor()
 
 void SwHTMLParser::InsertBookmark( const OUString& rName )
 {
-    _HTMLAttr* pTmp = new _HTMLAttr( *m_pPam->GetPoint(),
+    HTMLAttr* pTmp = new HTMLAttr( *m_pPam->GetPoint(),
             SfxStringItem( RES_FLTR_BOOKMARK, rName ));
     m_aSetAttrTab.push_back( pTmp );
 }
@@ -1297,7 +1297,7 @@ bool SwHTMLParser::HasCurrentParaBookmarks( bool bIgnoreStack ) const
     {
         for( auto i = m_aSetAttrTab.size(); i; )
         {
-            _HTMLAttr* pAttr = m_aSetAttrTab[ --i ];
+            HTMLAttr* pAttr = m_aSetAttrTab[ --i ];
             if( RES_FLTR_BOOKMARK == pAttr->pItem->Which() )
             {
                 if( pAttr->GetSttParaIdx() == nNodeIdx )

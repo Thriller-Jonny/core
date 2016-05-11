@@ -385,7 +385,7 @@ SvxBulletPickTabPage::SvxBulletPickTabPage(vcl::Window* pParent,
 {
     SetExchangeSupport();
     get(m_pExamplesVS, "valueset");
-    m_pExamplesVS->init(NumberingPageType::BULLET),
+    m_pExamplesVS->init(NumberingPageType::BULLET);
     m_pExamplesVS->SetSelectHdl(LINK(this, SvxBulletPickTabPage, NumSelectHdl_Impl));
     m_pExamplesVS->SetDoubleClickHdl(LINK(this, SvxBulletPickTabPage, DoubleClickHdl_Impl));
 }
@@ -723,7 +723,7 @@ IMPL_LINK_NOARG_TYPED(SvxNumPickTabPage, NumSelectHdl_Impl, ValueSet*, void)
                 aFmt.SetSuffix(OUString());
                 if( !pLevelSettings->sBulletFont.isEmpty() &&
                     pLevelSettings->sBulletFont.compareTo(
-                            rActBulletFont.GetName()))
+                            rActBulletFont.GetFamilyName()))
                 {
                     //search for the font
                     if(!pList)
@@ -736,9 +736,9 @@ IMPL_LINK_NOARG_TYPED(SvxNumPickTabPage, NumSelectHdl_Impl, ValueSet*, void)
                     }
                     if(pList && pList->IsAvailable( pLevelSettings->sBulletFont ) )
                     {
-                        vcl::FontInfo aInfo = pList->Get(
+                        FontMetric aFontMetric = pList->Get(
                             pLevelSettings->sBulletFont,WEIGHT_NORMAL, ITALIC_NONE);
-                        vcl::Font aFont(aInfo);
+                        vcl::Font aFont(aFontMetric);
                         aFmt.SetBulletFont(&aFont);
                     }
                     else
@@ -1136,11 +1136,11 @@ void SvxNumOptionsTabPage::GetI18nNumbering( ListBox& rFmtLB, sal_uInt16 nDoNotR
             }
         }
     }
-    for (size_t i=0; i<aRemove.size(); ++i)
+    for (unsigned short i : aRemove)
     {
-        if (aRemove[i] != nDontRemove)
+        if (i != nDontRemove)
         {
-            sal_Int32 nPos = rFmtLB.GetEntryPos( reinterpret_cast<void*>((sal_uLong)aRemove[i]));
+            sal_Int32 nPos = rFmtLB.GetEntryPos( reinterpret_cast<void*>((sal_uLong)i));
             rFmtLB.RemoveEntry( nPos);
         }
     }
@@ -1884,7 +1884,7 @@ IMPL_LINK_TYPED( SvxNumOptionsTabPage, NumberTypeSelectHdl_Impl, ListBox&, rBox,
             if(SVX_NUM_BITMAP == (nNumberingType&(~LINK_TOKEN)))
             {
                 bBmp |= nullptr != aNumFmt.GetBrush();
-                aNumFmt.SetIncludeUpperLevels( sal_False );
+                aNumFmt.SetIncludeUpperLevels( 0 );
                 aNumFmt.SetSuffix( "" );
                 aNumFmt.SetPrefix( "" );
                 if(!bBmp)
@@ -1895,7 +1895,7 @@ IMPL_LINK_TYPED( SvxNumOptionsTabPage, NumberTypeSelectHdl_Impl, ListBox&, rBox,
             }
             else if( SVX_NUM_CHAR_SPECIAL == nNumberingType )
             {
-                aNumFmt.SetIncludeUpperLevels( sal_False );
+                aNumFmt.SetIncludeUpperLevels( 0 );
                 aNumFmt.SetSuffix( "" );
                 aNumFmt.SetPrefix( "" );
                 if( !aNumFmt.GetBulletFont() )
@@ -2413,7 +2413,7 @@ static sal_uInt16 lcl_DrawBullet(VirtualDevice* pVDev,
     // in case of a height of zero it is drawed in original height
     if(!aTmpSize.Height())
         aTmpSize.Height() = 1;
-    aFont.SetSize(aTmpSize);
+    aFont.SetFontSize(aTmpSize);
     aFont.SetTransparent(true);
     Color aBulletColor = rFmt.GetBulletColor();
     if(aBulletColor.GetColor() == COL_AUTO)
@@ -2494,9 +2494,9 @@ void SvxNumberingPreview::Paint(vcl::RenderContext& rRenderContext, const Rectan
         sal_uInt16 nFontHeight = nYStep * 6 / 10;
         if (bPosition)
             nFontHeight = nYStep * 15 / 10;
-        aStdFont.SetSize(Size( 0, nFontHeight ));
+        aStdFont.SetFontSize(Size( 0, nFontHeight ));
 
-        SvxNodeNum aNum(sal_uInt8(0));
+        SvxNodeNum aNum;
         sal_uInt16 nPreNum = pActNum->GetLevel(0).GetStart();
 
         if (bPosition)
@@ -2553,7 +2553,7 @@ void SvxNumberingPreview::Paint(vcl::RenderContext& rRenderContext, const Rectan
                 }
                 else if (SVX_NUM_CHAR_SPECIAL == rFmt.GetNumberingType())
                 {
-                    nBulletWidth =  rFmt.IsShowSymbol() ? lcl_DrawBullet(pVDev.get(), rFmt, nNumberXPos, nYStart, aStdFont.GetSize()) : 0;
+                    nBulletWidth =  rFmt.IsShowSymbol() ? lcl_DrawBullet(pVDev.get(), rFmt, nNumberXPos, nYStart, aStdFont.GetFontSize()) : 0;
                 }
                 else
                 {
@@ -2676,7 +2676,7 @@ void SvxNumberingPreview::Paint(vcl::RenderContext& rRenderContext, const Rectan
                 {
                     if (rFmt.IsShowSymbol())
                     {
-                        nTextOffset =  lcl_DrawBullet(pVDev.get(), rFmt, nXStart, nYStart, aStdFont.GetSize());
+                        nTextOffset =  lcl_DrawBullet(pVDev.get(), rFmt, nXStart, nYStart, aStdFont.GetFontSize());
                         nTextOffset = nTextOffset + nXStep;
                     }
                 }
@@ -3664,14 +3664,11 @@ IMPL_LINK_NOARG_TYPED(SvxNumPositionTabPage, StandardHdl_Impl, Button*, void)
     SetModified();
 }
 
-void SvxNumPositionTabPage::SetModified(bool bRepaint)
+void SvxNumPositionTabPage::SetModified()
 {
     bModified = true;
-    if(bRepaint)
-    {
-        m_pPreviewWIN->SetLevel(nActNumLvl);
-        m_pPreviewWIN->Invalidate();
-    }
+    m_pPreviewWIN->SetLevel(nActNumLvl);
+    m_pPreviewWIN->Invalidate();
 }
 
 void SvxNumOptionsTabPage::SetModified(bool bRepaint)
@@ -3698,7 +3695,7 @@ void SvxNumOptionsTabPage::PageCreated(const SfxAllItemSet& aSet)
     {
         ListBox& myCharFmtLB = GetCharFmtListBox();
         const std::vector<OUString> &aList = pListItem->GetList();
-        sal_uInt32 nCount = aList.size();;
+        sal_uInt32 nCount = aList.size();
         for(sal_uInt32 i = 0; i < nCount; i++)
             myCharFmtLB.InsertEntry(aList[i]);
     }

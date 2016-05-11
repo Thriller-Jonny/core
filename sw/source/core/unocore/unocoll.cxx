@@ -126,8 +126,6 @@ public:
 
                 for ( sal_Int32 i=0; i < sModuleNames.getLength(); ++i )
                 {
-                    script::ModuleInfo mInfo;
-
                     if ( xVBAModuleInfo->hasModuleInfo( sModuleNames[ i ] ) &&  xVBAModuleInfo->getModuleInfo( sModuleNames[ i ] ).ModuleType == script::ModuleType::DOCUMENT )
                     {
                         msThisDocumentCodeName = sModuleNames[ i ];
@@ -246,8 +244,8 @@ public:
         // #FIXME #TODO we really need to be checking against the codename for
         // ThisDocument
         if ( aName == "ThisDocument" )
-            return sal_True;
-        return sal_False;
+            return true;
+        return false;
     }
 
     css::uno::Any SAL_CALL getByName( const OUString& aName ) throw (css::container::NoSuchElementException, css::lang::WrappedTargetException, css::uno::RuntimeException, std::exception) override
@@ -269,7 +267,7 @@ public:
     }
     // XElemenAccess
     virtual css::uno::Type SAL_CALL getElementType(  ) throw (css::uno::RuntimeException, std::exception) override { return uno::Type(); }
-    virtual sal_Bool SAL_CALL hasElements(  ) throw (css::uno::RuntimeException, std::exception ) override { return sal_True; }
+    virtual sal_Bool SAL_CALL hasElements(  ) throw (css::uno::RuntimeException, std::exception ) override { return true; }
 
 };
 
@@ -475,7 +473,7 @@ OUString    SwXServiceProvider::GetProviderName(sal_uInt16 nObjectType)
 {
     SolarMutexGuard aGuard;
     OUString sRet;
-    const sal_uInt16 nEntries = sizeof(aProvNamesId) / sizeof(aProvNamesId[0]);
+    const sal_uInt16 nEntries = SAL_N_ELEMENTS(aProvNamesId);
     if(nObjectType < nEntries)
         sRet = OUString::createFromAscii(aProvNamesId[nObjectType].pName);
     return sRet;
@@ -483,7 +481,7 @@ OUString    SwXServiceProvider::GetProviderName(sal_uInt16 nObjectType)
 
 uno::Sequence<OUString>     SwXServiceProvider::GetAllServiceNames()
 {
-    const sal_uInt16 nEntries = sizeof(aProvNamesId) / sizeof(aProvNamesId[0]);
+    const sal_uInt16 nEntries = SAL_N_ELEMENTS(aProvNamesId);
     uno::Sequence<OUString> aRet(nEntries);
     OUString* pArray = aRet.getArray();
     sal_uInt16 n = 0;
@@ -503,7 +501,7 @@ uno::Sequence<OUString>     SwXServiceProvider::GetAllServiceNames()
 
 sal_uInt16  SwXServiceProvider::GetProviderType(const OUString& rServiceName)
 {
-    const sal_uInt16 nEntries = sizeof(aProvNamesId) / sizeof(aProvNamesId[0]);
+    const sal_uInt16 nEntries = SAL_N_ELEMENTS(aProvNamesId);
     for(sal_uInt16 i = 0; i < nEntries; i++ )
     {
         if (rServiceName.equalsAscii(aProvNamesId[i].pName))
@@ -673,29 +671,28 @@ SwXServiceProvider::MakeInstance(sal_uInt16 nObjectType, SwDoc & rDoc)
         case SW_SERVICE_STYLE_PAGE_STYLE:
         case SW_SERVICE_STYLE_NUMBERING_STYLE:
         {
-            SfxStyleFamily  eFamily = SFX_STYLE_FAMILY_CHAR;
+            SfxStyleFamily eFamily = SfxStyleFamily::Char;
             switch(nObjectType)
             {
                 case SW_SERVICE_STYLE_PARAGRAPH_STYLE:
+                    eFamily = SfxStyleFamily::Para;
+                break;
                 case SW_SERVICE_STYLE_CONDITIONAL_PARAGRAPH_STYLE:
-                    eFamily = SFX_STYLE_FAMILY_PARA;
+                    eFamily = SfxStyleFamily::Para;
+                    xRet = SwXStyleFamilies::CreateStyleCondParagraph(rDoc);
                 break;
                 case SW_SERVICE_STYLE_FRAME_STYLE:
-                    eFamily = SFX_STYLE_FAMILY_FRAME;
+                    eFamily = SfxStyleFamily::Frame;
                 break;
                 case SW_SERVICE_STYLE_PAGE_STYLE:
-                    eFamily = SFX_STYLE_FAMILY_PAGE;
+                    eFamily = SfxStyleFamily::Page;
                 break;
                 case SW_SERVICE_STYLE_NUMBERING_STYLE:
-                    eFamily = SFX_STYLE_FAMILY_PSEUDO;
+                    eFamily = SfxStyleFamily::Pseudo;
                 break;
             }
-            SwXStyle* pNewStyle = (SFX_STYLE_FAMILY_PAGE == eFamily)
-                ? new SwXPageStyle(rDoc.GetDocShell())
-                : (eFamily == SFX_STYLE_FAMILY_FRAME)
-                    ? new SwXFrameStyle(&rDoc)
-                    : new SwXStyle(&rDoc, eFamily, nObjectType == SW_SERVICE_STYLE_CONDITIONAL_PARAGRAPH_STYLE);
-            xRet = static_cast<cppu::OWeakObject*>(pNewStyle);
+            if(!xRet.is())
+                xRet = SwXStyleFamilies::CreateStyle(eFamily, rDoc);
         }
         break;
         case SW_SERVICE_FIELDTYPE_DATETIME:
@@ -1026,13 +1023,13 @@ namespace
     };
 
     template<FlyCntType T>
-    static uno::Any lcl_UnoWrapFrame(SwFrameFormat* pFormat)
+    uno::Any lcl_UnoWrapFrame(SwFrameFormat* pFormat)
     {
         return UnoFrameWrap_traits<T>::wrapFrame(*pFormat);
     }
 
     // runtime adapter for lcl_UnoWrapFrame
-    static uno::Any lcl_UnoWrapFrame(SwFrameFormat* pFormat, FlyCntType eType) throw(uno::RuntimeException)
+    uno::Any lcl_UnoWrapFrame(SwFrameFormat* pFormat, FlyCntType eType) throw(uno::RuntimeException)
     {
         switch(eType)
         {

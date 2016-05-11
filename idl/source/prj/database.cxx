@@ -17,7 +17,9 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
+#include <sal/config.h>
 
+#include <algorithm>
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,6 +28,21 @@
 #include <globals.hxx>
 #include <rtl/strbuf.hxx>
 #include <osl/file.hxx>
+
+
+SvParseException::SvParseException( SvTokenStream & rInStm, const OString& rError )
+{
+    SvToken& rTok = rInStm.GetToken();
+    aError = SvIdlError( rTok.GetLine(), rTok.GetColumn() );
+    aError.SetText( rError );
+};
+
+SvParseException::SvParseException( const OString& rError, SvToken& rTok )
+{
+    aError = SvIdlError( rTok.GetLine(), rTok.GetColumn() );
+    aError.SetText( rError );
+};
+
 
 SvIdlDataBase::SvIdlDataBase( const SvCommand& rCmd )
     : bExport( false )
@@ -43,11 +60,10 @@ SvIdlDataBase::~SvIdlDataBase()
     delete pIdTable;
 }
 
-#define ADD_TYPE( Name, OdlName, ParserChar, CName, BasName, BasPost )            \
-    aTypeList.push_back( new SvMetaType( SvHash_##Name()->GetName(),   \
-                     BasName, OdlName, ParserChar, CName, BasName, BasPost ) );
+#define ADD_TYPE( Name )            \
+    aTypeList.push_back( new SvMetaType( SvHash_##Name()->GetName() ) );
 
-SvMetaTypeMemberList & SvIdlDataBase::GetTypeList()
+SvRefMemberList<SvMetaType *>& SvIdlDataBase::GetTypeList()
 {
     if( aTypeList.empty() )
     { // fill initially
@@ -55,30 +71,20 @@ SvMetaTypeMemberList & SvIdlDataBase::GetTypeList()
         aTypeList.push_back( new SvMetaTypevoid() );
 
         // MI: IDispatch::Invoke can not unsigned
-        ADD_TYPE( UINT16,    "long", 'h', "unsigned short", "Long", "&" );
-        ADD_TYPE( INT16,     "short", 'h', "short", "Integer", "%" );
-        ADD_TYPE( UINT32,    "long", 'l', "unsigned long", "Long", "&" );
-        ADD_TYPE( INT32,     "long", 'l', "long", "Long", "&" );
-        ADD_TYPE( int,       "int", 'i', "int", "Integer", "%" );
-        ADD_TYPE( BOOL,      "boolean", 'b', "unsigned char", "Boolean", "" );
-        ADD_TYPE( char,      "char", 'c', "char", "Integer", "%" );
-        ADD_TYPE( BYTE,      "char", 'c', "unsigned char", "Integer", "%" );
-        ADD_TYPE( float,     "float", 'f', "float", "Single", "!" );
-        ADD_TYPE( double,    "double", 'F', "double", "Double", "#" );
-        ADD_TYPE( SbxObject, "VARIANT", 'o', "C_Object", "Object", "" );
+        ADD_TYPE( UINT16 );
+        ADD_TYPE( INT16 );
+        ADD_TYPE( UINT32 );
+        ADD_TYPE( INT32 );
+        ADD_TYPE( BOOL );
+        ADD_TYPE( BYTE );
+        ADD_TYPE( float );
+        ADD_TYPE( double );
+        ADD_TYPE( SbxObject );
 
         // Attention! When adding types all binary data bases get incompatible
 
     }
     return aTypeList;
-}
-
-SvMetaModule * SvIdlDataBase::GetModule( const OString& rName )
-{
-    for( sal_uLong n = 0; n < aModuleList.size(); n++ )
-        if( aModuleList[n]->GetName().getString().equals(rName) )
-            return aModuleList[n];
-    return nullptr;
 }
 
 void SvIdlDataBase::SetError( const OString& rError, SvToken& rTok )
@@ -94,9 +100,15 @@ void SvIdlDataBase::SetError( const OString& rError, SvToken& rTok )
     }
 }
 
+void SvIdlDataBase::SetAndWriteError( SvTokenStream & rInStm, const OString& rError )
+{
+    SetError( rError, rInStm.GetToken() );
+    WriteError( rInStm );
+}
+
 void SvIdlDataBase::Push( SvMetaObject * pObj )
 {
-    GetStack().Push( pObj );
+    GetStack().push_back( pObj );
 }
 
 bool SvIdlDataBase::FindId( const OString& rIdName, sal_uLong * pVal )
@@ -127,8 +139,9 @@ bool SvIdlDataBase::InsertId( const OString& rIdName, sal_uLong nVal )
     return false;
 }
 
-bool SvIdlDataBase::ReadIdFile( const OUString & rFileName )
+bool SvIdlDataBase::ReadIdFile( const OString& rOFileName )
 {
+    OUString rFileName = OStringToOUString(rOFileName, RTL_TEXTENCODING_ASCII_US);
     OUString aFullName;
     osl::File::searchFileURL( rFileName, GetPath(), aFullName);
     osl::FileBase::getSystemPathFromFileURL( aFullName, aFullName );
@@ -142,69 +155,56 @@ bool SvIdlDataBase::ReadIdFile( const OUString & rFileName )
     SvTokenStream aTokStm( aFullName );
     if( aTokStm.GetStream().GetError() == SVSTREAM_OK )
     {
-        SvToken * pTok = aTokStm.GetToken_Next();
+        SvToken& rTok = aTokStm.GetToken_Next();
 
-        while( !pTok->IsEof() )
+        while( !rTok.IsEof() )
         {
-            if( pTok->IsChar() && pTok->GetChar() == '#' )
+            if( rTok.IsChar() && rTok.GetChar() == '#' )
             {
-                pTok = aTokStm.GetToken_Next();
-                if( pTok->Is( SvHash_define() ) )
+                rTok = aTokStm.GetToken_Next();
+                if( rTok.Is( SvHash_define() ) )
                 {
-                    pTok = aTokStm.GetToken_Next();
+                    rTok = aTokStm.GetToken_Next();
                     OString aDefName;
-                    if( pTok->IsIdentifier() )
-                        aDefName = pTok->GetString();
-                    else
-                    {
-                        OString aStr("unexpected token after define");
-                        // set error
-                        SetError( aStr, *pTok );
-                        WriteError( aTokStm );
-                        return false;
-                    }
+                    if( !rTok.IsIdentifier() )
+                        throw SvParseException( "unexpected token after define", rTok );
+                    aDefName = rTok.GetString();
 
                     sal_uLong nVal = 0;
                     bool bOk = true;
                     while( bOk )
                     {
-                        pTok = aTokStm.GetToken_Next();
-                        if( pTok->IsIdentifier() )
+                        rTok = aTokStm.GetToken_Next();
+                        if( rTok.IsIdentifier() )
                         {
                             sal_uLong n;
-                            if( FindId( pTok->GetString(), &n ) )
+                            if( FindId( rTok.GetString(), &n ) )
                                 nVal += n;
                             else
                                 bOk = false;
                         }
-                        else if( pTok->IsChar() )
+                        else if( rTok.IsChar() )
                         {
-                            if( pTok->GetChar() == '-'
-                              || pTok->GetChar() == '/'
-                              || pTok->GetChar() == '*'
-                              || pTok->GetChar() == '&'
-                              || pTok->GetChar() == '|'
-                              || pTok->GetChar() == '^'
-                              || pTok->GetChar() == '~' )
+                            if( rTok.GetChar() == '-'
+                              || rTok.GetChar() == '/'
+                              || rTok.GetChar() == '*'
+                              || rTok.GetChar() == '&'
+                              || rTok.GetChar() == '|'
+                              || rTok.GetChar() == '^'
+                              || rTok.GetChar() == '~' )
                             {
-                                OStringBuffer aStr("unknown operator '");
-                                aStr.append(pTok->GetChar());
-                                aStr.append("'in define");
-                                // set error
-                                SetError( aStr.makeStringAndClear(), *pTok );
-                                WriteError( aTokStm );
-                                return false;
+                                throw SvParseException( "unknown operator '" + OString(rTok.GetChar()) + "'in define", rTok );
                             }
-                            if( pTok->GetChar() != '+'
-                              && pTok->GetChar() != '('
-                              && pTok->GetChar() != ')' )
+                            if( rTok.GetChar() != '+'
+                              && rTok.GetChar() != '('
+                              && rTok.GetChar() != ')' )
                                 // only + is allowed, parentheses are immaterial
                                 // because + is commutative
                                 break;
                         }
-                        else if( pTok->IsInteger() )
+                        else if( rTok.IsInteger() )
                         {
-                            nVal += pTok->GetNumber();
+                            nVal += rTok.GetNumber();
                         }
                         else
                             break;
@@ -213,50 +213,38 @@ bool SvIdlDataBase::ReadIdFile( const OUString & rFileName )
                     {
                         if( !InsertId( aDefName, nVal ) )
                         {
-                            OString aStr("hash table overflow: ");
-                            SetError( aStr, *pTok );
-                            WriteError( aTokStm );
-                            return false;
+                            throw SvParseException( "hash table overflow: ", rTok );
                         }
                     }
                 }
-                else if( pTok->Is( SvHash_include() ) )
+                else if( rTok.Is( SvHash_include() ) )
                 {
-                    pTok = aTokStm.GetToken_Next();
+                    rTok = aTokStm.GetToken_Next();
                     OStringBuffer aName;
-                    if( pTok->IsString() )
-                        aName.append(pTok->GetString());
-                    else if( pTok->IsChar() && pTok->GetChar() == '<' )
+                    if( rTok.IsString() )
+                        aName.append(rTok.GetString());
+                    else if( rTok.IsChar() && rTok.GetChar() == '<' )
                     {
-                        pTok = aTokStm.GetToken_Next();
-                        while( !pTok->IsEof()
-                          && !(pTok->IsChar() && pTok->GetChar() == '>') )
+                        rTok = aTokStm.GetToken_Next();
+                        while( !rTok.IsEof()
+                          && !(rTok.IsChar() && rTok.GetChar() == '>') )
                         {
-                            aName.append(pTok->GetTokenAsString());
-                            pTok = aTokStm.GetToken_Next();
+                            aName.append(rTok.GetTokenAsString());
+                            rTok = aTokStm.GetToken_Next();
                         }
-                        if( pTok->IsEof() )
+                        if( rTok.IsEof() )
                         {
-                            OString aStr("unexpected eof in #include");
-                            // set error
-                            SetError(aStr, *pTok);
-                            WriteError( aTokStm );
-                            return false;
+                            throw SvParseException("unexpected eof in #include", rTok);
                         }
                     }
-                    if (!ReadIdFile(OStringToOUString(aName.toString(),
-                        RTL_TEXTENCODING_ASCII_US)))
+                    if (!ReadIdFile(aName.toString()))
                     {
-                        OStringBuffer aStr("cannot read file: ");
-                        aStr.append(aName.makeStringAndClear());
-                        SetError(aStr.makeStringAndClear(), *pTok);
-                        WriteError( aTokStm );
-                        return false;
+                        throw SvParseException("cannot read file: " + aName, rTok);
                     }
                 }
             }
             else
-                pTok = aTokStm.GetToken_Next();
+                rTok = aTokStm.GetToken_Next();
         }
     }
     else
@@ -265,9 +253,9 @@ bool SvIdlDataBase::ReadIdFile( const OUString & rFileName )
 }
 
 SvMetaType * SvIdlDataBase::FindType( const SvMetaType * pPType,
-                                    SvMetaTypeMemberList & rList )
+                                    SvRefMemberList<SvMetaType *>& rList )
 {
-    for( SvMetaTypeMemberList::const_iterator it = rList.begin(); it != rList.end(); ++it )
+    for( SvRefMemberList<SvMetaType *>::const_iterator it = rList.begin(); it != rList.end(); ++it )
         if( *it == pPType )
             return *it;
     return nullptr;
@@ -275,101 +263,26 @@ SvMetaType * SvIdlDataBase::FindType( const SvMetaType * pPType,
 
 SvMetaType * SvIdlDataBase::FindType( const OString& rName )
 {
-    for( SvMetaTypeMemberList::const_iterator it = aTypeList.begin(); it != aTypeList.end(); ++it )
-        if( rName.equals((*it)->GetName().getString()) )
+    for( SvRefMemberList<SvMetaType *>::const_iterator it = aTypeList.begin(); it != aTypeList.end(); ++it )
+        if( rName.equals((*it)->GetName()) )
             return *it;
     return nullptr;
 }
 
 SvMetaType * SvIdlDataBase::ReadKnownType( SvTokenStream & rInStm )
 {
-    bool bIn    = false;
-    bool bOut   = false;
-    int nCall0  = CALL_VALUE;
-    int nCall1  = CALL_VALUE;
-    bool bSet   = false; // any attribute set
-
     sal_uInt32  nTokPos = rInStm.Tell();
-    SvToken * pTok = rInStm.GetToken_Next();
+    SvToken& rTok = rInStm.GetToken_Next();
 
-    if( pTok->HasHash() )
+    if( rTok.IsIdentifier() )
     {
-        sal_uInt32 nBeginPos = 0; // can not happen with Tell
-        while( nBeginPos != rInStm.Tell() )
+        OString aName = rTok.GetString();
+        for( const auto& aType : GetTypeList() )
         {
-            nBeginPos = rInStm.Tell();
-            if( pTok->Is( SvHash_in() ) )
+            if( aType->GetName().equals(aName) )
             {
-                bIn  = true;
-                pTok = rInStm.GetToken_Next();
-                bSet = true;
+                return aType;
             }
-            if( pTok->Is( SvHash_out() ) )
-            {
-                bOut = true;
-                pTok = rInStm.GetToken_Next();
-                bSet = true;
-            }
-            if( pTok->Is( SvHash_inout() ) )
-            {
-                bIn  = true;
-                bOut = true;
-                pTok = rInStm.GetToken_Next();
-                bSet = true;
-            }
-        }
-    }
-
-    if( pTok->IsIdentifier() )
-    {
-        OString aName = pTok->GetString();
-        SvMetaTypeMemberList & rList = GetTypeList();
-        SvMetaTypeMemberList::const_iterator it = rList.begin();
-        SvMetaType * pType = nullptr;
-        while( it != rList.end() )
-        {
-            if( (*it)->GetName().getString().equals(aName) )
-            {
-                pType = *it;
-                break;
-            }
-            ++it;
-        }
-        if( pType )
-        {
-            pTok = &rInStm.GetToken();
-            if( pTok->IsChar() )
-            {
-                if( pTok->GetChar() == '&' || pTok->GetChar() == '*' )
-                {
-                    nCall0 = (pTok->GetChar() == '&') ? CALL_REFERENCE :
-                                                        CALL_POINTER;
-                    rInStm.GetToken_Next();
-                    pTok = &rInStm.GetToken();
-                    if( pTok->GetChar() == '&' || pTok->GetChar() == '*' )
-                    {
-                        nCall1 = (pTok->GetChar() == '&') ? CALL_REFERENCE :
-                                                            CALL_POINTER;
-                        rInStm.GetToken_Next();
-                    }
-                    bSet = true;
-                }
-            }
-
-            if( !bSet )
-                // is exactly this type
-                return pType;
-
-            DBG_ASSERT( aTmpTypeList.front(), "mindestens ein Element" );
-            SvMetaTypeRef xType = new SvMetaType( pType->GetName().getString(), 'h', "dummy" );
-            xType->SetRef( pType );
-            xType->SetIn( bIn );
-            xType->SetOut( bOut );
-            xType->SetCall0( nCall0 );
-            xType->SetCall1( nCall1 );
-
-            aTmpTypeList.push_back( xType );
-            return xType;
         }
     }
     rInStm.Seek( nTokPos );
@@ -391,22 +304,22 @@ SvMetaAttribute * SvIdlDataBase::ReadKnownAttr
     if( !pType )
     {
         // otherwise SlotId?
-        SvToken * pTok = rInStm.GetToken_Next();
-        if( pTok->IsIdentifier() )
+        SvToken& rTok = rInStm.GetToken_Next();
+        if( rTok.IsIdentifier() )
         {
             sal_uLong n;
-            if( FindId( pTok->GetString(), &n ) )
+            if( FindId( rTok.GetString(), &n ) )
             {
-                for( sal_uLong i = 0; i < aAttrList.size(); i++ )
+                for( sal_uLong i = 0; i < aSlotList.size(); i++ )
                 {
-                    SvMetaAttribute * pAttr = aAttrList[i];
-                    if( pAttr->GetSlotId().getString().equals(pTok->GetString()) )
-                        return pAttr;
+                    SvMetaSlot * pSlot = aSlotList[i];
+                    if( pSlot->GetSlotId().getString().equals(rTok.GetString()) )
+                        return pSlot;
                 }
             }
 
-            OStringBuffer aStr("Nicht gefunden : ");
-            aStr.append(pTok->GetString());
+            OStringBuffer aStr("Not found : ");
+            aStr.append(rTok.GetString());
             OSL_FAIL(aStr.getStr());
         }
     }
@@ -415,19 +328,16 @@ SvMetaAttribute * SvIdlDataBase::ReadKnownAttr
     return nullptr;
 }
 
-SvMetaAttribute* SvIdlDataBase::SearchKnownAttr
-(
-    const SvIdentifier& rId
-)
+SvMetaAttribute* SvIdlDataBase::FindKnownAttr( const SvIdentifier& rId )
 {
     sal_uLong n;
     if( FindId( rId.getString(), &n ) )
     {
-        for( sal_uLong i = 0; i < aAttrList.size(); i++ )
+        for( sal_uLong i = 0; i < aSlotList.size(); i++ )
         {
-            SvMetaAttribute * pAttr = aAttrList[i];
-            if( pAttr->GetSlotId().getString() == rId.getString() )
-                return pAttr;
+            SvMetaSlot * pSlot = aSlotList[i];
+            if( pSlot->GetSlotId().getString() == rId.getString() )
+                return pSlot;
         }
     }
 
@@ -437,39 +347,33 @@ SvMetaAttribute* SvIdlDataBase::SearchKnownAttr
 SvMetaClass * SvIdlDataBase::ReadKnownClass( SvTokenStream & rInStm )
 {
     sal_uInt32  nTokPos = rInStm.Tell();
-    SvToken * pTok = rInStm.GetToken_Next();
+    SvToken& rTok = rInStm.GetToken_Next();
 
-    if( pTok->IsIdentifier() )
-        for( sal_uLong n = 0; n < aClassList.size(); n++ )
-        {
-            SvMetaClass * pClass = aClassList[n];
-            if( pClass->GetName().getString().equals(pTok->GetString()) )
-                return pClass;
-        }
+    if( rTok.IsIdentifier() )
+    {
+        SvMetaClass* p = FindKnownClass(rTok.GetString());
+        if (p)
+            return p;
+    }
 
     rInStm.Seek( nTokPos );
     return nullptr;
 }
 
+SvMetaClass * SvIdlDataBase::FindKnownClass( const OString& aName )
+{
+    for( sal_uLong n = 0; n < aClassList.size(); n++ )
+    {
+        SvMetaClass * pClass = aClassList[n];
+        if( pClass->GetName() == aName )
+            return pClass;
+    }
+    return nullptr;
+}
 void SvIdlDataBase::Write(const OString& rText)
 {
     if( nVerbosity != 0 )
         fprintf( stdout, "%s", rText.getStr() );
-}
-
-void SvIdlDataBase::WriteError( const OString& rErrWrn,
-                                const OString& rFileName,
-                                const OString& rErrorText,
-                                sal_uLong nRow, sal_uLong nColumn )
-{
-    // error treatment
-    fprintf( stderr, "\n%s --- %s: ( %" SAL_PRIuUINTPTR ", %" SAL_PRIuUINTPTR " )\n",
-             rFileName.getStr(), rErrWrn.getStr(), nRow, nColumn );
-
-    if( !rErrorText.isEmpty() )
-    { // error set
-        fprintf( stderr, "\t%s\n", rErrorText.getStr() );
-    }
 }
 
 void SvIdlDataBase::WriteError( SvTokenStream & rInStm )
@@ -479,12 +383,12 @@ void SvIdlDataBase::WriteError( SvTokenStream & rInStm )
     OStringBuffer aErrorText;
     sal_uLong   nRow = 0, nColumn = 0;
 
-    rInStm.SeekEnd();
-    SvToken *pTok = &rInStm.GetToken();
+    rInStm.SeekToMax();
+    SvToken& rTok = rInStm.GetToken();
 
     // error position
-    nRow    = pTok->GetLine();
-    nColumn = pTok->GetColumn();
+    nRow    = rTok.GetLine();
+    nColumn = rTok.GetColumn();
 
     if( aError.IsError() )
     { // error set
@@ -496,13 +400,13 @@ void SvIdlDataBase::WriteError( SvTokenStream & rInStm )
             aErrorText.append(aError.GetText());
         }
         SvToken * pPrevTok = nullptr;
-        while( pTok != pPrevTok )
+        while( &rTok != pPrevTok )
         {
-            pPrevTok = pTok;
-            if( pTok->GetLine() == aError.nLine
-              && pTok->GetColumn() == aError.nColumn )
+            pPrevTok = &rTok;
+            if( rTok.GetLine() == aError.nLine
+              && rTok.GetColumn() == aError.nColumn )
                 break;
-            pTok = rInStm.GetToken_PrevAll();
+            rTok = rInStm.GetToken_PrevAll();
         }
 
         // error position
@@ -516,24 +420,27 @@ void SvIdlDataBase::WriteError( SvTokenStream & rInStm )
         aError = SvIdlError();
     }
 
-    WriteError("error", OUStringToOString(aFileName,
-        RTL_TEXTENCODING_UTF8), aErrorText.makeStringAndClear(), nRow, nColumn);
+    // error treatment
+    fprintf( stderr, "\n%s --- %s: ( %" SAL_PRIuUINTPTR ", %" SAL_PRIuUINTPTR " )\n",
+             OUStringToOString(aFileName, RTL_TEXTENCODING_UTF8).getStr(),
+             "error", nRow, nColumn );
 
-    DBG_ASSERT( pTok, "token must be found" );
-    if( !pTok )
-        return;
+    if( !aErrorText.isEmpty() )
+    { // error set
+        fprintf( stderr, "\t%s\n", aErrorText.getStr() );
+    }
 
     // look for identifier close by
-    if( !pTok->IsIdentifier() )
+    if( !rTok.IsIdentifier() )
     {
         rInStm.GetToken_PrevAll();
-        pTok = &rInStm.GetToken();
+        rTok = rInStm.GetToken();
     }
-    if( pTok && pTok->IsIdentifier() )
+    if( rTok.IsIdentifier() )
     {
-        OString aN = GetIdlApp().pHashTable->GetNearString( pTok->GetString() );
+        OString aN = GetIdlApp().pHashTable->GetNearString( rTok.GetString() );
         if( !aN.isEmpty() )
-            fprintf( stderr, "%s versus %s\n", pTok->GetString().getStr(), aN.getStr() );
+            fprintf( stderr, "%s versus %s\n", rTok.GetString().getStr(), aN.getStr() );
     }
 }
 
@@ -541,69 +448,6 @@ SvIdlWorkingBase::SvIdlWorkingBase(const SvCommand& rCmd) : SvIdlDataBase(rCmd)
 {
 }
 
-bool SvIdlWorkingBase::ReadSvIdl( SvTokenStream & rInStm, bool bImported, const OUString & rPath )
-{
-    aPath = rPath; // only valid for this iteration
-    bool bOk = true;
-    SvToken * pTok = &rInStm.GetToken();
-    // only one import at the very beginning
-    if( pTok->Is( SvHash_import() ) )
-    {
-        rInStm.GetToken_Next();
-        bOk = rInStm.Read( '(' ); // optional
-        pTok = bOk ? rInStm.GetToken_Next() : nullptr;
-        if( pTok && pTok->IsString() )
-        {
-            OUString aFullName;
-            if( osl::FileBase::E_None == osl::File::searchFileURL(
-                OStringToOUString(pTok->GetString(), RTL_TEXTENCODING_ASCII_US),
-                rPath,
-                aFullName) )
-            {
-                osl::FileBase::getSystemPathFromFileURL( aFullName, aFullName );
-                this->AddDepFile(aFullName);
-                SvFileStream aStm( aFullName, STREAM_STD_READ | StreamMode::NOCREATE );
-                SvTokenStream aTokStm( aStm, aFullName );
-                bOk = ReadSvIdl( aTokStm, true, rPath );
-            }
-            else
-                bOk = false;
-        }
-        else
-            bOk = false;
-    }
-
-    sal_uInt32 nBeginPos = 0xFFFFFFFF; // can not happen with Tell
-
-    while( bOk && nBeginPos != rInStm.Tell() )
-    {
-        nBeginPos = rInStm.Tell();
-        pTok = &rInStm.GetToken();
-        if( pTok->IsEof() )
-            return true;
-        if( pTok->IsEmpty() )
-            bOk = false;
-
-        // only one import at the very beginning
-        if( pTok->Is( SvHash_module() ) )
-        {
-            tools::SvRef<SvMetaModule> aModule = new SvMetaModule( bImported );
-            if( aModule->ReadSvIdl( *this, rInStm ) )
-                GetModuleList().push_back( aModule );
-            else
-                bOk = false;
-        }
-        else
-            bOk = false;
-    }
-    if( !bOk || !pTok->IsEof() )
-    {
-         // error treatment
-         WriteError( rInStm );
-         return false;
-    }
-    return true;
-}
 
 bool SvIdlWorkingBase::WriteSfx( SvStream & rOutStm )
 {
@@ -617,8 +461,7 @@ bool SvIdlWorkingBase::WriteSfx( SvStream & rOutStm )
     for( n = 0; n < GetModuleList().size(); n++ )
     {
         SvMetaModule * pModule = GetModuleList()[n];
-        if( !pModule->IsImported() )
-            pModule->WriteSfx( *this, aTmpStm );
+        pModule->WriteSfx( *this, aTmpStm );
         aTmpStm.Seek( 0 );
     }
     for( n = 0; n < aUsedTypes.size(); n++ )
@@ -633,14 +476,14 @@ bool SvIdlWorkingBase::WriteSfx( SvStream & rOutStm )
 
 void SvIdlDataBase::StartNewFile( const OUString& rName )
 {
-    bExport = ( aExportFile.equalsIgnoreAsciiCase( rName ) );
+    bExport = aExportFile.equalsIgnoreAsciiCase( rName );
+    assert ( !bExport );
 }
 
-void SvIdlDataBase::AppendAttr( SvMetaAttribute *pAttr )
+void SvIdlDataBase::AppendSlot( SvMetaSlot *pSlot )
 {
-    aAttrList.push_back( pAttr );
-    if ( bExport )
-        pAttr->SetNewAttribute( true );
+    aSlotList.push_back( pSlot );
+    assert ( !bExport );
 }
 
 void SvIdlDataBase::AddDepFile(OUString const& rFileName)
@@ -655,7 +498,7 @@ struct WriteDep
     void operator() (OUString const& rItem)
     {
         m_rStream.WriteCharPtr( " \\\n " );
-        m_rStream.WriteCharPtr( OUStringToOString(rItem, RTL_TEXTENCODING_UTF8).getStr() );
+        m_rStream.WriteOString( OUStringToOString(rItem, RTL_TEXTENCODING_UTF8) );
     }
 };
 
@@ -667,20 +510,19 @@ struct WriteDummy
     explicit WriteDummy(SvFileStream & rStream) : m_rStream(rStream) { }
     void operator() (OUString const& rItem)
     {
-        m_rStream.WriteCharPtr( OUStringToOString(rItem, RTL_TEXTENCODING_UTF8).getStr() );
+        m_rStream.WriteOString( OUStringToOString(rItem, RTL_TEXTENCODING_UTF8) );
         m_rStream.WriteCharPtr( " :\n\n" );
     }
 };
 
-bool SvIdlDataBase::WriteDepFile(
+void SvIdlDataBase::WriteDepFile(
         SvFileStream & rStream, OUString const& rTarget)
 {
-    rStream.WriteCharPtr( OUStringToOString(rTarget, RTL_TEXTENCODING_UTF8).getStr() );
+    rStream.WriteOString( OUStringToOString(rTarget, RTL_TEXTENCODING_UTF8) );
     rStream.WriteCharPtr( " :" );
     ::std::for_each(m_DepFiles.begin(), m_DepFiles.end(), WriteDep(rStream));
     rStream.WriteCharPtr( "\n\n" );
     ::std::for_each(m_DepFiles.begin(), m_DepFiles.end(), WriteDummy(rStream));
-    return rStream.GetError() == SVSTREAM_OK;
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

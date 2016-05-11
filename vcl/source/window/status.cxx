@@ -27,8 +27,10 @@
 #include <vcl/status.hxx>
 #include <vcl/virdev.hxx>
 #include <vcl/settings.hxx>
+#include <config_features.h>
+#if HAVE_FEATURE_OPENGL
 #include <vcl/opengl/OpenGLWrapper.hxx>
-
+#endif
 #include <svdata.hxx>
 #include <window.h>
 
@@ -86,7 +88,7 @@ inline long ImplCalcProgessWidth( sal_uInt16 nMax, long nSize )
 }
 
 static Point ImplGetItemTextPos( const Size& rRectSize, const Size& rTextSize,
-                                 sal_uInt16 nStyle )
+                                 StatusBarItemBits nStyle )
 {
     long nX;
     long nY;
@@ -94,11 +96,11 @@ static Point ImplGetItemTextPos( const Size& rRectSize, const Size& rTextSize,
     if( delta + rTextSize.Width() > rRectSize.Width() )
         delta = 0;
 
-    if ( nStyle & SIB_LEFT )
+    if ( nStyle & StatusBarItemBits::Left )
         nX = delta;
-    else if ( nStyle & SIB_RIGHT )
+    else if ( nStyle & StatusBarItemBits::Right )
         nX = rRectSize.Width()-rTextSize.Width()-delta;
-    else // SIB_CENTER
+    else // StatusBarItemBits::Center
         nX = (rRectSize.Width()-rTextSize.Width())/2;
     nY = (rRectSize.Height()-rTextSize.Height())/2 + 1;
     return Point( nX, nY );
@@ -168,9 +170,9 @@ void StatusBar::dispose()
     Window::dispose();
 }
 
-void StatusBar::AdjustItemWidthsForHiDPI(bool bAdjustHiDPI)
+void StatusBar::AdjustItemWidthsForHiDPI()
 {
-    mbAdjustHiDPI = bAdjustHiDPI;
+    mbAdjustHiDPI = true;
 }
 
 void StatusBar::ApplySettings(vcl::RenderContext& rRenderContext)
@@ -237,7 +239,7 @@ void StatusBar::ImplFormat()
         pItem = (*mpItemList)[ i ];
         if ( pItem->mbVisible )
         {
-            if ( pItem->mnBits & SIB_AUTOSIZE ) {
+            if ( pItem->mnBits & StatusBarItemBits::AutoSize ) {
                 nAutoSizeItems++;
             }
 
@@ -278,7 +280,7 @@ void StatusBar::ImplFormat()
     for ( size_t i = 0, n = mpItemList->size(); i < n; ++i ) {
         pItem = (*mpItemList)[ i ];
         if ( pItem->mbVisible ) {
-            if ( pItem->mnBits & SIB_AUTOSIZE ) {
+            if ( pItem->mnBits & StatusBarItemBits::AutoSize ) {
                 pItem->mnExtraWidth = nExtraWidth;
                 if ( nExtraWidth2 ) {
                     pItem->mnExtraWidth++;
@@ -330,7 +332,7 @@ sal_uInt16 StatusBar::ImplGetFirstVisiblePos() const
     return SAL_MAX_UINT16;
 }
 
-void StatusBar::ImplDrawText(vcl::RenderContext& rRenderContext, bool bOffScreen, long nOldTextWidth)
+void StatusBar::ImplDrawText(vcl::RenderContext& rRenderContext)
 {
     // prevent item box from being overwritten
     Rectangle aTextRect;
@@ -350,24 +352,11 @@ void StatusBar::ImplDrawText(vcl::RenderContext& rRenderContext, bool bOffScreen
 
         aTextRect.Bottom() = aTextRect.Top()+GetTextHeight()+1;
 
-        if (bOffScreen)
-        {
-            long nMaxWidth = std::max(nOldTextWidth, GetTextWidth(aStr));
-            Size aVirDevSize(nMaxWidth, aTextRect.GetHeight());
-            mpImplData->mpVirDev->SetOutputSizePixel( aVirDevSize );
-            Rectangle aTempRect = aTextRect;
-            aTempRect.SetPos(Point(0, 0));
-            mpImplData->mpVirDev->DrawText( aTempRect, aStr, DrawTextFlags::Left | DrawTextFlags::Top | DrawTextFlags::Clip | DrawTextFlags::EndEllipsis );
-            rRenderContext.DrawOutDev(aTextRect.TopLeft(), aVirDevSize, Point(), aVirDevSize, *mpImplData->mpVirDev);
-        }
-        else
-        {
-            rRenderContext.DrawText(aTextRect, aStr, DrawTextFlags::Left | DrawTextFlags::Top | DrawTextFlags::Clip | DrawTextFlags::EndEllipsis);
-        }
+        rRenderContext.DrawText(aTextRect, aStr, DrawTextFlags::Left | DrawTextFlags::Top | DrawTextFlags::Clip | DrawTextFlags::EndEllipsis);
     }
 }
 
-void StatusBar::ImplDrawItem(vcl::RenderContext& rRenderContext, bool bOffScreen, sal_uInt16 nPos, bool bDrawText, bool bDrawFrame)
+void StatusBar::ImplDrawItem(vcl::RenderContext& rRenderContext, bool bOffScreen, sal_uInt16 nPos)
 {
     Rectangle aRect = ImplGetItemRectPos(nPos);
 
@@ -393,24 +382,21 @@ void StatusBar::ImplDrawItem(vcl::RenderContext& rRenderContext, bool bOffScreen
     }
 
     // print text
-    if (bDrawText)
+    Size aTextSize(rRenderContext.GetTextWidth(pItem->maText), rRenderContext.GetTextHeight());
+    Point aTextPos = ImplGetItemTextPos(aTextRectSize, aTextSize, pItem->mnBits);
+    if (bOffScreen)
     {
-        Size aTextSize(rRenderContext.GetTextWidth(pItem->maText), rRenderContext.GetTextHeight());
-        Point aTextPos = ImplGetItemTextPos(aTextRectSize, aTextSize, pItem->mnBits);
-        if (bOffScreen)
-        {
-            mpImplData->mpVirDev->DrawText(aTextPos, pItem->maText);
-        }
-        else
-        {
-            aTextPos.X() += aTextRect.Left();
-            aTextPos.Y() += aTextRect.Top();
-            rRenderContext.DrawText(aTextPos, pItem->maText);
-        }
+        mpImplData->mpVirDev->DrawText(aTextPos, pItem->maText);
+    }
+    else
+    {
+        aTextPos.X() += aTextRect.Left();
+        aTextPos.Y() += aTextRect.Top();
+        rRenderContext.DrawText(aTextPos, pItem->maText);
     }
 
     // call DrawItem if necessary
-    if (pItem->mnBits & SIB_USERDRAW)
+    if (pItem->mnBits & StatusBarItemBits::UserDraw)
     {
         if (bOffScreen)
         {
@@ -434,36 +420,33 @@ void StatusBar::ImplDrawItem(vcl::RenderContext& rRenderContext, bool bOffScreen
         rRenderContext.SetClipRegion();
 
     // show frame
-    if (bDrawFrame)
+    if (mpImplData->mbDrawItemFrames)
     {
-        if (mpImplData->mbDrawItemFrames)
+        if (!(pItem->mnBits & StatusBarItemBits::Flat))
         {
-            if (!(pItem->mnBits & SIB_FLAT))
-            {
-                DrawFrameStyle nStyle;
+            DrawFrameStyle nStyle;
 
-                if (pItem->mnBits & SIB_IN)
-                    nStyle = DrawFrameStyle::In;
-                else
-                    nStyle = DrawFrameStyle::Out;
-
-                DecorationView aDecoView(&rRenderContext);
-                aDecoView.DrawFrame(aRect, nStyle);
-            }
-        }
-        else if (nPos != ImplGetFirstVisiblePos())
-        {
-            // draw separator
-            Point aFrom(aRect.TopLeft());
-            aFrom.X() -= 4;
-            aFrom.Y()++;
-            Point aTo(aRect.BottomLeft());
-            aTo.X() -= 4;
-            aTo.Y()--;
+            if (pItem->mnBits & StatusBarItemBits::In)
+                nStyle = DrawFrameStyle::In;
+            else
+                nStyle = DrawFrameStyle::Out;
 
             DecorationView aDecoView(&rRenderContext);
-            aDecoView.DrawSeparator(aFrom, aTo);
+            aDecoView.DrawFrame(aRect, nStyle);
         }
+    }
+    else if (nPos != ImplGetFirstVisiblePos())
+    {
+        // draw separator
+        Point aFrom(aRect.TopLeft());
+        aFrom.X() -= 4;
+        aFrom.Y()++;
+        Point aTo(aRect.BottomLeft());
+        aTo.X() -= 4;
+        aTo.Y()--;
+
+        DecorationView aDecoView(&rRenderContext);
+        aDecoView.DrawSeparator(aFrom, aTo);
     }
 
     if (!rRenderContext.ImplIsRecordLayout())
@@ -582,19 +565,15 @@ void DrawProgress(vcl::Window* pWindow, vcl::RenderContext& rRenderContext, cons
     }
 }
 
-void StatusBar::ImplDrawProgress(vcl::RenderContext& rRenderContext, bool bPaint,
-                                 sal_uInt16 nPercent1, sal_uInt16 nPercent2)
+void StatusBar::ImplDrawProgress(vcl::RenderContext& rRenderContext, sal_uInt16 nPercent2)
 {
     bool bNative = rRenderContext.IsNativeControlSupported(CTRL_PROGRESS, PART_ENTIRE_CONTROL);
     // bPaint: draw text also, else only update progress
-    if (bPaint)
+    rRenderContext.DrawText(maPrgsTxtPos, maPrgsTxt);
+    if (!bNative)
     {
-        rRenderContext.DrawText(maPrgsTxtPos, maPrgsTxt);
-        if (!bNative)
-        {
-            DecorationView aDecoView(&rRenderContext);
-            aDecoView.DrawFrame(maPrgsFrameRect, DrawFrameStyle::In);
-        }
+        DecorationView aDecoView(&rRenderContext);
+        aDecoView.DrawFrame(maPrgsFrameRect, DrawFrameStyle::In);
     }
 
     Point aPos(maPrgsFrameRect.Left() + STATUSBAR_PRGS_OFFSET,
@@ -606,7 +585,7 @@ void StatusBar::ImplDrawProgress(vcl::RenderContext& rRenderContext, bool bPaint
         nPrgsHeight = maPrgsFrameRect.GetHeight();
     }
     DrawProgress(this, rRenderContext, aPos, mnPrgsSize / 2, mnPrgsSize, nPrgsHeight,
-                 nPercent1 * 100, nPercent2 * 100, mnPercentCount, maPrgsFrameRect);
+                 0, nPercent2 * 100, mnPercentCount, maPrgsFrameRect);
 }
 
 void StatusBar::ImplCalcProgressRect()
@@ -698,7 +677,7 @@ void StatusBar::MouseButtonDown( const MouseEvent& rMEvt )
     }
 }
 
-void StatusBar::Paint(vcl::RenderContext& rRenderContext, const Rectangle&)
+void StatusBar::Paint(vcl::RenderContext& rRenderContext, const Rectangle& rRect)
 {
     if (mbFormat)
         ImplFormat();
@@ -716,7 +695,7 @@ void StatusBar::Paint(vcl::RenderContext& rRenderContext, const Rectangle&)
         rRenderContext.SetLineColor();
         rRenderContext.SetFillColor(aProgressColor);
 
-        ImplDrawProgress(rRenderContext, true, 0, mnPercent);
+        ImplDrawProgress(rRenderContext, mnPercent);
 
         rRenderContext.Pop();
     }
@@ -724,7 +703,7 @@ void StatusBar::Paint(vcl::RenderContext& rRenderContext, const Rectangle&)
     {
         // draw text
         if (!mbVisibleItems || (GetStyle() & WB_RIGHT))
-            ImplDrawText(rRenderContext, false, 0);
+            ImplDrawText(rRenderContext);
 
         // draw items
         if (mbVisibleItems)
@@ -734,13 +713,16 @@ void StatusBar::Paint(vcl::RenderContext& rRenderContext, const Rectangle&)
 
             // tdf#94213 - un-necessary virtual-device in GL mode
             // causes context switch & hence flicker during sizing.
+#if HAVE_FEATURE_OPENGL
             if( OpenGLWrapper::isVCLOpenGLEnabled() )
                 bOffscreen = false;
+#endif
+
+            if (!bOffscreen)
+                rRenderContext.Erase(rRect);
 
             for (sal_uInt16 i = 0; i < nItemCount; i++)
-            {
-                ImplDrawItem(rRenderContext, bOffscreen, i, true, true);
-            }
+                ImplDrawItem(rRenderContext, bOffscreen, i);
         }
     }
 
@@ -924,10 +906,10 @@ void StatusBar::InsertItem( sal_uInt16 nItemId, sal_uLong nWidth,
                 "StatusBar::InsertItem(): ItemId already exists" );
 
     // default: IN and CENTER
-    if ( !(nBits & (SIB_IN | SIB_OUT | SIB_FLAT)) )
-        nBits |= SIB_IN;
-    if ( !(nBits & (SIB_LEFT | SIB_RIGHT | SIB_CENTER)) )
-        nBits |= SIB_CENTER;
+    if ( !(nBits & (StatusBarItemBits::In | StatusBarItemBits::Out | StatusBarItemBits::Flat)) )
+        nBits |= StatusBarItemBits::In;
+    if ( !(nBits & (StatusBarItemBits::Left | StatusBarItemBits::Right | StatusBarItemBits::Center)) )
+        nBits |= StatusBarItemBits::Center;
 
     // create item
     if (mbAdjustHiDPI && GetDPIScaleFactor() != 1)
@@ -1147,7 +1129,7 @@ StatusBarItemBits StatusBar::GetItemBits( sal_uInt16 nItemId ) const
     if ( nPos != STATUSBAR_ITEM_NOTFOUND )
         return (*mpItemList)[ nPos ]->mnBits;
 
-    return 0;
+    return StatusBarItemBits::NONE;
 }
 
 long StatusBar::GetItemOffset( sal_uInt16 nItemId ) const
@@ -1237,7 +1219,7 @@ void StatusBar::SetItemData( sal_uInt16 nItemId, void* pNewData )
         pItem->mpUserData = pNewData;
 
         // call Draw-Item if it's a User-Item
-        if ( (pItem->mnBits & SIB_USERDRAW) && pItem->mbVisible &&
+        if ( (pItem->mnBits & StatusBarItemBits::UserDraw) && pItem->mbVisible &&
              !mbFormat && ImplIsItemUpdate() )
         {
             Update();
@@ -1268,7 +1250,7 @@ void StatusBar::RedrawItem(sal_uInt16 nItemId)
         return;
 
     ImplStatusItem* pItem = (*mpItemList)[ nPos ];
-    if (pItem && (pItem->mnBits & SIB_USERDRAW) &&
+    if (pItem && (pItem->mnBits & StatusBarItemBits::UserDraw) &&
         pItem->mbVisible && ImplIsItemUpdate())
     {
         Update();
@@ -1373,7 +1355,7 @@ void StatusBar::StartProgressMode( const OUString& rText )
 
 void StatusBar::SetProgressValue( sal_uInt16 nNewPercent )
 {
-    DBG_ASSERT( mbProgressMode, "StatusBar::SetProgressValue(): no progrss mode" );
+    DBG_ASSERT( mbProgressMode, "StatusBar::SetProgressValue(): no progress mode" );
     SAL_WARN_IF( nNewPercent > 100, "vcl", "StatusBar::SetProgressValue(): nPercent > 100" );
 
     if ( mbProgressMode

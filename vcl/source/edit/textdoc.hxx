@@ -67,13 +67,15 @@ private:
     OUString            maText;
     TextCharAttribList  maCharAttribs;
 
-                        TextNode( const TextNode& ) {;}
 protected:
     void                ExpandAttribs( sal_Int32 nIndex, sal_Int32 nNewChars );
     void                CollapsAttribs( sal_Int32 nIndex, sal_Int32 nDelChars );
 
 public:
                         TextNode( const OUString& rText );
+
+    TextNode( const TextNode& ) = delete;
+    void operator=( const TextNode& ) = delete;
 
     const OUString&     GetText() const         { return maText; }
 
@@ -85,7 +87,7 @@ public:
     void                InsertText( sal_Int32 nPos, sal_Unicode c );
     void                RemoveText( sal_Int32 nPos, sal_Int32 nChars );
 
-    TextNode*           Split( sal_Int32 nPos, bool bKeepEndigAttribs );
+    TextNode*           Split( sal_Int32 nPos );
     void                Append( const TextNode& rNode );
 };
 
@@ -107,11 +109,11 @@ public:
     std::vector<TextNode*>&       GetNodes()              { return maTextNodes; }
     const std::vector<TextNode*>& GetNodes() const        { return maTextNodes; }
 
-    TextPaM             RemoveChars( const TextPaM& rPaM, sal_Int32 nChars );
+    void                RemoveChars( const TextPaM& rPaM, sal_Int32 nChars );
     TextPaM             InsertText( const TextPaM& rPaM, sal_Unicode c );
     TextPaM             InsertText( const TextPaM& rPaM, const OUString& rStr );
 
-    TextPaM             InsertParaBreak( const TextPaM& rPaM, bool bKeepEndingAttribs );
+    TextPaM             InsertParaBreak( const TextPaM& rPaM );
     TextPaM             ConnectParagraphs( TextNode* pLeft, TextNode* pRight );
 
     sal_Int32           GetTextLen( const sal_Unicode* pSep, const TextSelection* pSel = nullptr ) const;

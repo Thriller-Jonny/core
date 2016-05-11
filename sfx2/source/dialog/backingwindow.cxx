@@ -18,7 +18,7 @@
  */
 
 #include "backingwindow.hxx"
-#include "inputdlg.hxx"
+#include <sfx2/inputdlg.hxx>
 
 #include <vcl/settings.hxx>
 #include <vcl/svapp.hxx>
@@ -61,15 +61,6 @@ using namespace ::com::sun::star::frame;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::document;
 
-const char WRITER_URL[] =         "private:factory/swriter";
-const char CALC_URL[] =           "private:factory/scalc";
-const char IMPRESS_WIZARD_URL[] = "private:factory/simpress?slot=6686";
-const char DRAW_URL[] =           "private:factory/sdraw";
-const char BASE_URL[] =           "private:factory/sdatabase?Interactive";
-const char MATH_URL[] =           "private:factory/smath";
-const char TEMPLATE_URL[] =       ".uno:NewDoc";
-const char OPEN_URL[] =           ".uno:Open";
-const char REMOTE_URL[] =         ".uno:OpenRemote";
 const char SERVICENAME_CFGREADACCESS[] = "com.sun.star.configuration.ConfigurationAccess";
 
 // increase size of the text in the buttons on the left fMultiplier-times
@@ -90,7 +81,6 @@ static bool cmpSelectionItems (const ThumbnailViewItem *pItem1, const ThumbnailV
 
 BackingWindow::BackingWindow( vcl::Window* i_pParent ) :
     Window( i_pParent ),
-    mxDesktop( Desktop::create(comphelper::getProcessComponentContext()) ),
     mbLocalViewInitialized(false),
     maButtonsTextColor(officecfg::Office::Common::Help::StartCenter::StartCenterTextColor::get()),
     mbIsSaveMode( false ),
@@ -308,7 +298,7 @@ void BackingWindow::initControls()
     // setup nice colors
     mpCreateLabel->SetControlForeground(maButtonsTextColor);
     vcl::Font aFont(mpCreateLabel->GetSettings().GetStyleSettings().GetLabelFont());
-    aFont.SetSize(Size(0, aFont.GetSize().Height() * fMultiplier));
+    aFont.SetFontSize(Size(0, aFont.GetFontSize().Height() * fMultiplier));
     mpCreateLabel->SetControlFont(aFont);
 
     mpHelpButton->SetControlForeground(maButtonsTextColor);
@@ -357,7 +347,7 @@ void BackingWindow::setupButton( PushButton* pButton )
 {
     // the buttons should have a bit bigger font
     vcl::Font aFont(pButton->GetSettings().GetStyleSettings().GetPushButtonFont());
-    aFont.SetSize(Size(0, aFont.GetSize().Height() * fMultiplier));
+    aFont.SetFontSize(Size(0, aFont.GetFontSize().Height() * fMultiplier));
     pButton->SetControlFont(aFont);
 
     // color that fits the theme
@@ -368,7 +358,7 @@ void BackingWindow::setupButton( PushButton* pButton )
 void BackingWindow::setupButton( MenuButton* pButton )
 {
     vcl::Font aFont(pButton->GetSettings().GetStyleSettings().GetPushButtonFont());
-    aFont.SetSize(Size(0, aFont.GetSize().Height() * fMultiplier));
+    aFont.SetFontSize(Size(0, aFont.GetFontSize().Height() * fMultiplier));
     pButton->SetControlFont(aFont);
 
     // color that fits the theme
@@ -550,17 +540,17 @@ IMPL_LINK_TYPED( BackingWindow, ClickHdl, Button*, pButton, void )
 {
     // dispatch the appropriate URL and end the dialog
     if( pButton == mpWriterAllButton )
-        dispatchURL( WRITER_URL );
+        dispatchURL( "private:factory/swriter" );
     else if( pButton == mpCalcAllButton )
-        dispatchURL( CALC_URL );
+        dispatchURL( "private:factory/scalc" );
     else if( pButton == mpImpressAllButton )
-        dispatchURL( IMPRESS_WIZARD_URL );
+        dispatchURL( "private:factory/simpress?slot=6686" );
     else if( pButton == mpDrawAllButton )
-        dispatchURL( DRAW_URL );
+        dispatchURL( "private:factory/sdraw" );
     else if( pButton == mpDBAllButton )
-        dispatchURL( BASE_URL );
+        dispatchURL( "private:factory/sdatabase?Interactive" );
     else if( pButton == mpMathAllButton )
-        dispatchURL( MATH_URL );
+        dispatchURL( "private:factory/smath" );
     else if( pButton == mpOpenButton )
     {
         Reference< XDispatchProvider > xFrame( mxFrame, UNO_QUERY );
@@ -570,7 +560,7 @@ IMPL_LINK_TYPED( BackingWindow, ClickHdl, Button*, pButton, void )
         pArg[0].Name = "Referer";
         pArg[0].Value <<= OUString("private:user");
 
-        dispatchURL( OPEN_URL, OUString(), xFrame, aArgs );
+        dispatchURL( ".uno:Open", OUString(), xFrame, aArgs );
     }
     else if( pButton == mpRemoteButton )
     {
@@ -578,7 +568,7 @@ IMPL_LINK_TYPED( BackingWindow, ClickHdl, Button*, pButton, void )
 
         Sequence< css::beans::PropertyValue > aArgs(0);
 
-        dispatchURL( REMOTE_URL, OUString(), xFrame, aArgs );
+        dispatchURL( ".uno:OpenRemote", OUString(), xFrame, aArgs );
     }
     else if( pButton == mpRecentButton )
     {
@@ -628,7 +618,7 @@ IMPL_LINK_TYPED( BackingWindow, MenuSelectHdl, MenuButton*, pButton, void )
         pArg[0].Name = "Referer";
         pArg[0].Value <<= OUString("private:user");
 
-        dispatchURL( TEMPLATE_URL, OUString(), xFrame, aArgs );
+        dispatchURL( ".uno:NewDoc", OUString(), xFrame, aArgs );
 
     }
 
@@ -651,7 +641,7 @@ IMPL_LINK_TYPED(BackingWindow, OpenTemplateHdl, ThumbnailViewItem*, pItem, void)
     {
         uno::Sequence< PropertyValue > aArgs(4);
         aArgs[0].Name = "AsTemplate";
-        aArgs[0].Value <<= sal_True;
+        aArgs[0].Value <<= true;
         aArgs[1].Name = "MacroExecutionMode";
         aArgs[1].Value <<= MacroExecMode::USE_CONFIG;
         aArgs[2].Name = "UpdateDocMode";

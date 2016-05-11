@@ -33,6 +33,7 @@
 
 #include "rtfexp.hxx"
 #include "filter.hxx"
+#include "cellvalue.hxx"
 #include "document.hxx"
 #include "patattr.hxx"
 #include "attrib.hxx"
@@ -41,11 +42,11 @@
 #include "stlpool.hxx"
 #include "ftools.hxx"
 
-FltError ScFormatFilterPluginImpl::ScExportRTF( SvStream& rStrm, ScDocument* pDoc,
+void ScFormatFilterPluginImpl::ScExportRTF( SvStream& rStrm, ScDocument* pDoc,
         const ScRange& rRange, const rtl_TextEncoding /*eNach*/ )
 {
     ScRTFExport aEx( rStrm, pDoc, rRange );
-    return aEx.Write();
+    aEx.Write();
 }
 
 ScRTFExport::ScRTFExport( SvStream& rStrmP, ScDocument* pDocP, const ScRange& rRangeP )
@@ -60,7 +61,7 @@ ScRTFExport::~ScRTFExport()
     delete [] pCellX;
 }
 
-sal_uLong ScRTFExport::Write()
+void ScRTFExport::Write()
 {
     rStrm.WriteChar( '{' ).WriteCharPtr( OOO_STRING_SVTOOLS_RTF_RTF );
     rStrm.WriteCharPtr( OOO_STRING_SVTOOLS_RTF_ANSI ).WriteCharPtr( SAL_NEWLINE_STRING );
@@ -74,7 +75,6 @@ sal_uLong ScRTFExport::Write()
     }
 
     rStrm.WriteChar( '}' ).WriteCharPtr( SAL_NEWLINE_STRING );
-    return rStrm.GetError();
 }
 
 void ScRTFExport::WriteTab( SCTAB nTab )
@@ -166,7 +166,8 @@ void ScRTFExport::WriteCell( SCTAB nTab, SCROW nRow, SCCOL nCol )
     bool bValueData = false;
     OUString aContent;
     ScAddress aPos(nCol, nRow, nTab);
-    switch (pDoc->GetCellType(aPos))
+    ScRefCellValue aCell(*pDoc, aPos);
+    switch (aCell.meType)
     {
         case CELLTYPE_NONE:
             bValueData = false;
@@ -174,13 +175,10 @@ void ScRTFExport::WriteCell( SCTAB nTab, SCROW nRow, SCCOL nCol )
         case CELLTYPE_EDIT:
         {
             bValueData = false;
-            const EditTextObject* pObj = pDoc->GetEditText(aPos);
-            if (pObj)
-            {
-                EditEngine& rEngine = GetEditEngine();
-                rEngine.SetText(*pObj);
-                aContent = rEngine.GetText(); // LineFeed in between paragraphs!
-            }
+            const EditTextObject* pObj = aCell.mpEditText;
+            EditEngine& rEngine = GetEditEngine();
+            rEngine.SetText(*pObj);
+            aContent = rEngine.GetText(); // LineFeed in between paragraphs!
         }
         break;
         default:
@@ -225,7 +223,7 @@ void ScRTFExport::WriteCell( SCTAB nTab, SCROW nRow, SCCOL nCol )
         bResetAttr = true;
         rStrm.WriteCharPtr( OOO_STRING_SVTOOLS_RTF_I );
     }
-    if ( rUnderlineItem.GetLineStyle() != UNDERLINE_NONE )
+    if ( rUnderlineItem.GetLineStyle() != LINESTYLE_NONE )
     {   // underline
         bResetAttr = true;
         rStrm.WriteCharPtr( OOO_STRING_SVTOOLS_RTF_UL );

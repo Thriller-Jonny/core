@@ -34,8 +34,6 @@
 #include <com/sun/star/sheet/DataPilotFieldFilter.hpp>
 
 using namespace ::com::sun::star;
-using ::com::sun::star::uno::Sequence;
-using ::com::sun::star::uno::Any;
 using ::std::vector;
 
 ScDPTableData::CalcInfo::CalcInfo() :
@@ -169,7 +167,7 @@ void ScDPTableData::FillRowDataFromCacheTable(sal_Int32 nRow, const ScDPFiltered
         if ( nDim < nCacheColumnCount )
         {
             ScDPValue& rVal = rData.aValues.back();
-            rCacheTable.getValue( rVal, static_cast<SCCOL>(nDim), static_cast<SCROW>(nRow), false);
+            rCacheTable.getValue( rVal, static_cast<SCCOL>(nDim), static_cast<SCROW>(nRow));
         }
     }
 }

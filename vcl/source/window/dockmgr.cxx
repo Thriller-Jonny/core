@@ -488,7 +488,6 @@ public:
     virtual void        MouseButtonUp( const MouseEvent& rMEvt ) override;
     virtual void        Tracking( const TrackingEvent& rTEvt ) override;
     virtual void        Resize() override;
-    virtual vcl::Window*     GetPreferredKeyInputWindow() override;
 
     Rectangle           GetDragRect() const;
     Point               GetToolboxPosition() const;
@@ -532,16 +531,8 @@ css::uno::Reference< css::accessibility::XAccessible > ImplPopupFloatWin::Create
     // this is to avoid appearance of this window as standalone window in the accessibility hierarchy
     // as this window is only used as a helper for subtoolbars that are not teared-off, the parent toolbar
     // has to provide accessibility support (as implemented in the toolkit)
-    // so the contained toolbar should appear as child of the correponsing toolbar item of the parent toolbar
+    // so the contained toolbar should appear as child of the corresponding toolbar item of the parent toolbar
     return css::uno::Reference< css::accessibility::XAccessible >();
-}
-
-vcl::Window* ImplPopupFloatWin::GetPreferredKeyInputWindow()
-{
-    if( mpWindowImpl->mpClientWindow )
-        return mpWindowImpl->mpClientWindow;
-    else
-        return FloatingWindow::GetPreferredKeyInputWindow();
 }
 
 void ImplPopupFloatWin::ImplSetBorder()
@@ -1152,7 +1143,7 @@ void ImplDockingWindowWrapper::StartPopupMode( ToolBox *pParentToolBox, FloatWin
     {
         // send HOME key to subtoolbar in order to select first item
         KeyEvent aEvent( 0, vcl::KeyCode( KEY_HOME ) );
-        mpFloatWin->GetPreferredKeyInputWindow()->KeyInput( aEvent );
+        mpFloatWin->KeyInput(aEvent);
     }
 }
 

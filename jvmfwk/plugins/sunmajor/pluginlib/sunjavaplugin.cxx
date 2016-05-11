@@ -18,7 +18,7 @@
  */
 
 
-#ifdef WNT
+#ifdef _WIN32
 # include <stdio.h>
 # include <sys/stat.h>
 # include <windows.h>
@@ -146,18 +146,10 @@ OString getPluginJarPath(
 
 JavaInfo* createJavaInfo(const rtl::Reference<VendorBase> & info)
 {
-    JavaInfo* pInfo = static_cast<JavaInfo*>(rtl_allocateMemory(sizeof(JavaInfo)));
-    if (pInfo == nullptr)
-        return nullptr;
-    OUString sVendor = info->getVendor();
-    pInfo->sVendor = sVendor.pData;
-    rtl_uString_acquire(sVendor.pData);
-    OUString sHome = info->getHome();
-    pInfo->sLocation = sHome.pData;
-    rtl_uString_acquire(pInfo->sLocation);
-    OUString sVersion = info->getVersion();
-    pInfo->sVersion = sVersion.pData;
-    rtl_uString_acquire(pInfo->sVersion);
+    JavaInfo* pInfo = new JavaInfo;
+    pInfo->sVendor = info->getVendor();
+    pInfo->sLocation = info->getHome();
+    pInfo->sVersion = info->getVersion();
     pInfo->nFeatures = info->supportsAccessibility() ? 1 : 0;
     pInfo->nRequirements = info->needsRestart() ? JFW_REQUIRE_NEEDRESTART : 0;
     OUStringBuffer buf(1024);
@@ -170,10 +162,9 @@ JavaInfo* createJavaInfo(const rtl::Reference<VendorBase> & info)
     }
 
     OUString sVendorData = buf.makeStringAndClear();
-    rtl::ByteSequence byteSeq( reinterpret_cast<sal_Int8*>(sVendorData.pData->buffer),
-                               sVendorData.getLength() * sizeof(sal_Unicode));
-    pInfo->arVendorData = byteSeq.get();
-    rtl_byte_sequence_acquire(pInfo->arVendorData);
+    pInfo->arVendorData = rtl::ByteSequence(
+        reinterpret_cast<sal_Int8*>(sVendorData.pData->buffer),
+        sVendorData.getLength() * sizeof(sal_Unicode));
 
     return pInfo;
 }
@@ -497,9 +488,7 @@ javaPluginError jfw_plugin_getJavaInfosFromPath(
 }
 
 
-
-
-#if defined(WNT)
+#if defined(_WIN32)
 
 // Load msvcr71.dll using an explicit full path from where it is
 // present as bundled with the JRE. In case it is not found where we
@@ -679,7 +668,7 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
 #if defined(LINUX)
     if (!moduleRt.load(sRuntimeLib, SAL_LOADMODULE_GLOBAL | SAL_LOADMODULE_NOW))
 #else
-#if defined(WNT)
+#if defined(_WIN32)
     do_msvcr_magic(sRuntimeLib.pData);
 #endif
     if (!moduleRt.load(sRuntimeLib))
@@ -696,7 +685,7 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
 #if defined UNX && !defined MACOSX
     //Setting the JAVA_HOME is needed for awt
     OUString sPathLocation;
-    osl_getSystemPathFromFileURL(pInfo->sLocation, & sPathLocation.pData);
+    osl::FileBase::getSystemPathFromFileURL(pInfo->sLocation, sPathLocation);
     osl_setEnvironment(OUString("JAVA_HOME").pData, sPathLocation.pData);
 #endif
 
@@ -889,11 +878,11 @@ javaPluginError jfw_plugin_existJRE(const JavaInfo *pInfo, sal_Bool *exist)
     ::osl::File::RC rc_item = ::osl::DirectoryItem::get(sLocation, item);
     if (::osl::File::E_None == rc_item)
     {
-        *exist = sal_True;
+        *exist = true;
     }
     else if (::osl::File::E_NOENT == rc_item)
     {
-        *exist = sal_False;
+        *exist = false;
     }
     else
     {
@@ -912,13 +901,13 @@ javaPluginError jfw_plugin_existJRE(const JavaInfo *pInfo, sal_Bool *exist)
         ::osl::File::RC rc_itemRt = ::osl::DirectoryItem::get(sRuntimeLib, itemRt);
         if (::osl::File::E_None == rc_itemRt)
         {
-            *exist = sal_True;
+            *exist = true;
             JFW_TRACE2("Java runtime library exist: " << sRuntimeLib);
 
         }
         else if (::osl::File::E_NOENT == rc_itemRt)
         {
-            *exist = sal_False;
+            *exist = false;
             JFW_TRACE2("Java runtime library does not exist: " << sRuntimeLib);
         }
         else

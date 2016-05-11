@@ -9,7 +9,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include <com/sun/star/uno/Reference.h>
 #include <cppuhelper/supportsservice.hxx>
 
 #include <libe-book/libe-book.h>
@@ -17,10 +16,7 @@
 #include "EBookImportFilter.hxx"
 
 using com::sun::star::uno::Sequence;
-using com::sun::star::uno::Reference;
-using com::sun::star::uno::Any;
 using com::sun::star::uno::XInterface;
-using com::sun::star::uno::Exception;
 using com::sun::star::uno::RuntimeException;
 using com::sun::star::uno::XComponentContext;
 
@@ -92,14 +88,21 @@ bool EBookImportFilter::doDetectFormat(librevenge::RVNGInputStream &rInput, OUSt
     return !rTypeName.isEmpty();
 }
 
-OUString EBookImportFilter_getImplementationName()
-throw (RuntimeException)
+// XServiceInfo
+OUString SAL_CALL EBookImportFilter::getImplementationName()
+throw (RuntimeException, std::exception)
 {
     return OUString("org.libreoffice.comp.Writer.EBookImportFilter");
 }
 
-Sequence< OUString > SAL_CALL EBookImportFilter_getSupportedServiceNames()
-throw (RuntimeException)
+sal_Bool SAL_CALL EBookImportFilter::supportsService(const OUString &rServiceName)
+throw (RuntimeException, std::exception)
+{
+    return cppu::supportsService(this, rServiceName);
+}
+
+Sequence< OUString > SAL_CALL EBookImportFilter::getSupportedServiceNames()
+throw (RuntimeException, std::exception)
 {
     Sequence < OUString > aRet(2);
     OUString *pArray = aRet.getArray();
@@ -107,30 +110,14 @@ throw (RuntimeException)
     pArray[1] =  "com.sun.star.document.ExtendedTypeDetection";
     return aRet;
 }
-#undef SERVICE_NAME2
-#undef SERVICE_NAME1
 
-Reference< XInterface > SAL_CALL EBookImportFilter_createInstance(const Reference< XComponentContext > &rContext)
-throw(Exception)
+extern "C"
+SAL_DLLPUBLIC_EXPORT css::uno::XInterface *SAL_CALL
+org_libreoffice_comp_Writer_EBookImportFilter_get_implementation(
+    css::uno::XComponentContext *const context,
+    const css::uno::Sequence<css::uno::Any> &)
 {
-    return static_cast<cppu::OWeakObject *>(new EBookImportFilter(rContext));
-}
-
-// XServiceInfo
-OUString SAL_CALL EBookImportFilter::getImplementationName()
-throw (RuntimeException, std::exception)
-{
-    return EBookImportFilter_getImplementationName();
-}
-sal_Bool SAL_CALL EBookImportFilter::supportsService(const OUString &rServiceName)
-throw (RuntimeException, std::exception)
-{
-    return cppu::supportsService(this, rServiceName);
-}
-Sequence< OUString > SAL_CALL EBookImportFilter::getSupportedServiceNames()
-throw (RuntimeException, std::exception)
-{
-    return EBookImportFilter_getSupportedServiceNames();
+    return cppu::acquire(new EBookImportFilter(context));
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

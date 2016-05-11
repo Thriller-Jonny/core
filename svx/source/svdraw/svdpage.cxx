@@ -68,7 +68,6 @@ public:
 };
 
 
-
 static const sal_Int32 InitialObjectContainerCapacity (64);
 
 
@@ -679,8 +678,6 @@ size_t SdrObjList::GetObjCount() const
 }
 
 
-
-
 SdrObject* SdrObjList::GetObj(size_t nNum) const
 {
     if (nNum >= maList.size())
@@ -691,8 +688,6 @@ SdrObject* SdrObjList::GetObj(size_t nNum) const
     else
         return maList[nNum];
 }
-
-
 
 
 bool SdrObjList::IsReadOnly() const
@@ -760,14 +755,10 @@ void SdrObjList::UnGroupObj( size_t nObjNum )
 }
 
 
-
-
 bool SdrObjList::HasObjectNavigationOrder() const
 {
     return mxNavigationOrder.get() != nullptr;
 }
-
-
 
 
 void SdrObjList::SetObjectNavigationPosition (
@@ -824,8 +815,6 @@ void SdrObjList::SetObjectNavigationPosition (
 }
 
 
-
-
 SdrObject* SdrObjList::GetObjectForNavigationPosition (const sal_uInt32 nNavigationPosition) const
 {
     if (HasObjectNavigationOrder())
@@ -854,15 +843,11 @@ SdrObject* SdrObjList::GetObjectForNavigationPosition (const sal_uInt32 nNavigat
 }
 
 
-
-
 void SdrObjList::ClearObjectNavigationOrder()
 {
     mxNavigationOrder.reset();
     mbIsNavigationOrderDirty = true;
 }
-
-
 
 
 bool SdrObjList::RecalcNavigationPositions()
@@ -883,8 +868,6 @@ bool SdrObjList::RecalcNavigationPositions()
 
     return mxNavigationOrder.get() != nullptr;
 }
-
-
 
 
 void SdrObjList::SetNavigationOrder (const uno::Reference<container::XIndexAccess>& rxOrder)
@@ -914,8 +897,6 @@ void SdrObjList::SetNavigationOrder (const uno::Reference<container::XIndexAcces
 }
 
 
-
-
 void SdrObjList::InsertObjectIntoContainer (
     SdrObject& rObject,
     const sal_uInt32 nInsertPosition)
@@ -940,8 +921,6 @@ void SdrObjList::InsertObjectIntoContainer (
         maList.insert(maList.begin()+nInsertPosition, &rObject);
     bObjOrdNumsDirty=true;
 }
-
-
 
 
 void SdrObjList::ReplaceObjectInContainer (
@@ -977,8 +956,6 @@ void SdrObjList::ReplaceObjectInContainer (
     maList[nObjectPosition] = &rNewObject;
     bObjOrdNumsDirty=true;
 }
-
-
 
 
 void SdrObjList::RemoveObjectFromContainer (
@@ -1024,9 +1001,6 @@ void SdrObjList::dumpAsXml(xmlTextWriterPtr pWriter) const
 }
 
 
-
-
-
 void SdrPageGridFrameList::Clear()
 {
     sal_uInt16 nCount=GetCount();
@@ -1061,18 +1035,22 @@ sdr::contact::ViewContact* SdrPage::CreateObjectSpecificViewContact()
     return new sdr::contact::ViewContactOfSdrPage(*this);
 }
 
-sdr::contact::ViewContact& SdrPage::GetViewContact() const
+const sdr::contact::ViewContact& SdrPage::GetViewContact() const
 {
-    if(!mpViewContact)
-    {
-        const_cast< SdrPage* >(this)->mpViewContact =
-            const_cast< SdrPage* >(this)->CreateObjectSpecificViewContact();
-    }
+    if (!mpViewContact)
+        const_cast<SdrPage*>(this)->mpViewContact.reset(
+            const_cast<SdrPage*>(this)->CreateObjectSpecificViewContact());
 
     return *mpViewContact;
 }
 
+sdr::contact::ViewContact& SdrPage::GetViewContact()
+{
+    if (!mpViewContact)
+        mpViewContact.reset(CreateObjectSpecificViewContact());
 
+    return *mpViewContact;
+}
 
 void SdrPageProperties::ImpRemoveStyleSheet()
 {
@@ -1192,8 +1170,6 @@ void SdrPageProperties::SetStyleSheet(SfxStyleSheet* pStyleSheet)
 }
 
 
-
-
 SdrPage::SdrPage(SdrModel& rNewModel, bool bMasterPage)
 :   SdrObjList(&rNewModel, this),
     mpViewContact(nullptr),
@@ -1203,7 +1179,7 @@ SdrPage::SdrPage(SdrModel& rNewModel, bool bMasterPage)
     nBordUpp(0L),
     nBordRgt(0L),
     nBordLwr(0L),
-    pLayerAdmin(new SdrLayerAdmin(&rNewModel.GetLayerAdmin())),
+    mpLayerAdmin(new SdrLayerAdmin(&rNewModel.GetLayerAdmin())),
     mpSdrPageProperties(nullptr),
     mpMasterPageDescriptor(nullptr),
     nPageNum(0L),
@@ -1215,7 +1191,7 @@ SdrPage::SdrPage(SdrModel& rNewModel, bool bMasterPage)
     aPrefVisiLayers.SetAll();
     eListKind = (bMasterPage) ? SDROBJLIST_MASTERPAGE : SDROBJLIST_DRAWPAGE;
 
-    mpSdrPageProperties = new SdrPageProperties(*this);
+    mpSdrPageProperties.reset(new SdrPageProperties(*this));
 }
 
 SdrPage::SdrPage(const SdrPage& rSrcPage)
@@ -1228,7 +1204,7 @@ SdrPage::SdrPage(const SdrPage& rSrcPage)
     nBordUpp(rSrcPage.nBordUpp),
     nBordRgt(rSrcPage.nBordRgt),
     nBordLwr(rSrcPage.nBordLwr),
-    pLayerAdmin(new SdrLayerAdmin(rSrcPage.pModel->GetLayerAdmin())),
+    mpLayerAdmin(new SdrLayerAdmin(rSrcPage.pModel->GetLayerAdmin())),
     mpSdrPageProperties(nullptr),
     mpMasterPageDescriptor(nullptr),
     nPageNum(rSrcPage.nPageNum),
@@ -1269,21 +1245,12 @@ SdrPage::~SdrPage()
     // when they get called from PageInDestruction().
     maPageUsers.clear();
 
-    delete pLayerAdmin;
+    mpLayerAdmin.reset();
 
     TRG_ClearMasterPage();
 
-    if(mpViewContact)
-    {
-        delete mpViewContact;
-        mpViewContact = nullptr;
-    }
-
-    {
-        delete mpSdrPageProperties;
-        mpSdrPageProperties = nullptr;
-    }
-
+    mpViewContact.reset();
+    mpSdrPageProperties.reset();
 }
 
 void SdrPage::lateInit(const SdrPage& rSrcPage, SdrModel* const pNewModel)
@@ -1325,7 +1292,7 @@ void SdrPage::lateInit(const SdrPage& rSrcPage, SdrModel* const pNewModel)
     mbObjectsNotPersistent = rSrcPage.mbObjectsNotPersistent;
 
     {
-        mpSdrPageProperties = new SdrPageProperties(*this);
+        mpSdrPageProperties.reset(new SdrPageProperties(*this));
 
         if(!IsMasterPage())
         {
@@ -1506,11 +1473,11 @@ sal_Int32 SdrPage::GetLwrBorder() const
 void SdrPage::impl_setModelForLayerAdmin(SdrModel* const pNewModel)
 {
     if (pNewModel!=nullptr) {
-        pLayerAdmin->SetParent(&pNewModel->GetLayerAdmin());
+        mpLayerAdmin->SetParent(&pNewModel->GetLayerAdmin());
     } else {
-        pLayerAdmin->SetParent(nullptr);
+        mpLayerAdmin->SetParent(nullptr);
     }
-    pLayerAdmin->SetModel(pNewModel);
+    mpLayerAdmin->SetModel(pNewModel);
 }
 
 void SdrPage::SetModel(SdrModel* pNewModel)
@@ -1524,7 +1491,7 @@ void SdrPage::SetModel(SdrModel* pNewModel)
 
         // create new SdrPageProperties with new model (due to SfxItemSet there)
         // and copy ItemSet and StyleSheet
-        SdrPageProperties *pNew = new SdrPageProperties(*this);
+        std::unique_ptr<SdrPageProperties> pNew(new SdrPageProperties(*this));
 
         if(!IsMasterPage())
         {
@@ -1533,8 +1500,7 @@ void SdrPage::SetModel(SdrModel* pNewModel)
 
         pNew->SetStyleSheet(getSdrPageProperties().GetStyleSheet());
 
-        delete mpSdrPageProperties;
-        mpSdrPageProperties = pNew;
+        mpSdrPageProperties = std::move(pNew);
     }
 
     // update listeners at possible API wrapper object
@@ -1548,7 +1514,6 @@ void SdrPage::SetModel(SdrModel* pNewModel)
         }
     }
 }
-
 
 
 // #i68775# React on PageNum changes (from Model in most cases)
@@ -1661,6 +1626,16 @@ const SdrPageGridFrameList* SdrPage::GetGridFrameList(const SdrPageView* /*pPV*/
     return nullptr;
 }
 
+const SdrLayerAdmin& SdrPage::GetLayerAdmin() const
+{
+    return *mpLayerAdmin;
+}
+
+SdrLayerAdmin& SdrPage::GetLayerAdmin()
+{
+    return *mpLayerAdmin;
+}
+
 OUString SdrPage::GetLayoutName() const
 {
     return OUString();
@@ -1770,7 +1745,7 @@ bool SdrPage::checkVisibility(
 }
 
 // DrawContact support: Methods for handling Page changes
-void SdrPage::ActionChanged() const
+void SdrPage::ActionChanged()
 {
     // Do necessary ViewContact actions
     GetViewContact().ActionChanged();
@@ -1782,7 +1757,15 @@ void SdrPage::ActionChanged() const
     }
 }
 
-// sdr::Comment interface
+SdrPageProperties& SdrPage::getSdrPageProperties()
+{
+    return *mpSdrPageProperties;
+}
+
+const SdrPageProperties& SdrPage::getSdrPageProperties() const
+{
+    return *mpSdrPageProperties;
+}
 
 const SdrPageProperties* SdrPage::getCorrectSdrPageProperties() const
 {

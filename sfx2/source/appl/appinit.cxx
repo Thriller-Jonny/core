@@ -57,7 +57,6 @@
 #include <sfx2/dispatch.hxx>
 #include <sfx2/docfac.hxx>
 #include <sfx2/evntconf.hxx>
-#include <sfx2/mnumgr.hxx>
 #include <sfx2/msgpool.hxx>
 #include <sfx2/progress.hxx>
 #include <sfx2/sfxhelp.hxx>
@@ -151,7 +150,6 @@ Sequence< OUString > SAL_CALL SfxTerminateListener_Impl::getSupportedServiceName
 }
 
 
-
 typedef bool ( *PFunc_getSpecialCharsForEdit)( vcl::Window* i_pParent, const vcl::Font& i_rFont, OUString& o_rOutString );
 
 
@@ -199,8 +197,7 @@ OUString GetSpecialCharsForEdit(vcl::Window* pParent, const vcl::Font& rFont)
 }
 
 
-
-bool SfxApplication::Initialize_Impl()
+void SfxApplication::Initialize_Impl()
 {
 #ifdef TLX_VALIDATE
     StgIo::SetErrorLink( LINK( this, SfxStorageErrHdl, Error ) );
@@ -252,7 +249,6 @@ bool SfxApplication::Initialize_Impl()
     pAppData_Impl->pSlotPool = new SfxSlotPool;
     pAppData_Impl->pTbxCtrlFac = new SfxTbxCtrlFactArr_Impl;
     pAppData_Impl->pStbCtrlFac = new SfxStbCtrlFactArr_Impl;
-    pAppData_Impl->pMenuCtrlFac = new SfxMenuCtrlFactArr_Impl;
     pAppData_Impl->pViewFrames = new SfxViewFrameArr_Impl;
     pAppData_Impl->pViewShells = new SfxViewShellArr_Impl;
     pAppData_Impl->pObjShells = new SfxObjectShellArr_Impl;
@@ -270,7 +266,7 @@ bool SfxApplication::Initialize_Impl()
     SetPool( pAppData_Impl->pPool );
 
     if ( pAppData_Impl->bDowning )
-        return false;
+        return;
 
     // App-Dispatcher aufbauen
     pAppData_Impl->pAppDispat->Push(*this);
@@ -282,8 +278,6 @@ bool SfxApplication::Initialize_Impl()
         // Set special characters callback on vcl edit control
         Edit::SetGetSpecialCharsFunction(&GetSpecialCharsForEdit);
     }
-
-    return true;
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

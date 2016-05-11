@@ -29,10 +29,6 @@
 
 #define NAVSTATE_NONE           0x00000000
 
-#define NAVBTN_PEN_DISABLED     0x00000020
-#define NAVBTN_PEN_CHECKED      0x00000040
-#define NAVBTN_PEN_UNCHECKED    0x00000080
-
 #define NAVTLB_UPDATE           0x00000100
 
 #define NAVBTN_FIRST_ENABLED    0x00001000
@@ -181,8 +177,7 @@ private:
 class SdPageNameControllerItem : public SfxControllerItem
 {
 public:
-    SdPageNameControllerItem( sal_uInt16, SdNavigatorWin*, SfxBindings*,
-        const SdNavigatorWin::UpdateRequestFunctor& rUpdateRequest);
+    SdPageNameControllerItem( sal_uInt16, SdNavigatorWin*, SfxBindings*);
 
 protected:
     virtual void StateChanged( sal_uInt16 nSId, SfxItemState eState,
@@ -190,7 +185,6 @@ protected:
 
 private:
     VclPtr<SdNavigatorWin> pNavigatorWin;
-    const SdNavigatorWin::UpdateRequestFunctor maUpdateRequest;
 };
 
 #endif

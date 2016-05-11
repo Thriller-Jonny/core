@@ -24,8 +24,7 @@
 #include <sfx2/viewsh.hxx>
 #include <sfx2/viewfrm.hxx>
 #include <osl/mutex.hxx>
-#include <cppuhelper/interfacecontainer.hxx>
-#include <com/sun/star/uno/Sequence.hxx>
+#include <comphelper/interfacecontainer2.hxx>
 #include <com/sun/star/beans/PropertyValue.hpp>
 #include <svtools/acceleratorexecute.hxx>
 #include <rtl/ref.hxx>
@@ -42,15 +41,13 @@ class SfxInPlaceClientList;
 struct SfxViewShell_Impl
 {
     ::osl::Mutex                aMutex;
-    ::cppu::OInterfaceContainerHelper aInterceptorContainer;
+    ::comphelper::OInterfaceContainerHelper2 aInterceptorContainer;
     bool                        m_bControllerSet;
     SfxShellArr_Impl            aArr;
-    SvBorder                    aBorder;
     Size                        aMargin;
     sal_uInt16                  m_nPrinterLocks;
     bool                        m_bCanPrint;
     bool                        m_bHasPrintOptions;
-    bool                        m_bPlugInsActive;
     bool                        m_bIsShowView;
     bool                        m_bGotOwnership;
     bool                        m_bGotFrameOwnership;

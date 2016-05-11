@@ -72,12 +72,10 @@ namespace dbp
     protected:
         static void fillListBox(
             ListBox& _rList,
-            const css::uno::Sequence< OUString >& _rItems,
-            bool _bClear = true);
+            const css::uno::Sequence< OUString >& _rItems);
         static void fillListBox(
             ComboBox& _rList,
-            const css::uno::Sequence< OUString >& _rItems,
-            bool _bClear = true);
+            const css::uno::Sequence< OUString >& _rItems);
 
     protected:
         void enableFormDatasourceDisplay();
@@ -109,7 +107,7 @@ namespace dbp
         bool    travelNext() { return OControlWizard_Base::travelNext(); }
 
     public:
-        css::uno::Reference< css::uno::XComponentContext >
+        const css::uno::Reference< css::uno::XComponentContext >&
             getComponentContext() const { return m_xContext; }
 
         const OControlWizardContext&    getContext() const { return m_aContext; }

@@ -208,7 +208,7 @@ FrameSelectorImpl::FrameSelectorImpl( FrameSelector& rFrameSel ) :
     Resource( SVX_RES( RID_SVXSTR_BORDER_CONTROL ) ),
     mrFrameSel( rFrameSel ),
     mpVirDev( VclPtr<VirtualDevice>::Create() ),
-    maILArrows( 16 ),
+    maILArrows(),
     maLeft( FRAMEBORDER_LEFT ),
     maRight( FRAMEBORDER_RIGHT ),
     maTop( FRAMEBORDER_TOP ),
@@ -936,9 +936,9 @@ bool FrameSelector::IsBorderSelected( FrameBorderType eBorder ) const
     return mxImpl->GetBorder( eBorder ).IsSelected();
 }
 
-void FrameSelector::SelectBorder( FrameBorderType eBorder, bool bSelect /*, bool bFocus */ )
+void FrameSelector::SelectBorder( FrameBorderType eBorder )
 {
-    mxImpl->SelectBorder( mxImpl->GetBorderAccess( eBorder ), bSelect );
+    mxImpl->SelectBorder( mxImpl->GetBorderAccess( eBorder ), true/*bSelect*/ );
     // MT: bFireFox as API parameter is ugly...
     // if (bFocus)
     {
@@ -965,10 +965,10 @@ void FrameSelector::SelectAllBorders( bool bSelect )
         mxImpl->SelectBorder( **aIt, bSelect );
 }
 
-void FrameSelector::SelectAllVisibleBorders( bool bSelect )
+void FrameSelector::SelectAllVisibleBorders()
 {
     for( VisFrameBorderIter aIt( mxImpl->maEnabBorders ); aIt.Is(); ++aIt )
-        mxImpl->SelectBorder( **aIt, bSelect );
+        mxImpl->SelectBorder( **aIt, true/*bSelect*/ );
 }
 
 void FrameSelector::SetStyleToSelection( long nWidth, SvxBorderStyle nStyle )
@@ -1247,7 +1247,6 @@ Size FrameSelector::GetOptimalSize() const
 }
 
 
-
 template< typename Cont, typename Iter, typename Pred >
 FrameBorderIterBase< Cont, Iter, Pred >::FrameBorderIterBase( container_type& rCont ) :
     maIt( rCont.begin() ),
@@ -1262,7 +1261,6 @@ FrameBorderIterBase< Cont, Iter, Pred >& FrameBorderIterBase< Cont, Iter, Pred >
     do { ++maIt; } while( Is() && !maPred( *maIt ) );
     return *this;
 }
-
 
 
 }

@@ -92,20 +92,20 @@ OMySQLTable::OMySQLTable(   sdbcx::OCollection* _pTables,
 
 OMySQLTable::OMySQLTable(   sdbcx::OCollection* _pTables,
                            const Reference< XConnection >& _xConnection,
-                    const OUString& _Name,
-                    const OUString& _Type,
-                    const OUString& _Description ,
-                    const OUString& _SchemaName,
-                    const OUString& _CatalogName,
+                    const OUString& Name,
+                    const OUString& Type,
+                    const OUString& Description ,
+                    const OUString& SchemaName,
+                    const OUString& CatalogName,
                     sal_Int32 _nPrivileges
                 ) : OTableHelper(   _pTables,
                                     _xConnection,
                                     true,
-                                    _Name,
-                                    _Type,
-                                    _Description,
-                                    _SchemaName,
-                                    _CatalogName)
+                                    Name,
+                                    Type,
+                                    Description,
+                                    SchemaName,
+                                    CatalogName)
  , m_nPrivileges(_nPrivileges)
 {
     construct();
@@ -130,7 +130,7 @@ void OMySQLTable::construct()
 
 sdbcx::OCollection* OMySQLTable::createColumns(const TStringVector& _rNames)
 {
-    OMySQLColumns* pColumns = new OMySQLColumns(*this,true,m_aMutex,_rNames);
+    OMySQLColumns* pColumns = new OMySQLColumns(*this,m_aMutex,_rNames);
     pColumns->setParent(this);
     return pColumns;
 }
@@ -336,7 +336,7 @@ OUString OMySQLTable::getAlterTableColumnPart()
     OUString sSql(  "ALTER TABLE " );
 
     OUString sComposedName(
-        ::dbtools::composeTableName( getMetaData(), m_CatalogName, m_SchemaName, m_Name, true, ::dbtools::eInTableDefinitions ) );
+        ::dbtools::composeTableName( getMetaData(), m_CatalogName, m_SchemaName, m_Name, true, ::dbtools::EComposeRule::InTableDefinitions ) );
     sSql += sComposedName;
 
     return sSql;
@@ -360,8 +360,6 @@ OUString OMySQLTable::getRenameStart() const
 {
     return OUString("RENAME TABLE ");
 }
-
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -105,13 +105,12 @@ public:
                             { DBG_ASSERT( !pInternalController, "Only one internal controller allowed!" ); pInternalController = pCtrl; }
     void                    ReleaseInternalController() { pInternalController = nullptr; }
     SfxControllerItem*      GetInternalController() const { return pInternalController; }
-    css::uno::Reference < css::frame::XDispatch >
+    const css::uno::Reference < css::frame::XDispatch >&
                             GetInternalDispatch() const
                             { return xMyDispatch; }
     void                    SetInternalDispatch( const css::uno::Reference < css::frame::XDispatch >& rDisp )
                             { xMyDispatch = rDisp; }
 };
-
 
 
 // clears Cached-Item
@@ -120,7 +119,6 @@ inline void SfxStateCache::ClearCache()
 {
     bItemDirty = true;
 }
-
 
 
 // registeres a item representing this function

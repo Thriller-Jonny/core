@@ -43,7 +43,6 @@ public:
     SwBlockName( const OUString& rShort, const OUString& rLong, const OUString& rPackageName );
 
     /// For sorting in the array
-    bool operator==( const SwBlockName& r ) const { return aShort == r.aShort; }
     bool operator< ( const SwBlockName& r ) const { return aShort <  r.aShort; }
 };
 
@@ -70,13 +69,15 @@ protected:
     SwImpBlocks( const OUString&, bool = false );
     virtual ~SwImpBlocks();
 
-    static short GetFileType( const OUString& );
-    virtual short GetFileType() const = 0;
-#define SWBLK_NO_FILE   0               // Not present
-#define SWBLK_NONE      1               // No TB file
-#define SWBLK_SW2       2               // SW2 file
-#define SWBLK_SW3       3               // SW3 file
-#define SWBLK_XML       4               // XML Block List
+    enum class FileType {
+        NoFile,  // Not present
+        None,    // No TB file
+        SW2,     // SW2 file
+        SW3,     // SW3 file
+        XML      // XML Block List
+    };
+    static FileType GetFileType( const OUString& );
+    virtual FileType GetFileType() const = 0;
 
     virtual void   ClearDoc();          // Delete Doc content
     SwPaM* MakePaM();                   // Span PaM over Doc
@@ -93,13 +94,13 @@ public:
     OUString GetLongName( sal_uInt16 ) const;         /// Return longname for index
     OUString GetPackageName( sal_uInt16 ) const;      /// Return packagename for index
 
-    OUString GetFileName() const {return aFile;}      /// Return physical file name
+    const OUString& GetFileName() const {return aFile;}      /// Return physical file name
     void SetName( const OUString& rName )             /// Logic name
         { aName = rName; bInfoChanged = true; }
-    OUString GetName()
+    const OUString& GetName()
         { return aName; }
 
-    OUString            GetBaseURL() const { return sBaseURL;}
+    const OUString&     GetBaseURL() const { return sBaseURL;}
     void                SetBaseURL( const OUString& rURL ) { sBaseURL = rURL; }
 
     virtual sal_uLong Delete( sal_uInt16 ) = 0;
@@ -116,11 +117,9 @@ public:
 
     virtual bool IsOnlyTextBlock( const OUString& rShort ) const;
 
-    virtual sal_uLong GetMacroTable( sal_uInt16 nIdx, SvxMacroTableDtor& rMacroTable,
-                                 bool bFileAlreadyOpen = false );
+    virtual sal_uLong GetMacroTable( sal_uInt16 nIdx, SvxMacroTableDtor& rMacroTable );
     virtual sal_uLong SetMacroTable( sal_uInt16 nIdx,
-                                 const SvxMacroTableDtor& rMacroTable,
-                                 bool bFileAlreadyOpen = false );
+                                 const SvxMacroTableDtor& rMacroTable );
     virtual bool PutMuchEntries( bool bOn );
 };
 

@@ -33,6 +33,7 @@
 #include <svl/eitem.hxx>
 #include <svl/stritem.hxx>
 #include <toolkit/helper/vclunohelper.hxx>
+#include <tools/globname.hxx>
 #include <com/sun/star/awt/PosSize.hpp>
 #include <comphelper/processfactory.hxx>
 #include <vcl/msgbox.hxx>
@@ -90,7 +91,6 @@ void SfxFrame::Construct_Impl()
 }
 
 
-
 SfxFrame::~SfxFrame()
 {
     RemoveTopFrame_Impl( this );
@@ -132,7 +132,7 @@ bool SfxFrame::DoClose()
         {
             Reference< XCloseable > xCloseable  ( pImp->xFrame, UNO_QUERY );
             if ( (!GetCurrentDocument() || !GetCurrentDocument()->Get_Impl()->bDisposing ) && xCloseable.is())
-                xCloseable->close(sal_True);
+                xCloseable->close(true);
             else if ( pImp->xFrame.is() )
             {
                 Reference < XFrame > xFrame = pImp->xFrame;
@@ -236,7 +236,6 @@ bool SfxFrame::PrepareClose_Impl( bool bUI )
 }
 
 
-
 SfxFrame* SfxFrame::GetChildFrame( sal_uInt16 nPos ) const
 {
     if ( pChildArr && pChildArr->size() > nPos )
@@ -279,7 +278,7 @@ sal_uInt16 SfxFrame::GetChildFrameCount() const
     return pChildArr ? pChildArr->size() : 0;
 }
 
-void SfxFrame::CancelTransfers( bool /*bCancelLoadEnv*/ )
+void SfxFrame::CancelTransfers()
 {
     if( !pImp->bInCancelTransfers )
     {
@@ -325,7 +324,7 @@ SfxDispatcher* SfxFrame::GetDispatcher_Impl() const
 
 bool SfxFrame::IsAutoLoadLocked_Impl() const
 {
-    // Its own Docucument is locked?
+    // Its own Document is locked?
     const SfxObjectShell* pObjSh = GetCurrentDocument();
     if ( !pObjSh || !pObjSh->IsAutoLoadLocked() )
         return false;
@@ -425,7 +424,7 @@ void SfxFrame::UpdateDescriptor( SfxObjectShell *pDoc )
     // Mark FileOpen parameter
     SfxItemSet* pItemSet = pMed->GetItemSet();
 
-    const SfxFilter* pFilter = pMed->GetOrigFilter();
+    std::shared_ptr<const SfxFilter> pFilter = pMed->GetOrigFilter();
     OUString aFilter;
     if ( pFilter )
         aFilter = pFilter->GetFilterName();
@@ -452,7 +451,6 @@ void SfxFrame::UpdateDescriptor( SfxObjectShell *pDoc )
 
     pSet->Put( SfxStringItem( SID_FILTER_NAME, aFilter ));
 }
-
 
 
 SfxFrameDescriptor* SfxFrame::GetDescriptor() const
@@ -704,7 +702,7 @@ css::uno::Reference< css::frame::XController > SfxFrame::GetController() const
         return css::uno::Reference< css::frame::XController > ();
 }
 
-css::uno::Reference< css::frame::XFrame >  SfxFrame::GetFrameInterface() const
+const css::uno::Reference< css::frame::XFrame >&  SfxFrame::GetFrameInterface() const
 {
     return pImp->xFrame;
 }
@@ -723,7 +721,7 @@ void SfxFrame::Appear()
     {
         GetCurrentViewFrame()->Show();
         GetWindow().Show();
-        pImp->xFrame->getContainerWindow()->setVisible( sal_True );
+        pImp->xFrame->getContainerWindow()->setVisible( true );
         if ( pParentFrame )
             pParentFrame->Appear();
         Reference < css::awt::XTopWindow > xTopWindow( pImp->xFrame->getContainerWindow(), UNO_QUERY );
@@ -832,7 +830,7 @@ void SfxFrame::CreateWorkWindow_Impl()
         }
         catch(Exception&)
         {
-            OSL_FAIL("SfxFrame::CreateWorkWindow_Impl: Exception caught. Please try to submit a reproducable bug!");
+            OSL_FAIL("SfxFrame::CreateWorkWindow_Impl: Exception caught. Please try to submit a reproducible bug!");
         }
     }
 
@@ -855,9 +853,9 @@ void SfxFrame::GrabFocusOnComponent_Impl()
         pFocusWindow->GrabFocus();
 }
 
-void SfxFrame::ReleasingComponent_Impl( bool bSet )
+void SfxFrame::ReleasingComponent_Impl()
 {
-    pImp->bReleasingComponent = bSet;
+    pImp->bReleasingComponent = true;
 }
 
 bool SfxFrame::IsInPlace() const

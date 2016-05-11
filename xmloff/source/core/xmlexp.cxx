@@ -159,8 +159,7 @@ public:
     virtual void    AddAttribute( enum ::xmloff::token::XMLTokenEnum i_eName,
                                   enum ::xmloff::token::XMLTokenEnum i_eValue ) override;
 
-    virtual void    StartElement( enum ::xmloff::token::XMLTokenEnum i_eName,
-                                  const bool i_bIgnoreWhitespace ) override;
+    virtual void    StartElement( enum ::xmloff::token::XMLTokenEnum i_eName ) override;
     virtual void    EndElement(   const bool i_bIgnoreWhitespace ) override;
 
     virtual void    Characters( const OUString& i_rCharacters ) override;
@@ -182,10 +181,10 @@ void SettingsExportFacade::AddAttribute( enum ::xmloff::token::XMLTokenEnum i_eN
     m_rExport.AddAttribute( XML_NAMESPACE_CONFIG, i_eName, i_eValue );
 }
 
-void SettingsExportFacade::StartElement( enum ::xmloff::token::XMLTokenEnum i_eName, const bool i_bIgnoreWhitespace )
+void SettingsExportFacade::StartElement( enum ::xmloff::token::XMLTokenEnum i_eName )
 {
     const OUString sElementName( m_rExport.GetNamespaceMap().GetQNameByKey( XML_NAMESPACE_CONFIG, GetXMLToken( i_eName ) ) );
-    m_rExport.StartElement( sElementName, i_bIgnoreWhitespace );
+    m_rExport.StartElement( sElementName, true/*i_bIgnoreWhitespace*/ );
     m_aElements.push( sElementName );
 }
 
@@ -302,7 +301,7 @@ void SvXMLExport::SetDocHandler( const uno::Reference< xml::sax::XDocumentHandle
     mxExtHandler.set( mxHandler, UNO_QUERY );
 }
 
-void SvXMLExport::_InitCtor()
+void SvXMLExport::InitCtor_()
 {
     // note: it is not necessary to add XML_NP_XML (it is declared implicitly)
     if( getExportFlags() & ~SvXMLExportFlags::OASIS )
@@ -412,7 +411,7 @@ void SvXMLExport::_InitCtor()
     }
 
     // Determine model type (#i51726#)
-    _DetermineModelType();
+    DetermineModelType_();
 
     // cl: but only if we do export to current oasis format, old openoffice format *must* always be compatible
     if( getExportFlags() & SvXMLExportFlags::OASIS )
@@ -424,7 +423,7 @@ void SvXMLExport::_InitCtor()
 }
 
 // Shapes in Writer cannot be named via context menu (#i51726#)
-void SvXMLExport::_DetermineModelType()
+void SvXMLExport::DetermineModelType_()
 {
     meModelType = SvtModuleOptions::EFactory::UNKNOWN_FACTORY;
 
@@ -450,7 +449,6 @@ SvXMLExport::SvXMLExport(
     mpEventExport( nullptr ),
     mpImageMapExport( nullptr ),
     mpXMLErrors( nullptr ),
-    mbExtended( false ),
     meClass( eClass ),
     mnExportFlags( nExportFlags ),
     mnErrorFlags( SvXMLErrorFlags::NO ),
@@ -458,7 +456,7 @@ SvXMLExport::SvXMLExport(
     mbSaveLinkedSections(true)
 {
     SAL_WARN_IF( !xContext.is(), "xmloff.core", "got no service manager" );
-    _InitCtor();
+    InitCtor_();
 }
 
 SvXMLExport::SvXMLExport(
@@ -481,7 +479,6 @@ SvXMLExport::SvXMLExport(
     mpEventExport( nullptr ),
     mpImageMapExport( nullptr ),
     mpXMLErrors( nullptr ),
-    mbExtended( false ),
     meClass( XML_TOKEN_INVALID ),
     mnExportFlags( SvXMLExportFlags::NONE ),
     mnErrorFlags( SvXMLErrorFlags::NO ),
@@ -490,7 +487,7 @@ SvXMLExport::SvXMLExport(
 {
     SAL_WARN_IF( !xContext.is(), "xmloff.core", "got no service manager" );
     mpImpl->SetSchemeOf( msOrigFileName );
-    _InitCtor();
+    InitCtor_();
 
     if (mxNumberFormatsSupplier.is())
         mpNumExport = new SvXMLNumFmtExport(*this, mxNumberFormatsSupplier);
@@ -520,7 +517,6 @@ SvXMLExport::SvXMLExport(
     mpEventExport( nullptr ),
     mpImageMapExport( nullptr ),
     mpXMLErrors( nullptr ),
-    mbExtended( false ),
     meClass( XML_TOKEN_INVALID ),
     mnExportFlags( SvXMLExportFlags::NONE ),
     mnErrorFlags( SvXMLErrorFlags::NO ),
@@ -529,7 +525,7 @@ SvXMLExport::SvXMLExport(
 {
     SAL_WARN_IF(!xContext.is(), "xmloff.core", "got no service manager" );
     mpImpl->SetSchemeOf( msOrigFileName );
-    _InitCtor();
+    InitCtor_();
 
     if (mxNumberFormatsSupplier.is())
         mpNumExport = new SvXMLNumFmtExport(*this, mxNumberFormatsSupplier);
@@ -559,11 +555,8 @@ SvXMLExport::~SvXMLExport()
                     {
                         sal_Int32 nProgressMax(mpProgressBarHelper->GetReference());
                         sal_Int32 nProgressCurrent(mpProgressBarHelper->GetValue());
-                        uno::Any aAny;
-                        aAny <<= nProgressMax;
-                        mxExportInfo->setPropertyValue(sProgressMax, aAny);
-                        aAny <<= nProgressCurrent;
-                        mxExportInfo->setPropertyValue(sProgressCurrent, aAny);
+                        mxExportInfo->setPropertyValue(sProgressMax, uno::Any(nProgressMax));
+                        mxExportInfo->setPropertyValue(sProgressCurrent, uno::Any(nProgressCurrent));
                     }
                     if (xPropertySetInfo->hasPropertyByName(sRepeat))
                         mxExportInfo->setPropertyValue(sRepeat, css::uno::makeAny(mpProgressBarHelper->GetRepeat()));
@@ -575,9 +568,7 @@ SvXMLExport::~SvXMLExport()
                     {
                         uno::Sequence<sal_Int32> aWasUsed;
                         mpNumExport->GetWasUsed(aWasUsed);
-                        uno::Any aAny;
-                        aAny <<= aWasUsed;
-                        mxExportInfo->setPropertyValue(sWrittenNumberFormats, aAny);
+                        mxExportInfo->setPropertyValue(sWrittenNumberFormats, Any(aWasUsed));
                     }
                 }
             }
@@ -666,7 +657,7 @@ void SAL_CALL SvXMLExport::setSourceDocument( const uno::Reference< lang::XCompo
                     for( nIndex = 0; nIndex < nCount; ++nIndex, ++pPrefix )
                     {
                         if( xNamespaceMap->getByName( *pPrefix ) >>= aURL )
-                            _GetNamespaceMap().Add( *pPrefix, aURL );
+                            GetNamespaceMap_().Add( *pPrefix, aURL );
                     }
                 }
             }
@@ -677,7 +668,7 @@ void SAL_CALL SvXMLExport::setSourceDocument( const uno::Reference< lang::XCompo
     }
 
     // Determine model type (#i51726#)
-    _DetermineModelType();
+    DetermineModelType_();
 }
 
 // XInitialize
@@ -796,7 +787,7 @@ sal_Bool SAL_CALL SvXMLExport::filter( const uno::Sequence< beans::PropertyValue
 {
     // check for xHandler first... should have been supplied in initialize
     if( !mxHandler.is() )
-        return sal_False;
+        return false;
 
     try
     {
@@ -818,12 +809,12 @@ sal_Bool SAL_CALL SvXMLExport::filter( const uno::Sequence< beans::PropertyValue
                 if ( rPropName == "FileName" )
                 {
                     if( !(rValue >>= msOrigFileName ) )
-                        return sal_False;
+                        return false;
                 }
                 else if ( rPropName == "FilterName" )
                 {
                     if( !(rValue >>= msFilterName ) )
-                        return sal_False;
+                        return false;
                 }
             }
         }
@@ -903,25 +894,25 @@ uno::Sequence< OUString > SAL_CALL SvXMLExport::getSupportedServiceNames(  )
 }
 
 OUString
-SvXMLExport::EnsureNamespace(OUString const & i_rNamespace,
-    OUString const & i_rPreferredPrefix)
+SvXMLExport::EnsureNamespace(OUString const & i_rNamespace)
 {
+    OUString const aPreferredPrefix("gen");
     OUString sPrefix;
-    sal_uInt16 nKey( _GetNamespaceMap().GetKeyByName( i_rNamespace ) );
+    sal_uInt16 nKey( GetNamespaceMap_().GetKeyByName( i_rNamespace ) );
     if( XML_NAMESPACE_UNKNOWN == nKey )
     {
         // There is no prefix for the namespace, so
         // we have to generate one and have to add it.
-        sPrefix = i_rPreferredPrefix;
-        nKey = _GetNamespaceMap().GetKeyByPrefix( sPrefix );
+        sPrefix = aPreferredPrefix;
+        nKey = GetNamespaceMap_().GetKeyByPrefix( sPrefix );
         sal_Int32 n( 0 );
         OUStringBuffer buf;
         while( nKey != USHRT_MAX )
         {
-            buf.append( i_rPreferredPrefix );
+            buf.append( aPreferredPrefix );
             buf.append( ++n );
             sPrefix = buf.makeStringAndClear();
-            nKey = _GetNamespaceMap().GetKeyByPrefix( sPrefix );
+            nKey = GetNamespaceMap_().GetKeyByPrefix( sPrefix );
         }
 
         if (mpImpl->mNamespaceMaps.empty()
@@ -943,7 +934,7 @@ SvXMLExport::EnsureNamespace(OUString const & i_rNamespace,
     else
     {
         // If there is a prefix for the namespace, reuse that.
-        sPrefix = _GetNamespaceMap().GetPrefixByKey( nKey );
+        sPrefix = GetNamespaceMap_().GetPrefixByKey( nKey );
     }
     return sPrefix;
 }
@@ -956,7 +947,7 @@ void SvXMLExport::AddAttributeASCII( sal_uInt16 nPrefixKey,
     OUString sValue( OUString::createFromAscii( pValue ) );
 
     mpAttrList->AddAttribute(
-        _GetNamespaceMap().GetQNameByKey( nPrefixKey, sName ), sValue );
+        GetNamespaceMap_().GetQNameByKey( nPrefixKey, sName ), sValue );
 }
 
 void SvXMLExport::AddAttribute( sal_uInt16 nPrefixKey, const sal_Char *pName,
@@ -965,14 +956,14 @@ void SvXMLExport::AddAttribute( sal_uInt16 nPrefixKey, const sal_Char *pName,
     OUString sName( OUString::createFromAscii( pName ) );
 
     mpAttrList->AddAttribute(
-        _GetNamespaceMap().GetQNameByKey( nPrefixKey, sName ), rValue );
+        GetNamespaceMap_().GetQNameByKey( nPrefixKey, sName ), rValue );
 }
 
 void SvXMLExport::AddAttribute( sal_uInt16 nPrefixKey, const OUString& rName,
                               const OUString& rValue )
 {
     mpAttrList->AddAttribute(
-        _GetNamespaceMap().GetQNameByKey( nPrefixKey, rName ), rValue );
+        GetNamespaceMap_().GetQNameByKey( nPrefixKey, rName ), rValue );
 }
 
 void SvXMLExport::AddAttribute( sal_uInt16 nPrefixKey,
@@ -980,7 +971,7 @@ void SvXMLExport::AddAttribute( sal_uInt16 nPrefixKey,
                                 const OUString& rValue )
 {
     mpAttrList->AddAttribute(
-        _GetNamespaceMap().GetQNameByKey( nPrefixKey, GetXMLToken(eName) ),
+        GetNamespaceMap_().GetQNameByKey( nPrefixKey, GetXMLToken(eName) ),
         rValue );
 }
 
@@ -989,7 +980,7 @@ void SvXMLExport::AddAttribute( sal_uInt16 nPrefixKey,
                                 enum XMLTokenEnum eValue)
 {
     mpAttrList->AddAttribute(
-        _GetNamespaceMap().GetQNameByKey( nPrefixKey, GetXMLToken(eName) ),
+        GetNamespaceMap_().GetQNameByKey( nPrefixKey, GetXMLToken(eName) ),
         GetXMLToken(eValue) );
 }
 
@@ -1010,8 +1001,7 @@ void SvXMLExport::AddAttribute( const OUString& rQName,
 }
 
 void SvXMLExport::AddLanguageTagAttributes( sal_uInt16 nPrefix, sal_uInt16 nPrefixRfc,
-        const css::lang::Locale& rLocale, bool bWriteEmpty,
-        enum ::xmloff::token::XMLTokenEnum eClass )
+        const css::lang::Locale& rLocale, bool bWriteEmpty )
 {
     if (rLocale.Variant.isEmpty())
     {
@@ -1020,26 +1010,8 @@ void SvXMLExport::AddLanguageTagAttributes( sal_uInt16 nPrefix, sal_uInt16 nPref
         // to convert to LanguageTag first. Also catches the case of empty
         // locale denoting system locale.
         xmloff::token::XMLTokenEnum eLanguage, eCountry;
-        switch (eClass)
-        {
-            default:
-            case XML_LANGUAGE:
-                eLanguage = XML_LANGUAGE;
-                eCountry  = XML_COUNTRY;
-                break;
-            case XML_LANGUAGE_ASIAN:
-                eLanguage = XML_LANGUAGE_ASIAN;
-                eCountry  = XML_COUNTRY_ASIAN;
-                if (nPrefix == XML_NAMESPACE_FO)
-                    nPrefix = XML_NAMESPACE_STYLE;
-                break;
-            case XML_LANGUAGE_COMPLEX:
-                eLanguage = XML_LANGUAGE_COMPLEX;
-                eCountry  = XML_COUNTRY_COMPLEX;
-                if (nPrefix == XML_NAMESPACE_FO)
-                    nPrefix = XML_NAMESPACE_STYLE;
-                break;
-        }
+        eLanguage = XML_LANGUAGE;
+        eCountry  = XML_COUNTRY;
         if (bWriteEmpty || !rLocale.Language.isEmpty())
             AddAttribute( nPrefix, eLanguage, rLocale.Language);
         if (bWriteEmpty || !rLocale.Country.isEmpty())
@@ -1048,55 +1020,28 @@ void SvXMLExport::AddLanguageTagAttributes( sal_uInt16 nPrefix, sal_uInt16 nPref
     else
     {
         LanguageTag aLanguageTag( rLocale);
-        AddLanguageTagAttributes( nPrefix, nPrefixRfc, aLanguageTag, bWriteEmpty, eClass);
+        AddLanguageTagAttributes( nPrefix, nPrefixRfc, aLanguageTag, bWriteEmpty);
     }
 }
 
 void SvXMLExport::AddLanguageTagAttributes( sal_uInt16 nPrefix, sal_uInt16 nPrefixRfc,
-        const LanguageTag& rLanguageTag, bool bWriteEmpty, xmloff::token::XMLTokenEnum eClass )
+        const LanguageTag& rLanguageTag, bool bWriteEmpty )
 {
-    xmloff::token::XMLTokenEnum eLanguage, eScript, eCountry, eRfcLanguageTag;
-    switch (eClass)
-    {
-        default:
-        case XML_LANGUAGE:
-            eLanguage       = XML_LANGUAGE;
-            eScript         = XML_SCRIPT;
-            eCountry        = XML_COUNTRY;
-            eRfcLanguageTag = XML_RFC_LANGUAGE_TAG;
-            break;
-        case XML_LANGUAGE_ASIAN:
-            eLanguage       = XML_LANGUAGE_ASIAN;
-            eScript         = XML_SCRIPT_ASIAN;
-            eCountry        = XML_COUNTRY_ASIAN;
-            eRfcLanguageTag = XML_RFC_LANGUAGE_TAG_ASIAN;
-            if (nPrefix == XML_NAMESPACE_FO)
-                nPrefix = XML_NAMESPACE_STYLE;
-            break;
-        case XML_LANGUAGE_COMPLEX:
-            eLanguage       = XML_LANGUAGE_COMPLEX;
-            eScript         = XML_SCRIPT_COMPLEX;
-            eCountry        = XML_COUNTRY_COMPLEX;
-            eRfcLanguageTag = XML_RFC_LANGUAGE_TAG_COMPLEX;
-            if (nPrefix == XML_NAMESPACE_FO)
-                nPrefix = XML_NAMESPACE_STYLE;
-            break;
-    }
     if (rLanguageTag.isIsoODF())
     {
         if (bWriteEmpty || !rLanguageTag.isSystemLocale())
         {
-            AddAttribute( nPrefix, eLanguage, rLanguageTag.getLanguage());
+            AddAttribute( nPrefix, XML_LANGUAGE, rLanguageTag.getLanguage());
             if (rLanguageTag.hasScript() && getDefaultVersion() >= SvtSaveOptions::ODFVER_012)
-                AddAttribute( nPrefix, eScript, rLanguageTag.getScript());
+                AddAttribute( nPrefix, XML_SCRIPT, rLanguageTag.getScript());
             if (bWriteEmpty || !rLanguageTag.getCountry().isEmpty())
-                AddAttribute( nPrefix, eCountry, rLanguageTag.getCountry());
+                AddAttribute( nPrefix, XML_COUNTRY, rLanguageTag.getCountry());
         }
     }
     else
     {
         if (getDefaultVersion() >= SvtSaveOptions::ODFVER_012)
-            AddAttribute( nPrefixRfc, eRfcLanguageTag, rLanguageTag.getBcp47());
+            AddAttribute( nPrefixRfc, XML_RFC_LANGUAGE_TAG, rLanguageTag.getBcp47());
         // Also in case of non-pure-ISO tag store best matching fo: attributes
         // for consumers not handling *:rfc-language-tag, ensuring that only
         // valid ISO codes are stored. Here the bWriteEmpty parameter has no
@@ -1105,11 +1050,11 @@ void SvXMLExport::AddLanguageTagAttributes( sal_uInt16 nPrefix, sal_uInt16 nPref
         rLanguageTag.getIsoLanguageScriptCountry( aLanguage, aScript, aCountry);
         if (!aLanguage.isEmpty())
         {
-            AddAttribute( nPrefix, eLanguage, aLanguage);
+            AddAttribute( nPrefix, XML_LANGUAGE, aLanguage);
             if (!aScript.isEmpty() && getDefaultVersion() >= SvtSaveOptions::ODFVER_012)
-                AddAttribute( nPrefix, eScript, aScript);
+                AddAttribute( nPrefix, XML_SCRIPT, aScript);
             if (!aCountry.isEmpty())
-                AddAttribute( nPrefix, eCountry, aCountry);
+                AddAttribute( nPrefix, XML_COUNTRY, aCountry);
         }
     }
 }
@@ -1136,7 +1081,7 @@ void SvXMLExport::ImplExportMeta()
 {
     CheckAttrList();
 
-    _ExportMeta();
+    ExportMeta_();
 }
 
 void SvXMLExport::ImplExportSettings()
@@ -1178,14 +1123,14 @@ void SvXMLExport::ImplExportSettings()
             if ( !settings->aSettings.getLength() )
                 continue;
 
-            OUString sSettingsName( GetXMLToken( settings->eGroupName ) );
+            const OUString& sSettingsName( GetXMLToken( settings->eGroupName ) );
             OUString sQName = GetNamespaceMap().GetQNameByKey( XML_NAMESPACE_OOO, sSettingsName );
             aSettingsExportHelper.exportAllSettings( settings->aSettings, sQName );
         }
     }
 }
 
-void SvXMLExport::ImplExportStyles( bool )
+void SvXMLExport::ImplExportStyles()
 {
     CheckAttrList();
 
@@ -1194,7 +1139,7 @@ void SvXMLExport::ImplExportStyles( bool )
         SvXMLElementExport aElem( *this, XML_NAMESPACE_OFFICE, XML_STYLES,
                                 true, true );
 
-        _ExportStyles( false );
+        ExportStyles_( false );
     }
 
     // transfer style names (+ families) TO other components (if appropriate)
@@ -1215,7 +1160,7 @@ void SvXMLExport::ImplExportStyles( bool )
     }
 }
 
-void SvXMLExport::ImplExportAutoStyles( bool )
+void SvXMLExport::ImplExportAutoStyles()
 {
     // transfer style names (+ families) FROM other components (if appropriate)
     OUString sStyleNames( "StyleNames" );
@@ -1237,18 +1182,18 @@ void SvXMLExport::ImplExportAutoStyles( bool )
         SvXMLElementExport aElem( *this, XML_NAMESPACE_OFFICE,
                                   XML_AUTOMATIC_STYLES, true, true );
 
-        _ExportAutoStyles();
+        ExportAutoStyles_();
     }
 }
 
-void SvXMLExport::ImplExportMasterStyles( bool )
+void SvXMLExport::ImplExportMasterStyles()
 {
     {
         // <style:master-styles>
         SvXMLElementExport aElem( *this, XML_NAMESPACE_OFFICE, XML_MASTER_STYLES,
                                 true, true );
 
-        _ExportMasterStyles();
+        ExportMasterStyles_();
     }
 
 }
@@ -1278,7 +1223,7 @@ void SvXMLExport::ImplExportContent()
                                       XML_NAMESPACE_OFFICE, eClass,
                                         true, true );
 
-            _ExportContent();
+            ExportContent_();
         }
     }
 }
@@ -1363,9 +1308,7 @@ sal_uInt32 SvXMLExport::exportDoc( enum ::xmloff::token::XMLTokenEnum eClass )
                 ::comphelper::GenericPropertySet_CreateInstance(
                         new ::comphelper::PropertySetInfo( aInfoMap ) ) );
 
-            Any aAny;
-            aAny <<= GetXMLToken( eClass );
-            xConvPropSet->setPropertyValue( "Class", aAny );
+            xConvPropSet->setPropertyValue( "Class", Any(GetXMLToken( eClass )) );
 
             Reference< XPropertySet > xPropSet =
                 mxExportInfo.is()
@@ -1414,24 +1357,23 @@ sal_uInt32 SvXMLExport::exportDoc( enum ::xmloff::token::XMLTokenEnum eClass )
     }
 
     // office:version = ...
-    if( !mbExtended )
+    const sal_Char* pVersion = nullptr;
+    switch (getDefaultVersion())
     {
-        const sal_Char* pVersion = nullptr;
-        switch( getDefaultVersion() )
-        {
-        case SvtSaveOptions::ODFVER_LATEST: pVersion = sXML_1_2; break;
-        case SvtSaveOptions::ODFVER_012_EXT_COMPAT: pVersion = sXML_1_2; break;
-        case SvtSaveOptions::ODFVER_012: pVersion = sXML_1_2; break;
-        case SvtSaveOptions::ODFVER_011: pVersion = sXML_1_1; break;
-        case SvtSaveOptions::ODFVER_010: break;
+    case SvtSaveOptions::ODFVER_LATEST: pVersion = sXML_1_2; break;
+    case SvtSaveOptions::ODFVER_012_EXT_COMPAT: pVersion = sXML_1_2; break;
+    case SvtSaveOptions::ODFVER_012: pVersion = sXML_1_2; break;
+    case SvtSaveOptions::ODFVER_011: pVersion = sXML_1_1; break;
+    case SvtSaveOptions::ODFVER_010: break;
 
-        default:
-            SAL_WARN("xmloff.core", "xmloff::SvXMLExport::exportDoc(), unexpected odf default version!");
-        }
+    default:
+        SAL_WARN("xmloff.core", "xmloff::SvXMLExport::exportDoc(), unexpected odf default version!");
+    }
 
-        if( pVersion )
-            AddAttribute( XML_NAMESPACE_OFFICE, XML_VERSION,
-                              OUString::createFromAscii(pVersion) );
+    if (pVersion)
+    {
+        AddAttribute( XML_NAMESPACE_OFFICE, XML_VERSION,
+                          OUString::createFromAscii(pVersion) );
     }
 
     {
@@ -1485,23 +1427,23 @@ sal_uInt32 SvXMLExport::exportDoc( enum ::xmloff::token::XMLTokenEnum eClass )
 
         // scripts
         if( mnExportFlags & SvXMLExportFlags::SCRIPTS )
-            _ExportScripts();
+            ExportScripts_();
 
-        // font declerations
+        // font declarations
         if( mnExportFlags & SvXMLExportFlags::FONTDECLS )
-            _ExportFontDecls();
+            ExportFontDecls_();
 
         // styles
         if( mnExportFlags & SvXMLExportFlags::STYLES )
-            ImplExportStyles( false );
+            ImplExportStyles();
 
         // autostyles
         if( mnExportFlags & SvXMLExportFlags::AUTOSTYLES )
-            ImplExportAutoStyles( false );
+            ImplExportAutoStyles();
 
         // masterstyles
         if( mnExportFlags & SvXMLExportFlags::MASTERSTYLES )
-            ImplExportMasterStyles( false );
+            ImplExportMasterStyles();
 
         // content
         if( mnExportFlags & SvXMLExportFlags::CONTENT )
@@ -1540,7 +1482,7 @@ OUString SvXMLExport::GetDestinationShellID() const
     return mpImpl->maDestShellID;
 }
 
-void SvXMLExport::_ExportMeta()
+void SvXMLExport::ExportMeta_()
 {
     OUString generator( ::utl::DocInfoHelper::GetGeneratorString() );
     Reference< XDocumentPropertiesSupplier > xDocPropsSupplier(mxModel,
@@ -1568,7 +1510,7 @@ void SvXMLExport::_ExportMeta()
     }
 }
 
-void SvXMLExport::_ExportScripts()
+void SvXMLExport::ExportScripts_()
 {
     SvXMLElementExport aElement( *this, XML_NAMESPACE_OFFICE, XML_SCRIPTS, true, true );
 
@@ -1603,13 +1545,13 @@ void SvXMLExport::_ExportScripts()
     GetEventExport().Export( xEvents );
 }
 
-void SvXMLExport::_ExportFontDecls()
+void SvXMLExport::ExportFontDecls_()
 {
     if( mxFontAutoStylePool.is() )
         mxFontAutoStylePool->exportXML();
 }
 
-void SvXMLExport::_ExportStyles( bool )
+void SvXMLExport::ExportStyles_( bool )
 {
     uno::Reference< lang::XMultiServiceFactory > xFact( GetModel(), uno::UNO_QUERY );
     if( xFact.is())
@@ -2119,7 +2061,7 @@ const uno::Sequence< sal_Int8 > & SvXMLExport::getUnoTunnelId() throw()
     return theSvXMLExportUnoTunnelId::get().getSeq();
 }
 
-SvXMLExport* SvXMLExport::getImplementation( uno::Reference< uno::XInterface > xInt ) throw()
+SvXMLExport* SvXMLExport::getImplementation( const uno::Reference< uno::XInterface >& xInt ) throw()
 {
     uno::Reference< lang::XUnoTunnel > xUT( xInt, uno::UNO_QUERY );
     if( xUT.is() )
@@ -2145,7 +2087,7 @@ sal_Int64 SAL_CALL SvXMLExport::getSomething( const uno::Sequence< sal_Int8 >& r
     return 0;
 }
 
-bool SvXMLExport::ExportEmbeddedOwnObject( Reference< XComponent >& rComp )
+void SvXMLExport::ExportEmbeddedOwnObject( Reference< XComponent >& rComp )
 {
     OUString sFilterService;
 
@@ -2172,7 +2114,7 @@ bool SvXMLExport::ExportEmbeddedOwnObject( Reference< XComponent >& rComp )
     SAL_WARN_IF( !sFilterService.getLength(), "xmloff.core", "no export filter for own object" );
 
     if( sFilterService.isEmpty() )
-        return false;
+        return;
 
     Reference < XDocumentHandler > xHdl =
         new XMLEmbeddedObjectExportFilter( mxHandler );
@@ -2185,14 +2127,14 @@ bool SvXMLExport::ExportEmbeddedOwnObject( Reference< XComponent >& rComp )
         UNO_QUERY);
     SAL_WARN_IF( !xExporter.is(), "xmloff.core", "can't instantiate export filter component for own object" );
     if( !xExporter.is() )
-        return false;
+        return;
 
     xExporter->setSourceDocument( rComp );
 
     Reference<XFilter> xFilter( xExporter, UNO_QUERY );
 
     Sequence < PropertyValue > aMediaDesc( 0 );
-    return xFilter->filter( aMediaDesc );
+    xFilter->filter( aMediaDesc );
 }
 
 OUString SvXMLExport::GetRelativeReference(const OUString& rValue)
@@ -2233,7 +2175,7 @@ void SvXMLExport::StartElement(sal_uInt16 nPrefix,
                         enum ::xmloff::token::XMLTokenEnum eName,
                         bool bIgnWSOutside )
 {
-    StartElement(_GetNamespaceMap().GetQNameByKey( nPrefix,
+    StartElement(GetNamespaceMap_().GetQNameByKey( nPrefix,
         GetXMLToken(eName) ), bIgnWSOutside);
 }
 
@@ -2290,7 +2232,7 @@ void SvXMLExport::EndElement(sal_uInt16 nPrefix,
                         enum ::xmloff::token::XMLTokenEnum eName,
                         bool bIgnWSInside )
 {
-    EndElement(_GetNamespaceMap().GetQNameByKey( nPrefix, GetXMLToken(eName) ),
+    EndElement(GetNamespaceMap_().GetQNameByKey( nPrefix, GetXMLToken(eName) ),
         bIgnWSInside);
 }
 
@@ -2420,7 +2362,7 @@ SvtSaveOptions::ODFSaneDefaultVersion SvXMLExport::getSaneDefaultVersion() const
         return mpImpl->maSaveOptions.GetODFSaneDefaultVersion();
 
     // fatal error, use current version as default
-    return SvtSaveOptions::ODFSVER_012;
+    return SvtSaveOptions::ODFSVER_LATEST;
 }
 
 OUString SvXMLExport::GetStreamName() const
@@ -2532,7 +2474,6 @@ bool SvXMLExport::SetNullDateOnUnitConverter()
 
     return mpImpl->mbNullDateInitialized;
 }
-
 
 
 void SvXMLElementExport::StartElement(

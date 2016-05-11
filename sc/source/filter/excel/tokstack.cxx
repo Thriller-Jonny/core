@@ -126,11 +126,7 @@ TokenPool::~TokenPool()
         delete ppP_Nlf[ n ];
     delete[] ppP_Nlf;
 
-    for( n = 0 ; n < nP_Matrix ; n++ )
-    {
-        if( ppP_Matrix[ n ] )
-            ppP_Matrix[ n ]->DecRef( );
-    }
+    ClearMatrix();
     delete[] ppP_Matrix;
 
     delete pScToken;
@@ -429,7 +425,7 @@ bool TokenPool::GetElement( const sal_uInt16 nId )
                 if (n < maRangeNames.size())
                 {
                     const RangeName& r = maRangeNames[n];
-                    pScToken->AddRangeName(r.mnIndex, r.mbGlobal);
+                    pScToken->AddRangeName(r.mnIndex, r.mnSheet);
                 }
             }
             break;
@@ -627,7 +623,7 @@ const TokenId TokenPool::Store( const double& rDouble )
 
 const TokenId TokenPool::Store( const sal_uInt16 nIndex )
 {
-    return StoreName(nIndex, true);
+    return StoreName(nIndex, -1);
 }
 
 const TokenId TokenPool::Store( const OUString& rString )
@@ -773,8 +769,6 @@ const TokenId TokenPool::StoreNlf( const ScSingleRefData& rTr )
 
 const TokenId TokenPool::StoreMatrix()
 {
-    ScMatrix* pM;
-
     if( nElementAkt >= nElement )
         if (!GrowElement())
             return static_cast<const TokenId>(nElementAkt+1);
@@ -786,7 +780,7 @@ const TokenId TokenPool::StoreMatrix()
     pElement[ nElementAkt ] = nP_MatrixAkt;
     pType[ nElementAkt ] = T_Matrix;
 
-    pM = new ScFullMatrix( 0, 0 );
+    ScMatrix* pM = new ScFullMatrix( 0, 0 );
     pM->IncRef( );
     ppP_Matrix[ nP_MatrixAkt ] = pM;
 
@@ -796,7 +790,7 @@ const TokenId TokenPool::StoreMatrix()
     return static_cast<const TokenId>(nElementAkt);
 }
 
-const TokenId TokenPool::StoreName( sal_uInt16 nIndex, bool bGlobal )
+const TokenId TokenPool::StoreName( sal_uInt16 nIndex, sal_Int16 nSheet )
 {
     if ( nElementAkt >= nElement )
         if (!GrowElement())
@@ -808,7 +802,7 @@ const TokenId TokenPool::StoreName( sal_uInt16 nIndex, bool bGlobal )
     maRangeNames.push_back(RangeName());
     RangeName& r = maRangeNames.back();
     r.mnIndex = nIndex;
-    r.mbGlobal = bGlobal;
+    r.mnSheet = nSheet;
 
     ++nElementAkt;
 
@@ -881,6 +875,7 @@ void TokenPool::Reset()
     maExtNames.clear();
     maExtCellRefs.clear();
     maExtAreaRefs.clear();
+    ClearMatrix();
 }
 
 bool TokenPool::IsSingleOp( const TokenId& rId, const DefTokenId eId ) const
@@ -934,6 +929,18 @@ ScMatrix* TokenPool::GetMatrix( unsigned int n ) const
     else
         SAL_WARN("sc.filter", "GetMatrix: " << n << " >= " << nP_MatrixAkt << "\n");
     return nullptr;
+}
+
+void TokenPool::ClearMatrix()
+{
+    for(sal_uInt16 n = 0 ; n < nP_Matrix ; n++ )
+    {
+        if( ppP_Matrix[ n ] )
+        {
+            ppP_Matrix[ n ]->DecRef( );
+            ppP_Matrix[n] = nullptr;
+        }
+    }
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

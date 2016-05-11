@@ -30,7 +30,6 @@
 
 class GalleryBrowser1;
 
-// - GalleryButton -
 
 class GalleryButton : public PushButton
 {
@@ -43,7 +42,6 @@ public:
                     GalleryButton( GalleryBrowser1* pParent, WinBits nWinBits );
 };
 
-// - GalleryThemeListBox -
 
 class GalleryThemeListBox : public ListBox
 {
@@ -59,7 +57,6 @@ public:
                     GalleryThemeListBox( GalleryBrowser1* pParent, WinBits nWinBits );
 };
 
-// - GalleryBrowser1 -
 
 class Gallery;
 class GalleryThemeEntry;
@@ -70,7 +67,7 @@ class SfxItemSet;
 
 namespace svx { namespace sidebar { class GalleryControl; } }
 
-class GalleryBrowser1 : public Control, SfxListener
+class GalleryBrowser1 : public Control, public SfxListener
 {
     friend class GalleryBrowser;
     friend class svx::sidebar::GalleryControl;
@@ -89,7 +86,6 @@ private:
     Image                   aImgNormal;
     Image                   aImgDefault;
     Image                   aImgReadOnly;
-    Image                   aImgImported;
 
     ::std::function<sal_Bool (const KeyEvent&,Window*)> maKeyInputHandler;
     ::std::function<void ()> maThemeSlectionHandler;

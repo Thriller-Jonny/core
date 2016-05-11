@@ -29,7 +29,7 @@
 #include <svtools/filechangedchecker.hxx>
 #include <unotools/ucbstreamhelper.hxx>
 #include <comphelper/processfactory.hxx>
-#include <boost/bind.hpp>
+
 #include <memory>
 
 #include <com/sun/star/system/SystemShellExecute.hpp>
@@ -66,7 +66,7 @@ void ExternalToolEdit::StartListeningEvent()
     //Start an event listener implemented via VCL timeout
     assert(!m_pChecker.get());
     m_pChecker.reset(new FileChangedChecker(
-            m_aFileName, ::boost::bind(&HandleCloseEvent, this)));
+            m_aFileName, [this] () { return HandleCloseEvent(this); }));
 }
 
 // self-destructing thread to make shell execute async
@@ -103,7 +103,7 @@ void ExternalToolEditThread::execute()
 void ExternalToolEdit::Edit(GraphicObject const*const pGraphicObject)
 {
     //Get the graphic from the GraphicObject
-    const Graphic aGraphic = pGraphicObject->GetGraphic();
+    const Graphic& aGraphic = pGraphicObject->GetGraphic();
 
     //get the Preferred File Extension for this graphic
     OUString fExtension;

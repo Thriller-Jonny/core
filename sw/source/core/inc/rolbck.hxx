@@ -70,7 +70,6 @@ enum HISTORY_HINT {
     HSTRY_FLYCNT,
     HSTRY_BOOKMARK,
     HSTRY_SETATTRSET,
-    HSTRY_RESETATTRSET,
     HSTRY_CHGFLYANCHOR,
     HSTRY_CHGFLYCHAIN,
     HSTRY_CHGCHARFMT,
@@ -131,7 +130,7 @@ public:
 
 class SwHistorySetTextField : public SwHistoryHint
 {
-    //!! beware of the order for the declation of the unique_ptrs.
+    //!! beware of the order for the declaration of the unique_ptrs.
     //!! If they get destroyed in the wrong order sw may crash (namely mail-merge as well)
     ::std::unique_ptr<SwFieldType> m_pFieldType;
     const ::std::unique_ptr<SwFormatField> m_pField;
@@ -276,25 +275,6 @@ public:
 
 };
 
-class SwHistoryResetAttrSet : public SwHistoryHint
-{
-    const sal_uLong m_nNodeIndex;
-    const sal_Int32 m_nStart;
-    const sal_Int32 m_nEnd;
-    std::vector<sal_uInt16> m_Array;
-
-public:
-    SwHistoryResetAttrSet( const SfxItemSet& rSet, sal_uLong nNode,
-                        sal_Int32 nStt,
-                        sal_Int32 nEnd);
-    virtual void SetInDoc( SwDoc* pDoc, bool bTmpSet ) override;
-
-    const std::vector<sal_uInt16>& GetArr() const { return m_Array; }
-    sal_uLong GetNode() const               { return m_nNodeIndex; }
-    sal_Int32 GetContent() const         { return m_nStart; }
-
-};
-
 class SwHistoryChangeFlyAnchor : public SwHistoryHint
 {
     SwFrameFormat & m_rFormat;
@@ -338,11 +318,11 @@ class SwHistory
 
 public:
     typedef std::vector<SwHistoryHint*>::iterator SwpHstry_iterator;
-    SwHistory( sal_uInt16 nInitSz = 0 );
+    SwHistory();
     ~SwHistory();
 
-    // delete History from nStart to array end
-    void Delete( sal_uInt16 nStart = 0 );
+    // delete History
+    void Delete();
     // call and delete all objects between nStart and array end
     bool Rollback( SwDoc* pDoc, sal_uInt16 nStart = 0 );
     // call all objects between nStart and TmpEnd; store nStart as TmpEnd
@@ -395,7 +375,7 @@ private:
     SwHistory * const m_pHistory;
     sal_uLong m_nNodeIndex;
 
-    void _MakeSetWhichIds();
+    void MakeSetWhichIds();
 
 protected:
     virtual void Modify( const SfxPoolItem* pOld, const SfxPoolItem* pNew ) override;

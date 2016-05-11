@@ -152,7 +152,7 @@ bool ScViewFunc::PasteDataFormat( SotClipboardFormatId nFormatId,
                         nFirstRow = nLastRow = 0;
                     }
                     ScClipParam aClipParam(ScRange(nFirstCol, nFirstRow, nSrcTab, nLastCol, nLastRow, nSrcTab), false);
-                    rSrcDoc.CopyToClip(aClipParam, pClipDoc.get(), &aSrcMark);
+                    rSrcDoc.CopyToClip(aClipParam, pClipDoc.get(), &aSrcMark, false, false);
                     ScGlobal::SetClipDocName( xDocShRef->GetTitle( SFX_TITLE_FULLNAME ) );
 
                     SetCursor( nPosX, nPosY );
@@ -307,7 +307,7 @@ bool ScViewFunc::PasteDataFormat( SotClipboardFormatId nFormatId,
                     // make sense to do it for other data types too.
                     ScAbstractDialogFactory* pFact = ScAbstractDialogFactory::Create();
                     std::unique_ptr<AbstractScTextImportOptionsDlg> pDlg(
-                        pFact->CreateScTextImportOptionsDlg(nullptr));
+                        pFact->CreateScTextImportOptionsDlg());
 
                     if (pDlg->Execute() == RET_OK)
                     {
@@ -336,8 +336,7 @@ bool ScViewFunc::PasteDataFormat( SotClipboardFormatId nFormatId,
                     ScAbstractDialogFactory* pFact =
                         ScAbstractDialogFactory::Create();
                     std::unique_ptr<AbstractScImportAsciiDlg> pDlg(
-                        pFact->CreateScImportAsciiDlg( nullptr, OUString(), &aStrm,
-                                                       SC_PASTETEXT));
+                        pFact->CreateScImportAsciiDlg( OUString(), &aStrm, SC_PASTETEXT));
 
                     if (pDlg->Execute() == RET_OK)
                     {
@@ -398,7 +397,7 @@ bool ScViewFunc::PasteDataFormat( SotClipboardFormatId nFormatId,
             else
             {
                 ScAddress aCellPos( nPosX,nPosY,nTab );
-                sTarget = aCellPos.Format(SCA_ABS_3D, pDoc, pDoc->GetAddressConvention());
+                sTarget = aCellPos.Format(ScRefFlags::ADDR_ABS_3D, pDoc, pDoc->GetAddressConvention());
             }
             SfxStringItem aTarget(FN_PARAM_1, sTarget);
 
@@ -407,8 +406,8 @@ bool ScViewFunc::PasteDataFormat( SotClipboardFormatId nFormatId,
 
             //  asynchronous, to avoid doing the whole import in drop handler
             SfxDispatcher& rDisp = GetViewData().GetDispatcher();
-            rDisp.Execute(SID_SBA_IMPORT, SfxCallMode::ASYNCHRON,
-                                        &aDataDesc, &aTarget, &aAreaNew, nullptr );
+            rDisp.ExecuteList(SID_SBA_IMPORT, SfxCallMode::ASYNCHRON,
+                    { &aDataDesc, &aTarget, &aAreaNew });
 
             bRet = true;
         }

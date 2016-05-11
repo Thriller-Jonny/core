@@ -20,6 +20,8 @@
 #include <com/sun/star/sheet/DataPilotOutputRangeType.hpp>
 #include <com/sun/star/sheet/GeneralFunction.hpp>
 
+#include <o3tl/make_unique.hxx>
+
 #include <vector>
 
 using namespace oox;
@@ -308,9 +310,9 @@ void XclExpXmlPivotTableManager::Initialize()
     std::vector<XclExpXmlPivotCaches::Entry> aCaches;
     const ScDPCollection::SheetCaches& rSheetCaches = pDPColl->GetSheetCaches();
     const std::vector<ScRange>& rRanges = rSheetCaches.getAllRanges();
-    for (size_t i = 0, n = rRanges.size(); i < n; ++i)
+    for (const auto & rRange : rRanges)
     {
-        const ScDPCache* pCache = rSheetCaches.getExistingCache(rRanges[i]);
+        const ScDPCache* pCache = rSheetCaches.getExistingCache(rRange);
         if (!pCache)
             continue;
 
@@ -324,7 +326,7 @@ void XclExpXmlPivotTableManager::Initialize()
         XclExpXmlPivotCaches::Entry aEntry;
         aEntry.meType = XclExpXmlPivotCaches::Worksheet;
         aEntry.mpCache = pCache;
-        aEntry.maSrcRange = rRanges[i];
+        aEntry.maSrcRange = rRange;
         aCaches.push_back(aEntry); // Cache ID equals position + 1.
     }
 
@@ -343,16 +345,16 @@ void XclExpXmlPivotTableManager::Initialize()
         sal_Int32 nCacheId = itCache->second;
         SCTAB nTab = rDPObj.GetOutRange().aStart.Tab();
 
-        TablesType::iterator it = maTables.find(nTab);
-        if (it == maTables.end())
+        TablesType::iterator it = m_Tables.find(nTab);
+        if (it == m_Tables.end())
         {
             // Insert a new instance for this sheet index.
             std::pair<TablesType::iterator, bool> r =
-                maTables.insert(nTab, new XclExpXmlPivotTables(GetRoot(), maCaches));
+                m_Tables.insert(std::make_pair(nTab, o3tl::make_unique<XclExpXmlPivotTables>(GetRoot(), maCaches)));
             it = r.first;
         }
 
-        XclExpXmlPivotTables* p = it->second;
+        XclExpXmlPivotTables *const p = it->second.get();
         p->AppendTable(&rDPObj, nCacheId, i+1);
     }
 
@@ -366,8 +368,8 @@ XclExpXmlPivotCaches& XclExpXmlPivotTableManager::GetCaches()
 
 XclExpXmlPivotTables* XclExpXmlPivotTableManager::GetTablesBySheet( SCTAB nTab )
 {
-    TablesType::iterator it = maTables.find(nTab);
-    return it == maTables.end() ? nullptr : it->second;
+    TablesType::iterator const it = m_Tables.find(nTab);
+    return it == m_Tables.end() ? nullptr : it->second.get();
 }
 
 XclExpXmlPivotTables::Entry::Entry( const ScDPObject* pTable, sal_Int32 nCacheId, sal_Int32 nPivotId ) :
@@ -449,9 +451,9 @@ void XclExpXmlPivotTables::SavePivotTableXml( XclExpXmlStream& rStrm, const ScDP
     // appearance in each axis.
     const ScDPSaveData::DimsType& rDims = rSaveData.GetDimensions();
 
-    for (size_t i = 0, n = rDims.size(); i < n; ++i)
+    for (const auto & i : rDims)
     {
-        const ScDPSaveDimension& rDim = *rDims[i];
+        const ScDPSaveDimension& rDim = *i;
 
         long nPos = -1; // position in cache
         if (rDim.IsDataLayout())
@@ -552,9 +554,8 @@ void XclExpXmlPivotTables::SavePivotTableXml( XclExpXmlStream& rStrm, const ScDP
         XML_count, OString::number(static_cast<long>(aCachedDims.size())).getStr(),
         FSEND);
 
-    for (size_t i = 0, n = aCachedDims.size(); i < n; ++i)
+    for (const ScDPSaveDimension* pDim : aCachedDims)
     {
-        const ScDPSaveDimension* pDim = aCachedDims[i];
         if (!pDim)
         {
             pPivotStrm->singleElement(XML_pivotField,

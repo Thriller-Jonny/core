@@ -8,11 +8,12 @@
  */
 
 // only compile this on unixy system
-// as we dont want to bother with x-platform system()/mkdir()
+// as we don't want to bother with x-platform system()/mkdir()
 #if defined(__unix__)
 // only compile this on clang 3.7 or higher, which is known to work
 // there were problems on clang 3.5 at least
-#if (__clang_major__ > 3 || (__clang_major__ == 3 && __clang_minor__ >= 7))
+#include "config_clang.h"
+#if CLANG_VERSION >= 30700
 #include <cassert>
 #include <stdlib.h>
 #include <string>
@@ -58,6 +59,19 @@ bool overridesXServiceInfo(clang::CXXMethodDecl const * decl) {
         }
     }
     return false;
+}
+
+std::string replace_all(std::string subject, const std::string& search, const std::string& replace)
+{
+    size_t pos = 0;
+
+    while ((pos = subject.find(search, pos)) != std::string::npos)
+    {
+        subject.replace(pos, search.length(), replace);
+        pos += replace.length();
+    }
+
+    return subject;
 }
 
 class GetImplementationName:
@@ -263,8 +277,8 @@ void GetImplementationName::generateOutput(FunctionDecl const * decl, const std:
     if(modulematch.empty())
         return;
     const std::string module(modulematch[0]);
-    const std::regex doublecolonregex("::");
-    const std::string cppclassweb(std::regex_replace(cppclass, doublecolonregex, "_1_1"));
+    const std::string doublecolonregex("::");
+    const std::string cppclassweb(replace_all(cppclass, doublecolonregex, "_1_1"));
     std::ofstream redirectfile(m_Outdir + "/" + unoimpl + ".html");
     redirectfile << "<meta http-equiv=\"refresh\" content=\"0; URL=http://docs.libreoffice.org/" << module << "/html/class" << cppclassweb << "\">\n";
     redirectfile.close();
@@ -279,7 +293,7 @@ std::string GetImplementationName::initOutdir() {
         return result;
     }
     report(
-        clang::DiagnosticsEngine::Error, "WORKDIR unset, dont know where to write service implementation info.");
+        clang::DiagnosticsEngine::Error, "WORKDIR unset, don't know where to write service implementation info.");
     return std::string();
     }
 }
@@ -289,7 +303,7 @@ std::string GetImplementationName::initSrcdir() {
     char* pSrcdir = getenv("SRCDIR");
     if(!pSrcdir) {
         report(
-            clang::DiagnosticsEngine::Error, "SRCDIR unset, dont know where the source base is.");
+            clang::DiagnosticsEngine::Error, "SRCDIR unset, don't know where the source base is.");
     }
     return std::string(pSrcdir);
     }

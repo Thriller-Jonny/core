@@ -12,6 +12,7 @@
 #include "view.hxx"
 #include "accessibility.hxx"
 #include <comphelper/string.hxx>
+#include <cassert>
 
 void SmCursor::Move(OutputDevice* pDev, SmMovementDirection direction, bool bMoveAnchor){
     SmCaretPosGraphEntry* NewPos = nullptr;
@@ -144,13 +145,12 @@ void SmCursor::BuildGraph(){
     OSL_ENSURE(mpAnchor->CaretPos.IsValid(), "Anchor must be valid");
 }
 
-bool SmCursor::SetCaretPosition(SmCaretPos pos, bool moveAnchor){
+bool SmCursor::SetCaretPosition(SmCaretPos pos){
     SmCaretPosGraphIterator it = mpGraph->GetIterator();
     while(it.Next()){
         if(it->CaretPos == pos){
             mpPosition = it.Current();
-            if(moveAnchor)
-                mpAnchor = it.Current();
+            mpAnchor = it.Current();
             return true;
         }
     }
@@ -176,6 +176,7 @@ void SmCursor::DeletePrev(OutputDevice* pDev){
     SmNode* pLine = FindTopMostNodeInLine(mpPosition->CaretPos.pSelectedNode);
     SmStructureNode* pLineParent = pLine->GetParent();
     int nLineOffset = pLineParent->IndexOfSubNode(pLine);
+    assert(nLineOffset >= 0);
 
     //If we're in front of a node who's parent is a TABLE
     if(pLineParent->GetType() == NTABLE && mpPosition->CaretPos.Index == 0 && nLineOffset > 0){
@@ -216,8 +217,8 @@ void SmCursor::DeletePrev(OutputDevice* pDev){
         BuildGraph();
         AnnotateSelection();
         //Set caret position
-        if(!SetCaretPosition(PosAfterDelete, true))
-            SetCaretPosition(SmCaretPos(pLine, 0), true);
+        if(!SetCaretPosition(PosAfterDelete))
+            SetCaretPosition(SmCaretPos(pLine, 0));
         //Finish editing
         EndEdit();
 
@@ -262,11 +263,7 @@ void SmCursor::Delete(){
     SmStructureNode* pLineParent = pLine->GetParent();
     //Find line offset in parent
     int nLineOffset = pLineParent->IndexOfSubNode(pLine);
-    if (nLineOffset == -1)
-    {
-        SAL_WARN("starmath", "pLine must be a child of its parent!");
-        return;
-    }
+    assert(nLineOffset >= 0);
 
     //Position after delete
     SmCaretPos PosAfterDelete;
@@ -304,12 +301,7 @@ void SmCursor::InsertNodes(SmNodeList* pNewNodes){
     //Find line parent and line index in parent
     SmStructureNode* pLineParent = pLine->GetParent();
     int nParentIndex = pLineParent->IndexOfSubNode(pLine);
-    OSL_ENSURE(nParentIndex != -1, "pLine must be a subnode of pLineParent!");
-    if (nParentIndex == -1)
-    {
-        delete pNewNodes;
-        return;
-    }
+    assert(nParentIndex >= 0);
 
     //Convert line to list
     SmNodeList* pLineList = NodeToList(pLine);
@@ -506,7 +498,7 @@ void SmCursor::InsertSubSup(SmSubSup eSubSup) {
     //Find Parent and offset in parent
     SmStructureNode *pLineParent = pLine->GetParent();
     int nParentIndex = pLineParent->IndexOfSubNode(pLine);
-    OSL_ENSURE(nParentIndex != -1, "pLine must be a subnode of pLineParent!");
+    assert(nParentIndex >= 0);
 
     //TODO: Consider handling special cases where parent is an SmOperNode,
     //      Maybe this method should be able to add limits to an SmOperNode...
@@ -594,7 +586,7 @@ void SmCursor::InsertSubSup(SmSubSup eSubSup) {
     FinishEdit(pLineList, pLineParent, nParentIndex, PosAfterScript, pScriptLine);
 }
 
-bool SmCursor::InsertLimit(SmSubSup eSubSup, bool bMoveCaret) {
+bool SmCursor::InsertLimit(SmSubSup eSubSup) {
     //Find a subject to set limits on
     SmOperNode *pSubject = nullptr;
     //Check if pSelectedNode might be a subject
@@ -636,7 +628,7 @@ bool SmCursor::InsertLimit(SmSubSup eSubSup, bool bMoveCaret) {
         pSubSup->SetSubSup(eSubSup, pLine);
         PosAfterLimit = SmCaretPos(pLine, 1);
     //If it's already there... let's move the caret
-    } else if(bMoveCaret){
+    } else {
         pLine = pSubSup->GetSubSup(eSubSup);
         SmNodeList* pLineList = NodeToList(pLine);
         if(pLineList->size() > 0)
@@ -651,9 +643,8 @@ bool SmCursor::InsertLimit(SmSubSup eSubSup, bool bMoveCaret) {
     AnnotateSelection();
 
     //Set caret position
-    if(bMoveCaret)
-        if(!SetCaretPosition(PosAfterLimit, true))
-            SetCaretPosition(SmCaretPos(pLine, 0), true);
+    if(!SetCaretPosition(PosAfterLimit))
+        SetCaretPosition(SmCaretPos(pLine, 0));
 
     EndEdit();
 
@@ -677,9 +668,7 @@ void SmCursor::InsertBrackets(SmBracketType eBracketType) {
     //Find parent and offset in parent
     SmStructureNode *pLineParent = pLine->GetParent();
     int nParentIndex = pLineParent->IndexOfSubNode(pLine);
-    OSL_ENSURE( nParentIndex != -1, "pLine must be a subnode of pLineParent!");
-    if (nParentIndex < 0)
-        return;
+    assert(nParentIndex >= 0);
 
     //Convert line to list
     SmNodeList *pLineList = NodeToList(pLine);
@@ -717,9 +706,9 @@ void SmCursor::InsertBrackets(SmBracketType eBracketType) {
     //Insert into line
     pLineList->insert(it, pBrace);
     //Patch line (I think this is good enough)
-    SmCaretPos pAfter = PatchLineList(pLineList, it);
+    SmCaretPos aAfter = PatchLineList(pLineList, it);
     if( !PosAfterInsert.IsValid() )
-        PosAfterInsert = pAfter;
+        PosAfterInsert = aAfter;
 
     //Finish editing
     FinishEdit(pLineList, pLineParent, nParentIndex, PosAfterInsert);
@@ -814,12 +803,7 @@ bool SmCursor::InsertRow() {
     //Find parent and offset in parent
     SmStructureNode *pLineParent = pLine->GetParent();
     int nParentIndex = pLineParent->IndexOfSubNode(pLine);
-
-    if (nParentIndex == -1)
-    {
-        SAL_WARN("starmath", "pLine must be a subnode of pLineParent!");
-        return false;
-    }
+    assert(nParentIndex >= 0);
 
     //Discover the context of this command
     SmTableNode  *pTable  = nullptr;
@@ -827,14 +811,14 @@ bool SmCursor::InsertRow() {
     int nTableIndex = nParentIndex;
     if(pLineParent->GetType() == NTABLE)
         pTable = static_cast<SmTableNode*>(pLineParent);
-    //If it's warped in a SmLineNode, we can still insert a newline
+    //If it's wrapped in a SmLineNode, we can still insert a newline
     else if(pLineParent->GetType() == NLINE &&
             pLineParent->GetParent() &&
             pLineParent->GetParent()->GetType() == NTABLE) {
         //NOTE: This hack might give problems if we stop ignoring SmAlignNode
         pTable = static_cast<SmTableNode*>(pLineParent->GetParent());
         nTableIndex = pTable->IndexOfSubNode(pLineParent);
-        OSL_ENSURE(nTableIndex != -1, "pLineParent must be a child of its parent!");
+        assert(nTableIndex >= 0);
     }
     if(pLineParent->GetType() == NMATRIX)
         pMatrix = static_cast<SmMatrixNode*>(pLineParent);
@@ -938,11 +922,7 @@ void SmCursor::InsertFraction() {
     //Find Parent and offset in parent
     SmStructureNode *pLineParent = pLine->GetParent();
     int nParentIndex = pLineParent->IndexOfSubNode(pLine);
-    if (nParentIndex == -1)
-    {
-        SAL_WARN("starmath", "pLine must be a subnode of pLineParent!");
-        return;
-    }
+    assert(nParentIndex >= 0);
 
     //We begin modifying the tree here
     BeginEdit();
@@ -1422,8 +1402,8 @@ void SmCursor::FinishEdit(SmNodeList* pLineList,
     AnnotateSelection(); //Update selection annotation!
 
     //Set caret position
-    if(!SetCaretPosition(PosAfterEdit, true))
-        SetCaretPosition(SmCaretPos(pStartLine, 0), true);
+    if(!SetCaretPosition(PosAfterEdit))
+        SetCaretPosition(SmCaretPos(pStartLine, 0));
 
     //End edit section
     EndEdit();
@@ -1507,7 +1487,8 @@ bool SmCursor::IsAtTailOfBracket(SmBracketType eBracketType, SmBraceNode** ppBra
             return false;
         }
 
-        sal_uInt16 index = pNode->FindIndex();
+        int index = pParentNode->IndexOfSubNode(pNode);
+        assert(index >= 0);
         if (index + 1 != pParentNode->GetNumSubNodes()) {
             // The cursor is not at the tail at one of ancestor nodes.
             return false;
@@ -1551,39 +1532,35 @@ bool SmCursor::IsAtTailOfBracket(SmBracketType eBracketType, SmBraceNode** ppBra
     }
 
     if (ppBraceNode) {
-        *ppBraceNode = static_cast<SmBraceNode*>(pBraceNode);
+        *ppBraceNode = pBraceNode;
     }
 
     return true;
 }
 
-void SmCursor::MoveAfterBracket(SmBraceNode* pBraceNode, bool bMoveAnchor)
+void SmCursor::MoveAfterBracket(SmBraceNode* pBraceNode)
 {
     mpPosition->CaretPos.pSelectedNode = pBraceNode;
     mpPosition->CaretPos.Index = 1;
-    if (bMoveAnchor) {
-        mpAnchor->CaretPos.pSelectedNode = pBraceNode;
-        mpAnchor->CaretPos.Index = 1;
-    }
+    mpAnchor->CaretPos.pSelectedNode = pBraceNode;
+    mpAnchor->CaretPos.Index = 1;
     RequestRepaint();
 }
 
 
 /////////////////////////////////////// SmNodeListParser
 
-SmNode* SmNodeListParser::Parse(SmNodeList* list, bool bDeleteErrorNodes){
+SmNode* SmNodeListParser::Parse(SmNodeList* list){
     pList = list;
-    if(bDeleteErrorNodes){
-        //Delete error nodes
-        SmNodeList::iterator it = pList->begin();
-        while(it != pList->end()) {
-            if((*it)->GetType() == NERROR){
-                //Delete and erase
-                delete *it;
-                it = pList->erase(it);
-            }else
-                ++it;
-        }
+    //Delete error nodes
+    SmNodeList::iterator it = pList->begin();
+    while(it != pList->end()) {
+        if((*it)->GetType() == NERROR){
+            //Delete and erase
+            delete *it;
+            it = pList->erase(it);
+        }else
+            ++it;
     }
     SmNode* retval = Expression();
     pList = nullptr;

@@ -32,7 +32,7 @@ namespace basegfx
 
         // helper class to hold a simple edge. This is only used for horizontal edges
         // currently, thus the YPositions will be equal. I did not create a special
-        // class for this since holdingthe pointers is more effective and also can be
+        // class for this since holding the pointers is more effective and also can be
         // used as baseclass for the traversing edges
 
         class TrDeSimpleEdge
@@ -271,7 +271,7 @@ namespace basegfx
             bool splitEdgeAtGivenPoint(
                 TrDeEdgeEntries::reference aEdge,
                 const B2DPoint& rCutPoint,
-                TrDeEdgeEntries::iterator aCurrent)
+                const TrDeEdgeEntries::iterator& aCurrent)
             {
                 // do not create edges without deltaY: do not split when start is identical
                 if(aEdge.getStart().equal(rCutPoint))
@@ -323,7 +323,7 @@ namespace basegfx
             bool testAndCorrectEdgeIntersection(
                 TrDeEdgeEntries::reference aEdgeA,
                 TrDeEdgeEntries::reference aEdgeB,
-                TrDeEdgeEntries::iterator aCurrent)
+                const TrDeEdgeEntries::iterator& aCurrent)
             {
                 // Exclude simple cases: same start or end point
                 if(aEdgeA.getStart().equal(aEdgeB.getStart()))
@@ -423,10 +423,9 @@ namespace basegfx
                     // there were horizontal edges. These can be excluded, but
                     // cuts with other edges need to be solved and added before
                     // ignoring them
-                    for(size_t a = 0; a < rTrDeSimpleEdges.size(); a++)
+                    for(TrDeSimpleEdge & rHorEdge : rTrDeSimpleEdges)
                     {
                         // get horizontal edge as candidate; prepare its range and fixed Y
-                        const TrDeSimpleEdge& rHorEdge = rTrDeSimpleEdges[a];
                         const B1DRange aRange(rHorEdge.getStart().getX(), rHorEdge.getEnd().getX());
                         const double fFixedY(rHorEdge.getStart().getY());
 

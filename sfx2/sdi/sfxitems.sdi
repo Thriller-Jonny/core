@@ -25,15 +25,12 @@
     item String     SfxStringItem;
     item BYTE       SfxByteItem;
     item INT16      SfxEnumItem;
-    item INT16      SfxAllEnumItem;
-    item INT16      TbxImageItem;
 
     item String     SbxItem;                //! Dummy
     item String     SfxObjectItem;          //! Dummy
     item String     SfxTemplateItem;        //! Dummy
     item String     SfxMacroInfoItem;       //! Dummy
     item String     SfxImageItem;           //! Dummy
-    item String     SfxFrameItem;           //! Dummy
     item String     SfxObjectShellItem      //! Dummy
     item String     SfxUsrAnyItem           //! Dummy
     item String     SfxUnoFrameItem         //! Dummy
@@ -93,6 +90,7 @@
         INT32       SearchStartPointX MID_SEARCH_STARTPOINTX;
         INT32       SearchStartPointY MID_SEARCH_STARTPOINTY;
         BOOL        SearchFormatted MID_SEARCH_SEARCHFORMATTED;
+        INT16       AlgorithmType2  MID_SEARCH_ALGORITHMTYPE2;
     };
     item SvxSearch SvxSearchItem;
 

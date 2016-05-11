@@ -211,7 +211,7 @@ bool ScValidationData::DoScript( const ScAddress& rPos, const OUString& rInput,
         aParams[0] = css::uno::makeAny( OUString( aValStr ) );
 
     //  2) Position of the cell
-    OUString aPosStr(rPos.Format(SCA_VALID | SCA_TAB_3D, pDocument, pDocument->GetAddressConvention()));
+    OUString aPosStr(rPos.Format(ScRefFlags::VALID | ScRefFlags::TAB_3D, pDocument, pDocument->GetAddressConvention()));
     aParams[1] = css::uno::makeAny(aPosStr);
 
     //  use link-update flag to prevent closing the document
@@ -328,7 +328,7 @@ bool ScValidationData::DoMacro( const ScAddress& rPos, const OUString& rInput,
             refPar->Get(1)->PutString( aValStr );
 
         //  2) Position of the cell
-        OUString aPosStr(rPos.Format(SCA_VALID | SCA_TAB_3D, pDocument, pDocument->GetAddressConvention()));
+        OUString aPosStr(rPos.Format(ScRefFlags::VALID | ScRefFlags::TAB_3D, pDocument, pDocument->GetAddressConvention()));
         refPar->Get(2)->PutString( aPosStr );
 
         //  use link-update flag to prevent closing the document
@@ -555,8 +555,8 @@ namespace {
 class ScStringTokenIterator
 {
 public:
-    inline explicit             ScStringTokenIterator( ScTokenArray& rTokArr, bool bSkipEmpty = true ) :
-                                    mrTokArr( rTokArr ), mbSkipEmpty( bSkipEmpty ), mbOk( true ) {}
+    inline explicit             ScStringTokenIterator( ScTokenArray& rTokArr ) :
+                                    mrTokArr( rTokArr ), mbSkipEmpty( true ), mbOk( true ) {}
 
     /** Returns the string of the first string token or NULL on error or empty token array. */
     rtl_uString* First();
@@ -694,7 +694,7 @@ bool ScValidationData::GetSelectionFromFormula(
         }
         else if (eOpCode == ocName)
         {
-            ScRangeData* pName = pDocument->GetRangeName()->findByIndex( t->GetIndex() );
+            const ScRangeData* pName = pDocument->FindRangeNameBySheetAndIndex( t->GetSheet(), t->GetIndex());
             if (pName && pName->IsReference(aRange))
             {
                 bRef = true;
@@ -811,7 +811,7 @@ bool ScValidationData::FillSelectionList(std::vector<ScTypedStrData>& rStrColl, 
 
     if( HasSelectionList() )
     {
-        std::unique_ptr<ScTokenArray> pTokArr( CreateTokenArry(0) );
+        std::unique_ptr<ScTokenArray> pTokArr( CreateFlatCopiedTokenArray(0) );
 
         // *** try if formula is a string list ***
 
@@ -864,7 +864,7 @@ bool ScValidationData::IsListValid( ScRefCellValue& rCell, const ScAddress& rPos
         5)  A formula resulting in a cell/range reference or matrix/array.
     */
 
-    std::unique_ptr< ScTokenArray > pTokArr( CreateTokenArry( 0 ) );
+    std::unique_ptr< ScTokenArray > pTokArr( CreateFlatCopiedTokenArray( 0 ) );
 
     // *** try if formula is a string list ***
 
@@ -971,19 +971,6 @@ void ScValidationDataList::UpdateMoveTab( sc::RefUpdateMoveTabContext& rCxt )
 {
     for (iterator it = begin(); it != end(); ++it)
         (*it)->UpdateMoveTab(rCxt);
-}
-
-bool ScValidationDataList::operator==( const ScValidationDataList& r ) const
-{
-    // for Ref-Undo - internal variables can not be compared
-
-    size_t nCount = maData.size();
-    bool bEqual = ( nCount == r.maData.size() );
-    for( const_iterator it1 = begin(), it2 = r.begin(); it1 != end() && bEqual; ++it1, ++it2 ) // Entries are sorted
-        if ( !(*it1)->EqualEntries(**it2) )         // different entries ?
-            bEqual = false;
-
-    return bEqual;
 }
 
 ScValidationDataList::iterator ScValidationDataList::begin()

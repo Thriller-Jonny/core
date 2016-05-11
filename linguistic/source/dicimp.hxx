@@ -25,7 +25,7 @@
 #include <com/sun/star/lang/XServiceInfo.hpp>
 
 #include <cppuhelper/implbase.hxx>
-#include <cppuhelper/interfacecontainer.h>
+#include <comphelper/interfacecontainer2.hxx>
 #include <tools/solar.h>
 
 #include "defs.hxx"
@@ -43,13 +43,12 @@ class DictionaryNeo :
     >
 {
 
-    ::cppu::OInterfaceContainerHelper                           aDicEvtListeners;
-    css::uno::Sequence< css::uno::Reference<  css::linguistic2::XDictionaryEntry > >
+    ::comphelper::OInterfaceContainerHelper2                    aDicEvtListeners;
+    std::vector< css::uno::Reference< css::linguistic2::XDictionaryEntry > >
                                                                 aEntries;
     OUString                                                    aDicName;
     OUString                                                    aMainURL;
     css::linguistic2::DictionaryType                            eDicType;
-    sal_Int16                                                   nCount;
     sal_Int16                                                   nLanguage;
     sal_Int16                                                   nDicVersion;
     bool                                                        bNeedEntries;
@@ -61,7 +60,7 @@ class DictionaryNeo :
     DictionaryNeo & operator = (const DictionaryNeo &) = delete;
 
     void                    launchEvent(sal_Int16 nEvent,
-                                        css::uno::Reference< css::linguistic2::XDictionaryEntry > xEntry);
+                                        const css::uno::Reference< css::linguistic2::XDictionaryEntry >& xEntry);
 
     sal_uLong                   loadEntries(const OUString &rMainURL);
     sal_uLong                   saveEntries(const OUString &rMainURL);
@@ -167,7 +166,6 @@ public:
 };
 
 
-
 class DicEntry :
     public cppu::WeakImplHelper< css::linguistic2::XDictionaryEntry >
 {
@@ -196,7 +194,6 @@ public:
     virtual OUString SAL_CALL
         getReplacementText() throw(css::uno::RuntimeException, std::exception) override;
 };
-
 
 
 #endif

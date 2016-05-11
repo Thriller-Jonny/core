@@ -24,7 +24,7 @@
  <toolbar:toolbaritem xlink:href=".uno:Open"/>
  <toolbar:toolbaritem xlink:href=".uno:OpenRemote" toolbar:visible="false"/>
  <toolbar:toolbaritem xlink:href=".uno:Save"/>
- <toolbar:toolbaritem xlink:href=".uno:SaveAs"/>
+ <toolbar:toolbaritem xlink:href=".uno:SaveAs" toolbar:visible="false"/>
  <toolbar:toolbaritem xlink:href=".uno:SendMail" toolbar:visible="false"/>
  <toolbar:toolbarseparator/>
  <toolbar:toolbaritem xlink:href=".uno:EditDoc" toolbar:visible="false"/>
@@ -40,9 +40,6 @@
  <toolbar:toolbarseparator/>
  <toolbar:toolbaritem xlink:href=".uno:Undo"/>
  <toolbar:toolbaritem xlink:href=".uno:Redo"/>
- <toolbar:toolbarseparator/>
- <toolbar:toolbaritem xlink:href=".uno:DisplayMode"/>
- <toolbar:toolbaritem xlink:href=".uno:ToggleTabBarVisibility" toolbar:visible="false"/>
  <toolbar:toolbarseparator/>
  <toolbar:toolbaritem xlink:href=".uno:SearchDialog"/>
  <toolbar:toolbaritem xlink:href=".uno:SpellDialog"/>
@@ -63,22 +60,25 @@
  <toolbar:toolbaritem xlink:href=".uno:GridVisible"/>
  <toolbar:toolbaritem xlink:href=".uno:HelplinesMove" toolbar:visible="false"/>
  <toolbar:toolbaritem xlink:href=".uno:AnimationEffects"/>
+ <toolbar:toolbaritem xlink:href=".uno:InsertDraw"/>
  <toolbar:toolbarseparator/>
- <toolbar:toolbaritem xlink:href=".uno:PageSetup"/>
+ <toolbar:toolbaritem xlink:href=".uno:DisplayMode"/>
+ <toolbar:toolbaritem xlink:href=".uno:ToggleTabBarVisibility"/>
+ <toolbar:toolbaritem xlink:href=".uno:SlideSetup"/>
  <toolbar:toolbaritem xlink:href=".uno:SlideMasterPage"/>
  <toolbar:toolbarseparator/>
  <toolbar:toolbaritem xlink:href=".uno:Presentation" toolbar:helpid="10157"/>
  <toolbar:toolbaritem xlink:href=".uno:PresentationCurrentSlide"/>
  <toolbar:toolbarseparator/>
- <toolbar:toolbaritem xlink:href=".uno:FirstPage" toolbar:visible="false"/>
- <toolbar:toolbaritem xlink:href=".uno:PreviousPage" toolbar:visible="false"/>
- <toolbar:toolbaritem xlink:href=".uno:NextPage" toolbar:visible="false"/>
- <toolbar:toolbaritem xlink:href=".uno:LastPage" toolbar:visible="false"/>
+ <toolbar:toolbaritem xlink:href=".uno:FirstSlide" toolbar:visible="false"/>
+ <toolbar:toolbaritem xlink:href=".uno:PreviousSlide" toolbar:visible="false"/>
+ <toolbar:toolbaritem xlink:href=".uno:NextSlide" toolbar:visible="false"/>
+ <toolbar:toolbaritem xlink:href=".uno:LastSlide" toolbar:visible="false"/>
  <toolbar:toolbarseparator/>
- <toolbar:toolbaritem xlink:href=".uno:MovePageFirst" toolbar:visible="false"/>
- <toolbar:toolbaritem xlink:href=".uno:MovePageUp" toolbar:visible="false"/>
- <toolbar:toolbaritem xlink:href=".uno:MovePageDown" toolbar:visible="false"/>
- <toolbar:toolbaritem xlink:href=".uno:MovePageLast" toolbar:visible="false"/>
+ <toolbar:toolbaritem xlink:href=".uno:MoveSlideFirst" toolbar:visible="false"/>
+ <toolbar:toolbaritem xlink:href=".uno:MoveSlideUp" toolbar:visible="false"/>
+ <toolbar:toolbaritem xlink:href=".uno:MoveSlideDown" toolbar:visible="false"/>
+ <toolbar:toolbaritem xlink:href=".uno:MoveSlideLast" toolbar:visible="false"/>
  <toolbar:toolbarseparator/>
  <toolbar:toolbaritem xlink:href=".uno:HelpIndex" toolbar:visible="false"/>
  <toolbar:toolbaritem xlink:href=".uno:ExtendedHelp" toolbar:visible="false"/>

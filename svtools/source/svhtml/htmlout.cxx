@@ -640,7 +640,7 @@ SvStream& HTMLOutFuncs::Out_ImageMap( SvStream& rStream,
             OString aCoords;
             switch( pObj->GetType() )
             {
-            case( IMAP_OBJ_RECTANGLE ):
+            case IMAP_OBJ_RECTANGLE:
                 {
                     const IMapRectangleObject* pRectObj =
                         static_cast<const IMapRectangleObject *>(pObj);
@@ -658,7 +658,7 @@ SvStream& HTMLOutFuncs::Out_ImageMap( SvStream& rStream,
                         .makeStringAndClear();
                 }
                 break;
-            case( IMAP_OBJ_CIRCLE ):
+            case IMAP_OBJ_CIRCLE:
                 {
                     const IMapCircleObject* pCirc =
                         static_cast<const IMapCircleObject *>(pObj);
@@ -675,7 +675,7 @@ SvStream& HTMLOutFuncs::Out_ImageMap( SvStream& rStream,
                         .makeStringAndClear();
                 }
                 break;
-            case( IMAP_OBJ_POLYGON ):
+            case IMAP_OBJ_POLYGON:
                 {
                     const IMapPolygonObject* pPolyObj =
                         static_cast<const IMapPolygonObject *>(pObj);
@@ -976,6 +976,18 @@ OString HTMLOutFuncs::CreateTableDataOptionsValNum(
         aStrTD.append('\"');
     }
     return aStrTD.makeStringAndClear();
+}
+
+bool HTMLOutFuncs::PrivateURLToInternalImg( OUString& rURL )
+{
+    if( rURL.getLength() > 14 &&
+        rURL.compareTo( OOO_STRING_SVTOOLS_HTML_private_image, 14 ) == 0 )
+    {
+        rURL = rURL.copy( 14 );
+        return true;
+    }
+
+    return false;
 }
 
 void HtmlWriterHelper::applyColor(HtmlWriter& rHtmlWriter, const OString &aAttributeName, const Color& rColor)

@@ -153,10 +153,10 @@ class ScExternalSingleRefToken : public formula::FormulaToken
     svl::SharedString           maTabName;
     ScSingleRefData             maSingleRef;
 
-    ScExternalSingleRefToken(); // disabled
 public:
     ScExternalSingleRefToken( sal_uInt16 nFileId, const svl::SharedString& rTabName, const ScSingleRefData& r );
     ScExternalSingleRefToken( const ScExternalSingleRefToken& r );
+    ScExternalSingleRefToken() = delete;
     virtual ~ScExternalSingleRefToken();
 
     virtual sal_uInt16                  GetIndex() const override;
@@ -173,8 +173,8 @@ class ScExternalDoubleRefToken : public formula::FormulaToken
     svl::SharedString           maTabName;  // name of the first sheet
     ScComplexRefData            maDoubleRef;
 
-    ScExternalDoubleRefToken(); // disabled
 public:
+    ScExternalDoubleRefToken() = delete;
     ScExternalDoubleRefToken( sal_uInt16 nFileId, const svl::SharedString& rTabName, const ScComplexRefData& r );
     ScExternalDoubleRefToken( const ScExternalDoubleRefToken& r );
     virtual ~ScExternalDoubleRefToken();
@@ -196,8 +196,8 @@ class ScExternalNameToken : public formula::FormulaToken
     sal_uInt16                  mnFileId;
     svl::SharedString           maName;
 
-    ScExternalNameToken(); // disabled
 public:
+    ScExternalNameToken() = delete;
     ScExternalNameToken( sal_uInt16 nFileId, const svl::SharedString& rName );
     ScExternalNameToken( const ScExternalNameToken& r );
     virtual ~ScExternalNameToken();
@@ -225,13 +225,14 @@ public:
         DATA_TOTALS = DATA | TOTALS
     };
 
+    ScTableRefToken() = delete;
     ScTableRefToken( sal_uInt16 nIndex, Item eItem );
     ScTableRefToken( const ScTableRefToken& r );
     virtual ~ScTableRefToken();
 
     virtual sal_uInt16          GetIndex() const override;
     virtual void                SetIndex( sal_uInt16 n ) override;
-    virtual bool                IsGlobal() const override;
+    virtual sal_Int16           GetSheet() const override;
     virtual bool                operator==( const formula::FormulaToken& rToken ) const override;
     virtual FormulaToken*       Clone() const override { return new ScTableRefToken(*this); }
 
@@ -245,9 +246,6 @@ private:
     formula::FormulaTokenRef    mxAreaRefRPN;   ///< resulting RPN area
     sal_uInt16                  mnIndex;    ///< index into table / database range collection
     Item                        meItem;
-
-    ScTableRefToken(); // disabled
-
 };
 
 // Only created from within the interpreter, no conversion from ScRawToken,
@@ -330,7 +328,7 @@ public:
                                             xUpperLeft->GetType() :
                                             static_cast<formula::StackVar>(formula::svUnknown);
                                     }
-    inline formula::FormulaConstTokenRef     GetUpperLeftToken() const   { return xUpperLeft; }
+    const formula::FormulaConstTokenRef& GetUpperLeftToken() const { return xUpperLeft; }
     void Assign( const ScMatrixCellResultToken & r );
 };
 

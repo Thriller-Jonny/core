@@ -19,7 +19,6 @@
 
 #include <com/sun/star/lang/XServiceInfo.hpp>
 #include <com/sun/star/registry/XRegistryKey.hpp>
-#include <com/sun/star/uno/Sequence.h>
 #include <rtl/ustring.hxx>
 
 #include <sfx2/sfxmodelfactory.hxx>
@@ -92,7 +91,6 @@ SAL_DLLPUBLIC_EXPORT void* SAL_CALL sm_component_getFactory( const sal_Char* pIm
     return pReturn ;
 }
 } // extern "C"
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

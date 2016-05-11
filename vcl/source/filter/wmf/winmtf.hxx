@@ -20,13 +20,15 @@
 #ifndef INCLUDED_VCL_SOURCE_FILTER_WMF_WINMTF_HXX
 #define INCLUDED_VCL_SOURCE_FILTER_WMF_WINMTF_HXX
 
-#include <sot/object.hxx>
+#include <sal/config.h>
+
 #include <vcl/graph.hxx>
 #include <basegfx/tools/b2dclipstate.hxx>
 #include <vcl/font.hxx>
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 #include <vcl/lineinfo.hxx>
 #include <vcl/fltcall.hxx>
+#include <o3tl/make_unique.hxx>
 
 #define ERROR                   0
 #define NULLREGION              1
@@ -148,14 +150,15 @@ struct WMF_EXTERNALHEADER;
 #define PS_INSIDEFRAME          6
 #define PS_STYLE_MASK           15
 
-#define PS_ENDCAP_ROUND     0x000
-#define PS_ENDCAP_SQUARE    0x100
-#define PS_ENDCAP_FLAT      0x200
+#define PS_ENDCAP_ROUND      0x000
+#define PS_ENDCAP_SQUARE     0x100
+#define PS_ENDCAP_FLAT       0x200
+#define PS_ENDCAP_STYLE_MASK 0xF00
 
 #define PS_JOIN_ROUND       0x0000
 #define PS_JOIN_BEVEL       0x1000
 #define PS_JOIN_MITER       0x2000
-
+#define PS_JOIN_STYLE_MASK  0xF000
 
 #define ANSI_CHARSET            0
 #define DEFAULT_CHARSET         1
@@ -283,7 +286,12 @@ public:
     void        AddPolyPolygon( const tools::PolyPolygon& rPolyPolygon );
 };
 
-struct WinMtfFontStyle
+struct GDIObj
+{
+    virtual ~GDIObj(); // Polymorphic base class
+};
+
+struct WinMtfFontStyle : GDIObj
 {
     vcl::Font    aFont;
 
@@ -297,7 +305,7 @@ typedef enum
     FillStylePattern
 } WinMtfFillStyleType;
 
-struct WinMtfFillStyle
+struct WinMtfFillStyle : GDIObj
 {
     Color               aFillColor;
     bool                bTransparent;
@@ -329,13 +337,6 @@ struct WinMtfFillStyle
             && aType == rStyle.aType;
     }
 
-    bool operator==(WinMtfFillStyle* pStyle)
-    {
-        return aFillColor == pStyle->aFillColor
-            && bTransparent == pStyle->bTransparent
-            && aType == pStyle->aType;
-    }
-
     WinMtfFillStyle& operator=(const WinMtfFillStyle& rStyle)
     {
         aFillColor = rStyle.aFillColor;
@@ -345,17 +346,9 @@ struct WinMtfFillStyle
         return *this;
     }
 
-    WinMtfFillStyle& operator=(WinMtfFillStyle* pStyle)
-    {
-        aFillColor = pStyle->aFillColor;
-        bTransparent = pStyle->bTransparent;
-        aBmp = pStyle->aBmp;
-        aType = pStyle->aType;
-        return *this;
-    }
 };
 
-struct WinMtfLineStyle
+struct WinMtfLineStyle : GDIObj
 {
     Color       aLineColor;
     LineInfo    aLineInfo;
@@ -382,13 +375,6 @@ struct WinMtfLineStyle
         return aLineColor == rStyle.aLineColor
             && bTransparent == rStyle.bTransparent
             && aLineInfo == rStyle.aLineInfo;
-    }
-
-    bool operator==(WinMtfLineStyle* pStyle)
-    {
-        return aLineColor == pStyle->aLineColor
-            && bTransparent == pStyle->bTransparent
-            && aLineInfo == pStyle->aLineInfo;
     }
 
     WinMtfLineStyle& operator=( const WinMtfLineStyle& rStyle )
@@ -456,84 +442,24 @@ typedef std::shared_ptr<SaveStruct> SaveStructPtr;
 
 struct BSaveStruct
 {
-    Bitmap          aBmp;
+    BitmapEx        aBmpEx;
     Rectangle       aOutRect;
     sal_uInt32      nWinRop;
-    WinMtfFillStyle aStyle;
 
-    BSaveStruct(const Bitmap& rBmp, const Rectangle& rOutRect,
-                sal_uInt32 nRop, WinMtfFillStyle& rStyle)
-        : aBmp(rBmp)
-        , aOutRect(rOutRect)
-        , nWinRop(nRop)
-        , aStyle (rStyle)
+    BSaveStruct(const Bitmap& rBmp, const Rectangle& rOutRect, sal_uInt32 nRop)
+    :   aBmpEx(rBmp)
+    ,   aOutRect(rOutRect)
+    ,   nWinRop(nRop)
+    {}
+
+    BSaveStruct(const BitmapEx& rBmpEx, const Rectangle& rOutRect, sal_uInt32 nRop)
+    :   aBmpEx(rBmpEx)
+    ,   aOutRect(rOutRect)
+    ,   nWinRop(nRop)
     {}
 };
 
-typedef ::std::vector< BSaveStruct* > BSaveStructList_impl;
-
-enum GDIObjectType
-{
-    GDI_DUMMY = 0,
-    GDI_PEN = 1,
-    GDI_BRUSH = 2,
-    GDI_FONT = 3,
-    GDI_PALETTE = 4,
-    GDI_BITMAP = 5,
-    GDI_REGION = 6
-};
-
-struct GDIObj
-{
-    void*           pStyle;
-    GDIObjectType   eType;
-
-    GDIObj()
-        : pStyle (nullptr)
-        , eType  (GDI_DUMMY)
-    {}
-
-    GDIObj(GDIObjectType eT, void* pS)
-    {
-        pStyle = pS;
-        eType = eT;
-    }
-
-    void Set(GDIObjectType eT, void* pS)
-    {
-        pStyle = pS;
-        eType = eT;
-    }
-
-    void Delete()
-    {
-        if (pStyle == nullptr)
-            return;
-
-        switch (eType)
-        {
-            case GDI_PEN :
-                delete static_cast<WinMtfLineStyle*>(pStyle);
-            break;
-            case GDI_BRUSH :
-                delete static_cast<WinMtfFillStyle*>(pStyle);
-            break;
-            case GDI_FONT :
-                delete static_cast<WinMtfFontStyle*>(pStyle);
-            break;
-
-            default:
-                OSL_FAIL( "unsupported style deleted" );
-                break;
-        }
-        pStyle = nullptr;
-    }
-
-    ~GDIObj()
-    {
-        Delete();
-    }
-};
+typedef std::vector<std::unique_ptr<BSaveStruct>> BSaveStructList_impl;
 
 class WinMtfOutput
 {
@@ -561,7 +487,7 @@ class WinMtfOutput
     RasterOp            meLatestRasterOp;
     RasterOp            meRasterOp;
 
-    std::vector< GDIObj* > vGDIObj;
+    std::vector< std::unique_ptr<GDIObj> > vGDIObj;
 
     Point               maActPos;
 
@@ -601,7 +527,7 @@ class WinMtfOutput
     void                ImplMap( vcl::Font& rFont );
     tools::Polygon&     ImplMap( tools::Polygon& rPolygon );
     tools::PolyPolygon& ImplMap( tools::PolyPolygon& rPolyPolygon );
-    tools::Polygon&     ImplScale( tools::Polygon& rPolygon );
+    void                ImplScale( tools::Polygon& rPolygon );
     tools::PolyPolygon& ImplScale( tools::PolyPolygon& rPolyPolygon );
     void                ImplResizeObjectArry( sal_uInt32 nNewEntry );
     void                ImplSetNonPersistentLineColorTransparenz();
@@ -642,12 +568,18 @@ public:
     void                SetBkColor( const Color& rColor );
     void                SetTextColor( const Color& rColor );
     void                SetTextAlign( sal_uInt32 nAlign );
-    void                CreateObject( GDIObjectType, void* pStyle = nullptr );
-    void                CreateObject( sal_Int32 nIndex, GDIObjectType, void* pStyle = nullptr );
+
+    void                CreateObject( std::unique_ptr<GDIObj> pObject);
+    void                CreateObjectIndexed( sal_Int32 nIndex, std::unique_ptr<GDIObj> pObject );
+
+    void                CreateObject()
+    {
+        CreateObject(o3tl::make_unique<GDIObj>());
+    }
+
     void                DeleteObject( sal_Int32 nIndex );
     void                SelectObject( sal_Int32 nIndex );
     rtl_TextEncoding    GetCharSet(){ return maFont.GetCharSet(); };
-    WinMtfFillStyle&    GetFillStyle () { return maFillStyle; }
     const vcl::Font&    GetFont() const { return maFont;}
     void                SetTextLayoutMode( ComplexTextLayoutMode nLayoutMode );
 
@@ -723,7 +655,7 @@ class WinMtf
 {
 protected:
 
-    WinMtfOutput*           pOut;
+    std::unique_ptr<WinMtfOutput> pOut;
     SvStream*               pWMF;               // the WMF/EMF file to be read
 
     sal_uInt32              nStartPos, nEndPos;
@@ -739,7 +671,7 @@ protected:
     void                Callback( sal_uInt16 nPercent );
 
                         WinMtf(
-                            WinMtfOutput* pOut,
+                            GDIMetaFile& rGDIMetaFile,
                             SvStream& rStreamWMF,
                             FilterConfigItem* pConfigItem = nullptr
                         );
@@ -761,7 +693,6 @@ public:
     ~EnhWMFReader();
 
     bool ReadEnhWMF();
-    void ReadEMFPlusComment(sal_uInt32 length, bool& bHaveDC);
 private:
     template <class T> void ReadAndDrawPolyPolygon();
     template <class T> void ReadAndDrawPolyLine();
@@ -769,6 +700,7 @@ private:
     template <class T, class Drawer> void ReadAndDrawPolygon(Drawer drawer, const bool skipFirst);
 
     Rectangle ReadRectangle();
+    void ReadEMFPlusComment(sal_uInt32 length, bool& bHaveDC);
 };
 
 class WMFReader : public WinMtf
@@ -779,7 +711,7 @@ private:
     sal_uInt32      nRecSize;
 
     // embedded EMF data
-    SvMemoryStream* pEMFStream;
+    std::unique_ptr<SvMemoryStream> pEMFStream;
 
     // total number of comment records containing EMF data
     sal_uInt32      nEMFRecCount;
@@ -806,14 +738,13 @@ private:
     Point           ReadYX();                   // reads and converts a point (first Y then X)
     Rectangle       ReadRectangle();            // reads and converts a rectangle
     Size            ReadYXExt();
-    bool        GetPlaceableBound( Rectangle& rSize, SvStream* pStrm );
+    void            GetPlaceableBound( Rectangle& rSize, SvStream* pStrm );
 
 public:
 
     WMFReader(SvStream& rStreamWMF, GDIMetaFile& rGDIMetaFile,
               FilterConfigItem* pConfigItem = nullptr,
               WMF_EXTERNALHEADER* pExtHeader = nullptr);
-    ~WMFReader();
 
     // read WMF file from stream and fill the GDIMetaFile
     void ReadWMF();

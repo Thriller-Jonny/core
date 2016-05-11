@@ -19,7 +19,6 @@
 
 #include <sfx2/sfxcommands.h>
 #include <svx/svxcommands.h>
-#include "sccommands.h"
 
 #define HID_INSWIN_POS                                          "SC_HID_INSWIN_POS"
 #define HID_INSWIN_CALC                                         "SC_HID_INSWIN_CALC"
@@ -87,11 +86,6 @@
 #define HID_SC_REN_AFMT_DLG                                     "SC_HID_SC_REN_AFMT_DLG"
 
 // Hilfe IDs fuer Submenus (max.50) ------------------------------------------
-#define HID_SCMENU_OBJMIRROR                                    "SC_HID_SCMENU_OBJMIRROR"
-#define HID_SCMENU_OBJARRANGE                                   "SC_HID_SCMENU_OBJARRANGE"
-#define HID_SCMENU_ANCHOR                                       "SC_HID_SCMENU_ANCHOR"
-
-
 #define HID_SC_SORT_ACTION                                      "SC_HID_SC_SORT_ACTION"
 #define HID_SC_SORT_AUTHOR                                      "SC_HID_SC_SORT_AUTHOR"
 #define HID_SC_SORT_DATE                                        "SC_HID_SC_SORT_DATE"
@@ -632,5 +626,21 @@
 #define HID_FUNC_CEIL_MATH                                      "SC_HID_FUNC_CEIL_MATH"
 #define HID_FUNC_FLOOR_MATH                                     "SC_HID_FUNC_FLOOR_MATH"
 #define HID_FUNC_FLOOR_PRECISE                                  "SC_HID_FUNC_FLOOR_PRECISE"
+#define HID_FUNC_RAWSUBTRACT                                    "SC_HID_FUNC_RAWSUBTRACT"
+#define HID_FUNC_WEEKNUM_OOO                                    "SC_HID_FUNC_WEEKNUM_OOO"
+#define HID_FUNC_FORECAST_ETS_ADD                               "SC_HID_FUNC_FORECAST_ETS_ADD"
+#define HID_FUNC_FORECAST_ETS_MUL                               "SC_HID_FUNC_FORECAST_ETS_MUL"
+#define HID_FUNC_FORECAST_ETS_PIA                               "SC_HID_FUNC_FORECAST_ETS_PIA"
+#define HID_FUNC_FORECAST_ETS_PIM                               "SC_HID_FUNC_FORECAST_ETS_PIM"
+#define HID_FUNC_FORECAST_ETS_SEA                               "SC_HID_FUNC_FORECAST_ETS_SEA"
+#define HID_FUNC_FORECAST_ETS_STA                               "SC_HID_FUNC_FORECAST_ETS_STA"
+#define HID_FUNC_FORECAST_ETS_STM                               "SC_HID_FUNC_FORECAST_ETS_STM"
+#define HID_FUNC_FORECAST_LIN                                   "SC_HID_FUNC_FORECAST_LIN"
+#define HID_FUNC_CONCAT_MS                                      "SC_HID_FUNC_CONCAT_MS"
+#define HID_FUNC_TEXTJOIN_MS                                    "SC_HID_FUNC_TEXTJOIN_MS"
+#define HID_FUNC_IFS_MS                                         "SC_HID_FUNC_IFS_MS"
+#define HID_FUNC_SWITCH_MS                                      "SC_HID_FUNC_SWITCH_MS"
+#define HID_FUNC_MINIFS_MS                                      "SC_HID_FUNC_MINIFS_MS"
+#define HID_FUNC_MAXIFS_MS                                      "SC_HID_FUNC_MAXIFS_MS"
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -22,9 +22,6 @@
 #include "services.h"
 #include <classes/resource.hrc>
 #include <classes/fwkresid.hxx>
-#include <framework/bmkmenu.hxx>
-#include <framework/imageproducer.hxx>
-#include <framework/menuconfiguration.hxx>
 
 #include <com/sun/star/awt/XDevice.hpp>
 #include <com/sun/star/beans/PropertyValue.hpp>
@@ -37,15 +34,21 @@
 #include <vcl/svapp.hxx>
 #include <vcl/i18nhelp.hxx>
 #include <vcl/settings.hxx>
+#include <vcl/commandinfoprovider.hxx>
 #include <rtl/ustrbuf.hxx>
 #include <osl/file.hxx>
 #include <svtools/menuoptions.hxx>
 #include <svtools/acceleratorexecute.hxx>
+#include <svtools/imagemgr.hxx>
+#include <tools/urlobj.hxx>
+#include <unotools/dynamicmenuoptions.hxx>
 #include <unotools/moduleoptions.hxx>
 #include <osl/mutex.hxx>
 #include <memory>
 
 //  Defines
+#define aSlotNewDocDirect ".uno:AddDirect"
+#define aSlotAutoPilot ".uno:AutoPilotMenu"
 
 using namespace com::sun::star::uno;
 using namespace com::sun::star::lang;
@@ -82,14 +85,14 @@ void NewMenuController::setMenuImages( PopupMenu* pPopupMenu, bool bSetImages )
                 bool        bImageSet( false );
                 OUString aImageId;
 
-                sal_uIntPtr nAttributePtr = pPopupMenu->GetUserValue(sal::static_int_cast<sal_uInt16>(i));
+                sal_uLong nAttributePtr = pPopupMenu->GetUserValue(sal::static_int_cast<sal_uInt16>(i));
                 MenuAttributes* pAttributes = reinterpret_cast<MenuAttributes *>(nAttributePtr);
                 if (pAttributes)
                     aImageId = pAttributes->aImageId;
 
                 if ( !aImageId.isEmpty() )
                 {
-                    aImage = GetImageFromURL( xFrame, aImageId, false );
+                    aImage = vcl::CommandInfoProvider::Instance().GetImageForCommand( aImageId, false, xFrame );
                     if ( !!aImage )
                     {
                         bImageSet = true;
@@ -101,7 +104,10 @@ void NewMenuController::setMenuImages( PopupMenu* pPopupMenu, bool bSetImages )
                 {
                     OUString aCmd( pPopupMenu->GetItemCommand( nItemId ) );
                     if ( !aCmd.isEmpty() )
-                        aImage = GetImageFromURL( xFrame, aCmd, false );
+                    {
+                        INetURLObject aURLObj( aCmd );
+                        aImage = SvFileInformationManager::GetImageNoDefault( aURLObj );
+                    }
 
                     if ( !!aImage )
                         pPopupMenu->SetItemImage( nItemId, aImage );
@@ -324,34 +330,51 @@ void NewMenuController::fillPopupMenu( Reference< css::awt::XPopupMenu >& rPopup
 
     if ( pVCLPopupMenu )
     {
-        MenuConfiguration aMenuCfg( m_xContext );
-        std::unique_ptr<BmkMenu> pSubMenu;
+        Reference< XDispatchProvider > xDispatchProvider( m_xFrame, UNO_QUERY );
+        URL aTargetURL;
+        aTargetURL.Complete = rtl::OUString::createFromAscii(m_bNewMenu ? aSlotNewDocDirect : aSlotAutoPilot);
+        m_xURLTransformer->parseStrict( aTargetURL );
+        Reference< XDispatch > xMenuItemDispatch = xDispatchProvider->queryDispatch( aTargetURL, OUString(), 0 );
+        if(xMenuItemDispatch == nullptr)
+            return;
 
-        if ( m_bNewMenu )
-            pSubMenu.reset(static_cast<BmkMenu*>(aMenuCfg.CreateBookmarkMenu( m_xFrame, BOOKMARK_NEWMENU )));
-        else
-            pSubMenu.reset(static_cast<BmkMenu*>(aMenuCfg.CreateBookmarkMenu( m_xFrame, BOOKMARK_WIZARDMENU )));
+        css::uno::Sequence< css::uno::Sequence< css::beans::PropertyValue > > aDynamicMenuEntries =
+            SvtDynamicMenuOptions().GetMenu( m_bNewMenu ? E_NEWMENU : E_WIZARDMENU );
 
-        // copy entries as we have to use the provided popup menu
-        *pVCLPopupMenu = *pSubMenu;
+        OUString aTitle;
+        OUString aURL;
+        OUString aTargetFrame;
+        OUString aImageId;
+        sal_uInt16 nItemId = 1;
 
-        Image           aImage;
-
-        // retrieve additional parameters from bookmark menu and
-        // store it in a unordered_map.
-        for ( sal_uInt16 i = 0; i < pSubMenu->GetItemCount(); i++ )
+        for ( const auto& aDynamicMenuEntry : aDynamicMenuEntries )
         {
-            sal_uInt16 nItemId = pSubMenu->GetItemId( sal::static_int_cast<sal_uInt16>( i ) );
-            if (( nItemId != 0 ) &&
-                ( pSubMenu->GetItemType( nItemId ) != MenuItemType::SEPARATOR ))
+            for ( const auto& aProperty : aDynamicMenuEntry )
             {
-                sal_uIntPtr nAttributePtr = pSubMenu->GetUserValue(nItemId);
-                if (nAttributePtr)
-                {
-                    MenuAttributes* pAttributes = reinterpret_cast<MenuAttributes *>(nAttributePtr);
-                    pAttributes->acquire();
-                    pVCLPopupMenu->SetUserValue(nItemId, nAttributePtr, MenuAttributes::ReleaseAttribute);
-                }
+                if ( aProperty.Name == DYNAMICMENU_PROPERTYNAME_URL )
+                    aProperty.Value >>= aURL;
+                else if ( aProperty.Name == DYNAMICMENU_PROPERTYNAME_TITLE )
+                    aProperty.Value >>= aTitle;
+                else if ( aProperty.Name == DYNAMICMENU_PROPERTYNAME_IMAGEIDENTIFIER )
+                    aProperty.Value >>= aImageId;
+                else if ( aProperty.Name == DYNAMICMENU_PROPERTYNAME_TARGETNAME )
+                    aProperty.Value >>= aTargetFrame;
+            }
+
+            if ( aTitle.isEmpty() && aURL.isEmpty() )
+                continue;
+
+            if ( aURL == "private:separator" )
+                pVCLPopupMenu->InsertSeparator();
+            else
+            {
+                pVCLPopupMenu->InsertItem( nItemId, aTitle );
+                pVCLPopupMenu->SetItemCommand( nItemId, aURL );
+
+                sal_uIntPtr nAttributePtr = MenuAttributes::CreateAttribute( aTargetFrame, aImageId );
+                pVCLPopupMenu->SetUserValue( nItemId, nAttributePtr, MenuAttributes::ReleaseAttribute );
+
+                nItemId++;
             }
         }
 
@@ -410,7 +433,7 @@ void SAL_CALL NewMenuController::itemSelected( const css::awt::MenuEvent& rEvent
                 SolarMutexGuard aSolarMutexGuard;
                 PopupMenu* pVCLPopupMenu = static_cast<PopupMenu *>(pPopupMenu->GetMenu());
                 aTargetURL.Complete = pVCLPopupMenu->GetItemCommand(rEvent.MenuId);
-                sal_uIntPtr nAttributePtr = pVCLPopupMenu->GetUserValue(rEvent.MenuId);
+                sal_uLong nAttributePtr = pVCLPopupMenu->GetUserValue(rEvent.MenuId);
                 MenuAttributes* pAttributes = reinterpret_cast<MenuAttributes *>(nAttributePtr);
                 if (pAttributes)
                     aTargetFrame = pAttributes->aTargetFrame;
@@ -427,7 +450,7 @@ void SAL_CALL NewMenuController::itemSelected( const css::awt::MenuEvent& rEvent
 
     if ( xDispatch.is() )
     {
-        // Call dispatch asychronously as we can be destroyed while dispatch is
+        // Call dispatch asynchronously as we can be destroyed while dispatch is
         // executed. VCL is not able to survive this as it wants to call listeners
         // after select!!!
         NewDocument* pNewDocument = new NewDocument;
@@ -448,12 +471,14 @@ void SAL_CALL NewMenuController::itemActivated( const css::awt::MenuEvent& ) thr
         {
             const StyleSettings& rSettings = Application::GetSettings().GetStyleSettings();
             bool bShowImages( rSettings.GetUseImagesInMenus() );
+            OUString aIconTheme( rSettings.DetermineIconTheme() );
 
             PopupMenu* pVCLPopupMenu = static_cast<PopupMenu *>(pPopupMenu->GetMenu());
 
-            if ( m_bShowImages != bShowImages )
+            if ( m_bShowImages != bShowImages || m_aIconTheme != aIconTheme )
             {
                 m_bShowImages = bShowImages;
+                m_aIconTheme = aIconTheme;
                 setMenuImages( pVCLPopupMenu, m_bShowImages );
             }
 
@@ -517,7 +542,8 @@ void SAL_CALL NewMenuController::initialize( const Sequence< Any >& aArguments )
             const StyleSettings& rSettings = Application::GetSettings().GetStyleSettings();
 
             m_bShowImages   = rSettings.GetUseImagesInMenus();
-            m_bNewMenu      = m_aCommandURL == ".uno:AddDirect";
+            m_aIconTheme    = rSettings.DetermineIconTheme();
+            m_bNewMenu      = m_aCommandURL == aSlotNewDocDirect;
         }
     }
 }

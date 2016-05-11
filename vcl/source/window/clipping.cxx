@@ -25,9 +25,6 @@
 #include <salobj.hxx>
 #include <window.h>
 
-#define IMPL_MAXSAVEBACKSIZE    (640*480)
-#define IMPL_MAXALLSAVEBACKSIZE (800*600*2)
-
 namespace vcl {
 
 void Window::InitClipRegion()
@@ -36,9 +33,6 @@ void Window::InitClipRegion()
 
     vcl::Region  aRegion;
 
-    // Put back backed up background
-    if ( mpWindowImpl->mpFrameData->mpFirstBackWin )
-        ImplInvalidateAllOverlapBackgrounds();
     if ( mpWindowImpl->mbInPaint )
         aRegion = *(mpWindowImpl->mpPaintRegion);
     else
@@ -324,25 +318,15 @@ bool Window::ImplSysObjClip( const vcl::Region* pOldRegion )
                     bUpdate = aNewRegion == *pWinChildClipRegion;
                 }
 
-                if ( mpWindowImpl->mpFrameData->mpFirstBackWin )
-                    ImplInvalidateAllOverlapBackgrounds();
-
                 vcl::Region      aRegion = *pWinChildClipRegion;
                 Rectangle   aWinRect( Point( mnOutOffX, mnOutOffY ), Size( mnOutWidth, mnOutHeight ) );
                 vcl::Region      aWinRectRegion( aWinRect );
-                sal_uInt16      nClipFlags = mpWindowImpl->mpSysObj->GetClipRegionType();
 
                 if ( aRegion == aWinRectRegion )
                     mpWindowImpl->mpSysObj->ResetClipRegion();
                 else
                 {
-                    if ( nClipFlags & SAL_OBJECT_CLIP_EXCLUDERECTS )
-                    {
-                        aWinRectRegion.Exclude( aRegion );
-                        aRegion = aWinRectRegion;
-                    }
-                    if ( !(nClipFlags & SAL_OBJECT_CLIP_ABSOLUTE) )
-                        aRegion.Move( -mnOutOffX, -mnOutOffY );
+                    aRegion.Move( -mnOutOffX, -mnOutOffY );
 
                     // set/update clip region
                     RectangleVector aRectangles;
@@ -623,7 +607,7 @@ void Window::ImplCalcOverlapRegionOverlaps( const vcl::Region& rInterRegion, vcl
 }
 
 void Window::ImplCalcOverlapRegion( const Rectangle& rSourceRect, vcl::Region& rRegion,
-                                    bool bChildren, bool bParent, bool bSiblings )
+                                    bool bChildren, bool bSiblings )
 {
     vcl::Region  aRegion( rSourceRect );
     if ( mpWindowImpl->mbWinRegion )
@@ -634,29 +618,26 @@ void Window::ImplCalcOverlapRegion( const Rectangle& rSourceRect, vcl::Region& r
     ImplCalcOverlapRegionOverlaps( aRegion, rRegion );
 
     // Parent-Boundaries
-    if ( bParent )
+    pWindow = this;
+    if ( !ImplIsOverlapWindow() )
     {
-        pWindow = this;
-        if ( !ImplIsOverlapWindow() )
-        {
-            pWindow = ImplGetParent();
-            do
-            {
-                aTempRegion = aRegion;
-                pWindow->ImplExcludeWindowRegion( aTempRegion );
-                rRegion.Union( aTempRegion );
-                if ( pWindow->ImplIsOverlapWindow() )
-                    break;
-                pWindow = pWindow->ImplGetParent();
-            }
-            while ( pWindow );
-        }
-        if ( pWindow && !pWindow->mpWindowImpl->mbFrame )
+        pWindow = ImplGetParent();
+        do
         {
             aTempRegion = aRegion;
-            aTempRegion.Exclude( Rectangle( Point( 0, 0 ), Size( mpWindowImpl->mpFrameWindow->mnOutWidth, mpWindowImpl->mpFrameWindow->mnOutHeight ) ) );
+            pWindow->ImplExcludeWindowRegion( aTempRegion );
             rRegion.Union( aTempRegion );
+            if ( pWindow->ImplIsOverlapWindow() )
+                break;
+            pWindow = pWindow->ImplGetParent();
         }
+        while ( pWindow );
+    }
+    if ( pWindow && !pWindow->mpWindowImpl->mbFrame )
+    {
+        aTempRegion = aRegion;
+        aTempRegion.Exclude( Rectangle( Point( 0, 0 ), Size( mpWindowImpl->mpFrameWindow->mnOutWidth, mpWindowImpl->mpFrameWindow->mnOutHeight ) ) );
+        rRegion.Union( aTempRegion );
     }
 
     // Siblings
@@ -692,92 +673,6 @@ void Window::ImplCalcOverlapRegion( const Rectangle& rSourceRect, vcl::Region& r
     }
 }
 
-bool Window::ImplIsWindowInFront( const vcl::Window* pTestWindow ) const
-{
-    // check for overlapping window
-    pTestWindow = pTestWindow->ImplGetFirstOverlapWindow();
-    const vcl::Window* pTempWindow = pTestWindow;
-    const vcl::Window* pThisWindow = ImplGetFirstOverlapWindow();
-    if ( pTempWindow == pThisWindow )
-        return false;
-    do
-    {
-        if ( pTempWindow == pThisWindow )
-            return true;
-        if ( pTempWindow->mpWindowImpl->mbFrame )
-            break;
-        pTempWindow = pTempWindow->mpWindowImpl->mpOverlapWindow;
-    }
-    while ( pTempWindow );
-    pTempWindow = pThisWindow;
-    do
-    {
-        if ( pTempWindow == pTestWindow )
-            return false;
-        if ( pTempWindow->mpWindowImpl->mbFrame )
-            break;
-        pTempWindow = pTempWindow->mpWindowImpl->mpOverlapWindow;
-    }
-    while ( pTempWindow );
-
-    // move window to same level
-    if ( pThisWindow->mpWindowImpl->mpOverlapWindow != pTestWindow->mpWindowImpl->mpOverlapWindow )
-    {
-        sal_uInt16 nThisLevel = 0;
-        sal_uInt16 nTestLevel = 0;
-        pTempWindow = pThisWindow;
-        do
-        {
-            nThisLevel++;
-            pTempWindow = pTempWindow->mpWindowImpl->mpOverlapWindow;
-        }
-        while ( !pTempWindow->mpWindowImpl->mbFrame );
-        pTempWindow = pTestWindow;
-        do
-        {
-            nTestLevel++;
-            pTempWindow = pTempWindow->mpWindowImpl->mpOverlapWindow;
-        }
-        while ( !pTempWindow->mpWindowImpl->mbFrame );
-
-        if ( nThisLevel < nTestLevel )
-        {
-            do
-            {
-                if ( pTestWindow->mpWindowImpl->mpOverlapWindow == pThisWindow->mpWindowImpl->mpOverlapWindow )
-                    break;
-                if ( pTestWindow->mpWindowImpl->mbFrame )
-                    break;
-                pTestWindow = pTestWindow->mpWindowImpl->mpOverlapWindow;
-            }
-            while ( pTestWindow );
-        }
-        else
-        {
-            do
-            {
-                if ( pThisWindow->mpWindowImpl->mpOverlapWindow == pTempWindow->mpWindowImpl->mpOverlapWindow )
-                    break;
-                if ( pThisWindow->mpWindowImpl->mbFrame )
-                    break;
-                pThisWindow = pThisWindow->mpWindowImpl->mpOverlapWindow;
-            }
-            while ( pThisWindow );
-        }
-    }
-
-    // if TestWindow is before ThisWindow, it is in front
-    pTempWindow = pTestWindow;
-    while ( pTempWindow )
-    {
-        if ( pTempWindow == pThisWindow )
-            return true;
-        pTempWindow = pTempWindow->mpWindowImpl->mpNext;
-    }
-
-    return false;
-}
-
 void Window::SaveBackground( const Point& rPos, const Size& rSize,
                              const Point& rDestOff, VirtualDevice& rSaveDevice )
 {
@@ -808,142 +703,6 @@ void Window::SaveBackground( const Point& rPos, const Size& rSize,
     }
     else
         rSaveDevice.DrawOutDev( rDestOff, rSize, rPos, rSize, *this );
-}
-
-void Window::ImplSaveOverlapBackground()
-{
-    DBG_ASSERT( !mpWindowImpl->mpOverlapData->mpSaveBackDev, "Window::ImplSaveOverlapBackground() - Background already saved" );
-
-    if ( !mpWindowImpl->mbFrame )
-    {
-        sal_uLong nSaveBackSize = mnOutWidth*mnOutHeight;
-        if ( nSaveBackSize <= IMPL_MAXSAVEBACKSIZE )
-        {
-            if ( nSaveBackSize+mpWindowImpl->mpFrameData->mnAllSaveBackSize <= IMPL_MAXALLSAVEBACKSIZE )
-            {
-                Size aOutSize( mnOutWidth, mnOutHeight );
-                mpWindowImpl->mpOverlapData->mpSaveBackDev = VclPtr<VirtualDevice>::Create( *mpWindowImpl->mpFrameWindow );
-                if ( mpWindowImpl->mpOverlapData->mpSaveBackDev->SetOutputSizePixel( aOutSize ) )
-                {
-                    mpWindowImpl->mpFrameWindow->ImplUpdateAll();
-
-                    if ( mpWindowImpl->mbInitWinClipRegion )
-                        ImplInitWinClipRegion();
-
-                    mpWindowImpl->mpOverlapData->mnSaveBackSize = nSaveBackSize;
-                    mpWindowImpl->mpFrameData->mnAllSaveBackSize += nSaveBackSize;
-                    Point aDevPt;
-
-                    Window* pWin = mpWindowImpl->mpFrameWindow;
-                    pWin->getFrameDev( Point( mnOutOffX, mnOutOffY ),
-                                           aDevPt, aOutSize,
-                                           *(mpWindowImpl->mpOverlapData->mpSaveBackDev) );
-                    mpWindowImpl->mpOverlapData->mpNextBackWin = mpWindowImpl->mpFrameData->mpFirstBackWin;
-                    mpWindowImpl->mpFrameData->mpFirstBackWin = this;
-                }
-                else
-                {
-                    mpWindowImpl->mpOverlapData->mpSaveBackDev.disposeAndClear();
-                }
-            }
-        }
-    }
-}
-
-bool Window::ImplRestoreOverlapBackground( vcl::Region& rInvRegion )
-{
-    if ( mpWindowImpl->mpOverlapData->mpSaveBackDev )
-    {
-        if ( mpWindowImpl->mbInitWinClipRegion )
-            ImplInitWinClipRegion();
-
-        if ( mpWindowImpl->mpOverlapData->mpSaveBackDev )
-        {
-            Point   aDevPt;
-            Point   aDestPt( mnOutOffX, mnOutOffY );
-            Size    aDevSize = mpWindowImpl->mpOverlapData->mpSaveBackDev->GetOutputSizePixel();
-
-            Window *pWin = mpWindowImpl->mpFrameWindow;
-
-            if ( mpWindowImpl->mpOverlapData->mpSaveBackRgn )
-            {
-                mpWindowImpl->mpOverlapData->mpSaveBackRgn->Intersect( mpWindowImpl->maWinClipRegion );
-                rInvRegion = mpWindowImpl->maWinClipRegion;
-                rInvRegion.Exclude( *mpWindowImpl->mpOverlapData->mpSaveBackRgn );
-                pWin->drawFrameDev( aDestPt, aDevPt, aDevSize,
-                                    *(mpWindowImpl->mpOverlapData->mpSaveBackDev),
-                                    *mpWindowImpl->mpOverlapData->mpSaveBackRgn );
-            }
-            else
-            {
-                pWin->drawFrameDev( aDestPt, aDevPt, aDevSize,
-                                    *(mpWindowImpl->mpOverlapData->mpSaveBackDev),
-                                    mpWindowImpl->maWinClipRegion );
-            }
-            ImplDeleteOverlapBackground();
-        }
-
-        return true;
-    }
-
-    return false;
-}
-
-void Window::ImplDeleteOverlapBackground()
-{
-    if ( mpWindowImpl->mpOverlapData->mpSaveBackDev )
-    {
-        mpWindowImpl->mpFrameData->mnAllSaveBackSize -= mpWindowImpl->mpOverlapData->mnSaveBackSize;
-        mpWindowImpl->mpOverlapData->mpSaveBackDev.disposeAndClear();
-        if ( mpWindowImpl->mpOverlapData->mpSaveBackRgn )
-        {
-            delete mpWindowImpl->mpOverlapData->mpSaveBackRgn;
-            mpWindowImpl->mpOverlapData->mpSaveBackRgn = nullptr;
-        }
-
-        // remove window from the list
-        if ( mpWindowImpl->mpFrameData->mpFirstBackWin == this )
-            mpWindowImpl->mpFrameData->mpFirstBackWin = mpWindowImpl->mpOverlapData->mpNextBackWin;
-        else
-        {
-            vcl::Window* pTemp = mpWindowImpl->mpFrameData->mpFirstBackWin;
-            while ( pTemp->mpWindowImpl->mpOverlapData->mpNextBackWin.get() != this )
-                pTemp = pTemp->mpWindowImpl->mpOverlapData->mpNextBackWin;
-            pTemp->mpWindowImpl->mpOverlapData->mpNextBackWin = mpWindowImpl->mpOverlapData->mpNextBackWin;
-        }
-        mpWindowImpl->mpOverlapData->mpNextBackWin = nullptr;
-    }
-}
-
-void Window::ImplInvalidateAllOverlapBackgrounds()
-{
-    vcl::Window* pWindow = mpWindowImpl->mpFrameData->mpFirstBackWin;
-    while ( pWindow )
-    {
-        // remember next window here already, as this window could
-        // be removed within the next if clause from the list
-        vcl::Window* pNext = pWindow->mpWindowImpl->mpOverlapData->mpNextBackWin;
-
-        if ( ImplIsWindowInFront( pWindow ) )
-        {
-            Rectangle aRect1( Point( mnOutOffX, mnOutOffY ),
-                              Size( mnOutWidth, mnOutHeight ) );
-            Rectangle aRect2( Point( pWindow->mnOutOffX, pWindow->mnOutOffY ),
-                              Size( pWindow->mnOutWidth, pWindow->mnOutHeight ) );
-            aRect1.Intersection( aRect2 );
-            if ( !aRect1.IsEmpty() )
-            {
-                if ( !pWindow->mpWindowImpl->mpOverlapData->mpSaveBackRgn )
-                    pWindow->mpWindowImpl->mpOverlapData->mpSaveBackRgn = new vcl::Region( aRect2 );
-                pWindow->mpWindowImpl->mpOverlapData->mpSaveBackRgn->Exclude( aRect1 );
-                if ( pWindow->mpWindowImpl->mpOverlapData->mpSaveBackRgn->IsEmpty() )
-                    pWindow->ImplDeleteOverlapBackground();
-            }
-
-        }
-
-        pWindow = pNext;
-    }
 }
 
 } /* namespace vcl */

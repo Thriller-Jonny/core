@@ -63,6 +63,7 @@
 #include <linguistic/lngprops.hxx>
 #include <vcl/settings.hxx>
 #include <LibreOfficeKit/LibreOfficeKitEnums.h>
+#include <comphelper/lok.hxx>
 
 #include <com/sun/star/lang/XServiceInfo.hpp>
 
@@ -74,8 +75,8 @@ using namespace com::sun::star::beans;
 // static
 LanguageType EditView::CheckLanguage(
         const OUString &rText,
-        Reference< linguistic2::XSpellChecker1 > xSpell,
-        Reference< linguistic2::XLanguageGuessing > xLangGuess,
+        const Reference< linguistic2::XSpellChecker1 >& xSpell,
+        const Reference< linguistic2::XLanguageGuessing >& xLangGuess,
         bool bIsParaText )
 {
     LanguageType nLang = LANGUAGE_NONE;
@@ -131,7 +132,7 @@ LanguageType EditView::CheckLanguage(
         lang::Locale a3( LanguageTag::convertToLocale( aLangList[3] ) );
 #endif
 
-        sal_Int32 nCount = sizeof (aLangList) / sizeof (aLangList[0]);
+        sal_Int32 nCount = SAL_N_ELEMENTS(aLangList);
         for (sal_Int32 i = 0;  i < nCount;  i++)
         {
             sal_Int16 nTmpLang = aLangList[i];
@@ -400,7 +401,7 @@ void EditView::ShowCursor( bool bGotoCursor, bool bForceVisCursor )
             bGotoCursor = false;
         pImpEditView->ShowCursor( bGotoCursor, bForceVisCursor );
 
-        if (pImpEditView->isTiledRendering())
+        if (comphelper::LibreOfficeKit::isActive())
             pImpEditView->libreOfficeKitCallback(LOK_CALLBACK_CURSOR_VISIBLE, OString::boolean(true).getStr());
     }
 }
@@ -408,7 +409,7 @@ void EditView::ShowCursor( bool bGotoCursor, bool bForceVisCursor )
 void EditView::HideCursor()
 {
     pImpEditView->GetCursor()->Hide();
-    if (pImpEditView->isTiledRendering())
+    if (comphelper::LibreOfficeKit::isActive())
         pImpEditView->libreOfficeKitCallback(LOK_CALLBACK_CURSOR_VISIBLE, OString::boolean(false).getStr());
 }
 
@@ -485,7 +486,7 @@ void EditView::Redo()
     pImpEditView->pEditEngine->Redo( this );
 }
 
-sal_uInt32 EditView::Read( SvStream& rInput, const OUString& rBaseURL, EETextFormat eFormat, bool bSelect, SvKeyValueIterator* pHTTPHeaderAttrs )
+sal_uInt32 EditView::Read( SvStream& rInput, const OUString& rBaseURL, EETextFormat eFormat, SvKeyValueIterator* pHTTPHeaderAttrs )
 {
     EditSelection aOldSel( pImpEditView->GetEditSelection() );
     pImpEditView->DrawSelection();
@@ -493,11 +494,6 @@ sal_uInt32 EditView::Read( SvStream& rInput, const OUString& rBaseURL, EETextFor
     EditPaM aEndPaM = pImpEditView->pEditEngine->pImpEditEngine->Read( rInput, rBaseURL, eFormat, aOldSel, pHTTPHeaderAttrs );
     pImpEditView->pEditEngine->pImpEditEngine->UndoActionEnd( EDITUNDO_READ );
     EditSelection aNewSel( aEndPaM, aEndPaM );
-    if ( bSelect )
-    {
-        aOldSel.Adjust( pImpEditView->pEditEngine->GetEditDoc() );
-        aNewSel.Min() = aOldSel.Min();
-    }
 
     pImpEditView->SetEditSelection( aNewSel );
     bool bGotoCursor = pImpEditView->DoAutoScroll();
@@ -582,19 +578,9 @@ Color EditView::GetBackgroundColor() const
     return pImpEditView->GetBackgroundColor();
 }
 
-void EditView::setTiledRendering(bool bTiledRendering)
+void EditView::registerLibreOfficeKitCallback(OutlinerSearchable *pSearchable)
 {
-    pImpEditView->setTiledRendering(bTiledRendering);
-}
-
-bool EditView::isTiledRendering()
-{
-    return pImpEditView->isTiledRendering();
-}
-
-void EditView::registerLibreOfficeKitCallback(LibreOfficeKitCallback pCallback, void* pLibreOfficeKitData)
-{
-    pImpEditView->registerLibreOfficeKitCallback(pCallback, pLibreOfficeKitData);
+    pImpEditView->registerLibreOfficeKitCallback(pSearchable);
 }
 
 void EditView::SetControlWord( EVControlBits nWord )
@@ -746,13 +732,13 @@ sal_Int32 EditView::StartSearchAndReplace( const SvxSearchItem& rSearchItem )
     return pImpEditView->pEditEngine->pImpEditEngine->StartSearchAndReplace( this, rSearchItem );
 }
 
-bool EditView::IsCursorAtWrongSpelledWord( bool bMarkIfWrong )
+bool EditView::IsCursorAtWrongSpelledWord()
 {
     bool bIsWrong = false;
     if ( !HasSelection() )
     {
         EditPaM aPaM = pImpEditView->GetEditSelection().Max();
-        bIsWrong = pImpEditView->IsWrongSpelledWord( aPaM, bMarkIfWrong );
+        bIsWrong = pImpEditView->IsWrongSpelledWord( aPaM, false/*bMarkIfWrong*/ );
     }
     return bIsWrong;
 }
@@ -884,7 +870,7 @@ void EditView::ExecuteSpellPopup( const Point& rPosPixel, Link<SpellCallbackInfo
             // words could be added.
             uno::Reference< linguistic2::XDictionary >  xDic( SvxGetOrCreatePosDic( xDicList ) );
             if (xDic.is())
-                xDic->setActive( sal_True );
+                xDic->setActive( true );
 
             aDics = xDicList->getDictionaries();
             pDic  = aDics.getConstArray();
@@ -938,7 +924,7 @@ void EditView::ExecuteSpellPopup( const Point& rPosPixel, Link<SpellCallbackInfo
         sal_uInt16 nId = aPopupMenu.Execute( pImpEditView->GetWindow(), aTempRect, PopupMenuFlags::NoMouseUpClose );
         if ( nId == MN_IGNORE )
         {
-            OUString aWord = pImpEditView->SpellIgnoreOrAddWord( false );
+            OUString aWord = pImpEditView->SpellIgnoreWord();
             if ( pCallBack )
             {
                 SpellCallbackInfo aInf( SpellCallbackCommand::IGNOREWORD, aWord );
@@ -1011,7 +997,7 @@ void EditView::ExecuteSpellPopup( const Point& rPosPixel, Link<SpellCallbackInfo
                 xDic = xDicList->getDictionaryByName( aDicName );
 
             if (xDic.is())
-                xDic->add( aSelected, sal_False, OUString() );
+                xDic->add( aSelected, false, OUString() );
             // save modified user-dictionary if it is persistent
             Reference< frame::XStorable >  xSavDic( xDic, UNO_QUERY );
             if (xSavDic.is())
@@ -1049,7 +1035,7 @@ void EditView::ExecuteSpellPopup( const Point& rPosPixel, Link<SpellCallbackInfo
     }
 }
 
-bool EditView::SelectCurrentWord( sal_Int16 nWordType )
+void EditView::SelectCurrentWord( sal_Int16 nWordType )
 {
     EditSelection aCurSel( pImpEditView->GetEditSelection() );
     pImpEditView->DrawSelection();
@@ -1057,7 +1043,6 @@ bool EditView::SelectCurrentWord( sal_Int16 nWordType )
     pImpEditView->SetEditSelection( aCurSel );
     pImpEditView->DrawSelection();
     ShowCursor( true, false );
-    return aCurSel.HasRange();
 }
 
 void EditView::InsertField( const SvxFieldItem& rFld )
@@ -1217,8 +1202,8 @@ bool EditView::ChangeFontSize( bool bGrow, SfxItemSet& rSet, const FontList* pFo
         const SfxMapUnit eUnit = rSet.GetPool()->GetMetric( *pWhich );
         nHeight = OutputDevice::LogicToLogic( nHeight * 10, (MapUnit)eUnit, MAP_POINT );
 
-        vcl::FontInfo aFontInfo = pFontList->Get( pFontItem->GetFamilyName(), pFontItem->GetStyleName() );
-        const sal_IntPtr* pAry = pFontList->GetSizeAry( aFontInfo );
+        FontMetric aFontMetric = pFontList->Get( pFontItem->GetFamilyName(), pFontItem->GetStyleName() );
+        const sal_IntPtr* pAry = pFontList->GetSizeAry( aFontMetric );
 
         if( bGrow )
         {

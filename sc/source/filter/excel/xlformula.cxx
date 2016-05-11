@@ -566,6 +566,28 @@ static const XclFunctionInfo saFuncTable_2013[] =
     EXC_FUNCENTRY_V_VR(         ocErrorType_ODF, 1,  1,  0,  "ERROR.TYPE" )
 };
 
+/** Functions new in Excel 2016.
+
+    See https://support.office.com/en-us/article/Forecasting-functions-897a2fe9-6595-4680-a0b0-93e0308d5f6e?ui=en-US&rs=en-US&ad=US#_forecast.ets
+    and  https://support.office.com/en-us/article/What-s-New-and-Improved-in-Office-2016-for-Office-365-95c8d81d-08ba-42c1-914f-bca4603e1426?ui=en-US&rs=en-US&ad=US
+
+    @See sc/source/filter/oox/formulabase.cxx saFuncTable2016 for V,VR,RO,...
+ */
+static const XclFunctionInfo saFuncTable_2016[] =
+{
+    EXC_FUNCENTRY_V_VR(  ocForecast_ETS_ADD,    3,  6,  0,  "FORECAST.ETS" ),
+    EXC_FUNCENTRY_V_VR(  ocForecast_ETS_PIA,    3,  7,  0,  "FORECAST.ETS.CONFINT" ),
+    EXC_FUNCENTRY_V_VR(  ocForecast_ETS_SEA,    2,  4,  0,  "FORECAST.ETS.SEASONALITY" ),
+    EXC_FUNCENTRY_V_VR(  ocForecast_ETS_STA,    3,  6,  0,  "FORECAST.ETS.STAT" ),
+    EXC_FUNCENTRY_V_VR(  ocForecast_LIN,        3,  3,  0,  "FORECAST.LINEAR" ),
+    EXC_FUNCENTRY_V_VR(  ocConcat_MS,           1,  MX, 0,  "CONCAT" ),
+    EXC_FUNCENTRY_V_VR(  ocTextJoin_MS,         3,  MX, 0,  "TEXTJOIN" ),
+    EXC_FUNCENTRY_V_VR(  ocIfs_MS,              2,  MX, 0,  "IFS" ),
+    EXC_FUNCENTRY_V_VR(  ocSwitch_MS,           3,  MX, 0,  "SWITCH" ),
+    EXC_FUNCENTRY_V_VR(  ocMinIfs_MS,           3,  MX, 0,  "MINIFS" ),
+    EXC_FUNCENTRY_V_VR(  ocMaxIfs_MS,           3,  MX, 0,  "MAXIFS" )
+};
+
 #define EXC_FUNCENTRY_ODF( opcode, minparam, maxparam, flags, asciiname ) \
     { opcode, NOID, minparam,     maxparam,     V, { VR },       EXC_FUNCFLAG_IMPORTONLY|(flags), EXC_FUNCNAME_ODF( asciiname ) }, \
     { opcode,  255, (minparam)+1, (maxparam)+1, V, { RO_E, RO }, EXC_FUNCFLAG_EXPORTONLY|(flags), EXC_FUNCNAME_ODF( asciiname ) }
@@ -587,7 +609,12 @@ static const XclFunctionInfo saFuncTable_Odf[] =
 static const XclFunctionInfo saFuncTable_OOoLO[] =
 {
     EXC_FUNCENTRY_OOO( ocConvert,       3,  3,  0,  "ORG.OPENOFFICE.CONVERT" ),
-    EXC_FUNCENTRY_OOO( ocColor,         3,  4,  0,  "ORG.LIBREOFFICE.COLOR" )
+    EXC_FUNCENTRY_OOO( ocColor,         3,  4,  0,  "ORG.LIBREOFFICE.COLOR" ),
+    EXC_FUNCENTRY_OOO( ocRawSubtract,   2, MX,  0,  "ORG.LIBREOFFICE.RAWSUBTRACT" ),
+    EXC_FUNCENTRY_OOO( ocWeeknumOOo,    2,  2,  0,  "ORG.LIBREOFFICE.WEEKNUM_OOO" ),
+    EXC_FUNCENTRY_OOO( ocForecast_ETS_MUL, 3,  6,  0,  "ORG.LIBREOFFICE.FORECAST.ETS.MULT" ),
+    EXC_FUNCENTRY_OOO( ocForecast_ETS_PIM, 3,  7,  0,  "ORG.LIBREOFFICE.FORECAST.ETS.PI.MULT" ),
+    EXC_FUNCENTRY_OOO( ocForecast_ETS_STM, 3,  6,  0,  "ORG.LIBREOFFICE.FORECAST.ETS.STAT.MULT" )
 };
 
 #undef EXC_FUNCENTRY_OOO
@@ -602,20 +629,21 @@ XclFunctionProvider::XclFunctionProvider( const XclRoot& rRoot )
         from earlier tables. */
     XclBiff eBiff = rRoot.GetBiff();
     if( eBiff >= EXC_BIFF2 )
-        (this->*pFillFunc)( saFuncTable_2, STATIC_ARRAY_END( saFuncTable_2 ) );
+        (this->*pFillFunc)( saFuncTable_2, std::end( saFuncTable_2 ) );
     if( eBiff >= EXC_BIFF3 )
-        (this->*pFillFunc)( saFuncTable_3, STATIC_ARRAY_END( saFuncTable_3 ) );
+        (this->*pFillFunc)( saFuncTable_3, std::end( saFuncTable_3 ) );
     if( eBiff >= EXC_BIFF4 )
-        (this->*pFillFunc)( saFuncTable_4, STATIC_ARRAY_END( saFuncTable_4 ) );
+        (this->*pFillFunc)( saFuncTable_4, std::end( saFuncTable_4 ) );
     if( eBiff >= EXC_BIFF5 )
-        (this->*pFillFunc)( saFuncTable_5, STATIC_ARRAY_END( saFuncTable_5 ) );
+        (this->*pFillFunc)( saFuncTable_5, std::end( saFuncTable_5 ) );
     if( eBiff >= EXC_BIFF8 )
-        (this->*pFillFunc)( saFuncTable_8, STATIC_ARRAY_END( saFuncTable_8 ) );
-    (this->*pFillFunc)( saFuncTable_Oox, STATIC_ARRAY_END( saFuncTable_Oox ) );
-    (this->*pFillFunc)( saFuncTable_2010, STATIC_ARRAY_END( saFuncTable_2010 ) );
-    (this->*pFillFunc)( saFuncTable_2013, STATIC_ARRAY_END( saFuncTable_2013 ) );
-    (this->*pFillFunc)( saFuncTable_Odf, STATIC_ARRAY_END( saFuncTable_Odf ) );
-    (this->*pFillFunc)( saFuncTable_OOoLO, STATIC_ARRAY_END( saFuncTable_OOoLO ) );
+        (this->*pFillFunc)( saFuncTable_8, std::end( saFuncTable_8 ) );
+    (this->*pFillFunc)( saFuncTable_Oox, std::end( saFuncTable_Oox ) );
+    (this->*pFillFunc)( saFuncTable_2010, std::end( saFuncTable_2010 ) );
+    (this->*pFillFunc)( saFuncTable_2013, std::end( saFuncTable_2013 ) );
+    (this->*pFillFunc)( saFuncTable_2016, std::end( saFuncTable_2016 ) );
+    (this->*pFillFunc)( saFuncTable_Odf, std::end( saFuncTable_Odf ) );
+    (this->*pFillFunc)( saFuncTable_OOoLO, std::end( saFuncTable_OOoLO ) );
 }
 
 const XclFunctionInfo* XclFunctionProvider::GetFuncInfoFromXclFunc( sal_uInt16 nXclFunc ) const

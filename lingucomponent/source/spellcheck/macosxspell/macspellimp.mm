@@ -45,9 +45,7 @@ using namespace com::sun::star::linguistic2;
 using namespace linguistic;
 
 using ::rtl::OUString;
-using ::rtl::OString;
 using ::rtl::OUStringBuffer;
-using ::rtl::OUStringToOString;
 
 MacSpellChecker::MacSpellChecker() :
     aEvtListeners( GetLinguMutex() )
@@ -248,7 +246,7 @@ sal_Int16 MacSpellChecker::GetSpellFailure( const OUString &rWord, const Locale 
         }
 
         NSInteger aCount;
-        NSRange range = [macSpell checkSpellingOfString:aNSStr startingAt:0 language:aLang wrap:sal_False inSpellDocumentWithTag:macTag wordCount:&aCount];
+        NSRange range = [macSpell checkSpellingOfString:aNSStr startingAt:0 language:aLang wrap:false inSpellDocumentWithTag:macTag wordCount:&aCount];
         int rVal = 0;
         if(range.length>0)
         {
@@ -279,10 +277,10 @@ sal_Bool SAL_CALL
     MutexGuard  aGuard( GetLinguMutex() );
 
      if (rLocale == Locale()  ||  !rWord.getLength())
-        return sal_True;
+        return true;
 
     if (!hasLocale( rLocale ))
-        return sal_True;
+        return true;
 
     // Get property values to be used.
     // These are be the default values set in the SN_LINGU_PROPERTIES

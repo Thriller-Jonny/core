@@ -23,41 +23,15 @@
 #include <slot.hxx>
 #include <object.hxx>
 
-class SvMetaModule : public SvMetaExtern
+class SvMetaModule : public SvMetaObject
 {
-    SvMetaClassMemberList       aClassList;
-    SvMetaTypeMemberList        aTypeList;
-    SvMetaAttributeMemberList   aAttrList;
-// browser
-    SvString                aHelpFileName;
-    SvString                aSlotIdFile;
-    SvString                aTypeLibFile;
-    SvString                aModulePrefix;
-
-    bool                    bImported   : 1,
-                            bIsModified : 1;
-    SvGlobalName            aBeginName;
-    SvGlobalName            aEndName;
-    SvGlobalName            aNextName;
-protected:
-    virtual void        ReadAttributesSvIdl( SvIdlDataBase &, SvTokenStream & rInStm ) override;
-    virtual void        ReadContextSvIdl( SvIdlDataBase &, SvTokenStream & rInStm ) override;
 public:
+    SvRefMemberList<SvMetaClass *>  aClassList;
 
-    virtual bool        SetName( const OString& rName, SvIdlDataBase * = nullptr  ) override;
-
-                        SvMetaModule( bool bImported );
-
-    bool                FillNextName( SvGlobalName * );
-    bool                IsImported() const { return bImported; }
-
-    virtual bool        ReadSvIdl( SvIdlDataBase &, SvTokenStream & rInStm ) override;
+                        SvMetaModule();
 
     void                WriteSfx( SvIdlDataBase & rBase, SvStream & rOutStm );
 };
-
-class SvMetaModuleMemberList : public SvRefMemberList<SvMetaModule *> {};
-
 
 #endif // INCLUDED_IDL_INC_MODULE_HXX
 

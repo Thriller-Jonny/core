@@ -20,14 +20,15 @@
 #ifndef INCLUDED_OOX_CORE_RELATIONS_HXX
 #define INCLUDED_OOX_CORE_RELATIONS_HXX
 
-#include <oox/helper/helper.hxx>
-#include <oox/dllapi.h>
+#include <cstddef>
 #include <map>
 #include <memory>
 
+#include <oox/dllapi.h>
+#include <rtl/ustring.hxx>
+
 namespace oox {
 namespace core {
-
 
 
 /** Expands to an OUString containing an 'officeDocument' transitional relation type created
@@ -39,11 +40,6 @@ namespace core {
     from the passed literal(!) ASCII(!) character array. */
 #define CREATE_OFFICEDOC_RELATION_TYPE_STRICT( ascii ) \
     ( "http://purl.oclc.org/ooxml/officeDocument/relationships/" ascii )
-
-/** Expands to an OUString containing a 'package' relation type created from
-    the passed literal(!) ASCII(!) character array. */
-#define CREATE_PACKAGE_RELATION_TYPE( ascii ) \
-    ( "http://schemas.openxmlformats.org/package/2006/relationships/" ascii )
 
 /** Expands to an OUString containing an MS Office specific relation type
     created from the passed literal(!) ASCII(!) character array. */
@@ -62,7 +58,6 @@ struct Relation
 
     Relation() : mbExternal( false ) {}
 };
-
 
 
 class Relations;
@@ -115,7 +110,6 @@ private:
     ::std::map< OUString, Relation > maMap;
     OUString     maFragmentPath;
 };
-
 
 
 } // namespace core

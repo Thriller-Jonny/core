@@ -12,6 +12,7 @@
 #include "visitors.hxx"
 #include "tmpdevice.hxx"
 #include "cursor.hxx"
+#include <cassert>
 
 // SmDefaultingVisitor
 
@@ -210,9 +211,9 @@ void SmCaretDrawingVisitor::Visit( SmTextNode* pNode )
     }
 
     //Underline the line
-    Point pLeft( left_line, top + height );
-    Point pRight( right_line, top + height );
-    mrDev.DrawLine( pLeft, pRight );
+    Point aLeft( left_line, top + height );
+    Point aRight( right_line, top + height );
+    mrDev.DrawLine( aLeft, aRight );
 }
 
 void SmCaretDrawingVisitor::DefaultVisit( SmNode* pNode )
@@ -240,9 +241,9 @@ void SmCaretDrawingVisitor::DefaultVisit( SmNode* pNode )
     }
 
     //Underline the line
-    Point pLeft( left_line, top + height );
-    Point pRight( right_line, top + height );
-    mrDev.DrawLine( pLeft, pRight );
+    Point aLeft( left_line, top + height );
+    Point aRight( right_line, top + height );
+    mrDev.DrawLine( aLeft, aRight );
 }
 
 // SmCaretPos2LineVisitor
@@ -527,7 +528,7 @@ void SmDrawingVisitor::DrawSpecialNode( SmSpecialNode* pNode )
 {
     //! since this chars might come from any font, that we may not have
     //! set to ALIGN_BASELINE yet, we do it now.
-    pNode->GetFont( ).SetAlign( ALIGN_BASELINE );
+    pNode->GetFont( ).SetAlignment( ALIGN_BASELINE );
 
     DrawTextNode( pNode );
 }
@@ -848,8 +849,8 @@ void SmCaretPosGraphBuildingVisitor::Visit( SmSubSupNode* pNode )
                          *bodyLeft,
                          *bodyRight;
 
+    assert(mpRightMost);
     left = mpRightMost;
-    SAL_WARN_IF( !mpRightMost, "starmath", "mpRightMost shouldn't be NULL here!" );
 
     //Create bodyLeft
     SAL_WARN_IF( !pNode->GetBody(), "starmath", "SmSubSupNode Doesn't have a body!" );
@@ -1140,9 +1141,9 @@ void SmCaretPosGraphBuildingVisitor::Visit( SmBinVerNode* pNode )
                          *numLeft,
                          *denomLeft;
 
+    assert(mpRightMost);
     //Set left
     left = mpRightMost;
-    SAL_WARN_IF( !mpRightMost, "starmath", "There must be a position in front of this" );
 
     //Create right
     right = mpGraph->Add( SmCaretPos( pNode, 1 ) );
@@ -1319,7 +1320,7 @@ void SmCaretPosGraphBuildingVisitor::Visit( SmFontNode* pNode )
  * n6 -> n7 [label="0"];
  * n7 [label="SmTextNode: i"];
  * n5 -> n8 [label="1"];
- * n8 [label="SmMathSymbolNode: ∣"];
+ * n8 [label="SmMathSymbolNode: &#124;"]; // Unicode "VERTICAL LINE"
  * n5 -> n9 [label="2"];
  * n9 [label="SmExpressionNode"];
  * n9 -> n10 [label="0"];
@@ -1327,9 +1328,9 @@ void SmCaretPosGraphBuildingVisitor::Visit( SmFontNode* pNode )
  * n10 -> n11 [label="0"];
  * n11 [label="SmTextNode: i"];
  * n10 -> n12 [label="1"];
- * n12 [label="SmMathSymbolNode: ∈"];
+ * n12 [label="SmMathSymbolNode: &#8712;"]; // Unicode "ELEMENT OF"
  * n10 -> n13 [label="2"];
- * n13 [label="SmMathSymbolNode: ℤ"];
+ * n13 [label="SmMathSymbolNode: &#8484;"]; // Unicode "DOUBLE-STRUCK CAPITAL Z"
  * n3 -> n14 [label="2"];
  * n14 [label="SmMathSymbolNode: }"];
  * }
@@ -1381,7 +1382,7 @@ void SmCaretPosGraphBuildingVisitor::Visit( SmRootNode* pNode )
 {
     SmNode  *pExtra = pNode->GetSubNode( 0 ), //Argument, NULL for sqrt, and SmTextNode if cubicroot
             *pBody  = pNode->GetSubNode( 2 ); //Body of the root
-    SAL_WARN_IF( !pBody, "starmath", "pBody cannot be NULL" );
+    assert(pBody);
 
     SmCaretPosGraphEntry  *left,
                         *right,
@@ -1389,7 +1390,7 @@ void SmCaretPosGraphBuildingVisitor::Visit( SmRootNode* pNode )
                         *bodyRight;
 
     //Get left and save it
-    SAL_WARN_IF( !mpRightMost, "starmath", "There must be a position in front of this" );
+    assert(mpRightMost);
     left = mpRightMost;
 
     //Create body left
@@ -1421,7 +1422,7 @@ void SmCaretPosGraphBuildingVisitor::Visit( SmDynIntegralNode* pNode )
 {
     //! To be changed: Integrals don't have args.
     SmNode  *pBody  = pNode->Body(); //Body of the root
-    SAL_WARN_IF( !pBody, "starmath", "pBody cannot be NULL" );
+    assert(pBody);
 
     SmCaretPosGraphEntry  *left,
                         *right,
@@ -1429,7 +1430,7 @@ void SmCaretPosGraphBuildingVisitor::Visit( SmDynIntegralNode* pNode )
                         *bodyRight;
 
     //Get left and save it
-    SAL_WARN_IF( !mpRightMost, "starmath", "There must be a position in front of this" );
+    assert(mpRightMost);
     left = mpRightMost;
 
     //Create body left

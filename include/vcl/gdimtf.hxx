@@ -40,9 +40,6 @@ namespace tools {
 class Gradient;
 
 
-// - GDIMetaFile-Types -
-
-
 #define GDI_METAFILE_END                ((size_t)0xFFFFFFFF)
 #define GDI_METAFILE_LABEL_NOTFOUND     ((size_t)0xFFFFFFFF)
 
@@ -54,26 +51,23 @@ enum MtfConversion
 };
 
 
-// - Color conversion routines -
-
-
 typedef Color (*ColorExchangeFnc)( const Color& rColor, const void* pColParam );
 typedef BitmapEx (*BmpExchangeFnc)( const BitmapEx& rBmpEx, const void* pBmpParam );
 
 class VCL_DLLPUBLIC GDIMetaFile
 {
 private:
-    ::std::vector< MetaAction* > aList;
-    size_t          nCurrentActionElement;
+    ::std::vector< MetaAction* > m_aList;
+    size_t          m_nCurrentActionElement;
 
-    MapMode         aPrefMapMode;
-    Size            aPrefSize;
-    GDIMetaFile*    pPrev;
-    GDIMetaFile*    pNext;
-    VclPtr<OutputDevice> pOutDev;
-    bool            bPause;
-    bool            bRecord;
-    bool            bUseCanvas;
+    MapMode         m_aPrefMapMode;
+    Size            m_aPrefSize;
+    GDIMetaFile*    m_pPrev;
+    GDIMetaFile*    m_pNext;
+    VclPtr<OutputDevice> m_pOutDev;
+    bool            m_bPause;
+    bool            m_bRecord;
+    bool            m_bUseCanvas;
 
 
     SAL_DLLPRIVATE static Color         ImplColAdjustFnc( const Color& rColor, const void* pColParam );
@@ -144,20 +138,20 @@ public:
 
     void            Convert( MtfConversion eConversion );
     void            ReplaceColors( const Color* pSearchColors, const Color* rReplaceColors,
-                                   sal_uLong nColorCount, sal_uLong* pTols = nullptr );
+                                   sal_uLong nColorCount );
 
     GDIMetaFile     GetMonochromeMtf( const Color& rCol ) const;
 
     void            Record( OutputDevice* pOutDev );
-    bool            IsRecord() const { return bRecord; }
+    bool            IsRecord() const { return m_bRecord; }
 
-    void            Play( GDIMetaFile& rMtf, size_t nPos = GDI_METAFILE_END );
+    void            Play( GDIMetaFile& rMtf );
     void            Play( OutputDevice* pOutDev, size_t nPos = GDI_METAFILE_END );
     void            Play( OutputDevice* pOutDev, const Point& rPos,
-                          const Size& rSize, size_t nPos = GDI_METAFILE_END );
+                          const Size& rSize );
 
     void            Pause( bool bPause );
-    bool            IsPause() const { return bPause; }
+    bool            IsPause() const { return m_bPause; }
 
     void            Stop();
 
@@ -172,19 +166,20 @@ public:
     void            push_back( MetaAction* pAction );
     /**
      * @param pAction takes ownership
+     * @param nAction the action to replace
      */
     MetaAction*     ReplaceAction( MetaAction* pAction, size_t nAction );
 
     MetaAction*     FirstAction();
     MetaAction*     NextAction();
     MetaAction*     GetAction( size_t nAction ) const;
-    MetaAction*     GetCurAction() const { return GetAction( nCurrentActionElement ); }
+    MetaAction*     GetCurAction() const { return GetAction( m_nCurrentActionElement ); }
 
-    const Size&     GetPrefSize() const { return aPrefSize; }
-    void            SetPrefSize( const Size& rSize ) { aPrefSize = rSize; }
+    const Size&     GetPrefSize() const { return m_aPrefSize; }
+    void            SetPrefSize( const Size& rSize ) { m_aPrefSize = rSize; }
 
-    const MapMode&  GetPrefMapMode() const { return aPrefMapMode; }
-    void            SetPrefMapMode( const MapMode& rMapMode ) { aPrefMapMode = rMapMode; }
+    const MapMode&  GetPrefMapMode() const { return m_aPrefMapMode; }
+    void            SetPrefMapMode( const MapMode& rMapMode ) { m_aPrefMapMode = rMapMode; }
 
 
     BitmapChecksum  GetChecksum() const;
@@ -207,7 +202,7 @@ public:
                                     BmpScaleFlag nScaleFlag = BmpScaleFlag::BestQuality) const;
 
     void            UseCanvas( bool _bUseCanvas );
-    bool            GetUseCanvas() const { return bUseCanvas; }
+    bool            GetUseCanvas() const { return m_bUseCanvas; }
 };
 
 #endif // INCLUDED_VCL_GDIMTF_HXX

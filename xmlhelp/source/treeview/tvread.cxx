@@ -312,13 +312,12 @@ TVRead::getByHierarchicalName( const OUString& aName )
            RuntimeException, std::exception )
 {
     sal_Int32 idx;
-    OUString name( aName );
 
-    if( ( idx = name.indexOf( '/' ) ) != -1  &&
-        name.copy( 0,idx ) == "Children" )
-        return Children->getByHierarchicalName( name.copy( 1 + idx ) );
+    if( ( idx = aName.indexOf( '/' ) ) != -1  &&
+        aName.copy( 0,idx ) == "Children" )
+        return Children->getByHierarchicalName( aName.copy( 1 + idx ) );
 
-    return getByName( name );
+    return getByName( aName );
 }
 
 sal_Bool SAL_CALL
@@ -326,13 +325,12 @@ TVRead::hasByHierarchicalName( const OUString& aName )
     throw( RuntimeException, std::exception )
 {
     sal_Int32 idx;
-    OUString name( aName );
 
-       if( ( idx = name.indexOf( '/' ) ) != -1  &&
-        name.copy( 0,idx ) == "Children" )
-        return Children->hasByHierarchicalName( name.copy( 1 + idx ) );
+    if( ( idx = aName.indexOf( '/' ) ) != -1  &&
+        aName.copy( 0,idx ) == "Children" )
+        return Children->hasByHierarchicalName( aName.copy( 1 + idx ) );
 
-    return hasByName( name );
+    return hasByName( aName );
 }
 
 /**************************************************************************/
@@ -536,10 +534,8 @@ TVChildTarget::getByName( const OUString& aName )
     if( idx < 0 || Elements.size() <= sal_uInt32( idx ) )
         throw NoSuchElementException();
 
-    Any aAny;
     cppu::OWeakObject* p = Elements[idx].get();
-    aAny <<= Reference< XInterface >( p );
-    return aAny;
+    return Any( Reference< XInterface >( p ) );
 }
 
 Sequence< OUString > SAL_CALL
@@ -573,20 +569,19 @@ TVChildTarget::getByHierarchicalName( const OUString& aName )
            RuntimeException, std::exception )
 {
     sal_Int32 idx;
-    OUString name( aName );
 
-    if( ( idx = name.indexOf( '/' ) ) != -1 )
+    if( ( idx = aName.indexOf( '/' ) ) != -1 )
     {
-        OUString num( name.getStr()+2,idx-4 );
+        OUString num( aName.getStr()+2,idx-4 );
         sal_Int32 pref = num.toInt32() - 1;
 
         if( pref < 0 || Elements.size() <= sal_uInt32( pref ) )
             throw NoSuchElementException();
 
-        return Elements[pref]->getByHierarchicalName( name.copy( 1 + idx ) );
+        return Elements[pref]->getByHierarchicalName( aName.copy( 1 + idx ) );
     }
     else
-        return getByName( name );
+        return getByName( aName );
 }
 
 sal_Bool SAL_CALL
@@ -594,19 +589,18 @@ TVChildTarget::hasByHierarchicalName( const OUString& aName )
     throw( RuntimeException, std::exception )
 {
     sal_Int32 idx;
-    OUString name( aName );
 
-       if( ( idx = name.indexOf( '/' ) ) != -1 )
+    if( ( idx = aName.indexOf( '/' ) ) != -1 )
     {
-        OUString num( name.getStr()+2,idx-4 );
+        OUString num( aName.getStr()+2,idx-4 );
         sal_Int32 pref = num.toInt32() - 1;
         if( pref < 0 || Elements.size() <= sal_uInt32( pref ) )
             return false;
 
-        return Elements[pref]->hasByHierarchicalName( name.copy( 1 + idx ) );
+        return Elements[pref]->hasByHierarchicalName( aName.copy( 1 + idx ) );
     }
     else
-        return hasByName( name );
+        return hasByName( aName );
 }
 
 ConfigData TVChildTarget::init( const Reference< XComponentContext >& xContext )
@@ -895,7 +889,7 @@ void ExtensionIteratorBase::init()
 }
 
 Reference< deployment::XPackage > ExtensionIteratorBase::implGetHelpPackageFromPackage
-    ( Reference< deployment::XPackage > xPackage, Reference< deployment::XPackage >& o_xParentPackageBundle )
+    ( const Reference< deployment::XPackage >& xPackage, Reference< deployment::XPackage >& o_xParentPackageBundle )
 {
     o_xParentPackageBundle.clear();
 
@@ -1042,7 +1036,7 @@ inline bool isLetter( sal_Unicode c )
 }
 
 void ExtensionIteratorBase::implGetLanguageVectorFromPackage( ::std::vector< OUString > &rv,
-    css::uno::Reference< css::deployment::XPackage > xPackage )
+    const css::uno::Reference< css::deployment::XPackage >& xPackage )
 {
     rv.clear();
     OUString aExtensionPath = xPackage->getURL();
@@ -1156,7 +1150,7 @@ OUString TreeFileIterator::expandURL( const OUString& aURL )
 }
 
 OUString TreeFileIterator::implGetTreeFileFromPackage
-    ( sal_Int32& rnFileSize, Reference< deployment::XPackage > xPackage )
+    ( sal_Int32& rnFileSize, const Reference< deployment::XPackage >& xPackage )
 {
     OUString aRetFile;
     OUString aLanguage = m_aLanguage;

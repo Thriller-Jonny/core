@@ -194,24 +194,20 @@ public abstract class ScriptProvider implements
                     m_container = new ParcelContainer(m_xContext, contextUrl, language);
                     m_xModel = getModelFromDocUrl(originalContextURL);
                 } else {
-                    String extensionDb = null;
+                    String extensionDb = "vnd.sun.star.expand:${$BRAND_INI_DIR/"
+                                   + PathUtils.BOOTSTRAP_NAME + "::UserInstallation}/user";
+
                     String extensionRepository = null;
 
                     if (originalContextURL.startsWith("bundled")) {
                         contextUrl = "vnd.sun.star.expand:$BUNDLED_EXTENSIONS";
-                        extensionDb = "vnd.sun.star.expand:${$BRAND_INI_DIR/"
-                                      + PathUtils.BOOTSTRAP_NAME + "::UserInstallation}/user";
                         extensionRepository = "bundled";
                     } else if (originalContextURL.startsWith("share")) {
                         contextUrl = "vnd.sun.star.expand:$BRAND_BASE_DIR/$BRAND_SHARE_SUBDIR";
-                        extensionDb = "vnd.sun.star.expand:${$BRAND_INI_DIR/"
-                                      + PathUtils.BOOTSTRAP_NAME + "::UserInstallation}/user";
                         extensionRepository = "shared";
                     } else if (originalContextURL.startsWith("user")) {
                         contextUrl = "vnd.sun.star.expand:${$BRAND_INI_DIR/"
                                      + PathUtils.BOOTSTRAP_NAME + "::UserInstallation}/user";
-                        extensionDb = "vnd.sun.star.expand:${$BRAND_INI_DIR/"
-                                      + PathUtils.BOOTSTRAP_NAME + "::UserInstallation}/user";
                         extensionRepository = "user";
                     }
 
@@ -219,6 +215,7 @@ public abstract class ScriptProvider implements
                         isPkgProvider = true;
 
                         if (!originalContextURL.equals(contextUrl)
+                            && extensionRepository != null
                             && !extensionRepository.equals("bundled")) {
 
                             contextUrl = PathUtils.make_url(contextUrl, "uno_packages");
@@ -243,7 +240,7 @@ public abstract class ScriptProvider implements
             LogUtils.DEBUG("isPkgProvider is: " + isPkgProvider);
 
             // TODO should all be done in this class instead of
-            // deleagation????
+            // delegation????
             m_xBrowseNodeProxy =
                 new ProviderBrowseNode(this, m_container, m_xContext);
 
@@ -555,7 +552,7 @@ public abstract class ScriptProvider implements
 
         XPackage newPackage = UnoRuntime.queryInterface(XPackage.class, aElement);
 
-        if (aName.length() == 0) {
+        if (aName == null || aName.length() == 0) {
             throw new  com.sun.star.lang.IllegalArgumentException("Empty name");
         }
 

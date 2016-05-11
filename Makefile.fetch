@@ -11,7 +11,7 @@ fetch_LOGFILE := $(TARFILE_LOCATION)/fetch.log
 
 ifneq (,$(WGET))
 define fetch_Download__wget_command
-&& bash -c '$(WGET) --progress=dot:mega -4 -Q 0 -P "." -l 0 -nd -nH -N $1/$2 2>&1 | tee -a $(fetch_LOGFILE) && [ $$PIPESTATUS -eq 0 ]'
+&& bash -c '$(WGET) --progress=dot:mega -4 -Q 0 -P "." -l 0 -nd -nH -N --no-use-server-timestamps $1/$2 2>&1 | tee -a $(fetch_LOGFILE) && [ $$PIPESTATUS -eq 0 ]'
 endef
 
 else
@@ -108,6 +108,7 @@ $(WORKDIR)/download: $(BUILDDIR)/config_host.mk $(SRCDIR)/download.lst $(SRCDIR)
 		$(call fetch_Optional,APR,APR_TARBALL) \
 		$(call fetch_Optional,APR,APR_UTIL_TARBALL) \
 		$(call fetch_Optional,BOOST,BOOST_TARBALL) \
+		$(call fetch_Optional,BREAKPAD,BREAKPAD_TARBALL) \
 		$(call fetch_Optional,BSH,BSH_TARBALL) \
 		$(call fetch_Optional,BZIP2,BZIP2_TARBALL) \
 		$(call fetch_Optional,CAIRO,CAIRO_TARBALL) \
@@ -193,7 +194,6 @@ $(WORKDIR)/download: $(BUILDDIR)/config_host.mk $(SRCDIR)/download.lst $(SRCDIR)
 		$(call fetch_Optional,PAGEMAKER,PAGEMAKER_TARBALL) \
 		$(call fetch_Optional,POPPLER,POPPLER_TARBALL) \
 		$(call fetch_Optional,POSTGRESQL,POSTGRESQL_TARBALL) \
-		$(call fetch_Optional,PREBUILT_OPENSSL,PREBUILT_OPENSSL_TARBALL) \
 		$(call fetch_Optional,PYTHON,PYTHON_TARBALL) \
 		$(call fetch_Optional,REDLAND,RAPTOR_TARBALL) \
 		$(call fetch_Optional,REDLAND,RASQAL_TARBALL) \
@@ -203,7 +203,6 @@ $(WORKDIR)/download: $(BUILDDIR)/config_host.mk $(SRCDIR)/download.lst $(SRCDIR)
 		$(call fetch_Optional,RHINO,SWING_TARBALL) \
 		$(call fetch_Optional,SERF,SERF_TARBALL) \
 		$(call fetch_Optional,UCPP,UCPP_TARBALL) \
-		$(call fetch_Optional,VIGRA,VIGRA_TARBALL) \
 		$(call fetch_Optional,VISIO,VISIO_TARBALL) \
 		$(call fetch_Optional,WPD,WPD_TARBALL) \
 		$(call fetch_Optional,WPG,WPG_TARBALL) \

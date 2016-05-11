@@ -48,6 +48,7 @@ using ::com::sun::star::text::WritingMode;
 #include <cppuhelper/implbase.hxx>
 #include <osl/diagnose.h>
 #include <osl/mutex.hxx>
+#include <oox/token/properties.hxx>
 #include "oox/token/propertynames.hxx"
 using ::com::sun::star::uno::Any;
 using ::com::sun::star::uno::Reference;
@@ -286,7 +287,7 @@ Reference< XPropertySet > PropertyMap::makePropertySet() const
 }
 
 #if OSL_DEBUG_LEVEL > 0
-static void lclDumpAnyValue( Any value)
+static void lclDumpAnyValue( const Any& value)
 {
         OUString strValue;
         Sequence< OUString > strArray;
@@ -449,7 +450,7 @@ static void lclDumpAnyValue( Any value)
 }
 
 #ifdef DBG_UTIL
-void PropertyMap::dump( Reference< XPropertySet > rXPropSet )
+void PropertyMap::dump( const Reference< XPropertySet >& rXPropSet )
 {
     Reference< XPropertySetInfo > info = rXPropSet->getPropertySetInfo ();
     Sequence< Property > props = info->getProperties ();
@@ -552,7 +553,7 @@ static void printParameterPairData(int level, EnhancedCustomShapeParameterPair &
     fprintf (stderr, "}");
 }
 
-static const char* lclDumpAnyValueCode( Any value, int level = 0)
+static const char* lclDumpAnyValueCode( const Any& value, int level = 0)
 {
     OUString strValue;
     Sequence< OUString > strArray;
@@ -899,7 +900,7 @@ static const char* lclDumpAnyValueCode( Any value, int level = 0)
     return "";
 }
 
-void PropertyMap::dumpCode( Reference< XPropertySet > rXPropSet )
+void PropertyMap::dumpCode( const Reference< XPropertySet >& rXPropSet )
 {
     Reference< XPropertySetInfo > info = rXPropSet->getPropertySetInfo ();
     Sequence< Property > props = info->getProperties ();
@@ -928,7 +929,7 @@ void PropertyMap::dumpCode( Reference< XPropertySet > rXPropSet )
     }
 }
 
-void PropertyMap::dumpData(Reference<XPropertySet> xPropertySet)
+void PropertyMap::dumpData(const Reference<XPropertySet>& xPropertySet)
 {
     Reference<XPropertySetInfo> xPropertySetInfo = xPropertySet->getPropertySetInfo();
     Sequence<Property> aProperties = xPropertySetInfo->getProperties();

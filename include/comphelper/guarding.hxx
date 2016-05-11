@@ -27,12 +27,11 @@ namespace comphelper
 {
 
 
-
 // = class MutexRelease -
 
 
 /** opposite of OGuard :)
-    (a mutex is released within the constructor and acquired within the desctructor)
+    (a mutex is released within the constructor and acquired within the destructor)
     use only when you're sure the mutex is acquired !
 */
 template <class MUTEX>

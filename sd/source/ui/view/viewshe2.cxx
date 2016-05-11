@@ -17,6 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
+#include <com/sun/star/embed/EmbedVerbs.hpp>
 #include <com/sun/star/embed/NoVisualAreaSizeException.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/chart2/XChartDocument.hpp>
@@ -70,6 +71,7 @@
 #include <svtools/soerr.hxx>
 #include <toolkit/helper/vclunohelper.hxx>
 #include <svx/charthelper.hxx>
+#include <comphelper/lok.hxx>
 
 using namespace com::sun::star;
 
@@ -140,7 +142,7 @@ IMPL_LINK_TYPED(ViewShell, HScrollHdl, ScrollBar *, pHScroll, void )
 /**
  * virtual scroll handler for horizontal Scrollbars
  */
-long ViewShell::VirtHScrollHdl(ScrollBar* pHScroll)
+void ViewShell::VirtHScrollHdl(ScrollBar* pHScroll)
 {
     long nDelta = pHScroll->GetDelta();
 
@@ -181,8 +183,6 @@ long ViewShell::VirtHScrollHdl(ScrollBar* pHScroll)
             UpdateHRuler();
 
     }
-
-    return 0;
 }
 
 /**
@@ -196,7 +196,7 @@ IMPL_LINK_TYPED(ViewShell, VScrollHdl, ScrollBar *, pVScroll, void )
 /**
  * handling for vertical Scrollbars
  */
-long ViewShell::VirtVScrollHdl(ScrollBar* pVScroll)
+void ViewShell::VirtVScrollHdl(ScrollBar* pVScroll)
 {
     if(IsPageFlipMode())
     {
@@ -242,11 +242,9 @@ long ViewShell::VirtVScrollHdl(ScrollBar* pVScroll)
             UpdateVRuler();
 
     }
-
-    return 0;
 }
 
-SvxRuler* ViewShell::CreateHRuler(::sd::Window* , bool )
+SvxRuler* ViewShell::CreateHRuler(::sd::Window* )
 {
     return nullptr;
 }
@@ -389,7 +387,7 @@ void ViewShell::SetZoomRect(const Rectangle& rZoomRect)
         mpContentWindow->UpdateMapOrigin();
 
         // When tiled rendering, UpdateMapOrigin() doesn't touch the map mode.
-        if (!GetDoc()->isTiledRendering())
+        if (!comphelper::LibreOfficeKit::isActive())
             // #i74769# see above
             mpContentWindow->Invalidate(InvalidateFlags::Children);
     }
@@ -798,7 +796,7 @@ bool ViewShell::ActivateObject(SdrOle2Obj* pObj, long nVerb)
 
             GetViewShellBase().SetVerbs( xObj->getSupportedVerbs() );
 
-            nVerb = SVVERB_SHOW;
+            nVerb = embed::EmbedVerbs::MS_OLEVERB_SHOW;
         }
         else
         {
@@ -984,17 +982,14 @@ void ViewShell::VisAreaChanged(const Rectangle& rRect)
     GetViewShell()->VisAreaChanged(rRect);
 }
 
-void ViewShell::SetWinViewPos(const Point& rWinPos, bool bUpdate)
+void ViewShell::SetWinViewPos(const Point& rWinPos)
 {
     if (mpContentWindow.get() != nullptr)
     {
         mpContentWindow->SetWinViewPos(rWinPos);
 
-        if ( bUpdate )
-        {
-            mpContentWindow->UpdateMapOrigin();
-            mpContentWindow->Invalidate();
-        }
+        mpContentWindow->UpdateMapOrigin();
+        mpContentWindow->Invalidate();
     }
 
     if (mbHasRulers)

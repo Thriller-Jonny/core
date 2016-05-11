@@ -128,95 +128,13 @@ void ScCellFormat::GetString( ScRefCellValue& rCell, sal_uLong nFormat, OUString
 
 OUString ScCellFormat::GetString(
     ScDocument& rDoc, const ScAddress& rPos, sal_uLong nFormat, Color** ppColor,
-    SvNumberFormatter& rFormatter, bool bNullVals, bool bFormula, ScForceTextFmt eForceTextFmt,
-    bool bUseStarFormat )
+    SvNumberFormatter& rFormatter, bool bNullVals, bool bFormula, ScForceTextFmt eForceTextFmt )
 {
     OUString aString;
     *ppColor = nullptr;
 
-    CellType eType = rDoc.GetCellType(rPos);
-    switch (eType)
-    {
-        case CELLTYPE_STRING:
-        {
-            ScRefCellValue aCell(rDoc, rPos);
-            rFormatter.GetOutputString(aCell.mpString->getString(), nFormat, aString, ppColor, bUseStarFormat);
-        }
-        break;
-        case CELLTYPE_EDIT:
-        {
-            ScRefCellValue aCell(rDoc, rPos);
-            rFormatter.GetOutputString(aCell.getString(&rDoc), nFormat, aString, ppColor);
-        }
-        break;
-        case CELLTYPE_VALUE:
-        {
-            double nValue = rDoc.GetValue(rPos);
-            if (!bNullVals && nValue == 0.0) aString.clear();
-            else
-            {
-                if (eForceTextFmt == ftCheck)
-                {
-                    if (nFormat && rFormatter.IsTextFormat(nFormat)) eForceTextFmt = ftForce;
-                }
-                if (eForceTextFmt == ftForce)
-                {
-                    OUString aTemp;
-                    rFormatter.GetOutputString(nValue, 0, aTemp, ppColor);
-                    rFormatter.GetOutputString(aTemp, nFormat, aString, ppColor);
-                }
-                else rFormatter.GetOutputString(nValue, nFormat, aString, ppColor, bUseStarFormat);
-            }
-        }
-        break;
-        case CELLTYPE_FORMULA:
-        {
-            ScFormulaCell* pFCell = rDoc.GetFormulaCell(rPos);
-            if (!pFCell)
-                return aString;
-            if (bFormula)
-            {
-                pFCell->GetFormula(aString);
-            }
-            else
-            {
-                // A macro started from the interpreter, which has
-                // access to Formular Cells, becomes a CellText, even if
-                // that triggers further interpretation, except if those
-                // cells are already being interpreted.
-                // IdleCalc generally doesn't trigger further interpretation,
-                // as not to get Err522 (circular).
-                if (pFCell->GetDocument()->IsInInterpreter() &&
-                    (!pFCell->GetDocument()->GetMacroInterpretLevel()
-                     || pFCell->IsRunning()))
-                {
-                    aString = "...";
-                }
-                else
-                {
-                    sal_uInt16 nErrCode = pFCell->GetErrCode();
-
-                    if (nErrCode != 0) aString = ScGlobal::GetErrorString(nErrCode);
-                    else if (pFCell->IsEmptyDisplayedAsString()) aString.clear();
-                    else if (pFCell->IsValue())
-                    {
-                        double fValue = pFCell->GetValue();
-                        if (!bNullVals && fValue == 0.0) aString.clear();
-                        else if (pFCell->IsHybridValueCell()) aString = pFCell->GetString().getString();
-                        else rFormatter.GetOutputString(fValue, nFormat, aString, ppColor, bUseStarFormat);
-                    }
-                    else
-                    {
-                        rFormatter.GetOutputString(pFCell->GetString().getString(),
-                                                   nFormat, aString, ppColor, bUseStarFormat);
-                    }
-                }
-            }
-        }
-        break;
-        default:
-            ;
-    }
+    ScRefCellValue aCell(rDoc, rPos);
+    GetString(aCell, nFormat, aString, ppColor, rFormatter, &rDoc, bNullVals, bFormula, eForceTextFmt);
     return aString;
 }
 
@@ -281,7 +199,7 @@ OUString ScCellFormat::GetOutputString( ScDocument& rDoc, const ScAddress& rPos,
         //  like in GetString for document (column)
         Color* pColor;
         sal_uLong nNumFmt = rDoc.GetNumberFormat(rPos);
-        aVal = GetString(rDoc, rPos, nNumFmt, &pColor, *rDoc.GetFormatTable());
+        GetString(rCell, nNumFmt, aVal, &pColor, *rDoc.GetFormatTable(), &rDoc);
     }
     return aVal;
 }

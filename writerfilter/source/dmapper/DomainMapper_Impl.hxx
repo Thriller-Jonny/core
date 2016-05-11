@@ -27,12 +27,12 @@
 #include <com/sun/star/text/XTextFrame.hpp>
 #include <com/sun/star/style/TabStop.hpp>
 #include <com/sun/star/container/XNameContainer.hpp>
-#include <vector>
-#include <stack>
 #include <queue>
-#include <boost/optional.hpp>
-#include <boost/tuple/tuple.hpp>
+#include <stack>
+#include <tuple>
 #include <unordered_map>
+#include <vector>
+#include <boost/optional.hpp>
 
 #include <ooxml/resourceids.hxx>
 
@@ -75,7 +75,7 @@ namespace dmapper {
 
 class SdtHelper;
 
-struct _PageMar
+struct PageMar
 {
     sal_Int32 top;
     sal_Int32 right;
@@ -85,7 +85,7 @@ struct _PageMar
     sal_Int32 footer;
     sal_Int32 gutter;
     public:
-        _PageMar();
+        PageMar();
 };
 enum PageMarElement
 {
@@ -159,7 +159,7 @@ public:
     FieldContext(css::uno::Reference<css::text::XTextRange> const& xStart);
     ~FieldContext();
 
-    css::uno::Reference<css::text::XTextRange> GetStartRange() const { return m_xStartRange; }
+    const css::uno::Reference<css::text::XTextRange>& GetStartRange() const { return m_xStartRange; }
 
     void                    AppendCommand(const OUString& rPart);
     const OUString&  GetCommand() const {return m_sCommand; }
@@ -173,28 +173,28 @@ public:
     void                    SetFieldLocked() { m_bFieldLocked = true; }
     bool                    IsFieldLocked() { return m_bFieldLocked; }
 
-    css::uno::Reference<css::beans::XPropertySet> GetCustomField() const { return m_xCustomField; }
+    const css::uno::Reference<css::beans::XPropertySet>& GetCustomField() const { return m_xCustomField; }
     void SetCustomField(css::uno::Reference<css::beans::XPropertySet> const& xCustomField) { m_xCustomField = xCustomField; }
-    css::uno::Reference<css::text::XTextField> GetTextField() const { return m_xTextField;}
+    const css::uno::Reference<css::text::XTextField>& GetTextField() const { return m_xTextField;}
     void SetTextField(css::uno::Reference<css::text::XTextField> const& xTextField) { m_xTextField = xTextField;}
-    css::uno::Reference<css::text::XFormField> GetFormField() const { return m_xFormField;}
+    const css::uno::Reference<css::text::XFormField>& GetFormField() const { return m_xFormField;}
     void SetFormField(css::uno::Reference<css::text::XFormField> const& xFormField) { m_xFormField = xFormField;}
 
     void SetTOC(css::uno::Reference<css::beans::XPropertySet> const& xTOC) { m_xTOC = xTOC; }
-    css::uno::Reference<css::beans::XPropertySet> GetTOC() { return m_xTOC; }
+    const css::uno::Reference<css::beans::XPropertySet>& GetTOC() { return m_xTOC; }
 
     void SetTC(css::uno::Reference<css::beans::XPropertySet> const& xTC) { m_xTC = xTC; }
-    css::uno::Reference<css::beans::XPropertySet> GetTC() { return m_xTC; }
+    const css::uno::Reference<css::beans::XPropertySet>& GetTC() { return m_xTC; }
 
     void    SetHyperlinkURL( const OUString& rURL ) { m_sHyperlinkURL = rURL; }
     const OUString&                                                      GetHyperlinkURL() { return m_sHyperlinkURL; }
 
     void setFFDataHandler(FFDataHandler::Pointer_t pFFDataHandler) { m_pFFDataHandler = pFFDataHandler; }
-    FFDataHandler::Pointer_t getFFDataHandler() const { return m_pFFDataHandler; }
+    const FFDataHandler::Pointer_t& getFFDataHandler() const { return m_pFFDataHandler; }
 
     void setFormControlHelper(FormControlHelper::Pointer_t pFormControlHelper) { m_pFormControlHelper = pFormControlHelper; }
-    FormControlHelper::Pointer_t getFormControlHelper() const { return m_pFormControlHelper; }
-    PropertyMapPtr getProperties() { return m_pProperties; }
+    const FormControlHelper::Pointer_t& getFormControlHelper() const { return m_pFormControlHelper; }
+    const PropertyMapPtr& getProperties() { return m_pProperties; }
 
     ::std::vector<OUString> GetCommandParts() const;
 };
@@ -380,7 +380,7 @@ private:
     OUString                                                                        m_sCurrentBkmkId;
     OUString                                                                        m_sCurrentBkmkName;
 
-    _PageMar                                                                        m_aPageMargins;
+    PageMar                                                                        m_aPageMargins;
     SymbolData                                                                      m_aSymbolData;
 
     // TableManagers are stacked: one for each stream to avoid any confusion
@@ -483,17 +483,17 @@ public:
 
     css::uno::Reference<css::container::XNameContainer> GetPageStyles();
     css::uno::Reference<css::text::XText> GetBodyText();
-    css::uno::Reference<css::lang::XMultiServiceFactory> GetTextFactory() const
+    const css::uno::Reference<css::lang::XMultiServiceFactory>& GetTextFactory() const
     {
         return m_xTextFactory;
     }
-    css::uno::Reference<css::text::XTextDocument> GetTextDocument() const
+    const css::uno::Reference<css::text::XTextDocument>& GetTextDocument() const
     {
         return m_xTextDocument;
     }
     void SetDocumentSettingsProperty( const OUString& rPropName, const css::uno::Any& rValue );
 
-    static void CreateRedline(css::uno::Reference<css::text::XTextRange> const& xRange, RedlineParamsPtr pRedline);
+    static void CreateRedline(css::uno::Reference<css::text::XTextRange> const& xRange, const RedlineParamsPtr& pRedline);
 
     void CheckParaMarkerRedline(css::uno::Reference<css::text::XTextRange> const& xRange);
 
@@ -547,21 +547,21 @@ public:
     void setParaSdtEndDeferred(bool bParaSdtEndDeferred);
     bool isParaSdtEndDeferred();
 
-    void finishParagraph( PropertyMapPtr pPropertyMap );
-    void appendTextPortion( const OUString& rString, PropertyMapPtr pPropertyMap );
+    void finishParagraph( const PropertyMapPtr& pPropertyMap );
+    void appendTextPortion( const OUString& rString, const PropertyMapPtr& pPropertyMap );
     void appendTextContent(const css::uno::Reference<css::text::XTextContent>&, const css::uno::Sequence<css::beans::PropertyValue>&);
-    void appendOLE( const OUString& rStreamName, OLEHandlerPtr pOleHandler );
+    void appendOLE( const OUString& rStreamName, const OLEHandlerPtr& pOleHandler );
     void appendStarMath( const Value& v );
     css::uno::Reference<css::beans::XPropertySet> appendTextSectionAfter(css::uno::Reference<css::text::XTextRange>& xBefore);
 
     // push the new properties onto the stack and make it the 'current' property map
     void    PushProperties(ContextType eId);
-    void    PushStyleProperties(PropertyMapPtr pStyleProperties);
-    void    PushListProperties(PropertyMapPtr pListProperties);
+    void    PushStyleProperties(const PropertyMapPtr& pStyleProperties);
+    void    PushListProperties(const PropertyMapPtr& pListProperties);
     void    PopProperties(ContextType eId);
 
     ContextType GetTopContextType() const { return m_aContextStack.top(); }
-    PropertyMapPtr GetTopContext()
+    const PropertyMapPtr& GetTopContext()
     {
         return m_pTopContext;
     }
@@ -593,21 +593,21 @@ public:
     SettingsTablePtr GetSettingsTable()
     {
         if( !m_pSettingsTable )
-            m_pSettingsTable.reset( new SettingsTable( m_xTextFactory ) );
+            m_pSettingsTable.reset( new SettingsTable );
         return m_pSettingsTable;
     }
 
     GraphicImportPtr GetGraphicImport( GraphicImportType eGraphicImportType );
     void            ResetGraphicImport();
     // this method deletes the current m_pGraphicImport after import
-    void    ImportGraphic(writerfilter::Reference< Properties>::Pointer_t, GraphicImportType eGraphicImportType );
+    void    ImportGraphic(const writerfilter::Reference< Properties>::Pointer_t&, GraphicImportType eGraphicImportType );
 
     void InitTabStopFromStyle(const css::uno::Sequence<css::style::TabStop>& rInitTabStops);
     void    IncorporateTabStop( const DeletableTabStop &aTabStop );
     css::uno::Sequence<css::style::TabStop> GetCurrentTabStopAndClear();
 
     void        SetCurrentParaStyleId(const OUString& sStringValue) {m_sCurrentParaStyleId = sStringValue;}
-    OUString    GetCurrentParaStyleId() const {return m_sCurrentParaStyleId;}
+    const OUString& GetCurrentParaStyleId() const {return m_sCurrentParaStyleId;}
 
     css::uno::Any GetPropertyFromStyleSheet(PropertyIds eId);
     void        SetStyleSheetImport( bool bSet ) { m_bInStyleSheetImport = bSet;}
@@ -648,13 +648,13 @@ public:
     void SetFieldLocked();
     //collect the pieces of the command
     void AppendFieldCommand(OUString& rPartOfCommand);
-    void handleRubyEQField( FieldContextPtr pContext);
+    void handleRubyEQField( const FieldContextPtr& pContext);
     void handleFieldAsk
-        (FieldContextPtr pContext,
+        (const FieldContextPtr& pContext,
         css::uno::Reference< css::uno::XInterface > & xFieldInterface,
         css::uno::Reference< css::beans::XPropertySet > const& xFieldProperties);
     void handleAutoNum
-        (FieldContextPtr pContext,
+        (const FieldContextPtr& pContext,
         css::uno::Reference< css::uno::XInterface > & xFieldInterface,
         css::uno::Reference< css::beans::XPropertySet > const& xFieldProperties);
     static void handleAuthor
@@ -663,23 +663,23 @@ public:
         css::uno::Reference< css::beans::XPropertySet > const& xFieldProperties,
         FieldId eFieldId);
     void handleDocProperty
-        (FieldContextPtr pContext,
+        (const FieldContextPtr& pContext,
         OUString const& rFirstParam,
         css::uno::Reference< css::uno::XInterface > & xFieldInterface,
         css::uno::Reference< css::beans::XPropertySet > const& xFieldProperties);
     void handleToc
-        (FieldContextPtr pContext,
+        (const FieldContextPtr& pContext,
         css::uno::Reference< css::uno::XInterface > & xFieldInterface,
         css::uno::Reference< css::beans::XPropertySet > const& xFieldProperties,
         const OUString & sTOCServiceName);
     void handleIndex
-        (FieldContextPtr pContext,
+        (const FieldContextPtr& pContext,
         css::uno::Reference< css::uno::XInterface > & xFieldInterface,
         css::uno::Reference< css::beans::XPropertySet > const& xFieldProperties,
         const OUString & sTOCServiceName);
 
     void handleBibliography
-        (FieldContextPtr pContext,
+        (const FieldContextPtr& pContext,
         const OUString & sTOCServiceName);
     /// The field command has to be closed (cFieldSep appeared).
     void CloseFieldCommand();
@@ -689,7 +689,7 @@ public:
     //apply the result text to the related field
     void SetFieldResult(OUString const& rResult);
     // set FFData of top field context
-    void SetFieldFFData( FFDataHandler::Pointer_t pFFDataHandler );
+    void SetFieldFFData( const FFDataHandler::Pointer_t& pFFDataHandler );
     /// The end of field is reached (cFieldEnd appeared) - the command might still be open.
     void PopFieldContext();
 
@@ -733,9 +733,9 @@ public:
 
     bool IsRTFImport() const { return m_eDocumentType == SourceDocumentType::RTF; }
 
-    void InitPageMargins() { m_aPageMargins = _PageMar(); }
+    void InitPageMargins() { m_aPageMargins = PageMar(); }
     void SetPageMarginTwip( PageMarElement eElement, sal_Int32 nValue );
-    const _PageMar& GetPageMargins() const {return m_aPageMargins;}
+    const PageMar& GetPageMargins() const {return m_aPageMargins;}
 
     const LineNumberSettings& GetLineNumberSettings() const { return m_aLineNumberSettings;}
     void SetLineNumberSettings(const LineNumberSettings& rSet) { m_aLineNumberSettings = rSet;}
@@ -753,7 +753,7 @@ public:
     void RegisterFrameConversion(css::uno::Reference<css::text::XTextRange> const& xFrameStartRange,
                                  css::uno::Reference<css::text::XTextRange> const& xFrameEndRange,
                                  const std::vector<css::beans::PropertyValue>& aFrameProperties);
-    bool ExecuteFrameConversion();
+    void ExecuteFrameConversion();
 
     void AddNewRedline( sal_uInt32 sprmId );
 
@@ -780,7 +780,7 @@ public:
     css::uno::Reference<css::container::XIndexAccess> GetCurrentNumberingRules(sal_Int32* pListLevel = nullptr);
 
     /**
-     Used for attributes/sprms which cannot be evaluated immediatelly (e.g. they depend
+     Used for attributes/sprms which cannot be evaluated immediately (e.g. they depend
      on another one that comes in the same CONTEXT_CHARACTER). The property will be processed
      again in DomainMapper::processDeferredCharacterProperties().
     */
@@ -869,10 +869,6 @@ private:
     /// Current paragraph had at least one field in it.
     bool m_bParaHadField;
 };
-
-// export just for test
-SAL_DLLPUBLIC_EXPORT boost::tuple<OUString, std::vector<OUString>, std::vector<OUString> >
-    lcl_SplitFieldCommand(const OUString& rCommand);
 
 } //namespace dmapper
 } //namespace writerfilter

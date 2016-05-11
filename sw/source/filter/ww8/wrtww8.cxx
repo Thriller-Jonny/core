@@ -19,7 +19,6 @@
 
 #include <iostream>
 
-#include <boost/noncopyable.hpp>
 #include <com/sun/star/embed/ElementModes.hpp>
 #include <com/sun/star/embed/XStorage.hpp>
 #include <unotools/ucbstreamhelper.hxx>
@@ -142,7 +141,7 @@ public:
     WW8_WrFkp(ePLCFT ePl, WW8_FC nStartFc);
     ~WW8_WrFkp();
     bool Append( WW8_FC nEndFc, sal_uInt16 nVarLen = 0, const sal_uInt8* pSprms = nullptr );
-    bool Combine();
+    void Combine();
     void Write( SvStream& rStrm, SwWW8WrGrf& rGrf );
 
     bool IsEqualPos(WW8_FC nEndFc) const
@@ -183,11 +182,14 @@ typedef std::pair<long,BKMK> BKMKCP;
 typedef std::multimap<long,BKMKCP*> BKMKCPs;
 typedef BKMKCPs::iterator CPItr;
 
-class WW8_WrtBookmarks: private boost::noncopyable
+class WW8_WrtBookmarks
 {
 private:
     BKMKCPs aSttCps,aEndCps;
     BKMKNames maSwBkmkNms;
+
+    WW8_WrtBookmarks(WW8_WrtBookmarks const&) = delete;
+    WW8_WrtBookmarks& operator=(WW8_WrtBookmarks const&) = delete;
 
 public:
     WW8_WrtBookmarks();
@@ -315,11 +317,14 @@ void WW8_WrtBookmarks::MoveFieldMarks(WW8_CP nFrom, WW8_CP nTo)
 }
 
 /// Handles export of smart tags.
-class WW8_WrtFactoids: private boost::noncopyable
+class WW8_WrtFactoids
 {
     std::vector<WW8_CP> m_aStartCPs;
     std::vector<WW8_CP> m_aEndCPs;
     std::vector< std::map<OUString, OUString> > m_aStatements;
+
+    WW8_WrtFactoids(WW8_WrtFactoids const&) = delete;
+    WW8_WrtFactoids& operator=(WW8_WrtFactoids const&) = delete;
 
 public:
     WW8_WrtFactoids();
@@ -788,7 +793,7 @@ const SfxPoolItem* MSWordExportBase::HasItem( sal_uInt16 nWhich ) const
 
 const SfxPoolItem& MSWordExportBase::GetItem(sal_uInt16 nWhich) const
 {
-    const SfxPoolItem* pItem;
+    assert((m_pISet || m_pChpIter) && "Where is my ItemSet / pChpIter ?");
     if (m_pISet)
     {
         // if write a EditEngine text, then the WhichIds are greater as
@@ -796,16 +801,9 @@ const SfxPoolItem& MSWordExportBase::GetItem(sal_uInt16 nWhich) const
         // EditEngine Range
         nWhich = sw::hack::GetSetWhichFromSwDocWhich(*m_pISet, *m_pDoc, nWhich);
         OSL_ENSURE(nWhich != 0, "All broken, Impossible");
-        pItem = &m_pISet->Get(nWhich);
+        return m_pISet->Get(nWhich);
     }
-    else if( m_pChpIter )
-        pItem = &m_pChpIter->GetItem( nWhich );
-    else
-    {
-        OSL_ENSURE( false, "Where is my ItemSet / pChpIter ?" );
-        pItem = nullptr;
-    }
-    return *pItem;
+    return m_pChpIter->GetItem( nWhich );
 }
 
 WW8_WrPlc1::WW8_WrPlc1( sal_uInt16 nStructSz )
@@ -864,10 +862,10 @@ void WW8_WrPlc1::Write( SvStream& rStrm )
 
 // Class WW8_WrPlcField for fields
 
-bool WW8_WrPlcField::Write( WW8Export& rWrt )
+void WW8_WrPlcField::Write( WW8Export& rWrt )
 {
     if( WW8_WrPlc1::Count() <= 1 )
-        return false;
+        return;
 
     WW8_FC *pfc;
     sal_Int32 *plc;
@@ -919,18 +917,16 @@ bool WW8_WrPlcField::Write( WW8Export& rWrt )
         *pfc = nFcStart;
         *plc = rWrt.pTableStrm->Tell() - nFcStart;
     }
-    return true;
 }
 
-bool WW8_WrMagicTable::Write( WW8Export& rWrt )
+void WW8_WrMagicTable::Write( WW8Export& rWrt )
 {
     if( WW8_WrPlc1::Count() <= 1 )
-        return false;
+        return;
     sal_uLong nFcStart = rWrt.pTableStrm->Tell();
     WW8_WrPlc1::Write( *rWrt.pTableStrm );
     rWrt.pFib->fcPlcfTch = nFcStart;
     rWrt.pFib->lcbPlcfTch = rWrt.pTableStrm->Tell() - nFcStart;
-    return true;
 }
 
 void WW8_WrMagicTable::Append( WW8_CP nCp, sal_uLong nData)
@@ -1244,10 +1240,10 @@ bool WW8_WrFkp::Append( WW8_FC nEndFc, sal_uInt16 nVarLen, const sal_uInt8* pSpr
     return true;
 }
 
-bool WW8_WrFkp::Combine()
+void WW8_WrFkp::Combine()
 {
     if( bCombined )
-        return false;
+        return;
     if( nIMax )
         memcpy( pFkp + ( nIMax + 1 ) * 4, pOfs, nIMax * nItemSize );
     delete[] pOfs;
@@ -1262,8 +1258,6 @@ bool WW8_WrFkp::Combine()
     for( i = 0, p = (sal_uInt32*)pFkp; i <= nIMax; i++, p++ )
         *p = OSL_SWAPDWORD( *p );
 #endif // ifdef OSL_BIGENDIAN
-
-    return true;
 }
 
 void WW8_WrFkp::Write( SvStream& rStrm, SwWW8WrGrf& rGrf )
@@ -1501,7 +1495,7 @@ void WW8Export::AppendAnnotationMarks(const SwTextNode& rNode, sal_Int32 nAktPos
 
 void WW8Export::AppendSmartTags(const SwTextNode& rTextNode)
 {
-    std::map<OUString, OUString> aStatements = SwRDFHelper::getTextNodeStatements("urn:tscp:names:baf:1.1", rTextNode);
+    std::map<OUString, OUString> aStatements = SwRDFHelper::getTextNodeStatements("urn:bails", rTextNode);
     if (!aStatements.empty())
     {
         WW8_CP nCP = Fc2Cp(Strm().Tell());
@@ -1514,10 +1508,26 @@ void WW8Export::MoveFieldMarks(WW8_CP nFrom, WW8_CP nTo)
     m_pBkmks->MoveFieldMarks(nFrom, nTo);
 }
 
-void WW8Export::AppendBookmark( const OUString& rName, bool bSkip )
+void WW8Export::AppendBookmark( const OUString& rName )
 {
-    sal_uLong nSttCP = Fc2Cp( Strm().Tell() ) + ( bSkip? 1: 0 );
+    sal_uLong nSttCP = Fc2Cp( Strm().Tell() );
     m_pBkmks->Append( nSttCP, rName );
+}
+
+boost::optional<SvxBrushItem> MSWordExportBase::getBackground()
+{
+    boost::optional<SvxBrushItem> oRet;
+    const SwFrameFormat &rFormat = m_pDoc->GetPageDesc(0).GetMaster();
+    SvxBrushItem aBrush(RES_BACKGROUND);
+    SfxItemState eState = rFormat.GetBackgroundState(aBrush);
+
+    if (SfxItemState::SET == eState)
+    {
+        // The 'color' is set for the first page style - take it and use it as the background color of the entire DOCX
+        if (aBrush.GetColor().GetColor() != COL_AUTO)
+            oRet.reset(aBrush);
+    }
+    return oRet;
 }
 
 // #i120928 collect all the graphics of bullets applied to paragraphs
@@ -1675,7 +1685,7 @@ sal_uInt16 WW8Export::AddRedlineAuthor( sal_uInt16 nId )
 }
 
 void WW8Export::WriteAsStringTable(const std::vector<OUString>& rStrings,
-    sal_Int32& rfcSttbf, sal_Int32& rlcbSttbf, sal_uInt16 nExtraLen)
+    sal_Int32& rfcSttbf, sal_Int32& rlcbSttbf)
 {
     sal_uInt16 n, nCount = static_cast< sal_uInt16 >(rStrings.size());
     if( nCount )
@@ -1691,8 +1701,6 @@ void WW8Export::WriteAsStringTable(const std::vector<OUString>& rStrings,
             const OUString& rNm = rStrings[n];
             SwWW8Writer::WriteShort( rStrm, rNm.getLength() );
             SwWW8Writer::WriteString16(rStrm, rNm, false);
-            if( nExtraLen )
-                SwWW8Writer::FillCount(rStrm, nExtraLen);
         }
         rlcbSttbf = rStrm.Tell() - rfcSttbf;
     }
@@ -1788,14 +1796,14 @@ void SwWW8Writer::WriteString8(SvStream& rStrm, const OUString& rStr,
         rStrm.Write(&aBytes[0], aBytes.size());
 }
 
-void WW8Export::WriteStringAsPara( const OUString& rText, sal_uInt16 nStyleId )
+void WW8Export::WriteStringAsPara( const OUString& rText )
 {
     if( !rText.isEmpty() )
         OutSwString(rText, 0, rText.getLength());
     WriteCR();              // CR thereafter
 
     ww::bytes aArr;
-    SwWW8Writer::InsUInt16( aArr, nStyleId );
+    SwWW8Writer::InsUInt16( aArr, 0/*nStyleId*/ );
     if( m_bOutTable )
     {                                               // Tab-Attr
         // sprmPFInTable
@@ -2191,9 +2199,11 @@ void WW8AttributeOutput::TableOrientation( ww8::WW8TableNodeInfoInner::Pointer_t
     const SwTable * pTable = pTableTextNodeInfoInner->getTable();
 
     const SwFrameFormat *pFormat = pTable->GetFrameFormat();
-    OSL_ENSURE(pFormat,"Impossible");
-    if (!pFormat)
+    if ( !pFormat )
+    {
+        SAL_WARN( "sw.ww8", "FrameFormat is nil" );
         return;
+    }
 
     const SwFormatHoriOrient &rHori = pFormat->GetHoriOrient();
     const SwFormatVertOrient &rVert = pFormat->GetVertOrient();
@@ -2291,9 +2301,11 @@ void WW8AttributeOutput::TableDefinition( ww8::WW8TableNodeInfoInner::Pointer_t 
      */
     //const bool bNewTableModel = pTable->IsNewModel();
     const SwFrameFormat *pFormat = pTable->GetFrameFormat();
-    OSL_ENSURE(pFormat,"Impossible");
-    if (!pFormat)
+    if ( !pFormat )
+    {
+        SAL_WARN( "sw.ww8", "FrameFormat is nil" );
         return;
+    }
 
     const SwFormatHoriOrient &rHori = pFormat->GetHoriOrient();
     const SwFormatVertOrient &rVert = pFormat->GetVertOrient();
@@ -2386,9 +2398,11 @@ void AttributeOutputBase::GetTablePageSize( ww8::WW8TableNodeInfoInner * pTableT
     const SwTable *pTable = pTableTextNodeInfoInner->getTable( );
 
     const SwFrameFormat *pFormat = pTable->GetFrameFormat();
-    OSL_ENSURE(pFormat,"Impossible");
-    if (!pFormat)
+    if ( !pFormat )
+    {
+        SAL_WARN( "sw.ww8", "FrameFormat is nil" );
         return;
+    }
 
     const SwFormatFrameSize &rSize = pFormat->GetFrameSize();
     int nWidthPercent = rSize.GetWidthPercent();
@@ -2434,12 +2448,13 @@ void AttributeOutputBase::GetTablePageSize( ww8::WW8TableNodeInfoInner * pTableT
 
         }
 
-        OSL_ENSURE(nWidthPercent, "Impossible");
-        if (nWidthPercent)
+        if ( nWidthPercent )
         {
             nPageSize *= nWidthPercent;
             nPageSize /= 100;
         }
+        else
+            SAL_WARN( "sw.ww8", "nWidthPercent is zero" );
     }
     else
     {
@@ -2640,7 +2655,7 @@ void MSWordExportBase::WriteText()
         {
             SwContentNode* pCNd = static_cast<SwContentNode*>(&rNd);
 
-            const SwPageDesc* pTemp = rNd.FindPageDesc(false);
+            const SwPageDesc* pTemp = rNd.FindPageDesc();
             if ( pTemp )
                 m_pAktPageDesc = pTemp;
 
@@ -3314,15 +3329,6 @@ void WW8Export::ExportDocument_Impl()
         pFib->WriteHeader( *pStrmTemp );
     }
 
-    if (m_pUsedNumTable)           // all used NumRules
-    {
-        // clear the part of the list array that was copied from the document
-        // - it's an auto delete array, so the rest of the array which are
-        // duplicated lists that were added during the export will be deleted.
-        m_pUsedNumTable->erase(m_pUsedNumTable->begin(), m_pUsedNumTable->begin() + m_pUsedNumTable->size() - m_nUniqueList);
-        delete m_pUsedNumTable;
-    }
-
     DELETEZ( m_pGrf );
     DELETEZ( m_pMagicTable );
     DELETEZ( m_pFieldFootnote );
@@ -3365,37 +3371,35 @@ void WW8Export::ExportDocument_Impl()
 
 void WW8Export::PrepareStorage()
 {
-    sal_uLong nLen;
-    const sal_uInt8* pData;
-    const char* pName;
-
-    static const char aUserName[] = "Microsoft Word-Document";
-    static const sal_uInt8 aCompObj[] =
+    static const sal_uInt8 pData[] =
     {
         0x01, 0x00, 0xFE, 0xFF, 0x03, 0x0A, 0x00, 0x00,
         0xFF, 0xFF, 0xFF, 0xFF, 0x06, 0x09, 0x02, 0x00,
         0x00, 0x00, 0x00, 0x00, 0xC0, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x46, 0x18, 0x00, 0x00, 0x00,
-        0x4D, 0x69, 0x63, 0x72, 0x6F, 0x73, 0x6F, 0x66,
-        0x74, 0x20, 0x57, 0x6F, 0x72, 0x64, 0x2D, 0x44,
-        0x6F, 0x6B, 0x75, 0x6D, 0x65, 0x6E, 0x74, 0x00,
-        0x0A, 0x00, 0x00, 0x00, 0x4D, 0x53, 0x57, 0x6F,
-        0x72, 0x64, 0x44, 0x6F, 0x63, 0x00, 0x10, 0x00,
-        0x00, 0x00, 0x57, 0x6F, 0x72, 0x64, 0x2E, 0x44,
-        0x6F, 0x63, 0x75, 0x6D, 0x65, 0x6E, 0x74, 0x2E,
-        0x38, 0x00, 0xF4, 0x39, 0xB2, 0x71, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00
+        0x00, 0x00, 0x00, 0x46,
+
+        0x18, 0x00, 0x00, 0x00,
+        'M', 'i', 'c', 'r', 'o', 's', 'o', 'f',
+        't', ' ', 'W', 'o', 'r', 'd', '-', 'D',
+        'o', 'k', 'u', 'm', 'e', 'n', 't', 0x0,
+
+        0x0A, 0x00, 0x00, 0x00,
+        'M', 'S', 'W', 'o', 'r', 'd', 'D', 'o',
+        'c', 0x0,
+
+        0x10, 0x00, 0x00, 0x00,
+        'W', 'o', 'r', 'd', '.', 'D', 'o', 'c',
+        'u', 'm', 'e', 'n', 't', '.', '8', 0x0,
+
+        0xF4, 0x39, 0xB2, 0x71, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
     };
 
-    pName = aUserName;
-    pData = aCompObj;
-    nLen = sizeof( aCompObj );
-
     SvGlobalName aGName(MSO_WW8_CLASSID);
-    GetWriter().GetStorage().SetClass( aGName, SotClipboardFormatId::NONE, OUString::createFromAscii( pName ));
+    GetWriter().GetStorage().SetClass(
+        aGName, SotClipboardFormatId::NONE, "Microsoft Word-Document");
     tools::SvRef<SotStorageStream> xStor( GetWriter().GetStorage().OpenSotStream(sCompObj) );
-    xStor->Write( pData, nLen );
+    xStor->Write( pData, sizeof( pData ) );
 
     SwDocShell* pDocShell = m_pDoc->GetDocShell ();
     OSL_ENSURE(pDocShell, "no SwDocShell");
@@ -3413,7 +3417,7 @@ void WW8Export::PrepareStorage()
             {
                 std::shared_ptr<GDIMetaFile> xMetaFile =
                     pDocShell->GetPreviewMetaFile();
-                uno::Sequence<sal_uInt8> metaFile(
+                uno::Sequence<sal_Int8> metaFile(
                     sfx2::convertMetaFile(xMetaFile.get()));
                 sfx2::SaveOlePropertySet(xDocProps, &GetWriter().GetStorage(), &metaFile);
             }
@@ -3545,6 +3549,14 @@ MSWordExportBase::MSWordExportBase( SwDoc *pDocument, SwPaM *pCurrentPam, SwPaM 
 
 MSWordExportBase::~MSWordExportBase()
 {
+    if (m_pUsedNumTable)           // all used NumRules
+    {
+        // clear the part of the list array that was copied from the document
+        // - it's an auto delete array, so the rest of the array which are
+        // duplicated lists that were added during the export will be deleted.
+        m_pUsedNumTable->erase(m_pUsedNumTable->begin(), m_pUsedNumTable->begin() + m_pUsedNumTable->size() - m_nUniqueList);
+        delete m_pUsedNumTable;
+    }
     delete m_pOLEExp;
     delete m_pOCXExp;
 }
@@ -3569,7 +3581,8 @@ WW8Export::WW8Export( SwWW8Writer *pWriter,
 
 WW8Export::~WW8Export()
 {
-    delete m_pAttrOutput, m_pAttrOutput = nullptr;
+    delete m_pAttrOutput;
+    m_pAttrOutput = nullptr;
 }
 
 AttributeOutputBase& WW8Export::AttrOutput() const
@@ -3726,13 +3739,13 @@ void WW8Export::WriteFormData( const ::sw::mark::IFieldmark& rFieldmark )
     const ::sw::mark::IFieldmark* pFieldmark = &rFieldmark;
     const ::sw::mark::ICheckboxFieldmark* pAsCheckbox = dynamic_cast< const ::sw::mark::ICheckboxFieldmark* >( pFieldmark );
 
-    OSL_ENSURE(rFieldmark.GetFieldname() == ODF_FORMTEXT ||
-                rFieldmark.GetFieldname() == ODF_FORMDROPDOWN ||
-                rFieldmark.GetFieldname() == ODF_FORMCHECKBOX, "Unknown field type!!!");
     if ( ! ( rFieldmark.GetFieldname() == ODF_FORMTEXT ||
                 rFieldmark.GetFieldname() == ODF_FORMDROPDOWN ||
                 rFieldmark.GetFieldname() == ODF_FORMCHECKBOX ) )
+    {
+        SAL_WARN( "sw.ww8", "unknown field type" );
         return;
+    }
 
     int type = 0; // TextFieldmark
     if ( pAsCheckbox )

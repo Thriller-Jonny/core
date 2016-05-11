@@ -72,6 +72,7 @@
 #include <ToxTextGenerator.hxx>
 #include <ToxTabStopTokenHandler.hxx>
 #include <tools/datetimeutils.hxx>
+#include <tools/globname.hxx>
 
 #include <memory>
 
@@ -257,7 +258,7 @@ const SwTOXMark& SwDoc::GotoTOXMark( const SwTOXMark& rCurTOXMark,
             case TOX_SAME_PRV:
                 if( pTOXMark->GetText() != rCurTOXMark.GetText() )
                     break;
-            /* no break here */
+                SAL_FALLTHROUGH;
             case TOX_PRV:
                 if ( (aAbsNew < aAbsIdx && aAbsNew > aPrevPos) ||
                      (aAbsIdx == aAbsNew &&
@@ -279,7 +280,7 @@ const SwTOXMark& SwDoc::GotoTOXMark( const SwTOXMark& rCurTOXMark,
             case TOX_SAME_NXT:
                 if( pTOXMark->GetText() != rCurTOXMark.GetText() )
                     break;
-            /* no break here */
+                SAL_FALLTHROUGH;
             case TOX_NXT:
                 if ( (aAbsNew > aAbsIdx && aAbsNew < aNextPos) ||
                      (aAbsIdx == aAbsNew &&
@@ -358,7 +359,7 @@ SwTOXBaseSection* SwDoc::InsertTableOf( const SwPosition& rPos,
             SwSectionData headerData( TOX_HEADER_SECTION, pNewSection->GetTOXName()+"_Head" );
 
             SwNodeIndex aStt( *pHeadNd ); --aIdx;
-            SwSectionFormat* pSectFormat = MakeSectionFormat( nullptr );
+            SwSectionFormat* pSectFormat = MakeSectionFormat();
             GetNodes().InsertTextSection(
                     aStt, *pSectFormat, headerData, nullptr, &aIdx, true, false);
         }
@@ -369,18 +370,18 @@ SwTOXBaseSection* SwDoc::InsertTableOf( const SwPosition& rPos,
     return pNewSection;
 }
 
-const SwTOXBaseSection* SwDoc::InsertTableOf( sal_uLong nSttNd, sal_uLong nEndNd,
+void SwDoc::InsertTableOf( sal_uLong nSttNd, sal_uLong nEndNd,
                                                 const SwTOXBase& rTOX,
                                                 const SfxItemSet* pSet )
 {
-    // check for recursiv TOX
+    // check for recursive TOX
     SwNode* pNd = GetNodes()[ nSttNd ];
     SwSectionNode* pSectNd = pNd->FindSectionNode();
     while( pSectNd )
     {
         SectionType eT = pSectNd->GetSection().GetType();
         if( TOX_HEADER_SECTION == eT || TOX_CONTENT_SECTION == eT )
-            return nullptr;
+            return;
         pSectNd = pSectNd->StartOfSectionNode()->FindSectionNode();
     }
 
@@ -389,7 +390,7 @@ const SwTOXBaseSection* SwDoc::InsertTableOf( sal_uLong nSttNd, sal_uLong nEndNd
     SwSectionData aSectionData( TOX_CONTENT_SECTION, sSectNm );
 
     SwNodeIndex aStt( GetNodes(), nSttNd ), aEnd( GetNodes(), nEndNd );
-    SwSectionFormat* pFormat = MakeSectionFormat( nullptr );
+    SwSectionFormat* pFormat = MakeSectionFormat();
     if(pSet)
         pFormat->SetFormatAttr(*pSet);
 
@@ -398,14 +399,13 @@ const SwTOXBaseSection* SwDoc::InsertTableOf( sal_uLong nSttNd, sal_uLong nEndNd
     if (!pNewSectionNode)
     {
         DelSectionFormat( pFormat );
-        return nullptr;
+        return;
     }
 
     SwTOXBaseSection *const pNewSection(
         dynamic_cast<SwTOXBaseSection*>(& pNewSectionNode->GetSection()));
     if (pNewSection)
         pNewSection->SetTOXName(sSectNm); // rTOX may have had no name...
-    return pNewSection;
 }
 
 /// Get current table of contents
@@ -612,7 +612,7 @@ OUString SwDoc::GetUniqueTOXBaseName( const SwTOXType& rType,
     }
 
     bool bUseChkStr = !sChkStr.isEmpty();
-    const OUString aName( rType.GetTypeName() );
+    const OUString& aName( rType.GetTypeName() );
     const sal_Int32 nNmLen = aName.getLength();
 
     SwSectionFormats::size_type nNum = 0;
@@ -692,7 +692,7 @@ static const SwTextNode* lcl_FindChapterNode( const SwNode& rNd, sal_uInt8 nLvl 
         // then find the "Anchor" (Body) position
         Point aPt;
         SwNode2Layout aNode2Layout( *pNd, pNd->GetIndex() );
-        const SwFrame* pFrame = aNode2Layout.GetFrame( &aPt, nullptr, false );
+        const SwFrame* pFrame = aNode2Layout.GetFrame( &aPt, nullptr );
 
         if( pFrame )
         {
@@ -719,26 +719,15 @@ SwTOXBaseSection::~SwTOXBaseSection()
         delete *it;
 }
 
-bool SwTOXBaseSection::SetPosAtStartEnd( SwPosition& rPos, bool bAtStart ) const
+bool SwTOXBaseSection::SetPosAtStartEnd( SwPosition& rPos ) const
 {
     bool bRet = false;
     const SwSectionNode* pSectNd = GetFormat()->GetSectionNode();
     if( pSectNd )
     {
-        SwContentNode* pCNd;
-        sal_Int32 nC = 0;
-        if( bAtStart )
-        {
-            rPos.nNode = *pSectNd;
-            pCNd = pSectNd->GetDoc()->GetNodes().GoNext( &rPos.nNode );
-        }
-        else
-        {
-            rPos.nNode = *pSectNd->EndOfSectionNode();
-            pCNd = SwNodes::GoPrevious( &rPos.nNode );
-            if( pCNd ) nC = pCNd->Len();
-        }
-        rPos.nContent.Assign( pCNd, nC );
+        rPos.nNode = *pSectNd;
+        SwContentNode* pCNd = pSectNd->GetDoc()->GetNodes().GoNext( &rPos.nNode );
+        rPos.nContent.Assign( pCNd, 0 );
         bRet = true;
     }
     return bRet;
@@ -780,7 +769,7 @@ void SwTOXBaseSection::Update(const SfxItemSet* pAttr,
             // determine page description of table-of-content
             size_t nPgDescNdIdx = pSectNd->GetIndex() + 1;
             size_t* pPgDescNdIdx = &nPgDescNdIdx;
-            pDefaultPageDesc = pSectNd->FindPageDesc( false, pPgDescNdIdx );
+            pDefaultPageDesc = pSectNd->FindPageDesc( pPgDescNdIdx );
             if ( nPgDescNdIdx < pSectNd->GetIndex() )
             {
                 pDefaultPageDesc = nullptr;
@@ -801,7 +790,7 @@ void SwTOXBaseSection::Update(const SfxItemSet* pAttr,
                     eBreak == SVX_BREAK_PAGE_BOTH )
                )
             {
-                pDefaultPageDesc = pNdAfterTOX->FindPageDesc( false );
+                pDefaultPageDesc = pNdAfterTOX->FindPageDesc();
             }
         }
         // consider start node of content section in the node array.
@@ -813,7 +802,7 @@ void SwTOXBaseSection::Update(const SfxItemSet* pAttr,
             // determine page description of content before table-of-content
             SwNodeIndex aIdx( *pSectNd );
             pDefaultPageDesc =
-                SwNodes::GoPrevious( &aIdx )->FindPageDesc( false );
+                SwNodes::GoPrevious( &aIdx )->FindPageDesc();
 
         }
         if ( !pDefaultPageDesc )
@@ -893,7 +882,7 @@ void SwTOXBaseSection::Update(const SfxItemSet* pAttr,
         SwSectionData headerData( TOX_HEADER_SECTION, GetTOXName()+"_Head" );
 
         SwNodeIndex aStt( *pHeadNd ); --aIdx;
-        SwSectionFormat* pSectFormat = pDoc->MakeSectionFormat( nullptr );
+        SwSectionFormat* pSectFormat = pDoc->MakeSectionFormat();
         pDoc->GetNodes().InsertTextSection(
                 aStt, *pSectFormat, headerData, nullptr, &aIdx, true, false);
     }
@@ -1341,10 +1330,10 @@ void SwTOXBaseSection::UpdateAuthorities( const SwTOXInternational& rIntl )
 
 static long lcl_IsSOObject( const SvGlobalName& rFactoryNm )
 {
-    static struct _SoObjType {
+    static struct SoObjType {
         long nFlag;
         // GlobalNameId
-        struct _GlobalNameIds {
+        struct GlobalNameIds {
             sal_uInt32 n1;
             sal_uInt16 n2, n3;
             sal_uInt8 b8, b9, b10, b11, b12, b13, b14, b15;
@@ -1369,10 +1358,10 @@ static long lcl_IsSOObject( const SvGlobalName& rFactoryNm )
     };
 
     long nRet = 0;
-    for( const _SoObjType* pArr = aArr; !nRet && pArr->nFlag; ++pArr )
+    for( const SoObjType* pArr = aArr; !nRet && pArr->nFlag; ++pArr )
         for ( int n = 0; n < 4; ++n )
         {
-            const _SoObjType::_GlobalNameIds& rId = pArr->aGlNmIds[ n ];
+            const SoObjType::GlobalNameIds& rId = pArr->aGlNmIds[ n ];
             if( !rId.n1 )
                 break;
             SvGlobalName aGlbNm( rId.n1, rId.n2, rId.n3,
@@ -1636,7 +1625,7 @@ void SwTOXBaseSection::UpdatePageNum()
                 const SwTextNode* pTextNd = pBase->pTOXNd->GetTextNode();
                 OSL_ENSURE( pTextNd, "no TextNode, wrong TOC" );
 
-                _UpdatePageNum( const_cast<SwTextNode*>(pTextNd), aNums, aDescs, pMainNums,
+                UpdatePageNum_( const_cast<SwTextNode*>(pTextNd), aNums, aDescs, pMainNums,
                                 aIntl );
             }
             DELETEZ(pMainNums);
@@ -1662,7 +1651,7 @@ static bool lcl_HasMainEntry( const std::vector<sal_uInt16>* pMainEntryNums, sal
     return false;
 }
 
-void SwTOXBaseSection::_UpdatePageNum( SwTextNode* pNd,
+void SwTOXBaseSection::UpdatePageNum_( SwTextNode* pNd,
                                     const std::vector<sal_uInt16>& rNums,
                                     const std::vector<SwPageDesc*>& rDescs,
                                     const std::vector<sal_uInt16>* pMainEntryNums,

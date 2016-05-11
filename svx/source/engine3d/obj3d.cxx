@@ -78,7 +78,6 @@
 #include <svx/e3dsceneupdater.hxx>
 
 
-
 using namespace com::sun::star;
 
 
@@ -172,13 +171,10 @@ SdrObject* E3dObjList::RemoveObject(size_t nObjNum)
 }
 
 
-
 sdr::properties::BaseProperties* E3dObject::CreateObjectSpecificProperties()
 {
     return new sdr::properties::E3dProperties(*this);
 }
-
-
 
 
 E3dObject::E3dObject()
@@ -284,7 +280,7 @@ void E3dObject::TakeObjInfo(SdrObjTransformInfoRec& rInfo) const
     // At first not only possible, because the creation of a group of
     // 2D polygons would be required which need to be sorted by depth,
     // ie at intersections be cut relative to each other. Also the texture
-    // coorinates were an unsolved problem.
+    // coordinates were an unsolved problem.
     rInfo.bCanConvToPoly = false;
     rInfo.bCanConvToContour = false;
     rInfo.bCanConvToPathLineToArea = false;
@@ -337,7 +333,7 @@ void E3dObject::NbcResize(const Point& rRef, const Fraction& xFact, const Fracti
     {
         // transform pos from 2D world to 3D eye
         const sdr::contact::ViewContactOfE3dScene& rVCScene = static_cast< sdr::contact::ViewContactOfE3dScene& >(pScene->GetViewContact());
-        const drawinglayer::geometry::ViewInformation3D aViewInfo3D(rVCScene.getViewInformation3D());
+        const drawinglayer::geometry::ViewInformation3D& aViewInfo3D(rVCScene.getViewInformation3D());
         basegfx::B2DPoint aScaleCenter2D((double)rRef.X(), (double)rRef.Y());
         basegfx::B2DHomMatrix aInverseSceneTransform(rVCScene.getObjectTransformation());
 
@@ -357,23 +353,23 @@ void E3dObject::NbcResize(const Point& rRef, const Fraction& xFact, const Fracti
         // build transform
         basegfx::B3DHomMatrix aInverseOrientation(aViewInfo3D.getOrientation());
         aInverseOrientation.invert();
-        basegfx::B3DHomMatrix mFullTransform(GetFullTransform());
-        basegfx::B3DHomMatrix mTrans(mFullTransform);
+        basegfx::B3DHomMatrix aFullTransform(GetFullTransform());
+        basegfx::B3DHomMatrix aTrans(aFullTransform);
 
-        mTrans *= aViewInfo3D.getOrientation();
-        mTrans.translate(-aScaleCenter3D.getX(), -aScaleCenter3D.getY(), -aScaleCenter3D.getZ());
-        mTrans.scale(fScaleX, fScaleY, 1.0);
-        mTrans.translate(aScaleCenter3D.getX(), aScaleCenter3D.getY(), aScaleCenter3D.getZ());
-        mTrans *= aInverseOrientation;
-        mFullTransform.invert();
-        mTrans *= mFullTransform;
+        aTrans *= aViewInfo3D.getOrientation();
+        aTrans.translate(-aScaleCenter3D.getX(), -aScaleCenter3D.getY(), -aScaleCenter3D.getZ());
+        aTrans.scale(fScaleX, fScaleY, 1.0);
+        aTrans.translate(aScaleCenter3D.getX(), aScaleCenter3D.getY(), aScaleCenter3D.getZ());
+        aTrans *= aInverseOrientation;
+        aFullTransform.invert();
+        aTrans *= aFullTransform;
 
         // Apply
-        basegfx::B3DHomMatrix mObjTrans(GetTransform());
-        mObjTrans *= mTrans;
+        basegfx::B3DHomMatrix aObjTrans(GetTransform());
+        aObjTrans *= aTrans;
 
         E3DModifySceneSnapRectUpdater aUpdater(this);
-        SetTransform(mObjTrans);
+        SetTransform(aObjTrans);
     }
 }
 
@@ -390,16 +386,16 @@ void E3dObject::NbcMove(const Size& rSize)
         //Dimensions of the scene in 3D and 2D for comparison
         Rectangle aRect = pScene->GetSnapRect();
 
-        basegfx::B3DHomMatrix mInvDispTransform;
+        basegfx::B3DHomMatrix aInvDispTransform;
         if(GetParentObj())
         {
-            mInvDispTransform = GetParentObj()->GetFullTransform();
-            mInvDispTransform.invert();
+            aInvDispTransform = GetParentObj()->GetFullTransform();
+            aInvDispTransform.invert();
         }
 
         // BoundVolume from 3d world to 3d eye
         const sdr::contact::ViewContactOfE3dScene& rVCScene = static_cast< sdr::contact::ViewContactOfE3dScene& >(pScene->GetViewContact());
-        const drawinglayer::geometry::ViewInformation3D aViewInfo3D(rVCScene.getViewInformation3D());
+        const drawinglayer::geometry::ViewInformation3D& aViewInfo3D(rVCScene.getViewInformation3D());
         basegfx::B3DRange aEyeVol(pScene->GetBoundVolume());
         aEyeVol.transform(aViewInfo3D.getOrientation());
 
@@ -416,7 +412,7 @@ void E3dObject::NbcMove(const Size& rSize)
         // movement vector to local coordinates of objects' parent
         basegfx::B3DHomMatrix aInverseOrientation(aViewInfo3D.getOrientation());
         aInverseOrientation.invert();
-        basegfx::B3DHomMatrix aCompleteTrans(mInvDispTransform * aInverseOrientation);
+        basegfx::B3DHomMatrix aCompleteTrans(aInvDispTransform * aInverseOrientation);
 
         aMove = aCompleteTrans * aMove;
         aPos = aCompleteTrans * aPos;
@@ -453,7 +449,7 @@ void E3dObject::RecalcSnapRect()
 }
 
 // Inform the parent about insertion of a 3D object, so that the parent is able
-// treat the particualar objects in a special way (eg Light / Label in E3dScene)
+// treat the particular objects in a special way (eg Light / Label in E3dScene)
 
 void E3dObject::NewObjectInserted(const E3dObject* p3DObj)
 {
@@ -770,8 +766,6 @@ sdr::properties::BaseProperties* E3dCompoundObject::CreateObjectSpecificProperti
 {
     return new sdr::properties::E3dCompoundProperties(*this);
 }
-
-
 
 
 E3dCompoundObject::E3dCompoundObject()

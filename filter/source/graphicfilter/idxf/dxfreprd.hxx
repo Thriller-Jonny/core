@@ -24,7 +24,6 @@
 #include <dxftblrd.hxx>
 
 
-
 //--------------------Other stuff---------------------------------------------
 
 
@@ -66,7 +65,6 @@ private:
 };
 
 
-
 //-----------------read and represent DXF file--------------------------------
 
 
@@ -101,7 +99,7 @@ public:
 
     rtl_TextEncoding getTextEncoding() const;
     void setTextEncoding(rtl_TextEncoding aEnc);
-    OUString ToOUString(const OString& s, bool bSpecials=false) const;
+    OUString ToOUString(const OString& s) const;
 
     double getGlobalLineTypeScale() const;
     void setGlobalLineTypeScale(double fGlobalLineTypeScale);

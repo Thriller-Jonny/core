@@ -146,8 +146,8 @@ bool SwExtraRedlineTable::DeleteAllTableRedlines( SwDoc* pDoc, const SwTable& rT
         if (pTableCellRedline)
         {
             const SwTableBox *pRedTabBox = &pTableCellRedline->GetTableBox();
-            const SwTable& pRedTable = pRedTabBox->GetSttNd()->FindTableNode()->GetTable();
-            if ( &pRedTable == &rTable )
+            const SwTable& rRedTable = pRedTabBox->GetSttNd()->FindTableNode()->GetTable();
+            if ( &rRedTable == &rTable )
             {
                 // Redline for this table
                 const SwRedlineData& aRedlineData = pTableCellRedline->GetRedlineData();
@@ -169,9 +169,9 @@ bool SwExtraRedlineTable::DeleteAllTableRedlines( SwDoc* pDoc, const SwTable& rT
             if (pTableRowRedline)
             {
                 const SwTableLine *pRedTabLine = &pTableRowRedline->GetTableLine();
-                const SwTableBoxes &pRedTabBoxes = pRedTabLine->GetTabBoxes();
-                const SwTable& pRedTable = pRedTabBoxes[0]->GetSttNd()->FindTableNode()->GetTable();
-                if ( &pRedTable == &rTable )
+                const SwTableBoxes &rRedTabBoxes = pRedTabLine->GetTabBoxes();
+                const SwTable& rRedTable = rRedTabBoxes[0]->GetSttNd()->FindTableNode()->GetTable();
+                if ( &rRedTable == &rTable )
                 {
                     // Redline for this table
                     const SwRedlineData& aRedlineData = pTableRowRedline->GetRedlineData();
@@ -291,36 +291,28 @@ bool SwExtraRedlineTable::DeleteTableCellRedline( SwDoc* pDoc, const SwTableBox&
     return bChg;
 }
 
-bool SwRedlineTable::Insert( SwRangeRedline* p, bool bIns )
+bool SwRedlineTable::Insert( SwRangeRedline* p )
 {
     if( p->HasValidRange() )
     {
         std::pair<vector_type::const_iterator, bool> rv = maVector.insert( p );
         size_t nP = rv.first - begin();
-        p->CallDisplayFunc(0, nP);
+        p->CallDisplayFunc(nP);
         return rv.second;
     }
-    if( bIns )
-        return InsertWithValidRanges( p );
-
-    OSL_ENSURE( false, "Redline: wrong range" );
-    return false;
+    return InsertWithValidRanges( p );
 }
 
-bool SwRedlineTable::Insert( SwRangeRedline* p, sal_uInt16& rP, bool bIns )
+bool SwRedlineTable::Insert( SwRangeRedline* p, sal_uInt16& rP )
 {
     if( p->HasValidRange() )
     {
         std::pair<vector_type::const_iterator, bool> rv = maVector.insert( p );
         rP = rv.first - begin();
-        p->CallDisplayFunc(0, rP);
+        p->CallDisplayFunc(rP);
         return rv.second;
     }
-    if( bIns )
-        return InsertWithValidRanges( p, &rP );
-
-    OSL_ENSURE( false, "Redline: wrong range" );
-    return false;
+    return InsertWithValidRanges( p, &rP );
 }
 
 bool SwRedlineTable::InsertWithValidRanges( SwRangeRedline* p, sal_uInt16* pInsPos )
@@ -414,7 +406,7 @@ bool SwRedlineTable::InsertWithValidRanges( SwRangeRedline* p, sal_uInt16* pInsP
                 pNew->HasValidRange() &&
                 Insert( pNew, nInsPos ) )
             {
-                pNew->CallDisplayFunc(0, nInsPos);
+                pNew->CallDisplayFunc(nInsPos);
                 bAnyIns = true;
                 pNew = nullptr;
                 if( pInsPos && *pInsPos < nInsPos )
@@ -430,7 +422,8 @@ bool SwRedlineTable::InsertWithValidRanges( SwRangeRedline* p, sal_uInt16* pInsP
         } while( aNewStt < *pEnd );
 
     delete pNew;
-    delete p, p = nullptr;
+    delete p;
+    p = nullptr;
     return bAnyIns;
 }
 
@@ -511,20 +504,17 @@ sal_uInt16 SwRedlineTable::FindPrevOfSeqNo( sal_uInt16 nSttPos ) const
 
 /// Find the next or preceding Redline with the same seq.no.
 /// We can limit the search using look ahead (0 searches the whole array).
-sal_uInt16 SwRedlineTable::FindNextSeqNo( sal_uInt16 nSeqNo, sal_uInt16 nSttPos,
-                                    sal_uInt16 nLookahead ) const
+sal_uInt16 SwRedlineTable::FindNextSeqNo( sal_uInt16 nSeqNo, sal_uInt16 nSttPos ) const
 {
+    sal_uInt16 nLookahead = 20;
     sal_uInt16 nRet = USHRT_MAX;
     if( nSeqNo && nSttPos < size() )
     {
         size_t nEnd = size();
-        if( nLookahead )
+        const size_t nTmp = static_cast<size_t>(nSttPos)+ static_cast<size_t>(nLookahead);
+        if (nTmp < nEnd)
         {
-            const size_t nTmp = static_cast<size_t>(nSttPos)+ static_cast<size_t>(nLookahead);
-            if (nTmp < nEnd)
-            {
-                nEnd = nTmp;
-            }
+            nEnd = nTmp;
         }
 
         for( ; nSttPos < nEnd; ++nSttPos )
@@ -537,14 +527,14 @@ sal_uInt16 SwRedlineTable::FindNextSeqNo( sal_uInt16 nSeqNo, sal_uInt16 nSttPos,
     return nRet;
 }
 
-sal_uInt16 SwRedlineTable::FindPrevSeqNo( sal_uInt16 nSeqNo, sal_uInt16 nSttPos,
-                                    sal_uInt16 nLookahead ) const
+sal_uInt16 SwRedlineTable::FindPrevSeqNo( sal_uInt16 nSeqNo, sal_uInt16 nSttPos ) const
 {
+    sal_uInt16 nLookahead = 20;
     sal_uInt16 nRet = USHRT_MAX;
     if( nSeqNo && nSttPos < size() )
     {
         size_t nEnd = 0;
-        if( nLookahead && nSttPos > nLookahead )
+        if( nSttPos > nLookahead )
             nEnd = nSttPos - nLookahead;
 
         ++nSttPos;
@@ -923,18 +913,18 @@ bool SwRangeRedline::HasValidRange() const
     return false;
 }
 
-void SwRangeRedline::CallDisplayFunc(sal_uInt16 nLoop, size_t nMyPos)
+void SwRangeRedline::CallDisplayFunc(size_t nMyPos)
 {
     switch( nsRedlineMode_t::REDLINE_SHOW_MASK & GetDoc()->getIDocumentRedlineAccess().GetRedlineMode() )
     {
     case nsRedlineMode_t::REDLINE_SHOW_INSERT | nsRedlineMode_t::REDLINE_SHOW_DELETE:
-        Show(nLoop, nMyPos);
+        Show(0, nMyPos);
         break;
     case nsRedlineMode_t::REDLINE_SHOW_INSERT:
-        Hide(nLoop, nMyPos);
+        Hide(0, nMyPos);
         break;
     case nsRedlineMode_t::REDLINE_SHOW_DELETE:
-        ShowOriginal(nLoop, nMyPos);
+        ShowOriginal(0, nMyPos);
         break;
     }
 }
@@ -1207,7 +1197,7 @@ void SwRangeRedline::CopyToSection()
 
         // The IsRedlineMove() flag causes the behaviour of the
         // SwDoc::_CopyFlyInFly method to change, which will eventually be
-        // called by the pDoc->Copy line below (through SwDoc::_Copy,
+        // called by the pDoc->Copy line below (through SwDoc::Copy_,
         // SwDoc::CopyWithFlyInFly). This rather obscure bugfix
         // apparently never really worked.
         pDoc->getIDocumentRedlineAccess().SetRedlineMove( pStt->nContent == 0 );
@@ -1457,7 +1447,8 @@ void SwRangeRedline::MoveFromSection(size_t nMyPos)
         {
             pDoc->getIDocumentContentOperations().DeleteSection( &pContentSect->GetNode() );
         }
-        delete pContentSect, pContentSect = nullptr;
+        delete pContentSect;
+        pContentSect = nullptr;
 
         // adjustment of redline table positions must take start and
         // end into account, not point and mark.
@@ -1480,7 +1471,8 @@ void SwRangeRedline::SetContentIdx( const SwNodeIndex* pIdx )
     }
     else if( !pIdx && pContentSect )
     {
-        delete pContentSect, pContentSect = nullptr;
+        delete pContentSect;
+        pContentSect = nullptr;
         bIsVisible = false;
     }
     else
@@ -1554,11 +1546,6 @@ const OUString& SwRangeRedline::GetComment( sal_uInt16 nPos ) const
     return GetRedlineData(nPos).sComment;
 }
 
-bool SwRangeRedline::operator==( const SwRangeRedline& rCmp ) const
-{
-    return this == &rCmp;
-}
-
 bool SwRangeRedline::operator<( const SwRangeRedline& rCmp ) const
 {
     if (*Start() < *rCmp.Start())
@@ -1583,10 +1570,10 @@ const SwRedlineData & SwRangeRedline::GetRedlineData(sal_uInt16 nPos) const
     return *pCur;
 }
 
-OUString SwRangeRedline::GetDescr(sal_uInt16 nPos)
+OUString SwRangeRedline::GetDescr()
 {
     // get description of redline data (e.g.: "insert $1")
-    OUString aResult = GetRedlineData(nPos).GetDescr();
+    OUString aResult = GetRedlineData().GetDescr();
 
     SwPaM * pPaM = nullptr;
     bool bDeletePaM = false;

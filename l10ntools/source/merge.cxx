@@ -29,7 +29,7 @@
 
 namespace
 {
-    static OString lcl_NormalizeFilename(const OString& rFilename)
+    OString lcl_NormalizeFilename(const OString& rFilename)
     {
         return rFilename.copy(
             std::max(
@@ -37,7 +37,7 @@ namespace
                 rFilename.lastIndexOf( '/' ))+1);
     };
 
-    static bool lcl_ReadPoChecked(
+    bool lcl_ReadPoChecked(
         PoEntry& o_rPoEntry, PoIfstream& rPoFile,
         const OString& rFileName)
     {
@@ -47,9 +47,7 @@ namespace
         }
         catch (const PoIfstream::Exception&)
         {
-            printf(
-                "Warning : %s contains invalid entry\n",
-                rFileName.getStr() );
+            SAL_WARN("l10ntools", rFileName.getStr() << " contains invalid entry\n");
             return false;
         }
         return true;
@@ -123,13 +121,22 @@ bool MergeEntrys::GetText( OString &rReturn,
     return bReturn;
 }
 
+namespace
+{
+    OString GetDoubleBars()
+    {
+        //DOUBLE VERTICAL LINE instead of || because the translations make their
+        //way into action_names under gtk3 where || is illegal
+        return OUStringToOString(OUString(static_cast<sal_Unicode>(0x2016)), RTL_TEXTENCODING_UTF8);
+    }
+}
 
 OString MergeEntrys::GetQTZText(const ResData& rResData, const OString& rOrigText)
 {
     const OString sFilename = rResData.sFilename.copy(rResData.sFilename.lastIndexOf('/')+1);
     const OString sKey =
         PoEntry::genKeyId(sFilename + rResData.sGId + rResData.sId + rResData.sResTyp + rOrigText);
-    return sKey + "||" + rOrigText;
+    return sKey + GetDoubleBars() + rOrigText;
 }
 
 
@@ -190,11 +197,9 @@ MergeDataHashMap::iterator MergeDataHashMap::find(const OString& rKey)
 // class MergeData
 
 
-MergeData::MergeData(
-    const OString &rTyp, const OString &rGID,
+MergeData::MergeData(const OString &rGID,
     const OString &rLID )
-    : sTyp( rTyp ),
-    sGID( rGID ),
+    : sGID( rGID ),
     sLID( rLID ) ,
     pMergeEntrys( new MergeEntrys() )
 {
@@ -203,13 +208,6 @@ MergeData::MergeData(
 MergeData::~MergeData()
 {
     delete pMergeEntrys;
-}
-
-
-bool MergeData::operator==( ResData *pData )
-{
-    return pData->sId == sLID && pData->sGId == sGID
-        && pData->sResTyp.equalsIgnoreAsciiCase(sTyp);
 }
 
 
@@ -225,7 +223,7 @@ MergeDataFile::MergeDataFile(
     std::ifstream aInputStream( rFileName.getStr() );
     if ( !aInputStream.is_open() )
     {
-        printf("Warning : Can't open po path container file\n");
+        SAL_WARN("l10ntools", "Can't open po path container file for " << rFileName.getStr());
         return;
     }
     std::string sPoFile;
@@ -242,7 +240,7 @@ MergeDataFile::MergeDataFile(
         aPoInput.open( sPoFileName );
         if ( !aPoInput.isOpen() )
         {
-            printf( "Warning : Can't open %s\n", sPoFileName.getStr() );
+            SAL_WARN("l10ntools", "Can't open file: " << sPoFileName.getStr());
             return;
         }
 
@@ -410,7 +408,7 @@ void MergeDataFile::InsertEntry(
 
     if( !pData )
     {
-        pData = new MergeData( rTYP, rGID, rLID );
+        pData = new MergeData( rGID, rLID );
         aMap.insert( sKey, pData );
     }
 
@@ -422,9 +420,9 @@ void MergeDataFile::InsertEntry(
         const OString sTemp = rInFilename + rGID + rLID + rTYP;
         pMergeEntrys->InsertEntry(
             nLANG,
-            rTEXT.isEmpty()? rTEXT : PoEntry::genKeyId(sTemp + rTEXT) + "||" + rTEXT,
-            rQHTEXT.isEmpty()? rQHTEXT : PoEntry::genKeyId(sTemp + rQHTEXT) + "||" + rQHTEXT,
-            rTITLE.isEmpty()? rTITLE : PoEntry::genKeyId(sTemp + rTITLE) + "||" + rTITLE );
+            rTEXT.isEmpty()? rTEXT : PoEntry::genKeyId(sTemp + rTEXT) + GetDoubleBars() + rTEXT,
+            rQHTEXT.isEmpty()? rQHTEXT : PoEntry::genKeyId(sTemp + rQHTEXT) + GetDoubleBars() + rQHTEXT,
+            rTITLE.isEmpty()? rTITLE : PoEntry::genKeyId(sTemp + rTITLE) + GetDoubleBars() + rTITLE );
     }
     else
     {

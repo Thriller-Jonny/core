@@ -54,7 +54,6 @@
 #include <pagedesc.hxx>
 #include <fmtpdsc.hxx>
 #include <breakit.hxx>
-#include <crsskip.hxx>
 #include <SwStyleNameMapper.hxx>
 #include <scriptinfo.hxx>
 #include <rootfrm.hxx>
@@ -67,6 +66,7 @@
 #include <calbck.hxx>
 #include "ndole.hxx"
 #include <memory>
+#include <swcrsr.hxx>
 
 using namespace ::com::sun::star::i18n;
 
@@ -452,8 +452,7 @@ bool SwNode::IsProtect() const
 
 /// Find the PageDesc that is used to format this node. If the Layout is available,
 /// we search through that. Else we can only do it the hard way by searching onwards through the nodes.
-const SwPageDesc* SwNode::FindPageDesc( bool bCalcLay,
-                                        size_t* pPgDescNdIdx ) const
+const SwPageDesc* SwNode::FindPageDesc( size_t* pPgDescNdIdx ) const
 {
     if ( !GetNodes().IsDocNodes() )
     {
@@ -485,7 +484,7 @@ const SwPageDesc* SwNode::FindPageDesc( bool bCalcLay,
     {
         const SwFrame* pFrame;
         const SwPageFrame* pPage;
-        if( pNode && nullptr != ( pFrame = pNode->getLayoutFrame( pNode->GetDoc()->getIDocumentLayoutAccess().GetCurrentLayout(), nullptr, nullptr, bCalcLay ) ) &&
+        if( pNode && nullptr != ( pFrame = pNode->getLayoutFrame( pNode->GetDoc()->getIDocumentLayoutAccess().GetCurrentLayout(), nullptr, nullptr, false/*bCalcLay*/ ) ) &&
             nullptr != ( pPage = pFrame->FindPageFrame() ) )
         {
             pPgDesc = pPage->GetPageDesc();
@@ -1113,25 +1112,23 @@ SwContentFrame *SwContentNode::getLayoutFrame( const SwRootFrame* _pRoot,
                                             pPoint, pPos, bCalcFrame ));
 }
 
-SwRect SwContentNode::FindLayoutRect( const bool bPrtArea, const Point* pPoint,
-                                    const bool bCalcFrame ) const
+SwRect SwContentNode::FindLayoutRect( const bool bPrtArea, const Point* pPoint ) const
 {
     SwRect aRet;
     SwContentFrame* pFrame = static_cast<SwContentFrame*>( ::GetFrameOfModify( nullptr, *const_cast<SwModify*>(static_cast<SwModify const *>(this)),
-                                            FRM_CNTNT, pPoint, nullptr, bCalcFrame ) );
+                                            FRM_CNTNT, pPoint ) );
     if( pFrame )
         aRet = bPrtArea ? pFrame->Prt() : pFrame->Frame();
     return aRet;
 }
 
-SwRect SwContentNode::FindPageFrameRect( const bool bPrtArea, const Point* pPoint,
-                                    const bool bCalcFrame ) const
+SwRect SwContentNode::FindPageFrameRect() const
 {
     SwRect aRet;
     SwFrame* pFrame = ::GetFrameOfModify( nullptr, *const_cast<SwModify*>(static_cast<SwModify const *>(this)),
-                                            FRM_CNTNT, pPoint, nullptr, bCalcFrame );
+                                            FRM_CNTNT );
     if( pFrame && nullptr != ( pFrame = pFrame->FindPageFrame() ))
-        aRet = bPrtArea ? pFrame->Prt() : pFrame->Frame();
+        aRet = pFrame->Frame();
     return aRet;
 }
 
@@ -1303,7 +1300,7 @@ void SwContentNode::MakeFrames( SwContentNode& rNode )
             {
                 pViewShell->InvalidateAccessibleParaFlowRelation(
                             dynamic_cast<SwTextFrame*>(pNew->FindNextCnt( true )),
-                            dynamic_cast<SwTextFrame*>(pNew->FindPrevCnt( true )) );
+                            dynamic_cast<SwTextFrame*>(pNew->FindPrevCnt()) );
             }
         }
     }
@@ -1336,7 +1333,7 @@ void SwContentNode::DelFrames( bool bIsDisposeAccTable )
             {
                 pViewShell->InvalidateAccessibleParaFlowRelation(
                             dynamic_cast<SwTextFrame*>(pFrame->FindNextCnt( true )),
-                            dynamic_cast<SwTextFrame*>(pFrame->FindPrevCnt( true )) );
+                            dynamic_cast<SwTextFrame*>(pFrame->FindPrevCnt()) );
             }
         }
 
@@ -1385,9 +1382,8 @@ SwContentNode *SwContentNode::JoinNext()
     return this;
 }
 
-SwContentNode *SwContentNode::JoinPrev()
+void SwContentNode::JoinPrev()
 {
-    return this;
 }
 
 /// Get info from Modify
@@ -1596,8 +1592,7 @@ bool SwContentNode::ResetAttr( const std::vector<sal_uInt16>& rWhichArr )
     sal_uInt16 nDel = 0;
     if( IsModifyLocked() )
     {
-        std::vector<sal_uInt16> aClearWhichIds(rWhichArr);
-        nDel = ClearItemsFromAttrSet( aClearWhichIds );
+        nDel = ClearItemsFromAttrSet( rWhichArr );
     }
     else
     {
@@ -1659,17 +1654,13 @@ sal_uInt16 SwContentNode::ResetAllAttr()
     return aNew.Count();
 }
 
-bool SwContentNode::GetAttr( SfxItemSet& rSet, bool bInParent ) const
+bool SwContentNode::GetAttr( SfxItemSet& rSet ) const
 {
     if( rSet.Count() )
         rSet.ClearItem();
 
     const SwAttrSet& rAttrSet = GetSwAttrSet();
-    if( bInParent )
-        return rSet.Set( rAttrSet );
-
-    rSet.Put( rAttrSet );
-    return rSet.Count() != 0;
+    return rSet.Set( rAttrSet );
 }
 
 sal_uInt16 SwContentNode::ClearItemsFromAttrSet( const std::vector<sal_uInt16>& rWhichIds )

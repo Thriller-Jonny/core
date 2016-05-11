@@ -129,22 +129,28 @@ void ScFiltersTest::testCVEs()
 {
 #ifndef DISABLE_CVE_TESTS
     testDir("Quattro Pro 6.0",
-        getURLFromSrc("/sc/qa/unit/data/qpro/"), OUString());
+        m_directories.getURLFromSrc("/sc/qa/unit/data/qpro/"));
 
     //warning, the current "sylk filter" in sc (docsh.cxx) automatically
     //chains on failure on trying as csv, rtf, etc. so "success" may
     //not indicate that it imported as .slk.
     testDir("SYLK",
-        getURLFromSrc("/sc/qa/unit/data/slk/"), OUString());
+        m_directories.getURLFromSrc("/sc/qa/unit/data/slk/"));
 
     testDir("MS Excel 97",
-        getURLFromSrc("/sc/qa/unit/data/xls/"), OUString());
+        m_directories.getURLFromSrc("/sc/qa/unit/data/xls/"));
+
+    testDir("Calc Office Open XML",
+        m_directories.getURLFromSrc("/sc/qa/unit/data/xlsx/"), OUString(), XLSX_FORMAT_TYPE);
+
+    testDir("Calc Office Open XML",
+        m_directories.getURLFromSrc("/sc/qa/unit/data/xlsm/"), OUString(), XLSX_FORMAT_TYPE);
 
     testDir("dBase",
-        getURLFromSrc("/sc/qa/unit/data/dbf/"), OUString());
+        m_directories.getURLFromSrc("/sc/qa/unit/data/dbf/"));
 
     testDir("Lotus",
-        getURLFromSrc("/sc/qa/unit/data/wks/"), OUString());
+        m_directories.getURLFromSrc("/sc/qa/unit/data/wks/"));
 
 #endif
 }
@@ -159,20 +165,20 @@ void testRangeNameImpl(ScDocument& rDoc)
     CPPUNIT_ASSERT_MESSAGE("range name Global1 not found", pRangeData);
     double aValue;
     rDoc.GetValue(1,0,0,aValue);
-    CPPUNIT_ASSERT_MESSAGE("range name Global1 should reference Sheet1.A1", aValue == 1);
+    ASSERT_DOUBLES_EQUAL_MESSAGE("range name Global1 should reference Sheet1.A1", 1.0, aValue);
     pRangeData = rDoc.GetRangeName(0)->findByUpperName(OUString("LOCAL1"));
     CPPUNIT_ASSERT_MESSAGE("range name Sheet1.Local1 not found", pRangeData);
     rDoc.GetValue(1,2,0,aValue);
-    CPPUNIT_ASSERT_MESSAGE("range name Sheet1.Local1 should reference Sheet1.A3", aValue == 3);
+    ASSERT_DOUBLES_EQUAL_MESSAGE("range name Sheet1.Local1 should reference Sheet1.A3", 3.0, aValue);
     pRangeData = rDoc.GetRangeName(1)->findByUpperName(OUString("LOCAL2"));
     CPPUNIT_ASSERT_MESSAGE("range name Sheet2.Local2 not found", pRangeData);
     //check for correct results for the remaining formulas
     rDoc.GetValue(1,1,0, aValue);
-    CPPUNIT_ASSERT_MESSAGE("=global2 should be 2", aValue == 2);
+    ASSERT_DOUBLES_EQUAL_MESSAGE("=global2 should be 2", 2.0, aValue);
     rDoc.GetValue(1,3,0, aValue);
-    CPPUNIT_ASSERT_MESSAGE("=local2 should be 4", aValue == 4);
+    ASSERT_DOUBLES_EQUAL_MESSAGE("=local2 should be 4", 4.0, aValue);
     rDoc.GetValue(2,0,0, aValue);
-    CPPUNIT_ASSERT_MESSAGE("=SUM(global3) should be 10", aValue == 10);
+    ASSERT_DOUBLES_EQUAL_MESSAGE("=SUM(global3) should be 10", 10.0, aValue);
 }
 
 }
@@ -181,7 +187,7 @@ void ScFiltersTest::testRangeNameODS()
 {
     ScDocShellRef xDocSh = loadDoc("named-ranges-global.", FORMAT_ODS);
 
-    CPPUNIT_ASSERT_MESSAGE("Failed to load named-ranges-globals.*", xDocSh.Is());
+    CPPUNIT_ASSERT_MESSAGE("Failed to load named-ranges-global.*", xDocSh.Is());
 
     xDocSh->DoHardRecalc(true);
 
@@ -202,26 +208,26 @@ void testContentImpl(ScDocument& rDoc, sal_Int32 nFormat ) //same code for ods, 
     double fValue;
     //check value import
     rDoc.GetValue(0,0,0,fValue);
-    CPPUNIT_ASSERT_MESSAGE("value not imported correctly", fValue == 1);
+    ASSERT_DOUBLES_EQUAL_MESSAGE("value not imported correctly", 1.0, fValue);
     rDoc.GetValue(0,1,0,fValue);
-    CPPUNIT_ASSERT_MESSAGE("value not imported correctly", fValue == 2);
+    ASSERT_DOUBLES_EQUAL_MESSAGE("value not imported correctly", 2.0, fValue);
     OUString aString = rDoc.GetString(1, 0, 0);
 
     //check string import
-    CPPUNIT_ASSERT_MESSAGE("string imported not correctly", aString == "String1");
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("string imported not correctly", OUString("String1"), aString);
     aString = rDoc.GetString(1, 1, 0);
-    CPPUNIT_ASSERT_MESSAGE("string not imported correctly", aString == "String2");
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("string not imported correctly", OUString("String2"), aString);
 
     //check basic formula import
     // in case of DIF it just contains values
     rDoc.GetValue(2,0,0,fValue);
-    CPPUNIT_ASSERT_MESSAGE("=2*3", fValue == 6);
+    ASSERT_DOUBLES_EQUAL_MESSAGE("=2*3", 6.0, fValue);
     rDoc.GetValue(2,1,0,fValue);
-    CPPUNIT_ASSERT_MESSAGE("=2+3", fValue == 5);
+    ASSERT_DOUBLES_EQUAL_MESSAGE("=2+3", 5.0, fValue);
     rDoc.GetValue(2,2,0,fValue);
-    CPPUNIT_ASSERT_MESSAGE("=2-3", fValue == -1);
+    ASSERT_DOUBLES_EQUAL_MESSAGE("=2-3", -1.0, fValue);
     rDoc.GetValue(2,3,0,fValue);
-    CPPUNIT_ASSERT_MESSAGE("=C1+C2", fValue == 11);
+    ASSERT_DOUBLES_EQUAL_MESSAGE("=C1+C2", 11.0, fValue);
 
     //check merged cells import
     if (nFormat != FORMAT_LOTUS123 && nFormat != FORMAT_DIF)
@@ -289,7 +295,6 @@ void ScFiltersTest::testContentLotus123()
     xDocSh->DoHardRecalc(true);
 
     ScDocument& rDoc = xDocSh->GetDocument();
-    CPPUNIT_ASSERT(&rDoc);
     testContentImpl(rDoc, FORMAT_LOTUS123);
     xDocSh->DoClose();
 }
@@ -298,8 +303,7 @@ void ScFiltersTest::testContentDIF()
 {
     ScDocShellRef xDocSh = loadDoc("universal-content.", FORMAT_DIF);
 
-    ScDocument& rDoc = xDocSh->GetDocument();
-    CPPUNIT_ASSERT(&rDoc);
+    xDocSh->GetDocument();
     xDocSh->DoClose();
 }
 
@@ -319,7 +323,6 @@ void ScFiltersTest::testContentXLSB()
 //     CPPUNIT_ASSERT(xDocSh);
 //
 //     ScDocument& rDoc = xDocSh->GetDocument();
-//     CPPUNIT_ASSERT(&rDoc);
 //     testContentImpl(pDoc, FORMAT_XLS_XML);
 //     xDocSh->DoClose();
 // }
@@ -397,7 +400,6 @@ void ScFiltersTest::testSharedFormulaXLSX()
 {
     ScDocShellRef xDocSh = loadDoc("shared-formula/basic.", FORMAT_XLSX);
     ScDocument& rDoc = xDocSh->GetDocument();
-    CPPUNIT_ASSERT(&rDoc);
     xDocSh->DoHardRecalc(true);
     // Check the results of formula cells in the shared formula range.
     for (SCROW i = 1; i <= 18; ++i)
@@ -422,7 +424,7 @@ void ScFiltersTest::testSheetNamesXLSX()
     ScDocument& rDoc = xDocSh->GetDocument();
 
     std::vector<OUString> aTabNames = rDoc.GetAllTableNames();
-    CPPUNIT_ASSERT_MESSAGE("The document should have 5 sheets in total.", aTabNames.size() == 5);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("The document should have 5 sheets in total.", size_t(5), aTabNames.size());
     CPPUNIT_ASSERT_EQUAL(OUString("S&P"), aTabNames[0]);
     CPPUNIT_ASSERT_EQUAL(OUString("Sam's Club"), aTabNames[1]);
     CPPUNIT_ASSERT_EQUAL(OUString("\"The Sheet\""), aTabNames[2]);
@@ -472,7 +474,6 @@ void ScFiltersTest::testLegacyCellAnchoredRotatedShape()
         ScDocShellRef xDocSh = loadDoc("legacycellanchoredrotatedclippedshape.", FORMAT_ODS);
 
         ScDocument& rDoc = xDocSh->GetDocument();
-        CPPUNIT_ASSERT(&rDoc);
         // ensure the imported legacy rotated shape is in the expected position
         Rectangle aRect( 6000, -2000, 8000, 4000 );
         // ensure the imported ( and converted ) anchor ( note we internally now store the anchor in
@@ -488,7 +489,6 @@ void ScFiltersTest::testLegacyCellAnchoredRotatedShape()
         // a core dump in editeng ( so moved to here )
         xDocSh = saveAndReload( &(*xDocSh), FORMAT_ODS);
         ScDocument& rDoc2 = xDocSh->GetDocument();
-        CPPUNIT_ASSERT(&rDoc2);
         impl_testLegacyCellAnchoredRotatedShape( rDoc2, aRect, aAnchor );
 
         xDocSh->DoClose();
@@ -500,7 +500,6 @@ void ScFiltersTest::testLegacyCellAnchoredRotatedShape()
         // are hidden
         ScDocShellRef xDocSh = loadDoc("legacycellanchoredrotatedhiddenshape.", FORMAT_ODS, true);
         ScDocument& rDoc = xDocSh->GetDocument();
-        CPPUNIT_ASSERT(&rDoc);
         // ensure the imported legacy rotated shape is in the expected position
         // when a shape is fully hidden reloading seems to result is in some errors, usually
         // ( same but different error happens pre-patch ) - we should do better here, I regard it
@@ -528,7 +527,6 @@ void ScFiltersTest::testLegacyCellAnchoredRotatedShape()
         ScDocShellRef xDocSh = loadDoc("legacycellanchoredrotatedshape.", FORMAT_ODS);
 
         ScDocument& rDoc = xDocSh->GetDocument();
-        CPPUNIT_ASSERT(&rDoc);
         // ensure the imported legacy rotated shape is in the expected position
         Rectangle aRect( 6000, 3000, 8000, 9000 );
         // ensure the imported (and converted) anchor (note we internally now store the anchor in
@@ -544,7 +542,6 @@ void ScFiltersTest::testLegacyCellAnchoredRotatedShape()
         // test save and reload
         xDocSh = saveAndReload( &(*xDocSh), FORMAT_ODS);
         ScDocument& rDoc2 = xDocSh->GetDocument();
-        CPPUNIT_ASSERT(&rDoc2);
         impl_testLegacyCellAnchoredRotatedShape( rDoc2, aRect, aAnchor );
 
         xDocSh->DoClose();

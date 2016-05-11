@@ -106,7 +106,7 @@ FltError ScQProReader::readSheet( SCTAB nTab, ScDocument* pDoc, ScQProStyle *pSt
                 const ScTokenArray *pArray;
 
                 QProToSc aConv(*mpStream, pDoc->GetSharedStringPool(), aAddr);
-                if (ConvOK != aConv.Convert( pArray, nLen ))
+                if (ConvOK != aConv.Convert( pArray ))
                     eRet = eERR_FORMAT;
                 else
                 {
@@ -153,7 +153,7 @@ FltError ScQProReader::import( ScDocument *pDoc )
     {
         switch( getId() )
         {
-            case 0x0000: // Begginning of file
+            case 0x0000: // Beginning of file
                 mpStream->ReadUInt16( nVersion );
                 break;
 

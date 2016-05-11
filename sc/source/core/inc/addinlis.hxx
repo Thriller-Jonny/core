@@ -25,6 +25,7 @@
 #include <com/sun/star/sheet/XVolatileResult.hpp>
 #include <com/sun/star/lang/XServiceInfo.hpp>
 #include <cppuhelper/implbase.hxx>
+#include <list>
 
 class ScDocument;
 
@@ -49,10 +50,10 @@ public:
 
     // create Listener and put it into global list
     static ScAddInListener* CreateListener(
-                                css::uno::Reference<css::sheet::XVolatileResult> xVR,
+                                const css::uno::Reference<css::sheet::XVolatileResult>& xVR,
                                 ScDocument* pDoc );
 
-    static ScAddInListener* Get( css::uno::Reference<css::sheet::XVolatileResult> xVR );
+    static ScAddInListener* Get( const css::uno::Reference<css::sheet::XVolatileResult>& xVR );
 
     static void RemoveDocument( ScDocument* pDocument );
 

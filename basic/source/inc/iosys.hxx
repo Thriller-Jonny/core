@@ -48,9 +48,9 @@ namespace o3tl
 class SbiStream
 {
     SvStream* pStrm;
-    sal_uIntPtr  nExpandOnWriteTo;  // during writing access expand the stream to this size
+    sal_uInt64  nExpandOnWriteTo;  // during writing access expand the stream to this size
     OString aLine;
-    sal_uIntPtr  nLine;
+    sal_uInt64  nLine;
     short  nLen;                    // buffer length
     SbiStreamFlags  nMode;
     short  nChan;
@@ -64,7 +64,7 @@ public:
     SbError Close();
     SbError Read(OString&, sal_uInt16 = 0, bool bForceReadingPerByte=false);
     SbError Read( char& );
-    SbError Write( const OString&, sal_uInt16 = 0 );
+    SbError Write( const OString& );
 
     bool IsText() const     { return !bool(nMode & SbiStreamFlags::Binary); }
     bool IsRandom() const   { return bool(nMode & SbiStreamFlags::Random); }
@@ -73,8 +73,8 @@ public:
     bool IsAppend() const   { return bool(nMode & SbiStreamFlags::Append); }
     short GetBlockLen() const          { return nLen;           }
     SbiStreamFlags GetMode() const              { return nMode;          }
-    sal_uIntPtr GetLine() const            { return nLine;          }
-    void SetExpandOnWriteTo( sal_uIntPtr n ) { nExpandOnWriteTo = n;    }
+    sal_uInt64 GetLine() const            { return nLine;          }
+    void SetExpandOnWriteTo( sal_uInt64 n ) { nExpandOnWriteTo = n;    }
     void ExpandFile();
     SvStream* GetStrm()                { return pStrm;          }
 };
@@ -100,9 +100,9 @@ public:
     void  ResetChannel()               { nChan = 0;   }
     void  Open( short, const OString&, StreamMode, SbiStreamFlags, short );
     void  Close();
-    void  Read(OString&, short = 0);
+    void  Read(OString&);
     char  Read();
-    void  Write(const OUString&, short = 0);
+    void  Write(const OUString&);
     // 0 == bad channel or no SvStream (nChannel=0..CHANNELS-1)
     SbiStream* GetStream( short nChannel ) const;
     void  CloseAll(); // JSM

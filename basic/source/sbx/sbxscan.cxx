@@ -326,8 +326,16 @@ static void myftoa( double nNum, char * pBuf, short nPrec, short nExpWidth,
     nExp = 0;
     if( nNum > 0.0 )
     {
-        while( nNum <   1.0 ) nNum *= 10.0, nExp--;
-        while( nNum >= 10.0 ) nNum /= 10.0, nExp++;
+        while( nNum <   1.0 )
+        {
+            nNum *= 10.0;
+            nExp--;
+        }
+        while( nNum >= 10.0 )
+        {
+            nNum /= 10.0;
+            nExp++;
+        }
     }
     if( !bFix && !nExpWidth )
         nDig = nDig + nExp;
@@ -393,7 +401,11 @@ static void myftoa( double nNum, char * pBuf, short nPrec, short nExpWidth,
         nExpWidth -= 2;
         *pBuf++ = 'E';
         *pBuf++ =( nExp < 0 ) ?( (nExp = -nExp ), '-' ) : '+';
-        while( nExpWidth > 3 ) *pBuf++ = '0', nExpWidth--;
+        while( nExpWidth > 3 )
+        {
+            *pBuf++ = '0';
+            nExpWidth--;
+        }
         if( nExp >= 100 || nExpWidth == 3 )
         {
             *pBuf++ = sal::static_int_cast< char >(nExp/100 + '0');
@@ -431,7 +443,11 @@ void ImpCvtNum( double nNum, short nPrec, OUString& rRes, bool bCoreString )
     // remove trailing zeros
     for( p = cBuf; *p &&( *p != 'E' ); p++ ) {}
     q = p; p--;
-    while( nPrec && *p == '0' ) nPrec--, p--;
+    while( nPrec && *p == '0' )
+    {
+        nPrec--;
+        p--;
+    }
     if( *p == cDecimalSep ) p--;
     while( *q ) *++p = *q++;
     *++p = 0;
@@ -515,7 +531,7 @@ static sal_uInt16 printfmtstr( const OUString& rStr, OUString& rRes, const OUStr
             aTemp.append( *pStr ? *pStr++ : static_cast< sal_Unicode >(' '));
             pFmt++;
         }
-        while( *pFmt != '\\' );
+        while( *pFmt && *pFmt != '\\' );
         aTemp.append(*pStr ? *pStr++ : static_cast< sal_Unicode >(' '));
         pFmt++; break;
     case '&':
@@ -809,7 +825,7 @@ void SbxValue::Format( OUString& rRes, const OUString* pFmt ) const
                 const LocaleDataWrapper& rData = aSysLocale.GetLocaleData();
                 sal_Unicode cComma = rData.getNumDecimalSep()[0];
                 sal_Unicode c1000  = rData.getNumThousandSep()[0];
-                OUString aCurrencyStrg = rData.getCurrSymbol();
+                const OUString& aCurrencyStrg = rData.getCurrSymbol();
 
                 // initialize the Basic-formater help object:
                 // get resources for predefined output

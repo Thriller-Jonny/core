@@ -19,13 +19,11 @@
 
 #include <sal/config.h>
 
-#include <boost/noncopyable.hpp>
 #include <comphelper/string.hxx>
 #include <sal/macros.h>
 #include <com/sun/star/embed/XTransactedObject.hpp>
 #include <com/sun/star/embed/ElementModes.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
-#include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/lang/XServiceInfo.hpp>
 #include <com/sun/star/lang/XInitialization.hpp>
 #include <cppuhelper/compbase.hxx>
@@ -53,7 +51,6 @@ using namespace com::sun::star;
 using namespace com::sun::star::uno;
 using namespace com::sun::star::io;
 
-using ::com::sun::star::lang::XMultiServiceFactory;
 
 #define XML_GRAPHICSTORAGE_NAME     "Pictures"
 #define XML_GRAPHICOBJECT_URL_BASE  "vnd.sun.star.GraphicObject:"
@@ -74,7 +71,7 @@ const MetaCommentAction* ImplCheckForEPS( GDIMetaFile& rMtf )
 }
 
 class SvXMLGraphicInputStream:
-    public cppu::WeakImplHelper<XInputStream>, private boost::noncopyable
+    public cppu::WeakImplHelper<XInputStream>
 {
 private:
 
@@ -93,6 +90,8 @@ public:
 
     explicit                        SvXMLGraphicInputStream( const OUString& rGraphicId );
     virtual                         ~SvXMLGraphicInputStream();
+                                    SvXMLGraphicInputStream(const SvXMLGraphicInputStream&) = delete;
+    SvXMLGraphicInputStream&        operator=(const SvXMLGraphicInputStream&) = delete;
 
     bool                            Exists() const { return mxStmWrapper.is(); }
 };
@@ -200,7 +199,7 @@ void SAL_CALL SvXMLGraphicInputStream::closeInput() throw( NotConnectedException
 }
 
 class SvXMLGraphicOutputStream:
-    public cppu::WeakImplHelper<XOutputStream>, private boost::noncopyable
+    public cppu::WeakImplHelper<XOutputStream>
 {
 private:
 
@@ -221,6 +220,8 @@ public:
 
                                     SvXMLGraphicOutputStream();
     virtual                         ~SvXMLGraphicOutputStream();
+                                    SvXMLGraphicOutputStream(const SvXMLGraphicOutputStream&) = delete;
+    SvXMLGraphicOutputStream&       operator=(const SvXMLGraphicOutputStream&) = delete;
 
     bool                            Exists() const { return mxStmWrapper.is(); }
     const GraphicObject&            GetGraphicObject();
@@ -282,10 +283,10 @@ const GraphicObject& SvXMLGraphicOutputStream::GetGraphicObject()
 
         mpOStm->Seek( 0 );
         sal_uInt16 nFormat = GRFILTER_FORMAT_DONTKNOW;
-        sal_uInt16 pDeterminedFormat = GRFILTER_FORMAT_DONTKNOW;
-        GraphicFilter::GetGraphicFilter().ImportGraphic( aGraphic, "", *mpOStm ,nFormat,&pDeterminedFormat );
+        sal_uInt16 nDeterminedFormat = GRFILTER_FORMAT_DONTKNOW;
+        GraphicFilter::GetGraphicFilter().ImportGraphic( aGraphic, "", *mpOStm ,nFormat,&nDeterminedFormat );
 
-        if (pDeterminedFormat == GRFILTER_FORMAT_DONTKNOW)
+        if (nDeterminedFormat == GRFILTER_FORMAT_DONTKNOW)
         {
             //Read the first two byte to check whether it is a gzipped stream, is so it may be in wmz or emz format
             //unzip them and try again
@@ -326,7 +327,7 @@ const GraphicObject& SvXMLGraphicOutputStream::GetGraphicObject()
                         if (nStreamLen_)
                         {
                             pDest->Seek(0L);
-                            GraphicFilter::GetGraphicFilter().ImportGraphic( aGraphic, "", *pDest ,nFormat,&pDeterminedFormat );
+                            GraphicFilter::GetGraphicFilter().ImportGraphic( aGraphic, "", *pDest ,nFormat,&nDeterminedFormat );
                         }
                     }
                 }
@@ -336,8 +337,10 @@ const GraphicObject& SvXMLGraphicOutputStream::GetGraphicObject()
         maGrfObj = aGraphic;
         if( maGrfObj.GetType() != GRAPHIC_NONE )
         {
-            delete mpOStm, mpOStm = nullptr;
-            delete mpTmp, mpTmp = nullptr;
+            delete mpOStm;
+            mpOStm = nullptr;
+            delete mpTmp;
+            mpTmp = nullptr;
         }
     }
 
@@ -430,8 +433,7 @@ uno::Reference < embed::XStorage > SvXMLGraphicHelper::ImplGetGraphicStorage( co
 }
 
 SvxGraphicHelperStream_Impl SvXMLGraphicHelper::ImplGetGraphicStream( const OUString& rPictureStorageName,
-                                                              const OUString& rPictureStreamName,
-                                                              bool bTruncate )
+                                                              const OUString& rPictureStreamName )
 {
     SvxGraphicHelperStream_Impl aRet;
     aRet.xStorage = ImplGetGraphicStorage( rPictureStorageName );
@@ -442,8 +444,6 @@ SvxGraphicHelperStream_Impl SvXMLGraphicHelper::ImplGetGraphicStream( const OUSt
         if ( GRAPHICHELPER_MODE_WRITE == meCreateMode )
         {
             nMode = embed::ElementModes::READWRITE;
-            if ( bTruncate )
-                nMode |= embed::ElementModes::TRUNCATE;
         }
 
         aRet.xStream = aRet.xStorage->openStreamElement( rPictureStreamName, nMode );
@@ -451,7 +451,7 @@ SvxGraphicHelperStream_Impl SvXMLGraphicHelper::ImplGetGraphicStream( const OUSt
         {
             OUString aPropName( "UseCommonStoragePasswordEncryption" );
             uno::Reference < beans::XPropertySet > xProps( aRet.xStream, uno::UNO_QUERY );
-            xProps->setPropertyValue( aPropName, uno::makeAny( sal_True) );
+            xProps->setPropertyValue( aPropName, uno::makeAny( true) );
         }
     }
 
@@ -498,7 +498,7 @@ Graphic SvXMLGraphicHelper::ImplReadGraphic( const OUString& rPictureStorageName
                                              const OUString& rPictureStreamName )
 {
     Graphic             aGraphic;
-    SvxGraphicHelperStream_Impl aStream( ImplGetGraphicStream( rPictureStorageName, rPictureStreamName, false ) );
+    SvxGraphicHelperStream_Impl aStream( ImplGetGraphicStream( rPictureStorageName, rPictureStreamName ) );
     if( aStream.xStream.is() )
     {
         std::unique_ptr<SvStream> pStream(utl::UcbStreamHelper::CreateStream( aStream.xStream ));
@@ -518,20 +518,18 @@ bool SvXMLGraphicHelper::ImplWriteGraphic( const OUString& rPictureStorageName,
 
     if( aGrfObject.GetType() != GRAPHIC_NONE )
     {
-        SvxGraphicHelperStream_Impl aStream( ImplGetGraphicStream( rPictureStorageName, rPictureStreamName, false ) );
+        SvxGraphicHelperStream_Impl aStream( ImplGetGraphicStream( rPictureStorageName, rPictureStreamName ) );
         if( aStream.xStream.is() )
         {
             Graphic         aGraphic( (Graphic&) aGrfObject.GetGraphic() );
             const GfxLink   aGfxLink( aGraphic.GetLink() );
             const OUString  aMimeType( ImplGetGraphicMimeType( rPictureStreamName ) );
-            uno::Any        aAny;
             uno::Reference < beans::XPropertySet > xProps( aStream.xStream, uno::UNO_QUERY );
 
             // set stream properties (MediaType/Compression)
             if( !aMimeType.isEmpty() )
             {
-                aAny <<= aMimeType;
-                xProps->setPropertyValue( "MediaType", aAny );
+                xProps->setPropertyValue( "MediaType", Any(aMimeType) );
             }
 
             // picture formats that actuall _do_ benefit from zip
@@ -561,8 +559,7 @@ bool SvXMLGraphicHelper::ImplWriteGraphic( const OUString& rPictureStorageName,
                 }
             }
 
-            aAny <<= bCompressed;
-            xProps->setPropertyValue( "Compressed", aAny );
+            xProps->setPropertyValue( "Compressed", Any(bCompressed) );
 
             std::unique_ptr<SvStream> pStream(utl::UcbStreamHelper::CreateStream( aStream.xStream ));
             if( bUseGfxLink && aGfxLink.GetDataSize() && aGfxLink.GetData() )
@@ -622,20 +619,19 @@ bool SvXMLGraphicHelper::ImplWriteGraphic( const OUString& rPictureStorageName,
 
 void SvXMLGraphicHelper::ImplInsertGraphicURL( const OUString& rURLStr, sal_uInt32 nInsertPos, OUString& rRequestedFileName )
 {
-    OUString aURLString( rURLStr );
     OUString aPictureStorageName, aPictureStreamName;
-    if( ( maURLSet.find( aURLString ) != maURLSet.end() ) )
+    if( ( maURLSet.find( rURLStr ) != maURLSet.end() ) )
     {
         for (URLPairVector::const_iterator aIter( maGrfURLs.begin() ), aEnd( maGrfURLs.end() ); aIter != aEnd ; ++aIter)
         {
-            if( aURLString == (*aIter).first )
+            if( rURLStr == (*aIter).first )
             {
                 maGrfURLs[ nInsertPos ].second = (*aIter).second;
                 break;
             }
         }
     }
-    else if( ImplGetStreamNames( aURLString, aPictureStorageName, aPictureStreamName ) )
+    else if( ImplGetStreamNames( rURLStr, aPictureStorageName, aPictureStreamName ) )
     {
         URLPair& rURLPair = maGrfURLs[ nInsertPos ];
 
@@ -657,12 +653,11 @@ void SvXMLGraphicHelper::ImplInsertGraphicURL( const OUString& rURLStr, sal_uInt
         }
         else
         {
-            const OUString      aGraphicObjectId( aPictureStreamName );
-            const OString aAsciiObjectID(OUStringToOString(aGraphicObjectId, RTL_TEXTENCODING_ASCII_US));
+            const OString aAsciiObjectID(OUStringToOString(aPictureStreamName, RTL_TEXTENCODING_ASCII_US));
             const GraphicObject aGrfObject( aAsciiObjectID );
             if( aGrfObject.GetType() != GRAPHIC_NONE )
             {
-                OUString        aStreamName( aGraphicObjectId );
+                OUString        aStreamName( aPictureStreamName );
                 Graphic         aGraphic( (Graphic&) aGrfObject.GetGraphic() );
                 const GfxLink   aGfxLink( aGraphic.GetLink() );
                 OUString        aExtension;
@@ -672,17 +667,17 @@ void SvXMLGraphicHelper::ImplInsertGraphicURL( const OUString& rURLStr, sal_uInt
                 {
                     switch( aGfxLink.GetType() )
                     {
-                        case( GFX_LINK_TYPE_EPS_BUFFER ): aExtension = ".eps"; break;
-                        case( GFX_LINK_TYPE_NATIVE_GIF ): aExtension = ".gif"; break;
+                        case GFX_LINK_TYPE_EPS_BUFFER: aExtension = ".eps"; break;
+                        case GFX_LINK_TYPE_NATIVE_GIF: aExtension = ".gif"; break;
                         // #i15508# added BMP type for better exports (checked, works)
-                        case( GFX_LINK_TYPE_NATIVE_BMP ): aExtension = ".bmp"; break;
-                        case( GFX_LINK_TYPE_NATIVE_JPG ): aExtension = ".jpg"; break;
-                        case( GFX_LINK_TYPE_NATIVE_PNG ): aExtension = ".png"; break;
-                        case( GFX_LINK_TYPE_NATIVE_TIF ): aExtension = ".tif"; break;
-                        case( GFX_LINK_TYPE_NATIVE_WMF ): aExtension = ".wmf"; break;
-                        case( GFX_LINK_TYPE_NATIVE_MET ): aExtension = ".met"; break;
-                        case( GFX_LINK_TYPE_NATIVE_PCT ): aExtension = ".pct"; break;
-                        case( GFX_LINK_TYPE_NATIVE_SVG ):
+                        case GFX_LINK_TYPE_NATIVE_BMP: aExtension = ".bmp"; break;
+                        case GFX_LINK_TYPE_NATIVE_JPG: aExtension = ".jpg"; break;
+                        case GFX_LINK_TYPE_NATIVE_PNG: aExtension = ".png"; break;
+                        case GFX_LINK_TYPE_NATIVE_TIF: aExtension = ".tif"; break;
+                        case GFX_LINK_TYPE_NATIVE_WMF: aExtension = ".wmf"; break;
+                        case GFX_LINK_TYPE_NATIVE_MET: aExtension = ".met"; break;
+                        case GFX_LINK_TYPE_NATIVE_PCT: aExtension = ".pct"; break;
+                        case GFX_LINK_TYPE_NATIVE_SVG:
                             // backward-compat kludge: since no released OOo
                             // version to date can handle svg properly, wrap it up
                             // into an svm. slight catch22 here, since strict ODF
@@ -744,7 +739,7 @@ void SvXMLGraphicHelper::ImplInsertGraphicURL( const OUString& rURLStr, sal_uInt
                 aStreamName += aExtension;
 
                 if( mbDirect && !aStreamName.isEmpty() )
-                    ImplWriteGraphic( aPictureStorageName, aStreamName, aGraphicObjectId, bUseGfxLink );
+                    ImplWriteGraphic( aPictureStorageName, aStreamName, aPictureStreamName, bUseGfxLink );
 
                 rURLPair.second = sPictures;
                 rURLPair.second += aStreamName;
@@ -760,7 +755,7 @@ void SvXMLGraphicHelper::ImplInsertGraphicURL( const OUString& rURLStr, sal_uInt
 #endif
         }
 
-        maURLSet.insert( aURLString );
+        maURLSet.insert( rURLStr );
     }
 }
 

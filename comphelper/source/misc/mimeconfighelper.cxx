@@ -549,7 +549,6 @@ OUString MimeConfigurationHelper::GetFactoryNameByDocumentName( const OUString& 
 }
 
 
-
 OUString MimeConfigurationHelper::GetFactoryNameByMediaType( const OUString& aMediaType )
 {
     OUString aResult = GetFactoryNameByStringClassID( GetExplicitlyRegisteredObjClassID( aMediaType ) );
@@ -590,7 +589,7 @@ OUString MimeConfigurationHelper::UpdateMediaDescriptorWithFilterName(
         uno::Sequence< beans::PropertyValue > aTempMD( aMediaDescr );
 
         // get TypeName
-        OUString aTypeName = xTypeDetection->queryTypeByDescriptor( aTempMD, sal_True );
+        OUString aTypeName = xTypeDetection->queryTypeByDescriptor( aTempMD, true );
 
         // get FilterName
         for ( sal_Int32 nInd = 0; nInd < aTempMD.getLength(); nInd++ )
@@ -665,7 +664,7 @@ OUString MimeConfigurationHelper::UpdateMediaDescriptorWithFilterName(
     return UpdateMediaDescriptorWithFilterName( aMediaDescr, true );
 }
 
-#ifdef WNT
+#ifdef _WIN32
 
 SfxFilterFlags MimeConfigurationHelper::GetFilterFlags( const OUString& aFilterName )
 {
@@ -869,7 +868,6 @@ uno::Sequence< beans::PropertyValue > MimeConfigurationHelper::SearchForFilter(
 
     return aFilterProps;
 }
-
 
 
 bool MimeConfigurationHelper::ClassIDsEqual( const uno::Sequence< sal_Int8 >& aClassID1, const uno::Sequence< sal_Int8 >& aClassID2 )

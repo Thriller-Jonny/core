@@ -62,7 +62,7 @@ SFX_IMPL_INTERFACE(SdModule, SfxModule)
 
 void SdModule::InitInterface_Impl()
 {
-    GetStaticInterface()->RegisterStatusBar(SdResId(RID_DRAW_STATUSBAR));
+    GetStaticInterface()->RegisterStatusBar(RID_DRAW_STATUSBAR);
 }
 
 // Ctor
@@ -126,8 +126,10 @@ void SdModule::Notify( SfxBroadcaster&, const SfxHint& rHint )
     const SfxSimpleHint* pSimpleHint = dynamic_cast<const SfxSimpleHint*>(&rHint);
     if( pSimpleHint && pSimpleHint->GetId() == SFX_HINT_DEINITIALIZING )
     {
-        delete pImpressOptions, pImpressOptions = nullptr;
-        delete pDrawOptions, pDrawOptions = nullptr;
+        delete pImpressOptions;
+        pImpressOptions = nullptr;
+        delete pDrawOptions;
+        pDrawOptions = nullptr;
     }
 }
 

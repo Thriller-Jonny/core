@@ -29,7 +29,7 @@
 class CControlCommandRequest
 {
 public:
-    CControlCommandRequest( sal_Int16 aControlId ) :
+    explicit CControlCommandRequest( sal_Int16 aControlId ) :
         m_aControlId( aControlId )
     {
     }
@@ -46,9 +46,6 @@ public:
 private:
     sal_Int16 m_aControlId;
 };
-
-
-
 
 
 class CValueControlCommandRequest : public CControlCommandRequest

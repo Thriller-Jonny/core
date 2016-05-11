@@ -18,17 +18,24 @@
  */
 
 #include "stdafx.h"
-#include "UAccCOM.h"
 #include "AccHypertext.h"
 #include "AccHyperLink.h"
 #include "acccommon.h"
+
+#if defined __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnon-virtual-dtor"
+#endif
+#include  "UAccCOM.h"
+#if defined __clang__
+#pragma clang diagnostic pop
+#endif
 
 #include <vcl/svapp.hxx>
 
 
 using namespace com::sun::star::accessibility;
 using namespace com::sun::star::uno;
-
 
 
 /**

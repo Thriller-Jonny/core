@@ -29,11 +29,7 @@ namespace writerfilter {
 namespace dmapper {
 
 typedef css::uno::Sequence< css::uno::Reference< css::text::XTextRange > > CellSequence_t;
-typedef std::shared_ptr<CellSequence_t> CellSequencePointer_t;
 typedef css::uno::Sequence<CellSequence_t> RowSequence_t;
-typedef std::shared_ptr<RowSequence_t> RowSequencePointer_t;
-typedef css::uno::Sequence<RowSequence_t> TableSequence_t;
-typedef std::shared_ptr<TableSequence_t> TableSequencePointer_t;
 
 typedef css::uno::Sequence< css::uno::Sequence<css::beans::PropertyValues> >  CellPropertyValuesSeq_t;
 
@@ -65,9 +61,9 @@ class DomainMapperTableHandler
 {
     css::uno::Reference<css::text::XTextAppendAndConvert>  m_xText;
     DomainMapper_Impl&      m_rDMapper_Impl;
-    CellSequencePointer_t   m_pCellSeq;
-    RowSequencePointer_t    m_pRowSeq;
-    TableSequencePointer_t  m_pTableSeq;
+    std::vector< css::uno::Reference<css::text::XTextRange> > m_aCellRange;
+    std::vector<CellSequence_t> m_aRowRanges;
+    std::vector<RowSequence_t> m_aTableRanges;
 
     css::uno::Reference< css::text::XTextRange >           m_xTableRange;
 
@@ -75,9 +71,6 @@ class DomainMapperTableHandler
     PropertyMapVector2      m_aCellProperties;
     PropertyMapVector1      m_aRowProperties;
     TablePropertyMapPtr     m_aTableProperties;
-
-    sal_Int32 m_nCellIndex;
-    sal_Int32 m_nRowIndex;
 
     /// Did we have a foot or endnote in this table?
     bool m_bHadFootOrEndnote;
@@ -96,20 +89,18 @@ public:
     /**
        Handle start of table.
 
-       @param nRows   number of rows in the table
        @param nDepth  depth of the table in surrounding table hierarchy
        @param pProps  properties of the table
      */
-    void startTable(unsigned int nRows, unsigned int nDepth, TablePropertyMapPtr pProps);
+    void startTable(unsigned int nDepth, const TablePropertyMapPtr& pProps);
     /// Handle end of table.
     void endTable(unsigned int nestedTableLevel);
     /**
        Handle start of row.
 
-       @param nCols    number of columns in the table
        @param pProps   properties of the row
      */
-    void startRow(unsigned int nCells, TablePropertyMapPtr pProps);
+    void startRow(const TablePropertyMapPtr& pProps);
     /// Handle end of row.
     void endRow();
     /**
@@ -118,7 +109,7 @@ public:
        @param rT     start handle of the cell
        @param pProps properties of the cell
     */
-    void startCell(const css::uno::Reference< css::text::XTextRange > & start, TablePropertyMapPtr pProps);
+    void startCell(const css::uno::Reference< css::text::XTextRange > & start, const TablePropertyMapPtr& pProps);
     /**
         Handle end of cell.
 

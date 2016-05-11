@@ -24,22 +24,16 @@
 
 #include <osl/diagnose.h>
 
-void XclAddress::Read( XclImpStream& rStrm, bool bCol16Bit )
+void XclAddress::Read( XclImpStream& rStrm )
 {
     mnRow = rStrm.ReaduInt16();
-    if( bCol16Bit )
-        mnCol = rStrm.ReaduInt16();
-    else
-        mnCol = rStrm.ReaduInt8();
+    mnCol = rStrm.ReaduInt16();
 }
 
-void XclAddress::Write( XclExpStream& rStrm, bool bCol16Bit ) const
+void XclAddress::Write( XclExpStream& rStrm ) const
 {
     rStrm << static_cast<sal_uInt16> (mnRow);
-    if( bCol16Bit )
-        rStrm << mnCol;
-    else
-        rStrm << static_cast< sal_uInt8 >( mnCol );
+    rStrm << mnCol;
 }
 
 bool XclRange::Contains( const XclAddress& rPos ) const
@@ -142,15 +136,14 @@ XclAddressConverterBase::~XclAddressConverterBase()
 {
 }
 
-bool XclAddressConverterBase::CheckScTab( SCTAB nScTab, bool bWarn )
+void XclAddressConverterBase::CheckScTab( SCTAB nScTab )
 {
     bool bValid = (0 <= nScTab) && (nScTab <= maMaxPos.Tab());
-    if( !bValid && bWarn )
+    if( !bValid )
     {
         mbTabTrunc |= (nScTab > maMaxPos.Tab());  // do not warn for deleted refs
         mrTracer.TraceInvalidTab( nScTab, maMaxPos.Tab() );
     }
-    return bValid;
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

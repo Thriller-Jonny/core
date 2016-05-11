@@ -167,6 +167,7 @@ enum PreDefVariable
     PREDEFVAR_HOME,
     PREDEFVAR_TEMP,
     PREDEFVAR_PATH,
+    PREDEFVAR_USERNAME,
     PREDEFVAR_LANGID,
     PREDEFVAR_VLANG,
     PREDEFVAR_INSTPATH,
@@ -227,7 +228,7 @@ class SubstitutePathVariables : private cppu::BaseMutex,
 friend class SubstitutePathVariables_Impl;
 
 public:
-    SubstitutePathVariables( const css::uno::Reference< css::uno::XComponentContext >& xContext );
+    explicit SubstitutePathVariables(const css::uno::Reference< css::uno::XComponentContext >& xContext);
     virtual ~SubstitutePathVariables();
 
     virtual OUString SAL_CALL getImplementationName()
@@ -350,6 +351,7 @@ static const FixedVariable aFixedVarTable[] =
     { "$(home)",        PREDEFVAR_HOME,         true  },
     { "$(temp)",        PREDEFVAR_TEMP,         true  },
     { "$(path)",        PREDEFVAR_PATH,         true  },
+    { "$(username)",    PREDEFVAR_USERNAME,     false },
     { "$(langid)",      PREDEFVAR_LANGID,       false },
     { "$(vlang)",       PREDEFVAR_VLANG,        false },
     { "$(instpath)",    PREDEFVAR_INSTPATH,     true  },
@@ -454,7 +456,7 @@ void SubstitutePathVariables_Impl::ImplCommit()
 {
 }
 
-static inline OperatingSystem GetOperatingSystem()
+inline OperatingSystem GetOperatingSystem()
 {
 #ifdef SOLARIS
     return OS_SOLARIS;
@@ -732,7 +734,7 @@ SubstitutePathVariables::SubstitutePathVariables( const Reference< XComponentCon
     {
         if (( i != PREDEFVAR_WORKDIRURL ) && ( i != PREDEFVAR_PATH ))
         {
-            // Special path variables, don't include into automatic resubstituion search!
+            // Special path variables, don't include into automatic resubstitution search!
             // $(workdirurl) is not allowed to resubstitute! This variable is the value of path settings entry
             // and it could be possible that it will be resubstituted by itself!!
             // Example: WORK_PATH=c:\test, $(workdirurl)=WORK_PATH => WORK_PATH=$(workdirurl) and this cannot be substituted!
@@ -800,7 +802,7 @@ OUString SubstitutePathVariables::GetWorkVariableValue() const
     if (!x)
     {
         // fallback to $HOME in case platform dependent config layer does not return
-        // an usuable work dir value.
+        // an usable work dir value.
         osl::Security aSecurity;
         aSecurity.getHomeDir( aWorkPath );
     }
@@ -820,9 +822,8 @@ OUString SubstitutePathVariables::GetHomeVariableValue() const
 
 OUString SubstitutePathVariables::GetPathVariableValue() const
 {
-
     OUString aRetStr;
-    const char*   pEnv = getenv( "PATH" );
+    const char* pEnv = getenv( "PATH" );
 
     if ( pEnv )
     {
@@ -836,9 +837,10 @@ OUString SubstitutePathVariables::GetPathVariableValue() const
         do
         {
             OUString sToken = aPathList.getToken(0, SAL_PATHSEPARATOR, nToken);
-            if (!sToken.isEmpty())
+            if (!sToken.isEmpty() &&
+                osl::FileBase::getFileURLFromSystemPath( sToken, aTmp ) ==
+                osl::FileBase::RC::E_None )
             {
-                osl::FileBase::getFileURLFromSystemPath( sToken, aTmp );
                 if ( bAppendSep )
                     aPathStrBuffer.append( ";" ); // Office uses ';' as path separator
                 aPathStrBuffer.append( aTmp );
@@ -917,7 +919,7 @@ throw ( NoSuchElementException, RuntimeException )
                     bWorkDirURLRetrieved = true;
                 }
 
-                // Check preconditions to substitue path variables.
+                // Check preconditions to substitute path variables.
                 // 1. A path variable can only be substituted if it follows a ';'!
                 // 2. It's located exactly at the start of the string being substituted!
                 if (( aFixedVarTable[ int( nIndex ) ].bAbsPath && (( nPosition == 0 ) || (( nPosition > 0 ) && ( aWorkText[nPosition-1] == ';')))) ||
@@ -1121,7 +1123,7 @@ throw ( RuntimeException )
             }
         }
 
-        // This part can be iteratered more than one time as variables can contain variables again!
+        // This part can be iterated more than one time as variables can contain variables again!
         for (ReSubstUserVarOrderVector::const_iterator i(
                  m_aReSubstUserVarOrder.begin());
              i != m_aReSubstUserVarOrder.end(); ++i)
@@ -1238,6 +1240,12 @@ void SubstitutePathVariables::SetPredefinedPathVariables()
         m_aPreDefVars.m_FixedVar[ PREDEFVAR_PROGURL ]  = m_aPreDefVars.m_FixedVar[ PREDEFVAR_PROGPATH ];
         m_aPreDefVars.m_FixedVar[ PREDEFVAR_PROG ]     = m_aPreDefVars.m_FixedVar[ PREDEFVAR_PROGPATH ];
     }
+
+    // Set $(username)
+    OUString aSystemUser;
+    ::osl::Security aSecurity;
+    aSecurity.getUserName( aSystemUser, false );
+    m_aPreDefVars.m_FixedVar[ PREDEFVAR_USERNAME ]   = aSystemUser;
 
     // Detect the language type of the current office
     m_aPreDefVars.m_eLanguageType = LANGUAGE_ENGLISH_US;

@@ -35,6 +35,7 @@
 class EditEngine;
 class ImpEditEngine;
 class ImpEditView;
+class OutlinerSearchable;
 class SvxSearchItem;
 class SvxFieldItem;
 namespace vcl { class Window; }
@@ -120,7 +121,7 @@ public:
     bool            HasSelection() const;
     ESelection      GetSelection() const;
     void            SetSelection( const ESelection& rNewSel );
-    bool            SelectCurrentWord( sal_Int16 nWordType = css::i18n::WordType::ANYWORD_IGNOREWHITESPACES );
+    void            SelectCurrentWord( sal_Int16 nWordType = css::i18n::WordType::ANYWORD_IGNOREWHITESPACES );
     /// Returns the rectangles of the current selection in TWIPs.
     void GetSelectionRectangles(std::vector<Rectangle>& rLogicRects) const;
 
@@ -176,15 +177,13 @@ public:
     void                RemoveCharAttribs( sal_Int32 nPara, sal_uInt16 nWhich = 0 );
     void                RemoveAttribsKeepLanguages( bool bRemoveParaAttribs = false );
 
-    sal_uInt32          Read( SvStream& rInput, const OUString& rBaseURL, EETextFormat eFormat, bool bSelect = false, SvKeyValueIterator* pHTTPHeaderAttrs = nullptr );
+    sal_uInt32          Read( SvStream& rInput, const OUString& rBaseURL, EETextFormat eFormat, SvKeyValueIterator* pHTTPHeaderAttrs = nullptr );
 
     void            SetBackgroundColor( const Color& rColor );
     Color           GetBackgroundColor() const;
 
-    void            setTiledRendering(bool bTiledRendering);
-    bool            isTiledRendering();
     /// @see vcl::ITiledRenderable::registerCallback().
-    void registerLibreOfficeKitCallback(LibreOfficeKitCallback pCallback, void* pLibreOfficeKitData);
+    void registerLibreOfficeKitCallback(OutlinerSearchable *pSearchable);
 
     void            SetControlWord( EVControlBits nWord );
     EVControlBits   GetControlWord() const;
@@ -216,7 +215,7 @@ public:
 
     void            TransliterateText( sal_Int32 nTransliterationMode );
 
-    bool            IsCursorAtWrongSpelledWord( bool bMarkIfWrong = false );
+    bool            IsCursorAtWrongSpelledWord();
     bool            IsWrongSpelledWordAtPos( const Point& rPosPixel, bool bMarkIfWrong = false );
     void            ExecuteSpellPopup( const Point& rPosPixel, Link<SpellCallbackInfo&,void>* pCallBack = nullptr );
 
@@ -254,8 +253,8 @@ public:
     */
     static LanguageType CheckLanguage(
                             const OUString &rText,
-                            css::uno::Reference< css::linguistic2::XSpellChecker1 > xSpell,
-                            css::uno::Reference< css::linguistic2::XLanguageGuessing > xLangGuess,
+                            const css::uno::Reference< css::linguistic2::XSpellChecker1 >& xSpell,
+                            const css::uno::Reference< css::linguistic2::XLanguageGuessing >& xLangGuess,
                             bool bIsParaText );
     /// Allows adjusting the point or mark of the selection to a document coordinate.
     void SetCursorLogicPosition(const Point& rPosition, bool bPoint, bool bClearMark);

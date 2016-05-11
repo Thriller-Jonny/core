@@ -76,9 +76,9 @@ namespace chelp {
 
         ~StaticModuleInformation() { }
 
-        OUString get_title() const { return m_aTitle; }
-        OUString get_id() const { return m_aStartId; }
-        OUString get_program() const { return m_aProgramSwitch; }
+        const OUString& get_title() const { return m_aTitle; }
+        const OUString& get_id() const { return m_aStartId; }
+        const OUString& get_program() const { return m_aProgramSwitch; }
         int get_order() const { return m_nOrder; }
     };  // end class StaticModuleInformation
 
@@ -226,13 +226,13 @@ namespace chelp {
 
         void replaceName( OUString& oustring ) const;
 
-        OUString getProductName() const { return m_vReplacement[0]; }
-        OUString getProductVersion() const { return m_vReplacement[1]; }
+        const OUString& getProductName() const { return m_vReplacement[0]; }
+        const OUString& getProductVersion() const { return m_vReplacement[1]; }
 
         OUString expandURL( const OUString& aURL );
 
         static OUString expandURL( const OUString& aURL,
-            css::uno::Reference< css::uno::XComponentContext > xContext );
+            const css::uno::Reference< css::uno::XComponentContext >& xContext );
 
     private:
 
@@ -242,7 +242,6 @@ namespace chelp {
         css::uno::Reference< css::ucb::XSimpleFileAccess3 >      m_xSFA;
 
         bool   m_bShowBasic;
-        char*  m_pErrorDoc;
 
         int    m_nCustomCSSDocLength;
         char*  m_pCustomCSSDoc;
@@ -338,7 +337,7 @@ namespace chelp {
 
     private:
         static css::uno::Reference< css::deployment::XPackage > implGetHelpPackageFromPackage
-            ( const css::uno::Reference< css::deployment::XPackage > xPackage,
+            ( const css::uno::Reference< css::deployment::XPackage >& xPackage,
               css::uno::Reference< css::deployment::XPackage >& o_xParentPackageBundle );
 
     protected:
@@ -349,9 +348,9 @@ namespace chelp {
         css::uno::Reference< css::deployment::XPackage > implGetNextBundledHelpPackage
         ( css::uno::Reference< css::deployment::XPackage >& o_xParentPackageBundle );
         OUString implGetFileFromPackage( const OUString& rFileExtension,
-            css::uno::Reference< css::deployment::XPackage > xPackage );
+            const css::uno::Reference< css::deployment::XPackage >& xPackage );
         void implGetLanguageVectorFromPackage( ::std::vector< OUString > &rv,
-            css::uno::Reference< css::deployment::XPackage > xPackage );
+            const css::uno::Reference< css::deployment::XPackage >& xPackage );
 
         css::uno::Reference< css::uno::XComponentContext >    m_xContext;
         css::uno::Reference< css::ucb::XSimpleFileAccess3 >   m_xSFA;
@@ -398,7 +397,7 @@ namespace chelp {
 
     private:
         helpdatafileproxy::Hdf* implGetHdfFromPackage(
-            css::uno::Reference< css::deployment::XPackage > xPackage,
+            const css::uno::Reference< css::deployment::XPackage >& xPackage,
             OUString* o_pExtensionPath, OUString* o_pExtensionRegistryPath );
 
         bool                                                                        m_bHelpText;
@@ -417,7 +416,7 @@ namespace chelp {
 
     private:
         OUString implGetDbFileFromPackage(
-            css::uno::Reference< css::deployment::XPackage > xPackage );
+            const css::uno::Reference< css::deployment::XPackage >& xPackage );
 
     }; // end class KeyDataBaseFileIterator
 
@@ -435,7 +434,7 @@ namespace chelp {
 
     private:
         css::uno::Reference< css::container::XHierarchicalNameAccess >
-            implGetJarFromPackage(css::uno::Reference< css::deployment::XPackage > xPackage,
+            implGetJarFromPackage(const css::uno::Reference< css::deployment::XPackage >& xPackage,
                 OUString* o_pExtensionPath = nullptr, OUString* o_pExtensionRegistryPath = nullptr );
 
     }; // end class JarFileIterator
@@ -452,7 +451,7 @@ namespace chelp {
 
     private:
         OUString implGetIndexFolderFromPackage( bool& o_rbTemporary,
-            css::uno::Reference< css::deployment::XPackage > xPackage );
+            const css::uno::Reference< css::deployment::XPackage >& xPackage );
 
     }; // end class KeyDataBaseFileIterator
 

@@ -284,11 +284,11 @@ private:
     sal_uInt32          GetNearestListColor( sal_uInt32 nIndex ) const;
 
     /** Returns in rnIndex the palette index of the color nearest to rColor.
-        @param bDefaultOnly  true = Searches for default colors only (colors never replaced).
+        Searches for default colors only (colors never replaced).
         @return  The distance from passed color to found color. */
     sal_Int32           GetNearestPaletteColor(
                             sal_uInt32& rnIndex,
-                            const Color& rColor, bool bDefaultOnly ) const;
+                            const Color& rColor ) const;
     /** Returns in rnFirst and rnSecond the palette indexes of the two colors nearest to rColor.
         @return  The minimum distance from passed color to found colors. */
     sal_Int32           GetNearPaletteColors(
@@ -380,7 +380,7 @@ void XclExpPaletteImpl::Finalize()
         // find nearest unused default color for each unprocessed list color
         for( nIndex = 0; nIndex < nCount; ++nIndex )
             aNearestVec[ nIndex ].mnDist = aRemapVec[ nIndex ].mbProcessed ? SAL_MAX_INT32 :
-                GetNearestPaletteColor( aNearestVec[ nIndex ].mnPalIndex, mxColorList->at( nIndex )->GetColor(), true );
+                GetNearestPaletteColor( aNearestVec[ nIndex ].mnPalIndex, mxColorList->at( nIndex )->GetColor() );
         // find the list color which is nearest to a default color
         sal_uInt32 nFound = 0;
         for( nIndex = 1; nIndex < nCount; ++nIndex )
@@ -590,10 +590,10 @@ void XclExpPaletteImpl::RawReducePalette( sal_uInt32 nPass )
     sal_uInt8 nFactor3 = static_cast< sal_uInt8 >( 0x40 >> nPass );
 
     // process each color in the old color list
-    for( sal_uInt32 nIdx = 0, nCount = xOldList->size(); nIdx < nCount; ++nIdx )
+    for(std::unique_ptr<XclListColor> & pOldColor : *xOldList)
     {
         // get the old list entry
-        const XclListColor* pOldEntry = xOldList->at( nIdx ).get();
+        const XclListColor* pOldEntry = pOldColor.get();
         nR = pOldEntry->GetColor().GetRed();
         nG = pOldEntry->GetColor().GetGreen();
         nB = pOldEntry->GetColor().GetBlue();
@@ -661,12 +661,12 @@ sal_uInt32 XclExpPaletteImpl::GetLeastUsedListColor() const
 
     for( sal_uInt32 nIdx = 0, nCount = mxColorList->size(); nIdx < nCount; ++nIdx )
     {
-        XclListColor& pEntry = *mxColorList->at( nIdx ).get();
+        XclListColor& rEntry = *mxColorList->at( nIdx ).get();
         // ignore the base colors
-        if( !pEntry.IsBaseColor() && (pEntry.GetWeighting() < nMinW) )
+        if( !rEntry.IsBaseColor() && (rEntry.GetWeighting() < nMinW) )
         {
             nFound = nIdx;
-            nMinW = pEntry.GetWeighting();
+            nMinW = rEntry.GetWeighting();
         }
     }
     return nFound;
@@ -704,7 +704,7 @@ sal_uInt32 XclExpPaletteImpl::GetNearestListColor( sal_uInt32 nIndex ) const
 }
 
 sal_Int32 XclExpPaletteImpl::GetNearestPaletteColor(
-        sal_uInt32& rnIndex, const Color& rColor, bool bDefaultOnly ) const
+        sal_uInt32& rnIndex, const Color& rColor ) const
 {
     rnIndex = 0;
     sal_Int32 nDist = SAL_MAX_INT32;
@@ -712,7 +712,7 @@ sal_Int32 XclExpPaletteImpl::GetNearestPaletteColor(
     for( XclPaletteColorVec::const_iterator aIt = maPalette.begin(), aEnd = maPalette.end();
             aIt != aEnd; ++aIt )
     {
-        if( !bDefaultOnly || !aIt->mbUsed )
+        if( !aIt->mbUsed )
         {
             sal_Int32 nCurrDist = lclGetColorDistance( rColor, aIt->maColor );
             if( nCurrDist < nDist )
@@ -1024,15 +1024,15 @@ XclExpDxfFont::XclExpDxfFont(const XclExpRoot& rRoot,
 
 namespace {
 
-const char* getUnderlineOOXValue(FontUnderline eUnderline)
+const char* getUnderlineOOXValue(FontLineStyle eUnderline)
 {
     switch (eUnderline)
     {
-        case UNDERLINE_NONE:
-        case UNDERLINE_DONTKNOW:
+        case LINESTYLE_NONE:
+        case LINESTYLE_DONTKNOW:
             return "none";
-        case UNDERLINE_DOUBLE:
-        case UNDERLINE_DOUBLEWAVE:
+        case LINESTYLE_DOUBLE:
+        case LINESTYLE_DOUBLEWAVE:
             return "double";
         default:
             return "single";
@@ -1240,9 +1240,9 @@ sal_uInt16 XclExpFontBuffer::Insert(
 }
 
 sal_uInt16 XclExpFontBuffer::Insert(
-        const SvxFont& rFont, XclExpColorType eColorType, bool bAppFont )
+        const SvxFont& rFont, XclExpColorType eColorType )
 {
-    return Insert( XclFontData( rFont ), eColorType, bAppFont );
+    return Insert( XclFontData( rFont ), eColorType );
 }
 
 sal_uInt16 XclExpFontBuffer::Insert( const SfxItemSet& rItemSet,
@@ -1478,8 +1478,6 @@ bool XclExpCellAlign::FillFromItemSet(
 
     switch( eBiff )
     {
-        // ALL 'case's - run through!
-
         case EXC_BIFF8: // attributes new in BIFF8
         {
             // text indent
@@ -1495,6 +1493,8 @@ bool XclExpCellAlign::FillFromItemSet(
             // CTL text direction
             SetScFrameDir( GETITEMVALUE( rItemSet, SvxFrameDirectionItem, ATTR_WRITINGDIR, SvxFrameDirection ) );
             bUsed |= ScfTools::CheckItem( rItemSet, ATTR_WRITINGDIR, bStyle );
+
+            SAL_FALLTHROUGH;
         }
 
         case EXC_BIFF5: // attributes new in BIFF5
@@ -1519,6 +1519,8 @@ bool XclExpCellAlign::FillFromItemSet(
                 bUsed |= ScfTools::CheckItem( rItemSet, ATTR_ROTATE_VALUE, bStyle );
             }
             mnOrient = XclTools::GetXclOrientFromRot( mnRotation );
+
+            SAL_FALLTHROUGH;
         }
 
         case EXC_BIFF3: // attributes new in BIFF3
@@ -1526,6 +1528,8 @@ bool XclExpCellAlign::FillFromItemSet(
             // text wrap
             mbLineBreak = bForceLineBreak || GETITEMBOOL( rItemSet, ATTR_LINEBREAK );
             bUsed |= bForceLineBreak || ScfTools::CheckItem( rItemSet, ATTR_LINEBREAK, bStyle );
+
+            SAL_FALLTHROUGH;
         }
 
         case EXC_BIFF2: // attributes new in BIFF2
@@ -1621,7 +1625,7 @@ void XclExpCellAlign::SaveXml( XclExpXmlStream& rStrm ) const
             // OOXTODO: XML_relativeIndent,     mnIndent?
             // OOXTODO: XML_justifyLastLine,
             XML_shrinkToFit,        XclXmlUtils::ToPsz( mbShrink ),
-            // OOXTODO: XML_readingOrder,
+            XML_readingOrder, mnTextDir == EXC_XF_TEXTDIR_CONTEXT ? nullptr : OString::number(  mnTextDir ).getStr(),
             FSEND );
 }
 
@@ -1631,60 +1635,78 @@ void lclGetBorderLine(
         sal_uInt8& rnXclLine, sal_uInt32& rnColorId,
         const ::editeng::SvxBorderLine* pLine, XclExpPalette& rPalette, XclBiff eBiff )
 {
+    // Document: sc/qa/unit/data/README.cellborders
+
+    enum CalcLineIndex{Idx_None, Idx_Solid, Idx_Dotted, Idx_Dashed, Idx_FineDashed, Idx_DashDot, Idx_DashDotDot, Idx_DoubleThin, Idx_Last};
+    enum ExcelWidthIndex{Width_Hair, Width_Thin, Width_Medium, Width_Thick, Width_Last};
+    static sal_uInt8 Map_LineLO_toMS[Idx_Last][Width_Last] =
+    {
+    //    0,05  -  0,74                  0,75  -  1,49                   1,50  -  2,49                 2,50  -  9,00          Width Range [pt]
+    //   EXC_BORDER_HAIR                EXC_BORDER_THIN                EXC_BORDER_MEDIUM              EXC_BORDER_THICK        MS Width
+        {EXC_LINE_NONE                , EXC_LINE_NONE                , EXC_LINE_NONE                , EXC_LINE_NONE                }, //  0    BorderLineStyle::NONE
+        {EXC_LINE_HAIR                , EXC_LINE_THIN                , EXC_LINE_MEDIUM              , EXC_LINE_THICK               }, //  1    BorderLineStyle::SOLID
+        {EXC_LINE_DOTTED              , EXC_LINE_DOTTED              , EXC_LINE_MEDIUM_SLANT_DASHDOT, EXC_LINE_MEDIUM_SLANT_DASHDOT}, //  2    BorderLineStyle::DOTTED
+        {EXC_LINE_DOTTED              , EXC_LINE_DASHED              , EXC_LINE_MEDIUM_DASHED       , EXC_LINE_MEDIUM_DASHED       }, //  3    BorderLineStyle::DASHED
+        {EXC_LINE_DASHED              , EXC_LINE_DASHED              , EXC_LINE_MEDIUM_SLANT_DASHDOT, EXC_LINE_MEDIUM_SLANT_DASHDOT}, //  4    BorderLineStyle::FINE_DASHED
+        {EXC_LINE_DASHED              , EXC_LINE_THIN_DASHDOT        , EXC_LINE_MEDIUM_DASHDOT      , EXC_LINE_MEDIUM_DASHDOT      }, //  5    BorderLineStyle::DASH_DOT
+        {EXC_LINE_DASHED              , EXC_LINE_THIN_DASHDOTDOT     , EXC_LINE_MEDIUM_DASHDOTDOT   , EXC_LINE_MEDIUM_DASHDOTDOT   }, //  6    BorderLineStyle::DASH_DOT_DOT
+        {EXC_LINE_DOUBLE              , EXC_LINE_DOUBLE              , EXC_LINE_DOUBLE              , EXC_LINE_DOUBLE              }  //  7    BorderLineStyle::DOUBLE_THIN
+    };                                                                                                                                // Line  Name
+
     rnXclLine = EXC_LINE_NONE;
     if( pLine )
     {
         sal_uInt16 nOuterWidth = pLine->GetOutWidth();
-        sal_uInt16 nDistance = pLine->GetDistance();
-        if( nDistance > 0 )
-            rnXclLine = EXC_LINE_DOUBLE;
-        else if( nOuterWidth >= EXC_BORDER_THICK )
-            rnXclLine = EXC_LINE_THICK;
-        else if( nOuterWidth >= EXC_BORDER_MEDIUM )
+        ExcelWidthIndex nOuterWidthIndx;
+        CalcLineIndex  nStyleIndex;
+
+        switch (pLine->GetBorderLineStyle())
         {
-            rnXclLine = EXC_LINE_MEDIUM;
-            switch (pLine->GetBorderLineStyle())
-            {
-                case table::BorderLineStyle::DASHED:
-                    rnXclLine = EXC_LINE_MEDIUM_DASHED;
+            case table::BorderLineStyle::NONE:
+                nStyleIndex = Idx_None;
                 break;
-                case table::BorderLineStyle::DASH_DOT:
-                    rnXclLine = EXC_LINE_MEDIUM_DASHDOT;
-                    break;
-                case table::BorderLineStyle::DASH_DOT_DOT:
-                    rnXclLine = EXC_LINE_MEDIUM_DASHDOTDOT;
-                    break;
-                default:
-                    ;
-            }
+            case table::BorderLineStyle::SOLID:
+                nStyleIndex = Idx_Solid;
+                break;
+            case table::BorderLineStyle::DOTTED:
+                nStyleIndex = Idx_Dotted;
+                break;
+            case table::BorderLineStyle::DASHED:
+                nStyleIndex = Idx_Dashed;
+                break;
+            case table::BorderLineStyle::FINE_DASHED:
+                nStyleIndex = Idx_FineDashed;
+                break;
+            case table::BorderLineStyle::DASH_DOT:
+                nStyleIndex = Idx_DashDot;
+                break;
+            case table::BorderLineStyle::DASH_DOT_DOT:
+                nStyleIndex = Idx_DashDotDot;
+                break;
+            case table::BorderLineStyle::DOUBLE_THIN:
+                // the "nOuterWidth" is not right for this line type
+                // but at the moment width it not important for that
+                // the right function is nOuterWidth = (sal_uInt16) pLine->GetWidth();
+                nStyleIndex = Idx_DoubleThin;
+                break;
+            default:
+                nStyleIndex = Idx_Solid;
         }
+
+        if( nOuterWidth >= EXC_BORDER_THICK )
+            nOuterWidthIndx = Width_Thick;
+        else if( nOuterWidth >= EXC_BORDER_MEDIUM )
+            nOuterWidthIndx = Width_Medium;
         else if( nOuterWidth >= EXC_BORDER_THIN )
-        {
-            rnXclLine = EXC_LINE_THIN;
-            switch (pLine->GetBorderLineStyle())
-            {
-                case table::BorderLineStyle::DASHED:
-                case table::BorderLineStyle::FINE_DASHED:
-                    rnXclLine = EXC_LINE_DASHED;
-                    break;
-                case table::BorderLineStyle::DASH_DOT:
-                    rnXclLine = EXC_LINE_THIN_DASHDOT;
-                    break;
-                case table::BorderLineStyle::DASH_DOT_DOT:
-                    rnXclLine = EXC_LINE_THIN_DASHDOTDOT;
-                    break;
-                case table::BorderLineStyle::DOTTED:
-                    rnXclLine = EXC_LINE_DOTTED;
-                    break;
-                default:
-                    break;
-            }
-        }
-        else if (nOuterWidth >= EXC_BORDER_HAIR)
-            rnXclLine = EXC_LINE_HAIR;
+            nOuterWidthIndx = Width_Thin;
+        else if ( nOuterWidth >= EXC_BORDER_HAIR )
+            nOuterWidthIndx = Width_Hair;
         else
-            rnXclLine = EXC_LINE_NONE;
+            nOuterWidthIndx = Width_Thin;
+
+        rnXclLine = Map_LineLO_toMS[nStyleIndex][nOuterWidthIndx];
     }
+
     if( (eBiff == EXC_BIFF2) && (rnXclLine != EXC_LINE_NONE) )
         rnXclLine = EXC_LINE_THIN;
 
@@ -1711,8 +1733,6 @@ bool XclExpCellBorder::FillFromItemSet(
 
     switch( eBiff )
     {
-        // ALL 'case's - run through!
-
         case EXC_BIFF8: // attributes new in BIFF8
         {
             const SvxLineItem& rTLBRItem = GETITEM( rItemSet, SvxLineItem, ATTR_BORDER_TLBR );
@@ -1740,6 +1760,8 @@ bool XclExpCellBorder::FillFromItemSet(
 
             bUsed |= ScfTools::CheckItem( rItemSet, ATTR_BORDER_TLBR, bStyle ) ||
                      ScfTools::CheckItem( rItemSet, ATTR_BORDER_BLTR, bStyle );
+
+            SAL_FALLTHROUGH;
         }
 
         case EXC_BIFF5:
@@ -1828,6 +1850,7 @@ static const char* ToLineStyle( sal_uInt8 nLineStyle )
         case EXC_LINE_THIN_DASHDOTDOT:   return "dashDotDot";
         case EXC_LINE_MEDIUM_DASHDOT:    return "mediumDashDot";
         case EXC_LINE_MEDIUM_DASHDOTDOT: return "mediumDashDotDot";
+        case EXC_LINE_MEDIUM_SLANT_DASHDOT: return "slantDashDot";
     }
     return "*unknown*";
 }
@@ -2818,7 +2841,7 @@ sal_uInt32 XclExpXFBuffer::InsertStyleXF( const SfxStyleSheetBase& rStyleSheet )
 
 void XclExpXFBuffer::InsertUserStyles()
 {
-    SfxStyleSheetIterator aStyleIter( GetDoc().GetStyleSheetPool(), SFX_STYLE_FAMILY_PARA );
+    SfxStyleSheetIterator aStyleIter( GetDoc().GetStyleSheetPool(), SfxStyleFamily::Para );
     for( SfxStyleSheetBase* pStyleSheet = aStyleIter.First(); pStyleSheet; pStyleSheet = aStyleIter.Next() )
         if( pStyleSheet->IsUserDefined() && !lclIsBuiltInStyle( pStyleSheet->GetName() ) )
             InsertStyleXF( *pStyleSheet );
@@ -2865,7 +2888,7 @@ void XclExpXFBuffer::InsertDefaultRecords()
     maFills.push_back( lcl_GetPatternFill_Gray125() );
 
     // index 0: default style
-    if( SfxStyleSheetBase* pDefStyleSheet = GetStyleSheetPool().Find( ScGlobal::GetRscString( STR_STYLENAME_STANDARD ), SFX_STYLE_FAMILY_PARA ) )
+    if( SfxStyleSheetBase* pDefStyleSheet = GetStyleSheetPool().Find( ScGlobal::GetRscString( STR_STYLENAME_STANDARD ), SfxStyleFamily::Para ) )
     {
         XclExpXFRef xDefStyle( new XclExpXF( GetRoot(), *pDefStyleSheet ) );
         sal_uInt32 nXFId = AppendBuiltInXFWithStyle( xDefStyle, EXC_STYLE_NORMAL );

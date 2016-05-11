@@ -56,7 +56,7 @@
 
 #include <cppuhelper/weakref.hxx>
 #include <cppuhelper/compbase.hxx>
-#include <boost/functional/hash.hpp>
+#include <functional>
 
 #include <libpq-fe.h>
 #include <unordered_map>
@@ -76,8 +76,6 @@ public:
 };
 
 struct ConnectionSettings;
-
-
 
 
 // Logging API
@@ -149,19 +147,14 @@ struct HashByteSequence
 typedef std::unordered_map<
     ::rtl::ByteSequence,
     ::com::sun::star::uno::WeakReference< com::sun::star::sdbc::XCloseable >,
-    HashByteSequence,
-    ::std::equal_to< ::rtl::ByteSequence >
-> WeakHashMap;
+    HashByteSequence > WeakHashMap;
 typedef ::std::vector< OString > OStringVector;
-
 
 
 typedef std::unordered_map
 <
     sal_Int32,
-    OUString,
-    ::boost::hash< sal_Int32 >,
-    ::std::equal_to< sal_Int32 >
+    OUString
 > Int2StringMap;
 
 class Connection : public ConnectionBase

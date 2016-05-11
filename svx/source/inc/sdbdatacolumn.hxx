@@ -30,7 +30,6 @@ namespace svxform
 {
 
 
-
     //= DataColumn - a class wrapping an object implementing a sdb::DataColumn service
 
     class DataColumn
@@ -47,9 +46,6 @@ namespace svxform
         // if the object behind _rxIFace doesn't fully support the DataColumn service,
         // (which is checked via the supported interfaces) _all_ members will be set to
         // void !, even if the object has some of the needed interfaces.
-
-        DataColumn* operator ->() { return this; }
-        operator css::uno::Reference< css::uno::XInterface> () const{ return m_xColumn.get(); }
 
         // 'conversions'
         inline const css::uno::Reference< css::sdb::XColumn>& getColumn() const

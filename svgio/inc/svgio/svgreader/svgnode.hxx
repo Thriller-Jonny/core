@@ -26,7 +26,6 @@
 #include <basegfx/matrix/b2dhommatrix.hxx>
 #include <com/sun/star/xml/sax/XAttributeList.hpp>
 #include <vector>
-#include <boost/noncopyable.hpp>
 
 // predefines
 namespace svgio
@@ -38,7 +37,6 @@ namespace svgio
         class SvgStyleAttributes;
     }
 }
-
 
 
 namespace svgio
@@ -83,7 +81,7 @@ namespace svgio
         // which members should be initialized
         Display getDisplayFromContent(const OUString& aContent);
 
-        class SvgNode : private boost::noncopyable, public InfoProvider
+        class SvgNode : public InfoProvider
         {
         private:
             /// basic data, Type, document we belong to and parent (if not root)
@@ -124,7 +122,7 @@ namespace svgio
             const SvgStyleAttributes* checkForCssStyle(const OUString& rClassStr, const SvgStyleAttributes& rOriginal) const;
 
             /// helper for filling the CssStyle vector once dependent on mbCssStyleVectorBuilt
-            void fillCssStyleVector(const OUString& rClassStr);
+            void fillCssStyleVector(const OUString& rClassStr, const SvgStyleAttributes& rOriginal);
             void fillCssStyleVectorUsingHierarchyAndSelectors(
                 const OUString& rClassStr,
                 const SvgNode& rCurrent,
@@ -136,6 +134,8 @@ namespace svgio
                 SvgDocument& rDocument,
                 SvgNode* pParent);
             virtual ~SvgNode();
+            SvgNode(const SvgNode&) = delete;
+            SvgNode& operator=(const SvgNode&) = delete;
 
             /// scan helper to read and interpret a local CssStyle to mpLocalCssStyle
             void readLocalCssStyle(const OUString& aContent);
@@ -160,7 +160,7 @@ namespace svgio
             virtual double getCurrentFontSizeInherited() const override;
             virtual double getCurrentXHeightInherited() const override;
 
-            double getCurrentFontSize() const;
+            virtual double getCurrentFontSize() const;
             double getCurrentXHeight() const;
 
             /// Id access

@@ -31,7 +31,6 @@ namespace svt
 {
 
 
-
     //= SmartContent
 
     /** a "smart content" which basically wraps an UCB content, but caches some information
@@ -66,7 +65,7 @@ namespace svt
 
     public:
         SmartContent();
-        SmartContent( const OUString& _rInitialURL );
+        explicit SmartContent( const OUString& _rInitialURL );
         ~SmartContent();
 
     public:

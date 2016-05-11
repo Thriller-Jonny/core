@@ -47,11 +47,6 @@
 #include <sfx2/frame.hxx>
 #include <macroloader.hxx>
 
-
-
-#define MACRO_PRFIX         "macro://"
-#define MACRO_POSTFIX       "()"
-
 using namespace css;
 
 
@@ -152,10 +147,10 @@ sal_Bool SAL_CALL SfxEvents_Impl::hasByName( const OUString& aName ) throw ( uno
     for ( long i=0; i<nCount; i++ )
     {
         if ( maEventNames[i] == aName )
-            return sal_True;
+            return true;
     }
 
-    return sal_False;
+    return false;
 }
 
 
@@ -173,9 +168,9 @@ sal_Bool SAL_CALL SfxEvents_Impl::hasElements() throw ( uno::RuntimeException, s
     ::osl::MutexGuard aGuard( maMutex );
 
     if ( maEventNames.getLength() )
-        return sal_True;
+        return true;
     else
-        return sal_False;
+        return false;
 }
 
 void SfxEvents_Impl::Execute( uno::Any& aEventData, const document::DocumentEvent& aTrigger, SfxObjectShell* pDoc )
@@ -313,7 +308,6 @@ void SAL_CALL SfxEvents_Impl::disposing( const lang::EventObject& /*Source*/ ) t
         mxBroadcaster = nullptr;
     }
 }
-
 
 
 SfxEvents_Impl::SfxEvents_Impl( SfxObjectShell* pShell,
@@ -460,10 +454,10 @@ void SfxEvents_Impl::NormalizeMacro( const ::comphelper::NamedValueCollection& i
         }
         else if ( !aMacroName.isEmpty() )
         {
-            aScript = MACRO_PRFIX;
+            aScript = "macro://";
             if ( aLibrary != SfxGetpApp()->GetName() && aLibrary != "StarDesktop" && aLibrary != "application" )
                 aScript += ".";
-            aScript += "/" + aMacroName + MACRO_POSTFIX;
+            aScript += "/" + aMacroName + "()";
         }
         else
             // wrong properties

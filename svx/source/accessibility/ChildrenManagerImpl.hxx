@@ -436,8 +436,6 @@ private:
 };
 
 
-
-
 /** A child descriptor holds a reference to a UNO shape and the
     corresponding accessible object.  There are two use cases:
     <ol><li>The accessible object is only created on demand and is then
@@ -519,17 +517,7 @@ public:
                );
     }
 
-    /** The ordering defined by this operator is only used in order to be able
-        to put child descriptors in some STL containers.  The ordering itself is
-        not so important, its 'features' are not used.
-    */
-    inline bool operator < (const ChildDescriptor& aDescriptor) const
-    {
-        return (mxShape.get() < aDescriptor.mxShape.get());
-    }
-
 };
-
 
 
 } // end of namespace accessibility

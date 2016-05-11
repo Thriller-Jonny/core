@@ -144,7 +144,6 @@ Reference<XInterface> SAL_CALL DllComponentLoader::activate(
 }
 
 
-
 sal_Bool SAL_CALL DllComponentLoader::writeRegistryInfo(
     const Reference< XRegistryKey > & xKey, const OUString &, const OUString & rLibName )
 
@@ -158,7 +157,7 @@ sal_Bool SAL_CALL DllComponentLoader::writeRegistryInfo(
 #else
     writeSharedLibComponentInfo(
         cppu::bootstrap_expandUri(rLibName), OUString(), m_xSMgr, xKey );
-    return sal_True;
+    return true;
 #endif
 }
 

@@ -42,7 +42,7 @@
 #include <editeng/ulspitem.hxx>
 #include <editeng/lrspitem.hxx>
 #include <svx/sdr/properties/properties.hxx>
-
+#include <sfx2/bindings.hxx>
 #include "glob.hrc"
 #include <editeng/shaditem.hxx>
 #include <editeng/boxitem.hxx>
@@ -129,10 +129,13 @@ void FuPage::DoExecute( SfxRequest& )
 {
     mpDrawViewShell = dynamic_cast<DrawViewShell*>(mpViewShell);
     DBG_ASSERT( mpDrawViewShell, "sd::FuPage::FuPage(), called without a current DrawViewShell!" );
+
     if( mpDrawViewShell )
     {
         mbMasterPage = mpDrawViewShell->GetEditMode() == EM_MASTERPAGE;
-        mbDisplayBackgroundTabPage = (mpDrawViewShell->GetPageKind() == PK_STANDARD);
+        // we don't really want to format page background with SID_ATTR_PAGE[_SIZE] slots
+        mbDisplayBackgroundTabPage = ( mpDrawViewShell->GetPageKind() == PK_STANDARD) &&
+                                      ( nSlotId != SID_ATTR_PAGE_SIZE) && ( nSlotId != SID_ATTR_PAGE );
         mpPage = mpDrawViewShell->getCurrentPage();
     }
 
@@ -147,7 +150,10 @@ void FuPage::DoExecute( SfxRequest& )
 
         // if we now have arguments, apply them to current page
         if( mpArgs )
+        {
             ApplyItemSet( mpArgs );
+            mpView->SetAttributes( *mpArgs );
+        }
     }
 }
 
@@ -213,6 +219,7 @@ const SfxItemSet* FuPage::ExecuteDialog( vcl::Window* pParent )
                         SID_ATTR_BORDER_OUTER, SID_ATTR_BORDER_OUTER,
                         SID_ATTR_BORDER_SHADOW, SID_ATTR_BORDER_SHADOW,
                         XATTR_FILL_FIRST, XATTR_FILL_LAST,
+                        SID_ATTR_PAGE_COLOR,SID_ATTR_PAGE_FILLSTYLE,
                         EE_PARA_WRITINGDIR, EE_PARA_WRITINGDIR,
                         0);
 
@@ -324,11 +331,12 @@ const SfxItemSet* FuPage::ExecuteDialog( vcl::Window* pParent )
             }
         }
     }
+
     else
     {
         // create the dialog
         SdAbstractDialogFactory* pFact = SdAbstractDialogFactory::Create();
-        std::unique_ptr<SfxAbstractTabDialog> pDlg( pFact ? pFact->CreateSdTabPageDialog(nullptr, &aMergedAttr, mpDocSh, mbDisplayBackgroundTabPage ) : nullptr );
+        std::unique_ptr<SfxAbstractTabDialog> pDlg( pFact ? pFact->CreateSdTabPageDialog(&aMergedAttr, mpDocSh, mbDisplayBackgroundTabPage ) : nullptr );
         if( pDlg.get() && pDlg->Execute() == RET_OK )
             pTempSet.reset( new SfxItemSet(*pDlg->GetOutputItemSet()) );
     }

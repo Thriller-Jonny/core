@@ -749,7 +749,6 @@ css::uno::Any VCLXImageControl::getProperty( const OUString& PropertyName ) thro
 //  class VCLXCheckBox
 
 
-
 void VCLXCheckBox::ImplGetPropertyIds( std::list< sal_uInt16 > &rIds )
 {
     PushPropertyIds( rIds,
@@ -1464,7 +1463,6 @@ void VCLXSpinField::ProcessWindowEvent( const VclWindowEvent& rVclWindowEvent )
 }
 
 
-
 //  class VCLXListBox
 
 void VCLXListBox::ImplGetPropertyIds( std::list< sal_uInt16 > &rIds )
@@ -1727,8 +1725,7 @@ void VCLXListBox::selectItem( const OUString& rItemText, sal_Bool bSelect ) thro
     VclPtr< ListBox > pBox = GetAs< ListBox >();
     if ( pBox )
     {
-        OUString aItemText( rItemText );
-        selectItemPos( pBox->GetEntryPos( aItemText ), bSelect );
+        selectItemPos( pBox->GetEntryPos( rItemText ), bSelect );
     }
 }
 
@@ -1891,7 +1888,7 @@ void VCLXListBox::setProperty( const OUString& PropertyName, const css::uno::Any
                         pListBox->SelectEntryPos( --n, false );
 
                     if ( aItems.getLength() )
-                        selectItemsPos( aItems, sal_True );
+                        selectItemsPos( aItems, true );
                     else
                         pListBox->SetNoSelection();
 
@@ -2416,7 +2413,6 @@ throw(css::uno::RuntimeException, std::exception)
 }
 
 
-
 //  class VCLXTabPage
 
 VCLXMultiPage::VCLXMultiPage() : maTabListeners( *this ), mTabId( 1 )
@@ -2905,8 +2901,8 @@ void VCLXFixedHyperlink::ProcessWindowEvent( const VclWindowEvent& rVclWindowEve
                     }
                 }
             }
+            SAL_FALLTHROUGH;
         }
-        //fall-through
         default:
             VCLXWindow::ProcessWindowEvent( rVclWindowEvent );
             break;
@@ -3739,7 +3735,6 @@ css::awt::Size SAL_CALL VCLXScrollBar::getMinimumSize() throw(css::uno::RuntimeE
     SolarMutexGuard aGuard;
     return implGetMinimumSize( GetWindow() );
 }
-
 
 
 //  class VCLXEdit
@@ -4720,7 +4715,6 @@ css::uno::Any VCLXFormattedSpinField::getProperty( const OUString& PropertyName 
 }
 
 
-
 //  class VCLXDateField
 
 
@@ -5068,7 +5062,6 @@ sal_Bool VCLXDateField::isStrictFormat() throw(css::uno::RuntimeException, std::
 {
     return VCLXFormattedSpinField::isStrictFormat();
 }
-
 
 
 //  class VCLXTimeField
@@ -5971,7 +5964,6 @@ css::uno::Any VCLXMetricField::getProperty( const OUString& PropertyName ) throw
     }
     return aProp;
 }
-
 
 
 //  class VCLXCurrencyField

@@ -32,7 +32,6 @@
 using namespace com::sun::star;
 
 
-
 namespace sdr
 {
     namespace overlay
@@ -95,7 +94,8 @@ namespace sdr
 
             if(nSize)
             {
-                for(OverlayObjectVector::iterator aIter(maOverlayObjects.begin()); aIter != maOverlayObjects.end(); ++aIter)
+                OverlayObjectVector::const_iterator aEnd(maOverlayObjects.end());
+                for(OverlayObjectVector::iterator aIter(maOverlayObjects.begin()); aIter != aEnd; ++aIter)
                 {
                     OSL_ENSURE(*aIter, "Corrupted OverlayObject List (!)");
                     OverlayObject& rCandidate = **aIter;
@@ -115,10 +115,9 @@ namespace sdr
             return mfDiscreteOne;
         }
 
-        OverlayManager::OverlayManager(OutputDevice& rOutputDevice, const SdrModel* pModel)
+        OverlayManager::OverlayManager(OutputDevice& rOutputDevice)
         :   Scheduler(),
             mrOutputDevice(rOutputDevice),
-            mpModel(pModel),
             maOverlayObjects(),
             maStripeColorA(Color(COL_BLACK)),
             maStripeColorB(Color(COL_WHITE)),
@@ -141,9 +140,9 @@ namespace sdr
             }
         }
 
-        rtl::Reference<OverlayManager> OverlayManager::create(OutputDevice& rOutputDevice, const SdrModel* pModel)
+        rtl::Reference<OverlayManager> OverlayManager::create(OutputDevice& rOutputDevice)
         {
-            return rtl::Reference<OverlayManager>(new OverlayManager(rOutputDevice, pModel));
+            return rtl::Reference<OverlayManager>(new OverlayManager(rOutputDevice));
         }
 
         const drawinglayer::geometry::ViewInformation2D OverlayManager::getCurrentViewInformation2D() const
@@ -225,7 +224,8 @@ namespace sdr
 
             if(nSize)
             {
-                for(OverlayObjectVector::iterator aIter(maOverlayObjects.begin()); aIter != maOverlayObjects.end(); ++aIter)
+                OverlayObjectVector::const_iterator aEnd = maOverlayObjects.end();
+                for(OverlayObjectVector::iterator aIter(maOverlayObjects.begin()); aIter != aEnd; ++aIter)
                 {
                     OSL_ENSURE(*aIter, "Corrupted OverlayObject List (!)");
                     OverlayObject& rCandidate = **aIter;

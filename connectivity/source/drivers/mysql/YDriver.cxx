@@ -74,7 +74,7 @@ namespace connectivity
             ::comphelper::disposeComponent(m_xODBCDriver);
             ::comphelper::disposeComponent(m_xNativeDriver);
             TJDBCDrivers::iterator aIter = m_aJdbcDrivers.begin();
-            TJDBCDrivers::iterator aEnd = m_aJdbcDrivers.end();
+            TJDBCDrivers::const_iterator aEnd = m_aJdbcDrivers.end();
             for ( ;aIter != aEnd;++aIter )
                 ::comphelper::disposeComponent(aIter->second);
         }
@@ -172,12 +172,12 @@ namespace connectivity
                 aProps.push_back( PropertyValue(
                                     OUString("Silent")
                                     ,0
-                                    ,makeAny(sal_True)
+                                    ,makeAny(true)
                                     ,PropertyState_DIRECT_VALUE) );
                 aProps.push_back( PropertyValue(
                                     OUString("PreventGetVersionColumns")
                                     ,0
-                                    ,makeAny(sal_True)
+                                    ,makeAny(true)
                                     ,PropertyState_DIRECT_VALUE) );
             }
             else if ( _eType == D_JDBC )
@@ -202,7 +202,7 @@ namespace connectivity
             aProps.push_back( PropertyValue(
                                 OUString("IsAutoRetrievingEnabled")
                                 ,0
-                                ,makeAny(sal_True)
+                                ,makeAny(true)
                                 ,PropertyState_DIRECT_VALUE) );
             aProps.push_back( PropertyValue(
                                 OUString("AutoRetrievingStatement")
@@ -212,7 +212,7 @@ namespace connectivity
             aProps.push_back( PropertyValue(
                                 OUString("ParameterNameSubstitution")
                                 ,0
-                                ,makeAny(sal_True)
+                                ,makeAny(true)
                                 ,PropertyState_DIRECT_VALUE) );
             return Sequence< PropertyValue >(aProps.data(), aProps.size());
         }
@@ -337,14 +337,14 @@ namespace connectivity
         aDriverInfo.push_back(DriverPropertyInfo(
                 OUString("CharSet")
                 ,OUString("CharSet of the database.")
-                ,sal_False
+                ,false
                 ,OUString()
                 ,Sequence< OUString >())
                 );
         aDriverInfo.push_back(DriverPropertyInfo(
                 OUString("SuppressVersionColumns")
                 ,OUString("Display version columns (when available).")
-                ,sal_False
+                ,false
                 ,OUString("0")
                 ,aBoolean)
                 );
@@ -354,7 +354,7 @@ namespace connectivity
             aDriverInfo.push_back(DriverPropertyInfo(
                     OUString("JavaDriverClass")
                     ,OUString("The JDBC driver class name.")
-                    ,sal_True
+                    ,true
                     ,getJavaDriverClass(info)
                     ,Sequence< OUString >())
                     );
@@ -364,14 +364,14 @@ namespace connectivity
             aDriverInfo.push_back(DriverPropertyInfo(
                     OUString("LocalSocket")
                     ,OUString("The file path of a socket to connect to a local MySQL server.")
-                    ,sal_False
+                    ,false
                     ,OUString()
                     ,Sequence< OUString >())
                     );
             aDriverInfo.push_back(DriverPropertyInfo(
                     OUString("NamedPipe")
                     ,OUString("The name of a pipe to connect to a local MySQL server.")
-                    ,sal_False
+                    ,false
                     ,OUString()
                     ,Sequence< OUString >())
                     );
@@ -405,7 +405,7 @@ namespace connectivity
             OMetaConnection* pConnection = reinterpret_cast<OMetaConnection*>(xTunnel->getSomething( OMetaConnection::getUnoTunnelImplementationId() ));
             if ( pConnection )
             {
-                TWeakPairVector::iterator aEnd = m_aConnections.end();
+                TWeakPairVector::const_iterator aEnd = m_aConnections.end();
                 for (TWeakPairVector::iterator i = m_aConnections.begin(); aEnd != i; ++i)
                 {
                     if ( i->second.second == pConnection )
@@ -423,7 +423,7 @@ namespace connectivity
         } // if ( xTunnel.is() )
         if ( !xTab.is() )
         {
-            TWeakPairVector::iterator aEnd = m_aConnections.end();
+            TWeakPairVector::const_iterator aEnd = m_aConnections.end();
             for (TWeakPairVector::iterator i = m_aConnections.begin(); aEnd != i; ++i)
             {
                 Reference< XConnection > xTemp(i->first.get(),UNO_QUERY);

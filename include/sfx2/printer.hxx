@@ -34,7 +34,6 @@ struct SfxPrinter_Impl;
 class SFX2_DLLPUBLIC SfxPrinter : public Printer
 {
 private:
-    JobSetup                aOrigJobSetup;
     SfxItemSet*             pOptions;
     SfxPrinter_Impl*        pImpl;
     bool                    bKnown;
@@ -54,7 +53,7 @@ public:
     VclPtr<SfxPrinter>      Clone() const;
 
     static VclPtr<SfxPrinter> Create( SvStream &rStream, SfxItemSet *pOptions );
-    SvStream&               Store( SvStream &rStream ) const;
+    void                    Store( SvStream &rStream ) const;
 
     const SfxItemSet&       GetOptions() const { return *pOptions; }
     void                    SetOptions( const SfxItemSet &rNewOptions );

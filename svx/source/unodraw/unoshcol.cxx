@@ -25,6 +25,7 @@
 
 #include <cppuhelper/implbase3.hxx>
 #include <cppuhelper/interfacecontainer.hxx>
+#include <comphelper/interfacecontainer2.hxx>
 #include <cppuhelper/supportsservice.hxx>
 #include <osl/mutex.hxx>
 #include <rtl/ref.hxx>
@@ -46,7 +47,7 @@ class SvxShapeCollection :
     public SvxShapeCollectionMutex
 {
 private:
-    cppu::OInterfaceContainerHelper maShapeContainer;
+    comphelper::OInterfaceContainerHelper2 maShapeContainer;
 
     cppu::OBroadcastHelper mrBHelper;
 
@@ -137,10 +138,10 @@ void SvxShapeCollection::dispose()
 {
     // An frequently programming error is to release the last
     // reference to this object in the disposing message.
-    // Make it rubust, hold a self Reference.
+    // Make it robust, hold a self Reference.
     uno::Reference< lang::XComponent > xSelf( this );
 
-    // Guard dispose against multible threading
+    // Guard dispose against multiple threading
     // Remark: It is an error to call dispose more than once
     bool bDoDispose = false;
     {
@@ -148,7 +149,7 @@ void SvxShapeCollection::dispose()
     if( !mrBHelper.bDisposed && !mrBHelper.bInDispose )
     {
         // only one call go into this section
-        mrBHelper.bInDispose = sal_True;
+        mrBHelper.bInDispose = true;
         bDoDispose = true;
     }
     }
@@ -173,15 +174,15 @@ void SvxShapeCollection::dispose()
             // catch exception and throw again but signal that
             // the object was disposed. Dispose should be called
             // only once.
-            mrBHelper.bDisposed = sal_True;
-            mrBHelper.bInDispose = sal_False;
+            mrBHelper.bDisposed = true;
+            mrBHelper.bInDispose = false;
             throw;
         }
 
         // the values bDispose and bInDisposing must set in this order.
         // No multithread call overcome the "!rBHelper.bDisposed && !rBHelper.bInDispose" guard.
-        mrBHelper.bDisposed = sal_True;
-        mrBHelper.bInDispose = sal_False;
+        mrBHelper.bDisposed = true;
+        mrBHelper.bInDispose = false;
     }
     else
     {
@@ -229,10 +230,10 @@ uno::Any SAL_CALL SvxShapeCollection::getByIndex( sal_Int32 Index )
     if( Index < 0 || Index >= getCount() )
         throw lang::IndexOutOfBoundsException();
 
-    uno::Sequence< Reference< uno::XInterface> > xElements( maShapeContainer.getElements() );
+    std::vector< Reference< uno::XInterface> > aElements( maShapeContainer.getElements() );
 
 
-    return uno::makeAny( Reference< drawing::XShape>(static_cast< drawing::XShape* >( xElements.getArray()[Index].get())) );
+    return uno::makeAny( Reference< drawing::XShape>(static_cast< drawing::XShape* >( aElements[Index].get())) );
 }
 
 // XElementAccess

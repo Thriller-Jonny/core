@@ -294,17 +294,9 @@ static void cpp_call(
      catch (...)
      {
          // fill uno exception
-#ifdef _LIBCPP_VERSION
          CPPU_CURRENT_NAMESPACE::fillUnoException(
-             reinterpret_cast< __cxxabiv1::__cxa_eh_globals * >(
-                 __cxxabiv1::__cxa_get_globals())->caughtExceptions,
+             __cxxabiv1::__cxa_get_globals()->caughtExceptions,
              *ppUnoExc, pThis->getBridge()->getCpp2Uno());
-#else
-         fillUnoException(
-             reinterpret_cast< CPPU_CURRENT_NAMESPACE::__cxa_eh_globals * >(
-                 __cxxabiv1::__cxa_get_globals())->caughtExceptions,
-             *ppUnoExc, pThis->getBridge()->getCpp2Uno());
-#endif
 
         // temporary params
         for ( ; nTempIndices--; )
@@ -364,8 +356,8 @@ void unoInterfaceProxyDispatch(
             typelib_MethodParameter aParam;
             aParam.pTypeRef =
                 reinterpret_cast<typelib_InterfaceAttributeTypeDescription const *>(pMemberDescr)->pAttributeTypeRef;
-            aParam.bIn      = sal_True;
-            aParam.bOut     = sal_False;
+            aParam.bIn      = true;
+            aParam.bOut     = false;
 
             typelib_TypeDescriptionReference * pReturnTypeRef = nullptr;
             OUString aVoidName("void");
@@ -432,7 +424,8 @@ void unoInterfaceProxyDispatch(
                 }
                 TYPELIB_DANGER_RELEASE( pTD );
             }
-        } // else perform queryInterface()
+            SAL_FALLTHROUGH; // else perform queryInterface()
+        }
         default:
             // dependent dispatch
             cpp_call(

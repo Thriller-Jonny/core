@@ -251,7 +251,7 @@ SwFmDrawPage::~SwFmDrawPage() throw ()
 
 const SdrMarkList&  SwFmDrawPage::PreGroup(const uno::Reference< drawing::XShapes > & xShapes)
 {
-    _SelectObjectsInView( xShapes, GetPageView() );
+    SelectObjectsInView( xShapes, GetPageView() );
     const SdrMarkList& rMarkList = mpView->GetMarkedObjectList();
     return rMarkList;
 }
@@ -259,7 +259,7 @@ const SdrMarkList&  SwFmDrawPage::PreGroup(const uno::Reference< drawing::XShape
 void SwFmDrawPage::PreUnGroup(const uno::Reference< drawing::XShapeGroup >&  rShapeGroup)
 {
     uno::Reference< drawing::XShape >  xShape( rShapeGroup, uno::UNO_QUERY);
-    _SelectObjectInView( xShape, GetPageView() );
+    SelectObjectInView( xShape, GetPageView() );
 }
 
 SdrPageView*    SwFmDrawPage::GetPageView()
@@ -293,14 +293,14 @@ uno::Reference< uno::XInterface >   SwFmDrawPage::GetInterface( SdrObject* pObj 
     return xShape;
 }
 
-SdrObject* SwFmDrawPage::_CreateSdrObject( const uno::Reference< drawing::XShape > & xShape )
+SdrObject* SwFmDrawPage::CreateSdrObject_( const uno::Reference< drawing::XShape > & xShape )
     throw (uno::RuntimeException, std::exception)
 {
     //FIXME: just a redirect call - can this method be deleted?
-    return SvxFmDrawPage::_CreateSdrObject( xShape );
+    return SvxFmDrawPage::CreateSdrObject_( xShape );
 }
 
-uno::Reference< drawing::XShape > SwFmDrawPage::_CreateShape( SdrObject *pObj ) const
+uno::Reference< drawing::XShape > SwFmDrawPage::CreateShape( SdrObject *pObj ) const
     throw (uno::RuntimeException, std::exception)
 {
     uno::Reference< drawing::XShape >  xRet;
@@ -336,7 +336,7 @@ uno::Reference< drawing::XShape > SwFmDrawPage::_CreateShape( SdrObject *pObj ) 
             }
             else
             {
-                OSL_FAIL( "<SwFmDrawPage::_CreateShape(..)> - could not retrieve type. Thus, no shape created." );
+                OSL_FAIL( "<SwFmDrawPage::CreateShape(..)> - could not retrieve type. Thus, no shape created." );
                 return xRet;
             }
         }
@@ -346,7 +346,7 @@ uno::Reference< drawing::XShape > SwFmDrawPage::_CreateShape( SdrObject *pObj ) 
         // own block - temporary object has to be destroyed before
         // the delegator is set #81670#
         {
-            xRet = SvxFmDrawPage::_CreateShape( pObj );
+            xRet = SvxFmDrawPage::CreateShape( pObj );
         }
         uno::Reference< XUnoTunnel > xShapeTunnel(xRet, uno::UNO_QUERY);
         //don't create an SwXShape if it already exists
@@ -577,7 +577,7 @@ sal_Bool SwXDrawPage::hasElements() throw( uno::RuntimeException, std::exception
     if(!pDoc)
         throw uno::RuntimeException();
     if(!pDoc->getIDocumentDrawModelAccess().GetDrawModel())
-        return sal_False;
+        return false;
     else
         return static_cast<SwXDrawPage*>(this)->GetSvxPage()->hasElements();
 }
@@ -913,7 +913,7 @@ sal_Int64 SAL_CALL SwXShape::getSomething( const uno::Sequence< sal_Int8 >& rId 
 }
 namespace
 {
-    static void lcl_addShapePropertyEventFactories( SdrObject& _rObj, SwXShape& _rShape )
+    void lcl_addShapePropertyEventFactories( SdrObject& _rObj, SwXShape& _rShape )
     {
         svx::PPropertyValueProvider pProvider( new svx::PropertyValueProvider( _rShape, "AnchorType" ) );
         _rObj.getShapePropertyChangeNotifier().registerProvider( svx::eTextShapeAnchorType, pProvider );
@@ -1730,7 +1730,7 @@ uno::Any SwXShape::getPropertyValue(const OUString& rPropertyName)
             {
                 drawing::HomogenMatrix3 aMatrix;
                 aRet >>= aMatrix;
-                aRet <<= _ConvertTransformationToLayoutDir( aMatrix );
+                aRet <<= ConvertTransformationToLayoutDir( aMatrix );
             }
             // #i36248#
             else if ( rPropertyName == "StartPosition" )
@@ -1738,21 +1738,21 @@ uno::Any SwXShape::getPropertyValue(const OUString& rPropertyName)
                 awt::Point aStartPos;
                 aRet >>= aStartPos;
                 // #i59051#
-                aRet <<= _ConvertStartOrEndPosToLayoutDir( aStartPos );
+                aRet <<= ConvertStartOrEndPosToLayoutDir( aStartPos );
             }
             else if ( rPropertyName == "EndPosition" )
             {
                 awt::Point aEndPos;
                 aRet >>= aEndPos;
                 // #i59051#
-                aRet <<= _ConvertStartOrEndPosToLayoutDir( aEndPos );
+                aRet <<= ConvertStartOrEndPosToLayoutDir( aEndPos );
             }
             // #i59051#
             else if ( rPropertyName == "PolyPolygonBezier" )
             {
                 drawing::PolyPolygonBezierCoords aPath;
                 aRet >>= aPath;
-                aRet <<= _ConvertPolyPolygonBezierToLayoutDir( aPath );
+                aRet <<= ConvertPolyPolygonBezierToLayoutDir( aPath );
             }
             else if (rPropertyName == "ZOrder")
             {
@@ -2277,13 +2277,13 @@ SvxShape*   SwXShape::GetSvxShape()
 // implementation of virtual methods from drawing::XShape
 awt::Point SAL_CALL SwXShape::getPosition() throw ( uno::RuntimeException, std::exception )
 {
-    awt::Point aPos( _GetAttrPosition() );
+    awt::Point aPos( GetAttrPosition() );
 
     // handle group members
     SvxShape* pSvxShape = GetSvxShape();
     if ( pSvxShape )
     {
-        SdrObject* pTopGroupObj = _GetTopGroupObj( pSvxShape );
+        SdrObject* pTopGroupObj = GetTopGroupObj( pSvxShape );
         if ( pTopGroupObj )
         {
             // #i34750# - get attribute position of top group
@@ -2318,7 +2318,7 @@ awt::Point SAL_CALL SwXShape::getPosition() throw ( uno::RuntimeException, std::
 void SAL_CALL SwXShape::setPosition( const awt::Point& aPosition )
                                                 throw ( uno::RuntimeException, std::exception )
 {
-    SdrObject* pTopGroupObj = _GetTopGroupObj();
+    SdrObject* pTopGroupObj = GetTopGroupObj();
     if ( !pTopGroupObj )
     {
         // #i37877# - no adjustment of position attributes,
@@ -2350,7 +2350,7 @@ void SAL_CALL SwXShape::setPosition( const awt::Point& aPosition )
         // shape isn't a group member. Thus, set positioning attributes
         if ( !bNoAdjustOfPosProp )
         {
-            _AdjustPositionProperties( aPosition );
+            AdjustPositionProperties( aPosition );
         }
         if ( bApplyPosAtDrawObj )
         {
@@ -2367,7 +2367,7 @@ void SAL_CALL SwXShape::setPosition( const awt::Point& aPosition )
         // convert given absolute attribute position in layout direction into
         // position in horizontal left-to-right layout.
         {
-            aNewPos = _ConvertPositionToHoriL2R( aNewPos, getSize() );
+            aNewPos = ConvertPositionToHoriL2R( aNewPos, getSize() );
         }
         // Convert given absolute position in horizontal left-to-right
         // layout into relative position in horizontal left-to-right layout.
@@ -2379,7 +2379,7 @@ void SAL_CALL SwXShape::setPosition( const awt::Point& aPosition )
             // use method <xGroupShape->getPosition()> to get the correct
             // position of the top group object.
             awt::Point aAttrPosInHoriL2R(
-                    _ConvertPositionToHoriL2R( xGroupShape->getPosition(),
+                    ConvertPositionToHoriL2R( xGroupShape->getPosition(),
                                                xGroupShape->getSize() ) );
             aNewPos.X -= aAttrPosInHoriL2R.X;
             aNewPos.Y -= aAttrPosInHoriL2R.Y;
@@ -2437,7 +2437,7 @@ OUString SAL_CALL SwXShape::getShapeType() throw ( uno::RuntimeException, std::e
 /** method to determine top group object
     #i31698#
 */
-SdrObject* SwXShape::_GetTopGroupObj( SvxShape* _pSvxShape )
+SdrObject* SwXShape::GetTopGroupObj( SvxShape* _pSvxShape )
 {
     SdrObject* pTopGroupObj( nullptr );
 
@@ -2461,7 +2461,7 @@ SdrObject* SwXShape::_GetTopGroupObj( SvxShape* _pSvxShape )
 /** method to determine position according to the positioning attributes
     #i31698#
 */
-awt::Point SwXShape::_GetAttrPosition()
+awt::Point SwXShape::GetAttrPosition()
 {
     awt::Point aAttrPos;
 
@@ -2505,7 +2505,7 @@ awt::Point SwXShape::_GetAttrPosition()
     the layout direction horizontal left-to-right.
     #i31698#
 */
-awt::Point SwXShape::_ConvertPositionToHoriL2R( const awt::Point& rObjPos,
+awt::Point SwXShape::ConvertPositionToHoriL2R( const awt::Point& rObjPos,
                                                 const awt::Size& rObjSize )
 {
     awt::Point aObjPosInHoriL2R( rObjPos );
@@ -2534,7 +2534,7 @@ awt::Point SwXShape::_ConvertPositionToHoriL2R( const awt::Point& rObjPos,
             break;
             default:
             {
-                OSL_FAIL( "<SwXShape::_ConvertPositionToHoriL2R(..)> - unsupported layout direction" );
+                OSL_FAIL( "<SwXShape::ConvertPositionToHoriL2R(..)> - unsupported layout direction" );
             }
         }
     }
@@ -2546,7 +2546,7 @@ awt::Point SwXShape::_ConvertPositionToHoriL2R( const awt::Point& rObjPos,
     direction, the drawing object is in
     #i31698#
 */
-drawing::HomogenMatrix3 SwXShape::_ConvertTransformationToLayoutDir(
+drawing::HomogenMatrix3 SwXShape::ConvertTransformationToLayoutDir(
                                     const drawing::HomogenMatrix3& rMatrixInHoriL2R )
 {
     drawing::HomogenMatrix3 aMatrix(rMatrixInHoriL2R);
@@ -2555,12 +2555,12 @@ drawing::HomogenMatrix3 SwXShape::_ConvertTransformationToLayoutDir(
     // tranformation structure isn't valid, if it contains rotation.
     SvxShape* pSvxShape = GetSvxShape();
     OSL_ENSURE( pSvxShape,
-            "<SwXShape::_ConvertTransformationToLayoutDir(..)> - no SvxShape found!");
+            "<SwXShape::ConvertTransformationToLayoutDir(..)> - no SvxShape found!");
     if ( pSvxShape )
     {
         const SdrObject* pObj = pSvxShape->GetSdrObject();
         OSL_ENSURE( pObj,
-                "<SwXShape::_ConvertTransformationToLayoutDir(..)> - no SdrObject found!");
+                "<SwXShape::ConvertTransformationToLayoutDir(..)> - no SdrObject found!");
         if ( pObj )
         {
             // get position of object in Writer coordinate system.
@@ -2610,7 +2610,7 @@ drawing::HomogenMatrix3 SwXShape::_ConvertTransformationToLayoutDir(
 /** method to adjust the positioning properties
     #i31698#
 */
-void SwXShape::_AdjustPositionProperties( const awt::Point& rPosition )
+void SwXShape::AdjustPositionProperties( const awt::Point& rPosition )
 {
     // handle x-position
     // #i35007# - no handling of x-position, if drawing
@@ -2686,19 +2686,19 @@ void SwXShape::_AdjustPositionProperties( const awt::Point& rPosition )
     Writer specific position, which is the attribute position in layout direction
     #i59051#
 */
-css::awt::Point SwXShape::_ConvertStartOrEndPosToLayoutDir(
+css::awt::Point SwXShape::ConvertStartOrEndPosToLayoutDir(
                             const css::awt::Point& aStartOrEndPos )
 {
     awt::Point aConvertedPos( aStartOrEndPos );
 
     SvxShape* pSvxShape = GetSvxShape();
     OSL_ENSURE( pSvxShape,
-            "<SwXShape::_ConvertStartOrEndPosToLayoutDir(..)> - no SvxShape found!");
+            "<SwXShape::ConvertStartOrEndPosToLayoutDir(..)> - no SvxShape found!");
     if ( pSvxShape )
     {
         const SdrObject* pObj = pSvxShape->GetSdrObject();
         OSL_ENSURE( pObj,
-                "<SwXShape::_ConvertStartOrEndPosToLayoutDir(..)> - no SdrObject found!");
+                "<SwXShape::ConvertStartOrEndPosToLayoutDir(..)> - no SdrObject found!");
         if ( pObj )
         {
             // get position of object in Writer coordinate system.
@@ -2724,19 +2724,19 @@ css::awt::Point SwXShape::_ConvertStartOrEndPosToLayoutDir(
     return aConvertedPos;
 }
 
-css::drawing::PolyPolygonBezierCoords SwXShape::_ConvertPolyPolygonBezierToLayoutDir(
+css::drawing::PolyPolygonBezierCoords SwXShape::ConvertPolyPolygonBezierToLayoutDir(
                     const css::drawing::PolyPolygonBezierCoords& aPath )
 {
     drawing::PolyPolygonBezierCoords aConvertedPath( aPath );
 
     SvxShape* pSvxShape = GetSvxShape();
     OSL_ENSURE( pSvxShape,
-            "<SwXShape::_ConvertStartOrEndPosToLayoutDir(..)> - no SvxShape found!");
+            "<SwXShape::ConvertStartOrEndPosToLayoutDir(..)> - no SvxShape found!");
     if ( pSvxShape )
     {
         const SdrObject* pObj = pSvxShape->GetSdrObject();
         OSL_ENSURE( pObj,
-                "<SwXShape::_ConvertStartOrEndPosToLayoutDir(..)> - no SdrObject found!");
+                "<SwXShape::ConvertStartOrEndPosToLayoutDir(..)> - no SdrObject found!");
         if ( pObj )
         {
             // get position of object in Writer coordinate system.

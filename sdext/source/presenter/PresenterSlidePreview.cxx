@@ -53,7 +53,6 @@ PresenterSlidePreview::PresenterSlidePreview (
     const ::rtl::Reference<PresenterController>& rpPresenterController)
     : PresenterSlidePreviewInterfaceBase(m_aMutex),
       mpPresenterController(rpPresenterController),
-      mxPane(rxAnchorPane),
       mxViewId(rxViewId),
       mxPreviewRenderer(),
       mxPreview(),
@@ -84,7 +83,7 @@ PresenterSlidePreview::PresenterSlidePreview (
         if (xPeer.is())
             xPeer->setBackground(util::Color(0xff000000));
 
-        mxWindow->setVisible(sal_True);
+        mxWindow->setVisible(true);
     }
 
     if (mpPresenterController.get() != nullptr)
@@ -215,7 +214,6 @@ Reference<drawing::XDrawPage> SAL_CALL PresenterSlidePreview::getCurrentPage()
     ThrowIfDisposed();
     return nullptr;
 }
-
 
 
 void PresenterSlidePreview::SetSlide (const Reference<drawing::XDrawPage>& rxPage)
@@ -360,7 +358,7 @@ void PresenterSlidePreview::Paint (const awt::Rectangle& rBoundingBox)
 
     Reference<rendering::XSpriteCanvas> xSpriteCanvas (mxCanvas, UNO_QUERY);
     if (xSpriteCanvas.is())
-        xSpriteCanvas->updateScreen(sal_False);
+        xSpriteCanvas->updateScreen(false);
 }
 
 void PresenterSlidePreview::Resize()

@@ -17,8 +17,9 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
+#include <sal/config.h>
+
 #include <hintids.hxx>
-#include <sot/factory.hxx>
 #include <editeng/xmlcnitm.hxx>
 #include <svl/whiter.hxx>
 #include <svl/itemiter.hxx>
@@ -1159,7 +1160,7 @@ void SwTextNode::DestroyAttr( SwTextAttr* pAttr )
                 {
                 case RES_HIDDENPARAFLD:
                     SetCalcHiddenParaField();
-                    // no break
+                    SAL_FALLTHROUGH;
                 case RES_DBSETNUMBERFLD:
                 case RES_GETEXPFLD:
                 case RES_DBFLD:
@@ -1507,16 +1508,15 @@ bool SwTextNode::InsertHint( SwTextAttr * const pAttr, const SetAttrMode nMode )
                     if( !(SetAttrMode::NOTXTATRCHR & nMode) )
                     {
                         SwIndex aIdx( this, pAttr->GetStart() );
-                        InsertText( OUString(CH_TXT_ATR_INPUTFIELDSTART), aIdx, nInsertFlags );
-                        const OUString aContent = pTextInputField->GetFieldContent();
+                        const OUString aContent = OUStringLiteral1<CH_TXT_ATR_INPUTFIELDSTART>()
+                            + pTextInputField->GetFieldContent() + OUStringLiteral1<CH_TXT_ATR_INPUTFIELDEND>();
                         InsertText( aContent, aIdx, nInsertFlags );
-                        InsertText( OUString(CH_TXT_ATR_INPUTFIELDEND), aIdx, nInsertFlags );
 
                         sal_Int32* const pEnd(pAttr->GetEnd());
                         OSL_ENSURE( pEnd != nullptr, "<SwTextNode::InsertHint(..)> - missing end of RES_TXTATR_INPUTFIELD!" );
                         if ( pEnd != nullptr )
                         {
-                            *pEnd = *pEnd + 2 + aContent.getLength();
+                            *pEnd = *pEnd + aContent.getLength();
                             nEnd = *pEnd;
                         }
                     }
@@ -1774,7 +1774,7 @@ bool SwTextNode::IsIgnoredCharFormatForNumbering(const sal_uInt16 nWhich)
     return (nWhich ==  RES_CHRATR_UNDERLINE || nWhich == RES_CHRATR_COLOR || nWhich == RES_CHRATR_BACKGROUND || nWhich == RES_CHRATR_ESCAPEMENT);
 }
 
-//In MS Word, following properties of the paragraph end position wont affect the formatting of bullets, so we ignore them:
+//In MS Word, following properties of the paragraph end position won't affect the formatting of bullets, so we ignore them:
 //Font underline;
 //Font Italic of Western, CJK and CTL;
 //Font Bold of Wertern, CJK and CTL;
@@ -3173,6 +3173,7 @@ bool SwpHints::TryInsertHint(
     if( !pHtEnd )
     {
         Insert( pHint );
+        NoteInHistory(pHint, true);
         CalcFlags();
 #ifdef DBG_UTIL
         if( !rNode.GetDoc()->IsInReading() )

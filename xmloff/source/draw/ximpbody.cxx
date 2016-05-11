@@ -19,6 +19,7 @@
 
 #include "ximpbody.hxx"
 #include <xmloff/prstylei.hxx>
+#include <xmloff/xmlnmspe.hxx>
 #include "ximpnote.hxx"
 #include <com/sun/star/drawing/XDrawPage.hpp>
 #include <com/sun/star/drawing/XDrawPages.hpp>
@@ -65,7 +66,7 @@ SdXMLDrawPageContext::SdXMLDrawPageContext( SdXMLImport& rImport,
         {
             case XML_TOK_DRAWPAGE_NAME:
             {
-                maName = sValue;
+                maContextName = sValue;
                 break;
             }
             case XML_TOK_DRAWPAGE_STYLE_NAME:
@@ -128,13 +129,13 @@ SdXMLDrawPageContext::SdXMLDrawPageContext( SdXMLImport& rImport,
     uno::Reference< drawing::XDrawPage > xShapeDrawPage(rShapes, uno::UNO_QUERY);
 
     // set PageName?
-    if(!maName.isEmpty())
+    if(!maContextName.isEmpty())
     {
         if(xShapeDrawPage.is())
         {
             uno::Reference < container::XNamed > xNamed(xShapeDrawPage, uno::UNO_QUERY);
             if(xNamed.is())
-                xNamed->setName(maName);
+                xNamed->setName(maContextName);
         }
     }
 
@@ -143,7 +144,7 @@ SdXMLDrawPageContext::SdXMLDrawPageContext( SdXMLImport& rImport,
     {
         // #85906# Code for setting masterpage needs complete rework
         // since GetSdImport().GetMasterStylesContext() gives always ZERO
-        // because of content/style file split. Now the nechanism is to
+        // because of content/style file split. Now the mechanism is to
         // compare the wanted masterpage-name with the existing masterpages
         // which were loaded and created in the styles section loading.
         uno::Reference< drawing::XDrawPages > xMasterPages(GetSdImport().GetLocalMasterPages(), uno::UNO_QUERY);
@@ -278,34 +279,11 @@ void SdXMLDrawPageContext::EndElement()
         if(xNodeSupplier.is())
             xmloff::AnimationNodeContext::postProcessRootNode( GetSdImport(), xNodeSupplier->getAnimationNode(), xPageProps );
     }
-
-    // tdf#93994 call a custom slot to be able to reset the UNO API
-    // implementations held on the SdrObjects of type
-    // SdrObjCustomShape - those tend to linger until the entire file
-    // is loaded. For large files with a lot of these 32bit systems
-    // may crash due to being out of ressources after ca. 4200
-    // Outliners and VirtualDevices used there as RefDevice
-    try
-    {
-        uno::Reference< beans::XPropertySet > xPropSet(GetLocalShapesContext(), uno::UNO_QUERY);
-
-        if(xPropSet.is())
-        {
-            const OUString sFlushCustomShapeUnoApiObjects("FlushCustomShapeUnoApiObjects");
-            uno::Any aAny;
-            aAny <<= sal_True;
-            xPropSet->setPropertyValue(sFlushCustomShapeUnoApiObjects, aAny);
-        }
-    }
-    catch(const uno::Exception&)
-    {
-        OSL_FAIL("could not flush after load");
-    }
 }
 
 SdXMLBodyContext::SdXMLBodyContext( SdXMLImport& rImport,
-    sal_uInt16 nPrfx, const OUString& rLocalName )
-:   SvXMLImportContext( rImport, nPrfx, rLocalName )
+    const OUString& rLocalName )
+:   SvXMLImportContext( rImport, XML_NAMESPACE_OFFICE, rLocalName )
 {
 }
 

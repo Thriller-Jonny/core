@@ -338,24 +338,14 @@ sal_Int32 XMLFilter::impl_Import(
         comphelper::PropertyMapEntry const aImportInfoMap[] =
         {
             // necessary properties for XML progress bar at load time
-            { OUString("ProgressRange"),   0, ::cppu::UnoType<sal_Int32>::get(), ::com::sun::star::beans::PropertyAttribute::MAYBEVOID, 0},
-            { OUString("ProgressMax"),     0, ::cppu::UnoType<sal_Int32>::get(), ::com::sun::star::beans::PropertyAttribute::MAYBEVOID, 0},
-            { OUString("ProgressCurrent"), 0, ::cppu::UnoType<sal_Int32>::get(), ::com::sun::star::beans::PropertyAttribute::MAYBEVOID, 0},
-            { OUString("PrivateData"), 0,
-                cppu::UnoType<XInterface>::get(),
-                ::com::sun::star::beans::PropertyAttribute::MAYBEVOID, 0 },
-            { OUString("BaseURI"), 0,
-                ::cppu::UnoType<OUString>::get(),
-                ::com::sun::star::beans::PropertyAttribute::MAYBEVOID, 0 },
-            { OUString("StreamRelPath"), 0,
-                ::cppu::UnoType<OUString>::get(),
-                ::com::sun::star::beans::PropertyAttribute::MAYBEVOID, 0 },
-            { OUString("StreamName"), 0,
-                ::cppu::UnoType<OUString>::get(),
-                ::com::sun::star::beans::PropertyAttribute::MAYBEVOID, 0 },
-            { OUString("BuildId"), 0,
-                ::cppu::UnoType<OUString>::get(),
-                ::com::sun::star::beans::PropertyAttribute::MAYBEVOID, 0 },
+            { OUString("ProgressRange"),   0, cppu::UnoType<sal_Int32>::get(),  css::beans::PropertyAttribute::MAYBEVOID, 0},
+            { OUString("ProgressMax"),     0, cppu::UnoType<sal_Int32>::get(),  css::beans::PropertyAttribute::MAYBEVOID, 0},
+            { OUString("ProgressCurrent"), 0, cppu::UnoType<sal_Int32>::get(),  css::beans::PropertyAttribute::MAYBEVOID, 0},
+            { OUString("PrivateData"),     0, cppu::UnoType<XInterface>::get(), css::beans::PropertyAttribute::MAYBEVOID, 0 },
+            { OUString("BaseURI"),         0, cppu::UnoType<OUString>::get(),   css::beans::PropertyAttribute::MAYBEVOID, 0 },
+            { OUString("StreamRelPath"),   0, cppu::UnoType<OUString>::get(),   css::beans::PropertyAttribute::MAYBEVOID, 0 },
+            { OUString("StreamName"),      0, cppu::UnoType<OUString>::get(),   css::beans::PropertyAttribute::MAYBEVOID, 0 },
+            { OUString("BuildId"),         0, cppu::UnoType<OUString>::get(),   css::beans::PropertyAttribute::MAYBEVOID, 0 },
             { OUString(), 0, css::uno::Type(), 0, 0 }
         };
         uno::Reference< beans::XPropertySet > xImportInfo(
@@ -364,7 +354,7 @@ sal_Int32 XMLFilter::impl_Import(
 
         // Set base URI and Hierarchical Name
         OUString aHierarchName, aBaseUri;
-        // why retrieve this from the model when it's availabe as rMediaDescriptor?
+        // why retrieve this from the model when it's available as rMediaDescriptor?
         uno::Reference<frame::XModel> const xModel(m_xTargetDoc, uno::UNO_QUERY);
         if( xModel.is() )
         {
@@ -383,6 +373,8 @@ sal_Int32 XMLFilter::impl_Import(
             }
         }
 
+        // needed for relative URLs, but in clipboard copy/paste there may be none
+        SAL_INFO_IF(aBaseUri.isEmpty(), "chart2", "chart::XMLFilter: no base URL");
         if( !aBaseUri.isEmpty() )
             xImportInfo->setPropertyValue( "BaseURI", uno::makeAny( aBaseUri ) );
 
@@ -718,8 +710,8 @@ sal_Int32 XMLFilter::impl_ExportStream(
         if(xStreamProp.is()) try
         {
             xStreamProp->setPropertyValue( "MediaType", uno::makeAny( OUString("text/xml") ) );
-            xStreamProp->setPropertyValue( "Compressed", uno::makeAny( sal_True ) );//@todo?
-            xStreamProp->setPropertyValue( "UseCommonStoragePasswordEncryption", uno::makeAny( sal_True ) );
+            xStreamProp->setPropertyValue( "Compressed", uno::makeAny( true ) );//@todo?
+            xStreamProp->setPropertyValue( "UseCommonStoragePasswordEncryption", uno::makeAny( true ) );
         }
         catch (const uno::Exception& rEx)
         {

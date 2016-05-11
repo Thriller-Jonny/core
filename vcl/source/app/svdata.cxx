@@ -28,15 +28,15 @@
 #include <tools/gen.hxx>
 #include <uno/current_context.hxx>
 
-#include "vcl/configsettings.hxx"
-#include "vcl/svapp.hxx"
-#include "vcl/settings.hxx"
-#include "vcl/wrkwin.hxx"
-#include "vcl/layout.hxx"
-#include "vcl/button.hxx"
-#include "vcl/dockwin.hxx"
-#include "vcl/print.hxx"
-#include "vcl/virdev.hxx"
+#include <vcl/configsettings.hxx>
+#include <vcl/svapp.hxx>
+#include <vcl/settings.hxx>
+#include <vcl/wrkwin.hxx>
+#include <vcl/layout.hxx>
+#include <vcl/button.hxx>
+#include <vcl/dockwin.hxx>
+#include <vcl/print.hxx>
+#include <vcl/virdev.hxx>
 #include "salinst.hxx"
 #include "salframe.hxx"
 #include "salgdi.hxx"
@@ -52,7 +52,10 @@
 
 #include "officecfg/Office/Common.hxx"
 
-#include "vcl/opengl/OpenGLContext.hxx"
+#include <config_features.h>
+#if HAVE_FEATURE_OPENGL
+#include <vcl/opengl/OpenGLContext.hxx>
+#endif
 
 using namespace com::sun::star::uno;
 using namespace com::sun::star::lang;
@@ -100,36 +103,53 @@ void ImplDeInitSVData()
 
     // delete global instance data
     if( pSVData->mpSettingsConfigItem )
+    {
         delete pSVData->mpSettingsConfigItem;
+        pSVData->mpSettingsConfigItem = nullptr;
+    }
 
     if( pSVData->mpDockingManager )
+    {
         delete pSVData->mpDockingManager;
+        pSVData->mpDockingManager = nullptr;
+    }
 
     if( pSVData->maCtrlData.mpFieldUnitStrings )
-        delete pSVData->maCtrlData.mpFieldUnitStrings, pSVData->maCtrlData.mpFieldUnitStrings = nullptr;
+    {
+        delete pSVData->maCtrlData.mpFieldUnitStrings;
+        pSVData->maCtrlData.mpFieldUnitStrings = nullptr;
+    }
     if( pSVData->maCtrlData.mpCleanUnitStrings )
-        delete pSVData->maCtrlData.mpCleanUnitStrings, pSVData->maCtrlData.mpCleanUnitStrings = nullptr;
+    {
+        delete pSVData->maCtrlData.mpCleanUnitStrings;
+        pSVData->maCtrlData.mpCleanUnitStrings = nullptr;
+    }
     if( pSVData->mpPaperNames )
-        delete pSVData->mpPaperNames, pSVData->mpPaperNames = nullptr;
+    {
+        delete pSVData->mpPaperNames;
+        pSVData->mpPaperNames = nullptr;
+    }
 }
 
+/// Returns either the application window, or the default GL context window
 vcl::Window* ImplGetDefaultWindow()
 {
     ImplSVData* pSVData = ImplGetSVData();
     if ( pSVData->maWinData.mpAppWin )
         return pSVData->maWinData.mpAppWin;
+    else
+        return ImplGetDefaultContextWindow();
+}
 
-    // First test if we already have a default window.
-    // Don't only place a single if..else inside solar mutex lockframe
-    // because then we might have to wait for the solar mutex what is not necessary
-    // if we already have a default window.
+/// returns the default window created to hold the persistent VCL GL context.
+vcl::Window *ImplGetDefaultContextWindow()
+{
+    ImplSVData* pSVData = ImplGetSVData();
 
+    // Double check locking on mpDefaultWin.
     if ( !pSVData->mpDefaultWin )
     {
-        Application::GetSolarMutex().acquire();
-
-        // Test again because the thread who released the solar mutex could have called
-        // the same method
+        SolarMutexGuard aGuard;
 
         if ( !pSVData->mpDefaultWin && !pSVData->mbDeInit )
         {
@@ -137,12 +157,13 @@ vcl::Window* ImplGetDefaultWindow()
             pSVData->mpDefaultWin = VclPtr<WorkWindow>::Create( nullptr, WB_DEFAULTWIN );
             pSVData->mpDefaultWin->SetText( "VCL ImplGetDefaultWindow" );
 
+#if HAVE_FEATURE_OPENGL
             // Add a reference to the default context so it never gets deleted
             rtl::Reference<OpenGLContext> pContext = pSVData->mpDefaultWin->GetGraphics()->GetOpenGLContext();
             if( pContext.is() )
                 pContext->acquire();
+#endif
         }
-        Application::GetSolarMutex().release();
     }
 
     return pSVData->mpDefaultWin;

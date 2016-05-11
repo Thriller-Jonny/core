@@ -455,7 +455,7 @@ namespace drawinglayer
                     // get Join
                     switch(pLineAttribute->getLineJoin())
                     {
-                        default : // basegfx::B2DLineJoin::NONE :
+                        case basegfx::B2DLineJoin::NONE :
                         {
                             eJoin = SvtGraphicStroke::joinNone;
                             break;
@@ -465,7 +465,6 @@ namespace drawinglayer
                             eJoin = SvtGraphicStroke::joinBevel;
                             break;
                         }
-                        case basegfx::B2DLineJoin::Middle :
                         case basegfx::B2DLineJoin::Miter :
                         {
                             eJoin = SvtGraphicStroke::joinMiter;
@@ -587,7 +586,7 @@ namespace drawinglayer
             Used inside OutputDevice::DrawGradient to mark the start and end of a MetaGradientEx action.
             It is used in various exporters/importers to have direct access to the gradient before it
             is rendered by VCL (and thus fragmented to polygon color actions and others). On that base, e.g.
-            the Metafile to SdrObject import creates it's gradient objects.
+            the Metafile to SdrObject import creates its gradient objects.
             Best (and safest) way to support it here is to use PRIMITIVE2D_ID_POLYPOLYGONGRADIENTPRIMITIVE2D,
             map it back to the corresponding tools tools::PolyPolygon and the Gradient and just call
             OutputDevice::DrawGradient which creates the necessary compatible actions.
@@ -669,7 +668,7 @@ namespace drawinglayer
             - TextHierarchyParagraphPrimitive2D: Encapsulates single paragraph
             - TextHierarchyBlockPrimitive2D: encapsulates object texts (only one ATM)
             Those are now supported in hierarchy. This means the MetaFile renderer will support them
-            by using them, reculrively using their content and adding MetaFile comments as needed.
+            by using them, recursively using their content and adding MetaFile comments as needed.
             This also means that when another text layouter will be used it will be necessary to
             create/support the same HierarchyPrimitives to support users.
             To transport the information using this hierarchy is best suited to all future needs;
@@ -745,12 +744,9 @@ namespace drawinglayer
               as intended, the original file is exported. Works, Done.
 
 
-
-
             To be done:
 
             - Maybe there are more places to take care of for vcl::PDFExtOutDevData!
-
 
 
         ****************************************************************************************************/
@@ -912,9 +908,9 @@ namespace drawinglayer
                                     (sal_Int32)ceil(aRangeLogic.getMaxX()), (sal_Int32)ceil(aRangeLogic.getMaxY()));
                                 pPDFControl->Location = aRectLogic;
 
-                                Size aFontSize(pPDFControl->TextFont.GetSize());
+                                Size aFontSize(pPDFControl->TextFont.GetFontSize());
                                 aFontSize = OutputDevice::LogicToLogic(aFontSize, MapMode(MAP_POINT), mpOutputDevice->GetMapMode());
-                                pPDFControl->TextFont.SetSize(aFontSize);
+                                pPDFControl->TextFont.SetFontSize(aFontSize);
 
                                 mpPDFExtOutDevData->BeginStructureElement(vcl::PDFWriter::Form);
                                 mpPDFExtOutDevData->CreateControl(*pPDFControl.get());
@@ -999,8 +995,7 @@ namespace drawinglayer
                         case drawinglayer::primitive2d::FIELD_TYPE_URL :
                         {
                             const OUString& rURL = rFieldPrimitive.getString();
-                            const OUString aOldString(rURL);
-                            mpMetaFile->AddAction(new MetaCommentAction(aCommentStringCommon, 0, reinterpret_cast< const sal_uInt8* >(aOldString.getStr()), 2 * aOldString.getLength()));
+                            mpMetaFile->AddAction(new MetaCommentAction(aCommentStringCommon, 0, reinterpret_cast< const sal_uInt8* >(rURL.getStr()), 2 * rURL.getLength()));
                             break;
                         }
                     }
@@ -1124,7 +1119,7 @@ namespace drawinglayer
 
                             sal_Int32 nDone;
                             sal_Int32 nNextCellBreak(mxBreakIterator->nextCharacters(rTxt, nTextPosition, rLocale, css::i18n::CharacterIteratorMode::SKIPCELL, 0, nDone));
-                            css::i18n::Boundary nNextWordBoundary(mxBreakIterator->getWordBoundary(rTxt, nTextPosition, rLocale, css::i18n::WordType::ANY_WORD, sal_True));
+                            css::i18n::Boundary nNextWordBoundary(mxBreakIterator->getWordBoundary(rTxt, nTextPosition, rLocale, css::i18n::WordType::ANY_WORD, true));
                             sal_Int32 nNextSentenceBreak(mxBreakIterator->endOfSentence(rTxt, nTextPosition, rLocale));
                             const OString aCommentStringA("XTEXT_EOC");
                             const OString aCommentStringB("XTEXT_EOW");
@@ -1141,7 +1136,7 @@ namespace drawinglayer
                                 if(i == nNextWordBoundary.endPos)
                                 {
                                     mpMetaFile->AddAction(new MetaCommentAction(aCommentStringB, i - nTextPosition));
-                                    nNextWordBoundary = mxBreakIterator->getWordBoundary(rTxt, i + 1, rLocale, css::i18n::WordType::ANY_WORD, sal_True);
+                                    nNextWordBoundary = mxBreakIterator->getWordBoundary(rTxt, i + 1, rLocale, css::i18n::WordType::ANY_WORD, true);
                                 }
                                 if(i == nNextSentenceBreak)
                                 {
@@ -1820,7 +1815,7 @@ namespace drawinglayer
                     // - uses DrawTransparent for single PolyPoylgons directly. Can be detected by
                     //   checking the content for single PolyPolygonColorPrimitive2D
                     const primitive2d::UnifiedTransparencePrimitive2D& rUniTransparenceCandidate = static_cast< const primitive2d::UnifiedTransparencePrimitive2D& >(rCandidate);
-                    const primitive2d::Primitive2DContainer rContent = rUniTransparenceCandidate.getChildren();
+                    const primitive2d::Primitive2DContainer& rContent = rUniTransparenceCandidate.getChildren();
 
                     if(!rContent.empty())
                     {

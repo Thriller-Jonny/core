@@ -412,11 +412,11 @@ class SwXFieldMaster::Impl
     : public SwClient
 {
 private:
-    ::osl::Mutex m_Mutex; // just for OInterfaceContainerHelper
+    ::osl::Mutex m_Mutex; // just for OInterfaceContainerHelper2
 
 public:
     uno::WeakReference<uno::XInterface> m_wThis;
-    ::cppu::OInterfaceContainerHelper m_EventListeners;
+    ::comphelper::OInterfaceContainerHelper2 m_EventListeners;
 
     SwDoc*          m_pDoc;
 
@@ -1127,11 +1127,11 @@ class SwXTextField::Impl
     : public SwClient
 {
 private:
-    ::osl::Mutex m_Mutex; // just for OInterfaceContainerHelper
+    ::osl::Mutex m_Mutex; // just for OInterfaceContainerHelper2
 
 public:
     uno::WeakReference<uno::XInterface> m_wThis;
-    ::cppu::OInterfaceContainerHelper m_EventListeners;
+    ::comphelper::OInterfaceContainerHelper2 m_EventListeners;
 
     SwFormatField const*     m_pFormatField;
     SwDoc *             m_pDoc;
@@ -2852,16 +2852,16 @@ sal_Bool SwXTextFieldMasters::hasElements() throw( uno::RuntimeException, std::e
     SolarMutexGuard aGuard;
     if(!IsValid())
         throw uno::RuntimeException();
-    return sal_True;
+    return true;
 }
 
 class SwXTextFieldTypes::Impl
 {
 private:
-    ::osl::Mutex m_Mutex; // just for OInterfaceContainerHelper
+    ::osl::Mutex m_Mutex; // just for OInterfaceContainerHelper2
 
 public:
-    ::cppu::OInterfaceContainerHelper m_RefreshListeners;
+    ::comphelper::OInterfaceContainerHelper2 m_RefreshListeners;
 
     Impl() : m_RefreshListeners(m_Mutex) { }
 };
@@ -2918,7 +2918,7 @@ sal_Bool SwXTextFieldTypes::hasElements() throw( uno::RuntimeException, std::exc
     SolarMutexGuard aGuard;
     if(!IsValid())
         throw uno::RuntimeException();
-    return sal_True; // they always exist
+    return true; // they always exist
 }
 
 void SAL_CALL SwXTextFieldTypes::refresh() throw (uno::RuntimeException, std::exception)
@@ -2929,7 +2929,7 @@ void SAL_CALL SwXTextFieldTypes::refresh() throw (uno::RuntimeException, std::ex
             throw uno::RuntimeException();
         UnoActionContext aContext(GetDoc());
         GetDoc()->getIDocumentStatistics().UpdateDocStat( false, true );
-        GetDoc()->getIDocumentFieldsAccess().UpdateFields(nullptr, false);
+        GetDoc()->getIDocumentFieldsAccess().UpdateFields(false);
     }
     // call refresh listeners (without SolarMutex locked)
     lang::EventObject const event(static_cast< ::cppu::OWeakObject*>(this));
@@ -2960,7 +2960,7 @@ class SwXFieldEnumeration::Impl
 public:
     SwDoc * m_pDoc;
 
-    uno::Sequence< uno::Reference<text::XTextField> > m_Items;
+    std::vector< uno::Reference<text::XTextField> > m_Items;
     sal_Int32       m_nNextIndex;  ///< index of next element to be returned
 
     explicit Impl(SwDoc & rDoc)
@@ -2997,10 +2997,7 @@ SwXFieldEnumeration::SwXFieldEnumeration(SwDoc & rDoc)
     : m_pImpl(new Impl(rDoc))
 {
     // build sequence
-    sal_Int32 nSize = 32;
-    m_pImpl->m_Items.realloc( nSize );
-    uno::Reference< text::XTextField > *pItems = m_pImpl->m_Items.getArray();
-    sal_Int32 nFillPos = 0;
+    m_pImpl->m_Items.clear();
 
     const SwFieldTypes* pFieldTypes = m_pImpl->m_pDoc->getIDocumentFieldsAccess().GetFieldTypes();
     const size_t nCount = pFieldTypes->size();
@@ -3017,16 +3014,9 @@ SwXFieldEnumeration::SwXFieldEnumeration(SwDoc & rDoc)
             bool bSkip = !pTextField ||
                          !pTextField->GetpTextNode()->GetNodes().IsDocNodes();
             if (!bSkip)
-                pItems[ nFillPos++ ] = SwXTextField::CreateXTextField(
-                        m_pImpl->m_pDoc, pCurFieldFormat);
+                m_pImpl->m_Items.push_back( SwXTextField::CreateXTextField(
+                        m_pImpl->m_pDoc, pCurFieldFormat));
             pCurFieldFormat = aIter.Next();
-
-            // enlarge sequence if necessary
-            if (m_pImpl->m_Items.getLength() == nFillPos)
-            {
-                m_pImpl->m_Items.realloc( 2 * m_pImpl->m_Items.getLength() );
-                pItems = m_pImpl->m_Items.getArray();
-            }
         }
     }
     // now handle meta-fields, which are not SwFields
@@ -3034,19 +3024,8 @@ SwXFieldEnumeration::SwXFieldEnumeration(SwDoc & rDoc)
            m_pImpl->m_pDoc->GetMetaFieldManager().getMetaFields() );
     for (size_t i = 0; i < MetaFields.size(); ++i)
     {
-        pItems[ nFillPos ] = MetaFields[i];
-        nFillPos++;
-
-        //FIXME UGLY
-        // enlarge sequence if necessary
-        if (m_pImpl->m_Items.getLength() == nFillPos)
-        {
-            m_pImpl->m_Items.realloc( 2 * m_pImpl->m_Items.getLength() );
-            pItems = m_pImpl->m_Items.getArray();
-        }
+        m_pImpl->m_Items.push_back( MetaFields[i] );
     }
-    // resize sequence to actual used size
-    m_pImpl->m_Items.realloc( nFillPos );
 }
 
 SwXFieldEnumeration::~SwXFieldEnumeration()
@@ -3058,7 +3037,7 @@ throw (uno::RuntimeException, std::exception)
 {
     SolarMutexGuard aGuard;
 
-    return m_pImpl->m_nNextIndex < m_pImpl->m_Items.getLength();
+    return m_pImpl->m_nNextIndex < (sal_Int32)m_pImpl->m_Items.size();
 }
 
 uno::Any SAL_CALL SwXFieldEnumeration::nextElement()
@@ -3067,7 +3046,7 @@ throw (container::NoSuchElementException, lang::WrappedTargetException,
 {
     SolarMutexGuard aGuard;
 
-    if (!(m_pImpl->m_nNextIndex < m_pImpl->m_Items.getLength()))
+    if (!(m_pImpl->m_nNextIndex < (sal_Int32)m_pImpl->m_Items.size()))
         throw container::NoSuchElementException(
             "SwXFieldEnumeration::nextElement",
             css::uno::Reference<css::uno::XInterface>());
@@ -3077,7 +3056,7 @@ throw (container::NoSuchElementException, lang::WrappedTargetException,
     (void)pItems;
 #endif
     uno::Reference< text::XTextField >  &rxField =
-        m_pImpl->m_Items.getArray()[ m_pImpl->m_nNextIndex++ ];
+        m_pImpl->m_Items[ m_pImpl->m_nNextIndex++ ];
     uno::Any aRet;
     aRet <<= rxField;
     rxField = nullptr;  // free memory for item that is not longer used

@@ -35,9 +35,9 @@ ScCondFormatManagerWindow::ScCondFormatManagerWindow(SvSimpleTableContainer& rPa
 
 OUString ScCondFormatManagerWindow::createEntryString(const ScConditionalFormat& rFormat)
 {
-    ScRangeList aRange = rFormat.GetRange();
+    const ScRangeList& aRange = rFormat.GetRange();
     OUString aStr;
-    aRange.Format(aStr, SCA_VALID, mpDoc, mpDoc->GetAddressConvention());
+    aRange.Format(aStr, ScRefFlags::VALID, mpDoc, mpDoc->GetAddressConvention());
     aStr += "\t";
     aStr += ScCondFormatHelper::GetExpression(rFormat, aRange.GetTopLeftCorner());
     return aStr;
@@ -146,7 +146,6 @@ ScConditionalFormatList* ScCondFormatManagerDlg::GetConditionalFormatList()
     return pList;
 }
 
-// ---------------------------------------------------------------
 // Get the current conditional format selected.
 //
 ScConditionalFormat* ScCondFormatManagerDlg::GetCondFormatSelected()

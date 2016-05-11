@@ -20,7 +20,6 @@
 #define INCLUDED_CUI_SOURCE_INC_NUMFMT_HXX
 
 
-
 #include <rtl/ustring.hxx>
 #include <sfx2/tabdlg.hxx>
 #include <svx/langbox.hxx>
@@ -34,11 +33,9 @@
 #include <vcl/window.hxx>
 
 
-
 class SvxNumberFormatShell;
 class SvxNumberInfoItem;
 class vector;
-
 
 
 class SvxNumberPreview : public vcl::Window
@@ -60,7 +57,6 @@ public:
 
     void            NotifyChange( const OUString& rPrevStr, const Color* pColor = nullptr );
 };
-
 
 
 class SvxNumberFormatTabPage : public SfxTabPage
@@ -109,6 +105,7 @@ private:
     VclPtr<FixedText>              m_pFtLeadZeroes;
     VclPtr<NumericField>           m_pEdLeadZeroes;
     VclPtr<CheckBox>               m_pBtnThousand;
+    VclPtr<CheckBox>               m_pBtnEngineering;
 
     VclPtr<VclContainer>           m_pFormatCodeFrame;
     VclPtr<Edit>                   m_pEdFormat;
@@ -131,8 +128,6 @@ private:
     short                   nFixedCategory;
 
     OUString sAutomaticEntry;
-    OUString sThousandSeparator;
-    OUString sEngineeringNotation;
 
     VclPtr<vcl::Window>            pLastActivWindow;
 
@@ -141,7 +136,7 @@ private:
     void    FillFormatListBox_Impl( std::vector<OUString>& rEntries );
     void    UpdateOptions_Impl( bool bCheckCatChange );
     void    UpdateFormatListBox_Impl( bool bCat, bool bUpdateEdit );
-    void    UpdateThousandEngineeringText();
+    void    UpdateThousandEngineeringCheckBox();
     void    Obstructing();
     void    EnableBySourceFormat_Impl();
     void    SetCategory( sal_uInt16 nPos );

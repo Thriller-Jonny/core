@@ -21,9 +21,7 @@
 #include <drawinglayer/primitive3d/drawinglayer_primitivetypes3d.hxx>
 
 
-
 using namespace com::sun::star;
-
 
 
 namespace drawinglayer
@@ -52,7 +50,7 @@ namespace drawinglayer
             return false;
         }
 
-        /// default: just return children, so all renderers not supporting group will use it's content
+        /// default: just return children, so all renderers not supporting group will use its content
         Primitive3DContainer GroupPrimitive3D::get3DDecomposition(const geometry::ViewInformation3D& /*rViewInformation*/) const
         {
             return getChildren();

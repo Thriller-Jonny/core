@@ -73,7 +73,6 @@
 // e.g.  the first cell, or when being in read-only mode
 
 using namespace ::com::sun::star;
-using ::com::sun::star::uno::Sequence;
 using ::com::sun::star::uno::Reference;
 
 using namespace ::svt;
@@ -712,18 +711,14 @@ void DataBrowser::Resize()
     SetUpdateMode( bLastUpdateMode );
 }
 
-bool DataBrowser::SetReadOnly( bool bNewState )
+void DataBrowser::SetReadOnly( bool bNewState )
 {
-    bool bResult = m_bIsReadOnly;
-
     if( m_bIsReadOnly != bNewState )
     {
         m_bIsReadOnly = bNewState;
         Invalidate();
         DeactivateCell();
     }
-
-    return bResult;
 }
 
 void DataBrowser::SetClean()
@@ -1303,7 +1298,7 @@ IMPL_LINK_TYPED( DataBrowser, SeriesHeaderGotFocus, Control&, rControl, void )
         GoToCell( 0, 0 );
     else
     {
-        MakeFieldVisible( GetCurRow(), static_cast< sal_uInt16 >( pEdit->getStartColumn()), true /* bComplete */ );
+        MakeFieldVisible( GetCurRow(), static_cast< sal_uInt16 >( pEdit->getStartColumn()) );
         ActivateCell();
         m_aCursorMovedHdlLink.Call( this );
     }

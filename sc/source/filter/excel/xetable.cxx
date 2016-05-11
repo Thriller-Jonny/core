@@ -724,18 +724,21 @@ void XclExpLabelCell::Init( const XclExpRoot& rRoot,
     mnSstIndex = 0;
 
     const XclFormatRunVec& rFormats = mxText->GetFormats();
-    // Create the cell format and remove formatting of the leading run
-    // if the entire string is equally formatted
+    // remove formatting of the leading run if the entire string
+    // is equally formatted
+    sal_uInt16 nXclFont = EXC_FONT_NOTFOUND;
     if( rFormats.size() == 1 )
-    {
-        sal_uInt16 nXclFont = mxText->RemoveLeadingFont();
-        if( GetXFId() == EXC_XFID_NOTFOUND )
-        {
-            OSL_ENSURE( nXclFont != EXC_FONT_NOTFOUND, "XclExpLabelCell::Init - leading font not found" );
-            bool bForceLineBreak = mxText->IsWrapped();
-            SetXFId( rRoot.GetXFBuffer().InsertWithFont( pPattern, ApiScriptType::WEAK, nXclFont, bForceLineBreak ) );
-        }
-    }
+        nXclFont = mxText->RemoveLeadingFont();
+    else
+        nXclFont = mxText->GetLeadingFont();
+
+   // create cell format
+   if( GetXFId() == EXC_XFID_NOTFOUND )
+   {
+       OSL_ENSURE( nXclFont != EXC_FONT_NOTFOUND, "XclExpLabelCell::Init - leading font not found" );
+       bool bForceLineBreak = mxText->IsWrapped();
+       SetXFId( rRoot.GetXFBuffer().InsertWithFont( pPattern, ApiScriptType::WEAK, nXclFont, bForceLineBreak ) );
+   }
 
     // get auto-wrap attribute from cell format
     const XclExpXF* pXF = rRoot.GetXFBuffer().GetXFById( GetXFId() );
@@ -1598,10 +1601,9 @@ XclExpColinfo::XclExpColinfo( const XclExpRoot& rRoot,
     ::insert_value( mnFlags, rOutlineBfr.GetLevel(), 8, 3 );
 }
 
-sal_uInt16 XclExpColinfo::ConvertXFIndexes()
+void XclExpColinfo::ConvertXFIndexes()
 {
     maXFId.ConvertXFIndex( GetRoot() );
-    return maXFId.mnXFIndex;
 }
 
 bool XclExpColinfo::IsDefault( const XclExpDefcolwidth& rDefColWidth ) const
@@ -1861,7 +1863,7 @@ void XclExpRow::Finalize( const ScfUInt16Vec& rColXFIndexes, bool bProgress )
 
     // *** Fill gaps with BLANK/MULBLANK cell records *** ---------------------
 
-    /*  This is needed because nonexistant cells in Calc are not formatted at all,
+    /*  This is needed because nonexistent cells in Calc are not formatted at all,
         but in Excel they would have the column default format. Blank cells that
         are equal to the respective column default are removed later in this function. */
     if( !mbAlwaysEmpty )
@@ -2116,8 +2118,8 @@ public:
     void     push_back( XclExpRow *pRow ) { maRows.push_back( pRow ); }
     virtual void doWork() override
     {
-        for (size_t i = 0; i < maRows.size(); i++ )
-            maRows[ i ]->Finalize( mrColXFIndexes, mbProgress );
+        for (XclExpRow* p : maRows)
+            p->Finalize( mrColXFIndexes, mbProgress );
     }
 };
 
@@ -2144,20 +2146,20 @@ void XclExpRowBuffer::Finalize( XclExpDefaultRowData& rDefRowData, const ScfUInt
     else
     {
         comphelper::ThreadPool &rPool = comphelper::ThreadPool::getSharedOptimalPool();
-        std::vector<RowFinalizeTask*> pTasks(nThreads, nullptr);
+        std::vector<RowFinalizeTask*> aTasks(nThreads, nullptr);
         for ( size_t i = 0; i < nThreads; i++ )
-            pTasks[ i ] = new RowFinalizeTask( rColXFIndexes, i == 0 );
+            aTasks[ i ] = new RowFinalizeTask( rColXFIndexes, i == 0 );
 
         RowMap::iterator itr, itrBeg = maRowMap.begin(), itrEnd = maRowMap.end();
         size_t nIdx = 0;
         for ( itr = itrBeg; itr != itrEnd; ++itr, ++nIdx )
-            pTasks[ nIdx % nThreads ]->push_back( itr->second.get() );
+            aTasks[ nIdx % nThreads ]->push_back( itr->second.get() );
 
         for ( size_t i = 1; i < nThreads; i++ )
-            rPool.pushTask( pTasks[ i ] );
+            rPool.pushTask( aTasks[ i ] );
 
         // Progress bar updates must be synchronous to avoid deadlock
-        pTasks[0]->doWork();
+        aTasks[0]->doWork();
 
         rPool.waitUntilEmpty();
     }
@@ -2193,7 +2195,7 @@ void XclExpRowBuffer::Finalize( XclExpDefaultRowData& rDefRowData, const ScfUInt
             if ( pPrev->IsDefaultable())
             {
                 // if the previous row we processed is not
-                // defaultable then afaict the rows inbetween are
+                // defaultable then afaict the rows in between are
                 // not used ( and not repeatable )
                 sal_uInt32 nRpt =  rRow->GetXclRow() - pPrev->GetXclRow();
                 if ( nRpt > 1 )
@@ -2502,7 +2504,7 @@ XclExpCellTable::XclExpCellTable( const XclExpRoot& rRoot ) :
 
             default:
                 OSL_FAIL( "XclExpCellTable::XclExpCellTable - unknown cell type" );
-                // run-through!
+                SAL_FALLTHROUGH;
             case CELLTYPE_NONE:
             {
                 xCell.reset( new XclExpBlankCell(

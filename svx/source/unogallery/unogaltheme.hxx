@@ -35,9 +35,6 @@ namespace unogallery { class GalleryItem; }
 namespace unogallery {
 
 
-// - GalleryTheme -
-
-
 class GalleryTheme : public ::cppu::WeakImplHelper<
                                                         css::gallery::XGalleryTheme,
                                                         css::lang::XServiceInfo >,

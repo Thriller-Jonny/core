@@ -29,6 +29,7 @@
 #include <oox/helper/propertyset.hxx>
 #include <oox/core/xmlfilterbase.hxx>
 #include <oox/token/properties.hxx>
+#include <oox/token/tokens.hxx>
 #include "biffinputstream.hxx"
 #include "unitconverter.hxx"
 
@@ -186,6 +187,7 @@ void WorkbookSettings::finalizeImport()
         case FILTER_BIFF:
             aPropSet.setProperty( PROP_IgnoreCase,          true );     // always in Excel
             aPropSet.setProperty( PROP_RegularExpressions,  false );    // not supported in Excel
+            aPropSet.setProperty( PROP_Wildcards,           true );     // always in Excel
         break;
         case FILTER_UNKNOWN:
         break;

@@ -55,15 +55,15 @@ protected:
         const OString &rCloseTag
     )=0;
 
-    OString GetGID() { return sGID; }
+    const OString& GetGID() { return sGID; }
 
 public:
     XRMResParser();
     virtual ~XRMResParser();
 
-    int Execute( int nToken, char * pToken );
+    void Execute( int nToken, char * pToken );
 
-    void SetError( bool bErr = true ) { bError = bErr; }
+    void SetError() { bError = true; }
     bool GetError() { return bError; }
 };
 

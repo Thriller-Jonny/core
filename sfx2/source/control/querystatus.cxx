@@ -19,7 +19,6 @@
 
 #include <sal/config.h>
 
-#include <boost/noncopyable.hpp>
 #include <sfx2/querystatus.hxx>
 #include <svl/poolitem.hxx>
 #include <svl/eitem.hxx>
@@ -46,13 +45,14 @@ using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::util;
 
 class SfxQueryStatus_Impl:
-    public cppu::WeakImplHelper<css::frame::XStatusListener>,
-    private boost::noncopyable
+    public cppu::WeakImplHelper<css::frame::XStatusListener>
 {
     public:
 
         SfxQueryStatus_Impl( const css::uno::Reference< css::frame::XDispatchProvider >& rDispatchProvider, sal_uInt16 nSlotId, const OUString& aCommand );
         virtual ~SfxQueryStatus_Impl();
+        SfxQueryStatus_Impl(const SfxQueryStatus_Impl&) = delete;
+        SfxQueryStatus_Impl& operator=(const SfxQueryStatus_Impl&) = delete;
 
         // Query method
         SfxItemState QueryState( SfxPoolItem*& pPoolItem );
@@ -109,40 +109,40 @@ throw( RuntimeException, std::exception )
     if ( rEvent.IsEnabled )
     {
         m_eState = SfxItemState::DEFAULT;
-        css::uno::Type pType = rEvent.State.getValueType();
+        css::uno::Type aType = rEvent.State.getValueType();
 
-        if ( pType == cppu::UnoType<bool>::get() )
+        if ( aType == cppu::UnoType<bool>::get() )
         {
             bool bTemp = false;
             rEvent.State >>= bTemp ;
             m_pItem = new SfxBoolItem( m_nSlotID, bTemp );
         }
-        else if ( pType == ::cppu::UnoType< ::cppu::UnoUnsignedShortType >::get() )
+        else if ( aType == ::cppu::UnoType< ::cppu::UnoUnsignedShortType >::get() )
         {
             sal_uInt16 nTemp = 0;
             rEvent.State >>= nTemp ;
             m_pItem = new SfxUInt16Item( m_nSlotID, nTemp );
         }
-        else if ( pType == cppu::UnoType<sal_uInt32>::get() )
+        else if ( aType == cppu::UnoType<sal_uInt32>::get() )
         {
             sal_uInt32 nTemp = 0;
             rEvent.State >>= nTemp ;
             m_pItem = new SfxUInt32Item( m_nSlotID, nTemp );
         }
-        else if ( pType == cppu::UnoType<OUString>::get() )
+        else if ( aType == cppu::UnoType<OUString>::get() )
         {
             OUString sTemp ;
             rEvent.State >>= sTemp ;
             m_pItem = new SfxStringItem( m_nSlotID, sTemp );
         }
-        else if ( pType == cppu::UnoType< css::frame::status::ItemStatus>::get() )
+        else if ( aType == cppu::UnoType< css::frame::status::ItemStatus>::get() )
         {
             ItemStatus aItemStatus;
             rEvent.State >>= aItemStatus;
             m_eState = (SfxItemState) aItemStatus.State;
             m_pItem = new SfxVoidItem( m_nSlotID );
         }
-        else if ( pType == cppu::UnoType< css::frame::status::Visibility>::get() )
+        else if ( aType == cppu::UnoType< css::frame::status::Visibility>::get() )
         {
             Visibility aVisibilityStatus;
             rEvent.State >>= aVisibilityStatus;
@@ -202,7 +202,6 @@ SfxItemState SfxQueryStatus_Impl::QueryState( SfxPoolItem*& rpPoolItem )
     rpPoolItem = m_pItem;
     return m_eState;
 }
-
 
 
 SfxQueryStatus::SfxQueryStatus( const Reference< XDispatchProvider >& rDispatchProvider, sal_uInt16 nSlotId, const OUString& rCommand )

@@ -9,10 +9,8 @@
 
 #include <ctype.h>
 
-#include <com/sun/star/uno/Any.hxx>
 #include <com/sun/star/uno/Sequence.hxx>
 #include <com/sun/star/lang/Locale.hpp>
-#include <com/sun/star/i18n/LocaleDataItem.hpp>
 #include <osl/diagnose.h>
 
 #include "formulaopt.hxx"
@@ -23,7 +21,6 @@
 using namespace utl;
 using namespace com::sun::star::uno;
 namespace lang = ::com::sun::star::lang;
-using ::com::sun::star::i18n::LocaleDataItem;
 
 
 ScFormulaOptions::ScFormulaOptions()

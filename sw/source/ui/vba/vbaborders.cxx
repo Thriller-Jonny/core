@@ -46,8 +46,7 @@ class SwVbaBorder : public SwVbaBorder_Base
 private:
     uno::Reference< beans::XPropertySet > m_xProps;
     sal_Int32 m_LineType;
-    VbaPalette m_Palette;
-    bool setBorderLine( table::BorderLine& rBorderLine )
+    void setBorderLine( table::BorderLine& rBorderLine )
     {
         table::TableBorder aTableBorder;
         m_xProps->getPropertyValue( "TableBorder" ) >>= aTableBorder;
@@ -55,28 +54,28 @@ private:
         switch ( m_LineType )
         {
             case word::WdBorderType::wdBorderLeft:
-                aTableBorder.IsLeftLineValid = sal_True;
+                aTableBorder.IsLeftLineValid = true;
                 aTableBorder.LeftLine= rBorderLine;
                 break;
             case word::WdBorderType::wdBorderTop:
-                aTableBorder.IsTopLineValid = sal_True;
+                aTableBorder.IsTopLineValid = true;
                 aTableBorder.TopLine = rBorderLine;
                 break;
 
             case word::WdBorderType::wdBorderBottom:
-                aTableBorder.IsBottomLineValid = sal_True;
+                aTableBorder.IsBottomLineValid = true;
                 aTableBorder.BottomLine = rBorderLine;
                 break;
             case word::WdBorderType::wdBorderRight:
-                aTableBorder.IsRightLineValid = sal_True;
+                aTableBorder.IsRightLineValid = true;
                 aTableBorder.RightLine = rBorderLine;
                 break;
             case word::WdBorderType::wdBorderVertical:
-                aTableBorder.IsVerticalLineValid = sal_True;
+                aTableBorder.IsVerticalLineValid = true;
                 aTableBorder.VerticalLine = rBorderLine;
                 break;
             case word::WdBorderType::wdBorderHorizontal:
-                aTableBorder.IsHorizontalLineValid = sal_True;
+                aTableBorder.IsHorizontalLineValid = true;
                 aTableBorder.HorizontalLine = rBorderLine;
                 break;
             case word::WdBorderType::wdBorderDiagonalDown:
@@ -85,10 +84,9 @@ private:
                 // nice to investigate what we can do here
                 break;
             default:
-                    return false;
+                return;
         }
         m_xProps->setPropertyValue( "TableBorder", uno::makeAny(aTableBorder) );
-        return true;
     }
 
     bool getBorderLine( table::BorderLine& rBorderLine )
@@ -150,7 +148,7 @@ protected:
         return aServiceNames;
     }
 public:
-    SwVbaBorder( const uno::Reference< beans::XPropertySet > & xProps, const uno::Reference< uno::XComponentContext >& xContext, sal_Int32 lineType, VbaPalette& rPalette) : SwVbaBorder_Base( uno::Reference< XHelperInterface >( xProps, uno::UNO_QUERY ), xContext ), m_xProps( xProps ), m_LineType( lineType ), m_Palette( rPalette ) {}
+    SwVbaBorder( const uno::Reference< beans::XPropertySet > & xProps, const uno::Reference< uno::XComponentContext >& xContext, sal_Int32 lineType ) : SwVbaBorder_Base( uno::Reference< XHelperInterface >( xProps, uno::UNO_QUERY ), xContext ), m_xProps( xProps ), m_LineType( lineType ) {}
 
     uno::Any SAL_CALL getLineStyle() throw (uno::RuntimeException, std::exception) override
     {
@@ -264,7 +262,7 @@ public:
         if ( nIndex >= 0 && nIndex < getCount() )
         {
             uno::Reference< beans::XPropertySet > xProps( m_xRange, uno::UNO_QUERY_THROW );
-            return uno::makeAny( uno::Reference< word::XBorder >( new SwVbaBorder( xProps, m_xContext, supportedIndexTable[ nIndex ], m_Palette )) );
+            return uno::makeAny( uno::Reference< word::XBorder >( new SwVbaBorder( xProps, m_xContext, supportedIndexTable[ nIndex ] )) );
         }
         throw lang::IndexOutOfBoundsException();
     }
@@ -274,7 +272,7 @@ public:
     }
     virtual sal_Bool SAL_CALL hasElements(  ) throw (uno::RuntimeException, std::exception) override
     {
-        return sal_True;
+        return true;
     }
 };
 
@@ -336,7 +334,7 @@ SwVbaBorders::getItemByIntIndex( const sal_Int32 nIndex )  throw (uno::RuntimeEx
 sal_Bool SAL_CALL SwVbaBorders::getShadow() throw (uno::RuntimeException, std::exception)
 {
     // always return False for table border in MS Word
-    return sal_False;
+    return false;
 }
 
 void SAL_CALL SwVbaBorders::setShadow( sal_Bool /*_shadow*/ ) throw (uno::RuntimeException, std::exception)

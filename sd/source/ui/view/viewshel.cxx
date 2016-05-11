@@ -65,6 +65,7 @@
 #include <svx/fontworkbar.hxx>
 #include <svx/svdoutl.hxx>
 #include <tools/diagnose_ex.h>
+#include <comphelper/lok.hxx>
 
 #include <svl/slstitm.hxx>
 #include <sfx2/request.hxx>
@@ -134,9 +135,9 @@ SfxViewFrame* ViewShell::GetViewFrame() const
 
 /// declare SFX-Slotmap and standard interface
 
-ViewShell::ViewShell( SfxViewFrame*, vcl::Window* pParentWindow, ViewShellBase& rViewShellBase, bool bAllowCenter)
+ViewShell::ViewShell( SfxViewFrame*, vcl::Window* pParentWindow, ViewShellBase& rViewShellBase)
 :   SfxShell(&rViewShellBase)
-,   mbCenterAllowed(bAllowCenter)
+,   mbCenterAllowed(true)
 ,   mpParentWindow(pParentWindow)
 {
     construct();
@@ -315,11 +316,10 @@ void ViewShell::Activate(bool bIsMDIActivate)
         // thus, the Navigator will also get a current status
         SfxBoolItem aItem( SID_NAVIGATOR_INIT, true );
         if (GetDispatcher() != nullptr)
-            GetDispatcher()->Execute(
+            GetDispatcher()->ExecuteList(
                 SID_NAVIGATOR_INIT,
                 SfxCallMode::ASYNCHRON | SfxCallMode::RECORD,
-                &aItem,
-                0L);
+                { &aItem });
 
         SfxViewShell* pViewShell = GetViewShell();
         OSL_ASSERT (pViewShell!=nullptr);
@@ -500,7 +500,7 @@ void ViewShell::MouseButtonDown(const MouseEvent& rMEvt, ::sd::Window* pWin)
 void ViewShell::LogicMouseButtonDown(const MouseEvent& rMouseEvent)
 {
     // When we're not doing tiled rendering, then positions must be passed as pixels.
-    assert(GetDoc()->isTiledRendering());
+    assert(comphelper::LibreOfficeKit::isActive());
 
     Point aPoint = mpActiveWindow->GetPointerPosPixel();
     mpActiveWindow->SetLastMousePos(rMouseEvent.GetPosPixel());
@@ -513,7 +513,7 @@ void ViewShell::LogicMouseButtonDown(const MouseEvent& rMouseEvent)
 void ViewShell::LogicMouseButtonUp(const MouseEvent& rMouseEvent)
 {
     // When we're not doing tiled rendering, then positions must be passed as pixels.
-    assert(GetDoc()->isTiledRendering());
+    assert(comphelper::LibreOfficeKit::isActive());
 
     Point aPoint = mpActiveWindow->GetPointerPosPixel();
     mpActiveWindow->SetLastMousePos(rMouseEvent.GetPosPixel());
@@ -526,7 +526,7 @@ void ViewShell::LogicMouseButtonUp(const MouseEvent& rMouseEvent)
 void ViewShell::LogicMouseMove(const MouseEvent& rMouseEvent)
 {
     // When we're not doing tiled rendering, then positions must be passed as pixels.
-    assert(GetDoc()->isTiledRendering());
+    assert(comphelper::LibreOfficeKit::isActive());
 
     Point aPoint = mpActiveWindow->GetPointerPosPixel();
     mpActiveWindow->SetLastMousePos(rMouseEvent.GetPosPixel());
@@ -771,7 +771,7 @@ bool ViewShell::HandleScrollCommand(const CommandEvent& rCEvt, ::sd::Window* pWi
                     break;
                 }
             }
-            // fall through when not running slideshow
+            SAL_FALLTHROUGH;
         case CommandEventId::StartAutoScroll:
         case CommandEventId::AutoScroll:
         {
@@ -795,7 +795,7 @@ bool ViewShell::HandleScrollCommand(const CommandEvent& rCEvt, ::sd::Window* pWi
                         SetZoom( nNewZoom );
                         // Keep mouse at same doc point before zoom
                         Point aNewMousePos = GetActiveWindow()->PixelToLogic(rCEvt.GetMousePosPixel());
-                        SetWinViewPos(GetWinViewPos() - (aNewMousePos - aOldMousePos), true);
+                        SetWinViewPos(GetWinViewPos() - (aNewMousePos - aOldMousePos));
 
                         Invalidate( SID_ATTR_ZOOM );
                         Invalidate( SID_ATTR_ZOOMSLIDER );
@@ -848,7 +848,7 @@ void ViewShell::SetupRulers()
         }
         if ( mpHorizontalRuler.get() == nullptr )
         {
-            mpHorizontalRuler.reset(CreateHRuler(GetActiveWindow(), true));
+            mpHorizontalRuler.reset(CreateHRuler(GetActiveWindow()));
             if ( mpHorizontalRuler.get() != nullptr )
             {
                 mpHorizontalRuler->SetWinPos(nHRulerOfs);
@@ -1539,7 +1539,7 @@ bool ViewShell::RelocateToParentWindow (vcl::Window* pParentWindow)
     return true;
 }
 
-void ViewShell::SwitchViewFireFocus(css::uno::Reference< css::accessibility::XAccessible > xAcc )
+void ViewShell::SwitchViewFireFocus(const css::uno::Reference< css::accessibility::XAccessible >& xAcc )
 {
     if (xAcc.get())
     {

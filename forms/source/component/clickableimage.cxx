@@ -178,7 +178,7 @@ namespace frm
         bool bCancelled = false;
         EventObject aEvent( static_cast< XWeak* >( this ) );
 
-        ::cppu::OInterfaceIteratorHelper aIter( m_aApproveActionListeners );
+        ::comphelper::OInterfaceIteratorHelper2 aIter( m_aApproveActionListeners );
         while( !bCancelled && aIter.hasMoreElements() )
         {
             // Every approveAction method must be thread-safe!
@@ -346,7 +346,6 @@ namespace frm
     }
 
 
-
     void SAL_CALL OClickableImageBaseControl::addSubmissionVetoListener( const Reference< submission::XSubmissionVetoListener >& listener ) throw (NoSupportException, RuntimeException, std::exception)
     {
         m_aSubmissionVetoListeners.addInterface( listener );
@@ -449,7 +448,6 @@ namespace frm
     }
 
 
-
     OClickableImageBaseModel::OClickableImageBaseModel( const Reference< XComponentContext >& _rxFactory, const OUString& _rUnoControlModelTypeName,
             const OUString& rDefault )
         :OControlModel( _rxFactory, _rUnoControlModelTypeName, rDefault )
@@ -493,7 +491,7 @@ namespace frm
             // simulate a propertyChanged event for the ImageURL
             Any aImageURL;
             getFastPropertyValue( aImageURL, PROPERTY_ID_IMAGE_URL );
-            _propertyChanged( PropertyChangeEvent( *this, PROPERTY_IMAGE_URL, sal_False, PROPERTY_ID_IMAGE_URL, Any( ), aImageURL ) );
+            _propertyChanged( PropertyChangeEvent( *this, PROPERTY_IMAGE_URL, false, PROPERTY_ID_IMAGE_URL, Any( ), aImageURL ) );
         }
         osl_atomic_decrement( &m_refCount );
     }
@@ -747,7 +745,7 @@ namespace frm
             }
 
             // Search for the Object shell by iterating over all Object shells
-            // and comparing their XModel to our´s.
+            // and comparing their XModel to ours.
             // As an optimization, we try the current Object shell first.
             SfxObjectShell *pObjSh = nullptr;
 
@@ -850,7 +848,7 @@ namespace frm
             case PROPERTY_ID_BUTTONTYPE             : return makeAny( FormButtonType_PUSH );
             case PROPERTY_ID_TARGET_URL             :
             case PROPERTY_ID_TARGET_FRAME           : return makeAny( OUString() );
-            case PROPERTY_ID_DISPATCHURLINTERNAL    : return makeAny( sal_False );
+            case PROPERTY_ID_DISPATCHURLINTERNAL    : return makeAny( false );
             default:
                 return OControlModel::getPropertyDefaultByHandle(nHandle);
         }

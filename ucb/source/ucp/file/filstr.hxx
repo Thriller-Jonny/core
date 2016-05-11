@@ -49,7 +49,7 @@ class XStream_impl :  public cppu::WeakImplHelper<
 
     public:
 
-        XStream_impl( shell* pMyShell,const OUString& aUncPath, bool bLock );
+        XStream_impl( const OUString& aUncPath, bool bLock );
 
         /**
          *  Returns an error code as given by filerror.hxx
@@ -153,7 +153,6 @@ class XStream_impl :  public cppu::WeakImplHelper<
                    css::uno::RuntimeException, std::exception) override;
 
 
-
         void SAL_CALL
         flush()
             throw( css::io::NotConnectedException,
@@ -178,10 +177,7 @@ class XStream_impl :  public cppu::WeakImplHelper<
 
         osl::Mutex   m_aMutex;
         bool         m_bInputStreamCalled,m_bOutputStreamCalled;
-
-        shell*       m_pMyShell;
-        css::uno::Reference< css::ucb::XContentProvider > m_xProvider;
-        bool     m_nIsOpen;
+        bool         m_nIsOpen;
 
         ReconnectingFile    m_aFile;
 

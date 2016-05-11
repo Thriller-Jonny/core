@@ -52,7 +52,7 @@ namespace pcr
     //= helper
 
     // small helper to make the "swap" call on an STL container a single-line call, which
-    // in it's canonic form "aFoo.swap( Container() )" doesn't compile with GCC
+    // in its canonic form "aFoo.swap( Container() )" doesn't compile with GCC
     template< class CONTAINER >
     void clearContainer( CONTAINER& _rContainer )
     {
@@ -86,9 +86,6 @@ namespace pcr
         inline StlSyntaxSequence( const ELEMENT* pElements, sal_Int32 len ) : UnoBase( pElements, len ) { }
         explicit inline StlSyntaxSequence( sal_Int32 len ) : UnoBase( len ) { }
 
-        operator const UnoBase&() const { return *this; }
-        operator       UnoBase&()       { return *this; }
-
         typedef const ELEMENT* const_iterator;
         typedef       ELEMENT* iterator;
 
@@ -115,13 +112,13 @@ namespace pcr
     { \
     baseclass::WeakComponentImplHelperBase::dispose(); \
     } \
-    void SAL_CALL classname::addEventListener( const css::uno::Reference< css::lang::XEventListener >& _Listener ) throw (css::uno::RuntimeException, std::exception) \
+    void SAL_CALL classname::addEventListener( const css::uno::Reference< css::lang::XEventListener >& Listener ) throw (css::uno::RuntimeException, std::exception) \
     { \
-        baseclass::WeakComponentImplHelperBase::addEventListener( _Listener ); \
+        baseclass::WeakComponentImplHelperBase::addEventListener( Listener ); \
     } \
-    void SAL_CALL classname::removeEventListener( const css::uno::Reference< css::lang::XEventListener >& _Listener ) throw (css::uno::RuntimeException, std::exception) \
+    void SAL_CALL classname::removeEventListener( const css::uno::Reference< css::lang::XEventListener >& Listener ) throw (css::uno::RuntimeException, std::exception) \
     { \
-        baseclass::WeakComponentImplHelperBase::removeEventListener( _Listener ); \
+        baseclass::WeakComponentImplHelperBase::removeEventListener( Listener ); \
     } \
 
 

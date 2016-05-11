@@ -23,13 +23,9 @@
 #include <windows.h>
 #include <ddeml.h>
 
-#include <boost/noncopyable.hpp>
 #include <rtl/ustring.hxx>
 #include <svl/svdde.hxx>
 #include <vector>
-
-
-// - Conversation -
 
 
 struct Conversation
@@ -39,9 +35,6 @@ struct Conversation
 };
 
 typedef ::std::vector< Conversation* > ConvList;
-
-
-// - DdeInternal -
 
 
 class DdeInternal
@@ -57,9 +50,6 @@ public:
     static DdeTopic*        FindTopic( DdeService&, HSZ );
     static DdeItem*         FindItem( DdeTopic&, HSZ );
 };
-
-
-// - DdeString -
 
 
 class DdeString
@@ -81,9 +71,6 @@ public:
 };
 
 
-// - DdeDataImp -
-
-
 struct DdeDataImp
 {
     HDDEDATA        hData;
@@ -94,7 +81,7 @@ struct DdeDataImp
 
 class DdeConnection;
 
-class DdeInstData : private boost::noncopyable
+class DdeInstData
 {
 public:
     sal_uInt16          nRefCount;
@@ -118,6 +105,8 @@ public:
         , nInstanceCli(0)
     {
     }
+    DdeInstData(const DdeInstData&) = delete;
+    DdeInstData& operator=(const DdeInstData&) = delete;
 };
 
 DdeInstData* ImpGetInstData();

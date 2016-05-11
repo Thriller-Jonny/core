@@ -56,20 +56,20 @@ long SwDecrement( long nA, long nSub )
 
 static SwRectFnCollection aHorizontal = {
     /* fnRectGet      */
-    &SwRect::_Top,
-    &SwRect::_Bottom,
-    &SwRect::_Left,
-    &SwRect::_Right,
-    &SwRect::_Width,
-    &SwRect::_Height,
+    &SwRect::Top_,
+    &SwRect::Bottom_,
+    &SwRect::Left_,
+    &SwRect::Rigth_,
+    &SwRect::Width_,
+    &SwRect::Height_,
     &SwRect::TopLeft,
     /* fnRectSet      */
-    &SwRect::_Top,
-    &SwRect::_Bottom,
-    &SwRect::_Left,
-    &SwRect::_Right,
-    &SwRect::_Width,
-    &SwRect::_Height,
+    &SwRect::Top_,
+    &SwRect::Bottom_,
+    &SwRect::Left_,
+    &SwRect::Rigth_,
+    &SwRect::Width_,
+    &SwRect::Height_,
 
     &SwRect::SubTop,
     &SwRect::AddBottom,
@@ -107,20 +107,20 @@ static SwRectFnCollection aHorizontal = {
 
 static SwRectFnCollection aVertical = {
     /* fnRectGet      */
-    &SwRect::_Right,
-    &SwRect::_Left,
-    &SwRect::_Top,
-    &SwRect::_Bottom,
-    &SwRect::_Height,
-    &SwRect::_Width,
+    &SwRect::Rigth_,
+    &SwRect::Left_,
+    &SwRect::Top_,
+    &SwRect::Bottom_,
+    &SwRect::Height_,
+    &SwRect::Width_,
     &SwRect::TopRight,
     /* fnRectSet      */
-    &SwRect::_Right,
-    &SwRect::_Left,
-    &SwRect::_Top,
-    &SwRect::_Bottom,
-    &SwRect::_Height,
-    &SwRect::_Width,
+    &SwRect::Rigth_,
+    &SwRect::Left_,
+    &SwRect::Top_,
+    &SwRect::Bottom_,
+    &SwRect::Height_,
+    &SwRect::Width_,
 
     &SwRect::AddRight,
     &SwRect::SubLeft,
@@ -158,20 +158,20 @@ static SwRectFnCollection aVertical = {
 
 static SwRectFnCollection aBottomToTop = {
     /* fnRectGet      */
-    &SwRect::_Bottom,
-    &SwRect::_Top,
-    &SwRect::_Left,
-    &SwRect::_Right,
-    &SwRect::_Width,
-    &SwRect::_Height,
+    &SwRect::Bottom_,
+    &SwRect::Top_,
+    &SwRect::Left_,
+    &SwRect::Rigth_,
+    &SwRect::Width_,
+    &SwRect::Height_,
     &SwRect::BottomLeft,
     /* fnRectSet      */
-    &SwRect::_Bottom,
-    &SwRect::_Top,
-    &SwRect::_Left,
-    &SwRect::_Right,
-    &SwRect::_Width,
-    &SwRect::_Height,
+    &SwRect::Bottom_,
+    &SwRect::Top_,
+    &SwRect::Left_,
+    &SwRect::Rigth_,
+    &SwRect::Width_,
+    &SwRect::Height_,
 
     &SwRect::AddBottom,
     &SwRect::SubTop,
@@ -209,20 +209,20 @@ static SwRectFnCollection aBottomToTop = {
 
 static SwRectFnCollection aVerticalRightToLeft = {
     /* fnRectGet      */
-    &SwRect::_Left,
-    &SwRect::_Right,
-    &SwRect::_Top,
-    &SwRect::_Bottom,
-    &SwRect::_Height,
-    &SwRect::_Width,
+    &SwRect::Left_,
+    &SwRect::Rigth_,
+    &SwRect::Top_,
+    &SwRect::Bottom_,
+    &SwRect::Height_,
+    &SwRect::Width_,
     &SwRect::BottomRight,
     /* fnRectSet      */
-    &SwRect::_Left,
-    &SwRect::_Right,
-    &SwRect::_Top,
-    &SwRect::_Bottom,
-    &SwRect::_Height,
-    &SwRect::_Width,
+    &SwRect::Left_,
+    &SwRect::Rigth_,
+    &SwRect::Top_,
+    &SwRect::Bottom_,
+    &SwRect::Height_,
+    &SwRect::Width_,
 
     &SwRect::SubLeft,
     &SwRect::AddRight,
@@ -260,20 +260,20 @@ static SwRectFnCollection aVerticalRightToLeft = {
 
 static SwRectFnCollection aVerticalLeftToRight = {
     /* fnRectGet      */
-    &SwRect::_Left,
-    &SwRect::_Right,
-    &SwRect::_Top,
-    &SwRect::_Bottom,
-    &SwRect::_Height,
-    &SwRect::_Width,
+    &SwRect::Left_,
+    &SwRect::Rigth_,
+    &SwRect::Top_,
+    &SwRect::Bottom_,
+    &SwRect::Height_,
+    &SwRect::Width_,
     &SwRect::TopLeft,
     /* fnRectSet      */
-    &SwRect::_Left,
-    &SwRect::_Right,
-    &SwRect::_Top,
-    &SwRect::_Bottom,
-    &SwRect::_Height,
-    &SwRect::_Width,
+    &SwRect::Left_,
+    &SwRect::Rigth_,
+    &SwRect::Top_,
+    &SwRect::Bottom_,
+    &SwRect::Height_,
+    &SwRect::Width_,
 
     &SwRect::SubLeft,
     &SwRect::AddRight,
@@ -321,7 +321,7 @@ SwRectFn fnRectVL2R = &aVerticalRightToLeft;
 sal_uInt32 SwFrame::mnLastFrameId=0;
 
 
-void _FrameInit()
+void FrameInit()
 {
     SwRootFrame::s_pVout = new SwLayVout();
     SwCache *pNew = new SwCache( 100
@@ -332,7 +332,7 @@ void _FrameInit()
     SwFrame::SetCache( pNew );
 }
 
-void _FrameFinit()
+void FrameFinit()
 {
 #if OSL_DEBUG_LEVEL > 0
     // The cache may only contain null pointers at this time.
@@ -457,7 +457,7 @@ SwRootFrame::SwRootFrame( SwFrameFormat *pFormat, SwViewShell * pSh ) :
     mnPhyPageNums( 0 ),
     mnAccessibleShells( 0 )
 {
-    mnFrameType = FRM_ROOT;
+    mnFrameType = SwFrameType::Root;
     setRootFrame( this );
 }
 
@@ -531,7 +531,7 @@ void SwRootFrame::Init( SwFrameFormat* pFormat )
         pLay = static_cast<SwLayoutFrame*>(pLay->Lower());
 
     SwNodeIndex aTmp( *pDoc->GetNodes().GetEndOfContent().StartOfSectionNode(), 1 );
-    ::_InsertCnt( pLay, pDoc, aTmp.GetIndex(), true );
+    ::InsertCnt_( pLay, pDoc, aTmp.GetIndex(), true );
     //Remove masters that haven't been replaced yet from the list.
     RemoveMasterObjs( mpDrawPage );
     if( rSettingAccess.get(DocumentSettingId::GLOBAL_DOCUMENT) )
@@ -559,7 +559,7 @@ void SwRootFrame::DestroyImpl()
     // Object ownership in writer and esp. in layout are a mess: Before the
     // document/layout split SwDoc and SwRootFrame were essentially one object
     // and magically/uncleanly worked around their common destruction by call
-    // to SwDoc::IsInDtor() -- even from the layout. As of now destuction of
+    // to SwDoc::IsInDtor() -- even from the layout. As of now destruction of
     // the layout proceeds forward through the frames. Since SwTextFootnote::DelFrames
     // also searches backwards to find the master of footnotes, they must be
     // considered to be owned by the SwRootFrame and also be destroyed here,

@@ -26,7 +26,6 @@
 
 #include <com/sun/star/frame/XDesktop.hpp>
 #include <com/sun/star/script/XLibraryContainer.hpp>
-#include <com/sun/star/uno/Reference.h>
 #include <basic/basrdll.hxx>
 #include <officecfg/Office/Common.hxx>
 #include <svl/macitem.hxx>
@@ -88,11 +87,10 @@ using namespace ::com::sun::star::script;
 using ::basic::BasicManagerRepository;
 
 
-sal_uInt16 SfxApplication::SaveBasicAndDialogContainer() const
+void SfxApplication::SaveBasicAndDialogContainer() const
 {
     if ( pAppData_Impl->pBasicManager->isValid() )
         pAppData_Impl->pBasicManager->storeAllLibraries();
-    return 0;
 }
 
 BasicManager* SfxApplication::GetBasicManager()
@@ -102,7 +100,7 @@ BasicManager* SfxApplication::GetBasicManager()
 #else
     if (utl::ConfigManager::IsAvoidConfig())
         return nullptr;
-    return BasicManagerRepository::getApplicationBasicManager( true );
+    return BasicManagerRepository::getApplicationBasicManager();
 #endif
 }
 
@@ -118,7 +116,6 @@ XLibraryContainer * SfxApplication::GetDialogContainer()
     return pAppData_Impl->pBasicManager->getLibraryContainer( SfxBasicManagerHolder::DIALOGS );
 #endif
 }
-
 
 
 XLibraryContainer * SfxApplication::GetBasicContainer()

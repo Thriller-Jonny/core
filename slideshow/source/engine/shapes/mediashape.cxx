@@ -68,7 +68,7 @@ namespace slideshow
             virtual void addViewLayer( const ViewLayerSharedPtr&    rNewLayer,
                                        bool                         bRedrawLayer ) override;
             virtual bool removeViewLayer( const ViewLayerSharedPtr& rNewLayer ) override;
-            virtual bool clearAllViewLayers() override;
+            virtual void clearAllViewLayers() override;
 
 
             // ExternalShapeBase methods
@@ -79,7 +79,7 @@ namespace slideshow
             virtual void implViewsChanged() override;
             virtual bool implStartIntrinsicAnimation() override;
             virtual bool implEndIntrinsicAnimation() override;
-            virtual bool implPauseIntrinsicAnimation() override;
+            virtual void implPauseIntrinsicAnimation() override;
             virtual bool implIsIntrinsicAnimationPlaying() const override;
             virtual void implSetIntrinsicAnimationTime(double) override;
 
@@ -100,7 +100,6 @@ namespace slideshow
         }
 
 
-
         void MediaShape::implViewChanged( const UnoViewSharedPtr& rView )
         {
             const ::basegfx::B2DRectangle& rBounds = getBounds();
@@ -111,7 +110,6 @@ namespace slideshow
         }
 
 
-
         void MediaShape::implViewsChanged()
         {
             const ::basegfx::B2DRectangle& rBounds = getBounds();
@@ -119,7 +117,6 @@ namespace slideshow
             for( const auto& pViewMediaShape : maViewMediaShapes )
                 pViewMediaShape->resize( rBounds );
         }
-
 
 
         void MediaShape::addViewLayer( const ViewLayerSharedPtr& rNewLayer,
@@ -137,7 +134,6 @@ namespace slideshow
             if( bRedrawLayer )
                 maViewMediaShapes.back()->render( getBounds() );
         }
-
 
 
         bool MediaShape::removeViewLayer( const ViewLayerSharedPtr& rLayer )
@@ -170,13 +166,10 @@ namespace slideshow
         }
 
 
-
-        bool MediaShape::clearAllViewLayers()
+        void MediaShape::clearAllViewLayers()
         {
             maViewMediaShapes.clear();
-            return true;
         }
-
 
 
         bool MediaShape::implRender( const ::basegfx::B2DRange& rCurrBounds ) const
@@ -198,7 +191,6 @@ namespace slideshow
         }
 
 
-
         bool MediaShape::implStartIntrinsicAnimation()
         {
             for( const auto& pViewMediaShape : maViewMediaShapes )
@@ -208,7 +200,6 @@ namespace slideshow
 
             return true;
         }
-
 
 
         bool MediaShape::implEndIntrinsicAnimation()
@@ -222,24 +213,19 @@ namespace slideshow
         }
 
 
-
-        bool MediaShape::implPauseIntrinsicAnimation()
+        void MediaShape::implPauseIntrinsicAnimation()
         {
             for( const auto& pViewMediaShape : maViewMediaShapes )
                 pViewMediaShape->pauseMedia();
 
             mbIsPlaying = false;
-
-            return true;
         }
-
 
 
         bool MediaShape::implIsIntrinsicAnimationPlaying() const
         {
             return mbIsPlaying;
         }
-
 
 
         void MediaShape::implSetIntrinsicAnimationTime(double fTime)
@@ -249,13 +235,12 @@ namespace slideshow
         }
 
 
-
         ShapeSharedPtr createMediaShape(
             const uno::Reference< drawing::XShape >& xShape,
             double                                   nPrio,
             const SlideShowContext&                  rContext)
         {
-            boost::shared_ptr< MediaShape > pMediaShape(
+            std::shared_ptr< MediaShape > pMediaShape(
                 new MediaShape(xShape, nPrio, rContext));
 
             return pMediaShape;

@@ -84,11 +84,11 @@ ScServerObject::ScServerObject( ScDocShell* pShell, const OUString& rItem ) :
 
         // For DDE link, we always must parse references using OOO A1 convention.
 
-        if ( aRange.Parse( rItem, &rDoc, FormulaGrammar::CONV_OOO ) & SCA_VALID )
+        if ( aRange.Parse( rItem, &rDoc, FormulaGrammar::CONV_OOO ) & ScRefFlags::VALID )
         {
             // area reference
         }
-        else if ( aRange.aStart.Parse( rItem, &rDoc, FormulaGrammar::CONV_OOO ) & SCA_VALID )
+        else if ( aRange.aStart.Parse( rItem, &rDoc, FormulaGrammar::CONV_OOO ) & ScRefFlags::VALID )
         {
             // cell reference
             aRange.aEnd = aRange.aStart;
@@ -239,8 +239,7 @@ void ScServerObject::Notify( SfxBroadcaster& rBC, const SfxHint& rHint )
         }
         else if (const SfxSimpleHint *pSplHint = dynamic_cast<const SfxSimpleHint*>(&rHint))
         {
-            sal_uLong nId = pSplHint->GetId();
-            if (nId == SFX_HINT_DYING)
+            if (pSplHint->GetId() == SFX_HINT_DYING)
             {
                 //  If the range is being deleted, listening must be restarted
                 //  after the deletion is complete (done in GetData)

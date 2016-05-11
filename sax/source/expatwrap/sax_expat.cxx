@@ -32,6 +32,7 @@
 #include <com/sun/star/io/XSeekable.hpp>
 #include <com/sun/star/lang/WrappedTargetRuntimeException.hpp>
 
+#include <comphelper/attributelist.hxx>
 #include <cppuhelper/weak.hxx>
 #include <cppuhelper/implbase.hxx>
 #include <cppuhelper/supportsservice.hxx>
@@ -47,7 +48,6 @@ using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::xml::sax;
 using namespace ::com::sun::star::io;
 
-#include "attrlistimpl.hxx"
 #include "xml2utf.hxx"
 
 namespace {
@@ -165,7 +165,7 @@ public: // module scope
     css::uno::Reference < XLocator >      rDocumentLocator;
 
 
-    rtl::Reference < sax_expatwrap::AttributeList > rAttrList;
+    rtl::Reference < comphelper::AttributeList > rAttrList;
 
     // External entity stack
     vector<struct Entity>   vecEntity;
@@ -313,7 +313,6 @@ extern "C"
 }
 
 
-
 // LocatorImpl
 
 class LocatorImpl :
@@ -364,8 +363,6 @@ private:
 };
 
 
-
-
 SaxExpatParser::SaxExpatParser(  )
 {
     m_pImpl = new SaxExpatParser_Impl;
@@ -375,7 +372,7 @@ SaxExpatParser::SaxExpatParser(  )
 
     // Performance-improvement; handing out the same object with every call of
     // the startElement callback is allowed (see sax-specification):
-    m_pImpl->rAttrList = new sax_expatwrap::AttributeList;
+    m_pImpl->rAttrList = new comphelper::AttributeList;
 
     m_pImpl->bExceptionWasThrown = false;
     m_pImpl->bRTExceptionWasThrown = false;
@@ -722,7 +719,6 @@ void SaxExpatParser_Impl::parse( )
 }
 
 
-
 // The C-Callbacks
 
 
@@ -735,11 +731,11 @@ void SaxExpatParser_Impl::callbackStartElement( void *pvThis ,
     if( pImpl->rDocumentHandler.is() ) {
 
         int i = 0;
-        pImpl->rAttrList->clear();
+        pImpl->rAttrList->Clear();
 
         while( awAttributes[i] ) {
             assert(awAttributes[i+1]);
-            pImpl->rAttrList->addAttribute(
+            pImpl->rAttrList->AddAttribute(
                 XML_CHAR_TO_OUSTRING( awAttributes[i] ) ,
                 pImpl->sCDATA,  // expat doesn't know types
                 XML_CHAR_TO_OUSTRING( awAttributes[i+1] ) );
@@ -834,7 +830,6 @@ void SaxExpatParser_Impl::callbackNotationDecl(
     }
 
 }
-
 
 
 bool SaxExpatParser_Impl::callbackExternalEntityRef(

@@ -257,10 +257,10 @@ public:
     static OUString CreateShellID( const SfxObjectShell* pShell );
 
     // Document-Shell Iterator
-    static SfxObjectShell*      GetFirst( std::function<bool ( const SfxObjectShell* )> isObjectShell = nullptr,
+    static SfxObjectShell*      GetFirst( const std::function<bool ( const SfxObjectShell* )>& isObjectShell = nullptr,
                                           bool bOnlyVisible = true );
     static SfxObjectShell*      GetNext( const SfxObjectShell& rPrev,
-                                         std::function<bool ( const SfxObjectShell* )> isObjectShell = nullptr,
+                                         const std::function<bool ( const SfxObjectShell* )>& isObjectShell = nullptr,
                                          bool bOnlyVisible = true );
     static SfxObjectShell*      Current();
     static css::uno::Reference< css::uno::XInterface >
@@ -318,7 +318,7 @@ public:
      *
      * @return true if the initialization is successful, false otherwise.
      */
-    bool                        DoInitUnitTest();
+    void                        DoInitUnitTest();
     bool                        DoInitNew( SfxMedium* pMedium=nullptr );
     bool                        DoLoad( SfxMedium* pMedium );
     bool                        DoLoadExternal( SfxMedium* pMed );
@@ -327,7 +327,7 @@ public:
     bool                        DoSaveObjectAs( SfxMedium &rNewStor, bool bCommit );
 
     // TODO/LATER: currently only overridden in Calc, should be made non-virtual
-    virtual bool                DoSaveCompleted( SfxMedium* pNewStor=nullptr );
+    virtual bool                DoSaveCompleted( SfxMedium* pNewStor=nullptr, bool bRegisterRecent=true );
 
     bool                        LoadOwnFormat( SfxMedium& pMedium );
     virtual bool                SaveAsOwnFormat( SfxMedium& pMedium );
@@ -359,7 +359,7 @@ public:
     bool                        SwitchChildrenPersistance(
                                     const css::uno::Reference< css::embed::XStorage >& xStorage,
                                     bool bForceNonModified = false );
-    bool                        SaveCompletedChildren( bool bSuccess );
+    bool                        SaveCompletedChildren();
 
     /** a very special case to insert at a position in Writer from UNO,
         via OwnSubFilterService */
@@ -375,8 +375,7 @@ public:
     SignatureState              GetScriptingSignatureState();
     void                        SignScriptingContent();
 
-    virtual VclPtr<SfxDocumentInfoDialog> CreateDocumentInfoDialog(
-                                        vcl::Window *pParent, const SfxItemSet& );
+    virtual VclPtr<SfxDocumentInfoDialog> CreateDocumentInfoDialog( const SfxItemSet& );
 
     ErrCode                     CallBasic( const OUString& rMacro, const OUString& rBasicName,
                                     SbxArray* pArgs = nullptr, SbxValue* pRet = nullptr );
@@ -408,7 +407,7 @@ public:
         @return
             whether macros from this document should be executed
     */
-    bool                        AdjustMacroMode( const OUString& rScriptType, bool _bSuppressUI = false );
+    bool                        AdjustMacroMode();
 
     SvKeyValueIterator*         GetHeaderAttributes();
     void                        ClearHeaderAttributesForSourceViewHack();
@@ -432,7 +431,7 @@ public:
     sal_uInt32                  GetModifyPasswordHash() const;
     bool                        SetModifyPasswordHash( sal_uInt32 nHash );
 
-    css::uno::Sequence< css::beans::PropertyValue > GetModifyPasswordInfo() const;
+    const css::uno::Sequence< css::beans::PropertyValue >& GetModifyPasswordInfo() const;
     bool                        SetModifyPasswordInfo( const css::uno::Sequence< css::beans::PropertyValue >& aInfo );
 
     static sal_uInt32           HandleFilter( SfxMedium* pMedium, SfxObjectShell* pDoc );
@@ -489,7 +488,7 @@ public:
     OUString                    GetTitle( sal_uInt16 nMaxLen = 0 ) const;
     void                        InvalidateName();  // Re-set to unnamed
 
-#if defined WNT
+#if defined(_WIN32)
     // DDE-Interface
     long                        DdeExecute( const OUString& rCmd );
     virtual bool                DdeGetData( const OUString& rItem,
@@ -541,7 +540,7 @@ public:
     static SfxObjectShell*      CreateObject( const OUString& rServiceName, SfxObjectCreateMode = SfxObjectCreateMode::STANDARD );
     static SfxObjectShell*      CreateObjectByFactoryName( const OUString& rURL, SfxObjectCreateMode = SfxObjectCreateMode::STANDARD );
     static css::uno::Reference< css::lang::XComponent >
-                                CreateAndLoadComponent( const SfxItemSet& rSet, SfxFrame* pFrame = nullptr );
+                                CreateAndLoadComponent( const SfxItemSet& rSet );
     static SfxObjectShell*      GetShellFromComponent( const css::uno::Reference< css::lang::XComponent >& xComp );
     static OUString             GetServiceNameFromFactory( const OUString& rFact );
     bool                        IsInPlaceActive();
@@ -624,7 +623,7 @@ public:
     virtual bool    IsChangeRecording() const;
     virtual bool    HasChangeRecordProtection() const;
     virtual void    SetChangeRecording( bool bActivate );
-    virtual bool    SetProtectionPassword( const OUString &rPassword );
+    virtual void    SetProtectionPassword( const OUString &rPassword );
     virtual bool    GetProtectionHash( /*out*/ css::uno::Sequence< sal_Int8 > &rPasswordHash );
 
     SAL_DLLPRIVATE std::shared_ptr<GDIMetaFile> CreatePreviewMetaFile_Impl( bool bFullContent ) const;
@@ -730,7 +729,6 @@ public:
      * the default behavior and implements LOK calls.
      */
     virtual void libreOfficeKitCallback(int nType, const char* pPayload) const;
-    virtual bool isTiledRendering() const;
 };
 
 #define SFX_GLOBAL_CLASSID \
@@ -755,10 +753,7 @@ public:
     };
 
 
-#ifndef SFX_DECL_OBJECTSHELL_DEFINED
-#define SFX_DECL_OBJECTSHELL_DEFINED
 typedef tools::SvRef<SfxObjectShell> SfxObjectShellRef;
-#endif
 
 class SfxObjectShellLock
 {

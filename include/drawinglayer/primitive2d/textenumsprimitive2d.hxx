@@ -26,7 +26,6 @@
 #include <vcl/vclenum.hxx>
 
 
-
 namespace drawinglayer
 {
     namespace primitive2d
@@ -58,8 +57,8 @@ namespace drawinglayer
         };
 
         /** helper to convert LineStyle */
-        TextLine DRAWINGLAYER_DLLPUBLIC mapFontUnderlineToTextLine(FontUnderline eLineStyle);
-        FontUnderline DRAWINGLAYER_DLLPUBLIC mapTextLineToFontUnderline(TextLine eLineStyle);
+        TextLine DRAWINGLAYER_DLLPUBLIC mapFontLineStyleToTextLine(FontLineStyle eLineStyle);
+        FontLineStyle DRAWINGLAYER_DLLPUBLIC mapTextLineToFontLineStyle(TextLine eLineStyle);
 
         /** FontStrikeout definition */
         enum TextStrikeout
@@ -79,11 +78,11 @@ namespace drawinglayer
         /** TextEmphasisMark definition */
         enum TextEmphasisMark
         {
-            TEXT_EMPHASISMARK_NONE,
-            TEXT_EMPHASISMARK_DOT,
-            TEXT_EMPHASISMARK_CIRCLE,
-            TEXT_EMPHASISMARK_DISC,
-            TEXT_EMPHASISMARK_ACCENT
+            TEXT_FONT_EMPHASIS_MARK_NONE,
+            TEXT_FONT_EMPHASIS_MARK_DOT,
+            TEXT_FONT_EMPHASIS_MARK_CIRCLE,
+            TEXT_FONT_EMPHASIS_MARK_DISC,
+            TEXT_FONT_EMPHASIS_MARK_ACCENT
         };
 
         /** TextRelief definition */
@@ -96,7 +95,6 @@ namespace drawinglayer
 
     } // end of namespace primitive2d
 } // end of namespace drawinglayer
-
 
 
 #endif //INCLUDED_DRAWINGLAYER_PRIMITIVE2D_TEXTENUMSPRIMITIVE2D_HXX

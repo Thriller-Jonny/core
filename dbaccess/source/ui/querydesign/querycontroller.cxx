@@ -138,10 +138,10 @@ extern "C" void SAL_CALL createRegistryInfo_OViewControl()
 namespace dbaui
 {
     using namespace ::connectivity;
-#if OSL_DEBUG_LEVEL > 1
+#if OSL_DEBUG_LEVEL > 0
     namespace
     {
-        void insertParseTree(SvTreeListBox* _pBox,::connectivity::OSQLParseNode* _pNode,SvTreeListEntry* _pParent = NULL)
+        void insertParseTree(SvTreeListBox* _pBox,::connectivity::OSQLParseNode* _pNode,SvTreeListEntry* _pParent = nullptr)
         {
             OUString rString;
             if (!_pNode->isToken())
@@ -166,45 +166,45 @@ namespace dbaui
                 switch (_pNode->getNodeType())
                 {
 
-                case SQL_NODE_KEYWORD:
+                case SQLNodeType::Keyword:
                     {
                         rString += "SQL_KEYWORD:";
                         OString sT = OSQLParser::TokenIDToStr(_pNode->getTokenID());
                         rString += OStringToOUString(sT, RTL_TEXTENCODING_UTF8);
                      break;}
 
-                case SQL_NODE_COMPARISON:
+                case SQLNodeType::Comparison:
                     {
                         rString += "SQL_COMPARISON:" + _pNode->getTokenValue(); // append Nodevalue
                             // and start new line
                         break;}
 
-                case SQL_NODE_NAME:
+                case SQLNodeType::Name:
                     {
                         rString += "SQL_NAME:\"" + _pNode->getTokenValue() + "\"";
                         break;}
 
-                case SQL_NODE_STRING:
+                case SQLNodeType::String:
                     {
                         rString += "SQL_STRING:'" + _pNode->getTokenValue();
                         break;}
 
-                case SQL_NODE_INTNUM:
+                case SQLNodeType::IntNum:
                     {
                         rString += "SQL_INTNUM:" + _pNode->getTokenValue();
                         break;}
 
-                case SQL_NODE_APPROXNUM:
+                case SQLNodeType::ApproxNum:
                     {
                         rString += "SQL_APPROXNUM:" + _pNode->getTokenValue();
                         break;}
 
-                case SQL_NODE_PUNCTUATION:
+                case SQLNodeType::Punctuation:
                     {
                         rString += "SQL_PUNCTUATION:" + _pNode->getTokenValue(); // append Nodevalue
                         break;}
 
-                case SQL_NODE_AMMSC:
+                case SQLNodeType::AMMSC:
                     {
                         rString += "SQL_AMMSC:" + _pNode->getTokenValue(); // append Nodevalue
                         break;}
@@ -496,7 +496,7 @@ FeatureState OQueryController::GetState(sal_uInt16 _nId) const
             aReturn.bEnabled = !editingCommand() && !editingView() && (!m_bGraphicalDesign || !(m_vTableFieldDesc.empty() || m_vTableData.empty()));
             break;
         case ID_BROWSER_SAVEDOC:
-            aReturn.bEnabled = impl_isModified() && (!m_bGraphicalDesign || !(m_vTableFieldDesc.empty() || m_vTableData.empty()));
+            aReturn.bEnabled = isEditable() && (!m_bGraphicalDesign || !(m_vTableFieldDesc.empty() || m_vTableData.empty()));
             break;
         case SID_PRINTDOCDIRECT:
             break;
@@ -541,7 +541,7 @@ FeatureState OQueryController::GetState(sal_uInt16 _nId) const
             aReturn.bEnabled = true;
             aReturn.bChecked = getContainer() && getContainer()->getPreviewFrame().is();
             break;
-#if OSL_DEBUG_LEVEL > 1
+#if OSL_DEBUG_LEVEL > 0
         case ID_EDIT_QUERY_SQL:
             break;
         case ID_EDIT_QUERY_DESIGN:
@@ -553,7 +553,7 @@ FeatureState OQueryController::GetState(sal_uInt16 _nId) const
                 aReturn.bEnabled = false;
                 break;
             }
-            // run through
+            SAL_FALLTHROUGH;
         default:
             aReturn = OJoinController::GetState(_nId);
             break;
@@ -568,7 +568,7 @@ void OQueryController::Execute(sal_uInt16 _nId, const Sequence< PropertyValue >&
         case ID_BROWSER_ESCAPEPROCESSING:
             setEscapeProcessing_fireEvent( !m_bEscapeProcessing );
             if ( !editingView() )
-                setModified(sal_True);
+                setModified(true);
             InvalidateFeature(ID_BROWSER_SQL);
             break;
         case ID_BROWSER_SAVEASDOC:
@@ -627,8 +627,8 @@ void OQueryController::Execute(sal_uInt16 _nId, const Sequence< PropertyValue >&
                         }
                         else
                         {
-                            const OSQLTables& xTabs = m_pSqlIterator->getTables();
-                            if ( m_pSqlIterator->getStatementType() != SQL_STATEMENT_SELECT || xTabs.begin() == xTabs.end() )
+                            const OSQLTables& rTabs = m_pSqlIterator->getTables();
+                            if ( m_pSqlIterator->getStatementType() != OSQLStatementType::Select || rTabs.begin() == rTabs.end() )
                             {
                                 aError = SQLException(
                                     OUString( ModuleRes( STR_QRY_NOSELECT ) ),
@@ -697,17 +697,17 @@ void OQueryController::Execute(sal_uInt16 _nId, const Sequence< PropertyValue >&
         case SID_QUERY_VIEW_TABLES:
         case SID_QUERY_VIEW_ALIASES:
             getContainer()->setSlotEnabled(_nId,!getContainer()->isSlotEnabled(_nId));
-            setModified(sal_True);
+            setModified(true);
             break;
         case SID_QUERY_DISTINCT_VALUES:
             m_bDistinct = !m_bDistinct;
-            setModified(sal_True);
+            setModified(true);
             break;
         case SID_QUERY_LIMIT:
             if ( aArgs.getLength() >= 1 && aArgs[0].Name == "DBLimit.Value" )
             {
                 aArgs[0].Value >>= m_nLimit;
-                setModified(sal_True);
+                setModified(true);
             }
             break;
         case SID_QUERY_PROP_DLG:
@@ -727,7 +727,7 @@ void OQueryController::Execute(sal_uInt16 _nId, const Sequence< PropertyValue >&
                 {
                     try
                     {
-                        xCloseFrame->close( sal_True );
+                        xCloseFrame->close( true );
                     }
                     catch(const Exception&)
                     {
@@ -749,7 +749,7 @@ void OQueryController::Execute(sal_uInt16 _nId, const Sequence< PropertyValue >&
             {
             }
             break;
-#if OSL_DEBUG_LEVEL > 1
+#if OSL_DEBUG_LEVEL > 0
         case ID_EDIT_QUERY_DESIGN:
         case ID_EDIT_QUERY_SQL:
             {
@@ -767,7 +767,7 @@ void OQueryController::Execute(sal_uInt16 _nId, const Sequence< PropertyValue >&
 
                     if ( _nId == ID_EDIT_QUERY_DESIGN )
                     {
-                        ::connectivity::OSQLParseNode* pTemp = pNode ? pNode->getChild(3)->getChild(1) : NULL;
+                        ::connectivity::OSQLParseNode* pTemp = pNode ? pNode->getChild(3)->getChild(1) : nullptr;
                         // no where clause found
                         if ( pTemp && !pTemp->isLeaf() )
                         {
@@ -782,7 +782,6 @@ void OQueryController::Execute(sal_uInt16 _nId, const Sequence< PropertyValue >&
                                 ::connectivity::OSQLParseNode::absorptions(pNodeTmp);
                                 pNodeTmp = pTemp->getChild(1);
                                 OSQLParseNode::compress(pNodeTmp);
-                                pNodeTmp = pTemp->getChild(1);
                             }
                             OUString sTemp;
                             pNode->parseNodeToStr(sTemp,getConnection());
@@ -817,7 +816,7 @@ void OQueryController::impl_showAutoSQLViewError( const css::uno::Any& _rErrorDe
     showError( aErrorContext );
 }
 
-bool OQueryController::impl_setViewMode( ::dbtools::SQLExceptionInfo* _pErrorInfo )
+void OQueryController::impl_setViewMode( ::dbtools::SQLExceptionInfo* _pErrorInfo )
 {
     OSL_PRECOND( getContainer(), "OQueryController::impl_setViewMode: illegal call!" );
 
@@ -843,7 +842,6 @@ bool OQueryController::impl_setViewMode( ::dbtools::SQLExceptionInfo* _pErrorInf
     }
 
     setModified( wasModified );
-    return bSuccess;
 }
 
 void OQueryController::impl_initialize()
@@ -955,7 +953,7 @@ void OQueryController::impl_initialize()
         bForceInitialDesign = true;
     }
 
-    if ( !ensureConnected( false ) )
+    if ( !ensureConnected() )
     {   // we have no connection so what else should we do
         m_bGraphicalDesign = false;
         if ( editingView() )
@@ -1044,7 +1042,7 @@ void OQueryController::impl_initialize()
             Application::PostUserEvent( LINK( this, OQueryController, OnExecuteAddTable ) );
         }
 
-        setModified(sal_False);
+        setModified(false);
     }
     catch(const SQLException& e)
     {
@@ -1138,7 +1136,7 @@ void OQueryController::describeSupportedFeatures()
     implDescribeSupportedFeature( ".uno:DBLimit",           SID_QUERY_LIMIT,            CommandGroup::FORMAT );
     implDescribeSupportedFeature( ".uno:DBQueryPropertiesDialog", SID_QUERY_PROP_DLG,         CommandGroup::FORMAT );
 
-#if OSL_DEBUG_LEVEL > 1
+#if OSL_DEBUG_LEVEL > 0
     implDescribeSupportedFeature( ".uno:DBShowParseTree",   ID_EDIT_QUERY_SQL );
     implDescribeSupportedFeature( ".uno:DBMakeDisjunct",    ID_EDIT_QUERY_DESIGN );
 #endif
@@ -1420,7 +1418,7 @@ bool OQueryController::doSaveAsDoc(bool _bSaveAs)
     OUString sTranslatedStmt = translateStatement();
     if ( editingCommand() )
     {
-        setModified( sal_False );
+        setModified( false );
         // this is all we need to do here. translateStatement implicitly set our m_sStatement, and
         // notified it, and that's all
         return true;
@@ -1529,7 +1527,7 @@ bool OQueryController::doSaveAsDoc(bool _bSaveAs)
                     xViewProps.set( xElements->getByName( m_sName ), UNO_QUERY );
 
                 if ( !xViewProps.is() ) // correct name and try again
-                    m_sName = ::dbtools::composeTableName( getMetaData(), xQuery, ::dbtools::eInDataManipulation, false, false, false );
+                    m_sName = ::dbtools::composeTableName( getMetaData(), xQuery, ::dbtools::EComposeRule::InDataManipulation, false, false, false );
 
                 OSL_ENSURE( xElements->hasByName( m_sName ), "OQueryController::doSaveAsDoc: newly created view does not exist!" );
 
@@ -1548,7 +1546,7 @@ bool OQueryController::doSaveAsDoc(bool _bSaveAs)
             releaseNumberForComponent();
         }
 
-        setModified( sal_False );
+        setModified( false );
         bSuccess = true;
 
     }
@@ -1757,8 +1755,7 @@ OUString OQueryController::translateStatement( bool _bFireStatementChange )
     {
         ModuleRes aModuleRes(STR_QRY_NOSELECT);
         OUString sTmpStr(aModuleRes);
-        OUString sError(sTmpStr);
-        showError(SQLException(sError,nullptr,"S1000",1000,Any()));
+        showError(SQLException(sTmpStr,nullptr,"S1000",1000,Any()));
     }
     else
         sTranslatedStmt = m_sStatement;
@@ -1932,7 +1929,7 @@ void OQueryController::setStatement_fireEvent( const OUString& _rNewStatement, b
 
     sal_Int32 nHandle = PROPERTY_ID_ACTIVECOMMAND;
     if ( _bFireStatementChange )
-        fire( &nHandle, &aNewValue, &aOldValue, 1, sal_False );
+        fire( &nHandle, &aNewValue, &aOldValue, 1, false );
 }
 
 void OQueryController::setEscapeProcessing_fireEvent( const bool _bEscapeProcessing )
@@ -1945,7 +1942,7 @@ void OQueryController::setEscapeProcessing_fireEvent( const bool _bEscapeProcess
     Any aNewValue = makeAny( m_bEscapeProcessing );
 
     sal_Int32 nHandle = PROPERTY_ID_ESCAPE_PROCESSING;
-    fire( &nHandle, &aNewValue, &aOldValue, 1, sal_False );
+    fire( &nHandle, &aNewValue, &aOldValue, 1, false );
 }
 
 IMPL_LINK_NOARG_TYPED( OQueryController, OnExecuteAddTable, void*, void )

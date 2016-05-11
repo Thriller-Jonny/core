@@ -19,7 +19,6 @@
 
 #include <sal/config.h>
 
-#include <boost/noncopyable.hpp>
 #include <tools/debug.hxx>
 #include <sal/types.h>
 #include <vcl/lstbox.hxx>
@@ -73,7 +72,6 @@ public:
 
     bool                        IsUserSelected() const          { return bUserSel; }
     void                        SetUserSelected( bool bVal )    { bUserSel = bVal; }
-    virtual vcl::Window*             GetPreferredKeyInputWindow() override;
 };
 
 SvxPopupWindowListBox::SvxPopupWindowListBox(sal_uInt16 nSlotId, const OUString& rCommandURL, sal_uInt16 nId, ToolBox& rTbx)
@@ -126,13 +124,6 @@ void SvxPopupWindowListBox::StateChanged(
 {
     rToolBox.EnableItem( nTbxId, ( SfxToolBoxControl::GetItemState( pState ) != SfxItemState::DISABLED) );
     SfxPopupWindow::StateChanged( nSID, eState, pState );
-}
-
-vcl::Window* SvxPopupWindowListBox::GetPreferredKeyInputWindow()
-{
-    // allows forwarding key events in the correct window
-    // without setting the focus
-    return m_pListBox->GetPreferredKeyInputWindow();
 }
 
 SvxListBoxControl::SvxListBoxControl( sal_uInt16 nSlotId, sal_uInt16 nId, ToolBox& rTbx )
@@ -216,7 +207,6 @@ IMPL_LINK_NOARG_TYPED(SvxListBoxControl, SelectHdl, ListBox&, void)
 }
 
 
-
 SFX_IMPL_TOOLBOX_CONTROL( SvxUndoRedoControl, SfxStringItem );
 
 SvxUndoRedoControl::SvxUndoRedoControl( sal_uInt16 nSlotId, sal_uInt16 nId, ToolBox& rTbx )
@@ -245,7 +235,7 @@ void SvxUndoRedoControl::StateChanged(
         {
             const SfxStringItem& rItem = *static_cast<const SfxStringItem *>(pState);
             ToolBox& rBox = GetToolBox();
-            OUString aQuickHelpText = rItem.GetValue();
+            const OUString& aQuickHelpText = rItem.GetValue();
             rBox.SetQuickHelpText( GetId(), aQuickHelpText );
         }
         SvxListBoxControl::StateChanged( nSID, eState, pState );

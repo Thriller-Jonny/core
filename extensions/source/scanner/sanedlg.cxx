@@ -905,9 +905,9 @@ void SaneDlg::AcquirePreview()
     }
     else
     {
-#if OSL_DEBUG_LEVEL > 1
+#if OSL_DEBUG_LEVEL > 0
         xTransporter->getStream().Seek( STREAM_SEEK_TO_END );
-        fprintf( stderr, "Previewbitmapstream contains %d bytes\n", (int)xTransporter->getStream().Tell() );
+        SAL_INFO("extensions.scanner", "Previewbitmapstream contains " << xTransporter->getStream().Tell() << "bytes");
 #endif
         xTransporter->getStream().Seek( STREAM_SEEK_TO_BEGIN );
         mpPreview->SetBitmap(xTransporter->getStream());
@@ -1413,10 +1413,10 @@ void SaneDlg::SaveState()
         "br-x",
         "br-y"
     };
-    for( size_t i = 0; i < SAL_N_ELEMENTS(pSaveOptions); ++i )
+    for(const char * pSaveOption : pSaveOptions)
     {
-        OString aOption = pSaveOptions[i];
-        int nOption = mrSane.GetOptionByName( pSaveOptions[i] );
+        OString aOption = pSaveOption;
+        int nOption = mrSane.GetOptionByName( pSaveOption );
         if( nOption > -1 )
         {
             SANE_Value_Type nType = mrSane.GetOptionType( nOption );
@@ -1492,10 +1492,7 @@ bool SaneDlg::SetAdjustedNumericalValue(
         return false;
     }
 
-#if OSL_DEBUG_LEVEL > 1
-    fprintf( stderr, "SaneDlg::SetAdjustedNumericalValue( \"%s\", %lg ) ",
-             pOption, fValue );
-#endif
+    SAL_INFO("extensions.scanner", "SaneDlg::SetAdjustedNumericalValue(\"" << pOption << "\", " << fValue << ") ");
 
     if( nValues )
     {
@@ -1520,9 +1517,7 @@ bool SaneDlg::SetAdjustedNumericalValue(
     }
     delete [] pValues;
     mrSane.SetOptionValue( nOption, fValue, nElement );
-#if OSL_DEBUG_LEVEL > 1
-    fprintf( stderr, "yields %lg\n", fValue );
-#endif
+    SAL_INFO("extensions.scanner", "yields " << fValue);
 
 
     return true;

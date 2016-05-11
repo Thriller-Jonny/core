@@ -48,7 +48,7 @@ namespace {
 void renderPreview(sfx2::StyleManager* pStyleManager, OutputDevice& aOutputDevice,
                    OUString const & sName, sal_Int32 nHeight, Rectangle& aRect)
 {
-    SfxStyleSheetBase* pStyleSheet = pStyleManager->Search(sName, SFX_STYLE_FAMILY_PARA);
+    SfxStyleSheetBase* pStyleSheet = pStyleManager->Search(sName, SfxStyleFamily::Para);
 
     if (pStyleSheet)
     {
@@ -95,7 +95,7 @@ BitmapEx GenerateStylePreview(SfxObjectShell& rSource, OUString& aName)
         pVirtualDev->DrawRect(aNameRect);
 
         vcl::Font aFont;
-        aFont.SetSize(Size(0, nNameFontSize));
+        aFont.SetFontSize(Size(0, nNameFontSize));
 
         pVirtualDev->SetFont(aFont);
 

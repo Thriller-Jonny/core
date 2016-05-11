@@ -103,11 +103,6 @@ SvParserState EditHTMLParser::CallParser(EditEngine* pEE, const EditPaM& rPaM)
 
 void EditHTMLParser::NextToken( int nToken )
 {
-    #ifdef DBG_UTIL
-        HTML_TOKEN_IDS xID = (HTML_TOKEN_IDS)nToken;
-        (void)xID;
-    #endif
-
     switch( nToken )
     {
     case HTML_META:
@@ -297,7 +292,7 @@ void EditHTMLParser::NextToken( int nToken )
     case HTML_TABLEHEADER_ON:
     case HTML_TABLEDATA_ON:
         nInCell++;
-    // fall through
+        SAL_FALLTHROUGH;
     case HTML_BLOCKQUOTE_ON:
     case HTML_BLOCKQUOTE_OFF:
     case HTML_BLOCKQUOTE30_ON:
@@ -321,8 +316,8 @@ void EditHTMLParser::NextToken( int nToken )
     {
         if ( nInCell )
             nInCell--;
+        SAL_FALLTHROUGH;
     }
-    // fall through
     case HTML_LISTHEADER_OFF:
     case HTML_LI_OFF:
     case HTML_DD_OFF:
@@ -521,20 +516,17 @@ void EditHTMLParser::ImpInsertParaBreak()
     aCurSel = mpEditEngine->InsertParaBreak(aCurSel);
 }
 
-void EditHTMLParser::ImpSetAttribs( const SfxItemSet& rItems, EditSelection* pSel )
+void EditHTMLParser::ImpSetAttribs( const SfxItemSet& rItems )
 {
     // pSel, when character attributes, otherwise paragraph attributes for
     // the current paragraph.
-    DBG_ASSERT( pSel || ( aCurSel.Min().GetNode() == aCurSel.Max().GetNode() ), "ImpInsertAttribs: Selection?" );
+    DBG_ASSERT( aCurSel.Min().GetNode() == aCurSel.Max().GetNode(), "ImpInsertAttribs: Selection?" );
 
-    EditPaM aStartPaM( pSel ? pSel->Min() : aCurSel.Min() );
-    EditPaM aEndPaM( pSel ? pSel->Max() : aCurSel.Max() );
+    EditPaM aStartPaM( aCurSel.Min() );
+    EditPaM aEndPaM( aCurSel.Max() );
 
-    if ( !pSel )
-    {
-        aStartPaM.SetIndex( 0 );
-        aEndPaM.SetIndex( aEndPaM.GetNode()->Len() );
-    }
+    aStartPaM.SetIndex( 0 );
+    aEndPaM.SetIndex( aEndPaM.GetNode()->Len() );
 
     if (mpEditEngine->IsImportHandlerSet())
     {
@@ -653,13 +645,13 @@ void EditHTMLParser::ImpSetStyleSheet( sal_uInt16 nHLevel )
     if ( nHLevel == STYLE_PRE )
     {
         vcl::Font aFont = OutputDevice::GetDefaultFont( DefaultFontType::FIXED, LANGUAGE_SYSTEM, GetDefaultFontFlags::NONE );
-        SvxFontItem aFontItem( aFont.GetFamily(), aFont.GetName(), OUString(), aFont.GetPitch(), aFont.GetCharSet(), EE_CHAR_FONTINFO );
+        SvxFontItem aFontItem( aFont.GetFamilyType(), aFont.GetFamilyName(), OUString(), aFont.GetPitch(), aFont.GetCharSet(), EE_CHAR_FONTINFO );
         aItems.Put( aFontItem );
 
-        SvxFontItem aFontItemCJK( aFont.GetFamily(), aFont.GetName(), OUString(), aFont.GetPitch(), aFont.GetCharSet(), EE_CHAR_FONTINFO_CJK );
+        SvxFontItem aFontItemCJK( aFont.GetFamilyType(), aFont.GetFamilyName(), OUString(), aFont.GetPitch(), aFont.GetCharSet(), EE_CHAR_FONTINFO_CJK );
         aItems.Put( aFontItemCJK );
 
-        SvxFontItem aFontItemCTL( aFont.GetFamily(), aFont.GetName(), OUString(), aFont.GetPitch(), aFont.GetCharSet(), EE_CHAR_FONTINFO_CTL );
+        SvxFontItem aFontItemCTL( aFont.GetFamilyType(), aFont.GetFamilyName(), OUString(), aFont.GetPitch(), aFont.GetCharSet(), EE_CHAR_FONTINFO_CTL );
         aItems.Put( aFontItemCTL );
     }
 
@@ -668,15 +660,14 @@ void EditHTMLParser::ImpSetStyleSheet( sal_uInt16 nHLevel )
 
 void EditHTMLParser::ImpInsertText( const OUString& rText )
 {
-    OUString aText( rText );
     if (mpEditEngine->IsImportHandlerSet())
     {
         ImportInfo aImportInfo(HTMLIMP_INSERTTEXT, this, mpEditEngine->CreateESelection(aCurSel));
-        aImportInfo.aText = aText;
+        aImportInfo.aText = rText;
         mpEditEngine->CallImportHandler(aImportInfo);
     }
 
-    aCurSel = mpEditEngine->InsertText(aCurSel, aText);
+    aCurSel = mpEditEngine->InsertText(aCurSel, rText);
 }
 
 void EditHTMLParser::SkipGroup( int nEndToken )
@@ -709,9 +700,8 @@ void EditHTMLParser::StartPara( bool bReal )
     {
         const HTMLOptions& aOptions = GetOptions();
         SvxAdjust eAdjust = SVX_ADJUST_LEFT;
-        for ( size_t i = 0, n = aOptions.size(); i < n; ++i )
+        for (const auto & aOption : aOptions)
         {
-            const HTMLOption& aOption = aOptions[i];
             switch( aOption.GetToken() )
             {
                 case HTML_O_ALIGN:
@@ -770,9 +760,8 @@ void EditHTMLParser::AnchorStart()
         const HTMLOptions& aOptions = GetOptions();
         OUString aRef;
 
-        for ( size_t i = 0, n = aOptions.size(); i < n; ++i )
+        for (const auto & aOption : aOptions)
         {
-            const HTMLOption& aOption = aOptions[i];
             switch( aOption.GetToken() )
             {
                 case HTML_O_HREF:

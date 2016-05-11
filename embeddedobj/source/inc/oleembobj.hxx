@@ -22,7 +22,6 @@
 
 #include <com/sun/star/uno/Sequence.hxx>
 #include <com/sun/star/uno/Reference.hxx>
-#include <com/sun/star/uno/Any.hxx>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/embed/XEmbeddedObject.hpp>
 #include <com/sun/star/embed/XInplaceObject.hpp>
@@ -51,7 +50,7 @@ class VerbExecutionController
 
     sal_Int32 m_nNotificationLock;
 
-#ifdef WNT
+#ifdef _WIN32
     bool m_bWasEverActive;
     bool m_bVerbExecutionInProgress;
     oslThreadIdentifier m_nVerbExecutionThreadIdentifier;
@@ -62,7 +61,7 @@ public:
 
     VerbExecutionController()
     : m_nNotificationLock( 0 )
-#ifdef WNT
+#ifdef _WIN32
     , m_bWasEverActive( false )
     , m_bVerbExecutionInProgress( false )
     , m_nVerbExecutionThreadIdentifier( 0 )
@@ -70,7 +69,7 @@ public:
 #endif
     {}
 
-#ifdef WNT
+#ifdef _WIN32
     void StartControlExecution();
     sal_Bool EndControlExecution_WasModified();
     void ModificationNotificationIsDone();
@@ -205,11 +204,11 @@ protected:
     css::uno::Reference< css::io::XStream > GetNewFilledTempStream_Impl(
                                     const css::uno::Reference< css::io::XInputStream >& xInStream )
         throw( css::io::IOException, css::uno::RuntimeException );
-#ifdef WNT
+#ifdef _WIN32
     void SwitchComponentToRunningState_Impl();
 #endif
     void MakeEventListenerNotification_Impl( const OUString& aEventName );
-#ifdef WNT
+#ifdef _WIN32
     void StateChangeNotification_Impl( sal_Bool bBeforeChange, sal_Int32 nOldState, sal_Int32 nNewState );
     css::uno::Reference< css::io::XOutputStream > GetStreamForSaving();
 
@@ -239,7 +238,7 @@ protected:
                             const css::uno::Sequence< css::beans::PropertyValue >& lObjArgs,
                             bool bSaveAs )
         throw ( css::uno::Exception );
-#ifdef WNT
+#ifdef _WIN32
     void StoreObjectToStream( css::uno::Reference< css::io::XOutputStream > xOutStream )
         throw ( css::uno::Exception );
 #endif
@@ -255,14 +254,14 @@ protected:
     bool HasVisReplInStream();
 
     css::embed::VisualRepresentation GetVisualRepresentationInNativeFormat_Impl(
-                    const css::uno::Reference< css::io::XStream > xCachedVisRepr )
+                    const css::uno::Reference< css::io::XStream >& xCachedVisRepr )
         throw ( css::uno::Exception );
 
     css::uno::Reference< css::io::XStream > TryToRetrieveCachedVisualRepresentation_Impl(
                     const css::uno::Reference< css::io::XStream >& xStream,
                     bool bAllowRepair50 = false )
         throw ();
-#ifdef WNT
+#ifdef _WIN32
     sal_Bool SaveObject_Impl();
     sal_Bool OnShowWindow_Impl( sal_Bool bShow );
     void CreateOleComponent_Impl( OleComponent* pOleComponent = NULL );
@@ -289,14 +288,14 @@ public:
     // factory can do it for OOo objects, but for OLE objects OS dependent code is required
     OleEmbeddedObject( const css::uno::Reference< css::lang::XMultiServiceFactory >& xFactory,
                         bool bLink );
-#ifdef WNT
+#ifdef _WIN32
     // this constructor let object be initialized from clipboard
     OleEmbeddedObject( const css::uno::Reference< css::lang::XMultiServiceFactory >& xFactory );
 #endif
 
     virtual ~OleEmbeddedObject();
 
-#ifdef WNT
+#ifdef _WIN32
     void OnIconChanged_Impl();
     void OnViewChanged_Impl();
     void OnClosed_Impl();

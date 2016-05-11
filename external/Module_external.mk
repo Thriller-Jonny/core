@@ -24,10 +24,12 @@ $(eval $(call gb_Module_add_moduledirs,external,\
 	$(call gb_Helper_optional,APACHE_COMMONS,apache-commons) \
 	$(call gb_Helper_optional,APR,apr) \
 	$(call gb_Helper_optional,BOOST,boost) \
+	$(call gb_Helper_optional,BREAKPAD,breakpad) \
 	$(call gb_Helper_optional,BSH,beanshell) \
 	$(call gb_Helper_optional,BZIP2,bzip2) \
 	$(call gb_Helper_optional,CAIRO,cairo) \
 	$(call gb_Helper_optional,CDR,libcdr) \
+	$(call gb_Helper_optional,OPENCL,clew) \
 	$(call gb_Helper_optional,CLUCENE,clucene) \
 	$(call gb_Helper_optional,CMIS,libcmis) \
 	$(call gb_Helper_optional,COINMP,coinmp) \
@@ -92,7 +94,6 @@ $(eval $(call gb_Module_add_moduledirs,external,\
 	$(call gb_Helper_optional,RHINO,rhino) \
 	$(call gb_Helper_optional,SERF,serf) \
 	$(call gb_Helper_optional,UCPP,ucpp) \
-	$(call gb_Helper_optional,VIGRA,vigra) \
 	$(call gb_Helper_optional,VISIO,libvisio) \
 	$(call gb_Helper_optional,WPD,libwpd) \
 	$(call gb_Helper_optional,WPG,libwpg) \
@@ -104,7 +105,6 @@ $(eval $(call gb_Module_add_moduledirs,external,\
 			$(call gb_Helper_optional,HARFBUZZ,harfbuzz) \
 			$(call gb_Helper_optional,LCMS2,lcms2) \
 			$(call gb_Helper_optional,NSS,nss) \
-			$(call gb_Helper_optional,VIGRA,vigra) \
 		) \
 	) \
 ))

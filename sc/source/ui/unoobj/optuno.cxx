@@ -44,6 +44,7 @@ const SfxItemPropertyMapEntry* ScDocOptionsHelper::GetPropertyMap()
         {OUString(SC_UNO_SPELLONLINE),  PROP_UNO_SPELLONLINE ,  cppu::UnoType<bool>::get(),          0, 0},
         {OUString(SC_UNO_STANDARDDEC),  PROP_UNO_STANDARDDEC ,  cppu::UnoType<sal_Int16>::get(),    0, 0},
         {OUString(SC_UNO_REGEXENABLED), PROP_UNO_REGEXENABLED,  cppu::UnoType<bool>::get(),          0, 0},
+        {OUString(SC_UNO_WILDCARDSENABLED), PROP_UNO_WILDCARDSENABLED, cppu::UnoType<bool>::get(),  0, 0},
         { OUString(), 0, css::uno::Type(), 0, 0 }
     };
     return aMap;
@@ -116,6 +117,9 @@ bool ScDocOptionsHelper::setPropertyValue( ScDocOptions& rOptions,
         case PROP_UNO_REGEXENABLED:
             rOptions.SetFormulaRegexEnabled( ScUnoHelpFunctions::GetBoolFromAny( aValue ) );
         break;
+        case PROP_UNO_WILDCARDSENABLED:
+            rOptions.SetFormulaWildcardsEnabled( ScUnoHelpFunctions::GetBoolFromAny( aValue ) );
+        break;
         default:;
     }
     return true;
@@ -133,16 +137,16 @@ uno::Any ScDocOptionsHelper::getPropertyValue(
     switch( pEntry->nWID )
     {
         case PROP_UNO_CALCASSHOWN :
-            ScUnoHelpFunctions::SetBoolInAny( aRet, rOptions.IsCalcAsShown() );
+            aRet <<= rOptions.IsCalcAsShown();
         break;
         case PROP_UNO_DEFTABSTOP :
             aRet <<= (sal_Int16)( rOptions.GetTabDistance() );
         break;
         case PROP_UNO_IGNORECASE :
-            ScUnoHelpFunctions::SetBoolInAny( aRet, rOptions.IsIgnoreCase() );
+            aRet <<= rOptions.IsIgnoreCase();
         break;
         case PROP_UNO_ITERENABLED:
-        ScUnoHelpFunctions::SetBoolInAny( aRet, rOptions.IsIter() );
+            aRet <<= rOptions.IsIter();
         break;
         case PROP_UNO_ITERCOUNT:
             aRet <<= (sal_Int32)( rOptions.GetIterCount() );
@@ -151,10 +155,10 @@ uno::Any ScDocOptionsHelper::getPropertyValue(
             aRet <<= (double)( rOptions.GetIterEps() );
         break;
         case PROP_UNO_LOOKUPLABELS:
-            ScUnoHelpFunctions::SetBoolInAny( aRet, rOptions.IsLookUpColRowNames() );
+            aRet <<= rOptions.IsLookUpColRowNames();
         break;
         case PROP_UNO_MATCHWHOLE:
-            ScUnoHelpFunctions::SetBoolInAny( aRet, rOptions.IsMatchWholeCell() );
+            aRet <<= rOptions.IsMatchWholeCell();
         break;
         case PROP_UNO_NULLDATE:
         {
@@ -165,13 +169,16 @@ uno::Any ScDocOptionsHelper::getPropertyValue(
         }
         break;
         case PROP_UNO_SPELLONLINE:
-            ScUnoHelpFunctions::SetBoolInAny( aRet, rOptions.IsAutoSpell() );
+            aRet <<= rOptions.IsAutoSpell();
         break;
         case PROP_UNO_STANDARDDEC :
             aRet <<= (sal_Int16)( rOptions.GetStdPrecision() );
         break;
         case PROP_UNO_REGEXENABLED:
-            ScUnoHelpFunctions::SetBoolInAny( aRet, rOptions.IsFormulaRegexEnabled() );
+            aRet <<= rOptions.IsFormulaRegexEnabled();
+        break;
+        case PROP_UNO_WILDCARDSENABLED:
+            aRet <<= rOptions.IsFormulaWildcardsEnabled();
         break;
         default:;
     }

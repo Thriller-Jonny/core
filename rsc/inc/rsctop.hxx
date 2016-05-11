@@ -23,6 +23,7 @@
 #include <rsctools.hxx>
 #include <rschash.hxx>
 #include <rscclobj.hxx>
+#include <rsc/rscsfx.hxx>
 
 typedef sal_uInt32 RSCVAR;
 #define VAR_POINTER     0x0001
@@ -81,6 +82,16 @@ public:
 
                     // sets the variable
     virtual ERRTYPE SetVariable( Atom nVarName, RscTop * pClass,
+                                 RSCINST * pDflt,
+                                 RSCVAR nVarType, SfxStyleItem nMask,
+                                 Atom nDataBaseName = InvalidAtom );
+
+    virtual ERRTYPE SetVariable( Atom nVarName, RscTop * pClass,
+                                 RSCINST * pDflt,
+                                 RSCVAR nVarType, SfxSlotInfo nMask,
+                                 Atom nDataBaseName = InvalidAtom );
+
+    virtual ERRTYPE SetVariable( Atom nVarName, RscTop * pClass,
                                  RSCINST * pDflt = nullptr,
                                  RSCVAR nVarType = 0, sal_uInt32 nMask = 0,
                                  Atom nDataBaseName = InvalidAtom );
@@ -106,13 +117,13 @@ public:
                                 RSCINST * pGetInst );
 
                     // returns instance from a value
-                    // returnd pGetInst may be NULL
+                    // returned pGetInst may be NULL
     virtual ERRTYPE GetValueEle( const RSCINST & rInst, sal_Int32 lValue,
                                 RscTop * pCreateClass,
                                 RSCINST * pGetInst );
 
                     // returns instance from an array
-                    // returnd pGetInst may be NULL
+                    // returned pGetInst may be NULL
     virtual ERRTYPE GetArrayEle( const RSCINST & rInst, Atom nId,
                                 RscTop * pCreateClass,
                                 RSCINST * pGetInst );

@@ -30,7 +30,6 @@
 #include <svx/sdrpagewindow.hxx>
 #include "svx/sdrpaintwindow.hxx"
 
-#include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/awt/XControl.hpp>
 #include <com/sun/star/awt/XControlModel.hpp>
 #include <com/sun/star/awt/XControlContainer.hpp>
@@ -55,9 +54,6 @@
 #include <tools/diagnose_ex.h>
 #include <basegfx/matrix/b2dhommatrix.hxx>
 #include <drawinglayer/primitive2d/controlprimitive2d.hxx>
-
-#include <boost/bind.hpp>
-#include <boost/noncopyable.hpp>
 
 /*
 
@@ -114,11 +110,9 @@ namespace sdr { namespace contact {
     using ::com::sun::star::uno::XInterface;
     using ::com::sun::star::uno::UNO_QUERY;
     using ::com::sun::star::uno::UNO_QUERY_THROW;
-    using ::com::sun::star::uno::UNO_SET_THROW;
     using ::com::sun::star::uno::Exception;
     using ::com::sun::star::uno::RuntimeException;
     using ::com::sun::star::awt::XControl;
-    using ::com::sun::star::lang::XMultiServiceFactory;
     using ::com::sun::star::awt::XControlModel;
     using ::com::sun::star::awt::XControlContainer;
     using ::com::sun::star::awt::XWindow;
@@ -126,10 +120,8 @@ namespace sdr { namespace contact {
     using ::com::sun::star::awt::XWindowListener;
     using ::com::sun::star::awt::PosSize::POSSIZE;
     using ::com::sun::star::awt::XView;
-    using ::com::sun::star::awt::XGraphics;
     using ::com::sun::star::awt::WindowEvent;
     using ::com::sun::star::beans::XPropertySet;
-    using ::com::sun::star::beans::XPropertySetInfo;
     using ::com::sun::star::lang::XComponent;
     using ::com::sun::star::awt::XWindowPeer;
     using ::com::sun::star::beans::XPropertyChangeListener;
@@ -502,8 +494,7 @@ namespace sdr { namespace contact {
                                         >   ViewObjectContactOfUnoControl_Impl_Base;
 
     class SVX_DLLPRIVATE ViewObjectContactOfUnoControl_Impl:
-        public ViewObjectContactOfUnoControl_Impl_Base,
-        private boost::noncopyable
+        public ViewObjectContactOfUnoControl_Impl_Base
     {
     private:
         // fdo#41935 note that access to members is protected with SolarMutex;
@@ -543,6 +534,8 @@ namespace sdr { namespace contact {
 
     public:
         explicit ViewObjectContactOfUnoControl_Impl( ViewObjectContactOfUnoControl* _pAntiImpl );
+        ViewObjectContactOfUnoControl_Impl(const ViewObjectContactOfUnoControl_Impl&) = delete;
+        ViewObjectContactOfUnoControl_Impl& operator=(const ViewObjectContactOfUnoControl_Impl&) = delete;
 
         /** disposes the instance, which is nonfunctional afterwards
         */
@@ -569,7 +562,7 @@ namespace sdr { namespace contact {
 
             Failure of this method will be reported via an assertion in a non-product version.
         */
-        bool    ensureControl( const basegfx::B2DHomMatrix* _pInitialViewTransformationOrNULL );
+        void    ensureControl( const basegfx::B2DHomMatrix* _pInitialViewTransformationOrNULL );
 
         /** returns our XControl, if it already has been created
 
@@ -674,10 +667,6 @@ namespace sdr { namespace contact {
 
         /** adjusts the control visibility so it respects its layer's visibility
 
-            @param _bForce
-                set to <TRUE/> if you want to force a ->XWindow::setVisible call,
-                no matter if the control visibility is already correct
-
             @precond
                 ->m_aControl is not <NULL/>
 
@@ -689,7 +678,7 @@ namespace sdr { namespace contact {
                 might not be true, but those instances should never have a need to call
                 this method.
         */
-        void impl_adjustControlVisibilityToLayerVisibility_throw( bool _bForce );
+        void impl_adjustControlVisibilityToLayerVisibility_throw();
 
         /** adjusts the control visibility so it respects its layer's visibility
 
@@ -860,19 +849,19 @@ namespace sdr { namespace contact {
         const OutputDevice& rPageViewDevice( impl_getOutputDevice_throw() );
         m_aZoomLevelNormalization = rPageViewDevice.GetInverseViewTransformation();
 
-    #if OSL_DEBUG_LEVEL > 1
+    #if OSL_DEBUG_LEVEL > 0
         ::basegfx::B2DVector aScale, aTranslate;
         double fRotate, fShearX;
         m_aZoomLevelNormalization.decompose( aScale, aTranslate, fRotate, fShearX );
     #endif
 
         ::basegfx::B2DHomMatrix aScaleNormalization;
-        MapMode aCurrentDeviceMapMode( rPageViewDevice.GetMapMode() );
+        const MapMode& aCurrentDeviceMapMode( rPageViewDevice.GetMapMode() );
         aScaleNormalization.set( 0, 0, (double)aCurrentDeviceMapMode.GetScaleX() );
         aScaleNormalization.set( 1, 1, (double)aCurrentDeviceMapMode.GetScaleY() );
         m_aZoomLevelNormalization *= aScaleNormalization;
 
-    #if OSL_DEBUG_LEVEL > 1
+    #if OSL_DEBUG_LEVEL > 0
         m_aZoomLevelNormalization.decompose( aScale, aTranslate, fRotate, fShearX );
     #endif
    }
@@ -964,27 +953,28 @@ namespace sdr { namespace contact {
     }
 
 
-    bool ViewObjectContactOfUnoControl_Impl::ensureControl( const basegfx::B2DHomMatrix* _pInitialViewTransformationOrNULL )
+    void ViewObjectContactOfUnoControl_Impl::ensureControl( const basegfx::B2DHomMatrix* _pInitialViewTransformationOrNULL )
     {
         OSL_PRECOND( !impl_isDisposed_nofail(), "ViewObjectContactOfUnoControl_Impl::ensureControl: already disposed()" );
         if ( impl_isDisposed_nofail() )
-            return false;
+            return;
 
         ObjectContactOfPageView* pPageViewContact = dynamic_cast< ObjectContactOfPageView* >( &m_pAntiImpl->GetObjectContact() );
         if ( pPageViewContact )
         {
             SdrPageViewAccess aPVAccess( pPageViewContact->GetPageWindow().GetPageView() );
             const OutputDevice& rDevice( m_pAntiImpl->getPageViewOutputDevice().get() );
-            return impl_ensureControl_nothrow(
+            impl_ensureControl_nothrow(
                 aPVAccess,
                 rDevice,
                 _pInitialViewTransformationOrNULL ? *_pInitialViewTransformationOrNULL : rDevice.GetViewTransformation()
             );
+            return;
         }
 
         DummyPageViewAccess aNoPageView;
         const OutputDevice& rDevice( impl_getOutputDevice_throw() );
-        return impl_ensureControl_nothrow(
+        impl_ensureControl_nothrow(
             aNoPageView,
             rDevice,
             _pInitialViewTransformationOrNULL ? *_pInitialViewTransformationOrNULL : rDevice.GetViewTransformation()
@@ -1008,7 +998,7 @@ namespace sdr { namespace contact {
 
     namespace
     {
-        static void lcl_resetFlag( bool& rbFlag )
+        void lcl_resetFlag( bool& rbFlag )
         {
             rbFlag = false;
         }
@@ -1035,7 +1025,7 @@ namespace sdr { namespace contact {
         }
 
         m_bCreatingControl = true;
-        ::comphelper::ScopeGuard aGuard( ::boost::bind( lcl_resetFlag, ::boost::ref( m_bCreatingControl ) ) );
+        ::comphelper::ScopeGuard aGuard([&] () { lcl_resetFlag(m_bCreatingControl); });
 
         if ( m_aControl.is() )
         {
@@ -1100,7 +1090,7 @@ namespace sdr { namespace contact {
     {
         _out_rControl.clear();
 
-        Reference< XControlModel > xControlModel( _rUnoObject.GetUnoControlModel() );
+        const Reference< XControlModel >& xControlModel( _rUnoObject.GetUnoControlModel() );
         DBG_ASSERT( xControlModel.is(), "ViewObjectContactOfUnoControl_Impl::createControlForDevice: no control model at the SdrUnoObject!?" );
         if ( !xControlModel.is() )
             return false;
@@ -1108,7 +1098,7 @@ namespace sdr { namespace contact {
         bool bSuccess = false;
         try
         {
-            const OUString sControlServiceName( _rUnoObject.GetUnoControlTypeName() );
+            const OUString& sControlServiceName( _rUnoObject.GetUnoControlTypeName() );
 
             Reference< css::uno::XComponentContext > xContext = ::comphelper::getProcessComponentContext();
             _out_rControl = Reference<XControl>( xContext->getServiceManager()->createInstanceWithContext(sControlServiceName, xContext), UNO_QUERY_THROW );
@@ -1177,7 +1167,7 @@ namespace sdr { namespace contact {
     }
 
 
-    void ViewObjectContactOfUnoControl_Impl::impl_adjustControlVisibilityToLayerVisibility_throw( bool _bForce )
+    void ViewObjectContactOfUnoControl_Impl::impl_adjustControlVisibilityToLayerVisibility_throw()
     {
         OSL_PRECOND( m_aControl.is(),
             "ViewObjectContactOfUnoControl_Impl::impl_adjustControlVisibilityToLayerVisibility_throw: only valid if we have a control!" );
@@ -1191,7 +1181,7 @@ namespace sdr { namespace contact {
             return;
 
         SdrPageViewAccess aPVAccess( *pPageView );
-        impl_adjustControlVisibilityToLayerVisibility_throw( m_aControl, *pUnoObject, aPVAccess, impl_isControlVisible_nofail(), _bForce );
+        impl_adjustControlVisibilityToLayerVisibility_throw( m_aControl, *pUnoObject, aPVAccess, impl_isControlVisible_nofail(), false/*_bForce*/ );
     }
 
 
@@ -1404,7 +1394,7 @@ namespace sdr { namespace contact {
         try
         {
             // if the control is part of a invisible layer, we need to explicitly hide it in alive mode
-            impl_adjustControlVisibilityToLayerVisibility_throw( false );
+            impl_adjustControlVisibilityToLayerVisibility_throw();
         }
         catch( const Exception& )
         {
@@ -1550,7 +1540,7 @@ namespace sdr { namespace contact {
 
     ::drawinglayer::primitive2d::Primitive2DContainer LazyControlCreationPrimitive2D::get2DDecomposition( const ::drawinglayer::geometry::ViewInformation2D& _rViewInformation ) const
     {
-    #if OSL_DEBUG_LEVEL > 1
+    #if OSL_DEBUG_LEVEL > 0
         ::basegfx::B2DVector aScale, aTranslate;
         double fRotate, fShearX;
         _rViewInformation.getObjectToViewTransformation().decompose( aScale, aTranslate, fRotate, fShearX );
@@ -1563,7 +1553,7 @@ namespace sdr { namespace contact {
 
     ::drawinglayer::primitive2d::Primitive2DContainer LazyControlCreationPrimitive2D::create2DDecomposition( const ::drawinglayer::geometry::ViewInformation2D& _rViewInformation ) const
     {
-    #if OSL_DEBUG_LEVEL > 1
+    #if OSL_DEBUG_LEVEL > 0
         ::basegfx::B2DVector aScale, aTranslate;
         double fRotate, fShearX;
         _rViewInformation.getObjectToViewTransformation().decompose( aScale, aTranslate, fRotate, fShearX );
@@ -1715,7 +1705,7 @@ namespace sdr { namespace contact {
         if ( m_pImpl->hasControl() )
         {
             const ::drawinglayer::geometry::ViewInformation2D& rViewInformation( GetObjectContact().getViewInformation2D() );
-        #if OSL_DEBUG_LEVEL > 1
+        #if OSL_DEBUG_LEVEL > 0
             ::basegfx::B2DVector aScale, aTranslate;
             double fRotate, fShearX;
             rViewInformation.getObjectToViewTransformation().decompose( aScale, aTranslate, fRotate, fShearX );

@@ -46,13 +46,10 @@
 #include <unistd.h>
 #endif
 
-#include <sal/types.h>
-
-#include "vcl/dllapi.h"
+#include <vcl/dllapi.h>
+#include <vcl/fontcapabilities.hxx>
 
 #include <vector>
-
-#include "vcl/fontcapabilities.hxx"
 
 namespace vcl
 {
@@ -103,7 +100,7 @@ namespace vcl
         FWIDTH_ULTRA_EXPANDED = 9           /**< 200% of normal                     */
     };
 
-/** Type of the 'kern' table, stored in _TrueTypeFont::kerntype */
+/** Type of the 'kern' table, stored in TrueTypeFont::kerntype */
     enum KernType {
         KT_NONE         = 0,                /**< no kern table                      */
         KT_APPLE_NEW    = 1,                /**< new Apple kern table               */
@@ -182,7 +179,7 @@ namespace vcl
         sal_uInt16 macStyle;      /**< macstyle bits from 'HEAD' table */
         int   weight;             /**< value of WeightClass or 0 if can't be determined        */
         int   width;              /**< value of WidthClass or 0 if can't be determined         */
-        int   pitch;              /**< 0: proportianal font, otherwise: monospaced             */
+        int   pitch;              /**< 0: proportional font, otherwise: monospaced             */
         int   italicAngle;        /**< in counter-clockwise degrees * 65536                    */
         int   xMin;               /**< global bounding box: xMin                               */
         int   yMin;               /**< global bounding box: yMin                               */
@@ -196,7 +193,7 @@ namespace vcl
         int   vdescent;           /**< typographic descent for vertical writing mode           */
         int   typoAscender;       /**< OS/2 portable typographic ascender                      */
         int   typoDescender;      /**< OS/2 portable typographic descender                     */
-        int   typoLineGap;        /**< OS/2 portable typographc line gap                       */
+        int   typoLineGap;        /**< OS/2 portable typographic line gap                       */
         int   winAscent;          /**< ascender metric for Windows                             */
         int   winDescent;         /**< descender metric for Windows                            */
         bool  symbolEncoded;      /**< true: MS symbol encoded */
@@ -229,7 +226,7 @@ namespace vcl
         sal_Int16 y;                  /**< Y coordinate in EmSquare units      */
     } ControlPoint;
 
-    typedef struct _TrueTypeFont TrueTypeFont;
+    struct TrueTypeFont;
 
 /**
  * @defgroup sft Sun Font Tools Exported Functions
@@ -246,19 +243,24 @@ namespace vcl
 /**
  * TrueTypeFont constructor.
  * The font file has to be provided as a memory buffer and length
+ * @param  pBuffer - memory buffer
+ * @param  nLen    - size of memory buffer
  * @param  facenum - logical font number within a TTC file. This value is ignored
  *                   for TrueType fonts
+ * @param  ttf     - array of TrueTypeFonts
  * @return value of SFErrCodes enum
  * @ingroup sft
  */
     int VCL_DLLPUBLIC OpenTTFontBuffer(const void* pBuffer, sal_uInt32 nLen, sal_uInt32 facenum, TrueTypeFont** ttf);
-#if !defined(WIN32)
+#if !defined(_WIN32)
 /**
  * TrueTypeFont constructor.
  * Reads the font file and allocates the memory for the structure.
  * on WIN32 the font has to be provided as a memory buffer and length
+ * @param  fname   - name of TrueType font file
  * @param  facenum - logical font number within a TTC file. This value is ignored
  *                   for TrueType fonts
+ * @param  ttf     - array of TrueTypeFonts
  * @return value of SFErrCodes enum
  * @ingroup sft
  */
@@ -457,6 +459,7 @@ namespace vcl
  * @param str         pointer to a UCS-2 string
  * @param nchars      number of characters in <b>str</b>
  * @param glyphArray  pointer to the glyph array where glyph IDs are to be recorded.
+ * @param bvertical   vertical text
  *
  * @return MapString() returns -1 if the TrueType font has no usable 'cmap' tables.
  *         Otherwise it returns the number of characters processed: <b>nChars</b>
@@ -469,13 +472,15 @@ namespace vcl
  */
     int VCL_DLLPUBLIC MapString(TrueTypeFont *ttf, sal_uInt16 *str, int nchars, sal_uInt16 *glyphArray, bool bvertical);
 
-#if defined(WNT) || defined(MACOSX) || defined(IOS)
+#if defined(_WIN32) || defined(MACOSX) || defined(IOS)
 /**
  * Maps a Unicode (UCS-2) character to a glyph ID and returns it. Missing glyph has
  * a glyphID of 0 so this function can be used to test if a character is encoded in the font.
  *
  * @param ttf         pointer to the TrueTypeFont structure
  * @param ch          Unicode (UCS-2) character
+ * @param bvertical   flag to function that we want to find the vertical
+ *                    GlobalSUBstitution attribute
  * @return glyph ID, if the character is missing in the font, the return value is 0.
  * @ingroup sft
  */
@@ -486,6 +491,8 @@ namespace vcl
  * Returns 0 when the font does not substitute vertical glyphs
  *
  * @param ttf         pointer to the TrueTypeFont structure
+ * @param bvertical   flag to function that we want to find the vertical
+ *                    GlobalSUBstitution attribute
  */
     int DoesVerticalSubstitution( TrueTypeFont *ttf, int bvertical);
 
@@ -513,7 +520,7 @@ namespace vcl
 
 /*- private definitions */
 
-    struct _TrueTypeFont {
+    struct TrueTypeFont {
         sal_uInt32 tag;
 
         char        *fname;
@@ -543,7 +550,7 @@ namespace vcl
         void        *pGSubstitution;                       /* info provided by GSUB for UseGSUB()                                */
     };
 
-/* indexes into _TrueTypeFont::tables[] and _TrueTypeFont::tlens[] */
+/* indexes into TrueTypeFont::tables[] and TrueTypeFont::tlens[] */
 #define O_maxp 0     /* 'maxp' */
 #define O_glyf 1     /* 'glyf' */
 #define O_head 2     /* 'head' */

@@ -39,46 +39,13 @@
 #include "dwfunctr.hrc"
 #include "dwfunctr.hxx"
 
-SFX_IMPL_DOCKINGWINDOW_WITHID( ScFunctionChildWindow, FID_FUNCTION_BOX )
-
 /*************************************************************************
-#*  Member:     ScFunctionChildWindow
+#*  Member:     ScFunctionWin
 #*------------------------------------------------------------------------
 #*
-#*  Klasse:     ScFunctionChildWindow
+#*  Klasse:     ScFunctionWin
 #*
-#*  Funktion:   Konstruktor der Klasse ScFunctionChildWindow
-#*              Ableitung vom SfxChildWindow als "Behaelter" fuer
-#*              Funktions- Fenster in Clac
-#*
-#*  Input:      ---
-#*
-#*  Output:     ---
-#*
-#************************************************************************/
-
-ScFunctionChildWindow::ScFunctionChildWindow( vcl::Window* pParentP,
-                                    sal_uInt16 nId,
-                                    SfxBindings* pBindings,
-                                    SfxChildWinInfo* pInfo ) :
-    SfxChildWindow( pParentP, nId )
-{
-    VclPtr<ScFunctionDockWin> pWin = VclPtr<ScFunctionDockWin>::Create( pBindings, this,
-                                        pParentP, ScResId( FID_FUNCTION_BOX ) );
-    SetWindow(pWin);
-
-    SetAlignment(SfxChildAlignment::RIGHT);
-
-    pWin->Initialize( pInfo );
-}
-
-/*************************************************************************
-#*  Member:     ScFunctionDockWin
-#*------------------------------------------------------------------------
-#*
-#*  Klasse:     ScFunctionDockWin
-#*
-#*  Funktion:   Konstruktor der Klasse ScFunctionDockWin
+#*  Funktion:   Konstruktor der Klasse ScFunctionWin
 #*
 #*  Input:      Sfx- Verknuepfungen, Fenster, Resource
 #*
@@ -86,10 +53,9 @@ ScFunctionChildWindow::ScFunctionChildWindow( vcl::Window* pParentP,
 #*
 #************************************************************************/
 
-ScFunctionDockWin::ScFunctionDockWin( SfxBindings* pBindingsP,
-                SfxChildWindow *pCW, vcl::Window* pParent, const ResId& rResId ) :
-
-    SfxDockingWindow( pBindingsP, pCW, pParent, rResId ),
+ScFunctionWin::ScFunctionWin( SfxBindings* pBindingsP, vcl::Window* pParent, const ResId& rResId ) :
+    vcl::Window(pParent, rResId),
+    rBindings   ( *pBindingsP ),
     aPrivatSplit    ( VclPtr<ScPrivatSplit>::Create( this, ResId( FT_SPLIT, *rResId.GetResMgr() ) ) ),
     aCatBox         ( VclPtr<ListBox>::Create( this, ResId( CB_CAT, *rResId.GetResMgr() ) ) ),
     aFuncList       ( VclPtr<ListBox>::Create( this, ResId( LB_FUNC, *rResId.GetResMgr() ) ) ),
@@ -104,19 +70,13 @@ ScFunctionDockWin::ScFunctionDockWin( SfxBindings* pBindingsP,
     SetStyle(GetStyle()|WB_CLIPCHILDREN);
 
     aIdle.SetPriority(SchedulerPriority::LOWER);
-    aIdle.SetIdleHdl(LINK( this, ScFunctionDockWin, TimerHdl));
+    aIdle.SetIdleHdl(LINK( this, ScFunctionWin, TimerHdl));
 
-    if (pCW != nullptr)
-        eSfxNewAlignment=GetAlignment();
-    else
-        eSfxNewAlignment=SfxChildAlignment::RIGHT;
-    eSfxOldAlignment=eSfxNewAlignment;
     aFiFuncDesc->SetUpdateMode(true);
     pAllFuncList=aFuncList;
     aDDFuncList->Disable();
     aDDFuncList->Hide();
     nArgs=0;
-    nDockMode=0;
     bSizeFlag=false;
     aCatBox->SetDropDownLineCount(9);
     vcl::Font aFont=aFiFuncDesc->GetFont();
@@ -124,18 +84,18 @@ ScFunctionDockWin::ScFunctionDockWin( SfxBindings* pBindingsP,
     aFiFuncDesc->SetFont(aFont);
     aFiFuncDesc->SetBackground( GetBackground() );       //! never transparent?
 
-    Link<ListBox&,void> aLink=LINK( this, ScFunctionDockWin, SelHdl);
+    Link<ListBox&,void> aLink=LINK( this, ScFunctionWin, SelHdl);
     aCatBox->SetSelectHdl(aLink);
     aFuncList->SetSelectHdl(aLink);
     aDDFuncList->SetSelectHdl(aLink);
 
-    aFuncList->SetDoubleClickHdl(LINK( this, ScFunctionDockWin, SetSelectionHdl));
+    aFuncList->SetDoubleClickHdl(LINK( this, ScFunctionWin, SetSelectionHdl));
     aDDFuncList->SetSelectHdl(aLink);
-    aInsertButton->SetClickHdl(LINK( this, ScFunctionDockWin, SetSelectionClickHdl));
+    aInsertButton->SetClickHdl(LINK( this, ScFunctionWin, SetSelectionClickHdl));
 
-    Link<ScPrivatSplit&,void> a3Link=LINK( this, ScFunctionDockWin, SetSplitHdl);
+    Link<ScPrivatSplit&,void> a3Link=LINK( this, ScFunctionWin, SetSplitHdl);
     aPrivatSplit->SetCtrModifiedHdl(a3Link);
-    StartListening( *pBindingsP, true );
+    StartListening( rBindings, true );
 
     Point aTopLeft=aCatBox->GetPosPixel();
     OUString aString("ww");
@@ -149,16 +109,15 @@ ScFunctionDockWin::ScFunctionDockWin( SfxBindings* pBindingsP,
                 GetOutputSizePixel().Height()-2*aTxtSize.Height());
     aPrivatSplit->SetYRange(aYRange);
     SelHdl(*aCatBox.get());
-    bInit = true;
 }
 
 /*************************************************************************
-#*  Member:     ScFunctionDockWin
+#*  Member:     ScFunctionWin
 #*------------------------------------------------------------------------
 #*
-#*  Klasse:     ScFunctionDockWin
+#*  Klasse:     ScFunctionWin
 #*
-#*  Funktion:   Destruktor der Klasse ScFunctionDockWin
+#*  Funktion:   Destruktor der Klasse ScFunctionWin
 #*
 #*  Input:      ---
 #*
@@ -166,14 +125,14 @@ ScFunctionDockWin::ScFunctionDockWin( SfxBindings* pBindingsP,
 #*
 #************************************************************************/
 
-ScFunctionDockWin::~ScFunctionDockWin()
+ScFunctionWin::~ScFunctionWin()
 {
     disposeOnce();
 }
 
-void ScFunctionDockWin::dispose()
+void ScFunctionWin::dispose()
 {
-    EndListening( GetBindings() );
+    EndListening( rBindings );
     aPrivatSplit.disposeAndClear();
     aCatBox.disposeAndClear();
     aFuncList.disposeAndClear();
@@ -181,14 +140,14 @@ void ScFunctionDockWin::dispose()
     aInsertButton.disposeAndClear();
     aFiFuncDesc.disposeAndClear();
     pAllFuncList.clear();
-    SfxDockingWindow::dispose();
+    vcl::Window::dispose();
 }
 
 /*************************************************************************
 #*  Member:     UpdateFunctionList
 #*------------------------------------------------------------------------
 #*
-#*  Klasse:     ScFunctionDockWin
+#*  Klasse:     ScFunctionWin
 #*
 #*  Funktion:   Aktualisiert die Liste der Funktionen ab-
 #*              haengig von der eingestellten Kategorie.
@@ -199,7 +158,7 @@ void ScFunctionDockWin::dispose()
 #*
 #************************************************************************/
 
-void ScFunctionDockWin::InitLRUList()
+void ScFunctionWin::InitLRUList()
 {
     ScFunctionMgr* pFuncMgr = ScGlobal::GetStarCalcFunctionMgr();
     pFuncMgr->fillLastRecentlyUsedFunctions(aLRUList);
@@ -214,7 +173,7 @@ void ScFunctionDockWin::InitLRUList()
 #*  Member:     UpdateFunctionList
 #*------------------------------------------------------------------------
 #*
-#*  Klasse:     ScFunctionDockWin
+#*  Klasse:     ScFunctionWin
 #*
 #*  Funktion:   Aktualisiert die Liste der zuletzt verwendeten Funktionen.
 #*
@@ -224,7 +183,7 @@ void ScFunctionDockWin::InitLRUList()
 #*
 #************************************************************************/
 
-void ScFunctionDockWin::UpdateLRUList()
+void ScFunctionWin::UpdateLRUList()
 {
     if (pFuncDesc && pFuncDesc->nFIndex!=0)
     {
@@ -237,7 +196,7 @@ void ScFunctionDockWin::UpdateLRUList()
 #*  Member:     SetSize
 #*------------------------------------------------------------------------
 #*
-#*  Klasse:     ScFunctionDockWin
+#*  Klasse:     ScFunctionWin
 #*
 #*  Funktion:   Groesse fuer die einzelnen Controls einzustellen.
 #*
@@ -247,73 +206,16 @@ void ScFunctionDockWin::UpdateLRUList()
 #*
 #************************************************************************/
 
-void ScFunctionDockWin::SetSize()
+void ScFunctionWin::SetSize()
 {
-    sal_Int32 nSelEntry=0;
-    SfxChildAlignment  aChildAlign=eSfxOldAlignment;//GetAlignment();
-    short nNewDockMode;
-    switch(aChildAlign)
-    {
-        case SfxChildAlignment::HIGHESTTOP:
-        case SfxChildAlignment::TOP:
-        case SfxChildAlignment::LOWESTTOP:
-        case SfxChildAlignment::LOWESTBOTTOM:
-        case SfxChildAlignment::BOTTOM:
-        case SfxChildAlignment::TOOLBOXTOP:
-        case SfxChildAlignment::TOOLBOXBOTTOM:
-
-                        nNewDockMode=1;
-                        if(nDockMode!=nNewDockMode)
-                        {
-                            nDockMode=nNewDockMode;
-                            nSelEntry=aFuncList->GetSelectEntryPos();
-                            aFuncList->Clear();
-                            aFiFuncDesc->SetPosPixel(aFuncList->GetPosPixel());
-                            aDDFuncList->Enable();
-                            aDDFuncList->Show();
-                            aPrivatSplit->Disable();
-                            aPrivatSplit->Hide();
-                            aFuncList->Disable();
-                            aFuncList->Hide();
-                            pAllFuncList=aDDFuncList;
-                            SelHdl(*aCatBox.get());
-                            aDDFuncList->SelectEntryPos(nSelEntry);
-                        }
-                        break;
-
-        default:        nNewDockMode=0;
-                        if(nDockMode!=nNewDockMode)
-                        {
-                            nDockMode=nNewDockMode;
-                            nSelEntry=aDDFuncList->GetSelectEntryPos();
-                            aDDFuncList->Clear();
-                            aDDFuncList->Disable();
-                            aDDFuncList->Hide();
-                            aPrivatSplit->Enable();
-                            aPrivatSplit->Show();
-                            aFuncList->Enable();
-                            aFuncList->Show();
-                            pAllFuncList=aFuncList;
-                            SelHdl(*aCatBox.get());
-                            aFuncList->SelectEntryPos(nSelEntry);
-                        }
-                        break;
-    }
-
-    if(nDockMode==0)
-    {
-        SetLeftRightSize();
-    }
-    else
-    {
-        SetTopBottonSize();
-    }
+    SetLeftRightSize();
 }
+
 /*************************************************************************
 #*  Member:     SetLeftRightSize
 #*------------------------------------------------------------------------
 #*
-#*  Klasse:     ScFunctionDockWin
+#*  Klasse:     ScFunctionWin
 #*
 #*  Funktion:   Groesse fuer die einzelnen Controls einstellen,
 #*              wenn Links oder Rechts angedockt wird.
@@ -324,7 +226,7 @@ void ScFunctionDockWin::SetSize()
 #*
 #************************************************************************/
 
-void ScFunctionDockWin::SetLeftRightSize()
+void ScFunctionWin::SetLeftRightSize()
 {
     if(!bSizeFlag)
     {
@@ -355,45 +257,12 @@ void ScFunctionDockWin::SetLeftRightSize()
     }
 
 }
-/*************************************************************************
-#*  Member:     SetTopBottonSize
-#*------------------------------------------------------------------------
-#*
-#*  Klasse:     ScFunctionDockWin
-#*
-#*  Funktion:   Groesse fuer die einzelnen Controls einzustellen.
-#*              wenn oben oder unten angedockt wird.
-#*
-#*  Input:      ---
-#*
-#*  Output:     ---
-#*
-#************************************************************************/
-
-void ScFunctionDockWin::SetTopBottonSize()
-{
-    if(!bSizeFlag)
-    {
-        bSizeFlag = true;
-        Size aDiffSize=GetSizePixel();
-        Size aNewSize=GetOutputSizePixel();
-        aDiffSize.Width()-=aNewSize.Width();
-        aDiffSize.Height()-=aNewSize.Height();
-
-        SetMyWidthToBo(aNewSize);
-        SetMyHeightToBo(aNewSize);
-
-        aNewSize.Width()+=aDiffSize.Width();
-        aNewSize.Height()+=aDiffSize.Height();
-        bSizeFlag=false;
-    }
-}
 
 /*************************************************************************
 #*  Member:     SetMyWidthLeRi
 #*------------------------------------------------------------------------
 #*
-#*  Klasse:     ScFunctionDockWin
+#*  Klasse:     ScFunctionWin
 #*
 #*  Funktion:   Breite fuer die einzelnen Controls und
 #*              das Fenster einstellen,wenn Li oder Re
@@ -404,7 +273,7 @@ void ScFunctionDockWin::SetTopBottonSize()
 #*
 #************************************************************************/
 
-void ScFunctionDockWin::SetMyWidthLeRi(Size &aNewSize)
+void ScFunctionWin::SetMyWidthLeRi(Size &aNewSize)
 {
     if((sal_uLong)aNewSize.Width()<nMinWidth)   aNewSize.Width()=nMinWidth;
 
@@ -431,7 +300,7 @@ void ScFunctionDockWin::SetMyWidthLeRi(Size &aNewSize)
 #*  Member:     SetHeight
 #*------------------------------------------------------------------------
 #*
-#*  Klasse:     ScFunctionDockWin
+#*  Klasse:     ScFunctionWin
 #*
 #*  Funktion:   Hoehe fuer die einzelnen Controls und
 #*              das Fenster einstellen bei Li oder Re
@@ -442,7 +311,7 @@ void ScFunctionDockWin::SetMyWidthLeRi(Size &aNewSize)
 #*
 #************************************************************************/
 
-void ScFunctionDockWin::SetMyHeightLeRi(Size &aNewSize)
+void ScFunctionWin::SetMyHeightLeRi(Size &aNewSize)
 {
     if((sal_uLong)aNewSize.Height()<nMinHeight) aNewSize.Height()=nMinHeight;
 
@@ -476,80 +345,10 @@ void ScFunctionDockWin::SetMyHeightLeRi(Size &aNewSize)
 }
 
 /*************************************************************************
-#*  Member:     SetMyWidthToBo
-#*------------------------------------------------------------------------
-#*
-#*  Klasse:     ScFunctionDockWin
-#*
-#*  Funktion:   Breite fuer die einzelnen Controls und
-#*              das Fenster einstellen, wenn oben oder
-#*              unten angedockt werden soll.
-#*
-#*  Input:      neue Fenstergroesse
-#*
-#*  Output:     ---
-#*
-#************************************************************************/
-
-void ScFunctionDockWin::SetMyWidthToBo(Size &aNewSize)
-{
-    if((sal_uLong)aNewSize.Width()<nMinWidth)   aNewSize.Width()=nMinWidth;
-
-    Size aCDSize=aCatBox->GetSizePixel();
-    Size aDdFLSize=aDDFuncList->GetSizePixel();
-    Size aFDSize=aFiFuncDesc->GetSizePixel();
-
-    Point aCDTopLeft=aCatBox->GetPosPixel();
-    Point aDdFLTopLeft=aDDFuncList->GetPosPixel();
-    Point aFDTopLeft=aFiFuncDesc->GetPosPixel();
-
-    aCDSize.Width()=aDdFLTopLeft.X()-aFDTopLeft.X()-aCDTopLeft.X();
-    aDdFLTopLeft.X()=aCDSize.Width()+aCDTopLeft.X()+aFDTopLeft.X();
-
-    aDdFLSize.Width()=aNewSize.Width()-aDdFLTopLeft.X()-aFDTopLeft.X();
-
-    aFDSize.Width()=aNewSize.Width()-2*aFDTopLeft.X();
-
-    aDDFuncList->SetPosPixel(aDdFLTopLeft);
-    aDDFuncList->SetSizePixel(aDdFLSize);
-    aCatBox->SetSizePixel(aCDSize);
-    aFiFuncDesc->SetSizePixel(aFDSize);
-}
-
-/*************************************************************************
-#*  Member:     SetHeight
-#*------------------------------------------------------------------------
-#*
-#*  Klasse:     ScFunctionDockWin
-#*
-#*  Funktion:   Hoehe fuer die einzelnen Controls und
-#*              das Fenster einstellen, wenn oben oder
-#*              unten angedockt werden soll.
-#*
-#*  Input:      neue Fenstergroesse
-#*
-#*  Output:     ---
-#*
-#************************************************************************/
-
-void ScFunctionDockWin::SetMyHeightToBo(Size &aNewSize)
-{
-    if((sal_uLong)aNewSize.Height()<nMinHeight) aNewSize.Height()=nMinHeight;
-
-    Size aFDSize=aFiFuncDesc->GetSizePixel();
-
-    Point aFDTopLeft=aFiFuncDesc->GetPosPixel();
-    Point aCBTopLeft=aCatBox->GetPosPixel();
-    aFDSize.Height()=aNewSize.Height()-aFDTopLeft.Y()-aCBTopLeft.Y();
-    aFiFuncDesc->SetSizePixel(aFDSize);
-
-}
-
-/*************************************************************************
 #*  Member:     SetDescription
 #*------------------------------------------------------------------------
 #*
-#*  Klasse:     ScFunctionDockWin
+#*  Klasse:     ScFunctionWin
 #*
 #*  Funktion:   Erklaerungstext fuer die Funktion einstellen.
 #*
@@ -559,7 +358,7 @@ void ScFunctionDockWin::SetMyHeightToBo(Size &aNewSize)
 #*
 #************************************************************************/
 
-void ScFunctionDockWin::SetDescription()
+void ScFunctionWin::SetDescription()
 {
     aFiFuncDesc->SetText( EMPTY_OUSTRING );
     const ScFuncDesc* pDesc =
@@ -570,26 +369,9 @@ void ScFunctionDockWin::SetDescription()
         pDesc->initArgumentInfo();      // full argument info is needed
 
         OUStringBuffer aBuf(pAllFuncList->GetSelectEntry());
-        if(nDockMode==0)
-        {
-            aBuf.append(":\n\n");
-        }
-        else
-        {
-            aBuf.append(":   ");
-        }
-
+        aBuf.append(":\n\n");
         aBuf.append(pDesc->GetParamList());
-
-        if(nDockMode==0)
-        {
-            aBuf.append("\n\n");
-        }
-        else
-        {
-            aBuf.append("\n");
-        }
-
+        aBuf.append("\n\n");
         aBuf.append(*pDesc->pFuncDesc);
 
         aFiFuncDesc->SetText(aBuf.makeStringAndClear());
@@ -600,109 +382,11 @@ void ScFunctionDockWin::SetDescription()
     }
  }
 
-/// override to set new size of the controls
-void ScFunctionDockWin::Resizing( Size& rNewSize )
-{
-    if((sal_uLong)rNewSize.Width()<nMinWidth) rNewSize.Width()=nMinWidth;
-    if((sal_uLong)rNewSize.Height()<nMinHeight) rNewSize.Height()=nMinHeight;
-
-}
-
 /*************************************************************************
 #*  Member:     Close
 #*------------------------------------------------------------------------
 #*
-#*  Klasse:     ScFunctionDockWin
-#*
-#*  Funktion:   Schliessen des Fensters
-#*
-#*  Input:      ---
-#*
-#*  Output:     TRUE
-#*
-#************************************************************************/
-
-bool ScFunctionDockWin::Close()
-{
-    SfxBoolItem aItem( FID_FUNCTION_BOX, false );
-
-    GetBindings().GetDispatcher()->Execute( FID_FUNCTION_BOX,
-                                SfxCallMode::ASYNCHRON | SfxCallMode::RECORD,
-                                &aItem, 0L );
-
-    SfxDockingWindow::Close();
-
-    return true;
-}
-
-/*************************************************************************
-#*  Member:     CheckAlignment
-#*------------------------------------------------------------------------
-#*
-#*  Klasse:     ScFunctionDockWin
-#*
-#*  Funktion:   Ueberprueft den Andockmodus und stellt die
-#*              Groessen dementsprechend ein.
-#*
-#*  Input:      Das neue Alignment
-#*
-#*  Output:     Das uebergebene Alignment
-#*
-#************************************************************************/
-SfxChildAlignment ScFunctionDockWin::CheckAlignment(SfxChildAlignment /* abla */,
-                                SfxChildAlignment aChildAlign)
-{
-    OUString aString("ww");
-    Size aTxtSize( aFiFuncDesc->GetTextWidth(aString), aFiFuncDesc->GetTextHeight() );
-    if(!bInit)
-    {
-        eSfxOldAlignment=eSfxNewAlignment;
-        eSfxNewAlignment=aChildAlign;
-    }
-    else
-    {
-        bInit=false;
-        eSfxOldAlignment=aChildAlign;
-        eSfxNewAlignment=aChildAlign;
-    }
-
-    switch(eSfxOldAlignment)
-    {
-        case SfxChildAlignment::HIGHESTTOP:
-        case SfxChildAlignment::TOP:
-        case SfxChildAlignment::LOWESTTOP:
-        case SfxChildAlignment::LOWESTBOTTOM:
-        case SfxChildAlignment::BOTTOM:
-        case SfxChildAlignment::TOOLBOXTOP:
-        case SfxChildAlignment::TOOLBOXBOTTOM:
-
-                        nMinWidth= 0;
-                        nMinHeight=0;
-
-                        break;
-
-        case SfxChildAlignment::NOALIGNMENT:
-
-                        aString = aCatBox->GetEntry(0);
-                        aString += "www";
-                        aTxtSize = Size( aFiFuncDesc->GetTextWidth(aString),
-                                            aFiFuncDesc->GetTextHeight() );
-                        // fall-through
-        default:        Point aTopLeft=aCatBox->GetPosPixel();
-                        nMinWidth=aTxtSize.Width()+aTopLeft.X()
-                                +2*aFuncList->GetPosPixel().X();
-                        nMinHeight=19*aTxtSize.Height();
-
-                        break;
-    }
-
-    return aChildAlign;
-}
-/*************************************************************************
-#*  Member:     Close
-#*------------------------------------------------------------------------
-#*
-#*  Klasse:     ScFunctionDockWin
+#*  Klasse:     ScFunctionWin
 #*
 #*  Funktion:   Aenderungen erkennen
 #*
@@ -711,28 +395,22 @@ SfxChildAlignment ScFunctionDockWin::CheckAlignment(SfxChildAlignment /* abla */
 #*  Output:     TRUE
 #*
 #************************************************************************/
-void ScFunctionDockWin::Notify( SfxBroadcaster&, const SfxHint& /* rHint */ )
+void ScFunctionWin::Notify( SfxBroadcaster&, const SfxHint& /* rHint */ )
 {
 }
 
 /// override to set new size of the controls
-void ScFunctionDockWin::Resize()
+void ScFunctionWin::Resize()
 {
-    if ( !IsFloatingMode() ||
-         !GetFloatingWindow()->IsRollUp() )
-    {
-        Size aQSize=GetOutputSizePixel();
-        Resizing( aQSize);
-        SetSize();
-    }
-    SfxDockingWindow::Resize();
+    SetSize();
+    vcl::Window::Resize();
 }
 
 /*************************************************************************
 #*  Member:     UpdateFunctionList
 #*------------------------------------------------------------------------
 #*
-#*  Klasse:     ScFunctionDockWin
+#*  Klasse:     ScFunctionWin
 #*
 #*  Funktion:   Aktualisiert die Liste der Funktionen ab-
 #*              haengig von der eingestellten Kategorie.
@@ -743,7 +421,7 @@ void ScFunctionDockWin::Resize()
 #*
 #************************************************************************/
 
-void ScFunctionDockWin::UpdateFunctionList()
+void ScFunctionWin::UpdateFunctionList()
 {
     sal_Int32  nSelPos   = aCatBox->GetSelectEntryPos();
     sal_Int32  nCategory = ( LISTBOX_ENTRY_NOTFOUND != nSelPos )
@@ -793,7 +471,7 @@ void ScFunctionDockWin::UpdateFunctionList()
 #*  Member:     DoEnter
 #*------------------------------------------------------------------------
 #*
-#*  Klasse:     ScFunctionDockWin
+#*  Klasse:     ScFunctionWin
 #*
 #*  Funktion:   Eingabe ins Dokument uebernehmen. Wird aufgerufen
 #*              nach betaetigen der Uebernehmen- Schaltflaeche
@@ -805,7 +483,7 @@ void ScFunctionDockWin::UpdateFunctionList()
 #*
 #************************************************************************/
 
-void ScFunctionDockWin::DoEnter()
+void ScFunctionWin::DoEnter()
 {
     OUString aFirstArgStr;
     OUString aArgStr;
@@ -914,7 +592,7 @@ void ScFunctionDockWin::DoEnter()
 #*  Handle:     SelHdl
 #*------------------------------------------------------------------------
 #*
-#*  Klasse:     ScFunctionDockWin
+#*  Klasse:     ScFunctionWin
 #*
 #*  Funktion:   Bei einer Aenderung der Kategorie wird die
 #*              die Liste der Funktionen aktualisiert.
@@ -925,7 +603,7 @@ void ScFunctionDockWin::DoEnter()
 #*
 #************************************************************************/
 
-IMPL_LINK_TYPED( ScFunctionDockWin, SelHdl, ListBox&, rLb, void )
+IMPL_LINK_TYPED( ScFunctionWin, SelHdl, ListBox&, rLb, void )
 {
     if ( &rLb == aCatBox.get() )
     {
@@ -943,7 +621,7 @@ IMPL_LINK_TYPED( ScFunctionDockWin, SelHdl, ListBox&, rLb, void )
 #*  Handle:     SelHdl
 #*------------------------------------------------------------------------
 #*
-#*  Klasse:     ScFunctionDockWin
+#*  Klasse:     ScFunctionWin
 #*
 #*  Funktion:   Bei einer Aenderung der Kategorie wird die
 #*              die Liste der Funktionen aktualisiert.
@@ -954,11 +632,11 @@ IMPL_LINK_TYPED( ScFunctionDockWin, SelHdl, ListBox&, rLb, void )
 #*
 #************************************************************************/
 
-IMPL_LINK_NOARG_TYPED( ScFunctionDockWin, SetSelectionClickHdl, Button*, void )
+IMPL_LINK_NOARG_TYPED( ScFunctionWin, SetSelectionClickHdl, Button*, void )
 {
     DoEnter();          // Uebernimmt die Eingabe
 }
-IMPL_LINK_NOARG_TYPED( ScFunctionDockWin, SetSelectionHdl, ListBox&, void )
+IMPL_LINK_NOARG_TYPED( ScFunctionWin, SetSelectionHdl, ListBox&, void )
 {
     DoEnter();          // Uebernimmt die Eingabe
 }
@@ -967,7 +645,7 @@ IMPL_LINK_NOARG_TYPED( ScFunctionDockWin, SetSelectionHdl, ListBox&, void )
 #*  Handle:     SetSplitHdl
 #*------------------------------------------------------------------------
 #*
-#*  Klasse:     ScFunctionDockWin
+#*  Klasse:     ScFunctionWin
 #*
 #*  Funktion:   Bei einer Aenderung des Split- Controls werden die
 #*              einzelnen Controls an die neue Groesse angepasst.
@@ -978,7 +656,7 @@ IMPL_LINK_NOARG_TYPED( ScFunctionDockWin, SetSelectionHdl, ListBox&, void )
 #*
 #************************************************************************/
 
-IMPL_LINK_TYPED( ScFunctionDockWin, SetSplitHdl, ScPrivatSplit&, rCtrl, void )
+IMPL_LINK_TYPED( ScFunctionWin, SetSplitHdl, ScPrivatSplit&, rCtrl, void )
 {
     if (&rCtrl == aPrivatSplit.get())
     {
@@ -996,82 +674,17 @@ IMPL_LINK_TYPED( ScFunctionDockWin, SetSplitHdl, ScPrivatSplit&, rCtrl, void )
     }
 }
 
-void ScFunctionDockWin::ToggleFloatingMode()
+IMPL_LINK_NOARG_TYPED(ScFunctionWin, TimerHdl, Idle *, void)
 {
-    aSplitterInitPos = Point();
-    SfxDockingWindow::ToggleFloatingMode();
-
-    eSfxNewAlignment=GetAlignment();
-    eSfxOldAlignment=eSfxNewAlignment;
-
-    aOldSize.Height()=0;
-    aOldSize.Width()=0;
-    aIdle.Start();
-}
-
-IMPL_LINK_NOARG_TYPED(ScFunctionDockWin, TimerHdl, Idle *, void)
-{
-    CheckAlignment(eSfxOldAlignment,eSfxNewAlignment);
+    OUString aString("ww");
+    Size aTxtSize( aFiFuncDesc->GetTextWidth(aString), aFiFuncDesc->GetTextHeight() );
+    Point aTopLeft=aCatBox->GetPosPixel();
+    nMinWidth=aTxtSize.Width()+aTopLeft.X() +2*aFuncList->GetPosPixel().X();
+    nMinHeight=19*aTxtSize.Height();
     SetSize();
 }
 
-void ScFunctionDockWin::Initialize(SfxChildWinInfo *pInfo)
-{
-    OUString aStr;
-    if(pInfo!=nullptr)
-    {
-        if ( !pInfo->aExtraString.isEmpty() )
-        {
-            sal_Int32 nPos = pInfo->aExtraString.indexOf( "ScFuncList:" );
-
-            // Versuche, den Alignment-String "ALIGN:(...)" einzulesen; wenn
-            // er nicht vorhanden ist, liegt eine "altere Version vor
-            if ( nPos != -1 )
-            {
-                sal_Int32 n1 = pInfo->aExtraString.indexOf('(', nPos);
-                if ( n1 != -1 )
-                {
-                    sal_Int32 n2 = pInfo->aExtraString.indexOf(')', n1);
-                    if ( n2 != -1 )
-                    {
-                        // Alignment-String herausschneiden
-                        aStr = pInfo->aExtraString.copy(nPos, n2 - nPos + 1);
-                        pInfo->aExtraString = pInfo->aExtraString.replaceAt(nPos, n2 - nPos + 1, "");
-                        aStr = aStr.copy( n1-nPos+1 );
-                    }
-                }
-            }
-        }
-    }
-    SfxDockingWindow::Initialize(pInfo);
-
-    if ( !aStr.isEmpty())
-    {
-        aSplitterInitPos = aPrivatSplit->GetPosPixel();
-        aSplitterInitPos.Y() = (sal_uInt16) aStr.toInt32();
-        sal_Int32 n1 = aStr.indexOf(';');
-        aStr = aStr.copy( n1+1 );
-        sal_Int32 nSelPos = aStr.toInt32();
-        aCatBox->SelectEntryPos(nSelPos);
-        SelHdl(*aCatBox.get());
-
-        //  if the window has already been shown (from SfxDockingWindow::Initialize if docked),
-        //  set the splitter position now, otherwise it is set in StateChanged with type INITSHOW
-
-        UseSplitterInitPos();
-    }
-}
-
-void ScFunctionDockWin::FillInfo(SfxChildWinInfo& rInfo) const
-{
-    SfxDockingWindow::FillInfo(rInfo);
-    Point aPoint=aPrivatSplit->GetPosPixel();
-    rInfo.aExtraString += "ScFuncList:(" +
-                          OUString::number(aPoint.Y()) + ";" +
-                          OUString::number(aCatBox->GetSelectEntryPos()) + ")";
-}
-
-void ScFunctionDockWin::UseSplitterInitPos()
+void ScFunctionWin::UseSplitterInitPos()
 {
     if ( IsVisible() && aPrivatSplit->IsEnabled() && aSplitterInitPos != Point() )
     {
@@ -1080,9 +693,9 @@ void ScFunctionDockWin::UseSplitterInitPos()
     }
 }
 
-void ScFunctionDockWin::StateChanged( StateChangedType nStateChange )
+void ScFunctionWin::StateChanged( StateChangedType nStateChange )
 {
-    SfxDockingWindow::StateChanged( nStateChange );
+    vcl::Window::StateChanged( nStateChange );
 
     if (nStateChange == StateChangedType::InitShow)
     {

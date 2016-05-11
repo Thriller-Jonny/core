@@ -79,7 +79,7 @@
 #include <queue>
 #include <memory>
 
-#ifdef WNT
+#ifdef _WIN32
 #if defined _MSC_VER
 #pragma warning (push, 1)
 #pragma warning (disable: 4005)
@@ -109,7 +109,6 @@ OUString getVersion( const uno::Reference< deployment::XPackage > &rPackage )
 
 
 namespace dp_gui {
-
 
 
 class ProgressCmdEnv
@@ -322,7 +321,6 @@ ProgressCmdEnv::~ProgressCmdEnv()
 {
     // TODO: stop all threads and wait
 }
-
 
 
 // XCommandEnvironment
@@ -688,7 +686,7 @@ ExtensionCmdQueue::Thread::~Thread() {}
 
 void ExtensionCmdQueue::Thread::execute()
 {
-#ifdef WNT
+#ifdef _WIN32
     //Needed for use of the service "com.sun.star.system.SystemShellExecute" in
     //DialogHelper::openWebBrowser
     CoUninitialize();
@@ -835,7 +833,7 @@ void ExtensionCmdQueue::Thread::execute()
             currentCmdEnv->stopProgress();
     }
     //end for
-#ifdef WNT
+#ifdef _WIN32
     CoUninitialize();
 #endif
 }

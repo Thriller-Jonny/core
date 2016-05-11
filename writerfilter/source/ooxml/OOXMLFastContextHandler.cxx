@@ -88,14 +88,13 @@ OOXMLFastContextHandler::OOXMLFastContextHandler(OOXMLFastContextHandler * pCont
   mnDefine(0),
   mnToken(oox::XML_TOKEN_COUNT),
   mpStream(pContext->mpStream),
+  mpParserState(pContext->mpParserState),
   mnTableDepth(pContext->mnTableDepth),
   inPositionV(pContext->inPositionV),
   m_xContext(pContext->m_xContext),
   m_bDiscardChildren(pContext->m_bDiscardChildren),
   m_bTookChoice(pContext->m_bTookChoice)
 {
-    mpParserState = pContext->mpParserState;
-
     if (mpParserState.get() == nullptr)
         mpParserState.reset(new OOXMLParserState());
 
@@ -310,7 +309,6 @@ void OOXMLFastContextHandler::setDefine(Id nDefine)
 }
 
 
-
 void OOXMLFastContextHandler::setToken(Token_t nToken)
 {
     mnToken = nToken;
@@ -477,12 +475,12 @@ void OOXMLFastContextHandler::setLastSectionGroup()
 }
 
 void OOXMLFastContextHandler::newProperty
-(const Id & /*nId*/, OOXMLValue::Pointer_t /*pVal*/)
+(Id /*nId*/, const OOXMLValue::Pointer_t& /*pVal*/)
 {
 }
 
 void OOXMLFastContextHandler::setPropertySet
-(OOXMLPropertySet::Pointer_t /* pPropertySet */)
+(const OOXMLPropertySet::Pointer_t& /* pPropertySet */)
 {
 }
 
@@ -651,12 +649,12 @@ void OOXMLFastContextHandler::propagateCharacterProperties()
     mpParserState->setCharacterProperties(getPropertySet());
 }
 
-void OOXMLFastContextHandler::propagateCharacterPropertiesAsSet(const Id & rId)
+void OOXMLFastContextHandler::propagateCharacterPropertiesAsSet(Id nId)
 {
     OOXMLValue::Pointer_t pValue(new OOXMLPropertySetValue(getPropertySet()));
     OOXMLPropertySet::Pointer_t pPropertySet(new OOXMLPropertySet);
 
-    OOXMLProperty::Pointer_t pProp(new OOXMLProperty(rId, pValue, OOXMLProperty::SPRM));
+    OOXMLProperty::Pointer_t pProp(new OOXMLProperty(nId, pValue, OOXMLProperty::SPRM));
 
     pPropertySet->add(pProp);
     mpParserState->setCharacterProperties(pPropertySet);
@@ -700,12 +698,12 @@ void OOXMLFastContextHandler::clearTableProps()
                                      (new OOXMLPropertySet));
 }
 
-void OOXMLFastContextHandler::sendPropertiesWithId(const Id & rId)
+void OOXMLFastContextHandler::sendPropertiesWithId(Id nId)
 {
     OOXMLValue::Pointer_t pValue(new OOXMLPropertySetValue(getPropertySet()));
     OOXMLPropertySet::Pointer_t pPropertySet(new OOXMLPropertySet);
 
-    OOXMLProperty::Pointer_t pProp(new OOXMLProperty(rId, pValue, OOXMLProperty::SPRM));
+    OOXMLProperty::Pointer_t pProp(new OOXMLProperty(nId, pValue, OOXMLProperty::SPRM));
 
     pPropertySet->add(pProp);
     mpStream->props(pPropertySet);
@@ -757,7 +755,7 @@ void OOXMLFastContextHandler::setXNoteId(const sal_Int32 nId)
     mpParserState->setXNoteId(nId);
 }
 
-void OOXMLFastContextHandler::setXNoteId(OOXMLValue::Pointer_t pValue)
+void OOXMLFastContextHandler::setXNoteId(const OOXMLValue::Pointer_t& pValue)
 {
     mpParserState->setXNoteId(sal_Int32(pValue->getInt()));
 }
@@ -879,12 +877,12 @@ OOXMLFastContextHandlerStream::~OOXMLFastContextHandlerStream()
 {
 }
 
-void OOXMLFastContextHandlerStream::newProperty(const Id & rId,
-                                                OOXMLValue::Pointer_t pVal)
+void OOXMLFastContextHandlerStream::newProperty(Id nId,
+                                                const OOXMLValue::Pointer_t& pVal)
 {
-    if (rId != 0x0)
+    if (nId != 0x0)
     {
-        OOXMLProperty::Pointer_t pProperty(new OOXMLProperty(rId, pVal, OOXMLProperty::ATTRIBUTE));
+        OOXMLProperty::Pointer_t pProperty(new OOXMLProperty(nId, pVal, OOXMLProperty::ATTRIBUTE));
 
         mpPropertySetAttrs->add(pProperty);
     }
@@ -954,11 +952,11 @@ OOXMLValue::Pointer_t OOXMLFastContextHandlerProperties::getValue() const
 }
 
 void OOXMLFastContextHandlerProperties::newProperty
-(const Id & rId, OOXMLValue::Pointer_t pVal)
+(Id nId, const OOXMLValue::Pointer_t& pVal)
 {
-    if (rId != 0x0)
+    if (nId != 0x0)
     {
-        OOXMLProperty::Pointer_t pProperty(new OOXMLProperty(rId, pVal, OOXMLProperty::ATTRIBUTE));
+        OOXMLProperty::Pointer_t pProperty(new OOXMLProperty(nId, pVal, OOXMLProperty::ATTRIBUTE));
 
         mpPropertySet->add(pProperty);
     }
@@ -1051,7 +1049,7 @@ void OOXMLFastContextHandlerProperties::setParent
 }
 
 void OOXMLFastContextHandlerProperties::setPropertySet
-(OOXMLPropertySet::Pointer_t pPropertySet)
+(const OOXMLPropertySet::Pointer_t& pPropertySet)
 {
     if (pPropertySet.get() != nullptr)
         mpPropertySet = pPropertySet;
@@ -1108,7 +1106,7 @@ OOXMLFastContextHandlerValue::~OOXMLFastContextHandlerValue()
 {
 }
 
-void OOXMLFastContextHandlerValue::setValue(OOXMLValue::Pointer_t pValue)
+void OOXMLFastContextHandlerValue::setValue(const OOXMLValue::Pointer_t& pValue)
 {
     mpValue = pValue;
 }
@@ -1261,12 +1259,12 @@ void OOXMLFastContextHandlerXNote::lcl_endFastElement
     setForwardEvents(mbForwardEventsSaved);
 }
 
-void OOXMLFastContextHandlerXNote::checkId(OOXMLValue::Pointer_t pValue)
+void OOXMLFastContextHandlerXNote::checkId(const OOXMLValue::Pointer_t& pValue)
 {
     mnMyXNoteId = sal_Int32(pValue->getInt());
 }
 
-void OOXMLFastContextHandlerXNote::checkType(OOXMLValue::Pointer_t pValue)
+void OOXMLFastContextHandlerXNote::checkType(const OOXMLValue::Pointer_t& pValue)
 {
     mnMyXNoteType = pValue->getInt();
 }
@@ -1369,7 +1367,7 @@ void OOXMLFastContextHandlerTextTableRow::endRow()
 
 // Handle w:gridBefore here by faking necessary input that'll fake cells. I'm apparently
 // not insane enough to find out how to add cells in dmapper.
-void OOXMLFastContextHandlerTextTableRow::handleGridBefore( OOXMLValue::Pointer_t val )
+void OOXMLFastContextHandlerTextTableRow::handleGridBefore( const OOXMLValue::Pointer_t& val )
 {
     int count = val->getInt();
     for( int i = 0;
@@ -1513,7 +1511,7 @@ OOXMLFastContextHandlerShape::OOXMLFastContextHandlerShape
     uno::Reference<document::XDocumentPropertiesSupplier> xDocSupplier(getDocument()->getModel(), uno::UNO_QUERY_THROW);
     mrShapeContext->setDocumentProperties(xDocSupplier->getDocumentProperties());
     mrShapeContext->setDrawPage(getDocument()->getDrawPage());
-    mrShapeContext->setInputStream(getDocument()->getStorageStream());
+    mrShapeContext->setMediaDescriptor(getDocument()->getMediaDescriptor());
 
     mrShapeContext->setRelationFragmentPath
         (mpParserState->getTarget());
@@ -1626,7 +1624,7 @@ OOXMLFastContextHandlerShape::lcl_createFastChildContext
         case NMSP_vmlOffice:
             if (!bGroupShape)
                 xContextHandler.set(OOXMLFactory::createFastChildContextFromStart(this, Element));
-        // no break;
+            SAL_FALLTHROUGH;
         default:
             if (!xContextHandler.is())
             {
@@ -1762,7 +1760,7 @@ OOXMLFastContextHandlerWrapper::getResource() const
     return UNKNOWN;
 }
 
-void OOXMLFastContextHandlerWrapper::addNamespace(const Id & nId)
+void OOXMLFastContextHandlerWrapper::addNamespace(Id nId)
 {
     mMyNamespaces.insert(nId);
 }
@@ -1802,7 +1800,7 @@ OOXMLFastContextHandlerWrapper::lcl_createFastChildContext
 
     // We have methods to _add_ individual tokens or whole namespaces to be
     // processed by writerfilter (instead of oox), but we have no method to
-    // filter out a single token. Just hardwire the wrap token here untill we
+    // filter out a single token. Just hardwire the wrap token here until we
     // need a more generic solution.
     bool bIsWrap = Element == static_cast<sal_Int32>(NMSP_vmlWord | XML_wrap);
     bool bSkipImages = getDocument()->IsSkipImages() && oox::getNamespace(Element) == static_cast<sal_Int32>(NMSP_dml) &&
@@ -1846,18 +1844,18 @@ OOXMLFastContextHandlerWrapper::getFastContextHandler() const
 }
 
 void OOXMLFastContextHandlerWrapper::newProperty
-(const Id & rId, OOXMLValue::Pointer_t pVal)
+(Id nId, const OOXMLValue::Pointer_t& pVal)
 {
     if (mxContext.is())
     {
         OOXMLFastContextHandler * pHandler = getFastContextHandler();
         if (pHandler != nullptr)
-            pHandler->newProperty(rId, pVal);
+            pHandler->newProperty(nId, pVal);
     }
 }
 
 void OOXMLFastContextHandlerWrapper::setPropertySet
-(OOXMLPropertySet::Pointer_t pPropertySet)
+(const OOXMLPropertySet::Pointer_t& pPropertySet)
 {
     if (mxContext.is())
     {

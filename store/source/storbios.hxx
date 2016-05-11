@@ -92,17 +92,7 @@ public:
 
     storeError releasePage (const OStorePageDescriptor& rDescr);
 
-    /** Page Allocation.
-     */
-    enum Allocation
-    {
-        ALLOCATE_FIRST = 0,
-        ALLOCATE_BEST  = 1,
-        ALLOCATE_EOF   = 2
-    };
-
-    storeError allocate (
-        OStorePageObject& rPage, Allocation eAllocation = ALLOCATE_FIRST);
+    storeError allocate (OStorePageObject& rPage);
 
     storeError free (sal_uInt32 nAddr);
 
@@ -123,20 +113,6 @@ public:
      *  @return store_E_None upon success.
      */
     storeError flush();
-
-    /** ScanContext.
-     */
-    struct ScanContext
-    {
-        /** Representation.
-         */
-        OStorePageDescriptor m_aDescr;
-
-        /** Construction.
-         */
-        inline ScanContext();
-
-    };
 
 protected:
     /** Destruction (OReference).
@@ -211,11 +187,6 @@ inline bool OStorePageBIOS::isWriteable() const
 inline bool OStorePageBIOS::isValid() const
 {
     return m_xLockBytes.is();
-}
-
-inline OStorePageBIOS::ScanContext::ScanContext()
-    : m_aDescr (0, 0, 0)
-{
 }
 
 /*========================================================================

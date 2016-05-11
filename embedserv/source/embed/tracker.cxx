@@ -94,7 +94,6 @@ HBRUSH HalftoneBrush()
 }
 
 
-
 void DrawDragRect(
     HDC hDC,LPRECT lpRect,SIZE size,
     LPRECT lpRectLast,SIZE sizeLast,
@@ -326,7 +325,6 @@ BOOL Tracker::SetCursor(HWND pWnd, UINT nHitTest) const
     ::SetCursor(_afxCursors[nHandle]);
     return TRUE;
 }
-
 
 
 BOOL Tracker::Track(HWND hWnd,POINT point,BOOL bAllowInvert,
@@ -770,7 +768,7 @@ int Tracker::HitTestHandles(POINT point) const
     // last of all, check for non-hit outside of object, between resize handles
     if ((m_nStyle & hatchedBorder) == 0)
     {
-        RECT rect = m_rect;
+        rect = m_rect;
         NormalizeRect(&rect);
         if ((m_nStyle & (dottedLine|solidLine)) != 0)
             InflateRect(&rect,+1, +1);
@@ -779,7 +777,6 @@ int Tracker::HitTestHandles(POINT point) const
     }
     return hitMiddle;   // no handle hit, but hit object (or object border)
 }
-
 
 
 void Tracker::GetModifyPointers(

@@ -24,29 +24,11 @@
 
 namespace framework{
 
-#define DOCTYPE_ACCELERATORS            "<!DOCTYPE accel:acceleratorlist PUBLIC \"-//OpenOffice.org//DTD OfficeDocument 1.0//EN\" \"accelerator.dtd\">"
-
 #define ATTRIBUTE_TYPE_CDATA            "CDATA"
-
-#define XMLNS_XLINK                     "xlink"
 
 // same items with a name space alias
 #define AL_ELEMENT_ACCELERATORLIST      "accel:acceleratorlist"
 #define AL_ELEMENT_ITEM                 "accel:item"
-
-#define AL_XMLNS_ACCEL                  "xmlns:accel"
-#define AL_XMLNS_XLINK                  "xmlns:xlink"
-
-#define AL_ATTRIBUTE_URL                "xlink:href"
-#define AL_ATTRIBUTE_KEYCODE            "accel:code"
-#define AL_ATTRIBUTE_MOD_SHIFT          "accel:shift"
-#define AL_ATTRIBUTE_MOD_MOD1           "accel:mod1"
-#define AL_ATTRIBUTE_MOD_MOD2           "accel:mod2"
-#define AL_ATTRIBUTE_MOD_MOD3           "accel:mod3"
-
-// same items with full qualified name space
-#define NS_XMLNS_ACCEL                  "http://openoffice.org/2001/accel"
-#define NS_XMLNS_XLINK                  "http://www.w3.org/1999/xlink"
 
 } // namespace framework
 

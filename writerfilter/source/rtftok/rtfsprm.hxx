@@ -10,14 +10,11 @@
 #ifndef INCLUDED_WRITERFILTER_SOURCE_RTFTOK_RTFSPRM_HXX
 #define INCLUDED_WRITERFILTER_SOURCE_RTFTOK_RTFSPRM_HXX
 
-#include <sal/config.h>
-
 #include <string>
 #include <utility>
 #include <vector>
 
 #include <boost/intrusive_ptr.hpp>
-#include <rtfcontrolwords.hxx>
 #include <rtfvalue.hxx>
 
 namespace writerfilter
@@ -59,6 +56,7 @@ public:
     typedef ::std::shared_ptr<RTFSprms> Pointer_t;
     typedef std::pair<Id, RTFValue::Pointer_t> Entry_t;
     typedef std::vector<Entry_t>::iterator Iterator_t;
+    typedef std::vector<Entry_t>::reverse_iterator ReverseIterator_t;
     RTFSprms();
     RTFSprms(const RTFSprms& rSprms);
     ~RTFSprms();
@@ -67,11 +65,12 @@ public:
     /// Does the same as ->push_back(), except that it can overwrite or ignore existing entries.
     void set(Id nKeyword, RTFValue::Pointer_t pValue, RTFOverwrite eOverwrite = RTFOverwrite::YES);
     bool erase(Id nKeyword);
+    void eraseLast(Id nKeyword);
     /// Removes elements which are already in the reference set.
     /// Also insert default values to override attributes of style
     /// (yes, really; that's what Word does).
     RTFSprms cloneAndDeduplicate(RTFSprms& rReference) const;
-    size_t size() const
+    std::size_t size() const
     {
         return m_pSprms->size();
     }

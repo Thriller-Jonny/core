@@ -17,11 +17,12 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
+#include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/container/XChild.hpp>
 #include <com/sun/star/embed/XVisualObject.hpp>
 #include <com/sun/star/embed/EmbedMisc.hpp>
 #include <com/sun/star/embed/EmbedStates.hpp>
-#include <com/sun/star/beans/XPropertySet.hpp>
+#include <com/sun/star/embed/EmbedVerbs.hpp>
 #include <com/sun/star/embed/NoVisualAreaSizeException.hpp>
 #include <com/sun/star/chart2/XChartDocument.hpp>
 #include <com/sun/star/util/XModifiable.hpp>
@@ -30,12 +31,11 @@
 
 #include <math.h>
 #include <hintids.hxx>
+#include <sot/exchange.hxx>
 #include <svx/hdft.hxx>
 #include <svx/svdview.hxx>
-#include <sot/factory.hxx>
 #include <svl/itemiter.hxx>
 #include <tools/bigint.hxx>
-#include <sot/storage.hxx>
 #include <svtools/insdlg.hxx>
 #include <sfx2/frmdescr.hxx>
 #include <sfx2/ipclient.hxx>
@@ -80,7 +80,6 @@
 #include <caption.hxx>
 #include <viscrs.hxx>
 #include <swdtflvr.hxx>
-#include <crsskip.hxx>
 #include <doc.hxx>
 #include <IDocumentSettingAccess.hxx>
 #include <wrtsh.hrc>
@@ -105,6 +104,7 @@
 #include "FrameControlsManager.hxx"
 
 #include <sfx2/msgpool.hxx>
+#include <comphelper/lok.hxx>
 #include <memory>
 
 using namespace sw::mark;
@@ -240,7 +240,7 @@ void SwWrtShell::Insert( const OUString &rStr )
 
 void SwWrtShell::Insert( const OUString &rPath, const OUString &rFilter,
                          const Graphic &rGrf, SwFlyFrameAttrMgr *pFrameMgr,
-                         bool bRule )
+                         sal_uInt16 nAnchorType )
 {
     ResetCursorStack();
     if ( !CanInsert() )
@@ -267,7 +267,7 @@ void SwWrtShell::Insert( const OUString &rPath, const OUString &rFilter,
     if ( !pFrameMgr )
     {
         bOwnMgr = true;
-        pFrameMgr = new SwFlyFrameAttrMgr( true, this, FRMMGR_TYPE_GRF );
+        pFrameMgr = new SwFlyFrameAttrMgr( true, this, Frmmgr_Type::GRF );
 
         // CAUTION
         // GetAttrSet makes an adjustment
@@ -275,6 +275,10 @@ void SwWrtShell::Insert( const OUString &rPath, const OUString &rFilter,
         // because of the DEF-Framesize
         // These must be removed explicitly for the optimal size.
         pFrameMgr->DelAttr(RES_FRM_SIZE);
+
+        if (nAnchorType != 0)
+            // Something other than at-para was requested.
+            pFrameMgr->SetAnchor(static_cast<RndStdIds>(nAnchorType));
     }
     else
     {
@@ -295,7 +299,7 @@ void SwWrtShell::Insert( const OUString &rPath, const OUString &rFilter,
     if ( bOwnMgr )
         pFrameMgr->UpdateAttrMgr();
 
-    if( bSetGrfSize && !bRule )
+    if( bSetGrfSize )
     {
         Size aGrfSize, aBound = GetGraphicDefaultSize();
         GetGrfSize( aGrfSize );
@@ -334,7 +338,7 @@ void SwWrtShell::Insert( const OUString &rPath, const OUString &rFilter,
 // if no object is transferred, then one will be created.
 
 void SwWrtShell::InsertObject( const svt::EmbeddedObjectRef& xRef, SvGlobalName *pName,
-                               bool bActivate, sal_uInt16 nSlotId )
+                               sal_uInt16 nSlotId )
 {
     ResetCursorStack();
     if( !CanInsert() )
@@ -362,11 +366,10 @@ void SwWrtShell::InsertObject( const svt::EmbeddedObjectRef& xRef, SvGlobalName 
                 {
                     aServerList.FillInsertObjects();
                     aServerList.Remove( SwDocShell::Factory().GetClassId() );
-                    // Intentionally no break!
+                    SAL_FALLTHROUGH;
                 }
 
                 // TODO/LATER: recording! Convert properties to items
-                case SID_INSERT_PLUGIN:
                 case SID_INSERT_FLOATINGFRAME:
                 {
                     SfxSlotPool* pSlotPool = SW_MOD()->GetSlotPool();
@@ -397,7 +400,7 @@ void SwWrtShell::InsertObject( const svt::EmbeddedObjectRef& xRef, SvGlobalName 
 
         if ( xObj.is() )
         {
-            if( InsertOleObject( xObj ) && bActivate && bDoVerb )
+            if( InsertOleObject( xObj ) && bDoVerb )
             {
                 SfxInPlaceClient* pClient = GetView().FindIPClient( xObj.GetObject(), &GetView().GetEditWin() );
                 if ( !pClient )
@@ -421,7 +424,7 @@ void SwWrtShell::InsertObject( const svt::EmbeddedObjectRef& xRef, SvGlobalName 
 
                 //#50270# We don't need to handle error, this is handled by the
                 //DoVerb in the SfxViewShell
-                pClient->DoVerb( SVVERB_SHOW );
+                pClient->DoVerb(embed::EmbedVerbs::MS_OLEVERB_SHOW);
 
                 // TODO/LATER: set document name - should be done in Client
             }
@@ -494,7 +497,7 @@ bool SwWrtShell::InsertOleObject( const svt::EmbeddedObjectRef& xRef, SwFlyFrame
 
     EnterSelFrameMode();
 
-    SwFlyFrameAttrMgr aFrameMgr( true, this, FRMMGR_TYPE_OLE );
+    SwFlyFrameAttrMgr aFrameMgr( true, this, Frmmgr_Type::OLE );
     aFrameMgr.SetHeightSizeType(ATT_FIX_SIZE);
 
     SwRect aBound;
@@ -540,7 +543,7 @@ bool SwWrtShell::InsertOleObject( const svt::EmbeddedObjectRef& xRef, SwFlyFrame
                 uno::Reference< util::XModifiable > xModifiable( xProps, uno::UNO_QUERY );
                 if ( xModifiable.is() )
                 {
-                    xModifiable->setModified( sal_True );
+                    xModifiable->setModified( true );
                 }
             }
         }
@@ -652,7 +655,7 @@ void SwWrtShell::CalcAndSetScale( svt::EmbeddedObjectRef& xObj,
                 aSz.Width = aSize.Width();
                 aSz.Height = aSize.Height();
 
-                // Action 'setVisualAreaSize' doesn't have to change the
+                // Action 'setVisualAreaSize' doesn't have to turn on the
                 // modified state of the document, either.
                 bool bModified = false;
                 uno::Reference<util::XModifiable> xModifiable(xObj->getComponent(), uno::UNO_QUERY);
@@ -660,7 +663,7 @@ void SwWrtShell::CalcAndSetScale( svt::EmbeddedObjectRef& xObj,
                     bModified = xModifiable->isModified();
                 xObj->setVisualAreaSize( nAspect, aSz );
                 xModifiable.set(xObj->getComponent(), uno::UNO_QUERY);
-                if (xModifiable.is())
+                if (xModifiable.is() && xModifiable->isModified() && !bModified)
                     xModifiable->setModified(bModified);
 
                 // #i48419# - action 'UpdateReplacement' doesn't
@@ -943,7 +946,7 @@ void SwWrtShell::InsertFootnote(const OUString &rStr, bool bEndNote, bool bEdit 
 //                  - of deleting selected content;
 //                  - of reset of the Cursorstack if necessary.
 
-void SwWrtShell::SplitNode( bool bAutoFormat, bool bCheckTableStart )
+void SwWrtShell::SplitNode( bool bAutoFormat )
 {
     ResetCursorStack();
     if( CanInsert() )
@@ -958,7 +961,7 @@ void SwWrtShell::SplitNode( bool bAutoFormat, bool bCheckTableStart )
             DelRight();
         }
 
-        SwFEShell::SplitNode( bAutoFormat, bCheckTableStart );
+        SwFEShell::SplitNode( bAutoFormat );
         if( bHasSel )
             EndUndo( UNDO_INSERT );
     }
@@ -1510,9 +1513,9 @@ void SwWrtShell::SetPageStyle(const OUString &rCollName)
 
 // Access templates
 
-OUString SwWrtShell::GetCurPageStyle( const bool bCalcFrame ) const
+OUString SwWrtShell::GetCurPageStyle() const
 {
-    return GetPageDesc(GetCurPageDesc( bCalcFrame )).GetName();
+    return GetPageDesc(GetCurPageDesc( false/*bCalcFrame*/ )).GetName();
 }
 
 // Change the current template referring to the existing change.
@@ -1576,7 +1579,7 @@ void SwWrtShell::AutoUpdateFrame( SwFrameFormat* pFormat, const SfxItemSet& rSty
 {
     StartAction();
 
-    ResetFlyFrameAttr( 0, &rStyleSet );
+    ResetFlyFrameAttr( &rStyleSet );
     pFormat->SetFormatAttr( rStyleSet );
 
     EndAction();

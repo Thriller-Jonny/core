@@ -30,10 +30,11 @@ class SwTextNode;
 class Point;
 class MultiSelection;
 typedef std::list< sal_Int32 > PositionList;
+enum class SwFontScript;
 
 #define SPACING_PRECISION_FACTOR 100
 
-// encapsultes information about script changes
+// encapsulates information about script changes
 class SwScriptInfo
 {
 public:
@@ -298,12 +299,11 @@ public:
     }
 
 /** retrieves kashida opportunities for a given text range.
-   returns the number of kashida positions in the given text range
 
    pKashidaPositions: buffer to receive the char indices of the
                       kashida opportunties relative to the paragraph
 */
-    sal_Int32 GetKashidaPositions(sal_Int32 nStt, sal_Int32 nLen,
+    void GetKashidaPositions(sal_Int32 nStt, sal_Int32 nLen,
        sal_Int32* pKashidaPosition);
 
 /** Use regular blank justification instead of kashdida justification for the given line of text.
@@ -355,7 +355,7 @@ public:
     static SwScriptInfo* GetScriptInfo( const SwTextNode& rNode,
                                         bool bAllowInvalid = false );
 
-    static sal_uInt8 WhichFont(sal_Int32 nIdx, const OUString* pText, const SwScriptInfo* pSI);
+    static SwFontScript WhichFont(sal_Int32 nIdx, const OUString* pText, const SwScriptInfo* pSI);
 };
 
 #endif

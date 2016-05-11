@@ -11,14 +11,17 @@ $(eval $(call gb_CppunitTest_CppunitTest,vcl_bitmap_test))
 
 $(eval $(call gb_CppunitTest_add_exception_objects,vcl_bitmap_test, \
     vcl/qa/cppunit/BitmapTest \
-    vcl/qa/cppunit/BitmapFilterTest \
 ))
 
 $(eval $(call gb_CppunitTest_use_externals,vcl_bitmap_test,\
 	boost_headers \
-	glew \
 	glm_headers \
 ))
+ifeq ($(ENABLE_OPENGL),TRUE)
+$(eval $(call gb_CppunitTest_use_externals,vcl_bitmap_test,\
+     glew \
+ ))
+endif
 
 $(eval $(call gb_CppunitTest_set_include,vcl_bitmap_test,\
     $$(INCLUDE) \

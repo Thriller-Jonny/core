@@ -49,7 +49,7 @@ ScRangeData::ScRangeData( ScDocument* pDok,
                           const OUString& rName,
                           const OUString& rSymbol,
                           const ScAddress& rAddress,
-                          RangeType nType,
+                          Type nType,
                           const FormulaGrammar::Grammar eGrammar ) :
                 aName       ( rName ),
                 aUpperName  ( ScGlobal::pCharClass->uppercase( rName ) ),
@@ -82,7 +82,7 @@ ScRangeData::ScRangeData( ScDocument* pDok,
                           const OUString& rName,
                           const ScTokenArray& rArr,
                           const ScAddress& rAddress,
-                          RangeType nType ) :
+                          Type nType ) :
                 aName       ( rName ),
                 aUpperName  ( ScGlobal::pCharClass->uppercase( rName ) ),
                 pCode       ( new ScTokenArray( rArr ) ),
@@ -106,7 +106,7 @@ ScRangeData::ScRangeData( ScDocument* pDok,
                 aUpperName  ( ScGlobal::pCharClass->uppercase( rName ) ),
                 pCode       ( new ScTokenArray() ),
                 aPos        ( rTarget ),
-                eType       ( RT_NAME ),
+                eType       ( Type::Name ),
                 pDoc        ( pDok ),
                 eTempGrammar( FormulaGrammar::GRAM_UNSPECIFIED ),
                 nIndex      ( 0 ),
@@ -123,14 +123,14 @@ ScRangeData::ScRangeData( ScDocument* pDok,
     aComp.SetGrammar(pDoc->GetGrammar());
     aComp.CompileTokenArray();
     if ( !pCode->GetCodeError() )
-        eType |= RT_ABSPOS;
+        eType |= Type::AbsPos;
 }
 
-ScRangeData::ScRangeData(const ScRangeData& rScRangeData, ScDocument* pDocument) :
+ScRangeData::ScRangeData(const ScRangeData& rScRangeData, ScDocument* pDocument, const ScAddress* pPos) :
     aName   (rScRangeData.aName),
     aUpperName  (rScRangeData.aUpperName),
     pCode       (rScRangeData.pCode ? rScRangeData.pCode->Clone() : new ScTokenArray()),   // make real copy (not copy-ctor)
-    aPos        (rScRangeData.aPos),
+    aPos        (pPos ? *pPos : rScRangeData.aPos),
     eType       (rScRangeData.eType),
     pDoc        (pDocument ? pDocument : rScRangeData.pDoc),
     eTempGrammar(rScRangeData.eTempGrammar),
@@ -174,9 +174,9 @@ void ScRangeData::CompileRangeData( const OUString& rSymbol, bool bSetError )
             // first token is a reference
             /* FIXME: wouldn't that need a check if it's exactly one reference? */
             if( p->GetType() == svSingleRef )
-                eType = eType | RT_ABSPOS;
+                eType = eType | Type::AbsPos;
             else
-                eType = eType | RT_ABSAREA;
+                eType = eType | Type::AbsArea;
         }
         // For manual input set an error for an incomplete formula.
         if (!pDoc->IsImportingXML())
@@ -268,12 +268,11 @@ void ScRangeData::GetSymbol( OUString& rSymbol, const ScAddress& rPos, const For
     rSymbol = aStr;
 }
 
-void ScRangeData::UpdateSymbol( OUStringBuffer& rBuffer, const ScAddress& rPos,
-                                const FormulaGrammar::Grammar eGrammar )
+void ScRangeData::UpdateSymbol( OUStringBuffer& rBuffer, const ScAddress& rPos )
 {
     std::unique_ptr<ScTokenArray> pTemp( pCode->Clone() );
     ScCompiler aComp( pDoc, rPos, *pTemp.get());
-    aComp.SetGrammar(eGrammar);
+    aComp.SetGrammar(formula::FormulaGrammar::GRAM_DEFAULT);
     aComp.MoveRelWrap(GetMaxCol(), GetMaxRow());
     aComp.CreateStringFromTokenArray( rBuffer );
 }
@@ -381,7 +380,7 @@ bool ScRangeData::IsRangeAtBlock( const ScRange& rBlock ) const
 
 bool ScRangeData::IsReference( ScRange& rRange ) const
 {
-    if ( (eType & ( RT_ABSAREA | RT_REFAREA | RT_ABSPOS )) && pCode )
+    if ( (eType & ( Type::AbsArea | Type::RefArea | Type::AbsPos )) && pCode )
         return pCode->IsReference(rRange, aPos);
 
     return false;
@@ -389,7 +388,7 @@ bool ScRangeData::IsReference( ScRange& rRange ) const
 
 bool ScRangeData::IsReference( ScRange& rRange, const ScAddress& rPos ) const
 {
-    if ( (eType & ( RT_ABSAREA | RT_REFAREA | RT_ABSPOS ) ) && pCode )
+    if ( (eType & ( Type::AbsArea | Type::RefArea | Type::AbsPos ) ) && pCode )
         return pCode->IsReference(rRange, rPos);
 
     return false;
@@ -397,7 +396,7 @@ bool ScRangeData::IsReference( ScRange& rRange, const ScAddress& rPos ) const
 
 bool ScRangeData::IsValidReference( ScRange& rRange ) const
 {
-    if ( (eType & ( RT_ABSAREA | RT_REFAREA | RT_ABSPOS ) ) && pCode )
+    if ( (eType & ( Type::AbsArea | Type::RefArea | Type::AbsPos ) ) && pCode )
         return pCode->IsValidReference(rRange, aPos);
 
     return false;
@@ -464,7 +463,8 @@ void ScRangeData::MakeValidName( OUString& rName )
         ScAddress::Details details( static_cast<FormulaGrammar::AddressConvention>( nConv ) );
         // Don't check Parse on VALID, any partial only VALID may result in
         // #REF! during compile later!
-        while (aRange.Parse( rName, nullptr, details) || aAddr.Parse( rName, nullptr, details))
+        while (aRange.Parse(rName, nullptr, details) != ScRefFlags::ZERO ||
+                aAddr.Parse(rName, nullptr, details) != ScRefFlags::ZERO)
         {
             // Range Parse is partially valid also with invalid sheet name,
             // Address Parse dito, during compile name would generate a #REF!
@@ -499,8 +499,11 @@ bool ScRangeData::IsNameValid( const OUString& rName, ScDocument* pDoc )
         ScAddress::Details details( static_cast<FormulaGrammar::AddressConvention>( nConv ) );
         // Don't check Parse on VALID, any partial only VALID may result in
         // #REF! during compile later!
-        if (aRange.Parse( rName, pDoc, details) || aAddr.Parse( rName, pDoc, details))
+        if (aRange.Parse(rName, pDoc, details) != ScRefFlags::ZERO ||
+             aAddr.Parse(rName, pDoc, details) != ScRefFlags::ZERO )
+        {
             return false;
+        }
     }
     return true;
 }
@@ -528,10 +531,10 @@ bool ScRangeData::HasReferences() const
 sal_uInt32 ScRangeData::GetUnoType() const
 {
     sal_uInt32 nUnoType = 0;
-    if ( HasType(RT_CRITERIA) )  nUnoType |= css::sheet::NamedRangeFlag::FILTER_CRITERIA;
-    if ( HasType(RT_PRINTAREA) ) nUnoType |= css::sheet::NamedRangeFlag::PRINT_AREA;
-    if ( HasType(RT_COLHEADER) ) nUnoType |= css::sheet::NamedRangeFlag::COLUMN_HEADER;
-    if ( HasType(RT_ROWHEADER) ) nUnoType |= css::sheet::NamedRangeFlag::ROW_HEADER;
+    if ( HasType(Type::Criteria) )  nUnoType |= css::sheet::NamedRangeFlag::FILTER_CRITERIA;
+    if ( HasType(Type::PrintArea) ) nUnoType |= css::sheet::NamedRangeFlag::PRINT_AREA;
+    if ( HasType(Type::ColHeader) ) nUnoType |= css::sheet::NamedRangeFlag::COLUMN_HEADER;
+    if ( HasType(Type::RowHeader) ) nUnoType |= css::sheet::NamedRangeFlag::ROW_HEADER;
     return nUnoType;
 }
 
@@ -638,9 +641,9 @@ void ScRangeData::InitCode()
         if( p )   // exact one reference at first
         {
             if( p->GetType() == svSingleRef )
-                eType = eType | RT_ABSPOS;
+                eType = eType | Type::AbsPos;
             else
-                eType = eType | RT_ABSAREA;
+                eType = eType | Type::AbsArea;
         }
     }
 }
@@ -651,11 +654,6 @@ int SAL_CALL ScRangeData_QsortNameCompare( const void* p1, const void* p2 )
     return (int) ScGlobal::GetCollator()->compareString(
             (*static_cast<const ScRangeData* const *>(p1))->GetName(),
             (*static_cast<const ScRangeData* const *>(p2))->GetName() );
-}
-
-bool operator<(const ScRangeData& left, const ScRangeData& right)
-{
-    return left.GetName() < right.GetName();
 }
 
 namespace {
@@ -729,6 +727,10 @@ ScRangeData* ScRangeName::findByIndex(sal_uInt16 i) const
 
 void ScRangeName::UpdateReference(sc::RefUpdateContext& rCxt, SCTAB nLocalTab )
 {
+    if (rCxt.meMode == URM_COPY)
+        // Copying cells does not modify named expressions.
+        return;
+
     for (auto const& itr : m_Data)
     {
         itr.second->UpdateReference(rCxt, nLocalTab);
@@ -780,6 +782,22 @@ void ScRangeName::CompileUnresolvedXML( sc::CompileFormulaContext& rCxt )
     for (auto const& itr : m_Data)
     {
         itr.second->CompileUnresolvedXML(rCxt);
+    }
+}
+
+void ScRangeName::CopyUsedNames( const SCTAB nLocalTab, const SCTAB nOldTab, const SCTAB nNewTab,
+        const ScDocument& rOldDoc, ScDocument& rNewDoc, const bool bGlobalNamesToLocal ) const
+{
+    for (auto const& itr : m_Data)
+    {
+        SCTAB nSheet = (nLocalTab < 0) ? nLocalTab : nOldTab;
+        sal_uInt16 nIndex = itr.second->GetIndex();
+        ScAddress aOldPos( itr.second->GetPos());
+        aOldPos.SetTab( nOldTab);
+        ScAddress aNewPos( aOldPos);
+        aNewPos.SetTab( nNewTab);
+        ScRangeData* pRangeData = nullptr;
+        rOldDoc.CopyAdjustRangeName( nSheet, nIndex, pRangeData, rNewDoc, aNewPos, aOldPos, bGlobalNamesToLocal, false);
     }
 }
 

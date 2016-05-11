@@ -372,8 +372,7 @@ const SwFormatVertOrient*      SwNumFormat::GetGraphicOrientation() const
 
 SwNumRule::SwNumRule( const OUString& rNm,
                       const SvxNumberFormat::SvxNumPositionAndSpaceMode eDefaultNumberFormatPositionAndSpaceMode,
-                      SwNumRuleType eType,
-                      bool bAutoFlg )
+                      SwNumRuleType eType )
   : maTextNodeList(),
     maParagraphStyleList(),
     mpNumRuleMap(nullptr),
@@ -382,7 +381,7 @@ SwNumRule::SwNumRule( const OUString& rNm,
     mnPoolFormatId( USHRT_MAX ),
     mnPoolHelpId( USHRT_MAX ),
     mnPoolHlpFileId( UCHAR_MAX ),
-    mbAutoRuleFlag( bAutoFlg ),
+    mbAutoRuleFlag( true ),
     mbInvalidRuleFlag( true ),
     mbContinusNum( false ),
     mbAbsSpaces( false ),
@@ -446,12 +445,6 @@ SwNumRule::SwNumRule( const OUString& rNm,
             SwNumRule::maBaseFormats[ OUTLINE_RULE ][ n ] = pFormat;
         }
         // position-and-space mode LABEL_ALIGNMENT:
-        // indent values of default outline numbering in inch:
-        //  0,3         0,4         0,5         0,6         0,7
-        //  0,8         0,9         1,0         1,1         1,2
-        const long cOutlineIndentAt[ MAXLEVEL ] = {
-            1440*3/10,  1440*2/5,   1440/2,     1440*3/5,   1440*7/10,
-            1440*4/5,   1440*9/10,  1440,       1440*11/10, 1440*6/5 };
         for( n = 0; n < MAXLEVEL; ++n )
         {
             pFormat = new SwNumFormat;
@@ -459,10 +452,6 @@ SwNumRule::SwNumRule( const OUString& rNm,
             pFormat->SetIncludeUpperLevels( MAXLEVEL );
             pFormat->SetStart( 1 );
             pFormat->SetPositionAndSpaceMode( SvxNumberFormat::LABEL_ALIGNMENT );
-            pFormat->SetLabelFollowedBy( SvxNumberFormat::LISTTAB );
-            pFormat->SetListtabPos( cOutlineIndentAt[ n ] );
-            pFormat->SetFirstLineIndent( -cOutlineIndentAt[ n ] );
-            pFormat->SetIndentAt( cOutlineIndentAt[ n ] );
             pFormat->SetBulletChar( numfunc::GetBulletChar(n));
             SwNumRule::maLabelAlignmentBaseFormats[ OUTLINE_RULE ][ n ] = pFormat;
         }
@@ -619,17 +608,22 @@ void SwNumRule::Set( sal_uInt16 i, const SwNumFormat* pNumFormat )
         }
     }
     else if( !pNumFormat )
-        delete pOld, maFormats[ i ] = nullptr, mbInvalidRuleFlag = true;
+    {
+        delete pOld;
+        maFormats[ i ] = nullptr;
+        mbInvalidRuleFlag = true;
+    }
     else if( *pOld != *pNumFormat )
-        *pOld = *pNumFormat, mbInvalidRuleFlag = true;
+    {
+        *pOld = *pNumFormat;
+        mbInvalidRuleFlag = true;
+    }
 }
 
-OUString SwNumRule::MakeNumString( const SwNodeNum& rNum, bool bInclStrings,
-                                bool bOnlyArabic ) const
+OUString SwNumRule::MakeNumString( const SwNodeNum& rNum, bool bInclStrings ) const
 {
     if (rNum.IsCounted())
-        return MakeNumString(rNum.GetNumberVector(),
-                             bInclStrings, bOnlyArabic);
+        return MakeNumString(rNum.GetNumberVector(), bInclStrings);
 
     return OUString();
 }
@@ -704,8 +698,8 @@ OUString SwNumRule::MakeNumString( const SwNumberTree::tNumberVector & rNumVecto
                 SVX_NUM_CHAR_SPECIAL != rMyNFormat.GetNumberingType() &&
                 SVX_NUM_BITMAP != rMyNFormat.GetNumberingType() )
             {
-                const OUString sPrefix = rMyNFormat.GetPrefix();
-                const OUString sSuffix = rMyNFormat.GetSuffix();
+                const OUString& sPrefix = rMyNFormat.GetPrefix();
+                const OUString& sSuffix = rMyNFormat.GetSuffix();
 
                 aStr = sPrefix + aStr + sSuffix;
                 if ( pExtremities )
@@ -1066,7 +1060,7 @@ namespace numfunc
         public:
             static SwDefBulletConfig& getInstance();
 
-            inline OUString GetFontname() const
+            const OUString& GetFontname() const
             {
                 return msFontname;
             }
@@ -1223,7 +1217,7 @@ namespace numfunc
                         case 1:
                         case 2:
                         {
-                            sal_uInt8 nTmp = 0;
+                            sal_Int16 nTmp = 0;
                             pValues[nProp] >>= nTmp;
                             if ( nProp == 1 )
                                 meFontWeight = static_cast<FontWeight>(nTmp);

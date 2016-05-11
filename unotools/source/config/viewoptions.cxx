@@ -93,9 +93,9 @@ class SvtViewOptionsBase_Impl
 
         explicit SvtViewOptionsBase_Impl(const OUString& rList);
         virtual                                        ~SvtViewOptionsBase_Impl (                                                                );
-        bool                                        Exists                  ( const OUString&                                sName    );
-        bool                                        Delete                  ( const OUString&                                sName    );
-        OUString                                 GetWindowState          ( const OUString&                                sName    );
+        bool                                            Exists                  ( const OUString&                                sName    );
+        void                                            Delete                  ( const OUString&                                sName    );
+        OUString                                        GetWindowState          ( const OUString&                                sName    );
         void                                            SetWindowState          ( const OUString&                                sName    ,
                                                                                   const OUString&                                sState   );
         css::uno::Sequence< css::beans::NamedValue >    GetUserData             ( const OUString&                                sName    );
@@ -157,7 +157,7 @@ SvtViewOptionsBase_Impl::SvtViewOptionsBase_Impl( const OUString& sList )
         m_xRoot.set( ::comphelper::ConfigurationHelper::openConfig(
                             ::comphelper::getProcessComponentContext(),
                             PACKAGE_VIEWS,
-                            ::comphelper::ConfigurationHelper::E_STANDARD),
+                            ::comphelper::EConfigurationModes::Standard),
                      css::uno::UNO_QUERY);
         if (m_xRoot.is())
             m_xRoot->getByName(sList) >>= m_xSet;
@@ -232,32 +232,25 @@ bool SvtViewOptionsBase_Impl::Exists( const OUString& sName )
     @seealso        member m_aList
 
     @param          "sName", name of entry to delete it
-    @return         true , if item not exist(!) or could be deleted (should be the same!)
-                    false, otherwise
 *//*-*************************************************************************************************************/
-bool SvtViewOptionsBase_Impl::Delete( const OUString& sName )
+void SvtViewOptionsBase_Impl::Delete( const OUString& sName )
 {
     #ifdef DEBUG_VIEWOPTIONS
     ++m_nWriteCount;
     #endif
 
-    bool bDeleted = false;
     try
     {
         css::uno::Reference< css::container::XNameContainer > xSet(m_xSet, css::uno::UNO_QUERY_THROW);
         xSet->removeByName(sName);
-        bDeleted = true;
         ::comphelper::ConfigurationHelper::flush(m_xRoot);
     }
     catch(const css::container::NoSuchElementException&)
-        { bDeleted = true; }
+        { }
     catch(const css::uno::Exception& ex)
         {
-            bDeleted = false;
             SVTVIEWOPTIONS_LOG_UNEXPECTED_EXCEPTION(ex)
         }
-
-    return bDeleted;
 }
 
 /*-************************************************************************************************************
@@ -726,32 +719,22 @@ bool SvtViewOptions::Exists() const
 
 //  public method
 
-bool SvtViewOptions::Delete()
+void SvtViewOptions::Delete()
 {
     // Ready for multithreading
     ::osl::MutexGuard aGuard( GetOwnStaticMutex() );
 
-    bool bState = false;
     switch( m_eViewType )
     {
-        case E_DIALOG       :   {
-                                    bState = m_pDataContainer_Dialogs->Delete( m_sViewName );
-                                }
-                                break;
-        case E_TABDIALOG    :   {
-                                    bState = m_pDataContainer_TabDialogs->Delete( m_sViewName );
-                                }
-                                break;
-        case E_TABPAGE      :   {
-                                    bState = m_pDataContainer_TabPages->Delete( m_sViewName );
-                                }
-                                break;
-        case E_WINDOW       :   {
-                                    bState = m_pDataContainer_Windows->Delete( m_sViewName );
-                                }
-                                break;
+        case E_DIALOG    :  m_pDataContainer_Dialogs->Delete( m_sViewName );
+                            break;
+        case E_TABDIALOG :  m_pDataContainer_TabDialogs->Delete( m_sViewName );
+                            break;
+        case E_TABPAGE   :  m_pDataContainer_TabPages->Delete( m_sViewName );
+                            break;
+        case E_WINDOW    :  m_pDataContainer_Windows->Delete( m_sViewName );
+                            break;
     }
-    return bState;
 }
 
 //  public method

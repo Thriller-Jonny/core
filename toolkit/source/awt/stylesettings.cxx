@@ -36,16 +36,7 @@ namespace toolkit
 
 
     using ::com::sun::star::uno::Reference;
-    using ::com::sun::star::uno::XInterface;
-    using ::com::sun::star::uno::UNO_QUERY;
-    using ::com::sun::star::uno::UNO_QUERY_THROW;
-    using ::com::sun::star::uno::UNO_SET_THROW;
-    using ::com::sun::star::uno::Exception;
     using ::com::sun::star::uno::RuntimeException;
-    using ::com::sun::star::uno::Any;
-    using ::com::sun::star::uno::makeAny;
-    using ::com::sun::star::uno::Sequence;
-    using ::com::sun::star::uno::Type;
     using ::com::sun::star::lang::DisposedException;
     using ::com::sun::star::lang::EventObject;
     using ::com::sun::star::awt::FontDescriptor;
@@ -57,7 +48,7 @@ namespace toolkit
     struct WindowStyleSettings_Data
     {
         VCLXWindow*                         pOwningWindow;
-        ::cppu::OInterfaceContainerHelper   aStyleChangeListeners;
+        ::comphelper::OInterfaceContainerHelper2   aStyleChangeListeners;
 
         WindowStyleSettings_Data( ::osl::Mutex& i_rListenerMutex, VCLXWindow& i_rOwningWindow )
             : pOwningWindow( &i_rOwningWindow )
@@ -145,7 +136,7 @@ namespace toolkit
         {
             const vcl::Window* pWindow = i_rData.pOwningWindow->GetWindow();
             const AllSettings aAllSettings = pWindow->GetSettings();
-            const StyleSettings aStyleSettings = aAllSettings.GetStyleSettings();
+            const StyleSettings& aStyleSettings = aAllSettings.GetStyleSettings();
             return (aStyleSettings.*i_pGetter)().GetColor();
         }
 
@@ -163,7 +154,7 @@ namespace toolkit
         {
             const vcl::Window* pWindow = i_rData.pOwningWindow->GetWindow();
             const AllSettings aAllSettings = pWindow->GetSettings();
-            const StyleSettings aStyleSettings = aAllSettings.GetStyleSettings();
+            const StyleSettings& aStyleSettings = aAllSettings.GetStyleSettings();
             return VCLUnoHelper::CreateFontDescriptor( (aStyleSettings.*i_pGetter)() );
         }
 
@@ -396,7 +387,7 @@ namespace toolkit
         StyleMethodGuard aGuard( *m_pData );
         const vcl::Window* pWindow = m_pData->pOwningWindow->GetWindow();
         const AllSettings aAllSettings = pWindow->GetSettings();
-        const StyleSettings aStyleSettings = aAllSettings.GetStyleSettings();
+        const StyleSettings& aStyleSettings = aAllSettings.GetStyleSettings();
         return aStyleSettings.GetFaceGradientColor().GetColor();
     }
 
@@ -700,7 +691,7 @@ namespace toolkit
         StyleMethodGuard aGuard( *m_pData );
         const vcl::Window* pWindow = m_pData->pOwningWindow->GetWindow();
         const AllSettings aAllSettings = pWindow->GetSettings();
-        const StyleSettings aStyleSettings = aAllSettings.GetStyleSettings();
+        const StyleSettings& aStyleSettings = aAllSettings.GetStyleSettings();
         return aStyleSettings.GetSeparatorColor().GetColor();
     }
 
@@ -766,7 +757,7 @@ namespace toolkit
         StyleMethodGuard aGuard( *m_pData );
         const vcl::Window* pWindow = m_pData->pOwningWindow->GetWindow();
         const AllSettings aAllSettings = pWindow->GetSettings();
-        const StyleSettings aStyleSettings = aAllSettings.GetStyleSettings();
+        const StyleSettings& aStyleSettings = aAllSettings.GetStyleSettings();
         return aStyleSettings.GetHighContrastMode();
     }
 

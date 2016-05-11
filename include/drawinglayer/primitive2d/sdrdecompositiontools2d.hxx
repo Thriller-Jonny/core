@@ -33,18 +33,15 @@ namespace basegfx {
 }
 
 
-
 namespace drawinglayer
 {
     namespace primitive2d
     {
         // helpers to create HitTestPrimitives Line
         Primitive2DReference DRAWINGLAYER_DLLPUBLIC createHiddenGeometryPrimitives2D(
-            bool bFilled,
             const basegfx::B2DHomMatrix& rMatrix);
 
         Primitive2DReference DRAWINGLAYER_DLLPUBLIC createHiddenGeometryPrimitives2D(
-            bool bFilled,
             const basegfx::B2DPolyPolygon& rPolygon);
 
         Primitive2DReference DRAWINGLAYER_DLLPUBLIC createHiddenGeometryPrimitives2D(
@@ -63,7 +60,6 @@ namespace drawinglayer
 
     } // end of namespace primitive2d
 } // end of namespace drawinglayer
-
 
 
 #endif //INCLUDED_DRAWINGLAYER_PRIMITIVE2D_SDRDECOMPOSITIONTOOLS2D_HXX

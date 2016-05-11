@@ -31,11 +31,10 @@
 #include "queryparam.hxx"
 #include "typedstrdata.hxx"
 
+#include <memory>
 #include <deque>
 #include <vector>
 #include <map>
-#include <boost/ptr_container/ptr_map.hpp>
-#include <boost/noncopyable.hpp>
 
 class ScFilterOptionsMgr;
 class ScViewData;
@@ -44,13 +43,17 @@ class ScQueryItem;
 
 class ScFilterDlg : public ScAnyRefDlg
 {
-    struct EntryList : boost::noncopyable
+    struct EntryList
     {
         std::vector<ScTypedStrData> maList;
         size_t mnHeaderPos;
+
+        EntryList(const EntryList&) = delete;
+        const EntryList& operator=(const EntryList&) = delete;
+
         EntryList();
     };
-    typedef boost::ptr_map<SCCOL,EntryList> EntryListsMap;
+    typedef std::map<SCCOL, std::unique_ptr<EntryList>> EntryListsMap;
 public:
                     ScFilterDlg( SfxBindings* pB, SfxChildWindow* pCW, vcl::Window* pParent,
                                  const SfxItemSet&  rArgSet );
@@ -61,7 +64,6 @@ public:
 
     virtual bool    IsRefInputMode() const override;
     virtual void    SetActive() override;
-
     virtual bool    Close() override;
     void            SliderMoved();
     size_t          GetSliderPos();
@@ -130,7 +132,7 @@ private:
     std::deque<bool>   maRefreshExceptQuery;
     bool                bRefInputMode;
 
-    EntryListsMap maEntryLists;
+    EntryListsMap m_EntryLists;
 
     // Hack: RefInput control
     Timer*  pTimer;
@@ -165,7 +167,7 @@ public:
     virtual void    dispose() override;
 
     virtual void    SetReference( const ScRange& rRef, ScDocument* pDoc ) override;
-
+    void            SyncFocusState();
     virtual bool    IsRefInputMode() const override;
     virtual void    SetActive() override;
 
@@ -204,8 +206,6 @@ private:
     VclPtr<formula::RefEdit>   pRefInputEdit;
     bool                bRefInputMode;
 
-    // Hack: RefInput control
-    Idle*  pIdle;
 
 private:
     void            Init( const SfxItemSet& rArgSet );

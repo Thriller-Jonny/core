@@ -27,12 +27,13 @@
 #include <cppuhelper/compbase.hxx>
 #include <cppuhelper/basemutex.hxx>
 
+#if defined(ENABLE_GTKSINK)
+#    include <gtk/gtk.h>
+#endif
+
 typedef struct _GstVideoOverlay GstVideoOverlay;
 
 namespace avmedia { namespace gstreamer {
-
-
-// - Player -
 
 
 typedef ::cppu::WeakComponentImplHelper< css::media::XPlayer,
@@ -43,7 +44,7 @@ class Player : public ::cppu::BaseMutex,
 {
 public:
 
-    explicit Player( const css::uno::Reference< css::lang::XMultiServiceFactory >& rxMgr );
+    explicit Player();
     virtual ~Player();
 
     void preparePlaybin( const OUString& rURL, GstElement *pSink );
@@ -77,12 +78,15 @@ public:
     virtual void SAL_CALL disposing() override;
 
 protected:
-    css::uno::Reference< css::lang::XMultiServiceFactory > mxMgr;
-
     OUString                maURL;
 
     // Add elements and pipeline here
     GstElement*             mpPlaybin;  // the playbin is also a pipeline
+    GstElement*             mpVolumeControl;  // the playbin is also a pipeline
+#if defined(ENABLE_GTKSINK)
+    GtkWidget*              mpGtkWidget;
+#endif
+    bool                    mbUseGtkSink;
     bool                    mbFakeVideo;
 
     gdouble                 mnUnmutedVolume;

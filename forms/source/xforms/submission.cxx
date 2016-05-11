@@ -35,9 +35,6 @@
 #include <com/sun/star/uno/Reference.hxx>
 #include <com/sun/star/xforms/XModel.hpp>
 #include <com/sun/star/uno/RuntimeException.hpp>
-#include <com/sun/star/xml/xpath/XXPathObject.hpp>
-#include <com/sun/star/container/XNameAccess.hpp>
-#include <com/sun/star/xml/xpath/XPathObjectType.hpp>
 #include <com/sun/star/xml/dom/XNodeList.hpp>
 #include <com/sun/star/xml/dom/XDocument.hpp>
 #include <com/sun/star/xml/dom/DocumentBuilder.hpp>
@@ -66,9 +63,7 @@ using com::sun::star::task::XInteractionRequest;
 using com::sun::star::task::XInteractionContinuation;
 using com::sun::star::xforms::XModel;
 using com::sun::star::xforms::InvalidDataOnSubmitException;
-using com::sun::star::container::XNameAccess;
 using com::sun::star::xml::xpath::XXPathObject;
-using com::sun::star::xml::xpath::XPathObjectType;
 using com::sun::star::frame::XFrame;
 using xforms::Submission;
 using xforms::Model;
@@ -288,10 +283,6 @@ Submission* Submission::getSubmission(
 }
 
 
-
-
-
-
 void Submission::liveCheck()
     throw( RuntimeException )
 {
@@ -308,7 +299,6 @@ Model* Submission::getModelImpl() const
         pModel = Model::getModel( mxModel );
     return pModel;
 }
-
 
 
 // Property-Set implementation
@@ -369,7 +359,7 @@ sal_Bool SAL_CALL Submission::convertFastPropertyValue(
 {
     if ( nHandle == HANDLE_IncludeNamespacePrefixes )
     {
-        // for convinience reasons (????), we accept a string which contains
+        // for convenience reasons (????), we accept a string which contains
         // a comma-separated list of namespace prefixes
         OUString sTokenList;
         if ( rValue >>= sTokenList )
@@ -398,7 +388,6 @@ void SAL_CALL Submission::setName( const OUString& sID )
 {
     setID( sID );
 }
-
 
 
 sal_Int64 SAL_CALL Submission::getSomething(
@@ -525,7 +514,7 @@ void SAL_CALL Submission::removeSubmissionVetoListener( const Reference< XSubmis
     throw NoSupportException();
 }
 
-static bool _isIgnorable(const Reference< XNode >& aNode)
+static bool isIgnorable(const Reference< XNode >& aNode)
 {
     // ignore whitespace-only textnodes
     if (aNode->getNodeType() == NodeType_TEXT_NODE)
@@ -538,7 +527,7 @@ static bool _isIgnorable(const Reference< XNode >& aNode)
 }
 
 // recursively copy relevant nodes from A to B
-static void _cloneNodes(Model& aModel, const Reference< XNode >& dstParent, const Reference< XNode >& source, bool bRemoveWSNodes)
+static void cloneNodes(Model& aModel, const Reference< XNode >& dstParent, const Reference< XNode >& source, bool bRemoveWSNodes)
 {
     if (!source.is()) return;
 
@@ -550,13 +539,13 @@ static void _cloneNodes(Model& aModel, const Reference< XNode >& dstParent, cons
     {
         //  is this node relevant?
         MIP mip = aModel.queryMIP(cur);
-        if(mip.isRelevant() && !(bRemoveWSNodes && _isIgnorable(cur)))
+        if(mip.isRelevant() && !(bRemoveWSNodes && isIgnorable(cur)))
         {
-            imported = dstDoc->importNode(cur, sal_False);
+            imported = dstDoc->importNode(cur, false);
             imported = dstParent->appendChild(imported);
             // append source children to new imported parent
             for( cur = cur->getFirstChild(); cur.is(); cur = cur->getNextSibling() )
-                _cloneNodes(aModel, imported, cur, bRemoveWSNodes);
+                cloneNodes(aModel, imported, cur, bRemoveWSNodes);
         }
     }
 }
@@ -593,7 +582,7 @@ Reference< XDocumentFragment > Submission::createSubmissionDocument(const Refere
             if (aListItem->getNodeType()==NodeType_DOCUMENT_NODE)
                 aListItem.set( (Reference< XDocument >(aListItem, UNO_QUERY))->getDocumentElement(), UNO_QUERY);
             // copy relevant nodes from instance into fragment
-            _cloneNodes(*getModelImpl(), aFragment, aListItem, bRemoveWSNodes);
+            cloneNodes(*getModelImpl(), aFragment, aListItem, bRemoveWSNodes);
         }
     }
     return aFragment;

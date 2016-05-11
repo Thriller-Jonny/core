@@ -17,6 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 #include <cppuhelper/weak.hxx>
+#include <cppuhelper/interfacecontainer.hxx>
 
 #include <embeddoc.hxx>
 #include <docholder.hxx>
@@ -25,9 +26,7 @@
 using namespace ::com::sun::star;
 
 
-
 #define IUL 6
-
 
 
 uno::Sequence< OUString > Interceptor::m_aInterceptedURL(IUL);
@@ -52,7 +51,7 @@ Interceptor::addEventListener(
 
     if ( ! m_pDisposeEventListeners )
         m_pDisposeEventListeners =
-            new cppu::OInterfaceContainerHelper( m_aMutex );
+            new comphelper::OInterfaceContainerHelper2( m_aMutex );
 
     m_pDisposeEventListeners->addInterface( Listener );
 }
@@ -87,7 +86,6 @@ void SAL_CALL Interceptor::dispose()
     m_xSlaveDispatchProvider = 0;
     m_xMasterDispatchProvider = 0;
 }
-
 
 
 Interceptor::Interceptor(
@@ -474,7 +472,6 @@ Interceptor::queryDispatches(
 
     return aRet;
 }
-
 
 
 //XDispatchProviderInterceptor

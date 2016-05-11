@@ -112,7 +112,7 @@ public:
     virtual void clearPassword() override;
     virtual void setTitle(const OUString& _sTitle) override;
     virtual void enableConfirmSettings( bool _bEnable ) override;
-    virtual bool saveDatasource() override;
+    virtual void saveDatasource() override;
     virtual OUString getStateDisplayName( WizardState _nState ) const override;
 
     /** returns <TRUE/> if the database should be opened, otherwise <FALSE/>.
@@ -162,7 +162,7 @@ private:
     OUString createUniqueFileName(const INetURLObject& rURL);
     void CreateDatabase();
     void createUniqueFolderName(INetURLObject* pURL);
-    ::dbaccess::DATASOURCE_TYPE VerifyDataSourceType(const ::dbaccess::DATASOURCE_TYPE _DatabaseType) const;
+    ::dbaccess::DATASOURCE_TYPE VerifyDataSourceType(const ::dbaccess::DATASOURCE_TYPE DatabaseType) const;
 
     void updateTypeDependentStates();
     bool callSaveAsDialog();

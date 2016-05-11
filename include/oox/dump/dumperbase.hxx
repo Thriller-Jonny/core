@@ -20,19 +20,25 @@
 #ifndef INCLUDED_OOX_DUMP_DUMPERBASE_HXX
 #define INCLUDED_OOX_DUMP_DUMPERBASE_HXX
 
-#include <math.h>
-#include <vector>
-#include <stack>
-#include <set>
+#include <cmath>
+#include <cstddef>
 #include <map>
 #include <memory>
-#include <rtl/strbuf.hxx>
-#include <rtl/ustrbuf.hxx>
+#include <set>
+#include <utility>
+#include <vector>
+
 #include <com/sun/star/uno/Reference.hxx>
+#include <com/sun/star/uno/Sequence.hxx>
 #include <com/sun/star/util/DateTime.hpp>
 #include <oox/helper/binaryinputstream.hxx>
-#include <oox/helper/helper.hxx>
+#include <oox/helper/binarystreambase.hxx>
 #include <oox/helper/storagebase.hxx>
+#include <rtl/string.hxx>
+#include <rtl/textenc.h>
+#include <rtl/ustring.hxx>
+#include <rtl/ustrbuf.hxx>
+#include <sal/types.h>
 
 #define OOX_INCLUDE_DUMPER (OSL_DEBUG_LEVEL > 0)
 
@@ -45,12 +51,7 @@ namespace com { namespace sun { namespace star {
     namespace uno { class XComponentContext; }
 } } }
 
-namespace comphelper {
-    class IDocPasswordVerifier;
-}
-
 namespace oox {
-    class BinaryOutputStream;
     class TextInputStream;
 }
 
@@ -60,7 +61,6 @@ namespace oox { namespace core {
 
 namespace oox {
 namespace dump {
-
 
 
 #define OOX_DUMP_UNUSED                     "unused"
@@ -95,8 +95,6 @@ typedef ::std::pair< OUString, OUString > OUStringPair;
 
 typedef ::std::vector< OUString >         OUStringVector;
 typedef ::std::vector< sal_Int64 >        Int64Vector;
-
-
 
 
 /** Static helper functions for system file and stream access. */
@@ -137,7 +135,6 @@ public:
 };
 
 
-
 class BinaryInputStreamRef : public ::oox::BinaryInputStreamRef
 {
 public:
@@ -153,8 +150,6 @@ public:
     /*implicit*/ BinaryInputStreamRef( const std::shared_ptr< StreamType >& rxInStrm ) :
                             ::oox::BinaryInputStreamRef( rxInStrm ) {}
 };
-
-
 
 
 /** Specifiers for atomic data types. */
@@ -174,7 +169,6 @@ enum DataType
 };
 
 
-
 /** Specifiers for the output format of values. */
 enum FormatType
 {
@@ -186,7 +180,6 @@ enum FormatType
     FORMATTYPE_FIX,             ///< Fixed-point.
     FORMATTYPE_BOOL             ///< Boolean ('true' or 'false').
 };
-
 
 
 /** Describes the output format of a data item.
@@ -247,10 +240,6 @@ struct ItemFormat
      */
     OUStringVector      parse( const OUString& rFormatStr );
 };
-
-
-
-
 
 
 /** Static helper functions for formatted output to strings. */
@@ -364,11 +353,10 @@ public:
 };
 
 
-
 template< typename Type >
 void StringHelper::appendFix( OUStringBuffer& rStr, Type nData, sal_Int32 nWidth )
 {
-    appendDec( rStr, static_cast< double >( nData ) / pow( 2.0, 4.0 * sizeof( Type ) ), nWidth );
+    appendDec( rStr, static_cast< double >( nData ) / std::pow( 2.0, 4.0 * sizeof( Type ) ), nWidth );
 }
 
 template< typename Type >
@@ -387,7 +375,6 @@ void StringHelper::appendValue( OUStringBuffer& rStr, Type nData, FormatType eFm
 }
 
 
-
 class String : public OUString
 {
 public:
@@ -402,10 +389,6 @@ public:
 
 static const String EMPTY_STRING;
 
-
-
-
-class Base;
 
 /** Base class for all dumper classes.
 
@@ -471,8 +454,6 @@ protected:
 };
 
 
-
-
 class ConfigItemBase
 {
 public:
@@ -508,7 +489,6 @@ private:
                             const OUString& rKey,
                             const OUString& rData );
 };
-
 
 
 class SharedConfigData;
@@ -600,7 +580,6 @@ private:
 };
 
 
-
 class ConstList : public NameListBase
 {
 public:
@@ -632,7 +611,6 @@ private:
 };
 
 
-
 class MultiList : public ConstList
 {
 public:
@@ -651,7 +629,6 @@ protected:
 private:
     bool                mbIgnoreEmpty;
 };
-
 
 
 class FlagsList : public NameListBase
@@ -682,7 +659,6 @@ protected:
 private:
     sal_Int64           mnIgnore;
 };
-
 
 
 class CombiList : public FlagsList
@@ -717,7 +693,6 @@ private:
 };
 
 
-
 class UnitConverter : public NameListBase
 {
 public:
@@ -742,7 +717,6 @@ private:
 };
 
 
-
 class NameListWrapper
 {
 public:
@@ -762,7 +736,6 @@ private:
 static const NameListWrapper NO_LIST;
 
 
-
 class ItemFormatMap
 {
 private:
@@ -780,8 +753,6 @@ public:
 
     void         insertFormats( const NameListRef& rxNameList );
 };
-
-
 
 
 class SharedConfigData : public Base, public ConfigItemBase
@@ -841,7 +812,6 @@ private:
 };
 
 
-
 template< typename ListType >
 std::shared_ptr< ListType > SharedConfigData::createNameList( const OUString& rListName )
 {
@@ -861,7 +831,6 @@ void SharedConfigData::readNameList( TextInputStream& rStrm, const OUString& rLi
     if( xList.get() )
         xList->readConfigBlock( rStrm );
 }
-
 
 
 class Config : public Base
@@ -929,7 +898,6 @@ private:
 typedef std::shared_ptr< Config > ConfigRef;
 
 
-
 template< typename Type >
 Type Config::getIntOption( const String& rKey, Type nDefault ) const
 {
@@ -960,15 +928,12 @@ bool Config::hasName( const NameListWrapper& rListWrp, Type nKey ) const
 }
 
 
-
-
 class Output : public Base
 {
 public:
     explicit            Output(
                             const css::uno::Reference< css::uno::XComponentContext >& rxContext,
                             const OUString& rFileName );
-
 
 
     void                newLine();
@@ -1047,7 +1012,6 @@ private:
 typedef std::shared_ptr< Output > OutputRef;
 
 
-
 class IndentGuard
 {
 public:
@@ -1059,7 +1023,6 @@ private:
 private:
     Output&             mrOut;
 };
-
 
 
 class TableGuard
@@ -1084,7 +1047,6 @@ private:
 };
 
 
-
 class ItemGuard
 {
 public:
@@ -1100,7 +1062,6 @@ private:
 };
 
 
-
 class MultiItemsGuard
 {
 public:
@@ -1112,7 +1073,6 @@ private:
 private:
     Output&             mrOut;
 };
-
 
 
 class StorageIterator : public Base
@@ -1137,8 +1097,6 @@ private:
 };
 
 
-
-
 class ObjectBase : public Base
 {
 public:
@@ -1160,7 +1118,6 @@ protected:
     virtual void        implDump();
 
 
-
     Config&             cfg() const { return *mxConfig; }
 
 private:
@@ -1168,8 +1125,6 @@ private:
 };
 
 typedef std::shared_ptr< ObjectBase > ObjectRef;
-
-
 
 
 class StorageObjectBase : public ObjectBase
@@ -1242,9 +1197,6 @@ private:
 };
 
 
-
-
-
 class OutputObjectBase : public ObjectBase
 {
 public:
@@ -1259,7 +1211,6 @@ protected:
     void                construct( const OutputObjectBase& rParent );
 
     virtual bool        implIsValid() const override;
-
 
 
     void                writeEmptyItem( const String& rName );
@@ -1302,8 +1253,6 @@ protected:
     OutputRef           mxOut;
     OUString     maSysFileName;
 };
-
-
 
 
 template< typename Type >
@@ -1412,8 +1361,6 @@ void OutputObjectBase::writeHexPairItem( const String& rName, Type nData1, Type 
 }
 
 
-
-
 class InputObjectBase : public OutputObjectBase
 {
 public:
@@ -1490,8 +1437,6 @@ protected:
 protected:
     BinaryInputStreamRef mxStrm;
 };
-
-
 
 
 template< typename Type >
@@ -1609,8 +1554,6 @@ void InputObjectBase::dumpHexPair( const String& rName, sal_Unicode cSep )
 }
 
 
-
-
 class BinaryStreamObject : public InputObjectBase
 {
 public:
@@ -1624,8 +1567,6 @@ protected:
 
     virtual void        implDump() override;
 };
-
-
 
 
 class TextStreamObjectBase : public InputObjectBase
@@ -1657,7 +1598,6 @@ protected:
 };
 
 
-
 class TextLineStreamObject : public TextStreamObjectBase
 {
 public:
@@ -1678,7 +1618,6 @@ protected:
 };
 
 
-
 class XmlStreamObject : public TextStreamObjectBase
 {
 public:
@@ -1690,8 +1629,6 @@ public:
 protected:
     virtual void        implDumpText( TextInputStream& rTextStrm ) override;
 };
-
-
 
 
 class RecordObjectBase : public InputObjectBase
@@ -1739,7 +1676,6 @@ private:
 };
 
 
-
 class SequenceRecordObjectBase : public RecordObjectBase
 {
 protected:
@@ -1762,8 +1698,6 @@ private:
 };
 
 
-
-
 /** Base class for a file dumper. Derived classes implement the implDump()
     function to add functionality.
  */
@@ -1781,8 +1715,6 @@ protected:
     using               ObjectBase::construct;
     void                construct( const ConfigRef& rxConfig );
 };
-
-
 
 
 } // namespace dump

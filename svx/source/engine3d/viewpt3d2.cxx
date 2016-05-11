@@ -27,8 +27,6 @@ Viewport3D::Viewport3D() :
     aVUV(0, 1, 1),
     aPRP(0, 0, 2),
     fVPD(-3),
-    fNearClipDist (0.0),
-    fFarClipDist (0.0),
     eProjection(PR_PERSPECTIVE),
     eAspectMapping(AS_NO_MAPPING),
     aDeviceRect(Point(0,0), Size(-1,-1)),
@@ -154,6 +152,7 @@ void Viewport3D::SetDeviceWindow(const Rectangle& rRect)
                 aViewWin.H *= fRatio;
                 break;
             }
+            SAL_FALLTHROUGH;
         case AS_HOLD_X:
             if (nNewW == 0)
                 throw o3tl::divide_by_zero();

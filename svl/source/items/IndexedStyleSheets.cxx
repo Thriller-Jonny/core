@@ -23,18 +23,19 @@ const size_t NUMBER_OF_FAMILIES = 6;
 size_t family_to_index(SfxStyleFamily family)
 {
     switch (family) {
-    case SFX_STYLE_FAMILY_CHAR:
+    case SfxStyleFamily::Char:
         return 0;
-    case SFX_STYLE_FAMILY_PARA:
+    case SfxStyleFamily::Para:
         return 1;
-    case SFX_STYLE_FAMILY_FRAME:
+    case SfxStyleFamily::Frame:
         return 2;
-    case SFX_STYLE_FAMILY_PAGE:
+    case SfxStyleFamily::Page:
         return 3;
-    case SFX_STYLE_FAMILY_PSEUDO:
+    case SfxStyleFamily::Pseudo:
         return 4;
-    case SFX_STYLE_FAMILY_ALL:
+    case SfxStyleFamily::All:
         return 5;
+    default: break;
     }
     assert(false); // only for compiler warning. all cases are handled in the switch
     return 0;
@@ -57,7 +58,7 @@ IndexedStyleSheets::Register(const SfxStyleSheetBase& style, unsigned pos)
     mPositionsByName.insert(std::make_pair(style.GetName(), pos));
     size_t position = family_to_index(style.GetFamily());
     mStyleSheetPositionsByFamily.at(position).push_back(pos);
-    size_t positionForFamilyAll = family_to_index(SFX_STYLE_FAMILY_ALL);
+    size_t positionForFamilyAll = family_to_index(SfxStyleFamily::All);
     mStyleSheetPositionsByFamily.at(positionForFamilyAll).push_back(pos);
 }
 
@@ -86,7 +87,7 @@ IndexedStyleSheets::GetNumberOfStyleSheets() const
 }
 
 void
-IndexedStyleSheets::AddStyleSheet(rtl::Reference< SfxStyleSheetBase > style)
+IndexedStyleSheets::AddStyleSheet(const rtl::Reference< SfxStyleSheetBase >& style)
 {
     if (!HasStyleSheet(style)) {
         mStyleSheets.push_back(style);
@@ -96,7 +97,7 @@ IndexedStyleSheets::AddStyleSheet(rtl::Reference< SfxStyleSheetBase > style)
 }
 
 bool
-IndexedStyleSheets::RemoveStyleSheet(rtl::Reference< SfxStyleSheetBase > style)
+IndexedStyleSheets::RemoveStyleSheet(const rtl::Reference< SfxStyleSheetBase >& style)
 {
     rtl::OUString styleName = style->GetName();
     std::vector<unsigned> positions = FindPositionsByName(styleName);
@@ -170,7 +171,7 @@ IndexedStyleSheets::GetNthStyleSheetThatMatchesPredicate(
 {
     rtl::Reference<SfxStyleSheetBase> retval;
     unsigned matching = 0;
-    for (VectorType::iterator it = mStyleSheets.begin()+startAt; it != mStyleSheets.end(); ++it) {
+    for (VectorType::const_iterator it = mStyleSheets.begin()+startAt; it != mStyleSheets.end(); ++it) {
         SfxStyleSheetBase *ssheet = it->get();
         if (predicate.Check(*ssheet)) {
             if (matching == n) {
@@ -207,7 +208,7 @@ IndexedStyleSheets::~IndexedStyleSheets()
 {;}
 
 bool
-IndexedStyleSheets::HasStyleSheet(rtl::Reference< SfxStyleSheetBase > style) const
+IndexedStyleSheets::HasStyleSheet(const rtl::Reference< SfxStyleSheetBase >& style) const
 {
     rtl::OUString styleName = style->GetName();
     std::vector<unsigned> positions = FindPositionsByName(styleName);

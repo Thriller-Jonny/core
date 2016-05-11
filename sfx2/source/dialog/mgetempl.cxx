@@ -248,7 +248,6 @@ SfxManageStyleSheetPage::SfxManageStyleSheetPage(vcl::Window* pParent, const Sfx
 }
 
 
-
 SfxManageStyleSheetPage::~SfxManageStyleSheetPage()
 {
     disposeOnce();
@@ -277,7 +276,6 @@ void SfxManageStyleSheetPage::dispose()
 }
 
 
-
 void SfxManageStyleSheetPage::UpdateName_Impl( ListBox* pBox,
                                                const OUString& rNew )
 
@@ -303,7 +301,6 @@ void SfxManageStyleSheetPage::UpdateName_Impl( ListBox* pBox,
             pBox->SelectEntry( rNew );
     }
 }
-
 
 
 void SfxManageStyleSheetPage::SetDescriptionText_Impl()
@@ -379,7 +376,7 @@ IMPL_LINK_NOARG_TYPED( SfxManageStyleSheetPage, EditLinkStyleHdl_Impl, Button*, 
 // Internal: Perform functions through the Dispatcher
 bool SfxManageStyleSheetPage::Execute_Impl(
     sal_uInt16 nId, const OUString &rStr, const OUString& rRefStr, sal_uInt16 nFamily,
-    sal_uInt16 nMask, const sal_uInt16* pModifier)
+    sal_uInt16 nMask)
 {
 
     SfxDispatcher &rDispatcher = *SfxGetpApp()->GetDispatcher_Impl();
@@ -400,12 +397,11 @@ bool SfxManageStyleSheetPage::Execute_Impl(
 
     pItems[ nCount++ ] = nullptr;
 
-    sal_uInt16 nModi = pModifier ? *pModifier : 0;
-    const SfxPoolItem* mpItem = rDispatcher.Execute(
+    const SfxPoolItem* pItem = rDispatcher.Execute(
         nId, SfxCallMode::SYNCHRON | SfxCallMode::RECORD | SfxCallMode::MODAL,
-        pItems, nModi );
+        pItems );
 
-    if ( !mpItem )
+    if ( !pItem )
         return false;
 
     return true;
@@ -488,7 +484,6 @@ bool SfxManageStyleSheetPage::FillItemSet( SfxItemSet* rSet )
 }
 
 
-
 void SfxManageStyleSheetPage::Reset( const SfxItemSet* /*rAttrSet*/ )
 
 /*  [Description]
@@ -557,13 +552,11 @@ void SfxManageStyleSheetPage::Reset( const SfxItemSet* /*rAttrSet*/ )
 }
 
 
-
 VclPtr<SfxTabPage> SfxManageStyleSheetPage::Create( vcl::Window* pParent,
                                                     const SfxItemSet *rAttrSet )
 {
     return VclPtr<SfxManageStyleSheetPage>::Create( pParent, *rAttrSet );
 }
-
 
 
 void SfxManageStyleSheetPage::ActivatePage( const SfxItemSet& rSet)
@@ -594,7 +587,6 @@ void SfxManageStyleSheetPage::ActivatePage( const SfxItemSet& rSet)
         m_pAutoCB->Check( static_cast<const SfxBoolItem*>(pPoolItem)->GetValue() );
     m_pAutoCB->SaveValue();
 }
-
 
 
 SfxTabPage::sfxpg SfxManageStyleSheetPage::DeactivatePage( SfxItemSet* pItemSet )

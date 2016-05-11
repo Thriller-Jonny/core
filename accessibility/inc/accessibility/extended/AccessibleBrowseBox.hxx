@@ -33,7 +33,6 @@ namespace accessibility {
     class AccessibleBrowseBoxTable;
 
 
-
 /** This class represents the complete accessible BrowseBox object. */
 class AccessibleBrowseBox : public AccessibleBrowseBoxBase
 {
@@ -50,7 +49,7 @@ protected:
 
     /** sets the XAccessible which created the context
 
-        <p>To be called only once, and only if in the ctor NULL was passed.</p>
+        To be called only once, and only if in the ctor NULL was passed.
     */
     void    setCreator(
         const css::uno::Reference< css::accessibility::XAccessible >& _rxCreator
@@ -61,7 +60,7 @@ protected:
     virtual void SAL_CALL disposing() override;
 
 protected:
-    // XAccessibleContext -----------------------------------------------------
+    // XAccessibleContext
 
     /** @return  The count of visible children. */
     virtual sal_Int32 SAL_CALL getAccessibleChildCount()
@@ -74,7 +73,7 @@ protected:
         throw ( css::lang::IndexOutOfBoundsException,
                 css::uno::RuntimeException, std::exception ) override;
 
-    // XAccessibleComponent ---------------------------------------------------
+    // XAccessibleComponent
 
     /** @return
             The accessible child rendered under the given point.
@@ -88,7 +87,7 @@ protected:
     virtual void SAL_CALL grabFocus()
         throw ( css::uno::RuntimeException, std::exception ) override;
 
-    // XServiceInfo -----------------------------------------------------------
+    // XServiceInfo
 
     /** @return
             The name of this class.
@@ -105,6 +104,8 @@ public:
             the new value
         @param rOldValue
             the old value
+        @param _bColumnHeaderBar
+            true if a column based header bar, false if a row based header bar
     */
     void commitHeaderBarEvent(sal_Int16 nEventId,
             const css::uno::Any& rNewValue,
@@ -142,7 +143,7 @@ public:
         }
 
 protected:
-    // internal virtual methods -----------------------------------------------
+    // internal virtual methods
 
     /** @attention  This method requires locked mutex's and a living object.
         @return  The bounding box (VCL rect.) relative to the parent window. */
@@ -151,7 +152,7 @@ protected:
         @return  The bounding box (VCL rect.) in screen coordinates. */
     virtual Rectangle implGetBoundingBoxOnScreen() override;
 
-    // internal helper methods ------------------------------------------------
+    // internal helper methods
 
     /** This method creates (once) and returns the accessible data table child.
         @attention  This method requires locked mutex's and a living object.
@@ -179,15 +180,15 @@ protected:
     virtual AccessibleBrowseBoxTable*   createAccessibleTable();
 
 private:
-    // members ----------------------------------------------------------------
+    // members
     std::unique_ptr< AccessibleBrowseBoxImpl > m_xImpl;
 };
 
 
 /** the XAccessible which creates/returns an AccessibleBrowseBox
 
-    <p>The instance holds its XAccessibleContext with a hard reference, while
-    the context holds this instance weak.</p>
+    The instance holds its XAccessibleContext with a hard reference, while
+    the context holds this instance weak.
 */
 class AccessibleBrowseBoxAccess:
     public cppu::WeakImplHelper<css::accessibility::XAccessible>,
@@ -215,7 +216,6 @@ public:
 
     /// returns the AccessibleContext belonging to this Accessible
     inline AccessibleBrowseBox*            getContext()         { return m_pContext; }
-    inline const AccessibleBrowseBox*      getContext() const   { return m_pContext; }
 
 protected:
     virtual ~AccessibleBrowseBoxAccess();
@@ -282,7 +282,6 @@ private:
 
 
 } // namespace accessibility
-
 
 
 #endif

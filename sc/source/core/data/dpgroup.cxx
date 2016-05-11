@@ -43,10 +43,7 @@
 
 using namespace ::com::sun::star;
 using ::com::sun::star::uno::Any;
-using ::com::sun::star::uno::Reference;
 using ::com::sun::star::uno::Sequence;
-using ::com::sun::star::uno::UNO_QUERY;
-using ::com::sun::star::uno::UNO_QUERY_THROW;
 
 using ::std::vector;
 using ::std::shared_ptr;
@@ -641,7 +638,7 @@ void ScDPGroupTableData::CreateCacheTable()
 
 namespace {
 
-class FindCaseInsensitive : std::unary_function<ScDPItemData, bool>
+class FindCaseInsensitive : public std::unary_function<ScDPItemData, bool>
 {
     ScDPItemData maValue;
 public:

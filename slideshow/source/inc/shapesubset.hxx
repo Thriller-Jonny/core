@@ -24,14 +24,14 @@
 #include "subsettableshapemanager.hxx"
 #include "doctreenode.hxx"
 
-#include <boost/shared_ptr.hpp>
+#include <memory>
 
 namespace slideshow
 {
     namespace internal
     {
         class ShapeSubset;
-        typedef ::boost::shared_ptr< ShapeSubset > ShapeSubsetSharedPtr;
+        typedef ::std::shared_ptr< ShapeSubset > ShapeSubsetSharedPtr;
 
         /* Definition of ShapeSubset class */
 
@@ -104,10 +104,8 @@ namespace slideshow
                 successful completion of this method, the original
                 shape will cease to show the subset range, and
                 getSubsetShape() will return a valid shape.
-
-                @return true, if subsetting was successfully enabled.
              */
-            bool            enableSubsetShape();
+            void            enableSubsetShape();
 
             /** Disable the subset shape.
 
@@ -124,7 +122,7 @@ namespace slideshow
 
             /** Query subset this object represents
              */
-            DocTreeNode getSubset() const;
+            const DocTreeNode& getSubset() const;
 
         private:
             // default copy/assignment are okay

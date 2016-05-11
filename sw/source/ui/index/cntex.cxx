@@ -105,7 +105,7 @@ IMPL_LINK_NOARG_TYPED(SwMultiTOXTabDialog, CreateExample_Hdl, SwOneExampleFrame&
         SwXTextDocument* pDoc = reinterpret_cast<SwXTextDocument*>(xDocTunnel->getSomething(SwXTextDocument::getUnoTunnelId()));
 
         if( pDoc )
-            pDoc->GetDocShell()->_LoadStyles( *rSh.GetView().GetDocShell(), true );
+            pDoc->GetDocShell()->LoadStyles_( *rSh.GetView().GetDocShell(), true );
 
          uno::Reference< lang::XMultiServiceFactory >  xFact(
                                              xModel, uno::UNO_QUERY);
@@ -181,7 +181,7 @@ void SwMultiTOXTabDialog::CreateOrUpdateExample(
              pxIndexSectionsArr[nTOXIndex]->xDocumentIndex.set(xFact->createInstance(sIndexTypeName), uno::UNO_QUERY);
              uno::Reference< text::XTextContent >  xContent(pxIndexSectionsArr[nTOXIndex]->xDocumentIndex, uno::UNO_QUERY);
              uno::Reference< text::XTextRange >  xRg(xCursor, uno::UNO_QUERY);
-             xCursor->getText()->insertTextContent(xRg, xContent, sal_False);
+             xCursor->getText()->insertTextContent(xRg, xContent, false);
          }
          for(sal_uInt16 i = 0 ; i <= TOX_AUTHORITIES; i++)
          {

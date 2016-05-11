@@ -24,7 +24,7 @@
 #include <jerror.h>
 
 #include "JpegWriter.hxx"
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 #include <vcl/FilterConfigItem.hxx>
 #include <vcl/graphicfilter.hxx>
 
@@ -199,38 +199,39 @@ bool JPEGWriter::Write( const Graphic& rGraphic )
     }
 
     mpReadAccess = aGraphicBmp.AcquireReadAccess();
-
-    if ( !mbGreys )  // bitmap was not explicitly converted into greyscale,
-    {                // check if source is greyscale only
-
-        bool bIsGrey = true;
-
-        long nWidth = mpReadAccess->Width();
-        for ( long nY = 0; bIsGrey && ( nY < mpReadAccess->Height() ); nY++ )
-        {
-            BitmapColor aColor;
-            for( long nX = 0L; bIsGrey && ( nX < nWidth ); nX++ )
-            {
-                aColor = mpReadAccess->HasPalette() ? mpReadAccess->GetPaletteColor( mpReadAccess->GetPixelIndex( nY, nX ) )
-                                            : mpReadAccess->GetPixel( nY, nX );
-                bIsGrey = ( aColor.GetRed() == aColor.GetGreen() ) && ( aColor.GetRed() == aColor.GetBlue() );
-            }
-        }
-        if ( bIsGrey )
-            mbGreys = true;
-    }
-
-    if( mpExpWasGrey )
-        *mpExpWasGrey = mbGreys;
-
     if( mpReadAccess )
     {
+        if ( !mbGreys )  // bitmap was not explicitly converted into greyscale,
+        {                // check if source is greyscale only
+            bool bIsGrey = true;
+
+            long nWidth = mpReadAccess->Width();
+            for ( long nY = 0; bIsGrey && ( nY < mpReadAccess->Height() ); nY++ )
+            {
+                BitmapColor aColor;
+                for( long nX = 0L; bIsGrey && ( nX < nWidth ); nX++ )
+                {
+                    aColor = mpReadAccess->HasPalette() ? mpReadAccess->GetPaletteColor( mpReadAccess->GetPixelIndex( nY, nX ) )
+                                                : mpReadAccess->GetPixel( nY, nX );
+                    bIsGrey = ( aColor.GetRed() == aColor.GetGreen() ) && ( aColor.GetRed() == aColor.GetBlue() );
+                }
+            }
+            if ( bIsGrey )
+                mbGreys = true;
+        }
+        if( mpExpWasGrey )
+            *mpExpWasGrey = mbGreys;
+
         mbNative = ( mpReadAccess->GetScanlineFormat() == BMP_FORMAT_24BIT_TC_RGB );
 
         if( !mbNative )
             mpBuffer = new sal_uInt8[ AlignedWidth4Bytes( mbGreys ? mpReadAccess->Width() * 8L : mpReadAccess->Width() * 24L ) ];
 
-        bRet = WriteJPEG( this, &mrStream, mpReadAccess->Width(), mpReadAccess->Height(), mbGreys, mnQuality, maChromaSubsampling, mxStatusIndicator );
+        SAL_INFO("vcl", "\nJPEG Export - DPI X: " << rGraphic.GetPPI().getX() << "\nJPEG Export - DPI Y: " << rGraphic.GetPPI().getY());
+
+        bRet = WriteJPEG( this, &mrStream, mpReadAccess->Width(),
+                          mpReadAccess->Height(), rGraphic.GetPPI(), mbGreys,
+                          mnQuality, maChromaSubsampling, mxStatusIndicator );
 
         delete[] mpBuffer;
         mpBuffer = nullptr;

@@ -40,7 +40,6 @@
 #include "arrdecl.hxx"
 #include <sfx2/sfxresid.hxx>
 #include <sfx2/event.hxx>
-#include <sfx2/mnumgr.hxx>
 #include <sfx2/templdlg.hxx>
 #include <sfx2/msgpool.hxx>
 #include <sfx2/docfile.hxx>
@@ -101,7 +100,8 @@ void SfxApplication::Deinitialize()
 
     DBG_ASSERT( pAppData_Impl->pViewFrame == nullptr, "active foreign ViewFrame" );
 
-    delete[] pAppData_Impl->pInterfaces, pAppData_Impl->pInterfaces = nullptr;
+    delete[] pAppData_Impl->pInterfaces;
+    pAppData_Impl->pInterfaces = nullptr;
 
     // free administration managers
     DELETEZ(pAppData_Impl->pAppDispat);
@@ -116,7 +116,6 @@ void SfxApplication::Deinitialize()
 
     DELETEX(SfxTbxCtrlFactArr_Impl, pAppData_Impl->pTbxCtrlFac);
     DELETEX(SfxStbCtrlFactArr_Impl, pAppData_Impl->pStbCtrlFac);
-    DELETEX(SfxMenuCtrlFactArr_Impl, pAppData_Impl->pMenuCtrlFac);
     DELETEX(SfxViewFrameArr_Impl, pAppData_Impl->pViewFrames);
     DELETEX(SfxViewShellArr_Impl, pAppData_Impl->pViewShells);
     DELETEX(SfxObjectShellArr_Impl, pAppData_Impl->pObjShells);

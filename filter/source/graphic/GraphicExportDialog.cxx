@@ -26,7 +26,6 @@
 #include <com/sun/star/container/XIndexAccess.hpp>
 #include <com/sun/star/lang/XServiceInfo.hpp>
 #include <com/sun/star/uno/Sequence.h>
-#include <com/sun/star/uno/Any.h>
 #include <com/sun/star/ui/dialogs/ExecutableDialogResults.hpp>
 
 #include <svtools/GraphicExportOptionsDialog.hxx>
@@ -37,9 +36,8 @@ using namespace css::uno;
 using namespace css::beans;
 using namespace css::lang;
 
-GraphicExportDialog::GraphicExportDialog( const Reference< XComponentContext >& rxContext )
-    : mxContext( rxContext )
-    , meFieldUnit(FUNIT_NONE)
+GraphicExportDialog::GraphicExportDialog( const Reference< XComponentContext >& )
+    : meFieldUnit(FUNIT_NONE)
     , mbExportSelection( false )
 {
 }
@@ -136,7 +134,7 @@ void GraphicExportDialog::setSourceDocument( const Reference<XComponent>& xDocum
         {
             aConfigPath = "Office.Draw/Layout/Other/MeasureUnit";
         }
-        else if ( xServiceInfo->supportsService("com.sun.star.text.TextDocument") )
+        else if ( xServiceInfo->supportsService("com.sun.star.text.TextDocument") || xServiceInfo->supportsService("com.sun.star.text.WebDocument") )
         {
             aConfigPath = "Office.Writer/Layout/Other/MeasureUnit";
         }

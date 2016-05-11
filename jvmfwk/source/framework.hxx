@@ -21,7 +21,7 @@
 
 #include "rtl/ustring.hxx"
 #include "rtl/byteseq.hxx"
-#include "jvmfwk/framework.h"
+#include "jvmfwk/framework.hxx"
 #include "vendorplugin.hxx"
 
 /** typedefs for functions from vendorplugin.hxx
@@ -79,7 +79,6 @@ public:
     ::JavaInfo * pInfo;
 
 
-
     CJavaInfo();
     CJavaInfo(const CJavaInfo &);
     ~CJavaInfo();
@@ -97,7 +96,6 @@ public:
     ::JavaInfo * detach();
     const ::JavaInfo* operator ->() const { return pInfo;}
     operator ::JavaInfo* () { return pInfo;}
-    operator ::JavaInfo const * () const { return pInfo;}
     ::JavaInfo* cloneJavaInfo() const;
 
     OUString getLocation() const;

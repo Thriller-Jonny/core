@@ -19,7 +19,7 @@
 
 #include <stdlib.h>
 #include <osl/diagnose.h>
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 #include <vcl/bitmap.hxx>
 
 #define S2(a,b)             { long t; if( ( t = b - a ) < 0 ) { a += t; b -= t; } }
@@ -44,7 +44,7 @@ bool Bitmap::Filter( BmpFilter eFilter, const BmpFilterParam* pFilterParam )
 
     switch( eFilter )
     {
-        case( BMP_FILTER_SMOOTH ):
+        case BMP_FILTER_SMOOTH:
         {
             // Blur for positive values of mnRadius
             if (pFilterParam->mnRadius > 0.0)
@@ -63,42 +63,42 @@ bool Bitmap::Filter( BmpFilter eFilter, const BmpFilterParam* pFilterParam )
         }
         break;
 
-        case( BMP_FILTER_SHARPEN ):
+        case BMP_FILTER_SHARPEN:
         {
             const long pSharpenMatrix[] = { -1, -1,  -1, -1, 16, -1, -1, -1,  -1 };
             bRet = ImplConvolute3( &pSharpenMatrix[ 0 ], 8 );
         }
         break;
 
-        case( BMP_FILTER_REMOVENOISE ):
+        case BMP_FILTER_REMOVENOISE:
             bRet = ImplMedianFilter();
         break;
 
-        case( BMP_FILTER_SOBEL_GREY ):
+        case BMP_FILTER_SOBEL_GREY:
             bRet = ImplSobelGrey();
         break;
 
-        case( BMP_FILTER_SOLARIZE ):
+        case BMP_FILTER_SOLARIZE:
             bRet = ImplSolarize( pFilterParam );
         break;
 
-        case( BMP_FILTER_SEPIA ):
+        case BMP_FILTER_SEPIA:
             bRet = ImplSepia( pFilterParam );
         break;
 
-        case( BMP_FILTER_MOSAIC ):
+        case BMP_FILTER_MOSAIC:
             bRet = ImplMosaic( pFilterParam );
         break;
 
-        case( BMP_FILTER_EMBOSS_GREY ):
+        case BMP_FILTER_EMBOSS_GREY:
             bRet = ImplEmbossGrey( pFilterParam );
         break;
 
-        case( BMP_FILTER_POPART ):
+        case BMP_FILTER_POPART:
             bRet = ImplPopArt();
         break;
 
-        case( BMP_FILTER_DUOTONE ):
+        case BMP_FILTER_DUOTONE:
             bRet = ImplDuotoneFilter( pFilterParam->mnProgressStart, pFilterParam->mnProgressEnd );
         break;
 
@@ -215,11 +215,23 @@ bool Bitmap::ImplConvolute3( const long* pMatrix, long nDivisor )
                 if( ++nY < nHeight )
                 {
                     if( pRowTmp1 == pColRow1 )
-                        pRowTmp1 = pColRow2, pRowTmp2 = pColRow3, pRowTmp3 = pColRow1;
+                    {
+                        pRowTmp1 = pColRow2;
+                        pRowTmp2 = pColRow3;
+                        pRowTmp3 = pColRow1;
+                    }
                     else if( pRowTmp1 == pColRow2 )
-                        pRowTmp1 = pColRow3, pRowTmp2 = pColRow1, pRowTmp3 = pColRow2;
+                    {
+                        pRowTmp1 = pColRow3;
+                        pRowTmp2 = pColRow1;
+                        pRowTmp3 = pColRow2;
+                    }
                     else
-                        pRowTmp1 = pColRow1, pRowTmp2 = pColRow2, pRowTmp3 = pColRow3;
+                    {
+                        pRowTmp1 = pColRow1;
+                        pRowTmp2 = pColRow2;
+                        pRowTmp3 = pColRow3;
+                    }
 
                     for( i = 0; i < nWidth2; i++ )
                         pRowTmp3[ i ] = pReadAcc->GetColor( pRows[ nY + 2 ], pColm[ i ] );
@@ -311,17 +323,35 @@ bool Bitmap::ImplMedianFilter()
             {
                 for( nX = 0; nX < nWidth; nX++ )
                 {
-                    nR1 = ( pColor = pRowTmp1 + nX )->GetRed(), nG1 = pColor->GetGreen(), nB1 = pColor->GetBlue();
-                    nR2 = ( ++pColor )->GetRed(), nG2 = pColor->GetGreen(), nB2 = pColor->GetBlue();
-                    nR3 = ( ++pColor )->GetRed(), nG3 = pColor->GetGreen(), nB3 = pColor->GetBlue();
+                    nR1 = ( pColor = pRowTmp1 + nX )->GetRed();
+                    nG1 = pColor->GetGreen();
+                    nB1 = pColor->GetBlue();
+                    nR2 = ( ++pColor )->GetRed();
+                    nG2 = pColor->GetGreen();
+                    nB2 = pColor->GetBlue();
+                    nR3 = ( ++pColor )->GetRed();
+                    nG3 = pColor->GetGreen();
+                    nB3 = pColor->GetBlue();
 
-                    nR4 = ( pColor = pRowTmp2 + nX )->GetRed(), nG4 = pColor->GetGreen(), nB4 = pColor->GetBlue();
-                    nR5 = ( ++pColor )->GetRed(), nG5 = pColor->GetGreen(), nB5 = pColor->GetBlue();
-                    nR6 = ( ++pColor )->GetRed(), nG6 = pColor->GetGreen(), nB6 = pColor->GetBlue();
+                    nR4 = ( pColor = pRowTmp2 + nX )->GetRed();
+                    nG4 = pColor->GetGreen();
+                    nB4 = pColor->GetBlue();
+                    nR5 = ( ++pColor )->GetRed();
+                    nG5 = pColor->GetGreen();
+                    nB5 = pColor->GetBlue();
+                    nR6 = ( ++pColor )->GetRed();
+                    nG6 = pColor->GetGreen();
+                    nB6 = pColor->GetBlue();
 
-                    nR7 = ( pColor = pRowTmp3 + nX )->GetRed(), nG7 = pColor->GetGreen(), nB7 = pColor->GetBlue();
-                    nR8 = ( ++pColor )->GetRed(), nG8 = pColor->GetGreen(), nB8 = pColor->GetBlue();
-                    nR9 = ( ++pColor )->GetRed(), nG9 = pColor->GetGreen(), nB9 = pColor->GetBlue();
+                    nR7 = ( pColor = pRowTmp3 + nX )->GetRed();
+                    nG7 = pColor->GetGreen();
+                    nB7 = pColor->GetBlue();
+                    nR8 = ( ++pColor )->GetRed();
+                    nG8 = pColor->GetGreen();
+                    nB8 = pColor->GetBlue();
+                    nR9 = ( ++pColor )->GetRed();
+                    nG9 = pColor->GetGreen();
+                    nB9 = pColor->GetBlue();
 
                     MNMX6( nR1, nR2, nR3, nR4, nR5, nR6 );
                     MNMX5( nR7, nR2, nR3, nR4, nR5 );
@@ -345,11 +375,23 @@ bool Bitmap::ImplMedianFilter()
                 if( ++nY < nHeight )
                 {
                     if( pRowTmp1 == pColRow1 )
-                        pRowTmp1 = pColRow2, pRowTmp2 = pColRow3, pRowTmp3 = pColRow1;
+                    {
+                        pRowTmp1 = pColRow2;
+                        pRowTmp2 = pColRow3;
+                        pRowTmp3 = pColRow1;
+                    }
                     else if( pRowTmp1 == pColRow2 )
-                        pRowTmp1 = pColRow3, pRowTmp2 = pColRow1, pRowTmp3 = pColRow2;
+                    {
+                        pRowTmp1 = pColRow3;
+                        pRowTmp2 = pColRow1;
+                        pRowTmp3 = pColRow2;
+                    }
                     else
-                        pRowTmp1 = pColRow1, pRowTmp2 = pColRow2, pRowTmp3 = pColRow3;
+                    {
+                        pRowTmp1 = pColRow1;
+                        pRowTmp2 = pColRow2;
+                        pRowTmp3 = pColRow3;
+                    }
 
                     for( i = 0; i < nWidth2; i++ )
                         pRowTmp3[ i ] = pReadAcc->GetColor( pRows[ nY + 2 ], pColm[ i ] );
@@ -543,7 +585,7 @@ bool Bitmap::ImplEmbossGrey( const BmpFilterParam* pFilterParam )
                 const long  nLx = FRound( cos( fAzim ) * cos( fElev ) * 255.0 );
                 const long  nLy = FRound( sin( fAzim ) * cos( fElev ) * 255.0 );
                 const long  nLz = FRound( sin( fElev ) * 255.0 );
-                const long  nZ2 = ( ( 6 * 255 ) / 4 ) * ( ( 6 * 255 ) / 4 );
+                const auto  nZ2 = ( ( 6 * 255 ) / 4 ) * ( ( 6 * 255 ) / 4 );
                 const long  nNzLz = ( ( 6 * 255 ) / 4 ) * nLz;
                 const sal_uInt8 cLz = (sal_uInt8) SAL_BOUND( nLz, 0, 255 );
 
@@ -940,6 +982,7 @@ extern "C" int SAL_CALL ImplPopArtCmpFnc( const void* p1, const void* p2 )
 
 bool Bitmap::ImplPopArt()
 {
+    /* note: GetBitCount() after that is no more than 8 */
     bool bRet = ( GetBitCount() <= 8 ) || Convert( BMP_CONVERSION_8BIT_COLORS );
 
     if( bRet )
@@ -952,8 +995,8 @@ bool Bitmap::ImplPopArt()
         {
             const long      nWidth = pWriteAcc->Width();
             const long      nHeight = pWriteAcc->Height();
-            const sal_uLong nEntryCount = 1UL << pWriteAcc->GetBitCount();
-            sal_uLong       n;
+            const int       nEntryCount = 1 << pWriteAcc->GetBitCount();
+            int n;
             PopArtEntry*    pPopArtTable = new PopArtEntry[ nEntryCount ];
 
             for( n = 0; n < nEntryCount; n++ )

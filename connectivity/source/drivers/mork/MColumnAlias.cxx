@@ -17,12 +17,9 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <sal/macros.h>
 #include "MColumnAlias.hxx"
-#include "MConnection.hxx"
 
 #include <com/sun/star/beans/XPropertySet.hpp>
-#include <com/sun/star/container/XNameAccess.hpp>
 #include <officecfg/Office/DataAccess.hxx>
 
 #include <tools/diagnose_ex.h>
@@ -30,11 +27,8 @@
 #include <algorithm>
 #include <functional>
 
-using namespace ::connectivity;
 using namespace ::connectivity::mork;
 using namespace ::com::sun::star::uno;
-using namespace ::com::sun::star::lang;
-using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::container;
 
 
@@ -81,7 +75,7 @@ OColumnAlias::OColumnAlias( const ::com::sun::star::uno::Reference< ::com::sun::
         "Notes",
     };
 
-    for ( size_t i = 0; i < sizeof( s_pProgrammaticNames ) / sizeof( s_pProgrammaticNames[0] ); ++i )
+    for ( size_t i = 0; i < SAL_N_ELEMENTS( s_pProgrammaticNames ); ++i )
         m_aAliasMap[ OUString::createFromAscii( s_pProgrammaticNames[i] ) ] = AliasEntry( s_pProgrammaticNames[i], i );
 
     initialize( _rxORB );
@@ -101,7 +95,7 @@ void OColumnAlias::initialize( const ::com::sun::star::uno::Reference< ::com::su
             OUStringToOString(
                 aProgrammaticNames[i], RTL_TEXTENCODING_ASCII_US));
         bool bFound = false;
-        for (AliasMap::iterator j(m_aAliasMap.begin()); j != m_aAliasMap.end();
+        for (AliasMap::const_iterator j(m_aAliasMap.begin()); j != m_aAliasMap.end();
              ++j)
         {
             if (j->second.programmaticAsciiName == sAsciiProgrammaticName) {

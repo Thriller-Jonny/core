@@ -137,7 +137,7 @@ throw ( Exception, RuntimeException, std::exception )
         {
             // from the arguments, we were able to deduce a model. That alone doesn't
             // suffice, we also need an XEmbeddedScripts which actually indicates support
-            // for embeddeding scripts
+            // for embedding scripts
             Reference< XEmbeddedScripts > xScripts( m_xModel, UNO_QUERY );
             if ( !xScripts.is() )
             {
@@ -201,7 +201,6 @@ throw ( Exception, RuntimeException, std::exception )
     m_bInitialised = true;
     m_bIsValid = true;
 }
-
 
 
 void MasterScriptProvider::createPkgProvider()
@@ -361,7 +360,6 @@ throw ( provider::ScriptFrameworkErrorException,
 }
 
 
-
 ProviderCache*
 MasterScriptProvider::providerCache()
 {
@@ -385,7 +383,6 @@ MasterScriptProvider::providerCache()
     }
     return m_pPCache;
 }
-
 
 
 OUString SAL_CALL
@@ -452,7 +449,7 @@ sal_Bool SAL_CALL
 MasterScriptProvider::hasChildNodes()
         throw ( css::uno::RuntimeException, std::exception )
 {
-    return sal_True;
+    return true;
 }
 
 
@@ -462,7 +459,6 @@ MasterScriptProvider::getType()
 {
     return browse::BrowseNodeTypes::CONTAINER;
 }
-
 
 
 OUString
@@ -771,7 +767,6 @@ MasterScriptProvider::getAllProviders() throw ( css::uno::RuntimeException )
         throw RuntimeException( errorMsg.concat( errorMsg ) );
     }
 }
-
 
 
 OUString SAL_CALL MasterScriptProvider::getImplementationName( )

@@ -18,10 +18,8 @@
  */
 
 #include <sfx2/sidebar/ResourceDefinitions.hrc>
-#include <sfx2/sidebar/Theme.hxx>
 #include <sfx2/sidebar/ControlFactory.hxx>
 #include "NumberFormatPropertyPanel.hxx"
-#include <NumberFormatPropertyPanel.hrc>
 #include "sc.hrc"
 #include "scresid.hxx"
 #include <sfx2/bindings.hxx>
@@ -36,7 +34,6 @@
 
 using namespace css;
 using namespace css::uno;
-using ::sfx2::sidebar::Theme;
 
 namespace sc { namespace sidebar {
 
@@ -45,22 +42,20 @@ NumberFormatPropertyPanel::NumberFormatPropertyPanel(
     const css::uno::Reference<css::frame::XFrame>& rxFrame,
     SfxBindings* pBindings)
   : PanelLayout(pParent,"NumberFormatPropertyPanel", "modules/scalc/ui/sidebarnumberformat.ui", rxFrame),
-    maThousandSeparator(ScResId(RID_SFX_STR_THOUSAND_SEP)),
-    maEngineeringNotation(ScResId(RID_SFX_STR_ENGINEERING)),
     maNumFormatControl(SID_NUMBER_TYPE_FORMAT, *pBindings, *this),
     maFormatControl(SID_NUMBER_FORMAT, *pBindings, *this),
 
     mnCategorySelected(0),
-    mxFrame(rxFrame),
     maContext(),
     mpBindings(pBindings)
 {
-    get(mpLbCategory,   "category");
-    get(mpTBCategory,   "numberformat");
-    get(mpEdDecimals,   "decimalplaces");
-    get(mpEdLeadZeroes, "leadingzeroes");
-    get(mpBtnNegRed,    "negativenumbersred");
-    get(mpBtnThousand,  "thousandseparator");
+    get(mpLbCategory,     "category");
+    get(mpTBCategory,     "numberformat");
+    get(mpEdDecimals,     "decimalplaces");
+    get(mpEdLeadZeroes,   "leadingzeroes");
+    get(mpBtnNegRed,      "negativenumbersred");
+    get(mpBtnThousand,    "thousandseparator");
+    get(mpBtnEngineering, "engineeringnotation");
 
     Initialize();
 }
@@ -78,6 +73,7 @@ void NumberFormatPropertyPanel::dispose()
     mpEdLeadZeroes.clear();
     mpBtnNegRed.clear();
     mpBtnThousand.clear();
+    mpBtnEngineering.clear();
 
     maNumFormatControl.dispose();
     maFormatControl.dispose();
@@ -101,6 +97,7 @@ void NumberFormatPropertyPanel::Initialize()
 
     mpBtnNegRed->SetClickHdl( LINK(this, NumberFormatPropertyPanel, NumFormatValueClickHdl) );
     mpBtnThousand->SetClickHdl( LINK(this, NumberFormatPropertyPanel, NumFormatValueClickHdl) );
+    mpBtnEngineering->SetClickHdl( LINK(this, NumberFormatPropertyPanel, NumFormatValueClickHdl) );
 
     mpTBCategory->SetAccessibleRelationLabeledBy(mpTBCategory);
 }
@@ -111,7 +108,8 @@ IMPL_LINK_TYPED( NumberFormatPropertyPanel, NumFormatSelectHdl, ListBox&, rBox, 
     if( nVal != mnCategorySelected )
     {
         SfxUInt16Item aItem( SID_NUMBER_TYPE_FORMAT,  nVal );
-        GetBindings()->GetDispatcher()->Execute(SID_NUMBER_TYPE_FORMAT, SfxCallMode::RECORD, &aItem, 0L);
+        GetBindings()->GetDispatcher()->ExecuteList(SID_NUMBER_TYPE_FORMAT,
+                SfxCallMode::RECORD, { &aItem });
         mnCategorySelected = nVal;
     }
 }
@@ -122,16 +120,15 @@ IMPL_LINK_NOARG_TYPED( NumberFormatPropertyPanel, NumFormatValueClickHdl, Button
 }
 IMPL_LINK_NOARG_TYPED( NumberFormatPropertyPanel, NumFormatValueHdl, Edit&, void )
 {
-    OUString      aFormat;
-    OUString      sBreak = ",";
-    bool          bThousand     =    mpBtnThousand->IsEnabled()
-        && mpBtnThousand->IsChecked();
-    bool          bNegRed       =    mpBtnNegRed->IsEnabled()
-        && mpBtnNegRed->IsChecked();
-    sal_uInt16        nPrecision    = (mpEdDecimals->IsEnabled())
+    OUString    aFormat;
+    OUString    sBreak = ",";
+    bool        bThousand   = ( mpBtnThousand->IsVisible() && mpBtnThousand->IsEnabled() && mpBtnThousand->IsChecked() )
+                           || ( mpBtnEngineering->IsVisible() && mpBtnEngineering->IsEnabled() && mpBtnEngineering->IsChecked() );
+    bool        bNegRed     =  mpBtnNegRed->IsEnabled() && mpBtnNegRed->IsChecked();
+    sal_uInt16  nPrecision  = (mpEdDecimals->IsEnabled())
         ? (sal_uInt16)mpEdDecimals->GetValue()
         : (sal_uInt16)0;
-    sal_uInt16        nLeadZeroes   = (mpEdLeadZeroes->IsEnabled())
+    sal_uInt16  nLeadZeroes = (mpEdLeadZeroes->IsEnabled())
         ? (sal_uInt16)mpEdLeadZeroes->GetValue()
         : (sal_uInt16)0;
 
@@ -150,7 +147,8 @@ IMPL_LINK_NOARG_TYPED( NumberFormatPropertyPanel, NumFormatValueHdl, Edit&, void
     aFormat += sBreak;
 
     SfxStringItem aItem( SID_NUMBER_FORMAT,  aFormat );
-    GetBindings()->GetDispatcher()->Execute(SID_NUMBER_FORMAT, SfxCallMode::RECORD, &aItem, 0L);
+    GetBindings()->GetDispatcher()->ExecuteList(SID_NUMBER_FORMAT,
+            SfxCallMode::RECORD, { &aItem });
 }
 
 VclPtr<vcl::Window> NumberFormatPropertyPanel::Create (
@@ -208,25 +206,36 @@ void NumberFormatPropertyPanel::NotifyItemUpdate(
                 if( nVal < 4 ||  // General, Number, Percent and Currency
                     nVal == 6 )  // scientific also
                 {
-                    mpBtnThousand->Enable();
+                    if ( nVal == 6 ) // scientific
+                    {  // For scientific, Thousand separator is replaced by Engineering notation
+                        mpBtnThousand->Hide();
+                        mpBtnEngineering->Show();
+                        mpBtnEngineering->Enable();
+                    }
+                    else
+                    {
+                        mpBtnEngineering->Hide();
+                        mpBtnThousand->Show();
+                        mpBtnThousand->Enable();
+                    }
                     mpBtnNegRed->Enable();
                     mpEdDecimals->Enable();
                     mpEdLeadZeroes->Enable();
                 }
                 else
                 {
+                    mpBtnEngineering->Hide();
+                    mpBtnThousand->Show();
                     mpBtnThousand->Disable();
                     mpBtnNegRed->Disable();
                     mpEdDecimals->Disable();
                     mpEdLeadZeroes->Disable();
                 }
-                if( nVal == 6 ) // For scientific, Thousand separator is replaced by Engineering notation
-                    mpBtnThousand->SetText( maEngineeringNotation );
-                else
-                    mpBtnThousand->SetText( maThousandSeparator );
             }
             else
             {
+                mpBtnEngineering->Hide();
+                mpBtnThousand->Show();
                 mpLbCategory->SetNoSelection();
                 mnCategorySelected = 0;
                 mpBtnThousand->Disable();
@@ -248,9 +257,9 @@ void NumberFormatPropertyPanel::NotifyItemUpdate(
                 OUString aCode = pItem->GetValue();
                 sal_Int32 nIndex = 0;
                 sal_Int32 aFormat[4] = {0};
-                for (size_t i=0; i<SAL_N_ELEMENTS(aFormat); ++i)
+                for (sal_Int32 & rn : aFormat)
                 {
-                    aFormat[i] = aCode.getToken(0, ',', nIndex).toInt32();
+                    rn = aCode.getToken(0, ',', nIndex).toInt32();
                     if (nIndex<0)
                         break;
                 }
@@ -266,7 +275,10 @@ void NumberFormatPropertyPanel::NotifyItemUpdate(
                 nPrecision  =    0;
                 nLeadZeroes =    1;
             }
-            mpBtnThousand->Check(bThousand);
+            if ( mpBtnThousand->IsVisible() )
+                mpBtnThousand->Check(bThousand);
+            else if ( mpBtnEngineering->IsVisible() )
+                mpBtnEngineering->Check(bThousand);
             mpBtnNegRed->Check(bNegRed);
             if ( mpLbCategory->GetSelectEntryPos() == 0 )
                 mpEdDecimals->SetText(""); // tdf#44399
@@ -274,8 +286,9 @@ void NumberFormatPropertyPanel::NotifyItemUpdate(
                 mpEdDecimals->SetValue(nPrecision);
             mpEdLeadZeroes->SetValue(nLeadZeroes);
         }
+        break;
     default:
-        ;
+        break;
     }
 }
 

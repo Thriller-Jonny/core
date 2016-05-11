@@ -676,13 +676,27 @@ namespace svgio
 
                         // todo: Handle getStrokeDashOffset()
 
+                        // convert svg:stroke-miterlimit to LineAttrute:mfMiterMinimumAngle
+                        // The default needs to be set explicitely, because svg default <> Draw default
+                        double fMiterMinimumAngle;
+                        if (getStrokeMiterLimit().isSet())
+                        {
+                            fMiterMinimumAngle = 2.0 * asin(1.0/getStrokeMiterLimit().getNumber());
+                        }
+                        else
+                        {
+                            fMiterMinimumAngle = 2.0 * asin(0.25); // 1.0/default 4.0
+                        }
+
                         // prepare line attribute
                         drawinglayer::primitive2d::Primitive2DReference aNewLinePrimitive;
+
                         const drawinglayer::attribute::LineAttribute aLineAttribute(
                             pStroke ? *pStroke : basegfx::BColor(0.0, 0.0, 0.0),
                             fStrokeWidth,
                             aB2DLineJoin,
-                            aLineCap);
+                            aLineCap,
+                            fMiterMinimumAngle);
 
                         if(aDashArray.empty())
                         {
@@ -1056,7 +1070,7 @@ namespace svgio
                 return;
             }
 
-            const double fOpacity(getOpacity().getNumber());
+            const double fOpacity(getOpacity().solve(mrOwner));
 
             if(basegfx::fTools::equalZero(fOpacity))
             {
@@ -1113,7 +1127,7 @@ namespace svgio
         {
             if(!rSource.empty())
             {
-                const double fOpacity(getOpacity().getNumber());
+                const double fOpacity(getOpacity().solve(mrOwner));
 
                 if(basegfx::fTools::equalZero(fOpacity))
                 {
@@ -1145,30 +1159,21 @@ namespace svgio
                     aSource = drawinglayer::primitive2d::Primitive2DContainer { xRef };
                 }
 
-                if(!getClipPathXLink().isEmpty())
+                const SvgClipPathNode* pClip = accessClipPathXLink();
+                while(pClip)
                 {
-                    // try to access linked ClipPath
-                    const SvgClipPathNode* mpClip = dynamic_cast< const SvgClipPathNode* >(mrOwner.getDocument().findSvgNodeById(getClipPathXLink()));
-
-                    if(mpClip)
-                    {
-                        // #i124852# transform may be needed when userSpaceOnUse
-                        mpClip->apply(aSource, pTransform);
-                    }
+                    // #i124852# transform may be needed when userSpaceOnUse
+                    pClip->apply(aSource, pTransform);
+                    pClip = pClip->getSvgStyleAttributes()->accessClipPathXLink();
                 }
 
                 if(!aSource.empty()) // test again, applied clipPath may have lead to empty geometry
                 {
-                    if(!getMaskXLink().isEmpty())
+                    const SvgMaskNode* pMask = accessMaskXLink();
+                    if(pMask)
                     {
-                        // try to access linked Mask
-                        const SvgMaskNode* mpMask = dynamic_cast< const SvgMaskNode* >(mrOwner.getDocument().findSvgNodeById(getMaskXLink()));
-
-                        if(mpMask)
-                        {
-                            // #i124852# transform may be needed when userSpaceOnUse
-                            mpMask->apply(aSource, pTransform);
-                        }
+                        // #i124852# transform may be needed when userSpaceOnUse
+                        pMask->apply(aSource, pTransform);
                     }
 
                     if(!aSource.empty()) // test again, applied mask may have lead to empty geometry
@@ -1201,6 +1206,7 @@ namespace svgio
             maStrokeOpacity(),
             maFontFamily(),
             maFontSize(),
+            maFontSizeNumber(),
             maFontStretch(FontStretch_notset),
             maFontStyle(FontStyle_notset),
             maFontVariant(FontVariant_notset),
@@ -1209,12 +1215,14 @@ namespace svgio
             maTextDecoration(TextDecoration_notset),
             maTextAnchor(TextAnchor_notset),
             maColor(),
-            maOpacity(1.0),
-            maVisibility(Visibility_visible),
+            maOpacity(),
+            maVisibility(Visibility_notset),
             maTitle(),
             maDesc(),
             maClipPathXLink(),
+            mpClipPathXLink(nullptr),
             maMaskXLink(),
+            mpMaskXLink(nullptr),
             maMarkerStartXLink(),
             mpMarkerStartXLink(nullptr),
             maMarkerMidXLink(),
@@ -1236,10 +1244,6 @@ namespace svgio
                     mbIsClipPathContent = pParentStyle->mbIsClipPathContent;
                 }
             }
-            if(pParentStyle)
-            {
-                maVisibility = pParentStyle->maVisibility;
-            }
         }
 
         SvgStyleAttributes::~SvgStyleAttributes()
@@ -1258,10 +1262,15 @@ namespace svgio
                 {
                     SvgPaint aSvgPaint;
                     OUString aURL;
+                    SvgNumber aOpacity;
 
-                    if(readSvgPaint(aContent, aSvgPaint, aURL, bCaseIndependent))
+                    if(readSvgPaint(aContent, aSvgPaint, aURL, bCaseIndependent, aOpacity))
                     {
                         setFill(aSvgPaint);
+                        if(aOpacity.isSet())
+                        {
+                            setOpacity(SvgNumber(basegfx::clamp(aOpacity.getNumber(), 0.0, 1.0)));
+                        }
                     }
                     else if(!aURL.isEmpty())
                     {
@@ -1310,10 +1319,15 @@ namespace svgio
                 {
                     SvgPaint aSvgPaint;
                     OUString aURL;
+                    SvgNumber aOpacity;
 
-                    if(readSvgPaint(aContent, aSvgPaint, aURL, bCaseIndependent))
+                    if(readSvgPaint(aContent, aSvgPaint, aURL, bCaseIndependent, aOpacity))
                     {
                         setStroke(aSvgPaint);
+                        if(aOpacity.isSet())
+                        {
+                            setOpacity(SvgNumber(basegfx::clamp(aOpacity.getNumber(), 0.0, 1.0)));
+                        }
                     }
                     else if(!aURL.isEmpty())
                     {
@@ -1411,9 +1425,9 @@ namespace svgio
 
                     if(readSingleNumber(aContent, aNum))
                     {
-                        if(aNum.isPositive())
-                        {
-                            setStrokeMiterLimit(aNum);
+                        if(basegfx::fTools::moreOrEqual(aNum.getNumber(), 1.0))
+                        { //readSingleNumber sets Unit_px as default, if unit is missing. Correct it here.
+                            setStrokeMiterLimit(SvgNumber(aNum.getNumber(), Unit_none));
                         }
                     }
                     break;
@@ -1448,10 +1462,15 @@ namespace svgio
                 {
                     SvgPaint aSvgPaint;
                     OUString aURL;
+                    SvgNumber aOpacity;
 
-                    if(readSvgPaint(aContent, aSvgPaint, aURL, bCaseIndependent))
+                    if(readSvgPaint(aContent, aSvgPaint, aURL, bCaseIndependent, aOpacity))
                     {
                         setStopColor(aSvgPaint);
+                        if(aOpacity.isSet())
+                        {
+                            setOpacity(SvgNumber(basegfx::clamp(aOpacity.getNumber(), 0.0, 1.0)));
+                        }
                     }
                     break;
                 }
@@ -1484,11 +1503,57 @@ namespace svgio
                 }
                 case SVGTokenFontSize:
                 {
-                    SvgNumber aNum;
-
-                    if(readSingleNumber(aContent, aNum))
+                    if(!aContent.isEmpty())
                     {
-                        setFontSize(aNum);
+                        if(aContent.startsWith("xx-small"))
+                        {
+                            setFontSize(FontSize_xx_small);
+                        }
+                        else if(aContent.startsWith("x-small"))
+                        {
+                            setFontSize(FontSize_x_small);
+                        }
+                        else if(aContent.startsWith("small"))
+                        {
+                            setFontSize(FontSize_small);
+                        }
+                        else if(aContent.startsWith("smaller"))
+                        {
+                            setFontSize(FontSize_smaller);
+                        }
+                        else if(aContent.startsWith("medium"))
+                        {
+                            setFontSize(FontSize_medium);
+                        }
+                        else if(aContent.startsWith("larger"))
+                        {
+                            setFontSize(FontSize_larger);
+                        }
+                        else if(aContent.startsWith("large"))
+                        {
+                            setFontSize(FontSize_large);
+                        }
+                        else if(aContent.startsWith("x-large"))
+                        {
+                            setFontSize(FontSize_x_large);
+                        }
+                        else if(aContent.startsWith("xx-large"))
+                        {
+                            setFontSize(FontSize_xx_large);
+                        }
+                        else if(aContent.startsWith("initial"))
+                        {
+                            setFontSize(FontSize_initial);
+                        }
+                        else
+                        {
+                            SvgNumber aNum;
+
+                            if(readSingleNumber(aContent, aNum))
+                            {
+                                setFontSizeNumber(aNum);
+                            }
+                        }
                     }
                     break;
                 }
@@ -1721,10 +1786,15 @@ namespace svgio
                 {
                     SvgPaint aSvgPaint;
                     OUString aURL;
+                    SvgNumber aOpacity;
 
-                    if(readSvgPaint(aContent, aSvgPaint, aURL, bCaseIndependent))
+                    if(readSvgPaint(aContent, aSvgPaint, aURL, bCaseIndependent, aOpacity))
                     {
                         setColor(aSvgPaint);
+                        if(aOpacity.isSet())
+                        {
+                            setOpacity(SvgNumber(basegfx::clamp(aOpacity.getNumber(), 0.0, 1.0)));
+                        }
                     }
                     break;
                 }
@@ -1798,8 +1868,11 @@ namespace svgio
                 }
                 case SVGTokenMarker:
                 {
-                    readLocalUrl(aContent, maMarkerEndXLink);
-                    maMarkerStartXLink = maMarkerMidXLink = maMarkerEndXLink;
+                    if(bCaseIndependent)
+                    {
+                        readLocalUrl(aContent, maMarkerEndXLink);
+                        maMarkerStartXLink = maMarkerMidXLink = maMarkerEndXLink;
+                    }
                     break;
                 }
                 case SVGTokenMarkerStart:
@@ -1898,12 +1971,7 @@ namespace svgio
 
         const basegfx::BColor* SvgStyleAttributes::getFill() const
         {
-            if(mbIsClipPathContent)
-            {
-                static basegfx::BColor aBlack(0.0, 0.0, 0.0);
-                return &aBlack;
-            }
-            else if(maFill.isSet())
+            if(maFill.isSet())
             {
                 if(maFill.isCurrent())
                 {
@@ -1914,7 +1982,7 @@ namespace svgio
                     return &maFill.getBColor();
                 }
             }
-            else
+            else if (!mpSvgGradientNodeFill && !mpSvgPatternNodeFill)
             {
                 const SvgStyleAttributes* pSvgStyleAttributes = getParentStyle();
 
@@ -1923,17 +1991,18 @@ namespace svgio
                     return pSvgStyleAttributes->getFill();
                 }
             }
+            else if(mbIsClipPathContent)
+            {
+                static basegfx::BColor aBlack(0.0, 0.0, 0.0);
+                return &aBlack;
+            }
 
             return nullptr;
         }
 
         const basegfx::BColor* SvgStyleAttributes::getStroke() const
         {
-            if(mbIsClipPathContent)
-            {
-                return nullptr;
-            }
-            else if(maStroke.isSet())
+            if(maStroke.isSet())
             {
                 if(maStroke.isCurrent())
                 {
@@ -1944,7 +2013,7 @@ namespace svgio
                     return &maStroke.getBColor();
                 }
             }
-            else
+            else if (!mpSvgGradientNodeStroke && !mpSvgPatternNodeStroke)
             {
                 const SvgStyleAttributes* pSvgStyleAttributes = getParentStyle();
 
@@ -1971,15 +2040,11 @@ namespace svgio
 
         const SvgGradientNode* SvgStyleAttributes::getSvgGradientNodeFill() const
         {
-            if(mbIsClipPathContent)
-            {
-                return nullptr;
-            }
-            else if(mpSvgGradientNodeFill)
+            if(mpSvgGradientNodeFill)
             {
                 return mpSvgGradientNodeFill;
             }
-            else
+            else if (!maFill.isSet() && !mpSvgPatternNodeFill)
             {
                 const SvgStyleAttributes* pSvgStyleAttributes = getParentStyle();
 
@@ -1994,15 +2059,11 @@ namespace svgio
 
         const SvgGradientNode* SvgStyleAttributes::getSvgGradientNodeStroke() const
         {
-            if(mbIsClipPathContent)
-            {
-                return nullptr;
-            }
-            else if(mpSvgGradientNodeStroke)
+            if(mpSvgGradientNodeStroke)
             {
                 return mpSvgGradientNodeStroke;
             }
-            else
+            else if (!maStroke.isSet() && !mpSvgPatternNodeStroke)
             {
                 const SvgStyleAttributes* pSvgStyleAttributes = getParentStyle();
 
@@ -2017,15 +2078,11 @@ namespace svgio
 
         const SvgPatternNode* SvgStyleAttributes::getSvgPatternNodeFill() const
         {
-            if(mbIsClipPathContent)
-            {
-                return nullptr;
-            }
-            else if(mpSvgPatternNodeFill)
+            if(mpSvgPatternNodeFill)
             {
                 return mpSvgPatternNodeFill;
             }
-            else
+            else if (!maFill.isSet() && !mpSvgGradientNodeFill)
             {
                 const SvgStyleAttributes* pSvgStyleAttributes = getParentStyle();
 
@@ -2040,15 +2097,11 @@ namespace svgio
 
         const SvgPatternNode* SvgStyleAttributes::getSvgPatternNodeStroke() const
         {
-            if(mbIsClipPathContent)
-            {
-                return nullptr;
-            }
-            else if(mpSvgPatternNodeStroke)
+            if(mpSvgPatternNodeStroke)
             {
                 return mpSvgPatternNodeStroke;
             }
-            else
+            else if (!maStroke.isSet() && !mpSvgGradientNodeStroke)
             {
                 const SvgStyleAttributes* pSvgStyleAttributes = getParentStyle();
 
@@ -2063,11 +2116,7 @@ namespace svgio
 
         SvgNumber SvgStyleAttributes::getStrokeWidth() const
         {
-            if(mbIsClipPathContent)
-            {
-                return SvgNumber(0.0);
-            }
-            else if(maStrokeWidth.isSet())
+            if(maStrokeWidth.isSet())
             {
                 return maStrokeWidth;
             }
@@ -2077,6 +2126,11 @@ namespace svgio
             if(pSvgStyleAttributes)
             {
                 return pSvgStyleAttributes->getStrokeWidth();
+            }
+
+            if(mbIsClipPathContent)
+            {
+                return SvgNumber(0.0);
             }
 
             // default is 1
@@ -2096,11 +2150,7 @@ namespace svgio
 
         SvgNumber SvgStyleAttributes::getFillOpacity() const
         {
-            if(mbIsClipPathContent)
-            {
-                return SvgNumber(1.0);
-            }
-            else if(maFillOpacity.isSet())
+            if(maFillOpacity.isSet())
             {
                 return maFillOpacity;
             }
@@ -2114,6 +2164,41 @@ namespace svgio
 
             // default is 1
             return SvgNumber(1.0);
+        }
+
+        SvgNumber SvgStyleAttributes::getOpacity() const
+        {
+            if(maOpacity.isSet())
+            {
+                return maOpacity;
+            }
+
+            const SvgStyleAttributes* pSvgStyleAttributes = getParentStyle();
+
+            if(pSvgStyleAttributes)
+            {
+                return pSvgStyleAttributes->getOpacity();
+            }
+
+            // default is 1
+            return SvgNumber(1.0);
+        }
+
+        Visibility SvgStyleAttributes::getVisibility() const
+        {
+            if(Visibility_notset == maVisibility || Visibility_inherit == maVisibility)
+            {
+                const SvgStyleAttributes* pSvgStyleAttributes = getParentStyle();
+
+                if(pSvgStyleAttributes)
+                {
+                    return pSvgStyleAttributes->getVisibility();
+                }
+                //default is Visible
+                return Visibility_visible;
+            }
+
+            return maVisibility;
         }
 
         FillRule SvgStyleAttributes::getFillRule() const
@@ -2226,7 +2311,7 @@ namespace svgio
             }
 
             // default is 4
-            return SvgNumber(4.0);
+            return SvgNumber(4.0, Unit_none);
         }
 
         SvgNumber SvgStyleAttributes::getStrokeOpacity() const
@@ -2265,40 +2350,120 @@ namespace svgio
             return maFontFamily;
         }
 
-        SvgNumber SvgStyleAttributes::getFontSize() const
+        SvgNumber SvgStyleAttributes::getFontSizeNumber() const
         {
-            if(maFontSize.isSet())
+            // default size is 'medium' or 16px, which is equal to the default PPI used in svgio ( 96.0 )
+            // converted to pixels
+            const double aDefaultSize = F_SVG_PIXEL_PER_INCH / 6.0;
+
+            if(maFontSizeNumber.isSet())
             {
+                if(!maFontSizeNumber.isPositive())
+                    return aDefaultSize;
+
                 // #122524# Handle Unit_percent realtive to parent FontSize (see SVG1.1
                 // spec 10.10 Font selection properties \91font-size\92, lastline (click 'normative
                 // definition of the property')
-                if(Unit_percent == maFontSize.getUnit())
+                if(Unit_percent == maFontSizeNumber.getUnit())
                 {
                     const SvgStyleAttributes* pSvgStyleAttributes = getParentStyle();
 
                     if(pSvgStyleAttributes)
                     {
-                        const SvgNumber aParentNumber = pSvgStyleAttributes->getFontSize();
+                        const SvgNumber aParentNumber = pSvgStyleAttributes->getFontSizeNumber();
 
                         return SvgNumber(
-                            aParentNumber.getNumber() * maFontSize.getNumber() * 0.01,
+                            aParentNumber.getNumber() * maFontSizeNumber.getNumber() * 0.01,
+                            aParentNumber.getUnit(),
+                            true);
+                    }
+                    // if there's no parent style, set the font size based on the default size
+                    // 100% = 16px
+                    return SvgNumber(
+                        maFontSizeNumber.getNumber() * aDefaultSize / 100.0, Unit_px, true);
+                }
+                else if((Unit_em == maFontSizeNumber.getUnit()) || (Unit_ex == maFontSizeNumber.getUnit()))
+                {
+                    const SvgStyleAttributes* pSvgStyleAttributes = getParentStyle();
+
+                    if(pSvgStyleAttributes)
+                    {
+                        const SvgNumber aParentNumber = pSvgStyleAttributes->getFontSizeNumber();
+
+                        return SvgNumber(
+                            aParentNumber.getNumber() * maFontSizeNumber.getNumber(),
                             aParentNumber.getUnit(),
                             true);
                     }
                 }
 
-                return maFontSize;
+                return maFontSizeNumber;
+            }
+
+            //In CSS2, the suggested scaling factor between adjacent indexes is 1.2
+            switch(maFontSize)
+            {
+                case FontSize_notset:
+                    break;
+                case FontSize_xx_small:
+                {
+                    return SvgNumber(aDefaultSize / 1.728);
+                }
+                case FontSize_x_small:
+                {
+                    return SvgNumber(aDefaultSize / 1.44);
+                }
+                case FontSize_small:
+                {
+                    return SvgNumber(aDefaultSize / 1.2);
+                }
+                case FontSize_smaller:
+                {
+                    const SvgStyleAttributes* pSvgStyleAttributes = getParentStyle();
+                    if(pSvgStyleAttributes)
+                    {
+                        const SvgNumber aParentNumber = pSvgStyleAttributes->getFontSizeNumber();
+                        return SvgNumber(aParentNumber.getNumber() / 1.2, aParentNumber.getUnit());
+                    }
+                    SAL_FALLTHROUGH;
+                }
+                case FontSize_medium:
+                case FontSize_initial:
+                {
+                    return SvgNumber(aDefaultSize);
+                }
+                case FontSize_large:
+                {
+                    return SvgNumber(aDefaultSize * 1.2);
+                }
+                case FontSize_larger:
+                {
+                    const SvgStyleAttributes* pSvgStyleAttributes = getParentStyle();
+                    if(pSvgStyleAttributes)
+                    {
+                        const SvgNumber aParentNumber = pSvgStyleAttributes->getFontSizeNumber();
+                        return SvgNumber(aParentNumber.getNumber() * 1.2, aParentNumber.getUnit());
+                    }
+                    SAL_FALLTHROUGH;
+                }
+                case FontSize_x_large:
+                {
+                    return SvgNumber(aDefaultSize * 1.44);
+                }
+                case FontSize_xx_large:
+                {
+                    return SvgNumber(aDefaultSize * 1.728);
+                }
             }
 
             const SvgStyleAttributes* pSvgStyleAttributes = getParentStyle();
 
             if(pSvgStyleAttributes)
             {
-                return pSvgStyleAttributes->getFontSize();
+                return pSvgStyleAttributes->getFontSizeNumber();
             }
 
-            // default is 'medium'
-            return SvgNumber(12.0);
+            return SvgNumber(aDefaultSize);
         }
 
         FontStretch SvgStyleAttributes::getFontStretch() const
@@ -2479,6 +2644,75 @@ namespace svgio
             return nullptr;
         }
 
+        OUString SvgStyleAttributes::getClipPathXLink() const
+        {
+            if(mbIsClipPathContent)
+            {
+                return maClipPathXLink;
+            }
+
+            if(!maClipPathXLink.isEmpty())
+            {
+                return maClipPathXLink;
+            }
+
+            const SvgStyleAttributes* pSvgStyleAttributes = getParentStyle();
+
+            if(pSvgStyleAttributes && !pSvgStyleAttributes->maClipPathXLink.isEmpty())
+            {
+                return pSvgStyleAttributes->getClipPathXLink();
+            }
+
+            return OUString();
+        }
+
+        const SvgClipPathNode* SvgStyleAttributes::accessClipPathXLink() const
+        {
+            if(!mpClipPathXLink)
+            {
+                const OUString aClipPath(getClipPathXLink());
+
+                if(!aClipPath.isEmpty())
+                {
+                    const_cast< SvgStyleAttributes* >(this)->mpClipPathXLink = dynamic_cast< const SvgClipPathNode* >(mrOwner.getDocument().findSvgNodeById(aClipPath));
+                }
+            }
+
+            return mpClipPathXLink;
+        }
+
+        OUString SvgStyleAttributes::getMaskXLink() const
+        {
+            if(!maMaskXLink.isEmpty())
+            {
+                return maMaskXLink;
+            }
+
+            const SvgStyleAttributes* pSvgStyleAttributes = getParentStyle();
+
+            if(pSvgStyleAttributes && !pSvgStyleAttributes->maMaskXLink.isEmpty())
+            {
+                return pSvgStyleAttributes->getMaskXLink();
+            }
+
+            return OUString();
+        }
+
+        const SvgMaskNode* SvgStyleAttributes::accessMaskXLink() const
+        {
+            if(!mpMaskXLink)
+            {
+                const OUString aMask(getMaskXLink());
+
+                if(!aMask.isEmpty())
+                {
+                    const_cast< SvgStyleAttributes* >(this)->mpMaskXLink = dynamic_cast< const SvgMaskNode* >(mrOwner.getDocument().findSvgNodeById(aMask));
+                }
+            }
+
+            return mpMaskXLink;
+        }
+
         OUString SvgStyleAttributes::getMarkerStartXLink() const
         {
             if(!maMarkerStartXLink.isEmpty())
@@ -2599,3 +2833,4 @@ namespace svgio
 } // end of namespace svgio
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */
+

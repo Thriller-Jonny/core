@@ -20,13 +20,10 @@
 #include "previewbase.hxx"
 
 #include <com/sun/star/ui/dialogs/FilePreviewImageFormats.hpp>
+#include <com/sun/star/uno/Sequence.hxx>
 
 using namespace com::sun::star::uno;
 using namespace com::sun::star::lang;
-
-
-
-
 
 
 PreviewBase::PreviewBase() :
@@ -36,15 +33,9 @@ PreviewBase::PreviewBase() :
 }
 
 
-
-
-
 PreviewBase::~PreviewBase()
 {
 }
-
-
-
 
 
 sal_Int32 SAL_CALL PreviewBase::getTargetColorDepth() throw (RuntimeException)
@@ -53,25 +44,16 @@ sal_Int32 SAL_CALL PreviewBase::getTargetColorDepth() throw (RuntimeException)
 }
 
 
-
-
-
 sal_Int32 SAL_CALL PreviewBase::getAvailableWidth() throw (RuntimeException)
 {
     return 0;
 }
 
 
-
-
-
 sal_Int32 SAL_CALL PreviewBase::getAvailableHeight() throw (RuntimeException)
 {
     return 0;
 }
-
-
-
 
 
 void SAL_CALL PreviewBase::setImage( sal_Int16 aImageFormat, const css::uno::Any& aImage )
@@ -91,17 +73,11 @@ void SAL_CALL PreviewBase::setImage( sal_Int16 aImageFormat, const css::uno::Any
 }
 
 
-
-
-
 void SAL_CALL PreviewBase::getImage(sal_Int16& aImageFormat,css::uno::Any& aImage)
 {
     aImageFormat = m_ImageFormat;
     aImage       = m_ImageData;
 }
-
-
-
 
 
 sal_Bool SAL_CALL PreviewBase::setShowState( sal_Bool bShowState ) throw (RuntimeException)
@@ -111,25 +87,16 @@ sal_Bool SAL_CALL PreviewBase::setShowState( sal_Bool bShowState ) throw (Runtim
 }
 
 
-
-
-
 sal_Bool SAL_CALL PreviewBase::getShowState() throw (RuntimeException)
 {
     return sal_False;
 }
 
 
-
-
-
 sal_Bool SAL_CALL PreviewBase::getImaginaryShowState() const
 {
     return m_bShowState;
 }
-
-
-
 
 
 HWND SAL_CALL PreviewBase::getWindowHandle() const

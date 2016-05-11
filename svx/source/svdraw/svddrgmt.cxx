@@ -74,7 +74,6 @@
 #include <vector>
 
 
-
 SdrDragEntry::SdrDragEntry()
 :   mbAddToTransparent(false)
 {
@@ -83,7 +82,6 @@ SdrDragEntry::SdrDragEntry()
 SdrDragEntry::~SdrDragEntry()
 {
 }
-
 
 
 SdrDragEntryPolyPolygon::SdrDragEntryPolyPolygon(const basegfx::B2DPolyPolygon& rOriginalPolyPolygon)
@@ -136,7 +134,6 @@ drawinglayer::primitive2d::Primitive2DContainer SdrDragEntryPolyPolygon::createP
 
     return aRetval;
 }
-
 
 
 SdrDragEntrySdrObject::SdrDragEntrySdrObject(const SdrObject& rOriginal, sdr::contact::ObjectContact& rObjectContact, bool bModify)
@@ -205,15 +202,13 @@ drawinglayer::primitive2d::Primitive2DContainer SdrDragEntrySdrObject::createPri
 }
 
 
-
 SdrDragEntryPrimitive2DSequence::SdrDragEntryPrimitive2DSequence(
-    const drawinglayer::primitive2d::Primitive2DContainer& rSequence,
-    bool bAddToTransparent)
+    const drawinglayer::primitive2d::Primitive2DContainer& rSequence)
 :   SdrDragEntry(),
     maPrimitive2DSequence(rSequence)
 {
     // add parts to transparent overlay stuff if necessary
-    setAddToTransparent(bAddToTransparent);
+    setAddToTransparent(true);
 }
 
 SdrDragEntryPrimitive2DSequence::~SdrDragEntryPrimitive2DSequence()
@@ -229,7 +224,6 @@ drawinglayer::primitive2d::Primitive2DContainer SdrDragEntryPrimitive2DSequence:
 
     return drawinglayer::primitive2d::Primitive2DContainer { aTransformPrimitive2D };
 }
-
 
 
 SdrDragEntryPointGlueDrag::SdrDragEntryPointGlueDrag(const std::vector< basegfx::B2DPoint >& rPositions, bool bIsPointDrag)
@@ -301,8 +295,6 @@ drawinglayer::primitive2d::Primitive2DContainer SdrDragEntryPointGlueDrag::creat
 }
 
 
-
-
 void SdrDragMethod::resetSdrDragEntries()
 {
     // clear entries; creation is on demand
@@ -358,11 +350,11 @@ void SdrDragMethod::createSdrDragEntries()
     }
 }
 
-void SdrDragMethod::createSdrDragEntryForSdrObject(const SdrObject& rOriginal, sdr::contact::ObjectContact& rObjectContact, bool bModify)
+void SdrDragMethod::createSdrDragEntryForSdrObject(const SdrObject& rOriginal, sdr::contact::ObjectContact& rObjectContact)
 {
     // add full object drag; Clone() at the object has to work
     // for this
-    addSdrDragEntry(new SdrDragEntrySdrObject(rOriginal, rObjectContact, bModify));
+    addSdrDragEntry(new SdrDragEntrySdrObject(rOriginal, rObjectContact, true/*bModify*/));
 }
 
 void SdrDragMethod::createSdrDragEntries_SolidDrag()
@@ -406,7 +398,7 @@ void SdrDragMethod::createSdrDragEntries_SolidDrag()
                                 {
                                     // add full object drag; Clone() at the object has to work
                                     // for this
-                                    createSdrDragEntryForSdrObject(*pCandidate, rOC, true);
+                                    createSdrDragEntryForSdrObject(*pCandidate, rOC);
                                 }
 
                                 if(bAddWireframe)
@@ -560,7 +552,7 @@ void SdrDragMethod::createSdrDragEntries_GlueDrag()
     }
 }
 
-void SdrDragMethod::ImpTakeDescriptionStr(sal_uInt16 nStrCacheID, OUString& rStr, sal_uInt16 nVal) const
+void SdrDragMethod::ImpTakeDescriptionStr(sal_uInt16 nStrCacheID, OUString& rStr) const
 {
     ImpTakeDescriptionOptions nOpt=ImpTakeDescriptionOptions::NONE;
     if (IsDraggingPoints()) {
@@ -568,7 +560,7 @@ void SdrDragMethod::ImpTakeDescriptionStr(sal_uInt16 nStrCacheID, OUString& rStr
     } else if (IsDraggingGluePoints()) {
         nOpt=ImpTakeDescriptionOptions::GLUEPOINTS;
     }
-    getSdrDragView().ImpTakeDescriptionStr(nStrCacheID,rStr,nVal,nOpt);
+    getSdrDragView().ImpTakeDescriptionStr(nStrCacheID,rStr,nOpt);
 }
 
 SdrObject* SdrDragMethod::GetDragObj() const
@@ -962,8 +954,6 @@ drawinglayer::primitive2d::Primitive2DContainer SdrDragMethod::AddConnectorOverl
 }
 
 
-
-
 SdrDragMovHdl::SdrDragMovHdl(SdrDragView& rNewView)
 :   SdrDragMethod(rNewView)
 {
@@ -1175,8 +1165,6 @@ Pointer SdrDragMovHdl::GetSdrDragPointer() const
 
     return Pointer(PointerStyle::RefHand);
 }
-
-
 
 
 SdrDragObjOwn::SdrDragObjOwn(SdrDragView& rNewView)
@@ -1422,6 +1410,12 @@ bool SdrDragObjOwn::EndSdrDrag(bool /*bCopy*/)
         }
 
         bRet = pObj->applySpecialDrag(DragStat());
+        if (DragStat().IsEndDragChangesLayout())
+        {
+            auto pGeoUndo = dynamic_cast<SdrUndoGeoObj*>(pUndo);
+            if (pGeoUndo)
+                pGeoUndo->SetSkipChangeLayout(true);
+        }
 
         if(bRet)
         {
@@ -1483,9 +1477,7 @@ Pointer SdrDragObjOwn::GetSdrDragPointer() const
 }
 
 
-
-
-void SdrDragMove::createSdrDragEntryForSdrObject(const SdrObject& rOriginal, sdr::contact::ObjectContact& rObjectContact, bool /*bModify*/)
+void SdrDragMove::createSdrDragEntryForSdrObject(const SdrObject& rOriginal, sdr::contact::ObjectContact& rObjectContact)
 {
     // for SdrDragMove, use current Primitive2DContainer of SdrObject visualization
     // in given ObjectContact directly
@@ -1497,7 +1489,7 @@ void SdrDragMove::createSdrDragEntryForSdrObject(const SdrObject& rOriginal, sdr
     // here we want the complete primitive sequence without visible clippings
     rObjectContact.resetViewPort();
 
-    addSdrDragEntry(new SdrDragEntryPrimitive2DSequence(rVOC.getPrimitive2DSequenceHierarchy(aDisplayInfo), true));
+    addSdrDragEntry(new SdrDragEntryPrimitive2DSequence(rVOC.getPrimitive2DSequenceHierarchy(aDisplayInfo)));
 }
 
 void SdrDragMove::applyCurrentTransformationToSdrObject(SdrObject& rTarget)
@@ -1759,8 +1751,6 @@ Pointer SdrDragMove::GetSdrDragPointer() const
         return Pointer(PointerStyle::Move);
     }
 }
-
-
 
 
 SdrDragResize::SdrDragResize(SdrDragView& rNewView)
@@ -2097,8 +2087,6 @@ Pointer SdrDragResize::GetSdrDragPointer() const
 }
 
 
-
-
 void SdrDragRotate::applyCurrentTransformationToSdrObject(SdrObject& rTarget)
 {
     rTarget.Rotate(DragStat().GetRef1(), nAngle, sin(nAngle*nPi180), cos(nAngle*nPi180));
@@ -2231,8 +2219,6 @@ Pointer SdrDragRotate::GetSdrDragPointer() const
 {
     return Pointer(PointerStyle::Rotate);
 }
-
-
 
 
 SdrDragShear::SdrDragShear(SdrDragView& rNewView, bool bSlant1)
@@ -2514,8 +2500,6 @@ Pointer SdrDragShear::GetSdrDragPointer() const
 }
 
 
-
-
 void SdrDragMirror::applyCurrentTransformationToSdrObject(SdrObject& rTarget)
 {
     if(bMirrored)
@@ -2642,8 +2626,6 @@ Pointer SdrDragMirror::GetSdrDragPointer() const
 {
     return Pointer(PointerStyle::Mirror);
 }
-
-
 
 
 SdrDragGradient::SdrDragGradient(SdrDragView& rNewView, bool bGrad)
@@ -2804,8 +2786,6 @@ Pointer SdrDragGradient::GetSdrDragPointer() const
 }
 
 
-
-
 SdrDragCrook::SdrDragCrook(SdrDragView& rNewView)
 :   SdrDragMethod(rNewView),
     aFact(1,1),
@@ -2852,7 +2832,7 @@ void SdrDragCrook::TakeSdrDragComment(OUString& rStr) const
         rStr += ImpGetResStr(STR_EditWithCopy);
 }
 
-// These defines parameterize the created raster
+// These defines parametrize the created raster
 // for interactions
 #define DRAG_CROOK_RASTER_MINIMUM   (4)
 #define DRAG_CROOK_RASTER_MAXIMUM   (15)
@@ -2971,7 +2951,7 @@ bool SdrDragCrook::BeginSdrDrag()
     }
 }
 
-void SdrDragCrook::_MovAllPoints(basegfx::B2DPolyPolygon& rTarget)
+void SdrDragCrook::MovAllPoints(basegfx::B2DPolyPolygon& rTarget)
 {
     SdrPageView* pPV = getSdrDragView().GetSdrPageView();
 
@@ -3078,7 +3058,7 @@ void SdrDragCrook::_MovAllPoints(basegfx::B2DPolyPolygon& rTarget)
                             i++;
                         }
 
-                        _MovCrookPoint(*pPnt,pC1,pC2);
+                        MovCrookPoint(*pPnt,pC1,pC2);
                     }
                 }
             }
@@ -3088,7 +3068,7 @@ void SdrDragCrook::_MovAllPoints(basegfx::B2DPolyPolygon& rTarget)
     }
 }
 
-void SdrDragCrook::_MovCrookPoint(Point& rPnt, Point* pC1, Point* pC2)
+void SdrDragCrook::MovCrookPoint(Point& rPnt, Point* pC1, Point* pC2)
 {
     bool bVert=bVertical;
     bool bC1=pC1!=nullptr;
@@ -3352,7 +3332,7 @@ void SdrDragCrook::applyCurrentTransformationToSdrObject(SdrObject& rTarget)
 void SdrDragCrook::applyCurrentTransformationToPolyPolygon(basegfx::B2DPolyPolygon& rTarget)
 {
     // use helper derived from old stuff
-    _MovAllPoints(rTarget);
+    MovAllPoints(rTarget);
 }
 
 bool SdrDragCrook::EndSdrDrag(bool bCopy)
@@ -3440,8 +3420,6 @@ Pointer SdrDragCrook::GetSdrDragPointer() const
 }
 
 
-
-
 SdrDragDistort::SdrDragDistort(SdrDragView& rNewView)
 :   SdrDragMethod(rNewView),
     nPolyPt(0),
@@ -3511,7 +3489,7 @@ bool SdrDragDistort::BeginSdrDrag()
     }
 }
 
-void SdrDragDistort::_MovAllPoints(basegfx::B2DPolyPolygon& rTarget)
+void SdrDragDistort::MovAllPoints(basegfx::B2DPolyPolygon& rTarget)
 {
     if (bContortion)
     {
@@ -3589,10 +3567,8 @@ void SdrDragDistort::applyCurrentTransformationToSdrObject(SdrObject& rTarget)
 void SdrDragDistort::applyCurrentTransformationToPolyPolygon(basegfx::B2DPolyPolygon& rTarget)
 {
     // use helper derived from old stuff
-    _MovAllPoints(rTarget);
+    MovAllPoints(rTarget);
 }
-
-
 
 
 SdrDragCrop::SdrDragCrop(SdrDragView& rNewView)
@@ -3960,7 +3936,7 @@ bool SdrDragCrop::EndSdrDrag(bool /*bCopy*/)
 
     // the following old code uses aOldRect/aNewRect to calculate the crop change for
     // the crop item. It implies unrotated objects, so create the unrotated original
-    // erctangle and the unrotated modified rectangle. Latter can in case of shear and/or
+    // rectangle and the unrotated modified rectangle. Latter can in case of shear and/or
     // rotation not be fetched by using
 
     //Rectangle aNewRect( pObj->GetLogicRect() );

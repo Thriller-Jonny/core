@@ -28,7 +28,6 @@
 #include <com/sun/star/linguistic2/XConversionDictionary.hpp>
 #include <com/sun/star/linguistic2/ConversionDictionaryType.hpp>
 #include <com/sun/star/lang/Locale.hpp>
-#include <com/sun/star/uno/Reference.h>
 #include <com/sun/star/registry/XRegistryKey.hpp>
 
 #include "hhconvdic.hxx"
@@ -70,7 +69,6 @@ sal_Int16 SAL_CALL checkScriptType(sal_Unicode c) throw (RuntimeException)
 }
 
 
-
 bool TextIsAllScriptType( const OUString &rTxt, sal_Int16 nScriptType )
 {
     bool bIsAll = true;
@@ -81,7 +79,6 @@ bool TextIsAllScriptType( const OUString &rTxt, sal_Int16 nScriptType )
     }
     return bIsAll;
 }
-
 
 
 HHConvDic::HHConvDic( const OUString &rName, const OUString &rMainURL ) :

@@ -138,14 +138,13 @@ OTextInputStream::~OTextInputStream()
 
 void OTextInputStream::implResizeBuffer()
 {
-    sal_Int32 mnNewBufferSize = mnBufferSize * 2;
-    sal_Unicode* pNewBuffer = new sal_Unicode[ mnNewBufferSize ];
+    sal_Int32 nNewBufferSize = mnBufferSize * 2;
+    sal_Unicode* pNewBuffer = new sal_Unicode[ nNewBufferSize ];
     memcpy( pNewBuffer, mpBuffer, mnCharsInBuffer * sizeof( sal_Unicode ) );
     delete[] mpBuffer;
     mpBuffer = pNewBuffer;
-    mnBufferSize = mnNewBufferSize;
+    mnBufferSize = nNewBufferSize;
 }
-
 
 
 // XTextInputStream
@@ -412,7 +411,6 @@ void OTextInputStream::closeInput(  )
 {
     mxStream->closeInput();
 }
-
 
 
 // XActiveDataSink

@@ -23,7 +23,7 @@
 #include <new>
 #include <string.h>
 
-#ifdef WNT
+#ifdef _WIN32
 #include "stdlib.h"
 #endif
 
@@ -183,7 +183,7 @@ OString makeOString(const sal_uInt8* p, sal_uInt64 n)
 {
     if (n > SAL_MAX_INT32)
     {
-        #ifdef WNT
+        #ifdef _WIN32
         abort();
         #else
         ::std::abort(); //TODO: handle this gracefully
@@ -664,9 +664,7 @@ Config::Config( const OUString& rFileName )
     mbPersistence   = true;
 
 #ifdef DBG_UTIL
-    OStringBuffer aTraceStr("Config::Config( ");
-    aTraceStr.append(OUStringToOString(maFileName, RTL_TEXTENCODING_UTF8));
-    aTraceStr.append(" )");
+    OString aTraceStr("Config::Config( " + OUStringToOString(maFileName, RTL_TEXTENCODING_UTF8) + " )");
     OSL_TRACE("%s", aTraceStr.getStr());
 #endif
 }

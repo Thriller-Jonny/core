@@ -26,10 +26,12 @@
 #include <osl/diagnose.h>
 #include <svl/intitem.hxx>
 #include <svl/sharedstringpool.hxx>
+#include <oox/core/filterbase.hxx>
 #include <oox/helper/attributelist.hxx>
 #include <oox/helper/containerhelper.hxx>
 #include <oox/helper/propertyset.hxx>
 #include <oox/token/properties.hxx>
+#include <oox/token/tokens.hxx>
 #include "addressconverter.hxx"
 #include "biffinputstream.hxx"
 #include "stylesbuffer.hxx"
@@ -104,18 +106,30 @@ const sal_uInt16 BIFF12_CFRULE_ABOVEAVERAGE         = 0x0004;
 const sal_uInt16 BIFF12_CFRULE_BOTTOM               = 0x0008;
 const sal_uInt16 BIFF12_CFRULE_PERCENT              = 0x0010;
 
+bool isValue(const OUString& rStr, double& rVal)
+{
+    sal_Int32 nEnd = -1;
+    rVal = rtl::math::stringToDouble(rStr.trim(), '.', ',', nullptr, &nEnd);
+
+    if (nEnd < rStr.getLength())
+        return false;
+
+    return true;
+}
+
 void SetCfvoData( ColorScaleRuleModelEntry* pEntry, const AttributeList& rAttribs )
 {
     OUString aType = rAttribs.getString( XML_type, OUString() );
+    OUString aVal = rAttribs.getString(XML_val, OUString());
 
-    if( aType == "formula" )
+    double nVal = 0.0;
+    bool bVal = isValue(aVal, nVal);
+    if( !bVal || aType == "formula" )
     {
-        OUString aFormula = rAttribs.getString( XML_val, OUString() );
-        pEntry->maFormula = aFormula;
+        pEntry->maFormula = aVal;
     }
     else
     {
-        double nVal = rAttribs.getDouble( XML_val, 0.0 );
         pEntry->mnVal = nVal;
     }
 
@@ -182,14 +196,17 @@ namespace {
     {
         sal_uInt32 nThemeIndex = rAttribs.getUnsigned( XML_theme, 0 );
 
-        // looks like an Excel bug
+        // Excel has a bug in the mapping of index 0, 1, 2 and 3.
         if (nThemeIndex == 0)
             nThemeIndex = 1;
         else if (nThemeIndex == 1)
             nThemeIndex = 0;
+        else if (nThemeIndex == 2)
+            nThemeIndex = 3;
+        else if (nThemeIndex == 3)
+            nThemeIndex = 2;
 
         nColor = rThemeBuffer.getColorByIndex( nThemeIndex );
-
     }
 
     ::Color aColor;
@@ -253,10 +270,8 @@ ScColorScaleEntry* ConvertToModel( const ColorScaleRuleModelEntry& rEntry, ScDoc
 
 void ColorScaleRule::AddEntries( ScColorScaleFormat* pFormat, ScDocument* pDoc, const ScAddress& rAddr )
 {
-    for(size_t i = 0; i < maColorScaleRuleEntries.size(); ++i)
+    for(ColorScaleRuleModelEntry & rEntry : maColorScaleRuleEntries)
     {
-        const ColorScaleRuleModelEntry& rEntry = maColorScaleRuleEntries[i];
-
         ScColorScaleEntry* pEntry = ConvertToModel( rEntry, pDoc, rAddr );
 
         pFormat->AddEntry( pEntry );
@@ -272,27 +287,9 @@ DataBarRule::DataBarRule( const CondFormat& rFormat ):
 
 void DataBarRule::importColor( const AttributeList& rAttribs )
 {
-    sal_uInt32 nColor = 0;
-    if( rAttribs.hasAttribute( XML_rgb ) )
-        nColor = rAttribs.getUnsignedHex( XML_rgb, UNSIGNED_RGB_TRANSPARENT );
-    else if( rAttribs.hasAttribute( XML_theme ) )
-    {
-        sal_uInt32 nThemeIndex = rAttribs.getUnsigned( XML_theme, 0 );
-        nColor = getTheme().getColorByIndex( nThemeIndex );
-    }
-
-    ::Color aColor;
-    double nTint = rAttribs.getDouble(XML_tint, 0.0);
-    if (nTint != 0.0)
-    {
-        oox::drawingml::Color aDMColor;
-        aDMColor.setSrgbClr(nColor);
-        aDMColor.addExcelTintTransformation(nTint);
-        nColor = aDMColor.getColor(getBaseFilter().getGraphicHelper());
-        aColor = ::Color(nColor);
-    }
-    else
-        aColor = ARgbToARgbComponents( nColor );
+    ThemeBuffer& rThemeBuffer = getTheme();
+    GraphicHelper& rGraphicHelper = getBaseFilter().getGraphicHelper();
+    ::Color aColor = importOOXColor(rAttribs, rThemeBuffer, rGraphicHelper);
 
     mxFormat->maPositiveColor = aColor;
 }
@@ -357,11 +354,9 @@ void IconSetRule::importAttribs( const AttributeList& rAttribs )
 void IconSetRule::importFormula(const OUString& rFormula)
 {
     ColorScaleRuleModelEntry& rEntry = maEntries.back();
-    if (rEntry.mbNum ||
-            rEntry.mbPercent ||
-            rEntry.mbPercentile)
+    double nVal = 0.0;
+    if ((rEntry.mbNum || rEntry.mbPercent || rEntry.mbPercentile) && isValue(rFormula, nVal))
     {
-        double nVal = rFormula.toDouble();
         rEntry.mnVal = nVal;
     }
     else if (!rFormula.isEmpty())
@@ -403,9 +398,9 @@ void IconSetRule::importIcon(const AttributeList& rAttribs)
 
 void IconSetRule::SetData( ScIconSetFormat* pFormat, ScDocument* pDoc, const ScAddress& rPos )
 {
-    for(size_t i = 0; i < maEntries.size(); ++i)
+    for(ColorScaleRuleModelEntry & rEntry : maEntries)
     {
-        ScColorScaleEntry* pModelEntry = ConvertToModel( maEntries[i], pDoc, rPos );
+        ScColorScaleEntry* pModelEntry = ConvertToModel( rEntry, pDoc, rPos );
         mxFormatData->m_Entries.push_back(std::unique_ptr<ScColorScaleEntry>(pModelEntry));
     }
 
@@ -479,7 +474,7 @@ void CondFormatRule::importCfRule( const AttributeList& rAttribs )
 
 void CondFormatRule::appendFormula( const OUString& rFormula )
 {
-    CellAddress aBaseAddr = mrCondFormat.getRanges().getBaseAddress();
+    ScAddress aBaseAddr = mrCondFormat.getRanges().getBaseAddress();
     ApiTokenSequence aTokens = getFormulaParser().importFormula( aBaseAddr, rFormula );
     maModel.maFormulas.push_back( aTokens );
 }
@@ -510,7 +505,7 @@ void CondFormatRule::importCfRule( SequenceInputStream& rStrm )
     SAL_WARN_IF( !( (nFmla1Size > 0) == (rStrm.getRemaining() >= 8) ), "sc.filter", "CondFormatRule::importCfRule - formula size mismatch" );
     if( rStrm.getRemaining() >= 8 )
     {
-        CellAddress aBaseAddr = mrCondFormat.getRanges().getBaseAddress();
+        ScAddress aBaseAddr = mrCondFormat.getRanges().getBaseAddress();
         ApiTokenSequence aTokens = getFormulaParser().importFormula( aBaseAddr, FORMULATYPE_CONDFORMAT, rStrm );
         maModel.maFormulas.push_back( aTokens );
 
@@ -852,9 +847,7 @@ void CondFormatRule::finalizeImport()
         eOperator = SC_COND_DIRECT;
     }
 
-    CellAddress aBaseAddr = mrCondFormat.getRanges().getBaseAddress();
-    ScAddress aPos;
-    ScUnoConversion::FillScAddress( aPos, aBaseAddr );
+    ScAddress aPos = mrCondFormat.getRanges().getBaseAddress();
 
     if( eOperator == SC_COND_ERROR || eOperator == SC_COND_NOERROR )
     {
@@ -1068,7 +1061,7 @@ void CondFormat::finalizeImport()
         return;
     ScDocument& rDoc = getScDocument();
     maRules.forEachMem( &CondFormatRule::finalizeImport );
-    SCTAB nTab = maModel.maRanges.getBaseAddress().Sheet;
+    SCTAB nTab = maModel.maRanges.getBaseAddress().Tab();
     sal_Int32 nIndex = getScDocument().AddCondFormat(mpFormat, nTab);
 
     ScRangeList aList;

@@ -21,7 +21,6 @@
 #include "wizardpagecontroller.hxx"
 #include "wizardshell.hxx"
 
-#include <com/sun/star/lang/XComponent.hpp>
 #include <com/sun/star/awt/XControl.hpp>
 
 #include <toolkit/helper/vclunohelper.hxx>
@@ -33,19 +32,11 @@ namespace svt { namespace uno
 
 
     using css::uno::Reference;
-    using css::uno::XInterface;
-    using css::uno::UNO_QUERY;
     using css::uno::UNO_QUERY_THROW;
     using css::uno::UNO_SET_THROW;
     using css::uno::Exception;
-    using css::uno::RuntimeException;
-    using css::uno::Any;
-    using css::uno::makeAny;
-    using css::uno::Sequence;
-    using css::uno::Type;
     using css::ui::dialogs::XWizardController;
     using css::awt::XWindow;
-    using css::lang::XComponent;
     using css::awt::XControl;
 
     using namespace ::com::sun::star;
@@ -69,7 +60,7 @@ namespace svt { namespace uno
             ), UNO_SET_THROW );
 
             Reference< XWindow > xPageWindow( m_xWizardPage->getWindow(), UNO_SET_THROW );
-            xPageWindow->setVisible( sal_True );
+            xPageWindow->setVisible( true );
 
             TabPage* pTabPage( getTabPage() );
             if ( pTabPage )

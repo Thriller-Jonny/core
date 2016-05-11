@@ -270,8 +270,8 @@ void ScTabControl::Select()
     {
         // sheet for basic is 1-based
         SfxUInt16Item aItem( SID_CURRENTTAB, nPage + 1 );
-        rDisp.Execute( SID_CURRENTTAB, SfxCallMode::SLOT | SfxCallMode::RECORD,
-                                &aItem, nullptr );
+        rDisp.ExecuteList(SID_CURRENTTAB,
+                SfxCallMode::SLOT | SfxCallMode::RECORD, { &aItem });
     }
 
     SfxBindings& rBind = pViewData->GetBindings();
@@ -289,7 +289,7 @@ void ScTabControl::Select()
 
         // SetReference onlw when the consolidate dialog is open
         // (for referenzes over multiple sheets)
-        // for others this is only uneeded fidgeting
+        // for others this is only needed fidgeting
 
     if ( bRefMode && pViewData->GetRefType() == SC_REFTYPE_REF )
         if ( pViewData->GetViewShell()->GetViewFrame()->HasChildWindow(SID_OPENDLG_CONSOLIDATE) )
@@ -430,7 +430,7 @@ void ScTabControl::Command( const CommandEvent& rCEvt )
 
         //  Popup-Menu:
         //  get Dispatcher from ViewData (ViewFrame) instead of Shell (Frame), so it can't be null
-        pViewData->GetDispatcher().ExecutePopup( ScResId(RID_POPUP_TAB) );
+        pViewData->GetDispatcher().ExecutePopup( "sheettab" );
     }
 }
 
@@ -461,7 +461,7 @@ void ScTabControl::DoDrag( const vcl::Region& /* rRegion */ )
 
     ScDocument* pClipDoc = new ScDocument( SCDOCMODE_CLIP );
     ScClipParam aClipParam(aTabRange, false);
-    rDoc.CopyToClip(aClipParam, pClipDoc, &aTabMark);
+    rDoc.CopyToClip(aClipParam, pClipDoc, &aTabMark, false, false);
 
     TransferableObjectDescriptor aObjDesc;
     pDocSh->FillTransferableObjectDescriptor( aObjDesc );

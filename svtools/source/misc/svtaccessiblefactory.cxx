@@ -21,7 +21,6 @@
 
 #include "svtaccessiblefactory.hxx"
 
-#include <boost/noncopyable.hpp>
 #include <osl/module.h>
 
 namespace svt
@@ -44,10 +43,12 @@ namespace svt
         //= AccessibleDummyFactory
 
         class AccessibleDummyFactory:
-            public IAccessibleFactory, private boost::noncopyable
+            public IAccessibleFactory
         {
         public:
             AccessibleDummyFactory();
+            AccessibleDummyFactory(const AccessibleDummyFactory&) = delete;
+            AccessibleDummyFactory& operator=(const AccessibleDummyFactory&) = delete;
 
         protected:
             virtual ~AccessibleDummyFactory();
@@ -173,24 +174,6 @@ namespace svt
                     sal_Int32 /*_nRowPos*/,
                     sal_uInt16 /*_nColPos*/
                 ) const override
-            {
-                return nullptr;
-            }
-
-            virtual css::uno::Reference< css::accessibility::XAccessibleContext >
-                createAccessibleToolPanelDeck(
-                    const css::uno::Reference< css::accessibility::XAccessible >& /*i_rAccessibleParent*/,
-                    ::svt::ToolPanelDeck& /*i_rPanelDeck*/
-                ) override
-            {
-                return nullptr;
-            }
-            virtual css::uno::Reference< css::accessibility::XAccessibleContext >
-                createAccessibleToolPanelTabBar(
-                    const css::uno::Reference< css::accessibility::XAccessible >& /*i_rAccessibleParent*/,
-                    ::svt::IToolPanelDeck& /*i_rPanelDeck*/,
-                    ::svt::PanelTabBar& /*i_rTabBar*/
-                ) override
             {
                 return nullptr;
             }

@@ -48,10 +48,8 @@ using namespace ::com::sun::star::embed;
 using namespace ::com::sun::star::container;
 
 
-
 namespace stringresource
 {
-
 
 
 // mutex
@@ -71,7 +69,6 @@ namespace stringresource
     }
     return *s_pMutex;
 }
-
 
 
 // StringResourceImpl
@@ -96,8 +93,6 @@ static Reference< XInterface > SAL_CALL create_StringResourceImpl(
 }
 
 
-
-
 StringResourceImpl::StringResourceImpl( const Reference< XComponentContext >& rxContext )
     : m_xContext( rxContext )
     , m_pCurrentLocaleItem( nullptr )
@@ -109,7 +104,6 @@ StringResourceImpl::StringResourceImpl( const Reference< XComponentContext >& rx
     , m_nNextUniqueNumericId( UNIQUE_NUMBER_NEEDS_INITIALISATION )
 {
 }
-
 
 
 StringResourceImpl::~StringResourceImpl()
@@ -128,7 +122,6 @@ StringResourceImpl::~StringResourceImpl()
 }
 
 
-
 // XServiceInfo
 
 OUString StringResourceImpl::getImplementationName(  ) throw (RuntimeException, std::exception)
@@ -145,7 +138,6 @@ Sequence< OUString > StringResourceImpl::getSupportedServiceNames(  ) throw (Run
 {
     return getSupportedServiceNames_StringResourceImpl();
 }
-
 
 
 // XModifyBroadcaster
@@ -169,7 +161,6 @@ void StringResourceImpl::removeModifyListener( const Reference< XModifyListener 
     ::osl::MutexGuard aGuard( getMutex() );
     m_aListenerContainer.removeInterface( Reference<XInterface>( aListener, UNO_QUERY ) );
 }
-
 
 
 // XStringResourceResolver
@@ -317,7 +308,6 @@ Sequence< Locale > StringResourceImpl::getLocales(  )
     }
     return aLocalSeq;
 }
-
 
 
 // XStringResourceManager
@@ -636,7 +626,6 @@ sal_Int32 StringResourceImpl::getUniqueNumericId(  )
 }
 
 
-
 // Private helper methods
 
 LocaleItem* StringResourceImpl::getItemForLocale
@@ -701,7 +690,7 @@ void StringResourceImpl::implNotifyListeners()
     EventObject aEvent;
     aEvent.Source = static_cast< XInterface* >( static_cast<OWeakObject*>(this) );
 
-    ::cppu::OInterfaceIteratorHelper it( m_aListenerContainer );
+    ::comphelper::OInterfaceIteratorHelper2 it( m_aListenerContainer );
     while( it.hasMoreElements() )
     {
         Reference< XInterface > xIface = it.next();
@@ -716,7 +705,6 @@ void StringResourceImpl::implNotifyListeners()
         }
     }
 }
-
 
 
 // Loading
@@ -734,25 +722,6 @@ void StringResourceImpl::implLoadAllLocales()
 }
 
 
-Reference< XMultiComponentFactory > StringResourceImpl::getMultiComponentFactory()
-{
-    ::osl::MutexGuard aGuard( getMutex() );
-
-    if( !m_xMCF.is() )
-    {
-        Reference< XMultiComponentFactory > xSMgr( m_xContext->getServiceManager(), UNO_QUERY );
-        if( !xSMgr.is() )
-        {
-            throw RuntimeException(
-                "StringResourceImpl::getMultiComponentFactory: Couldn't instantiate MultiComponentFactory" );
-        }
-        m_xMCF = xSMgr;
-    }
-    return m_xMCF;
-}
-
-
-
 // StringResourcePersistenceImpl
 
 
@@ -760,7 +729,6 @@ StringResourcePersistenceImpl::StringResourcePersistenceImpl( const Reference< X
     : StringResourcePersistenceImpl_BASE( rxContext )
 {
 }
-
 
 
 StringResourcePersistenceImpl::~StringResourcePersistenceImpl()
@@ -778,13 +746,11 @@ OUString StringResourcePersistenceImpl::getImplementationName(  )
 }
 
 
-
 sal_Bool StringResourcePersistenceImpl::supportsService( const OUString& rServiceName )
     throw (RuntimeException, std::exception)
 {
     return cppu::supportsService( this, rServiceName );
 }
-
 
 
 Sequence< OUString > StringResourcePersistenceImpl::getSupportedServiceNames(  )
@@ -1047,7 +1013,7 @@ void StringResourcePersistenceImpl::implStoreAtStorage
                 xProps->setPropertyValue( aPropName, uno::makeAny( aMime ) );
 
                 aPropName = "UseCommonStoragePasswordEncryption";
-                xProps->setPropertyValue( aPropName, uno::makeAny( sal_True ) );
+                xProps->setPropertyValue( aPropName, uno::makeAny( true ) );
             }
 
             Reference< io::XOutputStream > xOutputStream = xElementStream->getOutputStream();
@@ -1240,21 +1206,18 @@ void StringResourcePersistenceImpl::implStoreAtLocation
 }
 
 
-
 // BinaryOutput, helper class for exportBinary
 
 class BinaryOutput
 {
-    Reference< XMultiComponentFactory >     m_xMCF;
     Reference< XComponentContext >          m_xContext;
     Reference< XInterface >                 m_xTempFile;
     Reference< io::XOutputStream >          m_xOutputStream;
 
 public:
-    BinaryOutput( Reference< XMultiComponentFactory > xMCF,
-        Reference< XComponentContext > xContext );
+    explicit BinaryOutput( Reference< XComponentContext > xContext );
 
-    Reference< io::XOutputStream > getOutputStream() const
+    const Reference< io::XOutputStream >& getOutputStream() const
         { return m_xOutputStream; }
 
     Sequence< ::sal_Int8 > closeAndGetData();
@@ -1270,10 +1233,8 @@ public:
     void writeString( const OUString& aStr );
 };
 
-BinaryOutput::BinaryOutput( Reference< XMultiComponentFactory > xMCF,
-    Reference< XComponentContext > xContext )
-        : m_xMCF( xMCF )
-        , m_xContext( xContext )
+BinaryOutput::BinaryOutput( Reference< XComponentContext > xContext )
+        : m_xContext( xContext )
 {
     m_xTempFile = io::TempFile::create( m_xContext );
     m_xOutputStream.set( m_xTempFile, UNO_QUERY_THROW );
@@ -1380,8 +1341,7 @@ Sequence< ::sal_Int8 > BinaryOutput::closeAndGetData()
 Sequence< sal_Int8 > StringResourcePersistenceImpl::exportBinary(  )
     throw (RuntimeException, std::exception)
 {
-    Reference< XMultiComponentFactory > xMCF = getMultiComponentFactory();
-    BinaryOutput aOut( xMCF, m_xContext );
+    BinaryOutput aOut( m_xContext );
 
     sal_Int32 nLocaleCount = m_aLocaleItemVector.size();
     Sequence< sal_Int8 >* pLocaleDataSeq = new Sequence< sal_Int8 >[ nLocaleCount ];
@@ -1397,7 +1357,7 @@ Sequence< sal_Int8 > StringResourcePersistenceImpl::exportBinary(  )
             if( m_pDefaultLocaleItem == pLocaleItem )
                 iDefault = iLocale;
 
-            BinaryOutput aLocaleOut( m_xMCF, m_xContext );
+            BinaryOutput aLocaleOut( m_xContext );
             implWriteLocaleBinary( pLocaleItem, aLocaleOut );
 
             pLocaleDataSeq[iLocale] = aLocaleOut.closeAndGetData();
@@ -1462,7 +1422,6 @@ void StringResourcePersistenceImpl::implWriteLocaleBinary
 class BinaryInput
 {
     Sequence< sal_Int8 >                    m_aData;
-    Reference< XMultiComponentFactory >     m_xMCF;
     Reference< XComponentContext >          m_xContext;
 
     const sal_Int8*                         m_pData;
@@ -1470,8 +1429,7 @@ class BinaryInput
     sal_Int32                               m_nSize;
 
 public:
-    BinaryInput( const Sequence< ::sal_Int8 >& aData, Reference< XMultiComponentFactory > xMCF,
-        Reference< XComponentContext > xContext );
+    BinaryInput( const Sequence< ::sal_Int8 >& aData, Reference< XComponentContext > xContext );
 
     Reference< io::XInputStream > getInputStreamForSection( sal_Int32 nSize );
 
@@ -1485,10 +1443,8 @@ public:
     OUString readString();
 };
 
-BinaryInput::BinaryInput( const Sequence< ::sal_Int8 >& aData, Reference< XMultiComponentFactory > xMCF,
-    Reference< XComponentContext > xContext )
+BinaryInput::BinaryInput( const Sequence< ::sal_Int8 >& aData, Reference< XComponentContext > xContext )
         : m_aData( aData )
-        , m_xMCF( xMCF )
         , m_xContext( xContext )
 {
     m_pData = m_aData.getConstArray();
@@ -1607,8 +1563,7 @@ void StringResourcePersistenceImpl::importBinary( const Sequence< ::sal_Int8 >& 
     while( nOldLocaleCount > 0 );
 
     // Import data
-    Reference< XMultiComponentFactory > xMCF = getMultiComponentFactory();
-    BinaryInput aIn( Data, xMCF, m_xContext );
+    BinaryInput aIn( Data, m_xContext );
 
     sal_Int32 nVersion = aIn.readInt16();
     (void)nVersion;
@@ -1650,7 +1605,6 @@ void StringResourcePersistenceImpl::importBinary( const Sequence< ::sal_Int8 >& 
 
     delete[] pPositions;
 }
-
 
 
 // Private helper methods
@@ -1847,7 +1801,7 @@ OUString StringResourcePersistenceImpl::implGetPathForLocaleItem
 {
     OUString aFileName = implGetFileNameForLocaleItem( pLocaleItem, aNameBase );
     INetURLObject aInetObj( aLocation );
-    aInetObj.insertName( aFileName, true, INetURLObject::LAST_SEGMENT, true, INetURLObject::ENCODE_ALL );
+    aInetObj.insertName( aFileName, true, INetURLObject::LAST_SEGMENT, INetURLObject::ENCODE_ALL );
     if( bDefaultFile )
         aInetObj.setExtension( "default" );
     else
@@ -1947,7 +1901,7 @@ sal_Unicode getEscapeChar( const sal_Unicode* pBuf, sal_Int32 nLen, sal_Int32& r
     return cRet;
 }
 
-void CheckContinueInNextLine( Reference< io::XTextInputStream2 > xTextInputStream,
+void CheckContinueInNextLine( const Reference< io::XTextInputStream2 >& xTextInputStream,
     OUString& aLine, bool& bEscapePending, const sal_Unicode*& pBuf,
     sal_Int32& nLen, sal_Int32& i )
 {
@@ -2251,7 +2205,6 @@ bool StringResourcePersistenceImpl::implWritePropertiesFile( LocaleItem* pLocale
 }
 
 
-
 // StringResourceWithStorageImpl
 
 
@@ -2274,13 +2227,11 @@ static Reference< XInterface > SAL_CALL create_StringResourceWithStorageImpl(
 }
 
 
-
 StringResourceWithStorageImpl::StringResourceWithStorageImpl( const Reference< XComponentContext >& rxContext )
     : StringResourceWithStorageImpl_BASE( rxContext )
     , m_bStorageChanged( false )
 {
 }
-
 
 
 StringResourceWithStorageImpl::~StringResourceWithStorageImpl()
@@ -2529,7 +2480,6 @@ void StringResourceWithStorageImpl::setStorage( const Reference< XStorage >& Sto
 }
 
 
-
 // Private helper methods
 
 
@@ -2575,7 +2525,6 @@ bool StringResourceWithStorageImpl::implLoadLocale( LocaleItem* pLocaleItem )
 }
 
 
-
 // StringResourceWithLocationImpl
 
 
@@ -2598,13 +2547,11 @@ static Reference< XInterface > SAL_CALL create_StringResourceWithLocationImpl(
 }
 
 
-
 StringResourceWithLocationImpl::StringResourceWithLocationImpl( const Reference< XComponentContext >& rxContext )
     : StringResourceWithLocationImpl_BASE( rxContext )
     , m_bLocationChanged( false )
 {
 }
-
 
 
 StringResourceWithLocationImpl::~StringResourceWithLocationImpl()
@@ -2883,7 +2830,6 @@ void StringResourceWithLocationImpl::setURL( const OUString& URL )
 }
 
 
-
 // Private helper methods
 
 
@@ -2941,7 +2887,6 @@ const Reference< ucb::XSimpleFileAccess3 > StringResourceWithLocationImpl::getFi
 }
 
 
-
 // component export operations
 
 
@@ -2969,10 +2914,7 @@ static const struct ::cppu::ImplementationEntry s_component_entries [] =
 };
 
 
-
 }   // namespace dlgprov
-
-
 
 
 // component exports

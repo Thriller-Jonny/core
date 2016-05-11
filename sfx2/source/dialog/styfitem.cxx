@@ -22,15 +22,6 @@
 #include <tools/debug.hxx>
 
 
-
-class SfxStyleFamilyItem_Impl
-{
-    Bitmap aBitmap;
-    Image   aImage;
-};
-
-
-
 // Implementierung des Resource-Konstruktors
 
 SfxStyleFamilyItem::SfxStyleFamilyItem( const ResId &rResId ) :
@@ -40,7 +31,7 @@ SfxStyleFamilyItem::SfxStyleFamilyItem( const ResId &rResId ) :
 {
     const sal_Int32 nMask = ReadLongRes();
 
-    if(nMask & RSC_SFX_STYLE_ITEM_LIST)
+    if(nMask & (sal_uInt32)SfxStyleItem::List)
     {
         const sal_Int32 nCount = ReadLongRes();
         for( sal_Int32 i = 0; i < nCount; ++i )
@@ -51,26 +42,27 @@ SfxStyleFamilyItem::SfxStyleFamilyItem( const ResId &rResId ) :
             aFilterList.push_back( pTupel );
         }
     }
-    if(nMask & RSC_SFX_STYLE_ITEM_BITMAP)
+    if(nMask & (sal_uInt32)SfxStyleItem::Bitmap)
     {
         aBitmap = Bitmap(ResId(static_cast<RSHEADER_TYPE *>(GetClassRes()),*rResId.GetResMgr()));
         IncrementRes( GetObjSizeRes( static_cast<RSHEADER_TYPE *>(GetClassRes()) ) );
     }
-    if(nMask & RSC_SFX_STYLE_ITEM_TEXT)
+    if(nMask & (sal_uInt32)SfxStyleItem::Text)
     {
         aText = ReadStringRes();
     }
-    if(nMask & RSC_SFX_STYLE_ITEM_HELPTEXT)
+    if(nMask & (sal_uInt32)SfxStyleItem::HelpText)
     {
         aHelpText = ReadStringRes();
     }
-    if(nMask & RSC_SFX_STYLE_ITEM_STYLEFAMILY)
+    if(nMask & (sal_uInt32)SfxStyleItem::StyleFamily)
     {
-        nFamily = static_cast<sal_uInt16>(ReadLongRes());
+        nFamily = static_cast<SfxStyleFamily>(ReadLongRes());
     }
     else
-        nFamily = SFX_STYLE_FAMILY_PARA;
-    if(nMask & RSC_SFX_STYLE_ITEM_IMAGE)
+        nFamily = SfxStyleFamily::Para;
+
+    if(nMask & (sal_uInt32)SfxStyleItem::Image)
     {
         aImage = Image(ResId(static_cast<RSHEADER_TYPE *>(GetClassRes()),*rResId.GetResMgr()));
         IncrementRes( GetObjSizeRes( static_cast<RSHEADER_TYPE *>(GetClassRes()) ) );
@@ -80,16 +72,14 @@ SfxStyleFamilyItem::SfxStyleFamilyItem( const ResId &rResId ) :
 }
 
 
-
 // Destructor; releases the internal data
 
 SfxStyleFamilyItem::~SfxStyleFamilyItem()
 {
-    for ( size_t i = 0, n = aFilterList.size(); i < n; ++i )
-        delete aFilterList[ i ];
+    for (SfxFilterTupel* p : aFilterList)
+        delete p;
     aFilterList.clear();
 }
-
 
 
 // Implementation of the resource constructor
@@ -112,52 +102,41 @@ SfxStyleFamilies::SfxStyleFamilies( const ResId& rResId ) :
 }
 
 
-
 // Destructor; releases the internal data
 
 SfxStyleFamilies::~SfxStyleFamilies()
 {
-    for ( size_t i = 0, n = aEntryList.size(); i < n; ++i )
-        delete aEntryList[ i ];
+    for (SfxStyleFamilyItem* p : aEntryList)
+        delete p;
     aEntryList.clear();
 }
 
 
-
-
-bool SfxStyleFamilies::updateImages( const ResId& _rId )
+void SfxStyleFamilies::updateImages( const ResId& _rId )
 {
-    bool bSuccess = false;
+    ::svt::OLocalResourceAccess aLocalRes( _rId );
 
-    {
-        ::svt::OLocalResourceAccess aLocalRes( _rId );
+    // check if the image list is present
+    ResId aImageListId( (sal_uInt16) 1, *_rId.GetResMgr() );
+    aImageListId.SetRT( RSC_IMAGELIST );
 
-        // check if the image list is present
-        ResId aImageListId( (sal_uInt16) 1, *_rId.GetResMgr() );
-        aImageListId.SetRT( RSC_IMAGELIST );
+    if ( aLocalRes.IsAvailableRes( aImageListId ) )
+    {   // there is such a list
+        ImageList aImages( aImageListId );
 
-        if ( aLocalRes.IsAvailableRes( aImageListId ) )
-        {   // there is such a list
-            ImageList aImages( aImageListId );
+        // number of styles items/images
+        sal_uInt16 nCount = aImages.GetImageCount( );
+        DBG_ASSERT( aEntryList.size() == nCount, "SfxStyleFamilies::updateImages: found the image list, but missing some bitmaps!" );
+        if ( nCount > aEntryList.size() )
+            nCount = aEntryList.size();
 
-            // number of styles items/images
-            sal_uInt16 nCount = aImages.GetImageCount( );
-            DBG_ASSERT( aEntryList.size() == nCount, "SfxStyleFamilies::updateImages: found the image list, but missing some bitmaps!" );
-            if ( nCount > aEntryList.size() )
-                nCount = aEntryList.size();
-
-            // set the images on the items
-            for ( size_t i = 0; i < nCount; ++i )
-            {
-                SfxStyleFamilyItem* pItem = aEntryList[ i ];
-                pItem->SetImage( aImages.GetImage( aImages.GetImageId( i ) ) );
-            }
-
-            bSuccess = true;
+        // set the images on the items
+        for ( size_t i = 0; i < nCount; ++i )
+        {
+            SfxStyleFamilyItem* pItem = aEntryList[ i ];
+            pItem->SetImage( aImages.GetImage( aImages.GetImageId( i ) ) );
         }
     }
-
-    return bSuccess;
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

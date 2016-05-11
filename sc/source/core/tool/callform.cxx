@@ -19,7 +19,6 @@
 
 #include <sal/config.h>
 
-#include <boost/noncopyable.hpp>
 #include <vcl/svapp.hxx>
 #include <vcl/settings.hxx>
 #include <osl/module.hxx>
@@ -77,12 +76,15 @@ typedef void (CALLTYPE* Unadvice)( double&      nHandle );
 #define UNADVICE                "Unadvice"
 #endif
 
-class ModuleData: private boost::noncopyable
+class ModuleData
 {
 friend class ModuleCollection;
     OUString aName;
     osl::Module* pInstance;
 public:
+    ModuleData(const ModuleData&) = delete;
+    const ModuleData& operator=(const ModuleData&) = delete;
+
     ModuleData(const OUString& rStr, osl::Module* pInst) : aName(rStr), pInstance(pInst) {}
     ~ModuleData() { delete pInstance; }
 
@@ -211,9 +213,9 @@ bool InitExternalFunc(const OUString& rModuleName)
         cFuncName[0] = 0;
         cInternalName[0] = 0;
         nParamCount = 0;
-        for ( sal_uInt16 j=0; j<MAXFUNCPARAM; j++ )
+        for (ParamType & rParamType : eParamType)
         {
-            eParamType[j] = ParamType::NONE;
+            rParamType = ParamType::NONE;
         }
         (*reinterpret_cast<GetFuncDataPtr>(fpGetData))(i, cFuncName, nParamCount,
                                        eParamType, cInternalName);
@@ -243,13 +245,11 @@ void ExitExternalFunc()
     aModuleCollection.clear();
 }
 
-bool LegacyFuncData::Call(void** ppParam) const
+void LegacyFuncData::Call(void** ppParam) const
 {
 #ifdef DISABLE_DYNLOADING
     (void) ppParam;
-    return false;
 #else
-    bool bRet = false;
     osl::Module* pLib = pModuleData->GetInstance();
     oslGenericFunction fProc = pLib->getFunctionSymbol(aFuncName);
     if (fProc != nullptr)
@@ -258,104 +258,83 @@ bool LegacyFuncData::Call(void** ppParam) const
         {
             case 1 :
                 (*reinterpret_cast<ExFuncPtr1>(fProc))(ppParam[0]);
-                bRet = true;
                 break;
             case 2 :
                 (*reinterpret_cast<ExFuncPtr2>(fProc))(ppParam[0], ppParam[1]);
-                bRet = true;
                 break;
             case 3 :
                 (*reinterpret_cast<ExFuncPtr3>(fProc))(ppParam[0], ppParam[1], ppParam[2]);
-                bRet = true;
                 break;
             case 4 :
                 (*reinterpret_cast<ExFuncPtr4>(fProc))(ppParam[0], ppParam[1], ppParam[2], ppParam[3]);
-                bRet = true;
                 break;
             case 5 :
                 (*reinterpret_cast<ExFuncPtr5>(fProc))(ppParam[0], ppParam[1], ppParam[2], ppParam[3], ppParam[4]);
-                bRet = true;
                 break;
             case 6 :
                 (*reinterpret_cast<ExFuncPtr6>(fProc))(ppParam[0], ppParam[1], ppParam[2], ppParam[3], ppParam[4], ppParam[5]);
-                bRet = true;
                 break;
             case 7 :
                 (*reinterpret_cast<ExFuncPtr7>(fProc))( ppParam[0], ppParam[1], ppParam[2], ppParam[3], ppParam[4], ppParam[5],
                                         ppParam[6]);
-                bRet = true;
                 break;
             case 8 :
                 (*reinterpret_cast<ExFuncPtr8>(fProc))( ppParam[0], ppParam[1], ppParam[2], ppParam[3], ppParam[4], ppParam[5],
                                         ppParam[6], ppParam[7]);
-                bRet = true;
                 break;
             case 9 :
                 (*reinterpret_cast<ExFuncPtr9>(fProc))( ppParam[0], ppParam[1], ppParam[2], ppParam[3], ppParam[4], ppParam[5],
                                         ppParam[6], ppParam[7], ppParam[8]);
-                bRet = true;
                 break;
             case 10 :
                 (*reinterpret_cast<ExFuncPtr10>(fProc))( ppParam[0], ppParam[1], ppParam[2], ppParam[3], ppParam[4], ppParam[5],
                                         ppParam[6], ppParam[7], ppParam[8], ppParam[9]);
-                bRet = true;
                 break;
             case 11 :
                 (*reinterpret_cast<ExFuncPtr11>(fProc))( ppParam[0], ppParam[1], ppParam[2], ppParam[3], ppParam[4], ppParam[5],
                                         ppParam[6], ppParam[7], ppParam[8], ppParam[9], ppParam[10]);
-                bRet = true;
                 break;
             case 12:
                 (*reinterpret_cast<ExFuncPtr12>(fProc))( ppParam[0], ppParam[1], ppParam[2], ppParam[3], ppParam[4], ppParam[5],
                                         ppParam[6], ppParam[7], ppParam[8], ppParam[9], ppParam[10], ppParam[11]);
-                bRet = true;
                 break;
             case 13:
                 (*reinterpret_cast<ExFuncPtr13>(fProc))( ppParam[0], ppParam[1], ppParam[2], ppParam[3], ppParam[4], ppParam[5],
                                         ppParam[6], ppParam[7], ppParam[8], ppParam[9], ppParam[10], ppParam[11],
                                         ppParam[12]);
-                bRet = true;
                 break;
             case 14 :
                 (*reinterpret_cast<ExFuncPtr14>(fProc))( ppParam[0], ppParam[1], ppParam[2], ppParam[3], ppParam[4], ppParam[5],
                                         ppParam[6], ppParam[7], ppParam[8], ppParam[9], ppParam[10], ppParam[11],
                                         ppParam[12], ppParam[13]);
-                bRet = true;
                 break;
             case 15 :
                 (*reinterpret_cast<ExFuncPtr15>(fProc))( ppParam[0], ppParam[1], ppParam[2], ppParam[3], ppParam[4], ppParam[5],
                                         ppParam[6], ppParam[7], ppParam[8], ppParam[9], ppParam[10], ppParam[11],
                                         ppParam[12], ppParam[13], ppParam[14]);
-                bRet = true;
                 break;
             case 16 :
                 (*reinterpret_cast<ExFuncPtr16>(fProc))( ppParam[0], ppParam[1], ppParam[2], ppParam[3], ppParam[4], ppParam[5],
                                         ppParam[6], ppParam[7], ppParam[8], ppParam[9], ppParam[10], ppParam[11],
                                         ppParam[12], ppParam[13], ppParam[14], ppParam[15]);
-                bRet = true;
                 break;
             default : break;
         }
     }
-    return bRet;
 #endif
 }
 
-bool LegacyFuncData::Unadvice( double nHandle )
+void LegacyFuncData::Unadvice( double nHandle )
 {
 #ifdef DISABLE_DYNLOADING
     (void) nHandle;
-    return false;
 #else
-    bool bRet = false;
     osl::Module* pLib = pModuleData->GetInstance();
     oslGenericFunction fProc = pLib->getFunctionSymbol(UNADVICE);
     if (fProc != nullptr)
     {
         reinterpret_cast< ::Unadvice>(fProc)(nHandle);
-        bRet = true;
     }
-    return bRet;
 #endif
 }
 
@@ -364,13 +343,12 @@ const OUString& LegacyFuncData::GetModuleName() const
     return pModuleData->GetName();
 }
 
-bool LegacyFuncData::getParamDesc( OUString& aName, OUString& aDesc, sal_uInt16 nParam ) const
+void LegacyFuncData::getParamDesc( OUString& aName, OUString& aDesc, sal_uInt16 nParam ) const
 {
 #ifdef DISABLE_DYNLOADING
     (void) aName;
     (void) aDesc;
     (void) nParam;
-    return false;
 #else
     bool bRet = false;
     if ( nParam <= nParamCount )
@@ -394,7 +372,6 @@ bool LegacyFuncData::getParamDesc( OUString& aName, OUString& aDesc, sal_uInt16 
         aName.clear();
         aDesc.clear();
     }
-    return bRet;
 #endif
 }
 

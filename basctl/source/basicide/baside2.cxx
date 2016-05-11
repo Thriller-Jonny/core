@@ -103,7 +103,7 @@ void lcl_PrintHeader( Printer* pPrinter, sal_uInt16 nPages, sal_uInt16 nCurPage,
 
     vcl::Font aFont( aOldFont );
     aFont.SetWeight( WEIGHT_BOLD );
-    aFont.SetAlign( ALIGN_BOTTOM );
+    aFont.SetAlignment( ALIGN_BOTTOM );
     pPrinter->SetFont( aFont );
 
     long nFontHeight = pPrinter->GetTextHeight();
@@ -181,12 +181,12 @@ bool bSourceLinesEnabled = false;
 ModulWindow::ModulWindow (ModulWindowLayout* pParent, ScriptDocument const& rDocument,
                           const OUString& aLibName, const OUString& aName, OUString& aModule)
     : BaseWindow(pParent, rDocument, aLibName, aName)
-    , rLayout(*pParent)
-    , nValid(ValidWindow)
-    , aXEditorWindow(VclPtr<ComplexEditorWindow>::Create(this))
+    , m_rLayout(*pParent)
+    , m_nValid(ValidWindow)
+    , m_aXEditorWindow(VclPtr<ComplexEditorWindow>::Create(this))
     , m_aModule(aModule)
 {
-    aXEditorWindow->Show();
+    m_aXEditorWindow->Show();
     SetBackground();
 }
 
@@ -197,10 +197,10 @@ SbModuleRef ModulWindow::XModule()
     // elementInserted event from the BasicLibrary container.
     // However the SbModule is also created from a different listener to
     // the same event ( in basmgr ) Therefore it is possible when we look
-    // for xModule it may not yet be available, here we keep trying to access
+    // for m_xModule it may not yet be available, here we keep trying to access
     // the module until such time as it exists
 
-    if ( !xModule.Is() )
+    if ( !m_xModule.Is() )
     {
         BasicManager* pBasMgr = GetDocument().getBasicManager();
         if ( pBasMgr )
@@ -208,12 +208,12 @@ SbModuleRef ModulWindow::XModule()
             StarBASIC* pBasic = pBasMgr->GetLib( GetLibName() );
             if ( pBasic )
             {
-                xBasic = pBasic;
-                xModule = pBasic->FindModule( GetName() );
+                m_xBasic = pBasic;
+                m_xModule = pBasic->FindModule( GetName() );
             }
         }
     }
-    return xModule;
+    return m_xModule;
 }
 
 ModulWindow::~ModulWindow()
@@ -223,18 +223,18 @@ ModulWindow::~ModulWindow()
 
 void ModulWindow::dispose()
 {
-    nValid = 0;
+    m_nValid = 0;
     StarBASIC::Stop();
-    aXEditorWindow.disposeAndClear();
+    m_aXEditorWindow.disposeAndClear();
     BaseWindow::dispose();
 }
 
 
 void ModulWindow::GetFocus()
 {
-    if (nValid != ValidWindow)
+    if (m_nValid != ValidWindow)
         return;
-    aXEditorWindow->GetEdtWindow().GrabFocus();
+    m_aXEditorWindow->GetEdtWindow().GrabFocus();
     // don't call basic calls because focus is somewhere else...
 }
 
@@ -252,7 +252,7 @@ void ModulWindow::Paint(vcl::RenderContext& /*rRenderContext*/, const Rectangle&
 
 void ModulWindow::Resize()
 {
-    aXEditorWindow->SetPosSizePixel( Point( 0, 0 ),
+    m_aXEditorWindow->SetPosSizePixel( Point( 0, 0 ),
                                     Size( GetOutputSizePixel() ) );
 }
 
@@ -262,7 +262,7 @@ void ModulWindow::CheckCompileBasic()
     {
         // never compile while running!
         bool const bRunning = StarBASIC::IsRunning();
-        bool const bModified = ( !xModule->IsCompiled() ||
+        bool const bModified = ( !m_xModule->IsCompiled() ||
             ( GetEditEngine() && GetEditEngine()->IsModified() ) );
 
         if ( !bRunning && bModified )
@@ -279,24 +279,24 @@ void ModulWindow::CheckCompileBasic()
 
             bool bWasModified = GetBasic()->IsModified();
 
-            bDone = StarBASIC::Compile( xModule );
+            bDone = m_xModule->Compile();
             if ( !bWasModified )
                 GetBasic()->SetModified(false);
 
             if ( bDone )
             {
-                GetBreakPoints().SetBreakPointsInBasic( xModule );
+                GetBreakPoints().SetBreakPointsInBasic( m_xModule );
             }
 
             GetShell()->GetViewFrame()->GetWindow().LeaveWait();
 
-            aStatus.bError = !bDone;
-            aStatus.bIsRunning = false;
+            m_aStatus.bError = !bDone;
+            m_aStatus.bIsRunning = false;
         }
     }
 }
 
-bool ModulWindow::BasicExecute()
+void ModulWindow::BasicExecute()
 {
     // #116444# check security settings before macro execution
     ScriptDocument aDocument( GetDocument() );
@@ -305,20 +305,20 @@ bool ModulWindow::BasicExecute()
         if ( !aDocument.allowMacros() )
         {
             ScopedVclPtrInstance<MessageDialog>::Create(this, IDE_RESSTR(RID_STR_CANNOTRUNMACRO), VCL_MESSAGE_WARNING)->Execute();
-            return false;
+            return;
         }
     }
 
     CheckCompileBasic();
 
-    if ( XModule().Is() && xModule->IsCompiled() && !aStatus.bError )
+    if ( XModule().Is() && m_xModule->IsCompiled() && !m_aStatus.bError )
     {
         if ( GetBreakPoints().size() )
-            aStatus.nBasicFlags = aStatus.nBasicFlags | SbDEBUG_BREAK;
+            m_aStatus.nBasicFlags = m_aStatus.nBasicFlags | SbDEBUG_BREAK;
 
-        if ( !aStatus.bIsRunning )
+        if ( !m_aStatus.bIsRunning )
         {
-            DBG_ASSERT( xModule.Is(), "Kein Modul!" );
+            DBG_ASSERT( m_xModule.Is(), "Kein Modul!" );
             AddStatus( BASWIN_RUNNINGBASIC );
             sal_uInt16 nStart, nEnd;
             TextSelection aSel = GetEditView()->GetSelection();
@@ -326,9 +326,9 @@ bool ModulWindow::BasicExecute()
             const sal_uInt32 nCurMethodStart = aSel.GetStart().GetPara() + 1;
             SbMethod* pMethod = nullptr;
             // first Macro, else blind "Main" (ExtSearch?)
-            for ( sal_uInt16 nMacro = 0; nMacro < xModule->GetMethods()->Count(); nMacro++ )
+            for ( sal_uInt16 nMacro = 0; nMacro < m_xModule->GetMethods()->Count(); nMacro++ )
             {
-                SbMethod* pM = static_cast<SbMethod*>(xModule->GetMethods()->Get( nMacro ));
+                SbMethod* pM = static_cast<SbMethod*>(m_xModule->GetMethods()->Get( nMacro ));
                 assert(pM && "Method?");
                 pM->GetLineRange( nStart, nEnd );
                 if (  nCurMethodStart >= nStart && nCurMethodStart <= nEnd )
@@ -341,11 +341,12 @@ bool ModulWindow::BasicExecute()
             if ( !pMethod )
             {
                 // If not in a method then prompt the user
-                return ( !ChooseMacro( uno::Reference< frame::XModel >(), false, OUString() ).isEmpty() );
+                ChooseMacro( uno::Reference< frame::XModel >(), false, OUString() );
+                return;
             }
             if ( pMethod )
             {
-                pMethod->SetDebugFlags( aStatus.nBasicFlags );
+                pMethod->SetDebugFlags( m_aStatus.nBasicFlags );
                 BasicDLL::SetDebugMode( true );
                 RunMethod( pMethod );
                 BasicDLL::SetDebugMode( false );
@@ -355,63 +356,56 @@ bool ModulWindow::BasicExecute()
             ClearStatus( BASWIN_RUNNINGBASIC );
         }
         else
-            aStatus.bIsRunning = false; // cancel of Reschedule()
+            m_aStatus.bIsRunning = false; // cancel of Reschedule()
     }
-
-    bool bDone = !aStatus.bError;
-
-    return bDone;
 }
 
-bool ModulWindow::CompileBasic()
+void ModulWindow::CompileBasic()
 {
     CheckCompileBasic();
 
-    return XModule().Is() && xModule->IsCompiled();
+    XModule().Is() && m_xModule->IsCompiled();
 }
 
-bool ModulWindow::BasicRun()
+void ModulWindow::BasicRun()
 {
-    aStatus.nBasicFlags = 0;
-    return BasicExecute();
+    m_aStatus.nBasicFlags = 0;
+    BasicExecute();
 }
 
-bool ModulWindow::BasicStepOver()
+void ModulWindow::BasicStepOver()
 {
-    aStatus.nBasicFlags = SbDEBUG_STEPINTO | SbDEBUG_STEPOVER;
-    return BasicExecute();
+    m_aStatus.nBasicFlags = SbDEBUG_STEPINTO | SbDEBUG_STEPOVER;
+    BasicExecute();
 }
 
 
-bool ModulWindow::BasicStepInto()
+void ModulWindow::BasicStepInto()
 {
-    aStatus.nBasicFlags = SbDEBUG_STEPINTO;
-    return BasicExecute();
+    m_aStatus.nBasicFlags = SbDEBUG_STEPINTO;
+    BasicExecute();
 }
 
-bool ModulWindow::BasicStepOut()
+void ModulWindow::BasicStepOut()
 {
-    aStatus.nBasicFlags = SbDEBUG_STEPOUT;
-    return BasicExecute();
+    m_aStatus.nBasicFlags = SbDEBUG_STEPOUT;
+    BasicExecute();
 }
-
 
 
 void ModulWindow::BasicStop()
 {
     StarBASIC::Stop();
-    aStatus.bIsRunning = false;
+    m_aStatus.bIsRunning = false;
 }
 
-bool ModulWindow::LoadBasic()
+void ModulWindow::LoadBasic()
 {
-    bool bDone = false;
-
     Reference< uno::XComponentContext > xContext( ::comphelper::getProcessComponentContext() );
     Reference < XFilePicker3 > xFP = FilePicker::createWithMode(xContext, TemplateDescription::FILEOPEN_SIMPLE);
 
-    if ( !aCurPath.isEmpty() )
-        xFP->setDisplayDirectory ( aCurPath );
+    if ( !m_sCurPath.isEmpty() )
+        xFP->setDisplayDirectory ( m_sCurPath );
 
     xFP->appendFilter( "BASIC" , "*.bas" );
     xFP->appendFilter( IDE_RESSTR(RID_STR_FILTER_ALLFILES), FilterMask_All );
@@ -420,8 +414,8 @@ bool ModulWindow::LoadBasic()
     if( xFP->execute() == RET_OK )
     {
         Sequence< OUString > aPaths = xFP->getSelectedFiles();
-        aCurPath = aPaths[0];
-        SfxMedium aMedium( aCurPath, StreamMode::READ | StreamMode::SHARE_DENYWRITE | StreamMode::NOCREATE );
+        m_sCurPath = aPaths[0];
+        SfxMedium aMedium( m_sCurPath, StreamMode::READ | StreamMode::SHARE_DENYWRITE | StreamMode::NOCREATE );
         SvStream* pStream = aMedium.GetInStream();
         if ( pStream )
         {
@@ -438,20 +432,15 @@ bool ModulWindow::LoadBasic()
             sal_uLong nError = aMedium.GetError();
             if ( nError )
                 ErrorHandler::HandleError( nError );
-            else
-                bDone = true;
         }
         else
             ScopedVclPtrInstance<MessageDialog>::Create(this, IDE_RESSTR(RID_STR_COULDNTREAD))->Execute();
     }
-    return bDone;
 }
 
 
-bool ModulWindow::SaveBasicSource()
+void ModulWindow::SaveBasicSource()
 {
-    bool bDone = false;
-
     Reference< uno::XComponentContext > xContext( ::comphelper::getProcessComponentContext() );
     Reference < XFilePicker3 > xFP = FilePicker::createWithMode(xContext, TemplateDescription::FILESAVE_AUTOEXTENSION_PASSWORD);
 
@@ -461,8 +450,8 @@ bool ModulWindow::SaveBasicSource()
     aValue <<= true;
     xFPControl->setValue(ExtendedFilePickerElementIds::CHECKBOX_AUTOEXTENSION, 0, aValue);
 
-    if ( !aCurPath.isEmpty() )
-        xFP->setDisplayDirectory ( aCurPath );
+    if ( !m_sCurPath.isEmpty() )
+        xFP->setDisplayDirectory ( m_sCurPath );
 
     xFP->appendFilter( "BASIC", "*.bas" );
     xFP->appendFilter( IDE_RESSTR(RID_STR_FILTER_ALLFILES), FilterMask_All );
@@ -471,8 +460,8 @@ bool ModulWindow::SaveBasicSource()
     if( xFP->execute() == RET_OK )
     {
         Sequence< OUString > aPaths = xFP->getSelectedFiles();
-        aCurPath = aPaths[0];
-        SfxMedium aMedium( aCurPath, StreamMode::WRITE | StreamMode::SHARE_DENYWRITE | StreamMode::TRUNC );
+        m_sCurPath = aPaths[0];
+        SfxMedium aMedium( m_sCurPath, StreamMode::WRITE | StreamMode::SHARE_DENYWRITE | StreamMode::TRUNC );
         SvStream* pStream = aMedium.GetOutStream();
         if ( pStream )
         {
@@ -484,54 +473,47 @@ bool ModulWindow::SaveBasicSource()
             sal_uLong nError = aMedium.GetError();
             if ( nError )
                 ErrorHandler::HandleError( nError );
-            else
-                bDone = true;
         }
         else
             ScopedVclPtrInstance<MessageDialog>::Create(this, IDEResId(RID_STR_COULDNTWRITE))->Execute();
     }
-
-    return bDone;
 }
 
-bool ModulWindow::ImportDialog()
+void ModulWindow::ImportDialog()
 {
     const ScriptDocument& rDocument = GetDocument();
     OUString aLibName = GetLibName();
-    return implImportDialog( this, aCurPath, rDocument, aLibName );
+    implImportDialog( this, m_sCurPath, rDocument, aLibName );
 }
 
-bool ModulWindow::ToggleBreakPoint( sal_uLong nLine )
+void ModulWindow::ToggleBreakPoint( sal_uLong nLine )
 {
     DBG_ASSERT( XModule().Is(), "Kein Modul!" );
-
-    bool bNewBreakPoint = false;
 
     if ( XModule().Is() )
     {
         CheckCompileBasic();
-        if ( aStatus.bError )
+        if ( m_aStatus.bError )
         {
-            return false;
+            return;
         }
 
         BreakPoint* pBrk = GetBreakPoints().FindBreakPoint( nLine );
         if ( pBrk ) // remove
         {
-            xModule->ClearBP( (sal_uInt16)nLine );
+            m_xModule->ClearBP( (sal_uInt16)nLine );
             delete GetBreakPoints().remove( pBrk );
         }
         else // create one
         {
-            if ( xModule->SetBP( (sal_uInt16)nLine) )
+            if ( m_xModule->SetBP( (sal_uInt16)nLine) )
             {
                 GetBreakPoints().InsertSorted( new BreakPoint( nLine ) );
-                bNewBreakPoint = true;
                 if ( StarBASIC::IsRunning() )
                 {
-                    for ( sal_uInt16 nMethod = 0; nMethod < xModule->GetMethods()->Count(); nMethod++ )
+                    for ( sal_uInt16 nMethod = 0; nMethod < m_xModule->GetMethods()->Count(); nMethod++ )
                     {
-                        SbMethod* pMethod = static_cast<SbMethod*>(xModule->GetMethods()->Get( nMethod ));
+                        SbMethod* pMethod = static_cast<SbMethod*>(m_xModule->GetMethods()->Get( nMethod ));
                         assert(pMethod && "Methode nicht gefunden! (NULL)");
                         pMethod->SetDebugFlags( pMethod->GetDebugFlags() | SbDEBUG_BREAK );
                     }
@@ -539,8 +521,6 @@ bool ModulWindow::ToggleBreakPoint( sal_uLong nLine )
             }
         }
     }
-
-    return bNewBreakPoint;
 }
 
 void ModulWindow::UpdateBreakPoint( const BreakPoint& rBrk )
@@ -552,14 +532,14 @@ void ModulWindow::UpdateBreakPoint( const BreakPoint& rBrk )
         CheckCompileBasic();
 
         if ( rBrk.bEnabled )
-            xModule->SetBP( (sal_uInt16)rBrk.nLine );
+            m_xModule->SetBP( (sal_uInt16)rBrk.nLine );
         else
-            xModule->ClearBP( (sal_uInt16)rBrk.nLine );
+            m_xModule->ClearBP( (sal_uInt16)rBrk.nLine );
     }
 }
 
 
-bool ModulWindow::BasicToggleBreakPoint()
+void ModulWindow::BasicToggleBreakPoint()
 {
     AssertValidEditEngine();
 
@@ -567,16 +547,12 @@ bool ModulWindow::BasicToggleBreakPoint()
     aSel.GetStart().GetPara()++;    // Basic lines start at 1!
     aSel.GetEnd().GetPara()++;
 
-    bool bNewBreakPoint = false;
-
     for ( sal_uInt32 nLine = aSel.GetStart().GetPara(); nLine <= aSel.GetEnd().GetPara(); ++nLine )
     {
-        if ( ToggleBreakPoint( nLine ) )
-            bNewBreakPoint = true;
+        ToggleBreakPoint( nLine );
     }
 
-    aXEditorWindow->GetBrkWindow().Invalidate();
-    return bNewBreakPoint;
+    m_aXEditorWindow->GetBrkWindow().Invalidate();
 }
 
 
@@ -633,7 +609,7 @@ bool ModulWindow::BasicErrorHdl( StarBASIC * pBasic )
     // if other basic, the IDE should try to display the correct module
     bool const bMarkError = pBasic == GetBasic();
     if ( bMarkError )
-        aXEditorWindow->GetBrkWindow().SetMarkerPos(nErrorLine, true);
+        m_aXEditorWindow->GetBrkWindow().SetMarkerPos(nErrorLine, true);
 
     // #i47002#
     Reference< awt::XWindow > xWindow = VCLUnoHelper::GetInterface( this );
@@ -646,7 +622,7 @@ bool ModulWindow::BasicErrorHdl( StarBASIC * pBasic )
         return false;
 
     if ( bMarkError )
-        aXEditorWindow->GetBrkWindow().SetNoMarker();
+        m_aXEditorWindow->GetBrkWindow().SetNoMarker();
     return false;
 }
 
@@ -664,33 +640,33 @@ long ModulWindow::BasicBreakHdl( StarBASIC* pBasic )
     {
         pBrk->nHitCount++;
         if ( pBrk->nHitCount <= pBrk->nStopAfter && GetBasic()->IsBreak() )
-            return aStatus.nBasicFlags; // go on...
+            return m_aStatus.nBasicFlags; // go on...
     }
 
     nErrorLine--;   // EditEngine starts at 0, Basic at 1
 
     AssertValidEditEngine();
     GetEditView()->SetSelection( TextSelection( TextPaM( nErrorLine, 0 ), TextPaM( nErrorLine, 0 ) ) );
-    aXEditorWindow->GetBrkWindow().SetMarkerPos( nErrorLine );
+    m_aXEditorWindow->GetBrkWindow().SetMarkerPos( nErrorLine );
 
-    rLayout.UpdateDebug(false);
+    m_rLayout.UpdateDebug(false);
 
-    aStatus.bIsInReschedule = true;
-    aStatus.bIsRunning = true;
+    m_aStatus.bIsInReschedule = true;
+    m_aStatus.bIsRunning = true;
 
     AddStatus( BASWIN_INRESCHEDULE );
 
     InvalidateDebuggerSlots();
 
-    while( aStatus.bIsRunning )
+    while( m_aStatus.bIsRunning )
         Application::Yield();
 
-    aStatus.bIsInReschedule = false;
-    aXEditorWindow->GetBrkWindow().SetNoMarker();
+    m_aStatus.bIsInReschedule = false;
+    m_aXEditorWindow->GetBrkWindow().SetNoMarker();
 
     ClearStatus( BASWIN_INRESCHEDULE );
 
-    return aStatus.nBasicFlags;
+    return m_aStatus.nBasicFlags;
 }
 
 void ModulWindow::BasicAddWatch()
@@ -713,10 +689,9 @@ void ModulWindow::BasicAddWatch()
     {
         TextSelection aSel = GetEditView()->GetSelection();
         if ( aSel.GetStart().GetPara() == aSel.GetEnd().GetPara() ) // single line selection
-            rLayout.BasicAddWatch(GetEditView()->GetSelected());
+            m_rLayout.BasicAddWatch(GetEditView()->GetSelected());
     }
 }
-
 
 
 void ModulWindow::EditMacro( const OUString& rMacroName )
@@ -727,10 +702,10 @@ void ModulWindow::EditMacro( const OUString& rMacroName )
     {
         CheckCompileBasic();
 
-        if ( !aStatus.bError )
+        if ( !m_aStatus.bError )
         {
             sal_uInt16 nStart, nEnd;
-            SbMethod* pMethod = static_cast<SbMethod*>(xModule->Find( rMacroName, SbxCLASS_METHOD ));
+            SbMethod* pMethod = static_cast<SbMethod*>(m_xModule->Find( rMacroName, SbxCLASS_METHOD ));
             if ( pMethod )
             {
                 pMethod->GetLineRange( nStart, nEnd );
@@ -788,12 +763,12 @@ void ModulWindow::UpdateData()
 
     if ( XModule().Is() )
     {
-        SetModule( xModule->GetSource32() );
+        SetModule( m_xModule->GetSource32() );
 
         if ( GetEditView() )
         {
             TextSelection aSel = GetEditView()->GetSelection();
-            setTextEngineText(*GetEditEngine(), xModule->GetSource32());
+            setTextEngineText(*GetEditEngine(), m_xModule->GetSource32());
             GetEditView()->SetSelection( aSel );
             GetEditEngine()->SetModified( false );
             MarkDocumentModified( GetDocument() );
@@ -825,9 +800,9 @@ sal_Int32 ModulWindow::FormatAndPrint( Printer* pPrinter, sal_Int32 nPrintPage )
     vcl::Font aOldFont( pPrinter->GetFont() );
 
     vcl::Font aFont( GetEditEngine()->GetFont() );
-    aFont.SetAlign( ALIGN_BOTTOM );
+    aFont.SetAlignment( ALIGN_BOTTOM );
     aFont.SetTransparent( true );
-    aFont.SetSize( Size( 0, 360 ) );
+    aFont.SetFontSize( Size( 0, 360 ) );
     pPrinter->SetFont( aFont );
     pPrinter->SetMapMode( MAP_100TH_MM );
 
@@ -892,11 +867,10 @@ void ModulWindow::ExecuteCommand (SfxRequest& rReq)
     {
         case SID_DELETE:
         {
-            KeyEvent aFakeDelete( 0, KEY_DELETE );
-            bool bDone = GetEditView()->KeyInput( aFakeDelete );
-            if (!bDone)
+            if (!IsReadOnly())
             {
-                BaseWindow::KeyInput(aFakeDelete);
+                KeyEvent aFakeDelete(0, KEY_DELETE);
+                (void)GetEditView()->KeyInput(aFakeDelete);
             }
             break;
         }
@@ -975,7 +949,7 @@ void ModulWindow::ExecuteCommand (SfxRequest& rReq)
         break;
         case SID_BASICIDE_REMOVEWATCH:
         {
-            rLayout.BasicRemoveWatch();
+            m_rLayout.BasicRemoveWatch();
         }
         break;
         case SID_CUT:
@@ -1012,7 +986,7 @@ void ModulWindow::ExecuteCommand (SfxRequest& rReq)
         {
             const SfxBoolItem* pItem = rReq.GetArg<SfxBoolItem>(rReq.GetSlot());
             bSourceLinesEnabled = pItem && pItem->GetValue();
-            aXEditorWindow->SetLineNumberDisplay(bSourceLinesEnabled);
+            m_aXEditorWindow->SetLineNumberDisplay(bSourceLinesEnabled);
         }
         break;
         case SID_BASICIDE_DELETECURRENT:
@@ -1056,7 +1030,6 @@ void ModulWindow::ExecuteGlobal (SfxRequest& rReq)
         break;
     }
 }
-
 
 
 void ModulWindow::GetState( SfxItemSet &rSet )
@@ -1188,7 +1161,7 @@ OUString ModulWindow::GetSbModuleName()
 {
     OUString aModuleName;
     if ( XModule().Is() )
-        aModuleName = xModule->GetName();
+        aModuleName = m_xModule->GetName();
     return aModuleName;
 }
 
@@ -1220,7 +1193,7 @@ void ModulWindow::AssertValidEditEngine()
 
 void ModulWindow::Activating ()
 {
-    aXEditorWindow->SetLineNumberDisplay(bSourceLinesEnabled);
+    m_aXEditorWindow->SetLineNumberDisplay(bSourceLinesEnabled);
     Show();
 }
 
@@ -1302,15 +1275,15 @@ void ModulWindow::BasicStarted()
 {
     if ( XModule().Is() )
     {
-        aStatus.bIsRunning = true;
+        m_aStatus.bIsRunning = true;
         BreakPointList& rList = GetBreakPoints();
         if ( rList.size() )
         {
             rList.ResetHitCount();
-            rList.SetBreakPointsInBasic( xModule );
-            for ( sal_uInt16 nMethod = 0; nMethod < xModule->GetMethods()->Count(); nMethod++ )
+            rList.SetBreakPointsInBasic( m_xModule );
+            for ( sal_uInt16 nMethod = 0; nMethod < m_xModule->GetMethods()->Count(); nMethod++ )
             {
-                SbMethod* pMethod = static_cast<SbMethod*>(xModule->GetMethods()->Get( nMethod ));
+                SbMethod* pMethod = static_cast<SbMethod*>(m_xModule->GetMethods()->Get( nMethod ));
                 assert(pMethod && "Methode nicht gefunden! (NULL)");
                 pMethod->SetDebugFlags( pMethod->GetDebugFlags() | SbDEBUG_BREAK );
             }
@@ -1320,7 +1293,7 @@ void ModulWindow::BasicStarted()
 
 void ModulWindow::BasicStopped()
 {
-    aStatus.bIsRunning = false;
+    m_aStatus.bIsRunning = false;
     GetBreakPointWindow().SetNoMarker();
 }
 
@@ -1331,9 +1304,9 @@ EntryDescriptor ModulWindow::CreateEntryDescriptor()
     LibraryLocation eLocation = aDocument.getLibraryLocation( aLibName );
     OUString aModName( GetName() );
     OUString aLibSubName;
-    if( xBasic.Is() && aDocument.isInVBAMode() && XModule().Is() )
+    if( m_xBasic.Is() && aDocument.isInVBAMode() && XModule().Is() )
     {
-        switch( xModule->GetModuleType() )
+        switch( m_xModule->GetModuleType() )
         {
             case script::ModuleType::DOCUMENT:
             {
@@ -1404,7 +1377,7 @@ bool ModulWindow::IsPasteAllowed()
 
 void ModulWindow::OnNewDocument ()
 {
-    aXEditorWindow->SetLineNumberDisplay(bSourceLinesEnabled);
+    m_aXEditorWindow->SetLineNumberDisplay(bSourceLinesEnabled);
 }
 
 char const* ModulWindow::GetHid () const
@@ -1427,7 +1400,7 @@ void ModulWindow::UpdateModule ()
     OUString const aModule = getTextEngineText(*GetEditEngine());
 
     // update module in basic
-    assert(xModule);
+    assert(m_xModule);
 
     // update module in module window
     SetModule(aModule);
@@ -1538,9 +1511,9 @@ ModulWindowLayout::SyntaxColors::SyntaxColors () :
 {
     aConfig.AddListener(this);
 
-    aColors[TT_UNKNOWN] =
-    aColors[TT_WHITESPACE] =
-    aColors[TT_EOL] =
+    aColors[TokenType::Unknown] =
+    aColors[TokenType::Whitespace] =
+    aColors[TokenType::EOL] =
         Application::GetSettings().GetStyleSettings().GetFieldTextColor();
 
     NewConfig(true);
@@ -1554,11 +1527,11 @@ ModulWindowLayout::SyntaxColors::~SyntaxColors ()
 void ModulWindowLayout::SyntaxColors::SettingsChanged ()
 {
     Color const aColor = Application::GetSettings().GetStyleSettings().GetFieldTextColor();
-    if (aColor != aColors[TT_UNKNOWN])
+    if (aColor != aColors[TokenType::Unknown])
     {
-        aColors[TT_UNKNOWN] =
-        aColors[TT_WHITESPACE] =
-        aColors[TT_EOL] =
+        aColors[TokenType::Unknown] =
+        aColors[TokenType::Whitespace] =
+        aColors[TokenType::EOL] =
             aColor;
         if (pEditor)
             pEditor->UpdateSyntaxHighlighting();
@@ -1576,22 +1549,22 @@ void ModulWindowLayout::SyntaxColors::NewConfig (bool bFirst)
 {
     static struct
     {
-        TokenTypes eTokenType;
+        TokenType eTokenType;
         svtools::ColorConfigEntry eEntry;
     }
     const vIds[] =
     {
-        { TT_IDENTIFIER,  svtools::BASICIDENTIFIER },
-        { TT_NUMBER,      svtools::BASICNUMBER },
-        { TT_STRING,      svtools::BASICSTRING },
-        { TT_COMMENT,     svtools::BASICCOMMENT },
-        { TT_ERROR,       svtools::BASICERROR },
-        { TT_OPERATOR,    svtools::BASICOPERATOR },
-        { TT_KEYWORDS,    svtools::BASICKEYWORD },
+        { TokenType::Identifier,  svtools::BASICIDENTIFIER },
+        { TokenType::Number,      svtools::BASICNUMBER },
+        { TokenType::String,      svtools::BASICSTRING },
+        { TokenType::Comment,     svtools::BASICCOMMENT },
+        { TokenType::Error,       svtools::BASICERROR },
+        { TokenType::Operator,    svtools::BASICOPERATOR },
+        { TokenType::Keywords,    svtools::BASICKEYWORD },
     };
 
     bool bChanged = false;
-    for (unsigned i = 0; i != sizeof vIds / sizeof vIds[0]; ++i)
+    for (unsigned i = 0; i != SAL_N_ELEMENTS(vIds); ++i)
     {
         Color const aColor = aConfig.GetColorValue(vIds[i].eEntry).nColor;
         Color& rMyColor = aColors[vIds[i].eTokenType];

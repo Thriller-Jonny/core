@@ -192,10 +192,10 @@ private:
     }
 
     uno::Reference< rendering::XSpriteCanvas > mxCanvas;
-    ::cppu::OInterfaceContainerHelper          maPaintListeners;
-    ::cppu::OInterfaceContainerHelper          maTransformationListeners;
-    ::cppu::OInterfaceContainerHelper          maMouseListeners;
-    ::cppu::OInterfaceContainerHelper          maMouseMotionListeners;
+    ::comphelper::OInterfaceContainerHelper2          maPaintListeners;
+    ::comphelper::OInterfaceContainerHelper2          maTransformationListeners;
+    ::comphelper::OInterfaceContainerHelper2          maMouseListeners;
+    ::comphelper::OInterfaceContainerHelper2          maMouseMotionListeners;
     basegfx::B2DHomMatrix                      maTransform;
     Size                                       maSize;
 };
@@ -483,9 +483,9 @@ void DemoWindow::Resize()
 
 sal_uInt16 DemoApp::Exception( sal_uInt16 nError )
 {
-    switch( nError & EXC_MAJORTYPE )
+    switch( nError & EXCEPTION_MAJORTYPE )
     {
-        case EXC_RSCNOTLOADED:
+        case EXCEPTION_RESOURCENOTLOADED:
             Abort( "Error: could not load language resources.\nPlease check your installation.\n" );
             break;
     }

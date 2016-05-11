@@ -22,17 +22,8 @@
 
 #include <sal/config.h>
 
-void createRegistryInfo_AnyCompareFactory();
-void createRegistryInfo_IndexedPropertyValuesContainer();
 void createRegistryInfo_Map();
-void createRegistryInfo_NamedPropertyValuesContainer();
-void createRegistryInfo_OInstanceLocker();
-void createRegistryInfo_OOfficeRestartManager();
 void createRegistryInfo_OPropertyBag();
-void createRegistryInfo_OSimpleLogRing();
-void createRegistryInfo_OfficeInstallationDirectories();
-void createRegistryInfo_SequenceInputStream();
-void createRegistryInfo_SequenceOutputStream();
 void createRegistryInfo_UNOMemoryStream();
 
 #endif

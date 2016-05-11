@@ -29,8 +29,6 @@
 #include "gridwin.hxx"
 #include "drawview.hxx"
 
-#include <boost/noncopyable.hpp>
-
 namespace editeng {
     struct MisspellRanges;
 }
@@ -80,7 +78,7 @@ public:
     virtual void    DataChanged( const DataChangedEvent& rDCEvt ) override;
 };
 
-class ScTabView : boost::noncopyable
+class ScTabView
 {
 private:
     enum BlockMode { None = 0, Normal = 1, Own = 2 };
@@ -226,8 +224,14 @@ protected:
     void            UpdateIMap( SdrObject* pObj );
 
 public:
+    /** make noncopyable */
+                    ScTabView(const ScTabView&) = delete;
+    const ScTabView&    operator=(const ScTabView&) = delete;
+
                     ScTabView( vcl::Window* pParent, ScDocShell& rDocSh, ScTabViewShell* pViewShell );
                     ~ScTabView();
+
+    enum SplitMethod { SC_SPLIT_METHOD_FIRST_COL, SC_SPLIT_METHOD_FIRST_ROW, SC_SPLIT_METHOD_CURSOR };
 
     void            MakeDrawLayer();
 
@@ -306,8 +310,7 @@ public:
 
     static void     UpdateInputLine();
 
-    void            InitRefMode( SCCOL nCurX, SCROW nCurY, SCTAB nCurZ, ScRefType eType,
-                                 bool bPaint = true );
+    void            InitRefMode( SCCOL nCurX, SCROW nCurY, SCTAB nCurZ, ScRefType eType );
     void            DoneRefMode( bool bContinue = false );
     void            UpdateRef( SCCOL nCurX, SCROW nCurY, SCTAB nCurZ );
     void            StopRefMode();
@@ -386,6 +389,7 @@ public:
 
     SC_DLLPUBLIC void SetTabNo( SCTAB nTab, bool bNew = false, bool bExtendSelection = false, bool bSameTabButMoved = false );
     void            SelectNextTab( short nDir, bool bExtendSelection = false );
+    void            SelectTabPage( const sal_uInt16 nTab );
 
     void            ActivateView( bool bActivate, bool bFirst );
     void            ActivatePart( ScSplitPos eWhich );
@@ -472,6 +476,23 @@ public:
 
     void            MarkColumns();
     void            MarkRows();
+
+    /**
+     * Called to select the specified full column.
+     *
+     * @param nCol: Column number to do operation on
+     * @param nModifier: 0, KEY_SHIFT, KEY_MOD1, KEY_SHIFT | KEY_MOD1
+     */
+
+    void            MarkColumns(SCCOL nCol, sal_Int16 nModifier);
+    /**
+     * Called to select the specified full row.
+     *
+     * @param nRow: Row number to do operation on
+     * @param nModifier: 0, KEY_SHIFT, KEY_MOD1, KEY_SHIFT | KEY_MOD1
+     */
+    void            MarkRows(SCROW nRow, sal_Int16 nModifier);
+
     void            MarkDataArea( bool bIncludeCursor = true );
     void            MarkMatrixFormula();
     void            Unmark();
@@ -493,10 +514,10 @@ public:
 
     Point           GetMousePosPixel();
 
-    void            FreezeSplitters( bool bFreeze );
+    void            FreezeSplitters( bool bFreeze, SplitMethod eSplitMethod = SC_SPLIT_METHOD_CURSOR );
     void            RemoveSplit();
     void            SplitAtCursor();
-    void            SplitAtPixel( const Point& rPixel, bool bHor, bool bVer );
+    void            SplitAtPixel( const Point& rPixel );
     void            InvalidateSplit();
 
     void            ErrorMessage( sal_uInt16 nGlobStrId );

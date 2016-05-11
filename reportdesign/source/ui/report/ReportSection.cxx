@@ -402,7 +402,6 @@ void OReportSection::MouseButtonUp( const MouseEvent& rMEvt )
 }
 
 
-
 void OReportSection::MouseMove( const MouseEvent& rMEvt )
 {
     m_pFunc->MouseMove( rMEvt );
@@ -630,8 +629,8 @@ void OReportSection::createDefault(const OUString& _sType,SdrObject* _pObj)
         std::vector< OUString > aObjList;
         if ( GalleryExplorer::FillObjListTitle( GALLERY_THEME_POWERPOINT, aObjList ) )
         {
-            std::vector< OUString >::iterator aIter = aObjList.begin();
-            std::vector< OUString >::iterator aEnd = aObjList.end();
+            std::vector< OUString >::const_iterator aIter = aObjList.begin();
+            std::vector< OUString >::const_iterator aEnd = aObjList.end();
             for (sal_uInt32 i=0 ; aIter != aEnd; ++aIter,++i)
             {
                 if ( aIter->equalsIgnoreAsciiCase( _sType ) )

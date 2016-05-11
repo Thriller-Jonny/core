@@ -40,6 +40,7 @@
 #include <oox/helper/progressbar.hxx>
 #include <oox/helper/propertyset.hxx>
 #include <oox/ole/vbaproject.hxx>
+#include <oox/token/properties.hxx>
 #include <vcl/msgbox.hxx>
 #include "addressconverter.hxx"
 #include "biffinputstream.hxx"
@@ -85,7 +86,6 @@
 #include <comphelper/processfactory.hxx>
 #include <officecfg/Office/Calc.hxx>
 
-#include <boost/noncopyable.hpp>
 #include <memory>
 
 namespace oox {
@@ -110,9 +110,14 @@ bool IgnoreCaseCompare::operator()( const OUString& rName1, const OUString& rNam
     return rName1.compareToIgnoreAsciiCase(rName2 ) < 0;
 }
 
-class WorkbookGlobals : boost::noncopyable
+class WorkbookGlobals
 {
 public:
+    // noncopyable ------------------------------------------------------------
+
+    WorkbookGlobals(const WorkbookGlobals&) = delete;
+    const WorkbookGlobals& operator=(const WorkbookGlobals&) = delete;
+
     explicit            WorkbookGlobals( ExcelFilter& rFilter );
                         ~WorkbookGlobals();
 
@@ -130,7 +135,7 @@ public:
     /** Returns true, if the file is a multi-sheet document, or false if single-sheet. */
     inline bool         isWorkbookFile() const { return mbWorkbook; }
     /** Returns the VBA project storage. */
-    inline StorageRef   getVbaProjectStorage() const { return mxVbaPrjStrg; }
+    const StorageRef&   getVbaProjectStorage() const { return mxVbaPrjStrg; }
     /** Returns the index of the current Calc sheet, if filter currently processes a sheet. */
     inline sal_Int16    getCurrentSheetIndex() const { return mnCurrSheet; }
 
@@ -151,7 +156,7 @@ public:
     ScDocumentImport& getDocImport();
 
     /** Returns a reference to the source/target spreadsheet document model. */
-    inline Reference< XSpreadsheetDocument > getDocument() const { return mxDoc; }
+    const Reference< XSpreadsheetDocument >& getDocument() const { return mxDoc; }
     /** Returns the cell or page styles container from the Calc document. */
     Reference< XNameContainer > getStyleFamily( bool bPageStyles ) const;
     /** Returns the specified cell or page style from the Calc document. */
@@ -232,7 +237,7 @@ public:
 
 private:
     /** Initializes some basic members and sets needed document properties. */
-    void                initialize( bool bWorkbookFile );
+    void                initialize();
     /** Finalizes the filter process (sets some needed document properties). */
     void                finalize();
 
@@ -322,7 +327,7 @@ WorkbookGlobals::WorkbookGlobals( ExcelFilter& rFilter ) :
 {
     // register at the filter, needed for virtual callbacks (even during construction)
     mrExcelFilter.registerWorkbookGlobals( *this );
-    initialize( true );
+    initialize();
 }
 
 WorkbookGlobals::~WorkbookGlobals()
@@ -372,11 +377,11 @@ namespace {
 ScRangeData* lcl_addNewByNameAndTokens( ScDocument& rDoc, ScRangeName* pNames, const OUString& rName, const Sequence<FormulaToken>& rTokens, sal_Int16 nIndex, sal_Int32 nUnoType )
 {
     bool bDone = false;
-    sal_uInt16 nNewType = RT_NAME;
-    if ( nUnoType & NamedRangeFlag::FILTER_CRITERIA )    nNewType |= RT_CRITERIA;
-    if ( nUnoType & NamedRangeFlag::PRINT_AREA )         nNewType |= RT_PRINTAREA;
-    if ( nUnoType & NamedRangeFlag::COLUMN_HEADER )      nNewType |= RT_COLHEADER;
-    if ( nUnoType & NamedRangeFlag::ROW_HEADER )         nNewType |= RT_ROWHEADER;
+    ScRangeData::Type nNewType = ScRangeData::Type::Name;
+    if ( nUnoType & NamedRangeFlag::FILTER_CRITERIA )    nNewType |= ScRangeData::Type::Criteria;
+    if ( nUnoType & NamedRangeFlag::PRINT_AREA )         nNewType |= ScRangeData::Type::PrintArea;
+    if ( nUnoType & NamedRangeFlag::COLUMN_HEADER )      nNewType |= ScRangeData::Type::ColHeader;
+    if ( nUnoType & NamedRangeFlag::ROW_HEADER )         nNewType |= ScRangeData::Type::RowHeader;
     ScTokenArray aTokenArray;
     (void)ScTokenConversion::ConvertToTokenArray( rDoc, aTokenArray, rTokens );
     ScRangeData* pNew = new ScRangeData( &rDoc, rName, aTokenArray, ScAddress(), nNewType );
@@ -528,14 +533,14 @@ void WorkbookGlobals::useInternalChartDataTable( bool bInternal )
 
 // private --------------------------------------------------------------------
 
-void WorkbookGlobals::initialize( bool bWorkbookFile )
+void WorkbookGlobals::initialize()
 {
     maCellStyles = "CellStyles";
     maPageStyles = "PageStyles";
     maCellStyleServ = "com.sun.star.style.CellStyle";
     maPageStyleServ = "com.sun.star.style.PageStyle";
     mnCurrSheet = -1;
-    mbWorkbook = bWorkbookFile;
+    mbWorkbook = true;
     meTextEnc = osl_getThreadTextEncoding();
     mbHasCodePage = false;
 
@@ -604,7 +609,7 @@ void WorkbookGlobals::initialize( bool bWorkbookFile )
         // #i76026# disable Undo while loading the document
         mpDoc->EnableUndo(false);
         // #i79826# disable calculating automatic row height while loading the document
-        mpDoc->EnableAdjustHeight(true);
+        mpDoc->EnableAdjustHeight(false);
         // disable automatic update of linked sheets and DDE links
         mpDoc->EnableExecuteLink(false);
 
@@ -827,9 +832,9 @@ Reference< XCellRange > WorkbookHelper::getCellRangeFromDoc( const CellRangeAddr
     return xRange;
 }
 
-Reference< XNameContainer > WorkbookHelper::getStyleFamily( bool bPageStyles ) const
+Reference< XNameContainer > WorkbookHelper::getCellStyleFamily() const
 {
-    return mrBookGlob.getStyleFamily( bPageStyles );
+    return mrBookGlob.getStyleFamily( false/*bPageStyles*/ );
 }
 
 Reference< XStyle > WorkbookHelper::getStyleObject( const OUString& rStyleName, bool bPageStyle ) const

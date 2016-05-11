@@ -118,50 +118,17 @@ void FastParser::parseStream( const InputSource& rInputSource, bool bCloseStream
     mxParser->parseStream( rInputSource );
 }
 
-void FastParser::parseStream( const Reference< XInputStream >& rxInStream, const OUString& rStreamName, bool bCloseStream ) throw( SAXException, IOException, RuntimeException )
+void FastParser::parseStream( const Reference< XInputStream >& rxInStream, const OUString& rStreamName ) throw( SAXException, IOException, RuntimeException )
 {
     InputSource aInputSource;
     aInputSource.sSystemId = rStreamName;
     aInputSource.aInputStream = rxInStream;
-    parseStream( aInputSource, bCloseStream );
+    parseStream( aInputSource );
 }
 
-void FastParser::parseStream( StorageBase& rStorage, const OUString& rStreamName, bool bCloseStream ) throw( SAXException, IOException, RuntimeException )
+void FastParser::parseStream( StorageBase& rStorage, const OUString& rStreamName ) throw( SAXException, IOException, RuntimeException )
 {
-    parseStream( rStorage.openInputStream( rStreamName ), rStreamName, bCloseStream );
-}
-
-OUString FastParser::getNamespaceURL( const OUString& rPrefix ) throw( IllegalArgumentException, RuntimeException )
-{
-    if( !mxParser.is() )
-        throw RuntimeException();
-    return mxParser->getNamespaceURL( rPrefix );
-}
-
-bool FastParser::hasNamespaceURL( const OUString& rPrefix ) const
-{
-    if (!mxParser.is())
-        throw RuntimeException();
-
-    if (!mpParser)
-        return false;
-
-    return mpParser->hasNamespaceURL(rPrefix);
-}
-
-sal_Int32 FastParser::getNamespaceId( const OUString& rUrl )
-{
-    for( NamespaceMap::const_iterator aIt = mrNamespaceMap.maTransitionalNamespaceMap.begin(),
-            aEnd = mrNamespaceMap.maTransitionalNamespaceMap.end(); aIt != aEnd; ++aIt )
-        if( rUrl  == aIt->second )
-            return aIt->first;
-
-    for( NamespaceMap::const_iterator aIt = mrNamespaceMap.maStrictNamespaceMap.begin(),
-            aEnd = mrNamespaceMap.maStrictNamespaceMap.end(); aIt != aEnd; ++aIt )
-        if( rUrl  == aIt->second )
-            return aIt->first;
-
-    return 0;
+    parseStream( rStorage.openInputStream( rStreamName ), rStreamName );
 }
 
 } // namespace core

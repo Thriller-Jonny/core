@@ -55,7 +55,6 @@ css::uno::Sequence<OUString> SAL_CALL ORadioButtonControl::getSupportedServiceNa
 }
 
 
-
 ORadioButtonControl::ORadioButtonControl(const Reference<XComponentContext>& _rxFactory)
                       :OBoundControl(_rxFactory, VCL_CONTROL_RADIOBUTTON)
 {
@@ -84,7 +83,7 @@ void SAL_CALL ORadioButtonControl::createPeer(const Reference<css::awt::XToolkit
 
 
 ORadioButtonModel::ORadioButtonModel(const Reference<XComponentContext>& _rxFactory)
-    :OReferenceValueComponent( _rxFactory, VCL_CONTROLMODEL_RADIOBUTTON, FRM_SUN_CONTROL_RADIOBUTTON,true )
+    :OReferenceValueComponent( _rxFactory, VCL_CONTROLMODEL_RADIOBUTTON, FRM_SUN_CONTROL_RADIOBUTTON )
                     // use the old control name for compytibility reasons
 {
 

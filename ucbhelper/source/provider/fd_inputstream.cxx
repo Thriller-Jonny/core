@@ -93,7 +93,6 @@ namespace ucbhelper
     }
 
 
-
     void SAL_CALL FdInputStream::skipBytes(sal_Int32 nBytesToSkip)
         throw(NotConnectedException,
               BufferSizeExceededException,
@@ -109,7 +108,6 @@ namespace ucbhelper
     }
 
 
-
     sal_Int32 SAL_CALL FdInputStream::available()
         throw(NotConnectedException,
               IOException,
@@ -119,7 +117,6 @@ namespace ucbhelper
     }
 
 
-
     void SAL_CALL FdInputStream::closeInput()
         throw(NotConnectedException,
               IOException,
@@ -127,9 +124,11 @@ namespace ucbhelper
     {
         osl::MutexGuard aGuard(m_aMutex);
         if(m_tmpfl)
-            osl_closeFile(m_tmpfl),m_tmpfl = nullptr;
+        {
+            osl_closeFile(m_tmpfl);
+            m_tmpfl = nullptr;
+        }
     }
-
 
 
     void SAL_CALL FdInputStream::seek(sal_Int64 location)
@@ -146,7 +145,6 @@ namespace ucbhelper
     }
 
 
-
     sal_Int64 SAL_CALL
     FdInputStream::getPosition(
         void )
@@ -161,7 +159,6 @@ namespace ucbhelper
         osl_getFilePos( m_tmpfl, &nFilePos );
         return nFilePos;
     }
-
 
 
     sal_Int64 SAL_CALL FdInputStream::getLength(

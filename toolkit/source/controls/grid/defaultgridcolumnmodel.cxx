@@ -28,6 +28,7 @@
 
 #include <comphelper/sequence.hxx>
 #include <comphelper/componentguard.hxx>
+#include <comphelper/interfacecontainer2.hxx>
 #include <cppuhelper/basemutex.hxx>
 #include <cppuhelper/compbase.hxx>
 #include <cppuhelper/supportsservice.hxx>
@@ -84,7 +85,7 @@ public:
 private:
     typedef ::std::vector< css::uno::Reference< css::awt::grid::XGridColumn > >   Columns;
 
-    ::cppu::OInterfaceContainerHelper   m_aContainerListeners;
+    ::comphelper::OInterfaceContainerHelper2   m_aContainerListeners;
     Columns                             m_aColumns;
 };
 
@@ -279,7 +280,7 @@ private:
                 pGridColumn->setTitle( colTitle.makeStringAndClear() );
                 pGridColumn->setColumnWidth( 80 /* APPFONT */ );
                 pGridColumn->setFlexibility( 1 );
-                pGridColumn->setResizeable( sal_True );
+                pGridColumn->setResizeable( true );
                 pGridColumn->setDataColumnIndex( i );
 
                 ContainerEvent aEvent;

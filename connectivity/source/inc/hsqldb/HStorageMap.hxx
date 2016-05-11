@@ -31,6 +31,7 @@
 #include <com/sun/star/io/XInputStream.hpp>
 #include <com/sun/star/io/XSeekable.hpp>
 #include <jni.h>
+#include <uno/environment.hxx>
 
 namespace connectivity
 {
@@ -54,9 +55,17 @@ namespace connectivity
 
 
         typedef std::map< OUString, std::shared_ptr<StreamHelper> > TStreamMap;
-        typedef ::std::pair< ::com::sun::star::uno::Reference< ::com::sun::star::embed::XStorage >, OUString > TStorageURLPair;
-        typedef ::std::pair< TStorageURLPair, TStreamMap> TStoragePair;
-        typedef std::map<OUString, TStoragePair> TStorages;
+
+        struct StorageData {
+            css::uno::Reference<css::embed::XStorage> storage;
+            css::uno::Environment storageEnvironment;
+            OUString url;
+            TStreamMap streams;
+
+            css::uno::Reference<css::embed::XStorage> mapStorage() const;
+        };
+
+        typedef std::map<OUString, StorageData> TStorages;
         /** contains all storages so far accessed.
         */
         class StorageContainer

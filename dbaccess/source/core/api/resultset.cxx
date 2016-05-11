@@ -82,7 +82,7 @@ OResultSet::OResultSet(const css::uno::Reference< css::sdbc::XResultSet >& _xRes
             {
                 m_bIsBookmarkable = ::comphelper::getBOOL(xSet->getPropertyValue(PROPERTY_ISBOOKMARKABLE));
                 OSL_ENSURE( !m_bIsBookmarkable || Reference< XRowLocate >(m_xDelegatorResultSet, UNO_QUERY).is(),
-                    "OResultSet::OResultSet: aggregate is inconsistent in it's bookmarkable attribute!" );
+                    "OResultSet::OResultSet: aggregate is inconsistent in its bookmarkable attribute!" );
                 m_bIsBookmarkable = m_bIsBookmarkable && Reference< XRowLocate >(m_xDelegatorResultSet, UNO_QUERY).is();
             }
         }
@@ -216,7 +216,7 @@ sal_Bool OResultSet::convertFastPropertyValue(Any & rConvertedValue, Any & rOldV
     // be lazy ...
     rConvertedValue = rValue;
     getFastPropertyValue( rOldValue, nHandle );
-    return sal_True;
+    return true;
 }
 
 void OResultSet::setFastPropertyValue_NoBroadcast( sal_Int32 nHandle, const Any& rValue ) throw (Exception, std::exception)
@@ -242,8 +242,7 @@ void OResultSet::getFastPropertyValue( Any& rValue, sal_Int32 nHandle ) const
     {
         case PROPERTY_ID_ISBOOKMARKABLE:
         {
-            sal_Bool bVal = m_bIsBookmarkable;
-            rValue.setValue(&bVal, cppu::UnoType<bool>::get());
+            rValue <<= m_bIsBookmarkable;
         }   break;
         default:
         {
@@ -295,7 +294,7 @@ sal_Int32 OResultSet::findColumn(const OUString& columnName) throw( SQLException
 
 namespace
 {
-    static Reference< XDatabaseMetaData > lcl_getDBMetaDataFromStatement_nothrow( const Reference< XInterface >& _rxStatement )
+    Reference< XDatabaseMetaData > lcl_getDBMetaDataFromStatement_nothrow( const Reference< XInterface >& _rxStatement )
     {
         Reference< XDatabaseMetaData > xDBMetaData;
         try
@@ -992,13 +991,13 @@ void OResultSet::checkReadOnly() const
     if  (   ( m_nResultSetConcurrency == ResultSetConcurrency::READ_ONLY )
         ||  !m_xDelegatorResultSetUpdate.is()
         )
-        throwSQLException( "The result set is read-only.", SQL_GENERAL_ERROR, *const_cast< OResultSet* >( this ) );
+        throwSQLException( "The result set is read-only.", StandardSQLState::GENERAL_ERROR, *const_cast< OResultSet* >( this ) );
 }
 
 void OResultSet::checkBookmarkable() const
 {
     if ( !m_bIsBookmarkable )
-        throwSQLException( "The result set does not have bookmark support.", SQL_GENERAL_ERROR, *const_cast< OResultSet* >( this ) );
+        throwSQLException( "The result set does not have bookmark support.", StandardSQLState::GENERAL_ERROR, *const_cast< OResultSet* >( this ) );
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

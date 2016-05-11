@@ -20,6 +20,7 @@
 #define INCLUDED_TOOLS_FONTENUM_HXX
 
 #include <sal/types.h>
+#include <o3tl/typed_flags_set.hxx>
 
 enum FontFamily { FAMILY_DONTKNOW, FAMILY_DECORATIVE, FAMILY_MODERN,
                   FAMILY_ROMAN, FAMILY_SCRIPT, FAMILY_SWISS, FAMILY_SYSTEM, FontFamily_FORCE_EQUAL_SIZE=SAL_MAX_ENUM };
@@ -41,38 +42,38 @@ enum FontWidth { WIDTH_DONTKNOW, WIDTH_ULTRA_CONDENSED, WIDTH_EXTRA_CONDENSED,
 
 enum FontItalic { ITALIC_NONE, ITALIC_OBLIQUE, ITALIC_NORMAL, ITALIC_DONTKNOW, FontItalic_FORCE_EQUAL_SIZE=SAL_MAX_ENUM };
 
-enum FontUnderline { UNDERLINE_NONE, UNDERLINE_SINGLE, UNDERLINE_DOUBLE,
-                     UNDERLINE_DOTTED, UNDERLINE_DONTKNOW,
-                     UNDERLINE_DASH, UNDERLINE_LONGDASH,
-                     UNDERLINE_DASHDOT, UNDERLINE_DASHDOTDOT,
-                     UNDERLINE_SMALLWAVE,
-                     UNDERLINE_WAVE, UNDERLINE_DOUBLEWAVE,
-                     UNDERLINE_BOLD, UNDERLINE_BOLDDOTTED,
-                     UNDERLINE_BOLDDASH, UNDERLINE_BOLDLONGDASH,
-                     UNDERLINE_BOLDDASHDOT, UNDERLINE_BOLDDASHDOTDOT,
-                     UNDERLINE_BOLDWAVE,
-                     FontUnderline_FORCE_EQUAL_SIZE=SAL_MAX_ENUM };
+enum FontLineStyle { LINESTYLE_NONE, LINESTYLE_SINGLE, LINESTYLE_DOUBLE,
+                     LINESTYLE_DOTTED, LINESTYLE_DONTKNOW,
+                     LINESTYLE_DASH, LINESTYLE_LONGDASH,
+                     LINESTYLE_DASHDOT, LINESTYLE_DASHDOTDOT,
+                     LINESTYLE_SMALLWAVE,
+                     LINESTYLE_WAVE, LINESTYLE_DOUBLEWAVE,
+                     LINESTYLE_BOLD, LINESTYLE_BOLDDOTTED,
+                     LINESTYLE_BOLDDASH, LINESTYLE_BOLDLONGDASH,
+                     LINESTYLE_BOLDDASHDOT, LINESTYLE_BOLDDASHDOTDOT,
+                     LINESTYLE_BOLDWAVE,
+                     FontLineStyle_FORCE_EQUAL_SIZE=SAL_MAX_ENUM };
 
 enum FontStrikeout { STRIKEOUT_NONE, STRIKEOUT_SINGLE, STRIKEOUT_DOUBLE,
                      STRIKEOUT_DONTKNOW, STRIKEOUT_BOLD,
                      STRIKEOUT_SLASH, STRIKEOUT_X,
                      FontStrikeout_FORCE_EQUAL_SIZE=SAL_MAX_ENUM };
 
-typedef sal_uInt16 FontEmphasisMark;
-#define EMPHASISMARK_NONE           ((FontEmphasisMark)0x0000)
-#define EMPHASISMARK_DOT            ((FontEmphasisMark)0x0001)
-#define EMPHASISMARK_CIRCLE         ((FontEmphasisMark)0x0002)
-#define EMPHASISMARK_DISC           ((FontEmphasisMark)0x0003)
-#define EMPHASISMARK_ACCENT         ((FontEmphasisMark)0x0004)
-#define EMPHASISMARK_STYLE          ((FontEmphasisMark)0x00FF)
-#define EMPHASISMARK_POS_ABOVE      ((FontEmphasisMark)0x1000)
-#define EMPHASISMARK_POS_BELOW      ((FontEmphasisMark)0x2000)
+enum class FontEmphasisMark {
+    NONE          = 0x0000, // capitalisation to avoid conflict with X11 macro
+    Dot           = 0x0001,
+    Circle        = 0x0002,
+    Disc          = 0x0003,
+    Accent        = 0x0004,
+    Style         = 0x000f,
+    PosAbove      = 0x1000,
+    PosBelow      = 0x2000
+};
+namespace o3tl
+{
+    template<> struct typed_flags<FontEmphasisMark> : is_typed_flags<FontEmphasisMark, 0x300f> {};
+}
 
-// Only for compatibility
-#define EMPHASISMARK_DOTS_ABOVE     (EMPHASISMARK_DOT | EMPHASISMARK_POS_ABOVE)
-#define EMPHASISMARK_DOTS_BELOW     (EMPHASISMARK_DOT | EMPHASISMARK_POS_BELOW)
-#define EMPHASISMARK_SIDE_DOTS      (EMPHASISMARK_ACCENT | EMPHASISMARK_POS_ABOVE)
-#define EMPHASISMARK_CIRCLE_ABOVE   (EMPHASISMARK_CIRCLE | EMPHASISMARK_POS_ABOVE)
 
 enum FontType { TYPE_DONTKNOW, TYPE_RASTER, TYPE_VECTOR, TYPE_SCALABLE,
                 FontType_FORCE_EQUAL_SIZE=SAL_MAX_ENUM };

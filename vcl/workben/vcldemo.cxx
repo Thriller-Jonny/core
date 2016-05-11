@@ -35,7 +35,7 @@
 #include <vcl/pngwrite.hxx>
 #include <vcl/floatwin.hxx>
 #include <vcl/salbtype.hxx>
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 #include <vcl/help.hxx>
 #include <vcl/menu.hxx>
 
@@ -45,13 +45,14 @@
 #include <opengl/zone.hxx>
 
 // internal headers for OpenGLTests class.
+#if HAVE_FEATURE_OPENGL
 #include "salgdi.hxx"
 #include "salframe.hxx"
 #include "openglgdiimpl.hxx"
 #include "opengl/texture.hxx"
 #include "opengl/framebuffer.hxx"
 #include <vcl/opengl/OpenGLHelper.hxx>
-
+#endif
 #include <rtl/math.hxx>
 
 #define FIXME_SELF_INTERSECTING_WORKING 0
@@ -142,11 +143,9 @@ public:
         maIntroBW.Filter(BMP_FILTER_EMBOSS_GREY);
 
         InitRenderers();
-        mnSegmentsX = rtl::math::round(std::sqrt(maRenderers.size()), 0,
-                                       rtl_math_RoundingMode_Up);
         mnSegmentsY = rtl::math::round(std::sqrt(maRenderers.size()), 0,
                                        rtl_math_RoundingMode_Down);
-        mnSegmentsY = floor(std::sqrt(maRenderers.size()));
+        mnSegmentsX = (maRenderers.size() + mnSegmentsY - 1)/mnSegmentsY;
     }
 
     OUString getRendererList();
@@ -159,7 +158,7 @@ public:
 
     Size maSize;
     void SetSizePixel(const Size &rSize) { maSize = rSize; }
-    Size GetSizePixel() const            { return maSize;  }
+    const Size& GetSizePixel() const            { return maSize;  }
 
 
 // more of a 'Window' concept - push upwards ?
@@ -175,6 +174,15 @@ public:
     bool MouseButtonDown(const MouseEvent& rMEvt);
     void KeyInput(const KeyEvent& rKEvt);
 
+    static std::vector<Rectangle> partition(const Rectangle &rRect, int nX, int nY)
+    {
+        std::vector<Rectangle> aRegions = partition(rRect.GetSize(), nX, nY);
+        for (auto it = aRegions.begin(); it != aRegions.end(); ++it)
+            it->Move(rRect.Left(), rRect.Top());
+
+        return aRegions;
+    }
+
     static std::vector<Rectangle> partition(const RenderContext &rCtx, int nX, int nY)
     {
         return partition(rCtx.maSize, nX, nY);
@@ -186,7 +194,7 @@ public:
         std::vector<Rectangle> aRegions;
 
         // Make small cleared area for these guys
-        long nBorderSize = aSize.Width() / 32;
+        long nBorderSize = std::min(aSize.Height() / 32, aSize.Width() / 32);
         long nBoxWidth = (aSize.Width() - nBorderSize*(nX+1)) / nX;
         long nBoxHeight = (aSize.Height() - nBorderSize*(nY+1)) / nY;
         for (int y = 0; y < nY; y++)
@@ -259,10 +267,10 @@ public:
                     drawing::LineCap_BUTT, drawing::LineCap_ROUND, drawing::LineCap_SQUARE, drawing::LineCap_BUTT
                 };
                 basegfx::B2DLineJoin eJoins[] = {
-                    basegfx::B2DLineJoin::NONE,  basegfx::B2DLineJoin::Middle, basegfx::B2DLineJoin::Bevel,  basegfx::B2DLineJoin::Miter,
-                    basegfx::B2DLineJoin::Round, basegfx::B2DLineJoin::NONE,   basegfx::B2DLineJoin::Middle, basegfx::B2DLineJoin::Bevel,
-                    basegfx::B2DLineJoin::Miter, basegfx::B2DLineJoin::Round,  basegfx::B2DLineJoin::NONE,   basegfx::B2DLineJoin::Middle,
-                    basegfx::B2DLineJoin::Bevel, basegfx::B2DLineJoin::Miter,  basegfx::B2DLineJoin::Round,  basegfx::B2DLineJoin::NONE
+                    basegfx::B2DLineJoin::NONE, basegfx::B2DLineJoin::Bevel, basegfx::B2DLineJoin::Miter, basegfx::B2DLineJoin::Round,
+                    basegfx::B2DLineJoin::NONE, basegfx::B2DLineJoin::Bevel, basegfx::B2DLineJoin::Miter, basegfx::B2DLineJoin::Round,
+                    basegfx::B2DLineJoin::NONE, basegfx::B2DLineJoin::Bevel, basegfx::B2DLineJoin::Miter, basegfx::B2DLineJoin::Round,
+                    basegfx::B2DLineJoin::NONE, basegfx::B2DLineJoin::Bevel, basegfx::B2DLineJoin::Miter, basegfx::B2DLineJoin::Round
                 };
                 double aLineWidths[] = {
                     10.0, 15.0, 20.0, 10.0,
@@ -326,36 +334,41 @@ public:
         {
             if (rCtx.meStyle == RENDER_EXPANDED)
             {
-                std::vector<Rectangle> aRegions(DemoRenderer::partition(rCtx, 4, 2));
-                DemoRenderer::clearRects(rDev, aRegions);
+                std::vector<Rectangle> aToplevelRegions(
+                    DemoRenderer::partition(rCtx, 1, 3));
+                std::vector<Rectangle> aSubRegions(
+                    DemoRenderer::partition(aToplevelRegions[0], 4, 2));
+                Rectangle aBottom(aToplevelRegions[1].TopLeft(),
+                                  aToplevelRegions[2].BottomRight());
+                DemoRenderer::clearRects(rDev,aSubRegions);
+                struct {
+                    bool mbClip;
+                    bool mbArabicText;
+                    bool mbRotate;
+                } aRenderData[] = {
+                    { false, false, false },
+                    { false, true,  false },
+                    { false, true,  true },
+                    { false, false, true },
+                    { true,  false, true },
+                    { true,  true,  true },
+                    { true,  true,  false },
+                    { true,  false, false },
+                };
 
-                bool bClip=true, bArabicText=true, bRotate=true;
-
-                int nRegions=0;
-
-                for (int nClipRow=0; nClipRow < 2; nClipRow++)
+                size_t i = 0;
+                for (int y = 0; y < 2; y++)
                 {
-                    if (!bArabicText)
-                        bArabicText=true;
-
-                    for (int nArabicRow=0; nArabicRow < 2; nArabicRow++)
+                    for (int x = 0; x < 4; x++)
                     {
-                        if (!bRotate)
-                            bRotate=true;
-
-                        for (int nRotateRow=0; nRotateRow < 2; nRotateRow++)
-                        {
-                            drawText( rDev, aRegions[nRegions], bClip, bArabicText, bRotate );
-
-                            nRegions++;
-                            bRotate=false;
-                        }
-
-                        bArabicText=false;
+                        assert(i < SAL_N_ELEMENTS(aRenderData));
+                        drawText(rDev, aSubRegions[i], aRenderData[i].mbClip,
+                                 aRenderData[i].mbArabicText, aRenderData[i].mbRotate);
+                        i++;
                     }
-
-                    bClip=false;
                 }
+
+                drawComplex(rDev, aBottom);
             }
             else
             {
@@ -391,7 +404,7 @@ public:
             else
                 aText = aLatinText;
 
-            std::vector<OUString> maFontNames;
+            std::vector<OUString> aFontNames;
 
             sal_uInt32 nCols[] = {
                 COL_BLACK, COL_BLUE, COL_GREEN, COL_CYAN, COL_RED, COL_MAGENTA,
@@ -407,7 +420,7 @@ public:
             size_t nNumFontNames = SAL_N_ELEMENTS(pNames);
 
             for (size_t i = 0; i < nNumFontNames; i++)
-                maFontNames.push_back(OUString::createFromAscii(pNames[i]));
+                aFontNames.push_back(OUString::createFromAscii(pNames[i]));
 
             if (bClip && !bRotate)
             {
@@ -432,12 +445,12 @@ public:
                 {
                     // random font size to avoid buffering
                     nFontHeight = 1 + i * (0.9 + comphelper::rng::uniform_real_distribution(0.0, std::nextafter(0.1, DBL_MAX))) * (r.Top() - r.Bottom()) / nPrintNumCopies;
-                    nFontIndex = (i % maFontNames.size());
-                    nFontColorIndex=(i % maFontNames.size());
+                    nFontIndex = (i % aFontNames.size());
+                    nFontColorIndex=(i % aFontNames.size());
                 }
 
                 rDev.SetTextColor(Color(nCols[nFontColorIndex]));
-                vcl::Font aFont( maFontNames[nFontIndex], Size(0, nFontHeight ));
+                vcl::Font aFont( aFontNames[nFontIndex], Size(0, nFontHeight ));
 
                 if (bRotate)
                 {
@@ -446,7 +459,7 @@ public:
                     int nHeight = r.GetHeight();
 
                     // move the text to the bottom of the bounding rect before rotating
-                    aFontRect.Top() += nHeight;
+                    aFontRect.Top() += nHeight/2;
                     aFontRect.Bottom() += nHeight;
 
                     int nDegrees = 45;
@@ -472,6 +485,171 @@ public:
             }
 
             rDev.SetClipRegion();
+        }
+
+        static void drawComplex (OutputDevice &rDev, Rectangle r)
+        {
+            const unsigned char pInvalid[] = { 0xfe, 0x1f, 0 };
+            const unsigned char pDiacritic1[] = { 0x61, 0xcc, 0x8a, 0xcc, 0x8c, 0 };
+            const unsigned char pDiacritic2[] = { 0x61, 0xcc, 0x88, 0xcc, 0x86, 0 };
+            const unsigned char pDiacritic3[] = { 0x61, 0xcc, 0x8b, 0xcc, 0x87, 0 };
+            const unsigned char pJustification[] = {
+                0x64, 0x20, 0xc3, 0xa1, 0xc3, 0xa9, 0x77, 0xc4, 0x8d,
+                0xc5, 0xa1, 0xc3, 0xbd, 0xc5, 0x99, 0x20, 0xc4, 0x9b, 0
+            };
+            const unsigned char pEmojis[] = {
+                0xf0, 0x9f, 0x8d, 0x80, 0xf0, 0x9f, 0x91, 0x98,
+                0xf0, 0x9f, 0x92, 0x8a, 0xf0, 0x9f, 0x92, 0x99,
+                0xf0, 0x9f, 0x92, 0xa4, 0xf0, 0x9f, 0x94, 0x90, 0
+            };
+            const unsigned char pThreeBowlG[] = {
+                0xe2, 0x9a, 0x82, 0xe2, 0x99, 0xa8, 0xc4, 0x9e, 0
+            };
+            const unsigned char pWavesAndDomino[] = {
+                0xe2, 0x99, 0x92, 0xf0, 0x9f, 0x81, 0xa0,
+                0xf0, 0x9f, 0x82, 0x93, 0
+            };
+            const unsigned char pSpadesAndBits[] = {
+                0xf0, 0x9f, 0x82, 0xa1, 0xc2, 0xa2, 0xc2, 0xa2, 0
+            };
+
+            struct {
+                const char *mpFont;
+                const char *mpString;
+            } aRuns[] = {
+#define SET(font,string) { font, reinterpret_cast<const char *>(string) }
+                SET("sans", "a"),           // logical font - no 'sans' font.
+                SET("opensymbol", "#$%"),   // font fallback - $ is missing.
+                SET("sans", pInvalid),      // unicode invalid character character
+                // tdf#96266 - stacking diacritics
+                SET("carlito", pDiacritic1),
+                SET("carlito", pDiacritic2),
+                SET("carlito", pDiacritic3),
+                SET("liberation sans", pDiacritic1),
+                SET("liberation sans", pDiacritic2),
+                SET("liberation sans", pDiacritic3),
+                SET("liberation sans", pDiacritic3),
+
+                // tdf#95222 - justification issue
+                // - FIXME: replicate justification
+                SET("gentium basic", pJustification),
+
+                // tdf#97319 - Unicode beyond BMP; SMP & Plane 2
+                SET("symbola", pEmojis),
+                SET("symbola", pThreeBowlG),
+                SET("symbola", pWavesAndDomino),
+                SET("symbola", pSpadesAndBits),
+            };
+
+            // Nice clean white background
+            rDev.DrawWallpaper(r, Wallpaper(COL_WHITE));
+            rDev.SetClipRegion(vcl::Region(r));
+
+            Point aPos(r.Left(), r.Top()+20);
+
+            long nMaxTextHeight = 0;
+            for (size_t i = 0; i < SAL_N_ELEMENTS(aRuns); ++i)
+            {
+                // Legend
+                vcl::Font aIndexFont("sans", Size(0,20));
+                aIndexFont.SetColor(COL_BLACK);
+                Rectangle aTextRect;
+                rDev.SetFont(aIndexFont);
+                OUString aText = OUString::number(i) + ".";
+                rDev.DrawText(aPos, aText);
+                if (rDev.GetTextBoundRect(aTextRect, aText))
+                    aPos.Move(aTextRect.GetWidth() + 8, 0);
+
+                // Text
+                FontWeight aWeights[] = { WEIGHT_NORMAL,
+                                          WEIGHT_BOLD,
+                                          WEIGHT_NORMAL };
+                FontItalic aItalics[] = { ITALIC_NONE,
+                                          ITALIC_NONE,
+                                          ITALIC_NORMAL };
+                vcl::Font aFont(OUString::createFromAscii(
+                                    aRuns[i].mpFont),
+                                Size(0,42));
+                aFont.SetColor(COL_BLACK);
+                for (size_t j = 0; j < SAL_N_ELEMENTS(aWeights); ++j)
+                {
+                    aFont.SetItalic(aItalics[j]);
+                    aFont.SetWeight(aWeights[j]);
+                    rDev.SetFont(aFont);
+
+                    OUString aString(aRuns[i].mpString,
+                                     strlen(aRuns[i].mpString),
+                                     RTL_TEXTENCODING_UTF8);
+                    long nNewX = drawStringBox(rDev, aPos, aString,
+                                               nMaxTextHeight);
+
+                    aPos.X() = nNewX;
+
+                    if (aPos.X() >= r.Right())
+                    {
+                        aPos = Point(r.Left(), aPos.Y() + nMaxTextHeight + 15);
+                        nMaxTextHeight = 0;
+                        if(j>0)
+                            j--; // re-render the last point.
+                    }
+                    if (aPos.Y() > r.Bottom())
+                        break;
+                }
+                if (aPos.Y() > r.Bottom())
+                    break;
+            }
+
+            rDev.SetClipRegion();
+        }
+        // render text, bbox, DX arrays etc.
+        static long drawStringBox(OutputDevice &rDev, Point aPos,
+                           const OUString &aText,
+                           long &nMaxTextHeight)
+        {
+            rDev.Push();
+            {
+                Rectangle aTextRect;
+
+                rDev.DrawText(aPos,aText);
+
+                if (rDev.GetTextBoundRect(aTextRect, aText))
+                {
+                    aTextRect.Move(aPos.X(), aPos.Y());
+                    rDev.SetFillColor();
+                    rDev.SetLineColor(COL_BLACK);
+                    rDev.DrawRect(aTextRect);
+                    if (aTextRect.GetHeight() > nMaxTextHeight)
+                        nMaxTextHeight = aTextRect.GetHeight();
+                    // This should intersect with the text
+                    Rectangle aInnerRect(
+                        aTextRect.Left()+1, aTextRect.Top()+1,
+                        aTextRect.Right()-1, aTextRect.Bottom()-1);
+                    rDev.SetLineColor(COL_WHITE);
+                    rDev.SetRasterOp(ROP_XOR);
+                    rDev.DrawRect(aInnerRect);
+                    rDev.SetRasterOp(ROP_OVERPAINT);
+                }
+
+                // DX array rendering
+                long *pItems = new long[aText.getLength()+10];
+                rDev.GetTextArray(aText, pItems);
+                for (long j = 0; j < aText.getLength(); ++j)
+                {
+                    Point aTop = aTextRect.TopLeft();
+                    Point aBottom = aTop;
+                    aTop.Move(pItems[j], 0);
+                    aBottom.Move(pItems[j], aTextRect.GetHeight());
+                    rDev.SetLineColor(COL_RED);
+                    rDev.SetRasterOp(ROP_XOR);
+                    rDev.DrawLine(aTop,aBottom);
+                    rDev.SetRasterOp(ROP_OVERPAINT);
+                }
+                delete[] pItems;
+
+                aPos.Move(aTextRect.GetWidth() + 16, 0);
+            }
+            rDev.Pop();
+            return aPos.X();
         }
     };
 
@@ -562,13 +740,32 @@ public:
 
     struct DrawEllipse : public RegionRenderer
     {
-        RENDER_DETAILS(ellipse,KEY_E,5000)
+        RENDER_DETAILS(ellipse,KEY_E,500)
+        static void doInvert(OutputDevice &rDev, const Rectangle &r,
+                      InvertFlags nFlags)
+        {
+            rDev.Invert(r, nFlags);
+            if (r.GetWidth() > 10 && r.GetHeight() > 10)
+            {
+                Rectangle aSmall(r.Center()-Point(4,4), Size(8,8));
+                rDev.Invert(aSmall,nFlags);
+            }
+        }
         virtual void RenderRegion(OutputDevice &rDev, Rectangle r,
-                                  const RenderContext &) override
+                                  const RenderContext &rCtx) override
         {
             rDev.SetLineColor(Color(COL_RED));
             rDev.SetFillColor(Color(COL_GREEN));
             rDev.DrawEllipse(r);
+
+            if (rCtx.meStyle == RENDER_EXPANDED)
+            {
+                auto aRegions = partition(rCtx, 2, 2);
+                doInvert(rDev, aRegions[0], InvertFlags::NONE);
+                doInvert(rDev, aRegions[1], InvertFlags::N50);
+                doInvert(rDev, aRegions[2], InvertFlags::Highlight);
+                doInvert(rDev, aRegions[3], (InvertFlags)0xffff);
+            }
         }
     };
 
@@ -771,6 +968,111 @@ public:
         }
     };
 
+    struct DrawClipped : public RegionRenderer
+    {
+        RENDER_DETAILS(clip,KEY_D,10)
+        virtual void RenderRegion(OutputDevice &rDev, Rectangle r,
+                                  const RenderContext &) override
+        {
+            std::vector<Rectangle> aRegions(DemoRenderer::partition(r, 2, 2));
+            const int nLimits[] = { 4, -100 };
+            for (int i = 0; i < 2; ++i)
+            {
+                sal_uInt16 nHue = 0;
+                rDev.Push(PushFlags::CLIPREGION);
+                Rectangle aOuter = aRegions[i];
+                Rectangle aInner = aOuter;
+                while (aInner.GetWidth() > nLimits[i] && aInner.GetHeight() > nLimits[i])
+                {
+                    aInner.expand(-1);
+                    rDev.SetClipRegion(vcl::Region(aInner));
+                    rDev.SetFillColor(Color::HSBtoRGB(nHue, 75, 100));
+                    nHue = (nHue + 97) % 360;
+                    rDev.DrawRect(aOuter);
+                }
+                rDev.Pop();
+            }
+
+            {
+                sal_uInt16 nHue = 0;
+                Rectangle aOuter = aRegions[2];
+                std::vector<Rectangle> aPieces(DemoRenderer::partition(aOuter, 2, 2));
+                for (int j = 0; j < std::min(aOuter.GetWidth(), aOuter.GetHeight())/5; ++j)
+                {
+                    rDev.Push(PushFlags::CLIPREGION);
+
+                    vcl::Region aClipRegion;
+                    for (int i = 0; i < 4; ++i)
+                    {
+                        aPieces[i].expand(-1);
+                        aPieces[i].Move(2 - i/2, 2 - i/2);
+                        aClipRegion.Union(aPieces[i]);
+                    }
+                    assert (aClipRegion.getRegionBand());
+                    rDev.SetClipRegion(vcl::Region(aClipRegion));
+                    rDev.SetFillColor(Color::HSBtoRGB(nHue, 75, 75));
+                    nHue = (nHue + 97) % 360;
+                    rDev.DrawRect(aOuter);
+
+                    rDev.Pop();
+                }
+            }
+
+            {
+                sal_uInt16 nHue = 0;
+                Rectangle aOuter = aRegions[3];
+                std::vector<Rectangle> aPieces(DemoRenderer::partition(aOuter, 2, 2));
+                bool bDone = false;
+                for (int j = 0; !bDone; ++j)
+                {
+                    rDev.Push(PushFlags::CLIPREGION);
+
+                    for (int i = 0; i < 4; ++i)
+                    {
+                        vcl::Region aClipRegion;
+                        tools::Polygon aPoly;
+                        switch (i) {
+                        case 3:
+                        case 0: // 45degree rectangle.
+                            aPoly = tools::Polygon(aPieces[i]);
+                            aPoly.Rotate(aPieces[i].Center(), 450);
+                            break;
+                        case 1: // arc
+                            aPoly = tools::Polygon(aPieces[i],
+                                                   aPieces[i].TopLeft(),
+                                                   aPieces[i].BottomRight());
+                            break;
+                        case 2:
+                            aPoly = tools::Polygon(aPieces[i],
+                                                   aPieces[i].GetWidth()/5,
+                                                   aPieces[i].GetHeight()/5);
+                            aPoly.Rotate(aPieces[i].Center(), 450);
+                            break;
+                        }
+                        aClipRegion = vcl::Region(aPoly);
+                        aPieces[i].expand(-1);
+                        aPieces[i].Move(2 - i/2, 2 - i/2);
+
+                        bDone = aPieces[i].GetWidth() < 4 ||
+                                aPieces[i].GetHeight() < 4;
+
+                        if (!bDone)
+                        {
+                            assert (!aClipRegion.getRegionBand());
+
+                            rDev.SetClipRegion(vcl::Region(aClipRegion));
+                            rDev.SetFillColor(Color::HSBtoRGB(nHue, 50, 75));
+                            nHue = (nHue + 97) % 360;
+                            rDev.DrawRect(aOuter);
+                        }
+                    }
+
+                    rDev.Pop();
+                }
+            }
+        }
+    };
+
     struct DrawToVirtualDevice : public RegionRenderer
     {
         RENDER_DETAILS(vdev,KEY_V,1)
@@ -782,7 +1084,7 @@ public:
         };
 
         static void SizeAndRender(OutputDevice &rDev, const Rectangle& r, RenderType eType,
-                           const RenderContext &rCtx)
+                                  const RenderContext &rCtx)
         {
             ScopedVclPtr<VirtualDevice> pNested;
 
@@ -837,6 +1139,29 @@ public:
         }
     };
 
+    struct DrawXOR : public RegionRenderer
+    {
+        RENDER_DETAILS(xor,KEY_X,1)
+
+        virtual void RenderRegion(OutputDevice &rDev, Rectangle r,
+                                  const RenderContext &rCtx) override
+        {
+            // avoid infinite recursion
+            if (rCtx.mbVDev)
+                return;
+
+            rDev.Push();
+
+            AntialiasingFlags nFlags = rDev.GetAntialiasing();
+            rDev.SetAntialiasing(nFlags & ~AntialiasingFlags::EnableB2dDraw);
+            rDev.SetRasterOp( ROP_XOR );
+
+            rCtx.mpDemoRenderer->drawThumbs(rDev, r, true);
+
+            rDev.Pop();
+        }
+    };
+
     struct DrawIcons : public RegionRenderer
     {
         RENDER_DETAILS(icons,KEY_I,1)
@@ -870,7 +1195,9 @@ public:
                 "cmd/lc_marks.png",
                 "cmd/lc_fieldnames.png",
                 "cmd/lc_hyperlinkdialog.png",
-              };
+                "cmd/lc_basicshapes.rectangle.png",
+                "cmd/lc_basicshapes.round-rectangle.png"
+            };
             for (size_t i = 0; i < SAL_N_ELEMENTS(pNames); i++)
             {
                 maIconNames.push_back(OUString::createFromAscii(pNames[i]));
@@ -1059,6 +1386,19 @@ public:
                     aBelow.Move(0,aResult.GetSizePixel().Height());
                     rDev.DrawBitmapEx(aBelow, aResult);
 
+                    // mini convert test.
+                    aBelow.Move(aResult.GetSizePixel().Width()+4,0);
+                    rDev.DrawBitmapEx(aBelow, aResult);
+
+                    Bitmap aGrey = aSrc.GetBitmap();
+                    aGrey.Convert(BMP_CONVERSION_8BIT_GREYS);
+                    rDev.DrawBitmap(aBelow, aGrey);
+
+                    aBelow.Move(aGrey.GetSizePixel().Width(),0);
+                    BitmapEx aGreyMask(aSrc.GetBitmap(),
+                                       AlphaMask(aSrc.GetMask()));
+                    rDev.DrawBitmapEx(aBelow, aGreyMask);
+
                     aLocation.Move(aSrc.GetSizePixel().Width()*6,0);
                     if (aLocation.X() > r.Right())
                         aLocation = Point(0,aLocation.Y()+aSrc.GetSizePixel().Height()*3+4);
@@ -1086,10 +1426,44 @@ public:
         }
     };
 
+    void drawThumbs(vcl::RenderContext& rDev, Rectangle aRect, bool bVDev)
+    {
+        RenderContext aCtx;
+        aCtx.meStyle = RENDER_THUMB;
+        aCtx.mbVDev = bVDev;
+        aCtx.mpDemoRenderer = this;
+        aCtx.maSize = aRect.GetSize();
+        std::vector<Rectangle> aRegions(partition(aRect, mnSegmentsX, mnSegmentsY));
+        DemoRenderer::clearRects(rDev, aRegions);
+        for (size_t i = 0; i < maRenderers.size(); i++)
+        {
+            RegionRenderer * r = maRenderers[i];
+
+            rDev.SetClipRegion( vcl::Region( aRegions[i] ) );
+
+            // profiling?
+            if (getIterCount() > 0)
+            {
+                if (!bVDev)
+                {
+                    double nStartTime = getTimeNow();
+                    for (int j = 0; j < r->getTestRepeatCount() * THUMB_REPEAT_FACTOR; j++)
+                        r->RenderRegion(rDev, aRegions[i], aCtx);
+                    addTime(i, (getTimeNow() - nStartTime) / THUMB_REPEAT_FACTOR);
+                } else
+                    for (int j = 0; j < r->getTestRepeatCount(); j++)
+                        r->RenderRegion(rDev, aRegions[i], aCtx);
+            }
+            else
+                r->RenderRegion(rDev, aRegions[i], aCtx);
+
+            rDev.SetClipRegion();
+        }
+    }
+
     void drawToDevice(vcl::RenderContext& rDev, Size aSize, bool bVDev)
     {
         RenderContext aCtx;
-        double mnStartTime;
         aCtx.mbVDev = bVDev;
         aCtx.mpDemoRenderer = this;
         aCtx.maSize = aSize;
@@ -1098,52 +1472,23 @@ public:
         drawBackground(rDev, aWholeWin);
 
         if (!bVDev /* want everything in the vdev */ &&
-            mnSelectedRenderer >= 0)
+            mnSelectedRenderer >= 0 &&
+            static_cast<sal_uInt32>(mnSelectedRenderer) < maRenderers.size())
         {
             aCtx.meStyle = RENDER_EXPANDED;
             RegionRenderer * r = maRenderers[mnSelectedRenderer];
             // profiling?
             if (getIterCount() > 0)
             {
-                mnStartTime = getTimeNow();
+                double nStartTime = getTimeNow();
                 for (int i = 0; i < r->getTestRepeatCount(); i++)
                     r->RenderRegion(rDev, aWholeWin, aCtx);
-                addTime(mnSelectedRenderer, getTimeNow() - mnStartTime);
+                addTime(mnSelectedRenderer, getTimeNow() - nStartTime);
             } else
                 r->RenderRegion(rDev, aWholeWin, aCtx);
         }
         else
-        {
-            aCtx.meStyle = RENDER_THUMB;
-            std::vector<Rectangle> aRegions(partition(aSize, mnSegmentsX, mnSegmentsY));
-            DemoRenderer::clearRects(rDev, aRegions);
-            for (size_t i = 0; i < maRenderers.size(); i++)
-            {
-                RegionRenderer * r = maRenderers[i];
-
-                rDev.SetClipRegion( vcl::Region( aRegions[i] ) );
-
-                // profiling?
-                if (getIterCount() > 0)
-                {
-                    if (!bVDev)
-                    {
-                        mnStartTime = getTimeNow();
-                        for (int j = 0; j < r->getTestRepeatCount() * THUMB_REPEAT_FACTOR; j++)
-                            r->RenderRegion(rDev, aRegions[i], aCtx);
-                        addTime(i, (getTimeNow() - mnStartTime) / THUMB_REPEAT_FACTOR);
-                    } else
-                        for (int j = 0; j < r->getTestRepeatCount(); j++)
-                            r->RenderRegion(rDev, aRegions[i], aCtx);
-                }
-                else
-                {
-                    r->RenderRegion(rDev, aRegions[i], aCtx);
-                }
-
-                rDev.SetClipRegion();
-            }
-        }
+            drawThumbs(rDev, aWholeWin, bVDev);
     }
     std::vector<VclPtr<vcl::Window> > maInvalidates;
     void addInvalidate(vcl::Window *pWindow) { maInvalidates.push_back(pWindow); };
@@ -1276,7 +1621,9 @@ void DemoRenderer::InitRenderers()
     maRenderers.push_back(new DrawBitmap());
     maRenderers.push_back(new DrawGradient());
     maRenderers.push_back(new DrawPolyPolygons());
+    maRenderers.push_back(new DrawClipped());
     maRenderers.push_back(new DrawToVirtualDevice());
+    maRenderers.push_back(new DrawXOR());
     maRenderers.push_back(new DrawIcons());
     maRenderers.push_back(new FetchDrawBitmap());
 }
@@ -1757,6 +2104,64 @@ public:
     }
 };
 
+namespace {
+    void renderFonts(const std::vector<OUString> &aFontNames)
+    {
+        ScopedVclPtrInstance<VirtualDevice> xDevice;
+        Size aSize(1024, 1024);
+        xDevice->SetOutputSizePixel(aSize);
+
+        for (auto & aFontName : aFontNames)
+        {
+            vcl::Font aFont(aFontName, Size(0,96));
+#if 0
+            aFont.SetColor(COL_BLACK);
+            xDevice->SetFont(aFont);
+            xDevice->Erase();
+
+            FontMetric aMetric = xDevice->GetFontMetric(aFont);
+
+            FontCharMapPtr xMap;
+            if (xDevice->GetFontCharMap(xMap))
+            {
+                ... iterate through glyphs ...
+            }
+
+
+    bool                        GetGlyphBoundRects( const Point& rOrigin, const OUString& rStr, int nIndex,
+                                                    int nLen, int nBase, MetricVector& rVector );
+
+include/vcl/outdev.hxx:typedef std::vector< Rectangle > MetricVector;
+include/vcl/outdev.hxx:                                          MetricVector* pVector = nullptr, OUString* pDisplayText = nullptr );
+include/vcl/outdev.hxx:                                          MetricVector* pVector = nullptr, OUString* pDisplayText = nullptr,
+include/vcl/outdev.hxx:                                              MetricVector* pVector, OUString* pDisplayText, vcl::ITextLayout& _rLayout );
+include/vcl/outdev.hxx:                                              DrawTextFlags nStyle = DrawTextFlags::Mnemonic, MetricVector* pVector = nullp
+
+    bool                        GetTextBoundRect( Rectangle& rRect,
+                                                  const OUString& rStr, sal_Int32 nBase = 0, sal_Int32 nIndex = 0, sal_Int32 nLen = -1,
+                                                  sal_uLong nLayoutWidth = 0, const long* pDXArray = nullptr ) const;
+
+
+    void                        DrawText( const Point& rStartPt, const OUString& rStr,
+                                          sal_Int32 nIndex = 0, sal_Int32 nLen = -1,
+                                          MetricVector* pVector = nullptr, OUString* pDisplayText = nullptr );
+
+    void                        DrawText( const Rectangle& rRect,
+                                          const OUString& rStr, DrawTextFlags nStyle = DrawTextFlags::NONE,
+                                          MetricVector* pVector = nullptr, OUString* pDisplayText = nullptr,
+                                          vcl::ITextLayout* _pTextLayout = nullptr );
+
+    Rectangle                   GetTextRect( const Rectangle& rRect,
+                                             const OUString& rStr, DrawTextFlags nStyle = DrawTextFlags::WordBreak,
+                                             TextRectInfo* pInfo = nullptr,
+                                             const vcl::ITextLayout* _pTextLayout = nullptr ) const;
+
+#endif
+        }
+
+    }
+};
+
 class DemoApp : public Application
 {
     static int showHelp(DemoRenderer &rRenderer)
@@ -1785,6 +2190,7 @@ public:
             bool bWidgets = false, bThreads = false;
             bool bPopup = false, bGLTest = false;
             DemoRenderer aRenderer;
+            std::vector<OUString> aFontNames;
 
             for (sal_uInt16 i = 0; i < GetCommandLineParamCount(); ++i)
             {
@@ -1814,6 +2220,8 @@ public:
                     bGLTest = true;
                 else if (aArg == "--threads")
                     bThreads = true;
+                else if (aArg == "--font" && !bLast)
+                    aFontNames.push_back(GetCommandLineParam(++i));
                 else if (aArg.startsWith("--"))
                 {
                     fprintf(stderr,"Unknown argument '%s'\n",
@@ -1827,16 +2235,20 @@ public:
             VclPtr<DemoPopup> xPopup;
 
             aMainWin->SetText("Interactive VCL demo #1");
-
+#if HAVE_FEATURE_OPENGL
             if (bGLTest)
             {
                 OpenGLTests aTests;
                 return aTests.execute();
             }
-            else if (bWidgets)
+            else
+#endif
+                 if (bWidgets)
                 xWidgets = VclPtr< DemoWidgets >::Create ();
             else if (bPopup)
                 xPopup = VclPtrInstance< DemoPopup> ();
+            else if (aFontNames.size() > 0)
+                renderFonts(aFontNames);
             else
                 aMainWin->Show();
 

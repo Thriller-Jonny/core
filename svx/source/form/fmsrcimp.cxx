@@ -29,8 +29,8 @@
 #include <svx/dialmgr.hxx>
 #include <vcl/svapp.hxx>
 #include <unotools/textsearch.hxx>
-#include <com/sun/star/util/SearchOptions.hpp>
-#include <com/sun/star/util/SearchAlgorithms.hpp>
+#include <com/sun/star/util/SearchOptions2.hpp>
+#include <com/sun/star/util/SearchAlgorithms2.hpp>
 #include <com/sun/star/util/SearchResult.hpp>
 #include <com/sun/star/util/SearchFlags.hpp>
 #include <com/sun/star/lang/Locale.hpp>
@@ -63,7 +63,6 @@ using namespace ::com::sun::star::sdbc;
 using namespace ::com::sun::star::i18n;
 using namespace ::com::sun::star::beans;
 using namespace ::svxform;
-
 
 
 // = FmSearchThread
@@ -106,15 +105,12 @@ FmRecordCountListener::FmRecordCountListener(const Reference< css::sdbc::XResult
 }
 
 
-Link<sal_Int32,void> FmRecordCountListener::SetPropChangeHandler(const Link<sal_Int32,void>& lnk)
+void FmRecordCountListener::SetPropChangeHandler(const Link<sal_Int32,void>& lnk)
 {
-    Link<sal_Int32,void> lnkReturn = m_lnkWhoWantsToKnow;
     m_lnkWhoWantsToKnow = lnk;
 
     if (m_xListening.is())
         NotifyCurrentCount();
-
-    return lnkReturn;
 }
 
 
@@ -402,7 +398,7 @@ FmSearchEngine::SEARCH_RESULT FmSearchEngine::SearchSpecial(bool _bSearchForNull
     Any aStartMark;
     try { aStartMark = m_xSearchCursor.getBookmark(); }
     catch ( const Exception& ) { DBG_UNHANDLED_EXCEPTION(); return SR_ERROR; }
-    FieldCollection::iterator iterInitialField = iterFieldLoop;
+    FieldCollection::const_iterator iterInitialField = iterFieldLoop;
 
 
     bool bFound(false);
@@ -467,7 +463,7 @@ FmSearchEngine::SEARCH_RESULT FmSearchEngine::SearchWildcard(const OUString& str
     Any aStartMark;
     try { aStartMark = m_xSearchCursor.getBookmark(); }
     catch ( const Exception& ) { DBG_UNHANDLED_EXCEPTION(); return SR_ERROR; }
-    FieldCollection::iterator iterInitialField = iterFieldLoop;
+    FieldCollection::const_iterator iterInitialField = iterFieldLoop;
 
     WildCard aSearchExpression(strExpression);
 
@@ -550,11 +546,11 @@ FmSearchEngine::SEARCH_RESULT FmSearchEngine::SearchRegularApprox(const OUString
     Any aStartMark;
     try { aStartMark = m_xSearchCursor.getBookmark(); }
     catch ( const Exception& ) { DBG_UNHANDLED_EXCEPTION(); return SR_ERROR; }
-    FieldCollection::iterator iterInitialField = iterFieldLoop;
+    FieldCollection::const_iterator iterInitialField = iterFieldLoop;
 
     // Parameter sammeln
-    SearchOptions aParam;
-    aParam.algorithmType = m_bRegular ? SearchAlgorithms_REGEXP : SearchAlgorithms_APPROXIMATE;
+    SearchOptions2 aParam;
+    aParam.AlgorithmType2 = m_bRegular ? SearchAlgorithms2::REGEXP : SearchAlgorithms2::APPROXIMATE;
     aParam.searchFlag = 0;
     aParam.transliterateFlags = GetTransliterationFlags();
     if ( !GetTransliteration() )
@@ -571,7 +567,7 @@ FmSearchEngine::SEARCH_RESULT FmSearchEngine::SearchRegularApprox(const OUString
     }
     aParam.searchString = strExpression;
     aParam.Locale = SvtSysLocale().GetLanguageTag().getLocale();
-    ::utl::TextSearch aLocalEngine(aParam);
+    ::utl::TextSearch aLocalEngine( aParam);
 
 
     bool bFound = false;
@@ -614,7 +610,7 @@ FmSearchEngine::SEARCH_RESULT FmSearchEngine::SearchRegularApprox(const OUString
                         bFound = false;
                         break;
                     }
-                    // laeuft in den naechsten Case rein !
+                    SAL_FALLTHROUGH;
                 case MATCHING_BEGINNING :
                     if (nStart != 0)
                         bFound = false;
@@ -661,7 +657,6 @@ FmSearchEngine::SEARCH_RESULT FmSearchEngine::SearchRegularApprox(const OUString
 
     return bFound ? SR_FOUND : SR_NOTFOUND;
 }
-
 
 
 FmSearchEngine::FmSearchEngine(const Reference< XComponentContext >& _rxContext,
@@ -774,8 +769,9 @@ bool FmSearchEngine::GetCaseSensitive() const
 
 void FmSearchEngine::clearControlTexts()
 {
+    ControlTextSuppliers::const_iterator aEnd = m_aControlTexts.end();
     for (   ControlTextSuppliers::iterator aIter = m_aControlTexts.begin();
-            aIter < m_aControlTexts.end();
+            aIter != aEnd;
             ++aIter
         )
     {
@@ -825,7 +821,7 @@ void FmSearchEngine::Init(const OUString& sVisibleFields)
 
     // important: The case of the columns does not need to be exact - for instance:
     // - a user created a form which works on a table, for which the driver returns a column name "COLUMN"
-    // - the driver itself works case-insensitve with column names
+    // - the driver itself works case-insensitive with column names
     // - a control in the form is bound to "column" - not the different case
     // In such a scenario, the form and the field would work okay, but we here need to case for the different case
     // explicitly
@@ -847,11 +843,11 @@ void FmSearchEngine::Init(const OUString& sVisibleFields)
         xMeta = xConn->getMetaData();
     OSL_ENSURE( xMeta.is(), "FmSearchEngine::Init: very strange cursor (could not derive connection meta data from it)!" );
 
-    bool bCaseSensitiveIdentifiers = true;  // assume case sensivity
+    bool bCaseSensitiveIdentifiers = true;  // assume case sensitivity
     if ( xMeta.is() )
         bCaseSensitiveIdentifiers = xMeta->supportsMixedCaseQuotedIdentifiers();
 
-    // now that we have this information, we need a collator which is able to case (in)sentively compare strings
+    // now that we have this information, we need a collator which is able to case (in)sensitivity compare strings
     m_aStringCompare.loadDefaultCollator( SvtSysLocale().GetLanguageTag().getLocale(),
         bCaseSensitiveIdentifiers ? 0 : css::i18n::CollatorOptions::CollatorOptions_IGNORE_CASE );
 
@@ -1131,12 +1127,12 @@ void FmSearchEngine::CancelSearch()
 }
 
 
-bool FmSearchEngine::SwitchToContext(const Reference< css::sdbc::XResultSet > & xCursor, const OUString& sVisibleFields, const InterfaceArray& arrFields,
+void FmSearchEngine::SwitchToContext(const Reference< css::sdbc::XResultSet > & xCursor, const OUString& sVisibleFields, const InterfaceArray& arrFields,
     sal_Int32 nFieldIndex)
 {
     DBG_ASSERT(!m_bSearchingCurrently, "FmSearchEngine::SwitchToContext : please do not call while I'm searching !");
     if (m_bSearchingCurrently)
-        return false;
+        return;
 
     m_xSearchCursor = xCursor;
     m_xOriginalIterator = xCursor;
@@ -1147,8 +1143,6 @@ bool FmSearchEngine::SwitchToContext(const Reference< css::sdbc::XResultSet > & 
 
     Init(sVisibleFields);
     RebuildUsedFields(nFieldIndex, true);
-
-    return true;
 }
 
 

@@ -27,6 +27,7 @@
 #include <protocols.h>
 #include <services.h>
 #include <comphelper/interaction.hxx>
+#include <comphelper/lok.hxx>
 #include <framework/interaction.hxx>
 #include <comphelper/processfactory.hxx>
 #include <comphelper/configuration.hxx>
@@ -102,7 +103,7 @@ class LoadEnvListener : public ::cppu::WeakImplHelper< css::frame::XLoadEventLis
 
     public:
 
-        LoadEnvListener(LoadEnv* pLoadEnv)
+        explicit LoadEnvListener(LoadEnv* pLoadEnv)
             : m_bWaitingResult(true)
             , m_pLoadEnv(pLoadEnv)
         {
@@ -221,7 +222,7 @@ utl::MediaDescriptor addModelArgs(const uno::Sequence<beans::PropertyValue>& rDe
 
 void LoadEnv::initializeLoading(const OUString& sURL, const uno::Sequence<beans::PropertyValue>& lMediaDescriptor,
         const uno::Reference<frame::XFrame>& xBaseFrame, const OUString& sTarget,
-        sal_Int32 nSearchFlags, EFeature eFeature, EContentType eContentType)
+        sal_Int32 nSearchFlags, EFeature eFeature)
 {
     osl::MutexGuard g(m_mutex);
 
@@ -236,7 +237,7 @@ void LoadEnv::initializeLoading(const OUString& sURL, const uno::Sequence<beans:
     m_sTarget = sTarget;
     m_nSearchFlags = nSearchFlags;
     m_eFeature = eFeature;
-    m_eContentType = eContentType;
+    m_eContentType = E_UNSUPPORTED_CONTENT;
     m_bCloseFrameOnError = false;
     m_bReactivateControllerOnError = false;
     m_bLoaded = false;
@@ -245,12 +246,9 @@ void LoadEnv::initializeLoading(const OUString& sURL, const uno::Sequence<beans:
     // We use a default value for this in-parameter. Then we have to start a complex check method
     // internally. But if this check was already done outside it can be suppressed to perform
     // the load request. We take over the result then!
+    m_eContentType = LoadEnv::classifyContent(sURL, lMediaDescriptor);
     if (m_eContentType == E_UNSUPPORTED_CONTENT)
-    {
-        m_eContentType = LoadEnv::classifyContent(sURL, lMediaDescriptor);
-        if (m_eContentType == E_UNSUPPORTED_CONTENT)
-            throw LoadEnvException(LoadEnvException::ID_UNSUPPORTED_CONTENT, "from LoadEnv::initializeLoading");
-    }
+        throw LoadEnvException(LoadEnvException::ID_UNSUPPORTED_CONTENT, "from LoadEnv::initializeLoading");
 
     // make URL part of the MediaDescriptor
     // It doesn't matter if it is already an item of it.
@@ -554,13 +552,25 @@ LoadEnv::EContentType LoadEnv::classifyContent(const OUString&                  
                   in a special way .-)
     */
 
+    utl::MediaDescriptor stlMediaDescriptor(lMediaDescriptor);
+    utl::MediaDescriptor::const_iterator pIt;
+
     // creation of new documents
     if (ProtocolCheck::isProtocol(sURL,ProtocolCheck::E_PRIVATE_FACTORY))
-        return E_CAN_BE_LOADED;
+    {
+        //tdf#98837 - check if read only prop is set to true for a new document
+        //if yes then fail loading as doc needs to be saved before being opened
+        //in read only mode
+        pIt = stlMediaDescriptor.find(utl::MediaDescriptor::PROP_READONLY());
+        if( pIt == stlMediaDescriptor.end() ||
+            pIt->second == uno::Any(false)
+          )
+            return E_CAN_BE_LOADED;
+        SAL_INFO("fwk", "LoadEnv::classifyContent(): new document can not be loaded in read only mode");
+        return E_UNSUPPORTED_CONTENT;
+    }
 
     // using of an existing input stream
-    utl::MediaDescriptor                 stlMediaDescriptor(lMediaDescriptor);
-    utl::MediaDescriptor::const_iterator pIt;
     if (ProtocolCheck::isProtocol(sURL,ProtocolCheck::E_PRIVATE_STREAM))
     {
         pIt = stlMediaDescriptor.find(utl::MediaDescriptor::PROP_INPUTSTREAM());
@@ -761,7 +771,7 @@ void LoadEnv::impl_detectTypeAndFilter()
         xContext->getServiceManager()->createInstanceWithContext(
             "com.sun.star.document.TypeDetection", xContext),
         css::uno::UNO_QUERY_THROW);
-    sType = xDetect->queryTypeByDescriptor(lDescriptor, sal_True); /*TODO should deep detection be able for enable/disable it from outside? */
+    sType = xDetect->queryTypeByDescriptor(lDescriptor, true); /*TODO should deep detection be able for enable/disable it from outside? */
 
     // no valid content -> loading not possible
     if (sType.isEmpty())
@@ -780,6 +790,11 @@ void LoadEnv::impl_detectTypeAndFilter()
 
     aWriteLock.clear();
     // <- SAFE
+
+    // We do have potentially correct type, but the detection process was aborted.
+    if (m_lMediaDescriptor.getUnpackedValueOrDefault(utl::MediaDescriptor::PROP_ABORTED(), false))
+        throw LoadEnvException(
+            LoadEnvException::ID_UNSUPPORTED_CONTENT, "type detection aborted");
 
     // But the type isn't enough. For loading sometimes we need more information.
     // E.g. for our "_default" feature, where we recycle any frame which contains
@@ -838,7 +853,7 @@ void LoadEnv::impl_detectTypeAndFilter()
         // Don't overwrite external decisions! See comments before ...
         utl::MediaDescriptor::const_iterator pAsTemplateItem = m_lMediaDescriptor.find(utl::MediaDescriptor::PROP_ASTEMPLATE());
         if (pAsTemplateItem == m_lMediaDescriptor.end())
-            m_lMediaDescriptor[utl::MediaDescriptor::PROP_ASTEMPLATE()] <<= sal_True;
+            m_lMediaDescriptor[utl::MediaDescriptor::PROP_ASTEMPLATE()] <<= true;
         aWriteLock.clear();
         // <- SAFE
     }
@@ -922,7 +937,7 @@ bool LoadEnv::impl_furtherDocsAllowed()
                                 "org.openoffice.Office.Common/",
                                 "Misc",
                                 "MaxOpenDocuments",
-                                ::comphelper::ConfigurationHelper::E_READONLY);
+                                ::comphelper::EConfigurationModes::ReadOnly);
 
         // NIL means: count of allowed documents = infinite !
         //     => return sal_True
@@ -943,7 +958,7 @@ bool LoadEnv::impl_furtherDocsAllowed()
                                         FrameListAnalyzer::E_BACKINGCOMPONENT |
                                         FrameListAnalyzer::E_HIDDEN);
 
-            sal_Int32 nOpenDocuments = aAnalyzer.m_lOtherVisibleFrames.getLength();
+            sal_Int32 nOpenDocuments = aAnalyzer.m_lOtherVisibleFrames.size();
                       bAllowed       = (nOpenDocuments < nMaxOpenDocuments);
         }
     }
@@ -1387,6 +1402,7 @@ css::uno::Reference< css::frame::XFrame > LoadEnv::impl_searchRecycleTarget()
         {
             // bring it to front ...
             impl_makeFrameWindowVisible(aTasksAnalyzer.m_xBackingComponent->getContainerWindow(), true);
+            m_bReactivateControllerOnError = true;
             return aTasksAnalyzer.m_xBackingComponent;
         }
     }
@@ -1475,7 +1491,7 @@ css::uno::Reference< css::frame::XFrame > LoadEnv::impl_searchRecycleTarget()
     css::uno::Reference< css::frame::XController > xOldDoc = xTask->getController();
     if (xOldDoc.is())
     {
-        bReactivateOldControllerOnError = xOldDoc->suspend(sal_True);
+        bReactivateOldControllerOnError = xOldDoc->suspend(true);
         if (! bReactivateOldControllerOnError)
             return css::uno::Reference< css::frame::XFrame >();
     }
@@ -1553,7 +1569,7 @@ void LoadEnv::impl_reactForLoadingState()
         m_xTargetFrame.clear();
         if (xOldDoc.is())
         {
-            bool bReactivated = xOldDoc->suspend(sal_False);
+            bool bReactivated = xOldDoc->suspend(false);
             if (!bReactivated)
                 throw LoadEnvException(LoadEnvException::ID_COULD_NOT_REACTIVATE_CONTROLLER);
             m_bReactivateControllerOnError = false;
@@ -1568,7 +1584,7 @@ void LoadEnv::impl_reactForLoadingState()
         try
         {
             if (xCloseable.is())
-                xCloseable->close(sal_True);
+                xCloseable->close(true);
             else
             if (xDisposable.is())
                 xDisposable->dispose();
@@ -1640,12 +1656,12 @@ void LoadEnv::impl_makeFrameWindowVisible(const css::uno::Reference< css::awt::X
                   "org.openoffice.Office.Common/View",
                   "NewDocumentHandling",
                   "ForceFocusAndToFront",
-                  ::comphelper::ConfigurationHelper::E_READONLY);
+                  ::comphelper::EConfigurationModes::ReadOnly);
             a >>= bForceFrontAndFocus;
         }
 
         if( pWindow->IsVisible() && (bForceFrontAndFocus || bForceToFront) )
-            pWindow->ToTop();
+            pWindow->ToTop( ToTopFlags::RestoreWhenMin | ToTopFlags::ForegroundTask );
         else
             pWindow->Show(true, (bForceFrontAndFocus || bForceToFront) ? ShowFlags::ForegroundTask : ShowFlags::NONE );
     }
@@ -1717,14 +1733,18 @@ void LoadEnv::impl_applyPersistentWindowState(const css::uno::Reference< css::aw
         css::uno::Reference< css::container::XNameAccess > xModuleCfg(::comphelper::ConfigurationHelper::openConfig(
                                                                         xContext,
                                                                         PACKAGE_SETUP_MODULES,
-                                                                        ::comphelper::ConfigurationHelper::E_READONLY),
+                                                                        ::comphelper::EConfigurationModes::ReadOnly),
                                                                       css::uno::UNO_QUERY_THROW);
 
         // read window state from the configuration
         // and apply it on the window.
         // Do nothing, if no configuration entry exists!
         OUString sWindowState;
-        ::comphelper::ConfigurationHelper::readRelativeKey(xModuleCfg, sModule, OFFICEFACTORY_PROPNAME_ASCII_WINDOWATTRIBUTES) >>= sWindowState;
+
+        // Don't look for persistent window attributes when used through LibreOfficeKit
+        if( !comphelper::LibreOfficeKit::isActive() )
+            comphelper::ConfigurationHelper::readRelativeKey(xModuleCfg, sModule, OFFICEFACTORY_PROPNAME_ASCII_WINDOWATTRIBUTES) >>= sWindowState;
+
         if (!sWindowState.isEmpty())
         {
             // SOLAR SAFE ->

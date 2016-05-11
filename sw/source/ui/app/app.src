@@ -20,7 +20,6 @@
 #include <svl/style.hrc>
 #include <sfx2/sfx.hrc>
 #include <svx/dialogs.hrc>
-#include <svx/globlmn.hrc>
 #include "cmdid.h"
 #include "access.hrc"
 #include "globals.hrc"
@@ -86,7 +85,7 @@ SfxStyleFamilies DLG_STYLE_DESIGNER
         SfxStyleFamilyItem
         {
             Text [ en-US ] = "Paragraph Styles" ;
-            StyleFamily = SFX_STYLE_FAMILY_PARA ;
+            StyleFamily = SfxStyleFamily::Para ;
             FilterList [ en-US ] =
             {
                 < "All Styles"          ; SFXSTYLEBIT_ALL_VISIBLE ; > ;
@@ -106,7 +105,7 @@ SfxStyleFamilies DLG_STYLE_DESIGNER
         SfxStyleFamilyItem
         {
             Text [ en-US ] = "Character Styles" ;
-            StyleFamily = SFX_STYLE_FAMILY_CHAR ;
+            StyleFamily = SfxStyleFamily::Char ;
             FilterList [ en-US ] =
             {
                 < "All"             ; SFXSTYLEBIT_ALL_VISIBLE ; > ;
@@ -118,7 +117,7 @@ SfxStyleFamilies DLG_STYLE_DESIGNER
         SfxStyleFamilyItem
         {
             Text [ en-US ] = "Frame Styles" ;
-            StyleFamily = SFX_STYLE_FAMILY_FRAME ;
+            StyleFamily = SfxStyleFamily::Frame ;
             FilterList [ en-US ] =
             {
                 < "All"             ; SFXSTYLEBIT_ALL_VISIBLE ; > ;
@@ -130,7 +129,7 @@ SfxStyleFamilies DLG_STYLE_DESIGNER
         SfxStyleFamilyItem
         {
             Text [ en-US ] = "Page Styles" ;
-            StyleFamily = SFX_STYLE_FAMILY_PAGE ;
+            StyleFamily = SfxStyleFamily::Page ;
             FilterList [ en-US ] =
             {
                 < "All"             ; SFXSTYLEBIT_ALL_VISIBLE ; > ;
@@ -141,7 +140,7 @@ SfxStyleFamilies DLG_STYLE_DESIGNER
         };
         SfxStyleFamilyItem
         {
-            StyleFamily = SFX_STYLE_FAMILY_PSEUDO ;
+            StyleFamily = SfxStyleFamily::Pseudo ;
             FilterList [ en-US ] =
             {
                 < "All"             ; SFXSTYLEBIT_ALL_VISIBLE ; > ;
@@ -222,6 +221,16 @@ String STR_JAVA_EDIT
 String STR_REMOVE_WARNING
 {
     Text [ en-US ] = "The following characters are not valid and have been removed: ";
+};
+
+String STR_BOOKMARK_NAME
+{
+    Text [ en-US ] = "Name";
+};
+
+String STR_BOOKMARK_TEXT
+{
+    Text [ en-US ] = "Text";
 };
 
 String SW_STR_NONE
@@ -464,6 +473,16 @@ String STR_CJK_FONT
 String STR_REDLINE_UNKNOWN_AUTHOR
 {
     Text [ en-US ] = "Unknown Author";
+};
+
+String STR_DELETE_NOTE_AUTHOR
+{
+    Text [ en-US ] = "Delete ~All Comments by $1";
+};
+
+String STR_HIDE_NOTE_AUTHOR
+{
+    Text [ en-US ] = "H~ide All Comments by $1";
 };
 
 String  STR_DONT_ASK_AGAIN

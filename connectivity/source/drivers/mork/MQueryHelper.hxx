@@ -20,15 +20,8 @@
 #ifndef INCLUDED_CONNECTIVITY_SOURCE_DRIVERS_MORK_MQUERYHELPER_HXX
 #define INCLUDED_CONNECTIVITY_SOURCE_DRIVERS_MORK_MQUERYHELPER_HXX
 
-#include <sal/types.h>
-#include <rtl/ustring.hxx>
-#include <osl/mutex.hxx>
-#include <osl/conditn.hxx>
-#include <osl/thread.hxx>
 #include <connectivity/FValue.hxx>
-#include <boost/noncopyable.hpp>
 #include "MErrorResource.hxx"
-#include <unordered_map>
 
 namespace connectivity
 {
@@ -105,7 +98,7 @@ namespace connectivity
             const OUString&    getValue() const { return m_aValue; }
         };
 
-        class MQueryExpression : public MQueryExpressionBase, private boost::noncopyable
+        class MQueryExpression : public MQueryExpressionBase
         {
             friend class MQueryHelper;
 
@@ -147,6 +140,9 @@ namespace connectivity
             ExprVector          m_aExprVector;
             bool_cond           m_aExprCondType;
 
+        private:
+           MQueryExpression(const MQueryExpression&) = delete;
+           MQueryExpression& operator=(const MQueryExpression&) = delete;
         };
 
         class MQueryHelperResultEntry

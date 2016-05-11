@@ -19,7 +19,7 @@
 
 #include <unobookmark.hxx>
 #include <osl/mutex.hxx>
-#include <cppuhelper/interfacecontainer.h>
+#include <comphelper/interfacecontainer2.hxx>
 #include <cppuhelper/supportsservice.hxx>
 #include <vcl/svapp.hxx>
 
@@ -45,11 +45,11 @@ class SwXBookmark::Impl
     : public SwClient
 {
 private:
-    ::osl::Mutex m_Mutex; // just for OInterfaceContainerHelper
+    ::osl::Mutex m_Mutex; // just for OInterfaceContainerHelper2
 
 public:
     uno::WeakReference<uno::XInterface> m_wThis;
-    ::cppu::OInterfaceContainerHelper m_EventListeners;
+    ::comphelper::OInterfaceContainerHelper2  m_EventListeners;
     SwDoc *                     m_pDoc;
     ::sw::mark::IMark *         m_pRegisteredBookmark;
     OUString             m_sMarkName;
@@ -227,7 +227,6 @@ throw (lang::IllegalArgumentException, uno::RuntimeException)
     SwUnoInternalPaM aPam(*m_pImpl->m_pDoc);
     ::sw::XTextRangeToSwPaM(aPam, xTextRange);
     UnoActionContext aCont(m_pImpl->m_pDoc);
-    bool isHorribleHackIgnoreDuplicates(false);
     if (m_pImpl->m_sMarkName.isEmpty())
     {
          m_pImpl->m_sMarkName = "Bookmark";
@@ -242,16 +241,10 @@ throw (lang::IllegalArgumentException, uno::RuntimeException)
         IDocumentMarkAccess::IsLegalPaMForCrossRefHeadingBookmark( aPam ) )
     {
         eType = IDocumentMarkAccess::MarkType::CROSSREF_HEADING_BOOKMARK;
-        // tdf#94804 LO 4.2-5.0 create invalid duplicates that must be preserved
-        // note: do not check meta:generator, may be preserved by other versions
-        if (m_pImpl->m_pDoc->IsInXMLImport())
-        {
-            isHorribleHackIgnoreDuplicates = true;
-        }
     }
     m_pImpl->registerInMark(*this,
         m_pImpl->m_pDoc->getIDocumentMarkAccess()->makeMark(
-            aPam, m_pImpl->m_sMarkName, eType, isHorribleHackIgnoreDuplicates));
+            aPam, m_pImpl->m_sMarkName, eType));
     // #i81002#
     // Check, if bookmark has been created.
     // E.g., the creation of a cross-reference bookmark is suppress,
@@ -371,8 +364,7 @@ static char const*const g_ServicesBookmark[] =
     "com.sun.star.text.Bookmark",
     "com.sun.star.document.LinkTarget",
 };
-static const size_t g_nServicesBookmark(
-    sizeof(g_ServicesBookmark)/sizeof(g_ServicesBookmark[0]));
+static const size_t g_nServicesBookmark(SAL_N_ELEMENTS(g_ServicesBookmark));
 
 sal_Bool SAL_CALL SwXBookmark::supportsService(const OUString& rServiceName)
 throw (uno::RuntimeException, std::exception)

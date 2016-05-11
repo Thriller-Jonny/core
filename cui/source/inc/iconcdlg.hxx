@@ -31,9 +31,6 @@
 #include <vcl/layout.hxx>
 #include <vector>
 
-#define RET_USER        100
-#define RET_USER_CANCEL 101
-
 // forward-declarations
 struct IconChoicePageData;
 class IconChoiceDialog;
@@ -54,12 +51,12 @@ struct IconChoicePageData
     bool bRefresh;          ///< Flag: page has to be newly initialized
 
     // constructor
-    IconChoicePageData( sal_uInt16 Id, CreatePage fnPage, GetPageRanges fnRanges, bool bDemand )
+    IconChoicePageData( sal_uInt16 Id, CreatePage fnPage, GetPageRanges fnRanges )
         : nId           ( Id ),
           fnCreatePage  ( fnPage ),
           fnGetRanges   ( fnRanges ),
           pPage         ( nullptr ),
-          bOnDemand     ( bDemand ),
+          bOnDemand     ( false ),
           bRefresh      ( false )
     {}
 };
@@ -91,8 +88,8 @@ public:
     virtual bool        FillItemSet( SfxItemSet* ) = 0;
     virtual void        Reset( const SfxItemSet& ) = 0;
 
-    bool                HasExchangeSupport() const              { return bHasExchangeSupport; }
-    void                SetExchangeSupport( bool bNew = true )  { bHasExchangeSupport = bNew; }
+    bool                HasExchangeSupport() const { return bHasExchangeSupport; }
+    void                SetExchangeSupport()       { bHasExchangeSupport = true; }
 
     enum {
         KEEP_PAGE = 0x0000, ///< error handling
@@ -105,7 +102,7 @@ public:
 
     virtual void        ActivatePage( const SfxItemSet& );
     virtual int         DeactivatePage( SfxItemSet* pSet );
-    OUString            GetUserData() { return aUserString; }
+    const OUString&     GetUserData() { return aUserString; }
     virtual bool        QueryClose();
 
     void                StateChanged( StateChangedType nType ) override;
@@ -164,7 +161,7 @@ protected:
     static void             RefreshInputSet();
 
     void                    ActivatePageImpl ();
-    bool                    DeActivatePageImpl ();
+    void                    DeActivatePageImpl ();
     void                    ResetPageImpl ();
 
     short                   Ok();
@@ -180,8 +177,7 @@ public:
     // interface
     SvxIconChoiceCtrlEntry* AddTabPage(
         sal_uInt16 nId, const OUString& rIconText, const Image& rChoiceIcon,
-        CreatePage pCreateFunc /* != NULL */, GetPageRanges pRangesFunc = nullptr /* NULL allowed*/,
-        bool bItemsOnDemand = false, sal_uLong nPos = TREELIST_APPEND );
+        CreatePage pCreateFunc /* != NULL */ );
 
     void                SetCurPageId( sal_uInt16 nId ) { mnCurrentPageId = nId; FocusOnIcon( nId ); }
     sal_uInt16          GetCurPageId() const       { return mnCurrentPageId; }
@@ -191,15 +187,12 @@ public:
     const sal_uInt16*   GetInputRanges( const SfxItemPool& );
     void                SetInputSet( const SfxItemSet* pInSet );
 
-    const OKButton&     GetOKButton() const { return *m_pOKBtn; }
     OKButton&           GetOKButton() { return *m_pOKBtn; }
-    const PushButton&   GetApplyButton() const { return *m_pApplyBtn; }
     PushButton&         GetApplyButton() { return *m_pApplyBtn; }
-    const CancelButton& GetCancelButton() const { return *m_pCancelBtn; }
     CancelButton&       GetCancelButton() { return *m_pCancelBtn; }
 
     short               Execute() override;
-    void                Start( bool bShow = true );
+    void                Start();
     bool                QueryClose();
 
     void                SetCtrlStyle();

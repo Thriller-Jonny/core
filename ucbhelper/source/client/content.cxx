@@ -126,12 +126,7 @@ void EmptyInputStream::closeInput()
 }
 
 
-
-
-
 // class ContentEventListener_Impl.
-
-
 
 
 class ContentEventListener_Impl : public cppu::OWeakObject,
@@ -161,11 +156,7 @@ public:
 };
 
 
-
-
 // class Content_Impl.
-
-
 
 
 class Content_Impl : public salhelper::SimpleReferenceObject
@@ -306,11 +297,7 @@ static Reference< XContent > getContentNoThrow(
 }
 
 
-
-
 // Content Implementation.
-
-
 
 
 Content::Content()
@@ -664,7 +651,7 @@ Reference< XDynamicResultSet > Content::createDynamicCursor(
 Reference< XResultSet > Content::createSortedCursor(
                             const Sequence< OUString >& rPropertyNames,
                             const Sequence< NumberedSortingInfo >& rSortInfo,
-                            Reference< XAnyCompareFactory > rAnyCompareFactory,
+                            const Reference< XAnyCompareFactory >& rAnyCompareFactory,
                             ResultSetInclude eMode )
     throw( CommandAbortedException, RuntimeException, Exception )
 {
@@ -969,7 +956,7 @@ bool Content::insertNewContent( const OUString& rContentType,
                                 makeAny(
                                     InsertCommandArgument(
                                         rData.is() ? rData : new EmptyInputStream,
-                                        sal_False /* ReplaceExisting */ ) ) );
+                                        false /* ReplaceExisting */ ) ) );
     aNewContent.m_xImpl->inserted();
 
     rNewContent = aNewContent;
@@ -1069,7 +1056,6 @@ bool Content::isFolder()
 }
 
 
-
 SAL_WNOUNREACHABLE_CODE_PUSH
 
 bool Content::isDocument()
@@ -1121,8 +1107,6 @@ void Content::unlock()
 // Content_Impl Implementation.
 
 
-
-
 Content_Impl::Content_Impl( const Reference< XComponentContext >& rCtx,
                             const Reference< XContent >& rContent,
                             const Reference< XCommandEnvironment >& rEnv )
@@ -1136,7 +1120,7 @@ Content_Impl::Content_Impl( const Reference< XComponentContext >& rCtx,
         m_xContentEventListener = new ContentEventListener_Impl( *this );
         m_xContent->addContentEventListener( m_xContentEventListener );
 
-#if OSL_DEBUG_LEVEL > 1
+#if OSL_DEBUG_LEVEL > 0
         // Only done on demand in product version for performance reasons,
         // but a nice debug helper.
         getURL();
@@ -1169,7 +1153,7 @@ void Content_Impl::reinit( const Reference< XContent >& xContent )
         m_xContent = xContent;
         m_xContent->addContentEventListener( m_xContentEventListener );
 
-#if OSL_DEBUG_LEVEL > 1
+#if OSL_DEBUG_LEVEL > 0
         // Only done on demand in product version for performance reasons,
         // but a nice debug helper.
         getURL();
@@ -1337,13 +1321,7 @@ void Content_Impl::inserted()
 }
 
 
-
-
 // ContentEventListener_Impl Implementation.
-
-
-
-
 
 
 // XInterface methods.
@@ -1373,7 +1351,6 @@ css::uno::Any SAL_CALL ContentEventListener_Impl::queryInterface( const css::uno
 // XContentEventListener methods.
 
 
-
 // virtual
 void SAL_CALL ContentEventListener_Impl::contentEvent( const ContentEvent& evt )
     throw( RuntimeException, std::exception )
@@ -1397,9 +1374,7 @@ void SAL_CALL ContentEventListener_Impl::contentEvent( const ContentEvent& evt )
 }
 
 
-
 // XEventListenr methods.
-
 
 
 // virtual

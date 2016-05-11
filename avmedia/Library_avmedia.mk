@@ -25,8 +25,14 @@ $(eval $(call gb_Library_add_defs,avmedia,\
 
 $(eval $(call gb_Library_use_externals,avmedia,\
 	boost_headers \
-	glew \
 ))
+
+ifeq ($(ENABLE_OPENGL),TRUE)
+$(eval $(call gb_Library_use_externals,avmedia,\
+    glew \
+))
+endif
+
 
 $(eval $(call gb_Library_use_libraries,avmedia,\
 	comphelper \

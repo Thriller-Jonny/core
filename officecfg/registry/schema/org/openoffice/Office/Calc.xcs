@@ -395,6 +395,13 @@
         <info>
           <desc>Contains other layout settings.</desc>
         </info>
+        <prop oor:name="StatusbarMultiFunction" oor:type="xs:int" oor:nillable="false">
+          <info>
+            <desc>Selects a set of functions that are calculated for the selected cells, and which show the results in the status bar.</desc>
+            <label>Statusbar Functions</label>
+          </info>
+          <value>514</value>
+        </prop>
         <prop oor:name="StatusbarFunction" oor:type="xs:int" oor:nillable="false">
           <!-- OldPath: Calc/Layout -->
           <!-- OldLocation: Soffice.cfg -->
@@ -440,7 +447,7 @@
               </info>
             </enumeration>
           </constraints>
-          <value>9</value>
+          <value>1</value>
         </prop>
         <prop oor:name="TabbarInlineWithScrollbar" oor:type="xs:boolean" oor:nillable="false">
           <info>
@@ -1307,6 +1314,14 @@
             <label>Enable regular expressions in formulas</label>
           </info>
           <value>true</value>
+        </prop>
+        <prop oor:name="Wildcards" oor:type="xs:boolean" oor:nillable="false">
+          <!-- UIHints: Tools - Options  Spreadsheet  Calculate  [Check box] Enable wildcards in formulas -->
+          <info>
+            <desc>Specifies whether the calculation uses wildcards in formulas, e.g. for functions which look up sheet contents.</desc>
+            <label>Enable wildcards in formulas</label>
+          </info>
+          <value>false</value>
         </prop>
         <prop oor:name="FormulaSyntax" oor:type="xs:int">
           <!-- UIHints: Tools - Options  Spreadsheet  Calculate -->

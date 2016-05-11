@@ -25,8 +25,6 @@
 #include <tools/gen.hxx>
 #include <o3tl/typed_flags_set.hxx>
 
-#include <boost/functional/hash.hpp>
-
 /* Control Types:
  *
  *   Specify the overall, whole control
@@ -287,6 +285,13 @@ public:
             case CTRL_CHECKBOX:
             case CTRL_RADIOBUTTON:
             case CTRL_LISTNODE:
+            case CTRL_SLIDER:
+            // FIXME: these guys have complex state hidden in ImplControlValue
+            // structs which affects rendering, needs to be a and needs to be
+            // part of the key to our cache.
+            case CTRL_SPINBOX:
+            case CTRL_SPINBUTTONS:
+            case CTRL_TAB_ITEM:
                 return false;
 
             case CTRL_MENUBAR:
@@ -300,21 +305,6 @@ public:
         return true;
     }
 };
-
-struct ControlCacheHashFunction
-{
-    std::size_t operator()(ControlCacheKey const& aCache) const
-    {
-        std::size_t seed = 0;
-        boost::hash_combine(seed, aCache.mnType);
-        boost::hash_combine(seed, aCache.mnPart);
-        boost::hash_combine(seed, aCache.mnState);
-        boost::hash_combine(seed, aCache.maSize.Width());
-        boost::hash_combine(seed, aCache.maSize.Height());
-        return seed;
-    }
-};
-
 
 /* ButtonValue:
  *
@@ -343,9 +333,9 @@ class VCL_DLLPUBLIC ImplControlValue
         ButtonValue     mTristate;    // Tristate value: on, off, mixed
         long            mNumber;      // numeric value
     protected:
-        ImplControlValue( ControlType i_eType, ButtonValue i_eTriState, long i_nNumber )
+        ImplControlValue( ControlType i_eType, long i_nNumber )
         : mType( i_eType )
-        , mTristate( i_eTriState )
+        , mTristate( BUTTONVALUE_DONTKNOW )
         , mNumber( i_nNumber )
         {}
 
@@ -391,7 +381,7 @@ class VCL_DLLPUBLIC ScrollbarValue : public ImplControlValue
         ControlState    mnPage2State;
 
         inline ScrollbarValue()
-        : ImplControlValue( CTRL_SCROLLBAR, BUTTONVALUE_DONTKNOW, 0 )
+        : ImplControlValue( CTRL_SCROLLBAR, 0 )
         {
             mnMin = 0; mnMax = 0; mnCur = 0; mnVisibleSize = 0;
             mnButton1State = ControlState::NONE; mnButton2State = ControlState::NONE;
@@ -411,7 +401,7 @@ class VCL_DLLPUBLIC SliderValue : public ImplControlValue
         ControlState    mnThumbState;
 
         SliderValue()
-        : ImplControlValue( CTRL_SLIDER, BUTTONVALUE_DONTKNOW, 0 )
+        : ImplControlValue( CTRL_SLIDER, 0 )
         , mnMin( 0 ), mnMax( 0 ), mnCur( 0 ), mnThumbState( ControlState::NONE )
         {}
         virtual ~SliderValue();
@@ -444,7 +434,7 @@ class VCL_DLLPUBLIC TabitemValue : public ImplControlValue
         Rectangle       maContentRect;
 
         TabitemValue(const Rectangle &rContentRect)
-            : ImplControlValue( CTRL_TAB_ITEM, BUTTONVALUE_DONTKNOW, 0 )
+            : ImplControlValue( CTRL_TAB_ITEM, 0 )
             , mnAlignment(TabitemFlags::NONE)
             , maContentRect(rContentRect)
         {
@@ -478,7 +468,7 @@ class VCL_DLLPUBLIC SpinbuttonValue : public ImplControlValue
         int         mnLowerPart;
 
         SpinbuttonValue()
-            : ImplControlValue( CTRL_SPINBUTTONS, BUTTONVALUE_DONTKNOW, 0 )
+            : ImplControlValue( CTRL_SPINBUTTONS, 0 )
             , mnUpperState(ControlState::NONE)
             , mnLowerState(ControlState::NONE)
             , mnUpperPart(0)
@@ -497,7 +487,7 @@ class VCL_DLLPUBLIC SpinbuttonValue : public ImplControlValue
 class VCL_DLLPUBLIC ToolbarValue : public ImplControlValue
 {
 public:
-    ToolbarValue() : ImplControlValue( CTRL_TOOLBAR, BUTTONVALUE_DONTKNOW, 0 )
+    ToolbarValue() : ImplControlValue( CTRL_TOOLBAR, 0 )
     { mbIsTopDockingArea = false; }
     virtual ~ToolbarValue();
     virtual ToolbarValue* clone() const override;
@@ -513,7 +503,7 @@ public:
 class VCL_DLLPUBLIC MenubarValue : public ImplControlValue
 {
 public:
-    MenubarValue() : ImplControlValue( CTRL_MENUBAR, BUTTONVALUE_DONTKNOW, 0 )
+    MenubarValue() : ImplControlValue( CTRL_MENUBAR, 0 )
     { maTopDockingAreaHeight=0; }
     virtual ~MenubarValue();
     virtual MenubarValue* clone() const override;
@@ -528,10 +518,10 @@ public:
 class VCL_DLLPUBLIC MenupopupValue : public ImplControlValue
 {
 public:
-    MenupopupValue() : ImplControlValue( CTRL_MENU_POPUP, BUTTONVALUE_DONTKNOW, 0 )
+    MenupopupValue() : ImplControlValue( CTRL_MENU_POPUP, 0 )
     {}
     MenupopupValue( long i_nGutterWidth, const Rectangle& i_rItemRect )
-    : ImplControlValue( CTRL_MENU_POPUP, BUTTONVALUE_DONTKNOW, i_nGutterWidth )
+    : ImplControlValue( CTRL_MENU_POPUP, i_nGutterWidth )
     , maItemRect( i_rItemRect )
     {}
     virtual ~MenupopupValue();
@@ -547,7 +537,7 @@ class VCL_DLLPUBLIC PushButtonValue : public ImplControlValue
 {
 public:
     PushButtonValue()
-    : ImplControlValue( CTRL_PUSHBUTTON, BUTTONVALUE_DONTKNOW, 0 )
+    : ImplControlValue( CTRL_PUSHBUTTON, 0 )
     , mbBevelButton( false ), mbSingleLine( true ) {}
     virtual ~PushButtonValue();
     virtual PushButtonValue* clone() const override;

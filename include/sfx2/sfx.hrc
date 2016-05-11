@@ -17,8 +17,8 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef _SFX_HRC
-#define _SFX_HRC
+#ifndef INCLUDED_SFX2_SFX_HRC
+#define INCLUDED_SFX2_SFX_HRC
 
 #include <svl/solar.hrc>
 #include <svl/memberid.hrc>
@@ -153,6 +153,9 @@
 #define STR_READONLY_DOCUMENT               (RID_SFX_START+128)
 #define STR_PASSWD_MIN_LEN1                 (RID_SFX_START+129)
 #define STR_MODULENOTINSTALLED              (RID_SFX_START+130)
+#define STR_CLASSIFIED_DOCUMENT             (RID_SFX_START+131)
+#define STR_TARGET_DOC_NOT_CLASSIFIED       (RID_SFX_START+132)
+#define STR_DOC_CLASSIFICATION_TOO_LOW      (RID_SFX_START+133)
 #define STR_ACCTITLE_PRODUCTIVITYTOOLS      (RID_SFX_START+157)
 
 #define SFX_THUMBNAIL_TEXT                  (RID_SFX_START+158)
@@ -252,6 +255,6 @@
 
 #include <sfx2/sfxsids.hrc>
 
-#endif // #ifndef _SFX_HRC
+#endif
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

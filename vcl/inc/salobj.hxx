@@ -20,18 +20,11 @@
 #ifndef INCLUDED_VCL_INC_SALOBJ_HXX
 #define INCLUDED_VCL_INC_SALOBJ_HXX
 
-#include <tools/solar.h>
 #include <vcl/dllapi.h>
-#include <vcl/salgtype.hxx>
-#include <salwtype.hxx>
+
+#include "salwtype.hxx"
 
 struct SystemEnvData;
-
-// SalObject types
-
-#define SAL_OBJECT_CLIP_INCLUDERECTS            ((sal_uInt16)0x0001)
-#define SAL_OBJECT_CLIP_EXCLUDERECTS            ((sal_uInt16)0x0002)
-#define SAL_OBJECT_CLIP_ABSOLUTE                ((sal_uInt16)0x0004)
 
 class VCL_PLUGIN_PUBLIC SalObject
 {
@@ -44,7 +37,6 @@ public:
             virtual ~SalObject();
 
     virtual void                    ResetClipRegion() = 0;
-    virtual sal_uInt16              GetClipRegionType() = 0;
     virtual void                    BeginSetClipRegion( sal_uLong nRects ) = 0;
     virtual void                    UnionClipRegion( long nX, long nY, long nWidth, long nHeight ) = 0;
     virtual void                    EndSetClipRegion() = 0;
@@ -60,8 +52,8 @@ public:
 
     void                            SetCallback( void* pInst, SALOBJECTPROC pProc )
                                         { m_pInst = pInst; m_pCallback = pProc; }
-    long                            CallCallback( sal_uInt16 nEvent, const void* pEvent )
-                                        { return m_pCallback ? m_pCallback( m_pInst, this, nEvent, pEvent ) : 0; }
+    void                            CallCallback( SalObjEvent nEvent, const void* pEvent )
+                                        { if (m_pCallback) m_pCallback( m_pInst, this, nEvent, pEvent ); }
 
     void                            SetMouseTransparent( bool bMouseTransparent )
                                         { m_bMouseTransparent = bMouseTransparent; }

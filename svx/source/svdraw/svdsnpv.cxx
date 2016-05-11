@@ -208,7 +208,6 @@ SdrSnapView::~SdrSnapView()
 }
 
 
-
 bool SdrSnapView::IsAction() const
 {
     return IsSetPageOrg() || IsDragHelpLine() || SdrPaintView::IsAction();
@@ -258,7 +257,6 @@ void SdrSnapView::TakeActionRect(Rectangle& rRect) const
         SdrPaintView::TakeActionRect(rRect);
     }
 }
-
 
 
 Point SdrSnapView::GetSnapPos(const Point& rPnt, const SdrPageView* pPV) const
@@ -447,8 +445,7 @@ void SdrSnapView::CheckSnap(const Point& rPt, const SdrPageView* pPV, long& nBes
 }
 
 
-
-bool SdrSnapView::BegSetPageOrg(const Point& rPnt)
+void SdrSnapView::BegSetPageOrg(const Point& rPnt)
 {
     BrkAction();
 
@@ -456,8 +453,6 @@ bool SdrSnapView::BegSetPageOrg(const Point& rPnt)
     basegfx::B2DPoint aStartPos(rPnt.X(), rPnt.Y());
     mpPageOriginOverlay = new ImplPageOriginOverlay(*this, aStartPos);
     maDragStat.Reset(GetSnapPos(rPnt,nullptr));
-
-    return true;
 }
 
 void SdrSnapView::MovSetPageOrg(const Point& rPnt)
@@ -471,10 +466,8 @@ void SdrSnapView::MovSetPageOrg(const Point& rPnt)
     }
 }
 
-bool SdrSnapView::EndSetPageOrg()
+void SdrSnapView::EndSetPageOrg()
 {
-    bool bRet(false);
-
     if(IsSetPageOrg())
     {
         SdrPageView* pPV = GetSdrPageView();
@@ -483,14 +476,11 @@ bool SdrSnapView::EndSetPageOrg()
         {
             Point aPnt(maDragStat.GetNow());
             pPV->SetPageOrigin(aPnt);
-            bRet = true;
         }
 
         // cleanup
         BrkSetPageOrg();
     }
-
-    return bRet;
 }
 
 void SdrSnapView::BrkSetPageOrg()
@@ -502,7 +492,6 @@ void SdrSnapView::BrkSetPageOrg()
         mpPageOriginOverlay = nullptr;
     }
 }
-
 
 
 bool SdrSnapView::PickHelpLine(const Point& rPnt, short nTol, const OutputDevice& rOut, sal_uInt16& rnHelpLineNum, SdrPageView*& rpPV) const
@@ -554,10 +543,8 @@ bool SdrSnapView::BegDragHelpLine(sal_uInt16 nHelpLineNum, SdrPageView* pPV)
 }
 
 // start HelpLine drag with existing HelpLine
-bool SdrSnapView::BegDragHelpLine(const Point& rPnt, SdrHelpLineKind eNewKind)
+void SdrSnapView::BegDragHelpLine(const Point& rPnt, SdrHelpLineKind eNewKind)
 {
-    bool bRet(false);
-
     BrkAction();
 
     if(GetSdrPageView())
@@ -566,10 +553,7 @@ bool SdrSnapView::BegDragHelpLine(const Point& rPnt, SdrHelpLineKind eNewKind)
         basegfx::B2DPoint aStartPos(rPnt.X(), rPnt.Y());
         mpHelpLineOverlay = new ImplHelpLineOverlay(*this, aStartPos, nullptr, 0, eNewKind);
         maDragStat.Reset(GetSnapPos(rPnt, nullptr));
-        bRet = true;
     }
-
-    return bRet;
 }
 
 Pointer SdrSnapView::GetDraggedHelpLinePointer() const

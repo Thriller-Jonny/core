@@ -21,9 +21,7 @@
 #include "ctp_factory.hxx"
 #include "ctp_panel.hxx"
 
-#include <com/sun/star/lang/NotInitializedException.hpp>
 #include <com/sun/star/lang/IllegalArgumentException.hpp>
-#include <com/sun/star/lang/XComponent.hpp>
 #include <cppuhelper/supportsservice.hxx>
 
 namespace sd { namespace colortoolpanel
@@ -31,18 +29,10 @@ namespace sd { namespace colortoolpanel
     using ::com::sun::star::uno::Reference;
     using ::com::sun::star::uno::XInterface;
     using ::com::sun::star::uno::UNO_QUERY;
-    using ::com::sun::star::uno::UNO_QUERY_THROW;
-    using ::com::sun::star::uno::UNO_SET_THROW;
-    using ::com::sun::star::uno::Exception;
     using ::com::sun::star::uno::RuntimeException;
-    using ::com::sun::star::uno::Any;
-    using ::com::sun::star::uno::makeAny;
     using ::com::sun::star::uno::Sequence;
-    using ::com::sun::star::uno::Type;
     using ::com::sun::star::uno::XComponentContext;
-    using ::com::sun::star::lang::NotInitializedException;
     using ::com::sun::star::lang::IllegalArgumentException;
-    using ::com::sun::star::lang::XComponent;
     using ::com::sun::star::ui::XUIElement;
     using ::com::sun::star::beans::PropertyValue;
     using ::com::sun::star::container::NoSuchElementException;
@@ -118,7 +108,8 @@ namespace sd { namespace colortoolpanel
 
     Sequence< OUString > SAL_CALL ToolPanelFactory::getSupportedServiceNames_static() throw (RuntimeException)
     {
-        Sequence< OUString > aServiceNames { "org.openoffice.example.colorpanel.ToolPanelFactory" };
+        Sequence< OUString > aServiceNames(1);
+        aServiceNames[0] = "org.openoffice.example.colorpanel.ToolPanelFactory";
         return aServiceNames;
     }
 

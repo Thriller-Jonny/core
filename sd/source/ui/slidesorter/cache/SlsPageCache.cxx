@@ -60,10 +60,9 @@ Bitmap PageCache::GetPreviewBitmap (
 }
 
 Bitmap PageCache::GetMarkedPreviewBitmap (
-    const CacheKey aKey,
-    const bool bResize)
+    const CacheKey aKey)
 {
-    return mpImplementation->GetMarkedPreviewBitmap(aKey, bResize);
+    return mpImplementation->GetMarkedPreviewBitmap(aKey);
 }
 
 void PageCache::SetMarkedPreviewBitmap (
@@ -79,16 +78,15 @@ void PageCache::RequestPreviewBitmap (const CacheKey aKey)
 }
 
 void PageCache::InvalidatePreviewBitmap (
-    const CacheKey aKey,
-    const bool bRequestPreview)
+    const CacheKey aKey)
 {
-    if (mpImplementation->InvalidatePreviewBitmap(aKey) && bRequestPreview)
+    if (mpImplementation->InvalidatePreviewBitmap(aKey))
         RequestPreviewBitmap(aKey);
 }
 
-void PageCache::InvalidateCache (const bool bUpdateCache)
+void PageCache::InvalidateCache()
 {
-    mpImplementation->InvalidateCache(bUpdateCache);
+    mpImplementation->InvalidateCache();
 }
 
 void PageCache::SetPreciousFlag (

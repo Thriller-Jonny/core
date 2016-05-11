@@ -192,13 +192,13 @@ sal_Int32 SAL_CALL
 {
     ThrowIfDisposed ();
 
-    long mpChildCount = AccessibleDocumentViewBase::getAccessibleChildCount();
+    long nChildCount = AccessibleDocumentViewBase::getAccessibleChildCount();
 
     // Forward request to children manager.
     if (mpChildrenManager != nullptr)
-        mpChildCount += mpChildrenManager->GetChildCount ();
+        nChildCount += mpChildrenManager->GetChildCount();
 
-    return mpChildCount;
+    return nChildCount;
 }
 
 uno::Reference<XAccessible> SAL_CALL
@@ -363,10 +363,10 @@ void SAL_CALL
                 css::uno::Reference< drawing::XDrawPage > xSlide;
                 // MT IA2: Not used...
                 // sal_Int32 currentPageIndex = xSlideshow->getCurrentPageIndex();
-                css::uno::Reference< css::presentation::XSlideShowController > mpSlideController = xSlideshow->getController();
-                if( mpSlideController.is() )
+                css::uno::Reference< css::presentation::XSlideShowController > xSlideController = xSlideshow->getController();
+                if( xSlideController.is() )
                 {
-                    xSlide = mpSlideController->getCurrentSlide();
+                    xSlide = xSlideController->getCurrentSlide();
                     if (xSlide.is())
                     {
                         mpChildrenManager->SetShapeList (uno::Reference<drawing::XShapes> (
@@ -694,7 +694,7 @@ bool
     return bRet;
 }
 
-/** Select or delselect the specified shapes.  The corresponding accessible
+/** Select or deselect the specified shapes.  The corresponding accessible
     shapes are notified over the selection change listeners registered with
     the XSelectionSupplier of the controller.
 */
@@ -730,8 +730,7 @@ void
 
                 if( xShapes->getCount() )
                 {
-                    aAny <<= xShapes;
-                    xSel->select( aAny );
+                    xSel->select( Any(xShapes) );
                 }
             }
         }
@@ -776,8 +775,7 @@ void
                     else if( bFound && !bSelect )
                         xShapes->remove( xShape );
 
-                    aAny <<= xShapes;
-                    xSel->select( aAny );
+                    xSel->select( Any(xShapes) );
                 }
             }
         }

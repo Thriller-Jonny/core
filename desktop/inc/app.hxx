@@ -75,8 +75,8 @@ class Desktop : public Application
         virtual void            Init() override;
         virtual void            InitFinished() override;
         virtual void            DeInit() override;
-        virtual bool        QueryExit() override;
-        virtual sal_uInt16      Exception(sal_uInt16 nError) override;
+        virtual bool            QueryExit() override;
+        virtual void            Exception(sal_uInt16 nError) override;
         virtual void            OverrideSystemSettings( AllSettings& rSettings ) override;
         virtual void            AppEvent( const ApplicationEvent& rAppEvent ) override;
 
@@ -141,9 +141,6 @@ class Desktop : public Application
         // Create a error message depending on bootstrap failure code and an optional file url
         static OUString         CreateErrorMsgString( utl::Bootstrap::FailureCode nFailureCode,
                                                       const OUString& aFileURL );
-
-        static void             PreloadModuleData( const CommandLineArgs& );
-        static void             PreloadConfigurationData();
 
         css::uno::Reference<css::task::XStatusIndicator> m_rSplashScreen;
         void                    OpenSplashScreen();

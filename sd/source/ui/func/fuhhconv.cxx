@@ -65,7 +65,7 @@ FuHangulHanjaConversion::FuHangulHanjaConversion (
     if ( dynamic_cast< const DrawViewShell *>( mpViewShell ) !=  nullptr )
     {
         bOwnOutliner = true;
-        pSdOutliner = new Outliner( mpDoc, OUTLINERMODE_TEXTOBJECT );
+        pSdOutliner = new Outliner( mpDoc, OutlinerMode::TextObject );
     }
     else if ( dynamic_cast< const OutlineViewShell *>( mpViewShell ) !=  nullptr )
     {
@@ -112,7 +112,7 @@ void FuHangulHanjaConversion::StartConversion( sal_Int16 nSourceLanguage, sal_In
             pSdOutliner->EndConversion();
 
             bOwnOutliner = true;
-            pSdOutliner = new Outliner( mpDoc, OUTLINERMODE_TEXTOBJECT );
+            pSdOutliner = new Outliner( mpDoc, OutlinerMode::TextObject );
             pSdOutliner->BeginConversion();
         }
         else if ( pSdOutliner && dynamic_cast< const OutlineViewShell *>( mpViewShell ) !=  nullptr && bOwnOutliner )
@@ -171,8 +171,8 @@ void FuHangulHanjaConversion::ConvertStyles( sal_Int16 nTargetLanguage, const vc
         {
             // set new font attribute
             SvxFontItem aFontItem( static_cast<const SvxFontItem&>( rSet.Get( EE_CHAR_FONTINFO_CJK ) ) );
-            aFontItem.SetFamilyName(   pTargetFont->GetName());
-            aFontItem.SetFamily(       pTargetFont->GetFamily());
+            aFontItem.SetFamilyName(   pTargetFont->GetFamilyName());
+            aFontItem.SetFamily(       pTargetFont->GetFamilyType());
             aFontItem.SetStyleName(    pTargetFont->GetStyleName());
             aFontItem.SetPitch(        pTargetFont->GetPitch());
             aFontItem.SetCharSet(      pTargetFont->GetCharSet());

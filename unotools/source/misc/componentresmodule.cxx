@@ -65,7 +65,8 @@ namespace utl
 
     void OComponentResModuleImpl::freeResManager()
     {
-        delete m_pResources, m_pResources = nullptr;
+        delete m_pResources;
+        m_pResources = nullptr;
         m_bInitialized = false;
     }
 
@@ -103,11 +104,6 @@ namespace utl
     {
         ::osl::MutexGuard aGuard( m_aMutex );
         return m_pImpl->getResManager();
-    }
-
-    void OComponentResourceModule::onFirstClient()
-    {
-        BaseClass::onFirstClient();
     }
 
     void OComponentResourceModule::onLastClient()

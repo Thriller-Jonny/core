@@ -52,10 +52,6 @@
 #include <typeinfo>
 #include <utility>
 #include <vector>
-#include <boost/current_function.hpp>
-#include <boost/functional/hash.hpp>
-#include <boost/intrusive_ptr.hpp>
-#include <boost/noncopyable.hpp>
 #include <boost/optional.hpp>
 #include <osl/diagnose.h>
 #include <osl/doublecheckedlocking.h>
@@ -109,7 +105,7 @@
 #include <vcl/button.hxx>
 #include <vcl/cairo.hxx>
 #include <vcl/checksum.hxx>
-#include <vcl/cmdevt.hxx>
+#include <vcl/commandevent.hxx>
 #include <vcl/combobox.hxx>
 #include <vcl/controllayout.hxx>
 #include <vcl/ctrl.hxx>
@@ -128,7 +124,6 @@
 #include <vcl/hatch.hxx>
 #include <vcl/idle.hxx>
 #include <vcl/image.hxx>
-#include <vcl/impdel.hxx>
 #include <vcl/keycod.hxx>
 #include <vcl/keycodes.hxx>
 #include <vcl/lineinfo.hxx>

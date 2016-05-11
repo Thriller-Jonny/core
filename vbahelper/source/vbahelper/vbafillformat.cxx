@@ -26,7 +26,7 @@
 using namespace ooo::vba;
 using namespace com::sun::star;
 
-ScVbaFillFormat::ScVbaFillFormat( const uno::Reference< XHelperInterface >& xParent, const uno::Reference< uno::XComponentContext >& xContext, const uno::Reference< drawing::XShape > xShape ) : ScVbaFillFormat_BASE( xParent, xContext ), m_xShape( xShape )
+ScVbaFillFormat::ScVbaFillFormat( const uno::Reference< XHelperInterface >& xParent, const uno::Reference< uno::XComponentContext >& xContext, const uno::Reference< drawing::XShape >& xShape ) : ScVbaFillFormat_BASE( xParent, xContext ), m_xShape( xShape )
 {
     m_xPropertySet.set( xShape, uno::UNO_QUERY_THROW );
     m_nFillStyle = drawing::FillStyle_SOLID;
@@ -80,8 +80,8 @@ ScVbaFillFormat::getVisible() throw (uno::RuntimeException, std::exception)
     drawing::FillStyle nFillStyle;
     m_xPropertySet->getPropertyValue( "FillStyle" ) >>= nFillStyle;
     if( nFillStyle == drawing::FillStyle_NONE )
-        return sal_False;
-    return sal_True;
+        return false;
+    return true;
 }
 
 void SAL_CALL

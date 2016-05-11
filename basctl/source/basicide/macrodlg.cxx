@@ -42,7 +42,6 @@ namespace basctl
 {
 
 using ::std::map;
-using ::std::pair;
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
@@ -50,7 +49,7 @@ using namespace ::com::sun::star::uno;
 MacroChooser::MacroChooser( vcl::Window* pParnt, bool bCreateEntries )
     : SfxModalDialog(pParnt, "BasicMacroDialog", "modules/BasicIDE/ui/basicmacrodialog.ui")
     , bNewDelIsDel(true)
-    // the Sfx doesn't ask the BasicManger whether modified or not
+    // the Sfx doesn't ask the BasicManager whether modified or not
     // => start saving in case of a change without a into the BasicIDE.
     , bForceStoreBasic(false)
     , nMode(All)
@@ -267,8 +266,6 @@ void MacroChooser::EnableButton( Button& rButton, bool bEnable )
 }
 
 
-
-
 SbMethod* MacroChooser::GetMacro()
 {
     SbMethod* pMethod = nullptr;
@@ -284,7 +281,6 @@ SbMethod* MacroChooser::GetMacro()
     }
     return pMethod;
 }
-
 
 
 void MacroChooser::DeleteMacro()
@@ -371,8 +367,8 @@ SbMethod* MacroChooser::CreateMacro()
             }
             pModule = pBasic->FindModule( aModName );
         }
-        else if ( pBasic->GetModules()->Count() )
-            pModule = static_cast<SbModule*>(pBasic->GetModules()->Get( 0 ));
+        else if ( !pBasic->GetModules().empty() )
+            pModule = pBasic->GetModules().front();
 
         if ( !pModule )
         {
@@ -467,7 +463,6 @@ void MacroChooser::CheckButtons()
 }
 
 
-
 IMPL_LINK_NOARG_TYPED(MacroChooser, MacroDoubleClickHdl, SvTreeListBox*, bool)
 {
     StoreMacroDescription();
@@ -549,7 +544,6 @@ IMPL_LINK_TYPED( MacroChooser, BasicSelectHdl, SvTreeListBox *, pBox, void )
 }
 
 
-
 IMPL_LINK_NOARG_TYPED( MacroChooser, EditModifyHdl, Edit&, void )
 {
     // select the module in which the macro is put at Neu (new),
@@ -596,7 +590,7 @@ IMPL_LINK_NOARG_TYPED( MacroChooser, EditModifyHdl, Edit&, void )
             if ( !bFound )
             {
                 SvTreeListEntry* pEntry = m_pMacroBox->FirstSelected();
-                // if the entry exists ->Select ->Desription...
+                // if the entry exists ->Select ->Description...
                 if ( pEntry )
                     m_pMacroBox->Select( pEntry, false );
             }
@@ -605,7 +599,6 @@ IMPL_LINK_NOARG_TYPED( MacroChooser, EditModifyHdl, Edit&, void )
 
     CheckButtons();
 }
-
 
 
 IMPL_LINK_TYPED( MacroChooser, ButtonHdl, Button *, pButton, void )
@@ -684,7 +677,10 @@ IMPL_LINK_TYPED( MacroChooser, ButtonHdl, Button *, pButton, void )
             SfxGetpApp()->ExecuteSlot( aRequest );
 
             if (SfxDispatcher* pDispatcher = GetDispatcher())
-                pDispatcher->Execute( SID_BASICIDE_EDITMACRO, SfxCallMode::ASYNCHRON, &aInfoItem, 0L );
+            {
+                pDispatcher->ExecuteList(SID_BASICIDE_EDITMACRO,
+                        SfxCallMode::ASYNCHRON, { &aInfoItem });
+            }
             EndDialog(Macro_Edit);
         }
         else
@@ -693,8 +689,10 @@ IMPL_LINK_TYPED( MacroChooser, ButtonHdl, Button *, pButton, void )
             {
                 DeleteMacro();
                 if (SfxDispatcher* pDispatcher = GetDispatcher())
-                    pDispatcher->Execute( SID_BASICIDE_UPDATEMODULESOURCE,
-                                          SfxCallMode::SYNCHRON, &aInfoItem, 0L );
+                {
+                    pDispatcher->ExecuteList( SID_BASICIDE_UPDATEMODULESOURCE,
+                                  SfxCallMode::SYNCHRON, { &aInfoItem });
+                }
                 CheckButtons();
                 UpdateFields();
                 //if ( m_pMacroBox->GetCurEntry() )    // OV-Bug ?
@@ -720,7 +718,10 @@ IMPL_LINK_TYPED( MacroChooser, ButtonHdl, Button *, pButton, void )
                     SfxGetpApp()->ExecuteSlot( aRequest );
 
                     if (SfxDispatcher* pDispatcher = GetDispatcher())
-                        pDispatcher->Execute( SID_BASICIDE_EDITMACRO, SfxCallMode::ASYNCHRON, &aInfoItem, 0L );
+                    {
+                        pDispatcher->ExecuteList(SID_BASICIDE_EDITMACRO,
+                                SfxCallMode::ASYNCHRON, { &aInfoItem });
+                    }
                     StoreMacroDescription();
                     EndDialog(Macro_New);
                 }
@@ -788,7 +789,6 @@ IMPL_LINK_TYPED( MacroChooser, ButtonHdl, Button *, pButton, void )
         m_pBasicBox->UpdateEntries();
     }
 }
-
 
 
 void MacroChooser::UpdateFields()

@@ -49,6 +49,7 @@
 #include <svx/lathe3d.hxx>
 #include <vcl/svapp.hxx>
 #include <tools/diagnose_ex.h>
+#include <tools/globname.hxx>
 
 using namespace ::cppu;
 using namespace ::com::sun::star;
@@ -56,9 +57,6 @@ using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::container;
 using namespace ::com::sun::star::drawing;
-
-#define INTERFACE_TYPE( xint ) \
-    cppu::UnoType<xint>::get()
 
 UNO3_GETIMPLEMENTATION_IMPL( SvxDrawPage );
 SvxDrawPage::SvxDrawPage( SdrPage* pInPage ) throw()
@@ -119,10 +117,10 @@ void SvxDrawPage::dispose()
 
     // An frequently programming error is to release the last
     // reference to this object in the disposing message.
-    // Make it rubust, hold a self Reference.
+    // Make it robust, hold a self Reference.
     uno::Reference< lang::XComponent > xSelf( this );
 
-    // Guard dispose against multible threading
+    // Guard dispose against multiple threading
     // Remark: It is an error to call dispose more than once
     bool bDoDispose = false;
     {
@@ -130,7 +128,7 @@ void SvxDrawPage::dispose()
     if( !mrBHelper.bDisposed && !mrBHelper.bInDispose )
     {
         // only one call go into this section
-        mrBHelper.bInDispose = sal_True;
+        mrBHelper.bInDispose = true;
         bDoDispose = true;
     }
     }
@@ -155,15 +153,15 @@ void SvxDrawPage::dispose()
             // catch exception and throw again but signal that
             // the object was disposed. Dispose should be called
             // only once.
-            mrBHelper.bDisposed = sal_True;
-            mrBHelper.bInDispose = sal_False;
+            mrBHelper.bDisposed = true;
+            mrBHelper.bInDispose = false;
             throw;
         }
 
         // the values bDispose and bInDisposing must set in this order.
         // No multithread call overcome the "!rBHelper.bDisposed && !rBHelper.bInDispose" guard.
-        mrBHelper.bDisposed = sal_True;
-        mrBHelper.bInDispose = sal_False;
+        mrBHelper.bDisposed = true;
+        mrBHelper.bInDispose = false;
     }
 
 }
@@ -359,7 +357,7 @@ uno::Any SAL_CALL SvxDrawPage::getByIndex( sal_Int32 Index )
 uno::Type SAL_CALL SvxDrawPage::getElementType()
     throw( uno::RuntimeException, std::exception )
 {
-    return INTERFACE_TYPE( drawing::XShape );
+    return cppu::UnoType<drawing::XShape>::get();
 }
 
 sal_Bool SAL_CALL SvxDrawPage::hasElements()
@@ -389,9 +387,9 @@ namespace
     }
 }
 
-// ATTENTION: _SelectObjectsInView selects the css::drawing::Shapes
+// ATTENTION: SelectObjectsInView selects the css::drawing::Shapes
 // only in the given SdrPageView. It hasn't to be the visible SdrPageView.
-void SvxDrawPage::_SelectObjectsInView( const Reference< drawing::XShapes > & aShapes, SdrPageView* pPageView ) throw ()
+void SvxDrawPage::SelectObjectsInView( const Reference< drawing::XShapes > & aShapes, SdrPageView* pPageView ) throw ()
 {
     SAL_WARN_IF(!pPageView, "svx", "SdrPageView is NULL!");
     SAL_WARN_IF(!mpView, "svx", "SdrView is NULL!");
@@ -411,9 +409,9 @@ void SvxDrawPage::_SelectObjectsInView( const Reference< drawing::XShapes > & aS
     }
 }
 
-// ATTENTION: _SelectObjectInView selects the shape only in the given SdrPageView.
+// ATTENTION: SelectObjectInView selects the shape only in the given SdrPageView.
 // It hasn't to be the visible SdrPageView.
-void SvxDrawPage::_SelectObjectInView( const Reference< drawing::XShape > & xShape, SdrPageView* pPageView ) throw()
+void SvxDrawPage::SelectObjectInView( const Reference< drawing::XShape > & xShape, SdrPageView* pPageView ) throw()
 {
     SAL_WARN_IF(!pPageView, "svx", "SdrPageView is NULL!");
     SAL_WARN_IF(!mpView, "svx", "SdrView is NULL!");
@@ -442,7 +440,7 @@ Reference< drawing::XShapeGroup > SAL_CALL SvxDrawPage::group( const Reference< 
 
     SdrPageView* pPageView = mpView->ShowSdrPage( mpPage );
 
-    _SelectObjectsInView( xShapes, pPageView );
+    SelectObjectsInView( xShapes, pPageView );
 
     mpView->GroupMarked();
 
@@ -480,7 +478,7 @@ void SAL_CALL SvxDrawPage::ungroup( const Reference< drawing::XShapeGroup >& aGr
     SdrPageView* pPageView = mpView->ShowSdrPage( mpPage );
 
     Reference< drawing::XShape > xShape( aGroup, UNO_QUERY );
-    _SelectObjectInView( xShape, pPageView );
+    SelectObjectInView( xShape, pPageView );
     mpView->UnGroupMarked();
 
     mpView->HideSdrPage();
@@ -489,7 +487,7 @@ void SAL_CALL SvxDrawPage::ungroup( const Reference< drawing::XShapeGroup >& aGr
         mpModel->SetChanged();
 }
 
-SdrObject *SvxDrawPage::_CreateSdrObject(const Reference< drawing::XShape > & xShape)
+SdrObject *SvxDrawPage::CreateSdrObject_(const Reference< drawing::XShape > & xShape)
     throw (css::uno::RuntimeException, std::exception)
 {
     sal_uInt16 nType = 0;
@@ -787,7 +785,7 @@ SvxShape* SvxDrawPage::CreateShapeByTypeAndInventor( sal_uInt16 nType, sal_uInt3
         }
         default: // unknown inventor
         {
-            OSL_FAIL("AW: Unknown Inventor in SvxDrawPage::_CreateShape()");
+            OSL_FAIL("AW: Unknown Inventor in SvxDrawPage::CreateShape()");
             break;
         }
     }
@@ -823,7 +821,7 @@ SvxShape* SvxDrawPage::CreateShapeByTypeAndInventor( sal_uInt16 nType, sal_uInt3
     return pRet;
 }
 
-Reference< drawing::XShape >  SvxDrawPage::_CreateShape( SdrObject *pObj ) const
+Reference< drawing::XShape >  SvxDrawPage::CreateShape( SdrObject *pObj ) const
     throw (css::uno::RuntimeException, std::exception)
 {
     Reference< drawing::XShape > xShape( CreateShapeByTypeAndInventor(pObj->GetObjIdentifier(),
@@ -835,7 +833,7 @@ Reference< drawing::XShape >  SvxDrawPage::_CreateShape( SdrObject *pObj ) const
 
 SdrObject *SvxDrawPage::CreateSdrObject( const Reference< drawing::XShape > & xShape, bool bBeginning ) throw()
 {
-    SdrObject* pObj = _CreateSdrObject( xShape );
+    SdrObject* pObj = CreateSdrObject_( xShape );
     if( pObj)
     {
         pObj->SetModel(mpModel);
@@ -910,7 +908,7 @@ uno::Reference< drawing::XDrawPage > GetXDrawPageForSdrPage( SdrPage* pPage ) th
 }
 
 /** returns the SdrObject from the given StarOffice API wrapper */
-SdrPage* GetSdrPageFromXDrawPage( uno::Reference< drawing::XDrawPage > xDrawPage ) throw()
+SdrPage* GetSdrPageFromXDrawPage( const uno::Reference< drawing::XDrawPage >& xDrawPage ) throw()
 {
     if(xDrawPage.is())
     {

@@ -131,7 +131,7 @@ class BackendImpl : public ::dp_registry::backend::PackageRegistryBackend
        value from the backend db. This entry already contains the path as it
        is used in the configmgr.ini.
      */
-    bool addToConfigmgrIni( bool isSchema, bool isURL, OUString const & url,
+    void addToConfigmgrIni( bool isSchema, bool isURL, OUString const & url,
                      Reference<XCommandEnvironment> const & xCmdEnv );
     bool removeFromConfigmgrIni( bool isSchema, OUString const & url,
                           Reference<XCommandEnvironment> const & xCmdEnv );
@@ -227,7 +227,7 @@ BackendImpl::BackendImpl(
         {
             try
             {
-                pMap.reset( new PersistentMap( aCompatURL, false ) );
+                pMap.reset( new PersistentMap( aCompatURL ) );
             }
             catch (const Exception &e)
             {
@@ -277,7 +277,6 @@ bool BackendImpl::activateEntry(OUString const & url)
         return m_backendDb->activateEntry(url);
     return false;
 }
-
 
 
 // XPackageRegistry
@@ -355,7 +354,6 @@ Reference<deployment::XPackage> BackendImpl::bindPackage_(
         static_cast<OWeakObject *>(this),
         static_cast<sal_Int16>(-1) );
 }
-
 
 
 void BackendImpl::configmgrini_verify_init(
@@ -460,9 +458,8 @@ void BackendImpl::configmgrini_flush(
     // write configmgr.ini:
     const Reference<io::XInputStream> xData(
         ::xmlscript::createInputStream(
-            ::rtl::ByteSequence(
                 reinterpret_cast<sal_Int8 const *>(buf.getStr()),
-                buf.getLength() ) ) );
+                buf.getLength() ) );
     ::ucbhelper::Content ucb_content(
         makeURL( getCachePath(), "configmgr.ini" ), xCmdEnv, m_xComponentContext );
     ucb_content.writeStream( xData, true /* replace existing */ );
@@ -471,7 +468,7 @@ void BackendImpl::configmgrini_flush(
 }
 
 
-bool BackendImpl::addToConfigmgrIni( bool isSchema, bool isURL, OUString const & url_,
+void BackendImpl::addToConfigmgrIni( bool isSchema, bool isURL, OUString const & url_,
                               Reference<XCommandEnvironment> const & xCmdEnv )
 {
     const OUString rcterm( isURL ? dp_misc::makeRcTerm(url_) : url_ );
@@ -483,10 +480,7 @@ bool BackendImpl::addToConfigmgrIni( bool isSchema, bool isURL, OUString const &
         // write immediately:
         m_configmgrini_modified = true;
         configmgrini_flush( xCmdEnv );
-        return true;
     }
-    else
-        return false;
 }
 
 
@@ -602,15 +596,14 @@ OUString replaceOrigin(
 {
     // looking for %origin%:
     ::ucbhelper::Content ucb_content( url, xCmdEnv, xContext );
-    ::rtl::ByteSequence bytes( readFile( ucb_content ) );
-    ::rtl::ByteSequence filtered( bytes.getLength() * 2,
-                                  ::rtl::BYTESEQ_NODEFAULT );
+    std::vector<sal_Int8> bytes( readFile( ucb_content ) );
+    std::vector<sal_Int8> filtered( bytes.size() * 2 );
     bool use_filtered = false;
     OString origin;
     sal_Char const * pBytes = reinterpret_cast<sal_Char const *>(
-        bytes.getConstArray());
-    sal_Size nBytes = bytes.getLength();
-    sal_Int32 write_pos = 0;
+        bytes.data());
+    sal_Size nBytes = bytes.size();
+    size_t write_pos = 0;
     while (nBytes > 0)
     {
         sal_Int32 index = rtl_str_indexOfChar_WithLength( pBytes, nBytes, '%' );
@@ -620,9 +613,9 @@ OUString replaceOrigin(
             index = nBytes;
         }
 
-        if ((write_pos + index) > filtered.getLength())
-            filtered.realloc( (filtered.getLength() + index) * 2 );
-        memcpy( filtered.getArray() + write_pos, pBytes, index );
+        if ((write_pos + index) > filtered.size())
+            filtered.resize( (filtered.size() + index) * 2 );
+        memcpy( filtered.data() + write_pos, pBytes, index );
         write_pos += index;
         pBytes += index;
         nBytes -= index;
@@ -660,15 +653,15 @@ OUString replaceOrigin(
             nBytes -= RTL_CONSTASCII_LENGTH("origin%");
             use_filtered = true;
         }
-        if ((write_pos + nAdd) > filtered.getLength())
-            filtered.realloc( (filtered.getLength() + nAdd) * 2 );
-        memcpy( filtered.getArray() + write_pos, pAdd, nAdd );
+        if ((write_pos + nAdd) > filtered.size())
+            filtered.resize( (filtered.size() + nAdd) * 2 );
+        memcpy( filtered.data() + write_pos, pAdd, nAdd );
         write_pos += nAdd;
     }
     if (!use_filtered)
         return url;
-    if (write_pos < filtered.getLength())
-        filtered.realloc( write_pos );
+    if (write_pos < filtered.size())
+        filtered.resize( write_pos );
     OUString newUrl(url);
     if (!destFolder.isEmpty())
     {

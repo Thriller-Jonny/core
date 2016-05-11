@@ -18,7 +18,6 @@
  */
 
 #include "PresenterCanvas.hxx"
-#include "facreg.hxx"
 
 #include <basegfx/matrix/b2dhommatrix.hxx>
 #include <basegfx/polygon/b2dpolygontools.hxx>
@@ -27,15 +26,12 @@
 #include <basegfx/range/b2drectangle.hxx>
 #include <basegfx/tools/canvastools.hxx>
 #include <canvas/canvastools.hxx>
-#include <com/sun/star/uno/XComponentContext.hpp>
 #include <cppuhelper/basemutex.hxx>
 #include <cppuhelper/compbase.hxx>
-#include <cppuhelper/supportsservice.hxx>
 #include <rtl/ref.hxx>
 #include <toolkit/helper/vclunohelper.hxx>
 #include <vcl/window.hxx>
 #include <vcl/svapp.hxx>
-#include <boost/noncopyable.hpp>
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
@@ -52,8 +48,7 @@ namespace {
     > PresenterCustomSpriteInterfaceBase;
 }
 class PresenterCustomSprite
-    : private ::boost::noncopyable,
-      protected ::cppu::BaseMutex,
+    : protected ::cppu::BaseMutex,
       public PresenterCustomSpriteInterfaceBase
 {
 public:
@@ -63,6 +58,8 @@ public:
         const Reference<awt::XWindow>& rxBaseWindow,
         const css::geometry::RealSize2D& rSpriteSize);
     virtual ~PresenterCustomSprite();
+    PresenterCustomSprite(const PresenterCustomSprite&) = delete;
+    PresenterCustomSprite& operator=(const PresenterCustomSprite&) = delete;
     virtual void SAL_CALL disposing()
         throw (RuntimeException) override;
 
@@ -109,19 +106,6 @@ private:
 
 //===== PresenterCanvas =======================================================
 
-PresenterCanvas::PresenterCanvas()
-    : PresenterCanvasInterfaceBase(m_aMutex),
-      mxUpdateCanvas(),
-      mxSharedCanvas(),
-      mxSharedWindow(),
-      mxWindow(),
-      maOffset(),
-      mpUpdateRequester(),
-      maClipRectangle(),
-      mbOffsetUpdatePending(true)
-{
-}
-
 PresenterCanvas::PresenterCanvas (
     const Reference<rendering::XSpriteCanvas>& rxUpdateCanvas,
     const Reference<awt::XWindow>& rxUpdateWindow,
@@ -155,82 +139,6 @@ void SAL_CALL PresenterCanvas::disposing()
 {
     if (mxWindow.is())
         mxWindow->removeWindowListener(this);
-}
-
-//----- XInitialization -------------------------------------------------------
-
-void SAL_CALL PresenterCanvas::initialize (
-    const Sequence<Any>& rArguments)
-    throw(Exception, RuntimeException, std::exception)
-{
-    if (rBHelper.bDisposed || rBHelper.bInDispose)
-        ThrowIfDisposed();
-
-    if (rArguments.getLength() == 5)
-    {
-        try
-        {
-            // First and second argument may be NULL.
-            rArguments[0] >>= mxUpdateCanvas;
-            rArguments[1] >>= mxUpdateWindow;
-
-            if ( ! (rArguments[2] >>= mxSharedWindow))
-            {
-                throw lang::IllegalArgumentException("PresenterCanvas: invalid shared window",
-                    static_cast<XWeak*>(this),
-                    1);
-            }
-
-            if ( ! (rArguments[3] >>= mxSharedCanvas))
-            {
-                throw lang::IllegalArgumentException("PresenterCanvas: invalid shared canvas",
-                    static_cast<XWeak*>(this),
-                    2);
-            }
-
-            if ( ! (rArguments[4] >>= mxWindow))
-            {
-                throw lang::IllegalArgumentException("PresenterCanvas: invalid window",
-                    static_cast<XWeak*>(this),
-                    3);
-            }
-
-            mpUpdateRequester = CanvasUpdateRequester::Instance(mxUpdateCanvas);
-
-            mbOffsetUpdatePending = true;
-            if (mxWindow.is())
-                mxWindow->addWindowListener(this);
-        }
-        catch (RuntimeException&)
-        {
-            mxSharedWindow = nullptr;
-            mxWindow = nullptr;
-            throw;
-        }
-    }
-    else
-    {
-        throw RuntimeException("PresenterCanvas: invalid number of arguments",
-                static_cast<XWeak*>(this));
-    }
-}
-
-OUString PresenterCanvas::getImplementationName()
-    throw (css::uno::RuntimeException, std::exception)
-{
-    return OUString("com.sun.star.comp.Draw.PresenterCanvasFactory");
-}
-
-sal_Bool PresenterCanvas::supportsService(OUString const & ServiceName)
-    throw (css::uno::RuntimeException, std::exception)
-{
-    return cppu::supportsService(this, ServiceName);
-}
-
-css::uno::Sequence<OUString> PresenterCanvas::getSupportedServiceNames()
-    throw (css::uno::RuntimeException, std::exception)
-{
-    return css::uno::Sequence<OUString>{"com.sun.star.rendering.Canvas"};
 }
 
 //----- XCanvas ---------------------------------------------------------------
@@ -560,11 +468,11 @@ sal_Bool SAL_CALL PresenterCanvas::updateScreen (sal_Bool bUpdateAll)
     if (mpUpdateRequester.get() != nullptr)
     {
         mpUpdateRequester->RequestUpdate(bUpdateAll);
-        return sal_True;
+        return true;
     }
     else
     {
-        return sal_False;
+        return false;
     }
 }
 
@@ -634,7 +542,7 @@ sal_Bool SAL_CALL PresenterCanvas::hasAlpha()
     if (xBitmap.is())
         return xBitmap->hasAlpha();
     else
-        return sal_False;
+        return false;
 }
 
 Reference<rendering::XBitmap> SAL_CALL PresenterCanvas::getScaledBitmap(
@@ -850,7 +758,7 @@ Reference<rendering::XPolyPolygon2D> PresenterCanvas::UpdateSpriteClip (
         Reference<rendering::XLinePolyPolygon2D> xLinePolygon(
             xDevice->createCompatibleLinePolyPolygon(aPoints));
         if (xLinePolygon.is())
-            xLinePolygon->setClosed(0, sal_True);
+            xLinePolygon->setClosed(0, true);
         xPolygon.set(xLinePolygon, UNO_QUERY);
     }
 
@@ -919,7 +827,7 @@ void SAL_CALL PresenterCustomSprite::move (
         mpCanvas->MergeViewState(rViewState, mpCanvas->GetOffset(mxBaseWindow)),
         rRenderState);
     // Clip sprite against window bounds.  This call is necessary because
-    // sprite clipping is done in the corrdinate system of the sprite.
+    // sprite clipping is done in the coordinate system of the sprite.
     // Therefore, after each change of the sprites location the window
     // bounds have to be transformed into the sprites coordinate system.
     clip(nullptr);
@@ -983,15 +891,5 @@ void PresenterCustomSprite::ThrowIfDisposed()
 }
 
 } } // end of namespace ::sd::presenter
-
-
-extern "C" SAL_DLLPUBLIC_EXPORT css::uno::XInterface* SAL_CALL
-com_sun_star_comp_Draw_PresenterCanvasFactory_get_implementation(css::uno::XComponentContext*,
-                                                                 css::uno::Sequence<css::uno::Any> const &)
-{
-    return cppu::acquire(new sd::presenter::PresenterCanvas());
-}
-
-
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -91,8 +91,8 @@ using ::com::sun::star::beans::XPropertySetInfo;
 using ::com::sun::star::container::XIndexAccess;
 using ::sax_fastparser::FSHelperPtr;
 
-DBG(void dump_pset(Reference< XPropertySet > rXPropSet);)
 
+void dump_pset(Reference< XPropertySet > rXPropSet);
 #define IDS(x) OString(OStringLiteral(#x " ") + OString::number( mnShapeIdMax++ )).getStr()
 
 namespace oox {
@@ -108,14 +108,14 @@ public:
     PowerPointShapeExport( FSHelperPtr pFS, ShapeHashMap* pShapeMap, PowerPointExport* pFB );
     void                SetMaster( bool bMaster );
     void                SetPageType( PageType ePageType );
-    ShapeExport&        WriteNonVisualProperties( Reference< XShape > xShape ) override;
-    ShapeExport&        WriteTextShape( Reference< XShape > xShape ) override;
-    ShapeExport&        WriteUnknownShape( Reference< XShape > xShape ) override;
-    ShapeExport&        WritePlaceholderShape( Reference< XShape > xShape, PlaceholderType ePlaceholder );
-    ShapeExport&        WritePageShape( Reference< XShape > xShape, PageType ePageType, bool bPresObj );
+    ShapeExport&        WriteNonVisualProperties( const Reference< XShape >& xShape ) override;
+    ShapeExport&        WriteTextShape( const Reference< XShape >& xShape ) override;
+    ShapeExport&        WriteUnknownShape( const Reference< XShape >& xShape ) override;
+    ShapeExport&        WritePlaceholderShape( const Reference< XShape >& xShape, PlaceholderType ePlaceholder );
+    ShapeExport&        WritePageShape( const Reference< XShape >& xShape, PageType ePageType, bool bPresObj );
 
     // helper parts
-    bool WritePlaceholder( Reference< XShape > xShape, PlaceholderType ePlaceholder, bool bMaster );
+    bool WritePlaceholder( const Reference< XShape >& xShape, PlaceholderType ePlaceholder, bool bMaster );
 };
 
 enum PPTXLayout {
@@ -159,7 +159,7 @@ int PowerPointExport::GetPPTXLayoutId( int nOffset )
 {
     int nId = LAYOUT_BLANK;
 
-    DBG(printf("GetPPTXLayoutId %d\n", nOffset));
+    SAL_INFO("sd.eppt", "GetPPTXLayoutId " << nOffset);
 
     switch( nOffset ) {
         case 0:
@@ -223,20 +223,20 @@ void PowerPointShapeExport::SetPageType( PageType ePageType )
     mePageType = ePageType;
 }
 
-ShapeExport& PowerPointShapeExport::WriteNonVisualProperties( Reference< XShape > )
+ShapeExport& PowerPointShapeExport::WriteNonVisualProperties( const Reference< XShape >& )
 {
     GetFS()->singleElementNS( XML_p, XML_nvPr, FSEND );
 
     return *this;
 }
 
-ShapeExport& PowerPointShapeExport::WriteTextShape( Reference< XShape > xShape )
+ShapeExport& PowerPointShapeExport::WriteTextShape( const Reference< XShape >& xShape )
 {
     OUString sShapeType = xShape->getShapeType();
 
-    DBG(printf( "shape(text): %s\n", USS(sShapeType) ));
+    SAL_INFO("sd.eppt", "shape(text) : " << USS(sShapeType));
 
-    if ( sShapeType == "com.sun.star.drawing.TextShape" )
+    if ( sShapeType == "com.sun.star.drawing.TextShape" || sShapeType == "com.sun.star.drawing.GraphicObjectShape" )
     {
     ShapeExport::WriteTextShape( xShape );
     }
@@ -277,22 +277,24 @@ ShapeExport& PowerPointShapeExport::WriteTextShape( Reference< XShape > xShape )
         if( !WritePlaceholder( xShape, Title, mbMaster ) )
             ShapeExport::WriteTextShape( xShape );
     }
+    else
+        SAL_WARN("sd.filter", "PowerPointShapeExport::WriteTextShape: shape of type '" << sShapeType << "' is ignored");
 
     return *this;
 }
 
-ShapeExport& PowerPointShapeExport::WriteUnknownShape( Reference< XShape > xShape )
+ShapeExport& PowerPointShapeExport::WriteUnknownShape( const Reference< XShape >& xShape )
 {
     OUString sShapeType = xShape->getShapeType();
 
-    DBG(printf( "shape(unknown): %s\n", USS(sShapeType) ));
+    SAL_INFO("sd.eppt", "shape(unknown): " << USS(sShapeType));
 
     if ( sShapeType == "com.sun.star.drawing.GroupShape" )
     {
         Reference< XIndexAccess > rXIndexAccess( xShape, UNO_QUERY );
 
         mrExport.EnterGroup( rXIndexAccess );
-        DBG(printf( "enter group\n" ));
+        SAL_INFO("sd.eppt", "enter group");
     }
     else if ( sShapeType == "com.sun.star.drawing.PageShape" )
     {
@@ -330,8 +332,7 @@ void PowerPointExport::writeDocumentProperties()
 
     if (xDocProps.is())
     {
-        PowerPointExport& mrExport(*this);
-        mrExport.exportDocumentProperties( xDocProps );
+        exportDocumentProperties( xDocProps );
     }
 }
 
@@ -402,7 +403,7 @@ bool PowerPointExport::exportDocument() throw (css::uno::RuntimeException, std::
     return new ::oox::ole::VbaProject( getComponentContext(), getModel(), "Impress" );
 }
 
-void PowerPointExport::ImplWriteBackground( FSHelperPtr pFS, Reference< XPropertySet > rXPropSet )
+void PowerPointExport::ImplWriteBackground( const FSHelperPtr& pFS, const Reference< XPropertySet >& rXPropSet )
 {
     FillStyle aFillStyle( FillStyle_NONE );
     if ( ImplGetPropertyValue( rXPropSet, "FillStyle" ) )
@@ -501,7 +502,7 @@ const char* PowerPointExport::Get8Direction( sal_uInt8 nDirection )
     return pDirection;
 }
 
-void PowerPointExport::WriteTransition( FSHelperPtr pFS )
+void PowerPointExport::WriteTransition( const FSHelperPtr& pFS )
 {
     FadeEffect eFadeEffect = FadeEffect_NONE;
     GET( eFadeEffect, Effect );
@@ -585,6 +586,7 @@ void PowerPointExport::WriteTransition( FSHelperPtr pFS )
                         break;
                     case animations::TransitionSubType::CORNERSIN: // Inside turning cube
                         pInverted = "true";
+                        SAL_FALLTHROUGH;
                     case animations::TransitionSubType::CORNERSOUT: // Outside turning cube
                         nTransition = XML_fade;
                         nTransition14 = XML_prism;
@@ -790,7 +792,7 @@ void PowerPointExport::WriteTransition( FSHelperPtr pFS )
     }
 }
 
-void PowerPointExport::WriteAnimationProperty( FSHelperPtr pFS, const Any& rAny )
+void PowerPointExport::WriteAnimationProperty( const FSHelperPtr& pFS, const Any& rAny )
 {
     if( !rAny.hasValue() )
         return;
@@ -806,7 +808,7 @@ void PowerPointExport::WriteAnimationProperty( FSHelperPtr pFS, const Any& rAny 
     }
 }
 
-void PowerPointExport::WriteAnimateValues( FSHelperPtr pFS, const Reference< XAnimate >& rXAnimate )
+void PowerPointExport::WriteAnimateValues( const FSHelperPtr& pFS, const Reference< XAnimate >& rXAnimate )
 {
     const Sequence< double > aKeyTimes = rXAnimate->getKeyTimes();
     if( aKeyTimes.getLength() <= 0 )
@@ -815,12 +817,12 @@ void PowerPointExport::WriteAnimateValues( FSHelperPtr pFS, const Reference< XAn
     const OUString& sFormula = rXAnimate->getFormula();
     const OUString& rAttributeName = rXAnimate->getAttributeName();
 
-    DBG(printf("animate values, formula: %s\n", USS( sFormula )));
+    SAL_INFO("sd.eppt", "animate values, formula: " << USS(sFormula));
 
     pFS->startElementNS( XML_p, XML_tavLst, FSEND );
 
     for( int i = 0; i < aKeyTimes.getLength(); i++ ) {
-    DBG(printf("animate value %d: %f\n", i, aKeyTimes[ i ]));
+    SAL_INFO("sd.eppt", "animate value " << i << ": " << aKeyTimes[i]);
     if( aValues[ i ].hasValue() ) {
         pFS->startElementNS( XML_p, XML_tav,
                  XML_fmla, sFormula.isEmpty() ? nullptr : USS( sFormula ),
@@ -842,12 +844,12 @@ void PowerPointExport::WriteAnimateValues( FSHelperPtr pFS, const Reference< XAn
     pFS->endElementNS( XML_p, XML_tavLst );
 }
 
-void PowerPointExport::WriteAnimateTo( FSHelperPtr pFS, const Any& rValue, const OUString& rAttributeName )
+void PowerPointExport::WriteAnimateTo( const FSHelperPtr& pFS, const Any& rValue, const OUString& rAttributeName )
 {
     if( !rValue.hasValue() )
         return;
 
-    DBG(printf("to attribute name: %s\n", USS( rAttributeName )));
+    SAL_INFO("sd.eppt", "to attribute name: " << USS(rAttributeName));
 
     pFS->startElementNS( XML_p, XML_to, FSEND );
 
@@ -856,14 +858,14 @@ void PowerPointExport::WriteAnimateTo( FSHelperPtr pFS, const Any& rValue, const
     pFS->endElementNS( XML_p, XML_to );
 }
 
-void PowerPointExport::WriteAnimationAttributeName( FSHelperPtr pFS, const OUString& rAttributeName )
+void PowerPointExport::WriteAnimationAttributeName( const FSHelperPtr& pFS, const OUString& rAttributeName )
 {
     if( rAttributeName.isEmpty() )
         return;
 
     pFS->startElementNS( XML_p, XML_attrNameLst, FSEND );
 
-    DBG(printf("write attribute name: %s\n", USS( rAttributeName )));
+    SAL_INFO("sd.eppt", "write attribute name: " << USS(rAttributeName));
 
     const char* sAttributeName = nullptr;
     if ( rAttributeName == "Visibility" ) {
@@ -881,7 +883,7 @@ void PowerPointExport::WriteAnimationAttributeName( FSHelperPtr pFS, const OUStr
     pFS->endElementNS( XML_p, XML_attrNameLst );
 }
 
-void PowerPointExport::WriteAnimationTarget( FSHelperPtr pFS, const Any& rTarget )
+void PowerPointExport::WriteAnimationTarget( const FSHelperPtr& pFS, const Any& rTarget )
 {
     sal_Int32 nBegin = -1, nEnd = -1;
     bool bParagraphTarget;
@@ -905,7 +907,7 @@ void PowerPointExport::WriteAnimationTarget( FSHelperPtr pFS, const Any& rTarget
     }
 }
 
-void PowerPointExport::WriteAnimationNodeAnimate( FSHelperPtr pFS, const Reference< XAnimationNode >& rXNode, sal_Int32 nXmlNodeType, bool bMainSeqChild )
+void PowerPointExport::WriteAnimationNodeAnimate( const FSHelperPtr& pFS, const Reference< XAnimationNode >& rXNode, sal_Int32 nXmlNodeType, bool bMainSeqChild )
 {
     Reference< XAnimate > rXAnimate( rXNode, UNO_QUERY );
     if( !rXAnimate.is() )
@@ -946,7 +948,7 @@ void PowerPointExport::WriteAnimationNodeAnimate( FSHelperPtr pFS, const Referen
     pFS->endElementNS( XML_p, nXmlNodeType );
 }
 
-void PowerPointExport::WriteAnimationNodeAnimateInside( FSHelperPtr pFS, const Reference< XAnimationNode >& rXNode, bool bMainSeqChild, bool bSimple )
+void PowerPointExport::WriteAnimationNodeAnimateInside( const FSHelperPtr& pFS, const Reference< XAnimationNode >& rXNode, bool bMainSeqChild, bool bSimple )
 {
     Reference< XAnimate > rXAnimate( rXNode, UNO_QUERY );
     if( !rXAnimate.is() )
@@ -985,7 +987,7 @@ void PowerPointExport::WriteAnimationNodeAnimateInside( FSHelperPtr pFS, const R
     WriteAnimateTo( pFS, rXAnimate->getTo(), rXAnimate->getAttributeName() );
 }
 
-void PowerPointExport::WriteAnimationCondition( FSHelperPtr pFS, const char* pDelay, const char* pEvent, double fDelay, bool bHasFDelay )
+void PowerPointExport::WriteAnimationCondition( const FSHelperPtr& pFS, const char* pDelay, const char* pEvent, double fDelay, bool bHasFDelay )
 {
     if( bHasFDelay || pDelay || pEvent ) {
     if( !pEvent )
@@ -1007,7 +1009,7 @@ void PowerPointExport::WriteAnimationCondition( FSHelperPtr pFS, const char* pDe
     }
 }
 
-void PowerPointExport::WriteAnimationCondition( FSHelperPtr pFS, Any& rAny, bool bWriteEvent, bool bMainSeqChild )
+void PowerPointExport::WriteAnimationCondition( const FSHelperPtr& pFS, Any& rAny, bool bWriteEvent, bool bMainSeqChild )
 {
     bool bHasFDelay = false;
     double fDelay = 0;
@@ -1026,9 +1028,10 @@ void PowerPointExport::WriteAnimationCondition( FSHelperPtr pFS, Any& rAny, bool
     else if( rAny >>= aEvent )
     {
     // TODO
-    DBG(printf ("animation condition event: TODO\n"));
-    DBG(printf ("event offset has value: %d trigger: %d source has value: %d\n", aEvent.Offset.hasValue(), aEvent.Trigger, aEvent.Source.hasValue()));
 
+    SAL_INFO("sd.eppt", "animation condition event: TODO");
+    SAL_INFO("sd.eppt", "event offset has value: " << aEvent.Offset.hasValue() << " trigger: " <<  aEvent.Trigger
+             << " source has value: " <<  aEvent.Source.hasValue());
     if( !bWriteEvent && aEvent.Trigger == EventTrigger::ON_NEXT && bMainSeqChild )
         pDelay = "indefinite";
     else if( bWriteEvent ) {
@@ -1071,18 +1074,18 @@ void PowerPointExport::WriteAnimationCondition( FSHelperPtr pFS, Any& rAny, bool
 
     if( aEvent.Offset >>= fDelay ) {
         bHasFDelay = true;
-        DBG(printf ("event offset: %f\n", fDelay));
+        SAL_INFO("sd.eppt", "event offset: " << fDelay);
     } else if( aEvent.Offset >>= eTiming ) {
         if( eTiming == Timing_INDEFINITE )
             pDelay = "indefinite";
-        DBG(printf ("event offset timing: %d\n", eTiming));
+        SAL_INFO("sd.eppt", "event offset timing: " << eTiming);
     }
     }
 
     WriteAnimationCondition( pFS, pDelay, pEvent, fDelay, bHasFDelay );
 }
 
-void PowerPointExport::WriteAnimationNodeCommonPropsStart( FSHelperPtr pFS, const Reference< XAnimationNode >& rXNode, bool bSingle, bool bMainSeqChild )
+void PowerPointExport::WriteAnimationNodeCommonPropsStart( const FSHelperPtr& pFS, const Reference< XAnimationNode >& rXNode, bool bSingle, bool bMainSeqChild )
 {
     const char* pDuration = nullptr;
     const char* pRestart = nullptr;
@@ -1251,7 +1254,7 @@ void PowerPointExport::WriteAnimationNodeCommonPropsStart( FSHelperPtr pFS, cons
     if( xEnumerationAccess.is() ) {
     Reference< XEnumeration > xEnumeration( xEnumerationAccess->createEnumeration(), UNO_QUERY );
     if( xEnumeration.is() ) {
-        DBG(printf ("-----\n"));
+        SAL_INFO("sd.eppt", "-----");
 
         if( xEnumeration->hasMoreElements() ) {
             pFS->startElementNS( XML_p, XML_childTnLst, FSEND );
@@ -1264,7 +1267,7 @@ void PowerPointExport::WriteAnimationNodeCommonPropsStart( FSHelperPtr pFS, cons
 
             pFS->endElementNS( XML_p, XML_childTnLst );
         }
-        DBG(printf ("-----\n"));
+        SAL_INFO("sd.eppt", "-----");
     }
     }
 
@@ -1272,9 +1275,9 @@ void PowerPointExport::WriteAnimationNodeCommonPropsStart( FSHelperPtr pFS, cons
     pFS->endElementNS( XML_p, XML_cTn );
 }
 
-void PowerPointExport::WriteAnimationNodeSeq( FSHelperPtr pFS, const Reference< XAnimationNode >& rXNode, sal_Int32, bool bMainSeqChild )
+void PowerPointExport::WriteAnimationNodeSeq( const FSHelperPtr& pFS, const Reference< XAnimationNode >& rXNode, sal_Int32, bool bMainSeqChild )
 {
-    DBG(printf ("write animation node SEQ\n"));
+    SAL_INFO("sd.eppt", "write animation node SEQ");
 
     pFS->startElementNS( XML_p, XML_seq, FSEND );
 
@@ -1291,10 +1294,9 @@ void PowerPointExport::WriteAnimationNodeSeq( FSHelperPtr pFS, const Reference< 
     pFS->endElementNS( XML_p, XML_seq );
 }
 
-void PowerPointExport::WriteAnimationNodeEffect( FSHelperPtr pFS, const Reference< XAnimationNode >& rXNode, sal_Int32, bool bMainSeqChild )
+void PowerPointExport::WriteAnimationNodeEffect( const FSHelperPtr& pFS, const Reference< XAnimationNode >& rXNode, sal_Int32, bool bMainSeqChild )
 {
-    DBG(printf ("write animation node FILTER\n"));
-
+    SAL_INFO("sd.eppt", "write animation node FILTER");
     Reference< XTransitionFilter > xFilter( rXNode, UNO_QUERY );
     if ( xFilter.is() ) {
     const char* pFilter = ::ppt::AnimationExporter::FindTransitionName( xFilter->getTransition(), xFilter->getSubtype(), xFilter->getDirection() );
@@ -1310,11 +1312,11 @@ void PowerPointExport::WriteAnimationNodeEffect( FSHelperPtr pFS, const Referenc
     }
 }
 
-void PowerPointExport::WriteAnimationNode( FSHelperPtr pFS, const Reference< XAnimationNode >& rXNode, bool bMainSeqChild )
+void PowerPointExport::WriteAnimationNode( const FSHelperPtr& pFS, const Reference< XAnimationNode >& rXNode, bool bMainSeqChild )
 {
-    DBG(printf ("export node type: %d\n", rXNode->getType()));
+    SAL_INFO("sd.eppt", "export node type: " << rXNode->getType());
     sal_Int32 xmlNodeType = -1;
-    typedef void (PowerPointExport::*AnimationNodeWriteMethod)( FSHelperPtr, const Reference< XAnimationNode >&, sal_Int32, bool );
+    typedef void (PowerPointExport::*AnimationNodeWriteMethod)( const FSHelperPtr&, const Reference< XAnimationNode >&, sal_Int32, bool );
     AnimationNodeWriteMethod pMethod = nullptr;
 
     switch( rXNode->getType() ) {
@@ -1353,7 +1355,7 @@ void PowerPointExport::WriteAnimationNode( FSHelperPtr pFS, const Reference< XAn
     pFS->endElementNS( XML_p, xmlNodeType );
 }
 
-void PowerPointExport::WriteAnimations( FSHelperPtr pFS )
+void PowerPointExport::WriteAnimations( const FSHelperPtr& pFS )
 {
     Reference< XAnimationNodeSupplier > xNodeSupplier( mXDrawPage, UNO_QUERY );
     if( xNodeSupplier.is() ) {
@@ -1410,7 +1412,7 @@ void PowerPointExport::WriteAuthors()
                          FSNS( XML_xmlns, XML_p ), "http://schemas.openxmlformats.org/presentationml/2006/main",
                          FSEND );
 
-    for( AuthorsMap::value_type i : maAuthors ) {
+    for( const AuthorsMap::value_type& i : maAuthors ) {
         pFS->singleElementNS( XML_p, XML_cmAuthor,
                               XML_id, I32S( i.second.nId ),
                               XML_name, USS( i.first ),
@@ -1502,7 +1504,7 @@ bool PowerPointExport::WriteComments( sal_uInt32 nPageNum )
 void PowerPointExport::ImplWriteSlide( sal_uInt32 nPageNum, sal_uInt32 nMasterNum, sal_uInt16 /* nMode */,
                                        bool bHasBackground, Reference< XPropertySet > aXBackgroundPropSet )
 {
-    DBG(printf("write slide: %" SAL_PRIuUINT32 "\n----------------\n", nPageNum));
+    SAL_INFO("sd.eppt", "write slide: " << nPageNum << "\n----------------");
 
     // slides list
     if( nPageNum == 0 )
@@ -1583,15 +1585,15 @@ void PowerPointExport::ImplWriteSlide( sal_uInt32 nPageNum, sal_uInt32 nMasterNu
                      .append( ".xml" )
                      .makeStringAndClear() );
 
-    DBG(printf("----------------\n"));
+    SAL_INFO("sd.eppt", "----------------");
 }
 
 void PowerPointExport::ImplWriteNotes( sal_uInt32 nPageNum )
 {
-    if( !mbCreateNotes || !ContainsOtherShapeThanPlaceholders( true ) )
+    if( !mbCreateNotes || !ContainsOtherShapeThanPlaceholders() )
         return;
 
-    DBG(printf("write Notes %" SAL_PRIuUINT32 "\n----------------\n", nPageNum));
+    SAL_INFO("sd.eppt", "write Notes " << nPageNum << "\n----------------");
 
     FSHelperPtr pFS = openFragmentStreamWithSerializer( OUStringBuffer()
                                                         .append( "ppt/notesSlides/notesSlide" )
@@ -1634,10 +1636,10 @@ void PowerPointExport::ImplWriteNotes( sal_uInt32 nPageNum )
                  "http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesMaster",
           "../notesMasters/notesMaster1.xml" );
 
-    DBG(printf("----------------\n"));
+    SAL_INFO("sd.eppt", "-----------------");
 }
 
-void PowerPointExport::AddLayoutIdAndRelation( FSHelperPtr pFS, sal_Int32 nLayoutFileId )
+void PowerPointExport::AddLayoutIdAndRelation( const FSHelperPtr& pFS, sal_Int32 nLayoutFileId )
 {
     // add implicit relation of slide master to slide layout
     OUString sRelId = addRelation( pFS->getOutputStream(),
@@ -1665,7 +1667,7 @@ sal_Int32 PowerPointExport::nStyleLevelToken[5] =
 
 void PowerPointExport::ImplWriteSlideMaster( sal_uInt32 nPageNum, Reference< XPropertySet > aXBackgroundPropSet )
 {
-    DBG(printf("write slide master: %" SAL_PRIuUINT32 "\n----------------\n", nPageNum));
+    SAL_INFO("sd.eppt", "write slide master: " << nPageNum << "\n--------------");
 
     // slides list
     if( nPageNum == 0 )
@@ -1751,12 +1753,12 @@ void PowerPointExport::ImplWriteSlideMaster( sal_uInt32 nPageNum, Reference< XPr
 
     pFS->endElementNS( XML_p, XML_sldMaster );
 
-    DBG(printf("----------------\n"));
+    SAL_INFO("sd.eppt", "----------------");
 }
 
 sal_Int32 PowerPointExport::GetLayoutFileId( sal_Int32 nOffset, sal_uInt32 nMasterNum )
 {
-    DBG(printf("GetLayoutFileId offset: %" SAL_PRIdINT32 " master: %" SAL_PRIuUINT32 "", nOffset, nMasterNum));
+    SAL_INFO("sd.eppt", "GetLayoutFileId offset: " << nOffset << " master: " << nMasterNum);
     if( mLayoutInfo[ nOffset ].mnFileIdArray.size() <= nMasterNum )
         return 0;
 
@@ -1771,7 +1773,7 @@ void PowerPointExport::ImplWriteLayout( sal_Int32 /*nOffset*/, sal_uInt32 /*nMas
 
 void PowerPointExport::ImplWritePPTXLayout( sal_Int32 nOffset, sal_uInt32 nMasterNum )
 {
-    DBG(printf("write layout: %" SAL_PRIdINT32 "\n", nOffset));
+    SAL_INFO("sd.eppt", "write layout: " << nOffset);
 
     Reference< drawing::XDrawPagesSupplier > xDPS( getModel(), uno::UNO_QUERY );
     Reference< drawing::XDrawPages > xDrawPages( xDPS->getDrawPages(), uno::UNO_QUERY );
@@ -1787,8 +1789,7 @@ void PowerPointExport::ImplWritePPTXLayout( sal_Int32 nOffset, sal_uInt32 nMaste
 
     Reference< beans::XPropertySet > xPropSet( xSlide, uno::UNO_QUERY );
     xPropSet->setPropertyValue( "Layout", makeAny( short( aLayoutInfo[ nOffset ].nType ) ) );
-    DBG(dump_pset( xPropSet ));
-
+    dump_pset(xPropSet);
     mXPagePropSet.set( xSlide, UNO_QUERY );
     mXShapes.set( xSlide, UNO_QUERY );
 
@@ -1839,7 +1840,7 @@ void PowerPointExport::ImplWritePPTXLayout( sal_Int32 nOffset, sal_uInt32 nMaste
     xDrawPages->remove( xSlide );
 }
 
-void PowerPointExport::WriteShapeTree( FSHelperPtr pFS, PageType ePageType, bool bMaster )
+void PowerPointExport::WriteShapeTree( const FSHelperPtr& pFS, PageType ePageType, bool bMaster )
 {
     PowerPointShapeExport aDML( pFS, &maShapeMap, this );
     aDML.SetMaster( bMaster );
@@ -1856,11 +1857,11 @@ void PowerPointExport::WriteShapeTree( FSHelperPtr pFS, PageType ePageType, bool
 
         sal_uInt32 nGroups = GetGroupsClosed();
         for ( sal_uInt32 i = 0; i < nGroups; i++ ) {
-            DBG(printf( "leave group\n" ));
+            SAL_INFO("sd.eppt", "leave group");
         }
 
         if ( GetShapeByIndex( GetCurrentGroupIndex(), true ) ) {
-            DBG(printf( "mType: \"%s\"\n", mType.getStr() ));
+            SAL_INFO("sd.eppt", "mType: \"" << mType.getStr() << "\"\n");
             aDML.WriteShape( mXShape );
         }
     }
@@ -1868,10 +1869,7 @@ void PowerPointExport::WriteShapeTree( FSHelperPtr pFS, PageType ePageType, bool
     pFS->endElementNS( XML_p, XML_spTree );
 }
 
-#define BEGIN_SHAPE mpFS->startElementNS( XML_p, XML_sp, FSEND )
-#define END_SHAPE mpFS->endElementNS( XML_p, XML_sp )
-
-ShapeExport& PowerPointShapeExport::WritePageShape( Reference< XShape > xShape, PageType ePageType, bool bPresObj )
+ShapeExport& PowerPointShapeExport::WritePageShape( const Reference< XShape >& xShape, PageType ePageType, bool bPresObj )
 {
     if( ( ePageType == NOTICE && bPresObj ) || ePageType == LAYOUT )
         return WritePlaceholderShape( xShape, SlideImage );
@@ -1879,9 +1877,9 @@ ShapeExport& PowerPointShapeExport::WritePageShape( Reference< XShape > xShape, 
     return WriteTextShape( xShape );
 }
 
-bool PowerPointShapeExport::WritePlaceholder( Reference< XShape > xShape, PlaceholderType ePlaceholder, bool bMaster )
+bool PowerPointShapeExport::WritePlaceholder( const Reference< XShape >& xShape, PlaceholderType ePlaceholder, bool bMaster )
 {
-    DBG(printf("WritePlaceholder %d %d\n", bMaster, ShapeExport::NonEmptyText( xShape )));
+    SAL_INFO("sd.eppt", "WritePlaceholder " << bMaster << " " << ShapeExport::NonEmptyText(xShape));
     if( bMaster && ShapeExport::NonEmptyText( xShape ) ) {
     WritePlaceholderShape( xShape, ePlaceholder );
 
@@ -1891,9 +1889,9 @@ bool PowerPointShapeExport::WritePlaceholder( Reference< XShape > xShape, Placeh
     return false;
 }
 
-ShapeExport& PowerPointShapeExport::WritePlaceholderShape( Reference< XShape > xShape, PlaceholderType ePlaceholder )
+ShapeExport& PowerPointShapeExport::WritePlaceholderShape( const Reference< XShape >& xShape, PlaceholderType ePlaceholder )
 {
-    BEGIN_SHAPE;
+    mpFS->startElementNS( XML_p, XML_sp, FSEND );
 
     // non visual shape properties
     mpFS->startElementNS( XML_p, XML_nvSpPr, FSEND );
@@ -1933,9 +1931,9 @@ ShapeExport& PowerPointShapeExport::WritePlaceholderShape( Reference< XShape > x
         pType = "subTitle";
         break;
     default:
-        DBG(printf("warning: unhandled placeholder type: %d\n", ePlaceholder));
+        SAL_INFO("sd.eppt", "warning: unhandled placeholder type: " << ePlaceholder);
     }
-    DBG(printf("write placeholder %s\n", pType));
+    SAL_INFO("sd.eppt", "write placeholder " << pType);
     mpFS->singleElementNS( XML_p, XML_ph, XML_type, pType, FSEND );
     mpFS->endElementNS( XML_p, XML_nvPr );
     mpFS->endElementNS( XML_p, XML_nvSpPr );
@@ -1951,7 +1949,7 @@ ShapeExport& PowerPointShapeExport::WritePlaceholderShape( Reference< XShape > x
 
     WriteTextBox( xShape, XML_p );
 
-    END_SHAPE;
+    mpFS->endElementNS( XML_p, XML_sp );
 
     return *this;
 }
@@ -2202,10 +2200,10 @@ bool PowerPointExport::ImplCreateDocument()
         if ( !GetPageByIndex( i, NOTICE ) )
             return false;
 
-    if( ContainsOtherShapeThanPlaceholders( true ) ) {
-        mbCreateNotes = true;
-        break;
-    }
+        if( ContainsOtherShapeThanPlaceholders() ) {
+            mbCreateNotes = true;
+            break;
+        }
     }
 
     return true;
@@ -2213,7 +2211,7 @@ bool PowerPointExport::ImplCreateDocument()
 
 bool PowerPointExport::WriteNotesMaster()
 {
-    DBG(printf("write Notes master\n----------------\n"));
+    SAL_INFO("sd.eppt", "write Notes master\n---------------");
 
     mPresentationFS->startElementNS( XML_p, XML_notesMasterIdLst, FSEND );
 
@@ -2273,7 +2271,7 @@ bool PowerPointExport::WriteNotesMaster()
 
     pFS->endElementNS( XML_p, XML_notesMaster );
 
-    DBG(printf("----------------\n"));
+    SAL_INFO("sd.eppt", "----------------");
 
     return true;
 }
@@ -2336,7 +2334,6 @@ SAL_DLLPUBLIC_EXPORT void* SAL_CALL sdfilt_component_getFactory( const sal_Char*
 }
 #endif
 
-DBG(
 void dump_pset(Reference< XPropertySet > rXPropSet)
 {
     Reference< XPropertySetInfo > info = rXPropSet->getPropertySetInfo ();
@@ -2344,7 +2341,6 @@ void dump_pset(Reference< XPropertySet > rXPropSet)
 
     for (int i=0; i < props.getLength (); i++) {
         OString name = OUStringToOString( props [i].Name, RTL_TEXTENCODING_UTF8);
-        printf ("%30s = ", name.getStr() );
 
         Any value = rXPropSet->getPropertyValue( props [i].Name );
 
@@ -2354,17 +2350,16 @@ void dump_pset(Reference< XPropertySet > rXPropSet)
         RectanglePoint pointValue;
 
         if( value >>= strValue )
-            printf ("\"%s\"\n", USS( strValue ) );
+            SAL_WARN("sd.eppt", name << " = \"" << strValue << "\"");
         else if( value >>= intValue )
-            printf ("%" SAL_PRIdINT32 "            (hex: %" SAL_PRIxUINT32 ")\n", intValue, intValue);
+            SAL_WARN("sd.eppt", name << " = " << intValue << "(hex : " << std::hex << intValue << ")");
         else if( value >>= boolValue )
-            printf ("%d            (bool)\n", boolValue);
+            SAL_WARN("sd.eppt", name << " = " << boolValue << "           (bool)");
         else if( value >>= pointValue )
-            printf ("%d            (RectanglePoint)\n", pointValue);
+            SAL_WARN("sd.eppt", name << " = " << pointValue << "    (RectanglePoint)");
         else
-            printf ("???           <unhandled type>\n");
+            SAL_WARN("sd.eppt", "???          <unhandled type>");
     }
 }
-);
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

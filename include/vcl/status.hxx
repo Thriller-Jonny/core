@@ -23,13 +23,12 @@
 #include <tools/solar.h>
 #include <vcl/dllapi.h>
 #include <vcl/window.hxx>
+#include <o3tl/typed_flags_set.hxx>
 #include <vector>
 
 struct ImplStatusItem;
 typedef ::std::vector< ImplStatusItem* > ImplStatusItemList;
 
-
-// - Progress-Ausgabe -
 
 void VCL_DLLPUBLIC DrawProgress(vcl::Window* pWindow, vcl::RenderContext& rRenderContext, const Point& rPos,
                                 long nOffset, long nPrgsWidth, long nPrgsHeight,
@@ -37,34 +36,25 @@ void VCL_DLLPUBLIC DrawProgress(vcl::Window* pWindow, vcl::RenderContext& rRende
                                 const Rectangle& rFramePosSize);
 
 
-// - StatusBarItemBits -
-
-
-typedef sal_uInt16 StatusBarItemBits;
-
-
-// - Bits fuer StatusBarItems -
-
-
-#define SIB_LEFT                    ((StatusBarItemBits)0x0001)
-#define SIB_CENTER                  ((StatusBarItemBits)0x0002)
-#define SIB_RIGHT                   ((StatusBarItemBits)0x0004)
-#define SIB_IN                      ((StatusBarItemBits)0x0008)
-#define SIB_OUT                     ((StatusBarItemBits)0x0010)
-#define SIB_FLAT                    ((StatusBarItemBits)0x0020)
-#define SIB_AUTOSIZE                ((StatusBarItemBits)0x0040)
-#define SIB_USERDRAW                ((StatusBarItemBits)0x0080)
-
-
-// - StatusBar-Types -
-
+enum class StatusBarItemBits {
+    NONE            = 0x0000,
+    Left            = 0x0001,
+    Center          = 0x0002,
+    Right           = 0x0004,
+    In              = 0x0008,
+    Out             = 0x0010,
+    Flat            = 0x0020,
+    AutoSize        = 0x0040,
+    UserDraw        = 0x0080,
+};
+namespace o3tl
+{
+    template<> struct typed_flags<StatusBarItemBits> : is_typed_flags<StatusBarItemBits, 0x00ff> {};
+}
 
 #define STATUSBAR_APPEND            ((sal_uInt16)0xFFFF)
 #define STATUSBAR_ITEM_NOTFOUND     ((sal_uInt16)0xFFFF)
 #define STATUSBAR_OFFSET            ((long)5)
-
-
-// - StatusBar -
 
 
 class VCL_DLLPUBLIC StatusBar : public vcl::Window
@@ -100,12 +90,10 @@ private:
     SAL_DLLPRIVATE void      ImplFormat();
     SAL_DLLPRIVATE bool      ImplIsItemUpdate();
 
-    SAL_DLLPRIVATE void      ImplDrawText(vcl::RenderContext& rRenderContext, bool bOffScreen,
-                                          long nOldTextWidth);
+    SAL_DLLPRIVATE void      ImplDrawText(vcl::RenderContext& rRenderContext);
     SAL_DLLPRIVATE void      ImplDrawItem(vcl::RenderContext& rRenderContext, bool bOffScreen,
-                                          sal_uInt16 nPos, bool bDrawText, bool bDrawFrame);
-    SAL_DLLPRIVATE void      ImplDrawProgress(vcl::RenderContext& rRenderContext, bool bPaint,
-                                              sal_uInt16 nOldPerc, sal_uInt16 nNewPerc);
+                                          sal_uInt16 nPos);
+    SAL_DLLPRIVATE void      ImplDrawProgress(vcl::RenderContext& rRenderContext, sal_uInt16 nNewPerc);
     SAL_DLLPRIVATE void      ImplCalcProgressRect();
     SAL_DLLPRIVATE Rectangle ImplGetItemRectPos( sal_uInt16 nPos ) const;
     SAL_DLLPRIVATE sal_uInt16    ImplGetFirstVisiblePos() const;
@@ -119,7 +107,7 @@ public:
     virtual             ~StatusBar();
     virtual void        dispose() override;
 
-    void                AdjustItemWidthsForHiDPI(bool bAdjustHiDPI);
+    void                AdjustItemWidthsForHiDPI();
 
     virtual void        MouseButtonDown( const MouseEvent& rMEvt ) override;
     virtual void        Paint( vcl::RenderContext& rRenderContext, const Rectangle& rRect ) override;
@@ -134,7 +122,7 @@ public:
     virtual void        UserDraw( const UserDrawEvent& rUDEvt );
 
     void                InsertItem( sal_uInt16 nItemId, sal_uLong nWidth,
-                                    StatusBarItemBits nBits = SIB_CENTER | SIB_IN,
+                                    StatusBarItemBits nBits = StatusBarItemBits::Center | StatusBarItemBits::In,
                                     long nOffset = STATUSBAR_OFFSET,
                                     sal_uInt16 nPos = STATUSBAR_APPEND );
     void                RemoveItem( sal_uInt16 nItemId );

@@ -50,18 +50,18 @@ using std::shared_ptr;
 namespace HelperNotifyChanges
 {
     void NotifyIfChangesListeners(ScDocShell& rDocShell, const ScAddress &rPos,
-        const ScUndoEnterData::ValuesType &rOldValues, const OUString &rType = OUString("cell-change"))
+        const ScUndoEnterData::ValuesType &rOldValues)
     {
         if (ScModelObj* pModelObj = getMustPropagateChangesModel(rDocShell))
         {
             ScRangeList aChangeRanges;
 
-            for (size_t i = 0, n = rOldValues.size(); i < n; ++i)
+            for (const auto & rOldValue : rOldValues)
             {
-                aChangeRanges.Append( ScRange(rPos.Col(), rPos.Row(), rOldValues[i].mnTab));
+                aChangeRanges.Append( ScRange(rPos.Col(), rPos.Row(), rOldValue.mnTab));
             }
 
-            Notify(*pModelObj, aChangeRanges, rType);
+            Notify(*pModelObj, aChangeRanges, "cell-change");
         }
     }
 }
@@ -70,14 +70,14 @@ namespace HelperNotifyChanges
 ScUndoCursorAttr::ScUndoCursorAttr( ScDocShell* pNewDocShell,
             SCCOL nNewCol, SCROW nNewRow, SCTAB nNewTab,
             const ScPatternAttr* pOldPat, const ScPatternAttr* pNewPat,
-            const ScPatternAttr* pApplyPat, bool bAutomatic ) :
+            const ScPatternAttr* pApplyPat ) :
     ScSimpleUndo( pNewDocShell ),
     nCol( nNewCol ),
     nRow( nNewRow ),
     nTab( nNewTab ),
     pOldEditData( static_cast<EditTextObject*>(nullptr) ),
     pNewEditData( static_cast<EditTextObject*>(nullptr) ),
-    bIsAutomatic( bAutomatic )
+    bIsAutomatic( false )
 {
     ScDocumentPool* pPool = pDocShell->GetDocument().GetPool();
     pNewPattern = const_cast<ScPatternAttr*>(static_cast<const ScPatternAttr*>( &pPool->Put( *pNewPat ) ));
@@ -111,7 +111,7 @@ void ScUndoCursorAttr::DoChange( const ScPatternAttr* pWhichPattern, const share
 {
     ScDocument& rDoc = pDocShell->GetDocument();
     ScAddress aPos(nCol, nRow, nTab);
-    rDoc.SetPattern( nCol, nRow, nTab, *pWhichPattern, true );
+    rDoc.SetPattern( nCol, nRow, nTab, *pWhichPattern );
 
     if (rDoc.GetCellType(aPos) == CELLTYPE_EDIT && pEditData)
         rDoc.SetEditText(aPos, *pEditData, nullptr);
@@ -199,8 +199,8 @@ OUString ScUndoEnterData::GetComment() const
 void ScUndoEnterData::DoChange() const
 {
     // only when needed (old or new Edit cell, or Attribute)?
-    for (size_t i = 0, n = maOldValues.size(); i < n; ++i)
-        pDocShell->AdjustRowHeight(maPos.Row(), maPos.Row(), maOldValues[i].mnTab);
+    for (const auto & i : maOldValues)
+        pDocShell->AdjustRowHeight(maPos.Row(), maPos.Row(), i.mnTab);
 
     ScTabViewShell* pViewShell = ScTabViewShell::GetActiveViewShell();
     if (pViewShell)
@@ -219,13 +219,13 @@ void ScUndoEnterData::SetChangeTrack()
     {
         mnEndChangeAction = pChangeTrack->GetActionMax() + 1;
         ScAddress aPos(maPos);
-        for (size_t i = 0, n = maOldValues.size(); i < n; ++i)
+        for (Value & rOldValue : maOldValues)
         {
-            aPos.SetTab(maOldValues[i].mnTab);
+            aPos.SetTab(rOldValue.mnTab);
             sal_uLong nFormat = 0;
-            if (maOldValues[i].mbHasFormat)
-                nFormat = maOldValues[i].mnFormat;
-            pChangeTrack->AppendContent(aPos, maOldValues[i].maCell, nFormat);
+            if (rOldValue.mbHasFormat)
+                nFormat = rOldValue.mnFormat;
+            pChangeTrack->AppendContent(aPos, rOldValue.maCell, nFormat);
         }
         if ( mnEndChangeAction > pChangeTrack->GetActionMax() )
             mnEndChangeAction = 0;       // nothing is appended
@@ -239,9 +239,8 @@ void ScUndoEnterData::Undo()
     BeginUndo();
 
     ScDocument& rDoc = pDocShell->GetDocument();
-    for (size_t i = 0, n = maOldValues.size(); i < n; ++i)
+    for (Value & rVal : maOldValues)
     {
-        Value& rVal = maOldValues[i];
         ScCellValue aNewCell;
         aNewCell.assign(rVal.maCell, rDoc, SC_CLONECELL_STARTLISTENING);
         ScAddress aPos = maPos;
@@ -255,7 +254,7 @@ void ScUndoEnterData::Undo()
         {
             ScPatternAttr aPattern(*rDoc.GetPattern(maPos.Col(), maPos.Row(), rVal.mnTab));
             aPattern.GetItemSet().ClearItem( ATTR_VALUE_FORMAT );
-            rDoc.SetPattern(maPos.Col(), maPos.Row(), rVal.mnTab, aPattern, true);
+            rDoc.SetPattern(maPos.Col(), maPos.Row(), rVal.mnTab, aPattern);
         }
         pDocShell->PostPaintCell(maPos.Col(), maPos.Row(), rVal.mnTab);
     }
@@ -276,9 +275,9 @@ void ScUndoEnterData::Redo()
     BeginRedo();
 
     ScDocument& rDoc = pDocShell->GetDocument();
-    for (size_t i = 0, n = maOldValues.size(); i < n; ++i)
+    for (Value & rOldValue : maOldValues)
     {
-        SCTAB nTab = maOldValues[i].mnTab;
+        SCTAB nTab = rOldValue.mnTab;
         if (mpNewEditData)
         {
             ScAddress aPos = maPos;
@@ -592,7 +591,7 @@ void ScUndoPrintZoom::DoChange( bool bUndo )
     ScDocument& rDoc = pDocShell->GetDocument();
     OUString aStyleName = rDoc.GetPageStyle( nTab );
     ScStyleSheetPool* pStylePool = rDoc.GetStyleSheetPool();
-    SfxStyleSheetBase* pStyleSheet = pStylePool->Find( aStyleName, SFX_STYLE_FAMILY_PAGE );
+    SfxStyleSheetBase* pStyleSheet = pStylePool->Find( aStyleName, SfxStyleFamily::Page );
     OSL_ENSURE( pStyleSheet, "PageStyle not found" );
     if ( pStyleSheet )
     {

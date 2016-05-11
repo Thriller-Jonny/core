@@ -40,6 +40,8 @@
 #include "pq_xcontainer.hxx"
 #include "pq_xbase.hxx"
 
+namespace com { namespace sun { namespace star { namespace sdbc { class XRow; } } } }
+
 namespace pq_sdbc_driver
 {
 

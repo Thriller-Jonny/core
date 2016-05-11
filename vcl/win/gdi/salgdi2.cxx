@@ -29,9 +29,10 @@
 #include <win/salids.hrc>
 #include <win/salgdi.h>
 #include <win/salframe.h>
+#include <opengl/salbmp.hxx>
 
-#include "vcl/salbtype.hxx"
-#include "vcl/bmpacc.hxx"
+#include <vcl/salbtype.hxx>
+#include <vcl/bitmapaccess.hxx>
 #include "outdata.hxx"
 #include "salgdiimpl.hxx"
 #include "opengl/win/gdiimpl.hxx"
@@ -46,9 +47,6 @@ bool WinSalGraphics::supportsOperation( OutDevSupportType eType ) const
     {
     case OutDevSupport_TransparentRect:
         bRet = mbVirDev || mbWindow;
-        break;
-    case OutDevSupport_B2DClip:
-        bRet = true;
         break;
     case OutDevSupport_B2DDraw:
         bRet = bAllowForTest;
@@ -76,9 +74,16 @@ namespace
 
 void convertToWinSalBitmap(SalBitmap& rSalBitmap, WinSalBitmap& rWinSalBitmap)
 {
+         BitmapPalette aBitmapPalette;
+         OpenGLSalBitmap* pGLSalBitmap = dynamic_cast<OpenGLSalBitmap*>(&rSalBitmap);
+         if (pGLSalBitmap != nullptr)
+         {
+             aBitmapPalette = pGLSalBitmap->GetBitmapPalette();
+         }
+
         BitmapBuffer* pRead = rSalBitmap.AcquireBuffer(BITMAP_READ_ACCESS);
 
-        rWinSalBitmap.Create(rSalBitmap.GetSize(), rSalBitmap.GetBitCount(), BitmapPalette());
+        rWinSalBitmap.Create(rSalBitmap.GetSize(), rSalBitmap.GetBitCount(), aBitmapPalette);
         BitmapBuffer* pWrite = rWinSalBitmap.AcquireBuffer(BITMAP_WRITE_ACCESS);
 
         sal_uInt8* pSource(pRead->mpBits);

@@ -593,24 +593,24 @@ void SAL_CALL SdXMLExport::setSourceDocument( const Reference< lang::XComponent 
     }
 
     // add namespaces
-    _GetNamespaceMap().Add(
+    GetNamespaceMap_().Add(
         GetXMLToken(XML_NP_PRESENTATION),
         GetXMLToken(XML_N_PRESENTATION),
         XML_NAMESPACE_PRESENTATION);
 
-    _GetNamespaceMap().Add(
+    GetNamespaceMap_().Add(
         GetXMLToken(XML_NP_SMIL),
         GetXMLToken(XML_N_SMIL_COMPAT),
         XML_NAMESPACE_SMIL);
 
-    _GetNamespaceMap().Add(
+    GetNamespaceMap_().Add(
         GetXMLToken(XML_NP_ANIMATION),
         GetXMLToken(XML_N_ANIMATION),
         XML_NAMESPACE_ANIMATION);
 
     if( getDefaultVersion() > SvtSaveOptions::ODFVER_012 )
     {
-        _GetNamespaceMap().Add(
+        GetNamespaceMap_().Add(
             GetXMLToken(XML_NP_OFFICE_EXT),
             GetXMLToken(XML_N_OFFICE_EXT),
             XML_NAMESPACE_OFFICE_EXT);
@@ -623,7 +623,7 @@ void SAL_CALL SdXMLExport::setSourceDocument( const Reference< lang::XComponent 
 }
 
 // #82003# helper function for recursive object count
-sal_uInt32 SdXMLExport::ImpRecursiveObjectCount(Reference< drawing::XShapes > xShapes)
+sal_uInt32 SdXMLExport::ImpRecursiveObjectCount(const Reference< drawing::XShapes >& xShapes)
 {
     sal_uInt32 nRetval(0L);
 
@@ -1246,7 +1246,7 @@ void SdXMLExport::ImpWriteAutoLayoutPlaceholder(XmlPlaceholder ePl, const Rectan
     SvXMLElementExport aPPL(*this, XML_NAMESPACE_PRESENTATION, XML_PLACEHOLDER, true, true);
 }
 
-ImpXMLEXPPageMasterInfo* SdXMLExport::ImpGetOrCreatePageMasterInfo( Reference< XDrawPage > xMasterPage )
+ImpXMLEXPPageMasterInfo* SdXMLExport::ImpGetOrCreatePageMasterInfo( const Reference< XDrawPage >& xMasterPage )
 {
     bool bDoesExist = false;
 
@@ -1614,7 +1614,7 @@ void SdXMLExport::ImplExportHeaderFooterDeclAttributes( const HeaderFooterPageSe
         AddAttribute( XML_NAMESPACE_PRESENTATION, XML_USE_DATE_TIME_NAME, aSettings.maStrDateTimeDeclName );
 }
 
-OUString SdXMLExport::ImpCreatePresPageStyleName( Reference<XDrawPage> xDrawPage, bool bExportBackground /* = true */ )
+OUString SdXMLExport::ImpCreatePresPageStyleName( const Reference<XDrawPage>& xDrawPage, bool bExportBackground /* = true */ )
 {
     // create name
     OUString sStyleName;
@@ -1653,18 +1653,18 @@ OUString SdXMLExport::ImpCreatePresPageStyleName( Reference<XDrawPage> xDrawPage
 
         const rtl::Reference< SvXMLExportPropertyMapper > aMapperRef( GetPresPagePropsMapper() );
 
-        std::vector< XMLPropertyState > xPropStates( aMapperRef->Filter( xPropSet ) );
+        std::vector< XMLPropertyState > aPropStates( aMapperRef->Filter( xPropSet ) );
 
-        if( !xPropStates.empty() )
+        if( !aPropStates.empty() )
         {
             // there are filtered properties -> hard attributes
             // try to find this style in AutoStylePool
-            sStyleName = GetAutoStylePool()->Find(XML_STYLE_FAMILY_SD_DRAWINGPAGE_ID, sStyleName, xPropStates);
+            sStyleName = GetAutoStylePool()->Find(XML_STYLE_FAMILY_SD_DRAWINGPAGE_ID, sStyleName, aPropStates);
 
             if(sStyleName.isEmpty())
             {
                 // Style did not exist, add it to AutoStalePool
-                sStyleName = GetAutoStylePool()->Add(XML_STYLE_FAMILY_SD_DRAWINGPAGE_ID, sStyleName, xPropStates);
+                sStyleName = GetAutoStylePool()->Add(XML_STYLE_FAMILY_SD_DRAWINGPAGE_ID, sStyleName, aPropStates);
             }
         }
     }
@@ -1739,7 +1739,7 @@ void SdXMLExport::SetProgress(sal_Int32 nProg)
 }
 
 
-void SdXMLExport::_ExportMeta()
+void SdXMLExport::ExportMeta_()
 {
     uno::Sequence<beans::NamedValue> stats { { "ObjectCount", uno::makeAny(mnObjectCount) } };
 
@@ -1753,16 +1753,16 @@ void SdXMLExport::_ExportMeta()
     }
 
     // call parent
-    SvXMLExport::_ExportMeta();
+    SvXMLExport::ExportMeta_();
 }
 
-void SdXMLExport::_ExportFontDecls()
+void SdXMLExport::ExportFontDecls_()
 {
     GetFontAutoStylePool(); // make sure the pool is created
-    SvXMLExport::_ExportFontDecls();
+    SvXMLExport::ExportFontDecls_();
 }
 
-void SdXMLExport::_ExportContent()
+void SdXMLExport::ExportContent_()
 {
     // export <pres:header-decl>, <pres:footer-decl> and <pres:date-time-decl> elements
     ImpWriteHeaderFooterDecls();
@@ -2128,12 +2128,12 @@ void SdXMLExport::exportPresentationSettings()
     }
 }
 
-void SdXMLExport::_ExportStyles(bool bUsed)
+void SdXMLExport::ExportStyles_(bool bUsed)
 {
     GetPropertySetMapper()->SetAutoStyles( false );
 
     // export fill styles
-    SvXMLExport::_ExportStyles( bUsed );
+    SvXMLExport::ExportStyles_( bUsed );
 
     // write draw:style-name for object graphic-styles
     GetShapeExport()->ExportGraphicDefaults();
@@ -2156,17 +2156,14 @@ void SdXMLExport::_ExportStyles(bool bUsed)
     {
         Reference< beans::XPropertySetInfo > xInfoSetInfo( xInfoSet->getPropertySetInfo() );
 
-        Any aAny;
-
         if( xInfoSetInfo->hasPropertyByName( msPageLayoutNames ) )
         {
-            aAny <<= maDrawPagesAutoLayoutNames;
-            xInfoSet->setPropertyValue( msPageLayoutNames, aAny );
+            xInfoSet->setPropertyValue( msPageLayoutNames, Any(maDrawPagesAutoLayoutNames) );
         }
     }
 }
 
-void SdXMLExport::_ExportAutoStyles()
+void SdXMLExport::ExportAutoStyles_()
 {
     Reference< beans::XPropertySet > xInfoSet( getExportInfo() );
     if( xInfoSet.is() )
@@ -2361,7 +2358,7 @@ void SdXMLExport::_ExportAutoStyles()
     GetTextParagraphExport()->exportTextAutoStyles();
 }
 
-void SdXMLExport::_ExportMasterStyles()
+void SdXMLExport::ExportMasterStyles_()
 {
     // export layer
     SdXMLayerExporter::exportLayer( *this );
@@ -2485,7 +2482,7 @@ void SdXMLExport::_ExportMasterStyles()
     }
 }
 
-void SdXMLExport::exportFormsElement( Reference< XDrawPage > xDrawPage )
+void SdXMLExport::exportFormsElement( const Reference< XDrawPage >& xDrawPage )
 {
     if( xDrawPage.is() )
     {
@@ -2703,6 +2700,18 @@ void SdXMLExport::exportAnnotations( const Reference<XDrawPage>& xDrawPage )
                 {
                     SvXMLElementExport aCreatorElem( *this, XML_NAMESPACE_DC, XML_CREATOR, true, false );
                     this->Characters(aAuthor);
+                }
+
+                if (SvtSaveOptions().GetODFDefaultVersion() > SvtSaveOptions::ODFVER_012)
+                {
+                    // initials
+                    OUString aInitials( xAnnotation->getInitials() );
+                    if( !aInitials.isEmpty() )
+                    {
+                        SvXMLElementExport aInitialsElem( *this, XML_NAMESPACE_LO_EXT,
+                                XML_SENDER_INITIALS, true, false );
+                        this->Characters(aInitials);
+                    }
                 }
 
                 {

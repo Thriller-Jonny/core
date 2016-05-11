@@ -45,14 +45,6 @@ typedef ::std::set< ::rtl::OString, LessString >    StringSet;
 
 // FileStream
 
-enum FileAccessMode
-{
-    FAM_READ,                   // "r"
-    FAM_WRITE,                  // "w"
-    FAM_READWRITE_EXIST,        // "r+"
-    FAM_READWRITE               // "w+"
-};
-
 class FileStream
 {
 public:
@@ -64,7 +56,7 @@ public:
     void createTempFile(const ::rtl::OString& sPath);
     void close();
 
-    ::rtl::OString  getName() { return m_name; }
+    const ::rtl::OString& getName() { return m_name; }
 
     bool write(void const * buffer, sal_uInt64 size);
 
@@ -83,7 +75,6 @@ private:
 };
 
 
-
 // Helper functions
 
 ::rtl::OString getTempDir(const ::rtl::OString& sFileName);
@@ -91,8 +82,7 @@ private:
 ::rtl::OString createFileNameFromType(const ::rtl::OString& destination,
                                       const ::rtl::OString& type,
                                       const ::rtl::OString& postfix,
-                                      bool bLowerCase=false,
-                                      const ::rtl::OString& prefix="");
+                                      bool bLowerCase=false);
 
 bool fileExists(const ::rtl::OString& fileName);
 bool makeValidTypeFile(const ::rtl::OString& targetFileName,
@@ -108,7 +98,7 @@ public:
 
     virtual ~CannotDumpException() throw ();
 
-    OUString getMessage() const { return message_; }
+    const OUString& getMessage() const { return message_; }
 
 private:
     OUString message_;

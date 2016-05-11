@@ -180,11 +180,6 @@ void OGroup::RemoveComponent( const Reference<XPropertySet>& rxElement )
     }
 }
 
-bool OGroup::operator==( const OGroup& rGroup ) const
-{
-    return m_aGroupName.equals(rGroup.GetGroupName());
-}
-
 Sequence< Reference<XControlModel>  > OGroup::GetControlModels() const
 {
     sal_Int32 nLen = m_aCompArray.size();
@@ -425,7 +420,7 @@ void OGroupManager::RemoveElement( const Reference<XPropertySet>& xSet )
     removeFromGroupMap(sGroupName,xSet);
 }
 
-OUString OGroupManager::GetGroupName( css::uno::Reference< css::beans::XPropertySet> xComponent )
+OUString OGroupManager::GetGroupName( const css::uno::Reference< css::beans::XPropertySet>& xComponent )
 {
     if (!xComponent.is())
         return OUString();

@@ -58,7 +58,10 @@ static SfxItemSet* lcl_GetAttrSet( const SwSection& rSect )
             pAttr->ClearItem( RES_PROTECT );
             pAttr->ClearItem( RES_CNTNT );
             if( !pAttr->Count() )
-                delete pAttr, pAttr = nullptr;
+            {
+                delete pAttr;
+                pAttr = nullptr;
+            }
         }
     }
     return pAttr;
@@ -329,7 +332,7 @@ void SwUndoDelSection::UndoImpl(::sw::UndoRedoContext & rContext)
     {
         SwNodeIndex aStt( rDoc.GetNodes(), m_nStartNode );
         SwNodeIndex aEnd( rDoc.GetNodes(), m_nEndNode-2 );
-        SwSectionFormat* pFormat = rDoc.MakeSectionFormat( nullptr );
+        SwSectionFormat* pFormat = rDoc.MakeSectionFormat();
         if (m_pAttrSet.get())
         {
             pFormat->SetFormatAttr( *m_pAttrSet );

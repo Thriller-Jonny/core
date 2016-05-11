@@ -31,7 +31,6 @@
 #include "treevisitor.hxx"
 
 #include <com/sun/star/sdb/CommandType.hpp>
-#include <com/sun/star/util/XCloneable.hpp>
 #include <com/sun/star/container/EnumerableMap.hpp>
 #include <com/sun/star/drawing/XControlShape.hpp>
 #include <com/sun/star/form/Forms.hpp>
@@ -57,7 +56,6 @@ using namespace ::com::sun::star::sdb;
 using namespace ::com::sun::star::container;
 using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::form;
-using ::com::sun::star::util::XCloneable;
 using ::com::sun::star::awt::XControlModel;
 using ::com::sun::star::container::XMap;
 using ::com::sun::star::container::EnumerableMap;
@@ -237,7 +235,7 @@ Reference< XMap > FmFormPageImpl::getControlToShapeMap()
 
 namespace
 {
-    static void lcl_insertFormObject_throw( const FmFormObj& _object, const Reference< XMap >& _map )
+    void lcl_insertFormObject_throw( const FmFormObj& _object, const Reference< XMap >& _map )
     {
         // the control model
         Reference< XControlModel > xControlModel( _object.GetUnoControlModel(), UNO_QUERY );
@@ -253,7 +251,7 @@ namespace
         _map->put( makeAny( xControlModel ), makeAny( xControlShape ) );
     }
 
-    static void lcl_removeFormObject_throw( const FmFormObj& _object, const Reference< XMap >& _map, bool i_ignoreNonExistence = false )
+    void lcl_removeFormObject_throw( const FmFormObj& _object, const Reference< XMap >& _map )
     {
         // the control model
         Reference< XControlModel > xControlModel( _object.GetUnoControlModel(), UNO_QUERY );
@@ -263,10 +261,9 @@ namespace
             return;
         }
 
-        Any aOldAssignment =
-            _map->remove( makeAny( xControlModel ) );
-        OSL_ENSURE( !i_ignoreNonExistence ||
-            ( aOldAssignment == makeAny( Reference< XControlShape >( const_cast< FmFormObj& >( _object ).getUnoShape(), UNO_QUERY ) ) ),
+        Any aOldAssignment = _map->remove( makeAny( xControlModel ) );
+        OSL_ENSURE(
+            aOldAssignment == makeAny( Reference< XControlShape >( const_cast< FmFormObj& >( _object ).getUnoShape(), UNO_QUERY ) ),
                 "lcl_removeFormObject: map was inconsistent!" );
     }
 }
@@ -356,7 +353,7 @@ bool FmFormPageImpl::validateCurForm()
 }
 
 
-void FmFormPageImpl::setCurForm(Reference< css::form::XForm >  xForm)
+void FmFormPageImpl::setCurForm(const Reference< css::form::XForm >&  xForm)
 {
     xCurrentForm = xForm;
 }

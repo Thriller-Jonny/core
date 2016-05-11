@@ -49,7 +49,6 @@
 #include <unotools/configmgr.hxx>
 
 class SdrOutliner;
-class XSpellChecker1;
 
 namespace sw
 {
@@ -204,9 +203,6 @@ void DocumentDrawModelManager::ReleaseDrawModel()
 }
 
 
-
-
-
 const SwDrawModel* DocumentDrawModelManager::GetDrawModel() const
 {
     return mpDrawModel;
@@ -217,9 +213,9 @@ SwDrawModel* DocumentDrawModelManager::GetDrawModel()
     return mpDrawModel;
 }
 
-SwDrawModel* DocumentDrawModelManager::_MakeDrawModel()
+SwDrawModel* DocumentDrawModelManager::MakeDrawModel_()
 {
-    OSL_ENSURE( !mpDrawModel, "_MakeDrawModel: Why?" );
+    OSL_ENSURE( !mpDrawModel, "MakeDrawModel_: Why?" );
     InitDrawModel();
     SwViewShell* const pSh = m_rDoc.getIDocumentLayoutAccess().GetCurrentViewShell();
     if ( pSh )
@@ -239,7 +235,7 @@ SwDrawModel* DocumentDrawModelManager::_MakeDrawModel()
 
 SwDrawModel* DocumentDrawModelManager::GetOrCreateDrawModel()
 {
-    return GetDrawModel() ? GetDrawModel() : _MakeDrawModel();
+    return GetDrawModel() ? GetDrawModel() : MakeDrawModel_();
 }
 
 SdrLayerID DocumentDrawModelManager::GetHeavenId() const
@@ -285,7 +281,7 @@ void DocumentDrawModelManager::NotifyInvisibleLayers( SdrPageView& _rSdrPageView
     _rSdrPageView.SetLayerVisible( sLayerNm, false );
 }
 
-bool DocumentDrawModelManager::IsVisibleLayerId( const SdrLayerID& _nLayerId ) const
+bool DocumentDrawModelManager::IsVisibleLayerId( SdrLayerID _nLayerId ) const
 {
     bool bRetVal;
 
@@ -310,7 +306,7 @@ bool DocumentDrawModelManager::IsVisibleLayerId( const SdrLayerID& _nLayerId ) c
     return bRetVal;
 }
 
-SdrLayerID DocumentDrawModelManager::GetInvisibleLayerIdByVisibleOne( const SdrLayerID& _nVisibleLayerId )
+SdrLayerID DocumentDrawModelManager::GetInvisibleLayerIdByVisibleOne( SdrLayerID _nVisibleLayerId )
 {
     SdrLayerID nInvisibleLayerId;
 

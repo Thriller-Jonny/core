@@ -51,7 +51,7 @@
 #include <vcl/svapp.hxx>
 #include <vcl/settings.hxx>
 #include "editutil.hxx"
-
+#include <o3tl/make_unique.hxx>
 using ::utl::AccessibleRelationSetHelper;
 using ::utl::AccessibleStateSetHelper;
 using ::accessibility::AccessibleStaticTextBase;
@@ -314,8 +314,8 @@ static inline void lcl_FillProperty( PropertyValue& rVal, const OUString& rPropN
 /** Fills the sequence with all font attributes of rFont. */
 static void lcl_FillFontAttributes( Sequence< PropertyValue >& rSeq, const vcl::Font& rFont )
 {
-    SvxFontItem aFontItem( rFont.GetFamily(), rFont.GetName(), rFont.GetStyleName(), rFont.GetPitch(), rFont.GetCharSet(), ATTR_FONT );
-    SvxFontHeightItem aHeightItem( rFont.GetSize().Height(), 100, ATTR_FONT_HEIGHT );
+    SvxFontItem aFontItem( rFont.GetFamilyType(), rFont.GetFamilyName(), rFont.GetStyleName(), rFont.GetPitch(), rFont.GetCharSet(), ATTR_FONT );
+    SvxFontHeightItem aHeightItem( rFont.GetFontSize().Height(), 100, ATTR_FONT_HEIGHT );
     SvxLanguageItem aLangItem( rFont.GetLanguage(), ATTR_FONT_LANGUAGE );
 
     sal_Int32 nIndex = lcl_ExpandSequence( rSeq, 7 );
@@ -1371,7 +1371,7 @@ OUString ScAccessibleCsvGrid::implGetCellText( sal_Int32 nRow, sal_Int32 nColumn
     if( (nColumn > 0) && (nRow > 0) )
         aCellStr = rGrid.GetCellText( lcl_GetGridColumn( nColumn ), nLine );
     else if( nRow > 0 )
-        aCellStr = OUString::number( nLine + 1L );
+        aCellStr = OUString::number( nLine + 1 );
     else if( nColumn > 0 )
         aCellStr = rGrid.GetColumnTypeName( lcl_GetGridColumn( nColumn ) );
     return aCellStr;
@@ -1575,10 +1575,7 @@ Rectangle ScAccessibleCsvCell::implGetBoundingBox() const
     Rectangle aBoundRect( implGetBoundingBox() );
     aBoundRect -= implGetRealPos();
 
-    ::std::unique_ptr< ScAccessibleTextData > pCsvTextData( new ScAccessibleCsvTextData(
-        &rGrid, rGrid.GetEditEngine(), maCellText, aBoundRect, implGetRealSize() ) );
-
-    ::std::unique_ptr< SvxEditSource > pEditSource( new ScAccessibilityEditSource( std::move(pCsvTextData) ) );
+    ::std::unique_ptr< SvxEditSource > pEditSource( new ScAccessibilityEditSource( o3tl::make_unique<ScAccessibleCsvTextData>(&rGrid, rGrid.GetEditEngine(), maCellText, aBoundRect, implGetRealSize()) ) );
     return pEditSource;
 }
 

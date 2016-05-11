@@ -75,10 +75,10 @@ void OPreparedStatement::scanParameter(OSQLParseNode* pParseNode,::std::vector< 
     if (SQL_ISRULE(pParseNode,parameter))
     {
         DBG_ASSERT(pParseNode->count() >= 1,"OResultSet: Parse Tree fehlerhaft");
-        DBG_ASSERT(pParseNode->getChild(0)->getNodeType() == SQL_NODE_PUNCTUATION,"OResultSet: Parse Tree fehlerhaft");
+        DBG_ASSERT(pParseNode->getChild(0)->getNodeType() == SQLNodeType::Punctuation,"OResultSet: Parse Tree fehlerhaft");
 
         _rParaNodes.push_back(pParseNode);
-        // Further descend not nessesary
+        // Further descend not necessary
         return;
     }
 
@@ -93,7 +93,7 @@ OKeyValue* OResultSet::GetOrderbyKeyValue(OValueRefRow& _rRow)
 
     OKeyValue* pKeyValue = OKeyValue::createKeyValue((sal_uInt32)nBookmarkValue);
 
-    ::std::vector<sal_Int32>::iterator aIter = m_aOrderbyColumnNumber.begin();
+    ::std::vector<sal_Int32>::const_iterator aIter = m_aOrderbyColumnNumber.begin();
     for (;aIter != m_aOrderbyColumnNumber.end(); ++aIter)
     {
         OSL_ENSURE(*aIter < static_cast<sal_Int32>(_rRow->get().size()),"Invalid index for orderkey values!");

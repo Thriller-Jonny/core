@@ -26,9 +26,7 @@
 #include <basegfx/matrix/b2dhommatrixtools.hxx>
 
 
-
 using namespace com::sun::star;
-
 
 
 namespace
@@ -83,7 +81,6 @@ namespace
 } // end of anonymous namespace
 
 
-
 namespace drawinglayer
 {
     namespace primitive2d
@@ -130,9 +127,9 @@ namespace drawinglayer
                         ::std::vector< double > aScaledDXArray = getDXArray();
                         const double fDXArrayScale(1.0 / aScale.getX());
 
-                        for(size_t a(0); a < aScaledDXArray.size(); a++)
+                        for(double & a : aScaledDXArray)
                         {
-                            aScaledDXArray[a] *= fDXArrayScale;
+                            a *= fDXArrayScale;
                         }
 
                         // get the text outlines

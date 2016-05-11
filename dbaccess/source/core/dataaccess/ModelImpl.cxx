@@ -181,7 +181,7 @@ void DocumentStorageAccess::dispose()
 {
     ::osl::MutexGuard aGuard( m_aMutex );
 
-    for (   NamedStorages::iterator loop = m_aExposedStorages.begin();
+    for (   NamedStorages::const_iterator loop = m_aExposedStorages.begin();
             loop != m_aExposedStorages.end();
             ++loop
         )
@@ -239,7 +239,7 @@ void DocumentStorageAccess::disposeStorages()
 {
     m_bDisposingSubStorages = true;
 
-    NamedStorages::iterator aEnd = m_aExposedStorages.end();
+    NamedStorages::const_iterator aEnd = m_aExposedStorages.end();
     for (   NamedStorages::iterator aIter = m_aExposedStorages.begin();
             aIter != aEnd ;
             ++aIter
@@ -305,7 +305,7 @@ bool DocumentStorageAccess::commitEmbeddedStorage( bool _bPreventRootCommits )
 Reference< XStorage > SAL_CALL DocumentStorageAccess::getDocumentSubStorage( const OUString& aStorageName, ::sal_Int32 _nDesiredMode ) throw (RuntimeException, std::exception)
 {
     ::osl::MutexGuard aGuard( m_aMutex );
-    NamedStorages::iterator pos = m_aExposedStorages.find( aStorageName );
+    NamedStorages::const_iterator pos = m_aExposedStorages.find( aStorageName );
     if ( pos == m_aExposedStorages.end() )
     {
         Reference< XStorage > xResult = impl_openSubStorage_nothrow( aStorageName, _nDesiredMode );
@@ -379,7 +379,7 @@ void SAL_CALL DocumentStorageAccess::disposing( const css::lang::EventObject& So
     if ( m_bDisposingSubStorages )
         return;
 
-    for (   NamedStorages::iterator find = m_aExposedStorages.begin();
+    for (   NamedStorages::const_iterator find = m_aExposedStorages.begin();
             find != m_aExposedStorages.end();
             ++find
         )
@@ -474,7 +474,7 @@ void ODatabaseModelImpl::impl_construct_nothrow()
         *pAllowedType++ = ::cppu::UnoType<sal_Int16>::get();
         *pAllowedType++ = cppu::UnoType<Sequence< Any >>::get();
 
-        m_xSettings = PropertyBag::createWithTypes( m_aContext, aAllowedTypes, sal_False/*AllowEmptyPropertyName*/, sal_True/*AutomaticAddition*/ );
+        m_xSettings = PropertyBag::createWithTypes( m_aContext, aAllowedTypes, false/*AllowEmptyPropertyName*/, true/*AutomaticAddition*/ );
 
         // insert the default settings
         Reference< XPropertyContainer > xContainer( m_xSettings, UNO_QUERY_THROW );
@@ -629,7 +629,7 @@ void SAL_CALL ODatabaseModelImpl::disposing( const css::lang::EventObject& Sourc
     if ( xCon.is() )
     {
         bool bStore = false;
-        OWeakConnectionArray::iterator aEnd = m_aConnections.end();
+        OWeakConnectionArray::const_iterator aEnd = m_aConnections.end();
         for (OWeakConnectionArray::iterator i = m_aConnections.begin(); aEnd != i; ++i)
         {
             if ( xCon == i->get() )
@@ -655,8 +655,8 @@ void ODatabaseModelImpl::clearConnections()
     aConnections.swap( m_aConnections );
 
     Reference< XConnection > xConn;
-    OWeakConnectionArray::iterator aEnd = aConnections.end();
-    for ( OWeakConnectionArray::iterator i = aConnections.begin(); aEnd != i; ++i )
+    OWeakConnectionArray::const_iterator aEnd = aConnections.end();
+    for ( OWeakConnectionArray::const_iterator i = aConnections.begin(); aEnd != i; ++i )
     {
         xConn = *i;
         if ( xConn.is() )
@@ -694,8 +694,8 @@ void ODatabaseModelImpl::dispose()
     m_xDataSource = WeakReference<XDataSource>();
     m_xModel = WeakReference< XModel >();
 
-    ::std::vector<TContentPtr>::iterator aIter = m_aContainer.begin();
-    ::std::vector<TContentPtr>::iterator aEnd = m_aContainer.end();
+    ::std::vector<TContentPtr>::const_iterator aIter = m_aContainer.begin();
+    ::std::vector<TContentPtr>::const_iterator aEnd = m_aContainer.end();
     for (;aIter != aEnd ; ++aIter)
     {
         if ( aIter->get() )
@@ -937,7 +937,7 @@ Reference< XModel> ODatabaseModelImpl::getModel_noCreate() const
     return m_xModel;
 }
 
-Reference< XModel > ODatabaseModelImpl::createNewModel_deliverOwnership( bool _bInitialize )
+Reference< XModel > ODatabaseModelImpl::createNewModel_deliverOwnership()
 {
     Reference< XModel > xModel( m_xModel );
     OSL_PRECOND( !xModel.is(), "ODatabaseModelImpl::createNewModel_deliverOwnership: not to be called if there already is a model!" );
@@ -968,20 +968,6 @@ Reference< XModel > ODatabaseModelImpl::createNewModel_deliverOwnership( bool _b
             // #i105505#
             xModel->attachResource( xModel->getURL(), m_aMediaDescriptor.getPropertyValues() );
         }
-
-        if ( _bInitialize )
-        {
-            try
-            {
-                Reference< XLoadable > xLoad( xModel, UNO_QUERY_THROW );
-                xLoad->initNew();
-            }
-            catch( RuntimeException& ) { throw; }
-            catch( const Exception& )
-            {
-                DBG_UNHANDLED_EXCEPTION();
-            }
-        }
     }
     return xModel;
 }
@@ -1009,9 +995,10 @@ void ODatabaseModelImpl::commitStorages()
     getDocumentStorageAccess()->commitStorages();
 }
 
-Reference< XStorage > ODatabaseModelImpl::getStorage( const ObjectType _eType, const sal_Int32 _nDesiredMode )
+Reference< XStorage > ODatabaseModelImpl::getStorage( const ObjectType _eType )
 {
-    return getDocumentStorageAccess()->getDocumentSubStorage( getObjectContainerStorageName( _eType ), _nDesiredMode );
+    return getDocumentStorageAccess()->getDocumentSubStorage( getObjectContainerStorageName( _eType ),
+                    css::embed::ElementModes::READWRITE );
 }
 
 const AsciiPropertyValue* ODatabaseModelImpl::getDefaultDataSourceSettings()
@@ -1206,7 +1193,7 @@ namespace
 
 namespace
 {
-    static void lcl_rebaseScriptStorage_throw( const Reference< XStorageBasedLibraryContainer >& _rxContainer,
+    void lcl_rebaseScriptStorage_throw( const Reference< XStorageBasedLibraryContainer >& _rxContainer,
         const Reference< XStorage >& _rxNewRootStorage )
     {
         if ( _rxContainer.is() )
@@ -1295,10 +1282,9 @@ sal_Int16 ODatabaseModelImpl::getCurrentMacroExecMode() const
     return nCurrentMode;
 }
 
-bool ODatabaseModelImpl::setCurrentMacroExecMode( sal_uInt16 nMacroMode )
+void ODatabaseModelImpl::setCurrentMacroExecMode( sal_uInt16 nMacroMode )
 {
     m_aMediaDescriptor.put( "MacroExecutionMode", nMacroMode );
-    return true;
 }
 
 OUString ODatabaseModelImpl::getDocumentLocation() const

@@ -46,21 +46,21 @@ OReportDrawPage::OReportDrawPage(SdrPage* _pPage
 {
 }
 
-SdrObject* OReportDrawPage::_CreateSdrObject(const uno::Reference< drawing::XShape > & xDescr)
+SdrObject* OReportDrawPage::CreateSdrObject_(const uno::Reference< drawing::XShape > & xDescr)
     throw (uno::RuntimeException, std::exception)
 {
     uno::Reference< report::XReportComponent> xReportComponent(xDescr,uno::UNO_QUERY);
     if ( xReportComponent.is() )
         return OObjectBase::createObject(xReportComponent);
-    return SvxDrawPage::_CreateSdrObject( xDescr );
+    return SvxDrawPage::CreateSdrObject_( xDescr );
 }
 
-uno::Reference< drawing::XShape >  OReportDrawPage::_CreateShape( SdrObject *pObj ) const
+uno::Reference< drawing::XShape >  OReportDrawPage::CreateShape( SdrObject *pObj ) const
     throw (uno::RuntimeException, std::exception)
 {
     OObjectBase* pBaseObj = dynamic_cast<OObjectBase*>(pObj);
     if ( !pBaseObj )
-        return SvxDrawPage::_CreateShape( pObj );
+        return SvxDrawPage::CreateShape( pObj );
 
     uno::Reference< report::XSection> xSection = m_xSection;
     uno::Reference< lang::XMultiServiceFactory> xFactory;
@@ -81,7 +81,7 @@ uno::Reference< drawing::XShape >  OReportDrawPage::_CreateShape( SdrObject *pOb
             {
                 uno::Reference<beans::XPropertySet> xControlModel(rUnoObj.GetUnoControlModel(),uno::UNO_QUERY);
                 if ( xControlModel.is() )
-                    xControlModel->setPropertyValue( PROPERTY_MULTILINE,uno::makeAny(sal_True));
+                    xControlModel->setPropertyValue( PROPERTY_MULTILINE,uno::makeAny(true));
             }
             else
                 bChangeOrientation = rUnoObj.GetObjIdentifier() == OBJ_DLG_HFIXEDLINE;
@@ -130,7 +130,7 @@ uno::Reference< drawing::XShape >  OReportDrawPage::_CreateShape( SdrObject *pOb
         }
 
         if ( !xShape.is() )
-            xShape.set( SvxDrawPage::_CreateShape( pObj ) );
+            xShape.set( SvxDrawPage::CreateShape( pObj ) );
 
         try
         {

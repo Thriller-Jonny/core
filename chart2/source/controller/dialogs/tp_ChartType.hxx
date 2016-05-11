@@ -49,10 +49,7 @@ class ChartTypeTabPage : public ResourceChangeListener, public svt::OWizardPage,
 {
 public:
     ChartTypeTabPage( vcl::Window* pParent
-                , const ::com::sun::star::uno::Reference<
-                ::com::sun::star::chart2::XChartDocument >& xChartModel
-                , const ::com::sun::star::uno::Reference<
-                ::com::sun::star::uno::XComponentContext >& xContext
+                , const css::uno::Reference< css::chart2::XChartDocument >& xChartModel
                 , bool bDoLiveUpdate, bool bShowDescription = true );
     virtual ~ChartTypeTabPage();
     virtual void        dispose() override;
@@ -60,8 +57,7 @@ public:
     virtual void        initializePage() override;
     virtual bool        commitPage( ::svt::WizardTypes::CommitPageReason eReason ) override;
 
-    virtual ::com::sun::star::uno::Reference<
-                ::com::sun::star::chart2::XChartTypeTemplate > getCurrentTemplate() const override;
+    virtual css::uno::Reference< css::chart2::XChartTypeTemplate > getCurrentTemplate() const override;
 
 protected:
     ChartTypeDialogController* getSelectedMainType();
@@ -89,10 +85,7 @@ protected:
     SortByXValuesResourceGroup* m_pSortByXValuesResourceGroup;
     GL3DResourceGroup* m_pGL3DResourceGroup;
 
-    ::com::sun::star::uno::Reference<
-                       ::com::sun::star::chart2::XChartDocument >   m_xChartModel;
-    ::com::sun::star::uno::Reference<
-                       ::com::sun::star::uno::XComponentContext >    m_xCC;
+    css::uno::Reference< css::chart2::XChartDocument >   m_xChartModel;
 
     ::std::vector< ChartTypeDialogController* > m_aChartTypeDialogControllerList;
     ChartTypeDialogController*                  m_pCurrentMainType;

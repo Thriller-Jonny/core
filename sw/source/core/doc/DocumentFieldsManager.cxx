@@ -57,7 +57,7 @@ namespace
 {
     #if HAVE_FEATURE_DBCONNECTIVITY
 
-    static OUString lcl_GetDBVarName( SwDoc& rDoc, SwDBNameInfField& rDBField )
+    OUString lcl_GetDBVarName( SwDoc& rDoc, SwDBNameInfField& rDBField )
     {
         SwDBData aDBData( rDBField.GetDBData( &rDoc ));
         OUString sDBNumNm;
@@ -77,7 +77,7 @@ namespace
 
     #endif
 
-    static void lcl_CalcField( SwDoc& rDoc, SwCalc& rCalc, const _SetGetExpField& rSGEField,
+    void lcl_CalcField( SwDoc& rDoc, SwCalc& rCalc, const SetGetExpField& rSGEField,
                             SwDBManager* pMgr )
     {
         const SwTextField* pTextField = rSGEField.GetTextField();
@@ -176,7 +176,7 @@ SwFieldType* DocumentFieldsManager::InsertFieldType(const SwFieldType &rFieldTyp
             //constructing string pools and when reading SetExp fields
             if( nsSwGetSetExpType::GSE_SEQ & static_cast<const SwSetExpFieldType&>(rFieldTyp).GetType() )
                 i -= INIT_SEQ_FLDTYPES;
-        // no break;
+            SAL_FALLTHROUGH;
     case RES_DBFLD:
     case RES_USERFLD:
     case RES_DDEFLD:
@@ -308,7 +308,7 @@ void DocumentFieldsManager::RemoveFieldType(size_t nField)
         case RES_SETEXPFLD:
         case RES_USERFLD:
             mpUpdateFields->RemoveFieldType( *pTmp );
-            // no break;
+            SAL_FALLTHROUGH;
         case RES_DDEFLD:
             if( pTmp->HasWriterListeners() && !m_rDoc.IsUsed( *pTmp ) )
             {
@@ -335,7 +335,7 @@ void DocumentFieldsManager::RemoveFieldType(size_t nField)
 }
 
 // All have to be re-evaluated.
-void DocumentFieldsManager::UpdateFields( SfxPoolItem *pNewHt, bool bCloseDB )
+void DocumentFieldsManager::UpdateFields( bool bCloseDB )
 {
     // Call Modify() for every field type,
     // dependent SwTextField get notified ...
@@ -355,13 +355,8 @@ void DocumentFieldsManager::UpdateFields( SfxPoolItem *pNewHt, bool bCloseDB )
 
         case RES_DDEFLD:
         {
-            if( !pNewHt )
-            {
-                SwMsgPoolItem aUpdateDDE( RES_UPDATEDDETBL );
-                pFieldType->ModifyNotification( nullptr, &aUpdateDDE );
-            }
-            else
-                pFieldType->ModifyNotification( nullptr, pNewHt );
+            SwMsgPoolItem aUpdateDDE( RES_UPDATEDDETBL );
+            pFieldType->ModifyNotification( nullptr, &aUpdateDDE );
             break;
         }
         case RES_GETEXPFLD:
@@ -369,10 +364,9 @@ void DocumentFieldsManager::UpdateFields( SfxPoolItem *pNewHt, bool bCloseDB )
         case RES_HIDDENTXTFLD:
         case RES_HIDDENPARAFLD:
             // Expression fields are treated separately
-            if( !pNewHt )
-                break;
+            break;
         default:
-            pFieldType->ModifyNotification ( nullptr, pNewHt );
+            pFieldType->ModifyNotification ( nullptr, nullptr );
         }
     }
 
@@ -380,10 +374,10 @@ void DocumentFieldsManager::UpdateFields( SfxPoolItem *pNewHt, bool bCloseDB )
         UpdateExpFields( nullptr, false );      // update expression fields
 
     // Tables
-    UpdateTableFields(pNewHt);
+    UpdateTableFields(nullptr);
 
     // References
-    UpdateRefFields(pNewHt);
+    UpdateRefFields(nullptr);
     if( bCloseDB )
     {
 #if HAVE_FEATURE_DBCONNECTIVITY
@@ -553,7 +547,7 @@ bool DocumentFieldsManager::UpdateField(SwTextField * pDstTextField, SwField & r
                 pDBField->InitContent();
             }
 #endif
-            // no break;
+            SAL_FALLTHROUGH;
 
         default:
             pDstFormatField->ModifyNotification( nullptr, pMsgHint );
@@ -714,7 +708,7 @@ void DocumentFieldsManager::UpdateTableFields( SfxPoolItem* pHt )
                         {
                             SwPosition aPos( *pTableNd );
                             if( GetBodyTextNode( m_rDoc, aPos, *pFrame ) )
-                                FieldsToCalc( *pCalc, _SetGetExpField(
+                                FieldsToCalc( *pCalc, SetGetExpField(
                                     aPos.nNode, pFormatField->GetTextField(),
                                     &aPos.nContent ));
                             else
@@ -726,7 +720,7 @@ void DocumentFieldsManager::UpdateTableFields( SfxPoolItem* pHt )
                         // create index to determine the TextNode
                         SwNodeIndex aIdx( rTextNd );
                         FieldsToCalc( *pCalc,
-                            _SetGetExpField( aIdx, pFormatField->GetTextField() ));
+                            SetGetExpField( aIdx, pFormatField->GetTextField() ));
                     }
 
                     SwTableCalcPara aPara( *pCalc, pTableNd->GetTable() );
@@ -783,7 +777,7 @@ void DocumentFieldsManager::UpdateTableFields( SfxPoolItem* pHt )
                         {
                             SwPosition aPos( *pCNd );
                             if( GetBodyTextNode( m_rDoc, aPos, *pFrame ) )
-                                FieldsToCalc( *pCalc, _SetGetExpField( aPos.nNode ));
+                                FieldsToCalc( *pCalc, SetGetExpField( aPos.nNode ));
                             else
                                 pFrame = nullptr;
                         }
@@ -792,7 +786,7 @@ void DocumentFieldsManager::UpdateTableFields( SfxPoolItem* pHt )
                     {
                         // create index to determine the TextNode
                         SwNodeIndex aIdx( *pTableNd );
-                        FieldsToCalc( *pCalc, _SetGetExpField( aIdx ));
+                        FieldsToCalc( *pCalc, SetGetExpField( aIdx ));
                     }
 
                     SwTableCalcPara aPara( *pCalc, pTableNd->GetTable() );
@@ -858,7 +852,7 @@ void DocumentFieldsManager::UpdateExpFields( SwTextField* pUpdateField, bool bUp
     const sal_uInt16 nStrFormatCnt = static_cast<sal_uInt16>(nHashSize);
     OSL_ENSURE( nStrFormatCnt == nHashSize, "Downcasting to sal_uInt16 lost information!" );
     SwHash** pHashStrTable = new SwHash*[ nStrFormatCnt ];
-    memset( pHashStrTable, 0, sizeof( _HashStr* ) * nStrFormatCnt );
+    memset( pHashStrTable, 0, sizeof( HashStr* ) * nStrFormatCnt );
 
     {
         const SwFieldType* pFieldType;
@@ -875,11 +869,11 @@ void DocumentFieldsManager::UpdateExpFields( SwTextField* pUpdateField, bool bUp
                     SwHash* pFnd = Find( rNm, pHashStrTable, nStrFormatCnt, &nPos );
                     if( pFnd )
                         // modify entry in the hash table
-                        static_cast<_HashStr*>(pFnd)->aSetStr = sExpand;
+                        static_cast<HashStr*>(pFnd)->aSetStr = sExpand;
                     else
                         // insert the new entry
-                        *(pHashStrTable + nPos ) = new _HashStr( rNm, sExpand,
-                                                static_cast<_HashStr*>(*(pHashStrTable + nPos)) );
+                        *(pHashStrTable + nPos ) = new HashStr( rNm, sExpand,
+                                                static_cast<HashStr*>(*(pHashStrTable + nPos)) );
                 }
                 break;
             case RES_SETEXPFLD:
@@ -901,12 +895,12 @@ void DocumentFieldsManager::UpdateExpFields( SwTextField* pUpdateField, bool bUp
     SvtSysLocale aSysLocale;
     const LocaleDataWrapper* pLclData = aSysLocale.GetLocaleDataPtr();
     const long nLang = pLclData->getLanguageTag().getLanguageType();
-    bool bCanFill = pMgr->FillCalcWithMergeData( m_rDoc.GetNumberFormatter(), nLang, true, aCalc );
+    bool bCanFill = pMgr->FillCalcWithMergeData( m_rDoc.GetNumberFormatter(), nLang, aCalc );
 #endif
 
     // Make sure we don't hide all sections, which would lead to a crash. First, count how many of them do we have.
     int nShownSections = 0;
-    for( _SetGetExpFields::const_iterator it = mpUpdateFields->GetSortLst()->begin(); it != mpUpdateFields->GetSortLst()->end(); ++it )
+    for( SetGetExpFields::const_iterator it = mpUpdateFields->GetSortLst()->begin(); it != mpUpdateFields->GetSortLst()->end(); ++it )
     {
         SwSection* pSect = const_cast<SwSection*>((*it)->GetSection());
         if ( pSect && !pSect->IsCondHidden())
@@ -914,7 +908,7 @@ void DocumentFieldsManager::UpdateExpFields( SwTextField* pUpdateField, bool bUp
     }
 
     OUString aNew;
-    for( _SetGetExpFields::const_iterator it = mpUpdateFields->GetSortLst()->begin(); it != mpUpdateFields->GetSortLst()->end(); ++it )
+    for( SetGetExpFields::const_iterator it = mpUpdateFields->GetSortLst()->begin(); it != mpUpdateFields->GetSortLst()->end(); ++it )
     {
         SwSection* pSect = const_cast<SwSection*>((*it)->GetSection());
         if( pSect )
@@ -998,7 +992,7 @@ void DocumentFieldsManager::UpdateExpFields( SwTextField* pUpdateField, bool bUp
         {
             UpdateDBNumFields( *const_cast<SwDBNameInfField*>(static_cast<const SwDBNameInfField*>(pField)), aCalc );
             if( bCanFill )
-                bCanFill = pMgr->FillCalcWithMergeData( m_rDoc.GetNumberFormatter(), nLang, true, aCalc );
+                bCanFill = pMgr->FillCalcWithMergeData( m_rDoc.GetNumberFormatter(), nLang, aCalc );
         }
 #endif
         break;
@@ -1023,13 +1017,13 @@ void DocumentFieldsManager::UpdateExpFields( SwTextField* pUpdateField, bool bUp
             if( pFnd )
             {
                 // Modify entry in the hash table
-                static_cast<_HashStr*>(pFnd)->aSetStr = value;
+                static_cast<HashStr*>(pFnd)->aSetStr = value;
             }
             else
             {
                 // insert new entry
-                *(pHashStrTable + nPos ) = new _HashStr( rName,
-                    value, static_cast<_HashStr *>(*(pHashStrTable + nPos)));
+                *(pHashStrTable + nPos ) = new HashStr( rName,
+                    value, static_cast<HashStr *>(*(pHashStrTable + nPos)));
             }
 #endif
         }
@@ -1072,16 +1066,16 @@ void DocumentFieldsManager::UpdateExpFields( SwTextField* pUpdateField, bool bUp
                     SwHash* pFnd = Find( aNew, pHashStrTable, nStrFormatCnt, &nPos );
                     if( pFnd )
                         // Modify entry in the hash table
-                        static_cast<_HashStr*>(pFnd)->aSetStr = pSField->GetExpStr();
+                        static_cast<HashStr*>(pFnd)->aSetStr = pSField->GetExpStr();
                     else
                         // insert new entry
-                        *(pHashStrTable + nPos ) = pFnd = new _HashStr( aNew,
+                        *(pHashStrTable + nPos ) = pFnd = new HashStr( aNew,
                                         pSField->GetExpStr(),
-                                        static_cast<_HashStr*>(*(pHashStrTable + nPos) ));
+                                        static_cast<HashStr*>(*(pHashStrTable + nPos) ));
 
                     // Extension for calculation with Strings
                     SwSbxValue aValue;
-                    aValue.PutString( static_cast<_HashStr*>(pFnd)->aSetStr );
+                    aValue.PutString( static_cast<HashStr*>(pFnd)->aSetStr );
                     aCalc.VarChange( aNew, aValue );
                 }
             }
@@ -1281,7 +1275,7 @@ bool DocumentFieldsManager::SetFieldsDirty( bool b, const SwNode* pChk, sal_uLon
     return bFieldsFnd;
 }
 
-void DocumentFieldsManager::SetFixFields( bool bOnlyTimeDate, const DateTime* pNewDateTime )
+void DocumentFieldsManager::SetFixFields( const DateTime* pNewDateTime )
 {
     bool bIsModified = m_rDoc.getIDocumentState().IsModified();
 
@@ -1305,9 +1299,7 @@ void DocumentFieldsManager::SetFixFields( bool bOnlyTimeDate, const DateTime* pN
         /*3*/   RES_FILENAMEFLD,
         /*4*/   RES_DATETIMEFLD };  // MUST be at the end!
 
-    sal_uInt16 nStt = bOnlyTimeDate ? 4 : 0;
-
-    for( ; nStt < 5; ++nStt )
+    for( sal_uInt16 nStt = 0; nStt < 5; ++nStt )
     {
         SwFieldType* pFieldType = GetSysFieldType( aTypes[ nStt ] );
         SwIterator<SwFormatField,SwFieldType> aIter( *pFieldType );
@@ -1385,7 +1377,7 @@ void DocumentFieldsManager::SetFixFields( bool bOnlyTimeDate, const DateTime* pN
         m_rDoc.getIDocumentState().ResetModified();
 }
 
-void DocumentFieldsManager::FieldsToCalc( SwCalc& rCalc, const _SetGetExpField& rToThisField )
+void DocumentFieldsManager::FieldsToCalc( SwCalc& rCalc, const SetGetExpField& rToThisField )
 {
     // create the sorted list of all SetFields
     mpUpdateFields->MakeFieldList( m_rDoc, mbNewFieldLst, GETFLD_CALC );
@@ -1400,10 +1392,10 @@ void DocumentFieldsManager::FieldsToCalc( SwCalc& rCalc, const _SetGetExpField& 
 
     if( !mpUpdateFields->GetSortLst()->empty() )
     {
-        _SetGetExpFields::const_iterator const itLast =
+        SetGetExpFields::const_iterator const itLast =
             mpUpdateFields->GetSortLst()->upper_bound(
-                const_cast<_SetGetExpField*>(&rToThisField));
-        for( _SetGetExpFields::const_iterator it = mpUpdateFields->GetSortLst()->begin(); it != itLast; ++it )
+                const_cast<SetGetExpField*>(&rToThisField));
+        for( SetGetExpFields::const_iterator it = mpUpdateFields->GetSortLst()->begin(); it != itLast; ++it )
             lcl_CalcField( m_rDoc, rCalc, **it, pMgr );
     }
 #if HAVE_FEATURE_DBCONNECTIVITY
@@ -1424,7 +1416,7 @@ void DocumentFieldsManager::FieldsToCalc( SwCalc& rCalc, sal_uLong nLastNd, sal_
     pMgr->CloseAll(false);
 #endif
 
-    for( _SetGetExpFields::const_iterator it = mpUpdateFields->GetSortLst()->begin();
+    for( SetGetExpFields::const_iterator it = mpUpdateFields->GetSortLst()->begin();
         it != mpUpdateFields->GetSortLst()->end() &&
         ( (*it)->GetNode() < nLastNd ||
           ( (*it)->GetNode() == nLastNd && (*it)->GetContent() <= nLastCnt )
@@ -1440,7 +1432,7 @@ void DocumentFieldsManager::FieldsToCalc( SwCalc& rCalc, sal_uLong nLastNd, sal_
 }
 
 void DocumentFieldsManager::FieldsToExpand( SwHash**& ppHashTable, sal_uInt16& rTableSize,
-                            const _SetGetExpField& rToThisField )
+                            const SetGetExpField& rToThisField )
 {
     // create the sorted list of all SetFields
     mpUpdateFields->MakeFieldList( m_rDoc, mbNewFieldLst, GETFLD_EXPAND );
@@ -1450,13 +1442,13 @@ void DocumentFieldsManager::FieldsToExpand( SwHash**& ppHashTable, sal_uInt16& r
     // Try to fabricate an uneven number.
     rTableSize = (( mpUpdateFields->GetSortLst()->size() / 7 ) + 1 ) * 7;
     ppHashTable = new SwHash*[ rTableSize ];
-    memset( ppHashTable, 0, sizeof( _HashStr* ) * rTableSize );
+    memset( ppHashTable, 0, sizeof( HashStr* ) * rTableSize );
 
-    _SetGetExpFields::const_iterator const itLast =
+    SetGetExpFields::const_iterator const itLast =
         mpUpdateFields->GetSortLst()->upper_bound(
-            const_cast<_SetGetExpField*>(&rToThisField));
+            const_cast<SetGetExpField*>(&rToThisField));
 
-    for( _SetGetExpFields::const_iterator it = mpUpdateFields->GetSortLst()->begin(); it != itLast; ++it )
+    for( SetGetExpFields::const_iterator it = mpUpdateFields->GetSortLst()->begin(); it != itLast; ++it )
     {
         const SwTextField* pTextField = (*it)->GetTextField();
         if( !pTextField )
@@ -1487,11 +1479,11 @@ void DocumentFieldsManager::FieldsToExpand( SwHash**& ppHashTable, sal_uInt16& r
                 SwHash* pFnd = Find( aNew, ppHashTable, rTableSize, &nPos );
                 if( pFnd )
                     // modify entry in the hash table
-                    static_cast<_HashStr*>(pFnd)->aSetStr = pSField->GetExpStr();
+                    static_cast<HashStr*>(pFnd)->aSetStr = pSField->GetExpStr();
                 else
                     // insert the new entry
-                    *(ppHashTable + nPos ) = new _HashStr( aNew,
-                            pSField->GetExpStr(), static_cast<_HashStr*>(*(ppHashTable + nPos)) );
+                    *(ppHashTable + nPos ) = new HashStr( aNew,
+                            pSField->GetExpStr(), static_cast<HashStr*>(*(ppHashTable + nPos)) );
             }
             break;
         case RES_DBFLD:
@@ -1506,13 +1498,13 @@ void DocumentFieldsManager::FieldsToExpand( SwHash**& ppHashTable, sal_uInt16& r
                 if( pFnd )
                 {
                     // modify entry in the hash table
-                    static_cast<_HashStr*>(pFnd)->aSetStr = value;
+                    static_cast<HashStr*>(pFnd)->aSetStr = value;
                 }
                 else
                 {
                     // insert the new entry
-                    *(ppHashTable + nPos ) = new _HashStr( rName,
-                        value, static_cast<_HashStr *>(*(ppHashTable + nPos)));
+                    *(ppHashTable + nPos ) = new HashStr( rName,
+                        value, static_cast<HashStr *>(*(ppHashTable + nPos)));
                 }
             }
             break;
@@ -1574,7 +1566,7 @@ void DocumentFieldsManager::GCFieldTypes()
             RemoveFieldType( n );
 }
 
-void DocumentFieldsManager::_InitFieldTypes()       // is being called by the CTOR
+void DocumentFieldsManager::InitFieldTypes()       // is being called by the CTOR
 {
     // Field types
     mpFieldTypes->push_back( new SwDateTimeFieldType(&m_rDoc) );

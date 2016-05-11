@@ -190,7 +190,7 @@ class AbstractScFillSeriesDlg_Impl:public AbstractScFillSeriesDlg
     virtual double      GetStep() const override;
     virtual double      GetMax() const override;
     virtual OUString    GetStartStr() const override;
-    virtual void        SetEdStartValEnabled(bool bFlag=false) override;
+    virtual void        SetEdStartValEnabled(bool bFlag) override;
 };
 
 class AbstractScGroupDlg_Impl :  public AbstractScGroupDlg
@@ -256,7 +256,7 @@ class AbstractScLinkedAreaDlg_Impl : public AbstractScLinkedAreaDlg
 class AbstractScMetricInputDlg_Impl : public AbstractScMetricInputDlg
 {
     DECL_ABSTDLG_BASE( AbstractScMetricInputDlg_Impl, ScMetricInputDlg)
-    virtual long GetInputValue( FieldUnit eUnit = FUNIT_TWIP ) const override;
+    virtual long GetInputValue() const override;
 };
 
 class AbstractScMoveTableDlg_Impl : public AbstractScMoveTableDlg
@@ -392,11 +392,11 @@ class ScAbstractDialogFactory_Impl : public ScAbstractDialogFactory
 public:
     virtual ~ScAbstractDialogFactory_Impl() {}
 
-    virtual     AbstractScImportAsciiDlg * CreateScImportAsciiDlg( vcl::Window* pParent, const OUString& aDatName,
+    virtual     AbstractScImportAsciiDlg * CreateScImportAsciiDlg( const OUString& aDatName,
                                                                     SvStream* pInStream,
                                                                     ScImportAsciiCall eCall) override;
 
-    virtual AbstractScTextImportOptionsDlg * CreateScTextImportOptionsDlg(vcl::Window* pParent) override;
+    virtual AbstractScTextImportOptionsDlg * CreateScTextImportOptionsDlg() override;
 
     virtual     AbstractScAutoFormatDlg * CreateScAutoFormatDlg(vcl::Window* pParent,
                                                                 ScAutoFormat* pAutoFormat,
@@ -417,7 +417,7 @@ public:
         bool bEnableExternal) override;
 
     virtual AbstractScDataPilotServiceDlg * CreateScDataPilotServiceDlg( vcl::Window* pParent,
-                                                                        const css::uno::Sequence<OUString>& rServices,
+                                                                        const std::vector<OUString>& rServices,
                                                                         int nId ) override;
     virtual AbstractScDeleteCellDlg * CreateScDeleteCellDlg(vcl::Window* pParent, bool bDisallowCellMove = false ) override;
 
@@ -425,8 +425,7 @@ public:
     virtual AbstractScDataFormDlg* CreateScDataFormDlg(vcl::Window* pParent,
         ScTabViewShell* pTabViewShell) override;
 
-    virtual AbstractScDeleteContentsDlg * CreateScDeleteContentsDlg(vcl::Window* pParent,
-                                                                    InsertDeleteFlags nCheckDefaults = InsertDeleteFlags::NONE) override;
+    virtual AbstractScDeleteContentsDlg * CreateScDeleteContentsDlg(vcl::Window* pParent) override;
 
     virtual AbstractScFillSeriesDlg * CreateScFillSeriesDlg( vcl::Window*        pParent,
                                                             ScDocument&     rDocument,
@@ -438,15 +437,13 @@ public:
                                                             double          fMax,
                                                             sal_uInt16       nPossDir) override;
     virtual AbstractScGroupDlg * CreateAbstractScGroupDlg( vcl::Window* pParent,
-                                                            bool bUnGroup = false,
-                                                            bool bRows = true) override;
+                                                            bool bUnGroup = false) override;
 
     virtual AbstractScInsertCellDlg * CreateScInsertCellDlg( vcl::Window* pParent,
                                                              int nId,
                                                              bool bDisallowCellMove = false ) override;
 
     virtual AbstractScInsertContentsDlg * CreateScInsertContentsDlg( vcl::Window*        pParent,
-                                                                    InsertDeleteFlags nCheckDefaults = InsertDeleteFlags::NONE,
                                                                     const OUString* pStrTitle = nullptr ) override;
 
     virtual AbstractScInsertTableDlg * CreateScInsertTableDlg(vcl::Window* pParent, ScViewData& rViewData,
@@ -488,8 +485,7 @@ public:
                                                                 ScDPObject& rDPObj,
                                                                 const ScDPLabelData& rLabelData,
                                                                 const ScPivotFuncData& rFuncData,
-                                                                const ScDPNameVec& rDataFields,
-                                                                bool bEnableLayout ) override;
+                                                                const ScDPNameVec& rDataFields ) override;
 
     virtual AbstractScDPNumGroupDlg * CreateScDPNumGroupDlg( vcl::Window* pParent,
                                                                 int nId,
@@ -521,8 +517,7 @@ public:
                                                                 const Color& rDefaultColor, //Currently selected Color
                                                                 const OString& sHelpId ) override;
 
-    virtual AbstractScImportOptionsDlg * CreateScImportOptionsDlg ( vcl::Window*                 pParent,
-                                                                    bool                    bAscii = true,
+    virtual AbstractScImportOptionsDlg * CreateScImportOptionsDlg ( bool                    bAscii = true,
                                                                     const ScImportOptions*  pOptions = nullptr,
                                                                     const OUString*         pStrTitle = nullptr,
                                                                     bool                    bMultiByte = false,
@@ -549,15 +544,10 @@ public:
     virtual SfxAbstractTabDialog * CreateScParagraphDlg(vcl::Window* pParent,
         const SfxItemSet* pAttr) override;
 
-    virtual SfxAbstractTabDialog * CreateScValidationDlg(vcl::Window* pParent,
-        const SfxItemSet* pArgSet, ScTabViewShell *pTabVwSh) override;
-
     virtual SfxAbstractTabDialog * CreateScSortDlg(vcl::Window* pParent, const SfxItemSet* pArgSet) override;
 
     // For TabPage
     virtual CreateTabPage               GetTabPageCreatorFunc( sal_uInt16 nId ) override;
-
-    virtual GetTabPageRanges            GetTabPageRangesFunc() override;
 
 };
 

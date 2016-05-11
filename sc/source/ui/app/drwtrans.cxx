@@ -466,7 +466,7 @@ bool ScDrawTransferObj::WriteObject( tools::SvRef<SotStorageStream>& rxOStm, voi
                 const SvxFontHeightItem& rDefaultFontHeight = static_cast<const SvxFontHeightItem&>(rItemPool.GetDefaultItem(EE_CHAR_FONTHEIGHT));
 
                 // SW should have no MasterPages
-                OSL_ENSURE(0L == pModel->GetMasterPageCount(), "SW with MasterPages (!)");
+                OSL_ENSURE(0 == pModel->GetMasterPageCount(), "SW with MasterPages (!)");
 
                 for(sal_uInt16 a(0); a < pModel->GetPageCount(); a++)
                 {
@@ -670,7 +670,7 @@ void ScDrawTransferObj::SetDragWasInternal()
     bDragWasInternal = true;
 }
 
-OUString ScDrawTransferObj::GetShellID() const
+const OUString& ScDrawTransferObj::GetShellID() const
 {
     return maShellID;
 }
@@ -735,7 +735,7 @@ void ScDrawTransferObj::InitDocShell()
         aDestView.Paste(
             *pModel,
             Point(aSrcSize.Width()/2, aSrcSize.Height()/2),
-            nullptr, SdrInsertFlags::NONE, OUString(), OUString());
+            nullptr, SdrInsertFlags::NONE);
 
         // put objects to right layer (see ScViewFunc::PasteDataFormat for SotClipboardFormatId::DRAWING)
 

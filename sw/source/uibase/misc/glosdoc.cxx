@@ -440,7 +440,6 @@ void SwGlossaries::RemoveFileFromList( const OUString& rGroup )
         {
             if (*it == rGroup)
             {
-                OUString aUName = rGroup;
                 {
                     // tell the UNO AutoTextGroup object that it's not valid anymore
                     for (   UnoAutoTextGroups::iterator aLoop = m_aGlossaryGroups.begin();
@@ -449,7 +448,7 @@ void SwGlossaries::RemoveFileFromList( const OUString& rGroup )
                         )
                     {
                         Reference< container::XNamed > xNamed( aLoop->get(), UNO_QUERY );
-                        if ( xNamed.is() && ( xNamed->getName() == aUName ) )
+                        if ( xNamed.is() && ( xNamed->getName() == rGroup ) )
                         {
                             static_cast< SwXAutoTextGroup* >( xNamed.get() )->Invalidate();
                                 // note that this static_cast works because we know that the array only
@@ -548,8 +547,9 @@ void SwGlossaries::InvalidateUNOOjects()
     m_aGlossaryEntries.swap( aTmpe );
 }
 
-Reference< text::XAutoTextGroup > SwGlossaries::GetAutoTextGroup( const OUString& _rGroupName, bool _bCreate )
+Reference< text::XAutoTextGroup > SwGlossaries::GetAutoTextGroup( const OUString& _rGroupName )
 {
+    bool _bCreate = true;
     // first, find the name with path-extension
     const OUString sCompleteGroupName = GetCompleteGroupName( _rGroupName );
 
@@ -605,8 +605,7 @@ Reference< text::XAutoTextGroup > SwGlossaries::GetAutoTextGroup( const OUString
 Reference< text::XAutoTextEntry > SwGlossaries::GetAutoTextEntry(
     const OUString& rCompleteGroupName,
     const OUString& rGroupName,
-    const OUString& rEntryName,
-    bool _bCreate )
+    const OUString& rEntryName )
 {
     //standard must be created
     bool bCreate = ( rCompleteGroupName == GetDefName() );
@@ -650,7 +649,7 @@ Reference< text::XAutoTextEntry > SwGlossaries::GetAutoTextEntry(
         ++aSearch;
     }
 
-    if ( !xReturn.is() && _bCreate )
+    if ( !xReturn.is() )
     {
         xReturn = new SwXAutoTextEntry( this, rGroupName, rEntryName );
         // cache it

@@ -219,7 +219,7 @@ void SwXDispatch::dispatch(const util::URL& aURL,
     {
         svx::ODataAccessDescriptor aDescriptor(aArgs);
         SwMergeDescriptor aMergeDesc( DBMGR_MERGE, rSh, aDescriptor );
-        pDBManager->MergeNew(aMergeDesc);
+        pDBManager->Merge(aMergeDesc);
     }
     else if(aURL.Complete.equalsAscii(cURLInsertColumns))
     {
@@ -228,10 +228,10 @@ void SwXDispatch::dispatch(const util::URL& aURL,
     else if(aURL.Complete.equalsAscii(cURLFormLetter))
     {
         SfxUsrAnyItem aDBProperties(FN_PARAM_DATABASE_PROPERTIES, uno::makeAny(aArgs));
-        m_pView->GetViewFrame()->GetDispatcher()->Execute(
+        m_pView->GetViewFrame()->GetDispatcher()->ExecuteList(
             FN_MAILMERGE_WIZARD,
             SfxCallMode::ASYNCHRON,
-            &aDBProperties, 0L);
+            { &aDBProperties });
     }
 #endif
     else if(aURL.Complete.equalsAscii(cURLDocumentDataSource))
@@ -241,7 +241,7 @@ void SwXDispatch::dispatch(const util::URL& aURL,
     else if(aURL.Complete.equalsAscii(cInternalDBChangeNotification))
     {
         frame::FeatureStateEvent aEvent;
-        aEvent.IsEnabled = sal_True;
+        aEvent.IsEnabled = true;
         aEvent.Source = *static_cast<cppu::OWeakObject*>(this);
 
         const SwDBData& rData = m_pView->GetWrtShell().GetDBDesc();

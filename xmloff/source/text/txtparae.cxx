@@ -109,6 +109,7 @@
 #include <unordered_map>
 #include <vector>
 #include <algorithm>
+#include <iterator>
 
 using namespace ::std;
 using namespace ::com::sun::star;
@@ -153,10 +154,10 @@ namespace
             { return sal::static_int_cast<size_t>(reinterpret_cast<sal_uIntPtr>(rFrame.get())); }
     };
 
-    static bool lcl_TextContentsUnfiltered(const Reference<XTextContent>&)
+    bool lcl_TextContentsUnfiltered(const Reference<XTextContent>&)
         { return true; };
 
-    static bool lcl_ShapeFilter(const Reference<XTextContent>& xTxtContent)
+    bool lcl_ShapeFilter(const Reference<XTextContent>& xTxtContent)
     {
         Reference<XShape> xShape(xTxtContent, UNO_QUERY);
         if(!xShape.is())
@@ -381,7 +382,7 @@ void FieldParamExporter::Export()
     for(const OUString* pCurrent = vParameters.begin(); pCurrent != vParameters.end(); ++pCurrent)
     {
         const Any aValue = m_xFieldParams->getByName(*pCurrent);
-        const Type aValueType = aValue.getValueType();
+        const Type& aValueType = aValue.getValueType();
         if(aValueType == aStringType)
         {
             OUString sValue;
@@ -466,19 +467,19 @@ void XMLTextParagraphExport::Add( sal_uInt16 nFamily,
     }
     DBG_ASSERT( xPropMapper.is(), "There is the property mapper?" );
 
-    vector< XMLPropertyState > xPropStates =
+    vector< XMLPropertyState > aPropStates =
             xPropMapper->Filter( rPropSet );
 
     if( ppAddStates )
     {
         while( *ppAddStates )
         {
-            xPropStates.push_back( **ppAddStates );
+            aPropStates.push_back( **ppAddStates );
             ppAddStates++;
         }
     }
 
-    if( !xPropStates.empty() )
+    if( !aPropStates.empty() )
     {
         Reference< XPropertySetInfo > xPropSetInfo(rPropSet->getPropertySetInfo());
         OUString sParent, sCondParent;
@@ -535,8 +536,8 @@ void XMLTextParagraphExport::Add( sal_uInt16 nFamily,
             {
                 // Get parent and remove hyperlinks (they aren't of interest)
                 rtl::Reference< XMLPropertySetMapper > xPM(xPropMapper->getPropertySetMapper());
-                for( ::std::vector< XMLPropertyState >::iterator i(xPropStates.begin());
-                      nIgnoreProps < 2 && i != xPropStates.end(); )
+                for( ::std::vector< XMLPropertyState >::iterator i(aPropStates.begin());
+                      nIgnoreProps < 2 && i != aPropStates.end(); )
                 {
                     if( i->mnIndex == -1 )
                     {
@@ -550,7 +551,7 @@ void XMLTextParagraphExport::Add( sal_uInt16 nFamily,
                     case CTF_HYPERLINK_URL:
                         i->mnIndex = -1;
                         nIgnoreProps++;
-                        i = xPropStates.erase( i );
+                        i = aPropStates.erase( i );
                         break;
                     default:
                         ++i;
@@ -570,11 +571,11 @@ void XMLTextParagraphExport::Add( sal_uInt16 nFamily,
             ; // section styles have no parents
             break;
         }
-        if( (xPropStates.size() - nIgnoreProps) > 0 )
+        if( (aPropStates.size() - nIgnoreProps) > 0 )
         {
-            GetAutoStylePool().Add( nFamily, sParent, xPropStates, bDontSeek );
+            GetAutoStylePool().Add( nFamily, sParent, aPropStates, bDontSeek );
             if( !sCondParent.isEmpty() && sParent != sCondParent )
-                GetAutoStylePool().Add( nFamily, sCondParent, xPropStates );
+                GetAutoStylePool().Add( nFamily, sCondParent, aPropStates );
         }
     }
 }
@@ -586,8 +587,7 @@ static bool lcl_validPropState( const XMLPropertyState& rState )
 
 void XMLTextParagraphExport::Add( sal_uInt16 nFamily,
                                   MultiPropertySetHelper& rPropSetHelper,
-                                  const Reference < XPropertySet > & rPropSet,
-                                  const XMLPropertyState** ppAddStates)
+                                  const Reference < XPropertySet > & rPropSet)
 {
     rtl::Reference < SvXMLExportPropertyMapper > xPropMapper;
     switch( nFamily )
@@ -598,15 +598,7 @@ void XMLTextParagraphExport::Add( sal_uInt16 nFamily,
     }
     DBG_ASSERT( xPropMapper.is(), "There is the property mapper?" );
 
-    vector< XMLPropertyState > xPropStates(xPropMapper->Filter( rPropSet ));
-    if( ppAddStates )
-    {
-        while( *ppAddStates )
-        {
-            xPropStates.push_back( **ppAddStates );
-            ++ppAddStates;
-        }
-    }
+    vector< XMLPropertyState > aPropStates(xPropMapper->Filter( rPropSet ));
 
     if( rPropSetHelper.hasProperty( NUMBERING_RULES_AUTO ) )
     {
@@ -646,7 +638,7 @@ void XMLTextParagraphExport::Add( sal_uInt16 nFamily,
         }
     }
 
-    if( !xPropStates.empty() )
+    if( !aPropStates.empty() )
     {
         OUString sParent, sCondParent;
         switch( nFamily )
@@ -666,11 +658,11 @@ void XMLTextParagraphExport::Add( sal_uInt16 nFamily,
             break;
         }
 
-        if( std::any_of( xPropStates.begin(), xPropStates.end(), lcl_validPropState ) )
+        if( std::any_of( aPropStates.begin(), aPropStates.end(), lcl_validPropState ) )
         {
-            GetAutoStylePool().Add( nFamily, sParent, xPropStates );
+            GetAutoStylePool().Add( nFamily, sParent, aPropStates );
             if( !sCondParent.isEmpty() && sParent != sCondParent )
-                GetAutoStylePool().Add( nFamily, sCondParent, xPropStates );
+                GetAutoStylePool().Add( nFamily, sCondParent, aPropStates );
         }
     }
 }
@@ -701,17 +693,17 @@ OUString XMLTextParagraphExport::Find(
     DBG_ASSERT( xPropMapper.is(), "There is the property mapper?" );
     if( !xPropMapper.is() )
         return sName;
-    vector< XMLPropertyState > xPropStates(xPropMapper->Filter( rPropSet ));
+    vector< XMLPropertyState > aPropStates(xPropMapper->Filter( rPropSet ));
     if( ppAddStates )
     {
         while( *ppAddStates )
         {
-            xPropStates.push_back( **ppAddStates );
+            aPropStates.push_back( **ppAddStates );
             ++ppAddStates;
         }
     }
-    if( std::any_of( xPropStates.begin(), xPropStates.end(), lcl_validPropState ) )
-        sName = GetAutoStylePool().Find( nFamily, sName, xPropStates );
+    if( std::any_of( aPropStates.begin(), aPropStates.end(), lcl_validPropState ) )
+        sName = GetAutoStylePool().Find( nFamily, sName, aPropStates );
 
     return sName;
 }
@@ -724,19 +716,19 @@ OUString XMLTextParagraphExport::FindTextStyleAndHyperlink(
         const XMLPropertyState** ppAddStates ) const
 {
     rtl::Reference < SvXMLExportPropertyMapper > xPropMapper(GetTextPropMapper());
-    vector< XMLPropertyState > xPropStates(xPropMapper->Filter( rPropSet ));
+    vector< XMLPropertyState > aPropStates(xPropMapper->Filter( rPropSet ));
 
     // Get parent and remove hyperlinks (they aren't of interest)
     OUString sName;
     rbHyperlink = rbHasCharStyle = rbHasAutoStyle = false;
     sal_uInt16 nIgnoreProps = 0;
     rtl::Reference< XMLPropertySetMapper > xPM(xPropMapper->getPropertySetMapper());
-    ::std::vector< XMLPropertyState >::iterator aFirstDel = xPropStates.end();
-    ::std::vector< XMLPropertyState >::iterator aSecondDel = xPropStates.end();
+    ::std::vector< XMLPropertyState >::iterator aFirstDel = aPropStates.end();
+    ::std::vector< XMLPropertyState >::iterator aSecondDel = aPropStates.end();
 
     for( ::std::vector< XMLPropertyState >::iterator
-            i = xPropStates.begin();
-         nIgnoreProps < 2 && i != xPropStates.end();
+            i = aPropStates.begin();
+         nIgnoreProps < 2 && i != aPropStates.end();
          ++i )
     {
         if( i->mnIndex == -1 )
@@ -769,11 +761,11 @@ OUString XMLTextParagraphExport::FindTextStyleAndHyperlink(
     {
         while( *ppAddStates )
         {
-            xPropStates.push_back( **ppAddStates );
+            aPropStates.push_back( **ppAddStates );
             ppAddStates++;
         }
     }
-    if( (xPropStates.size() - nIgnoreProps) > 0L )
+    if( (aPropStates.size() - nIgnoreProps) > 0L )
     {
         // erase the character style, otherwise the autostyle cannot be found!
         // erase the hyperlink, otherwise the autostyle cannot be found!
@@ -782,11 +774,11 @@ OUString XMLTextParagraphExport::FindTextStyleAndHyperlink(
             // If two elements of a vector have to be deleted,
             // we should delete the second one first.
             if( --nIgnoreProps )
-                xPropStates.erase( aSecondDel );
-            xPropStates.erase( aFirstDel );
+                aPropStates.erase( aSecondDel );
+            aPropStates.erase( aFirstDel );
         }
         OUString sParent; // AutoStyles should not have parents!
-        sName = GetAutoStylePool().Find( XML_STYLE_FAMILY_TEXT_TEXT, sParent, xPropStates );
+        sName = GetAutoStylePool().Find( XML_STYLE_FAMILY_TEXT_TEXT, sParent, aPropStates );
         rbHasAutoStyle = true;
     }
 
@@ -863,10 +855,10 @@ void XMLTextParagraphExport::exportListChange(
 
         if ( nListLevelsToBeOpened > 0 )
         {
-            const OUString sListStyleName( rNextInfo.GetNumRulesName() );
+            const OUString& sListStyleName( rNextInfo.GetNumRulesName() );
             // Currently only the text documents support <ListId>.
             // Thus, for other document types <sListId> is empty.
-            const OUString sListId( rNextInfo.GetListId() );
+            const OUString& sListId( rNextInfo.GetListId() );
             bool bExportListStyle( true );
             bool bRestartNumberingAtContinuedList( false );
             sal_Int32 nRestartValueForContinuedList( -1 );
@@ -1027,9 +1019,9 @@ void XMLTextParagraphExport::exportListChange(
                 eLName = ( rNextInfo.IsNumbered() || nListLevelsToBeOpened > 1 )
                          ? XML_LIST_ITEM
                          : XML_LIST_HEADER;
-                aElem = OUString( GetExport().GetNamespaceMap().GetQNameByKey(
+                aElem = GetExport().GetNamespaceMap().GetQNameByKey(
                                             XML_NAMESPACE_TEXT,
-                                            GetXMLToken(eLName) ) );
+                                            GetXMLToken(eLName) );
                 GetExport().IgnorableWhitespace();
                 GetExport().StartElement(aElem, false);
                 pListElements->push_back(aElem);
@@ -1101,7 +1093,7 @@ void XMLTextParagraphExport::exportListChange(
         if ( ( GetExport().getExportFlags() & SvXMLExportFlags::OASIS ) &&
              GetExport().getDefaultVersion() >= SvtSaveOptions::ODFVER_012 )
         {
-            const OUString sListStyleName( rNextInfo.GetNumRulesName() );
+            const OUString& sListStyleName( rNextInfo.GetNumRulesName() );
             if ( !mpTextListsHelper->EqualsToTopListStyleOnStack( sListStyleName ) )
             {
                 GetExport().AddAttribute( XML_NAMESPACE_TEXT,
@@ -1170,7 +1162,6 @@ XMLTextParagraphExport::XMLTextParagraphExport(
     pSectionExport( nullptr ),
     pIndexMarkExport( nullptr ),
     pRedlineExport( nullptr ),
-    pHeadingStyles( nullptr ),
     bProgress( false ),
     bBlock( false ),
     bOpenRuby( false ),
@@ -1314,13 +1305,12 @@ XMLTextParagraphExport::XMLTextParagraphExport(
     sal_Int32 nIndex = xTextPropMapper->getPropertySetMapper()->FindEntryIndex(
                                 "", XML_NAMESPACE_STYLE,
                                 GetXMLToken(XML_TEXT_COMBINE));
-    pFieldExport = new XMLTextFieldExport( rExp, new XMLPropertyState( nIndex, uno::makeAny(sal_True) ) );
+    pFieldExport = new XMLTextFieldExport( rExp, new XMLPropertyState( nIndex, uno::makeAny(true) ) );
     PushNewTextListsHelper();
 }
 
 XMLTextParagraphExport::~XMLTextParagraphExport()
 {
-    delete pHeadingStyles;
     delete pRedlineExport;
     delete pIndexMarkExport;
     delete pSectionExport;
@@ -1367,8 +1357,7 @@ SvXMLExportPropertyMapper *XMLTextParagraphExport::CreateParaDefaultExtPropMappe
     return new XMLTextExportPropertySetMapper( pPropMapper, rExport );
 }
 
-void XMLTextParagraphExport::exportPageFrames( bool bAutoStyles,
-                                               bool bIsProgress )
+void XMLTextParagraphExport::exportPageFrames( bool bIsProgress )
 {
     const TextContentSet& rTexts = pBoundFrameSets->GetTexts()->GetPageBoundContents();
     const TextContentSet& rGraphics = pBoundFrameSets->GetGraphics()->GetPageBoundContents();
@@ -1377,19 +1366,19 @@ void XMLTextParagraphExport::exportPageFrames( bool bAutoStyles,
     for(TextContentSet::const_iterator_t it = rTexts.getBegin();
         it != rTexts.getEnd();
         ++it)
-        exportTextFrame(*it, bAutoStyles, bIsProgress, true);
+        exportTextFrame(*it, false/*bAutoStyles*/, bIsProgress, true);
     for(TextContentSet::const_iterator_t it = rGraphics.getBegin();
         it != rGraphics.getEnd();
         ++it)
-        exportTextGraphic(*it, bAutoStyles);
+        exportTextGraphic(*it, false/*bAutoStyles*/);
     for(TextContentSet::const_iterator_t it = rEmbeddeds.getBegin();
         it != rEmbeddeds.getEnd();
         ++it)
-        exportTextEmbedded(*it, bAutoStyles);
+        exportTextEmbedded(*it, false/*bAutoStyles*/);
     for(TextContentSet::const_iterator_t it = rShapes.getBegin();
         it != rShapes.getEnd();
         ++it)
-        exportShape(*it, bAutoStyles);
+        exportShape(*it, false/*bAutoStyles*/);
 }
 
 void XMLTextParagraphExport::exportFrameFrames(
@@ -3092,7 +3081,7 @@ void XMLTextParagraphExport::_exportTextGraphic(
     rPropSet->getPropertyValue( sGraphicURL ) >>= sOrigURL;
     OUString sURL(GetExport().AddEmbeddedGraphicObject( sOrigURL ));
 
-    // If there still is no url, then then graphic is empty
+    // If there still is no url, then graphic is empty
     if( !sURL.isEmpty() )
     {
         GetExport().AddAttribute(XML_NAMESPACE_XLINK, XML_HREF, sURL );
@@ -3123,7 +3112,7 @@ void XMLTextParagraphExport::_exportTextGraphic(
     {
         const OUString sReplacementURL(GetExport().AddEmbeddedGraphicObject( sReplacementOrigURL ));
 
-        // If there is no url, then then graphic is empty
+        // If there is no url, then graphic is empty
         if(sReplacementURL.getLength())
         {
             GetExport().AddAttribute(XML_NAMESPACE_XLINK, XML_HREF, sReplacementURL);
@@ -3138,7 +3127,6 @@ void XMLTextParagraphExport::_exportTextGraphic(
             GetExport().AddEmbeddedGraphicObjectAsBase64(sReplacementURL);
         }
     }
-
 
 
     // script:events
@@ -3397,7 +3385,7 @@ void XMLTextParagraphExport::exportTextRange(
 }
 
 void XMLTextParagraphExport::exportText( const OUString& rText,
-                                           bool& rPrevCharIsSpace, TextPNS /*eExtensionNS*/ )
+                                           bool& rPrevCharIsSpace )
 {
     sal_Int32 nExpStartPos = 0;
     sal_Int32 nEndPos = rText.getLength();
@@ -3569,9 +3557,9 @@ void XMLTextParagraphExport::exportTextDeclarations(
     pFieldExport->ExportFieldDeclarations(rText);
 }
 
-void XMLTextParagraphExport::exportUsedDeclarations( bool bOnlyUsed )
+void XMLTextParagraphExport::exportUsedDeclarations()
 {
-    pFieldExport->SetExportOnlyUsedFieldDeclarations( bOnlyUsed );
+    pFieldExport->SetExportOnlyUsedFieldDeclarations( false/*bOnlyUsed*/ );
 }
 
 void XMLTextParagraphExport::exportTrackedChanges(bool bAutoStyles)
@@ -3752,7 +3740,7 @@ void XMLTextParagraphExport::exportMeta(
 
 void XMLTextParagraphExport::PreventExportOfControlsInMuteSections(
     const Reference<XIndexAccess> & rShapes,
-    rtl::Reference<xmloff::OFormLayerXMLExport> xFormExport   )
+    const rtl::Reference<xmloff::OFormLayerXMLExport>& xFormExport   )
 {
     // check parameters ad pre-conditions
     if( ( ! rShapes.is() ) || ( ! xFormExport.is() ) )

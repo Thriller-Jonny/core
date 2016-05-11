@@ -1578,7 +1578,6 @@ bool filter_info_impl::operator==( const filter_info_impl& r ) const
 }
 
 
-
 Sequence< OUString > filter_info_impl::getFilterUserData() const
 {
     Sequence< OUString > aUserData(8);
@@ -1618,7 +1617,7 @@ OUString string_decode( const OUString & rText )
     return Uri::decode( rText, rtl_UriDecodeWithCharset, RTL_TEXTENCODING_UTF8 );
 }
 
-bool copyStreams( Reference< XInputStream > xIS, Reference< XOutputStream > xOS )
+bool copyStreams( const Reference< XInputStream >& xIS, const Reference< XOutputStream >& xOS )
 {
     try
     {

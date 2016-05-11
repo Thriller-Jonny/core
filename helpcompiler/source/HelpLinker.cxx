@@ -87,7 +87,7 @@ void IndexerPreProcessor::processDocument
         if( pResNodeCaption )
         {
             fs::path fsCaptionPureTextFile_docURL = m_fsCaptionFilesDirName / aStdStr_EncodedDocPathURL;
-#ifdef WNT     //We need _wfopen to support long file paths on Windows XP
+#ifdef _WIN32     //We need _wfopen to support long file paths on Windows XP
             FILE* pFile_docURL = _wfopen(
                 fsCaptionPureTextFile_docURL.native_file_string_w(), L"w" );
 #else
@@ -110,7 +110,7 @@ void IndexerPreProcessor::processDocument
         if( pResNodeContent )
         {
             fs::path fsContentPureTextFile_docURL = m_fsContentFilesDirName / aStdStr_EncodedDocPathURL;
-#ifdef WNT     //We need _wfopen to support long file paths on Windows XP
+#ifdef _WIN32     //We need _wfopen to support long file paths on Windows XP
             FILE* pFile_docURL = _wfopen(
                 fsContentPureTextFile_docURL.native_file_string_w(), L"w" );
 #else
@@ -186,7 +186,7 @@ public:
 
     void dump_DBHelp( const fs::path& rFileName )
     {
-#ifdef WNT     //We need _wfopen to support long file paths on Windows XP
+#ifdef _WIN32     //We need _wfopen to support long file paths on Windows XP
         FILE* pFile = _wfopen( rFileName.native_file_string_w(), L"wb" );
 #else
         FILE* pFile = fopen( rFileName.native_file_string().c_str(), "wb" );
@@ -210,9 +210,8 @@ namespace URLEncoder
         static const char hex[17] = "0123456789ABCDEF";
 
         std::string result;
-        for (size_t i=0; i < rIn.length(); ++i)
+        for (char c : rIn)
         {
-            unsigned char c = rIn[i];
             if (isalnum (c) || strchr (good, c))
                 result += c;
             else {
@@ -242,21 +241,21 @@ void HelpLinker::addBookmark( FILE* pFile_DBHelp, std::string thishid,
     std::vector<unsigned char> dataB(dataLen);
     size_t i = 0;
     dataB[i++] = static_cast<unsigned char>(fileLen);
-    for (size_t j = 0; j < fileB.length(); ++j)
-        dataB[i++] = static_cast<unsigned char>(fileB[j]);
+    for (char j : fileB)
+        dataB[i++] = static_cast<unsigned char>(j);
     if (!anchorB.empty())
     {
         dataB[i++] = '#';
-        for (size_t j = 0; j < anchorB.length(); ++j)
-            dataB[i++] = anchorB[j];
+        for (char j : anchorB)
+            dataB[i++] = j;
     }
     dataB[i++] = static_cast<unsigned char>(jarfileB.length());
-    for (size_t j = 0; j < jarfileB.length(); ++j)
-        dataB[i++] = jarfileB[j];
+    for (char j : jarfileB)
+        dataB[i++] = j;
 
     dataB[i++] = static_cast<unsigned char>(titleB.length());
-    for (size_t j = 0; j < titleB.length(); ++j)
-        dataB[i++] = titleB[j];
+    for (char j : titleB)
+        dataB[i++] = j;
 
     if( pFile_DBHelp != nullptr )
     {
@@ -303,7 +302,7 @@ void HelpLinker::link() throw(HelpProcessingException, BasicCodeTagger::TaggerEx
         bUse_ = false;
 
     fs::path helpTextFileName_DBHelp(indexDirParentName / (mod + (bUse_ ? ".ht_" : ".ht")));
-#ifdef WNT
+#ifdef _WIN32
     //We need _wfopen to support long file paths on Windows XP
     FILE* pFileHelpText_DBHelp = _wfopen
         ( helpTextFileName_DBHelp.native_file_string_w(), L"wb" );
@@ -314,7 +313,7 @@ void HelpLinker::link() throw(HelpProcessingException, BasicCodeTagger::TaggerEx
 #endif
 
     fs::path dbBaseFileName_DBHelp(indexDirParentName / (mod + (bUse_ ? ".db_" : ".db")));
-#ifdef WNT
+#ifdef _WIN32
     //We need _wfopen to support long file paths on Windows XP
     FILE* pFileDbBase_DBHelp = _wfopen
         ( dbBaseFileName_DBHelp.native_file_string_w(), L"wb" );
@@ -986,7 +985,7 @@ bool compileExtensionHelp
         {
             XML_Error nError = XML_GetErrorCode( parser );
             o_rHelpProcessingErrorInfo.m_eErrorClass = HELPPROCESSING_XMLPARSING_ERROR;
-            o_rHelpProcessingErrorInfo.m_aErrorMsg = OUString::createFromAscii( XML_ErrorString( nError ) );;
+            o_rHelpProcessingErrorInfo.m_aErrorMsg = OUString::createFromAscii( XML_ErrorString( nError ) );
             o_rHelpProcessingErrorInfo.m_aXMLParsingFile = aTreeFileURL;
             // CRASHES!!! o_rHelpProcessingErrorInfo.m_nXMLParsingLine = XML_GetCurrentLineNumber( parser );
             bSuccess = false;

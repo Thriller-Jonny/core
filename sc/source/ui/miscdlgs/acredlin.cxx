@@ -41,12 +41,6 @@
 
 // defines -------------------------------------------------------------------
 
-#define ABS_SREF          SCA_VALID \
-                        | SCA_COL_ABSOLUTE | SCA_ROW_ABSOLUTE | SCA_TAB_ABSOLUTE
-#define ABS_DREF          ABS_SREF \
-                        | SCA_COL2_ABSOLUTE | SCA_ROW2_ABSOLUTE | SCA_TAB2_ABSOLUTE
-#define ABS_DREF3D      ABS_DREF | SCA_TAB_3D
-
 #define RD_SPECIAL_NONE         0
 #define RD_SPECIAL_CONTENT      1
 #define RD_SPECIAL_VISCONTENT   2
@@ -83,6 +77,8 @@ ScAcceptChgDlg::ScAcceptChgDlg(SfxBindings* pB, SfxChildWindow* pCW, vcl::Window
     ScViewData* ptrViewData)
     : SfxModelessDialog(pB, pCW, pParent,
         "AcceptRejectChangesDialog", "svx/ui/acceptrejectchangesdialog.ui"),
+        aSelectionIdle("ScAcceptChgDlg SelectionIdle"),
+        aReOpenIdle("ScAcceptChgDlg ReOpenIdle"),
         pViewData       ( ptrViewData ),
         pDoc            ( ptrViewData->GetDocument() ),
         aStrInsertCols       (SC_RESSTR(STR_CHG_INSERT_COLS)),
@@ -257,7 +253,7 @@ void ScAcceptChgDlg::Init()
     if( !aChangeViewSet.GetTheRangeList().empty() )
     {
         const ScRange* pRangeEntry = aChangeViewSet.GetTheRangeList().front();
-        OUString aRefStr(pRangeEntry->Format(ABS_DREF3D, pDoc));
+        OUString aRefStr(pRangeEntry->Format(ScRefFlags::RANGE_ABS_3D, pDoc));
         pTPFilter->SetRange(aRefStr);
     }
 
@@ -1345,11 +1341,7 @@ IMPL_LINK_TYPED( ScAcceptChgDlg, ExpandingHandle, SvTreeListBox*, pTable, bool )
         SvTreeListEntry* pEntry=pTheView->GetHdlEntry();
         if(pEntry!=nullptr)
         {
-            ScChangeAction* pScChangeAction=nullptr;
-
             ScRedlinData *pEntryData=static_cast<ScRedlinData *>(pEntry->GetUserData());
-            if(pEntryData!=nullptr)
-                pScChangeAction=static_cast<ScChangeAction*>(pEntryData->pData);
 
             if(pEntry->HasChildrenOnDemand())
             {
@@ -1361,7 +1353,7 @@ IMPL_LINK_TYPED( ScAcceptChgDlg, ExpandingHandle, SvTreeListBox*, pTable, bool )
 
                 if(pEntryData!=nullptr)
                 {
-                    pScChangeAction=static_cast<ScChangeAction*>(pEntryData->pData);
+                    ScChangeAction* pScChangeAction=static_cast<ScChangeAction*>(pEntryData->pData);
 
                     GetDependents( pScChangeAction, aActionMap, pEntry );
 
@@ -1531,7 +1523,6 @@ void ScAcceptChgDlg::UpdateEntrys(ScChangeTrack* pChgTrack, sal_uLong nStartActi
 
 
     SvTreeListEntry* pEntry=pTheView->First();
-    SvTreeListEntry* pNextEntry = (pEntry ? SvTreeListBox::NextSibling(pEntry) : nullptr);
     SvTreeListEntry* pLastEntry=nullptr;
     while(pEntry!=nullptr)
     {
@@ -1547,6 +1538,7 @@ void ScAcceptChgDlg::UpdateEntrys(ScChangeTrack* pChgTrack, sal_uLong nStartActi
             if(nStartAction<=nAction && nAction<=nEndAction) bRemove=true;
         }
 
+        SvTreeListEntry* pNextEntry;
         if(bRemove)
         {
             nPos=pEntry->GetChildListPos();
@@ -1840,7 +1832,7 @@ void ScAcceptChgDlg::InitFilter()
         pTheView->SetFilterComment(pTPFilter->IsComment());
 
         utl::SearchParam aSearchParam( pTPFilter->GetComment(),
-                utl::SearchParam::SRCH_REGEXP,false,false,false );
+                utl::SearchParam::SRCH_REGEXP,false );
 
         pTheView->SetCommentParams(&aSearchParam);
 

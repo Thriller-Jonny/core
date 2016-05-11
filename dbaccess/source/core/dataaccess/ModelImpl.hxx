@@ -281,12 +281,11 @@ public:
 
     void dispose();
 
-    inline OUString getURL() const               { return m_sDocumentURL;     }
-    inline OUString getDocFileLocation() const   { return m_sDocFileLocation; }
+    const OUString& getURL() const               { return m_sDocumentURL;     }
+    const OUString& getDocFileLocation() const   { return m_sDocFileLocation; }
 
     css::uno::Reference< css::embed::XStorage >
-            getStorage(
-                const ObjectType _eType, const sal_Int32 _nDesiredMode = css::embed::ElementModes::READWRITE );
+            getStorage( const ObjectType _eType );
 
 // helper
     const css::uno::Reference< css::util::XNumberFormatsSupplier >&
@@ -342,16 +341,13 @@ public:
 
     /** returns a new ->ODatabaseDocument
 
-        @param _bInitializeIfNecessary
-            calls XLoadable::initNew on the newly created model, if necessary
-
         @precond
             No ->ODatabaseDocument exists so far
 
         @seealso
             getModel_noCreate
     */
-    css::uno::Reference< css::frame::XModel > createNewModel_deliverOwnership( bool _bInitialize );
+    css::uno::Reference< css::frame::XModel > createNewModel_deliverOwnership();
 
     struct ResetModelAccess { friend class ODatabaseDocument; private: ResetModelAccess() { } };
 
@@ -467,7 +463,7 @@ public:
 public:
     // IMacroDocumentAccess overridables
     virtual sal_Int16 getCurrentMacroExecMode() const override;
-    virtual bool setCurrentMacroExecMode( sal_uInt16 ) override;
+    virtual void setCurrentMacroExecMode( sal_uInt16 ) override;
     virtual OUString getDocumentLocation() const override;
     virtual bool documentStorageHasMacros() const override;
     virtual css::uno::Reference< css::document::XEmbeddedScripts > getEmbeddedDocumentScripts() const override;
@@ -488,7 +484,7 @@ private:
     css::uno::Reference< css::embed::XStorage >
             impl_switchToStorage_throw( const css::uno::Reference< css::embed::XStorage >& _rxNewRootStorage );
 
-    /** switches to the given document URL, which denotes the logical URL of the document, not necessariy the
+    /** switches to the given document URL, which denotes the logical URL of the document, not necessarily the
         URL where the doc was loaded/recovered from
     */
     void    impl_switchToLogicalURL(

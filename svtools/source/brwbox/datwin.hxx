@@ -28,11 +28,9 @@
 #include <vector>
 
 
-
 #define MIN_COLUMNWIDTH  2
 
 typedef ::std::vector< Rectangle* > RectangleList;
-
 
 
 class ButtonFrame
@@ -41,21 +39,17 @@ class ButtonFrame
     Rectangle   aInnerRect;
     OUString    aText;
     bool        bPressed;
-    bool        bCurs;
     bool        m_bDrawDisabled;
 
 public:
                ButtonFrame( const Point& rPt, const Size& rSz,
                             const OUString &rText,
-                            bool bPress,
-                            bool bCursor,
                             bool _bDrawDisabled)
                 :aRect( rPt, rSz )
                 ,aInnerRect( Point( aRect.Left()+1, aRect.Top()+1 ),
                             Size( aRect.GetWidth()-2, aRect.GetHeight()-2 ) )
                 ,aText(rText)
-                ,bPressed(bPress)
-                ,bCurs(bCursor)
+                ,bPressed(false)
                 ,m_bDrawDisabled(_bDrawDisabled)
             {
             }
@@ -64,18 +58,16 @@ public:
 };
 
 
-
 class BrowserColumn
 {
     sal_uInt16          _nId;
     sal_uLong           _nOriginalWidth;
     sal_uLong           _nWidth;
-    Image               _aImage;
     OUString            _aTitle;
     bool                _bFrozen;
 
 public:
-                        BrowserColumn( sal_uInt16 nItemId, const Image &rImage,
+                        BrowserColumn( sal_uInt16 nItemId,
                                         const OUString& rTitle, sal_uLong nWidthPixel, const Fraction& rCurrentZoom );
     virtual            ~BrowserColumn();
 
@@ -85,15 +77,14 @@ public:
     OUString&           Title() { return _aTitle; }
 
     bool                IsFrozen() const { return _bFrozen; }
-    void                Freeze( bool bFreeze = true ) { _bFrozen = bFreeze; }
+    void                Freeze() { _bFrozen = true; }
 
     void                Draw( BrowseBox& rBox, OutputDevice& rDev,
-                              const Point& rPos, bool bCurs  );
+                              const Point& rPos  );
 
     void                SetWidth(sal_uLong nNewWidthPixel, const Fraction& rCurrentZoom);
     void                ZoomChanged(const Fraction& rNewZoom);
 };
-
 
 
 class BrowserDataWin
@@ -181,10 +172,8 @@ protected:
 };
 
 
-
 class BrowserScrollBar: public ScrollBar
 {
-    sal_uLong           _nTip;
     sal_uLong           _nLastPos;
     VclPtr<BrowserDataWin> _pDataWin;
 
@@ -192,7 +181,6 @@ public:
                     BrowserScrollBar( vcl::Window* pParent, WinBits nStyle,
                                       BrowserDataWin *pDataWin )
                     :   ScrollBar( pParent, nStyle ),
-                        _nTip( 0 ),
                         _nLastPos( ULONG_MAX ),
                         _pDataWin( pDataWin )
                     {}
@@ -205,10 +193,8 @@ public:
 };
 
 
-
 void InitSettings_Impl( vcl::Window *pWin,
-         bool bFont = true, bool bForeground = true, bool bBackground = true );
-
+         bool bFont = true, bool bForeground = true );
 
 
 #endif

@@ -38,9 +38,9 @@ void SwDoc::SetLineNumberInfo( const SwLineNumberInfo &rNew )
         pTmpRoot->StartAllAction();
         // FME 2007-08-14 #i80120# Invalidate size, because ChgThisLines()
         // is only (and may only be) called by the formatting routines
-        //pTmpRoot->InvalidateAllContent( INV_LINENUM | INV_SIZE );
+        //pTmpRoot->InvalidateAllContent( SwInvalidateFlags::LineNum | SwInvalidateFlags::Size );
         for( auto aLayout : GetAllLayouts() )
-            aLayout->InvalidateAllContent( INV_LINENUM | INV_SIZE );
+            aLayout->InvalidateAllContent( SwInvalidateFlags::LineNum | SwInvalidateFlags::Size );
         pTmpRoot->EndAllAction();
     }
     *mpLineNumberInfo = rNew;
@@ -99,21 +99,6 @@ SwLineNumberInfo& SwLineNumberInfo::operator=(const SwLineNumberInfo &rCpy)
     bRestartEachPage = rCpy.IsRestartEachPage();
 
     return *this;
-}
-
-bool SwLineNumberInfo::operator==( const SwLineNumberInfo& rInf ) const
-{
-    return  GetRegisteredIn() == rInf.GetRegisteredIn() &&
-            aType.GetNumberingType() == rInf.GetNumType().GetNumberingType() &&
-            aDivider == rInf.GetDivider() &&
-            nPosFromLeft == rInf.GetPosFromLeft() &&
-            nCountBy == rInf.GetCountBy() &&
-            nDividerCountBy == rInf.GetDividerCountBy() &&
-            ePos == rInf.GetPos() &&
-            bPaintLineNumbers == rInf.IsPaintLineNumbers() &&
-            bCountBlankLines == rInf.IsCountBlankLines() &&
-            bCountInFlys == rInf.IsCountInFlys() &&
-            bRestartEachPage == rInf.IsRestartEachPage();
 }
 
 SwCharFormat* SwLineNumberInfo::GetCharFormat( IDocumentStylePoolAccess& rIDSPA ) const

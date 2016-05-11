@@ -68,7 +68,7 @@ private:
     std::string fullyQualifiedName(const FunctionDecl* functionDecl);
 };
 
-static std::string niceName(const CXXMethodDecl* functionDecl)
+std::string niceName(const CXXMethodDecl* functionDecl)
 {
     std::string s =
            functionDecl->getParent()->getQualifiedNameAsString() + "::"
@@ -219,7 +219,6 @@ gotfunc:
 
     return true;
 }
-
 
 
 loplugin::Plugin::Registration< UnnecessaryVirtual > X("unnecessaryvirtual", false);

@@ -69,7 +69,7 @@ SwXMLWriter::~SwXMLWriter()
 {
 }
 
-sal_uInt32 SwXMLWriter::_Write( const uno::Reference < task::XStatusIndicator >& xStatusIndicator,
+sal_uInt32 SwXMLWriter::Write_( const uno::Reference < task::XStatusIndicator >& xStatusIndicator,
                                 const OUString& aDocHierarchicalName )
 {
     // Get service factory
@@ -170,11 +170,9 @@ sal_uInt32 SwXMLWriter::_Write( const uno::Reference < task::XStatusIndicator >&
             xStatusIndicator->start(SW_RESSTR( STR_STATSTR_SWGWRITE),
                                     nProgressRange);
         }
-        aAny <<= nProgressRange;
-        xInfoSet->setPropertyValue("ProgressRange", aAny);
+        xInfoSet->setPropertyValue("ProgressRange", Any(nProgressRange));
 
-        aAny <<= static_cast < sal_Int32 >( -1 );
-        xInfoSet->setPropertyValue("ProgressMax", aAny);
+        xInfoSet->setPropertyValue("ProgressMax", Any(static_cast < sal_Int32 >( -1 )));
     }
 
     SvtSaveOptions aSaveOpt;
@@ -433,7 +431,7 @@ sal_uInt32 SwXMLWriter::_Write( const uno::Reference < task::XStatusIndicator >&
 
 sal_uLong SwXMLWriter::WriteStorage()
 {
-    return _Write( uno::Reference < task::XStatusIndicator >(), OUString() );
+    return Write_( uno::Reference < task::XStatusIndicator >(), OUString() );
 }
 
 sal_uLong SwXMLWriter::WriteMedium( SfxMedium& aTargetMedium )
@@ -449,7 +447,7 @@ sal_uLong SwXMLWriter::WriteMedium( SfxMedium& aTargetMedium )
     if ( pDocHierarchItem )
         aName = pDocHierarchItem->GetValue();
 
-    return _Write( xStatusIndicator, aName );
+    return Write_( xStatusIndicator, aName );
 }
 
 sal_uLong SwXMLWriter::Write( SwPaM& rPaM, SfxMedium& rMed,
@@ -486,9 +484,7 @@ bool SwXMLWriter::WriteThroughComponent(
         if( !xSet.is() )
             return false;
 
-        uno::Any aAny;
-        aAny <<= OUString("text/xml");
-        xSet->setPropertyValue("MediaType", aAny );
+        xSet->setPropertyValue("MediaType", Any(OUString("text/xml")) );
 
         // even plain stream should be encrypted in encrypted documents
         xSet->setPropertyValue( "UseCommonStoragePasswordEncryption", makeAny(true) );

@@ -123,42 +123,42 @@ Sequence< DriverPropertyInfo > SAL_CALL OFileDriver::getPropertyInfo( const OUSt
         aDriverInfo.push_back(DriverPropertyInfo(
                 OUString("CharSet")
                 ,OUString("CharSet of the database.")
-                ,sal_False
+                ,false
                 ,OUString()
                 ,Sequence< OUString >())
                 );
         aDriverInfo.push_back(DriverPropertyInfo(
                 OUString("Extension")
                 ,OUString("Extension of the file format.")
-                ,sal_False
+                ,false
                 ,OUString(".*")
                 ,Sequence< OUString >())
                 );
         aDriverInfo.push_back(DriverPropertyInfo(
                 OUString("ShowDeleted")
                 ,OUString("Display inactive records.")
-                ,sal_False
+                ,false
                 ,OUString("0")
                 ,aBoolean)
                 );
         aDriverInfo.push_back(DriverPropertyInfo(
                 OUString("EnableSQL92Check")
                 ,OUString("Use SQL92 naming constraints.")
-                ,sal_False
+                ,false
                 ,OUString("0")
                 ,aBoolean)
                 );
         aDriverInfo.push_back(DriverPropertyInfo(
                 OUString("UseRelativePath")
                 ,OUString("Handle the connection url as relative path.")
-                ,sal_False
+                ,false
                 ,OUString("0")
                 ,aBoolean)
                 );
         aDriverInfo.push_back(DriverPropertyInfo(
                 OUString("URL")
                 ,OUString("The URL of the database document which is used to create an absolute path.")
-                ,sal_False
+                ,false
                 ,OUString()
                 ,Sequence< OUString >())
                 );
@@ -195,7 +195,7 @@ Reference< XTablesSupplier > SAL_CALL OFileDriver::getDataDefinitionByConnection
     {
         OConnection* pSearchConnection = reinterpret_cast< OConnection* >( xTunnel->getSomething(OConnection::getUnoTunnelImplementationId()) );
         OConnection* pConnection = nullptr;
-        for (OWeakRefArray::iterator i = m_xConnections.begin(); m_xConnections.end() != i; ++i)
+        for (OWeakRefArray::const_iterator i = m_xConnections.begin(); m_xConnections.end() != i; ++i)
         {
             if (static_cast<OConnection*>( Reference< XConnection >::query(i->get().get()).get() ) == pSearchConnection)
             {
@@ -225,12 +225,8 @@ Reference< XTablesSupplier > SAL_CALL OFileDriver::getDataDefinitionByURL( const
 
 OOperandAttr::OOperandAttr(sal_uInt16 _nPos,const Reference< XPropertySet>& _xColumn)
     : OOperandRow(_nPos,::comphelper::getINT32(_xColumn->getPropertyValue(OMetaConnection::getPropMap().getNameByIndex(PROPERTY_ID_TYPE))))
-    , m_xColumn(_xColumn)
 {
 }
-
-
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

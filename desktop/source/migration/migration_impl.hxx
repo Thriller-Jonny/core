@@ -46,7 +46,7 @@ namespace desktop
 
 struct install_info
 {
-    OUString productname;  // human readeable product name
+    OUString productname;  // human readable product name
     OUString userdata;     // file: url for user installation
 };
 
@@ -135,7 +135,7 @@ struct MigrationItem
 };
 
 typedef std::unordered_map< OUString, std::vector< MigrationItem >,
-                            OUStringHash, std::equal_to< OUString > > MigrationHashMap;
+                            OUStringHash > MigrationHashMap;
 
 /**
     information for the UI elements to be migrated for one module

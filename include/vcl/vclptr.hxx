@@ -62,6 +62,8 @@ public:
 
 }; }; // namespace detail, namespace vcl
 
+/// @endcond
+
 /**
  * A thin wrapper around rtl::Reference to implement the acquire and dispose semantics we want for references to vcl::Window subclasses.
  *
@@ -122,7 +124,7 @@ public:
      *
      * For more details on the design please see vcl/README.lifecycle
      *
-     * @param reference_type must be a subclass of vcl::Window
+     * @tparam reference_type must be a subclass of vcl::Window
      */
     template<typename... Arg> static VclPtr< reference_type > Create(Arg &&... arg)
     {

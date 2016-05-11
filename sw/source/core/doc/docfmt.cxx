@@ -366,8 +366,11 @@ void SwDoc::ResetAttrs( const SwPaM &rRg,
         ++aTmpStt;
     }
     if( pEnd->nContent.GetIndex() == pEnd->nNode.GetNode().GetContentNode()->Len() )
+    {
          // set up a later, and all CharFormatAttr -> TextFormatAttr
-        ++aTmpEnd, bAdd = false;
+        ++aTmpEnd;
+        bAdd = false;
+    }
     else if( pStt->nNode != pEnd->nNode || !pStt->nContent.GetIndex() )
     {
         SwTextNode* pTNd = aTmpEnd.GetNode().GetTextNode();
@@ -674,7 +677,7 @@ void SwDoc::DelCharFormat(size_t nFormat, bool bBroadcast)
     SwCharFormat * pDel = (*mpCharFormatTable)[nFormat];
 
     if (bBroadcast)
-        BroadcastStyleOperation(pDel->GetName(), SFX_STYLE_FAMILY_CHAR,
+        BroadcastStyleOperation(pDel->GetName(), SfxStyleFamily::Char,
                                 SfxStyleSheetHintId::ERASED);
 
     if (GetIDocumentUndoRedo().DoesUndo())
@@ -715,7 +718,7 @@ void SwDoc::DelFrameFormat( SwFrameFormat *pFormat, bool bBroadcast )
         {
             if (bBroadcast)
                 BroadcastStyleOperation(pFormat->GetName(),
-                                        SFX_STYLE_FAMILY_FRAME,
+                                        SfxStyleFamily::Frame,
                                         SfxStyleSheetHintId::ERASED);
 
             if (GetIDocumentUndoRedo().DoesUndo())
@@ -829,14 +832,14 @@ SwFrameFormat *SwDoc::MakeFrameFormat(const OUString &rFormatName,
 
     if (bBroadcast)
     {
-        BroadcastStyleOperation(rFormatName, SFX_STYLE_FAMILY_FRAME,
+        BroadcastStyleOperation(rFormatName, SfxStyleFamily::Frame,
                                 SfxStyleSheetHintId::CREATED);
     }
 
     return pFormat;
 }
 
-SwFormat *SwDoc::_MakeFrameFormat(const OUString &rFormatName,
+SwFormat *SwDoc::MakeFrameFormat_(const OUString &rFormatName,
                             SwFormat *pDerivedFrom,
                             bool bBroadcast, bool bAuto)
 {
@@ -865,14 +868,14 @@ SwCharFormat *SwDoc::MakeCharFormat( const OUString &rFormatName,
 
     if (bBroadcast)
     {
-        BroadcastStyleOperation(rFormatName, SFX_STYLE_FAMILY_CHAR,
+        BroadcastStyleOperation(rFormatName, SfxStyleFamily::Char,
                                 SfxStyleSheetHintId::CREATED);
     }
 
     return pFormat;
 }
 
-SwFormat *SwDoc::_MakeCharFormat(const OUString &rFormatName,
+SwFormat *SwDoc::MakeCharFormat_(const OUString &rFormatName,
                             SwFormat *pDerivedFrom,
                             bool bBroadcast, bool bAuto)
 {
@@ -901,13 +904,13 @@ SwTextFormatColl* SwDoc::MakeTextFormatColl( const OUString &rFormatName,
     }
 
     if (bBroadcast)
-        BroadcastStyleOperation(rFormatName, SFX_STYLE_FAMILY_PARA,
+        BroadcastStyleOperation(rFormatName, SfxStyleFamily::Para,
                                 SfxStyleSheetHintId::CREATED);
 
     return pFormatColl;
 }
 
-SwFormat *SwDoc::_MakeTextFormatColl(const OUString &rFormatName,
+SwFormat *SwDoc::MakeTextFormatColl_(const OUString &rFormatName,
                             SwFormat *pDerivedFrom,
                             bool bBroadcast, bool bAuto)
 {
@@ -935,7 +938,7 @@ SwConditionTextFormatColl* SwDoc::MakeCondTextFormatColl( const OUString &rForma
     }
 
     if (bBroadcast)
-        BroadcastStyleOperation(rFormatName, SFX_STYLE_FAMILY_PARA,
+        BroadcastStyleOperation(rFormatName, SfxStyleFamily::Para,
                                 SfxStyleSheetHintId::CREATED);
 
     return pFormatColl;
@@ -964,7 +967,7 @@ void SwDoc::DelTextFormatColl(size_t nFormatColl, bool bBroadcast)
         return;     // never delete default!
 
     if (bBroadcast)
-        BroadcastStyleOperation(pDel->GetName(), SFX_STYLE_FAMILY_PARA,
+        BroadcastStyleOperation(pDel->GetName(), SfxStyleFamily::Para,
                                 SfxStyleSheetHintId::ERASED);
 
     if (GetIDocumentUndoRedo().DoesUndo())
@@ -1144,7 +1147,7 @@ SwFormat* SwDoc::CopyFormat( const SwFormat& rFormat,
 /// copy the frame format
 SwFrameFormat* SwDoc::CopyFrameFormat( const SwFrameFormat& rFormat )
 {
-    return static_cast<SwFrameFormat*>(CopyFormat( rFormat, *GetFrameFormats(), &SwDoc::_MakeFrameFormat,
+    return static_cast<SwFrameFormat*>(CopyFormat( rFormat, *GetFrameFormats(), &SwDoc::MakeFrameFormat_,
                                 *GetDfltFrameFormat() ));
 }
 
@@ -1152,7 +1155,7 @@ SwFrameFormat* SwDoc::CopyFrameFormat( const SwFrameFormat& rFormat )
 SwCharFormat* SwDoc::CopyCharFormat( const SwCharFormat& rFormat )
 {
     return static_cast<SwCharFormat*>(CopyFormat( rFormat, *GetCharFormats(),
-                                            &SwDoc::_MakeCharFormat,
+                                            &SwDoc::MakeCharFormat_,
                                             *GetDfltCharFormat() ));
 }
 
@@ -1380,7 +1383,7 @@ void SwDoc::CopyPageDescHeaderFooterImpl( bool bCpyHeader,
                 const SwNode& rCSttNd = pContent->GetContentIdx()->GetNode();
                 SwNodeRange aRg( rCSttNd, 0, *rCSttNd.EndOfSectionNode() );
                 aTmpIdx = *pSttNd->EndOfSectionNode();
-                rSrcNds._Copy( aRg, aTmpIdx );
+                rSrcNds.Copy_( aRg, aTmpIdx );
                 aTmpIdx = *pSttNd;
                 rSrcFormat.GetDoc()->GetDocumentContentOperationsManager().CopyFlyInFlyImpl( aRg, 0, aTmpIdx );
                 pNewFormat->SetFormatAttr( SwFormatContent( pSttNd ));
@@ -1523,11 +1526,11 @@ void SwDoc::ReplaceStyles( const SwDoc& rSource, bool bIncludePageStyles )
     ::sw::UndoGuard const undoGuard(GetIDocumentUndoRedo());
 
     CopyFormatArr( *rSource.mpCharFormatTable, *mpCharFormatTable,
-                &SwDoc::_MakeCharFormat, *mpDfltCharFormat );
+                &SwDoc::MakeCharFormat_, *mpDfltCharFormat );
     CopyFormatArr( *rSource.mpFrameFormatTable, *mpFrameFormatTable,
-                &SwDoc::_MakeFrameFormat, *mpDfltFrameFormat );
+                &SwDoc::MakeFrameFormat_, *mpDfltFrameFormat );
     CopyFormatArr( *rSource.mpTextFormatCollTable, *mpTextFormatCollTable,
-                &SwDoc::_MakeTextFormatColl, *mpDfltTextFormatColl );
+                &SwDoc::MakeTextFormatColl_, *mpDfltTextFormatColl );
 
     //To-Do:
     //  a) in rtf export don't export our hideous pgdsctbl
@@ -1707,7 +1710,7 @@ SwTableLineFormat* SwDoc::MakeTableLineFormat()
     return pFormat;
 }
 
-void SwDoc::_CreateNumberFormatter()
+void SwDoc::CreateNumberFormatter()
 {
     OSL_ENSURE( !mpNumberFormatter, "is already there" );
 
@@ -1876,7 +1879,7 @@ void SwDoc::ChgFormat(SwFormat & rFormat, const SfxItemSet & rSet)
 void SwDoc::RenameFormat(SwFormat & rFormat, const OUString & sNewName,
                       bool bBroadcast)
 {
-    SfxStyleFamily eFamily = SFX_STYLE_FAMILY_ALL;
+    SfxStyleFamily eFamily = SfxStyleFamily::All;
 
     if (GetIDocumentUndoRedo().DoesUndo())
     {
@@ -1886,15 +1889,15 @@ void SwDoc::RenameFormat(SwFormat & rFormat, const OUString & sNewName,
         {
         case RES_CHRFMT:
             pUndo = new SwUndoRenameCharFormat(rFormat.GetName(), sNewName, this);
-            eFamily = SFX_STYLE_FAMILY_CHAR;
+            eFamily = SfxStyleFamily::Char;
             break;
         case RES_TXTFMTCOLL:
             pUndo = new SwUndoRenameFormatColl(rFormat.GetName(), sNewName, this);
-            eFamily = SFX_STYLE_FAMILY_PARA;
+            eFamily = SfxStyleFamily::Para;
             break;
         case RES_FRMFMT:
             pUndo = new SwUndoRenameFrameFormat(rFormat.GetName(), sNewName, this);
-            eFamily = SFX_STYLE_FAMILY_FRAME;
+            eFamily = SfxStyleFamily::Frame;
             break;
 
         default:
@@ -1991,7 +1994,7 @@ namespace docfunc
 {
     bool HasOutlineStyleToBeWrittenAsNormalListStyle( SwDoc& rDoc )
     {
-        // If a parent paragraph style of one of the parargraph styles, which
+        // If a parent paragraph style of one of the paragraph styles, which
         // are assigned to the list levels of the outline style, has a list style
         // set or inherits a list style from its parent style, the outline style
         // has to be written as a normal list style to the OpenDocument file

@@ -35,7 +35,6 @@ namespace dbtools
 {
 
 
-
     //= OCharsetMap
 
     /** is a class which translates between different charset representations.
@@ -106,13 +105,12 @@ namespace dbtools
         CharsetIteratorDerefHelper(const CharsetIteratorDerefHelper& _rSource);
 
         rtl_TextEncoding    getEncoding() const { return m_eEncoding; }
-        OUString     getIanaName() const { return m_aIanaName; }
+        const OUString&     getIanaName() const { return m_aIanaName; }
 
     protected:
         CharsetIteratorDerefHelper( const rtl_TextEncoding _eEncoding, const OUString& _rIanaName );
 
     };
-
 
 
     //- OCharsetMap::CharsetIterator
@@ -141,13 +139,9 @@ namespace dbtools
 
         /// prefix increment
         const CharsetIterator&  operator++();
-        /// postfix increment
-        const CharsetIterator   operator++(int) { CharsetIterator hold(*this); ++*this; return hold; }
 
         /// prefix decrement
         const CharsetIterator&  operator--();
-        /// postfix decrement
-        const CharsetIterator   operator--(int) { CharsetIterator hold(*this); --*this; return hold; }
 
     protected:
         CharsetIterator(const OCharsetMap* _pContainer, OCharsetMap::TextEncBag::const_iterator _aPos );

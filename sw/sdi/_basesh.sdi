@@ -17,9 +17,6 @@
  */
 
 interface BaseTextSelection
-[
-    Automation = FALSE;
-]
 {
     SID_ATTR_BRUSH
     [
@@ -213,7 +210,7 @@ interface BaseTextSelection
     [
         ExecMethod = ExecBckCol ;
         StateMethod = GetBckColState ;
-        Cachable , AutoUpdate ;
+        AutoUpdate ;
         DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
     ]
 
@@ -361,6 +358,12 @@ interface BaseTextSelection
 
     SID_STYLE_FAMILY5 // status(fina|play)
     [
+        StateMethod = StateStyle ;
+    ]
+
+    SID_CLASSIFICATION_APPLY
+    [
+        ExecMethod = Execute ;
         StateMethod = StateStyle ;
     ]
 

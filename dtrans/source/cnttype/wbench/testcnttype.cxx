@@ -37,7 +37,7 @@
 #define TEST_CLIPBOARD
 #define RDB_SYSPATH  "d:\\projects\\src621\\dtrans\\wntmsci7\\bin\\applicat.rdb"
 
-//  namesapces
+//  namespaces
 
 using namespace ::std;
 using namespace ::cppu;
@@ -144,8 +144,7 @@ int SAL_CALL main( int nArgc, char* argv[] )
 
     // get the global service-manager
 
-    OUString rdbName = OUString(  RDB_SYSPATH  );
-    Reference< XMultiServiceFactory > g_xFactory( createRegistryServiceFactory( rdbName ) );
+    Reference< XMultiServiceFactory > g_xFactory( createRegistryServiceFactory( RDB_SYSPATH ) );
 
     // Print a message if an error occurred.
     if ( !g_xFactory.is( ) )

@@ -46,6 +46,9 @@
 #include <editeng/outliner.hxx>
 #include <svx/svditer.hxx>
 #include <svtools/imapobj.hxx>
+#include <LibreOfficeKit/LibreOfficeKitEnums.h>
+#include <boost/property_tree/json_parser.hpp>
+#include <comphelper/lok.hxx>
 
 #include "sdresid.hxx"
 #include "drawdoc.hxx"
@@ -248,11 +251,11 @@ void SdDrawDocument::UpdatePageRelativeURLs(const OUString& rOldName, const OUSt
     if (rNewName.isEmpty())
         return;
 
-    SfxItemPool& pPool(GetPool());
-    sal_uInt32 nCount = pPool.GetItemCount2(EE_FEATURE_FIELD);
+    SfxItemPool& rPool(GetPool());
+    sal_uInt32 nCount = rPool.GetItemCount2(EE_FEATURE_FIELD);
     for (sal_uInt32 nOff = 0; nOff < nCount; nOff++)
     {
-        const SfxPoolItem *pItem = pPool.GetItem2(EE_FEATURE_FIELD, nOff);
+        const SfxPoolItem *pItem = rPool.GetItem2(EE_FEATURE_FIELD, nOff);
         const SvxFieldItem* pFldItem = dynamic_cast< const SvxFieldItem * > (pItem);
 
         if(pFldItem)
@@ -292,11 +295,11 @@ void SdDrawDocument::UpdatePageRelativeURLs(SdPage* pPage, sal_uInt16 nPos, sal_
 {
     bool bNotes = (pPage->GetPageKind() == PK_NOTES);
 
-    SfxItemPool& pPool(GetPool());
-    sal_uInt32 nCount = pPool.GetItemCount2(EE_FEATURE_FIELD);
+    SfxItemPool& rPool(GetPool());
+    sal_uInt32 nCount = rPool.GetItemCount2(EE_FEATURE_FIELD);
     for (sal_uInt32 nOff = 0; nOff < nCount; nOff++)
     {
-        const SfxPoolItem *pItem = pPool.GetItem2(EE_FEATURE_FIELD, nOff);
+        const SfxPoolItem *pItem = rPool.GetItem2(EE_FEATURE_FIELD, nOff);
         const SvxFieldItem* pFldItem;
 
         if ((pFldItem = dynamic_cast< const SvxFieldItem * > (pItem)) != nullptr)
@@ -374,6 +377,11 @@ void SdDrawDocument::InsertPage(SdrPage* pPage, sal_uInt16 nPos)
     if (!bLast)
         UpdatePageRelativeURLs(static_cast<SdPage*>( pPage ), nPos, 1);
 
+    if (comphelper::LibreOfficeKit::isActive() &&
+        static_cast<SdPage*>(pPage)->GetPageKind() == PK_STANDARD)
+    {
+        libreOfficeKitCallback(LOK_CALLBACK_DOCUMENT_SIZE_CHANGED, "");
+    }
 }
 
 // Delete page
@@ -397,6 +405,12 @@ SdrPage* SdDrawDocument::RemovePage(sal_uInt16 nPgNum)
 
     if (!bLast)
         UpdatePageRelativeURLs(static_cast<SdPage*>(pPage), nPgNum, -1);
+
+    if (comphelper::LibreOfficeKit::isActive() &&
+        static_cast<SdPage*>(pPage)->GetPageKind() == PK_STANDARD)
+    {
+        libreOfficeKitCallback(LOK_CALLBACK_DOCUMENT_SIZE_CHANGED, "");
+    }
 
     return pPage;
 }
@@ -628,7 +642,7 @@ void SdDrawDocument::CreateFirstPages( SdDrawDocument* pRefDocument /* = 0 */ )
         if( !pRefPage && (meDocType != DOCUMENT_TYPE_DRAW) )
             pPage->SetAutoLayout( AUTOLAYOUT_TITLE, true, true );
 
-        mpWorkStartupTimer = new Timer();
+        mpWorkStartupTimer = new Timer("DrawWorkStartupTimer");
         mpWorkStartupTimer->SetTimeoutHdl( LINK(this, SdDrawDocument, WorkStartupHdl) );
         mpWorkStartupTimer->SetTimeout(2000);
         mpWorkStartupTimer->Start();
@@ -852,6 +866,9 @@ LanguageType SdDrawDocument::GetLanguage( const sal_uInt16 nId ) const
 // Initiate WorkStartup
 IMPL_LINK_NOARG_TYPED(SdDrawDocument, WorkStartupHdl, Timer *, void)
 {
+    if (IsTransportContainer())
+        return;
+
     if( mpDocSh )
         mpDocSh->SetWaitCursor( true );
 
@@ -1351,7 +1368,6 @@ sal_uInt16 SdDrawDocument::InsertPageSet (
     SdPage* pPreviousNotesPage;
     sal_uInt16 nStandardPageNum;
     sal_uInt16 nNotesPageNum;
-    OUString aStandardPageName(sStandardPageName);
     OUString aNotesPageName(sNotesPageName);
 
     // Gather some information about the standard page and the notes page
@@ -1370,7 +1386,7 @@ sal_uInt16 SdDrawDocument::InsertPageSet (
         nStandardPageNum = pPreviousStandardPage->GetPageNum() + 2;
         pPreviousNotesPage = static_cast<SdPage*>( GetPage(nStandardPageNum - 1) );
         nNotesPageNum = nStandardPageNum + 1;
-        aNotesPageName = aStandardPageName;
+        aNotesPageName = sStandardPageName;
     }
 
     OSL_ASSERT(nNotesPageNum==nStandardPageNum+1);
@@ -1381,7 +1397,7 @@ sal_uInt16 SdDrawDocument::InsertPageSet (
     SetupNewPage (
         pPreviousStandardPage,
         pStandardPage,
-        aStandardPageName,
+        sStandardPageName,
         nInsertPosition,
         bIsPageBack,
         bIsPageObj);

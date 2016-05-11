@@ -298,7 +298,7 @@ void SAL_CALL OFSInputStreamContainer::addEventListener( const uno::Reference< l
         throw lang::DisposedException();
 
     if ( !m_pListenersContainer )
-        m_pListenersContainer = new ::cppu::OInterfaceContainerHelper( m_aMutex );
+        m_pListenersContainer = new ::comphelper::OInterfaceContainerHelper2( m_aMutex );
 
     m_pListenersContainer->addInterface( xListener );
 }
@@ -314,7 +314,6 @@ void SAL_CALL OFSInputStreamContainer::removeEventListener( const uno::Reference
     if ( m_pListenersContainer )
         m_pListenersContainer->removeInterface( xListener );
 }
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -247,6 +247,8 @@ void LwpPara::Parse(IXFStream* pOutputStream)
 {
     m_pXFContainer = new XFContentContainer;
     XFConvert(m_pXFContainer);
+    if (!m_pXFContainer)
+        return;
     m_pXFContainer->ToXml(pOutputStream);
     m_pXFContainer->Reset();
     delete m_pXFContainer;
@@ -293,7 +295,7 @@ void LwpPara::XFConvert(XFContentContainer* pCont)
     }
     else if (m_pXFContainer)
     {
-        LwpBulletStyleMgr* pBulletStyleMgr = this->GetBulletStyleMgr();
+        LwpBulletStyleMgr* pBulletStyleMgr = GetBulletStyleMgr();
         if (pBulletStyleMgr)
         {
             pBulletStyleMgr->SetCurrentSilverBullet(LwpObjectID());
@@ -305,13 +307,12 @@ void LwpPara::XFConvert(XFContentContainer* pCont)
     m_Fribs.SetXFPara(pPara);
     m_Fribs.XFConvert();
 
-    if (m_pBreaks)
+    if (m_pBreaks && m_pXFContainer)
         AddBreakAfter(m_pXFContainer);
 }
 
-bool LwpPara::RegisterMasterPage(XFParaStyle* pBaseStyle)
+void LwpPara::RegisterMasterPage(XFParaStyle* pBaseStyle)
 {
-    bool bSuccess = false;
     //get story
     LwpStory* pStory = dynamic_cast<LwpStory*>(m_Story.obj().get());
     //if pagelayout is modified, register the pagelayout
@@ -324,7 +325,6 @@ bool LwpPara::RegisterMasterPage(XFParaStyle* pBaseStyle)
             RegisterNewSectionStyle(pLayout);
         }
 
-        bSuccess = true;
         //register master page style
         XFParaStyle* pOverStyle = new XFParaStyle();
         *pOverStyle = *pBaseStyle;
@@ -335,7 +335,6 @@ bool LwpPara::RegisterMasterPage(XFParaStyle* pBaseStyle)
         XFStyleManager* pXFStyleManager = LwpGlobalMgr::GetInstance()->GetXFStyleManager();
         m_StyleName = pXFStyleManager->AddStyle(pOverStyle).m_pStyle->GetStyleName();
     }
-    return bSuccess;
 }
 /**
  * @short   register paragraph style
@@ -531,7 +530,7 @@ void LwpPara::RegisterStyle()
     OverrideParaNumbering(pNumberingProps);
 
     //register bullet style
-    LwpBulletStyleMgr* pBulletStyleMgr = this->GetBulletStyleMgr();
+    LwpBulletStyleMgr* pBulletStyleMgr = GetBulletStyleMgr();
     if (pBulletStyleMgr)
     {
         // if has bullet or numbering
@@ -553,7 +552,7 @@ void LwpPara::RegisterStyle()
                 if (m_pSilverBullet->IsBulletOrdered())
                 {
                     OUString aPreBullStyleName;
-                    LwpNumberingOverride* pNumbering = this->GetParaNumbering();
+                    LwpNumberingOverride* pNumbering = GetParaNumbering();
                     sal_uInt16 nPosition = pNumbering->GetPosition();
                     bool bLesser = m_pSilverBullet->IsLesserLevel(nPosition);
                     LwpPara* pPara = this;
@@ -580,7 +579,7 @@ void LwpPara::RegisterStyle()
                         LwpSilverBullet* pParaSilverBullet = pPara->GetSilverBullet();
                         pNumbering = pPara->GetParaNumbering();
 
-                        if (pPara->GetObjectID() != this->GetObjectID())
+                        if (pPara->GetObjectID() != GetObjectID())
                         {
                             if (!pParaSilverBullet)
                             {
@@ -689,7 +688,7 @@ void LwpPara::RegisterStyle()
                     else
                     {
                         m_bBullContinue = false;
-                        if (this->IsInCell())
+                        if (IsInCell())
                         {
                             XFListStyle* pOldStyle = static_cast<XFListStyle*>(pXFStyleManager->FindStyle(m_aBulletStyleName));
                             if (pOldStyle)
@@ -700,7 +699,7 @@ void LwpPara::RegisterStyle()
                         }
                     }
 
-                    LwpStory* pMyStory = this->GetStory();
+                    LwpStory* pMyStory = GetStory();
                     if (pMyStory)
                     {
                         if (pMyStory->IsBullStyleUsedBefore(m_aBulletStyleName, m_pParaNumbering->GetPosition()))
@@ -740,7 +739,7 @@ void LwpPara::RegisterStyle()
         XFParaStyle* pNewParaStyle = new XFParaStyle;
         *pNewParaStyle = *GetXFParaStyle();
         //pOverStyle->SetStyleName("");
-        this->RegisterTabStyle(pNewParaStyle);
+        RegisterTabStyle(pNewParaStyle);
         if (!m_ParentStyleName.isEmpty())
                     pNewParaStyle->SetParentStyleName(m_ParentStyleName);
         m_StyleName = pXFStyleManager->AddStyle(pNewParaStyle).m_pStyle->GetStyleName();
@@ -845,7 +844,7 @@ void LwpPara::ParseDropcapContent()
  */
 void LwpPara::AddBreakBefore(XFContentContainer* pCont)
 {
-    if (!m_pBreaks)
+    if (!m_pBreaks || !pCont)
         return;
     if (m_pBreaks->IsPageBreakBefore())
     {

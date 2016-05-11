@@ -61,14 +61,14 @@ public:
     virtual bool RestorePersistentData();
 
     OUString GetTitle() const;
-    void SetTitle( const OUString& rTitle, bool bBroadcast = false );
+    void SetTitle( const OUString& rTitle );
     OUString GetDescription() const;
-    void SetDescription( const OUString& rDescription, bool bBroadcast = false );
+    void SetDescription( const OUString& rDescription );
 
     void               SetContour( const tools::PolyPolygon *pPoly,
                                    bool bAutomatic = false );
     const tools::PolyPolygon *HasContour() const;
-    bool               _HasContour() const { return pContour!=nullptr; };
+    bool               HasContour_() const { return pContour!=nullptr; };
     void               GetContour( tools::PolyPolygon &rPoly ) const;
     void               CreateContour();
 

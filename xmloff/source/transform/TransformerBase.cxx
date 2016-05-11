@@ -40,7 +40,6 @@
 #include "TransformerTokenMap.hxx"
 
 #include "TransformerBase.hxx"
-#include "TContextVector.hxx"
 
 using namespace ::osl;
 using namespace ::xmloff::token;
@@ -187,7 +186,6 @@ XMLTransformerBase::XMLTransformerBase( XMLTransformerActionInit *pInit,
     throw () :
     m_pNamespaceMap( new SvXMLNamespaceMap ),
     m_pReplaceNamespaceMap( new SvXMLNamespaceMap ),
-    m_pContexts( new XMLTransformerContextVector ),
     m_pElemActions( new XMLTransformerActions( pInit ) ),
     m_pTokenMap( new XMLTransformerTokenMap( pTKMapInit ) )
 {
@@ -204,7 +202,6 @@ XMLTransformerBase::~XMLTransformerBase() throw ()
 {
     delete m_pNamespaceMap;
     delete m_pReplaceNamespaceMap;
-    delete m_pContexts;
     delete m_pElemActions;
     delete m_pTokenMap;
 }
@@ -288,9 +285,9 @@ void SAL_CALL XMLTransformerBase::startElement( const OUString& rName,
     // If there are contexts already, call a CreateChildContext at the topmost
     // context. Otherwise, create a default context.
     ::rtl::Reference < XMLTransformerContext > xContext;
-    if( !m_pContexts->empty() )
+    if( !m_pContexts.empty() )
     {
-        xContext = m_pContexts->back()->CreateChildContext( nPrefix,
+        xContext = m_pContexts.back()->CreateChildContext( nPrefix,
                                                           aLocalName,
                                                           rName,
                                                           xAttrList );
@@ -306,10 +303,10 @@ void SAL_CALL XMLTransformerBase::startElement( const OUString& rName,
 
     // Remember old namespace map.
     if( pRewindMap )
-        xContext->SetRewindMap( pRewindMap );
+        xContext->PutRewindMap( pRewindMap );
 
     // Push context on stack.
-    m_pContexts->push_back( xContext );
+    m_pContexts.push_back( xContext );
 
     // Call a startElement at the new context.
     xContext->StartElement( xAttrList );
@@ -322,10 +319,10 @@ rName
 )
     throw(SAXException, RuntimeException, std::exception)
 {
-    if( !m_pContexts->empty() )
+    if( !m_pContexts.empty() )
     {
         // Get topmost context
-        ::rtl::Reference< XMLTransformerContext > xContext = m_pContexts->back();
+        ::rtl::Reference< XMLTransformerContext > xContext = m_pContexts.back();
 
 #if OSL_DEBUG_LEVEL > 0
         OSL_ENSURE( xContext->GetQName() == rName,
@@ -336,10 +333,10 @@ rName
         xContext->EndElement();
 
         // and remove it from the stack.
-        m_pContexts->pop_back();
+        m_pContexts.pop_back();
 
         // Get a namespace map to rewind.
-        SvXMLNamespaceMap *pRewindMap = xContext->GetRewindMap();
+        SvXMLNamespaceMap *pRewindMap = xContext->TakeRewindMap();
 
         // Delete the current context.
         xContext = nullptr;
@@ -356,9 +353,9 @@ rName
 void SAL_CALL XMLTransformerBase::characters( const OUString& rChars )
     throw(SAXException, RuntimeException, std::exception)
 {
-    if( !m_pContexts->empty() )
+    if( !m_pContexts.empty() )
     {
-        m_pContexts->back()->Characters( rChars );
+        m_pContexts.back()->Characters( rChars );
     }
 }
 
@@ -551,6 +548,7 @@ XMLMutableAttributeList *XMLTransformerBase::ProcessAttrList(
                     break;
                 case XML_ATACTION_RENAME_IN2INCH:
                     bRename = true;
+                    SAL_FALLTHROUGH;
                 case XML_ATACTION_IN2INCH:
                     {
                         OUString aAttrValue( rAttrValue );
@@ -567,6 +565,7 @@ XMLMutableAttributeList *XMLTransformerBase::ProcessAttrList(
                     break;
                 case XML_ATACTION_RENAME_INCH2IN:
                     bRename = true;
+                    SAL_FALLTHROUGH;
                 case XML_ATACTION_INCH2IN:
                     {
                         OUString aAttrValue( rAttrValue );
@@ -614,6 +613,7 @@ XMLMutableAttributeList *XMLTransformerBase::ProcessAttrList(
                     break;
                 case XML_ATACTION_RENAME_DECODE_STYLE_NAME_REF:
                     bRename = true;
+                    SAL_FALLTHROUGH;
                 case XML_ATACTION_DECODE_STYLE_NAME:
                 case XML_ATACTION_DECODE_STYLE_NAME_REF:
                     {
@@ -640,6 +640,7 @@ XMLMutableAttributeList *XMLTransformerBase::ProcessAttrList(
                     break;
                 case XML_ATACTION_RENAME_ENCODE_STYLE_NAME_REF:
                     bRename = true;
+                    SAL_FALLTHROUGH;
                 case XML_ATACTION_ENCODE_STYLE_NAME_REF:
                     {
                         OUString aAttrValue( rAttrValue );
@@ -649,6 +650,7 @@ XMLMutableAttributeList *XMLTransformerBase::ProcessAttrList(
                     break;
                 case XML_ATACTION_RENAME_NEG_PERCENT:
                     bRename = true;
+                    SAL_FALLTHROUGH;
                 case XML_ATACTION_NEG_PERCENT:
                     {
                         OUString aAttrValue( rAttrValue );
@@ -658,6 +660,7 @@ XMLMutableAttributeList *XMLTransformerBase::ProcessAttrList(
                     break;
                 case XML_ATACTION_RENAME_ADD_NAMESPACE_PREFIX:
                     bRename = true;
+                    SAL_FALLTHROUGH;
                 case XML_ATACTION_ADD_NAMESPACE_PREFIX:
                     {
                         OUString aAttrValue( rAttrValue );
@@ -684,6 +687,7 @@ XMLMutableAttributeList *XMLTransformerBase::ProcessAttrList(
                     break;
                 case XML_ATACTION_RENAME_REMOVE_NAMESPACE_PREFIX:
                     bRename = true;
+                    SAL_FALLTHROUGH;
                 case XML_ATACTION_REMOVE_NAMESPACE_PREFIX:
                     {
                         OUString aAttrValue( rAttrValue );
@@ -852,7 +856,7 @@ XMLMutableAttributeList *XMLTransformerBase::ProcessAttrList(
                 case XML_ATACTION_WRITER_BACK_GRAPHIC_TRANSPARENCY:
                     {
                         // determine, if it's the transparency of a document style
-                        XMLTransformerContext* pFirstContext = (*m_pContexts)[0].get();
+                        XMLTransformerContext* pFirstContext = m_pContexts[0].get();
                         OUString aFirstContextLocalName;
                         /* sal_uInt16 nFirstContextPrefix = */
                             GetNamespaceMap().GetKeyByAttrName( pFirstContext->GetQName(),
@@ -1243,7 +1247,7 @@ bool XMLTransformerBase::RemoveNamespacePrefix( OUString& rName,
 {
     OUString aLocalName;
     sal_uInt16 nPrefix =
-        GetNamespaceMap()._GetKeyByAttrName( rName, &aLocalName, false );
+        GetNamespaceMap().GetKeyByAttrName_( rName, &aLocalName );
     bool bRet = XML_NAMESPACE_UNKNOWN != nPrefix &&
                     (USHRT_MAX == nPrefixOnly || nPrefix == nPrefixOnly);
     if( bRet )
@@ -1424,26 +1428,22 @@ XMLTokenEnum XMLTransformerBase::GetToken( const OUString& rStr ) const
 }
 
 
-
 const XMLTransformerContext *XMLTransformerBase::GetCurrentContext() const
 {
-    OSL_ENSURE( !m_pContexts->empty(), "empty stack" );
+    OSL_ENSURE( !m_pContexts.empty(), "empty stack" );
 
 
-    return m_pContexts->empty() ? nullptr : m_pContexts->back().get();
+    return m_pContexts.empty() ? nullptr : m_pContexts.back().get();
 }
 
 const XMLTransformerContext *XMLTransformerBase::GetAncestorContext(
                                                         sal_uInt32 n ) const
 {
-    XMLTransformerContextVector::size_type nSize =
-        m_pContexts->size();
-    XMLTransformerContextVector::size_type nPos =
-        static_cast<XMLTransformerContextVector::size_type>( n );
+    auto nSize = m_pContexts.size();
 
-    OSL_ENSURE( nSize >nPos+2 , "invalid context" );
+    OSL_ENSURE( nSize > n + 2 , "invalid context" );
 
-    return nSize > nPos+2 ? (*m_pContexts)[nSize-(nPos+2)].get() : nullptr;
+    return nSize > n + 2 ? m_pContexts[nSize - (n + 2)].get() : nullptr;
 }
 
 bool XMLTransformerBase::isWriter() const

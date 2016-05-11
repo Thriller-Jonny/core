@@ -18,18 +18,16 @@
  */
 
 #include <string.h>
-#include <vcl/svpforlokit.hxx>
 #include <vcl/syswin.hxx>
 
 #include "headless/svpframe.hxx"
 #include "headless/svpinst.hxx"
 #include "headless/svpgdi.hxx"
 
-#include <basebmp/bitmapdevice.hxx>
-#include <basebmp/scanlineformats.hxx>
 #include <basegfx/vector/b2ivector.hxx>
 
-using namespace basebmp;
+#include <cairo.h>
+
 using namespace basegfx;
 
 SvpSalFrame* SvpSalFrame::s_pFocusFrame = nullptr;
@@ -38,48 +36,15 @@ SvpSalFrame* SvpSalFrame::s_pFocusFrame = nullptr;
 #define SvpSalGraphics AquaSalGraphics
 #endif
 
-#ifndef IOS
-namespace {
-    /// Decouple SalFrame lifetime from damagetracker lifetime
-    struct DamageTracker : public basebmp::IBitmapDeviceDamageTracker
-    {
-        virtual ~DamageTracker() {}
-        virtual void damaged( const basegfx::B2IBox& ) const override {}
-    };
-}
-#endif
-
-#ifdef ANDROID
-void SvpSalFrame::enableDamageTracker( bool bOn )
-{
-    if( m_bDamageTracking == bOn )
-        return;
-    if( m_aFrame.get() )
-    {
-        if( m_bDamageTracking )
-            m_aFrame->setDamageTracker( basebmp::IBitmapDeviceDamageTrackerSharedPtr() );
-        else
-            m_aFrame->setDamageTracker(
-                basebmp::IBitmapDeviceDamageTrackerSharedPtr( new DamageTracker ) );
-    }
-    m_bDamageTracking = bOn;
-}
-#endif
-
-
 SvpSalFrame::SvpSalFrame( SvpSalInstance* pInstance,
                           SalFrame* pParent,
                           SalFrameStyleFlags nSalFrameStyle,
-                          basebmp::Format nScanlineFormat,
                           SystemParentData* ) :
     m_pInstance( pInstance ),
     m_pParent( static_cast<SvpSalFrame*>(pParent) ),
     m_nStyle( nSalFrameStyle ),
     m_bVisible( false ),
-#ifndef IOS
-    m_bDamageTracking( false ),
-    m_nScanlineFormat( nScanlineFormat ),
-#endif
+    m_pSurface( nullptr ),
     m_nMinWidth( 0 ),
     m_nMinHeight( 0 ),
     m_nMaxWidth( 0 ),
@@ -124,7 +89,7 @@ SvpSalFrame::~SvpSalFrame()
         // SAL_DEBUG("SvpSalFrame::~SvpSalFrame: losing focus: " << this);
         s_pFocusFrame = nullptr;
         // call directly here, else an event for a destroyed frame would be dispatched
-        CallCallback( SALEVENT_LOSEFOCUS, nullptr );
+        CallCallback( SalEvent::LoseFocus, nullptr );
         // if the handler has not set a new focus frame
         // pass focus to another frame, preferably a document style window
         if( s_pFocusFrame == nullptr )
@@ -146,6 +111,8 @@ SvpSalFrame::~SvpSalFrame()
             }
         }
     }
+    if (m_pSurface)
+        cairo_surface_destroy(m_pSurface);
 }
 
 void SvpSalFrame::GetFocus()
@@ -159,7 +126,7 @@ void SvpSalFrame::GetFocus()
             s_pFocusFrame->LoseFocus();
         // SAL_DEBUG("SvpSalFrame::GetFocus(): " << this);
         s_pFocusFrame = this;
-        m_pInstance->PostEvent( this, nullptr, SALEVENT_GETFOCUS );
+        m_pInstance->PostEvent( this, nullptr, SalEvent::GetFocus );
     }
 }
 
@@ -168,7 +135,7 @@ void SvpSalFrame::LoseFocus()
     if( s_pFocusFrame == this )
     {
         // SAL_DEBUG("SvpSalFrame::LoseFocus: " << this);
-        m_pInstance->PostEvent( this, nullptr, SALEVENT_LOSEFOCUS );
+        m_pInstance->PostEvent( this, nullptr, SalEvent::LoseFocus );
         s_pFocusFrame = nullptr;
     }
 }
@@ -177,7 +144,7 @@ SalGraphics* SvpSalFrame::AcquireGraphics()
 {
     SvpSalGraphics* pGraphics = new SvpSalGraphics();
 #ifndef IOS
-    pGraphics->setDevice( m_aFrame );
+    pGraphics->setSurface( m_pSurface );
 #endif
     m_aGraphics.push_back( pGraphics );
     return pGraphics;
@@ -192,17 +159,17 @@ void SvpSalFrame::ReleaseGraphics( SalGraphics* pGraphics )
 
 bool SvpSalFrame::PostEvent(ImplSVEvent* pData)
 {
-    m_pInstance->PostEvent( this, pData, SALEVENT_USEREVENT );
+    m_pInstance->PostEvent( this, pData, SalEvent::UserEvent );
     return true;
 }
 
-void SvpSalFrame::PostPaint(bool bImmediate) const
+void SvpSalFrame::PostPaint() const
 {
     if( m_bVisible )
     {
         SalPaintEvent aPEvt(0, 0, maGeometry.nWidth, maGeometry.nHeight);
-        aPEvt.mbImmediateUpdate = bImmediate;
-        CallCallback( SALEVENT_PAINT, &aPEvt );
+        aPEvt.mbImmediateUpdate = false;
+        CallCallback( SalEvent::Paint, &aPEvt );
     }
 }
 
@@ -232,7 +199,7 @@ void SvpSalFrame::Show( bool bVisible, bool bNoActivate )
     {
         // SAL_DEBUG("SvpSalFrame::Show: showing: " << this);
         m_bVisible = true;
-        m_pInstance->PostEvent( this, nullptr, SALEVENT_RESIZE );
+        m_pInstance->PostEvent( this, nullptr, SalEvent::Resize );
         if( ! bNoActivate )
             GetFocus();
     }
@@ -240,7 +207,7 @@ void SvpSalFrame::Show( bool bVisible, bool bNoActivate )
     {
         // SAL_DEBUG("SvpSalFrame::Show: hiding: " << this);
         m_bVisible = false;
-        m_pInstance->PostEvent( this, nullptr, SALEVENT_RESIZE );
+        m_pInstance->PostEvent( this, nullptr, SalEvent::Resize );
         LoseFocus();
     }
     else
@@ -285,25 +252,34 @@ void SvpSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight, sal_u
     }
 #ifndef IOS
     B2IVector aFrameSize( maGeometry.nWidth, maGeometry.nHeight );
-    if( ! m_aFrame.get() || m_aFrame->getSize() != aFrameSize )
+    if (!m_pSurface || cairo_image_surface_get_width(m_pSurface) != aFrameSize.getX() ||
+                       cairo_image_surface_get_height(m_pSurface) != aFrameSize.getY() )
     {
         if( aFrameSize.getX() == 0 )
             aFrameSize.setX( 1 );
         if( aFrameSize.getY() == 0 )
             aFrameSize.setY( 1 );
-        m_aFrame = createBitmapDevice( aFrameSize, true, m_nScanlineFormat );
-        if (m_bDamageTracking)
-            m_aFrame->setDamageTracker(
-                basebmp::IBitmapDeviceDamageTrackerSharedPtr( new DamageTracker ) );
+
+        if (m_pSurface)
+            cairo_surface_destroy(m_pSurface);
+
+        // Creating backing surfaces for invisible windows costs a big chunk of RAM.
+        if (Application::IsHeadlessModeEnabled())
+             aFrameSize = B2IVector( 1, 1 );
+
+        m_pSurface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
+                                                aFrameSize.getX(),
+                                                aFrameSize.getY());
+
         // update device in existing graphics
         for( std::list< SvpSalGraphics* >::iterator it = m_aGraphics.begin();
              it != m_aGraphics.end(); ++it )
         {
-             (*it)->setDevice( m_aFrame );
+             (*it)->setSurface(m_pSurface);
         }
     }
     if( m_bVisible )
-        m_pInstance->PostEvent( this, nullptr, SALEVENT_RESIZE );
+        m_pInstance->PostEvent( this, nullptr, SalEvent::Resize );
 #endif
 }
 
@@ -329,9 +305,9 @@ SalFrame* SvpSalFrame::GetParent() const
     return m_pParent;
 }
 
-#define _FRAMESTATE_MASK_GEOMETRY \
-     (WINDOWSTATE_MASK_X     | WINDOWSTATE_MASK_Y |   \
-      WINDOWSTATE_MASK_WIDTH | WINDOWSTATE_MASK_HEIGHT)
+#define FRAMESTATE_MASK_GEOMETRY \
+     (WindowStateMask::X     | WindowStateMask::Y |   \
+      WindowStateMask::Width | WindowStateMask::Height)
 
 void SvpSalFrame::SetWindowState( const SalFrameState *pState )
 {
@@ -339,7 +315,7 @@ void SvpSalFrame::SetWindowState( const SalFrameState *pState )
         return;
 
     // Request for position or size change
-    if (pState->mnMask & _FRAMESTATE_MASK_GEOMETRY)
+    if (pState->mnMask & FRAMESTATE_MASK_GEOMETRY)
     {
         long nX = maGeometry.nX;
         long nY = maGeometry.nY;
@@ -347,13 +323,13 @@ void SvpSalFrame::SetWindowState( const SalFrameState *pState )
         long nHeight = maGeometry.nHeight;
 
         // change requested properties
-        if (pState->mnMask & WINDOWSTATE_MASK_X)
+        if (pState->mnMask & WindowStateMask::X)
             nX = pState->mnX;
-        if (pState->mnMask & WINDOWSTATE_MASK_Y)
+        if (pState->mnMask & WindowStateMask::Y)
             nY = pState->mnY;
-        if (pState->mnMask & WINDOWSTATE_MASK_WIDTH)
+        if (pState->mnMask & WindowStateMask::Width)
             nWidth = pState->mnWidth;
-        if (pState->mnMask & WINDOWSTATE_MASK_HEIGHT)
+        if (pState->mnMask & WindowStateMask::Height)
             nHeight = pState->mnHeight;
 
         SetPosSize( nX, nY, nWidth, nHeight,
@@ -364,12 +340,12 @@ void SvpSalFrame::SetWindowState( const SalFrameState *pState )
 
 bool SvpSalFrame::GetWindowState( SalFrameState* pState )
 {
-    pState->mnState = WINDOWSTATE_STATE_NORMAL;
+    pState->mnState = WindowStateState::Normal;
     pState->mnX      = maGeometry.nX;
     pState->mnY      = maGeometry.nY;
     pState->mnWidth  = maGeometry.nWidth;
     pState->mnHeight = maGeometry.nHeight;
-    pState->mnMask   = _FRAMESTATE_MASK_GEOMETRY | WINDOWSTATE_MASK_STATE;
+    pState->mnMask   = FRAMESTATE_MASK_GEOMETRY | WindowStateMask::State;
 
     return true;
 }
@@ -487,16 +463,6 @@ void SvpSalFrame::UnionClipRegion( long, long, long, long )
 
 void SvpSalFrame::EndSetClipRegion()
 {
-}
-
-SalFrame* GetSvpFocusFrameForLibreOfficeKit()
-{
-    return SvpSalFrame::GetFocusFrame();
-}
-
-vcl::Window* GetSalFrameWindowForLibreOfficeKit(SalFrame *pSF)
-{
-    return pSF->GetWindow();
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -112,10 +112,10 @@ void Scheduler::ImplDeInitScheduler()
 }
 
 /**
- * Start a new timer if we need to for @nMS duration.
+ * Start a new timer if we need to for nMS duration.
  *
  * if this is longer than the existing duration we're
- * waiting for, do nothing - unless @bForce - which means
+ * waiting for, do nothing - unless bForce - which means
  * to reset the minimum period; used by the scheduled itself.
  */
 void Scheduler::ImplStartTimer(sal_uInt64 nMS, bool bForce)
@@ -159,10 +159,9 @@ void InitSystemTimer(ImplSVData* pSVData)
 
 }
 
-void Scheduler::CallbackTaskScheduling(bool ignore)
+void Scheduler::CallbackTaskScheduling(bool)
 {
     // this function is for the saltimer callback
-    (void)ignore;
     Scheduler::ProcessTaskScheduling( false );
 }
 
@@ -170,7 +169,6 @@ bool Scheduler::ProcessTaskScheduling( bool bTimerOnly )
 {
     ImplSchedulerData* pSchedulerData;
 
-    // tdf#91727 - NB. bTimerOnly is ultimately not used
     if ((pSchedulerData = ImplSchedulerData::GetMostImportantTask(bTimerOnly)))
     {
         SAL_INFO("vcl.schedule", "Invoke task " << pSchedulerData->GetDebugName());
@@ -181,20 +179,6 @@ bool Scheduler::ProcessTaskScheduling( bool bTimerOnly )
     }
     else
         return false;
-}
-
-void Scheduler::ProcessEventsToIdle()
-{
-    // FIXME: really we should process incoming OS events too ...
-    int nSanity = 1000;
-    while (Scheduler::ProcessTaskScheduling(false))
-    {
-        if (nSanity-- < 0)
-        {
-            SAL_WARN("vcl.schedule", "Unexpected volume of events to process");
-            break;
-        }
-    }
 }
 
 sal_uInt64 Scheduler::CalculateMinimumTimeout( bool &bHasActiveIdles )

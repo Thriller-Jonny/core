@@ -87,7 +87,6 @@ jobject Bridge::map_to_java(
 }
 
 
-
 void Bridge::handle_uno_exc( JNI_context const & jni, uno_Any * uno_exc ) const
 {
     if (typelib_TypeClass_EXCEPTION == uno_exc->pType->eTypeClass)
@@ -413,7 +412,7 @@ JNICALL Java_com_sun_star_bridges_jni_1uno_JNI_1proxy_dispatch_1call(
 
             JLocalAutoRef jo_type_name(
                 jni, jni->GetObjectField(
-                    jo_type.get(), jni_info->m_field_Type__typeName ) );
+                    jo_type.get(), jni_info->m_field_Type_typeName ) );
             if (! jo_type_name.is())
             {
                 throw BridgeRuntimeError(
@@ -566,8 +565,8 @@ JNICALL Java_com_sun_star_bridges_jni_1uno_JNI_1proxy_dispatch_1call(
                         {
                             typelib_MethodParameter param;
                             param.pTypeRef = attr_td->pAttributeTypeRef;
-                            param.bIn = sal_True;
-                            param.bOut = sal_False;
+                            param.bIn = true;
+                            param.bOut = false;
                             return bridge->call_uno(
                                 jni, pUnoI, member_td.get(),
                                 jni_info->m_void_type.getTypeLibType(),

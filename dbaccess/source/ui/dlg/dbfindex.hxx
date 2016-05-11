@@ -43,7 +43,7 @@ public:
     OTableIndex( const OTableIndex& _rSource) : aIndexFileName(_rSource.aIndexFileName) { }
     explicit OTableIndex( const OUString& rFileName ) : aIndexFileName( rFileName ) { }
 
-    OUString GetIndexFileName() const { return aIndexFileName; }
+    const OUString& GetIndexFileName() const { return aIndexFileName; }
 };
 
 typedef ::std::list< OTableIndex >  TableIndexList;
@@ -105,7 +105,7 @@ protected:
 
     OTableIndex RemoveFreeIndex( const OUString& _rName, bool _bMustExist ) { return implRemoveIndex(_rName, m_aFreeIndexList, *m_pLB_FreeIndexes, _bMustExist); }
     void        InsertFreeIndex( const OTableIndex& _rIndex ) { implInsertIndex(_rIndex, m_aFreeIndexList, *m_pLB_FreeIndexes); }
-    OTableIndex RemoveTableIndex( const OUString& _rTableName, const OUString& _rIndexName, bool _bMustExist );
+    OTableIndex RemoveTableIndex( const OUString& _rTableName, const OUString& _rIndexName );
     void        InsertTableIndex( const OUString& _rTableName, const OTableIndex& _rIndex );
 
     void checkButtons();

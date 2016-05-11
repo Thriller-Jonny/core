@@ -70,7 +70,7 @@ XMLTextListItemContext::XMLTextListItemContext(
         else if ( nPrefix == XML_NAMESPACE_TEXT &&
                   IsXMLToken( aLocalName, XML_STYLE_OVERRIDE ) )
         {
-            const OUString sListStyleOverrideName = rValue;
+            const OUString& sListStyleOverrideName = rValue;
             if ( !sListStyleOverrideName.isEmpty() )
             {
                 OUString sDisplayStyleName(
@@ -143,6 +143,7 @@ SvXMLImportContext *XMLTextListItemContext::CreateChildContext(
     {
     case XML_TOK_TEXT_H:
         bHeading = true;
+        SAL_FALLTHROUGH;
     case XML_TOK_TEXT_P:
         pContext = new XMLParaContext( GetImport(),
                                        nPrefix, rLocalName,

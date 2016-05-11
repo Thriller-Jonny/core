@@ -55,7 +55,6 @@
 #include <editeng/writingmodeitem.hxx>
 #include <svx/gallery.hxx>
 #include <svl/itempool.hxx>
-#include <com/sun/star/uno/Any.hxx>
 
 #include "sdresid.hxx"
 #include "View.hxx"
@@ -247,7 +246,7 @@ void FuConstructCustomShape::SetAttributes( SdrObject* pObj )
     }
 }
 
-OUString FuConstructCustomShape::GetShapeType() const
+const OUString& FuConstructCustomShape::GetShapeType() const
 {
     return aCustomShape;
 }

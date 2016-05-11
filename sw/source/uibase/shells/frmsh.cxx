@@ -110,7 +110,7 @@ SFX_IMPL_INTERFACE(SwFrameShell, SwBaseShell)
 
 void SwFrameShell::InitInterface_Impl()
 {
-    GetStaticInterface()->RegisterPopupMenu(SW_RES(MN_FRM_POPUPMENU));
+    GetStaticInterface()->RegisterPopupMenu("frame");
 
     GetStaticInterface()->RegisterObjectBar(SFX_OBJECTBAR_OBJECT, RID_FRAME_TOOLBOX);
 }
@@ -154,9 +154,10 @@ void SwFrameShell::Execute(SfxRequest &rReq)
             {
                 // Frame already exists, open frame dialog for editing.
                 SfxStringItem aDefPage(FN_FORMAT_FRAME_DLG, "columns");
-                rSh.GetView().GetViewFrame()->GetDispatcher()->Execute( FN_FORMAT_FRAME_DLG,
-                                SfxCallMode::SYNCHRON|SfxCallMode::RECORD,
-                                &aDefPage, 0L );
+                rSh.GetView().GetViewFrame()->GetDispatcher()->ExecuteList(
+                        FN_FORMAT_FRAME_DLG,
+                        SfxCallMode::SYNCHRON|SfxCallMode::RECORD,
+                        { &aDefPage });
 
             }
             else
@@ -265,7 +266,7 @@ void SwFrameShell::Execute(SfxRequest &rReq)
         return;
     }
 
-    SwFlyFrameAttrMgr aMgr( false, &rSh, FRMMGR_TYPE_NONE );
+    SwFlyFrameAttrMgr aMgr( false, &rSh, Frmmgr_Type::NONE );
     bool bUpdateMgr = true;
     bool bCopyToFormat = false;
     switch ( nSlot )
@@ -470,7 +471,7 @@ void SwFrameShell::Execute(SfxRequest &rReq)
                                                                                         OUString("FrameDialog"),
                                                         GetView().GetViewFrame(),
                                                         GetView().GetWindow(),
-                                                        aSet, false,
+                                                        aSet,
                                                         false,
                                                         sDefPage));
                 assert(pDlg);
@@ -623,8 +624,7 @@ void SwFrameShell::Execute(SfxRequest &rReq)
                 SvxAbstractDialogFactory* pFact = SvxAbstractDialogFactory::Create();
                 assert(pFact);
                 std::unique_ptr<AbstractSvxObjectTitleDescDialog> pDlg(
-                    pFact->CreateSvxObjectTitleDescDialog( nullptr,
-                                                           aTitle,
+                    pFact->CreateSvxObjectTitleDescDialog( aTitle,
                                                            aDescription ));
                 assert(pDlg);
 
@@ -678,7 +678,7 @@ void SwFrameShell::GetState(SfxItemSet& rSet)
         bProtect |= bParentCntProt;
 
         const FrameTypeFlags eFrameType = rSh.GetFrameType(nullptr,true);
-        SwFlyFrameAttrMgr aMgr( false, &rSh, FRMMGR_TYPE_NONE );
+        SwFlyFrameAttrMgr aMgr( false, &rSh, Frmmgr_Type::NONE );
 
         SfxWhichIter aIter( rSet );
         sal_uInt16 nWhich = aIter.FirstWhich();

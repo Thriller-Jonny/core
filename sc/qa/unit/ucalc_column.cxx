@@ -19,11 +19,11 @@ void Test::testColumnFindEditCells()
     // Test the basics with real edit cells, using Column A.
 
     SCROW nResRow = m_pDoc->GetFirstEditTextRow(ScRange(0,0,0,0,MAXROW,0));
-    CPPUNIT_ASSERT_MESSAGE("There should be no edit cells.", nResRow == -1);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("There should be no edit cells.", SCROW(-1), nResRow);
     nResRow = m_pDoc->GetFirstEditTextRow(ScRange(0,0,0,0,0,0));
-    CPPUNIT_ASSERT_MESSAGE("There should be no edit cells.", nResRow == -1);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("There should be no edit cells.", SCROW(-1), nResRow);
     nResRow = m_pDoc->GetFirstEditTextRow(ScRange(0,0,0,0,10,0));
-    CPPUNIT_ASSERT_MESSAGE("There should be no edit cells.", nResRow == -1);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("There should be no edit cells.", SCROW(-1), nResRow);
 
     ScFieldEditEngine& rEE = m_pDoc->GetEditEngine();
     rEE.SetText("Test");
@@ -33,39 +33,39 @@ void Test::testColumnFindEditCells()
 
     ScRange aRange(0,0,0,0,0,0);
     nResRow = m_pDoc->GetFirstEditTextRow(aRange);
-    CPPUNIT_ASSERT_MESSAGE("There is an edit cell here.", nResRow == 0);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("There is an edit cell here.", SCROW(0), nResRow);
 
     aRange.aStart.SetRow(1);
     aRange.aEnd.SetRow(1);
     nResRow = m_pDoc->GetFirstEditTextRow(aRange);
-    CPPUNIT_ASSERT_MESSAGE("There shouldn't be an edit cell in specified range.", nResRow == -1);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("There shouldn't be an edit cell in specified range.", SCROW(-1), nResRow);
 
     aRange.aStart.SetRow(2);
     aRange.aEnd.SetRow(4);
     nResRow = m_pDoc->GetFirstEditTextRow(aRange);
-    CPPUNIT_ASSERT_MESSAGE("There shouldn't be an edit cell in specified range.", nResRow == -1);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("There shouldn't be an edit cell in specified range.", SCROW(-1), nResRow);
 
     aRange.aStart.SetRow(0);
     aRange.aEnd.SetRow(MAXROW);
     nResRow = m_pDoc->GetFirstEditTextRow(aRange);
-    CPPUNIT_ASSERT_MESSAGE("There should be an edit cell in specified range.", nResRow == 0);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("There should be an edit cell in specified range.", SCROW(0), nResRow);
 
     m_pDoc->SetString(ScAddress(0,0,0), "Test");
     m_pDoc->SetValue(ScAddress(0,2,0), 1.0);
     ScRefCellValue aCell;
     aCell.assign(*m_pDoc, ScAddress(0,0,0));
-    CPPUNIT_ASSERT_MESSAGE("This should be a string cell.", aCell.meType == CELLTYPE_STRING);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("This should be a string cell.", CELLTYPE_STRING, aCell.meType);
     aCell.assign(*m_pDoc, ScAddress(0,1,0));
-    CPPUNIT_ASSERT_MESSAGE("This should be an empty cell.", aCell.meType == CELLTYPE_NONE);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("This should be an empty cell.", CELLTYPE_NONE, aCell.meType);
     aCell.assign(*m_pDoc, ScAddress(0,2,0));
-    CPPUNIT_ASSERT_MESSAGE("This should be a numeric cell.", aCell.meType == CELLTYPE_VALUE);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("This should be a numeric cell.", CELLTYPE_VALUE, aCell.meType);
     aCell.assign(*m_pDoc, ScAddress(0,3,0));
-    CPPUNIT_ASSERT_MESSAGE("This should be an empty cell.", aCell.meType == CELLTYPE_NONE);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("This should be an empty cell.", CELLTYPE_NONE, aCell.meType);
 
     aRange.aStart.SetRow(1);
     aRange.aEnd.SetRow(1);
     nResRow = m_pDoc->GetFirstEditTextRow(aRange);
-    CPPUNIT_ASSERT_MESSAGE("There shouldn't be an edit cell in specified range.", nResRow == -1);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("There shouldn't be an edit cell in specified range.", SCROW(-1), nResRow);
 
     // Test with non-edit cell but with ambiguous script type.
 
@@ -89,6 +89,39 @@ void Test::testColumnFindEditCells()
 
     nResRow = m_pDoc->GetFirstEditTextRow(ScAddress(2,1,0));
     CPPUNIT_ASSERT_EQUAL(static_cast<SCROW>(-1), nResRow);
+
+    m_pDoc->DeleteTab(0);
+}
+
+
+void Test::testSetFormula()
+{
+    m_pDoc->InsertTab(0, "Test");
+
+    struct aInputs
+    {
+        const char* aName;
+        SCROW nRow;
+        SCCOL nCol;
+        const char* aFormula1;      // Represents the formula that is input to SetFormula function.
+        const char* aFormula2;      // Represents the formula that is actually stored in the cell.
+        formula::FormulaGrammar::Grammar eGram;
+
+    } aTest[] = {
+        { "Rock and Roll" ,5 , 4 , "=SUM($D$2:$F$3)"             ,"=SUM($D$2:$F$3)" , formula::FormulaGrammar::Grammar::GRAM_ENGLISH     },
+        { "Blues"         ,5 , 5 , "=A1-$C2+B$3-$F$4"            ,"=A1-$C2+B$3-$F$4", formula::FormulaGrammar::Grammar::GRAM_NATIVE      },
+        { "Acoustic"      ,6 , 6 , "=A1-$C2+B$3-$F$4"            ,"=A1-$C2+B$3-$F$4", formula::FormulaGrammar::Grammar::GRAM_NATIVE_XL_A1},
+        { "Nursery Rhymes",7 , 8 , "=[.A1]-[.$C2]+[.G$3]-[.$F$4]","=A1-$C2+G$3-$F$4", formula::FormulaGrammar::Grammar::GRAM_ODFF        }
+    };
+
+    for(size_t i = 0; i < SAL_N_ELEMENTS(aTest); ++i)
+    {
+        OUString aBuffer;
+        m_pDoc->SetFormula(ScAddress(aTest[i].nCol, aTest[i].nRow, 0), OUString::createFromAscii(aTest[i].aFormula1), aTest[i].eGram);
+        m_pDoc->GetFormula(aTest[i].nCol, aTest[i].nRow, 0, aBuffer);
+
+        CPPUNIT_ASSERT_EQUAL_MESSAGE("Failed to set formula", OUString::createFromAscii(aTest[i].aFormula2), aBuffer);
+    }
 
     m_pDoc->DeleteTab(0);
 }

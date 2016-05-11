@@ -97,8 +97,8 @@ private:
     bool                            mbDirectVisible;
 
     ::osl::Mutex                        maListenerContainerMutex;
-    ::cppu::OInterfaceContainerHelper   maWindow2Listeners;
-    ::cppu::OInterfaceContainerHelper   maDockableWindowListeners;
+    ::comphelper::OInterfaceContainerHelper2   maWindow2Listeners;
+    ::comphelper::OInterfaceContainerHelper2   maDockableWindowListeners;
     EventListenerMultiplexer            maEventListeners;
     FocusListenerMultiplexer            maFocusListeners;
     WindowListenerMultiplexer           maWindowListeners;
@@ -173,8 +173,8 @@ public:
 
     /** returns the container of registered XWindowListener2 listeners
     */
-    inline ::cppu::OInterfaceContainerHelper&   getWindow2Listeners()       { return maWindow2Listeners; }
-    inline ::cppu::OInterfaceContainerHelper&   getDockableWindowListeners(){ return maDockableWindowListeners; }
+    inline ::comphelper::OInterfaceContainerHelper2&   getWindow2Listeners()       { return maWindow2Listeners; }
+    inline ::comphelper::OInterfaceContainerHelper2&   getDockableWindowListeners(){ return maDockableWindowListeners; }
     inline EventListenerMultiplexer&            getEventListeners()         { return maEventListeners; }
     inline FocusListenerMultiplexer&            getFocusListeners()         { return maFocusListeners; }
     inline WindowListenerMultiplexer&           getWindowListeners()        { return maWindowListeners; }
@@ -315,8 +315,6 @@ Reference< XStyleSettings > VCLXWindowImpl::getStyleSettings()
 }
 
 
-
-
 // Uses an out-parameter instead of return value, due to the object reference
 
 void ImplInitWindowEvent( css::awt::WindowEvent& rEvent, vcl::Window* pWindow )
@@ -416,7 +414,7 @@ namespace
 {
     struct CallWindow2Listener
     {
-        CallWindow2Listener( ::cppu::OInterfaceContainerHelper& i_rWindow2Listeners, const bool i_bEnabled, const EventObject& i_rEvent )
+        CallWindow2Listener( ::comphelper::OInterfaceContainerHelper2& i_rWindow2Listeners, const bool i_bEnabled, const EventObject& i_rEvent )
             :m_rWindow2Listeners( i_rWindow2Listeners )
             ,m_bEnabled( i_bEnabled )
             ,m_aEvent( i_rEvent )
@@ -428,7 +426,7 @@ namespace
             m_rWindow2Listeners.notifyEach( m_bEnabled ? &XWindowListener2::windowEnabled : &XWindowListener2::windowDisabled, m_aEvent );
         }
 
-        ::cppu::OInterfaceContainerHelper&  m_rWindow2Listeners;
+        ::comphelper::OInterfaceContainerHelper2&  m_rWindow2Listeners;
         const bool                          m_bEnabled;
         const EventObject                   m_aEvent;
     };
@@ -576,7 +574,7 @@ void VCLXWindow::ProcessWindowEvent( const VclWindowEvent& rVclWindowEvent )
                     css::awt::FocusEvent aEvent;
                     aEvent.Source = static_cast<cppu::OWeakObject*>(this);
                     aEvent.FocusFlags = static_cast<sal_Int16>(rVclWindowEvent.GetWindow()->GetGetFocusFlags());
-                    aEvent.Temporary = sal_False;
+                    aEvent.Temporary = false;
                     mpImpl->getFocusListeners().focusGained( aEvent );
                 }
             }
@@ -598,7 +596,7 @@ void VCLXWindow::ProcessWindowEvent( const VclWindowEvent& rVclWindowEvent )
                     css::awt::FocusEvent aEvent;
                     aEvent.Source = static_cast<cppu::OWeakObject*>(this);
                     aEvent.FocusFlags = static_cast<sal_Int16>(rVclWindowEvent.GetWindow()->GetGetFocusFlags());
-                    aEvent.Temporary = sal_False;
+                    aEvent.Temporary = false;
 
                     vcl::Window* pNext = Application::GetFocusWindow();
                     if ( pNext )
@@ -677,7 +675,7 @@ void VCLXWindow::ProcessWindowEvent( const VclWindowEvent& rVclWindowEvent )
 
                 MouseEvent aMEvt( aWhere, 1, MouseEventModifiers::SIMPLECLICK, MOUSE_LEFT, 0 );
                 awt::MouseEvent aEvent( VCLUnoHelper::createMouseEvent( aMEvt, *this ) );
-                aEvent.PopupTrigger = sal_True;
+                aEvent.PopupTrigger = true;
 
                 Callback aCallback = [ this, aEvent ]()
                                      { this->mpImpl->getMouseListeners().mousePressed( aEvent ); };
@@ -774,7 +772,7 @@ void VCLXWindow::ProcessWindowEvent( const VclWindowEvent& rVclWindowEvent )
                     aEvent.bInteractive = pData->mbInteractive;
 
                     Reference< XDockableWindowListener > xFirstListener;
-                    ::cppu::OInterfaceIteratorHelper aIter( mpImpl->getDockableWindowListeners() );
+                    ::comphelper::OInterfaceIteratorHelper2 aIter( mpImpl->getDockableWindowListeners() );
                     while ( aIter.hasMoreElements() && !xFirstListener.is() )
                     {
                         xFirstListener.set( aIter.next(), UNO_QUERY );
@@ -816,7 +814,7 @@ void VCLXWindow::ProcessWindowEvent( const VclWindowEvent& rVclWindowEvent )
                 aEvent.Source = static_cast<cppu::OWeakObject*>(this);
 
                 Reference< XDockableWindowListener > xFirstListener;
-                ::cppu::OInterfaceIteratorHelper aIter( mpImpl->getDockableWindowListeners() );
+                ::comphelper::OInterfaceIteratorHelper2 aIter( mpImpl->getDockableWindowListeners() );
                 while ( aIter.hasMoreElements() && !xFirstListener.is() )
                 {
                     xFirstListener.set( aIter.next(), UNO_QUERY );
@@ -912,8 +910,6 @@ VCLXWindow* VCLXWindow::GetImplementation( const css::uno::Reference< css::uno::
     css::uno::Reference< css::lang::XUnoTunnel > xUT( rxIFace, css::uno::UNO_QUERY );
     return xUT.is() ? reinterpret_cast<VCLXWindow*>(sal::static_int_cast<sal_IntPtr>(xUT->getSomething( VCLXWindow::GetUnoTunnelId() ))) : nullptr;
 }
-
-
 
 
 // css::lang::Component
@@ -1340,12 +1336,12 @@ void VCLXWindow::GetPropertyIds( std::list< sal_uInt16 >& _out_rIds )
     return ImplGetPropertyIds( _out_rIds, mpImpl->mbWithDefaultProps );
 }
 
-::cppu::OInterfaceContainerHelper& VCLXWindow::GetContainerListeners()
+::comphelper::OInterfaceContainerHelper2& VCLXWindow::GetContainerListeners()
 {
     return mpImpl->getContainerListeners();
 }
 
-::cppu::OInterfaceContainerHelper& VCLXWindow::GetTopWindowListeners()
+::comphelper::OInterfaceContainerHelper2& VCLXWindow::GetTopWindowListeners()
 {
     return mpImpl->getTopWindowListeners();
 }
@@ -1573,7 +1569,7 @@ void VCLXWindow::setProperty( const OUString& PropertyName, const css::uno::Any&
             if ( Value >>= n )
             {
                 vcl::Font aFont = pWindow->GetControlFont();
-                aFont.SetEmphasisMark( n );
+                aFont.SetEmphasisMark( (FontEmphasisMark)n );
                 pWindow->SetControlFont( aFont );
             }
         }
@@ -1641,7 +1637,9 @@ void VCLXWindow::setProperty( const OUString& PropertyName, const css::uno::Any&
                         case WINDOW_GROUPBOX:
                         case WINDOW_FIXEDLINE:
                             pWindow->SetPaintTransparent( false );
-                        default: ;
+                            break;
+                        default:
+                            break;
                     }
                     pWindow->Invalidate();  // Invalidate if control does not respond to it
                 }
@@ -1771,7 +1769,7 @@ void VCLXWindow::setProperty( const OUString& PropertyName, const css::uno::Any&
                 case WINDOW_CANCELBUTTON:
                 case WINDOW_HELPBUTTON:
                     nAlign = PROPERTY_ALIGN_CENTER;
-                    // no break here!
+                    SAL_FALLTHROUGH;
                 case WINDOW_FIXEDTEXT:
                 case WINDOW_EDIT:
                 case WINDOW_MULTILINEEDIT:
@@ -2421,7 +2419,7 @@ sal_Bool SAL_CALL VCLXWindow::isFloating(  ) throw (css::uno::RuntimeException, 
     if( pWindow )
         return vcl::Window::GetDockingManager()->IsFloating( pWindow );
     else
-        return sal_False;
+        return false;
 }
 
 void SAL_CALL VCLXWindow::setFloatingMode( sal_Bool bFloating ) throw (css::uno::RuntimeException, std::exception)
@@ -2441,7 +2439,7 @@ sal_Bool SAL_CALL VCLXWindow::isLocked(  ) throw (css::uno::RuntimeException, st
     if( pWindow )
         return vcl::Window::GetDockingManager()->IsLocked( pWindow );
     else
-        return sal_False;
+        return false;
 }
 
 void SAL_CALL VCLXWindow::lock(  ) throw (css::uno::RuntimeException, std::exception)
@@ -2472,7 +2470,7 @@ sal_Bool SAL_CALL VCLXWindow::isInPopupMode(  ) throw (css::uno::RuntimeExceptio
 {
     // TODO: remove interface in the next incompatible build
     SolarMutexGuard aGuard;
-    return sal_False;
+    return false;
 }
 
 
@@ -2514,7 +2512,7 @@ sal_Bool SAL_CALL VCLXWindow::isVisible(  ) throw (css::uno::RuntimeException, s
     if( GetWindow() )
         return GetWindow()->IsVisible();
     else
-        return sal_False;
+        return false;
 }
 
 sal_Bool SAL_CALL VCLXWindow::isActive(  ) throw (css::uno::RuntimeException, std::exception)
@@ -2523,7 +2521,7 @@ sal_Bool SAL_CALL VCLXWindow::isActive(  ) throw (css::uno::RuntimeException, st
     if( GetWindow() )
         return GetWindow()->IsActive();
     else
-        return sal_False;
+        return false;
 
 }
 
@@ -2533,7 +2531,7 @@ sal_Bool SAL_CALL VCLXWindow::isEnabled(  ) throw (css::uno::RuntimeException, s
     if( GetWindow() )
         return GetWindow()->IsEnabled();
     else
-        return sal_False;
+        return false;
 }
 
 sal_Bool SAL_CALL VCLXWindow::hasFocus(  ) throw (css::uno::RuntimeException, std::exception)
@@ -2542,7 +2540,7 @@ sal_Bool SAL_CALL VCLXWindow::hasFocus(  ) throw (css::uno::RuntimeException, st
     if( GetWindow() )
         return GetWindow()->HasFocus();
     else
-        return sal_False;
+        return false;
 }
 
 // css::beans::XPropertySetInfo

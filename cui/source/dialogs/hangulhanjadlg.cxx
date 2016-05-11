@@ -130,7 +130,7 @@ namespace svx
         // the font for the secondary text:
         vcl::Font aSmallerFont(rRenderContext.GetFont());
         // heuristic: 80% of the original size
-        aSmallerFont.SetHeight( (long)( 0.8 * aSmallerFont.GetHeight() ) );
+        aSmallerFont.SetFontHeight( (long)( 0.8 * aSmallerFont.GetFontHeight() ) );
 
         // let's calculate the size of our two texts
         Rectangle aPrimaryRect = rRenderContext.GetTextRect( _rRect, m_sPrimaryText, _nTextStyle );
@@ -309,7 +309,7 @@ namespace svx
     Size RubyRadioButton::GetOptimalSize() const
     {
         vcl::Font aSmallerFont( GetFont() );
-        aSmallerFont.SetHeight( static_cast<long>( 0.8 * aSmallerFont.GetHeight() ) );
+        aSmallerFont.SetFontHeight( static_cast<long>( 0.8 * aSmallerFont.GetFontHeight() ) );
         Rectangle rect( Point(), Size( SAL_MAX_INT32, SAL_MAX_INT32 ) );
 
         Size aPrimarySize = GetTextRect( rect, m_aRubyText.getPrimaryText() ).GetSize();
@@ -825,9 +825,9 @@ namespace svx
 
             // give the focus to the new def button temporarily - VCL is somewhat peculiar
             // in recognizing a new default button
-            sal_uInt32 nSaveFocusId = Window::SaveFocus();
+            VclPtr<vcl::Window> xSaveFocusId = Window::SaveFocus();
             pNewDefButton->GrabFocus();
-            Window::EndSaveFocus( nSaveFocusId );
+            Window::EndSaveFocus( xSaveFocusId );
         }
     }
 
@@ -984,7 +984,7 @@ namespace svx
             DBG_ASSERT( xDict.is(), "-HangulHanjaOptionsDialog::OkHdl(): someone is evaporated..." );
             DBG_ASSERT( pEntry, "-HangulHanjaOptionsDialog::OkHdl(): no one there in list?" );
 
-            bool    bActive = m_pDictsLB->GetCheckButtonState( pEntry ) == SV_BUTTON_CHECKED;
+            bool    bActive = m_pDictsLB->GetCheckButtonState( pEntry ) == SvButtonState::Checked;
             xDict->setActive( bActive );
             Reference< util::XFlushable > xFlush( xDict, uno::UNO_QUERY );
             if( xFlush.is() )
@@ -1180,7 +1180,7 @@ namespace svx
     void HangulHanjaOptionsDialog::AddDict( const OUString& _rName, bool _bChecked )
     {
         SvTreeListEntry*    pEntry = m_pDictsLB->SvTreeListBox::InsertEntry( _rName );
-        m_pDictsLB->SetCheckButtonState( pEntry, _bChecked? SV_BUTTON_CHECKED : SV_BUTTON_UNCHECKED );
+        m_pDictsLB->SetCheckButtonState( pEntry, _bChecked? SvButtonState::Checked : SvButtonState::Unchecked );
         pEntry->SetUserData( new OUString( _rName ) );
     }
 
@@ -1242,12 +1242,12 @@ namespace svx
         // index of the internal iterator, used for First() and Next() methods
         sal_uInt16          m_nAct;
 
-        const OUString*       _Next();
+        const OUString*       Next_();
     public:
                             SuggestionList();
                             ~SuggestionList();
 
-        bool                Set( const OUString& _rElement, sal_uInt16 _nNumOfElement );
+        void                Set( const OUString& _rElement, sal_uInt16 _nNumOfElement );
         bool                Reset( sal_uInt16 _nNumOfElement );
         const OUString*     Get( sal_uInt16 _nNumOfElement ) const;
         void                Clear();
@@ -1269,7 +1269,7 @@ namespace svx
         Clear();
     }
 
-    bool SuggestionList::Set( const OUString& _rElement, sal_uInt16 _nNumOfElement )
+    void SuggestionList::Set( const OUString& _rElement, sal_uInt16 _nNumOfElement )
     {
         bool    bRet = _nNumOfElement < m_vElements.size();
         if( bRet )
@@ -1282,8 +1282,6 @@ namespace svx
                 ++m_nNumOfEntries;
             }
         }
-
-        return bRet;
     }
 
     bool SuggestionList::Reset( sal_uInt16 _nNumOfElement )
@@ -1324,7 +1322,7 @@ namespace svx
         }
     }
 
-    const OUString* SuggestionList::_Next()
+    const OUString* SuggestionList::Next_()
     {
         const OUString*   pRet = nullptr;
         while( m_nAct < m_vElements.size() && !pRet )
@@ -1340,7 +1338,7 @@ namespace svx
     const OUString* SuggestionList::First()
     {
         m_nAct = 0;
-        return _Next();
+        return Next_();
     }
 
     const OUString* SuggestionList::Next()
@@ -1350,7 +1348,7 @@ namespace svx
         if( m_nAct < m_nNumOfEntries )
         {
             ++m_nAct;
-            pRet = _Next();
+            pRet = Next_();
         }
         else
             pRet = nullptr;
@@ -1467,7 +1465,7 @@ namespace svx
 
     namespace
     {
-        bool GetConversions(    Reference< XConversionDictionary >  _xDict,
+        bool GetConversions(    const Reference< XConversionDictionary >&  _xDict,
                                 const OUString& _rOrg,
                                 Sequence< OUString >& _rEntries )
         {

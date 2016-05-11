@@ -67,7 +67,7 @@ public:
     OUString GetStyleString();
 
     SdrOle2Obj( bool bFrame_ = false );
-    SdrOle2Obj( const svt::EmbeddedObjectRef& rNewObjRef, const OUString& rNewObjName, const Rectangle& rNewRect, bool bFrame_ = false );
+    SdrOle2Obj( const svt::EmbeddedObjectRef& rNewObjRef, const OUString& rNewObjName, const Rectangle& rNewRect );
     virtual ~SdrOle2Obj();
 
     const svt::EmbeddedObjectRef& getEmbeddedObjectRef() const;
@@ -93,7 +93,7 @@ public:
 
     // OLE object has got a separate PersistName member now;
     // !!! use ::SetPersistName( ... ) only, if you know what you do !!!
-    OUString      GetPersistName() const;
+    const OUString& GetPersistName() const;
     void        SetPersistName( const OUString& rPersistName );
 
     // One can add an application name to a SdrOle2Obj, which can be queried for
@@ -128,9 +128,8 @@ public:
     virtual OUString TakeObjNamePlural() const override;
 
     virtual SdrOle2Obj* Clone() const override;
-    virtual SdrOle2Obj* CloneWithShellIDs( const OUString& rSrcShellID, const OUString& rDestShellID ) const override;
 
-    SdrOle2Obj& assignFrom( const SdrOle2Obj& rObj, const OUString& rSrcShellID, const OUString& rDestShellID );
+    SdrOle2Obj& assignFrom(const SdrOle2Obj& rObj);
     SdrOle2Obj& operator=(const SdrOle2Obj& rObj);
 
     virtual void NbcMove(const Size& rSize) override;

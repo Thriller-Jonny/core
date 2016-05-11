@@ -28,7 +28,6 @@
 #include <com/sun/star/sheet/DataPilotFieldOrientation.hpp>
 #include <basegfx/matrix/b2dhommatrix.hxx>
 
-#include <boost/ptr_container/ptr_map.hpp>
 #include <vector>
 
 namespace editeng {
@@ -296,7 +295,6 @@ protected:
     virtual void    LoseFocus() override;
 
     virtual void    RequestHelp( const HelpEvent& rEvt ) override;
-    virtual void    Command( const CommandEvent& rCEvt ) override;
 
     virtual sal_Int8 AcceptDrop( const AcceptDropEvent& rEvt ) override;
     virtual sal_Int8 ExecuteDrop( const ExecuteDropEvent& rEvt ) override;
@@ -314,6 +312,7 @@ public:
     rtl::Reference<sdr::overlay::OverlayManager> getOverlayManager();
     void flushOverlayManager();
 
+    virtual void    Command( const CommandEvent& rCEvt ) override;
     virtual void    DataChanged( const DataChangedEvent& rDCEvt ) override;
 
     virtual void    MouseButtonDown( const MouseEvent& rMEvt ) override;
@@ -341,7 +340,7 @@ public:
 
     void            FakeButtonUp();
 
-    Point           GetMousePosPixel() const { return aCurMousePos; }
+    const Point&    GetMousePosPixel() const { return aCurMousePos; }
     void            UpdateStatusPosSize();
 
     void            ClickExtern();
@@ -355,7 +354,7 @@ public:
 
     void            UpdateFormulas();
 
-    void            LaunchDataSelectMenu( SCCOL nCol, SCROW nRow, bool bDataSelect );
+    void            LaunchDataSelectMenu( SCCOL nCol, SCROW nRow );
     void            DoScenarioMenu( const ScRange& rScenRange );
 
     void            LaunchAutoFilterMenu(SCCOL nCol, SCROW nRow);
@@ -442,6 +441,7 @@ protected:
 private:
 
 #ifdef DBG_UTIL
+    void dumpCellProperties();
     void dumpColumnInformationPixel();
     void dumpColumnInformationHmm();
     void dumpGraphicInformation();

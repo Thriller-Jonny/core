@@ -7,9 +7,11 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include <opengl/program.hxx>
+#include "opengl/program.hxx"
+#include "opengl/RenderState.hxx"
 
 #include <vcl/opengl/OpenGLHelper.hxx>
+#include <vcl/opengl/OpenGLContext.hxx>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -22,6 +24,7 @@ OpenGLProgram::OpenGLProgram() :
     mnTexCoordAttrib( SAL_MAX_UINT32 ),
     mnAlphaCoordAttrib( SAL_MAX_UINT32 ),
     mnMaskCoordAttrib( SAL_MAX_UINT32 ),
+    mnNormalAttrib( SAL_MAX_UINT32 ),
     mbBlending( false ),
     mfLastWidth(0.0),
     mfLastHeight(0.0),
@@ -61,19 +64,11 @@ bool OpenGLProgram::Use()
 bool OpenGLProgram::Clean()
 {
     // unbind all textures
-    if( !maTextures.empty() )
+    for (OpenGLTexture& rTexture : maTextures)
     {
-        int nIndex( maTextures.size() - 1 );
-        TextureList::reverse_iterator it( maTextures.rbegin() );
-        while( it != maTextures.rend() )
-        {
-            glActiveTexture( GL_TEXTURE0 + nIndex-- );
-            CHECK_GL_ERROR();
-            it->Unbind();
-            ++it;
-        }
-        maTextures.clear();
+        rTexture.Unbind();
     }
+    maTextures.clear();
 
     // disable any enabled vertex attrib array
     if( mnEnabledAttribs )
@@ -100,7 +95,7 @@ bool OpenGLProgram::Clean()
     return true;
 }
 
-void OpenGLProgram::SetVertexAttrib( GLuint& rAttrib, const OString& rName, const GLvoid* pData )
+void OpenGLProgram::SetVertexAttrib( GLuint& rAttrib, const OString& rName, const GLvoid* pData, GLint nSize )
 {
     if( rAttrib == SAL_MAX_UINT32 )
     {
@@ -113,7 +108,7 @@ void OpenGLProgram::SetVertexAttrib( GLuint& rAttrib, const OString& rName, cons
         CHECK_GL_ERROR();
         mnEnabledAttribs |= ( 1 << rAttrib );
     }
-    glVertexAttribPointer( rAttrib, 2, GL_FLOAT, GL_FALSE, 0, pData );
+    glVertexAttribPointer( rAttrib, nSize, GL_FLOAT, GL_FALSE, 0, pData );
     CHECK_GL_ERROR();
 }
 
@@ -135,6 +130,11 @@ void OpenGLProgram::SetAlphaCoord( const GLvoid* pData )
 void OpenGLProgram::SetMaskCoord(const GLvoid* pData)
 {
     SetVertexAttrib(mnMaskCoordAttrib, "mask_coord_in", pData);
+}
+
+void OpenGLProgram::SetExtrusionVectors(const GLvoid* pData)
+{
+    SetVertexAttrib(mnNormalAttrib, "extrusion_vectors", pData, 3);
 }
 
 GLuint OpenGLProgram::GetUniformLocation( const OString& rName )
@@ -246,10 +246,12 @@ void OpenGLProgram::SetTexture( const OString& rName, OpenGLTexture& rTexture )
 
     glUniform1i( nUniform, nIndex );
     CHECK_GL_ERROR();
-    glActiveTexture( GL_TEXTURE0 + nIndex );
-    CHECK_GL_ERROR();
+
+    std::unique_ptr<RenderState>& rState = OpenGLContext::getVCLContext()->state();
+    rState->texture().active(nIndex);
+
     rTexture.Bind();
-    maTextures.push_back( rTexture );
+    maTextures.push_back(rTexture);
 }
 
 void OpenGLProgram::SetTransform(
@@ -272,8 +274,8 @@ void OpenGLProgram::SetTransform(
         (float) aYRel.getX()/nTexHeight, (float) aYRel.getY()/nTexHeight, 0, 0,
         0,                               0,                               1, 0,
         (float) rNull.getX(),            (float) rNull.getY(),            0, 1 };
-    glm::mat4 mMatrix = glm::make_mat4( aValues );
-    glUniformMatrix4fv( nUniform, 1, GL_FALSE, glm::value_ptr( mMatrix ) );
+    glm::mat4 aMatrix = glm::make_mat4( aValues );
+    glUniformMatrix4fv( nUniform, 1, GL_FALSE, glm::value_ptr( aMatrix ) );
     CHECK_GL_ERROR();
 }
 
@@ -290,12 +292,12 @@ void OpenGLProgram::ApplyMatrix(float fWidth, float fHeight, float fPixelOffset)
     OString sProjectionMatrix("mvp");
     GLuint nUniform = GetUniformLocation(sProjectionMatrix);
 
-    glm::mat4 mMVP = glm::ortho(0.0f, fWidth, fHeight, 0.0f, 0.0f, 1.0f);
+    glm::mat4 aMVP = glm::ortho(0.0f, fWidth, fHeight, 0.0f, 0.0f, 1.0f);
 
     if (fPixelOffset != 0.0f)
-        mMVP = glm::translate(mMVP, glm::vec3(fPixelOffset, fPixelOffset, 0.0f));
+        aMVP = glm::translate(aMVP, glm::vec3(fPixelOffset, fPixelOffset, 0.0f));
 
-    glUniformMatrix4fv(nUniform, 1, GL_FALSE, glm::value_ptr(mMVP));
+    glUniformMatrix4fv(nUniform, 1, GL_FALSE, glm::value_ptr(aMVP));
     CHECK_GL_ERROR();
 }
 

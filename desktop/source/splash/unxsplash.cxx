@@ -29,18 +29,14 @@ using namespace com::sun::star;
 
 namespace desktop
 {
-    UnxSplashScreen::UnxSplashScreen( const uno::Reference< uno::XComponentContext >& xCtx )
-    : m_xCtx( xCtx ),
-      m_pOutFd( nullptr )
+    UnxSplashScreen::UnxSplashScreen()
+    : m_pOutFd( nullptr )
 {
 }
 
 UnxSplashScreen::~UnxSplashScreen()
 {
-#if OSL_DEBUG_LEVEL > 1
-    fprintf( stderr, "UnxSplashScreen::~UnxSplashScreen()\n" );
-#endif
-
+    SAL_INFO("desktop.splash", "UnxSplashScreen::~UnxSplashScreen()");
     if ( m_pOutFd )
     {
         fclose( m_pOutFd );
@@ -56,9 +52,7 @@ void SAL_CALL UnxSplashScreen::start( const OUString& /*aText*/, sal_Int32 /*nRa
 void SAL_CALL UnxSplashScreen::end()
     throw ( uno::RuntimeException, std::exception )
 {
-#if OSL_DEBUG_LEVEL > 1
-    fprintf( stderr, "UnxSplashScreen::end()\n" );
-#endif
+    SAL_INFO("desktop.splash", "UnxSplashScreen::end()");
     if( !m_pOutFd )
         return;
 
@@ -69,9 +63,7 @@ void SAL_CALL UnxSplashScreen::end()
 void SAL_CALL UnxSplashScreen::reset()
     throw ( uno::RuntimeException, std::exception )
 {
-#if OSL_DEBUG_LEVEL > 1
-    fprintf( stderr, "UnxSplashScreen::reset()\n" );
-#endif
+    SAL_WARN("desktop.splash", "UNXSplashScreen::reset()");
     if( !m_pOutFd )
         return;
 
@@ -109,11 +101,9 @@ UnxSplashScreen::initialize( const css::uno::Sequence< css::uno::Any>& )
         {
             int fd = aNum.toInt32();
             m_pOutFd = fdopen( fd, "w" );
-#if OSL_DEBUG_LEVEL > 1
-            fprintf( stderr, "Got argument '--splash-pipe=%d ('%s') (%p)\n",
-                     fd, OUStringToOString( aNum, RTL_TEXTENCODING_UTF8 ).getStr(),
-                     m_pOutFd );
-#endif
+            SAL_INFO("desktop.splash", "Got argument '--splash-pipe=" << fd << " ('"
+                << aNum << "') ("
+                << static_cast<void *>(m_pOutFd) << ")");
         }
     }
 }
@@ -143,14 +133,14 @@ using namespace desktop;
 // get service instance...
 static uno::Reference< uno::XInterface > m_xINSTANCE;
 
-uno::Reference< uno::XInterface > UnxSplash_createInstance(const uno::Reference< uno::XComponentContext > & xCtx ) throw( uno::Exception )
+uno::Reference< uno::XInterface > UnxSplash_createInstance(const uno::Reference< uno::XComponentContext > &  ) throw( uno::Exception )
 {
-    static osl::Mutex m_aMutex;
+    static osl::Mutex s_aMutex;
     if ( !m_xINSTANCE.is() )
     {
-        osl::MutexGuard guard( m_aMutex );
+        osl::MutexGuard guard( s_aMutex );
         if ( !m_xINSTANCE.is() )
-            m_xINSTANCE = static_cast<cppu::OWeakObject*>(new UnxSplashScreen( xCtx ));
+            m_xINSTANCE = static_cast<cppu::OWeakObject*>(new UnxSplashScreen);
     }
 
     return m_xINSTANCE;

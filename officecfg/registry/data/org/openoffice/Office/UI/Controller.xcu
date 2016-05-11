@@ -291,6 +291,62 @@
           <value>flowchartshapes</value>
         </prop>
       </node>
+      <node oor:name="c25" oor:op="replace">
+        <prop oor:name="Command">
+          <value>.uno:ConditionalFormatMenu</value>
+        </prop>
+        <prop oor:name="Module">
+          <value>com.sun.star.sheet.SpreadsheetDocument</value>
+        </prop>
+        <prop oor:name="Controller">
+          <value>com.sun.star.comp.framework.ResourceMenuController</value>
+        </prop>
+        <prop oor:name="Value">
+          <value>conditional</value>
+        </prop>
+      </node>
+      <node oor:name="c26" oor:op="replace">
+        <prop oor:name="Command">
+          <value>.uno:FreezePanesMenu</value>
+        </prop>
+        <prop oor:name="Module">
+          <value>com.sun.star.sheet.SpreadsheetDocument</value>
+        </prop>
+        <prop oor:name="Controller">
+          <value>com.sun.star.comp.framework.ResourceMenuController</value>
+        </prop>
+        <prop oor:name="Value">
+          <value>freezepanes</value>
+        </prop>
+      </node>
+      <node oor:name="c27" oor:op="replace">
+        <prop oor:name="Command">
+          <value>.uno:InsertFieldCtrl</value>
+        </prop>
+        <prop oor:name="Module">
+          <value/>
+        </prop>
+        <prop oor:name="Controller">
+          <value>com.sun.star.comp.framework.ResourceMenuController</value>
+        </prop>
+        <prop oor:name="Value">
+          <value>insertfield</value>
+        </prop>
+      </node>
+      <node oor:name="c28" oor:op="replace">
+        <prop oor:name="Command">
+          <value>.uno:AnchorMenu</value>
+        </prop>
+        <prop oor:name="Module">
+          <value/>
+        </prop>
+        <prop oor:name="Controller">
+          <value>com.sun.star.comp.framework.ResourceMenuController</value>
+        </prop>
+        <prop oor:name="Value">
+          <value>anchor</value>
+        </prop>
+      </node>
     </node>
     <node oor:name="ToolBar">
       <node oor:name="ZoomToolBox" oor:op="replace">
@@ -855,6 +911,28 @@
           <value>starshapes;.uno:StarShapes.star5</value>
         </prop>
       </node>
+      <node oor:name="lo.writer.MMCurrentEntryController" oor:op="replace">
+        <prop oor:name="Command">
+          <value>.uno:MailMergeCurrentEntry</value>
+        </prop>
+        <prop oor:name="Module">
+          <value/>
+        </prop>
+        <prop oor:name="Controller">
+          <value>lo.writer.MMCurrentEntryController</value>
+        </prop>
+      </node>
+      <node oor:name="lo.writer.MMExcludeEntryController" oor:op="replace">
+        <prop oor:name="Command">
+          <value>.uno:MailMergeExcludeEntry</value>
+        </prop>
+        <prop oor:name="Module">
+          <value/>
+        </prop>
+        <prop oor:name="Controller">
+          <value>lo.writer.MMExcludeEntryController</value>
+        </prop>
+      </node>
       <node oor:name="com.sun.star.svx.FindTextToolboxController" oor:op="replace">
         <prop oor:name="Command">
           <value>.uno:FindText</value>
@@ -941,6 +1019,17 @@
         </prop>
         <prop oor:name="Controller">
           <value>com.sun.star.svx.FindAllToolboxController</value>
+        </prop>
+      </node>
+      <node oor:name="com.sun.star.comp.sfx2.ClassificationCategoriesController" oor:op="replace">
+        <prop oor:name="Command">
+          <value>.uno:ClassificationApply</value>
+        </prop>
+        <prop oor:name="Module">
+          <value/>
+        </prop>
+        <prop oor:name="Controller">
+          <value>com.sun.star.comp.sfx2.ClassificationCategoriesController</value>
         </prop>
       </node>
       <node oor:name="c4" oor:op="replace" install:module="reportbuilder">
@@ -1040,6 +1129,64 @@
           <value>com.sun.star.comp.framework.SaveToolbarController</value>
         </prop>
       </node>
+      <node oor:name="SimpleSaveInRelationDesign" oor:op="replace">
+        <prop oor:name="Command">
+          <value>.uno:Save</value>
+        </prop>
+        <prop oor:name="Module">
+          <value>com.sun.star.sdb.RelationDesign</value>
+        </prop>
+        <prop oor:name="Controller">
+          <value>com.sun.star.comp.framework.GenericPopupToolbarController</value>
+        </prop>
+      </node>
+      <node oor:name="SimpleSaveInBasicIDE" oor:op="replace">
+        <prop oor:name="Command">
+          <value>.uno:Save</value>
+        </prop>
+        <prop oor:name="Module">
+          <value>com.sun.star.script.BasicIDE</value>
+        </prop>
+        <prop oor:name="Controller">
+          <value>com.sun.star.comp.framework.GenericPopupToolbarController</value>
+        </prop>
+      </node>
+      <node oor:name="FreezePanesToolbarController" oor:op="replace">
+        <prop oor:name="Command">
+          <value>.uno:FreezePanes</value>
+        </prop>
+        <prop oor:name="Module">
+          <value>com.sun.star.sheet.SpreadsheetDocument</value>
+        </prop>
+        <prop oor:name="Controller">
+          <value>com.sun.star.comp.framework.GenericPopupToolbarController</value>
+        </prop>
+        <prop oor:name="Value">
+          <value>.uno:FreezePanesMenu</value>
+        </prop>
+      </node>
+      <node oor:name="InsertFieldController" oor:op="replace">
+        <prop oor:name="Command">
+          <value>.uno:InsertFieldCtrl</value>
+        </prop>
+        <prop oor:name="Module">
+          <value/>
+        </prop>
+        <prop oor:name="Controller">
+          <value>com.sun.star.comp.framework.GenericPopupToolbarController</value>
+        </prop>
+      </node>
+      <node oor:name="AnchorController" oor:op="replace">
+        <prop oor:name="Command">
+          <value>.uno:AnchorMenu</value>
+        </prop>
+        <prop oor:name="Module">
+          <value/>
+        </prop>
+        <prop oor:name="Controller">
+          <value>com.sun.star.comp.framework.GenericPopupToolbarController</value>
+        </prop>
+      </node>
       <node oor:name="org.apache.openoffice.comp.framework.NewToolbarController" oor:op="replace">
         <prop oor:name="Command">
           <value>.uno:AddDirect</value>
@@ -1057,6 +1204,17 @@
         </prop>
         <prop oor:name="Module">
           <value/>
+        </prop>
+        <prop oor:name="Controller">
+          <value>com.sun.star.comp.framework.GenericPopupToolbarController</value>
+        </prop>
+      </node>
+      <node oor:name="ConditionalFormatControl" oor:op="replace">
+        <prop oor:name="Command">
+          <value>.uno:ConditionalFormatMenu</value>
+        </prop>
+        <prop oor:name="Module">
+          <value>com.sun.star.sheet.SpreadsheetDocument</value>
         </prop>
         <prop oor:name="Controller">
           <value>com.sun.star.comp.framework.GenericPopupToolbarController</value>

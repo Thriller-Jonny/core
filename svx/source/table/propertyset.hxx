@@ -34,7 +34,7 @@
 namespace sdr { namespace table {
 
 typedef std::vector< css::beans::Property > PropertyVector;
-typedef std::unordered_map< OUString, ::sal_uInt32, OUStringHash, std::equal_to< OUString > > PropertyMap;
+typedef std::unordered_map< OUString, ::sal_uInt32, OUStringHash > PropertyMap;
 
 class FastPropertySetInfo : public ::cppu::WeakAggImplHelper1< css::beans::XPropertySetInfo >
 {
@@ -56,7 +56,6 @@ private:
     PropertyVector maProperties;
     PropertyMap maMap;
 };
-
 
 
 class FastPropertySet : public ::cppu::WeakAggImplHelper3<  css::beans::XPropertySet, css::beans::XMultiPropertySet, css::beans::XFastPropertySet >

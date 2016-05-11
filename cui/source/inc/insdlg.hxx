@@ -48,7 +48,7 @@ protected:
         const OUString& rUIXMLDescription,
         const css::uno::Reference < css::embed::XStorage >& xStorage);
 public:
-    css::uno::Reference < css::embed::XEmbeddedObject > GetObject()
+    const css::uno::Reference < css::embed::XEmbeddedObject >& GetObject()
                         { return m_xObj; }
     virtual css::uno::Reference< css::io::XInputStream > GetIconIfIconified( OUString* pGraphicMediaType );
     virtual bool IsCreateNew() const;
@@ -97,15 +97,7 @@ public:
 class SvInsertPlugInDialog : public InsertObjectDialog_Impl
 {
 private:
-    VclPtr<Edit> m_pEdFileurl;
-    VclPtr<PushButton> m_pBtnFileurl;
-    VclPtr<VclMultiLineEdit> m_pEdPluginsOptions;
-    INetURLObject* m_pURL;
-    OUString m_aCommands;
-
     DECL_LINK_TYPED(BrowseHdl, Button*, void);
-    OUString GetPlugInFile() const { return m_pEdFileurl->GetText(); }
-    OUString GetPlugInOptions() const { return m_pEdPluginsOptions->GetText(); }
 
 public:
     SvInsertPlugInDialog(vcl::Window* pParent,

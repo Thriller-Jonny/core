@@ -26,6 +26,7 @@
 
 #include <osl/mutex.hxx>
 #include <cppuhelper/implbase.hxx>
+#include <vector>
 
 #define SIMPLELOGRING_SIZE 256
 
@@ -37,7 +38,7 @@ class OSimpleLogRing : public ::cppu::WeakImplHelper< css::logging::XSimpleLogRi
                                                       css::lang::XServiceInfo >
 {
     ::osl::Mutex m_aMutex;
-    css::uno::Sequence< OUString > m_aMessages;
+    std::vector< OUString > m_aMessages;
 
     bool      m_bInitialized;
     bool      m_bFull;
@@ -46,18 +47,6 @@ class OSimpleLogRing : public ::cppu::WeakImplHelper< css::logging::XSimpleLogRi
 public:
     OSimpleLogRing();
     virtual ~OSimpleLogRing();
-
-    static css::uno::Sequence< OUString > SAL_CALL
-            getSupportedServiceNames_static();
-
-    static OUString SAL_CALL getImplementationName_static();
-
-    static OUString SAL_CALL getSingletonName_static();
-
-    static OUString SAL_CALL getServiceName_static();
-
-    static css::uno::Reference< css::uno::XInterface > SAL_CALL
-        Create( const css::uno::Reference< css::uno::XComponentContext >& rxContext );
 
 // XSimpleLogRing
     virtual void SAL_CALL logString( const OUString& aMessage ) throw (css::uno::RuntimeException, std::exception) override;

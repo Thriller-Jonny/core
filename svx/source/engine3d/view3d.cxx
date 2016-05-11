@@ -71,7 +71,6 @@ using namespace com::sun::star;
 #define ITEMVALUE(ItemSet,Id,Cast)  (static_cast<const Cast&>((ItemSet).Get(Id))).GetValue()
 
 
-
 // Migrate Marking
 
 class Impl3DMirrorConstructOverlay
@@ -271,7 +270,7 @@ void E3dView::DrawMarkedObj(OutputDevice& rOut) const
             SdrObject *pObj = GetMarkedObjectByIndex(nObjs);
             if(pObj && dynamic_cast< const E3dCompoundObject*>(pObj) !=  nullptr)
             {
-                // relatated scene
+                // related scene
                 pScene = static_cast<E3dCompoundObject*>(pObj)->GetScene();
                 if(pScene)
                     pScene->SetSelected(false);
@@ -444,8 +443,7 @@ SdrModel* E3dView::GetMarkedObjModel() const
 // not the scene itself
 
 bool E3dView::Paste(
-    const SdrModel& rMod, const Point& rPos, SdrObjList* pLst, SdrInsertFlags nOptions,
-    const OUString& rSrcShellID, const OUString& rDestShellID )
+    const SdrModel& rMod, const Point& rPos, SdrObjList* pLst, SdrInsertFlags nOptions)
 {
     bool bRetval = false;
 
@@ -490,7 +488,7 @@ bool E3dView::Paste(
     else
     {
         // call parent
-        bRetval = SdrView::Paste(rMod, rPos, pLst, nOptions, rSrcShellID, rDestShellID);
+        bRetval = SdrView::Paste(rMod, rPos, pLst, nOptions);
     }
 
     return bRetval;
@@ -503,11 +501,6 @@ bool E3dView::ImpCloneAll3DObjectsToDestScene(E3dScene* pSrcScene, E3dScene* pDs
 
     if(pSrcScene && pDstScene)
     {
-        const sdr::contact::ViewContactOfE3dScene& rVCSceneDst = static_cast< sdr::contact::ViewContactOfE3dScene& >(pDstScene->GetViewContact());
-        const drawinglayer::geometry::ViewInformation3D aViewInfo3DDst(rVCSceneDst.getViewInformation3D());
-        const sdr::contact::ViewContactOfE3dScene& rVCSceneSrc = static_cast< sdr::contact::ViewContactOfE3dScene& >(pSrcScene->GetViewContact());
-        const drawinglayer::geometry::ViewInformation3D aViewInfo3DSrc(rVCSceneSrc.getViewInformation3D());
-
         for(size_t i = 0; i < pSrcScene->GetSubList()->GetObjCount(); ++i)
         {
             E3dCompoundObject* pCompoundObj = dynamic_cast< E3dCompoundObject* >(pSrcScene->GetSubList()->GetObj(i));
@@ -623,8 +616,8 @@ bool E3dView::IsConvertTo3DObjPossible() const
 
     bRetval = !bAny3D
         && (
-           IsConvertToPolyObjPossible(false)
-        || IsConvertToPathObjPossible(false)
+           IsConvertToPolyObjPossible()
+        || IsConvertToPathObjPossible()
         || IsImportMtfPossible());
     return bRetval;
 }
@@ -1089,7 +1082,7 @@ void E3dView::DoDepthArrange(E3dScene* pScene, double fDepth)
 
                         if(bOverlap)
                         {
-                            // second ciriteria: is another fillstyle or color used?
+                            // second criteria: is another fillstyle or color used?
                             const SfxItemSet& rCompareSet = pAct->mpObj->GetMergedItemSet();
 
                             drawing::FillStyle eCompareFillStyle = ITEMVALUE(rCompareSet, XATTR_FILLSTYLE, XFillStyleItem);

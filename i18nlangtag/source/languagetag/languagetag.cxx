@@ -293,7 +293,7 @@ private:
     bool                isValidBcp47() const;
 
     void                convertLocaleToBcp47();
-    void                convertLocaleToLang( bool bAllowOnTheFlyID );
+    bool                convertLocaleToLang( bool bAllowOnTheFlyID );
     void                convertBcp47ToLocale();
     void                convertBcp47ToLang();
     void                convertLangToLocale();
@@ -328,7 +328,7 @@ private:
     /** Obtain Language, Script, Country and Variants via simpleExtract() and
         assign them to the cached variables if successful.
 
-        @return return of simpleExtract()
+        @return simpleExtract() successfully extracted and cached.
      */
     bool                cacheSimpleLSCV();
 
@@ -337,6 +337,7 @@ private:
         EXTRACTED_NONE,
         EXTRACTED_LSC,
         EXTRACTED_LV,
+        EXTRACTED_C_LOCALE,
         EXTRACTED_X,
         EXTRACTED_X_JOKER
     };
@@ -349,6 +350,7 @@ private:
         @return EXTRACTED_LSC if simple tag was detected (i.e. one that
                 would fulfill the isIsoODF() condition),
                 EXTRACTED_LV if a tag with variant was detected,
+                EXTRACTED_C_LOCALE if a 'C' locale was detected,
                 EXTRACTED_X if x-... privateuse tag was detected,
                 EXTRACTED_X_JOKER if "*" joker was detected,
                 EXTRACTED_NONE else.
@@ -486,7 +488,7 @@ LanguageTag::LanguageTag( const css::lang::Locale & rLocale )
         mnLangID( LANGUAGE_DONTKNOW),
         mbSystemLocale( rLocale.Language.isEmpty()),
         mbInitializedBcp47( false),
-        mbInitializedLocale( !mbSystemLocale),
+        mbInitializedLocale( false),    // we do not know which mess we got passed in
         mbInitializedLangID( false),
         mbIsFallback( false)
 {
@@ -799,8 +801,15 @@ LanguageTag::ImplPtr LanguageTag::registerImpl() const
     }
 
     // Force Bcp47 if not LangID.
-    if (!mbInitializedLangID && !mbInitializedBcp47 && mbInitializedLocale)
+    if (!mbInitializedLangID && !mbInitializedBcp47)
     {
+        // The one central point to set mbInitializedLocale=true if a
+        // LanguageTag was initialized with a Locale. We will now convert and
+        // possibly later resolve it.
+        if (!mbInitializedLocale && (mbSystemLocale || !maLocale.Language.isEmpty()))
+            mbInitializedLocale = true;
+        SAL_WARN_IF( !mbInitializedLocale, "i18nlangtag", "LanguageTag::registerImpl: still not mbInitializedLocale");
+
         maBcp47 = LanguageTagImpl::convertToBcp47( maLocale);
         mbInitializedBcp47 = !maBcp47.isEmpty();
     }
@@ -1012,20 +1021,13 @@ void LanguageTag::resetVars()
 }
 
 
-LanguageTag & LanguageTag::reset( const OUString & rBcp47LanguageTag, bool bCanonicalize )
+LanguageTag & LanguageTag::reset( const OUString & rBcp47LanguageTag )
 {
     resetVars();
     maBcp47             = rBcp47LanguageTag;
     mbSystemLocale      = rBcp47LanguageTag.isEmpty();
     mbInitializedBcp47  = !mbSystemLocale;
 
-    if (bCanonicalize)
-    {
-        getImpl()->canonicalize();
-        // Registration itself may already have canonicalized, so do an
-        // unconditional sync.
-        syncFromImpl();
-    }
     return *this;
 }
 
@@ -1120,6 +1122,11 @@ bool LanguageTagImpl::canonicalize()
                         maLocale.Language = aLanguage;
                         maLocale.Country  = aCountry;
                     }
+                    else if (eExt == EXTRACTED_C_LOCALE)
+                    {
+                        maLocale.Language = aLanguage;
+                        maLocale.Country  = aCountry;
+                    }
                     else
                     {
                         maLocale.Language = I18NLANGTAG_QLT;
@@ -1144,7 +1151,8 @@ bool LanguageTagImpl::canonicalize()
         {
             if (!mbInitializedLangID)
             {
-                convertLocaleToLang( false);
+                if (convertLocaleToLang( false))
+                    bChanged = true;
                 if (bTemporaryLocale || mnLangID == LANGUAGE_DONTKNOW)
                     bTemporaryLangID = true;
             }
@@ -1333,8 +1341,9 @@ void LanguageTagImpl::convertLocaleToBcp47()
 }
 
 
-void LanguageTagImpl::convertLocaleToLang( bool bAllowOnTheFlyID )
+bool LanguageTagImpl::convertLocaleToLang( bool bAllowOnTheFlyID )
 {
+    bool bRemapped = false;
     if (mbSystemLocale)
     {
         mnLangID = MsLangId::getRealLanguage( LANGUAGE_SYSTEM);
@@ -1342,6 +1351,24 @@ void LanguageTagImpl::convertLocaleToLang( bool bAllowOnTheFlyID )
     else
     {
         mnLangID = MsLangId::Conversion::convertLocaleToLanguage( maLocale);
+        if (mnLangID == LANGUAGE_DONTKNOW)
+        {
+            // convertLocaleToLanguage() only searches in ISO and private
+            // definitions, search in remaining definitions, i.e. for the "C"
+            // locale and non-standard things like "sr-latin" or "german" to
+            // resolve to a known locale, skipping ISO lll-CC that were already
+            // searched.
+            mnLangID = MsLangId::Conversion::convertIsoNamesToLanguage( maLocale.Language, maLocale.Country, true);
+            if (mnLangID != LANGUAGE_DONTKNOW)
+            {
+                // If one found, convert back and adapt Locale and Bcp47
+                // strings so we have a matching entry.
+                OUString aOrgBcp47( maBcp47);
+                convertLangToLocale();
+                convertLocaleToBcp47();
+                bRemapped = (maBcp47 != aOrgBcp47);
+            }
+        }
         if (mnLangID == LANGUAGE_DONTKNOW && bAllowOnTheFlyID)
         {
             if (isValidBcp47())
@@ -1371,6 +1398,7 @@ void LanguageTagImpl::convertLocaleToLang( bool bAllowOnTheFlyID )
         }
     }
     mbInitializedLangID = true;
+    return bRemapped;
 }
 
 
@@ -2016,8 +2044,6 @@ bool LanguageTag::isValidBcp47() const
 }
 
 
-
-
 LanguageTag & LanguageTag::makeFallback()
 {
     if (!mbIsFallback)
@@ -2277,15 +2303,15 @@ LanguageTag & LanguageTag::makeFallback()
 }
 
 
-bool LanguageTag::equals( const LanguageTag & rLanguageTag, bool bResolveSystem ) const
+bool LanguageTag::equals( const LanguageTag & rLanguageTag ) const
 {
     // If SYSTEM is not to be resolved or either both are SYSTEM or none, we
     // can use the operator==() optimization.
-    if (!bResolveSystem || isSystemLocale() == rLanguageTag.isSystemLocale())
+    if (isSystemLocale() == rLanguageTag.isSystemLocale())
         return operator==( rLanguageTag);
 
     // Compare full language tag strings.
-    return getBcp47( bResolveSystem) == rLanguageTag.getBcp47( bResolveSystem);
+    return getBcp47() == rLanguageTag.getBcp47();
 }
 
 
@@ -2337,6 +2363,14 @@ LanguageTagImpl::Extraction LanguageTagImpl::simpleExtract( const OUString& rBcp
     {
         // x-... privateuse tags MUST be known to us by definition.
         eRet = EXTRACTED_X;
+    }
+    else if (nLen == 1 && rBcp47[0] == 'C')         // the 'C' locale
+    {
+        eRet = EXTRACTED_C_LOCALE;
+        rLanguage = "C";
+        rScript.clear();
+        rCountry.clear();
+        rVariants.clear();
     }
     else if (nLen == 2 || nLen == 3)                // ll or lll
     {
@@ -2641,17 +2675,13 @@ OUString LanguageTag::convertToBcp47( const css::lang::Locale& rLocale, bool bRe
 
 
 // static
-OUString LanguageTag::convertToBcp47( LanguageType nLangID, bool bResolveSystem )
+OUString LanguageTag::convertToBcp47( LanguageType nLangID )
 {
-    // Catch this first so we don't need the rest.
-    if (!bResolveSystem && lcl_isSystem( nLangID))
-        return OUString();
-
-    lang::Locale aLocale( LanguageTag::convertToLocale( nLangID, bResolveSystem));
+    lang::Locale aLocale( LanguageTag::convertToLocale( nLangID ));
     // If system for some reason (should not happen.. haha) could not be
     // resolved DO NOT CALL LanguageTag::convertToBcp47(Locale) because that
     // would recurse into this method here!
-    if (aLocale.Language.isEmpty() && bResolveSystem)
+    if (aLocale.Language.isEmpty())
         return OUString();      // bad luck, bail out
     return LanguageTagImpl::convertToBcp47( aLocale);
 }
@@ -2668,12 +2698,9 @@ css::lang::Locale LanguageTag::convertToLocale( const OUString& rBcp47, bool bRe
 
 
 // static
-LanguageType LanguageTag::convertToLanguageType( const OUString& rBcp47, bool bResolveSystem )
+LanguageType LanguageTag::convertToLanguageType( const OUString& rBcp47 )
 {
-    if (rBcp47.isEmpty() && !bResolveSystem)
-        return LANGUAGE_SYSTEM;
-
-    return LanguageTag( rBcp47).getLanguageType( bResolveSystem);
+    return LanguageTag( rBcp47).getLanguageType();
 }
 
 

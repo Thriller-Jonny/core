@@ -36,7 +36,6 @@
 #include <com/sun/star/lang/XServiceInfo.hpp>
 #include <com/sun/star/sheet/XSpreadsheet.hpp>
 #include <com/sun/star/table/XColumnRowRange.hpp>
-#include <com/sun/star/table/XCellRange.hpp>
 #include <com/sun/star/container/XChild.hpp>
 #include <com/sun/star/form/XGridColumnFactory.hpp>
 
@@ -59,7 +58,6 @@ namespace pcr
     using ::com::sun::star::uno::Any;
     using ::com::sun::star::uno::makeAny;
     using ::com::sun::star::uno::Sequence;
-    using ::com::sun::star::uno::Type;
     using ::com::sun::star::uno::XComponentContext;
     using ::com::sun::star::beans::UnknownPropertyException;
     using ::com::sun::star::beans::Property;
@@ -86,7 +84,6 @@ namespace pcr
     using ::com::sun::star::table::XColumnRowRange;
     using ::com::sun::star::table::XTableColumns;
     using ::com::sun::star::table::XTableRows;
-    using ::com::sun::star::table::XCellRange;
     using ::com::sun::star::container::XIndexAccess;
     using ::com::sun::star::container::XChild;
     using ::com::sun::star::form::XGridColumnFactory;
@@ -194,7 +191,7 @@ namespace pcr
 
     private:
         ::cppu::OWeakObject&                m_rParent;
-        ::cppu::OInterfaceContainerHelper   m_aPropertyChangeListeners;
+        ::comphelper::OInterfaceContainerHelper2   m_aPropertyChangeListeners;
         Reference< XShape >                 m_xShape;
     };
 
@@ -453,12 +450,12 @@ namespace pcr
             case PROPERTY_ID_WIDTH:
             case PROPERTY_ID_HEIGHT:
                 bIsSize = true;
-                // NO break!
+                SAL_FALLTHROUGH;
             case PROPERTY_ID_POSITIONX:
             case PROPERTY_ID_POSITIONY:
             {
-                Optional< double > aZero( sal_True, 0 );
-                Optional< double > aValueNotPresent( sal_False, 0 );
+                Optional< double > aZero( true, 0 );
+                Optional< double > aValueNotPresent( false, 0 );
                 aLineDesc.Control = PropertyHandlerHelper::createNumericControl(
                     _rxControlFactory, 2, bIsSize ? aZero : aValueNotPresent, aValueNotPresent, false );
 
@@ -611,7 +608,7 @@ namespace pcr
 
     namespace
     {
-        static sal_Int32 lcl_getLowerBoundRowOrColumn( const Reference< XIndexAccess >& _rxRowsOrColumns, const bool _bRows,
+        sal_Int32 lcl_getLowerBoundRowOrColumn( const Reference< XIndexAccess >& _rxRowsOrColumns, const bool _bRows,
             const css::awt::Point& _rRelativePosition )
         {
             sal_Int32 nAccumulated = 0;

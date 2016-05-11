@@ -19,7 +19,6 @@
 
 #include <com/sun/star/presentation/XPresentation2.hpp>
 #include <com/sun/star/beans/PropertyValue.hpp>
-#include <com/sun/star/uno/Any.hxx>
 
 #include <editeng/outlobj.hxx>
 
@@ -87,7 +86,6 @@
 #include <com/sun/star/drawing/XDrawPages.hpp>
 #include <vcl/svapp.hxx>
 
-#include <boost/bind.hpp>
 #include <memory>
 
 using namespace ::com::sun::star;
@@ -350,7 +348,7 @@ void SlotManager::FuSupport (SfxRequest& rRequest)
                     const SfxPoolItem& rItem (
                         rRequest.GetArgs()->Get(SID_STYLE_FAMILY));
                     pDocument->GetDocSh()->SetStyleFamily(
-                        static_cast<const SfxUInt16Item&>(rItem).GetValue());
+                        (SfxStyleFamily) static_cast<const SfxUInt16Item&>(rItem).GetValue());
                 }
             }
             break;
@@ -1020,8 +1018,10 @@ bool SlotManager::RenameSlideFromDrawViewShell( sal_uInt16 nPageId, const OUStri
         // inform navigator about change
         SfxBoolItem aItem( SID_NAVIGATOR_INIT, true );
         if (mrSlideSorter.GetViewShell() != nullptr)
-            mrSlideSorter.GetViewShell()->GetDispatcher()->Execute(
-                SID_NAVIGATOR_INIT, SfxCallMode::ASYNCHRON | SfxCallMode::RECORD, &aItem, 0L );
+            mrSlideSorter.GetViewShell()->GetDispatcher()->ExecuteList(
+                SID_NAVIGATOR_INIT,
+                SfxCallMode::ASYNCHRON | SfxCallMode::RECORD,
+                { &aItem });
     }
 
     return bSuccess;
@@ -1137,13 +1137,10 @@ void SlotManager::DuplicateSelectedSlides (SfxRequest& rRequest)
     // Set the selection to the pages in aPagesToSelect.
     PageSelector& rSelector (mrSlideSorter.GetController().GetPageSelector());
     rSelector.DeselectAllPages();
-    ::std::for_each (
-        aPagesToSelect.begin(),
-        aPagesToSelect.end(),
-        ::boost::bind(
-            static_cast<void (PageSelector::*)(const SdPage*)>(&PageSelector::SelectPage),
-            ::boost::ref(rSelector),
-            _1));
+    for (auto const& it: aPagesToSelect)
+    {
+        rSelector.SelectPage(it);
+    }
 }
 
 void SlotManager::ChangeSlideExclusionState (

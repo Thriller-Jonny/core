@@ -30,6 +30,7 @@ $(eval $(call gb_Library_use_custom_headers,scfilt,\
 
 $(eval $(call gb_Library_use_externals,scfilt,\
 	boost_headers \
+	$(call gb_Helper_optional,OPENCL,clew) \
 	mdds_headers \
 ))
 
@@ -227,6 +228,7 @@ ifeq ($(ENABLE_ORCUS),TRUE)
 $(eval $(call gb_Library_use_externals,scfilt,\
 	orcus \
 	orcus-parser \
+	boost_filesystem \
 	boost_system \
 	boost_iostreams \
 	zlib \

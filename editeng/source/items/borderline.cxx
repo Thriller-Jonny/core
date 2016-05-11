@@ -90,7 +90,7 @@ Color SvxBorderLine::threeDMediumColor( Color aMain )
 }
 
 SvxBorderLine::SvxBorderLine( const Color *pCol, long nWidth,
-       SvxBorderStyle nStyle, bool bUseLeftTop,
+       SvxBorderStyle nStyle,
        Color (*pColorOutFn)( Color ), Color (*pColorInFn)( Color ),
        Color (*pColorGapFn)( Color ) )
 : m_nWidth( nWidth )
@@ -99,7 +99,7 @@ SvxBorderLine::SvxBorderLine( const Color *pCol, long nWidth,
 , m_nMult( 1 )
 , m_nDiv( 1 )
 , m_nStyle( nStyle )
-, m_bUseLeftTop( bUseLeftTop )
+, m_bUseLeftTop( false )
 , m_pColorOutFn( pColorOutFn )
 , m_pColorInFn( pColorInFn )
 , m_pColorGapFn( pColorGapFn )
@@ -401,12 +401,10 @@ BorderWidthImpl SvxBorderLine::getWidthImpl( SvxBorderStyle nStyle )
 }
 
 
-
 SvxBorderLine::SvxBorderLine( const SvxBorderLine& r )
 {
     *this = r;
 }
-
 
 
 SvxBorderLine& SvxBorderLine::operator=( const SvxBorderLine& r )
@@ -424,7 +422,6 @@ SvxBorderLine& SvxBorderLine::operator=( const SvxBorderLine& r )
     m_pColorGapFn = r.m_pColorGapFn;
     return *this;
 }
-
 
 
 void SvxBorderLine::ScaleMetrics( long nMult, long nDiv )
@@ -534,7 +531,6 @@ sal_uInt16 SvxBorderLine::GetDistance() const
 {
     return (sal_uInt16)Scale( m_aWidthImpl.GetGap( m_nWidth ), m_nMult, m_nDiv );
 }
-
 
 
 bool SvxBorderLine::operator==( const SvxBorderLine& rCmp ) const

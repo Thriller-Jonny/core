@@ -57,9 +57,8 @@ SvxRedlinEntry::~SvxRedlinEntry()
     delete pRedDat;
 }
 
-SvLBoxColorString::SvLBoxColorString(SvTreeListEntry*pEntry, sal_uInt16 nFlags, const OUString& rStr,
-    const Color& rCol)
-    : SvLBoxString(pEntry, nFlags, rStr)
+SvLBoxColorString::SvLBoxColorString(const OUString& rStr, const Color& rCol)
+    : SvLBoxString(rStr)
 {
     aPrivColor=rCol;
     SetText( rStr );
@@ -161,17 +160,10 @@ sal_Int32 SvxRedlinTable::ColCompare(SvTreeListEntry* pLeft,SvTreeListEntry* pRi
 
     return nCompare;
 }
-void SvxRedlinTable::SetCalcView(bool bFlag)
+void SvxRedlinTable::SetCalcView()
 {
-    bIsCalc=bFlag;
-    if(bFlag)
-    {
-        nDatePos=CALC_DATE;
-    }
-    else
-    {
-        nDatePos=WRITER_DATE;
-    }
+    bIsCalc=true;
+    nDatePos=CALC_DATE;
 }
 
 void SvxRedlinTable::UpdateFilterTest()
@@ -344,21 +336,21 @@ void SvxRedlinTable::InitEntry(SvTreeListEntry* pEntry, const OUString& rStr,
     if (nTreeFlags & SvTreeFlags::CHKBTN)
     {
         pEntry->AddItem(std::unique_ptr<SvLBoxButton>(
-                new SvLBoxButton(pEntry, eButtonKind, 0, pCheckButtonData)));
+                new SvLBoxButton(eButtonKind, pCheckButtonData)));
     }
 
     pEntry->AddItem(std::unique_ptr<SvLBoxContextBmp>(
-                new SvLBoxContextBmp(pEntry, 0, rColl, rExp, true)));
+                new SvLBoxContextBmp(rColl, rExp, true)));
 
     // the type of the change
     assert((rStr.isEmpty() && !!maEntryImage) || (!rStr.isEmpty() && !maEntryImage));
 
     if (rStr.isEmpty())
         pEntry->AddItem(std::unique_ptr<SvLBoxContextBmp>(new SvLBoxContextBmp(
-                        pEntry, 0, maEntryImage, maEntryImage, true)));
+                        maEntryImage, maEntryImage, true)));
     else
         pEntry->AddItem(std::unique_ptr<SvLBoxColorString>(
-                    new SvLBoxColorString(pEntry, 0, rStr, maEntryColor)));
+                    new SvLBoxColorString(rStr, maEntryColor)));
 
     // the change tracking entries
     sal_Int32 nIndex = 0;
@@ -367,7 +359,7 @@ void SvxRedlinTable::InitEntry(SvTreeListEntry* pEntry, const OUString& rStr,
     {
         const OUString aToken = GetToken(maEntryString, nIndex);
         pEntry->AddItem(std::unique_ptr<SvLBoxColorString>(
-                    new SvLBoxColorString(pEntry, 0, aToken, maEntryColor)));
+                    new SvLBoxColorString(aToken, maEntryColor)));
     }
 }
 
@@ -497,9 +489,9 @@ void SvxTPView::EnableRejectAll(bool bFlag)
     m_pRejectAll->Enable(bFlag);
 }
 
-void SvxTPView::ShowUndo(bool bFlag)
+void SvxTPView::ShowUndo()
 {
-    m_pUndo->Show(bFlag);
+    m_pUndo->Show();
 }
 
 void SvxTPView::EnableUndo(bool bFlag)
@@ -768,9 +760,9 @@ void SvxTPFilter::ClearAuthors()
     m_pLbAuthor->Clear();
 }
 
-void SvxTPFilter::InsertAuthor( const OUString& rString, sal_Int32 nPos)
+void SvxTPFilter::InsertAuthor( const OUString& rString)
 {
-    m_pLbAuthor->InsertEntry(rString,nPos);
+    m_pLbAuthor->InsertEntry(rString);
 }
 
 OUString SvxTPFilter::GetSelectedAuthor() const
@@ -992,7 +984,7 @@ void SvxTPFilter::DeactivatePage()
             pRedlinTable->SetFilterComment(IsComment());
 
             utl::SearchParam aSearchParam( m_pEdComment->GetText(),
-                    utl::SearchParam::SRCH_REGEXP,false,false,false );
+                    utl::SearchParam::SRCH_REGEXP,false );
 
             pRedlinTable->SetCommentParams(&aSearchParam);
 
@@ -1005,9 +997,9 @@ void SvxTPFilter::DeactivatePage()
     TabPage::DeactivatePage();
 }
 
-void SvxTPFilter::Enable( bool bEnable, bool bChild)
+void SvxTPFilter::Enable( bool bEnable)
 {
-    TabPage::Enable(bEnable,bChild);
+    TabPage::Enable(bEnable);
     if(m_pCbDate->IsEnabled())
     {
         RowEnableHdl(m_pCbDate);
@@ -1016,9 +1008,9 @@ void SvxTPFilter::Enable( bool bEnable, bool bChild)
         RowEnableHdl(m_pCbComment);
     }
 }
-void SvxTPFilter::Disable( bool bChild)
+void SvxTPFilter::Disable()
 {
-    Enable( false, bChild );
+    Enable( false );
 }
 
 IMPL_LINK_TYPED( SvxTPFilter, ModifyDate, Edit&, rTF, void)

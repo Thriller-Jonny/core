@@ -53,7 +53,6 @@
 #include <basegfx/tools/unotools.hxx>
 #include <vcl/gradient.hxx>
 
-#include <stdio.h>
 #include <libxml/xmlwriter.h>
 
 using namespace ::com::sun::star;
@@ -330,12 +329,10 @@ SvStream& XColorItem::Store( SvStream& rOut, sal_uInt16 nItemVersion ) const
     return rOut;
 }
 
-const Color& XColorItem::GetColorValue(const XColorList* pTable) const
+const Color& XColorItem::GetColorValue() const
 {
-    if (!IsIndex())
-        return aColor;
-    else
-        return pTable->GetColor(GetIndex())->GetColor();
+    assert(!IsIndex());
+    return aColor;
 
 }
 
@@ -737,12 +734,11 @@ bool XLineDashItem::HasMetrics() const
     return true;
 }
 
-bool XLineDashItem::ScaleMetrics(long nMul, long nDiv)
+void XLineDashItem::ScaleMetrics(long nMul, long nDiv)
 {
     aDash.SetDotLen( ScaleMetricValue( aDash.GetDotLen(), nMul, nDiv ) );
     aDash.SetDashLen( ScaleMetricValue( aDash.GetDashLen(), nMul, nDiv ) );
     aDash.SetDistance( ScaleMetricValue( aDash.GetDistance(), nMul, nDiv ) );
-    return true;
 }
 
 bool XLineDashItem::QueryValue( css::uno::Any& rVal, sal_uInt8 nMemberId ) const
@@ -2042,8 +2038,8 @@ bool XLineStartCenterItem::GetPresentation
 
 bool XLineStartCenterItem::QueryValue( css::uno::Any& rVal, sal_uInt8 /*nMemberId*/) const
 {
-    sal_Bool bValue = GetValue();
-    rVal.setValue( &bValue, cppu::UnoType<bool>::get() );
+    bool bValue = GetValue();
+    rVal <<= bValue;
     return true;
 }
 
@@ -2093,8 +2089,8 @@ bool XLineEndCenterItem::GetPresentation
 
 bool XLineEndCenterItem::QueryValue( css::uno::Any& rVal, sal_uInt8 /*nMemberId*/) const
 {
-    sal_Bool bValue = GetValue();
-    rVal.setValue( &bValue, cppu::UnoType<bool>::get() );
+    bool bValue = GetValue();
+    rVal <<= bValue;
     return true;
 }
 
@@ -2975,10 +2971,9 @@ bool XFillHatchItem::HasMetrics() const
     return true;
 }
 
-bool XFillHatchItem::ScaleMetrics(long nMul, long nDiv)
+void XFillHatchItem::ScaleMetrics(long nMul, long nDiv)
 {
     aHatch.SetDistance( ScaleMetricValue( aHatch.GetDistance(), nMul, nDiv ) );
-    return true;
 }
 
 bool XFillHatchItem::QueryValue( css::uno::Any& rVal, sal_uInt8 nMemberId ) const
@@ -3519,7 +3514,6 @@ SvStream& XLineAttrSetItem::Store( SvStream& rStream, sal_uInt16 nItemVersion ) 
 {
     return SfxSetItem::Store( rStream, nItemVersion );
 }
-
 
 
 /// fill attribute set item

@@ -29,11 +29,11 @@
 #include <basegfx/polygon/b2dpolypolygontools.hxx>
 
 #include <o3tl/vector_pool.hxx>
-#include <boost/next_prior.hpp>
 
 #include <algorithm>
 #include <deque>
 #include <list>
+#include <iterator>
 
 namespace basegfx
 {
@@ -706,17 +706,17 @@ namespace basegfx
 
         // wow what a hack. necessary because stl's list::erase does
         // not eat reverse_iterator
-        template<typename Cont, typename Iter> Iter eraseFromList(Cont&, Iter);
+        template<typename Cont, typename Iter> Iter eraseFromList(Cont&, const Iter&);
         template<> inline ListOfEdges::iterator eraseFromList(
-            ListOfEdges& rList, ListOfEdges::iterator aIter)
+            ListOfEdges& rList, const ListOfEdges::iterator& aIter)
         {
             return rList.erase(aIter);
         }
         template<> inline ListOfEdges::reverse_iterator eraseFromList(
-            ListOfEdges& rList, ListOfEdges::reverse_iterator aIter)
+            ListOfEdges& rList, const ListOfEdges::reverse_iterator& aIter)
         {
             return ListOfEdges::reverse_iterator(
-                    rList.erase(boost::prior(aIter.base())));
+                    rList.erase(std::prev(aIter.base())));
         }
 
         template<int bPerformErase,

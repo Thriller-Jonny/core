@@ -50,7 +50,7 @@ const OUString S_PAGE_DELI(", ");
 namespace
 {
 
-static void lcl_FillAuthPattern(SwFormTokens &rAuthTokens, sal_uInt16 nTypeId)
+void lcl_FillAuthPattern(SwFormTokens &rAuthTokens, sal_uInt16 nTypeId)
 {
     rAuthTokens.reserve(9); // Worst case: Start+Sep1+Auth+3*(Sep2+Auth)
 
@@ -455,7 +455,7 @@ void SwTOXBase::RegisterToTOXType( SwTOXType& rType )
     rType.Add( this );
 }
 
-SwTOXBase& SwTOXBase::CopyTOXBase( SwDoc* pDoc, const SwTOXBase& rSource )
+void SwTOXBase::CopyTOXBase( SwDoc* pDoc, const SwTOXBase& rSource )
 {
     maMSTOCExpression = rSource.maMSTOCExpression;
     SwTOXType* pType = const_cast<SwTOXType*>(rSource.GetTOXType());
@@ -507,8 +507,6 @@ SwTOXBase& SwTOXBase::CopyTOXBase( SwDoc* pDoc, const SwTOXBase& rSource )
         m_aName = rSource.GetTOXName();
     else
         m_aName = pDoc->GetUniqueTOXBaseName( *pType, rSource.GetTOXName() );
-
-    return *this;
 }
 
 // TOX specific functions
@@ -637,6 +635,7 @@ OUString SwFormToken::GetString() const
             {
                  sData = OUString::number( nAuthorityField ) + sData;
             }
+            break;
         default:
             break;
     }

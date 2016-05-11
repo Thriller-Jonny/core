@@ -26,15 +26,13 @@
 #include <sfx2/msgpool.hxx>
 #include <sfx2/tbxctrl.hxx>
 #include <sfx2/stbitem.hxx>
-#include <sfx2/mnuitem.hxx>
 #include <sfx2/childwin.hxx>
-#include <sfx2/mnumgr.hxx>
 #include <sfx2/docfac.hxx>
 #include <sfx2/objface.hxx>
 #include <sfx2/viewfrm.hxx>
+#include <sfx2/sfx.hrc>
 #include <sfx2/tabdlg.hxx>
 #include <svl/intitem.hxx>
-#include <sfx2/taskpane.hxx>
 #include <tools/diagnose_ex.h>
 #include <rtl/strbuf.hxx>
 #include <sal/log.hxx>
@@ -57,7 +55,7 @@ public:
         return maData.begin();
     }
 
-    void erase( iterator it )
+    void erase( const iterator& it )
     {
         maData.erase(it);
     }
@@ -87,7 +85,6 @@ public:
     SfxSlotPool*                pSlotPool;
     SfxTbxCtrlFactArr_Impl*     pTbxCtrlFac;
     SfxStbCtrlFactArr_Impl*     pStbCtrlFac;
-    SfxMenuCtrlFactArr_Impl*    pMenuCtrlFac;
     SfxChildWinFactArr_Impl*    pFactArr;
     ImageList*                  pImgListSmall;
     ImageList*                  pImgListBig;
@@ -98,7 +95,7 @@ public:
 };
 
 SfxModule_Impl::SfxModule_Impl()
- : pSlotPool(nullptr), pTbxCtrlFac(nullptr), pStbCtrlFac(nullptr), pMenuCtrlFac(nullptr), pFactArr(nullptr), pImgListSmall(nullptr), pImgListBig(nullptr)
+ : pSlotPool(nullptr), pTbxCtrlFac(nullptr), pStbCtrlFac(nullptr), pFactArr(nullptr), pImgListSmall(nullptr), pImgListBig(nullptr)
 {
 }
 
@@ -107,7 +104,6 @@ SfxModule_Impl::~SfxModule_Impl()
     delete pSlotPool;
     delete pTbxCtrlFac;
     delete pStbCtrlFac;
-    delete pMenuCtrlFac;
     delete pFactArr;
     delete pImgListSmall;
     delete pImgListBig;
@@ -166,7 +162,6 @@ void SfxModule::Construct_Impl()
 
         pImpl->pTbxCtrlFac=nullptr;
         pImpl->pStbCtrlFac=nullptr;
-        pImpl->pMenuCtrlFac=nullptr;
         pImpl->pFactArr=nullptr;
         pImpl->pImgListSmall=nullptr;
         pImpl->pImgListBig=nullptr;
@@ -174,7 +169,6 @@ void SfxModule::Construct_Impl()
         SetPool( &pApp->GetPool() );
     }
 }
-
 
 
 SfxModule::~SfxModule()
@@ -203,12 +197,10 @@ SfxModule::~SfxModule()
 }
 
 
-
 SfxSlotPool* SfxModule::GetSlotPool() const
 {
     return pImpl->pSlotPool;
 }
-
 
 
 void SfxModule::RegisterChildWindow(SfxChildWinFactory *pFact)
@@ -232,7 +224,6 @@ void SfxModule::RegisterChildWindow(SfxChildWinFactory *pFact)
 }
 
 
-
 void SfxModule::RegisterToolBoxControl( const SfxTbxCtrlFactory& rFact )
 {
     if (!pImpl->pTbxCtrlFac)
@@ -252,7 +243,6 @@ void SfxModule::RegisterToolBoxControl( const SfxTbxCtrlFactory& rFact )
 
     pImpl->pTbxCtrlFac->push_back( rFact );
 }
-
 
 
 void SfxModule::RegisterStatusBarControl( const SfxStbCtrlFactory& rFact )
@@ -276,49 +266,16 @@ void SfxModule::RegisterStatusBarControl( const SfxStbCtrlFactory& rFact )
 }
 
 
-
-void SfxModule::RegisterMenuControl( const SfxMenuCtrlFactory& rFact )
-{
-    if (!pImpl->pMenuCtrlFac)
-        pImpl->pMenuCtrlFac = new SfxMenuCtrlFactArr_Impl;
-
-#ifdef DBG_UTIL
-    for ( size_t n=0; n<pImpl->pMenuCtrlFac->size(); n++ )
-    {
-        SfxMenuCtrlFactory *pF = &(*pImpl->pMenuCtrlFac)[n];
-        if ( pF->nTypeId == rFact.nTypeId &&
-            (pF->nSlotId == rFact.nSlotId || pF->nSlotId == 0) )
-        {
-            SAL_INFO("sfx.appl", "MenuController-Registering is not clearly defined!");
-        }
-    }
-#endif
-
-    pImpl->pMenuCtrlFac->push_back( rFact );
-}
-
-
-
 SfxTbxCtrlFactArr_Impl*  SfxModule::GetTbxCtrlFactories_Impl() const
 {
     return pImpl->pTbxCtrlFac;
 }
 
 
-
 SfxStbCtrlFactArr_Impl*  SfxModule::GetStbCtrlFactories_Impl() const
 {
     return pImpl->pStbCtrlFac;
 }
-
-
-
-SfxMenuCtrlFactArr_Impl* SfxModule::GetMenuCtrlFactories_Impl() const
-{
-    return pImpl->pMenuCtrlFac;
-}
-
-
 
 SfxChildWinFactArr_Impl* SfxModule::GetChildWinFactories_Impl() const
 {
@@ -352,7 +309,8 @@ void SfxModule::DestroyModules_Impl()
             SfxModule* pMod = rModules[nPos];
             delete pMod;
         }
-        delete pModules, pModules = nullptr;
+        delete pModules;
+        pModules = nullptr;
     }
 }
 
@@ -361,17 +319,6 @@ void SfxModule::Invalidate( sal_uInt16 nId )
     for( SfxViewFrame* pFrame = SfxViewFrame::GetFirst(); pFrame; pFrame = SfxViewFrame::GetNext( *pFrame ) )
         if ( pFrame->GetObjectShell()->GetModule() == this )
             Invalidate_Impl( pFrame->GetBindings(), nId );
-}
-
-bool SfxModule::IsChildWindowAvailable( const sal_uInt16 i_nId, const SfxViewFrame* i_pViewFrame ) const
-{
-    if ( i_nId != SID_TASKPANE )
-        // by default, assume it is
-        return true;
-
-    const SfxViewFrame* pViewFrame = i_pViewFrame ? i_pViewFrame : GetFrame();
-    ENSURE_OR_RETURN( pViewFrame, "SfxModule::IsChildWindowAvailable: no frame to ask for the module identifier!", false );
-    return ::sfx2::ModuleTaskPane::ModuleHasToolPanels( pViewFrame->GetFrame().GetFrameInterface() );
 }
 
 SfxModule* SfxModule::GetActiveModule( SfxViewFrame* pFrame )

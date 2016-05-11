@@ -29,11 +29,11 @@
 
 #include "rtl/ustrbuf.hxx"
 
-#include "vcl/svapp.hxx"
-#include "vcl/window.hxx"
-#include "vcl/idle.hxx"
-#include "vcl/svmain.hxx"
-#include "vcl/opengl/OpenGLContext.hxx"
+#include <vcl/svapp.hxx>
+#include <vcl/window.hxx>
+#include <vcl/idle.hxx>
+#include <vcl/svmain.hxx>
+#include <vcl/opengl/OpenGLContext.hxx>
 
 #include "osx/saldata.hxx"
 #include "osx/salinst.h"
@@ -85,7 +85,7 @@ class AquaDelayedSettingsChanged : public Idle
     {
         SalData* pSalData = GetSalData();
         if( ! pSalData->maFrames.empty() )
-            pSalData->maFrames.front()->CallCallback( SALEVENT_SETTINGSCHANGED, nullptr );
+            pSalData->maFrames.front()->CallCallback( SalEvent::SettingsChanged, nullptr );
 
         if( mbInvalidate )
         {
@@ -187,8 +187,10 @@ bool ImplSVMainHook( int * pnInit )
     if (comphelper::LibreOfficeKit::isActive())
         return false;
 
+    NSAutoreleasePool * pool = [ [ NSAutoreleasePool alloc ] init ];
     unlink([[NSString stringWithFormat:@"%@/Library/Saved Application State/%s.savedState/restorecount.plist", NSHomeDirectory(), MACOSX_BUNDLE_IDENTIFIER] UTF8String]);
     unlink([[NSString stringWithFormat:@"%@/Library/Saved Application State/%s.savedState/restorecount.txt", NSHomeDirectory(), MACOSX_BUNDLE_IDENTIFIER] UTF8String]);
+    [ pool drain ];
 
     gpnInit = pnInit;
 
@@ -336,7 +338,6 @@ SalInstance* CreateSalInstance()
     ImplGetSVData()->maNWFData.mbProgressNeedsErase = true;
     ImplGetSVData()->maNWFData.mbCheckBoxNeedsErase = true;
     ImplGetSVData()->maNWFData.mnStatusBarLowerRightOffset = 10;
-    ImplGetSVData()->maWinData.mbNoSaveBackground = true;
 
     return pInst;
 }
@@ -347,13 +348,13 @@ void DestroySalInstance( SalInstance* pInst )
 }
 
 AquaSalInstance::AquaSalInstance()
+ : maUserEventListMutex()
 {
     mpSalYieldMutex = new SalYieldMutex;
     mpSalYieldMutex->acquire();
     ::comphelper::SolarMutex::setSolarMutex( mpSalYieldMutex );
     maMainThread = osl::Thread::getCurrentIdentifier();
     mbWaitingYield = false;
-    maUserEventListMutex = osl_createMutex();
     mnActivePrintJobs = 0;
     maWaitingYieldCond = osl_createCondition();
 }
@@ -363,7 +364,6 @@ AquaSalInstance::~AquaSalInstance()
     ::comphelper::SolarMutex::setSolarMutex( nullptr );
     mpSalYieldMutex->release();
     delete mpSalYieldMutex;
-    osl_destroyMutex( maUserEventListMutex );
     osl_destroyCondition( maWaitingYieldCond );
 }
 
@@ -387,12 +387,12 @@ void AquaSalInstance::wakeupYield()
     }
 }
 
-void AquaSalInstance::PostUserEvent( AquaSalFrame* pFrame, sal_uInt16 nType, void* pData )
+void AquaSalInstance::PostUserEvent( AquaSalFrame* pFrame, SalEvent nType, void* pData )
 {
-    osl_acquireMutex( maUserEventListMutex );
-    maUserEvents.push_back( SalUserEvent( pFrame, pData, nType ) );
-    osl_releaseMutex( maUserEventListMutex );
-
+    {
+        osl::MutexGuard g( maUserEventListMutex );
+        maUserEvents.push_back( SalUserEvent( pFrame, pData, nType ) );
+    }
     // notify main loop that an event has arrived
     wakeupYield();
 }
@@ -580,17 +580,17 @@ SalYieldResult AquaSalInstance::DoYield(bool bWait, bool bHandleAllCurrentEvents
         sal_uLong nCount = ReleaseYieldMutex();
 
         // get one user event
-        osl_acquireMutex( maUserEventListMutex );
-        SalUserEvent aEvent( nullptr, nullptr, 0 );
-        if( ! maUserEvents.empty() )
+        SalUserEvent aEvent( nullptr, nullptr, SalEvent::NONE );
         {
-            aEvent = maUserEvents.front();
-            maUserEvents.pop_front();
+            osl::MutexGuard g( maUserEventListMutex );
+            if( ! maUserEvents.empty() )
+            {
+                aEvent = maUserEvents.front();
+                maUserEvents.pop_front();
+            }
+            else
+                bDispatchUser = false;
         }
-        else
-            bDispatchUser = false;
-        osl_releaseMutex( maUserEventListMutex );
-
         AcquireYieldMutex( nCount );
 
         // dispatch it
@@ -972,6 +972,23 @@ SalBitmap* AquaSalInstance::CreateSalBitmap()
 SalSession* AquaSalInstance::CreateSalSession()
 {
     return nullptr;
+}
+
+OUString AquaSalInstance::getOSVersion()
+{
+    NSString * versionString = nullptr;
+    NSString * sysVersionDictionaryPath = @"/System/Library/CoreServices/SystemVersion.plist";
+    NSDictionary * sysVersionDict = [ NSDictionary dictionaryWithContentsOfFile: sysVersionDictionaryPath ];
+    if ( sysVersionDict )
+        versionString = [ sysVersionDict valueForKey: @"ProductVersion" ];
+
+    OUString aVersion = "Mac OS X ";
+    if ( versionString )
+        aVersion += OUString::fromUtf8( [ versionString UTF8String ] );
+    else
+        aVersion += "(unknown)";
+
+    return aVersion;
 }
 
 class MacImeStatus : public SalI18NImeStatus

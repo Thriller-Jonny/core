@@ -81,13 +81,10 @@ sdr::contact::ViewContact* SdrTextObj::CreateObjectSpecificViewContact()
 }
 
 
-
-
 SdrTextObj::SdrTextObj()
 :   SdrAttrObj(),
     mpText(nullptr),
     pEdtOutl(nullptr),
-    pFormTextBoundRect(nullptr),
     eTextKind(OBJ_TEXT)
 {
     bTextSizeDirty=false;
@@ -116,7 +113,6 @@ SdrTextObj::SdrTextObj(const Rectangle& rNewRect)
     maRect(rNewRect),
     mpText(nullptr),
     pEdtOutl(nullptr),
-    pFormTextBoundRect(nullptr),
     eTextKind(OBJ_TEXT)
 {
     bTextSizeDirty=false;
@@ -145,7 +141,6 @@ SdrTextObj::SdrTextObj(SdrObjKind eNewTextKind)
 :   SdrAttrObj(),
     mpText(nullptr),
     pEdtOutl(nullptr),
-    pFormTextBoundRect(nullptr),
     eTextKind(eNewTextKind)
 {
     bTextSizeDirty=false;
@@ -174,7 +169,6 @@ SdrTextObj::SdrTextObj(SdrObjKind eNewTextKind, const Rectangle& rNewRect)
     maRect(rNewRect),
     mpText(nullptr),
     pEdtOutl(nullptr),
-    pFormTextBoundRect(nullptr),
     eTextKind(eNewTextKind)
 {
     bTextSizeDirty=false;
@@ -209,8 +203,6 @@ SdrTextObj::~SdrTextObj()
     }
 
     delete mpText;
-
-    delete pFormTextBoundRect;
 
     ImpLinkAbmeldung();
 }
@@ -551,10 +543,9 @@ void SdrTextObj::SetModel(SdrModel* pNewModel)
     }
 }
 
-bool SdrTextObj::NbcSetEckenradius(long nRad)
+void SdrTextObj::NbcSetEckenradius(long nRad)
 {
     SetObjectItem(makeSdrEckenradiusItem(nRad));
-    return true;
 }
 
 // #115391# This implementation is based on the object size (aRect) and the
@@ -916,10 +907,10 @@ void SdrTextObj::ImpSetCharStretching(SdrOutliner& rOutliner, const Size& rTextS
         vcl::Font aFontMerk(pOut->GetFont());
         vcl::Font aTmpFont( OutputDevice::GetDefaultFont( DefaultFontType::SERIF, LANGUAGE_SYSTEM, GetDefaultFontFlags::OnlyOne ) );
 
-        aTmpFont.SetSize(Size(0,100));
+        aTmpFont.SetFontSize(Size(0,100));
         pOut->SetFont(aTmpFont);
         Size aSize1(pOut->GetTextWidth(aTestString), pOut->GetTextHeight());
-        aTmpFont.SetSize(Size(800,100));
+        aTmpFont.SetFontSize(Size(800,100));
         pOut->SetFont(aTmpFont);
         Size aSize2(pOut->GetTextWidth(aTestString), pOut->GetTextHeight());
         pOut->SetFont(aFontMerk);
@@ -929,7 +920,7 @@ void SdrTextObj::ImpSetCharStretching(SdrOutliner& rOutliner, const Size& rTextS
 
         bNoStretching = (aSize1 == aSize2);
 
-#ifdef WNT
+#ifdef _WIN32
         // Windows zooms the font proportionally when using Size(100,500),
         // we don't like that.
         if(aSize2.Height() >= aSize1.Height() * 2)
@@ -1238,9 +1229,9 @@ void SdrTextObj::ImpCheckMasterCachable()
 void SdrTextObj::ImpInitDrawOutliner( SdrOutliner& rOutl ) const
 {
     rOutl.SetUpdateMode(false);
-    sal_uInt16 nOutlinerMode = OUTLINERMODE_OUTLINEOBJECT;
+    OutlinerMode nOutlinerMode = OutlinerMode::OutlineObject;
     if ( !IsOutlText() )
-        nOutlinerMode = OUTLINERMODE_TEXTOBJECT;
+        nOutlinerMode = OutlinerMode::TextObject;
     rOutl.Init( nOutlinerMode );
 
     rOutl.SetGlobalCharStretching();
@@ -1398,7 +1389,6 @@ void SdrTextObj::UpdateOutlinerFormatting( SdrOutliner& rOutl, Rectangle& rPaint
 }
 
 
-
 OutlinerParaObject* SdrTextObj::GetOutlinerParaObject() const
 {
     SdrText* pText = getActiveText();
@@ -1530,9 +1520,9 @@ void SdrTextObj::ForceOutlinerParaObject()
     SdrText* pText = getActiveText();
     if( pText && (pText->GetOutlinerParaObject() == nullptr) )
     {
-        sal_uInt16 nOutlMode = OUTLINERMODE_TEXTOBJECT;
+        OutlinerMode nOutlMode = OutlinerMode::TextObject;
         if( IsTextFrame() && eTextKind == OBJ_OUTLINETEXT )
-            nOutlMode = OUTLINERMODE_OUTLINEOBJECT;
+            nOutlMode = OutlinerMode::OutlineObject;
 
         pText->ForceOutlinerParaObject( nOutlMode );
     }
@@ -1634,7 +1624,6 @@ void SdrTextObj::SetVerticalWriting(bool bVertical)
         SetSnapRect(aObjectRect);
     }
 }
-
 
 
 // transformation interface for StarOfficeAPI. This implements support for
@@ -2209,7 +2198,6 @@ void SdrTextObj::SetObjectItemNoBroadcast(const SfxPoolItem& rItem)
 }
 
 
-
 // The concept of the text object:
 // ~~~~~~~~~~~~~~~~~~~~~~~~
 // Attributes/Variations:
@@ -2271,7 +2259,6 @@ void SdrTextObj::SetObjectItemNoBroadcast(const SfxPoolItem& rItem)
 // - ModelChanged (e. g. through a neighboring View or rulers) while editing
 // - FillColorChanged while editing
 // - and many more...
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

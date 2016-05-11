@@ -23,7 +23,6 @@
 #include <rtl/instance.hxx>
 
 
-
 namespace drawinglayer
 {
     namespace attribute
@@ -45,6 +44,13 @@ namespace drawinglayer
             :   maColor(rColor),
                 maDirection(rDirection),
                 mbSpecular(bSpecular)
+            {
+            }
+
+            ImpSdr3DLightAttribute()
+            :   maColor(),
+                maDirection(),
+                mbSpecular(false)
             {
             }
 
@@ -76,6 +82,11 @@ namespace drawinglayer
         {
         }
 
+        Sdr3DLightAttribute::Sdr3DLightAttribute()
+        :   mpSdr3DLightAttribute(theGlobalDefault::get())
+        {
+        }
+
         Sdr3DLightAttribute::Sdr3DLightAttribute(const Sdr3DLightAttribute& rCandidate)
         :   mpSdr3DLightAttribute(rCandidate.mpSdr3DLightAttribute)
         {
@@ -83,6 +94,11 @@ namespace drawinglayer
 
         Sdr3DLightAttribute::~Sdr3DLightAttribute()
         {
+        }
+
+        bool Sdr3DLightAttribute::isDefault() const
+        {
+            return mpSdr3DLightAttribute.same_object(theGlobalDefault::get());
         }
 
         Sdr3DLightAttribute& Sdr3DLightAttribute::operator=(const Sdr3DLightAttribute& rCandidate)

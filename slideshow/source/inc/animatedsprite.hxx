@@ -30,8 +30,7 @@
 #include "viewlayer.hxx"
 
 #include <boost/optional.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/noncopyable.hpp>
+#include <memory>
 
 
 /* Definition of AnimatedSprite class */
@@ -47,7 +46,7 @@ namespace slideshow
             and all the gory details of offset calculations and
             rounding prevention.
          */
-        class AnimatedSprite : private boost::noncopyable
+        class AnimatedSprite
         {
         public:
             /** Create a new AnimatedSprite, for the given metafile
@@ -68,16 +67,15 @@ namespace slideshow
             AnimatedSprite( const ViewLayerSharedPtr&   rViewLayer,
                             const ::basegfx::B2DSize&   rSpriteSizePixel,
                             double                      nSpritePrio );
+            AnimatedSprite(const AnimatedSprite&) = delete;
+            AnimatedSprite& operator=(const AnimatedSprite&) = delete;
 
             /** Resize the sprite.
 
                 @param rSpriteSizePixel
                 The new size in pixel
-
-                @return true, if the resize was successful. If false
-                is returned, the sprite might be invalid.
              */
-            bool resize( const ::basegfx::B2DSize& rSpriteSizePixel );
+            void resize( const ::basegfx::B2DSize& rSpriteSizePixel );
 
             /** Set an offset for the content output in pixel
 
@@ -157,7 +155,7 @@ namespace slideshow
             bool                                                        mbSpriteVisible;
         };
 
-        typedef ::boost::shared_ptr< AnimatedSprite > AnimatedSpriteSharedPtr;
+        typedef ::std::shared_ptr< AnimatedSprite > AnimatedSpriteSharedPtr;
 
     }
 }

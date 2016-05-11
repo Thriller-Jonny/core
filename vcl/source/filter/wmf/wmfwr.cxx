@@ -37,6 +37,7 @@
 #include <basegfx/polygon/b2dpolygon.hxx>
 #include <basegfx/polygon/b2dpolypolygon.hxx>
 #include <memory>
+#include <vcl/fontcharmap.hxx>
 
 // MS Windows defines
 
@@ -311,7 +312,7 @@ void WMFWriter::WMFRecord_CreateFontIndirect(const vcl::Font & rFont)
     sal_uInt8 nPitchFamily;
 
     WriteRecordHeader(0x00000000,W_META_CREATEFONTINDIRECT);
-    WriteHeightWidth(Size(rFont.GetSize().Width(),-rFont.GetSize().Height()));
+    WriteHeightWidth(Size(rFont.GetFontSize().Width(),-rFont.GetFontSize().Height()));
     pWMF->WriteInt16( rFont.GetOrientation() ).WriteInt16( rFont.GetOrientation() );
 
     switch (rFont.GetWeight()) {
@@ -330,7 +331,7 @@ void WMFWriter::WMFRecord_CreateFontIndirect(const vcl::Font & rFont)
     pWMF->WriteUInt16( nWeight );
 
     if (rFont.GetItalic()==ITALIC_NONE)       pWMF->WriteUChar( 0 ); else  pWMF->WriteUChar( 1 );
-    if (rFont.GetUnderline()==UNDERLINE_NONE) pWMF->WriteUChar( 0 ); else  pWMF->WriteUChar( 1 );
+    if (rFont.GetUnderline()==LINESTYLE_NONE) pWMF->WriteUChar( 0 ); else  pWMF->WriteUChar( 1 );
     if (rFont.GetStrikeout()==STRIKEOUT_NONE) pWMF->WriteUChar( 0 ); else  pWMF->WriteUChar( 1 );
 
     rtl_TextEncoding  eFontNameEncoding = rFont.GetCharSet();
@@ -348,7 +349,7 @@ void WMFWriter::WMFRecord_CreateFontIndirect(const vcl::Font & rFont)
         case PITCH_VARIABLE: nPitchFamily=W_VARIABLE_PITCH; break;
         default:             nPitchFamily=W_DEFAULT_PITCH;
     }
-    switch (rFont.GetFamily()) {
+    switch (rFont.GetFamilyType()) {
         case FAMILY_DECORATIVE: nPitchFamily|=W_FF_DECORATIVE; break;
         case FAMILY_MODERN:     nPitchFamily|=W_FF_MODERN;     break;
         case FAMILY_ROMAN:      nPitchFamily|=W_FF_ROMAN;      break;
@@ -358,7 +359,7 @@ void WMFWriter::WMFRecord_CreateFontIndirect(const vcl::Font & rFont)
     }
     pWMF->WriteUChar( nPitchFamily );
 
-    OString aFontName(OUStringToOString(rFont.GetName(), eFontNameEncoding));
+    OString aFontName(OUStringToOString(rFont.GetFamilyName(), eFontNameEncoding));
     for ( i = 0; i < W_LF_FACESIZE; i++ )
     {
         sal_Char nChar = ( i < aFontName.getLength() ) ? aFontName[i] : 0;
@@ -490,7 +491,7 @@ bool WMFWriter::WMFRecord_Escape_Unicode( const Point& rPoint, const OUString& r
                 }
             }
 
-            if ( ( i != nStringLen ) || IsStarSymbol( aSrcFont.GetName() ) )    // after conversion the characters are not original, so we
+            if ( ( i != nStringLen ) || IsStarSymbol( aSrcFont.GetFamilyName() ) )    // after conversion the characters are not original, so we
             {                                                                   // will store the unicode string and a polypoly replacement
                 Color aOldFillColor( aSrcFillColor );
                 Color aOldLineColor( aSrcLineColor );
@@ -801,7 +802,12 @@ void WMFWriter::WMFRecord_StretchDIB( const Point & rPoint, const Size & rSize,
         }
     }
 
-    pWMF->WriteUInt32( nROP ).             WriteInt16( 0 ).             WriteInt16( rBitmap.GetSizePixel().Height() ).             WriteInt16( rBitmap.GetSizePixel().Width() ).             WriteInt16( 0 ).             WriteInt16( 0 );
+    pWMF->WriteUInt32( nROP ).
+        WriteInt16( 0 ).
+        WriteInt16( rBitmap.GetSizePixel().Height() ).
+        WriteInt16( rBitmap.GetSizePixel().Width() ).
+        WriteInt16( 0 ).
+        WriteInt16( 0 );
 
     WriteHeightWidth(rSize);
     WritePointYX(rPoint);
@@ -945,18 +951,16 @@ void WMFWriter::SetAllAttr()
     if ( aDstFont != aSrcFont )
     {
         pVirDev->SetFont(aSrcFont);
-        if ( aDstFont.GetName() != aSrcFont.GetName() )
+        if ( aDstFont.GetFamilyName() != aSrcFont.GetFamilyName() )
         {
-            FontCharMapPtr pFontCharMap;
-            if ( pVirDev->GetFontCharMap( pFontCharMap ) )
+            FontCharMapPtr xFontCharMap;
+            if ( pVirDev->GetFontCharMap( xFontCharMap ) )
             {
-                if ( ( pFontCharMap->GetFirstChar() & 0xff00 ) == 0xf000 )
+                if ( ( xFontCharMap->GetFirstChar() & 0xff00 ) == 0xf000 )
                     aSrcFont.SetCharSet( RTL_TEXTENCODING_SYMBOL );
                 else if ( aSrcFont.GetCharSet() == RTL_TEXTENCODING_SYMBOL )
                     aSrcFont.SetCharSet( RTL_TEXTENCODING_MS_1252 );
             }
-
-            pFontCharMap = nullptr;
         }
 
         aDstFont = aSrcFont;
@@ -1453,9 +1457,9 @@ void WMFWriter::WriteRecords( const GDIMetaFile & rMTF )
                     {
                         aSrcFont.SetCharSet( RTL_TEXTENCODING_MS_1252 );
                     }
-                    eSrcTextAlign = aSrcFont.GetAlign();
+                    eSrcTextAlign = aSrcFont.GetAlignment();
                     aSrcTextColor = aSrcFont.GetColor();
-                    aSrcFont.SetAlign( ALIGN_BASELINE );
+                    aSrcFont.SetAlignment( ALIGN_BASELINE );
                     aSrcFont.SetColor( COL_WHITE );
                 }
                 break;
@@ -1575,10 +1579,12 @@ void WMFWriter::WriteRecords( const GDIMetaFile & rMTF )
                     if( fScaleX != 1.0 || fScaleY != 1.0 )
                     {
                         aTmpMtf.Scale( fScaleX, fScaleY );
-                        aSrcPt.X() = FRound( aSrcPt.X() * fScaleX ), aSrcPt.Y() = FRound( aSrcPt.Y() * fScaleY );
+                        aSrcPt.X() = FRound( aSrcPt.X() * fScaleX );
+                        aSrcPt.Y() = FRound( aSrcPt.Y() * fScaleY );
                     }
 
-                    nMoveX = aDestPt.X() - aSrcPt.X(), nMoveY = aDestPt.Y() - aSrcPt.Y();
+                    nMoveX = aDestPt.X() - aSrcPt.X();
+                    nMoveY = aDestPt.Y() - aSrcPt.Y();
 
                     if( nMoveX || nMoveY )
                         aTmpMtf.Move( nMoveX, nMoveY );
@@ -1788,7 +1794,7 @@ bool WMFWriter::WriteWMF( const GDIMetaFile& rMTF, SvStream& rTargetStream,
     vcl::Font aFont;
     aFont.SetCharSet( GetExtendedTextEncoding( RTL_TEXTENCODING_MS_1252 ) );
     aFont.SetColor( Color( COL_WHITE ) );
-    aFont.SetAlign( ALIGN_BASELINE );
+    aFont.SetAlignment( ALIGN_BASELINE );
     aDstFont = aSrcFont = aFont;
     CreateSelectDeleteFont(aDstFont);
 

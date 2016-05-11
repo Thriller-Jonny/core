@@ -191,7 +191,6 @@ static void lcl_Highlight(const OUString& rSource, TextPortions& aPortionList)
                     aTextPortion.eType = eFoundType;
                     aPortionList.push_back( aTextPortion );
                     nInsert++;
-                    eFoundType = svtools::HTMLUNKNOWN;
                 }
 
             }
@@ -744,26 +743,28 @@ void SwSrcEditWindow::ImpDoHighlight( const OUString& rSource, sal_uInt16 nLineO
 
 void SwSrcEditWindow::Notify( SfxBroadcaster& /*rBC*/, const SfxHint& rHint )
 {
-    if ( dynamic_cast<const TextHint*>(&rHint) )
+    if ( !dynamic_cast<const TextHint*>(&rHint) )
+        return;
+
+    const TextHint& rTextHint = static_cast<const TextHint&>(rHint);
+    switch (rTextHint.GetId())
     {
-        const TextHint& rTextHint = static_cast<const TextHint&>(rHint);
-        if( rTextHint.GetId() == TEXT_HINT_VIEWSCROLLED )
-        {
+        case TEXT_HINT_VIEWSCROLLED:
             pHScrollbar->SetThumbPos( pTextView->GetStartDocPos().X() );
             pVScrollbar->SetThumbPos( pTextView->GetStartDocPos().Y() );
-        }
-        else if( rTextHint.GetId() == TEXT_HINT_TEXTHEIGHTCHANGED )
-        {
+            break;
+
+        case TEXT_HINT_TEXTHEIGHTCHANGED:
             if ( pTextEngine->GetTextHeight() < pOutWin->GetOutputSizePixel().Height() )
                 pTextView->Scroll( 0, pTextView->GetStartDocPos().Y() );
             pVScrollbar->SetThumbPos( pTextView->GetStartDocPos().Y() );
             SetScrollBarRanges();
-        }
-        else if( ( rTextHint.GetId() == TEXT_HINT_PARAINSERTED ) ||
-                 ( rTextHint.GetId() == TEXT_HINT_PARACONTENTCHANGED ) )
-        {
+            break;
+
+        case TEXT_HINT_PARAINSERTED:
+        case TEXT_HINT_PARACONTENTCHANGED:
             DoDelayedSyntaxHighlight( (sal_uInt16)rTextHint.GetValue() );
-        }
+            break;
     }
 }
 
@@ -981,20 +982,20 @@ void SwSrcEditWindow::SetFont()
         else
             aFont = OutputDevice::GetDefaultFont(DefaultFontType::SANS_UNICODE,
                         Application::GetSettings().GetLanguageTag().getLanguageType(), GetDefaultFontFlags::NONE, this);
-        sFontName = aFont.GetName();
+        sFontName = aFont.GetFamilyName();
     }
     const SvxFontListItem* pFontListItem =
         static_cast<const SvxFontListItem* >(pSrcView->GetDocShell()->GetItem( SID_ATTR_CHAR_FONTLIST ));
     const FontList*  pList = pFontListItem->GetFontList();
-    vcl::FontInfo aInfo = pList->Get(sFontName,WEIGHT_NORMAL, ITALIC_NONE);
+    FontMetric aFontMetric = pList->Get(sFontName,WEIGHT_NORMAL, ITALIC_NONE);
 
     const vcl::Font& rFont = GetTextEngine()->GetFont();
-    vcl::Font aFont(aInfo);
-    Size aSize(rFont.GetSize());
+    vcl::Font aFont(aFontMetric);
+    Size aSize(rFont.GetFontSize());
     //font height is stored in point and set in twip
     aSize.Height() =
         officecfg::Office::Common::Font::SourceViewFont::FontHeight::get() * 20;
-    aFont.SetSize(pOutWin->LogicToPixel(aSize, MAP_TWIP));
+    aFont.SetFontSize(pOutWin->LogicToPixel(aSize, MAP_TWIP));
     GetTextEngine()->SetFont( aFont );
     pOutWin->SetFont(aFont);
 }

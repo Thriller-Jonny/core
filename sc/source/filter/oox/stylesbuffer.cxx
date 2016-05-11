@@ -64,6 +64,9 @@
 #include <oox/helper/containerhelper.hxx>
 #include <oox/helper/propertymap.hxx>
 #include <oox/helper/propertyset.hxx>
+#include <oox/token/namespaces.hxx>
+#include <oox/token/properties.hxx>
+#include <oox/token/tokens.hxx>
 #include "biffinputstream.hxx"
 #include "condformatbuffer.hxx"
 #include "excelhandlers.hxx"
@@ -92,7 +95,6 @@ using namespace ::com::sun::star::table;
 using namespace ::com::sun::star::text;
 using namespace ::com::sun::star::uno;
 
-using ::oox::core::FilterBase;
 
 namespace {
 
@@ -400,17 +402,17 @@ ColorPalette::ColorPalette( const WorkbookHelper& rHelper )
     switch( getFilterType() )
     {
         case FILTER_OOXML:
-            maColors.insert( maColors.begin(), spnDefColors8, STATIC_ARRAY_END( spnDefColors8 ) );
+            maColors.insert( maColors.begin(), spnDefColors8, ::std::end(spnDefColors8) );
             mnAppendIndex = OOX_COLOR_USEROFFSET;
         break;
         case FILTER_BIFF:
             switch( getBiff() )
             {
-                case BIFF2: maColors.insert( maColors.begin(), spnDefColors2, STATIC_ARRAY_END( spnDefColors2 ) );  break;
+                case BIFF2: maColors.insert( maColors.begin(), spnDefColors2, ::std::end(spnDefColors2) );  break;
                 case BIFF3:
-                case BIFF4: maColors.insert( maColors.begin(), spnDefColors3, STATIC_ARRAY_END( spnDefColors3 ) );  break;
-                case BIFF5: maColors.insert( maColors.begin(), spnDefColors5, STATIC_ARRAY_END( spnDefColors5 ) );  break;
-                case BIFF8: maColors.insert( maColors.begin(), spnDefColors8, STATIC_ARRAY_END( spnDefColors8 ) );  break;
+                case BIFF4: maColors.insert( maColors.begin(), spnDefColors3, ::std::end(spnDefColors3) );  break;
+                case BIFF5: maColors.insert( maColors.begin(), spnDefColors5, ::std::end(spnDefColors5) );  break;
+                case BIFF8: maColors.insert( maColors.begin(), spnDefColors8, ::std::end(spnDefColors8) );  break;
                 case BIFF_UNKNOWN: break;
             }
             mnAppendIndex = BIFF_COLOR_USEROFFSET;
@@ -569,8 +571,8 @@ ApiFontData::ApiFontData() :
         css::awt::FontUnderline::NONE,
         css::awt::FontStrikeout::NONE,
         0.0,
-        sal_False,
-        sal_False,
+        false,
+        false,
         css::awt::FontType::DONTKNOW ),
     mnColor( API_RGB_TRANSPARENT ),
     mnEscapement( API_ESCAPE_NONE ),
@@ -769,20 +771,18 @@ void Font::importDxfFlag( sal_Int32 nElement, SequenceInputStream& rStrm )
 
 void Font::finalizeImport()
 {
-    namespace cssawt = ::com::sun::star::awt;
-
     // font name
     maApiData.maDesc.Name = maModel.maName;
 
     // font family
     switch( maModel.mnFamily )
     {
-        case OOX_FONTFAMILY_NONE:           maApiData.maDesc.Family = cssawt::FontFamily::DONTKNOW;     break;
-        case OOX_FONTFAMILY_ROMAN:          maApiData.maDesc.Family = cssawt::FontFamily::ROMAN;        break;
-        case OOX_FONTFAMILY_SWISS:          maApiData.maDesc.Family = cssawt::FontFamily::SWISS;        break;
-        case OOX_FONTFAMILY_MODERN:         maApiData.maDesc.Family = cssawt::FontFamily::MODERN;       break;
-        case OOX_FONTFAMILY_SCRIPT:         maApiData.maDesc.Family = cssawt::FontFamily::SCRIPT;       break;
-        case OOX_FONTFAMILY_DECORATIVE:     maApiData.maDesc.Family = cssawt::FontFamily::DECORATIVE;   break;
+        case OOX_FONTFAMILY_NONE:           maApiData.maDesc.Family = css::awt::FontFamily::DONTKNOW;     break;
+        case OOX_FONTFAMILY_ROMAN:          maApiData.maDesc.Family = css::awt::FontFamily::ROMAN;        break;
+        case OOX_FONTFAMILY_SWISS:          maApiData.maDesc.Family = css::awt::FontFamily::SWISS;        break;
+        case OOX_FONTFAMILY_MODERN:         maApiData.maDesc.Family = css::awt::FontFamily::MODERN;       break;
+        case OOX_FONTFAMILY_SCRIPT:         maApiData.maDesc.Family = css::awt::FontFamily::SCRIPT;       break;
+        case OOX_FONTFAMILY_DECORATIVE:     maApiData.maDesc.Family = css::awt::FontFamily::DECORATIVE;   break;
     }
 
     // character set (API font descriptor uses rtl_TextEncoding in member CharSet!)
@@ -793,20 +793,20 @@ void Font::finalizeImport()
     // color, height, weight, slant, strikeout, outline, shadow
     maApiData.mnColor          = maModel.maColor.getColor( getBaseFilter().getGraphicHelper() );
     maApiData.maDesc.Height    = static_cast< sal_Int16 >( maModel.mfHeight * 20.0 );
-    maApiData.maDesc.Weight    = maModel.mbBold ? cssawt::FontWeight::BOLD : cssawt::FontWeight::NORMAL;
-    maApiData.maDesc.Slant     = maModel.mbItalic ? cssawt::FontSlant_ITALIC : cssawt::FontSlant_NONE;
-    maApiData.maDesc.Strikeout = maModel.mbStrikeout ? cssawt::FontStrikeout::SINGLE : cssawt::FontStrikeout::NONE;
+    maApiData.maDesc.Weight    = maModel.mbBold ? css::awt::FontWeight::BOLD : css::awt::FontWeight::NORMAL;
+    maApiData.maDesc.Slant     = maModel.mbItalic ? css::awt::FontSlant_ITALIC : css::awt::FontSlant_NONE;
+    maApiData.maDesc.Strikeout = maModel.mbStrikeout ? css::awt::FontStrikeout::SINGLE : css::awt::FontStrikeout::NONE;
     maApiData.mbOutline        = maModel.mbOutline;
     maApiData.mbShadow         = maModel.mbShadow;
 
     // underline
     switch( maModel.mnUnderline )
     {
-        case XML_double:            maApiData.maDesc.Underline = cssawt::FontUnderline::DOUBLE; break;
-        case XML_doubleAccounting:  maApiData.maDesc.Underline = cssawt::FontUnderline::DOUBLE; break;
-        case XML_none:              maApiData.maDesc.Underline = cssawt::FontUnderline::NONE;   break;
-        case XML_single:            maApiData.maDesc.Underline = cssawt::FontUnderline::SINGLE; break;
-        case XML_singleAccounting:  maApiData.maDesc.Underline = cssawt::FontUnderline::SINGLE; break;
+        case XML_double:            maApiData.maDesc.Underline = css::awt::FontUnderline::DOUBLE; break;
+        case XML_doubleAccounting:  maApiData.maDesc.Underline = css::awt::FontUnderline::DOUBLE; break;
+        case XML_none:              maApiData.maDesc.Underline = css::awt::FontUnderline::NONE;   break;
+        case XML_single:            maApiData.maDesc.Underline = css::awt::FontUnderline::SINGLE; break;
+        case XML_singleAccounting:  maApiData.maDesc.Underline = css::awt::FontUnderline::SINGLE; break;
     }
 
     // escapement
@@ -878,29 +878,28 @@ bool Font::needsRichTextFormat() const
 {
     return maApiData.mnEscapement != API_ESCAPE_NONE;
 }
+
 ::FontFamily lcl_getFontFamily( sal_Int32 nFamily )
 {
-    namespace cssawt = ::com::sun::star::awt;
-
     ::FontFamily eScFamily = FAMILY_DONTKNOW;
     switch( nFamily )
     {
-        case cssawt::FontFamily::DONTKNOW:
+        case css::awt::FontFamily::DONTKNOW:
             eScFamily = FAMILY_DONTKNOW;
             break;
-        case cssawt::FontFamily::ROMAN:
+        case css::awt::FontFamily::ROMAN:
             eScFamily = FAMILY_ROMAN;
             break;
-        case cssawt::FontFamily::SWISS:
+        case css::awt::FontFamily::SWISS:
             eScFamily = FAMILY_SWISS;
             break;
-        case cssawt::FontFamily::MODERN:
+        case css::awt::FontFamily::MODERN:
             eScFamily = FAMILY_MODERN;
             break;
-        case cssawt::FontFamily::SCRIPT:
+        case css::awt::FontFamily::SCRIPT:
             eScFamily = FAMILY_SCRIPT;
             break;
-        case cssawt::FontFamily::DECORATIVE:
+        case css::awt::FontFamily::DECORATIVE:
             eScFamily = FAMILY_DECORATIVE;
             break;
     }
@@ -909,7 +908,6 @@ bool Font::needsRichTextFormat() const
 
 void Font::fillToItemSet( SfxItemSet& rItemSet, bool bEditEngineText, bool bSkipPoolDefs ) const
 {
-    namespace cssawt = ::com::sun::star::awt;
     if ( maUsedFlags.mbNameUsed )
     {
         if( !maApiData.maLatinFont.maName.isEmpty() )
@@ -968,7 +966,7 @@ void Font::fillToItemSet( SfxItemSet& rItemSet, bool bEditEngineText, bool bSkip
     // font posture
     if( maUsedFlags.mbPostureUsed )
     {
-        SvxPostureItem aPostItem( ( maApiData.maDesc.Slant == cssawt::FontSlant_ITALIC ) ? ITALIC_NORMAL :  ITALIC_NONE,  ATTR_FONT_POSTURE);
+        SvxPostureItem aPostItem( ( maApiData.maDesc.Slant == css::awt::FontSlant_ITALIC ) ? ITALIC_NORMAL :  ITALIC_NONE,  ATTR_FONT_POSTURE);
         ScfTools::PutItem( rItemSet, aPostItem, bEditEngineText ? EE_CHAR_ITALIC : ATTR_FONT_POSTURE, bSkipPoolDefs );
         ScfTools::PutItem( rItemSet, aPostItem, bEditEngineText ? EE_CHAR_ITALIC_CJK : ATTR_CJK_FONT_POSTURE, bSkipPoolDefs );
         ScfTools::PutItem( rItemSet, aPostItem, bEditEngineText ? EE_CHAR_ITALIC_CTL : ATTR_CTL_FONT_POSTURE, bSkipPoolDefs );
@@ -981,13 +979,13 @@ void Font::fillToItemSet( SfxItemSet& rItemSet, bool bEditEngineText, bool bSkip
     // underline style
     if( maUsedFlags.mbUnderlineUsed )
     {
-        ::FontUnderline eScUnderl;
-        if ( maApiData.maDesc.Underline == cssawt::FontUnderline::DOUBLE )
-            eScUnderl = UNDERLINE_DOUBLE;
-        else if ( maApiData.maDesc.Underline == cssawt::FontUnderline::SINGLE )
-            eScUnderl = UNDERLINE_SINGLE;
+        FontLineStyle eScUnderl;
+        if ( maApiData.maDesc.Underline == css::awt::FontUnderline::DOUBLE )
+            eScUnderl = LINESTYLE_DOUBLE;
+        else if ( maApiData.maDesc.Underline == css::awt::FontUnderline::SINGLE )
+            eScUnderl = LINESTYLE_SINGLE;
         else
-            eScUnderl = UNDERLINE_NONE;
+            eScUnderl = LINESTYLE_NONE;
         SvxUnderlineItem aUnderlItem( eScUnderl, ATTR_FONT_UNDERLINE );
         ScfTools::PutItem( rItemSet, aUnderlItem, bEditEngineText ? EE_CHAR_UNDERLINE : ATTR_FONT_UNDERLINE, bSkipPoolDefs );
     }
@@ -1188,37 +1186,34 @@ void Alignment::setBiff12Data( sal_uInt32 nFlags )
 
 void Alignment::finalizeImport()
 {
-    namespace csstab = ::com::sun::star::table;
-    namespace csstxt = ::com::sun::star::text;
-
     // horizontal alignment
     switch( maModel.mnHorAlign )
     {
-        case XML_center:            maApiData.meHorJustify = csstab::CellHoriJustify_CENTER;    break;
-        case XML_centerContinuous:  maApiData.meHorJustify = csstab::CellHoriJustify_CENTER;    break;
-        case XML_distributed:       maApiData.meHorJustify = csstab::CellHoriJustify_BLOCK;     break;
-        case XML_fill:              maApiData.meHorJustify = csstab::CellHoriJustify_REPEAT;    break;
-        case XML_general:           maApiData.meHorJustify = csstab::CellHoriJustify_STANDARD;  break;
-        case XML_justify:           maApiData.meHorJustify = csstab::CellHoriJustify_BLOCK;     break;
-        case XML_left:              maApiData.meHorJustify = csstab::CellHoriJustify_LEFT;      break;
-        case XML_right:             maApiData.meHorJustify = csstab::CellHoriJustify_RIGHT;     break;
+        case XML_center:            maApiData.meHorJustify = css::table::CellHoriJustify_CENTER;    break;
+        case XML_centerContinuous:  maApiData.meHorJustify = css::table::CellHoriJustify_CENTER;    break;
+        case XML_distributed:       maApiData.meHorJustify = css::table::CellHoriJustify_BLOCK;     break;
+        case XML_fill:              maApiData.meHorJustify = css::table::CellHoriJustify_REPEAT;    break;
+        case XML_general:           maApiData.meHorJustify = css::table::CellHoriJustify_STANDARD;  break;
+        case XML_justify:           maApiData.meHorJustify = css::table::CellHoriJustify_BLOCK;     break;
+        case XML_left:              maApiData.meHorJustify = css::table::CellHoriJustify_LEFT;      break;
+        case XML_right:             maApiData.meHorJustify = css::table::CellHoriJustify_RIGHT;     break;
     }
 
     if (maModel.mnHorAlign == XML_distributed)
-        maApiData.mnHorJustifyMethod = csstab::CellJustifyMethod::DISTRIBUTE;
+        maApiData.mnHorJustifyMethod = css::table::CellJustifyMethod::DISTRIBUTE;
 
     // vertical alignment
     switch( maModel.mnVerAlign )
     {
-        case XML_bottom:        maApiData.mnVerJustify = csstab::CellVertJustify2::BOTTOM;    break;
-        case XML_center:        maApiData.mnVerJustify = csstab::CellVertJustify2::CENTER;    break;
-        case XML_distributed:   maApiData.mnVerJustify = csstab::CellVertJustify2::BLOCK;     break;
-        case XML_justify:       maApiData.mnVerJustify = csstab::CellVertJustify2::BLOCK;     break;
-        case XML_top:           maApiData.mnVerJustify = csstab::CellVertJustify2::TOP;       break;
+        case XML_bottom:        maApiData.mnVerJustify = css::table::CellVertJustify2::BOTTOM;    break;
+        case XML_center:        maApiData.mnVerJustify = css::table::CellVertJustify2::CENTER;    break;
+        case XML_distributed:   maApiData.mnVerJustify = css::table::CellVertJustify2::BLOCK;     break;
+        case XML_justify:       maApiData.mnVerJustify = css::table::CellVertJustify2::BLOCK;     break;
+        case XML_top:           maApiData.mnVerJustify = css::table::CellVertJustify2::TOP;       break;
     }
 
     if (maModel.mnVerAlign == XML_distributed)
-        maApiData.mnVerJustifyMethod = csstab::CellJustifyMethod::DISTRIBUTE;
+        maApiData.mnVerJustifyMethod = css::table::CellJustifyMethod::DISTRIBUTE;
 
     /*  indentation: expressed as number of blocks of 3 space characters in
         OOXML/BIFF12, and as multiple of 10 points in BIFF8. */
@@ -1235,9 +1230,9 @@ void Alignment::finalizeImport()
     // complex text direction
     switch( maModel.mnTextDir )
     {
-        case OOX_XF_TEXTDIR_CONTEXT:    maApiData.mnWritingMode = csstxt::WritingMode2::PAGE;   break;
-        case OOX_XF_TEXTDIR_LTR:        maApiData.mnWritingMode = csstxt::WritingMode2::LR_TB;  break;
-        case OOX_XF_TEXTDIR_RTL:        maApiData.mnWritingMode = csstxt::WritingMode2::RL_TB;  break;
+        case OOX_XF_TEXTDIR_CONTEXT:    maApiData.mnWritingMode = css::text::WritingMode2::PAGE;   break;
+        case OOX_XF_TEXTDIR_LTR:        maApiData.mnWritingMode = css::text::WritingMode2::LR_TB;  break;
+        case OOX_XF_TEXTDIR_RTL:        maApiData.mnWritingMode = css::text::WritingMode2::RL_TB;  break;
     }
 
     // rotation: 0-90 means 0 to 90 degrees ccw, 91-180 means 1 to 90 degrees cw, 255 means stacked
@@ -1248,7 +1243,7 @@ void Alignment::finalizeImport()
 
     // "Orientation" property used for character stacking
     maApiData.meOrientation = (nOoxRot == OOX_XF_ROTATION_STACKED) ?
-        csstab::CellOrientation_STACKED : csstab::CellOrientation_STANDARD;
+        css::table::CellOrientation_STACKED : css::table::CellOrientation_STANDARD;
 
     // alignment flags (#i84960 automatic line break, if vertically justified/distributed)
     maApiData.mbWrapText = maModel.mbWrapText || (maModel.mnVerAlign == XML_distributed) || (maModel.mnVerAlign == XML_justify);
@@ -1258,23 +1253,22 @@ void Alignment::finalizeImport()
 
 ::SvxCellVerJustify Alignment::GetScVerAlign() const
 {
-    namespace csstab = ::com::sun::star::table;
     ::SvxCellVerJustify nVert = ::SVX_VER_JUSTIFY_STANDARD;
     switch ( maApiData.mnVerJustify )
     {
-        case csstab::CellVertJustify2::BOTTOM:
+        case css::table::CellVertJustify2::BOTTOM:
             nVert = ::SVX_VER_JUSTIFY_BOTTOM;
             break;
-        case csstab::CellVertJustify2::CENTER:
+        case css::table::CellVertJustify2::CENTER:
             nVert = ::SVX_VER_JUSTIFY_CENTER;
             break;
-        case csstab::CellVertJustify2::TOP:
+        case css::table::CellVertJustify2::TOP:
             nVert = ::SVX_VER_JUSTIFY_TOP;
             break;
-        case csstab::CellVertJustify2::BLOCK:
+        case css::table::CellVertJustify2::BLOCK:
             nVert = ::SVX_VER_JUSTIFY_BLOCK;
             break;
-        case csstab::CellVertJustify2::STANDARD:
+        case css::table::CellVertJustify2::STANDARD:
         default:
             nVert = ::SVX_VER_JUSTIFY_STANDARD;
             break;
@@ -1284,26 +1278,25 @@ void Alignment::finalizeImport()
 
 ::SvxCellHorJustify Alignment::GetScHorAlign() const
 {
-    namespace csstab = ::com::sun::star::table;
     ::SvxCellHorJustify nHori = ::SVX_HOR_JUSTIFY_STANDARD;
     switch( maApiData.meHorJustify )
     {
-        case csstab::CellHoriJustify_LEFT:
+        case css::table::CellHoriJustify_LEFT:
             nHori = ::SVX_HOR_JUSTIFY_LEFT;
             break;
-        case csstab::CellHoriJustify_CENTER:
+        case css::table::CellHoriJustify_CENTER:
             nHori = ::SVX_HOR_JUSTIFY_CENTER;
             break;
-        case csstab::CellHoriJustify_RIGHT:
+        case css::table::CellHoriJustify_RIGHT:
             nHori = ::SVX_HOR_JUSTIFY_RIGHT;
             break;
-        case csstab::CellHoriJustify_BLOCK:
+        case css::table::CellHoriJustify_BLOCK:
             nHori = ::SVX_HOR_JUSTIFY_BLOCK;
             break;
-        case csstab::CellHoriJustify_REPEAT:
+        case css::table::CellHoriJustify_REPEAT:
             nHori = ::SVX_HOR_JUSTIFY_REPEAT;
             break;
-        case csstab::CellHoriJustify_STANDARD:
+        case css::table::CellHoriJustify_STANDARD:
         default:
             nHori = ::SVX_HOR_JUSTIFY_STANDARD;
             break;
@@ -1313,17 +1306,16 @@ void Alignment::finalizeImport()
 
 ::SvxFrameDirection Alignment::GetScFrameDir() const
 {
-    namespace csstxt = css::text;
     ::SvxFrameDirection eFrameDir = ::FRMDIR_ENVIRONMENT;
     switch( maApiData.mnWritingMode )
     {
-        case csstxt::WritingMode2::PAGE:
+        case css::text::WritingMode2::PAGE:
             eFrameDir = ::FRMDIR_ENVIRONMENT;
             break;
-        case csstxt::WritingMode2::LR_TB:
+        case css::text::WritingMode2::LR_TB:
             eFrameDir = ::FRMDIR_HORI_LEFT_TOP;
             break;
-        case csstxt::WritingMode2::RL_TB:
+        case css::text::WritingMode2::RL_TB:
             eFrameDir = ::FRMDIR_HORI_RIGHT_TOP;
             break;
         default:
@@ -1334,20 +1326,19 @@ void Alignment::finalizeImport()
 
 void Alignment::fillToItemSet( SfxItemSet& rItemSet, bool bSkipPoolDefs ) const
 {
-    namespace csstab = ::com::sun::star::table;
     // horizontal alignment
     ScfTools::PutItem( rItemSet, SvxHorJustifyItem( GetScHorAlign(), ATTR_HOR_JUSTIFY ), bSkipPoolDefs );
-    ScfTools::PutItem( rItemSet, SvxJustifyMethodItem( ( maApiData.mnHorJustifyMethod == csstab::CellJustifyMethod::DISTRIBUTE ) ? ::SVX_JUSTIFY_METHOD_DISTRIBUTE : ::SVX_JUSTIFY_METHOD_AUTO, ATTR_HOR_JUSTIFY_METHOD ), bSkipPoolDefs );
+    ScfTools::PutItem( rItemSet, SvxJustifyMethodItem( ( maApiData.mnHorJustifyMethod == css::table::CellJustifyMethod::DISTRIBUTE ) ? ::SVX_JUSTIFY_METHOD_DISTRIBUTE : ::SVX_JUSTIFY_METHOD_AUTO, ATTR_HOR_JUSTIFY_METHOD ), bSkipPoolDefs );
     ScfTools::PutItem( rItemSet, SvxVerJustifyItem( GetScVerAlign(), ATTR_VER_JUSTIFY ), bSkipPoolDefs );
     // vertical alignment
-    ScfTools::PutItem( rItemSet, SvxJustifyMethodItem( ( maApiData.mnVerJustifyMethod == csstab::CellJustifyMethod::DISTRIBUTE ) ? ::SVX_JUSTIFY_METHOD_DISTRIBUTE : ::SVX_JUSTIFY_METHOD_AUTO, ATTR_VER_JUSTIFY_METHOD ), bSkipPoolDefs );
+    ScfTools::PutItem( rItemSet, SvxJustifyMethodItem( ( maApiData.mnVerJustifyMethod == css::table::CellJustifyMethod::DISTRIBUTE ) ? ::SVX_JUSTIFY_METHOD_DISTRIBUTE : ::SVX_JUSTIFY_METHOD_AUTO, ATTR_VER_JUSTIFY_METHOD ), bSkipPoolDefs );
 
     // CTL text direction
     ScfTools::PutItem( rItemSet, SvxFrameDirectionItem( GetScFrameDir(), ATTR_WRITINGDIR ), bSkipPoolDefs );
     // set an angle in the range from -90 to 90 degrees
     ScfTools::PutItem( rItemSet, SfxInt32Item( ATTR_ROTATE_VALUE, maApiData.mnRotation ), bSkipPoolDefs );
     // Orientation
-    ScfTools::PutItem( rItemSet, SfxBoolItem( ATTR_STACKED, maApiData.meOrientation == csstab::CellOrientation_STACKED ), bSkipPoolDefs );
+    ScfTools::PutItem( rItemSet, SfxBoolItem( ATTR_STACKED, maApiData.meOrientation == css::table::CellOrientation_STACKED ), bSkipPoolDefs );
     // indent
     ScfTools::PutItem( rItemSet, SfxUInt16Item( ATTR_INDENT, maApiData.mnIndent ), bSkipPoolDefs );
     // line wrap
@@ -1376,7 +1367,7 @@ ProtectionModel::ProtectionModel() :
 }
 
 ApiProtectionData::ApiProtectionData() :
-    maCellProt( sal_True, sal_False, sal_False, sal_False )
+    maCellProt( true, false, false, false )
 {
 }
 
@@ -1473,19 +1464,6 @@ bool ApiBorderData::hasAnyOuterBorder() const
         ( ( lcl_isBorder( maLeft ) && maLeft.OuterLineWidth > 0 ) ) ||
         ( ( lcl_isBorder( maRight ) && maRight.OuterLineWidth > 0 ) );
 }
-
-namespace {
-
-bool operator==( const BorderLine& rLeft, const BorderLine& rRight )
-{
-    return
-        (rLeft.Color          == rRight.Color) &&
-        (rLeft.InnerLineWidth == rRight.InnerLineWidth) &&
-        (rLeft.OuterLineWidth == rRight.OuterLineWidth) &&
-        (rLeft.LineDistance   == rRight.LineDistance);
-}
-
-} // namespace
 
 bool operator==( const ApiBorderData& rLeft, const ApiBorderData& rRight )
 {
@@ -1685,6 +1663,8 @@ BorderLineModel* Border::getBorderLine( sal_Int32 nElement )
 
 bool Border::convertBorderLine( BorderLine2& rBorderLine, const BorderLineModel& rModel )
 {
+    // Document: sc/qa/unit/data/README.cellborders
+
     rBorderLine.Color = rModel.maColor.getColor( getBaseFilter().getGraphicHelper(), API_RGB_BLACK );
     switch( rModel.mnStyle )
     {
@@ -1705,7 +1685,7 @@ bool Border::convertBorderLine( BorderLine2& rBorderLine, const BorderLineModel&
             rBorderLine.LineStyle = table::BorderLineStyle::DOTTED;
         break;
         case XML_double:
-            lclSetBorderLineWidth( rBorderLine, 10, 30, 10 );
+            lclSetBorderLineWidth( rBorderLine, 10, 15, 10 );
             rBorderLine.LineStyle = table::BorderLineStyle::DOUBLE_THIN;
         break;
         case XML_hair:              lclSetBorderLineWidth( rBorderLine, API_LINE_HAIR );    break;
@@ -1725,7 +1705,7 @@ bool Border::convertBorderLine( BorderLine2& rBorderLine, const BorderLineModel&
         case XML_none:              lclSetBorderLineWidth( rBorderLine, API_LINE_NONE );    break;
         case XML_slantDashDot:
             lclSetBorderLineWidth( rBorderLine, API_LINE_MEDIUM );
-            rBorderLine.LineStyle = table::BorderLineStyle::DASH_DOT;
+            rBorderLine.LineStyle = table::BorderLineStyle::FINE_DASHED;
             break;
         case XML_thick:             lclSetBorderLineWidth( rBorderLine, API_LINE_THICK );   break;
         case XML_thin:              lclSetBorderLineWidth( rBorderLine, API_LINE_THIN );    break;
@@ -2074,7 +2054,10 @@ XfModel::XfModel() :
 {
 }
 
-Xf::AttrList::AttrList() : mbLatinNumFmtOnly(true) {}
+Xf::AttrList::AttrList(const ScPatternAttr* pDefPattern):
+    mbLatinNumFmtOnly(true),
+    mpDefPattern(pDefPattern)
+{}
 
 Xf::Xf( const WorkbookHelper& rHelper ) :
     WorkbookHelper( rHelper ),
@@ -2171,7 +2154,7 @@ void Xf::applyPatternToAttrList( AttrList& rAttrs, SCROW nRow1, SCROW nRow2, sal
             {
                 ScStyleSheet* pStyleSheet = static_cast<ScStyleSheet*>(
                     pStylePool->Find(
-                        ScGlobal::GetRscString(STR_STYLENAME_STANDARD), SFX_STYLE_FAMILY_PARA));
+                        ScGlobal::GetRscString(STR_STYLENAME_STANDARD), SfxStyleFamily::Para));
 
                 if (pStyleSheet)
                     rPat.SetStyleSheet( pStyleSheet, false );
@@ -2204,7 +2187,7 @@ void Xf::applyPatternToAttrList( AttrList& rAttrs, SCROW nRow1, SCROW nRow2, sal
             // Fill this gap with the default pattern.
             ScAttrEntry aEntry;
             aEntry.nRow = nRow1 - 1;
-            aEntry.pPattern = rDoc.GetDefPattern();
+            aEntry.pPattern = static_cast<const ScPatternAttr*>(&rDoc.GetPool()->Put(*rAttrs.mpDefPattern));
             rAttrs.maAttrs.push_back(aEntry);
 
             // Check if the default pattern is 'General'.
@@ -2252,7 +2235,7 @@ void Xf::writeToPropertySet( PropertySet& rPropSet ) const
     rPropSet.setProperties( aPropMap );
 }
 
-void Xf::writeToDoc( ScDocumentImport& rDoc, const table::CellRangeAddress& rRange ) const
+void Xf::writeToDoc( ScDocumentImport& rDoc, const table::CellRangeAddress& rRange )
 {
     const StylesBuffer& rStyles = getStyles();
 
@@ -2263,7 +2246,7 @@ void Xf::writeToDoc( ScDocumentImport& rDoc, const table::CellRangeAddress& rRan
 
         ScStyleSheet* pStyleSheet =
             static_cast<ScStyleSheet*>(
-                rDoc.getDoc().GetStyleSheetPool()->Find(aStyleName, SFX_STYLE_FAMILY_PARA));
+                rDoc.getDoc().GetStyleSheetPool()->Find(aStyleName, SfxStyleFamily::Para));
 
         if (pStyleSheet)
         {
@@ -2273,22 +2256,9 @@ void Xf::writeToDoc( ScDocumentImport& rDoc, const table::CellRangeAddress& rRan
         }
     }
 
-    std::unique_ptr<ScPatternAttr> pAttr(new ScPatternAttr(rDoc.getDoc().GetPool()));
-
-    {
-        SvxRotateMode eRotateMode = SVX_ROTATE_MODE_STANDARD;
-
-        if (maModel.mbBorderUsed && rStyles.hasBorder(maModel.mnBorderId) && maAlignment.getApiData().mnRotation)
-            eRotateMode = SVX_ROTATE_MODE_BOTTOM;
-
-        SvxRotateModeItem aItem(eRotateMode, ATTR_ROTATE_MODE);
-        ScfTools::PutItem(pAttr->GetItemSet(), aItem, false);
-    }
-
-    // TODO : Move more properties from writeToPropertyMap().
-
+    const ScPatternAttr& rAttr = createPattern();
     rDoc.getDoc().ApplyPatternAreaTab(
-        rRange.StartColumn, rRange.StartRow, rRange.EndColumn, rRange.EndRow, rRange.Sheet, *pAttr);
+        rRange.StartColumn, rRange.StartRow, rRange.EndColumn, rRange.EndRow, rRange.Sheet, rAttr);
 }
 
 const ::ScPatternAttr&
@@ -2664,16 +2634,16 @@ void CellStyle::createCellStyle()
         {
             // use existing "Default" style sheet
             mpStyleSheet = static_cast< ScStyleSheet* >( static_cast< ScStyleSheetPool* >( rDoc.GetStyleSheetPool() )->Find(
-                ScGlobal::GetRscString( STR_STYLENAME_STANDARD ), SFX_STYLE_FAMILY_PARA ) );
+                ScGlobal::GetRscString( STR_STYLENAME_STANDARD ), SfxStyleFamily::Para ) );
             OSL_ENSURE( mpStyleSheet, "CellStyle::createStyle - Default style not found" );
             bCreatePattern = true;
         }
         else
         {
-            mpStyleSheet = static_cast< ScStyleSheet* >( static_cast< ScStyleSheetPool* >( rDoc.GetStyleSheetPool() )->Find( maFinalName, SFX_STYLE_FAMILY_PARA ) );
+            mpStyleSheet = static_cast< ScStyleSheet* >( static_cast< ScStyleSheetPool* >( rDoc.GetStyleSheetPool() )->Find( maFinalName, SfxStyleFamily::Para ) );
             if( !mpStyleSheet )
             {
-                mpStyleSheet = &static_cast< ScStyleSheet& >( rDoc.GetStyleSheetPool()->Make( maFinalName, SFX_STYLE_FAMILY_PARA, SFXSTYLEBIT_USERDEF ) );
+                mpStyleSheet = &static_cast< ScStyleSheet& >( rDoc.GetStyleSheetPool()->Make( maFinalName, SfxStyleFamily::Para, SFXSTYLEBIT_USERDEF ) );
                 bCreatePattern = true;
             }
         }
@@ -2731,7 +2701,7 @@ void CellStyleBuffer::finalizeImport()
     try
     {
         // unfortunately, com.sun.star.style.StyleFamily does not implement XEnumerationAccess...
-        Reference< XIndexAccess > xStyleFamilyIA( getStyleFamily( false ), UNO_QUERY_THROW );
+        Reference< XIndexAccess > xStyleFamilyIA( getCellStyleFamily(), UNO_QUERY_THROW );
         for( sal_Int32 nIndex = 0, nCount = xStyleFamilyIA->getCount(); nIndex < nCount; ++nIndex )
         {
             Reference< XStyle > xStyle( xStyleFamilyIA->getByIndex( nIndex ), UNO_QUERY_THROW );
@@ -2880,9 +2850,8 @@ StylesBuffer::StylesBuffer( const WorkbookHelper& rHelper ) :
 {
 }
 
-FontRef StylesBuffer::createFont( sal_Int32* opnFontId )
+FontRef StylesBuffer::createFont()
 {
-    if( opnFontId ) *opnFontId = static_cast< sal_Int32 >( maFonts.size() );
     FontRef xFont( new Font( *this, false ) );
     maFonts.push_back( xFont );
     return xFont;
@@ -2898,41 +2867,36 @@ sal_Int32 StylesBuffer::nextFreeNumFmtId()
     return maNumFmts.nextFreeId();
 }
 
-BorderRef StylesBuffer::createBorder( sal_Int32* opnBorderId )
+BorderRef StylesBuffer::createBorder()
 {
-    if( opnBorderId ) *opnBorderId = static_cast< sal_Int32 >( maBorders.size() );
     BorderRef xBorder( new Border( *this, false ) );
     maBorders.push_back( xBorder );
     return xBorder;
 }
 
-FillRef StylesBuffer::createFill( sal_Int32* opnFillId )
+FillRef StylesBuffer::createFill()
 {
-    if( opnFillId ) *opnFillId = static_cast< sal_Int32 >( maFills.size() );
     FillRef xFill( new Fill( *this, false ) );
     maFills.push_back( xFill );
     return xFill;
 }
 
-XfRef StylesBuffer::createCellXf( sal_Int32* opnXfId )
+XfRef StylesBuffer::createCellXf()
 {
-    if( opnXfId ) *opnXfId = static_cast< sal_Int32 >( maCellXfs.size() );
     XfRef xXf( new Xf( *this ) );
     maCellXfs.push_back( xXf );
     return xXf;
 }
 
-XfRef StylesBuffer::createStyleXf( sal_Int32* opnXfId )
+XfRef StylesBuffer::createStyleXf()
 {
-    if( opnXfId ) *opnXfId = static_cast< sal_Int32 >( maStyleXfs.size() );
     XfRef xXf( new Xf( *this ) );
     maStyleXfs.push_back( xXf );
     return xXf;
 }
 
-DxfRef StylesBuffer::createDxf( sal_Int32* opnDxfId )
+DxfRef StylesBuffer::createDxf()
 {
-    if( opnDxfId ) *opnDxfId = static_cast< sal_Int32 >( maDxfs.size() );
     DxfRef xDxf( new Dxf( *this ) );
     maDxfs.push_back( xDxf );
     return xDxf;

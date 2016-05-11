@@ -71,7 +71,7 @@ private:
     css::uno::Reference< css::uno::XComponentContext > m_xContext;
 
     /** cached list of all registered event names of cfg for call optimization. */
-    OUStringList m_lEvents;
+    std::vector<OUString> m_lEvents;
 
     /** we listen at the configuration for changes at the event list. */
     ConfigAccess m_aConfig;
@@ -83,7 +83,7 @@ private:
 
 public:
 
-             JobExecutor( const css::uno::Reference< css::uno::XComponentContext >& xContext );
+    explicit JobExecutor(const css::uno::Reference< css::uno::XComponentContext >& xContext);
     virtual ~JobExecutor();
 
     virtual OUString SAL_CALL getImplementationName()
@@ -205,7 +205,7 @@ void SAL_CALL JobExecutor::trigger( const OUString& sEvent ) throw(css::uno::Run
 {
     SAL_INFO( "fwk", "JobExecutor::trigger()");
 
-    css::uno::Sequence< OUString > lJobs;
+    std::vector< OUString > lJobs;
 
     /* SAFE */ {
     osl::MutexGuard g(rBHelper.rMutex);
@@ -223,8 +223,8 @@ void SAL_CALL JobExecutor::trigger( const OUString& sEvent ) throw(css::uno::Run
     } /* SAFE */
 
     // step over all enabled jobs and execute it
-    sal_Int32 c = lJobs.getLength();
-    for (sal_Int32 j=0; j<c; ++j)
+    size_t c = lJobs.size();
+    for (size_t j=0; j<c; ++j)
     {
         rtl::Reference<Job> pJob;
 
@@ -343,7 +343,7 @@ void SAL_CALL JobExecutor::elementInserted( const css::container::ContainerEvent
         OUString sEvent = ::utl::extractFirstFromConfigurationPath(sValue);
         if (!sEvent.isEmpty())
         {
-            OUStringList::iterator pEvent = std::find(m_lEvents.begin(), m_lEvents.end(), sEvent);
+            std::vector<OUString>::iterator pEvent = std::find(m_lEvents.begin(), m_lEvents.end(), sEvent);
             if (pEvent == m_lEvents.end())
                 m_lEvents.push_back(sEvent);
         }
@@ -358,7 +358,7 @@ void SAL_CALL JobExecutor::elementRemoved ( const css::container::ContainerEvent
         OUString sEvent = ::utl::extractFirstFromConfigurationPath(sValue);
         if (!sEvent.isEmpty())
         {
-            OUStringList::iterator pEvent = std::find(m_lEvents.begin(), m_lEvents.end(), sEvent);
+            std::vector<OUString>::iterator pEvent = std::find(m_lEvents.begin(), m_lEvents.end(), sEvent);
             if (pEvent != m_lEvents.end())
                 m_lEvents.erase(pEvent);
         }

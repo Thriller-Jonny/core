@@ -37,7 +37,6 @@ namespace svx {
 struct FrameSelectorImpl;
 
 
-
 typedef int FrameSelFlags;
 
 const FrameSelFlags FRAMESEL_NONE       = 0x0000;
@@ -69,7 +68,6 @@ const FrameSelFlags FRAMESEL_DIAGONAL   = FRAMESEL_DIAG_TLBR|FRAMESEL_DIAG_BLTR;
 const FrameSelFlags FRAMESEL_DONTCARE   = 0x0100;
 
 
-
 /** All possible states of a frame border. */
 enum FrameBorderState
 {
@@ -77,7 +75,6 @@ enum FrameBorderState
     FRAMESTATE_HIDE,        /// Frame border is hidden (off).
     FRAMESTATE_DONTCARE     /// Frame border is in don't care state (if enabled).
 };
-
 
 
 class SAL_WARN_UNUSED SVX_DLLPUBLIC FrameSelector : public Control
@@ -139,7 +136,7 @@ public:
     /** Returns true, if the specified frame border is selected. */
     bool                IsBorderSelected( FrameBorderType eBorder ) const;
     /** Selects or deselects the specified frame border. */
-    void                SelectBorder( FrameBorderType eBorder, bool bSelect = true );
+    void                SelectBorder( FrameBorderType eBorder );
     /** Returns true, if any of the enabled frame borders is selected. */
     bool                IsAnyBorderSelected() const;
     /** Selects or deselects all frame borders. */
@@ -148,7 +145,7 @@ public:
     inline void         DeselectAllBorders() { SelectAllBorders( false ); }
 
     /** Selects or deselects all visible frame borders (ignores hidden and "don't care" borders). */
-    void                SelectAllVisibleBorders( bool bSelect = true );
+    void                SelectAllVisibleBorders();
 
     /** Sets the passed line widths to all selected frame borders (in twips). */
     void                SetStyleToSelection( long nWidth, editeng::SvxBorderStyle nStyle );
@@ -189,7 +186,6 @@ protected:
 private:
     std::unique_ptr< FrameSelectorImpl > mxImpl;
 };
-
 
 
 }

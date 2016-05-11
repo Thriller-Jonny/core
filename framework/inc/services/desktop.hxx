@@ -22,6 +22,9 @@
 
 #include <sal/config.h>
 
+#include <memory>
+#include <vector>
+
 #include <classes/framecontainer.hxx>
 
 #include <com/sun/star/frame/XUntitledNumbers.hpp>
@@ -150,7 +153,7 @@ class Desktop : private cppu::BaseMutex,
                         different to all other listener.
 
                         Btw: Desktop.terminate() was designed in the past to be used
-                        within an UI based envrionment. So it's allowed e.g. to
+                        within an UI based environment. So it's allowed e.g. to
                         call XController.suspend() here. If UI isn't an option ... please
                         use XCloseable.close() at these desktop implementation.
                         ... if it will be supported in the future .-))
@@ -174,7 +177,7 @@ class Desktop : private cppu::BaseMutex,
 
             @descr      Additional to adding normal listener these method was implemented special.
                         Every listener will be asked for its uno implementation name.
-                        Some of them are well known ... and the corresponding listener wont be added
+                        Some of them are well known... and the corresponding listener wont be added
                         to the container of "normal listener". Those listener will be set as special
                         member.
                         see e.g. member m_xSfxTerminator
@@ -322,7 +325,6 @@ class Desktop : private cppu::BaseMutex,
     private:
 
         css::uno::Reference< css::lang::XComponent >            impl_getFrameComponent          ( const css::uno::Reference< css::frame::XFrame >&  xFrame          ) const;
-        static const css::uno::Sequence< css::beans::Property > impl_getStaticPropertyDescriptor(                                                                   );
 
         /** calls queryTermination() on every registered termination listener.
          *
@@ -332,7 +334,7 @@ class Desktop : private cppu::BaseMutex,
          *
          *  @param  [out] lCalledListener
          *          every called listener will be returned here.
-         *          Those list will be used to informa all called listener
+         *          Those list will be used to inform all called listener
          *          about cancel this termination request.
          *
          *  @param  [out] bVeto
@@ -427,8 +429,8 @@ class Desktop : private cppu::BaseMutex,
         css::uno::Reference< css::frame::XTerminateListener > m_xQuickLauncher;
 
         /** special terminate listener which loads images asynchronous for current open documents.
-          * Because internally it uses blocking system APIs ... it can't be guaranteed that
-          * running jobs can be cancelled successfully if the corressponding document will be closed ...
+          * Because internally it uses blocking system APIs... it can't be guaranteed that
+          * running jobs can be cancelled successfully if the corresponding document will be closed...
           * it will not hinder those documents on closing. Instead it let all jobs running...
           * but at least on terminate we have to wait for all those blocked requests.
           * So these implementation must be a special terminate listener too .-(

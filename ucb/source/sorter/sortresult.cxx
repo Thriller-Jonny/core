@@ -28,6 +28,7 @@
 #include <com/sun/star/ucb/XAnyCompareFactory.hpp>
 #include <cppuhelper/implbase.hxx>
 #include <cppuhelper/interfacecontainer.hxx>
+#include <comphelper/interfacecontainer2.hxx>
 #include <cppuhelper/supportsservice.hxx>
 #include <osl/diagnose.h>
 #include <memory>
@@ -40,9 +41,8 @@ using namespace com::sun::star::sdbc;
 using namespace com::sun::star::ucb;
 using namespace com::sun::star::uno;
 using namespace com::sun::star::util;
+using namespace comphelper;
 using namespace cppu;
-
-
 
 
 //  The mutex to synchronize access to containers.
@@ -63,7 +63,6 @@ static osl::Mutex& getContainerMutex()
 }
 
 
-
 struct SortInfo
 {
     bool    mbUseOwnCompare;
@@ -76,20 +75,17 @@ struct SortInfo
 };
 
 
-
 struct SortListData
 {
-    bool    mbModified;
+    bool        mbModified;
     sal_IntPtr  mnCurPos;
     sal_IntPtr  mnOldPos;
 
-    SortListData( sal_IntPtr nPos, bool bModified = false );
+    explicit SortListData( sal_IntPtr nPos );
 };
 
 
-
 // class SRSPropertySetInfo.
-
 
 
 class SRSPropertySetInfo : public cppu::WeakImplHelper <
@@ -238,7 +234,7 @@ void SAL_CALL SortedResultSet::addEventListener(
 
     if ( !mpDisposeEventListeners )
         mpDisposeEventListeners =
-                    new OInterfaceContainerHelper( getContainerMutex() );
+                    new OInterfaceContainerHelper2( getContainerMutex() );
 
     mpDisposeEventListeners->addInterface( Listener );
 }
@@ -285,7 +281,6 @@ SortedResultSet::queryContent()
 }
 
 
-
 // XResultSet methods.
 
 sal_Bool SAL_CALL SortedResultSet::next()
@@ -307,7 +302,7 @@ sal_Bool SAL_CALL SortedResultSet::next()
             mnCurEntry = mnCount + 1;
         }
     }
-    return sal_False;
+    return false;
 }
 
 
@@ -315,9 +310,9 @@ sal_Bool SAL_CALL SortedResultSet::isBeforeFirst()
     throw ( SQLException, RuntimeException, std::exception )
 {
     if ( mnCurEntry )
-        return sal_False;
+        return false;
     else
-        return sal_True;
+        return true;
 }
 
 
@@ -325,9 +320,9 @@ sal_Bool SAL_CALL SortedResultSet::isAfterLast()
     throw ( SQLException, RuntimeException, std::exception )
 {
     if ( mnCurEntry > mnCount )
-        return sal_True;
+        return true;
     else
-        return sal_False;
+        return false;
 }
 
 
@@ -335,9 +330,9 @@ sal_Bool SAL_CALL SortedResultSet::isFirst()
     throw ( SQLException, RuntimeException, std::exception )
 {
     if ( mnCurEntry == 1 )
-        return sal_True;
+        return true;
     else
-        return sal_False;
+        return false;
 }
 
 
@@ -345,9 +340,9 @@ sal_Bool SAL_CALL SortedResultSet::isLast()
     throw ( SQLException, RuntimeException, std::exception )
 {
     if ( mnCurEntry == mnCount )
-        return sal_True;
+        return true;
     else
-        return sal_False;
+        return false;
 }
 
 
@@ -383,7 +378,7 @@ sal_Bool SAL_CALL SortedResultSet::first()
     else
     {
         mnCurEntry = 0;
-        return sal_False;
+        return false;
     }
 }
 
@@ -402,7 +397,7 @@ sal_Bool SAL_CALL SortedResultSet::last()
     else
     {
         mnCurEntry = 0;
-        return sal_False;
+        return false;
     }
 }
 
@@ -457,7 +452,7 @@ sal_Bool SAL_CALL SortedResultSet::absolute( sal_Int32 row )
         else
         {
             mnCurEntry = mnCount + 1;
-            return sal_False;
+            return false;
         }
     }
     else if ( row == 0 )
@@ -475,7 +470,7 @@ sal_Bool SAL_CALL SortedResultSet::absolute( sal_Int32 row )
         else
         {
             mnCurEntry = 0;
-            return sal_False;
+            return false;
         }
     }
 }
@@ -513,19 +508,19 @@ sal_Bool SAL_CALL SortedResultSet::relative( sal_Int32 rows )
     }
 
     if ( rows == 0 )
-        return sal_True;
+        return true;
 
     sal_Int32 nTmp = mnCurEntry + rows;
 
     if ( nTmp <= 0 )
     {
         mnCurEntry = 0;
-        return sal_False;
+        return false;
     }
     else if ( nTmp > mnCount )
     {
         mnCurEntry = mnCount + 1;
-        return sal_False;
+        return false;
     }
     else
     {
@@ -565,7 +560,7 @@ sal_Bool SAL_CALL SortedResultSet::previous()
     else
         mnCurEntry = 0;
 
-    return sal_False;
+    return false;
 }
 
 
@@ -805,7 +800,6 @@ Reference< XArray > SAL_CALL SortedResultSet::getArray( sal_Int32 columnIndex )
 }
 
 
-
 // XCloseable methods.
 
 
@@ -826,7 +820,6 @@ Reference< XResultSetMetaData > SAL_CALL SortedResultSet::getMetaData()
     osl::Guard< osl::Mutex > aGuard( maMutex );
     return Reference< XResultSetMetaDataSupplier >::query(mxOriginal)->getMetaData();
 }
-
 
 
 // XPropertySet methods.
@@ -970,8 +963,8 @@ void SAL_CALL SortedResultSet::removeVetoableChangeListener(
 
 // private methods
 
-sal_IntPtr SortedResultSet::CompareImpl( Reference < XResultSet > xResultOne,
-                                   Reference < XResultSet > xResultTwo,
+sal_IntPtr SortedResultSet::CompareImpl( const Reference < XResultSet >& xResultOne,
+                                   const Reference < XResultSet >& xResultTwo,
                                    sal_IntPtr nIndexOne, sal_IntPtr nIndexTwo,
                                    SortInfo* pSortInfo )
 
@@ -1185,8 +1178,8 @@ sal_IntPtr SortedResultSet::CompareImpl( Reference < XResultSet > xResultOne,
 }
 
 
-sal_IntPtr SortedResultSet::CompareImpl( Reference < XResultSet > xResultOne,
-                                   Reference < XResultSet > xResultTwo,
+sal_IntPtr SortedResultSet::CompareImpl( const Reference < XResultSet >& xResultOne,
+                                   const Reference < XResultSet >& xResultTwo,
                                    sal_IntPtr nIndexOne, sal_IntPtr nIndexTwo )
     throw( SQLException, RuntimeException )
 {
@@ -1338,8 +1331,6 @@ void SortedResultSet::PropertyChanged( const PropertyChangeEvent& rEvt )
 }
 
 
-
-
 // public methods
 
 
@@ -1439,7 +1430,7 @@ void SortedResultSet::CheckProperties( sal_IntPtr nOldCount, bool bWasFinal )
             PropertyChangeEvent aEvt;
 
             aEvt.PropertyName = "RowCount";
-            aEvt.Further = sal_False;
+            aEvt.Further = false;
             aEvt.PropertyHandle = -1;
             aEvt.OldValue <<= nOldCount;
             aEvt.NewValue <<= GetCount();
@@ -1451,7 +1442,7 @@ void SortedResultSet::CheckProperties( sal_IntPtr nOldCount, bool bWasFinal )
             if ( (aRet >>= bIsFinal) && bIsFinal != bWasFinal )
             {
                 aEvt.PropertyName = aName;
-                aEvt.Further = sal_False;
+                aEvt.Further = false;
                 aEvt.PropertyHandle = -1;
                 aEvt.OldValue <<= bWasFinal;
                 aEvt.NewValue <<= bIsFinal;
@@ -1534,7 +1525,7 @@ void SortedResultSet::Remove( sal_IntPtr nPos, sal_IntPtr nCount, EventList *pEv
 
         // generate remove Event, but not for new entries
         if ( nSortPos <= nOldLastSort )
-            pEvents->AddEvent( ListActionType::REMOVED, nSortPos, 1 );
+            pEvents->AddEvent( ListActionType::REMOVED, nSortPos );
     }
 
     // correct the positions in the sorted list
@@ -1626,7 +1617,7 @@ void SortedResultSet::Move( sal_IntPtr nPos, sal_IntPtr nCount, sal_IntPtr nOffs
 
 
 void SortedResultSet::BuildSortInfo(
-                Reference< XResultSet > aResult,
+                const Reference< XResultSet >& aResult,
                 const Sequence < NumberedSortingInfo > &xSortInfo,
                 const Reference< XAnyCompareFactory > &xCompFactory )
 {
@@ -1751,8 +1742,7 @@ void SortedResultSet::ResortModified( EventList* pList )
                     pAction->ActionInfo <<= nNewPos-nCurPos;
                     pList->Insert( pAction );
                 }
-                pList->AddEvent( ListActionType::PROPERTIES_CHANGED,
-                                 nNewPos, 1 );
+                pList->AddEvent( ListActionType::PROPERTIES_CHANGED, nNewPos );
             }
         }
     }
@@ -1788,7 +1778,7 @@ void SortedResultSet::ResortNew( EventList* pList )
                 maO2S.Replace( reinterpret_cast<void*>(nNewPos), (sal_uInt32) pData->mnCurPos );
             }
             mnLastSort++;
-            pList->AddEvent( ListActionType::INSERTED, nNewPos, 1 );
+            pList->AddEvent( ListActionType::INSERTED, nNewPos );
         }
     }
     catch (const SQLException&)
@@ -1798,17 +1788,15 @@ void SortedResultSet::ResortNew( EventList* pList )
 }
 
 
-
 // SortListData
 
 
-SortListData::SortListData( sal_IntPtr nPos, bool bModified )
+SortListData::SortListData( sal_IntPtr nPos )
 {
-    mbModified = bModified;
+    mbModified = false;
     mnCurPos = nPos;
     mnOldPos = nPos;
 };
-
 
 
 void SortedEntryList::Clear()
@@ -1886,8 +1874,6 @@ sal_IntPtr SortedEntryList::operator [] ( sal_IntPtr nPos ) const
 }
 
 
-
-
 void SimpleList::Remove( sal_uInt32 nPos )
 {
     if ( nPos < (sal_uInt32) maData.size() )
@@ -1941,9 +1927,7 @@ void SimpleList::Replace( void* pData, sal_uInt32 nPos )
 }
 
 
-
 // class SRSPropertySetInfo.
-
 
 
 SRSPropertySetInfo::SRSPropertySetInfo()
@@ -1990,11 +1974,11 @@ SRSPropertySetInfo::hasPropertyByName( const OUString& Name )
     throw( RuntimeException, std::exception )
 {
     if ( Name == "RowCount" )
-        return sal_True;
+        return true;
     else if ( Name == "IsRowCountFinal" )
-        return sal_True;
+        return true;
     else
-        return sal_False;
+        return false;
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

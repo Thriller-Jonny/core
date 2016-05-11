@@ -22,7 +22,7 @@
 
 #include <osl/mutex.hxx>
 #include <cppuhelper/implbase.hxx>
-#include <cppuhelper/interfacecontainer.hxx>
+#include <comphelper/interfacecontainer2.hxx>
 #include <com/sun/star/frame/XDispatchProviderInterceptor.hpp>
 #include <com/sun/star/frame/XInterceptorInfo.hpp>
 #include <com/sun/star/frame/XDispatch.hpp>
@@ -69,7 +69,6 @@ public:
 
     void SAL_CALL
     dispose() throw(css::uno::RuntimeException);
-
 
 
     //XDispatch
@@ -166,7 +165,7 @@ private:
 
     static css::uno::Sequence< OUString > m_aInterceptedURL;
 
-    cppu::OInterfaceContainerHelper*    m_pDisposeEventListeners;
+    comphelper::OInterfaceContainerHelper2*    m_pDisposeEventListeners;
     StatusChangeListenerContainer*      m_pStatCL;
 
     sal_Bool m_bLink;

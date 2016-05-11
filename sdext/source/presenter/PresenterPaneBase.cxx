@@ -116,12 +116,12 @@ void PresenterPaneBase::SetTitle (const OUString& rsTitle)
     mpPresenterController->GetPaintManager()->Invalidate(mxBorderWindow);
 }
 
-OUString PresenterPaneBase::GetTitle() const
+const OUString& PresenterPaneBase::GetTitle() const
 {
     return msTitle;
 }
 
-Reference<drawing::framework::XPaneBorderPainter>
+const Reference<drawing::framework::XPaneBorderPainter>&
     PresenterPaneBase::GetPaneBorderPainter() const
 {
     return mxBorderPainter;
@@ -130,7 +130,7 @@ Reference<drawing::framework::XPaneBorderPainter>
 void PresenterPaneBase::SetCalloutAnchor (const css::awt::Point& rCalloutAnchor)
 {
     mbHasCallout = true;
-    // Anchor is given in the coorindate system of the parent window.
+    // Anchor is given in the coordinate system of the parent window.
     // Transform it into the local coordinate system.
     maCalloutAnchor = rCalloutAnchor;
     const awt::Rectangle aBorderBox (mxBorderWindow->getPosSize());
@@ -156,7 +156,7 @@ void PresenterPaneBase::SetCalloutAnchor (const css::awt::Point& rCalloutAnchor)
     mpPresenterController->GetPaintManager()->Invalidate(mxBorderWindow);
 }
 
-awt::Point PresenterPaneBase::GetCalloutAnchor() const
+const awt::Point& PresenterPaneBase::GetCalloutAnchor() const
 {
     return maCalloutAnchor;
 }
@@ -315,7 +315,6 @@ void SAL_CALL PresenterPaneBase::disposing (const lang::EventObject& rEvent)
 }
 
 
-
 void PresenterPaneBase::CreateWindows (
     const Reference<awt::XWindow>& rxParentWindow,
     const bool bIsWindowVisibleOnCreation)
@@ -325,20 +324,20 @@ void PresenterPaneBase::CreateWindows (
 
         mxBorderWindow = mxPresenterHelper->createWindow(
             rxParentWindow,
-            sal_False,
+            false,
             bIsWindowVisibleOnCreation,
-            sal_False,
-            sal_False);
+            false,
+            false);
         mxContentWindow = mxPresenterHelper->createWindow(
             mxBorderWindow,
-            sal_False,
+            false,
             bIsWindowVisibleOnCreation,
-            sal_False,
-            sal_False);
+            false,
+            false);
     }
 }
 
-Reference<awt::XWindow> PresenterPaneBase::GetBorderWindow() const
+const Reference<awt::XWindow>& PresenterPaneBase::GetBorderWindow() const
 {
     return mxBorderWindow;
 }

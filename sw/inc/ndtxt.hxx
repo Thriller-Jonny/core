@@ -123,7 +123,7 @@ class SW_DLLPUBLIC SwTextNode: public SwContentNode, public ::sfx2::Metadatable
     /// Copies the attributes at nStart to pDest.
     SAL_DLLPRIVATE void CopyAttr( SwTextNode *pDest, const sal_Int32 nStart, const sal_Int32 nOldPos);
 
-    SAL_DLLPRIVATE SwTextNode* _MakeNewTextNode( const SwNodeIndex&, bool bNext = true,
+    SAL_DLLPRIVATE SwTextNode* MakeNewTextNode( const SwNodeIndex&, bool bNext = true,
                                 bool bChgFollow = true );
 
     SAL_DLLPRIVATE void CutImpl(
@@ -150,7 +150,7 @@ class SW_DLLPUBLIC SwTextNode: public SwContentNode, public ::sfx2::Metadatable
 
     SAL_DLLPRIVATE void CalcHiddenCharFlags() const;
 
-    SAL_DLLPRIVATE SwNumRule * _GetNumRule(bool bInParent = true) const;
+    SAL_DLLPRIVATE SwNumRule * GetNumRule_(bool bInParent = true) const;
 
     SAL_DLLPRIVATE void SetLanguageAndFont( const SwPaM &rPaM,
             LanguageType nLang, sal_uInt16 nLangWhichId,
@@ -233,8 +233,7 @@ public:
     virtual sal_Int32 Len() const override;
 
     /// Is in itratr.
-    void GetMinMaxSize( sal_uLong nIndex, sal_uLong& rMin, sal_uLong &rMax, sal_uLong &rAbs,
-                        OutputDevice* pOut = nullptr ) const;
+    void GetMinMaxSize( sal_uLong nIndex, sal_uLong& rMin, sal_uLong &rMax, sal_uLong &rAbs ) const;
 
     /// overriding to handle change of certain paragraph attributes
     virtual bool SetAttr( const SfxPoolItem& ) override;
@@ -355,7 +354,7 @@ public:
     virtual SwContentFrame *MakeFrame( SwFrame* ) override;
     virtual SwContentNode *SplitContentNode( const SwPosition & ) override;
     virtual SwContentNode *JoinNext() override;
-    virtual SwContentNode *JoinPrev() override;
+    virtual void JoinPrev() override;
 
     SwContentNode *AppendNode( const SwPosition & );
 
@@ -388,8 +387,7 @@ public:
      */
     ::std::vector<SwTextAttr *> GetTextAttrsAt(
         sal_Int32 const nIndex,
-        RES_TXTATR const nWhich,
-        enum GetTextAttrMode const eMode = DEFAULT ) const;
+        RES_TXTATR const nWhich ) const;
 
     /** get the text attribute at position nIndex which owns
         the dummy character CH_TXTATR_* at that position, if one exists.
@@ -412,7 +410,7 @@ public:
 
     inline SwTextFormatColl *GetTextColl() const;
     virtual SwFormatColl *ChgFormatColl( SwFormatColl* ) override;
-    void _ChgTextCollUpdateNum( const SwTextFormatColl* pOld,
+    void ChgTextCollUpdateNum( const SwTextFormatColl* pOld,
                                 const SwTextFormatColl* pNew );
 
     /** Copy collection with all auto formats to dest-node.
@@ -695,10 +693,7 @@ public:
                            bool bWithNum = false, bool bWithFootnote = true,
                            bool bReplaceTabsWithSpaces = false ) const;
 
-    OUString GetRedlineText( sal_Int32 nIdx = 0,
-                          sal_Int32 nLen = SAL_MAX_INT32,
-                          bool bExpandFields = false,
-                          bool bWithNum = false ) const;
+    OUString GetRedlineText() const;
 
     /** @return actual count of initial chars for initial-function.
        If nWishLen == 0 that of first word. */
@@ -757,7 +752,7 @@ public:
        to economize notifications */
     bool IsNotificationEnabled() const;
 
-    /// Checks a temporary notification blocker and the global conditons of IsNotificationEnabled()
+    /// Checks a temporary notification blocker and the global conditions of IsNotificationEnabled()
     bool IsNotifiable() const;
 
     void SetListRestart( bool bRestart );
@@ -798,8 +793,7 @@ public:
     sal_uInt32 GetRsid( sal_Int32 nStt, sal_Int32 nEnd ) const;
     sal_uInt32 GetParRsid() const;
 
-    bool CompareRsid( const SwTextNode &rTextNode, sal_Int32 nStt1, sal_Int32 nStt2,
-            sal_Int32 nEnd1 = 0,  sal_Int32 nEnd2 = 0 ) const;
+    bool CompareRsid( const SwTextNode &rTextNode, sal_Int32 nStt1, sal_Int32 nStt2 ) const;
     bool CompareParRsid( const SwTextNode &rTextNode ) const;
 
     DECL_FIXEDMEMPOOL_NEWDEL(SwTextNode)

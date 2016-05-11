@@ -17,12 +17,12 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include "internal/global.hxx"
-#include "internal/propertyhdl.hxx"
-#include "internal/fileextensions.hxx"
-#include "internal/metainforeader.hxx"
-#include "internal/utilities.hxx"
-#include "internal/config.hxx"
+#include "global.hxx"
+#include "propertyhdl.hxx"
+#include "fileextensions.hxx"
+#include "metainforeader.hxx"
+#include "utilities.hxx"
+#include "config.hxx"
 
 #include <propkey.h>
 #include <propvarutil.h>
@@ -31,7 +31,7 @@
 #include <malloc.h>
 #include <strsafe.h>
 
-#include "internal/stream_helper.hxx"
+#include "stream_helper.hxx"
 
 
 // Module global
@@ -47,7 +47,7 @@ struct PROPERTYMAP
     PCWSTR pszValueNodeName;
 };
 
-PROPERTYMAP g_rgPROPERTYMAP[] =
+const PROPERTYMAP g_rgPROPERTYMAP[] =
 {
     { PKEY_Title,          L"LibreOffice",          L"Title" },
     { PKEY_Author,         L"LibreOffice",          L"Author" },
@@ -56,8 +56,7 @@ PROPERTYMAP g_rgPROPERTYMAP[] =
     { PKEY_Comment,        L"LibreOffice",          L"Comments" },
 };
 
-size_t gPropertyMapTableSize = sizeof(g_rgPROPERTYMAP)/sizeof(g_rgPROPERTYMAP[0]);
-
+size_t gPropertyMapTableSize = SAL_N_ELEMENTS(g_rgPROPERTYMAP);
 
 
 CPropertyHdl::CPropertyHdl( long nRefCnt ) :
@@ -67,7 +66,6 @@ CPropertyHdl::CPropertyHdl( long nRefCnt ) :
     OutputDebugStringFormat( "CPropertyHdl: CTOR\n" );
     InterlockedIncrement( &g_DllRefCnt );
 }
-
 
 
 CPropertyHdl::~CPropertyHdl()

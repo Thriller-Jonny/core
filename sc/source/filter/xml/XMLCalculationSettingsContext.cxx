@@ -40,12 +40,12 @@ ScXMLCalculationSettingsContext::ScXMLCalculationSettingsContext( ScXMLImport& r
     fIterationEpsilon(0.001),
     nIterationCount(100),
     nYear2000(1930),
+    eSearchType(utl::SearchParam::SRCH_REGEXP),
     bIsIterationEnabled(false),
     bCalcAsShown(false),
     bIgnoreCase(false),
     bLookUpLabels(true),
-    bMatchWholeCell(true),
-    bUseRegularExpressions(true)
+    bMatchWholeCell(true)
 {
     aNullDate.Day = 30;
     aNullDate.Month = 12;
@@ -89,8 +89,14 @@ ScXMLCalculationSettingsContext::ScXMLCalculationSettingsContext( ScXMLImport& r
             }
             else if (IsXMLToken(aLocalName, XML_USE_REGULAR_EXPRESSIONS))
             {
-                if (IsXMLToken(sValue, XML_FALSE))
-                    bUseRegularExpressions = false;
+                // Overwrite only the default (regex true) value, not wildcard.
+                if (eSearchType == utl::SearchParam::SRCH_REGEXP && IsXMLToken(sValue, XML_FALSE))
+                    eSearchType = utl::SearchParam::SRCH_NORMAL;
+            }
+            else if (IsXMLToken(aLocalName, XML_USE_WILDCARDS))
+            {
+                if (IsXMLToken(sValue, XML_TRUE))
+                    eSearchType = utl::SearchParam::SRCH_WILDCARD;
             }
         }
     }
@@ -131,7 +137,10 @@ void ScXMLCalculationSettingsContext::EndElement()
             xPropertySet->setPropertyValue( SC_UNO_IGNORECASE, uno::makeAny(bIgnoreCase) );
             xPropertySet->setPropertyValue( SC_UNO_LOOKUPLABELS, uno::makeAny(bLookUpLabels) );
             xPropertySet->setPropertyValue( SC_UNO_MATCHWHOLE, uno::makeAny(bMatchWholeCell) );
-            xPropertySet->setPropertyValue( SC_UNO_REGEXENABLED, uno::makeAny(bUseRegularExpressions) );
+            bool bWildcards, bRegex;
+            utl::SearchParam::ConvertToBool( eSearchType, bWildcards, bRegex);
+            xPropertySet->setPropertyValue( SC_UNO_REGEXENABLED, uno::makeAny(bRegex) );
+            xPropertySet->setPropertyValue( SC_UNO_WILDCARDSENABLED, uno::makeAny(bWildcards) );
             xPropertySet->setPropertyValue( SC_UNO_ITERENABLED, uno::makeAny(bIsIterationEnabled) );
             xPropertySet->setPropertyValue( SC_UNO_ITERCOUNT, uno::makeAny(nIterationCount) );
             xPropertySet->setPropertyValue( SC_UNO_ITEREPSILON, uno::makeAny(fIterationEpsilon) );

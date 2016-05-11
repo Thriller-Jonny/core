@@ -79,14 +79,12 @@ public:
 private:
     OUString   m_strID;
     OUString   m_strLabel;
-    rtl::Reference<XFContentContainer>  m_aContents;
 };
 
 inline XFEndNote::XFEndNote()
 {
     m_strID = XFGlobal::GenNoteName();
 }
-
 
 
 inline void XFEndNote::ToXml(IXFStream *pStrm)

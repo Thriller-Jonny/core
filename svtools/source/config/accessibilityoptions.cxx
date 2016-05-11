@@ -22,7 +22,6 @@
 
 #include <unotools/configmgr.hxx>
 #include <com/sun/star/uno/Any.hxx>
-#include <com/sun/star/uno/Sequence.hxx>
 
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/container/XNameAccess.hpp>
@@ -117,7 +116,7 @@ SvtAccessibilityOptions_Impl::SvtAccessibilityOptions_Impl()
             ::comphelper::ConfigurationHelper::openConfig(
                 comphelper::getProcessComponentContext(),
                 s_sAccessibility,
-                ::comphelper::ConfigurationHelper::E_STANDARD),
+                ::comphelper::EConfigurationModes::Standard ),
             css::uno::UNO_QUERY);
 
         bIsModified = false;
@@ -621,7 +620,6 @@ void SvtAccessibilityOptions::SetVCLSettings()
 {
     sm_pSingleImplConfig->SetVCLSettings();
 }
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -40,28 +40,6 @@ namespace comphelper
         }
     };
 
-    struct PropertyStringEqualFunctor : ::std::binary_function< css::beans::Property, OUString, bool >
-    {
-
-        inline bool operator()( const css::beans::Property& lhs, const OUString& rhs ) const
-        {
-            return lhs.Name == rhs ;
-        }
-
-        inline bool operator()( const OUString& lhs, const css::beans::Property& rhs ) const
-        {
-            return lhs == rhs.Name ;
-        }
-    };
-
-    struct PropertyEqualByName : public ::std::binary_function< css::beans::Property, css::beans::Property, bool >
-    {
-        bool operator() (const css::beans::Property& x, const css::beans::Property& y) const
-        {
-            return x.Name == y.Name ;
-        }
-    };
-
 /// remove the property with the given name from the given sequence
 COMPHELPER_DLLPUBLIC void RemoveProperty(css::uno::Sequence<css::beans::Property>& seqProps, const OUString& _rPropName);
 
@@ -149,12 +127,12 @@ bool tryPropertyValueEnum(css::uno::Any& /*out*/_rConvertedValue, css::uno::Any&
 inline bool tryPropertyValue(css::uno::Any& /*out*/_rConvertedValue, css::uno::Any& /*out*/_rOldValue, const css::uno::Any& _rValueToSet, bool _bCurrentValue)
 {
     bool bModified(false);
-    sal_Bool bNewValue(sal_False);
+    sal_Bool bNewValue(false);
     ::cppu::convertPropertyValue(bNewValue, _rValueToSet);
     if (bool(bNewValue) != _bCurrentValue)
     {
-        _rConvertedValue.setValue(&bNewValue, cppu::UnoType<bool>::get());
-        _rOldValue.setValue(&_bCurrentValue, cppu::UnoType<bool>::get());
+        _rConvertedValue <<= bNewValue;
+        _rOldValue <<= _bCurrentValue;
         bModified = true;
     }
     return bModified;

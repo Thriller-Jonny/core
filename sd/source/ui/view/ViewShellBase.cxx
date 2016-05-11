@@ -59,6 +59,8 @@
 #include "Window.hxx"
 #include "framework/ConfigurationController.hxx"
 #include "DocumentRenderer.hxx"
+#include "sdattr.hxx"
+#include "optsitem.hxx"
 
 #include <com/sun/star/frame/XFrame.hpp>
 #include <com/sun/star/awt/XWindow.hpp>
@@ -367,8 +369,10 @@ void ViewShellBase::LateInit (const OUString& rsDefaultView)
         if (pFrameView != nullptr)
             pFrameView->SetViewShellTypeOnLoad(pViewShell->GetShellType());
     }
-    // Hide the TabBar
-    mpImpl->SetUserWantsTabBar(false);
+    // Show/Hide the TabBar
+    SdOptions* pOptions = SD_MOD()->GetSdOptions(GetDocument()->GetDocumentType());
+    bool bIsTabBarVisible = pOptions->IsTabBarVisible();
+    mpImpl->SetUserWantsTabBar( bIsTabBarVisible );
 }
 
 std::shared_ptr<ViewShellManager> ViewShellBase::GetViewShellManager() const
@@ -524,8 +528,7 @@ SfxPrinter* ViewShellBase::GetPrinter (bool bCreate)
 
 sal_uInt16 ViewShellBase::SetPrinter (
     SfxPrinter* pNewPrinter,
-    SfxPrinterChangeFlags nDiffFlags,
-    bool bIsAPI)
+    SfxPrinterChangeFlags nDiffFlags)
 {
     OSL_ASSERT(mpImpl.get()!=nullptr);
 
@@ -541,14 +544,6 @@ sal_uInt16 ViewShellBase::SetPrinter (
         Size aNewSize = pNewPrinter->GetOutputSize();
 
         bool bScaleAll = false;
-        if ( bIsAPI )
-        {
-            ScopedVclPtrInstance<WarningBox> aWarnBox (
-                GetWindow(),
-                (WinBits)(WB_YES_NO | WB_DEF_YES),
-                SD_RESSTR(STR_SCALE_OBJS_TO_PAGE));
-            bScaleAll = (aWarnBox->Execute() == RET_YES);
-        }
 
         std::shared_ptr<DrawViewShell> pDrawViewShell (
             std::dynamic_pointer_cast<DrawViewShell>(GetMainViewShell()));
@@ -636,9 +631,14 @@ void ViewShellBase::Execute (SfxRequest& rRequest)
             break;
 
         case SID_TOGGLE_TABBAR_VISIBILITY:
-            mpImpl->SetUserWantsTabBar(!mpImpl->GetUserWantsTabBar());
+        {
+            SdOptions* pOptions = SD_MOD()->GetSdOptions(GetDocument()->GetDocumentType());
+            bool bIsTabBarVisible = pOptions->IsTabBarVisible();
+            pOptions->SetTabBarVisible( !bIsTabBarVisible );
+            mpImpl->SetUserWantsTabBar( !bIsTabBarVisible );
             rRequest.Done();
-            break;
+        }
+        break;
 
         // draw
         case SID_DRAWINGMODE:
@@ -678,24 +678,22 @@ void ViewShellBase::GetState (SfxItemSet& rSet)
 }
 
 void ViewShellBase::WriteUserDataSequence (
-    css::uno::Sequence< css::beans::PropertyValue >& rSequence,
-    bool bBrowse)
+    css::uno::Sequence< css::beans::PropertyValue >& rSequence)
 {
     // Forward call to main sub shell.
     ViewShell* pShell = GetMainViewShell().get();
     if (pShell != nullptr)
-        pShell->WriteUserDataSequence (rSequence, bBrowse);
+        pShell->WriteUserDataSequence (rSequence);
 }
 
 void ViewShellBase::ReadUserDataSequence (
-    const css::uno::Sequence< css::beans::PropertyValue >& rSequence,
-    bool bBrowse)
+    const css::uno::Sequence< css::beans::PropertyValue >& rSequence)
 {
     // Forward call to main sub shell.
     ViewShell* pShell = GetMainViewShell().get();
     if (pShell != nullptr)
     {
-        pShell->ReadUserDataSequence (rSequence, bBrowse);
+        pShell->ReadUserDataSequence (rSequence, true/*bBrowse*/);
 
         // For certain shell types ReadUserDataSequence may have changed the
         // type to another one.  Make sure that the center pane shows the
@@ -988,9 +986,9 @@ OUString ImplRetrieveLabelFromCommand( const Reference< XFrame >& xFrame, const 
         {
             Reference< XNameAccess > const xNameAccess(
                     frame::theUICommandDescription::get(xContext) );
-            Reference< css::container::XNameAccess > m_xUICommandLabels( xNameAccess->getByName( aModuleIdentifier ), UNO_QUERY_THROW );
+            Reference< css::container::XNameAccess > xUICommandLabels( xNameAccess->getByName( aModuleIdentifier ), UNO_QUERY_THROW );
             Sequence< PropertyValue > aPropSeq;
-            if( m_xUICommandLabels->getByName( aCmdURL ) >>= aPropSeq )
+            if( xUICommandLabels->getByName( aCmdURL ) >>= aPropSeq )
             {
                 for( sal_Int32 i = 0; i < aPropSeq.getLength(); i++ )
                 {
@@ -1304,9 +1302,6 @@ void ViewShellBase::Implementation::GetSlotState (SfxItemSet& rSet)
             catch (const DeploymentException&)
             {
             }
-
-            // Determine the state for the resource.
-            bState = xConfiguration->hasResource(xResourceId);
 
             // Take the master page mode into account.
             switch (nItemId)

@@ -19,9 +19,9 @@
 #elif defined( ANDROID )
 #elif defined( LIBO_HEADLESS )
 #elif defined( UNX )
-#  include <prex.h>
+#  include <X11/Xlib.h>
+#  include <X11/Xutil.h>
 #  include "GL/glxew.h"
-#  include <postx.h>
 #elif defined( _WIN32 )
 #ifndef INCLUDED_PRE_POST_WIN_H
 #define INCLUDED_PRE_POST_WIN_H
@@ -62,6 +62,7 @@ class OpenGLProgram;
 class OpenGLTexture;
 class SalGraphicsImpl;
 class OpenGLTests;
+class RenderState;
 
 /// Holds the information of our new child window
 struct GLWindow
@@ -156,6 +157,7 @@ public:
     OpenGLFramebuffer* AcquireFramebuffer( const OpenGLTexture& rTexture );
     static void        ReleaseFramebuffer( OpenGLFramebuffer* pFramebuffer );
     void UnbindTextureFromFramebuffers( GLuint nTexture );
+    static bool        IsTextureAttachedAnywhere( GLuint nTexture );
 
     void               ReleaseFramebuffer( const OpenGLTexture& rTexture );
     void               ReleaseFramebuffers();
@@ -165,6 +167,11 @@ public:
     OpenGLProgram*      UseProgram( const OUString& rVertexShader, const OUString& rFragmentShader, const OString& preamble = "" );
     void                UseNoProgram();
 
+    std::unique_ptr<RenderState>& state()
+    {
+        return mpRenderState;
+    }
+
     /// Is this GL context the current context ?
     bool isCurrent();
     /// release bound resources from the current context
@@ -173,6 +180,11 @@ public:
     static void prepareForYield();
     /// Is there a current GL context ?
     static bool hasCurrent();
+
+    /// make a VCL context (any context) current, create it if necessary.
+    static void makeVCLCurrent();
+    /// fetch any VCL context, creating one if bMakeIfNecessary is set.
+    static rtl::Reference<OpenGLContext> getVCLContext(bool bMakeIfNecessary = true);
     /// make this GL context current - so it is implicit in subsequent GL calls
     void makeCurrent();
     /// Put this GL context to the end of the context list.
@@ -193,11 +205,6 @@ public:
     bool isInitialized()
     {
         return mbInitialized;
-    }
-
-    bool requestedLegacy()
-    {
-        return mbRequestLegacyContext;
     }
 
     /// VCL promiscuously re-uses its own contexts:
@@ -247,9 +254,8 @@ private:
     typedef std::unordered_map< rtl::OString, std::shared_ptr<OpenGLProgram>, ProgramHash > ProgramCollection;
     ProgramCollection maPrograms;
     OpenGLProgram* mpCurrentProgram;
-#ifdef DBG_UTIL
-    std::set<SalGraphicsImpl*> maParents;
-#endif
+
+    std::unique_ptr<RenderState> mpRenderState;
 
 public:
     vcl::Region maClipRegion;

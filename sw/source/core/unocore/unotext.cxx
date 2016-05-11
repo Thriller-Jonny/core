@@ -66,7 +66,6 @@
 #include <IMark.hxx>
 #include <fmtanchr.hxx>
 #include <fmtcntnt.hxx>
-#include <crsskip.hxx>
 #include <ndtxt.hxx>
 
 using namespace ::com::sun::star;
@@ -95,7 +94,6 @@ public:
 
     uno::Reference< text::XTextRange >
         finishOrAppendParagraph(
-            const bool bFinish,
             const uno::Sequence< beans::PropertyValue >&
                 rCharacterAndParagraphProperties,
             const uno::Reference< text::XTextRange >& xInsertPosition)
@@ -180,7 +178,7 @@ SwXText::CreateCursor() throw (uno::RuntimeException)
         SwPosition aPos(rNode);
         xRet = static_cast<text::XWordCursor*>(
                 new SwXTextCursor(*GetDoc(), this, m_pImpl->m_eType, aPos));
-        xRet->gotoStart(sal_False);
+        xRet->gotoStart(false);
     }
     return xRet;
 }
@@ -469,9 +467,9 @@ throw (lang::IllegalArgumentException, uno::RuntimeException, std::exception)
         OTextCursorHelper *const pCursor =
             ::sw::UnoTunnelGetImplementation<OTextCursorHelper>(xRangeTunnel);
 
-        SwCursor aCursor(*aPam.GetPoint(), nullptr, false);
+        SwCursor aCursor(*aPam.GetPoint(), nullptr);
         SwUnoCursorHelper::SelectPam(aCursor, true);
-        aCursor.Left(1, CRSR_SKIP_CHARS, false, false);
+        aCursor.Left(1);
         // here, the PaM needs to be moved:
         if (pRange)
         {
@@ -873,7 +871,7 @@ SwXText::getStart() throw (uno::RuntimeException, std::exception)
         aRuntime.Message = cInvalidObject;
         throw aRuntime;
     }
-    xRef->gotoStart(sal_False);
+    xRef->gotoStart(false);
     const uno::Reference< text::XTextRange > xRet(xRef, uno::UNO_QUERY);
     return xRet;
 }
@@ -890,7 +888,7 @@ SwXText::getEnd() throw (uno::RuntimeException, std::exception)
         aRuntime.Message = cInvalidObject;
         throw aRuntime;
     }
-    xRef->gotoEnd(sal_False);
+    xRef->gotoEnd(false);
     const uno::Reference< text::XTextRange >  xRet(xRef, uno::UNO_QUERY);
     return xRet;
 }
@@ -906,7 +904,7 @@ OUString SAL_CALL SwXText::getString() throw (uno::RuntimeException, std::except
         aRuntime.Message = cInvalidObject;
         throw aRuntime;
     }
-    xRet->gotoEnd(sal_True);
+    xRet->gotoEnd(true);
     return xRet->getString();
 }
 
@@ -971,7 +969,7 @@ SwXText::setString(const OUString& rString) throw (uno::RuntimeException, std::e
         aRuntime.Message = cInvalidObject;
         throw aRuntime;
     }
-    xRet->gotoEnd(sal_True);
+    xRet->gotoEnd(true);
     xRet->setString(rString);
     GetDoc()->GetIDocumentUndoRedo().EndUndo(UNDO_END, nullptr);
 }
@@ -1239,7 +1237,7 @@ throw (lang::IllegalArgumentException, uno::RuntimeException, std::exception)
 {
     SolarMutexGuard g;
 
-    return m_pImpl->finishOrAppendParagraph(true, rProperties, uno::Reference< text::XTextRange >());
+    return m_pImpl->finishOrAppendParagraph(rProperties, uno::Reference< text::XTextRange >());
 }
 
 uno::Reference< text::XTextRange > SAL_CALL
@@ -1250,12 +1248,11 @@ throw (lang::IllegalArgumentException, uno::RuntimeException, std::exception)
 {
     SolarMutexGuard g;
 
-    return m_pImpl->finishOrAppendParagraph(true, rProperties, xInsertPosition);
+    return m_pImpl->finishOrAppendParagraph(rProperties, xInsertPosition);
 }
 
 uno::Reference< text::XTextRange >
 SwXText::Impl::finishOrAppendParagraph(
-        const bool bFinish,
         const uno::Sequence< beans::PropertyValue > & rProperties,
         const uno::Reference< text::XTextRange >& xInsertPosition)
     throw (lang::IllegalArgumentException, uno::RuntimeException, std::exception)
@@ -1296,10 +1293,7 @@ SwXText::Impl::finishOrAppendParagraph(
     m_pDoc->ResetAttrs(aPam);
     // in case of finishParagraph the PaM needs to be moved to the
     // previous paragraph
-    if (bFinish)
-    {
-        aPam.Move( fnMoveBackward, fnGoNode );
-    }
+    aPam.Move( fnMoveBackward, fnGoNode );
 
     try
     {
@@ -1370,7 +1364,7 @@ SwXText::insertTextPortion(
     }
     uno::Reference< text::XTextRange > xRet;
     const uno::Reference< text::XTextCursor > xTextCursor = CreateCursor();
-    xTextCursor->gotoRange(xInsertPosition, sal_False);
+    xTextCursor->gotoRange(xInsertPosition, false);
 
     const uno::Reference< lang::XUnoTunnel > xRangeTunnel(
             xTextCursor, uno::UNO_QUERY_THROW );
@@ -1620,7 +1614,7 @@ SwXText::convertToTextFrame(
             // if not - remove the additional paragraphs and throw
             if (bParaBeforeInserted)
             {
-                SwCursor aDelete(*aStartPam.GetPoint(), nullptr, false);
+                SwCursor aDelete(*aStartPam.GetPoint(), nullptr);
                 *aStartPam.GetPoint() = // park it because node is deleted
                     SwPosition(GetDoc()->GetNodes().GetEndOfContent());
                 aDelete.MovePara(fnParaCurr, fnParaStart);
@@ -1630,7 +1624,7 @@ SwXText::convertToTextFrame(
             }
             if (bParaAfterInserted)
             {
-                SwCursor aDelete(*pEndPam->GetPoint(), nullptr, false);
+                SwCursor aDelete(*pEndPam->GetPoint(), nullptr);
                 *pEndPam->GetPoint() = // park it because node is deleted
                     SwPosition(GetDoc()->GetNodes().GetEndOfContent());
                 aDelete.MovePara(fnParaCurr, fnParaStart);
@@ -1757,7 +1751,7 @@ SwXText::convertToTextFrame(
         }
         if (bParaAfterInserted)
         {
-            xFrameTextCursor->gotoEnd(sal_False);
+            xFrameTextCursor->gotoEnd(false);
             if (!bParaBeforeInserted)
                 m_pImpl->m_pDoc->getIDocumentContentOperations().DelFullPara(*pFrameCursor->GetPaM());
             else
@@ -2047,7 +2041,7 @@ lcl_ApplyCellProperties(
     const sal_Int32 nCell,
     TableColumnSeparators const& rRowSeparators,
     const uno::Sequence< beans::PropertyValue >& rCellProperties,
-    uno::Reference< uno::XInterface > xCell,
+    const uno::Reference< uno::XInterface >& xCell,
     ::std::vector<VerticallyMergedCell> & rMergedCells)
 {
     const sal_Int32 nCellProperties = rCellProperties.getLength();
@@ -2139,8 +2133,8 @@ lcl_ApplyCellProperties(
                         uno::UNO_QUERY);
                 const uno::Reference< text::XTextCursor > xCellCurs =
                     xCellText->createTextCursor();
-                xCellCurs->gotoStart( sal_False );
-                xCellCurs->gotoEnd( sal_True );
+                xCellCurs->gotoStart( false );
+                xCellCurs->gotoEnd( true );
                 const uno::Reference< beans::XPropertyState >
                     xCellTextPropState(xCellCurs, uno::UNO_QUERY);
                 try
@@ -2354,7 +2348,7 @@ throw (uno::RuntimeException, std::exception)
     uno::Reference< text::XText > const xText(xSource, uno::UNO_QUERY_THROW);
     uno::Reference< text::XTextCursor > const xCursor =
         xText->createTextCursor();
-    xCursor->gotoEnd( sal_True );
+    xCursor->gotoEnd( true );
 
     uno::Reference< lang::XUnoTunnel > const xCursorTunnel(xCursor,
         uno::UNO_QUERY_THROW);
@@ -2391,8 +2385,7 @@ static char const*const g_ServicesBodyText[] =
     "com.sun.star.text.Text",
 };
 
-static const size_t g_nServicesBodyText(
-    sizeof(g_ServicesBodyText)/sizeof(g_ServicesBodyText[0]));
+static const size_t g_nServicesBodyText(SAL_N_ELEMENTS(g_ServicesBodyText));
 
 sal_Bool SAL_CALL SwXBodyText::supportsService(const OUString& rServiceName)
 throw (uno::RuntimeException, std::exception)
@@ -2587,7 +2580,7 @@ SwXBodyText::hasElements() throw (uno::RuntimeException, std::exception)
         throw aRuntime;
     }
 
-    return sal_True;
+    return true;
 }
 
 class SwXHeadFootText::Impl
@@ -2839,7 +2832,7 @@ SwXHeadFootText::getElementType() throw (uno::RuntimeException, std::exception)
 
 sal_Bool SAL_CALL SwXHeadFootText::hasElements() throw (uno::RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

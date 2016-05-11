@@ -58,30 +58,30 @@ static const struct
 
 
 static void lcl_AddAsPropertyChangeListener(
-        Reference< XPropertyChangeListener > xListener,
+        const Reference< XPropertyChangeListener >& xListener,
         Reference< XLinguProperties > &rPropSet )
 {
     if (xListener.is() && rPropSet.is())
     {
-        for (int i = 0;  i < NUM_FLUSH_PROPS;  ++i)
+        for (auto& aFlushPropertie : aFlushProperties)
         {
             rPropSet->addPropertyChangeListener(
-                    OUString::createFromAscii(aFlushProperties[i].pPropName), xListener );
+                    OUString::createFromAscii(aFlushPropertie.pPropName), xListener );
         }
     }
 }
 
 
 static void lcl_RemoveAsPropertyChangeListener(
-        Reference< XPropertyChangeListener > xListener,
+        const Reference< XPropertyChangeListener >& xListener,
         Reference< XLinguProperties > &rPropSet )
 {
     if (xListener.is() && rPropSet.is())
     {
-        for (int i = 0;  i < NUM_FLUSH_PROPS;  ++i)
+        for (auto& aFlushPropertie : aFlushProperties)
         {
             rPropSet->removePropertyChangeListener(
-                    OUString::createFromAscii(aFlushProperties[i].pPropName), xListener );
+                    OUString::createFromAscii(aFlushPropertie.pPropName), xListener );
         }
     }
 }
@@ -110,7 +110,7 @@ void FlushListener::SetDicList( Reference<XSearchableDictionaryList> &rDL )
 
         xDicList = rDL;
         if (xDicList.is())
-            xDicList->addDictionaryListEventListener( this, sal_False );
+            xDicList->addDictionaryListEventListener( this, false );
     }
 }
 
@@ -185,7 +185,6 @@ void SAL_CALL FlushListener::propertyChange(
             mrSpellCache.Flush();
     }
 }
-
 
 
 SpellCache::SpellCache()

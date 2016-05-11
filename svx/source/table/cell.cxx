@@ -54,7 +54,6 @@
 #include <svx/svdpool.hxx>
 
 
-
 using ::editeng::SvxBorderLine;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::beans;
@@ -64,7 +63,6 @@ using namespace ::com::sun::star::table;
 using namespace ::com::sun::star::drawing;
 using namespace ::com::sun::star::style;
 using namespace ::com::sun::star::container;
-
 
 
 static const SvxItemPropertySet* ImplGetSvxCellPropertySet()
@@ -359,7 +357,6 @@ rtl::Reference< Cell > Cell::create( SdrTableObj& rTableObj, OutlinerParaObject*
 }
 
 
-
 Cell::Cell( SdrTableObj& rTableObj, OutlinerParaObject* pOutlinerParaObject ) throw(css::uno::RuntimeException)
 : SdrText( rTableObj, pOutlinerParaObject )
 , SvxUnoTextBase( ImplGetSvxUnoOutlinerTextCursorSvxPropertySet() )
@@ -378,12 +375,10 @@ Cell::Cell( SdrTableObj& rTableObj, OutlinerParaObject* pOutlinerParaObject ) th
 }
 
 
-
 Cell::~Cell() throw()
 {
     dispose();
 }
-
 
 
 void Cell::dispose()
@@ -411,7 +406,6 @@ void Cell::dispose()
 }
 
 
-
 void Cell::SetModel(SdrModel* pNewModel)
 {
     SvxTextEditSource* pTextEditSource = dynamic_cast< SvxTextEditSource* >( GetEditSource() );
@@ -437,10 +431,9 @@ void Cell::SetModel(SdrModel* pNewModel)
 
         SetStyleSheet( nullptr, true );
         SdrText::SetModel( pNewModel );
-        ForceOutlinerParaObject( OUTLINERMODE_TEXTOBJECT );
+        ForceOutlinerParaObject( OutlinerMode::TextObject );
     }
 }
-
 
 
 void Cell::merge( sal_Int32 nColumnSpan, sal_Int32 nRowSpan )
@@ -453,7 +446,6 @@ void Cell::merge( sal_Int32 nColumnSpan, sal_Int32 nRowSpan )
         notifyModified();
     }
 }
-
 
 
 void Cell::mergeContent( const CellRef& xSourceCell )
@@ -482,7 +474,6 @@ void Cell::mergeContent( const CellRef& xSourceCell )
         SetStyleSheet( GetStyleSheet(), true );
     }
 }
-
 
 
 void Cell::cloneFrom( const CellRef& xCell )
@@ -523,7 +514,6 @@ void Cell::replaceContentAndFormating( const CellRef& xSourceCell )
 }
 
 
-
 void Cell::setMerged()
 {
     if( !mbMerged )
@@ -532,7 +522,6 @@ void Cell::setMerged()
         notifyModified();
     }
 }
-
 
 
 void Cell::copyFormatFrom( const CellRef& xSourceCell )
@@ -554,16 +543,25 @@ void Cell::copyFormatFrom( const CellRef& xSourceCell )
 }
 
 
-
 void Cell::notifyModified()
 {
     if( mxTable.is() )
-        mxTable->setModified( sal_True );
+        mxTable->setModified( true );
 }
 
 
 // SdrTextShape proxy
 
+
+bool Cell::IsActiveCell()
+{
+    bool isActive = false;
+    SdrTableObj& rTableObj = dynamic_cast< SdrTableObj& >( GetObject() );
+    if( rTableObj.getActiveCell().get() == this )
+        isActive = true;
+
+    return isActive;
+}
 
 bool Cell::IsTextEditActive()
 {
@@ -580,7 +578,6 @@ bool Cell::IsTextEditActive()
     }
     return isActive;
 }
-
 
 
 bool Cell::hasText() const
@@ -604,7 +601,6 @@ bool Cell::hasText() const
 }
 
 
-
 OutlinerParaObject* Cell::GetEditOutlinerParaObject() const
 {
     SdrTableObj& rTableObj = dynamic_cast< SdrTableObj& >( GetObject() );
@@ -614,11 +610,10 @@ OutlinerParaObject* Cell::GetEditOutlinerParaObject() const
 }
 
 
-
 void Cell::SetStyleSheet( SfxStyleSheet* pStyleSheet, bool bDontRemoveHardAttr )
 {
     // only allow cell styles for cells
-    if( pStyleSheet && pStyleSheet->GetFamily() != SFX_STYLE_FAMILY_FRAME )
+    if( pStyleSheet && pStyleSheet->GetFamily() != SfxStyleFamily::Frame )
         return;
 
     if( mpProperties && (mpProperties->GetStyleSheet() != pStyleSheet) )
@@ -626,7 +621,6 @@ void Cell::SetStyleSheet( SfxStyleSheet* pStyleSheet, bool bDontRemoveHardAttr )
         mpProperties->SetStyleSheet( pStyleSheet, bDontRemoveHardAttr );
     }
 }
-
 
 
 const SfxItemSet& Cell::GetObjectItemSet()
@@ -673,12 +667,10 @@ void Cell::TakeTextAnchorRect(Rectangle& rAnchorRect) const
 }
 
 
-
 const SfxItemSet& Cell::GetItemSet() const
 {
     return mpProperties->GetObjectItemSet();
 }
-
 
 
 void Cell::SetMergedItemSetAndBroadcast(const SfxItemSet& rSet, bool bClearAllItems)
@@ -691,12 +683,10 @@ void Cell::SetMergedItemSetAndBroadcast(const SfxItemSet& rSet, bool bClearAllIt
 }
 
 
-
 sal_Int32 Cell::getMinimumWidth()
 {
     return GetTextLeftDistance() + GetTextRightDistance() + 100;
 }
-
 
 
 sal_Int32 Cell::getMinimumHeight()
@@ -718,12 +708,12 @@ sal_Int32 Cell::getMinimumHeight()
         pEditOutliner->SetMaxAutoPaperSize(aSize);
         nMinimumHeight = pEditOutliner->GetTextHeight()+1;
     }
-    else if ( hasText() )
+    else
     {
         Outliner& rOutliner=rTableObj.ImpGetDrawOutliner();
         rOutliner.SetPaperSize(aSize);
         rOutliner.SetUpdateMode(true);
-        ForceOutlinerParaObject( OUTLINERMODE_TEXTOBJECT );
+        ForceOutlinerParaObject( OutlinerMode::TextObject );
 
         if( GetOutlinerParaObject() )
         {
@@ -738,12 +728,10 @@ sal_Int32 Cell::getMinimumHeight()
 }
 
 
-
 long Cell::GetTextLeftDistance() const
 {
     return static_cast<const SdrMetricItem&>(GetItemSet().Get(SDRATTR_TEXT_LEFTDIST)).GetValue();
 }
-
 
 
 long Cell::GetTextRightDistance() const
@@ -752,12 +740,10 @@ long Cell::GetTextRightDistance() const
 }
 
 
-
 long Cell::GetTextUpperDistance() const
 {
     return static_cast<const SdrMetricItem&>(GetItemSet().Get(SDRATTR_TEXT_UPPERDIST)).GetValue();
 }
-
 
 
 long Cell::GetTextLowerDistance() const
@@ -766,12 +752,10 @@ long Cell::GetTextLowerDistance() const
 }
 
 
-
 SdrTextVertAdjust Cell::GetTextVerticalAdjust() const
 {
     return static_cast<const SdrTextVertAdjustItem&>(GetItemSet().Get(SDRATTR_TEXT_VERTADJUST)).GetValue();
 }
-
 
 
 SdrTextHorzAdjust Cell::GetTextHorizontalAdjust() const
@@ -780,16 +764,14 @@ SdrTextHorzAdjust Cell::GetTextHorizontalAdjust() const
 }
 
 
-
 void Cell::SetOutlinerParaObject( OutlinerParaObject* pTextObject )
 {
     SdrText::SetOutlinerParaObject( pTextObject );
     maSelection.nStartPara = EE_PARA_MAX_COUNT;
 
     if( pTextObject == nullptr )
-        ForceOutlinerParaObject( OUTLINERMODE_TEXTOBJECT );
+        ForceOutlinerParaObject( OutlinerMode::TextObject );
 }
-
 
 
 void Cell::AddUndo()
@@ -799,9 +781,13 @@ void Cell::AddUndo()
     {
         CellRef xCell( this );
         GetModel()->AddUndo( new CellUndo( &rObj, xCell ) );
+
+        // Undo action for the after-text-edit-ended stack.
+        SdrTableObj* pTableObj = dynamic_cast<sdr::table::SdrTableObj*>(&rObj);
+        if (pTableObj && pTableObj->IsTextEditActive())
+            pTableObj->AddUndo(new CellUndo(pTableObj, xCell));
     }
 }
-
 
 
 sdr::properties::TextProperties* Cell::CloneProperties( sdr::properties::TextProperties* pProperties, SdrObject& rNewObj, Cell& rNewCell )
@@ -811,7 +797,6 @@ sdr::properties::TextProperties* Cell::CloneProperties( sdr::properties::TextPro
     else
         return nullptr;
 }
-
 
 
 sdr::properties::TextProperties* Cell::CloneProperties( SdrObject& rNewObj, Cell& rNewCell )
@@ -845,12 +830,10 @@ Any SAL_CALL Cell::queryInterface( const Type & rType ) throw(RuntimeException, 
 }
 
 
-
 void SAL_CALL Cell::acquire() throw ()
 {
     ::cppu::OWeakObject::acquire();
 }
-
 
 
 void SAL_CALL Cell::release() throw ()
@@ -875,7 +858,6 @@ Sequence< Type > SAL_CALL Cell::getTypes(  ) throw (RuntimeException, std::excep
 }
 
 
-
 Sequence< sal_Int8 > SAL_CALL Cell::getImplementationId(  ) throw (RuntimeException, std::exception)
 {
     return css::uno::Sequence<sal_Int8>();
@@ -890,14 +872,12 @@ css::awt::Size SAL_CALL Cell::getMinimumSize()
 }
 
 
-
 css::awt::Size SAL_CALL Cell::getPreferredSize()
     throw (RuntimeException,
            std::exception)
 {
     return getMinimumSize();
 }
-
 
 
 css::awt::Size SAL_CALL Cell::calcAdjustedSize( const css::awt::Size& aNewSize ) throw (RuntimeException, std::exception)
@@ -915,12 +895,10 @@ sal_Int32 SAL_CALL Cell::getRowSpan() throw (RuntimeException, std::exception)
 }
 
 
-
 sal_Int32 SAL_CALL Cell::getColumnSpan() throw (RuntimeException, std::exception)
 {
     return mnColSpan;
 }
-
 
 
 sal_Bool SAL_CALL Cell::isMerged() throw (RuntimeException, std::exception)
@@ -938,7 +916,6 @@ OUString SAL_CALL Cell::getFormula(  ) throw (RuntimeException, std::exception)
 }
 
 
-
 void SAL_CALL Cell::setFormula( const OUString& aFormula ) throw (RuntimeException, std::exception)
 {
     if( msFormula != aFormula )
@@ -948,12 +925,10 @@ void SAL_CALL Cell::setFormula( const OUString& aFormula ) throw (RuntimeExcepti
 }
 
 
-
 double SAL_CALL Cell::getValue(  ) throw (RuntimeException, std::exception)
 {
     return mfValue;
 }
-
 
 
 void SAL_CALL Cell::setValue( double nValue ) throw (RuntimeException, std::exception)
@@ -966,12 +941,10 @@ void SAL_CALL Cell::setValue( double nValue ) throw (RuntimeException, std::exce
 }
 
 
-
 CellContentType SAL_CALL Cell::getType() throw (RuntimeException, std::exception)
 {
     return mnCellContentType;
 }
-
 
 
 sal_Int32 SAL_CALL Cell::getError(  ) throw (RuntimeException, std::exception)
@@ -1009,7 +982,6 @@ Reference< XPropertySetInfo > SAL_CALL Cell::getPropertySetInfo() throw(RuntimeE
 {
     return mpPropSet->getPropertySetInfo();
 }
-
 
 
 void SAL_CALL Cell::setPropertyValue( const OUString& rPropertyName, const Any& rValue ) throw(UnknownPropertyException, PropertyVetoException, IllegalArgumentException, WrappedTargetException, RuntimeException, std::exception)
@@ -1156,7 +1128,6 @@ void SAL_CALL Cell::setPropertyValue( const OUString& rPropertyName, const Any& 
 }
 
 
-
 Any SAL_CALL Cell::getPropertyValue( const OUString& PropertyName ) throw(UnknownPropertyException, WrappedTargetException, RuntimeException, std::exception)
 {
     ::SolarMutexGuard aGuard;
@@ -1240,11 +1211,9 @@ Any SAL_CALL Cell::getPropertyValue( const OUString& PropertyName ) throw(Unknow
 }
 
 
-
 void SAL_CALL Cell::addPropertyChangeListener( const OUString& /*aPropertyName*/, const Reference< XPropertyChangeListener >& /*xListener*/ ) throw(UnknownPropertyException, WrappedTargetException, RuntimeException, std::exception)
 {
 }
-
 
 
 void SAL_CALL Cell::removePropertyChangeListener( const OUString& /*aPropertyName*/, const Reference< XPropertyChangeListener >& /*aListener*/ ) throw(UnknownPropertyException, WrappedTargetException, RuntimeException, std::exception)
@@ -1252,11 +1221,9 @@ void SAL_CALL Cell::removePropertyChangeListener( const OUString& /*aPropertyNam
 }
 
 
-
 void SAL_CALL Cell::addVetoableChangeListener( const OUString& /*PropertyName*/, const Reference< XVetoableChangeListener >& /*aListener*/ ) throw(UnknownPropertyException, WrappedTargetException, RuntimeException, std::exception)
 {
 }
-
 
 
 void SAL_CALL Cell::removeVetoableChangeListener( const OUString& /*PropertyName*/, const Reference< XVetoableChangeListener >& /*aListener*/ ) throw(UnknownPropertyException, WrappedTargetException, RuntimeException, std::exception)
@@ -1297,7 +1264,6 @@ void SAL_CALL Cell::setPropertyValues( const Sequence< OUString >& aPropertyName
 }
 
 
-
 Sequence< Any > SAL_CALL Cell::getPropertyValues( const Sequence< OUString >& aPropertyNames ) throw (RuntimeException, std::exception)
 {
     ::SolarMutexGuard aSolarGuard;
@@ -1331,17 +1297,14 @@ Sequence< Any > SAL_CALL Cell::getPropertyValues( const Sequence< OUString >& aP
 }
 
 
-
 void SAL_CALL Cell::addPropertiesChangeListener( const Sequence< OUString >& /*aPropertyNames*/, const Reference< XPropertiesChangeListener >& /*xListener*/ ) throw (RuntimeException, std::exception)
 {
 }
 
 
-
 void SAL_CALL Cell::removePropertiesChangeListener( const Reference< XPropertiesChangeListener >& /*xListener*/ ) throw (RuntimeException, std::exception)
 {
 }
-
 
 
 void SAL_CALL Cell::firePropertiesChangeEvent( const Sequence< OUString >& /*aPropertyNames*/, const Reference< XPropertiesChangeListener >& /*xListener*/ ) throw (RuntimeException, std::exception)
@@ -1455,7 +1418,6 @@ PropertyState SAL_CALL Cell::getPropertyState( const OUString& PropertyName ) th
 }
 
 
-
 Sequence< PropertyState > SAL_CALL Cell::getPropertyStates( const Sequence< OUString >& aPropertyName ) throw(UnknownPropertyException, RuntimeException, std::exception)
 {
     ::SolarMutexGuard aGuard;
@@ -1484,7 +1446,6 @@ Sequence< PropertyState > SAL_CALL Cell::getPropertyStates( const Sequence< OUSt
 
     return aRet;
 }
-
 
 
 void SAL_CALL Cell::setPropertyToDefault( const OUString& PropertyName ) throw(UnknownPropertyException, RuntimeException, std::exception)
@@ -1526,7 +1487,6 @@ void SAL_CALL Cell::setPropertyToDefault( const OUString& PropertyName ) throw(U
     }
     throw UnknownPropertyException();
 }
-
 
 
 Any SAL_CALL Cell::getPropertyDefault( const OUString& aPropertyName ) throw(UnknownPropertyException, WrappedTargetException, RuntimeException, std::exception)
@@ -1602,7 +1562,6 @@ void SAL_CALL Cell::setAllPropertiesToDefault()
 }
 
 
-
 void SAL_CALL Cell::setPropertiesToDefault( const Sequence< OUString >& aPropertyNames ) throw (UnknownPropertyException, RuntimeException, std::exception)
 {
     sal_Int32 nCount = aPropertyNames.getLength();
@@ -1611,7 +1570,6 @@ void SAL_CALL Cell::setPropertiesToDefault( const Sequence< OUString >& aPropert
     while(nCount--)
         setPropertyToDefault( *pName++ );
 }
-
 
 
 Sequence< Any > SAL_CALL Cell::getPropertyDefaults( const Sequence< OUString >& aPropertyNames ) throw (UnknownPropertyException, WrappedTargetException, RuntimeException, std::exception)
@@ -1638,7 +1596,6 @@ void SAL_CALL Cell::insertTextContent( const Reference< XTextRange >& xRange, co
 }
 
 
-
 void SAL_CALL Cell::removeTextContent( const Reference< XTextContent >& xContent ) throw (NoSuchElementException, RuntimeException, std::exception)
 {
     SvxUnoTextBase::removeTextContent( xContent );
@@ -1655,12 +1612,10 @@ Reference< XTextCursor > SAL_CALL Cell::createTextCursor(  ) throw (RuntimeExcep
 }
 
 
-
 Reference< XTextCursor > SAL_CALL Cell::createTextCursorByRange( const Reference< XTextRange >& aTextPosition ) throw (RuntimeException, std::exception)
 {
     return SvxUnoTextBase::createTextCursorByRange( aTextPosition );
 }
-
 
 
 void SAL_CALL Cell::insertString( const Reference< XTextRange >& xRange, const OUString& aString, sal_Bool bAbsorb ) throw (RuntimeException, std::exception)
@@ -1668,7 +1623,6 @@ void SAL_CALL Cell::insertString( const Reference< XTextRange >& xRange, const O
     SvxUnoTextBase::insertString( xRange, aString, bAbsorb );
     notifyModified();
 }
-
 
 
 void SAL_CALL Cell::insertControlCharacter( const Reference< XTextRange >& xRange, sal_Int16 nControlCharacter, sal_Bool bAbsorb ) throw (IllegalArgumentException, RuntimeException, std::exception)
@@ -1687,12 +1641,10 @@ Reference< XText > SAL_CALL Cell::getText(  ) throw (RuntimeException, std::exce
 }
 
 
-
 Reference< XTextRange > SAL_CALL Cell::getStart(  ) throw (RuntimeException, std::exception)
 {
     return SvxUnoTextBase::getStart();
 }
-
 
 
 Reference< XTextRange > SAL_CALL Cell::getEnd(  ) throw (RuntimeException, std::exception)
@@ -1701,13 +1653,11 @@ Reference< XTextRange > SAL_CALL Cell::getEnd(  ) throw (RuntimeException, std::
 }
 
 
-
 OUString SAL_CALL Cell::getString(  ) throw (RuntimeException, std::exception)
 {
     maSelection.nStartPara = EE_PARA_MAX_COUNT;
     return SvxUnoTextBase::getString();
 }
-
 
 
 void SAL_CALL Cell::setString( const OUString& aString ) throw (RuntimeException, std::exception)

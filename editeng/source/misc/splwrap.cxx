@@ -144,27 +144,23 @@ SvxSpellWrapper::~SvxSpellWrapper()
  --------------------------------------------------------------------*/
 
 SvxSpellWrapper::SvxSpellWrapper( vcl::Window* pWn,
-    Reference< XSpellChecker1 >  &xSpellChecker,
-    const bool bStart, const bool bIsAllRight,
-    const bool bOther, const bool bRevAllow ) :
+    const bool bStart, const bool bIsAllRight ) :
 
     pWin        ( pWn ),
-    xSpell      ( xSpellChecker ),
-    mpTextObj( nullptr),
-    bOtherCntnt ( bOther ),
+    mpTextObj   ( nullptr),
+    bOtherCntnt ( false ),
     bDialog     ( false ),
     bHyphen     ( false ),
-    bStartChk   ( bOther ),
-    bRevAllowed ( bRevAllow ),
+    bStartChk   ( false ),
+    bRevAllowed ( true ),
     bAllRight   ( bIsAllRight )
 {
     Reference< linguistic2::XLinguProperties >  xProp( SvxGetLinguPropertySet() );
     bool bWrapReverse = xProp.is() && xProp->getIsWrapReverse();
-    bReverse = bRevAllow && bWrapReverse;
-    bStartDone = bOther || ( !bReverse && bStart );
-    bEndDone   = bReverse && bStart && !bOther;
+    bReverse = bWrapReverse;
+    bStartDone = !bReverse && bStart;
+    bEndDone   = bReverse && bStart;
 }
-
 
 
 SvxSpellWrapper::SvxSpellWrapper( vcl::Window* pWn,
@@ -184,7 +180,6 @@ SvxSpellWrapper::SvxSpellWrapper( vcl::Window* pWn,
     bAllRight   ( true )
 {
 }
-
 
 
 sal_Int16 SvxSpellWrapper::CheckSpellLang(
@@ -238,13 +233,9 @@ sal_Int16 SvxSpellWrapper::CheckHyphLang(
 }
 
 
-
-
 void SvxSpellWrapper::SpellStart( SvxSpellArea /*eSpell*/ )
 { // Here, the necessary preparations be made for SpellContinue in the
 } // given area.
-
-
 
 
 bool SvxSpellWrapper::HasOtherCnt()
@@ -253,14 +244,10 @@ bool SvxSpellWrapper::HasOtherCnt()
 }
 
 
-
-
 bool SvxSpellWrapper::SpellMore()
 {
     return false; // Should additional documents be examined?
 }
-
-
 
 
 void SvxSpellWrapper::SpellEnd()
@@ -270,9 +257,8 @@ void SvxSpellWrapper::SpellEnd()
     ShowLanguageErrors();
 }
 
-bool SvxSpellWrapper::SpellContinue()
+void SvxSpellWrapper::SpellContinue()
 {
-    return false;
 }
 
 void SvxSpellWrapper::ReplaceAll( const OUString &, sal_Int16 )
@@ -412,7 +398,6 @@ bool SvxSpellWrapper::SpellNext( )
 }
 
 
-
 Reference< XDictionary >  SvxSpellWrapper::GetAllRightDic()
 {
     Reference< XDictionary >  xDic;
@@ -448,13 +433,12 @@ Reference< XDictionary >  SvxSpellWrapper::GetAllRightDic()
         {
             xDic = SvxGetOrCreatePosDic( xDicList );
             if (xDic.is())
-                xDic->setActive( sal_True );
+                xDic->setActive( true );
         }
     }
 
     return xDic;
 }
-
 
 
 bool SvxSpellWrapper::FindSpellError()
@@ -481,7 +465,7 @@ bool SvxSpellWrapper::FindSpellError()
         {
             if (IsAllRight() && xAllRightDic.is())
             {
-                xAllRightDic->add( xAlt->getWord(), sal_False, OUString() );
+                xAllRightDic->add( xAlt->getWord(), false, OUString() );
             }
             else
             {
@@ -513,7 +497,6 @@ bool SvxSpellWrapper::FindSpellError()
     WAIT_OFF();
     return GetLast().is();
 }
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

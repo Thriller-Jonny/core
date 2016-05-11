@@ -20,6 +20,7 @@
 #define INCLUDED_SW_SOURCE_CORE_INC_UNOEVENT_HXX
 
 #include <svtools/unoevent.hxx>
+#include <unostyle.hxx>
 #include <svl/macitem.hxx>
 
 class SvxMacroItem;
@@ -33,8 +34,6 @@ class SwFormatINetFormat;
 
 class SwHyperlinkEventDescriptor : public SvDetachedEventDescriptor
 {
-    const OUString sImplName;
-
     //XServiceInfo
     virtual OUString SAL_CALL getImplementationName()
         throw( css::uno::RuntimeException, std::exception ) override;
@@ -82,10 +81,10 @@ class SwFrameStyleEventDescriptor : public SvEventDescriptor
 {
     OUString sSwFrameStyleEventDescriptor;
 
-    SwXFrameStyle& rStyle;
+    sw::ICoreFrameStyle& m_rStyle;
 
 public:
-    SwFrameStyleEventDescriptor( SwXFrameStyle& rStyleRef );
+    SwFrameStyleEventDescriptor( sw::ICoreFrameStyle& rStyle );
 
     virtual ~SwFrameStyleEventDescriptor();
 

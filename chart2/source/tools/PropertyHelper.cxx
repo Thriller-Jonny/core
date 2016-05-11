@@ -33,7 +33,6 @@ using namespace ::com::sun::star;
 using namespace ::com::sun::star::beans;
 using ::com::sun::star::uno::Any;
 using ::com::sun::star::uno::Reference;
-using ::com::sun::star::uno::Sequence;
 
 namespace
 {
@@ -274,7 +273,7 @@ void setPropertyValueAny( tPropertyValueMap & rOutMap, tPropertyValueMapKey key,
 }
 
 template<>
-    void setPropertyValue< ::com::sun::star::uno::Any >( tPropertyValueMap & rOutMap, tPropertyValueMapKey key, const ::com::sun::star::uno::Any & rAny )
+    void setPropertyValue< css::uno::Any >( tPropertyValueMap & rOutMap, tPropertyValueMapKey key, const css::uno::Any & rAny )
 {
     setPropertyValueAny( rOutMap, key, rAny );
 }
@@ -286,7 +285,7 @@ void setPropertyValueDefaultAny( tPropertyValueMap & rOutMap, tPropertyValueMapK
 }
 
 template<>
-    void setPropertyValueDefault< ::com::sun::star::uno::Any >( tPropertyValueMap & rOutMap, tPropertyValueMapKey key, const ::com::sun::star::uno::Any & rAny )
+    void setPropertyValueDefault< css::uno::Any >( tPropertyValueMap & rOutMap, tPropertyValueMapKey key, const css::uno::Any & rAny )
 {
     setPropertyValueDefaultAny( rOutMap, key, rAny );
 }

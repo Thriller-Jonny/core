@@ -24,7 +24,6 @@
 #include "macros.hxx"
 #include "RelativeSizeHelper.hxx"
 #include "PropertyMapper.hxx"
-#include <comphelper/InlineContainer.hxx>
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/drawing/CircleKind.hpp>
 #include <com/sun/star/drawing/DoubleSequence.hpp>
@@ -455,7 +454,7 @@ uno::Reference<drawing::XShape>
     if( !xTarget.is() )
         return nullptr;
 
-    Reference< drawing::XShapes > xGroup( ShapeFactory::createGroup3D( xTarget, OUString() ) );
+    Reference< drawing::XShapes > xGroup( ShapeFactory::createGroup3D( xTarget ) );
 
     bool bDoubleSided = false;
     short nRotatedTexture = 0;
@@ -824,7 +823,7 @@ drawing::PolyPolygonBezierCoords getRingBezierCoords(
             double fUnitCircleInnerRadius
             , double fUnitCircleOuterRadius
             , double fStartAngleRadian, double fWidthAngleRadian
-            , ::basegfx::B2DHomMatrix aTransformationFromUnitCircle
+            , const ::basegfx::B2DHomMatrix& aTransformationFromUnitCircle
             , const double fAngleSubdivisionRadian )
 {
     drawing::PolyPolygonBezierCoords aReturn = drawing::PolyPolygonBezierCoords();
@@ -2268,8 +2267,9 @@ uno::Reference< drawing::XShape >
         tPropertyNameValueMap aValueMap;
         //fill line-, fill- and paragraph-properties into the ValueMap
         {
-            tMakePropertyNameMap aNameMap = PropertyMapper::getPropertyNameMapForParagraphProperties();
-            aNameMap( PropertyMapper::getPropertyNameMapForFillAndLineProperties() );
+            tPropertyNameMap aNameMap = PropertyMapper::getPropertyNameMapForParagraphProperties();
+            auto const & add = PropertyMapper::getPropertyNameMapForFillAndLineProperties();
+            aNameMap.insert(add.begin(), add.end());
 
             PropertyMapper::getValueMap( aValueMap, aNameMap, xTextProperties );
         }
@@ -2281,8 +2281,8 @@ uno::Reference< drawing::XShape >
 
             aValueMap.insert( tPropertyNameValueMap::value_type( "TextHorizontalAdjust", uno::makeAny(eHorizontalAdjust) ) ); // drawing::TextHorizontalAdjust
             aValueMap.insert( tPropertyNameValueMap::value_type( "TextVerticalAdjust", uno::makeAny(eVerticalAdjust) ) ); //drawing::TextVerticalAdjust
-            aValueMap.insert( tPropertyNameValueMap::value_type( "TextAutoGrowHeight", uno::makeAny(sal_True) ) ); // sal_Bool
-            aValueMap.insert( tPropertyNameValueMap::value_type( "TextAutoGrowWidth", uno::makeAny(sal_True) ) ); // sal_Bool
+            aValueMap.insert( tPropertyNameValueMap::value_type( "TextAutoGrowHeight", uno::makeAny(true) ) ); // sal_Bool
+            aValueMap.insert( tPropertyNameValueMap::value_type( "TextAutoGrowWidth", uno::makeAny(true) ) ); // sal_Bool
 
             //set name/classified ObjectID (CID)
             if( !aName.isEmpty() )

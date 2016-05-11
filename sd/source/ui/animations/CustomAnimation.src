@@ -199,31 +199,6 @@ Menu RID_CUSTOMANIMATION_FONTSTYLE_POPUP
     };
 };
 
-String STR_CUSTOMANIMATION_DURATION_VERY_SLOW
-{
-    Text [ en-US ] = "Very slow";
-};
-
-String STR_CUSTOMANIMATION_DURATION_SLOW
-{
-    Text [ en-US ] = "Slow";
-};
-
-String STR_CUSTOMANIMATION_DURATION_NORMAL
-{
-    Text [ en-US ] = "Medium";
-};
-
-String STR_CUSTOMANIMATION_DURATION_FAST
-{
-    Text [ en-US ] = "Fast";
-};
-
-String STR_CUSTOMANIMATION_DURATION_VERY_FAST
-{
-    Text [ en-US ] = "Very fast";
-};
-
 String STR_CUSTOMANIMATION_REPEAT_NONE
 {
     Text [ en-US ] = "none";
@@ -388,6 +363,27 @@ String STR_CUSTOMANIMATION_USERPATH
 {
     Text [ en-US ] = "User paths";
 };
+
+String STR_CUSTOMANIMATION_ENTRANCE
+{
+    Text [ en-US ] = "Entrance: %1";
+};
+
+String STR_CUSTOMANIMATION_EMPHASIS
+{
+    Text [ en-US ] = "Emphasis: %1";
+};
+
+String STR_CUSTOMANIMATION_EXIT
+{
+    Text [ en-US ] = "Exit: %1";
+};
+
+String STR_CUSTOMANIMATION_MOTION_PATHS
+{
+    Text [ en-US ] = "Motion Paths: %1";
+};
+
 
 String STR_SLIDETRANSITION_NONE
 {

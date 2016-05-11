@@ -36,7 +36,6 @@ using namespace com::sun::star::ucb;
 
 XPropertySetInfo_impl::XPropertySetInfo_impl( shell* pMyShell,const OUString& aUnqPath )
     : m_pMyShell( pMyShell ),
-      m_xProvider( pMyShell->m_pProvider ),
       m_count( 0 ),
       m_seq( 0 )
 {
@@ -86,7 +85,6 @@ XPropertySetInfo_impl::getPropertyByName(
 
   throw beans::UnknownPropertyException( THROW_WHERE );
 }
-
 
 
 Sequence< beans::Property > SAL_CALL

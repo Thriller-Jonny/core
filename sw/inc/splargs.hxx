@@ -146,7 +146,7 @@ public:
     {
         xHyphWord = rxHW;
     }
-    css::uno::Reference< css::linguistic2::XHyphenatedWord > GetHyphWord()
+    const css::uno::Reference< css::linguistic2::XHyphenatedWord >& GetHyphWord()
     {
         return xHyphWord;
     }
@@ -155,8 +155,10 @@ public:
 
 namespace sw {
 
+typedef std::function<SwTextFrame*()> Creator;
+
 SwTextFrame *
-SwHyphIterCacheLastTextFrame(SwTextNode *, std::function<SwTextFrame * ()>);
+SwHyphIterCacheLastTextFrame(SwTextNode *, const Creator& rCreator);
 
 }
 

@@ -37,7 +37,7 @@ class NamedValueByNameAccess
     const css::uno::Sequence< css::beans::NamedValue >& m_rValues;
 
 public:
-    NamedValueByNameAccess(
+    explicit NamedValueByNameAccess(
         const css::uno::Sequence< css::beans::NamedValue >& rValues) :
         m_rValues(rValues) {} ;
 
@@ -53,7 +53,7 @@ public:
 class UpdateCheckROModel
 {
 public:
-    UpdateCheckROModel(NamedValueByNameAccess& aNameAccess) : m_aNameAccess(aNameAccess) {};
+    explicit UpdateCheckROModel(NamedValueByNameAccess& aNameAccess) : m_aNameAccess(aNameAccess) {};
 
     bool isAutoCheckEnabled() const;
     bool isDownloadPaused() const;
@@ -69,7 +69,6 @@ private:
 
     NamedValueByNameAccess& m_aNameAccess;
 };
-
 
 
 /* This class implements the non published UNO service com.sun.star.setup.UpdateCheckConfig,
@@ -200,8 +199,6 @@ private:
     const css::uno::Reference< css::container::XNameContainer > m_xIgnoredUpdates;
     const ::rtl::Reference< UpdateCheckConfigListener > m_rListener;
 };
-
-
 
 
 template <typename T>

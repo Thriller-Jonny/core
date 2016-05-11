@@ -88,9 +88,11 @@ namespace formula
         virtual void initArgumentInfo() const = 0;
         virtual OUString getSignature() const = 0;
         virtual OString getHelpId() const = 0;
+        virtual bool isHidden() const = 0;
 
         // parameter
         virtual sal_uInt32 getParameterCount() const = 0;
+        virtual sal_uInt32 getVarArgsStart() const = 0;
         virtual OUString getParameterName(sal_uInt32 _nPos) const = 0;
         virtual OUString getParameterDescription(sal_uInt32 _nPos) const = 0;
         virtual bool isParameterOptional(sal_uInt32 _nPos) const = 0;
@@ -123,7 +125,7 @@ namespace formula
         virtual void setSelection(sal_Int32 _nStart, sal_Int32 _nEnd) = 0;
 
         virtual FormEditData* getFormEditData() const = 0;
-        virtual bool calculateValue(const OUString& _sExpression, OUString& _rResult) = 0;
+        virtual bool calculateValue(const OUString& _sExpression, OUString& _rResult, bool bMatrixFormula) = 0;
 
         virtual void switchBack() = 0;
 

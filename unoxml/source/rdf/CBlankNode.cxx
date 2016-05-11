@@ -19,7 +19,6 @@
 
 #include "CNodes.hxx"
 
-#include <boost/noncopyable.hpp>
 #include <cppuhelper/implbase.hxx>
 #include <cppuhelper/supportsservice.hxx>
 #include <com/sun/star/lang/XServiceInfo.hpp>
@@ -36,11 +35,10 @@ class CBlankNode:
     public ::cppu::WeakImplHelper<
         css::lang::XServiceInfo,
         css::lang::XInitialization,
-        css::rdf::XBlankNode>,
-    private boost::noncopyable
+        css::rdf::XBlankNode>
 {
 public:
-    explicit CBlankNode(css::uno::Reference< css::uno::XComponentContext > const & context);
+    CBlankNode();
     virtual ~CBlankNode() {}
 
     // css::lang::XServiceInfo:
@@ -55,13 +53,14 @@ public:
     virtual OUString SAL_CALL getStringValue() throw (css::uno::RuntimeException, std::exception) override;
 
 private:
-    css::uno::Reference< css::uno::XComponentContext > m_xContext;
+    CBlankNode(CBlankNode const&) = delete;
+    CBlankNode& operator=(CBlankNode const&) = delete;
 
     OUString m_NodeID;
 };
 
-CBlankNode::CBlankNode(css::uno::Reference< css::uno::XComponentContext > const & context) :
-    m_xContext(context), m_NodeID()
+CBlankNode::CBlankNode() :
+    m_NodeID()
 {}
 
 // com.sun.star.uno.XServiceInfo:
@@ -115,7 +114,6 @@ OUString SAL_CALL CBlankNode::getStringValue() throw (css::uno::RuntimeException
 } // closing anonymous implementation namespace
 
 
-
 // component helper namespace
 namespace comp_CBlankNode {
 
@@ -130,9 +128,9 @@ css::uno::Sequence< OUString > SAL_CALL _getSupportedServiceNames()
 }
 
 css::uno::Reference< css::uno::XInterface > SAL_CALL _create(
-    const css::uno::Reference< css::uno::XComponentContext > & context)
+    const css::uno::Reference< css::uno::XComponentContext > & )
 {
-    return static_cast< ::cppu::OWeakObject * >(new CBlankNode(context));
+    return static_cast< ::cppu::OWeakObject * >(new CBlankNode);
 }
 
 } // closing component helper namespace

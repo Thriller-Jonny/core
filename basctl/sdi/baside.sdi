@@ -17,15 +17,12 @@
  */
 
 interface BasicIDEView
-[
-    uuid = "D88DF7A2-EE63-11d0-89CA-008029E4B0B1";
-]
 {
 }
 
 shell basctl_Shell
 {
-    import BasicIDEView [Automation];
+    import BasicIDEView;
 
 
     // Current, je nach aktuellem Fenster:
@@ -508,14 +505,11 @@ shell basctl_Shell
 }
 
 interface BasicIDEDocument
-[
-    uuid = "D88DF7A1-EE63-11d0-89CA-008029E4B0B1";
-]
 {
 }
 
 shell basctl_DocShell
 {
-    import BasicIDEDocument [Automation];
+    import BasicIDEDocument;
 }
 

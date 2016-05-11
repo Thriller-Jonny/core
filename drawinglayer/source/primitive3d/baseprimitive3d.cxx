@@ -23,9 +23,7 @@
 #include <comphelper/sequence.hxx>
 
 
-
 using namespace com::sun::star;
-
 
 
 namespace drawinglayer
@@ -69,7 +67,6 @@ namespace drawinglayer
         }
     } // end of namespace primitive3d
 } // end of namespace drawinglayer
-
 
 
 namespace drawinglayer
@@ -184,38 +181,6 @@ namespace drawinglayer
             return (pA->operator==(*pB));
         }
 
-        bool arePrimitive3DSequencesEqual(const Primitive3DSequence& rA, const Primitive3DSequence& rB)
-        {
-            const bool bAHasElements(rA.hasElements());
-
-            if(bAHasElements != rB.hasElements())
-            {
-                return false;
-            }
-
-            if(!bAHasElements)
-            {
-                return true;
-            }
-
-            const sal_Int32 nCount(rA.getLength());
-
-            if(nCount != rB.getLength())
-            {
-                return false;
-            }
-
-            for(sal_Int32 a(0L); a < nCount; a++)
-            {
-                if(!arePrimitive3DReferencesEqual(rA[a], rB[a]))
-                {
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
         bool Primitive3DContainer::operator==(const Primitive3DContainer& rB) const
         {
             const bool bAHasElements(!empty());
@@ -251,27 +216,6 @@ namespace drawinglayer
         void Primitive3DContainer::append(const Primitive3DContainer& rSource)
         {
             insert(end(), rSource.begin(), rSource.end());
-        }
-
-        void Primitive3DContainer::append(Primitive3DContainer&& rSource)
-        {
-            size_t n = size();
-            resize(n + rSource.size());
-            for (size_t i = 0; i<rSource.size(); ++i)
-            {
-                (*this)[n + i] = std::move( rSource[i] );
-            }
-        }
-
-        // concatenate single Primitive3D
-        void appendPrimitive3DReferenceToPrimitive3DSequence(Primitive3DSequence& rDest, const Primitive3DReference& rSource)
-        {
-            if(rSource.is())
-            {
-                const sal_Int32 nDestCount(rDest.getLength());
-                rDest.realloc(nDestCount + 1L);
-                rDest[nDestCount] = rSource;
-            }
         }
 
     } // end of namespace primitive3d

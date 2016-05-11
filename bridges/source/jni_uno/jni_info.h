@@ -22,8 +22,7 @@
 
 #include <sal/config.h>
 
-#include <boost/noncopyable.hpp>
-#include <boost/unordered_map.hpp>
+#include <unordered_map>
 
 #include "jni_base.h"
 
@@ -61,8 +60,11 @@ inline bool is_XInterface( typelib_TypeDescriptionReference * type )
             OUString::unacquired( &type->pTypeName ) == "com.sun.star.uno.XInterface");
 }
 
-struct JNI_type_info: private boost::noncopyable
+struct JNI_type_info
 {
+    JNI_type_info(const JNI_type_info&) = delete;
+    const JNI_type_info& operator=(const JNI_type_info&) = delete;
+
     ::com::sun::star::uno::TypeDescription      m_td;
     jclass                                      m_class;
 
@@ -106,18 +108,20 @@ private:
     virtual ~JNI_compound_type_info() {}
 };
 
-struct JNI_type_info_holder: private boost::noncopyable
+struct JNI_type_info_holder
 {
     JNI_type_info * m_info;
-    inline JNI_type_info_holder()
-        : m_info( NULL )
-        {}
+
+    JNI_type_info_holder(const JNI_type_info_holder&) = delete;
+    const JNI_type_info_holder& operator=(const JNI_type_info_holder&) = delete;
+
+    inline JNI_type_info_holder() : m_info( nullptr ) {}
 };
 
-typedef ::boost::unordered_map<
+typedef ::std::unordered_map<
     OUString, JNI_type_info_holder, OUStringHash > t_str2type;
 
-class JNI_info: private boost::noncopyable
+class JNI_info
 {
     mutable ::osl::Mutex        m_mutex;
     mutable t_str2type          m_type_map;
@@ -177,11 +181,11 @@ public:
     jmethodID                   m_method_UnoRuntime_generateOid;
     jmethodID                   m_method_UnoRuntime_queryInterface;
     jmethodID                   m_ctor_Any_with_Type_Object;
-    jfieldID                    m_field_Any__type;
-    jfieldID                    m_field_Any__object;
+    jfieldID                    m_field_Any_type;
+    jfieldID                    m_field_Any_object;
     jmethodID                   m_ctor_Type_with_Class;
     jmethodID                   m_ctor_Type_with_Name_TypeClass;
-    jfieldID                    m_field_Type__typeName;
+    jfieldID                    m_field_Type_typeName;
     jmethodID                   m_method_TypeClass_fromInt;
     jfieldID                    m_field_Enum_m_value;
 
@@ -200,6 +204,10 @@ public:
     ::com::sun::star::uno::Type const & m_RuntimeException_type;
     ::com::sun::star::uno::Type const & m_void_type;
     JNI_interface_type_info const * m_XInterface_type_info;
+
+    // noncopyable
+    JNI_info(const JNI_info&) = delete;
+    const JNI_info& operator=(const JNI_info&) = delete;
 
     JNI_type_info const * get_type_info(
         JNI_context const & jni,

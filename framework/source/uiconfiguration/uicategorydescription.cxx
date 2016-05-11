@@ -92,15 +92,14 @@ class ConfigurationAccess_UICategory : public ::cppu::WeakImplHelper<XNameAccess
         Any                       getUINameFromID( const OUString& rId );
         Any                       getUINameFromCache( const OUString& rId );
         Sequence< OUString > getAllIds();
-        bool                  fillCache();
+        void                  fillCache();
 
     private:
         typedef std::unordered_map< OUString,
                                     OUString,
-                                    OUStringHash,
-                                    std::equal_to< OUString > > IdToInfoCache;
+                                    OUStringHash > IdToInfoCache;
 
-        bool initializeConfigAccess();
+        void initializeConfigAccess();
 
         OUString                          m_aConfigCategoryAccess;
         OUString                          m_aPropUIName;
@@ -182,15 +181,15 @@ sal_Bool SAL_CALL ConfigurationAccess_UICategory::hasElements()
 throw ( RuntimeException, std::exception )
 {
     // There must be global categories!
-    return sal_True;
+    return true;
 }
 
-bool ConfigurationAccess_UICategory::fillCache()
+void ConfigurationAccess_UICategory::fillCache()
 {
     SAL_INFO( "fwk", "framework (cd100003) ::ConfigurationAccess_UICategory::fillCache" );
 
     if ( m_bCacheFilled )
-        return true;
+        return;
 
     sal_Int32            i( 0 );
     OUString        aUIName;
@@ -217,8 +216,6 @@ bool ConfigurationAccess_UICategory::fillCache()
     }
 
     m_bCacheFilled = true;
-
-    return true;
 }
 
 Any ConfigurationAccess_UICategory::getUINameFromID( const OUString& rId )
@@ -314,7 +311,7 @@ Sequence< OUString > ConfigurationAccess_UICategory::getAllIds()
     return Sequence< OUString >();
 }
 
-bool ConfigurationAccess_UICategory::initializeConfigAccess()
+void ConfigurationAccess_UICategory::initializeConfigAccess()
 {
     Sequence< Any > aArgs( 1 );
     PropertyValue   aPropValue;
@@ -337,8 +334,6 @@ bool ConfigurationAccess_UICategory::initializeConfigAccess()
                 xContainer->addContainerListener(m_xConfigListener);
             }
         }
-
-        return true;
     }
     catch ( const WrappedTargetException& )
     {
@@ -346,8 +341,6 @@ bool ConfigurationAccess_UICategory::initializeConfigAccess()
     catch ( const Exception& )
     {
     }
-
-    return false;
 }
 
 // container.XContainerListener

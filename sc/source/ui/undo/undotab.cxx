@@ -54,10 +54,8 @@
 extern bool bDrawIsInUndo; // somewhere as member!
 
 using namespace com::sun::star;
-using ::com::sun::star::uno::Sequence;
 using ::std::unique_ptr;
 using ::std::vector;
-using std::shared_ptr;
 
 
 ScUndoInsertTab::ScUndoInsertTab( ScDocShell* pNewDocShell,
@@ -500,7 +498,7 @@ void ScUndoMoveTab::DoChange( bool bUndo ) const
     {
         size_t i = mpNewTabs->size();
         std::unique_ptr<ScProgress> pProgress(new ScProgress(pDocShell , ScGlobal::GetRscString(STR_UNDO_MOVE_TAB),
-                                                               i * rDoc.GetCodeCount()));
+                                                               i * rDoc.GetCodeCount(), true));
         for (; i > 0; --i)
         {
             SCTAB nDestTab = (*mpNewTabs)[i-1];
@@ -522,7 +520,7 @@ void ScUndoMoveTab::DoChange( bool bUndo ) const
     {
         size_t n = mpNewTabs->size();
         std::unique_ptr<ScProgress> pProgress(new ScProgress(pDocShell , ScGlobal::GetRscString(STR_UNDO_MOVE_TAB),
-                                                               n * rDoc.GetCodeCount()));
+                                                               n * rDoc.GetCodeCount(), true));
         for (size_t i = 0; i < n; ++i)
         {
             SCTAB nDestTab = (*mpNewTabs)[i];

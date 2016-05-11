@@ -75,8 +75,7 @@ void SwHTMLParser::InsertDrawObject( SdrObject* pNewDrawObj,
                                      sal_Int16 eVertOri,
                                      sal_Int16 eHoriOri,
                                      SfxItemSet& rCSS1ItemSet,
-                                     SvxCSS1PropertyInfo& rCSS1PropInfo,
-                                     bool bHidden )
+                                     SvxCSS1PropertyInfo& rCSS1PropInfo )
 {
     // always on top of text.
     // but in invisible layer. <ConnectToLayout> will move the object
@@ -180,8 +179,7 @@ void SwHTMLParser::InsertDrawObject( SdrObject* pNewDrawObj,
              text::HoriOrientation::LEFT == eHoriOri )
     {
         aAnchor.SetType( FLY_AT_PARA );
-        aFrameSet.Put( SwFormatSurround(bHidden ? SURROUND_THROUGHT
-                                             : SURROUND_RIGHT) );
+        aFrameSet.Put( SwFormatSurround(SURROUND_RIGHT) );
         // #i26791# - direct positioning for <SwDoc::Insert(..)>
         pNewDrawObj->SetRelativePos( Point(nLeftSpace, nUpperSpace) );
     }
@@ -431,10 +429,10 @@ void SwHTMLParser::NewMarquee( HTMLTable *pCurTable )
     }
 
     // die Attribute der Umgebung am Draw-Objekt setzen
-    _HTMLAttr** pHTMLAttributes = reinterpret_cast<_HTMLAttr**>(&m_aAttrTab);
-    for (auto nCnt = sizeof(_HTMLAttrTable) / sizeof(_HTMLAttr*); nCnt--; ++pHTMLAttributes)
+    HTMLAttr** pHTMLAttributes = reinterpret_cast<HTMLAttr**>(&m_aAttrTab);
+    for (auto nCnt = sizeof(HTMLAttrTable) / sizeof(HTMLAttr*); nCnt--; ++pHTMLAttributes)
     {
-        _HTMLAttr *pAttr = *pHTMLAttributes;
+        HTMLAttr *pAttr = *pHTMLAttributes;
         if( pAttr )
             PutEEPoolItem( aItemSet, pAttr->GetItem() );
     }

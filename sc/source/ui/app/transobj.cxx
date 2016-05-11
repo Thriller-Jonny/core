@@ -36,6 +36,9 @@
 #include <sfx2/docfile.hxx>
 
 #include "transobj.hxx"
+#include "patattr.hxx"
+#include "cellvalue.hxx"
+#include "cellform.hxx"
 #include "document.hxx"
 #include "viewopti.hxx"
 #include "editutil.hxx"
@@ -261,15 +264,19 @@ bool ScTransferObj::GetData( const datatransfer::DataFlavor& rFlavor, const OUSt
 
             const ScPatternAttr* pPattern = pDoc->GetPattern( nCol, nRow, nTab );
             ScTabEditEngine aEngine( *pPattern, pDoc->GetEditPool() );
-            if (pDoc->GetCellType(aPos) == CELLTYPE_EDIT)
+            ScRefCellValue aCell(*pDoc, aPos);
+            if (aCell.meType == CELLTYPE_EDIT)
             {
-                const EditTextObject* pObj = pDoc->GetEditText(aPos);
-                if (pObj)
-                    aEngine.SetText(*pObj);
+                const EditTextObject* pObj = aCell.mpEditText;
+                aEngine.SetText(*pObj);
             }
             else
             {
-                OUString aText = pDoc->GetString(nCol, nRow, nTab);
+                SvNumberFormatter* pFormatter = pDoc->GetFormatTable();
+                sal_uLong nNumFmt = pPattern->GetNumberFormat(pFormatter);
+                OUString aText;
+                Color* pColor;
+                ScCellFormat::GetString(aCell, nNumFmt, aText, &pColor, *pFormatter, pDoc);
                 if (!aText.isEmpty())
                     aEngine.SetText(aText);
             }
@@ -661,7 +668,7 @@ void ScTransferObj::InitDocShell(bool bLimitToPageSize)
         Size aPaperSize = SvxPaperInfo::GetPaperSize( PAPER_A4 );       // Twips
         ScStyleSheetPool* pStylePool = pDoc->GetStyleSheetPool();
         OUString aStyleName = pDoc->GetPageStyle( aBlock.aStart.Tab() );
-        SfxStyleSheetBase* pStyleSheet = pStylePool->Find( aStyleName, SFX_STYLE_FAMILY_PAGE );
+        SfxStyleSheetBase* pStyleSheet = pStylePool->Find( aStyleName, SfxStyleFamily::Page );
         if (pStyleSheet)
         {
             const SfxItemSet& rSourceSet = pStyleSheet->GetItemSet();
@@ -669,7 +676,7 @@ void ScTransferObj::InitDocShell(bool bLimitToPageSize)
 
             //  CopyStyleFrom kopiert SetItems mit richtigem Pool
             ScStyleSheetPool* pDestPool = rDestDoc.GetStyleSheetPool();
-            pDestPool->CopyStyleFrom( pStylePool, aStyleName, SFX_STYLE_FAMILY_PAGE );
+            pDestPool->CopyStyleFrom( pStylePool, aStyleName, SfxStyleFamily::Page );
         }
 
         ScViewData aViewData( pDocSh, nullptr );

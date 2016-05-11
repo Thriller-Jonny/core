@@ -48,13 +48,13 @@
 #include <comphelper/propertystatecontainer.hxx>
 #include <comphelper/uno3.hxx>
 #include <cppuhelper/implbase5.hxx>
+#include <comphelper/interfacecontainer2.hxx>
 #include <dbaccess/dbsubcomponentcontroller.hxx>
 #include <svl/lstner.hxx>
 #include <svtools/transfer.hxx>
 #include <svx/svdedtv.hxx>
 #include <sfx2/zoomitem.hxx>
 
-#include <boost/noncopyable.hpp>
 #include <functional>
 #include <memory>
 
@@ -82,11 +82,10 @@ namespace rptui
                                 ,public SfxListener
                                 ,public ::comphelper::OPropertyStateContainer
                                 ,public ::comphelper::OPropertyArrayUsageHelper < OReportController_BASE >
-                                ,public ::boost::noncopyable
     {
     private:
         OModuleClient           m_aModuleClient;
-        ::cppu::OInterfaceContainerHelper
+        ::comphelper::OInterfaceContainerHelper2
                                 m_aSelectionListeners;
         css::uno::Sequence< css::beans::PropertyValue>
                                 m_aCollapsedSections;
@@ -216,11 +215,11 @@ namespace rptui
         @param _nUndoStrId the string id of the string which is shown in undo menu
         @param _nShrinkId  ID of what you would like to shrink.
         */
-        static void shrinkSectionBottom(css::uno::Reference< css::report::XSection > _xSection);
-        static void shrinkSectionTop(css::uno::Reference< css::report::XSection > _xSection);
+        static void shrinkSectionBottom(const css::uno::Reference< css::report::XSection >& _xSection);
+        static void shrinkSectionTop(const css::uno::Reference< css::report::XSection >& _xSection);
 
     public:
-        void shrinkSection(sal_uInt16 _nUndoStrId, css::uno::Reference< css::report::XSection > _xSection, sal_Int32 _nShrinkId);
+        void shrinkSection(sal_uInt16 _nUndoStrId, const css::uno::Reference< css::report::XSection >& _xSection, sal_Int32 _nShrinkId);
 
         /** opens the file open dialog to allow the user to select a image which will be
         * bound to a newly created image button.
@@ -332,7 +331,9 @@ namespace rptui
         virtual ~OReportController();
 
     public:
-        OReportController(css::uno::Reference< css::uno::XComponentContext > const & the_context);
+        explicit OReportController(css::uno::Reference< css::uno::XComponentContext > const & the_context);
+        OReportController(const OReportController&) = delete;
+        OReportController& operator=(const OReportController&) = delete;
 
         DECL_LINK_TYPED( EventLstHdl, VclWindowEvent&, void );
         DECL_LINK_TYPED( OnCreateHdl, OAddFieldWindow&, void);
@@ -391,7 +392,7 @@ namespace rptui
         /** gives access to the report definition
         * \return the report definition object, may be <NULL/>
         */
-        inline css::uno::Reference< css::report::XReportDefinition> getReportDefinition() const { return m_xReportDefinition; }
+        const css::uno::Reference< css::report::XReportDefinition>& getReportDefinition() const { return m_xReportDefinition; }
 
         // css::frame::XController
         virtual css::uno::Reference< css::frame::XModel >  SAL_CALL getModel() throw( css::uno::RuntimeException, std::exception ) override;
@@ -434,15 +435,15 @@ namespace rptui
 
         /** returns the number formatter
         */
-        css::uno::Reference< css::util::XNumberFormatter >    getReportNumberFormatter() const { return m_xFormatter;}
+        const css::uno::Reference< css::util::XNumberFormatter >& getReportNumberFormatter() const { return m_xFormatter;}
 
         /** return the SdrModel of the real model
         *
         * \return
         */
-        std::shared_ptr<rptui::OReportModel> getSdrModel() const { return m_aReportModel;}
+        const std::shared_ptr<rptui::OReportModel>& getSdrModel() const { return m_aReportModel;}
 
-        inline css::uno::Reference< css::uno::XComponentContext >  getContext() const { return m_xContext; }
+        const css::uno::Reference< css::uno::XComponentContext >&  getContext() const { return m_xContext; }
         inline sal_Int16   getZoomValue() const     { return m_nZoomValue; }
         inline void         resetZoomType()         { m_eZoomType = SvxZoomType::PERCENT; }
 

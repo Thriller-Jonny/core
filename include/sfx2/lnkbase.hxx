@@ -99,12 +99,12 @@ protected:
                     SvBaseLink( SfxLinkUpdateMode nLinkType, SotClipboardFormatId nContentType = SotClipboardFormatId::STRING );
     virtual         ~SvBaseLink();
 
-    void            _GetRealObject( bool bConnect = true );
+    void            GetRealObject_( bool bConnect = true );
 
     SvLinkSource*   GetRealObject()
                     {
                         if( !xObj.Is() )
-                            _GetRealObject();
+                            GetRealObject_();
                         return xObj;
                     }
 
@@ -112,7 +112,7 @@ public:
 
     virtual void    Closed();
 
-#if defined WNT
+#if defined(_WIN32)
                     SvBaseLink( const OUString& rNm, sal_uInt16 nObjectType,
                                  SvLinkSource* );
 #endif
@@ -123,7 +123,7 @@ public:
     SvLinkSource*   GetObj() const  { return xObj; }
 
     void            SetLinkSourceName( const OUString & rName );
-    OUString        GetLinkSourceName() const { return aLinkName;}
+    const OUString& GetLinkSourceName() const { return aLinkName;}
 
     enum UpdateResult {
         SUCCESS = 0,
@@ -136,7 +136,7 @@ public:
     void                 SetUpdateMode( SfxLinkUpdateMode );
     SfxLinkUpdateMode    GetUpdateMode() const;
     SotClipboardFormatId GetContentType() const;
-    bool                 SetContentType( SotClipboardFormatId nType );
+    void                 SetContentType( SotClipboardFormatId nType );
 
     LinkManager*          GetLinkManager();
     const LinkManager*    GetLinkManager() const;

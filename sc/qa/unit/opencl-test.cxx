@@ -1,10 +1,6 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This file is added by mcw.
- */
 
 #include <sal/config.h>
-#include <unotest/filters-test.hxx>
 #include <test/bootstrapfixture.hxx>
 #include <rtl/strbuf.hxx>
 #include <osl/file.hxx>
@@ -38,11 +34,8 @@
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
 
-/* Implementation of Filters test */
-
 class ScOpenCLTest
-    : public test::FiltersTest
-    , public ScBootstrapFixture
+    : public ScBootstrapFixture
 {
 public:
     ScOpenCLTest();
@@ -63,9 +56,6 @@ public:
     virtual void setUp() override;
     virtual void tearDown() override;
 
-    virtual bool load( const OUString &rFilter, const OUString &rURL,
-            const OUString &rUserData, SfxFilterFlags nFilterFlags,
-            SotClipboardFormatId nClipboardID, unsigned int nFilterVersion) override;
     void testSystematic();
     void testSharedFormulaXLS();
 #if 0
@@ -555,19 +545,6 @@ bool ScOpenCLTest::initTestEnv(const OUString& fileName, sal_Int32 nFormat,
     CPPUNIT_ASSERT_MESSAGE("Failed to load document.", xDocShRes.Is());
 
     return true;
-}
-
-bool ScOpenCLTest::load(const OUString &rFilter, const OUString &rURL,
-    const OUString &rUserData, SfxFilterFlags nFilterFlags,
-        SotClipboardFormatId nClipboardID, unsigned int nFilterVersion)
-{
-    ScDocShellRef xDocShRef = ScBootstrapFixture::load(rURL, rFilter, rUserData,
-        OUString(), nFilterFlags, nClipboardID, nFilterVersion );
-    bool bLoaded = xDocShRef.Is();
-    //reference counting of ScDocShellRef is very confused.
-    if (bLoaded)
-        xDocShRef->DoClose();
-    return bLoaded;
 }
 
 bool ScOpenCLTest::detectOpenCLDevice()
@@ -4771,9 +4748,15 @@ void ScOpenCLTest::tearDown()
 {
     //close test env
     if(xDocSh.Is())
+    {
         xDocSh->DoClose();
+        xDocSh.Clear();
+    }
     if(xDocShRes.Is())
+    {
         xDocShRes->DoClose();
+        xDocShRes.Clear();
+    }
 
     uno::Reference< lang::XComponent >
         ( m_xCalcComponent, UNO_QUERY_THROW )->dispose();

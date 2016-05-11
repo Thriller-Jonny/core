@@ -36,7 +36,6 @@
 #include "app.hrc"
 #include "sdtreelb.hxx"
 #include <sfx2/bindings.hxx>
-#include <boost/bind.hpp>
 
 namespace sd { namespace slidesorter { namespace controller {
 
@@ -65,7 +64,7 @@ DragAndDropContext::DragAndDropContext (SlideSorter& rSlideSorter)
 
 DragAndDropContext::~DragAndDropContext()
 {
-    SetTargetSlideSorter (nullptr, Point(0,0));
+    SetTargetSlideSorter (Point(0,0));
 }
 
 void DragAndDropContext::Dispose()
@@ -95,8 +94,9 @@ void DragAndDropContext::UpdatePosition (
     bool bDoAutoScroll = bAllowAutoScroll
             && mpTargetSlideSorter->GetController().GetScrollBarManager().AutoScroll(
                 rMousePosition,
-                ::boost::bind(
-                    &DragAndDropContext::UpdatePosition, this, rMousePosition, eMode, false));
+                [this, eMode, &rMousePosition] () {
+                    return this->UpdatePosition(rMousePosition, eMode, false);
+                });
 
     if (!bDoAutoScroll)
     {
@@ -110,10 +110,8 @@ void DragAndDropContext::UpdatePosition (
 }
 
 void DragAndDropContext::SetTargetSlideSorter (
-    SlideSorter* pSlideSorter,
     const Point& rMousePosition,
-    const InsertionIndicatorHandler::Mode eMode,
-    const bool bIsOverSourceView)
+    const InsertionIndicatorHandler::Mode eMode)
 {
     if (mpTargetSlideSorter != nullptr)
     {
@@ -122,12 +120,12 @@ void DragAndDropContext::SetTargetSlideSorter (
             Animator::AM_Animated);
     }
 
-    mpTargetSlideSorter = pSlideSorter;
+    mpTargetSlideSorter = nullptr;
 
     if (mpTargetSlideSorter != nullptr)
     {
         mpTargetSlideSorter->GetController().GetInsertionIndicatorHandler()->Start(
-            bIsOverSourceView);
+            false/*bIsOverSourceView*/);
         mpTargetSlideSorter->GetController().GetInsertionIndicatorHandler()->UpdatePosition(
             rMousePosition,
             eMode);

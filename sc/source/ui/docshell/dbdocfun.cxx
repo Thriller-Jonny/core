@@ -194,9 +194,8 @@ bool ScDBDocFunc::RenameDBRange( const OUString& rOld, const OUString& rNew )
     return bDone;
 }
 
-bool ScDBDocFunc::ModifyDBData( const ScDBData& rNewData )
+void ScDBDocFunc::ModifyDBData( const ScDBData& rNewData )
 {
-    bool bDone = false;
     ScDocument& rDoc = rDocShell.GetDocument();
     ScDBCollection* pDocColl = rDoc.GetDBCollection();
     bool bUndo = rDoc.IsUndoEnabled();
@@ -236,10 +235,7 @@ bool ScDBDocFunc::ModifyDBData( const ScDBData& rNewData )
         }
 
         aModificator.SetDocumentModified();
-        bDone = true;
     }
-
-    return bDone;
 }
 
 void ScDBDocFunc::ModifyAllDBData( const ScDBCollection& rNewColl, const std::vector<ScRange>& rDelAreaList )
@@ -281,13 +277,14 @@ void ScDBDocFunc::ModifyAllDBData( const ScDBCollection& rNewColl, const std::ve
     }
 }
 
-bool ScDBDocFunc::RepeatDB( const OUString& rDBName, bool bRecord, bool bApi, bool bIsUnnamed, SCTAB aTab )
+bool ScDBDocFunc::RepeatDB( const OUString& rDBName, bool bApi, bool bIsUnnamed, SCTAB aTab )
 {
     //! auch fuer ScDBFunc::RepeatDB benutzen!
 
     bool bDone = false;
     ScDocument& rDoc = rDocShell.GetDocument();
-    if (bRecord && !rDoc.IsUndoEnabled())
+    bool bRecord = true;
+    if (!rDoc.IsUndoEnabled())
         bRecord = false;
     ScDBData* pDBData = nullptr;
     if (bIsUnnamed)
@@ -562,7 +559,7 @@ bool ScDBDocFunc::Sort( SCTAB nTab, const ScSortParam& rSortParam,
     {
         ScInputOptions aInputOption = SC_MOD()->GetInputOptions();
         bool bUpdateRefs = aInputOption.GetSortRefUpdate();
-        ScProgress aProgress(&rDocShell, ScGlobal::GetRscString(STR_PROGRESS_SORTING), 0);
+        ScProgress aProgress(&rDocShell, ScGlobal::GetRscString(STR_PROGRESS_SORTING), 0, true);
         rDoc.Sort(nTab, aLocalParam, bRepeatQuery, bUpdateRefs, &aProgress, &aUndoParam);
     }
 
@@ -698,7 +695,10 @@ bool ScDBDocFunc::Query( SCTAB nTab, const ScQueryParam& rQueryParam,
                                     ( aLocalParam.bHasHeader ? 1 : 0 );
                 while ( nTestCol <= MAXCOL &&
                         rDoc.GetCellType(ScAddress( nTestCol, nTestRow, nTab )) == CELLTYPE_FORMULA )
-                    ++nTestCol, ++nFormulaCols;
+                {
+                    ++nTestCol;
+                    ++nFormulaCols;
+                }
             }
 
             bKeepFmt = pDestData->IsKeepFmt();
@@ -789,6 +789,7 @@ bool ScDBDocFunc::Query( SCTAB nTab, const ScQueryParam& rQueryParam,
 
     //  Filtern am Dokument ausfuehren
     SCSIZE nCount = rDoc.Query( nTab, rQueryParam, bKeepSub );
+    pDBData->CalcSaveFilteredCount( nCount );
     if (bCopy)
     {
         aLocalParam.nRow2 = aLocalParam.nRow1 + nCount;
@@ -822,7 +823,7 @@ bool ScDBDocFunc::Query( SCTAB nTab, const ScQueryParam& rQueryParam,
                 sal_uLong nProgCount = nFormulaCols;
                 nProgCount *= aLocalParam.nRow2 - nFStartY;
                 ScProgress aProgress( rDoc.GetDocumentShell(),
-                        ScGlobal::GetRscString(STR_FILL_SERIES_PROGRESS), nProgCount );
+                        ScGlobal::GetRscString(STR_FILL_SERIES_PROGRESS), nProgCount, true );
 
                 rDoc.Fill( aLocalParam.nCol2+1, nFStartY,
                             aLocalParam.nCol2+nFormulaCols, nFStartY, &aProgress, aMark,
@@ -948,7 +949,7 @@ bool ScDBDocFunc::Query( SCTAB nTab, const ScQueryParam& rQueryParam,
     return true;
 }
 
-bool ScDBDocFunc::DoSubTotals( SCTAB nTab, const ScSubTotalParam& rParam,
+void ScDBDocFunc::DoSubTotals( SCTAB nTab, const ScSubTotalParam& rParam,
                                 const ScSortParam* pForceNewSort, bool bRecord, bool bApi )
 {
     //! auch fuer ScDBFunc::DoSubTotals benutzen!
@@ -957,7 +958,6 @@ bool ScDBDocFunc::DoSubTotals( SCTAB nTab, const ScSubTotalParam& rParam,
     //  - SelectionChanged (?)
 
     bool bDo = !rParam.bRemoveOnly;                         // sal_False = nur loeschen
-    bool bRet = false;
 
     ScDocument& rDoc = rDocShell.GetDocument();
     if (bRecord && !rDoc.IsUndoEnabled())
@@ -967,7 +967,7 @@ bool ScDBDocFunc::DoSubTotals( SCTAB nTab, const ScSubTotalParam& rParam,
     if (!pDBData)
     {
         OSL_FAIL( "SubTotals: keine DBData" );
-        return false;
+        return;
     }
 
     ScEditableTester aTester( &rDoc, nTab, 0,rParam.nRow1+1, MAXCOL,MAXROW );
@@ -975,7 +975,7 @@ bool ScDBDocFunc::DoSubTotals( SCTAB nTab, const ScSubTotalParam& rParam,
     {
         if (!bApi)
             rDocShell.ErrorMessage(aTester.GetMessageId());
-        return false;
+        return;
     }
 
     if (rDoc.HasAttrib( rParam.nCol1, rParam.nRow1+1, nTab,
@@ -983,7 +983,7 @@ bool ScDBDocFunc::DoSubTotals( SCTAB nTab, const ScSubTotalParam& rParam,
     {
         if (!bApi)
             rDocShell.ErrorMessage(STR_MSSG_INSERTCELLS_0); // nicht in zusammengefasste einfuegen
-        return false;
+        return;
     }
 
     bool bOk = true;
@@ -1105,10 +1105,7 @@ bool ScDBDocFunc::DoSubTotals( SCTAB nTab, const ScSubTotalParam& rParam,
         rDocShell.PostPaint(ScRange(0, 0, nTab, MAXCOL,MAXROW,nTab),
                             PAINT_GRID | PAINT_LEFT | PAINT_TOP | PAINT_SIZE);
         aModificator.SetDocumentModified();
-
-        bRet = bSuccess;
     }
-    return bRet;
 }
 
 namespace {
@@ -1176,7 +1173,7 @@ bool checkNewOutputRange(ScDPObject& rDPObj, ScDocShell& rDocShell, ScRange& rNe
     const ScSheetSourceDesc* pSheetDesc = rDPObj.GetSheetDesc();
     if (pSheetDesc && pSheetDesc->GetSourceRange().Intersects(rNewOut))
     {
-        // New output range intersepts with the source data. Move it up to
+        // New output range intersteps with the source data. Move it up to
         // where the old range is and see if that works.
         ScRange aOldRange = rDPObj.GetOutRange();
         SCsROW nDiff = aOldRange.aStart.Row() - rNewOut.aStart.Row();
@@ -1536,16 +1533,16 @@ bool ScDBDocFunc::UpdatePivotTable(ScDPObject& rDPObj, bool bRecord, bool bApi)
     return true;
 }
 
-sal_uLong ScDBDocFunc::RefreshPivotTables(ScDPObject* pDPObj, bool bApi)
+void ScDBDocFunc::RefreshPivotTables(ScDPObject* pDPObj, bool bApi)
 {
     ScDPCollection* pDPs = rDocShell.GetDocument().GetDPCollection();
     if (!pDPs)
-        return 0;
+        return;
 
     std::set<ScDPObject*> aRefs;
     sal_uLong nErrId = pDPs->ReloadCache(pDPObj, aRefs);
     if (nErrId)
-        return nErrId;
+        return;
 
     std::set<ScDPObject*>::iterator it = aRefs.begin(), itEnd = aRefs.end();
     for (; it != itEnd; ++it)
@@ -1555,8 +1552,6 @@ sal_uLong ScDBDocFunc::RefreshPivotTables(ScDPObject* pDPObj, bool bApi)
         // This action is intentionally not undoable since it modifies cache.
         UpdatePivotTable(*pObj, false, bApi);
     }
-
-    return 0;
 }
 
 void ScDBDocFunc::RefreshPivotTableGroups(ScDPObject* pDPObj)
@@ -1633,7 +1628,7 @@ void ScDBDocFunc::UpdateImport( const OUString& rTarget, const svx::ODataAccessD
     aImportParam.nType      = static_cast<sal_uInt8>( ( nCommandType == sdb::CommandType::QUERY ) ? ScDbQuery : ScDbTable );
     aImportParam.bImport    = true;
 
-    bool bContinue = DoImport( nTab, aImportParam, &rDescriptor, true );
+    bool bContinue = DoImport( nTab, aImportParam, &rDescriptor );
 
     //  DB-Operationen wiederholen
 

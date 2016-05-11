@@ -177,7 +177,7 @@ implnCut( const uno::Reference< frame::XModel>& xModel )
     ScTabViewShell* pViewShell =  getBestViewShell( xModel );
     if ( pViewShell )
     {
-        pViewShell->CutToClip( nullptr, true );
+        pViewShell->CutToClip();
 
         // mark the copied transfer object so it is used in ScVbaRange::Insert
         ScTransferObj* pClipObj = ScTransferObj::GetOwnClipboard( nullptr );
@@ -302,7 +302,7 @@ void setUpDocumentModules( const uno::Reference< sheet::XSpreadsheetDocument >& 
             document. */
         uno::Reference<script::XLibraryContainer> xLibContainer = pShell->GetBasicContainer();
         uno::Reference<script::vba::XVBACompatibility> xVBACompat( xLibContainer, uno::UNO_QUERY_THROW );
-        xVBACompat->setVBACompatibilityMode( sal_True );
+        xVBACompat->setVBACompatibilityMode( true );
 
         if( xLibContainer.is() )
         {

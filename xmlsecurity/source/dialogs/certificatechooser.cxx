@@ -48,12 +48,12 @@ sal_uInt16 CertificateChooser::GetSelectedEntryPos() const
     return (sal_uInt16) nSel;
 }
 
-CertificateChooser::CertificateChooser( vcl::Window* _pParent, uno::Reference< uno::XComponentContext>& _rxCtx, uno::Reference< css::xml::crypto::XSecurityEnvironment >& _rxSecurityEnvironment, const SignatureInformations& _rCertsToIgnore )
+CertificateChooser::CertificateChooser(vcl::Window* _pParent, uno::Reference<uno::XComponentContext>& _rxCtx, uno::Reference<xml::crypto::XSecurityEnvironment>& _rxSecurityEnvironment)
     : ModalDialog(_pParent, "SelectCertificateDialog", "xmlsec/ui/selectcertificatedialog.ui")
-    , maCertsToIgnore( _rCertsToIgnore )
 {
     get(m_pOKBtn, "ok");
     get(m_pViewBtn, "viewcert");
+    get(m_pDescriptionED, "description");
 
     Size aControlSize(275, 122);
     const long nControlWidth = aControlSize.Width();
@@ -132,42 +132,16 @@ void CertificateChooser::ImplInitialize()
         }
 
         uno::Reference< css::security::XSerialNumberAdapter> xSerialNumberAdapter =
-            ::com::sun::star::security::SerialNumberAdapter::create(mxCtx);
+            css::security::SerialNumberAdapter::create(mxCtx);
 
         sal_Int32 nCertificates = maCerts.getLength();
-        sal_Int32 nCertificatesToIgnore = maCertsToIgnore.size();
         for( sal_Int32 nCert = nCertificates; nCert; )
         {
             uno::Reference< security::XCertificate > xCert = maCerts[ --nCert ];
-            bool bIgnoreThis = false;
+            // Check if we have a private key for this...
+            long nCertificateCharacters = mxSecurityEnvironment->getCertificateCharacters(xCert);
 
-            // Do we already use that?
-            if( nCertificatesToIgnore )
-            {
-                OUString aIssuerName = xCert->getIssuerName();
-                for( sal_Int32 nSig = 0; nSig < nCertificatesToIgnore; ++nSig )
-                {
-                    const SignatureInformation& rInf = maCertsToIgnore[ nSig ];
-                    if ( ( aIssuerName == rInf.ouX509IssuerName ) &&
-                        ( xSerialNumberAdapter->toString( xCert->getSerialNumber() ) == rInf.ouX509SerialNumber ) )
-                    {
-                        bIgnoreThis = true;
-                        break;
-                    }
-                }
-            }
-
-            if ( !bIgnoreThis )
-            {
-                // Check if we have a private key for this...
-                long nCertificateCharacters = mxSecurityEnvironment->getCertificateCharacters( xCert );
-
-                if ( !( nCertificateCharacters & security::CertificateCharacters::HAS_PRIVATE_KEY ) )
-                    bIgnoreThis = true;
-
-            }
-
-            if ( bIgnoreThis )
+            if (!(nCertificateCharacters & security::CertificateCharacters::HAS_PRIVATE_KEY))
             {
                 ::comphelper::removeElementAt( maCerts, nCert );
                 nCertificates = maCerts.getLength();
@@ -199,11 +173,17 @@ uno::Reference< css::security::XCertificate > CertificateChooser::GetSelectedCer
     return xCert;
 }
 
+OUString CertificateChooser::GetDescription()
+{
+    return m_pDescriptionED->GetText();
+}
+
 IMPL_LINK_NOARG_TYPED(CertificateChooser, CertificateHighlightHdl, SvTreeListBox*, void)
 {
     bool bEnable = GetSelectedCertificate().is();
     m_pViewBtn->Enable( bEnable );
     m_pOKBtn->Enable( bEnable );
+    m_pDescriptionED->Enable(bEnable);
 }
 
 IMPL_LINK_NOARG_TYPED(CertificateChooser, CertificateSelectHdl, SvTreeListBox*, bool)

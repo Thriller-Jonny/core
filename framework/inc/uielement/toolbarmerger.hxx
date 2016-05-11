@@ -44,6 +44,7 @@ struct AddonsParams
     OUString aImageId;
     OUString aTarget;
     OUString aControlType;
+    sal_uInt16 nWidth;
 };
 
 struct AddonToolbarItem
@@ -54,6 +55,7 @@ struct AddonToolbarItem
     OUString aTarget;
     OUString aContext;
     OUString aControlType;
+    sal_uInt16 nWidth;
 };
 
 typedef ::std::vector< AddonToolbarItem > AddonToolbarItemContainer;
@@ -79,13 +81,13 @@ class ToolBarMerger
                                                    OUString& rImageIdentifier,
                                                    OUString& rTarget,
                                                    OUString& rContext,
-                                                   OUString& rControlType );
+                                                   OUString& rControlType,
+                                                   sal_uInt16& rWidth );
 
         static ReferenceToolbarPathInfo FindReferencePoint( ToolBox* pToolbar,
                                                             const OUString& rReferencePoint );
 
-        static bool       ProcessMergeOperation( const css::uno::Reference< css::frame::XFrame >& xFrame,
-                                                 ToolBox*                  pToolbar,
+        static bool       ProcessMergeOperation( ToolBox*                  pToolbar,
                                                  sal_uInt16                nPos,
                                                  sal_uInt16&               rItemId,
                                                  CommandToInfoMap&         rCommandMap,
@@ -94,8 +96,7 @@ class ToolBarMerger
                                                  const OUString&           rMergeCommandParameter,
                                                  const AddonToolbarItemContainer& rItems );
 
-        static bool       ProcessMergeFallback( const css::uno::Reference< css::frame::XFrame >& xFrame,
-                                                ToolBox*                         pToolbar,
+        static bool       ProcessMergeFallback( ToolBox*                         pToolbar,
                                                 sal_uInt16                       nPos,
                                                 sal_uInt16&                      rItemId,
                                                 CommandToInfoMap&                rCommandMap,
@@ -104,8 +105,7 @@ class ToolBarMerger
                                                 const OUString&           rMergeFallback,
                                                 const AddonToolbarItemContainer& rItems );
 
-        static bool       MergeItems( const css::uno::Reference< css::frame::XFrame >& xFrame,
-                                      ToolBox*                  pToolbar,
+        static bool       MergeItems( ToolBox*                  pToolbar,
                                       sal_uInt16                nPos,
                                       sal_uInt16                nModIndex,
                                       sal_uInt16&               rItemId,
@@ -113,8 +113,7 @@ class ToolBarMerger
                                       const OUString&           rModuleIdentifier,
                                       const AddonToolbarItemContainer& rAddonToolbarItems );
 
-        static bool       ReplaceItem( const css::uno::Reference< css::frame::XFrame >& xFrame,
-                                       ToolBox*                  pToolbar,
+        static bool       ReplaceItem( ToolBox*                  pToolbar,
                                        sal_uInt16                nPos,
                                        sal_uInt16&               rItemId,
                                        CommandToInfoMap&         rCommandMap,
@@ -131,6 +130,7 @@ class ToolBarMerger
             ToolBox*        pToolbar,
             const OUString& rCommandURL,
             sal_uInt16      nId,
+            sal_uInt16      nWidth,
             const OUString& rControlType );
 
         static void CreateToolbarItem( ToolBox* pToolbox,

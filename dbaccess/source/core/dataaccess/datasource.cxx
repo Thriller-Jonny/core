@@ -119,7 +119,7 @@ protected:
     FlushNotificationAdapter( const Reference< XFlushable >& _rxBroadcaster, const Reference< XFlushListener >& _rxListener );
     virtual ~FlushNotificationAdapter();
 
-    void SAL_CALL impl_dispose( bool _bRevokeListener );
+    void SAL_CALL impl_dispose();
 
 protected:
     // XFlushListener
@@ -147,16 +147,13 @@ FlushNotificationAdapter::~FlushNotificationAdapter()
 {
 }
 
-void SAL_CALL FlushNotificationAdapter::impl_dispose( bool _bRevokeListener )
+void SAL_CALL FlushNotificationAdapter::impl_dispose()
 {
     Reference< XFlushListener > xKeepAlive( this );
 
-    if ( _bRevokeListener )
-    {
-        Reference< XFlushable > xFlushable( m_aBroadcaster );
-        if ( xFlushable.is() )
-            xFlushable->removeFlushListener( this );
-    }
+    Reference< XFlushable > xFlushable( m_aBroadcaster );
+    if ( xFlushable.is() )
+        xFlushable->removeFlushListener( this );
 
     m_aListener.clear();
     m_aBroadcaster.clear();
@@ -168,7 +165,7 @@ void SAL_CALL FlushNotificationAdapter::flushed( const EventObject& rEvent ) thr
     if ( xListener.is() )
         xListener->flushed( rEvent );
     else
-        impl_dispose( true );
+        impl_dispose();
 }
 
 void SAL_CALL FlushNotificationAdapter::disposing( const EventObject& Source ) throw (RuntimeException, std::exception)
@@ -177,7 +174,7 @@ void SAL_CALL FlushNotificationAdapter::disposing( const EventObject& Source ) t
     if ( xListener.is() )
         xListener->disposing( Source );
 
-    impl_dispose( true );
+    impl_dispose();
 }
 
 OAuthenticationContinuation::OAuthenticationContinuation()
@@ -188,7 +185,7 @@ OAuthenticationContinuation::OAuthenticationContinuation()
 
 sal_Bool SAL_CALL OAuthenticationContinuation::canSetRealm(  ) throw(RuntimeException, std::exception)
 {
-    return sal_False;
+    return false;
 }
 
 void SAL_CALL OAuthenticationContinuation::setRealm( const OUString& /*Realm*/ ) throw(RuntimeException, std::exception)
@@ -210,7 +207,7 @@ void SAL_CALL OAuthenticationContinuation::setUserName( const OUString& _rUser )
 
 sal_Bool SAL_CALL OAuthenticationContinuation::canSetPassword(  ) throw(RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 void SAL_CALL OAuthenticationContinuation::setPassword( const OUString& _rPassword ) throw(RuntimeException, std::exception)
@@ -232,7 +229,7 @@ void SAL_CALL OAuthenticationContinuation::setRememberPassword( RememberAuthenti
 
 sal_Bool SAL_CALL OAuthenticationContinuation::canSetAccount(  ) throw(RuntimeException, std::exception)
 {
-    return sal_False;
+    return false;
 }
 
 void SAL_CALL OAuthenticationContinuation::setAccount( const OUString& ) throw(RuntimeException, std::exception)
@@ -325,7 +322,7 @@ void SAL_CALL OSharedConnectionManager::disposing( const css::lang::EventObject&
 {
     MutexGuard aGuard(m_aMutex);
     Reference<XConnection> xConnection(Source.Source,UNO_QUERY);
-    TSharedConnectionMap::iterator aFind = m_aSharedConnection.find(xConnection);
+    TSharedConnectionMap::const_iterator aFind = m_aSharedConnection.find(xConnection);
     if ( m_aSharedConnection.end() != aFind )
     {
         osl_atomic_decrement(&aFind->second->second.nALiveCount);
@@ -1062,8 +1059,8 @@ Reference< XConnection > SAL_CALL ODatabaseSource::connectWithCompletion( const 
         // the request
         AuthenticationRequest aRequest;
         aRequest.ServerName = sServerName;
-        aRequest.HasRealm = aRequest.HasAccount = sal_False;
-        aRequest.HasUserName = aRequest.HasPassword = sal_True;
+        aRequest.HasRealm = aRequest.HasAccount = false;
+        aRequest.HasUserName = aRequest.HasPassword = true;
         aRequest.UserName = m_pImpl->m_sUser;
         aRequest.Password = m_pImpl->m_sFailedPassword.isEmpty() ?  m_pImpl->m_aPassword : m_pImpl->m_sFailedPassword;
         OInteractionRequest* pRequest = new OInteractionRequest(makeAny(aRequest));
@@ -1225,7 +1222,7 @@ void SAL_CALL ODatabaseSource::flush(  ) throw (RuntimeException, std::exception
             SharedModel xModel( m_pImpl->getModel_noCreate(), SharedModel::NoTakeOwnership );
 
             if ( !xModel.is() )
-                xModel.reset( m_pImpl->createNewModel_deliverOwnership( false ), SharedModel::TakeOwnership );
+                xModel.reset( m_pImpl->createNewModel_deliverOwnership(), SharedModel::TakeOwnership );
 
             Reference< css::frame::XStorable> xStorable( xModel, UNO_QUERY_THROW );
             xStorable->store();
@@ -1311,7 +1308,7 @@ Reference< XOfficeDatabaseDocument > SAL_CALL ODatabaseSource::getDatabaseDocume
 
     Reference< XModel > xModel( m_pImpl->getModel_noCreate() );
     if ( !xModel.is() )
-        xModel = m_pImpl->createNewModel_deliverOwnership( false );
+        xModel = m_pImpl->createNewModel_deliverOwnership();
 
     return Reference< XOfficeDatabaseDocument >( xModel, UNO_QUERY_THROW );
 }

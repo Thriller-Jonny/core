@@ -480,13 +480,6 @@ bool XPolygon::operator==( const XPolygon& rXPoly ) const
     return *rXPoly.pImpXPolygon == *pImpXPolygon;
 }
 
-bool XPolygon::operator!=( const XPolygon& rXPoly ) const
-{
-    pImpXPolygon->CheckPointDelete();
-    if (rXPoly.pImpXPolygon==pImpXPolygon) return false;
-    return *rXPoly.pImpXPolygon != *pImpXPolygon;
-}
-
 /// get the flags for the point at the given position
 XPolyFlags XPolygon::GetFlags( sal_uInt16 nPos ) const
 {
@@ -904,20 +897,6 @@ ImpXPolyPolygon::~ImpXPolyPolygon()
     aXPolyList.clear();
 }
 
-bool ImpXPolyPolygon::operator==(const ImpXPolyPolygon& rImpXPolyPoly) const
-{
-    size_t nCount = aXPolyList.size();
-    const XPolygonList& rCmpList = rImpXPolyPoly.aXPolyList;
-    if ( nCount != rCmpList.size() ) return false;
-    bool bEq=true;
-    for ( size_t i = nCount; i > 0 && bEq; )
-    {
-        i--;
-        bEq = ( *aXPolyList[ i ] == *rCmpList[ i ] );
-    }
-    return bEq;
-}
-
 XPolyPolygon::XPolyPolygon( sal_uInt16 /*nInitSize*/, sal_uInt16 /*nResize*/ )
 {
     pImpXPolyPolygon = new ImpXPolyPolygon();
@@ -947,22 +926,15 @@ void XPolyPolygon::CheckReference()
     }
 }
 
-void XPolyPolygon::Insert( const XPolygon& rXPoly, sal_uInt16 nPos )
+void XPolyPolygon::Insert( const XPolygon& rXPoly )
 {
     CheckReference();
     XPolygon* pXPoly = new XPolygon( rXPoly );
-    if ( nPos < pImpXPolyPolygon->aXPolyList.size() )
-    {
-        XPolygonList::iterator it = pImpXPolyPolygon->aXPolyList.begin();
-        ::std::advance( it, nPos );
-        pImpXPolyPolygon->aXPolyList.insert( it, pXPoly );
-    }
-    else
-        pImpXPolyPolygon->aXPolyList.push_back( pXPoly );
+    pImpXPolyPolygon->aXPolyList.push_back( pXPoly );
 }
 
 /// insert all XPolygons of a XPolyPolygon
-void XPolyPolygon::Insert( const XPolyPolygon& rXPolyPoly, sal_uInt16 nPos )
+void XPolyPolygon::Insert( const XPolyPolygon& rXPolyPoly )
 {
     CheckReference();
 
@@ -970,15 +942,7 @@ void XPolyPolygon::Insert( const XPolyPolygon& rXPolyPoly, sal_uInt16 nPos )
     {
         XPolygon* pXPoly = new XPolygon( rXPolyPoly[i] );
 
-        if ( nPos < pImpXPolyPolygon->aXPolyList.size() )
-        {
-            XPolygonList::iterator it = pImpXPolyPolygon->aXPolyList.begin();
-            ::std::advance( it, nPos );
-            pImpXPolyPolygon->aXPolyList.insert( it, pXPoly );
-            nPos++;
-        }
-        else
-            pImpXPolyPolygon->aXPolyList.push_back( pXPoly );
+        pImpXPolyPolygon->aXPolyList.push_back( pXPoly );
     }
 }
 
@@ -1050,18 +1014,6 @@ XPolyPolygon& XPolyPolygon::operator=( const XPolyPolygon& rXPolyPoly )
 
     pImpXPolyPolygon = rXPolyPoly.pImpXPolyPolygon;
     return *this;
-}
-
-bool XPolyPolygon::operator==( const XPolyPolygon& rXPolyPoly ) const
-{
-    if (pImpXPolyPolygon==rXPolyPoly.pImpXPolyPolygon) return true;
-    return *pImpXPolyPolygon == *rXPolyPoly.pImpXPolyPolygon;
-}
-
-bool XPolyPolygon::operator!=( const XPolyPolygon& rXPolyPoly ) const
-{
-    if (pImpXPolyPolygon==rXPolyPoly.pImpXPolyPolygon) return false;
-    return *pImpXPolyPolygon != *rXPolyPoly.pImpXPolyPolygon;
 }
 
 /**

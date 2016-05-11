@@ -28,6 +28,8 @@
 #include <tools/ref.hxx>
 #include <rtl/ustring.hxx>
 #include <cppuhelper/implbase1.hxx>
+#include <xmloff/nmspmap.hxx>
+#include <memory>
 
 class SvXMLNamespaceMap;
 class SvXMLImport;
@@ -42,11 +44,10 @@ class XMLOFF_DLLPUBLIC SvXMLImportContext : public SvRefBase,
     sal_uInt16       mnPrefix;
     OUString maLocalName;
 
-    SvXMLNamespaceMap   *mpRewindMap;
+    std::unique_ptr<SvXMLNamespaceMap>   mxRewindMap;
 
-    SAL_DLLPRIVATE SvXMLNamespaceMap *GetRewindMap() const
-    { return mpRewindMap; }
-    SAL_DLLPRIVATE void SetRewindMap( SvXMLNamespaceMap *p ) { mpRewindMap = p; }
+    SAL_DLLPRIVATE SvXMLNamespaceMap *TakeRewindMap() { return mxRewindMap.release(); }
+    SAL_DLLPRIVATE void PutRewindMap( SvXMLNamespaceMap *p ) { mxRewindMap.reset(p); }
 
 protected:
 

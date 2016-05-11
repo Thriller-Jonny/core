@@ -23,6 +23,9 @@
 
 #include <comphelper/processfactory.hxx>
 #include <oox/core/xmlfilterbase.hxx>
+#include <oox/helper/attributelist.hxx>
+#include <oox/token/namespaces.hxx>
+#include <oox/token/tokens.hxx>
 #include <svl/zforlist.hxx>
 #include <osl/diagnose.h>
 
@@ -44,10 +47,7 @@ DoubleSequenceContext::DoubleSequenceContext( ContextHandler2Helper& rParent, Da
 
 DoubleSequenceContext::~DoubleSequenceContext()
 {
-    if( mpNumberFormatter != nullptr )
-    {
-        delete mpNumberFormatter;
-    }
+    delete mpNumberFormatter;
 }
 
 ContextHandlerRef DoubleSequenceContext::onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs )

@@ -128,7 +128,6 @@ OSingleFactoryHelper::~OSingleFactoryHelper()
 }
 
 
-
 Any OSingleFactoryHelper::queryInterface( const Type & rType )
     throw(css::uno::RuntimeException, std::exception)
 {
@@ -462,8 +461,8 @@ void OFactoryComponentHelper::dispose()
 sal_Bool SAL_CALL OFactoryComponentHelper::releaseOnNotification() throw(css::uno::RuntimeException, std::exception)
 {
     if( bOneInstance)
-        return sal_False;
-    return sal_True;
+        return false;
+    return true;
 }
 
 class ORegistryFactoryHelper : public OFactoryComponentHelper,
@@ -700,9 +699,7 @@ Reference<XInterface > SAL_CALL ORegistryFactoryHelper::createInstanceWithArgume
     }
     else if( xModuleFactory.is() )
     {
-#if OSL_DEBUG_LEVEL > 1
-        OSL_TRACE( "### no context ORegistryFactoryHelper::createInstanceWithArgumentsAndContext()!" );
-#endif
+        SAL_INFO("cppuhelper", "no context ORegistryFactoryHelper::createInstanceWithArgumentsAndContext()!");
         return xModuleFactory->createInstanceWithArgumentsAndContext( Arguments, Reference< XComponentContext >() );
     }
 
@@ -733,12 +730,7 @@ Reference< XInterface > ORegistryFactoryHelper::createInstanceWithArgumentsAndCo
     }
     else if( xModuleFactoryDepr.is() )
     {
-#if OSL_DEBUG_LEVEL > 1
-        if (xContext.is())
-        {
-            OSL_TRACE( "### ignoring context calling ORegistryFactoryHelper::createInstanceWithArgumentsAndContext()!" );
-        }
-#endif
+        SAL_INFO_IF(xContext.is(), "cppuhelper", "ignoring context calling ORegistryFactoryHelper::createInstaceWithArgumentsAndContext()!");
         return xModuleFactoryDepr->createInstanceWithArguments( rArguments );
     }
 
@@ -948,7 +940,7 @@ sal_Bool SAL_CALL OFactoryProxyHelper::releaseOnNotification() throw(css::uno::R
     Reference<XUnloadingPreference> pref( xFactory, UNO_QUERY);
     if( pref.is())
         return pref->releaseOnNotification();
-    return sal_True;
+    return true;
 }
 
 // global function

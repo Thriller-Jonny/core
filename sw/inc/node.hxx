@@ -267,7 +267,7 @@ public:
     /** Search PageDesc with which this node is formatted. If layout is existent
        search over layout, else only the hard way is left: search over the nodes
        to the front!! */
-    const SwPageDesc* FindPageDesc( bool bCalcLay, size_t* pPgDescNdIdx = nullptr ) const;
+    const SwPageDesc* FindPageDesc( size_t* pPgDescNdIdx = nullptr ) const;
 
     /// If node is in a fly return the respective format.
     SwFrameFormat* GetFlyFormat() const;
@@ -376,7 +376,7 @@ protected:
        SwAttrSet (handle): */
     sal_uInt16 ClearItemsFromAttrSet( const std::vector<sal_uInt16>& rWhichIds );
 
-   virtual void Modify( const SfxPoolItem* pOld, const SfxPoolItem *pNew) override;
+    virtual void Modify( const SfxPoolItem* pOld, const SfxPoolItem *pNew) override;
 
 public:
 
@@ -387,7 +387,7 @@ public:
     virtual SwContentNode *SplitContentNode(const SwPosition & ) = 0;
 
     virtual SwContentNode *JoinNext();
-    virtual SwContentNode *JoinPrev();
+    virtual void           JoinPrev();
     /** Is it possible to join two nodes?
        In pIdx the second position can be returned. */
     bool CanJoinNext( SwNodeIndex* pIdx =nullptr ) const;
@@ -407,11 +407,8 @@ public:
     /** @return the real size of the frame or an empty rectangle if
        no layout exists. Needed for export filters. */
     SwRect FindLayoutRect( const bool bPrtArea = false,
-                            const Point* pPoint = nullptr,
-                            const bool bCalcFrame = false  ) const;
-    SwRect FindPageFrameRect( const bool bPrtArea = false,
-                            const Point* pPoint = nullptr,
-                            const bool bCalcFrame = false  ) const;
+                            const Point* pPoint = nullptr  ) const;
+    SwRect FindPageFrameRect() const;
 
     /** Method creates all views of document for given node. The content
        frames that are created are put in the respective layout. */
@@ -437,7 +434,7 @@ public:
 
     /// If bInParent is FALSE search for attribute only in this node.
     const SfxPoolItem& GetAttr( sal_uInt16 nWhich, bool bInParent=true ) const;
-    bool GetAttr( SfxItemSet& rSet, bool bInParent=true ) const;
+    bool GetAttr( SfxItemSet& rSet ) const;
     /// made virtual
     virtual bool SetAttr( const SfxPoolItem& );
     virtual bool SetAttr( const SfxItemSet& rSet );

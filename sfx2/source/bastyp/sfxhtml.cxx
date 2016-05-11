@@ -136,7 +136,7 @@ bool SfxHTMLParser::ParseAreaOptions(ImageMap * pImageMap, const OUString& rBase
             rOption.GetEnum( nShape, aAreaShapeOptEnums );
             break;
         case HTML_O_COORDS:
-            rOption.GetNumbers( aCoords, true );
+            rOption.GetNumbers( aCoords );
             break;
         case HTML_O_HREF:
             aHRef = INetURLObject::GetAbsURL( rBaseURL, rOption.GetString() );
@@ -153,14 +153,14 @@ bool SfxHTMLParser::ParseAreaOptions(ImageMap * pImageMap, const OUString& rBase
 
         case HTML_O_ONMOUSEOVER:
             eScrpType = JAVASCRIPT;
-            //fallthrough
+            SAL_FALLTHROUGH;
         case HTML_O_SDONMOUSEOVER:
             nEvent = nEventMouseOver;
             goto IMAPOBJ_SETEVENT;
 
         case HTML_O_ONMOUSEOUT:
             eScrpType = JAVASCRIPT;
-            //fallthrough
+            SAL_FALLTHROUGH;
         case HTML_O_SDONMOUSEOUT:
             nEvent = nEventMouseOut;
             goto IMAPOBJ_SETEVENT;

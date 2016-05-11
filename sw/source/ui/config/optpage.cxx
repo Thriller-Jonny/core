@@ -155,6 +155,7 @@ SwContentOptPage::SwContentOptPage( vcl::Window* pParent,
                    sal_Int32 nPos = m_pVMetric->InsertEntry( sMetric );
                    m_pVMetric->SetEntryData( nPos, reinterpret_cast<void*>((sal_IntPtr)eFUnit) );
                 }
+                break;
             }
             default:;//prevent warning
         }
@@ -641,7 +642,7 @@ static void lcl_SetColl(SwWrtShell* pWrtShell, sal_uInt16 nType,
     if( pPrt )
         aFont = pPrt->GetFontMetric( aFont );
     SwTextFormatColl *pColl = pWrtShell->GetTextCollFromPool(nType);
-    pColl->SetFormatAttr(SvxFontItem(aFont.GetFamily(), aFont.GetName(),
+    pColl->SetFormatAttr(SvxFontItem(aFont.GetFamilyType(), aFont.GetFamilyName(),
                 aEmptyOUStr, aFont.GetPitch(), aFont.GetCharSet(), nFontWhich));
 }
 
@@ -717,7 +718,7 @@ bool SwStdFontTabPage::FillItemSet( SfxItemSet* )
             vcl::Font aFont( sStandard, Size( 0, 10 ) );
             if( pPrinter )
                 aFont = pPrinter->GetFontMetric( aFont );
-            m_pWrtShell->SetDefault(SvxFontItem(aFont.GetFamily(), aFont.GetName(),
+            m_pWrtShell->SetDefault(SvxFontItem(aFont.GetFamilyType(), aFont.GetFamilyName(),
                                   aEmptyOUStr, aFont.GetPitch(), aFont.GetCharSet(), nFontWhich));
             SwTextFormatColl *pColl = m_pWrtShell->GetTextCollFromPool(RES_POOLCOLL_STANDARD);
             pColl->ResetFormatAttr(nFontWhich);
@@ -828,8 +829,8 @@ void SwStdFontTabPage::Reset( const SfxItemSet* rSet)
         int nFontNames = m_pPrt->GetDevFontCount();
         for( int i = 0; i < nFontNames; i++ )
         {
-            vcl::FontInfo aInf( m_pPrt->GetDevFont( i ) );
-            aFontNames.insert( aInf.GetName() );
+            FontMetric aFontMetric( m_pPrt->GetDevFont( i ) );
+            aFontNames.insert( aFontMetric.GetFamilyName() );
         }
 
         // insert to listboxes
@@ -944,16 +945,16 @@ void SwStdFontTabPage::Reset( const SfxItemSet* rSet)
     m_pLabelBox->SetText(sCapBackup );
     m_pIdxBox->SetText(sIdxBackup );
 
-    vcl::FontInfo aFontInfo( m_pFontList->Get(sStdBackup, sStdBackup) );
-    m_pStandardHeightLB->Fill( &aFontInfo, m_pFontList );
-    aFontInfo = m_pFontList->Get(sOutBackup, sOutBackup );
-    m_pTitleHeightLB->Fill( &aFontInfo, m_pFontList );
-    aFontInfo = m_pFontList->Get(sListBackup,sListBackup);
-    m_pListHeightLB->Fill( &aFontInfo, m_pFontList );
-    aFontInfo = m_pFontList->Get(sCapBackup, sCapBackup );
-    m_pLabelHeightLB->Fill( &aFontInfo, m_pFontList );
-    aFontInfo = m_pFontList->Get(sIdxBackup, sIdxBackup );
-    m_pIndexHeightLB->Fill( &aFontInfo, m_pFontList );
+    FontMetric aFontMetric( m_pFontList->Get(sStdBackup, sStdBackup) );
+    m_pStandardHeightLB->Fill( &aFontMetric, m_pFontList );
+    aFontMetric = m_pFontList->Get(sOutBackup, sOutBackup );
+    m_pTitleHeightLB->Fill( &aFontMetric, m_pFontList );
+    aFontMetric = m_pFontList->Get(sListBackup,sListBackup);
+    m_pListHeightLB->Fill( &aFontMetric, m_pFontList );
+    aFontMetric = m_pFontList->Get(sCapBackup, sCapBackup );
+    m_pLabelHeightLB->Fill( &aFontMetric, m_pFontList );
+    aFontMetric = m_pFontList->Get(sIdxBackup, sIdxBackup );
+    m_pIndexHeightLB->Fill( &aFontMetric, m_pFontList );
 
     m_pStandardHeightLB->SetValue( CalcToPoint( nStandardHeight, SFX_MAPUNIT_TWIP, 10 ) );
     m_pTitleHeightLB->   SetValue( CalcToPoint( nTitleHeight   , SFX_MAPUNIT_TWIP, 10 ) );
@@ -1083,8 +1084,8 @@ IMPL_LINK_TYPED( SwStdFontTabPage, LoseFocusHdl, Control&, rControl, void )
     {
         pHeightLB = m_pIndexHeightLB;
     }
-    vcl::FontInfo aFontInfo( m_pFontList->Get(sEntry, sEntry) );
-    pHeightLB->Fill( &aFontInfo, m_pFontList );
+    FontMetric aFontMetric( m_pFontList->Get(sEntry, sEntry) );
+    pHeightLB->Fill( &aFontMetric, m_pFontList );
 }
 
 void SwStdFontTabPage::PageCreated( const SfxAllItemSet& aSet)
@@ -1544,8 +1545,8 @@ static CharAttr aRedlineAttr[] =
     { SID_ATTR_CHAR_CASEMAP,        SVX_CASEMAP_NOT_MAPPED },
     { SID_ATTR_CHAR_WEIGHT,         WEIGHT_BOLD },
     { SID_ATTR_CHAR_POSTURE,        ITALIC_NORMAL },
-    { SID_ATTR_CHAR_UNDERLINE,      UNDERLINE_SINGLE },
-    { SID_ATTR_CHAR_UNDERLINE,      UNDERLINE_DOUBLE },
+    { SID_ATTR_CHAR_UNDERLINE,      LINESTYLE_SINGLE },
+    { SID_ATTR_CHAR_UNDERLINE,      LINESTYLE_DOUBLE },
     { SID_ATTR_CHAR_STRIKEOUT,      STRIKEOUT_SINGLE },
     { SID_ATTR_CHAR_CASEMAP,        SVX_CASEMAP_VERSALIEN },
     { SID_ATTR_CHAR_CASEMAP,        SVX_CASEMAP_GEMEINE },
@@ -2101,8 +2102,8 @@ IMPL_LINK_TYPED( SwRedlineOptionsTabPage, AttribHdl, ListBox&, rLB, void )
     rCJKFont.SetWeight(WEIGHT_NORMAL);
     rFont.SetItalic(ITALIC_NONE);
     rCJKFont.SetItalic(ITALIC_NONE);
-    rFont.SetUnderline(UNDERLINE_NONE);
-    rCJKFont.SetUnderline(UNDERLINE_NONE);
+    rFont.SetUnderline(LINESTYLE_NONE);
+    rCJKFont.SetUnderline(LINESTYLE_NONE);
     rFont.SetStrikeout(STRIKEOUT_NONE);
     rCJKFont.SetStrikeout(STRIKEOUT_NONE);
     rFont.SetCaseMap(SVX_CASEMAP_NOT_MAPPED);
@@ -2147,8 +2148,8 @@ IMPL_LINK_TYPED( SwRedlineOptionsTabPage, AttribHdl, ListBox&, rLB, void )
             break;
 
         case SID_ATTR_CHAR_UNDERLINE:
-            rFont.SetUnderline( ( FontUnderline ) pAttr->nAttr );
-            rCJKFont.SetUnderline( ( FontUnderline ) pAttr->nAttr );
+            rFont.SetUnderline( ( FontLineStyle ) pAttr->nAttr );
+            rCJKFont.SetUnderline( ( FontLineStyle ) pAttr->nAttr );
             break;
 
         case SID_ATTR_CHAR_STRIKEOUT:
@@ -2267,9 +2268,9 @@ void SwRedlineOptionsTabPage::InitFontStyle(SvxFontPrevWindow& rExampleWin)
     vcl::Font           aCTLFont( OutputDevice::GetDefaultFont( DefaultFontType::CTL_TEXT, eLangType,
                                                         GetDefaultFontFlags::OnlyOne, &rExampleWin ) );
     const Size          aDefSize( 0, 12 );
-    aFont.SetSize( aDefSize );
-    aCJKFont.SetSize( aDefSize );
-    aCTLFont.SetSize( aDefSize );
+    aFont.SetFontSize( aDefSize );
+    aCJKFont.SetFontSize( aDefSize );
+    aCTLFont.SetFontSize( aDefSize );
 
     aFont.SetFillColor( aBackCol );
     aCJKFont.SetFillColor( aBackCol );
@@ -2284,8 +2285,8 @@ void SwRedlineOptionsTabPage::InitFontStyle(SvxFontPrevWindow& rExampleWin)
     rCTLFont = aCTLFont;
 
     const Size          aNewSize( 0, rExampleWin.GetOutputSize().Height() * 2 / 3 );
-    rFont.SetSize( aNewSize );
-    rCJKFont.SetSize( aNewSize );
+    rFont.SetFontSize( aNewSize );
+    rCJKFont.SetFontSize( aNewSize );
 
     rExampleWin.SetFont( rFont, rCJKFont,rCTLFont );
 

@@ -65,15 +65,16 @@ private:
     SAL_DLLPRIVATE void         ImplInitSettings( bool bFont, bool bForeground, bool bBackground );
     SAL_DLLPRIVATE ImplTabItem* ImplGetItem( sal_uInt16 nId ) const;
     SAL_DLLPRIVATE Size         ImplGetItemSize( ImplTabItem* pItem, long nMaxWidth );
+    SAL_DLLPRIVATE bool         ImplPlaceTabs( long nWidth );
     SAL_DLLPRIVATE Rectangle    ImplGetTabRect( sal_uInt16 nPos, long nWidth = -1, long nHeight = -1 );
     SAL_DLLPRIVATE void         ImplChangeTabPage( sal_uInt16 nId, sal_uInt16 nOldId );
     SAL_DLLPRIVATE bool         ImplPosCurTabPage();
     SAL_DLLPRIVATE void         ImplActivateTabPage( bool bNext );
     SAL_DLLPRIVATE void         ImplShowFocus();
     SAL_DLLPRIVATE void         ImplDrawItem(vcl::RenderContext& rRenderContext, ImplTabItem* pItem,
-                                             const Rectangle& rCurRect, bool bLayout = false, bool bFirstInGroup = false,
+                                             const Rectangle& rCurRect, bool bFirstInGroup = false,
                                              bool bLastInGroup = false, bool bIsCurrentItem = false);
-    SAL_DLLPRIVATE void         ImplPaint(vcl::RenderContext& rRenderContext, const Rectangle& rRect, bool bLayout = false);
+    SAL_DLLPRIVATE void         ImplPaint(vcl::RenderContext& rRenderContext, const Rectangle& rRect);
     SAL_DLLPRIVATE void         ImplFreeLayoutData();
     SAL_DLLPRIVATE bool         ImplHandleKeyEvent( const KeyEvent& rKeyEvent );
 

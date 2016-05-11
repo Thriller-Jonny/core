@@ -47,7 +47,6 @@ using namespace ::com::sun::star::text;
 using namespace ::xmloff::token;
 
 
-
 const sal_Char sAPI_TextSection[] = "com.sun.star.text.TextSection";
 const sal_Char sAPI_IndexHeaderSection[] = "com.sun.star.text.IndexHeaderSection";
 const sal_Char sAPI_IsProtected[] = "IsProtected";
@@ -168,24 +167,19 @@ void XMLSectionImportContext::StartElement(
                 // IsVisible and condition (not for index headers)
                 if (! bIsIndexHeader)
                 {
-                    Any aAny;
-                    aAny.setValue( &bIsVisible, cppu::UnoType<bool>::get() );
-                    xPropSet->setPropertyValue( sIsVisible, aAny );
+                    xPropSet->setPropertyValue( sIsVisible, Any(bIsVisible) );
 
                     // #97450# hidden sections must be hidden on reload
                     // For backwards compatibility, set flag only if it is
                     // present
                     if( bIsCurrentlyVisibleOK )
                     {
-                        aAny.setValue( &bIsCurrentlyVisible,
-                                       cppu::UnoType<bool>::get() );
-                        xPropSet->setPropertyValue( sIsCurrentlyVisible, aAny);
+                        xPropSet->setPropertyValue( sIsCurrentlyVisible, Any(bIsCurrentlyVisible));
                     }
 
                     if (bCondOK)
                     {
-                        aAny <<= sCond;
-                        xPropSet->setPropertyValue( sCondition, aAny );
+                        xPropSet->setPropertyValue( sCondition, Any(sCond) );
                     }
                 }
 
@@ -193,15 +187,11 @@ void XMLSectionImportContext::StartElement(
                 if ( bSequenceOK &&
                      IsXMLToken(GetLocalName(), XML_SECTION) )
                 {
-                    Any aAny;
-                    aAny <<= aSequence;
-                    xPropSet->setPropertyValue(sProtectionKey, aAny);
+                    xPropSet->setPropertyValue(sProtectionKey, Any(aSequence));
                 }
 
                 // protection
-                Any aAny;
-                aAny.setValue( &bProtect, cppu::UnoType<bool>::get() );
-                xPropSet->setPropertyValue( sIsProtected, aAny );
+                xPropSet->setPropertyValue( sIsProtected, Any(bProtect) );
 
                 // insert marker, <paragraph>, marker; then insert
                 // section over the first marker character, and delete the
@@ -220,8 +210,8 @@ void XMLSectionImportContext::StartElement(
                 rHelper->InsertString(sMarkerString);
 
                 // select first marker
-                rHelper->GetCursor()->gotoRange(xStart, sal_False);
-                rHelper->GetCursor()->goRight(1, sal_True);
+                rHelper->GetCursor()->gotoRange(xStart, false);
+                rHelper->GetCursor()->goRight(1, true);
 
                 // convert section to XTextContent
                 Reference<XTextContent> xTextContent(xSectionPropertySet,
@@ -229,11 +219,11 @@ void XMLSectionImportContext::StartElement(
 
                 // and insert (over marker)
                 rHelper->GetText()->insertTextContent(
-                    rHelper->GetCursorAsRange(), xTextContent, sal_True );
+                    rHelper->GetCursorAsRange(), xTextContent, true );
 
                 // and delete first marker (in section)
                 rHelper->GetText()->insertString(
-                    rHelper->GetCursorAsRange(), "", sal_True);
+                    rHelper->GetCursorAsRange(), "", true);
 
                 // finally, check for redlines that should start at
                 // the section start node
@@ -276,7 +266,7 @@ void XMLSectionImportContext::ProcessAttributes(
                 {
                     OUString sTmp;
                     sal_uInt16 nPrefix = GetImport().GetNamespaceMap().
-                                    _GetKeyByAttrName( sAttr, &sTmp, false );
+                                    GetKeyByAttrName_( sAttr, &sTmp );
                     if( XML_NAMESPACE_OOOW == nPrefix )
                     {
                         sCond = sTmp;
@@ -333,18 +323,18 @@ void XMLSectionImportContext::EndElement()
     // get rid of last paragraph
     // (unless it's the only paragraph in the section)
     rtl::Reference<XMLTextImportHelper> rHelper = GetImport().GetTextImport();
-    rHelper->GetCursor()->goRight(1, sal_False);
+    rHelper->GetCursor()->goRight(1, false);
     if (bHasContent)
     {
-        rHelper->GetCursor()->goLeft(1, sal_True);
+        rHelper->GetCursor()->goLeft(1, true);
         rHelper->GetText()->insertString(rHelper->GetCursorAsRange(),
-                                         "", sal_True);
+                                         "", true);
     }
 
     // and delete second marker
-    rHelper->GetCursor()->goRight(1, sal_True);
+    rHelper->GetCursor()->goRight(1, true);
     rHelper->GetText()->insertString(rHelper->GetCursorAsRange(),
-                                     "", sal_True);
+                                     "", true);
 
     // check for redlines to our endnode
     rHelper->RedlineAdjustStartNodeCursor(false);

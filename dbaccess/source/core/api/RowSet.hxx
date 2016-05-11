@@ -42,6 +42,7 @@
 #include <com/sun/star/sdb/XRowsChangeBroadcaster.hpp>
 
 #include <cppuhelper/compbase12.hxx>
+#include <comphelper/interfacecontainer2.hxx>
 #include <connectivity/paramwrapper.hxx>
 #include <connectivity/FValue.hxx>
 #include <connectivity/warningscontainer.hxx>
@@ -91,9 +92,9 @@ namespace dbaccess
         ::std::vector<bool>                         m_aParametersSet;
         ::std::vector<bool>                         m_aReadOnlyDataColumns;
 
-        ::cppu::OInterfaceContainerHelper           m_aRowsetListeners;
-        ::cppu::OInterfaceContainerHelper           m_aApproveListeners;
-        ::cppu::OInterfaceContainerHelper           m_aRowsChangeListener;
+        ::comphelper::OInterfaceContainerHelper2    m_aRowsetListeners;
+        ::comphelper::OInterfaceContainerHelper2    m_aApproveListeners;
+        ::comphelper::OInterfaceContainerHelper2    m_aRowsChangeListener;
 
         ::dbtools::WarningsContainer                m_aWarnings;
 
@@ -123,6 +124,7 @@ namespace dbaccess
         sal_Int32                   m_nPrivileges;
         sal_Int32                   m_nLastKnownRowCount;
         oslInterlockedCount         m_nInAppend;
+        bool                        m_bInsertingRow;
         bool                        m_bLastKnownRowCountFinal;
         bool                        m_bUseEscapeProcessing ;
         bool                        m_bApplyFilter ;
@@ -156,13 +158,6 @@ namespace dbaccess
                 The command which is to be executed, according to the current settings -
                 it is built from our active command plus our current filter/order criterions.
 
-            @return
-                whether we should use escape processing before executing the actual command. This is determined
-                from our own EscapeProcessing property, and possibly overruled by the respective property
-                of a query we're based on.
-                Effectively, this value determines whether or not we actually have an composer (m_xComposer)
-                and dependent information (such as the parameters container).
-
             @precond
                 m_xActiveConnection points to a valid SDB-level connection
 
@@ -172,7 +167,7 @@ namespace dbaccess
             @throws css::uno::RuntimeException
                 if any of the components involved throws a css::uno::RuntimeException
         */
-        bool        impl_initComposer_throw( OUString& _out_rCommandToExecute );
+        void        impl_initComposer_throw( OUString& _out_rCommandToExecute );
 
         /** returns the table container of our active connection
 
@@ -445,7 +440,6 @@ namespace dbaccess
         using ORowSetBase::isModified;
         using ORowSetBase::isNew;
     };
-
 
 
     //  ORowSetClone

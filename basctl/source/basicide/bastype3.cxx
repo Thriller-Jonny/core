@@ -193,9 +193,8 @@ SbxVariable* TreeListBox::FindVariable( SvTreeListEntry* pEntry )
     if ( !aEntries.empty() )
     {
         bool bDocumentObjects = false;
-        for ( size_t n = 0; n < aEntries.size(); n++ )
+        for (SvTreeListEntry* pLE : aEntries)
         {
-            SvTreeListEntry* pLE = aEntries[n];
             assert(pLE && "Can not find entry in array");
             Entry* pBE = static_cast<Entry*>(pLE->GetUserData());
             assert(pBE && "The data in the entry not found!");
@@ -234,6 +233,7 @@ SbxVariable* TreeListBox::FindVariable( SvTreeListEntry* pEntry )
                 break;
             case OBJ_TYPE_DOCUMENT_OBJECTS:
                 bDocumentObjects = true;
+                SAL_FALLTHROUGH;
             case OBJ_TYPE_USERFORMS:
             case OBJ_TYPE_NORMAL_MODULES:
             case OBJ_TYPE_CLASS_MODULES:
@@ -296,9 +296,8 @@ EntryDescriptor TreeListBox::GetEntryDescriptor( SvTreeListEntry* pEntry )
 
     if ( !aEntries.empty() )
     {
-        for ( size_t n = 0; n < aEntries.size(); n++ )
+        for (SvTreeListEntry* pLE : aEntries)
         {
-            SvTreeListEntry* pLE = aEntries[n];
             assert(pLE && "Entrie im Array nicht gefunden");
             Entry* pBE = static_cast<Entry*>(pLE->GetUserData());
             assert(pBE && "Keine Daten im Eintrag gefunden!");

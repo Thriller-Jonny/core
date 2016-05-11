@@ -49,17 +49,17 @@ OFileTable::OFileTable(sdbcx::OCollection* _pTables,OConnection* _pConnection)
 }
 
 OFileTable::OFileTable( sdbcx::OCollection* _pTables,OConnection* _pConnection,
-                        const OUString& _Name,
-                        const OUString& _Type,
-                        const OUString& _Description ,
-                        const OUString& _SchemaName,
-                        const OUString& _CatalogName )
+                        const OUString& Name,
+                        const OUString& Type,
+                        const OUString& Description ,
+                        const OUString& SchemaName,
+                        const OUString& CatalogName )
     : OTable_TYPEDEF(_pTables,_pConnection->getMetaData()->supportsMixedCaseQuotedIdentifiers(),
-                     _Name,
-                     _Type,
-                     _Description,
-                     _SchemaName,
-                     _CatalogName)
+                     Name,
+                     Type,
+                     Description,
+                     SchemaName,
+                     CatalogName)
     , m_pConnection(_pConnection)
     , m_pFileStream(nullptr)
     , m_nFilePos(0)
@@ -175,7 +175,7 @@ void SAL_CALL OFileTable::release() throw()
     OTable_TYPEDEF::release();
 }
 
-bool OFileTable::InsertRow(OValueRefVector& /*rRow*/, bool /*bFlush*/, const ::com::sun::star::uno::Reference< ::com::sun::star::container::XIndexAccess>& /*_xCols*/)
+bool OFileTable::InsertRow(OValueRefVector& /*rRow*/, const ::com::sun::star::uno::Reference< ::com::sun::star::container::XIndexAccess>& /*_xCols*/)
 {
     return false;
 }

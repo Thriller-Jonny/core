@@ -27,7 +27,6 @@
 #include <rtl/bootstrap.hxx>
 #include <sal/types.h>
 #include <sal/config.h>
-#include <boost/noncopyable.hpp>
 #include <com/sun/star/lang/XServiceInfo.hpp>
 #include <com/sun/star/lang/XInitialization.hpp>
 #include <com/sun/star/lang/WrappedTargetException.hpp>
@@ -36,7 +35,7 @@
 #include <com/sun/star/configuration/backend/XLayerHandler.hpp>
 #include <com/sun/star/configuration/backend/MalformedDataException.hpp>
 #include <com/sun/star/configuration/backend/TemplateIdentifier.hpp>
-#include <jvmfwk/framework.h>
+#include <jvmfwk/framework.hxx>
 #include "jvmfwk.hxx"
 #include <stack>
 #include <stdio.h>
@@ -58,12 +57,14 @@ using namespace com::sun::star::configuration::backend;
 namespace migration
 {
 
-class CJavaInfo: private boost::noncopyable
+class CJavaInfo
 {
 public:
     JavaInfo* pData;
     CJavaInfo();
     ~CJavaInfo();
+    CJavaInfo(const CJavaInfo&) = delete;
+    const CJavaInfo& operator=(const CJavaInfo&) = delete;
     operator JavaInfo* () const { return pData;}
 };
 
@@ -73,9 +74,8 @@ CJavaInfo::CJavaInfo(): pData(nullptr)
 
 CJavaInfo::~CJavaInfo()
 {
-    jfw_freeJavaInfo(pData);
+    delete pData;
 }
-
 
 
 class JavaMigration : public ::cppu::WeakImplHelper<
@@ -188,8 +188,6 @@ public:
         throw(
             css::configuration::backend::MalformedDataException,
             css::lang::WrappedTargetException, std::exception ) override;
-
-
 
 
     virtual ~JavaMigration();

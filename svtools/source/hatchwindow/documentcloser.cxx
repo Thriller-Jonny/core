@@ -28,7 +28,7 @@
 #include <com/sun/star/awt/XVclWindowPeer.hpp>
 #include <comphelper/processfactory.hxx>
 #include <cppuhelper/implbase.hxx>
-#include <cppuhelper/interfacecontainer.h>
+#include <comphelper/interfacecontainer2.hxx>
 #include <cppuhelper/supportsservice.hxx>
 #include <osl/mutex.hxx>
 #include <osl/thread.hxx>
@@ -49,7 +49,7 @@ class ODocumentCloser : public ::cppu::WeakImplHelper< css::lang::XComponent,
 {
     ::osl::Mutex m_aMutex;
     css::uno::Reference< css::frame::XFrame > m_xFrame;
-    ::cppu::OInterfaceContainerHelper* m_pListenersContainer; // list of listeners
+    ::comphelper::OInterfaceContainerHelper2* m_pListenersContainer; // list of listeners
 
     bool m_bDisposed;
 
@@ -113,7 +113,7 @@ IMPL_STATIC_LINK_TYPED( MainThreadFrameCloserRequest, worker, void*, p, void )
                 uno::Reference< awt::XWindow > xWindow = pMTRequest->m_xFrame->getContainerWindow();
                 uno::Reference< awt::XVclWindowPeer > xWinPeer( xWindow, uno::UNO_QUERY_THROW );
 
-                xWindow->setVisible( sal_False );
+                xWindow->setVisible( false );
 
                 // reparent the window
                 xWinPeer->setProperty( "PluginParent", uno::makeAny( (sal_Int64) 0 ) );
@@ -130,7 +130,7 @@ IMPL_STATIC_LINK_TYPED( MainThreadFrameCloserRequest, worker, void*, p, void )
             try
             {
                 uno::Reference< util::XCloseable > xCloseable( pMTRequest->m_xFrame, uno::UNO_QUERY_THROW );
-                xCloseable->close( sal_True );
+                xCloseable->close( true );
             }
             catch( uno::Exception& )
             {
@@ -208,7 +208,7 @@ void SAL_CALL ODocumentCloser::addEventListener( const uno::Reference< lang::XEv
         throw lang::DisposedException(); // TODO
 
     if ( !m_pListenersContainer )
-        m_pListenersContainer = new ::cppu::OInterfaceContainerHelper( m_aMutex );
+        m_pListenersContainer = new ::comphelper::OInterfaceContainerHelper2( m_aMutex );
 
     m_pListenersContainer->addInterface( xListener );
 }

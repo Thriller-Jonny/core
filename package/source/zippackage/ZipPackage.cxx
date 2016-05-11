@@ -535,7 +535,7 @@ void ZipPackage::getZipFileContents()
                 {
                     pPkgFolder = new ZipPackageFolder( m_xContext, m_nFormat, m_bAllowRemoveOnInsert );
                     pPkgFolder->setName( sTemp );
-                    pPkgFolder->doSetParent( pCurrent, true );
+                    pPkgFolder->doSetParent( pCurrent );
                     pCurrent = pPkgFolder;
                 }
                 else
@@ -553,7 +553,7 @@ void ZipPackage::getZipFileContents()
             pPkgStream->SetPackageMember( true );
             pPkgStream->setZipEntryOnLoading( rEntry );
             pPkgStream->setName( sTemp );
-            pPkgStream->doSetParent( pCurrent, true );
+            pPkgStream->doSetParent( pCurrent );
         }
     }
 
@@ -741,7 +741,7 @@ void SAL_CALL ZipPackage::initialize( const uno::Sequence< Any >& aArguments )
             OUString message;
             try
             {
-                m_pZipFile = new ZipFile ( m_xContentStream, m_xContext, true, m_bForceRecovery, xProgressHandler );
+                m_pZipFile = new ZipFile ( m_xContentStream, m_xContext, true, m_bForceRecovery );
                 getZipFileContents();
             }
             catch ( IOException & e )
@@ -862,7 +862,7 @@ sal_Bool SAL_CALL ZipPackage::hasByHierarchicalName( const OUString& aName )
     FolderHash::iterator aIter;
 
     if ( ( nIndex = aName.getLength() ) == 1 && *aName.getStr() == '/' )
-        return sal_True;
+        return true;
 
     try
     {
@@ -879,7 +879,7 @@ sal_Bool SAL_CALL ZipPackage::hasByHierarchicalName( const OUString& aName )
                     sal_Int32 nDirIndex = aName.lastIndexOf ( '/', nStreamIndex );
                     sTemp = aName.copy ( nDirIndex == -1 ? 0 : nDirIndex+1, nStreamIndex-nDirIndex-1 );
                     if ( sTemp == ( *aIter ).second->getName() )
-                        return sal_True;
+                        return true;
                     else
                         m_aRecent.erase ( aIter );
                 }
@@ -887,7 +887,7 @@ sal_Bool SAL_CALL ZipPackage::hasByHierarchicalName( const OUString& aName )
                 {
                     sTemp = aName.copy ( nStreamIndex + 1 );
                     if ( ( *aIter ).second->hasByName( sTemp ) )
-                        return sal_True;
+                        return true;
                     else
                         m_aRecent.erase( aIter );
                 }
@@ -896,7 +896,7 @@ sal_Bool SAL_CALL ZipPackage::hasByHierarchicalName( const OUString& aName )
         else
         {
             if ( m_pRootFolder->hasByName ( aName ) )
-                return sal_True;
+                return true;
         }
         ZipPackageFolder * pCurrent = m_pRootFolder;
         ZipPackageFolder * pPrevious = nullptr;
@@ -912,13 +912,13 @@ sal_Bool SAL_CALL ZipPackage::hasByHierarchicalName( const OUString& aName )
                 pCurrent = pCurrent->doGetByName( sTemp ).pFolder;
             }
             else
-                return sal_False;
+                return false;
             nOldIndex = nIndex+1;
         }
         if ( bFolder )
         {
             m_aRecent[sDirName] = pPrevious;
-            return sal_True;
+            return true;
         }
         else
         {
@@ -927,7 +927,7 @@ sal_Bool SAL_CALL ZipPackage::hasByHierarchicalName( const OUString& aName )
             if ( pCurrent->hasByName( sTemp ) )
             {
                 m_aRecent[sDirName] = pCurrent;
-                return sal_True;
+                return true;
             }
         }
     }
@@ -942,7 +942,7 @@ sal_Bool SAL_CALL ZipPackage::hasByHierarchicalName( const OUString& aName )
             OUString("ZipPackage::hasByHierarchicalName"),
             nullptr, e);
     }
-    return sal_False;
+    return false;
 }
 
 uno::Reference< XInterface > SAL_CALL ZipPackage::createInstance()
@@ -1379,7 +1379,7 @@ void SAL_CALL ZipPackage::commitChanges()
     }
     catch (const ucb::ContentCreationException& r)
     {
-        throw WrappedTargetException(THROW_WHERE "Temporary file should be createable!",
+        throw WrappedTargetException(THROW_WHERE "Temporary file should be creatable!",
                     static_cast < OWeakObject * > ( this ), makeAny ( r ) );
     }
     if ( xTempInStream.is() )
@@ -1513,15 +1513,13 @@ void SAL_CALL ZipPackage::commitChanges()
 
                     TransferInfo aInfo;
                     aInfo.NameClash = NameClash::OVERWRITE;
-                    aInfo.MoveData = sal_False;
+                    aInfo.MoveData = false;
                     aInfo.SourceURL = sTempURL;
                     aInfo.NewTitle = rtl::Uri::decode ( m_aURL.copy ( 1 + m_aURL.lastIndexOf ( static_cast < sal_Unicode > ( '/' ) ) ),
                                                         rtl_UriDecodeWithCharset,
                                                         RTL_TEXTENCODING_UTF8 );
-                    aAny <<= aInfo;
-
                     // if the file is still not corrupted, it can become after the next step
-                    aContent.executeCommand ("transfer", aAny );
+                    aContent.executeCommand ("transfer", Any(aInfo) );
                 }
                 catch ( const css::uno::Exception& r )
                 {
@@ -1555,7 +1553,7 @@ void ZipPackage::DisconnectFromTargetAndThrowException_Impl( const uno::Referenc
         uno::Any aUrl = xTempFile->getPropertyValue("Uri");
         aUrl >>= aTempURL;
         xTempFile->setPropertyValue("RemoveFile",
-                                     uno::makeAny( sal_False ) );
+                                     uno::makeAny( false ) );
     }
     catch ( uno::Exception& )
     {
@@ -1601,7 +1599,7 @@ const uno::Sequence< sal_Int8 > ZipPackage::GetEncryptionKey()
 sal_Bool SAL_CALL ZipPackage::hasPendingChanges()
         throw( RuntimeException, std::exception )
 {
-    return sal_False;
+    return false;
 }
 Sequence< ElementChange > SAL_CALL ZipPackage::getPendingChanges()
         throw( RuntimeException, std::exception )
@@ -1782,11 +1780,9 @@ Any SAL_CALL ZipPackage::getPropertyValue( const OUString& PropertyName )
     // if ( m_nFormat != embed::StorageFormats::PACKAGE )
     //  throw UnknownPropertyException(THROW_WHERE );
 
-    Any aAny;
     if ( PropertyName == ENCRYPTION_KEY_PROPERTY )
     {
-        aAny <<= m_aEncryptionKey;
-        return aAny;
+        return Any(m_aEncryptionKey);
     }
     else if ( PropertyName == ENCRYPTION_ALGORITHMS_PROPERTY )
     {
@@ -1794,33 +1790,27 @@ Any SAL_CALL ZipPackage::getPropertyValue( const OUString& PropertyName )
         aAlgorithms["StartKeyGenerationAlgorithm"] <<= m_nStartKeyGenerationID;
         aAlgorithms["EncryptionAlgorithm"] <<= m_nCommonEncryptionID;
         aAlgorithms["ChecksumAlgorithm"] <<= m_nChecksumDigestID;
-        aAny <<= aAlgorithms.getAsConstNamedValueList();
-        return aAny;
+        return Any(aAlgorithms.getAsConstNamedValueList());
     }
     if ( PropertyName == STORAGE_ENCRYPTION_KEYS_PROPERTY )
     {
-        aAny <<= m_aStorageEncryptionKeys;
-        return aAny;
+        return Any(m_aStorageEncryptionKeys);
     }
     else if ( PropertyName == HAS_ENCRYPTED_ENTRIES_PROPERTY )
     {
-        aAny <<= m_bHasEncryptedEntries;
-        return aAny;
+        return Any(m_bHasEncryptedEntries);
     }
     else if ( PropertyName == HAS_NONENCRYPTED_ENTRIES_PROPERTY )
     {
-        aAny <<= m_bHasNonEncryptedEntries;
-        return aAny;
+        return Any(m_bHasNonEncryptedEntries);
     }
     else if ( PropertyName == IS_INCONSISTENT_PROPERTY )
     {
-        aAny <<= m_bInconsistent;
-        return aAny;
+        return Any(m_bInconsistent);
     }
     else if ( PropertyName == MEDIATYPE_FALLBACK_USED_PROPERTY )
     {
-        aAny <<= m_bMediaTypeFallbackUsed;
-        return aAny;
+        return Any(m_bMediaTypeFallbackUsed);
     }
     throw UnknownPropertyException(THROW_WHERE );
 }

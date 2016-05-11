@@ -57,7 +57,6 @@ $(eval $(call gb_Library_add_exception_objects,fwe,\
     framework/source/fwe/classes/actiontriggerseparatorpropertyset \
     framework/source/fwe/classes/addonmenu \
     framework/source/fwe/classes/addonsoptions \
-    framework/source/fwe/classes/bmkmenu \
     framework/source/fwe/classes/framelistanalyzer \
     framework/source/fwe/classes/fwkresid \
     framework/source/fwe/classes/imagewrapper \
@@ -67,7 +66,6 @@ $(eval $(call gb_Library_add_exception_objects,fwe,\
     framework/source/fwe/dispatch/interaction \
     framework/source/fwe/helper/actiontriggerhelper \
     framework/source/fwe/helper/configimporter \
-    framework/source/fwe/helper/imageproducer \
     framework/source/fwe/helper/propertysetcontainer \
     framework/source/fwe/helper/titlehelper \
     framework/source/fwe/helper/documentundoguard \

@@ -23,8 +23,7 @@
 #include <basegfx/range/b2drectangle.hxx>
 #include <com/sun/star/awt/Point.hpp>
 
-#include <boost/shared_ptr.hpp>
-#include <boost/noncopyable.hpp>
+#include <memory>
 #include <vcl/vclptr.hxx>
 
 #include "viewlayer.hxx"
@@ -56,7 +55,7 @@ namespace slideshow
             The class is able to render the associated media shape on
             View implementations.
          */
-        class ViewMediaShape : private boost::noncopyable
+        class ViewMediaShape
         {
         public:
             /** Create a ViewMediaShape for the given View
@@ -72,9 +71,14 @@ namespace slideshow
              */
             virtual ~ViewMediaShape();
 
+            /// Forbid copy construction
+            ViewMediaShape(const ViewMediaShape&) = delete;
+            /// Forbid copy assignment
+            ViewMediaShape& operator=(const ViewMediaShape&) = delete;
+
             /** Query the associated view layer of this shape
              */
-            ViewLayerSharedPtr getViewLayer() const;
+            const ViewLayerSharedPtr& getViewLayer() const;
 
             // animation methods
 
@@ -84,10 +88,8 @@ namespace slideshow
                 This method enters animation mode on the associate
                 target view. The shape can be animated in parallel on
                 different views.
-
-                @return whether the mode change finished successfully.
              */
-            bool startMedia();
+            void startMedia();
 
             /** Notify the ViewShape that it is no longer animated
 
@@ -141,7 +143,7 @@ namespace slideshow
             bool implInitialize( const ::basegfx::B2DRectangle& rBounds );
             void implSetMediaProperties( const css::uno::Reference< css::beans::XPropertySet >& rxProps );
             void implInitializeMediaPlayer( const OUString& rMediaURL, const OUString& rMimeType );
-            bool implInitializePlayerWindow( const ::basegfx::B2DRectangle& rBounds,
+            void implInitializePlayerWindow( const ::basegfx::B2DRectangle& rBounds,
                                              const css::uno::Sequence< css::uno::Any >& rVCLDeviceParams,
                                              const OUString& rMimeType );
             ViewLayerSharedPtr                    mpViewLayer;
@@ -157,7 +159,7 @@ namespace slideshow
             bool                                              mbIsSoundEnabled;
         };
 
-        typedef ::boost::shared_ptr< ViewMediaShape > ViewMediaShapeSharedPtr;
+        typedef ::std::shared_ptr< ViewMediaShape > ViewMediaShapeSharedPtr;
 
     }
 }

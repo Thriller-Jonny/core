@@ -16,8 +16,8 @@
  *   except in compliance with the License. You may obtain a copy of
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
-#ifndef _SVX_FMHELP_HRC
-#define _SVX_FMHELP_HRC
+#ifndef INCLUDED_SVX_INC_FMHELP_HRC
+#define INCLUDED_SVX_INC_FMHELP_HRC
 
 #define HID_FORM_NAVIGATOR                                    "SVX_HID_FORM_NAVIGATOR"
 #define HID_FORM_NAVIGATOR_WIN                                "SVX_HID_FORM_NAVIGATOR_WIN"
@@ -58,9 +58,6 @@
 #define HID_FM_NEW_FORM                                       "SVX_HID_FM_NEW_FORM"
 #define HID_FM_NEW_HIDDEN                                     "SVX_HID_FM_NEW_HIDDEN"
 #define HID_FM_RENAME_OBJECT                                  "SVX_HID_FM_RENAME_OBJECT"
-#define HID_MENU_FM_TEXTATTRIBUTES_STYLE                      "SVX_HID_MENU_FM_TEXTATTRIBUTES_STYLE"
-#define HID_MENU_FM_TEXTATTRIBUTES_ALIGNMENT                  "SVX_HID_MENU_FM_TEXTATTRIBUTES_ALIGNMENT"
-#define HID_MENU_FM_TEXTATTRIBUTES_SPACING                    "SVX_HID_MENU_FM_TEXTATTRIBUTES_SPACING"
 
 #endif
 

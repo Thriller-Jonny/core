@@ -14,8 +14,20 @@ $(eval $(call gb_UIConfig_add_menubarfiles,modules/swxform,\
 ))
 
 $(eval $(call gb_UIConfig_add_popupmenufiles,modules/swxform,\
+	sw/uiconfig/swxform/popupmenu/anchor \
+	sw/uiconfig/swxform/popupmenu/annotation \
+	sw/uiconfig/swxform/popupmenu/draw \
+	sw/uiconfig/swxform/popupmenu/drawtext \
+	sw/uiconfig/swxform/popupmenu/form \
+	sw/uiconfig/swxform/popupmenu/formrichtext \
+	sw/uiconfig/swxform/popupmenu/frame \
+	sw/uiconfig/swxform/popupmenu/graphic \
+	sw/uiconfig/swxform/popupmenu/insertfield \
+	sw/uiconfig/swxform/popupmenu/media \
+	sw/uiconfig/swxform/popupmenu/oleobject \
 	sw/uiconfig/swxform/popupmenu/preview \
 	sw/uiconfig/swxform/popupmenu/table \
+	sw/uiconfig/swxform/popupmenu/text \
 ))
 
 $(eval $(call gb_UIConfig_add_statusbarfiles,modules/swxform,\
@@ -48,6 +60,7 @@ $(eval $(call gb_UIConfig_add_toolbarfiles,modules/swxform,\
 	sw/uiconfig/swxform/toolbar/graphicobjectbar \
 	sw/uiconfig/swxform/toolbar/insertbar \
 	sw/uiconfig/swxform/toolbar/insertobjectbar \
+	sw/uiconfig/swxform/toolbar/mailmerge \
 	sw/uiconfig/swxform/toolbar/mediaobjectbar \
 	sw/uiconfig/swxform/toolbar/moreformcontrols \
 	sw/uiconfig/swxform/toolbar/numobjectbar \

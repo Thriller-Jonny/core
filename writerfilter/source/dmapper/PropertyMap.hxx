@@ -57,6 +57,7 @@ namespace com{namespace sun{namespace star{
 namespace writerfilter {
 namespace dmapper{
 class DomainMapper_Impl;
+struct FloatingTableInfo;
 
 enum BorderPosition
 {
@@ -208,6 +209,8 @@ class SectionPropertyMap : public PropertyMap
 
     bool                                    m_bPageNoRestart;
     sal_Int32                               m_nPageNumber;
+    /// Page number type is a value from css::style::NumberingType.
+    sal_Int16                               m_nPageNumberType;
     sal_Int32                               m_nBreakType;
     sal_Int32                               m_nPaperBin;
     sal_Int32                               m_nFirstPaperBin;
@@ -233,12 +236,28 @@ class SectionPropertyMap : public PropertyMap
     sal_Int32                               m_ndxaLnn;
     sal_Int32                               m_nLnnMin;
 
-    void _ApplyProperties(css::uno::Reference<css::beans::XPropertySet> const& xStyle);
+    // The "Link To Previous" flag indicates whether the header/footer
+    // content should be taken from the previous section
+    bool                                    m_bDefaultHeaderLinkToPrevious;
+    bool                                    m_bEvenPageHeaderLinkToPrevious;
+    bool                                    m_bFirstPageHeaderLinkToPrevious;
+    bool                                    m_bDefaultFooterLinkToPrevious;
+    bool                                    m_bEvenPageFooterLinkToPrevious;
+    bool                                    m_bFirstPageFooterLinkToPrevious;
+
+    void ApplyProperties_(css::uno::Reference<css::beans::XPropertySet> const& xStyle);
     css::uno::Reference<css::text::XTextColumns> ApplyColumnProperties(css::uno::Reference<css::beans::XPropertySet> const& xFollowPageStyle,
                                                                        DomainMapper_Impl& rDM_Impl);
     void CopyLastHeaderFooter( bool bFirstPage, DomainMapper_Impl& rDM_Impl );
-    static void CopyHeaderFooter(css::uno::Reference<css::beans::XPropertySet> xPrevStyle,
-                          css::uno::Reference<css::beans::XPropertySet> xStyle);
+    static void CopyHeaderFooter(
+        const css::uno::Reference<css::beans::XPropertySet>& xPrevStyle,
+        const css::uno::Reference<css::beans::XPropertySet>& xStyle,
+        bool bOmitRightHeader=false, bool bOmitLeftHeader=false,
+        bool bOmitRightFooter=false, bool bOmitLeftFooter=false);
+    static void CopyHeaderFooterTextProperty(
+        const css::uno::Reference<css::beans::XPropertySet>& xPrevStyle,
+        const css::uno::Reference<css::beans::XPropertySet>& xStyle,
+        PropertyIds ePropId );
     void PrepareHeaderFooterProperties( bool bFirstPage );
     bool HasHeader( bool bFirstPage ) const;
     bool HasFooter( bool bFirstPage ) const;
@@ -249,6 +268,8 @@ class SectionPropertyMap : public PropertyMap
                            sal_Int32 nDistance,
                            sal_Int32 nOffsetFrom,
                            sal_uInt32 nLineWidth);
+    /// Determines if conversion of a given floating table is wanted or not.
+    bool FloatingTableConversion(FloatingTableInfo& rInfo);
 
 public:
         explicit SectionPropertyMap(bool bIsFirstSection);
@@ -266,7 +287,7 @@ public:
         m_xStartingRange = xRange;
     }
 
-    css::uno::Reference<css::text::XTextRange> GetStartingRange() const { return m_xStartingRange; }
+    const css::uno::Reference<css::text::XTextRange>& GetStartingRange() const { return m_xStartingRange; }
 
     css::uno::Reference<css::beans::XPropertySet> GetPageStyle(const css::uno::Reference<css::container::XNameContainer>& xStyles,
                                                                const css::uno::Reference<css::lang::XMultiServiceFactory>& xTextFactory,
@@ -286,6 +307,7 @@ public:
     void SetEvenlySpaced( bool bSet ) {    m_bEvenlySpaced = bSet; }
     void SetLandscape( bool bSet ) { m_bIsLandscape = bSet; }
     void SetPageNumber( sal_Int32 nSet ) { m_nPageNumber = nSet; }
+    void SetPageNumberType(sal_Int32 nSet) { m_nPageNumberType = nSet; }
     void SetBreakType( sal_Int32 nSet ) { m_nBreakType = nSet; }
     sal_Int32 GetBreakType( ) { return m_nBreakType; }
 
@@ -317,8 +339,8 @@ public:
     void CloseSectionGroup( DomainMapper_Impl& rDM_Impl );
     /// Handling of margins, header and footer for any kind of sections breaks.
     void HandleMarginsHeaderFooter(DomainMapper_Impl& rDM_Impl);
+    void ClearHeaderFooterLinkToPrevious( bool bHeader, PageType eType );
 };
-
 
 
 class ParagraphProperties
@@ -406,10 +428,10 @@ public:
     sal_Int8    GetDropCapLength() const { return m_nDropCapLength;}
     void        SetDropCapLength(sal_Int8 nSet) { m_nDropCapLength = nSet;}
 
-    css::uno::Reference<css::text::XTextRange> GetStartingRange() const { return m_xStartingRange; }
+    const css::uno::Reference<css::text::XTextRange>& GetStartingRange() const { return m_xStartingRange; }
     void SetStartingRange(css::uno::Reference<css::text::XTextRange> const& xSet) { m_xStartingRange = xSet; }
 
-    css::uno::Reference<css::text::XTextRange> GetEndingRange() const { return m_xEndingRange; }
+    const css::uno::Reference<css::text::XTextRange>& GetEndingRange() const { return m_xEndingRange; }
     void SetEndingRange(css::uno::Reference<css::text::XTextRange> const& xSet) { m_xEndingRange = xSet; }
 
     void                    SetParaStyleName( const OUString& rSet ) { m_sParaStyleName = rSet;}

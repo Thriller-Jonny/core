@@ -53,6 +53,8 @@
 #include <com/sun/star/chart2/StackingDirection.hpp>
 #include <com/sun/star/chart2/TickmarkStyle.hpp>
 
+#include <o3tl/make_unique.hxx>
+
 #include <tools/gen.hxx>
 #include <vcl/outdev.hxx>
 #include <filter/msfilter/escherex.hxx>
@@ -103,7 +105,6 @@ using ::com::sun::star::chart2::XFormattedString;
 using ::com::sun::star::chart2::XLegend;
 using ::com::sun::star::chart2::XRegressionCurve;
 using ::com::sun::star::chart2::XRegressionCurveContainer;
-using ::com::sun::star::chart2::XScaling;
 using ::com::sun::star::chart2::XTitle;
 using ::com::sun::star::chart2::XTitled;
 
@@ -111,7 +112,6 @@ using ::com::sun::star::chart2::data::XDataSequence;
 using ::com::sun::star::chart2::data::XDataSource;
 using ::com::sun::star::chart2::data::XLabeledDataSequence;
 
-using ::formula::FormulaGrammar;
 using ::formula::FormulaToken;
 
 namespace cssc = ::com::sun::star::chart;
@@ -720,6 +720,7 @@ void XclExpChEscherFormat::WriteBody( XclExpStream& rStrm )
     // write Escher property container via temporary memory stream
     SvMemoryStream aMemStrm;
     maData.mxEscherSet->Commit( aMemStrm );
+    aMemStrm.Flush();
     aMemStrm.Seek( STREAM_SEEK_TO_BEGIN );
     rStrm.CopyFromStream( aMemStrm );
 }
@@ -1109,11 +1110,11 @@ XclExpChFrLabelProps::XclExpChFrLabelProps( const XclExpChRoot& rRoot ) :
 {
 }
 
-void XclExpChFrLabelProps::Convert( const ScfPropertySet& rPropSet, bool bShowSeries,
+void XclExpChFrLabelProps::Convert( const ScfPropertySet& rPropSet,
         bool bShowCateg, bool bShowValue, bool bShowPercent, bool bShowBubble )
 {
     // label value flags
-    ::set_flag( maData.mnFlags, EXC_CHFRLABELPROPS_SHOWSERIES,  bShowSeries );
+    ::set_flag( maData.mnFlags, EXC_CHFRLABELPROPS_SHOWSERIES,  false );
     ::set_flag( maData.mnFlags, EXC_CHFRLABELPROPS_SHOWCATEG,   bShowCateg );
     ::set_flag( maData.mnFlags, EXC_CHFRLABELPROPS_SHOWVALUE,   bShowValue );
     ::set_flag( maData.mnFlags, EXC_CHFRLABELPROPS_SHOWPERCENT, bShowPercent );
@@ -1279,7 +1280,7 @@ bool XclExpChText::ConvertDataLabel( const ScfPropertySet& rPropSet,
     if( bShowAny && (GetBiff() == EXC_BIFF8) )
     {
         mxLabelProps.reset( new XclExpChFrLabelProps( GetChRoot() ) );
-        mxLabelProps->Convert( rPropSet, false, bShowCateg, bShowValue, bShowPercent, bShowBubble );
+        mxLabelProps->Convert( rPropSet, bShowCateg, bShowValue, bShowPercent, bShowBubble );
     }
 
     // restrict to combinations allowed in CHTEXT
@@ -2470,7 +2471,7 @@ void XclExpChTypeGroup::ConvertSeries(
                 if (bConnectBars && (maTypeInfo.meTypeCateg == EXC_CHTYPECATEG_BAR))
                 {
                     sal_uInt16 nKey = EXC_CHCHARTLINE_CONNECT;
-                    maChartLines.insert(nKey, new XclExpChLineFormat(GetChRoot()));
+                    m_ChartLines.insert(std::make_pair(nKey, o3tl::make_unique<XclExpChLineFormat>(GetChRoot())));
                 }
             }
             else
@@ -2522,8 +2523,10 @@ void XclExpChTypeGroup::WriteSubRecords( XclExpStream& rStrm )
     lclSaveRecord( rStrm, mxLegend );
     lclSaveRecord( rStrm, mxUpBar );
     lclSaveRecord( rStrm, mxDownBar );
-    for( XclExpChLineFormatMap::iterator aLIt = maChartLines.begin(), aLEnd = maChartLines.end(); aLIt != aLEnd; ++aLIt )
-        lclSaveRecord( rStrm, aLIt->second, EXC_ID_CHCHARTLINE, aLIt->first );
+    for (auto const& it : m_ChartLines)
+    {
+        lclSaveRecord( rStrm, it.second.get(), EXC_ID_CHCHARTLINE, it.first );
+    }
 }
 
 sal_uInt16 XclExpChTypeGroup::GetFreeFormatIdx() const
@@ -2563,7 +2566,7 @@ void XclExpChTypeGroup::CreateAllStockSeries(
         XclExpChLineFormatRef xLineFmt( new XclExpChLineFormat( GetChRoot() ) );
         xLineFmt->Convert( GetChRoot(), aSeriesProp, EXC_CHOBJTYPE_HILOLINE );
         sal_uInt16 nKey = EXC_CHCHARTLINE_HILO;
-        maChartLines.insert(nKey, new XclExpChLineFormat(GetChRoot()));
+        m_ChartLines.insert(std::make_pair(nKey, o3tl::make_unique<XclExpChLineFormat>(GetChRoot())));
     }
     // dropbars
     if( bHasOpen && bHasClose )

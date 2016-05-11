@@ -15,6 +15,8 @@
 #include "docsh.hxx"
 #include "address.hxx"
 
+#include <cppunit/SourceLine.h>
+
 #include <test/bootstrapfixture.hxx>
 #include <comphelper/documentconstants.hxx>
 
@@ -111,7 +113,7 @@ SCQAHELPER_DLLPUBLIC std::ostream& operator<<(std::ostream& rStrm, const OpCode&
 // handling APIs? Do we really want to add arbitrary new file handling
 // wrappers here and there (and then having to handle the Android (and
 // eventually perhaps iOS) special cases here, too)?  Please move this to osl,
-// it sure looks gemerally useful. Or am I missing something?
+// it sure looks generally useful. Or am I missing something?
 
 SCQAHELPER_DLLPUBLIC void loadFile(const OUString& aFileName, std::string& aContent);
 
@@ -136,8 +138,8 @@ SCQAHELPER_DLLPUBLIC ScTokenArray* compileFormula(
     ScDocument* pDoc, const OUString& rFormula, const ScAddress* pPos = nullptr,
     formula::FormulaGrammar::Grammar eGram = formula::FormulaGrammar::GRAM_NATIVE );
 
-template<size_t _Size>
-bool checkOutput(ScDocument* pDoc, const ScRange& aOutRange, const char* aOutputCheck[][_Size], const char* pCaption)
+template<size_t Size>
+bool checkOutput(ScDocument* pDoc, const ScRange& aOutRange, const char* aOutputCheck[][Size], const char* pCaption)
 {
     bool bResult = true;
     const ScAddress& s = aOutRange.aStart;
@@ -243,6 +245,12 @@ public:
 
 #define ASSERT_EQUAL_TYPE( type, expected, result ) \
     CPPUNIT_ASSERT_EQUAL( static_cast<type>(expected), static_cast<type>(result) );
+
+SCQAHELPER_DLLPUBLIC void checkFormula(ScDocument& rDoc, const ScAddress& rPos,
+        const char* expected, const char* msg, CppUnit::SourceLine sourceLine);
+
+#define ASSERT_FORMULA_EQUAL(doc, pos, expected, msg) \
+    checkFormula(doc, pos, expected, msg, CPPUNIT_SOURCELINE())
 
 SCQAHELPER_DLLPUBLIC void testFormats(ScBootstrapFixture* pTest, ScDocument* pDoc, sal_Int32 nFormat);
 

@@ -36,7 +36,6 @@ namespace drawinglayer { namespace attribute {
 }}
 
 
-
 namespace drawinglayer
 {
     namespace attribute
@@ -57,10 +56,14 @@ namespace drawinglayer
                 bool bSpecular);
             explicit Sdr3DLightAttribute(const basegfx::BColor& rColor);
             Sdr3DLightAttribute(const Sdr3DLightAttribute& rCandidate);
+            Sdr3DLightAttribute();
             ~Sdr3DLightAttribute();
 
             // assignment operator
             Sdr3DLightAttribute& operator=(const Sdr3DLightAttribute& rCandidate);
+
+            // checks if the incarnation is default constructed
+            bool isDefault() const;
 
             // compare operator
             bool operator==(const Sdr3DLightAttribute& rCandidate) const;
@@ -72,7 +75,6 @@ namespace drawinglayer
         };
     } // end of namespace attribute
 } // end of namespace drawinglayer
-
 
 
 #endif //INCLUDED_DRAWINGLAYER_ATTRIBUTE_SDRLIGHTATTRIBUTE3D_HXX

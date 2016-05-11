@@ -53,8 +53,6 @@ private:
     css::uno::Reference<
         css::uno::XInterface >             xLast;  // result of last spelling/hyphenation attempt
     css::uno::Reference<
-        css::linguistic2::XSpellChecker1 > xSpell;
-    css::uno::Reference<
         css::linguistic2::XHyphenator >    xHyph;
     SdrObject*  mpTextObj;
     bool        bOtherCntnt : 1; // set => Check special sections initially
@@ -76,9 +74,7 @@ private:
 
 public:
     SvxSpellWrapper( vcl::Window* pWn,
-                     css::uno::Reference< css::linguistic2::XSpellChecker1 >  &xSpellChecker,
-                     const bool bStart = false, const bool bIsAllRight = false,
-                     const bool bOther = false, const bool bRevAllow = true );
+                     const bool bStart = false, const bool bIsAllRight = false );
     SvxSpellWrapper( vcl::Window* pWn,
                      css::uno::Reference< css::linguistic2::XHyphenator >  &xHyphenator,
                      const bool bStart = false, const bool bOther = false );
@@ -98,18 +94,18 @@ public:
     inline bool     IsStartDone(){ return bStartDone; }
     inline bool     IsEndDone(){ return bEndDone; }
     inline bool     IsHyphen(){ return bHyphen; } // Split instead of Spell check
-    inline void     SetHyphen( const bool bNew = true ){ bHyphen = bNew; }
+    inline void     SetHyphen() { bHyphen = true; }
     inline bool     IsAllRight()        { return bAllRight; }
 
 protected:
-    css::uno::Reference< css::uno::XInterface >
+    const css::uno::Reference< css::uno::XInterface >&
                      GetLast()      { return xLast; }
     void             SetLast(const css::uno::Reference< css::uno::XInterface >  &xNewLast)
                             { xLast = xNewLast; }
     virtual bool SpellMore();               // examine further documents?
     virtual bool HasOtherCnt();             // Are there any special areas?
     virtual void SpellStart( SvxSpellArea eSpell ); // Preparing the area
-    virtual bool SpellContinue();     // Check Areas
+    virtual void SpellContinue();     // Check Areas
                                           // Result available through GetLast
     virtual void ReplaceAll( const OUString &rNewText, sal_Int16 nLanguage ); //Replace word from the replace list
     static css::uno::Reference< css::linguistic2::XDictionary >

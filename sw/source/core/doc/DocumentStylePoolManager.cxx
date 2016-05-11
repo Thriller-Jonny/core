@@ -91,14 +91,14 @@ namespace
     #define HTML_PARSPACE   GetMetricVal( CM_05 )
 
     static const sal_uInt16 aHeadlineSizes[ 2 * MAXLEVEL ] = {
-        // we do everything procentual now:
+        // we do everything percentual now:
         130, 115, 101, 95, 85,
         85,   80,  80, 75, 75,  // normal
         PT_24, PT_18, PT_14, PT_12, PT_10,
         PT_7, PT_7, PT_7, PT_7, PT_7            // HTML mode
     };
 
-    static long lcl_GetRightMargin( SwDoc& rDoc )
+    long lcl_GetRightMargin( SwDoc& rDoc )
     {
         // Make sure that the printer settings are taken over to the standard
         // page style
@@ -110,7 +110,7 @@ namespace
         return nWidth - nLeft - nRight;
     }
 
-    static void lcl_SetDfltFont( DefaultFontType nFntType, SfxItemSet& rSet )
+    void lcl_SetDfltFont( DefaultFontType nFntType, SfxItemSet& rSet )
     {
         static struct {
             sal_uInt16 nResLngId;
@@ -127,13 +127,13 @@ namespace
             vcl::Font aFnt( OutputDevice::GetDefaultFont( nFntType,
                                     nLng, GetDefaultFontFlags::OnlyOne ) );
 
-            rSet.Put( SvxFontItem( aFnt.GetFamily(), aFnt.GetName(),
+            rSet.Put( SvxFontItem( aFnt.GetFamilyType(), aFnt.GetFamilyName(),
                                 OUString(), aFnt.GetPitch(),
                                 aFnt.GetCharSet(), aArr[n].nResFntId ));
         }
     }
 
-    static void lcl_SetDfltFont( DefaultFontType nLatinFntType, DefaultFontType nCJKFntType,
+    void lcl_SetDfltFont( DefaultFontType nLatinFntType, DefaultFontType nCJKFntType,
                             DefaultFontType nCTLFntType, SfxItemSet& rSet )
     {
         static struct {
@@ -156,13 +156,13 @@ namespace
             vcl::Font aFnt( OutputDevice::GetDefaultFont( aArr[n].nFntType,
                                     nLng, GetDefaultFontFlags::OnlyOne ) );
 
-            rSet.Put( SvxFontItem( aFnt.GetFamily(), aFnt.GetName(),
+            rSet.Put( SvxFontItem( aFnt.GetFamilyType(), aFnt.GetFamilyName(),
                                 OUString(), aFnt.GetPitch(),
                                 aFnt.GetCharSet(), aArr[n].nResFntId ));
         }
     }
 
-    static void lcl_SetHeadline( SwDoc* pDoc, SwTextFormatColl* pColl,
+    void lcl_SetHeadline( SwDoc* pDoc, SwTextFormatColl* pColl,
                             SfxItemSet& rSet,
                             sal_uInt16 nOutLvlBits, sal_uInt8 nLevel, bool bItalic )
     {
@@ -195,21 +195,15 @@ namespace
                 SwNumRule * pOutlineRule = pDoc->GetOutlineNumRule();
                 const SwNumFormat& rNFormat = pOutlineRule->Get( nLevel );
 
-                SvxLRSpaceItem aLR( static_cast<const SvxLRSpaceItem&>(pColl->GetFormatAttr( RES_LR_SPACE )) );
-                if ( rNFormat.GetPositionAndSpaceMode() == SvxNumberFormat::LABEL_WIDTH_AND_POSITION &&
+                if ( rNFormat.GetPositionAndSpaceMode() ==
+                                    SvxNumberFormat::LABEL_WIDTH_AND_POSITION &&
                         ( rNFormat.GetAbsLSpace() || rNFormat.GetFirstLineOffset() ) )
                 {
+                    SvxLRSpaceItem aLR( static_cast<const SvxLRSpaceItem&>(pColl->GetFormatAttr( RES_LR_SPACE )) );
                     aLR.SetTextFirstLineOfstValue( rNFormat.GetFirstLineOffset() );
                     aLR.SetTextLeft( rNFormat.GetAbsLSpace() );
+                    pColl->SetFormatAttr( aLR );
                 }
-                else
-                {
-                    // tdf#93970 The indent set at the associated outline style also affects this paragraph.
-                    // We don't want this here, so override it. This doesn't affect the outline style properties.
-                    aLR.SetTextFirstLineOfstValue( 0 );
-                    aLR.SetTextLeft( 0 );
-                }
-                pColl->SetFormatAttr( aLR );
 
                 // All paragraph styles, which are assigned to a level of the
                 // outline style has to have the outline style set as its list style.
@@ -220,7 +214,7 @@ namespace
         pColl->SetNextTextFormatColl( *pDoc->getIDocumentStylePoolAccess().GetTextCollFromPool( RES_POOLCOLL_TEXT ));
     }
 
-    static void lcl_SetRegister( SwDoc* pDoc, SfxItemSet& rSet, sal_uInt16 nFact,
+    void lcl_SetRegister( SwDoc* pDoc, SfxItemSet& rSet, sal_uInt16 nFact,
                             bool bHeader, bool bTab )
     {
         SvxLRSpaceItem aLR( RES_LR_SPACE );
@@ -244,7 +238,7 @@ namespace
         }
     }
 
-    static void lcl_SetNumBul( SwDoc* pDoc, SwTextFormatColl* pColl,
+    void lcl_SetNumBul( SwDoc* pDoc, SwTextFormatColl* pColl,
                             SfxItemSet& rSet,
                             sal_uInt16 nNxt, SwTwips nEZ, SwTwips nLeft,
                             SwTwips nUpper, SwTwips nLower )
@@ -263,7 +257,7 @@ namespace
             pColl->SetNextTextFormatColl( *pDoc->getIDocumentStylePoolAccess().GetTextCollFromPool( nNxt ));
     }
 
-    static void lcl_PutStdPageSizeIntoItemSet( SwDoc* pDoc, SfxItemSet& rSet )
+    void lcl_PutStdPageSizeIntoItemSet( SwDoc* pDoc, SfxItemSet& rSet )
     {
         SwPageDesc* pStdPgDsc = pDoc->getIDocumentStylePoolAccess().GetPageDescFromPool( RES_POOLPAGE_STANDARD );
         SwFormatFrameSize aFrameSz( pStdPgDsc->GetMaster().GetFrameSize() );
@@ -469,7 +463,7 @@ SwTextFormatColl* DocumentStylePoolManager::GetTextCollFromPool( sal_uInt16 nId,
                     vcl::Font aFnt( OutputDevice::GetDefaultFont( nFontTypes[i],
                                             nLng, GetDefaultFontFlags::OnlyOne ) );
 
-                    aSet.Put( SvxFontItem( aFnt.GetFamily(), aFnt.GetName(),
+                    aSet.Put( SvxFontItem( aFnt.GetFamilyType(), aFnt.GetFamilyName(),
                                             OUString(), aFnt.GetPitch(),
                                             aFnt.GetCharSet(), aFontWhich[i] ));
                 }
@@ -1163,10 +1157,10 @@ SwFormat* DocumentStylePoolManager::GetFormatFromPool( sal_uInt16 nId )
             switch (nId & (COLL_GET_RANGE_BITS + POOLGRP_NOCOLLID) )
             {
                 case POOLGRP_CHARFMT:
-                    pNewFormat = m_rDoc._MakeCharFormat(aNm, pDeriveFormat, false, true);
+                    pNewFormat = m_rDoc.MakeCharFormat_(aNm, pDeriveFormat, false, true);
                     break;
                 case POOLGRP_FRAMEFMT:
-                    pNewFormat = m_rDoc._MakeFrameFormat(aNm, pDeriveFormat, false, true);
+                    pNewFormat = m_rDoc.MakeFrameFormat_(aNm, pDeriveFormat, false, true);
                     break;
                 default:
                     break;
@@ -1201,8 +1195,8 @@ SwFormat* DocumentStylePoolManager::GetFormatFromPool( sal_uInt16 nId )
     case RES_POOLCHR_BUL_LEVEL:             // Bullet character
         {
             const vcl::Font& rBulletFont = numfunc::GetDefBulletFont();
-            SetAllScriptItem( aSet, SvxFontItem( rBulletFont.GetFamily(),
-                      rBulletFont.GetName(), rBulletFont.GetStyleName(),
+            SetAllScriptItem( aSet, SvxFontItem( rBulletFont.GetFamilyType(),
+                        rBulletFont.GetFamilyName(), rBulletFont.GetStyleName(),
                         rBulletFont.GetPitch(), rBulletFont.GetCharSet(), RES_CHRATR_FONT ));
         }
         break;
@@ -1211,7 +1205,7 @@ SwFormat* DocumentStylePoolManager::GetFormatFromPool( sal_uInt16 nId )
         {
             Color aCol( COL_BLUE );
             aSet.Put( SvxColorItem( aCol, RES_CHRATR_COLOR ) );
-            aSet.Put( SvxUnderlineItem( UNDERLINE_SINGLE, RES_CHRATR_UNDERLINE ) );
+            aSet.Put( SvxUnderlineItem( LINESTYLE_SINGLE, RES_CHRATR_UNDERLINE ) );
             // i40133: patch submitted by rail: set language to 'none' to prevent spell checking:
             aSet.Put( SvxLanguageItem( LANGUAGE_NONE, RES_CHRATR_LANGUAGE ) );
             aSet.Put( SvxLanguageItem( LANGUAGE_NONE, RES_CHRATR_CJK_LANGUAGE ) );
@@ -1222,7 +1216,7 @@ SwFormat* DocumentStylePoolManager::GetFormatFromPool( sal_uInt16 nId )
         {
             Color aCol( COL_RED );
             aSet.Put( SvxColorItem( aCol, RES_CHRATR_COLOR ) );
-            aSet.Put( SvxUnderlineItem( UNDERLINE_SINGLE, RES_CHRATR_UNDERLINE ) );
+            aSet.Put( SvxUnderlineItem( LINESTYLE_SINGLE, RES_CHRATR_UNDERLINE ) );
             aSet.Put( SvxLanguageItem( LANGUAGE_NONE, RES_CHRATR_LANGUAGE ) );
             aSet.Put( SvxLanguageItem( LANGUAGE_NONE, RES_CHRATR_CJK_LANGUAGE ) );
             aSet.Put( SvxLanguageItem( LANGUAGE_NONE, RES_CHRATR_CTL_LANGUAGE ) );
@@ -1232,7 +1226,7 @@ SwFormat* DocumentStylePoolManager::GetFormatFromPool( sal_uInt16 nId )
         {
             Color aCol( COL_CYAN );
             aSet.Put( SvxColorItem( aCol, RES_CHRATR_COLOR ) );
-            aSet.Put( SvxUnderlineItem( UNDERLINE_DOTTED, RES_CHRATR_UNDERLINE ) );
+            aSet.Put( SvxUnderlineItem( LINESTYLE_DOTTED, RES_CHRATR_UNDERLINE ) );
             aSet.Put( SvxCaseMapItem( SVX_CASEMAP_KAPITAELCHEN, RES_CHRATR_CASEMAP ) );
         }
         break;
@@ -1242,8 +1236,8 @@ SwFormat* DocumentStylePoolManager::GetFormatFromPool( sal_uInt16 nId )
             long nH = static_cast<const SvxFontHeightItem*>(GetDfltAttr(
                                 RES_CHRATR_CJK_FONTSIZE ))->GetHeight() / 2;
             SetAllScriptItem( aSet, SvxFontHeightItem( nH, 100, RES_CHRATR_FONTSIZE));
-            aSet.Put(SvxUnderlineItem( UNDERLINE_NONE, RES_CHRATR_UNDERLINE ));
-            aSet.Put(SvxEmphasisMarkItem( EMPHASISMARK_NONE, RES_CHRATR_EMPHASIS_MARK) );
+            aSet.Put(SvxUnderlineItem( LINESTYLE_NONE, RES_CHRATR_UNDERLINE ));
+            aSet.Put(SvxEmphasisMarkItem( FontEmphasisMark::NONE, RES_CHRATR_EMPHASIS_MARK) );
         }
         break;
 
@@ -1270,7 +1264,7 @@ SwFormat* DocumentStylePoolManager::GetFormatFromPool( sal_uInt16 nId )
             ::lcl_SetDfltFont( DefaultFontType::FIXED, aSet );
         }
         break;
-   case RES_POOLCHR_VERT_NUM:
+    case RES_POOLCHR_VERT_NUM:
             aSet.Put( SvxCharRotateItem( 900, false, RES_CHRATR_ROTATE ) );
     break;
 

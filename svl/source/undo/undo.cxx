@@ -35,7 +35,6 @@
 using ::com::sun::star::uno::Exception;
 
 
-
 SfxRepeatTarget::~SfxRepeatTarget()
 {
 }
@@ -78,7 +77,6 @@ OUString SfxUndoAction::GetComment() const
 {
     return OUString();
 }
-
 
 
 sal_uInt16 SfxUndoAction::GetId() const
@@ -128,7 +126,6 @@ void SfxUndoAction::Repeat(SfxRepeatTarget&)
 }
 
 
-
 bool SfxUndoAction::CanRepeat(SfxRepeatTarget&) const
 {
     return true;
@@ -137,6 +134,7 @@ bool SfxUndoAction::CanRepeat(SfxRepeatTarget&) const
 void SfxUndoAction::dumpAsXml(xmlTextWriterPtr pWriter) const
 {
     xmlTextWriterStartElement(pWriter, BAD_CAST("sfxUndoAction"));
+    xmlTextWriterWriteFormatAttribute(pWriter, BAD_CAST("ptr"), "%p", this);
     xmlTextWriterWriteAttribute(pWriter, BAD_CAST("symbol"), BAD_CAST(typeid(*this).name()));
     xmlTextWriterWriteAttribute(pWriter, BAD_CAST("comment"), BAD_CAST(GetComment().toUtf8().getStr()));
     xmlTextWriterEndElement(pWriter);
@@ -852,16 +850,16 @@ size_t SfxUndoManager::ImplGetRedoActionCount_Lock( bool const i_currentLevel ) 
 }
 
 
-SfxUndoAction* SfxUndoManager::GetRedoAction( size_t nNo, bool const i_currentLevel ) const
+SfxUndoAction* SfxUndoManager::GetRedoAction() const
 {
     UndoManagerGuard aGuard( *m_xData );
 
-    const SfxUndoArray* pUndoArray = i_currentLevel ? m_xData->pActUndoArray : m_xData->pUndoArray;
-    if ( (pUndoArray->nCurUndoAction + nNo) > pUndoArray->aUndoActions.size() )
+    const SfxUndoArray* pUndoArray = m_xData->pActUndoArray;
+    if ( (pUndoArray->nCurUndoAction) > pUndoArray->aUndoActions.size() )
     {
         return nullptr;
     }
-    return pUndoArray->aUndoActions[ pUndoArray->nCurUndoAction + nNo ].pAction;
+    return pUndoArray->aUndoActions[ pUndoArray->nCurUndoAction ].pAction;
 }
 
 
@@ -1257,26 +1255,21 @@ bool SfxUndoManager::HasTopUndoActionMark( UndoStackMark const i_mark )
 }
 
 
-void SfxUndoManager::RemoveOldestUndoActions( size_t const i_count )
+void SfxUndoManager::RemoveOldestUndoAction()
 {
     UndoManagerGuard aGuard( *m_xData );
 
-    size_t nActionsToRemove = i_count;
-    while ( nActionsToRemove )
+    SfxUndoAction* pActionToRemove = m_xData->pUndoArray->aUndoActions[0].pAction;
+
+    if ( IsInListAction() && ( m_xData->pUndoArray->nCurUndoAction == 1 ) )
     {
-        SfxUndoAction* pActionToRemove = m_xData->pUndoArray->aUndoActions[0].pAction;
-
-        if ( IsInListAction() && ( m_xData->pUndoArray->nCurUndoAction == 1 ) )
-        {
-            assert(!"SfxUndoManager::RemoveOldestUndoActions: cannot remove a not-yet-closed list action!");
-            return;
-        }
-
-        aGuard.markForDeletion( pActionToRemove );
-        m_xData->pUndoArray->aUndoActions.Remove( 0 );
-        --m_xData->pUndoArray->nCurUndoAction;
-        --nActionsToRemove;
+        assert(!"SfxUndoManager::RemoveOldestUndoActions: cannot remove a not-yet-closed list action!");
+        return;
     }
+
+    aGuard.markForDeletion( pActionToRemove );
+    m_xData->pUndoArray->aUndoActions.Remove( 0 );
+    --m_xData->pUndoArray->nCurUndoAction;
 }
 
 void SfxUndoManager::dumpAsXml(xmlTextWriterPtr pWriter) const
@@ -1442,13 +1435,10 @@ void SfxLinkUndoAction::Redo()
 }
 
 
-
 bool SfxLinkUndoAction::CanRepeat(SfxRepeatTarget& r) const
 {
     return pAction && pAction->CanRepeat(r);
 }
-
-
 
 
 void SfxLinkUndoAction::Repeat(SfxRepeatTarget&r)
@@ -1458,14 +1448,12 @@ void SfxLinkUndoAction::Repeat(SfxRepeatTarget&r)
 }
 
 
-
 OUString SfxLinkUndoAction::GetComment() const
 {
     if ( pAction )
         return pAction->GetComment();
     return OUString();
 }
-
 
 
 OUString SfxLinkUndoAction::GetRepeatComment(SfxRepeatTarget&r) const

@@ -25,6 +25,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <rtl/character.hxx>
 
 // All symbol names are laid down int the symbol-pool's stringpool, so that
 // all symbols are handled in the same case. On saving the code-image, the
@@ -52,14 +53,13 @@ const OUString& SbiStringPool::Find( sal_uInt32 n ) const
         return aData[n - 1];
 }
 
-short SbiStringPool::Add( const OUString& rVal, bool bNoCase )
+short SbiStringPool::Add( const OUString& rVal )
 {
     sal_uInt32 n = aData.size();
     for( sal_uInt32 i = 0; i < n; ++i )
     {
         OUString& p = aData[i];
-        if( (  bNoCase && p == rVal )
-            || ( !bNoCase && p.equalsIgnoreAsciiCase( rVal ) ) )
+        if( p == rVal )
             return i+1;
     }
 
@@ -246,12 +246,11 @@ sal_uInt32 SbiSymPool::Reference( const OUString& rName )
 
 void SbiSymPool::CheckRefs()
 {
-    for (size_t i = 0; i < m_Data.size(); ++i)
+    for (std::unique_ptr<SbiSymDef> & r : m_Data)
     {
-        SbiSymDef &r = *m_Data[ i ];
-        if( !r.IsDefined() )
+        if( !r->IsDefined() )
         {
-            pParser->Error( ERRCODE_BASIC_UNDEF_LABEL, r.GetName() );
+            pParser->Error( ERRCODE_BASIC_UNDEF_LABEL, r->GetName() );
         }
     }
 }
@@ -328,7 +327,7 @@ void SbiSymDef::SetType( SbxDataType t )
             {
                 ch = 'Z';
             }
-            int ch2 = toupper( ch );
+            int ch2 = rtl::toAsciiUpperCase( ch );
             int nIndex = ch2 - 'A';
             if (nIndex >= 0 && nIndex < N_DEF_TYPES)
                 t = pIn->pParser->eDefTypes[nIndex];
@@ -488,7 +487,6 @@ void SbiProcDef::setPropertyMode( PropertyMode ePropMode )
         aName = aCompleteProcName;
     }
 }
-
 
 
 SbiConstDef::SbiConstDef( const OUString& rName )

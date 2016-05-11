@@ -39,7 +39,7 @@
 #endif
 
 
-//  namesapces
+//  namespaces
 
 
 using namespace ::cppu                  ;
@@ -57,9 +57,7 @@ using namespace com::sun::star::system;
 Reference< XMultiServiceFactory >   g_xFactory;
 
 
-
 //  main
-
 
 
 // int SAL_CALL main(int nArgc, char* Argv[], char* Env[]   )

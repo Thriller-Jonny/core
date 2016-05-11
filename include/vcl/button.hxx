@@ -37,6 +37,7 @@ class UserDrawEvent;
 class ImplCommonButtonData;
 enum class DrawButtonFlags;
 
+
 class VCL_DLLPUBLIC Button : public Control
 {
 private:
@@ -53,7 +54,7 @@ public:
     SAL_DLLPRIVATE DrawButtonFlags& ImplGetButtonState();
     SAL_DLLPRIVATE DrawTextFlags    ImplGetTextStyle( OUString& rText, WinBits nWinStyle, DrawFlags nDrawFlags );
     SAL_DLLPRIVATE void             ImplDrawAlignedImage(OutputDevice* pDev, Point& rPos, Size& rSize,
-                                              bool bLayout, sal_uLong nImageSep, DrawFlags nDrawFlags,
+                                              sal_uLong nImageSep, DrawFlags nDrawFlags,
                                               DrawTextFlags nTextStyle, Rectangle *pSymbolRect=nullptr, bool bAddImageSep = false );
     SAL_DLLPRIVATE void             ImplSetFocusRect( const Rectangle &rFocusRect );
     SAL_DLLPRIVATE const Rectangle& ImplGetFocusRect() const;
@@ -90,7 +91,7 @@ public:
 
     void                SetFocusRect( const Rectangle& rFocusRect );
     bool                IsSmallSymbol() const;
-    void                SetSmallSymbol(bool bSmall = true);
+    void                SetSmallSymbol();
     virtual bool        set_property(const OString &rKey, const OString &rValue) override;
 
     /// Sets the button state according to the FeatureStateEvent emitted by an Uno state change.
@@ -103,18 +104,12 @@ protected:
 };
 
 
-// - PushButton-Types -
-
-
 enum class PushButtonDropdownStyle
 {
     NONE            = 0x0000,
     Toolbox         = 0x0001,
     MenuButton      = 0x0002,
 };
-
-
-// - PushButton -
 
 
 class VCL_DLLPUBLIC PushButton : public Button
@@ -131,8 +126,8 @@ protected:
     SAL_DLLPRIVATE WinBits         ImplInitStyle( const vcl::Window* pPrevWindow, WinBits nStyle );
     SAL_DLLPRIVATE void            ImplInitSettings( bool bFont, bool bForeground, bool bBackground );
     SAL_DLLPRIVATE void            ImplDrawPushButtonContent(OutputDevice* pDev, DrawFlags nDrawFlags,
-                                                             const Rectangle& rRect, bool bLayout, bool bMenuBtnSep);
-    SAL_DLLPRIVATE void            ImplDrawPushButton(vcl::RenderContext& rRenderContext, bool bLayout = false);
+                                                             const Rectangle& rRect, bool bMenuBtnSep);
+    SAL_DLLPRIVATE void            ImplDrawPushButton(vcl::RenderContext& rRenderContext);
     using Button::ImplGetTextStyle;
     SAL_DLLPRIVATE DrawTextFlags   ImplGetTextStyle( DrawFlags nDrawFlags ) const;
     SAL_DLLPRIVATE bool            IsSymbol() const { return ( (meSymbol != SymbolType::DONTKNOW) && (meSymbol != SymbolType::IMAGE) ); }
@@ -200,22 +195,25 @@ public:
     void            SaveValue() { meSaveValue = GetState(); }
     bool            IsValueChangedFromSaved() const { return meSaveValue != GetState(); }
 
-    Size            CalcMinimumSize( long nMaxWidth = 0 ) const;
+    Size            CalcMinimumSize() const;
     virtual Size    GetOptimalSize() const override;
 
     virtual bool    set_property(const OString &rKey, const OString &rValue) override;
     virtual void    ShowFocus(const Rectangle& rRect) override;
 };
 
+
 inline void PushButton::Check( bool bCheck )
 {
     SetState( (bCheck) ? TRISTATE_TRUE : TRISTATE_FALSE );
 }
 
+
 inline bool PushButton::IsChecked() const
 {
     return (GetState() == TRISTATE_TRUE);
 }
+
 
 class VCL_DLLPUBLIC OKButton : public PushButton
 {
@@ -233,6 +231,7 @@ public:
     virtual void    Click() override;
 };
 
+
 class VCL_DLLPUBLIC CancelButton : public PushButton
 {
 protected:
@@ -249,15 +248,12 @@ public:
     virtual void    Click() override;
 };
 
+
 class VCL_DLLPUBLIC CloseButton : public CancelButton
 {
 public:
     explicit CloseButton(vcl::Window* pParent, WinBits nStyle = 0);
 };
-
-
-
-// - HelpButton -
 
 
 class VCL_DLLPUBLIC HelpButton : public PushButton
@@ -277,7 +273,6 @@ public:
 };
 
 
-// - RadioButton -
 class VCL_DLLPUBLIC RadioButton : public Button
 {
 private:
@@ -302,8 +297,8 @@ private:
     SAL_DLLPRIVATE void     ImplDraw( OutputDevice* pDev, DrawFlags nDrawFlags,
                               const Point& rPos, const Size& rSize,
                               const Size& rImageSize, Rectangle& rStateRect,
-                              Rectangle& rMouseRect, bool bLayout = false );
-    SAL_DLLPRIVATE void     ImplDrawRadioButton(vcl::RenderContext& rRenderContext, bool bLayout = false );
+                              Rectangle& rMouseRect );
+    SAL_DLLPRIVATE void     ImplDrawRadioButton(vcl::RenderContext& rRenderContext );
     SAL_DLLPRIVATE void     ImplUncheckAllOther();
     SAL_DLLPRIVATE Size     ImplGetRadioImageSize() const;
     SAL_DLLPRIVATE long     ImplGetImageToTextDistance() const;
@@ -374,7 +369,7 @@ public:
 
     static Image    GetRadioImage( const AllSettings& rSettings, DrawButtonFlags nFlags );
 
-    Size            CalcMinimumSize( long nMaxWidth = 0 ) const;
+    Size            CalcMinimumSize() const;
     virtual Size    GetOptimalSize() const override;
 
     void            SetToggleHdl( const Link<RadioButton&,void>& rLink ) { maToggleHdl = rLink; }
@@ -404,9 +399,6 @@ public:
 };
 
 
-// - CheckBox -
-
-
 class VCL_DLLPUBLIC CheckBox : public Button
 {
 private:
@@ -427,8 +419,8 @@ private:
     SAL_DLLPRIVATE void         ImplDraw( OutputDevice* pDev, DrawFlags nDrawFlags,
                                     const Point& rPos, const Size& rSize,
                                     const Size& rImageSize, Rectangle& rStateRect,
-                                    Rectangle& rMouseRect, bool bLayout );
-    SAL_DLLPRIVATE void         ImplDrawCheckBox(vcl::RenderContext& rRenderContext, bool bLayout = false );
+                                    Rectangle& rMouseRect );
+    SAL_DLLPRIVATE void         ImplDrawCheckBox(vcl::RenderContext& rRenderContext );
     SAL_DLLPRIVATE long         ImplGetImageToTextDistance() const;
     SAL_DLLPRIVATE Size         ImplGetCheckImageSize() const;
 
@@ -495,10 +487,12 @@ public:
     virtual void ShowFocus(const Rectangle& rRect) override;
 };
 
+
 inline void CheckBox::Check( bool bCheck )
 {
     SetState( (bCheck) ? TRISTATE_TRUE : TRISTATE_FALSE );
 }
+
 
 inline bool CheckBox::IsChecked() const
 {
@@ -506,13 +500,11 @@ inline bool CheckBox::IsChecked() const
 }
 
 
-// - Control-Layer fuer alten Code -
-
-
 class VCL_DLLPUBLIC ImageButton : public PushButton
 {
 protected:
     using PushButton::ImplInitStyle;
+
 private:
     SAL_DLLPRIVATE void     ImplInitStyle();
 
@@ -524,14 +516,16 @@ public:
                  ImageButton( vcl::Window* pParent, const ResId& rResId );
 };
 
+
 class VCL_DLLPUBLIC ImageRadioButton : public RadioButton
 {
                     ImageRadioButton( const ImageRadioButton & ) = delete;
                     ImageRadioButton & operator= ( const ImageRadioButton & ) = delete;
 
 public:
-    explicit        ImageRadioButton( vcl::Window* pParent, WinBits nStyle = 0 );
+    explicit        ImageRadioButton( vcl::Window* pParent );
 };
+
 
 class VCL_DLLPUBLIC TriStateBox : public CheckBox
 {
@@ -542,12 +536,14 @@ public:
     explicit        TriStateBox( vcl::Window* pParent, WinBits nStyle = 0 );
 };
 
+
 class VCL_DLLPUBLIC DisclosureButton : public CheckBox
 {
 protected:
     SAL_DLLPRIVATE virtual void ImplDrawCheckBoxState(vcl::RenderContext& rRenderContext) override;
+
 public:
-    explicit DisclosureButton( vcl::Window* pParent, WinBits nStyle = 0 );
+    explicit DisclosureButton( vcl::Window* pParent );
 
     virtual void    KeyInput( const KeyEvent& rKEvt ) override;
 };

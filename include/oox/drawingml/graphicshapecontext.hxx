@@ -20,10 +20,15 @@
 #ifndef INCLUDED_OOX_DRAWINGML_GRAPHICSHAPECONTEXT_HXX
 #define INCLUDED_OOX_DRAWINGML_GRAPHICSHAPECONTEXT_HXX
 
-#include <oox/drawingml/shape.hxx>
-#include <oox/drawingml/shapecontext.hxx>
+#include <oox/core/contexthandler.hxx>
 #include <oox/dllapi.h>
+#include <oox/drawingml/drawingmltypes.hxx>
+#include <oox/drawingml/shapecontext.hxx>
+#include <rtl/ustring.hxx>
+#include <sal/types.h>
 
+namespace oox { class AttributeList; }
+namespace oox { namespace core { class ContextHandler2Helper; } }
 namespace oox { namespace vml { struct OleObjectInfo; } }
 
 namespace oox { namespace drawingml {
@@ -35,7 +40,6 @@ public:
 
     virtual ::oox::core::ContextHandlerRef onCreateContext( ::sal_Int32 Element, const ::oox::AttributeList& rAttribs ) override;
 };
-
 
 
 class OOX_DLLPUBLIC GraphicalObjectFrameContext : public ShapeContext
@@ -52,7 +56,6 @@ private:
 };
 
 
-
 class OleObjectGraphicDataContext : public ShapeContext
 {
 public:
@@ -64,9 +67,6 @@ private:
     ::oox::vml::OleObjectInfo& mrOleObjectInfo;
 };
 
-
-
-class Diagram;
 
 class DiagramGraphicDataContext
     : public ShapeContext
@@ -84,6 +84,7 @@ private:
 };
 
 
+struct ChartShapeInfo;
 
 class ChartGraphicDataContext : public ShapeContext
 {
@@ -100,7 +101,6 @@ public:
 private:
     ChartShapeInfo&     mrChartShapeInfo;
 };
-
 
 
 } }

@@ -352,7 +352,7 @@ Reference< XGraphic > ImpCompressGraphic( const Reference< XComponentContext >& 
             }
             else // this is a metafile
             {
-                OUString aDestMimeType( aSourceMimeType );
+                const OUString& aDestMimeType( aSourceMimeType );
                 Reference< XStream > xTempFile( io::TempFile::create(rxContext), UNO_QUERY_THROW );
                 Reference< XOutputStream > xOutputStream( xTempFile->getOutputStream() );
                 Reference< XGraphicProvider > xGraphicProvider( GraphicProvider::create( rxContext ) );
@@ -454,7 +454,7 @@ void CompressGraphics( ImpOptimizer& rOptimizer, const Reference< XComponentCont
                                     {
                                         if ( !aSize.Width || !aSize.Height )
                                         {
-                                            rxPropertySet->setPropertyValue( "FillBitmapLogicalSize", Any( sal_True ) );
+                                            rxPropertySet->setPropertyValue( "FillBitmapLogicalSize", Any( true ) );
                                             rxPropertySet->setPropertyValue( "FillBitmapSizeX", Any( aGraphicUserIter->maLogicalSize.Width ) );
                                             rxPropertySet->setPropertyValue( "FillBitmapSizeY", Any( aGraphicUserIter->maLogicalSize.Height ) );
                                         }
@@ -477,9 +477,6 @@ void CompressGraphics( ImpOptimizer& rOptimizer, const Reference< XComponentCont
 }
 
 
-// - ImpOptimizer -
-
-
 ImpOptimizer::ImpOptimizer( const Reference< XComponentContext >& rxContext, const Reference< XModel >& rxModel ) :
     mxContext                   ( rxContext ),
     mxModel                     ( rxModel ),
@@ -498,11 +495,9 @@ ImpOptimizer::ImpOptimizer( const Reference< XComponentContext >& rxContext, con
 }
 
 
-
 ImpOptimizer::~ImpOptimizer()
 {
 }
-
 
 
 void ImpOptimizer::DispatchStatus()
@@ -517,20 +512,11 @@ void ImpOptimizer::DispatchStatus()
 }
 
 
-
 bool ImpOptimizer::Optimize()
 {
 
     if ( !maCustomShowName.isEmpty() )
         ImpExtractCustomShow( mxModel, maCustomShowName );
-
-    if ( mbDeleteUnusedMasterPages )
-    {
-        SetStatusValue( TK_Progress, Any( static_cast< sal_Int32 >( 40 ) ) );
-        SetStatusValue( TK_Status, Any( OUString("STR_DELETING_SLIDES") ) );
-        DispatchStatus();
-        ImpDeleteUnusedMasterPages( mxModel );
-    }
 
     if ( mbDeleteHiddenSlides )
     {
@@ -545,6 +531,14 @@ bool ImpOptimizer::Optimize()
         SetStatusValue( TK_Status, Any( OUString("STR_DELETING_SLIDES") ) );
         DispatchStatus();
         ImpDeleteNotesPages( mxModel );
+    }
+
+    if ( mbDeleteUnusedMasterPages )
+    {
+        SetStatusValue( TK_Progress, Any( static_cast< sal_Int32 >( 40 ) ) );
+        SetStatusValue( TK_Status, Any( OUString("STR_DELETING_SLIDES") ) );
+        DispatchStatus();
+        ImpDeleteUnusedMasterPages( mxModel );
     }
 
     if ( mbOLEOptimization )
@@ -571,7 +565,7 @@ bool ImpOptimizer::Optimize()
     return true;
 }
 
-static void DispatchURL( Reference< XComponentContext > xContext, const OUString& sURL, Reference< XFrame > xFrame )
+static void DispatchURL( const Reference< XComponentContext >& xContext, const OUString& sURL, const Reference< XFrame >& xFrame )
 {
     try
     {
@@ -591,11 +585,8 @@ static void DispatchURL( Reference< XComponentContext > xContext, const OUString
 }
 
 
-
-bool ImpOptimizer::Optimize( const Sequence< PropertyValue >& rArguments )
+void ImpOptimizer::Optimize( const Sequence< PropertyValue >& rArguments )
 {
-    bool bRet = true;
-
     if ( mxModel.is() )
     {
         sal_Int64 nEstimatedFileSize = 0;
@@ -692,7 +683,7 @@ bool ImpOptimizer::Optimize( const Sequence< PropertyValue >& rArguments )
         if ( xStorable.is() && !xStorable->isReadonly() )
         {
             mxModel->lockControllers();
-            bRet = Optimize();
+            Optimize();
             mxModel->unlockControllers();
 
             // clearing undo stack:
@@ -726,7 +717,7 @@ bool ImpOptimizer::Optimize( const Sequence< PropertyValue >& rArguments )
             if ( mbOpenNewDocument && xSelf.is() )
             {
                 Reference< awt::XWindow > xContainerWindow( xSelf->getContainerWindow() );
-                xContainerWindow->setVisible( sal_True );
+                xContainerWindow->setVisible( true );
             }
             else
             {
@@ -741,9 +732,6 @@ bool ImpOptimizer::Optimize( const Sequence< PropertyValue >& rArguments )
             DispatchStatus();
         }
     }
-    else
-        bRet = false;
-    return bRet;
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

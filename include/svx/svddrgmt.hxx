@@ -48,7 +48,6 @@ public:
 };
 
 
-
 class SVX_DLLPUBLIC SdrDragEntryPolyPolygon : public SdrDragEntry
 {
 private:
@@ -60,7 +59,6 @@ public:
 
     virtual drawinglayer::primitive2d::Primitive2DContainer createPrimitive2DSequenceInCurrentState(SdrDragMethod& rDragMethod) override;
 };
-
 
 
 class SdrDragEntrySdrObject : public SdrDragEntry
@@ -85,7 +83,6 @@ public:
 };
 
 
-
 class SdrDragEntryPrimitive2DSequence : public SdrDragEntry
 {
 private:
@@ -93,13 +90,11 @@ private:
 
 public:
     SdrDragEntryPrimitive2DSequence(
-        const drawinglayer::primitive2d::Primitive2DContainer& rSequence,
-        bool bAddToTransparent);
+        const drawinglayer::primitive2d::Primitive2DContainer& rSequence);
     virtual ~SdrDragEntryPrimitive2DSequence();
 
     virtual drawinglayer::primitive2d::Primitive2DContainer createPrimitive2DSequenceInCurrentState(SdrDragMethod& rDragMethod) override;
 };
-
 
 
 class SdrDragEntryPointGlueDrag : public SdrDragEntry
@@ -114,7 +109,6 @@ public:
 
     virtual drawinglayer::primitive2d::Primitive2DContainer createPrimitive2DSequenceInCurrentState(SdrDragMethod& rDragMethod) override;
 };
-
 
 
 class SVX_DLLPUBLIC SdrDragMethod
@@ -134,7 +128,7 @@ protected:
     void clearSdrDragEntries();
     void addSdrDragEntry(SdrDragEntry* pNew);
     virtual void createSdrDragEntries();
-    virtual void createSdrDragEntryForSdrObject(const SdrObject& rOriginal, sdr::contact::ObjectContact& rObjectContact, bool bModify);
+    virtual void createSdrDragEntryForSdrObject(const SdrObject& rOriginal, sdr::contact::ObjectContact& rObjectContact);
 
     // access for derivated classes to maOverlayObjectList
     void clearOverlayObjectList() { maOverlayObjectList.clear(); }
@@ -156,7 +150,7 @@ protected:
     void createSdrDragEntries_GlueDrag();
 
     // old call forwarders to the SdrDragView
-    void               ImpTakeDescriptionStr(sal_uInt16 nStrCacheID, OUString& rStr, sal_uInt16 nVal=0) const;
+    void               ImpTakeDescriptionStr(sal_uInt16 nStrCacheID, OUString& rStr) const;
     SdrHdl*            GetDragHdl() const              { return getSdrDragView().mpDragHdl; }
     SdrHdlKind         GetDragHdlKind() const          { return getSdrDragView().meDragHdl; }
     SdrDragStat&       DragStat()                      { return getSdrDragView().maDragStat; }
@@ -234,7 +228,7 @@ private:
     void ImpCheckSnap(const Point& rPt);
 
 protected:
-    virtual void createSdrDragEntryForSdrObject(const SdrObject& rOriginal, sdr::contact::ObjectContact& rObjectContact, bool bModify) override;
+    virtual void createSdrDragEntryForSdrObject(const SdrObject& rOriginal, sdr::contact::ObjectContact& rObjectContact) override;
 
 public:
     SdrDragMove(SdrDragView& rNewView);

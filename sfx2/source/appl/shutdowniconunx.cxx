@@ -32,7 +32,9 @@
 #include "app.hrc"
 #include "shutdownicon.hxx"
 
-#ifdef ENABLE_GIO
+#include <config_gio.h>
+
+#if ENABLE_GIO
 #include <gio/gio.h>
 #endif
 
@@ -59,7 +61,7 @@ static GtkStatusIcon* pTrayIcon;
 static GtkWidget *pExitMenuItem = nullptr;
 static GtkWidget *pOpenMenuItem = nullptr;
 static GtkWidget *pDisableMenuItem = nullptr;
-#ifdef ENABLE_GIO
+#if ENABLE_GIO
 GFileMonitor* pMonitor = nullptr;
 #endif
 
@@ -139,7 +141,7 @@ static void add_item( GtkMenuShell *pMenuShell, const char *pAsciiURL,
     else if (nResId == SV_ICON_ID_FORMULA)
         appicon = g_strdup ("libreoffice-math");
     else
-        appicon = g_strdup ("libreoffice-main");
+        appicon = g_strdup ("libreoffice-startcenter");
 
     GtkWidget *pImage = gtk_image_new_from_icon_name (appicon, GTK_ICON_SIZE_MENU);
     GtkWidget *pMenuItem = gtk_image_menu_item_new_with_label( aLabel.getStr() );
@@ -282,7 +284,7 @@ static gboolean display_menu_cb( GtkWidget *,
                                  GdkEventButton *event, GtkWidget *pMenu )
 {
     if (event->button == 2)
-        return sal_False;
+        return false;
 
     refresh_menu( pMenu );
 
@@ -290,10 +292,10 @@ static gboolean display_menu_cb( GtkWidget *,
                     gtk_status_icon_position_menu, pTrayIcon,
                     0, event->time );
 
-    return sal_True;
+    return true;
 }
 
-#ifdef ENABLE_GIO
+#if ENABLE_GIO
 /*
  * If the quickstarter is running, then LibreOffice is
  * upgraded, then the old quickstarter is still running, but is now unreliable
@@ -338,7 +340,7 @@ void plugin_init_sys_tray()
 
     pVCLResMgr = ResMgr::CreateResMgr("vcl");
 
-    pTrayIcon = gtk_status_icon_new_from_icon_name ("libreoffice-main");
+    pTrayIcon = gtk_status_icon_new_from_icon_name ("libreoffice-startcenter");
 
     g_object_set (pTrayIcon, "title", aLabel.getStr(),
                   "tooltip_text", aLabel.getStr(), nullptr);
@@ -353,7 +355,7 @@ void plugin_init_sys_tray()
     pShutdownIcon->SetVeto( true );
     ShutdownIcon::addTerminateListener();
 
-#ifdef ENABLE_GIO
+#if ENABLE_GIO
     GFile* pFile = nullptr;
     OUString sLibraryFileUrl;
     if (osl::Module::getUrlFromAddress(plugin_init_sys_tray, sLibraryFileUrl))
@@ -374,7 +376,7 @@ void plugin_shutdown_sys_tray()
     if( !pTrayIcon )
         return;
 
-#ifdef ENABLE_GIO
+#if ENABLE_GIO
     if (pMonitor)
     {
         g_signal_handlers_disconnect_by_func(pMonitor,

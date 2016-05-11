@@ -62,7 +62,7 @@ using namespace com::sun::star;
 
 ScFormulaDlg::ScFormulaDlg( SfxBindings* pB, SfxChildWindow* pCW,
                                     vcl::Window* pParent, ScViewData* pViewData,formula::IFunctionManager* _pFunctionMgr )
-    : formula::FormulaDlg( pB, pCW, pParent, true,true,true, _pFunctionMgr,this)
+    : formula::FormulaDlg( pB, pCW, pParent, _pFunctionMgr,this)
     , m_aHelper(this,pB)
 {
     m_aHelper.SetWindow(this);
@@ -89,11 +89,13 @@ ScFormulaDlg::ScFormulaDlg( SfxBindings* pB, SfxChildWindow* pCW,
     }
 
     m_pDoc = pViewData->GetDocument();
-    m_xParser.set(ScServiceProvider::MakeInstance(SC_SERVICE_FORMULAPARS, static_cast<ScDocShell*>(m_pDoc->GetDocumentShell())),uno::UNO_QUERY);
+    m_xParser.set(ScServiceProvider::MakeInstance(ScServiceProvider::Type::FORMULAPARS,
+                                                  static_cast<ScDocShell*>(m_pDoc->GetDocumentShell())),uno::UNO_QUERY);
     uno::Reference< beans::XPropertySet> xSet(m_xParser,uno::UNO_QUERY);
-    xSet->setPropertyValue(SC_UNO_COMPILEFAP, uno::makeAny(sal_True));
+    xSet->setPropertyValue(SC_UNO_COMPILEFAP, uno::makeAny(true));
 
-    m_xOpCodeMapper.set(ScServiceProvider::MakeInstance(SC_SERVICE_OPCODEMAPPER, static_cast<ScDocShell*>(m_pDoc->GetDocumentShell())),uno::UNO_QUERY);
+    m_xOpCodeMapper.set(ScServiceProvider::MakeInstance(ScServiceProvider::Type::OPCODEMAPPER,
+                                                        static_cast<ScDocShell*>(m_pDoc->GetDocumentShell())),uno::UNO_QUERY);
 
     ScInputHandler* pInputHdl = SC_MOD()->GetInputHdl(pScViewShell);
 
@@ -246,7 +248,7 @@ void ScFormulaDlg::dispose()
     ScFormEditData* pData = pScMod->GetFormEditData();
     m_aHelper.dispose();
 
-    if (pData) // close dosen't destroy;
+    if (pData) // close doesn't destroy;
     {
         //set back reference input handler
         pScMod->SetRefInputHdl(nullptr);
@@ -295,15 +297,16 @@ ScInputHandler* ScFormulaDlg::GetNextInputHandler(ScDocShell* pDocShell, ScTabVi
 
 bool ScFormulaDlg::Close()
 {
-    DoEnter(false);
+    DoEnter();
     return true;
 }
 
 //                          functions for right side
 
-bool ScFormulaDlg::calculateValue( const OUString& rStrExp, OUString& rStrResult )
+bool ScFormulaDlg::calculateValue( const OUString& rStrExp, OUString& rStrResult, bool bMatrixFormula )
 {
-    std::unique_ptr<ScSimpleFormulaCalculator> pFCell(new ScSimpleFormulaCalculator(m_pDoc, m_CursorPos, rStrExp));
+    std::unique_ptr<ScSimpleFormulaCalculator> pFCell( new ScSimpleFormulaCalculator(
+                m_pDoc, m_CursorPos, rStrExp, bMatrixFormula));
     pFCell->SetLimitString(true);
 
     // HACK! to avoid neither #REF! from ColRowNames
@@ -320,7 +323,8 @@ bool ScFormulaDlg::calculateValue( const OUString& rStrExp, OUString& rStrResult
             aBraced.append('(');
             aBraced.append(rStrExp);
             aBraced.append(')');
-            pFCell.reset(new ScSimpleFormulaCalculator(m_pDoc, m_CursorPos, aBraced.makeStringAndClear()));
+            pFCell.reset( new ScSimpleFormulaCalculator(
+                        m_pDoc, m_CursorPos, aBraced.makeStringAndClear(), bMatrixFormula));
             pFCell->SetLimitString(true);
         }
         else
@@ -349,7 +353,7 @@ bool ScFormulaDlg::calculateValue( const OUString& rStrExp, OUString& rStrResult
         }
 
         ScRange aTestRange;
-        if ( bColRowName || (aTestRange.Parse(rStrExp) & SCA_VALID) )
+        if ( bColRowName || (aTestRange.Parse(rStrExp) & ScRefFlags::VALID) )
             rStrResult += " ...";
             // area
     }
@@ -395,7 +399,7 @@ void ScFormulaDlg::SetReference( const ScRange& rRef, ScDocument* pRefDoc )
 
             OSL_ENSURE(rRef.aStart.Tab()==rRef.aEnd.Tab(), "nStartTab!=nEndTab");
 
-            OUString aTmp(rRef.Format(SCA_VALID|SCA_TAB_3D, pRefDoc));     // immer 3d
+            OUString aTmp(rRef.Format(ScRefFlags::VALID|ScRefFlags::TAB_3D, pRefDoc));     // immer 3d
 
             SfxObjectShell* pObjSh = pRefDoc->GetDocumentShell();
 
@@ -508,9 +512,9 @@ void ScFormulaDlg::ToggleCollapsed( formula::RefEdit* pEdit, formula::RefButton*
 {
     m_aHelper.ToggleCollapsed(pEdit,pButton);
 }
-void ScFormulaDlg::ReleaseFocus( formula::RefEdit* pEdit, formula::RefButton* pButton)
+void ScFormulaDlg::ReleaseFocus( formula::RefEdit* pEdit)
 {
-    m_aHelper.ReleaseFocus(pEdit,pButton);
+    m_aHelper.ReleaseFocus(pEdit);
 }
 void ScFormulaDlg::dispatch(bool _bOK, bool _bMatrixChecked)
 {
@@ -527,9 +531,9 @@ void ScFormulaDlg::dispatch(bool _bOK, bool _bMatrixChecked)
 
     clear();
 
-    GetBindings().GetDispatcher()->Execute( SID_INS_FUNCTION,
+    GetBindings().GetDispatcher()->ExecuteList( SID_INS_FUNCTION,
                               SfxCallMode::ASYNCHRON | SfxCallMode::RECORD,
-                              &aRetItem, &aStrItem, &aMatItem, 0L );
+                              { &aRetItem, &aStrItem, &aMatItem });
 }
 void ScFormulaDlg::setDispatcherLock( bool bLock )
 {

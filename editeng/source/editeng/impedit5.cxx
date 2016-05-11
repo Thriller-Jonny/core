@@ -82,8 +82,8 @@ void ImpEditEngine::SetStyleSheet( sal_Int32 nPara, SfxStyleSheet* pStyle )
 
             InsertUndo(
                 new EditUndoSetStyleSheet(pEditEngine, aEditDoc.GetPos( pNode ),
-                        aPrevStyleName, pCurStyle ? pCurStyle->GetFamily() : SFX_STYLE_FAMILY_PARA,
-                        aNewStyleName, pStyle ? pStyle->GetFamily() : SFX_STYLE_FAMILY_PARA,
+                        aPrevStyleName, pCurStyle ? pCurStyle->GetFamily() : SfxStyleFamily::Para,
+                        aNewStyleName, pStyle ? pStyle->GetFamily() : SfxStyleFamily::Para,
                         pNode->GetContentAttribs().GetItems() ) );
         }
         if ( pCurStyle )
@@ -144,7 +144,7 @@ void ImpEditEngine::Notify( SfxBroadcaster& rBC, const SfxHint& rHint )
     {
 
         SfxStyleSheet* pStyle = nullptr;
-        sal_uLong nId = 0;
+        sal_uInt32 nId = 0;
 
         const SfxStyleSheetHint* pStyleSheetHint = dynamic_cast<const SfxStyleSheetHint*>(&rHint);
         if ( pStyleSheetHint )
@@ -281,26 +281,22 @@ void ImpEditEngine::EnableUndo( bool bEnable )
     bUndoEnabled = bEnable;
 }
 
-bool ImpEditEngine::Undo( EditView* pView )
+void ImpEditEngine::Undo( EditView* pView )
 {
     if ( HasUndoManager() && GetUndoManager().GetUndoActionCount() )
     {
         SetActiveView( pView );
         GetUndoManager().Undo();
-        return true;
     }
-    return false;
 }
 
-bool ImpEditEngine::Redo( EditView* pView )
+void ImpEditEngine::Redo( EditView* pView )
 {
     if ( HasUndoManager() && GetUndoManager().GetRedoActionCount() )
     {
         SetActiveView( pView );
         GetUndoManager().Redo();
-        return true;
     }
-    return false;
 }
 
 SfxItemSet ImpEditEngine::GetAttribs( EditSelection aSel, EditEngineAttribs nOnlyHardAttrib )
@@ -428,9 +424,9 @@ SfxItemSet ImpEditEngine::GetAttribs( sal_Int32 nPara, sal_Int32 nStart, sal_Int
             pNode->GetCharAttribs().OptimizeRanges(const_cast<SfxItemPool&>(rPool));
 
             const CharAttribList::AttribsType& rAttrs = pNode->GetCharAttribs().GetAttribs();
-            for (size_t nAttr = 0; nAttr < rAttrs.size(); ++nAttr)
+            for (const auto & nAttr : rAttrs)
             {
-                const EditCharAttrib& rAttr = *rAttrs[nAttr].get();
+                const EditCharAttrib& rAttr = *nAttr.get();
 
                 if ( nStart == nEnd )
                 {
@@ -542,9 +538,9 @@ void ImpEditEngine::SetAttribs( EditSelection aSel, const SfxItemSet& rSet, sal_
                     if ( nSpecial == ATTRSPECIAL_EDGE )
                     {
                         CharAttribList::AttribsType& rAttribs = pNode->GetCharAttribs().GetAttribs();
-                        for (size_t i = 0, n = rAttribs.size(); i < n; ++i)
+                        for (std::unique_ptr<EditCharAttrib> & rAttrib : rAttribs)
                         {
-                            EditCharAttrib& rAttr = *rAttribs[i].get();
+                            EditCharAttrib& rAttr = *rAttrib.get();
                             if (rAttr.GetStart() > nEndPos)
                                 break;
 
@@ -730,9 +726,9 @@ void ImpEditEngine::GetCharAttribs( sal_Int32 nPara, std::vector<EECharAttrib>& 
     {
         rLst.reserve(pNode->GetCharAttribs().Count());
         const CharAttribList::AttribsType& rAttrs = pNode->GetCharAttribs().GetAttribs();
-        for (size_t i = 0; i < rAttrs.size(); ++i)
+        for (const auto & i : rAttrs)
         {
-            const EditCharAttrib& rAttr = *rAttrs[i].get();
+            const EditCharAttrib& rAttr = *i.get();
             EECharAttrib aEEAttr;
             aEEAttr.pAttr = rAttr.GetItem();
             aEEAttr.nPara = nPara;

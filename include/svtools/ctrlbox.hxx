@@ -38,7 +38,7 @@ class ImpLineListData;
 
 typedef ::std::vector< ImplColorListData*    > ImpColorList;
 typedef ::std::vector< ImpLineListData*      > ImpLineList;
-typedef ::std::vector< vcl::FontInfo         > ImplFontList;
+typedef ::std::vector< FontMetric         > ImplFontList;
 
 /*************************************************************************
 
@@ -131,7 +131,7 @@ Additionally it supports an relative mod, which allows entering
 percentage values. This, eg., can be useful for template dialogs.
 This mode can only be enabled, but not disabled again.
 
-For DontKnow the FontSizeBox should be filled FontInfo(), so it will
+For DontKnow the FontSizeBox should be filled FontMetric(), so it will
 contain an list with the standard sizes. Th currently shown size
 probably needs to be reset by the application.
 
@@ -175,10 +175,10 @@ public:
     sal_Int32       GetEntryPos( const Color& rColor ) const;
     Color           GetEntryColor( sal_Int32  nPos ) const;
 
-    void            SelectEntry( const OUString& rStr, bool bSelect = true )
-                        { ListBox::SelectEntry( rStr, bSelect ); }
-    void            SelectEntry( const Color& rColor, bool bSelect = true );
-    Color           GetSelectEntryColor( sal_Int32  nSelIndex = 0 ) const;
+    void            SelectEntry( const OUString& rStr )
+                        { ListBox::SelectEntry( rStr ); }
+    void            SelectEntry( const Color& rColor );
+    Color           GetSelectEntryColor() const;
     bool            IsEntrySelected(const OUString& rStr ) const
     {
         return ListBox::IsEntrySelected(rStr);
@@ -198,16 +198,16 @@ private:
     ColorListBox&   operator =( const ColorListBox& ) = delete;
 };
 
-inline void ColorListBox::SelectEntry( const Color& rColor, bool bSelect )
+inline void ColorListBox::SelectEntry( const Color& rColor )
 {
     sal_Int32  nPos = GetEntryPos( rColor );
     if ( nPos != LISTBOX_ENTRY_NOTFOUND )
-        ListBox::SelectEntryPos( nPos, bSelect );
+        ListBox::SelectEntryPos( nPos );
 }
 
-inline Color ColorListBox::GetSelectEntryColor( sal_Int32  nSelIndex ) const
+inline Color ColorListBox::GetSelectEntryColor() const
 {
-    sal_Int32  nPos = GetSelectEntryPos( nSelIndex );
+    sal_Int32  nPos = GetSelectEntryPos();
     Color aColor;
     if ( nPos != LISTBOX_ENTRY_NOTFOUND )
         aColor = GetEntryColor( nPos );
@@ -296,7 +296,7 @@ class SVT_DLLPUBLIC LineListBox : public ListBox
                                     sal_uInt16 nStyle, Bitmap& rBmp );
     using Window::ImplInit;
     SVT_DLLPRIVATE void         ImplInit();
-    bool            UpdatePaintLineColor();       // returns sal_True if maPaintCol has changed
+    void            UpdatePaintLineColor();       // returns sal_True if maPaintCol has changed
     virtual void    DataChanged( const DataChangedEvent& rDCEvt ) override;
 
     void            UpdateEntries( long nOldWidth );
@@ -328,14 +328,14 @@ public:
     sal_uInt16      GetEntryStyle( sal_Int32  nPos ) const;
 
     void            SelectEntry( sal_uInt16 nStyle = css::table::BorderLineStyle::SOLID, bool bSelect = true );
-    sal_uInt16      GetSelectEntryStyle( sal_Int32  nSelIndex = 0 ) const;
+    sal_uInt16      GetSelectEntryStyle() const;
 
     inline void     SetUnit( FieldUnit eNewUnit ) { eUnit = eNewUnit; }
 
     inline void     SetSourceUnit( FieldUnit eNewUnit ) { eSourceUnit = eNewUnit; }
 
     void            SetColor( const Color& rColor );
-    Color           GetColor() const { return aColor; }
+    const Color&    GetColor() const { return aColor; }
 
 protected:
 
@@ -384,8 +384,8 @@ private:
     SVT_DLLPRIVATE void         ImplDestroyFontList();
 
 protected:
-    void            LoadMRUEntries( const OUString& aFontMRUEntriesFile, sal_Unicode cSep = ';' );
-    void            SaveMRUEntries( const OUString& aFontMRUEntriesFile, sal_Unicode cSep = ';' ) const;
+    void            LoadMRUEntries( const OUString& aFontMRUEntriesFile );
+    void            SaveMRUEntries( const OUString& aFontMRUEntriesFile ) const;
 public:
                     FontNameBox( vcl::Window* pParent,
                                  WinBits nWinStyle = WB_SORT );
@@ -437,7 +437,7 @@ inline void FontStyleBox::SetText( const OUString& rText )
 
 class SVT_DLLPUBLIC FontSizeBox : public MetricBox
 {
-    vcl::FontInfo       aFontInfo;
+    FontMetric       aFontMetric;
     const FontList* pFontList;
     sal_uInt16          nRelMin;
     sal_uInt16          nRelMax;
@@ -462,7 +462,7 @@ public:
     void            Reformat() override;
     void            Modify() override;
 
-    void            Fill( const vcl::FontInfo* pInfo, const FontList* pList );
+    void            Fill( const FontMetric* pFontMetric, const FontList* pList );
 
     void            EnableRelativeMode( sal_uInt16 nMin = 50, sal_uInt16 nMax = 150,
                                         sal_uInt16 nStep = 5 );

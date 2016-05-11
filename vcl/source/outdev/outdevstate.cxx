@@ -18,26 +18,13 @@
  */
 
 #include <vcl/outdevstate.hxx>
-
-#include <vcl/outdev.hxx>
 #include <vcl/virdev.hxx>
-
 #include <vcl/settings.hxx>
-
-#include <vcl/mapmod.hxx>
-#include <vcl/region.hxx>
-#include <vcl/font.hxx>
-#include <vcl/vclenum.hxx>
-
-#include <tools/gen.hxx>
-#include <tools/color.hxx>
-#include <tools/fontenum.hxx>
 
 #include "outdev.h"
 #include "outdata.hxx"
-#include <outdevstatestack.hxx>
+#include "outdevstatestack.hxx"
 #include "salgdi.hxx"
-#include "sallayout.hxx"
 
 OutDevState::OutDevState()
     : mpMapMode(nullptr)
@@ -545,7 +532,7 @@ void OutputDevice::SetFont( const vcl::Font& rNewFont )
         mpMetaFile->AddAction( new MetaFontAction( aFont ) );
         // the color and alignment actions don't belong here
         // TODO: get rid of them without breaking anything...
-        mpMetaFile->AddAction( new MetaTextAlignAction( aFont.GetAlign() ) );
+        mpMetaFile->AddAction( new MetaTextAlignAction( aFont.GetAlignment() ) );
         mpMetaFile->AddAction( new MetaTextFillColorAction( aFont.GetFillColor(), !aFont.IsTransparent() ) );
     }
 
@@ -590,11 +577,11 @@ void OutputDevice::InitLineColor()
     if( mbLineColor )
     {
         if( ROP_0 == meRasterOp )
-            mpGraphics->SetROPLineColor( SAL_ROP_0 );
+            mpGraphics->SetROPLineColor( SalROPColor::N0 );
         else if( ROP_1 == meRasterOp )
-            mpGraphics->SetROPLineColor( SAL_ROP_1 );
+            mpGraphics->SetROPLineColor( SalROPColor::N1 );
         else if( ROP_INVERT == meRasterOp )
-            mpGraphics->SetROPLineColor( SAL_ROP_INVERT );
+            mpGraphics->SetROPLineColor( SalROPColor::Invert );
         else
             mpGraphics->SetLineColor( ImplColorToSal( maLineColor ) );
     }
@@ -612,11 +599,11 @@ void OutputDevice::InitFillColor()
     if( mbFillColor )
     {
         if( ROP_0 == meRasterOp )
-            mpGraphics->SetROPFillColor( SAL_ROP_0 );
+            mpGraphics->SetROPFillColor( SalROPColor::N0 );
         else if( ROP_1 == meRasterOp )
-            mpGraphics->SetROPFillColor( SAL_ROP_1 );
+            mpGraphics->SetROPFillColor( SalROPColor::N1 );
         else if( ROP_INVERT == meRasterOp )
-            mpGraphics->SetROPFillColor( SAL_ROP_INVERT );
+            mpGraphics->SetROPFillColor( SalROPColor::Invert );
         else
             mpGraphics->SetFillColor( ImplColorToSal( maFillColor ) );
     }
@@ -633,22 +620,22 @@ void OutputDevice::ImplReleaseFonts()
     mbNewFont = true;
     mbInitFont = true;
 
-    if ( mpFontEntry )
+    if ( mpFontInstance )
     {
-        mpFontCache->Release( mpFontEntry );
-        mpFontEntry = nullptr;
+        mpFontCache->Release( mpFontInstance );
+        mpFontInstance = nullptr;
     }
 
-    if ( mpGetDevFontList )
+    if ( mpDeviceFontList )
     {
-        delete mpGetDevFontList;
-        mpGetDevFontList = nullptr;
+        delete mpDeviceFontList;
+        mpDeviceFontList = nullptr;
     }
 
-    if ( mpGetDevSizeList )
+    if ( mpDeviceFontSizeList )
     {
-        delete mpGetDevSizeList;
-        mpGetDevSizeList = nullptr;
+        delete mpDeviceFontSizeList;
+        mpDeviceFontSizeList = nullptr;
     }
 }
 

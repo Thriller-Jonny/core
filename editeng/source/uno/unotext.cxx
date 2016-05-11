@@ -1911,6 +1911,7 @@ void SAL_CALL SvxUnoTextBase::insertControlCharacter( const uno::Reference< text
 
                 return;
             }
+            SAL_FALLTHROUGH;
         }
         default:
             throw lang::IllegalArgumentException();
@@ -2031,7 +2032,7 @@ sal_Bool SAL_CALL SvxUnoTextBase::hasElements(  ) throw(uno::RuntimeException, s
             return pForwarder->GetParagraphCount() != 0;
     }
 
-    return sal_False;
+    return false;
 }
 
 // text::XTextRangeMover
@@ -2185,7 +2186,7 @@ uno::Reference< text::XTextRange > SAL_CALL SvxUnoTextBase::appendTextPortion(
 
         // set properties for the new text portion
         ESelection aSel( nPara, nStart, nPara, nEnd );
-        pTextForwarder->RemoveAttribs( aSel, false, 0 );
+        pTextForwarder->RemoveAttribs( aSel );
         pEditSource->UpdateData();
 
         SfxItemSet aItemSet( *pTextForwarder->GetEmptyItemSetPtr() );
@@ -2249,7 +2250,7 @@ uno::Sequence< OUString > SAL_CALL SvxUnoTextBase::getSupportedServiceNames(  )
 uno::Sequence< OUString > SAL_CALL SvxUnoTextBase::getSupportedServiceNames_Static(  )
 {
     uno::Sequence< OUString > aSeq( SvxUnoTextRangeBase::getSupportedServiceNames_Static() );
-    comphelper::ServiceInfoHelper::addToSequence( aSeq, 1, "com.sun.star.text.Text" );
+    comphelper::ServiceInfoHelper::addToSequence( aSeq, {"com.sun.star.text.Text"} );
     return aSeq;
 }
 
@@ -2365,8 +2366,6 @@ sal_Int64 SAL_CALL SvxUnoText::getSomething( const uno::Sequence< sal_Int8 >& rI
 }
 
 
-
-
 SvxDummyTextSource::~SvxDummyTextSource()
 {
 };
@@ -2417,7 +2416,7 @@ void SvxDummyTextSource::SetParaAttribs( sal_Int32, const SfxItemSet& )
 {
 }
 
-void SvxDummyTextSource::RemoveAttribs( const ESelection& , bool , sal_uInt16 )
+void SvxDummyTextSource::RemoveAttribs( const ESelection& )
 {
 }
 

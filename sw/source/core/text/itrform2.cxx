@@ -70,15 +70,15 @@ using namespace ::com::sun::star;
 
 namespace {
     //! Calculates and sets optimal repaint offset for the current line
-    static long lcl_CalcOptRepaint( SwTextFormatter &rThis,
+    long lcl_CalcOptRepaint( SwTextFormatter &rThis,
                                     SwLineLayout &rCurr,
                                     const sal_Int32 nOldLineEnd,
                                     const std::vector<long> &rFlyStarts );
     //! Determine if we need to build hidden portions
-    static bool lcl_BuildHiddenPortion( const SwTextSizeInfo& rInf, sal_Int32 &rPos );
+    bool lcl_BuildHiddenPortion( const SwTextSizeInfo& rInf, sal_Int32 &rPos );
 
     // Check whether the two font has the same border
-    static bool lcl_HasSameBorder(const SwFont& rFirst, const SwFont& rSecond);
+    bool lcl_HasSameBorder(const SwFont& rFirst, const SwFont& rSecond);
 }
 
 inline void ClearFly( SwTextFormatInfo &rInf )
@@ -206,7 +206,7 @@ SwLinePortion *SwTextFormatter::Underflow( SwTextFormatInfo &rInf )
             pPor = pPor->GetPortion();
         }
         pPor = pTmpPrev;
-        if( pPor && // Flies + Initialen werden nicht beim Underflow mitgenommen
+        if( pPor && // Skip flys and initials when underflow.
             ( pPor->IsFlyPortion() || pPor->IsDropPortion() ||
               pPor->IsFlyCntPortion() ) )
         {
@@ -219,18 +219,6 @@ SwLinePortion *SwTextFormatter::Underflow( SwTextFormatInfo &rInf )
 
     // What? The under-flow portion is not in the portion chain?
     OSL_ENSURE( pPor, "SwTextFormatter::Underflow: overflow but underflow" );
-
-    // OD 2004-05-26 #i29529# - correction: no delete of footnotes
-//    if( rInf.IsFootnoteInside() && pPor && !rInf.IsQuick() )
-//    {
-//        SwLinePortion *pTmp = pPor->GetPortion();
-//        while( pTmp )
-//        {
-//            if( pTmp->IsFootnotePortion() )
-//                ((SwFootnotePortion*)pTmp)->ClearFootnote();
-//            pTmp = pTmp->GetPortion();
-//        }
-//    }
 
     // Snapshot
     if ( pPor==rInf.GetLast() )
@@ -312,7 +300,8 @@ void SwTextFormatter::InsertPortion( SwTextFormatInfo &rInf,
             pPor = m_pCurr->GetPortion();
         }
 
-        // #i112181#
+        // i#112181 - Prevent footnote anchor being wrapped to next line
+        // without preceeding word
         rInf.SetOtherThanFootnoteInside( rInf.IsOtherThanFootnoteInside() || !pPor->IsFootnotePortion() );
     }
     else
@@ -371,7 +360,7 @@ void SwTextFormatter::BuildPortions( SwTextFormatInfo &rInf )
     SwFlyPortion *pFly = rInf.GetFly();
     if( pFly )
     {
-        if ( 0 < pFly->Fix() )
+        if ( 0 < pFly->GetFix() )
             ClearFly( rInf );
         else
             rInf.SetFull(true);
@@ -411,8 +400,8 @@ void SwTextFormatter::BuildPortions( SwTextFormatInfo &rInf )
             rInf.GetLast() && rInf.GetLast()->InTextGrp() &&
             rInf.GetLast()->Width() && !rInf.GetLast()->InNumberGrp() )
         {
-            sal_uInt8 nNxtActual = rInf.GetFont()->GetActual();
-            sal_uInt8 nLstActual = nNxtActual;
+            SwFontScript nNxtActual = rInf.GetFont()->GetActual();
+            SwFontScript nLstActual = nNxtActual;
             sal_uInt16 nLstHeight = (sal_uInt16)rInf.GetFont()->GetHeight();
             bool bAllowBehind = false;
             const CharClass& rCC = GetAppCharClass();
@@ -465,7 +454,7 @@ void SwTextFormatter::BuildPortions( SwTextFormatInfo &rInf )
                     bAllowBefore = rCC.isLetterNumeric( rInf.GetText(), rInf.GetIdx() - 1 );
                     // Note: ScriptType returns values in [1,4]
                     if ( bAllowBefore )
-                        nLstActual = pScriptInfo->ScriptType( rInf.GetIdx() - 1 ) - 1;
+                        nLstActual = SwFontScript(pScriptInfo->ScriptType( rInf.GetIdx() - 1 ) - 1);
                 }
 
                 nLstHeight /= 5;
@@ -538,7 +527,7 @@ void SwTextFormatter::BuildPortions( SwTextFormatInfo &rInf )
 
         // if we are underlined, we store the beginning of this underlined
         // segment for repaint optimization
-        if ( UNDERLINE_NONE != pFnt->GetUnderline() && ! nUnderLineStart )
+        if ( LINESTYLE_NONE != pFnt->GetUnderline() && ! nUnderLineStart )
             nUnderLineStart = GetLeftMargin() + rInf.X();
 
         if ( pPor->IsFlyPortion() )
@@ -557,12 +546,12 @@ void SwTextFormatter::BuildPortions( SwTextFormatInfo &rInf )
                      // reformat is at end of an underlined portion and next portion
                      // is not underlined
                   ( ( rInf.GetReformatStart() == rInf.GetIdx() &&
-                      UNDERLINE_NONE == pFnt->GetUnderline()
+                      LINESTYLE_NONE == pFnt->GetUnderline()
                     ) ||
                      // reformat is inside portion and portion is underlined
                     ( rInf.GetReformatStart() >= rInf.GetIdx() &&
                       rInf.GetReformatStart() <= rInf.GetIdx() + pPor->GetLen() &&
-                      UNDERLINE_NONE != pFnt->GetUnderline() ) ) )
+                      LINESTYLE_NONE != pFnt->GetUnderline() ) ) )
             rInf.SetPaintOfst( nUnderLineStart );
         else if (  ! rInf.GetPaintOfst() &&
                    // 2. Right Tab
@@ -574,7 +563,7 @@ void SwTextFormatter::BuildPortions( SwTextFormatInfo &rInf )
                        rInf.GetReformatStart() >= rInf.GetIdx() &&
                        rInf.GetReformatStart() <= rInf.GetIdx() + pPor->GetLen() )
                    // 6. Grid Mode
-                     || ( bHasGrid && SW_CJK != pFnt->GetActual() )
+                     || ( bHasGrid && SwFontScript::CJK != pFnt->GetActual() )
                    )
                 )
             // we store the beginning of the critical portion as our
@@ -628,17 +617,17 @@ void SwTextFormatter::BuildPortions( SwTextFormatInfo &rInf )
             sal_Int32 nTmp = rInf.GetIdx() + pPor->GetLen();
             const SwTwips nRestWidth = rInf.Width() - rInf.X() - pPor->Width();
 
-            const sal_uInt8 nCurrScript = pFnt->GetActual(); // pScriptInfo->ScriptType( rInf.GetIdx() );
-            const sal_uInt8 nNextScript = nTmp >= rInf.GetText().getLength() ?
-                                     SW_CJK :
+            const SwFontScript nCurrScript = pFnt->GetActual(); // pScriptInfo->ScriptType( rInf.GetIdx() );
+            const SwFontScript nNextScript = nTmp >= rInf.GetText().getLength() ?
+                                     SwFontScript::CJK :
                                      SwScriptInfo::WhichFont( nTmp, nullptr, pScriptInfo );
 
             // snap non-asian text to grid if next portion is ASIAN or
             // there are no more portions in this line
             // be careful when handling an underflow event: the gridkernportion
             // could have been deleted
-            if ( nRestWidth > 0 && SW_CJK != nCurrScript &&
-                ! rInf.IsUnderflow() && ( bFull || SW_CJK == nNextScript ) )
+            if ( nRestWidth > 0 && SwFontScript::CJK != nCurrScript &&
+                ! rInf.IsUnderflow() && ( bFull || SwFontScript::CJK == nNextScript ) )
             {
                 OSL_ENSURE( pGridKernPortion, "No GridKernPortion available" );
 
@@ -740,7 +729,7 @@ void SwTextFormatter::CalcAscent( SwTextFormatInfo &rInf, SwLinePortion *pPor )
         pPor->SetAscent( rInf.GetAscent() );
         bCalc = true;
     }
-    // #i89179#
+    // i#89179
     // tab portion representing the list tab of a list label gets the
     // same height and ascent as the corresponding number portion
     else if ( pPor->InTabGrp() && pPor->GetLen() == 0 &&
@@ -1234,7 +1223,7 @@ SwLinePortion *SwTextFormatter::NewPortion( SwTextFormatInfo &rInf )
     if( !pPor )
     {
         if( ( !pMulti || pMulti->IsBidi() ) &&
-            // #i42734#
+            // i#42734
             // No multi portion if there is a hook character waiting:
             ( !rInf.GetRest() || '\0' == rInf.GetHookChar() ) )
         {
@@ -1246,9 +1235,9 @@ SwLinePortion *SwTextFormatter::NewPortion( SwTextFormatInfo &rInf )
             {
                 SwMultiPortion* pTmp = nullptr;
 
-                if ( SW_MC_BIDI == pCreate->nId )
+                if ( SwMultiCreatorId::Bidi == pCreate->nId )
                     pTmp = new SwBidiPortion( nEnd, pCreate->nLevel );
-                else if ( SW_MC_RUBY == pCreate->nId )
+                else if ( SwMultiCreatorId::Ruby == pCreate->nId )
                 {
                     Seek( rInf.GetIdx() );
                     bool bRubyTop = false;
@@ -1269,7 +1258,7 @@ SwLinePortion *SwTextFormatter::NewPortion( SwTextFormatInfo &rInf )
                                               *GetTextFrame()->GetTextNode()->getIDocumentSettingAccess(),
                                               nEnd, 0, pRubyPos );
                 }
-                else if( SW_MC_ROTATE == pCreate->nId )
+                else if( SwMultiCreatorId::Rotate == pCreate->nId )
                     pTmp = new SwRotatedPortion( *pCreate, nEnd,
                                                  GetTextFrame()->IsRightToLeft() );
                 else
@@ -1281,7 +1270,7 @@ SwLinePortion *SwTextFormatter::NewPortion( SwTextFormatInfo &rInf )
                 return pTmp;
             }
         }
-        // 5010: Tabs und Felder
+        // Tabs and Fields
         sal_Unicode cChar = rInf.GetHookChar();
 
         if( cChar )
@@ -1336,21 +1325,21 @@ SwLinePortion *SwTextFormatter::NewPortion( SwTextFormatInfo &rInf )
                     pPor = NewExtraPortion( rInf );
                     break;
                 }
-                // No break
+                SAL_FALLTHROUGH;
             default        :
                 {
                 SwTabPortion* pLastTabPortion = rInf.GetLastTab();
                 if ( pLastTabPortion && cChar == rInf.GetTabDecimal() )
                 {
-                    // #127428# Abandon dec. tab position if line is full
+                    // Abandon dec. tab position if line is full
                     // We have a decimal tab portion in the line and the next character has to be
                     // aligned at the tab stop position. We store the width from the beginning of
-                    // the tab stop portion up to the portion containint the decimal separator:
+                    // the tab stop portion up to the portion containing the decimal separator:
                   if ( GetTextFrame()->GetTextNode()->getIDocumentSettingAccess()->get(DocumentSettingId::TAB_COMPAT) /*rInf.GetVsh()->IsTabCompat();*/ &&
                          POR_TABDECIMAL == pLastTabPortion->GetWhichPor() )
                     {
-                        OSL_ENSURE( rInf.X() >= pLastTabPortion->Fix(), "Decimal tab stop position cannot be calculated" );
-                        const sal_uInt16 nWidthOfPortionsUpToDecimalPosition = (sal_uInt16)(rInf.X() - pLastTabPortion->Fix() );
+                        OSL_ENSURE( rInf.X() >= pLastTabPortion->GetFix(), "Decimal tab stop position cannot be calculated" );
+                        const sal_uInt16 nWidthOfPortionsUpToDecimalPosition = (sal_uInt16)(rInf.X() - pLastTabPortion->GetFix() );
                         static_cast<SwTabDecimalPortion*>(pLastTabPortion)->SetWidthOfPortionsUpToDecimalPosition( nWidthOfPortionsUpToDecimalPosition );
                         rInf.SetTabDecimal( 0 );
                     }
@@ -1567,7 +1556,7 @@ sal_Int32 SwTextFormatter::FormatLine(const sal_Int32 nStartPos)
         m_pCurr->CalcLine( *this, GetInfo() );
         CalcRealHeight( GetInfo().IsNewLine() );
 
-        //#i120864# For Special case that at the first calculation couldn't get
+        //i#120864 For Special case that at the first calculation couldn't get
         //correct height. And need to recalculate for the right height.
         SwLinePortion* pPorTmp = m_pCurr->GetPortion();
         if ( IsFlyInCntBase() && (!IsQuick() || (pPorTmp && pPorTmp->IsFlyCntPortion() && !pPorTmp->GetPortion() &&
@@ -1846,7 +1835,7 @@ void SwTextFormatter::CalcRealHeight( bool bNewLine )
 
 void SwTextFormatter::FeedInf( SwTextFormatInfo &rInf ) const
 {
-    // 3260, 3860: Fly auf jeden Fall loeschen!
+    // Fly auf jeden Fall loeschen!
     ClearFly( rInf );
     rInf.Init();
 
@@ -1856,7 +1845,8 @@ void SwTextFormatter::FeedInf( SwTextFormatInfo &rInf ) const
     rInf.SetIdx( m_nStart );
 
     // Handle overflows:
-    // #i34348# Changed type from sal_uInt16 to SwTwips
+    // i#34348 Changed type from sal_uInt16 to SwTwips to enable
+    // the text formatting to cope with certain numbering indent values
     SwTwips nTmpLeft = Left();
     SwTwips nTmpRight = Right();
     SwTwips nTmpFirst = FirstLeft();
@@ -1891,7 +1881,7 @@ void SwTextFormatter::FormatReset( SwTextFormatInfo &rInf )
     if( pBlink && m_pCurr->IsBlinking() )
         pBlink->Delete( m_pCurr );
 
-    // delete pSpaceAdd und pKanaComp
+    // delete pSpaceAdd and pKanaComp
     m_pCurr->FinishSpaceAdd();
     m_pCurr->FinishKanaComp();
     m_pCurr->ResetFlags();
@@ -1936,7 +1926,7 @@ SwTwips SwTextFormatter::CalcBottomLine() const
 }
 
 // FME/OD: This routine does a limited text formatting.
-SwTwips SwTextFormatter::_CalcFitToContent()
+SwTwips SwTextFormatter::CalcFitToContent_()
 {
     FormatReset( GetInfo() );
     BuildPortions( GetInfo() );
@@ -2034,16 +2024,16 @@ void SwTextFormatter::UpdatePos( SwLineLayout *pCurrent, Point aStart,
 
     const sal_uInt16 nTmpHeight = pCurrent->GetRealHeight();
     sal_uInt16 nAscent = pCurrent->GetAscent() + nTmpHeight - pCurrent->Height();
-    objectpositioning::AsCharFlags nFlags = AS_CHAR_ULSPACE;
+    AsCharFlags nFlags = AsCharFlags::UlSpace;
     if( GetMulti() )
     {
         aTmpInf.SetDirection( GetMulti()->GetDirection() );
         if( GetMulti()->HasRotation() )
         {
-            nFlags |= AS_CHAR_ROTATE;
+            nFlags |= AsCharFlags::Rotate;
             if( GetMulti()->IsRevers() )
             {
-                nFlags |= AS_CHAR_REVERSE;
+                nFlags |= AsCharFlags::Reverse;
                 aTmpInf.X( aTmpInf.X() - nAscent );
             }
             else
@@ -2052,7 +2042,7 @@ void SwTextFormatter::UpdatePos( SwLineLayout *pCurrent, Point aStart,
         else
         {
             if ( GetMulti()->IsBidi() )
-                nFlags |= AS_CHAR_BIDI;
+                nFlags |= AsCharFlags::Bidi;
             aTmpInf.Y( aTmpInf.Y() + nAscent );
         }
     }
@@ -2140,12 +2130,12 @@ void SwTextFormatter::AlignFlyInCntBase( long nBaseLine ) const
         return;
     SwLinePortion *pFirst = m_pCurr->GetFirstPortion();
     SwLinePortion *pPos = pFirst;
-    objectpositioning::AsCharFlags nFlags = AS_CHAR_NOFLAG;
+    AsCharFlags nFlags = AsCharFlags::None;
     if( GetMulti() && GetMulti()->HasRotation() )
     {
-        nFlags |= AS_CHAR_ROTATE;
+        nFlags |= AsCharFlags::Rotate;
         if( GetMulti()->IsRevers() )
-            nFlags |= AS_CHAR_REVERSE;
+            nFlags |= AsCharFlags::Reverse;
     }
 
     long nTmpAscent, nTmpDescent, nFlyAsc, nFlyDesc;
@@ -2220,7 +2210,7 @@ bool SwTextFormatter::ChkFlyUnderflow( SwTextFormatInfo &rInf ) const
             {
                 if( aInter.IsOver( aLine ) )
                 {
-                    aInter._Intersection( aLine );
+                    aInter.Intersection_( aLine );
                     if( aInter.HasArea() )
                     {
                         // To be evaluated during reformat of this line:
@@ -2243,7 +2233,7 @@ bool SwTextFormatter::ChkFlyUnderflow( SwTextFormatInfo &rInf ) const
                 }
                 else
                 {
-                    aInter._Intersection( aLine );
+                    aInter.Intersection_( aLine );
 
                     // No area means a fly has become invalid because of
                     // lowering the line => reformat the line
@@ -2366,7 +2356,7 @@ void SwTextFormatter::CalcFlyWidth( SwTextFormatInfo &rInf )
         if( bFullLine && rInf.GetIdx() == rInf.GetText().getLength() )
         {
             rInf.SetNewLine( true );
-            // 8221: We know that for dummies, it holds ascent == height
+            // We know that for dummies, it holds ascent == height
             m_pCurr->SetDummy(true);
         }
 
@@ -2381,11 +2371,11 @@ void SwTextFormatter::CalcFlyWidth( SwTextFormatInfo &rInf )
 
         if( bFullLine )
         {
-            // 8110: In order to properly flow around Flys with different
+            // In order to properly flow around Flys with different
             // wrapping attributes, we need to increase by units of line height.
             // The last avoiding line should be adjusted in height, so that
             // we don't get a frame spacing effect.
-            // 8221: It is important that ascent == height, because the FlyPortion
+            // It is important that ascent == height, because the FlyPortion
             // values are transferred to pCurr in CalcLine and IsDummy() relies
             // on this behaviour.
             // To my knowledge we only have two places where DummyLines can be
@@ -2432,8 +2422,8 @@ void SwTextFormatter::CalcFlyWidth( SwTextFormatInfo &rInf )
 
         rInf.SetFly( pFly );
 
-        if( pFly->Fix() < rInf.Width() )
-            rInf.Width( pFly->Fix() );
+        if( pFly->GetFix() < rInf.Width() )
+            rInf.Width( pFly->GetFix() );
 
         SwTextGridItem const*const pGrid(GetGridItem(m_pFrame->FindPageFrame()));
         if ( pGrid )
@@ -2489,7 +2479,8 @@ SwFlyCntPortion *SwTextFormatter::NewFlyCntPortion( SwTextFormatInfo &rInf,
     // aBase.Y() = LineIter.Y() + Ascent of the current position
 
     long nTmpAscent, nTmpDescent, nFlyAsc, nFlyDesc;
-    // OD 08.01.2004 #i11859# - use new method <SwLineLayout::MaxAscentDescent(..)>
+    // i#11859 - use new method <SwLineLayout::MaxAscentDescent(..)>
+    // to change line spacing behaviour at paragraph - Compatibility to MS Word
     //SwLinePortion *pPos = pCurr->GetFirstPortion();
     //lcl_MaxAscDescent( pPos, nTmpAscent, nTmpDescent, nFlyAsc, nFlyDesc );
     m_pCurr->MaxAscentDescent( nTmpAscent, nTmpDescent, nFlyAsc, nFlyDesc );
@@ -2523,12 +2514,12 @@ SwFlyCntPortion *SwTextFormatter::NewFlyCntPortion( SwTextFormatInfo &rInf,
         nFlyAsc = nAscent;
 
     Point aBase( GetLeftMargin() + rInf.X(), Y() + nAscent );
-    objectpositioning::AsCharFlags nMode = IsQuick() ? AS_CHAR_QUICK : 0;
+    AsCharFlags nMode = IsQuick() ? AsCharFlags::Quick : AsCharFlags::None;
     if( GetMulti() && GetMulti()->HasRotation() )
     {
-        nMode |= AS_CHAR_ROTATE;
+        nMode |= AsCharFlags::Rotate;
         if( GetMulti()->IsRevers() )
-            nMode |= AS_CHAR_REVERSE;
+            nMode |= AsCharFlags::Reverse;
     }
 
     Point aTmpBase( aBase );
@@ -2542,13 +2533,12 @@ SwFlyCntPortion *SwTextFormatter::NewFlyCntPortion( SwTextFormatInfo &rInf,
         // We need to make sure that our font is set again in the OutputDevice
         // It could be that the FlyInCnt was added anew and GetFlyFrame() would
         // in turn cause, that it'd be created anew again.
-        // This one's frames get formatted right away, which change the font and
-        // we have a bug (3322).
+        // This one's frames get formatted right away, which change the font.
         rInf.SelectFont();
         if( pRet->GetAscent() > nAscent )
         {
             aBase.Y() = Y() + pRet->GetAscent();
-            nMode |= AS_CHAR_ULSPACE;
+            nMode |= AsCharFlags::UlSpace;
             if( !rInf.IsTest() )
             {
                 aTmpBase = aBase;
@@ -2686,7 +2676,7 @@ namespace {
                          const sal_Int32 nOldLineEnd,
                          const std::vector<long> &rFlyStarts )
     {
-        SwTextFormatInfo txtFormatInfo = rThis.GetInfo();
+        SwTextFormatInfo& txtFormatInfo = rThis.GetInfo();
         if ( txtFormatInfo.GetIdx() < txtFormatInfo.GetReformatStart() )
         // the reformat position is behind our new line, that means
         // something of our text has moved to the next line
@@ -2712,7 +2702,7 @@ namespace {
 
     #ifndef MACOSX
     #if ! ENABLE_GRAPHITE
-            // #i28795#, #i34607#, #i38388#
+            // i#28795, i#34607, i#38388
             // step back six(!) more characters for complex scripts
             // this is required e.g., for Khmer (thank you, Javier!)
             const SwScriptInfo& rSI = txtFormatInfo.GetParaPortion()->GetScriptInfo();
@@ -2733,7 +2723,11 @@ namespace {
                 if ( nReformat > txtFormatInfo.GetLineStart() + nMaxContext )
                     nReformat = nReformat - nMaxContext;
                 else
+                {
                     nReformat = txtFormatInfo.GetLineStart();
+                    //reset the margin flag - prevent loops
+                    SwTextCursor::SetRightMargin(false);
+                }
             }
 
             // Weird situation: Our line used to end with a hole portion

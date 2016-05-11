@@ -110,7 +110,7 @@ SFX_IMPL_INTERFACE(OutlineViewShell, SfxShell)
 
 void OutlineViewShell::InitInterface_Impl()
 {
-    GetStaticInterface()->RegisterPopupMenu(SdResId(RID_OUTLINE_POPUP));
+    GetStaticInterface()->RegisterPopupMenu("outline");
 
     GetStaticInterface()->RegisterObjectBar(SFX_OBJECTBAR_TOOLS | SFX_VISIBILITY_STANDARD | SFX_VISIBILITY_FULLSCREEN | SFX_VISIBILITY_SERVER,
                                             RID_OUTLINE_TOOLBOX);
@@ -417,7 +417,7 @@ void OutlineViewShell::GetCtrlState(SfxItemSet &rSet)
 void OutlineViewShell::FuSupport(SfxRequest &rReq)
 {
     if( rReq.GetSlot() == SID_STYLE_FAMILY && rReq.GetArgs())
-        GetDocSh()->SetStyleFamily(static_cast<const SfxUInt16Item&>(rReq.GetArgs()->Get( SID_STYLE_FAMILY )).GetValue());
+        GetDocSh()->SetStyleFamily((SfxStyleFamily) static_cast<const SfxUInt16Item&>(rReq.GetArgs()->Get( SID_STYLE_FAMILY )).GetValue());
 
     bool bPreviewState = false;
     sal_uLong nSlot = rReq.GetSlot();
@@ -1070,7 +1070,7 @@ void OutlineViewShell::GetMenuState( SfxItemSet &rSet )
 /**
  * gets invoked when ScrollBar is used
  */
-long OutlineViewShell::VirtHScrollHdl(ScrollBar* pHScroll)
+void OutlineViewShell::VirtHScrollHdl(ScrollBar* pHScroll)
 {
     long   nThumb = pHScroll->GetThumbPos();
     long   nRange = pHScroll->GetRange().Len();
@@ -1089,11 +1089,9 @@ long OutlineViewShell::VirtHScrollHdl(ScrollBar* pHScroll)
     pOutlinerView->HideCursor();
     pOutlinerView->Scroll(-nDelta, 0);
     pOutlinerView->ShowCursor(false);
-
-    return 0;
 }
 
-long OutlineViewShell::VirtVScrollHdl(ScrollBar* pVScroll)
+void OutlineViewShell::VirtVScrollHdl(ScrollBar* pVScroll)
 {
     long nThumb = pVScroll->GetThumbPos();
     long nRange = pVScroll->GetRange().Len();
@@ -1112,8 +1110,6 @@ long OutlineViewShell::VirtVScrollHdl(ScrollBar* pVScroll)
     pOutlinerView->HideCursor();
     pOutlinerView->Scroll(0, -nDelta);
     pOutlinerView->ShowCursor(false);
-
-    return 0;
 }
 
 /**
@@ -1381,7 +1377,7 @@ void OutlineViewShell::Command( const CommandEvent& rCEvt, ::sd::Window* pWin )
         }
         else
         {
-           GetViewFrame()->GetDispatcher()->ExecutePopup(SdResId(RID_OUTLINE_POPUP));
+           GetViewFrame()->GetDispatcher()->ExecutePopup("outline");
         }
     }
     else
@@ -1577,13 +1573,13 @@ void OutlineViewShell::UpdatePreview( SdPage* pPage, bool )
     }
 }
 
-bool OutlineViewShell::UpdateTitleObject( SdPage* pPage, Paragraph* pPara )
+void OutlineViewShell::UpdateTitleObject( SdPage* pPage, Paragraph* pPara )
 {
     DBG_ASSERT( pPage, "sd::OutlineViewShell::UpdateTitleObject(), pPage == 0?" );
     DBG_ASSERT( pPara, "sd::OutlineViewShell::UpdateTitleObject(), pPara == 0?" );
 
     if( !pPage || !pPara )
-        return false;
+        return;
 
     ::Outliner&         rOutliner = pOlView->GetOutliner();
     SdrTextObj*         pTO  = OutlineView::GetTitleTextObject( pPage );
@@ -1606,7 +1602,7 @@ bool OutlineViewShell::UpdateTitleObject( SdPage* pPage, Paragraph* pPara )
         OutlinerParaObject* pOPO = pTO ? rOutliner.CreateParaObject(rOutliner.GetAbsPos(pPara), 1) : nullptr;
         if (pOPO)
         {
-            pOPO->SetOutlinerMode( OUTLINERMODE_TITLEOBJECT );
+            pOPO->SetOutlinerMode( OutlinerMode::TitleObject );
             pOPO->SetVertical( pTO->IsVerticalWriting() );
             if( pTO->GetOutlinerParaObject() && (pOPO->GetTextObject() == pTO->GetOutlinerParaObject()->GetTextObject()) )
             {
@@ -1653,17 +1649,15 @@ bool OutlineViewShell::UpdateTitleObject( SdPage* pPage, Paragraph* pPara )
             pPage->RemoveObject(pTO->GetOrdNum());
         }
     }
-
-    return bNewObject;
 }
 
-bool OutlineViewShell::UpdateOutlineObject( SdPage* pPage, Paragraph* pPara )
+void OutlineViewShell::UpdateOutlineObject( SdPage* pPage, Paragraph* pPara )
 {
     DBG_ASSERT( pPage, "sd::OutlineViewShell::UpdateOutlineObject(), pPage == 0?" );
     DBG_ASSERT( pPara, "sd::OutlineViewShell::UpdateOutlineObject(), pPara == 0?" );
 
     if( !pPage || !pPara )
-        return false;
+        return;
 
     ::Outliner&         rOutliner = pOlView->GetOutliner();
     OutlinerParaObject* pOPO = nullptr;
@@ -1671,11 +1665,11 @@ bool OutlineViewShell::UpdateOutlineObject( SdPage* pPage, Paragraph* pPara )
 
     bool bNewObject = false;
 
-    sal_uInt16 eOutlinerMode = OUTLINERMODE_TITLEOBJECT;
+    OutlinerMode eOutlinerMode = OutlinerMode::TitleObject;
     pTO = static_cast<SdrTextObj*>(pPage->GetPresObj( PRESOBJ_TEXT ));
     if( !pTO )
     {
-        eOutlinerMode = OUTLINERMODE_OUTLINEOBJECT;
+        eOutlinerMode = OutlinerMode::OutlineObject;
         pTO = OutlineView::GetOutlineTextObject( pPage );
     }
 
@@ -1758,8 +1752,6 @@ bool OutlineViewShell::UpdateOutlineObject( SdPage* pPage, Paragraph* pPara )
             pPage->RemoveObject(pTO->GetOrdNum());
         }
     }
-
-    return bNewObject;
 }
 
 /**
@@ -1776,7 +1768,7 @@ sal_uLong OutlineViewShell::Read(SvStream& rInput, const OUString& rBaseURL, sal
 
     bRet = rOutl.Read( rInput, rBaseURL, eFormat, GetDocSh()->GetHeaderAttributes() );
 
-    SdPage* pPage = GetDoc()->GetSdPage( GetDoc()->GetSdPageCount(PK_STANDARD) - 1, PK_STANDARD );;
+    SdPage* pPage = GetDoc()->GetSdPage( GetDoc()->GetSdPageCount(PK_STANDARD) - 1, PK_STANDARD );
     SfxStyleSheet* pTitleSheet = pPage->GetStyleSheetForPresObj( PRESOBJ_TITLE );
     SfxStyleSheet* pOutlSheet = pPage->GetStyleSheetForPresObj( PRESOBJ_OUTLINE );
 

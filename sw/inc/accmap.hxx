@@ -94,8 +94,6 @@ class SwAccessibleMap : public ::accessibility::IAccessibleViewForwarder,
 
     css::uno::WeakReference < css::accessibility::XAccessible > mxCursorContext;
 
-    sal_Int32 mnPara;
-
     bool mbShapeSelected;
 
     void FireEvent( const SwAccessibleEvent_Impl& rEvent );
@@ -112,10 +110,10 @@ class SwAccessibleMap : public ::accessibility::IAccessibleViewForwarder,
     //IvalidateShapeInParaSelection() method is responsible for the updating the selected states of the objects.
     void InvalidateShapeInParaSelection();
 
-    void _InvalidateRelationSet( const SwFrame* pFrame, bool bFrom );
+    void InvalidateRelationSet_( const SwFrame* pFrame, bool bFrom );
 
     css::uno::Reference<css::accessibility::XAccessible>
-            _GetDocumentView( bool bPagePreview );
+            GetDocumentView_( bool bPagePreview );
 
     /** method to build up a new data structure of the accessible paragraphs,
         which have a selection
@@ -124,7 +122,7 @@ class SwAccessibleMap : public ::accessibility::IAccessibleViewForwarder,
 
         @author OD
     */
-    SwAccessibleSelectedParas_Impl* _BuildSelectedParas();
+    SwAccessibleSelectedParas_Impl* BuildSelectedParas();
 
 public:
 
@@ -205,8 +203,7 @@ public:
 
     // Invalidate state of whole tree. If an action is open, this call
     // is processed when the last action ends.
-    void InvalidateStates( AccessibleStates _nStates,
-                           const SwFrame* _pFrame = nullptr );
+    void InvalidateEditableStates( const SwFrame* _pFrame );
 
     void InvalidateRelationSet( const SwFrame* pMaster, const SwFrame* pFollow );
 
@@ -301,7 +298,7 @@ private:
 public:
     virtual bool IsDocumentSelAll() override;
 
-    css::uno::WeakReference < css::accessibility::XAccessible >
+    const css::uno::WeakReference < css::accessibility::XAccessible >&
         GetCursorContext() const { return mxCursorContext; }
 
     //Para Container for InvalidateCursorPosition

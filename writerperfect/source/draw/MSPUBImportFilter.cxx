@@ -7,7 +7,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include <com/sun/star/uno/Reference.h>
 #include <com/sun/star/uno/XComponentContext.hpp>
 #include <cppuhelper/supportsservice.hxx>
 
@@ -16,10 +15,6 @@
 
 #include "MSPUBImportFilter.hxx"
 
-#include <iostream>
-
-using com::sun::star::uno::Reference;
-using com::sun::star::uno::Exception;
 using com::sun::star::uno::RuntimeException;
 using com::sun::star::uno::Sequence;
 using com::sun::star::uno::XComponentContext;
@@ -41,14 +36,21 @@ bool MSPUBImportFilter::doDetectFormat(librevenge::RVNGInputStream &rInput, OUSt
     return false;
 }
 
-OUString MSPUBImportFilter_getImplementationName()
-throw (RuntimeException)
+// XServiceInfo
+OUString SAL_CALL MSPUBImportFilter::getImplementationName()
+throw (RuntimeException, std::exception)
 {
     return OUString("com.sun.star.comp.Draw.MSPUBImportFilter");
 }
 
-Sequence< OUString > SAL_CALL MSPUBImportFilter_getSupportedServiceNames()
-throw (RuntimeException)
+sal_Bool SAL_CALL MSPUBImportFilter::supportsService(const OUString &rServiceName)
+throw (RuntimeException, std::exception)
+{
+    return cppu::supportsService(this, rServiceName);
+}
+
+Sequence< OUString > SAL_CALL MSPUBImportFilter::getSupportedServiceNames()
+throw (RuntimeException, std::exception)
 {
     Sequence < OUString > aRet(2);
     OUString *pArray = aRet.getArray();
@@ -57,27 +59,13 @@ throw (RuntimeException)
     return aRet;
 }
 
-Reference< XInterface > SAL_CALL MSPUBImportFilter_createInstance(const Reference< XComponentContext > &rContext)
-throw(Exception)
+extern "C"
+SAL_DLLPUBLIC_EXPORT css::uno::XInterface *SAL_CALL
+com_sun_star_comp_Draw_MSPUBImportFilter_get_implementation(
+    css::uno::XComponentContext *const context,
+    const css::uno::Sequence<css::uno::Any> &)
 {
-    return static_cast<cppu::OWeakObject *>(new MSPUBImportFilter(rContext));
-}
-
-// XServiceInfo
-OUString SAL_CALL MSPUBImportFilter::getImplementationName()
-throw (RuntimeException, std::exception)
-{
-    return MSPUBImportFilter_getImplementationName();
-}
-sal_Bool SAL_CALL MSPUBImportFilter::supportsService(const OUString &rServiceName)
-throw (RuntimeException, std::exception)
-{
-    return cppu::supportsService(this, rServiceName);
-}
-Sequence< OUString > SAL_CALL MSPUBImportFilter::getSupportedServiceNames()
-throw (RuntimeException, std::exception)
-{
-    return MSPUBImportFilter_getSupportedServiceNames();
+    return cppu::acquire(new MSPUBImportFilter(context));
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

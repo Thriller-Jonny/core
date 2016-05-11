@@ -35,10 +35,10 @@ SbxCollection::SbxCollection( const OUString& rClass )
 {
     if( !nCountHash )
     {
-        pCount  = OUString::createFromAscii(GetSbxRes( STRING_COUNTPROP ));
-        pAdd    = OUString::createFromAscii(GetSbxRes( STRING_ADDMETH ));
-        pItem   = OUString::createFromAscii(GetSbxRes( STRING_ITEMMETH ));
-        pRemove = OUString::createFromAscii(GetSbxRes( STRING_REMOVEMETH ));
+        pCount  = GetSbxRes( StringId::CountProp );
+        pAdd    = GetSbxRes( StringId::AddMeth );
+        pItem   = GetSbxRes( StringId::ItemMeth );
+        pRemove = GetSbxRes( StringId::RemoveMeth );
         nCountHash  = MakeHashCode( pCount );
         nAddHash    = MakeHashCode( pAdd );
         nItemHash   = MakeHashCode( pItem );
@@ -117,7 +117,7 @@ void SbxCollection::Notify( SfxBroadcaster& rCst, const SfxHint& rHint )
     const SbxHint* p = dynamic_cast<const SbxHint*>(&rHint);
     if( p )
     {
-        sal_uLong nId = p->GetId();
+        const sal_uInt32 nId = p->GetId();
         bool bRead  = ( nId == SBX_HINT_DATAWANTED );
         bool bWrite = ( nId == SBX_HINT_DATACHANGED );
         SbxVariable* pVar = p->GetVar();

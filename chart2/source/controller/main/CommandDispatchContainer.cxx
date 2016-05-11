@@ -26,8 +26,6 @@
 #include "DrawCommandDispatch.hxx"
 #include "ShapeController.hxx"
 
-#include <comphelper/InlineContainer.hxx>
-
 #include <com/sun/star/frame/XDispatchProvider.hpp>
 
 using namespace ::com::sun::star;
@@ -45,12 +43,6 @@ CommandDispatchContainer::CommandDispatchContainer(
         ,m_pDrawCommandDispatch( nullptr )
         ,m_pShapeController( nullptr )
 {
-    m_aContainerDocumentCommands =
-        ::comphelper::MakeSet< OUString >
-        ("AddDirect")    ("NewDoc")             ("Open")
-        ("Save")         ("SaveAs")             ("SendMail")
-        ("EditDoc")      ("ExportDirectToPDF")  ("PrintDefault")
-        ;
 }
 
 void CommandDispatchContainer::setModel(
@@ -76,6 +68,11 @@ void CommandDispatchContainer::setChartDispatch(
 Reference< frame::XDispatch > CommandDispatchContainer::getDispatchForURL(
     const util::URL & rURL )
 {
+    static const std::set< OUString >  s_aContainerDocumentCommands {
+        "AddDirect",    "NewDoc",             "Open",
+        "Save",         "SaveAs",             "SendMail",
+        "EditDoc",      "ExportDirectToPDF",  "PrintDefault"};
+
     Reference< frame::XDispatch > xResult;
     tDispatchMap::const_iterator aIt( m_aCachedDispatches.find( rURL.Complete ));
     if( aIt != m_aCachedDispatches.end())
@@ -106,7 +103,7 @@ Reference< frame::XDispatch > CommandDispatchContainer::getDispatchForURL(
             m_aToBeDisposedDispatches.push_back( xResult );
         }
         else if( xModel.is() &&
-                 (m_aContainerDocumentCommands.find( rURL.Path ) != m_aContainerDocumentCommands.end()) )
+                 (s_aContainerDocumentCommands.find( rURL.Path ) != s_aContainerDocumentCommands.end()) )
         {
             xResult.set( getContainerDispatchForURL( xModel->getCurrentController(), rURL ));
             // ToDo: can those dispatches be cached?

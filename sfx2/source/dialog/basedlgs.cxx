@@ -102,7 +102,6 @@ void SfxFloatingWindow_Impl::Notify( SfxBroadcaster&, const SfxHint& rHint )
 }
 
 
-
 void SfxModalDialog::SetDialogData_Impl()
 {
     // save settings (position and user data)
@@ -117,11 +116,10 @@ void SfxModalDialog::SetDialogData_Impl()
 
     SvtViewOptions aDlgOpt(E_DIALOG, sConfigId);
     aDlgOpt.SetWindowState(OStringToOUString(
-        GetWindowState(WINDOWSTATE_MASK_POS), RTL_TEXTENCODING_ASCII_US));
+        GetWindowState(WindowStateMask::Pos), RTL_TEXTENCODING_ASCII_US));
     if ( !aExtraData.isEmpty() )
         aDlgOpt.SetUserItem( USERITEM_NAME, makeAny( aExtraData ) );
 }
-
 
 
 void SfxModalDialog::GetDialogData_Impl()
@@ -186,7 +184,6 @@ void SfxModalDialog::CreateOutputItemSet( SfxItemPool& rPool )
     if (!pOutputSet)
         pOutputSet = new SfxAllItemSet( rPool );
 }
-
 
 
 void SfxModalDialog::CreateOutputItemSet( const SfxItemSet& rSet )
@@ -299,9 +296,9 @@ IMPL_LINK_NOARG_TYPED(SfxModelessDialog, TimerHdl, Idle *, void)
     {
         if ( !IsRollUp() )
             aSize = GetSizePixel();
-        sal_uIntPtr nMask = WINDOWSTATE_MASK_POS | WINDOWSTATE_MASK_STATE;
+        WindowStateMask nMask = WindowStateMask::Pos | WindowStateMask::State;
         if ( GetStyle() & WB_SIZEABLE )
-            nMask |= ( WINDOWSTATE_MASK_WIDTH | WINDOWSTATE_MASK_HEIGHT );
+            nMask |= ( WindowStateMask::Width | WindowStateMask::Height );
         pImp->aWinState = GetWindowState( nMask );
         GetBindings().GetWorkWindow_Impl()->ConfigChild_Impl( SfxChildIdentifier::DOCKINGWINDOW, SfxDockingConfig::ALIGNDOCKINGWINDOW, pImp->pMgr->GetType() );
     }
@@ -375,7 +372,6 @@ void SfxModelessDialog::dispose()
 }
 
 
-
 bool SfxModelessDialog::Close()
 
 /*  [Description]
@@ -389,12 +385,11 @@ bool SfxModelessDialog::Close()
 {
     // Execute with Parameters, since Toggle is ignored by some ChildWindows.
     SfxBoolItem aValue( pImp->pMgr->GetType(), false);
-    pBindings->GetDispatcher_Impl()->Execute(
+    pBindings->GetDispatcher_Impl()->ExecuteList(
         pImp->pMgr->GetType(),
-        SfxCallMode::RECORD|SfxCallMode::SYNCHRON, &aValue, 0L );
+        SfxCallMode::RECORD|SfxCallMode::SYNCHRON, { &aValue } );
     return true;
 }
-
 
 
 void SfxModelessDialog::FillInfo(SfxChildWinInfo& rInfo) const
@@ -413,7 +408,6 @@ void SfxModelessDialog::FillInfo(SfxChildWinInfo& rInfo) const
     if ( IsRollUp() )
         rInfo.nFlags |= SfxChildWindowFlags::ZOOMIN;
 }
-
 
 
 bool SfxFloatingWindow::Notify( NotifyEvent& rEvt )
@@ -504,12 +498,11 @@ bool SfxFloatingWindow::Close()
 {
     // Execute with Parameters, since Toggle is ignored by some ChildWindows.
     SfxBoolItem aValue( pImp->pMgr->GetType(), false);
-    pBindings->GetDispatcher_Impl()->Execute(
+    pBindings->GetDispatcher_Impl()->ExecuteList(
             pImp->pMgr->GetType(),
-            SfxCallMode::RECORD|SfxCallMode::SYNCHRON, &aValue, 0L );
+            SfxCallMode::RECORD|SfxCallMode::SYNCHRON, { &aValue });
     return true;
 }
-
 
 
 SfxFloatingWindow::~SfxFloatingWindow()
@@ -565,9 +558,9 @@ IMPL_LINK_NOARG_TYPED(SfxFloatingWindow, TimerHdl, Idle *, void)
     {
         if ( !IsRollUp() )
             aSize = GetSizePixel();
-        sal_uIntPtr nMask = WINDOWSTATE_MASK_POS | WINDOWSTATE_MASK_STATE;
+        WindowStateMask nMask = WindowStateMask::Pos | WindowStateMask::State;
         if ( GetStyle() & WB_SIZEABLE )
-            nMask |= ( WINDOWSTATE_MASK_WIDTH | WINDOWSTATE_MASK_HEIGHT );
+            nMask |= ( WindowStateMask::Width | WindowStateMask::Height );
         pImp->aWinState = GetWindowState( nMask );
         GetBindings().GetWorkWindow_Impl()->ConfigChild_Impl( SfxChildIdentifier::DOCKINGWINDOW, SfxDockingConfig::ALIGNDOCKINGWINDOW, pImp->pMgr->GetType() );
     }
@@ -601,7 +594,6 @@ void SfxFloatingWindow::Initialize(SfxChildWinInfo *pInfo)
     if (pInfo)
         pImp->aWinState = pInfo->aWinState;
 }
-
 
 
 void SfxFloatingWindow::FillInfo(SfxChildWinInfo& rInfo) const
@@ -677,7 +669,6 @@ IMPL_LINK_NOARG_TYPED(SfxSingleTabDialog, OKHdl_Impl, Button*, void)
         EndDialog();
     return;
 }
-
 
 
 SfxSingleTabDialog::SfxSingleTabDialog(vcl::Window *pParent, const SfxItemSet& rSet,

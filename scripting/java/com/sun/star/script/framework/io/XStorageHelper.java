@@ -29,10 +29,6 @@ import com.sun.star.embed.XTransactedObject;
 
 import com.sun.star.frame.XModel;
 
-import com.sun.star.io.XInputStream;
-import com.sun.star.io.XOutputStream;
-import com.sun.star.io.XStream;
-
 import com.sun.star.lang.EventObject;
 import com.sun.star.lang.XComponent;
 import com.sun.star.lang.XEventListener;
@@ -241,7 +237,7 @@ public class XStorageHelper implements XEventListener {
             try {
                 xTrans.commit();
             } catch (Exception e) {
-                LogUtils.DEBUG("Something went bellyup exception: " + e);
+                LogUtils.DEBUG("Something went belly up exception: " + e);
             }
         }
     }

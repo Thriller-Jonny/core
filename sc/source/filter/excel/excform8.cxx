@@ -141,9 +141,10 @@ ConvErr ExcelToSc8::Convert( const ScTokenArray*& rpTokArray, XclImpStream& aIn,
     bool                    bArrayFormula = false;
     TokenId                 nMerk0;
     const bool              bCondFormat = eFT == FT_CondFormat;
-    const bool              bRangeName = eFT == FT_RangeName || bCondFormat;
+    const bool              bRangeName = eFT == FT_RangeName;
+    const bool              bRangeNameOrCond = bRangeName || bCondFormat;
     const bool              bSharedFormula = eFT == FT_SharedFormula;
-    const bool              bRNorSF = bRangeName || bSharedFormula;
+    const bool              bRNorSF = bRangeNameOrCond || bSharedFormula;
 
     ScSingleRefData         aSRD;
     ScComplexRefData            aCRD;
@@ -493,7 +494,7 @@ ConvErr ExcelToSc8::Convert( const ScTokenArray*& rpTokArray, XclImpStream& aIn,
                         // user-defined macro name.
                         aStack << aPool.Store(ocMacro, pName->GetXclName());
                     else
-                        aStack << aPool.StoreName(nUINT16, pName->IsGlobal());
+                        aStack << aPool.StoreName(nUINT16, pName->IsGlobal() ? -1 : pName->GetScTab());
                 }
                 break;
             }
@@ -510,9 +511,9 @@ ConvErr ExcelToSc8::Convert( const ScTokenArray*& rpTokArray, XclImpStream& aIn,
                 nCol = aIn.ReaduInt16();
 
                 aSRD.SetRelTab(0);
-                aSRD.SetFlag3D( bRangeName && !bCondFormat );
+                aSRD.SetFlag3D( bRangeName );
 
-                ExcRelToScRel8( nRow, nCol, aSRD, bRangeName );
+                ExcRelToScRel8( nRow, nCol, aSRD, bRangeNameOrCond );
 
                 switch ( nOp )
                 {
@@ -546,11 +547,11 @@ ConvErr ExcelToSc8::Convert( const ScTokenArray*& rpTokArray, XclImpStream& aIn,
 
                 rSRef1.SetRelTab(0);
                 rSRef2.SetRelTab(0);
-                rSRef1.SetFlag3D( bRangeName && !bCondFormat );
-                rSRef2.SetFlag3D( bRangeName && !bCondFormat );
+                rSRef1.SetFlag3D( bRangeName );
+                rSRef2.SetFlag3D( bRangeName );
 
-                ExcRelToScRel8( nRowFirst, nColFirst, aCRD.Ref1, bRangeName );
-                ExcRelToScRel8( nRowLast, nColLast, aCRD.Ref2, bRangeName );
+                ExcRelToScRel8( nRowFirst, nColFirst, aCRD.Ref1, bRangeNameOrCond );
+                ExcRelToScRel8( nRowLast, nColLast, aCRD.Ref2, bRangeNameOrCond );
 
                 if( IsComplColRange( nColFirst, nColLast ) )
                     SetComplCol( aCRD );
@@ -680,7 +681,7 @@ ConvErr ExcelToSc8::Convert( const ScTokenArray*& rpTokArray, XclImpStream& aIn,
                     if (pName)
                     {
                         if (pName->GetScRangeData())
-                            aStack << aPool.StoreName( nNameIdx, pName->IsGlobal());
+                            aStack << aPool.StoreName( nNameIdx, pName->IsGlobal() ? -1 : pName->GetScTab());
                         else
                             aStack << aPool.Store(ocMacro, pName->GetXclName());
                     }
@@ -799,7 +800,7 @@ ConvErr ExcelToSc8::Convert( const ScTokenArray*& rpTokArray, XclImpStream& aIn,
                 aSRD.SetAbsTab(nTabFirst);
                 aSRD.SetFlag3D(true);
 
-                ExcRelToScRel8( nRw, nGrbitCol, aSRD, bRangeName );
+                ExcRelToScRel8( nRw, nGrbitCol, aSRD, bRangeNameOrCond );
 
                 switch ( nOp )
                 {
@@ -875,8 +876,8 @@ ConvErr ExcelToSc8::Convert( const ScTokenArray*& rpTokArray, XclImpStream& aIn,
                 rR1.SetFlag3D(true);
                 rR2.SetFlag3D( nTabFirst != nTabLast );
 
-                ExcRelToScRel8( nRw1, nGrbitCol1, aCRD.Ref1, bRangeName );
-                ExcRelToScRel8( nRw2, nGrbitCol2, aCRD.Ref2, bRangeName );
+                ExcRelToScRel8( nRw1, nGrbitCol1, aCRD.Ref1, bRangeNameOrCond );
+                ExcRelToScRel8( nRw2, nGrbitCol2, aCRD.Ref2, bRangeNameOrCond );
 
                 if( IsComplColRange( nGrbitCol1, nGrbitCol2 ) )
                     SetComplCol( aCRD );
@@ -952,7 +953,7 @@ ConvErr ExcelToSc8::Convert( const ScTokenArray*& rpTokArray, XclImpStream& aIn,
 }
 
 // stream seeks to first byte after <nFormulaLen>
-ConvErr ExcelToSc8::Convert( _ScRangeListTabs& rRangeList, XclImpStream& aIn, sal_Size nFormulaLen,
+ConvErr ExcelToSc8::Convert( ScRangeListTabs& rRangeList, XclImpStream& aIn, sal_Size nFormulaLen,
                               SCsTAB nTab, const FORMULA_TYPE eFT )
 {
     sal_uInt8                   nOp, nLen;
@@ -1299,11 +1300,11 @@ ConvErr ExcelToSc8::Convert( _ScRangeListTabs& rRangeList, XclImpStream& aIn, sa
     return eRet;
 }
 
-ConvErr ExcelToSc8::ConvertExternName( const ScTokenArray*& rpArray, XclImpStream& rStrm, sal_Size nFormulaLen,
+void ExcelToSc8::ConvertExternName( const ScTokenArray*& rpArray, XclImpStream& rStrm, sal_Size nFormulaLen,
                                        const OUString& rUrl, const vector<OUString>& rTabNames )
 {
     if( !GetDocShell() )
-        return ConvErrNi;
+        return;
 
     OUString aFileUrl = ScGlobal::GetAbsDocName(rUrl, GetDocShell());
 
@@ -1316,7 +1317,7 @@ ConvErr ExcelToSc8::ConvertExternName( const ScTokenArray*& rpArray, XclImpStrea
     if (eStatus != ConvOK)
     {
         rStrm.Ignore(nFormulaLen);
-        return eStatus;
+        return;
     }
 
     if (nFormulaLen == 0)
@@ -1324,7 +1325,7 @@ ConvErr ExcelToSc8::ConvertExternName( const ScTokenArray*& rpArray, XclImpStrea
         aPool.Store(OUString("-/-"));
         aPool >> aStack;
         rpArray = aPool[aStack.Get()];
-        return ConvOK;
+        return;
     }
 
     ScExternalRefManager* pRefMgr = GetDoc().GetExternalRefManager();
@@ -1428,30 +1429,24 @@ ConvErr ExcelToSc8::ConvertExternName( const ScTokenArray*& rpArray, XclImpStrea
         bError |= !rStrm.IsValid();
     }
 
-    ConvErr eRet;
-
     if( bError )
     {
         aPool << ocBad;
         aPool >> aStack;
         rpArray = aPool[ aStack.Get() ];
-        eRet = ConvErrNi;
     }
     else if( rStrm.GetRecPos() != nEndPos )
     {
         aPool << ocBad;
         aPool >> aStack;
         rpArray = aPool[ aStack.Get() ];
-        eRet = ConvErrCount;
     }
     else
     {
         rpArray = aPool[ aStack.Get() ];
-        eRet = ConvOK;
     }
 
     rStrm.Seek(nEndPos);
-    return eRet;
 }
 
 void ExcelToSc8::ExcRelToScRel8( sal_uInt16 nRow, sal_uInt16 nC, ScSingleRefData &rSRD, const bool bName )
@@ -1509,7 +1504,7 @@ void ExcelToSc8::ExcRelToScRel8( sal_uInt16 nRow, sal_uInt16 nC, ScSingleRefData
 }
 
 // stream seeks to first byte after <nLen>
-bool ExcelToSc8::GetAbsRefs( ScRangeList& r, XclImpStream& aIn, sal_Size nLen )
+void ExcelToSc8::GetAbsRefs( ScRangeList& r, XclImpStream& aIn, sal_Size nLen )
 {
     sal_uInt8                   nOp;
     sal_uInt16                  nRow1, nRow2, nCol1, nCol2;
@@ -1687,8 +1682,6 @@ bool ExcelToSc8::GetAbsRefs( ScRangeList& r, XclImpStream& aIn, sal_Size nLen )
         aIn.Ignore( nSeek );
     }
     aIn.Seek( nEndPos );
-
-    return !r.empty();
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

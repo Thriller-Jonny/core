@@ -126,7 +126,7 @@ class DemoRenderer
             maRenderState.AffineTransform = aUnit;
             maRenderState.DeviceColor = maColorBlack;
 
-            //I can't figure out what the compsiteoperation stuff does
+            //I can't figure out what the compositeoperation stuff does
             //it doesn't seem to do anything in either VCL or cairocanvas
             //I was hoping that CLEAR would clear the canvas before we paint,
             //but nothing changes
@@ -428,7 +428,7 @@ class DemoRenderer
             xPoly = mxDevice->createCompatibleBezierPolyPolygon(aPolys);
             xPoly->setClosed( 0, true );
             //uno::Reference< rendering::XBezierPolyPolygon2D> xPP( xPoly, uno::UNO_QUERY );
-            //compiles, but totally screws up.  I think it is interpretting the bezier as a line
+            //compiles, but totally screws up.  I think it is interpreting the bezier as a line
             uno::Reference< rendering::XPolyPolygon2D> xPP( xPoly, uno::UNO_QUERY );
 
             rendering::StrokeAttributes aStrokeAttrs;
@@ -623,9 +623,9 @@ void TestWindow::Paint( const Rectangle& /*rRect*/ )
 
 USHORT DemoApp::Exception( USHORT nError )
 {
-    switch( nError & EXC_MAJORTYPE )
+    switch( nError & EXCEPTION_MAJORTYPE )
     {
-        case EXC_RSCNOTLOADED:
+        case EXCEPTION_RESOURCENOTLOADED:
             Abort( "Error: could not load language resources.\nPlease check your installation.\n" );
             break;
     }

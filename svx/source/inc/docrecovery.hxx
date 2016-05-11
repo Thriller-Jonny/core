@@ -232,7 +232,7 @@ class RecoveryCore : public ::cppu::WeakImplHelper< css::frame::XStatusListener 
 
 
         /** @short  TODO */
-        css::uno::Reference< css::uno::XComponentContext > getComponentContext();
+        const css::uno::Reference< css::uno::XComponentContext >& getComponentContext();
 
 
         /** @short  TODO */
@@ -423,7 +423,7 @@ class SaveProgressDialog : public ModalDialog
                     is used automatically.
 
             @param  pCore
-                    used to start emegrency save.
+                    used to start emergency save.
          */
         SaveProgressDialog(vcl::Window*       pParent,
                            RecoveryCore* pCore  );
@@ -445,11 +445,8 @@ class RecovDocListEntry : public SvLBoxString
 {
 public:
 
-
     /** @short TODO */
-    RecovDocListEntry(      SvTreeListEntry* pEntry,
-                            sal_uInt16       nFlags,
-                      const OUString&      sText );
+    RecovDocListEntry( const OUString&      sText );
 
 
     /** @short TODO */
@@ -586,7 +583,7 @@ class BrokenRecoveryDialog : public ModalDialog
 
 
         /** @short TODO */
-        OUString getSaveDirURL();
+        const OUString& getSaveDirURL();
 
 
     // helper

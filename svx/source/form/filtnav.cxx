@@ -26,7 +26,6 @@
 
 #include <com/sun/star/awt/XControlModel.hpp>
 #include <com/sun/star/awt/XControl.hpp>
-#include <com/sun/star/awt/XTextComponent.hpp>
 #include <com/sun/star/form/runtime/XFormController.hpp>
 #include <com/sun/star/lang/XUnoTunnel.hpp>
 #include <com/sun/star/util/NumberFormatter.hpp>
@@ -76,8 +75,6 @@ namespace svxform
 
 
     using ::com::sun::star::uno::Reference;
-    using ::com::sun::star::lang::XMultiServiceFactory;
-    using ::com::sun::star::awt::TextEvent;
     using ::com::sun::star::container::XIndexAccess;
     using ::com::sun::star::uno::UNO_QUERY;
     using ::com::sun::star::beans::XPropertySet;
@@ -93,7 +90,6 @@ namespace svxform
     using ::com::sun::star::sdbc::XConnection;
     using ::com::sun::star::util::XNumberFormatsSupplier;
     using ::com::sun::star::util::XNumberFormatter;
-    using ::com::sun::star::util::XNumberFormatter2;
     using ::com::sun::star::util::NumberFormatter;
     using ::com::sun::star::sdbc::XRowSet;
     using ::com::sun::star::lang::Locale;
@@ -102,7 +98,6 @@ namespace svxform
     using ::com::sun::star::uno::UNO_QUERY_THROW;
     using ::com::sun::star::uno::UNO_SET_THROW;
     using ::com::sun::star::uno::Exception;
-    using ::com::sun::star::awt::XTextComponent;
     using ::com::sun::star::uno::Sequence;
 
 
@@ -141,7 +136,6 @@ Image FmFilterData::GetImage() const
 }
 
 
-
 FmParentData::~FmParentData()
 {
     for (::std::vector<FmFilterData*>::const_iterator i = m_aChildren.begin();
@@ -150,13 +144,11 @@ FmParentData::~FmParentData()
 }
 
 
-
 Image FmFormItem::GetImage() const
 {
     ImageList aNavigatorImages( SVX_RES( RID_SVXIMGLIST_FMEXPL ) );
     return aNavigatorImages.GetImage( RID_SVXIMG_FORM );
 }
-
 
 
 FmFilterItem* FmFilterItems::Find( const ::sal_Int32 _nFilterComponentIndex ) const
@@ -180,7 +172,6 @@ Image FmFilterItems::GetImage() const
     ImageList aNavigatorImages( SVX_RES( RID_SVXIMGLIST_FMEXPL ) );
     return aNavigatorImages.GetImage( RID_SVXIMG_FILTER );
 }
-
 
 
 FmFilterItem::FmFilterItem( FmFilterItems* pParent,
@@ -270,9 +261,9 @@ public:
     virtual void SAL_CALL disposing(const EventObject& Source) throw( RuntimeException, std::exception ) override;
 
 // XFilterControllerListener
-    virtual void SAL_CALL predicateExpressionChanged( const FilterEvent& _Event ) throw (RuntimeException, std::exception) override;
-    virtual void SAL_CALL disjunctiveTermRemoved( const FilterEvent& _Event ) throw (RuntimeException, std::exception) override;
-    virtual void SAL_CALL disjunctiveTermAdded( const FilterEvent& _Event ) throw (RuntimeException, std::exception) override;
+    virtual void SAL_CALL predicateExpressionChanged( const FilterEvent& Event ) throw (RuntimeException, std::exception) override;
+    virtual void SAL_CALL disjunctiveTermRemoved( const FilterEvent& Event ) throw (RuntimeException, std::exception) override;
+    virtual void SAL_CALL disjunctiveTermAdded( const FilterEvent& Event ) throw (RuntimeException, std::exception) override;
 
 // helpers
     void dispose() throw( RuntimeException );
@@ -382,7 +373,7 @@ namespace
 
 // XFilterControllerListener
 
-void FmFilterAdapter::predicateExpressionChanged( const FilterEvent& _Event ) throw( RuntimeException, std::exception )
+void FmFilterAdapter::predicateExpressionChanged( const FilterEvent& Event ) throw( RuntimeException, std::exception )
 {
     SolarMutexGuard aGuard;
 
@@ -390,8 +381,8 @@ void FmFilterAdapter::predicateExpressionChanged( const FilterEvent& _Event ) th
         return;
 
     // the controller which sent the event
-    Reference< XFormController > xController( _Event.Source, UNO_QUERY_THROW );
-    Reference< XFilterController > xFilterController( _Event.Source, UNO_QUERY_THROW );
+    Reference< XFormController > xController( Event.Source, UNO_QUERY_THROW );
+    Reference< XFilterController > xFilterController( Event.Source, UNO_QUERY_THROW );
     Reference< XForm > xForm( xController->getModel(), UNO_QUERY_THROW );
 
     FmFormItem* pFormItem = m_pModel->Find( m_pModel->m_aChildren, xForm );
@@ -403,12 +394,12 @@ void FmFilterAdapter::predicateExpressionChanged( const FilterEvent& _Event ) th
 
     FmFilterData* pData = pFormItem->GetChildren()[nActiveTerm];
     FmFilterItems& rFilter = dynamic_cast<FmFilterItems&>(*pData);
-    FmFilterItem* pFilterItem = rFilter.Find( _Event.FilterComponent );
+    FmFilterItem* pFilterItem = rFilter.Find( Event.FilterComponent );
     if ( pFilterItem )
     {
-        if ( !_Event.PredicateExpression.isEmpty())
+        if ( !Event.PredicateExpression.isEmpty())
         {
-            pFilterItem->SetText( _Event.PredicateExpression );
+            pFilterItem->SetText( Event.PredicateExpression );
             // UI benachrichtigen
             FmFilterTextChangedHint aChangeHint(pFilterItem);
             m_pModel->Broadcast( aChangeHint );
@@ -422,9 +413,9 @@ void FmFilterAdapter::predicateExpressionChanged( const FilterEvent& _Event ) th
     else
     {
         // searching the component by field name
-        OUString aFieldName( lcl_getLabelName_nothrow( xFilterController->getFilterComponent( _Event.FilterComponent ) ) );
+        OUString aFieldName( lcl_getLabelName_nothrow( xFilterController->getFilterComponent( Event.FilterComponent ) ) );
 
-        pFilterItem = new FmFilterItem(&rFilter, aFieldName, _Event.PredicateExpression, _Event.FilterComponent);
+        pFilterItem = new FmFilterItem(&rFilter, aFieldName, Event.PredicateExpression, Event.FilterComponent);
         m_pModel->Insert(rFilter.GetChildren().end(), pFilterItem);
     }
 
@@ -433,12 +424,12 @@ void FmFilterAdapter::predicateExpressionChanged( const FilterEvent& _Event ) th
 }
 
 
-void SAL_CALL FmFilterAdapter::disjunctiveTermRemoved( const FilterEvent& _Event ) throw (RuntimeException, std::exception)
+void SAL_CALL FmFilterAdapter::disjunctiveTermRemoved( const FilterEvent& Event ) throw (RuntimeException, std::exception)
 {
     SolarMutexGuard aGuard;
 
-    Reference< XFormController > xController( _Event.Source, UNO_QUERY_THROW );
-    Reference< XFilterController > xFilterController( _Event.Source, UNO_QUERY_THROW );
+    Reference< XFormController > xController( Event.Source, UNO_QUERY_THROW );
+    Reference< XFilterController > xFilterController( Event.Source, UNO_QUERY_THROW );
     Reference< XForm > xForm( xController->getModel(), UNO_QUERY_THROW );
 
     FmFormItem* pFormItem = m_pModel->Find( m_pModel->m_aChildren, xForm );
@@ -447,13 +438,13 @@ void SAL_CALL FmFilterAdapter::disjunctiveTermRemoved( const FilterEvent& _Event
         return;
 
     ::std::vector< FmFilterData* >& rTermItems = pFormItem->GetChildren();
-    const bool bValidIndex = ( _Event.DisjunctiveTerm >= 0 ) && ( (size_t)_Event.DisjunctiveTerm < rTermItems.size() );
+    const bool bValidIndex = ( Event.DisjunctiveTerm >= 0 ) && ( (size_t)Event.DisjunctiveTerm < rTermItems.size() );
     OSL_ENSURE( bValidIndex, "FmFilterAdapter::disjunctiveTermRemoved: invalid term index!" );
     if ( !bValidIndex )
         return;
 
     // if the first term was removed, then the to-be first term needs its text updated
-    if ( _Event.DisjunctiveTerm == 0 )
+    if ( Event.DisjunctiveTerm == 0 )
     {
         rTermItems[1]->SetText( SVX_RESSTR(RID_STR_FILTER_FILTER_FOR));
         FmFilterTextChangedHint aChangeHint( rTermItems[1] );
@@ -461,19 +452,19 @@ void SAL_CALL FmFilterAdapter::disjunctiveTermRemoved( const FilterEvent& _Event
     }
 
     // finally remove the entry from the model
-    m_pModel->Remove( rTermItems.begin() + _Event.DisjunctiveTerm );
+    m_pModel->Remove( rTermItems.begin() + Event.DisjunctiveTerm );
 
     // ensure there's one empty term in the filter, just in case the currently removed one was the last empty one
     m_pModel->EnsureEmptyFilterRows( *pFormItem );
 }
 
 
-void SAL_CALL FmFilterAdapter::disjunctiveTermAdded( const FilterEvent& _Event ) throw (RuntimeException, std::exception)
+void SAL_CALL FmFilterAdapter::disjunctiveTermAdded( const FilterEvent& Event ) throw (RuntimeException, std::exception)
 {
     SolarMutexGuard aGuard;
 
-    Reference< XFormController > xController( _Event.Source, UNO_QUERY_THROW );
-    Reference< XFilterController > xFilterController( _Event.Source, UNO_QUERY_THROW );
+    Reference< XFormController > xController( Event.Source, UNO_QUERY_THROW );
+    Reference< XFilterController > xFilterController( Event.Source, UNO_QUERY_THROW );
     Reference< XForm > xForm( xController->getModel(), UNO_QUERY_THROW );
 
     FmFormItem* pFormItem = m_pModel->Find( m_pModel->m_aChildren, xForm );
@@ -481,7 +472,7 @@ void SAL_CALL FmFilterAdapter::disjunctiveTermAdded( const FilterEvent& _Event )
     if ( !pFormItem )
         return;
 
-    const sal_Int32 nInsertPos = _Event.DisjunctiveTerm;
+    const sal_Int32 nInsertPos = Event.DisjunctiveTerm;
     bool bValidIndex = ( nInsertPos >= 0 ) && ( (size_t)nInsertPos <= pFormItem->GetChildren().size() );
     if ( !bValidIndex )
     {
@@ -712,9 +703,10 @@ void FmFilterModel::SetCurrentController(const Reference< XFormController > & xC
 void FmFilterModel::AppendFilterItems( FmFormItem& _rFormItem )
 {
     // insert the condition behind the last filter items
+    ::std::vector<FmFilterData*>::const_reverse_iterator aEnd = _rFormItem.GetChildren().rend();
     ::std::vector<FmFilterData*>::reverse_iterator iter;
     for (   iter = _rFormItem.GetChildren().rbegin();
-            iter != _rFormItem.GetChildren().rend();
+            iter != aEnd;
             ++iter
         )
     {
@@ -782,8 +774,10 @@ void FmFilterModel::Remove(FmFilterData* pData)
                 while ( !rChildren.empty() )
                 {
                     ::std::vector< FmFilterData* >::iterator removePos = rChildren.end() - 1;
-                    FmFilterItem* pFilterItem = dynamic_cast<FmFilterItem*>( *removePos  );
-                    FmFilterAdapter::setText( nPos, pFilterItem, OUString() );
+                    if (FmFilterItem* pFilterItem = dynamic_cast<FmFilterItem*>( *removePos))
+                    {
+                        FmFilterAdapter::setText( nPos, pFilterItem, OUString() );
+                    }
                     Remove( removePos );
                 }
             }
@@ -886,7 +880,7 @@ void FmFilterModel::Append(FmFilterItems* pItems, FmFilterItem* pFilterItem)
 void FmFilterModel::SetTextForItem(FmFilterItem* pItem, const OUString& rText)
 {
     ::std::vector<FmFilterData*>& rItems = pItem->GetParent()->GetParent()->GetChildren();
-    ::std::vector<FmFilterData*>::iterator i = ::std::find(rItems.begin(), rItems.end(), pItem->GetParent());
+    ::std::vector<FmFilterData*>::const_iterator i = ::std::find(rItems.begin(), rItems.end(), pItem->GetParent());
     sal_Int32 nParentPos = i - rItems.begin();
 
     FmFilterAdapter::setText(nParentPos, pItem, rText);
@@ -953,9 +947,10 @@ void FmFilterModel::EnsureEmptyFilterRows( FmParentData& _rItem )
     // checks whether for each form there's one free level for input
     ::std::vector< FmFilterData* >& rChildren = _rItem.GetChildren();
     bool bAppendLevel = dynamic_cast<const FmFormItem*>(&_rItem) !=  nullptr;
+    ::std::vector<FmFilterData*>::const_iterator aEnd = rChildren.end();
 
     for (   ::std::vector<FmFilterData*>::iterator i = rChildren.begin();
-            i != rChildren.end();
+            i != aEnd;
             ++i
         )
     {
@@ -986,8 +981,10 @@ void FmFilterModel::EnsureEmptyFilterRows( FmParentData& _rItem )
 class FmFilterItemsString : public SvLBoxString
 {
 public:
-    FmFilterItemsString( SvTreeListEntry* pEntry, sal_uInt16 nFlags, const OUString& rStr )
-        :SvLBoxString(pEntry,nFlags,rStr){}
+    explicit FmFilterItemsString(const OUString& rStr)
+        : SvLBoxString(rStr)
+    {
+    }
 
     virtual void Paint(const Point& rPos, SvTreeListBox& rDev, vcl::RenderContext& rRenderContext,
                        const SvViewDataEntry* pView, const SvTreeListEntry& rEntry) override;
@@ -1043,8 +1040,8 @@ class FmFilterString : public SvLBoxString
     OUString m_aName;
 
 public:
-    FmFilterString( SvTreeListEntry* pEntry, sal_uInt16 nFlags, const OUString& rStr, const OUString& aName)
-        : SvLBoxString(pEntry,nFlags,rStr)
+    FmFilterString( const OUString& rStr, const OUString& aName)
+        : SvLBoxString(rStr)
         , m_aName(aName)
     {
         m_aName += ": ";
@@ -1253,7 +1250,6 @@ IMPL_LINK_NOARG_TYPED(FmFilterNavigator, OnDropActionTimer, Timer *, void)
 }
 
 
-
 sal_Int8 FmFilterNavigator::AcceptDrop( const AcceptDropEvent& rEvt )
 {
     Point aDropPos = rEvt.maPosPixel;
@@ -1389,10 +1385,10 @@ void FmFilterNavigator::InitEntry(SvTreeListEntry* pEntry,
     std::unique_ptr<SvLBoxString> pString;
 
     if (dynamic_cast<const FmFilterItem*>(static_cast<FmFilterData*>(pEntry->GetUserData())) != nullptr)
-        pString.reset(new FmFilterString(pEntry, 0, rStr,
+        pString.reset(new FmFilterString(rStr,
             static_cast<FmFilterItem*>(pEntry->GetUserData())->GetFieldName()));
     else if (dynamic_cast<const FmFilterItems*>(static_cast<FmFilterData*>(pEntry->GetUserData())) != nullptr)
-        pString.reset(new FmFilterItemsString(pEntry, 0, rStr));
+        pString.reset(new FmFilterItemsString(rStr));
 
     if (pString)
         pEntry->ReplaceItem(std::move(pString), 1 );

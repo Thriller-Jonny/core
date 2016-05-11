@@ -47,12 +47,12 @@ generate_Opcodes(LotusContext &rContext, SvStream& aStream,
     {
         case eWK_1:
         case eWK_2:
-        pOps = rContext.pOpFkt;
-        nOps = FKT_LIMIT;
+            pOps = rContext.pOpFkt;
+            nOps = FKT_LIMIT;
         break;
         case eWK123:
-        pOps = rContext.pOpFkt123;
-        nOps = FKT_LIMIT123;
+            pOps = rContext.pOpFkt123;
+            nOps = FKT_LIMIT123;
         break;
         case eWK3:      return eERR_NI;
         case eWK_Error: return eERR_FORMAT;
@@ -140,7 +140,7 @@ WKTYP ScanVersion(LotusContext &rContext, SvStream& aStream)
             aStream.ReadUInt16( nVersNr );
             if( aStream.IsEof() ) return eWK_Error;
             if( nVersNr == 0x0004 && nRecLen == 26 )
-			{	// 4 bytes of 26 read => skip 22 (read instead of seek to make IsEof() work just in case)
+            {   // 4 bytes of 26 read => skip 22 (read instead of seek to make IsEof() work just in case)
                 sal_Char aDummy[22];
                 aStream.Read( aDummy, 22 );
                 return aStream.IsEof() ? eWK_Error : eWK3;

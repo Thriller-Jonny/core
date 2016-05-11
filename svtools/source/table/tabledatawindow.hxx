@@ -38,7 +38,6 @@ namespace svt { namespace table
     private:
         TableControl_Impl&  m_rTableControl;
         Link<LinkParamNone*,void> m_aSelectHdl;
-        sal_uLong           m_nTipWindowHandle;
 
     public:
         explicit TableDataWindow( TableControl_Impl& _rTableControl );
@@ -61,7 +60,7 @@ namespace svt { namespace table
         void                SetBackground(const Wallpaper& rColor);
 
     private:
-        void    impl_hideTipWindow();
+        static void impl_hideTipWindow();
     };
 
 } } // namespace svt::table

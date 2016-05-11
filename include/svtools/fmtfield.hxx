@@ -95,7 +95,7 @@ protected:
     bool                m_bUseInputStringForFormatting;
 
 public:
-    FormattedField(vcl::Window* pParent, WinBits nStyle = 0, SvNumberFormatter* pInitialFormatter = nullptr, sal_Int32 nFormatKey = 0);
+    FormattedField(vcl::Window* pParent, WinBits nStyle = 0, SvNumberFormatter* pInitialFormatter = nullptr);
 
     // Min-/Max-management
     bool    HasMinValue() const         { return m_bHasMin; }
@@ -184,7 +184,7 @@ public:
     OUString  GetTextValue() const;
 
     void      SetDefaultText(const OUString& rDefault) { m_sDefaultText = rDefault; }
-    OUString  GetDefaultText() const { return m_sDefaultText; }
+    const OUString& GetDefaultText() const { return m_sDefaultText; }
 
     // The last colour from the Formatter's last output operation. Output operations get triggered by:
     // SetValue, SetTextValue, SetTextFormatted, also indirectly via SetMin - / -MaxValue
@@ -222,7 +222,7 @@ public:
         InputLine format.  That's also what you get in Calc when you edit a cell
         using F2
      */
-    void    UseInputStringForFormatting( bool bUseInputStr = true );
+    void    UseInputStringForFormatting();
     bool    IsUsingInputStringForFormatting() const { return m_bUseInputStringForFormatting;}
 
 protected:
@@ -285,7 +285,7 @@ class DoubleCurrencyField : public FormattedField
 public:
     DoubleCurrencyField(vcl::Window* pParent, WinBits nStyle = 0);
 
-    OUString    getCurrencySymbol() const { return m_sCurrencySymbol; }
+    const OUString& getCurrencySymbol() const { return m_sCurrencySymbol; }
     void        setCurrencySymbol(const OUString& rSymbol);
 
     bool        getPrependCurrSym() const { return m_bPrependCurrSym; }

@@ -39,10 +39,9 @@ public:
     ~SwSaveFootnoteHeight();
 };
 
-#define NA_ONLY_ADJUST 0
-#define NA_GROW_SHRINK 1
-#define NA_GROW_ADJUST 2
-#define NA_ADJUST_GROW 3
+enum class SwNeighbourAdjust {
+    OnlyAdjust, GrowShrink, GrowAdjust, AdjustGrow
+};
 
 typedef std::vector<SwFootnoteFrame*> SwFootnoteFrames;
 
@@ -58,7 +57,7 @@ class SwFootnoteBossFrame: public SwLayoutFrame
 
     SwFootnoteContFrame *MakeFootnoteCont();
     SwFootnoteFrame     *FindFirstFootnote();
-    sal_uInt8 _NeighbourhoodAdjustment( const SwFrame* pFrame ) const;
+    SwNeighbourAdjust NeighbourhoodAdjustment_( const SwFrame* pFrame ) const;
 
 protected:
     void          InsertFootnote( SwFootnoteFrame * );
@@ -102,7 +101,7 @@ public:
     // footnote boss-frame have to be collected.
     // Note: if parameter <_bCollectOnlyPreviousFootnotes> is true, then parameter
     // <_pRefFootnoteBossFrame> has to be referenced by an object.
-    static void _CollectFootnotes( const SwContentFrame*   _pRef,
+    static void CollectFootnotes_( const SwContentFrame*   _pRef,
                               SwFootnoteFrame*           _pFootnote,
                               SwFootnoteFrames&          _rFootnoteArr,
                               const bool      _bCollectOnlyPreviousFootnotes = false,
@@ -114,13 +113,13 @@ public:
                          SwFootnoteBossFrame*     _pOld,
                          SwFootnoteFrames&        _rFootnoteArr,
                          const bool    _bCollectOnlyPreviousFootnotes = false );
-    void    _MoveFootnotes( SwFootnoteFrames &rFootnoteArr, bool bCalc = false );
+    void    MoveFootnotes_( SwFootnoteFrames &rFootnoteArr, bool bCalc = false );
     void    MoveFootnotes( const SwContentFrame *pSrc, SwContentFrame *pDest,
                       SwTextFootnote *pAttr );
 
     // should AdjustNeighbourhood be called (or Grow/Shrink)?
-    sal_uInt8 NeighbourhoodAdjustment( const SwFrame* pFrame ) const
-        { return IsPageFrame() ? NA_ONLY_ADJUST : _NeighbourhoodAdjustment( pFrame ); }
+    SwNeighbourAdjust NeighbourhoodAdjustment( const SwFrame* pFrame ) const
+        { return IsPageFrame() ? SwNeighbourAdjust::OnlyAdjust : NeighbourhoodAdjustment_( pFrame ); }
 };
 
 inline const SwLayoutFrame *SwFootnoteBossFrame::FindBodyCont() const

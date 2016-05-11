@@ -17,6 +17,10 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
+#include <sal/config.h>
+
+#include <map>
+
 #include "ObjectIdentifier.hxx"
 #include "macros.hxx"
 #include "TitleHelper.hxx"
@@ -33,8 +37,6 @@
 #include <com/sun/star/chart2/XDataSeriesContainer.hpp>
 #include <com/sun/star/chart2/XAxis.hpp>
 #include <com/sun/star/chart2/XRegressionCurveContainer.hpp>
-
-#include <comphelper/InlineContainer.hxx>
 
 #include <rtl/ustrbuf.hxx>
 
@@ -71,8 +73,9 @@ OUString lcl_createClassificationStringForType( ObjectType eObjectType
         case OBJECTTYPE_DATA_ERRORS_Y: //parent is intended to be OBJECTTYPE_DATA_ERRORS
         case OBJECTTYPE_DATA_ERRORS_Z: //parent is intended to be OBJECTTYPE_DATA_ERRORS
             aRet=m_aMultiClick;
+            break;
         default:
-            ;//empty string
+            break;//empty string
     }
     if( !rDragMethodServiceName.isEmpty() )
     {
@@ -92,20 +95,19 @@ OUString lcl_createClassificationStringForType( ObjectType eObjectType
     return aRet.makeStringAndClear();
 }
 
-typedef ::comphelper::MakeMap< TitleHelper::eTitleType, OUString > tTitleMap;
+typedef std::map< TitleHelper::eTitleType, OUString > tTitleMap;
 const tTitleMap& lcl_getTitleMap()
 {
     //maps the title type to the ParentParticle for that title
-    static tTitleMap m_aTitleMap = tTitleMap
-        ( TitleHelper::MAIN_TITLE, "" )
-        ( TitleHelper::SUB_TITLE, "D=0" )
-        ( TitleHelper::X_AXIS_TITLE, "D=0:CS=0:Axis=0,0" )
-        ( TitleHelper::Y_AXIS_TITLE, "D=0:CS=0:Axis=1,0" )
-        ( TitleHelper::Z_AXIS_TITLE, "D=0:CS=0:Axis=2,0" )
-        ( TitleHelper::SECONDARY_X_AXIS_TITLE, "D=0:CS=0:Axis=0,1" )
-        ( TitleHelper::SECONDARY_Y_AXIS_TITLE, "D=0:CS=0:Axis=1,1" )
-        ;
-    return m_aTitleMap;
+    static tTitleMap s_aTitleMap{
+        {TitleHelper::MAIN_TITLE, ""},
+        {TitleHelper::SUB_TITLE, "D=0"},
+        {TitleHelper::X_AXIS_TITLE, "D=0:CS=0:Axis=0,0"},
+        {TitleHelper::Y_AXIS_TITLE, "D=0:CS=0:Axis=1,0"},
+        {TitleHelper::Z_AXIS_TITLE, "D=0:CS=0:Axis=2,0"},
+        {TitleHelper::SECONDARY_X_AXIS_TITLE, "D=0:CS=0:Axis=0,1"},
+        {TitleHelper::SECONDARY_Y_AXIS_TITLE, "D=0:CS=0:Axis=1,1"}};
+    return s_aTitleMap;
 }
 
 OUString lcl_getTitleParentParticle( TitleHelper::eTitleType aTitleType )

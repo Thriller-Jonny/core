@@ -20,7 +20,6 @@
 
 #include "accessibility/extended/AccessibleGridControlTableCell.hxx"
 #include <svtools/accessibletable.hxx>
-#include "accessibility/extended/AccessibleGridControl.hxx"
 #include <tools/gen.hxx>
 #include <toolkit/helper/vclunohelper.hxx>
 #include <com/sun/star/accessibility/AccessibleEventId.hpp>
@@ -31,7 +30,7 @@ namespace accessibility
     {
         // FIXME this is a copy'n'paste from
         // source/extended/AccessibleBrowseBoxTableCell.cxx, get rid of that...
-        static void checkIndex_Impl( sal_Int32 _nIndex, const OUString& _sText ) throw (css::lang::IndexOutOfBoundsException)
+        void checkIndex_Impl( sal_Int32 _nIndex, const OUString& _sText ) throw (css::lang::IndexOutOfBoundsException)
         {
             if ( _nIndex >= _sText.getLength() )
                 throw css::lang::IndexOutOfBoundsException();
@@ -40,7 +39,6 @@ namespace accessibility
     using namespace ::com::sun::star::lang;
     using namespace utl;
     using namespace comphelper;
-    using ::accessibility::AccessibleGridControl;
     using namespace ::com::sun::star::uno;
     using ::com::sun::star::accessibility::XAccessible;
     using namespace ::com::sun::star::accessibility;
@@ -48,13 +46,12 @@ namespace accessibility
     using namespace ::svt::table;
 
 
-
     // = AccessibleGridControlCell
 
 
     AccessibleGridControlCell::AccessibleGridControlCell(
-            const Reference< XAccessible >& _rxParent, IAccessibleTable& _rTable,
-            sal_Int32 _nRowPos, sal_uInt16 _nColPos, AccessibleTableControlObjType _eType )
+            const css::uno::Reference< css::accessibility::XAccessible >& _rxParent, ::svt::table::IAccessibleTable& _rTable,
+            sal_Int32 _nRowPos, sal_uInt16 _nColPos, ::svt::table::AccessibleTableControlObjType _eType )
         :AccessibleGridControlBase( _rxParent, _rTable, _eType )
         ,m_nRowPos( _nRowPos )
         ,m_nColPos( _nColPos )
@@ -103,16 +100,16 @@ namespace accessibility
         nEndIndex = 0;
     }
 
-    AccessibleGridControlTableCell::AccessibleGridControlTableCell(const Reference<XAccessible >& _rxParent,
-                                IAccessibleTable& _rTable,
+    AccessibleGridControlTableCell::AccessibleGridControlTableCell(const css::uno::Reference<XAccessible >& _rxParent,
+                                ::svt::table::IAccessibleTable& _rTable,
                                 sal_Int32 _nRowPos,
                                 sal_uInt16 _nColPos,
-                                AccessibleTableControlObjType  eObjType)
+                                ::svt::table::AccessibleTableControlObjType  eObjType)
         :AccessibleGridControlCell( _rxParent, _rTable, _nRowPos, _nColPos, eObjType )
     {
     }
 
-    // XInterface -------------------------------------------------------------
+    // XInterface
 
     /** Queries for a new interface. */
     css::uno::Any SAL_CALL AccessibleGridControlTableCell::queryInterface(
@@ -173,10 +170,8 @@ namespace accessibility
         return 0;
     }
 
-    /** @return  The XAccessible interface of the specified child. */
-    css::uno::Reference<
-        css::accessibility::XAccessible > SAL_CALL
-        AccessibleGridControlTableCell::getAccessibleChild( sal_Int32 )
+    /** @return  The css::accessibility::XAccessible interface of the specified child. */
+    css::uno::Reference< css::accessibility::XAccessible > SAL_CALL AccessibleGridControlTableCell::getAccessibleChild( sal_Int32 )
             throw ( css::lang::IndexOutOfBoundsException,
                     css::uno::RuntimeException, std::exception )
     {
@@ -207,10 +202,10 @@ namespace accessibility
     }
 
 
-    // XAccessible ------------------------------------------------------------
+    // css::accessibility::XAccessible
 
-    /** @return  The XAccessibleContext interface of this object. */
-    Reference< XAccessibleContext > SAL_CALL AccessibleGridControlTableCell::getAccessibleContext() throw ( RuntimeException, std::exception )
+    /** @return  The css::accessibility::XAccessibleContext interface of this object. */
+    css::uno::Reference< css::accessibility::XAccessibleContext > SAL_CALL AccessibleGridControlTableCell::getAccessibleContext() throw ( RuntimeException, std::exception )
     {
         SolarMutexGuard g;
 
@@ -218,7 +213,7 @@ namespace accessibility
         return this;
     }
 
-    // XAccessibleContext -----------------------------------------------------
+    // css::accessibility::XAccessibleContext
 
     sal_Int32 SAL_CALL AccessibleGridControlTableCell::getAccessibleIndexInParent()
             throw ( css::uno::RuntimeException, std::exception )

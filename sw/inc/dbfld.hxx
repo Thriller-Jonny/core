@@ -46,7 +46,7 @@ public:
     inline void     AddRef() { nRefCnt++; }
     void            ReleaseRef();
 
-    OUString        GetColumnName() const {return sColumn;}
+    const OUString&     GetColumnName() const {return sColumn;}
     const SwDBData& GetDBData() const {return aDBData;}
 
     virtual bool        QueryValue( css::uno::Any& rVal, sal_uInt16 nWhich ) const override;
@@ -247,7 +247,7 @@ public:
 class SW_DLLPUBLIC SwDBNameField : public SwDBNameInfField
 {
 public:
-    SwDBNameField(SwDBNameFieldType*, const SwDBData& rDBData, sal_uLong nFormat = 0);
+    SwDBNameField(SwDBNameFieldType*, const SwDBData& rDBData);
 
     virtual OUString Expand() const override;
     virtual SwField* Copy() const override;

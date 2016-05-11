@@ -189,7 +189,7 @@ void ScDBFunc::RemoveAllOutlines( bool bRecord )
 
 // auto outlines
 
-void ScDBFunc::AutoOutline( bool bRecord )
+void ScDBFunc::AutoOutline( )
 {
     SCTAB nTab = GetViewData().GetTabNo();
     ScRange aRange( 0,0,nTab, MAXCOL,MAXROW,nTab );     // the complete sheet, if nothing is marked
@@ -202,18 +202,18 @@ void ScDBFunc::AutoOutline( bool bRecord )
 
     ScDocShell* pDocSh = GetViewData().GetDocShell();
     ScOutlineDocFunc aFunc(*pDocSh);
-    aFunc.AutoOutline( aRange, bRecord );
+    aFunc.AutoOutline( aRange, true );
 }
 
 // select outline level
 
-void ScDBFunc::SelectLevel( bool bColumns, sal_uInt16 nLevel, bool bRecord, bool bPaint )
+void ScDBFunc::SelectLevel( bool bColumns, sal_uInt16 nLevel, bool bRecord )
 {
     SCTAB nTab = GetViewData().GetTabNo();
     ScDocShell* pDocSh = GetViewData().GetDocShell();
     ScOutlineDocFunc aFunc(*pDocSh);
 
-    bool bOk = aFunc.SelectLevel( nTab, bColumns, nLevel, bRecord, bPaint );
+    bool bOk = aFunc.SelectLevel( nTab, bColumns, nLevel, bRecord, true/*bPaint*/ );
 
     if (bOk)
         UpdateScrollBars();
@@ -528,10 +528,10 @@ void ScDBFunc::DoSubTotals( const ScSubTotalParam& rParam, bool bRecord,
 
 // consolidate
 
-void ScDBFunc::Consolidate( const ScConsolidateParam& rParam, bool bRecord )
+void ScDBFunc::Consolidate( const ScConsolidateParam& rParam )
 {
     ScDocShell* pDocShell = GetViewData().GetDocShell();
-    pDocShell->DoConsolidate( rParam, bRecord );
+    pDocShell->DoConsolidate( rParam );
     SetTabNo( rParam.nTab, true );
 }
 
@@ -545,12 +545,12 @@ static OUString lcl_MakePivotTabName( const OUString& rPrefix, SCTAB nNumber )
 
 bool ScDBFunc::MakePivotTable(
     const ScDPSaveData& rData, const ScRange& rDest, bool bNewTable,
-    const ScDPObject& rSource, bool bApi )
+    const ScDPObject& rSource )
 {
     //  error message if no fields are set
     //  this must be removed when drag&drop of fields from a toolbox is available
 
-    if ( rData.IsEmpty() && !bApi )
+    if ( rData.IsEmpty() )
     {
         ErrorMessage(STR_PIVOT_NODATA);
         return false;
@@ -1609,12 +1609,12 @@ struct ScOUStringCollate
     }
 };
 
-bool ScDBFunc::DataPilotSort( const ScAddress& rPos, bool bAscending, sal_uInt16* pUserListId )
+void ScDBFunc::DataPilotSort( const ScAddress& rPos, bool bAscending, sal_uInt16* pUserListId )
 {
     ScDocument* pDoc = GetViewData().GetDocument();
     ScDPObject* pDPObj = pDoc->GetDPAtCursor(rPos.Col(), rPos.Row(), rPos.Tab());
     if (!pDPObj)
-        return false;
+        return;
 
     // We need to run this to get all members later.
     if ( pUserListId )
@@ -1624,18 +1624,18 @@ bool ScDBFunc::DataPilotSort( const ScAddress& rPos, bool bAscending, sal_uInt16
     long nDimIndex = pDPObj->GetHeaderDim(rPos, nOrientation);
     if (nDimIndex < 0)
         // Invalid dimension index.  Bail out.
-        return false;
+        return;
 
     ScDPSaveData* pSaveData = pDPObj->GetSaveData();
     if (!pSaveData)
-        return false;
+        return;
 
     ScDPSaveData aNewSaveData(*pSaveData);
     bool bDataLayout;
     OUString aDimName = pDPObj->GetDimName(nDimIndex, bDataLayout);
     ScDPSaveDimension* pSaveDim = aNewSaveData.GetDimensionByName(aDimName);
     if (!pSaveDim)
-        return false;
+        return;
 
     // manual evaluation of sort order is only needed if a user list id is given
     if ( pUserListId )
@@ -1667,12 +1667,12 @@ bool ScDBFunc::DataPilotSort( const ScAddress& rPos, bool bAscending, sal_uInt16
         {
             ScUserList* pUserList = ScGlobal::GetUserList();
             if (!pUserList)
-                return false;
+                return;
 
             {
                 size_t n = pUserList->size();
                 if (!n || *pUserListId >= static_cast<sal_uInt16>(n))
-                    return false;
+                    return;
             }
 
             const ScUserListData& rData = (*pUserList)[*pUserListId];
@@ -1746,7 +1746,7 @@ bool ScDBFunc::DataPilotSort( const ScAddress& rPos, bool bAscending, sal_uInt16
     pNewObj->SetSaveData(aNewSaveData);
     ScDBDocFunc aFunc(*GetViewData().GetDocShell());
 
-    return aFunc.DataPilotUpdate(pDPObj, pNewObj.get(), true, false);
+    aFunc.DataPilotUpdate(pDPObj, pNewObj.get(), true, false);
 }
 
 bool ScDBFunc::DataPilotMove( const ScRange& rSource, const ScAddress& rDest )
@@ -1761,7 +1761,7 @@ bool ScDBFunc::DataPilotMove( const ScRange& rSource, const ScAddress& rDest )
         bool bValid = ( aDestData.Dimension >= 0 );        // dropping onto a field
 
         // look through the source range
-        std::unordered_set< OUString, OUStringHash, std::equal_to<OUString> > aMembersSet;   // for lookup
+        std::unordered_set< OUString, OUStringHash > aMembersSet;   // for lookup
         std::vector< OUString > aMembersVector;  // members in original order, for inserting
         aMembersVector.reserve( std::max( static_cast<SCSIZE>( rSource.aEnd.Col() - rSource.aStart.Col() + 1 ),
                                           static_cast<SCSIZE>( rSource.aEnd.Row() - rSource.aStart.Row() + 1 ) ) );

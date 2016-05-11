@@ -236,7 +236,7 @@ void SdXMLDrawingPageStyleContext::FillPropertySet(
     const Reference< beans::XPropertySet > & rPropSet )
 {
     static const sal_uInt16 MAX_SPECIAL_DRAW_STYLES = 7;
-    struct _ContextID_Index_Pair aContextIDs[MAX_SPECIAL_DRAW_STYLES+1] =
+    struct ContextID_Index_Pair aContextIDs[MAX_SPECIAL_DRAW_STYLES+1] =
     {
         { CTF_DASHNAME , -1 },
         { CTF_LINESTARTNAME , -1 },
@@ -448,7 +448,7 @@ SdXMLPresentationPageLayoutContext::SdXMLPresentationPageLayoutContext(
 :   SvXMLStyleContext(rImport, nPrfx, rLName, xAttrList, XML_STYLE_FAMILY_SD_PRESENTATIONPAGELAYOUT_ID),
     mnTypeId( 20 ) // AUTOLAYOUT_NONE
 {
-    // set family to somethiong special at SvXMLStyleContext
+    // set family to something special at SvXMLStyleContext
     // for differences in search-methods
 
     sal_Int16 nAttrCount = xAttrList.is() ? xAttrList->getLength() : 0;
@@ -936,11 +936,10 @@ SvXMLImportContext* SdXMLMasterPageContext::CreateChildContext(
 
 SdXMLStylesContext::SdXMLStylesContext(
     SdXMLImport& rImport,
-    sal_uInt16 nPrfx,
     const OUString& rLName,
     const uno::Reference< xml::sax::XAttributeList >& xAttrList,
     bool bIsAutoStyle)
-:   SvXMLStylesContext(rImport, nPrfx, rLName, xAttrList),
+:   SvXMLStylesContext(rImport, XML_NAMESPACE_OFFICE, rLName, xAttrList),
     mbIsAutoStyle(bIsAutoStyle)
 {
     Reference< uno::XComponentContext > xContext = rImport.GetComponentContext();
@@ -1269,7 +1268,7 @@ static bool canSkipReset(const OUString &rName, const XMLPropStyleContext* pProp
                     bool bNewStyleTextAutoGrowHeight(false);
                     property->maValue >>= bNewStyleTextAutoGrowHeight;
                     if (bNewStyleTextAutoGrowHeight == bOldStyleTextAutoGrowHeight)
-                        bCanSkipReset = true;;
+                        bCanSkipReset = true;
                     break;
                 }
             }
@@ -1457,12 +1456,10 @@ uno::Reference< container::XNameAccess > SdXMLStylesContext::getPageLayouts() co
 }
 
 
-
 SdXMLMasterStylesContext::SdXMLMasterStylesContext(
     SdXMLImport& rImport,
-    sal_uInt16 nPrfx,
     const OUString& rLName)
-:   SvXMLImportContext( rImport, nPrfx, rLName)
+:   SvXMLImportContext( rImport, XML_NAMESPACE_OFFICE, rLName)
 {
 }
 

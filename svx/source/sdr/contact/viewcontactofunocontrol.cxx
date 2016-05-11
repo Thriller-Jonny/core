@@ -19,7 +19,6 @@
 
 #include <sal/config.h>
 
-#include <boost/noncopyable.hpp>
 #include <sdr/contact/viewcontactofunocontrol.hxx>
 #include <sdr/contact/viewobjectcontactofunocontrol.hxx>
 #include <sdr/contact/objectcontactofpageview.hxx>
@@ -28,8 +27,6 @@
 #include <svx/svdpagv.hxx>
 #include <svx/svdview.hxx>
 #include <svx/sdrpagewindow.hxx>
-
-#include <com/sun/star/awt/XWindow2.hpp>
 
 #include "svx/sdrpaintwindow.hxx"
 #include <tools/diagnose_ex.h>
@@ -46,33 +43,12 @@ namespace sdr { namespace contact {
     using ::com::sun::star::uno::Reference;
     using ::com::sun::star::awt::XControlContainer;
     using ::com::sun::star::awt::XControlModel;
-    using ::com::sun::star::awt::XWindow2;
-    using ::com::sun::star::uno::UNO_QUERY;
-    using ::com::sun::star::uno::Exception;
 
 
     //= ViewContactOfUnoControl
 
-    class ViewContactOfUnoControl_Impl: private boost::noncopyable
-    {
-    public:
-        ViewContactOfUnoControl_Impl();
-        ~ViewContactOfUnoControl_Impl();
-    };
-
-
-    ViewContactOfUnoControl_Impl::ViewContactOfUnoControl_Impl()
-    {
-    }
-
-
-    ViewContactOfUnoControl_Impl::~ViewContactOfUnoControl_Impl()
-    {
-    }
-
     ViewContactOfUnoControl::ViewContactOfUnoControl( SdrUnoObj& _rUnoObject )
         :ViewContactOfSdrObj( _rUnoObject )
-        ,m_pImpl( new ViewContactOfUnoControl_Impl )
     {
     }
 
@@ -154,7 +130,7 @@ namespace sdr { namespace contact {
             // always append an invisible outline for the cases where no visible content exists
             const drawinglayer::primitive2d::Primitive2DReference xRetval(
                 drawinglayer::primitive2d::createHiddenGeometryPrimitives2D(
-                    false, aTransform));
+                    aTransform));
 
             return drawinglayer::primitive2d::Primitive2DContainer { xRetval };
         }

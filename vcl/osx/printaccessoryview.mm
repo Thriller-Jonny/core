@@ -21,11 +21,11 @@
 
 #include "tools/resary.hxx"
 
-#include "vcl/print.hxx"
-#include "vcl/image.hxx"
-#include "vcl/virdev.hxx"
-#include "vcl/svapp.hxx"
-#include "vcl/unohelp.hxx"
+#include <vcl/print.hxx>
+#include <vcl/image.hxx>
+#include <vcl/virdev.hxx>
+#include <vcl/svapp.hxx>
+#include <vcl/unohelp.hxx>
 #include <vcl/settings.hxx>
 
 #include "osx/printview.h"
@@ -1083,7 +1083,7 @@ static void addEdit( NSView* pCurParent, long& rCurX, long& rCurY, long nAttachO
             }
             else if( rEntry.Name.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("Enabled")) )
             {
-                sal_Bool bValue = sal_True;
+                sal_Bool bValue = true;
                 rEntry.Value >>= bValue;
                 bEnabled = bValue;
             }
@@ -1101,7 +1101,7 @@ static void addEdit( NSView* pCurParent, long& rCurX, long& rCurY, long nAttachO
             }
             else if( rEntry.Name.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("InternalUIOnly")) )
             {
-                sal_Bool bValue = sal_False;
+                sal_Bool bValue = false;
                 rEntry.Value >>= bValue;
                 bIgnore = bValue;
             }
@@ -1177,7 +1177,7 @@ static void addEdit( NSView* pCurParent, long& rCurX, long& rCurY, long nAttachO
             }
             else if( aCtrlType.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("Bool")) && pCurParent )
             {
-                sal_Bool bVal = sal_False;
+                sal_Bool bVal = false;
                 PropertyValue* pVal = pController->getValue( aPropertyName );
                 if( pVal )
                     pVal->Value >>= bVal;
@@ -1250,7 +1250,7 @@ static void addEdit( NSView* pCurParent, long& rCurX, long& rCurY, long nAttachO
     // add the accessory controller to the panel
     [pPrintPanel addAccessoryController: [pAccessoryController autorelease]];
 
-    // set the current selecte tab item
+    // set the current selected tab item
     if( pState->nLastPage >= 0 && pState->nLastPage < [pTabView numberOfTabViewItems] )
         [pTabView selectTabViewItemAtIndex: pState->nLastPage];
 

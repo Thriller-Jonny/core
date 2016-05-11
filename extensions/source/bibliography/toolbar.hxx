@@ -51,7 +51,7 @@ public:
     BibToolBarListener(BibToolBar *pTB, const OUString& aStr, sal_uInt16 nId);
     virtual ~BibToolBarListener();
 
-    OUString           GetCommand() const { return aCommand;}
+    const OUString&          GetCommand() const { return aCommand;}
 
     // css::lang::XEventListener
     // we do not hold References to dispatches, so there is nothing to do on disposal
@@ -111,9 +111,7 @@ class BibToolBar:   public ToolBox
         css::uno::Reference< css::frame::XController >  xController;
         Idle                    aIdle;
         ImageList               aImgLst;
-        ImageList               aImgLstHC;
         ImageList               aBigImgLst;
-        ImageList               aBigImgLstHC;
         VclPtr<FixedText>       aFtSource;
         VclPtr<ListBox>         aLBSource;
         VclPtr<FixedText>       aFtQuery;
@@ -125,6 +123,16 @@ class BibToolBar:   public ToolBox
         Link<void*,void>        aLayoutManager;
         sal_Int16               nSymbolsSize;
         sal_Int16               nOutStyle;
+
+        sal_uInt16              nTBC_FT_SOURCE;
+        sal_uInt16              nTBC_LB_SOURCE;
+        sal_uInt16              nTBC_FT_QUERY;
+        sal_uInt16              nTBC_ED_QUERY;
+        sal_uInt16              nTBC_BT_AUTOFILTER;
+        sal_uInt16              nTBC_BT_COL_ASSIGN;
+        sal_uInt16              nTBC_BT_CHANGESOURCE;
+        sal_uInt16              nTBC_BT_FILTERCRIT;
+        sal_uInt16              nTBC_BT_REMOVEFILTER;
 
         BibDataManager*         pDatMan;
         DECL_LINK_TYPED( SelHdl, ListBox&, void );
@@ -147,16 +155,18 @@ class BibToolBar:   public ToolBox
 
     public:
 
-        BibToolBar(vcl::Window* pParent, Link<void*,void> aLink, WinBits nStyle = WB_3DLOOK );
+        BibToolBar(vcl::Window* pParent, Link<void*,void> aLink);
         virtual ~BibToolBar();
         virtual void dispose() override;
+
+        sal_uInt16  GetChangeSourceId() const { return nTBC_BT_CHANGESOURCE; }
 
         void    SetXController(const css::uno::Reference< css::frame::XController > &);
 
         void    ClearSourceList();
         void    UpdateSourceList(bool bFlag=true);
         void    EnableSourceList(bool bFlag=true);
-        void    InsertSourceEntry(const OUString&,sal_Int32  nPos=LISTBOX_APPEND );
+        void    InsertSourceEntry(const OUString& );
         void    SelectSourceEntry(const OUString& );
 
         void    EnableQuery(bool bFlag=true);
@@ -173,8 +183,6 @@ class BibToolBar:   public ToolBox
         void    SetDatMan(BibDataManager& rDatMan) {pDatMan = &rDatMan;}
         void    SendDispatch(sal_uInt16 nId, const css::uno::Sequence< css::beans::PropertyValue >& rArgs);
 };
-
-
 
 
 #endif

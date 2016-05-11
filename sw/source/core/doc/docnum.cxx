@@ -61,7 +61,7 @@
 #include <map>
 
 namespace {
-    static void lcl_ResetIndentAttrs(SwDoc *pDoc, const SwPaM &rPam, sal_uInt16 marker )
+    void lcl_ResetIndentAttrs(SwDoc *pDoc, const SwPaM &rPam, sal_uInt16 marker )
     {
         std::set<sal_uInt16> aResetAttrsArray;
         aResetAttrsArray.insert( marker );
@@ -430,7 +430,7 @@ bool SwDoc::MoveOutlinePara( const SwPaM& rPam, short nOffset )
     int nOutLineLevel = MAXLEVEL;
     SwNode* pSrch = &aSttRg.GetNode();
 
-   if( pSrch->IsTextNode())
+    if( pSrch->IsTextNode())
         nOutLineLevel = static_cast<sal_uInt8>(pSrch->GetTextNode()->GetAttrOutlineLevel()-1);
     SwNode* pEndSrch = &aEndRg.GetNode();
     if( !GetNodes().GetOutLineNds().Seek_Entry( pSrch, &nAktPos ) )
@@ -1023,7 +1023,7 @@ bool SwDoc::DelNumRule( const OUString& rName, bool bBroadcast )
         }
 
         if (bBroadcast)
-            BroadcastStyleOperation(rName, SFX_STYLE_FAMILY_PSEUDO,
+            BroadcastStyleOperation(rName, SfxStyleFamily::Pseudo,
                                     SfxStyleSheetHintId::ERASED);
 
         getIDocumentListsAccess().deleteListForListStyle( rName );
@@ -1066,6 +1066,8 @@ void SwDoc::ChgNumRuleFormats( const SwNumRule& rRule )
 bool SwDoc::RenameNumRule(const OUString & rOldName, const OUString & rNewName,
                               bool bBroadcast)
 {
+    assert(!FindNumRulePtr(rNewName));
+
     bool bResult = false;
     SwNumRule * pNumRule = FindNumRulePtr(rOldName);
 
@@ -1094,7 +1096,7 @@ bool SwDoc::RenameNumRule(const OUString & rOldName, const OUString & rNewName,
         bResult = true;
 
         if (bBroadcast)
-            BroadcastStyleOperation(rOldName, SFX_STYLE_FAMILY_PSEUDO,
+            BroadcastStyleOperation(rOldName, SfxStyleFamily::Pseudo,
                                     SfxStyleSheetHintId::MODIFIED);
     }
 
@@ -1312,7 +1314,7 @@ void SwDoc::DelNumRules( const SwPaM& rPam )
             aRegH.RegisterInModify( pTNd, *pTNd );
 
             if( pUndo )
-                pUndo->AddNode( *pTNd, false );
+                pUndo->AddNode( *pTNd );
 
             // directly set list style attribute is reset, otherwise empty
             // list style is applied
@@ -1441,9 +1443,15 @@ static bool lcl_GotoNextPrevNum( SwPosition& rPos, bool bNext,
 
     const SwTextNode* pLast;
     if( bNext )
-        ++aIdx, pLast = pNd;
+    {
+        ++aIdx;
+        pLast = pNd;
+    }
     else
-        --aIdx, pLast = nullptr;
+    {
+        --aIdx;
+        pLast = nullptr;
+    }
 
     while( bNext ? ( aIdx.GetIndex() < aIdx.GetNodes().Count() - 1 )
                  : aIdx.GetIndex() != 0 )
@@ -2174,7 +2182,7 @@ sal_uInt16 SwDoc::MakeNumRule( const OUString &rName,
     }
 
     if (bBroadcast)
-        BroadcastStyleOperation(pNew->GetName(), SFX_STYLE_FAMILY_PSEUDO,
+        BroadcastStyleOperation(pNew->GetName(), SfxStyleFamily::Pseudo,
                                 SfxStyleSheetHintId::CREATED);
 
     return nRet;
@@ -2265,7 +2273,10 @@ OUString SwDoc::GetUniqueNumRuleName( const OUString* pChkStr, bool bAutoNum ) c
                 // identify the Number
                 nNum = n * 8;
                 while( nTmp & 1 )
-                    ++nNum, nTmp >>= 1;
+                {
+                    ++nNum;
+                    nTmp >>= 1;
+                }
                 break;
             }
     }

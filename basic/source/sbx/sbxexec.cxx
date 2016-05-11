@@ -23,7 +23,7 @@
 #include <rtl/character.hxx>
 
 
-static SbxVariable* Element
+static SbxVariableRef Element
     ( SbxObject* pObj, SbxObject* pGbl, const sal_Unicode** ppBuf,
       SbxClassType );
 
@@ -46,7 +46,8 @@ static const sal_Unicode* Symbol( const sal_Unicode* p, OUString& rSym )
         rSym = ++p;
         while( *p && *p != ']' )
         {
-            p++, nLen++;
+            p++;
+            nLen++;
         }
         p++;
     }
@@ -63,9 +64,10 @@ static const sal_Unicode* Symbol( const sal_Unicode* p, OUString& rSym )
             // The it can contain alphabetic characters, numbers or underlines
             while( *p && (rtl::isAsciiAlphanumeric( *p ) || *p == '_') )
             {
-                p++, nLen++;
+                p++;
+                nLen++;
             }
-            // BASIC-Standard-Suffixes were ignored
+            // Ignore standard BASIC suffixes
             if( *p && (*p == '%' || *p == '&' || *p == '!' || *p == '#' || *p == '$' ) )
             {
                 p++;
@@ -78,7 +80,7 @@ static const sal_Unicode* Symbol( const sal_Unicode* p, OUString& rSym )
 
 // Qualified name. Element.Element....
 
-static SbxVariable* QualifiedName
+static SbxVariableRef QualifiedName
     ( SbxObject* pObj, SbxObject* pGbl, const sal_Unicode** ppBuf, SbxClassType t )
 {
 
@@ -107,15 +109,13 @@ static SbxVariable* QualifiedName
     else
         SbxBase::SetError( ERRCODE_SBX_SYNTAX );
     *ppBuf = p;
-    if( refVar.Is() )
-        refVar->AddFirstRef();
     return refVar;
 }
 
 // Read in of an operand. This could be a number, a string or
 // a function (with optional parameters).
 
-static SbxVariable* Operand
+static SbxVariableRef Operand
     ( SbxObject* pObj, SbxObject* pGbl, const sal_Unicode** ppBuf, bool bVar )
 {
     SbxVariableRef refVar( new SbxVariable );
@@ -165,15 +165,13 @@ static SbxVariable* Operand
         refVar = QualifiedName( pObj, pGbl, &p, SbxCLASS_DONTCARE );
     }
     *ppBuf = p;
-    if( refVar.Is() )
-        refVar->AddFirstRef();
     return refVar;
 }
 
 // Read in of a simple term. The operands +, -, * and /
 // are supported.
 
-static SbxVariable* MulDiv( SbxObject* pObj, SbxObject* pGbl, const sal_Unicode** ppBuf )
+static SbxVariableRef MulDiv( SbxObject* pObj, SbxObject* pGbl, const sal_Unicode** ppBuf )
 {
     const sal_Unicode* p = *ppBuf;
     SbxVariableRef refVar( Operand( pObj, pGbl, &p, false ) );
@@ -200,12 +198,10 @@ static SbxVariable* MulDiv( SbxObject* pObj, SbxObject* pGbl, const sal_Unicode*
         }
     }
     *ppBuf = p;
-    if( refVar.Is() )
-        refVar->AddFirstRef();
     return refVar;
 }
 
-static SbxVariable* PlusMinus( SbxObject* pObj, SbxObject* pGbl, const sal_Unicode** ppBuf )
+static SbxVariableRef PlusMinus( SbxObject* pObj, SbxObject* pGbl, const sal_Unicode** ppBuf )
 {
     const sal_Unicode* p = *ppBuf;
     SbxVariableRef refVar( MulDiv( pObj, pGbl, &p ) );
@@ -232,12 +228,10 @@ static SbxVariable* PlusMinus( SbxObject* pObj, SbxObject* pGbl, const sal_Unico
         }
     }
     *ppBuf = p;
-    if( refVar.Is() )
-        refVar->AddFirstRef();
     return refVar;
 }
 
-static SbxVariable* Assign( SbxObject* pObj, SbxObject* pGbl, const sal_Unicode** ppBuf )
+static SbxVariableRef Assign( SbxObject* pObj, SbxObject* pGbl, const sal_Unicode** ppBuf )
 {
     const sal_Unicode* p = *ppBuf;
     SbxVariableRef refVar( Operand( pObj, pGbl, &p, true ) );
@@ -270,8 +264,6 @@ static SbxVariable* Assign( SbxObject* pObj, SbxObject* pGbl, const sal_Unicode*
             refVar->Broadcast( SBX_HINT_DATAWANTED );
     }
     *ppBuf = p;
-    if( refVar.Is() )
-        refVar->AddFirstRef();
     return refVar;
 }
 
@@ -279,7 +271,7 @@ static SbxVariable* Assign( SbxObject* pObj, SbxObject* pGbl, const sal_Unicode*
 // by a parameter list. The symbol will be searched in the
 // specified object and the parameter list will be attached if necessary.
 
-static SbxVariable* Element
+static SbxVariableRef Element
     ( SbxObject* pObj, SbxObject* pGbl, const sal_Unicode** ppBuf,
       SbxClassType t )
 {
@@ -303,7 +295,7 @@ static SbxVariable* Element
             if( *p == '(' )
             {
                 p++;
-                SbxArrayRef refPar = new SbxArray;
+                auto refPar = tools::make_ref<SbxArray>();
                 sal_uInt16 nArg = 0;
                 // We are once relaxed and accept as well
                 // the line- or commandend as delimiter
@@ -321,8 +313,7 @@ static SbxVariable* Element
                         // One copies the parameter, so that
                         // one have the current status (triggers also
                         // the call per access)
-                        SbxVariable* pArg = refArg;
-                        refPar->Put( new SbxVariable( *pArg ), ++nArg );
+                        refPar->Put( new SbxVariable( *(refArg.get()) ), ++nArg );
                     }
                     p = SkipWhitespace( p );
                     if( *p == ',' )
@@ -338,8 +329,6 @@ static SbxVariable* Element
             SbxBase::SetError( ERRCODE_SBX_NO_METHOD );
     }
     *ppBuf = p;
-    if( refVar.Is() )
-        refVar->AddFirstRef();
     return refVar;
 }
 
@@ -381,7 +370,7 @@ SbxVariable* SbxObject::FindQualified( const OUString& rName, SbxClassType t )
     p = SkipWhitespace( p );
     if( !*p )
     {
-        return nullptr;;
+        return nullptr;
     }
     pVar = QualifiedName( this, this, &p, t );
     p = SkipWhitespace( p );

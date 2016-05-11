@@ -80,6 +80,7 @@ SvxLineTabDialog::SvxLineTabDialog
         case OBJ_MEASURE:
         case OBJ_EDGE:
             bLineOnly = true;
+            break;
 
         default:
             break;
@@ -101,7 +102,6 @@ SvxLineTabDialog::SvxLineTabDialog
     CancelButton& rBtnCancel = GetCancelButton();
     rBtnCancel.SetClickHdl( LINK( this, SvxLineTabDialog, CancelHdlImpl ) );
 }
-
 
 
 void SvxLineTabDialog::SavePalettes()
@@ -171,7 +171,6 @@ void SvxLineTabDialog::SavePalettes()
 }
 
 
-
 short SvxLineTabDialog::Ok()
 {
     SavePalettes();
@@ -180,7 +179,6 @@ short SvxLineTabDialog::Ok()
     // We do this by default at the moment.
     return( SfxTabDialog::Ok() );
 }
-
 
 
 IMPL_LINK_NOARG_TYPED(SvxLineTabDialog, CancelHdlImpl, Button*, void)

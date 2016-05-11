@@ -17,15 +17,12 @@
  */
 
 interface TextGraphic : BaseTextGraphic
-[
-    uuid = "1885FE00-111C-101D-9757-6E74207A7520"
-]
 {
 }
 
 shell SwGrfShell : SwBaseShell
 
 {
-    import TextGraphic[Automation];
+    import TextGraphic;
 }
 

@@ -8,12 +8,9 @@
  */
 
 #include <rtfsprm.hxx>
-
-#include <rtl/strbuf.hxx>
-
 #include <ooxml/resourceids.hxx>
 #include <ooxml/QNameToString.hxx>
-
+#include <rtl/strbuf.hxx>
 
 namespace writerfilter
 {
@@ -125,6 +122,19 @@ bool RTFSprms::erase(Id nKeyword)
         }
     }
     return false;
+}
+
+void RTFSprms::eraseLast(Id nKeyword)
+{
+    ensureCopyBeforeWrite();
+    for (RTFSprms::ReverseIterator_t i = m_pSprms->rbegin(); i != m_pSprms->rend(); ++i)
+    {
+        if (i->first == nKeyword)
+        {
+            m_pSprms->erase(std::next(i).base());
+            return;
+        }
+    }
 }
 
 static RTFValue::Pointer_t getDefaultSPRM(Id const id)

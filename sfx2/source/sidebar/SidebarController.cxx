@@ -160,7 +160,7 @@ SidebarController* SidebarController::GetSidebarControllerForFrame (
     return dynamic_cast<SidebarController*>(xListener.get());
 }
 
-void SidebarController::registerSidebarForFrame(SidebarController* pController, css::uno::Reference<css::frame::XController> xController)
+void SidebarController::registerSidebarForFrame(SidebarController* pController, const css::uno::Reference<css::frame::XController>& xController)
 {
     // Listen for context change events.
     css::uno::Reference<css::ui::XContextChangeEventMultiplexer> xMultiplexer (
@@ -172,7 +172,7 @@ void SidebarController::registerSidebarForFrame(SidebarController* pController, 
             xController);
 }
 
-void SidebarController::unregisterSidebarForFrame(SidebarController* pController, css::uno::Reference<css::frame::XController> xController)
+void SidebarController::unregisterSidebarForFrame(SidebarController* pController, const css::uno::Reference<css::frame::XController>& xController)
 {
     pController->disposeDecks();
     css::uno::Reference<css::ui::XContextChangeEventMultiplexer> xMultiplexer (
@@ -544,8 +544,11 @@ void SidebarController::SwitchToDeck (
     }
 }
 
+void SidebarController::CreateDeck(const ::rtl::OUString& rDeckId) {
+    CreateDeck(rDeckId, maCurrentContext);
+}
 
-void SidebarController::CreateDeck(const ::rtl::OUString& rDeckId, bool bForceCreate)
+void SidebarController::CreateDeck(const ::rtl::OUString& rDeckId, const Context& rContext, bool bForceCreate)
 {
     DeckDescriptor* pDeckDescriptor = mpResourceManager->GetDeckDescriptor(rDeckId);
 
@@ -563,12 +566,13 @@ void SidebarController::CreateDeck(const ::rtl::OUString& rDeckId, bool bForceCr
                             [this]() { return this->RequestCloseDeck(); });
         }
         pDeckDescriptor->mpDeck = aDeck;
-        CreatePanels(rDeckId);
+        CreatePanels(rDeckId, rContext);
     }
 }
 
-void SidebarController::CreatePanels(const ::rtl::OUString& rDeckId)
+void SidebarController::CreatePanels(const ::rtl::OUString& rDeckId, const Context& rContext)
 {
+
      DeckDescriptor* pDeckDescriptor = mpResourceManager->GetDeckDescriptor(rDeckId);
 
     // init panels bounded to that deck, do not wait them being displayed as may be accessed through API
@@ -581,16 +585,16 @@ void SidebarController::CreatePanels(const ::rtl::OUString& rDeckId)
 
     mpResourceManager->GetMatchingPanels(
                                         aPanelContextDescriptors,
-                                        maCurrentContext,
+                                        rContext,
                                         rDeckId,
                                         xController);
 
     // Update the panel list.
     const sal_Int32 nNewPanelCount (aPanelContextDescriptors.size());
     SharedPanelContainer aNewPanels;
+    sal_Int32 nWriteIndex (0);
 
     aNewPanels.resize(nNewPanelCount);
-    sal_Int32 nWriteIndex (0);
 
     for (sal_Int32 nReadIndex=0; nReadIndex<nNewPanelCount; ++nReadIndex)
     {
@@ -614,7 +618,7 @@ void SidebarController::CreatePanels(const ::rtl::OUString& rDeckId)
                                             rPanelContexDescriptor.msId,
                                             pDeck->GetPanelParentWindow(),
                                             rPanelContexDescriptor.mbIsInitiallyVisible,
-                                            maCurrentContext,
+                                            rContext,
                                             pDeck);
                 if (aPanel.get()!=nullptr )
                 {
@@ -630,10 +634,9 @@ void SidebarController::CreatePanels(const ::rtl::OUString& rDeckId)
                             mxFrame, xController);
                     }
                     ++nWriteIndex;
-                 }
-
-            }
+                }
         }
+    }
 
     // mpCurrentPanels - may miss stuff (?)
     aNewPanels.resize(nWriteIndex);
@@ -694,10 +697,10 @@ void SidebarController::SwitchToDeck (
 
     // Provide a configuration and Deck object.
 
-    CreateDeck(rDeckDescriptor.msId, bForceNewDeck);
+    CreateDeck(rDeckDescriptor.msId, rContext, bForceNewDeck);
 
     if (bForceNewPanels && !bForceNewDeck) // already forced if bForceNewDeck
-        CreatePanels(rDeckDescriptor.msId);
+        CreatePanels(rDeckDescriptor.msId, rContext);
 
     mpCurrentDeck.reset(rDeckDescriptor.mpDeck);
 
@@ -762,7 +765,7 @@ VclPtr<Panel> SidebarController::CreatePanel (
     vcl::Window* pParentWindow,
     const bool bIsInitiallyExpanded,
     const Context& rContext,
-    VclPtr<Deck> pDeck)
+    const VclPtr<Deck>& pDeck)
 {
     const PanelDescriptor* pPanelDescriptor = mpResourceManager->GetPanelDescriptor(rsPanelId);
 
@@ -1012,9 +1015,9 @@ IMPL_LINK_TYPED(SidebarController, OnMenuItemSelected, Menu*, pMenu, bool)
         case MID_HIDE_SIDEBAR:
         {
             const util::URL aURL (Tools::GetURL(gsHideSidebarCommandName));
-            Reference<frame::XDispatch> mxDispatch (Tools::GetDispatch(mxFrame, aURL));
-            if (mxDispatch.is())
-                    mxDispatch->dispatch(aURL, Sequence<beans::PropertyValue>());
+            Reference<frame::XDispatch> xDispatch (Tools::GetDispatch(mxFrame, aURL));
+            if (xDispatch.is())
+                    xDispatch->dispatch(aURL, Sequence<beans::PropertyValue>());
             break;
         }
         default:
@@ -1288,7 +1291,7 @@ ResourceManager::PanelContextDescriptorContainer SidebarController::GetMatchingP
     return aPanels;
 }
 
-void SidebarController::updateModel(css::uno::Reference<css::frame::XModel> xModel)
+void SidebarController::updateModel(const css::uno::Reference<css::frame::XModel>& xModel)
 {
     mpResourceManager->UpdateModel(xModel);
 }

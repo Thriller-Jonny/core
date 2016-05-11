@@ -39,7 +39,6 @@
 #include <sfx2/viewsh.hxx>
 #include "sfxtypes.hxx"
 #include <sfx2/request.hxx>
-#include <sfx2/mnumgr.hxx>
 #include "statcach.hxx"
 #include <sfx2/msgpool.hxx>
 #include <sidebar/ContextChangeBroadcaster.hxx>
@@ -49,18 +48,16 @@
 #include <vector>
 #include <map>
 
-// Maps the Which() field to a pointer to a SfxPoolItem
-typedef std::map<sal_uInt16, std::unique_ptr<SfxPoolItem>> SfxItemPtrMap;
-
-
 using namespace com::sun::star;
 
 struct SfxShell_Impl: public SfxBroadcaster
 {
     OUString                    aObjectName;   // Name of Sbx-Objects
-    SfxItemPtrMap               m_Items;       // Data exchange on Item level
+    // Maps the Which() field to a pointer to a SfxPoolItem
+    std::map<sal_uInt16, std::unique_ptr<SfxPoolItem>>
+                                m_Items;       // Data exchange on Item level
     SfxViewShell*               pViewSh;       // SfxViewShell if Shell is
-                                            // ViewFrame/ViewShell/SubShell list
+                                               // ViewFrame/ViewShell/SubShell list
     SfxViewFrame*               pFrame;        // Frame, if  <UI-active>
     SfxRepeatTarget*            pRepeatTarget; // SbxObjectRef xParent;
     bool                        bActive;
@@ -272,7 +269,7 @@ void SfxShell::Invalidate_Impl( SfxBindings& rBindings, sal_uInt16 nId )
             if ( pSlot )
             {
                 // At Enum-Slots invalidate the Master-Slot
-                if ( SFX_KIND_ENUM == pSlot->GetKind() )
+                if ( SfxSlotKind::Enum == pSlot->GetKind() )
                     pSlot = pSlot->GetLinkedSlot();
 
                 // Invalidate the Slot itself and possible also all Slave-Slots
@@ -411,17 +408,16 @@ void ShellCall_Impl( void* pObj, void* pArg )
     static_cast<SfxShell*>(pObj)->ExecuteSlot( *static_cast<SfxRequest*>(pArg) );
 }
 
-const SfxPoolItem* SfxShell::ExecuteSlot( SfxRequest& rReq, bool bAsync )
+void SfxShell::ExecuteSlot( SfxRequest& rReq, bool bAsync )
 {
     if( !bAsync )
-        return ExecuteSlot( rReq );
+        ExecuteSlot( rReq );
     else
     {
         if( !pImp->pExecuter )
             pImp->pExecuter = new svtools::AsynchronLink(
                 Link<void*,void>( this, ShellCall_Impl ) );
         pImp->pExecuter->Call( new SfxRequest( rReq ) );
-        return nullptr;
     }
 }
 

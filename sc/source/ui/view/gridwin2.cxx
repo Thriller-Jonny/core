@@ -20,6 +20,7 @@
 #include "scitems.hxx"
 #include <vcl/msgbox.hxx>
 #include <vcl/settings.hxx>
+#include <comphelper/lok.hxx>
 
 #include "gridwin.hxx"
 #include "tabvwsh.hxx"
@@ -493,10 +494,10 @@ void ScGridWindow::DPLaunchFieldPopupMenu(
         // Populate the menus.
         ScTabViewShell* pViewShell = pViewData->GetViewShell();
         mpDPFieldPopup->addMenuItem(
-            SC_STRLOAD(RID_POPUP_FILTER, STR_MENU_SORT_ASC), true,
+            SC_STRLOAD(RID_POPUP_FILTER, STR_MENU_SORT_ASC),
             new PopupSortAction(rPos, PopupSortAction::ASCENDING, 0, pViewShell));
         mpDPFieldPopup->addMenuItem(
-            SC_STRLOAD(RID_POPUP_FILTER, STR_MENU_SORT_DESC), true,
+            SC_STRLOAD(RID_POPUP_FILTER, STR_MENU_SORT_DESC),
             new PopupSortAction(rPos, PopupSortAction::DESCENDING, 0, pViewShell));
         ScMenuFloatingWindow* pSubMenu = mpDPFieldPopup->addSubMenuItem(
             SC_STRLOAD(RID_POPUP_FILTER, STR_MENU_SORT_CUSTOM), !aUserSortNames.empty());
@@ -507,7 +508,7 @@ void ScGridWindow::DPLaunchFieldPopupMenu(
             for (size_t i = 0; i < n; ++i)
             {
                 pSubMenu->addMenuItem(
-                    aUserSortNames[i], true,
+                    aUserSortNames[i],
                     new PopupSortAction(rPos, PopupSortAction::CUSTOM, static_cast<sal_uInt16>(i), pViewShell));
             }
         }
@@ -594,7 +595,7 @@ bool ScGridWindow::UpdateVisibleRange()
     SCCOL nXRight = MAXCOL;
     SCROW nYBottom = MAXROW;
 
-    if (rDoc.GetDrawLayer()->isTiledRendering())
+    if (comphelper::LibreOfficeKit::isActive())
     {
         // entire table in the tiled rendering case
         SCTAB nTab = pViewData->GetTabNo();
@@ -694,7 +695,7 @@ sal_uInt16 ScGridWindow::HitPageBreak( const Point& rMouse, ScRange* pSource,
         Point aTL = pViewData->GetScrPos( nPosX, nPosY, eWhich );
         Point aBR = pViewData->GetScrPos( nPosX+1, nPosY+1, eWhich );
 
-        //  Horizontal more  tolerances as as for vertical, because there is more space
+        //  Horizontal more tolerances as for vertical, because there is more space
         if ( nMouseX <= aTL.X() + 4 )
         {
             bHori = true;
@@ -1046,9 +1047,9 @@ void ScGridWindow::PagebreakMove( const MouseEvent& rMEvt, bool bUp )
                     {
                         OUString aTemp;
                         if ( *pOld != aPagebreakSource )
-                            aTemp = pOld->Format(SCA_VALID);
+                            aTemp = pOld->Format(ScRefFlags::VALID);
                         else if ( !bHide )
-                            aTemp = aPagebreakDrag.Format(SCA_VALID);
+                            aTemp = aPagebreakDrag.Format(ScRefFlags::VALID);
                         if (!aTemp.isEmpty())
                         {
                             if ( !aNewRanges.isEmpty() )
@@ -1059,7 +1060,7 @@ void ScGridWindow::PagebreakMove( const MouseEvent& rMEvt, bool bUp )
                 }
             }
             else if (!bHide)
-                aNewRanges = aPagebreakDrag.Format(SCA_VALID);
+                aNewRanges = aPagebreakDrag.Format(ScRefFlags::VALID);
 
             pViewFunc->SetPrintRanges( rDoc.IsPrintEntireSheet( nTab ), &aNewRanges, nullptr, nullptr, false );
         }

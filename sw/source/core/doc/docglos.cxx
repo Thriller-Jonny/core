@@ -36,7 +36,7 @@
 using namespace ::com::sun::star;
 
 void SwDoc::ReplaceUserDefinedDocumentProperties(
-        uno::Reference<document::XDocumentProperties> xSourceDocProps)
+        const uno::Reference<document::XDocumentProperties>& xSourceDocProps)
 {
     OSL_ENSURE(xSourceDocProps.is(), "null reference");
 
@@ -150,7 +150,7 @@ bool SwDoc::InsertGlossary( SwTextBlocks& rBlock, const OUString& rEntry,
             OSL_ENSURE(pGDoc->GetDocShell(), "no SwDocShell at glossary");
             if (GetDocShell() && pGDoc->GetDocShell())
                 pGDoc->ReplaceDocumentProperties( *this );
-            pGDoc->getIDocumentFieldsAccess().SetFixFields(false, nullptr);
+            pGDoc->getIDocumentFieldsAccess().SetFixFields(nullptr);
 
             // StartAllAction();
             getIDocumentFieldsAccess().LockExpFields();
@@ -168,7 +168,7 @@ bool SwDoc::InsertGlossary( SwTextBlocks& rBlock, const OUString& rEntry,
                     pContentNd, (pContentNd) ? pContentNd->Len() : 0 );
 
             GetIDocumentUndoRedo().StartUndo( UNDO_INSGLOSSARY, nullptr );
-            SwPaM *_pStartCursor = &rPaM, *__pStartCursor = _pStartCursor;
+            SwPaM *_pStartCursor = &rPaM, *_pStartCursor2 = _pStartCursor;
             do {
 
                 SwPosition& rInsPos = *_pStartCursor->GetPoint();
@@ -193,7 +193,7 @@ bool SwDoc::InsertGlossary( SwTextBlocks& rBlock, const OUString& rEntry,
                 if( pShell )
                     pShell->SaveTableBoxContent( &rInsPos );
             } while( (_pStartCursor = static_cast<SwPaM *>(_pStartCursor->GetNext())) !=
-                        __pStartCursor );
+                        _pStartCursor2 );
             GetIDocumentUndoRedo().EndUndo( UNDO_INSGLOSSARY, nullptr );
 
             getIDocumentFieldsAccess().UnlockExpFields();

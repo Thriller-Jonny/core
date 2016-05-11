@@ -414,7 +414,7 @@ class SwXMLTableCellContext_Impl : public SvXMLImportContext
     SwXMLTableContext *GetTable() { return static_cast<SwXMLTableContext *>(&xMyTable); }
 
     bool HasContent() const { return bHasTextContent || bHasTableContent; }
-    inline void _InsertContent();
+    inline void InsertContent_();
     inline void InsertContent();
     inline void InsertContentIfNotThere();
     inline void InsertContent( SwXMLTableContext *pTable );
@@ -495,7 +495,7 @@ SwXMLTableCellContext_Impl::SwXMLTableCellContext_Impl(
             {
                 OUString sTmp;
                 const sal_uInt16 nPrefix2 = GetImport().GetNamespaceMap().
-                        _GetKeyByAttrName( rValue, &sTmp, false );
+                        GetKeyByAttrName_( rValue, &sTmp );
                 sFormula = XML_NAMESPACE_OOOW == nPrefix2 ? sTmp : rValue;
             }
             break;
@@ -574,7 +574,7 @@ SwXMLTableCellContext_Impl::~SwXMLTableCellContext_Impl()
 {
 }
 
-inline void SwXMLTableCellContext_Impl::_InsertContent()
+inline void SwXMLTableCellContext_Impl::InsertContent_()
 {
     SwStartNode const*const pStartNode( GetTable()->InsertTableSection(nullptr,
             (m_bHasStringValue && m_bValueTypeIsString &&
@@ -590,7 +590,7 @@ inline void SwXMLTableCellContext_Impl::InsertContent()
 {
     OSL_ENSURE( !HasContent(), "content already there" );
     bHasTextContent = true;
-    _InsertContent();
+    InsertContent_();
 }
 
 inline void SwXMLTableCellContext_Impl::InsertContentIfNotThere()
@@ -688,7 +688,7 @@ void SwXMLTableCellContext_Impl::EndElement()
                 // paragraph
                 Reference < XTextCursor > xSrcTextCursor =
                     GetImport().GetTextImport()->GetText()->createTextCursor();
-                xSrcTextCursor->gotoEnd( sal_True );
+                xSrcTextCursor->gotoEnd( true );
 
                 // Until we have an API for copying we have to use the core.
                 Reference<XUnoTunnel> xSrcCursorTunnel( xSrcTextCursor, UNO_QUERY);
@@ -701,7 +701,7 @@ void SwXMLTableCellContext_Impl::EndElement()
 
                 while( nColRepeat > 1 && GetTable()->IsInsertCellPossible() )
                 {
-                    _InsertContent();
+                    InsertContent_();
 
                     Reference<XUnoTunnel> xDstCursorTunnel(
                         GetImport().GetTextImport()->GetCursor(), UNO_QUERY);
@@ -724,7 +724,7 @@ void SwXMLTableCellContext_Impl::EndElement()
             {
                 while( nColRepeat > 1 && GetTable()->IsInsertCellPossible() )
                 {
-                    _InsertContent();
+                    InsertContent_();
                     nColRepeat--;
                 }
             }
@@ -1343,7 +1343,7 @@ SwXMLTableContext::SwXMLTableContext( SwXMLImport& rImport,
     }
 
     Reference< XTextTable > xTable;
-    const SwXTextTable *pXTable = nullptr;
+    SwXTextTable *pXTable = nullptr;
     Reference<XMultiServiceFactory> xFactory( GetImport().GetModel(),
                                               UNO_QUERY );
     OSL_ENSURE( xFactory.is(), "factory missing" );
@@ -1396,7 +1396,7 @@ SwXMLTableContext::SwXMLTableContext( SwXMLImport& rImport,
     }
     if( pXTable )
     {
-        SwFrameFormat *pTableFrameFormat = pXTable->GetFrameFormat();
+        SwFrameFormat *const pTableFrameFormat = pXTable->GetFrameFormat();
         OSL_ENSURE( pTableFrameFormat, "table format missing" );
         SwTable *pTable = SwTable::FindTable( pTableFrameFormat );
         OSL_ENSURE( pTable, "table missing" );
@@ -1472,7 +1472,7 @@ SvXMLImportContext *SwXMLTableContext::CreateChildContext( sal_uInt16 nPrefix,
         break;
     case XML_TOK_TABLE_HEADER_ROWS:
         bHeader = true;
-        //fall-through
+        SAL_FALLTHROUGH;
     case XML_TOK_TABLE_ROWS:
         pContext = new SwXMLTableRowsContext_Impl( GetSwImport(), nPrefix,
                                                    rLocalName, xAttrList,
@@ -2259,7 +2259,7 @@ SwTableLine *SwXMLTableContext::MakeTableLine( SwTableBox *pUpper,
             }
             else
             {
-                // No subtabels: We use the new table model.
+                // No subtables: we use the new table model.
                 SwXMLTableCell_Impl *pCell = GetCell(nTopRow,nCol);
 
                 // #i95726# - some fault tolerance
@@ -2332,7 +2332,7 @@ SwTableLine *SwXMLTableContext::MakeTableLine( SwTableBox *pUpper,
                     // column, and the remaining fragment could be divided
                     // into lines. Anyway, it could be that this applies to
                     // the next column, too. That for, we check the next
-                    // column but rememeber the current one as a good place to
+                    // column but remember the current one as a good place to
                     // split.
                     nSplitCol = nCol + 1UL;
                 }
@@ -2373,7 +2373,7 @@ SwTableLine *SwXMLTableContext::MakeTableLine( SwTableBox *pUpper,
     return pLine;
 }
 
-void SwXMLTableContext::_MakeTable( SwTableBox *pBox )
+void SwXMLTableContext::MakeTable_( SwTableBox *pBox )
 {
     // fix column widths
     std::vector<ColumnWidthInfo>::iterator colIter;
@@ -2724,7 +2724,7 @@ void SwXMLTableContext::MakeTable()
             {
                 if( pSize->GetWidthPercent() )
                 {
-                    // The width will be set in _MakeTable
+                    // The width will be set in MakeTable_
                     nPrcWidth = pSize->GetWidthPercent();
                 }
                 else
@@ -2768,12 +2768,12 @@ void SwXMLTableContext::MakeTable()
     m_pLineFormat = static_cast<SwTableLineFormat*>(pLine1->GetFrameFormat());
     m_pBoxFormat = static_cast<SwTableBoxFormat*>(m_pBox1->GetFrameFormat());
 
-    _MakeTable();
+    MakeTable_();
 
     if( bSetHoriOrient )
         pFrameFormat->SetFormatAttr( SwFormatHoriOrient( 0, eHoriOrient ) );
 
-    // This must be after the call to _MakeTable, because nWidth might be
+    // This must be after the call to MakeTable_, because nWidth might be
     // changed there.
     pFrameFormat->LockModify();
     SwFormatFrameSize aSize( ATT_VAR_SIZE, m_nWidth );
@@ -2820,7 +2820,7 @@ void SwXMLTableContext::MakeTable( SwTableBox *pBox, sal_Int32 nW )
     m_nWidth = nW;
     m_bRelWidth = GetParentTable()->m_bRelWidth;
 
-    _MakeTable( pBox );
+    MakeTable_( pBox );
 
     for (size_t i = 0; i < m_pRows->size(); ++i)
     {

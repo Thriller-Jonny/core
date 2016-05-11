@@ -29,7 +29,7 @@
 #include <docsort.hxx>
 #include <redline.hxx>
 #include <node2lay.hxx>
-
+#include <o3tl/make_unique.hxx>
 // Undo for Sorting
 SwSortUndoElement::~SwSortUndoElement()
 {
@@ -45,7 +45,6 @@ SwUndoSort::SwUndoSort(const SwPaM& rRg, const SwSortOptions& rOpt)
     : SwUndo(UNDO_SORT_TXT)
     , SwUndRng(rRg)
     , pUndoTableAttr(nullptr)
-    , pRedlData(nullptr)
     , nTableNd(0)
 {
     pSortOpt = new SwSortOptions(rOpt);
@@ -53,7 +52,7 @@ SwUndoSort::SwUndoSort(const SwPaM& rRg, const SwSortOptions& rOpt)
 
 SwUndoSort::SwUndoSort( sal_uLong nStt, sal_uLong nEnd, const SwTableNode& rTableNd,
                         const SwSortOptions& rOpt, bool bSaveTable )
-    : SwUndo(UNDO_SORT_TBL), pUndoTableAttr( nullptr ), pRedlData( nullptr )
+    : SwUndo(UNDO_SORT_TBL), pUndoTableAttr( nullptr )
 {
     nSttNode = nStt;
     nEndNode = nEnd;
@@ -68,7 +67,6 @@ SwUndoSort::~SwUndoSort()
 {
     delete pSortOpt;
     delete pUndoTableAttr;
-    delete pRedlData;
 }
 
 void SwUndoSort::UndoImpl(::sw::UndoRedoContext & rContext)
@@ -249,14 +247,12 @@ void SwUndoSort::RepeatImpl(::sw::RepeatContext & rContext)
 
 void SwUndoSort::Insert( const OUString& rOrgPos, const OUString& rNewPos)
 {
-    std::unique_ptr<SwSortUndoElement> p(new SwSortUndoElement(rOrgPos, rNewPos));
-    m_SortList.push_back(std::move(p));
+    m_SortList.push_back(o3tl::make_unique< SwSortUndoElement>(rOrgPos, rNewPos));
 }
 
 void SwUndoSort::Insert( sal_uLong nOrgPos, sal_uLong nNewPos)
 {
-    std::unique_ptr<SwSortUndoElement> p(new SwSortUndoElement(nOrgPos, nNewPos));
-    m_SortList.push_back(std::move(p));
+    m_SortList.push_back(o3tl::make_unique<SwSortUndoElement>(nOrgPos, nNewPos));
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -974,7 +974,7 @@ void SwHTMLTableLayout::AutoLayoutPass1()
                     if( nRel+nColWidth > 100 )
                     {
                         nColWidth = 100 - nRel;
-                        pColumn->SetWidthOption( nColWidth, true, false );
+                        pColumn->SetWidthOption( nColWidth );
                     }
                     nRelMax += pColumn->GetMax();
                     nRel = nRel + nColWidth;
@@ -1008,7 +1008,7 @@ void SwHTMLTableLayout::AutoLayoutPass1()
                         // the next column gets the rest
                         sal_uInt16 nColWidth =
                             (sal_uInt16)((pColumn->GetMax() * nRelLeft) / nFixMax);
-                        pColumn->SetWidthOption( nColWidth, true, false );
+                        pColumn->SetWidthOption( nColWidth );
                     }
                 }
             }
@@ -1100,7 +1100,7 @@ void SwHTMLTableLayout::AutoLayoutPass2( sal_uInt16 nAbsAvail, sal_uInt16 nRelAv
 
     // Remember the available width for which the table was calculated.
     // This is a good place as we pass by here for the initial calculation
-    // of the table in the parser and for each _Resize call.
+    // of the table in the parser and for each Resize_ call.
     m_nLastResizeAbsAvail = nAbsAvail;
 
     // Step 1: The available space is readjusted for the left/right border,
@@ -1702,7 +1702,7 @@ void SwHTMLTableLayout::SetWidths( bool bCallPass2, sal_uInt16 nAbsAvail,
             const SwTableLines& rLines = m_pSwTable->GetTabLines();
             for (size_t n = 0; n < rLines.size(); ++n)
             {
-                _CheckBoxWidth( *rLines[ n ], nSize );
+                CheckBoxWidth( *rLines[ n ], nSize );
             }
         }
 #endif
@@ -1723,7 +1723,7 @@ void SwHTMLTableLayout::SetWidths( bool bCallPass2, sal_uInt16 nAbsAvail,
     }
 }
 
-void SwHTMLTableLayout::_Resize( sal_uInt16 nAbsAvail, bool bRecalc )
+void SwHTMLTableLayout::Resize_( sal_uInt16 nAbsAvail, bool bRecalc )
 {
     // If bRecalc is set, the table's content changed.
     // We need to execute pass 1 again.
@@ -1744,7 +1744,7 @@ void SwHTMLTableLayout::_Resize( sal_uInt16 nAbsAvail, bool bRecalc )
 IMPL_LINK_NOARG_TYPED( SwHTMLTableLayout, DelayedResize_Impl, Timer*, void )
 {
     m_aResizeTimer.Stop();
-    _Resize( m_nDelayedResizeAbsAvail, m_bDelayedResizeRecalc );
+    Resize_( m_nDelayedResizeAbsAvail, m_bDelayedResizeRecalc );
 }
 
 bool SwHTMLTableLayout::Resize( sal_uInt16 nAbsAvail, bool bRecalc,
@@ -1800,7 +1800,7 @@ bool SwHTMLTableLayout::Resize( sal_uInt16 nAbsAvail, bool bRecalc,
     {
         if( m_aResizeTimer.IsActive() )
             m_aResizeTimer.Stop();
-        _Resize( nAbsAvail, bRecalc );
+        Resize_( nAbsAvail, bRecalc );
     }
     else if( nDelay > 0 )
     {
@@ -1811,17 +1811,17 @@ bool SwHTMLTableLayout::Resize( sal_uInt16 nAbsAvail, bool bRecalc,
     }
     else
     {
-        _Resize( nAbsAvail, bRecalc );
+        Resize_( nAbsAvail, bRecalc );
     }
 
     return true;
 }
 
-void SwHTMLTableLayout::BordersChanged( sal_uInt16 nAbsAvail, bool bRecalc )
+void SwHTMLTableLayout::BordersChanged( sal_uInt16 nAbsAvail )
 {
     m_bBordersChanged = true;
 
-    Resize( nAbsAvail, bRecalc );
+    Resize( nAbsAvail, true/*bRecalc*/ );
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

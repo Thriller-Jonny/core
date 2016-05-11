@@ -61,12 +61,6 @@ namespace fpicker{
 namespace win32{
 namespace vista{
 
-#define FILE_PICKER_DLL_NAME  TEXT("fps.dll")
-
-
-// helper functions
-
-
 namespace
 {
     css::uno::Sequence< OUString > SAL_CALL VistaFilePicker_getSupportedServiceNames()
@@ -324,9 +318,6 @@ void SAL_CALL VistaFilePicker::setValue(      ::sal_Int16    nControlId    ,
 }
 
 
-
-
-
 css::uno::Any SAL_CALL VistaFilePicker::getValue(::sal_Int16 nControlId    ,
                                                  ::sal_Int16 nControlAction)
     throw(css::uno::RuntimeException)
@@ -342,9 +333,6 @@ css::uno::Any SAL_CALL VistaFilePicker::getValue(::sal_Int16 nControlId    ,
 }
 
 
-
-
-
 void SAL_CALL VistaFilePicker::enableControl(::sal_Int16 nControlId,
                                              sal_Bool  bEnable   )
     throw(css::uno::RuntimeException)
@@ -356,9 +344,6 @@ void SAL_CALL VistaFilePicker::enableControl(::sal_Int16 nControlId,
 
     m_aAsyncExecute.triggerRequestThreadAware(rRequest, AsyncRequests::NON_BLOCKED);
 }
-
-
-
 
 
 void SAL_CALL VistaFilePicker::setLabel(      ::sal_Int16      nControlId,
@@ -374,9 +359,6 @@ void SAL_CALL VistaFilePicker::setLabel(      ::sal_Int16      nControlId,
 }
 
 
-
-
-
 OUString SAL_CALL VistaFilePicker::getLabel(::sal_Int16 nControlId)
     throw (css::uno::RuntimeException)
 {
@@ -390,17 +372,11 @@ OUString SAL_CALL VistaFilePicker::getLabel(::sal_Int16 nControlId)
 }
 
 
-
-
-
 css::uno::Sequence< ::sal_Int16 > SAL_CALL VistaFilePicker::getSupportedImageFormats()
     throw (css::uno::RuntimeException)
 {
     return css::uno::Sequence< sal_Int16 >();
 }
-
-
-
 
 
 sal_Int32 SAL_CALL VistaFilePicker::getTargetColorDepth()
@@ -410,9 +386,6 @@ sal_Int32 SAL_CALL VistaFilePicker::getTargetColorDepth()
 }
 
 
-
-
-
 sal_Int32 SAL_CALL VistaFilePicker::getAvailableWidth()
     throw (css::uno::RuntimeException)
 {
@@ -420,17 +393,11 @@ sal_Int32 SAL_CALL VistaFilePicker::getAvailableWidth()
 }
 
 
-
-
-
 sal_Int32 SAL_CALL VistaFilePicker::getAvailableHeight()
     throw (css::uno::RuntimeException)
 {
     return 0;
 }
-
-
-
 
 
 void SAL_CALL VistaFilePicker::setImage(      sal_Int16      /*nImageFormat*/,
@@ -441,9 +408,6 @@ void SAL_CALL VistaFilePicker::setImage(      sal_Int16      /*nImageFormat*/,
 }
 
 
-
-
-
 sal_Bool SAL_CALL VistaFilePicker::setShowState(sal_Bool /*bShowState*/)
     throw (css::uno::RuntimeException)
 {
@@ -451,17 +415,11 @@ sal_Bool SAL_CALL VistaFilePicker::setShowState(sal_Bool /*bShowState*/)
 }
 
 
-
-
-
 sal_Bool SAL_CALL VistaFilePicker::getShowState()
     throw (css::uno::RuntimeException)
 {
     return sal_False;
 }
-
-
-
 
 
 void SAL_CALL VistaFilePicker::initialize(const css::uno::Sequence< css::uno::Any >& lArguments)
@@ -583,9 +541,6 @@ void SAL_CALL VistaFilePicker::initialize(const css::uno::Sequence< css::uno::An
         m_bInitialized = true;
     }
 }
-
-
-
 
 
 void SAL_CALL VistaFilePicker::cancel()

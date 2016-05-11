@@ -58,8 +58,6 @@
 
 #include <algorithm>
 
-using namespace ::com::sun::star;
-
 class TETextDataObject :    public css::datatransfer::XTransferable,
                         public ::cppu::OWeakObject
 
@@ -94,17 +92,17 @@ TETextDataObject::~TETextDataObject()
 {
 }
 
-// uno::XInterface
-uno::Any TETextDataObject::queryInterface( const uno::Type & rType ) throw(uno::RuntimeException, std::exception)
+// css::uno::XInterface
+css::uno::Any TETextDataObject::queryInterface( const css::uno::Type & rType ) throw(css::uno::RuntimeException, std::exception)
 {
-    uno::Any aRet = ::cppu::queryInterface( rType, (static_cast< datatransfer::XTransferable* >(this)) );
+    css::uno::Any aRet = ::cppu::queryInterface( rType, (static_cast< css::datatransfer::XTransferable* >(this)) );
     return (aRet.hasValue() ? aRet : OWeakObject::queryInterface( rType ));
 }
 
-// datatransfer::XTransferable
-uno::Any TETextDataObject::getTransferData( const datatransfer::DataFlavor& rFlavor ) throw(datatransfer::UnsupportedFlavorException, io::IOException, uno::RuntimeException, std::exception)
+// css::datatransfer::XTransferable
+css::uno::Any TETextDataObject::getTransferData( const css::datatransfer::DataFlavor& rFlavor ) throw(css::datatransfer::UnsupportedFlavorException, css::io::IOException, css::uno::RuntimeException, std::exception)
 {
-    uno::Any aAny;
+    css::uno::Any aAny;
 
     SotClipboardFormatId nT = SotExchange::GetFormat( rFlavor );
     if ( nT == SotClipboardFormatId::STRING )
@@ -117,29 +115,29 @@ uno::Any TETextDataObject::getTransferData( const datatransfer::DataFlavor& rFla
         sal_uLong nLen = GetHTMLStream().Tell();
         GetHTMLStream().Seek(0);
 
-        uno::Sequence< sal_Int8 > aSeq( nLen );
+        css::uno::Sequence< sal_Int8 > aSeq( nLen );
         memcpy( aSeq.getArray(), GetHTMLStream().GetData(), nLen );
         aAny <<= aSeq;
     }
     else
     {
-        throw datatransfer::UnsupportedFlavorException();
+        throw css::datatransfer::UnsupportedFlavorException();
     }
     return aAny;
 }
 
-uno::Sequence< datatransfer::DataFlavor > TETextDataObject::getTransferDataFlavors(  ) throw(uno::RuntimeException, std::exception)
+css::uno::Sequence< css::datatransfer::DataFlavor > TETextDataObject::getTransferDataFlavors(  ) throw(css::uno::RuntimeException, std::exception)
 {
     GetHTMLStream().Seek( STREAM_SEEK_TO_END );
     bool bHTML = GetHTMLStream().Tell() > 0;
-    uno::Sequence< datatransfer::DataFlavor > aDataFlavors( bHTML ? 2 : 1 );
+    css::uno::Sequence< css::datatransfer::DataFlavor > aDataFlavors( bHTML ? 2 : 1 );
     SotExchange::GetFormatDataFlavor( SotClipboardFormatId::STRING, aDataFlavors.getArray()[0] );
     if ( bHTML )
         SotExchange::GetFormatDataFlavor( SotClipboardFormatId::HTML, aDataFlavors.getArray()[1] );
     return aDataFlavors;
 }
 
-sal_Bool TETextDataObject::isDataFlavorSupported( const datatransfer::DataFlavor& rFlavor ) throw(uno::RuntimeException, std::exception)
+sal_Bool TETextDataObject::isDataFlavorSupported( const css::datatransfer::DataFlavor& rFlavor ) throw(css::uno::RuntimeException, std::exception)
 {
     SotClipboardFormatId nT = SotExchange::GetFormat( rFlavor );
     return ( nT == SotClipboardFormatId::STRING );
@@ -224,12 +222,12 @@ TextView::TextView( TextEngine* pEng, vcl::Window* pWindow ) :
         vcl::unohelper::DragAndDropWrapper* pDnDWrapper = new vcl::unohelper::DragAndDropWrapper( this );
         mpImpl->mxDnDListener = pDnDWrapper;
 
-        uno::Reference< datatransfer::dnd::XDragGestureListener> xDGL( mpImpl->mxDnDListener, uno::UNO_QUERY );
+        css::uno::Reference< css::datatransfer::dnd::XDragGestureListener> xDGL( mpImpl->mxDnDListener, css::uno::UNO_QUERY );
         pWindow->GetDragGestureRecognizer()->addDragGestureListener( xDGL );
-        uno::Reference< datatransfer::dnd::XDropTargetListener> xDTL( xDGL, uno::UNO_QUERY );
+        css::uno::Reference< css::datatransfer::dnd::XDropTargetListener> xDTL( xDGL, css::uno::UNO_QUERY );
         pWindow->GetDropTarget()->addDropTargetListener( xDTL );
         pWindow->GetDropTarget()->setActive( true );
-        pWindow->GetDropTarget()->setDefaultActions( datatransfer::dnd::DNDConstants::ACTION_COPY_OR_MOVE );
+        pWindow->GetDropTarget()->setDefaultActions( css::datatransfer::dnd::DNDConstants::ACTION_COPY_OR_MOVE );
     }
 }
 
@@ -321,10 +319,10 @@ void TextView::ImpPaint(vcl::RenderContext& rRenderContext, const Point& rStartP
 
 void TextView::Paint(vcl::RenderContext& rRenderContext, const Rectangle& rRect)
 {
-    ImpPaint(rRenderContext, rRect, false);
+    ImpPaint(rRenderContext, rRect);
 }
 
-void TextView::ImpPaint(vcl::RenderContext& rRenderContext, const Rectangle& rRect, bool bUseVirtDev)
+void TextView::ImpPaint(vcl::RenderContext& rRenderContext, const Rectangle& rRect)
 {
     if ( !mpImpl->mpTextEngine->GetUpdateMode() || mpImpl->mpTextEngine->IsInUndo() )
         return;
@@ -333,59 +331,10 @@ void TextView::ImpPaint(vcl::RenderContext& rRenderContext, const Rectangle& rRe
     if (!mpImpl->mbHighlightSelection && mpImpl->maSelection.HasRange())
         pDrawSelection = &mpImpl->maSelection;
 
-    if (bUseVirtDev)
-    {
-        VirtualDevice* pVDev = GetVirtualDevice();
-
-        const Color& rBackgroundColor = mpImpl->mpWindow->GetBackground().GetColor();
-        if (pVDev->GetFillColor() != rBackgroundColor)
-            pVDev->SetFillColor( rBackgroundColor );
-        if (pVDev->GetBackground().GetColor() != rBackgroundColor)
-            pVDev->SetBackground( rBackgroundColor );
-
-        bool bVDevValid = true;
-        Size aOutSz(pVDev->GetOutputSizePixel());
-        if ((aOutSz.Width() < rRect.GetWidth()) ||
-            (aOutSz.Height() < rRect.GetHeight()))
-        {
-            bVDevValid = pVDev->SetOutputSizePixel(rRect.GetSize());
-        }
-        else
-        {
-            // the VirtDev can get very large on Resize =>
-            // shrink now and then
-            if ((aOutSz.Height() > (rRect.GetHeight() + 20)) ||
-                (aOutSz.Width() > (rRect.GetWidth() + 20)))
-            {
-                bVDevValid = pVDev->SetOutputSizePixel(rRect.GetSize());
-            }
-            else
-            {
-                pVDev->Erase();
-            }
-        }
-        if (!bVDevValid)
-        {
-            ImpPaint(rRenderContext, rRect, false);
-            return;
-        }
-
-        Rectangle aTmpRect(Point(0, 0), rRect.GetSize());
-
-        Point aDocPos(mpImpl->maStartDocPos.X(), mpImpl->maStartDocPos.Y() + rRect.Top());
-        Point aStartPos = ImpGetOutputStartPos(aDocPos);
-        ImpPaint(*pVDev, aStartPos, &aTmpRect, nullptr, pDrawSelection);
-        rRenderContext.DrawOutDev(rRect.TopLeft(), rRect.GetSize(), Point(0,0), rRect.GetSize(), *pVDev);
-        if (mpImpl->mbHighlightSelection)
-            ImpHighlight(mpImpl->maSelection);
-    }
-    else
-    {
-        Point aStartPos = ImpGetOutputStartPos(mpImpl->maStartDocPos);
-        ImpPaint(rRenderContext, aStartPos, &rRect, nullptr, pDrawSelection);
-        if (mpImpl->mbHighlightSelection)
-            ImpHighlight(mpImpl->maSelection);
-    }
+    Point aStartPos = ImpGetOutputStartPos(mpImpl->maStartDocPos);
+    ImpPaint(rRenderContext, aStartPos, &rRect, nullptr, pDrawSelection);
+    if (mpImpl->mbHighlightSelection)
+        ImpHighlight(mpImpl->maSelection);
 }
 
 void TextView::ImpHighlight( const TextSelection& rSel )
@@ -418,9 +367,9 @@ void TextView::ImpHighlight( const TextSelection& rSel )
                 // iterate over all lines
                 for ( sal_uInt16 nLine = nStartLine; nLine <= nEndLine; nLine++ )
                 {
-                    TextLine& pLine = pTEParaPortion->GetLines()[ nLine ];
-                    sal_Int32 nStartIndex = pLine.GetStart();
-                    sal_Int32 nEndIndex = pLine.GetEnd();
+                    TextLine& rLine = pTEParaPortion->GetLines()[ nLine ];
+                    sal_Int32 nStartIndex = rLine.GetStart();
+                    sal_Int32 nEndIndex = rLine.GetEnd();
                     if ( ( nPara == nStartPara ) && ( nLine == nStartLine ) )
                         nStartIndex = aSel.GetStart().GetIndex();
                     if ( ( nPara == nEndPara ) && ( nLine == nEndLine ) )
@@ -632,7 +581,7 @@ bool TextView::KeyInput( const KeyEvent& rKeyEvent )
                 {
                     aCurSel = ImpMoveCursor( rKeyEvent );
                     if ( aCurSel.HasRange() ) {
-                        uno::Reference<datatransfer::clipboard::XClipboard> aSelection(GetWindow()->GetPrimarySelection());
+                        css::uno::Reference<css::datatransfer::clipboard::XClipboard> aSelection(GetWindow()->GetPrimarySelection());
                         Copy( aSelection );
                     }
                     bMoved = true;
@@ -809,14 +758,14 @@ void TextView::MouseButtonUp( const MouseEvent& rMouseEvent )
     if ( rMouseEvent.IsMiddle() && !IsReadOnly() &&
          ( GetWindow()->GetSettings().GetMouseSettings().GetMiddleButtonAction() == MouseMiddleButtonAction::PasteSelection ) )
     {
-        uno::Reference<datatransfer::clipboard::XClipboard> aSelection(GetWindow()->GetPrimarySelection());
+        css::uno::Reference<css::datatransfer::clipboard::XClipboard> aSelection(GetWindow()->GetPrimarySelection());
         Paste( aSelection );
         if ( mpImpl->mpTextEngine->IsModified() )
             mpImpl->mpTextEngine->Broadcast( TextHint( TEXT_HINT_MODIFIED ) );
     }
     else if ( rMouseEvent.IsLeft() && GetSelection().HasRange() )
     {
-        uno::Reference<datatransfer::clipboard::XClipboard> aSelection(GetWindow()->GetPrimarySelection());
+        css::uno::Reference<css::datatransfer::clipboard::XClipboard> aSelection(GetWindow()->GetPrimarySelection());
         Copy( aSelection );
     }
 }
@@ -854,8 +803,8 @@ void TextView::MouseButtonDown( const MouseEvent& rMouseEvent )
             {
                 HideSelection();
                 TextNode* pNode = mpImpl->mpTextEngine->mpDoc->GetNodes()[  mpImpl->maSelection.GetEnd().GetPara() ];
-                uno::Reference < i18n::XBreakIterator > xBI = mpImpl->mpTextEngine->GetBreakIterator();
-                i18n::Boundary aBoundary = xBI->getWordBoundary( pNode->GetText(), mpImpl->maSelection.GetEnd().GetIndex(), mpImpl->mpTextEngine->GetLocale(), i18n::WordType::ANYWORD_IGNOREWHITESPACES, true );
+                css::uno::Reference < css::i18n::XBreakIterator > xBI = mpImpl->mpTextEngine->GetBreakIterator();
+                css::i18n::Boundary aBoundary = xBI->getWordBoundary( pNode->GetText(), mpImpl->maSelection.GetEnd().GetIndex(), mpImpl->mpTextEngine->GetLocale(), css::i18n::WordType::ANYWORD_IGNOREWHITESPACES, true );
                 TextSelection aNewSel( mpImpl->maSelection );
                 aNewSel.GetStart().GetIndex() = aBoundary.startPos;
                 aNewSel.GetEnd().GetIndex() = aBoundary.endPos;
@@ -931,6 +880,7 @@ void TextView::Command( const CommandEvent& rCEvt )
             delete mpImpl->mpTextEngine->mpIMEInfos;
             mpImpl->mpTextEngine->mpIMEInfos = nullptr;
 
+            mpImpl->mpTextEngine->TextModified();
             mpImpl->mpTextEngine->FormatAndUpdate( this );
 
             SetInsertMode( bInsertMode );
@@ -1020,9 +970,9 @@ void TextView::Command( const CommandEvent& rCEvt )
 
             TEParaPortion* pParaPortion = mpImpl->mpTextEngine->mpTEParaPortions->GetObject( aPaM.GetPara() );
             sal_uInt16 nLine = pParaPortion->GetLineNumber( aPaM.GetIndex(), true );
-            TextLine& pLine = pParaPortion->GetLines()[ nLine ];
-            if ( nInputEnd > pLine.GetEnd() )
-                nInputEnd = pLine.GetEnd();
+            TextLine& rLine = pParaPortion->GetLines()[ nLine ];
+            if ( nInputEnd > rLine.GetEnd() )
+                nInputEnd = rLine.GetEnd();
             Rectangle aR2 = mpImpl->mpTextEngine->PaMtoEditCursor( TextPaM( aPaM.GetPara(), nInputEnd ) );
 
             long nWidth = aR2.Left()-aR1.Right();
@@ -1114,7 +1064,7 @@ void TextView::Cut()
     mpImpl->mpTextEngine->UndoActionEnd();
 }
 
-void TextView::Copy( uno::Reference< datatransfer::clipboard::XClipboard >& rxClipboard )
+void TextView::Copy( css::uno::Reference< css::datatransfer::clipboard::XClipboard >& rxClipboard )
 {
     if ( rxClipboard.is() )
     {
@@ -1129,7 +1079,7 @@ void TextView::Copy( uno::Reference< datatransfer::clipboard::XClipboard >& rxCl
         {
             rxClipboard->setContents( pDataObj, nullptr );
 
-            uno::Reference< datatransfer::clipboard::XFlushableClipboard > xFlushableClipboard( rxClipboard, uno::UNO_QUERY );
+            css::uno::Reference< css::datatransfer::clipboard::XFlushableClipboard > xFlushableClipboard( rxClipboard, css::uno::UNO_QUERY );
             if( xFlushableClipboard.is() )
                 xFlushableClipboard->flushClipboard();
         }
@@ -1141,15 +1091,15 @@ void TextView::Copy( uno::Reference< datatransfer::clipboard::XClipboard >& rxCl
 
 void TextView::Copy()
 {
-    uno::Reference<datatransfer::clipboard::XClipboard> aClipboard(GetWindow()->GetClipboard());
+    css::uno::Reference<css::datatransfer::clipboard::XClipboard> aClipboard(GetWindow()->GetClipboard());
     Copy( aClipboard );
 }
 
-void TextView::Paste( uno::Reference< datatransfer::clipboard::XClipboard >& rxClipboard )
+void TextView::Paste( css::uno::Reference< css::datatransfer::clipboard::XClipboard >& rxClipboard )
 {
     if ( rxClipboard.is() )
     {
-        uno::Reference< datatransfer::XTransferable > xDataObj;
+        css::uno::Reference< css::datatransfer::XTransferable > xDataObj;
 
         try
             {
@@ -1162,13 +1112,13 @@ void TextView::Paste( uno::Reference< datatransfer::clipboard::XClipboard >& rxC
 
         if ( xDataObj.is() )
         {
-            datatransfer::DataFlavor aFlavor;
+            css::datatransfer::DataFlavor aFlavor;
             SotExchange::GetFormatDataFlavor( SotClipboardFormatId::STRING, aFlavor );
             if ( xDataObj->isDataFlavorSupported( aFlavor ) )
             {
                 try
                 {
-                    uno::Any aData = xDataObj->getTransferData( aFlavor );
+                    css::uno::Any aData = xDataObj->getTransferData( aFlavor );
                     OUString aText;
                     aData >>= aText;
                     bool bWasTruncated = false;
@@ -1190,7 +1140,7 @@ void TextView::Paste( uno::Reference< datatransfer::clipboard::XClipboard >& rxC
 
 void TextView::Paste()
 {
-    uno::Reference<datatransfer::clipboard::XClipboard> aClipboard(GetWindow()->GetClipboard());
+    css::uno::Reference<css::datatransfer::clipboard::XClipboard> aClipboard(GetWindow()->GetClipboard());
     Paste( aClipboard );
 }
 
@@ -1259,47 +1209,55 @@ TextSelection TextView::ImpMoveCursor( const KeyEvent& rKeyEvent )
                             break;
         case KEY_PAGEDOWN:  aPaM = bCtrl ? CursorEndOfDoc() : PageDown( aPaM );
                             break;
-        case KEY_LEFT:      aPaM = bCtrl ? CursorWordLeft( aPaM ) : CursorLeft( aPaM, aTranslatedKeyEvent.GetKeyCode().IsMod2() ? (sal_uInt16)i18n::CharacterIteratorMode::SKIPCHARACTER : (sal_uInt16)i18n::CharacterIteratorMode::SKIPCELL );
+        case KEY_LEFT:      aPaM = bCtrl ? CursorWordLeft( aPaM ) : CursorLeft( aPaM, aTranslatedKeyEvent.GetKeyCode().IsMod2() ? (sal_uInt16) css::i18n::CharacterIteratorMode::SKIPCHARACTER : (sal_uInt16)css::i18n::CharacterIteratorMode::SKIPCELL );
                             break;
-        case KEY_RIGHT:     aPaM = bCtrl ? CursorWordRight( aPaM ) : CursorRight( aPaM, aTranslatedKeyEvent.GetKeyCode().IsMod2() ? (sal_uInt16)i18n::CharacterIteratorMode::SKIPCHARACTER : (sal_uInt16)i18n::CharacterIteratorMode::SKIPCELL );
+        case KEY_RIGHT:     aPaM = bCtrl ? CursorWordRight( aPaM ) : CursorRight( aPaM, aTranslatedKeyEvent.GetKeyCode().IsMod2() ? (sal_uInt16) css::i18n::CharacterIteratorMode::SKIPCHARACTER : (sal_uInt16) css::i18n::CharacterIteratorMode::SKIPCELL );
                             break;
         case css::awt::Key::SELECT_WORD_FORWARD:
-                            bSelect = true; // fallthrough intentional
+                            bSelect = true;
+                            SAL_FALLTHROUGH;
         case css::awt::Key::MOVE_WORD_FORWARD:
                             aPaM = CursorWordRight( aPaM );
                             break;
         case css::awt::Key::SELECT_WORD_BACKWARD:
-                            bSelect = true; // fallthrough intentional
+                            bSelect = true;
+                            SAL_FALLTHROUGH;
         case css::awt::Key::MOVE_WORD_BACKWARD:
                             aPaM = CursorWordLeft( aPaM );
                             break;
         case css::awt::Key::SELECT_TO_BEGIN_OF_LINE:
-                            bSelect = true; // fallthrough intentional
+                            bSelect = true;
+                            SAL_FALLTHROUGH;
         case css::awt::Key::MOVE_TO_BEGIN_OF_LINE:
                             aPaM = CursorStartOfLine( aPaM );
                             break;
         case css::awt::Key::SELECT_TO_END_OF_LINE:
-                            bSelect = true; // fallthrough intentional
+                            bSelect = true;
+                            SAL_FALLTHROUGH;
         case css::awt::Key::MOVE_TO_END_OF_LINE:
                             aPaM = CursorEndOfLine( aPaM );
                             break;
         case css::awt::Key::SELECT_TO_BEGIN_OF_PARAGRAPH:
-                            bSelect = true; // falltthrough intentional
+                            bSelect = true;
+                            SAL_FALLTHROUGH;
         case css::awt::Key::MOVE_TO_BEGIN_OF_PARAGRAPH:
                             aPaM = CursorStartOfParagraph( aPaM );
                             break;
         case css::awt::Key::SELECT_TO_END_OF_PARAGRAPH:
-                            bSelect = true; // falltthrough intentional
+                            bSelect = true;
+                            SAL_FALLTHROUGH;
         case css::awt::Key::MOVE_TO_END_OF_PARAGRAPH:
                             aPaM = CursorEndOfParagraph( aPaM );
                             break;
         case css::awt::Key::SELECT_TO_BEGIN_OF_DOCUMENT:
-                            bSelect = true; // falltthrough intentional
+                            bSelect = true;
+                            SAL_FALLTHROUGH;
         case css::awt::Key::MOVE_TO_BEGIN_OF_DOCUMENT:
                             aPaM = CursorStartOfDoc();
                             break;
         case css::awt::Key::SELECT_TO_END_OF_DOCUMENT:
-                            bSelect = true; // falltthrough intentional
+                            bSelect = true;
+                            SAL_FALLTHROUGH;
         case css::awt::Key::MOVE_TO_END_OF_DOCUMENT:
                             aPaM = CursorEndOfDoc();
                             break;
@@ -1330,22 +1288,11 @@ TextSelection TextView::ImpMoveCursor( const KeyEvent& rKeyEvent )
     return mpImpl->maSelection;
 }
 
-void TextView::InsertText( const OUString& rStr, bool bSelect )
+void TextView::InsertText( const OUString& rStr )
 {
     mpImpl->mpTextEngine->UndoActionStart();
 
-    TextSelection aNewSel( mpImpl->maSelection );
-    TextPaM aPaM = mpImpl->mpTextEngine->ImpInsertText( mpImpl->maSelection, rStr );
-
-    if ( bSelect )
-    {
-        aNewSel.Justify();
-        aNewSel.GetEnd() = aPaM;
-    }
-    else
-    {
-        aNewSel = aPaM;
-    }
+    TextSelection aNewSel = mpImpl->mpTextEngine->ImpInsertText( mpImpl->maSelection, rStr );
 
     ImpSetSelection( aNewSel );
 
@@ -1361,7 +1308,7 @@ TextPaM TextView::CursorLeft( const TextPaM& rPaM, sal_uInt16 nCharacterIterator
     if ( aPaM.GetIndex() )
     {
         TextNode* pNode = mpImpl->mpTextEngine->mpDoc->GetNodes()[ aPaM.GetPara() ];
-        uno::Reference < i18n::XBreakIterator > xBI = mpImpl->mpTextEngine->GetBreakIterator();
+        css::uno::Reference < css::i18n::XBreakIterator > xBI = mpImpl->mpTextEngine->GetBreakIterator();
         sal_Int32 nCount = 1;
         aPaM.GetIndex() = xBI->previousCharacters( pNode->GetText(), aPaM.GetIndex(), mpImpl->mpTextEngine->GetLocale(), nCharacterIteratorMode, nCount, nCount );
     }
@@ -1381,7 +1328,7 @@ TextPaM TextView::CursorRight( const TextPaM& rPaM, sal_uInt16 nCharacterIterato
     TextNode* pNode = mpImpl->mpTextEngine->mpDoc->GetNodes()[ aPaM.GetPara() ];
     if ( aPaM.GetIndex() < pNode->GetText().getLength() )
     {
-        uno::Reference < i18n::XBreakIterator > xBI = mpImpl->mpTextEngine->GetBreakIterator();
+        css::uno::Reference < css::i18n::XBreakIterator > xBI = mpImpl->mpTextEngine->GetBreakIterator();
         sal_Int32 nCount = 1;
         aPaM.GetIndex() = xBI->nextCharacters( pNode->GetText(), aPaM.GetIndex(), mpImpl->mpTextEngine->GetLocale(), nCharacterIteratorMode, nCount, nCount );
     }
@@ -1401,10 +1348,10 @@ TextPaM TextView::CursorWordLeft( const TextPaM& rPaM )
     if ( aPaM.GetIndex() )
     {
         TextNode* pNode = mpImpl->mpTextEngine->mpDoc->GetNodes()[ aPaM.GetPara() ];
-        uno::Reference < i18n::XBreakIterator > xBI = mpImpl->mpTextEngine->GetBreakIterator();
-        i18n::Boundary aBoundary = xBI->getWordBoundary( pNode->GetText(), rPaM.GetIndex(), mpImpl->mpTextEngine->GetLocale(), i18n::WordType::ANYWORD_IGNOREWHITESPACES, true );
+        css::uno::Reference < css::i18n::XBreakIterator > xBI = mpImpl->mpTextEngine->GetBreakIterator();
+        css::i18n::Boundary aBoundary = xBI->getWordBoundary( pNode->GetText(), rPaM.GetIndex(), mpImpl->mpTextEngine->GetLocale(), css::i18n::WordType::ANYWORD_IGNOREWHITESPACES, true );
         if ( aBoundary.startPos >= rPaM.GetIndex() )
-            aBoundary = xBI->previousWord( pNode->GetText(), rPaM.GetIndex(), mpImpl->mpTextEngine->GetLocale(), i18n::WordType::ANYWORD_IGNOREWHITESPACES );
+            aBoundary = xBI->previousWord( pNode->GetText(), rPaM.GetIndex(), mpImpl->mpTextEngine->GetLocale(), css::i18n::WordType::ANYWORD_IGNOREWHITESPACES );
         aPaM.GetIndex() = ( aBoundary.startPos != -1 ) ? aBoundary.startPos : 0;
     }
     else if ( aPaM.GetPara() )
@@ -1423,8 +1370,8 @@ TextPaM TextView::CursorWordRight( const TextPaM& rPaM )
     TextNode* pNode = mpImpl->mpTextEngine->mpDoc->GetNodes()[ aPaM.GetPara() ];
     if ( aPaM.GetIndex() < pNode->GetText().getLength() )
     {
-        uno::Reference < i18n::XBreakIterator > xBI = mpImpl->mpTextEngine->GetBreakIterator();
-        i18n::Boundary aBoundary = xBI->nextWord(  pNode->GetText(), aPaM.GetIndex(), mpImpl->mpTextEngine->GetLocale(), i18n::WordType::ANYWORD_IGNOREWHITESPACES );
+        css::uno::Reference < css::i18n::XBreakIterator > xBI = mpImpl->mpTextEngine->GetBreakIterator();
+        css::i18n::Boundary aBoundary = xBI->nextWord(  pNode->GetText(), aPaM.GetIndex(), mpImpl->mpTextEngine->GetLocale(), css::i18n::WordType::ANYWORD_IGNOREWHITESPACES );
         aPaM.GetIndex() = aBoundary.startPos;
     }
     else if ( aPaM.GetPara() < ( mpImpl->mpTextEngine->mpDoc->GetNodes().size()-1) )
@@ -1447,15 +1394,15 @@ TextPaM TextView::ImpDelete( sal_uInt8 nMode, sal_uInt8 nDelMode )
     {
         if ( nDelMode == DELMODE_SIMPLE )
         {
-            aEndPaM = CursorLeft( aEndPaM, (sal_uInt16)i18n::CharacterIteratorMode::SKIPCHARACTER );
+            aEndPaM = CursorLeft( aEndPaM, (sal_uInt16) css::i18n::CharacterIteratorMode::SKIPCHARACTER );
         }
         else if ( nDelMode == DELMODE_RESTOFWORD )
         {
             TextNode* pNode = mpImpl->mpTextEngine->mpDoc->GetNodes()[  aEndPaM.GetPara() ];
-            uno::Reference < i18n::XBreakIterator > xBI = mpImpl->mpTextEngine->GetBreakIterator();
-            i18n::Boundary aBoundary = xBI->getWordBoundary( pNode->GetText(), mpImpl->maSelection.GetEnd().GetIndex(), mpImpl->mpTextEngine->GetLocale(), i18n::WordType::ANYWORD_IGNOREWHITESPACES, true );
+            css::uno::Reference < css::i18n::XBreakIterator > xBI = mpImpl->mpTextEngine->GetBreakIterator();
+            css::i18n::Boundary aBoundary = xBI->getWordBoundary( pNode->GetText(), mpImpl->maSelection.GetEnd().GetIndex(), mpImpl->mpTextEngine->GetLocale(), css::i18n::WordType::ANYWORD_IGNOREWHITESPACES, true );
             if ( aBoundary.startPos == mpImpl->maSelection.GetEnd().GetIndex() )
-                aBoundary = xBI->previousWord( pNode->GetText(), mpImpl->maSelection.GetEnd().GetIndex(), mpImpl->mpTextEngine->GetLocale(), i18n::WordType::ANYWORD_IGNOREWHITESPACES );
+                aBoundary = xBI->previousWord( pNode->GetText(), mpImpl->maSelection.GetEnd().GetIndex(), mpImpl->mpTextEngine->GetLocale(), css::i18n::WordType::ANYWORD_IGNOREWHITESPACES );
             // #i63506# startPos is -1 when the paragraph starts with a tab
             aEndPaM.GetIndex() = std::max<sal_Int32>(aBoundary.startPos, 0);
         }
@@ -1475,13 +1422,13 @@ TextPaM TextView::ImpDelete( sal_uInt8 nMode, sal_uInt8 nDelMode )
     {
         if ( nDelMode == DELMODE_SIMPLE )
         {
-            aEndPaM = CursorRight( aEndPaM, (sal_uInt16)i18n::CharacterIteratorMode::SKIPCELL );
+            aEndPaM = CursorRight( aEndPaM, (sal_uInt16) css::i18n::CharacterIteratorMode::SKIPCELL );
         }
         else if ( nDelMode == DELMODE_RESTOFWORD )
         {
             TextNode* pNode = mpImpl->mpTextEngine->mpDoc->GetNodes()[  aEndPaM.GetPara() ];
-            uno::Reference < i18n::XBreakIterator > xBI = mpImpl->mpTextEngine->GetBreakIterator();
-            i18n::Boundary aBoundary = xBI->nextWord( pNode->GetText(), mpImpl->maSelection.GetEnd().GetIndex(), mpImpl->mpTextEngine->GetLocale(), i18n::WordType::ANYWORD_IGNOREWHITESPACES );
+            css::uno::Reference < css::i18n::XBreakIterator > xBI = mpImpl->mpTextEngine->GetBreakIterator();
+            css::i18n::Boundary aBoundary = xBI->nextWord( pNode->GetText(), mpImpl->maSelection.GetEnd().GetIndex(), mpImpl->mpTextEngine->GetLocale(), css::i18n::WordType::ANYWORD_IGNOREWHITESPACES );
             aEndPaM.GetIndex() = aBoundary.startPos;
         }
         else    // DELMODE_RESTOFCONTENT
@@ -1523,8 +1470,8 @@ TextPaM TextView::CursorUp( const TextPaM& rPaM )
         // If we need to go to the end of a line that was wrapped automatically,
         // the cursor ends up at the beginning of the 2nd line
         // Problem: Last character of an automatically wrapped line = Cursor
-        TextLine& pLine = pPPortion->GetLines()[ nLine - 1 ];
-        if ( aPaM.GetIndex() && ( aPaM.GetIndex() == pLine.GetEnd() ) )
+        TextLine& rLine = pPPortion->GetLines()[ nLine - 1 ];
+        if ( aPaM.GetIndex() && ( aPaM.GetIndex() == rLine.GetEnd() ) )
             --aPaM.GetIndex();
     }
     else if ( rPaM.GetPara() )  // previous paragraph
@@ -1558,8 +1505,8 @@ TextPaM TextView::CursorDown( const TextPaM& rPaM )
         aPaM.GetIndex() = mpImpl->mpTextEngine->GetCharPos( rPaM.GetPara(), nLine+1, nX );
 
         // special case CursorUp
-        TextLine& pLine = pPPortion->GetLines()[ nLine + 1 ];
-        if ( ( aPaM.GetIndex() == pLine.GetEnd() ) && ( aPaM.GetIndex() > pLine.GetStart() ) && aPaM.GetIndex() < pPPortion->GetNode()->GetText().getLength() )
+        TextLine& rLine = pPPortion->GetLines()[ nLine + 1 ];
+        if ( ( aPaM.GetIndex() == rLine.GetEnd() ) && ( aPaM.GetIndex() > rLine.GetStart() ) && aPaM.GetIndex() < pPPortion->GetNode()->GetText().getLength() )
             --aPaM.GetIndex();
     }
     else if ( rPaM.GetPara() < ( mpImpl->mpTextEngine->mpDoc->GetNodes().size() - 1 ) )   // next paragraph
@@ -1567,8 +1514,8 @@ TextPaM TextView::CursorDown( const TextPaM& rPaM )
         aPaM.GetPara()++;
         pPPortion = mpImpl->mpTextEngine->mpTEParaPortions->GetObject( aPaM.GetPara() );
         aPaM.GetIndex() = mpImpl->mpTextEngine->GetCharPos( aPaM.GetPara(), 0, nX+1 );
-        TextLine& pLine = pPPortion->GetLines().front();
-        if ( ( aPaM.GetIndex() == pLine.GetEnd() ) && ( aPaM.GetIndex() > pLine.GetStart() ) && ( pPPortion->GetLines().size() > 1 ) )
+        TextLine& rLine = pPPortion->GetLines().front();
+        if ( ( aPaM.GetIndex() == rLine.GetEnd() ) && ( aPaM.GetIndex() > rLine.GetStart() ) && ( pPPortion->GetLines().size() > 1 ) )
             --aPaM.GetIndex();
     }
 
@@ -1581,8 +1528,8 @@ TextPaM TextView::CursorStartOfLine( const TextPaM& rPaM )
 
     TEParaPortion* pPPortion = mpImpl->mpTextEngine->mpTEParaPortions->GetObject( rPaM.GetPara() );
     sal_uInt16 nLine = pPPortion->GetLineNumber( aPaM.GetIndex(), false );
-    TextLine& pLine = pPPortion->GetLines()[ nLine ];
-    aPaM.GetIndex() = pLine.GetStart();
+    TextLine& rLine = pPPortion->GetLines()[ nLine ];
+    aPaM.GetIndex() = rLine.GetStart();
 
     return aPaM;
 }
@@ -1593,10 +1540,10 @@ TextPaM TextView::CursorEndOfLine( const TextPaM& rPaM )
 
     TEParaPortion* pPPortion = mpImpl->mpTextEngine->mpTEParaPortions->GetObject( rPaM.GetPara() );
     sal_uInt16 nLine = pPPortion->GetLineNumber( aPaM.GetIndex(), false );
-    TextLine& pLine = pPPortion->GetLines()[ nLine ];
-    aPaM.GetIndex() = pLine.GetEnd();
+    TextLine& rLine = pPPortion->GetLines()[ nLine ];
+    aPaM.GetIndex() = rLine.GetEnd();
 
-    if ( pLine.GetEnd() > pLine.GetStart() )  // empty line
+    if ( rLine.GetEnd() > rLine.GetStart() )  // empty line
     {
         sal_Unicode cLastChar = pPPortion->GetNode()->GetText()[ aPaM.GetIndex()-1 ];
         if ( ( cLastChar == ' ' ) && ( aPaM.GetIndex() != pPPortion->GetNode()->GetText().getLength() ) )
@@ -1714,7 +1661,7 @@ void TextView::ImpShowCursor( bool bGotoCursor, bool bForceVisCursor, bool bSpec
             }
             else
             {
-                TextPaM aNext = CursorRight( TextPaM( aPaM.GetPara(), aPaM.GetIndex() ), (sal_uInt16)i18n::CharacterIteratorMode::SKIPCELL );
+                TextPaM aNext = CursorRight( TextPaM( aPaM.GetPara(), aPaM.GetIndex() ), (sal_uInt16) css::i18n::CharacterIteratorMode::SKIPCELL );
                 aEditCursor.Right() = mpImpl->mpTextEngine->GetEditCursor( aNext, true ).Left();
             }
         }
@@ -1998,9 +1945,9 @@ void TextView::dragGestureRecognized( const css::datatransfer::dnd::DragGestureE
 
         mpImpl->mpCursor->Hide();
 
-        sal_Int8 nActions = datatransfer::dnd::DNDConstants::ACTION_COPY;
+        sal_Int8 nActions = css::datatransfer::dnd::DNDConstants::ACTION_COPY;
         if ( !IsReadOnly() )
-            nActions |= datatransfer::dnd::DNDConstants::ACTION_MOVE;
+            nActions |= css::datatransfer::dnd::DNDConstants::ACTION_MOVE;
         rDGE.DragSource->startDrag( rDGE, nActions, 0 /*cursor*/, 0 /*image*/, pDataObj, mpImpl->mxDnDListener );
     }
 }
@@ -2037,14 +1984,14 @@ void TextView::drop( const css::datatransfer::dnd::DropTargetDropEvent& rDTDE ) 
         mpImpl->mpTextEngine->UndoActionStart();
 
         OUString aText;
-        uno::Reference< datatransfer::XTransferable > xDataObj = rDTDE.Transferable;
+        css::uno::Reference< css::datatransfer::XTransferable > xDataObj = rDTDE.Transferable;
         if ( xDataObj.is() )
         {
-            datatransfer::DataFlavor aFlavor;
+            css::datatransfer::DataFlavor aFlavor;
             SotExchange::GetFormatDataFlavor( SotClipboardFormatId::STRING, aFlavor );
             if ( xDataObj->isDataFlavorSupported( aFlavor ) )
             {
-                uno::Any aData = xDataObj->getTransferData( aFlavor );
+                css::uno::Any aData = xDataObj->getTransferData( aFlavor );
                 OUString aOUString;
                 aData >>= aOUString;
                 aText = convertLineEnd(aOUString, LINEEND_LF);
@@ -2067,7 +2014,7 @@ void TextView::drop( const css::datatransfer::dnd::DropTargetDropEvent& rDTDE ) 
 
         if ( aPrevSel.HasRange() &&
                 !mpImpl->mbSupportProtectAttribute && // don't remove currently selected element
-                (( rDTDE.DropAction & datatransfer::dnd::DNDConstants::ACTION_MOVE ) || !bStarterOfDD) )
+                (( rDTDE.DropAction & css::datatransfer::dnd::DNDConstants::ACTION_MOVE ) || !bStarterOfDD) )
         {
             // adjust selection if necessary
             if ( ( mpImpl->mpDDInfo->maDropPos.GetPara() < aPrevSel.GetStart().GetPara() ) ||

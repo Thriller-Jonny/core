@@ -81,11 +81,14 @@ static SwContentNode* GetContentNode(SwDoc* pDoc, SwNodeIndex& rIdx, bool bNext)
     return pCNd;
 }
 
-static OUString lcl_getTypePath(const OUString& rType)
+static OUString lcl_getTypePath(OUString& rType)
 {
     OUString aRet;
-    if (rType == "urn:tscp:names:baf:1.1")
-        aRet = "tscp/baf.rdf";
+    if (rType.startsWith("urn:bails"))
+    {
+        rType = "urn:bails";
+        aRet = "tscp/bails.rdf";
+    }
     return aRet;
 }
 
@@ -292,7 +295,7 @@ void SwFltControlStack::DeleteAndDestroy(Entries::size_type nCnt)
 // type.  This makes them disappear from the doc structure. Only
 // attributes from the same paragraph as rPos are removed. Used for
 // graphic apos -> images.
-void SwFltControlStack::StealAttr(const SwNodeIndex& rNode, sal_uInt16 nAttrId)
+void SwFltControlStack::StealAttr(const SwNodeIndex& rNode)
 {
     size_t nCnt = m_Entries.size();
 
@@ -300,8 +303,7 @@ void SwFltControlStack::StealAttr(const SwNodeIndex& rNode, sal_uInt16 nAttrId)
     {
         nCnt --;
         SwFltStackEntry& rEntry = *m_Entries[nCnt];
-        if (rEntry.m_aPtPos.m_nNode.GetIndex()+1 == rNode.GetIndex() &&
-            (!nAttrId || nAttrId == rEntry.pAttr->Which()))
+        if (rEntry.m_aPtPos.m_nNode.GetIndex()+1 == rNode.GetIndex())
         {
             DeleteAndDestroy(nCnt);     // loesche aus dem Stack
         }
@@ -634,11 +636,7 @@ void SwFltControlStack::SetAttrInDoc(const SwPosition& rTmpPos,
 
                     for (const std::pair<OUString, OUString>& rAttribute : pMark->GetAttributes())
                     {
-                        sal_Int32 nIndex = rAttribute.first.indexOf('#');
-                        if (nIndex == -1)
-                            continue;
-
-                        OUString aTypeNS = rAttribute.first.copy(0, nIndex);
+                        OUString aTypeNS = rAttribute.first;
                         OUString aMetadataFilePath = lcl_getTypePath(aTypeNS);
                         if (aMetadataFilePath.isEmpty())
                             continue;
@@ -915,7 +913,6 @@ void SwFltAnchor::SetFrameFormat(SwFrameFormat * _pFrameFormat)
 }
 
 
-
 bool SwFltAnchor::operator==(const SfxPoolItem& rItem) const
 {
     return pFrameFormat == static_cast<const SwFltAnchor&>(rItem).pFrameFormat;
@@ -1049,14 +1046,14 @@ const std::vector< std::pair<OUString, OUString> >& SwFltRDFMark::GetAttributes(
 }
 
 // methods of SwFltTOX follow
-SwFltTOX::SwFltTOX(SwTOXBase* pBase, sal_uInt16 _nCols)
-    : SfxPoolItem(RES_FLTR_TOX), pTOXBase(pBase), nCols( _nCols ),
+SwFltTOX::SwFltTOX(SwTOXBase* pBase)
+    : SfxPoolItem(RES_FLTR_TOX), pTOXBase(pBase),
       bHadBreakItem( false ), bHadPageDescItem( false )
 {
 }
 
 SwFltTOX::SwFltTOX(const SwFltTOX& rCpy)
-    : SfxPoolItem(RES_FLTR_TOX), pTOXBase(rCpy.pTOXBase), nCols( rCpy.nCols ),
+    : SfxPoolItem(RES_FLTR_TOX), pTOXBase(rCpy.pTOXBase),
       bHadBreakItem( rCpy.bHadBreakItem ), bHadPageDescItem( rCpy.bHadPageDescItem )
 {
 }

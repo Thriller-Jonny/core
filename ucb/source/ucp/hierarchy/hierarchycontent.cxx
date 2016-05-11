@@ -74,11 +74,7 @@ using namespace com::sun::star;
 using namespace hierarchy_ucp;
 
 
-
-
 // HierarchyContent Implementation.
-
-
 
 
 // static ( "virtual" ctor )
@@ -151,9 +147,7 @@ HierarchyContent::~HierarchyContent()
 }
 
 
-
 // XInterface methods.
-
 
 
 // virtual
@@ -195,9 +189,7 @@ uno::Any SAL_CALL HierarchyContent::queryInterface( const uno::Type & rType )
 }
 
 
-
 // XTypeProvider methods.
-
 
 
 XTYPEPROVIDER_COMMON_IMPL( HierarchyContent );
@@ -279,9 +271,7 @@ uno::Sequence< uno::Type > SAL_CALL HierarchyContent::getTypes()
 }
 
 
-
 // XServiceInfo methods.
-
 
 
 // virtual
@@ -310,9 +300,7 @@ HierarchyContent::getSupportedServiceNames()
 }
 
 
-
 // XContent methods.
-
 
 
 // virtual
@@ -339,9 +327,7 @@ HierarchyContent::getIdentifier()
 }
 
 
-
 // XCommandProcessor methods.
-
 
 
 // virtual
@@ -500,7 +486,7 @@ uno::Any SAL_CALL HierarchyContent::execute(
         }
 
         // Remove own and all children's Additional Core Properties.
-        removeAdditionalPropertySet( true );
+        removeAdditionalPropertySet();
     }
     else if ( aCommand.Name == "transfer" && isFolder() && !isReadOnly() )
     {
@@ -572,9 +558,7 @@ void SAL_CALL HierarchyContent::abort( sal_Int32 /*CommandId*/ )
 }
 
 
-
 // XContentCreator methods.
-
 
 
 // virtual
@@ -690,17 +674,17 @@ bool HierarchyContent::storeData()
 {
     HierarchyEntry aEntry(
             m_xContext, m_pProvider, m_xIdentifier->getContentIdentifier() );
-    return aEntry.setData( m_aProps.getHierarchyEntryData(), true );
+    return aEntry.setData( m_aProps.getHierarchyEntryData() );
 }
 
 
-bool HierarchyContent::renameData(
+void HierarchyContent::renameData(
             const uno::Reference< ucb::XContentIdentifier >& xOldId,
             const uno::Reference< ucb::XContentIdentifier >& xNewId )
 {
     HierarchyEntry aEntry(
             m_xContext, m_pProvider, xOldId->getContentIdentifier() );
-    return aEntry.move( xNewId->getContentIdentifier(),
+    aEntry.move( xNewId->getContentIdentifier(),
                         m_aProps.getHierarchyEntryData() );
 }
 
@@ -1084,7 +1068,7 @@ uno::Sequence< uno::Any > HierarchyContent::setPropertyValues(
 
     beans::PropertyChangeEvent aEvent;
     aEvent.Source         = static_cast< cppu::OWeakObject * >( this );
-    aEvent.Further        = sal_False;
+    aEvent.Further        = false;
 //    aEvent.PropertyName   =
     aEvent.PropertyHandle = -1;
 //    aEvent.OldValue       =
@@ -1313,8 +1297,7 @@ uno::Sequence< uno::Any > HierarchyContent::setPropertyValues(
 
             // Adapt Additional Core Properties.
             renameAdditionalPropertySet( xOldId->getContentIdentifier(),
-                                         xNewId->getContentIdentifier(),
-                                         true );
+                                         xNewId->getContentIdentifier() );
         }
         else
         {
@@ -1802,7 +1785,7 @@ void HierarchyContent::transfer(
             aChildId += rResult.getName();
 
             ucb::TransferInfo aInfo;
-            aInfo.MoveData  = sal_False;
+            aInfo.MoveData  = false;
             aInfo.NewTitle.clear();
             aInfo.SourceURL = aChildId;
             aInfo.NameClash = rInfo.NameClash;
@@ -1842,16 +1825,12 @@ void HierarchyContent::transfer(
         }
 
         // Remove own and all children's Additional Core Properties.
-        xSource->removeAdditionalPropertySet( true );
+        xSource->removeAdditionalPropertySet();
     }
 }
 
 
-
-
 // HierarchyContentProperties Implementation.
-
-
 
 
 uno::Sequence< ucb::ContentInfo >

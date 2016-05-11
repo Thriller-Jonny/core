@@ -62,9 +62,9 @@
 #include <sdr/overlay/overlaytools.hxx>
 #include <svx/sdr/table/tablecontroller.hxx>
 #include <drawinglayer/processor2d/processor2dtools.hxx>
+#include <comphelper/lok.hxx>
 
 #include <memory>
-
 
 void SdrObjEditView::ImpClearVars()
 {
@@ -101,7 +101,6 @@ SdrObjEditView::~SdrObjEditView()
     delete pTextEditOutliner;
     delete mpOldTextEditUndoManager;
 }
-
 
 
 bool SdrObjEditView::IsAction() const
@@ -316,7 +315,7 @@ void SdrObjEditView::TextEditDrawing(SdrPaintWindow& rPaintWindow) const
                     // compare against that; that's how double-buffering can
                     // still find the matching OutlinerView.
                     OutputDevice* pOutputDevice = rPaintWindow.GetWindow() ? rPaintWindow.GetWindow() : &rPaintWindow.GetOutputDevice();
-                    if(pOLV->GetWindow() == pOutputDevice || GetModel()->isTiledRendering())
+                    if(pOLV->GetWindow() == pOutputDevice || comphelper::LibreOfficeKit::isActive())
                     {
                         ImpPaintOutlinerView(*pOLV, aCheckRect, rPaintWindow.GetTargetOutputDevice());
                         return;
@@ -342,7 +341,7 @@ void SdrObjEditView::ImpPaintOutlinerView(OutlinerView& rOutlView, const Rectang
     // clipped; happens in case of editing text inside a shape in Calc.
     // FIXME would be better to complete the setup so that we don't get an
     // empty rRect here
-    if (!GetModel()->isTiledRendering() || !rRect.IsEmpty())
+    if (!comphelper::LibreOfficeKit::isActive() || !rRect.IsEmpty())
         aBlankRect.Intersection(rRect);
 
     rOutlView.GetOutliner()->SetUpdateMode(true); // Bugfix #22596#
@@ -461,8 +460,7 @@ OutlinerView* SdrObjEditView::ImpMakeOutlinerView(vcl::Window* pWin, bool /*bNoP
     }
     pOutlView->SetControlWord(nStat);
     pOutlView->SetBackgroundColor( aBackground );
-    pOutlView->setTiledRendering(GetModel()->isTiledRendering());
-    pOutlView->registerLibreOfficeKitCallback(GetModel()->getLibreOfficeKitCallback(), GetModel()->getLibreOfficeKitData());
+    pOutlView->registerLibreOfficeKitCallback(GetModel());
     if (pText!=nullptr)
     {
         pOutlView->SetAnchorMode((EVAnchorMode)(pText->GetOutlinerViewAnchorMode()));
@@ -711,7 +709,7 @@ bool SdrObjEditView::SdrBeginTextEdit(
         mxTextEditObj.reset( pObj );
         pTextEditOutliner=pGivenOutliner;
         if (pTextEditOutliner==nullptr)
-            pTextEditOutliner = SdrMakeOutliner( OUTLINERMODE_TEXTOBJECT, *mxTextEditObj->GetModel() );
+            pTextEditOutliner = SdrMakeOutliner( OutlinerMode::TextObject, *mxTextEditObj->GetModel() );
 
         {
             SvtAccessibilityOptions aOptions;
@@ -1186,7 +1184,6 @@ SdrPageView* SdrObjEditView::GetTextEditPageView() const
 }
 
 
-
 OutlinerView* SdrObjEditView::ImpFindOutlinerView(vcl::Window* pWin) const
 {
     if (pWin==nullptr) return nullptr;
@@ -1483,7 +1480,6 @@ bool SdrObjEditView::Command(const CommandEvent& rCEvt, vcl::Window* pWin)
     }
     return SdrGlueEditView::Command(rCEvt,pWin);
 }
-
 
 
 bool SdrObjEditView::ImpIsTextEditAllSelected() const
@@ -1794,7 +1790,6 @@ bool SdrObjEditView::SetStyleSheet(SfxStyleSheet* pStyleSheet, bool bDontRemoveH
 }
 
 
-
 void SdrObjEditView::AddWindowToPaintView(OutputDevice* pNewWin, vcl::Window *pWindow)
 {
     SdrGlueEditView::AddWindowToPaintView(pNewWin, pWindow);
@@ -1993,14 +1988,14 @@ void SdrObjEditView::MarkListHasChanged()
     }
 }
 
-IMPL_LINK_TYPED( SdrObjEditView, EndPasteOrDropHdl, PasteOrDropInfos*, pInfos, void )
+IMPL_LINK_TYPED( SdrObjEditView, EndPasteOrDropHdl, PasteOrDropInfos*, pInfo, void )
 {
-    OnEndPasteOrDrop( pInfos );
+    OnEndPasteOrDrop( pInfo );
 }
 
-IMPL_LINK_TYPED( SdrObjEditView, BeginPasteOrDropHdl, PasteOrDropInfos*, pInfos, void )
+IMPL_LINK_TYPED( SdrObjEditView, BeginPasteOrDropHdl, PasteOrDropInfos*, pInfo, void )
 {
-    OnBeginPasteOrDrop( pInfos );
+    OnBeginPasteOrDrop( pInfo );
 }
 
 void SdrObjEditView::OnBeginPasteOrDrop( PasteOrDropInfos* )
@@ -2110,10 +2105,10 @@ static const sal_uInt16* GetFormatRangeImpl( bool bTextOnly )
     return &gRanges[ bTextOnly ? 10 : 0];
 }
 
-bool SdrObjEditView::TakeFormatPaintBrush( std::shared_ptr< SfxItemSet >& rFormatSet  )
+void SdrObjEditView::TakeFormatPaintBrush( std::shared_ptr< SfxItemSet >& rFormatSet  )
 {
     if( mxSelectionController.is() && mxSelectionController->TakeFormatPaintBrush(rFormatSet) )
-        return true;
+        return;
 
     const SdrMarkList& rMarkList = GetMarkedObjectList();
     if( rMarkList.GetMarkCount() > 0 )
@@ -2130,10 +2125,7 @@ bool SdrObjEditView::TakeFormatPaintBrush( std::shared_ptr< SfxItemSet >& rForma
             const bool bOnlyHardAttr = false;
             rFormatSet->Put( GetAttrFromMarked(bOnlyHardAttr) );
         }
-        return true;
     }
-
-    return false;
 }
 
 static SfxItemSet CreatePaintSet( const sal_uInt16 *pRanges, SfxItemPool& rPool, const SfxItemSet& rSourceSet, const SfxItemSet& rTargetSet, bool bNoCharacterFormats, bool bNoParagraphFormats )

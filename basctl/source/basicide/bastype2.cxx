@@ -160,21 +160,7 @@ EntryDescriptor::EntryDescriptor (
 EntryDescriptor::~EntryDescriptor()
 { }
 
-bool EntryDescriptor::operator == (EntryDescriptor const& rDesc) const
-{
-    return
-        m_aDocument == rDesc.m_aDocument &&
-        m_eLocation == rDesc.m_eLocation &&
-        m_aLibName == rDesc.m_aLibName &&
-        m_aLibSubName == rDesc.m_aLibSubName &&
-        m_aName == rDesc.m_aName &&
-        m_aMethodName == rDesc.m_aMethodName &&
-        m_eType == rDesc.m_eType;
-}
-
-
 // TreeListBox
-
 
 
 TreeListBox::TreeListBox (vcl::Window* pParent, ResId const& rRes)
@@ -271,15 +257,14 @@ void TreeListBox::ImpCreateLibEntries( SvTreeListEntry* pDocumentRootEntry, cons
         {
             // check, if the module library is loaded
             bool bModLibLoaded = false;
-            OUString aOULibName( aLibName );
             Reference< script::XLibraryContainer > xModLibContainer( rDocument.getLibraryContainer( E_SCRIPTS ) );
-            if ( xModLibContainer.is() && xModLibContainer->hasByName( aOULibName ) && xModLibContainer->isLibraryLoaded( aOULibName ) )
+            if ( xModLibContainer.is() && xModLibContainer->hasByName( aLibName ) && xModLibContainer->isLibraryLoaded( aLibName ) )
                 bModLibLoaded = true;
 
             // check, if the dialog library is loaded
             bool bDlgLibLoaded = false;
             Reference< script::XLibraryContainer > xDlgLibContainer( rDocument.getLibraryContainer( E_DIALOGS ) );
-            if ( xDlgLibContainer.is() && xDlgLibContainer->hasByName( aOULibName ) && xDlgLibContainer->isLibraryLoaded( aOULibName ) )
+            if ( xDlgLibContainer.is() && xDlgLibContainer->hasByName( aLibName ) && xDlgLibContainer->isLibraryLoaded( aLibName ) )
                 bDlgLibLoaded = true;
 
             bool bLoaded = bModLibLoaded || bDlgLibLoaded;
@@ -287,11 +272,11 @@ void TreeListBox::ImpCreateLibEntries( SvTreeListEntry* pDocumentRootEntry, cons
             // if only one of the libraries is loaded, load also the other
             if ( bLoaded )
             {
-                if ( xModLibContainer.is() && xModLibContainer->hasByName( aOULibName ) && !xModLibContainer->isLibraryLoaded( aOULibName ) )
-                    xModLibContainer->loadLibrary( aOULibName );
+                if ( xModLibContainer.is() && xModLibContainer->hasByName( aLibName ) && !xModLibContainer->isLibraryLoaded( aLibName ) )
+                    xModLibContainer->loadLibrary( aLibName );
 
-                if ( xDlgLibContainer.is() && xDlgLibContainer->hasByName( aOULibName ) && !xDlgLibContainer->isLibraryLoaded( aOULibName ) )
-                    xDlgLibContainer->loadLibrary( aOULibName );
+                if ( xDlgLibContainer.is() && xDlgLibContainer->hasByName( aLibName ) && !xDlgLibContainer->isLibraryLoaded( aLibName ) )
+                    xDlgLibContainer->loadLibrary( aLibName );
             }
 
             // create tree list box entry
@@ -944,9 +929,9 @@ bool TreeListBox::OpenCurrent()
                     aDesc.GetLibName(), aDesc.GetName(), aDesc.GetMethodName(),
                     ConvertType(aDesc.GetType())
                 );
-                pDispatcher->Execute(
-                    SID_BASICIDE_SHOWSBX,
-                    SfxCallMode::SYNCHRON, &aSbxItem, 0L
+                pDispatcher->ExecuteList(
+                    SID_BASICIDE_SHOWSBX, SfxCallMode::SYNCHRON,
+                    { &aSbxItem }
                 );
                 return true;
             }

@@ -224,8 +224,7 @@ bool SdrExchangeView::Paste(SvStream& rInput, const OUString& rBaseURL, sal_uInt
 }
 
 bool SdrExchangeView::Paste(
-    const SdrModel& rMod, const Point& rPos, SdrObjList* pLst, SdrInsertFlags nOptions,
-    const OUString& rSrcShellID, const OUString& rDestShellID )
+    const SdrModel& rMod, const Point& rPos, SdrObjList* pLst, SdrInsertFlags nOptions)
 {
     const SdrModel* pSrcMod=&rMod;
     if (pSrcMod==mpModel)
@@ -267,13 +266,13 @@ bool SdrExchangeView::Paste(
     MapUnit eSrcUnit=pSrcMod->GetScaleUnit();
     MapUnit eDstUnit=mpModel->GetScaleUnit();
     bool bResize=eSrcUnit!=eDstUnit;
-    Fraction xResize,yResize;
+    Fraction aXResize,aYResize;
     Point aPt0;
     if (bResize)
     {
         FrPair aResize(GetMapFactor(eSrcUnit,eDstUnit));
-        xResize=aResize.X();
-        yResize=aResize.Y();
+        aXResize=aResize.X();
+        aYResize=aResize.Y();
     }
     SdrObjList*  pDstLst=pLst;
     sal_uInt16 nPg,nPgAnz=pSrcMod->GetPageCount();
@@ -285,7 +284,7 @@ bool SdrExchangeView::Paste(
         Rectangle aR=pSrcPg->GetAllObjSnapRect();
 
         if (bResize)
-            ResizeRect(aR,aPt0,xResize,yResize);
+            ResizeRect(aR,aPt0,aXResize,aYResize);
         Point aDist(aPos-aR.Center());
         Size  aSiz(aDist.X(),aDist.Y());
         size_t nCloneErrCnt = 0;
@@ -300,14 +299,14 @@ bool SdrExchangeView::Paste(
         {
             const SdrObject* pSrcOb=pSrcPg->GetObj(nOb);
 
-            SdrObject* pNeuObj = pSrcOb->CloneWithShellIDs(rSrcShellID, rDestShellID);
+            SdrObject* pNeuObj = pSrcOb->Clone();
 
             if (pNeuObj!=nullptr)
             {
                 if(bResize)
                 {
                     pNeuObj->GetModel()->SetPasteResize(true);
-                    pNeuObj->NbcResize(aPt0,xResize,yResize);
+                    pNeuObj->NbcResize(aPt0,aXResize,aYResize);
                     pNeuObj->GetModel()->SetPasteResize(false);
                 }
 
@@ -522,7 +521,6 @@ BitmapEx SdrExchangeView::GetMarkedObjBitmapEx(bool bNoVDevIfOneBmpMarked) const
 }
 
 
-
 GDIMetaFile SdrExchangeView::GetMarkedObjMetaFile(bool bNoVDevIfOneMtfMarked) const
 {
     GDIMetaFile aMtf;
@@ -584,7 +582,6 @@ GDIMetaFile SdrExchangeView::GetMarkedObjMetaFile(bool bNoVDevIfOneMtfMarked) co
 }
 
 
-
 Graphic SdrExchangeView::GetAllMarkedGraphic() const
 {
     Graphic aRet;
@@ -599,7 +596,6 @@ Graphic SdrExchangeView::GetAllMarkedGraphic() const
 
     return aRet;
 }
-
 
 
 Graphic SdrExchangeView::GetObjGraphic( const SdrModel* pModel, const SdrObject* pObj )
@@ -669,7 +665,6 @@ Graphic SdrExchangeView::GetObjGraphic( const SdrModel* pModel, const SdrObject*
 }
 
 
-
 ::std::vector< SdrObject* > SdrExchangeView::GetMarkedObjects() const
 {
     SortMarkedObjects();
@@ -707,7 +702,6 @@ Graphic SdrExchangeView::GetObjGraphic( const SdrModel* pModel, const SdrObject*
 }
 
 
-
 void SdrExchangeView::DrawMarkedObj(OutputDevice& rOut) const
 {
     ::std::vector< SdrObject* > aSdrObjects(GetMarkedObjects());
@@ -721,7 +715,6 @@ void SdrExchangeView::DrawMarkedObj(OutputDevice& rOut) const
         aPainter.ProcessDisplay(aDisplayInfo);
     }
 }
-
 
 
 SdrModel* SdrExchangeView::GetMarkedObjModel() const
@@ -775,28 +768,5 @@ SdrModel* SdrExchangeView::GetMarkedObjModel() const
     return pNeuMod;
 }
 
-
-
-bool SdrExchangeView::Cut( sal_uIntPtr /*nFormat */)
-{
-    OSL_FAIL( "SdrExchangeView::Cut: Not supported any more." );
-    return false;
-}
-
-
-
-bool SdrExchangeView::Yank(sal_uIntPtr /*nFormat*/)
-{
-    OSL_FAIL( "SdrExchangeView::Yank: Not supported any more." );
-    return false;
-}
-
-
-
-bool SdrExchangeView::Paste(vcl::Window* /*pWin*/, sal_uIntPtr /*nFormat*/)
-{
-    OSL_FAIL( "SdrExchangeView::Paste: Not supported any more." );
-    return false;
-}
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

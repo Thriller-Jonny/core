@@ -164,7 +164,7 @@ namespace dbaui
         for (sal_Int32 i=0; i<_rTables.getLength(); ++i, ++pIncludeTable)
         {
             if (xMeta.is())
-                qualifiedNameComponents(xMeta, pIncludeTable->getStr(), sCatalog, sSchema, sName,::dbtools::eInDataManipulation);
+                qualifiedNameComponents(xMeta, pIncludeTable->getStr(), sCatalog, sSchema, sName,::dbtools::EComposeRule::InDataManipulation);
             else
                 sName = pIncludeTable->getStr();
 
@@ -197,7 +197,7 @@ namespace dbaui
 
             SvTreeListEntry* pEntry = m_pTablesList->GetEntryPosByName(sName, pSchema ? pSchema : (pCatalog ? pCatalog : pRootEntry) );
             if (pEntry)
-                m_pTablesList->SetCheckButtonState(pEntry, SV_BUTTON_CHECKED);
+                m_pTablesList->SetCheckButtonState(pEntry, SvButtonState::Checked);
         }
         m_pTablesList->CheckButtons();
     }
@@ -295,7 +295,7 @@ namespace dbaui
                     xProp->setPropertyValue(PROPERTY_TABLETYPEFILTER,aTableTypeFilter);
 
                     if ( xModi.is() && !bModified )
-                        xModi->setModified(sal_False);
+                        xModi->setModified(false);
 
                 }
 
@@ -372,7 +372,7 @@ namespace dbaui
 
     void OTableSubscriptionPage::CheckAll( bool _bCheck )
     {
-        SvButtonState eState = _bCheck ? SV_BUTTON_CHECKED : SV_BUTTON_UNCHECKED;
+        SvButtonState eState = _bCheck ? SvButtonState::Checked : SvButtonState::Unchecked;
         SvTreeListEntry* pEntry = m_pTablesList->First();
         while (pEntry)
         {
@@ -455,7 +455,7 @@ namespace dbaui
             SvTreeListEntry* pSchema = nullptr;
             SvTreeListEntry* pCatalog = nullptr;
 
-            if (m_pTablesList->GetCheckButtonState(pEntry) == SV_BUTTON_CHECKED && !m_pTablesList->GetModel()->HasChildren(pEntry))
+            if (m_pTablesList->GetCheckButtonState(pEntry) == SvButtonState::Checked && !m_pTablesList->GetModel()->HasChildren(pEntry))
             {   // checked and a leaf, which means it's no catalog, no schema, but a real table
                 OUString sCatalog;
                 if(m_pTablesList->GetModel()->HasParent(pEntry))

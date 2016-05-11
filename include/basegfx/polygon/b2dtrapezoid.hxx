@@ -26,7 +26,6 @@
 #include <basegfx/basegfxdllapi.h>
 
 
-
 namespace basegfx
 {
     // class to hold a single trapezoid
@@ -74,7 +73,6 @@ namespace basegfx
 } // end of namespace basegfx
 
 
-
 namespace basegfx
 {
     namespace tools
@@ -82,7 +80,7 @@ namespace basegfx
         // convert SourcePolyPolygon to trapezoids. The trapezoids will be appended to
         // ro_Result. ro_Result will not be cleared. If SourcePolyPolygon contains curves,
         // it's default AdaptiveSubdivision will be used.
-        // CAUTION: Trapezoids are oreintation-dependent in the sense that the upper and lower
+        // CAUTION: Trapezoids are orientation-dependent in the sense that the upper and lower
         // lines have to be parallel to the X-Axis, thus this subdivision is NOT simply usable
         // for primitive decompositions. To use it, the shear and rotate parts of the
         // involved transformations HAVE to be taken into account.
@@ -116,7 +114,6 @@ namespace basegfx
 
     } // end of namespace tools
 } // end of namespace basegfx
-
 
 
 #endif // INCLUDED_BASEGFX_POLYGON_B2DTRAPEZOID_HXX

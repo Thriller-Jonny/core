@@ -34,7 +34,6 @@
 using namespace ::com::sun::star;
 
 using ::com::sun::star::beans::Property;
-using ::osl::MutexGuard;
 
 namespace
 {
@@ -149,7 +148,7 @@ struct StaticRegressionCurveInfoHelper_Initializer
 private:
     static uno::Sequence< Property > lcl_GetPropertySequence()
     {
-        ::std::vector< ::com::sun::star::beans::Property > aProperties;
+        ::std::vector< css::beans::Property > aProperties;
         lcl_AddPropertiesToVector( aProperties );
         ::chart::LinePropertiesHelper::AddPropertiesToVector( aProperties );
 
@@ -190,7 +189,7 @@ RegressionCurveModel::RegressionCurveModel(
     m_xContext( xContext ),
     m_eRegressionCurveType( eCurveType ),
         m_xModifyEventForwarder( ModifyListenerHelper::createModifyEventForwarder()),
-        m_xEquationProperties( new RegressionEquation( xContext ))
+        m_xEquationProperties( new RegressionEquation )
 {
     // set 0 line width (default) hard, so that it is always written to XML,
     // because the old implementation uses different defaults
@@ -207,7 +206,7 @@ RegressionCurveModel::RegressionCurveModel( const RegressionCurveModel & rOther 
     m_eRegressionCurveType( rOther.m_eRegressionCurveType ),
     m_xModifyEventForwarder( ModifyListenerHelper::createModifyEventForwarder())
 {
-    m_xEquationProperties.set( CloneHelper::CreateRefClone< uno::Reference< beans::XPropertySet > >()( rOther.m_xEquationProperties ));
+    m_xEquationProperties.set( CloneHelper::CreateRefClone< beans::XPropertySet >()( rOther.m_xEquationProperties ));
     ModifyListenerHelper::addListener( m_xEquationProperties, m_xModifyEventForwarder );
 }
 
@@ -376,7 +375,7 @@ OUString SAL_CALL MeanValueRegressionCurve::getImplementationName()
     return getImplementationName_Static();
 }
 
-OUString MeanValueRegressionCurve::getImplementationName_Static()
+const OUString& MeanValueRegressionCurve::getImplementationName_Static()
 {
     return lcl_aImplementationName_MeanValue;
 }
@@ -423,7 +422,7 @@ OUString SAL_CALL LinearRegressionCurve::getImplementationName()
     return getImplementationName_Static();
 }
 
-OUString LinearRegressionCurve::getImplementationName_Static()
+const OUString& LinearRegressionCurve::getImplementationName_Static()
 {
     return lcl_aImplementationName_Linear;
 }
@@ -470,7 +469,7 @@ OUString SAL_CALL LogarithmicRegressionCurve::getImplementationName()
     return getImplementationName_Static();
 }
 
-OUString LogarithmicRegressionCurve::getImplementationName_Static()
+const OUString& LogarithmicRegressionCurve::getImplementationName_Static()
 {
     return lcl_aImplementationName_Logarithmic;
 }
@@ -517,7 +516,7 @@ OUString SAL_CALL ExponentialRegressionCurve::getImplementationName()
     return getImplementationName_Static();
 }
 
-OUString ExponentialRegressionCurve::getImplementationName_Static()
+const OUString& ExponentialRegressionCurve::getImplementationName_Static()
 {
     return lcl_aImplementationName_Exponential;
 }
@@ -564,7 +563,7 @@ OUString SAL_CALL PotentialRegressionCurve::getImplementationName()
     return getImplementationName_Static();
 }
 
-OUString PotentialRegressionCurve::getImplementationName_Static()
+const OUString& PotentialRegressionCurve::getImplementationName_Static()
 {
     return lcl_aImplementationName_Potential;
 }
@@ -611,7 +610,7 @@ OUString SAL_CALL PolynomialRegressionCurve::getImplementationName()
     return getImplementationName_Static();
 }
 
-OUString PolynomialRegressionCurve::getImplementationName_Static()
+const OUString& PolynomialRegressionCurve::getImplementationName_Static()
 {
     return lcl_aImplementationName_Polynomial;
 }
@@ -658,7 +657,7 @@ OUString SAL_CALL MovingAverageRegressionCurve::getImplementationName()
     return getImplementationName_Static();
 }
 
-OUString MovingAverageRegressionCurve::getImplementationName_Static()
+const OUString& MovingAverageRegressionCurve::getImplementationName_Static()
 {
     return lcl_aImplementationName_MovingAverage;
 }

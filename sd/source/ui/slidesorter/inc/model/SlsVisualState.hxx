@@ -48,8 +48,8 @@ public:
 
     void UpdateVisualState (const PageDescriptor& rDescriptor);
 
-    Point GetLocationOffset() const { return maLocationOffset;}
-    bool SetLocationOffset (const Point& rPoint);
+    const Point& GetLocationOffset() const { return maLocationOffset;}
+    void SetLocationOffset (const Point& rPoint);
 
     sal_Int32 mnPageId; // For debugging
 

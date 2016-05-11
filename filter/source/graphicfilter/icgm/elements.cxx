@@ -21,13 +21,10 @@
 #include "elements.hxx"
 
 
-
-
 CGMElements::CGMElements()
 {
     Init();
 };
-
 
 
 CGMElements::~CGMElements()
@@ -38,7 +35,6 @@ CGMElements::~CGMElements()
     DeleteAllBundles( aTextList );
     DeleteAllBundles( aFillList );
 }
-
 
 
 CGMElements& CGMElements::operator=( CGMElements& rSource )
@@ -137,7 +133,6 @@ CGMElements& CGMElements::operator=( CGMElements& rSource )
     bSegmentCount = rSource.bSegmentCount;
     return (*this);
 }
-
 
 
 void CGMElements::Init()
@@ -286,7 +281,6 @@ void CGMElements::Init()
 }
 
 
-
 void CGMElements::ImplInsertHatch( sal_Int32 nKey, int nStyle, long nDistance, long nAngle )
 {
     HatchEntry& rEntry = maHatchMap[nKey];
@@ -296,30 +290,25 @@ void CGMElements::ImplInsertHatch( sal_Int32 nKey, int nStyle, long nDistance, l
 }
 
 
-
 void CGMElements::DeleteAllBundles( BundleList& rList )
 {
-    for ( size_t i = 0, n = rList.size(); i < n; ++i ) {
-        delete rList[ i ];
+    for (Bundle* i : rList) {
+        delete i;
     }
     rList.clear();
 };
-
-
 
 
 void CGMElements::CopyAllBundles( BundleList& rSource, BundleList& rDest )
 {
     DeleteAllBundles( rDest );
 
-    for ( size_t i = 0, n = rSource.size(); i < n; ++i )
+    for (Bundle* pPtr : rSource)
     {
-        Bundle* pPtr = rSource[ i ];
         Bundle* pTempBundle = pPtr->Clone();
         rDest.push_back( pTempBundle );
     }
 };
-
 
 
 Bundle* CGMElements::GetBundleIndex( long nIndex, BundleList& rList, Bundle& rBundle )
@@ -332,17 +321,15 @@ Bundle* CGMElements::GetBundleIndex( long nIndex, BundleList& rList, Bundle& rBu
 }
 
 
-
 Bundle* CGMElements::GetBundle( BundleList& rList, long nIndex )
 {
-    for ( size_t i = 0, n = rList.size(); i < n; ++i ) {
-        if ( rList[ i ]->GetIndex() == nIndex ) {
-            return rList[ i ];
+    for (Bundle* i : rList) {
+        if ( i->GetIndex() == nIndex ) {
+            return i;
         }
     }
     return nullptr;
 }
-
 
 
 Bundle* CGMElements::InsertBundle( BundleList& rList, Bundle& rBundle )

@@ -54,7 +54,6 @@ using namespace comphelper;
 #define CFG_PAGE_AND_GROUP          "General", "LoadSave"
 
 
-
 struct SvxSaveTabPage_Impl
 {
     Reference< XNameContainer > xFact;
@@ -63,7 +62,7 @@ struct SvxSaveTabPage_Impl
     Sequence< sal_Bool >        aODFArr[APP_COUNT];
     Sequence< OUString >        aUIFilterArr[APP_COUNT];
     OUString                    aDefaultArr[APP_COUNT];
-    sal_Bool                    aDefaultReadonlyArr[APP_COUNT];
+    bool                    aDefaultReadonlyArr[APP_COUNT];
     bool                    bInitialized;
 
     SvxSaveTabPage_Impl();
@@ -193,7 +192,6 @@ SvxSaveTabPage::SvxSaveTabPage( vcl::Window* pParent, const SfxItemSet& rCoreSet
 
     DetectHiddenControls();
 }
-
 
 
 SvxSaveTabPage::~SvxSaveTabPage()
@@ -510,7 +508,6 @@ void SvxSaveTabPage::Reset( const SfxItemSet* )
     aRelativeInetCB->SaveValue();
     aODFVersionLB->SaveValue();
 }
-
 
 
 IMPL_LINK_TYPED( SvxSaveTabPage, AutoClickHdl_Impl, Button*, pBox, void )

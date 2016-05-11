@@ -41,7 +41,7 @@ namespace utl
 {
 
 static SvStream* lcl_CreateStream( const OUString& rFileName, StreamMode eOpenMode,
-                                   Reference < XInteractionHandler > xInteractionHandler,
+                                   const Reference < XInteractionHandler >& xInteractionHandler,
                                    UcbLockBytesHandler* pHandler, bool bEnsureFileExists )
 {
     SvStream* pStream = nullptr;
@@ -90,7 +90,7 @@ static SvStream* lcl_CreateStream( const OUString& rFileName, StreamMode eOpenMo
                 InsertCommandArgument aInsertArg;
                 aInsertArg.Data = xInput;
 
-                aInsertArg.ReplaceExisting = sal_False;
+                aInsertArg.ReplaceExisting = false;
                 Any aCmdArg;
                 aCmdArg <<= aInsertArg;
                 aContent.executeCommand( "insert", aCmdArg );
@@ -138,27 +138,24 @@ static SvStream* lcl_CreateStream( const OUString& rFileName, StreamMode eOpenMo
     return pStream;
 }
 
-SvStream* UcbStreamHelper::CreateStream( const OUString& rFileName, StreamMode eOpenMode,
-                                         UcbLockBytesHandler* pHandler )
+SvStream* UcbStreamHelper::CreateStream( const OUString& rFileName, StreamMode eOpenMode )
 {
-    return lcl_CreateStream( rFileName, eOpenMode, Reference < XInteractionHandler >(), pHandler, true /* bEnsureFileExists */ );
+    return lcl_CreateStream( rFileName, eOpenMode, Reference < XInteractionHandler >(), nullptr, true /* bEnsureFileExists */ );
 }
 
 SvStream* UcbStreamHelper::CreateStream( const OUString& rFileName, StreamMode eOpenMode,
-                                         Reference < XInteractionHandler > xInteractionHandler,
-                                         UcbLockBytesHandler* pHandler )
+                                         const Reference < XInteractionHandler >& xInteractionHandler )
 {
-    return lcl_CreateStream( rFileName, eOpenMode, xInteractionHandler, pHandler, true /* bEnsureFileExists */ );
+    return lcl_CreateStream( rFileName, eOpenMode, xInteractionHandler, nullptr, true /* bEnsureFileExists */ );
 }
 
 SvStream* UcbStreamHelper::CreateStream( const OUString& rFileName, StreamMode eOpenMode,
-                                         bool bFileExists,
-                                         UcbLockBytesHandler* pHandler )
+                                         bool bFileExists )
 {
-    return lcl_CreateStream( rFileName, eOpenMode, Reference < XInteractionHandler >(), pHandler, !bFileExists );
+    return lcl_CreateStream( rFileName, eOpenMode, Reference < XInteractionHandler >(), nullptr, !bFileExists );
 }
 
-SvStream* UcbStreamHelper::CreateStream( Reference < XInputStream > xStream )
+SvStream* UcbStreamHelper::CreateStream( const Reference < XInputStream >& xStream )
 {
     SvStream* pStream = nullptr;
     UcbLockBytesRef xLockBytes = UcbLockBytes::CreateInputLockBytes( xStream );
@@ -172,7 +169,7 @@ SvStream* UcbStreamHelper::CreateStream( Reference < XInputStream > xStream )
     return pStream;
 }
 
-SvStream* UcbStreamHelper::CreateStream( Reference < XStream > xStream )
+SvStream* UcbStreamHelper::CreateStream( const Reference < XStream >& xStream )
 {
     SvStream* pStream = nullptr;
     if ( xStream->getOutputStream().is() )
@@ -191,7 +188,7 @@ SvStream* UcbStreamHelper::CreateStream( Reference < XStream > xStream )
     return pStream;
 }
 
-SvStream* UcbStreamHelper::CreateStream( Reference < XInputStream > xStream, bool bCloseStream )
+SvStream* UcbStreamHelper::CreateStream( const Reference < XInputStream >& xStream, bool bCloseStream )
 {
     SvStream* pStream = nullptr;
     UcbLockBytesRef xLockBytes = UcbLockBytes::CreateInputLockBytes( xStream );
@@ -208,7 +205,7 @@ SvStream* UcbStreamHelper::CreateStream( Reference < XInputStream > xStream, boo
     return pStream;
 };
 
-SvStream* UcbStreamHelper::CreateStream( Reference < XStream > xStream, bool bCloseStream )
+SvStream* UcbStreamHelper::CreateStream( const Reference < XStream >& xStream, bool bCloseStream )
 {
     SvStream* pStream = nullptr;
     if ( xStream->getOutputStream().is() )

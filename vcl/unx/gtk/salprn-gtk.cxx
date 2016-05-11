@@ -7,18 +7,18 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include "gtkprintwrapper.hxx"
+#include "unx/gtk/gtkprintwrapper.hxx"
 
 #include "unx/gtk/gtkdata.hxx"
 #include "unx/gtk/gtkframe.hxx"
 #include "unx/gtk/gtkinst.hxx"
 #include "unx/gtk/gtkprn.hxx"
 
-#include "vcl/configsettings.hxx"
-#include "vcl/help.hxx"
-#include "vcl/print.hxx"
-#include "vcl/svapp.hxx"
-#include "vcl/window.hxx"
+#include <vcl/configsettings.hxx>
+#include <vcl/help.hxx>
+#include <vcl/print.hxx>
+#include <vcl/svapp.hxx>
+#include <vcl/window.hxx>
 
 #include <gtk/gtk.h>
 
@@ -147,14 +147,14 @@ GtkSalPrinter_Impl::~GtkSalPrinter_Impl()
 namespace
 {
 
-static GtkInstance const&
+GtkInstance const&
 lcl_getGtkSalInstance()
 {
     // we _know_ this is GtkInstance
     return *static_cast<GtkInstance*>(GetGtkSalData()->m_pInstance);
 }
 
-static bool
+bool
 lcl_useSystemPrintDialog()
 {
     return officecfg::Office::Common::Misc::UseSystemPrintDialog::get()
@@ -312,7 +312,7 @@ GtkSalPrinter::EndJob()
 namespace
 {
 
-static void
+void
 lcl_setHelpText(
         GtkWidget* const io_pWidget,
         const uno::Sequence<OUString>& i_rHelpTexts,
@@ -323,7 +323,7 @@ lcl_setHelpText(
             OUStringToOString(i_rHelpTexts.getConstArray()[i_nIndex], RTL_TEXTENCODING_UTF8).getStr());
 }
 
-static GtkWidget*
+GtkWidget*
 lcl_makeFrame(
         GtkWidget* const i_pChild,
         const OUString &i_rText,
@@ -352,7 +352,7 @@ lcl_makeFrame(
     return pFrame;
 }
 
-static void
+void
 lcl_extractHelpTextsOrIds(
         const beans::PropertyValue& rEntry,
         uno::Sequence<OUString>& rHelpStrings)
@@ -368,7 +368,7 @@ lcl_extractHelpTextsOrIds(
     }
 }
 
-static GtkWidget*
+GtkWidget*
 lcl_combo_box_text_new()
 {
 #if GTK_CHECK_VERSION(3,0,0)
@@ -378,7 +378,7 @@ lcl_combo_box_text_new()
 #endif
 }
 
-static void
+void
 lcl_combo_box_text_append(GtkWidget* const pWidget, gchar const* const pText)
 {
 #if GTK_CHECK_VERSION(3,0,0)
@@ -404,7 +404,7 @@ void
 GtkPrintDialog::impl_initDialog()
 {
     //To-Do, like fpicker, set UI language
-    m_pDialog = m_xWrapper->print_unix_dialog_new(nullptr, nullptr);
+    m_pDialog = m_xWrapper->print_unix_dialog_new();
 
     vcl::Window* const pTopWindow(Application::GetActiveTopWindow());
     if (pTopWindow)
@@ -750,7 +750,7 @@ GtkPrintDialog::impl_initPrintContent(uno::Sequence<sal_Bool> const& i_rDisabled
     GtkPrintUnixDialog* const pDialog(GTK_PRINT_UNIX_DIALOG(m_pDialog));
 
     // XXX: This is a hack that depends on the number and the ordering of
-    // the controls in the rDisabled sequence (cf. the intialization of
+    // the controls in the rDisabled sequence (cf. the initialization of
     // the "PrintContent" UI option in SwPrintUIOptions::SwPrintUIOptions,
     // sw/source/core/view/printdata.cxx)
     if (m_xWrapper->supportsPrintSelection() && !i_rDisabled[2])
@@ -1133,7 +1133,7 @@ const
     pItem->Commit();
 }
 
-sal_uLong
+sal_uInt32
 GtkSalInfoPrinter::GetCapabilities(
         const ImplJobSetup* const i_pSetupData,
         const PrinterCapType i_nType)

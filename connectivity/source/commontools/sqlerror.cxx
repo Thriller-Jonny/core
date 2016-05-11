@@ -35,12 +35,7 @@ namespace connectivity
 
 
     using ::com::sun::star::uno::Reference;
-    using ::com::sun::star::uno::UNO_QUERY;
-    using ::com::sun::star::uno::UNO_QUERY_THROW;
-    using ::com::sun::star::uno::Exception;
-    using ::com::sun::star::uno::RuntimeException;
     using ::com::sun::star::uno::Any;
-    using ::com::sun::star::uno::makeAny;
     using ::com::sun::star::uno::XInterface;
     using ::com::sun::star::uno::XComponentContext;
     using ::com::sun::star::sdbc::SQLException;
@@ -72,11 +67,11 @@ namespace connectivity
     private:
         /// returns the basic error message associated with the given error condition, without any parameter replacements
         OUString
-                impl_getErrorMessage( const ErrorCondition& _eCondition );
+                impl_getErrorMessage( ErrorCondition _eCondition );
 
         /// returns the SQLState associated with the given error condition
         OUString
-                impl_getSQLState( const ErrorCondition& _eCondition );
+                impl_getSQLState( ErrorCondition _eCondition );
 
         /// returns an SQLException describing the given error condition
         SQLException
@@ -229,7 +224,7 @@ namespace connectivity
     }
 
 
-    OUString SQLError_Impl::impl_getErrorMessage( const ErrorCondition& _eCondition )
+    OUString SQLError_Impl::impl_getErrorMessage( ErrorCondition _eCondition )
     {
         OUStringBuffer aMessage;
 
@@ -244,7 +239,7 @@ namespace connectivity
     }
 
 
-    OUString SQLError_Impl::impl_getSQLState( const ErrorCondition& _eCondition )
+    OUString SQLError_Impl::impl_getSQLState( ErrorCondition _eCondition )
     {
         OUString sState;
 
@@ -293,9 +288,9 @@ namespace connectivity
     }
 
 
-    OUString SQLError::getErrorMessage( const ErrorCondition _eCondition, const ParamValue& _rParamValue1, const ParamValue& _rParamValue2, const ParamValue& _rParamValue3 ) const
+    OUString SQLError::getErrorMessage( const ErrorCondition _eCondition ) const
     {
-        return m_pImpl->getErrorMessage( _eCondition, _rParamValue1, _rParamValue2, _rParamValue3 );
+        return m_pImpl->getErrorMessage( _eCondition, ParamValue(), ParamValue(), ParamValue() );
     }
 
 
@@ -311,16 +306,16 @@ namespace connectivity
     }
 
 
-    void SQLError::raiseException( const ErrorCondition _eCondition, const ParamValue& _rParamValue1, const ParamValue& _rParamValue2, const ParamValue& _rParamValue3 ) const
+    void SQLError::raiseException( const ErrorCondition _eCondition ) const
     {
-        m_pImpl->raiseException( _eCondition, _rParamValue1, _rParamValue2, _rParamValue3 );
+        m_pImpl->raiseException( _eCondition, ParamValue(), ParamValue(), ParamValue() );
     }
 
 
     void SQLError::raiseTypedException( const ErrorCondition _eCondition, const Reference< XInterface >& _rxContext,
-        const Type& _rExceptionType, const ParamValue& _rParamValue1, const ParamValue& _rParamValue2, const ParamValue& _rParamValue3 ) const
+        const Type& _rExceptionType ) const
     {
-        m_pImpl->raiseTypedException( _eCondition, _rxContext, _rExceptionType, _rParamValue1, _rParamValue2, _rParamValue3 );
+        m_pImpl->raiseTypedException( _eCondition, _rxContext, _rExceptionType, ParamValue(), ParamValue(), ParamValue() );
     }
 
 

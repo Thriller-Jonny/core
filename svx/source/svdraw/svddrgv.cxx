@@ -44,9 +44,7 @@
 using namespace sdr;
 
 
-
 // DragView
-
 
 
 void SdrDragView::ImpClearVars()
@@ -198,7 +196,6 @@ bool SdrDragView::TakeDragObjAnchorPos(Point& rPos, bool bTR ) const
     }
     return false;
 }
-
 
 
 bool SdrDragView::TakeDragLimit(SdrDragMode /*eMode*/, Rectangle& /*rRect*/) const
@@ -660,11 +657,11 @@ bool SdrDragView::ImpBegInsObjPoint(bool bIdxZwang, sal_uInt32 nIdx, const Point
 
         if(bIdxZwang)
         {
-            mnInsPointNum = pMarkedPath->NbcInsPoint(nIdx, aPt, bNewObj, true);
+            mnInsPointNum = pMarkedPath->NbcInsPoint(nIdx, aPt, bNewObj);
         }
         else
         {
-            mnInsPointNum = pMarkedPath->NbcInsPointOld(aPt, bNewObj, true);
+            mnInsPointNum = pMarkedPath->NbcInsPointOld(aPt, bNewObj);
         }
 
         if(bClosed0 != pMarkedPath->IsClosedObj())
@@ -829,7 +826,6 @@ void SdrDragView::HideDragObj()
         maDragStat.SetShown(false);
     }
 }
-
 
 
 void SdrDragView::SetNoDragXorPolys(bool bOn)

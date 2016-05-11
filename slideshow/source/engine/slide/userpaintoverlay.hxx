@@ -25,8 +25,7 @@
 #include "unoview.hxx"
 #include "rgbcolor.hxx"
 
-#include <boost/noncopyable.hpp>
-#include <boost/shared_ptr.hpp>
+#include <memory>
 #include <vector>
 
 /* Definition of UserPaintOverlay class */
@@ -39,7 +38,7 @@ namespace slideshow
         struct SlideShowContext;
 
         class PaintOverlayHandler;
-        typedef ::boost::shared_ptr< class UserPaintOverlay > UserPaintOverlaySharedPtr;
+        typedef ::std::shared_ptr< class UserPaintOverlay > UserPaintOverlaySharedPtr;
         typedef ::std::vector< ::cppcanvas::PolyPolygonSharedPtr> PolyPolygonVector;
         /** Slide overlay, which can be painted into by the user.
 
@@ -47,7 +46,7 @@ namespace slideshow
             listening for mouse clicks and moves. When the mouse is
             dragged, a hand sketching in the selected color is shown.
         */
-        class UserPaintOverlay : private boost::noncopyable
+        class UserPaintOverlay
         {
         public:
             /** Create a UserPaintOverlay
@@ -64,6 +63,8 @@ namespace slideshow
                                                      const PolyPolygonVector& rPolygons,
                                                      bool                     bActive);
             ~UserPaintOverlay();
+            UserPaintOverlay(const UserPaintOverlay&) = delete;
+            UserPaintOverlay& operator=(const UserPaintOverlay&) = delete;
             PolyPolygonVector getPolygons();
             void drawPolygons();
 
@@ -74,7 +75,7 @@ namespace slideshow
                               const PolyPolygonVector& rPolygons,
                               bool                    bActive );
 
-            ::boost::shared_ptr<PaintOverlayHandler>    mpHandler;
+            ::std::shared_ptr<PaintOverlayHandler>    mpHandler;
             EventMultiplexer&                           mrMultiplexer;
         };
     }

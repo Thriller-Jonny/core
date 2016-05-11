@@ -33,9 +33,10 @@ namespace chart
 class ChartDropTargetHelper : public DropTargetHelper
 {
 public:
+    ChartDropTargetHelper() = delete;
     explicit ChartDropTargetHelper(
-        const ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::dnd::XDropTarget >& rxDropTarget,
-        const ::com::sun::star::uno::Reference< ::com::sun::star::chart2::XChartDocument > & xChartDocument );
+        const css::uno::Reference< css::datatransfer::dnd::XDropTarget >& rxDropTarget,
+        const css::uno::Reference< css::chart2::XChartDocument > & xChartDocument );
     virtual ~ChartDropTargetHelper();
 
 protected:
@@ -44,13 +45,9 @@ protected:
     virtual sal_Int8    ExecuteDrop( const ExecuteDropEvent& rEvt ) override;
 
 private:
-    // not available
-    ChartDropTargetHelper();
-
     bool satisfiesPrerequisites() const;
 
-    ::com::sun::star::uno::Reference<
-            ::com::sun::star::chart2::XChartDocument > m_xChartDocument;
+    css::uno::Reference< css::chart2::XChartDocument > m_xChartDocument;
 };
 
 } //  namespace chart

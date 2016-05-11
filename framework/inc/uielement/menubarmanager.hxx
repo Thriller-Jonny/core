@@ -64,7 +64,7 @@ struct PopupControllerEntry
     css::uno::WeakReference< css::frame::XDispatchProvider > m_xDispatchProvider;
 };
 
-typedef std::unordered_map< OUString, PopupControllerEntry, OUStringHash, std::equal_to< OUString > > PopupControllerCache;
+typedef std::unordered_map< OUString, PopupControllerEntry, OUStringHash > PopupControllerCache;
 
 class BmkMenu;
 class AddonMenu;
@@ -188,6 +188,8 @@ class MenuBarManager : public css::frame::XStatusListener                ,
 
         void             RetrieveShortcuts( std::vector< MenuItemHandler* >& aMenuShortCuts );
         void             CheckAndAddMenuExtension( Menu* pMenu );
+        static void      UpdateSpecialWindowMenu( Menu* pMenu, const css::uno::Reference< css::uno::XComponentContext >& xContext );
+        static void      FillMenuImages( css::uno::Reference< css::frame::XFrame >& xFrame, Menu* _pMenu, bool bShowMenuImages );
         static void      impl_RetrieveShortcutsFromConfiguration( const css::uno::Reference< css::ui::XAcceleratorConfiguration >& rAccelCfg,
                                                                   const css::uno::Sequence< OUString >& rCommands,
                                                                   std::vector< MenuItemHandler* >& aMenuShortCuts );
@@ -200,15 +202,15 @@ class MenuBarManager : public css::frame::XStatusListener                ,
         void             Init(const css::uno::Reference< css::frame::XFrame >& rFrame,Menu* pAddonMenu,bool bDelete,bool bDeleteChildren,bool _bHandlePopUp);
         void             SetHdl();
 
-        bool                                                         m_bDisposed : 1,
-                                                                     m_bInitialized : 1,
-                                                                     m_bDeleteMenu : 1,
-                                                                     m_bDeleteChildren : 1,
-                                                                     m_bActive : 1,
-                                                                     m_bIsBookmarkMenu : 1,
-                                                                     m_bShowMenuImages : 1;
-        bool                                                         m_bRetrieveImages : 1,
-                                                                     m_bAcceleratorCfg : 1;
+        bool                                                         m_bDisposed;
+        bool                                                         m_bInitialized;
+        bool                                                         m_bDeleteMenu;
+        bool                                                         m_bDeleteChildren;
+        bool                                                         m_bActive;
+        bool                                                         m_bIsBookmarkMenu;
+        bool                                                         m_bShowMenuImages;
+        bool                                                         m_bRetrieveImages;
+        bool                                                         m_bAcceleratorCfg;
         bool                                                         m_bModuleIdentified;
         bool                                                         m_bHasMenuBar;
         OUString                                                     m_aMenuItemCommand;

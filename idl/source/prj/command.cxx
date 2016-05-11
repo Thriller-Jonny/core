@@ -29,6 +29,7 @@
 #include <command.hxx>
 #include <globals.hxx>
 #include <database.hxx>
+#include <parser.hxx>
 
 char const * SyntaxStrings[] = {
 "basic-type:",
@@ -51,7 +52,7 @@ char const * SyntaxStrings[] = {
 "\titem type item-name;\n",
 
 "\ttype definition:",
-"\tstruct | union identifier",
+"\tstruct identifier",
 "\t'{'",
 "\t\t{ type idetifier }",
 "\t'}'",
@@ -74,29 +75,23 @@ char const * SyntaxStrings[] = {
 "\t'['\n",
 
 "\t\titem-method-args",
-"\t\tAccelConfig, MenuConfig, StatusBarConfig, ToolbarConfig",
-"\t\tAutomation*",
+"\t\tAccelConfig, MenuConfig, ToolbarConfig",
 "\t\tAutoUpdate",
 "\t\tContainer",
-"\t\tDefault        = Identifier",
 "\t\tExecMethod     = Identifier",
 "\t\tExport*",
 "\t\tFastCall",
 "\t\tGet, Set",
 "\t\tGroupId        = Identifier",
-"\t\tHasCoreId",
-"\t\tHasDialog",
-"\t\tIsCollection",
 "\t\tImageRotation",
 "\t\tImageReflection",
 "\t\tPseudoPrefix   = Identifier",
 "\t\tPseudoSlots",
-"\t\tReadOnly",
 "\t\tReadOnlyDoc*",
-"\t\tRecordPerSet*, RecordPerItem, RecordManual, NoRecord",
+"\t\tRecordPerSet*, RecordPerItem, NoRecord",
 "\t\tRecordAbsolute",
 "\t\tStateMethod    = Identifier",
-"\t\tSynchron*, Asynchron",
+"\t\tAsynchron",
 "\t\tToggle",
 "\t']'\n",
 
@@ -128,18 +123,13 @@ bool ReadIdl( SvIdlWorkingBase * pDataBase, const SvCommand & rCommand )
     {
         OUString aFileName ( rCommand.aInFileList[ n ] );
         pDataBase->AddDepFile(aFileName);
-        SvFileStream aStm( aFileName, STREAM_STD_READ | StreamMode::NOCREATE );
-        if( aStm.GetError() == SVSTREAM_OK )
-        {
-            SvTokenStream aTokStm( aStm, aFileName );
-            if( !pDataBase->ReadSvIdl( aTokStm, false, rCommand.aPath ) )
-                return false;
-        }
-        else
-        {
-            const OString aStr(OUStringToOString(aFileName,
-                RTL_TEXTENCODING_UTF8));
-            fprintf( stderr, "unable to read input file: %s\n", aStr.getStr() );
+        SvTokenStream aTokStm( aFileName );
+        try {
+            SvIdlParser aParser(*pDataBase, aTokStm);
+            aParser.ReadSvIdl( rCommand.aPath );
+        } catch (const SvParseException& ex) {
+            pDataBase->SetError(ex.aError);
+            pDataBase->WriteError(aTokStm);
             return false;
         }
     }

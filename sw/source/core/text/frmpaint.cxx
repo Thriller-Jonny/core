@@ -220,7 +220,7 @@ void SwExtraPainter::PaintExtra( SwTwips nY, long nAsc, long nMax, bool bRed )
     bool bPaint = true;
     if( !IsClipChg() )
     {
-        Size aSize = pTmpFnt->_GetTextSize( aDrawInf );
+        Size aSize = pTmpFnt->GetTextSize_( aDrawInf );
         if( bGoLeft )
             aTmpPos.X() -= aSize.Width();
         // calculate rectangle containing the line number
@@ -236,10 +236,10 @@ void SwExtraPainter::PaintExtra( SwTwips nY, long nAsc, long nMax, bool bRed )
         }
     }
     else if( bGoLeft )
-        aTmpPos.X() -= pTmpFnt->_GetTextSize( aDrawInf ).Width();
+        aTmpPos.X() -= pTmpFnt->GetTextSize_( aDrawInf ).Width();
     aDrawInf.SetPos( aTmpPos );
     if( bPaint )
-        pTmpFnt->_DrawText( aDrawInf );
+        pTmpFnt->DrawText_( aDrawInf );
 
     if( bTooBig )
         delete pTmpFnt;
@@ -493,13 +493,13 @@ bool SwTextFrame::PaintEmpty( const SwRect &rRect, bool bCheck ) const
 
             if( pSh->GetViewOptions()->IsParagraph() && Prt().Height() )
             {
-                if( RTL_TEXTENCODING_SYMBOL == pFnt->GetCharSet( SW_LATIN ) &&
-                    pFnt->GetName( SW_LATIN ) != numfunc::GetDefBulletFontname() )
+                if( RTL_TEXTENCODING_SYMBOL == pFnt->GetCharSet( SwFontScript::Latin ) &&
+                    pFnt->GetName( SwFontScript::Latin ) != numfunc::GetDefBulletFontname() )
                 {
-                    pFnt->SetFamily( FAMILY_DONTKNOW, SW_LATIN );
-                    pFnt->SetName( numfunc::GetDefBulletFontname(), SW_LATIN );
-                    pFnt->SetStyleName( aEmptyOUStr, SW_LATIN );
-                    pFnt->SetCharSet( RTL_TEXTENCODING_SYMBOL, SW_LATIN );
+                    pFnt->SetFamily( FAMILY_DONTKNOW, SwFontScript::Latin );
+                    pFnt->SetName( numfunc::GetDefBulletFontname(), SwFontScript::Latin );
+                    pFnt->SetStyleName( aEmptyOUStr, SwFontScript::Latin );
+                    pFnt->SetCharSet( RTL_TEXTENCODING_SYMBOL, SwFontScript::Latin );
                 }
                 pFnt->SetVertical( 0, IsVertical() );
                 SwFrameSwapper aSwapper( this, true );
@@ -560,7 +560,7 @@ bool SwTextFrame::PaintEmpty( const SwRect &rRect, bool bCheck ) const
                     aDrawInf.SetSnapToGrid( false );
 
                     pFnt->SetColor(NON_PRINTING_CHARACTER_COLOR);
-                    pFnt->_DrawText( aDrawInf );
+                    pFnt->DrawText_( aDrawInf );
                 }
                 delete pClip;
             }

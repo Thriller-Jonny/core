@@ -69,7 +69,7 @@
 #include <vcl/help.hxx>
 #include <rtl/ustrbuf.hxx>
 #include <comphelper/sequenceashashmap.hxx>
-
+#include <o3tl/make_unique.hxx>
 // namespaces
 
 using namespace css;
@@ -202,6 +202,8 @@ static const sal_uInt16 KEYCODE_ARRAY[] =
     KEY_MOD1 | KEY_BRACKETLEFT,
     KEY_MOD1 | KEY_BRACKETRIGHT,
     KEY_MOD1 | KEY_POINT,
+    KEY_MOD1 | KEY_COMMA,
+    KEY_MOD1 | KEY_TILDE,
 
     KEY_MOD1 | KEY_F1,
     KEY_MOD1 | KEY_F2,
@@ -280,6 +282,8 @@ static const sal_uInt16 KEYCODE_ARRAY[] =
     KEY_SHIFT | KEY_MOD1 | KEY_BRACKETLEFT,
     KEY_SHIFT | KEY_MOD1 | KEY_BRACKETRIGHT,
     KEY_SHIFT | KEY_MOD1 | KEY_POINT,
+    KEY_SHIFT | KEY_MOD1 | KEY_COMMA,
+    KEY_SHIFT | KEY_MOD1 | KEY_TILDE,
 
     KEY_SHIFT | KEY_MOD1 | KEY_F1,
     KEY_SHIFT | KEY_MOD1 | KEY_F2,
@@ -308,6 +312,7 @@ static const sal_uInt16 KEYCODE_ARRAY[] =
     KEY_SHIFT | KEY_MOD1 | KEY_PAGEDOWN,
     KEY_SHIFT | KEY_MOD1 | KEY_RETURN,
     KEY_SHIFT | KEY_MOD1 | KEY_ESCAPE,
+    KEY_SHIFT | KEY_MOD1 | KEY_SPACE,
     KEY_SHIFT | KEY_MOD1 | KEY_BACKSPACE,
     KEY_SHIFT | KEY_MOD1 | KEY_INSERT,
     KEY_SHIFT | KEY_MOD1 | KEY_DELETE,
@@ -353,6 +358,8 @@ static const sal_uInt16 KEYCODE_ARRAY[] =
     KEY_MOD2 | KEY_BRACKETLEFT,
     KEY_MOD2 | KEY_BRACKETRIGHT,
     KEY_MOD2 | KEY_POINT,
+    KEY_MOD2 | KEY_COMMA,
+    KEY_MOD2 | KEY_TILDE,
 
     KEY_MOD2 | KEY_F1,
     KEY_MOD2 | KEY_F2,
@@ -426,6 +433,8 @@ static const sal_uInt16 KEYCODE_ARRAY[] =
     KEY_SHIFT | KEY_MOD2 | KEY_BRACKETLEFT,
     KEY_SHIFT | KEY_MOD2 | KEY_BRACKETRIGHT,
     KEY_SHIFT | KEY_MOD2 | KEY_POINT,
+    KEY_SHIFT | KEY_MOD2 | KEY_COMMA,
+    KEY_SHIFT | KEY_MOD2 | KEY_TILDE,
 
     KEY_SHIFT | KEY_MOD2 | KEY_F1,
     KEY_SHIFT | KEY_MOD2 | KEY_F2,
@@ -454,6 +463,7 @@ static const sal_uInt16 KEYCODE_ARRAY[] =
     KEY_SHIFT | KEY_MOD2 | KEY_PAGEDOWN,
     KEY_SHIFT | KEY_MOD2 | KEY_RETURN,
     KEY_SHIFT | KEY_MOD2 | KEY_ESCAPE,
+    KEY_SHIFT | KEY_MOD2 | KEY_SPACE,
     KEY_SHIFT | KEY_MOD2 | KEY_BACKSPACE,
     KEY_SHIFT | KEY_MOD2 | KEY_INSERT,
     KEY_SHIFT | KEY_MOD2 | KEY_DELETE,
@@ -499,6 +509,8 @@ static const sal_uInt16 KEYCODE_ARRAY[] =
     KEY_MOD1 | KEY_MOD2 | KEY_BRACKETLEFT,
     KEY_MOD1 | KEY_MOD2 | KEY_BRACKETRIGHT,
     KEY_MOD1 | KEY_MOD2 | KEY_POINT,
+    KEY_MOD1 | KEY_MOD2 | KEY_COMMA,
+    KEY_MOD1 | KEY_MOD2 | KEY_TILDE,
 
     KEY_MOD1 | KEY_MOD2 | KEY_F1,
     KEY_MOD1 | KEY_MOD2 | KEY_F2,
@@ -572,6 +584,8 @@ static const sal_uInt16 KEYCODE_ARRAY[] =
     KEY_SHIFT | KEY_MOD1 | KEY_MOD2 | KEY_BRACKETLEFT,
     KEY_SHIFT | KEY_MOD1 | KEY_MOD2 | KEY_BRACKETRIGHT,
     KEY_SHIFT | KEY_MOD1 | KEY_MOD2 | KEY_POINT,
+    KEY_SHIFT | KEY_MOD1 | KEY_MOD2 | KEY_COMMA,
+    KEY_SHIFT | KEY_MOD1 | KEY_MOD2 | KEY_TILDE,
 
     KEY_SHIFT | KEY_MOD1 | KEY_MOD2 | KEY_F1,
     KEY_SHIFT | KEY_MOD1 | KEY_MOD2 | KEY_F2,
@@ -620,7 +634,7 @@ static long AccCfgTabs[] =
 class SfxAccCfgLBoxString_Impl : public SvLBoxString
 {
 public:
-    SfxAccCfgLBoxString_Impl(SvTreeListEntry* pEntry, sal_uInt16 nFlags, const OUString& sText);
+    explicit SfxAccCfgLBoxString_Impl(const OUString& sText);
 
     virtual ~SfxAccCfgLBoxString_Impl();
 
@@ -629,8 +643,8 @@ public:
 };
 
 
-SfxAccCfgLBoxString_Impl::SfxAccCfgLBoxString_Impl(SvTreeListEntry* pEntry, sal_uInt16 nFlags, const OUString& sText)
-    : SvLBoxString(pEntry, nFlags, sText)
+SfxAccCfgLBoxString_Impl::SfxAccCfgLBoxString_Impl(const OUString& sText)
+    : SvLBoxString(sText)
 {}
 
 SfxAccCfgLBoxString_Impl::~SfxAccCfgLBoxString_Impl()
@@ -789,9 +803,9 @@ SfxAcceleratorConfigPage::SfxAcceleratorConfigPage( vcl::Window* pParent, const 
 
     // detect max keyname width
     long nMaxWidth  = 0;
-    for ( sal_uInt16 i = 0; i < KEYCODE_ARRAY_SIZE; ++i )
+    for (unsigned short i : KEYCODE_ARRAY)
     {
-        long nTmp = GetTextWidth( vcl::KeyCode( KEYCODE_ARRAY[i] ).GetName() );
+        long nTmp = GetTextWidth( vcl::KeyCode( i ).GetName() );
         if ( nTmp > nMaxWidth )
             nMaxWidth = nTmp;
     }
@@ -911,13 +925,8 @@ void SfxAcceleratorConfigPage::CreateCustomItems(SvTreeListEntry* pEntry,
                                                  const OUString& sCol1 ,
                                                  const OUString& sCol2)
 {
-    std::unique_ptr<SfxAccCfgLBoxString_Impl> pStringItem1(
-            new SfxAccCfgLBoxString_Impl(pEntry, 0, sCol1));
-    pEntry->ReplaceItem(std::move(pStringItem1), 1);
-
-    std::unique_ptr<SfxAccCfgLBoxString_Impl> pStringItem2(
-            new SfxAccCfgLBoxString_Impl(pEntry, 0, sCol2));
-    pEntry->ReplaceItem(std::move(pStringItem2), 2);
+    pEntry->ReplaceItem(o3tl::make_unique<SfxAccCfgLBoxString_Impl>(sCol1), 1);
+    pEntry->ReplaceItem(o3tl::make_unique<SfxAccCfgLBoxString_Impl>(sCol2), 2);
 }
 
 
@@ -1367,9 +1376,9 @@ IMPL_LINK_NOARG_TYPED(SfxAcceleratorConfigPage, SaveHdl, sfx2::FileDialogHelper*
         if (xCfgMgr.is())
         {
             // get the target configuration access and update with all shortcuts
-            // which are set currently at the UI !
-            // Dont copy the m_xAct content to it ... because m_xAct will be updated
-            // from the UI on pressing the button "OK" only. And inbetween it's not up to date !
+            // which are set currently at the UI!
+            // Don't copy the m_xAct content to it... because m_xAct will be updated
+            // from the UI on pressing the button "OK" only. And inbetween it's not up to date!
             uno::Reference<ui::XAcceleratorConfiguration> xTargetAccMgr(xCfgMgr->getShortCutManager(), uno::UNO_QUERY_THROW);
             Apply(xTargetAccMgr);
 

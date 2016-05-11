@@ -17,7 +17,6 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#define STRICT
 #define _WIN32_DCOM
 #ifdef _MSC_VER
 #pragma warning(disable : 4917 4555)
@@ -41,8 +40,14 @@ CComModule _Module;
 #include <atlcom.h>
 
 BEGIN_OBJECT_MAP(ObjectMap)
+#if defined __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wmissing-field-initializers"
+#endif
 END_OBJECT_MAP()
-
+#if defined __clang__
+#pragma clang diagnostic pop
+#endif
 
 // DLL Entry Point
 

@@ -116,7 +116,7 @@ void SAL_CALL PresenterSpritePane::windowShown (const lang::EventObject& rEvent)
     if (mxContentWindow.is())
     {
         LayoutContextWindow();
-        mxContentWindow->setVisible(sal_True);
+        mxContentWindow->setVisible(true);
     }
 }
 
@@ -128,7 +128,7 @@ void SAL_CALL PresenterSpritePane::windowHidden (const lang::EventObject& rEvent
 
     mpSprite->Hide();
     if (mxContentWindow.is())
-        mxContentWindow->setVisible(sal_False);
+        mxContentWindow->setVisible(false);
 }
 
 //----- XPaintListener --------------------------------------------------------
@@ -147,8 +147,7 @@ void SAL_CALL PresenterSpritePane::windowPaint (const awt::PaintEvent& rEvent)
 }
 
 
-
-std::shared_ptr<PresenterSprite> PresenterSpritePane::GetSprite()
+const std::shared_ptr<PresenterSprite>& PresenterSpritePane::GetSprite()
 {
     return mpSprite;
 }

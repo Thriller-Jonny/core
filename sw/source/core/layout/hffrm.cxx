@@ -94,7 +94,7 @@ static void lcl_LayoutFrameEnsureMinHeight(SwLayoutFrame & rFrame,
     }
 }
 
-SwHeadFootFrame::SwHeadFootFrame( SwFrameFormat * pFormat, SwFrame* pSib, sal_uInt16 nTypeIn)
+SwHeadFootFrame::SwHeadFootFrame( SwFrameFormat * pFormat, SwFrame* pSib, SwFrameType nTypeIn)
     : SwLayoutFrame( pFormat, pSib )
 {
     mnFrameType = nTypeIn;
@@ -108,7 +108,7 @@ SwHeadFootFrame::SwHeadFootFrame( SwFrameFormat * pFormat, SwFrame* pSib, sal_uI
     bool bOld = bObjsDirect;
     bObjsDirect = true;
     sal_uLong nIndex = rCnt.GetContentIdx()->GetIndex();
-    ::_InsertCnt( this, pFormat->GetDoc(), ++nIndex );
+    ::InsertCnt_( this, pFormat->GetDoc(), ++nIndex );
     bObjsDirect = bOld;
 }
 
@@ -244,7 +244,7 @@ void SwHeadFootFrame::FormatSize(SwTwips nUL, const SwBorderAttrs * pAttrs)
                 if ( pFrame &&
                      aOldFooterPrtPos != ( Frame().Pos() + Prt().Pos() ) )
                 {
-                    pFrame->_InvalidatePos();
+                    pFrame->InvalidatePos_();
                     aOldFooterPrtPos = Frame().Pos() + Prt().Pos();
                 }
                 int nLoopControl = 0;

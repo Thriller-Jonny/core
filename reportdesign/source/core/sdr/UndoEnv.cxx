@@ -29,7 +29,6 @@
 #include "RptResId.hrc"
 #include "RptModel.hxx"
 
-#include <boost/noncopyable.hpp>
 #include <com/sun/star/script/XEventAttacherManager.hpp>
 #include <com/sun/star/container/XChild.hpp>
 #include <com/sun/star/container/XNameContainer.hpp>
@@ -61,7 +60,6 @@ namespace rptui
     using namespace report;
 
 
-
 struct PropertyInfo
 {
     bool    bIsReadonlyOrTransient;
@@ -89,8 +87,7 @@ struct ObjectInfo
 typedef ::std::map< Reference< XPropertySet >, ObjectInfo, ::comphelper::OInterfaceCompare< XPropertySet > >    PropertySetInfoCache;
 
 
-
-class OXUndoEnvironmentImpl: private boost::noncopyable
+class OXUndoEnvironmentImpl
 {
 public:
     OReportModel&                                       m_rModel;
@@ -105,6 +102,8 @@ public:
     bool                                            m_bIsUndo;
 
     explicit OXUndoEnvironmentImpl(OReportModel& _rModel);
+    OXUndoEnvironmentImpl(const OXUndoEnvironmentImpl&) = delete;
+    OXUndoEnvironmentImpl& operator=(const OXUndoEnvironmentImpl&) = delete;
 };
 
 OXUndoEnvironmentImpl::OXUndoEnvironmentImpl(OReportModel& _rModel) : m_rModel(_rModel)
@@ -115,7 +114,6 @@ OXUndoEnvironmentImpl::OXUndoEnvironmentImpl(OReportModel& _rModel) : m_rModel(_
         ,m_bIsUndo(false)
 {
 }
-
 
 
 OXUndoEnvironment::OXUndoEnvironment(OReportModel& _rModel)
@@ -248,7 +246,7 @@ void SAL_CALL OXUndoEnvironment::propertyChange( const PropertyChangeEvent& _rEv
     // now we have access to the cached info about the set
     // let's see what we know about the property
     ObjectInfo& rObjectInfo = objectPos->second;
-    PropertiesInfo::iterator aPropertyPos = rObjectInfo.aProperties.find( _rEvent.PropertyName );
+    PropertiesInfo::const_iterator aPropertyPos = rObjectInfo.aProperties.find( _rEvent.PropertyName );
     if ( aPropertyPos == rObjectInfo.aProperties.end() )
     {   // nothing 'til now ... have to change this ....
         // the attributes
@@ -540,7 +538,6 @@ void OXUndoEnvironment::TogglePropertyListening(const Reference< XInterface > & 
             xSet->removePropertyChangeListener( OUString(), this );
     }
 }
-
 
 
 void OXUndoEnvironment::switchListening( const Reference< XIndexAccess >& _rxContainer, bool _bStartListening )

@@ -68,8 +68,7 @@ private:
     Color           aPrivColor;
 
 public:
-                    SvLBoxColorString( SvTreeListEntry*, sal_uInt16 nFlags, const OUString& rStr,
-                                    const Color& rCol);
+                    SvLBoxColorString( const OUString& rStr, const Color& rCol);
                     SvLBoxColorString();
                     virtual ~SvLBoxColorString();
 
@@ -132,7 +131,7 @@ public:
     void            UpdateFilterTest();
     // } For FilterPage only
 
-    void            SetCalcView(bool bFlag=true);
+    void            SetCalcView();
 
     bool            IsValidEntry(const OUString &rAuthor, const DateTime &rDateTime, const OUString &rComment);
     bool            IsValidEntry(const OUString &rAuthor, const DateTime &rDateTime);
@@ -230,7 +229,7 @@ public:
     SvxRedlinDateMode GetDateMode();
 
     void            ClearAuthors();
-    void            InsertAuthor( const OUString& rString, sal_Int32  nPos = LISTBOX_APPEND );
+    void            InsertAuthor( const OUString& rString );
     OUString        GetSelectedAuthor()const;
     void            SelectedAuthorPos(sal_Int32  nPos);
     sal_Int32       SelectAuthor(const OUString& aString);
@@ -266,8 +265,8 @@ public:
     // Methods for Calc {
     void            SetRefHdl( const Link<SvxTPFilter*,void>& rLink ) { aRefLink = rLink; }
 
-    void            Enable( bool bEnable = true, bool bChild = true );
-    void            Disable( bool bChild = true );
+    void            Enable( bool bEnable = true );
+    void            Disable();
     // } Methods for Calc
 };
 
@@ -312,7 +311,7 @@ public:
     void            EnableRejectAll(bool bFlag=true);
     void            EnableUndo(bool bFlag=true);
     void            DisableUndo()       {EnableUndo(false);}
-    void            ShowUndo(bool bFlag=true);
+    void            ShowUndo();
 
     void            SetAcceptClickHdl( const Link<SvxTPView*,void>& rLink ) { AcceptClickLk = rLink; }
 

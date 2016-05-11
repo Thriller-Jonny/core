@@ -62,10 +62,9 @@ private:
     ::std::vector< SvCommand >  aCommandList;
 
 public:
-    SvCommand&      Append( const OUString & rCommand, const OUString & rArg );
-    bool        AppendCommands( const OUString & rCmd, sal_Int32 * pEaten );
+    void           Append( const OUString & rCommand, const OUString & rArg );
 
-    bool FillFromSequence( const css::uno::Sequence < css::beans::PropertyValue >& );
+    void FillFromSequence( const css::uno::Sequence < css::beans::PropertyValue >& );
     void FillSequence( css::uno::Sequence < css::beans::PropertyValue >& );
 
     size_t          size() const { return aCommandList.size(); }
@@ -74,9 +73,6 @@ public:
                         return aCommandList[ i ];
                     }
 
-    void            clear() {
-                        aCommandList.clear();
-                    }
 };
 
 #endif // INCLUDED_SVL_OWNLIST_HXX

@@ -9,17 +9,16 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include <com/sun/star/uno/Reference.h>
 #include <cppuhelper/supportsservice.hxx>
 
 #include <libwps/libwps.h>
 
 #include "WPFTEncodingDialog.hxx"
+#include "WPFTResMgr.hxx"
 #include "MSWorksImportFilter.hxx"
+#include "strings.hrc"
 
 using com::sun::star::uno::Sequence;
-using com::sun::star::uno::Reference;
-using com::sun::star::uno::Any;
 using com::sun::star::uno::XInterface;
 using com::sun::star::uno::Exception;
 using com::sun::star::uno::RuntimeException;
@@ -42,33 +41,40 @@ bool MSWorksImportFilter::doImportDocument(librevenge::RVNGInputStream &rInput, 
     std::string fileEncoding("");
     try
     {
-        if ((kind == libwps::WPS_TEXT) && (creator == libwps::WPS_MSWORKS) && (confidence == libwps::WPS_CONFIDENCE_EXCELLENT) && needEncoding)
+        if ((kind == libwps::WPS_TEXT) && (confidence == libwps::WPS_CONFIDENCE_EXCELLENT) && needEncoding)
         {
-            const ScopedVclPtrInstance<writerperfect::WPFTEncodingDialog> pDlg(
-                "Import MsWorks files(libwps)", "CP850");
-            if (pDlg->Execute() == RET_OK)
-            {
-                if (!pDlg->GetEncoding().isEmpty())
-                    fileEncoding=pDlg->GetEncoding().toUtf8().getStr();
-            }
-            // we can fail because we are in headless mode, the user has cancelled conversion, ...
-            else if (pDlg->hasUserCalledCancel())
-                return false;
-        }
-        else if ((kind == libwps::WPS_TEXT) && (creator == libwps::WPS_MSWRITE) && (confidence == libwps::WPS_CONFIDENCE_EXCELLENT) && needEncoding)
-        {
-            const ScopedVclPtrInstance<writerperfect::WPFTEncodingDialog> pDlg(
-                "Import MsWrite files(libwps)", "CP1252");
-            if (pDlg->Execute() == RET_OK)
-            {
-                if (!pDlg->GetEncoding().isEmpty())
-                    fileEncoding=pDlg->GetEncoding().toUtf8().getStr();
-            }
-            // we can fail because we are in headless mode, the user has cancelled conversion, ...
-            else if (pDlg->hasUserCalledCancel())
-                return false;
-        }
+            OUString title, encoding;
 
+            switch (creator)
+            {
+            case libwps::WPS_MSWORKS:
+                title = WPFT_RESSTR(STR_ENCODING_DIALOG_TITLE_MSWORKS);
+                encoding = "CP850";
+                break;
+            case libwps::WPS_RESERVED_0: // MS Write
+                title = WPFT_RESSTR(STR_ENCODING_DIALOG_TITLE_MSWRITE);
+                encoding = "CP1252";
+                break;
+            case libwps::WPS_RESERVED_1: // DosWord
+                title = WPFT_RESSTR(STR_ENCODING_DIALOG_TITLE_DOSWORD);
+                encoding = "CP850";
+                break;
+            default:
+                title = WPFT_RESSTR(STR_ENCODING_DIALOG_TITLE);
+                encoding = "CP850";
+                break;
+            }
+
+            const ScopedVclPtrInstance<writerperfect::WPFTEncodingDialog> pDlg(title, encoding);
+            if (pDlg->Execute() == RET_OK)
+            {
+                if (!pDlg->GetEncoding().isEmpty())
+                    fileEncoding=pDlg->GetEncoding().toUtf8().getStr();
+            }
+            // we can fail because we are in headless mode, the user has cancelled conversion, ...
+            else if (pDlg->hasUserCalledCancel())
+                return false;
+        }
     }
     catch (css::uno::Exception &e)
     {
@@ -90,10 +96,15 @@ bool MSWorksImportFilter::doDetectFormat(librevenge::RVNGInputStream &rInput, OU
         {
             rTypeName = "writer_MS_Works_Document";
         }
-        else
+        else if (creator == libwps::WPS_RESERVED_0)
         {
             rTypeName = "writer_MS_Write";
         }
+        else
+        {
+            rTypeName = "writer_DosWord";
+        }
+
         return true;
     }
 
@@ -105,14 +116,21 @@ void MSWorksImportFilter::doRegisterHandlers(OdtGenerator &rGenerator)
     rGenerator.registerEmbeddedObjectHandler("image/wks-ods", &handleEmbeddedWKSObject);
 }
 
-OUString MSWorksImportFilter_getImplementationName()
-throw (RuntimeException)
+// XServiceInfo
+OUString SAL_CALL MSWorksImportFilter::getImplementationName()
+throw (RuntimeException, std::exception)
 {
     return OUString("com.sun.star.comp.Writer.MSWorksImportFilter");
 }
 
-Sequence< OUString > SAL_CALL MSWorksImportFilter_getSupportedServiceNames()
-throw (RuntimeException)
+sal_Bool SAL_CALL MSWorksImportFilter::supportsService(const OUString &rServiceName)
+throw (RuntimeException, std::exception)
+{
+    return cppu::supportsService(this, rServiceName);
+}
+
+Sequence< OUString > SAL_CALL MSWorksImportFilter::getSupportedServiceNames()
+throw (RuntimeException, std::exception)
 {
     Sequence < OUString > aRet(2);
     OUString *pArray = aRet.getArray();
@@ -120,30 +138,14 @@ throw (RuntimeException)
     pArray[1] =  "com.sun.star.document.ExtendedTypeDetection";
     return aRet;
 }
-#undef SERVICE_NAME2
-#undef SERVICE_NAME1
 
-Reference< XInterface > SAL_CALL MSWorksImportFilter_createInstance(const Reference< XComponentContext > &rContext)
-throw(Exception)
+extern "C"
+SAL_DLLPUBLIC_EXPORT css::uno::XInterface *SAL_CALL
+com_sun_star_comp_Writer_MSWorksImportFilter_get_implementation(
+    css::uno::XComponentContext *const context,
+    const css::uno::Sequence<css::uno::Any> &)
 {
-    return static_cast<cppu::OWeakObject *>(new MSWorksImportFilter(rContext));
-}
-
-// XServiceInfo
-OUString SAL_CALL MSWorksImportFilter::getImplementationName()
-throw (RuntimeException, std::exception)
-{
-    return MSWorksImportFilter_getImplementationName();
-}
-sal_Bool SAL_CALL MSWorksImportFilter::supportsService(const OUString &rServiceName)
-throw (RuntimeException, std::exception)
-{
-    return cppu::supportsService(this, rServiceName);
-}
-Sequence< OUString > SAL_CALL MSWorksImportFilter::getSupportedServiceNames()
-throw (RuntimeException, std::exception)
-{
-    return MSWorksImportFilter_getSupportedServiceNames();
+    return cppu::acquire(new MSWorksImportFilter(context));
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -172,7 +172,7 @@ do { \
     nRef-=amt; \
 } while(false)
 
-ConvErr QProToSc::Convert( const ScTokenArray*& pArray, sal_uInt16 /*nLen*/, const FORMULA_TYPE /*eFT*/ )
+ConvErr QProToSc::Convert( const ScTokenArray*& pArray )
 {
     sal_uInt8 nFmla[ nBufSize ], i, nArg;
     sal_uInt8 nArgArray[ nBufSize ] = {0};
@@ -239,7 +239,12 @@ ConvErr QProToSc::Convert( const ScTokenArray*& pArray, sal_uInt16 /*nLen*/, con
     else
         return ConvErrCount;
 
-    i = 0, nIntCount = 0, nFloatCount = 0, nDLLCount = 0, nArgCount = 0, nStringCount =0;
+    i = 0;
+    nIntCount = 0;
+    nFloatCount = 0;
+    nDLLCount = 0;
+    nArgCount = 0;
+    nStringCount = 0;
 
     while( i < nRef && ( nFmla[ i ] != 0x03 ) )
     {
@@ -535,7 +540,7 @@ static const struct
     { ocNoName, FT_NotImpl }   // gives properties of DOS menus
 };
 
-const int nIndexCount = sizeof( aFuncMap ) / sizeof( aFuncMap[ 0 ] );
+const int nIndexCount = SAL_N_ELEMENTS( aFuncMap );
 
 DefTokenId QProToSc::IndexToToken( sal_uInt16 nIndex )
 {

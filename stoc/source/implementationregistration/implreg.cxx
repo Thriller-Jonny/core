@@ -21,7 +21,6 @@
 #include <string.h>
 #include <list>
 
-#include <boost/noncopyable.hpp>
 #include <cppuhelper/queryinterface.hxx>
 #include <cppuhelper/weak.hxx>
 #include <cppuhelper/implbase.hxx>
@@ -66,7 +65,7 @@ using namespace osl;
 
 namespace {
 
-struct StringPool: private boost::noncopyable
+struct StringPool
 {
     OUString slash_UNO_slash_REGISTRY_LINKS;
     OUString slash_IMPLEMENTATIONS;
@@ -92,6 +91,8 @@ struct StringPool: private boost::noncopyable
         , com_sun_star_registry_SimpleRegistry("com.sun.star.registry.SimpleRegistry" )
         , Registry( "Registry" )
         {}
+    StringPool(const StringPool&) = delete;
+    StringPool& operator=(const StringPool&) = delete;
 };
 
 const StringPool &spool()
@@ -112,7 +113,7 @@ const StringPool &spool()
 
 //  static deleteAllLinkReferences()
 
-static void deleteAllLinkReferences(const Reference < XSimpleRegistry >& xReg,
+void deleteAllLinkReferences(const Reference < XSimpleRegistry >& xReg,
                                     const Reference < XRegistryKey >& xSource)
     // throw ( InvalidRegistryException, RuntimeException )
 {
@@ -195,7 +196,7 @@ static void deleteAllLinkReferences(const Reference < XSimpleRegistry >& xReg,
 
 //  static prepareLink
 
-static void prepareLink( const Reference < XSimpleRegistry > & xDest,
+void prepareLink( const Reference < XSimpleRegistry > & xDest,
                          const Reference < XRegistryKey > & xSource,
                          const OUString& link)
     // throw ( InvalidRegistryException, RuntimeException )
@@ -239,7 +240,7 @@ static void prepareLink( const Reference < XSimpleRegistry > & xDest,
 
 //  static searchImplForLink
 
-static OUString searchImplForLink(
+OUString searchImplForLink(
     const Reference < XRegistryKey > & xRootKey,
     const OUString& linkName,
     const OUString& implName )
@@ -279,7 +280,7 @@ static OUString searchImplForLink(
 
 //  static searchLinkTargetForImpl
 
-static OUString searchLinkTargetForImpl(const Reference < XRegistryKey >& xRootKey,
+OUString searchLinkTargetForImpl(const Reference < XRegistryKey >& xRootKey,
                                         const OUString& linkName,
                                         const OUString& implName)
     // throw ( InvalidRegistryException, RuntimeException )
@@ -323,7 +324,7 @@ static OUString searchLinkTargetForImpl(const Reference < XRegistryKey >& xRootK
 
 //  static createUniqueSubEntry
 
-static void createUniqueSubEntry(const Reference < XRegistryKey > & xSuperKey,
+void createUniqueSubEntry(const Reference < XRegistryKey > & xSuperKey,
                                  const OUString& value)
     // throw ( InvalidRegistryException, RuntimeException )
 {
@@ -382,7 +383,7 @@ static void createUniqueSubEntry(const Reference < XRegistryKey > & xSuperKey,
 
 //  static deleteSubEntry
 
-static bool deleteSubEntry(const Reference < XRegistryKey >& xSuperKey, const OUString& value)
+bool deleteSubEntry(const Reference < XRegistryKey >& xSuperKey, const OUString& value)
     // throw ( InvalidRegistryException, RuntimeException )
 {
     if (xSuperKey->getValueType() == RegistryValueType_ASCIILIST)
@@ -427,7 +428,7 @@ static bool deleteSubEntry(const Reference < XRegistryKey >& xSuperKey, const OU
 
 //  static prepareUserLink
 
-static void prepareUserLink(const Reference < XSimpleRegistry >& xDest,
+void prepareUserLink(const Reference < XSimpleRegistry >& xDest,
                                 const OUString& linkName,
                                 const OUString& linkTarget,
                                 const OUString& implName)
@@ -454,7 +455,7 @@ static void prepareUserLink(const Reference < XSimpleRegistry >& xDest,
 
 //  static deleteUserLink
 
-static void deletePathIfPossible(const Reference < XRegistryKey >& xRootKey,
+void deletePathIfPossible(const Reference < XRegistryKey >& xRootKey,
                                  const OUString& path)
 {
     try
@@ -466,8 +467,7 @@ static void deletePathIfPossible(const Reference < XRegistryKey >& xRootKey,
         {
             xRootKey->deleteKey(path);
 
-            OUString tmpPath(path);
-            OUString newPath = tmpPath.copy(0, tmpPath.lastIndexOf('/'));
+            OUString newPath = path.copy(0, path.lastIndexOf('/'));
 
             if (newPath.getLength() > 1)
                 deletePathIfPossible(xRootKey, newPath);
@@ -479,10 +479,9 @@ static void deletePathIfPossible(const Reference < XRegistryKey >& xRootKey,
 }
 
 
-
 //  static deleteUserLink
 
-static void deleteUserLink(const Reference < XRegistryKey >& xRootKey,
+void deleteUserLink(const Reference < XRegistryKey >& xRootKey,
                                const OUString& linkName,
                                const OUString& linkTarget,
                                const OUString& implName)
@@ -576,8 +575,7 @@ static void deleteUserLink(const Reference < XRegistryKey >& xRootKey,
 
     if (bClean)
     {
-        OUString tmpName(linkName);
-        OUString path = tmpName.copy(0, tmpName.lastIndexOf('/'));
+        OUString path = linkName.copy(0, linkName.lastIndexOf('/'));
         deletePathIfPossible(xRootKey, path);
     }
 }
@@ -585,7 +583,7 @@ static void deleteUserLink(const Reference < XRegistryKey >& xRootKey,
 
 //  static prepareUserKeys
 
-static void prepareUserKeys(const Reference < XSimpleRegistry >& xDest,
+void prepareUserKeys(const Reference < XSimpleRegistry >& xDest,
                                 const Reference < XRegistryKey >& xUnoKey,
                                 const Reference < XRegistryKey >& xKey,
                                 const OUString& implName,
@@ -662,7 +660,7 @@ static void prepareUserKeys(const Reference < XSimpleRegistry >& xDest,
 
 //  static deleteAllImplementations
 
-static void deleteAllImplementations(   const Reference < XSimpleRegistry >& xReg,
+void deleteAllImplementations(   const Reference < XSimpleRegistry >& xReg,
                                         const Reference < XRegistryKey >& xSource,
                                         const OUString& locationUrl,
                                         std::list<OUString> & implNames)
@@ -749,7 +747,7 @@ static void deleteAllImplementations(   const Reference < XSimpleRegistry >& xRe
 }
 
 
-static void delete_all_singleton_entries(
+void delete_all_singleton_entries(
     Reference < registry::XRegistryKey > const & xSingletons_section,
     ::std::list< OUString > const & impl_names )
     // throw (InvalidRegistryException, RuntimeException)
@@ -814,7 +812,7 @@ static void delete_all_singleton_entries(
 
 //  static deleteAllServiceEntries
 
-static void deleteAllServiceEntries(    const Reference < XSimpleRegistry >& xReg,
+void deleteAllServiceEntries(    const Reference < XSimpleRegistry >& xReg,
                                         const Reference < XRegistryKey >& xSource,
                                         const OUString& implName)
     // throw ( InvalidRegistryException, RuntimeException )
@@ -891,7 +889,7 @@ static void deleteAllServiceEntries(    const Reference < XSimpleRegistry >& xRe
 }
 
 
-static bool is_supported_service(
+bool is_supported_service(
     OUString const & service_name,
     Reference< reflection::XServiceTypeDescription > const & xService_td )
 {
@@ -909,7 +907,7 @@ static bool is_supported_service(
 }
 
 
-static void insert_singletons(
+void insert_singletons(
     Reference< registry::XSimpleRegistry > const & xDest,
     Reference< registry::XRegistryKey > const & xImplKey,
     Reference< XComponentContext > const & xContext )
@@ -1028,10 +1026,9 @@ static void insert_singletons(
 }
 
 
-
 //  static prepareRegistry
 
-static void prepareRegistry(
+void prepareRegistry(
     const Reference < XSimpleRegistry >& xDest,
     const Reference < XRegistryKey >& xSource,
     const OUString& implementationLoaderUrl,
@@ -1144,7 +1141,7 @@ static void prepareRegistry(
 }
 
 
-static void findImplementations(    const Reference < XRegistryKey > & xSource,
+void findImplementations(    const Reference < XRegistryKey > & xSource,
                                     std::list <OUString>& implNames)
 {
     bool isImplKey = false;
@@ -1328,7 +1325,6 @@ Reference< XSimpleRegistry > ImplementationRegistration::getRegistryFromServiceM
 }
 
 
-
 // XInitialization
 
 void ImplementationRegistration::initialize(
@@ -1418,8 +1414,6 @@ void ImplementationRegistration::initialize(
 }
 
 
-
-
 // virtual function registerImplementationWithLocation of XImplementationRegistration2
 
 void ImplementationRegistration::registerImplementationWithLocation(
@@ -1441,14 +1435,12 @@ void ImplementationRegistration::prepareRegister(
     const Reference < XSimpleRegistry > & xReg)
     // throw( CannotRegisterImplementationException, RuntimeException )
 {
-    OUString implLoaderUrl(implementationLoaderUrl);
     OUString activatorName;
 
     if (!implementationLoaderUrl.isEmpty())
     {
-        OUString tmpActivator(implementationLoaderUrl);
         sal_Int32 nIndex = 0;
-        activatorName = tmpActivator.getToken(0, ':', nIndex );
+        activatorName = implementationLoaderUrl.getToken(0, ':', nIndex );
     } else
     {
         // check locationUrl to find out what kind of loader is needed
@@ -1476,7 +1468,7 @@ void ImplementationRegistration::prepareRegister(
 
                 if ( xRegistry.is())
                 {
-                    doRegister(m_xSMgr, m_xCtx, xAct, xRegistry, implLoaderUrl,
+                    doRegister(m_xSMgr, m_xCtx, xAct, xRegistry, implementationLoaderUrl,
                                locationUrl, registeredLocationUrl);
                 }
             }
@@ -1534,7 +1526,6 @@ void ImplementationRegistration::registerImplementation(
 {
     prepareRegister(implementationLoaderUrl, locationUrl, locationUrl, xReg);
 }
-
 
 
 // virtual function revokeImplementation of XImplementationRegistration
@@ -1596,9 +1587,8 @@ Sequence< OUString > ImplementationRegistration::getImplementations(
 
     if (!implementationLoaderUrl.isEmpty())
     {
-        OUString tmpActivator(implementationLoaderUrl);
         sal_Int32 nIndex = 0;
-        activatorName = tmpActivator.getToken(0, ':', nIndex );
+        activatorName = implementationLoaderUrl.getToken(0, ':', nIndex );
     } else
     {
         // check locationUrl to find out what kind of loader is needed
@@ -1620,7 +1610,7 @@ Sequence< OUString > ImplementationRegistration::getImplementations(
             {
                 try
                 {
-                    xReg->open(OUString() /* in mem */, sal_False, sal_True);
+                    xReg->open(OUString() /* in mem */, false, true);
                     Reference < XRegistryKey > xImpl;
 
                     { // only necessary for deleting the temporary variable of rootkey
@@ -1733,7 +1723,7 @@ void ImplementationRegistration::doRegister(
     {
         try
         {
-            xReg->open(OUString() /* in mem */, sal_False, sal_True);
+            xReg->open(OUString() /* in mem */, false, true);
 
             { // only necessary for deleting the temporary variable of rootkey
                 xSourceKey = xReg->getRootKey()->createKey( spool().slash_IMPLEMENTATIONS );
@@ -1772,7 +1762,6 @@ void ImplementationRegistration::doRegister(
         }
     }
 }
-
 
 
 Reference< XSimpleRegistry > ImplementationRegistration::createTemporarySimpleRegistry(

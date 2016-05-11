@@ -76,31 +76,26 @@ class OLEHandler : public LoggedProperties
     virtual void lcl_attribute(Id Name, Value & val) override;
     virtual void lcl_sprm(Sprm & sprm) override;
 
-    // Interoperability
-    void saveInteropProperties(css::uno::Reference<css::text::XTextDocument> const& xTextDocument,
-                                        const OUString& sObjectName,
-                                        const OUString& sOldObjectName = OUString());
-
 public:
     OLEHandler(DomainMapper& rDomainMapper);
     virtual ~OLEHandler();
 
-    css::uno::Reference<css::drawing::XShape> getShape() { return m_xShape; };
+    const css::uno::Reference<css::drawing::XShape>& getShape() { return m_xShape; };
 
     bool isOLEObject() { return m_xInputStream.is(); }
 
     /// In case of a valid CLSID, import the native data to the previously created empty OLE object.
-    void importStream(css::uno::Reference<css::uno::XComponentContext> xComponentContext,
-                      css::uno::Reference<css::text::XTextDocument> xTextDocument,
-                      css::uno::Reference<css::text::XTextContent> xOLE);
+    void importStream(const css::uno::Reference<css::uno::XComponentContext>& xComponentContext,
+                      const css::uno::Reference<css::text::XTextDocument>& xTextDocument,
+                      const css::uno::Reference<css::text::XTextContent>& xOLE);
 
     /// Get the CLSID of the OLE object, in case we can find one based on m_sProgId.
-    OUString getCLSID(css::uno::Reference<css::uno::XComponentContext> xComponentContext) const;
+    OUString getCLSID(const css::uno::Reference<css::uno::XComponentContext>& xComponentContext) const;
 
     OUString copyOLEOStream(css::uno::Reference<css::text::XTextDocument> const& xTextDocument);
 
-    css::awt::Size getSize() const { return m_aShapeSize; }
-    css::uno::Reference<css::graphic::XGraphic> getReplacement() const { return m_xReplacement; }
+    const css::awt::Size& getSize() const { return m_aShapeSize; }
+    const css::uno::Reference<css::graphic::XGraphic>& getReplacement() const { return m_xReplacement; }
 
 };
 typedef std::shared_ptr< OLEHandler >  OLEHandlerPtr;

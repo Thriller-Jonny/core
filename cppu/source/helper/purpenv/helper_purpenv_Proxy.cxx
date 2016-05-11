@@ -91,9 +91,10 @@ static bool relatesToInterface(typelib_TypeDescription * pTypeDescr)
                 TYPELIB_DANGER_RELEASE( pTD );
                 if (bRel)
                     return true;
+                break;
             }
             default:
-                ;
+                break;
             }
         }
         if (pComp->pBaseTypeDescription)
@@ -141,8 +142,8 @@ extern "C" { static void SAL_CALL s_Proxy_dispatch(
         {
             param.pTypeRef = reinterpret_cast<typelib_InterfaceAttributeTypeDescription const *>(
                               pMemberType)->pAttributeTypeRef;
-            param.bIn = sal_True;
-            param.bOut = sal_False;
+            param.bIn = true;
+            param.bOut = false;
             nParams = 1;
             pParams = &param;
         }

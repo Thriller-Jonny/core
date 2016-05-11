@@ -108,11 +108,14 @@ LRESULT CALLBACK SalSysMsgProc( int nCode, WPARAM wParam, LPARAM lParam )
                 pObject->mhLastFocusWnd = pData->hwnd;
                 if ( ImplSalYieldMutexTryToAcquire() )
                 {
-                    pObject->CallCallback( SALOBJ_EVENT_GETFOCUS, 0 );
+                    pObject->CallCallback( SalObjEvent::GetFocus, 0 );
                     ImplSalYieldMutexRelease();
                 }
                 else
-                    PostMessageW( pObject->mhWnd, SALOBJ_MSG_POSTFOCUS, 0, 0 );
+                {
+                    BOOL const ret = PostMessageW(pObject->mhWnd, SALOBJ_MSG_POSTFOCUS, 0, 0);
+                    SAL_WARN_IF(0 == ret, "vcl", "ERROR: PostMessage() failed!");
+                }
             }
         }
         else if ( pData->message == WM_KILLFOCUS )
@@ -125,11 +128,14 @@ LRESULT CALLBACK SalSysMsgProc( int nCode, WPARAM wParam, LPARAM lParam )
                 {
                     if ( ImplSalYieldMutexTryToAcquire() )
                     {
-                        pObject->CallCallback( SALOBJ_EVENT_LOSEFOCUS, 0 );
+                        pObject->CallCallback( SalObjEvent::LoseFocus, 0 );
                         ImplSalYieldMutexRelease();
                     }
                     else
-                        PostMessageW( pObject->mhWnd, SALOBJ_MSG_POSTFOCUS, 0, 0 );
+                    {
+                        BOOL const ret = PostMessageW(pObject->mhWnd, SALOBJ_MSG_POSTFOCUS, 0, 0);
+                        SAL_WARN_IF(0 == ret, "vcl", "ERROR: PostMessage() failed!");
+                    }
                 }
                 else
                     pObject->mhLastFocusWnd = (HWND)pData->wParam;
@@ -153,7 +159,10 @@ bool ImplSalPreDispatchMsg( MSG* pMsg )
         ImplSalYieldMutexAcquireWithWait();
         pObject = ImplFindSalObject( pMsg->hwnd );
         if ( pObject && !pObject->IsMouseTransparent() )
-            PostMessageW( pObject->mhWnd, SALOBJ_MSG_TOTOP, 0, 0 );
+        {
+            BOOL const ret = PostMessageW(pObject->mhWnd, SALOBJ_MSG_TOTOP, 0, 0);
+            SAL_WARN_IF(0 == ret, "vcl", "ERROR: PostMessage() failed!");
+        }
         ImplSalYieldMutexRelease();
     }
 
@@ -277,7 +286,7 @@ LRESULT CALLBACK SalSysObjWndProc( HWND hWnd, UINT nMsg, WPARAM wParam, LPARAM l
                 ImplSalYieldMutexAcquireWithWait();
                 pSysObj = GetSalObjWindowPtr( hWnd );
                 if ( pSysObj && !pSysObj->IsMouseTransparent() )
-                    pSysObj->CallCallback( SALOBJ_EVENT_TOTOP, 0 );
+                    pSysObj->CallCallback( SalObjEvent::ToTop, 0 );
                 ImplSalYieldMutexRelease();
             }
             }
@@ -288,7 +297,10 @@ LRESULT CALLBACK SalSysObjWndProc( HWND hWnd, UINT nMsg, WPARAM wParam, LPARAM l
             ImplSalYieldMutexAcquireWithWait();
             pSysObj = GetSalObjWindowPtr( hWnd );
             if ( pSysObj && !pSysObj->IsMouseTransparent() )
-                PostMessageW( hWnd, SALOBJ_MSG_TOTOP, 0, 0 );
+            {
+                BOOL const ret = PostMessageW( hWnd, SALOBJ_MSG_TOTOP, 0, 0 );
+                SAL_WARN_IF(0 == ret, "vcl", "ERROR: PostMessage() failed!");
+            }
             ImplSalYieldMutexRelease();
             }
             break;
@@ -297,12 +309,15 @@ LRESULT CALLBACK SalSysObjWndProc( HWND hWnd, UINT nMsg, WPARAM wParam, LPARAM l
             if ( ImplSalYieldMutexTryToAcquire() )
             {
                 pSysObj = GetSalObjWindowPtr( hWnd );
-                pSysObj->CallCallback( SALOBJ_EVENT_TOTOP, 0 );
+                pSysObj->CallCallback( SalObjEvent::ToTop, 0 );
                 ImplSalYieldMutexRelease();
                 rDef = FALSE;
             }
             else
-                PostMessageW( hWnd, SALOBJ_MSG_TOTOP, 0, 0 );
+            {
+                BOOL const ret = PostMessageW( hWnd, SALOBJ_MSG_TOTOP, 0, 0 );
+                SAL_WARN_IF(0 == ret, "vcl", "ERROR: PostMessage() failed!");
+            }
             break;
 
         case SALOBJ_MSG_POSTFOCUS:
@@ -310,16 +325,19 @@ LRESULT CALLBACK SalSysObjWndProc( HWND hWnd, UINT nMsg, WPARAM wParam, LPARAM l
             {
                 pSysObj = GetSalObjWindowPtr( hWnd );
                 HWND    hFocusWnd = ::GetFocus();
-                sal_uInt16 nEvent;
+                SalObjEvent nEvent;
                 if ( hFocusWnd && ImplIsSysWindowOrChild( hWnd, hFocusWnd ) )
-                    nEvent = SALOBJ_EVENT_GETFOCUS;
+                    nEvent = SalObjEvent::GetFocus;
                 else
-                    nEvent = SALOBJ_EVENT_LOSEFOCUS;
+                    nEvent = SalObjEvent::LoseFocus;
                 pSysObj->CallCallback( nEvent, 0 );
                 ImplSalYieldMutexRelease();
             }
             else
-                PostMessageW( hWnd, SALOBJ_MSG_POSTFOCUS, 0, 0 );
+            {
+                BOOL const ret = PostMessageW(hWnd, SALOBJ_MSG_POSTFOCUS, 0, 0);
+                SAL_WARN_IF(0 == ret, "vcl", "ERROR: PostMessage() failed!");
+            }
             rDef = FALSE;
             break;
 
@@ -471,7 +489,7 @@ SalObject* ImplSalCreateObject( WinSalInstance* pInst, WinSalFrame* pParent )
             aWndClassEx.lpfnWndProc     = SalSysObjChildWndProcA;
             aWndClassEx.lpszClassName   = SAL_OBJECT_CHILDCLASSNAMEA;
             if ( RegisterClassExA( &aWndClassEx ) )
-                pSalData->mbObjClassInit = TRUE;
+                pSalData->mbObjClassInit = true;
         }
     }
 
@@ -588,11 +606,6 @@ WinSalObject::~WinSalObject()
 void WinSalObject::ResetClipRegion()
 {
     SetWindowRgn( mhWnd, 0, TRUE );
-}
-
-sal_uInt16 WinSalObject::GetClipRegionType()
-{
-    return SAL_OBJECT_CLIP_INCLUDERECTS;
 }
 
 void WinSalObject::BeginSetClipRegion( sal_uLong nRectCount )

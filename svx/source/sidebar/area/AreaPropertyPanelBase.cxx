@@ -40,7 +40,6 @@
 #include <svtools/toolbarmenu.hxx>
 #include <svx/tbcontrl.hxx>
 
-#include <boost/bind.hpp>
 
 using namespace css;
 using namespace css::uno;
@@ -82,7 +81,7 @@ AreaPropertyPanelBase::AreaPropertyPanelBase(
       maImgRadial(SVX_RES(IMG_RADIAL)),
       maImgSquare(SVX_RES(IMG_SQUARE)),
       maImgLinear(SVX_RES(IMG_LINEAR)),
-      maTrGrPopup(this, ::boost::bind(&AreaPropertyPanelBase::CreateTransparencyGradientControl, this, _1)),
+      maTrGrPopup(this, [this] (PopupContainer *const pContainer) { return this->CreateTransparencyGradientControl(pContainer); }),
       mpFloatTransparenceItem(),
       mpTransparanceItem(),
       mxFrame(rxFrame),
@@ -154,8 +153,6 @@ void AreaPropertyPanelBase::Initialize()
     maGradientRect = maGradientLinear;
     maGradientRect.SetGradientStyle(css::awt::GradientStyle_RECT);
 
-    mpLbFillType->SetAccessibleName("Fill");    //wj acc
-    mpLbFillAttr->SetAccessibleName("Fill");    //wj acc
 
     mpLbFillType->SetSelectHdl( LINK( this, AreaPropertyPanelBase, SelectFillTypeHdl ) );
 
@@ -166,12 +163,10 @@ void AreaPropertyPanelBase::Initialize()
     mpLbFillGradTo->SetSelectHdl( aLink );
 
     mpLBTransType->SetSelectHdl(LINK(this, AreaPropertyPanelBase, ChangeTrgrTypeHdl_Impl));
-    mpLBTransType->SetAccessibleName("Transparency");    //wj acc
 
     SetTransparency( 50 );
     mpMTRTransparent->SetModifyHdl(LINK(this, AreaPropertyPanelBase, ModifyTransparentHdl_Impl));
     mpSldTransparent->SetSlideHdl(LINK(this, AreaPropertyPanelBase, ModifyTransSliderHdl));
-    mpMTRTransparent->SetAccessibleName("Transparency");    //wj acc
 
     const sal_uInt16 nIdGradient = mpBTNGradient->GetItemId(UNO_SIDEBARGRADIENT);
     mpBTNGradient->SetItemBits( nIdGradient, mpBTNGradient->GetItemBits( nIdGradient ) | ToolBoxItemBits::DROPDOWNONLY );
@@ -180,15 +175,8 @@ void AreaPropertyPanelBase::Initialize()
     mpBTNGradient->SetSelectHdl( aLink2 );
     mpBTNGradient->SetItemImage(nIdGradient,maImgLinear);
     mpBTNGradient->Hide();
-
-    mpLbFillType->SetAccessibleRelationLabeledBy(mpColorTextFT);
-    mpLbFillAttr->SetAccessibleRelationLabeledBy(mpLbFillAttr);
-    mpToolBoxColor->SetAccessibleRelationLabeledBy(mpToolBoxColor);
-    mpLBTransType->SetAccessibleRelationLabeledBy(mpTrspTextFT);
-    mpMTRTransparent->SetAccessibleRelationLabeledBy(mpMTRTransparent);
-    mpBTNGradient->SetAccessibleRelationLabeledBy(mpBTNGradient);
-
     mpSidebarController = sfx2::sidebar::SidebarController::GetSidebarControllerForFrame(mxFrame);
+    mpSidebarController->NotifyResize();
 }
 
 void AreaPropertyPanelBase::SetTransparency(sal_uInt16 nVal)
@@ -744,6 +732,7 @@ void AreaPropertyPanelBase::updateFillStyle(bool bDisabled, bool bDefault, const
     mpToolBoxColor->Hide();
     meLastXFS = static_cast<sal_uInt16>(-1);
     mpStyleItem.reset();
+    mpSidebarController->NotifyResize();
 }
 
 void AreaPropertyPanelBase::updateFillGradient(bool bDisabled, bool bDefault, const XFillGradientItem* pItem)
@@ -781,6 +770,7 @@ void AreaPropertyPanelBase::updateFillGradient(bool bDisabled, bool bDefault, co
             mpLbFillGradTo->SetNoSelection();
         }
     }
+    mpSidebarController->NotifyResize();
 }
 
 void AreaPropertyPanelBase::updateFillHatch(bool bDisabled, bool bDefault, const XFillHatchItem* pItem)
@@ -810,6 +800,7 @@ void AreaPropertyPanelBase::updateFillHatch(bool bDisabled, bool bDefault, const
             mpLbFillAttr->SetNoSelection();
         }
     }
+    mpSidebarController->NotifyResize();
 }
 
 void AreaPropertyPanelBase::updateFillColor(bool bDefault, const XFillColorItem* pItem)
@@ -826,6 +817,7 @@ void AreaPropertyPanelBase::updateFillColor(bool bDefault, const XFillColorItem*
 
         Update();
     }
+    mpSidebarController->NotifyResize();
 }
 
 void AreaPropertyPanelBase::updateFillBitmap(bool bDisabled, bool bDefault, const XFillBitmapItem* pItem)
@@ -855,6 +847,7 @@ void AreaPropertyPanelBase::updateFillBitmap(bool bDisabled, bool bDefault, cons
             mpLbFillAttr->SetNoSelection();
         }
     }
+    mpSidebarController->NotifyResize();
 }
 
 void AreaPropertyPanelBase::NotifyItemUpdate(
@@ -973,7 +966,6 @@ void AreaPropertyPanelBase::NotifyItemUpdate(
             break;
         }
     }
-    mpSidebarController->NotifyResize();
 }
 
 void AreaPropertyPanelBase::Update()
@@ -1033,24 +1025,24 @@ void AreaPropertyPanelBase::Update()
                     {
                         const OUString aString(mpFillGradientItem->GetName());
                         mpLbFillAttr->SelectEntry(aString);
-                        const XGradient pGradient = mpFillGradientItem->GetGradientValue();
-                        mpLbFillGradFrom->SelectEntry(pGradient.GetStartColor());
+                        const XGradient aGradient = mpFillGradientItem->GetGradientValue();
+                        mpLbFillGradFrom->SelectEntry(aGradient.GetStartColor());
                         if(mpLbFillGradFrom->GetSelectEntryCount() == 0)
                         {
-                            mpLbFillGradFrom->InsertEntry(pGradient.GetStartColor(), OUString());
-                            mpLbFillGradFrom->SelectEntry(pGradient.GetStartColor());
+                            mpLbFillGradFrom->InsertEntry(aGradient.GetStartColor(), OUString());
+                            mpLbFillGradFrom->SelectEntry(aGradient.GetStartColor());
                         }
-                        mpLbFillGradTo->SelectEntry(pGradient.GetEndColor());
+                        mpLbFillGradTo->SelectEntry(aGradient.GetEndColor());
                         if(mpLbFillGradTo->GetSelectEntryCount() == 0)
                         {
-                            mpLbFillGradTo->InsertEntry(pGradient.GetEndColor(), OUString());
-                            mpLbFillGradTo->SelectEntry(pGradient.GetEndColor());
+                            mpLbFillGradTo->InsertEntry(aGradient.GetEndColor(), OUString());
+                            mpLbFillGradTo->SelectEntry(aGradient.GetEndColor());
                         }
-                        mpGradientStyle->SelectEntryPos(sal::static_int_cast< sal_Int32 >( pGradient.GetGradientStyle() ));
+                        mpGradientStyle->SelectEntryPos(sal::static_int_cast< sal_Int32 >( aGradient.GetGradientStyle() ));
                         if(mpGradientStyle->GetSelectEntryPos() == GradientStyle_RADIAL)
                             mpMTRAngle->Disable();
                         else
-                            mpMTRAngle->SetValue( pGradient.GetAngle() /10 );
+                            mpMTRAngle->SetValue( aGradient.GetAngle() /10 );
                     }
                     else
                     {
@@ -1253,6 +1245,7 @@ IMPL_LINK_NOARG_TYPED(AreaPropertyPanelBase, ModifyTransparentHdl_Impl, Edit&, v
 {
     const sal_uInt16 nTrans = (sal_uInt16)mpMTRTransparent->GetValue();
     mnLastTransSolid = nTrans;
+    SetTransparency(nTrans);
     const sal_Int32 nSelectType = mpLBTransType->GetSelectEntryPos();
 
     if(nTrans && !nSelectType)
@@ -1264,7 +1257,7 @@ IMPL_LINK_NOARG_TYPED(AreaPropertyPanelBase, ModifyTransparentHdl_Impl, Edit&, v
     setFillTransparence(aLinearItem);
 }
 
-XGradient AreaPropertyPanelBase::GetGradient (const css::awt::GradientStyle eStyle) const
+const XGradient& AreaPropertyPanelBase::GetGradient (const css::awt::GradientStyle eStyle) const
 {
     switch (eStyle)
     {

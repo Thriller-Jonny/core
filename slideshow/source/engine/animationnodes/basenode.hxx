@@ -27,7 +27,6 @@
 #include "slideshowcontext.hxx"
 #include "shapesubset.hxx"
 
-#include <boost/noncopyable.hpp>
 #include <vector>
 
 namespace slideshow {
@@ -74,13 +73,14 @@ class BaseContainerNode;
     file-private accessor methods.
 */
 class BaseNode : public AnimationNode,
-                 public  ::osl::DebugBase<BaseNode>,
-                 private ::boost::noncopyable
+                 public  ::osl::DebugBase<BaseNode>
 {
 public:
     BaseNode( css::uno::Reference<css::animations::XAnimationNode> const& xNode,
-              ::boost::shared_ptr<BaseContainerNode> const&        pParent,
+              ::std::shared_ptr<BaseContainerNode> const&        pParent,
               NodeContext const&                                   rContext );
+    BaseNode(const BaseNode&) = delete;
+    BaseNode& operator=(const BaseNode&) = delete;
 
     /** Provide the node with a shared_ptr to itself.
 
@@ -89,7 +89,7 @@ public:
         retrieve a shared_ptr to itself internally, have to
         set that from the outside.
     */
-    void setSelf( const ::boost::shared_ptr< BaseNode >& rSelf );
+    void setSelf( const ::std::shared_ptr< BaseNode >& rSelf );
 
 
 #if defined(DBG_UTIL)
@@ -97,7 +97,7 @@ public:
     virtual const char* getDescription() const;
 #endif
 
-    const ::boost::shared_ptr< BaseContainerNode >& getParentNode() const
+    const ::std::shared_ptr< BaseContainerNode >& getParentNode() const
         { return mpParent; }
 
     // Disposable:
@@ -106,7 +106,7 @@ public:
     // AnimationNode:
     virtual bool init() override;
     virtual bool resolve() override;
-    virtual bool activate() override;
+    virtual void activate() override;
     virtual void deactivate() override;
     virtual void end() override;
     virtual css::uno::Reference<css::animations::XAnimationNode> getXAnimationNode() const override;
@@ -123,7 +123,7 @@ protected:
                                     EventSharedPtr() );
 
     SlideShowContext const&                 getContext() const { return maContext; }
-    ::boost::shared_ptr<BaseNode> const&    getSelf() const { return mpSelf; }
+    ::std::shared_ptr<BaseNode> const&    getSelf() const { return mpSelf; }
 
     bool checkValidNode() const {
         ENSURE_OR_THROW( mpSelf, "no self ptr set!" );
@@ -191,8 +191,8 @@ private:
 
     ListenerVector                                     maDeactivatingListeners;
     css::uno::Reference< css::animations::XAnimationNode > mxAnimationNode;
-    ::boost::shared_ptr< BaseContainerNode >           mpParent;
-    ::boost::shared_ptr< BaseNode >                    mpSelf;
+    ::std::shared_ptr< BaseContainerNode >           mpParent;
+    ::std::shared_ptr< BaseNode >                    mpSelf;
     const int*                                         mpStateTransitionTable;
     const double                                       mnStartDelay;
     NodeState                                          meCurrState;
@@ -201,7 +201,7 @@ private:
     const bool                                         mbIsMainSequenceRootNode;
 };
 
-typedef ::boost::shared_ptr< BaseNode > BaseNodeSharedPtr;
+typedef ::std::shared_ptr< BaseNode > BaseNodeSharedPtr;
 
 } // namespace internal
 } // namespace slideshow

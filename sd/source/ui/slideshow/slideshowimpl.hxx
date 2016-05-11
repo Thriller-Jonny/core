@@ -26,6 +26,7 @@
 #include <cppuhelper/implbase.hxx>
 #include "cppuhelper/basemutex.hxx"
 #include "cppuhelper/propertysetmixin.hxx"
+#include <comphelper/interfacecontainer2.hxx>
 #include <com/sun/star/awt/XActivateListener.hpp>
 #include <com/sun/star/presentation/XSlideShow.hpp>
 #include <com/sun/star/presentation/XSlideShowView.hpp>
@@ -80,13 +81,13 @@
 
 class SfxViewFrame;
 class SfxRequest;
-class ShowWindow;
 
 namespace sd
 {
 class SlideShowView;
 class AnimationSlideController;
 class PaneHider;
+class ShowWindow;
 
 struct PresentationSettingsEx : public PresentationSettings
 {
@@ -151,7 +152,7 @@ public:
     // css::presentation::XShapeEventListener:
     virtual void SAL_CALL click(const css::uno::Reference< css::drawing::XShape > & xShape, const css::awt::MouseEvent & aOriginalEvent) throw (css::uno::RuntimeException, std::exception) override;
 
-    ::cppu::OInterfaceContainerHelper maListeners;
+    ::comphelper::OInterfaceContainerHelper2 maListeners;
 
     rtl::Reference< SlideshowImpl > mxController;
     css::uno::Reference< css::presentation::XSlideShow > mxSlideShow;
@@ -252,7 +253,7 @@ private:
         /** forces an async call to update in the main thread */
     void startUpdateTimer();
 
-    double update();
+    void update();
 
     void createSlideList( bool bAll, const OUString& rPresSlide );
 
@@ -281,9 +282,6 @@ private:
     DECL_LINK_TYPED( ContextMenuHdl, void*, void );
     DECL_LINK_TYPED( deactivateHdl, Timer *, void );
     DECL_LINK_TYPED( EventListenerHdl, VclSimpleEvent&, void );
-
-    // helper
-    void receiveRequest(SfxRequest& rReq);
 
     /** called only by the slideshow view when the first paint event occurs.
         This actually starts the slideshow. */
@@ -315,7 +313,7 @@ private:
         its return value, wait for a certain amount of time before another
         call to update() is scheduled.
     */
-    sal_Int32 updateSlideShow();
+    void updateSlideShow();
 
     css::uno::Reference< css::presentation::XSlideShow > mxShow;
     rtl::Reference<sd::SlideShowView> mxView;
@@ -331,7 +329,7 @@ private:
     SdDrawDocument* mpDoc;
 
     VclPtr<vcl::Window>    mpParentWindow;
-    VclPtr<ShowWindow>     mpShowWindow;
+    VclPtr<sd::ShowWindow>     mpShowWindow;
     VclPtr<PushButton>     mpTimeButton;
 
     std::shared_ptr< AnimationSlideController > mpSlideController;

@@ -21,7 +21,7 @@
 #define INCLUDED_VCL_INC_HEADLESS_SVPDUMMIES_HXX
 
 #include <vcl/sysdata.hxx>
-#include <generic/gensys.h>
+#include <unx/gensys.h>
 #include <salobj.hxx>
 #include <salimestatus.hxx>
 #include <salsys.hxx>
@@ -37,8 +37,7 @@ public:
     virtual ~SvpSalObject();
 
     // override all pure virtual methods
-     virtual void                   ResetClipRegion() override;
-    virtual sal_uInt16              GetClipRegionType() override;
+    virtual void                    ResetClipRegion() override;
     virtual void                    BeginSetClipRegion( sal_uLong nRects ) override;
     virtual void                    UnionClipRegion( long nX, long nY, long nWidth, long nHeight ) override;
     virtual void                    EndSetClipRegion() override;

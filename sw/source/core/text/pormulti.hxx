@@ -36,16 +36,16 @@ class SwFont;
 // or a poolitem.
 // The GetMultiCreator-function fills this structure and
 // the Ctor of the SwMultiPortion uses it.
-#define SW_MC_DOUBLE    0
-#define SW_MC_RUBY      1
-#define SW_MC_ROTATE    2
-#define SW_MC_BIDI      3
+enum class SwMultiCreatorId
+{
+    Double, Ruby, Rotate, Bidi
+};
 
 struct SwMultiCreator
 {
     const SwTextAttr* pAttr;
     const SfxPoolItem* pItem;
-    sal_uInt8 nId;
+    SwMultiCreatorId nId;
     sal_uInt8 nLevel;
 };
 
@@ -60,8 +60,8 @@ struct SwBracket
     sal_uInt16 nPostWidth;      // Width of the closing bracket
     sal_Unicode cPre;       // Initial character, e.g. '('
     sal_Unicode cPost;      // Final character, e.g. ')'
-    sal_uInt8 nPreScript;       // Script of the initial character
-    sal_uInt8 nPostScript;       // Script of the final character
+    SwFontScript nPreScript;       // Script of the initial character
+    SwFontScript nPostScript;       // Script of the final character
 };
 
 // The SwMultiPortion is line portion inside a line portion,
@@ -73,7 +73,6 @@ struct SwBracket
 class SwMultiPortion : public SwLinePortion
 {
     SwLineLayout aRoot;     // One or more lines
-    SwFieldPortion *pFieldRest; // Field rest from the previous line
     bool bTab1      :1;     // First line tabulator
     bool bTab2      :1;     // Second line includes tabulator
     bool bDouble    :1;     // Double line
@@ -86,8 +85,7 @@ class SwMultiPortion : public SwLinePortion
     sal_uInt8 nDirection:2; // Direction (0/90/180/270 degrees)
 protected:
     explicit SwMultiPortion(sal_Int32 nEnd)
-        : pFieldRest(nullptr)
-        , bTab1(false)
+        : bTab1(false)
         , bTab2(false)
         , bDouble(false)
         , bRuby(false)
@@ -183,7 +181,7 @@ class SwRubyPortion : public SwMultiPortion
 {
     sal_Int32 nRubyOffset;
     sal_uInt16 nAdjustment;
-    void _Adjust( SwTextFormatInfo &rInf);
+    void Adjust_( SwTextFormatInfo &rInf);
 public:
     SwRubyPortion( const SwRubyPortion& rRuby, sal_Int32 nEnd );
 
@@ -194,7 +192,7 @@ public:
 
     void CalcRubyOffset();
     inline void Adjust( SwTextFormatInfo &rInf )
-        { if(nAdjustment && GetRoot().GetNext()) _Adjust(rInf); }
+        { if(nAdjustment && GetRoot().GetNext()) Adjust_(rInf); }
     inline sal_uInt16 GetAdjustment() const { return nAdjustment; }
     inline sal_Int32 GetRubyOffset() const { return nRubyOffset; }
 };

@@ -30,8 +30,6 @@
 #include <com/sun/star/animations/EventTrigger.hpp>
 #include <com/sun/star/container/XEnumerationAccess.hpp>
 
-#include <boost/enable_shared_from_this.hpp>
-
 using ::com::sun::star::uno::Reference;
 using namespace ::com::sun::star;
 
@@ -52,7 +50,6 @@ private:
 };
 
 
-
 class RewinderAnimationEventHandler : public AnimationEventHandler
 {
 public:
@@ -64,7 +61,6 @@ private:
     virtual bool handleAnimationEvent (const AnimationNodeSharedPtr& rpNode) override
         { return maAction(rpNode); }
 };
-
 
 
 } // end of anonymous namespace
@@ -89,8 +85,6 @@ EffectRewinder::EffectRewinder (
 {
     initialize();
 }
-
-
 
 
 void EffectRewinder::initialize()
@@ -119,14 +113,10 @@ void EffectRewinder::initialize()
 }
 
 
-
-
 EffectRewinder::~EffectRewinder()
 {
     dispose();
 }
-
-
 
 
 void EffectRewinder::dispose()
@@ -157,8 +147,6 @@ void EffectRewinder::dispose()
 }
 
 
-
-
 void EffectRewinder::setRootAnimationNode (
     const uno::Reference<animations::XAnimationNode>& xRootNode)
 {
@@ -166,10 +154,8 @@ void EffectRewinder::setRootAnimationNode (
 }
 
 
-
-
 bool EffectRewinder::rewind (
-    const ::boost::shared_ptr<ScreenUpdater::UpdateLock>& rpPaintLock,
+    const ::std::shared_ptr<ScreenUpdater::UpdateLock>& rpPaintLock,
     const ::std::function<void ()>& rSlideRewindFunctor,
     const ::std::function<void ()>& rPreviousSlideFunctor)
 {
@@ -225,8 +211,6 @@ bool EffectRewinder::rewind (
 }
 
 
-
-
 void EffectRewinder::skipAllMainSequenceEffects()
 {
     // Do not allow nested rewinds.
@@ -247,8 +231,6 @@ void EffectRewinder::skipAllMainSequenceEffects()
         "EffectRewinder::asynchronousRewind");
     mrEventQueue.addEvent(mpAsynchronousRewindEvent);
 }
-
-
 
 
 sal_Int32 EffectRewinder::countMainSequenceEffects()
@@ -292,8 +274,6 @@ sal_Int32 EffectRewinder::countMainSequenceEffects()
 }
 
 
-
-
 void EffectRewinder::skipSingleMainSequenceEffects()
 {
     // This basically just starts the next effect and then skips over its
@@ -305,8 +285,6 @@ void EffectRewinder::skipSingleMainSequenceEffects()
 }
 
 
-
-
 bool EffectRewinder::resetEffectCount()
 {
     mnMainSequenceEffectCount = 0;
@@ -314,13 +292,11 @@ bool EffectRewinder::resetEffectCount()
 }
 
 
-
-
 bool EffectRewinder::notifyAnimationStart (const AnimationNodeSharedPtr& rpNode)
 {
     // This notification is only relevant for us when the rpNode belongs to
     // the main sequence.
-    BaseNodeSharedPtr pBaseNode (::boost::dynamic_pointer_cast<BaseNode>(rpNode));
+    BaseNodeSharedPtr pBaseNode (::std::dynamic_pointer_cast<BaseNode>(rpNode));
     if ( ! pBaseNode)
         return false;
 
@@ -347,8 +323,6 @@ bool EffectRewinder::notifyAnimationStart (const AnimationNodeSharedPtr& rpNode)
 
     return false;
 }
-
-
 
 
 void EffectRewinder::asynchronousRewind (
@@ -395,8 +369,6 @@ void EffectRewinder::asynchronousRewind (
 }
 
 
-
-
 void EffectRewinder::asynchronousRewindToPreviousSlide (
     const ::std::function<void ()>& rSlideRewindFunctor)
 {
@@ -405,8 +377,6 @@ void EffectRewinder::asynchronousRewindToPreviousSlide (
     mpAsynchronousRewindEvent.reset();
     rSlideRewindFunctor();
 }
-
-
 
 
 } } // end of namespace ::slideshow::internal

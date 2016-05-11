@@ -17,11 +17,10 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <tools/stream.hxx>
+#include <svl/languageoptions.hxx>
 #include <vcl/svapp.hxx>
 #include <editeng/scripttypeitem.hxx>
 #include "format.hxx"
-
 
 
 // Latin default-fonts
@@ -89,17 +88,14 @@ OUString GetDefaultFontName( LanguageType nLang, sal_uInt16 nIdent )
 
         return OutputDevice::GetDefaultFont(
                         pTable[ nIdent ], nLang,
-                        GetDefaultFontFlags::OnlyOne ).GetName();
+                        GetDefaultFontFlags::OnlyOne ).GetFamilyName();
     }
 }
-
 
 
 SmFormat::SmFormat()
 :   aBaseSize(0, SmPtsTo100th_mm(12))
 {
-    nVersion    = SM_FMT_VERSION_NOW;
-
     eHorAlign       = AlignCenter;
     nGreekCharStyle = 0;
     bIsTextmode     = bScaleNormalBrackets = false;
@@ -158,7 +154,7 @@ SmFormat::SmFormat()
     {
         SmFace &rFace = vFont[i];
         rFace.SetTransparent( true );
-        rFace.SetAlign( ALIGN_BASELINE );
+        rFace.SetAlignment( ALIGN_BASELINE );
         rFace.SetColor( COL_AUTO );
         bDefaultFont[i] = false;
     }
@@ -169,7 +165,7 @@ void SmFormat::SetFont(sal_uInt16 nIdent, const SmFace &rFont, bool bDefault )
 {
     vFont[nIdent] = rFont;
     vFont[nIdent].SetTransparent( true );
-    vFont[nIdent].SetAlign( ALIGN_BASELINE );
+    vFont[nIdent].SetAlignment( ALIGN_BASELINE );
 
     bDefaultFont[nIdent] = bDefault;
 }
@@ -177,7 +173,6 @@ void SmFormat::SetFont(sal_uInt16 nIdent, const SmFace &rFont, bool bDefault )
 SmFormat & SmFormat::operator = (const SmFormat &rFormat)
 {
     SetBaseSize(rFormat.GetBaseSize());
-    SetVersion (rFormat.GetVersion());
     SetHorAlign(rFormat.GetHorAlign());
     SetTextmode(rFormat.IsTextmode());
     SetGreekCharStyle(rFormat.GetGreekCharStyle());

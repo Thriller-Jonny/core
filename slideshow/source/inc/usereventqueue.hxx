@@ -26,8 +26,6 @@
 #include "eventqueue.hxx"
 #include "shape.hxx"
 
-#include <boost/noncopyable.hpp>
-
 /* Definition of UserEventQueue class */
 
 namespace slideshow {
@@ -57,7 +55,7 @@ class MouseLeaveHandler;
     this object are fired and then all references to them are
     removed.
 */
-class UserEventQueue : private ::boost::noncopyable
+class UserEventQueue
 {
 public:
     /** Create a user event queue
@@ -82,6 +80,8 @@ public:
                     EventQueue&         rEventQueue,
                     CursorManager&      rCursorManager );
     ~UserEventQueue();
+    UserEventQueue(const UserEventQueue&) = delete;
+    UserEventQueue& operator=(const UserEventQueue&) = delete;
 
     /** Clear all registered events.
 
@@ -228,7 +228,7 @@ private:
         register it via the Functor
     */
     template< typename Handler, typename Functor >
-    void registerEvent( ::boost::shared_ptr< Handler >& rHandler,
+    void registerEvent( ::std::shared_ptr< Handler >& rHandler,
                         const EventSharedPtr&           rEvent,
                         const Functor&                  rRegistrationFunctor );
 
@@ -241,7 +241,7 @@ private:
         rHandler's addEvent() method.
     */
     template< typename Handler, typename Arg, typename Functor >
-    void registerEvent( ::boost::shared_ptr< Handler >& rHandler,
+    void registerEvent( ::std::shared_ptr< Handler >& rHandler,
                         const EventSharedPtr&           rEvent,
                         const Arg&                      rArg,
                         const Functor&                  rRegistrationFunctor );
@@ -250,16 +250,16 @@ private:
     EventQueue&                                     mrEventQueue;
     CursorManager&                                  mrCursorManager;
 
-    ::boost::shared_ptr<AllAnimationEventHandler>   mpAnimationStartEventHandler;
-    ::boost::shared_ptr<AllAnimationEventHandler>   mpAnimationEndEventHandler;
-    ::boost::shared_ptr<AllAnimationEventHandler>   mpAudioStoppedEventHandler;
-    ::boost::shared_ptr<ShapeClickEventHandler>     mpShapeClickEventHandler;
-    ::boost::shared_ptr<ClickEventHandler>          mpClickEventHandler;
-    ::boost::shared_ptr<SkipEffectEventHandler>     mpSkipEffectEventHandler;
-    ::boost::shared_ptr<ShapeClickEventHandler>     mpShapeDoubleClickEventHandler;
-    ::boost::shared_ptr<ClickEventHandler>          mpDoubleClickEventHandler;
-    ::boost::shared_ptr<MouseEnterHandler>          mpMouseEnterHandler;
-    ::boost::shared_ptr<MouseLeaveHandler>          mpMouseLeaveHandler;
+    ::std::shared_ptr<AllAnimationEventHandler>   mpAnimationStartEventHandler;
+    ::std::shared_ptr<AllAnimationEventHandler>   mpAnimationEndEventHandler;
+    ::std::shared_ptr<AllAnimationEventHandler>   mpAudioStoppedEventHandler;
+    ::std::shared_ptr<ShapeClickEventHandler>     mpShapeClickEventHandler;
+    ::std::shared_ptr<ClickEventHandler>          mpClickEventHandler;
+    ::std::shared_ptr<SkipEffectEventHandler>     mpSkipEffectEventHandler;
+    ::std::shared_ptr<ShapeClickEventHandler>     mpShapeDoubleClickEventHandler;
+    ::std::shared_ptr<ClickEventHandler>          mpDoubleClickEventHandler;
+    ::std::shared_ptr<MouseEnterHandler>          mpMouseEnterHandler;
+    ::std::shared_ptr<MouseLeaveHandler>          mpMouseLeaveHandler;
 
     bool                                            mbAdvanceOnClick;
 };

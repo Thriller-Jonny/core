@@ -324,11 +324,6 @@ void IdlAttributeFieldImpl::checkException(
 }
 
 
-
-
-
-
-
 class IdlInterfaceMethodImpl
     : public IdlMemberImpl
     , public XIdlMethod
@@ -763,12 +758,6 @@ Any SAL_CALL IdlInterfaceMethodImpl::invoke( const Any & rObj, Sequence< Any > &
 }
 
 
-
-
-
-
-
-
 InterfaceIdlClassImpl::~InterfaceIdlClassImpl()
 {
     for ( sal_Int32 nPos = _nMethods + _nAttributes; nPos--; )
@@ -832,7 +821,7 @@ sal_Bool InterfaceIdlClassImpl::isAssignableFrom( const Reference< XIdlClass > &
     if (xType.is() && xType->getTypeClass() == TypeClass_INTERFACE)
     {
         if (equals( xType ))
-            return sal_True;
+            return true;
         else
         {
             const Sequence< Reference< XIdlClass > > & rSeq = xType->getSuperclasses();
@@ -843,7 +832,7 @@ sal_Bool InterfaceIdlClassImpl::isAssignableFrom( const Reference< XIdlClass > &
             }
         }
     }
-    return sal_False;
+    return false;
 }
 
 Uik InterfaceIdlClassImpl::getUik()

@@ -55,7 +55,7 @@ private:
     uno::Reference< beans::XPropertySet > m_xProps;
     sal_Int32 m_LineType;
     ScVbaPalette m_Palette;
-    bool setBorderLine( table::BorderLine& rBorderLine )
+    void setBorderLine( table::BorderLine& rBorderLine )
     {
         table::TableBorder aTableBorder;
         m_xProps->getPropertyValue( sTableBorder ) >>= aTableBorder;
@@ -63,28 +63,28 @@ private:
         switch ( m_LineType )
         {
             case XlBordersIndex::xlEdgeLeft:
-                aTableBorder.IsLeftLineValid = sal_True;
+                aTableBorder.IsLeftLineValid = true;
                 aTableBorder.LeftLine= rBorderLine;
                 break;
             case XlBordersIndex::xlEdgeTop:
-                aTableBorder.IsTopLineValid = sal_True;
+                aTableBorder.IsTopLineValid = true;
                 aTableBorder.TopLine = rBorderLine;
                 break;
 
             case XlBordersIndex::xlEdgeBottom:
-                aTableBorder.IsBottomLineValid = sal_True;
+                aTableBorder.IsBottomLineValid = true;
                 aTableBorder.BottomLine = rBorderLine;
                 break;
             case XlBordersIndex::xlEdgeRight:
-                aTableBorder.IsRightLineValid = sal_True;
+                aTableBorder.IsRightLineValid = true;
                 aTableBorder.RightLine = rBorderLine;
                 break;
             case XlBordersIndex::xlInsideVertical:
-                aTableBorder.IsVerticalLineValid = sal_True;
+                aTableBorder.IsVerticalLineValid = true;
                 aTableBorder.VerticalLine = rBorderLine;
                 break;
             case XlBordersIndex::xlInsideHorizontal:
-                aTableBorder.IsHorizontalLineValid = sal_True;
+                aTableBorder.IsHorizontalLineValid = true;
                 aTableBorder.HorizontalLine = rBorderLine;
                 break;
             case XlBordersIndex::xlDiagonalDown:
@@ -93,10 +93,9 @@ private:
                 // nice to investigate what we can do here
                 break;
             default:
-                    return false;
+                    return;
         }
         m_xProps->setPropertyValue( sTableBorder, uno::makeAny(aTableBorder) );
-        return true;
     }
 
     bool getBorderLine( table::BorderLine& rBorderLine )
@@ -323,7 +322,7 @@ public:
     // XIndexAccess
     virtual ::sal_Int32 SAL_CALL getCount(  ) throw (uno::RuntimeException, std::exception) override
     {
-        return sizeof( supportedIndexTable ) / sizeof( supportedIndexTable[0] );
+        return SAL_N_ELEMENTS( supportedIndexTable );
     }
     virtual uno::Any SAL_CALL getByIndex( ::sal_Int32 Index ) throw (lang::IndexOutOfBoundsException, lang::WrappedTargetException, uno::RuntimeException, std::exception) override
     {
@@ -342,7 +341,7 @@ public:
     }
     virtual sal_Bool SAL_CALL hasElements(  ) throw (uno::RuntimeException, std::exception) override
     {
-        return sal_True;
+        return true;
     }
 };
 
@@ -486,18 +485,18 @@ lcl_areAllLineWidthsSame( const table::TableBorder& maTableBorder, bool bIsCell 
 
 uno::Any SAL_CALL ScVbaBorders::getLineStyle() throw (uno::RuntimeException, std::exception)
 {
-    table::TableBorder maTableBorder;
-    m_xProps->getPropertyValue( sTableBorder ) >>= maTableBorder;
+    table::TableBorder aTableBorder;
+    m_xProps->getPropertyValue( sTableBorder ) >>= aTableBorder;
 
     sal_Int32 aLinestyle =  XlLineStyle::xlLineStyleNone;
 
-    if ( lcl_areAllLineWidthsSame( maTableBorder, bRangeIsSingleCell ))
+    if ( lcl_areAllLineWidthsSame( aTableBorder, bRangeIsSingleCell ))
     {
-        if (maTableBorder.TopLine.LineDistance != 0)
+        if (aTableBorder.TopLine.LineDistance != 0)
         {
             aLinestyle = XlLineStyle::xlDouble;
         }
-        else if ( maTableBorder.TopLine.OuterLineWidth != 0 )
+        else if ( aTableBorder.TopLine.OuterLineWidth != 0 )
         {
             aLinestyle = XlLineStyle::xlContinuous;
         }

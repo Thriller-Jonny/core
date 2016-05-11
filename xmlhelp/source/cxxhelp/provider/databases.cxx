@@ -65,7 +65,7 @@
 #include "databases.hxx"
 #include "urlparameter.hxx"
 
-#ifdef WNT
+#ifdef _WIN32
 #include <windows.h>
 #endif
 
@@ -86,7 +86,7 @@ OUString Databases::expandURL( const OUString& aURL )
     return aRetURL;
 }
 
-OUString Databases::expandURL( const OUString& aURL, Reference< uno::XComponentContext > xContext )
+OUString Databases::expandURL( const OUString& aURL, const Reference< uno::XComponentContext >& xContext )
 {
     static Reference< util::XMacroExpander > xMacroExpander;
     static Reference< uri::XUriReferenceFactory > xFac;
@@ -126,7 +126,6 @@ Databases::Databases( bool showBasic,
                       Reference< uno::XComponentContext > xContext )
     : m_xContext( xContext ),
       m_bShowBasic(showBasic),
-      m_pErrorDoc( nullptr ),
       m_nCustomCSSDocLength( 0 ),
       m_pCustomCSSDoc( nullptr ),
       m_aCSS(styleSheet.toAsciiLowerCase()),
@@ -164,10 +163,6 @@ Databases::~Databases()
     // release stylesheet
 
     delete[] m_pCustomCSSDoc;
-
-    // release errorDocument
-
-    delete[] m_pErrorDoc;
 
     // unload the databases
 
@@ -316,8 +311,6 @@ const std::vector< OUString >& Databases::getModuleList( const OUString& Languag
         osl::DirectoryItem aDirItem;
         osl::FileStatus    aStatus( osl_FileStatus_Mask_FileName );
 
-        sal_Int32 idx;
-
         if( osl::FileBase::E_None != dirFile.open() )
             return m_avModules;
 
@@ -330,22 +323,17 @@ const std::vector< OUString >& Databases::getModuleList( const OUString& Languag
             fileName = aStatus.getFileName();
 
             // Check, whether fileName is of the form *.cfg
-            idx = fileName.lastIndexOf( '.' );
-
-            if( idx == -1 )
+            if (!fileName.endsWithIgnoreAsciiCase(".cfg", &fileName)) {
                 continue;
-
-            const sal_Unicode* str = fileName.getStr();
-
-            if( fileName.getLength() == idx + 4                   &&
-                ( str[idx + 1] == 'c' || str[idx + 1] == 'C' )    &&
-                ( str[idx + 2] == 'f' || str[idx + 2] == 'F' )    &&
-                ( str[idx + 3] == 'g' || str[idx + 3] == 'G' )    &&
-                ( fileName = fileName.copy(0,idx).toAsciiLowerCase() ) != "picture" ) {
-              if(! m_bShowBasic && fileName == "sbasic" )
-                continue;
-              m_avModules.push_back( fileName );
             }
+            fileName = fileName.toAsciiLowerCase();
+            if (fileName == "picture"
+                || (!m_bShowBasic && fileName == "sbasic"))
+            {
+                continue;
+            }
+
+            m_avModules.push_back( fileName );
         }
     }
     return m_avModules;
@@ -959,7 +947,9 @@ Reference< XHierarchicalNameAccess > Databases::findJarFileForPath
 void Databases::changeCSS(const OUString& newStyleSheet)
 {
     m_aCSS = newStyleSheet.toAsciiLowerCase();
-    delete[] m_pCustomCSSDoc, m_pCustomCSSDoc = nullptr,m_nCustomCSSDocLength = 0;
+    delete[] m_pCustomCSSDoc;
+    m_pCustomCSSDoc = nullptr;
+    m_nCustomCSSDocLength = 0;
 }
 
 void Databases::cascadingStylesheet( const OUString& Language,
@@ -989,7 +979,7 @@ void Databases::cascadingStylesheet( const OUString& Language,
                     if ( ( aHCMode >>= bHighContrastMode ) && bHighContrastMode )
                     {
                         aCSS = "highcontrastblack";
-                        #ifdef WNT
+                        #ifdef _WIN32
                         HKEY hKey = NULL;
                         LONG lResult = RegOpenKeyExA( HKEY_CURRENT_USER, "Control Panel\\Accessibility\\HighContrast", 0, KEY_QUERY_VALUE, &hKey );
                         if ( ERROR_SUCCESS == lResult )
@@ -1186,7 +1176,7 @@ void ExtensionIteratorBase::init()
 }
 
 Reference< deployment::XPackage > ExtensionIteratorBase::implGetHelpPackageFromPackage
-    ( Reference< deployment::XPackage > xPackage, Reference< deployment::XPackage >& o_xParentPackageBundle )
+    ( const Reference< deployment::XPackage >& xPackage, Reference< deployment::XPackage >& o_xParentPackageBundle )
 {
     o_xParentPackageBundle.clear();
 
@@ -1335,7 +1325,7 @@ Reference< deployment::XPackage > ExtensionIteratorBase::implGetNextBundledHelpP
 }
 
 OUString ExtensionIteratorBase::implGetFileFromPackage(
-    const OUString& rFileExtension, Reference< deployment::XPackage > xPackage )
+    const OUString& rFileExtension, const Reference< deployment::XPackage >& xPackage )
 {
     // No extension -> search for pure language folder
     bool bLangFolderOnly = rFileExtension.isEmpty();
@@ -1372,7 +1362,7 @@ inline bool isLetter( sal_Unicode c )
 }
 
 void ExtensionIteratorBase::implGetLanguageVectorFromPackage( ::std::vector< OUString > &rv,
-    css::uno::Reference< css::deployment::XPackage > xPackage )
+    const css::uno::Reference< css::deployment::XPackage >& xPackage )
 {
     rv.clear();
     OUString aExtensionPath = xPackage->getURL();
@@ -1463,7 +1453,7 @@ helpdatafileproxy::Hdf* DataBaseIterator::nextHdf( OUString* o_pExtensionPath, O
     return pRetHdf;
 }
 
-helpdatafileproxy::Hdf* DataBaseIterator::implGetHdfFromPackage( Reference< deployment::XPackage > xPackage,
+helpdatafileproxy::Hdf* DataBaseIterator::implGetHdfFromPackage( const Reference< deployment::XPackage >& xPackage,
             OUString* o_pExtensionPath, OUString* o_pExtensionRegistryPath )
 {
 
@@ -1584,7 +1574,7 @@ OUString KeyDataBaseFileIterator::nextDbFile( bool& o_rbExtension )
 
 //Returns a file URL, that does not contain macros
 OUString KeyDataBaseFileIterator::implGetDbFileFromPackage
-    ( Reference< deployment::XPackage > xPackage )
+    ( const Reference< deployment::XPackage >& xPackage )
 {
     OUString aExpandedURL =
         implGetFileFromPackage( ".key", xPackage );
@@ -1653,7 +1643,7 @@ Reference< XHierarchicalNameAccess > JarFileIterator::nextJarFile
 }
 
 Reference< XHierarchicalNameAccess > JarFileIterator::implGetJarFromPackage
-( Reference< deployment::XPackage > xPackage, OUString* o_pExtensionPath, OUString* o_pExtensionRegistryPath )
+( const Reference< deployment::XPackage >& xPackage, OUString* o_pExtensionPath, OUString* o_pExtensionRegistryPath )
 {
     Reference< XHierarchicalNameAccess > xNA;
 
@@ -1781,7 +1771,7 @@ OUString IndexFolderIterator::nextIndexFolder( bool& o_rbExtension, bool& o_rbTe
     return aIndexFolder;
 }
 
-OUString IndexFolderIterator::implGetIndexFolderFromPackage( bool& o_rbTemporary, Reference< deployment::XPackage > xPackage )
+OUString IndexFolderIterator::implGetIndexFolderFromPackage( bool& o_rbTemporary, const Reference< deployment::XPackage >& xPackage )
 {
     OUString aIndexFolder =
         implGetFileFromPackage( ".idxl", xPackage );
@@ -1829,17 +1819,16 @@ OUString IndexFolderIterator::implGetIndexFolderFromPackage( bool& o_rbTemporary
                     ::osl::FileBase::RC eErr = ::osl::File::createTempFile( nullptr, nullptr, &aTempFileURL );
                     if( eErr == ::osl::FileBase::E_None )
                     {
-                        OUString aTempDirURL = aTempFileURL;
                         try
                         {
-                            m_xSFA->kill( aTempDirURL );
+                            m_xSFA->kill( aTempFileURL );
                         }
                         catch (const Exception &)
                         {
                         }
-                        m_xSFA->createFolder( aTempDirURL );
+                        m_xSFA->createFolder( aTempFileURL );
 
-                        aZipDir = aTempDirURL;
+                        aZipDir = aTempFileURL;
                         o_rbTemporary = true;
                     }
                 }

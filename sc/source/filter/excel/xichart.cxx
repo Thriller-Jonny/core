@@ -75,7 +75,7 @@
 #include <com/sun/star/chart2/data/XDataSink.hpp>
 #include <com/sun/star/chart2/data/LabeledDataSequence.hpp>
 #include <o3tl/numeric.hxx>
-#include <o3tl/ptr_container.hxx>
+#include <o3tl/make_unique.hxx>
 #include <sfx2/objsh.hxx>
 #include <svx/svdpage.hxx>
 #include <svx/unoapi.hxx>
@@ -104,7 +104,6 @@ using ::com::sun::star::uno::UNO_QUERY_THROW;
 using ::com::sun::star::uno::UNO_SET_THROW;
 using ::com::sun::star::uno::Exception;
 using ::com::sun::star::beans::XPropertySet;
-using ::com::sun::star::lang::XMultiServiceFactory;
 using ::com::sun::star::frame::XModel;
 using ::com::sun::star::util::XNumberFormatsSupplier;
 using ::com::sun::star::drawing::XDrawPage;
@@ -121,9 +120,6 @@ using ::com::sun::star::chart2::data::XLabeledDataSequence;
 using ::com::sun::star::chart2::data::LabeledDataSequence;
 
 using ::formula::FormulaToken;
-using ::formula::StackVar;
-using ::std::shared_ptr;
-using ::std::pair;
 using ::std::unique_ptr;
 
 namespace cssc = ::com::sun::star::chart;
@@ -1551,9 +1547,9 @@ void XclImpChDataFormat::ConvertLine( ScfPropertySet& rPropSet, XclChObjectType 
     ConvertLineBase( GetChRoot(), rPropSet, eObjType );
 }
 
-void XclImpChDataFormat::ConvertArea( ScfPropertySet& rPropSet, sal_uInt16 nFormatIdx, bool bUsePicFmt ) const
+void XclImpChDataFormat::ConvertArea( ScfPropertySet& rPropSet, sal_uInt16 nFormatIdx ) const
 {
-    ConvertAreaBase( GetChRoot(), rPropSet, EXC_CHOBJTYPE_FILLEDSERIES, nFormatIdx, bUsePicFmt );
+    ConvertAreaBase( GetChRoot(), rPropSet, EXC_CHOBJTYPE_FILLEDSERIES, nFormatIdx );
 }
 
 void XclImpChDataFormat::RemoveUnusedFormats( const XclChExtTypeInfo& rTypeInfo )
@@ -1882,7 +1878,10 @@ void XclImpChSeries::AddChildSeries( const XclImpChSeries& rSeries )
         these are properties of the parent series. This function adds the
         settings of the passed series to this series. */
     maTrendLines.insert( maTrendLines.end(), rSeries.maTrendLines.begin(), rSeries.maTrendLines.end() );
-    maErrorBars.insert( rSeries.maErrorBars.begin(), rSeries.maErrorBars.end() );
+    for (auto const& it : rSeries.m_ErrorBars)
+    {
+        m_ErrorBars.insert(std::make_pair(it.first, o3tl::make_unique<XclImpChSerErrorBar>(*it.second)));
+    }
 }
 
 void XclImpChSeries::FinalizeDataFormats()
@@ -1916,9 +1915,9 @@ void XclImpChSeries::FinalizeDataFormats()
                 (*aLIt)->SetTrendlineName(mxTitleLink->GetString());
             }
         }
-        for( XclImpChSerErrorBarMap::iterator aMIt = maErrorBars.begin(), aMEnd = maErrorBars.end(); aMIt != aMEnd; ++aMIt )
+        for (auto const& it : m_ErrorBars)
         {
-            aMIt->second->SetSeriesData( mxValueLink, mxSeriesFmt );
+            it.second->SetSeriesData( mxValueLink, mxSeriesFmt );
         }
     }
     else if( XclImpChTypeGroup* pTypeGroup = GetChartData().GetTypeGroup( mnGroupIdx ).get() )
@@ -2067,7 +2066,7 @@ Reference< XDataSeries > XclImpChSeries::CreateDataSeries() const
             for( sal_uInt16 nPointIdx = 0, nPointCount = mxValueLink->GetCellCount(); nPointIdx < nPointCount; ++nPointIdx )
             {
                 ScfPropertySet aPointProp = lclGetPointPropSet( xDataSeries, nPointIdx );
-                mxSeriesFmt->ConvertArea( aPointProp, bVarPointFmt ? nPointIdx : mnSeriesIdx, false );
+                mxSeriesFmt->ConvertArea( aPointProp, bVarPointFmt ? nPointIdx : mnSeriesIdx );
             }
         }
 
@@ -2134,7 +2133,7 @@ void XclImpChSeries::ReadChSerErrorBar( XclImpStream& rStrm )
     unique_ptr<XclImpChSerErrorBar> pErrorBar(new XclImpChSerErrorBar(GetChRoot()));
     pErrorBar->ReadChSerErrorBar(rStrm);
     sal_uInt8 nBarType = pErrorBar->GetBarType();
-    o3tl::ptr_container::insert(maErrorBars, nBarType, std::move(pErrorBar));
+    m_ErrorBars.insert(std::make_pair(nBarType, std::move(pErrorBar)));
 }
 
 XclImpChDataFormatRef XclImpChSeries::CreateDataFormat( sal_uInt16 nPointIdx, sal_uInt16 nFormatIdx )
@@ -2169,13 +2168,13 @@ void XclImpChSeries::ConvertTrendLines( Reference< XDataSeries > xDataSeries ) c
 
 Reference< XPropertySet > XclImpChSeries::CreateErrorBar( sal_uInt8 nPosBarId, sal_uInt8 nNegBarId ) const
 {
-    XclImpChSerErrorBarMap::const_iterator itrPosBar = maErrorBars.find(nPosBarId);
-    XclImpChSerErrorBarMap::const_iterator itrNegBar = maErrorBars.find(nNegBarId);
-    XclImpChSerErrorBarMap::const_iterator itrEnd = maErrorBars.end();
+    XclImpChSerErrorBarMap::const_iterator itrPosBar = m_ErrorBars.find(nPosBarId);
+    XclImpChSerErrorBarMap::const_iterator itrNegBar = m_ErrorBars.find(nNegBarId);
+    XclImpChSerErrorBarMap::const_iterator itrEnd = m_ErrorBars.end();
     if (itrPosBar == itrEnd || itrNegBar == itrEnd)
         return Reference<XPropertySet>();
 
-    return XclImpChSerErrorBar::CreateErrorBar(itrPosBar->second, itrNegBar->second);
+    return XclImpChSerErrorBar::CreateErrorBar(itrPosBar->second.get(), itrNegBar->second.get());
 }
 
 // Chart type groups ==========================================================
@@ -2741,8 +2740,8 @@ bool XclImpChTypeGroup::HasConnectorLines() const
     // existence of connector lines (only in stacked bar charts)
     if ( !(maType.IsStacked() || maType.IsPercent()) || (maTypeInfo.meTypeCateg != EXC_CHTYPECATEG_BAR) )
         return false;
-    XclImpChLineFormatMap::const_iterator xConLine = maChartLines.find( EXC_CHCHARTLINE_CONNECT );
-    return ( xConLine != maChartLines.end() && xConLine->second->HasLine() );
+    XclImpChLineFormatMap::const_iterator aConLine = m_ChartLines.find(EXC_CHCHARTLINE_CONNECT);
+    return (aConLine != m_ChartLines.end() && aConLine->second.HasLine());
 }
 
 OUString XclImpChTypeGroup::GetSingleSeriesTitle() const
@@ -2799,17 +2798,17 @@ Reference< XLabeledDataSequence > XclImpChTypeGroup::CreateCategSequence() const
 
 void XclImpChTypeGroup::ReadChDropBar( XclImpStream& rStrm )
 {
-    if (maDropBars.find(EXC_CHDROPBAR_UP) == maDropBars.end())
+    if (m_DropBars.find(EXC_CHDROPBAR_UP) == m_DropBars.end())
     {
         unique_ptr<XclImpChDropBar> p(new XclImpChDropBar(EXC_CHDROPBAR_UP));
         p->ReadRecordGroup(rStrm);
-        o3tl::ptr_container::insert(maDropBars, EXC_CHDROPBAR_UP, std::move(p));
+        m_DropBars.insert(std::make_pair(EXC_CHDROPBAR_UP, std::move(p)));
     }
-    else if(maDropBars.find(EXC_CHDROPBAR_DOWN) == maDropBars.end())
+    else if (m_DropBars.find(EXC_CHDROPBAR_DOWN) == m_DropBars.end())
     {
         unique_ptr<XclImpChDropBar> p(new XclImpChDropBar(EXC_CHDROPBAR_DOWN));
         p->ReadRecordGroup(rStrm);
-        o3tl::ptr_container::insert(maDropBars, EXC_CHDROPBAR_DOWN, std::move(p));
+        m_DropBars.insert(std::make_pair(EXC_CHDROPBAR_DOWN, std::move(p)));
     }
 }
 
@@ -2818,9 +2817,9 @@ void XclImpChTypeGroup::ReadChChartLine( XclImpStream& rStrm )
     sal_uInt16 nLineId = rStrm.ReaduInt16();
     if( (rStrm.GetNextRecId() == EXC_ID_CHLINEFORMAT) && rStrm.StartNextRecord() )
     {
-        XclImpChLineFormat xLineFmt;
-        xLineFmt.ReadChLineFormat( rStrm );
-        maChartLines[ nLineId ] = xLineFmt;
+        XclImpChLineFormat aLineFmt;
+        aLineFmt.ReadChLineFormat( rStrm );
+        m_ChartLines[ nLineId ] = aLineFmt;
     }
 }
 
@@ -2920,24 +2919,24 @@ void XclImpChTypeGroup::CreateStockSeries( Reference< XChartType > xChartType, s
         aTypeProp.SetBoolProperty( EXC_CHPROP_SHOWFIRST, HasDropBars() );
         aTypeProp.SetBoolProperty( EXC_CHPROP_SHOWHIGHLOW, true );
         // hi-lo line format
-        XclImpChLineFormatMap::const_iterator xHiLoLine = maChartLines.find( EXC_CHCHARTLINE_HILO );
-        if ( xHiLoLine != maChartLines.end() )
+        XclImpChLineFormatMap::const_iterator aHiLoLine = m_ChartLines.find( EXC_CHCHARTLINE_HILO );
+        if (aHiLoLine != m_ChartLines.end())
         {
             ScfPropertySet aSeriesProp( xDataSeries );
-            xHiLoLine->second->Convert( GetChRoot(), aSeriesProp, EXC_CHOBJTYPE_HILOLINE );
+            aHiLoLine->second.Convert( GetChRoot(), aSeriesProp, EXC_CHOBJTYPE_HILOLINE );
         }
         // white dropbar format
-        XclImpChDropBarMap::const_iterator itr = maDropBars.find(EXC_CHDROPBAR_UP);
+        XclImpChDropBarMap::const_iterator itr = m_DropBars.find(EXC_CHDROPBAR_UP);
         Reference<XPropertySet> xWhitePropSet;
-        if (itr != maDropBars.end() && aTypeProp.GetProperty(xWhitePropSet, EXC_CHPROP_WHITEDAY))
+        if (itr != m_DropBars.end() && aTypeProp.GetProperty(xWhitePropSet, EXC_CHPROP_WHITEDAY))
         {
             ScfPropertySet aBarProp( xWhitePropSet );
             itr->second->Convert(GetChRoot(), aBarProp);
         }
         // black dropbar format
-        itr = maDropBars.find(EXC_CHDROPBAR_DOWN);
+        itr = m_DropBars.find(EXC_CHDROPBAR_DOWN);
         Reference<XPropertySet> xBlackPropSet;
-        if (itr != maDropBars.end() && aTypeProp.GetProperty(xBlackPropSet, EXC_CHPROP_BLACKDAY))
+        if (itr != m_DropBars.end() && aTypeProp.GetProperty(xBlackPropSet, EXC_CHPROP_BLACKDAY))
         {
             ScfPropertySet aBarProp( xBlackPropSet );
             itr->second->Convert(GetChRoot(), aBarProp);
@@ -3854,7 +3853,7 @@ void XclImpChChart::ReadChDefaultText( XclImpStream& rStrm )
     {
         unique_ptr<XclImpChText> pText(new XclImpChText(GetChRoot()));
         pText->ReadRecordGroup(rStrm);
-        o3tl::ptr_container::insert(maDefTexts, nTextId, std::move(pText));
+        m_DefTexts.insert(std::make_pair(nTextId, std::move(pText)));
     }
 }
 
@@ -3904,8 +3903,8 @@ const XclImpChText* XclImpChChart::GetDefaultText( XclChTextType eTextType ) con
         case EXC_CHTEXTTYPE_DATALABEL:  nDefTextId = bBiff8 ? EXC_CHDEFTEXT_AXESSET : EXC_CHDEFTEXT_GLOBAL; break;
     }
 
-    XclImpChTextMap::const_iterator itr = maDefTexts.find(nDefTextId);
-    return itr == maDefTexts.end() ? nullptr : itr->second;
+    XclImpChTextMap::const_iterator const itr = m_DefTexts.find(nDefTextId);
+    return itr == m_DefTexts.end() ? nullptr : itr->second.get();
 }
 
 bool XclImpChChart::IsManualPlotArea() const

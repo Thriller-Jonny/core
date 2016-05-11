@@ -71,19 +71,19 @@ namespace dbaui
         void SetDefaultValue(const css::uno::Any& _rDefaultValue);
         void SetControlDefault(const css::uno::Any& _rControlDefault);
         void SetAutoIncrementValue(const OUString& _sAutoIncValue);
-        void SetType(TOTypeInfoSP _pType);
+        void SetType(const TOTypeInfoSP& _pType);
         void SetTypeValue(sal_Int32 _nType);
         void SetTypeName(const OUString& _sTypeName);
-        void SetPrecision(const sal_Int32& _rPrecision);
-        void SetScale(const sal_Int32& _rScale);
-        void SetIsNullable(const sal_Int32& _rIsNullable);
-        void SetFormatKey(const sal_Int32& _rFormatKey);
+        void SetPrecision(sal_Int32 _rPrecision);
+        void SetScale(sal_Int32 _rScale);
+        void SetIsNullable(sal_Int32 _rIsNullable);
+        void SetFormatKey(sal_Int32 _rFormatKey);
         void SetHorJustify(const SvxCellHorJustify& _rHorJustify);
         void SetAutoIncrement(bool _bAuto);
         void SetPrimaryKey(bool _bPKey);
         void SetCurrency(bool _bIsCurrency);
 
-        /** copies the content of the field eescription into the column
+        /** copies the content of the field description into the column
             @param  _rxColumn the dest
         */
         void copyColumnSettingsTo(const css::uno::Reference< css::beans::XPropertySet >& _rxColumn);
@@ -102,7 +102,7 @@ namespace dbaui
         sal_Int32                   GetIsNullable()         const;
         sal_Int32                   GetFormatKey()          const;
         SvxCellHorJustify           GetHorJustify()         const;
-        TOTypeInfoSP                getTypeInfo()           const { return m_pType;}
+        const TOTypeInfoSP&         getTypeInfo()           const { return m_pType;}
         TOTypeInfoSP                getSpecialTypeInfo()    const;
         bool                    IsAutoIncrement()       const;
         bool                    IsPrimaryKey()          const { return m_bIsPrimaryKey;}

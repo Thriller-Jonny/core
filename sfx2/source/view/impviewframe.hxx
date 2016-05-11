@@ -34,7 +34,6 @@ struct SfxViewFrame_Impl
     Size                aSize;
     OUString            aActualURL;
     SfxFrame&           rFrame;
-    svtools::AsynchronLink* pReloader;
     VclPtr<vcl::Window> pWindow;
     SfxViewFrame*       pActiveChild;
     VclPtr<vcl::Window> pFocusWin;
@@ -50,12 +49,9 @@ struct SfxViewFrame_Impl
     bool            bWindowWasEnabled:1;
     bool            bActive;
     OUString            aFactoryName;
-    ::boost::optional< bool >
-                        aHasToolPanels;
 
     explicit SfxViewFrame_Impl(SfxFrame& i_rFrame)
         : rFrame(i_rFrame)
-        , pReloader(nullptr)
         , pWindow(nullptr)
         , pActiveChild(nullptr)
         , pFocusWin(nullptr)
@@ -75,7 +71,6 @@ struct SfxViewFrame_Impl
 
     ~SfxViewFrame_Impl()
     {
-        delete pReloader;
     }
 };
 
@@ -84,8 +79,8 @@ class SfxFrameViewWindow_Impl : public vcl::Window
     SfxViewFrame*   pFrame;
 
 public:
-                        SfxFrameViewWindow_Impl( SfxViewFrame* p, vcl::Window& rParent, WinBits nBits=0 ) :
-                            Window( &rParent, nBits | WB_CLIPCHILDREN ),
+                        SfxFrameViewWindow_Impl( SfxViewFrame* p, vcl::Window& rParent ) :
+                            Window( &rParent, WB_CLIPCHILDREN ),
                             pFrame( p )
                         {
                             p->GetFrame().GetWindow().SetBorderStyle( WindowBorderStyle::NOBORDER );

@@ -37,7 +37,6 @@
 #include "starmath.hrc"
 
 
-using namespace ::com::sun::star;
 using namespace ::com::sun::star::ucb;
 using namespace ::com::sun::star::uno;
 
@@ -53,7 +52,7 @@ SmSym::SmSym() :
 {
     m_aExportName = m_aName;
     m_aFace.SetTransparent(true);
-    m_aFace.SetAlign(ALIGN_BASELINE);
+    m_aFace.SetAlignment(ALIGN_BASELINE);
 }
 
 
@@ -70,7 +69,7 @@ SmSym::SmSym(const OUString& rName, const vcl::Font& rFont, sal_UCS4 cChar,
 
     m_aFace     = rFont;
     m_aFace.SetTransparent(true);
-    m_aFace.SetAlign(ALIGN_BASELINE);
+    m_aFace.SetAlignment(ALIGN_BASELINE);
 
     m_cChar         = cChar;
     m_aSetName      = rSet;
@@ -163,7 +162,7 @@ bool SmSymbolManager::AddOrReplaceSymbol( const SmSym &rSymbol, bool bForceChang
 {
     bool bAdded = false;
 
-    const OUString aSymbolName( rSymbol.GetName() );
+    const OUString& aSymbolName( rSymbol.GetName() );
     if (aSymbolName.getLength() > 0 && rSymbol.GetSymbolSetName().getLength() > 0)
     {
         const SmSym *pFound = GetSymbolByName( aSymbolName );

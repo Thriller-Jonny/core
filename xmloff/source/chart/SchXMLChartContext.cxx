@@ -248,7 +248,7 @@ void SchXMLChartContext::StartElement( const uno::Reference< xml::sax::XAttribut
     if( xVisualObject.is() )
         maChartSize = xVisualObject->getVisualAreaSize( embed::Aspects::MSOLE_CONTENT ); //#i103460# take the size given from the parent frame as default
 
-    // this flag is necessarry for pie charts in the core
+    // this flag is necessary for pie charts in the core
     bool bSetSwitchData = false;
 
     OUString sAutoStyleName;
@@ -332,7 +332,7 @@ void SchXMLChartContext::StartElement( const uno::Reference< xml::sax::XAttribut
     {
         SAL_WARN("xmloff.chart", "need a charttype to create a diagram" );
         //set a fallback value:
-        OUString aChartClass_Bar( GetXMLToken(XML_BAR ) );
+        const OUString& aChartClass_Bar( GetXMLToken(XML_BAR ) );
         aOldChartTypeName = SchXMLTools::GetChartTypeByClassName( aChartClass_Bar, true /* bUseOldNames */ );
         maChartTypeServiceName = SchXMLTools::GetChartTypeByClassName( aChartClass_Bar, false /* bUseOldNames */ );
     }
@@ -354,7 +354,7 @@ void SchXMLChartContext::StartElement( const uno::Reference< xml::sax::XAttribut
             {
                 xDocProp->getPropertyValue("BaseDiagram") >>= aOldChartTypeName;
                 maChartTypeServiceName =  SchXMLTools::GetNewChartTypeName( aOldChartTypeName );
-                xDocProp->setPropertyValue("RefreshAddInAllowed", uno::makeAny( sal_False) );
+                xDocProp->setPropertyValue("RefreshAddInAllowed", uno::makeAny( false) );
             }
             catch(const uno::Exception&)
             {
@@ -663,7 +663,7 @@ static void lcl_ApplyDataFromRectangularRangeToDiagram(
         beans::PropertyState_DIRECT_VALUE );
     aArgs[ sal::static_int_cast<sal_uInt32>(aArgs.getLength()) - 1 ] = beans::PropertyValue(
         OUString("UseCategoriesAsX"),
-        -1, uno::makeAny( sal_False ),//categories in ODF files are not to be used as x values (independent from what is offered in our ui)
+        -1, uno::makeAny( false ),//categories in ODF files are not to be used as x values (independent from what is offered in our ui)
         beans::PropertyState_DIRECT_VALUE );
 
     xNewDia->setDiagramData( xDataSource, aArgs );
@@ -684,9 +684,7 @@ void SchXMLChartContext::EndElement()
             {
                 try
                 {
-                    uno::Any aAny;
-                    aAny <<= maMainTitle;
-                    xTitleProp->setPropertyValue("String", aAny );
+                    xTitleProp->setPropertyValue("String", uno::Any(maMainTitle) );
                 }
                 catch(const beans::UnknownPropertyException&)
                 {
@@ -701,9 +699,7 @@ void SchXMLChartContext::EndElement()
             {
                 try
                 {
-                    uno::Any aAny;
-                    aAny <<= maSubTitle;
-                    xTitleProp->setPropertyValue("String", aAny );
+                    xTitleProp->setPropertyValue("String", uno::Any(maSubTitle) );
                 }
                 catch(const beans::UnknownPropertyException&)
                 {
@@ -762,7 +758,7 @@ void SchXMLChartContext::EndElement()
     }
     else if( bHasOwnData )
     {
-        xNewDoc->createInternalDataProvider( sal_False /* bCloneExistingData */ );
+        xNewDoc->createInternalDataProvider( false /* bCloneExistingData */ );
     }
     if( bHasOwnData )
         msChartAddress = "all";
@@ -815,7 +811,7 @@ void SchXMLChartContext::EndElement()
                     msChartAddress = "all";
                     if( !xNewDoc->hasInternalDataProvider() )
                     {
-                        xNewDoc->createInternalDataProvider( sal_False /* bCloneExistingData */ );
+                        xNewDoc->createInternalDataProvider( false /* bCloneExistingData */ );
                         SchXMLTableHelper::applyTableToInternalDataProvider( maTable, xNewDoc );
                         try
                         {
@@ -904,7 +900,7 @@ void SchXMLChartContext::EndElement()
     }
 
     if( xProp.is())
-        xProp->setPropertyValue("RefreshAddInAllowed", uno::makeAny( sal_True) );
+        xProp->setPropertyValue("RefreshAddInAllowed", uno::makeAny( true) );
 }
 
 void SchXMLChartContext::MergeSeriesForStockChart()
@@ -1149,7 +1145,7 @@ void SchXMLTitleContext::StartElement( const uno::Reference< xml::sax::XAttribut
 {
     sal_Int16 nAttrCount = xAttrList.is()? xAttrList->getLength(): 0;
 
-    css::awt::Point maPosition;
+    css::awt::Point aPosition;
     bool bHasXPosition=false;
     bool bHasYPosition=false;
 
@@ -1165,13 +1161,13 @@ void SchXMLTitleContext::StartElement( const uno::Reference< xml::sax::XAttribut
             if( IsXMLToken( aLocalName, XML_X ) )
             {
                 GetImport().GetMM100UnitConverter().convertMeasureToCore(
-                        maPosition.X, aValue );
+                        aPosition.X, aValue );
                 bHasXPosition = true;
             }
             else if( IsXMLToken( aLocalName, XML_Y ) )
             {
                 GetImport().GetMM100UnitConverter().convertMeasureToCore(
-                        maPosition.Y, aValue );
+                        aPosition.Y, aValue );
                 bHasYPosition = true;
             }
         }
@@ -1185,7 +1181,7 @@ void SchXMLTitleContext::StartElement( const uno::Reference< xml::sax::XAttribut
     if( mxTitleShape.is())
     {
         if( bHasXPosition && bHasYPosition )
-            mxTitleShape->setPosition( maPosition );
+            mxTitleShape->setPosition( aPosition );
 
         uno::Reference< beans::XPropertySet > xProp( mxTitleShape, uno::UNO_QUERY );
         if( xProp.is())

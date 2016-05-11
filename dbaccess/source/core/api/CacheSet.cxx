@@ -88,12 +88,12 @@ void OCacheSet::construct(  const Reference< XResultSet>& _xDriverSet,const OUSt
         if ( m_xSetMetaData.is() )
         {
             const sal_Int32 nCount = m_xSetMetaData->getColumnCount();
-            m_aNullable.realloc(nCount);
-            m_aSignedFlags.realloc(nCount);
-            m_aColumnTypes.realloc(nCount);
-            sal_Bool* pNullableIter = m_aNullable.getArray();
-            sal_Bool* pSignedIter = m_aSignedFlags.getArray();
-            sal_Int32* pColumnIter = m_aColumnTypes.getArray();
+            m_aNullable.resize(nCount);
+            m_aSignedFlags.resize(nCount);
+            m_aColumnTypes.resize(nCount);
+            auto pNullableIter = m_aNullable.begin();
+            auto pSignedIter = m_aSignedFlags.begin();
+            auto pColumnIter = m_aColumnTypes.begin();
             for (sal_Int32 i=1; i <= nCount; ++i,++pSignedIter,++pColumnIter,++pNullableIter)
             {
                 *pNullableIter = m_xSetMetaData->isNullable(i) != ColumnValue::NO_NULLS;
@@ -144,7 +144,7 @@ void OCacheSet::fillTableName(const Reference<XPropertySet>& _xTable)  throw(SQL
                         ,comphelper::getString(_xTable->getPropertyValue(PROPERTY_SCHEMANAME))
                         ,comphelper::getString(_xTable->getPropertyValue(PROPERTY_NAME))
                         ,true
-                        ,::dbtools::eInDataManipulation);
+                        ,::dbtools::EComposeRule::InDataManipulation);
     }
 }
 
@@ -296,7 +296,7 @@ void SAL_CALL OCacheSet::updateRow(const ORowSetRow& _rInsertRow ,const ORowSetR
     }
     else
         ::dbtools::throwSQLException(
-            DBACORE_RESSTRING( RID_STR_NO_UPDATE_MISSING_CONDITION ), SQL_GENERAL_ERROR, *this );
+            DBACORE_RESSTRING( RID_STR_NO_UPDATE_MISSING_CONDITION ), StandardSQLState::GENERAL_ERROR, *this );
 
     // now create end execute the prepared statement
     Reference< XPreparedStatement > xPrep(m_xConnection->prepareStatement(aSql.makeStringAndClear()));

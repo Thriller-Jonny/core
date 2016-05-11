@@ -95,8 +95,7 @@ public:
 
     static bool StartPreview( ViewShellBase& rBase,
         const css::uno::Reference< css::drawing::XDrawPage >& xDrawPage,
-        const css::uno::Reference< css::animations::XAnimationNode >& xAnimationNode,
-        vcl::Window* pParent = nullptr );
+        const css::uno::Reference< css::animations::XAnimationNode >& xAnimationNode );
 
     static void Stop( ViewShellBase& rBase );
 
@@ -155,7 +154,7 @@ public:
 
     /** sets or clears the pause state of the running slideshow.
         !!!! This should only be called by the SdShowWindow !!!!*/
-    bool pause( bool bPause );
+    void pause( bool bPause );
     bool swipe(const CommandSwipeData &rSwipeData);
     bool longpress(const CommandLongPressData& rLongPressData);
 
@@ -165,10 +164,6 @@ public:
     OutputDevice* getShowWindow();                      // a.k.a. FuSlideShow::GetShowWindow()
     int getAnimationMode();                             // a.k.a. FuSlideShow::GetAnimationMode()
     sal_Int32 getCurrentPageNumber();                   // a.k.a. FuSlideShow::GetCurrentPage()
-    sal_Int32 getFirstPageNumber();
-    sal_Int32 getLastPageNumber();
-    bool isEndless();
-    bool isDrawingPossible();
 
     // events
     void resize( const Size &rSize );
@@ -177,8 +172,6 @@ public:
     void paint( const Rectangle& rRect );
 
     bool keyInput(const KeyEvent& rKEvt);
-
-    void receiveRequest(SfxRequest& rReq);
 
     bool dependsOn( ViewShellBase* pViewShellBase );
 

@@ -25,6 +25,7 @@
 #include <com/sun/star/ui/ImageType.hpp>
 #include <com/sun/star/ui/XUIConfigurationManagerSupplier.hpp>
 
+#include <tools/globname.hxx>
 #include <tools/urlobj.hxx>
 #include <svtools/imagemgr.hxx>
 #include <comphelper/processfactory.hxx>
@@ -51,8 +52,7 @@ using namespace ::com::sun::star::ui;
 
 typedef std::unordered_map< OUString,
                        WeakReference< XImageManager >,
-                       OUStringHash,
-                       ::std::equal_to< OUString > > ModuleIdToImagegMgr;
+                       OUStringHash > ModuleIdToImagegMgr;
 
 
 Image SAL_CALL GetImage(
@@ -138,14 +138,14 @@ Image SAL_CALL GetImage(
         }
     }
 
-    static WeakReference< XModuleManager2 > m_xModuleManager;
+    static WeakReference< XModuleManager2 > s_xModuleManager;
 
-    Reference< XModuleManager2 > xModuleManager = m_xModuleManager;
+    Reference< XModuleManager2 > xModuleManager = s_xModuleManager;
 
     if ( !xModuleManager.is() )
     {
         xModuleManager = ModuleManager::create(::comphelper::getProcessComponentContext());
-        m_xModuleManager = xModuleManager;
+        s_xModuleManager = xModuleManager;
     }
 
     try
@@ -155,28 +155,28 @@ Image SAL_CALL GetImage(
             Reference< XImageManager > xModuleImageManager;
             OUString aModuleId = xModuleManager->identify( rFrame );
 
-            static ModuleIdToImagegMgr m_aModuleIdToImageMgrMap;
+            static ModuleIdToImagegMgr s_aModuleIdToImageMgrMap;
 
-            ModuleIdToImagegMgr::iterator pIter = m_aModuleIdToImageMgrMap.find( aModuleId );
-            if ( pIter != m_aModuleIdToImageMgrMap.end() )
+            ModuleIdToImagegMgr::iterator pIter = s_aModuleIdToImageMgrMap.find( aModuleId );
+            if ( pIter != s_aModuleIdToImageMgrMap.end() )
                 xModuleImageManager = pIter->second;
             else
             {
-                static WeakReference< XModuleUIConfigurationManagerSupplier > m_xModuleCfgMgrSupplier;
+                static WeakReference< XModuleUIConfigurationManagerSupplier > s_xModuleCfgMgrSupplier;
 
-                Reference< XModuleUIConfigurationManagerSupplier > xModuleCfgMgrSupplier = m_xModuleCfgMgrSupplier;
+                Reference< XModuleUIConfigurationManagerSupplier > xModuleCfgMgrSupplier = s_xModuleCfgMgrSupplier;
 
                 if ( !xModuleCfgMgrSupplier.is() )
                 {
                     xModuleCfgMgrSupplier = theModuleUIConfigurationManagerSupplier::get(
                                               ::comphelper::getProcessComponentContext() );
 
-                    m_xModuleCfgMgrSupplier = xModuleCfgMgrSupplier;
+                    s_xModuleCfgMgrSupplier = xModuleCfgMgrSupplier;
                 }
 
                 Reference< XUIConfigurationManager > xUICfgMgr = xModuleCfgMgrSupplier->getUIConfigurationManager( aModuleId );
                 xModuleImageManager.set( xUICfgMgr->getImageManager(), UNO_QUERY );
-                m_aModuleIdToImageMgrMap.insert( ModuleIdToImagegMgr::value_type( aModuleId, xModuleImageManager ));
+                s_aModuleIdToImageMgrMap.insert( ModuleIdToImagegMgr::value_type( aModuleId, xModuleImageManager ));
             }
 
             Sequence< Reference< css::graphic::XGraphic > > aGraphicSeq;

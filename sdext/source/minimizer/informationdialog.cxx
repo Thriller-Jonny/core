@@ -37,10 +37,6 @@
 #define PAGE_WIDTH      ( DIALOG_WIDTH - PAGE_POS_X ) - 6
 
 
-
-// - INFORMATIONDIALOG -
-
-
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::io;
 using namespace ::com::sun::star::ui;
@@ -52,9 +48,6 @@ using namespace ::com::sun::star::frame;
 using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::script;
 using namespace ::com::sun::star::container;
-
-
-
 
 
 OUString InsertFixedText( InformationDialog& rInformationDialog, const OUString& rControlName, const OUString& rLabel,
@@ -140,7 +133,7 @@ OUString InsertCheckBox( InformationDialog& rInformationDialog, const OUString& 
         OUString("Width") };
 
     Any pValues[] = {
-        Any( sal_True ),
+        Any( true ),
         Any( nHeight ),
         Any( rLabel ),
         Any( nXPos ),
@@ -175,7 +168,7 @@ OUString InsertButton( InformationDialog& rInformationDialog, const OUString& rC
         OUString("Width") };
 
     Any pValues[] = {
-        Any( sal_True ),
+        Any( true ),
         Any( nHeight ),
         Any( rInformationDialog.getString( nResID ) ),
         Any( nXPos ),
@@ -225,9 +218,9 @@ void InformationDialog::InitDialog()
         OUString("Width") };
 
     Any pValues[] = {
-        Any( sal_True ),
+        Any( true ),
         Any( nDialogHeight ),
-        Any( sal_True ),
+        Any( true ),
         Any( sal_Int32( 245 ) ),
         Any( sal_Int32( 115 ) ),
         Any( getString( STR_SUN_OPTIMIZATION_WIZARD2 ) ),
@@ -272,7 +265,7 @@ void InformationDialog::InitDialog()
 
         const OUString sFileProtocol( "file:///" );
         aPresentationURL.Complete = sFileProtocol.concat( aURL.Name );
-        aTitle = xURLTransformer->getPresentation( aPresentationURL, sal_False );
+        aTitle = xURLTransformer->getPresentation( aPresentationURL, false );
 
         if ( aTitle.match( sFileProtocol ) )
             aTitle = aTitle.replaceAt( 0, sFileProtocol.getLength(), OUString() );
@@ -311,11 +304,9 @@ void InformationDialog::InitDialog()
 }
 
 
-
-InformationDialog::InformationDialog( const Reference< XComponentContext > &rxContext, Reference< XFrame >& rxFrame, const OUString& rSaveAsURL, bool& rbOpenNewDocument, const sal_Int64& rSourceSize, const sal_Int64& rDestSize, const sal_Int64& rApproxSize ) :
+InformationDialog::InformationDialog( const Reference< XComponentContext > &rxContext, Reference< XFrame >& rxFrame, const OUString& rSaveAsURL, bool& rbOpenNewDocument, sal_Int64 rSourceSize, sal_Int64 rDestSize, sal_Int64 rApproxSize ) :
     UnoDialog( rxContext, rxFrame ),
     ConfigurationAccess( rxContext, nullptr ),
-    mxFrame( rxFrame ),
     mxActionListener( new OKActionListener( *this ) ),
     mnSourceSize( rSourceSize ),
     mnDestSize( rDestSize ),
@@ -332,14 +323,12 @@ InformationDialog::InformationDialog( const Reference< XComponentContext > &rxCo
 }
 
 
-
 InformationDialog::~InformationDialog()
 {
 }
 
 
-
-bool InformationDialog::execute()
+void InformationDialog::execute()
 {
     UnoDialog::execute();
 
@@ -353,9 +342,7 @@ bool InformationDialog::execute()
             mrbOpenNewDocument = bOpenNewDocument;
         }
     }
-    return mbStatus;
 }
-
 
 
 void OKActionListener::actionPerformed( const ActionEvent& rEvent )

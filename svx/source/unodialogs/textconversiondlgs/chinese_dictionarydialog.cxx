@@ -340,9 +340,6 @@ SvLBoxItem* DictionaryList::getItemAtColumn( SvTreeListEntry* pEntry, sal_uInt16
 }
 
 
-
-
-
 DictionaryEntry::DictionaryEntry( const OUString& rTerm, const OUString& rMapping
                     , sal_Int16 nConversionPropertyType
                     , bool bNewEntry )
@@ -357,13 +354,6 @@ DictionaryEntry::DictionaryEntry( const OUString& rTerm, const OUString& rMappin
 
 DictionaryEntry::~DictionaryEntry()
 {
-}
-
-bool DictionaryEntry::operator==( const DictionaryEntry& rE ) const
-{
-    return m_aTerm == rE.m_aTerm
-            && m_aMapping == rE.m_aMapping
-            && m_nConversionPropertyType == rE.m_nConversionPropertyType;
 }
 
 void DictionaryList::setColSizes()
@@ -507,7 +497,7 @@ ChineseDictionaryDialog::ChineseDictionaryDialog( vcl::Window* pParent )
                                 ), UNO_QUERY );
                     }
                     if (xDictionary_To_Simplified.is())
-                        xDictionary_To_Simplified->setActive( sal_True );
+                        xDictionary_To_Simplified->setActive( true );
 
 
                     if( xContainer->hasByName( aNameTo_Traditional ) )
@@ -522,7 +512,7 @@ ChineseDictionaryDialog::ChineseDictionaryDialog( vcl::Window* pParent )
                                 UNO_QUERY );
                     }
                     if (xDictionary_To_Traditional.is())
-                        xDictionary_To_Traditional->setActive( sal_True );
+                        xDictionary_To_Traditional->setActive( true );
 
                 }
                 catch(const uno::Exception& )
@@ -655,9 +645,9 @@ bool ChineseDictionaryDialog::isEditFieldsContentEqualsSelectedListContent() con
     DictionaryEntry* pE = getActiveDictionary().getFirstSelectedEntry();
     if( pE )
     {
-        if( pE->m_aTerm != OUString( m_pED_Term->GetText() ) )
+        if( pE->m_aTerm != m_pED_Term->GetText() )
             return false;
-        if( pE->m_aMapping != OUString( m_pED_Mapping->GetText() ) )
+        if( pE->m_aMapping != m_pED_Mapping->GetText() )
             return false;
         if( pE->m_nConversionPropertyType != m_pLB_Property->GetSelectEntryPos()+1 )
             return false;
@@ -809,9 +799,7 @@ short ChineseDictionaryDialog::Execute()
     {
         //save settings to configuration
         SvtLinguConfig  aLngCfg;
-        Any aAny;
-        aAny <<= m_pCB_Reverse->IsChecked();
-        aLngCfg.SetProperty( OUString( UPN_IS_REVERSE_MAPPING ), aAny );
+        aLngCfg.SetProperty( OUString( UPN_IS_REVERSE_MAPPING ), uno::Any(m_pCB_Reverse->IsChecked()) );
 
         m_pCT_DictionaryToSimplified->save();
         m_pCT_DictionaryToTraditional->save();

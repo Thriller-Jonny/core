@@ -223,7 +223,7 @@ sal_Bool SAL_CALL SwXFlatParagraph::isChecked( ::sal_Int32 nType ) throw (uno::R
             return !GetTextNode()->IsSmartTagDirty();
     }
 
-    return sal_True;
+    return true;
 }
 
 // text::XFlatParagraph:
@@ -470,7 +470,7 @@ uno::Reference< text::XFlatParagraph > SwXFlatParagraphIterator::getNextPara()
     {
         // Expand the string:
         const ModelToViewHelper aConversionMap(*pRet);
-        OUString aExpandText = aConversionMap.getViewText();
+        const OUString& aExpandText = aConversionMap.getViewText();
 
         xRet = new SwXFlatParagraph( *pRet, aExpandText, aConversionMap );
         // keep hard references...
@@ -522,7 +522,7 @@ uno::Reference< text::XFlatParagraph > SwXFlatParagraphIterator::getParaAfter(co
     {
         // Expand the string:
         const ModelToViewHelper aConversionMap(*pNextTextNode);
-        OUString aExpandText = aConversionMap.getViewText();
+        const OUString& aExpandText = aConversionMap.getViewText();
 
         xRet = new SwXFlatParagraph( *pNextTextNode, aExpandText, aConversionMap );
         // keep hard references...
@@ -568,7 +568,7 @@ uno::Reference< text::XFlatParagraph > SwXFlatParagraphIterator::getParaBefore(c
     {
         // Expand the string:
         const ModelToViewHelper aConversionMap(*pPrevTextNode);
-        OUString aExpandText = aConversionMap.getViewText();
+        const OUString& aExpandText = aConversionMap.getViewText();
 
         xRet = new SwXFlatParagraph( *pPrevTextNode, aExpandText, aConversionMap );
         // keep hard references...

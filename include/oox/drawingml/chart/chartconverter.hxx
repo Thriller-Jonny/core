@@ -22,6 +22,7 @@
 
 #include <com/sun/star/uno/Reference.hxx>
 #include <oox/dllapi.h>
+#include <rtl/ustring.hxx>
 
 namespace com { namespace sun { namespace star {
     namespace awt { struct Point; }
@@ -40,7 +41,6 @@ namespace chart {
 
 struct ChartSpaceModel;
 struct DataSequenceModel;
-
 
 
 class OOX_DLLPUBLIC ChartConverter
@@ -92,7 +92,6 @@ private:
                         ChartConverter( const ChartConverter& ) = delete;
     ChartConverter&     operator=( const ChartConverter& ) = delete;
 };
-
 
 
 } // namespace chart

@@ -22,14 +22,12 @@
 
 #include <vcl/dllapi.h>
 #include <tools/mapunit.hxx>
+#include <o3tl/cow_wrapper.hxx>
 
 class Point;
 class Fraction;
 class SvStream;
 class OutputDevice;
-
-
-// - MapMode -
 
 
 class VCL_DLLPUBLIC MapMode
@@ -39,19 +37,12 @@ class VCL_DLLPUBLIC MapMode
 public:
     struct ImplMapMode;
 
-private:
-    ImplMapMode*        mpImplMapMode;
-
-    SAL_DLLPRIVATE void ImplMakeUnique();
-    SAL_DLLPRIVATE bool IsSimple() const;
-
-public:
-                    MapMode();
-                    MapMode( const MapMode& rMapMode );
-                    MapMode( MapUnit eUnit );
-                    MapMode( MapUnit eUnit, const Point& rLogicOrg,
-                             const Fraction& rScaleX, const Fraction& rScaleY );
-                    ~MapMode();
+    MapMode();
+    MapMode( const MapMode& rMapMode );
+    MapMode( MapUnit eUnit );
+    MapMode( MapUnit eUnit, const Point& rLogicOrg,
+        const Fraction& rScaleX, const Fraction& rScaleY );
+    ~MapMode();
 
     void            SetMapUnit( MapUnit eUnit );
     MapUnit         GetMapUnit() const;
@@ -64,6 +55,9 @@ public:
     void            SetScaleY( const Fraction& rScaleY );
     const Fraction& GetScaleY() const;
 
+    /// Gets the multiplier, which is relative to 1/100 mm units
+    double          GetUnitMultiplier() const;
+
     MapMode&        operator=( const MapMode& rMapMode );
     bool            operator==( const MapMode& rMapMode ) const;
     bool            operator!=( const MapMode& rMapMode ) const
@@ -72,6 +66,13 @@ public:
 
     friend VCL_DLLPUBLIC SvStream& ReadMapMode( SvStream& rIStm, MapMode& rMapMode );
     friend VCL_DLLPUBLIC SvStream& WriteMapMode( SvStream& rOStm, const MapMode& rMapMode );
+
+    typedef o3tl::cow_wrapper< ImplMapMode > ImplType;
+
+private:
+    ImplType        mpImplMapMode;
+
+    SAL_DLLPRIVATE bool IsSimple() const;
 };
 
 #endif // INCLUDED_VCL_MAPMOD_HXX

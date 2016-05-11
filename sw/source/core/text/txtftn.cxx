@@ -55,7 +55,7 @@
 
 using namespace ::com::sun::star;
 
-bool SwTextFrame::_IsFootnoteNumFrame() const
+bool SwTextFrame::IsFootnoteNumFrame_() const
 {
     const SwFootnoteFrame* pFootnote = FindFootnoteFrame()->GetMaster();
     while( pFootnote && !pFootnote->ContainsContent() )
@@ -292,7 +292,7 @@ SwTwips SwTextFrame::GetFootnoteLine( const SwTextFootnote *pFootnote ) const
  * Calculates the maximum reachable height for the TextFrame in the Footnote Area.
  * The cell's bottom margin with the Footnote Reference limit's this height.
  */
-SwTwips SwTextFrame::_GetFootnoteFrameHeight() const
+SwTwips SwTextFrame::GetFootnoteFrameHeight_() const
 {
     OSL_ENSURE( !IsFollow() && IsInFootnote(), "SwTextFrame::SetFootnoteLine: moon walk" );
 
@@ -599,7 +599,7 @@ void SwTextFrame::ConnectFootnote( SwTextFootnote *pFootnote, const SwTwips nDea
     {
         pSect = FindSctFrame();
         if( pSect->IsEndnAtEnd() )
-            pContent = pSect->FindLastContent( FINDMODE_ENDNOTE );
+            pContent = pSect->FindLastContent( SwFindMode::EndNote );
         if( !pContent )
             pContent = this;
     }
@@ -642,7 +642,7 @@ void SwTextFrame::ConnectFootnote( SwTextFootnote *pFootnote, const SwTwips nDea
             {
                 SwFootnoteFrame *pNew = new SwFootnoteFrame(pDoc->GetDfltFrameFormat(),this,this,pFootnote);
                  SwNodeIndex aIdx( *pFootnote->GetStartNode(), 1 );
-                 ::_InsertCnt( pNew, pDoc, aIdx.GetIndex() );
+                 ::InsertCnt_( pNew, pDoc, aIdx.GetIndex() );
                 GetNode()->getIDocumentLayoutAccess().GetLayouter()->CollectEndnote( pNew );
             }
             else if( pSrcFrame != this )
@@ -960,14 +960,14 @@ SwNumberPortion *SwTextFormatter::NewFootnoteNumPortion( SwTextFormatInfo &rInf 
     // Weight style of paragraph font should not be considered
     // Posture style of paragraph font should not be considered
     // See also #i18463# and SwTextFormatter::NewNumberPortion()
-    pNumFnt->SetUnderline( UNDERLINE_NONE );
-    pNumFnt->SetOverline( UNDERLINE_NONE );
-    pNumFnt->SetItalic( ITALIC_NONE, SW_LATIN );
-    pNumFnt->SetItalic( ITALIC_NONE, SW_CJK );
-    pNumFnt->SetItalic( ITALIC_NONE, SW_CTL );
-    pNumFnt->SetWeight( WEIGHT_NORMAL, SW_LATIN );
-    pNumFnt->SetWeight( WEIGHT_NORMAL, SW_CJK );
-    pNumFnt->SetWeight( WEIGHT_NORMAL, SW_CTL );
+    pNumFnt->SetUnderline( LINESTYLE_NONE );
+    pNumFnt->SetOverline( LINESTYLE_NONE );
+    pNumFnt->SetItalic( ITALIC_NONE, SwFontScript::Latin );
+    pNumFnt->SetItalic( ITALIC_NONE, SwFontScript::CJK );
+    pNumFnt->SetItalic( ITALIC_NONE, SwFontScript::CTL );
+    pNumFnt->SetWeight( WEIGHT_NORMAL, SwFontScript::Latin );
+    pNumFnt->SetWeight( WEIGHT_NORMAL, SwFontScript::CJK );
+    pNumFnt->SetWeight( WEIGHT_NORMAL, SwFontScript::CTL );
 
     pNumFnt->SetDiffFnt(&rSet, pIDSA );
     pNumFnt->SetVertical( pNumFnt->GetOrientation(), m_pFrame->IsVertical() );
@@ -1065,7 +1065,7 @@ sal_Int32 SwTextFormatter::FormatQuoVadis( const sal_Int32 nOffset )
     while( pPor )
     {
         if ( pPor->IsFlyPortion() )
-            nLastLeft = static_cast<SwFlyPortion*>(pPor)->Fix() +
+            nLastLeft = static_cast<SwFlyPortion*>(pPor)->GetFix() +
                         static_cast<SwFlyPortion*>(pPor)->Width();
         pPor = pPor->GetPortion();
     }
@@ -1208,7 +1208,7 @@ sal_Int32 SwTextFormatter::FormatQuoVadis( const sal_Int32 nOffset )
 
 /**
  * This function creates a Line that reaches to the other Page Margin.
- * DummyLines or DummyPortions make sure, that osicllations stop, because
+ * DummyLines or DummyPortions make sure, that oscillations stop, because
  * there's no way to flow back.
  * They are used for Footnotes in paragraph-bound Frames and for Footnote
  * oscillations
@@ -1236,14 +1236,14 @@ public:
     SwFootnoteSave( const SwTextSizeInfo &rInf,
                const SwTextFootnote *pTextFootnote,
                const bool bApplyGivenScriptType,
-               const sal_uInt8 nGivenScriptType );
-   ~SwFootnoteSave();
+               const SwFontScript nGivenScriptType );
+    ~SwFootnoteSave();
 };
 
 SwFootnoteSave::SwFootnoteSave( const SwTextSizeInfo &rInf,
                       const SwTextFootnote* pTextFootnote,
                       const bool bApplyGivenScriptType,
-                      const sal_uInt8 nGivenScriptType )
+                      const SwFontScript nGivenScriptType )
     : pInf( &((SwTextSizeInfo&)rInf) )
     , pFnt( nullptr )
     , pOld( nullptr )
@@ -1322,7 +1322,7 @@ SwFootnotePortion::SwFootnotePortion( const OUString &rExpand,
         , nOrigHeight( nReal )
         // #i98418#
         , mbPreferredScriptTypeSet( false )
-        , mnPreferredScriptType( SW_LATIN )
+        , mnPreferredScriptType( SwFontScript::Latin )
 {
     SetLen(1);
     SetWhichPor( POR_FTN );
@@ -1371,7 +1371,7 @@ SwPosSize SwFootnotePortion::GetTextSize( const SwTextSizeInfo &rInfo ) const
 }
 
 // #i98418#
-void SwFootnotePortion::SetPreferredScriptType( sal_uInt8 nPreferredScriptType )
+void SwFootnotePortion::SetPreferredScriptType( SwFontScript nPreferredScriptType )
 {
     mbPreferredScriptTypeSet = true;
     mnPreferredScriptType = nPreferredScriptType;

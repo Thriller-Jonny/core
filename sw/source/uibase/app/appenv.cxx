@@ -58,7 +58,6 @@
 #include <poolfmt.hxx>
 #include <expfld.hxx>
 #include <SwStyleNameMapper.hxx>
-#include <crsskip.hxx>
 #include <fmtpdsc.hxx>
 
 #include <cmdid.h>
@@ -417,7 +416,7 @@ void SwModule::InsertEnv( SfxRequest& rReq )
         pSh->ChgCurPageDesc(*pDesc);
 
         // Insert Frame
-        SwFlyFrameAttrMgr aMgr(false, pSh, FRMMGR_TYPE_ENVELP);
+        SwFlyFrameAttrMgr aMgr(false, pSh, Frmmgr_Type::ENVELP);
         SwFieldMgr aFieldMgr;
         aMgr.SetHeightSizeType(ATT_VAR_SIZE);
 

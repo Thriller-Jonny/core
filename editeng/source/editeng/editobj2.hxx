@@ -22,13 +22,13 @@
 
 #include <editeng/editobj.hxx>
 #include <editeng/fieldupdater.hxx>
+#include <editeng/outliner.hxx>
 #include <editdoc.hxx>
 
 #include <unotools/fontcvt.hxx>
 #include "svl/sharedstring.hxx"
 #include <svl/languageoptions.hxx>
 
-#include <boost/noncopyable.hpp>
 #include <memory>
 #include <vector>
 
@@ -69,23 +69,7 @@ public:
 
     bool IsFeature() const;
     void SetItem(const SfxPoolItem& rNew);
-
-    inline bool operator==( const XEditAttribute& rCompare ) const;
-
-    bool operator!= (const XEditAttribute& r) const
-    {
-        return !operator==(r);
-    }
 };
-
-inline bool XEditAttribute::operator==( const XEditAttribute& rCompare ) const
-{
-    return  (nStart == rCompare.nStart) &&
-            (nEnd == rCompare.nEnd) &&
-            ( (pItem == rCompare.pItem) ||
-            ( pItem->Which() != rCompare.pItem->Which()) ||
-            (*pItem == *rCompare.pItem));
-}
 
 struct XParaPortion
 {
@@ -123,7 +107,7 @@ public:
 
 };
 
-class ContentInfo : boost::noncopyable
+class ContentInfo
 {
     friend class EditTextObjectImpl;
 public:
@@ -143,6 +127,8 @@ private:
 
 public:
                         ~ContentInfo();
+                        ContentInfo(const ContentInfo&) = delete;
+    ContentInfo&        operator=(const ContentInfo&) = delete;
 
     void NormalizeString( svl::SharedStringPool& rPool );
     const svl::SharedString& GetSharedString() const { return maText;}
@@ -162,8 +148,6 @@ public:
 
     const WrongList* GetWrongList() const;
     void SetWrongList( WrongList* p );
-    bool operator==( const ContentInfo& rCompare ) const;
-    bool operator!=( const ContentInfo& rCompare ) const;
 
     // #i102062#
     bool isWrongListEqual(const ContentInfo& rCompare) const;
@@ -173,7 +157,7 @@ public:
 #endif
 };
 
-class EditTextObjectImpl : boost::noncopyable
+class EditTextObjectImpl
 {
 public:
     typedef std::vector<std::unique_ptr<ContentInfo> > ContentInfosType;
@@ -188,7 +172,7 @@ private:
     sal_uInt32              nObjSettings;
     sal_uInt16              nMetric;
     sal_uInt16              nVersion;
-    sal_uInt16              nUserType;
+    OutlinerMode            nUserType;
     SvtScriptType           nScriptType;
 
     bool                    bOwnerOfPool:1;
@@ -206,8 +190,11 @@ public:
     EditTextObjectImpl( EditTextObject* pFront, const EditTextObjectImpl& r );
     ~EditTextObjectImpl();
 
-    sal_uInt16 GetUserType() const { return nUserType;}
-    void SetUserType( sal_uInt16 n );
+    EditTextObjectImpl(const EditTextObjectImpl&) = delete;
+    EditTextObjectImpl& operator=(const EditTextObjectImpl&) = delete;
+
+    OutlinerMode GetUserType() const { return nUserType;}
+    void SetUserType( OutlinerMode n );
 
     void NormalizeString( svl::SharedStringPool& rPool );
     std::vector<svl::SharedString> GetSharedStrings() const;

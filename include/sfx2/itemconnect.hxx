@@ -184,9 +184,9 @@ public:
     bool                IsActive() const;
 
     /** Calls the virtual ApplyFlags() function, if connection is active. */
-    void                DoApplyFlags( const SfxItemSet& rItemSet );
+    void                DoApplyFlags( const SfxItemSet* pItemSet );
     /** Calls the virtual Reset() function, if connection is active. */
-    void                DoReset( const SfxItemSet& rItemSet );
+    void                DoReset( const SfxItemSet* pItemSet );
     /** Calls the virtual FillItemSet() function, if connection is active. */
     bool                DoFillItemSet( SfxItemSet& rDestSet, const SfxItemSet& rOldSet );
 
@@ -194,9 +194,9 @@ protected:
     explicit            ItemConnectionBase( ItemConnFlags nFlags = ITEMCONN_DEFAULT );
 
     /** Derived classes implement actions according to current flags here. */
-    virtual void        ApplyFlags( const SfxItemSet& rItemSet ) = 0;
+    virtual void        ApplyFlags( const SfxItemSet* pItemSet ) = 0;
     /** Derived classes implement initializing controls from item sets here. */
-    virtual void        Reset( const SfxItemSet& rItemSet ) = 0;
+    virtual void        Reset( const SfxItemSet* pItemSet ) = 0;
     /** Derived classes implement filling item sets from controls here. */
     virtual bool        FillItemSet( SfxItemSet& rDestSet, const SfxItemSet& rOldSet ) = 0;
 
@@ -211,7 +211,6 @@ private:
 
     ItemConnFlags       mnFlags;    /// Flags for additional options.
 };
-
 
 
 /** Base class template for single item <-> single control connection objects.
@@ -252,9 +251,9 @@ public:
 
 protected:
     /** Actions according to current flags for the control. */
-    virtual void        ApplyFlags( const SfxItemSet& rItemSet ) override;
+    virtual void        ApplyFlags( const SfxItemSet* pItemSet ) override;
     /** Resets the control according to the item contents. */
-    virtual void        Reset( const SfxItemSet& rItemSet ) override;
+    virtual void        Reset( const SfxItemSet* pItemSet ) override;
     /** Fills the item set according to the control's state. */
     virtual bool        FillItemSet( SfxItemSet& rDestSet, const SfxItemSet& rOldSet ) override;
 
@@ -281,8 +280,8 @@ public:
                             ItemConnFlags nFlags = ITEMCONN_DEFAULT );
 
 protected:
-    virtual void        ApplyFlags( const SfxItemSet& rItemSet ) override;
-    virtual void        Reset( const SfxItemSet& rItemSet ) override;
+    virtual void        ApplyFlags( const SfxItemSet* pItemSet ) override;
+    virtual void        Reset( const SfxItemSet* pItemSet ) override;
     virtual bool        FillItemSet( SfxItemSet& rDestSet, const SfxItemSet& rOldSet ) override;
 
 private:
@@ -290,10 +289,8 @@ private:
 };
 
 
-
 /** Connection between an SfxBoolItem and a VCL CheckBox. */
 typedef ItemControlConnection< BoolItemWrapper, CheckBoxWrapper > CheckBoxConnection;
-
 
 
 /** Connection between an item and the VCL NumericField. */
@@ -311,10 +308,6 @@ public:
     explicit            NumericConnection( sal_uInt16 nSlot, NumericField& rField,
                             ItemConnFlags nFlags = ITEMCONN_DEFAULT );
 };
-
-
-
-
 
 
 /** Connection between an item and the VCL MetricField.
@@ -340,7 +333,6 @@ public:
 };
 
 
-
 /** Connection between an item and a VCL ListBox.
 
     Optionally a map can be passed that maps list box positions to item values.
@@ -362,12 +354,8 @@ public:
     typedef typename ListBoxWrapperType::MapEntryType               MapEntryType;
 
     explicit            ListBoxConnection( sal_uInt16 nSlot, ListBox& rListBox,
-                            const MapEntryType* pMap = 0, ItemConnFlags nFlags = ITEMCONN_DEFAULT );
+                            const MapEntryType* pMap = nullptr, ItemConnFlags nFlags = ITEMCONN_DEFAULT );
 };
-
-
-
-
 
 
 /** Connection between an item and an SVTOOLS ValueSet.
@@ -391,11 +379,8 @@ public:
     typedef typename ValueSetWrapperType::MapEntryType              MapEntryType;
 
     explicit            ValueSetConnection( sal_uInt16 nSlot, ValueSet& rValueSet,
-                            const MapEntryType* pMap = 0, ItemConnFlags nFlags = ITEMCONN_DEFAULT );
+                            const MapEntryType* pMap = nullptr, ItemConnFlags nFlags = ITEMCONN_DEFAULT );
 };
-
-
-
 
 
 // Array of connections
@@ -421,8 +406,8 @@ public:
     void                AddConnection( ItemConnectionBase* pConnection );
 
 protected:
-    virtual void        ApplyFlags( const SfxItemSet& rItemSet ) override;
-    virtual void        Reset( const SfxItemSet& rItemSet ) override;
+    virtual void        ApplyFlags( const SfxItemSet* pItemSet ) override;
+    virtual void        Reset( const SfxItemSet* pItemSet ) override;
     virtual bool        FillItemSet( SfxItemSet& rDestSet, const SfxItemSet& rOldSet ) override;
 
 private:
@@ -430,10 +415,7 @@ private:
 };
 
 
-
-
 //               ***  Implementation of template functions  ***
-
 
 
 // Base connection classes
@@ -463,16 +445,16 @@ ItemControlConnection< ItemWrpT, ControlWrpT >::~ItemControlConnection()
 }
 
 template< typename ItemWrpT, typename ControlWrpT >
-void ItemControlConnection< ItemWrpT, ControlWrpT >::ApplyFlags( const SfxItemSet& rItemSet )
+void ItemControlConnection< ItemWrpT, ControlWrpT >::ApplyFlags( const SfxItemSet* pItemSet )
 {
-    bool bKnown = ItemWrapperHelper::IsKnownItem( rItemSet, maItemWrp.GetSlotId() );
+    bool bKnown = ItemWrapperHelper::IsKnownItem( *pItemSet, maItemWrp.GetSlotId() );
     mxCtrlWrp->ModifyControl( GetEnableState( bKnown ), GetShowState( bKnown ) );
 }
 
 template< typename ItemWrpT, typename ControlWrpT >
-void ItemControlConnection< ItemWrpT, ControlWrpT >::Reset( const SfxItemSet& rItemSet )
+void ItemControlConnection< ItemWrpT, ControlWrpT >::Reset( const SfxItemSet* pItemSet )
 {
-    const ItemType* pItem = maItemWrp.GetUniqueItem( rItemSet );
+    const ItemType* pItem = maItemWrp.GetUniqueItem( *pItemSet );
     mxCtrlWrp->SetControlDontKnow( pItem == nullptr );
     if( pItem )
         mxCtrlWrp->SetControlValue( maItemWrp.GetItemValue( *pItem ) );
@@ -519,14 +501,12 @@ NumericConnection< ItemWrpT >::NumericConnection(
 }
 
 
-
 template< typename ItemWrpT >
 MetricConnection< ItemWrpT >::MetricConnection(
         sal_uInt16 nSlot, MetricField& rField, FieldUnit eItemUnit, ItemConnFlags nFlags ) :
     ItemControlConnectionType( nSlot, new MetricFieldWrapperType( rField, eItemUnit ), nFlags )
 {
 }
-
 
 
 template< typename ItemWrpT >
@@ -537,14 +517,12 @@ ListBoxConnection< ItemWrpT >::ListBoxConnection(
 }
 
 
-
 template< typename ItemWrpT >
 ValueSetConnection< ItemWrpT >::ValueSetConnection(
         sal_uInt16 nSlot, ValueSet& rValueSet, const MapEntryType* pMap, ItemConnFlags nFlags ) :
     ItemControlConnectionType( nSlot, new ValueSetWrapperType( rValueSet, pMap ), nFlags )
 {
 }
-
 
 
 } // namespace sfx

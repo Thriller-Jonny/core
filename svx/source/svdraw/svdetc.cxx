@@ -29,7 +29,7 @@
 #include "svx/svdviter.hxx"
 #include <svx/svdview.hxx>
 #include <svx/svdoutl.hxx>
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 #include <editeng/editdata.hxx>
 #include <editeng/eeitem.hxx>
 #include <svl/itemset.hxx>
@@ -238,7 +238,7 @@ bool OLEObjCache::UnloadObj(SdrOle2Obj* pObj)
         // The question is what will happen when i make it work now suddenly? I
         // will try it for 2.4.
         const sdr::contact::ViewContact& rViewContact = pObj->GetViewContact();
-        const bool bVisible(rViewContact.HasViewObjectContacts(true));
+        const bool bVisible(rViewContact.HasViewObjectContacts());
 
         if(!bVisible)
         {
@@ -255,7 +255,6 @@ IMPL_LINK_NOARG_TYPED(OLEObjCache, UnloadCheckHdl, Timer*, void)
 }
 
 
-
 void SdrLinkList::Clear()
 {
     aList.clear();
@@ -263,22 +262,19 @@ void SdrLinkList::Clear()
 
 unsigned SdrLinkList::FindEntry(const Link<SdrObjFactory*,void>& rLink) const
 {
-    unsigned nAnz=GetLinkCount();
-    for (unsigned i=0; i<nAnz; i++) {
+    unsigned nCount=GetLinkCount();
+    for (unsigned i=0; i<nCount; i++) {
         if (GetLink(i)==rLink) return i;
     }
     return 0xFFFF;
 }
 
-void SdrLinkList::InsertLink(const Link<SdrObjFactory*,void>& rLink, unsigned nPos)
+void SdrLinkList::InsertLink(const Link<SdrObjFactory*,void>& rLink)
 {
     unsigned nFnd=FindEntry(rLink);
     if (nFnd==0xFFFF) {
         if (rLink.IsSet()) {
-            if(nPos==0xFFFF)
-                aList.push_back(rLink);
-            else
-                aList.insert(aList.begin() + nPos, rLink);
+            aList.push_back(rLink);
         } else {
             OSL_FAIL("SdrLinkList::InsertLink(): Tried to insert a link that was not set already.");
         }
@@ -296,7 +292,6 @@ void SdrLinkList::RemoveLink(const Link<SdrObjFactory*,void>& rLink)
         OSL_FAIL("SdrLinkList::RemoveLink(): Link not found.");
     }
 }
-
 
 
 bool GetDraftFillColor(const SfxItemSet& rSet, Color& rCol)
@@ -357,7 +352,7 @@ bool GetDraftFillColor(const SfxItemSet& rSet, Color& rCol)
                 const sal_uInt32 nMaxSteps(8L);
                 const sal_uInt32 nXStep((nWidth > nMaxSteps) ? nWidth / nMaxSteps : 1L);
                 const sal_uInt32 nYStep((nHeight > nMaxSteps) ? nHeight / nMaxSteps : 1L);
-                sal_uInt32 nAnz(0L);
+                sal_uInt32 nCount(0L);
 
                 for(sal_uInt32 nY(0L); nY < nHeight; nY += nYStep)
                 {
@@ -368,13 +363,13 @@ bool GetDraftFillColor(const SfxItemSet& rSet, Color& rCol)
                         nRt += rCol2.GetRed();
                         nGn += rCol2.GetGreen();
                         nBl += rCol2.GetBlue();
-                        nAnz++;
+                        nCount++;
                     }
                 }
 
-                nRt /= nAnz;
-                nGn /= nAnz;
-                nBl /= nAnz;
+                nRt /= nCount;
+                nGn /= nCount;
+                nBl /= nCount;
 
                 rCol = Color(sal_uInt8(nRt), sal_uInt8(nGn), sal_uInt8(nBl));
 
@@ -411,7 +406,7 @@ SdrEngineDefaults& SdrEngineDefaults::GetDefaults()
     return *rGlobalData.pDefaults;
 }
 
-SdrOutliner* SdrMakeOutliner(sal_uInt16 nOutlinerMode, SdrModel& rModel)
+SdrOutliner* SdrMakeOutliner(OutlinerMode nOutlinerMode, SdrModel& rModel)
 {
     SfxItemPool* pPool = &rModel.GetItemPool();
     SdrOutliner* pOutl = new SdrOutliner( pPool, nOutlinerMode );
@@ -493,13 +488,13 @@ sal_uInt16* RemoveWhichRange(const sal_uInt16* pOldWhichTable, sal_uInt16 nRange
     // [b..e]    [b..e]    [b..e]  Cases 1,3,2: doesn't matter, delete, doesn't matter  + Ranges
     // [b........e]  [b........e]  Cases 4,5  : shrink range                            | in
     // [b......................e]  Case  6    : splitting                               + pOldWhichTable
-    sal_uInt16 nAnz=0;
-    while (pOldWhichTable[nAnz]!=0) nAnz++;
-    nAnz++; // nAnz should now be an odd number (0 for end of array)
-    DBG_ASSERT((nAnz&1)==1,"RemoveWhichRange: WhichTable doesn't have an odd number of entries.");
-    sal_uInt16 nAlloc=nAnz;
+    sal_uInt16 nCount=0;
+    while (pOldWhichTable[nCount]!=0) nCount++;
+    nCount++; // nCount should now be an odd number (0 for end of array)
+    DBG_ASSERT((nCount&1)==1,"RemoveWhichRange: WhichTable doesn't have an odd number of entries.");
+    sal_uInt16 nAlloc=nCount;
     // check necessary size of new array
-    sal_uInt16 nNum=nAnz-1;
+    sal_uInt16 nNum=nCount-1;
     while (nNum!=0) {
         nNum-=2;
         sal_uInt16 nBeg=pOldWhichTable[nNum];
@@ -530,16 +525,16 @@ sal_uInt16* RemoveWhichRange(const sal_uInt16* pOldWhichTable, sal_uInt16 nRange
         else nCase=6;
         switch (nCase) {
             case 3: {
-                unsigned nTailBytes=(nAnz-(nNum+2))*sizeof(sal_uInt16);
+                unsigned nTailBytes=(nCount-(nNum+2))*sizeof(sal_uInt16);
                 memcpy(&pNewWhichTable[nNum],&pNewWhichTable[nNum+2],nTailBytes);
-                nAnz-=2; // remember: array is now smaller
+                nCount-=2; // remember: array is now smaller
             } break;
             case 4: pNewWhichTable[nNum+1]=nRangeBeg-1; break;
             case 5: pNewWhichTable[nNum]=nRangeEnd+1;     break;
             case 6: {
-                unsigned nTailBytes=(nAnz-(nNum+2))*sizeof(sal_uInt16);
+                unsigned nTailBytes=(nCount-(nNum+2))*sizeof(sal_uInt16);
                 memcpy(&pNewWhichTable[nNum+4],&pNewWhichTable[nNum+2],nTailBytes);
-                nAnz+=2; // remember:array is now larger
+                nCount+=2; // remember:array is now larger
                 pNewWhichTable[nNum+2]=nRangeEnd+1;
                 pNewWhichTable[nNum+3]=pNewWhichTable[nNum+1];
                 pNewWhichTable[nNum+1]=nRangeBeg-1;
@@ -550,73 +545,72 @@ sal_uInt16* RemoveWhichRange(const sal_uInt16* pOldWhichTable, sal_uInt16 nRange
 }
 
 
-
 SvdProgressInfo::SvdProgressInfo( const Link<void*,bool>&_rLink )
 {
     maLink = _rLink;
-    nSumActionCount = 0;
-    nSumCurAction   = 0;
+    m_nSumActionCount = 0;
+    m_nSumCurAction   = 0;
 
-    nObjCount = 0;
-    nCurObj   = 0;
+    m_nObjCount = 0;
+    m_nCurObj   = 0;
 
-    nActionCount = 0;
-    nCurAction   = 0;
+    m_nActionCount = 0;
+    m_nCurAction   = 0;
 
-    nInsertCount = 0;
-    nCurInsert   = 0;
+    m_nInsertCount = 0;
+    m_nCurInsert   = 0;
 }
 
-void SvdProgressInfo::Init( sal_uIntPtr _nSumActionCount, sal_uIntPtr _nObjCount )
+void SvdProgressInfo::Init( sal_uIntPtr nSumActionCount, sal_uIntPtr nObjCount )
 {
-    nSumActionCount = _nSumActionCount;
-    nObjCount = _nObjCount;
+    m_nSumActionCount = nSumActionCount;
+    m_nObjCount = nObjCount;
 }
 
-bool SvdProgressInfo::ReportActions( sal_uIntPtr nAnzActions )
+bool SvdProgressInfo::ReportActions( sal_uIntPtr nActionCount )
 {
-    nSumCurAction += nAnzActions;
-    nCurAction += nAnzActions;
-    if(nCurAction > nActionCount)
-        nCurAction = nActionCount;
+    m_nSumCurAction += nActionCount;
+    m_nCurAction += nActionCount;
+    if(m_nCurAction > m_nActionCount)
+        m_nCurAction = m_nActionCount;
 
     return maLink.Call(nullptr);
 }
 
-bool SvdProgressInfo::ReportInserts( sal_uIntPtr nAnzInserts )
+void SvdProgressInfo::ReportInserts( sal_uIntPtr nInsertCount )
 {
-    nSumCurAction += nAnzInserts;
-    nCurInsert += nAnzInserts;
+    m_nSumCurAction += nInsertCount;
+    m_nCurInsert += nInsertCount;
 
-    return maLink.Call(nullptr);
+    maLink.Call(nullptr);
 }
 
-bool SvdProgressInfo::ReportRescales( sal_uIntPtr nAnzRescales )
+void SvdProgressInfo::ReportRescales( sal_uIntPtr nRescaleCount )
 {
-    nSumCurAction += nAnzRescales;
-    return maLink.Call(nullptr);
+    m_nSumCurAction += nRescaleCount;
+    maLink.Call(nullptr);
 }
 
-void SvdProgressInfo::SetActionCount( sal_uIntPtr _nActionCount )
+void SvdProgressInfo::SetActionCount( sal_uIntPtr nActionCount )
 {
-    nActionCount = _nActionCount;
+    m_nActionCount = nActionCount;
 }
 
-void SvdProgressInfo::SetInsertCount( sal_uIntPtr _nInsertCount )
+void SvdProgressInfo::SetInsertCount( sal_uIntPtr nInsertCount )
 {
-    nInsertCount = _nInsertCount;
+    m_nInsertCount = nInsertCount;
 }
 
-bool SvdProgressInfo::SetNextObject()
+void SvdProgressInfo::SetNextObject()
 {
-    nActionCount = 0;
-    nCurAction   = 0;
+    m_nActionCount = 0;
+    m_nCurAction   = 0;
 
-    nInsertCount = 0;
-    nCurInsert   = 0;
+    m_nInsertCount = 0;
+    m_nCurInsert   = 0;
 
-    nCurObj++;
-    return ReportActions(0);
+    m_nCurObj++;
+    ReportActions(0);
 }
 
 // #i101872# isolate GetTextEditBackgroundColor to tooling; it will anyways only be used as long

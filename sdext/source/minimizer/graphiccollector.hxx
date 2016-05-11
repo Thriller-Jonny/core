@@ -90,10 +90,6 @@ class GraphicCollector
 };
 
 
-// - GRAPHICCOLLECTOR -
-
-
-
 #endif // INCLUDED_SDEXT_SOURCE_MINIMIZER_GRAPHICCOLLECTOR_HXX
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

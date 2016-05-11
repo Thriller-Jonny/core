@@ -241,7 +241,6 @@ public:
     virtual css::uno::Sequence< sal_Int8 > SAL_CALL getImplementationId() throw( css::uno::RuntimeException, std::exception ) override ;
 
 
-
     //  XStarBasicAccess
 
 
@@ -270,7 +269,6 @@ public:
     virtual void SAL_CALL addDialog( const OUString& LibraryName, const OUString& DialogName,
         const css::uno::Sequence< sal_Int8 >& Data )
             throw(css::container::NoSuchElementException, css::uno::RuntimeException, std::exception) override;
-
 
 
     //  XChild
@@ -428,8 +426,6 @@ public:
         throw (css::io::IOException, css::uno::RuntimeException, std::exception) override;
 
 
-
-
     //  XLoadable
 
 
@@ -545,7 +541,6 @@ public:
         throw (css::uno::RuntimeException, std::exception) override;
 
 
-
     //  XEventsSupplier
 
 
@@ -556,7 +551,6 @@ public:
     */
 
     virtual css::uno::Reference< css::container::XNameReplace > SAL_CALL getEvents() throw( css::uno::RuntimeException, std::exception ) override;
-
 
 
     //  XEmbeddedScripts
@@ -592,9 +586,9 @@ public:
     //  XDocumentEventBroadcaster
 
 
-    virtual void SAL_CALL addDocumentEventListener( const css::uno::Reference< css::document::XDocumentEventListener >& _Listener ) throw (css::uno::RuntimeException, std::exception) override;
-    virtual void SAL_CALL removeDocumentEventListener( const css::uno::Reference< css::document::XDocumentEventListener >& _Listener ) throw (css::uno::RuntimeException, std::exception) override;
-    virtual void SAL_CALL notifyDocumentEvent( const OUString& _EventName, const css::uno::Reference< css::frame::XController2 >& _ViewController, const css::uno::Any& _Supplement ) throw (css::lang::IllegalArgumentException, css::lang::NoSupportException, css::uno::RuntimeException, std::exception) override;
+    virtual void SAL_CALL addDocumentEventListener( const css::uno::Reference< css::document::XDocumentEventListener >& Listener ) throw (css::uno::RuntimeException, std::exception) override;
+    virtual void SAL_CALL removeDocumentEventListener( const css::uno::Reference< css::document::XDocumentEventListener >& Listener ) throw (css::uno::RuntimeException, std::exception) override;
+    virtual void SAL_CALL notifyDocumentEvent( const OUString& EventName, const css::uno::Reference< css::frame::XController2 >& ViewController, const css::uno::Any& Supplement ) throw (css::lang::IllegalArgumentException, css::lang::NoSupportException, css::uno::RuntimeException, std::exception) override;
 
 
     //  XUnoTunnel
@@ -659,7 +653,6 @@ public:
 
     // css.document.XUndoManagerSupplier
     virtual css::uno::Reference< css::document::XUndoManager > SAL_CALL getUndoManager(  ) throw (css::uno::RuntimeException, std::exception) override;
-
 
 
     // css::rdf::XNode:

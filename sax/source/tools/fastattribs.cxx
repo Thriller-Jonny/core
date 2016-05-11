@@ -120,11 +120,11 @@ void FastAttributeList::addUnknown( const OString& rName, const OString& value )
 // XFastAttributeList
 sal_Bool FastAttributeList::hasAttribute( ::sal_Int32 Token ) throw (RuntimeException, std::exception)
 {
-    for (size_t i = 0; i < maAttributeTokens.size(); ++i)
-        if (maAttributeTokens[i] == Token)
-            return sal_True;
+    for (sal_Int32 i : maAttributeTokens)
+        if (i == Token)
+            return true;
 
-    return sal_False;
+    return false;
 }
 
 sal_Int32 FastAttributeList::getValueToken( ::sal_Int32 Token ) throw (SAXException, RuntimeException, std::exception)

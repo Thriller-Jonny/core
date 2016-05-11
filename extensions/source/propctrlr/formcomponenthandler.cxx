@@ -212,7 +212,7 @@ namespace pcr
         }
 
         Reference< resource::XStringResourceResolver > lcl_getStringResourceResolverForProperty
-            ( Reference< XPropertySet > _xComponent, const OUString& _rPropertyName,
+            ( const Reference< XPropertySet >& _xComponent, const OUString& _rPropertyName,
               const Any& _rPropertyValue )
         {
             Reference< resource::XStringResourceResolver > xRet;
@@ -277,9 +277,8 @@ namespace pcr
                 const OUString* pStrings = aStrings.getConstArray();
                 sal_Int32 nCount = aStrings.getLength();
 
-                Sequence< OUString > aResolvedStrings;
-                aResolvedStrings.realloc( nCount );
-                OUString* pResolvedStrings = aResolvedStrings.getArray();
+                std::vector< OUString > aResolvedStrings;
+                aResolvedStrings.resize( nCount );
                 try
                 {
                     for ( sal_Int32 i = 0; i < nCount; ++i )
@@ -287,14 +286,14 @@ namespace pcr
                         OUString aIdStr = pStrings[i];
                         OUString aPureIdStr = aIdStr.copy( 1 );
                         if( xStringResourceResolver->hasEntryForId( aPureIdStr ) )
-                            pResolvedStrings[i] = xStringResourceResolver->resolveString( aPureIdStr );
+                            aResolvedStrings[i] = xStringResourceResolver->resolveString( aPureIdStr );
                         else
-                            pResolvedStrings[i] = aIdStr;
+                            aResolvedStrings[i] = aIdStr;
                     }
                 }
                 catch( const resource::MissingResourceException & )
                 {}
-                aPropertyValue <<= aResolvedStrings;
+                aPropertyValue <<= comphelper::containerToSequence(aResolvedStrings);
             }
         }
         else
@@ -993,7 +992,6 @@ namespace pcr
         }
 
 
-
         LineDescriptor aDescriptor;
         aDescriptor.HelpURL = HelpIdUrl::getHelpURL( m_pInfoService->getPropertyHelpId( nPropId ) );
         aDescriptor.DisplayName = sDisplayName;
@@ -1002,7 +1000,6 @@ namespace pcr
         sal_Int16 nControlType = PropertyControlType::TextField;
         bool bReadOnly = false;
         aDescriptor.Control.clear();
-
 
 
         bool bNeedDefaultStringIfVoidAllowed = false;
@@ -1226,7 +1223,7 @@ namespace pcr
                     }
                 }
 
-                Optional< double > aValueNotPresent( sal_False, 0 );
+                Optional< double > aValueNotPresent( false, 0 );
                 aDescriptor.Control = PropertyHandlerHelper::createNumericControl(
                     _rxControlFactory, nDigits, aValueNotPresent, aValueNotPresent, false );
 
@@ -1315,8 +1312,8 @@ namespace pcr
                 OTimeDurationControl* pControl = new OTimeDurationControl( impl_getDefaultDialogParent_nothrow(), WB_BORDER | WB_TABSTOP );
                 aDescriptor.Control = pControl;
 
-                pControl->setMinValue( Optional< double >( sal_True, 0 ) );
-                pControl->setMaxValue( Optional< double >( sal_True, ::std::numeric_limits< double >::max() ) );
+                pControl->setMinValue( Optional< double >( true, 0 ) );
+                pControl->setMaxValue( Optional< double >( true, ::std::numeric_limits< double >::max() ) );
             }
             break;
 
@@ -1328,8 +1325,8 @@ namespace pcr
             case PROPERTY_ID_BLOCKINCREMENT:
             case PROPERTY_ID_SPININCREMENT:
             {
-                Optional< double > aMinValue( sal_True, 0 );
-                Optional< double > aMaxValue( sal_True, 0x7FFFFFFF );
+                Optional< double > aMinValue( true, 0 );
+                Optional< double > aMaxValue( true, 0x7FFFFFFF );
 
                 if ( nPropId == PROPERTY_ID_MAXTEXTLEN ||  nPropId == PROPERTY_ID_BOUNDCOLUMN )
                     aMinValue.Value = -1;
@@ -1345,8 +1342,8 @@ namespace pcr
 
             case PROPERTY_ID_DECIMAL_ACCURACY:
             {
-                Optional< double > aMinValue( sal_True, 0 );
-                Optional< double > aMaxValue( sal_True, 20 );
+                Optional< double > aMinValue( true, 0 );
+                Optional< double > aMaxValue( true, 20 );
 
                 aDescriptor.Control = PropertyHandlerHelper::createNumericControl(
                     _rxControlFactory, 0, aMinValue, aMaxValue, false );
@@ -1403,9 +1400,9 @@ namespace pcr
         }
 
         if ( !aDescriptor.PrimaryButtonId.isEmpty() )
-            aDescriptor.HasPrimaryButton = sal_True;
+            aDescriptor.HasPrimaryButton = true;
         if ( !aDescriptor.SecondaryButtonId.isEmpty() )
-            aDescriptor.HasSecondaryButton = sal_True;
+            aDescriptor.HasSecondaryButton = true;
 
         bool bIsDataProperty = ( nPropertyUIFlags & PROP_FLAG_DATA_PROPERTY ) != 0;
         aDescriptor.Category = bIsDataProperty ? OUString("Data") : OUString("General");
@@ -1557,7 +1554,7 @@ namespace pcr
 
             // Command also depends on DataSource
             aDependentProperties.push_back( PROPERTY_ID_COMMAND );
-            // NO break!
+            SAL_FALLTHROUGH;
 
         // ----- Command -----
         case PROPERTY_ID_COMMAND:
@@ -1574,7 +1571,7 @@ namespace pcr
                 _rxInspectorUI->rebuildPropertyUI( PROPERTY_LISTSOURCE );
             aDependentProperties.push_back( PROPERTY_ID_STRINGITEMLIST );
             aDependentProperties.push_back( PROPERTY_ID_BOUNDCOLUMN );
-            // NO break!
+            SAL_FALLTHROUGH;
 
         // ----- StringItemList -----
         case PROPERTY_ID_STRINGITEMLIST:
@@ -1679,8 +1676,8 @@ namespace pcr
             FormButtonType eButtonType( FormButtonType_PUSH );
             OSL_VERIFY( _rNewValue >>= eButtonType );
             _rxInspectorUI->enablePropertyUI( PROPERTY_TARGET_URL, FormButtonType_URL == eButtonType );
+            SAL_FALLTHROUGH;
         }
-        // NO break!
 
         // ----- TargetURL -----
         case PROPERTY_ID_TARGET_URL:
@@ -1708,12 +1705,12 @@ namespace pcr
 
             // propagate the changes to the min/max/default fields
             OUString aAffectedProps[] = { OUString(PROPERTY_VALUE), OUString(PROPERTY_DEFAULT_VALUE), OUString(PROPERTY_VALUEMIN), OUString(PROPERTY_VALUEMAX) };
-            for (sal_uInt16 i=0; i<SAL_N_ELEMENTS(aAffectedProps); ++i)
+            for (OUString & aAffectedProp : aAffectedProps)
             {
                 Reference< XPropertyControl > xControl;
                 try
                 {
-                    xControl = _rxInspectorUI->getPropertyControl( aAffectedProps[i] );
+                    xControl = _rxInspectorUI->getPropertyControl( aAffectedProp );
                 }
                 catch( const UnknownPropertyException& ) {}
                 if ( xControl.is() )
@@ -1755,12 +1752,12 @@ namespace pcr
                 OUString aFormattedPropertyControls[] = {
                     OUString(PROPERTY_EFFECTIVE_MIN), OUString(PROPERTY_EFFECTIVE_MAX), OUString(PROPERTY_EFFECTIVE_DEFAULT), OUString(PROPERTY_EFFECTIVE_VALUE)
                 };
-                for ( sal_uInt16 i=0; i<SAL_N_ELEMENTS(aFormattedPropertyControls); ++i )
+                for (OUString & aFormattedPropertyControl : aFormattedPropertyControls)
                 {
                     Reference< XPropertyControl > xControl;
                     try
                     {
-                        xControl = _rxInspectorUI->getPropertyControl( aFormattedPropertyControls[i] );
+                        xControl = _rxInspectorUI->getPropertyControl( aFormattedPropertyControl );
                     }
                     catch( const UnknownPropertyException& ) {}
                     if ( xControl.is() )
@@ -2022,7 +2019,7 @@ namespace pcr
         if ( _bSuspend )
             if ( m_xCommandDesigner.is() && m_xCommandDesigner->isActive() )
                 return m_xCommandDesigner->suspend();
-        return sal_True;
+        return true;
     }
 
 
@@ -2478,7 +2475,7 @@ namespace pcr
             break;
 
             default:
-                _out_rProperty.Control = _rxControlFactory->createPropertyControl( PropertyControlType::MultiLineTextField, sal_False );
+                _out_rProperty.Control = _rxControlFactory->createPropertyControl( PropertyControlType::MultiLineTextField, false );
                 break;
             }
         }
@@ -2574,7 +2571,7 @@ namespace pcr
         switch( nListSourceType )
         {
         case ListSourceType_VALUELIST:
-            _out_rDescriptor.Control = _rxControlFactory->createPropertyControl( PropertyControlType::StringListField, sal_False );
+            _out_rDescriptor.Control = _rxControlFactory->createPropertyControl( PropertyControlType::StringListField, false );
             break;
 
         case ListSourceType_TABLEFIELDS:
@@ -2875,9 +2872,9 @@ namespace pcr
                 const SfxItemSet* pOut = aDlg->GetOutputItemSet();
                 if ( pOut )
                 {
-                    Sequence< NamedValue > aFontPropertyValues;
+                    std::vector< NamedValue > aFontPropertyValues;
                     ControlCharacterDialog::translateItemsToProperties( *pOut, aFontPropertyValues );
-                    _out_rNewValue <<= aFontPropertyValues;
+                    _out_rNewValue <<= comphelper::containerToSequence(aFontPropertyValues);
                     bSuccess = true;
                 }
             }
@@ -2902,7 +2899,7 @@ namespace pcr
             // is considered to be potentially expensive
             aFileDlg.SetDisplayDirectory( sDataSource );
 
-        const SfxFilter* pFilter = SfxFilter::GetFilterByName("StarOffice XML (Base)");
+        std::shared_ptr<const SfxFilter> pFilter = SfxFilter::GetFilterByName("StarOffice XML (Base)");
         OSL_ENSURE(pFilter,"Filter: StarOffice XML (Base) could not be found!");
         if ( pFilter )
         {
@@ -3211,12 +3208,12 @@ namespace pcr
                 const OUString* pToDisable = xCommandUI->getPropertiesToDisable();
                 while ( !pToDisable->isEmpty() )
                 {
-                    m_xBrowserUI->enablePropertyUIElements( *pToDisable++, PropertyLineElement::All, sal_False );
+                    m_xBrowserUI->enablePropertyUIElements( *pToDisable++, PropertyLineElement::All, false );
                 }
 
                 // but enable the browse button for the property itself - so it can be used to raise the query designer
                 OUString sPropertyName( impl_getPropertyNameFromId_nothrow( _nDesignForProperty ) );
-                m_xBrowserUI->enablePropertyUIElements( sPropertyName, PropertyLineElement::PrimaryButton, sal_True );
+                m_xBrowserUI->enablePropertyUIElements( sPropertyName, PropertyLineElement::PrimaryButton, true );
             }
         }
         catch( const Exception& )
@@ -3242,7 +3239,7 @@ namespace pcr
                 const OUString* pToEnable = xCommandUI->getPropertiesToDisable();
                 while ( !pToEnable->isEmpty() )
                 {
-                    m_xBrowserUI->enablePropertyUIElements( *pToEnable++, PropertyLineElement::All, sal_True );
+                    m_xBrowserUI->enablePropertyUIElements( *pToEnable++, PropertyLineElement::All, true );
                 }
             }
             catch( const Exception& )

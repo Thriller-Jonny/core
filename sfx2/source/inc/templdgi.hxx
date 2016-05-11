@@ -47,7 +47,6 @@ class SvTreeListBox ;
 class StyleTreeListBox_Impl;
 class SfxTemplateDialog_Impl;
 class SfxCommonTemplateDialog_Impl;
-class SfxDockingWindow;
 
 namespace com { namespace sun { namespace star { namespace frame {
     class XModuleManager2;
@@ -238,11 +237,11 @@ protected:
     virtual void ClearFamilyList() = 0;
     virtual void ReplaceUpdateButtonByMenu();
 
-    void NewHdl( void* );
-    void EditHdl( void* );
-    void DeleteHdl( void* );
-    void HideHdl( void* );
-    void ShowHdl( void* );
+    void NewHdl();
+    void EditHdl();
+    void DeleteHdl();
+    void HideHdl();
+    void ShowHdl();
 
     bool Execute_Impl(sal_uInt16 nId, const OUString& rStr, const OUString& rRefStr,
                       sal_uInt16 nFamily, sal_uInt16 nMask = 0,
@@ -266,7 +265,7 @@ protected:
 
     void SelectStyle( const OUString& rStyle );
     bool HasSelectedStyle() const;
-    SfxStyleSheetBase* GetSelectedStyle() const;
+    void GetSelectedStyle() const;
     void FillTreeBox();
     void Update_Impl();
     void UpdateFamily_Impl();
@@ -351,7 +350,6 @@ private:
     friend class SfxTemplatePanelControl;
 
     VclPtr<vcl::Window>         m_pFloat;
-    bool                        m_bZoomIn;
     VclPtr<DropToolBox_Impl>    m_aActionTbL;
     VclPtr<ToolBox>             m_aActionTbR;
 

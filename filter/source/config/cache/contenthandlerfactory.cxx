@@ -43,11 +43,9 @@ ContentHandlerFactory::ContentHandlerFactory(const css::uno::Reference< css::uno
 }
 
 
-
 ContentHandlerFactory::~ContentHandlerFactory()
 {
 }
-
 
 
 css::uno::Reference< css::uno::XInterface > SAL_CALL ContentHandlerFactory::createInstance(const OUString& sHandler)
@@ -56,7 +54,6 @@ css::uno::Reference< css::uno::XInterface > SAL_CALL ContentHandlerFactory::crea
 {
     return createInstanceWithArguments(sHandler, css::uno::Sequence< css::uno::Any >());
 }
-
 
 
 css::uno::Reference< css::uno::XInterface > SAL_CALL ContentHandlerFactory::createInstanceWithArguments(const OUString&                     sHandler  ,
@@ -71,7 +68,7 @@ css::uno::Reference< css::uno::XInterface > SAL_CALL ContentHandlerFactory::crea
 
     OUString sRealHandler = sHandler;
 
-    #ifdef _FILTER_CONFIG_MIGRATION_Q_
+    #ifdef FILTER_CONFIG_MIGRATION_Q_
 
         /* -> TODO - HACK
             check if the given handler name really exists ...
@@ -79,9 +76,11 @@ css::uno::Reference< css::uno::XInterface > SAL_CALL ContentHandlerFactory::crea
             type name instead of a handler name. For a small migration time
             we must simulate this old feature :-( */
 
-        if (!m_rCache->hasItem(FilterCache::E_CONTENTHANDLER, sHandler) && m_rCache->hasItem(FilterCache::E_TYPE, sHandler))
+        auto & cache = TheFilterCache::get();
+
+        if (!cache.hasItem(FilterCache::E_CONTENTHANDLER, sHandler) && cache.hasItem(FilterCache::E_TYPE, sHandler))
         {
-            _FILTER_CONFIG_LOG_("ContentHandlerFactory::createInstanceWithArguments() ... simulate old type search functionality!\n");
+            FILTER_CONFIG_LOG_("ContentHandlerFactory::createInstanceWithArguments() ... simulate old type search functionality!\n");
 
             css::uno::Sequence< OUString > lTypes { sHandler };
 
@@ -97,16 +96,16 @@ css::uno::Reference< css::uno::XInterface > SAL_CALL ContentHandlerFactory::crea
 
             // prevent outside code against NoSuchElementException!
             // But don't implement such defensive strategy for our new create handling :-)
-            if (!m_rCache->hasItem(FilterCache::E_CONTENTHANDLER, sRealHandler))
+            if (!cache.hasItem(FilterCache::E_CONTENTHANDLER, sRealHandler))
                 return css::uno::Reference< css::uno::XInterface>();
         }
 
         /* <- HACK */
 
-    #endif // _FILTER_CONFIG_MIGRATION_Q_
+    #endif // FILTER_CONFIG_MIGRATION_Q_
 
     // search handler on cache
-    CacheItem aHandler = m_rCache->getItem(FilterCache::E_CONTENTHANDLER, sRealHandler);
+    CacheItem aHandler = cache.getItem(FilterCache::E_CONTENTHANDLER, sRealHandler);
 
     // create service instance
     xHandler = m_xContext->getServiceManager()->createInstanceWithContext(sRealHandler, m_xContext);
@@ -133,7 +132,6 @@ css::uno::Reference< css::uno::XInterface > SAL_CALL ContentHandlerFactory::crea
 }
 
 
-
 css::uno::Sequence< OUString > SAL_CALL ContentHandlerFactory::getAvailableServiceNames()
     throw(css::uno::RuntimeException, std::exception)
 {
@@ -142,20 +140,16 @@ css::uno::Sequence< OUString > SAL_CALL ContentHandlerFactory::getAvailableServi
 }
 
 
-
 OUString ContentHandlerFactory::impl_getImplementationName()
 {
     return OUString( "com.sun.star.comp.filter.config.ContentHandlerFactory" );
 }
 
 
-
 css::uno::Sequence< OUString > ContentHandlerFactory::impl_getSupportedServiceNames()
 {
-    css::uno::Sequence< OUString > lServiceNames { "com.sun.star.frame.ContentHandlerFactory" };
-    return lServiceNames;
+    return { "com.sun.star.frame.ContentHandlerFactory" };
 }
-
 
 
 css::uno::Reference< css::uno::XInterface > SAL_CALL ContentHandlerFactory::impl_createInstance(const css::uno::Reference< css::lang::XMultiServiceFactory >& xSMGR)

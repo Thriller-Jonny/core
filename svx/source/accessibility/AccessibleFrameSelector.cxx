@@ -50,7 +50,6 @@ using ::com::sun::star::uno::RuntimeException;
 using ::com::sun::star::uno::XInterface;
 using ::com::sun::star::lang::Locale;
 using ::com::sun::star::lang::EventObject;
-using ::com::sun::star::beans::XPropertyChangeListener;
 using ::com::sun::star::awt::XFocusListener;
 
 using namespace ::com::sun::star::accessibility;
@@ -75,12 +74,10 @@ AccFrameSelector::AccFrameSelector( FrameSelector& rFrameSel, FrameBorderType eB
 }
 
 
-
 AccFrameSelector::~AccFrameSelector()
 {
     RemoveFrameSelEventListener();
 }
-
 
 
 void AccFrameSelector::RemoveFrameSelEventListener()
@@ -92,13 +89,11 @@ void AccFrameSelector::RemoveFrameSelEventListener()
 }
 
 
-
 Reference< XAccessibleContext > AccFrameSelector::getAccessibleContext(  )
     throw (RuntimeException, std::exception)
 {
     return this;
 }
-
 
 
 sal_Int32 AccFrameSelector::getAccessibleChildCount(  ) throw (RuntimeException, std::exception)
@@ -305,7 +300,6 @@ css::awt::Rectangle AccFrameSelector::getBounds(  ) throw (RuntimeException, std
 }
 
 
-
 css::awt::Point AccFrameSelector::getLocation(  ) throw (RuntimeException, std::exception)
 {
     SolarMutexGuard aGuard;
@@ -323,7 +317,6 @@ css::awt::Point AccFrameSelector::getLocation(  ) throw (RuntimeException, std::
     css::awt::Point aRet(aPos.X(), aPos.Y());
     return aRet;
 }
-
 
 
 css::awt::Point AccFrameSelector::getLocationOnScreen(  ) throw (RuntimeException, std::exception)
@@ -344,7 +337,6 @@ css::awt::Point AccFrameSelector::getLocationOnScreen(  ) throw (RuntimeExceptio
     css::awt::Point aRet(aPos.X(), aPos.Y());
     return aRet;
 }
-
 
 
 css::awt::Size AccFrameSelector::getSize(  ) throw (RuntimeException, std::exception)
@@ -470,12 +462,12 @@ void AccFrameSelector::NotifyFocusListeners(bool bGetFocus)
         if(nFocusFlags & GetFocusFlags::UniqueMnemonic)
             aEvent.FocusFlags |= css::awt::FocusChangeReason::UNIQUEMNEMONIC;
     }
-    aEvent.Temporary = sal_False;
+    aEvent.Temporary = false;
 
     Reference < XAccessibleContext > xThis( this );
     aEvent.Source = xThis;
 
-    ::cppu::OInterfaceIteratorHelper aIter( maFocusListeners );
+    ::comphelper::OInterfaceIteratorHelper2 aIter( maFocusListeners );
     while( aIter.hasMoreElements() )
     {
         Reference < XFocusListener > xListener( aIter.next(), UNO_QUERY );
@@ -487,7 +479,6 @@ void AccFrameSelector::NotifyFocusListeners(bool bGetFocus)
 }
 
 
-
 IMPL_LINK_TYPED( AccFrameSelector, WindowEventListener, VclWindowEvent&, rEvent, void )
 {
     vcl::Window* pWindow = rEvent.GetWindow();
@@ -497,7 +488,6 @@ IMPL_LINK_TYPED( AccFrameSelector, WindowEventListener, VclWindowEvent&, rEvent,
         ProcessWindowEvent( rEvent );
     }
 }
-
 
 
 void AccFrameSelector::ProcessWindowEvent( const VclWindowEvent& rVclWindowEvent )
@@ -532,7 +522,6 @@ void AccFrameSelector::ProcessWindowEvent( const VclWindowEvent& rVclWindowEvent
 }
 
 
-
 void AccFrameSelector::NotifyAccessibleEvent( const sal_Int16 _nEventId,
     const Any& _rOldValue, const Any& _rNewValue )
 {
@@ -545,7 +534,6 @@ void AccFrameSelector::NotifyAccessibleEvent( const sal_Int16 _nEventId,
 }
 
 
-
 void AccFrameSelector::Invalidate()
 {
     RemoveFrameSelEventListener();
@@ -556,7 +544,6 @@ void AccFrameSelector::Invalidate()
     maFocusListeners.disposeAndClear( aEvent );
     maPropertyListeners.disposeAndClear( aEvent );
 }
-
 
 
 }

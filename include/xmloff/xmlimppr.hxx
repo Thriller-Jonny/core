@@ -45,7 +45,7 @@ class SvXMLImport;
  *
  * It should not be used in any other context.
  */
-struct _ContextID_Index_Pair
+struct ContextID_Index_Pair
 {
     sal_Int16 nContextID;
     sal_Int32 nIndex;
@@ -84,7 +84,7 @@ public:
       */
     void importXML(
             ::std::vector< XMLPropertyState >& rProperties,
-            css::uno::Reference< css::xml::sax::XAttributeList > xAttrList,
+            const css::uno::Reference< css::xml::sax::XAttributeList >& xAttrList,
             const SvXMLUnitConverter& rUnitConverter,
             const SvXMLNamespaceMap& rNamespaceMap,
             sal_uInt32 nPropType,
@@ -106,12 +106,12 @@ public:
     void CheckSpecialContext(
             const ::std::vector< XMLPropertyState >& rProperties,
             const css::uno::Reference< css::beans::XPropertySet >& rPropSet,
-            _ContextID_Index_Pair* pSpecialContextIds ) const;
+            ContextID_Index_Pair* pSpecialContextIds ) const;
 
     bool FillPropertySet(
             const ::std::vector< XMLPropertyState >& rProperties,
             const css::uno::Reference< css::beans::XPropertySet >& rPropSet,
-            _ContextID_Index_Pair* pSpecialContextIds = nullptr ) const;
+            ContextID_Index_Pair* pSpecialContextIds = nullptr ) const;
 
     void FillPropertySequence(
             const ::std::vector< XMLPropertyState >& aProperties,
@@ -122,10 +122,9 @@ public:
         getPropertySetMapper() const;
 
 
-
     /** implementation helper for FillPropertySet: fill an XPropertySet.
      * Exceptions will be asserted. */
-    static bool _FillPropertySet(
+    static bool FillPropertySet_(
         const ::std::vector<XMLPropertyState> & rProperties,
         const css::uno::Reference< css::beans::XPropertySet> & rPropSet,
         const css::uno::Reference< css::beans::XPropertySetInfo> & rPropSetInfo,
@@ -134,11 +133,11 @@ public:
 
         // parameter for use by txtstyli.cxx; allows efficient
         // catching the combined characters property
-        _ContextID_Index_Pair* pSpecialContextIds = nullptr );
+        ContextID_Index_Pair* pSpecialContextIds = nullptr );
 
     /** implementation helper for FillPropertySet: fill an XMultiPropertySet.
      * If unsuccessul, set return value. */
-    static bool _FillMultiPropertySet(
+    static bool FillMultiPropertySet_(
         const ::std::vector<XMLPropertyState> & rProperties,
         const css::uno::Reference< css::beans::XMultiPropertySet> & rMultiPropSet,
         const css::uno::Reference< css::beans::XPropertySetInfo> & rPropSetInfo,
@@ -146,11 +145,11 @@ public:
 
         // parameters for use by txtstyli.cxx; allows efficient
         // catching the combined characters property
-        _ContextID_Index_Pair* pSpecialContextIds = nullptr );
+        ContextID_Index_Pair* pSpecialContextIds = nullptr );
 
     /** implementation helper for FillPropertySet: fill an XTolerantMultiPropertySet.
      * If unsuccessul, set return value. */
-    static bool _FillTolerantMultiPropertySet(
+    static bool FillTolerantMultiPropertySet_(
         const ::std::vector<XMLPropertyState> & rProperties,
         const css::uno::Reference< css::beans::XTolerantMultiPropertySet> & rTolPropSet,
         const rtl::Reference<XMLPropertySetMapper> & rPropMapper,
@@ -158,14 +157,14 @@ public:
 
         // parameters for use by txtstyli.cxx; allows efficient
         // catching the combined characters property
-        _ContextID_Index_Pair* pSpecialContextIds = nullptr );
+        ContextID_Index_Pair* pSpecialContextIds = nullptr );
 
 
-    static void _PrepareForMultiPropertySet(
+    static void PrepareForMultiPropertySet_(
         const ::std::vector<XMLPropertyState> & rProperties,
         const css::uno::Reference< css::beans::XPropertySetInfo> & rPropSetInfo,
         const rtl::Reference<XMLPropertySetMapper> & rPropMapper,
-        _ContextID_Index_Pair* pSpecialContextIds,
+        ContextID_Index_Pair* pSpecialContextIds,
         css::uno::Sequence< OUString >& rNames,
         css::uno::Sequence< css::uno::Any >& rValues);
 };

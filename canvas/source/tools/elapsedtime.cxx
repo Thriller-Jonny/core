@@ -24,7 +24,7 @@
 
 #include <canvas/elapsedtime.hxx>
 
-#if defined(WNT)
+#if defined(_WIN32)
 
 #if defined _MSC_VER
 #pragma warning(push,1)
@@ -50,7 +50,7 @@ namespace canvas {
 namespace tools {
 
 
-#if defined(WNT)
+#if defined(_WIN32)
 // TODO(Q2): is 0 okay for the failure case here?
 double ElapsedTime::getSystemTime()
 {
@@ -142,7 +142,7 @@ void ElapsedTime::reset()
     m_bInHoldMode = false;
 }
 
-void ElapsedTime::adjustTimer( double fOffset, bool /*bLimitToLastQueriedTime*/ )
+void ElapsedTime::adjustTimer( double fOffset )
 {
     // to make getElapsedTime() become _larger_, have to reduce
     // m_fStartTime.

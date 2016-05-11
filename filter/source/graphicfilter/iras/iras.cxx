@@ -19,7 +19,7 @@
 
 
 #include <vcl/graph.hxx>
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 
 class FilterConfigItem;
 
@@ -85,7 +85,6 @@ RASReader::RASReader(SvStream &rRAS)
 RASReader::~RASReader()
 {
 }
-
 
 
 bool RASReader::ReadRAS(Graphic & rGraphic)
@@ -209,7 +208,6 @@ bool RASReader::ImplReadHeader()
     }
     return mbStatus;
 }
-
 
 
 bool RASReader::ImplReadBody(BitmapWriteAccess * pAcc)

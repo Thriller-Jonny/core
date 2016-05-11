@@ -68,8 +68,7 @@ private:
     std::vector<Image>      aBmps;  // indices s. constants BMP_ ....
 
     SVT_DLLPRIVATE void     SetWidthAndHeight();
-    SVT_DLLPRIVATE void     InitData( bool bImagesFromDefault,
-                                      bool _bRadioBtn, const Control* pControlForSettings = nullptr );
+    SVT_DLLPRIVATE void     InitData( bool _bRadioBtn, const Control* pControlForSettings = nullptr );
 public:
                             // include creating default images (CheckBox or RadioButton)
                             SvLBoxButtonData( const Control* pControlForSettings );
@@ -107,7 +106,7 @@ protected:
     OUString maText;
 
 public:
-    SvLBoxString(SvTreeListEntry*, sal_uInt16 nFlags, const OUString& rText);
+    SvLBoxString(const OUString& rText);
     SvLBoxString();
     virtual ~SvLBoxString();
 
@@ -116,7 +115,7 @@ public:
                               SvTreeListEntry* pEntry,
                               SvViewDataItem* pViewData) override;
 
-    OUString GetText() const
+    const OUString& GetText() const
     {
         return maText;
     }
@@ -163,9 +162,7 @@ public:
     // (which cannot be modified via UI), or a static image
     // (see SV_BMP_STATICIMAGE; nFlags are effectively ignored
     // for that kind).
-    SvLBoxButton( SvTreeListEntry* pEntry,
-                  SvLBoxButtonKind eTheKind, sal_uInt16 nFlags,
-                  SvLBoxButtonData* pBData );
+    SvLBoxButton( SvLBoxButtonKind eTheKind, SvLBoxButtonData* pBData );
     SvLBoxButton();
     virtual ~SvLBoxButton();
     virtual void InitViewData(SvTreeListBox* pView,
@@ -246,9 +243,7 @@ class SVT_DLLPUBLIC SvLBoxContextBmp : public SvLBoxItem
 {
     SvLBoxContextBmp_Impl*  m_pImpl;
 public:
-    SvLBoxContextBmp(SvTreeListEntry* pEntry,
-                     sal_uInt16 nItemFlags,
-                     Image aBmp1,
+    SvLBoxContextBmp(Image aBmp1,
                      Image aBmp2,
                      bool bExpanded);
     SvLBoxContextBmp();
@@ -268,7 +263,7 @@ public:
     virtual void Clone(SvLBoxItem* pSource) override;
 
 
-    bool SetModeImages(const Image& rBitmap1, const Image& rBitmap2);
+    void SetModeImages(const Image& rBitmap1, const Image& rBitmap2);
 
     inline void SetBitmap1(const Image& rImage);
     inline void SetBitmap2(const Image& rImage);

@@ -32,6 +32,8 @@
 #include <comphelper/lok.hxx>
 #include <comphelper/processfactory.hxx>
 #include <comphelper/string.hxx>
+#include <comphelper/propertysequence.hxx>
+#include <comphelper/scopeguard.hxx>
 
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/container/XNameAccess.hpp>
@@ -47,6 +49,7 @@
 #include <com/sun/star/ucb/XUniversalContentBroker.hpp>
 #include <com/sun/star/util/URLTransformer.hpp>
 #include <com/sun/star/datatransfer/clipboard/XClipboard.hpp>
+#include <com/sun/star/text/TextContentAnchorType.hpp>
 
 #include <editeng/fontitem.hxx>
 #include <editeng/flstitem.hxx>
@@ -62,7 +65,6 @@
 #include <svx/dialogs.hrc>
 #include <svx/svxids.hrc>
 #include <vcl/svapp.hxx>
-#include <vcl/svpforlokit.hxx>
 #include <tools/resmgr.hxx>
 #include <tools/fract.hxx>
 #include <svtools/ctrltool.hxx>
@@ -101,17 +103,6 @@ typedef struct
     const char *extn;
     const char *filterName;
 } ExtensionMap;
-
-// We need a shared_array for passing into the BitmapDevice (via
-// VirtualDevice.SetOutputSizePixelScaleOffsetAndBuffer which goes via the
-// SvpVirtualDevice, ending up in the basebmp BitmapDevice. However as we're
-// given the array externally we can't delete it, and hence need to override
-// shared_array's default of deleting its pointer.
-template<typename T>
-struct NoDelete
-{
-   void operator()(T* /* p */) {}
-};
 
 static const ExtensionMap aWriterExtensionMap[] =
 {
@@ -185,6 +176,10 @@ static const ExtensionMap aDrawExtensionMap[] =
  * by css, it might turn out to be worth mapping some of these missing cursors
  * to available cursors?
  */
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning( disable : 4592)
+#endif
 static const std::map <PointerStyle, OString> aPointerMap {
     { PointerStyle::Arrow, "default" },
     // PointerStyle::Null ?
@@ -192,6 +187,7 @@ static const std::map <PointerStyle, OString> aPointerMap {
     { PointerStyle::Text, "text" },
     { PointerStyle::Help, "help" },
     { PointerStyle::Cross, "crosshair" },
+    { PointerStyle::Fill, "fill" },
     { PointerStyle::Move, "move" },
     { PointerStyle::NSize, "n-resize" },
     { PointerStyle::SSize, "s-resize" },
@@ -227,6 +223,9 @@ static const std::map <PointerStyle, OString> aPointerMap {
     // Pivot Delete, TabSelectS through TabSelectSW
     // PaintBrush, HideWhiteSpace, ShowWhiteSpace
 };
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 static OUString getUString(const char* pString)
 {
@@ -260,7 +259,7 @@ static OUString getAbsoluteURL(const char* pURL)
     return OUString();
 }
 
-static void jsonToPropertyValues(const char* pJSON, uno::Sequence<beans::PropertyValue>& rPropertyValues)
+static std::vector<beans::PropertyValue> jsonToPropertyValuesVector(const char* pJSON)
 {
     std::vector<beans::PropertyValue> aArguments;
     if (pJSON && pJSON[0] != '\0')
@@ -287,11 +286,11 @@ static void jsonToPropertyValues(const char* pJSON, uno::Sequence<beans::Propert
             else if (rType == "unsigned short")
                 aValue.Value <<= static_cast<sal_uInt16>(OString(rValue.c_str()).toUInt32());
             else
-                SAL_WARN("desktop.lib", "jsonToPropertyValues: unhandled type '"<<rType<<"'");
+                SAL_WARN("desktop.lib", "jsonToPropertyValuesVector: unhandled type '"<<rType<<"'");
             aArguments.push_back(aValue);
         }
     }
-    rPropertyValues = comphelper::containerToSequence(aArguments);
+    return aArguments;
 }
 
 extern "C"
@@ -311,6 +310,12 @@ void        doc_paintTile(LibreOfficeKitDocument* pThis,
                           const int nCanvasWidth, const int nCanvasHeight,
                           const int nTilePosX, const int nTilePosY,
                           const int nTileWidth, const int nTileHeight);
+void        doc_paintPartTile(LibreOfficeKitDocument* pThis,
+                              unsigned char* pBuffer,
+                              const int nPart,
+                              const int nCanvasWidth, const int nCanvasHeight,
+                              const int nTilePosX, const int nTilePosY,
+                              const int nTileWidth, const int nTileHeight);
 static int doc_getTileMode(LibreOfficeKitDocument* pThis);
 static void doc_getDocumentSize(LibreOfficeKitDocument* pThis,
                                 long* pWidth,
@@ -358,6 +363,7 @@ static void doc_setClientZoom(LibreOfficeKitDocument* pThis,
                                     int nTilePixelHeight,
                                     int nTileTwipWidth,
                                     int nTileTwipHeight);
+static void doc_setClientVisibleArea(LibreOfficeKitDocument* pThis, int nX, int nY, int nWidth, int nHeight);
 static int doc_createView(LibreOfficeKitDocument* pThis);
 static void doc_destroyView(LibreOfficeKitDocument* pThis, int nId);
 static void doc_setView(LibreOfficeKitDocument* pThis, int nId);
@@ -367,11 +373,10 @@ static unsigned char* doc_renderFont(LibreOfficeKitDocument* pThis,
                           const char *pFontName,
                           int* pFontWidth,
                           int* pFontHeight);
+static char* doc_getPartHash(LibreOfficeKitDocument* pThis, int nPart);
 
 LibLODocument_Impl::LibLODocument_Impl(const uno::Reference <css::lang::XComponent> &xComponent)
     : mxComponent(xComponent)
-    , mpCallback(nullptr)
-    , mpCallbackData(nullptr)
 {
     if (!(m_pDocumentClass = gDocumentClass.lock()))
     {
@@ -388,8 +393,8 @@ LibLODocument_Impl::LibLODocument_Impl(const uno::Reference <css::lang::XCompone
         m_pDocumentClass->setPart = doc_setPart;
         m_pDocumentClass->getPartName = doc_getPartName;
         m_pDocumentClass->setPartMode = doc_setPartMode;
-        m_pDocumentClass->renderFont = doc_renderFont;
         m_pDocumentClass->paintTile = doc_paintTile;
+        m_pDocumentClass->paintPartTile = doc_paintPartTile;
         m_pDocumentClass->getTileMode = doc_getTileMode;
         m_pDocumentClass->getDocumentSize = doc_getDocumentSize;
         m_pDocumentClass->initializeForRendering = doc_initializeForRendering;
@@ -404,12 +409,16 @@ LibLODocument_Impl::LibLODocument_Impl(const uno::Reference <css::lang::XCompone
         m_pDocumentClass->resetSelection = doc_resetSelection;
         m_pDocumentClass->getCommandValues = doc_getCommandValues;
         m_pDocumentClass->setClientZoom = doc_setClientZoom;
+        m_pDocumentClass->setClientVisibleArea = doc_setClientVisibleArea;
 
         m_pDocumentClass->createView = doc_createView;
         m_pDocumentClass->destroyView = doc_destroyView;
         m_pDocumentClass->setView = doc_setView;
         m_pDocumentClass->getView = doc_getView;
         m_pDocumentClass->getViews = doc_getViews;
+
+        m_pDocumentClass->renderFont = doc_renderFont;
+        m_pDocumentClass->getPartHash = doc_getPartHash;
 
         gDocumentClass = m_pDocumentClass;
     }
@@ -431,6 +440,7 @@ static void                    lo_destroy       (LibreOfficeKit* pThis);
 static int                     lo_initialize    (LibreOfficeKit* pThis, const char* pInstallPath, const char* pUserProfilePath);
 static LibreOfficeKitDocument* lo_documentLoad  (LibreOfficeKit* pThis, const char* pURL);
 static char *                  lo_getError      (LibreOfficeKit* pThis);
+static void                    lo_freeError     (char* pFree);
 static LibreOfficeKitDocument* lo_documentLoadWithOptions  (LibreOfficeKit* pThis,
                                                            const char* pURL,
                                                            const char* pOptions);
@@ -438,12 +448,17 @@ static void                    lo_registerCallback (LibreOfficeKit* pThis,
                                                     LibreOfficeKitCallback pCallback,
                                                     void* pData);
 static char* lo_getFilterTypes(LibreOfficeKit* pThis);
+static void lo_setOptionalFeatures(LibreOfficeKit* pThis, uint64_t features);
+static void                    lo_setDocumentPassword(LibreOfficeKit* pThis,
+                                                       const char* pURL,
+                                                       const char* pPassword);
 
 LibLibreOffice_Impl::LibLibreOffice_Impl()
     : m_pOfficeClass( gOfficeClass.lock() )
     , maThread(nullptr)
     , mpCallback(nullptr)
     , mpCallbackData(nullptr)
+    , mOptionalFeatures(0)
 {
     if(!m_pOfficeClass) {
         m_pOfficeClass.reset(new LibreOfficeKitClass);
@@ -452,14 +467,21 @@ LibLibreOffice_Impl::LibLibreOffice_Impl()
         m_pOfficeClass->destroy = lo_destroy;
         m_pOfficeClass->documentLoad = lo_documentLoad;
         m_pOfficeClass->getError = lo_getError;
+        m_pOfficeClass->freeError = lo_freeError;
         m_pOfficeClass->documentLoadWithOptions = lo_documentLoadWithOptions;
         m_pOfficeClass->registerCallback = lo_registerCallback;
         m_pOfficeClass->getFilterTypes = lo_getFilterTypes;
+        m_pOfficeClass->setOptionalFeatures = lo_setOptionalFeatures;
+        m_pOfficeClass->setDocumentPassword = lo_setDocumentPassword;
 
         gOfficeClass = m_pOfficeClass;
     }
 
     pClass = m_pOfficeClass.get();
+}
+
+LibLibreOffice_Impl::~LibLibreOffice_Impl()
+{
 }
 
 namespace
@@ -523,7 +545,16 @@ static LibreOfficeKitDocument* lo_documentLoadWithOptions(LibreOfficeKit* pThis,
                                                        uno::makeAny(OUString::createFromAscii(pOptions)),
                                                        beans::PropertyState_DIRECT_VALUE);
 
-        uno::Reference<task::XInteractionHandler2> xInteraction(new LOKInteractionHandler(::comphelper::getProcessComponentContext()));
+        rtl::Reference<LOKInteractionHandler> const pInteraction(
+            new LOKInteractionHandler(::comphelper::getProcessComponentContext(), "load", pLib));
+        auto const pair(pLib->mInteractionMap.insert(std::make_pair(aURL.toUtf8(), pInteraction)));
+        comphelper::ScopeGuard const g([&] () {
+                if (pair.second)
+                {
+                    pLib->mInteractionMap.erase(aURL.toUtf8());
+                }
+            });
+        uno::Reference<task::XInteractionHandler2> const xInteraction(pInteraction.get());
         aFilterOptions[1].Name = "InteractionHandler";
         aFilterOptions[1].Value <<= xInteraction;
 
@@ -541,6 +572,8 @@ static LibreOfficeKitDocument* lo_documentLoadWithOptions(LibreOfficeKit* pThis,
         xComponent = xComponentLoader->loadComponentFromURL(
                                             aURL, "_blank", 0,
                                             aFilterOptions);
+
+        assert(!xComponent.is() || pair.second); // concurrent loading of same URL ought to fail
 
         if (!xComponent.is())
         {
@@ -604,6 +637,7 @@ static int doc_saveAs(LibreOfficeKitDocument* pThis, const char* sUrl, const cha
             break;
         case LOK_DOCTYPE_OTHER:
         default:
+            SAL_INFO("lok", "Can't save document - unsopported document type.");
             return false;
         }
 
@@ -639,13 +673,52 @@ static int doc_saveAs(LibreOfficeKitDocument* pThis, const char* sUrl, const cha
 
         OUString aFilterOptions = getUString(pFilterOptions);
 
+        // 'TakeOwnership' == this is a 'real' SaveAs (that is, the document
+        // gets a new name).  When this is not provided, the meaning of
+        // saveAs() is more like save-a-copy, which allows saving to any
+        // random format like PDF or PNG.
+        // It is not a real filter option, so we have to filter it out.
+        bool bTakeOwnership = false;
+        int nIndex = -1;
+        if (aFilterOptions == "TakeOwnership")
+        {
+            bTakeOwnership = true;
+            aFilterOptions.clear();
+        }
+        else if ((nIndex = aFilterOptions.indexOf(",TakeOwnership")) >= 0 || (nIndex = aFilterOptions.indexOf("TakeOwnership,")) >= 0)
+        {
+            OUString aFiltered;
+            if (nIndex > 0)
+                aFiltered = aFilterOptions.copy(0, nIndex);
+            if (nIndex + 14 < aFilterOptions.getLength())
+                aFiltered = aFiltered + aFilterOptions.copy(nIndex + 14);
+
+            bTakeOwnership = true;
+            aFilterOptions = aFiltered;
+        }
+
         MediaDescriptor aSaveMediaDescriptor;
-        aSaveMediaDescriptor["Overwrite"] <<= sal_True;
+        aSaveMediaDescriptor["Overwrite"] <<= true;
         aSaveMediaDescriptor["FilterName"] <<= aFilterName;
         aSaveMediaDescriptor[MediaDescriptor::PROP_FILTEROPTIONS()] <<= aFilterOptions;
 
+        // add interaction handler too
+        if (gImpl)
+        {
+            // gImpl does not have to exist when running from a unit test
+            rtl::Reference<LOKInteractionHandler> const pInteraction(
+                    new LOKInteractionHandler(::comphelper::getProcessComponentContext(), "saveas", gImpl, pDocument));
+            uno::Reference<task::XInteractionHandler2> const xInteraction(pInteraction.get());
+
+            aSaveMediaDescriptor[MediaDescriptor::PROP_INTERACTIONHANDLER()] <<= xInteraction;
+        }
+
         uno::Reference<frame::XStorable> xStorable(pDocument->mxComponent, uno::UNO_QUERY_THROW);
-        xStorable->storeToURL(aURL, aSaveMediaDescriptor.getAsConstPropertyValueList());
+
+        if (bTakeOwnership)
+            xStorable->storeAsURL(aURL, aSaveMediaDescriptor.getAsConstPropertyValueList());
+        else
+            xStorable->storeToURL(aURL, aSaveMediaDescriptor.getAsConstPropertyValueList());
 
         return true;
     }
@@ -661,9 +734,13 @@ static void doc_iniUnoCommands ()
     OUString sUnoCommands[] =
     {
         OUString(".uno:BackColor"),
+        OUString(".uno:BackgroundColor"),
         OUString(".uno:Bold"),
         OUString(".uno:CenterPara"),
+        OUString(".uno:CharBackColor"),
+        OUString(".uno:CharBackgroundExt"),
         OUString(".uno:CharFontName"),
+        OUString(".uno:Color"),
         OUString(".uno:DecrementIndent"),
         OUString(".uno:DefaultBullet"),
         OUString(".uno:DefaultNumbering"),
@@ -680,7 +757,13 @@ static void doc_iniUnoCommands ()
         OUString(".uno:SuperScript"),
         OUString(".uno:Strikeout"),
         OUString(".uno:StyleApply"),
-        OUString(".uno:Underline")
+        OUString(".uno:Underline"),
+        OUString(".uno:ModifiedStatus"),
+        OUString(".uno:Undo"),
+        OUString(".uno:Redo"),
+        OUString(".uno:InsertPage"),
+        OUString(".uno:DeletePage"),
+        OUString(".uno:DuplicatePage")
     };
 
     util::URL aCommandURL;
@@ -705,11 +788,11 @@ static void doc_iniUnoCommands ()
     SfxSlotPool& rSlotPool = SfxSlotPool::GetSlotPool(pViewFrame);
     uno::Reference<util::XURLTransformer> xParser(util::URLTransformer::create(xContext));
 
-    for (sal_uInt32 nIterator = 0; nIterator < SAL_N_ELEMENTS(sUnoCommands); nIterator++)
+    for (const auto & sUnoCommand : sUnoCommands)
     {
         const SfxSlot* pSlot = nullptr;
 
-        aCommandURL.Complete = sUnoCommands[nIterator];
+        aCommandURL.Complete = sUnoCommand;
         xParser->parseStrict(aCommandURL);
         pSlot = rSlotPool.GetUnoSlot(aCommandURL.Path);
 
@@ -743,7 +826,7 @@ static int doc_getDocumentType (LibreOfficeKitDocument* pThis)
         {
             return LOK_DOCTYPE_DRAWING;
         }
-        else if (xDocument->supportsService("com.sun.star.text.TextDocument"))
+        else if (xDocument->supportsService("com.sun.star.text.TextDocument") || xDocument->supportsService("com.sun.star.text.WebDocument"))
         {
             return LOK_DOCTYPE_TEXT;
         }
@@ -830,6 +913,23 @@ static char* doc_getPartName(LibreOfficeKitDocument* pThis, int nPart)
 
 }
 
+static char* doc_getPartHash(LibreOfficeKitDocument* pThis, int nPart)
+{
+    ITiledRenderable* pDoc = getTiledRenderable(pThis);
+    if (!pDoc)
+    {
+        gImpl->maLastExceptionMsg = "Document doesn't support tiled rendering";
+        return nullptr;
+    }
+
+    OUString sHash = pDoc->getPartHash(nPart);
+    OString aString = OUStringToOString(sHash, RTL_TEXTENCODING_UTF8);
+    char* pMemory = static_cast<char*>(malloc(aString.getLength() + 1));
+    strcpy(pMemory, aString.getStr());
+    return pMemory;
+
+}
+
 static void doc_setPartMode(LibreOfficeKitDocument* pThis,
                             int nPartMode)
 {
@@ -865,11 +965,11 @@ static void doc_setPartMode(LibreOfficeKitDocument* pThis,
     }
 }
 
-void doc_paintTile (LibreOfficeKitDocument* pThis,
-                    unsigned char* pBuffer,
-                    const int nCanvasWidth, const int nCanvasHeight,
-                    const int nTilePosX, const int nTilePosY,
-                    const int nTileWidth, const int nTileHeight)
+void doc_paintTile(LibreOfficeKitDocument* pThis,
+                   unsigned char* pBuffer,
+                   const int nCanvasWidth, const int nCanvasHeight,
+                   const int nTilePosX, const int nTilePosY,
+                   const int nTileWidth, const int nTileHeight)
 {
     SAL_INFO( "lok.tiledrendering", "paintTile: painting [" << nTileWidth << "x" << nTileHeight <<
               "]@(" << nTilePosX << ", " << nTilePosY << ") to [" <<
@@ -902,11 +1002,9 @@ void doc_paintTile (LibreOfficeKitDocument* pThis,
     pDevice->SetBackground(Wallpaper(Color(COL_TRANSPARENT)));
 #endif
 
-    boost::shared_array< sal_uInt8 > aBuffer( pBuffer, NoDelete< sal_uInt8 >() );
-
     pDevice->SetOutputSizePixelScaleOffsetAndBuffer(
                 Size(nCanvasWidth, nCanvasHeight), Fraction(1.0), Point(),
-                aBuffer);
+                pBuffer);
 
     pDoc->paintTile(*pDevice.get(), nCanvasWidth, nCanvasHeight,
                     nTilePosX, nTilePosY, nTileWidth, nTileHeight);
@@ -934,6 +1032,51 @@ void doc_paintTile (LibreOfficeKitDocument* pThis,
     (void) nTileWidth;
     (void) nTileHeight;
 #endif
+}
+
+
+void doc_paintPartTile(LibreOfficeKitDocument* pThis,
+                       unsigned char* pBuffer,
+                       const int nPart,
+                       const int nCanvasWidth, const int nCanvasHeight,
+                       const int nTilePosX, const int nTilePosY,
+                       const int nTileWidth, const int nTileHeight)
+{
+    SAL_INFO( "lok.tiledrendering", "paintPartTile: painting @ " << nPart << " ["
+               << nTileWidth << "x" << nTileHeight << "]@("
+               << nTilePosX << ", " << nTilePosY << ") to ["
+               << nCanvasWidth << "x" << nCanvasHeight << "]px" );
+
+    // Disable callbacks while we are painting.
+    LibLODocument_Impl* pDocument = static_cast<LibLODocument_Impl*>(pThis);
+    pDocument->mpCallbackFlushHandler->setPartTilePainting(true);
+    try
+    {
+        // Text documents have a single coordinate system; don't change part.
+        int nOrigPart = 0;
+        const bool isText = (doc_getDocumentType(pThis) == LOK_DOCTYPE_TEXT);
+        if (!isText)
+        {
+            nOrigPart = doc_getPart(pThis);
+            if (nPart != nOrigPart)
+            {
+                doc_setPart(pThis, nPart);
+            }
+        }
+
+        doc_paintTile(pThis, pBuffer, nCanvasWidth, nCanvasHeight, nTilePosX, nTilePosY, nTileWidth, nTileHeight);
+
+        if (!isText && nPart != nOrigPart)
+        {
+            doc_setPart(pThis, nOrigPart);
+        }
+    }
+    catch (const std::exception&)
+    {
+        // Nothing to do but restore the PartTilePainting flag.
+    }
+
+    pDocument->mpCallbackFlushHandler->setPartTilePainting(false);
 }
 
 static int doc_getTileMode(LibreOfficeKitDocument* /*pThis*/)
@@ -965,9 +1108,9 @@ static void doc_initializeForRendering(LibreOfficeKitDocument* pThis,
     if (pDoc)
     {
         doc_iniUnoCommands();
-        uno::Sequence<beans::PropertyValue> aPropertyValues;
-        jsonToPropertyValues(pArguments, aPropertyValues);
-        pDoc->initializeForTiledRendering(aPropertyValues);
+
+        pDoc->initializeForTiledRendering(
+                comphelper::containerToSequence(jsonToPropertyValuesVector(pArguments)));
     }
 }
 
@@ -977,13 +1120,12 @@ static void doc_registerCallback(LibreOfficeKitDocument* pThis,
 {
     LibLODocument_Impl* pDocument = static_cast<LibLODocument_Impl*>(pThis);
 
-    pDocument->mpCallback = pCallback;
-    pDocument->mpCallbackData = pData;
+    pDocument->mpCallbackFlushHandler.reset(new CallbackFlushHandler(pCallback, pData));
 
     if (comphelper::LibreOfficeKit::isViewCallback())
     {
         if (SfxViewShell* pViewShell = SfxViewFrame::Current()->GetViewShell())
-            pViewShell->registerLibreOfficeKitViewCallback(pCallback, pData);
+            pViewShell->registerLibreOfficeKitViewCallback(CallbackFlushHandler::callback, pDocument->mpCallbackFlushHandler.get());
     }
     else
     {
@@ -994,7 +1136,7 @@ static void doc_registerCallback(LibreOfficeKitDocument* pThis,
             return;
         }
 
-        pDoc->registerCallback(pCallback, pData);
+        pDoc->registerCallback(CallbackFlushHandler::callback, pDocument->mpCallbackFlushHandler.get());
     }
 }
 
@@ -1020,14 +1162,12 @@ static void doc_postKeyEvent(LibreOfficeKitDocument* pThis, int nType, int nChar
 class DispatchResultListener : public cppu::WeakImplHelper<css::frame::XDispatchResultListener>
 {
     OString maCommand;                 ///< Command for which this is the result.
-    LibreOfficeKitCallback mpCallback; ///< Callback to call.
-    void* mpCallbackData;              ///< The callback's data.
+    std::shared_ptr<CallbackFlushHandler> mpCallback; ///< Callback to call.
 
 public:
-    DispatchResultListener(const char* pCommand, LibreOfficeKitCallback pCallback, void* pCallbackData)
+    DispatchResultListener(const char* pCommand, std::shared_ptr<CallbackFlushHandler>& pCallback)
         : maCommand(pCommand)
         , mpCallback(pCallback)
-        , mpCallbackData(pCallbackData)
     {
         assert(mpCallback);
     }
@@ -1048,7 +1188,7 @@ public:
 
         std::stringstream aStream;
         boost::property_tree::write_json(aStream, aTree);
-        mpCallback(LOK_CALLBACK_UNO_COMMAND_RESULT, strdup(aStream.str().c_str()), mpCallbackData);
+        mpCallback->queue(LOK_CALLBACK_UNO_COMMAND_RESULT, strdup(aStream.str().c_str()));
     }
 
     virtual void SAL_CALL disposing(const css::lang::EventObject&) throw (css::uno::RuntimeException, std::exception) override {}
@@ -1057,20 +1197,33 @@ public:
 static void doc_postUnoCommand(LibreOfficeKitDocument* pThis, const char* pCommand, const char* pArguments, bool bNotifyWhenFinished)
 {
     OUString aCommand(pCommand, strlen(pCommand), RTL_TEXTENCODING_UTF8);
-
-    uno::Sequence<beans::PropertyValue> aPropertyValues;
-    jsonToPropertyValues(pArguments, aPropertyValues);
-    bool bResult = false;
-
     LibLODocument_Impl* pDocument = static_cast<LibLODocument_Impl*>(pThis);
 
-    if (bNotifyWhenFinished && pDocument->mpCallback)
+    std::vector<beans::PropertyValue> aPropertyValuesVector(jsonToPropertyValuesVector(pArguments));
+
+    // handle potential interaction
+    if (gImpl && aCommand == ".uno:Save")
     {
-        bResult = comphelper::dispatchCommand(aCommand, aPropertyValues,
-                new DispatchResultListener(pCommand, pDocument->mpCallback, pDocument->mpCallbackData));
+        rtl::Reference<LOKInteractionHandler> const pInteraction(
+            new LOKInteractionHandler(::comphelper::getProcessComponentContext(), "save", gImpl, pDocument));
+        uno::Reference<task::XInteractionHandler2> const xInteraction(pInteraction.get());
+
+        beans::PropertyValue aValue;
+        aValue.Name = "InteractionHandler";
+        aValue.Value <<= xInteraction;
+
+        aPropertyValuesVector.push_back(aValue);
+    }
+
+    bool bResult = false;
+
+    if (bNotifyWhenFinished && pDocument->mpCallbackFlushHandler)
+    {
+        bResult = comphelper::dispatchCommand(aCommand, comphelper::containerToSequence(aPropertyValuesVector),
+                new DispatchResultListener(pCommand, pDocument->mpCallbackFlushHandler));
     }
     else
-        bResult = comphelper::dispatchCommand(aCommand, aPropertyValues);
+        bResult = comphelper::dispatchCommand(aCommand, comphelper::containerToSequence(aPropertyValuesVector));
 
     if (!bResult)
     {
@@ -1090,7 +1243,6 @@ static void doc_postMouseEvent(LibreOfficeKitDocument* pThis, int nType, int nX,
     pDoc->postMouseEvent(nType, nX, nY, nCount, nButtons, nModifier);
 
     Pointer aPointer = pDoc->getPointer();
-
     // We don't map all possible pointers hence we need a default
     OString aPointerString = "default";
     auto aIt = aPointerMap.find(aPointer.GetStyle());
@@ -1100,9 +1252,9 @@ static void doc_postMouseEvent(LibreOfficeKitDocument* pThis, int nType, int nX,
     }
 
     LibLODocument_Impl* pLib = static_cast<LibLODocument_Impl*>(pThis);
-    if (pLib->mpCallback && pLib->mpCallbackData)
+    if (pLib->mpCallbackFlushHandler)
     {
-        pLib->mpCallback(LOK_CALLBACK_MOUSE_POINTER, aPointerString.getStr(), pLib->mpCallbackData);
+        pLib->mpCallbackFlushHandler->queue(LOK_CALLBACK_MOUSE_POINTER, aPointerString.getStr());
     }
 }
 
@@ -1164,7 +1316,10 @@ static bool doc_paste(LibreOfficeKitDocument* pThis, const char* pMimeType, cons
         return false;
     }
 
-    uno::Sequence<beans::PropertyValue> aPropertyValues;
+    uno::Sequence<beans::PropertyValue> aPropertyValues(comphelper::InitPropertySequence(
+    {
+        {"AnchorType", uno::makeAny(static_cast<sal_uInt16>(text::TextContentAnchorType_AS_CHARACTER))},
+    }));
     if (!comphelper::dispatchCommand(".uno:Paste", aPropertyValues))
     {
         gImpl->maLastExceptionMsg = "Failed to dispatch the .uno: command";
@@ -1213,8 +1368,8 @@ static char* getFonts (const char* pCommand)
         for (sal_uInt16 i = 0; i < nFontCount; ++i)
         {
             boost::property_tree::ptree aChildren;
-            const vcl::FontInfo& rInfo = pList->GetFontName(i);
-            const sal_IntPtr* pAry = pList->GetSizeAry(rInfo);
+            const FontMetric& rFontMetric = pList->GetFontName(i);
+            const sal_IntPtr* pAry = pList->GetSizeAry(rFontMetric);
             sal_uInt16 nSizeCount = 0;
             while (pAry[nSizeCount])
             {
@@ -1223,7 +1378,7 @@ static char* getFonts (const char* pCommand)
                 aChildren.push_back(std::make_pair("", aChild));
                 nSizeCount++;
             }
-            aValues.add_child(rInfo.GetName().toUtf8().getStr(), aChildren);
+            aValues.add_child(rFontMetric.GetFamilyName().toUtf8().getStr(), aChildren);
         }
     }
     aTree.add_child("commandValues", aValues);
@@ -1276,18 +1431,11 @@ static char* getStyles(LibreOfficeKitDocument* pThis, const char* pCommand)
         {
             for (const OUString& rStyle: aWriterStyles)
             {
-                uno::Reference< beans::XPropertySet > xStyle;
-                xStyleFamily->getByName(rStyle) >>= xStyle;
-                OUString sName;
-                xStyle->getPropertyValue("DisplayName") >>= sName;
-                if( !sName.isEmpty() )
-                {
-                    aDefaultStyleNames.insert( sName );
+                aDefaultStyleNames.insert( rStyle );
 
-                    boost::property_tree::ptree aChild;
-                    aChild.put("", sName.toUtf8());
-                    aChildren.push_back(std::make_pair("", aChild));
-                }
+                boost::property_tree::ptree aChild;
+                aChild.put("", rStyle.toUtf8());
+                aChildren.push_back(std::make_pair("", aChild));
             }
         }
 
@@ -1296,10 +1444,11 @@ static char* getStyles(LibreOfficeKitDocument* pThis, const char* pCommand)
         {
             // Filter out the default styles - they are already at the top
             // of the list
-            if (aDefaultStyleNames.find(rStyle) == aDefaultStyleNames.end())
+            if (aDefaultStyleNames.find(rStyle) == aDefaultStyleNames.end() ||
+                (sStyleFam != "ParagraphStyles" || doc_getDocumentType(pThis) != LOK_DOCTYPE_TEXT) )
             {
                 boost::property_tree::ptree aChild;
-                aChild.put("", rStyle);
+                aChild.put("", rStyle.toUtf8());
                 aChildren.push_back(std::make_pair("", aChild));
             }
         }
@@ -1476,6 +1625,19 @@ static void doc_setClientZoom(LibreOfficeKitDocument* pThis, int nTilePixelWidth
     pDoc->setClientZoom(nTilePixelWidth, nTilePixelHeight, nTileTwipWidth, nTileTwipHeight);
 }
 
+static void doc_setClientVisibleArea(LibreOfficeKitDocument* pThis, int nX, int nY, int nWidth, int nHeight)
+{
+    ITiledRenderable* pDoc = getTiledRenderable(pThis);
+    if (!pDoc)
+    {
+        gImpl->maLastExceptionMsg = "Document doesn't support tiled rendering";
+        return;
+    }
+
+    Rectangle aRectangle(Point(nX, nY), Size(nWidth, nHeight));
+    pDoc->setClientVisibleArea(aRectangle);
+}
+
 static int doc_createView(LibreOfficeKitDocument* /*pThis*/)
 {
     SolarMutexGuard aGuard;
@@ -1527,8 +1689,8 @@ unsigned char* doc_renderFont(LibreOfficeKitDocument* /*pThis*/,
         sal_uInt16 nFontCount = pList->GetFontNameCount();
         for (sal_uInt16 i = 0; i < nFontCount; ++i)
         {
-            const vcl::FontInfo& rInfo = pList->GetFontName(i);
-            OUString aFontName = rInfo.GetName();
+            const FontMetric& rFontMetric = pList->GetFontName(i);
+            const OUString& aFontName = rFontMetric.GetFamilyName();
             if (!aSearchedFontName.equals(aFontName.toUtf8().getStr()))
                 continue;
 
@@ -1536,8 +1698,8 @@ unsigned char* doc_renderFont(LibreOfficeKitDocument* /*pThis*/,
                 VclPtr<VirtualDevice>::Create(
                     nullptr, Size(1, 1), DeviceFormat::DEFAULT));
             ::Rectangle aRect;
-            vcl::Font aFont(rInfo);
-            aFont.SetSize(Size(0, 25));
+            vcl::Font aFont(rFontMetric);
+            aFont.SetFontSize(Size(0, 25));
             aDevice->SetFont(aFont);
             aDevice->GetTextBoundRect(aRect, aFontName);
             int nFontWidth = aRect.BottomRight().X() + 1;
@@ -1547,12 +1709,11 @@ unsigned char* doc_renderFont(LibreOfficeKitDocument* /*pThis*/,
 
             unsigned char* pBuffer = static_cast<unsigned char*>(malloc(4 * nFontWidth * nFontHeight));
             memset(pBuffer, 0, nFontWidth * nFontHeight * 4);
-            boost::shared_array<sal_uInt8> aBuffer(pBuffer, NoDelete< sal_uInt8 >());
 
             aDevice->SetBackground(Wallpaper(COL_TRANSPARENT));
             aDevice->SetOutputSizePixelScaleOffsetAndBuffer(
                         Size(nFontWidth, nFontHeight), Fraction(1.0), Point(),
-                        aBuffer);
+                        pBuffer);
             aDevice->DrawText(Point(0,0), aFontName);
 
             return pBuffer;
@@ -1568,6 +1729,11 @@ static char* lo_getError (LibreOfficeKit *pThis)
     char* pMemory = static_cast<char*>(malloc(aString.getLength() + 1));
     strcpy(pMemory, aString.getStr());
     return pMemory;
+}
+
+static void lo_freeError(char* pFree)
+{
+    free(pFree);
 }
 
 static char* lo_getFilterTypes(LibreOfficeKit* pThis)
@@ -1606,6 +1772,22 @@ static char* lo_getFilterTypes(LibreOfficeKit* pThis)
     return strdup(aStream.str().c_str());
 }
 
+static void lo_setOptionalFeatures(LibreOfficeKit* pThis, uint64_t const features)
+{
+    LibLibreOffice_Impl *const pLib = static_cast<LibLibreOffice_Impl*>(pThis);
+    pLib->mOptionalFeatures = features;
+}
+
+static void lo_setDocumentPassword(LibreOfficeKit* pThis,
+        const char* pURL, const char* pPassword)
+{
+    assert(pThis);
+    assert(pURL);
+    LibLibreOffice_Impl *const pLib = static_cast<LibLibreOffice_Impl*>(pThis);
+    assert(pLib->mInteractionMap.find(OString(pURL)) != pLib->mInteractionMap.end());
+    pLib->mInteractionMap.find(OString(pURL))->second->SetPassword(pPassword);
+}
+
 static void force_c_locale()
 {
     // force locale (and resource files loaded) to en-US
@@ -1639,6 +1821,7 @@ static bool initialize_uno(const OUString& aAppProgramURL)
 #endif
 
     xContext = cppu::defaultBootstrap_InitialComponentContext();
+
     if (!xContext.is())
     {
         gImpl->maLastExceptionMsg = "XComponentContext could not be created";
@@ -1671,6 +1854,9 @@ static void lo_startmain(void*)
 {
     osl_setThreadName("lo_startmain");
 
+    if (GetpApp())
+        Application::GetSolarMutex().tryToAcquire();
+
     soffice_main();
 }
 
@@ -1697,22 +1883,56 @@ static void lo_status_indicator_callback(void *data, comphelper::LibreOfficeKit:
     }
 }
 
-static int lo_initialize(LibreOfficeKit* pThis, const char* pAppPath, const char* pUserProfilePath)
+static int lo_initialize(LibreOfficeKit* pThis, const char* pAppPath, const char* pUserProfileUrl)
 {
+    enum {
+        PRE_INIT,     // setup shared data in master process
+        SECOND_INIT,  // complete init. after fork
+        FULL_INIT     // do a standard complete init.
+    } eStage;
+
+    // Did we do a pre-initialize
+    static bool bPreInited = false;
+
+    // What stage are we at ?
+    if (pThis == nullptr)
+        eStage = PRE_INIT;
+    else if (bPreInited)
+        eStage = SECOND_INIT;
+    else
+        eStage = FULL_INIT;
+
     LibLibreOffice_Impl* pLib = static_cast<LibLibreOffice_Impl*>(pThis);
 
     if (bInitialized)
         return 1;
 
-    comphelper::LibreOfficeKit::setActive();
+    if (eStage != SECOND_INIT)
+        comphelper::LibreOfficeKit::setActive();
 
     static bool bViewCallback = getenv("LOK_VIEW_CALLBACK");
     comphelper::LibreOfficeKit::setViewCallback(bViewCallback);
 
-    comphelper::LibreOfficeKit::setStatusIndicatorCallback(lo_status_indicator_callback, pLib);
+    if (eStage != PRE_INIT)
+        comphelper::LibreOfficeKit::setStatusIndicatorCallback(lo_status_indicator_callback, pLib);
 
-    if (pUserProfilePath)
-        rtl::Bootstrap::set("UserInstallation", OUString(pUserProfilePath, strlen(pUserProfilePath), RTL_TEXTENCODING_UTF8));
+    if (eStage != SECOND_INIT && pUserProfileUrl)
+    {
+        OUString url(
+            pUserProfileUrl, strlen(pUserProfileUrl), RTL_TEXTENCODING_UTF8);
+        OUString path;
+        if (url.startsWithIgnoreAsciiCase("vnd.sun.star.pathname:", &path))
+        {
+            OUString url2;
+            osl::FileBase::RC e = osl::FileBase::getFileURLFromSystemPath(
+                path, url2);
+            if (e == osl::FileBase::E_None)
+                url = url2;
+            else
+                SAL_WARN("lok", "resolving <" << url << "> failed with " << +e);
+        }
+        rtl::Bootstrap::set("UserInstallation", url);
+    }
 
     OUString aAppPath;
     if (pAppPath)
@@ -1734,25 +1954,53 @@ static int lo_initialize(LibreOfficeKit* pThis, const char* pAppPath, const char
 
     try
     {
-        SAL_INFO("lok", "Attempting to initalize UNO");
-        if (!initialize_uno(aAppURL))
+        if (eStage != SECOND_INIT)
         {
-            return false;
+            SAL_INFO("lok", "Attempting to initialize UNO");
+
+            if (!initialize_uno(aAppURL))
+                return false;
+
+            // Force headless -- this is only for bitmap rendering.
+            rtl::Bootstrap::set("SAL_USE_VCLPLUGIN", "svp");
+
+            // We specifically need to make sure we have the "headless"
+            // command arg set (various code specifically checks via
+            // CommandLineArgs):
+            desktop::Desktop::GetCommandLineArgs().setHeadless();
+
+            Application::EnableHeadlessMode(true);
+
+            if (eStage == PRE_INIT)
+            {
+                InitVCL();
+
+                // pre-load all component libraries.
+                if (!xContext.is())
+                    throw css::uno::DeploymentException("preInit: XComponentContext is not created");
+
+                css::uno::Reference< css::uno::XInterface > xService;
+                xContext->getValueByName("/singletons/com.sun.star.lang.theServiceManager") >>= xService;
+                if (!xService.is())
+                    throw css::uno::DeploymentException("preInit: XMultiComponentFactory is not created");
+
+                css::uno::Reference<css::lang::XInitialization> aService(
+                    xService, css::uno::UNO_QUERY_THROW);
+
+                // pre-requisites:
+                // In order to load implementations and invoke
+                // component factory it is required:
+                // 1) defaultBootstrap_InitialComponentContext()
+                // 2) comphelper::setProcessServiceFactory(xSFactory);
+                // 3) InitVCL()
+                aService->initialize({css::uno::makeAny<OUString>("preload")});
+
+                // Release Solar Mutex, lo_startmain thread should acquire it.
+                Application::ReleaseSolarMutex();
+            }
+
+            force_c_locale();
         }
-        force_c_locale();
-
-        // Force headless -- this is only for bitmap rendering.
-        rtl::Bootstrap::set("SAL_USE_VCLPLUGIN", "svp");
-
-        // We specifically need to make sure we have the "headless"
-        // command arg set (various code specifically checks via
-        // CommandLineArgs):
-        desktop::Desktop::GetCommandLineArgs().setHeadless();
-
-        Application::EnableHeadlessMode(true);
-
-        // This is horrible crack. I really would want to go back to simply just call
-        // InitVCL() here. The OfficeIPCThread thing is just horrible.
 
         // We could use InitVCL() here -- and used to before using soffice_main,
         // however that now deals with the initialisation for us (and it's not
@@ -1765,32 +2013,32 @@ static int lo_initialize(LibreOfficeKit* pThis, const char* pAppPath, const char
         // functions depend on VCL being ready -- the deadlocks would happen
         // if you try to use loadDocument too early.
 
-        // The OfficeIPCThread is specifically set to be read when all the other
-        // init in Desktop::Main (run from soffice_main) is done. We can "enable"
-        // the Thread from wherever (it's done again in Desktop::Main), and can
-        // then use it to wait until we're definitely ready to continue.
+        // The RequestHandler is specifically set to be ready when all the other
+        // init in Desktop::Main (run from soffice_main) is done. We can enable
+        // the RequestHandler here (without starting any IPC thread;
+        // shortcutting the invocation in Desktop::Main that would start the IPC
+        // thread), and can then use it to wait until we're definitely ready to
+        // continue.
 
-        SAL_INFO("lok", "Enabling OfficeIPCThread");
-        OfficeIPCThread::EnableOfficeIPCThread();
-        SAL_INFO("lok", "Starting soffice_main");
-        pLib->maThread = osl_createThread(lo_startmain, nullptr);
-        SAL_INFO("lok", "Waiting for OfficeIPCThread");
-        OfficeIPCThread::WaitForReady();
-        SAL_INFO("lok", "OfficeIPCThread ready -- continuing");
-
-        // If the Thread has been disabled again that indicates that a
-        // restart is required (or in any case we don't have a useable
-        // process around).
-        if (!OfficeIPCThread::IsEnabled())
+        if (eStage != PRE_INIT)
         {
-            fprintf(stderr, "LOK init failed -- restart required\n");
-            return false;
+            SAL_INFO("lok", "Enabling RequestHandler");
+            RequestHandler::Enable(false);
+            SAL_INFO("lok", "Starting soffice_main");
+            pLib->maThread = osl_createThread(lo_startmain, nullptr);
+            SAL_INFO("lok", "Waiting for RequestHandler");
+            RequestHandler::WaitForReady();
+            SAL_INFO("lok", "RequestHandler ready -- continuing");
         }
 
-        ErrorHandler::RegisterDisplay(aBasicErrorFunc);
+        if (eStage != SECOND_INIT)
+            ErrorHandler::RegisterDisplay(aBasicErrorFunc);
 
         SAL_INFO("lok", "LOK Initialized");
-        bInitialized = true;
+        if (eStage == PRE_INIT)
+            bPreInited = true;
+        else
+            bInitialized = true;
     }
     catch (css::uno::Exception& exception)
     {
@@ -1838,16 +2086,34 @@ LibreOfficeKit *libreofficekit_hook(const char* install_path)
     return libreofficekit_hook_2(install_path, nullptr);
 }
 
+SAL_JNI_EXPORT
+int lok_preinit(const char* install_path, const char* user_profile_path)
+{
+    return lo_initialize(nullptr, install_path, user_profile_path);
+}
+
 static void lo_destroy(LibreOfficeKit* pThis)
 {
+    bool bSuccess = false;
     LibLibreOffice_Impl* pLib = static_cast<LibLibreOffice_Impl*>(pThis);
     gImpl = nullptr;
 
     SAL_INFO("lok", "LO Destroy");
 
     comphelper::LibreOfficeKit::setStatusIndicatorCallback(nullptr, nullptr);
+    uno::Reference <frame::XDesktop2> xDesktop = frame::Desktop::create ( ::comphelper::getProcessComponentContext() );
+    bSuccess = xDesktop.is() && xDesktop->terminate();
 
-    Application::Quit();
+    if (!bSuccess)
+    {
+        bSuccess = GetpApp() && GetpApp()->QueryExit();
+    }
+
+    if (!bSuccess)
+    {
+        Application::Quit();
+    }
+
     osl_joinWithThread(pLib->maThread);
     osl_destroyThread(pLib->maThread);
 

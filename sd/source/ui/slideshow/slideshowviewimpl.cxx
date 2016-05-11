@@ -31,17 +31,11 @@
 #include <cppcanvas/vclfactory.hxx>
 #include <cppcanvas/basegfxfactory.hxx>
 
-using ::com::sun::star::uno::UNO_QUERY;
-using ::com::sun::star::uno::XInterface;
 using ::com::sun::star::uno::Reference;
 using ::com::sun::star::uno::WeakReference;
 using ::com::sun::star::uno::RuntimeException;
-using ::com::sun::star::lang::XComponent;
 using ::com::sun::star::uno::Exception;
-using ::com::sun::star::presentation::XSlideShow;
 using ::com::sun::star::presentation::XSlideShowView;
-using ::com::sun::star::presentation::XShapeEventListener;
-using ::com::sun::star::presentation::XSlideShowListener;
 
 using namespace ::com::sun::star;
 
@@ -73,7 +67,7 @@ void SlideShowViewListeners::removeListener( const Reference< util::XModifyListe
         maListeners.erase( aIter );
 }
 
-bool SlideShowViewListeners::notify( const lang::EventObject& _rEvent ) throw( css::uno::Exception )
+void SlideShowViewListeners::notify( const lang::EventObject& _rEvent ) throw( css::uno::Exception )
 {
     ::osl::MutexGuard aGuard( mrMutex );
 
@@ -91,7 +85,6 @@ bool SlideShowViewListeners::notify( const lang::EventObject& _rEvent ) throw( c
             aIter = maListeners.erase( aIter );
         }
     }
-    return true;
 }
 
 void SlideShowViewListeners::disposing( const lang::EventObject& _rEventSource )

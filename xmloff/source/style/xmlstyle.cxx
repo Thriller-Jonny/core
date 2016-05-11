@@ -101,9 +101,9 @@ void SvXMLStyleContext::SetAttribute( sal_uInt16 nPrefixKey,
         if( IsXMLToken( rLocalName, XML_FAMILY ) )
         {
             if( IsXMLToken( rValue, XML_PARAGRAPH ) )
-                mnFamily = (sal_uInt16)SFX_STYLE_FAMILY_PARA;
+                mnFamily = (sal_uInt16)SfxStyleFamily::Para;
             else if( IsXMLToken( rValue, XML_TEXT ) )
-                mnFamily = (sal_uInt16)SFX_STYLE_FAMILY_CHAR;
+                mnFamily = (sal_uInt16)SfxStyleFamily::Char;
         }
         else if( IsXMLToken( rLocalName, XML_NAME ) )
         {
@@ -666,7 +666,7 @@ rtl::Reference < SvXMLImportPropertyMapper > SvXMLStylesContext::GetImportProper
         if( ! mxPageImpPropMapper.is() )
         {
             XMLPropertySetMapper *pPropMapper =
-                new XMLPageMasterPropSetMapper( false );
+                new XMLPageMasterPropSetMapper();
             mxPageImpPropMapper =
                 new PageMasterImportPropertyMapper( pPropMapper,
                                     const_cast<SvXMLStylesContext*>(this)->GetImport() );

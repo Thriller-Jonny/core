@@ -32,7 +32,6 @@ namespace basic
 {
 
 
-
 class SfxDialogLibraryContainer : public SfxLibraryContainer
 {
     // Methods to distinguish between different library types
@@ -94,7 +93,6 @@ public:
 };
 
 
-
 typedef ::cppu::ImplHelper1 <   css::resource::XStringResourceSupplier
                             >   SfxDialogLibrary_BASE;
 
@@ -119,7 +117,6 @@ public:
     (
         ModifiableHelper& _rModifiable,
         const OUString& aName,
-        const css::uno::Reference< css::uno::XComponentContext >& xContext,
         const css::uno::Reference< css::ucb::XSimpleFileAccess3 >& xSFI,
         SfxDialogLibraryContainer* pParent
     );
@@ -128,7 +125,6 @@ public:
     (
         ModifiableHelper& _rModifiable,
         const OUString& aName,
-        const css::uno::Reference< css::uno::XComponentContext >& xContext,
         const css::uno::Reference< css::ucb::XSimpleFileAccess3 >& xSFI,
         const OUString& aLibInfoFileURL, const OUString& aStorageURL, bool ReadOnly,
         SfxDialogLibraryContainer* pParent
@@ -141,10 +137,10 @@ public:
     virtual css::uno::Reference< css::resource::XStringResourceResolver >
         SAL_CALL getStringResource(  ) throw (css::uno::RuntimeException, std::exception) override;
 
-    OUString getName()
+    const OUString& getName()
         { return m_aName; }
 
-    css::uno::Reference< css::resource::XStringResourcePersistence >
+    const css::uno::Reference< css::resource::XStringResourcePersistence >&
         getStringResourcePersistence()
     {
         return m_xStringResourcePersistence;

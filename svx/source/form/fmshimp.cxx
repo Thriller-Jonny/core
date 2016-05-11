@@ -1021,7 +1021,7 @@ IMPL_LINK_NOARG_TYPED(FmXFormShell, OnInvalidateSlots, void*,void)
 }
 
 
-void FmXFormShell::ForceUpdateSelection(bool bAllowInvalidation)
+void FmXFormShell::ForceUpdateSelection()
 {
     if ( impl_checkDisposed() )
         return;
@@ -1031,13 +1031,11 @@ void FmXFormShell::ForceUpdateSelection(bool bAllowInvalidation)
         m_aMarkTimer.Stop();
 
         // die Invalidierung der Slots, die implizit von SetSelection besorgt wird, eventuell abschalten
-        if (!bAllowInvalidation)
-            LockSlotInvalidation(true);
+        LockSlotInvalidation(true);
 
         SetSelection(m_pShell->GetFormView()->GetMarkedObjectList());
 
-        if (!bAllowInvalidation)
-            LockSlotInvalidation(false);
+        LockSlotInvalidation(false);
     }
 }
 
@@ -1048,7 +1046,7 @@ PopupMenu* FmXFormShell::GetConversionMenu()
     PopupMenu* pNewMenu = new PopupMenu(SVX_RES( RID_FMSHELL_CONVERSIONMENU ));
 
     ImageList aImageList( SVX_RES( RID_SVXIMGLIST_FMEXPL) );
-    for ( size_t i = 0; i < sizeof (nConvertSlots) / sizeof (nConvertSlots[0]); ++i )
+    for ( size_t i = 0; i < SAL_N_ELEMENTS(nConvertSlots); ++i )
     {
         // das entsprechende Image dran
         pNewMenu->SetItemImage(nConvertSlots[i], aImageList.GetImage(nCreateSlots[i]));
@@ -1060,21 +1058,21 @@ PopupMenu* FmXFormShell::GetConversionMenu()
 
 bool FmXFormShell::isControlConversionSlot( sal_uInt16 nSlotId )
 {
-    for ( size_t i = 0; i < sizeof (nConvertSlots) / sizeof (nConvertSlots[0]); ++i )
+    for ( size_t i = 0; i < SAL_N_ELEMENTS(nConvertSlots); ++i )
         if (nConvertSlots[i] == nSlotId)
             return true;
     return false;
 }
 
 
-bool FmXFormShell::executeControlConversionSlot( sal_uInt16 _nSlotId )
+void FmXFormShell::executeControlConversionSlot( sal_uInt16 _nSlotId )
 {
     OSL_PRECOND( canConvertCurrentSelectionToControl( _nSlotId ), "FmXFormShell::executeControlConversionSlot: illegal call!" );
     InterfaceBag::const_iterator aSelectedElement = m_aCurrentSelection.begin();
     if ( aSelectedElement == m_aCurrentSelection.end() )
-        return false;
+        return;
 
-    return executeControlConversionSlot( Reference< XFormComponent >( *aSelectedElement, UNO_QUERY ), _nSlotId );
+    executeControlConversionSlot( Reference< XFormComponent >( *aSelectedElement, UNO_QUERY ), _nSlotId );
 }
 
 
@@ -1096,7 +1094,7 @@ bool FmXFormShell::executeControlConversionSlot( const Reference< XFormComponent
     OSL_ENSURE( isSolelySelected( _rxObject ),
         "FmXFormShell::executeControlConversionSlot: hmm ... shouldn't this parameter be redundant?" );
 
-    for ( size_t lookupSlot = 0; lookupSlot < sizeof( nConvertSlots ) / sizeof( nConvertSlots[0] ); ++lookupSlot )
+    for ( size_t lookupSlot = 0; lookupSlot < SAL_N_ELEMENTS(nConvertSlots); ++lookupSlot )
     {
         if (nConvertSlots[lookupSlot] == _nSlotId)
         {
@@ -1312,10 +1310,10 @@ bool FmXFormShell::canConvertCurrentSelectionToControl( sal_Int16 nConversionSlo
        )
         return false;   // those types cannot be converted
 
-    DBG_ASSERT(sizeof(nConvertSlots)/sizeof(nConvertSlots[0]) == sizeof(nObjectTypes)/sizeof(nObjectTypes[0]),
+    DBG_ASSERT(SAL_N_ELEMENTS(nConvertSlots) == SAL_N_ELEMENTS(nObjectTypes),
         "FmXFormShell::canConvertCurrentSelectionToControl: nConvertSlots & nObjectTypes must have the same size !");
 
-    for ( size_t i = 0; i < sizeof( nConvertSlots ) / sizeof( nConvertSlots[0] ); ++i )
+    for ( size_t i = 0; i < SAL_N_ELEMENTS( nConvertSlots ); ++i )
         if (nConvertSlots[i] == nConversionSlot)
             return nObjectTypes[i] != nObjectType;
 
@@ -1359,30 +1357,26 @@ void FmXFormShell::LoopGrids(LoopGridsSync nSync, LoopGridsFlags nFlags)
             {
                 case LoopGridsSync::DISABLE_SYNC:
                 {
-                    sal_Bool bB(sal_False);
-                    xModelSet->setPropertyValue(FM_PROP_DISPLAYSYNCHRON, Any(&bB,cppu::UnoType<bool>::get()));
+                    xModelSet->setPropertyValue(FM_PROP_DISPLAYSYNCHRON, Any(false));
                 }
                 break;
                 case LoopGridsSync::FORCE_SYNC:
                 {
                     Any aOldVal( xModelSet->getPropertyValue(FM_PROP_DISPLAYSYNCHRON) );
-                    sal_Bool bB(sal_True);
-                    xModelSet->setPropertyValue(FM_PROP_DISPLAYSYNCHRON, Any(&bB,cppu::UnoType<bool>::get()));
+                    xModelSet->setPropertyValue(FM_PROP_DISPLAYSYNCHRON, Any(true));
                     xModelSet->setPropertyValue(FM_PROP_DISPLAYSYNCHRON, aOldVal);
                 }
                 break;
                 case LoopGridsSync::ENABLE_SYNC:
                 {
-                    sal_Bool bB(sal_True);
-                    xModelSet->setPropertyValue(FM_PROP_DISPLAYSYNCHRON, Any(&bB,cppu::UnoType<bool>::get()));
+                    xModelSet->setPropertyValue(FM_PROP_DISPLAYSYNCHRON, Any(true));
                 }
                 break;
             }
 
             if (nFlags & LoopGridsFlags::DISABLE_ROCTRLR)
             {
-                sal_Bool bB(sal_False);
-                xModelSet->setPropertyValue(FM_PROP_ALWAYSSHOWCURSOR, Any(&bB,cppu::UnoType<bool>::get()));
+                xModelSet->setPropertyValue(FM_PROP_ALWAYSSHOWCURSOR, Any(false));
                 Reference< XPropertyState> xModelPropState(xModelSet, UNO_QUERY);
                 if (xModelPropState.is())
                     xModelPropState->setPropertyToDefault(FM_PROP_CURSORCOLOR);
@@ -1644,9 +1638,7 @@ void FmXFormShell::SetY2KState(sal_uInt16 n)
             {
                 try
                 {
-                    Any aVal;
-                    aVal <<= n;
-                    xSet->setPropertyValue("TwoDigitDateStart", aVal);
+                    xSet->setPropertyValue("TwoDigitDateStart", makeAny<sal_uInt16>(n));
                 }
                 catch(Exception&)
                 {
@@ -1685,9 +1677,7 @@ void FmXFormShell::SetY2KState(sal_uInt16 n)
             {
                 try
                 {
-                    Any aVal;
-                    aVal <<= n;
-                    xSet->setPropertyValue("TwoDigitDateStart", aVal);
+                    xSet->setPropertyValue("TwoDigitDateStart", makeAny<sal_uInt16>(n));
                 }
                 catch(Exception&)
                 {
@@ -1754,7 +1744,7 @@ Reference< XForm> FmXFormShell::getInternalForm(const Reference< XForm>& _xForm)
 
 namespace
 {
-    static bool lcl_isNavigationRelevant( sal_Int32 _nWhich )
+    bool lcl_isNavigationRelevant( sal_Int32 _nWhich )
     {
         return  ( _nWhich == SID_FM_RECORD_FIRST )
             ||  ( _nWhich == SID_FM_RECORD_PREV )
@@ -2019,7 +2009,7 @@ bool FmXFormShell::setCurrentSelection( const InterfaceBag& _rSelection )
         OSL_ENSURE( xThisRoundsForm.is(), "FmXFormShell::setCurrentSelection: *everything* should belong to a form!" );
 
         if ( !xNewCurrentForm.is() )
-        {   // the first form we encounterd
+        {   // the first form we encountered
             xNewCurrentForm = xThisRoundsForm;
         }
         else if ( xNewCurrentForm != xThisRoundsForm )
@@ -2033,7 +2023,7 @@ bool FmXFormShell::setCurrentSelection( const InterfaceBag& _rSelection )
         impl_updateCurrentForm( xNewCurrentForm );
 
     // ensure some slots are updated
-    for ( size_t i = 0; i < sizeof( SelObjectSlotMap ) / sizeof( SelObjectSlotMap[0] ); ++i )
+    for ( size_t i = 0; i < SAL_N_ELEMENTS(SelObjectSlotMap); ++i )
         InvalidateSlot( SelObjectSlotMap[i], false);
 
     return true;
@@ -2073,7 +2063,7 @@ void FmXFormShell::impl_updateCurrentForm( const Reference< XForm >& _rxNewCurFo
         pPage->GetImpl().setCurForm( m_xCurrentForm );
 
     // ensure the UI which depends on the current form is up-to-date
-    for ( size_t i = 0; i < sizeof( DlgSlotMap ) / sizeof( DlgSlotMap[0] ); ++i )
+    for ( size_t i = 0; i < SAL_N_ELEMENTS( DlgSlotMap ); ++i )
         InvalidateSlot( DlgSlotMap[i], false );
 }
 
@@ -2338,7 +2328,7 @@ IMPL_LINK_TYPED(FmXFormShell, OnSearchContextRequest, FmSearchContext&, rfmscCon
     // The alternative to this (ugly but certainly not entirely fixable) solution would be
     // to renounce the caching of the SdrObjects, which would lead to significant extra
     // work in OnFoundData (since there I'd have to get the SdrObject first thing every
-    // time). But since OnFoundData is usually called more often than ExecuteSeearch, I'll
+    // time). But since OnFoundData is usually called more often than ExecuteSearch, I'll
     // do that here.
 
     Reference< XNameAccess> xValidFormFields;
@@ -2792,7 +2782,7 @@ void FmXFormShell::SetDesignMode(bool bDesign)
 
     pFormView->ChangeDesignMode(bDesign);
 
-    // notify listensers
+    // notify listeners
     FmDesignModeChangedHint aChangedHint( bDesign );
     m_pShell->Broadcast(aChangedHint);
 
@@ -3060,7 +3050,7 @@ void FmXFormShell::stopFiltering(bool bSave)
                         if (aOriginalFilters.size() == aOriginalApplyFlags.size())
                             // the first getPropertyValue failed -> use two dummies
                             aOriginalFilters.push_back( OUString() );
-                        aOriginalApplyFlags.push_back( sal_False );
+                        aOriginalApplyFlags.push_back( false );
                     }
                 }
                 saveFilter(*j);
@@ -3970,7 +3960,6 @@ bool FmXFormShell::HasControlFocus() const
 }
 
 
-
 SearchableControlIterator::SearchableControlIterator(Reference< XInterface> xStartingPoint)
     :IndexAccessIterator(xStartingPoint)
 {
@@ -4013,83 +4002,5 @@ bool SearchableControlIterator::ShouldStepInto(const Reference< XInterface>& /*x
 {
     return true;
 }
-
-
-
-
-SFX_IMPL_MENU_CONTROL(ControlConversionMenuController, SfxBoolItem);
-
-
-ControlConversionMenuController::ControlConversionMenuController( sal_uInt16 _nId, Menu& _rMenu, SfxBindings& _rBindings )
-    :SfxMenuControl( _nId, _rBindings )
-    ,m_pMainMenu( &_rMenu )
-    ,m_pConversionMenu( nullptr )
-{
-    if ( _nId == SID_FM_CHANGECONTROLTYPE )
-    {
-        m_pConversionMenu = FmXFormShell::GetConversionMenu();
-        _rMenu.SetPopupMenu( _nId, m_pConversionMenu );
-
-        for (sal_Int16 i=0; i<m_pConversionMenu->GetItemCount(); ++i)
-        {
-            _rBindings.Invalidate(m_pConversionMenu->GetItemId(i));
-            m_aStatusForwarders.push_back(o3tl::make_unique<SfxStatusForwarder>(m_pConversionMenu->GetItemId(i), *this));
-        }
-    }
-}
-
-
-ControlConversionMenuController::~ControlConversionMenuController()
-{
-    m_pMainMenu->SetPopupMenu(SID_FM_CHANGECONTROLTYPE, nullptr);
-    delete m_pConversionMenu;
-}
-
-
-void ControlConversionMenuController::StateChanged(sal_uInt16 nSID, SfxItemState eState, const SfxPoolItem* pState)
-{
-    if (nSID == GetId())
-        SfxMenuControl::StateChanged(nSID, eState, pState);
-    else if (FmXFormShell::isControlConversionSlot(nSID))
-    {
-        if ((m_pConversionMenu->GetItemPos(nSID) != MENU_ITEM_NOTFOUND) && (eState == SfxItemState::DISABLED))
-        {
-            m_pConversionMenu->RemoveItem(m_pConversionMenu->GetItemPos(nSID));
-        }
-        else if ((m_pConversionMenu->GetItemPos(nSID) == MENU_ITEM_NOTFOUND) && (eState != SfxItemState::DISABLED))
-        {
-            // We can't simply re-insert the item because we have a clear order for all the our items.
-            // So first we have to determine the position of the item to insert.
-            std::unique_ptr<PopupMenu> pSource(FmXFormShell::GetConversionMenu());
-            sal_uInt16 nSourcePos = pSource->GetItemPos(nSID);
-            DBG_ASSERT(nSourcePos != MENU_ITEM_NOTFOUND, "ControlConversionMenuController::StateChanged : FmXFormShell supplied an invalid menu !");
-            sal_uInt16 nPrevInSource = nSourcePos;
-            sal_uInt16 nPrevInConversion = MENU_ITEM_NOTFOUND;
-            while (nPrevInSource>0)
-            {
-                sal_Int16 nPrevId = pSource->GetItemId(--nPrevInSource);
-
-                // do we have the source's predecessor in our conversion menu, too ?
-                nPrevInConversion = m_pConversionMenu->GetItemPos(nPrevId);
-                if (nPrevInConversion != MENU_ITEM_NOTFOUND)
-                    break;
-            }
-            if (MENU_ITEM_NOTFOUND == nPrevInConversion)
-                // none of the items which precede the nSID-slot in the source menu are present in our conversion menu
-                nPrevInConversion = sal::static_int_cast< sal_uInt16 >(-1); // put the item at the first position
-            m_pConversionMenu->InsertItem(nSID, pSource->GetItemText(nSID),
-                pSource->GetItemBits(nSID), OString(), ++nPrevInConversion);
-            m_pConversionMenu->SetItemImage(nSID, pSource->GetItemImage(nSID));
-            m_pConversionMenu->SetHelpId(nSID, pSource->GetHelpId(nSID));
-        }
-        m_pMainMenu->EnableItem(SID_FM_CHANGECONTROLTYPE, m_pConversionMenu->GetItemCount() > 0);
-    }
-    else
-    {
-        OSL_FAIL("ControlConversionMenuController::StateChanged : unknown id !");
-    }
-}
-
-
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

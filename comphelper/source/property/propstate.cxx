@@ -26,7 +26,6 @@ namespace comphelper
 {
 
 
-    using ::com::sun::star::uno::Reference;
     using ::com::sun::star::uno::Type;
     using ::com::sun::star::uno::RuntimeException;
     using ::com::sun::star::uno::Sequence;
@@ -39,7 +38,6 @@ namespace comphelper
 
 
     // OPropertyStateHelper
-
 
 
     css::uno::Any SAL_CALL OPropertyStateHelper::queryInterface(const  css::uno::Type& _rType) throw( css::uno::RuntimeException, std::exception)
@@ -73,7 +71,7 @@ namespace comphelper
 
     void OPropertyStateHelper::firePropertyChange(sal_Int32 nHandle, const  css::uno::Any& aNewValue, const  css::uno::Any& aOldValue)
     {
-        fire(&nHandle, &aNewValue, &aOldValue, 1, sal_False);
+        fire(&nHandle, &aNewValue, &aOldValue, 1, false);
     }
 
     // XPropertyState

@@ -47,8 +47,7 @@ public:
 
                     // only UISort repeat the partial results if necessary
 
-    void            UISort( const ScSortParam& rSortParam,
-                          bool bRecord = true );
+    void            UISort( const ScSortParam& rSortParam );
 
     void            Sort( const ScSortParam& rSortParam,
                           bool bRecord = true, bool bPaint = true );
@@ -62,7 +61,7 @@ public:
 
     void            RepeatDB( bool bRecord = true );
 
-    bool            ImportData( const ScImportParam& rParam, bool bRecord = true );
+    bool            ImportData( const ScImportParam& rParam );
 
     void GotoDBArea( const OUString& rDBName );
 
@@ -70,11 +69,11 @@ public:
     ScDBData*       GetDBData( bool bMarkArea = true, ScGetDBMode eMode = SC_DB_MAKE, ScGetDBSelection eSel = SC_DBSEL_KEEP);
     ScDBData*       GetAnonymousDBData();
 
-    void            Consolidate( const ScConsolidateParam& rParam, bool bRecord = true );
+    void            Consolidate( const ScConsolidateParam& rParam );
 
     bool MakePivotTable(
         const ScDPSaveData& rData, const ScRange& rDest, bool bNewTable,
-        const ScDPObject& rSource, bool bApi = false );
+        const ScDPObject& rSource );
 
     void            DeletePivotTable();
     void            RecalcPivotTable();
@@ -86,7 +85,7 @@ public:
     void            UngroupDataPilot();
     void DataPilotInput( const ScAddress& rPos, const OUString& rString );
 
-    bool            DataPilotSort( const ScAddress& rPos, bool bAscending, sal_uInt16* pUserListId = nullptr );
+    void            DataPilotSort( const ScAddress& rPos, bool bAscending, sal_uInt16* pUserListId = nullptr );
     bool            DataPilotMove( const ScRange& rSource, const ScAddress& rDest );
 
     bool HasSelectionForDrillDown( sal_uInt16& rOrientation );
@@ -100,10 +99,10 @@ public:
     void            RemoveAllOutlines( bool bRecord = true );
     void            TestRemoveOutline( bool& rCol, bool& rRow );
 
-    void            AutoOutline( bool bRecord = true );
+    void            AutoOutline();
 
     void            SelectLevel( bool bColumns, sal_uInt16 nLevel,
-                                    bool bRecord = true, bool bPaint = true );
+                                    bool bRecord = true );
     void            ShowOutline( bool bColumns, sal_uInt16 nLevel, sal_uInt16 nEntry,
                                     bool bRecord = true, bool bPaint = true );
     void            HideOutline( bool bColumns, sal_uInt16 nLevel, sal_uInt16 nEntry,

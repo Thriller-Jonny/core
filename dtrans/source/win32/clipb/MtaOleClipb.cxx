@@ -27,7 +27,7 @@
     to problems because they all use the one and only mutex called
     SolarMutex.
     In order to transfer clipboard requests to our sta thread we use a
-    hidden window an forward these requests via window messages.
+    hidden window and forward these requests via window messages.
 */
 
 #ifdef _MSC_VER
@@ -37,9 +37,9 @@
 
 //#define UNICODE
 #include <osl/diagnose.h>
+#include <sal/log.hxx>
 
 #include "MtaOleClipb.hxx"
-#include <osl/conditn.hxx>
 #include <osl/thread.h>
 
 #include <wchar.h>
@@ -55,8 +55,6 @@
 
 //  namespace directives
 
-using osl::Condition;
-using osl::Mutex;
 using osl::MutexGuard;
 using osl::ClearableMutexGuard;
 
@@ -224,7 +222,7 @@ public:
     {
         /*
             we only call CoUninitialize when
-            CoInitailize returned S_FALSE, what
+            CoInitialize returned S_FALSE, what
             means that com was already initialize
             for that thread so we keep the balance
             if CoInitialize returned S_OK what means
@@ -589,7 +587,9 @@ LRESULT CMtaOleClipboard::sendMessage( UINT msg, WPARAM wParam, LPARAM lParam )
 
 bool CMtaOleClipboard::postMessage( UINT msg, WPARAM wParam, LPARAM lParam )
 {
-    return PostMessageA( m_hwndMtaOleReqWnd, msg, wParam, lParam ) ? true : false;
+    BOOL const ret = PostMessageA(m_hwndMtaOleReqWnd, msg, wParam, lParam);
+    SAL_WARN_IF(0 == ret, "dtrans", "ERROR: PostMessage() failed!");
+    return ret ? true : false;
 }
 
 // the window proc

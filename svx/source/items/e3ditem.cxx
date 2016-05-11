@@ -19,11 +19,11 @@
 
 #include <com/sun/star/drawing/Direction3D.hpp>
 #include <tools/stream.hxx>
+#include <rtl/math.hxx>
 
 #include <svx/e3ditem.hxx>
 
 using namespace ::com::sun::star;
-
 
 
 SvxB3DVectorItem::SvxB3DVectorItem()
@@ -35,13 +35,11 @@ SvxB3DVectorItem::~SvxB3DVectorItem()
 }
 
 
-
 SvxB3DVectorItem::SvxB3DVectorItem( sal_uInt16 _nWhich, const basegfx::B3DVector& rVal ) :
     SfxPoolItem( _nWhich ),
     aVal( rVal )
 {
 }
-
 
 
 SvxB3DVectorItem::SvxB3DVectorItem( const SvxB3DVectorItem& rItem ) :
@@ -51,7 +49,6 @@ SvxB3DVectorItem::SvxB3DVectorItem( const SvxB3DVectorItem& rItem ) :
 }
 
 
-
 bool SvxB3DVectorItem::operator==( const SfxPoolItem &rItem ) const
 {
     DBG_ASSERT( SfxPoolItem::operator==( rItem ), "unequal type" );
@@ -59,12 +56,10 @@ bool SvxB3DVectorItem::operator==( const SfxPoolItem &rItem ) const
 }
 
 
-
 SfxPoolItem* SvxB3DVectorItem::Clone( SfxItemPool* /*pPool*/ ) const
 {
     return new SvxB3DVectorItem( *this );
 }
-
 
 
 SfxPoolItem* SvxB3DVectorItem::Create(SvStream &rStream, sal_uInt16 /*nVersion*/) const
@@ -76,7 +71,6 @@ SfxPoolItem* SvxB3DVectorItem::Create(SvStream &rStream, sal_uInt16 /*nVersion*/
     rStream.ReadDouble( fValue ); aStr.setZ(fValue);
     return new SvxB3DVectorItem(Which(), aStr);
 }
-
 
 
 SvStream& SvxB3DVectorItem::Store(SvStream &rStream, sal_uInt16 /*nItemVersion*/) const
@@ -92,10 +86,9 @@ SvStream& SvxB3DVectorItem::Store(SvStream &rStream, sal_uInt16 /*nItemVersion*/
 }
 
 
-
 bool SvxB3DVectorItem::QueryValue( uno::Any& rVal, sal_uInt8 /*nMemberId*/ ) const
 {
-    assert(!isnan(aVal.getX()) && !isnan(aVal.getY()) && !isnan(aVal.getZ()));
+    assert(!rtl::math::isNan(aVal.getX()) && !rtl::math::isNan(aVal.getY()) && !rtl::math::isNan(aVal.getZ()));
 
     drawing::Direction3D aDirection;
 
@@ -109,7 +102,6 @@ bool SvxB3DVectorItem::QueryValue( uno::Any& rVal, sal_uInt8 /*nMemberId*/ ) con
 }
 
 
-
 bool SvxB3DVectorItem::PutValue( const uno::Any& rVal, sal_uInt8 /*nMemberId*/ )
 {
     drawing::Direction3D aDirection;
@@ -120,11 +112,10 @@ bool SvxB3DVectorItem::PutValue( const uno::Any& rVal, sal_uInt8 /*nMemberId*/ )
     aVal.setY(aDirection.DirectionY);
     aVal.setZ(aDirection.DirectionZ);
 
-    assert(!isnan(aVal.getX()) && !isnan(aVal.getY()) && !isnan(aVal.getZ()));
+    assert(!rtl::math::isNan(aVal.getX()) && !rtl::math::isNan(aVal.getY()) && !rtl::math::isNan(aVal.getZ()));
 
     return true;
 }
-
 
 
 sal_uInt16 SvxB3DVectorItem::GetVersion (sal_uInt16 nFileFormatVersion) const

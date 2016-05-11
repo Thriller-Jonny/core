@@ -104,6 +104,7 @@ struct HTMLOutFuncs
                 SvNumberFormatter& rFormatter,
                 rtl_TextEncoding eDestEnc = RTL_TEXTENCODING_MS_1252,
                 OUString *pNonConvertableChars = nullptr);
+    SVT_DLLPUBLIC static bool PrivateURLToInternalImg( OUString& rURL );
 };
 
 struct HtmlWriterHelper

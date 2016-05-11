@@ -13,11 +13,11 @@
  manual changes will be rewritten by the next run of update_pch.sh (which presumably
  also fixes all possible problems, so it's usually better to use it).
 
- Generated on 2015-12-02 12:43:09 using:
+ Generated on 2016-02-06 12:31:56 using:
  ./bin/update_pch sw vbaswobj --cutoff=4 --exclude:system --include:module --include:local
 
  If after updating build fails, use the following command to locate conflicting headers:
- ./bin/update_pch_bisect ./sw/inc/pch/precompiled_vbaswobj.hxx "/opt/lo/bin/make sw.build" --find-conflicts
+ ./bin/update_pch_bisect ./sw/inc/pch/precompiled_vbaswobj.hxx "make sw.build" --find-conflicts
 */
 
 #include <algorithm>
@@ -59,12 +59,9 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
-#include <boost/functional/hash.hpp>
 #include <boost/intrusive_ptr.hpp>
-#include <boost/noncopyable.hpp>
 #include <boost/operators.hpp>
 #include <boost/optional.hpp>
-#include <boost/shared_array.hpp>
 #include <osl/diagnose.h>
 #include <osl/doublecheckedlocking.h>
 #include <osl/endian.h>
@@ -114,12 +111,11 @@
 #include <vcl/accel.hxx>
 #include <vcl/alpha.hxx>
 #include <vcl/animate.hxx>
-#include <vcl/apptypes.hxx>
 #include <vcl/bitmap.hxx>
 #include <vcl/bitmapex.hxx>
 #include <vcl/cairo.hxx>
 #include <vcl/checksum.hxx>
-#include <vcl/cmdevt.hxx>
+#include <vcl/commandevent.hxx>
 #include <vcl/combobox.hxx>
 #include <vcl/ctrl.hxx>
 #include <vcl/cursor.hxx>
@@ -128,6 +124,7 @@
 #include <vcl/dndhelp.hxx>
 #include <vcl/edit.hxx>
 #include <vcl/event.hxx>
+#include <vcl/exceptiontypes.hxx>
 #include <vcl/field.hxx>
 #include <vcl/fntstyle.hxx>
 #include <vcl/font.hxx>
@@ -137,8 +134,8 @@
 #include <vcl/graph.hxx>
 #include <vcl/hatch.hxx>
 #include <vcl/image.hxx>
-#include <vcl/impdel.hxx>
 #include <vcl/inputctx.hxx>
+#include <vcl/inputtypes.hxx>
 #include <vcl/jobset.hxx>
 #include <vcl/keycod.hxx>
 #include <vcl/keycodes.hxx>
@@ -176,10 +173,6 @@
 #include <IMark.hxx>
 #include <IShellCursorSupplier.hxx>
 #include <SwGetPoolIdFromName.hxx>
-#include <basebmp/basebmpdllapi.h>
-#include <basebmp/bitmapdevice.hxx>
-#include <basebmp/drawmodes.hxx>
-#include <basebmp/scanlineformats.hxx>
 #include <basegfx/basegfxdllapi.h>
 #include <basegfx/color/bcolor.hxx>
 #include <basegfx/color/bcolormodifier.hxx>
@@ -214,7 +207,6 @@
 #include <com/sun/star/container/XIndexReplace.hpp>
 #include <com/sun/star/container/XNameAccess.hpp>
 #include <com/sun/star/container/XNamed.hpp>
-#include <com/sun/star/datatransfer/DataFlavor.hpp>
 #include <com/sun/star/datatransfer/dnd/XDragGestureListener.hpp>
 #include <com/sun/star/datatransfer/dnd/XDragSourceListener.hpp>
 #include <com/sun/star/datatransfer/dnd/XDropTargetListener.hpp>
@@ -235,8 +227,6 @@
 #include <com/sun/star/i18n/XLocaleData4.hpp>
 #include <com/sun/star/i18n/reservedWords.hpp>
 #include <com/sun/star/io/XInputStream.hpp>
-#include <com/sun/star/lang/DisposedException.hpp>
-#include <com/sun/star/lang/EventObject.hpp>
 #include <com/sun/star/lang/IllegalArgumentException.hpp>
 #include <com/sun/star/lang/Locale.hpp>
 #include <com/sun/star/lang/XComponent.hpp>
@@ -346,14 +336,11 @@
 #include <pam.hxx>
 #include <rsc/rsc-vcl-shared-types.hxx>
 #include <sfx2/dllapi.h>
-#include <sot/sotdllapi.h>
 #include <svl/cenumitm.hxx>
 #include <svl/cintitem.hxx>
 #include <svl/eitem.hxx>
 #include <svl/hint.hxx>
 #include <svl/intitem.hxx>
-#include <svl/itempool.hxx>
-#include <svl/itemset.hxx>
 #include <svl/lstner.hxx>
 #include <svl/macitem.hxx>
 #include <svl/poolitem.hxx>
@@ -365,7 +352,6 @@
 #include <svx/svddef.hxx>
 #include <svx/svxdllapi.h>
 #include <svx/xdef.hxx>
-#include <swatrset.hxx>
 #include <swcrsr.hxx>
 #include <swrect.hxx>
 #include <swregion.hxx>

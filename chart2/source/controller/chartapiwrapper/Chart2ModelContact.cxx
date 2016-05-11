@@ -35,7 +35,6 @@ using namespace ::com::sun::star;
 using namespace ::com::sun::star::chart2;
 
 using ::com::sun::star::uno::Reference;
-using ::com::sun::star::uno::Sequence;
 
 namespace chart
 {
@@ -56,8 +55,7 @@ Chart2ModelContact::~Chart2ModelContact()
     this->clear();
 }
 
-void Chart2ModelContact::setModel( const ::com::sun::star::uno::Reference<
-                       ::com::sun::star::frame::XModel >& xChartModel )
+void Chart2ModelContact::setModel( const css::uno::Reference< css::frame::XModel >& xChartModel )
 {
     this->clear();
     m_xChartModel = xChartModel;
@@ -136,7 +134,7 @@ uno::Reference< drawing::XDrawPage > Chart2ModelContact::getDrawPage()
     return xResult;
 }
 
-bool Chart2ModelContact::getExplicitValuesForAxis(
+void Chart2ModelContact::getExplicitValuesForAxis(
     const Reference< XAxis > & xAxis,
     ExplicitScaleData &  rOutExplicitScale,
     ExplicitIncrementData & rOutExplicitIncrement )
@@ -144,10 +142,9 @@ bool Chart2ModelContact::getExplicitValuesForAxis(
     ExplicitValueProvider* pProvider( getExplicitValueProvider() );
     if( pProvider )
     {
-        return pProvider->getExplicitValuesForAxis(
+        pProvider->getExplicitValuesForAxis(
             xAxis, rOutExplicitScale, rOutExplicitIncrement );
     }
-    return false;
 }
 
 sal_Int32 Chart2ModelContact::getExplicitNumberFormatKeyForAxis(
@@ -253,8 +250,7 @@ awt::Point Chart2ModelContact::GetLegendPosition() const
     return aPoint;
 }
 
-awt::Size Chart2ModelContact::GetTitleSize( const uno::Reference<
-        ::com::sun::star::chart2::XTitle > & xTitle ) const
+awt::Size Chart2ModelContact::GetTitleSize( const uno::Reference< css::chart2::XTitle > & xTitle ) const
 {
     awt::Size aSize;
     ExplicitValueProvider* pProvider( getExplicitValueProvider() );
@@ -266,8 +262,7 @@ awt::Size Chart2ModelContact::GetTitleSize( const uno::Reference<
     return aSize;
 }
 
-awt::Point Chart2ModelContact::GetTitlePosition( const uno::Reference<
-        ::com::sun::star::chart2::XTitle > & xTitle ) const
+awt::Point Chart2ModelContact::GetTitlePosition( const uno::Reference< css::chart2::XTitle > & xTitle ) const
 {
     awt::Point aPoint;
     ExplicitValueProvider* pProvider( getExplicitValueProvider() );
@@ -279,8 +274,7 @@ awt::Point Chart2ModelContact::GetTitlePosition( const uno::Reference<
     return aPoint;
 }
 
-awt::Size Chart2ModelContact::GetAxisSize( const uno::Reference<
-        ::com::sun::star::chart2::XAxis > & xAxis ) const
+awt::Size Chart2ModelContact::GetAxisSize( const uno::Reference< css::chart2::XAxis > & xAxis ) const
 {
     awt::Size aSize;
     ExplicitValueProvider* pProvider( getExplicitValueProvider() );
@@ -292,8 +286,7 @@ awt::Size Chart2ModelContact::GetAxisSize( const uno::Reference<
     return aSize;
 }
 
-awt::Point Chart2ModelContact::GetAxisPosition( const uno::Reference<
-        ::com::sun::star::chart2::XAxis > & xAxis ) const
+awt::Point Chart2ModelContact::GetAxisPosition( const uno::Reference< css::chart2::XAxis > & xAxis ) const
 {
     awt::Point aPoint;
     ExplicitValueProvider* pProvider( getExplicitValueProvider() );

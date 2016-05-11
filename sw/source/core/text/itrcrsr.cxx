@@ -471,7 +471,7 @@ bool SwTextCursor::GetEndCharRect( SwRect* pOrig, const sal_Int32 nOfst,
 // pCMS is used for restricting the cursor, if there are different font
 // heights in one line ( first value = offset to y of pOrig, second
 // value = real height of (shortened) cursor
-void SwTextCursor::_GetCharRect( SwRect* pOrig, const sal_Int32 nOfst,
+void SwTextCursor::GetCharRect_( SwRect* pOrig, const sal_Int32 nOfst,
     SwCursorMoveState* pCMS )
 {
     const OUString aText = GetInfo().GetText();
@@ -655,7 +655,7 @@ void SwTextCursor::_GetCharRect( SwRect* pOrig, const sal_Int32 nOfst,
                         {
                              pLastBidiPor = static_cast<SwBidiPortion*>(pPor);
                              nLastBidiPorWidth = pLastBidiPor->Width() +
-                                                 pLastBidiPor->CalcSpacing( nSpaceAdd, aInf );;
+                                                 pLastBidiPor->CalcSpacing( nSpaceAdd, aInf );
                         }
                     }
 
@@ -769,7 +769,7 @@ void SwTextCursor::_GetCharRect( SwRect* pOrig, const sal_Int32 nOfst,
                                 static_cast<SwBidiPortion*>(pPor)->GetLevel() % 2 );
                         }
 
-                        _GetCharRect( pOrig, nOfst, pCMS );
+                        GetCharRect_( pOrig, nOfst, pCMS );
 
                         if ( bChgHeight )
                         {
@@ -784,8 +784,6 @@ void SwTextCursor::_GetCharRect( SwRect* pOrig, const sal_Int32 nOfst,
                         {
                             // the recursion may have damaged our font size
                             SetPropFont( nOldProp );
-                            if ( !nOldProp )
-                                nOldProp = 100;
                             GetInfo().GetFont()->SetProportion( 100 );
 
                             if ( m_pCurr == &static_cast<SwMultiPortion*>(pPor)->GetRoot() )
@@ -1201,7 +1199,7 @@ bool SwTextCursor::GetCharRect( SwRect* pOrig, const sal_Int32 nOfst,
     const Point aCharPos( GetTopLeft() );
     bool bRet = true;
 
-    _GetCharRect( pOrig, nFindOfst, pCMS );
+    GetCharRect_( pOrig, nFindOfst, pCMS );
 
     // This actually would have to be "-1 LogicToPixel", but that seems too
     // expensive, so it's a value (-12), that should hopefully be OK.
@@ -1665,12 +1663,12 @@ sal_Int32 SwTextCursor::GetCursorOfst( SwPosition *pPos, const Point &rPoint,
                 aDrawInf.SetSnapToGrid( aSizeInf.SnapToGrid() );
                 aDrawInf.SetPosMatchesBounds( pCMS && pCMS->m_bPosMatchesBounds );
 
-                if ( SW_CJK == aSizeInf.GetFont()->GetActual() &&
+                if ( SwFontScript::CJK == aSizeInf.GetFont()->GetActual() &&
                      pPara->GetScriptInfo().CountCompChg() &&
                     ! pPor->InFieldGrp() )
                     aDrawInf.SetKanaComp( nKanaComp );
 
-                nLength = aSizeInf.GetFont()->_GetCursorOfst( aDrawInf );
+                nLength = aSizeInf.GetFont()->GetCursorOfst_( aDrawInf );
 
                 // get position inside field portion?
                 if ( pPor->InFieldGrp() && pCMS && pCMS->m_pSpecialPos )
@@ -1715,8 +1713,6 @@ sal_Int32 SwTextCursor::GetCursorOfst( SwPosition *pPos, const Point &rPoint,
                 if( bChgNodeInner && pTmp->Frame().IsInside( aTmpPoint ) &&
                     !( pTmp->IsProtected() ) )
                 {
-                    nLength = static_cast<SwFlyCntPortion*>(pPor)->
-                              GetFlyCursorOfst( nX, aTmpPoint, pPos, pCMS );
                     // After a change of the frame, our font must be still
                     // available for/in the OutputDevice.
                     // For comparison: Paint and new SwFlyCntPortion !

@@ -46,7 +46,6 @@
 #include <svx/svxids.hrc>
 #include <svl/lstner.hxx>
 
-#include <sfx2/mnuitem.hxx>
 #include "svx/fmtools.hxx"
 #include "svx/fmsrccfg.hxx"
 #include <osl/mutex.hxx>
@@ -344,7 +343,7 @@ protected:
         FmFormArray& _out_rForms,
         ::std::vector< OUString >& _out_rNames );
 
-    /** checks whether the instance is already disposed, if so, this is reported as assertion error (debug
+    /** checks whenever the instance is already disposed, if so, this is reported as assertion error (debug
         builds only) and <TRUE/> is returned.
     */
     SAL_DLLPRIVATE bool    impl_checkDisposed() const;
@@ -383,7 +382,7 @@ public:
     SAL_DLLPRIVATE bool    setCurrentSelectionFromMark(const SdrMarkList& rMarkList);
 
     /// returns the currently selected form, or the form which all currently selected controls belong to, or <NULL/>
-    SAL_DLLPRIVATE css::uno::Reference< css::form::XForm >
+    SAL_DLLPRIVATE const css::uno::Reference< css::form::XForm >&
                 getCurrentForm() const { return m_xCurrentForm; }
     SAL_DLLPRIVATE void        forgetCurrentForm();
     /// returns whether the last known marking contained only controls
@@ -422,7 +421,7 @@ public:
     SAL_DLLPRIVATE static PopupMenu* GetConversionMenu();
         // ein Menue, das alle ControlConversion-Eintraege enthaelt
 
-    /// checks whethere a given control conversion slot can be applied to the current selection
+    /// checks whether a given control conversion slot can be applied to the current selection
     SAL_DLLPRIVATE        bool canConvertCurrentSelectionToControl( sal_Int16 nConversionSlot );
     /// enables or disables all conversion slots in a menu, according to the current selection
     SAL_DLLPRIVATE        void checkControlConversionSlotsForCurrentSelection( Menu& rMenu );
@@ -431,7 +430,7 @@ public:
     /** executes a control conversion slot for the current selection
         @precond canConvertCurrentSelectionToControl( <arg>_nSlotId</arg> ) must return <TRUE/>
     */
-    SAL_DLLPRIVATE        bool executeControlConversionSlot( sal_uInt16 _nSlotId );
+    SAL_DLLPRIVATE        void executeControlConversionSlot( sal_uInt16 _nSlotId );
     /// checks whether the given slot id denotes a control conversion slot
     SAL_DLLPRIVATE static bool isControlConversionSlot( sal_uInt16 _nSlotId );
 
@@ -452,7 +451,7 @@ public:
     // das Setzen des curObject/selObject/curForm erfolgt verzoegert (SetSelectionDelayed), mit den folgenden
     // Funktionen laesst sich das abfragen/erzwingen
     SAL_DLLPRIVATE inline bool IsSelectionUpdatePending();
-    SAL_DLLPRIVATE void        ForceUpdateSelection(bool bLockInvalidation);
+    SAL_DLLPRIVATE void        ForceUpdateSelection();
 
     SAL_DLLPRIVATE css::uno::Reference< css::frame::XModel>          getContextDocument() const;
     SAL_DLLPRIVATE css::uno::Reference< css::form::XForm>            getInternalForm(const css::uno::Reference< css::form::XForm>& _xForm) const;
@@ -557,7 +556,7 @@ class SearchableControlIterator : public ::comphelper::IndexAccessIterator
         // der aktuelle Wert der ControlSource-css::beans::Property
 
 public:
-    OUString     getCurrentValue() const { return m_sCurrentValue; }
+    const OUString& getCurrentValue() const { return m_sCurrentValue; }
 
 public:
     SearchableControlIterator(css::uno::Reference< css::uno::XInterface> xStartingPoint);
@@ -565,25 +564,6 @@ public:
     virtual bool ShouldHandleElement(const css::uno::Reference< css::uno::XInterface>& rElement) override;
     virtual bool ShouldStepInto(const css::uno::Reference< css::uno::XInterface>& xContainer) const override;
     virtual void Invalidate() override { IndexAccessIterator::Invalidate(); m_sCurrentValue.clear(); }
-};
-
-
-class SVX_DLLPUBLIC ControlConversionMenuController : public SfxMenuControl
-{
-    ControlConversionMenuController( const ControlConversionMenuController&) = delete;
-    ControlConversionMenuController& operator =( const ControlConversionMenuController&) = delete;
-
-protected:
-    std::vector<std::unique_ptr<SfxStatusForwarder> > m_aStatusForwarders;
-    Menu*                   m_pMainMenu;
-    PopupMenu*              m_pConversionMenu;
-
-public:
-    SVX_DLLPRIVATE ControlConversionMenuController(sal_uInt16 nId, Menu& rMenu, SfxBindings& rBindings);
-    SVX_DLLPRIVATE virtual ~ControlConversionMenuController();
-    SFX_DECL_MENU_CONTROL();
-
-    SVX_DLLPRIVATE virtual void StateChanged(sal_uInt16 nSID, SfxItemState eState, const SfxPoolItem* pState) override;
 };
 
 #endif // INCLUDED_SVX_SOURCE_INC_FMSHIMP_HXX

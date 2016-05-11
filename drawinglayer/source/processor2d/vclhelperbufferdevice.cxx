@@ -248,8 +248,7 @@ namespace drawinglayer
 
     impBufferDevice::impBufferDevice(
         OutputDevice& rOutDev,
-        const basegfx::B2DRange& rRange,
-        bool bAddOffsetToMapping)
+        const basegfx::B2DRange& rRange)
     :   mrOutDev(rOutDev),
         mpContent(nullptr),
         mpMask(nullptr),
@@ -287,16 +286,16 @@ namespace drawinglayer
 
             MapMode aNewMapMode(mrOutDev.GetMapMode());
 
-            if(bAddOffsetToMapping)
-            {
-                const Point aLogicTopLeft(mrOutDev.PixelToLogic(maDestPixel.TopLeft()));
-                aNewMapMode.SetOrigin(Point(-aLogicTopLeft.X(), -aLogicTopLeft.Y()));
-            }
+            const Point aLogicTopLeft(mrOutDev.PixelToLogic(maDestPixel.TopLeft()));
+            aNewMapMode.SetOrigin(Point(-aLogicTopLeft.X(), -aLogicTopLeft.Y()));
 
             mpContent->SetMapMode(aNewMapMode);
 
             // copy AA flag for new target
             mpContent->SetAntialiasing(mrOutDev.GetAntialiasing());
+
+            // copy RasterOp (e.g. may be ROP_XOR on destination)
+            mpContent->SetRasterOp(mrOutDev.GetRasterOp());
         }
     }
 
@@ -325,28 +324,50 @@ namespace drawinglayer
             const Point aEmptyPoint;
             const Size aSizePixel(maDestPixel.GetSize());
             const bool bWasEnabledDst(mrOutDev.IsMapModeEnabled());
+#ifdef DBG_UTIL
             static bool bDoSaveForVisualControl(false);
+#endif
 
             mrOutDev.EnableMapMode(false);
             mpContent->EnableMapMode(false);
             Bitmap aContent(mpContent->GetBitmap(aEmptyPoint, aSizePixel));
 
+#ifdef DBG_UTIL
             if(bDoSaveForVisualControl)
             {
-                SvFileStream aNew( "c:\\content.bmp", StreamMode::WRITE|StreamMode::TRUNC);
+                SvFileStream aNew(
+#ifdef _WIN32
+                    "c:\\content.bmp",
+#else
+                    "~/content.bmp",
+#endif
+                    StreamMode::WRITE|StreamMode::TRUNC);
                 WriteDIB(aContent, aNew, false, true);
             }
+#endif
+
+            // during painting the buffer, disable evtl. set RasterOp (may be ROP_XOR)
+            const RasterOp aOrigRasterOp(mrOutDev.GetRasterOp());
+            mrOutDev.SetRasterOp(ROP_OVERPAINT);
 
             if(mpAlpha)
             {
                 mpAlpha->EnableMapMode(false);
                 const AlphaMask aAlphaMask(mpAlpha->GetBitmap(aEmptyPoint, aSizePixel));
 
+#ifdef DBG_UTIL
                 if(bDoSaveForVisualControl)
                 {
-                    SvFileStream aNew( "c:\\transparence.bmp", StreamMode::WRITE|StreamMode::TRUNC);
+                    SvFileStream aNew(
+#ifdef _WIN32
+                        "c:\\transparence.bmp",
+#else
+                        "~/transparence.bmp",
+#endif
+                        StreamMode::WRITE|StreamMode::TRUNC);
                     WriteDIB(aAlphaMask.GetBitmap(), aNew, false, true);
                 }
+#endif
 
                 mrOutDev.DrawBitmapEx(maDestPixel.TopLeft(), BitmapEx(aContent, aAlphaMask));
             }
@@ -355,11 +376,19 @@ namespace drawinglayer
                 mpMask->EnableMapMode(false);
                 const Bitmap aMask(mpMask->GetBitmap(aEmptyPoint, aSizePixel));
 
+#ifdef DBG_UTIL
                 if(bDoSaveForVisualControl)
                 {
-                    SvFileStream aNew( "c:\\mask.bmp", StreamMode::WRITE|StreamMode::TRUNC);
+                    SvFileStream aNew(
+#ifdef _WIN32
+                        "c:\\mask.bmp",
+#else
+                        "~/mask.bmp",
+#endif
+                        StreamMode::WRITE|StreamMode::TRUNC);
                     WriteDIB(aMask, aNew, false, true);
                 }
+#endif
 
                 mrOutDev.DrawBitmapEx(maDestPixel.TopLeft(), BitmapEx(aContent, aMask));
             }
@@ -374,6 +403,7 @@ namespace drawinglayer
                 mrOutDev.DrawBitmap(maDestPixel.TopLeft(), aContent);
             }
 
+            mrOutDev.SetRasterOp(aOrigRasterOp);
             mrOutDev.EnableMapMode(bWasEnabledDst);
         }
     }

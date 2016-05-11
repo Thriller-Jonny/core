@@ -30,10 +30,11 @@ public:
     void testImageWithSpecialID();
     void testGraphicShape();
     void testCharHighlight();
+    void testCharHighlightODF();
     void testCharHighlightBody();
     void testMSCharBackgroundEditing();
     void testCharBackgroundToHighlighting();
-#if !defined(WNT)
+#if !defined(_WIN32)
     void testSkipImages();
 #endif
 
@@ -43,9 +44,10 @@ public:
     CPPUNIT_TEST(testImageWithSpecialID);
     CPPUNIT_TEST(testGraphicShape);
     CPPUNIT_TEST(testCharHighlight);
+    CPPUNIT_TEST(testCharHighlightODF);
     CPPUNIT_TEST(testMSCharBackgroundEditing);
     CPPUNIT_TEST(testCharBackgroundToHighlighting);
-#if !defined(WNT)
+#if !defined(_WIN32)
     CPPUNIT_TEST(testSkipImages);
 #endif
     CPPUNIT_TEST_SUITE_END();
@@ -71,7 +73,7 @@ void Test::testSwappedOutImageExport()
 
         if (mxComponent.is())
             mxComponent->dispose();
-        mxComponent = loadFromDesktop(getURLFromSrc("/sw/qa/extras/globalfilter/data/document_with_two_images.odt"), "com.sun.star.text.TextDocument");
+        mxComponent = loadFromDesktop(m_directories.getURLFromSrc("/sw/qa/extras/globalfilter/data/document_with_two_images.odt"), "com.sun.star.text.TextDocument");
 
         // Export the document and import again for a check
         uno::Reference<frame::XStorable> xStorable(mxComponent, uno::UNO_QUERY);
@@ -147,7 +149,7 @@ void Test::testLinkedGraphicRT()
     {
         if (mxComponent.is())
             mxComponent->dispose();
-        mxComponent = loadFromDesktop(getURLFromSrc("/sw/qa/extras/globalfilter/data/document_with_linked_graphic.odt"), "com.sun.star.text.TextDocument");
+        mxComponent = loadFromDesktop(m_directories.getURLFromSrc("/sw/qa/extras/globalfilter/data/document_with_linked_graphic.odt"), "com.sun.star.text.TextDocument");
 
         const OString sFailedMessage = OString("Failed on filter: ")
             + OUStringToOString(aFilterNames[nFilter], RTL_TEXTENCODING_ASCII_US);
@@ -217,7 +219,7 @@ void Test::testImageWithSpecialID()
     {
         if (mxComponent.is())
             mxComponent->dispose();
-        mxComponent = loadFromDesktop(getURLFromSrc("/sw/qa/extras/globalfilter/data/images_with_special_IDs.odt"), "com.sun.star.text.TextDocument");
+        mxComponent = loadFromDesktop(m_directories.getURLFromSrc("/sw/qa/extras/globalfilter/data/images_with_special_IDs.odt"), "com.sun.star.text.TextDocument");
 
         // Export the document and import again for a check
         uno::Reference<frame::XStorable> xStorable(mxComponent, uno::UNO_QUERY);
@@ -298,7 +300,7 @@ void Test::testGraphicShape()
     {
         if (mxComponent.is())
             mxComponent->dispose();
-        mxComponent = loadFromDesktop(getURLFromSrc("/sw/qa/extras/globalfilter/data/graphic_shape.odt"), "com.sun.star.text.TextDocument");
+        mxComponent = loadFromDesktop(m_directories.getURLFromSrc("/sw/qa/extras/globalfilter/data/graphic_shape.odt"), "com.sun.star.text.TextDocument");
 
         // Export the document and import again for a check
         uno::Reference<frame::XStorable> xStorable(mxComponent, uno::UNO_QUERY);
@@ -380,7 +382,7 @@ void Test::testCharHighlightBody()
     {
         if (mxComponent.is())
             mxComponent->dispose();
-        mxComponent = loadFromDesktop(getURLFromSrc("/sw/qa/extras/globalfilter/data/char_highlight.docx"),
+        mxComponent = loadFromDesktop(m_directories.getURLFromSrc("/sw/qa/extras/globalfilter/data/char_highlight.docx"),
                                       "com.sun.star.text.TextDocument");
 
         const OString sFailedMessage = OString("Failed on filter: ") + aFilterNames[nFilter];
@@ -473,6 +475,84 @@ void Test::testCharHighlight()
     testCharHighlightBody();
 }
 
+void Test::testCharHighlightODF()
+{
+    mxComponent = loadFromDesktop(m_directories.getURLFromSrc("/sw/qa/extras/globalfilter/data/char_background_editing.docx"),
+                                      "com.sun.star.text.TextDocument");
+
+    // don't check import, testMSCharBackgroundEditing already does that
+
+    uno::Reference<text::XTextRange> xPara = getParagraph(1);
+    for (int i = 1; i <= 4; ++i)
+    {
+        uno::Reference<beans::XPropertySet> xRun(getRun(xPara,i), uno::UNO_QUERY);
+        switch (i)
+        {
+            case 1: // non-transparent highlight
+            xRun->setPropertyValue("CharBackColor", uno::makeAny(static_cast<sal_Int32>(128)));
+            xRun->setPropertyValue("CharBackTransparent", uno::makeAny(true));
+            xRun->setPropertyValue("CharHighlight", uno::makeAny(static_cast<sal_Int32>(64)));
+            break;
+
+            case 2: // transparent backcolor
+            xRun->setPropertyValue("CharBackColor", uno::makeAny(static_cast<sal_Int32>(128)));
+            xRun->setPropertyValue("CharBackTransparent", uno::makeAny(true));
+            xRun->setPropertyValue("CharHighlight", uno::makeAny(static_cast<sal_Int32>(COL_TRANSPARENT)));
+            break;
+
+            case 3: // non-transparent backcolor
+            xRun->setPropertyValue("CharBackColor", uno::makeAny(static_cast<sal_Int32>(128)));
+            xRun->setPropertyValue("CharBackTransparent", uno::makeAny(false));
+            xRun->setPropertyValue("CharHighlight", uno::makeAny(static_cast<sal_Int32>(COL_TRANSPARENT)));
+            break;
+
+            case 4: // non-transparent highlight again
+            xRun->setPropertyValue("CharBackColor", uno::makeAny(static_cast<sal_Int32>(128)));
+            xRun->setPropertyValue("CharBackTransparent", uno::makeAny(false));
+            xRun->setPropertyValue("CharHighlight", uno::makeAny(static_cast<sal_Int32>(64)));
+            break;
+        }
+    }
+
+    uno::Reference<frame::XStorable> xStorable(mxComponent, uno::UNO_QUERY);
+    utl::MediaDescriptor aMediaDescriptor;
+    aMediaDescriptor["FilterName"] <<= OUString("writer8");
+
+    utl::TempFile aTempFile;
+    aTempFile.EnableKillingFile();
+    xStorable->storeToURL(aTempFile.GetURL(), aMediaDescriptor.getAsConstPropertyValueList());
+
+    uno::Reference< lang::XComponent > xComponent(xStorable, uno::UNO_QUERY);
+    xComponent->dispose();
+    mxComponent = loadFromDesktop(aTempFile.GetURL(), "com.sun.star.text.TextDocument");
+
+    xPara.set(getParagraph(1));
+    for (int i = 1; i <= 4; ++i)
+    {
+        uno::Reference<beans::XPropertySet> xRun(getRun(xPara,i), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(COL_TRANSPARENT), getProperty<sal_Int32>(xRun, "CharHighlight"));
+        switch (i)
+        {
+            case 1: // non-transparent highlight
+            CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(64), getProperty<sal_Int32>(xRun, "CharBackColor"));
+            CPPUNIT_ASSERT_EQUAL(false, getProperty<bool>(xRun, "CharBackTransparent"));
+            break;
+            case 2: // transparent backcolor
+            CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(COL_TRANSPARENT), getProperty<sal_Int32>(xRun, "CharBackColor"));
+            CPPUNIT_ASSERT_EQUAL(true, getProperty<bool>(xRun, "CharBackTransparent"));
+            break;
+            case 3: // non-transparent backcolor
+            CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(128), getProperty<sal_Int32>(xRun, "CharBackColor"));
+            CPPUNIT_ASSERT_EQUAL(false, getProperty<bool>(xRun, "CharBackTransparent"));
+            break;
+            case 4: // non-transparent highlight again
+            CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(64), getProperty<sal_Int32>(xRun, "CharBackColor"));
+            CPPUNIT_ASSERT_EQUAL(false, getProperty<bool>(xRun, "CharBackTransparent"));
+            break;
+        }
+    }
+}
+
 void Test::testMSCharBackgroundEditing()
 {
     // Simulate the editing process of imported MSO character background attributes
@@ -490,7 +570,7 @@ void Test::testMSCharBackgroundEditing()
         if (mxComponent.is())
             mxComponent->dispose();
 
-        mxComponent = loadFromDesktop(getURLFromSrc("/sw/qa/extras/globalfilter/data/char_background_editing.docx"),
+        mxComponent = loadFromDesktop(m_directories.getURLFromSrc("/sw/qa/extras/globalfilter/data/char_background_editing.docx"),
                                       "com.sun.star.text.TextDocument");
 
         const OString sFailedMessage = OString("Failed on filter: ") + aFilterNames[nFilter];
@@ -603,7 +683,7 @@ void Test::testCharBackgroundToHighlighting()
     {
         if (mxComponent.is())
             mxComponent->dispose();
-        mxComponent = loadFromDesktop(getURLFromSrc("/sw/qa/extras/globalfilter/data/char_background.odt"),
+        mxComponent = loadFromDesktop(m_directories.getURLFromSrc("/sw/qa/extras/globalfilter/data/char_background.odt"),
                                       "com.sun.star.text.TextDocument");
 
         OString sFailedMessage = OString("Failed on filter: ") + aFilterNames[nFilter];
@@ -659,7 +739,7 @@ void Test::testCharBackgroundToHighlighting()
     }
 }
 
-#if !defined(WNT)
+#if !defined(_WIN32)
 void Test::testSkipImages()
 {
     // Check how LO skips image loading (but not texts of textboxes and custom shapes)
@@ -688,10 +768,10 @@ void Test::testSkipImages()
             args[0].Handle = -1;
             args[0].Value <<= OUString::createFromAscii(aFilterNames[nFilter][1]);
             args[0].State = beans::PropertyState_DIRECT_VALUE;
-            mxComponent = loadFromDesktop(getURLFromSrc(aFilterNames[nFilter][0]), "com.sun.star.text.TextDocument", args);
+            mxComponent = loadFromDesktop(m_directories.getURLFromSrc(aFilterNames[nFilter][0]), "com.sun.star.text.TextDocument", args);
             sFailedMessage = sFailedMessage + " - " + aFilterNames[nFilter][1];
         } else
-            mxComponent = loadFromDesktop(getURLFromSrc(aFilterNames[nFilter][0]), "com.sun.star.text.TextDocument");
+            mxComponent = loadFromDesktop(m_directories.getURLFromSrc(aFilterNames[nFilter][0]), "com.sun.star.text.TextDocument");
 
         // Check shapes (images, textboxes, custom shapes)
         uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(mxComponent, uno::UNO_QUERY);

@@ -115,37 +115,37 @@ bool MultiLineEditSyntaxHighlight::PreNotify( NotifyEvent& rNEvt )
     return MultiLineEdit::PreNotify(rNEvt);
 }
 
-Color MultiLineEditSyntaxHighlight::GetColorValue(TokenTypes aToken)
+Color MultiLineEditSyntaxHighlight::GetColorValue(TokenType aToken)
 {
     Color aColor;
     switch (aHighlighter.GetLanguage())
     {
-        case HIGHLIGHT_SQL:
+        case HighlighterLanguage::SQL:
         {
             switch (aToken)
             {
-                case TT_IDENTIFIER: aColor = (ColorData)m_aColorConfig.GetColorValue(svtools::SQLIDENTIFIER).nColor; break;
-                case TT_NUMBER:     aColor = (ColorData)m_aColorConfig.GetColorValue(svtools::SQLNUMBER).nColor; break;
-                case TT_STRING:     aColor = (ColorData)m_aColorConfig.GetColorValue(svtools::SQLSTRING).nColor; break;
-                case TT_OPERATOR:   aColor = (ColorData)m_aColorConfig.GetColorValue(svtools::SQLOPERATOR).nColor; break;
-                case TT_KEYWORDS:   aColor = (ColorData)m_aColorConfig.GetColorValue(svtools::SQLKEYWORD).nColor; break;
-                case TT_PARAMETER:  aColor = (ColorData)m_aColorConfig.GetColorValue(svtools::SQLPARAMETER).nColor; break;
-                case TT_COMMENT:    aColor = (ColorData)m_aColorConfig.GetColorValue(svtools::SQLCOMMENT).nColor; break;
+                case TokenType::Identifier: aColor = (ColorData)m_aColorConfig.GetColorValue(svtools::SQLIDENTIFIER).nColor; break;
+                case TokenType::Number:     aColor = (ColorData)m_aColorConfig.GetColorValue(svtools::SQLNUMBER).nColor; break;
+                case TokenType::String:     aColor = (ColorData)m_aColorConfig.GetColorValue(svtools::SQLSTRING).nColor; break;
+                case TokenType::Operator:   aColor = (ColorData)m_aColorConfig.GetColorValue(svtools::SQLOPERATOR).nColor; break;
+                case TokenType::Keywords:   aColor = (ColorData)m_aColorConfig.GetColorValue(svtools::SQLKEYWORD).nColor; break;
+                case TokenType::Parameter:  aColor = (ColorData)m_aColorConfig.GetColorValue(svtools::SQLPARAMETER).nColor; break;
+                case TokenType::Comment:    aColor = (ColorData)m_aColorConfig.GetColorValue(svtools::SQLCOMMENT).nColor; break;
                 default:            aColor = Color(0,0,0);
             }
             break;
         }
-        case HIGHLIGHT_BASIC:
+        case HighlighterLanguage::Basic:
         {
             switch (aToken)
             {
-                case TT_IDENTIFIER: aColor = Color(255,0,0); break;
-                case TT_COMMENT:    aColor = Color(0,0,45); break;
-                case TT_NUMBER:     aColor = Color(204,102,204); break;
-                case TT_STRING:     aColor = Color(0,255,45); break;
-                case TT_OPERATOR:   aColor = Color(0,0,100); break;
-                case TT_KEYWORDS:   aColor = Color(0,0,255); break;
-                case TT_ERROR :     aColor = Color(0,255,255); break;
+                case TokenType::Identifier: aColor = Color(255,0,0); break;
+                case TokenType::Comment:    aColor = Color(0,0,45); break;
+                case TokenType::Number:     aColor = Color(204,102,204); break;
+                case TokenType::String:     aColor = Color(0,255,45); break;
+                case TokenType::Operator:   aColor = Color(0,0,100); break;
+                case TokenType::Keywords:   aColor = Color(0,0,255); break;
+                case TokenType::Error :     aColor = Color(0,255,255); break;
                 default:            aColor = Color(0,0,0);
             }
             break;

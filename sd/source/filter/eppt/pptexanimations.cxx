@@ -52,7 +52,6 @@
 #include <com/sun/star/text/XSimpleText.hpp>
 #include <com/sun/star/animations/XIterateContainer.hpp>
 #include <com/sun/star/presentation/TextAnimationType.hpp>
-#include <com/sun/star/container/XChild.hpp>
 #include <comphelper/processfactory.hxx>
 #include <rtl/ustrbuf.hxx>
 
@@ -66,21 +65,16 @@
 
 #include <algorithm>
 
-using ::std::map;
 using ::com::sun::star::uno::Any;
-using ::com::sun::star::container::XChild;
 using ::com::sun::star::util::XCloneable;
 using ::com::sun::star::uno::Reference;
 using ::com::sun::star::uno::UNO_QUERY;
 using ::com::sun::star::uno::UNO_QUERY_THROW;
 using ::com::sun::star::uno::Sequence;
-using ::com::sun::star::uno::makeAny;
 using ::com::sun::star::uno::Exception;
-using ::com::sun::star::uno::XInterface;
 using ::com::sun::star::beans::NamedValue;
 using ::com::sun::star::container::XEnumerationAccess;
 using ::com::sun::star::container::XEnumeration;
-using ::com::sun::star::lang::XMultiServiceFactory;
 
 using namespace ::com::sun::star::text;
 using namespace ::com::sun::star::drawing;
@@ -287,8 +281,7 @@ sal_Int16 AnimationExporter::GetFillMode( const Reference< XAnimationNode >& xNo
             return nFill;
     }
 
-    if ( ( nFill == AnimationFill::DEFAULT ) ||
-        ( nFill == AnimationFill::INHERIT ) )
+    if ( nFill == AnimationFill::DEFAULT )
     {
         if ( nFill != AnimationFill::AUTO )
             nFill = nFillDefault;
@@ -836,7 +829,7 @@ void AnimationExporter::exportAnimNode( SvStream& rStrm, const Reference< XAnima
     {
         case AnimationNodeType::PAR :
             aAnim.mnGroupType = mso_Anim_GroupType_PAR;
-            // PASSTROUGH!!! (as it was intended)
+            SAL_FALLTHROUGH;
         case AnimationNodeType::SEQ :
         {
             sal_Int16 nType = 0;
@@ -909,7 +902,7 @@ void AnimationExporter::GetUserData( const Sequence< NamedValue >& rUserData, co
         }
         else if ( p->Name == "master-element" )
         {
-        pAny[ DFF_ANIM_AFTEREFFECT ] = &(p->Value);;
+        pAny[ DFF_ANIM_AFTEREFFECT ] = &(p->Value);
         }
         p++;
     }
@@ -1162,9 +1155,7 @@ bool AnimationExporter::exportAnimProperty( SvStream& rStrm, const sal_uInt16 nP
                 {
                     if ( eTranslateMode & TRANSLATE_NUMBER_TO_STRING )
                     {
-                        Any aAny;
                         OUString aNumber( OUString::number( fVal ) );
-                        aAny <<= aNumber;
                         exportAnimPropertyString( rStrm, nPropertyId, aNumber, eTranslateMode );
                     }
                     else
@@ -1614,7 +1605,6 @@ void AnimationExporter::exportAnimate( SvStream& rStrm, const Reference< XAnimat
             sal_uInt32 nBits = 0x38;
             sal_Int16 nTmp = xAnimate->getCalcMode();
             sal_uInt32 nCalcMode = /* (nTmp == AnimationCalcMode::FORMULA) ? 2 : */ (nTmp == AnimationCalcMode::LINEAR) ? 1 : 0;
-            nTmp = xAnimate->getValueType();
             sal_uInt32 nValueType = GetValueTypeForAttributeName( xAnimate->getAttributeName() );
 
             if ( aBy.hasValue() )

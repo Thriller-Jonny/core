@@ -28,15 +28,14 @@
 
 typedef std::unordered_map< OUString,
                             StylePool::SfxItemSet_Pointer_t,
-                            OUStringHash,
-                            std::equal_to< OUString > > SwStyleNameCache;
+                            OUStringHash > SwStyleNameCache;
 
 class SwStyleCache
 {
     SwStyleNameCache mMap;
 public:
     SwStyleCache() {}
-    void addStyleName( StylePool::SfxItemSet_Pointer_t pStyle )
+    void addStyleName( const StylePool::SfxItemSet_Pointer_t& pStyle )
         { mMap[ StylePool::nameOf(pStyle) ] = pStyle; }
     void addCompletePool( StylePool& rPool );
     StylePool::SfxItemSet_Pointer_t getByName( const OUString& rName ) { return mMap[rName]; }

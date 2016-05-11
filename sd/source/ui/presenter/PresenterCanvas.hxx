@@ -34,7 +34,6 @@
 #include <com/sun/star/rendering/VolatileContentDestroyedException.hpp>
 #include <cppuhelper/basemutex.hxx>
 #include <cppuhelper/compbase.hxx>
-#include <boost/noncopyable.hpp>
 #include <memory>
 
 namespace sd { namespace presenter {
@@ -43,9 +42,7 @@ namespace {
     typedef ::cppu::WeakComponentImplHelper <
         css::rendering::XSpriteCanvas,
         css::rendering::XBitmap,
-        css::awt::XWindowListener,
-        css::lang::XInitialization,
-        css::lang::XServiceInfo
+        css::awt::XWindowListener
     > PresenterCanvasInterfaceBase;
 }
 
@@ -62,16 +59,10 @@ namespace {
     construction.  This allows the shared canvas to be a canvas of sprite itself.
 */
 class PresenterCanvas
-    : private ::boost::noncopyable,
-      private ::cppu::BaseMutex,
+    : private ::cppu::BaseMutex,
       public PresenterCanvasInterfaceBase
 {
 public:
-    /** This constructor is used when a PresenterCanvas object is created as
-        a service.
-    */
-    PresenterCanvas();
-
     /** This constructor is used when a PresenterCanvas object is created
         directly, typically by the PresenterCanvasFactory.
         @param rxUpdateCanvas
@@ -106,6 +97,8 @@ public:
         const css::uno::Reference<css::awt::XWindow>& rxSharedWindow,
         const css::uno::Reference<css::awt::XWindow>& rxWindow);
     virtual ~PresenterCanvas();
+    PresenterCanvas(const PresenterCanvas&) = delete;
+    PresenterCanvas& operator=(const PresenterCanvas&) = delete;
 
     virtual void SAL_CALL disposing()
         throw (css::uno::RuntimeException) override;
@@ -129,21 +122,6 @@ public:
         const css::uno::Reference<css::rendering::XPolyPolygon2D>& rxOriginalClip,
         const css::geometry::RealPoint2D& rLocation,
         const css::geometry::RealSize2D& rSize);
-
-    // XInitialization
-
-    virtual void SAL_CALL initialize (
-        const css::uno::Sequence<css::uno::Any>& rArguments)
-        throw(css::uno::Exception, css::uno::RuntimeException, std::exception) override;
-
-    OUString SAL_CALL getImplementationName()
-        throw (css::uno::RuntimeException, std::exception) override;
-
-    sal_Bool SAL_CALL supportsService(OUString const & ServiceName)
-        throw (css::uno::RuntimeException, std::exception) override;
-
-    css::uno::Sequence<OUString> SAL_CALL getSupportedServiceNames()
-        throw (css::uno::RuntimeException, std::exception) override;
 
     // XCanvas
 

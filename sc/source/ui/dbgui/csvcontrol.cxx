@@ -81,6 +81,7 @@ void ScCsvControl::dispose()
 {
     if( mxAccessible.is() )
         mxAccessible->dispose();
+    mxAccessible = nullptr; // lp#1566050: prevent cyclic reference zombies
     Control::dispose();
 }
 
@@ -155,11 +156,11 @@ void ScCsvControl::DisableRepaint()
     ++mrData.mnNoRepaint;
 }
 
-void ScCsvControl::EnableRepaint( bool bInvalidate )
+void ScCsvControl::EnableRepaint()
 {
     OSL_ENSURE( IsNoRepaint(), "ScCsvControl::EnableRepaint - invalid call" );
     --mrData.mnNoRepaint;
-    Repaint( bInvalidate );
+    Repaint();
 }
 
 // command handling -----------------------------------------------------------

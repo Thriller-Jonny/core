@@ -22,7 +22,6 @@
 
 #include <classes/protocolhandlercache.hxx>
 
-#include <threadhelp/transactionbase.hxx>
 #include <macros/xinterface.hxx>
 #include <macros/xtypeprovider.hxx>
 #include <stdtypes.h>
@@ -48,7 +47,6 @@ namespace framework{
 enum EDispatchHelper
 {
     E_DEFAULTDISPATCHER     ,
-    E_MENUDISPATCHER        ,
     E_CREATEDISPATCHER      ,
     E_BLANKDISPATCHER       ,
     E_SELFDISPATCHER        ,
@@ -73,9 +71,7 @@ enum EDispatchHelper
     @devstatus      ready to use
     @threadsafe     yes
 */
-class DispatchProvider  :   private TransactionBase                     ,
-                            // interfaces
-                            public  ::cppu::WeakImplHelper< css::frame::XDispatchProvider >
+class DispatchProvider: public ::cppu::WeakImplHelper< css::frame::XDispatchProvider >
 {
     /* member */
     private:
@@ -83,8 +79,6 @@ class DispatchProvider  :   private TransactionBase                     ,
         css::uno::Reference< css::uno::XComponentContext > m_xContext;
         /// weakreference to owner frame (Don't use a hard reference. Owner can't delete us then!)
         css::uno::WeakReference< css::frame::XFrame > m_xFrame;
-        /// different dispatcher to handle special dispatch calls, protocols or URLs (they will be created on demand.)
-        css::uno::Reference< css::frame::XDispatch > m_xMenuDispatcher;
         /// cache of some other dispatch provider which are registered inside configuration to handle special URL protocols
         HandlerCache m_aProtocolHandlerCache;
 
@@ -109,12 +103,12 @@ class DispatchProvider  :   private TransactionBase                     ,
                                                                                           const css::uno::Reference< css::frame::XFrame >& xOwner                        ,
                                                                                           const OUString&                           sTarget = OUString()   ,
                                                                                                 sal_Int32                                  nSearchFlags = 0              );
-        bool                                     implts_isLoadableContent           ( const css::util::URL&                            aURL                          );
-        css::uno::Reference< css::frame::XDispatch > implts_queryDesktopDispatch        ( const css::uno::Reference< css::frame::XFrame >  xDesktop                      ,
+        bool                                         implts_isLoadableContent           ( const css::util::URL&                            aURL                          );
+        css::uno::Reference< css::frame::XDispatch > implts_queryDesktopDispatch        ( const css::uno::Reference< css::frame::XFrame >&  xDesktop                      ,
                                                                                           const css::util::URL&                            aURL                          ,
                                                                                           const OUString&                           sTargetFrameName              ,
                                                                                                 sal_Int32                                  nSearchFlags                  );
-        css::uno::Reference< css::frame::XDispatch > implts_queryFrameDispatch          ( const css::uno::Reference< css::frame::XFrame >  xFrame                        ,
+        css::uno::Reference< css::frame::XDispatch > implts_queryFrameDispatch          ( const css::uno::Reference< css::frame::XFrame >&  xFrame                        ,
                                                                                           const css::util::URL&                            aURL                          ,
                                                                                           const OUString&                           sTargetFrameName              ,
                                                                                                 sal_Int32                                  nSearchFlags                  );

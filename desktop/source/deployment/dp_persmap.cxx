@@ -35,11 +35,10 @@ namespace dp_misc
 
 static const char PmapMagic[4] = {'P','m','p','1'};
 
-PersistentMap::PersistentMap( OUString const & url_, bool readOnly )
+PersistentMap::PersistentMap( OUString const & url_ )
 :    m_MapFile( expandUnoRcUrl(url_) )
-,    m_bReadOnly( readOnly )
 ,    m_bIsOpen( false )
-,    m_bToBeCreated( !readOnly )
+,    m_bToBeCreated( true )
 ,    m_bIsDirty( false )
 {
     open();
@@ -47,7 +46,6 @@ PersistentMap::PersistentMap( OUString const & url_, bool readOnly )
 
 PersistentMap::PersistentMap()
 :    m_MapFile( OUString() )
-,    m_bReadOnly( false )
 ,    m_bIsOpen( false )
 ,    m_bToBeCreated( false )
 ,    m_bIsDirty( false )
@@ -138,12 +136,10 @@ static OString decodeString( const sal_Char* pEncChars, int nLen)
     return aDecStr.makeStringAndClear();
 }
 
-bool PersistentMap::open()
+void PersistentMap::open()
 {
     // open the existing file
-    sal_uInt32 nOpenFlags = osl_File_OpenFlag_Read;
-    if( !m_bReadOnly)
-        nOpenFlags |= osl_File_OpenFlag_Write;
+    sal_uInt32 nOpenFlags = osl_File_OpenFlag_Read | osl_File_OpenFlag_Write;
 
     const osl::File::RC rcOpen = m_MapFile.open( nOpenFlags);
     m_bIsOpen = (rcOpen == osl::File::E_None);
@@ -152,13 +148,13 @@ bool PersistentMap::open()
     m_bToBeCreated &= (rcOpen == osl::File::E_NOENT) && !m_bIsOpen;
 
     if( !m_bIsOpen)
-        return m_bToBeCreated;
+        return;
 
-    return readAll();
+    readAll();
 }
 
 
-bool PersistentMap::readAll()
+void PersistentMap::readAll()
 {
     // prepare for re-reading the map-file
     const osl::FileBase::RC nRes = m_MapFile.setPos( osl_Pos_Absolut, 0);
@@ -171,11 +167,11 @@ bool PersistentMap::readAll()
     m_MapFile.read( aHeaderBytes, sizeof(aHeaderBytes), nBytesRead);
     OSL_ASSERT( nBytesRead == sizeof(aHeaderBytes));
     if( nBytesRead != sizeof(aHeaderBytes))
-        return false;
+        return;
     // check header magic
     for( int i = 0; i < (int)sizeof(PmapMagic); ++i)
         if( aHeaderBytes[i] != PmapMagic[i])
-            return false;
+            return;
 
     // read key value pairs and add them to the map
     ByteSequence aKeyLine;
@@ -185,11 +181,11 @@ bool PersistentMap::readAll()
         // read key-value line pair
         // an empty key name indicates the end of the line pairs
         if( m_MapFile.readLine( aKeyLine) != osl::File::E_None)
-            return false;
+            return;
         if( !aKeyLine.getLength())
             break;
         if( m_MapFile.readLine( aValLine) != osl::File::E_None)
-            return false;
+            return;
         // decode key and value strings
         const OString aKeyName = decodeString( reinterpret_cast<char const *>(aKeyLine.getConstArray()), aKeyLine.getLength());
         const OString aValName = decodeString( reinterpret_cast<char const *>(aValLine.getConstArray()), aValLine.getLength());
@@ -198,20 +194,18 @@ bool PersistentMap::readAll()
         // check end-of-file status
         sal_Bool bIsEOF = true;
         if( m_MapFile.isEndOfFile( &bIsEOF) != osl::File::E_None )
-            return false;
+            return;
         if( bIsEOF )
             break;
     }
 
     m_bIsDirty = false;
-    return true;
 }
 
 void PersistentMap::flush()
 {
     if( !m_bIsDirty)
         return;
-    OSL_ASSERT( !m_bReadOnly);
     if( m_bToBeCreated && !m_entries.empty())
     {
         const sal_uInt32 nOpenFlags = osl_File_OpenFlag_Read | osl_File_OpenFlag_Write | osl_File_OpenFlag_Create;
@@ -274,8 +268,6 @@ bool PersistentMap::get( OString * value, OString const & key ) const
 
 void PersistentMap::add( OString const & key, OString const & value )
 {
-    if( m_bReadOnly)
-        return;
     typedef std::pair<t_string2string_map::iterator,bool> InsertRC;
     InsertRC r = m_entries.insert( t_string2string_map::value_type(key,value));
     m_bIsDirty = r.second;
@@ -291,16 +283,13 @@ void PersistentMap::put( OString const & key, OString const & value )
         flush();
 }
 
-bool PersistentMap::erase( OString const & key, bool flush_immediately )
+bool PersistentMap::erase( OString const & key )
 {
-    if( m_bReadOnly)
-        return false;
     size_t nCount = m_entries.erase( key);
     if( !nCount)
         return false;
     m_bIsDirty = true;
-    if( flush_immediately)
-        flush();
+    flush();
     return true;
 }
 

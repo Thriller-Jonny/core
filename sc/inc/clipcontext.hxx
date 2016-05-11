@@ -16,7 +16,6 @@
 
 #include <memory>
 #include <vector>
-#include <boost/noncopyable.hpp>
 
 class ScDocument;
 class ScColumn;
@@ -29,13 +28,14 @@ namespace sc {
 struct ColumnBlockPosition;
 class ColumnBlockPositionSet;
 
-class ClipContextBase : boost::noncopyable
+class ClipContextBase
 {
     std::unique_ptr<ColumnBlockPositionSet> mpSet;
 
-    ClipContextBase(); // disabled
-
 public:
+    ClipContextBase() = delete;
+    ClipContextBase(const ClipContextBase&) = delete;
+    const ClipContextBase& operator=(const ClipContextBase&) = delete;
     ClipContextBase(ScDocument& rDoc);
     virtual ~ClipContextBase();
 
@@ -67,8 +67,6 @@ class CopyFromClipContext : public ClipContextBase
     bool mbCloneNotes:1;
     bool mbTableProtected:1;
 
-    CopyFromClipContext(); // disabled
-
 public:
 
     struct Range
@@ -79,6 +77,7 @@ public:
         SCROW mnRow2;
     };
 
+    CopyFromClipContext() = delete;
     CopyFromClipContext(ScDocument& rDoc,
         ScDocument* pRefUndoDoc, ScDocument* pClipDoc, InsertDeleteFlags nInsertFlag,
         bool bAsLink, bool bSkipAttrForEmptyCells);
@@ -136,9 +135,8 @@ class CopyToClipContext : public ClipContextBase
     bool mbKeepScenarioFlags:1;
     bool mbCloneNotes:1;
 
-    CopyToClipContext(); // disabled
-
 public:
+    CopyToClipContext() = delete;
     CopyToClipContext(ScDocument& rDoc, bool bKeepScenarioFlags, bool bCloneNotes);
     virtual ~CopyToClipContext();
 

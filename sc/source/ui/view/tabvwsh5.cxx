@@ -44,7 +44,7 @@ void ScTabViewShell::Notify( SfxBroadcaster& rBC, const SfxHint& rHint )
 {
     if (dynamic_cast<const SfxSimpleHint*>(&rHint))                       // ohne Parameter
     {
-        sal_uLong nSlot = static_cast<const SfxSimpleHint&>(rHint).GetId();
+        const sal_uInt32 nSlot = static_cast<const SfxSimpleHint&>(rHint).GetId();
         switch ( nSlot )
         {
             case FID_DATACHANGED:
@@ -112,8 +112,8 @@ void ScTabViewShell::Notify( SfxBroadcaster& rBC, const SfxHint& rHint )
                     bReadOnly = GetViewData().GetSfxDocShell()->IsReadOnly();
 
                     SfxBoolItem aItem( SID_FM_DESIGN_MODE, !bReadOnly);
-                    GetViewData().GetDispatcher().Execute( SID_FM_DESIGN_MODE, SfxCallMode::ASYNCHRON,
-                                                &aItem, 0L );
+                    GetViewData().GetDispatcher().ExecuteList(SID_FM_DESIGN_MODE,
+                            SfxCallMode::ASYNCHRON, { &aItem });
 
                     UpdateInputContext();
                 }

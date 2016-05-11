@@ -129,8 +129,8 @@ void PrepareListener_Impl::disposing(const css::lang::EventObject& /*rEvent*/) t
 static const char       PDF_DOCUMENT_TYPE[]   = "pdf_Portable_Document_Format";
 
 SfxMailModel::SaveResult SfxMailModel::ShowFilterOptionsDialog(
-    uno::Reference< lang::XMultiServiceFactory > xSMGR,
-    uno::Reference< frame::XModel > xModel,
+    const uno::Reference< lang::XMultiServiceFactory >& xSMGR,
+    const uno::Reference< frame::XModel >& xModel,
     const OUString& rFilterName,
     const OUString& rType,
     bool bModified,
@@ -222,7 +222,7 @@ SfxMailModel::SaveResult SfxMailModel::ShowFilterOptionsDialog(
                                 {
                                     try
                                     {
-                                        xModifiable->setModified( sal_False );
+                                        xModifiable->setModified( false );
                                     }
                                     catch( css::beans::PropertyVetoException& )
                                     {
@@ -612,7 +612,7 @@ SfxMailModel::SaveResult SfxMailModel::SaveDocumentAsFormat(
                     {
                         try
                         {
-                            xModifiable->setModified( sal_False );
+                            xModifiable->setModified( false );
                         }
                         catch( css::beans::PropertyVetoException& )
                         {
@@ -821,7 +821,7 @@ SfxMailModel::SendMailResult SfxMailModel::Send( const css::uno::Reference< css:
                     OUString subject(
                         url.getBase(
                             INetURLObject::LAST_SEGMENT, false,
-#ifdef WNT
+#ifdef _WIN32
                             INetURLObject::NO_DECODE)); // MAPISendMail does not accept Unicode
 #else
                             INetURLObject::DECODE_WITH_CHARSET));

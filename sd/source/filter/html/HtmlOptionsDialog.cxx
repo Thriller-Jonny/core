@@ -99,7 +99,6 @@ public:
 
 };
 
-// - SdHtmlOptionsDialog -
 SdHtmlOptionsDialog::SdHtmlOptionsDialog() :
     meDocType   ( DOCUMENT_TYPE_DRAW )
 {
@@ -243,7 +242,6 @@ com_sun_star_comp_draw_SdHtmlOptionsDialog_get_implementation(css::uno::XCompone
 {
     return cppu::acquire(new SdHtmlOptionsDialog());
 }
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

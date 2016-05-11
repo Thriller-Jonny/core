@@ -29,7 +29,6 @@ class SwView;
 class SwHyphWrapper : public SvxSpellWrapper {
 private:
     SwView* pView;
-    css::uno::Reference< css::linguistic2::XHyphenator >  xHyph;
     sal_uInt16      nPageCount;     // page count for progress view
     sal_uInt16      nPageStart;     // 1st checked page
     bool            bInSelection : 1; // separating selected text
@@ -38,7 +37,7 @@ private:
 
 protected:
     virtual void SpellStart( SvxSpellArea eSpell ) override;
-    virtual bool SpellContinue() override;
+    virtual void SpellContinue() override;
     virtual void SpellEnd( ) override;
     virtual bool SpellMore() override;
     virtual void InsertHyphen( const sal_Int32 nPos ) override; // insert hyphen

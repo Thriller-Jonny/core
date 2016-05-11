@@ -45,13 +45,12 @@ namespace svx
 
     OColumnTransferable::OColumnTransferable(const OUString& _rDatasource
                                             ,const OUString& _rConnectionResource
-                                            ,const sal_Int32        _nCommandType
                                             ,const OUString& _rCommand
                                             ,const OUString& _rFieldName
                                             ,ColumnTransferFormatFlags _nFormats)
         :m_nFormatFlags(_nFormats)
     {
-        implConstruct(_rDatasource,_rConnectionResource,_nCommandType, _rCommand, _rFieldName);
+        implConstruct(_rDatasource,_rConnectionResource, css::sdb::CommandType::TABLE, _rCommand, _rFieldName);
     }
 
 
@@ -569,7 +568,6 @@ namespace svx
         // extract the single values from the sequence
 
         OUString sObjectName;
-        OUString sDatasourceName = _rDatasource;
         sObjectName = _rCommand;
 
         // for compatibility: create a string which can be used for the SotClipboardFormatId::SBA_DATAEXCHANGE format
@@ -584,7 +582,7 @@ namespace svx
         const sal_Unicode       cQueryMark = '0';
 
         // build the descriptor string
-        m_sCompatibleObjectDescription += sDatasourceName;
+        m_sCompatibleObjectDescription += _rDatasource;
         m_sCompatibleObjectDescription += sSeparator;
         m_sCompatibleObjectDescription += bTreatAsStatement ? OUString() : sObjectName;
         m_sCompatibleObjectDescription += sSeparator;
@@ -675,7 +673,6 @@ namespace svx
 
 
 }
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -60,6 +60,7 @@
 
 #include <comphelper/sequence.hxx>
 #include <cppuhelper/supportsservice.hxx>
+#include <rtl/instance.hxx>
 #include <vcl/svapp.hxx>
 
 #include <tools/errinf.hxx>
@@ -67,6 +68,10 @@
 #include <comphelper/extract.hxx>
 
 namespace framework{
+
+enum PropHandle {
+    ActiveFrame, DispatchRecorderSupplier, IsPlugged, SuspendQuickstartVeto,
+    Title };
 
 OUString SAL_CALL Desktop::getImplementationName()
     throw (css::uno::RuntimeException, std::exception)
@@ -83,8 +88,7 @@ sal_Bool SAL_CALL Desktop::supportsService(OUString const & ServiceName)
 css::uno::Sequence<OUString> SAL_CALL Desktop::getSupportedServiceNames()
     throw (css::uno::RuntimeException, std::exception)
 {
-    css::uno::Sequence< OUString > aSeq { "com.sun.star.frame.Desktop" };
-    return aSeq;
+    return { "com.sun.star.frame.Desktop" };
 }
 
 void Desktop::constructorInit()
@@ -225,7 +229,7 @@ sal_Bool SAL_CALL Desktop::terminate()
     if ( bVeto )
     {
         impl_sendCancelTerminationEvent(lCalledTerminationListener);
-        return sal_False;
+        return false;
     }
 
     // try to close all open frames.
@@ -240,7 +244,7 @@ sal_Bool SAL_CALL Desktop::terminate()
     if ( ! bFramesClosed )
     {
         impl_sendCancelTerminationEvent(lCalledTerminationListener);
-        return sal_False;
+        return false;
     }
 
     // Normal listener had no problem ...
@@ -381,7 +385,7 @@ void SAL_CALL Desktop::addTerminateListener( const css::uno::Reference< css::fra
             m_xSfxTerminator = xListener;
             return;
         }
-        if( sImplementationName == "com.sun.star.comp.OfficeIPCThreadController" )
+        if( sImplementationName == "com.sun.star.comp.RequestHandlerController" )
         {
             m_xPipeTerminator = xListener;
             return;
@@ -420,7 +424,7 @@ void SAL_CALL Desktop::removeTerminateListener( const css::uno::Reference< css::
             return;
         }
 
-        if( sImplementationName == "com.sun.star.comp.OfficeIPCThreadController" )
+        if( sImplementationName == "com.sun.star.comp.RequestHandlerController" )
         {
             m_xPipeTerminator.clear();
             return;
@@ -674,7 +678,7 @@ css::uno::Sequence< css::uno::Reference< css::frame::XDispatch > > SAL_CALL Desk
 }
 
 /*-************************************************************************************************************
-    @interface  XDipsatchProviderInterception
+    @interface  XDispatchProviderInterception
     @short      supports registration/deregistration of interception objects, which
                 are interested on special dispatches.
 
@@ -812,7 +816,7 @@ void SAL_CALL Desktop::setName( const OUString& sName ) throw( css::uno::Runtime
 
 sal_Bool SAL_CALL Desktop::isTop() throw( css::uno::RuntimeException, std::exception )
 {
-    return sal_True;
+    return true;
 }
 
 void SAL_CALL Desktop::activate() throw( css::uno::RuntimeException, std::exception )
@@ -831,13 +835,13 @@ void SAL_CALL Desktop::deactivate() throw( css::uno::RuntimeException, std::exce
 
 sal_Bool SAL_CALL Desktop::isActive() throw( css::uno::RuntimeException, std::exception )
 {
-    return sal_True;
+    return true;
 }
 
 sal_Bool SAL_CALL Desktop::setComponent( const css::uno::Reference< css::awt::XWindow >&       /*xComponentWindow*/ ,
                                          const css::uno::Reference< css::frame::XController >& /*xController*/      ) throw( css::uno::RuntimeException, std::exception )
 {
-    return sal_False;
+    return false;
 }
 
 css::uno::Reference< css::awt::XWindow > SAL_CALL Desktop::getComponentWindow() throw( css::uno::RuntimeException, std::exception )
@@ -903,7 +907,6 @@ css::uno::Reference< css::frame::XFrame > SAL_CALL Desktop::findFrame( const OUS
 
     if (
         (sTargetFrameName==SPECIALTARGET_DEFAULT  )   ||    // valid for dispatches - not for findFrame()!
-        (sTargetFrameName==SPECIALTARGET_MENUBAR  )   ||    // valid for dispatches - not for findFrame()!
         (sTargetFrameName==SPECIALTARGET_PARENT   )   ||    // we have no parent by definition
         (sTargetFrameName==SPECIALTARGET_BEAMER   )         // beamer frames are allowed as child of tasks only -
                                                             // and they exist more than ones. We have no idea which our sub tasks is the right one
@@ -922,7 +925,7 @@ css::uno::Reference< css::frame::XFrame > SAL_CALL Desktop::findFrame( const OUS
     if ( sTargetFrameName==SPECIALTARGET_BLANK )
     {
         TaskCreator aCreator( m_xContext );
-        xTarget = aCreator.createTask(sTargetFrameName,false);
+        xTarget = aCreator.createTask(sTargetFrameName);
     }
 
     // I.II) "_top"
@@ -1006,7 +1009,7 @@ css::uno::Reference< css::frame::XFrame > SAL_CALL Desktop::findFrame( const OUS
            )
         {
             TaskCreator aCreator( m_xContext );
-            xTarget = aCreator.createTask(sTargetFrameName,false);
+            xTarget = aCreator.createTask(sTargetFrameName);
         }
     }
 
@@ -1025,19 +1028,9 @@ void SAL_CALL Desktop::disposing()
 
     SolarMutexClearableGuard aWriteLock;
 
-    // Look for multiple calls of this method!
-    // If somewhere call dispose() twice - he will be stopped here really!!!
-    TransactionGuard aTransaction( m_aTransactionManager, E_HARDEXCEPTIONS );
-
-    // Now - we are alone and its the first call of this method ...
-    // otherwise call before had thrown a DisposedException / hopefully .-)
-    // But we don't use the transaction object created before ... we reset it immediately ...
-    // two lines of code ... for what ?
-    // The answer: We wished to synchronize concurrent dispose() calls -> OK
-    // But next line will wait for all currently running transaction (even if they
-    // are running within the same thread!) So we would block ourself there if aTransaction
-    // will stay registered .-)
-    aTransaction.stop();
+    {
+        TransactionGuard aTransaction( m_aTransactionManager, E_HARDEXCEPTIONS );
+    }
 
     // Disable this instance for further work.
     // This will wait for all current running transactions ...
@@ -1198,7 +1191,7 @@ void SAL_CALL Desktop::handle( const css::uno::Reference< css::task::XInteractio
     // get packed request and work on it first
     // Attention: Don't set it on internal member BEFORE interaction is finished - because
     // "loadComponentFromURL()" yield tills this member is changed. If we do it before
-    // interaction finish we can't guarantee right functionality. May be we cancel load process to earliear...
+    // interaction finish we can't guarantee right functionality. May be we cancel load process to earlier...
     css::uno::Any aRequest = xRequest->getRequest();
 
     // extract continuations from request
@@ -1288,7 +1281,7 @@ OUString SAL_CALL Desktop::getUntitledPrefix()
     @short      try to convert a property value
     @descr      This method is called from helperclass "OPropertySetHelper".
                 Don't use this directly!
-                You must try to convert the value of given DESKTOP_PROPHANDLE and
+                You must try to convert the value of given PropHandle and
                 return results of this operation. This will be used to ask vetoable
                 listener. If no listener has a veto, we will change value really!
                 ( in method setFastPropertyValue_NoBroadcast(...) )
@@ -1323,21 +1316,21 @@ sal_Bool SAL_CALL Desktop::convertFastPropertyValue(       css::uno::Any&   aCon
 
     switch( nHandle )
     {
-        case DESKTOP_PROPHANDLE_SUSPENDQUICKSTARTVETO:
+        case PropHandle::SuspendQuickstartVeto:
                 bReturn = PropHelper::willPropertyBeChanged(
                     css::uno::makeAny(m_bSuspendQuickstartVeto),
                     aValue,
                     aOldValue,
                     aConvertedValue);
                 break;
-        case DESKTOP_PROPHANDLE_DISPATCHRECORDERSUPPLIER :
+        case PropHandle::DispatchRecorderSupplier :
                 bReturn = PropHelper::willPropertyBeChanged(
                     css::uno::makeAny(m_xDispatchRecorderSupplier),
                     aValue,
                     aOldValue,
                     aConvertedValue);
                 break;
-        case DESKTOP_PROPHANDLE_TITLE :
+        case PropHandle::Title :
                 bReturn = PropHelper::willPropertyBeChanged(
                     css::uno::makeAny(m_sTitle),
                     aValue,
@@ -1373,11 +1366,11 @@ void SAL_CALL Desktop::setFastPropertyValue_NoBroadcast(       sal_Int32        
 
     switch( nHandle )
     {
-        case DESKTOP_PROPHANDLE_SUSPENDQUICKSTARTVETO:    aValue >>= m_bSuspendQuickstartVeto;
+        case PropHandle::SuspendQuickstartVeto:    aValue >>= m_bSuspendQuickstartVeto;
                                                     break;
-        case DESKTOP_PROPHANDLE_DISPATCHRECORDERSUPPLIER:    aValue >>= m_xDispatchRecorderSupplier;
+        case PropHandle::DispatchRecorderSupplier:    aValue >>= m_xDispatchRecorderSupplier;
                                                     break;
-        case DESKTOP_PROPHANDLE_TITLE:    aValue >>= m_sTitle;
+        case PropHandle::Title:    aValue >>= m_sTitle;
                                                     break;
     }
 }
@@ -1404,59 +1397,47 @@ void SAL_CALL Desktop::getFastPropertyValue( css::uno::Any& aValue  ,
 
     switch( nHandle )
     {
-        case DESKTOP_PROPHANDLE_ACTIVEFRAME           :   aValue <<= m_aChildTaskContainer.getActive();
+        case PropHandle::ActiveFrame           :   aValue <<= m_aChildTaskContainer.getActive();
                                                     break;
-        case DESKTOP_PROPHANDLE_ISPLUGGED           :   aValue <<= sal_False;
+        case PropHandle::IsPlugged           :   aValue <<= false;
                                                     break;
-        case DESKTOP_PROPHANDLE_SUSPENDQUICKSTARTVETO:    aValue <<= m_bSuspendQuickstartVeto;
+        case PropHandle::SuspendQuickstartVeto:    aValue <<= m_bSuspendQuickstartVeto;
                                                     break;
-        case DESKTOP_PROPHANDLE_DISPATCHRECORDERSUPPLIER:    aValue <<= m_xDispatchRecorderSupplier;
+        case PropHandle::DispatchRecorderSupplier:    aValue <<= m_xDispatchRecorderSupplier;
                                                     break;
-        case DESKTOP_PROPHANDLE_TITLE:    aValue <<= m_sTitle;
+        case PropHandle::Title:    aValue <<= m_sTitle;
                                                     break;
     }
 }
 
-/*-************************************************************************************************************
-    @short      return structure and information about transient properties
-    @descr      This method is calling from helperclass "OPropertySetHelper".
-                Don't use this directly!
-
-    @attention  You must use global lock (method use static variable) ... and it must be the shareable osl mutex of it.
-                Because; our baseclass use this mutex to make his code threadsafe. We use our lock!
-                So we could have two different mutex/lock mechanism at the same object.
-
-    @seealso    class OPropertySetHelper
-    @return     structure with property-information
-    @threadsafe yes
-*//*-*************************************************************************************************************/
 ::cppu::IPropertyArrayHelper& SAL_CALL Desktop::getInfoHelper()
 {
-    /* UNSAFE AREA --------------------------------------------------------------------------------------------- */
-    // Register transaction and reject wrong calls.
-    TransactionGuard aTransaction( m_aTransactionManager, E_HARDEXCEPTIONS );
-
-    // Optimize this method !
-    // We initialize a static variable only one time. And we don't must use a mutex at every call!
-    // For the first call; pInfoHelper is NULL - for the second call pInfoHelper is different from NULL!
-    static ::cppu::OPropertyArrayHelper* pInfoHelper = nullptr;
-
-    if( pInfoHelper == nullptr )
+    struct Static:
+        public rtl::StaticWithInit<cppu::OPropertyArrayHelper, Static>
     {
-        SolarMutexGuard aGuard;
-
-        // Control this pointer again, another instance can be faster then these!
-        if( pInfoHelper == nullptr )
-        {
-            // Define static member to give structure of properties to baseclass "OPropertySetHelper".
-            // "impl_getStaticPropertyDescriptor" is a non exported and static function, who will define a static propertytable.
-            // "sal_True" say: Table is sorted by name.
-            static ::cppu::OPropertyArrayHelper aInfoHelper( impl_getStaticPropertyDescriptor(), sal_True );
-            pInfoHelper = &aInfoHelper;
+        cppu::OPropertyArrayHelper operator ()() {
+            return {
+                {{"ActiveFrame", PropHandle::ActiveFrame,
+                  cppu::UnoType<css::lang::XComponent>::get(),
+                  (css::beans::PropertyAttribute::TRANSIENT
+                   | css::beans::PropertyAttribute::READONLY)},
+                 {"DispatchRecorderSupplier",
+                  PropHandle::DispatchRecorderSupplier,
+                  cppu::UnoType<css::frame::XDispatchRecorderSupplier>::get(),
+                  css::beans::PropertyAttribute::TRANSIENT},
+                 {"IsPlugged",
+                  PropHandle::IsPlugged, cppu::UnoType<bool>::get(),
+                  (css::beans::PropertyAttribute::TRANSIENT
+                   | css::beans::PropertyAttribute::READONLY)},
+                 {"SuspendQuickstartVeto", PropHandle::SuspendQuickstartVeto,
+                  cppu::UnoType<bool>::get(),
+                  css::beans::PropertyAttribute::TRANSIENT},
+                 {"Title", PropHandle::Title, cppu::UnoType<OUString>::get(),
+                  css::beans::PropertyAttribute::TRANSIENT}},
+                true};
         }
-    }
-
-    return(*pInfoHelper);
+    };
+    return Static::get();
 }
 
 /*-************************************************************************************************************
@@ -1553,39 +1534,6 @@ css::uno::Reference< css::lang::XComponent > Desktop::impl_getFrameComponent( co
     }
 
     return xComponent;
-}
-
-/*-************************************************************************************************************
-    @short      create table with information about properties
-    @descr      We use a helper class to support properties. These class need some information about this.
-                These method create a new static description table with name, type, r/w-flags and so on ...
-
-    @seealso    class OPropertySetHelper
-    @seealso    method getInfoHelper()
-    @return     Static table with information about properties.
-    @threadsafe yes
-*//*-*************************************************************************************************************/
-const css::uno::Sequence< css::beans::Property > Desktop::impl_getStaticPropertyDescriptor()
-{
-    // Create a property array to initialize sequence!
-    // Table of all predefined properties of this class. Its used from OPropertySetHelper-class!
-    // Don't forget to change the defines (see begin of this file), if you add, change or delete a property in this list!!!
-    // It's necessary for methods of OPropertySetHelper.
-    // ATTENTION:
-    //      YOU MUST SORT FOLLOW TABLE BY NAME ALPHABETICAL !!!
-
-    const css::beans::Property pProperties[] =
-    {
-        css::beans::Property( DESKTOP_PROPNAME_ASCII_ACTIVEFRAME              , DESKTOP_PROPHANDLE_ACTIVEFRAME             , cppu::UnoType<css::lang::XComponent>::get(), css::beans::PropertyAttribute::TRANSIENT | css::beans::PropertyAttribute::READONLY ),
-        css::beans::Property( DESKTOP_PROPNAME_ASCII_DISPATCHRECORDERSUPPLIER , DESKTOP_PROPHANDLE_DISPATCHRECORDERSUPPLIER, cppu::UnoType<css::frame::XDispatchRecorderSupplier>::get(), css::beans::PropertyAttribute::TRANSIENT ),
-        css::beans::Property( DESKTOP_PROPNAME_ASCII_ISPLUGGED                , DESKTOP_PROPHANDLE_ISPLUGGED               , cppu::UnoType<bool>::get()                                                                  , css::beans::PropertyAttribute::TRANSIENT | css::beans::PropertyAttribute::READONLY ),
-        css::beans::Property( DESKTOP_PROPNAME_ASCII_SUSPENDQUICKSTARTVETO    , DESKTOP_PROPHANDLE_SUSPENDQUICKSTARTVETO   , cppu::UnoType<bool>::get()                                                                  , css::beans::PropertyAttribute::TRANSIENT ),
-        css::beans::Property( DESKTOP_PROPNAME_ASCII_TITLE                    , DESKTOP_PROPHANDLE_TITLE                   , cppu::UnoType<OUString>::get(), css::beans::PropertyAttribute::TRANSIENT ),
-    };
-    // Use it to initialize sequence!
-    const css::uno::Sequence< css::beans::Property > lPropertyDescriptor( pProperties, DESKTOP_PROPCOUNT );
-    // Return "PropertyDescriptor"
-    return lPropertyDescriptor;
 }
 
 void Desktop::impl_sendQueryTerminationEvent(Desktop::TTerminateListenerList& lCalledListener,
@@ -1707,7 +1655,7 @@ bool Desktop::impl_closeFrames(bool bAllowUI)
                 ( xController.is() )
                )
             {
-                bSuspended = xController->suspend( sal_True );
+                bSuspended = xController->suspend( true );
                 if ( ! bSuspended )
                 {
                     ++nNonClosedFrames;
@@ -1723,7 +1671,7 @@ bool Desktop::impl_closeFrames(bool bAllowUI)
             {
                 try
                 {
-                    xClose->close(sal_False);
+                    xClose->close(false);
                 }
                 catch(const css::util::CloseVetoException&)
                 {
@@ -1739,7 +1687,7 @@ bool Desktop::impl_closeFrames(bool bAllowUI)
                         (bSuspended      ) &&
                         (xController.is())
                        )
-                        xController->suspend(sal_False);
+                        xController->suspend(false);
                 }
 
                 // If interface XClosable interface exists and was used ...

@@ -137,11 +137,11 @@ bool SwGlossaryList::GetShortName(const OUString& rLongName,
             if(rLongName != sLong)
                 continue;
 
-            TripleString pTriple;
-            pTriple.sGroup = pGroup->sName;
-            pTriple.sBlock = sLong;
-            pTriple.sShort = pGroup->sShortNames.getToken(j, STRING_DELIM);
-            aTripleStrings.push_back(pTriple);
+            TripleString aTriple;
+            aTriple.sGroup = pGroup->sName;
+            aTriple.sBlock = sLong;
+            aTriple.sShort = pGroup->sShortNames.getToken(j, STRING_DELIM);
+            aTripleStrings.push_back(aTriple);
         }
     }
 
@@ -149,9 +149,9 @@ bool SwGlossaryList::GetShortName(const OUString& rLongName,
     nCount = aTripleStrings.size();
     if(1 == nCount)
     {
-        const TripleString& pTriple(aTripleStrings.front());
-        rShortName = pTriple.sShort;
-        rGroupName = pTriple.sGroup;
+        const TripleString& rTriple(aTripleStrings.front());
+        rShortName = rTriple.sShort;
+        rGroupName = rTriple.sGroup;
         bRet = true;
     }
     else if(1 < nCount)
@@ -168,9 +168,9 @@ bool SwGlossaryList::GetShortName(const OUString& rLongName,
         if(RET_OK == aDlg->Execute() &&
             LISTBOX_ENTRY_NOTFOUND != rLB.GetSelectEntryPos())
         {
-            const TripleString& pTriple(aTripleStrings[rLB.GetSelectEntryPos()]);
-            rShortName = pTriple.sShort;
-            rGroupName = pTriple.sGroup;
+            const TripleString& rTriple(aTripleStrings[rLB.GetSelectEntryPos()]);
+            rShortName = rTriple.sShort;
+            rGroupName = rTriple.sGroup;
             bRet = true;
         }
         else
@@ -186,15 +186,13 @@ size_t SwGlossaryList::GetGroupCount()
     return aGroupArr.size();
 }
 
-OUString SwGlossaryList::GetGroupName(size_t nPos, bool bNoPath)
+OUString SwGlossaryList::GetGroupName(size_t nPos)
 {
     OSL_ENSURE(aGroupArr.size() > nPos, "group not available");
     if(nPos < aGroupArr.size())
     {
         AutoTextGroup* pGroup = aGroupArr[nPos];
         OUString sRet = pGroup->sName;
-        if(bNoPath)
-            sRet = sRet.getToken(0, GLOS_DELIM);
         return sRet;
     }
     return OUString();
@@ -391,7 +389,7 @@ void SwGlossaryList::FillGroup(AutoTextGroup* pGroup, SwGlossaries* pGlossaries)
 // Give back all (not exceeding FIND_MAX_GLOS) found modules
 // with matching beginning.
 
-bool SwGlossaryList::HasLongName(const OUString& rBegin, std::vector<OUString> *pLongNames)
+void SwGlossaryList::HasLongName(const OUString& rBegin, std::vector<OUString> *pLongNames)
 {
     if(!bFilled)
         Update();
@@ -416,7 +414,6 @@ bool SwGlossaryList::HasLongName(const OUString& rBegin, std::vector<OUString> *
             }
         }
     }
-    return nFound > 0;
 }
 
 void    SwGlossaryList::ClearGroups()

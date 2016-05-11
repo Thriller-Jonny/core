@@ -21,8 +21,6 @@
 
 #include "excimp8.hxx"
 
-#include <boost/bind.hpp>
-
 #include <scitems.hxx>
 #include <comphelper/processfactory.hxx>
 #include <comphelper/sequence.hxx>
@@ -53,7 +51,7 @@
 #include <svx/xflclit.hxx>
 
 #include <vcl/graph.hxx>
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 #include <sot/exchange.hxx>
 
 #include <svl/stritem.hxx>
@@ -115,8 +113,7 @@ using namespace ::comphelper;
 class OleNameOverrideContainer : public ::cppu::WeakImplHelper< container::XNameContainer >
 {
 private:
-    typedef std::unordered_map< OUString, uno::Reference< container::XIndexContainer >, OUStringHash,
-       std::equal_to< OUString > > NamedIndexToOleName;
+    typedef std::unordered_map< OUString, uno::Reference< container::XIndexContainer >, OUStringHash > NamedIndexToOleName;
     NamedIndexToOleName  IdToOleNameHash;
     ::osl::Mutex m_aMutex;
 public:
@@ -383,7 +380,7 @@ void ImportExcel8::ReadBasic()
                 ScCTBWrapper wrapper;
                 if ( wrapper.Read( *xXCB ) )
                 {
-#if OSL_DEBUG_LEVEL > 1
+#ifdef DEBUG_SC_EXCEL
                     wrapper.Print( stderr );
 #endif
                     wrapper.ImportCustomToolBar( *pShell );

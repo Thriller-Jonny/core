@@ -55,8 +55,8 @@ RootData::RootData()
     pFmlaConverter = nullptr;
 
     pAutoFilterBuffer = nullptr;
-    pPrintRanges = new _ScRangeListTabs;
-    pPrintTitles = new _ScRangeListTabs;
+    pPrintRanges = new ScRangeListTabs;
+    pPrintTitles = new ScRangeListTabs;
 
     pTabId = nullptr;
     pUserBViewList = nullptr;
@@ -212,8 +212,6 @@ ExcScenario::ExcScenario( XclImpStream& rIn, const RootData& rR )
 
         n--;
     }
-
-    n = nCref;
 
     std::vector<ExcScenarioCell>::iterator iter;
     for (iter = aEntries.begin(); iter != aEntries.end(); ++iter)

@@ -22,7 +22,6 @@
 
 #include <cppuhelper/implbase.hxx>
 #include <ucbhelper/content.hxx>
-#include <com/sun/star/uno/Type.hxx>
 
 namespace dp_manager {
 
@@ -36,7 +35,6 @@ class BaseCommandEnv
                                       css::ucb::XProgressHandler >
 {
 protected:
-    css::uno::Reference< css::uno::XComponentContext > m_xContext;
     css::uno::Reference< css::task::XInteractionHandler> m_forwardHandler;
 
     void handle_(bool approve, bool abort,

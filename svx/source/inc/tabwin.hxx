@@ -60,12 +60,6 @@ protected:
 
 
 class FmFormShell;
-class FmFieldWinData
-{
-public:
-    FmFieldWinData();
-    ~FmFieldWinData();
-};
 
 
 class FmFieldWin :public SfxFloatingWindow
@@ -74,7 +68,6 @@ class FmFieldWin :public SfxFloatingWindow
 {
     ::osl::Mutex        m_aMutex;
     VclPtr<FmFieldWinListBox> pListBox;
-    FmFieldWinData*    pData;
     ::dbtools::SharedConnection
                        m_aConnection;
     OUString    m_aDatabaseName,
@@ -101,7 +94,7 @@ public:
     void FillInfo( SfxChildWinInfo& rInfo ) const override;
 
     const OUString&      GetDatabaseName() const { return m_aDatabaseName; }
-    ::dbtools::SharedConnection GetConnection() const { return m_aConnection; }
+    const ::dbtools::SharedConnection& GetConnection() const { return m_aConnection; }
     const OUString&      GetObjectName() const { return m_aObjectName; }
     sal_Int32                   GetObjectType() const { return m_nObjectType; }
 

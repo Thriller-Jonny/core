@@ -20,7 +20,6 @@
 #ifndef INCLUDED_FILTER_SOURCE_FLASH_SWFWRITER_HXX
 #define INCLUDED_FILTER_SOURCE_FLASH_SWFWRITER_HXX
 
-#include <com/sun/star/uno/Sequence.hxx>
 #include <com/sun/star/io/XOutputStream.hpp>
 #include <com/sun/star/i18n/XBreakIterator.hpp>
 #include <vcl/checksum.hxx>
@@ -51,13 +50,13 @@ namespace tools
     class PolyPolygon;
 }
 
-inline sal_uInt16 _uInt16( sal_Int32 nValue )
+inline sal_uInt16 uInt16_( sal_Int32 nValue )
 {
     OSL_ENSURE( (nValue >= 0) && ((sal_uInt32)nValue <= 0xffff), "overflow while converting sal_Int32 to sal_uInt16" );
     return (sal_uInt16)nValue;
 }
 
-inline sal_Int16 _Int16( sal_Int32 nValue )
+inline sal_Int16 Int16_( sal_Int32 nValue )
 {
     OSL_ENSURE( (nValue >= -32768) && (nValue <= 32767), "overflow while converting sal_Int32 to sal_Int16" );
     return (sal_Int16)nValue;
@@ -104,10 +103,8 @@ const sal_uInt8 TAG_FRAMELABEL      = 43;
 const sal_uInt8 TAG_HEADER          = 0xff;
 
 
-
 /** converts a double to a 16.16 flash fixed value */
 sal_uInt32 getFixed( double fValue );
-
 
 
 typedef ::std::map<BitmapChecksum, sal_uInt16> ChecksumCache;
@@ -120,7 +117,6 @@ struct ltuint16
     return s1 < s2;
   }
 };
-
 
 
 /** container class to create bit structures */
@@ -143,7 +139,6 @@ private:
     sal_uInt8 mnBitPos;
     sal_uInt8 mnCurrentByte;
 };
-
 
 
 /** this class collects all used glyphs for a given fonts and maps
@@ -172,7 +167,6 @@ private:
 };
 
 typedef std::vector<FlashFont*> FontMap;
-
 
 
 /** this class helps creating flash tags */
@@ -205,7 +199,6 @@ private:
 };
 
 
-
 /** this class helps to define flash sprites */
 class Sprite
 {
@@ -221,7 +214,6 @@ private:
     sal_uInt16  mnId;
     sal_uInt32  mnFrames;
 };
-
 
 
 /** this class stores a flash fill style for shapes */
@@ -251,7 +243,6 @@ private:
     Gradient        maGradient;
     Rectangle       maBoundRect;
 };
-
 
 
 /** this class creates a flash movie from vcl geometry */
@@ -292,7 +283,7 @@ public:
         A character id of a flash sprite is returned that contains all geometry
         from the metafile.
     */
-    sal_uInt16 defineShape( const GDIMetaFile& rMtf, sal_Int16 x = 0, sal_Int16 y = 0 );
+    sal_uInt16 defineShape( const GDIMetaFile& rMtf );
 
     /** defines a bitmap and returns its flash id.
     */
@@ -301,7 +292,7 @@ public:
     // control tags
 
     /** inserts a place shape tag into the movie stream or the current sprite */
-    void placeShape( sal_uInt16 nID, sal_uInt16 nDepth, sal_Int32 x, sal_Int32 y, sal_uInt16 nClipDepth = 0, const char* pName = nullptr );
+    void placeShape( sal_uInt16 nID, sal_uInt16 nDepth, sal_Int32 x, sal_Int32 y );
 
     /** inserts a remove shape tag into the movie stream or the current sprite */
     void removeShape( sal_uInt16 nDepth );
@@ -422,7 +413,6 @@ private:
     sal_uInt8 mnGlobalTransparency;
     sal_Int32 mnJPEGCompressMode;
 };
-
 
 
 }

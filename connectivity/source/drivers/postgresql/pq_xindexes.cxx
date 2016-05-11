@@ -55,23 +55,17 @@ using com::sun::star::beans::XPropertySet;
 using com::sun::star::uno::Any;
 using com::sun::star::uno::makeAny;
 using com::sun::star::uno::UNO_QUERY;
-using com::sun::star::uno::Type;
-using com::sun::star::uno::XInterface;
 using com::sun::star::uno::Reference;
 using com::sun::star::uno::Sequence;
 using com::sun::star::uno::RuntimeException;
 
-using com::sun::star::container::NoSuchElementException;
 using com::sun::star::container::XEnumerationAccess;
 using com::sun::star::container::XEnumeration;
 
-using com::sun::star::lang::WrappedTargetException;
 
 using com::sun::star::sdbcx::XColumnsSupplier;
 
 using com::sun::star::sdbc::XRow;
-using com::sun::star::sdbc::XCloseable;
-using com::sun::star::sdbc::XStatement;
 using com::sun::star::sdbc::XResultSet;
 using com::sun::star::sdbc::XParameters;
 using com::sun::star::sdbc::XPreparedStatement;
@@ -137,7 +131,7 @@ void Indexes::refresh()
 
         Reference< XRow > row( rs, UNO_QUERY );
         String2IntMap map;
-        m_values = Sequence< com::sun::star::uno::Any > ();
+        m_values.clear();
         sal_Int32 index = 0;
         while( rs->next() )
         {
@@ -154,22 +148,22 @@ void Indexes::refresh()
                            m_schemaName, m_tableName );
 
             (void) C_SCHEMA; (void) C_TABLENAME;
-            sal_Bool isUnique = row->getBoolean( C_IS_UNIQUE );
-            sal_Bool isPrimary = row->getBoolean( C_IS_PRIMARY );
-            sal_Bool isClusterd = row->getBoolean( C_IS_CLUSTERED );
+            bool isUnique = row->getBoolean( C_IS_UNIQUE );
+            bool isPrimary = row->getBoolean( C_IS_PRIMARY );
+            bool isClusterd = row->getBoolean( C_IS_CLUSTERED );
             Reference< com::sun::star::beans::XPropertySet > prop = pIndex;
             pIndex->setPropertyValue_NoBroadcast_public(
-                st.IS_UNIQUE, Any( &isUnique, cppu::UnoType<bool>::get() ) );
+                st.IS_UNIQUE, Any( isUnique ) );
             pIndex->setPropertyValue_NoBroadcast_public(
-                st.IS_PRIMARY_KEY_INDEX, Any( &isPrimary, cppu::UnoType<bool>::get() ) );
+                st.IS_PRIMARY_KEY_INDEX, Any( isPrimary ) );
             pIndex->setPropertyValue_NoBroadcast_public(
-                st.IS_CLUSTERED, Any( &isClusterd, cppu::UnoType<bool>::get() ) );
+                st.IS_CLUSTERED, Any( isClusterd ) );
             pIndex->setPropertyValue_NoBroadcast_public(
                 st.NAME, makeAny( currentIndexName ) );
 
-            Sequence< sal_Int32 > seq = parseIntArray( row->getString( C_COLUMNS ) );
-            Sequence< OUString > columnNames(seq.getLength());
-            for( int columns = 0 ; columns < seq.getLength() ; columns ++ )
+            std::vector< sal_Int32 > seq = parseIntArray( row->getString( C_COLUMNS ) );
+            Sequence< OUString > columnNames(seq.size());
+            for( size_t columns = 0 ; columns < seq.size() ; columns ++ )
             {
                 columnNames[columns] = column2NameMap[ seq[columns] ];
             }
@@ -178,11 +172,9 @@ void Indexes::refresh()
                 st.PRIVATE_COLUMN_INDEXES, makeAny( columnNames ));
 
             {
-                const int currentIndex = index++;
-                assert(currentIndex  == m_values.getLength());
-                m_values.realloc( index );
-                m_values[currentIndex] = makeAny( prop );
-                map[ currentIndexName ] = currentIndex;
+                m_values.push_back( makeAny( prop ) );
+                map[ currentIndexName ] = index;
+                ++index;
             }
         }
         m_name2index.swap( map );
@@ -256,11 +248,11 @@ void Indexes::dropByIndex( sal_Int32 index )
 
 
     osl::MutexGuard guard( m_refMutex->mutex );
-    if( index < 0 ||  index >= m_values.getLength() )
+    if( index < 0 ||  index >= (sal_Int32)m_values.size() )
     {
         OUStringBuffer buf( 128 );
         buf.append( "Indexes: Index out of range (allowed 0 to " );
-        buf.append( (sal_Int32) (m_values.getLength() -1) );
+        buf.append( (sal_Int32) (m_values.size() -1) );
         buf.append( ", got " );
         buf.append( index );
         buf.append( ")" );
@@ -299,7 +291,6 @@ Reference< com::sun::star::container::XNameAccess > Indexes::create(
     pIndexes->refresh();
     return ret;
 }
-
 
 
 IndexDescriptors::IndexDescriptors(

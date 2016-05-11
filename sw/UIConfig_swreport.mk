@@ -14,8 +14,20 @@ $(eval $(call gb_UIConfig_add_menubarfiles,modules/swreport,\
 ))
 
 $(eval $(call gb_UIConfig_add_popupmenufiles,modules/swreport,\
+	sw/uiconfig/swreport/popupmenu/anchor \
+	sw/uiconfig/swreport/popupmenu/annotation \
+	sw/uiconfig/swreport/popupmenu/draw \
+	sw/uiconfig/swreport/popupmenu/drawtext \
+	sw/uiconfig/swreport/popupmenu/form \
+	sw/uiconfig/swreport/popupmenu/formrichtext \
+	sw/uiconfig/swreport/popupmenu/frame \
+	sw/uiconfig/swreport/popupmenu/graphic \
+	sw/uiconfig/swreport/popupmenu/insertfield \
+	sw/uiconfig/swreport/popupmenu/media \
+	sw/uiconfig/swreport/popupmenu/oleobject \
 	sw/uiconfig/swreport/popupmenu/preview \
 	sw/uiconfig/swreport/popupmenu/table \
+	sw/uiconfig/swreport/popupmenu/text \
 ))
 
 $(eval $(call gb_UIConfig_add_statusbarfiles,modules/swreport,\
@@ -47,6 +59,7 @@ $(eval $(call gb_UIConfig_add_toolbarfiles,modules/swreport,\
 	sw/uiconfig/swreport/toolbar/graphicobjectbar \
 	sw/uiconfig/swreport/toolbar/insertbar \
 	sw/uiconfig/swreport/toolbar/insertobjectbar \
+	sw/uiconfig/swreport/toolbar/mailmerge \
 	sw/uiconfig/swreport/toolbar/mediaobjectbar \
 	sw/uiconfig/swreport/toolbar/moreformcontrols \
 	sw/uiconfig/swreport/toolbar/numobjectbar \

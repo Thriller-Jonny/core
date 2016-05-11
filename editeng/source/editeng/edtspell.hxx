@@ -20,7 +20,6 @@
 #ifndef INCLUDED_EDITENG_SOURCE_EDITENG_EDTSPELL_HXX
 #define INCLUDED_EDITENG_SOURCE_EDITENG_EDTSPELL_HXX
 
-#include <com/sun/star/uno/Reference.h>
 #include <editeng/editengdllapi.h>
 #include <editeng/splwrap.hxx>
 #include <editeng/svxacorr.hxx>
@@ -46,7 +45,7 @@ private:
 
 protected:
     virtual void            SpellStart( SvxSpellArea eArea ) override;
-    virtual bool            SpellContinue() override;    // Check area
+    virtual void            SpellContinue() override;    // Check area
     virtual void            ReplaceAll( const OUString &rNewText, sal_Int16 nLanguage ) override;
     virtual void            SpellEnd() override;
     virtual bool            SpellMore() override;
@@ -54,10 +53,8 @@ protected:
 
 public:
     EditSpellWrapper( vcl::Window* pWin,
-            css::uno::Reference<
-                css::linguistic2::XSpellChecker1 > &xChecker,
             bool bIsStart,
-            bool bIsAllRight, EditView* pView );
+            EditView* pView );
 
 };
 
@@ -140,7 +137,7 @@ public:
     virtual bool    Replace( sal_Int32 nPos, const OUString& rTxt ) override;
     virtual bool    ReplaceRange( sal_Int32 nPos, sal_Int32 nLen, const OUString& rTxt ) override;
 
-    virtual bool    SetAttr( sal_Int32 nStt, sal_Int32 nEnd, sal_uInt16 nSlotId, SfxPoolItem& ) override;
+    virtual void    SetAttr( sal_Int32 nStt, sal_Int32 nEnd, sal_uInt16 nSlotId, SfxPoolItem& ) override;
     virtual bool    SetINetAttr( sal_Int32 nStt, sal_Int32 nEnd, const OUString& rURL ) override;
 
     virtual OUString const* GetPrevPara(bool bAtNormalPos) override;
@@ -148,7 +145,7 @@ public:
     virtual bool        ChgAutoCorrWord( sal_Int32& rSttPos, sal_Int32 nEndPos,
                                   SvxAutoCorrect& rACorrect, OUString* pPara ) override;
 
-    virtual LanguageType GetLanguage( sal_Int32 nPos, bool bPrevPara = false ) const override;
+    virtual LanguageType GetLanguage( sal_Int32 nPos ) const override;
 
     sal_Int32       GetCursor() const { return nCursor; }
 

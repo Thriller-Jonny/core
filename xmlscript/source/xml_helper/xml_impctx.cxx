@@ -327,7 +327,6 @@ class ExtendedAttributes :
 {
     sal_Int32 m_nAttributes;
     sal_Int32 * m_pUids;
-    OUString * m_pPrefixes;
     OUString * m_pLocalNames;
     OUString * m_pQNames;
     OUString * m_pValues;
@@ -337,7 +336,7 @@ class ExtendedAttributes :
 public:
     inline ExtendedAttributes(
         sal_Int32 nAttributes,
-        sal_Int32 * pUids, OUString * pPrefixes,
+        sal_Int32 * pUids,
         OUString * pLocalNames, OUString * pQNames,
         Reference< xml::sax::XAttributeList > const & xAttributeList,
         DocumentHandlerImpl * pHandler );
@@ -374,13 +373,12 @@ public:
 
 inline ExtendedAttributes::ExtendedAttributes(
     sal_Int32 nAttributes,
-    sal_Int32 * pUids, OUString * pPrefixes,
+    sal_Int32 * pUids,
     OUString * pLocalNames, OUString * pQNames,
     Reference< xml::sax::XAttributeList > const & xAttributeList,
     DocumentHandlerImpl * pHandler )
     : m_nAttributes( nAttributes )
     , m_pUids( pUids )
-    , m_pPrefixes( pPrefixes )
     , m_pLocalNames( pLocalNames )
     , m_pQNames( pQNames )
     , m_pValues( new OUString[ nAttributes ] )
@@ -399,7 +397,6 @@ ExtendedAttributes::~ExtendedAttributes() throw ()
     m_pHandler->release();
 
     delete [] m_pUids;
-    delete [] m_pPrefixes;
     delete [] m_pLocalNames;
     delete [] m_pQNames;
     delete [] m_pValues;
@@ -500,11 +497,7 @@ void DocumentHandlerImpl::startElement(
     if (m_nSkipElements > 0)
     {
         ++m_nSkipElements; // wait for another end tag
-#if OSL_DEBUG_LEVEL > 1
-        OString aQName(
-            OUStringToOString( rQElementName, RTL_TEXTENCODING_ASCII_US ) );
-        SAL_INFO("xmlscript.xmlhelper", "### no context given on createChildElement() => ignoring element \"" << aQName.getStr() << "\" ...");
-#endif
+        SAL_INFO("xmlscript.xmlhelper", " no context given on createChildElement() => ignoring element \"" << rQElementName << "\" ...");
         return;
     }
 
@@ -577,10 +570,11 @@ void DocumentHandlerImpl::startElement(
             pUids[ nPos ] = getUidByPrefix( pPrefixes[ nPos ] );
         }
     }
+    delete[] pPrefixes;
     // ownership of arrays belongs to attribute list
     xAttributes = static_cast< xml::input::XAttributes * >(
         new ExtendedAttributes(
-            nAttribs, pUids, pPrefixes, pLocalNames, pQNames,
+            nAttribs, pUids, pLocalNames, pQNames,
             xAttribs, this ) );
 
     getElementName( rQElementName, &nUid, &aLocalName );
@@ -610,11 +604,7 @@ void DocumentHandlerImpl::startElement(
     else
     {
         ++m_nSkipElements;
-#if OSL_DEBUG_LEVEL > 1
-        OString aQName(
-            OUStringToOString( rQElementName, RTL_TEXTENCODING_ASCII_US ) );
-        SAL_INFO("xmlscript.xmlhelper", "### no context given on createChildElement() => ignoring element \"" << aQName.getStr() << "\" ...");
-#endif
+        SAL_INFO("xmlscript.xmlhelper", " no context given on createChildElement() => ignoring element \"" << rQElementName << "\" ...");
     }
     }
 }
@@ -629,11 +619,7 @@ void DocumentHandlerImpl::endElement(
     if (m_nSkipElements)
     {
         --m_nSkipElements;
-#if OSL_DEBUG_LEVEL > 1
-        OString aQName(
-            OUStringToOString( rQElementName, RTL_TEXTENCODING_ASCII_US ) );
-        SAL_INFO("xmlscript.xmlhelper", "### received endElement() for \"" << aQName.getStr() << "\".");
-#endif
+        SAL_INFO("xmlscript.xmlhelper", "### received endElement() for \"" << rQElementName << "\".");
         static_cast<void>(rQElementName);
         return;
     }
@@ -791,14 +777,13 @@ OUString ExtendedAttributes::getValueByUidName(
 }
 
 Reference< xml::sax::XDocumentHandler > SAL_CALL createDocumentHandler(
-    Reference< xml::input::XRoot > const & xRoot,
-    bool bSingleThreadedUse )
+    Reference< xml::input::XRoot > const & xRoot )
 {
     SAL_WARN_IF( !xRoot.is(), "xmlscript.xmlhelper", "xRoot is NULL" );
     if (xRoot.is())
     {
         return static_cast< xml::sax::XDocumentHandler * >(
-            new DocumentHandlerImpl( xRoot, bSingleThreadedUse ) );
+            new DocumentHandlerImpl( xRoot, true /* mt use */ ) );
     }
     return Reference< xml::sax::XDocumentHandler >();
 }

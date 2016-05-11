@@ -32,7 +32,7 @@ class BaseContainerNode : public BaseNode
 public:
     BaseContainerNode(
         css::uno::Reference<css::animations::XAnimationNode> const& xNode,
-        ::boost::shared_ptr<BaseContainerNode> const& pParent,
+        ::std::shared_ptr<BaseContainerNode> const& pParent,
         NodeContext const& rContext );
 
     /** Add given child node to this container
@@ -66,7 +66,7 @@ protected:
     /// @return true: if all children have been deactivated
     bool notifyDeactivatedChild( AnimationNodeSharedPtr const& pChildNode );
 
-    bool repeat();
+    void repeat();
 
     template <typename FuncT>
     inline void forEachChildNode( FuncT const& func,
@@ -91,7 +91,7 @@ private:
     const bool          mbDurationIndefinite;
 };
 
-typedef ::boost::shared_ptr< BaseContainerNode > BaseContainerNodeSharedPtr;
+typedef ::std::shared_ptr< BaseContainerNode > BaseContainerNodeSharedPtr;
 
 } // namespace interface
 } // namespace presentation

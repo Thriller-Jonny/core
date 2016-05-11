@@ -43,24 +43,22 @@ namespace {
 
 ItemPropertyMapType & lcl_GetCharacterPropertyPropertyMap()
 {
-    static ItemPropertyMapType aCharacterPropertyMap(
-        MakeItemPropertyMap
-        IPM_MAP_ENTRY( EE_CHAR_COLOR, "CharColor", 0 )
-        IPM_MAP_ENTRY( EE_CHAR_LANGUAGE, "CharLocale", MID_LANG_LOCALE )
-        IPM_MAP_ENTRY( EE_CHAR_LANGUAGE_CJK, "CharLocaleAsian", MID_LANG_LOCALE )
-        IPM_MAP_ENTRY( EE_CHAR_LANGUAGE_CTL, "CharLocaleComplex", MID_LANG_LOCALE )
+    static ItemPropertyMapType aCharacterPropertyMap{
+        {EE_CHAR_COLOR, {"CharColor", 0}},
+        {EE_CHAR_LANGUAGE, {"CharLocale", MID_LANG_LOCALE}},
+        {EE_CHAR_LANGUAGE_CJK, {"CharLocaleAsian", MID_LANG_LOCALE}},
+        {EE_CHAR_LANGUAGE_CTL, {"CharLocaleComplex", MID_LANG_LOCALE}},
 
-        IPM_MAP_ENTRY( EE_CHAR_STRIKEOUT, "CharStrikeout", MID_CROSS_OUT )
-        IPM_MAP_ENTRY( EE_CHAR_WLM, "CharWordMode", 0 )
-        IPM_MAP_ENTRY( EE_CHAR_SHADOW, "CharShadowed", 0 )
-        IPM_MAP_ENTRY( EE_CHAR_RELIEF, "CharRelief", 0 )
-        IPM_MAP_ENTRY( EE_CHAR_OUTLINE, "CharContoured", 0 )
-        IPM_MAP_ENTRY( EE_CHAR_EMPHASISMARK, "CharEmphasis", 0 )
+        {EE_CHAR_STRIKEOUT, {"CharStrikeout", MID_CROSS_OUT}},
+        {EE_CHAR_WLM, {"CharWordMode", 0}},
+        {EE_CHAR_SHADOW, {"CharShadowed", 0}},
+        {EE_CHAR_RELIEF, {"CharRelief", 0}},
+        {EE_CHAR_OUTLINE, {"CharContoured", 0}},
+        {EE_CHAR_EMPHASISMARK, {"CharEmphasis", 0}},
 
-        IPM_MAP_ENTRY( EE_PARA_WRITINGDIR, "WritingMode", 0 )
+        {EE_PARA_WRITINGDIR, {"WritingMode", 0}},
 
-        IPM_MAP_ENTRY( EE_PARA_ASIANCJKSPACING, "ParaIsCharacterDistance", 0 )
-        );
+        {EE_PARA_ASIANCJKSPACING, {"ParaIsCharacterDistance", 0}}};
 
     return aCharacterPropertyMap;
 }
@@ -141,7 +139,7 @@ void CharacterPropertyItemConverter::FillSpecialItem(
 
         case EE_CHAR_UNDERLINE:
         {
-            SvxUnderlineItem aItem(UNDERLINE_NONE, EE_CHAR_UNDERLINE);
+            SvxUnderlineItem aItem(LINESTYLE_NONE, EE_CHAR_UNDERLINE);
             bool bModified = false;
 
             uno::Any aValue( GetPropertySet()->getPropertyValue( "CharUnderline" ));
@@ -153,7 +151,7 @@ void CharacterPropertyItemConverter::FillSpecialItem(
 
             aValue = GetPropertySet()->getPropertyValue( "CharUnderlineHasColor" );
             if( aValue.hasValue() &&
-                ( *static_cast< const sal_Bool * >( aValue.getValue()) != sal_False ))
+                *static_cast< const sal_Bool * >( aValue.getValue()) )
             {
                 aItem.PutValue( aValue, MID_TL_HASCOLOR );
                 bModified = true;
@@ -173,7 +171,7 @@ void CharacterPropertyItemConverter::FillSpecialItem(
 
         case EE_CHAR_OVERLINE:
         {
-            SvxOverlineItem aItem( UNDERLINE_NONE, EE_CHAR_OVERLINE );
+            SvxOverlineItem aItem( LINESTYLE_NONE, EE_CHAR_OVERLINE );
             bool bModified = false;
 
             uno::Any aValue( GetPropertySet()->getPropertyValue( "CharOverline" ) );
@@ -185,7 +183,7 @@ void CharacterPropertyItemConverter::FillSpecialItem(
 
             aValue = GetPropertySet()->getPropertyValue( "CharOverlineHasColor" );
             if ( aValue.hasValue() &&
-                 ( *static_cast< const sal_Bool* >( aValue.getValue() ) != sal_False ) )
+                 *static_cast< const sal_Bool* >( aValue.getValue() ) )
             {
                 aItem.PutValue( aValue, MID_TL_HASCOLOR );
                 bModified = true;
@@ -552,7 +550,7 @@ bool CharacterPropertyItemConverter::ApplySpecialItem(
     return bChanged;
 }
 
-uno::Reference<beans::XPropertySet> CharacterPropertyItemConverter::GetRefSizePropertySet() const
+const uno::Reference<beans::XPropertySet>& CharacterPropertyItemConverter::GetRefSizePropertySet() const
 {
     return m_xRefSizePropSet;
 }

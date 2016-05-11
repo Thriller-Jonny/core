@@ -90,28 +90,32 @@ namespace sdr
 
             if(bIsLine)
             {
+                //tdf#63955 if we have an extremely long line then clip it to a
+                //very generous range of -1 page width/height vs +1 page
+                //width/height to avoid oom and massive churn generating a huge
+                //polygon chain to cover the length in applyLineDashing if this
+                //line is dashed
                 const SdrPage* pPage = GetPathObj().GetPage();
-                if (pPage)
-                {
-                    //tdf#63955 if we have an extremely long line then clip it
-                    //to a very generous range of -1 page width/height vs +1
-                    //page width/height to avoid oom and massive churn
-                    //generating a huge polygon chain to cover the length in
-                    //applyLineDashing if this line is dashed
-                    double fPageWidth = pPage->GetWdt();
-                    double fPageHeight = pPage->GetHgt();
-                    basegfx::B2DRange aClipRange(-fPageWidth, -fPageHeight,
-                                                 fPageWidth*2, fPageHeight*2);
-                    aUnitPolyPolygon = basegfx::tools::clipPolyPolygonOnRange(aUnitPolyPolygon,
-                                                                       aClipRange, true, true);
-                    nPolyCount = ensureGeometry(aUnitPolyPolygon);
+                sal_Int32 nPageWidth = pPage ? pPage->GetWdt() : 0;
+                sal_Int32 nPageHeight = pPage ? pPage->GetHgt() : 0;
 
-                    // re-check that we have't been clipped out to oblivion
-                    bIsLine =
-                        !aUnitPolyPolygon.areControlPointsUsed()
-                        && 1 == nPolyCount
-                        && 2 == aUnitPolyPolygon.getB2DPolygon(0).count();
-                }
+                //But, see tdf#97276 and tdf#98366. Don't clip too much if the
+                //underlying page dimension is unknown or a paste document
+                //where the page sizes use the odd default of 10x10
+                nPageWidth = std::max<sal_Int32>(21000, nPageWidth);
+                nPageHeight = std::max<sal_Int32>(29700, nPageHeight);
+                basegfx::B2DRange aClipRange(-nPageWidth, -nPageHeight,
+                                             nPageWidth*2, nPageHeight*2);
+
+                aUnitPolyPolygon = basegfx::tools::clipPolyPolygonOnRange(aUnitPolyPolygon,
+                                                                   aClipRange, true, true);
+                nPolyCount = ensureGeometry(aUnitPolyPolygon);
+
+                // re-check that we have't been clipped out to oblivion
+                bIsLine =
+                    !aUnitPolyPolygon.areControlPointsUsed()
+                    && 1 == nPolyCount
+                    && 2 == aUnitPolyPolygon.getB2DPolygon(0).count();
             }
 
             if(bIsLine)

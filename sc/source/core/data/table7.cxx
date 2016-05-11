@@ -15,6 +15,7 @@
 #include <segmenttree.hxx>
 #include <sharedformula.hxx>
 #include <cellvalues.hxx>
+#include "olinetab.hxx"
 
 bool ScTable::IsMerged( SCCOL nCol, SCROW nRow ) const
 {
@@ -52,7 +53,7 @@ void ScTable::DeleteBeforeCopyFromClip(
 }
 
 void ScTable::CopyOneCellFromClip(
-    sc::CopyFromClipContext& rCxt, SCCOL nCol1, SCROW nRow1, SCCOL nCol2, SCROW nRow2 )
+    sc::CopyFromClipContext& rCxt, SCCOL nCol1, SCROW nRow1, SCCOL nCol2, SCROW nRow2, SCROW nSrcRow, ScTable* pSrcTab )
 {
     ScRange aSrcRange = rCxt.getClipDoc()->GetClipParam().getWholeRange();
     SCCOL nSrcColSize = aSrcRange.aEnd.Col() - aSrcRange.aStart.Col() + 1;
@@ -64,6 +65,9 @@ void ScTable::CopyOneCellFromClip(
         assert(nColOffset >= 0);
         aCol[nCol].CopyOneCellFromClip(rCxt, nRow1, nRow2, nColOffset);
     }
+
+    if (nCol1 == 0 && nCol2 == MAXCOL && mpRowHeights)
+        mpRowHeights->setValue(nRow1, nRow2, pSrcTab->GetOriginalHeight(nSrcRow));
 }
 
 void ScTable::SetValues( SCCOL nCol, SCROW nRow, const std::vector<double>& rVals )
@@ -233,6 +237,14 @@ void ScTable::SetNeedsListeningGroup( SCCOL nCol, SCROW nRow )
         return;
 
     aCol[nCol].SetNeedsListeningGroup(nRow);
+}
+
+void ScTable::finalizeOutlineImport()
+{
+    if (pOutlineTable && pRowFlags)
+    {
+        pOutlineTable->GetRowArray().finalizeImport(*this);
+    }
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

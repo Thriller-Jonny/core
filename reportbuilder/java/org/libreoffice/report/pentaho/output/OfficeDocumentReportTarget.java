@@ -383,6 +383,7 @@ public abstract class OfficeDocumentReportTarget extends AbstractReportTarget
             rootAttributes.addNamespaceDeclaration("xsd", OfficeNamespaces.XSD_NS);
             rootAttributes.addNamespaceDeclaration("xsi", OfficeNamespaces.XSI_NS);
             rootAttributes.addNamespaceDeclaration("grddl", OfficeNamespaces.GRDDL_NS);
+            rootAttributes.addNamespaceDeclaration("loext", OfficeNamespaces.LOEXT_NS);
             rootAttributes.setAttribute(OfficeNamespaces.OFFICE_NS, "version",
                     ODF_VERSION);
 
@@ -1253,6 +1254,10 @@ public abstract class OfficeDocumentReportTarget extends AbstractReportTarget
 
         final LexicalUnit cssValue = styleSheetParserUtil.parseLexicalStyleValue(
                 text);
+        if (cssValue == null) {
+            CSSNumericValue zeroLength = CSSNumericValue.createValue(CSSNumericType.CM, 0);
+            return zeroLength;
+        }
         return CSSValueFactory.createLengthValue(cssValue);
     }
 

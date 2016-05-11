@@ -41,27 +41,13 @@ namespace ftp {
     struct DateTime
         : public css::util::DateTime
     {
-        DateTime(const sal_uInt32& nanoSeconds,
-                 const sal_uInt16& seconds,
-                 const sal_uInt16& minutes,
-                 const sal_uInt16& hours,
-                 const sal_uInt16& day,
-                 const sal_uInt16& month,
-                 const sal_uInt16& year)
-                     : css::util::DateTime(nanoSeconds,
-                                                      seconds,
-                                                      minutes,
-                                                      hours,
-                                                      day,
-                                                      month,
-                                                      year,
-                                                      false) { }
+        DateTime() : css::util::DateTime(0, 0, 0, 0, 0, 0, 0, false) { }
 
         void SetYear(sal_uInt16 year) { Year = year; }
         void SetMonth(sal_uInt16 month) { Month = month; }
         void SetDay(sal_uInt16 day) { Day = day; }
         // Only zero allowed and used for time-argument
-        void SetTime(sal_uInt16) { Hours = Minutes = Seconds = NanoSeconds = 0; }
+        void SetTime(sal_uInt16) { Hours = 0; Minutes = 0; Seconds = 0; NanoSeconds = 0; }
         void SetHour(sal_uInt16 hours) { Hours = hours; }
         void SetMin(sal_uInt16 minutes) { Minutes = minutes; }
         void SetSec(sal_uInt16 seconds) { Seconds = seconds; }
@@ -69,7 +55,6 @@ namespace ftp {
 
         sal_uInt16 GetMonth() { return Month; }
     };
-
 
 
 /*========================================================================
@@ -93,14 +78,14 @@ namespace ftp {
         sal_uInt32                          m_nSize;
 
         FTPDirentry()
-            : m_aDate(0,0,0,0,0,0,0),
+            : m_aDate(),
               m_nMode(INETCOREFTP_FILEMODE_UNKNOWN),
               m_nSize((sal_uInt32)(-1)) { }
 
         void clear() {
             m_aURL.clear();
             m_aName.clear();
-            m_aDate = DateTime(0,0,0,0,0,0,0);
+            m_aDate = DateTime();
             m_nMode = INETCOREFTP_FILEMODE_UNKNOWN;
             m_nSize = sal_uInt32(-1);
         }

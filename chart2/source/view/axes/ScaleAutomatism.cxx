@@ -62,11 +62,11 @@ ExplicitScaleData::ExplicitScaleData()
     : Minimum(0.0)
     , Maximum(10.0)
     , Origin(0.0)
-    , Orientation(::com::sun::star::chart2::AxisOrientation_MATHEMATICAL)
+    , Orientation(css::chart2::AxisOrientation_MATHEMATICAL)
     , Scaling()
-    , AxisType(::com::sun::star::chart2::AxisType::REALNUMBER)
+    , AxisType(css::chart2::AxisType::REALNUMBER)
     , ShiftedCategoryPosition(false)
-    , TimeResolution(::com::sun::star::chart::TimeUnit::DAY)
+    , TimeResolution(css::chart::TimeUnit::DAY)
     , NullDate(30,12,1899)
 {
 }
@@ -78,8 +78,8 @@ ExplicitSubIncrement::ExplicitSubIncrement()
 }
 
 ExplicitIncrementData::ExplicitIncrementData()
-    : MajorTimeInterval(1,::com::sun::star::chart::TimeUnit::DAY)
-    , MinorTimeInterval(1,::com::sun::star::chart::TimeUnit::DAY)
+    : MajorTimeInterval(1,css::chart::TimeUnit::DAY)
+    , MinorTimeInterval(1,css::chart::TimeUnit::DAY)
     , Distance(1.0)
     , PostEquidistant(true)
     , BaseValue(0.0)
@@ -96,11 +96,10 @@ ScaleAutomatism::ScaleAutomatism( const ScaleData& rSourceScale, const Date& rNu
                     , m_bExpandIfValuesCloseToBorder( false )
                     , m_bExpandWideValuesToZero( false )
                     , m_bExpandNarrowValuesTowardZero( false )
-                    , m_nTimeResolution(::com::sun::star::chart::TimeUnit::DAY)
+                    , m_nTimeResolution(css::chart::TimeUnit::DAY)
                     , m_aNullDate(rNullDate)
 {
-    ::rtl::math::setNan( &m_fValueMinimum );
-    ::rtl::math::setNan( &m_fValueMaximum );
+    resetValueRange();
 
     double fExplicitOrigin = 0.0;
     if( m_aSourceScale.Origin >>= fExplicitOrigin )
@@ -110,8 +109,19 @@ ScaleAutomatism::~ScaleAutomatism()
 {
 }
 
+void ScaleAutomatism::resetValueRange( )
+{
+    ::rtl::math::setNan( &m_fValueMinimum );
+    ::rtl::math::setNan( &m_fValueMaximum );
+}
+
 void ScaleAutomatism::expandValueRange( double fMinimum, double fMaximum )
 {
+    // if m_fValueMinimum and m_fValueMaximum == 0, it means that they were not determined.
+    // m_fValueMinimum == 0 makes impossible to determine real minimum,
+    // so they need to be reseted tdf#96807
+    if( (m_fValueMinimum == 0.0) && (m_fValueMaximum == 0.0) )
+        resetValueRange();
     if( (fMinimum < m_fValueMinimum) || ::rtl::math::isNan( m_fValueMinimum ) )
         m_fValueMinimum = fMinimum;
     if( (fMaximum > m_fValueMaximum) || ::rtl::math::isNan( m_fValueMaximum ) )
@@ -359,26 +369,16 @@ void ScaleAutomatism::calculateExplicitIncrementAndScaleForLogarithmic(
         than 1, and the range has been swapped above), then: */
     if( bAutoMinimum && (fTempMinimum > 0.0) )
     {
-        /*  If minimum is less than 5 (i.e. original source values less than
-            B^5, B being the base of the scaling), or if minimum and maximum
-            are in different increment intervals (means, if minimum and maximum
-            are not both in the range [B^n,B^(n+1)] for a whole number n), set
-            minimum to 0, which results in B^0=1 on the axis. */
         double fMinimumFloor = ::rtl::math::approxFloor( fTempMinimum );
         double fMaximumFloor = ::rtl::math::approxFloor( fTempMaximum );
         // handle the exact value B^(n+1) to be in the range [B^n,B^(n+1)]
         if( ::rtl::math::approxEqual( fTempMaximum, fMaximumFloor ) )
             fMaximumFloor -= 1.0;
 
-        if( (fMinimumFloor < 5.0) || (fMinimumFloor < fMaximumFloor) )
+        if( fMinimumFloor == fMaximumFloor )
         {
-            if( m_bExpandWideValuesToZero )
-                fTempMinimum = 0.0;
-        }
-        /*  Else (minimum and maximum are in one increment interval), expand
+        /*  if minimum and maximum are in one increment interval, expand
             minimum toward 0 to make the 'shorter' data points visible. */
-        else
-        {
             if( m_bExpandNarrowValuesTowardZero )
                 fTempMinimum -= 1.0;
         }

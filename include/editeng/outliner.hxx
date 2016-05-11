@@ -72,7 +72,7 @@ class SvKeyValueIterator;
 class SvxForbiddenCharactersTable;
 class OverflowingText;
 class NonOverflowingText;
-
+class OutlinerSearchable;
 
 namespace svl
 {
@@ -171,7 +171,7 @@ struct ParaRange
     sal_Int32  nStartPara;
     sal_Int32  nEndPara;
 
-            ParaRange( sal_Int32 nS, sal_Int32 nE ) { nStartPara = nS, nEndPara = nE; }
+            ParaRange( sal_Int32 nS, sal_Int32 nE ) : nStartPara(nS), nEndPara(nE) {}
 
     void    Adjust();
 };
@@ -180,9 +180,7 @@ inline void ParaRange::Adjust()
 {
     if ( nStartPara > nEndPara )
     {
-        sal_Int32 nTmp = nStartPara;
-        nStartPara = nEndPara;
-        nEndPara = nTmp;
+        std::swap(nStartPara, nEndPara);
     }
 }
 
@@ -249,9 +247,7 @@ public:
     void        CreateSelectionList (std::vector<Paragraph*> &aSelList) ;
 
     // Retruns the number of selected paragraphs
-    sal_Int32   Select( Paragraph* pParagraph,
-                    bool bSelect = true,
-                    bool bWChildren = true);
+    sal_Int32   Select( Paragraph* pParagraph, bool bSelect = true);
 
     OUString    GetSelected() const;
     void        SelectRange( sal_Int32 nFirst, sal_Int32 nCount );
@@ -259,9 +255,9 @@ public:
     void        Indent( short nDiff );
     void        AdjustDepth( short nDX );   // Later replace with Indent!
 
-    bool        AdjustHeight( long nDY );
+    void        AdjustHeight( long nDY );
 
-    sal_uLong   Read( SvStream& rInput, const OUString& rBaseURL, EETextFormat eFormat, bool bSelect = false, SvKeyValueIterator* pHTTPHeaderAttrs = nullptr );
+    sal_uLong   Read( SvStream& rInput, const OUString& rBaseURL, EETextFormat eFormat, SvKeyValueIterator* pHTTPHeaderAttrs = nullptr );
 
     void        InsertText( const OUString& rNew, bool bSelect = false );
     void        InsertText( const OutlinerParaObject& rParaObj );
@@ -273,10 +269,8 @@ public:
     void        SetBackgroundColor( const Color& rColor );
     Color       GetBackgroundColor();
 
-    /// Set if we are doing tiled rendering.
-    void        setTiledRendering(bool bTiledRendering);
     /// @see vcl::ITiledRenderable::registerCallback().
-    void registerLibreOfficeKitCallback(LibreOfficeKitCallback pCallback, void* pLibreOfficeKitData);
+    void registerLibreOfficeKitCallback(OutlinerSearchable* pSearchable);
 
     SfxItemSet  GetAttribs();
 
@@ -297,7 +291,7 @@ public:
     Pointer     GetPointer( const Point& rPosPixel );
     void        Command( const CommandEvent& rCEvt );
 
-    EESpellState    StartSpeller( bool bMultipleDoc = false );
+    void            StartSpeller();
     EESpellState    StartThesaurus();
     sal_Int32       StartSearchAndReplace( const SvxSearchItem& rSearchItem );
 
@@ -314,7 +308,7 @@ public:
     void        SetSelection( const ESelection& );
     void GetSelectionRectangles(std::vector<Rectangle>& rLogicRects) const;
 
-    void        RemoveAttribs( bool bRemoveParaAttribs = false, sal_uInt16 nWhich = 0, bool bKeepLanguages = false );
+    void        RemoveAttribs( bool bRemoveParaAttribs = false, bool bKeepLanguages = false );
     void        RemoveAttribsKeepLanguages( bool bRemoveParaAttribs );
     bool        HasSelection() const;
 
@@ -365,7 +359,7 @@ public:
     */
     void        EnableBullets();
 
-    bool        IsCursorAtWrongSpelledWord( bool bMarkIfWrong = false );
+    bool        IsCursorAtWrongSpelledWord();
     bool        IsWrongSpelledWordAtPos( const Point& rPosPixel, bool bMarkIfWrong = false );
     void        ExecuteSpellPopup( const Point& rPosPixel, Link<SpellCallbackInfo&,void>* pCallBack = nullptr );
 
@@ -378,6 +372,14 @@ public:
     void        SetEndCutPasteLinkHdl(const Link<LinkParamNone*,void> &rLink) { aEndCutPasteLink = rLink; }
 };
 
+/// Interface class to not depend on SdrModel in editeng.
+class EDITENG_DLLPUBLIC OutlinerSearchable
+{
+public:
+    virtual ~OutlinerSearchable();
+
+    virtual void libreOfficeKitCallback(int nType, const char* pPayload) const = 0;
+};
 
 // some thesaurus functionality to avoid code duplication in different projects...
 bool EDITENG_DLLPUBLIC  GetStatusValueForThesaurusFromContext( OUString &rStatusVal, LanguageType &rLang, const EditView &rEditView );
@@ -558,16 +560,21 @@ struct EBulletInfo
     EBulletInfo() : bVisible( false ), nType( 0 ), nParagraph( EE_PARA_NOT_FOUND ) {}
 };
 
-#define OUTLINERMODE_DONTKNOW       0x0000
-#define OUTLINERMODE_TEXTOBJECT     0x0001
-#define OUTLINERMODE_TITLEOBJECT    0x0002
-#define OUTLINERMODE_OUTLINEOBJECT  0x0003
-#define OUTLINERMODE_OUTLINEVIEW    0x0004
+enum class OutlinerMode {
+    DontKnow       = 0x0000,
+    TextObject     = 0x0001,
+    TitleObject    = 0x0002,
+    OutlineObject  = 0x0003,
+    OutlineView    = 0x0004,
+    Subtitle       = 0x0101,
+    Note           = 0x0201
+};
+namespace o3tl
+{
+    template<> struct typed_flags<OutlinerMode> : is_typed_flags<OutlinerMode, 0x030f> {};
+}
 
-#define OUTLINERMODE_USERMASK       0x00FF
-
-#define OUTLINERMODE_SUBTITLE       (0x0100|OUTLINERMODE_TEXTOBJECT)
-#define OUTLINERMODE_NOTE           (0x0200|OUTLINERMODE_TEXTOBJECT)
+#define OUTLINERMODE_USERMASK       (OutlinerMode)0x00FF
 
 class EDITENG_DLLPUBLIC Outliner : public SfxBroadcaster
 {
@@ -609,9 +616,8 @@ class EDITENG_DLLPUBLIC Outliner : public SfxBroadcaster
     const sal_Int16     nMinDepth;
     sal_Int32           nFirstPage;
 
-    sal_uInt16          nOutlinerMode;
+    OutlinerMode        nOutlinerMode;
 
-    bool                bIsExpanding; // Only valid in Expand/Collaps-Hdl, reset
     bool                bFirstParaIsEmpty;
     sal_uInt8           nBlockInsCallback;
     bool                bStrippingPortions;
@@ -630,13 +636,13 @@ class EDITENG_DLLPUBLIC Outliner : public SfxBroadcaster
     void                ImplCalcBulletText( sal_Int32 nPara, bool bRecalcLevel, bool bRecalcChildren );
     OUString            ImplGetBulletText( sal_Int32 nPara );
     void                ImplCheckNumBulletItem( sal_Int32 nPara );
-    void                ImplInitDepth( sal_Int32 nPara, sal_Int16 nDepth, bool bCreateUndo, bool bUndoAction = false );
-    void                ImplSetLevelDependendStyleSheet( sal_Int32 nPara, SfxStyleSheet* pLevelStyle = nullptr );
+    void                ImplInitDepth( sal_Int32 nPara, sal_Int16 nDepth, bool bCreateUndo );
+    void                ImplSetLevelDependendStyleSheet( sal_Int32 nPara );
 
     void                ImplBlockInsertionCallbacks( bool b );
 
     void        ImpFilterIndents( sal_Int32 nFirstPara, sal_Int32 nLastPara );
-    bool        ImpConvertEdtToOut( sal_Int32 nPara, EditView* pView = nullptr );
+    bool        ImpConvertEdtToOut( sal_Int32 nPara );
 
     void        ImpTextPasted( sal_Int32 nStartPara, sal_Int32 nCount );
     vcl::Font   ImpCalcBulletFont( sal_Int32 nPara ) const;
@@ -645,7 +651,7 @@ class EDITENG_DLLPUBLIC Outliner : public SfxBroadcaster
     bool        ImpCanDeleteSelectedPages( OutlinerView* pCurView );
     bool        ImpCanDeleteSelectedPages( OutlinerView* pCurView, sal_Int32 nFirstPage, sal_Int32 nPages );
 
-    sal_uInt16  ImplGetOutlinerMode() const { return nOutlinerMode & OUTLINERMODE_USERMASK; }
+    OutlinerMode ImplGetOutlinerMode() const { return nOutlinerMode & OUTLINERMODE_USERMASK; }
     void        ImplCheckDepth( sal_Int16& rnDepth ) const;
 
 protected:
@@ -666,11 +672,11 @@ protected:
 
 public:
 
-                    Outliner( SfxItemPool* pPool, sal_uInt16 nOutlinerMode );
+                    Outliner( SfxItemPool* pPool, OutlinerMode nOutlinerMode );
     virtual         ~Outliner();
 
-    void            Init( sal_uInt16 nOutlinerMode );
-    sal_uInt16      GetMode() const { return nOutlinerMode; }
+    void            Init( OutlinerMode nOutlinerMode );
+    OutlinerMode    GetMode() const { return nOutlinerMode; }
 
     void            SetVertical( bool bVertical );
     bool            IsVertical() const;
@@ -690,7 +696,7 @@ public:
     void            SetAddExtLeading( bool b );
 
     size_t          InsertView( OutlinerView* pView, size_t nIndex = size_t(-1) );
-    OutlinerView*   RemoveView( OutlinerView* pView );
+    void            RemoveView( OutlinerView* pView );
     OutlinerView*   RemoveView( size_t nIndex );
     OutlinerView*   GetView( size_t nIndex ) const;
     size_t          GetViewCount() const;
@@ -713,7 +719,7 @@ public:
     void            SetBackgroundColor( const Color& rColor );
     Color           GetBackgroundColor() const;
 
-    void            SetMaxDepth( sal_Int16 nDepth, bool bCheckParas = false );
+    void            SetMaxDepth( sal_Int16 nDepth );
     sal_Int16       GetMaxDepth() const { return nMaxDepth; }
 
     void            SetUpdateMode( bool bUpdate );
@@ -749,11 +755,11 @@ public:
 
     void            ParagraphInsertedHdl();
     void            SetParaInsertedHdl(const Link<Outliner*,void>& rLink){aParaInsertedHdl=rLink;}
-    Link<Outliner*,void> GetParaInsertedHdl() const { return aParaInsertedHdl; }
+    const Link<Outliner*,void>& GetParaInsertedHdl() const { return aParaInsertedHdl; }
 
     void            ParagraphRemovingHdl();
     void            SetParaRemovingHdl(const Link<Outliner*,void>& rLink){aParaRemovingHdl=rLink;}
-    Link<Outliner*,void> GetParaRemovingHdl() const { return aParaRemovingHdl; }
+    const Link<Outliner*,void>& GetParaRemovingHdl() const { return aParaRemovingHdl; }
 
     NonOverflowingText *GetNonOverflowingText() const;
     OverflowingText *GetOverflowingText() const;
@@ -765,7 +771,7 @@ public:
 
     void            DepthChangedHdl();
     void            SetDepthChangedHdl(const Link<Outliner*,void>& rLink){aDepthChangedHdl=rLink;}
-    Link<Outliner*,void> GetDepthChangedHdl() const { return aDepthChangedHdl; }
+    const Link<Outliner*,void>& GetDepthChangedHdl() const { return aDepthChangedHdl; }
     sal_Int16       GetPrevDepth() const { return static_cast<sal_Int16>(nDepthChangedHdlPrevDepth); }
     ParaFlag        GetPrevFlags() const { return mnDepthChangeHdlPrevFlags; }
 
@@ -777,7 +783,7 @@ public:
     sal_Int32       GetSelPageCount() const { return nDepthChangedHdlPrevDepth; }
 
     void            SetCalcFieldValueHdl(const Link<EditFieldInfo*,void>& rLink ) { aCalcFieldValueHdl= rLink; }
-    Link<EditFieldInfo*,void> GetCalcFieldValueHdl() const { return aCalcFieldValueHdl; }
+    const Link<EditFieldInfo*,void>& GetCalcFieldValueHdl() const { return aCalcFieldValueHdl; }
 
     void            SetDrawPortionHdl(const Link<DrawPortionInfo*,void>& rLink){aDrawPortionHdl=rLink;}
 
@@ -794,7 +800,7 @@ public:
     Link<EditStatus&, void> GetStatusEventHdl() const;
 
     void            Draw( OutputDevice* pOutDev, const Rectangle& rOutRect );
-    void            Draw( OutputDevice* pOutDev, const Point& rStartPos, short nOrientation = 0 );
+    void            Draw( OutputDevice* pOutDev, const Point& rStartPos );
 
     const Size&     GetPaperSize() const;
     void            SetPaperSize( const Size& rSize );
@@ -874,14 +880,14 @@ public:
     void            SetControlWord( EEControlBits nWord );
     EEControlBits   GetControlWord() const;
 
-    Link<Outliner*,void> GetBeginMovingHdl() const { return aBeginMovingHdl; }
+    const Link<Outliner*,void>& GetBeginMovingHdl() const { return aBeginMovingHdl; }
     void            SetBeginMovingHdl(const Link<Outliner*,void>& rLink) {aBeginMovingHdl=rLink;}
-    Link<Outliner*,void> GetEndMovingHdl() const {return aEndMovingHdl;}
+    const Link<Outliner*,void>& GetEndMovingHdl() const {return aEndMovingHdl;}
     void            SetEndMovingHdl( const Link<Outliner*,void>& rLink){aEndMovingHdl=rLink;}
 
     sal_uLong           GetLineCount( sal_Int32 nParagraph ) const;
     sal_Int32           GetLineLen( sal_Int32 nParagraph, sal_Int32 nLine ) const;
-    sal_uLong           GetLineHeight( sal_Int32 nParagraph, sal_Int32 nLine = 0 );
+    sal_uLong           GetLineHeight( sal_Int32 nParagraph );
 
     sal_uLong           Read( SvStream& rInput, const OUString& rBaseURL, sal_uInt16, SvKeyValueIterator* pHTTPHeaderAttrs = nullptr );
 
@@ -896,10 +902,10 @@ public:
     void            QuickInsertText( const OUString& rText, const ESelection& rSel );
     void            QuickDelete( const ESelection& rSel );
     void            RemoveCharAttribs( sal_Int32 nPara, sal_uInt16 nWhich = 0 );
-    void            QuickFormatDoc( bool bFull = false );
+    void            QuickFormatDoc();
 
     bool            UpdateFields();
-    void            RemoveFields( bool bKeepFieldText, std::function<bool ( const SvxFieldData* )> isFieldData = [] (const SvxFieldData* ){return true;} );
+    void            RemoveFields( const std::function<bool ( const SvxFieldData* )>& isFieldData = [] (const SvxFieldData* ){return true;} );
 
     void            FieldClicked( const SvxFieldItem& rField, sal_Int32 nPara, sal_Int32 nPos );
     virtual OUString CalcFieldValue( const SvxFieldItem& rField, sal_Int32 nPara, sal_Int32 nPos, Color*& rTxtColor, Color*& rFldColor );
@@ -909,7 +915,7 @@ public:
                     GetSpeller();
     void            SetHyphenator( css::uno::Reference< css::linguistic2::XHyphenator >& xHyph );
 
-    static void     SetForbiddenCharsTable( rtl::Reference<SvxForbiddenCharactersTable> xForbiddenChars );
+    static void     SetForbiddenCharsTable( const rtl::Reference<SvxForbiddenCharactersTable>& xForbiddenChars );
 
     // Deprecated
     void            SetDefaultLanguage( LanguageType eLang );
@@ -949,7 +955,7 @@ public:
     // this is needed for StarOffice Api
     void            SetLevelDependendStyleSheet( sal_Int32 nPara );
 
-    sal_uInt16      GetOutlinerMode() const { return nOutlinerMode & OUTLINERMODE_USERMASK; }
+    OutlinerMode    GetOutlinerMode() const { return nOutlinerMode & OUTLINERMODE_USERMASK; }
 
     // spell and return a sentence
     bool            SpellSentence(EditView& rEditView, svx::SpellPortions& rToFill, bool bIsGrammarChecking );

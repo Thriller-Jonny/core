@@ -42,6 +42,7 @@
 
 #include <cppuhelper/implbase.hxx>
 #include <cppuhelper/supportsservice.hxx>
+#include <comphelper/sequence.hxx>
 #include <vcl/svapp.hxx>
 #include <rtl/ref.hxx>
 #include <rtl/ustrbuf.hxx>
@@ -149,7 +150,7 @@ private:
 
     struct UIElementType;
     friend struct UIElementType;
-    typedef std::unordered_map< OUString, UIElementData, OUStringHash, std::equal_to< OUString > > UIElementDataHashMap;
+    typedef std::unordered_map< OUString, UIElementData, OUStringHash > UIElementDataHashMap;
 
     struct UIElementType
     {
@@ -168,7 +169,7 @@ private:
 
     typedef std::vector< UIElementType > UIElementTypesVector;
     typedef std::vector< css::ui::ConfigurationEvent > ConfigEventNotifyContainer;
-    typedef std::unordered_map< OUString, UIElementInfo, OUStringHash, std::equal_to< OUString > > UIElementInfoHashMap;
+    typedef std::unordered_map< OUString, UIElementInfo, OUStringHash > UIElementInfoHashMap;
 
     void            impl_Initialize();
     void            implts_notifyContainerListener( const css::ui::ConfigurationEvent& aEvent, NotifyOp eOp );
@@ -214,7 +215,7 @@ static const char* UIELEMENTTYPENAMES[] =
 static const char       RESOURCEURL_PREFIX[] = "private:resource/";
 static const sal_Int32  RESOURCEURL_PREFIX_SIZE = 17;
 
-static sal_Int16 RetrieveTypeFromResourceURL( const OUString& aResourceURL )
+sal_Int16 RetrieveTypeFromResourceURL( const OUString& aResourceURL )
 {
 
     if (( aResourceURL.startsWith( RESOURCEURL_PREFIX ) ) &&
@@ -236,7 +237,7 @@ static sal_Int16 RetrieveTypeFromResourceURL( const OUString& aResourceURL )
     return UIElementType::UNKNOWN;
 }
 
-static OUString RetrieveNameFromResourceURL( const OUString& aResourceURL )
+OUString RetrieveNameFromResourceURL( const OUString& aResourceURL )
 {
     if (( aResourceURL.startsWith( RESOURCEURL_PREFIX ) ) &&
         ( aResourceURL.getLength() > RESOURCEURL_PREFIX_SIZE ))
@@ -836,8 +837,8 @@ void SAL_CALL UIConfigurationManager::reset() throw (css::uno::RuntimeException,
             aGuard.clear();
 
             // Notify our listeners
-            for ( size_t k = 0; k < aRemoveEventNotifyContainer.size(); k++ )
-                implts_notifyContainerListener( aRemoveEventNotifyContainer[k], NotifyOp_Remove );
+            for (ConfigurationEvent & k : aRemoveEventNotifyContainer)
+                implts_notifyContainerListener( k, NotifyOp_Remove );
         }
         catch ( const css::lang::IllegalArgumentException& )
         {
@@ -864,7 +865,7 @@ throw ( IllegalArgumentException, RuntimeException, std::exception )
     if ( m_bDisposed )
         throw DisposedException();
 
-    Sequence< Sequence< PropertyValue > > aElementInfoSeq;
+    std::vector< Sequence< PropertyValue > > aElementInfoSeq;
     UIElementInfoHashMap aUIElementInfoCollection;
 
     if ( ElementType == css::ui::UIElementType::UNKNOWN )
@@ -879,7 +880,7 @@ throw ( IllegalArgumentException, RuntimeException, std::exception )
     aUIElementInfo[0].Name = m_aPropResourceURL;
     aUIElementInfo[1].Name = m_aPropUIName;
 
-    aElementInfoSeq.realloc( aUIElementInfoCollection.size() );
+    aElementInfoSeq.resize( aUIElementInfoCollection.size() );
     UIElementInfoHashMap::const_iterator pIter = aUIElementInfoCollection.begin();
 
     sal_Int32 n = 0;
@@ -891,7 +892,7 @@ throw ( IllegalArgumentException, RuntimeException, std::exception )
         ++pIter;
     }
 
-    return aElementInfoSeq;
+    return comphelper::containerToSequence(aElementInfoSeq);
 }
 
 Reference< XIndexContainer > SAL_CALL UIConfigurationManager::createSettings() throw (css::uno::RuntimeException, std::exception)
@@ -917,10 +918,10 @@ throw (css::lang::IllegalArgumentException, css::uno::RuntimeException, std::exc
     {
         UIElementData* pDataSettings = impl_findUIElementData( ResourceURL, nElementType, false );
         if ( pDataSettings && !pDataSettings->bDefault )
-            return sal_True;
+            return true;
     }
 
-    return sal_False;
+    return false;
 }
 
 Reference< XIndexAccess > SAL_CALL UIConfigurationManager::getSettings( const OUString& ResourceURL, sal_Bool bWriteable )
@@ -1297,10 +1298,10 @@ void SAL_CALL UIConfigurationManager::reload() throw (css::uno::Exception, css::
         aGuard.clear();
 
         // Notify our listeners
-        for ( size_t j = 0; j < aRemoveNotifyContainer.size(); j++ )
-            implts_notifyContainerListener( aRemoveNotifyContainer[j], NotifyOp_Remove );
-        for ( size_t k = 0; k < aReplaceNotifyContainer.size(); k++ )
-            implts_notifyContainerListener( aReplaceNotifyContainer[k], NotifyOp_Replace );
+        for (ConfigurationEvent & j : aRemoveNotifyContainer)
+            implts_notifyContainerListener( j, NotifyOp_Remove );
+        for (ConfigurationEvent & k : aReplaceNotifyContainer)
+            implts_notifyContainerListener( k, NotifyOp_Replace );
     }
 }
 

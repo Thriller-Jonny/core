@@ -19,10 +19,10 @@
 
 #include <config_features.h>
 
-#include "vcl/salnativewidgets.hxx"
-#include "vcl/decoview.hxx"
-#include "vcl/svapp.hxx"
-#include "vcl/timer.hxx"
+#include <vcl/salnativewidgets.hxx>
+#include <vcl/decoview.hxx>
+#include <vcl/svapp.hxx>
+#include <vcl/timer.hxx>
 #include <vcl/settings.hxx>
 
 #include "quartz/salgdi.h"
@@ -422,7 +422,7 @@ bool AquaSalGraphics::drawNativeControl(ControlType nType,
                         [NSNumber numberWithBool:NO], @"kCUIWindowFrameDrawTitleSeparatorKey",
                         [NSNumber numberWithBool:YES], @"is.flipped",
                         nil]),
-                        nil);;
+                        nil);
             }
             else
             {

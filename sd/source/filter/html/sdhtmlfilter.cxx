@@ -38,10 +38,9 @@
 #include "htmlex.hxx"
 #include "sdhtmlfilter.hxx"
 
-// - SdPPTFilter -
 
-SdHTMLFilter::SdHTMLFilter( SfxMedium& rMedium, ::sd::DrawDocShell& rDocShell, bool bShowProgress ) :
-    SdFilter( rMedium, rDocShell, bShowProgress )
+SdHTMLFilter::SdHTMLFilter( SfxMedium& rMedium, ::sd::DrawDocShell& rDocShell ) :
+    SdFilter( rMedium, rDocShell )
 {
 }
 

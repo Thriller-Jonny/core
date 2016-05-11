@@ -18,7 +18,6 @@
  */
 
 #include <sfx2/sidebar/ResourceDefinitions.hrc>
-#include <sfx2/sidebar/Theme.hxx>
 #include <sfx2/sidebar/ControlFactory.hxx>
 #include <com/sun/star/chart2/LegendPosition.hpp>
 #include <com/sun/star/chart/ChartLegendExpansion.hpp>
@@ -49,7 +48,6 @@
 
 using namespace css;
 using namespace css::uno;
-using ::sfx2::sidebar::Theme;
 
 namespace chart { namespace sidebar {
 
@@ -72,14 +70,14 @@ enum class AxisType
     Y_SECOND
 };
 
-ChartModel* getChartModel(css::uno::Reference<css::frame::XModel> xModel)
+ChartModel* getChartModel(const css::uno::Reference<css::frame::XModel>& xModel)
 {
     ChartModel* pModel = dynamic_cast<ChartModel*>(xModel.get());
 
     return pModel;
 }
 
-bool isLegendVisible(css::uno::Reference<css::frame::XModel> xModel)
+bool isLegendVisible(const css::uno::Reference<css::frame::XModel>& xModel)
 {
     ChartModel* pModel = getChartModel(xModel);
     if (!pModel)
@@ -104,7 +102,7 @@ bool isLegendVisible(css::uno::Reference<css::frame::XModel> xModel)
     return false;
 }
 
-void setLegendVisible(css::uno::Reference<css::frame::XModel> xModel, bool bVisible)
+void setLegendVisible(const css::uno::Reference<css::frame::XModel>& xModel, bool bVisible)
 {
     ChartModel* pModel = getChartModel(xModel);
     if (!pModel)
@@ -116,12 +114,19 @@ void setLegendVisible(css::uno::Reference<css::frame::XModel> xModel, bool bVisi
         LegendHelper::hideLegend(*pModel);
 }
 
-bool isTitleVisisble(css::uno::Reference<css::frame::XModel> xModel, TitleHelper::eTitleType eTitle)
+bool isTitleVisisble(const css::uno::Reference<css::frame::XModel>& xModel, TitleHelper::eTitleType eTitle)
 {
-    return TitleHelper::getTitle(eTitle, xModel).is();
+    css::uno::Reference<css::uno::XInterface> xTitle = TitleHelper::getTitle(eTitle, xModel);
+    if (!xTitle.is())
+        return false;
+
+    css::uno::Reference<css::beans::XPropertySet> xPropSet(xTitle, css::uno::UNO_QUERY_THROW);
+    css::uno::Any aAny = xPropSet->getPropertyValue("Visible");
+    bool bVisible = aAny.get<bool>();
+    return bVisible;
 }
 
-bool isGridVisible(css::uno::Reference<css::frame::XModel> xModel, GridType eType)
+bool isGridVisible(const css::uno::Reference<css::frame::XModel>& xModel, GridType eType)
 {
     Reference< chart2::XDiagram > xDiagram(ChartModelHelper::findDiagram(xModel));
     if(xDiagram.is())
@@ -139,7 +144,7 @@ bool isGridVisible(css::uno::Reference<css::frame::XModel> xModel, GridType eTyp
     return false;
 }
 
-void setGridVisible(css::uno::Reference<css::frame::XModel> xModel, GridType eType, bool bVisible)
+void setGridVisible(const css::uno::Reference<css::frame::XModel>& xModel, GridType eType, bool bVisible)
 {
     Reference< chart2::XDiagram > xDiagram(ChartModelHelper::findDiagram(xModel));
     if(xDiagram.is())
@@ -159,7 +164,7 @@ void setGridVisible(css::uno::Reference<css::frame::XModel> xModel, GridType eTy
     }
 }
 
-bool isAxisVisible(css::uno::Reference<css::frame::XModel> xModel, AxisType eType)
+bool isAxisVisible(const css::uno::Reference<css::frame::XModel>& xModel, AxisType eType)
 {
     Reference< chart2::XDiagram > xDiagram(ChartModelHelper::findDiagram(xModel));
     if(xDiagram.is())
@@ -178,7 +183,7 @@ bool isAxisVisible(css::uno::Reference<css::frame::XModel> xModel, AxisType eTyp
     return false;
 }
 
-void setAxisVisible(css::uno::Reference<css::frame::XModel> xModel, AxisType eType, bool bVisible)
+void setAxisVisible(const css::uno::Reference<css::frame::XModel>& xModel, AxisType eType, bool bVisible)
 {
     Reference< chart2::XDiagram > xDiagram(ChartModelHelper::findDiagram(xModel));
     if(xDiagram.is())
@@ -198,7 +203,7 @@ void setAxisVisible(css::uno::Reference<css::frame::XModel> xModel, AxisType eTy
     }
 }
 
-sal_Int32 getLegendPos(css::uno::Reference<css::frame::XModel> xModel)
+sal_Int32 getLegendPos(const css::uno::Reference<css::frame::XModel>& xModel)
 {
     ChartModel* pModel = getChartModel(xModel);
     if (!pModel)
@@ -225,7 +230,7 @@ sal_Int32 getLegendPos(css::uno::Reference<css::frame::XModel> xModel)
     }
 }
 
-void setLegendPos(css::uno::Reference<css::frame::XModel> xModel, sal_Int32 nPos)
+void setLegendPos(const css::uno::Reference<css::frame::XModel>& xModel, sal_Int32 nPos)
 {
     ChartModel* pModel = getChartModel(xModel);
     if (!pModel)
@@ -276,7 +281,6 @@ ChartElementsPanel::ChartElementsPanel(
     const css::uno::Reference<css::frame::XFrame>& rxFrame,
     ChartController* pController)
   : PanelLayout(pParent, "ChartElementsPanel", "modules/schart/ui/sidebarelements.ui", rxFrame),
-    mxFrame(rxFrame),
     maContext(),
     mxModel(pController->getModel()),
     mxListener(new ChartSidebarModifyListener(this)),
@@ -384,7 +388,7 @@ void ChartElementsPanel::Initialize()
 
 namespace {
 
-css::uno::Reference<css::chart2::XChartType> getChartType(css::uno::Reference<css::frame::XModel> xModel)
+css::uno::Reference<css::chart2::XChartType> getChartType(const css::uno::Reference<css::frame::XModel>& xModel)
 {
     css::uno::Reference<css::chart2::XChartDocument> xChartDoc(xModel, css::uno::UNO_QUERY_THROW);
     css::uno::Reference<chart2::XDiagram > xDiagram = xChartDoc->getFirstDiagram();
@@ -584,11 +588,11 @@ void ChartElementsPanel::setTitleVisible(TitleHelper::eTitleType eTitle, bool bV
     if (bVisible)
     {
         OUString aText = eTitle == TitleHelper::SUB_TITLE ? maTextSubTitle : maTextTitle;
-        TitleHelper::createTitle(eTitle, aText, mxModel, comphelper::getProcessComponentContext());
+        TitleHelper::createOrShowTitle(eTitle, aText, mxModel, comphelper::getProcessComponentContext());
     }
     else
     {
-        TitleHelper::removeTitle(eTitle, mxModel);
+        TitleHelper::hideTitle(eTitle, mxModel);
     }
 }
 

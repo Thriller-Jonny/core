@@ -20,8 +20,6 @@
 #ifndef INCLUDED_O3TL_LAZY_UPDATE_HXX
 #define INCLUDED_O3TL_LAZY_UPDATE_HXX
 
-#include <sal/config.h>
-
 #include <utility>
 
 namespace o3tl
@@ -51,11 +49,6 @@ output( myValue.getOutValue() );
     template<typename In, typename Out, typename Func> class LazyUpdate {
     public:
         LazyUpdate(Func const & func): func_(func), input_(), dirty_(true) {}
-
-        template<typename T> void setInValue(T && in) {
-            dirty_ = true;
-            input_ = std::forward(in);
-        }
 
         In const & getInValue() const { return input_; }
 

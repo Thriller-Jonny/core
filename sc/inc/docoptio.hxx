@@ -21,6 +21,7 @@
 #define INCLUDED_SC_INC_DOCOPTIO_HXX
 
 #include <unotools/configitem.hxx>
+#include <unotools/textsearch.hxx>
 #include <svl/poolitem.hxx>
 #include <svl/itemprop.hxx>
 #include "scdllapi.h"
@@ -39,14 +40,19 @@ class SC_DLLPUBLIC ScDocOptions
     sal_uInt16 nYear;
     sal_uInt16 nYear2000;               ///< earlier 19YY is assumed, 20YY otherwise (if only YY of year is given)
     sal_uInt16 nTabDistance;            ///< distance of standard tabs
+    mutable utl::SearchParam::SearchType eFormulaSearchType; ///< wildcards or regular expressions or normal search
     bool       bIsIgnoreCase;           ///< ignore case for comparisons?
     bool       bIsIter;                 ///< iterations for circular refs
     bool       bCalcAsShown;            ///< calculate as shown (wrt precision)
     bool       bMatchWholeCell;         ///< search criteria must match the whole cell
     bool       bDoAutoSpell;            ///< auto-spelling
     bool       bLookUpColRowNames;      ///< determine column-/row titles automagically
-    bool       bFormulaRegexEnabled;    ///< regular expressions in formulas enabled
+    mutable bool bFormulaRegexEnabled;    ///< regular expressions in formulas enabled, only when reading settings
+    mutable bool bFormulaWildcardsEnabled;///< wildcards in formulas enabled, only when reading settings
     bool       bWriteCalcConfig;        ///< (subset of) Calc config will be written to user's profile
+
+    const utl::SearchParam::SearchType eSearchTypeUnknown = static_cast<utl::SearchParam::SearchType>(-1);
+
 public:
                 ScDocOptions();
                 ScDocOptions( const ScDocOptions& rCpy );
@@ -89,8 +95,26 @@ public:
     void    SetYear2000( sal_uInt16 nVal )  { nYear2000 = nVal; }
     sal_uInt16  GetYear2000() const         { return nYear2000; }
 
-    void    SetFormulaRegexEnabled( bool bVal ) { bFormulaRegexEnabled = bVal; }
-    bool    IsFormulaRegexEnabled() const       { return bFormulaRegexEnabled; }
+    utl::SearchParam::SearchType GetFormulaSearchType() const
+    {
+        if (eFormulaSearchType == eSearchTypeUnknown)
+            eFormulaSearchType = utl::SearchParam::ConvertToSearchType( bFormulaWildcardsEnabled, bFormulaRegexEnabled);
+        return eFormulaSearchType;
+    }
+
+    void    SetFormulaRegexEnabled( bool bVal )
+    {
+        bFormulaRegexEnabled = bVal;
+        eFormulaSearchType = eSearchTypeUnknown;
+    }
+    bool    IsFormulaRegexEnabled() const       { return GetFormulaSearchType() == utl::SearchParam::SRCH_REGEXP; }
+
+    void    SetFormulaWildcardsEnabled( bool bVal )
+    {
+        bFormulaWildcardsEnabled = bVal;
+        eFormulaSearchType = eSearchTypeUnknown;
+    }
+    bool    IsFormulaWildcardsEnabled() const       { return GetFormulaSearchType() == utl::SearchParam::SRCH_WILDCARD; }
 
     void    SetWriteCalcConfig( bool bVal ) { bWriteCalcConfig = bVal; }
     bool    IsWriteCalcConfig() const       { return bWriteCalcConfig; }
@@ -113,6 +137,8 @@ inline const ScDocOptions& ScDocOptions::operator=( const ScDocOptions& rCpy )
     bDoAutoSpell        = rCpy.bDoAutoSpell;
     bLookUpColRowNames  = rCpy.bLookUpColRowNames;
     bFormulaRegexEnabled= rCpy.bFormulaRegexEnabled;
+    bFormulaWildcardsEnabled = rCpy.bFormulaWildcardsEnabled;
+    eFormulaSearchType  = rCpy.eFormulaSearchType;
     bWriteCalcConfig    = rCpy.bWriteCalcConfig;
 
     return *this;
@@ -136,6 +162,8 @@ inline bool ScDocOptions::operator==( const ScDocOptions& rOpt ) const
             &&  rOpt.bDoAutoSpell           == bDoAutoSpell
             &&  rOpt.bLookUpColRowNames     == bLookUpColRowNames
             &&  rOpt.bFormulaRegexEnabled   == bFormulaRegexEnabled
+            &&  rOpt.bFormulaWildcardsEnabled == bFormulaWildcardsEnabled
+            &&  rOpt.eFormulaSearchType     == eFormulaSearchType
             &&  rOpt.bWriteCalcConfig       == bWriteCalcConfig
             );
 }

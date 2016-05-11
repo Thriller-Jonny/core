@@ -37,6 +37,9 @@
 #include <oox/helper/graphichelper.hxx>
 #include <oox/helper/propertymap.hxx>
 #include <oox/helper/propertyset.hxx>
+#include <oox/token/namespaces.hxx>
+#include <oox/token/properties.hxx>
+#include <oox/token/tokens.hxx>
 #include "biffinputstream.hxx"
 #include "excelhandlers.hxx"
 #include "stylesbuffer.hxx"
@@ -471,8 +474,8 @@ HeaderFooterParser::HeaderFooterParser( const WorkbookHelper& rHelper ) :
     maSheetNameService( "com.sun.star.text.TextField.SheetName" ),
     maFileNameService( "com.sun.star.text.TextField.FileName" ),
     maDateTimeService( "com.sun.star.text.TextField.DateTime" ),
-    maBoldNames( sppcBoldNames, STATIC_ARRAY_END( sppcBoldNames ) ),
-    maItalicNames( sppcItalicNames, STATIC_ARRAY_END( sppcItalicNames ) ),
+    maBoldNames( sppcBoldNames, ::std::end(sppcBoldNames) ),
+    maItalicNames( sppcItalicNames, ::std::end(sppcItalicNames) ),
     maPortions( static_cast< size_t >( HF_COUNT ) ),
     meCurrPortion( HF_CENTER )
 {
@@ -753,16 +756,16 @@ void HeaderFooterParser::updateCurrHeight()
 void HeaderFooterParser::setAttributes()
 {
     Reference<text::XTextRange> xRange( getStartPos(), UNO_QUERY );
-    getEndPos()->gotoRange( xRange, sal_False );
-    getEndPos()->gotoEnd( sal_True );
+    getEndPos()->gotoRange( xRange, false );
+    getEndPos()->gotoEnd( true );
     if( !getEndPos()->isCollapsed() )
     {
         Font aFont( *this, maFontModel );
         aFont.finalizeImport();
         PropertySet aPropSet( getEndPos() );
         aFont.writeToPropertySet( aPropSet, FONT_PROPTYPE_TEXT );
-        getStartPos()->gotoEnd( sal_False );
-        getEndPos()->gotoEnd( sal_False );
+        getStartPos()->gotoEnd( false );
+        getEndPos()->gotoEnd( false );
     }
 }
 
@@ -770,7 +773,7 @@ void HeaderFooterParser::appendText()
 {
     if( !maBuffer.isEmpty() )
     {
-        getEndPos()->gotoEnd( sal_False );
+        getEndPos()->gotoEnd( false );
         getEndPos()->setString( maBuffer.makeStringAndClear() );
         updateCurrHeight();
     }
@@ -778,7 +781,7 @@ void HeaderFooterParser::appendText()
 
 void HeaderFooterParser::appendLineBreak()
 {
-    getEndPos()->gotoEnd( sal_False );
+    getEndPos()->gotoEnd( false );
     getEndPos()->setString( OUString( '\n' ) );
     getPortion().mfTotalHeight += getCurrHeight();
     getPortion().mfCurrHeight = 0;
@@ -802,11 +805,11 @@ Reference<text::XTextContent> HeaderFooterParser::createField( const OUString& r
 
 void HeaderFooterParser::appendField( const Reference<text::XTextContent>& rxContent )
 {
-    getEndPos()->gotoEnd( sal_False );
+    getEndPos()->gotoEnd( false );
     try
     {
         Reference<text::XTextRange> xRange( getEndPos(), UNO_QUERY_THROW );
-        getPortion().mxText->insertTextContent( xRange, rxContent, sal_False );
+        getPortion().mxText->insertTextContent( xRange, rxContent, false );
         updateCurrHeight();
     }
     catch( Exception& )

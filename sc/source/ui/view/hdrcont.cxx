@@ -61,7 +61,7 @@ ScHeaderControl::ScHeaderControl( vcl::Window* pParent, SelectionEngine* pSelect
             nDragPos    ( 0 ),
             bDragMoved  ( false ),
             bIgnoreMove ( false ),
-            bDoneInitRef( false ),
+            bInRefMode  ( false ),
             pTabView    ( pTab )
 {
     // --- RTL --- no default mirroring for this window, the spreadsheet itself
@@ -456,7 +456,7 @@ void ScHeaderControl::Paint( vcl::RenderContext& /*rRenderContext*/, const Recta
                     else
                         aTransRect = Rectangle( nTransStart, 0, nTransEnd, nBarSize-1 );
                     SetBackground( Color( rStyleSettings.GetFaceColor() ) );
-                    DrawSelectionBackground( aTransRect, 0, true, false, false );
+                    DrawSelectionBackground( aTransRect, 0, true, false );
                     SetBackground();
                 }
                 break;
@@ -666,8 +666,7 @@ void ScHeaderControl::MouseButtonDown( const MouseEvent& rMEvt )
             return;
         SCTAB nTab = pTabView->GetViewData().GetTabNo();
         if( !rMEvt.IsShift() )
-            pTabView->DoneRefMode();
-        bDoneInitRef = true;
+            pTabView->DoneRefMode( rMEvt.IsMod1() );
         if( !bVertical )
         {
             pTabView->InitRefMode( nHitNo, 0, nTab, SC_REFTYPE_REF );
@@ -678,6 +677,7 @@ void ScHeaderControl::MouseButtonDown( const MouseEvent& rMEvt )
             pTabView->InitRefMode( 0, nHitNo, nTab, SC_REFTYPE_REF );
             pTabView->UpdateRef( MAXCOL, nHitNo, nTab );
         }
+        bInRefMode = true;
         return;
     }
     if ( bIsBorder && ResizeAllowed() )
@@ -710,9 +710,15 @@ void ScHeaderControl::MouseButtonDown( const MouseEvent& rMEvt )
         Point aPoint;
         Rectangle aVis( aPoint,GetOutputSizePixel() );
         if (bVertical)
-            aVis.Left() = LONG_MIN, aVis.Right() = LONG_MAX;
+        {
+            aVis.Left() = LONG_MIN;
+            aVis.Right() = LONG_MAX;
+        }
         else
-            aVis.Top() = LONG_MIN, aVis.Bottom() = LONG_MAX;
+        {
+            aVis.Top() = LONG_MIN;
+            aVis.Bottom() = LONG_MAX;
+        }
         pSelEngine->SetVisibleArea( aVis );
 
         SetMarking( true );     //  must precede SelMouseButtonDown
@@ -741,7 +747,7 @@ void ScHeaderControl::MouseButtonUp( const MouseEvent& rMEvt )
     if ( SC_MOD()->IsFormulaMode() )
     {
         SC_MOD()->EndReference();
-        bDoneInitRef = false;
+        bInRefMode = false;
         return;
     }
 
@@ -798,7 +804,7 @@ void ScHeaderControl::MouseMove( const MouseEvent& rMEvt )
         return;
     }
 
-    if ( bDoneInitRef && rMEvt.IsLeft() && SC_MOD()->IsFormulaMode() )
+    if ( bInRefMode && rMEvt.IsLeft() && SC_MOD()->IsFormulaMode() )
     {
         if( !pTabView )
             return;
@@ -902,8 +908,7 @@ void ScHeaderControl::Command( const CommandEvent& rCEvt )
                     pViewSh->MarkRange( aNewRange );
             }
 
-            ScResId aResId( bVertical ? RID_POPUP_ROWHEADER : RID_POPUP_COLHEADER );
-            pViewSh->GetDispatcher()->ExecutePopup( aResId );
+            pViewSh->GetDispatcher()->ExecutePopup( bVertical ? OUString( "rowheader" ) : OUString( "colheader" ) );
         }
     }
     else if ( nCmd == CommandEventId::StartDrag )

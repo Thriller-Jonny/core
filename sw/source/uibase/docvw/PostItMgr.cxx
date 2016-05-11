@@ -228,7 +228,7 @@ void SwPostItMgr::InsertItem(SfxBroadcaster* pItem, bool bCheckExistance, bool b
     }
     mbLayout = bFocus;
     if (dynamic_cast< const SwFormatField *>( pItem ) !=  nullptr)
-        mvPostItFields.push_back(new SwAnnotationItem(static_cast<SwFormatField&>(*pItem), true, bFocus) );
+        mvPostItFields.push_back(new SwAnnotationItem(static_cast<SwFormatField&>(*pItem), bFocus) );
     OSL_ENSURE(dynamic_cast< const SwFormatField *>( pItem ) !=  nullptr,"Mgr::InsertItem: seems like new stuff was added");
     StartListening(*pItem);
 }
@@ -650,8 +650,7 @@ void SwPostItMgr::LayoutPostIts()
                         {
                             pPostIt = (*i)->GetSidebarWindow( mpView->GetEditWin(),
                                                               WB_DIALOGCONTROL,
-                                                              *this,
-                                                              0 );
+                                                              *this );
                             pPostIt->InitControls();
                             pPostIt->SetReadonly(mbReadOnly);
                             pItem->pPostIt = pPostIt;
@@ -881,7 +880,7 @@ void SwPostItMgr::PaintTile(OutputDevice& rRenderContext, const Rectangle& /*rRe
     }
 }
 
-void SwPostItMgr::registerLibreOfficeKitCallback(LibreOfficeKitCallback pCallback, void* pData)
+void SwPostItMgr::registerLibreOfficeKitCallback(OutlinerSearchable* pSearchable)
 {
     for (SwSidebarItem* pItem : mvPostItFields)
     {
@@ -889,8 +888,7 @@ void SwPostItMgr::registerLibreOfficeKitCallback(LibreOfficeKitCallback pCallbac
         if (!pPostIt)
             continue;
 
-        pPostIt->GetOutlinerView()->setTiledRendering(comphelper::LibreOfficeKit::isActive());
-        pPostIt->GetOutlinerView()->registerLibreOfficeKitCallback(pCallback, pData);
+        pPostIt->GetOutlinerView()->registerLibreOfficeKitCallback(pSearchable);
     }
 }
 
@@ -966,22 +964,20 @@ void SwPostItMgr::AutoScroll(const SwSidebarWin* pPostIt,const unsigned long aPa
     }
 }
 
-void SwPostItMgr::MakeVisible(const SwSidebarWin* pPostIt,long aPage )
+void SwPostItMgr::MakeVisible(const SwSidebarWin* pPostIt )
 {
-    if (aPage == -1)
+    long aPage = -1;
+    // we don't know the page yet, lets find it ourselves
+    for (unsigned long n=0;n<mPages.size();n++)
     {
-        // we don't know the page yet, lets find it ourselves
-        for (unsigned long n=0;n<mPages.size();n++)
+        if (mPages[n]->mList->size()>0)
         {
-            if (mPages[n]->mList->size()>0)
+            for(SwSidebarItem_iterator i = mPages[n]->mList->begin(); i != mPages[n]->mList->end(); ++i)
             {
-                for(SwSidebarItem_iterator i = mPages[n]->mList->begin(); i != mPages[n]->mList->end(); ++i)
+                if ((*i)->pPostIt==pPostIt)
                 {
-                    if ((*i)->pPostIt==pPostIt)
-                    {
-                        aPage = n+1;
-                        break;
-                    }
+                    aPage = n+1;
+                    break;
                 }
             }
         }
@@ -1441,7 +1437,7 @@ void SwPostItMgr::ExecuteFormatAllDialog(SwView& rView)
     SfxItemSet aDlgAttr(*pPool, EE_ITEMS_START, EE_ITEMS_END);
     aDlgAttr.Put(aEditAttr);
     SwAbstractDialogFactory* pFact = SwAbstractDialogFactory::Create();
-    std::unique_ptr<SfxAbstractTabDialog> pDlg(pFact->CreateSwCharDlg(rView.GetWindow(), rView, aDlgAttr, DLG_CHAR_ANN));
+    std::unique_ptr<SfxAbstractTabDialog> pDlg(pFact->CreateSwCharDlg(rView.GetWindow(), rView, aDlgAttr, SwCharDlgMode::Ann));
     sal_uInt16 nRet = pDlg->Execute();
     if (RET_OK == nRet)
     {
@@ -1911,7 +1907,7 @@ Color SwPostItMgr::GetColorDark(sal_uInt16 aAuthorIndex)
             COL_AUTHOR4_NORMAL,     COL_AUTHOR5_NORMAL,     COL_AUTHOR6_NORMAL,
             COL_AUTHOR7_NORMAL,     COL_AUTHOR8_NORMAL,     COL_AUTHOR9_NORMAL };
 
-        return Color( aArrayNormal[ aAuthorIndex % (sizeof( aArrayNormal )/ sizeof( aArrayNormal[0] ))]);
+        return Color( aArrayNormal[ aAuthorIndex % SAL_N_ELEMENTS( aArrayNormal )]);
     }
     else
         return Color(COL_WHITE);
@@ -1926,7 +1922,7 @@ Color SwPostItMgr::GetColorLight(sal_uInt16 aAuthorIndex)
             COL_AUTHOR4_LIGHT,      COL_AUTHOR5_LIGHT,      COL_AUTHOR6_LIGHT,
             COL_AUTHOR7_LIGHT,      COL_AUTHOR8_LIGHT,      COL_AUTHOR9_LIGHT };
 
-        return Color( aArrayLight[ aAuthorIndex % (sizeof( aArrayLight )/ sizeof( aArrayLight[0] ))]);
+        return Color( aArrayLight[ aAuthorIndex % SAL_N_ELEMENTS( aArrayLight )]);
     }
     else
         return Color(COL_WHITE);
@@ -1941,7 +1937,7 @@ Color SwPostItMgr::GetColorAnchor(sal_uInt16 aAuthorIndex)
             COL_AUTHOR4_DARK,       COL_AUTHOR5_DARK,       COL_AUTHOR6_DARK,
             COL_AUTHOR7_DARK,       COL_AUTHOR8_DARK,       COL_AUTHOR9_DARK };
 
-        return Color( aArrayAnchor[  aAuthorIndex % (sizeof( aArrayAnchor )  / sizeof( aArrayAnchor[0] ))]);
+        return Color( aArrayAnchor[  aAuthorIndex % SAL_N_ELEMENTS( aArrayAnchor )]);
     }
     else
         return Color(COL_WHITE);
@@ -2058,7 +2054,7 @@ sal_uInt16 SwPostItMgr::Replace(SvxSearchItem* pItem)
     return aResult;
 }
 
-sal_uInt16 SwPostItMgr::FinishSearchReplace(const css::util::SearchOptions& rSearchOptions, bool bSrchForward)
+sal_uInt16 SwPostItMgr::FinishSearchReplace(const css::util::SearchOptions2& rSearchOptions, bool bSrchForward)
 {
     SwSidebarWin* pWin = GetActiveSidebarWin();
     SvxSearchItem aItem(SID_SEARCH_ITEM );
@@ -2070,7 +2066,7 @@ sal_uInt16 SwPostItMgr::FinishSearchReplace(const css::util::SearchOptions& rSea
     return aResult;
 }
 
-sal_uInt16 SwPostItMgr::SearchReplace(const SwFormatField &pField, const css::util::SearchOptions& rSearchOptions, bool bSrchForward)
+sal_uInt16 SwPostItMgr::SearchReplace(const SwFormatField &pField, const css::util::SearchOptions2& rSearchOptions, bool bSrchForward)
 {
     sal_uInt16 aResult = 0;
     SwSidebarWin* pWin = GetSidebarWin(&pField);

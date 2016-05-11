@@ -371,7 +371,7 @@ ScVbaApplication::getCutCopyMode() throw (uno::RuntimeException, std::exception)
 {
     //# FIXME TODO, implementation
     uno::Any result;
-    result <<= sal_False;
+    result <<= false;
     return result;
 }
 
@@ -397,7 +397,7 @@ ScVbaApplication::setStatusBar( const uno::Any& _statusbar ) throw (uno::Runtime
     uno::Reference< task::XStatusIndicator > xStatusIndicator( xStatusIndicatorSupplier->getStatusIndicator(), uno::UNO_QUERY_THROW );
     if( _statusbar >>= sText )
     {
-        setDisplayStatusBar( sal_True );
+        setDisplayStatusBar( true );
         if ( !sText.isEmpty() )
             xStatusIndicator->start( sText, 100 );
         else
@@ -408,11 +408,11 @@ ScVbaApplication::setStatusBar( const uno::Any& _statusbar ) throw (uno::Runtime
         if( !bDefault )
         {
             xStatusIndicator->end();
-            setDisplayStatusBar( sal_True );
+            setDisplayStatusBar( true );
         }
     }
     else
-        throw uno::RuntimeException("Invalid prarameter. It should be a string or False" );
+        throw uno::RuntimeException("Invalid parameter. It should be a string or False" );
 }
 
 ::sal_Int32 SAL_CALL
@@ -438,7 +438,7 @@ ScVbaApplication::setCalculation( ::sal_Int32 _calculation ) throw (uno::Runtime
             break;
         case excel::XlCalculation::xlCalculationAutomatic:
         case excel::XlCalculation::xlCalculationSemiautomatic:
-            xCalc->enableAutomaticCalculation(sal_True);
+            xCalc->enableAutomaticCalculation(true);
             break;
     }
 }
@@ -599,7 +599,7 @@ ScVbaApplication::GoTo( const uno::Any& Reference, const uno::Any& Scroll ) thro
         ScGridWindow* gridWindow = static_cast<ScGridWindow*>(pShell->GetWindow());
         if ( xVbaRange.is() )
         {
-            //TODO bScroll should be using. An this time, it does not have effection
+            //TODO bScroll should be used. At this time, it does not have effect
             if( bScroll )
             {
                 xVbaRange->Select();
@@ -741,7 +741,7 @@ ScVbaApplication::getDisplayFullScreen()  throw (uno::RuntimeException, std::exc
     SfxViewShell* pShell  = excel::getCurrentBestViewShell( mxContext );
     if ( pShell )
         return ScViewUtil::IsFullScreen( *pShell );
-    return sal_False;
+    return false;
 }
 
 void SAL_CALL

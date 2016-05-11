@@ -336,7 +336,7 @@ void ODbTypeWizDialogSetup::activateDatabasePath()
         DataSourceInfoConverter::convert(getORB(), m_pCollection,sOld,m_sURL,m_pImpl->getCurrentDataSource());
         ::dbaccess::DATASOURCE_TYPE eType = VerifyDataSourceType(m_pCollection->determineType(m_sURL));
         if (eType ==  ::dbaccess::DST_UNKNOWN)
-            eType = m_pCollection->determineType(m_sOldURL);
+            m_pCollection->determineType(m_sOldURL);
 
         activatePath( static_cast<PathId>(m_pCollection->getIndexOf(m_sURL) + 1), true);
         updateTypeDependentStates();
@@ -422,9 +422,9 @@ Reference< XDriver > ODbTypeWizDialogSetup::getDriver()
     return m_pImpl->getDriver();
 }
 
-::dbaccess::DATASOURCE_TYPE ODbTypeWizDialogSetup::VerifyDataSourceType(const ::dbaccess::DATASOURCE_TYPE _DatabaseType) const
+::dbaccess::DATASOURCE_TYPE ODbTypeWizDialogSetup::VerifyDataSourceType(const ::dbaccess::DATASOURCE_TYPE DatabaseType) const
 {
-    ::dbaccess::DATASOURCE_TYPE LocDatabaseType = _DatabaseType;
+    ::dbaccess::DATASOURCE_TYPE LocDatabaseType = DatabaseType;
     if ((LocDatabaseType ==  ::dbaccess::DST_MYSQL_JDBC) || (LocDatabaseType ==  ::dbaccess::DST_MYSQL_ODBC) || (LocDatabaseType ==  ::dbaccess::DST_MYSQL_NATIVE))
     {
         if (m_pMySQLIntroPage != nullptr)
@@ -635,12 +635,11 @@ void ODbTypeWizDialogSetup::enterState(WizardState _nState)
     }
 }
 
-bool ODbTypeWizDialogSetup::saveDatasource()
+void ODbTypeWizDialogSetup::saveDatasource()
 {
     SfxTabPage* pPage = static_cast<SfxTabPage*>(WizardDialog::GetPage(getCurrentState()));
     if ( pPage )
         pPage->FillItemSet(m_pOutSet);
-    return true;
 }
 
 bool ODbTypeWizDialogSetup::leaveState(WizardState _nState)
@@ -756,7 +755,7 @@ bool ODbTypeWizDialogSetup::SaveDatabaseDocument()
     void ODbTypeWizDialogSetup::CreateDatabase()
     {
         OUString sUrl;
-        OUString eType = m_pGeneralPage->GetSelectedType();
+        const OUString eType = m_pGeneralPage->GetSelectedType();
         if ( dbaccess::ODsnTypeCollection::isEmbeddedDatabase(eType) )
         {
             sUrl = eType;
@@ -772,10 +771,9 @@ bool ODbTypeWizDialogSetup::SaveDatabaseDocument()
             INetURLObject aDBPathURL(m_sWorkPath);
             aDBPathURL.Append(m_aDocURL.getBase());
             createUniqueFolderName(&aDBPathURL);
-            OUString sPrefix = eType;
             sUrl = aDBPathURL.GetMainURL( INetURLObject::NO_DECODE);
             xSimpleFileAccess->createFolder(sUrl);
-             sUrl = sPrefix.concat(sUrl);
+            sUrl = eType.concat(sUrl);
         }
         m_pOutSet->Put(SfxStringItem(DSID_CONNECTURL, sUrl));
         m_pImpl->saveChanges(*m_pOutSet);
@@ -797,7 +795,7 @@ bool ODbTypeWizDialogSetup::SaveDatabaseDocument()
         ::sfx2::FileDialogHelper aFileDlg(
                 ui::dialogs::TemplateDescription::FILESAVE_AUTOEXTENSION,
                 0, this);
-        const SfxFilter* pFilter = getStandardDatabaseFilter();
+        std::shared_ptr<const SfxFilter> pFilter = getStandardDatabaseFilter();
         if ( pFilter )
         {
             INetURLObject aWorkURL( m_sWorkPath );

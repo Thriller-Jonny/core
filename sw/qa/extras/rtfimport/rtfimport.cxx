@@ -48,6 +48,8 @@
 #include <com/sun/star/text/VertOrientation.hpp>
 #include <com/sun/star/text/WritingMode2.hpp>
 #include <com/sun/star/util/XNumberFormatsSupplier.hpp>
+#include <com/sun/star/graphic/XGraphic.hpp>
+#include <com/sun/star/text/XFormField.hpp>
 
 #include <rtl/ustring.hxx>
 #include <vcl/outdev.hxx>
@@ -66,27 +68,32 @@ public:
     {
     }
 
-    virtual void preTest(const char* filename) override
+    virtual std::unique_ptr<Resetter> preTest(const char* filename) override
     {
         m_aSavedSettings = Application::GetSettings();
         if (OString(filename) == "fdo48023.rtf" || OString(filename) == "fdo72031.rtf")
         {
+            std::unique_ptr<Resetter> pResetter(new Resetter([this]()
+            {
+                Application::SetSettings(this->m_aSavedSettings);
+            }));
             AllSettings aSettings(m_aSavedSettings);
             aSettings.SetLanguageTag(LanguageTag("ru"));
             Application::SetSettings(aSettings);
+            return pResetter;
         }
         else if (OString(filename) == "fdo44211.rtf")
         {
+            std::unique_ptr<Resetter> pResetter(new Resetter([this]()
+            {
+                Application::SetSettings(this->m_aSavedSettings);
+            }));
             AllSettings aSettings(m_aSavedSettings);
             aSettings.SetLanguageTag(LanguageTag("lt"));
             Application::SetSettings(aSettings);
+            return pResetter;
         }
-    }
-
-    virtual void postTest(const char* filename) override
-    {
-        if (OString(filename) == "fdo48023.rtf" || OString(filename) == "fdo72031.rtf" || OString(filename) == "fdo44211.rtf")
-            Application::SetSettings(m_aSavedSettings);
+        return nullptr;
     }
 
 protected:
@@ -98,11 +105,11 @@ protected:
         xImporter->setTargetDocument(mxComponent);
         uno::Sequence<beans::PropertyValue> aDescriptor(xTextRange.is() ? 3 : 2);
         aDescriptor[0].Name = "InputStream";
-        SvStream* pStream = utl::UcbStreamHelper::CreateStream(getURLFromSrc("/sw/qa/extras/rtfimport/data/") + aFilename, StreamMode::WRITE);
+        SvStream* pStream = utl::UcbStreamHelper::CreateStream(m_directories.getURLFromSrc("/sw/qa/extras/rtfimport/data/") + aFilename, StreamMode::WRITE);
         uno::Reference<io::XStream> xStream(new utl::OStreamWrapper(*pStream));
         aDescriptor[0].Value <<= xStream;
         aDescriptor[1].Name = "InsertMode";
-        aDescriptor[1].Value <<= sal_True;
+        aDescriptor[1].Value <<= true;
         if (xTextRange.is())
         {
             aDescriptor[2].Name = "TextInsertModeRange";
@@ -113,7 +120,7 @@ protected:
     AllSettings m_aSavedSettings;
 };
 
-#if !defined(WNT)
+#if !defined(_WIN32)
 
 DECLARE_RTFIMPORT_TEST(testFdo45553, "fdo45553.rtf")
 {
@@ -147,9 +154,14 @@ DECLARE_RTFIMPORT_TEST(testN192129, "n192129.rtf")
     uno::Reference<container::XIndexAccess> xIndexAccess(xTextGraphicObjectsSupplier->getGraphicObjects(), uno::UNO_QUERY);
     uno::Reference<drawing::XShape> xShape(xIndexAccess->getByIndex(0), uno::UNO_QUERY);
     awt::Size aActualSize(xShape->getSize());
-
-    CPPUNIT_ASSERT_EQUAL(sal_Int32(aExpectedSize.Width()), aActualSize.Width);
-    CPPUNIT_ASSERT_EQUAL(sal_Int32(aExpectedSize.Height()), aActualSize.Height);
+    if ((aExpectedSize.Width() - aActualSize.Width) / 2 != 0)
+    {
+        CPPUNIT_ASSERT_EQUAL(sal_Int32(aExpectedSize.Width()), aActualSize.Width);
+    }
+    if ((aExpectedSize.Height() - aActualSize.Height) / 2 != 0)
+    {
+        CPPUNIT_ASSERT_EQUAL(sal_Int32(aExpectedSize.Height()), aActualSize.Height);
+    }
 }
 
 DECLARE_RTFIMPORT_TEST(testFdo45543, "fdo45543.rtf")
@@ -244,8 +256,8 @@ DECLARE_RTFIMPORT_TEST(testN750757, "n750757.rtf")
     uno::Reference<container::XEnumerationAccess> xParaEnumAccess(xTextDocument->getText(), uno::UNO_QUERY);
     uno::Reference<container::XEnumeration> xParaEnum = xParaEnumAccess->createEnumeration();
 
-    CPPUNIT_ASSERT_EQUAL(false, bool(getProperty<sal_Bool>(xParaEnum->nextElement(), "ParaContextMargin")));
-    CPPUNIT_ASSERT_EQUAL(true, bool(getProperty<sal_Bool>(xParaEnum->nextElement(), "ParaContextMargin")));
+    CPPUNIT_ASSERT_EQUAL(false, bool(getProperty<bool>(xParaEnum->nextElement(), "ParaContextMargin")));
+    CPPUNIT_ASSERT_EQUAL(true, bool(getProperty<bool>(xParaEnum->nextElement(), "ParaContextMargin")));
 }
 
 DECLARE_RTFIMPORT_TEST(testFdo45563, "fdo45563.rtf")
@@ -352,7 +364,7 @@ DECLARE_RTFIMPORT_TEST(testFdo81892, "fdo81892.rtf")
 
 DECLARE_RTFIMPORT_TEST(testFdo45394, "fdo45394.rtf")
 {
-    uno::Reference<text::XText> xHeaderText = getProperty< uno::Reference<text::XText> >(getStyles("PageStyles")->getByName(DEFAULT_STYLE), "HeaderText");
+    uno::Reference<text::XText> xHeaderText = getProperty< uno::Reference<text::XText> >(getStyles("PageStyles")->getByName("Standard"), "HeaderText");
     OUString aActual = xHeaderText->getString();
     // Encoding in the header was wrong.
     OUString aExpected("\xd0\x9f\xd0\x9a \xd0\xa0\xd0\x98\xd0\x9a", 11, RTL_TEXTENCODING_UTF8);
@@ -390,7 +402,7 @@ DECLARE_RTFIMPORT_TEST(testFdo44176, "fdo44176.rtf")
 {
     uno::Reference<container::XNameAccess> xPageStyles(getStyles("PageStyles"));
     uno::Reference<beans::XPropertySet> xFirstPage(xPageStyles->getByName("First Page"), uno::UNO_QUERY);
-    uno::Reference<beans::XPropertySet> xDefault(xPageStyles->getByName(DEFAULT_STYLE), uno::UNO_QUERY);
+    uno::Reference<beans::XPropertySet> xDefault(xPageStyles->getByName("Standard"), uno::UNO_QUERY);
     sal_Int32 nFirstTop = 0, nDefaultTop = 0, nDefaultHeader = 0;
     xFirstPage->getPropertyValue("TopMargin") >>= nFirstTop;
     xDefault->getPropertyValue("TopMargin") >>= nDefaultTop;
@@ -554,9 +566,9 @@ DECLARE_RTFIMPORT_TEST(testN757651, "n757651.rtf")
 
 DECLARE_RTFIMPORT_TEST(testFdo49501, "fdo49501.rtf")
 {
-    uno::Reference<beans::XPropertySet> xStyle(getStyles("PageStyles")->getByName(DEFAULT_STYLE), uno::UNO_QUERY);
+    uno::Reference<beans::XPropertySet> xStyle(getStyles("PageStyles")->getByName("Standard"), uno::UNO_QUERY);
 
-    CPPUNIT_ASSERT_EQUAL(sal_True, getProperty<sal_Bool>(xStyle, "IsLandscape"));
+    CPPUNIT_ASSERT_EQUAL(true, getProperty<bool>(xStyle, "IsLandscape"));
     sal_Int32 nExpected(convertTwipToMm100(567));
     CPPUNIT_ASSERT_EQUAL(nExpected, getProperty<sal_Int32>(xStyle, "LeftMargin"));
     CPPUNIT_ASSERT_EQUAL(nExpected, getProperty<sal_Int32>(xStyle, "RightMargin"));
@@ -623,6 +635,14 @@ DECLARE_RTFIMPORT_TEST(testFdo49659, "fdo49659.rtf")
     CPPUNIT_ASSERT_EQUAL(graphic::GraphicType::PIXEL, getProperty<sal_Int8>(xGraphic, "GraphicType"));
 }
 
+DECLARE_OOXMLIMPORT_TEST(testTdf59699, "tdf59699.rtf")
+{
+    // This resulted in a lang.IndexOutOfBoundsException: the referenced graphic data wasn't imported.
+    uno::Reference<beans::XPropertySet> xImage(getShape(1), uno::UNO_QUERY);
+    auto xGraphic = getProperty<uno::Reference<graphic::XGraphic> >(xImage, "Graphic");
+    CPPUNIT_ASSERT(xGraphic.is());
+}
+
 DECLARE_RTFIMPORT_TEST(testFdo46966, "fdo46966.rtf")
 {
     /*
@@ -630,7 +650,7 @@ DECLARE_RTFIMPORT_TEST(testFdo46966, "fdo46966.rtf")
      *
      * xray ThisComponent.StyleFamilies.PageStyles.Default.TopMargin
      */
-    uno::Reference<beans::XPropertySet> xPropertySet(getStyles("PageStyles")->getByName(DEFAULT_STYLE), uno::UNO_QUERY);
+    uno::Reference<beans::XPropertySet> xPropertySet(getStyles("PageStyles")->getByName("Standard"), uno::UNO_QUERY);
     CPPUNIT_ASSERT_EQUAL(sal_Int32(convertTwipToMm100(720)), getProperty<sal_Int32>(xPropertySet, "TopMargin"));
 }
 
@@ -838,7 +858,7 @@ DECLARE_RTFIMPORT_TEST(testCopyPastePageStyle, "copypaste-pagestyle.rtf")
     // Once we have more copy&paste tests, makes sense to refactor this to some helper method.
     paste("copypaste-pagestyle-paste.rtf");
 
-    uno::Reference<beans::XPropertySet> xPropertySet(getStyles("PageStyles")->getByName(DEFAULT_STYLE), uno::UNO_QUERY);
+    uno::Reference<beans::XPropertySet> xPropertySet(getStyles("PageStyles")->getByName("Standard"), uno::UNO_QUERY);
     CPPUNIT_ASSERT_EQUAL(sal_Int32(21001), getProperty<sal_Int32>(xPropertySet, "Width")); // Was letter, i.e. 21590
 }
 
@@ -895,7 +915,7 @@ DECLARE_RTFIMPORT_TEST(testDplinehollow, "dplinehollow.rtf")
 DECLARE_RTFIMPORT_TEST(testLeftmarginDefault, "leftmargin-default.rtf")
 {
     // The default left/right margin was incorrect when the top margin was set to zero.
-    CPPUNIT_ASSERT_EQUAL(sal_Int32(2540), getProperty<sal_Int32>(getStyles("PageStyles")->getByName(DEFAULT_STYLE), "LeftMargin"));
+    CPPUNIT_ASSERT_EQUAL(sal_Int32(2540), getProperty<sal_Int32>(getStyles("PageStyles")->getByName("Standard"), "LeftMargin"));
 }
 
 DECLARE_RTFIMPORT_TEST(testDppolyline, "dppolyline.rtf")
@@ -992,7 +1012,7 @@ DECLARE_RTFIMPORT_TEST(testFdo57886, "fdo57886.rtf")
 DECLARE_RTFIMPORT_TEST(testFdo58076, "fdo58076.rtf")
 {
     // An additional section was created, so the default page style didn't have the custom margins.
-    uno::Reference<beans::XPropertySet> xStyle(getStyles("PageStyles")->getByName(DEFAULT_STYLE), uno::UNO_QUERY);
+    uno::Reference<beans::XPropertySet> xStyle(getStyles("PageStyles")->getByName("Standard"), uno::UNO_QUERY);
     CPPUNIT_ASSERT_EQUAL(sal_Int32(2251), getProperty<sal_Int32>(xStyle, "LeftMargin"));
     CPPUNIT_ASSERT_EQUAL(sal_Int32(1752), getProperty<sal_Int32>(xStyle, "RightMargin"));
     CPPUNIT_ASSERT_EQUAL(sal_Int32(635), getProperty<sal_Int32>(xStyle, "TopMargin"));
@@ -1188,7 +1208,7 @@ DECLARE_RTFIMPORT_TEST(testFdo51916, "fdo51916.rtf")
 
 DECLARE_RTFIMPORT_TEST(testFdo63023, "fdo63023.rtf")
 {
-    uno::Reference<text::XText> xHeaderText = getProperty< uno::Reference<text::XText> >(getStyles("PageStyles")->getByName(DEFAULT_STYLE), "HeaderText");
+    uno::Reference<text::XText> xHeaderText = getProperty< uno::Reference<text::XText> >(getStyles("PageStyles")->getByName("Standard"), "HeaderText");
     // Back color was black (0) in the header, due to missing color table in the substream.
     CPPUNIT_ASSERT_EQUAL(sal_Int32(0xFFFF99), getProperty<sal_Int32>(getRun(getParagraphOfText(1, xHeaderText), 1), "CharBackColor"));
 }
@@ -1219,13 +1239,6 @@ DECLARE_RTFIMPORT_TEST(testFdo64671, "fdo64671.rtf")
 {
     // Additional '}' was inserted before the special character.
     getRun(getParagraph(1), 1, OUString("\xC5\xBD", 2, RTL_TEXTENCODING_UTF8));
-}
-
-DECLARE_RTFIMPORT_TEST(testPageBackground, "page-background.rtf")
-{
-    // The problem was that \background was ignored.
-    uno::Reference<beans::XPropertySet> xPageStyle(getStyles("PageStyles")->getByName(DEFAULT_STYLE), uno::UNO_QUERY);
-    CPPUNIT_ASSERT_EQUAL(sal_Int32(0x92D050), getProperty<sal_Int32>(xPageStyle, "BackColor"));
 }
 
 DECLARE_RTFIMPORT_TEST(testFdo81944, "fdo81944.rtf")
@@ -1269,6 +1282,20 @@ DECLARE_RTFIMPORT_TEST(testPoshPosv, "posh-posv.rtf")
     CPPUNIT_ASSERT_EQUAL(text::HoriOrientation::CENTER, getProperty<sal_Int16>(getShape(1), "HoriOrient"));
     CPPUNIT_ASSERT_EQUAL(text::VertOrientation::CENTER, getProperty<sal_Int16>(getShape(1), "VertOrient"));
     CPPUNIT_ASSERT_EQUAL(true, getProperty<bool>(getShape(1), "FrameIsAutomaticHeight"));
+}
+
+DECLARE_RTFIMPORT_TEST(testTdf96326, "tdf96326.rtf")
+{
+    // Make sure this is not checked.
+    auto xFormField = getProperty< uno::Reference<text::XFormField> >(getRun(getParagraph(1), 2), "Bookmark");
+    uno::Reference<container::XNameContainer> xParameters = xFormField->getParameters();
+    // This was true, ffres=25 was interpreted as checked.
+    CPPUNIT_ASSERT_EQUAL(false, bool(xParameters->hasElements()));
+
+    // And this is checked.
+    xFormField = getProperty< uno::Reference<text::XFormField> >(getRun(getParagraph(2), 2), "Bookmark");
+    xParameters = xFormField->getParameters();
+    CPPUNIT_ASSERT_EQUAL(true, xParameters->getByName("Checkbox_Checked").get<bool>());
 }
 
 DECLARE_RTFIMPORT_TEST(testN825305, "n825305.rtf")
@@ -1479,7 +1506,7 @@ DECLARE_RTFIMPORT_TEST(testFdo67365, "fdo67365.rtf")
 DECLARE_RTFIMPORT_TEST(testFdo67498, "fdo67498.rtf")
 {
     // Left margin of the default page style wasn't set (was 2000).
-    CPPUNIT_ASSERT_EQUAL(sal_Int32(convertTwipToMm100(5954)), getProperty<sal_Int32>(getStyles("PageStyles")->getByName(DEFAULT_STYLE), "LeftMargin"));
+    CPPUNIT_ASSERT_EQUAL(sal_Int32(convertTwipToMm100(5954)), getProperty<sal_Int32>(getStyles("PageStyles")->getByName("Standard"), "LeftMargin"));
 }
 
 DECLARE_RTFIMPORT_TEST(testFdo47440, "fdo47440.rtf")
@@ -1553,7 +1580,7 @@ DECLARE_RTFIMPORT_TEST(testFdo69384, "hello.rtf")
     paste("fdo69384-paste.rtf", xEnd);
 
     // Import got interrupted in the middle of style sheet table import,
-    // resuling in missing styles and text.
+    // resulting in missing styles and text.
     getStyles("ParagraphStyles")->getByName("Text body justified");
 }
 
@@ -1768,8 +1795,8 @@ DECLARE_RTFIMPORT_TEST(testShpzDhgt, "shpz-dhgt.rtf")
 DECLARE_RTFIMPORT_TEST(testBackground, "background.rtf")
 {
     // The first shape wasn't in the foreground.
-    CPPUNIT_ASSERT_EQUAL(true, bool(getProperty<sal_Bool>(getShape(1), "Opaque")));
-    CPPUNIT_ASSERT_EQUAL(false, bool(getProperty<sal_Bool>(getShape(2), "Opaque")));
+    CPPUNIT_ASSERT_EQUAL(true, bool(getProperty<bool>(getShape(1), "Opaque")));
+    CPPUNIT_ASSERT_EQUAL(false, bool(getProperty<bool>(getShape(2), "Opaque")));
 }
 
 DECLARE_RTFIMPORT_TEST(testLevelfollow, "levelfollow.rtf")
@@ -1818,7 +1845,7 @@ DECLARE_RTFIMPORT_TEST(testFdo76628, "fdo76628.rtf")
     // Should be 'SAMPLE' in Russian, was garbage.
     getParagraph(1, aExpected);
 
-    uno::Reference<text::XText> xHeaderText = getProperty< uno::Reference<text::XText> >(getStyles("PageStyles")->getByName(DEFAULT_STYLE), "HeaderText");
+    uno::Reference<text::XText> xHeaderText = getProperty< uno::Reference<text::XText> >(getStyles("PageStyles")->getByName("Standard"), "HeaderText");
     OUString aExpectedHeader("\xd0\x9f\xd0\xbe\xd0\xb4\xd0\xb3\xd0\xbe\xd1\x82\xd0\xbe\xd0\xb2\xd0\xbb\xd0\xb5\xd0\xbd\xd0\xbe", 24, RTL_TEXTENCODING_UTF8);
     // Should be 'prepared' in Russian, was garbage.
     getParagraphOfText(1, xHeaderText, aExpectedHeader);
@@ -2381,6 +2408,195 @@ DECLARE_RTFIMPORT_TEST(testTdf54584, "tdf54584.rtf")
     // \PAGE was ignored, so no fields were in document -> exception was thrown
     CPPUNIT_ASSERT_NO_THROW_MESSAGE("No fields in document found: field \"\\PAGE\" was not properly read",
                                     xFields->nextElement());
+}
+
+DECLARE_RTFIMPORT_TEST(testTdf96308Deftab, "tdf96308-deftab.rtf")
+{
+    uno::Reference<lang::XMultiServiceFactory> xTextFactory(mxComponent, uno::UNO_QUERY);
+    uno::Reference<beans::XPropertySet> xDefaults(xTextFactory->createInstance("com.sun.star.text.Defaults"), uno::UNO_QUERY);
+    // This was 1270 as \deftab was ignored on import.
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(convertTwipToMm100(284)), getProperty<sal_Int32>(xDefaults, "TabStopDistance"));
+}
+
+DECLARE_RTFIMPORT_TEST(testTdf96308Tabpos, "tdf96308-tabpos.rtf")
+{
+    // Get the tab stops of the second para in the B1 cell of the first table in the document.
+    uno::Reference<text::XTextTablesSupplier> xTextTablesSupplier(mxComponent, uno::UNO_QUERY);
+    uno::Reference<container::XIndexAccess> xTables(xTextTablesSupplier->getTextTables(), uno::UNO_QUERY);
+    uno::Reference<text::XTextTable> xTable(xTables->getByIndex(0), uno::UNO_QUERY);
+    uno::Reference<text::XTextRange> xCell(xTable->getCellByName("B1"), uno::UNO_QUERY);
+    uno::Reference<container::XEnumerationAccess> xParaEnumAccess(xCell->getText(), uno::UNO_QUERY);
+    uno::Reference<container::XEnumeration> xParaEnum = xParaEnumAccess->createEnumeration();
+    xParaEnum->nextElement();
+    uno::Reference<text::XTextRange> xPara(xParaEnum->nextElement(), uno::UNO_QUERY);
+    auto aTabStops = getProperty< uno::Sequence<style::TabStop> >(xPara, "ParaTabStops");
+    // This failed: tab stops were not deleted as direct formatting on the paragraph.
+    CPPUNIT_ASSERT(!aTabStops.hasElements());
+}
+
+DECLARE_RTFIMPORT_TEST(testLndscpsxn, "lndscpsxn.rtf")
+{
+    // Check landscape flag.
+    CPPUNIT_ASSERT_EQUAL(4, getPages());
+
+    uno::Reference<container::XNameAccess> pageStyles = getStyles("PageStyles");
+
+    // get a page cursor
+    uno::Reference<frame::XModel> xModel(mxComponent, uno::UNO_QUERY);
+    uno::Reference<text::XTextViewCursorSupplier> xTextViewCursorSupplier(
+        xModel->getCurrentController(), uno::UNO_QUERY);
+    uno::Reference<text::XPageCursor> xCursor(
+        xTextViewCursorSupplier->getViewCursor(), uno::UNO_QUERY);
+
+    // check that the first page has landscape flag
+    xCursor->jumpToFirstPage();
+    OUString pageStyleName = getProperty<OUString>(xCursor, "PageStyleName");
+    uno::Reference<style::XStyle> xStylePage(pageStyles->getByName(pageStyleName), uno::UNO_QUERY);
+    CPPUNIT_ASSERT_EQUAL(true, getProperty<bool>(xStylePage, "IsLandscape"));
+
+    // check that the second page has no landscape flag
+    xCursor->jumpToPage(2);
+    pageStyleName = getProperty<OUString>(xCursor, "PageStyleName");
+    xStylePage.set(pageStyles->getByName(pageStyleName), uno::UNO_QUERY);
+    CPPUNIT_ASSERT_EQUAL(false, getProperty<bool>(xStylePage, "IsLandscape"));
+
+    // check that the third page has landscape flag
+    xCursor->jumpToPage(3);
+    pageStyleName = getProperty<OUString>(xCursor, "PageStyleName");
+    xStylePage.set(pageStyles->getByName(pageStyleName), uno::UNO_QUERY);
+    CPPUNIT_ASSERT_EQUAL(true, getProperty<bool>(xStylePage, "IsLandscape"));
+
+    // check that the last page has no landscape flag
+    xCursor->jumpToLastPage();
+    pageStyleName = getProperty<OUString>(xCursor, "PageStyleName");
+    xStylePage.set(pageStyles->getByName(pageStyleName), uno::UNO_QUERY);
+    CPPUNIT_ASSERT_EQUAL(false, getProperty<bool>(xStylePage, "IsLandscape"));
+}
+
+DECLARE_RTFIMPORT_TEST(testLandscape, "landscape.rtf")
+{
+    // Check landscape flag.
+    CPPUNIT_ASSERT_EQUAL(3, getPages());
+
+    // All pages should have flag orientiation
+    uno::Reference<container::XNameAccess> pageStyles = getStyles("PageStyles");
+
+    // get a page cursor
+    uno::Reference<frame::XModel> xModel(mxComponent, uno::UNO_QUERY);
+    uno::Reference<text::XTextViewCursorSupplier> xTextViewCursorSupplier(
+        xModel->getCurrentController(), uno::UNO_QUERY);
+    uno::Reference<text::XPageCursor> xCursor(
+        xTextViewCursorSupplier->getViewCursor(), uno::UNO_QUERY);
+
+    // check that the first page has landscape flag
+    xCursor->jumpToFirstPage();
+    OUString pageStyleName = getProperty<OUString>(xCursor, "PageStyleName");
+    uno::Reference<style::XStyle> xStylePage(pageStyles->getByName(pageStyleName), uno::UNO_QUERY);
+    CPPUNIT_ASSERT_EQUAL(true, getProperty<bool>(xStylePage, "IsLandscape"));
+
+    // check that the second page has landscape flag
+    xCursor->jumpToPage(2);
+    pageStyleName = getProperty<OUString>(xCursor, "PageStyleName");
+    xStylePage.set(pageStyles->getByName(pageStyleName), uno::UNO_QUERY);
+    CPPUNIT_ASSERT_EQUAL(true, getProperty<bool>(xStylePage, "IsLandscape"));
+
+    // check that the last page has landscape flag
+    xCursor->jumpToLastPage();
+    pageStyleName = getProperty<OUString>(xCursor, "PageStyleName");
+    xStylePage.set(pageStyles->getByName(pageStyleName), uno::UNO_QUERY);
+    CPPUNIT_ASSERT_EQUAL(true, getProperty<bool>(xStylePage, "IsLandscape"));
+}
+
+DECLARE_RTFIMPORT_TEST(testTdf97035, "tdf97035.rtf")
+{
+    uno::Reference<text::XTextTablesSupplier> xTextTablesSupplier(mxComponent, uno::UNO_QUERY);
+    uno::Reference<container::XIndexAccess> xTables(xTextTablesSupplier->getTextTables(), uno::UNO_QUERY);
+    uno::Reference<text::XTextTable> xTable(xTables->getByIndex(0), uno::UNO_QUERY);
+
+    // First cell width of the second row should be 2299
+    uno::Reference<table::XTableRows> xTableRows(xTable->getRows(), uno::UNO_QUERY);
+    CPPUNIT_ASSERT_EQUAL(sal_Int16(2299), getProperty< uno::Sequence<text::TableColumnSeparator> >(xTableRows->getByIndex(1), "TableColumnSeparators")[0].Position);
+}
+
+DECLARE_RTFIMPORT_TEST(testTdf99498, "tdf99498.rtf")
+{
+    uno::Reference<text::XTextTablesSupplier> xTextTablesSupplier(mxComponent, uno::UNO_QUERY);
+    uno::Reference<container::XIndexAccess> xTables(xTextTablesSupplier->getTextTables(), uno::UNO_QUERY);
+
+    // Table width was a tiny sub one char wide 145twips, it should now be a table wide
+    // enough to see all the text in the first column without breaking into multiple lines
+    CPPUNIT_ASSERT_EQUAL(sal_Int32(7056), getProperty<sal_Int32>(xTables->getByIndex(0), "Width"));
+}
+
+
+DECLARE_RTFIMPORT_TEST(testTdf87034, "tdf87034.rtf")
+{
+    // This was A1BC34D, i.e. the first "super" text portion was mis-imported,
+    // and was inserted instead right before the second "super" text portion.
+    CPPUNIT_ASSERT_EQUAL(OUString("A1B3C4D"), getParagraph(1)->getString());
+}
+
+DECLARE_RTFIMPORT_TEST(testClassificatonPaste, "hello.rtf")
+{
+    uno::Reference<text::XTextDocument> xTextDocument(mxComponent, uno::UNO_QUERY);
+    uno::Reference<text::XTextRange> xText(xTextDocument->getText(), uno::UNO_QUERY);
+    uno::Reference<text::XTextRange> xEnd = xText->getEnd();
+
+    // Not classified source, not classified destination: OK.
+    paste("classification-no.rtf", xEnd);
+    CPPUNIT_ASSERT_EQUAL(OUString("classification-no"), getParagraph(2)->getString());
+
+    // Classified source, not classified destination: nothing should happen.
+    OUString aOld = xText->getString();
+    paste("classification-yes.rtf", xEnd);
+    CPPUNIT_ASSERT_EQUAL(aOld, xText->getString());
+}
+
+DECLARE_RTFIMPORT_TEST(testClassificatonPasteLevels, "classification-confidential.rtf")
+{
+    uno::Reference<text::XTextDocument> xTextDocument(mxComponent, uno::UNO_QUERY);
+    uno::Reference<text::XTextRange> xText(xTextDocument->getText(), uno::UNO_QUERY);
+    uno::Reference<text::XTextRange> xEnd = xText->getEnd();
+
+    // Classified source and classified destination, but internal only has a
+    // higher level than confidential: nothing should happen.
+    OUString aOld = xText->getString();
+    paste("classification-yes.rtf", xEnd);
+    CPPUNIT_ASSERT_EQUAL(aOld, xText->getString());
+}
+
+#if !defined(MACOSX) && !defined(WNT)
+DECLARE_RTFIMPORT_TEST(testTdf90097, "tdf90097.rtf")
+{
+    // Get the second child of the group shape.
+    uno::Reference<container::XIndexAccess> xGroup(getShape(1), uno::UNO_QUERY);
+    uno::Reference<beans::XPropertySet> xShape(xGroup->getByIndex(1), uno::UNO_QUERY);
+    uno::Sequence< uno::Sequence<awt::Point> > aPolyPolySequence;
+    xShape->getPropertyValue("PolyPolygon") >>= aPolyPolySequence;
+    uno::Sequence<awt::Point>& rPolygon = aPolyPolySequence[0];
+    // Vertical flip for the line shape was ignored, so Y coordinates were swapped.
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(2819), rPolygon[0].X);
+    // This was 1619.
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(1963), rPolygon[0].Y);
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(3181), rPolygon[1].X);
+    // This was 1962.
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(1620), rPolygon[1].Y);
+}
+#endif
+
+DECLARE_RTFIMPORT_TEST(testTdf95707, "tdf95707.rtf")
+{
+    // Graphic was replaced with a "Read-Error" placeholder.
+    CPPUNIT_ASSERT(getProperty<OUString>(getShape(1), "GraphicURL") != "vnd.sun.star.GraphicObject:0000000000000000000000000000000000000000");
+}
+
+DECLARE_RTFIMPORT_TEST(testTdf96275, "tdf96275.rtf")
+{
+    uno::Reference<text::XTextTable> xTable(getParagraphOrTable(1), uno::UNO_QUERY);
+    uno::Reference<text::XTextRange> xCell(xTable->getCellByName("A1"), uno::UNO_QUERY);
+    uno::Reference<text::XTextRange> xParagraph = getParagraphOfText(3, xCell->getText());
+    // This was text: the shape's frame was part of the 1st paragraph instead of the 3rd one.
+    CPPUNIT_ASSERT_EQUAL(OUString("Frame"), getProperty<OUString>(getRun(xParagraph, 1), "TextPortionType"));
 }
 
 CPPUNIT_PLUGIN_IMPLEMENT();

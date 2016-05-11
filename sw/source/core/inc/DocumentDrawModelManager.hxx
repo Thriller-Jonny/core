@@ -22,7 +22,6 @@
 
 #include <sal/types.h>
 #include <IDocumentDrawModelAccess.hxx>
-#include <boost/noncopyable.hpp>
 #include <svx/svdtypes.hxx>
 
 class SwDrawModel;
@@ -32,8 +31,7 @@ class SwDoc;
 namespace sw
 {
 
-class DocumentDrawModelManager : public IDocumentDrawModelAccess,
-                                 public ::boost::noncopyable
+class DocumentDrawModelManager : public IDocumentDrawModelAccess
 {
 public:
 
@@ -46,7 +44,7 @@ public:
     //IDocumentDrawModelAccess
     virtual const SwDrawModel* GetDrawModel() const override;
     virtual SwDrawModel* GetDrawModel() override;
-    virtual SwDrawModel* _MakeDrawModel() override;
+    virtual SwDrawModel* MakeDrawModel_() override;
     virtual SwDrawModel* GetOrCreateDrawModel() override;
     virtual SdrLayerID GetHeavenId() const override;
     virtual SdrLayerID GetHellId() const override;
@@ -57,15 +55,18 @@ public:
 
     virtual void NotifyInvisibleLayers( SdrPageView& _rSdrPageView ) override;
 
-    virtual bool IsVisibleLayerId( const SdrLayerID& _nLayerId ) const override;
+    virtual bool IsVisibleLayerId( SdrLayerID _nLayerId ) const override;
 
-    virtual SdrLayerID GetInvisibleLayerIdByVisibleOne( const SdrLayerID& _nVisibleLayerId ) override;
+    virtual SdrLayerID GetInvisibleLayerIdByVisibleOne( SdrLayerID _nVisibleLayerId ) override;
 
     virtual bool Search(const SwPaM& rPaM, const SvxSearchItem& rSearchItem) override;
 
     virtual ~DocumentDrawModelManager() {}
 
 private:
+
+    DocumentDrawModelManager(DocumentDrawModelManager const&) = delete;
+    DocumentDrawModelManager& operator=(DocumentDrawModelManager const&) = delete;
 
     SwDoc& m_rDoc;
 

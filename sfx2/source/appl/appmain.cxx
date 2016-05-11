@@ -25,7 +25,6 @@
 #include <rtl/ustring.hxx>
 #include <com/sun/star/uno/Exception.hpp>
 #include <com/sun/star/uno/RuntimeException.hpp>
-#include <com/sun/star/uno/Reference.hxx>
 
 #include "sfxtypes.hxx"
 #include "appdata.hxx"
@@ -37,11 +36,9 @@
 #include <sfx2/fcontnr.hxx>
 #include <sfx2/viewsh.hxx>
 #include <sfx2/msgpool.hxx>
-#include <sfx2/mnumgr.hxx>
 #include "app.hrc"
 #include <sfx2/docfile.hxx>
 #include "workwin.hxx"
-
 
 
 SfxFilterMatcher& SfxApplication::GetFilterMatcher()

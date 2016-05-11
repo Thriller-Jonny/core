@@ -273,7 +273,7 @@ struct PDFObject : public PDFContainer
     virtual PDFEntry* clone() const override;
 
     // writes only the contained stream, deflated if necessary
-    bool writeStream( EmitContext& rContext, const PDFFile* pPDFFile ) const;
+    void writeStream( EmitContext& rContext, const PDFFile* pPDFFile ) const;
 
 private:
     // returns true if stream is deflated
@@ -298,7 +298,7 @@ public:
     ~PDFReader() {}
 
     static PDFEntry* read( const char* pFileName );
-#ifdef WIN32
+#ifdef _WIN32
     static PDFEntry* read( const char* pBuffer, unsigned int nLen );
 #endif
 };

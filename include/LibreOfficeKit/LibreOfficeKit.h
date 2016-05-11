@@ -15,6 +15,7 @@
 #if defined LOK_USE_UNSTABLE_API || defined LIBO_INTERNAL_ONLY
 // the unstable API needs C99's bool
 #include <stdbool.h>
+#include <stdint.h>
 #endif
 
 #include <LibreOfficeKit/LibreOfficeKitTypes.h>
@@ -52,9 +53,13 @@ struct _LibreOfficeKitClass
 
     char* (*getError) (LibreOfficeKit* pThis);
 
+    /// @since LibreOffice 5.0
     LibreOfficeKitDocument* (*documentLoadWithOptions) (LibreOfficeKit* pThis,
                                                         const char* pURL,
                                                         const char* pOptions);
+    /// @since LibreOffice 5.2
+    void (*freeError) (char* pFree);
+
 #if defined LOK_USE_UNSTABLE_API || defined LIBO_INTERNAL_ONLY
     void (*registerCallback) (LibreOfficeKit* pThis,
                               LibreOfficeKitCallback pCallback,
@@ -62,7 +67,16 @@ struct _LibreOfficeKitClass
 
     /// @see lok::Office::getFilterTypes().
     char* (*getFilterTypes) (LibreOfficeKit* pThis);
+
+    /// @see lok::Office::setOptionalFeatures().
+    void (*setOptionalFeatures)(LibreOfficeKit* pThis, uint64_t features);
+
+    /// @see lok::Office::setDocumentPassword().
+    void (*setDocumentPassword) (LibreOfficeKit* pThis,
+            char const* pURL,
+            char const* pPassword);
 #endif
+
 };
 
 #define LIBREOFFICEKIT_DOCUMENT_HAS(pDoc,member) LIBREOFFICEKIT_HAS_MEMBER(LibreOfficeKitDocumentClass,member,(pDoc)->pClass->nSize)
@@ -191,6 +205,8 @@ struct _LibreOfficeKitDocumentClass
             int nTilePixelHeight,
             int nTileTwipWidth,
             int nTileTwipHeight);
+    /// @see lok::Document::setVisibleArea).
+    void (*setClientVisibleArea) (LibreOfficeKitDocument* pThis, int nX, int nY, int nWidth, int nHeight);
 
     /// @see lok::Document::createView().
     int (*createView) (LibreOfficeKitDocument* pThis);
@@ -208,6 +224,23 @@ struct _LibreOfficeKitDocumentClass
                        const char* pFontName,
                        int* pFontWidth,
                        int* pFontHeight);
+
+    /// @see lok::Document::getPartHash().
+    char* (*getPartHash) (LibreOfficeKitDocument* pThis,
+                          int nPart);
+
+    /// Paints a tile from a specific part.
+    /// @see lok::Document::paintTile().
+    void (*paintPartTile) (LibreOfficeKitDocument* pThis,
+                           unsigned char* pBuffer,
+                           const int nPart,
+                           const int nCanvasWidth,
+                           const int nCanvasHeight,
+                           const int nTilePosX,
+                           const int nTilePosY,
+                           const int nTileWidth,
+                           const int nTileHeight);
+
 #endif // defined LOK_USE_UNSTABLE_API || defined LIBO_INTERNAL_ONLY
 };
 

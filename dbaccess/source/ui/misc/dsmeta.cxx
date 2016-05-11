@@ -41,8 +41,8 @@ namespace dbaui
         {
         }
 
-        explicit FeatureSupport(AuthenticationMode _Auth)
-            :eAuthentication( _Auth )
+        explicit FeatureSupport(AuthenticationMode Auth)
+            :eAuthentication( Auth )
         {
         }
     };
@@ -151,7 +151,7 @@ namespace dbaui
     public:
         explicit DataSourceMetaData_Impl(const OUString& rURL);
 
-        OUString getType() const { return m_sURL; }
+        const OUString& getType() const { return m_sURL; }
 
     private:
         const OUString m_sURL;

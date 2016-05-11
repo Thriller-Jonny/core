@@ -27,13 +27,11 @@
 #include "svx/svdotable.hxx"
 
 
-
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::container;
 using namespace ::com::sun::star::table;
 using namespace ::com::sun::star::beans;
-
 
 
 namespace sdr { namespace table {
@@ -64,11 +62,9 @@ TableRow::TableRow( const TableModelRef& xTableModel, sal_Int32 nRow, sal_Int32 
 }
 
 
-
 TableRow::~TableRow()
 {
 }
-
 
 
 void TableRow::dispose()
@@ -84,13 +80,11 @@ void TableRow::dispose()
 }
 
 
-
 void TableRow::throwIfDisposed() const throw (css::uno::RuntimeException)
 {
     if( !mxTableModel.is() )
         throw DisposedException();
 }
-
 
 
 TableRow& TableRow::operator=( const TableRow& r )
@@ -104,7 +98,6 @@ TableRow& TableRow::operator=( const TableRow& r )
 
     return *this;
 }
-
 
 
 void TableRow::insertColumns( sal_Int32 nIndex, sal_Int32 nCount, CellVector::iterator* pIter /* = 0 */  )
@@ -124,7 +117,6 @@ void TableRow::insertColumns( sal_Int32 nIndex, sal_Int32 nCount, CellVector::it
         }
     }
 }
-
 
 
 void TableRow::removeColumns( sal_Int32 nIndex, sal_Int32 nCount )
@@ -157,6 +149,10 @@ void TableRow::removeColumns( sal_Int32 nIndex, sal_Int32 nCount )
     }
 }
 
+const TableModelRef& TableRow::getModel() const
+{
+    return mxTableModel;
+}
 
 // XCellRange
 
@@ -171,7 +167,6 @@ Reference< XCell > SAL_CALL TableRow::getCellByPosition( sal_Int32 nColumn, sal_
 }
 
 
-
 Reference< XCellRange > SAL_CALL TableRow::getCellRangeByPosition( sal_Int32 nLeft, sal_Int32 nTop, sal_Int32 nRight, sal_Int32 nBottom ) throw (IndexOutOfBoundsException, RuntimeException, std::exception)
 {
     throwIfDisposed();
@@ -181,7 +176,6 @@ Reference< XCellRange > SAL_CALL TableRow::getCellRangeByPosition( sal_Int32 nLe
     }
     throw IndexOutOfBoundsException();
 }
-
 
 
 Reference< XCellRange > SAL_CALL TableRow::getCellRangeByName( const OUString& /*aRange*/ ) throw (RuntimeException, std::exception)
@@ -198,7 +192,6 @@ OUString SAL_CALL TableRow::getName() throw (RuntimeException, std::exception)
 {
     return maName;
 }
-
 
 
 void SAL_CALL TableRow::setName( const OUString& aName ) throw (RuntimeException, std::exception)
@@ -295,12 +288,11 @@ void SAL_CALL TableRow::setFastPropertyValue( sal_Int32 nHandle, const Any& aVal
             pModel->AddUndo( pUndo );
             pUndo = nullptr;
         }
-        mxTableModel->setModified(sal_True);
+        mxTableModel->setModified(true);
     }
 
     delete pUndo;
 }
-
 
 
 Any SAL_CALL TableRow::getFastPropertyValue( sal_Int32 nHandle ) throw (UnknownPropertyException, WrappedTargetException, RuntimeException, std::exception)
@@ -314,7 +306,6 @@ Any SAL_CALL TableRow::getFastPropertyValue( sal_Int32 nHandle ) throw (UnknownP
     default:                        throw UnknownPropertyException();
     }
 }
-
 
 
 rtl::Reference< FastPropertySetInfo > TableRow::getStaticPropertySetInfo()
@@ -363,8 +354,6 @@ rtl::Reference< FastPropertySetInfo > TableRow::getStaticPropertySetInfo()
 
     return xInfo;
 }
-
-
 
 
 } }

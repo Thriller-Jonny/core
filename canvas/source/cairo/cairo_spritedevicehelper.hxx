@@ -24,8 +24,6 @@
 #include <com/sun/star/rendering/XGraphicDevice.hpp>
 #include <com/sun/star/rendering/XBufferController.hpp>
 
-#include <boost/noncopyable.hpp>
-
 #include <vcl/window.hxx>
 #include <vcl/bitmap.hxx>
 #include <vcl/cairo.hxx>
@@ -62,7 +60,7 @@ namespace cairocanvas
         void notifySizeUpdate( const css::awt::Rectangle& rBounds );
         void setSize( const ::basegfx::B2ISize& rSize );
 
-        ::cairo::SurfaceSharedPtr getBufferSurface() { return mpBufferSurface; }
+        const ::cairo::SurfaceSharedPtr& getBufferSurface() { return mpBufferSurface; }
         ::cairo::SurfaceSharedPtr getWindowSurface();
         ::cairo::SurfaceSharedPtr createSurface( const ::basegfx::B2ISize& rSize, int aContent = CAIRO_CONTENT_COLOR_ALPHA );
         ::cairo::SurfaceSharedPtr createSurface( BitmapSystemData& rData, const Size& rSize );

@@ -43,10 +43,10 @@
 #include "sallayout.hxx"
 #include "outdata.hxx"
 #include "pdffontcache.hxx"
+#include "PhysicalFontFace.hxx"
 
 class StyleSettings;
 class FontSelectPattern;
-class ImplFontMetricData;
 class FontSubsetInfo;
 class ZCodec;
 class EncHashTransporter;
@@ -70,6 +70,7 @@ namespace vcl
 
 class PDFStreamIf;
 class Matrix3;
+class PdfBuiltinFontFace;
 
 class PDFWriterImpl
 {
@@ -134,11 +135,9 @@ public:
 
         // converts point from ref device coordinates to
         // page coordinates and appends the point to the buffer
-        // if bNeg is true, the coordinates are inverted AFTER transformation
-        // to page (useful for transformation matrices
         // if pOutPoint is set it will be updated to the emitted point
         // (in PDF map mode, that is 10th of point)
-        void appendPoint( const Point& rPoint, OStringBuffer& rBuffer, bool bNeg = false, Point* pOutPoint = nullptr ) const;
+        void appendPoint( const Point& rPoint, OStringBuffer& rBuffer ) const;
         // appends a B2DPoint without further transformation
         void appendPixelPoint( const basegfx::B2DPoint& rPoint, OStringBuffer& rBuffer ) const;
         // appends a rectangle
@@ -148,11 +147,11 @@ public:
         // appends a polygon optionally closing it
         void appendPolygon( const tools::Polygon& rPoly, OStringBuffer& rBuffer, bool bClose = true ) const;
         // appends a polygon optionally closing it
-        void appendPolygon( const basegfx::B2DPolygon& rPoly, OStringBuffer& rBuffer, bool bClose = true ) const;
+        void appendPolygon( const basegfx::B2DPolygon& rPoly, OStringBuffer& rBuffer ) const;
         // appends a polypolygon optionally closing the subpaths
-        void appendPolyPolygon( const tools::PolyPolygon& rPolyPoly, OStringBuffer& rBuffer, bool bClose = true ) const;
+        void appendPolyPolygon( const tools::PolyPolygon& rPolyPoly, OStringBuffer& rBuffer ) const;
         // appends a polypolygon optionally closing the subpaths
-        void appendPolyPolygon( const basegfx::B2DPolyPolygon& rPolyPoly, OStringBuffer& rBuffer, bool bClose = true ) const;
+        void appendPolyPolygon( const basegfx::B2DPolyPolygon& rPolyPoly, OStringBuffer& rBuffer ) const;
         // converts a length (either vertical or horizontal; this
         // can be important if the source MapMode is not
         // symmetrical) to page length and appends it to the buffer
@@ -699,7 +698,6 @@ private:
         Color                            m_aOverlineColor;
         basegfx::B2DPolyPolygon          m_aClipRegion;
         bool                             m_bClipRegion;
-        sal_Int32                        m_nAntiAlias;
         ComplexTextLayoutMode            m_nLayoutMode;
         LanguageType                     m_aDigitLanguage;
         sal_Int32                        m_nTransparentPercent;
@@ -724,7 +722,6 @@ private:
                 m_aTextLineColor( COL_TRANSPARENT ),
                 m_aOverlineColor( COL_TRANSPARENT ),
                 m_bClipRegion( false ),
-                m_nAntiAlias( 1 ),
                 m_nLayoutMode( TEXT_LAYOUT_DEFAULT ),
                 m_aDigitLanguage( 0 ),
                 m_nTransparentPercent( 0 ),
@@ -790,7 +787,7 @@ i12626
     void appendLiteralStringEncrypt( OStringBuffer& rInString, const sal_Int32 nInObjectNumber, OStringBuffer& rOutBuffer );
 
     /* creates fonts and subsets that will be emitted later */
-    bool registerGlyphs( int nGlyphs, sal_GlyphId* pGlyphs, sal_Int32* pGlpyhWidths, sal_Ucs* pUnicodes, sal_Int32* pUnicodesPerGlyph, sal_uInt8* pMappedGlyphs, sal_Int32* pMappedFontObjects, const PhysicalFontFace* pFallbackFonts[] );
+    void registerGlyphs( int nGlyphs, sal_GlyphId* pGlyphs, sal_Int32* pGlpyhWidths, sal_Ucs* pUnicodes, sal_Int32* pUnicodesPerGlyph, sal_uInt8* pMappedGlyphs, sal_Int32* pMappedFontObjects, const PhysicalFontFace* pFallbackFonts[] );
 
     /*  emits a text object according to the passed layout */
     /* TODO: remove rText as soon as SalLayout will change so that rText is not necessary anymore */
@@ -808,18 +805,18 @@ i12626
     void updateGraphicsState(Mode mode = DEFAULT);
 
     /* writes a transparency group object */
-    bool writeTransparentObject( TransparencyEmit& rObject );
+    void writeTransparentObject( TransparencyEmit& rObject );
 
     /* writes an XObject of type image, may create
        a second for the mask
      */
     bool writeBitmapObject( BitmapEmit& rObject, bool bMask = false );
 
-    bool writeJPG( JPGEmit& rEmit );
+    void writeJPG( JPGEmit& rEmit );
 
     /* tries to find the bitmap by its id and returns its emit data if exists,
        else creates a new emit data block */
-    const BitmapEmit& createBitmapEmit( const BitmapEx& rBitmapEx, bool bDrawMask = false );
+    const BitmapEmit& createBitmapEmit( const BitmapEx& rBitmapEx );
 
     /* writes the Do operation inside the content stream */
     void drawBitmap( const Point& rDestPt, const Size& rDestSize, const BitmapEmit& rBitmap, const Color& rFillColor );
@@ -833,7 +830,7 @@ i12626
     /* writes all gradient patterns */
     bool emitGradients();
     /* writes a builtin font object and returns its objectid (or 0 in case of failure ) */
-    sal_Int32 emitBuiltinFont( const PhysicalFontFace*, sal_Int32 nObject = -1 );
+    sal_Int32 emitBuiltinFont( const PdfBuiltinFontFace*, sal_Int32 nObject = -1 );
     /* writes a type1 embedded font object and returns its mapping from font ids to object ids (or 0 in case of failure ) */
     std::map< sal_Int32, sal_Int32 > emitEmbeddedFont( const PhysicalFontFace*, EmbedFont& );
     /* writes a type1 system font object and returns its mapping from font ids to object ids (or 0 in case of failure ) */
@@ -1011,7 +1008,7 @@ i12626
     // helper for playMetafile
     void implWriteGradient( const tools::PolyPolygon& rPolyPoly, const Gradient& rGradient,
                             VirtualDevice* pDummyVDev, const vcl::PDFWriter::PlayMetafileContext& );
-    void implWriteBitmapEx( const Point& rPoint, const Size& rSize, const BitmapEx& rBitmapEx,
+    void implWriteBitmapEx( const Point& rPoint, const Size& rSize, const BitmapEx& rBitmapEx, const Graphic& i_pGraphic,
                            VirtualDevice* pDummyVDev, const vcl::PDFWriter::PlayMetafileContext& );
 
     // helpers for CCITT 1bit bitmap stream
@@ -1130,7 +1127,7 @@ public:
 
     void moveClipRegion( sal_Int32 nX, sal_Int32 nY );
 
-    bool intersectClipRegion( const Rectangle& rRect );
+    void intersectClipRegion( const Rectangle& rRect );
 
     bool intersectClipRegion( const basegfx::B2DPolyPolygon& rRegion );
 
@@ -1148,20 +1145,19 @@ public:
 
     void setTextAlign( TextAlign eAlign )
     {
-        m_aGraphicsStack.front().m_aFont.SetAlign( eAlign );
+        m_aGraphicsStack.front().m_aFont.SetAlignment( eAlign );
         m_aGraphicsStack.front().m_nUpdateFlags |= GraphicsState::updateFont;
     }
 
     /* actual drawing functions */
     void drawText( const Point& rPos, const OUString& rText, sal_Int32 nIndex, sal_Int32 nLen, bool bTextLines = true );
-    void drawTextArray( const Point& rPos, const OUString& rText, const long* pDXArray, sal_Int32 nIndex, sal_Int32 nLen, bool bTextLines = true );
+    void drawTextArray( const Point& rPos, const OUString& rText, const long* pDXArray, sal_Int32 nIndex, sal_Int32 nLen );
     void drawStretchText( const Point& rPos, sal_uLong nWidth, const OUString& rText,
-                          sal_Int32 nIndex, sal_Int32 nLen,
-                          bool bTextLines = true  );
-    void drawText( const Rectangle& rRect, const OUString& rOrigStr, DrawTextFlags nStyle, bool bTextLines = true  );
-    void drawTextLine( const Point& rPos, long nWidth, FontStrikeout eStrikeout, FontUnderline eUnderline, FontUnderline eOverline, bool bUnderlineAbove );
-    void drawWaveTextLine( OStringBuffer& aLine, long nWidth, FontUnderline eTextLine, Color aColor, bool bIsAbove );
-    void drawStraightTextLine( OStringBuffer& aLine, long nWidth, FontUnderline eTextLine, Color aColor, bool bIsAbove );
+                          sal_Int32 nIndex, sal_Int32 nLen  );
+    void drawText( const Rectangle& rRect, const OUString& rOrigStr, DrawTextFlags nStyle );
+    void drawTextLine( const Point& rPos, long nWidth, FontStrikeout eStrikeout, FontLineStyle eUnderline, FontLineStyle eOverline, bool bUnderlineAbove );
+    void drawWaveTextLine( OStringBuffer& aLine, long nWidth, FontLineStyle eTextLine, Color aColor, bool bIsAbove );
+    void drawStraightTextLine( OStringBuffer& aLine, long nWidth, FontLineStyle eTextLine, Color aColor, bool bIsAbove );
     void drawStrikeoutLine( OStringBuffer& aLine, long nWidth, FontStrikeout eStrikeout, Color aColor );
     void drawStrikeoutChar( const Point& rPos, long nWidth, FontStrikeout eStrikeout );
 
@@ -1237,7 +1233,7 @@ public:
     sal_Int32 createControl( const PDFWriter::AnyWidget& rControl, sal_Int32 nPageNr = -1 );
 
     // additional streams
-    void addStream( const OUString& rMimeType, PDFOutputStream* pStream, bool bCompress );
+    void addStream( const OUString& rMimeType, PDFOutputStream* pStream );
 
     // helper: eventually begin marked content sequence and
     // emit a comment in debug case
@@ -1253,6 +1249,21 @@ public:
 #endif
     }
 };
+
+class PdfBuiltinFontFace : public PhysicalFontFace
+{
+private:
+    const PDFWriterImpl::BuiltinFont& mrBuiltin;
+
+public:
+    explicit                            PdfBuiltinFontFace( const PDFWriterImpl::BuiltinFont& );
+    const PDFWriterImpl::BuiltinFont&   GetBuiltinFont() const  { return mrBuiltin; }
+
+    virtual PhysicalFontFace*           Clone() const override { return new PdfBuiltinFontFace(*this); }
+    virtual LogicalFontInstance*        CreateFontInstance( FontSelectPattern& ) const override;
+    virtual sal_IntPtr                  GetFontId() const override { return reinterpret_cast<sal_IntPtr>(&mrBuiltin); }
+};
+
 
 }
 

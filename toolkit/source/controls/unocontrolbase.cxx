@@ -34,7 +34,7 @@ using namespace com::sun::star;
 
 bool UnoControlBase::ImplHasProperty( sal_uInt16 nPropId )
 {
-    OUString aPropName( GetPropertyName( nPropId ) );
+    const OUString& aPropName( GetPropertyName( nPropId ) );
     return ImplHasProperty( aPropName );
 }
 
@@ -138,7 +138,7 @@ template <typename T> T UnoControlBase::ImplGetPropertyValueClass( sal_uInt16 nP
 
 bool UnoControlBase::ImplGetPropertyValue_BOOL( sal_uInt16 nProp )
 {
-    return ImplGetPropertyValuePOD<sal_Bool>(nProp);
+    return ImplGetPropertyValuePOD<bool>(nProp);
 }
 
 sal_Int16 UnoControlBase::ImplGetPropertyValue_INT16( sal_uInt16 nProp )
@@ -174,7 +174,7 @@ util::Time UnoControlBase::ImplGetPropertyValue_Time( sal_uInt16 nProp )
 css::awt::Size UnoControlBase::Impl_getMinimumSize()
 {
     css::awt::Size aSz;
-    css::uno::Reference< css::awt::XWindowPeer >  xP = ImplGetCompatiblePeer( true );
+    css::uno::Reference< css::awt::XWindowPeer >  xP = ImplGetCompatiblePeer();
     DBG_ASSERT( xP.is(), "Layout: No Peer!" );
     if ( xP.is() )
     {
@@ -191,7 +191,7 @@ css::awt::Size UnoControlBase::Impl_getMinimumSize()
 css::awt::Size UnoControlBase::Impl_getPreferredSize()
 {
     css::awt::Size aSz;
-    css::uno::Reference< css::awt::XWindowPeer >  xP = ImplGetCompatiblePeer( true );
+    css::uno::Reference< css::awt::XWindowPeer >  xP = ImplGetCompatiblePeer();
     DBG_ASSERT( xP.is(), "Layout: No Peer!" );
     if ( xP.is() )
     {
@@ -208,7 +208,7 @@ css::awt::Size UnoControlBase::Impl_getPreferredSize()
 css::awt::Size UnoControlBase::Impl_calcAdjustedSize( const css::awt::Size& rNewSize )
 {
     css::awt::Size aSz;
-    css::uno::Reference< css::awt::XWindowPeer >  xP = ImplGetCompatiblePeer( true );
+    css::uno::Reference< css::awt::XWindowPeer >  xP = ImplGetCompatiblePeer();
     DBG_ASSERT( xP.is(), "Layout: No Peer!" );
     if ( xP.is() )
     {
@@ -225,7 +225,7 @@ css::awt::Size UnoControlBase::Impl_calcAdjustedSize( const css::awt::Size& rNew
 css::awt::Size UnoControlBase::Impl_getMinimumSize( sal_Int16 nCols, sal_Int16 nLines )
 {
     css::awt::Size aSz;
-    css::uno::Reference< css::awt::XWindowPeer >  xP = ImplGetCompatiblePeer( true );
+    css::uno::Reference< css::awt::XWindowPeer >  xP = ImplGetCompatiblePeer();
     DBG_ASSERT( xP.is(), "Layout: No Peer!" );
     if ( xP.is() )
     {
@@ -241,7 +241,7 @@ css::awt::Size UnoControlBase::Impl_getMinimumSize( sal_Int16 nCols, sal_Int16 n
 
 void UnoControlBase::Impl_getColumnsAndLines( sal_Int16& nCols, sal_Int16& nLines )
 {
-    css::uno::Reference< css::awt::XWindowPeer >  xP = ImplGetCompatiblePeer( true );
+    css::uno::Reference< css::awt::XWindowPeer >  xP = ImplGetCompatiblePeer();
     DBG_ASSERT( xP.is(), "Layout: No Peer!" );
     if ( xP.is() )
     {
@@ -253,7 +253,6 @@ void UnoControlBase::Impl_getColumnsAndLines( sal_Int16& nCols, sal_Int16& nLine
             xP->dispose();
     }
 }
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

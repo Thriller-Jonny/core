@@ -35,31 +35,30 @@ struct SvLBoxButtonData_Impl
     SvLBoxButtonData_Impl() : pEntry( nullptr ), bDefaultImages( false ), bShowRadioButton( false ) {}
 };
 
-void SvLBoxButtonData::InitData( bool bImagesFromDefault, bool _bRadioBtn, const Control* pCtrl )
+void SvLBoxButtonData::InitData( bool _bRadioBtn, const Control* pCtrl )
 {
     nWidth = nHeight = 0;
 
     aBmps.resize((int)SvBmp::STATICIMAGE+1);
 
     bDataOk = false;
-    eState = SV_BUTTON_UNCHECKED;
-    pImpl->bDefaultImages = bImagesFromDefault;
+    eState = SvButtonState::Unchecked;
+    pImpl->bDefaultImages = true;
     pImpl->bShowRadioButton = _bRadioBtn;
 
-    if ( bImagesFromDefault )
-        SetDefaultImages( pCtrl );
+    SetDefaultImages( pCtrl );
 }
 
 SvLBoxButtonData::SvLBoxButtonData( const Control* pControlForSettings )
     : pImpl( new SvLBoxButtonData_Impl )
 {
-    InitData( true, false, pControlForSettings );
+    InitData( false, pControlForSettings );
 }
 
 SvLBoxButtonData::SvLBoxButtonData( const Control* pControlForSettings, bool _bRadioBtn )
     : pImpl( new SvLBoxButtonData_Impl )
 {
-    InitData( true, _bRadioBtn, pControlForSettings );
+    InitData( _bRadioBtn, pControlForSettings );
 }
 
 SvLBoxButtonData::~SvLBoxButtonData()
@@ -114,13 +113,13 @@ SvButtonState SvLBoxButtonData::ConvertToButtonState( SvItemStateFlags nItemFlag
     switch( nItemFlags )
     {
         case SvItemStateFlags::UNCHECKED:
-            return SV_BUTTON_UNCHECKED;
+            return SvButtonState::Unchecked;
         case SvItemStateFlags::CHECKED:
-            return SV_BUTTON_CHECKED;
+            return SvButtonState::Checked;
         case SvItemStateFlags::TRISTATE:
-            return SV_BUTTON_TRISTATE;
+            return SvButtonState::Tristate;
         default:
-            return SV_BUTTON_UNCHECKED;
+            return SvButtonState::Unchecked;
     }
 }
 
@@ -168,8 +167,7 @@ bool SvLBoxButtonData::IsRadio() {
 // ***************************************************************
 
 
-SvLBoxString::SvLBoxString(SvTreeListEntry* pEntry, sal_uInt16 nFlags, const OUString& rStr)
-    : SvLBoxItem(pEntry, nFlags)
+SvLBoxString::SvLBoxString(const OUString& rStr)
 {
     SetText(rStr);
 }
@@ -191,10 +189,16 @@ void SvLBoxString::Paint(
     const Point& rPos, SvTreeListBox& rDev, vcl::RenderContext& rRenderContext,
     const SvViewDataEntry* /*pView*/, const SvTreeListEntry& rEntry)
 {
+    Size aSize = GetSize(&rDev, &rEntry);
     DrawTextFlags nStyle = rDev.IsEnabled() ? DrawTextFlags::NONE : DrawTextFlags::Disable;
     if (rDev.IsEntryMnemonicsEnabled())
         nStyle |= DrawTextFlags::Mnemonic;
-    rRenderContext.DrawText(Rectangle(rPos, GetSize(&rDev, &rEntry)), maText, nStyle);
+    if (rDev.TextCenterAndClipEnabled())
+    {
+        nStyle |= DrawTextFlags::PathEllipsis | DrawTextFlags::Center;
+        aSize.Width() = rDev.GetEntryWidth();
+    }
+    rRenderContext.DrawText(Rectangle(rPos, aSize), maText, nStyle);
 }
 
 SvLBoxItem* SvLBoxString::Create() const
@@ -281,10 +285,9 @@ void SvLBoxBmp::Clone( SvLBoxItem* pSource )
 // ***************************************************************
 
 
-SvLBoxButton::SvLBoxButton( SvTreeListEntry* pEntry, SvLBoxButtonKind eTheKind,
-                            sal_uInt16 nFlags, SvLBoxButtonData* pBData )
-    : SvLBoxItem( pEntry, nFlags )
-    , isVis(true)
+SvLBoxButton::SvLBoxButton( SvLBoxButtonKind eTheKind,
+                            SvLBoxButtonData* pBData )
+    : isVis(true)
     , pData(pBData)
     , eKind(eTheKind)
     , nItemFlags(SvItemStateFlags::NONE)
@@ -296,7 +299,7 @@ SvLBoxButton::SvLBoxButton()
     : SvLBoxItem()
     , isVis(false)
     , pData(nullptr)
-    , eKind(SvLBoxButtonKind_enabledCheckbox)
+    , eKind(SvLBoxButtonKind::EnabledCheckbox)
     , nItemFlags(SvItemStateFlags::NONE)
 {
     SetStateUnchecked();
@@ -329,8 +332,8 @@ void SvLBoxButton::Paint(
     const Point& rPos, SvTreeListBox& rDev, vcl::RenderContext& rRenderContext,
     const SvViewDataEntry* /*pView*/, const SvTreeListEntry& /*rEntry*/)
 {
-    SvBmp nIndex = eKind == SvLBoxButtonKind_staticImage ? SvBmp::STATICIMAGE : SvLBoxButtonData::GetIndex(nItemFlags);
-    DrawImageFlags nStyle = eKind != SvLBoxButtonKind_disabledCheckbox && rDev.IsEnabled() ? DrawImageFlags::NONE : DrawImageFlags::Disable;
+    SvBmp nIndex = eKind == SvLBoxButtonKind::StaticImage ? SvBmp::STATICIMAGE : SvLBoxButtonData::GetIndex(nItemFlags);
+    DrawImageFlags nStyle = eKind != SvLBoxButtonKind::DisabledCheckbox && rDev.IsEnabled() ? DrawImageFlags::NONE : DrawImageFlags::Disable;
 
     //Native drawing
     bool bNativeOK = false;
@@ -413,14 +416,14 @@ void SvLBoxButton::InitViewData(SvTreeListBox* pView,SvTreeListEntry* pEntry, Sv
     Size aSize( pData->Width(), pData->Height() );
 
     ControlType eCtrlType = (pData->IsRadio())? CTRL_RADIOBUTTON : CTRL_CHECKBOX;
-    if ( eKind != SvLBoxButtonKind_staticImage && pView )
+    if ( eKind != SvLBoxButtonKind::StaticImage && pView )
         ImplAdjustBoxSize(aSize, eCtrlType, *pView);
     pViewData->maSize = aSize;
 }
 
 bool SvLBoxButton::CheckModification() const
 {
-    return eKind == SvLBoxButtonKind_enabledCheckbox;
+    return eKind == SvLBoxButtonKind::EnabledCheckbox;
 }
 
 void SvLBoxButton::SetStateInvisible()
@@ -442,11 +445,9 @@ struct SvLBoxContextBmp_Impl
 
 // ***************************************************************
 
-SvLBoxContextBmp::SvLBoxContextBmp(
-    SvTreeListEntry* pEntry, sal_uInt16 nItemFlags, Image aBmp1, Image aBmp2,
+SvLBoxContextBmp::SvLBoxContextBmp(Image aBmp1, Image aBmp2,
     bool bExpanded)
-    :SvLBoxItem( pEntry, nItemFlags )
-    ,m_pImpl( new SvLBoxContextBmp_Impl )
+    :m_pImpl( new SvLBoxContextBmp_Impl )
 {
 
     m_pImpl->m_bExpanded = bExpanded;
@@ -470,12 +471,10 @@ sal_uInt16 SvLBoxContextBmp::GetType() const
     return SV_ITEM_ID_LBOXCONTEXTBMP;
 }
 
-bool SvLBoxContextBmp::SetModeImages( const Image& _rBitmap1, const Image& _rBitmap2 )
+void SvLBoxContextBmp::SetModeImages( const Image& _rBitmap1, const Image& _rBitmap2 )
 {
-    bool bSuccess = true;
     m_pImpl->m_aImage1 = _rBitmap1;
     m_pImpl->m_aImage2 = _rBitmap2;
-    return bSuccess;
 }
 
 Image& SvLBoxContextBmp::implGetImageStore( bool _bFirst )

@@ -82,7 +82,6 @@ FmNavInsertedHint::~FmNavInsertedHint()
 }
 
 
-
 // class FmNavInsertedHint
 
 FmNavModelReplacedHint::FmNavModelReplacedHint( FmEntryData* pAffectedEntryData )
@@ -138,8 +137,9 @@ FmEntryDataList::~FmEntryDataList()
 
 FmEntryData* FmEntryDataList::remove( FmEntryData* pItem )
 {
+    FmEntryDataBaseList::const_iterator aEnd = maEntryDataList.end();
     for ( FmEntryDataBaseList::iterator it = maEntryDataList.begin();
-          it != maEntryDataList.end();
+          it != aEnd;
           ++it
         )
     {
@@ -599,9 +599,7 @@ namespace svxform
     }
 
 
-
     // class NavigatorFrameManager
-
 
 
     SFX_IMPL_DOCKINGWINDOW( NavigatorFrameManager, SID_FM_SHOW_FMEXPLORER )

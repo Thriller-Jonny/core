@@ -294,9 +294,9 @@ sal_Bool SAL_CALL OGridControlModel::select(const Any& rElement) throw(IllegalAr
         m_xSelection = xSel;
         aGuard.clear();
         m_aSelectListeners.notifyEach( &XSelectionChangeListener::selectionChanged, EventObject( *this ) );
-        return sal_True;
+        return true;
     }
-    return sal_False;
+    return false;
 }
 Any SAL_CALL OGridControlModel::getSelection() throw(RuntimeException, std::exception)
 {
@@ -349,7 +349,7 @@ css::uno::Sequence<OUString> SAL_CALL OGridControlModel::getColumnTypes() throw 
 // XReset
 void SAL_CALL OGridControlModel::reset() throw ( css::uno::RuntimeException, std::exception)
 {
-    ::cppu::OInterfaceIteratorHelper aIter(m_aResetListeners);
+    ::comphelper::OInterfaceIteratorHelper2 aIter(m_aResetListeners);
     EventObject aEvt(static_cast<XWeak*>(this));
     bool bContinue = true;
     while (aIter.hasMoreElements() && bContinue)
@@ -440,31 +440,31 @@ void OGridControlModel::getFastPropertyValue(Any& rValue, sal_Int32 nHandle ) co
             rValue <<= m_sHelpURL;
             break;
         case PROPERTY_ID_DISPLAYSYNCHRON:
-            setBOOL(rValue, m_bDisplaySynchron);
+            rValue <<= m_bDisplaySynchron;
             break;
         case PROPERTY_ID_ALWAYSSHOWCURSOR:
-            setBOOL(rValue, m_bAlwaysShowCursor);
+            rValue <<= m_bAlwaysShowCursor;
             break;
         case PROPERTY_ID_CURSORCOLOR:
             rValue = m_aCursorColor;
             break;
         case PROPERTY_ID_PRINTABLE:
-            setBOOL(rValue, m_bPrintable);
+            rValue <<= m_bPrintable;
             break;
         case PROPERTY_ID_TABSTOP:
             rValue = m_aTabStop;
             break;
         case PROPERTY_ID_HASNAVIGATION:
-            setBOOL(rValue, m_bNavigation);
+            rValue <<= m_bNavigation;
             break;
         case PROPERTY_ID_RECORDMARKER:
-            setBOOL(rValue, m_bRecordMarker);
+            rValue <<= m_bRecordMarker;
             break;
         case PROPERTY_ID_ENABLED:
-            setBOOL(rValue, m_bEnable);
+            rValue <<= m_bEnable;
             break;
         case PROPERTY_ID_ENABLEVISIBLE:
-            setBOOL(rValue, m_bEnableVisible);
+            rValue <<= m_bEnableVisible;
             break;
         case PROPERTY_ID_BORDER:
             rValue <<= (sal_Int16)m_nBorder;
@@ -664,10 +664,10 @@ Any OGridControlModel::getPropertyDefaultByHandle( sal_Int32 nHandle ) const
         case PROPERTY_ID_DISPLAYSYNCHRON:
         case PROPERTY_ID_ENABLED:
         case PROPERTY_ID_ENABLEVISIBLE:
-            aReturn = makeBoolAny(true);
+            aReturn <<= true;
             break;
         case PROPERTY_ID_ALWAYSSHOWCURSOR:
-            aReturn = makeBoolAny(false);
+            aReturn <<= false;
             break;
         case PROPERTY_ID_HELPURL:
         case PROPERTY_ID_HELPTEXT:
@@ -783,7 +783,7 @@ void OGridControlModel::write(const Reference<XObjectOutputStream>& _rxOutStream
     _rxOutStream->writeLong(nLen);
     for (sal_Int32 i = 0; i < nLen; i++)
     {
-        // first the service name for the unerlying model
+        // first the service name for the underlying model
         OGridColumn* pCol = getColumnImplementation(m_aItems[i]);
         DBG_ASSERT(pCol != nullptr, "OGridControlModel::write : such items should never reach it into my container !");
         _rxOutStream << pCol->getModelName();
@@ -965,7 +965,7 @@ void OGridControlModel::read(const Reference<XObjectInputStream>& _rxInStream) t
     m_bEnable = _rxInStream->readBoolean();
     if (nAnyMask & TABSTOP)
     {
-        m_aTabStop = makeBoolAny(_rxInStream->readBoolean() != 0);
+        m_aTabStop <<= (_rxInStream->readBoolean() != 0);
     }
     if (nVersion > 3)
         m_bNavigation = _rxInStream->readBoolean();

@@ -29,17 +29,12 @@
 
 #include <osl/diagnose.h>
 
-#include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/xsd/WhiteSpaceTreatment.hpp>
 
 using com::sun::star::uno::Reference;
-using com::sun::star::uno::Any;
 using com::sun::star::xml::sax::XAttributeList;
-using com::sun::star::beans::XPropertySet;
 using com::sun::star::xforms::XDataTypeRepository;
 using namespace xmloff::token;
-
-
 
 
 static const SvXMLTokenMapEntry aAttributes[] =

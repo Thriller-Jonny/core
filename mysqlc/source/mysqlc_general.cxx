@@ -24,7 +24,6 @@
 
 using com::sun::star::sdbc::SQLException;
 
-using com::sun::star::uno::UNO_QUERY;
 using com::sun::star::uno::Reference;
 using com::sun::star::uno::XInterface;
 using com::sun::star::uno::Any;
@@ -32,7 +31,7 @@ using com::sun::star::uno::Any;
 namespace mysqlc_sdbc_driver
 {
 
-void throwFeatureNotImplementedException( const sal_Char* _pAsciiFeatureName, const Reference< XInterface >& _rxContext, const Any* _pNextException )
+void throwFeatureNotImplementedException( const sal_Char* _pAsciiFeatureName, const Reference< XInterface >& _rxContext )
     throw (SQLException)
 {
     const rtl::OUString sMessage = rtl::OUString::createFromAscii( _pAsciiFeatureName ) + ": feature not implemented.";
@@ -41,11 +40,11 @@ void throwFeatureNotImplementedException( const sal_Char* _pAsciiFeatureName, co
         _rxContext,
         rtl::OUString("HYC00"),
         0,
-        _pNextException ? *_pNextException : Any()
+        Any()
     );
 }
 
-void throwInvalidArgumentException( const sal_Char* _pAsciiFeatureName, const Reference< XInterface >& _rxContext, const Any* _pNextException )
+void throwInvalidArgumentException( const sal_Char* _pAsciiFeatureName, const Reference< XInterface >& _rxContext )
     throw (SQLException)
 {
     const rtl::OUString sMessage = rtl::OUString::createFromAscii( _pAsciiFeatureName ) + ": invalid arguments.";
@@ -54,7 +53,7 @@ void throwInvalidArgumentException( const sal_Char* _pAsciiFeatureName, const Re
         _rxContext,
         rtl::OUString("HYC00"),
         0,
-        _pNextException ? *_pNextException : Any()
+        Any()
     );
 }
 

@@ -40,6 +40,7 @@
 #include "oox/helper/helper.hxx"
 #include "oox/core/xmlfilterbase.hxx"
 #include <oox/ppt/pptfilterhelpers.hxx>
+#include <oox/token/tokens.hxx>
 #include "sal/log.hxx"
 
 using namespace ::oox::core;
@@ -291,7 +292,7 @@ namespace oox { namespace ppt {
             OUString sString;
             Sequence< NamedValue > aSeq;
 
-            for( int i = 0; i < _NP_SIZE; i++)
+            for( int i = 0; i < NP_SIZE_; i++)
             {
                 Any & aValue( maNodeProperties[ i ] );
                 if( aValue.hasValue() )
@@ -568,7 +569,7 @@ namespace oox { namespace ppt {
             const Reference< XAnimationNode >& rxNode )
     {
         try {
-            Reference< XAnimationNode > xNode( Reference<css::lang::XMultiServiceFactory>(rFilter.getComponentContext()->getServiceManager(), UNO_QUERY_THROW)->createInstance( rServiceName ), UNO_QUERY_THROW );;
+            Reference< XAnimationNode > xNode( Reference<css::lang::XMultiServiceFactory>(rFilter.getComponentContext()->getServiceManager(), UNO_QUERY_THROW)->createInstance( rServiceName ), UNO_QUERY_THROW );
             Reference< XTimeContainer > xParentContainer( rxNode, UNO_QUERY_THROW );
 
             xParentContainer->appendChild( xNode );

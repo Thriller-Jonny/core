@@ -692,7 +692,6 @@ bool getCursorPropertyValue(const SfxItemPropertySimpleEntry& rEntry
                                     nAttrEnd < nPaMEnd)
                         {
                             aCharStyles.realloc(0);
-                            eNewState = PropertyState_AMBIGUOUS_VALUE;
                             break;
                         }
                         else
@@ -802,10 +801,10 @@ void setNumberingProperty(const Any& rValue, SwPaM& rPam)
                             {
                                 SfxStyleSheetBasePool* pPool = pDoc->GetDocShell()->GetStyleSheetPool();
                                 SfxStyleSheetBase* pBase;
-                                pBase = pPool->Find(pNewCharStyles[i], SFX_STYLE_FAMILY_CHAR);
+                                pBase = pPool->Find(pNewCharStyles[i], SfxStyleFamily::Char);
                             // shall it really be created?
                                 if(!pBase)
-                                    pBase = &pPool->Make(pNewCharStyles[i], SFX_STYLE_FAMILY_PAGE);
+                                    pBase = &pPool->Make(pNewCharStyles[i], SfxStyleFamily::Page);
                                 pCharFormat = static_cast<SwDocStyleSheet*>(pBase)->GetCharFormat();
                             }
                             if(pCharFormat)
@@ -816,7 +815,7 @@ void setNumberingProperty(const Any& rValue, SwPaM& rPam)
                     if(
                        !pBulletFontNames[i].isEmpty() &&
                        !SwXNumberingRules::isInvalidStyle(pBulletFontNames[i]) &&
-                       (!aFormat.GetBulletFont() || aFormat.GetBulletFont()->GetName() != pBulletFontNames[i])
+                       (!aFormat.GetBulletFont() || aFormat.GetBulletFont()->GetFamilyName() != pBulletFontNames[i])
                       )
                     {
                         const SvxFontListItem* pFontListItem =
@@ -824,9 +823,9 @@ void setNumberingProperty(const Any& rValue, SwPaM& rPam)
                                                     ->GetItem( SID_ATTR_CHAR_FONTLIST ));
                         const FontList*  pList = pFontListItem->GetFontList();
 
-                        vcl::FontInfo aInfo = pList->Get(
+                        FontMetric aFontMetric = pList->Get(
                             pBulletFontNames[i],WEIGHT_NORMAL, ITALIC_NONE);
-                        vcl::Font aFont(aInfo);
+                        vcl::Font aFont(aFontMetric);
                         aFormat.SetBulletFont(&aFont);
                     }
                     aRule.Set( i, aFormat );
@@ -983,7 +982,7 @@ void InsertFile(SwUnoCursor* pUnoCursor, const OUString& rURL,
         return;
 
     SfxObjectFactory& rFact = pDocSh->GetFactory();
-    const SfxFilter* pFilter = rFact.GetFilterContainer()->GetFilter4FilterName( sFilterName );
+    std::shared_ptr<const SfxFilter> pFilter = rFact.GetFilterContainer()->GetFilter4FilterName( sFilterName );
     uno::Reference < embed::XStorage > xReadStorage;
     if( xInputStream.is() )
     {
@@ -1015,7 +1014,7 @@ void InsertFile(SwUnoCursor* pUnoCursor, const OUString& rURL,
             pMed->GetItemSet()->Put( SfxStringItem( SID_DOC_BASEURL, sBaseURL ) );
 
         SfxFilterMatcher aMatcher( rFact.GetFilterContainer()->GetName() );
-        ErrCode nErr = aMatcher.GuessFilter(*pMed, &pFilter, SfxFilterFlags::NONE);
+        ErrCode nErr = aMatcher.GuessFilter(*pMed, pFilter, SfxFilterFlags::NONE);
         if ( nErr || !pFilter)
             return;
         pMed->SetFilter( pFilter );

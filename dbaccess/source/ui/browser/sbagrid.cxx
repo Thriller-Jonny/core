@@ -203,7 +203,7 @@ void SAL_CALL SbaXGridControl::createPeer(const Reference< css::awt::XToolkit > 
     // TODO: why the hell this whole class does not use any mutex?
 
         Reference< css::frame::XDispatch >  xDisp(getPeer(), UNO_QUERY);
-        for (   StatusMultiplexerArray::iterator aIter = m_aStatusMultiplexer.begin();
+        for (   StatusMultiplexerArray::const_iterator aIter = m_aStatusMultiplexer.begin();
                 aIter != m_aStatusMultiplexer.end();
                 ++aIter)
         {
@@ -324,7 +324,7 @@ void SbaXGridPeer::NotifyStatusChanged(const css::util::URL& _rUrl, const Refere
     if ( m_aDispatchStates.end() != aURLStatePos )
         aEvt.State <<= aURLStatePos->second;
     else
-        aEvt.State <<= sal_False;
+        aEvt.State <<= false;
 
     if (xControl.is())
         xControl->statusChanged(aEvt);
@@ -452,7 +452,7 @@ void SAL_CALL SbaXGridPeer::dispatch(const URL& aURL, const Sequence< PropertyVa
     if ( dtUnknown != eURLType )
     {
         // notify any status listeners that the dialog is now active (well, about to be active)
-        MapDispatchToBool::iterator aThisURLState = m_aDispatchStates.insert( MapDispatchToBool::value_type( eURLType, sal_True ) ).first;
+        MapDispatchToBool::const_iterator aThisURLState = m_aDispatchStates.insert( MapDispatchToBool::value_type( eURLType, true ) ).first;
         NotifyStatusChanged( aURL, nullptr );
 
         // execute the dialog
@@ -583,7 +583,7 @@ void SbaGridHeader::MouseButtonDown( const MouseEvent& _rMEvt )
     FmGridHeader::MouseButtonDown(_rMEvt);
 }
 
-bool SbaGridHeader::ImplStartColumnDrag(sal_Int8 _nAction, const Point& _rMousePos)
+void SbaGridHeader::ImplStartColumnDrag(sal_Int8 _nAction, const Point& _rMousePos)
 {
     sal_uInt16 nId = GetItemId(_rMousePos);
     bool bResizingCol = false;
@@ -596,7 +596,7 @@ bool SbaGridHeader::ImplStartColumnDrag(sal_Int8 _nAction, const Point& _rMouseP
     }
     if (!bResizingCol)
     {
-        // force the base class to end it's drag mode
+        // force the base class to end its drag mode
         EndTracking(TrackingEventFlags::Cancel | TrackingEventFlags::End);
 
         // because we have 3d-buttons the select handler is called from MouseButtonUp, but StartDrag
@@ -610,10 +610,7 @@ bool SbaGridHeader::ImplStartColumnDrag(sal_Int8 _nAction, const Point& _rMouseP
                     _rMousePos.Y() - GetSizePixel().Height()
                 )
             );
-        return true;
     }
-
-    return false;
 }
 
 void SbaGridHeader::PreExecuteColumnContextMenu(sal_uInt16 nColId, PopupMenu& rMenu)
@@ -1445,7 +1442,7 @@ IMPL_LINK_NOARG_TYPED(SbaGridControl, AsynchDropEvent, void*, void)
         bool bCountFinal = false;
         xDataSource->getPropertyValue(PROPERTY_ISROWCOUNTFINAL) >>= bCountFinal;
         if ( !bCountFinal )
-            setDataSource(nullptr); // dettach from grid control
+            setDataSource(nullptr); // detach from grid control
         Reference< XResultSetUpdate > xResultSetUpdate(xDataSource,UNO_QUERY);
         ODatabaseImportExport* pImExport = new ORowSetImportExport(this,xResultSetUpdate,m_aDataDescriptor, getContext());
         Reference<XEventListener> xHolder = pImExport;

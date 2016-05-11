@@ -36,16 +36,13 @@
 #include <comphelper/sequence.hxx>
 #include <comphelper/enumhelper.hxx>
 
-#include <boost/noncopyable.hpp>
-
 namespace {
 
 class ModuleManager:
     public cppu::WeakImplHelper<
         css::lang::XServiceInfo,
         css::frame::XModuleManager2,
-        css::container::XContainerQuery >,
-    private boost::noncopyable
+        css::container::XContainerQuery >
 {
 private:
 
@@ -62,9 +59,12 @@ private:
 
 public:
 
-    ModuleManager(const css::uno::Reference< css::uno::XComponentContext >& xContext);
+    explicit ModuleManager(const css::uno::Reference< css::uno::XComponentContext >& xContext);
 
     virtual ~ModuleManager();
+
+    ModuleManager(const ModuleManager&) = delete;
+    ModuleManager& operator=(const ModuleManager&) = delete;
 
     // XServiceInfo
     virtual OUString SAL_CALL getImplementationName()
@@ -147,7 +147,7 @@ ModuleManager::ModuleManager(const css::uno::Reference< css::uno::XComponentCont
 {
     m_xCFG.set( comphelper::ConfigurationHelper::openConfig(
                 m_xContext, "/org.openoffice.Setup/Office/Factories",
-                comphelper::ConfigurationHelper::E_READONLY),
+                comphelper::EConfigurationModes::ReadOnly ),
             css::uno::UNO_QUERY_THROW );
 }
 
@@ -170,8 +170,7 @@ sal_Bool ModuleManager::supportsService(OUString const & ServiceName)
 css::uno::Sequence< OUString > ModuleManager::getSupportedServiceNames()
     throw (css::uno::RuntimeException, std::exception)
 {
-    css::uno::Sequence< OUString > s { "com.sun.star.frame.ModuleManager" };
-    return s;
+    return { "com.sun.star.frame.ModuleManager" };
 }
 
 OUString SAL_CALL ModuleManager::identify(const css::uno::Reference< css::uno::XInterface >& xModule)
@@ -244,14 +243,14 @@ void SAL_CALL ModuleManager::replaceByName(const OUString& sName ,
     }
 
     // get access to the element
-    // Note: Dont use impl_getConfig() method here. Because it creates a readonly access only, further
+    // Note: Don't use impl_getConfig() method here. Because it creates a readonly access only, further
     // it cache it as a member of this module manager instance. If we change some props there ... but don't
     // flush changes (because an error occurred) we will read them later. If we use a different config access
-    // we can close it without a flush ... and our read data wont be affected .-)
+    // we can close it without a flush... and our read data won't be affected .-)
     css::uno::Reference< css::uno::XInterface >         xCfg      = ::comphelper::ConfigurationHelper::openConfig(
                                                                         m_xContext,
                                                                         "/org.openoffice.Setup/Office/Factories",
-                                                                        ::comphelper::ConfigurationHelper::E_STANDARD);
+                                                                        ::comphelper::EConfigurationModes::Standard);
     css::uno::Reference< css::container::XNameAccess >  xModules (xCfg, css::uno::UNO_QUERY_THROW);
     css::uno::Reference< css::container::XNameReplace > xModule  ;
 

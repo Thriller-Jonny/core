@@ -56,9 +56,7 @@
 #include <numeric>
 
 
-
 using namespace com::sun::star;
-
 
 
 namespace
@@ -199,7 +197,6 @@ namespace
 } // end of anonymous namespace
 
 
-
 namespace
 {
     /** stack for properites
@@ -301,10 +298,10 @@ namespace
                             }
                             if(!(nPushFlags & PushFlags::TEXTALIGN      ))
                             {
-                                if(pLast->getFont().GetAlign() != pTip->getFont().GetAlign())
+                                if(pLast->getFont().GetAlignment() != pTip->getFont().GetAlignment())
                                 {
                                     vcl::Font aFont(pLast->getFont());
-                                    aFont.SetAlign(pTip->getFont().GetAlign());
+                                    aFont.SetAlignment(pTip->getFont().GetAlignment());
                                     pLast->setFont(aFont);
                                 }
                             }
@@ -359,7 +356,6 @@ namespace
 } // end of anonymous namespace
 
 
-
 namespace
 {
     /** helper to convert a vcl::Region to a B2DPolyPolygon
@@ -375,15 +371,12 @@ namespace
 
         if(!rRegion.IsEmpty())
         {
-            vcl::Region aRegion(rRegion);
-
-            aRetval = aRegion.GetAsB2DPolyPolygon();
+            aRetval = rRegion.GetAsB2DPolyPolygon();
         }
 
         return aRetval;
     }
 } // end of anonymous namespace
-
 
 
 namespace
@@ -465,7 +458,6 @@ namespace
 } // end of anonymous namespace
 
 
-
 namespace
 {
     /** Helper class which builds a stack on the TargetHolder class */
@@ -519,7 +511,6 @@ namespace
 } // end of anonymous namespace
 
 
-
 namespace drawinglayer
 {
     namespace primitive2d
@@ -567,7 +558,6 @@ namespace drawinglayer
 } // end of namespace drawinglayer
 
 
-
 namespace
 {
     /** helper to convert a MapMode to a transformation */
@@ -612,9 +602,9 @@ namespace
             {
                 std::vector< basegfx::B2DPoint > aPositions(rPositions);
 
-                for(size_t a(0); a < aPositions.size(); a++)
+                for(basegfx::B2DPoint & aPosition : aPositions)
                 {
-                    aPositions[a] = rProperties.getTransformation() * aPositions[a];
+                    aPosition = rProperties.getTransformation() * aPosition;
                 }
 
                 rTarget.append(
@@ -1025,7 +1015,7 @@ namespace
     /** helper to handle the change of RasterOp. It takes care of encapsulating all current
         geometry to the current RasterOp (if changed) and needs to be called on any RasterOp
         change. It will also start a new geometry target to embrace to the new RasterOp if
-        a changuing RasterOp is used. Currently, ROP_XOR and ROP_INVERT are supported using
+        a changing RasterOp is used. Currently, ROP_XOR and ROP_INVERT are supported using
         InvertPrimitive2D, and ROP_0 by using a ModifiedColorPrimitive2D to force to black paint
      */
     void HandleNewRasterOp(
@@ -1237,12 +1227,12 @@ namespace
         rTextTransform.scale(aFontScaling.getX(), aFontScaling.getY());
 
         // take text align into account
-        if(ALIGN_BASELINE != rFont.GetAlign())
+        if(ALIGN_BASELINE != rFont.GetAlignment())
         {
             drawinglayer::primitive2d::TextLayouterDevice aTextLayouterDevice;
             aTextLayouterDevice.setFont(rFont);
 
-            if(ALIGN_TOP == rFont.GetAlign())
+            if(ALIGN_TOP == rFont.GetAlignment())
             {
                 rAlignmentOffset.setY(aTextLayouterDevice.getFontAscent());
             }
@@ -1299,10 +1289,10 @@ namespace
             const bool bWordLineMode(rFont.IsWordLineMode());
 
             const bool bDecoratedIsNeeded(
-                   UNDERLINE_NONE != rFont.GetOverline()
-                || UNDERLINE_NONE != rFont.GetUnderline()
+                   LINESTYLE_NONE != rFont.GetOverline()
+                || LINESTYLE_NONE != rFont.GetUnderline()
                 || STRIKEOUT_NONE != rFont.GetStrikeout()
-                || EMPHASISMARK_NONE != (rFont.GetEmphasisMark() & EMPHASISMARK_STYLE)
+                || FontEmphasisMark::NONE != (rFont.GetEmphasisMark() & FontEmphasisMark::Style)
                 || RELIEF_NONE != rFont.GetRelief()
                 || rFont.IsShadow()
                 || bWordLineMode);
@@ -1310,26 +1300,27 @@ namespace
             if(bDecoratedIsNeeded)
             {
                 // prepare overline, underline and strikeout data
-                const drawinglayer::primitive2d::TextLine eFontOverline(drawinglayer::primitive2d::mapFontUnderlineToTextLine(rFont.GetOverline()));
-                const drawinglayer::primitive2d::TextLine eFontUnderline(drawinglayer::primitive2d::mapFontUnderlineToTextLine(rFont.GetUnderline()));
+                const drawinglayer::primitive2d::TextLine eFontOverline(drawinglayer::primitive2d::mapFontLineStyleToTextLine(rFont.GetOverline()));
+                const drawinglayer::primitive2d::TextLine eFontLineStyle(drawinglayer::primitive2d::mapFontLineStyleToTextLine(rFont.GetUnderline()));
                 const drawinglayer::primitive2d::TextStrikeout eTextStrikeout(drawinglayer::primitive2d::mapFontStrikeoutToTextStrikeout(rFont.GetStrikeout()));
 
                 // check UndelineAbove
-                const bool bUnderlineAbove(drawinglayer::primitive2d::TEXT_LINE_NONE != eFontUnderline && isUnderlineAbove(rFont));
+                const bool bUnderlineAbove(drawinglayer::primitive2d::TEXT_LINE_NONE != eFontLineStyle && isUnderlineAbove(rFont));
 
                 // prepare emphasis mark data
-                drawinglayer::primitive2d::TextEmphasisMark eTextEmphasisMark(drawinglayer::primitive2d::TEXT_EMPHASISMARK_NONE);
+                drawinglayer::primitive2d::TextEmphasisMark eTextEmphasisMark(drawinglayer::primitive2d::TEXT_FONT_EMPHASIS_MARK_NONE);
 
-                switch(rFont.GetEmphasisMark() & EMPHASISMARK_STYLE)
+                switch(rFont.GetEmphasisMark() & FontEmphasisMark::Style)
                 {
-                    case EMPHASISMARK_DOT : eTextEmphasisMark = drawinglayer::primitive2d::TEXT_EMPHASISMARK_DOT; break;
-                    case EMPHASISMARK_CIRCLE : eTextEmphasisMark = drawinglayer::primitive2d::TEXT_EMPHASISMARK_CIRCLE; break;
-                    case EMPHASISMARK_DISC : eTextEmphasisMark = drawinglayer::primitive2d::TEXT_EMPHASISMARK_DISC; break;
-                    case EMPHASISMARK_ACCENT : eTextEmphasisMark = drawinglayer::primitive2d::TEXT_EMPHASISMARK_ACCENT; break;
+                    case FontEmphasisMark::Dot : eTextEmphasisMark = drawinglayer::primitive2d::TEXT_FONT_EMPHASIS_MARK_DOT; break;
+                    case FontEmphasisMark::Circle : eTextEmphasisMark = drawinglayer::primitive2d::TEXT_FONT_EMPHASIS_MARK_CIRCLE; break;
+                    case FontEmphasisMark::Disc : eTextEmphasisMark = drawinglayer::primitive2d::TEXT_FONT_EMPHASIS_MARK_DISC; break;
+                    case FontEmphasisMark::Accent : eTextEmphasisMark = drawinglayer::primitive2d::TEXT_FONT_EMPHASIS_MARK_ACCENT; break;
+                    default: break;
                 }
 
-                const bool bEmphasisMarkAbove(rFont.GetEmphasisMark() & EMPHASISMARK_POS_ABOVE);
-                const bool bEmphasisMarkBelow(rFont.GetEmphasisMark() & EMPHASISMARK_POS_BELOW);
+                const bool bEmphasisMarkAbove(rFont.GetEmphasisMark() & FontEmphasisMark::PosAbove);
+                const bool bEmphasisMarkBelow(rFont.GetEmphasisMark() & FontEmphasisMark::PosBelow);
 
                 // prepare font relief data
                 drawinglayer::primitive2d::TextRelief eTextRelief(drawinglayer::primitive2d::TEXT_RELIEF_NONE);
@@ -1362,7 +1353,7 @@ namespace
                     rProperty.getOverlineColorActive() ? rProperty.getOverlineColor() : aFontColor,
                     rProperty.getTextLineColorActive() ? rProperty.getTextLineColor() : aFontColor,
                     eFontOverline,
-                    eFontUnderline,
+                    eFontLineStyle,
                     bUnderlineAbove,
                     eTextStrikeout,
                     bWordLineMode,
@@ -1472,8 +1463,8 @@ namespace
 
         if(fLineWidth > 0.0)
         {
-            const drawinglayer::primitive2d::TextLine aOverlineMode(drawinglayer::primitive2d::mapFontUnderlineToTextLine(rAction.GetOverline()));
-            const drawinglayer::primitive2d::TextLine aUnderlineMode(drawinglayer::primitive2d::mapFontUnderlineToTextLine(rAction.GetUnderline()));
+            const drawinglayer::primitive2d::TextLine aOverlineMode(drawinglayer::primitive2d::mapFontLineStyleToTextLine(rAction.GetOverline()));
+            const drawinglayer::primitive2d::TextLine aUnderlineMode(drawinglayer::primitive2d::mapFontLineStyleToTextLine(rAction.GetUnderline()));
             const drawinglayer::primitive2d::TextStrikeout aTextStrikeout(drawinglayer::primitive2d::mapFontStrikeoutToTextStrikeout(rAction.GetStrikeout()));
 
             const bool bOverlineUsed(drawinglayer::primitive2d::TEXT_LINE_NONE != aOverlineMode);
@@ -1567,9 +1558,9 @@ namespace
                     // add created text primitive to target
                     if(rProperty.getTransformation().isIdentity())
                     {
-                        for(size_t a(0); a < aTargetVector.size(); a++)
+                        for(drawinglayer::primitive2d::BasePrimitive2D* a : aTargetVector)
                         {
-                            rTarget.append(aTargetVector[a]);
+                            rTarget.append(a);
                         }
                     }
                     else
@@ -2065,9 +2056,9 @@ namespace
                                 {
                                     // when derivation is more than 3,5% from default text size,
                                     // scale the DXArray
-                                    for(size_t a(0); a < aTextArray.size(); a++)
+                                    for(double & a : aTextArray)
                                     {
-                                        aTextArray[a] *= fRelative;
+                                        a *= fRelative;
                                     }
                                 }
                             }
@@ -2105,7 +2096,7 @@ namespace
                         // VCL AFAP.
                         // Since AddTextRectActions is the only way as long as we do not have
                         // a simple text layouter available, i will try to add it to the
-                        // TextLayouterDevice isloation.
+                        // TextLayouterDevice isolation.
                         drawinglayer::primitive2d::TextLayouterDevice aTextLayouterDevice;
                         aTextLayouterDevice.setFont(rPropertyHolders.Current().getFont());
                         GDIMetaFile aGDIMetaFile;
@@ -2659,10 +2650,10 @@ namespace
                     // TextAlign is applied to the current font (as in
                     // OutputDevice::SetTextAlign which would be used when
                     // playing the Metafile)
-                    if(rPropertyHolders.Current().getFont().GetAlign() != aNewTextAlign)
+                    if(rPropertyHolders.Current().getFont().GetAlignment() != aNewTextAlign)
                     {
                         vcl::Font aNewFont(rPropertyHolders.Current().getFont());
-                        aNewFont.SetAlign(aNewTextAlign);
+                        aNewFont.SetAlignment(aNewTextAlign);
                         rPropertyHolders.Current().setFont(aNewFont);
                     }
 
@@ -2730,7 +2721,7 @@ namespace
                     /** SIMPLE, DONE */
                     const MetaFontAction* pA = static_cast<const MetaFontAction*>(pAction);
                     rPropertyHolders.Current().setFont(pA->GetFont());
-                    Size aFontSize(pA->GetFont().GetSize());
+                    Size aFontSize(pA->GetFont().GetFontSize());
 
                     if(0 == aFontSize.Height())
                     {
@@ -2745,7 +2736,7 @@ namespace
                         aFontSize = OutputDevice::LogicToLogic(
                             aFontSize, MAP_PIXEL, rPropertyHolders.Current().getMapUnit());
 
-                        aCorrectedFont.SetSize(aFontSize);
+                        aCorrectedFont.SetFontSize(aFontSize);
                         rPropertyHolders.Current().setFont(aCorrectedFont);
                     }
 
@@ -3003,7 +2994,7 @@ namespace
                                 // apply general current transformation
                                 aSubTransform = rPropertyHolders.Current().getTransformation() * aSubTransform;
 
-                                // evtl. embed sub-content to it's transformation
+                                // evtl. embed sub-content to its transformation
                                 if(!aSubTransform.isIdentity())
                                 {
                                     const drawinglayer::primitive2d::Primitive2DReference aEmbeddedTransform(
@@ -3098,7 +3089,7 @@ namespace
                     {
                         // XGRAD_SEQ_BEGIN, XGRAD_SEQ_END should be supported since the
                         // pure recorded paint of the gradients uses the XOR paint functionality
-                        // ('trick'). This is (and will be) broblematic with AntAliasing, so it's
+                        // ('trick'). This is (and will be) problematic with AntiAliasing, so it's
                         // better to use this info
                         const MetaGradientExAction* pMetaGradientExAction = nullptr;
                         bool bDone(false);
@@ -3169,7 +3160,6 @@ namespace
         }
     }
 } // end of anonymous namespace
-
 
 
 namespace drawinglayer

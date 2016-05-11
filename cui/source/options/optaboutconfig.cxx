@@ -27,7 +27,9 @@
 #include <com/sun/star/util/XChangesBatch.hpp>
 #include <com/sun/star/i18n/TransliterationModules.hpp>
 #include <com/sun/star/util/SearchFlags.hpp>
+#include <com/sun/star/util/SearchAlgorithms2.hpp>
 #include <unotools/textsearch.hxx>
+#include <o3tl/make_unique.hxx>
 
 #include <vector>
 #include <iostream>
@@ -172,7 +174,7 @@ CuiAboutConfigTabPage::CuiAboutConfigTabPage( vcl::Window* pParent/*, const SfxI
     aTabs[3] = aTabs[2] + fWidth * 20;
     aTabs[4] = aTabs[3] + fWidth * 8;
 
-    m_options.algorithmType = util::SearchAlgorithms_ABSOLUTE;
+    m_options.AlgorithmType2 = util::SearchAlgorithms2::ABSOLUTE;
     m_options.transliterateFlags |= i18n::TransliterationModules_IGNORE_CASE;
     m_options.searchFlag |= (util::SearchFlags::REG_NOT_BEGINOFLINE |
                                         util::SearchFlags::REG_NOT_ENDOFLINE);
@@ -203,11 +205,11 @@ void CuiAboutConfigTabPage::InsertEntry(const OUString& rPropertyPath, const OUS
 {
     SvTreeListEntry* pEntry = new SvTreeListEntry;
     pEntry->AddItem(std::unique_ptr<SvLBoxContextBmp>(
-        new SvLBoxContextBmp( pEntry, 0, Image(), Image(), false))); //It is needed, otherwise causes crash
-    pEntry->AddItem(std::unique_ptr<SvLBoxString>(new SvLBoxString(pEntry, 0, rProp)));
-    pEntry->AddItem(std::unique_ptr<SvLBoxString>(new SvLBoxString(pEntry, 0, rStatus)));
-    pEntry->AddItem(std::unique_ptr<SvLBoxString>(new SvLBoxString(pEntry, 0, rType)));
-    pEntry->AddItem(std::unique_ptr<SvLBoxString>(new SvLBoxString(pEntry, 0, rValue)));
+        new SvLBoxContextBmp( Image(), Image(), false))); //It is needed, otherwise causes crash
+    pEntry->AddItem(std::unique_ptr<SvLBoxString>(new SvLBoxString(rProp)));
+    pEntry->AddItem(std::unique_ptr<SvLBoxString>(new SvLBoxString(rStatus)));
+    pEntry->AddItem(std::unique_ptr<SvLBoxString>(new SvLBoxString(rType)));
+    pEntry->AddItem(std::unique_ptr<SvLBoxString>(new SvLBoxString(rValue)));
     pEntry->SetUserData( new UserData(rPropertyPath) );
 
     if(bInsertToPrefBox)
@@ -234,10 +236,8 @@ void CuiAboutConfigTabPage::Reset()
     m_pPrefBox->SetUpdateMode(true);
 }
 
-bool CuiAboutConfigTabPage::FillItemSet()
+void CuiAboutConfigTabPage::FillItemSet()
 {
-    bool bModified = false;
-
     std::vector< std::shared_ptr< Prop_Impl > >::iterator pIter;
     for( pIter = m_vectorOfModified.begin() ; pIter != m_vectorOfModified.end(); ++pIter )
     {
@@ -245,13 +245,10 @@ bool CuiAboutConfigTabPage::FillItemSet()
         Reference< XNameReplace > xNameReplace( xUpdateAccess, UNO_QUERY_THROW );
 
         xNameReplace->replaceByName( (*pIter)->Property, (*pIter)->Value );
-        bModified = true;
 
         Reference< util::XChangesBatch > xChangesBatch( xUpdateAccess, UNO_QUERY_THROW );
         xChangesBatch->commitChanges();
     }
-
-    return bModified;
 }
 
 void CuiAboutConfigTabPage::FillItems(const Reference< XNameAccess >& xNameAccess, SvTreeListEntry *pParentEntry,
@@ -285,18 +282,14 @@ void CuiAboutConfigTabPage::FillItems(const Reference< XNameAccess >& xNameAcces
             {
                 // not leaf node
                 SvTreeListEntry* pEntry = new SvTreeListEntry;
-                pEntry->AddItem(std::unique_ptr<SvLBoxContextBmp>(
-                    new SvLBoxContextBmp(pEntry, 0, SvTreeListBox::GetDefaultExpandedNodeImage(),
-                       SvTreeListBox::GetDefaultCollapsedNodeImage(), false)));
-                pEntry->AddItem(std::unique_ptr<SvLBoxString>(
-                    new SvLBoxString( pEntry, 0, seqItems[i])));
+                pEntry->AddItem(o3tl::make_unique<SvLBoxContextBmp>(
+                    SvTreeListBox::GetDefaultExpandedNodeImage(),
+                    SvTreeListBox::GetDefaultCollapsedNodeImage(), false));
+                pEntry->AddItem(o3tl::make_unique<SvLBoxString>(seqItems[i]));
                 //It is needed, without this the selection line will be truncated.
-                pEntry->AddItem(std::unique_ptr<SvLBoxString>(
-                    new SvLBoxString( pEntry, 0, "")));
-                pEntry->AddItem(std::unique_ptr<SvLBoxString>(
-                    new SvLBoxString( pEntry, 0, "")));
-                pEntry->AddItem(std::unique_ptr<SvLBoxString>(
-                    new SvLBoxString( pEntry, 0, "")));
+                pEntry->AddItem(o3tl::make_unique<SvLBoxString>(""));
+                pEntry->AddItem(o3tl::make_unique<SvLBoxString>(""));
+                pEntry->AddItem(o3tl::make_unique<SvLBoxString>(""));
 
                 pEntry->SetUserData( new UserData(xNextNameAccess, lineage + 1) );
                 pEntry->EnableChildrenOnDemand();
@@ -514,13 +507,13 @@ void CuiAboutConfigTabPage::AddToModifiedVector( const std::shared_ptr< Prop_Imp
 {
     bool isModifiedBefore = false;
     //Check if value modified before
-    for( size_t nInd = 0; nInd < m_vectorOfModified.size() ; ++nInd )
+    for(std::shared_ptr<Prop_Impl> & nInd : m_vectorOfModified)
     {
-        if( rProp->Name == m_vectorOfModified[nInd]->Name && rProp->Property == m_vectorOfModified[nInd]->Property )
+        if( rProp->Name == nInd->Name && rProp->Property == nInd->Property )
         {
             //property modified before. Assign reference to the modified value
             //do your changes on this object. They will be saved later.
-            m_vectorOfModified[nInd] = rProp;
+            nInd = rProp;
             isModifiedBefore = true;
             break;
         }
@@ -784,8 +777,7 @@ IMPL_LINK_NOARG_TYPED( CuiAboutConfigTabPage, StandardHdl_Impl, Button*, void )
                 );
                 if (it != m_prefBoxEntries.end())
                 {
-                    (*it)->ReplaceItem(std::unique_ptr<SvLBoxString>(
-                        new SvLBoxString( (*it).get(), 0, sDialogValue)), 4);
+                    (*it)->ReplaceItem(o3tl::make_unique<SvLBoxString>(sDialogValue), 4);
 
                     SvTreeListEntries::iterator modifiedIt = std::find_if(
                                 m_modifiedPrefBoxEntries.begin(), m_modifiedPrefBoxEntries.end(),
@@ -798,9 +790,7 @@ IMPL_LINK_NOARG_TYPED( CuiAboutConfigTabPage, StandardHdl_Impl, Button*, void )
 
                     if( modifiedIt != m_modifiedPrefBoxEntries.end())
                     {
-                        (*modifiedIt)->ReplaceItem(std::unique_ptr<SvLBoxString>(
-                            new SvLBoxString((*modifiedIt).get(), 0, sDialogValue)),
-                            4);
+                        (*modifiedIt)->ReplaceItem(o3tl::make_unique<SvLBoxString>(sDialogValue), 4);
                     }
                     else
                     {
@@ -894,18 +884,14 @@ void CuiAboutConfigTabPage::InsertEntry( SvTreeListEntry *pEntry)
         if(!hasEntry)
         {
             pParentEntry = new SvTreeListEntry;
-            pParentEntry->AddItem(std::unique_ptr<SvLBoxContextBmp>(
-                new SvLBoxContextBmp(pParentEntry, 0, SvTreeListBox::GetDefaultExpandedNodeImage(),
-                   SvTreeListBox::GetDefaultCollapsedNodeImage(), false)));
-            pParentEntry->AddItem(std::unique_ptr<SvLBoxString>(
-                new SvLBoxString(pParentEntry, 0, sParentName)));
+            pParentEntry->AddItem(o3tl::make_unique<SvLBoxContextBmp>(
+                   SvTreeListBox::GetDefaultExpandedNodeImage(),
+                   SvTreeListBox::GetDefaultCollapsedNodeImage(), false));
+            pParentEntry->AddItem(o3tl::make_unique<SvLBoxString>(sParentName));
             //It is needed, without this the selection line will be truncated.
-            pParentEntry->AddItem(std::unique_ptr<SvLBoxString>(
-                new SvLBoxString(pParentEntry, 0, "")));
-            pParentEntry->AddItem(std::unique_ptr<SvLBoxString>(
-                new SvLBoxString(pParentEntry, 0, "")));
-            pParentEntry->AddItem(std::unique_ptr<SvLBoxString>(
-                new SvLBoxString( pParentEntry, 0, "")));
+            pParentEntry->AddItem(o3tl::make_unique<SvLBoxString>(""));
+            pParentEntry->AddItem(o3tl::make_unique<SvLBoxString>(""));
+            pParentEntry->AddItem(o3tl::make_unique<SvLBoxString>(""));
             pParentEntry->EnableChildrenOnDemand(false);
             m_pPrefBox->Insert( pParentEntry, pGrandParentEntry );
         }
@@ -937,7 +923,7 @@ IMPL_LINK_NOARG_TYPED( CuiAboutConfigTabPage, ExpandingHdl_Impl, SvTreeListBox*,
         }
     }
 
-    return true;
+    return pEntry && pEntry->HasChildren();
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

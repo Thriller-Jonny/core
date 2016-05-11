@@ -116,6 +116,7 @@ namespace svgio
         static const char aSVGStrSvg[] = "svg";
         static const char aSVGStrSymbol[] = "symbol";
         static const char aSVGStrUse[] = "use";
+        static const char aSVGStrA[] = "a";
 
         static const char aSVGStrCircle[] = "circle";
         static const char aSVGStrEllipse[] = "ellipse";
@@ -166,7 +167,7 @@ namespace svgio
 
         SVGToken StrToSVGToken(const OUString& rStr, bool bCaseIndependent)
         {
-            typedef std::unordered_map< OUString, SVGToken, OUStringHash, std::equal_to< OUString >  > SVGTokenMapper;
+            typedef std::unordered_map< OUString, SVGToken, OUStringHash > SVGTokenMapper;
             typedef std::pair< OUString, SVGToken > SVGTokenValueType;
             static SVGTokenMapper aSVGTokenMapperList;
 
@@ -264,6 +265,7 @@ namespace svgio
                 aSVGTokenMapperList.insert(SVGTokenValueType(aSVGStrSvg, SVGTokenSvg));
                 aSVGTokenMapperList.insert(SVGTokenValueType(aSVGStrSymbol, SVGTokenSymbol));
                 aSVGTokenMapperList.insert(SVGTokenValueType(aSVGStrUse, SVGTokenUse));
+                aSVGTokenMapperList.insert(SVGTokenValueType(aSVGStrA, SVGTokenA));
 
                 aSVGTokenMapperList.insert(SVGTokenValueType(aSVGStrCircle, SVGTokenCircle));
                 aSVGTokenMapperList.insert(SVGTokenValueType(aSVGStrEllipse, SVGTokenEllipse));

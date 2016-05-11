@@ -20,6 +20,7 @@
 #include "pivotcachebuffer.hxx"
 
 #include <set>
+#include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/container/XIndexAccess.hpp>
 #include <com/sun/star/container/XNameAccess.hpp>
 #include <com/sun/star/container/XNamed.hpp>
@@ -32,7 +33,9 @@
 #include <oox/helper/attributelist.hxx>
 #include <oox/helper/containerhelper.hxx>
 #include <oox/helper/propertyset.hxx>
+#include <oox/token/namespaces.hxx>
 #include <oox/token/properties.hxx>
+#include <oox/token/tokens.hxx>
 #include "biffinputstream.hxx"
 #include "defnamesbuffer.hxx"
 #include "excelhandlers.hxx"
@@ -775,7 +778,7 @@ void PivotCacheField::convertNumericGrouping( const Reference< XDataPilotField >
         DataPilotFieldGroupInfo aGroupInfo;
         aGroupInfo.HasAutoStart  = maFieldGroupModel.mbAutoStart;
         aGroupInfo.HasAutoEnd    = maFieldGroupModel.mbAutoEnd;
-        aGroupInfo.HasDateValues = sal_False;
+        aGroupInfo.HasDateValues = false;
         aGroupInfo.Start         = maFieldGroupModel.mfStartValue;
         aGroupInfo.End           = maFieldGroupModel.mfEndValue;
         aGroupInfo.Step          = maFieldGroupModel.mfInterval;
@@ -796,7 +799,7 @@ OUString PivotCacheField::createDateGroupField( const Reference< XDataPilotField
         DataPilotFieldGroupInfo aGroupInfo;
         aGroupInfo.HasAutoStart  = maFieldGroupModel.mbAutoStart;
         aGroupInfo.HasAutoEnd    = maFieldGroupModel.mbAutoEnd;
-        aGroupInfo.HasDateValues = sal_True;
+        aGroupInfo.HasDateValues = true;
         aGroupInfo.Start         = getUnitConverter().calcSerialFromDateTime( maFieldGroupModel.maStartDate );
         aGroupInfo.End           = getUnitConverter().calcSerialFromDateTime( maFieldGroupModel.maEndDate );
         aGroupInfo.Step          = bDayRanges ? maFieldGroupModel.mfInterval : 0.0;
@@ -953,7 +956,7 @@ OUString PivotCacheField::createParentGroupField( const Reference< XDataPilotFie
 void PivotCacheField::writeSourceHeaderCell( WorksheetHelper& rSheetHelper, sal_Int32 nCol, sal_Int32 nRow ) const
 {
     CellModel aModel;
-    aModel.maCellAddr = CellAddress( rSheetHelper.getSheetIndex(), nCol, nRow );
+    aModel.maCellAddr = ScAddress( SCCOL( nCol ), SCROW( nRow ), SCTAB( rSheetHelper.getSheetIndex() ) );
     rSheetHelper.getSheetData().setStringCell( aModel, maFieldModel.maName );
 }
 
@@ -1001,7 +1004,7 @@ void PivotCacheField::writeItemToSourceDataCell( WorksheetHelper& rSheetHelper,
     if( rItem.getType() != XML_m )
     {
         CellModel aModel;
-        aModel.maCellAddr = CellAddress( rSheetHelper.getSheetIndex(), nCol, nRow );
+        aModel.maCellAddr = ScAddress( SCCOL( nCol ), SCROW( nRow ), SCTAB( rSheetHelper.getSheetIndex() ) );
         SheetDataBuffer& rSheetData = rSheetHelper.getSheetData();
         switch( rItem.getType() )
         {
@@ -1262,7 +1265,7 @@ void PivotCache::writeSourceHeaderCells( WorksheetHelper& rSheetHelper ) const
     OSL_ENSURE( static_cast< size_t >( maSheetSrcModel.maRange.EndColumn - maSheetSrcModel.maRange.StartColumn + 1 ) == maDatabaseFields.size(),
         "PivotCache::writeSourceHeaderCells - source cell range width does not match number of source fields" );
     sal_Int32 nCol = maSheetSrcModel.maRange.StartColumn;
-    sal_Int32 nMaxCol = getAddressConverter().getMaxApiAddress().Column;
+    sal_Int32 nMaxCol = getAddressConverter().getMaxApiAddress().Col();
     sal_Int32 nRow = maSheetSrcModel.maRange.StartRow;
     mnCurrRow = -1;
     updateSourceDataRow( rSheetHelper, nRow );
@@ -1286,7 +1289,7 @@ void PivotCache::importPCRecord( SequenceInputStream& rStrm, WorksheetHelper& rS
     sal_Int32 nRow = maSheetSrcModel.maRange.StartRow + nRowIdx;
     OSL_ENSURE( (maSheetSrcModel.maRange.StartRow < nRow) && (nRow <= maSheetSrcModel.maRange.EndRow), "PivotCache::importPCRecord - invalid row index" );
     sal_Int32 nCol = maSheetSrcModel.maRange.StartColumn;
-    sal_Int32 nMaxCol = getAddressConverter().getMaxApiAddress().Column;
+    sal_Int32 nMaxCol = getAddressConverter().getMaxApiAddress().Col();
     for( PivotCacheFieldVector::const_iterator aIt = maDatabaseFields.begin(), aEnd = maDatabaseFields.end(); !rStrm.isEof() && (aIt != aEnd) && (nCol <= nMaxCol); ++aIt, ++nCol )
         (*aIt)->importPCRecordItem( rStrm, rSheetHelper, nCol, nRow );
 }
@@ -1296,7 +1299,7 @@ void PivotCache::importPCItemIndexList( BiffInputStream& rStrm, WorksheetHelper&
     sal_Int32 nRow = maSheetSrcModel.maRange.StartRow + nRowIdx;
     OSL_ENSURE( (maSheetSrcModel.maRange.StartRow < nRow) && (nRow <= maSheetSrcModel.maRange.EndRow), "PivotCache::importPCItemIndexList - invalid row index" );
     sal_Int32 nCol = maSheetSrcModel.maRange.StartColumn;
-    sal_Int32 nMaxCol = getAddressConverter().getMaxApiAddress().Column;
+    sal_Int32 nMaxCol = getAddressConverter().getMaxApiAddress().Col();
     for( PivotCacheFieldVector::const_iterator aIt = maDatabaseFields.begin(), aEnd = maDatabaseFields.end(); !rStrm.isEof() && (aIt != aEnd) && (nCol <= nMaxCol); ++aIt, ++nCol )
         if( (*aIt)->hasSharedItems() )
             (*aIt)->importPCItemIndex( rStrm, rSheetHelper, nCol, nRow );

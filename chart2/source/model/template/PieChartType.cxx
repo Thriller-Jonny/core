@@ -34,8 +34,6 @@ using namespace ::com::sun::star;
 using ::com::sun::star::beans::Property;
 using ::com::sun::star::uno::Sequence;
 using ::com::sun::star::uno::Reference;
-using ::com::sun::star::uno::Any;
-using ::osl::MutexGuard;
 
 namespace
 {
@@ -46,7 +44,7 @@ enum
     PROP_PIECHARTTYPE_3DRELATIVEHEIGHT
 };
 
-static void lcl_AddPropertiesToVector(
+void lcl_AddPropertiesToVector(
     ::std::vector< Property > & rOutProperties )
 {
     rOutProperties.push_back(
@@ -93,7 +91,7 @@ struct StaticPieChartTypeInfoHelper_Initializer
 private:
     static Sequence< Property > lcl_GetPropertySequence()
     {
-        ::std::vector< ::com::sun::star::beans::Property > aProperties;
+        ::std::vector< css::beans::Property > aProperties;
         lcl_AddPropertiesToVector( aProperties );
 
         ::std::sort( aProperties.begin(), aProperties.end(),
@@ -128,12 +126,9 @@ namespace chart
 {
 
 PieChartType::PieChartType(
-    const uno::Reference< uno::XComponentContext > & xContext,
-    bool bUseRings  /* = sal_False */) :
+    const uno::Reference< uno::XComponentContext > & xContext) :
         ChartType( xContext )
 {
-    if( bUseRings )
-        setFastPropertyValue_NoBroadcast( PROP_PIECHARTTYPE_USE_RINGS, uno::makeAny( bUseRings ));
 }
 
 PieChartType::PieChartType( const PieChartType & rOther ) :
@@ -164,8 +159,7 @@ Reference< chart2::XCoordinateSystem > SAL_CALL
            uno::RuntimeException, std::exception)
 {
     Reference< chart2::XCoordinateSystem > xResult(
-        new PolarCoordinateSystem(
-            GetComponentContext(), DimensionCount, /* bSwapXAndYAxis */ false ));
+        new PolarCoordinateSystem( GetComponentContext(), DimensionCount ));
 
     for( sal_Int32 i=0; i<DimensionCount; ++i )
     {

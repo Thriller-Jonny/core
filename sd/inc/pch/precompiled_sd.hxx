@@ -42,10 +42,7 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
-#include <boost/bind.hpp>
 #include <boost/intrusive_ptr.hpp>
-#include <boost/limits.hpp>
-#include <boost/noncopyable.hpp>
 #include <boost/optional.hpp>
 #include <boost/optional/optional.hpp>
 #include <boost/property_tree/json_parser.hpp>
@@ -83,7 +80,7 @@
 #include <sal/types.h>
 #include <vcl/bitmap.hxx>
 #include <vcl/bitmapex.hxx>
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 #include <vcl/builderfactory.hxx>
 #include <vcl/button.hxx>
 #include <vcl/checksum.hxx>

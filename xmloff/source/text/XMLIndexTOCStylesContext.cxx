@@ -44,7 +44,6 @@ using ::com::sun::star::xml::sax::XAttributeList;
 const sal_Char sAPI_LevelParagraphStyles[] = "LevelParagraphStyles";
 
 
-
 XMLIndexTOCStylesContext::XMLIndexTOCStylesContext(
     SvXMLImport& rImport, Reference<XPropertySet> & rPropSet,
     sal_uInt16 nPrfx, const OUString& rLocalName)
@@ -107,8 +106,7 @@ void XMLIndexTOCStylesContext::EndElement()
         aAny >>= xIndexReplace;
 
         // set style names
-        aAny <<= aStyleNamesSequence;
-        xIndexReplace->replaceByIndex(nOutlineLevel, aAny);
+        xIndexReplace->replaceByIndex(nOutlineLevel, Any(aStyleNamesSequence));
     }
 }
 

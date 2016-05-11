@@ -37,8 +37,7 @@ namespace xls {
 /** Stores basic data about cell values and formatting. */
 struct CellModel
 {
-    css::table::CellAddress
-                        maCellAddr;         /// The address of the current cell.
+    ScAddress           maCellAddr;         /// The address of the current cell.
     sal_Int32           mnCellType;         /// Data type of the cell value.
     sal_Int32           mnXfId;             /// XF (cell formatting) identifier.
     bool                mbShowPhonetic;     /// True = show phonetic text.
@@ -58,8 +57,10 @@ struct CellFormulaModel
 
     /** Returns true, if the passed cell address is valid for an array formula. */
     bool                isValidArrayRef( const css::table::CellAddress& rCellAddr );
+    bool                isValidArrayRef( const ScAddress& rCellAddr );
     /** Returns true, if the passed cell address is valid for a shared formula. */
     bool                isValidSharedRef( const css::table::CellAddress& rCellAddr );
+    bool                isValidSharedRef( const ScAddress& rCellAddr );
 };
 
 /** Stores data about table operations. */
@@ -87,7 +88,7 @@ public:
 private:
     typedef ::std::map< sal_Int32, ValueRangeVector >   ColSpanVectorMap;
 
-    ColSpanVectorMap    maColSpans;             /// Buffereed column spans, mapped by row index.
+    ColSpanVectorMap    maColSpans;             /// Buffered column spans, mapped by row index.
     sal_Int32           mnCurrRow;              /// Current row index used for buffered cell import.
 };
 
@@ -127,6 +128,9 @@ public:
     void                createSharedFormula(
             const css::table::CellAddress& rRange,
             const ApiTokenSequence& rTokens);
+    void                createSharedFormula(
+            const ScAddress& rRange,
+            const ApiTokenSequence& rTokens);
 
     /** Inserts the passed token array as array formula. */
     void                createArrayFormula(
@@ -145,9 +149,13 @@ public:
     void                setStandardNumFmt(
                             const css::table::CellAddress& rCellAddr,
                             sal_Int16 nStdNumFmt );
-    /** Processes the cell formatting data of the passed cell.
-        @param nNumFmtId  If set, overrides number format of the cell XF. */
-    void                setCellFormat( const CellModel& rModel, sal_Int32 nNumFmtId = -1 );
+
+    void                setStandardNumFmt(
+                            const ScAddress& rCellAddr,
+                            sal_Int16 nStdNumFmt );
+
+    /** Processes the cell formatting data of the passed cell. */
+    void                setCellFormat( const CellModel& rModel );
 
     /** Final processing after the sheet has been imported. */
     void                finalizeImport();
@@ -157,12 +165,16 @@ public:
                             const css::table::CellAddress& rCellAddr,
                             const ApiTokenSequence& rTokens );
 
+    void                setCellFormula(
+                            const ScAddress& rCellAddr,
+                            const ApiTokenSequence& rTokens );
 private:
     struct XfIdRowRange;
 
     /** Creates a formula token array representing the shared formula with the
         passed identifier. */
     ApiTokenSequence    resolveSharedFormula( const css::table::CellAddress& rMapKey ) const;
+    ApiTokenSequence    resolveSharedFormula( const ScAddress& rMapKey ) const;
 
     /** Inserts the passed array formula into the sheet. */
     void                finalizeArrayFormula(
@@ -223,7 +235,9 @@ private:
 
         explicit            MergedRange( const css::table::CellRangeAddress& rRange );
         explicit            MergedRange( const css::table::CellAddress& rAddress, sal_Int32 nHorAlign );
+        explicit            MergedRange( const ScAddress& rAddress, sal_Int32 nHorAlign );
         bool                tryExpand( const css::table::CellAddress& rAddress, sal_Int32 nHorAlign );
+        bool                tryExpand( const ScAddress& rAddress, sal_Int32 nHorAlign );
     };
     typedef ::std::list< MergedRange > MergedRangeList;
 
@@ -233,9 +247,8 @@ private:
     TableOperationList  maTableOperations;      /// All table operations in the sheet.
     ::std::map< BinAddress, ApiTokenSequence >
                         maSharedFormulas;       /// Maps shared formula base address to defined name token index.
-    css::table::CellAddress
-                        maSharedFmlaAddr;       /// Address of a cell containing a pending shared formula.
-    css::table::CellAddress maSharedBaseAddr;       /// Base address of the pending shared formula.
+    ScAddress           maSharedFmlaAddr;       /// Address of a cell containing a pending shared formula.
+    ScAddress           maSharedBaseAddr;       /// Base address of the pending shared formula.
     XfIdRowRange        maXfIdRowRange;         /// Cached XF identifier for a range of rows.
     XfIdRangeListMap    maXfIdRangeLists;       /// Collected XF identifiers for cell rangelists.
     MergedRangeList     maMergedRanges;         /// Merged cell ranges.

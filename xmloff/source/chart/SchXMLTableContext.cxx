@@ -49,6 +49,7 @@
 
 #include <vector>
 #include <algorithm>
+#include <iterator>
 
 using namespace com::sun::star;
 using namespace ::xmloff::token;
@@ -245,7 +246,7 @@ SvXMLImportContext *SchXMLTableContext::CreateChildContext(
     {
         case XML_TOK_TABLE_HEADER_COLS:
             mrTable.bHasHeaderColumn = true;
-            // fall through intended
+            SAL_FALLTHROUGH;
         case XML_TOK_TABLE_COLUMNS:
             pContext = new SchXMLTableColumnsContext( GetImport(), rLocalName, mrTable );
             break;
@@ -256,7 +257,7 @@ SvXMLImportContext *SchXMLTableContext::CreateChildContext(
 
         case XML_TOK_TABLE_HEADER_ROWS:
             mrTable.bHasHeaderRow = true;
-            // fall through intended
+            SAL_FALLTHROUGH;
         case XML_TOK_TABLE_ROWS:
             pContext = new SchXMLTableRowsContext( mrImportHelper, GetImport(), rLocalName, mrTable );
             break;
@@ -740,7 +741,7 @@ static void lcl_ApplyCellToComplexLabel( const SchXMLCell& rCell, Sequence< uno:
 
 void SchXMLTableHelper::applyTableToInternalDataProvider(
     const SchXMLTable& rTable,
-    uno::Reference< chart2::XChartDocument > xChartDoc )
+    const uno::Reference< chart2::XChartDocument >& xChartDoc )
 {
     // apply all data read from the local table to the internal data provider
     if( !xChartDoc.is() || !xChartDoc->hasInternalDataProvider() )
@@ -822,8 +823,8 @@ void SchXMLTableHelper::applyTableToInternalDataProvider(
         try
         {
             Reference< beans::XPropertySet > xProps( xChartDoc, uno::UNO_QUERY_THROW );
-            xProps->setPropertyValue( "DisableDataTableDialog", uno::makeAny( sal_True ) );
-            xProps->setPropertyValue( "DisableComplexChartTypes", uno::makeAny( sal_True ) );
+            xProps->setPropertyValue( "DisableDataTableDialog", uno::makeAny( true ) );
+            xProps->setPropertyValue( "DisableComplexChartTypes", uno::makeAny( true ) );
         }
         catch ( uno::Exception& )
         {
@@ -834,7 +835,7 @@ void SchXMLTableHelper::applyTableToInternalDataProvider(
 void SchXMLTableHelper::switchRangesFromOuterToInternalIfNecessary(
     const SchXMLTable& rTable,
     const tSchXMLLSequencesPerIndex & rLSequencesPerIndex,
-    uno::Reference< chart2::XChartDocument > xChartDoc,
+    const uno::Reference< chart2::XChartDocument >& xChartDoc,
     chart::ChartDataRowSource eDataRowSource )
 {
     if( ! (xChartDoc.is() && xChartDoc->hasInternalDataProvider()))

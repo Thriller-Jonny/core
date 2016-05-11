@@ -65,7 +65,6 @@
 #include <com/sun/star/awt/FontWeight.hpp>
 #include <com/sun/star/awt/FontRelief.hpp>
 #include <com/sun/star/awt/FontWidth.hpp>
-#include <com/sun/star/frame/XModel.hpp>
 #include "TypeInfo.hxx"
 #include "FieldDescriptions.hxx"
 #include <comphelper/processfactory.hxx>
@@ -129,7 +128,6 @@ using namespace ::svt;
 using ::com::sun::star::ucb::InteractiveIOException;
 using ::com::sun::star::ucb::IOErrorCode_NO_FILE;
 using ::com::sun::star::ucb::IOErrorCode_NOT_EXISTING;
-using ::com::sun::star::frame::XModel;
 
 SQLExceptionInfo createConnection(  const OUString& _rsDataSourceName,
                                      const Reference< css::container::XNameAccess >& _xDatabaseContext,
@@ -209,7 +207,7 @@ SQLExceptionInfo createConnection(  const Reference< css::beans::XPropertySet>& 
 }
 
 Reference< XDataSource > getDataSourceByName( const OUString& _rDataSourceName,
-    vcl::Window* _pErrorMessageParent, Reference< XComponentContext > _rxContext, ::dbtools::SQLExceptionInfo* _pErrorInfo )
+    vcl::Window* _pErrorMessageParent, const Reference< XComponentContext >& _rxContext, ::dbtools::SQLExceptionInfo* _pErrorInfo )
 {
     Reference< XDatabaseContext > xDatabaseContext = DatabaseContext::create(_rxContext);
 
@@ -456,7 +454,7 @@ void fillTypeInfo(  const Reference< css::sdbc::XConnection>& _rxConnection,
                     nCount = 18;
                 aTypes.reserve(nCount+1);
                 aTypes.push_back(-1);
-                aNullable.push_back(sal_False);
+                aNullable.push_back(false);
                 for (sal_Int32 j = 1; j <= nCount ; ++j)
                 {
                     aTypes.push_back(xResultSetMetaData->getColumnType(j));
@@ -569,7 +567,7 @@ void fillTypeInfo(  const Reference< css::sdbc::XConnection>& _rxConnection,
                         aName = _rsTypeNames.getToken(TYPE_BIT, ';');
                         break;
                     }
-                    // run through
+                    SAL_FALLTHROUGH;
                 case DataType::BOOLEAN:
                     aName = _rsTypeNames.getToken(TYPE_BOOL, ';');
                     break;
@@ -634,7 +632,7 @@ void fillTypeInfo(  const Reference< css::sdbc::XConnection>& _rxConnection,
         _rTypeInfoIters.reserve(_rTypeInfoMap.size());
 
         OTypeInfoMap::iterator aIter = _rTypeInfoMap.begin();
-        OTypeInfoMap::iterator aEnd = _rTypeInfoMap.end();
+        OTypeInfoMap::const_iterator aEnd = _rTypeInfoMap.end();
         for(;aIter != aEnd;++aIter)
             _rTypeInfoIters.push_back(aIter);
 
@@ -696,7 +694,7 @@ OUString createDefaultName(const Reference< XDatabaseMetaData>& _xMetaData,const
         {
             sSchema = _xMetaData->getUserName();
         }
-        sCompsedName = ::dbtools::composeTableName( _xMetaData, sCatalog, sSchema, _sName, false, ::dbtools::eInDataManipulation );
+        sCompsedName = ::dbtools::composeTableName( _xMetaData, sCatalog, sSchema, _sName, false, ::dbtools::EComposeRule::InDataManipulation );
         sDefaultName = ::dbtools::createUniqueName(_xTables,sCompsedName);
     }
     catch(const SQLException&)
@@ -737,7 +735,7 @@ sal_Int32 mapTextAllign(const SvxCellHorJustify& _eAlignment)
     return nAlignment;
 }
 
-SvxCellHorJustify mapTextJustify(const sal_Int32& _nAlignment)
+SvxCellHorJustify mapTextJustify(sal_Int32 _nAlignment)
 {
     SvxCellHorJustify eJustify = SVX_HOR_JUSTIFY_LEFT;
     switch (_nAlignment)
@@ -799,11 +797,11 @@ bool callColumnFormatDialog(vcl::Window* _pParent,
     // UNO->ItemSet
     static SfxItemInfo aItemInfos[] =
     {
-        { 0, SfxItemPoolFlags::NONE },
-        { SID_ATTR_NUMBERFORMAT_VALUE,      SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_ALIGN_HOR_JUSTIFY,       SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_NUMBERFORMAT_ONE_AREA,   SfxItemPoolFlags::POOLABLE },
-        { SID_ATTR_NUMBERFORMAT_INFO,       SfxItemPoolFlags::POOLABLE }
+        { 0, false },
+        { SID_ATTR_NUMBERFORMAT_VALUE,      true },
+        { SID_ATTR_ALIGN_HOR_JUSTIFY,       true },
+        { SID_ATTR_NUMBERFORMAT_ONE_AREA,   true },
+        { SID_ATTR_NUMBERFORMAT_INFO,       true }
     };
     static const sal_uInt16 aAttrMap[] =
     {
@@ -893,15 +891,15 @@ bool callColumnFormatDialog(vcl::Window* _pParent,
 
     pFormatDescriptor.reset();
     SfxItemPool::Free(pPool);
-    for (sal_uInt16 i=0; i<sizeof(pDefaults)/sizeof(pDefaults[0]); ++i)
-        delete pDefaults[i];
+    for (SfxPoolItem* pDefault : pDefaults)
+        delete pDefault;
 
     return bRet;
 }
 
-const SfxFilter* getStandardDatabaseFilter()
+std::shared_ptr<const SfxFilter> getStandardDatabaseFilter()
 {
-    const SfxFilter* pFilter = SfxFilter::GetFilterByName("StarOffice XML (Base)");
+    std::shared_ptr<const SfxFilter> pFilter = SfxFilter::GetFilterByName("StarOffice XML (Base)");
     OSL_ENSURE(pFilter,"Filter: StarOffice XML (Base) could not be found!");
     return pFilter;
 }
@@ -1221,19 +1219,19 @@ TOTypeInfoSP queryTypeInfoByType(sal_Int32 _nDataType,const OTypeInfoMap& _rType
         case DataType::TINYINT:
             if( (pTypeInfo = queryTypeInfoByType(DataType::SMALLINT,_rTypeInfo) ) )
                 break;
-            // run through
+            SAL_FALLTHROUGH;
         case DataType::SMALLINT:
             if( (pTypeInfo = queryTypeInfoByType(DataType::INTEGER,_rTypeInfo) ) )
                 break;
-            // run through
+            SAL_FALLTHROUGH;
         case DataType::INTEGER:
             if( (pTypeInfo = queryTypeInfoByType(DataType::FLOAT,_rTypeInfo) ) )
                 break;
-            // run through
+            SAL_FALLTHROUGH;
         case DataType::FLOAT:
             if( (pTypeInfo = queryTypeInfoByType(DataType::REAL,_rTypeInfo) ) )
                 break;
-            // run through
+            SAL_FALLTHROUGH;
         case DataType::DATE:
         case DataType::TIME:
             if( DataType::DATE == _nDataType || DataType::TIME == _nDataType )
@@ -1241,17 +1239,17 @@ TOTypeInfoSP queryTypeInfoByType(sal_Int32 _nDataType,const OTypeInfoMap& _rType
                 if( (pTypeInfo = queryTypeInfoByType(DataType::TIMESTAMP,_rTypeInfo) ) )
                     break;
             }
-            // run through
+            SAL_FALLTHROUGH;
         case DataType::TIMESTAMP:
         case DataType::REAL:
         case DataType::BIGINT:
             if (  (pTypeInfo = queryTypeInfoByType(DataType::DOUBLE,_rTypeInfo) ) )
                 break;
-            // run through
+            SAL_FALLTHROUGH;
         case DataType::DOUBLE:
             if (  (pTypeInfo = queryTypeInfoByType(DataType::NUMERIC,_rTypeInfo) ) )
                 break;
-            // run through
+            SAL_FALLTHROUGH;
         case DataType::NUMERIC:
              pTypeInfo = queryTypeInfoByType(DataType::DECIMAL,_rTypeInfo);
             break;
@@ -1298,7 +1296,7 @@ sal_Int32 askForUserAction(vcl::Window* _pParent,sal_uInt16 _nTitle,sal_uInt16 _
 
 namespace
 {
-    static OUString lcl_createSDBCLevelStatement( const OUString& _rStatement, const Reference< XConnection >& _rxConnection )
+    OUString lcl_createSDBCLevelStatement( const OUString& _rStatement, const Reference< XConnection >& _rxConnection )
     {
         OUString sSDBCLevelStatement( _rStatement );
         try
@@ -1338,7 +1336,7 @@ Reference< XPropertySet > createView( const OUString& _rName, const Reference< X
                                         sCatalog,
                                         sSchema,
                                         sTable,
-                                        ::dbtools::eInDataManipulation);
+                                        ::dbtools::EComposeRule::InDataManipulation);
 
     xView->setPropertyValue(PROPERTY_CATALOGNAME,makeAny(sCatalog));
     xView->setPropertyValue(PROPERTY_SCHEMANAME,makeAny(sSchema));
@@ -1399,10 +1397,9 @@ bool insertHierachyElement( vcl::Window* _pParent, const Reference< XComponentCo
         return false;
 
     Reference<XNameAccess> xNameAccess( _xNames, UNO_QUERY );
-    OUString sName = _sParentFolder;
-    if ( _xNames->hasByHierarchicalName(sName) )
+    if ( _xNames->hasByHierarchicalName(_sParentFolder) )
     {
-        Reference<XChild> xChild(_xNames->getByHierarchicalName(sName),UNO_QUERY);
+        Reference<XChild> xChild(_xNames->getByHierarchicalName(_sParentFolder),UNO_QUERY);
         xNameAccess.set(xChild,UNO_QUERY);
         if ( !xNameAccess.is() && xChild.is() )
             xNameAccess.set(xChild->getParent(),UNO_QUERY);
@@ -1430,7 +1427,7 @@ bool insertHierachyElement( vcl::Window* _pParent, const Reference< XComponentCo
             sTargetName = ::dbtools::createUniqueName(xNameAccess,sTargetName);
 
             // here we have everything needed to create a new query object ...
-            HierarchicalNameCheck aNameChecker( _xNames.get(), sName );
+            HierarchicalNameCheck aNameChecker( _xNames.get(), _sParentFolder );
             // ... ehm, except a new name
             ScopedVclPtrInstance<OSaveAsDlg> aAskForName(
                                    _pParent,

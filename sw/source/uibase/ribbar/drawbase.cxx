@@ -247,9 +247,12 @@ bool SwDrawBase::MouseButtonUp(const MouseEvent& rMEvt)
     {
         const SdrObjKind nDrawMode = m_pWin->GetSdrDrawMode();
         //objects with multiple point may end at the start position
-        bool bMultiPoint = OBJ_PLIN == nDrawMode ||
-                                OBJ_PATHLINE == nDrawMode ||
-                                OBJ_FREELINE == nDrawMode;
+        bool bMultiPoint = OBJ_PLIN     == nDrawMode ||
+                           OBJ_POLY     == nDrawMode ||
+                           OBJ_PATHLINE == nDrawMode ||
+                           OBJ_PATHFILL == nDrawMode ||
+                           OBJ_FREELINE == nDrawMode ||
+                           OBJ_FREEFILL == nDrawMode;
         if(rMEvt.IsRight() || (aPnt == m_aStartPos && !bMultiPoint))
         {
             m_pSh->BreakCreate();
@@ -443,10 +446,11 @@ void SwDrawBase::Deactivate()
 
     m_pWin->SetDrawAction(false);
 
-    m_pWin->ReleaseMouse();
+    if (m_pWin->IsMouseCaptured())
+        m_pWin->ReleaseMouse();
     g_bNoInterrupt = false;
 
-    if(m_pWin->GetApplyTemplate())
+    if (m_pWin->GetApplyTemplate())
         m_pWin->SetApplyTemplate(SwApplyTemplate());
     m_pSh->GetView().GetViewFrame()->GetBindings().Invalidate(SID_INSERT_DRAW);
 }
@@ -617,7 +621,7 @@ Point  SwDrawBase::GetDefaultCenterPos()
 // #i33136#
 bool SwDrawBase::doConstructOrthogonal() const
 {
-    return false;
+    return ( m_nSlotId == SID_DRAW_XPOLYGON || m_nSlotId == SID_DRAW_XPOLYGON_NOFILL );
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

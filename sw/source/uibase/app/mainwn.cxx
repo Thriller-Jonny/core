@@ -66,9 +66,7 @@ void StartProgress( sal_uInt16 nMessResId, long nStartValue, long nEndValue,
             pProgress = new SwProgress;
             pProgress->pProgress = new SfxProgress( pDocShell,
                                                     SW_RESSTR(nMessResId),
-                                                    nEndValue - nStartValue,
-                                                    false,
-                                                    true );
+                                                    nEndValue - nStartValue );
             pProgress->nStartCount = 1;
             pProgress->pDocShell = pDocShell;
             pProgressContainer->insert( pProgressContainer->begin(), pProgress );
@@ -112,7 +110,10 @@ void EndProgress( SwDocShell *pDocShell )
             //#112337# it may happen that the container has been removed
             //while rescheduling
             if ( pProgressContainer && pProgressContainer->empty() )
-                delete pProgressContainer, pProgressContainer = nullptr;
+            {
+                delete pProgressContainer;
+                pProgressContainer = nullptr;
+            }
         }
     }
 }

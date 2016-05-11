@@ -112,6 +112,7 @@
 #include <com/sun/star/document/XDocumentPropertiesSupplier.hpp>
 
 #include <svl/cjkoptions.hxx>
+#include <comphelper/propertyvalue.hxx>
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
@@ -299,7 +300,6 @@ void SwView::SelectShell()
         if ( !( m_nSelectionType & nsSelectionType::SEL_FOC_FRM_CTRL ) )
             rDispatcher.Push( *m_pFormShell );
 
-        eShellMode = SHELL_MODE_NAVIGATION;
         m_pShell = new SwNavigationShell( *this );
         rDispatcher.Push( *m_pShell );
 
@@ -471,10 +471,10 @@ IMPL_LINK_NOARG_TYPED(SwView, AttrChangedNotify, SwCursorShell*, void)
     //Opt: Not if PaintLocked. During unlock a notify will be once more triggered.
     if( !m_pWrtShell->IsPaintLocked() && !g_bNoInterrupt &&
         GetDocShell()->IsReadOnly() )
-        _CheckReadonlyState();
+        CheckReadonlyState();
 
     if( !m_pWrtShell->IsPaintLocked() && !g_bNoInterrupt )
-        _CheckReadonlySelection();
+        CheckReadonlySelection();
 
     if( !m_bAttrChgNotified )
     {
@@ -523,8 +523,8 @@ IMPL_LINK_NOARG_TYPED(SwView, TimeoutHdl, Timer *, void)
         m_bAttrChgNotifiedWithRegistrations = false;
     }
 
-    _CheckReadonlyState();
-    _CheckReadonlySelection();
+    CheckReadonlyState();
+    CheckReadonlySelection();
 
     bool bOldUndo = m_pWrtShell->DoesUndo();
     m_pWrtShell->DoUndo( false );
@@ -534,7 +534,7 @@ IMPL_LINK_NOARG_TYPED(SwView, TimeoutHdl, Timer *, void)
     GetViewImpl()->GetUNOObject_Impl()->NotifySelChanged();
 }
 
-void SwView::_CheckReadonlyState()
+void SwView::CheckReadonlyState()
 {
     SfxDispatcher &rDis = GetDispatcher();
     // To be able to recognize if it is already disabled!
@@ -622,7 +622,7 @@ void SwView::_CheckReadonlyState()
         GetViewFrame()->GetBindings().InvalidateAll(true);
 }
 
-void SwView::_CheckReadonlySelection()
+void SwView::CheckReadonlySelection()
 {
     sal_uInt32 nDisableFlags = 0;
     SfxDispatcher &rDis = GetDispatcher();
@@ -707,12 +707,14 @@ SwView::SwView( SfxViewFrame *_pFrame, SfxViewShell* pOldSh )
     m_nLastPasteDestination( static_cast<SotExchangeDest>(0xFFFF) ),
     m_nLeftBorderDistance( 0 ),
     m_nRightBorderDistance( 0 ),
+    m_eLastSearchCommand( static_cast<SvxSearchCmd>(0xFFFF) ),
     m_bWheelScrollInProgress(false),
     m_bInMailMerge(false),
     m_bInDtor(false),
     m_bOldShellWasPagePreview(false),
     m_bIsPreviewDoubleClick(false),
-    m_bAnnotationMode(false)
+    m_bAnnotationMode(false),
+    m_nLOKPageUpDownOffset(0)
 {
     static bool bRequestDoubleBuffering = getenv("VCL_DOUBLEBUFFERING_ENABLE");
     if (bRequestDoubleBuffering)
@@ -732,8 +734,8 @@ SwView::SwView( SfxViewFrame *_pFrame, SfxViewShell* pOldSh )
 
     m_bShowAtResize = m_bDrawSelMode = bDocSzUpdated = true;
 
-    _CreateScrollbar( true );
-    _CreateScrollbar( false );
+    CreateScrollbar( true );
+    CreateScrollbar( false );
 
     m_pViewImpl = new SwView_Impl(this);
     SetName("View");
@@ -939,7 +941,7 @@ SwView::SwView( SfxViewFrame *_pFrame, SfxViewShell* pOldSh )
             SET_CURR_SHELL( m_pWrtShell );
             m_pWrtShell->StartAction();
             m_pWrtShell->CalcLayout();
-            m_pWrtShell->GetDoc()->getIDocumentFieldsAccess().UpdateFields(nullptr, false);
+            m_pWrtShell->GetDoc()->getIDocumentFieldsAccess().UpdateFields(false);
             m_pWrtShell->EndAction();
         }
         m_pWrtShell->GetDoc()->getIDocumentState().SetUpdateExpFieldStat( false );
@@ -977,7 +979,7 @@ SwView::SwView( SfxViewFrame *_pFrame, SfxViewShell* pOldSh )
         !pVFrame->GetChildWindow( SID_NAVIGATOR ))
     {
         SfxBoolItem aNavi(SID_NAVIGATOR, true);
-        GetDispatcher().Execute(SID_NAVIGATOR, SfxCallMode::ASYNCHRON, &aNavi, 0L);
+        GetDispatcher().ExecuteList(SID_NAVIGATOR, SfxCallMode::ASYNCHRON, { &aNavi });
     }
 
     uno::Reference< frame::XFrame >  xFrame = pVFrame->GetFrame().GetFrameInterface();
@@ -1233,13 +1235,13 @@ void SwView::ReadUserData( const OUString &rUserData, bool bBrowse )
     }
 }
 
-void SwView::ReadUserDataSequence ( const uno::Sequence < beans::PropertyValue >& rSequence, bool bBrowse )
+void SwView::ReadUserDataSequence ( const uno::Sequence < beans::PropertyValue >& rSequence )
 {
     if(GetDocShell()->IsPreview()||m_bIsPreviewDoubleClick)
         return;
     bool bIsOwnDocument = lcl_IsOwnDocument( *this );
     sal_Int32 nLength = rSequence.getLength();
-    if (nLength && (!m_pWrtShell->IsNewLayout() || m_pWrtShell->GetViewOptions()->getBrowseMode() || bBrowse) )
+    if (nLength)
     {
         SET_CURR_SHELL(m_pWrtShell);
         const beans::PropertyValue *pValue = rSequence.getConstArray();
@@ -1248,7 +1250,8 @@ void SwView::ReadUserDataSequence ( const uno::Sequence < beans::PropertyValue >
         const SwViewOption* pVOpt = m_pWrtShell->GetViewOptions();
 
         sal_Int64 nX = rRect.Left(), nY = rRect.Top(), nLeft = rVis.Left(), nTop = rVis.Top();
-        sal_Int64 nRight = bBrowse ? LONG_MIN : rVis.Right(), nBottom = bBrowse ? LONG_MIN : rVis.Bottom();
+        sal_Int64 nRight = LONG_MIN;
+        sal_Int64 nBottom = LONG_MIN;
         sal_Int16 nZoomType = static_cast< sal_Int16 >(pVOpt->GetZoomType());
         sal_Int16 nZoomFactor = static_cast < sal_Int16 > (pVOpt->GetZoom());
         bool bViewLayoutBookMode = pVOpt->IsViewLayoutBookMode();
@@ -1419,7 +1422,7 @@ void SwView::ReadUserDataSequence ( const uno::Sequence < beans::PropertyValue >
 // go to the last editing position when opening own files
                 if(m_bOldShellWasPagePreview||bIsOwnDocument)
                 {
-                    if ( bBrowse && bGotVisibleLeft && bGotVisibleTop )
+                    if ( bGotVisibleLeft && bGotVisibleTop )
                     {
                         Point aTopLeft(aVis.TopLeft());
                         // make sure the document is still centered
@@ -1449,73 +1452,44 @@ void SwView::ReadUserDataSequence ( const uno::Sequence < beans::PropertyValue >
     }
 }
 
-#define NUM_VIEW_SETTINGS 12
-void SwView::WriteUserDataSequence ( uno::Sequence < beans::PropertyValue >& rSequence, bool bBrowse )
+void SwView::WriteUserDataSequence ( uno::Sequence < beans::PropertyValue >& rSequence )
 {
     const SwRect& rRect = m_pWrtShell->GetCharRect();
     const Rectangle& rVis = GetVisArea();
 
-    rSequence.realloc ( NUM_VIEW_SETTINGS );
-    sal_Int16 nIndex = 0;
-    beans::PropertyValue *pValue = rSequence.getArray();
+    std::vector<beans::PropertyValue> aVector;
 
     sal_uInt16 nViewID( GetViewFrame()->GetCurViewId());
-    pValue->Name = "ViewId";
     OUStringBuffer sBuffer ( OUString( "view" ) );
     ::sax::Converter::convertNumber(sBuffer, static_cast<sal_Int32>(nViewID));
-    pValue->Value <<= sBuffer.makeStringAndClear();
-    pValue++;nIndex++;
+    aVector.push_back(comphelper::makePropertyValue("ViewId", sBuffer.makeStringAndClear()));
 
-    pValue->Name = "ViewLeft";
-    pValue->Value <<= convertTwipToMm100 ( rRect.Left() );
-    pValue++;nIndex++;
+    aVector.push_back(comphelper::makePropertyValue("ViewLeft", convertTwipToMm100 ( rRect.Left() )));
 
-    pValue->Name = "ViewTop";
-    pValue->Value <<= convertTwipToMm100 ( rRect.Top() );
-    pValue++;nIndex++;
+    aVector.push_back(comphelper::makePropertyValue("ViewTop", convertTwipToMm100 ( rRect.Top() )));
 
-    pValue->Name = "VisibleLeft";
-    pValue->Value <<= convertTwipToMm100 ( rVis.Left() );
-    pValue++;nIndex++;
+    aVector.push_back(comphelper::makePropertyValue("VisibleLeft", convertTwipToMm100 ( rVis.Left() )));
 
-    pValue->Name = "VisibleTop";
-    pValue->Value <<= convertTwipToMm100 ( rVis.Top() );
-    pValue++;nIndex++;
+    aVector.push_back(comphelper::makePropertyValue("VisibleTop", convertTwipToMm100 ( rVis.Top() )));
 
-    pValue->Name = "VisibleRight";
-    pValue->Value <<= convertTwipToMm100 ( bBrowse ? LONG_MIN : rVis.Right() );
-    pValue++;nIndex++;
+    aVector.push_back(comphelper::makePropertyValue("VisibleRight", convertTwipToMm100 ( rVis.Right() )));
 
-    pValue->Name = "VisibleBottom";
-    pValue->Value <<= convertTwipToMm100 ( bBrowse ? LONG_MIN : rVis.Bottom() );
-    pValue++;nIndex++;
+    aVector.push_back(comphelper::makePropertyValue("VisibleBottom", convertTwipToMm100 ( rVis.Bottom() )));
 
-    pValue->Name = "ZoomType";
     const sal_Int16 nZoomType = static_cast< sal_Int16 >(m_pWrtShell->GetViewOptions()->GetZoomType());
-    pValue->Value <<= nZoomType;
-    pValue++;nIndex++;
+    aVector.push_back(comphelper::makePropertyValue("ZoomType", nZoomType));
 
-    pValue->Name = "ViewLayoutColumns";
     const sal_Int16 nViewLayoutColumns = static_cast< sal_Int16 >(m_pWrtShell->GetViewOptions()->GetViewLayoutColumns());
-    pValue->Value <<= nViewLayoutColumns;
-    pValue++;nIndex++;
+    aVector.push_back(comphelper::makePropertyValue("ViewLayoutColumns", nViewLayoutColumns));
 
-    pValue->Name = "ViewLayoutBookMode";
-    pValue->Value <<= m_pWrtShell->GetViewOptions()->IsViewLayoutBookMode();
-    pValue++;nIndex++;
+    aVector.push_back(comphelper::makePropertyValue("ViewLayoutBookMode", m_pWrtShell->GetViewOptions()->IsViewLayoutBookMode()));
 
-    pValue->Name = "ZoomFactor";
-    pValue->Value <<= static_cast < sal_Int16 > (m_pWrtShell->GetViewOptions()->GetZoom());
-    pValue++;nIndex++;
+    aVector.push_back(comphelper::makePropertyValue("ZoomFactor", static_cast < sal_Int16 > (m_pWrtShell->GetViewOptions()->GetZoom())));
 
-    pValue->Name = "IsSelectedFrame";
-    pValue->Value <<= FrameTypeFlags::NONE != m_pWrtShell->GetSelFrameType();
-    nIndex++;
+    aVector.push_back(comphelper::makePropertyValue("IsSelectedFrame", FrameTypeFlags::NONE != m_pWrtShell->GetSelFrameType()));
 
-    assert(nIndex == NUM_VIEW_SETTINGS);
-    (void)nIndex;
+    rSequence = comphelper::containerToSequence(aVector);
 }
-#undef NUM_VIEW_SETTINGS
 
 void SwView::ShowCursor( bool bOn )
 {
@@ -1602,7 +1576,7 @@ void SwView::Notify( SfxBroadcaster& rBC, const SfxHint& rHint )
                     m_pVRuler->SetActive( !bModal );
                 }
 
-                /* no break here */
+                SAL_FALLTHROUGH;
 
             case SFX_HINT_TITLECHANGED:
                 if ( GetDocShell()->IsReadOnly() != GetWrtShell().GetViewOptions()->IsReadonly() )
@@ -1631,8 +1605,8 @@ void SwView::Notify( SfxBroadcaster& rBC, const SfxHint& rHint )
                         }
                     }
                     SfxBoolItem aItem( SID_FM_DESIGN_MODE, !bReadonly);
-                    GetDispatcher().Execute( SID_FM_DESIGN_MODE, SfxCallMode::ASYNCHRON,
-                                                &aItem, 0L );
+                    GetDispatcher().ExecuteList(SID_FM_DESIGN_MODE,
+                            SfxCallMode::ASYNCHRON, { &aItem });
                 }
                 break;
 
@@ -1644,8 +1618,8 @@ void SwView::Notify( SfxBroadcaster& rBC, const SfxHint& rHint )
                         GetFormShell()->SetView(
                             dynamic_cast<FmFormView*>( GetWrtShell().GetDrawView())  );
                         SfxBoolItem aItem( SID_FM_DESIGN_MODE, !GetDocShell()->IsReadOnly());
-                        GetDispatcher().Execute( SID_FM_DESIGN_MODE, SfxCallMode::SYNCHRON,
-                                                  &aItem, 0L );
+                        GetDispatcher().ExecuteList(SID_FM_DESIGN_MODE,
+                                SfxCallMode::SYNCHRON, { &aItem });
                     }
                 }
                 break;
@@ -1667,7 +1641,7 @@ void SwView::Notify( SfxBroadcaster& rBC, const SfxHint& rHint )
         SfxViewShell::Notify(rBC, rHint);
 }
 
-#if defined WNT || defined UNX
+#if defined(_WIN32) || defined UNX
 
 void SwView::ScannerEventHdl( const EventObject& /*rEventObject*/ )
 {

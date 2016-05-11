@@ -24,7 +24,7 @@
 
 #include <map>
 
-#ifdef WNT
+#ifdef _WIN32
 #include <windows.h>
 #include <winldap.h>
 #else // !defined WNT
@@ -72,7 +72,7 @@ struct LdapDefinition
 
 typedef std::map< OUString, OUString > LdapData; // key/value pairs
 
-/** Class encapulating all LDAP functionality */
+/** Class encapsulating all LDAP functionality */
 class LdapConnection
 {
     friend struct LdapMessageHolder;

@@ -13,6 +13,38 @@ $(eval $(call gb_UIConfig_add_menubarfiles,modules/simpress,\
 	sd/uiconfig/simpress/menubar/menubar \
 ))
 
+$(eval $(call gb_UIConfig_add_popupmenufiles,modules/simpress,\
+	sd/uiconfig/simpress/popupmenu/3dobject \
+	sd/uiconfig/simpress/popupmenu/3dscene2 \
+	sd/uiconfig/simpress/popupmenu/3dscene \
+	sd/uiconfig/simpress/popupmenu/bezier \
+	sd/uiconfig/simpress/popupmenu/connector \
+	sd/uiconfig/simpress/popupmenu/curve \
+	sd/uiconfig/simpress/popupmenu/drawtext \
+	sd/uiconfig/simpress/popupmenu/draw \
+	sd/uiconfig/simpress/popupmenu/form \
+	sd/uiconfig/simpress/popupmenu/formrichtext \
+	sd/uiconfig/simpress/popupmenu/gluepoint \
+	sd/uiconfig/simpress/popupmenu/graphic \
+	sd/uiconfig/simpress/popupmenu/group \
+	sd/uiconfig/simpress/popupmenu/line \
+	sd/uiconfig/simpress/popupmenu/measure \
+	sd/uiconfig/simpress/popupmenu/media \
+	sd/uiconfig/simpress/popupmenu/multiselect \
+	sd/uiconfig/simpress/popupmenu/oleobject \
+	sd/uiconfig/simpress/popupmenu/outlinetext \
+	sd/uiconfig/simpress/popupmenu/outline \
+	sd/uiconfig/simpress/popupmenu/pagepanemaster \
+	sd/uiconfig/simpress/popupmenu/pagepanenoselmaster \
+	sd/uiconfig/simpress/popupmenu/pagepanenosel \
+	sd/uiconfig/simpress/popupmenu/pagepane \
+	sd/uiconfig/simpress/popupmenu/pagetab \
+	sd/uiconfig/simpress/popupmenu/page \
+	sd/uiconfig/simpress/popupmenu/tabletext \
+	sd/uiconfig/simpress/popupmenu/table \
+	sd/uiconfig/simpress/popupmenu/textbox \
+))
+
 $(eval $(call gb_UIConfig_add_statusbarfiles,modules/simpress,\
 	sd/uiconfig/simpress/statusbar/statusbar \
 ))
@@ -26,6 +58,7 @@ $(eval $(call gb_UIConfig_add_toolbarfiles,modules/simpress,\
 	sd/uiconfig/simpress/toolbar/bezierobjectbar \
 	sd/uiconfig/simpress/toolbar/calloutshapes \
 	sd/uiconfig/simpress/toolbar/choosemodebar \
+	sd/uiconfig/simpress/toolbar/classificationbar \
 	sd/uiconfig/simpress/toolbar/colorbar \
 	sd/uiconfig/simpress/toolbar/commentsbar \
 	sd/uiconfig/simpress/toolbar/commontaskbar \
@@ -71,8 +104,6 @@ $(eval $(call gb_UIConfig_add_toolbarfiles,modules/simpress,\
 
 $(eval $(call gb_UIConfig_add_uifiles,modules/simpress,\
 	sd/uiconfig/simpress/ui/assistentdialog \
-	sd/uiconfig/simpress/ui/customanimationcreatedialog \
-	sd/uiconfig/simpress/ui/customanimationcreatetab \
 	sd/uiconfig/simpress/ui/customanimationspanel \
 	sd/uiconfig/simpress/ui/customanimationproperties \
 	sd/uiconfig/simpress/ui/customanimationeffecttab \
@@ -96,6 +127,7 @@ $(eval $(call gb_UIConfig_add_uifiles,modules/simpress,\
 	sd/uiconfig/simpress/ui/publishingdialog \
 	sd/uiconfig/simpress/ui/remotedialog \
 	sd/uiconfig/simpress/ui/sdviewpage \
+	sd/uiconfig/simpress/ui/sidebarslidebackground \
 	sd/uiconfig/simpress/ui/slidedesigndialog \
 	sd/uiconfig/simpress/ui/slidetransitionspanel \
 	sd/uiconfig/simpress/ui/tabledesignpanel \

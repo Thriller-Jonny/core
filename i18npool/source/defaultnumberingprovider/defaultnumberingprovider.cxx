@@ -318,8 +318,8 @@ OUString toRoman( sal_Int32 n )
         }
         switch( nZahl )
         {
-            case 3: sTmp.append(*cRomanStr);           //no break!
-            case 2: sTmp.append(*cRomanStr);           //no break!
+            case 3: sTmp.append(*cRomanStr);           SAL_FALLTHROUGH;
+            case 2: sTmp.append(*cRomanStr);           SAL_FALLTHROUGH;
             case 1: sTmp.append(*cRomanStr);           break;
             case 4: sTmp.append(*cRomanStr).append(*(cRomanStr-nDiff)); break;
             case 5: sTmp.append(*(cRomanStr-nDiff));   break;
@@ -650,7 +650,7 @@ DefaultNumberingProvider::makeNumberingString( const Sequence<beans::PropertyVal
                     translit->loadModuleByImplName(transliteration, aLocale);
                     result += translit->transliterateString2String(tmp, 0, tmp.getLength());
                } catch (Exception& ) {
-                    // When translteration property is missing, return default number (bug #101141#)
+                    // When transliteration property is missing, return default number (bug #101141#)
                     result += OUString::number( number );
                     // OSL_ASSERT(0);
                     // throw IllegalArgumentException();
@@ -946,9 +946,11 @@ static const sal_Int32 nSupported_NumberingTypes = sizeof(aSupportedTypes) / siz
 OUString DefaultNumberingProvider::makeNumberingIdentifier(sal_Int16 index)
                                 throw(RuntimeException, std::exception)
 {
+    if (index < 0 || index >= nSupported_NumberingTypes)
+        throw RuntimeException();
+
     if (aSupportedTypes[index].cSymbol)
         return OUString(aSupportedTypes[index].cSymbol, strlen(aSupportedTypes[index].cSymbol), RTL_TEXTENCODING_UTF8);
-    //            return OUString::createFromAscii(aSupportedTypes[index].cSymbol);
     else {
         OUString result;
         Locale aLocale(OUString("en"), OUString(), OUString());
@@ -979,7 +981,7 @@ DefaultNumberingProvider::isScriptFlagEnabled(const OUString& aName) throw(Runti
         Sequence< Any > aArgs(1);
         beans::PropertyValue aPath;
         aPath.Name = "nodepath";
-        aPath.Value <<= OUString("/org.openoffice.Office.Common/I18N"),
+        aPath.Value <<= OUString("/org.openoffice.Office.Common/I18N");
         aArgs[0] <<= aPath;
 
         Reference<XInterface> xInterface = xConfigProvider->createInstanceWithArguments(
@@ -1032,8 +1034,8 @@ sal_Bool DefaultNumberingProvider::hasNumberingType( const OUString& rNumberingI
 {
     for(sal_Int16 i = 0; i < nSupported_NumberingTypes; i++)
         if(rNumberingIdentifier.equals(makeNumberingIdentifier(i)))
-            return sal_True;
-    return sal_False;
+            return true;
+    return false;
 }
 
 OUString DefaultNumberingProvider::getNumberingIdentifier( sal_Int16 nNumberingType )

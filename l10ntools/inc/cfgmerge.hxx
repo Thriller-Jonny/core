@@ -30,7 +30,6 @@
 typedef std::unordered_map<OString, OString, OStringHash> OStringHashMap;
 
 
-
 // class CfgStackData
 
 
@@ -115,7 +114,7 @@ protected:
     static void Error(const OString &rError);
 
 private:
-    int ExecuteAnalyzedToken( int nToken, char *pToken );
+    void ExecuteAnalyzedToken( int nToken, char *pToken );
     void AddText(
         OString &rText,
         const OString &rIsoLang,
@@ -127,7 +126,7 @@ public:
     CfgParser();
     virtual ~CfgParser();
 
-    int Execute( int nToken, char * pToken );
+    void Execute( int nToken, char * pToken );
 };
 
 /// Export strings from *.xcu files

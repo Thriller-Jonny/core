@@ -236,7 +236,7 @@ void XclImpStringHelper::SetToDocument(
     }
     else
     {
-        OUString aStr = rString.GetText();
+        const OUString& aStr = rString.GetText();
         if (aStr.indexOf('\n') != -1 || aStr.indexOf(CHAR_CR) != -1)
         {
             // Multiline content.
@@ -405,7 +405,7 @@ void XclImpHFConverter::ParseString( const OUString& rHFString )
                 {
                     case '\"':
                         --pChar;
-                        // run through
+                        SAL_FALLTHROUGH;
                     case ',':
                         eState = xlPSFontStyle;
                     break;
@@ -688,7 +688,7 @@ void XclImpUrlHelper::DecodeUrl(
                             lclAppendUrlChar( rUrl, cCurrDrive );
                             rUrl += ":";
                         }
-                        // run through
+                        SAL_FALLTHROUGH;
                     case EXC_URL_SUBDIR:
                         if( bEncoded )
                             rUrl += "\\";

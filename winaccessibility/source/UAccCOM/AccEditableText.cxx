@@ -21,8 +21,16 @@
  * AccEditableText.cpp : Implementation of CUAccCOMApp and DLL registration.
  */
 #include "stdafx.h"
-#include "UAccCOM.h"
 #include "AccEditableText.h"
+
+#if defined __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnon-virtual-dtor"
+#endif
+#include  "UAccCOM.h"
+#if defined __clang__
+#pragma clang diagnostic pop
+#endif
 
 #include <vcl/svapp.hxx>
 
@@ -279,8 +287,7 @@ void CAccEditableText::get_AnyFromOLECHAR(const ::rtl::OUString &ouName, const :
             ouName.equals(L"CharContoured") )
     {
         // Convert to boolean.
-        boolean nValue = (boolean)ouValue.toBoolean();
-        rAny.setValue(&nValue, cppu::UnoType<sal_Bool>::get() );
+        rAny <<= ouValue.toBoolean();
     }
     else if(ouName.equals(L"CharEscapement") ||
             ouName.equals(L"CharStrikeout")  ||

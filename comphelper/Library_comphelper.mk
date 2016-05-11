@@ -60,6 +60,7 @@ $(eval $(call gb_Library_add_exception_objects,comphelper,\
     comphelper/source/container/NamedPropertyValuesContainer \
     comphelper/source/container/container \
     comphelper/source/container/containermultiplexer \
+	comphelper/source/container/interfacecontainer2 \
     comphelper/source/container/embeddedobjectcontainer \
     comphelper/source/container/enumerablemap \
     comphelper/source/container/enumhelper \
@@ -75,7 +76,6 @@ $(eval $(call gb_Library_add_exception_objects,comphelper,\
     comphelper/source/misc/accimplaccess \
     comphelper/source/misc/anytostring \
     comphelper/source/misc/asyncnotification \
-    comphelper/source/misc/compareversionstrings \
     comphelper/source/misc/comphelper_module \
     comphelper/source/misc/comphelper_services \
     comphelper/source/misc/componentbase \
@@ -111,6 +111,7 @@ $(eval $(call gb_Library_add_exception_objects,comphelper,\
     comphelper/source/misc/servicedecl \
     comphelper/source/misc/serviceinfohelper \
     comphelper/source/misc/sharedmutex \
+    comphelper/source/misc/simplefileaccessinteraction \
     comphelper/source/misc/solarmutex \
     comphelper/source/misc/stillreadwriteinteraction \
     comphelper/source/misc/anycompare \

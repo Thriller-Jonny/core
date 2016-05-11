@@ -29,7 +29,7 @@
 #include <osl/file.hxx>
 #include <sal/macros.h>
 
-#ifdef WNT
+#ifdef _WIN32
 #ifdef _MSC_VER
 #pragma warning(push,1) // disable warnings within system headers
 #pragma warning(disable: 4917)
@@ -145,7 +145,7 @@ UpdateCheckROModel::getUpdateEntry(UpdateInfo& rInfo) const
     rInfo.Version = getStringValue(UPDATE_VERSION);
     rInfo.Description = getStringValue(UPDATE_DESCRIPTION);
 
-    sal_Bool isDirectDownload = sal_False;
+    bool isDirectDownload = false;
     m_aNameAccess.getValue(IS_DIRECT_DOWNLOAD) >>= isDirectDownload;
 
     rInfo.Sources.push_back( DownloadSource( isDirectDownload, getStringValue(DOWNLOAD_URL) ) );
@@ -164,7 +164,7 @@ OUString UpdateCheckConfig::getDesktopDirectory()
 {
     OUString aRet;
 
-#ifdef WNT
+#ifdef _WIN32
     WCHAR szPath[MAX_PATH];
 
     if (TRUE == SHGetSpecialFolderPathW(nullptr, szPath, CSIDL_DESKTOPDIRECTORY, true))
@@ -191,7 +191,7 @@ OUString UpdateCheckConfig::getAllUsersDirectory()
 {
     OUString aRet;
 
-#ifdef WNT
+#ifdef _WIN32
     WCHAR szPath[MAX_PATH];
 
     if (TRUE == SHGetSpecialFolderPathW(nullptr, szPath, CSIDL_COMMON_DOCUMENTS, true))
@@ -253,7 +253,7 @@ UpdateCheckConfig::get(
 bool
 UpdateCheckConfig::isAutoCheckEnabled() const
 {
-    sal_Bool nValue = sal_False;
+    bool nValue = false;
     const_cast < UpdateCheckConfig *> (this)->getByName( AUTOCHECK_ENABLED ) >>= nValue;
     return nValue;
 }
@@ -261,7 +261,7 @@ UpdateCheckConfig::isAutoCheckEnabled() const
 bool
 UpdateCheckConfig::isAutoDownloadEnabled() const
 {
-    sal_Bool nValue = sal_False;
+    bool nValue = false;
     const_cast < UpdateCheckConfig *> (this)->getByName( AUTODOWNLOAD_ENABLED ) >>= nValue;
     return nValue;
 }
@@ -346,10 +346,10 @@ UpdateCheckConfig::clearLocalFileName()
     const sal_uInt8 nItems = 2;
     const OUString aNameList[nItems] = { OUString(LOCAL_FILE), OUString(DOWNLOAD_SIZE) };
 
-    for( sal_uInt8 i=0; i < nItems; ++i )
+    for(const auto & i : aNameList)
     {
-        if( m_xContainer->hasByName(aNameList[i]) )
-            m_xContainer->removeByName(aNameList[i]);
+        if( m_xContainer->hasByName(i) )
+            m_xContainer->removeByName(i);
     }
 
     commitChanges();
@@ -413,9 +413,9 @@ UpdateCheckConfig::clearUpdateFound()
 {
     OUString aName;
 
-    for( sal_uInt32 n=0; n < nUpdateEntryProperties; ++n )
+    for(const char* aUpdateEntryPropertie : aUpdateEntryProperties)
     {
-        aName = OUString::createFromAscii(aUpdateEntryProperties[n]);
+        aName = OUString::createFromAscii(aUpdateEntryPropertie);
 
         try {
             if( m_xContainer->hasByName(aName) )
@@ -520,7 +520,7 @@ UpdateCheckConfig::commitChanges()
                 aChangesSet[i].Accessor >>= aString;
                 if( aString.endsWith(AUTOCHECK_ENABLED "']") )
                 {
-                    sal_Bool bEnabled = sal_False;
+                    bool bEnabled = false;
                     aChangesSet[i].Element >>= bEnabled;
                     m_rListener->autoCheckStatusChanged(bEnabled);
                 }
@@ -551,7 +551,7 @@ UpdateCheckConfig::hasPendingChanges(  ) throw (uno::RuntimeException, std::exce
     if( xChangesBatch.is() )
         return xChangesBatch->hasPendingChanges();
 
-    return sal_False;
+    return false;
 }
 
 uno::Sequence< util::ElementChange > SAL_CALL

@@ -19,7 +19,8 @@
 
 #include <config_features.h>
 
-#include <com/sun/star/util/SearchOptions.hpp>
+#include <com/sun/star/util/SearchOptions2.hpp>
+#include <com/sun/star/util/SearchAlgorithms2.hpp>
 #include <com/sun/star/util/SearchFlags.hpp>
 #include <com/sun/star/i18n/TransliterationModules.hpp>
 #include <vcl/graphicfilter.hxx>
@@ -215,7 +216,7 @@ OUString SwView::GetPageStr(sal_uInt16 nPhyNum, sal_uInt16 nVirtNum, const OUStr
 
 int SwView::InsertGraphic( const OUString &rPath, const OUString &rFilter,
                                 bool bLink, GraphicFilter *pFilter,
-                                Graphic* pPreviewGrf, bool bRule )
+                                Graphic* pPreviewGrf )
 {
     SwWait aWait( *GetDocShell(), true );
 
@@ -249,7 +250,7 @@ int SwView::InsertGraphic( const OUString &rPath, const OUString &rFilter,
             }
         }
 
-        SwFlyFrameAttrMgr aFrameManager( true, GetWrtShellPtr(), FRMMGR_TYPE_GRF );
+        SwFlyFrameAttrMgr aFrameManager( true, GetWrtShellPtr(), Frmmgr_Type::GRF );
         SwWrtShell& rShell = GetWrtShell();
 
         // #i123922# determine if we really want to insert or replace the graphic at a selected object
@@ -277,8 +278,7 @@ int SwView::InsertGraphic( const OUString &rPath, const OUString &rFilter,
                 OUString sURL = URIHelper::SmartRel2Abs(
                     aTemp, rPath, URIHelper::GetMaybeFileHdl() );
 
-                rShell.Insert( sURL,
-                            rFilter, aGraphic, &aFrameManager, bRule );
+                rShell.Insert( sURL, rFilter, aGraphic, &aFrameManager );
             }
             else
             {
@@ -308,7 +308,7 @@ bool SwView::InsertGraphicDlg( SfxRequest& rReq )
     if(nHtmlMode & HTMLMODE_ON)
     {
         xCtrlAcc->setValue( ExtendedFilePickerElementIds::CHECKBOX_LINK, 0, makeAny(true));
-        xCtrlAcc->enableControl( ExtendedFilePickerElementIds::CHECKBOX_LINK, sal_False);
+        xCtrlAcc->enableControl( ExtendedFilePickerElementIds::CHECKBOX_LINK, false);
     }
 
     std::vector<OUString> aFormats;
@@ -799,7 +799,6 @@ void SwView::Execute(SfxRequest &rReq)
             }
         break;
         case FN_SYNC_LABELS:
-        case FN_MAILMERGE_CHILDWINDOW:
             GetViewFrame()->ShowChildWindow(nSlot);
         break;
         case FN_ESCAPE:
@@ -861,7 +860,8 @@ void SwView::Execute(SfxRequest &rReq)
             else
             {
                 SfxBoolItem aItem( SID_WIN_FULLSCREEN, false );
-                GetViewFrame()->GetDispatcher()->Execute( SID_WIN_FULLSCREEN, SfxCallMode::RECORD, &aItem, 0L );
+                GetViewFrame()->GetDispatcher()->ExecuteList(SID_WIN_FULLSCREEN,
+                        SfxCallMode::RECORD, { &aItem });
                 bIgnore = true;
             }
         }
@@ -991,7 +991,7 @@ void SwView::Execute(SfxRequest &rReq)
             m_pShell->ExecuteSlot(rReq);
         }
         break;
-#if defined WNT || defined UNX
+#if defined(_WIN32) || defined UNX
         case SID_TWAIN_SELECT:
         case SID_TWAIN_TRANSFER:
             GetViewImpl()->ExecuteScan( rReq );
@@ -1114,7 +1114,7 @@ void SwView::Execute(SfxRequest &rReq)
                     pValues[0].Value <<= aData.sDataSource;
                     pValues[1].Value <<= aData.sCommand;
                     pValues[2].Value <<= aData.nCommandType;
-                    pDBManager->ExecuteFormLetter(rSh, aProperties, true);
+                    pDBManager->ExecuteFormLetter(rSh, aProperties);
                 }
             }
 #endif
@@ -1158,8 +1158,8 @@ void SwView::Execute(SfxRequest &rReq)
                 xDictionary->clear();
             // put cursor to the start of the document
             m_pWrtShell->SttDoc();
+            SAL_FALLTHROUGH; // call spell/grammar dialog
         }
-        // no break; - but call spell/grammar dialog
         case FN_SPELL_GRAMMAR_DIALOG:
         {
             SfxViewFrame* pViewFrame = GetViewFrame();
@@ -1214,8 +1214,8 @@ void SwView::Execute(SfxRequest &rReq)
             if(nAlias && (m_nSelectionType & (nsSelectionType::SEL_DRW)))
             {
                 SfxAllEnumItem aEnumItem(SID_OBJECT_ALIGN, nAlias - SID_OBJECT_ALIGN_LEFT);
-                GetViewFrame()->GetDispatcher()->Execute(
-                                SID_OBJECT_ALIGN, SfxCallMode::ASYNCHRON, &aEnumItem, 0L);
+                GetViewFrame()->GetDispatcher()->ExecuteList(SID_OBJECT_ALIGN,
+                        SfxCallMode::ASYNCHRON, { &aEnumItem });
             }
             else if(nAlias)
             //these slots are either re-mapped to text or object alignment
@@ -1364,7 +1364,7 @@ void SwView::StateStatusLine(SfxItemSet &rSet)
             case FN_STAT_TEMPLATE:
             {
                 rSet.Put(SfxStringItem( FN_STAT_TEMPLATE,
-                                        rShell.GetCurPageStyle(false)));
+                                        rShell.GetCurPageStyle()));
 
             }
             break;
@@ -1467,7 +1467,7 @@ void SwView::StateStatusLine(SfxItemSet &rSet)
             case SID_ATTR_SIZE:
             {
                 if( !rShell.IsFrameSelected() && !rShell.IsObjSelected() )
-                    SwBaseShell::_SetFrameMode( FLY_DRAG_END );
+                    SwBaseShell::SetFrameMode_( FLY_DRAG_END );
                 else
                 {
                     FlyMode eFrameMode = SwBaseShell::GetFrameMode();
@@ -1881,7 +1881,7 @@ void SwView::InsFrameMode(sal_uInt16 nCols)
 {
     if ( m_pWrtShell->HasWholeTabSelection() )
     {
-        SwFlyFrameAttrMgr aMgr( true, m_pWrtShell, FRMMGR_TYPE_TEXT );
+        SwFlyFrameAttrMgr aMgr( true, m_pWrtShell, Frmmgr_Type::TEXT );
 
         const SwFrameFormat &rPageFormat =
                 m_pWrtShell->GetPageDesc(m_pWrtShell->GetCurPageDesc()).GetMaster();
@@ -1924,9 +1924,9 @@ bool SwView::JumpToSwMark( const OUString& rMark )
         SetCursorAtTop( true );
 
         // For scrolling the FrameSet, the corresponding shell needs to have the focus.
-        bool bHasShFocus = m_pWrtShell->HasShFcs();
+        bool bHasShFocus = m_pWrtShell->HasShellFocus();
         if( !bHasShFocus )
-            m_pWrtShell->ShGetFcs( false );
+            m_pWrtShell->ShellGetFocus();
 
         const SwFormatINetFormat* pINet;
         OUString sCmp;
@@ -1986,12 +1986,14 @@ bool SwView::JumpToSwMark( const OUString& rMark )
                 // normal text search
                 m_pWrtShell->EnterStdMode();
 
-                SearchOptions aSearchOpt(
+                SearchOptions2 aSearchOpt(
                                     SearchAlgorithms_ABSOLUTE, 0,
                                     sName, OUString(),
                                     SvtSysLocale().GetLanguageTag().getLocale(),
                                     0,0,0,
-                                    TransliterationModules_IGNORE_CASE );
+                                    TransliterationModules_IGNORE_CASE,
+                                    SearchAlgorithms2::ABSOLUTE,
+                                    '\\' );
 
                 //todo/mba: assuming that notes shouldn't be searched
                 bool bSearchInNotes = false;
@@ -2002,7 +2004,10 @@ bool SwView::JumpToSwMark( const OUString& rMark )
                 }
             }
             else if( pMarkAccess->getAllMarksEnd() != (ppMark = pMarkAccess->findMark(sMark)) )
-                m_pWrtShell->GotoMark( ppMark->get(), false, true ), bRet = true;
+            {
+                m_pWrtShell->GotoMark( ppMark->get(), false );
+                bRet = true;
+            }
             else if( nullptr != ( pINet = m_pWrtShell->FindINetAttr( sMark ) )) {
                 m_pWrtShell->addCurrentPosition();
                 bRet = m_pWrtShell->GotoINetAttr( *pINet->GetTextINetFormat() );
@@ -2026,7 +2031,10 @@ bool SwView::JumpToSwMark( const OUString& rMark )
             }
         }
         else if( pMarkAccess->getAllMarksEnd() != (ppMark = pMarkAccess->findMark(sMark)))
-            m_pWrtShell->GotoMark( ppMark->get(), false, true ), bRet = true;
+        {
+            m_pWrtShell->GotoMark( ppMark->get(), false );
+            bRet = true;
+        }
         else if( nullptr != ( pINet = m_pWrtShell->FindINetAttr( sMark ) ))
             bRet = m_pWrtShell->GotoINetAttr( *pINet->GetTextINetFormat() );
 
@@ -2038,7 +2046,7 @@ bool SwView::JumpToSwMark( const OUString& rMark )
         SetCursorAtTop( bSaveCT, bSaveCC );
 
         if( !bHasShFocus )
-            m_pWrtShell->ShLooseFcs();
+            m_pWrtShell->ShellLoseFocus();
     }
     return bRet;
 }
@@ -2101,13 +2109,13 @@ long SwView::InsertDoc( sal_uInt16 nSlotId, const OUString& rFileName, const OUS
     if( !rFileName.isEmpty() )
     {
         SfxObjectFactory& rFact = pDocSh->GetFactory();
-        const SfxFilter* pFilter = rFact.GetFilterContainer()->GetFilter4FilterName( rFilterName );
+        std::shared_ptr<const SfxFilter> pFilter = rFact.GetFilterContainer()->GetFilter4FilterName( rFilterName );
         if ( !pFilter )
         {
             pMed = new SfxMedium(rFileName, StreamMode::READ, nullptr, nullptr );
             SfxFilterMatcher aMatcher( rFact.GetFilterContainer()->GetName() );
             pMed->UseInteractionHandler( true );
-            ErrCode nErr = aMatcher.GuessFilter(*pMed, &pFilter, SfxFilterFlags::NONE);
+            ErrCode nErr = aMatcher.GuessFilter(*pMed, pFilter, SfxFilterFlags::NONE);
             if ( nErr )
                 DELETEZ(pMed);
             else
@@ -2144,7 +2152,6 @@ long SwView::InsertMedium( sal_uInt16 nSlotId, SfxMedium* pMedium, sal_Int16 nVe
         default:
             OSL_ENSURE( false, "unknown SlotId!" );
             bInsert = true;
-            nSlotId = SID_INSERTDOC;
             break;
     }
 
@@ -2271,9 +2278,9 @@ long SwView::InsertMedium( sal_uInt16 nSlotId, SfxMedium* pMedium, sal_Int16 nVe
     return nFound;
 }
 
-void SwView::EnableMailMerge(bool bEnable )
+void SwView::EnableMailMerge()
 {
-    m_bInMailMerge = bEnable;
+    m_bInMailMerge = true;
     SfxBindings& rBind = GetViewFrame()->GetBindings();
     rBind.Invalidate(FN_INSERT_FIELD_DATA_ONLY);
     rBind.Update(FN_INSERT_FIELD_DATA_ONLY);
@@ -2353,8 +2360,8 @@ void SwView::GenerateFormLetter(bool bUseCurrentDocument)
             EnableMailMerge();
             //then show the "Data base only" field dialog
             SfxBoolItem aOn(FN_INSERT_FIELD_DATA_ONLY, true);
-            pVFrame->GetDispatcher()->Execute(FN_INSERT_FIELD_DATA_ONLY,
-                                                SfxCallMode::SYNCHRON, &aOn, 0L);
+            pVFrame->GetDispatcher()->ExecuteList(FN_INSERT_FIELD_DATA_ONLY,
+                    SfxCallMode::SYNCHRON, { &aOn });
             return;
         }
         else
@@ -2407,7 +2414,7 @@ void SwView::GenerateFormLetter(bool bUseCurrentDocument)
             pValues[0].Value <<= aData.sDataSource;
             pValues[1].Value <<= aData.sCommand;
             pValues[2].Value <<= aData.nCommandType;
-            pDBManager->ExecuteFormLetter(GetWrtShell(), aProperties, true);
+            pDBManager->ExecuteFormLetter(GetWrtShell(), aProperties);
         }
     }
     else

@@ -1015,14 +1015,14 @@ Document::retrieveCharacterAttributes(
     //character font name
     aAttribs[i].Name = "CharFontName";
     aAttribs[i].Handle = -1;
-    aAttribs[i].Value = css::uno::makeAny( aFont.GetName() );
+    aAttribs[i].Value = css::uno::makeAny( aFont.GetFamilyName() );
     aAttribs[i].State = css::beans::PropertyState_DIRECT_VALUE;
     i++;
 
     //character height
     aAttribs[i].Name = "CharHeight";
     aAttribs[i].Handle = -1;
-    aAttribs[i].Value = css::uno::makeAny( (sal_Int16)aFont.GetHeight() );
+    aAttribs[i].Value = css::uno::makeAny( (sal_Int16)aFont.GetFontHeight() );
     aAttribs[i].State = css::beans::PropertyState_DIRECT_VALUE;
     i++;
 
@@ -1664,8 +1664,8 @@ IMPL_LINK_TYPED(Document, WindowEventHandler, ::VclWindowEvent&, rEvent, void)
             bool bEmpty = m_aFocused == m_aVisibleEnd && count == 1;
             if ((m_aFocused >= m_aVisibleBegin && m_aFocused < m_aVisibleEnd) || bEmpty)
             {
-                Paragraphs::iterator m_aTemp = bEmpty ? m_aVisibleBegin : m_aFocused;
-                ::rtl::Reference< Paragraph > xParagraph(getParagraph(m_aTemp));
+                Paragraphs::iterator aTemp = bEmpty ? m_aVisibleBegin : m_aFocused;
+                ::rtl::Reference< Paragraph > xParagraph(getParagraph(aTemp));
                 if (xParagraph.is())
                 {
                     xParagraph->notifyEvent(
@@ -1701,8 +1701,8 @@ IMPL_LINK_TYPED(Document, WindowEventHandler, ::VclWindowEvent&, rEvent, void)
             bool bEmpty = m_aFocused == m_aVisibleEnd && count == 1;
             if ((m_aFocused >= m_aVisibleBegin && m_aFocused < m_aVisibleEnd) || bEmpty)
             {
-                Paragraphs::iterator m_aTemp = bEmpty ? m_aVisibleBegin : m_aFocused;
-                ::rtl::Reference< Paragraph > xParagraph(getParagraph(m_aTemp));
+                Paragraphs::iterator aTemp = bEmpty ? m_aVisibleBegin : m_aFocused;
+                ::rtl::Reference< Paragraph > xParagraph(getParagraph(aTemp));
                 if (xParagraph.is())
                     xParagraph->notifyEvent(
                         css::accessibility::AccessibleEventId::
@@ -2129,7 +2129,7 @@ void Document::handleParagraphNotifications()
                     // 4,1 -> 4,7;
                     return 5;
                 }
-                else if (Oep >= Osp)
+                else
                 {
                     // 1, 2 -> 1, 3; 4,4->4,5;
                     return 6;
@@ -2143,7 +2143,7 @@ void Document::handleParagraphNotifications()
                     // 4,1 -> 4,2,
                     return 7;
                 }
-                else if (Oep >= Osp)
+                else
                 {
                     // no such condition. Oep > Osp = Nsp > Nep
                 }
@@ -2159,7 +2159,7 @@ void Document::handleParagraphNotifications()
                 {
                     //no such condition, Oep<Osp=Nsp <= Nep
                 }
-                else if (Oep > Osp)
+                else
                 {
                     // 4,7 ->4,6
                     return 8;
@@ -2173,7 +2173,7 @@ void Document::handleParagraphNotifications()
                     // 3,2 -> 3,1; 4,4->4,3
                     return 9;
                 }
-                else if (Oep > Osp)
+                else
                 {
                     // 4,7 -> 4,1
                     return 10;

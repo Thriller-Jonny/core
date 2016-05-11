@@ -181,8 +181,10 @@ sal_Int32 SAL_CALL ODatabaseMetaDataResultSet::findColumn( const OUString& colum
     }
 
     ::dbtools::throwInvalidColumnException( columnName, *this );
+#if !(defined(_MSC_VER) && defined(ENABLE_LTO))
     assert(false);
     return 0; // Never reached
+#endif
 }
 
 void ODatabaseMetaDataResultSet::checkIndex(sal_Int32 columnIndex ) throw(::com::sun::star::sdbc::SQLException)
@@ -244,7 +246,6 @@ sal_Int32 SAL_CALL ODatabaseMetaDataResultSet::getInt( sal_Int32 columnIndex ) t
 }
 
 
-
 sal_Int32 SAL_CALL ODatabaseMetaDataResultSet::getRow(  ) throw(SQLException, RuntimeException, std::exception)
 {
     return 0;
@@ -273,7 +274,6 @@ Reference< XArray > SAL_CALL ODatabaseMetaDataResultSet::getArray( sal_Int32 /*c
 {
     return nullptr;
 }
-
 
 
 Reference< XClob > SAL_CALL ODatabaseMetaDataResultSet::getClob( sal_Int32 /*columnIndex*/ ) throw(SQLException, RuntimeException, std::exception)
@@ -311,13 +311,10 @@ OUString SAL_CALL ODatabaseMetaDataResultSet::getString( sal_Int32 columnIndex )
 }
 
 
-
-
 ::com::sun::star::util::Time SAL_CALL ODatabaseMetaDataResultSet::getTime( sal_Int32 columnIndex ) throw(SQLException, RuntimeException, std::exception)
 {
     return getValue(columnIndex);
 }
-
 
 
 ::com::sun::star::util::DateTime SAL_CALL ODatabaseMetaDataResultSet::getTimestamp( sal_Int32 columnIndex ) throw(SQLException, RuntimeException, std::exception)
@@ -337,13 +334,13 @@ SAL_WNOUNREACHABLE_CODE_PUSH
 sal_Bool SAL_CALL ODatabaseMetaDataResultSet::isFirst(  ) throw(SQLException, RuntimeException, std::exception)
 {
     ::dbtools::throwFunctionSequenceException(*this);
-    return sal_False;
+    return false;
 }
 
 sal_Bool SAL_CALL ODatabaseMetaDataResultSet::isLast(  ) throw(SQLException, RuntimeException, std::exception)
 {
     ::dbtools::throwFunctionSequenceException(*this);
-    return sal_False;
+    return false;
 }
 
 SAL_WNOUNREACHABLE_CODE_POP
@@ -376,32 +373,32 @@ SAL_WNOUNREACHABLE_CODE_PUSH
 sal_Bool SAL_CALL ODatabaseMetaDataResultSet::first(  ) throw(SQLException, RuntimeException, std::exception)
 {
     ::dbtools::throwFunctionSequenceException(*this);
-    return sal_False;
+    return false;
 }
 
 
 sal_Bool SAL_CALL ODatabaseMetaDataResultSet::last(  ) throw(SQLException, RuntimeException, std::exception)
 {
     ::dbtools::throwFunctionSequenceException(*this);
-    return sal_False;
+    return false;
 }
 
 sal_Bool SAL_CALL ODatabaseMetaDataResultSet::absolute( sal_Int32 /*row*/ ) throw(SQLException, RuntimeException, std::exception)
 {
     ::dbtools::throwFunctionSequenceException(*this);
-    return sal_False;
+    return false;
 }
 
 sal_Bool SAL_CALL ODatabaseMetaDataResultSet::relative( sal_Int32 /*row*/ ) throw(SQLException, RuntimeException, std::exception)
 {
     ::dbtools::throwFunctionSequenceException(*this);
-    return sal_False;
+    return false;
 }
 
 sal_Bool SAL_CALL ODatabaseMetaDataResultSet::previous(  ) throw(SQLException, RuntimeException, std::exception)
 {
     ::dbtools::throwFunctionSequenceException(*this);
-    return sal_False;
+    return false;
 }
 
 SAL_WNOUNREACHABLE_CODE_POP
@@ -418,23 +415,22 @@ SAL_WNOUNREACHABLE_CODE_PUSH
 sal_Bool SAL_CALL ODatabaseMetaDataResultSet::rowDeleted(  ) throw(SQLException, RuntimeException, std::exception)
 {
     ::dbtools::throwFunctionSequenceException(*this);
-    return sal_False;
+    return false;
 }
 
 sal_Bool SAL_CALL ODatabaseMetaDataResultSet::rowInserted(  ) throw(SQLException, RuntimeException, std::exception)
 {
     ::dbtools::throwFunctionSequenceException(*this);
-    return sal_False;
+    return false;
 }
 
 sal_Bool SAL_CALL ODatabaseMetaDataResultSet::rowUpdated(  ) throw(SQLException, RuntimeException, std::exception)
 {
     ::dbtools::throwFunctionSequenceException(*this);
-    return sal_False;
+    return false;
 }
 
 SAL_WNOUNREACHABLE_CODE_POP
-
 
 
 sal_Bool SAL_CALL ODatabaseMetaDataResultSet::isBeforeFirst(  ) throw(SQLException, RuntimeException, std::exception)
@@ -479,7 +475,7 @@ sal_Bool SAL_CALL ODatabaseMetaDataResultSet::wasNull(  ) throw(SQLException, Ru
 
 
     if(m_aRowsIter == m_aRows.end() || !(*m_aRowsIter)[m_nColPos].is())
-        return sal_True;
+        return true;
 
     return (*m_aRowsIter)[m_nColPos]->getValue().isNull();
 }

@@ -27,7 +27,6 @@
 #include <unordered_map>
 #include <vector>
 #include <o3tl/sorted_vector.hxx>
-#include <boost/ptr_container/ptr_map.hpp>
 
 #include "rangelst.hxx"
 #include "eeparser.hxx"
@@ -49,12 +48,12 @@ class ScHTMLTable;
 class ScHTMLStyles
 {
     typedef std::unordered_map<OUString, OUString, OUStringHash> PropsType;
-    typedef ::boost::ptr_map<OUString, PropsType> NamePropsType;
-    typedef ::boost::ptr_map<OUString, NamePropsType> ElemsType;
+    typedef ::std::map<OUString, std::unique_ptr<PropsType>> NamePropsType;
+    typedef ::std::map<OUString, std::unique_ptr<NamePropsType>> ElemsType;
 
-    NamePropsType maGlobalProps;     /// global properties (for a given class for all elements)
-    NamePropsType maElemGlobalProps; /// element global properties (no class specified)
-    ElemsType maElemProps;           /// element to class to properties (both element and class are given)
+    NamePropsType m_GlobalProps;     /// global properties (for a given class for all elements)
+    NamePropsType m_ElemGlobalProps; /// element global properties (no class specified)
+    ElemsType m_ElemProps;           /// element to class to properties (both element and class are given)
     const OUString maEmpty;     /// just a persistent empty string.
 public:
     ScHTMLStyles();
@@ -289,7 +288,7 @@ public:
     inline ScHTMLTableId GetTableId() const { return nTab; }
 
     /** Sets or cleares the import always state. */
-    inline void         SetImportAlways( bool bSet = true ) { mbImportAlways = bSet; }
+    inline void         SetImportAlways() { mbImportAlways = true; }
     /** Sets start point of the entry selection to the start of the import info object. */
     void                AdjustStart( const ImportInfo& rInfo );
     /** Sets end point of the entry selection to the end of the import info object. */
@@ -479,9 +478,8 @@ private:
         @param bLastInCell  true = If cell is still empty, put this entry always.
         @return  true = Entry as been pushed into the current cell; false = Entry dropped. */
     bool                PushEntry( const ImportInfo& rInfo, bool bLastInCell = false );
-    /** Pushes a new entry into current cell which references a nested table.
-        @return  true = Entry as been pushed into the current cell; false = Entry dropped. */
-    bool                PushTableEntry( ScHTMLTableId nTableId );
+    /** Pushes a new entry into current cell which references a nested table.*/
+    void                PushTableEntry( ScHTMLTableId nTableId );
 
     /** Tries to find a table from the table container.
         @descr  Assumes that the table is located in the current container or

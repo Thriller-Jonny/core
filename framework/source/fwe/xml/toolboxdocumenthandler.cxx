@@ -88,7 +88,7 @@ struct ToolboxStyleItem
     const char* attrName;
 };
 
-ToolboxStyleItem Styles[ ] = {
+const ToolboxStyleItem Styles[ ] = {
     { css::ui::ItemStyle::RADIO_CHECK,   ATTRIBUTE_ITEMSTYLE_RADIO },
     { css::ui::ItemStyle::ALIGN_LEFT,    ATTRIBUTE_ITEMSTYLE_LEFT },
     { css::ui::ItemStyle::AUTO_SIZE,     ATTRIBUTE_ITEMSTYLE_AUTO },
@@ -99,7 +99,7 @@ ToolboxStyleItem Styles[ ] = {
     { css::ui::ItemStyle::TEXT,          ATTRIBUTE_ITEMSTYLE_TEXT },
 };
 
-sal_Int32 nStyleItemEntries = sizeof (Styles) / sizeof (Styles[0]);
+sal_Int32 nStyleItemEntries = SAL_N_ELEMENTS(Styles);
 
 struct ToolBarEntryProperty
 {
@@ -162,8 +162,8 @@ OReadToolBoxDocumentHandler::OReadToolBoxDocumentHandler( const Reference< XInde
     m_nHashCode_Style_DropDown      = OUString( ATTRIBUTE_ITEMSTYLE_DROPDOWN ).hashCode();
     m_nHashCode_Style_Repeat        = OUString( ATTRIBUTE_ITEMSTYLE_REPEAT ).hashCode();
     m_nHashCode_Style_DropDownOnly  = OUString( ATTRIBUTE_ITEMSTYLE_DROPDOWNONLY ).hashCode();
-    m_nHashCode_Style_Text  = OUString( ATTRIBUTE_ITEMSTYLE_TEXT ).hashCode();
-    m_nHashCode_Style_Image  = OUString( ATTRIBUTE_ITEMSTYLE_IMAGE ).hashCode();
+    m_nHashCode_Style_Text          = OUString( ATTRIBUTE_ITEMSTYLE_TEXT ).hashCode();
+    m_nHashCode_Style_Image         = OUString( ATTRIBUTE_ITEMSTYLE_IMAGE ).hashCode();
 
     m_bToolBarStartFound            = false;
     m_bToolBarEndFound              = false;
@@ -216,43 +216,42 @@ throw(  SAXException, RuntimeException, std::exception )
                     aErrorMessage += "Element 'toolbar:toolbar' cannot be embedded into 'toolbar:toolbar'!";
                     throw SAXException( aErrorMessage, Reference< XInterface >(), Any() );
                 }
-                        else
-                        {
-                            // Check if we have a UI name set in our XML file
-                            OUString aUIName;
-                            for ( sal_Int16 n = 0; n < xAttribs->getLength(); n++ )
-                      {
+                else
+                {
+                    // Check if we have a UI name set in our XML file
+                    OUString aUIName;
+                    for ( sal_Int16 n = 0; n < xAttribs->getLength(); n++ )
+                    {
                         pToolBoxEntry = m_aToolBoxMap.find( xAttribs->getNameByIndex( n ) );
                         if ( pToolBoxEntry != m_aToolBoxMap.end() )
                         {
-                                    switch ( pToolBoxEntry->second )
-                                    {
-                                        case TB_ATTRIBUTE_UINAME:
-                                    aUIName = xAttribs->getValueByIndex( n );
-                                            break;
-                                        default:
-                                            break;
-                                    }
-                                }
-                            }
-
-                            if ( !aUIName.isEmpty() )
+                            switch ( pToolBoxEntry->second )
                             {
-                                // Try to set UI name as a container property
-                                Reference< XPropertySet > xPropSet( m_rItemContainer, UNO_QUERY );
-                                if ( xPropSet.is() )
-                                {
-                                    try
-                                    {
-                                        xPropSet->setPropertyValue("UIName", makeAny( aUIName ) );
-                                    }
-                                    catch ( const UnknownPropertyException& )
-                                    {
-                                    }
-                                }
+                                case TB_ATTRIBUTE_UINAME:
+                                    aUIName = xAttribs->getValueByIndex( n );
+                                    break;
+                                default:
+                                    break;
+                            }
+                        }
+                    }
+                    if ( !aUIName.isEmpty() )
+                    {
+                        // Try to set UI name as a container property
+                        Reference< XPropertySet > xPropSet( m_rItemContainer, UNO_QUERY );
+                        if ( xPropSet.is() )
+                        {
+                            try
+                            {
+                                xPropSet->setPropertyValue("UIName", makeAny( aUIName ) );
+                            }
+                            catch ( const UnknownPropertyException& )
+                            {
                             }
                         }
 
+                    }
+                }
                 m_bToolBarStartFound = true;
             }
             break;
@@ -758,7 +757,7 @@ throw ( SAXException, RuntimeException )
     if ( nStyle > 0 )
     {
         OUString aValue;
-        ToolboxStyleItem* pStyle = Styles;
+        const ToolboxStyleItem* pStyle = Styles;
 
         for ( sal_Int32 nIndex = 0; nIndex < nStyleItemEntries; ++nIndex, ++pStyle )
         {

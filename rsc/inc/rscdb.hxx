@@ -44,6 +44,7 @@ enum class MenuItemBits : sal_Int16;
 enum class ToolBoxItemType;
 enum class ButtonType;
 enum class WindowAlign;
+enum class SfxStyleFamily;
 
 struct WriteRcContext
 {
@@ -151,7 +152,8 @@ class RscTypCont
     inline void SETCONST( RscConst *p1, const char * p2, ToolBoxItemType p3 ) { SETCONST(p1, p2, static_cast<sal_uInt32>(p3)); }
     inline void SETCONST( RscConst *p1, const char * p2, ButtonType p3 ) { SETCONST(p1, p2, static_cast<sal_uInt32>(p3)); }
     inline void SETCONST( RscConst *p1, const char * p2, WindowAlign p3 ) { SETCONST(p1, p2, static_cast<sal_uInt32>(p3)); }
-    RscEnum *   InitLangType();
+    inline void SETCONST( RscConst *p1, const char * p2, SfxStyleFamily p3 ) { SETCONST(p1, p2, static_cast<sal_uInt16>(p3)); }
+    void        InitLangType();
     RscEnum *   InitFieldUnitsType();
     RscEnum *   InitColor();
     RscEnum *   InitMapUnit();
@@ -197,7 +199,6 @@ class RscTypCont
     RscTop *    InitClassMenuItem( RscTop * pSuper, RscTop * pClassBitmap,
                                    RscTop * pClassKeyCode );
     RscTop *    InitClassMenu( RscTop * pSuper, RscTop * pMenuItem );
-    RscTop *    InitClassSplitWindow( RscTop * pSuper );
 
     RscTop *    InitClassNumericFormatter( RscTop * pSuper );
     RscTop *    InitClassMetricFormatter( RscTop * pSuper,
@@ -224,7 +225,7 @@ class RscTypCont
 
     void        InsWinBit( RscTop * pClass, const OString& rName,
                            Atom nVal );
-    void        WriteInc( FILE * fOutput, sal_uLong lKey );
+    void        WriteInc( FILE * fOutput, RscFileTab::Index lKey );
 
 public:
     RscBool             aBool;
@@ -263,13 +264,11 @@ public:
 
     RSCBYTEORDER_TYPE GetByteOrder() const { return nByteOrder; }
     rtl_TextEncoding  GetSourceCharSet() const { return nSourceCharSet; }
-    rtl_TextEncoding  SetSourceCharSet( rtl_TextEncoding aCharSet )
+    void              SetSourceCharSet( rtl_TextEncoding aCharSet )
                           {
-                              rtl_TextEncoding aOld = nSourceCharSet;
                               nSourceCharSet = aCharSet;
-                              return aOld;
                           }
-    OString           GetSearchPath() const { return aSearchPath; }
+    const OString&    GetSearchPath() const { return aSearchPath; }
     void              SetSysSearchPath( const OString& rStr ) { aSysSearchPath = rStr; }
     void              InsertType( RscTop * pType )
                           {
@@ -277,15 +276,13 @@ public:
                           }
     RscTop  *         SearchType( Atom nTypId );
                       // deletes all resource objects of this file
-    void              Delete( sal_uLong lFileKey );
+    void              Delete( RscFileTab::Index lFileKey );
     RscTop  *         GetRoot()         { return pRoot; }
-    sal_uInt32        PutSysName( sal_uInt32 nRscTyp, char * pName, sal_uInt32 nConst,
-                                  sal_uInt32 nId, bool bFirst );
+    sal_uInt32        PutSysName( sal_uInt32 nRscTyp, char * pName );
     void              ClearSysNames();
     ERRTYPE           WriteRc( WriteRcContext& rContext );
-    void              WriteSrc( FILE * fOutput, sal_uLong nFileIndex,
-                                bool bName = true );
-    sal_uInt32        PutTranslatorKey( sal_uInt64 nKey );
+    void              WriteSrc( FILE * fOutput, RscFileTab::Index nFileIndex );
+    void              PutTranslatorKey( sal_uInt64 nKey );
     void              IncFilePos( sal_uLong nOffset ){ nFilePos += nOffset; }
 };
 

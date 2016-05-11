@@ -54,10 +54,10 @@ void FontNameMenu::Fill( const FontList* pList )
         const vcl::I18nHelper& rI18nHelper = Application::GetSettings().GetUILocaleI18nHelper();
         // more than 100 fonts reduces the speed of opening the menu.
         // So only the first 100 fonts will be displayed.
-        sal_uInt16 nFontCount = ::std::min( pList->GetFontNameCount(), static_cast< sal_uInt16 >(100) );
-        for (sal_uInt16 i = 0; i < nFontCount; ++i)
+        size_t nFontCount = ::std::min<size_t>(pList->GetFontNameCount(), 100);
+        for (size_t i = 0; i < nFontCount; ++i)
         {
-            const OUString& rName = pList->GetFontName( i ).GetName();
+            const OUString& rName = pList->GetFontName( i ).GetFamilyName();
 
             // sort with the I18nHelper
             sal_uInt16 j = GetItemCount();
@@ -125,7 +125,7 @@ void FontSizeMenu::Highlight()
 {
 }
 
-void FontSizeMenu::Fill( const vcl::FontInfo& rInfo, const FontList* pList )
+void FontSizeMenu::Fill( const FontMetric& rFontMetric, const FontList* pList )
 {
     Clear();
 
@@ -134,7 +134,7 @@ void FontSizeMenu::Fill( const vcl::FontInfo& rInfo, const FontList* pList )
         delete[] mpHeightAry;
 
     const sal_IntPtr* pTempAry;
-    const sal_IntPtr* pAry = pList->GetSizeAry( rInfo );
+    const sal_IntPtr* pAry = pList->GetSizeAry( rFontMetric );
     sal_uInt16 nSizeCount = 0;
     while ( pAry[nSizeCount] )
         nSizeCount++;

@@ -73,7 +73,7 @@ SFX_IMPL_INTERFACE(SwDrawShell, SwDrawBaseShell)
 
 void SwDrawShell::InitInterface_Impl()
 {
-    GetStaticInterface()->RegisterPopupMenu(SW_RES(MN_DRAW_POPUPMENU));
+    GetStaticInterface()->RegisterPopupMenu("draw");
 
     GetStaticInterface()->RegisterObjectBar(SFX_OBJECTBAR_OBJECT, RID_DRAW_TOOLBOX);
 
@@ -273,7 +273,7 @@ void SwDrawShell::Execute(SfxRequest &rReq)
 
         case SID_FLIP_VERTICAL:
             bMirror = false;
-            /* no break */
+            SAL_FALLTHROUGH;
         case SID_FLIP_HORIZONTAL:
             rSh.MirrorSelection( bMirror );
             break;

@@ -63,7 +63,7 @@ protected:
         default and isn't inherited, apart from bDefault is true)
         After this process It'll called 'Contextfilter' for application-specific
         filter-processes. */
-    std::vector<XMLPropertyState> _Filter(
+    std::vector<XMLPropertyState> Filter_(
             const css::uno::Reference<css::beans::XPropertySet>& rPropSet,
             bool bDefault, bool bDisableFoFontFamily ) const;
 
@@ -71,7 +71,7 @@ protected:
     virtual void ContextFilter(
             bool bEnableFoFontFamily,
             ::std::vector< XMLPropertyState >& rProperties,
-            css::uno::Reference<css::beans::XPropertySet > rPropSet ) const;
+            const css::uno::Reference<css::beans::XPropertySet >& rPropSet ) const;
 
     /** fills the given attribute list with the items in the given set */
     void _exportXML( sal_uInt16 nPropType, sal_uInt16& rPropTypeFlags,
@@ -124,7 +124,7 @@ public:
       * - instead of the property's value, its default value is exported.
       */
     std::vector<XMLPropertyState> FilterDefaults(
-        const css::uno::Reference<css::beans::XPropertySet>& rPropSet, bool bEnableFoFontFamily = false ) const;
+        const css::uno::Reference<css::beans::XPropertySet>& rPropSet ) const;
 
     /** Compare to arrays of XMLPropertyState */
     bool Equals( const ::std::vector< XMLPropertyState >& aProperties1,

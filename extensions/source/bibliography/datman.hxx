@@ -26,7 +26,7 @@
 #include <com/sun/star/sdb/XSingleSelectQueryComposer.hpp>
 #include <com/sun/star/form/runtime/XFormController.hpp>
 #include <cppuhelper/compbase.hxx>
-#include <cppuhelper/interfacecontainer.h>
+#include <comphelper/interfacecontainer2.hxx>
 #include <com/sun/star/form/XLoadable.hpp>
 #include <comphelper/broadcasthelper.hxx>
 #include <com/sun/star/frame/XDispatchProviderInterceptor.hpp>
@@ -83,7 +83,6 @@ class BibDataManager
 private:
         css::uno::Reference< css::form::XForm >                       m_xForm;
         css::uno::Reference< css::awt::XControlModel >                m_xGridModel;
-        css::uno::Reference< css::beans::XPropertySet >               m_xSourceProps;
         css::uno::Reference< css::sdb::XSingleSelectQueryComposer >   m_xParser;
         css::uno::Reference< css::form::runtime::XFormController >    m_xFormCtrl;
         css::uno::Reference< css::frame::XDispatch >                  m_xFormDispatch;
@@ -95,7 +94,7 @@ private:
         css::uno::Any                aUID;
         css::uno::Reference< css::sdbc::XResultSet >                  xBibCursor;
 
-        ::cppu::OInterfaceContainerHelper   m_aLoadListeners;
+        ::comphelper::OInterfaceContainerHelper2   m_aLoadListeners;
 
         VclPtr< ::bib::BibView>      pBibView;
         VclPtr<BibToolBar>           pToolbar;
@@ -133,17 +132,16 @@ public:
                                                                 throw( css::uno::RuntimeException, std::exception ) override;
 
 
-
         css::uno::Reference< css::form::XForm >                   createDatabaseForm( BibDBDescriptor&    aDesc);
 
         css::uno::Reference< css::awt::XControlModel >            updateGridModel();
 
         css::uno::Sequence< OUString>           getDataSources();
 
-        OUString                    getActiveDataSource() {return aDataSourceURL;}
+        const OUString&             getActiveDataSource() {return aDataSourceURL;}
         void                        setActiveDataSource(const OUString& rURL);
 
-        OUString                    getActiveDataTable() { return aActiveDataTable;}
+        const OUString&             getActiveDataTable() { return aActiveDataTable;}
         void                        setActiveDataTable(const OUString& rTable);
 
         void                        setFilter(const OUString& rQuery);

@@ -35,8 +35,6 @@ using namespace ::com::sun::star;
 using ::com::sun::star::beans::Property;
 using ::com::sun::star::uno::Sequence;
 using ::com::sun::star::uno::Reference;
-using ::com::sun::star::uno::Any;
-using ::osl::MutexGuard;
 
 namespace
 {
@@ -65,7 +63,7 @@ struct StaticBubbleChartTypeInfoHelper_Initializer
 private:
     static Sequence< Property > lcl_GetPropertySequence()
     {
-        ::std::vector< ::com::sun::star::beans::Property > aProperties;
+        ::std::vector< css::beans::Property > aProperties;
 
         ::std::sort( aProperties.begin(), aProperties.end(),
                      ::chart::PropertyNameLess() );
@@ -125,8 +123,7 @@ Reference< chart2::XCoordinateSystem > SAL_CALL
            uno::RuntimeException, std::exception)
 {
     Reference< chart2::XCoordinateSystem > xResult(
-        new CartesianCoordinateSystem(
-            GetComponentContext(), DimensionCount, /* bSwapXAndYAxis */ false ));
+        new CartesianCoordinateSystem( GetComponentContext(), DimensionCount ));
 
     for( sal_Int32 i=0; i<DimensionCount; ++i )
     {
@@ -170,7 +167,7 @@ uno::Sequence< OUString > SAL_CALL BubbleChartType::getSupportedMandatoryRoles()
 }
 
 uno::Sequence< OUString > SAL_CALL BubbleChartType::getSupportedPropertyRoles()
-    throw(com::sun::star::uno::RuntimeException, std::exception)
+    throw(css::uno::RuntimeException, std::exception)
 {
     uno::Sequence< OUString > aPropertyRoles(2);
     aPropertyRoles[0] = "FillColor";

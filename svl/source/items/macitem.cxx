@@ -68,7 +68,6 @@ SvxMacro& SvxMacro::operator=( const SvxMacro& rBase )
 }
 
 
-
 SvxMacroTableDtor& SvxMacroTableDtor::operator=( const SvxMacroTableDtor& rTbl )
 {
     aSvxMacroTable.clear();
@@ -98,7 +97,7 @@ bool SvxMacroTableDtor::operator==( const SvxMacroTableDtor& rOther ) const
     return true;
 }
 
-SvStream& SvxMacroTableDtor::Read( SvStream& rStrm, sal_uInt16 nVersion )
+void SvxMacroTableDtor::Read( SvStream& rStrm, sal_uInt16 nVersion )
 {
     if( SVX_MACROTBL_VERSION40 <= nVersion )
         rStrm.ReadUInt16( nVersion );
@@ -108,7 +107,7 @@ SvStream& SvxMacroTableDtor::Read( SvStream& rStrm, sal_uInt16 nVersion )
     if (nMacro < 0)
     {
         SAL_WARN("editeng", "Parsing error: negative value " << nMacro);
-        return rStrm;
+        return;
     }
 
     const size_t nMinStringSize = rStrm.GetStreamCharSet() == RTL_TEXTENCODING_UNICODE ? 4 : 2;
@@ -137,7 +136,6 @@ SvStream& SvxMacroTableDtor::Read( SvStream& rStrm, sal_uInt16 nVersion )
 
         aSvxMacroTable.insert( SvxMacroTable::value_type(nCurKey, SvxMacro( aMacName, aLibName, (ScriptType)eType ) ));
     }
-    return rStrm;
 }
 
 
@@ -195,17 +193,14 @@ SvxMacro& SvxMacroTableDtor::Insert(sal_uInt16 nEvent, const SvxMacro& rMacro)
 }
 
 // If the entry exists, remove it from the map and release it's storage
-bool SvxMacroTableDtor::Erase(sal_uInt16 nEvent)
+void SvxMacroTableDtor::Erase(sal_uInt16 nEvent)
 {
     SvxMacroTable::iterator it = aSvxMacroTable.find(nEvent);
     if ( it != aSvxMacroTable.end())
     {
         aSvxMacroTable.erase(it);
-        return true;
     }
-    return false;
 }
-
 
 
 bool SvxMacroItem::operator==( const SfxPoolItem& rAttr ) const
@@ -217,7 +212,6 @@ bool SvxMacroItem::operator==( const SfxPoolItem& rAttr ) const
 
     return rOwn == rOther;
 }
-
 
 
 SfxPoolItem* SvxMacroItem::Clone( SfxItemPool* ) const
@@ -254,12 +248,10 @@ bool SvxMacroItem::GetPresentation
 }
 
 
-
 SvStream& SvxMacroItem::Store( SvStream& rStrm , sal_uInt16 ) const
 {
     return aMacroTable.Write( rStrm );
 }
-
 
 
 SfxPoolItem* SvxMacroItem::Create( SvStream& rStrm, sal_uInt16 nVersion ) const
@@ -270,12 +262,10 @@ SfxPoolItem* SvxMacroItem::Create( SvStream& rStrm, sal_uInt16 nVersion ) const
 }
 
 
-
 void SvxMacroItem::SetMacro( sal_uInt16 nEvent, const SvxMacro& rMacro )
 {
     aMacroTable.Insert( nEvent, rMacro);
 }
-
 
 
 sal_uInt16 SvxMacroItem::GetVersion( sal_uInt16 nFileFormatVersion ) const

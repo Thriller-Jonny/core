@@ -63,10 +63,6 @@
 
 #define DEBUG_XL_ENCRYPTION 0
 
-using ::com::sun::star::lang::XSingleServiceFactory;
-using ::com::sun::star::registry::InvalidRegistryException;
-using ::com::sun::star::registry::XRegistryKey;
-using ::com::sun::star::uno::Exception;
 using ::com::sun::star::uno::XInterface;
 using ::std::vector;
 
@@ -325,22 +321,17 @@ void XclExpStream::WriteUnicodeBuffer( const ScfUInt16Vec& rBuffer, sal_uInt8 nF
 // Xcl has an obscure sense of whether starting a new record or not,
 // and crashes if it encounters the string header at the very end of a record.
 // Thus we add 1 to give some room, seems like they do it that way but with another count (10?)
-void XclExpStream::WriteByteString( const OString& rString, sal_uInt16 nMaxLen, bool b16BitCount )
+void XclExpStream::WriteByteString( const OString& rString )
 {
     SetSliceSize( 0 );
-    sal_Size nLen = ::std::min< sal_Size >( rString.getLength(), nMaxLen );
-    if( !b16BitCount )
-        nLen = ::std::min< sal_Size >( nLen, 0xFF );
+    sal_Size nLen = ::std::min< sal_Size >( rString.getLength(), 0x00FF );
+    nLen = ::std::min< sal_Size >( nLen, 0xFF );
 
     sal_uInt16 nLeft = PrepareWrite();
-    sal_uInt16 nLenFieldSize = b16BitCount ? 2 : 1;
-    if( mbInRec && (nLeft <= nLenFieldSize) )
+    if( mbInRec && (nLeft <= 1) )
         StartContinue();
 
-    if( b16BitCount )
-        operator<<( static_cast< sal_uInt16 >( nLen ) );
-    else
-        operator<<( static_cast< sal_uInt8 >( nLen ) );
+    operator<<( static_cast< sal_uInt8 >( nLen ) );
     Write( rString.getStr(), nLen );
 }
 
@@ -370,10 +361,10 @@ void XclExpStream::DisableEncryption()
     EnableEncryption(false);
 }
 
-sal_uInt64 XclExpStream::SetSvStreamPos(sal_uInt64 const nPos)
+void XclExpStream::SetSvStreamPos(sal_uInt64 const nPos)
 {
     OSL_ENSURE( !mbInRec, "XclExpStream::SetSvStreamPos - not allowed inside of a record" );
-    return mbInRec ? 0 : mrStrm.Seek( nPos );
+    mbInRec ? 0 : mrStrm.Seek( nPos );
 }
 
 // private --------------------------------------------------------------------
@@ -720,7 +711,7 @@ OString XclXmlUtils::ToOString( const OUString& s )
 
 OStringBuffer& XclXmlUtils::ToOString( OStringBuffer& s, const ScAddress& rAddress )
 {
-    rAddress.Format(s, SCA_VALID, nullptr, ScAddress::Details( FormulaGrammar::CONV_XL_A1));
+    rAddress.Format(s, ScRefFlags::VALID, nullptr, ScAddress::Details( FormulaGrammar::CONV_XL_A1));
     return s;
 }
 
@@ -737,14 +728,14 @@ OString XclXmlUtils::ToOString( const ScfUInt16Vec& rBuffer )
 
 OString XclXmlUtils::ToOString( const ScRange& rRange )
 {
-    OUString sRange(rRange.Format(SCA_VALID, nullptr, ScAddress::Details( FormulaGrammar::CONV_XL_A1)));
+    OUString sRange(rRange.Format(ScRefFlags::VALID, nullptr, ScAddress::Details( FormulaGrammar::CONV_XL_A1)));
     return ToOString( sRange );
 }
 
 OString XclXmlUtils::ToOString( const ScRangeList& rRangeList )
 {
     OUString s;
-    rRangeList.Format(s, SCA_VALID, nullptr, FormulaGrammar::CONV_XL_A1, ' ');
+    rRangeList.Format(s, ScRefFlags::VALID, nullptr, FormulaGrammar::CONV_XL_A1, ' ');
     return ToOString( s );
 }
 
@@ -876,16 +867,16 @@ static void lcl_WriteValue( sax_fastparser::FSHelperPtr& rStream, sal_Int32 nEle
             FSEND );
 }
 
-static const char* lcl_GetUnderlineStyle( FontUnderline eUnderline, bool& bHaveUnderline )
+static const char* lcl_GetUnderlineStyle( FontLineStyle eUnderline, bool& bHaveUnderline )
 {
     bHaveUnderline = true;
     switch( eUnderline )
     {
         // OOXTODO: doubleAccounting, singleAccounting
-        // OOXTODO: what should be done with the other FontUnderline values?
-        case UNDERLINE_SINGLE:  return "single";
-        case UNDERLINE_DOUBLE:  return "double";
-        case UNDERLINE_NONE:
+        // OOXTODO: what should be done with the other FontLineStyle values?
+        case LINESTYLE_SINGLE:  return "single";
+        case LINESTYLE_DOUBLE:  return "double";
+        case LINESTYLE_NONE:
         default:                bHaveUnderline = false; return "none";
     }
 }

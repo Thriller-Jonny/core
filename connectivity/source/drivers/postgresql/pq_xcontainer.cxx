@@ -36,10 +36,6 @@
 
 #include <rtl/ustrbuf.hxx>
 
-#include <com/sun/star/sdbc/XRow.hpp>
-#include <com/sun/star/sdbc/XParameters.hpp>
-
-
 #include <cppuhelper/implbase.hxx>
 
 #include "pq_xcontainer.hxx"
@@ -48,12 +44,10 @@
 
 using osl::MutexGuard;
 
-
 using com::sun::star::beans::XPropertySet;
 
 using com::sun::star::uno::Any;
 using com::sun::star::uno::makeAny;
-using com::sun::star::uno::UNO_QUERY;
 using com::sun::star::uno::Type;
 using com::sun::star::uno::XInterface;
 using com::sun::star::uno::Reference;
@@ -69,13 +63,6 @@ using com::sun::star::lang::XEventListener;
 
 using com::sun::star::lang::WrappedTargetException;
 
-using com::sun::star::sdbc::XRow;
-using com::sun::star::sdbc::XCloseable;
-using com::sun::star::sdbc::XStatement;
-using com::sun::star::sdbc::XResultSet;
-using com::sun::star::sdbc::XParameters;
-using com::sun::star::sdbc::XPreparedStatement;
-using com::sun::star::sdbcx::XDataDescriptorFactory;
 
 namespace pq_sdbc_driver
 {
@@ -172,14 +159,14 @@ Any Container::getByName( const OUString& aName )
         buf.append( "-Container" );
         throw NoSuchElementException( buf.makeStringAndClear() , *this );
     }
-    OSL_ASSERT( ii->second >= 0 && ii->second < m_values.getLength() );
+    OSL_ASSERT( ii->second >= 0 && ii->second < (int)m_values.size() );
     return m_values[ ii->second ];
 }
 
 Sequence< OUString > Container::getElementNames(  )
         throw (::com::sun::star::uno::RuntimeException, std::exception)
 {
-    Sequence< OUString > ret( m_values.getLength() );
+    Sequence< OUString > ret( m_values.size() );
     for( String2IntMap::const_iterator ii = m_name2index.begin();
          ii != m_name2index.end() ;
          ++ ii )
@@ -214,7 +201,7 @@ Any Container::getByIndex( sal_Int32 Index )
            ::com::sun::star::lang::WrappedTargetException,
            ::com::sun::star::uno::RuntimeException, std::exception)
 {
-    if( Index < 0 || Index >= m_values.getLength() )
+    if( Index < 0 || Index >= (sal_Int32)m_values.size() )
     {
         OUStringBuffer buf(128);
         buf.append( "Index " );
@@ -222,7 +209,7 @@ Any Container::getByIndex( sal_Int32 Index )
         buf.append(" out of range for " );
         buf.append( m_type );
         buf.append("-Container, expected 0 <= x <= " );
-        buf.append( (sal_Int32 ) (m_values.getLength() -1));
+        buf.append( (sal_Int32 ) (m_values.size() -1));
         throw IndexOutOfBoundsException( buf.makeStringAndClear(), *this );
     }
     return m_values[Index];
@@ -231,16 +218,16 @@ Any Container::getByIndex( sal_Int32 Index )
 sal_Int32 Container::getCount()
         throw (::com::sun::star::uno::RuntimeException, std::exception)
 {
-    return m_values.getLength();
+    return m_values.size();
 }
 
 
 class ContainerEnumeration : public ::cppu::WeakImplHelper< XEnumeration >
 {
-    com::sun::star::uno::Sequence< com::sun::star::uno::Any > m_vec;
+    std::vector< com::sun::star::uno::Any > m_vec;
     sal_Int32 m_index;
 public:
-    explicit ContainerEnumeration( const  com::sun::star::uno::Sequence< com::sun::star::uno::Any > &vec )
+    explicit ContainerEnumeration( const std::vector< com::sun::star::uno::Any > &vec )
         : m_vec( vec ),
           m_index( -1 )
     {}
@@ -259,7 +246,7 @@ public:
 sal_Bool ContainerEnumeration::hasMoreElements()
         throw (::com::sun::star::uno::RuntimeException, std::exception)
 {
-    return m_vec.getLength() > m_index +1;
+    return (int)m_vec.size() > m_index +1;
 }
 
 com::sun::star::uno::Any ContainerEnumeration::nextElement()
@@ -350,11 +337,11 @@ void Container::dropByIndex( sal_Int32 index )
            ::com::sun::star::uno::RuntimeException, std::exception)
 {
     osl::MutexGuard guard( m_refMutex->mutex );
-    if( index < 0 ||  index >= m_values.getLength() )
+    if( index < 0 ||  index >=(sal_Int32)m_values.size() )
     {
         OUStringBuffer buf( 128 );
         buf.append( "Index out of range (allowed 0 to " );
-        buf.append((sal_Int32)(m_values.getLength() -1) );
+        buf.append((sal_Int32)(m_values.size() -1) );
         buf.append( ", got " );
         buf.append( index );
         buf.append( ") in " );
@@ -376,7 +363,7 @@ void Container::dropByIndex( sal_Int32 index )
         }
     }
 
-    for( int i = index +1 ; i < m_values.getLength() ; i ++ )
+    for( int i = index +1 ; i < (int)m_values.size() ; i ++ )
     {
         m_values[i-1] = m_values[i];
 
@@ -392,7 +379,7 @@ void Container::dropByIndex( sal_Int32 index )
             }
         }
     }
-    m_values.realloc( m_values.getLength() - 1 );
+    m_values.resize( m_values.size() - 1 );
 
     fire( RemovedBroadcaster( *this, name ) );
 }
@@ -417,9 +404,8 @@ void Container::append(
             buf.makeStringAndClear() , *this );
     }
 
-    int index = m_values.getLength();
-    m_values.realloc( m_values.getLength() + 1 );
-    m_values[index] = makeAny( descriptor );
+    int index = m_values.size();
+    m_values.push_back( makeAny( descriptor ) );
     m_name2index[name] = index;
 
     fire( InsertedBroadcaster( *this, name, makeAny( descriptor ) ) );

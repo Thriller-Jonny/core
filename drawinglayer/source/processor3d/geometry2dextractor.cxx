@@ -30,9 +30,7 @@
 #include <drawinglayer/primitive3d/textureprimitive3d.hxx>
 
 
-
 using namespace com::sun::star;
-
 
 
 namespace drawinglayer
@@ -121,7 +119,7 @@ namespace drawinglayer
                 {
                     // TexturePrimitive3D: Process children, do not try to decompose
                     const primitive3d::TexturePrimitive3D& rTexturePrimitive = static_cast< const primitive3d::TexturePrimitive3D& >(rCandidate);
-                    const primitive3d::Primitive3DContainer aChildren(rTexturePrimitive.getChildren());
+                    const primitive3d::Primitive3DContainer& aChildren(rTexturePrimitive.getChildren());
 
                     if(!aChildren.empty())
                     {

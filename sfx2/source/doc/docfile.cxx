@@ -121,7 +121,6 @@
 #include "sfxacldetect.hxx"
 #include <officecfg/Office/Common.hxx>
 
-#include <boost/noncopyable.hpp>
 #include <memory>
 
 using namespace ::com::sun::star;
@@ -166,7 +165,7 @@ bool IsLockingUsed()
 
 } // anonymous namespace
 
-class SfxMedium_Impl : boost::noncopyable
+class SfxMedium_Impl
 {
 public:
     StreamMode m_nStorOpenMode;
@@ -200,13 +199,13 @@ public:
     mutable SfxItemSet* m_pSet;
     mutable INetURLObject* m_pURLObj;
 
-    const SfxFilter* m_pFilter;
-    std::unique_ptr<SfxFilter> m_pCustomFilter;
+    std::shared_ptr<const SfxFilter> m_pFilter;
+    std::shared_ptr<const SfxFilter> m_pCustomFilter;
 
     SvStream* m_pInStream;
     SvStream* m_pOutStream;
 
-    const SfxFilter* pOrigFilter;
+    std::shared_ptr<const SfxFilter> pOrigFilter;
     OUString    aOrigURL;
     DateTime         aExpireTime;
     SfxFrameWeakRef  wLoadTargetFrame;
@@ -240,9 +239,11 @@ public:
 
     explicit SfxMedium_Impl();
     ~SfxMedium_Impl();
+    SfxMedium_Impl(const SfxMedium_Impl&) = delete;
+    SfxMedium_Impl& operator=(const SfxMedium_Impl&) = delete;
 
     OUString getFilterMimeType()
-    { return m_pFilter == nullptr ? OUString() : m_pFilter->GetMimeType(); }
+        { return !m_pFilter ? OUString() : m_pFilter->GetMimeType(); }
 };
 
 
@@ -596,7 +597,7 @@ bool SfxMedium::CloseOutStream()
     return true;
 }
 
-bool SfxMedium::CloseOutStream_Impl()
+void SfxMedium::CloseOutStream_Impl()
 {
     if ( pImp->m_pOutStream )
     {
@@ -622,8 +623,6 @@ bool SfxMedium::CloseOutStream_Impl()
         if ( pImp->m_pSet )
             pImp->m_pSet->ClearItem( SID_STREAM );
     }
-
-    return true;
 }
 
 
@@ -639,7 +638,7 @@ const OUString& SfxMedium::GetPhysicalName() const
 
 void SfxMedium::CreateFileStream()
 {
-    ForceSynchronStream_Impl( true );
+    ForceSynchronStream_Impl();
     GetInStream();
     if( pImp->m_pInStream )
     {
@@ -831,6 +830,12 @@ sal_Int8 SfxMedium::ShowLockedDocumentDialog( const LockFileEntry& aData, bool b
 {
     sal_Int8 nResult = LOCK_UI_NOLOCK;
 
+    if( aData[LockFileComponent::OOOUSERNAME] == aData[LockFileComponent::SYSUSERNAME] ||
+                                      aData[LockFileComponent::OOOUSERNAME].isEmpty()  ||
+                                      aData[LockFileComponent::SYSUSERNAME].isEmpty()
+                                    )
+        bOwnLock=true;
+
     // show the interaction regarding the document opening
     uno::Reference< task::XInteractionHandler > xHandler = GetInteractionHandler();
 
@@ -928,11 +933,12 @@ namespace
     {
         INetURLObject aUrl( rLogicName );
         INetProtocol eProt = aUrl.GetProtocol();
-#if HAVE_FEATURE_MACOSX_SANDBOX
-        return eProt == INetProtocol::Sftp;
-#else
-        return eProt == INetProtocol::File || eProt == INetProtocol::Sftp;
+#if !HAVE_FEATURE_MACOSX_SANDBOX
+        if (eProt == INetProtocol::File) {
+            return true;
+        }
 #endif
+        return eProt == INetProtocol::Smb || eProt == INetProtocol::Sftp;
     }
 }
 
@@ -1637,7 +1643,7 @@ bool SfxMedium::StorageCommit_Impl()
 }
 
 
-bool SfxMedium::TransactedTransferForFS_Impl( const INetURLObject& aSource,
+void SfxMedium::TransactedTransferForFS_Impl( const INetURLObject& aSource,
                                                  const INetURLObject& aDest,
                                                  const Reference< css::ucb::XCommandEnvironment >& xComEnv )
 {
@@ -1758,8 +1764,6 @@ bool SfxMedium::TransactedTransferForFS_Impl( const INetURLObject& aSource,
         else
             pImp->m_eError = ERRCODE_IO_CANTREAD;
     }
-
-    return bResult;
 }
 
 
@@ -1932,11 +1936,9 @@ void SfxMedium::Transfer_Impl()
 
                 // set segment size property; package will automatically be divided in pieces fitting
                 // into this size
-                css::uno::Any aAny;
-                aAny <<= pSegmentSize->GetValue();
 
                 uno::Reference < beans::XPropertySet > xSet( pImp->xStorage, uno::UNO_QUERY );
-                xSet->setPropertyValue("SegmentSize", aAny );
+                xSet->setPropertyValue("SegmentSize", Any(pSegmentSize->GetValue()) );
 
                 // copy the temporary storage into the disk spanned package
                 GetStorage()->copyToStorage( xStor );
@@ -2231,7 +2233,6 @@ void SfxMedium::DoInternalBackup_Impl( const ::ucbhelper::Content& aOriginalCont
             DoInternalBackup_Impl( aOriginalContent, aPrefix, aExtension, aDest.GetMainURL( INetURLObject::NO_DECODE ) );
     }
 }
-
 
 
 void SfxMedium::DoBackup_Impl()
@@ -2632,12 +2633,10 @@ SfxMedium::SfxMedium() : pImp(new SfxMedium_Impl)
 }
 
 
-
 void SfxMedium::UseInteractionHandler( bool bUse )
 {
     pImp->bAllowDefaultIntHdl = bUse;
 }
-
 
 
 css::uno::Reference< css::task::XInteractionHandler >
@@ -2672,24 +2671,21 @@ SfxMedium::GetInteractionHandler( bool bGetAlways )
 }
 
 
-
-void SfxMedium::SetFilter( const SfxFilter* pFilterP, bool /*bResetOrig*/ )
+void SfxMedium::SetFilter( const std::shared_ptr<const SfxFilter>& pFilter )
 {
-    pImp->m_pFilter = pFilterP;
+    pImp->m_pFilter = pFilter;
 }
 
-const SfxFilter* SfxMedium::GetFilter() const
+const std::shared_ptr<const SfxFilter>& SfxMedium::GetFilter() const
 {
     return pImp->m_pFilter;
 }
 
 
-
-const SfxFilter* SfxMedium::GetOrigFilter( bool bNotCurrent ) const
+std::shared_ptr<const SfxFilter> SfxMedium::GetOrigFilter() const
 {
-    return ( pImp->pOrigFilter || bNotCurrent ) ? pImp->pOrigFilter : pImp->m_pFilter;
+    return pImp->pOrigFilter ? pImp->pOrigFilter : pImp->m_pFilter;
 }
-
 
 
 sal_uInt32 SfxMedium::CreatePasswordToModifyHash( const OUString& aPasswd, bool bWriter )
@@ -2711,7 +2707,6 @@ sal_uInt32 SfxMedium::CreatePasswordToModifyHash( const OUString& aPasswd, bool 
 
     return nHash;
 }
-
 
 
 void SfxMedium::Close()
@@ -2854,7 +2849,6 @@ void SfxMedium::CloseStreams_Impl()
 }
 
 
-
 void SfxMedium::SetIsRemote_Impl()
 {
     INetURLObject aObj( GetName() );
@@ -2877,7 +2871,6 @@ void SfxMedium::SetIsRemote_Impl()
 }
 
 
-
 void SfxMedium::SetName( const OUString& aNameP, bool bSetOrigURL )
 {
     if (pImp->aOrigURL.isEmpty())
@@ -2895,7 +2888,6 @@ const OUString& SfxMedium::GetOrigURL() const
 {
     return pImp->aOrigURL.isEmpty() ? pImp->m_aLogicName : pImp->aOrigURL;
 }
-
 
 
 void SfxMedium::SetPhysicalName_Impl( const OUString& rNameP )
@@ -2918,7 +2910,6 @@ void SfxMedium::SetPhysicalName_Impl( const OUString& rNameP )
 }
 
 
-
 void SfxMedium::ReOpen()
 {
     bool bUseInteractionHandler = pImp->bUseInteractionHandler;
@@ -2926,7 +2917,6 @@ void SfxMedium::ReOpen()
     GetMedium_Impl();
     pImp->bUseInteractionHandler = bUseInteractionHandler;
 }
-
 
 
 void SfxMedium::CompleteReOpen()
@@ -2966,17 +2956,17 @@ void SfxMedium::CompleteReOpen()
     pImp->bUseInteractionHandler = bUseInteractionHandler;
 }
 
-SfxMedium::SfxMedium(const OUString &rName, StreamMode nOpenMode, const SfxFilter *pFlt, SfxItemSet *pInSet) :
+SfxMedium::SfxMedium(const OUString &rName, StreamMode nOpenMode, std::shared_ptr<const SfxFilter> pFilter, SfxItemSet *pInSet) :
     pImp(new SfxMedium_Impl)
 {
     pImp->m_pSet = pInSet;
-    pImp->m_pFilter = pFlt;
+    pImp->m_pFilter = pFilter;
     pImp->m_aLogicName = rName;
     pImp->m_nStorOpenMode = nOpenMode;
     Init_Impl();
 }
 
-SfxMedium::SfxMedium(const OUString &rName, const OUString &rReferer, StreamMode nOpenMode, const SfxFilter *pFlt, SfxItemSet *pInSet) :
+SfxMedium::SfxMedium(const OUString &rName, const OUString &rReferer, StreamMode nOpenMode, std::shared_ptr<const SfxFilter> pFilter, SfxItemSet *pInSet) :
     pImp(new SfxMedium_Impl)
 {
     pImp->m_pSet = pInSet;
@@ -2984,7 +2974,7 @@ SfxMedium::SfxMedium(const OUString &rName, const OUString &rReferer, StreamMode
     if (s->GetItem(SID_REFERER) == nullptr) {
         s->Put(SfxStringItem(SID_REFERER, rReferer));
     }
-    pImp->m_pFilter = pFlt;
+    pImp->m_pFilter = pFilter;
     pImp->m_aLogicName = rName;
     pImp->m_nStorOpenMode = nOpenMode;
     Init_Impl();
@@ -3016,7 +3006,7 @@ SfxMedium::SfxMedium( const uno::Sequence<beans::PropertyValue>& aArgs ) :
     {
         // This filter is from an external provider such as orcus.
         pImp->m_pCustomFilter.reset(new SfxFilter(aFilterProvider, aFilterName));
-        pImp->m_pFilter = pImp->m_pCustomFilter.get();
+        pImp->m_pFilter = pImp->m_pCustomFilter;
     }
 
     const SfxStringItem* pSalvageItem = SfxItemSet::GetItem<SfxStringItem>(pImp->m_pSet, SID_DOC_SALVAGE, false);
@@ -3058,8 +3048,6 @@ SfxMedium::SfxMedium( const uno::Sequence<beans::PropertyValue>& aArgs ) :
 }
 
 
-
-
 SfxMedium::SfxMedium( const uno::Reference < embed::XStorage >& rStor, const OUString& rBaseURL, const SfxItemSet* p ) :
     pImp(new SfxMedium_Impl)
 {
@@ -3078,7 +3066,6 @@ SfxMedium::SfxMedium( const uno::Reference < embed::XStorage >& rStor, const OUS
 }
 
 
-
 SfxMedium::SfxMedium( const uno::Reference < embed::XStorage >& rStor, const OUString& rBaseURL, const OUString &rTypeName, const SfxItemSet* p ) :
     pImp(new SfxMedium_Impl)
 {
@@ -3094,7 +3081,6 @@ SfxMedium::SfxMedium( const uno::Reference < embed::XStorage >& rStor, const OUS
     if ( p )
         GetItemSet()->Put( *p );
 }
-
 
 
 SfxMedium::~SfxMedium()
@@ -3150,13 +3136,13 @@ bool SfxMedium::IsExpired() const
 }
 
 
-void SfxMedium::ForceSynchronStream_Impl( bool bForce )
+void SfxMedium::ForceSynchronStream_Impl()
 {
     if( pImp->m_pInStream )
     {
         SvLockBytes* pBytes = pImp->m_pInStream->GetLockBytes();
         if( pBytes )
-            pBytes->SetSynchronMode( bForce );
+            pBytes->SetSynchronMode();
     }
 }
 
@@ -3263,7 +3249,7 @@ uno::Sequence < util::RevisionTag > SfxMedium::GetVersionList( const uno::Refere
     return uno::Sequence < util::RevisionTag >();
 }
 
-sal_uInt16 SfxMedium::AddVersion_Impl( util::RevisionTag& rRevision )
+void SfxMedium::AddVersion_Impl( util::RevisionTag& rRevision )
 {
     if ( GetStorage().is() )
     {
@@ -3290,16 +3276,13 @@ sal_uInt16 SfxMedium::AddVersion_Impl( util::RevisionTag& rRevision )
         pImp->aVersions.realloc( nLength+1 );
         rRevision.Identifier = aRevName;
         pImp->aVersions[nLength] = rRevision;
-        return nKey;
     }
-
-    return 0;
 }
 
-bool SfxMedium::RemoveVersion_Impl( const OUString& rName )
+void SfxMedium::RemoveVersion_Impl( const OUString& rName )
 {
     if ( !pImp->aVersions.getLength() )
-        return false;
+        return;
 
     sal_Int32 nLength = pImp->aVersions.getLength();
     for ( sal_Int32 n=0; n<nLength; n++ )
@@ -3309,11 +3292,9 @@ bool SfxMedium::RemoveVersion_Impl( const OUString& rName )
             for ( sal_Int32 m=n; m<nLength-1; m++ )
                 pImp->aVersions[m] = pImp->aVersions[m+1];
             pImp->aVersions.realloc(nLength-1);
-            return true;
+            return;
         }
     }
-
-    return false;
 }
 
 bool SfxMedium::TransferVersionList_Impl( SfxMedium& rMedium )
@@ -3327,26 +3308,23 @@ bool SfxMedium::TransferVersionList_Impl( SfxMedium& rMedium )
     return false;
 }
 
-bool SfxMedium::SaveVersionList_Impl( bool /*bUseXML*/ )
+void SfxMedium::SaveVersionList_Impl()
 {
     if ( GetStorage().is() )
     {
         if ( !pImp->aVersions.getLength() )
-            return true;
+            return;
 
         uno::Reference < document::XDocumentRevisionListPersistence > xWriter =
                  document::DocumentRevisionListPersistence::create( comphelper::getProcessComponentContext() );
         try
         {
             xWriter->store( GetStorage(), pImp->aVersions );
-            return true;
         }
         catch ( const uno::Exception& )
         {
         }
     }
-
-    return false;
 }
 
 bool SfxMedium::IsReadOnly() const
@@ -3466,7 +3444,7 @@ void SfxMedium::CreateTempFile( bool bReplace )
 
         if ( !bTransferSuccess && pImp->m_pInStream )
         {
-            // the case when there is no URL-access available or this is a remote protocoll
+            // the case when there is no URL-access available or this is a remote protocol
             // but there is an input stream
             GetOutStream();
             if ( pImp->m_pOutStream )
@@ -3557,11 +3535,16 @@ bool SfxMedium::SignContents_Impl( bool bScriptingContent, const OUString& aODFV
                 if ( !xWriteableZipStor.is() )
                     throw uno::RuntimeException();
 
-                uno::Reference< embed::XStorage > xMetaInf = xWriteableZipStor->openStorageElement(
-                                                "META-INF",
-                                                embed::ElementModes::READWRITE );
-                if ( !xMetaInf.is() )
-                    throw uno::RuntimeException();
+                uno::Reference< embed::XStorage > xMetaInf;
+                uno::Reference<container::XNameAccess> xNameAccess(xWriteableZipStor, uno::UNO_QUERY);
+                if (xNameAccess.is() && xNameAccess->hasByName("META-INF"))
+                {
+                    xMetaInf = xWriteableZipStor->openStorageElement(
+                                                    "META-INF",
+                                                    embed::ElementModes::READWRITE );
+                    if ( !xMetaInf.is() )
+                        throw uno::RuntimeException();
+                }
 
                 if ( bScriptingContent )
                 {
@@ -3591,21 +3574,39 @@ bool SfxMedium::SignContents_Impl( bool bScriptingContent, const OUString& aODFV
                 }
                 else
                 {
-                     uno::Reference< io::XStream > xStream(
-                        xMetaInf->openStreamElement( xSigner->getDocumentContentSignatureDefaultStreamName(),
-                                                     embed::ElementModes::READWRITE ),
-                        uno::UNO_SET_THROW );
-
-                    if ( xSigner->signDocumentContent( GetZipStorageToSign_Impl(), xStream ) )
+                    if (xMetaInf.is())
                     {
-                        uno::Reference< embed::XTransactedObject > xTransact( xMetaInf, uno::UNO_QUERY_THROW );
-                        xTransact->commit();
-                        xTransact.set( xWriteableZipStor, uno::UNO_QUERY_THROW );
-                        xTransact->commit();
+                        // ODF.
+                        uno::Reference< io::XStream > xStream;
+                        if (GetFilter() && GetFilter()->IsOwnFormat())
+                            xStream.set(xMetaInf->openStreamElement(xSigner->getDocumentContentSignatureDefaultStreamName(), embed::ElementModes::READWRITE), uno::UNO_SET_THROW);
 
-                        // the temporary file has been written, commit it to the original file
-                        Commit();
-                        bChanges = true;
+                        if ( xSigner->signDocumentContent( GetZipStorageToSign_Impl(), xStream ) )
+                        {
+                            uno::Reference< embed::XTransactedObject > xTransact( xMetaInf, uno::UNO_QUERY_THROW );
+                            xTransact->commit();
+                            xTransact.set( xWriteableZipStor, uno::UNO_QUERY_THROW );
+                            xTransact->commit();
+
+                            // the temporary file has been written, commit it to the original file
+                            Commit();
+                            bChanges = true;
+                        }
+                    }
+                    else
+                    {
+                        // OOXML.
+                        uno::Reference<io::XStream> xStream;
+                        // We need read-write to be able to add the signature relation.
+                        if (xSigner->signDocumentContent(GetZipStorageToSign_Impl(/*bReadOnly=*/false), xStream))
+                        {
+                            uno::Reference<embed::XTransactedObject> xTransact(xWriteableZipStor, uno::UNO_QUERY_THROW);
+                            xTransact->commit();
+
+                            // the temporary file has been written, commit it to the original file
+                            Commit();
+                            bChanges = true;
+                        }
                     }
                 }
             }

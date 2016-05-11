@@ -37,8 +37,6 @@ AccessibleShapeTreeInfo::AccessibleShapeTreeInfo()
 }
 
 
-
-
 AccessibleShapeTreeInfo::AccessibleShapeTreeInfo (const AccessibleShapeTreeInfo& rInfo)
     : mxDocumentWindow (rInfo.mxDocumentWindow),
       mxModelBroadcaster (rInfo.mxModelBroadcaster),
@@ -51,8 +49,6 @@ AccessibleShapeTreeInfo::AccessibleShapeTreeInfo (const AccessibleShapeTreeInfo&
 }
 
 
-
-
 AccessibleShapeTreeInfo& AccessibleShapeTreeInfo::operator= (const AccessibleShapeTreeInfo& rInfo)
 {
     if ( this != &rInfo )
@@ -60,7 +56,7 @@ AccessibleShapeTreeInfo& AccessibleShapeTreeInfo::operator= (const AccessibleSha
         mxDocumentWindow = rInfo.mxDocumentWindow;
         mxModelBroadcaster = rInfo.mxModelBroadcaster;
         mpView = rInfo.mpView;
-        mxController = rInfo.mxController,
+        mxController = rInfo.mxController;
         mpWindow = rInfo.mpWindow;
         mpViewForwarder = rInfo.mpViewForwarder;
     }
@@ -68,15 +64,11 @@ AccessibleShapeTreeInfo& AccessibleShapeTreeInfo::operator= (const AccessibleSha
 }
 
 
-
-
 AccessibleShapeTreeInfo::~AccessibleShapeTreeInfo()
 {
     SolarMutexGuard g;
     mpWindow.reset();
 }
-
-
 
 
 void AccessibleShapeTreeInfo::SetDocumentWindow (
@@ -93,22 +85,10 @@ void AccessibleShapeTreeInfo::SetModelBroadcaster (
 }
 
 
-
-
-
-
-
-
 void AccessibleShapeTreeInfo::SetSdrView (SdrView* pView)
 {
     mpView = pView;
 }
-
-
-
-
-
-
 
 
 void AccessibleShapeTreeInfo::SetController (
@@ -118,32 +98,16 @@ void AccessibleShapeTreeInfo::SetController (
 }
 
 
-
-
-
-
-
-
 void AccessibleShapeTreeInfo::SetWindow (vcl::Window* pWindow)
 {
     mpWindow = pWindow;
 }
 
 
-
-
-
-
-
-
 void AccessibleShapeTreeInfo::SetViewForwarder (const IAccessibleViewForwarder* pViewForwarder)
 {
     mpViewForwarder = pViewForwarder;
 }
-
-
-
-
 
 
 } // end of namespace accessibility

@@ -30,7 +30,7 @@ static bool CompareStart( const std::unique_ptr<TextCharAttrib>& pFirst, const s
 TextCharAttrib::TextCharAttrib( const TextAttrib& rAttr, sal_Int32 nStart, sal_Int32 nEnd )
 {
     mpAttr = rAttr.Clone();
-    mnStart = nStart,
+    mnStart = nStart;
     mnEnd = nEnd;
 }
 
@@ -309,7 +309,7 @@ void TextNode::RemoveText( sal_Int32 nPos, sal_Int32 nChars )
     CollapsAttribs( nPos, nChars );
 }
 
-TextNode* TextNode::Split( sal_Int32 nPos, bool bKeepEndingAttribs )
+TextNode* TextNode::Split( sal_Int32 nPos )
 {
     OUString aNewText;
     if ( nPos < maText.getLength() )
@@ -331,7 +331,7 @@ TextNode* TextNode::Split( sal_Int32 nPos, bool bKeepEndingAttribs )
         {
             // must be copied as an empty attribute
             // !FindAttrib only sensible if traversing backwards through the list!
-            if ( bKeepEndingAttribs && !pNew->maCharAttribs.FindAttrib( rAttrib.Which(), 0 ) )
+            if ( !pNew->maCharAttribs.FindAttrib( rAttrib.Which(), 0 ) )
             {
                 TextCharAttrib* pNewAttrib = new TextCharAttrib( rAttrib );
                 pNewAttrib->GetStart() = 0;
@@ -514,10 +514,10 @@ TextPaM TextDoc::InsertText( const TextPaM& rPaM, const OUString& rStr )
     return aPaM;
 }
 
-TextPaM TextDoc::InsertParaBreak( const TextPaM& rPaM, bool bKeepEndingAttribs )
+TextPaM TextDoc::InsertParaBreak( const TextPaM& rPaM )
 {
     TextNode* pNode = maTextNodes[ rPaM.GetPara() ];
-    TextNode* pNew = pNode->Split( rPaM.GetIndex(), bKeepEndingAttribs );
+    TextNode* pNew = pNode->Split( rPaM.GetIndex() );
 
     DBG_ASSERT( maTextNodes.size()<SAL_MAX_UINT32, "InsertParaBreak: more than 4Gi paragraphs!" );
     maTextNodes.insert( maTextNodes.begin() + rPaM.GetPara() + 1, pNew );
@@ -540,12 +540,10 @@ TextPaM TextDoc::ConnectParagraphs( TextNode* pLeft, TextNode* pRight )
     return aPaM;
 }
 
-TextPaM TextDoc::RemoveChars( const TextPaM& rPaM, sal_Int32 nChars )
+void TextDoc::RemoveChars( const TextPaM& rPaM, sal_Int32 nChars )
 {
     TextNode* pNode = maTextNodes[ rPaM.GetPara() ];
     pNode->RemoveText( rPaM.GetIndex(), nChars );
-
-    return rPaM;
 }
 
 bool TextDoc::IsValidPaM( const TextPaM& rPaM )

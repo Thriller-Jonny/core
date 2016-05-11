@@ -61,14 +61,12 @@
 
 #include <com/sun/star/beans/PropertyValue.hpp>
 #include <com/sun/star/script/Converter.hpp>
-#include <com/sun/star/sdbc/XRow.hpp>
 
 using osl::MutexGuard;
 
 using com::sun::star::container::XNameAccess;
 
 using com::sun::star::lang::XComponent;
-using com::sun::star::lang::XInitialization;
 using com::sun::star::lang::IllegalArgumentException;
 
 using com::sun::star::script::Converter;
@@ -82,24 +80,17 @@ using com::sun::star::uno::XInterface;
 using com::sun::star::uno::UNO_QUERY;
 using com::sun::star::uno::XComponentContext;
 using com::sun::star::uno::Any;
-using com::sun::star::uno::makeAny;
 
 using com::sun::star::beans::PropertyValue;
-using com::sun::star::beans::XPropertySet;
 
-using com::sun::star::sdbc::XConnection;
-using com::sun::star::sdbc::XResultSet;
-using com::sun::star::sdbc::XRow;
 using com::sun::star::sdbc::XCloseable;
 using com::sun::star::sdbc::SQLException;
-using com::sun::star::sdbc::XWarningsSupplier;
 using com::sun::star::sdbc::XPreparedStatement;
 using com::sun::star::sdbc::XStatement;
 using com::sun::star::sdbc::XDatabaseMetaData;
 
 namespace pq_sdbc_driver
 {
-
 
 
 // Helper class for statement lifetime management
@@ -236,7 +227,7 @@ void Connection::close() throw ( SQLException, RuntimeException, std::exception 
         m_settings.tables.clear();
         m_settings.users.clear();
 
-        for( WeakHashMap::iterator ii = m_myStatements.begin() ;
+        for( WeakHashMap::const_iterator ii = m_myStatements.begin() ;
              ii != m_myStatements.end() ;
              ++ii )
         {
@@ -277,7 +268,7 @@ Reference< XStatement > Connection::createStatement() throw (SQLException, Runti
     Statement *stmt = new Statement( m_refMutex, this , &m_settings );
     Reference< XStatement > ret( stmt );
     ::rtl::ByteSequence id( 16 );
-    rtl_createUuid( reinterpret_cast<sal_uInt8*>(id.getArray()), nullptr, sal_False );
+    rtl_createUuid( reinterpret_cast<sal_uInt8*>(id.getArray()), nullptr, false );
     m_myStatements[ id ] = Reference< XCloseable > ( stmt );
     stmt->queryAdapter()->addReference( new ClosableReference( id, this ) );
     return ret;
@@ -294,7 +285,7 @@ Reference< XPreparedStatement > Connection::prepareStatement( const OUString& sq
     Reference< XPreparedStatement > ret = stmt;
 
     ::rtl::ByteSequence id( 16 );
-    rtl_createUuid( reinterpret_cast<sal_uInt8*>(id.getArray()), nullptr, sal_False );
+    rtl_createUuid( reinterpret_cast<sal_uInt8*>(id.getArray()), nullptr, false );
     m_myStatements[ id ] = Reference< XCloseable > ( stmt );
     stmt->queryAdapter()->addReference( new ClosableReference( id, this ) );
     return ret;
@@ -323,7 +314,7 @@ void Connection::setAutoCommit( sal_Bool ) throw (SQLException, RuntimeException
 sal_Bool Connection::getAutoCommit() throw (SQLException, RuntimeException, std::exception)
 {
     // UNSUPPORTED
-    return sal_True;
+    return true;
 }
 
 void Connection::commit() throw (SQLException, RuntimeException, std::exception)
@@ -360,7 +351,7 @@ void  Connection::setReadOnly( sal_Bool ) throw (SQLException, RuntimeException,
 sal_Bool Connection::isReadOnly() throw (SQLException, RuntimeException, std::exception)
 {
     // UNSUPPORTED
-    return sal_False;
+    return false;
 }
 
 void Connection::setCatalog( const OUString& )
@@ -428,9 +419,9 @@ public:
     {
         OSL_ENSURE(values.size() == acquired.size(), "pq_connection: cstr_vector values and acquired size mismatch");
         std::vector<char*>::iterator pv = values.begin();
-        std::vector<bool>::iterator pa = acquired.begin();
-        const std::vector<char*>::iterator pve = values.end();
-        for( ; pv < pve ; ++pv, ++pa )
+        std::vector<bool>::const_iterator pa = acquired.begin();
+        const std::vector<char*>::const_iterator pve = values.end();
+        for( ; pv != pve ; ++pv, ++pa )
             if (*pa)
                 free(*pv);
     }
@@ -474,11 +465,11 @@ static void properties2arrays( const Sequence< PropertyValue > & args,
     for( int i = 0; i < args.getLength() ; ++i )
     {
         bool append = false;
-        for( size_t j = 0; j < SAL_N_ELEMENTS( keyword_list ); j++)
+        for(const char* j : keyword_list)
         {
-            if( args[i].Name.equalsIgnoreAsciiCaseAscii( keyword_list[j] ))
+            if( args[i].Name.equalsIgnoreAsciiCaseAscii( j ))
             {
-                keywords.push_back( keyword_list[j], SAL_NO_ACQUIRE );
+                keywords.push_back( j, SAL_NO_ACQUIRE );
                 append = true;
                 break;
             }
@@ -660,7 +651,6 @@ Reference< XNameAccess > Connection::getViews()
 }
 
 
-
 Reference< XNameAccess > Connection::getUsers()
     throw (::com::sun::star::uno::RuntimeException, std::exception)
 {
@@ -682,7 +672,6 @@ Reference< XInterface >  ConnectionCreateInstance(
     ::rtl::Reference< RefCountedMutex > ref = new RefCountedMutex();
     return * new Connection( ref, ctx );
 }
-
 
 
 bool isLog( ConnectionSettings *settings, int loglevel )
@@ -726,7 +715,6 @@ void log( ConnectionSettings *settings, sal_Int32 level, const char *str )
 
 
 }
-
 
 
 static const struct cppu::ImplementationEntry g_entries[] =

@@ -26,18 +26,18 @@
 #include <vector>
 #include <memory>
 
-enum SVTOKEN_ENUM { SVTOKEN_EMPTY,      SVTOKEN_COMMENT,
-                    SVTOKEN_INTEGER,    SVTOKEN_STRING,
-                    SVTOKEN_BOOL,       SVTOKEN_IDENTIFIER,
-                    SVTOKEN_CHAR,       SVTOKEN_RTTIBASE,
-                    SVTOKEN_EOF,        SVTOKEN_HASHID };
+enum class SVTOKENTYPE { Empty,      Comment,
+                         Integer,    String,
+                         Bool,       Identifier,
+                         Char,
+                         EndOfFile,  HashId };
 
 class SvToken
 {
 friend class SvTokenStream;
     sal_uLong               nLine, nColumn;
-    SVTOKEN_ENUM            nType;
-    OString            aString;
+    SVTOKENTYPE             nType;
+    OString                 aString;
     union
     {
         sal_uLong           nLong;
@@ -47,12 +47,7 @@ friend class SvTokenStream;
     };
 public:
             SvToken();
-            SvToken( const SvToken & rObj );
-            SvToken( sal_uLong n );
-            SvToken( SVTOKEN_ENUM nTypeP, bool b );
-            SvToken( char c );
-            SvToken( SVTOKEN_ENUM nTypeP, const OString& rStr );
-            SvToken( SVTOKEN_ENUM nTypeP );
+            SvToken( const SvToken & rObj ) = delete;
 
     SvToken & operator = ( const SvToken & rObj );
 
@@ -64,20 +59,20 @@ public:
     void        SetColumn( sal_uLong nColumnP ) { nColumn = nColumnP;   }
     sal_uLong   GetColumn() const           { return nColumn;       }
 
-    bool        IsEmpty() const     { return nType == SVTOKEN_EMPTY; }
-    bool        IsComment() const   { return nType == SVTOKEN_COMMENT; }
-    bool        IsInteger() const   { return nType == SVTOKEN_INTEGER; }
-    bool        IsString() const    { return nType == SVTOKEN_STRING; }
-    bool        IsBool() const      { return nType == SVTOKEN_BOOL; }
+    bool        IsEmpty() const     { return nType == SVTOKENTYPE::Empty; }
+    bool        IsComment() const   { return nType == SVTOKENTYPE::Comment; }
+    bool        IsInteger() const   { return nType == SVTOKENTYPE::Integer; }
+    bool        IsString() const    { return nType == SVTOKENTYPE::String; }
+    bool        IsBool() const      { return nType == SVTOKENTYPE::Bool; }
     bool        IsIdentifierHash() const
-                { return nType == SVTOKEN_HASHID; }
+                { return nType == SVTOKENTYPE::HashId; }
     bool        IsIdentifier() const
                 {
-                    return nType == SVTOKEN_IDENTIFIER
-                            || nType == SVTOKEN_HASHID;
+                    return nType == SVTOKENTYPE::Identifier
+                            || nType == SVTOKENTYPE::HashId;
                 }
-    bool        IsChar() const      { return nType == SVTOKEN_CHAR; }
-    bool        IsEof() const       { return nType == SVTOKEN_EOF; }
+    bool        IsChar() const      { return nType == SVTOKENTYPE::Char; }
+    bool        IsEof() const       { return nType == SVTOKENTYPE::EndOfFile; }
 
     const OString& GetString() const
                 {
@@ -90,9 +85,9 @@ public:
     char        GetChar() const         { return cChar;         }
 
     void        SetHash( SvStringHashEntry * pHashP )
-                { pHash = pHashP; nType = SVTOKEN_HASHID; }
+                { pHash = pHashP; nType = SVTOKENTYPE::HashId; }
     bool        HasHash() const
-                { return nType == SVTOKEN_HASHID; }
+                { return nType == SVTOKENTYPE::HashId; }
     bool        Is( SvStringHashEntry * pEntry ) const
                 { return IsIdentifierHash() && pHash == pEntry; }
 };
@@ -100,44 +95,28 @@ public:
 inline SvToken::SvToken()
     : nLine(0)
     , nColumn(0)
-    , nType( SVTOKEN_EMPTY )
+    , nType( SVTOKENTYPE::Empty )
 {
 }
-
-inline SvToken::SvToken( sal_uLong n )
-    : nType( SVTOKEN_INTEGER ), nLong( n ) {}
-
-inline SvToken::SvToken( SVTOKEN_ENUM nTypeP, bool b )
-    : nType( nTypeP ), bBool( b ) {}
-
-inline SvToken::SvToken( char c )
-    : nType( SVTOKEN_CHAR ), cChar( c ) {}
-
-inline SvToken::SvToken( SVTOKEN_ENUM nTypeP, const OString& rStr )
-    : nType( nTypeP ), aString( rStr ) {}
-
-inline SvToken::SvToken( SVTOKEN_ENUM nTypeP )
-: nType( nTypeP ) {}
 
 class SvTokenStream
 {
     sal_uLong       nLine, nColumn;
-    int         nBufPos;
-    int         c;          // next character
+    int             nBufPos;
+    int             c;          // next character
     sal_uInt16      nTabSize;   // length of tabulator
-    OString    aStrTrue;
-    OString    aStrFalse;
+    OString         aStrTrue;
+    OString         aStrFalse;
     sal_uLong       nMaxPos;
 
     SvFileStream *  pInStream;
-    SvStream &      rInStream;
     OUString        aFileName;
     std::vector<std::unique_ptr<SvToken> > aTokList;
     std::vector<std::unique_ptr<SvToken> >::iterator pCurToken;
 
-    OString aBufStr;
+    OString         aBufStr;
 
-    void        InitCtor();
+    void            InitCtor();
 
     int             GetNextChar();
     int             GetFastNextChar()
@@ -150,7 +129,7 @@ class SvTokenStream
     void            FillTokenList();
     sal_uLong       GetNumber();
     bool            MakeToken( SvToken & );
-    bool            IsEof() const { return rInStream.IsEof(); }
+    bool            IsEof() const { return pInStream->IsEof(); }
     void            SetMax()
                     {
                         sal_uLong n = Tell();
@@ -170,13 +149,12 @@ class SvTokenStream
                     }
 public:
                     SvTokenStream( const OUString & rFileName );
-                    SvTokenStream( SvStream & rInStream, const OUString & rFileName );
                     ~SvTokenStream();
 
     const OUString &  GetFileName() const { return aFileName; }
-    SvStream &        GetStream() { return rInStream; }
+    SvStream &        GetStream() { return *pInStream; }
 
-    SvToken* GetToken_PrevAll()
+    SvToken& GetToken_PrevAll()
     {
         std::vector<std::unique_ptr<SvToken> >::iterator pRetToken = pCurToken;
 
@@ -184,10 +162,10 @@ public:
         if(pCurToken != aTokList.begin())
             --pCurToken;
 
-        return (*pRetToken).get();
+        return *(*pRetToken).get();
     }
 
-    SvToken* GetToken_NextAll()
+    SvToken& GetToken_Next()
     {
         std::vector<std::unique_ptr<SvToken> >::iterator pRetToken = pCurToken++;
 
@@ -196,38 +174,44 @@ public:
 
         SetMax();
 
-        return (*pRetToken).get();
-    }
-
-    SvToken* GetToken_Next()
-    {
-        // comments get removed initially
-        return GetToken_NextAll();
+        return *(*pRetToken).get();
     }
 
     SvToken& GetToken() const { return *(*pCurToken).get(); }
 
-    bool     Read( char cChar )
-                    {
-                        if( (*pCurToken)->IsChar()
-                          && cChar == (*pCurToken)->GetChar() )
-                        {
-                            GetToken_Next();
-                            return true;
-                        }
-                        else
-                            return false;
-                    }
+    bool     ReadIf( char cChar )
+    {
+        if( GetToken().IsChar() && cChar == GetToken().GetChar() )
+        {
+            GetToken_Next();
+            return true;
+        }
+        else
+            return false;
+    }
 
-    void     ReadDelemiter()
-                    {
-                        if( (*pCurToken)->IsChar()
-                          && (';' == (*pCurToken)->GetChar()
-                                || ',' == (*pCurToken)->GetChar()) )
-                        {
-                            GetToken_Next();
-                        }
-                    }
+    bool     ReadIf( SvStringHashEntry* pEntry )
+    {
+        if( GetToken().Is( pEntry ) )
+        {
+            GetToken_Next();
+            return true;
+        }
+        else
+            return false;
+    }
+
+    bool     ReadIfDelimiter()
+    {
+        if( GetToken().IsChar()
+            && (';' == GetToken().GetChar()
+                 || ',' == GetToken().GetChar()) )
+        {
+            GetToken_Next();
+            return true;
+        }
+        return false;
+    }
 
     sal_uInt32 Tell() const { return pCurToken-aTokList.begin(); }
 
@@ -237,12 +221,11 @@ public:
         SetMax();
     }
 
-    void SeekEnd()
+    void SeekToMax()
     {
         pCurToken = aTokList.begin()+nMaxPos;
     }
 };
-
 
 
 #endif // INCLUDED_IDL_INC_LEX_HXX

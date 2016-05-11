@@ -18,10 +18,7 @@
  */
 
 #include <sfx2/sfx.hrc>
-#include <svx/globlmn.hrc>
 #include "starmath.hrc"
-#include "toolbox.hrc"
-#include "smcommands.h"
 
 String RID_FONTREGULAR
 {
@@ -35,14 +32,6 @@ String RID_FONTBOLD
 {
     Text [ en-US ] = "Bold" ;
 };
-String RID_OBJECTNAME
-{
-    Text = "SMath3" ;
-};
-String RID_UNDOEDITNAME
-{
-    Text = "Edit" ;
-};
 String RID_UNDOFORMATNAME
 {
     Text = "Format" ;
@@ -50,58 +39,6 @@ String RID_UNDOFORMATNAME
 String GID_MATH
 {
     Text = "StarMath" ;
-};
-Menu RID_VIEWMENU
-{
-    ItemList =
-    {
-        MenuItem
-        {
-            Identifier = SID_ZOOM_50_PERCENT;
-            HelpId = CMD_SID_VIEW050 ;
-            Text [ en-US ] = "~View 50%" ;
-        };
-        MenuItem
-        {
-            Identifier = SID_ZOOM_100_PERCENT ;
-            HelpId = CMD_SID_VIEW100 ;
-            Text [ en-US ] = "View ~100%" ;
-        };
-        MenuItem
-        {
-            Identifier = SID_ZOOM_200_PERCENT ;
-            HelpId = CMD_SID_VIEW200 ;
-            Text [ en-US ] = "View ~200%" ;
-        };
-        MenuItem
-        {
-            Identifier = SID_ZOOMIN ;
-            HelpId = CMD_SID_ZOOMIN ;
-            Text [ en-US ] = "~Zoom In" ;
-        };
-        MenuItem
-        {
-            Identifier = SID_ZOOMOUT ;
-            HelpId = CMD_SID_ZOOMOUT ;
-            Text [ en-US ] = "Zoom ~Out" ;
-        };
-        MenuItem
-        {
-            Identifier = SID_ZOOM_OPTIMAL ;
-            HelpId = CMD_SID_ADJUST ;
-            Text [ en-US ] = "~Display All" ;
-        };
-        MenuItem
-        {
-            Separator = TRUE ;
-        };
-        MenuItem
-        {
-            Identifier = SID_DRAW ;
-            HelpId = CMD_SID_DRAW ;
-            Text [ en-US ] = "U~pdate" ;
-        };
-    };
 };
 
 String STR_BLACK
@@ -224,16 +161,6 @@ String STR_MATH_DOCUMENT_FULLTYPE_CURRENT
     Text [ en-US ] = "%PRODUCTNAME %PRODUCTVERSION Formula";
 };
 
-String RID_SYMBOLFILESSTR
-{
-    Text [ en-US ] = "Symbol files (*.sms)" ;
-};
-
-String RID_ALLFILESSTR
-{
-    Text [ en-US ] = "All files" ;
-};
-
 String RID_ERR_IDENT
 {
     Text [ en-US ] = "ERROR : " ;
@@ -247,11 +174,6 @@ String RID_ERR_UNKNOWN
 String RID_ERR_UNEXPECTEDCHARACTER
 {
     Text [ en-US ] = "Unexpected character" ;
-};
-
-String RID_ERR_OVERFLOW
-{
-    Text [ en-US ] = "Formula entry too complex" ;
 };
 
 String RID_ERR_LGROUPEXPECTED

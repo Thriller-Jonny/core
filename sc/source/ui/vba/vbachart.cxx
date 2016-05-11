@@ -321,11 +321,11 @@ try
                 case xlXYScatter:
                 case xlBubble:                      // not possible
                 case xlBubble3DEffect:              // not possible
-                    mxDiagramPropertySet->setPropertyValue(LINES, uno::makeAny( sal_False ));
+                    mxDiagramPropertySet->setPropertyValue(LINES, uno::makeAny( false ));
                     break;
                 case xlXYScatterLines:
                 case xlXYScatterLinesNoMarkers:
-                    mxDiagramPropertySet->setPropertyValue(LINES, uno::makeAny( sal_True ));
+                    mxDiagramPropertySet->setPropertyValue(LINES, uno::makeAny( true ));
                     break;
                 case xlXYScatterSmooth:
                 case xlXYScatterSmoothNoMarkers:
@@ -370,12 +370,12 @@ try
         case xlSurfaceWireframe:
         case xlSurfaceTopView:
         case xlSurfaceTopViewWireframe:
-            mxDiagramPropertySet->setPropertyValue(DEEP,uno::makeAny( sal_True ));
+            mxDiagramPropertySet->setPropertyValue(DEEP,uno::makeAny( true ));
             break;
         default:
                 if (mxDiagramPropertySet->getPropertySetInfo()->hasPropertyByName(DEEP))
                 {
-                    mxDiagramPropertySet->setPropertyValue(DEEP, uno::makeAny( sal_False));
+                    mxDiagramPropertySet->setPropertyValue(DEEP, uno::makeAny( false));
                 }
                 break;
         }
@@ -439,12 +439,12 @@ try
             case xlSurfaceWireframe:
             case xlSurfaceTopView:
             case xlSurfaceTopViewWireframe:
-                mxDiagramPropertySet->setPropertyValue(VERTICAL, uno::makeAny( sal_True));
+                mxDiagramPropertySet->setPropertyValue(VERTICAL, uno::makeAny( true));
                 break;
             default:
                 if (mxDiagramPropertySet->getPropertySetInfo()->hasPropertyByName(VERTICAL))
                 {
-                    mxDiagramPropertySet->setPropertyValue(VERTICAL, uno::makeAny(sal_False));
+                    mxDiagramPropertySet->setPropertyValue(VERTICAL, uno::makeAny(false));
                 }
                 break;
         }
@@ -465,8 +465,8 @@ try
             case xlConeBarStacked:
             case xlPyramidColStacked:
             case xlPyramidBarStacked:
-                mxDiagramPropertySet->setPropertyValue(PERCENT, uno::makeAny( sal_False ));
-                mxDiagramPropertySet->setPropertyValue(STACKED, uno::makeAny( sal_True ));
+                mxDiagramPropertySet->setPropertyValue(PERCENT, uno::makeAny( false ));
+                mxDiagramPropertySet->setPropertyValue(STACKED, uno::makeAny( true ));
                 break;
             case xlPyramidColStacked100:
             case xlPyramidBarStacked100:
@@ -482,12 +482,12 @@ try
             case xlBarStacked100:
             case xl3DColumnStacked100:
             case xlColumnStacked100:
-                mxDiagramPropertySet->setPropertyValue(STACKED, uno::makeAny( sal_True));
-                mxDiagramPropertySet->setPropertyValue(PERCENT, uno::makeAny( sal_True ));
+                mxDiagramPropertySet->setPropertyValue(STACKED, uno::makeAny( true));
+                mxDiagramPropertySet->setPropertyValue(PERCENT, uno::makeAny( true ));
                 break;
             default:
-                mxDiagramPropertySet->setPropertyValue(PERCENT, uno::makeAny( sal_False));
-                mxDiagramPropertySet->setPropertyValue(STACKED, uno::makeAny( sal_False));
+                mxDiagramPropertySet->setPropertyValue(PERCENT, uno::makeAny( false));
+                mxDiagramPropertySet->setPropertyValue(STACKED, uno::makeAny( false));
                 break;
         }
         switch (_nChartType)
@@ -526,12 +526,12 @@ try
             case xlCylinderBarStacked:
             case xlCylinderBarStacked100:
             case xlCylinderCol:
-                mxDiagramPropertySet->setPropertyValue(DIM3D, uno::makeAny( sal_True));
+                mxDiagramPropertySet->setPropertyValue(DIM3D, uno::makeAny( true));
                 break;
             default:
                 if (mxDiagramPropertySet->getPropertySetInfo()->hasPropertyByName(DIM3D))
                 {
-                    mxDiagramPropertySet->setPropertyValue(DIM3D, uno::makeAny( sal_False));
+                    mxDiagramPropertySet->setPropertyValue(DIM3D, uno::makeAny( false));
                 }
                 break;
         }
@@ -562,15 +562,15 @@ ScVbaChart::setSourceData( const css::uno::Reference< ::ooo::vba::excel::XRange 
 {
     try
     {
-        uno::Sequence< table::CellRangeAddress > mRangeAddresses(1);
-        table::CellRangeAddress mSingleRangeAddress;
+        uno::Sequence< table::CellRangeAddress > aRangeAddresses(1);
+        table::CellRangeAddress aSingleRangeAddress;
 
         uno::Reference< sheet::XCellRangeAddressable > xAddressable( _xCalcRange->getCellRange(), uno::UNO_QUERY_THROW );
-        mSingleRangeAddress = xAddressable->getRangeAddress();
+        aSingleRangeAddress = xAddressable->getRangeAddress();
 
-        mRangeAddresses[0] = mSingleRangeAddress;
+        aRangeAddresses[0] = aSingleRangeAddress;
 
-        mxTableChart->setRanges(mRangeAddresses);
+        mxTableChart->setRanges(aRangeAddresses);
 
         bool bsetRowHeaders = false;
         bool bsetColumnHeaders = false;
@@ -579,8 +579,8 @@ ScVbaChart::setSourceData( const css::uno::Reference< ::ooo::vba::excel::XRange 
         if ( pRange )
         {
             ScDocument& rDoc = pRange->getScDocument();
-            bsetRowHeaders = rDoc.HasRowHeader(  static_cast< SCCOL >( mSingleRangeAddress.StartColumn ), static_cast< SCROW >( mSingleRangeAddress.StartRow ), static_cast< SCCOL >( mSingleRangeAddress.EndColumn ), static_cast< SCROW >( mSingleRangeAddress.EndRow ), static_cast< SCTAB >( mSingleRangeAddress.Sheet ) );
-            bsetColumnHeaders = rDoc.HasColHeader(  static_cast< SCCOL >( mSingleRangeAddress.StartColumn ), static_cast< SCROW >( mSingleRangeAddress.StartRow ), static_cast< SCCOL >( mSingleRangeAddress.EndColumn ), static_cast< SCROW >( mSingleRangeAddress.EndRow ), static_cast< SCTAB >( mSingleRangeAddress.Sheet ));
+            bsetRowHeaders = rDoc.HasRowHeader(  static_cast< SCCOL >( aSingleRangeAddress.StartColumn ), static_cast< SCROW >( aSingleRangeAddress.StartRow ), static_cast< SCCOL >( aSingleRangeAddress.EndColumn ), static_cast< SCROW >( aSingleRangeAddress.EndRow ), static_cast< SCTAB >( aSingleRangeAddress.Sheet ) );
+            bsetColumnHeaders = rDoc.HasColHeader(  static_cast< SCCOL >( aSingleRangeAddress.StartColumn ), static_cast< SCROW >( aSingleRangeAddress.StartRow ), static_cast< SCCOL >( aSingleRangeAddress.EndColumn ), static_cast< SCROW >( aSingleRangeAddress.EndRow ), static_cast< SCTAB >( aSingleRangeAddress.Sheet ));
         }
         mxTableChart->setHasRowHeaders(bsetRowHeaders);
         mxTableChart->setHasColumnHeaders(bsetColumnHeaders);
@@ -606,8 +606,8 @@ ScVbaChart::setSourceData( const css::uno::Reference< ::ooo::vba::excel::XRange 
         }
         else
         {
-            sal_Int32 nRows =  mSingleRangeAddress.EndRow - mSingleRangeAddress.StartRow;
-            sal_Int32 nCols = mSingleRangeAddress.EndColumn - mSingleRangeAddress.StartColumn;
+            sal_Int32 nRows = aSingleRangeAddress.EndRow - aSingleRangeAddress.StartRow;
+            sal_Int32 nCols = aSingleRangeAddress.EndColumn - aSingleRangeAddress.StartColumn;
             // AutoDetect emulation
             if ( nRows > nCols )
                 setPlotBy( xlColumns );

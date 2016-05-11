@@ -37,7 +37,6 @@
 #include "unoprnms.hxx"
 #include <com/sun/star/lang/NoSupportException.hpp>
 #include <svx/svdpool.hxx>
-#include "unohelp.hxx"
 #include "FrameView.hxx"
 #include "DrawViewShell.hxx"
 #include "View.hxx"
@@ -258,13 +257,13 @@ uno::Any SAL_CALL SdLayer::getPropertyValue( const OUString& PropertyName )
     switch( pEntry ? pEntry->nWID : -1 )
     {
     case WID_LAYER_LOCKED:
-        sd::bool2any( get( LOCKED ), aValue );
+        aValue <<= get( LOCKED );
         break;
     case WID_LAYER_PRINTABLE:
-        sd::bool2any( get( PRINTABLE ), aValue );
+        aValue <<= get( PRINTABLE );
         break;
     case WID_LAYER_VISIBLE:
-        sd::bool2any( get( VISIBLE ), aValue );
+        aValue <<= get( VISIBLE );
         break;
     case WID_LAYER_NAME:
     {
@@ -693,7 +692,7 @@ sal_Bool SAL_CALL SdLayerManager::hasElements() throw(uno::RuntimeException, std
  * If something was changed at the layers, this methods takes care that the
  * changes are made visible in sdbcx::View.
  */
-void SdLayerManager::UpdateLayerView( bool modify ) const throw()
+void SdLayerManager::UpdateLayerView() const throw()
 {
     if(mpModel->mpDocShell)
     {
@@ -706,8 +705,7 @@ void SdLayerManager::UpdateLayerView( bool modify ) const throw()
             pDrViewSh->ChangeEditMode(pDrViewSh->GetEditMode(), bLayerMode);
         }
 
-        if(modify)
-            mpModel->mpDoc->SetChanged();
+        mpModel->mpDoc->SetChanged();
     }
 }
 
@@ -735,7 +733,7 @@ namespace
     @return
         Return </True> if both pointers point to the same object.
 */
-bool compare_layers (uno::WeakReference<uno::XInterface> xRef, void* pSearchData)
+bool compare_layers (const uno::WeakReference<uno::XInterface>& xRef, void* pSearchData)
 {
     uno::Reference<uno::XInterface> xLayer (xRef);
     if (xLayer.is())

@@ -29,7 +29,7 @@
 #include <tools/diagnose_ex.h>
 #include <tools/poly.hxx>
 #include <vcl/bitmapex.hxx>
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 #include <vcl/canvastools.hxx>
 #include <vcl/window.hxx>
 
@@ -533,11 +533,11 @@ namespace vclcanvas
         if( !mpOutDev.get() )
             return rendering::IntegerBitmapLayout(); // we're disposed
 
-        rendering::IntegerBitmapLayout xBitmapLayout( ::canvas::tools::getStdMemoryLayout(getSize()) );
+        rendering::IntegerBitmapLayout aBitmapLayout( ::canvas::tools::getStdMemoryLayout(getSize()) );
         if ( !hasAlpha() )
-            xBitmapLayout.ColorSpace = canvas::tools::getStdColorSpaceWithoutAlpha();
+            aBitmapLayout.ColorSpace = canvas::tools::getStdColorSpaceWithoutAlpha();
 
-        return xBitmapLayout;
+        return aBitmapLayout;
     }
 
     BitmapEx CanvasBitmapHelper::getBitmap() const

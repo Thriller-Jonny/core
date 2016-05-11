@@ -55,6 +55,7 @@ PluginHandler::PluginHandler( CompilerInstance& compiler, const vector< string >
     : compiler( compiler )
     , rewriter( compiler.getSourceManager(), compiler.getLangOpts())
     , scope( "mainfile" )
+    , warningsAsErrors( false )
     {
     set< string > rewriters;
     for( vector< string >::const_iterator it = args.begin();
@@ -101,6 +102,8 @@ void PluginHandler::handleOption( const string& option )
         {
         warningsOnly = option.substr(14);
         }
+    else if( option == "warnings-as-errors" )
+        warningsAsErrors = true;
     else
         report( DiagnosticsEngine::Fatal, "unknown option %0" ) << option;
     }
@@ -137,7 +140,7 @@ DiagnosticBuilder PluginHandler::report( DiagnosticsEngine::Level level, const c
     {
     DiagnosticsEngine& diag = compiler.getDiagnostics();
     // Do some mappings (e.g. for -Werror) that clang does not do for custom messages for some reason.
-    if( level == DiagnosticsEngine::Warning && diag.getWarningsAsErrors() && (plugin == nullptr || plugin != warningsOnly))
+    if( level == DiagnosticsEngine::Warning && ((diag.getWarningsAsErrors() && (plugin == nullptr || plugin != warningsOnly)) || warningsAsErrors))
         level = DiagnosticsEngine::Error;
     if( level == DiagnosticsEngine::Error && diag.getErrorsAsFatal())
         level = DiagnosticsEngine::Fatal;
@@ -250,7 +253,7 @@ void PluginHandler::HandleTranslationUnit( ASTContext& context )
         }
     }
 
-#if (__clang_major__ == 3 && __clang_minor__ >= 6) || __clang_major__ > 3
+#if CLANG_VERSION >= 30600
 std::unique_ptr<ASTConsumer> LibreOfficeAction::CreateASTConsumer( CompilerInstance& Compiler, StringRef )
     {
     return llvm::make_unique<PluginHandler>( Compiler, _args );

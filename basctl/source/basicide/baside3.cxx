@@ -64,7 +64,7 @@ using namespace ::com::sun::star::io;
 using namespace ::com::sun::star::resource;
 using namespace ::com::sun::star::ui::dialogs;
 
-#ifdef WNT
+#ifdef _WIN32
 char const FilterMask_All[] = "*.*";
 #else
 char const FilterMask_All[] = "*";
@@ -74,15 +74,15 @@ DialogWindow::DialogWindow(DialogWindowLayout* pParent, ScriptDocument const& rD
                            const OUString& aLibName, const OUString& aName,
                            css::uno::Reference<css::container::XNameContainer> const& xDialogModel)
     : BaseWindow(pParent, rDocument, aLibName, aName)
-    ,rLayout(*pParent)
-    ,pEditor(new DlgEditor(*this, rLayout, rDocument.isDocument()
+    ,m_rLayout(*pParent)
+    ,m_pEditor(new DlgEditor(*this, m_rLayout, rDocument.isDocument()
                                             ? rDocument.getDocument()
                                             : Reference<frame::XModel>(), xDialogModel))
-    ,pUndoMgr(new SfxUndoManager)
+    ,m_pUndoMgr(new SfxUndoManager)
 {
-    InitSettings( true, true, true );
+    InitSettings();
 
-    pEditor->GetModel().SetNotifyUndoActionHdl(
+    m_pEditor->GetModel().SetNotifyUndoActionHdl(
         LINK(this, DialogWindow, NotifyUndoActionHdl)
     );
 
@@ -99,7 +99,7 @@ DialogWindow::DialogWindow(DialogWindowLayout* pParent, ScriptDocument const& rD
 
 void DialogWindow::dispose()
 {
-    pEditor.reset();
+    m_pEditor.reset();
     BaseWindow::dispose();
 }
 
@@ -113,20 +113,20 @@ void DialogWindow::LoseFocus()
 
 void DialogWindow::Paint(vcl::RenderContext& rRenderContext, const Rectangle& rRect)
 {
-    pEditor->Paint(rRenderContext, rRect);
+    m_pEditor->Paint(rRenderContext, rRect);
 }
 
 void DialogWindow::Resize()
 {
     if (GetHScrollBar() && GetVScrollBar())
     {
-        pEditor->SetScrollBars( GetHScrollBar(), GetVScrollBar() );
+        m_pEditor->SetScrollBars( GetHScrollBar(), GetVScrollBar() );
     }
 }
 
 void DialogWindow::MouseButtonDown( const MouseEvent& rMEvt )
 {
-    pEditor->MouseButtonDown( rMEvt );
+    m_pEditor->MouseButtonDown( rMEvt );
 
     if (SfxBindings* pBindings = GetBindingsPtr())
         pBindings->Invalidate( SID_SHOW_PROPERTYBROWSER );
@@ -134,10 +134,10 @@ void DialogWindow::MouseButtonDown( const MouseEvent& rMEvt )
 
 void DialogWindow::MouseButtonUp( const MouseEvent& rMEvt )
 {
-    pEditor->MouseButtonUp( rMEvt );
-    if( (pEditor->GetMode() == DlgEditor::INSERT) && !pEditor->IsCreateOK() )
+    m_pEditor->MouseButtonUp( rMEvt );
+    if( (m_pEditor->GetMode() == DlgEditor::INSERT) && !m_pEditor->IsCreateOK() )
     {
-        pEditor->SetMode( DlgEditor::SELECT );
+        m_pEditor->SetMode( DlgEditor::SELECT );
         if (SfxBindings* pBindings = GetBindingsPtr())
             pBindings->Invalidate( SID_CHOOSE_CONTROLS );
     }
@@ -153,7 +153,7 @@ void DialogWindow::MouseButtonUp( const MouseEvent& rMEvt )
 
 void DialogWindow::MouseMove( const MouseEvent& rMEvt )
 {
-    pEditor->MouseMove( rMEvt );
+    m_pEditor->MouseMove( rMEvt );
 }
 
 void DialogWindow::KeyInput( const KeyEvent& rKEvt )
@@ -170,7 +170,7 @@ void DialogWindow::KeyInput( const KeyEvent& rKEvt )
         if( pBindings && rKEvt.GetKeyCode() == KEY_TAB )
             pBindings->Invalidate( SID_SHOW_PROPERTYBROWSER );
 
-        if( !pEditor->KeyInput( rKEvt ) )
+        if( !m_pEditor->KeyInput( rKEvt ) )
         {
             if( !SfxViewShell::Current()->KeyInput( rKEvt ) )
                 Window::KeyInput( rKEvt );
@@ -195,7 +195,7 @@ void DialogWindow::Command( const CommandEvent& rCEvt )
     }
     else if ( rCEvt.GetCommand() == CommandEventId::ContextMenu )
     {
-        if (SfxDispatcher* pDispatcher = GetDispatcher())
+        if (GetDispatcher())
         {
             SdrView& rView = GetView();
             if( !rCEvt.IsMouseEvent() && rView.AreObjectsMarked() )
@@ -203,11 +203,11 @@ void DialogWindow::Command( const CommandEvent& rCEvt )
                 Rectangle aMarkedRect( rView.GetMarkedRect() );
                 Point MarkedCenter( aMarkedRect.Center() );
                 Point PosPixel( LogicToPixel( MarkedCenter ) );
-                pDispatcher->ExecutePopup( IDEResId(RID_POPUP_DLGED), this, &PosPixel );
+                SfxDispatcher::ExecutePopup( this, &PosPixel );
             }
             else
             {
-                pDispatcher->ExecutePopup( IDEResId(RID_POPUP_DLGED) );
+                SfxDispatcher::ExecutePopup();
             }
 
         }
@@ -230,12 +230,12 @@ void DialogWindow::DoInit()
 {
     GetHScrollBar()->Show();
     GetVScrollBar()->Show();
-    pEditor->SetScrollBars( GetHScrollBar(), GetVScrollBar() );
+    m_pEditor->SetScrollBars( GetHScrollBar(), GetVScrollBar() );
 }
 
 void DialogWindow::DoScroll( ScrollBar* pCurScrollBar )
 {
-    pEditor->DoScroll( pCurScrollBar );
+    m_pEditor->DoScroll( pCurScrollBar );
 }
 
 void DialogWindow::GetState( SfxItemSet& rSet )
@@ -269,7 +269,7 @@ void DialogWindow::GetState( SfxItemSet& rSet )
             case SID_COPY:
             {
                 // any object selected?
-                if ( !pEditor->GetView().AreObjectsMarked() )
+                if ( !m_pEditor->GetView().AreObjectsMarked() )
                     rSet.DisableItem( nWh );
             }
             break;
@@ -278,7 +278,7 @@ void DialogWindow::GetState( SfxItemSet& rSet )
             case SID_BACKSPACE:
             {
                 // any object selected?
-                if ( !pEditor->GetView().AreObjectsMarked() )
+                if ( !m_pEditor->GetView().AreObjectsMarked() )
                     rSet.DisableItem( nWh );
 
                 if ( IsReadOnly() )
@@ -287,7 +287,7 @@ void DialogWindow::GetState( SfxItemSet& rSet )
             break;
             case SID_REDO:
             {
-                if ( !pUndoMgr->GetUndoActionCount() )
+                if ( !m_pUndoMgr->GetUndoActionCount() )
                     rSet.DisableItem( nWh );
             }
             break;
@@ -296,7 +296,7 @@ void DialogWindow::GetState( SfxItemSet& rSet )
             {
                 // is the IDE still active?
                 bool const bBool = GetShell()->GetFrame() &&
-                    pEditor->GetMode() == DlgEditor::TEST;
+                    m_pEditor->GetMode() == DlgEditor::TEST;
                 rSet.Put(SfxBoolItem(SID_DIALOG_TESTMODE, bBool));
             }
             break;
@@ -315,7 +315,7 @@ void DialogWindow::GetState( SfxItemSet& rSet )
                     else
                     {
                         sal_uInt16 nObj;
-                        switch( pEditor->GetInsertObj() )
+                        switch( m_pEditor->GetInsertObj() )
                         {
                             case OBJ_DLG_PUSHBUTTON:        nObj = SVX_SNAP_PUSHBUTTON; break;
                             case OBJ_DLG_RADIOBUTTON:       nObj = SVX_SNAP_RADIOBUTTON; break;
@@ -355,7 +355,7 @@ void DialogWindow::GetState( SfxItemSet& rSet )
             {
                 Shell* pShell = GetShell();
                 SfxViewFrame* pViewFrame = pShell ? pShell->GetViewFrame() : nullptr;
-                if ( pViewFrame && !pViewFrame->HasChildWindow( SID_SHOW_PROPERTYBROWSER ) && !pEditor->GetView().AreObjectsMarked() )
+                if ( pViewFrame && !pViewFrame->HasChildWindow( SID_SHOW_PROPERTYBROWSER ) && !m_pEditor->GetView().AreObjectsMarked() )
                     rSet.DisableItem( nWh );
 
                 if ( IsReadOnly() )
@@ -651,7 +651,7 @@ void DialogWindow::ExecuteCommand( SfxRequest& rReq )
 
 Reference< container::XNameContainer > DialogWindow::GetDialog() const
 {
-    return pEditor->GetDialog();
+    return m_pEditor->GetDialog();
 }
 
 bool DialogWindow::RenameDialog( const OUString& rNewName )
@@ -667,18 +667,16 @@ bool DialogWindow::RenameDialog( const OUString& rNewName )
 
 void DialogWindow::DisableBrowser()
 {
-    rLayout.DisablePropertyBrowser();
+    m_rLayout.DisablePropertyBrowser();
 }
 
 void DialogWindow::UpdateBrowser()
 {
-    rLayout.UpdatePropertyBrowser();
+    m_rLayout.UpdatePropertyBrowser();
 }
 
-bool DialogWindow::SaveDialog()
+void DialogWindow::SaveDialog()
 {
-    bool bDone = false;
-
     Reference< XComponentContext > xContext( comphelper::getProcessComponentContext() );
     Reference < XFilePicker3 > xFP = FilePicker::createWithMode(xContext, TemplateDescription::FILESAVE_AUTOEXTENSION_PASSWORD);
 
@@ -688,8 +686,8 @@ bool DialogWindow::SaveDialog()
     aValue <<= true;
     xFPControl->setValue(ExtendedFilePickerElementIds::CHECKBOX_AUTOEXTENSION, 0, aValue);
 
-    if ( !aCurPath.isEmpty() )
-        xFP->setDisplayDirectory ( aCurPath );
+    if ( !m_sCurPath.isEmpty() )
+        xFP->setDisplayDirectory ( m_sCurPath );
 
     xFP->setDefaultName( GetName() );
 
@@ -701,7 +699,7 @@ bool DialogWindow::SaveDialog()
     if( xFP->execute() == RET_OK )
     {
         Sequence< OUString > aPaths = xFP->getSelectedFiles();
-        aCurPath = aPaths[0];
+        m_sCurPath = aPaths[0];
 
         // export dialog model to xml
         Reference< container::XNameContainer > xDialogModel = GetDialog();
@@ -713,9 +711,9 @@ bool DialogWindow::SaveDialog()
         Reference< XOutputStream > xOutput;
         try
         {
-            if( xSFI->exists( aCurPath ) )
-                xSFI->kill( aCurPath );
-            xOutput = xSFI->openFileWrite( aCurPath );
+            if( xSFI->exists( m_sCurPath ) )
+                xSFI->kill( m_sCurPath );
+            xOutput = xSFI->openFileWrite( m_sCurPath );
         }
         catch(const Exception& )
         {}
@@ -733,7 +731,6 @@ bool DialogWindow::SaveDialog()
                 if (! nRead)
                     break;
             }
-            bDone = true;
 
             // With resource?
             Reference< beans::XPropertySet > xDialogModelPropSet( xDialogModel, UNO_QUERY );
@@ -760,7 +757,7 @@ bool DialogWindow::SaveDialog()
 
             if( bResource )
             {
-                INetURLObject aURLObj( aCurPath );
+                INetURLObject aURLObj( m_sCurPath );
                 aURLObj.removeExtension();
                 OUString aDialogName( aURLObj.getName() );
                 aURLObj.removeSegment();
@@ -832,8 +829,6 @@ bool DialogWindow::SaveDialog()
         else
             ScopedVclPtrInstance<MessageDialog>::Create(this, IDE_RESSTR(RID_STR_COULDNTWRITE))->Execute();
     }
-
-    return bDone;
 }
 
 std::vector< lang::Locale > implGetLanguagesOnlyContainedInFirstSeq
@@ -1155,7 +1150,7 @@ bool implImportDialog( vcl::Window* pWin, const OUString& rCurPath, const Script
                 {
                     BaseWindow* pDlgWin = pShell->FindDlgWin( rDocument, aLibName, aNewDlgName, false, true );
                     if( pDlgWin != nullptr )
-                        pShell->RemoveWindow( pDlgWin, true );
+                        pShell->RemoveWindow( pDlgWin, false );
                     MarkDocumentModified( rDocument );
                 }
                 else
@@ -1172,9 +1167,7 @@ bool implImportDialog( vcl::Window* pWin, const OUString& rCurPath, const Script
                 {
                     try
                     {
-                        Any aXmlDialogNameAny;
-                        aXmlDialogNameAny <<= OUString( aNewDlgName );
-                        xDialogModelPropSet->setPropertyValue( DLGED_PROP_NAME, aXmlDialogNameAny );
+                        xDialogModelPropSet->setPropertyValue( DLGED_PROP_NAME, Any(aNewDlgName) );
                         bRenamed = true;
                     }
                     catch(const beans::UnknownPropertyException& )
@@ -1211,36 +1204,36 @@ bool implImportDialog( vcl::Window* pWin, const OUString& rCurPath, const Script
 }
 
 
-bool DialogWindow::ImportDialog()
+void DialogWindow::ImportDialog()
 {
     const ScriptDocument& rDocument = GetDocument();
     OUString aLibName = GetLibName();
-    return implImportDialog( this, aCurPath, rDocument, aLibName );
+    implImportDialog( this, m_sCurPath, rDocument, aLibName );
 }
 
 DlgEdModel& DialogWindow::GetModel() const
 {
-    return pEditor->GetModel();
+    return m_pEditor->GetModel();
 }
 
 DlgEdPage& DialogWindow::GetPage() const
 {
-    return pEditor->GetPage();
+    return m_pEditor->GetPage();
 }
 
 DlgEdView& DialogWindow::GetView() const
 {
-    return pEditor->GetView();
+    return m_pEditor->GetView();
 }
 
 bool DialogWindow::IsModified()
 {
-    return pEditor->IsModified();
+    return m_pEditor->IsModified();
 }
 
 ::svl::IUndoManager* DialogWindow::GetUndoManager()
 {
-    return pUndoMgr.get();
+    return m_pUndoMgr.get();
 }
 
 OUString DialogWindow::GetTitle()
@@ -1259,17 +1252,17 @@ EntryDescriptor DialogWindow::CreateEntryDescriptor()
 
 void DialogWindow::SetReadOnly (bool bReadOnly)
 {
-    pEditor->SetMode(bReadOnly ? DlgEditor::READONLY : DlgEditor::SELECT);
+    m_pEditor->SetMode(bReadOnly ? DlgEditor::READONLY : DlgEditor::SELECT);
 }
 
 bool DialogWindow::IsReadOnly ()
 {
-    return pEditor->GetMode() == DlgEditor::READONLY;
+    return m_pEditor->GetMode() == DlgEditor::READONLY;
 }
 
 bool DialogWindow::IsPasteAllowed()
 {
-    return pEditor->IsPasteAllowed();
+    return m_pEditor->IsPasteAllowed();
 }
 
 void DialogWindow::StoreData()
@@ -1282,7 +1275,7 @@ void DialogWindow::StoreData()
 
             if( xLib.is() )
             {
-                Reference< container::XNameContainer > xDialogModel = pEditor->GetDialog();
+                Reference< container::XNameContainer > xDialogModel = m_pEditor->GetDialog();
 
                 if( xDialogModel.is() )
                 {
@@ -1298,7 +1291,7 @@ void DialogWindow::StoreData()
             DBG_UNHANDLED_EXCEPTION();
         }
         MarkDocumentModified( GetDocument() );
-        pEditor->ClearModifyFlag();
+        m_pEditor->ClearModifyFlag();
     }
 }
 
@@ -1330,32 +1323,25 @@ void DialogWindow::DataChanged( const DataChangedEvent& rDCEvt )
 {
     if( (rDCEvt.GetType()==DataChangedEventType::SETTINGS) && (rDCEvt.GetFlags() & AllSettingsFlags::STYLE) )
     {
-        InitSettings( true, true, true );
+        InitSettings();
         Invalidate();
     }
     else
         BaseWindow::DataChanged( rDCEvt );
 }
 
-void DialogWindow::InitSettings(bool bFont, bool bForeground, bool bBackground)
+void DialogWindow::InitSettings()
 {
     // FIXME RenderContext
     const StyleSettings& rStyleSettings = GetSettings().GetStyleSettings();
-    if( bFont )
-    {
-        vcl::Font aFont;
-        aFont = rStyleSettings.GetFieldFont();
-        SetPointFont(*this, aFont);
-    }
+    vcl::Font aFont;
+    aFont = rStyleSettings.GetFieldFont();
+    SetPointFont(*this, aFont);
 
-    if( bForeground || bFont )
-    {
-        SetTextColor( rStyleSettings.GetFieldTextColor() );
-        SetTextFillColor();
-    }
+    SetTextColor( rStyleSettings.GetFieldTextColor() );
+    SetTextFillColor();
 
-    if( bBackground )
-        SetBackground( rStyleSettings.GetFieldColor() );
+    SetBackground( rStyleSettings.GetFieldColor() );
 }
 
 css::uno::Reference< css::accessibility::XAccessible > DialogWindow::CreateAccessible()
@@ -1373,9 +1359,7 @@ ItemType DialogWindow::GetType () const
 }
 
 
-
 // DialogWindowLayout
-
 
 
 DialogWindowLayout::DialogWindowLayout (vcl::Window* pParent, ObjectCatalog& rObjectCatalog_) :

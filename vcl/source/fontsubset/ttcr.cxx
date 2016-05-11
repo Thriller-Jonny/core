@@ -42,7 +42,7 @@ namespace vcl
  * Private Data Types
  */
 
-    struct _TrueTypeCreator {
+    struct TrueTypeCreator {
         sal_uInt32 tag;                         /**< TrueType file tag */
         list   tables;                      /**< List of table tags and pointers */
     };
@@ -64,17 +64,8 @@ typedef struct {
     sal_uInt8  *data;
 } TableEntry;
 
-/*
- * this is a duplicate code from sft.c but it is left here for performance reasons
- */
-#ifdef __GNUC__
-#define _inline static __inline__
-#else
-#define _inline static
-#endif
-
 /*- Data access macros for data stored in big-endian or little-endian format */
-_inline sal_Int16 GetInt16( const sal_uInt8* ptr, sal_uInt32 offset, int bigendian)
+static sal_Int16 GetInt16( const sal_uInt8* ptr, sal_uInt32 offset, int bigendian)
 {
     sal_Int16 t;
     assert(ptr != nullptr);
@@ -88,7 +79,7 @@ _inline sal_Int16 GetInt16( const sal_uInt8* ptr, sal_uInt32 offset, int bigendi
     return t;
 }
 
-_inline sal_uInt16 GetUInt16( const sal_uInt8* ptr, sal_uInt32 offset, int bigendian)
+static sal_uInt16 GetUInt16( const sal_uInt8* ptr, sal_uInt32 offset, int bigendian)
 {
     sal_uInt16 t;
     assert(ptr != nullptr);
@@ -102,7 +93,7 @@ _inline sal_uInt16 GetUInt16( const sal_uInt8* ptr, sal_uInt32 offset, int bigen
     return t;
 }
 
-_inline void PutInt16(sal_Int16 val, sal_uInt8 *ptr, sal_uInt32 offset, int bigendian)
+static void PutInt16(sal_Int16 val, sal_uInt8 *ptr, sal_uInt32 offset, int bigendian)
 {
     assert(ptr != nullptr);
 
@@ -115,7 +106,7 @@ _inline void PutInt16(sal_Int16 val, sal_uInt8 *ptr, sal_uInt32 offset, int bige
     }
 }
 
-_inline void PutUInt16(sal_uInt16 val, sal_uInt8 *ptr, sal_uInt32 offset, int bigendian)
+static void PutUInt16(sal_uInt16 val, sal_uInt8 *ptr, sal_uInt32 offset, int bigendian)
 {
     assert(ptr != nullptr);
 
@@ -128,7 +119,7 @@ _inline void PutUInt16(sal_uInt16 val, sal_uInt8 *ptr, sal_uInt32 offset, int bi
     }
 }
 
-_inline void PutUInt32(sal_uInt32 val, sal_uInt8 *ptr, sal_uInt32 offset, int bigendian)
+static void PutUInt32(sal_uInt32 val, sal_uInt8 *ptr, sal_uInt32 offset, int bigendian)
 {
     assert(ptr != nullptr);
 
@@ -180,14 +171,14 @@ static sal_uInt32 CheckSum(sal_uInt32 *ptr, sal_uInt32 length)
     return sum;
 }
 
-_inline void *smalloc(sal_uInt32 size)
+static void *smalloc(sal_uInt32 size)
 {
     void *res = malloc(size);
     assert(res != nullptr);
     return res;
 }
 
-_inline void *scalloc(sal_uInt32 n, sal_uInt32 size)
+static void *scalloc(sal_uInt32 n, sal_uInt32 size)
 {
     void *res = calloc(n, size);
     assert(res != nullptr);
@@ -1015,7 +1006,6 @@ TrueTypeTable *TrueTypeTableNew_cmap()
     cmap->n = 0;
     cmap->m = CMAP_SUBTABLE_INIT;
     cmap->s = static_cast<CmapSubTable *>(scalloc(CMAP_SUBTABLE_INIT, sizeof(CmapSubTable)));
-    memset(cmap->s, 0, sizeof(CmapSubTable) * CMAP_SUBTABLE_INIT);
 
     table->data = cmap;
 
@@ -1112,7 +1102,7 @@ int GetRawData(TrueTypeTable *_this, sal_uInt8 **ptr, sal_uInt32 *len, sal_uInt3
         _this->rawdata = nullptr;
     }
 
-    for(i=0; i < sizeof(vtable2)/sizeof(*vtable2); i++) {
+    for(i=0; i < SAL_N_ELEMENTS(vtable2); i++) {
         if (_this->tag == vtable2[i].tag) {
             return vtable2[i].f(_this, ptr, len, tag);
         }
@@ -1145,7 +1135,6 @@ void cmapAdd(TrueTypeTable *table, sal_uInt32 id, sal_uInt32 c, sal_uInt32 g)
     if (!found) {
         if (t->n == t->m) {
             CmapSubTable* tmp = static_cast<CmapSubTable*>(scalloc(t->m + CMAP_SUBTABLE_INCR, sizeof(CmapSubTable)));
-            memset(tmp, 0, t->m + CMAP_SUBTABLE_INCR * sizeof(CmapSubTable));
             memcpy(tmp, s, sizeof(CmapSubTable) * t->m);
             t->m += CMAP_SUBTABLE_INCR;
             free(s);
@@ -1513,7 +1502,7 @@ extern "C"
 
         if (_this->rawdata) free(_this->rawdata);
 
-        for(i=0; i < sizeof(vcl::vtable1)/sizeof(*vcl::vtable1); i++) {
+        for(i=0; i < SAL_N_ELEMENTS(vcl::vtable1); i++) {
             if (_this->tag == vcl::vtable1[i].tag) {
                 vcl::vtable1[i].f(_this);
                 return;
@@ -1524,7 +1513,7 @@ extern "C"
 }
 
 #ifdef TEST_TTCR
-_inline sal_uInt32 mkTag(sal_uInt8 a, sal_uInt8 b, sal_uInt8 c, sal_uInt8 d) {
+static sal_uInt32 mkTag(sal_uInt8 a, sal_uInt8 b, sal_uInt8 c, sal_uInt8 d) {
     return (a << 24) | (b << 16) | (c << 8) | d;
 }
 

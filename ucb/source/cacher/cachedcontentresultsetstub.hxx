@@ -31,7 +31,6 @@
 #define CACHED_CRS_STUB_FACTORY_NAME "com.sun.star.ucb.CachedContentResultSetStubFactory"
 
 
-
 class CachedContentResultSetStub
                 : public ContentResultSetWrapper
                 , public css::lang::XTypeProvider
@@ -55,7 +54,7 @@ private:
     void SAL_CALL
     impl_getCurrentRowContent(
         css::uno::Any& rRowContent,
-        css::uno::Reference< css::sdbc::XRow > xRow )
+        const css::uno::Reference< css::sdbc::XRow >& xRow )
         throw ( css::sdbc::SQLException
               , css::uno::RuntimeException );
 
@@ -65,19 +64,19 @@ private:
     static void SAL_CALL
     impl_getCurrentContentIdentifierString(
             css::uno::Any& rAny
-            , css::uno::Reference< css::ucb::XContentAccess > xContentAccess )
+            , const css::uno::Reference< css::ucb::XContentAccess >& xContentAccess )
             throw ( css::uno::RuntimeException );
 
     static void SAL_CALL
     impl_getCurrentContentIdentifier(
             css::uno::Any& rAny
-            , css::uno::Reference< css::ucb::XContentAccess > xContentAccess )
+            , const css::uno::Reference< css::ucb::XContentAccess >& xContentAccess )
             throw ( css::uno::RuntimeException );
 
     static void SAL_CALL
     impl_getCurrentContent(
             css::uno::Any& rAny
-            , css::uno::Reference< css::ucb::XContentAccess > xContentAccess )
+            , const css::uno::Reference< css::ucb::XContentAccess >& xContentAccess )
             throw ( css::uno::RuntimeException );
 
     void SAL_CALL
@@ -88,7 +87,6 @@ public:
     CachedContentResultSetStub( css::uno::Reference< css::sdbc::XResultSet > xOrigin );
 
     virtual ~CachedContentResultSetStub();
-
 
 
     // XInterface
@@ -154,7 +152,6 @@ public:
         , sal_Int32 nRowCount, sal_Bool bDirection )
         throw( css::uno::RuntimeException, std::exception ) override;
 };
-
 
 
 class CachedContentResultSetStubFactory

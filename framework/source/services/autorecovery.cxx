@@ -108,9 +108,9 @@ namespace {
 
     @descr  Because some operations are forced to be executed asynchronously
             (e.g. requested by our CreashSave/Recovery dialog) ... we must make sure
-            that these information wont be set as "normal" members of our AtoRecovery
+            that these information won't be set as "normal" members of our AutoRecovery
             instance. Otherwise they can disturb our normal AutoSave-timer handling.
-            e.g. it can be unclear then, which progress has to be used for storing documents ...
+            e.g. it can be unclear then, which progress has to be used for storing documents...
  */
 struct DispatchParams
 {
@@ -143,10 +143,10 @@ public:
                 backup or cleanUp operation ... which is may be done asynchronous */
     sal_Int32 m_nWorkingEntryID;
 
-    /** @short  used for asyncoperations, to prevent us from dying.
+    /** @short  used for async operations, to prevent us from dying.
 
         @descr  If our dispatch() method was forced to start the
-                internal operation asynchronous ... we send an event
+                internal operation asynchronous... we send an event
                 to start and return immediately. But we must be sure that
                 our instance live if the event callback reach us.
                 So we hold an uno reference to ourself.
@@ -433,21 +433,11 @@ private:
     sal_Int32 m_nMinSpaceDocSave;
     sal_Int32 m_nMinSpaceConfigSave;
 
-    /** @short  special debug option to make testing faster.
-
-        @descr  We don't interpret the timer unit as [min] ...
-                we use [ms] instead of that. Further we don't
-                wait 10 s for user idle ...
-     */
-    #if OSL_DEBUG_LEVEL > 1
-    sal_Bool m_dbg_bMakeItFaster;
-    #endif
-
 // interface
 
 public:
 
-             AutoRecovery(const css::uno::Reference< css::uno::XComponentContext >& xContext);
+    explicit AutoRecovery(const css::uno::Reference< css::uno::XComponentContext >& xContext);
     virtual ~AutoRecovery(                                                                   );
 
     virtual OUString SAL_CALL getImplementationName()
@@ -662,7 +652,7 @@ private:
         @param  bStopListening
                 sal_False: must be used in case this method is called within disposing() of the document,
                        where it make no sense to deregister our listener. The container dies...
-                sal_True : must be used in case this method is used on "dergistration" of this document, where
+                sal_True : must be used in case this method is used on "deregistration" of this document, where
                        we must deregister our listener .-)
 
         @threadsafe
@@ -988,7 +978,7 @@ private:
 
         Every URL supported by our UCB component can be used here.
         Further it doesn't matter if the file really exists or not.
-        Because removing a non exsistent file will have the same
+        Because removing a non existent file will have the same
         result at the end... a non existing file .-)
 
         On the other side removing of files from disc is an optional
@@ -1265,10 +1255,6 @@ AutoRecovery::AutoRecovery(const css::uno::Reference< css::uno::XComponentContex
     , m_nDocCacheLock           (0                                                  )
     , m_nMinSpaceDocSave        (MIN_DISCSPACE_DOCSAVE                              )
     , m_nMinSpaceConfigSave     (MIN_DISCSPACE_CONFIGSAVE                           )
-
-    #if OSL_DEBUG_LEVEL > 1
-    , m_dbg_bMakeItFaster       (sal_False                                          )
-    #endif
 {
 }
 
@@ -1628,8 +1614,8 @@ void SAL_CALL AutoRecovery::documentEventOccured(const css::document::DocumentEv
     }
     /* document saved as copy => mark it as "non used by concurrent save operation".
        so we can try to create a backup copy if next time AutoSave is started too.
-       Dont remove temp. files or change the modified state of the document!
-       It was not really saved to the original file ...
+       Don't remove temp. files or change the modified state of the document!
+       It was not really saved to the original file...
     */
     else if ( aEvent.EventName == EVENT_ON_SAVETODONE )
     {
@@ -1761,7 +1747,7 @@ css::uno::Reference< css::container::XNameAccess > AutoRecovery::implts_openConf
     OUString sCFG_PACKAGE_RECOVERY(CFG_PACKAGE_RECOVERY);
     // throws a RuntimeException if an error occurs!
     css::uno::Reference< css::container::XNameAccess > xCFG(
-        ::comphelper::ConfigurationHelper::openConfig(m_xContext, sCFG_PACKAGE_RECOVERY, ::comphelper::ConfigurationHelper::E_STANDARD),
+        ::comphelper::ConfigurationHelper::openConfig(m_xContext, sCFG_PACKAGE_RECOVERY, ::comphelper::EConfigurationModes::Standard),
         css::uno::UNO_QUERY);
 
     sal_Int32 nMinSpaceDocSave    = MIN_DISCSPACE_DOCSAVE;
@@ -1774,13 +1760,13 @@ css::uno::Reference< css::container::XNameAccess > AutoRecovery::implts_openConf
                                                          sCFG_PACKAGE_RECOVERY,
                                                          sCFG_PATH_AUTOSAVE,
                                                          CFG_ENTRY_MINSPACE_DOCSAVE,
-                                                         ::comphelper::ConfigurationHelper::E_STANDARD) >>= nMinSpaceDocSave;
+                                                         ::comphelper::EConfigurationModes::Standard) >>= nMinSpaceDocSave;
 
         ::comphelper::ConfigurationHelper::readDirectKey(m_xContext,
                                                          sCFG_PACKAGE_RECOVERY,
                                                          sCFG_PATH_AUTOSAVE,
                                                          CFG_ENTRY_MINSPACE_CONFIGSAVE,
-                                                         ::comphelper::ConfigurationHelper::E_STANDARD) >>= nMinSpaceConfigSave;
+                                                         ::comphelper::EConfigurationModes::Standard) >>= nMinSpaceConfigSave;
     }
     catch(const css::uno::Exception&)
     {
@@ -1952,7 +1938,7 @@ void AutoRecovery::implts_specifyDefaultFilterAndExtension(AutoRecovery::TDocume
         {
             // open module config on demand and cache the update access
             xCFG.set( ::comphelper::ConfigurationHelper::openConfig(m_xContext, CFG_PACKAGE_MODULES,
-                           ::comphelper::ConfigurationHelper::E_STANDARD),
+                           ::comphelper::EConfigurationModes::Standard),
                       css::uno::UNO_QUERY_THROW);
 
             /* SAFE */ {
@@ -2220,7 +2206,7 @@ void AutoRecovery::implts_stopListening()
     css::uno::Reference< css::document::XDocumentEventBroadcaster > xGlobalEventBroadcaster;
     /* SAFE */ {
     osl::MutexGuard g(cppu::WeakComponentImplHelperBase::rBHelper.rMutex);
-    // Attention: Dont reset our internal members here too.
+    // Attention: Don't reset our internal members here too.
     // May be we must work with our configuration, but don't wish to be informed
     // about changes any longer. Needed e.g. during EMERGENCY_SAVE!
     xCFG.set                   (m_xRecoveryCFG      , css::uno::UNO_QUERY);
@@ -2291,18 +2277,10 @@ void AutoRecovery::implts_updateTimer()
     if (m_eTimerType == AutoRecovery::E_NORMAL_AUTOSAVE_INTERVALL)
     {
         nMilliSeconds = (m_nAutoSaveTimeIntervall*60000); // [min] => 60.000 ms
-        #if OSL_DEBUG_LEVEL > 1
-        if (m_dbg_bMakeItFaster)
-            nMilliSeconds = m_nAutoSaveTimeIntervall;  // [ms]
-        #endif
     }
     else if (m_eTimerType == AutoRecovery::E_POLL_FOR_USER_IDLE)
     {
         nMilliSeconds = MIN_TIME_FOR_USER_IDLE;
-        #if OSL_DEBUG_LEVEL > 1
-        if (m_dbg_bMakeItFaster)
-            nMilliSeconds = 300; // let us some time, to finish this method .-)
-        #endif
     }
     else if (m_eTimerType == AutoRecovery::E_POLL_TILL_AUTOSAVE_IS_ALLOWED)
         nMilliSeconds = 300; // there is a minimum time frame, where the user can lose some key input data!
@@ -2453,7 +2431,7 @@ void AutoRecovery::implts_registerDocument(const css::uno::Reference< css::frame
     {
         // Normally nothing must be done for this "late" notification.
         // But may be the modified state was changed inbetween.
-        // Check it ...
+        // Check it...
         implts_updateModifiedState(xDocument);
         return;
     }
@@ -2566,7 +2544,7 @@ void AutoRecovery::implts_deregisterDocument(const css::uno::Reference< css::fra
     /* SAFE */ {
     osl::MutexGuard g(cppu::WeakComponentImplHelperBase::rBHelper.rMutex);
 
-    // Attention: Dont leave SAFE section, if you work with pIt!
+    // Attention: Don't leave SAFE section, if you work with pIt!
     // Because it points directly into the m_lDocCache list ...
     CacheLockGuard aCacheLock(this, cppu::WeakComponentImplHelperBase::rBHelper.rMutex, m_nDocCacheLock, LOCK_FOR_CACHE_USE);
 
@@ -2837,7 +2815,7 @@ void AutoRecovery::implts_prepareSessionShutdown()
         {
             css::uno::Reference< css::util::XModifiable > xModify(rInfo.Document, css::uno::UNO_QUERY);
             if (xModify.is())
-                xModify->setModified(sal_False);
+                xModify->setModified(false);
 
             // close the model.
             css::uno::Reference< css::util::XCloseable > xClose(rInfo.Document, css::uno::UNO_QUERY);
@@ -2845,7 +2823,7 @@ void AutoRecovery::implts_prepareSessionShutdown()
             {
                 try
                 {
-                    xClose->close(sal_False);
+                    xClose->close(false);
                 }
                 catch(const css::uno::Exception&)
                 {
@@ -3221,7 +3199,7 @@ AutoRecovery::ETimerType AutoRecovery::implts_openDocs(const DispatchParams& aPa
         AutoRecovery::TDocumentInfo& rInfo = *pIt;
 
         // Such documents are already loaded by the last loop.
-        // Dont check E_SUCCEDED here! Its may be the final state of an AutoSave
+        // Don't check E_SUCCEDED here! It may be the final state of an AutoSave
         // operation before!!!
         if ((rInfo.DocumentState & AutoRecovery::E_HANDLED) == AutoRecovery::E_HANDLED)
             continue;
@@ -3288,13 +3266,13 @@ AutoRecovery::ETimerType AutoRecovery::implts_openDocs(const DispatchParams& aPa
         else if (!rInfo.TemplateURL.isEmpty())
         {
             sLoadOriginalURL = rInfo.TemplateURL;
-            lDescriptor[utl::MediaDescriptor::PROP_ASTEMPLATE()]   <<= sal_True;
+            lDescriptor[utl::MediaDescriptor::PROP_ASTEMPLATE()]   <<= true;
             lDescriptor[utl::MediaDescriptor::PROP_TEMPLATENAME()] <<= rInfo.TemplateURL;
         }
         else if (!rInfo.FactoryURL.isEmpty())
         {
             sLoadOriginalURL = rInfo.FactoryURL;
-            lDescriptor[utl::MediaDescriptor::PROP_ASTEMPLATE()] <<= sal_True;
+            lDescriptor[utl::MediaDescriptor::PROP_ASTEMPLATE()] <<= true;
         }
 
         // A "Salvaged" item must exists every time. The core can make something special then for recovery.
@@ -3388,7 +3366,7 @@ AutoRecovery::ETimerType AutoRecovery::implts_openDocs(const DispatchParams& aPa
         implts_startModifyListeningOnDoc(rInfo);
 
         // /* SAFE */ {
-        // Needed for next loop. Dont unlock it again!
+        // Needed for next loop. Don't unlock it again!
         g.reset();
     }
 
@@ -3497,7 +3475,7 @@ void AutoRecovery::implts_openOneDoc(const OUString&               sURL       ,
         {
             css::uno::Reference< css::util::XCloseable > xClose( *component, css::uno::UNO_QUERY );
             if ( xClose.is() )
-                xClose->close( sal_True );
+                xClose->close( true );
             else
                 (*component)->dispose();
         }
@@ -3716,8 +3694,8 @@ void AutoRecovery::implts_doEmergencySave(const DispatchParams& aParams)
         CFG_PACKAGE_RECOVERY,
         CFG_PATH_RECOVERYINFO,
         CFG_ENTRY_CRASHED,
-        css::uno::makeAny(sal_True),
-        ::comphelper::ConfigurationHelper::E_STANDARD);
+        css::uno::makeAny(true),
+        ::comphelper::EConfigurationModes::Standard);
 
     // for all docs, store their current view/names in the configurtion
     implts_persistAllActiveViewNames();
@@ -3728,7 +3706,7 @@ void AutoRecovery::implts_doEmergencySave(const DispatchParams& aParams)
     // That is normally done by recalling it from a timer.
     // Here we must do it immediately!
     // Of course this method returns the right state -
-    // because it knows, that we are running in ERMERGENCY SAVE mode .-)
+    // because it knows, that we are running in EMERGENCY SAVE mode .-)
 
     bool                 bAllowUserIdleLoop = false; // not allowed to change that .-)
     AutoRecovery::ETimerType eSuggestedTimer    = AutoRecovery::E_DONT_START_TIMER;
@@ -3748,7 +3726,7 @@ void AutoRecovery::implts_doEmergencySave(const DispatchParams& aParams)
     // flush config cached back to disc.
     impl_flushALLConfigChanges();
 
-    // try to make sure next time office will be started user wont be
+    // try to make sure next time office will be started user won't be
     // notified about any other might be running office instance
     // remove ".lock" file from disc !
     AutoRecovery::st_impl_removeLockFile();
@@ -3776,8 +3754,8 @@ void AutoRecovery::implts_doRecovery(const DispatchParams& aParams)
         CFG_PACKAGE_RECOVERY,
         CFG_PATH_RECOVERYINFO,
         CFG_ENTRY_CRASHED,
-        css::uno::makeAny(sal_False),
-        ::comphelper::ConfigurationHelper::E_STANDARD);
+        css::uno::makeAny(false),
+        ::comphelper::EConfigurationModes::Standard);
 }
 
 void AutoRecovery::implts_doSessionSave(const DispatchParams& aParams)
@@ -3822,9 +3800,9 @@ void AutoRecovery::implts_doSessionQuietQuit(const DispatchParams& /*aParams*/)
 {
     SAL_INFO("fwk.autorecovery", "AutoRecovery::implts_doSessionQuietQuit()");
 
-    // try to make sure next time office will be started user wont be
+    // try to make sure next time office will be started user won't be
     // notified about any other might be running office instance
-    // remove ".lock" file from disc !
+    // remove ".lock" file from disc!
     // it is done as a first action for session save since Gnome sessions
     // do not provide enough time for shutdown, and the dialog looks to be
     // confusing for the user
@@ -3841,8 +3819,8 @@ void AutoRecovery::implts_doSessionQuietQuit(const DispatchParams& /*aParams*/)
         CFG_PACKAGE_RECOVERY,
         CFG_PATH_RECOVERYINFO,
         CFG_ENTRY_SESSIONDATA,
-        css::uno::makeAny(sal_True),
-        ::comphelper::ConfigurationHelper::E_STANDARD);
+        css::uno::makeAny(true),
+        ::comphelper::EConfigurationModes::Standard);
 
     // flush config cached back to disc.
     impl_flushALLConfigChanges();
@@ -3876,8 +3854,8 @@ void AutoRecovery::implts_doSessionRestore(const DispatchParams& aParams)
         CFG_PACKAGE_RECOVERY,
         CFG_PATH_RECOVERYINFO,
         CFG_ENTRY_SESSIONDATA,
-        css::uno::makeAny(sal_False),
-        ::comphelper::ConfigurationHelper::E_STANDARD);
+        css::uno::makeAny(false),
+        ::comphelper::EConfigurationModes::Standard);
 
     SAL_INFO("fwk.autorecovery", "... AutoRecovery::implts_doSessionRestore()");
 }
@@ -3912,7 +3890,7 @@ void AutoRecovery::implts_backupWorkingEntry(const DispatchParams& aParams)
 
         // TODO: Check eResult and react for errors (InteractionHandler!?)
         // Currently we ignore it ...
-        // DONT UPDATE THE CACHE OR REMOVE ANY TEMP. FILES FROM DISK.
+        // DON'T UPDATE THE CACHE OR REMOVE ANY TEMP. FILES FROM DISK.
         // That has to be forced from outside explicitly.
         // See implts_cleanUpWorkingEntry() for further details.
     }
@@ -3986,7 +3964,7 @@ sal_Bool SAL_CALL AutoRecovery::convertFastPropertyValue(      css::uno::Any& /*
     throw(css::lang::IllegalArgumentException)
 {
     // not needed currently
-    return sal_False;
+    return false;
 }
 
 void SAL_CALL AutoRecovery::setFastPropertyValue_NoBroadcast(      sal_Int32      /*nHandle*/,
@@ -4009,7 +3987,7 @@ void SAL_CALL AutoRecovery::getFastPropertyValue(css::uno::Any& aValue ,
                                                     CFG_PACKAGE_RECOVERY,
                                                     CFG_PATH_RECOVERYINFO,
                                                     CFG_ENTRY_SESSIONDATA,
-                                                    ::comphelper::ConfigurationHelper::E_READONLY) >>= bSessionData;
+                                                    ::comphelper::EConfigurationModes::ReadOnly) >>= bSessionData;
 
                     bool bRecoveryData = m_lDocCache.size() > 0;
 
@@ -4028,7 +4006,7 @@ void SAL_CALL AutoRecovery::getFastPropertyValue(css::uno::Any& aValue ,
                             CFG_PACKAGE_RECOVERY,
                             CFG_PATH_RECOVERYINFO,
                             CFG_ENTRY_CRASHED,
-                            ::comphelper::ConfigurationHelper::E_READONLY);
+                            ::comphelper::EConfigurationModes::ReadOnly);
                 break;
 
         case AUTORECOVERY_PROPHANDLE_EXISTS_SESSIONDATA :
@@ -4037,7 +4015,7 @@ void SAL_CALL AutoRecovery::getFastPropertyValue(css::uno::Any& aValue ,
                             CFG_PACKAGE_RECOVERY,
                             CFG_PATH_RECOVERYINFO,
                             CFG_ENTRY_SESSIONDATA,
-                            ::comphelper::ConfigurationHelper::E_READONLY);
+                            ::comphelper::EConfigurationModes::ReadOnly);
                 break;
     }
 }
@@ -4062,7 +4040,7 @@ const css::uno::Sequence< css::beans::Property > impl_getStaticPropertyDescripto
         SolarMutexGuard g;
         if(!pInfoHelper)
         {
-            static ::cppu::OPropertyArrayHelper aInfoHelper(impl_getStaticPropertyDescriptor(), sal_True);
+            static ::cppu::OPropertyArrayHelper aInfoHelper(impl_getStaticPropertyDescriptor(), true);
             pInfoHelper = &aInfoHelper;
         }
     }
@@ -4145,7 +4123,7 @@ void AutoRecovery::implts_verifyCacheAgainstDesktopDocumentList()
             // insert model into cache ...
             // If the model is already well known inside cache
             // it's information set will be updated by asking the
-            // model again for it's new states.
+            // model again for its new states.
             implts_registerDocument(xModel);
         }
     }
@@ -4336,7 +4314,7 @@ void AutoRecovery::st_impl_removeFile(const OUString& sURL)
     try
     {
         ::ucbhelper::Content aContent = ::ucbhelper::Content(sURL, css::uno::Reference< css::ucb::XCommandEnvironment >(), m_xContext);
-        aContent.executeCommand("delete", css::uno::makeAny(sal_True));
+        aContent.executeCommand("delete", css::uno::makeAny(true));
     }
     catch(const css::uno::Exception&)
     {

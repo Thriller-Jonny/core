@@ -28,7 +28,6 @@
 #include "poolfmt.hxx"
 #include "unoredline.hxx"
 #include <xmloff/xmltoken.hxx>
-#include <com/sun/star/frame/XModel.hpp>
 #include <vcl/svapp.hxx>
 #include <osl/mutex.hxx>
 
@@ -36,7 +35,6 @@ using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
 using namespace ::xmloff::token;
 
-using ::com::sun::star::frame::XModel;
 using ::com::sun::star::text::XTextCursor;
 using ::com::sun::star::text::XTextRange;
 using ::com::sun::star::text::XText;
@@ -236,6 +234,10 @@ RedlineInfo::~RedlineInfo()
     delete pNextRedline;
 }
 
+static const char g_sShowChanges[] = "ShowChanges";
+static const char g_sRecordChanges[] = "RecordChanges";
+static const char g_sRedlineProtectionKey[] = "RedlineProtectionKey";
+
 XMLRedlineImportHelper::XMLRedlineImportHelper(
     bool bNoRedlinesPlease,
     const Reference<XPropertySet> & rModel,
@@ -243,9 +245,6 @@ XMLRedlineImportHelper::XMLRedlineImportHelper(
         sInsertion( GetXMLToken( XML_INSERTION )),
         sDeletion( GetXMLToken( XML_DELETION )),
         sFormatChange( GetXMLToken( XML_FORMAT_CHANGE )),
-        sShowChanges("ShowChanges"),
-        sRecordChanges("RecordChanges"),
-        sRedlineProtectionKey("RedlineProtectionKey"),
         aRedlineMap(),
         bIgnoreRedlines(bNoRedlinesPlease),
         xModelPropertySet(rModel),
@@ -260,29 +259,29 @@ XMLRedlineImportHelper::XMLRedlineImportHelper(
         Reference<XPropertySetInfo> xInfo =
             xImportInfoPropertySet->getPropertySetInfo();
 
-        bHandleShowChanges = ! xInfo->hasPropertyByName( sShowChanges );
-        bHandleRecordChanges = ! xInfo->hasPropertyByName( sRecordChanges );
-        bHandleProtectionKey = ! xInfo->hasPropertyByName( sRedlineProtectionKey );
+        bHandleShowChanges = ! xInfo->hasPropertyByName( g_sShowChanges );
+        bHandleRecordChanges = ! xInfo->hasPropertyByName( g_sRecordChanges );
+        bHandleProtectionKey = ! xInfo->hasPropertyByName( g_sRedlineProtectionKey );
     }
 
     // get redline mode
     bShowChanges = *static_cast<sal_Bool const *>(
         ( bHandleShowChanges ? xModelPropertySet : xImportInfoPropertySet )
-        ->getPropertyValue( sShowChanges ).getValue());
+        ->getPropertyValue( g_sShowChanges ).getValue());
     bRecordChanges = *static_cast<sal_Bool const *>(
         ( bHandleRecordChanges ? xModelPropertySet : xImportInfoPropertySet )
-        ->getPropertyValue( sRecordChanges ).getValue());
+        ->getPropertyValue( g_sRecordChanges ).getValue());
     {
         Any aAny = (bHandleProtectionKey  ? xModelPropertySet
                                           : xImportInfoPropertySet )
-                        ->getPropertyValue( sRedlineProtectionKey );
+                        ->getPropertyValue( g_sRedlineProtectionKey );
         aAny >>= aProtectionKey;
     }
 
     // set redline mode to "don't record changes"
     if( bHandleRecordChanges )
     {
-        xModelPropertySet->setPropertyValue( sRecordChanges, makeAny(false) );
+        xModelPropertySet->setPropertyValue( g_sRecordChanges, makeAny(false) );
     }
 }
 
@@ -334,9 +333,9 @@ XMLRedlineImportHelper::~XMLRedlineImportHelper()
         Reference<XPropertySetInfo> xInfo =
             xImportInfoPropertySet->getPropertySetInfo();
 
-        bHandleShowChanges = ! xInfo->hasPropertyByName( sShowChanges );
-        bHandleRecordChanges = ! xInfo->hasPropertyByName( sRecordChanges );
-        bHandleProtectionKey = ! xInfo->hasPropertyByName( sRedlineProtectionKey );
+        bHandleShowChanges = ! xInfo->hasPropertyByName( g_sShowChanges );
+        bHandleRecordChanges = ! xInfo->hasPropertyByName( g_sRecordChanges );
+        bHandleProtectionKey = ! xInfo->hasPropertyByName( g_sRedlineProtectionKey );
     }
 
     // set redline mode & key
@@ -346,21 +345,21 @@ XMLRedlineImportHelper::~XMLRedlineImportHelper()
 
         aAny <<= bShowChanges;
         if ( bHandleShowChanges )
-            xModelPropertySet->setPropertyValue( sShowChanges, aAny );
+            xModelPropertySet->setPropertyValue( g_sShowChanges, aAny );
         else
-            xImportInfoPropertySet->setPropertyValue( sShowChanges, aAny );
+            xImportInfoPropertySet->setPropertyValue( g_sShowChanges, aAny );
 
         aAny <<= bRecordChanges;
         if ( bHandleRecordChanges )
-            xModelPropertySet->setPropertyValue( sRecordChanges, aAny );
+            xModelPropertySet->setPropertyValue( g_sRecordChanges, aAny );
         else
-            xImportInfoPropertySet->setPropertyValue( sRecordChanges, aAny );
+            xImportInfoPropertySet->setPropertyValue( g_sRecordChanges, aAny );
 
         aAny <<= aProtectionKey;
         if ( bHandleProtectionKey )
-            xModelPropertySet->setPropertyValue( sRedlineProtectionKey, aAny );
+            xModelPropertySet->setPropertyValue( g_sRedlineProtectionKey, aAny );
         else
-            xImportInfoPropertySet->setPropertyValue( sRedlineProtectionKey, aAny);
+            xImportInfoPropertySet->setPropertyValue( g_sRedlineProtectionKey, aAny);
     }
     catch (const uno::RuntimeException &) // fdo#65882
     {
@@ -423,7 +422,7 @@ void XMLRedlineImportHelper::Add(
     {
         // 3b) we already have a redline with this name: hierarchical redlines
         // insert pInfo as last element in the chain.
-        // (hierarchy sanity checking happens on insertino into the document)
+        // (hierarchy sanity checking happens on inserting into the document)
 
         // find last element
         RedlineInfo* pInfoChain;
@@ -652,8 +651,8 @@ void XMLRedlineImportHelper::InsertIntoDocument(RedlineInfo* pRedlineInfo)
         // create redline (using pRedlineData which gets copied in SwRangeRedline())
         SwRedlineData* pRedlineData = ConvertRedline(pRedlineInfo, pDoc);
         SwRangeRedline* pRedline =
-            new SwRangeRedline( pRedlineData, *aPaM.GetPoint(), true,
-                           !pRedlineInfo->bMergeLastParagraph, false );
+            new SwRangeRedline( pRedlineData, *aPaM.GetPoint(),
+                           !pRedlineInfo->bMergeLastParagraph );
 
         // set mark
         if( aPaM.HasMark() )

@@ -362,10 +362,9 @@ namespace svx
     }
 
 
-    void ODataAccessDescriptor::initializeFrom(const Sequence< PropertyValue >& _rValues, bool _bClear)
+    void ODataAccessDescriptor::initializeFrom(const Sequence< PropertyValue >& _rValues)
     {
-        if (_bClear)
-            clear();
+        clear();
         m_pImpl->buildFrom(_rValues);
     }
 
@@ -400,7 +399,6 @@ namespace svx
 
 
 }
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

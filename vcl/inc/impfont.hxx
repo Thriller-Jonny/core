@@ -21,202 +21,134 @@
 #define INCLUDED_VCL_INC_IMPFONT_HXX
 
 #include <rtl/ustring.hxx>
-#include <tools/gen.hxx>
 #include <i18nlangtag/languagetag.hxx>
-#include <tools/color.hxx>
-#include <vcl/dllapi.h>
 #include <vcl/vclenum.hxx>
-#include <vcl/fntstyle.hxx>
-#include <outfont.hxx>
+
+#include "fontinstance.hxx"
 
 #include <boost/intrusive_ptr.hpp>
 
-class ImplFontCharMap;
-typedef boost::intrusive_ptr< ImplFontCharMap > ImplFontCharMapPtr;
+/* The following class is extraordinarily similar to FontAttributes. */
 
-// - Impl_Font -
-
-class Impl_Font
+class ImplFont
 {
 public:
-                        Impl_Font();
-                        Impl_Font( const Impl_Font& );
+    explicit            ImplFont();
+    explicit            ImplFont( const ImplFont& );
 
-    bool                operator==( const Impl_Font& ) const;
+    // device independent font functions
+    const OUString&     GetFamilyName() const                           { return maFamilyName; }
+    FontFamily          GetFamilyType()                                 { if(meFamily==FAMILY_DONTKNOW)  AskConfig(); return meFamily; }
+    const OUString&     GetStyleName() const                            { return maStyleName; }
 
-    FontPitch           GetPitch()      { if(mePitch==PITCH_DONTKNOW)    AskConfig(); return mePitch; }
-    FontFamily          GetFamily()     { if(meFamily==FAMILY_DONTKNOW)  AskConfig(); return meFamily; }
-    FontItalic          GetItalic()     { if(meItalic==ITALIC_DONTKNOW)  AskConfig(); return meItalic; }
-    FontWeight          GetWeight()     { if(meWeight==WEIGHT_DONTKNOW)  AskConfig(); return meWeight; }
-    FontWidth           GetWidthType()  { if(meWidthType==WIDTH_DONTKNOW)AskConfig(); return meWidthType; }
+    FontWeight          GetWeight()                                     { if(meWeight==WEIGHT_DONTKNOW)  AskConfig(); return meWeight; }
+    FontItalic          GetItalic()                                     { if(meItalic==ITALIC_DONTKNOW)  AskConfig(); return meItalic; }
+    FontPitch           GetPitch()                                      { if(mePitch==PITCH_DONTKNOW)    AskConfig(); return mePitch; }
+    FontWidth           GetWidthType()                                  { if(meWidthType==WIDTH_DONTKNOW) AskConfig(); return meWidthType; }
+    TextAlign           GetAlignment() const                            { return meAlign; }
+    rtl_TextEncoding    GetCharSet() const                              { return meCharSet; }
+    const Size&         GetFontSize() const                      { return maAverageFontSize; }
+
+    bool                IsSymbolFont() const                            { return mbSymbolFlag; }
+
+    void                SetFamilyName( const OUString& sFamilyName )    { maFamilyName = sFamilyName; }
+    void                SetStyleName( const OUString& sStyleName )      { maStyleName = sStyleName; }
+    void                SetFamilyType( const FontFamily eFontFamily )   { meFamily = eFontFamily; }
+
+    void                SetPitch( const FontPitch ePitch )              { mePitch = ePitch; }
+    void                SetItalic( const FontItalic eItalic )           { meItalic = eItalic; }
+    void                SetWeight( const FontWeight eWeight )           { meWeight = eWeight; }
+    void                SetWidthType( const FontWidth eWidthType )      { meWidthType = eWidthType; }
+    void                SetAlignment( const TextAlign eAlignment )      { meAlign = eAlignment; }
+    void                SetCharSet( const rtl_TextEncoding eCharSet )   { meCharSet = eCharSet; }
+    void                SetFontSize( const Size& rSize )         { maAverageFontSize = rSize; }
+
+    void                SetSymbolFlag( const bool bSymbolFlag )         { mbSymbolFlag = bSymbolFlag; }
+
+    bool                CompareDeviceIndependentFontAttributes(const ImplFont& rOther) const;
+
+    // straight properties, no getting them from AskConfig()
+    FontFamily          GetFamilyTypeNoAsk() const                      { return meFamily; }
+    FontWeight          GetWeightNoAsk() const                          { return meWeight; }
+    FontItalic          GetItalicNoAsk() const                          { return meItalic; }
+    FontPitch           GetPitchNoAsk() const                           { return mePitch; }
+    FontWidth           GetWidthTypeNoAsk() const                       { return meWidthType; }
+
+    // device dependent functions
+    int                 GetQuality() const                              { return mnQuality; }
+    const OUString&     GetMapNames() const                             { return maMapNames; }
+
+    void                SetQuality( int nQuality )                      { mnQuality = nQuality; }
+    void                IncreaseQualityBy( int nQualityAmount )         { mnQuality += nQualityAmount; }
+    void                DecreaseQualityBy( int nQualityAmount )         { mnQuality -= nQualityAmount; }
+    void                SetMapNames( OUString const & aMapNames )       { maMapNames = aMapNames; }
+
+    bool                IsBuiltInFont() const                           { return mbDevice; }
+    bool                CanEmbed() const                                { return mbEmbeddable; }
+    bool                CanSubset() const                               { return mbSubsettable; }
+    bool                CanRotate() const                               { return mbRotatable; }
+
+    void                SetBuiltInFontFlag( bool bIsBuiltInFont )       { mbDevice = bIsBuiltInFont; }
+    void                SetEmbeddableFlag( bool bEmbeddable )           { mbEmbeddable = bEmbeddable; }
+    void                SetSubsettableFlag( bool bSubsettable )         { mbSubsettable = bSubsettable; }
+    void                SetOrientationFlag( bool bCanRotate )           { mbRotatable = bCanRotate; }
+
+    bool                operator==( const ImplFont& ) const;
 
 private:
     friend class vcl::Font;
+    friend SvStream&    ReadImplFont( SvStream& rIStm, ImplFont& );
+    friend SvStream&    WriteImplFont( SvStream& rOStm, const ImplFont& );
+
     void                AskConfig();
 
-    sal_uInt32          mnRefCount;
+    // Device independent variables
     OUString            maFamilyName;
     OUString            maStyleName;
-    Size                maSize;
-    Color               maColor;        // compatibility, now on output device
-    Color               maFillColor;    // compatibility, now on output device
-    rtl_TextEncoding    meCharSet;
-    LanguageTag         maLanguageTag;
-    LanguageTag         maCJKLanguageTag;
+    FontWeight          meWeight;
     FontFamily          meFamily;
     FontPitch           mePitch;
-    TextAlign           meAlign;
-    FontWeight          meWeight;
     FontWidth           meWidthType;
     FontItalic          meItalic;
-    FontUnderline       meUnderline;
-    FontUnderline       meOverline;
+    TextAlign           meAlign;
+    FontLineStyle       meUnderline;
+    FontLineStyle       meOverline;
     FontStrikeout       meStrikeout;
     FontRelief          meRelief;
     FontEmphasisMark    meEmphasisMark;
-    short               mnOrientation;
-    FontKerning         mnKerning;
-    bool                mbWordLine:1,
+    FontKerning         meKerning;
+    Size                maAverageFontSize;
+    rtl_TextEncoding    meCharSet;
+
+    LanguageTag         maLanguageTag;
+    LanguageTag         maCJKLanguageTag;
+
+    // Flags - device independent
+    bool                mbSymbolFlag:1,
                         mbOutline:1,
-                        mbConfigLookup:1,   // there was a config lookup
+                        mbConfigLookup:1,   // config lookup should only be done once
                         mbShadow:1,
                         mbVertical:1,
                         mbTransparent:1;    // compatibility, now on output device
 
-    friend SvStream&    ReadImpl_Font( SvStream& rIStm, Impl_Font& );
-    friend SvStream&    WriteImpl_Font( SvStream& rOStm, const Impl_Font& );
+    // deprecated variables - device independent
+    Color               maColor;            // compatibility, now on output device
+    Color               maFillColor;        // compatibility, now on output device
+
+    // Device dependent variables
+    OUString            maMapNames;
+    bool                mbWordLine:1,
+                        mbEmbeddable:1,
+                        mbSubsettable:1,
+                        mbRotatable:1,      // is "rotatable" even a word?!? I'll keep it for consistency for now
+                        mbDevice:1;
+
+    // TODO: metric data, should be migrated to ImplFontMetric
+    short               mnOrientation;
+
+    int                 mnQuality;
+
 };
-
-// - ImplFontMetric -
-
-class ImplFontMetric
-{
-    friend class ::OutputDevice;
-
-private:
-    long                mnAscent;      // Ascent
-    long                mnDescent;     // Descent
-    long                mnIntLeading;  // Internal Leading
-    long                mnExtLeading;  // External Leading
-    long                mnLineHeight;  // Ascent+Descent+EmphasisMark
-    long                mnSlant;       // Slant
-    sal_uInt16          mnMiscFlags;   // Misc Flags
-    sal_uInt32          mnRefCount;    // Reference Counter
-
-    enum { DEVICE_FLAG=1, SCALABLE_FLAG=2, LATIN_FLAG=4, CJK_FLAG=8, CTL_FLAG=16, FULLSTOP_CENTERED_FLAG=32 };
-
-public:
-                        ImplFontMetric();
-    void                AddReference();
-    void                DeReference();
-
-    long                GetAscent() const       { return mnAscent; }
-    long                GetDescent() const      { return mnDescent; }
-    long                GetIntLeading() const   { return mnIntLeading; }
-    long                GetExtLeading() const   { return mnExtLeading; }
-    long                GetLineHeight() const   { return mnLineHeight; }
-    long                GetSlant() const        { return mnSlant; }
-    bool                IsFullstopCentered() const { return  ((mnMiscFlags & FULLSTOP_CENTERED_FLAG ) != 0); }
-
-    bool                IsScalable() const      { return ((mnMiscFlags & SCALABLE_FLAG) != 0); }
-
-    bool                operator==( const ImplFontMetric& ) const;
-};
-
-typedef struct _FcPattern   FcPattern;
-class FontConfigFontOptions
-{
-public:
-    FontEmbeddedBitmap meEmbeddedBitmap; // whether the embedded bitmaps should be used
-    FontAntiAlias      meAntiAlias;      // whether the font should be antialiased
-    FontAutoHint       meAutoHint;       // whether the font should be autohinted
-    FontHinting        meHinting;        // whether the font should be hinted
-    FontHintStyle      meHintStyle;      // type of font hinting to be used
-
-                        FontConfigFontOptions() :
-                            meEmbeddedBitmap(EMBEDDEDBITMAP_DONTKNOW),
-                            meAntiAlias(ANTIALIAS_DONTKNOW),
-                            meAutoHint(AUTOHINT_DONTKNOW),
-                            meHinting(HINTING_DONTKNOW),
-                            meHintStyle(HINT_SLIGHT),
-                            mpPattern(nullptr) {}
-                        FontConfigFontOptions(FcPattern* pPattern) :
-                            meEmbeddedBitmap(EMBEDDEDBITMAP_DONTKNOW),
-                            meAntiAlias(ANTIALIAS_DONTKNOW),
-                            meAutoHint(AUTOHINT_DONTKNOW),
-                            meHinting(HINTING_DONTKNOW),
-                            meHintStyle(HINT_SLIGHT),
-                            mpPattern(pPattern) {}
-                        ~FontConfigFontOptions();
-
-    FontAutoHint        GetUseAutoHint() const { return meAutoHint; }
-    FontHintStyle       GetHintStyle() const { return meHintStyle; }
-    bool                DontUseEmbeddedBitmaps() const { return meEmbeddedBitmap == EMBEDDEDBITMAP_FALSE; }
-    bool                DontUseAntiAlias() const { return meAntiAlias == ANTIALIAS_FALSE; }
-    bool                DontUseHinting() const { return (meHinting == HINTING_FALSE) || (GetHintStyle() == HINT_NONE); }
-    void*               GetPattern(void * /*pFace*/, bool /*bEmbolden*/) const;
-private:
-    FcPattern* mpPattern;
-};
-
-// - ImplFontCharMap -
-
-class CmapResult;
-
-class VCL_PLUGIN_PUBLIC ImplFontCharMap
-{
-public:
-    explicit            ImplFontCharMap( const CmapResult& );
-    virtual             ~ImplFontCharMap();
-
-private:
-    friend class FontCharMap;
-    friend void intrusive_ptr_add_ref(ImplFontCharMap* pImplFontCharMap);
-    friend void intrusive_ptr_release(ImplFontCharMap* pImplFontCharMap);
-
-                        ImplFontCharMap( const ImplFontCharMap& ) = delete;
-    void                operator=( const ImplFontCharMap& ) = delete;
-
-    static ImplFontCharMapPtr getDefaultMap( bool bSymbols=false);
-    bool                isDefaultMap() const;
-
-private:
-    const sal_uInt32*   mpRangeCodes;     // pairs of StartCode/(EndCode+1)
-    const int*          mpStartGlyphs;    // range-specific mapper to glyphs
-    const sal_uInt16*   mpGlyphIds;       // individual glyphid mappings
-    int                 mnRangeCount;
-    int                 mnCharCount;      // covered codepoints
-    mutable sal_uInt32  mnRefCount;
-};
-
-inline void intrusive_ptr_add_ref(ImplFontCharMap* pImplFontCharMap)
-{
-    ++pImplFontCharMap->mnRefCount;
-}
-
-inline void intrusive_ptr_release(ImplFontCharMap* pImplFontCharMap)
-{
-    if (--pImplFontCharMap->mnRefCount == 0)
-        delete pImplFontCharMap;
-}
-
-// CmapResult is a normalized version of the many CMAP formats
-class VCL_PLUGIN_PUBLIC CmapResult
-{
-public:
-    explicit            CmapResult( bool bSymbolic = false,
-                            const sal_uInt32* pRangeCodes = nullptr, int nRangeCount = 0,
-                            const int* pStartGlyphs = nullptr, const sal_uInt16* pGlyphIds = nullptr );
-
-    const sal_uInt32*   mpRangeCodes;
-    const int*          mpStartGlyphs;
-    const sal_uInt16*   mpGlyphIds;
-    int                 mnRangeCount;
-    bool                mbSymbolic;
-    bool                mbRecoded;
-};
-
-bool ParseCMAP( const unsigned char* pRawData, int nRawLength, CmapResult& );
 
 #endif // INCLUDED_VCL_INC_IMPFONT_HXX
 

@@ -36,6 +36,8 @@
 #include <com/sun/star/style/XStyle.hpp>
 #include <com/sun/star/table/ShadowFormat.hpp>
 #include <com/sun/star/text/RelOrientation.hpp>
+#include <com/sun/star/text/HoriOrientation.hpp>
+#include <com/sun/star/text/VertOrientation.hpp>
 #include <com/sun/star/text/WritingMode.hpp>
 #include <com/sun/star/text/XTextColumns.hpp>
 #include <com/sun/star/text/XText.hpp>
@@ -50,7 +52,6 @@ using namespace ::com::sun::star;
 
 namespace writerfilter {
 namespace dmapper{
-
 
 
 PropertyMap::PropertyMap() :
@@ -404,6 +405,7 @@ SectionPropertyMap::SectionPropertyMap(bool bIsFirstSection) :
     ,m_bIsLandscape( false )
     ,m_bPageNoRestart( false )
     ,m_nPageNumber( -1 )
+    ,m_nPageNumberType(-1)
     ,m_nBreakType( -1 )
     ,m_nPaperBin( -1 )
     ,m_nFirstPaperBin( -1 )
@@ -423,6 +425,12 @@ SectionPropertyMap::SectionPropertyMap(bool bIsFirstSection) :
     ,m_nLnc( 0 )
     ,m_ndxaLnn( 0 )
     ,m_nLnnMin( 0 )
+    ,m_bDefaultHeaderLinkToPrevious(true)
+    ,m_bEvenPageHeaderLinkToPrevious(true)
+    ,m_bFirstPageHeaderLinkToPrevious(true)
+    ,m_bDefaultFooterLinkToPrevious(true)
+    ,m_bEvenPageFooterLinkToPrevious(true)
+    ,m_bFirstPageFooterLinkToPrevious(true)
 {
     static sal_Int32 nNumber = 0;
     nSectionNumber = nNumber++;
@@ -486,7 +494,6 @@ OUString lcl_FindUnusedPageStyleName(const uno::Sequence< OUString >& rPageStyle
     }
     return DEFAULT_STYLE + OUString::number( nMaxIndex + 1);
 }
-
 
 
 uno::Reference< beans::XPropertySet > SectionPropertyMap::GetPageStyle(
@@ -695,7 +702,6 @@ void SectionPropertyMap::SetBorderDistance( uno::Reference< beans::XPropertySet 
 }
 
 
-
 uno::Reference< text::XTextColumns > SectionPropertyMap::ApplyColumnProperties(
                             uno::Reference< beans::XPropertySet > const& xColumnContainer, DomainMapper_Impl& rDM_Impl )
 {
@@ -765,7 +771,6 @@ uno::Reference< text::XTextColumns > SectionPropertyMap::ApplyColumnProperties(
 }
 
 
-
 bool SectionPropertyMap::HasHeader(bool bFirstPage) const
 {
     bool bRet = false;
@@ -798,72 +803,97 @@ bool SectionPropertyMap::HasFooter(bool bFirstPage) const
 
 #define MIN_HEAD_FOOT_HEIGHT 100 //minimum header/footer height
 
-void SectionPropertyMap::CopyHeaderFooter( uno::Reference< beans::XPropertySet > xPrevStyle,
-    uno::Reference< beans::XPropertySet > xStyle )
+void SectionPropertyMap::CopyHeaderFooterTextProperty (
+    const uno::Reference< beans::XPropertySet >& xPrevStyle,
+    const uno::Reference< beans::XPropertySet >& xStyle,
+    PropertyIds ePropId )
 {
     try {
-        // Loop over the Header and Footer properties to copy them
-        static const PropertyIds aProperties[] =
-        {
-            PROP_HEADER_TEXT,
-            PROP_FOOTER_TEXT,
-        };
+        OUString sName = getPropertyName( ePropId );
 
-        bool bHasPrevHeader = false;
-        bool bHasHeader = false;
-
-        OUString sHeaderIsOn = getPropertyName( PROP_HEADER_IS_ON );
-        if (xPrevStyle.is())
-            xPrevStyle->getPropertyValue( sHeaderIsOn ) >>= bHasPrevHeader;
+        SAL_INFO("writerfilter", "Copying " << sName);
+        uno::Reference< text::XTextCopy > xTxt;
         if (xStyle.is())
-            xStyle->getPropertyValue( sHeaderIsOn ) >>= bHasHeader;
-        bool bCopyHeader = bHasPrevHeader && !bHasHeader;
+            xTxt.set(xStyle->getPropertyValue( sName ), uno::UNO_QUERY_THROW );
 
-        if ( bCopyHeader )
-            xStyle->setPropertyValue( sHeaderIsOn, uno::makeAny( sal_True ) );
-
-        bool bHasPrevFooter = false;
-        bool bHasFooter = false;
-
-        OUString sFooterIsOn = getPropertyName( PROP_FOOTER_IS_ON );
+        uno::Reference< text::XTextCopy > xPrevTxt;
         if (xPrevStyle.is())
-            xPrevStyle->getPropertyValue( sFooterIsOn ) >>= bHasPrevFooter;
-        if (xStyle.is())
-            xStyle->getPropertyValue( sFooterIsOn ) >>= bHasFooter;
-        bool bCopyFooter = bHasPrevFooter && !bHasFooter;
+            xPrevTxt.set(xPrevStyle->getPropertyValue( sName ), uno::UNO_QUERY_THROW );
 
-        if ( bCopyFooter && xStyle.is() )
-            xStyle->setPropertyValue( sFooterIsOn, uno::makeAny( sal_True ) );
-
-        // Copying the text properties
-        for ( int i = 0, nNbProps = 2; i < nNbProps; i++ )
-        {
-            bool bIsHeader = ( i < nNbProps / 2 );
-            PropertyIds aPropId = aProperties[i];
-            OUString sName = getPropertyName( aPropId );
-
-            if ( ( bIsHeader && bCopyHeader ) || ( !bIsHeader && bCopyFooter ) )
-            {
-                SAL_INFO("writerfilter", "Copying " << sName);
-                // TODO has to be copied
-                uno::Reference< text::XTextCopy > xTxt;
-                if (xStyle.is())
-                    xTxt.set(xStyle->getPropertyValue( sName ), uno::UNO_QUERY_THROW );
-
-                uno::Reference< text::XTextCopy > xPrevTxt;
-                if (xPrevStyle.is())
-                    xPrevTxt.set(xPrevStyle->getPropertyValue( sName ), uno::UNO_QUERY_THROW );
-
-                xTxt->copyText( xPrevTxt );
-            }
-        }
+        xTxt->copyText( xPrevTxt );
     }
     catch ( const uno::Exception& e )
     {
-        SAL_INFO("writerfilter", "An exception occurred in SectionPropertyMap::CopyHeaderFooter( ) - " << e.Message);
+        SAL_INFO("writerfilter", "An exception occurred in SectionPropertyMap::CopyHeaderFooterTextProperty( ) - " << e.Message);
     }
 }
 
+// Copy headers and footers from the previous page style.
+void SectionPropertyMap::CopyHeaderFooter(
+    const uno::Reference< beans::XPropertySet >& xPrevStyle,
+    const uno::Reference< beans::XPropertySet >& xStyle,
+    bool bOmitRightHeader, bool bOmitLeftHeader,
+    bool bOmitRightFooter, bool bOmitLeftFooter)
+{
+    bool bHasPrevHeader = false;
+    bool bHeaderIsShared = true;
+    OUString sHeaderIsOn = getPropertyName( PROP_HEADER_IS_ON );
+    OUString sHeaderIsShared = getPropertyName( PROP_HEADER_IS_SHARED );
+    if ( xPrevStyle.is() )
+    {
+        xPrevStyle->getPropertyValue( sHeaderIsOn ) >>= bHasPrevHeader;
+        xPrevStyle->getPropertyValue( sHeaderIsShared ) >>= bHeaderIsShared;
+    }
+
+    if ( bHasPrevHeader )
+    {
+        xStyle->setPropertyValue( sHeaderIsOn, uno::makeAny( true ) );
+        xStyle->setPropertyValue( sHeaderIsShared, uno::makeAny(bHeaderIsShared));
+        if ( !bOmitRightHeader )
+        {
+            CopyHeaderFooterTextProperty( xPrevStyle, xStyle,
+                    PROP_HEADER_TEXT );
+        }
+        if ( !bHeaderIsShared && !bOmitLeftHeader )
+        {
+            CopyHeaderFooterTextProperty( xPrevStyle, xStyle,
+                    PROP_HEADER_TEXT_LEFT );
+        }
+    }
+
+    bool bHasPrevFooter = false;
+    bool bFooterIsShared = true;
+    OUString sFooterIsOn = getPropertyName( PROP_FOOTER_IS_ON );
+    OUString sFooterIsShared = getPropertyName( PROP_FOOTER_IS_SHARED );
+    if ( xPrevStyle.is() )
+    {
+        xPrevStyle->getPropertyValue( sFooterIsOn ) >>= bHasPrevFooter;
+        xPrevStyle->getPropertyValue( sFooterIsShared ) >>= bFooterIsShared;
+    }
+
+    if ( bHasPrevFooter )
+    {
+        xStyle->setPropertyValue( sFooterIsOn, uno::makeAny( true ) );
+        xStyle->setPropertyValue( sFooterIsShared, uno::makeAny(bFooterIsShared) );
+        if ( !bOmitRightFooter )
+        {
+            CopyHeaderFooterTextProperty( xPrevStyle, xStyle,
+                    PROP_FOOTER_TEXT );
+        }
+        if ( !bFooterIsShared && !bOmitLeftFooter )
+        {
+            CopyHeaderFooterTextProperty( xPrevStyle, xStyle,
+                    PROP_FOOTER_TEXT_LEFT );
+        }
+    }
+}
+
+// Copy header and footer content from the previous docx section as needed.
+//
+// Any headers and footers which were not defined in this docx section
+// should be "linked" with the corresponding header or footer from the
+// previous section.  LO does not support linking of header/footer content
+// across page styles so we just copy the content from the previous section.
 void SectionPropertyMap::CopyLastHeaderFooter( bool bFirstPage, DomainMapper_Impl& rDM_Impl )
 {
     SAL_INFO("writerfilter", "START>>> SectionPropertyMap::CopyLastHeaderFooter()");
@@ -878,7 +908,21 @@ void SectionPropertyMap::CopyLastHeaderFooter( bool bFirstPage, DomainMapper_Imp
                 rDM_Impl.GetPageStyles(),
                 rDM_Impl.GetTextFactory(),
                 bFirstPage );
-        CopyHeaderFooter( xPrevStyle, xStyle );
+
+        if (bFirstPage)
+        {
+            CopyHeaderFooter( xPrevStyle, xStyle,
+                    !m_bFirstPageHeaderLinkToPrevious, true,
+                    !m_bFirstPageFooterLinkToPrevious, true);
+        }
+        else
+        {
+            CopyHeaderFooter( xPrevStyle, xStyle,
+                    !m_bDefaultHeaderLinkToPrevious,
+                    !m_bEvenPageHeaderLinkToPrevious,
+                    !m_bDefaultFooterLinkToPrevious,
+                    !m_bEvenPageFooterLinkToPrevious);
+        }
     }
     SAL_INFO("writerfilter", "END>>> SectionPropertyMap::CopyLastHeaderFooter()");
 }
@@ -996,34 +1040,72 @@ void SectionPropertyMap::HandleMarginsHeaderFooter(DomainMapper_Impl& rDM_Impl)
     PrepareHeaderFooterProperties( false );
 }
 
+bool SectionPropertyMap::FloatingTableConversion(FloatingTableInfo& rInfo)
+{
+    // Note that this is just a list of heuristics till sw core can have a
+    // table that is floating and can span over multiple pages at the same
+    // time.
+
+    sal_Int32 nPageWidth = GetPageWidth();
+    sal_Int32 nTextAreaWidth = nPageWidth - GetLeftMargin() - GetRightMargin();
+    // Count the layout width of the table.
+    sal_Int32 nTableWidth = rInfo.m_nTableWidth;
+    sal_Int32 nLeftMargin = 0;
+    if (rInfo.getPropertyValue("LeftMargin") >>= nLeftMargin)
+        nTableWidth += nLeftMargin;
+    sal_Int32 nRightMargin = 0;
+    if (rInfo.getPropertyValue("RightMargin") >>= nRightMargin)
+        nTableWidth += nRightMargin;
+
+    sal_Int16 nHoriOrientRelation = rInfo.getPropertyValue("HoriOrientRelation").get<sal_Int16>();
+    sal_Int16 nVertOrientRelation = rInfo.getPropertyValue("VertOrientRelation").get<sal_Int16>();
+    if (nHoriOrientRelation == text::RelOrientation::PAGE_FRAME && nVertOrientRelation == text::RelOrientation::PAGE_FRAME)
+    {
+        sal_Int16 nHoriOrient = rInfo.getPropertyValue("HoriOrient").get<sal_Int16>();
+        sal_Int16 nVertOrient = rInfo.getPropertyValue("VertOrient").get<sal_Int16>();
+        if (nHoriOrient == text::HoriOrientation::NONE && nVertOrient == text::VertOrientation::NONE)
+        {
+            // Anchor position is relative to the page horizontally and vertically as well and is an absolute position.
+            // The more close we are to the left edge, the less likely there will be any wrapping.
+            // The more close we are to the bottom, the more likely the table will span over to the next page
+            // So if we're in the bottom left quarter, don't do any conversion.
+            sal_Int32 nHoriOrientPosition = rInfo.getPropertyValue("HoriOrientPosition").get<sal_Int32>();
+            sal_Int32 nVertOrientPosition = rInfo.getPropertyValue("VertOrientPosition").get<sal_Int32>();
+            sal_Int32 nPageHeight = getProperty(PROP_HEIGHT)->second.get<sal_Int32>();
+            if (nHoriOrientPosition < (nPageWidth / 2) && nVertOrientPosition > (nPageHeight / 2))
+                return false;
+        }
+    }
+
+    // If the table is wider than the text area, then don't create a fly
+    // for the table: no wrapping will be performed anyway, but multi-page
+    // tables will be broken.
+    if (nTableWidth < nTextAreaWidth)
+        return true;
+
+    // If the position is relative to the edge of the page, then we always
+    // create the fly.
+    if (rInfo.getPropertyValue("HoriOrientRelation") == text::RelOrientation::PAGE_FRAME)
+        return true;
+
+    // If there are columns, always create the fly, otherwise the columns would
+    // restrict geometry of the table.
+    if (ColumnCount() + 1 >= 2)
+        return true;
+
+    return false;
+}
+
 void SectionPropertyMap::CloseSectionGroup( DomainMapper_Impl& rDM_Impl )
 {
     // Text area width is known at the end of a section: decide if tables should be converted or not.
     std::vector<FloatingTableInfo>& rPendingFloatingTables = rDM_Impl.m_aPendingFloatingTables;
-    sal_Int32 nTextAreaWidth = GetPageWidth() - GetLeftMargin() - GetRightMargin();
     uno::Reference<text::XTextAppendAndConvert> xBodyText( rDM_Impl.GetBodyText(), uno::UNO_QUERY );
     for (size_t i = 0; i < rPendingFloatingTables.size(); ++i)
     {
         FloatingTableInfo& rInfo = rPendingFloatingTables[i];
 
-        // Count the layout width of the table.
-        sal_Int32 nTableWidth = rInfo.m_nTableWidth;
-        sal_Int32 nLeftMargin = 0;
-        if (rInfo.getPropertyValue("LeftMargin") >>= nLeftMargin)
-            nTableWidth += nLeftMargin;
-        sal_Int32 nRightMargin = 0;
-        if (rInfo.getPropertyValue("RightMargin") >>= nRightMargin)
-            nTableWidth += nRightMargin;
-
-        // If the table is wider than the text area, then don't create a fly
-        // for the table: no wrapping will be performed anyway, but multi-page
-        // tables will be broken.
-        // If the position is relative to the edge of the page, then we always
-        // create the fly.
-        // If there are columns, always create the fly, otherwise the columns would
-        // restrict geometry of the table.
-        if ( ( rInfo.getPropertyValue("HoriOrientRelation") == text::RelOrientation::PAGE_FRAME ) ||
-             nTableWidth < nTextAreaWidth || ColumnCount() + 1 >= 2 )
+        if (FloatingTableConversion(rInfo))
             xBodyText->convertToTextFrame(rInfo.m_xStart, rInfo.m_xEnd, rInfo.m_aFrameProperties);
     }
     rPendingFloatingTables.clear();
@@ -1078,7 +1160,7 @@ void SectionPropertyMap::CloseSectionGroup( DomainMapper_Impl& rDM_Impl )
                     uno::Reference<beans::XPropertySet> xPageStyle (rDM_Impl.GetPageStyles()->getByName(aName), uno::UNO_QUERY_THROW);
                     HandleMarginsHeaderFooter(rDM_Impl);
                     if (rDM_Impl.IsNewDoc())
-                        _ApplyProperties(xPageStyle);
+                        ApplyProperties_(xPageStyle);
                 }
                 catch( const uno::Exception& )
                 {
@@ -1192,6 +1274,9 @@ void SectionPropertyMap::CloseSectionGroup( DomainMapper_Impl& rDM_Impl )
             nRubyHeight = 0;
         Insert(PROP_GRID_RUBY_HEIGHT, uno::makeAny( nRubyHeight ));
 
+        if (m_nPageNumberType >= 0)
+            Insert(PROP_NUMBERING_TYPE, uno::makeAny(m_nPageNumberType));
+
         // #i119558#, force to set document as standard page mode,
         // refer to ww8 import process function "SwWW8ImplReader::SetDocumentGrid"
         try
@@ -1209,7 +1294,7 @@ void SectionPropertyMap::CloseSectionGroup( DomainMapper_Impl& rDM_Impl )
         }
 
         if (rDM_Impl.IsNewDoc())
-            _ApplyProperties( xFollowPageStyle );
+            ApplyProperties_( xFollowPageStyle );
 
         //todo: creating a "First Page" style depends on HasTitlePage und _fFacingPage_
         if( m_bTitlePage )
@@ -1219,7 +1304,7 @@ void SectionPropertyMap::CloseSectionGroup( DomainMapper_Impl& rDM_Impl )
             uno::Reference< beans::XPropertySet > xFirstPageStyle = GetPageStyle(
                                 rDM_Impl.GetPageStyles(), rDM_Impl.GetTextFactory(), true );
             if (rDM_Impl.IsNewDoc())
-                _ApplyProperties( xFirstPageStyle );
+                ApplyProperties_( xFirstPageStyle );
 
             sal_Int32 nPaperBin = m_nFirstPaperBin >= 0 ? m_nFirstPaperBin : m_nPaperBin >= 0 ? m_nPaperBin : 0;
             if( nPaperBin )
@@ -1258,8 +1343,8 @@ void SectionPropertyMap::CloseSectionGroup( DomainMapper_Impl& rDM_Impl )
                     }
                     evenOddStyle->setPropertyValue("FollowStyle", uno::makeAny(*pageStyle));
                     rDM_Impl.GetPageStyles()->insertByName( evenOddStyleName, uno::makeAny( evenOddStyle ) );
-                    evenOddStyle->setPropertyValue("HeaderIsOn", uno::makeAny(sal_False));
-                    evenOddStyle->setPropertyValue("FooterIsOn", uno::makeAny(sal_False));
+                    evenOddStyle->setPropertyValue("HeaderIsOn", uno::makeAny(false));
+                    evenOddStyle->setPropertyValue("FooterIsOn", uno::makeAny(false));
                     CopyHeaderFooter( pageProperties, evenOddStyle );
                     *pageStyle = evenOddStyleName; // And use it instead of the original one (which is set as follow of this one).
                     if (m_nBreakType == static_cast<sal_Int32>(NS_ooxml::LN_Value_ST_SectionMark_evenPage))
@@ -1291,6 +1376,30 @@ void SectionPropertyMap::CloseSectionGroup( DomainMapper_Impl& rDM_Impl )
     rDM_Impl.SetIsFirstParagraphInSection(true);
 }
 
+// Clear the flag that says we should take the header/footer content from
+// the previous section.  This should be called when we encounter a header
+// or footer definition for this section.
+void SectionPropertyMap::ClearHeaderFooterLinkToPrevious(
+        bool bHeader, PageType eType )
+{
+    if( bHeader ) {
+        switch( eType ) {
+            case PAGE_FIRST: m_bFirstPageHeaderLinkToPrevious = false; break;
+            case PAGE_LEFT:  m_bEvenPageHeaderLinkToPrevious = false; break;
+            case PAGE_RIGHT: m_bDefaultHeaderLinkToPrevious = false; break;
+            // no default case as all enumeration values have been covered
+        }
+    }
+    else
+    {
+        switch( eType ) {
+            case PAGE_FIRST: m_bFirstPageFooterLinkToPrevious = false; break;
+            case PAGE_LEFT:  m_bEvenPageFooterLinkToPrevious = false; break;
+            case PAGE_RIGHT: m_bDefaultFooterLinkToPrevious = false; break;
+        }
+    }
+}
+
 class NamedPropertyValue {
     OUString m_aName;
 public:
@@ -1299,7 +1408,7 @@ public:
     bool operator() (beans::PropertyValue& aVal)
     {   return aVal.Name == m_aName;    }
 };
-void SectionPropertyMap::_ApplyProperties(
+void SectionPropertyMap::ApplyProperties_(
         uno::Reference< beans::XPropertySet > const& xStyle)
 {
     uno::Reference<beans::XMultiPropertySet> const xMultiSet(xStyle,
@@ -1347,7 +1456,7 @@ void SectionPropertyMap::_ApplyProperties(
         }
         catch( const uno::Exception& )
         {
-            OSL_FAIL( "Exception in SectionPropertyMap::_ApplyProperties");
+            OSL_FAIL( "Exception in SectionPropertyMap::ApplyProperties_");
         }
         return;
     }
@@ -1360,7 +1469,7 @@ void SectionPropertyMap::_ApplyProperties(
         }
         catch( const uno::Exception& )
         {
-            OSL_FAIL( "Exception in SectionPropertyMap::_ApplyProperties");
+            OSL_FAIL( "Exception in SectionPropertyMap::ApplyProperties_");
         }
     }
 }

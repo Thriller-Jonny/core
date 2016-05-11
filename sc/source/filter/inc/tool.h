@@ -68,16 +68,6 @@ public:
                         pAttr = NULL;
                     }
 
-    bool            operator ==( const FormIdent& rComp ) const
-                    {
-                        return ( nStamp == rComp.nStamp );
-                    }
-
-    bool            operator ==( const StampTyp& rStamp ) const
-                    {
-                        return ( nStamp == rStamp );
-                    }
-
     StampTyp        GetStamp( void ) const
                     {
                         return nStamp;
@@ -95,14 +85,14 @@ public:
 };
 
 
-#define __nSize 2048
+#define nSize_ 2048
 
 
 class FormCache
 {
 private:
-    FormIdent           aIdents[ __nSize ]; //gepufferte Formate
-    sal_Bool                bValid[ __nSize ];
+    FormIdent           aIdents[ nSize_ ]; //gepufferte Formate
+    bool                bValid[ nSize_ ];
     FormIdent           aCompareIdent;      // zum Vergleichen
     sal_uInt8               nDefaultFormat;     // Defaultformat der Datei
     SvNumberFormatter*  pFormTable;         // Value-Format-Table-Anker
@@ -128,7 +118,7 @@ inline const SfxUInt32Item* FormCache::GetAttr( sal_uInt8 nFormat, sal_uInt8 nSt
 
     aCompareIdent.SetStamp( nFormat, nSt );
     nIndex = aCompareIdent.GetStamp();
-    OSL_ENSURE( nIndex < __nSize, "FormCache::GetAttr(): Oups... not this way!" );
+    OSL_ENSURE( nIndex < nSize_, "FormCache::GetAttr(): Oups... not this way!" );
     if( bValid[ nIndex ] )
         pRet = aIdents[ nIndex ].GetAttr();
     else
@@ -138,7 +128,7 @@ inline const SfxUInt32Item* FormCache::GetAttr( sal_uInt8 nFormat, sal_uInt8 nSt
         OSL_ENSURE( pAttr, "FormCache::GetAttr(): Nothing to save" );
 
         aIdents[ nIndex ] = FormIdent( nFormat, nSt, *pAttr );
-        bValid[ nIndex ] = sal_True;
+        bValid[ nIndex ] = true;
 
         pRet = pAttr;
     }

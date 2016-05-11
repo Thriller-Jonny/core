@@ -95,10 +95,10 @@ public:
     /** ScSingleRefOpToken with ocMatRef. */
     formula::FormulaToken* AddMatrixSingleReference( const ScSingleRefData& rRef );
     formula::FormulaToken* AddDoubleReference( const ScComplexRefData& rRef );
-    formula::FormulaToken* AddRangeName( sal_uInt16 n, bool bGlobal );
+    formula::FormulaToken* AddRangeName( sal_uInt16 n, sal_Int16 nSheet );
     formula::FormulaToken* AddDBRange( sal_uInt16 n );
     formula::FormulaToken* AddExternalName( sal_uInt16 nFileId, const OUString& rName );
-    formula::FormulaToken* AddExternalSingleReference( sal_uInt16 nFileId, const OUString& rTabName, const ScSingleRefData& rRef );
+    void AddExternalSingleReference( sal_uInt16 nFileId, const OUString& rTabName, const ScSingleRefData& rRef );
     formula::FormulaToken* AddExternalDoubleReference( sal_uInt16 nFileId, const OUString& rTabName, const ScComplexRefData& rRef );
     formula::FormulaToken* AddMatrix( const ScMatrixRef& p );
     /** ScSingleRefOpToken with ocColRowName. */
@@ -106,10 +106,8 @@ public:
     virtual formula::FormulaToken* MergeArray( ) override;
 
     /** Merge very last SingleRef+ocRange+SingleRef combination into DoubleRef
-        and adjust pCode array, or do nothing if conditions not met.
-        Unconditionally returns last token from the resulting pCode array, or
-        NULL if there is no pCode (which actually would be caller's fault). */
-    formula::FormulaToken* MergeRangeReference( const ScAddress & rPos );
+        and adjust pCode array, or do nothing if conditions not met. */
+    void MergeRangeReference( const ScAddress & rPos );
 
     /// Assign XML string placeholder to the array
     void AssignXMLString( const OUString &rText, const OUString &rFormulaNmsp );
@@ -136,7 +134,17 @@ public:
      * Make all absolute references pointing to the copied range if the range is copied too
      * @param bCheckCopyArea should references pointing into the copy area be adjusted independently from being absolute, should be true only for copy&paste between documents
      */
-    void AdjustAbsoluteRefs( const ScDocument* pOldDoc, const ScAddress& rOldPos, const ScAddress& rNewPos, bool bRangeName = false, bool bCheckCopyArea = false );
+    void AdjustAbsoluteRefs( const ScDocument* pOldDoc, const ScAddress& rOldPos, const ScAddress& rNewPos, bool bCheckCopyArea = false );
+
+    /** When copying a sheet-local named expression, move sheet references that
+        point to the originating sheet to point to the new sheet instead.
+     */
+    void AdjustSheetLocalNameReferences( SCTAB nOldTab, SCTAB nNewTab );
+
+    /** Returns true if the sheet nTab is referenced in code. Relative sheet
+        references are evaluated using nPosTab.
+     */
+    bool ReferencesSheet( SCTAB nTab, SCTAB nPosTab ) const;
 
     /**
      * Adjust all references in response to shifting of cells during cell

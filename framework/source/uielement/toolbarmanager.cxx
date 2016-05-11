@@ -22,7 +22,6 @@
 #include "services.h"
 #include "general.h"
 #include "properties.h"
-#include <framework/imageproducer.hxx>
 #include <framework/sfxhelperfunctions.hxx>
 #include <classes/fwkresid.hxx>
 #include <classes/resource.hrc>
@@ -64,7 +63,6 @@
 #include <vcl/commandinfoprovider.hxx>
 
 #include <svtools/menuoptions.hxx>
-#include <boost/bind.hpp>
 
 //  namespaces
 
@@ -169,9 +167,9 @@ ToolBarManager::ToolBarManager( const Reference< XComponentContext >& rxContext,
 
     // enables a menu for clipped items and customization
     SvtCommandOptions aCmdOptions;
-    sal_uInt16 nMenuType = TOOLBOX_MENUTYPE_CLIPPEDITEMS;
+    ToolBoxMenuType nMenuType = ToolBoxMenuType::ClippedItems;
     if ( !aCmdOptions.Lookup( SvtCommandOptions::CMDOPTION_DISABLED, "CreateDialog"))
-         nMenuType |= TOOLBOX_MENUTYPE_CUSTOMIZE;
+         nMenuType |= ToolBoxMenuType::Customize;
 
     m_pToolBar->SetCommandHdl( LINK( this, ToolBarManager, Command ) );
     m_pToolBar->SetMenuType( nMenuType );
@@ -182,7 +180,7 @@ ToolBarManager::ToolBarManager( const Reference< XComponentContext >& rxContext,
     idx++; // will become 0 if '/' not found: use full string
     OString  aHelpIdAsString( HELPID_PREFIX_TESTTOOL );
     OUString  aToolbarName = rResourceName.copy( idx );
-    aHelpIdAsString += OUStringToOString( aToolbarName, RTL_TEXTENCODING_UTF8 );;
+    aHelpIdAsString += OUStringToOString( aToolbarName, RTL_TEXTENCODING_UTF8 );
     m_pToolBar->SetHelpId( aHelpIdAsString );
 
     m_aAsyncUpdateControllersTimer.SetTimeout( 50 );
@@ -349,7 +347,7 @@ void ToolBarManager::UpdateControllers()
 }
 
 //for update toolbar controller via Support Visible
-void ToolBarManager::UpdateController( css::uno::Reference< css::frame::XToolbarController > xController)
+void ToolBarManager::UpdateController( const css::uno::Reference< css::frame::XToolbarController >& xController)
 {
 
     if ( !m_bUpdateControllers )
@@ -524,7 +522,8 @@ void SAL_CALL ToolBarManager::elementRemoved( const css::ui::ConfigurationEvent&
 {
     impl_elementChanged(true,Event);
 }
-void ToolBarManager::impl_elementChanged(bool _bRemove,const css::ui::ConfigurationEvent& Event )
+void ToolBarManager::impl_elementChanged(bool const isRemove,
+        const css::ui::ConfigurationEvent& Event)
 {
     SolarMutexGuard g;
 
@@ -553,7 +552,7 @@ void ToolBarManager::impl_elementChanged(bool _bRemove,const css::ui::Configurat
             CommandToInfoMap::iterator pIter = m_aCommandMap.find( aSeq[i] );
             if ( pIter != m_aCommandMap.end() && ( pIter->second.nImageInfo >= nImageInfo ))
             {
-                if ( _bRemove )
+                if (isRemove)
                 {
                     Image aImage;
                     if (( pIter->second.nImageInfo == 0 ) && ( pIter->second.nImageInfo == nImageInfo ))
@@ -569,7 +568,7 @@ void ToolBarManager::impl_elementChanged(bool _bRemove,const css::ui::Configurat
                     }
 
                     setToolBarImage(aImage,pIter);
-                } // if ( _bRemove )
+                } // if (isRemove)
                 else
                 {
                     Reference< XGraphic > xGraphic;
@@ -584,11 +583,15 @@ void ToolBarManager::impl_elementChanged(bool _bRemove,const css::ui::Configurat
         }
     }
 }
-void ToolBarManager::setToolBarImage(const Image& _aImage,const CommandToInfoMap::const_iterator& _pIter)
+void ToolBarManager::setToolBarImage(const Image& rImage,
+        const CommandToInfoMap::const_iterator& rIter)
 {
-    const ::std::vector< sal_uInt16 >& _rIDs = _pIter->second.aIds;
-    m_pToolBar->SetItemImage( _pIter->second.nId, _aImage );
-    ::std::for_each(_rIDs.begin(), _rIDs.end(), ::boost::bind(&ToolBox::SetItemImage, m_pToolBar.get(), _1,_aImage));
+    const ::std::vector<sal_uInt16>& rIDs = rIter->second.aIds;
+    m_pToolBar->SetItemImage( rIter->second.nId, rImage );
+    for (auto const& it : rIDs)
+    {
+        m_pToolBar->SetItemImage(it, rImage);
+    }
 }
 
 void SAL_CALL ToolBarManager::elementReplaced( const css::ui::ConfigurationEvent& Event ) throw (css::uno::RuntimeException, std::exception)
@@ -647,12 +650,17 @@ void ToolBarManager::CreateControllers()
             continue;
 
         OUString                 aLoadURL( ".uno:OpenUrl" );
-        OUString                 aCommandURL( m_pToolBar->GetItemCommand( nId ));
         bool                     bInit( true );
         bool                     bCreate( true );
         Reference< XStatusListener > xController;
 
         svt::ToolboxController* pController( nullptr );
+
+        OUString aCommandURL( m_pToolBar->GetItemCommand( nId ) );
+        // Command can be just an alias to another command.
+        OUString aRealCommandURL( vcl::CommandInfoProvider::Instance().GetRealCommandForCommand( aCommandURL, m_xFrame ) );
+        if ( !aRealCommandURL.isEmpty() )
+            aCommandURL = aRealCommandURL;
 
         if ( bHasDisabledEntries )
         {
@@ -707,6 +715,7 @@ void ToolBarManager::CreateControllers()
                 {
                     // retrieve additional parameters
                     OUString aControlType = static_cast< AddonsParams* >( m_pToolBar->GetItemData( nId ))->aControlType;
+                    sal_uInt16 nWidth = static_cast< AddonsParams* >( m_pToolBar->GetItemData( nId ))->nWidth;
 
                     Reference< XStatusListener > xStatusListener(
                         ToolBarMerger::CreateController( m_xContext,
@@ -714,6 +723,7 @@ void ToolBarManager::CreateControllers()
                                                          m_pToolBar,
                                                          aCommandURL,
                                                          nId,
+                                                         nWidth,
                                                          aControlType ), UNO_QUERY );
 
                     xController = xStatusListener;
@@ -806,7 +816,7 @@ void ToolBarManager::CreateControllers()
                        aCommandURL == ".uno:ParaLeftToRight" ||
                        aCommandURL == ".uno:ParaRightToLeft"
                        )
-                        pController->setFastPropertyValue_NoBroadcast(1, makeAny(sal_True));
+                        pController->setFastPropertyValue_NoBroadcast(1, makeAny(true));
                 }
             }
 
@@ -973,11 +983,11 @@ void ToolBarManager::FillToolbar( const Reference< XIndexAccess >& rItemContaine
                                 Reference< XIndexAccess > xMenuContainer;
                                 if ( m_xDocUICfgMgr.is() &&
                                      m_xDocUICfgMgr->hasSettings( aCommandURL ) )
-                                    xMenuContainer  = m_xDocUICfgMgr->getSettings( aCommandURL, sal_False );
+                                    xMenuContainer  = m_xDocUICfgMgr->getSettings( aCommandURL, false );
                                 if ( !xMenuContainer.is() &&
                                      m_xUICfgMgr.is() &&
                                      m_xUICfgMgr->hasSettings( aCommandURL ) )
-                                    xMenuContainer = m_xUICfgMgr->getSettings( aCommandURL, sal_False );
+                                    xMenuContainer = m_xUICfgMgr->getSettings( aCommandURL, false );
                                 if ( xMenuContainer.is() && xMenuContainer->getCount() )
                                 {
                                     Sequence< PropertyValue > aProps;
@@ -1099,8 +1109,7 @@ void ToolBarManager::FillToolbar( const Reference< XIndexAccess >& rItemContaine
 
                 if ( aRefPoint.bResult )
                 {
-                    ToolBarMerger::ProcessMergeOperation( m_xFrame,
-                                                          m_pToolBar,
+                    ToolBarMerger::ProcessMergeOperation( m_pToolBar,
                                                           aRefPoint.nPos,
                                                           nItemId,
                                                           m_aCommandMap,
@@ -1111,8 +1120,7 @@ void ToolBarManager::FillToolbar( const Reference< XIndexAccess >& rItemContaine
                 }
                 else
                 {
-                    ToolBarMerger::ProcessMergeFallback( m_xFrame,
-                                                         m_pToolBar,
+                    ToolBarMerger::ProcessMergeFallback( m_pToolBar,
                                                          aRefPoint.nPos,
                                                          nItemId,
                                                          m_aCommandMap,
@@ -1240,12 +1248,13 @@ void ToolBarManager::notifyRegisteredControllers( const OUString& aUIElementName
         }
     }
 }
-long ToolBarManager::HandleClick(void ( SAL_CALL XToolbarController::*_pClick )())
+
+void ToolBarManager::HandleClick(void ( SAL_CALL XToolbarController::*_pClick )())
 {
     SolarMutexGuard g;
 
     if ( m_bDisposed )
-        return 1;
+        return;
 
     sal_uInt16 nId( m_pToolBar->GetCurItemId() );
     ToolBarControllerMap::const_iterator pIter = m_aControllerMap.find( nId );
@@ -1256,7 +1265,6 @@ long ToolBarManager::HandleClick(void ( SAL_CALL XToolbarController::*_pClick )(
         if ( xController.is() )
             (xController.get()->*_pClick)( );
     }
-    return 1;
 }
 
 IMPL_LINK_NOARG_TYPED(ToolBarManager, Click, ToolBox *, void)
@@ -1297,6 +1305,9 @@ void ToolBarManager::ImplClearPopupMenu( ToolBox *pToolBar )
         return;
 
     ::PopupMenu *pMenu = pToolBar->GetMenu();
+    if (pMenu == nullptr) {
+        return;
+    }
 
     // remove config entries from menu, so we have a clean menu to start with
     // remove submenu first
@@ -1667,7 +1678,7 @@ IMPL_LINK_TYPED( ToolBarManager, MenuSelect, Menu*, pMenu, bool )
                         Reference< XUIElementSettings > xUIElementSettings( xLayoutManager->getElement( m_aResourceName ), UNO_QUERY );
                         if ( xUIElementSettings.is() )
                         {
-                            Reference< XIndexContainer > xItemContainer( xUIElementSettings->getSettings( sal_True ), UNO_QUERY );
+                            Reference< XIndexContainer > xItemContainer( xUIElementSettings->getSettings( true ), UNO_QUERY );
                             sal_Int32 nCount = xItemContainer->getCount();
                             for ( sal_Int32 i = 0; i < nCount; i++ )
                             {

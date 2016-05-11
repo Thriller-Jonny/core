@@ -41,9 +41,10 @@
 
 using namespace ::com::sun::star;
 
+// note: pAttrSet may be null if the dialog is restored on startup
 SwFieldPage::SwFieldPage(vcl::Window *pParent, const OString& rID,
-    const OUString& rUIXMLDescription, const SfxItemSet &rAttrSet)
-    : SfxTabPage(pParent, rID, rUIXMLDescription, &rAttrSet)
+    const OUString& rUIXMLDescription, const SfxItemSet *const pAttrSet)
+    : SfxTabPage(pParent, rID, rUIXMLDescription, pAttrSet)
     , m_pCurField(nullptr)
     , m_pWrtShell(nullptr)
     , m_nTypeSel(LISTBOX_ENTRY_NOTFOUND)
@@ -115,11 +116,10 @@ void SwFieldPage::EditNewField( bool bOnlyActivate )
 }
 
 // insert field
-bool SwFieldPage::InsertField(sal_uInt16 nTypeId, sal_uInt16 nSubType, const OUString& rPar1,
+void SwFieldPage::InsertField(sal_uInt16 nTypeId, sal_uInt16 nSubType, const OUString& rPar1,
                             const OUString& rPar2, sal_uLong nFormatId,
                             sal_Unicode cSeparator, bool bIsAutomaticLanguage)
 {
-    bool bRet = false;
     SwView* pView = GetActiveView();
     SwWrtShell *pSh = m_pWrtShell ? m_pWrtShell : pView->GetWrtShellPtr();
 
@@ -128,7 +128,7 @@ bool SwFieldPage::InsertField(sal_uInt16 nTypeId, sal_uInt16 nSubType, const OUS
         SwInsertField_Data aData(nTypeId, nSubType, rPar1, rPar2, nFormatId, nullptr, cSeparator, bIsAutomaticLanguage );
         //#i26566# provide parent for SwWrtShell::StartInputFieldDlg
         aData.m_pParent = &GetTabDialog()->GetOKButton();
-        bRet = m_aMgr.InsertField( aData );
+        m_aMgr.InsertField( aData );
 
         uno::Reference< frame::XDispatchRecorder > xRecorder =
                 pView->GetViewFrame()->GetBindings().GetRecorder();
@@ -277,33 +277,25 @@ bool SwFieldPage::InsertField(sal_uInt16 nTypeId, sal_uInt16 nSubType, const OUS
         pSh->SetUndoNoResetModified();
         pSh->EndAllAction();
     }
-
-    return bRet;
 }
 
-void SwFieldPage::SavePos( const ListBox* pLst1, const ListBox* pLst2,
-                         const ListBox* pLst3 )
+void SwFieldPage::SavePos( const ListBox* pLst1 )
 {
-    const ListBox* aLBArr [ coLBCount ] = { pLst1, pLst2, pLst3 };
-
-    const ListBox** ppLB = aLBArr;
-    for( int i = 0; i < coLBCount; ++i, ++ppLB )
-        if( (*ppLB) && (*ppLB)->GetEntryCount() )
-            m_aLstStrArr[ i ] = (*ppLB)->GetSelectEntry();
-        else
-            m_aLstStrArr[ i ].clear();
+    if( pLst1 && pLst1->GetEntryCount() )
+        m_aLstStrArr[ 0 ] = pLst1->GetSelectEntry();
+    else
+        m_aLstStrArr[ 0 ].clear();
+    m_aLstStrArr[ 1 ].clear();
+    m_aLstStrArr[ 2 ].clear();
 }
 
-void SwFieldPage::RestorePos(ListBox* pLst1, ListBox* pLst2, ListBox* pLst3)
+void SwFieldPage::RestorePos(ListBox* pLst1)
 {
     sal_Int32 nPos = 0;
-    ListBox* aLBArr [ coLBCount ] = { pLst1, pLst2, pLst3 };
-    ListBox** ppLB = aLBArr;
-    for( int i = 0; i < coLBCount; ++i, ++ppLB )
-        if( (*ppLB) && (*ppLB)->GetEntryCount() && !m_aLstStrArr[ i ].isEmpty() &&
-            LISTBOX_ENTRY_NOTFOUND !=
-                        ( nPos = (*ppLB)->GetEntryPos(m_aLstStrArr[ i ] ) ) )
-            (*ppLB)->SelectEntryPos( nPos );
+    if( pLst1 && pLst1->GetEntryCount() && !m_aLstStrArr[ 0 ].isEmpty() &&
+         LISTBOX_ENTRY_NOTFOUND !=
+                    ( nPos = pLst1->GetEntryPos(m_aLstStrArr[ 0 ] ) ) )
+        pLst1->SelectEntryPos( nPos );
 }
 
 // Insert new fields

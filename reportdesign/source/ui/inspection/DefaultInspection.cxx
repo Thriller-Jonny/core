@@ -57,7 +57,6 @@ namespace rptui
         ,m_bIsReadOnly(false)
         ,m_nMinHelpTextLines( 3 )
         ,m_nMaxHelpTextLines( 8 )
-        ,m_pInfoService(new OPropertyInfoService())
     {
     }
 
@@ -117,12 +116,12 @@ namespace rptui
 
         };
 
-        const size_t nFactories = sizeof( aFactories ) / sizeof( aFactories[ 0 ] );
+        const size_t nFactories = SAL_N_ELEMENTS( aFactories );
         Sequence< Any > aReturn( nFactories );
         Any* pReturn = aReturn.getArray();
-        for ( size_t i = 0; i < nFactories; ++i )
+        for (const auto& rFactory : aFactories)
         {
-            *pReturn++ <<= OUString::createFromAscii( aFactories[i].serviceName );
+            *pReturn++ <<= OUString::createFromAscii( rFactory.serviceName );
         }
 
         return aReturn;
@@ -215,7 +214,7 @@ namespace rptui
             { "Data",       RID_STR_PROPPAGE_DATA,      HID_RPT_PROPDLG_TAB_DATA },
         };
 
-        const size_t nCategories = sizeof( aCategories ) / sizeof( aCategories[0] );
+        const size_t nCategories = SAL_N_ELEMENTS( aCategories );
         Sequence< PropertyCategoryDescriptor > aReturn( nCategories );
         PropertyCategoryDescriptor* pReturn = aReturn.getArray();
         for ( size_t i=0; i<nCategories; ++i, ++pReturn )

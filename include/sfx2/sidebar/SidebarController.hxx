@@ -85,9 +85,9 @@ public:
     static SidebarController* GetSidebarControllerForFrame (
         const css::uno::Reference<css::frame::XFrame>& rxFrame);
 
-    static void registerSidebarForFrame(SidebarController* pController, css::uno::Reference<css::frame::XController> xFrame);
+    static void registerSidebarForFrame(SidebarController* pController, const css::uno::Reference<css::frame::XController>& xFrame);
 
-    static void unregisterSidebarForFrame(SidebarController* pController, css::uno::Reference<css::frame::XController> xFrame);
+    static void unregisterSidebarForFrame(SidebarController* pController, const css::uno::Reference<css::frame::XController>& xFrame);
 
     // ui::XContextChangeEventListener
     virtual void SAL_CALL notifyContextChangeEvent (const css::ui::ContextChangeEventObject& rEvent)
@@ -145,21 +145,21 @@ public:
 
    // std::unique_ptr<ResourceManager> GetResourceManager() { return mpResourceManager;}
 
-    Context GetCurrentContext() const { return maCurrentContext;}
+    const Context& GetCurrentContext() const { return maCurrentContext;}
     bool IsDocumentReadOnly (void) const { return mbIsDocumentReadOnly;}
 
     void SwitchToDeck ( const ::rtl::OUString& rsDeckId);
     void SwitchToDefaultDeck();
 
-    void CreateDeck(const ::rtl::OUString& rDeckId, bool bForceCreate = false);
-    void CreatePanels(const ::rtl::OUString& rDeckId);
+    void CreateDeck(const ::rtl::OUString& rDeckId);
+    void CreateDeck(const ::rtl::OUString& rDeckId, const Context& rContext, bool bForceCreate = false);
 
     ResourceManager::DeckContextDescriptorContainer GetMatchingDecks();
     ResourceManager::PanelContextDescriptorContainer GetMatchingPanels( const ::rtl::OUString& rDeckId);
 
     void notifyDeckTitle(const OUString& targetDeckId);
 
-    void updateModel(css::uno::Reference<css::frame::XModel> xModel);
+    void updateModel(const css::uno::Reference<css::frame::XModel>& xModel);
 
     void disposeDecks();
 
@@ -192,7 +192,7 @@ private:
     bool mbCanDeckBeOpened;
 
     /** Before the deck is closed the sidebar width is saved into this variable,
-        so that it can be restored when the deck is reopended.
+        so that it can be restored when the deck is reopened.
     */
     sal_Int32 mnSavedSidebarWidth;
     FocusManager maFocusManager;
@@ -220,16 +220,20 @@ private:
         const bool bWantsCanvas,
         const Context& rContext);
 
+    void CreatePanels(
+        const ::rtl::OUString& rDeckId,
+        const Context& rContext);
     VclPtr<Panel> CreatePanel (
         const ::rtl::OUString& rsPanelId,
         vcl::Window* pParentWindow,
         const bool bIsInitiallyExpanded,
         const Context& rContext,
-        VclPtr<Deck> pDeck);
+        const VclPtr<Deck>& pDeck);
 
     void SwitchToDeck (
         const DeckDescriptor& rDeckDescriptor,
         const Context& rContext);
+
     void ShowPopupMenu (
         const Rectangle& rButtonBox,
         const ::std::vector<TabBar::DeckMenuData>& rMenuData) const;

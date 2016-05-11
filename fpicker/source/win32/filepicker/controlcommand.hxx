@@ -25,21 +25,14 @@
 #include <rtl/ustring.hxx>
 
 
-
-
-
 class CFilePickerState;
 class CControlCommandRequest;
 class CControlCommandResult;
 
-
-
-
-
 class CControlCommand
 {
 public:
-    CControlCommand( sal_Int16 aControlId );
+    explicit CControlCommand( sal_Int16 aControlId );
     virtual ~CControlCommand( );
 
     virtual void SAL_CALL exec( CFilePickerState* aFilePickerState ) = 0;
@@ -66,9 +59,6 @@ private:
 };
 
 
-
-
-
 class CValueControlCommand : public CControlCommand
 {
 public:
@@ -91,9 +81,6 @@ private:
 };
 
 
-
-
-
 class CLabelControlCommand : public CControlCommand
 {
 public:
@@ -110,9 +97,6 @@ public:
 private:
     OUString m_aLabel;
 };
-
-
-
 
 
 class CEnableControlCommand : public CControlCommand

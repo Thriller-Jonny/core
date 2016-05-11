@@ -10,7 +10,6 @@
 #include <comphelper/string.hxx>
 #include <sfx2/sidebar/ControlFactory.hxx>
 #include <sfx2/sidebar/ResourceDefinitions.hrc>
-#include <sfx2/sidebar/Theme.hxx>
 #include <svx/dialogs.hrc>
 #include <svx/dialmgr.hxx>
 #include <sfx2/objsh.hxx>
@@ -20,7 +19,6 @@
 #include <svx/xtable.hxx>
 #include <svtools/valueset.hxx>
 #include <unotools/pathoptions.hxx>
-#include <boost/bind.hpp>
 #include <svx/xattr.hxx>
 #include <svx/svddef.hxx>
 #include <svx/sdooitm.hxx>
@@ -34,7 +32,6 @@
 
 using namespace css;
 using namespace css::uno;
-using sfx2::sidebar::Theme;
 
 namespace {
 
@@ -78,7 +75,6 @@ ShadowPropertyPanel::ShadowPropertyPanel(
     maShadowColorController(SID_ATTR_SHADOW_COLOR, *pBindings, *this),
     maShadowXDistanceController(SID_ATTR_SHADOW_XDISTANCE, *pBindings, *this),
     maShadowYDistanceController(SID_ATTR_SHADOW_YDISTANCE, *pBindings, *this),
-    mxFrame(rxFrame),
     mpBindings(pBindings),
     nX(0),
     nY(0),
@@ -151,19 +147,22 @@ IMPL_LINK_NOARG_TYPED(ShadowPropertyPanel, ClickShadowHdl, Button*, void)
     if( mpShowShadow->GetState() == TRISTATE_FALSE )
     {
         SdrOnOffItem aItem(makeSdrShadowItem(false));
-        GetBindings()->GetDispatcher()->Execute(SID_ATTR_FILL_SHADOW, SfxCallMode::RECORD, &aItem, 0L);
+        GetBindings()->GetDispatcher()->ExecuteList(SID_ATTR_FILL_SHADOW,
+                SfxCallMode::RECORD, { &aItem });
     }
     else
     {
         SdrOnOffItem aItem(makeSdrShadowItem(true));
-        GetBindings()->GetDispatcher()->Execute(SID_ATTR_FILL_SHADOW, SfxCallMode::RECORD, &aItem, 0L);
+        GetBindings()->GetDispatcher()->ExecuteList(SID_ATTR_FILL_SHADOW,
+                SfxCallMode::RECORD, { &aItem });
     }
 }
 
 IMPL_LINK_NOARG_TYPED(ShadowPropertyPanel, ModifyShadowColorHdl, ListBox&, void)
 {
     XColorItem aItem(makeSdrShadowColorItem(mpLBShadowColor->GetSelectEntryColor()));
-    GetBindings()->GetDispatcher()->Execute(SID_ATTR_SHADOW_COLOR, SfxCallMode::RECORD, &aItem,  0L);
+    GetBindings()->GetDispatcher()->ExecuteList(SID_ATTR_SHADOW_COLOR,
+            SfxCallMode::RECORD, { &aItem });
 }
 
 IMPL_LINK_NOARG_TYPED(ShadowPropertyPanel, ModifyShadowTransMetricHdl, Edit&, void)
@@ -171,7 +170,8 @@ IMPL_LINK_NOARG_TYPED(ShadowPropertyPanel, ModifyShadowTransMetricHdl, Edit&, vo
     sal_uInt16 nVal = mpShadowTransMetric->GetValue();
     SetTransparencyValue(nVal);
     SdrPercentItem aItem( makeSdrShadowTransparenceItem(nVal) );
-    GetBindings()->GetDispatcher()->Execute(SID_ATTR_SHADOW_TRANSPARENCE, SfxCallMode::RECORD, &aItem , 0L);
+    GetBindings()->GetDispatcher()->ExecuteList(SID_ATTR_SHADOW_TRANSPARENCE,
+            SfxCallMode::RECORD, { &aItem });
 }
 
 IMPL_LINK_NOARG_TYPED(ShadowPropertyPanel, ModifyShadowTransSliderHdl, Slider*, void)
@@ -179,7 +179,8 @@ IMPL_LINK_NOARG_TYPED(ShadowPropertyPanel, ModifyShadowTransSliderHdl, Slider*, 
     sal_uInt16 nVal = mpShadowTransSlider->GetThumbPos();
     SetTransparencyValue(nVal);
     SdrPercentItem aItem( makeSdrShadowTransparenceItem(nVal) );
-    GetBindings()->GetDispatcher()->Execute(SID_ATTR_SHADOW_TRANSPARENCE, SfxCallMode::RECORD, &aItem, 0L);
+    GetBindings()->GetDispatcher()->ExecuteList(SID_ATTR_SHADOW_TRANSPARENCE,
+            SfxCallMode::RECORD, { &aItem });
 }
 
 IMPL_LINK_NOARG_TYPED(ShadowPropertyPanel, ModifyShadowDistanceHdl, Edit&, void)
@@ -199,8 +200,10 @@ IMPL_LINK_NOARG_TYPED(ShadowPropertyPanel, ModifyShadowDistanceHdl, Edit&, void)
     }
     SdrMetricItem aXItem(makeSdrShadowXDistItem(nX));
     SdrMetricItem aYItem(makeSdrShadowYDistItem(nY));
-    GetBindings()->GetDispatcher()->Execute(SID_ATTR_SHADOW_XDISTANCE, SfxCallMode::RECORD, &aXItem, 0L);
-    GetBindings()->GetDispatcher()->Execute(SID_ATTR_SHADOW_YDISTANCE, SfxCallMode::RECORD, &aYItem, 0L);
+    GetBindings()->GetDispatcher()->ExecuteList(SID_ATTR_SHADOW_XDISTANCE,
+            SfxCallMode::RECORD, { &aXItem });
+    GetBindings()->GetDispatcher()->ExecuteList(SID_ATTR_SHADOW_YDISTANCE,
+            SfxCallMode::RECORD, { &aYItem });
 }
 
 void ShadowPropertyPanel::UpdateControls()

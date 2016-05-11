@@ -142,7 +142,6 @@ private:
 };
 
 
-
 SvxXMLXTableExportComponent::SvxXMLXTableExportComponent(
     const css::uno::Reference< css::uno::XComponentContext >& rContext,
     const OUString& rFileName,
@@ -153,11 +152,11 @@ SvxXMLXTableExportComponent::SvxXMLXTableExportComponent(
     mxTable( xTable )
 {
 
-    _GetNamespaceMap().Add( GetXMLToken(XML_NP_OOO), GetXMLToken(XML_N_OOO), XML_NAMESPACE_OOO );
-    _GetNamespaceMap().Add( GetXMLToken(XML_NP_OFFICE), GetXMLToken(XML_N_OFFICE), XML_NAMESPACE_OFFICE );
-    _GetNamespaceMap().Add( GetXMLToken(XML_NP_DRAW), GetXMLToken(XML_N_DRAW), XML_NAMESPACE_DRAW );
-    _GetNamespaceMap().Add( GetXMLToken(XML_NP_XLINK), GetXMLToken(XML_N_XLINK), XML_NAMESPACE_XLINK );
-    _GetNamespaceMap().Add( GetXMLToken(XML_NP_SVG), GetXMLToken(XML_N_SVG),  XML_NAMESPACE_SVG );
+    GetNamespaceMap_().Add( GetXMLToken(XML_NP_OOO), GetXMLToken(XML_N_OOO), XML_NAMESPACE_OOO );
+    GetNamespaceMap_().Add( GetXMLToken(XML_NP_OFFICE), GetXMLToken(XML_N_OFFICE), XML_NAMESPACE_OFFICE );
+    GetNamespaceMap_().Add( GetXMLToken(XML_NP_DRAW), GetXMLToken(XML_N_DRAW), XML_NAMESPACE_DRAW );
+    GetNamespaceMap_().Add( GetXMLToken(XML_NP_XLINK), GetXMLToken(XML_N_XLINK), XML_NAMESPACE_XLINK );
+    GetNamespaceMap_().Add( GetXMLToken(XML_NP_SVG), GetXMLToken(XML_N_SVG),  XML_NAMESPACE_SVG );
     SetGraphicResolver( xGrfResolver );
     setExportFlags( SvXMLExportFlags::NONE );
 }
@@ -180,7 +179,7 @@ static void initializeStreamMetadata( const uno::Reference< uno::XInterface > &x
         xProps->setPropertyValue("MediaType",  uno::makeAny( OUString( "text/xml" ) ) );
 
         // use stock encryption
-        xProps->setPropertyValue("UseCommonStoragePasswordEncryption", uno::makeAny( sal_True ) );
+        xProps->setPropertyValue("UseCommonStoragePasswordEncryption", uno::makeAny( true ) );
     } catch ( const uno::Exception & )
     {
         OSL_FAIL( "exception setting stream metadata" );
@@ -189,7 +188,7 @@ static void initializeStreamMetadata( const uno::Reference< uno::XInterface > &x
 
 static void createStorageStream( uno::Reference < io::XOutputStream > *xOut,
                                  SvXMLGraphicHelper                  **ppGraphicHelper,
-                                 uno::Reference < embed::XStorage >    xSubStorage )
+                                 const uno::Reference < embed::XStorage >& xSubStorage )
 {
     uno::Reference < io::XStream > xStream;
     xStream = xSubStorage->openStreamElement(
@@ -417,16 +416,14 @@ bool SvxXMLXTableExportComponent::exportTable() throw()
 }
 
 // methods without content:
-void SvxXMLXTableExportComponent::_ExportAutoStyles() {}
-void SvxXMLXTableExportComponent::_ExportMasterStyles() {}
-void SvxXMLXTableExportComponent::_ExportContent() {}
-
+void SvxXMLXTableExportComponent::ExportAutoStyles_() {}
+void SvxXMLXTableExportComponent::ExportMasterStyles_() {}
+void SvxXMLXTableExportComponent::ExportContent_() {}
 
 
 SvxXMLTableEntryExporter::~SvxXMLTableEntryExporter()
 {
 }
-
 
 
 SvxXMLColorEntryExporter::SvxXMLColorEntryExporter( SvXMLExport& rExport )
@@ -453,7 +450,6 @@ void SvxXMLColorEntryExporter::exportEntry( const OUString& rStrName, const Any&
 }
 
 
-
 SvxXMLLineEndEntryExporter::SvxXMLLineEndEntryExporter( SvXMLExport& rExport )
 : SvxXMLTableEntryExporter( rExport ), maMarkerStyle( rExport )
 {
@@ -467,7 +463,6 @@ void SvxXMLLineEndEntryExporter::exportEntry( const OUString& rStrName, const An
 {
     maMarkerStyle.exportXML( rStrName, rValue );
 }
-
 
 
 SvxXMLDashEntryExporter::SvxXMLDashEntryExporter( SvXMLExport& rExport )
@@ -485,7 +480,6 @@ void SvxXMLDashEntryExporter::exportEntry( const OUString& rStrName, const Any& 
 }
 
 
-
 SvxXMLHatchEntryExporter::SvxXMLHatchEntryExporter( SvXMLExport& rExport )
 : SvxXMLTableEntryExporter( rExport ), maHatchStyle( rExport )
 {
@@ -501,7 +495,6 @@ void SvxXMLHatchEntryExporter::exportEntry( const OUString& rStrName, const Any&
 }
 
 
-
 SvxXMLGradientEntryExporter::SvxXMLGradientEntryExporter( SvXMLExport& rExport )
 : SvxXMLTableEntryExporter( rExport ), maGradientStyle( rExport )
 {
@@ -515,7 +508,6 @@ void SvxXMLGradientEntryExporter::exportEntry( const OUString& rStrName, const A
 {
     maGradientStyle.exportXML( rStrName, rValue );
 }
-
 
 
 SvxXMLBitmapEntryExporter::SvxXMLBitmapEntryExporter( SvXMLExport& rExport )

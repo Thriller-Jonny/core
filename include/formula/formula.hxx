@@ -36,7 +36,6 @@ namespace formula
 enum FormulaDlgMode { FORMULA_FORMDLG_FORMULA, FORMULA_FORMDLG_ARGS, FORMULA_FORMDLG_EDIT };
 
 
-
 class FormulaDlg_Impl;
 class IControlReferenceHandler;
 class IFunctionDescription;
@@ -51,9 +50,6 @@ class FORMULA_DLLPUBLIC FormulaModalDialog :   public ModalDialog, public formul
     friend class FormulaDlg_Impl;
 public:
                     FormulaModalDialog( vcl::Window* pParent
-                                            , bool _bSupportFunctionResult
-                                            , bool _bSupportResult
-                                            , bool _bSupportMatrix
                                             ,IFunctionManager* _pFunctionMgr
                                             ,IControlReferenceHandler* _pDlg = nullptr );
     virtual ~FormulaModalDialog();
@@ -67,12 +63,12 @@ protected:
     virtual bool    PreNotify( NotifyEvent& rNEvt ) override;
     ::std::pair<RefButton*,RefEdit*> RefInputStartBefore( RefEdit* pEdit, RefButton* pButton = nullptr );
     void            RefInputStartAfter( RefEdit* pEdit, RefButton* pButton = nullptr );
-    void            RefInputDoneAfter( bool bForced = false );
+    void            RefInputDoneAfter();
     void            SetFocusWin(vcl::Window *pWin,const OString& nUniqueId);
 
     void            SetMeText(const OUString& _sText);
     void            Update();
-    bool            CheckMatrix(OUString& aFormula /*IN/OUT*/);
+    void            CheckMatrix(OUString& aFormula /*IN/OUT*/);
     void            Update(const OUString& _sExp);
 
     void            StoreFormEditData(FormEditData* pData);
@@ -91,9 +87,6 @@ public:
                     FormulaDlg( SfxBindings* pB
                                     , SfxChildWindow* pCW
                                     , vcl::Window* pParent
-                                    , bool _bSupportFunctionResult
-                                    , bool _bSupportResult
-                                    , bool _bSupportMatrix
                                     , IFunctionManager* _pFunctionMgr
                                     , IControlReferenceHandler* _pDlg = nullptr );
     virtual ~FormulaDlg();
@@ -119,7 +112,7 @@ protected:
     bool            CheckMatrix(OUString& aFormula /*IN/OUT*/);
     OUString        GetMeText() const;
     void            Update(const OUString& _sExp);
-    void            DoEnter(bool _bOk);
+    void            DoEnter();
     const IFunctionDescription* getCurrentFunctionDescription() const;
     bool            UpdateParaWin(Selection& _rSelection);
     void            UpdateParaWin(const Selection& _rSelection, const OUString& _sRefStr);

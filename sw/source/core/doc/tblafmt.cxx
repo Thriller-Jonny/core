@@ -41,8 +41,6 @@
 #include <fmtornt.hxx>
 #include <editsh.hxx>
 
-#include <boost/noncopyable.hpp>
-
 #include <memory>
 #include <vector>
 
@@ -130,7 +128,7 @@ namespace
 
     See also: BeginSwBlock and EndSwBlock.
     */
-    class WriterSpecificAutoFormatBlock : ::boost::noncopyable
+    class WriterSpecificAutoFormatBlock
     {
     public:
         explicit WriterSpecificAutoFormatBlock(SvStream &rStream) : _rStream(rStream)
@@ -144,6 +142,9 @@ namespace
         }
 
     private:
+        WriterSpecificAutoFormatBlock(WriterSpecificAutoFormatBlock const&) = delete;
+        WriterSpecificAutoFormatBlock& operator=(WriterSpecificAutoFormatBlock const&) = delete;
+
         SvStream &_rStream;
         sal_uInt64 _whereToWriteEndOfBlock;
     };
@@ -277,8 +278,8 @@ SwBoxAutoFormat::SwBoxAutoFormat()
     m_aCTLWeight( WEIGHT_NORMAL, RES_CHRATR_CTL_WEIGHT ),
     m_aCTLPosture( ITALIC_NONE, RES_CHRATR_CTL_POSTURE ),
 
-    m_aUnderline( UNDERLINE_NONE, RES_CHRATR_UNDERLINE ),
-    m_aOverline( UNDERLINE_NONE, RES_CHRATR_OVERLINE ),
+    m_aUnderline( LINESTYLE_NONE, RES_CHRATR_UNDERLINE ),
+    m_aOverline( LINESTYLE_NONE, RES_CHRATR_OVERLINE ),
     m_aCrossedOut( STRIKEOUT_NONE, RES_CHRATR_CROSSEDOUT ),
     m_aContour( false, RES_CHRATR_CONTOUR ),
     m_aShadowed( false, RES_CHRATR_SHADOWED ),

@@ -25,7 +25,6 @@
 #include <sfx2/dispatch.hxx>
 #include <sfx2/bindings.hxx>
 #include <sfx2/imagemgr.hxx>
-#include <sfx2/mnumgr.hxx>
 #include <sfx2/msgpool.hxx>
 #include <swmodule.hxx>
 #include <view.hxx>
@@ -65,7 +64,6 @@ using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::frame;
 
 SFX_IMPL_TOOLBOX_CONTROL( SwTbxAutoTextCtrl, SfxVoidItem );
-SFX_IMPL_TOOLBOX_CONTROL( SwTbxFieldCtrl, SfxBoolItem );
 
 SwTbxAutoTextCtrl::SwTbxAutoTextCtrl(
     sal_uInt16 nSlotId,
@@ -146,7 +144,7 @@ IMPL_STATIC_LINK_TYPED(SwTbxAutoTextCtrl, PopupHdl, Menu*, pMenu, bool)
     sal_uInt16 nBlock = nId / 100;
 
     SwGlossaryList* pGlossaryList = ::GetGlossaryList();
-    OUString sGroup = pGlossaryList->GetGroupName(nBlock - 1, false);
+    OUString sGroup = pGlossaryList->GetGroupName(nBlock - 1);
     OUString sShortName =
         pGlossaryList->GetBlockShortName(nBlock - 1, nId - (100 * nBlock) - 1);
 
@@ -175,66 +173,6 @@ void SwTbxAutoTextCtrl::DelPopup()
         pPopup = nullptr;
     }
 }
-
-SwTbxFieldCtrl::SwTbxFieldCtrl(
-    sal_uInt16 nSlotId,
-    sal_uInt16 nId,
-    ToolBox& rTbx ) :
-    SfxToolBoxControl( nSlotId, nId, rTbx )
-{
-    rTbx.SetItemBits( nId, ToolBoxItemBits::DROPDOWNONLY | rTbx.GetItemBits( nId ) );
-}
-
-SwTbxFieldCtrl::~SwTbxFieldCtrl()
-{
-}
-
-VclPtr<SfxPopupWindow> SwTbxFieldCtrl::CreatePopupWindow()
-{
-    SwView* pView = ::GetActiveView();
-    if(pView && !pView->GetDocShell()->IsReadOnly() &&
-       !pView->GetWrtShell().HasReadonlySel() )
-    {
-        PopupMenu* pPopup = new PopupMenu(SW_RES(RID_INSERT_FIELD_CTRL));
-
-        if (::GetHtmlMode(pView->GetDocShell()) & HTMLMODE_ON)
-        {
-            pPopup->RemoveItem(pPopup->GetItemPos(FN_INSERT_FLD_PGCOUNT));
-            pPopup->RemoveItem(pPopup->GetItemPos(FN_INSERT_FLD_TOPIC));
-        }
-
-        ToolBox*      pToolBox = &GetToolBox();
-        sal_uInt16    nId      = GetId();
-        SfxDispatcher *rDispat = pView->GetViewFrame()->GetDispatcher();
-
-        // set the icons in the Popup-Menu, delete the pPopup
-        SfxPopupMenuManager aPop( pPopup, rDispat->GetFrame()->GetBindings() );
-
-        pToolBox->SetItemDown( nId, true );
-
-        pPopup->Execute( pToolBox, pToolBox->GetItemRect( nId ),
-                (pToolBox->GetAlign() == WindowAlign::Top || pToolBox->GetAlign() == WindowAlign::Bottom) ?
-                 PopupMenuFlags::ExecuteDown : PopupMenuFlags::ExecuteRight );
-
-        pToolBox->SetItemDown( nId, false );
-    }
-
-    GetToolBox().EndSelection();
-
-    return nullptr;
-}
-
-void SwTbxFieldCtrl::StateChanged( sal_uInt16,
-                                              SfxItemState eState,
-                                              const SfxPoolItem* pState )
-{
-    GetToolBox().EnableItem( GetId(), (GetItemState(pState) != SfxItemState::DISABLED) );
-    if (eState >= SfxItemState::DEFAULT)
-    {
-        GetToolBox().CheckItem( GetId(), static_cast<const SfxBoolItem*>(pState)->GetValue() );
-    }
-}
-
 
 // Navigation-Popup
 // determine the order of the toolbox items
@@ -446,13 +384,11 @@ class SwZoomBox_Impl : public ComboBox
 {
     sal_uInt16          nSlotId;
     bool            bRelease;
-    uno::Reference< frame::XDispatchProvider > m_xDispatchProvider;
 
 public:
     SwZoomBox_Impl(
         vcl::Window* pParent,
-        sal_uInt16 nSlot,
-        const Reference< XDispatchProvider >& rDispatchProvider );
+        sal_uInt16 nSlot );
     virtual ~SwZoomBox_Impl();
 
 protected:
@@ -465,12 +401,10 @@ protected:
 
 SwZoomBox_Impl::SwZoomBox_Impl(
     vcl::Window* pParent,
-    sal_uInt16 nSlot,
-    const Reference< XDispatchProvider >& rDispatchProvider ):
+    sal_uInt16 nSlot ):
     ComboBox( pParent, SW_RES(RID_PVIEW_ZOOM_LB)),
     nSlotId(nSlot),
-    bRelease(true),
-    m_xDispatchProvider( rDispatchProvider )
+    bRelease(true)
 {
     EnableAutocomplete( false );
     sal_uInt16 aZoomValues[] =
@@ -515,7 +449,8 @@ void    SwZoomBox_Impl::Select()
         {
             SfxObjectShell* pCurrentShell = SfxObjectShell::Current();
 
-            pCurrentShell->GetDispatcher()->Execute(SID_ATTR_ZOOM, SfxCallMode::ASYNCHRON, &aZoom, 0L);
+            pCurrentShell->GetDispatcher()->ExecuteList(SID_ATTR_ZOOM,
+                    SfxCallMode::ASYNCHRON, { &aZoom });
         }
         ReleaseFocus();
     }
@@ -608,20 +543,18 @@ void SwPreviewZoomControl::StateChanged( sal_uInt16 /*nSID*/,
 
 VclPtr<vcl::Window> SwPreviewZoomControl::CreateItemWindow( vcl::Window *pParent )
 {
-    VclPtrInstance<SwZoomBox_Impl> pRet( pParent, GetSlotId(), Reference< XDispatchProvider >( m_xFrame->getController(), UNO_QUERY ));
+    VclPtrInstance<SwZoomBox_Impl> pRet( pParent, GetSlotId() );
     return pRet.get();
 }
 
 class SwJumpToSpecificBox_Impl : public NumericField
 {
     sal_uInt16          nSlotId;
-    uno::Reference< frame::XDispatchProvider > m_xDispatchProvider;
 
 public:
     SwJumpToSpecificBox_Impl(
         vcl::Window* pParent,
-        sal_uInt16 nSlot,
-        const Reference< XDispatchProvider >& rDispatchProvider );
+        sal_uInt16 nSlot );
     virtual ~SwJumpToSpecificBox_Impl();
 
 protected:
@@ -631,11 +564,9 @@ protected:
 
 SwJumpToSpecificBox_Impl::SwJumpToSpecificBox_Impl(
     vcl::Window* pParent,
-    sal_uInt16 nSlot,
-    const Reference< XDispatchProvider >& rDispatchProvider ):
+    sal_uInt16 nSlot ):
     NumericField( pParent, SW_RES(RID_JUMP_TO_SPEC_PAGE)),
-    nSlotId(nSlot),
-    m_xDispatchProvider( rDispatchProvider )
+    nSlotId(nSlot)
 {}
 
 SwJumpToSpecificBox_Impl::~SwJumpToSpecificBox_Impl()
@@ -647,7 +578,8 @@ void SwJumpToSpecificBox_Impl::Select()
     SfxUInt16Item aPageNum(nSlotId);
     aPageNum.SetValue((sal_uInt16)sEntry.toInt32());
     SfxObjectShell* pCurrentShell = SfxObjectShell::Current();
-    pCurrentShell->GetDispatcher()->Execute(nSlotId, SfxCallMode::ASYNCHRON, &aPageNum, 0L);
+    pCurrentShell->GetDispatcher()->ExecuteList(nSlotId, SfxCallMode::ASYNCHRON,
+            { &aPageNum });
 }
 
 bool SwJumpToSpecificBox_Impl::Notify( NotifyEvent& rNEvt )
@@ -671,7 +603,7 @@ SwJumpToSpecificPageControl::~SwJumpToSpecificPageControl()
 
 VclPtr<vcl::Window> SwJumpToSpecificPageControl::CreateItemWindow( vcl::Window *pParent )
 {
-    VclPtrInstance<SwJumpToSpecificBox_Impl> pRet( pParent, GetSlotId(), Reference< XDispatchProvider >( m_xFrame->getController(), UNO_QUERY ));
+    VclPtrInstance<SwJumpToSpecificBox_Impl> pRet( pParent, GetSlotId() );
     return pRet.get();
 }
 

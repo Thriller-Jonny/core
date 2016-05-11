@@ -118,11 +118,11 @@ SwAccessibleCell::SwAccessibleCell( SwAccessibleMap *pInitMap,
     SAL_WARN_IF(
         (!xContextTable.is()
          || xContextTable->getAccessibleRole() != AccessibleRole::TABLE),
-        "sw.core", "bad accessible context");
+        "sw.a11y", "bad accessible context");
     m_pAccTable = static_cast<SwAccessibleTable *>(xTableReference.get());
 }
 
-bool SwAccessibleCell::_InvalidateMyCursorPos()
+bool SwAccessibleCell::InvalidateMyCursorPos()
 {
     bool bNew = IsSelected();
     bool bOld;
@@ -151,7 +151,7 @@ bool SwAccessibleCell::_InvalidateMyCursorPos()
     return bChanged;
 }
 
-bool SwAccessibleCell::_InvalidateChildrenCursorPos( const SwFrame *pFrame )
+bool SwAccessibleCell::InvalidateChildrenCursorPos( const SwFrame *pFrame )
 {
     bool bChanged = false;
 
@@ -171,7 +171,7 @@ bool SwAccessibleCell::_InvalidateChildrenCursorPos( const SwFrame *pFrame )
                 {
                     assert(xAccImpl->GetFrame()->IsCellFrame());
                     bChanged = static_cast< SwAccessibleCell *>(
-                            xAccImpl.get() )->_InvalidateMyCursorPos();
+                            xAccImpl.get() )->InvalidateMyCursorPos();
                 }
                 else
                     bChanged = true; // If the context is not know we
@@ -181,7 +181,7 @@ bool SwAccessibleCell::_InvalidateChildrenCursorPos( const SwFrame *pFrame )
             else
             {
                 // This is a box with sub rows.
-                bChanged |= _InvalidateChildrenCursorPos( pLower );
+                bChanged |= InvalidateChildrenCursorPos( pLower );
             }
         }
         ++aIter;
@@ -190,7 +190,7 @@ bool SwAccessibleCell::_InvalidateChildrenCursorPos( const SwFrame *pFrame )
     return bChanged;
 }
 
-void SwAccessibleCell::_InvalidateCursorPos()
+void SwAccessibleCell::InvalidateCursorPos_()
 {
     if (IsSelected())
     {
@@ -216,7 +216,7 @@ void SwAccessibleCell::_InvalidateCursorPos()
 
     while( pTabFrame )
     {
-        _InvalidateChildrenCursorPos( pTabFrame );
+        InvalidateChildrenCursorPos( pTabFrame );
         pTabFrame = pTabFrame->GetFollow();
     }
     if (m_pAccTable.is())
@@ -353,9 +353,7 @@ uno::Any SwAccessibleCell::getCurrentValue( )
     SolarMutexGuard aGuard;
     CHECK_FOR_DEFUNC( XAccessibleValue );
 
-    uno::Any aAny;
-    aAny <<= GetTableBoxFormat()->GetTableBoxValue().GetValue();
-    return aAny;
+    return uno::Any( GetTableBoxFormat()->GetTableBoxValue().GetValue() );
 }
 
 sal_Bool SwAccessibleCell::setCurrentValue( const uno::Any& aNumber )
@@ -377,17 +375,13 @@ sal_Bool SwAccessibleCell::setCurrentValue( const uno::Any& aNumber )
 uno::Any SwAccessibleCell::getMaximumValue( )
     throw( uno::RuntimeException, std::exception )
 {
-    uno::Any aAny;
-    aAny <<= DBL_MAX;
-    return aAny;
+    return uno::Any(DBL_MAX);
 }
 
 uno::Any SwAccessibleCell::getMinimumValue(  )
     throw( uno::RuntimeException, std::exception )
 {
-    uno::Any aAny;
-    aAny <<= -DBL_MAX;
-    return aAny;
+    return uno::Any(-DBL_MAX);
 }
 
 static OUString ReplaceOneChar(const OUString& oldOUString, const OUString& replacedChar, const OUString& replaceStr)

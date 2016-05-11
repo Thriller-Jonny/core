@@ -28,31 +28,19 @@
 #include <cppunit/extensions/HelperMacros.h>
 #include <cppunit/plugin/TestPlugIn.h>
 
-#ifdef WNT
+#ifdef _WIN32
 #include <windows.h>
 #elif defined UNX
 #include <unistd.h>
 #include <time.h>
 #endif
 
-using ::rtl::OUString;
-using ::rtl::OUStringToOString;
-using ::rtl::OString;
 
 namespace rtl_Uuid
 {
 class createUuid : public CppUnit::TestFixture
 {
 public:
-    // initialise your test code values here.
-    void setUp() override
-    {
-    }
-
-    void tearDown() override
-    {
-    }
-
 #define TEST_UUID 20
     void createUuid_001()
     {
@@ -60,7 +48,7 @@ public:
     sal_Int32 i,i2;
     for( i = 0 ; i < TEST_UUID ; i ++ )
     {
-        rtl_createUuid( aNode[i], nullptr, sal_False );
+        rtl_createUuid( aNode[i], nullptr, false );
     }
     bool bRes = true;
     for( i = 0 ; i < TEST_UUID ; i ++ )
@@ -115,15 +103,6 @@ public:
 class createNamedUuid : public CppUnit::TestFixture
 {
 public:
-    // initialise your test code values here.
-    void setUp() override
-    {
-    }
-
-    void tearDown() override
-    {
-    }
-
     void createNamedUuid_001()
     {
         sal_uInt8 NameSpace_DNS[16] = RTL_UUID_NAMESPACE_DNS;

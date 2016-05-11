@@ -23,7 +23,6 @@
 #include <sal/types.h>
 #include <tools/link.hxx>
 #include <osl/mutex.hxx>
-#include <com/sun/star/uno/Sequence.h>
 #include <rtl/ustring.hxx>
 #include <unotools/options.hxx>
 
@@ -89,9 +88,6 @@ class SVT_DLLPUBLIC SvtMiscOptions: public utl::detail::Options
         bool        ShowLinkWarningDialog() const;
         void        SetShowLinkWarningDialog( bool bSet );
         bool        IsShowLinkWarningDialogReadOnly() const;
-
-        void        SetSaveAlwaysAllowed( bool bSet );
-        bool        IsSaveAlwaysAllowed() const;
 
         void        SetExperimentalMode( bool bSet );
         bool        IsExperimentalMode() const;

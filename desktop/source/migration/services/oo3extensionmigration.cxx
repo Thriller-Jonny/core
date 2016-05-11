@@ -59,7 +59,6 @@ OUString OO3ExtensionMigration_getImplementationName()
 }
 
 
-
 Sequence< OUString > OO3ExtensionMigration_getSupportedServiceNames()
 {
     return Sequence< OUString > { "com.sun.star.migration.Extensions" };
@@ -75,12 +74,11 @@ m_ctx(ctx)
 }
 
 
-
 OO3ExtensionMigration::~OO3ExtensionMigration()
 {
 }
 
-::osl::FileBase::RC OO3ExtensionMigration::checkAndCreateDirectory( INetURLObject& rDirURL )
+void OO3ExtensionMigration::checkAndCreateDirectory( INetURLObject& rDirURL )
 {
     ::osl::FileBase::RC aResult = ::osl::Directory::create( rDirURL.GetMainURL( INetURLObject::DECODE_TO_IURI ) );
     if ( aResult == ::osl::FileBase::E_NOENT )
@@ -88,11 +86,7 @@ OO3ExtensionMigration::~OO3ExtensionMigration()
         INetURLObject aBaseURL( rDirURL );
         aBaseURL.removeSegment();
         checkAndCreateDirectory( aBaseURL );
-        return ::osl::Directory::create( rDirURL.GetMainURL( INetURLObject::DECODE_TO_IURI ) );
-    }
-    else
-    {
-        return aResult;
+        ::osl::Directory::create( rDirURL.GetMainURL( INetURLObject::DECODE_TO_IURI ) );
     }
 }
 
@@ -231,9 +225,9 @@ bool OO3ExtensionMigration::scanDescriptionXml( const OUString& sDescriptionXmlU
         if ( !aExtIdentifier.isEmpty() )
         {
             // scan extension identifier and try to match with our black list entries
-            for ( size_t i = 0; i < m_aBlackList.size(); i++ )
+            for (OUString & i : m_aBlackList)
             {
-                utl::SearchParam param(m_aBlackList[i], utl::SearchParam::SRCH_REGEXP);
+                utl::SearchParam param(i, utl::SearchParam::SRCH_REGEXP);
                 utl::TextSearch  ts(param, LANGUAGE_DONTKNOW);
 
                 sal_Int32 start = 0;
@@ -256,9 +250,9 @@ bool OO3ExtensionMigration::scanDescriptionXml( const OUString& sDescriptionXmlU
         // Try to use the folder name to match our black list
         // as some extensions don't provide an identifier in the
         // description.xml!
-        for ( size_t i = 0; i < m_aBlackList.size(); i++ )
+        for (OUString & i : m_aBlackList)
         {
-            utl::SearchParam param(m_aBlackList[i], utl::SearchParam::SRCH_REGEXP);
+            utl::SearchParam param(i, utl::SearchParam::SRCH_REGEXP);
             utl::TextSearch  ts(param, LANGUAGE_DONTKNOW);
 
             sal_Int32 start = 0;
@@ -296,7 +290,6 @@ void OO3ExtensionMigration::migrateExtension( const OUString& sSourceDir )
 }
 
 
-
 // XServiceInfo
 
 
@@ -306,13 +299,11 @@ OUString OO3ExtensionMigration::getImplementationName() throw (RuntimeException,
 }
 
 
-
 sal_Bool OO3ExtensionMigration::supportsService(OUString const & ServiceName)
     throw (css::uno::RuntimeException, std::exception)
 {
     return cppu::supportsService(this, ServiceName);
 }
-
 
 
 Sequence< OUString > OO3ExtensionMigration::getSupportedServiceNames() throw (RuntimeException, std::exception)
@@ -461,7 +452,6 @@ Reference< XInterface > SAL_CALL OO3ExtensionMigration_create(
     return static_cast< lang::XTypeProvider * >( new OO3ExtensionMigration(
         ctx) );
 }
-
 
 
 }   // namespace migration

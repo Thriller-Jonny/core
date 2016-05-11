@@ -28,18 +28,18 @@
 #include <com/sun/star/rendering/XCanvasFont.hpp>
 #include <com/sun/star/rendering/XPolyPolygon2D.hpp>
 #include <rtl/ref.hxx>
-#include <boost/noncopyable.hpp>
 
 namespace sdext { namespace presenter {
 
 /** Collection of functions to ease the life of a canvas user.
 */
 class PresenterCanvasHelper
-    : ::boost::noncopyable
 {
 public:
     PresenterCanvasHelper();
     ~PresenterCanvasHelper();
+    PresenterCanvasHelper(const PresenterCanvasHelper&) = delete;
+    PresenterCanvasHelper& operator=(const PresenterCanvasHelper&) = delete;
 
     void Paint (
         const SharedBitmapDescriptor& rpBitmap,
@@ -68,8 +68,7 @@ public:
 
     static css::geometry::RealSize2D GetTextSize (
         const css::uno::Reference<css::rendering::XCanvasFont>& rxFont,
-        const OUString& rsText,
-        const sal_Int8 = css::rendering::TextDirection::WEAK_LEFT_TO_RIGHT);
+        const OUString& rsText );
 
 private:
     const css::rendering::ViewState maDefaultViewState;

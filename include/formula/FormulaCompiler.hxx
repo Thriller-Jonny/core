@@ -60,8 +60,8 @@ struct FormulaArrayStack
 };
 
 
-typedef std::unordered_map< OUString, OpCode, OUStringHash, ::std::equal_to< OUString > > OpCodeHashMap;
-typedef std::unordered_map< OUString, OUString, OUStringHash, ::std::equal_to< OUString > > ExternalHashMap;
+typedef std::unordered_map< OUString, OpCode, OUStringHash > OpCodeHashMap;
+typedef std::unordered_map< OUString, OUString, OUStringHash > ExternalHashMap;
 
 class FORMULA_DLLPUBLIC FormulaCompiler
 {
@@ -105,12 +105,11 @@ public:
 
         /** Copy mappings from r into this map, effectively replacing this map.
 
-            @param  bOverrideKnownBad
-                    If TRUE, override known legacy bad function names with
-                    correct ones if the conditions can be derived from the
-                    current maps.
+            Override known legacy bad function names with
+            correct ones if the conditions can be derived from the
+            current maps.
          */
-        void copyFrom( const OpCodeMap& r, bool bOverrideKnownBad );
+        void copyFrom( const OpCodeMap& r );
 
         /// Get the symbol String -> OpCode hash map for finds.
         inline const OpCodeHashMap* getHashMap() const { return mpHashMap; }
@@ -208,7 +207,7 @@ public:
             bool bEnglish );
 
     /** Get current OpCodeMap in effect. */
-    inline OpCodeMapPtr GetCurrentOpCodeMap() const { return mxSymbols; }
+    const OpCodeMapPtr& GetCurrentOpCodeMap() const { return mxSymbols; }
 
     /** Get OpCode for English symbol.
         Used in XFunctionAccess to create token array.
@@ -237,8 +236,7 @@ public:
 
     void CreateStringFromTokenArray( OUString& rFormula );
     void CreateStringFromTokenArray( OUStringBuffer& rBuffer );
-    const FormulaToken* CreateStringFromToken( OUString& rFormula, const FormulaToken* pToken,
-                                    bool bAllowArrAdvance = false );
+    const FormulaToken* CreateStringFromToken( OUString& rFormula, const FormulaToken* pToken );
     const FormulaToken* CreateStringFromToken( OUStringBuffer& rBuffer, const FormulaToken* pToken,
                                     bool bAllowArrAdvance = false );
 
@@ -273,13 +271,13 @@ public:
 
 protected:
     virtual OUString FindAddInFunction( const OUString& rUpperName, bool bLocalFirst ) const;
-    virtual void fillFromAddInCollectionUpperName( NonConstOpCodeMapPtr xMap ) const;
-    virtual void fillFromAddInMap( NonConstOpCodeMapPtr xMap, FormulaGrammar::Grammar _eGrammar ) const;
-    virtual void fillFromAddInCollectionEnglishName( NonConstOpCodeMapPtr xMap ) const;
+    virtual void fillFromAddInCollectionUpperName( const NonConstOpCodeMapPtr& xMap ) const;
+    virtual void fillFromAddInMap( const NonConstOpCodeMapPtr& xMap, FormulaGrammar::Grammar _eGrammar ) const;
+    virtual void fillFromAddInCollectionEnglishName( const NonConstOpCodeMapPtr& xMap ) const;
     virtual void fillAddInToken(::std::vector< css::sheet::FormulaOpCodeMapEntry >& _rVec, bool _bIsEnglish) const;
 
     virtual void SetError(sal_uInt16 nError);
-    virtual FormulaTokenRef ExtendRangeReference( FormulaToken & rTok1, FormulaToken & rTok2, bool bReuseDoubleRef );
+    virtual FormulaTokenRef ExtendRangeReference( FormulaToken & rTok1, FormulaToken & rTok2 );
     virtual bool HandleExternalReference(const FormulaToken& _aToken);
     virtual bool HandleRange();
     virtual bool HandleColRowName();

@@ -46,7 +46,7 @@ uno::Reference< uno::XInterface > OFormattedField::create(uno::Reference< uno::X
 uno::Sequence< OUString > lcl_getFormattedFieldOptionals()
 {
     OUString pProps[] = { OUString(PROPERTY_MASTERFIELDS),OUString(PROPERTY_DETAILFIELDS) };
-    return uno::Sequence< OUString >(pProps,sizeof(pProps)/sizeof(pProps[0]));
+    return uno::Sequence< OUString >(pProps,SAL_N_ELEMENTS(pProps));
 }
 
 OFormattedField::OFormattedField(uno::Reference< uno::XComponentContext > const & _xContext)
@@ -212,7 +212,6 @@ void SAL_CALL OFormattedField::setConditionalPrintExpression( const OUString& _c
 }
 
 
-
 // XCloneable
 uno::Reference< util::XCloneable > SAL_CALL OFormattedField::createClone(  ) throw (uno::RuntimeException, std::exception)
 {
@@ -221,8 +220,8 @@ uno::Reference< util::XCloneable > SAL_CALL OFormattedField::createClone(  ) thr
 
     if ( xSet.is() )
     {
-        ::std::vector< uno::Reference< report::XFormatCondition> >::iterator aIter = m_aProps.m_aFormatConditions.begin();
-        ::std::vector< uno::Reference< report::XFormatCondition> >::iterator aEnd  = m_aProps.m_aFormatConditions.end();
+        ::std::vector< uno::Reference< report::XFormatCondition> >::const_iterator aIter = m_aProps.m_aFormatConditions.begin();
+        ::std::vector< uno::Reference< report::XFormatCondition> >::const_iterator aEnd  = m_aProps.m_aFormatConditions.end();
         for (sal_Int32 i = 0; aIter != aEnd; ++aIter,++i)
         {
             uno::Reference< report::XFormatCondition > xCond = xSet->createFormatCondition();

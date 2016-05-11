@@ -28,7 +28,6 @@ namespace comphelper
 {
 
 
-
     //= ComponentBase
 
     class COMPHELPER_DLLPUBLIC ComponentBase
@@ -111,7 +110,7 @@ namespace comphelper
     class ComponentMethodGuard
     {
     public:
-        enum MethodType
+        enum class MethodType
         {
             /// allow the method to be called only when being initialized and not being disposed
             Default,
@@ -120,10 +119,10 @@ namespace comphelper
 
         };
 
-        ComponentMethodGuard( ComponentBase& _rComponent, const MethodType _eType = Default )
+        ComponentMethodGuard( ComponentBase& _rComponent, const MethodType _eType = MethodType::Default )
             :m_aMutexGuard( _rComponent.getMutex( ComponentBase::GuardAccess() ) )
         {
-            if ( _eType != WithoutInit )
+            if ( _eType != MethodType::WithoutInit )
                 _rComponent.checkInitialized( ComponentBase::GuardAccess() );
             _rComponent.checkDisposed( ComponentBase::GuardAccess() );
         }

@@ -40,7 +40,7 @@ COMMENT: Visual-Basic treats the following (invalid) format-strings
 #include <float.h>
 #include <math.h>
 
-#define _NO_DIGIT                   -1
+#define NO_DIGIT_                   -1
 
 #define MAX_NO_OF_DIGITS            DBL_DIG
 #define MAX_DOUBLE_BUFFER_LENGTH    MAX_NO_OF_DIGITS + 9
@@ -80,8 +80,6 @@ COMMENT: Visual-Basic treats the following (invalid) format-strings
 #define SCIENTIFIC_FORMAT           "#.00E+00"
 // Comment: the character @ means that thousand-separators shall
 //          be generated. That's a StarBasic 'extension'.
-
-
 
 
 double get_number_of_digits( double dNumber )
@@ -229,7 +227,7 @@ void SbxBasicFormater::ParseBack( OUStringBuffer& sStrg, const OUString& sFormat
     }
 }
 
-#ifdef _with_sprintf
+#ifdef with_sprintf_
 
 
 void SbxBasicFormater::InitScan( double _dNum )
@@ -262,7 +260,7 @@ short SbxBasicFormater::GetDigitAtPosScan( short nPos, bool& bFoundFirstDigit )
     // number's dissolution (double)
     if( nPos>nNumExp || abs(nNumExp-nPos)>MAX_NO_OF_DIGITS )
     {
-        return _NO_DIGIT;
+        return NO_DIGIT_;
     }
     // determine the index of the position in the number-string:
     // skip the leading sign
@@ -336,7 +334,7 @@ short SbxBasicFormater::GetDigitAtPos( double dNumber, short nPos,
     // error only at numbers > 0, i. e. for digits before
     // the decimal point
     if( nMaxDigit<nPos && !bFoundFirstDigit && nPos>=0 )
-        return _NO_DIGIT;
+        return NO_DIGIT_;
 
     bFoundFirstDigit = true;
     for( short i=nMaxDigit; i>=nPos; i-- )
@@ -466,7 +464,7 @@ OUString SbxBasicFormater::GetNullFormatString( const OUString& sFormatStrg, boo
 }
 
 // returns value <> 0 in case of an error
-short SbxBasicFormater::AnalyseFormatString( const OUString& sFormatStrg,
+void SbxBasicFormater::AnalyseFormatString( const OUString& sFormatStrg,
                 short& nNoOfDigitsLeft, short& nNoOfDigitsRight,
                 short& nNoOfOptionalDigitsLeft,
                 short& nNoOfExponentDigits, short& nNoOfOptionalExponentDigits,
@@ -528,7 +526,7 @@ short SbxBasicFormater::AnalyseFormatString( const OUString& sFormatStrg,
                 if( c=='0' )
                 {
                     // ERROR: 0 after # in the exponent is NOT allowed!!
-                    return -4;
+                    return;
                 }
                 nNoOfOptionalExponentDigits++;
                 nNoOfExponentDigits++;
@@ -538,7 +536,7 @@ short SbxBasicFormater::AnalyseFormatString( const OUString& sFormatStrg,
             nState++;
             if( nState>1 )
             {
-                return -1;  // ERROR: too many decimal points
+                return;  // ERROR: too many decimal points
             }
             break;
         case '%':
@@ -577,7 +575,6 @@ short SbxBasicFormater::AnalyseFormatString( const OUString& sFormatStrg,
             break;
         }
     }
-    return 0;
 }
 
 // the flag bCreateSign says that at the mantissa a leading sign
@@ -602,7 +599,7 @@ void SbxBasicFormater::ScanFormatString( double dNumber,
             - optional digits in the exponent
             - percent-character found?
             - () for negative leading sign?
-            - exponetial-notation?
+            - exponential-notation?
             - shall thousand-separators be generated?
             - is a percent-character being found? --> dNumber *= 100.0;
             - are there thousand-separators in a row?
@@ -660,7 +657,7 @@ void SbxBasicFormater::ScanFormatString( double dNumber,
     bZeroSpaceOn = false;
 
 
-#ifdef _with_sprintf
+#ifdef with_sprintf_
     InitScan( dNumber );
 #endif
     // scanning the format-string:
@@ -700,12 +697,12 @@ void SbxBasicFormater::ScanFormatString( double dNumber,
                         for( short j = nMaxDigit; j > nDigitPos; j-- )
                         {
                             short nTempDigit;
-#ifdef _with_sprintf
+#ifdef with_sprintf_
                             AppendDigit( sReturnStrg, nTempDigit = GetDigitAtPosScan( j, bFoundFirstDigit ) );
 #else
                             AppendDigit( sReturnStrg, nTempDigit = GetDigitAtPos( dNumber, j, dNumber, bFoundFirstDigit ) );
 #endif
-                            if( nTempDigit!=_NO_DIGIT )
+                            if( nTempDigit != NO_DIGIT_ )
                             {
                                 bFirstDigit = false;
                             }
@@ -733,13 +730,13 @@ void SbxBasicFormater::ScanFormatString( double dNumber,
                 else
                 {
                     short nTempDigit;
-#ifdef _with_sprintf
+#ifdef with_sprintf_
                     AppendDigit( sReturnStrg, nTempDigit = GetDigitAtPosScan( nDigitPos, bFoundFirstDigit ) );
 #else
                     AppendDigit( sReturnStrg, nTempDigit = GetDigitAtPos( dNumber, nDigitPos, dNumber, bFoundFirstDigit ) );
 #endif
 
-                    if( nTempDigit != _NO_DIGIT )
+                    if( nTempDigit != NO_DIGIT_ )
                     {
                         bFirstDigit = false;
                     }
@@ -763,7 +760,7 @@ void SbxBasicFormater::ScanFormatString( double dNumber,
                     {
                         for( short j = nMaxExponentDigit; j > nExponentPos; j-- )
                         {
-#ifdef _with_sprintf
+#ifdef with_sprintf_
                             AppendDigit( sReturnStrg, GetDigitAtPosExpScan( dExponent, j, bFoundFirstDigit ) );
 #else
                             AppendDigit( sReturnStrg,GetDigitAtPos( dExponent, j, dExponent, bFoundFirstDigit ) );
@@ -778,7 +775,7 @@ void SbxBasicFormater::ScanFormatString( double dNumber,
                 }
                 else
                 {
-#ifdef _with_sprintf
+#ifdef with_sprintf_
                     AppendDigit( sReturnStrg, GetDigitAtPosExpScan( dExponent, nExponentPos, bFoundFirstDigit ) );
 #else
                     AppendDigit( sReturnStrg, GetDigitAtPos( dExponent, nExponentPos, dExponent, bFoundFirstDigit ) );
@@ -820,7 +817,7 @@ void SbxBasicFormater::ScanFormatString( double dNumber,
                 }
 
                 bool bOverflow = false;
-#ifdef _with_sprintf
+#ifdef with_sprintf_
                 short nNextDigit = GetDigitAtPosScan( nDigitPos, bFoundFirstDigit );
 #else
                 short nNextDigit = GetDigitAtPos( dNumber, nDigitPos, dNumber, bFoundFirstDigit );
@@ -919,7 +916,7 @@ void SbxBasicFormater::ScanFormatString( double dNumber,
     // scan completed - rounding necessary?
     if( !bScientific )
     {
-#ifdef _with_sprintf
+#ifdef with_sprintf_
         short nNextDigit = GetDigitAtPosScan( nDigitPos, bFoundFirstDigit );
 #else
         short nNextDigit = GetDigitAtPos( dNumber, nDigitPos, dNumber, bFoundFirstDigit );

@@ -25,6 +25,7 @@
 #include <LatentStyleHandler.hxx>
 #include <ooxml/resourceids.hxx>
 #include <vector>
+#include <iterator>
 #include <com/sun/star/beans/XMultiPropertySet.hpp>
 #include <com/sun/star/beans/XPropertyState.hpp>
 #include <com/sun/star/beans/PropertyValue.hpp>
@@ -50,7 +51,6 @@ namespace dmapper
 {
 
 typedef ::std::map< OUString, OUString> StringPairMap_t;
-
 
 
 StyleSheetEntry::StyleSheetEntry() :
@@ -96,7 +96,7 @@ TableStyleSheetEntry::~TableStyleSheetEntry( )
     m_pStyleSheet = nullptr;
 }
 
-void TableStyleSheetEntry::AddTblStylePr( TblStyleType nType, PropertyMapPtr pProps )
+void TableStyleSheetEntry::AddTblStylePr( TblStyleType nType, const PropertyMapPtr& pProps )
 {
     static const int nTypesProps = 4;
     static const TblStyleType pTypesToFix[nTypesProps] =
@@ -139,30 +139,9 @@ void TableStyleSheetEntry::AddTblStylePr( TblStyleType nType, PropertyMapPtr pPr
     m_aStyles[nType] = pProps;
 }
 
-PropertyMapPtr TableStyleSheetEntry::GetProperties( sal_Int32 nMask, StyleSheetEntryDequePtr pStack )
+PropertyMapPtr TableStyleSheetEntry::GetProperties( sal_Int32 nMask )
 {
     PropertyMapPtr pProps( new PropertyMap );
-
-    // First get the parent properties
-    StyleSheetEntryPtr pEntry = m_pStyleSheet->FindParentStyleSheet( sBaseStyleIdentifier );
-
-    if ( pEntry.get( ) )
-    {
-        if (pStack.get() == nullptr)
-            pStack.reset(new StyleSheetEntryDeque());
-
-        StyleSheetEntryDeque::const_iterator aIt = find(pStack->begin(), pStack->end(), pEntry);
-
-        if (aIt != pStack->end())
-        {
-            pStack->push_back(pEntry);
-
-            TableStyleSheetEntry* pParent = static_cast<TableStyleSheetEntry *>( pEntry.get( ) );
-            pProps->InsertProps(pParent->GetProperties(nMask));
-
-            pStack->pop_back();
-        }
-    }
 
     // And finally get the mask ones
     pProps->InsertProps(GetLocalPropertiesFromMask(nMask));
@@ -180,7 +159,7 @@ beans::PropertyValue StyleSheetEntry::GetInteropGrabBag()
     beans::PropertyValue aRet;
     aRet.Name = sStyleIdentifierI;
 
-    beans::PropertyValues aSeq = GetInteropGrabBagSeq();;
+    beans::PropertyValues aSeq = GetInteropGrabBagSeq();
     aRet.Value = uno::makeAny(aSeq);
     return aRet;
 }
@@ -190,7 +169,7 @@ void StyleSheetEntry::AppendInteropGrabBag(const beans::PropertyValue& rValue)
     m_aInteropGrabBag.push_back(rValue);
 }
 
-void lcl_mergeProps( PropertyMapPtr pToFill,  PropertyMapPtr pToAdd, TblStyleType nStyleId )
+void lcl_mergeProps( const PropertyMapPtr& pToFill, const PropertyMapPtr& pToAdd, TblStyleType nStyleId )
 {
     static const PropertyIds pPropsToCheck[] =
     {
@@ -208,7 +187,7 @@ void lcl_mergeProps( PropertyMapPtr pToFill,  PropertyMapPtr pToAdd, TblStyleTyp
         ( nStyleId == TBL_STYLE_FIRSTCOL )
     };
 
-    for ( unsigned i = 0 ; i != sizeof(pPropsToCheck) / sizeof(PropertyIds); i++ )
+    for ( unsigned i = 0 ; i != SAL_N_ELEMENTS(pPropsToCheck); i++ )
     {
         PropertyIds nId = pPropsToCheck[i];
         boost::optional<PropertyMap::Property> pProp = pToAdd->getProperty(nId);
@@ -253,7 +232,7 @@ PropertyMapPtr TableStyleSheetEntry::GetLocalPropertiesFromMask( sal_Int32 nMask
 
     // Get the properties applying according to the mask
     PropertyMapPtr pProps( new PropertyMap( ) );
-    for (size_t i = 0; i < sizeof(aOrderedStyleTable)/sizeof(aOrderedStyleTable[0]); ++i)
+    for (size_t i = 0; i < SAL_N_ELEMENTS(aOrderedStyleTable); ++i)
     {
         TblStylePrs::iterator pIt = m_aStyles.find( aOrderedStyleTable[ i ].type );
         if ( ( nMask & aOrderedStyleTable[ i ].mask ) && ( pIt != m_aStyles.end( ) ) )
@@ -261,7 +240,6 @@ PropertyMapPtr TableStyleSheetEntry::GetLocalPropertiesFromMask( sal_Int32 nMask
     }
     return pProps;
 }
-
 
 
 struct ListCharStylePropertyMap_t
@@ -285,7 +263,6 @@ struct StyleSheetTable_Impl
     std::vector< StyleSheetEntryPtr >       m_aStyleSheetEntries;
     StyleSheetEntryPtr                      m_pCurrentEntry;
     PropertyMapPtr                          m_pDefaultParaProps, m_pDefaultCharProps;
-    PropertyMapPtr                          m_pCurrentProps;
     StringPairMap_t                         m_aStyleNameMap;
     /// Style names which should not be used without a " (user)" suffix.
     std::set<OUString>                      m_aReservedStyleNames;
@@ -298,6 +275,8 @@ struct StyleSheetTable_Impl
 
     /// Appends the given key-value pair to the list of latent style properties of the current entry.
     void AppendLatentStyleProperty(const OUString& aName, Value& rValue);
+    /// Sets all properties of xStyle back to default.
+    static void SetPropertiesToDefault(const uno::Reference<style::XStyle>& xStyle);
 };
 
 
@@ -372,6 +351,35 @@ void StyleSheetTable_Impl::AppendLatentStyleProperty(const OUString& aName, Valu
     m_pCurrentEntry->aLatentStyles.push_back(aValue);
 }
 
+void StyleSheetTable_Impl::SetPropertiesToDefault(const uno::Reference<style::XStyle>& xStyle)
+{
+    // See if the existing style has any non-default properties. If so, reset them back to default.
+    uno::Reference<beans::XPropertySet> xPropertySet(xStyle, uno::UNO_QUERY);
+    uno::Reference<beans::XPropertySetInfo> xPropertySetInfo = xPropertySet->getPropertySetInfo();
+    uno::Sequence<beans::Property> aProperties = xPropertySetInfo->getProperties();
+    std::vector<OUString> aPropertyNames;
+    for (sal_Int32 i = 0; i < aProperties.getLength(); ++i)
+    {
+        aPropertyNames.push_back(aProperties[i].Name);
+    }
+
+    uno::Reference<beans::XPropertyState> xPropertyState(xStyle, uno::UNO_QUERY);
+    uno::Sequence<beans::PropertyState> aStates = xPropertyState->getPropertyStates(comphelper::containerToSequence(aPropertyNames));
+    for (sal_Int32 i = 0; i < aStates.getLength(); ++i)
+    {
+        if (aStates[i] == beans::PropertyState_DIRECT_VALUE)
+        {
+            try
+            {
+                xPropertyState->setPropertyToDefault(aPropertyNames[i]);
+            }
+            catch(const uno::Exception& rException)
+            {
+                SAL_INFO("writerfilter", "setPropertyToDefault(" << aPropertyNames[i] << ") failed: " << rException.Message);
+            }
+        }
+    }
+}
 
 StyleSheetTable::StyleSheetTable(DomainMapper& rDMapper,
         uno::Reference< text::XTextDocument> const& xTextDocument,
@@ -431,7 +439,7 @@ void StyleSheetTable::lcl_attribute(Id Name, Value & val)
                     break;
                 default:
                     SAL_WARN("writerfilter", "unknown LN_CT_Style_type " << nType);
-                    //fall-through
+                    SAL_FALLTHROUGH;
                 case 0: // explicit unknown set by tokenizer
                     break;
 
@@ -892,7 +900,7 @@ uno::Sequence< OUString > PropValVector::getNames()
     return comphelper::containerToSequence(aRet);
 }
 
-void StyleSheetTable::ApplyStyleSheets( FontTablePtr rFontTable )
+void StyleSheetTable::ApplyStyleSheets( const FontTablePtr& rFontTable )
 {
     try
     {
@@ -932,32 +940,9 @@ void StyleSheetTable::ApplyStyleSheets( FontTablePtr rFontTable )
                         }
                         xStyles->getByName( sConvertedStyleName ) >>= xStyle;
 
-                        // See if the existing style has any non-default properties. If so, reset them back to default.
-                        uno::Reference<beans::XPropertySet> xPropertySet(xStyle, uno::UNO_QUERY);
-                        uno::Reference<beans::XPropertySetInfo> xPropertySetInfo = xPropertySet->getPropertySetInfo();
-                        uno::Sequence<beans::Property> aProperties = xPropertySetInfo->getProperties();
-                        std::vector<OUString> aPropertyNames;
-                        for (sal_Int32 i = 0; i < aProperties.getLength(); ++i)
-                        {
-                            aPropertyNames.push_back(aProperties[i].Name);
-                        }
-
-                        uno::Reference<beans::XPropertyState> xPropertyState(xStyle, uno::UNO_QUERY);
-                        uno::Sequence<beans::PropertyState> aStates = xPropertyState->getPropertyStates(comphelper::containerToSequence(aPropertyNames));
-                        for (sal_Int32 i = 0; i < aStates.getLength(); ++i)
-                        {
-                            if (aStates[i] == beans::PropertyState_DIRECT_VALUE)
-                            {
-                                try
-                                {
-                                    xPropertyState->setPropertyToDefault(aPropertyNames[i]);
-                                }
-                                catch(const uno::Exception& rException)
-                                {
-                                    SAL_INFO("writerfilter", "setPropertyToDefault(" << aPropertyNames[i] << ") failed: " << rException.Message);
-                                }
-                            }
-                        }
+                        // Standard is handled already in applyDefaults().
+                        if (sConvertedStyleName != "Standard")
+                            StyleSheetTable_Impl::SetPropertiesToDefault(xStyle);
                     }
                     else
                     {
@@ -1175,7 +1160,7 @@ void StyleSheetTable::ApplyStyleSheets( FontTablePtr rFontTable )
 
                     // List styles don't support automatic update.
                     if (pEntry->bAutoRedefine && !bListStyle)
-                        xPropertySet->setPropertyValue("IsAutoUpdate", uno::makeAny(sal_True));
+                        xPropertySet->setPropertyValue("IsAutoUpdate", uno::makeAny(true));
                 }
                 else if(pEntry->nStyleTypeCode == STYLE_TYPE_TABLE)
                 {
@@ -1434,7 +1419,7 @@ OUString StyleSheetTable::ConvertStyleName( const OUString& rWWName, bool bExten
     {
         //search for the rWWName in the IdentifierD of the existing styles and convert the sStyleName member
         std::vector< StyleSheetEntryPtr >::iterator aIt = m_pImpl->m_aStyleSheetEntries.begin();
-        //TODO: performance issue - put styles list into a map sorted by it's sStyleIdentifierD members
+        //TODO: performance issue - put styles list into a map sorted by its sStyleIdentifierD members
         while( aIt != m_pImpl->m_aStyleSheetEntries.end() )
         {
             if( rWWName == ( *aIt )->sStyleIdentifierD )
@@ -1444,7 +1429,7 @@ OUString StyleSheetTable::ConvertStyleName( const OUString& rWWName, bool bExten
     }
     if(m_pImpl->m_aStyleNameMap.empty())
     {
-        for( sal_uInt32 nPair = 0; nPair < sizeof(aStyleNamePairs) / sizeof( sal_Char*) / 2; ++nPair)
+        for( sal_uInt32 nPair = 0; nPair < SAL_N_ELEMENTS(aStyleNamePairs)/2; ++nPair)
         {
             OUString aFrom = OUString::createFromAscii(aStyleNamePairs[2 * nPair]);
             OUString aTo = OUString::createFromAscii(aStyleNamePairs[2 * nPair + 1]);
@@ -1485,12 +1470,22 @@ void StyleSheetTable::applyDefaults(bool bParaProperties)
         }
         if( bParaProperties && m_pImpl->m_pDefaultParaProps.get())
         {
+            uno::Reference<style::XStyleFamiliesSupplier> xStylesSupplier(m_pImpl->m_xTextDocument, uno::UNO_QUERY);
+            uno::Reference<container::XNameAccess> xStyleFamilies = xStylesSupplier->getStyleFamilies();
+            uno::Reference<container::XNameAccess> xParagraphStyles;
+            xStyleFamilies->getByName("ParagraphStyles") >>= xParagraphStyles;
+            uno::Reference<beans::XPropertySet> xStandard;
+            xParagraphStyles->getByName("Standard") >>= xStandard;
+
+            uno::Reference<style::XStyle> xStyle(xStandard, uno::UNO_QUERY);
+            StyleSheetTable_Impl::SetPropertiesToDefault(xStyle);
+
             uno::Sequence< beans::PropertyValue > aPropValues = m_pImpl->m_pDefaultParaProps->GetPropertyValues();
             for( sal_Int32 i = 0; i < aPropValues.getLength(); ++i )
             {
                 try
                 {
-                    m_pImpl->m_xTextDefaults->setPropertyValue( aPropValues[i].Name, aPropValues[i].Value );
+                    xStandard->setPropertyValue(aPropValues[i].Name, aPropValues[i].Value);
                 }
                 catch( const uno::Exception& )
                 {
@@ -1520,11 +1515,12 @@ void StyleSheetTable::applyDefaults(bool bParaProperties)
 }
 
 
-OUString StyleSheetTable::getOrCreateCharStyle( PropertyValueVector_t& rCharProperties )
+OUString StyleSheetTable::getOrCreateCharStyle( PropertyValueVector_t& rCharProperties, bool bAlwaysCreate )
 {
     //find out if any of the styles already has the required properties then return its name
     OUString sListLabel = m_pImpl->HasListCharStyle(rCharProperties);
-    if( !sListLabel.isEmpty() )
+    // Don't try to reuse an existing character style if requested.
+    if( !sListLabel.isEmpty() && !bAlwaysCreate)
         return sListLabel;
     const char cListLabel[] = "ListLabel ";
     uno::Reference< style::XStyleFamiliesSupplier > xStylesSupplier( m_pImpl->m_xTextDocument, uno::UNO_QUERY_THROW );

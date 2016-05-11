@@ -147,7 +147,7 @@ catch (int sig)
     fatalerr ("got signal %d\n", sig);
 }
 
-#if (defined(i386) && defined(SYSV)) || defined(WIN32)
+#if (defined(i386) && defined(SYSV)) || defined(_WIN32)
 #define USGISH
 #endif
 
@@ -563,10 +563,12 @@ char *get_line(struct filepointer *filep)
 
     for(bol = p--; ++p < eof; ) {
         if (*p == '/' && *(p+1) == '*') { /* consume comments */
-            *p++ = ' ', *p++ = ' ';
+            *p++ = ' ';
+            *p++ = ' ';
             while (*p) {
                 if (*p == '*' && *(p+1) == '/') {
-                    *p++ = ' ', *p = ' ';
+                    *p++ = ' ';
+                    *p = ' ';
                     break;
                 }
                 else if (*p == '\n')
@@ -576,7 +578,8 @@ char *get_line(struct filepointer *filep)
             continue;
         }
         else if (*p == '/' && *(p+1) == '/') { /* consume comments */
-            *p++ = ' ', *p++ = ' ';
+            *p++ = ' ';
+            *p++ = ' ';
             while (*p && *p != '\n')
                 *p++ = ' ';
             if ( *p == '\n' )
@@ -631,9 +634,9 @@ char *base_name(char *file)
         if ( *p == '/' ||  *p == '\\') {
             file = p + 1;
             break;
-        };
+        }
         p--;
-    };
+    }
     return file;
 }
 
@@ -695,7 +698,7 @@ void warning1(char *msg, ...)
 
 void convert_slashes(char *path)
 {
-#if defined (WNT)
+#if defined (_WIN32)
     /*
      * Convert backslashes to slashes
      */
@@ -708,7 +711,7 @@ void convert_slashes(char *path)
         for (ptr = (char*)path; *ptr; ++ptr)
             if (*ptr == '\\')
                 *ptr = '/';
-    };
+    }
 #else
     (void)path;
 #endif
@@ -727,7 +730,7 @@ char* append_slash(char *path)
             strcat(new_string, "\\");
         else
             strcat(new_string, "/");
-    };
+    }
     return new_string;
 }
 

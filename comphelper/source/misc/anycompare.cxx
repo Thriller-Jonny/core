@@ -26,15 +26,6 @@
 namespace comphelper
 {
     using ::com::sun::star::uno::Reference;
-    using ::com::sun::star::uno::XInterface;
-    using ::com::sun::star::uno::UNO_QUERY;
-    using ::com::sun::star::uno::UNO_QUERY_THROW;
-    using ::com::sun::star::uno::UNO_SET_THROW;
-    using ::com::sun::star::uno::Exception;
-    using ::com::sun::star::uno::RuntimeException;
-    using ::com::sun::star::uno::Any;
-    using ::com::sun::star::uno::makeAny;
-    using ::com::sun::star::uno::Sequence;
     using ::com::sun::star::uno::Type;
     using ::com::sun::star::uno::TypeClass_CHAR;
     using ::com::sun::star::uno::TypeClass_BOOLEAN;
@@ -176,7 +167,7 @@ namespace comphelper
             pComparator.reset( new ScalarPredicateLess< sal_Unicode >() );
             break;
         case TypeClass_BOOLEAN:
-            pComparator.reset( new ScalarPredicateLess< sal_Bool >() );
+            pComparator.reset( new ScalarPredicateLess< bool >() );
             break;
         case TypeClass_BYTE:
             pComparator.reset( new ScalarPredicateLess< sal_Int8 >() );

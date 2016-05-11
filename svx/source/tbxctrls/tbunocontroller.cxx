@@ -86,7 +86,6 @@ class SvxFontSizeBox_Impl : public FontSizeBox
 {
 public:
                         SvxFontSizeBox_Impl( vcl::Window* pParent,
-                                             const uno::Reference< frame::XDispatchProvider >& rDispatchProvider,
                                              const uno::Reference< frame::XFrame >& _xFrame,
                                              FontHeightToolBoxControl& rCtrl );
 
@@ -105,16 +104,13 @@ private:
     OUString                                   m_aCurText;
     Size                                       m_aLogicalSize;
     bool                                       m_bRelease;
-    uno::Reference< frame::XDispatchProvider > m_xDispatchProvider;
     uno::Reference< frame::XFrame >            m_xFrame;
-    uno::Reference< awt::XWindow >             m_xOldFocusWindow;
 
     void                ReleaseFocus_Impl();
 };
 
 SvxFontSizeBox_Impl::SvxFontSizeBox_Impl(
-    vcl::Window*                                           _pParent,
-    const uno::Reference< frame::XDispatchProvider >& _rDispatchProvider,
+    vcl::Window*                                      _pParent,
     const uno::Reference< frame::XFrame >&            _xFrame,
     FontHeightToolBoxControl&                         _rCtrl ) :
 
@@ -123,7 +119,6 @@ SvxFontSizeBox_Impl::SvxFontSizeBox_Impl(
     m_pCtrl             ( &_rCtrl ),
     m_aLogicalSize      ( 0,100 ),
     m_bRelease          ( true ),
-    m_xDispatchProvider ( _rDispatchProvider ),
     m_xFrame            ( _xFrame )
 {
     SetValue( 0 );
@@ -141,7 +136,6 @@ void SvxFontSizeBox_Impl::ReleaseFocus_Impl()
     if ( m_xFrame.is() && m_xFrame->getContainerWindow().is() )
         m_xFrame->getContainerWindow()->setFocus();
 }
-
 
 
 void SvxFontSizeBox_Impl::Select()
@@ -167,7 +161,6 @@ void SvxFontSizeBox_Impl::Select()
 }
 
 
-
 void SvxFontSizeBox_Impl::statusChanged_Impl( long nPoint, bool bErase )
 {
     if ( !bErase )
@@ -189,7 +182,6 @@ void SvxFontSizeBox_Impl::statusChanged_Impl( long nPoint, bool bErase )
 }
 
 
-
 void SvxFontSizeBox_Impl::UpdateFont( const css::awt::FontDescriptor& rCurrentFont )
 {
     // Sizes-Liste auff"ullen
@@ -200,11 +192,11 @@ void SvxFontSizeBox_Impl::UpdateFont( const css::awt::FontDescriptor& rCurrentFo
 
     if ( !rCurrentFont.Name.isEmpty() )
     {
-        vcl::FontInfo _aFontInfo;
-        _aFontInfo.SetName( rCurrentFont.Name );
-        _aFontInfo.SetStyleName( rCurrentFont.StyleName );
-        _aFontInfo.SetHeight( rCurrentFont.Height );
-        Fill( &_aFontInfo, _pFontList );
+        FontMetric _aFontMetric;
+        _aFontMetric.SetFamilyName( rCurrentFont.Name );
+        _aFontMetric.SetStyleName( rCurrentFont.StyleName );
+        _aFontMetric.SetFontHeight( rCurrentFont.Height );
+        Fill( &_aFontMetric, _pFontList );
     }
     else
     {
@@ -213,7 +205,6 @@ void SvxFontSizeBox_Impl::UpdateFont( const css::awt::FontDescriptor& rCurrentFo
     SetValue( nOldVal ); // alten Wert wiederherstellen
     m_aCurText = GetText(); // zum R"ucksetzen bei ESC merken
 }
-
 
 
 bool SvxFontSizeBox_Impl::Notify( NotifyEvent& rNEvt )
@@ -389,22 +380,16 @@ throw (css::uno::RuntimeException, std::exception)
 }
 
 uno::Reference< awt::XWindow > SAL_CALL FontHeightToolBoxControl::createItemWindow(
-    const uno::Reference< awt::XWindow >& Parent )
+    const uno::Reference< awt::XWindow >& xParent )
     throw (css::uno::RuntimeException, std::exception)
 {
     uno::Reference< awt::XWindow > xItemWindow;
-    uno::Reference< awt::XWindow > xParent( Parent );
 
     vcl::Window* pParent = VCLUnoHelper::GetWindow( xParent );
     if ( pParent )
     {
         SolarMutexGuard aSolarMutexGuard;
-        m_pBox = VclPtr<SvxFontSizeBox_Impl>::Create(
-
-                        pParent,
-                        uno::Reference< frame::XDispatchProvider >( m_xFrame, uno::UNO_QUERY ),
-                        m_xFrame,
-                        *this );
+        m_pBox = VclPtr<SvxFontSizeBox_Impl>::Create( pParent, m_xFrame, *this );
         //Get the box to fill itself with all its sizes
         m_pBox->UpdateFont(m_aCurrentFont);
         //Make it size itself to its optimal size re above sizes

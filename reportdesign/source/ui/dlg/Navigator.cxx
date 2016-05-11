@@ -24,7 +24,6 @@
 #include "UITools.hxx"
 #include "RptUndo.hxx"
 #include "reportformula.hxx"
-#include <boost/noncopyable.hpp>
 #include <com/sun/star/container/XContainerListener.hpp>
 #include <com/sun/star/report/XReportDefinition.hpp>
 #include <com/sun/star/report/XFixedText.hpp>
@@ -126,7 +125,7 @@ class NavigatorTree :   public ::cppu::BaseMutex
         UserData(NavigatorTree* _pTree,const uno::Reference<uno::XInterface>& _xContent);
         virtual ~UserData();
 
-        inline uno::Reference< uno::XInterface > getContent() const { return m_xContent; }
+        const uno::Reference< uno::XInterface >& getContent() const { return m_xContent; }
         inline void setContent(const uno::Reference< uno::XInterface >& _xContent) { m_xContent = _xContent; }
 
     protected:
@@ -135,7 +134,7 @@ class NavigatorTree :   public ::cppu::BaseMutex
 
         // OContainerListener
         virtual void _elementInserted( const container::ContainerEvent& _rEvent ) throw(uno::RuntimeException, std::exception) override;
-        virtual void _elementRemoved( const container::ContainerEvent& _Event )
+        virtual void _elementRemoved( const container::ContainerEvent& Event )
             throw (uno::RuntimeException, std::exception) override;
         virtual void _elementReplaced( const container::ContainerEvent& _rEvent ) throw(uno::RuntimeException, std::exception) override;
         virtual void _disposing(const lang::EventObject& _rSource)
@@ -144,7 +143,6 @@ class NavigatorTree :   public ::cppu::BaseMutex
 
     enum DROP_ACTION        { DA_SCROLLUP, DA_SCROLLDOWN, DA_EXPANDNODE };
     AutoTimer                                                                   m_aDropActionTimer;
-    Timer                                                                       m_aSynchronizeTimer;
     ImageList                                                                   m_aNavigatorImages;
     Point                                                                       m_aTimerTriggered;      // position at which the DropTimer started
     DROP_ACTION                                                                 m_aDropActionType;
@@ -176,7 +174,7 @@ protected:
 
     // OContainerListener Helper
     void _elementInserted( const container::ContainerEvent& _rEvent );
-    void _elementRemoved( const container::ContainerEvent& _Event );
+    void _elementRemoved( const container::ContainerEvent& Event );
     void _elementReplaced( const container::ContainerEvent& _rEvent );
 
 public:
@@ -872,10 +870,12 @@ Size NavigatorTree::GetOptimalSize() const
 }
 
 // class ONavigatorImpl
-class ONavigatorImpl: private boost::noncopyable
+class ONavigatorImpl
 {
 public:
     ONavigatorImpl(OReportController& _rController,ONavigator* _pParent);
+    ONavigatorImpl(const ONavigatorImpl&) = delete;
+    ONavigatorImpl& operator=(const ONavigatorImpl&) = delete;
 
     uno::Reference< report::XReportDefinition>  m_xReport;
     ::rptui::OReportController&                 m_rController;
@@ -910,6 +910,12 @@ void ONavigator::GetFocus()
     Window::GetFocus();
     if ( m_pImpl->m_pNavigatorTree.get() )
         m_pImpl->m_pNavigatorTree->GrabFocus();
+}
+
+void ONavigator::dispose()
+{
+    m_pImpl->m_pNavigatorTree.disposeAndClear();
+    FloatingWindow::dispose();
 }
 
 } // rptui

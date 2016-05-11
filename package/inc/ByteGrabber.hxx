@@ -46,12 +46,12 @@ public:
     ByteGrabber (css::uno::Reference < css::io::XInputStream > xIstream);
     ~ByteGrabber();
 
-    void setInputStream (css::uno::Reference < css::io::XInputStream > xNewStream);
+    void setInputStream (const css::uno::Reference < css::io::XInputStream >& xNewStream);
     // XInputStream
     sal_Int32 SAL_CALL readBytes( css::uno::Sequence< sal_Int8 >& aData, sal_Int32 nBytesToRead )
         throw(css::io::NotConnectedException, css::io::BufferSizeExceededException, css::io::IOException, css::uno::RuntimeException);
     // XSeekable
-    sal_Int64 SAL_CALL seek( sal_Int64 location )
+    void SAL_CALL seek( sal_Int64 location )
         throw(css::lang::IllegalArgumentException, css::io::IOException, css::uno::RuntimeException);
     sal_Int64 SAL_CALL getPosition(  )
         throw(css::io::IOException, css::uno::RuntimeException);

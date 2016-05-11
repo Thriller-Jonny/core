@@ -6223,6 +6223,7 @@ sal_Int16 GetCustomShapeConnectionTypeDefault( MSO_SPT eSpType )
             case mso_sptVerticalScroll :
             case mso_sptHorizontalScroll :
                 nGluePointType = css::drawing::EnhancedCustomShapeGluePointType::RECT;
+                break;
             default: break;
         }
     }
@@ -8503,7 +8504,7 @@ const mso_CustomShape* GetCustomShapeContent( MSO_SPT eSpType )
         case mso_sptCurvedConnector4 :          pCustomShape = &msoCurvedConnector4; break;
         case mso_sptCurvedConnector5 :          pCustomShape = &msoCurvedConnector5; break;
 
-        // Dont know, simply mapping to TextSimple
+        // Don't know, simply mapping to TextSimple
         case mso_sptTextOnRing :
         case mso_sptTextOnCurve :
         case mso_sptTextRing :

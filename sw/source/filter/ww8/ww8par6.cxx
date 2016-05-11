@@ -165,7 +165,7 @@ void wwSection::SetDirection()
     {
         default:
             OSL_ENSURE(false, "Unknown layout type");
-            //fall-through
+            SAL_FALLTHROUGH;
         case 0:
             meDir=FRMDIR_HORI_LEFT_TOP;
             break;
@@ -240,7 +240,7 @@ void SwWW8ImplReader::SetDocumentGrid(SwFrameFormat &rFormat, const wwSection &r
             break;
         default:
             OSL_ENSURE(false, "Unknown grid type");
-            //fall-through
+            SAL_FALLTHROUGH;
         case 3:
             eType = GRID_LINES_CHARS;
             aGrid.SetSnapToChars(true);
@@ -352,7 +352,7 @@ bool wwSectionManager::SetCols(SwFrameFormat &rFormat, const wwSection &rSection
     // sprmSFEvenlySpaced
     if (!rSep.fEvenlySpaced)
     {
-        aCol._SetOrtho(false);
+        aCol.SetOrtho_(false);
         const sal_uInt16 maxIdx = SAL_N_ELEMENTS(rSep.rgdxaColumnWidthSpacing);
         for (sal_uInt16 i = 0, nIdx = 1; i < nCols && nIdx < maxIdx; i++, nIdx+=2 )
         {
@@ -997,7 +997,7 @@ void wwSectionManager::CreateSep(const long nTextPos, bool /*bMustHaveBreak*/)
         /*sprmSDxaRight*/       0xB022,
         /*sprmSDzaGutter*/      0xB025,
         /*sprmSFPgnRestart*/    0x3011,
-        /*sprmSPgnStart*/       0x501C,
+        /*sprmSPgnStart97*/     0x501C,
            /*sprmSDmBinFirst*/     0x5007,
         /*sprmSDmBinOther*/     0x5008
     };
@@ -1035,7 +1035,7 @@ void wwSectionManager::CreateSep(const long nTextPos, bool /*bMustHaveBreak*/)
     // Page Number Restarts - sprmSFPgnRestart
     aNewSection.maSep.fPgnRestart = ReadBSprm(pSep, pIds[6], 0);
 
-    aNewSection.maSep.pgnStart = ReadBSprm( pSep, pIds[7], 0 );
+    aNewSection.maSep.pgnStart = ReadUSprm( pSep, pIds[7], 0 );
 
     if (eVer >= ww::eWW6)
     {
@@ -1224,7 +1224,7 @@ void SwWW8ImplReader::CopyPageDescHdFt(const SwPageDesc* pOrgPageDesc,
 // Read BoRder Control structure
 // nBrcVer should be set to the version of the BRC record being read (6, 8 or 9)
 // This will be converted to the latest format (9).
-static bool _SetWW8_BRC(int nBrcVer, WW8_BRCVer9& rVar, const sal_uInt8* pS)
+static bool SetWW8_BRC(int nBrcVer, WW8_BRCVer9& rVar, const sal_uInt8* pS)
 {
 
     if( pS )
@@ -1260,7 +1260,7 @@ static sal_uInt8 lcl_ReadBorders(bool bVer67, WW8_BRCVer9* brc, WW8PLCFx_Cp_FKP*
                     pSprm[0], pSprm[1], pSprm[2], pSprm[3] ) )
             {
                 for( int i = 0; i < 4; ++i )
-                    nBorder |= int(_SetWW8_BRC( 8, brc[ i ], pSprm[ i ] ))<<i;
+                    nBorder |= int(SetWW8_BRC( 8, brc[ i ], pSprm[ i ] ))<<i;
             }
             // Version 9 BRCs if present will override version 8
             if( pSep->Find4Sprms(
@@ -1269,7 +1269,7 @@ static sal_uInt8 lcl_ReadBorders(bool bVer67, WW8_BRCVer9* brc, WW8PLCFx_Cp_FKP*
                     pSprm[0], pSprm[1], pSprm[2], pSprm[3] ) )
             {
                 for( int i = 0; i < 4; ++i )
-                    nBorder |= int(_SetWW8_BRC( 9, brc[ i ], pSprm[ i ] ))<<i;
+                    nBorder |= int(SetWW8_BRC( 9, brc[ i ], pSprm[ i ] ))<<i;
             }
         }
     }
@@ -1289,15 +1289,15 @@ static sal_uInt8 lcl_ReadBorders(bool bVer67, WW8_BRCVer9* brc, WW8PLCFx_Cp_FKP*
             if (bVer67)
             {
                 for( int i = 0; i < 5; ++i )
-                    nBorder |= int(_SetWW8_BRC( 6 , brc[ i ], pPap->HasSprm( aVer67Ids[ i ] )))<<i;
+                    nBorder |= int(SetWW8_BRC( 6 , brc[ i ], pPap->HasSprm( aVer67Ids[ i ] )))<<i;
             }
             else
             {
                 for( int i = 0; i < 5; ++i )
-                    nBorder |= int(_SetWW8_BRC( 8 , brc[ i ], pPap->HasSprm( aVer8Ids[ i ] )))<<i;
+                    nBorder |= int(SetWW8_BRC( 8 , brc[ i ], pPap->HasSprm( aVer8Ids[ i ] )))<<i;
                 // Version 9 BRCs if present will override version 8
                 for( int i = 0; i < 5; ++i )
-                    nBorder |= int(_SetWW8_BRC( 9 , brc[ i ], pPap->HasSprm( aVer9Ids[ i ] )))<<i;
+                    nBorder |= int(SetWW8_BRC( 9 , brc[ i ], pPap->HasSprm( aVer9Ids[ i ] )))<<i;
             }
         }
         else if( pSty )
@@ -1305,15 +1305,15 @@ static sal_uInt8 lcl_ReadBorders(bool bVer67, WW8_BRCVer9* brc, WW8PLCFx_Cp_FKP*
             if (bVer67)
             {
                 for( int i = 0; i < 5; ++i )
-                    nBorder |= int(_SetWW8_BRC( 6 , brc[ i ], pSty->HasParaSprm( aVer67Ids[ i ] )))<<i;
+                    nBorder |= int(SetWW8_BRC( 6 , brc[ i ], pSty->HasParaSprm( aVer67Ids[ i ] )))<<i;
             }
             else
             {
                 for( int i = 0; i < 5; ++i )
-                    nBorder |= int(_SetWW8_BRC( 8 , brc[ i ], pSty->HasParaSprm( aVer8Ids[ i ] )))<<i;
+                    nBorder |= int(SetWW8_BRC( 8 , brc[ i ], pSty->HasParaSprm( aVer8Ids[ i ] )))<<i;
                 // Version 9 BRCs if present will override version 8
                 for( int i = 0; i < 5; ++i )
-                    nBorder |= int(_SetWW8_BRC( 9 , brc[ i ], pSty->HasParaSprm( aVer9Ids[ i ] )))<<i;
+                    nBorder |= int(SetWW8_BRC( 9 , brc[ i ], pSty->HasParaSprm( aVer9Ids[ i ] )))<<i;
             }
         }
         else {
@@ -2276,7 +2276,10 @@ WW8FlyPara *SwWW8ImplReader::ConstructApo(const ApoTestResults &rApo,
     pRet->ApplyTabPos(pTabPos);
 
     if (pRet->IsEmpty())
-        delete pRet, pRet = nullptr;
+    {
+        delete pRet;
+        pRet = nullptr;
+    }
     return pRet;
 }
 
@@ -2522,7 +2525,7 @@ void SwWW8ImplReader::StopApo()
             {
                 //If the last anchor pos is here, then clear the anchor pos.
                 //This "last anchor pos" is only used for fixing up the
-                //postions of things anchored to page breaks and here
+                //positions of things anchored to page breaks and here
                 //we are removing the last paragraph of a frame, so there
                 //cannot be a page break at this point so we can
                 //safely reset m_pLastAnchorPos to avoid any dangling
@@ -2582,7 +2585,8 @@ void SwWW8ImplReader::StopApo()
             m_pSFlyPara->pFlyFormat->SetFormatAttr(aSize);
         }
 
-        delete m_pSFlyPara->pMainTextPos, m_pSFlyPara->pMainTextPos = nullptr;
+        delete m_pSFlyPara->pMainTextPos;
+        m_pSFlyPara->pMainTextPos = nullptr;
 // To create the SwFrames when inserting into an existing document, fltshell.cxx
 // will call pFlyFrame->MakeFrames() when setting the FltAnchor attribute
 
@@ -3103,7 +3107,7 @@ void SwWW8ImplReader::SetToggleAttr(sal_uInt8 nAttrId, bool bOn)
     }
 }
 
-void SwWW8ImplReader::_ChkToggleAttr( sal_uInt16 nOldStyle81Mask,
+void SwWW8ImplReader::ChkToggleAttr_( sal_uInt16 nOldStyle81Mask,
                                         sal_uInt16 nNewStyle81Mask )
 {
     sal_uInt16 i = 1, nToggleAttrFlags = m_pCtrlStck->GetToggleAttrFlags();
@@ -3119,7 +3123,7 @@ void SwWW8ImplReader::_ChkToggleAttr( sal_uInt16 nOldStyle81Mask,
     }
 }
 
-void SwWW8ImplReader::_ChkToggleBiDiAttr( sal_uInt16 nOldStyle81Mask,
+void SwWW8ImplReader::ChkToggleBiDiAttr_( sal_uInt16 nOldStyle81Mask,
                                         sal_uInt16 nNewStyle81Mask )
 {
     sal_uInt16 i = 1, nToggleAttrFlags = m_pCtrlStck->GetToggleBiDiAttrFlags();
@@ -3260,7 +3264,7 @@ void SwWW8ImplReader::Read_SubSuperProp( sal_uInt16, const sal_uInt8* pData, sho
 
 void SwWW8ImplReader::Read_Underline( sal_uInt16, const sal_uInt8* pData, short nLen )
 {
-    FontUnderline eUnderline = UNDERLINE_NONE;
+    FontLineStyle eUnderline = LINESTYLE_NONE;
     bool bWordLine = false;
     if( pData )
     {
@@ -3270,23 +3274,24 @@ void SwWW8ImplReader::Read_Underline( sal_uInt16, const sal_uInt8* pData, short 
                     // 9 = dotdash 10 = dotdotdash 11 = wave
         switch( *pData )
         {
-            case 2: bWordLine = true;       // no break;
-            case 1: eUnderline = (FontUnderline)UNDERLINE_SINGLE;       break;
-            case 3: eUnderline = (FontUnderline)UNDERLINE_DOUBLE;       break;
-            case 4: eUnderline = (FontUnderline)UNDERLINE_DOTTED;       break;
-            case 7: eUnderline = (FontUnderline)UNDERLINE_DASH;         break;
-            case 9: eUnderline = (FontUnderline)UNDERLINE_DASHDOT;      break;
-            case 10:eUnderline = (FontUnderline)UNDERLINE_DASHDOTDOT;   break;
-            case 6: eUnderline = (FontUnderline)UNDERLINE_BOLD;         break;
-            case 11:eUnderline = (FontUnderline)UNDERLINE_WAVE;         break;
-            case 20:eUnderline = (FontUnderline)UNDERLINE_BOLDDOTTED;   break;
-            case 23:eUnderline = (FontUnderline)UNDERLINE_BOLDDASH;     break;
-            case 39:eUnderline = (FontUnderline)UNDERLINE_LONGDASH;     break;
-            case 55:eUnderline = (FontUnderline)UNDERLINE_BOLDLONGDASH; break;
-            case 25:eUnderline = (FontUnderline)UNDERLINE_BOLDDASHDOT;  break;
-            case 26:eUnderline = (FontUnderline)UNDERLINE_BOLDDASHDOTDOT;break;
-            case 27:eUnderline = (FontUnderline)UNDERLINE_BOLDWAVE;     break;
-            case 43:eUnderline = (FontUnderline)UNDERLINE_DOUBLEWAVE;   break;
+            case 2: bWordLine = true;
+                SAL_FALLTHROUGH;
+            case 1: eUnderline = (FontLineStyle)LINESTYLE_SINGLE;       break;
+            case 3: eUnderline = (FontLineStyle)LINESTYLE_DOUBLE;       break;
+            case 4: eUnderline = (FontLineStyle)LINESTYLE_DOTTED;       break;
+            case 7: eUnderline = (FontLineStyle)LINESTYLE_DASH;         break;
+            case 9: eUnderline = (FontLineStyle)LINESTYLE_DASHDOT;      break;
+            case 10:eUnderline = (FontLineStyle)LINESTYLE_DASHDOTDOT;   break;
+            case 6: eUnderline = (FontLineStyle)LINESTYLE_BOLD;         break;
+            case 11:eUnderline = (FontLineStyle)LINESTYLE_WAVE;         break;
+            case 20:eUnderline = (FontLineStyle)LINESTYLE_BOLDDOTTED;   break;
+            case 23:eUnderline = (FontLineStyle)LINESTYLE_BOLDDASH;     break;
+            case 39:eUnderline = (FontLineStyle)LINESTYLE_LONGDASH;     break;
+            case 55:eUnderline = (FontLineStyle)LINESTYLE_BOLDLONGDASH; break;
+            case 25:eUnderline = (FontLineStyle)LINESTYLE_BOLDDASHDOT;  break;
+            case 26:eUnderline = (FontLineStyle)LINESTYLE_BOLDDASHDOTDOT;break;
+            case 27:eUnderline = (FontLineStyle)LINESTYLE_BOLDWAVE;     break;
+            case 43:eUnderline = (FontLineStyle)LINESTYLE_DOUBLEWAVE;   break;
         }
     }
 
@@ -3329,10 +3334,10 @@ void SwWW8ImplReader::Read_DoubleLine_Rotate( sal_uInt16, const sal_uInt8* pData
                 sal_Unicode cStt = 0, cEnd = 0;
                 switch( SVBT16ToShort( pData+1 ) )
                 {
-                case 1: cStt = '(', cEnd = ')'; break;
-                case 2: cStt = '[', cEnd = ']'; break;
-                case 3: cStt = '<', cEnd = '>'; break;
-                case 4: cStt = '{', cEnd = '}'; break;
+                case 1: cStt = '('; cEnd = ')'; break;
+                case 2: cStt = '['; cEnd = ']'; break;
+                case 3: cStt = '<'; cEnd = '>'; break;
+                case 4: cStt = '{'; cEnd = '}'; break;
                 }
                 NewAttr( SvxTwoLinesItem( true, cStt, cEnd, RES_CHRATR_TWO_LINES ));
             }
@@ -4423,34 +4428,34 @@ void SwWW8ImplReader::Read_Emphasis( sal_uInt16, const sal_uInt8* pData, short n
                 GetFormatAttr(RES_CHRATR_CJK_LANGUAGE))->GetLanguage();
         }
 
-        sal_uInt16 nVal;
+        FontEmphasisMark nVal;
         switch( *pData )
         {
         case 0:
-            nVal = EMPHASISMARK_NONE;
+            nVal = FontEmphasisMark::NONE;
             break;
         case 2:
             if (MsLangId::isKorean(nLang) || MsLangId::isTraditionalChinese(nLang))
-                nVal = EMPHASISMARK_CIRCLE_ABOVE;
+                nVal = (FontEmphasisMark::Circle | FontEmphasisMark::PosAbove);
             else if (nLang == LANGUAGE_JAPANESE)
-                nVal = EMPHASISMARK_SIDE_DOTS;
+                nVal = (FontEmphasisMark::Accent | FontEmphasisMark::PosAbove);
             else
-                nVal = EMPHASISMARK_DOTS_BELOW;
+                nVal = (FontEmphasisMark::Dot | FontEmphasisMark::PosBelow);
             break;
         case 3:
-            nVal = EMPHASISMARK_CIRCLE_ABOVE;
+            nVal = (FontEmphasisMark::Circle | FontEmphasisMark::PosAbove);
             break;
         case 4:
-            nVal = EMPHASISMARK_DOTS_BELOW;
+            nVal = (FontEmphasisMark::Dot | FontEmphasisMark::PosBelow);
             break;
         case 1:
             if (MsLangId::isSimplifiedChinese(nLang))
-                nVal = EMPHASISMARK_DOTS_BELOW;
+                nVal = (FontEmphasisMark::Dot | FontEmphasisMark::PosBelow);
             else
-                nVal = EMPHASISMARK_DOTS_ABOVE;
+                nVal = (FontEmphasisMark::Dot | FontEmphasisMark::PosAbove);
             break;
         default:
-            nVal = EMPHASISMARK_DOTS_ABOVE;
+            nVal = (FontEmphasisMark::Dot | FontEmphasisMark::PosAbove);
             break;
         }
 
@@ -4629,7 +4634,7 @@ void SwWW8Shade::SetShade(ColorData nFore, ColorData nBack, sal_uInt16 nIndex)
     if (nUseBack == COL_AUTO)
         nUseBack = COL_WHITE;
 
-    if( nIndex >= sizeof( eMSGrayScale ) / sizeof ( eMSGrayScale[ 0 ] ) )
+    if( nIndex >= SAL_N_ELEMENTS( eMSGrayScale ) )
         nIndex = 0;
 
     sal_uLong nWW8BrushStyle = eMSGrayScale[nIndex];
@@ -4832,7 +4837,7 @@ void SwWW8ImplReader::Read_CharBorder(sal_uInt16 nId, const sal_uInt8* pData, sh
             WW8_BRCVer9 aBrc;
             int nBrcVer = (nId == NS_sprm::LN_CBrc) ? 9 : (m_bVer67 ? 6 : 8);
 
-            _SetWW8_BRC(nBrcVer, aBrc, pData);
+            SetWW8_BRC(nBrcVer, aBrc, pData);
 
             // Border style is none -> no border, no shadow
             if( editeng::ConvertBorderStyleFromWord(aBrc.brcType()) != table::BorderLineStyle::NONE )
@@ -4976,7 +4981,10 @@ void SwWW8ImplReader::Read_ApoPPC( sal_uInt16, const sal_uInt8* pData, short )
         m_vColl[m_nAktColl].m_pWWFly = pFly;
         pFly->Read(*pData, m_pStyles);
         if (pFly->IsEmpty())
-            delete m_vColl[m_nAktColl].m_pWWFly, m_vColl[m_nAktColl].m_pWWFly = nullptr;
+        {
+            delete m_vColl[m_nAktColl].m_pWWFly;
+            m_vColl[m_nAktColl].m_pWWFly = nullptr;
+        }
     }
 }
 
@@ -5239,7 +5247,7 @@ const wwSprmDispatcher *GetWW2SprmDispatcher()
          {99, nullptr}                                     //"sprmPicBrcRight",
     };
 
-    static wwSprmDispatcher aSprmSrch(aSprms, sizeof(aSprms) / sizeof(aSprms[0]));
+    static wwSprmDispatcher aSprmSrch(aSprms, SAL_N_ELEMENTS(aSprms));
     return &aSprmSrch;
 }
 
@@ -5601,7 +5609,7 @@ const wwSprmDispatcher *GetWW6SprmDispatcher()
         {207, nullptr},                                    //dunno
     };
 
-    static wwSprmDispatcher aSprmSrch(aSprms, sizeof(aSprms) / sizeof(aSprms[0]));
+    static wwSprmDispatcher aSprmSrch(aSprms, SAL_N_ELEMENTS(aSprms));
     return &aSprmSrch;
 }
 
@@ -6193,7 +6201,7 @@ const wwSprmDispatcher *GetWW8SprmDispatcher()
         {0x246D, &SwWW8ImplReader::Read_ParaContextualSpacing} //"sprmPFContextualSpacing"
     };
 
-    static wwSprmDispatcher aSprmSrch(aSprms, sizeof(aSprms) / sizeof(aSprms[0]));
+    static wwSprmDispatcher aSprmSrch(aSprms, SAL_N_ELEMENTS(aSprms));
     return &aSprmSrch;
 }
 

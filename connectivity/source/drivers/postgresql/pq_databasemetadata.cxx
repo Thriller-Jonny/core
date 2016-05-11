@@ -140,12 +140,12 @@ DatabaseMetaData::DatabaseMetaData(
 sal_Bool DatabaseMetaData::allProceduresAreCallable(  ) throw (SQLException, RuntimeException, std::exception)
 {
     // TODO
-    return sal_False;
+    return false;
 }
 
 sal_Bool DatabaseMetaData::allTablesAreSelectable(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 OUString DatabaseMetaData::getURL(  ) throw (SQLException, RuntimeException, std::exception)
@@ -162,7 +162,7 @@ OUString DatabaseMetaData::getUserName(  ) throw (SQLException, RuntimeException
 
 sal_Bool DatabaseMetaData::isReadOnly(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_False;
+    return false;
 }
 
 
@@ -171,7 +171,7 @@ sal_Bool DatabaseMetaData::nullsAreSortedHigh(  ) throw (SQLException, RuntimeEx
     // Whether NULL values are considered, for sorting purposes, LARGER than any other value.
     // Specification: http://download.oracle.com/javase/6/docs/api/java/sql/DatabaseMetaData.html#nullsAreSortedHigh()
     // PostgreSQL behaviour: http://www.postgresql.org/docs/9.1/static/queries-order.html
-    return sal_True;
+    return true;
 }
 
 sal_Bool DatabaseMetaData::nullsAreSortedLow(  ) throw (SQLException, RuntimeException, std::exception)
@@ -181,12 +181,12 @@ sal_Bool DatabaseMetaData::nullsAreSortedLow(  ) throw (SQLException, RuntimeExc
 
 sal_Bool DatabaseMetaData::nullsAreSortedAtStart(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_False;
+    return false;
 }
 
 sal_Bool DatabaseMetaData::nullsAreSortedAtEnd(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_False;
+    return false;
 }
 
 OUString DatabaseMetaData::getDatabaseProductName(  ) throw (SQLException, RuntimeException, std::exception)
@@ -226,56 +226,56 @@ sal_Bool DatabaseMetaData::usesLocalFiles(  ) throw (SQLException, RuntimeExcept
     //           database should not appear in the DatasourceBrowser
     //           of OpenOffice.org API, otherwise false is returned."
     //           So, hmmm, think about it.
-    return sal_False;
+    return false;
 }
 
 sal_Bool DatabaseMetaData::usesLocalFilePerTable(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_False;
+    return false;
 }
 
 sal_Bool DatabaseMetaData::supportsMixedCaseIdentifiers(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_False;
+    return false;
 }
 
 sal_Bool DatabaseMetaData::storesUpperCaseIdentifiers(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_False;
+    return false;
 }
 
 sal_Bool DatabaseMetaData::storesLowerCaseIdentifiers(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 
 sal_Bool DatabaseMetaData::storesMixedCaseIdentifiers(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_False;
+    return false;
 }
 
 
 sal_Bool DatabaseMetaData::supportsMixedCaseQuotedIdentifiers(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 sal_Bool DatabaseMetaData::storesUpperCaseQuotedIdentifiers(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_False;
+    return false;
 }
 
 
 sal_Bool DatabaseMetaData::storesLowerCaseQuotedIdentifiers(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_False;
+    return false;
 }
 
 
 sal_Bool DatabaseMetaData::storesMixedCaseQuotedIdentifiers(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_False;
+    return false;
 }
 
 
@@ -583,98 +583,98 @@ OUString DatabaseMetaData::getExtraNameCharacters(  ) throw (SQLException, Runti
 
 sal_Bool DatabaseMetaData::supportsAlterTableWithAddColumn(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 sal_Bool DatabaseMetaData::supportsAlterTableWithDropColumn(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 sal_Bool DatabaseMetaData::supportsColumnAliasing(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 sal_Bool DatabaseMetaData::nullPlusNonNullIsNull(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 sal_Bool DatabaseMetaData::supportsTypeConversion(  ) throw (SQLException, RuntimeException, std::exception)
 {
     // LEM: this is specifically whether the "CONVERT" function is supported
     //      It seems that in PostgreSQL, that function is only for string encoding, so no.
-    return sal_False;
+    return false;
 }
 
 sal_Bool DatabaseMetaData::supportsConvert( sal_Int32 fromType, sal_Int32 toType ) throw (SQLException, RuntimeException, std::exception)
 {
     (void) fromType; (void) toType;
-    return sal_False;
+    return false;
 }
 
 sal_Bool DatabaseMetaData::supportsTableCorrelationNames(  ) throw (SQLException, RuntimeException, std::exception)
 {
     // LEM: A correlation name is "bar" in "SELECT foo FROM qux [AS] bar WHERE ..."
-    return sal_True;
+    return true;
 }
 
 
 sal_Bool DatabaseMetaData::supportsDifferentTableCorrelationNames(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_False;
+    return false;
 }
 sal_Bool DatabaseMetaData::supportsExpressionsInOrderBy(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 sal_Bool DatabaseMetaData::supportsOrderByUnrelated(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 sal_Bool DatabaseMetaData::supportsGroupBy(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 sal_Bool DatabaseMetaData::supportsGroupByUnrelated(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 sal_Bool DatabaseMetaData::supportsGroupByBeyondSelect(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 sal_Bool DatabaseMetaData::supportsLikeEscapeClause(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 sal_Bool DatabaseMetaData::supportsMultipleResultSets(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 sal_Bool DatabaseMetaData::supportsMultipleTransactions(  ) throw (SQLException, RuntimeException, std::exception)
 {
     // Allows multiple transactions open at once (on different connections!)
-    return sal_True;
+    return true;
 }
 
 sal_Bool DatabaseMetaData::supportsNonNullableColumns(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 
 sal_Bool DatabaseMetaData::supportsMinimumSQLGrammar(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 sal_Bool DatabaseMetaData::supportsCoreSQLGrammar(  ) throw (SQLException, RuntimeException, std::exception)
@@ -685,50 +685,50 @@ sal_Bool DatabaseMetaData::supportsCoreSQLGrammar(  ) throw (SQLException, Runti
     //      Actually, Base assumes *also* support for aggregate functions "collect, fusion, intersection"
     //      as soon as supportsCoreSQLGrammar() returns true.
     //      Those are *not* Core SQL, though. They are in optional feature S271 "Basic multiset support"
-    return sal_True;
+    return true;
 }
 
 sal_Bool DatabaseMetaData::supportsExtendedSQLGrammar(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_False;
+    return false;
 }
 
 sal_Bool DatabaseMetaData::supportsANSI92EntryLevelSQL(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 sal_Bool DatabaseMetaData::supportsANSI92IntermediateSQL(  ) throw (SQLException, RuntimeException, std::exception)
 {
     // LEM: jdbc driver says not, although the comments in it seem old
-    return sal_False;
+    return false;
 }
 
 sal_Bool DatabaseMetaData::supportsANSI92FullSQL(  ) throw (SQLException, RuntimeException, std::exception)
 {
     // LEM: jdbc driver says not, although the comments in it seem old
-    return sal_False;
+    return false;
 }
 
 sal_Bool DatabaseMetaData::supportsIntegrityEnhancementFacility(  ) throw (SQLException, RuntimeException, std::exception)
 {
     // LEM: jdbc driver says yes, although comment says they are not sure what this means...
-    return sal_True;
+    return true;
 }
 
 sal_Bool DatabaseMetaData::supportsOuterJoins(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 sal_Bool DatabaseMetaData::supportsFullOuterJoins(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 sal_Bool DatabaseMetaData::supportsLimitedOuterJoins(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 
@@ -749,7 +749,7 @@ OUString DatabaseMetaData::getCatalogTerm(  ) throw (SQLException, RuntimeExcept
 
 sal_Bool DatabaseMetaData::isCatalogAtStart(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 OUString DatabaseMetaData::getCatalogSeparator(  ) throw (SQLException, RuntimeException, std::exception)
@@ -759,54 +759,54 @@ OUString DatabaseMetaData::getCatalogSeparator(  ) throw (SQLException, RuntimeE
 
 sal_Bool DatabaseMetaData::supportsSchemasInDataManipulation(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 sal_Bool DatabaseMetaData::supportsSchemasInProcedureCalls(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 sal_Bool DatabaseMetaData::supportsSchemasInTableDefinitions(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 sal_Bool DatabaseMetaData::supportsSchemasInIndexDefinitions(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 sal_Bool DatabaseMetaData::supportsSchemasInPrivilegeDefinitions(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 sal_Bool DatabaseMetaData::supportsCatalogsInDataManipulation(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_False;
+    return false;
 }
 
 sal_Bool DatabaseMetaData::supportsCatalogsInProcedureCalls(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_False;
+    return false;
 }
 
 sal_Bool DatabaseMetaData::supportsCatalogsInTableDefinitions(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_False;
+    return false;
 }
 
 
 sal_Bool DatabaseMetaData::supportsCatalogsInIndexDefinitions(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_False;
+    return false;
 }
 
 
 sal_Bool DatabaseMetaData::supportsCatalogsInPrivilegeDefinitions(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_False;
+    return false;
 }
 
 
@@ -817,80 +817,80 @@ sal_Bool DatabaseMetaData::supportsCatalogsInPrivilegeDefinitions(  ) throw (SQL
 sal_Bool DatabaseMetaData::supportsPositionedDelete(  ) throw (SQLException, RuntimeException, std::exception)
 {
     // LEM: jdbc driver says not, although the comments in it seem old
-    return sal_False;
+    return false;
 }
 
 sal_Bool DatabaseMetaData::supportsPositionedUpdate(  ) throw (SQLException, RuntimeException, std::exception)
 {
     // LEM: jdbc driver says not, although the comments in it seem old
-    return sal_False;
+    return false;
 }
 
 
 sal_Bool DatabaseMetaData::supportsSelectForUpdate(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 
 sal_Bool DatabaseMetaData::supportsStoredProcedures(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 
 sal_Bool DatabaseMetaData::supportsSubqueriesInComparisons(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 sal_Bool DatabaseMetaData::supportsSubqueriesInExists(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 sal_Bool DatabaseMetaData::supportsSubqueriesInIns(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 sal_Bool DatabaseMetaData::supportsSubqueriesInQuantifieds(  ) throw (SQLException, RuntimeException, std::exception)
 {
     // LEM: jdbc driver says yes, although comment says they don't know what this means...
-    return sal_True;
+    return true;
 }
 
 sal_Bool DatabaseMetaData::supportsCorrelatedSubqueries(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 sal_Bool DatabaseMetaData::supportsUnion(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 sal_Bool DatabaseMetaData::supportsUnionAll(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 sal_Bool DatabaseMetaData::supportsOpenCursorsAcrossCommit(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_False;
+    return false;
 }
 
 sal_Bool DatabaseMetaData::supportsOpenCursorsAcrossRollback(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_False;
+    return false;
 }
 
 sal_Bool DatabaseMetaData::supportsOpenStatementsAcrossCommit(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 sal_Bool DatabaseMetaData::supportsOpenStatementsAcrossRollback(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 sal_Int32 DatabaseMetaData::getMaxBinaryLiteralLength(  ) throw (SQLException, RuntimeException, std::exception)
@@ -1011,7 +1011,7 @@ sal_Bool DatabaseMetaData::doesMaxRowSizeIncludeBlobs(  ) throw (SQLException, R
 {
     // LEM: Err... PostgreSQL basically does not do BLOBs well
     //      In any case, BLOBs do not change the maximal row length AFAIK
-    return sal_True;
+    return true;
 }
 
 sal_Int32 DatabaseMetaData::getMaxStatementLength(  ) throw (SQLException, RuntimeException, std::exception)
@@ -1049,7 +1049,7 @@ sal_Int32 DatabaseMetaData::getDefaultTransactionIsolation(  ) throw (SQLExcepti
 
 sal_Bool DatabaseMetaData::supportsTransactions(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 sal_Bool DatabaseMetaData::supportsTransactionIsolationLevel( sal_Int32 level ) throw (SQLException, RuntimeException, std::exception)
@@ -1058,30 +1058,30 @@ sal_Bool DatabaseMetaData::supportsTransactionIsolationLevel( sal_Int32 level ) 
          || level == com::sun::star::sdbc::TransactionIsolation::SERIALIZABLE
          || level == com::sun::star::sdbc::TransactionIsolation::READ_UNCOMMITTED
          || level == com::sun::star::sdbc::TransactionIsolation::REPEATABLE_READ)
-        return sal_True;
+        return true;
     else
-        return sal_False;
+        return false;
 }
 
 sal_Bool DatabaseMetaData::supportsDataDefinitionAndDataManipulationTransactions(  )
     throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 sal_Bool DatabaseMetaData::supportsDataManipulationTransactionsOnly(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_False;
+    return false;
 }
 
 sal_Bool DatabaseMetaData::dataDefinitionCausesTransactionCommit(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_False;
+    return false;
 }
 
 sal_Bool DatabaseMetaData::dataDefinitionIgnoredInTransactions(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_False;
+    return false;
 }
 
 ::com::sun::star::uno::Reference< XResultSet > DatabaseMetaData::getProcedures(
@@ -1106,7 +1106,7 @@ sal_Bool DatabaseMetaData::dataDefinitionIgnoredInTransactions(  ) throw (SQLExc
 // LEM TODO: at least fake the columns, even if no row.
     MutexGuard guard( m_refMutex->mutex );
     return new SequenceResultSet(
-        m_refMutex, *this, Sequence< OUString >(), Sequence< Sequence< Any > > (), m_pSettings->tc );
+        m_refMutex, *this, std::vector< OUString >(), std::vector< std::vector< Any > > (), m_pSettings->tc );
 }
 
 ::com::sun::star::uno::Reference< XResultSet > DatabaseMetaData::getProcedureColumns(
@@ -1120,7 +1120,7 @@ sal_Bool DatabaseMetaData::dataDefinitionIgnoredInTransactions(  ) throw (SQLExc
 // LEM TODO: implement
 // LEM TODO: at least fake the columns, even if no row.
     return new SequenceResultSet(
-        m_refMutex, *this, Sequence< OUString >(), Sequence< Sequence< Any > > (), m_pSettings->tc );
+        m_refMutex, *this, std::vector< OUString >(), std::vector< std::vector< Any > >(), m_pSettings->tc );
 }
 
 ::com::sun::star::uno::Reference< XResultSet > DatabaseMetaData::getTables(
@@ -1167,11 +1167,11 @@ sal_Bool DatabaseMetaData::dataDefinitionIgnoredInTransactions(  ) throw (SQLExc
 
     Reference< XResultSet > rs = statement->executeQuery();
     Reference< XRow > xRow( rs, UNO_QUERY_THROW );
-    SequenceAnyVector vec;
+    std::vector< std::vector<Any> > vec;
 
     while( rs->next() )
     {
-        Sequence< Any > row( 5 );
+        std::vector< Any > row( 5 );
 
         row[0] <<= m_pSettings->catalog;
         row[1] <<= xRow->getString( 1 );
@@ -1206,46 +1206,61 @@ sal_Bool DatabaseMetaData::dataDefinitionIgnoredInTransactions(  ) throw (SQLExc
         closeable->close();
 
     return new SequenceResultSet(
-        m_refMutex, *this, statics.tablesRowNames, sequence_of_vector(vec), m_pSettings->tc );
+        m_refMutex, *this, statics.tablesRowNames, vec, m_pSettings->tc );
 }
 
-struct SortInternalSchemasLastAndPublicFirst
+namespace
 {
-    bool operator () ( const Sequence< Any >  & a, const Sequence< Any >  & b )
+    // sort no schema first, then "public", then normal schemas, then internal schemas
+    int compare_schema(const OUString &nsA, const OUString &nsB)
     {
-        OUString valueA;
-        OUString valueB;
-        a[0] >>= valueA;
-        b[0] >>= valueB;
-        bool ret = false;
-        if( valueA.startsWith( "public" ) )
+        if (nsA.isEmpty())
         {
-            ret = true;
+            return nsB.isEmpty() ? 0 : -1;
         }
-        else if( valueB.startsWith( "public" ) )
+        else if (nsB.isEmpty())
         {
-            ret = false;
+            assert(!nsA.isEmpty());
+            return 1;
         }
-        else if( valueA.startsWith( "pg_" ) &&
-            valueB.startsWith( "pg_" ) )
+        else if(nsA == "public")
         {
-            ret = valueA.compareTo( valueB ) < 0; // sorts equal !
+            return (nsB == "public") ? 0 : -1;
         }
-        else if( valueA.startsWith( "pg_" ))
+        else if(nsB == "public")
         {
-            ret = false; // sorts last !
+            assert(nsA != "public");
+            return 1;
         }
-        else if( valueB.startsWith( "pg_" ) )
+        else if(nsA.startsWith("pg_"))
         {
-            ret = true; // sorts first !
+            if(nsB.startsWith("pg_"))
+                return nsA.compareTo(nsB);
+            else
+                return 1;
+        }
+        else if(nsB.startsWith("pg_"))
+        {
+            return -1;
         }
         else
         {
-            ret = (valueA.compareTo( valueB ) < 0);
+            return nsA.compareTo(nsB);
         }
-        return ret;
     }
-};
+
+    struct SortInternalSchemasLastAndPublicFirst
+    {
+        bool operator () ( const std::vector< Any >  & a, const std::vector< Any >  & b )
+        {
+            OUString valueA;
+            OUString valueB;
+            a[0] >>= valueA;
+            b[0] >>= valueB;
+            return compare_schema(valueA, valueB);
+        }
+    };
+}
 
 ::com::sun::star::uno::Reference< XResultSet > DatabaseMetaData::getSchemas(  )
     throw (SQLException, RuntimeException, std::exception)
@@ -1264,10 +1279,10 @@ struct SortInternalSchemasLastAndPublicFirst
     //           in particular, excluding temporary schemas, but maybe better through pg_is_other_temp_schema(oid) OR  == pg_my_temp_schema()
 
     Reference< XRow > xRow( rs, UNO_QUERY_THROW );
-    SequenceAnyVector vec;
+    std::vector< std::vector<Any> > vec;
     while( rs->next() )
     {
-        Sequence<Any> row(1);
+        std::vector<Any> row(1);
         row[0] <<= xRow->getString(1);
         vec.push_back( row );
     }
@@ -1279,7 +1294,7 @@ struct SortInternalSchemasLastAndPublicFirst
     if( closeable.is() )
         closeable->close();
     return new SequenceResultSet(
-        m_refMutex, *this, getStatics().schemaNames, sequence_of_vector(vec), m_pSettings->tc );
+        m_refMutex, *this, getStatics().schemaNames, vec, m_pSettings->tc );
 }
 
 ::com::sun::star::uno::Reference< XResultSet > DatabaseMetaData::getCatalogs(  )
@@ -1289,7 +1304,7 @@ struct SortInternalSchemasLastAndPublicFirst
     //           at least fake the columns, even if no content
     MutexGuard guard( m_refMutex->mutex );
     return new SequenceResultSet(
-        m_refMutex, *this, Sequence< OUString >(), Sequence< Sequence< Any > > (), m_pSettings->tc );
+        m_refMutex, *this, std::vector< OUString >(), std::vector< std::vector< Any > >(), m_pSettings->tc );
 }
 
 ::com::sun::star::uno::Reference< XResultSet > DatabaseMetaData::getTableTypes(  )
@@ -1324,7 +1339,7 @@ sal_Int32 typeNameToDataType( const OUString &typeName, const OUString &typtype 
 //         }
         // base type
         Statics &statics = getStatics();
-        BaseTypeMap::iterator ii = statics.baseTypeMap.find( typeName );
+        BaseTypeMap::const_iterator ii = statics.baseTypeMap.find( typeName );
         if( ii != statics.baseTypeMap.end() )
         {
             ret = ii->second;
@@ -1342,72 +1357,70 @@ sal_Int32 typeNameToDataType( const OUString &typeName, const OUString &typtype 
 }
 
 namespace {
-inline bool isSystemColumn( sal_Int16 attnum )
-{
-    return attnum <= 0;
-}
-}
-
-// is not exported by the postgres header
-const static int PQ_VARHDRSZ = sizeof( sal_Int32 );
-
-// Oh, quelle horreur
-// LEM TODO: Need to severely rewrite that!
-// should probably just "do the same" as ODBC or JDBC drivers...
-static void extractPrecisionAndScale(
-    sal_Int32 dataType, sal_Int32 atttypmod, sal_Int32 *precision, sal_Int32 *scale )
-{
-    if( atttypmod < PQ_VARHDRSZ )
+    inline bool isSystemColumn( sal_Int16 attnum )
     {
-        *precision = 0;
-        *scale = 0;
+        return attnum <= 0;
     }
-    else
+
+    // is not exported by the postgres header
+    const int PQ_VARHDRSZ = sizeof( sal_Int32 );
+
+    // Oh, quelle horreur
+    // LEM TODO: Need to severely rewrite that!
+    // should probably just "do the same" as ODBC or JDBC drivers...
+    void extractPrecisionAndScale(
+        sal_Int32 dataType, sal_Int32 atttypmod, sal_Int32 *precision, sal_Int32 *scale )
     {
-        switch( dataType )
+        if( atttypmod < PQ_VARHDRSZ )
         {
-        case com::sun::star::sdbc::DataType::NUMERIC:
-        case com::sun::star::sdbc::DataType::DECIMAL:
-        {
-            *precision = ( ( atttypmod - PQ_VARHDRSZ ) >> 16 ) & 0xffff;
-            *scale = (atttypmod - PQ_VARHDRSZ ) & 0xffff;
-            break;
-        }
-        default:
-            *precision = atttypmod - PQ_VARHDRSZ;
+            *precision = 0;
             *scale = 0;
         }
+        else
+        {
+            switch( dataType )
+            {
+            case com::sun::star::sdbc::DataType::NUMERIC:
+            case com::sun::star::sdbc::DataType::DECIMAL:
+            {
+                *precision = ( ( atttypmod - PQ_VARHDRSZ ) >> 16 ) & 0xffff;
+                *scale = (atttypmod - PQ_VARHDRSZ ) & 0xffff;
+                break;
+            }
+            default:
+                *precision = atttypmod - PQ_VARHDRSZ;
+                *scale = 0;
+            }
+        }
     }
-}
 
-struct DatabaseTypeDescription
-{
-    DatabaseTypeDescription()
-    {}
-    DatabaseTypeDescription( const OUString &name, const OUString & type ) :
-        typeName( name ),
-        typeType( type )
-    {}
-    DatabaseTypeDescription( const DatabaseTypeDescription &source ) :
-        typeName( source.typeName ),
-        typeType( source.typeType )
-    {}
-    DatabaseTypeDescription & operator = ( const DatabaseTypeDescription & source )
+    struct DatabaseTypeDescription
     {
-        typeName = source.typeName;
-        typeType = source.typeType;
-        return *this;
-    }
-    OUString typeName;
-    OUString typeType;
-};
+        DatabaseTypeDescription()
+        {}
+        DatabaseTypeDescription( const OUString &name, const OUString & type ) :
+            typeName( name ),
+            typeType( type )
+        {}
+        DatabaseTypeDescription( const DatabaseTypeDescription &source ) :
+            typeName( source.typeName ),
+            typeType( source.typeType )
+        {}
+        DatabaseTypeDescription & operator = ( const DatabaseTypeDescription & source )
+        {
+            typeName = source.typeName;
+            typeType = source.typeType;
+            return *this;
+        }
+        OUString typeName;
+        OUString typeType;
+    };
+}
 
 typedef std::unordered_map
 <
     sal_Int32,
-    DatabaseTypeDescription,
-    ::boost::hash< sal_Int32 >,
-    ::std::equal_to< sal_Int32 >
+    DatabaseTypeDescription
 > Oid2DatabaseTypeDescriptionMap;
 
 static void columnMetaData2DatabaseTypeDescription(
@@ -1445,7 +1458,6 @@ static void columnMetaData2DatabaseTypeDescription(
     }
 
 }
-
 
 
 ::com::sun::star::uno::Reference< XResultSet > DatabaseMetaData::getColumns(
@@ -1559,7 +1571,7 @@ static void columnMetaData2DatabaseTypeDescription(
 
     Reference< XResultSet > rs = statement->executeQuery();
     Reference< XRow > xRow( rs, UNO_QUERY_THROW );
-    SequenceAnyVector vec;
+    std::vector< std::vector<Any> > vec;
 
     Oid2DatabaseTypeDescriptionMap domainMap;
     Reference< XStatement > domainTypeStmt = m_origin->createStatement();
@@ -1584,7 +1596,7 @@ static void columnMetaData2DatabaseTypeDescription(
             else
                 ++colNum;
             sal_Int32 precision, scale, type;
-            Sequence< Any > row( 18 );
+            std::vector< Any > row( 18 );
             row[0] <<= m_pSettings->catalog;
             row[1] <<= sNewSchema;
             row[2] <<= sNewTable;
@@ -1631,7 +1643,7 @@ static void columnMetaData2DatabaseTypeDescription(
         closeable->close();
 
     return new SequenceResultSet(
-        m_refMutex, *this, statics.columnRowNames, sequence_of_vector(vec), m_pSettings->tc );
+        m_refMutex, *this, statics.columnRowNames, vec, m_pSettings->tc );
 }
 
 ::com::sun::star::uno::Reference< XResultSet > DatabaseMetaData::getColumnPrivileges(
@@ -1702,7 +1714,7 @@ static void columnMetaData2DatabaseTypeDescription(
     //LEM TODO: implement! See JDBC driver
     MutexGuard guard( m_refMutex->mutex );
     return new SequenceResultSet(
-        m_refMutex, *this, Sequence< OUString >(), Sequence< Sequence< Any > > (), m_pSettings->tc );
+        m_refMutex, *this, std::vector< OUString >(), std::vector< std::vector< Any > >(), m_pSettings->tc );
 }
 
 ::com::sun::star::uno::Reference< XResultSet > DatabaseMetaData::getVersionColumns(
@@ -1713,7 +1725,7 @@ static void columnMetaData2DatabaseTypeDescription(
     //LEM TODO: implement! See JDBC driver
     MutexGuard guard( m_refMutex->mutex );
     return new SequenceResultSet(
-        m_refMutex, *this, Sequence< OUString >(), Sequence< Sequence< Any > > (), m_pSettings->tc );
+        m_refMutex, *this, std::vector< OUString >(), std::vector< std::vector< Any > >(), m_pSettings->tc );
 }
 
 ::com::sun::star::uno::Reference< XResultSet > DatabaseMetaData::getPrimaryKeys(
@@ -1757,11 +1769,11 @@ static void columnMetaData2DatabaseTypeDescription(
 
     Reference< XResultSet > rs = statement->executeQuery();
     Reference< XRow > xRow( rs, UNO_QUERY_THROW );
-    SequenceAnyVector vec;
+    std::vector< std::vector<Any> > vec;
 
     while( rs->next() )
     {
-        Sequence< Any > row( 6 );
+        std::vector< Any > row( 6 );
         row[0] <<= m_pSettings->catalog;
         row[1] <<= xRow->getString(1);
         row[2] <<= xRow->getString(2);
@@ -1796,15 +1808,15 @@ static void columnMetaData2DatabaseTypeDescription(
     }
 
 
-    SequenceAnyVector::iterator ii = vec.begin();
+    std::vector< std::vector<Any> >::const_iterator ii = vec.begin();
     OUString lastTableOid;
     sal_Int32 index = 0;
-    Sequence< Sequence< Any > > ret( vec.size() );
+    std::vector< std::vector< Any > > ret( vec.size() );
     int elements = 0;
     for( ; ii != vec.end() ; ++ ii )
     {
 
-        Sequence< Any > row = *ii;
+        std::vector< Any > row = *ii;
         OUString tableOid;
         OUString attnum;
 
@@ -1840,7 +1852,7 @@ static void columnMetaData2DatabaseTypeDescription(
         elements ++;
     }
     return new SequenceResultSet(
-        m_refMutex, *this, getStatics().primaryKeyNames, ret , m_pSettings->tc );
+        m_refMutex, *this, getStatics().primaryKeyNames, ret, m_pSettings->tc );
 }
 
 // Copied / adapted / simplified from JDBC driver
@@ -2128,156 +2140,192 @@ void DatabaseMetaData::init_getPrivs_stmt ()
     return getImportedExportedKeys( primaryCatalog, primarySchema, primaryTable, foreignCatalog, foreignSchema, foreignTable );
 }
 
-
-struct TypeInfoByDataTypeSorter
+namespace
 {
-    bool operator () ( const Sequence< Any > & a, const Sequence< Any > & b )
+    struct TypeInfoByDataTypeSorter
     {
-        OUString valueA;
-        OUString valueB;
-        a[1 /*DATA_TYPE*/] >>= valueA;
-        b[1 /*DATA_TYPE*/] >>= valueB;
-        if( valueB.toInt32() == valueA.toInt32() )
+        bool operator () ( const std::vector< Any > & a, const std::vector< Any > & b )
         {
-            OUString nameA;
-            OUString nameB;
-            a[0 /*TYPE_NAME*/] >>= nameA;
-            b[0 /*TYPE_NAME*/] >>= nameB;
-            if( nameA.startsWith( "int4" ) )
-                return true;
-            if( nameB.startsWith( "int4" ) )
-                return false;
-            return nameA.compareTo( nameB ) < 0;
+            OUString valueA;
+            OUString valueB;
+            a[1 /*DATA_TYPE*/] >>= valueA;
+            b[1 /*DATA_TYPE*/] >>= valueB;
+            if( valueB.toInt32() == valueA.toInt32() )
+            {
+                OUString nameA;
+                OUString nameB;
+                a[0 /*TYPE_NAME*/] >>= nameA;
+                b[0 /*TYPE_NAME*/] >>= nameB;
+                OUString nsA, tnA, nsB, tnB;
+
+                // parse typename into schema and typename
+                sal_Int32 nIndex=0;
+                nsA = nameA.getToken(0, '.', nIndex);
+                if (nIndex<0)
+                {
+                    tnA = nsA;
+                    nsA.clear();
+                }
+                else
+                {
+                    tnA = nameA.getToken(0, '.', nIndex);
+                    assert(nIndex < 0);
+                }
+
+                nIndex=0;
+                nsB = nameB.getToken(0, '.', nIndex);
+                if (nIndex<0)
+                {
+                    tnB = nsB;
+                    nsB.clear();
+                }
+                else
+                {
+                    tnB = nameB.getToken(0, '.', nIndex);
+                    assert(nIndex < 0);
+                }
+
+                const int ns_comp = compare_schema(nsA, nsB);
+                if(ns_comp == 0)
+                {
+                    if(nsA.isEmpty())
+                    {
+                        assert(nsB.isEmpty());
+                        // within each type category, sort privileged choice first
+                        if( tnA == "int4" || tnA == "varchar" || tnA == "char" || tnA == "text")
+                            return true;
+                        if( tnB == "int4" || tnB == "varchar" || tnB == "char" || tnB == "text")
+                            return false;
+                    }
+                    return nameA.compareTo( nameB ) < 0;
+                }
+                else
+                {
+                    return ns_comp < 0;
+                }
+            }
+
+            return valueA.toInt32() < valueB.toInt32();
         }
+    };
 
-        return valueA.toInt32() < valueB.toInt32();
-//         sal_Int32 valueA;
-//         sal_Int32 valueB;
-//         a[1 /*DATA_TYPE*/] >>= valueA;
-//         b[1 /*DATA_TYPE*/] >>= valueB;
-//         if( valueB == valueA )
-//         {
-//             OUString nameA;
-//             OUString nameB;
-//             a[0 /*TYPE_NAME*/] >>= nameA;
-//             b[0 /*TYPE_NAME*/] >>= nameB;
-//             return nameA.compareTo( nameB ) < 0;
-//         }
+    sal_Int32 calcSearchable( sal_Int32 dataType )
+    {
+        sal_Int32 ret = com::sun::star::sdbc::ColumnSearch::FULL;
+        if( com::sun::star::sdbc::DataType::BINARY == dataType ||
+            com::sun::star::sdbc::DataType::VARBINARY == dataType ||
+            com::sun::star::sdbc::DataType::LONGVARBINARY == dataType )
+            ret = com::sun::star::sdbc::ColumnSearch::NONE;
 
-//         return valueA < valueB;
+        return ret;
     }
-};
 
-static sal_Int32 calcSearchable( sal_Int32 dataType )
-{
-    sal_Int32 ret = com::sun::star::sdbc::ColumnSearch::FULL;
-    if( com::sun::star::sdbc::DataType::BINARY == dataType ||
-        com::sun::star::sdbc::DataType::VARBINARY == dataType ||
-        com::sun::star::sdbc::DataType::LONGVARBINARY == dataType )
-        ret = com::sun::star::sdbc::ColumnSearch::NONE;
-
-    return ret;
-}
-
-static sal_Int32 getMaxScale( sal_Int32 dataType )
-{
-    // LEM TODO: review, see where used, see JDBC, ...
-    sal_Int32 ret = 0;
-    if( dataType == com::sun::star::sdbc::DataType::NUMERIC )
-        ret = 1000; // see pg-docs DataType/numeric
+    sal_Int32 getMaxScale( sal_Int32 dataType )
+    {
+        // LEM TODO: review, see where used, see JDBC, ...
+        sal_Int32 ret = 0;
+        if( dataType == com::sun::star::sdbc::DataType::NUMERIC )
+            ret = 1000; // see pg-docs DataType/numeric
 //     else if( dataType == DataType::DOUBLE )
 //         ret = 308;
 //     else if( dataType == DataType::FLOAT )
 //         ret =
-    return ret;
-}
-
-
-static void pgTypeInfo2ResultSet(
-     SequenceAnyVector &vec,
-     const Reference< XResultSet > &rs )
-{
-    static const sal_Int32 TYPE_NAME = 0;  // string Type name
-    static const sal_Int32 DATA_TYPE = 1;  // short SQL data type from java.sql.Types
-    static const sal_Int32 PRECISION = 2;  // long maximum precision
-    static const sal_Int32 CREATE_PARAMS = 5; // string => parameters used in creating the type (may be NULL )
-    static const sal_Int32 NULLABLE  = 6;  // short ==> can you use NULL for this type?
-                                           // - NO_NULLS - does not allow NULL values
-                                           // - NULLABLE - allows NULL values
-                                           // - NULLABLE_UNKNOWN - nullability unknown
-
-    static const sal_Int32 CASE_SENSITIVE = 7; // boolean==> is it case sensitive
-    static const sal_Int32 SEARCHABLE = 8;  // short ==>; can you use
-                                            // "WHERE" based on this type:
-                                            //   - NONE - No support
-                                            //   - CHAR - Only supported with WHERE .. LIKE
-                                            //   - BASIC - Supported except for WHERE .. LIKE
-                                            //   - FULL - Supported for all WHERE ..
-    static const sal_Int32 UNSIGNED_ATTRIBUTE = 9; // boolean ==> is it unsigned?
-    static const sal_Int32 FIXED_PREC_SCALE = 10; // boolean ==> can it be a money value?
-    static const sal_Int32 AUTO_INCREMENT = 11; // boolean ==> can it be used for
-                                                // an auto-increment value?
-    static const sal_Int32 MINIMUM_SCALE = 13; // short ==> minimum scale supported
-    static const sal_Int32 MAXIMUM_SCALE = 14; // short ==> maximum scale supported
-    static const sal_Int32 NUM_PREC_RADIX = 17; // long ==> usually 2 or 10
-
-    /*  not filled so far
-        3. LITERAL_PREFIX string ==> prefix used to quote a literal
-                                     (may be <NULL/>)
-        4, LITERAL_SUFFIX string ==> suffix used to quote a literal
-                                    (may be <NULL/>)
-        5. CREATE_PARAMS string ==> parameters used in creating thw type (may be <NULL/>)
-        12. LOCAL_TYPE_NAME  string ==> localized version of type name (may be <NULL/>)
-        15, SQL_DATA_TYPE long ==> unused
-        16. SQL_DATETIME_SUB long ==> unused
-     */
-    Reference< XRow > xRow( rs, UNO_QUERY_THROW );
-    while( rs->next() )
-    {
-        Sequence< Any > row(18);
-
-        sal_Int32 dataType =typeNameToDataType(xRow->getString(5),xRow->getString(2));
-        sal_Int32 precision = xRow->getString(3).toInt32();
-
-        if( dataType == com::sun::star::sdbc::DataType::CHAR  ||
-            ( dataType == com::sun::star::sdbc::DataType::VARCHAR &&
-              xRow->getString(TYPE_NAME+1).equalsIgnoreAsciiCase("varchar") ) )
-        {
-            // reflect varchar as varchar with upper limit !
-            //NOTE: the sql spec requires varchar to have an upper limit, however
-            //      in postgresql the upper limit is optional, no limit means unlimited
-            //      length (=1GB).
-            precision = 0x40000000; // about 1 GB, see character type docs in postgresql
-            row[CREATE_PARAMS] <<= OUString("length");
-        }
-        else if( dataType == com::sun::star::sdbc::DataType::NUMERIC )
-        {
-            precision = 1000;
-            row[CREATE_PARAMS] <<= OUString("length, scale");
-        }
-
-        row[TYPE_NAME] <<= xRow->getString(1);
-        row[DATA_TYPE] <<= OUString::number(dataType);
-        row[PRECISION] <<= OUString::number( precision );
-        sal_Int32 nullable = xRow->getBoolean(4) ?
-            com::sun::star::sdbc::ColumnValue::NO_NULLS :
-            com::sun::star::sdbc::ColumnValue::NULLABLE;
-        row[NULLABLE] <<= OUString::number(nullable);
-        row[CASE_SENSITIVE] <<= OUString::number(1);
-        row[SEARCHABLE] <<= OUString::number( calcSearchable( dataType ) );
-        row[UNSIGNED_ATTRIBUTE] <<= OUString("0");
-        if( com::sun::star::sdbc::DataType::INTEGER == dataType ||
-            com::sun::star::sdbc::DataType::BIGINT == dataType )
-            row[AUTO_INCREMENT] <<= OUString("1");     // TODO
-        else
-            row[AUTO_INCREMENT] <<= OUString("0");     // TODO
-        row[MINIMUM_SCALE] <<= OUString("0");      // TODO: what is this ?
-        row[MAXIMUM_SCALE] <<= OUString::number( getMaxScale( dataType ) );
-        row[NUM_PREC_RADIX] <<= OUString("10");    // TODO: what is this ?
-        (void)FIXED_PREC_SCALE;
-        vec.push_back( row );
+        return ret;
     }
 
+    OUString construct_full_typename(const OUString &ns, const OUString &tn)
+    {
+        if(ns.isEmpty() || ns == "pg_catalog")
+            return tn;
+        else
+            return ns + "." + tn;
+    }
+
+    void pgTypeInfo2ResultSet(
+         std::vector< std::vector<Any> > &vec,
+         const Reference< XResultSet > &rs )
+    {
+        static const sal_Int32 TYPE_NAME = 0;  // string Type name
+        static const sal_Int32 DATA_TYPE = 1;  // short SQL data type from java.sql.Types
+        static const sal_Int32 PRECISION = 2;  // long maximum precision
+        static const sal_Int32 CREATE_PARAMS = 5; // string => parameters used in creating the type (may be NULL )
+        static const sal_Int32 NULLABLE  = 6;  // short ==> can you use NULL for this type?
+                                               // - NO_NULLS - does not allow NULL values
+                                               // - NULLABLE - allows NULL values
+                                               // - NULLABLE_UNKNOWN - nullability unknown
+
+        static const sal_Int32 CASE_SENSITIVE = 7; // boolean==> is it case sensitive
+        static const sal_Int32 SEARCHABLE = 8;  // short ==>; can you use
+                                                // "WHERE" based on this type:
+                                                //   - NONE - No support
+                                                //   - CHAR - Only supported with WHERE .. LIKE
+                                                //   - BASIC - Supported except for WHERE .. LIKE
+                                                //   - FULL - Supported for all WHERE ..
+        static const sal_Int32 UNSIGNED_ATTRIBUTE = 9; // boolean ==> is it unsigned?
+        static const sal_Int32 FIXED_PREC_SCALE = 10; // boolean ==> can it be a money value?
+        static const sal_Int32 AUTO_INCREMENT = 11; // boolean ==> can it be used for
+                                                    // an auto-increment value?
+        static const sal_Int32 MINIMUM_SCALE = 13; // short ==> minimum scale supported
+        static const sal_Int32 MAXIMUM_SCALE = 14; // short ==> maximum scale supported
+        static const sal_Int32 NUM_PREC_RADIX = 17; // long ==> usually 2 or 10
+
+        /*  not filled so far
+            3. LITERAL_PREFIX string ==> prefix used to quote a literal
+                                         (may be <NULL/>)
+            4. LITERAL_SUFFIX string ==> suffix used to quote a literal
+                                         (may be <NULL/>)
+            5. CREATE_PARAMS string ==> parameters used in creating thw type (may be <NULL/>)
+            12. LOCAL_TYPE_NAME  string ==> localized version of type name (may be <NULL/>)
+            15, SQL_DATA_TYPE long ==> unused
+            16. SQL_DATETIME_SUB long ==> unused
+         */
+        Reference< XRow > xRow( rs, UNO_QUERY_THROW );
+        while( rs->next() )
+        {
+            std::vector< Any > row(18);
+
+            sal_Int32 dataType =typeNameToDataType(xRow->getString(5),xRow->getString(2));
+            sal_Int32 precision = xRow->getString(3).toInt32();
+
+            if( dataType == com::sun::star::sdbc::DataType::CHAR  ||
+                ( dataType == com::sun::star::sdbc::DataType::VARCHAR &&
+                  xRow->getString(TYPE_NAME+1).equalsIgnoreAsciiCase("varchar") ) )
+            {
+                // reflect varchar as varchar with upper limit !
+                //NOTE: the sql spec requires varchar to have an upper limit, however
+                //      in postgresql the upper limit is optional, no limit means unlimited
+                //      length (=1GB).
+                precision = 0x40000000; // about 1 GB, see character type docs in postgresql
+                row[CREATE_PARAMS] <<= OUString("length");
+            }
+            else if( dataType == com::sun::star::sdbc::DataType::NUMERIC )
+            {
+                precision = 1000;
+                row[CREATE_PARAMS] <<= OUString("length, scale");
+            }
+
+            row[TYPE_NAME] <<= construct_full_typename(xRow->getString(6), xRow->getString(1));
+            row[DATA_TYPE] <<= OUString::number(dataType);
+            row[PRECISION] <<= OUString::number( precision );
+            sal_Int32 nullable = xRow->getBoolean(4) ?
+                com::sun::star::sdbc::ColumnValue::NO_NULLS :
+                com::sun::star::sdbc::ColumnValue::NULLABLE;
+            row[NULLABLE] <<= OUString::number(nullable);
+            row[CASE_SENSITIVE] <<= OUString::number(1);
+            row[SEARCHABLE] <<= OUString::number( calcSearchable( dataType ) );
+            row[UNSIGNED_ATTRIBUTE] <<= OUString("0");
+            if( com::sun::star::sdbc::DataType::INTEGER == dataType ||
+                com::sun::star::sdbc::DataType::BIGINT == dataType )
+                row[AUTO_INCREMENT] <<= OUString("1");     // TODO
+            else
+                row[AUTO_INCREMENT] <<= OUString("0");     // TODO
+            row[MINIMUM_SCALE] <<= OUString("0");      // TODO: what is this ?
+            row[MAXIMUM_SCALE] <<= OUString::number( getMaxScale( dataType ) );
+            row[NUM_PREC_RADIX] <<= OUString("10");    // TODO: what is this ?
+            (void)FIXED_PREC_SCALE;
+            vec.push_back( row );
+        }
+    }
 }
 
 
@@ -2298,13 +2346,14 @@ static void pgTypeInfo2ResultSet(
           "pg_type.typtype AS typtype,"        //2
           "pg_type.typlen AS typlen,"          //3
           "pg_type.typnotnull AS typnotnull,"  //4
-          "pg_type.typname AS typname "        //5
-          "FROM pg_type "
+          "pg_type.typname AS typname, "       //5
+          "pg_namespace.nspname as typns "     //6
+          "FROM pg_type LEFT JOIN pg_namespace ON pg_type.typnamespace=pg_namespace.oid "
           "WHERE pg_type.typtype = 'b' "
           "OR pg_type.typtype = 'p'"
             );
 
-    SequenceAnyVector vec;
+    std::vector< std::vector<Any> > vec;
     pgTypeInfo2ResultSet( vec, rs );
 
     // check for domain types
@@ -2313,8 +2362,9 @@ static void pgTypeInfo2ResultSet(
         "t2.typtype AS typtype,"
         "t2.typlen AS typlen,"
         "t2.typnotnull AS typnotnull,"
-        "t2.typname as realtypname "
-        "FROM pg_type as t1 LEFT JOIN pg_type AS t2 ON t1.typbasetype=t2.oid "
+        "t2.typname as realtypname, "
+        "pg_namespace.nspname as typns "
+        "FROM pg_type as t1 LEFT JOIN pg_type AS t2 ON t1.typbasetype=t2.oid LEFT JOIN pg_namespace ON t1.typnamespace=pg_namespace.oid "
         "WHERE t1.typtype = 'd'" );
     pgTypeInfo2ResultSet( vec, rs );
 
@@ -2324,25 +2374,11 @@ static void pgTypeInfo2ResultSet(
         m_refMutex,
         *this,
         getStatics().typeinfoColumnNames,
-        sequence_of_vector(vec),
+        vec,
         m_pSettings->tc,
         &( getStatics().typeInfoMetaData ));
 }
 
-
-static sal_Int32 seqContains( const Sequence< sal_Int32 > &seq, sal_Int32 value )
-{
-    sal_Int32 ret = -1;
-    for( int i = 0; i < seq.getLength(); i ++ )
-    {
-        if( seq[i] == value )
-        {
-            ret = i;
-            break;
-        }
-    }
-    return ret;
-}
 
 ::com::sun::star::uno::Reference< XResultSet > DatabaseMetaData::getIndexInfo(
     const ::com::sun::star::uno::Any& ,
@@ -2419,10 +2455,10 @@ static sal_Int32 seqContains( const Sequence< sal_Int32 > &seq, sal_Int32 value 
     Reference< XResultSet > rs = stmt->executeQuery();
     Reference< XRow > xRow ( rs, UNO_QUERY_THROW );
 
-    SequenceAnyVector vec;
+    std::vector< std::vector<Any> > vec;
     while( rs->next() )
     {
-        Sequence< sal_Int32 > columns = parseIntArray( xRow->getString(C_COLUMNS) );
+        std::vector< sal_Int32 > columns = parseIntArray( xRow->getString(C_COLUMNS) );
         Reference< XPreparedStatement > columnsStmt = m_origin->prepareStatement(
                 "SELECT attnum, attname "
                 "FROM pg_attribute "
@@ -2433,7 +2469,7 @@ static sal_Int32 seqContains( const Sequence< sal_Int32 > &seq, sal_Int32 value 
         OUString currentSchema = xRow->getString( C_SCHEMA );
         OUString currentTable = xRow->getString( C_TABLENAME );
         OUString currentIndexName = xRow->getString( C_INDEXNAME );
-        sal_Bool isNonUnique = ! xRow->getBoolean( C_IS_UNIQUE );
+        bool isNonUnique = ! xRow->getBoolean( C_IS_UNIQUE );
         bool isPrimary = xRow->getBoolean( C_IS_PRIMARY );
         (void)isPrimary;
         sal_Int32 indexType =  xRow->getBoolean( C_IS_CLUSTERED ) ?
@@ -2447,18 +2483,17 @@ static sal_Int32 seqContains( const Sequence< sal_Int32 > &seq, sal_Int32 value 
         Reference< XRow > rowColumn( rsColumn, UNO_QUERY_THROW );
         while( rsColumn->next() )
         {
-            sal_Int32 pos = seqContains( columns, rowColumn->getInt( 1 ) );
-            if( pos >= 0 && ( ! isNonUnique || !  unique ) )
+            auto findIt = std::find( columns.begin(), columns.end(), rowColumn->getInt( 1 ) );
+            if( findIt != columns.end() && ( ! isNonUnique || !  unique ) )
             {
-                Sequence< Any > result( 13 );
+                std::vector< Any > result( 13 );
                 result[R_TABLE_SCHEM] = makeAny(currentSchema);
                 result[R_TABLE_NAME] = makeAny(currentTable);
                 result[R_INDEX_NAME] = makeAny(currentIndexName);
-                result[R_NON_UNIQUE] =
-                    Any( &isNonUnique, cppu::UnoType<bool>::get() );
+                result[R_NON_UNIQUE] <<= isNonUnique;
                 result[R_TYPE] = makeAny( indexType );
                 result[R_COLUMN_NAME] = makeAny( rowColumn->getString(2) );
-                sal_Int32 nPos = ((sal_Int32)pos+1); // MSVC++ nonsense
+                sal_Int32 nPos = (sal_Int32)(findIt - columns.begin() +1); // MSVC++ nonsense
                 result[R_ORDINAL_POSITION] = makeAny( nPos );
                 vec.push_back( result );
             }
@@ -2466,7 +2501,7 @@ static sal_Int32 seqContains( const Sequence< sal_Int32 > &seq, sal_Int32 value 
     }
     return new SequenceResultSet(
         m_refMutex, *this, getStatics().indexinfoColumnNames,
-        sequence_of_vector(vec),
+        vec,
         m_pSettings->tc );
 }
 
@@ -2474,9 +2509,9 @@ sal_Bool DatabaseMetaData::supportsResultSetType( sal_Int32 setType )
     throw (SQLException, RuntimeException, std::exception)
 {
     if ( setType == com::sun::star::sdbc::ResultSetType::SCROLL_SENSITIVE )
-        return sal_False;
+        return false;
     else
-        return sal_True;
+        return true;
 }
 
 sal_Bool DatabaseMetaData::supportsResultSetConcurrency(
@@ -2484,58 +2519,58 @@ sal_Bool DatabaseMetaData::supportsResultSetConcurrency(
 {
     (void) concurrency;
     if ( ! supportsResultSetType( setType ) )
-        return sal_False;
+        return false;
     else
-        return sal_True;
+        return true;
 }
 
 sal_Bool DatabaseMetaData::ownUpdatesAreVisible( sal_Int32 /* setType */ ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 sal_Bool DatabaseMetaData::ownDeletesAreVisible( sal_Int32 /* setType */ ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 sal_Bool DatabaseMetaData::ownInsertsAreVisible( sal_Int32 /* setType */ ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 sal_Bool DatabaseMetaData::othersUpdatesAreVisible( sal_Int32 /* setType */ ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_False;
+    return false;
 }
 
 sal_Bool DatabaseMetaData::othersDeletesAreVisible( sal_Int32 /* setType */ ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_False;
+    return false;
 }
 
 sal_Bool DatabaseMetaData::othersInsertsAreVisible( sal_Int32 /* setType */ ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_False;
+    return false;
 }
 
 sal_Bool DatabaseMetaData::updatesAreDetected( sal_Int32 /* setType */ ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_False;
+    return false;
 }
 
 sal_Bool DatabaseMetaData::deletesAreDetected( sal_Int32 /* setType */ ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_False;
+    return false;
 }
 sal_Bool DatabaseMetaData::insertsAreDetected( sal_Int32 /* setType */ ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_False;
+    return false;
 }
 
 sal_Bool DatabaseMetaData::supportsBatchUpdates(  ) throw (SQLException, RuntimeException, std::exception)
 {
-    return sal_True;
+    return true;
 }
 
 css::uno::Reference< XResultSet > DatabaseMetaData::getUDTs( const ::com::sun::star::uno::Any&, const OUString&, const OUString&, const ::com::sun::star::uno::Sequence< sal_Int32 >& ) throw (SQLException, RuntimeException, std::exception)
@@ -2543,7 +2578,7 @@ css::uno::Reference< XResultSet > DatabaseMetaData::getUDTs( const ::com::sun::s
     //LEM TODO: implement! See JDBC driver
     MutexGuard guard( m_refMutex->mutex );
     return new SequenceResultSet(
-        m_refMutex, *this, Sequence< OUString >(), Sequence< Sequence< Any > > (), m_pSettings->tc );
+        m_refMutex, *this, std::vector< OUString >(), std::vector< std::vector< Any > >(), m_pSettings->tc );
 }
 
 ::com::sun::star::uno::Reference< com::sun::star::sdbc::XConnection > DatabaseMetaData::getConnection()

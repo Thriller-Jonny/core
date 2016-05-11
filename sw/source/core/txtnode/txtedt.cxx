@@ -145,8 +145,7 @@ lcl_MaskRedlines( const SwTextNode& rNode, OUStringBuffer& rText,
 static bool
 lcl_MaskRedlinesAndHiddenText( const SwTextNode& rNode, OUStringBuffer& rText,
                                       sal_Int32 nStt, sal_Int32 nEnd,
-                                      const sal_Unicode cChar = CH_TXTATR_INWORD,
-                                      bool bCheckShowHiddenChar = true )
+                                      const sal_Unicode cChar = CH_TXTATR_INWORD )
 {
     sal_Int32 nRedlinesMasked = 0;
     sal_Int32 nHiddenCharsMasked = 0;
@@ -165,7 +164,7 @@ lcl_MaskRedlinesAndHiddenText( const SwTextNode& rNode, OUStringBuffer& rText,
 
     // If called from word count, we want to mask the hidden ranges even
     // if they are visible:
-    if ( !bCheckShowHiddenChar || bHideHidden )
+    if ( bHideHidden )
     {
         nHiddenCharsMasked =
             SwScriptInfo::MaskHiddenRanges( rNode, rText, nStt, nEnd, cChar );
@@ -606,7 +605,8 @@ void SwTextNode::RstTextAttr(
         for (i = 0; i < m_pSwpHints->Count(); ++i)
         {
             SwTextAttr* pHint = m_pSwpHints->Get(i);
-            if (pHint->GetStart() != nStt)
+            if ( (isTXTATR_WITHEND(pHint->Which()) && RES_TXTATR_AUTOFMT != pHint->Which())
+                || pHint->GetStart() != nStt)
                 continue;
 
             const sal_Int32* pHintEnd = pHint->GetEnd();
@@ -940,7 +940,7 @@ bool SwScanner::NextWord()
 
 bool SwTextNode::Spell(SwSpellArgs* pArgs)
 {
-    // Die Aehnlichkeiten zu SwTextFrame::_AutoSpell sind beabsichtigt ...
+    // Die Aehnlichkeiten zu SwTextFrame::AutoSpell_ sind beabsichtigt ...
     // ACHTUNG: Ev. Bugs in beiden Routinen fixen!
 
     // modify string according to redline information and hidden text
@@ -1084,8 +1084,8 @@ void SwTextNode::SetLanguageAndFont( const SwPaM &rPaM,
     if (pFont)
     {
         SvxFontItem aFontItem = static_cast<const SvxFontItem&>( aSet.Get( nFontWhichId ) );
-        aFontItem.SetFamilyName(   pFont->GetName());
-        aFontItem.SetFamily(       pFont->GetFamily());
+        aFontItem.SetFamilyName(   pFont->GetFamilyName());
+        aFontItem.SetFamily(       pFont->GetFamilyType());
         aFontItem.SetStyleName(    pFont->GetStyleName());
         aFontItem.SetPitch(        pFont->GetPitch());
         aFontItem.SetCharSet( pFont->GetCharSet() );
@@ -1237,7 +1237,7 @@ bool SwTextNode::Convert( SwConversionArgs &rArgs )
 
 // Die Aehnlichkeiten zu SwTextNode::Spell sind beabsichtigt ...
 // ACHTUNG: Ev. Bugs in beiden Routinen fixen!
-SwRect SwTextFrame::_AutoSpell( const SwContentNode* pActNode, sal_Int32 nActPos )
+SwRect SwTextFrame::AutoSpell_( const SwContentNode* pActNode, sal_Int32 nActPos )
 {
     SwRect aRect;
 #if OSL_DEBUG_LEVEL > 1
@@ -1264,7 +1264,6 @@ SwRect SwTextFrame::_AutoSpell( const SwContentNode* pActNode, sal_Int32 nActPos
     }
 
     // a change of data indicates that at least one word has been modified
-    const bool bRedlineChg = (pNode->GetText().getStr() != aOldText.getStr());
 
     sal_Int32 nBegin = 0;
     sal_Int32 nEnd = pNode->GetText().getLength();
@@ -1361,7 +1360,8 @@ SwRect SwTextFrame::_AutoSpell( const SwContentNode* pActNode, sal_Int32 nActPos
                                 pNode->GetWrong()->Insert(OUString(), nullptr, nBegin, nLen, nInsertPos++);
                                 break;
                             case SwWrongList::FreshState::CURSOR:
-                                bPending = true; // fall-through to mark as invalid
+                                bPending = true;
+                                SAL_FALLTHROUGH; // to mark as invalid
                             case SwWrongList::FreshState::NOTHING:
                                 nInvStart = nBegin;
                                 nInvEnd = nBegin + nLen;
@@ -1371,13 +1371,7 @@ SwRect SwTextFrame::_AutoSpell( const SwContentNode* pActNode, sal_Int32 nActPos
                 }
                 else if( bAddAutoCmpl && rACW.GetMinWordLen() <= rWord.getLength() )
                 {
-                    if ( bRedlineChg )
-                    {
-                        OUString rNewWord( rWord );
-                        rACW.InsertWord( rNewWord, *pDoc );
-                    }
-                    else
-                        rACW.InsertWord( rWord, *pDoc );
+                    rACW.InsertWord( rWord, *pDoc );
                 }
             }
         }
@@ -1488,7 +1482,7 @@ SwRect SwTextFrame::SmartTagScan( SwContentNode* /*pActNode*/, sal_Int32 /*nActP
     {
         // Expand the string:
         const ModelToViewHelper aConversionMap(*pNode /*TODO - replace or expand fields for smart tags?*/);
-        OUString aExpandText = aConversionMap.getViewText();
+        const OUString& aExpandText = aConversionMap.getViewText();
 
         // Ownership ov ConversionMap is passed to SwXTextMarkup object!
         uno::Reference<text::XTextMarkup> const xTextMarkup =
@@ -1640,7 +1634,7 @@ bool SwTextNode::Hyphenate( SwInterHyphInfo &rHyphInf )
         {
             // Das Layout ist nicht robust gegen "Direktformatierung"
             // (7821, 7662, 7408); vgl. layact.cxx,
-            // SwLayAction::_TurboAction(), if( !pCnt->IsValid() ...
+            // SwLayAction::TurboAction_(), if( !pCnt->IsValid() ...
             pFrame->SetCompletePaint();
             return true;
         }
@@ -2015,7 +2009,7 @@ bool SwTextNode::CountWords( SwDocStat& rStat,
 
     // ConversionMap to expand fields, remove invisible and redline deleted text for scanner
     const ModelToViewHelper aConversionMap(*this, ExpandMode::ExpandFields | ExpandMode::ExpandFootnote | ExpandMode::HideInvisible | ExpandMode::HideDeletions);
-    OUString aExpandText = aConversionMap.getViewText();
+    const OUString& aExpandText = aConversionMap.getViewText();
 
     if (aExpandText.isEmpty() && !bCountNumbering)
     {

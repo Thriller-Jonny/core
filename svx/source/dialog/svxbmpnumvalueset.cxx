@@ -153,11 +153,11 @@ void  SvxNumValueSet::UserDraw( const UserDrawEvent& rUDEvt )
     vcl::Font aFont(OutputDevice::GetDefaultFont(
                 DefaultFontType::UI_SANS, MsLangId::getSystemLanguage(), GetDefaultFontFlags::OnlyOne));
 
-    Size aSize = aFont.GetSize();
+    Size aSize = aFont.GetFontSize();
 
     vcl::Font aRuleFont( lcl_GetDefaultBulletFont() );
     aSize.Height() = nRectHeight/6;
-    aRuleFont.SetSize(aSize);
+    aRuleFont.SetFontSize(aSize);
     aRuleFont.SetColor(aTextColor);
     aRuleFont.SetFillColor(aBackColor);
     if(ePageType == NumberingPageType::BULLET)
@@ -168,7 +168,7 @@ void  SvxNumValueSet::UserDraw( const UserDrawEvent& rUDEvt )
     }
     aFont.SetColor(aTextColor);
     aFont.SetFillColor(aBackColor);
-    aFont.SetSize( aSize );
+    aFont.SetFontSize( aSize );
     pDev->SetFont(aFont);
 
     if(!pVDev)
@@ -461,6 +461,7 @@ void SvxNumValueSet::SetOutlineNumberingSettings(
 
 SvxBmpNumValueSet::SvxBmpNumValueSet(vcl::Window* pParent, WinBits nWinBits)
     : SvxNumValueSet(pParent, nWinBits)
+    , aFormatIdle("SvxBmpNumValueSet FormatIdle")
 {
     init();
 }

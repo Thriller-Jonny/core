@@ -38,7 +38,6 @@
 #include <sfx2/viewsh.hxx>
 #include <sfx2/msg.hxx>
 #include <sfx2/msgpool.hxx>
-#include <sfx2/mnumgr.hxx>
 #include <sfx2/minfitem.hxx>
 #include <sfx2/objsh.hxx>
 #include <sfx2/request.hxx>
@@ -65,6 +64,7 @@
 #include <comphelper/processfactory.hxx>
 #include <comphelper/random.hxx>
 #include <unotools/configmgr.hxx>
+#include <o3tl/make_unique.hxx>
 #include <com/sun/star/embed/ElementModes.hpp>
 #include <com/sun/star/embed/FileSystemStorageFactory.hpp>
 #include <com/sun/star/frame/XFramesSupplier.hpp>
@@ -303,7 +303,7 @@ OUString
 generateCustomURL(
     SvxEntries* entries )
 {
-    OUString url = OUString(ITEM_TOOLBAR_URL );
+    OUString url = ITEM_TOOLBAR_URL;
     url += CUSTOM_TOOLBAR_STR;
 
     // use a random number to minimize possible clash with existing custom toolbars
@@ -1028,7 +1028,7 @@ MenuSaveInData::MenuSaveInData(
     try
     {
         OUString url( ITEM_MENUBAR_URL  );
-        m_xMenuSettings = GetConfigManager()->getSettings( url, sal_False );
+        m_xMenuSettings = GetConfigManager()->getSettings( url, false );
     }
     catch ( container::NoSuchElementException& )
     {
@@ -1201,7 +1201,7 @@ bool MenuSaveInData::Apply()
         uno::Reference< lang::XSingleComponentFactory > xFactory (
             m_xMenuSettings, uno::UNO_QUERY );
 
-        Apply( pRootEntry, xIndexContainer, xFactory );
+        Apply( xIndexContainer, xFactory );
 
         try
         {
@@ -1238,14 +1238,9 @@ bool MenuSaveInData::Apply()
 }
 
 void MenuSaveInData::Apply(
-    SvxConfigEntry* pRootEntry_,
     uno::Reference< container::XIndexContainer >& rMenuBar,
-    uno::Reference< lang::XSingleComponentFactory >& rFactory,
-    SvTreeListEntry *pParentEntry )
+    uno::Reference< lang::XSingleComponentFactory >& rFactory )
 {
-    (void)pRootEntry_;
-    (void)pParentEntry;
-
     SvxEntries::const_iterator iter = GetEntries()->begin();
     SvxEntries::const_iterator end = GetEntries()->end();
 
@@ -1325,7 +1320,14 @@ void SaveInData::ApplyMenu(
 void
 MenuSaveInData::Reset()
 {
-    GetConfigManager()->reset();
+    try
+    {
+        GetConfigManager()->removeSettings( m_aMenuResourceURL );
+    }
+    catch ( const css::uno::Exception& )
+    {}
+
+    PersistChanges( GetConfigManager() );
 
     delete pRootEntry;
     pRootEntry = nullptr;
@@ -1333,7 +1335,7 @@ MenuSaveInData::Reset()
     try
     {
         m_xMenuSettings = GetConfigManager()->getSettings(
-            m_aMenuResourceURL, sal_False );
+            m_aMenuResourceURL, false );
     }
     catch ( container::NoSuchElementException& )
     {
@@ -1385,7 +1387,7 @@ SvxEntries* ContextMenuSaveInData::GetEntries()
 {
     if ( !m_pRootEntry )
     {
-        typedef std::unordered_map< OUString, bool, OUStringHash, std::equal_to< OUString > > MenuInfo;
+        typedef std::unordered_map< OUString, bool, OUStringHash > MenuInfo;
         MenuInfo aMenuInfo;
 
         m_pRootEntry.reset( new SvxConfigEntry( "ContextMenus", OUString(), true ) );
@@ -1403,26 +1405,29 @@ SvxEntries* ContextMenuSaveInData::GetEntries()
             for ( const auto& aElementProp : aElement )
             {
                 if ( aElementProp.Name == ITEM_DESCRIPTOR_RESOURCEURL )
+                {
                     aElementProp.Value >>= aUrl;
+                    break;
+                }
             }
 
             css::uno::Reference< css::container::XIndexAccess > xPopupMenu;
             try
             {
-                xPopupMenu = GetConfigManager()->getSettings( aUrl, sal_False );
+                xPopupMenu = GetConfigManager()->getSettings( aUrl, false );
             }
             catch ( const css::uno::Exception& )
             {}
 
             if ( xPopupMenu.is() )
             {
-                OUString aMenuName = aUrl.copy( aUrl.lastIndexOf( '/' ) + 1 );
+                // insert into std::unordered_map to filter duplicates from the parent
+                aMenuInfo.insert( MenuInfo::value_type( aUrl, true ) );
+
                 OUString aUIMenuName = GetUIName( aUrl );
                 if ( aUIMenuName.isEmpty() )
-                    aUIMenuName = aMenuName;
-
-                // insert into std::unordered_map to filter duplicates from the parent
-                aMenuInfo.insert( MenuInfo::value_type( aMenuName, true ) );
+                    // Menus without UI name aren't supposed to be customized.
+                    continue;
 
                 SvxConfigEntry* pEntry = new SvxConfigEntry( aUIMenuName, aUrl, true );
                 pEntry->SetMain();
@@ -1444,21 +1449,21 @@ SvxEntries* ContextMenuSaveInData::GetEntries()
 
         for ( const auto& aElement : aParentElementsInfo )
         {
-            OUString aUrl, aMenuName;
+            OUString aUrl;
             for ( const auto& aElementProp : aElement )
             {
                 if ( aElementProp.Name == ITEM_DESCRIPTOR_RESOURCEURL )
                 {
                     aElementProp.Value >>= aUrl;
-                    aMenuName = aUrl.copy( aUrl.lastIndexOf( '/' ) + 1 );
+                    break;
                 }
             }
 
             css::uno::Reference< css::container::XIndexAccess > xPopupMenu;
             try
             {
-                if ( aMenuInfo.find( aMenuName ) == aMenuInfo.end() )
-                    xPopupMenu = xParentCfgMgr->getSettings( aUrl, sal_False );
+                if ( aMenuInfo.find( aUrl ) == aMenuInfo.end() )
+                    xPopupMenu = xParentCfgMgr->getSettings( aUrl, false );
             }
             catch ( const css::uno::Exception& )
             {}
@@ -1467,7 +1472,7 @@ SvxEntries* ContextMenuSaveInData::GetEntries()
             {
                 OUString aUIMenuName = GetUIName( aUrl );
                 if ( aUIMenuName.isEmpty() )
-                    aUIMenuName = aMenuName;
+                    continue;
 
                 SvxConfigEntry* pEntry = new SvxConfigEntry( aUIMenuName, aUrl, true, true );
                 pEntry->SetMain();
@@ -1515,7 +1520,7 @@ bool ContextMenuSaveInData::Apply()
             css::uno::Reference< css::lang::XSingleComponentFactory > xFactory( xIndexContainer, css::uno::UNO_QUERY );
             ApplyMenu( xIndexContainer, xFactory, pEntry );
 
-            OUString aUrl = pEntry->GetCommand();
+            const OUString& aUrl = pEntry->GetCommand();
             try
             {
                 if ( GetConfigManager()->hasSettings( aUrl ) )
@@ -1550,9 +1555,10 @@ void ContextMenuSaveInData::Reset()
 class PopupPainter : public SvLBoxString
 {
 public:
-    PopupPainter( SvTreeListEntry* pEntry, const OUString& rStr )
-        : SvLBoxString( pEntry, 0, rStr )
-    { }
+    explicit PopupPainter(const OUString& rStr)
+        : SvLBoxString(rStr)
+    {
+    }
 
     virtual ~PopupPainter() { }
 
@@ -2331,9 +2337,7 @@ SvTreeListEntry* SvxConfigPage::InsertEntryIntoUI(
              pNewEntryData->GetStyle() & css::ui::ItemStyle::DROP_DOWN )
         {
             // add new popup painter, it gets destructed by the entry
-            pNewEntry->ReplaceItem(
-                std::unique_ptr<PopupPainter>(new PopupPainter(pNewEntry, aName)),
-                pNewEntry->ItemCount() - 1 );
+            pNewEntry->ReplaceItem( o3tl::make_unique<PopupPainter>(aName), pNewEntry->ItemCount() - 1 );
         }
     }
 
@@ -2577,7 +2581,7 @@ void SvxMenuConfigPage::DeleteSelectedTopLevel()
     GetSaveInData()->SetModified( );
 }
 
-bool SvxMenuConfigPage::DeleteSelectedContent()
+void SvxMenuConfigPage::DeleteSelectedContent()
 {
     SvTreeListEntry *pActEntry = m_pContentsListBox->FirstSelected();
 
@@ -2607,10 +2611,7 @@ bool SvxMenuConfigPage::DeleteSelectedContent()
 
         GetSaveInData()->SetModified();
         pMenu->SetModified();
-
-        return true;
     }
-    return false;
 }
 
 short SvxMenuConfigPage::QueryReset()
@@ -3217,7 +3218,7 @@ void SvxToolbarConfigPage::DeleteSelectedTopLevel()
     }
 }
 
-bool SvxToolbarConfigPage::DeleteSelectedContent()
+void SvxToolbarConfigPage::DeleteSelectedContent()
 {
     SvTreeListEntry *pActEntry = m_pContentsListBox->FirstSelected();
 
@@ -3255,11 +3256,7 @@ bool SvxToolbarConfigPage::DeleteSelectedContent()
                 DeleteSelectedTopLevel();
             }
         }
-
-        return true;
     }
-
-    return false;
 }
 
 IMPL_LINK_TYPED( SvxToolbarConfigPage, MoveHdl, Button *, pButton, void )
@@ -3396,9 +3393,12 @@ IMPL_LINK_TYPED( SvxToolbarConfigPage, EntrySelectHdl, MenuButton *, pButton, vo
             if ( pNameDialog->Execute() == RET_OK ) {
                 pNameDialog->GetName(aNewName);
 
-                pEntry->SetName( aNewName );
-                m_pContentsListBox->SetEntryText( pActEntry, aNewName );
+                if( aNewName.isEmpty() ) //tdf#80758 - Accelerator character ("~") is passed as
+                    pEntry->SetName( "~" ); // the button name in case of empty values.
+                else
+                    pEntry->SetName( aNewName );
 
+                m_pContentsListBox->SetEntryText( pActEntry, aNewName );
                 bNeedsApply = true;
             }
             break;
@@ -3456,17 +3456,17 @@ IMPL_LINK_TYPED( SvxToolbarConfigPage, EntrySelectHdl, MenuButton *, pButton, vo
 
                 m_pContentsListBox->SetCheckButtonState( pNewLBEntry,
                     pEntry->IsVisible() ?
-                        SV_BUTTON_CHECKED : SV_BUTTON_UNCHECKED );
+                        SvButtonState::Checked : SvButtonState::Unchecked );
 
                 m_pContentsListBox->Select( pNewLBEntry );
                 m_pContentsListBox->MakeVisible( pNewLBEntry );
 
                 bNeedsApply = true;
             }
-               catch ( uno::Exception& )
-               {
+            catch ( uno::Exception& )
+            {
                 OSL_TRACE("Error restoring image");
-               }
+            }
             break;
         }
         case ID_BEGIN_GROUP:
@@ -3478,7 +3478,7 @@ IMPL_LINK_TYPED( SvxToolbarConfigPage, EntrySelectHdl, MenuButton *, pButton, vo
 
             m_pContentsListBox->SetCheckButtonInvisible( pNewLBEntry );
             m_pContentsListBox->SetCheckButtonState(
-                pNewLBEntry, SV_BUTTON_TRISTATE );
+                pNewLBEntry, SvButtonState::Tristate );
 
             bNeedsApply = true;
             break;
@@ -3518,7 +3518,7 @@ IMPL_LINK_TYPED( SvxToolbarConfigPage, EntrySelectHdl, MenuButton *, pButton, vo
                 }
             }
 
-            VclPtr<SvxIconSelectorDialog> pIconDialog(
+            ScopedVclPtr<SvxIconSelectorDialog> pIconDialog(
                 VclPtr<SvxIconSelectorDialog>::Create( nullptr,
                     GetSaveInData()->GetImageManager(),
                     GetSaveInData()->GetParentImageManager() ));
@@ -3561,7 +3561,7 @@ IMPL_LINK_TYPED( SvxToolbarConfigPage, EntrySelectHdl, MenuButton *, pButton, vo
 
                         m_pContentsListBox->SetCheckButtonState( pNewLBEntry,
                             pEntry->IsVisible() ?
-                                SV_BUTTON_CHECKED : SV_BUTTON_UNCHECKED );
+                                SvButtonState::Checked : SvButtonState::Unchecked );
 
                         m_pContentsListBox->Select( pNewLBEntry );
                         m_pContentsListBox->MakeVisible( pNewLBEntry );
@@ -3617,7 +3617,7 @@ IMPL_LINK_TYPED( SvxToolbarConfigPage, EntrySelectHdl, MenuButton *, pButton, vo
 
                 m_pContentsListBox->SetCheckButtonState( pNewLBEntry,
                     pEntry->IsVisible() ?
-                        SV_BUTTON_CHECKED : SV_BUTTON_UNCHECKED );
+                        SvButtonState::Checked : SvButtonState::Unchecked );
 
                 m_pContentsListBox->Select( pNewLBEntry );
                 m_pContentsListBox->MakeVisible( pNewLBEntry );
@@ -3711,7 +3711,7 @@ ToolbarSaveInData::~ToolbarSaveInData()
 }
 
 void ToolbarSaveInData::SetSystemStyle(
-    uno::Reference< frame::XFrame > xFrame,
+    const uno::Reference< frame::XFrame >& xFrame,
     const OUString& rResourceURL,
     sal_Int32 nStyle )
 {
@@ -3900,7 +3900,7 @@ OUString ToolbarSaveInData::GetSystemUIName( const OUString& rResourceURL )
 SvxEntries* ToolbarSaveInData::GetEntries()
 {
     typedef std::unordered_map<OUString, bool,
-                               OUStringHash, std::equal_to< OUString > > ToolbarInfo;
+                               OUStringHash > ToolbarInfo;
 
     ToolbarInfo aToolbarInfo;
 
@@ -3939,7 +3939,7 @@ SvxEntries* ToolbarSaveInData::GetEntries()
             try
             {
                 uno::Reference< container::XIndexAccess > xToolbarSettings =
-                    GetConfigManager()->getSettings( url, sal_False );
+                    GetConfigManager()->getSettings( url, false );
 
                 if ( uiname.isEmpty() )
                 {
@@ -4027,7 +4027,7 @@ SvxEntries* ToolbarSaveInData::GetEntries()
                     try
                     {
                         uno::Reference< container::XIndexAccess > xToolbarSettings =
-                            xParentCfgMgr->getSettings( url, sal_False );
+                            xParentCfgMgr->getSettings( url, false );
 
                         if ( uiname.isEmpty() )
                         {
@@ -4337,7 +4337,7 @@ void ToolbarSaveInData::RestoreToolbar( SvxConfigEntry* pToolbar )
     OUString url = pToolbar->GetCommand();
 
     // Restore of toolbar is done by removing it from
-    // it's configuration manager and then getting it again
+    // its configuration manager and then getting it again
     bool bParentToolbar = pToolbar->IsParentData();
 
     // Cannot restore parent toolbar
@@ -4362,11 +4362,11 @@ void ToolbarSaveInData::RestoreToolbar( SvxConfigEntry* pToolbar )
         uno::Reference< container::XIndexAccess > xToolbarSettings;
         if ( IsDocConfig() )
         {
-            xToolbarSettings = GetParentConfigManager()->getSettings( url, sal_False );
+            xToolbarSettings = GetParentConfigManager()->getSettings( url, false );
             pToolbar->SetParentData();
         }
         else
-            xToolbarSettings = GetConfigManager()->getSettings( url, sal_False );
+            xToolbarSettings = GetConfigManager()->getSettings( url, false );
 
         LoadToolbar( xToolbarSettings, pToolbar );
 
@@ -4397,7 +4397,7 @@ void ToolbarSaveInData::RestoreToolbar( SvxConfigEntry* pToolbar )
     }
 }
 
-bool ToolbarSaveInData::LoadToolbar(
+void ToolbarSaveInData::LoadToolbar(
     const uno::Reference< container::XIndexAccess >& xToolbarSettings,
     SvxConfigEntry* pParentData )
 {
@@ -4480,8 +4480,6 @@ bool ToolbarSaveInData::LoadToolbar(
             }
         }
     }
-
-    return true;
 }
 
 IMPL_LINK_NOARG_TYPED( SvxToolbarConfigPage, SelectToolbarEntry, SvTreeListBox *, void )
@@ -4605,12 +4603,12 @@ IMPL_LINK_NOARG_TYPED( SvxToolbarConfigPage, SelectToolbar, ListBox&, void )
         if (pEntry->IsBinding())
         {
             m_pContentsListBox->SetCheckButtonState( pNewLBEntry,
-                pEntry->IsVisible() ? SV_BUTTON_CHECKED : SV_BUTTON_UNCHECKED );
+                pEntry->IsVisible() ? SvButtonState::Checked : SvButtonState::Unchecked );
         }
         else
         {
             m_pContentsListBox->SetCheckButtonState(
-                pNewLBEntry, SV_BUTTON_TRISTATE );
+                pNewLBEntry, SvButtonState::Tristate );
         }
     }
 
@@ -4700,11 +4698,11 @@ IMPL_LINK_NOARG_TYPED( SvxToolbarConfigPage, AddFunctionHdl, SvxScriptSelectorDi
     AddFunction();
 }
 
-SvTreeListEntry* SvxToolbarConfigPage::AddFunction(
-    SvTreeListEntry* pTarget, bool bFront, bool bAllowDuplicates )
+void SvxToolbarConfigPage::AddFunction(
+    SvTreeListEntry* pTarget, bool bFront )
 {
     SvTreeListEntry* pNewLBEntry =
-        SvxConfigPage::AddFunction( pTarget, bFront, bAllowDuplicates );
+        SvxConfigPage::AddFunction( pTarget, bFront, true/*bAllowDuplicates*/ );
 
     SvxConfigEntry* pEntry = static_cast<SvxConfigEntry*>(pNewLBEntry->GetUserData());
 
@@ -4712,12 +4710,12 @@ SvTreeListEntry* SvxToolbarConfigPage::AddFunction(
     {
         pEntry->SetVisible( true );
         m_pContentsListBox->SetCheckButtonState(
-            pNewLBEntry, SV_BUTTON_CHECKED );
+            pNewLBEntry, SvButtonState::Checked );
     }
     else
     {
         m_pContentsListBox->SetCheckButtonState(
-            pNewLBEntry, SV_BUTTON_TRISTATE );
+            pNewLBEntry, SvButtonState::Tristate );
     }
 
     // get currently selected toolbar and apply change
@@ -4727,8 +4725,6 @@ SvTreeListEntry* SvxToolbarConfigPage::AddFunction(
     {
         static_cast<ToolbarSaveInData*>( GetSaveInData() )->ApplyToolbar( pToolbar );
     }
-
-    return pNewLBEntry;
 }
 
 SvxToolbarEntriesListBox::SvxToolbarEntriesListBox(vcl::Window* pParent, SvxToolbarConfigPage* pPg)
@@ -4823,7 +4819,6 @@ void SvxToolbarEntriesListBox::DataChanged( const DataChangedEvent& rDCEvt )
 }
 
 
-
 void SvxToolbarEntriesListBox::ChangeVisibility( SvTreeListEntry* pEntry )
 {
     if ( pEntry != nullptr )
@@ -4843,7 +4838,7 @@ void SvxToolbarEntriesListBox::ChangeVisibility( SvTreeListEntry* pEntry )
                pToolbarSaveInData->ApplyToolbar( pToolbar );
 
             SetCheckButtonState( pEntry, pEntryData->IsVisible() ?
-                SV_BUTTON_CHECKED : SV_BUTTON_UNCHECKED );
+                SvButtonState::Checked : SvButtonState::Unchecked );
         }
     }
 }
@@ -4971,7 +4966,7 @@ SvxIconSelectorDialog::SvxIconSelectorDialog( vcl::Window *pWindow,
     pTbSymbol->SetStyle(pTbSymbol->GetStyle() | WB_SCROLL | WB_LINESPACING);
 
     typedef std::unordered_map< OUString, bool,
-                                OUStringHash, std::equal_to< OUString > > ImageInfo;
+                                OUStringHash > ImageInfo;
 
     pTbSymbol->SetPageScroll( true );
 
@@ -5035,18 +5030,18 @@ SvxIconSelectorDialog::SvxIconSelectorDialog( vcl::Window *pWindow,
     m_xImportedImageManager = css::ui::ImageManager::create( xComponentContext );
     m_xImportedImageManager->initialize(aProp);
 
-    ImageInfo mImageInfo;
+    ImageInfo aImageInfo1;
     uno::Sequence< OUString > names;
     if ( m_xImportedImageManager.is() )
     {
         names = m_xImportedImageManager->getAllImageNames( GetImageType() );
         for ( sal_Int32 n = 0; n < names.getLength(); ++n )
-            mImageInfo.insert( ImageInfo::value_type( names[n], false ));
+            aImageInfo1.insert( ImageInfo::value_type( names[n], false ));
     }
     sal_uInt16 nId = 1;
-    ImageInfo::const_iterator pConstIter = mImageInfo.begin();
+    ImageInfo::const_iterator pConstIter = aImageInfo1.begin();
     uno::Sequence< OUString > name( 1 );
-    while ( pConstIter != mImageInfo.end() )
+    while ( pConstIter != aImageInfo1.end() )
     {
         name[ 0 ] = pConstIter->first;
         uno::Sequence< uno::Reference< graphic::XGraphic> > graphics = m_xImportedImageManager->getImages( GetImageType(), name );
@@ -5224,7 +5219,7 @@ IMPL_LINK_NOARG_TYPED( SvxIconSelectorDialog, ImportHdl, Button *, void)
     {
         xController->enableControl(
             css::ui::dialogs::ExtendedFilePickerElementIds::CHECKBOX_LINK,
-            sal_False);
+            false);
     }
 
     aImportDialog.SetCurrentFilter(

@@ -28,17 +28,11 @@
 #include "fmtinfmt.hxx"
 #include <svl/macitem.hxx>
 #include <rtl/ustrbuf.hxx>
-#include <com/sun/star/beans/PropertyValue.hpp>
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
 
-using ::com::sun::star::container::NoSuchElementException;
 using ::com::sun::star::container::XNameReplace;
-using ::com::sun::star::lang::IllegalArgumentException;
-using ::com::sun::star::lang::WrappedTargetException;
-using ::com::sun::star::lang::XServiceInfo;
-using ::com::sun::star::beans::PropertyValue;
 
 // tables of allowed events for specific objects
 
@@ -101,8 +95,7 @@ const struct SvEventDescription aFrameStyleEvents[] =
 };
 
 SwHyperlinkEventDescriptor::SwHyperlinkEventDescriptor() :
-    SvDetachedEventDescriptor(aHyperlinkEvents),
-    sImplName("SwHyperlinkEventDescriptor")
+    SvDetachedEventDescriptor(aHyperlinkEvents)
 {
 }
 
@@ -113,7 +106,7 @@ SwHyperlinkEventDescriptor::~SwHyperlinkEventDescriptor()
 OUString SwHyperlinkEventDescriptor::getImplementationName()
     throw( RuntimeException, std::exception )
 {
-    return sImplName;
+    return OUString("SwHyperlinkEventDescriptor");
 }
 
 void SwHyperlinkEventDescriptor::copyMacrosFromINetFormat(
@@ -211,11 +204,11 @@ OUString SwFrameEventDescriptor::getImplementationName()
 }
 
 SwFrameStyleEventDescriptor::SwFrameStyleEventDescriptor(
-    SwXFrameStyle& rStyleRef ) :
-        SvEventDescriptor((document::XEventsSupplier&)rStyleRef,
+    sw::ICoreFrameStyle& rStyle ) :
+        SvEventDescriptor(rStyle.GetEventsSupplier(),
                           aFrameStyleEvents),
         sSwFrameStyleEventDescriptor("SwFrameStyleEventDescriptor"),
-        rStyle(rStyleRef)
+        m_rStyle(rStyle)
 {
 }
 
@@ -225,43 +218,15 @@ SwFrameStyleEventDescriptor::~SwFrameStyleEventDescriptor()
 
 void SwFrameStyleEventDescriptor::setMacroItem(const SvxMacroItem& rItem)
 {
-    // As I was told, for some entirely unobvious reason getting an
-    // item from a style has to look as follows:
-    SfxStyleSheetBasePool* pBasePool = rStyle.GetBasePool();
-    if (pBasePool)
-    {
-        SfxStyleSheetBase* pBase = pBasePool->Find(rStyle.GetStyleName());
-        if (pBase)
-        {
-            rtl::Reference< SwDocStyleSheet > xStyle( new SwDocStyleSheet( *static_cast<SwDocStyleSheet*>(pBase) ) );
-            SfxItemSet& rStyleSet = xStyle->GetItemSet();
-            SfxItemSet aSet(*rStyleSet.GetPool(), RES_FRMMACRO, RES_FRMMACRO);
-            aSet.Put(rItem);
-            xStyle->SetItemSet(aSet);
-        }
-    }
+    m_rStyle.SetItem(RES_FRMMACRO, rItem);
 }
 
 static const SvxMacroItem aEmptyMacroItem(RES_FRMMACRO);
 
 const SvxMacroItem& SwFrameStyleEventDescriptor::getMacroItem()
 {
-    // As I was told, for some entirely unobvious reason getting an
-    // item from a style has to look as follows:
-    SfxStyleSheetBasePool* pBasePool = rStyle.GetBasePool();
-    if (pBasePool)
-    {
-        SfxStyleSheetBase* pBase = pBasePool->Find(rStyle.GetStyleName());
-        if (pBase)
-        {
-            rtl::Reference< SwDocStyleSheet > xStyle( new SwDocStyleSheet( *static_cast<SwDocStyleSheet*>(pBase)) );
-            return static_cast<const SvxMacroItem&>(xStyle->GetItemSet().Get(RES_FRMMACRO));
-        }
-        else
-            return aEmptyMacroItem;
-    }
-    else
-        return aEmptyMacroItem;
+    const SfxPoolItem* pItem(m_rStyle.GetItem(RES_FRMMACRO));
+    return pItem ? static_cast<const SvxMacroItem&>(*pItem) : aEmptyMacroItem;
 }
 
 OUString SwFrameStyleEventDescriptor::getImplementationName()

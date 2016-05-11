@@ -58,7 +58,6 @@
 #include <osl/thread.hxx>
 #include <osl/file.hxx>
 #include <osl/file.h>
-#include <rtl/instance.hxx>
 #include <iostream>
 
 using namespace ::osl;
@@ -88,7 +87,7 @@ struct DispatchHolder
 namespace
 {
 
-const SfxFilter* impl_lookupExportFilterForUrl( const rtl::OUString& rUrl, const rtl::OUString& rFactory )
+std::shared_ptr<const SfxFilter> impl_lookupExportFilterForUrl( const rtl::OUString& rUrl, const rtl::OUString& rFactory )
 {
     // create the list of filters
     OUStringBuffer sQuery(256);
@@ -105,7 +104,7 @@ const SfxFilter* impl_lookupExportFilterForUrl( const rtl::OUString& rUrl, const
             xContext->getServiceManager()->createInstanceWithContext( "com.sun.star.document.FilterFactory", xContext ),
             UNO_QUERY_THROW );
 
-    const SfxFilter* pBestMatch = nullptr;
+    std::shared_ptr<const SfxFilter> pBestMatch;
 
     const Reference< XEnumeration > xFilterEnum(
             xFilterFactory->createSubSetEnumerationByQuery( sQuery.makeStringAndClear() ), UNO_QUERY_THROW );
@@ -115,7 +114,7 @@ const SfxFilter* impl_lookupExportFilterForUrl( const rtl::OUString& rUrl, const
         const rtl::OUString aName( aFilterProps.getUnpackedValueOrDefault( "Name", rtl::OUString() ) );
         if ( !aName.isEmpty() )
         {
-            const SfxFilter* const pFilter( SfxFilter::GetFilterByName( aName ) );
+            std::shared_ptr<const SfxFilter> pFilter( SfxFilter::GetFilterByName( aName ) );
             if ( pFilter && pFilter->CanExport() && pFilter->GetWildcard().Matches( rUrl ) )
             {
                 if ( !pBestMatch || ( SfxFilterFlags::PREFERED & pFilter->GetFilterFlags() ) )
@@ -127,7 +126,7 @@ const SfxFilter* impl_lookupExportFilterForUrl( const rtl::OUString& rUrl, const
     return pBestMatch;
 }
 
-static const SfxFilter* impl_getExportFilterFromUrl(
+std::shared_ptr<const SfxFilter> impl_getExportFilterFromUrl(
         const rtl::OUString& rUrl, const rtl::OUString& rFactory)
 {
 try
@@ -138,7 +137,7 @@ try
             UNO_QUERY_THROW );
     const rtl::OUString aTypeName( xTypeDetector->queryTypeByURL( rUrl ) );
 
-    const SfxFilter* pFilter( SfxFilterMatcher( rFactory ).GetFilter4EA( aTypeName, SfxFilterFlags::EXPORT ) );
+    std::shared_ptr<const SfxFilter> pFilter( SfxFilterMatcher( rFactory ).GetFilter4EA( aTypeName, SfxFilterFlags::EXPORT ) );
     if ( !pFilter )
         pFilter = impl_lookupExportFilterForUrl( rUrl, rFactory );
     if ( !pFilter )
@@ -161,7 +160,7 @@ catch ( const Exception& )
 OUString impl_GuessFilter( const OUString& rUrlOut, const OUString& rDocService )
 {
     OUString aOutFilter;
-    const SfxFilter* pOutFilter = impl_getExportFilterFromUrl( rUrlOut, rDocService );
+    std::shared_ptr<const SfxFilter> pOutFilter = impl_getExportFilterFromUrl( rUrlOut, rDocService );
     if (pOutFilter)
         aOutFilter = pOutFilter->GetFilterName();
 
@@ -169,40 +168,6 @@ OUString impl_GuessFilter( const OUString& rUrlOut, const OUString& rDocService 
 }
 
 }
-
-namespace
-{
-    class theWatcherMutex : public rtl::Static<Mutex, theWatcherMutex> {};
-}
-
-Mutex& DispatchWatcher::GetMutex()
-{
-    return theWatcherMutex::get();
-}
-
-// Create or get the dispatch watcher implementation. This implementation must be
-// a singleton to prevent access to the framework after it wants to terminate.
-DispatchWatcher* DispatchWatcher::GetDispatchWatcher()
-{
-    static Reference< XInterface > xDispatchWatcher;
-    static DispatchWatcher*        pDispatchWatcher = nullptr;
-
-    if ( !xDispatchWatcher.is() )
-    {
-        ::osl::MutexGuard aGuard( GetMutex() );
-
-        if ( !xDispatchWatcher.is() )
-        {
-            pDispatchWatcher = new DispatchWatcher();
-
-            // We have to hold a reference to ourself forever to prevent our own destruction.
-            xDispatchWatcher = static_cast< cppu::OWeakObject *>( pDispatchWatcher );
-        }
-    }
-
-    return pDispatchWatcher;
-}
-
 
 DispatchWatcher::DispatchWatcher()
     : m_nRequestCount(0)
@@ -215,20 +180,17 @@ DispatchWatcher::~DispatchWatcher()
 }
 
 
-bool DispatchWatcher::executeDispatchRequests( const DispatchList& aDispatchRequestsList, bool bNoTerminate )
+bool DispatchWatcher::executeDispatchRequests( const std::vector<DispatchRequest>& aDispatchRequestsList, bool bNoTerminate )
 {
     Reference< XDesktop2 > xDesktop = css::frame::Desktop::create( ::comphelper::getProcessComponentContext() );
 
-    DispatchList::const_iterator    p;
     std::vector< DispatchHolder >   aDispatches;
     OUString                 aAsTemplateArg( "AsTemplate" );
     bool                     bSetInputFilter = false;
     OUString                 aForcedInputFilter;
 
-    for ( p = aDispatchRequestsList.begin(); p != aDispatchRequestsList.end(); ++p )
+    for (auto const & aDispatchRequest: aDispatchRequestsList)
     {
-        const DispatchRequest&  aDispatchRequest = *p;
-
         // create parameter array
         sal_Int32 nCount = 4;
         if ( !aDispatchRequest.aPreselectedFactory.isEmpty() )
@@ -239,7 +201,7 @@ bool DispatchWatcher::executeDispatchRequests( const DispatchList& aDispatchRequ
         {
             bSetInputFilter = true;
             aForcedInputFilter = aDispatchRequest.aURL;
-            OfficeIPCThread::RequestsCompleted();
+            RequestHandler::RequestsCompleted();
             continue;
         }
 
@@ -299,16 +261,16 @@ bool DispatchWatcher::executeDispatchRequests( const DispatchList& aDispatchRequ
         {
             // documents opened for printing are opened readonly because they must be opened as a new document and this
             // document could be open already
-            aArgs[1].Value <<= sal_True;
+            aArgs[1].Value <<= true;
 
             // always open a new document for printing, because it must be disposed afterwards
-            aArgs[2].Value <<= sal_True;
+            aArgs[2].Value <<= true;
 
             // printing is done in a hidden view
-            aArgs[3].Value <<= sal_True;
+            aArgs[3].Value <<= true;
 
             // load document for printing without user interaction
-            aArgs[4].Value <<= sal_True;
+            aArgs[4].Value <<= true;
 
             // hidden documents should never be put into open tasks
             aTarget = "_blank";
@@ -341,9 +303,9 @@ bool DispatchWatcher::executeDispatchRequests( const DispatchList& aDispatchRequ
             if( xDispatcher.is() )
             {
                 {
-                    ::osl::ClearableMutexGuard aGuard( GetMutex() );
+                    ::osl::ClearableMutexGuard aGuard(m_mutex);
                     // Remember request so we can find it in statusChanged!
-                    m_aRequestContainer.insert( DispatchWatcherHashMap::value_type( aURL.Complete, (sal_Int32)1 ) );
+                    m_aRequestContainer.emplace(aURL.Complete, 1);
                     m_nRequestCount++;
                 }
 
@@ -375,10 +337,10 @@ bool DispatchWatcher::executeDispatchRequests( const DispatchList& aDispatchRequ
                     // window!!
                     Sequence < PropertyValue > aArgs2(1);
                     aArgs2[0].Name    = "SynchronMode";
-                    aArgs2[0].Value <<= sal_True;
+                    aArgs2[0].Value <<= true;
                     Reference < XNotifyingDispatch > xDisp( xDispatcher, UNO_QUERY );
                     if ( xDisp.is() )
-                        xDisp->dispatchWithNotification( aURL, aArgs2, DispatchWatcher::GetDispatchWatcher() );
+                        xDisp->dispatchWithNotification( aURL, aArgs2, this );
                     else
                         xDispatcher->dispatch( aURL, aArgs2 );
                 }
@@ -406,9 +368,9 @@ bool DispatchWatcher::executeDispatchRequests( const DispatchList& aDispatchRequ
                 aArgs.realloc( nIndex+1 );
                 aArgs[nIndex].Name = aAsTemplateArg;
                 if ( aDispatchRequest.aRequestType == REQUEST_FORCENEW )
-                    aArgs[nIndex].Value <<= sal_True;
+                    aArgs[nIndex].Value <<= true;
                 else
-                    aArgs[nIndex].Value <<= sal_False;
+                    aArgs[nIndex].Value <<= false;
             }
 
             // if we are called in viewmode, open document read-only
@@ -416,7 +378,7 @@ bool DispatchWatcher::executeDispatchRequests( const DispatchList& aDispatchRequ
                 sal_Int32 nIndex = aArgs.getLength();
                 aArgs.realloc(nIndex+1);
                 aArgs[nIndex].Name = "ReadOnly";
-                aArgs[nIndex].Value <<= sal_True;
+                aArgs[nIndex].Value <<= true;
             }
 
             // if we are called with -start set Start in mediadescriptor
@@ -424,7 +386,7 @@ bool DispatchWatcher::executeDispatchRequests( const DispatchList& aDispatchRequ
                 sal_Int32 nIndex = aArgs.getLength();
                 aArgs.realloc(nIndex+1);
                 aArgs[nIndex].Name = "StartPresentation";
-                aArgs[nIndex].Value <<= sal_True;
+                aArgs[nIndex].Value <<= true;
             }
 
             // Force input filter, if possible
@@ -476,7 +438,7 @@ bool DispatchWatcher::executeDispatchRequests( const DispatchList& aDispatchRequ
                  aDispatchRequest.aRequestType == REQUEST_FORCENEW      )
             {
                 // request is completed
-                OfficeIPCThread::RequestsCompleted();
+                RequestHandler::RequestsCompleted();
             }
             else if ( aDispatchRequest.aRequestType == REQUEST_PRINT ||
                       aDispatchRequest.aRequestType == REQUEST_PRINTTO ||
@@ -546,7 +508,7 @@ bool DispatchWatcher::executeDispatchRequests( const DispatchList& aDispatchRequ
                                 sal_Int32 nFilterOptionsIndex = aFilter.indexOf(':');
                                 Sequence<PropertyValue> conversionProperties( 0 < nFilterOptionsIndex ? 3 : 2 );
                                 conversionProperties[0].Name = "Overwrite";
-                                conversionProperties[0].Value <<= sal_True;
+                                conversionProperties[0].Value <<= true;
 
                                 conversionProperties[1].Name = "FilterName";
                                 if( 0 < nFilterOptionsIndex )
@@ -687,7 +649,7 @@ bool DispatchWatcher::executeDispatchRequests( const DispatchList& aDispatchRequ
                 {
                     Reference < XCloseable > xClose( xDoc, UNO_QUERY );
                     if ( xClose.is() )
-                        xClose->close( sal_True );
+                        xClose->close( true );
                     else
                     {
                         Reference < XComponent > xComp( xDoc, UNO_QUERY );
@@ -700,7 +662,7 @@ bool DispatchWatcher::executeDispatchRequests( const DispatchList& aDispatchRequ
                 }
 
                 // request is completed
-                OfficeIPCThread::RequestsCompleted();
+                RequestHandler::RequestsCompleted();
             }
         }
     }
@@ -712,25 +674,25 @@ bool DispatchWatcher::executeDispatchRequests( const DispatchList& aDispatchRequ
         aArgs[0].Name = "Referer";
         aArgs[0].Value <<= OUString("private:OpenEvent");
         aArgs[1].Name = "SynchronMode";
-        aArgs[1].Value <<= sal_True;
+        aArgs[1].Value <<= true;
 
-        for ( size_t n = 0; n < aDispatches.size(); n++ )
+        for (DispatchHolder & aDispatche : aDispatches)
         {
-            Reference< XDispatch > xDispatch = aDispatches[n].xDispatch;
+            Reference< XDispatch > xDispatch = aDispatche.xDispatch;
             Reference < XNotifyingDispatch > xDisp( xDispatch, UNO_QUERY );
             if ( xDisp.is() )
-                xDisp->dispatchWithNotification( aDispatches[n].aURL, aArgs, this );
+                xDisp->dispatchWithNotification( aDispatche.aURL, aArgs, this );
             else
             {
-                ::osl::ClearableMutexGuard aGuard( GetMutex() );
+                ::osl::ClearableMutexGuard aGuard(m_mutex);
                 m_nRequestCount--;
                 aGuard.clear();
-                xDispatch->dispatch( aDispatches[n].aURL, aArgs );
+                xDispatch->dispatch( aDispatche.aURL, aArgs );
             }
         }
     }
 
-    ::osl::ClearableMutexGuard aGuard( GetMutex() );
+    ::osl::ClearableMutexGuard aGuard(m_mutex);
     bool bEmpty = (m_nRequestCount == 0);
     aGuard.clear();
 
@@ -762,11 +724,11 @@ void SAL_CALL DispatchWatcher::disposing( const css::lang::EventObject& )
 
 void SAL_CALL DispatchWatcher::dispatchFinished( const DispatchResultEvent& ) throw( RuntimeException, std::exception )
 {
-    osl::ClearableMutexGuard aGuard( GetMutex() );
+    osl::ClearableMutexGuard aGuard(m_mutex);
     sal_Int16 nCount = --m_nRequestCount;
     aGuard.clear();
-    OfficeIPCThread::RequestsCompleted();
-    if ( !nCount && !OfficeIPCThread::AreRequestsPending() )
+    RequestHandler::RequestsCompleted();
+    if ( !nCount && !RequestHandler::AreRequestsPending() )
     {
         // We have to check if we have an open task otherwise we have to shutdown the office.
         Reference< XDesktop2 > xDesktop = css::frame::Desktop::create( ::comphelper::getProcessComponentContext() );
@@ -781,12 +743,6 @@ void SAL_CALL DispatchWatcher::dispatchFinished( const DispatchResultEvent& ) th
 }
 
 }
-
-
-
-
-
-
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -22,12 +22,15 @@
 
 #include <deque>
 #include <map>
-#include <rtl/ustring.hxx>
+
 #include <com/sun/star/awt/DeviceInfo.hpp>
-#include <com/sun/star/drawing/FillStyle.hpp>
 #include <com/sun/star/uno/Reference.hxx>
+#include <oox/dllapi.h>
 #include <oox/helper/binarystreambase.hxx>
+#include <oox/helper/helper.hxx>
 #include <oox/helper/storagebase.hxx>
+#include <rtl/ustring.hxx>
+#include <sal/types.h>
 
 struct WMF_EXTERNALHEADER;
 
@@ -44,7 +47,6 @@ namespace com { namespace sun { namespace star {
 } } }
 
 namespace oox {
-
 
 
 /** Provides helper functions for colors, device measurement conversion,
@@ -163,7 +165,6 @@ private:
     double              mfPixelPerHmmX;             ///< Number of screen pixels per 1/100 mm in X direction.
     double              mfPixelPerHmmY;             ///< Number of screen pixels per 1/100 mm in Y direction.
 };
-
 
 
 } // namespace oox

@@ -55,14 +55,14 @@ class BrowseNodeAggregator :
 {
 private:
     OUString m_Name;
-    Sequence< Reference< browse::XBrowseNode > > m_Nodes;
+    std::vector< Reference< browse::XBrowseNode > > m_Nodes;
 
 public:
 
     explicit BrowseNodeAggregator( const Reference< browse::XBrowseNode >& node )
     {
         m_Name = node->getName();
-        m_Nodes.realloc( 1 );
+        m_Nodes.resize( 1 );
         m_Nodes[ 0 ] = node;
     }
 
@@ -72,10 +72,7 @@ public:
 
     void addBrowseNode( const Reference< browse::XBrowseNode>& node )
     {
-        sal_Int32 index = m_Nodes.getLength();
-
-        m_Nodes.realloc( index + 1 );
-        m_Nodes[ index ] = node;
+        m_Nodes.push_back( node );
     }
 
     virtual OUString
@@ -90,11 +87,11 @@ public:
         throw ( RuntimeException, std::exception ) override
     {
         std::vector<  Sequence< Reference < browse::XBrowseNode > > > seqs;
-        seqs.reserve( m_Nodes.getLength() );
+        seqs.reserve( m_Nodes.size() );
 
         sal_Int32 numChildren = 0;
 
-        for ( sal_Int32 i = 0; i < m_Nodes.getLength(); i++ )
+        for ( size_t i = 0; i < m_Nodes.size(); i++ )
         {
             Sequence< Reference < browse::XBrowseNode > > children;
             try
@@ -129,15 +126,15 @@ public:
     hasChildNodes()
         throw ( RuntimeException, std::exception ) override
     {
-        if ( m_Nodes.getLength() != 0 )
+        if ( !m_Nodes.empty() )
         {
-            for ( sal_Int32 i = 0 ; i < m_Nodes.getLength(); i++ )
+            for ( size_t i = 0 ; i < m_Nodes.size(); i++ )
             {
                 try
                 {
                     if ( m_Nodes[ i ]->hasChildNodes() )
                     {
-                        return sal_True;
+                        return true;
                     }
                 }
                 catch ( Exception& )
@@ -148,7 +145,7 @@ public:
             }
         }
 
-        return sal_False;
+        return false;
     }
 
     virtual sal_Int16 SAL_CALL getType()
@@ -160,7 +157,7 @@ public:
 
 //typedef std::map< OUString, Reference< browse::XBrowseNode > >
 typedef std::unordered_map< OUString, Reference< browse::XBrowseNode >,
-    OUStringHash, ::std::equal_to< OUString > >
+    OUStringHash >
         BrowseNodeAggregatorHash;
 typedef std::vector< OUString > vString;
 
@@ -232,7 +229,7 @@ public:
     virtual sal_Bool SAL_CALL hasChildNodes()
         throw ( RuntimeException, std::exception ) override
     {
-        return sal_True;
+        return true;
     }
 
     virtual sal_Int16 SAL_CALL getType()
@@ -294,7 +291,7 @@ private:
 namespace
 {
 
-Sequence< Reference< browse::XBrowseNode > > getAllBrowseNodes( const Reference< XComponentContext >& xCtx )
+std::vector< Reference< browse::XBrowseNode > > getAllBrowseNodes( const Reference< XComponentContext >& xCtx )
 {
     Sequence< OUString > openDocs =
         MiscUtils::allOpenTDocUrls( xCtx );
@@ -303,7 +300,7 @@ Sequence< Reference< browse::XBrowseNode > > getAllBrowseNodes( const Reference<
     sal_Int32 initialSize = openDocs.getLength() + 2;
     sal_Int32 mspIndex = 0;
 
-    Sequence < Reference < browse::XBrowseNode > > locnBNs( initialSize );
+    std::vector< Reference < browse::XBrowseNode > > locnBNs( initialSize );
     try
     {
         xFac = provider::theMasterScriptProviderFactory::get( xCtx );
@@ -317,7 +314,7 @@ Sequence< Reference< browse::XBrowseNode > > getAllBrowseNodes( const Reference<
         (void)e;
         OSL_TRACE("Caught Exception %s",
             OUStringToOString( e.Message , RTL_TEXTENCODING_ASCII_US ).pData->buffer );
-        locnBNs.realloc( mspIndex );
+        locnBNs.resize( mspIndex );
         return locnBNs;
     }
 
@@ -350,7 +347,7 @@ Sequence< Reference< browse::XBrowseNode > > getAllBrowseNodes( const Reference<
 
     }
 
-    Sequence < Reference < browse::XBrowseNode > > locnBNs_Return( mspIndex );
+    std::vector< Reference < browse::XBrowseNode > > locnBNs_Return( mspIndex );
     for ( sal_Int32 j = 0; j < mspIndex; j++ )
         locnBNs_Return[j] = locnBNs[j];
 
@@ -431,7 +428,7 @@ public:
     {
         if ( hasChildNodes() )
         {
-            vXBrowseNodes m_vNodes;
+            vXBrowseNodes aVNodes;
             Sequence < Reference< browse::XBrowseNode > > nodes =
                 m_xWrappedBrowseNode->getChildNodes();
             for ( sal_Int32 i=0; i<nodes.getLength(); i++ )
@@ -439,13 +436,13 @@ public:
                 Reference< browse::XBrowseNode > xBrowseNode = nodes[ i ];
                 OSL_ENSURE( xBrowseNode.is(), "DefaultBrowseNode::getChildNodes(): Invalid BrowseNode" );
                 if( xBrowseNode.is() )
-                    m_vNodes.push_back( new DefaultBrowseNode( m_xCtx, xBrowseNode ) );
+                    aVNodes.push_back( new DefaultBrowseNode( m_xCtx, xBrowseNode ) );
             }
 
-            ::std::sort( m_vNodes.begin(), m_vNodes.end(), alphaSortForBNodes() );
-            Sequence < Reference< browse::XBrowseNode > > children( m_vNodes.size() );
-            vXBrowseNodes::const_iterator it = m_vNodes.begin();
-            for ( sal_Int32 i=0; it != m_vNodes.end() && i<children.getLength(); i++, ++it )
+            ::std::sort( aVNodes.begin(), aVNodes.end(), alphaSortForBNodes() );
+            Sequence < Reference< browse::XBrowseNode > > children( aVNodes.size() );
+            vXBrowseNodes::const_iterator it = aVNodes.begin();
+            for ( sal_Int32 i=0; it != aVNodes.end() && i<children.getLength(); i++, ++it )
             {
                 children[ i ].set( *it );
             }
@@ -538,10 +535,10 @@ private:
 public:
     explicit DefaultRootBrowseNode( const Reference< XComponentContext >& xCtx )
     {
-        Sequence < Reference< browse::XBrowseNode > > nodes =
+        std::vector< Reference< browse::XBrowseNode > > nodes =
             getAllBrowseNodes( xCtx );
 
-        for ( sal_Int32 i=0; i<nodes.getLength(); i++ )
+        for ( size_t i=0; i<nodes.size(); i++ )
         {
             m_vNodes.push_back( new DefaultBrowseNode( xCtx, nodes[ i ] ) );
         }
@@ -621,12 +618,12 @@ public:
         throw ( RuntimeException, std::exception ) override
     {
 
-        Sequence < Reference < browse::XBrowseNode > > locnBNs = getAllBrowseNodes( m_xComponentContext );
+        std::vector< Reference < browse::XBrowseNode > > locnBNs = getAllBrowseNodes( m_xComponentContext );
 
         Sequence<  Reference< browse::XBrowseNode > > children(
-            locnBNs.getLength() );
+            locnBNs.size() );
 
-        for ( sal_Int32 j = 0; j < locnBNs.getLength(); j++ )
+        for ( size_t j = 0; j < locnBNs.size(); j++ )
         {
             children[j] = new LocationBrowseNode( locnBNs[j] );
         }
@@ -637,7 +634,7 @@ public:
     virtual sal_Bool SAL_CALL hasChildNodes()
         throw ( RuntimeException, std::exception ) override
     {
-        return sal_True; // will always be user and share
+        return true; // will always be user and share
     }
 
     virtual sal_Int16 SAL_CALL getType()
@@ -656,7 +653,6 @@ BrowseNodeFactoryImpl::BrowseNodeFactoryImpl(
 BrowseNodeFactoryImpl::~BrowseNodeFactoryImpl()
 {
 }
-
 
 
 // Implementation of XBrowseNodeFactory
@@ -701,7 +697,6 @@ BrowseNodeFactoryImpl::getOrganizerHierarchy()
 }
 
 // Helper methods
-
 
 
 // Namespace global methods for setting up BrowseNodeFactory service

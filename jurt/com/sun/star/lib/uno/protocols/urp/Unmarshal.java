@@ -1,3 +1,4 @@
+/* -*- Mode: Java; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /*
  * This file is part of the LibreOffice project.
  *
@@ -112,12 +113,30 @@ final class Unmarshal {
     public TypeDescription readType() {
         int b = read8Bit();
         TypeClass typeClass = TypeClass.fromInt(b & 0x7F);
+        if (typeClass == null) {
+            throw new RuntimeException(
+                "Reading TYPE with bad type class " + (b & 0x7F));
+        }
         if (TypeDescription.isTypeClassSimple(typeClass)) {
+            if ((b & 0x80) != 0) {
+                throw new RuntimeException(
+                    "Reading TYPE with bad type class/cache flag " + b);
+            }
             return TypeDescription.getTypeDescription(typeClass);
         } else {
             int index = read16Bit();
-            TypeDescription type = null;
-            if ((b & 0x80) != 0) {
+            TypeDescription type;
+            if ((b & 0x80) == 0) {
+                if (index >= typeCache.length) {
+                    throw new RuntimeException(
+                        "Reading TYPE with bad cache index " + index);
+                }
+                type = typeCache[index];
+                if (type == null) {
+                    throw new RuntimeException(
+                        "Reading TYPE with empty cache index " + index);
+                }
+            } else {
                 try {
                     type = TypeDescription.getTypeDescription(
                         readStringValue());
@@ -126,11 +145,11 @@ final class Unmarshal {
                 } catch (ClassNotFoundException e) {
                     throw new RuntimeException(e);
                 }
-            }
-            if (index != 0xFFFF) {
-                if ((b & 0x80) == 0) {
-                    type = typeCache[index];
-                } else {
+                if (index != 0xFFFF) {
+                    if (index >= typeCache.length) {
+                        throw new RuntimeException(
+                            "Reading TYPE with bad cache index " + index);
+                    }
                     typeCache[index] = type;
                 }
             }
@@ -454,3 +473,5 @@ final class Unmarshal {
     private final TypeDescription[] typeCache;
     private DataInputStream input;
 }
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

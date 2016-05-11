@@ -705,7 +705,7 @@ void DialogModel::startControllerLockTimer()
     m_aTimerTriggeredControllerLock.startTimer();
 }
 
-bool DialogModel::setData(
+void DialogModel::setData(
     const Sequence< beans::PropertyValue > & rArguments )
 {
     m_aTimerTriggeredControllerLock.startTimer();
@@ -716,7 +716,7 @@ bool DialogModel::setData(
         ! m_xTemplate.is() )
     {
         OSL_FAIL( "Model objects missing" );
-        return false;
+        return;
     }
 
     try
@@ -737,8 +737,7 @@ bool DialogModel::setData(
                 xInterpreter->interpretDataSource(
                     xDataSource, rArguments,
                     comphelper::containerToSequence( aSeriesToReUse )),
-                aSeriesToReUse,
-                true /* bSetStyles */);
+                aSeriesToReUse);
 
             ThreeDHelper::setScheme( xDiagram, e3DScheme );
         }
@@ -746,10 +745,7 @@ bool DialogModel::setData(
     catch( const uno::Exception & ex )
     {
         ASSERT_EXCEPTION( ex );
-        return false;
     }
-
-    return true;
 }
 
 void DialogModel::setTimeBasedRange( bool bTimeBased, sal_Int32 nStart, sal_Int32 nEnd) const
@@ -787,8 +783,7 @@ sal_Int32 DialogModel::GetRoleIndexForSorting( const OUString & rInternalRoleStr
 
 void DialogModel::applyInterpretedData(
     const InterpretedData & rNewData,
-    const ::std::vector< Reference< XDataSeries > > & rSeriesToReUse,
-    bool bSetStyles )
+    const ::std::vector< Reference< XDataSeries > > & rSeriesToReUse )
 {
     if( ! m_xChartDocument.is())
         return;
@@ -798,7 +793,7 @@ void DialogModel::applyInterpretedData(
     if( xDiagram.is())
     {
         // styles
-        if( bSetStyles && m_xTemplate.is() )
+        if( m_xTemplate.is() )
         {
             sal_Int32 nGroup = 0;
             sal_Int32 nSeriesCounter = 0;

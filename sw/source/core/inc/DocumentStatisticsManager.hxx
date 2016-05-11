@@ -20,7 +20,6 @@
 #define INCLUDED_SW_SOURCE_CORE_INC_DOCUMENTSTATISTICSMANAGER_HXX
 
 #include <IDocumentStatistics.hxx>
-#include <boost/noncopyable.hpp>
 #include <vcl/timer.hxx>
 
 class SwDoc;
@@ -29,8 +28,7 @@ class Timer;
 
 namespace sw {
 
-class DocumentStatisticsManager : public IDocumentStatistics,
-                                  public ::boost::noncopyable
+class DocumentStatisticsManager : public IDocumentStatistics
 {
 
 public:
@@ -39,17 +37,18 @@ public:
 
     void DocInfoChgd(bool isEnableSetModified) override;
     const SwDocStat &GetDocStat() const override;
-    SwDocStat & GetDocStat(); //Non const version of the above, not part of the interface.
+    void SetDocStatModified(bool bSet);
     const SwDocStat &GetUpdatedDocStat(bool bCompleteAsync = false, bool bFields = true) override;
     void SetDocStat(const SwDocStat& rStat) override;
     void UpdateDocStat(bool bCompleteAsync = false, bool bFields = true) override;
-
     virtual ~DocumentStatisticsManager();
 
 private:
 
-    SwDoc& m_rDoc;
+    DocumentStatisticsManager(DocumentStatisticsManager const&) = delete;
+    DocumentStatisticsManager& operator=(DocumentStatisticsManager const&) = delete;
 
+    SwDoc& m_rDoc;
 
     /** continue computing a chunk of document statistics
       * \param nChars  number of characters to count before exiting
@@ -64,6 +63,7 @@ private:
 
 
     SwDocStat       *mpDocStat;          //< Statistics information.
+    bool            mbInitialized;       // allow first time update
     Timer       maStatsUpdateTimer;      //< Timer for asynchronous stats calculation
 };
 

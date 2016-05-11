@@ -160,9 +160,8 @@ CustomToolBarImportHelper::createMenu( const OUString& rName, const uno::Referen
     return bRes;
 }
 
-#if OSL_DEBUG_LEVEL > 1
-void
-TBBase::indent_printf( FILE* fp, const char* format, ... )
+#ifdef DEBUG_FILTER_MSTOOLBAR
+void TBBase::indent_printf( FILE* fp, const char* format, ... )
 {
    va_list ap;
    va_start ( ap, format );
@@ -206,7 +205,7 @@ bool TBCHeader::Read( SvStream &rS )
     return true;
 }
 
-#if OSL_DEBUG_LEVEL > 1
+#ifdef DEBUG_FILTER_MSTOOLBAR
 void TBCHeader::Print( FILE* fp )
 {
     Indent a;
@@ -356,7 +355,7 @@ bool TBCData::ImportToolBarControl( CustomToolBarImportHelper& helper, std::vect
     return true; // just ignore
 }
 
-#if OSL_DEBUG_LEVEL > 1
+#ifdef DEBUG_FILTER_MSTOOLBAR
 void TBCData::Print( FILE* fp )
 {
     Indent a;
@@ -407,7 +406,7 @@ TBCExtraInfo::Read( SvStream &rS )
     return true;
 }
 
-#if OSL_DEBUG_LEVEL > 1
+#ifdef DEBUG_FILTER_MSTOOLBAR
 void
 TBCExtraInfo::Print( FILE* fp )
 {
@@ -452,7 +451,7 @@ bool TBCGeneralInfo::Read( SvStream &rS )
     return true;
 }
 
-#if OSL_DEBUG_LEVEL > 1
+#ifdef DEBUG_FILTER_MSFILTER
 void
 TBCGeneralInfo::Print( FILE* fp )
 {
@@ -470,7 +469,7 @@ TBCGeneralInfo::Print( FILE* fp )
 }
 #endif
 
-bool
+void
 TBCGeneralInfo::ImportToolBarControlData( CustomToolBarImportHelper& helper, std::vector< beans::PropertyValue >& sControlData )
 {
     if ( ( bFlags & 0x5 ) )
@@ -511,7 +510,6 @@ aToolbarItem(3).Name = "Visible"
 aToolbarItem(3).Value = true
 */
     }
-    return true;
 }
 
 TBCMenuSpecific::TBCMenuSpecific() : tbid( 0 )
@@ -532,7 +530,7 @@ TBCMenuSpecific::Read( SvStream &rS)
     return true;
 }
 
-#if OSL_DEBUG_LEVEL > 1
+#ifdef DEBUG_FILTER_MSFILTER
 void
 TBCMenuSpecific::Print( FILE* fp )
 {
@@ -587,7 +585,7 @@ bool TBCBSpecific::Read( SvStream &rS)
 }
 
 
-#if OSL_DEBUG_LEVEL > 1
+#ifdef DEBUG_FILTER_MSFILTER
 void TBCBSpecific::Print( FILE* fp )
 {
     Indent a;
@@ -644,7 +642,7 @@ bool TBCComboDropdownSpecific::Read( SvStream &rS)
     return true;
 }
 
-#if OSL_DEBUG_LEVEL > 1
+#ifdef DEBUG_FILTER_MSFILTER
 void TBCComboDropdownSpecific::Print( FILE* fp)
 {
     Indent a;
@@ -691,7 +689,7 @@ bool TBCCDData::Read( SvStream &rS)
     return wstrEdit.Read( rS );
 }
 
-#if OSL_DEBUG_LEVEL > 1
+#ifdef DEBUG_FILTER_MSFILTER
 void TBCCDData::Print( FILE* fp)
 {
     Indent a;
@@ -727,7 +725,7 @@ bool TBCBitMap::Read( SvStream& rS)
     return ReadDIB(mBitMap, rS, false, true);
 }
 
-#if OSL_DEBUG_LEVEL > 1
+#ifdef DEBUG_FILTER_MSTOOLBAR
 void TBCBitMap::Print( FILE* fp )
 {
     Indent a;
@@ -761,7 +759,7 @@ bool TB::IsEnabled()
     return ( bFlags & 0x01 ) != 0x01;
 }
 
-#if OSL_DEBUG_LEVEL > 1
+#ifdef DEBUG_FILTER_MSTOOLBAR
 void TB::Print( FILE* fp )
 {
     Indent a;
@@ -791,7 +789,7 @@ bool TBVisualData::Read( SvStream& rS )
     return true;
 }
 
-#if OSL_DEBUG_LEVEL > 1
+#ifdef DEBUG_FILTER_MSTOOLBAR
 void SRECT::Print( FILE* fp )
 {
     Indent a;
@@ -802,7 +800,7 @@ void SRECT::Print( FILE* fp )
 }
 #endif
 
-#if OSL_DEBUG_LEVEL > 1
+#ifdef DEBUG_FILTER_MSTOOLBAR
 void TBVisualData::Print( FILE* fp )
 {
     Indent a;

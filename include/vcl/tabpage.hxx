@@ -26,9 +26,6 @@
 #include <vcl/window.hxx>
 
 
-// - TabPage -
-
-
 class VCL_DLLPUBLIC TabPage
     : public vcl::Window
     , public VclBuilderContainer

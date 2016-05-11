@@ -23,7 +23,6 @@
 #include <sdr/properties/emptyproperties.hxx>
 
 
-
 namespace sdr
 {
     namespace properties
@@ -60,12 +59,14 @@ namespace sdr
             // get the installed StyleSheet
             virtual SfxStyleSheet* GetStyleSheet() const override;
 
+            // set the installed StyleSheet
+            virtual void SetStyleSheet(SfxStyleSheet* pStyleSheet, bool bDontRemoveHardAttr) override;
+
             // clear single item
             virtual void ClearObjectItem(const sal_uInt16 nWhich = 0) override;
         };
     } // end of namespace properties
 } // end of namespace sdr
-
 
 
 #endif // INCLUDED_SVX_INC_SDR_PROPERTIES_PAGEPROPERTIES_HXX

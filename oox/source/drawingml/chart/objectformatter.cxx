@@ -35,6 +35,7 @@
 #include "drawingml/chart/chartspacemodel.hxx"
 #include "oox/helper/modelobjecthelper.hxx"
 #include <oox/helper/graphichelper.hxx>
+#include <oox/token/properties.hxx>
 
 namespace oox {
 namespace drawingml {
@@ -321,17 +322,6 @@ static const AutoFormatEntry spFilledSeries3dFills[] =
     AUTOFORMAT_END()
 };
 
-static const AutoFormatEntry spFilledSeriesEffects[] =
-{
-    // 1...8: no effect, same as Chart2
-    AUTOFORMAT_COLOR(  9, 16, THEMED_STYLE_SUBTLE,   XML_dk1 ),
-    AUTOFORMAT_COLOR( 17, 24, THEMED_STYLE_MODERATE, XML_dk1 ),
-    AUTOFORMAT_COLOR( 25, 32, THEMED_STYLE_INTENSE,  XML_dk1 ),
-    // 33...40: no effect, same as Chart2
-    AUTOFORMAT_COLOR( 41, 48, THEMED_STYLE_INTENSE,  XML_dk1 ),
-    AUTOFORMAT_END()
-};
-
 static const AutoFormatEntry spUpDownBarLines[] =
 {
     AUTOFORMAT_COLOR(       1, 16, THEMED_STYLE_SUBTLE, XML_tx1 ),
@@ -383,17 +373,6 @@ static const AutoFormatEntry spDownBarFills[] =
     AUTOFORMAT_COLORMOD(   41, 41, THEMED_STYLE_INTENSE, XML_dk1, XML_tint,  85000 ),
     AUTOFORMAT_COLOR(      42, 42, THEMED_STYLE_INTENSE, XML_dk1 ),
     AUTOFORMAT_ACCENTSMOD( 43,     THEMED_STYLE_INTENSE,          XML_shade, 25000 ),
-    AUTOFORMAT_END()
-};
-
-static const AutoFormatEntry spUpDownBarEffects[] =
-{
-    // 1...8: no effect, same as Chart2
-    AUTOFORMAT_COLOR(  9, 16, THEMED_STYLE_SUBTLE,   XML_dk1 ),
-    AUTOFORMAT_COLOR( 17, 24, THEMED_STYLE_MODERATE, XML_dk1 ),
-    AUTOFORMAT_COLOR( 25, 32, THEMED_STYLE_INTENSE,  XML_dk1 ),
-    // 33...40: no effect, same as Chart2
-    AUTOFORMAT_COLOR( 41, 48, THEMED_STYLE_INTENSE,  XML_dk1 ),
     AUTOFORMAT_END()
 };
 
@@ -532,45 +511,44 @@ struct ObjectTypeFormatEntry
     const ShapePropertyInfo* mpPropInfo;    /// Property info for the ShapePropertyMap class.
     const AutoFormatEntry* mpAutoLines;     /// Automatic line formatting for all chart styles.
     const AutoFormatEntry* mpAutoFills;     /// Automatic fill formatting for all chart styles.
-    const AutoFormatEntry* mpAutoEffects;   /// Automatic effect formatting for all chart styles.
     const AutoTextEntry* mpAutoTexts;       /// Automatic text attributes for all chart styles.
     bool                mbIsFrame;          /// True = object is a frame, false = object is a line.
 };
 
-#define TYPEFORMAT_FRAME( obj_type, prop_type, auto_texts, auto_lines, auto_fills, auto_effects ) \
-    { obj_type, prop_type, auto_lines, auto_fills, auto_effects, auto_texts, true }
+#define TYPEFORMAT_FRAME( obj_type, prop_type, auto_texts, auto_lines, auto_fills ) \
+    { obj_type, prop_type, auto_lines, auto_fills, auto_texts, true }
 
 #define TYPEFORMAT_LINE( obj_type, prop_type, auto_texts, auto_lines ) \
-    { obj_type, prop_type, auto_lines, nullptr, nullptr, auto_texts, false }
+    { obj_type, prop_type, auto_lines, nullptr,  auto_texts, false }
 
 static const ObjectTypeFormatEntry spObjTypeFormatEntries[] =
 {
-    //                object type                property info      auto text          auto line            auto fill              auto effect
-    TYPEFORMAT_FRAME( OBJECTTYPE_CHARTSPACE,     &saCommonPropInfo, nullptr,                 spNoFormats,         spChartSpaceFill,      nullptr /* eq to Ch2 */ ),
-    TYPEFORMAT_FRAME( OBJECTTYPE_CHARTTITLE,     &saCommonPropInfo, spChartTitleTexts, nullptr /* eq to Ch2 */,   nullptr /* eq to Ch2 */,     nullptr /* eq to Ch2 */ ),
-    TYPEFORMAT_FRAME( OBJECTTYPE_LEGEND,         &saCommonPropInfo, spOtherTexts,      spNoFormats,         spNoFormats,           nullptr /* eq to Ch2 */ ),
-    TYPEFORMAT_FRAME( OBJECTTYPE_PLOTAREA2D,     &saCommonPropInfo, nullptr,                 nullptr /* eq to Ch2 */,   spPlotArea2dFills,     nullptr /* eq to Ch2 */ ),
-    TYPEFORMAT_FRAME( OBJECTTYPE_PLOTAREA3D,     &saCommonPropInfo, nullptr,                 nullptr /* eq to Ch2 */,   nullptr /* eq to Ch2 */,     nullptr /* eq to Ch2 */ ),
-    TYPEFORMAT_FRAME( OBJECTTYPE_WALL,           &saCommonPropInfo, nullptr,                 spWallFloorLines,    spWallFloorFills,      nullptr /* eq to Ch2 */ ),
-    TYPEFORMAT_FRAME( OBJECTTYPE_FLOOR,          &saCommonPropInfo, nullptr,                 spWallFloorLines,    spWallFloorFills,      nullptr /* eq to Ch2 */ ),
+    //                object type                property info      auto text          auto line            auto fill
+    TYPEFORMAT_FRAME( OBJECTTYPE_CHARTSPACE,     &saCommonPropInfo, nullptr,                 spNoFormats,         spChartSpaceFill ),
+    TYPEFORMAT_FRAME( OBJECTTYPE_CHARTTITLE,     &saCommonPropInfo, spChartTitleTexts, nullptr /* eq to Ch2 */,   nullptr /* eq to Ch2 */),
+    TYPEFORMAT_FRAME( OBJECTTYPE_LEGEND,         &saCommonPropInfo, spOtherTexts,      spNoFormats,         spNoFormats ),
+    TYPEFORMAT_FRAME( OBJECTTYPE_PLOTAREA2D,     &saCommonPropInfo, nullptr,                 nullptr /* eq to Ch2 */,   spPlotArea2dFills ),
+    TYPEFORMAT_FRAME( OBJECTTYPE_PLOTAREA3D,     &saCommonPropInfo, nullptr,                 nullptr /* eq to Ch2 */,   nullptr /* eq to Ch2 */ ),
+    TYPEFORMAT_FRAME( OBJECTTYPE_WALL,           &saCommonPropInfo, nullptr,                 spWallFloorLines,    spWallFloorFills ),
+    TYPEFORMAT_FRAME( OBJECTTYPE_FLOOR,          &saCommonPropInfo, nullptr,                 spWallFloorLines,    spWallFloorFills ),
     TYPEFORMAT_LINE(  OBJECTTYPE_AXIS,           &saCommonPropInfo, spOtherTexts,      spAxisLines ),
-    TYPEFORMAT_FRAME( OBJECTTYPE_AXISTITLE,      &saCommonPropInfo, spAxisTitleTexts,  nullptr /* eq to Ch2 */,   nullptr /* eq to Ch2 */,     nullptr /* eq to Ch2 */ ),
-    TYPEFORMAT_FRAME( OBJECTTYPE_AXISUNIT,       &saCommonPropInfo, spAxisTitleTexts,  nullptr /* eq in Ch2 */,   nullptr /* eq in Ch2 */,     nullptr /* eq in Ch2 */ ),
+    TYPEFORMAT_FRAME( OBJECTTYPE_AXISTITLE,      &saCommonPropInfo, spAxisTitleTexts,  nullptr /* eq to Ch2 */,   nullptr /* eq to Ch2 */ ),
+    TYPEFORMAT_FRAME( OBJECTTYPE_AXISUNIT,       &saCommonPropInfo, spAxisTitleTexts,  nullptr /* eq in Ch2 */,   nullptr /* eq in Ch2 */ ),
     TYPEFORMAT_LINE(  OBJECTTYPE_MAJORGRIDLINE,  &saCommonPropInfo, nullptr,                 spMajorGridLines ),
     TYPEFORMAT_LINE(  OBJECTTYPE_MINORGRIDLINE,  &saCommonPropInfo, nullptr,                 spMinorGridLines ),
     TYPEFORMAT_LINE(  OBJECTTYPE_LINEARSERIES2D, &saLinearPropInfo, nullptr,                 spLinearSeriesLines ),
-    TYPEFORMAT_FRAME( OBJECTTYPE_FILLEDSERIES2D, &saFilledPropInfo, nullptr,                 spFilledSeriesLines, spFilledSeries2dFills, spFilledSeriesEffects ),
-    TYPEFORMAT_FRAME( OBJECTTYPE_FILLEDSERIES3D, &saFilledPropInfo, nullptr,                 spFilledSeriesLines, spFilledSeries3dFills, spFilledSeriesEffects ),
-    TYPEFORMAT_FRAME( OBJECTTYPE_DATALABEL,      &saCommonPropInfo, spOtherTexts,      nullptr /* eq to Ch2 */,   nullptr /* eq to Ch2 */,     nullptr /* eq to Ch2 */ ),
+    TYPEFORMAT_FRAME( OBJECTTYPE_FILLEDSERIES2D, &saFilledPropInfo, nullptr,                 spFilledSeriesLines, spFilledSeries2dFills ),
+    TYPEFORMAT_FRAME( OBJECTTYPE_FILLEDSERIES3D, &saFilledPropInfo, nullptr,                 spFilledSeriesLines, spFilledSeries3dFills ),
+    TYPEFORMAT_FRAME( OBJECTTYPE_DATALABEL,      &saCommonPropInfo, spOtherTexts,      nullptr /* eq to Ch2 */,   nullptr /* eq to Ch2 */ ),
     TYPEFORMAT_LINE(  OBJECTTYPE_TRENDLINE,      &saCommonPropInfo, nullptr,                 spOtherLines ),
-    TYPEFORMAT_FRAME( OBJECTTYPE_TRENDLINELABEL, &saCommonPropInfo, spOtherTexts,      nullptr /* eq to Ch2 */,   nullptr /* eq to Ch2 */,     nullptr /* eq to Ch2 */ ),
+    TYPEFORMAT_FRAME( OBJECTTYPE_TRENDLINELABEL, &saCommonPropInfo, spOtherTexts,      nullptr /* eq to Ch2 */,   nullptr /* eq to Ch2 */ ),
     TYPEFORMAT_LINE(  OBJECTTYPE_ERRORBAR,       &saCommonPropInfo, nullptr,                 spOtherLines ),
     TYPEFORMAT_LINE(  OBJECTTYPE_SERLINE,        &saCommonPropInfo, nullptr,                 spOtherLines ),
     TYPEFORMAT_LINE(  OBJECTTYPE_LEADERLINE,     &saCommonPropInfo, nullptr,                 spOtherLines ),
     TYPEFORMAT_LINE(  OBJECTTYPE_DROPLINE,       &saCommonPropInfo, nullptr,                 spOtherLines ),
     TYPEFORMAT_LINE(  OBJECTTYPE_HILOLINE,       &saLinearPropInfo, nullptr,                 spOtherLines ),
-    TYPEFORMAT_FRAME( OBJECTTYPE_UPBAR,          &saCommonPropInfo, nullptr,                 spUpDownBarLines,    spUpBarFills,          spUpDownBarEffects ),
-    TYPEFORMAT_FRAME( OBJECTTYPE_DOWNBAR,        &saCommonPropInfo, nullptr,                 spUpDownBarLines,    spDownBarFills,        spUpDownBarEffects ),
+    TYPEFORMAT_FRAME( OBJECTTYPE_UPBAR,          &saCommonPropInfo, nullptr,                 spUpDownBarLines,    spUpBarFills ),
+    TYPEFORMAT_FRAME( OBJECTTYPE_DOWNBAR,        &saCommonPropInfo, nullptr,                 spUpDownBarLines,    spDownBarFills ),
     TYPEFORMAT_LINE(  OBJECTTYPE_DATATABLE,      &saCommonPropInfo, spOtherTexts,      spDataTableLines )
 };
 
@@ -649,15 +627,6 @@ private:
     FillPropertiesPtr   mxAutoFill;         /// Automatic fill properties.
 };
 
-class EffectFormatter : public DetailFormatterBase
-{
-public:
-    explicit            EffectFormatter(
-                            ObjectFormatterData& rData,
-                            const AutoFormatEntry* pAutoFormatEntry );
-
-};
-
 class TextFormatter : public DetailFormatterBase
 {
 public:
@@ -720,7 +689,6 @@ public:
 private:
     LineFormatter       maLineFormatter;    /// Converter for line formatting.
     FillFormatter       maFillFormatter;    /// Converter for fill formatting.
-    EffectFormatter     maEffectFormatter;  /// Converter for effect formatting.
     TextFormatter       maTextFormatter;    /// Converter for text formatting.
     ModelObjectHelper&  mrModelObjHelper;   /// Helper for named drawing formatting.
     const ObjectTypeFormatEntry& mrEntry;   /// Additional settings.
@@ -894,11 +862,6 @@ void FillFormatter::convertFormatting( ShapePropertyMap& rPropMap, const ModelRe
     aFillProps.pushToPropMap( rPropMap, mrData.mrFilter.getGraphicHelper(), 0, getPhColor( nSeriesIdx ) );
 }
 
-EffectFormatter::EffectFormatter( ObjectFormatterData& rData, const AutoFormatEntry* pAutoFormatEntry ) :
-    DetailFormatterBase( rData, pAutoFormatEntry )
-{
-}
-
 namespace {
 
 const TextCharacterProperties* lclGetTextProperties( const ModelRef< TextBody >& rxTextProp )
@@ -919,8 +882,10 @@ TextFormatter::TextFormatter( ObjectFormatterData& rData, const AutoTextEntry* p
             if( const TextCharacterProperties* pTextProps = pTheme->getFontStyle( pAutoTextEntry->mnThemedFont ) )
                 *mxAutoText = *pTextProps;
         sal_Int32 nTextColor = getPhColor( -1 );
-        if( nTextColor >= 0 )
-            mxAutoText->maCharColor.setSrgbClr( nTextColor );
+        if( nTextColor >= 0 ) {
+            mxAutoText->maFillProperties.maFillColor.setSrgbClr( nTextColor );
+            mxAutoText->maFillProperties.moFillType.set(XML_solidFill);
+        }
         mxAutoText->moHeight = pAutoTextEntry->mnDefFontSize;
         mxAutoText->moBold = pAutoTextEntry->mbBold;
 
@@ -951,7 +916,6 @@ void TextFormatter::convertFormatting( PropertySet& rPropSet, const ModelRef< Te
 ObjectTypeFormatter::ObjectTypeFormatter( ObjectFormatterData& rData, const ObjectTypeFormatEntry& rEntry, const ChartSpaceModel& rChartSpace, const ObjectType eObjType ) :
     maLineFormatter(   rData, lclGetAutoFormatEntry( rEntry.mpAutoLines,   rChartSpace.mnStyle ) ),
     maFillFormatter(   rData, lclGetAutoFormatEntry( rEntry.mpAutoFills,   rChartSpace.mnStyle ), eObjType ),
-    maEffectFormatter( rData, lclGetAutoFormatEntry( rEntry.mpAutoEffects, rChartSpace.mnStyle ) ),
     maTextFormatter(   rData, lclGetAutoTextEntry(   rEntry.mpAutoTexts,   rChartSpace.mnStyle ), rChartSpace.mxTextProp ),
     mrModelObjHelper( rData.maModelObjHelper ),
     mrEntry( rEntry )
@@ -997,9 +961,8 @@ ObjectFormatterData::ObjectFormatterData( const XmlFilterBase& rFilter, const Re
     maEnUsLocale( "en", "US", OUString() ),
     mnMaxSeriesIdx( -1 )
 {
-    const ObjectTypeFormatEntry* pEntryEnd = STATIC_ARRAY_END( spObjTypeFormatEntries );
-    for( const ObjectTypeFormatEntry* pEntry = spObjTypeFormatEntries; pEntry != pEntryEnd; ++pEntry )
-        maTypeFormatters[ pEntry->meObjType ].reset( new ObjectTypeFormatter( *this, *pEntry, rChartSpace, pEntry->meObjType ) );
+    for(auto const &rEntry : spObjTypeFormatEntries)
+        maTypeFormatters[ rEntry.meObjType ].reset( new ObjectTypeFormatter( *this, rEntry, rChartSpace, rEntry.meObjType ) );
 
     try
     {

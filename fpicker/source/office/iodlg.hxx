@@ -78,8 +78,6 @@ private:
     ::utl::OConfigurationNode   m_aConfiguration;
     ::rtl::Reference< ::svt::AsyncPickerAction >
                                 m_pCurrentAsyncAction;
-    css::uno::Reference< css::ui::dialogs::XDialogClosedListener >
-                                m_xListener;
     bool                        m_bInExecuteAsync;
     bool                        m_bHasFilename;
     css::uno::Reference < css::uno::XComponentContext >
@@ -241,19 +239,9 @@ private:
 
     /** updates _pUserFilter with a new filter
         <p>No checks for necessity are made.</p>
-        @param _bAllowUserDefExt
-            set to <TRUE/> if a filter like "*.txt" should reset the DefaultExtension to doc.
-            <p>
-            In a file-save-dialog this would have the following effect:<br/>
-            Say that auto-extension is checked, and the user enters *.txt, while a non-txt filter is selected.<br/>
-            If _bAllowUserDefExt is set to <TRUE/>, then a user input of "foo" would save a foo.txt, but in a format
-            which is determined by the filter selected (which is no txt file as said above).<br/>
-            If _bAllowUserDefExt is set to <FALSE/>, the default extension will be the one of the selected filter, means
-            in the above scenario a file "foo.<ext>" will be saved where ext is the extension of the selected filter.
-            </p>
         @return <TRUE/> if the new filter is "*.*"
     */
-    bool                        createNewUserFilter( const OUString& _rNewFilter, bool _bAllowUserDefExt );
+    bool                        createNewUserFilter( const OUString& _rNewFilter );
 
     sal_uInt16                  adjustFilter( const OUString& _rFilter );
 
@@ -292,12 +280,10 @@ private:
 };
 
 
-
 inline void SvtFileDialog::SetPath( const OUString& rNewURL )
 {
     _aPath = rNewURL;
 }
-
 
 
 inline void SvtFileDialog::SetHasFilename( bool bHasFilename )
@@ -306,12 +292,10 @@ inline void SvtFileDialog::SetHasFilename( bool bHasFilename )
 }
 
 
-
 inline const OUString& SvtFileDialog::GetPath()
 {
     return _aPath;
 }
-
 
 
 inline void SvtFileDialog::SetDefaultExt( const OUString& rExt )

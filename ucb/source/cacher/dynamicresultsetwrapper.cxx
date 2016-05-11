@@ -30,13 +30,10 @@ using namespace com::sun::star::lang;
 using namespace com::sun::star::sdbc;
 using namespace com::sun::star::ucb;
 using namespace com::sun::star::uno;
-using namespace cppu;
-
-
+using namespace comphelper;
 
 
 // class DynamicResultSetWrapper
-
 
 
 DynamicResultSetWrapper::DynamicResultSetWrapper(
@@ -178,7 +175,7 @@ void SAL_CALL DynamicResultSetWrapper::addEventListener( const Reference< XEvent
 
     if ( !m_pDisposeEventListeners )
         m_pDisposeEventListeners =
-                    new OInterfaceContainerHelper( m_aContainerMutex );
+                    new OInterfaceContainerHelper2( m_aContainerMutex );
 
     m_pDisposeEventListeners->addInterface( Listener );
 }
@@ -437,9 +434,7 @@ sal_Int16 SAL_CALL DynamicResultSetWrapper::getCapabilities()
 }
 
 
-
 // class DynamicResultSetWrapperListener
-
 
 
 DynamicResultSetWrapperListener::DynamicResultSetWrapperListener(

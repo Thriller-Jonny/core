@@ -33,6 +33,8 @@
 #include <sfx2/sfxuno.hxx>
 #include <sfx2/docfilt.hxx>
 
+#include <memory>
+
 namespace com
 {
     namespace sun
@@ -192,7 +194,7 @@ public:
     OUString                 GetDisplayDirectory() const;
     ErrCode                  GetGraphic( Graphic& rGraphic ) const;
 
-    css::uno::Reference < css::ui::dialogs::XFilePicker2 > GetFilePicker() const;
+    const css::uno::Reference < css::ui::dialogs::XFilePicker2 >& GetFilePicker() const;
 
     // XFilePickerListener methods
     void SAL_CALL   FileSelectionChanged( const css::ui::dialogs::FilePickerEvent& aEvent );
@@ -248,7 +250,7 @@ ErrCode FileOpenDialog_Impl( sal_Int16 nDialogType,
                              const css::uno::Sequence< OUString >& rBlackList = css::uno::Sequence< OUString >());
 
 
-ErrCode RequestPassword(const SfxFilter* pCurrentFilter, OUString& aURL, SfxItemSet* pSet);
+ErrCode RequestPassword(const std::shared_ptr<const SfxFilter>& pCurrentFilter, OUString& aURL, SfxItemSet* pSet);
 }
 
 #endif

@@ -68,7 +68,6 @@ struct SfxChildWindow_Impl
 };
 
 
-
 class DisposeListener : public ::cppu::WeakImplHelper< css::lang::XEventListener >
 {
     public:
@@ -110,7 +109,6 @@ class DisposeListener : public ::cppu::WeakImplHelper< css::lang::XEventListener
         SfxChildWindow*      m_pOwner;
         SfxChildWindow_Impl* m_pData ;
 };
-
 
 
 bool GetPosSizeFromString( const OUString& rStr, Point& rPos, Size& rSize )
@@ -182,7 +180,7 @@ void SfxChildWindow::Destroy()
         {
             css::uno::Reference < css::util::XCloseable > xClose( GetFrame(), css::uno::UNO_QUERY );
             if ( xClose.is() )
-                xClose->close( sal_True );
+                xClose->close( true );
             else
                 GetFrame()->dispose();
         }
@@ -327,13 +325,10 @@ void SfxChildWindow::SaveStatus(const SfxChildWinInfo& rInfo)
     pImp->pFact->aInfo = rInfo;
 }
 
-
 void SfxChildWindow::SetAlignment(SfxChildAlignment eAlign)
 {
-
     eChildAlignment = eAlign;
 }
-
 
 SfxChildWinInfo SfxChildWindow::GetInfo() const
 {
@@ -343,19 +338,19 @@ SfxChildWinInfo SfxChildWindow::GetInfo() const
     aInfo.aSize = pWindow->GetSizePixel();
     if ( pWindow->IsSystemWindow() )
     {
-        sal_uIntPtr nMask = WINDOWSTATE_MASK_POS | WINDOWSTATE_MASK_STATE;
+        WindowStateMask nMask = WindowStateMask::Pos | WindowStateMask::State;
         if ( pWindow->GetStyle() & WB_SIZEABLE )
-            nMask |= ( WINDOWSTATE_MASK_WIDTH | WINDOWSTATE_MASK_HEIGHT );
+            nMask |= ( WindowStateMask::Width | WindowStateMask::Height );
         aInfo.aWinState = static_cast<SystemWindow*>(pWindow.get())->GetWindowState( nMask );
     }
-    else if ( pWindow->GetType() == RSC_DOCKINGWINDOW )
+    else if (DockingWindow* pDockingWindow = dynamic_cast<DockingWindow*>(pWindow.get()))
     {
-        if (static_cast<DockingWindow*>(pWindow.get())->GetFloatingWindow() )
-            aInfo.aWinState = static_cast<DockingWindow*>(pWindow.get())->GetFloatingWindow()->GetWindowState();
-        else
+        if (pDockingWindow->GetFloatingWindow())
+            aInfo.aWinState = pDockingWindow->GetFloatingWindow()->GetWindowState();
+        else if (SfxDockingWindow* pSfxDockingWindow = dynamic_cast<SfxDockingWindow*>(pDockingWindow))
         {
             SfxChildWinInfo aTmpInfo;
-            static_cast<SfxDockingWindow*>(pWindow.get())->FillInfo( aTmpInfo );
+            pSfxDockingWindow->FillInfo( aTmpInfo );
             aInfo.aExtraString = aTmpInfo.aExtraString;
         }
     }
@@ -365,12 +360,10 @@ SfxChildWinInfo SfxChildWindow::GetInfo() const
     return aInfo;
 }
 
-
 sal_uInt16 SfxChildWindow::GetPosition()
 {
     return pImp->pFact->nPos;
 }
-
 
 void SfxChildWindow::InitializeChildWinFactory_Impl(sal_uInt16 nId, SfxChildWinInfo& rInfo)
 {
@@ -584,11 +577,7 @@ bool SfxChildWindow::WantsFocus() const
 
 bool SfxChildWinInfo::GetExtraData_Impl
 (
-    SfxChildAlignment   *pAlign,
-    SfxChildAlignment   *pLastAlign,
-    Size                *pSize,
-    sal_uInt16          *pLine,
-    sal_uInt16          *pPos
+    SfxChildAlignment   *pAlign
 )   const
 {
     // invalid?
@@ -624,8 +613,6 @@ bool SfxChildWinInfo::GetExtraData_Impl
     if ( nPos == -1 )
         return false;
     aStr = aStr.copy(nPos+1);
-    if ( pLastAlign )
-        *pLastAlign = (SfxChildAlignment) (sal_uInt16) aStr.toInt32();
 
     // Then the splitting information
     nPos = aStr.indexOf(',');
@@ -637,12 +624,6 @@ bool SfxChildWinInfo::GetExtraData_Impl
     Size aChildSize;
     if ( GetPosSizeFromString( aStr, aChildPos, aChildSize ) )
     {
-        if ( pSize )
-            *pSize = aChildSize;
-        if ( pLine )
-            *pLine = (sal_uInt16) aChildPos.X();
-        if ( pPos )
-            *pPos = (sal_uInt16) aChildPos.Y();
         return true;
     }
     return false;
@@ -660,34 +641,12 @@ void SfxChildWindow::SetVisible_Impl( bool bVis )
 
 void SfxChildWindow::Hide()
 {
-    switch ( pWindow->GetType() )
-    {
-        case RSC_DOCKINGWINDOW :
-            static_cast<DockingWindow*>(pWindow.get())->Hide();
-            break;
-        case RSC_TOOLBOX :
-            static_cast<ToolBox*>(pWindow.get())->Hide();
-            break;
-        default:
-            pWindow->Hide();
-            break;
-    }
+    pWindow->Hide();
 }
 
 void SfxChildWindow::Show( ShowFlags nFlags )
 {
-    switch ( pWindow->GetType() )
-    {
-        case RSC_DOCKINGWINDOW :
-            static_cast<DockingWindow*>(pWindow.get())->Show( true, nFlags );
-            break;
-        case RSC_TOOLBOX :
-            static_cast<ToolBox*>(pWindow.get())->Show( true, nFlags );
-            break;
-        default:
-            pWindow->Show( true, nFlags );
-            break;
-    }
+    pWindow->Show(true, nFlags);
 }
 
 vcl::Window* SfxChildWindow::GetContextWindow( SfxModule *pModule ) const
@@ -720,7 +679,7 @@ bool SfxChildWindow::QueryClose()
     {
         css::uno::Reference< css::frame::XController >  xCtrl = pImp->xFrame->getController();
         if ( xCtrl.is() )
-            bAllow = xCtrl->suspend( sal_True );
+            bAllow = xCtrl->suspend( true );
     }
 
     if ( bAllow )
@@ -729,7 +688,7 @@ bool SfxChildWindow::QueryClose()
     return bAllow;
 }
 
-css::uno::Reference< css::frame::XFrame >  SfxChildWindow::GetFrame()
+const css::uno::Reference< css::frame::XFrame >&  SfxChildWindow::GetFrame()
 {
     return pImp->xFrame;
 }

@@ -52,8 +52,6 @@ using namespace ::com::sun::star::frame;
 using namespace ::com::sun::star::util;
 using namespace ::com::sun::star::container;
 using namespace ::com::sun::star::beans;
-using ::com::sun::star::lang::XMultiServiceFactory;
-using ::com::sun::star::lang::XComponent;
 
 
 void SfxFrameViewWindow_Impl::StateChanged( StateChangedType nStateChange )
@@ -75,8 +73,6 @@ void SfxFrameViewWindow_Impl::Resize()
     if ( IsReallyVisible() || IsReallyShown() || GetOutputSizePixel().Width() )
         pFrame->Resize();
 }
-
-
 
 
 void SfxViewFrame::UpdateTitle()
@@ -120,7 +116,7 @@ void SfxViewFrame::UpdateTitle()
 {
 
     const SfxObjectFactory &rFact = GetObjectShell()->GetFactory();
-    pImp->aFactoryName = OUString::createFromAscii(rFact.GetShortName());
+    m_pImp->aFactoryName = OUString::createFromAscii(rFact.GetShortName());
 
     SfxObjectShell *pObjSh = GetObjectShell();
     if ( !pObjSh )
@@ -136,16 +132,16 @@ void SfxViewFrame::UpdateTitle()
         aURL = aTmp.getName( INetURLObject::LAST_SEGMENT, true, INetURLObject::DECODE_WITH_CHARSET );
     }
 
-    if ( aURL != pImp->aActualURL )
+    if ( aURL != m_pImp->aActualURL )
         // URL has changed
-        pImp->aActualURL = aURL;
+        m_pImp->aActualURL = aURL;
 
     // SbxObjects name
     OUString aSbxName = pObjSh->SfxShell::GetName();
     if ( IsVisible() )
     {
         aSbxName += ":";
-        aSbxName += OUString::number(pImp->nDocViewNo);
+        aSbxName += OUString::number(m_pImp->nDocViewNo);
     }
 
     SetName( aSbxName );
@@ -210,8 +206,8 @@ void SfxViewFrame::Exec_Impl(SfxRequest &rReq )
             OUString aFactName;
             if ( pFactoryItem )
                 aFactName = pFactoryItem->GetValue();
-            else if ( !pImp->aFactoryName.isEmpty() )
-                aFactName = pImp->aFactoryName;
+            else if ( !m_pImp->aFactoryName.isEmpty() )
+                aFactName = m_pImp->aFactoryName;
             else
             {
                 OSL_FAIL("Missing argument!");
@@ -259,8 +255,11 @@ void SfxViewFrame::Exec_Impl(SfxRequest &rReq )
                     bClosed = false;
                     try
                     {
-                        xTask->close(sal_True);
+                        xTask->close(true);
                         bClosed = true;
+                    }
+                    catch (css::lang::DisposedException &) {
+                        // already closed; ignore
                     }
                     catch( CloseVetoException& )
                     {
@@ -294,10 +293,10 @@ void SfxViewFrame::GetState_Impl( SfxItemSet &rSet )
             {
             case SID_NEWDOCDIRECT :
             {
-                if ( !pImp->aFactoryName.isEmpty() )
+                if ( !m_pImp->aFactoryName.isEmpty() )
                 {
                     OUString aFact("private:factory/");
-                    aFact += pImp->aFactoryName;
+                    aFact += m_pImp->aFactoryName;
                     rSet.Put( SfxStringItem( nWhich, aFact ) );
                 }
                 break;
@@ -322,8 +321,7 @@ void SfxViewFrame::GetState_Impl( SfxItemSet &rSet )
             case SID_OBJECT:
                 if ( GetViewShell() && GetViewShell()->GetVerbs().getLength() && !GetObjectShell()->IsInPlaceActive() )
                 {
-                    uno::Any aAny;
-                    aAny <<= GetViewShell()->GetVerbs();
+                    uno::Any aAny(GetViewShell()->GetVerbs());
                     rSet.Put( SfxUnoAnyItem( sal_uInt16( SID_OBJECT ), aAny ) );
                 }
                 else
@@ -389,7 +387,7 @@ void SfxViewFrame::Activate( bool bMDI )
 {
     DBG_ASSERT(GetViewShell(), "No Shell");
     if ( bMDI )
-        pImp->bActive = true;
+        m_pImp->bActive = true;
 //(mba): here maybe as in Beanframe NotifyEvent ?!
 }
 
@@ -397,7 +395,7 @@ void SfxViewFrame::Deactivate( bool bMDI )
 {
     DBG_ASSERT(GetViewShell(), "No Shell");
     if ( bMDI )
-        pImp->bActive = false;
+        m_pImp->bActive = false;
 //(mba): here maybe as in Beanframe NotifyEvent ?!
 }
 

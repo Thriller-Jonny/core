@@ -25,7 +25,6 @@
 #include <com/sun/star/xml/sax/Parser.hpp>
 #include <com/sun/star/container/XNameContainer.hpp>
 #include <com/sun/star/xml/sax/XDocumentHandler.hpp>
-#include <com/sun/star/uno/Sequence.hxx>
 #include <com/sun/star/drawing/PolyPolygonBezierCoords.hpp>
 #include <com/sun/star/drawing/LineDash.hpp>
 #include <com/sun/star/awt/Gradient.hpp>
@@ -66,17 +65,7 @@ using namespace com::sun::star::xml::sax;
 using namespace ::xmloff::token;
 using namespace cppu;
 
-sal_Char const sXML_np__office[] = "__office";
-sal_Char const sXML_np__office_ooo[] = "___office";
-sal_Char const sXML_np__draw[] = "__draw";
-sal_Char const sXML_np__draw_ooo[] = "___draw";
-sal_Char const sXML_np__ooo[] = "__ooo";
-sal_Char const sXML_np__xlink[] = "__xlink";
-
-
-
 enum SvxXMLTableImportContextEnum { stice_unknown, stice_color, stice_marker, stice_dash, stice_hatch, stice_gradient, stice_bitmap };
-
 
 
 class SvxXMLTableImportContext : public SvXMLImportContext
@@ -101,7 +90,6 @@ private:
     SvxXMLTableImportContextEnum meContext;
     bool mbOOoFormat;
 };
-
 
 
 SvxXMLTableImportContext::SvxXMLTableImportContext( SvXMLImport& rImport, sal_uInt16 nPrfx, const OUString& rLName, const uno::Reference< XAttributeList >&, SvxXMLTableImportContextEnum eContext, const uno::Reference< XNameContainer >& xTable, bool bOOoFormat )
@@ -322,7 +310,6 @@ void SvxXMLTableImportContext::importBitmap( sal_uInt16 nPrfx, const OUString& r
 }
 
 
-
 SvxXMLXTableImport::SvxXMLXTableImport(
     const css::uno::Reference< css::uno::XComponentContext >& rContext,
     const uno::Reference< XNameContainer > & rTable,
@@ -332,16 +319,16 @@ SvxXMLXTableImport::SvxXMLXTableImport(
 {
     SetGraphicResolver( xGrfResolver );
 
-    GetNamespaceMap().Add( sXML_np__ooo, GetXMLToken(XML_N_OOO), XML_NAMESPACE_OOO );
-    GetNamespaceMap().Add( sXML_np__office, GetXMLToken(XML_N_OFFICE), XML_NAMESPACE_OFFICE );
-    GetNamespaceMap().Add( sXML_np__draw, GetXMLToken(XML_N_DRAW), XML_NAMESPACE_DRAW );
-    GetNamespaceMap().Add( sXML_np__xlink, GetXMLToken(XML_N_XLINK), XML_NAMESPACE_XLINK );
+    GetNamespaceMap().Add( "__ooo", GetXMLToken(XML_N_OOO), XML_NAMESPACE_OOO );
+    GetNamespaceMap().Add( "__office", GetXMLToken(XML_N_OFFICE), XML_NAMESPACE_OFFICE );
+    GetNamespaceMap().Add( "__draw", GetXMLToken(XML_N_DRAW), XML_NAMESPACE_DRAW );
+    GetNamespaceMap().Add( "__xlink", GetXMLToken(XML_N_XLINK), XML_NAMESPACE_XLINK );
 
     // OOo namespaces for reading OOo 1.1 files
-    GetNamespaceMap().Add( sXML_np__office_ooo,
+    GetNamespaceMap().Add( "___office",
                         GetXMLToken(XML_N_OFFICE_OOO),
                         XML_NAMESPACE_OFFICE );
-    GetNamespaceMap().Add( sXML_np__draw_ooo,
+    GetNamespaceMap().Add( "___draw",
                         GetXMLToken(XML_N_DRAW_OOO),
                         XML_NAMESPACE_DRAW );
 }
@@ -352,7 +339,7 @@ SvxXMLXTableImport::~SvxXMLXTableImport() throw ()
 
 static void openStorageStream( xml::sax::InputSource *pParserInput,
                                SvXMLGraphicHelper   **ppGraphicHelper,
-                               uno::Reference < embed::XStorage > xStorage )
+                               const uno::Reference < embed::XStorage >& xStorage )
 {
     uno::Reference < io::XStream > xIStm;
     xIStm.set( xStorage->openStreamElement( "Content.xml", embed::ElementModes::READ ), uno::UNO_QUERY_THROW );

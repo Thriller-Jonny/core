@@ -32,20 +32,11 @@
 #include "privsplt.hxx"
 #include "funcdesc.hxx"
 
-/** Derivation of SfxChildWindow as "containers" for Controller */
-class ScFunctionChildWindow : public SfxChildWindow
-{
- public:
-    ScFunctionChildWindow( vcl::Window*, sal_uInt16, SfxBindings*,
-                            SfxChildWinInfo* );
-
-    SFX_DECL_CHILDWINDOW_WITHID(ScFunctionChildWindow);
-};
-
-class ScFunctionDockWin : public SfxDockingWindow, public SfxListener
+class ScFunctionWin : public vcl::Window, public SfxListener
 {
 
 private:
+    SfxBindings&        rBindings;
     Idle                aIdle;
     VclPtr<ScPrivatSplit> aPrivatSplit;
     VclPtr<ListBox>     aCatBox;
@@ -53,16 +44,12 @@ private:
     VclPtr<ListBox>     aDDFuncList;
     VclPtr<ListBox>            pAllFuncList;
 
-    SfxChildAlignment   eSfxNewAlignment;
-    SfxChildAlignment   eSfxOldAlignment;
     VclPtr<ImageButton> aInsertButton;
     VclPtr<FixedText>   aFiFuncDesc;
     sal_uLong           nMinWidth;
     sal_uLong           nMinHeight;
     Size                aOldSize;
     bool                bSizeFlag;
-    bool                bInit;
-    short               nDockMode;
     Point               aSplitterInitPos;
     const ScFuncDesc*   pFuncDesc;
     sal_uInt16              nArgs;
@@ -74,11 +61,8 @@ private:
     void            DoEnter();
     void            SetDescription();
     void            SetLeftRightSize();
-    void            SetTopBottonSize();
     void            SetMyWidthLeRi(Size &aNewSize);
     void            SetMyHeightLeRi(Size &aNewSize);
-    void            SetMyWidthToBo(Size &aNewSize);
-    void            SetMyHeightToBo(Size &aNewSize);
     void            UseSplitterInitPos();
 
                     DECL_LINK_TYPED( SetSelectionHdl, ListBox&, void );
@@ -89,32 +73,22 @@ private:
 
 protected:
 
-    virtual bool    Close() override;
     virtual void    Resize() override;
-    virtual void    Resizing( Size& rSize ) override;
     void            SetSize();
-    virtual void    ToggleFloatingMode() override;
     virtual void    StateChanged( StateChangedType nStateChange ) override;
 
-    virtual SfxChildAlignment CheckAlignment(SfxChildAlignment,
-                                SfxChildAlignment eAlign) override;
-
 public:
-                    ScFunctionDockWin(  SfxBindings* pBindings,
-                                        SfxChildWindow *pCW,
+                    ScFunctionWin(  SfxBindings* pBindings,
                                         vcl::Window* pParent,
                                         const ResId& rResId );
 
-                    virtual ~ScFunctionDockWin();
+                    virtual ~ScFunctionWin();
     virtual void    dispose() override;
 
-    using SfxDockingWindow::Notify;
+    using ::vcl::Window::Notify;
     virtual void    Notify( SfxBroadcaster& rBC, const SfxHint& rHint ) override;
 
     void            InitLRUList();
-
-    void            Initialize (SfxChildWinInfo* pInfo);
-    virtual void    FillInfo(SfxChildWinInfo&) const override;
 };
 
 #endif

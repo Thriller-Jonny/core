@@ -189,14 +189,14 @@ XMLShapeExport::XMLShapeExport(SvXMLExport& rExp,
 
     mrExport.GetAutoStylePool()->AddFamily(
         XML_STYLE_FAMILY_SD_GRAPHICS_ID,
-        OUString(XML_STYLE_FAMILY_SD_GRAPHICS_NAME),
+        XML_STYLE_FAMILY_SD_GRAPHICS_NAME,
         GetPropertySetMapper(),
-        OUString(XML_STYLE_FAMILY_SD_GRAPHICS_PREFIX));
+        XML_STYLE_FAMILY_SD_GRAPHICS_PREFIX);
     mrExport.GetAutoStylePool()->AddFamily(
         XML_STYLE_FAMILY_SD_PRESENTATION_ID,
-        OUString(XML_STYLE_FAMILY_SD_PRESENTATION_NAME),
+        XML_STYLE_FAMILY_SD_PRESENTATION_NAME,
         GetPropertySetMapper(),
-        OUString(XML_STYLE_FAMILY_SD_PRESENTATION_PREFIX));
+        XML_STYLE_FAMILY_SD_PRESENTATION_PREFIX);
 
     maCurrentInfo = maShapeInfos.end();
 
@@ -377,12 +377,12 @@ void XMLShapeExport::collectShapeAutoStyles(const uno::Reference< drawing::XShap
         }
 
         // filter propset
-        std::vector< XMLPropertyState > xPropStates;
+        std::vector< XMLPropertyState > aPropStates;
 
         sal_Int32 nCount = 0;
         if( (!bIsEmptyPresObj || (aShapeInfo.meShapeType != XmlShapeTypePresPageShape)) )
         {
-            xPropStates = GetPropertySetMapper()->Filter( xPropSet );
+            aPropStates = GetPropertySetMapper()->Filter( xPropSet );
 
             if (XmlShapeTypeDrawControlShape == aShapeInfo.meShapeType)
             {
@@ -403,13 +403,13 @@ void XMLShapeExport::collectShapeAutoStyles(const uno::Reference< drawing::XShap
                         DBG_ASSERT(-1 != nIndex, "XMLShapeExport::collectShapeAutoStyles: could not obtain the index for our context id!");
 
                         XMLPropertyState aNewState(nIndex, uno::makeAny(sNumberStyle));
-                        xPropStates.push_back(aNewState);
+                        aPropStates.push_back(aNewState);
                     }
                 }
             }
 
-            std::vector< XMLPropertyState >::iterator aIter = xPropStates.begin();
-            std::vector< XMLPropertyState >::iterator aEnd = xPropStates.end();
+            std::vector< XMLPropertyState >::iterator aIter = aPropStates.begin();
+            std::vector< XMLPropertyState >::iterator aEnd = aPropStates.end();
             while( aIter != aEnd )
             {
                 if( aIter->mnIndex != -1 )
@@ -427,19 +427,19 @@ void XMLShapeExport::collectShapeAutoStyles(const uno::Reference< drawing::XShap
         {
             // there are filtered properties -> hard attributes
             // try to find this style in AutoStylePool
-            aShapeInfo.msStyleName = mrExport.GetAutoStylePool()->Find(aShapeInfo.mnFamily, aParentName, xPropStates);
+            aShapeInfo.msStyleName = mrExport.GetAutoStylePool()->Find(aShapeInfo.mnFamily, aParentName, aPropStates);
 
             if(aShapeInfo.msStyleName.isEmpty())
             {
                 // Style did not exist, add it to AutoStalePool
-                aShapeInfo.msStyleName = mrExport.GetAutoStylePool()->Add(aShapeInfo.mnFamily, aParentName, xPropStates);
+                aShapeInfo.msStyleName = mrExport.GetAutoStylePool()->Add(aShapeInfo.mnFamily, aParentName, aPropStates);
             }
         }
 
         // optionaly generate auto style for text attributes
         if( (!bIsEmptyPresObj || (aShapeInfo.meShapeType != XmlShapeTypePresPageShape)) && bObjSupportsText )
         {
-            xPropStates = GetExport().GetTextParagraphExport()->GetParagraphPropertyMapper()->Filter( xPropSet );
+            aPropStates = GetExport().GetTextParagraphExport()->GetParagraphPropertyMapper()->Filter( xPropSet );
 
             // yet more additionally, we need to care for the ParaAdjust property
             if ( XmlShapeTypeDrawControlShape == aShapeInfo.meShapeType )
@@ -453,7 +453,7 @@ void XMLShapeExport::collectShapeAutoStyles(const uno::Reference< drawing::XShap
                     // * control models are allowed to have an Align of "void"
                     // * the Default for control model's Align is TextAlign_LEFT
                     // * defaults for style properties are not written, but we need to write the "left",
-                    //   because we need to distiguish this "left" from the case where not align attribute
+                    //   because we need to distinguish this "left" from the case where not align attribute
                     //   is present which means "void"
                     if  (   xPropSetInfo->hasPropertyByName( "ParaAdjust" )
                         &&  ( beans::PropertyState_DEFAULT_VALUE == xPropState->getPropertyState( "ParaAdjust" ) )
@@ -467,14 +467,14 @@ void XMLShapeExport::collectShapeAutoStyles(const uno::Reference< drawing::XShap
                         uno::Any aParaAdjustValue = xPropSet->getPropertyValue( "ParaAdjust" );
                         XMLPropertyState aAlignDefaultState( nIndex, aParaAdjustValue );
 
-                        xPropStates.push_back( aAlignDefaultState );
+                        aPropStates.push_back( aAlignDefaultState );
                     }
                 }
             }
 
             nCount = 0;
-            std::vector< XMLPropertyState >::iterator aIter = xPropStates.begin();
-            std::vector< XMLPropertyState >::iterator aEnd = xPropStates.end();
+            std::vector< XMLPropertyState >::iterator aIter = aPropStates.begin();
+            std::vector< XMLPropertyState >::iterator aEnd = aPropStates.end();
             while( aIter != aEnd )
             {
                 if( aIter->mnIndex != -1 )
@@ -484,11 +484,11 @@ void XMLShapeExport::collectShapeAutoStyles(const uno::Reference< drawing::XShap
 
             if( nCount )
             {
-                aShapeInfo.msTextStyleName = mrExport.GetAutoStylePool()->Find( XML_STYLE_FAMILY_TEXT_PARAGRAPH, "", xPropStates );
+                aShapeInfo.msTextStyleName = mrExport.GetAutoStylePool()->Find( XML_STYLE_FAMILY_TEXT_PARAGRAPH, "", aPropStates );
                 if(aShapeInfo.msTextStyleName.isEmpty())
                 {
                     // Style did not exist, add it to AutoStalePool
-                    aShapeInfo.msTextStyleName = mrExport.GetAutoStylePool()->Add(XML_STYLE_FAMILY_TEXT_PARAGRAPH, "", xPropStates);
+                    aShapeInfo.msTextStyleName = mrExport.GetAutoStylePool()->Add(XML_STYLE_FAMILY_TEXT_PARAGRAPH, "", aPropStates);
                 }
             }
         }
@@ -585,7 +585,7 @@ void XMLShapeExport::exportShape(const uno::Reference< drawing::XShape >& xShape
     sal_Int32 nZIndex = 0;
     uno::Reference< beans::XPropertySet > xSet( xShape, uno::UNO_QUERY );
 
-    std::unique_ptr< SvXMLElementExport >  mpHyperlinkElement;
+    std::unique_ptr< SvXMLElementExport >  pHyperlinkElement;
 
     // export hyperlinks with <a><shape/></a>. Currently only in draw since draw
     // does not support document events
@@ -605,7 +605,7 @@ void XMLShapeExport::exportShape(const uno::Reference< drawing::XShape >& xShape
                 mrExport.AddAttribute( XML_NAMESPACE_XLINK, XML_HREF, sURL );
                 mrExport.AddAttribute( XML_NAMESPACE_XLINK, XML_TYPE, XML_SIMPLE );
                 mrExport.AddAttribute( XML_NAMESPACE_XLINK, XML_SHOW, XML_EMBED );
-                mpHyperlinkElement.reset( new SvXMLElementExport(mrExport, XML_NAMESPACE_DRAW, XML_A, true, true) );
+                pHyperlinkElement.reset( new SvXMLElementExport(mrExport, XML_NAMESPACE_DRAW, XML_A, true, true) );
             }
         }
     }
@@ -935,7 +935,7 @@ void XMLShapeExport::exportShape(const uno::Reference< drawing::XShape >& xShape
         }
     }
 
-    mpHyperlinkElement.reset();
+    pHyperlinkElement.reset();
 
     // #97489# #97111#
     // if there was an error and no element for the shape was exported
@@ -1733,7 +1733,7 @@ void XMLShapeExport::ImpExportEvents( const uno::Reference< drawing::XShape >& x
 
             if( nFound & FOUND_LIBRARY )
             {
-                OUString sLocation( GetXMLToken(
+                const OUString& sLocation( GetXMLToken(
                     (aStrLibrary.equalsIgnoreAsciiCase("StarOffice") ||
                      aStrLibrary.equalsIgnoreAsciiCase("application") ) ? XML_APPLICATION
                                                                        : XML_DOCUMENT ) );
@@ -2313,9 +2313,7 @@ void XMLShapeExport::ImpExportGraphicObjectShape(
                             aStreamURL = aStreamURL.concat( aStr );
                         }
 
-                        uno::Any aAny;
-                        aAny <<= aStreamURL;
-                        xPropSet->setPropertyValue( "GraphicStreamURL", aAny );
+                        xPropSet->setPropertyValue( "GraphicStreamURL", uno::Any(aStreamURL) );
                     }
 
                     mrExport.AddAttribute(XML_NAMESPACE_XLINK, XML_TYPE, XML_SIMPLE );
@@ -2351,7 +2349,7 @@ void XMLShapeExport::ImpExportGraphicObjectShape(
                 OUString aReplacementUrl;
                 xPropSet->getPropertyValue("ReplacementGraphicURL") >>= aReplacementUrl;
 
-                // If there is no url, then then graphic is empty
+                // If there is no url, then the graphic is empty
                 if(!aReplacementUrl.isEmpty())
                 {
                     const OUString aStr = mrExport.AddEmbeddedGraphicObject(aReplacementUrl);
@@ -3126,7 +3124,7 @@ static void lcl_CopyStream(
             uno::makeAny(rMimeType));
         xStreamProps->setPropertyValue( // turn off compression
             "Compressed",
-            uno::makeAny(sal_False));
+            uno::makeAny(false));
     }
     ::comphelper::OStorageHelper::CopyInputToOutput(xInStream, xOutStream);
     xOutStream->closeOutput();
@@ -3449,7 +3447,7 @@ void XMLShapeExport::ImpExport3DSceneShape( const uno::Reference< drawing::XShap
 
 void XMLShapeExport::ImpExport3DShape(
     const uno::Reference< drawing::XShape >& xShape,
-    XmlShapeType eShapeType, XMLShapeExportFlags /* nFeatures = SEF_DEFAULT */, awt::Point* /*pRefPoint = NULL */)
+    XmlShapeType eShapeType)
 {
     const uno::Reference< beans::XPropertySet > xPropSet(xShape, uno::UNO_QUERY);
     if(xPropSet.is())
@@ -3459,10 +3457,10 @@ void XMLShapeExport::ImpExport3DShape(
 
         // transformation (UNO_NAME_3D_TRANSFORM_MATRIX == "D3DTransformMatrix")
         uno::Any aAny = xPropSet->getPropertyValue("D3DTransformMatrix");
-        drawing::HomogenMatrix xHomMat;
-        aAny >>= xHomMat;
+        drawing::HomogenMatrix aHomMat;
+        aAny >>= aHomMat;
         SdXMLImExTransform3D aTransform;
-        aTransform.AddHomogenMatrix(xHomMat);
+        aTransform.AddHomogenMatrix(aHomMat);
         if(aTransform.NeedsAction())
             mrExport.AddAttribute(XML_NAMESPACE_DR3D, XML_TRANSFORM, aTransform.GetExportString(mrExport.GetMM100UnitConverter()));
 
@@ -3550,13 +3548,13 @@ void XMLShapeExport::ImpExport3DShape(
             {
                 // write special 3DLathe/3DExtrude attributes, get 3D tools::PolyPolygon as drawing::PolyPolygonShape3D
                 aAny = xPropSet->getPropertyValue("D3DPolyPolygon3D");
-                drawing::PolyPolygonShape3D xPolyPolygon3D;
-                aAny >>= xPolyPolygon3D;
+                drawing::PolyPolygonShape3D aUnoPolyPolygon3D;
+                aAny >>= aUnoPolyPolygon3D;
 
                 // convert to 3D PolyPolygon
                 const basegfx::B3DPolyPolygon aPolyPolygon3D(
                     basegfx::tools::UnoPolyPolygonShape3DToB3DPolyPolygon(
-                        xPolyPolygon3D));
+                        aUnoPolyPolygon3D));
 
                 // convert to 2D tools::PolyPolygon using identity 3D transformation (just grep X and Y)
                 const basegfx::B3DHomMatrix aB3DHomMatrixFor2DConversion;
@@ -3614,10 +3612,10 @@ void XMLShapeExport::export3DSceneAttributes( const css::uno::Reference< css::be
 
     // world transformation (UNO_NAME_3D_TRANSFORM_MATRIX == "D3DTransformMatrix")
     uno::Any aAny = xPropSet->getPropertyValue("D3DTransformMatrix");
-    drawing::HomogenMatrix xHomMat;
-    aAny >>= xHomMat;
+    drawing::HomogenMatrix aHomMat;
+    aAny >>= aHomMat;
     SdXMLImExTransform3D aTransform;
-    aTransform.AddHomogenMatrix(xHomMat);
+    aTransform.AddHomogenMatrix(aHomMat);
     if(aTransform.NeedsAction())
         mrExport.AddAttribute(XML_NAMESPACE_DR3D, XML_TRANSFORM, aTransform.GetExportString(mrExport.GetMM100UnitConverter()));
 
@@ -3652,9 +3650,9 @@ void XMLShapeExport::export3DSceneAttributes( const css::uno::Reference< css::be
 
     // projection "D3DScenePerspective" drawing::ProjectionMode
     aAny = xPropSet->getPropertyValue("D3DScenePerspective");
-    drawing::ProjectionMode xPrjMode;
-    aAny >>= xPrjMode;
-    if(xPrjMode == drawing::ProjectionMode_PARALLEL)
+    drawing::ProjectionMode aPrjMode;
+    aAny >>= aPrjMode;
+    if(aPrjMode == drawing::ProjectionMode_PARALLEL)
         aStr = GetXMLToken(XML_PARALLEL);
     else
         aStr = GetXMLToken(XML_PERSPECTIVE);
@@ -3688,14 +3686,14 @@ void XMLShapeExport::export3DSceneAttributes( const css::uno::Reference< css::be
 
     // shadeMode
     aAny = xPropSet->getPropertyValue("D3DSceneShadeMode");
-    drawing::ShadeMode xShadeMode;
-    if(aAny >>= xShadeMode)
+    drawing::ShadeMode aShadeMode;
+    if(aAny >>= aShadeMode)
     {
-        if(xShadeMode == drawing::ShadeMode_FLAT)
+        if(aShadeMode == drawing::ShadeMode_FLAT)
             aStr = GetXMLToken(XML_FLAT);
-        else if(xShadeMode == drawing::ShadeMode_PHONG)
+        else if(aShadeMode == drawing::ShadeMode_PHONG)
             aStr = GetXMLToken(XML_PHONG);
-        else if(xShadeMode == drawing::ShadeMode_SMOOTH)
+        else if(aShadeMode == drawing::ShadeMode_SMOOTH)
             aStr = GetXMLToken(XML_GOURAUD);
         else
             aStr = GetXMLToken(XML_DRAFT);
@@ -3738,7 +3736,7 @@ void XMLShapeExport::export3DLamps( const css::uno::Reference< css::beans::XProp
     OUString aPropName;
     OUString aIndexStr;
     ::basegfx::B3DVector aLightDirection;
-    drawing::Direction3D xLightDir;
+    drawing::Direction3D aLightDir;
     bool bLightOnOff = false;
     for(sal_Int32 nLamp = 1; nLamp <= 8; nLamp++)
     {
@@ -3756,8 +3754,8 @@ void XMLShapeExport::export3DLamps( const css::uno::Reference< css::beans::XProp
         // lightdirection
         aPropName = aDirectionPropName;
         aPropName += aIndexStr;
-        xPropSet->getPropertyValue(aPropName) >>= xLightDir;
-        aLightDirection = ::basegfx::B3DVector(xLightDir.DirectionX, xLightDir.DirectionY, xLightDir.DirectionZ);
+        xPropSet->getPropertyValue(aPropName) >>= aLightDir;
+        aLightDirection = ::basegfx::B3DVector(aLightDir.DirectionX, aLightDir.DirectionY, aLightDir.DirectionZ);
         SvXMLUnitConverter::convertB3DVector(sStringBuffer, aLightDirection);
         aStr = sStringBuffer.makeStringAndClear();
         mrExport.AddAttribute(XML_NAMESPACE_DR3D, XML_DIRECTION, aStr);
@@ -4298,7 +4296,7 @@ void ImpExportEnhancedGeometry( SvXMLExport& rExport, const uno::Reference< bean
                                             double fDepth = 0;
                                             if ( aDepthParaPair.First.Value >>= fDepth )
                                             {
-                                                rExport.GetMM100UnitConverter().convertDouble( aStrBuffer, fDepth, true );
+                                                rExport.GetMM100UnitConverter().convertDouble( aStrBuffer, fDepth );
                                                 ExportParameter( aStrBuffer, aDepthParaPair.Second );
                                                 aStr = aStrBuffer.makeStringAndClear();
                                                 rExport.AddAttribute( XML_NAMESPACE_DRAW, XML_EXTRUSION_DEPTH, aStr );

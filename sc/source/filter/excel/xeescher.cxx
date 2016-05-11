@@ -26,18 +26,15 @@
 #include <com/sun/star/awt/ScrollBarOrientation.hpp>
 #include <com/sun/star/drawing/XShape.hpp>
 #include <com/sun/star/form/binding/XBindableValue.hpp>
-#include <com/sun/star/form/binding/XValueBinding.hpp>
 #include <com/sun/star/form/binding/XListEntrySink.hpp>
-#include <com/sun/star/form/binding/XListEntrySource.hpp>
 #include <com/sun/star/script/ScriptEventDescriptor.hpp>
 #include <com/sun/star/chart2/XChartDocument.hpp>
 #include <com/sun/star/awt/Point.hpp>
 #include <com/sun/star/awt/Size.hpp>
-#include <com/sun/star/container/XNamed.hpp>
 
 #include <set>
 #include <rtl/ustrbuf.h>
-#include <vcl/bmpacc.hxx>
+#include <vcl/bitmapaccess.hxx>
 #include <svx/svdoole2.hxx>
 #include <svx/svdocapt.hxx>
 #include <editeng/outlobj.hxx>
@@ -88,27 +85,26 @@ using ::com::sun::star::beans::XPropertySet;
 using ::com::sun::star::drawing::XShape;
 using ::com::sun::star::drawing::XShapes;
 using ::com::sun::star::frame::XModel;
-using ::com::sun::star::embed::XEmbeddedObject;
 using ::com::sun::star::awt::XControlModel;
 using ::com::sun::star::form::binding::XBindableValue;
-using ::com::sun::star::form::binding::XValueBinding;
 using ::com::sun::star::form::binding::XListEntrySink;
-using ::com::sun::star::form::binding::XListEntrySource;
 using ::com::sun::star::script::ScriptEventDescriptor;
 using ::com::sun::star::table::CellAddress;
 using ::com::sun::star::table::CellRangeAddress;
 using ::com::sun::star::chart2::XChartDocument;
-using ::com::sun::star::container::XNamed;
 using ::oox::drawingml::DrawingML;
 using ::oox::drawingml::ChartExport;
 using namespace oox;
 
-#define  HMM2XL(x)        ((x)/26.5)+0.5
+namespace
+{
 
-#if 1//def XLSX_OOXML_FUTURE
-// these function are only used within that context
-// Static Function Helpers
-static const char *ToHorizAlign( SdrTextHorzAdjust eAdjust )
+inline long lcl_hmm2px(long nPixel)
+{
+    return static_cast<long>(nPixel*PIXEL_PER_INCH/1000.0/CM_PER_INCH)+0.5;
+}
+
+const char *ToHorizAlign( SdrTextHorzAdjust eAdjust )
 {
     switch( eAdjust )
     {
@@ -124,7 +120,7 @@ static const char *ToHorizAlign( SdrTextHorzAdjust eAdjust )
     }
 }
 
-static const char *ToVertAlign( SdrTextVertAdjust eAdjust )
+const char *ToVertAlign( SdrTextVertAdjust eAdjust )
 {
     switch( eAdjust )
     {
@@ -140,7 +136,7 @@ static const char *ToVertAlign( SdrTextVertAdjust eAdjust )
     }
 }
 
-static void lcl_WriteAnchorVertex( sax_fastparser::FSHelperPtr rComments, Rectangle &aRect )
+void lcl_WriteAnchorVertex( sax_fastparser::FSHelperPtr rComments, Rectangle &aRect )
 {
     rComments->startElement( FSNS( XML_xdr, XML_col ), FSEND );
     rComments->writeEscaped( OUString::number( aRect.Left() ) );
@@ -155,9 +151,8 @@ static void lcl_WriteAnchorVertex( sax_fastparser::FSHelperPtr rComments, Rectan
     rComments->writeEscaped( OUString::number( aRect.Bottom() ) );
     rComments->endElement( FSNS( XML_xdr, XML_rowOff ) );
 }
-#endif
 
-static void lcl_GetFromTo( const XclExpRoot& rRoot, const Rectangle &aRect, sal_Int32 nTab, Rectangle &aFrom, Rectangle &aTo )
+void lcl_GetFromTo( const XclExpRoot& rRoot, const Rectangle &aRect, sal_Int32 nTab, Rectangle &aFrom, Rectangle &aTo )
 {
     sal_Int32 nCol = 0, nRow = 0;
     sal_Int32 nColOff = 0, nRowOff= 0;
@@ -180,8 +175,8 @@ static void lcl_GetFromTo( const XclExpRoot& rRoot, const Rectangle &aRect, sal_
             }
             if( r.Left() > aRect.Left() && r.Top() > aRect.Top() )
             {
-                aFrom = Rectangle( nCol-1, static_cast<long>(HMM2XL( nColOff )),
-                                   nRow-1, static_cast<long>(HMM2XL( nRowOff )) );
+                aFrom = Rectangle( nCol-1, lcl_hmm2px( nColOff ),
+                                   nRow-1, lcl_hmm2px( nRowOff ) );
                 break;
             }
         }
@@ -203,8 +198,8 @@ static void lcl_GetFromTo( const XclExpRoot& rRoot, const Rectangle &aRect, sal_
             }
             if( r.Left() < aRect.Left() && r.Top() > aRect.Top() )
             {
-                aFrom = Rectangle( nCol-1, static_cast<long>(HMM2XL( nColOff )),
-                                   nRow-1, static_cast<long>(HMM2XL( nRowOff )) );
+                aFrom = Rectangle( nCol-1, lcl_hmm2px( nColOff ),
+                                   nRow-1, lcl_hmm2px( nRowOff ) );
                 break;
             }
         }
@@ -220,8 +215,8 @@ static void lcl_GetFromTo( const XclExpRoot& rRoot, const Rectangle &aRect, sal_
                 nRow++;
             if( r.Right() >= aRect.Right() && r.Bottom() >= aRect.Bottom() )
             {
-                aTo = Rectangle( nCol, static_cast<long>(HMM2XL( aRect.Right() - r.Left() )),
-                                 nRow, static_cast<long>(HMM2XL( aRect.Bottom() - r.Top() )));
+                aTo = Rectangle( nCol, lcl_hmm2px( aRect.Right() - r.Left() ),
+                                 nRow, lcl_hmm2px( aRect.Bottom() - r.Top() ));
                 break;
             }
         }
@@ -237,13 +232,15 @@ static void lcl_GetFromTo( const XclExpRoot& rRoot, const Rectangle &aRect, sal_
                 nRow++;
             if( r.Right() < aRect.Right() && r.Bottom() >= aRect.Bottom() )
             {
-                aTo = Rectangle( nCol, static_cast<long>(HMM2XL( r.Left() - aRect.Right() )),
-                                 nRow, static_cast<long>(HMM2XL( aRect.Bottom() - r.Top() )));
+                aTo = Rectangle( nCol, lcl_hmm2px( r.Left() - aRect.Right() ),
+                                 nRow, lcl_hmm2px( aRect.Bottom() - r.Top() ));
                 break;
             }
         }
     }
 }
+
+} // namespace
 
 // Escher client anchor =======================================================
 
@@ -324,7 +321,7 @@ void XclExpDffEmbeddedAnchor::ImplSetFlags( const SdrObject& /*rSdrObj*/ )
 
 void XclExpDffEmbeddedAnchor::ImplCalcAnchorRect( const Rectangle& rRect, MapUnit eMapUnit )
 {
-    maAnchor.SetRect( maPageSize, mnScaleX, mnScaleY, rRect, eMapUnit, true );
+    maAnchor.SetRect( maPageSize, mnScaleX, mnScaleY, rRect, eMapUnit );
 }
 
 XclExpDffNoteAnchor::XclExpDffNoteAnchor( const XclExpRoot& rRoot, const Rectangle& rRect ) :
@@ -445,7 +442,7 @@ void XclExpImgData::SaveXml( XclExpXmlStream& rStrm )
 {
     sax_fastparser::FSHelperPtr pWorksheet = rStrm.GetCurrentStream();
 
-    DrawingML aDML( pWorksheet, &rStrm, DrawingML::DOCUMENT_XLSX );
+    DrawingML aDML(pWorksheet, &rStrm, drawingml::DOCUMENT_XLSX);
     OUString rId = aDML.WriteImage( maGraphic );
     pWorksheet->singleElement( XML_picture,
             FSNS( XML_r, XML_id ),  XclXmlUtils::ToOString( rId ).getStr(),
@@ -1137,7 +1134,7 @@ void XclExpChartObj::SaveXml( XclExpXmlStream& rStrm )
     {
         XclObjAny::WriteFromTo( rStrm, mxShape, GetTab() );
         Reference< XModel > xModel( mxChartDoc, UNO_QUERY );
-        ChartExport aChartExport( XML_xdr, pDrawing, xModel, &rStrm, DrawingML::DOCUMENT_XLSX );
+        ChartExport aChartExport(XML_xdr, pDrawing, xModel, &rStrm, drawingml::DOCUMENT_XLSX);
         static sal_Int32 nChartCount = 0;
         nChartCount++;
         aChartExport.WriteChartObj( mxShape, nChartCount );
